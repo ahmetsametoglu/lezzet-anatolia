@@ -103,6 +103,39 @@ describe('PO’lu mal kabul', () => {
     expect(Object.keys(rows[0]!).sort()).toEqual(['expectedQty', 'productName', 'variantId', 'variantLabel']);
   });
 
+  /**
+   * **Form KALANI gösterir, ısmarlanan toplamı değil** (kusur, ölçüldü ve düzeltildi 25.08 · 10.4 turu).
+   *
+   * Düzeltmeden önce ekranla kayıt aynı olay hakkında iki farklı şey söylüyordu: `expectedQtysOf`
+   * ilk günden `missingQty`ye bakıyor, form ise `line.qty` gösteriyordu. Kısmen gelmiş bir siparişte
+   * depocu kalanı sayıp yazınca ekran "olmayan bir eksik" çiziyor, kayıt farkı sıfır yazıyordu.
+   */
+  it('KISMEN gelmiş siparişte form KALANI gösterir — ekran ile kayıt aynı tabana bakar', async () => {
+    const purchaseOrderId = await draftPurchaseOrder(20, 600);
+    expect((await openIntakeForm(db, purchaseOrderId))[0]!.expectedQty).toBe(20);
+
+    // İlk sevkiyat: 12 geldi, 8 kaldı.
+    await receiveGoods(db, {
+      warehouseId,
+      purchaseOrderId,
+      lines: [{ variantId, qty: 12, expiryDate: dayOffset(90) }],
+    });
+
+    const rows = await openIntakeForm(db, purchaseOrderId);
+    expect(rows[0]!.expectedQty).toBe(8);
+
+    // Ve kalan tam gelince kayıt FARK ÜRETMEZ — ekranın gösterdiği sayı yazılabilir bir sayıdır.
+    const outcome = await receiveGoods(db, {
+      warehouseId,
+      purchaseOrderId,
+      lines: [{ variantId, qty: 8, expiryDate: dayOffset(90) }],
+    });
+    expect(outcome.status).toBe('ok');
+    expect(outcome.status === 'ok' ? outcome.differences : null).toEqual([]);
+    // Satır listede KALIR (0 ile): ikinci koliden yine çıkabilir, fazla kabul meşrudur.
+    expect((await openIntakeForm(db, purchaseOrderId))[0]!.expectedQty).toBe(0);
+  });
+
   it('bilinmeyen siparişte form BOŞ döner — plansız alım da meşrudur', async () => {
     // Kalemsiz PO diye bir şey YOK (`createDraft` reddediyor: "kalemsiz taslak açılmaz"), yani boş
     // dönüşün tek gerçek yolu siparişin hiç bulunmamasıdır — v2'nin "+ plansız kabul" yolu.

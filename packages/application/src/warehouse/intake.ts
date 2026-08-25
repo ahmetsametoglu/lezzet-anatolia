@@ -71,7 +71,20 @@ export interface IntakeFormRow {
   variantId: string;
   productName: string;
   variantLabel: string;
-  /** Tedarik siparişinde ısmarlanan adet; depocu sayarak doğrular. */
+  /**
+   * **Bu kabulde daha ne bekleniyor** — ısmarlanan toplam DEĞİL, kalan (`missingQty`).
+   *
+   * Ayrım ölçümle geldi (25.08, 10.4 turu) ve düzeltilmeden önce ekranla kayıt aynı olay hakkında
+   * iki farklı şey söylüyordu: kayıt tarafı (`expectedQtysOf` → `differencesOf`) ilk günden KALANa
+   * bakıyor, form ise ısmarlanan toplamı gösteriyordu. Kısmen gelmiş bir siparişte (60 ısmarlandı,
+   * 30 geldi) depocu ikinci 30'u sayıp yazınca ekran `30 / 60 · −30` diye **olmayan bir eksik**
+   * çiziyor, kayıt ise farkı sıfır yazıyordu. Depocu ya olmayan eksiğin peşine düşer ya gerçek
+   * eksiği o gürültünün içinde kaçırırdı.
+   *
+   * Tamamı gelmiş kalem `0` ile döner ve satır LİSTEDE KALIR: ikinci sevkiyatta koliden yine çıkabilir
+   * ve fazla kabul meşrudur (tedarikçi fazla göndermiş olabilir) — satırı gizlemek, gelen malı
+   * yazacak yeri ortadan kaldırırdı.
+   */
   expectedQty: number;
 }
 
@@ -89,12 +102,25 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
   const lines = await new PurchaseOrderItemService(db).listByOrder(purchaseOrderId);
   if (lines.length === 0) return [];
 
+  // Beklenti KAYITLA aynı görünümden okunur (`expectedQtysOf` de `progressOf` çağırıyor): iki taban,
+  // ekranın çizdiği farkla kaydın yazdığı farkın ayrışması demekti — ve öyle olmuştu (tipin künyesi).
+  //
+  // Eşleme KALEM kimliğiyle, varyantla DEĞİL: `expectedQtysOf` varyant anahtarlı toplar (fark varyant
+  // bazında hesaplandığı için orada doğru), ama form kalem başına satır çizer — aynı varyant iki
+  // kalemde geçiyorsa varyant anahtarlı okuma toplamı iki satıra birden yazar ve beklenti ikiye
+  // katlanmış görünürdü.
+  const progress = new Map(
+    (await new PurchaseOrderService(db).progressOf(purchaseOrderId)).map((row) => [row.purchaseOrderItemId, row.missingQty]),
+  );
   const names = await variantNames(db, lines.map((line) => line.variantId));
   return lines.map((line) => ({
     variantId: line.variantId,
     productName: names.get(line.variantId)?.productName ?? '—',
     variantLabel: names.get(line.variantId)?.variantLabel ?? '',
-    expectedQty: line.qty,
+    // İlerleme satırı yoksa kalan = ısmarlanan; `?? 0` OLAMAZ: görünüm bir satırı bir gün taşımazsa
+    // "0 bekleniyor" demek, depocuyu kendi kaydımıza karşı sessizce kör bırakırdı (`CLAUDE §1` —
+    // ölçülemeyen değer sıfır değildir).
+    expectedQty: progress.get(line.id) ?? line.qty,
   }));
 }
 

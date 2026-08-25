@@ -170,7 +170,7 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
          aynı kararı zaten vermişti).
   - **Kalemin tamamı eksikse oran hesaplanmaz:** müşteri sipariş ettiği şeyi hiç almayacak, doğrudan sorulur.
   - **Tavsiye TUTAR TAŞIMAZ:** parasal ölçüt motora GİRDİ olarak verilir, dönen değerde yer almaz (testli) — tasarımın "fark iadesi bile tutar olarak gösterilmez" kuralı.
-- [~] (10.4) **Mal kabul:** bekleyen tedarik siparişinden dolu form (yoksa boş); ürün/varyant + adet + son tarih + lot + tedarikçi + konum; MLOR uyarısı (engelsiz); paketleme girişi; PO → `received` · `touches: apps/web/app/(operations)/operations/receiving/** · apps/web/components/operation/**` *(üstlenildi 02.08 — operasyon yüzeyi ajanı)*
+- [x] (10.4) **Mal kabul:** bekleyen tedarik siparişinden dolu form (yoksa boş); ürün/varyant + adet + son tarih + lot + tedarikçi + konum; MLOR uyarısı (engelsiz); paketleme girişi; PO → `received` · `touches: apps/web/app/(operations)/operations/stock/** · apps/web/components/operation/form/intake-form/** · packages/application/src/warehouse/intake.ts` *(üstlenildi 02.08 — operasyon yüzeyi ajanı; ev değişikliği 22.26, ölçüm turu 25.08)*
   - *Bitti:* PO'lu kabul dolu formla açılıyor, eksik/fazla fark olarak işaretleniyor; alış fiyatı alanı yok
   - **Durum (28.07) — arka uç hazır.** Kapı ~~`apps/web/lib/stock/intake.ts`~~ → **`@lezzet/application` (`warehouse/intake`)**, 10.7'de taşındı ve web kopyası silindi: `openIntakeForm` (PO'dan dolu form) + `receiveGoods` (kabul + MLOR uyarısı + fark). 7 test → paketin 16 testi. Yazımın kendisi 06.10'un RPC'si.
   - **Durum (02.08 — çizim eksik, ekran bekliyor):** `.dc`'de yalnız iki kare var (mobil kabul formu + günün özeti); **PO'dan dolu form, yeni tedarikçi hızlı ekleme ve paketleme girişi kareleri çizilmemiş** — 10.4'ün bitti-kriteri çizilmeyen karede. Tasarım isteği yazıldı (`design/project/uploads/depo-mal-kabul-tasarim-istegi.md`), kullanıcı Claude Design'a iletiyor. Çizim gelince ekran tek turda iner (arka uç tam); şerit bu arada tedarik ekranına (09.14) geçti.
@@ -193,9 +193,14 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
       defter oldu ve gerekçesi kapsam: "bugün" bir gün süzgeciydi, oysa soru *"az önce ne girdim"* —
       dün yazılmış bir kabulü ertesi sabah gizlemek, aranan kaydı tam da arandığı an kaybetmekti.
       Ekranda ölçüldü (iki tema, konsol temiz).
-    - ⏳ **Açık kalan tek şey ölçüm:** kabul GERÇEK veriyle uçtan uca tamamlanmadı ("Kabulü tamamla"
-      basılmadı — stoğa yazar ve geri alınması elle düzeltme gerektirir). Satır bu yüzden `[~]`.
-      BEKLEYEN(10.4)
+    - ~~⏳ **Açık kalan tek şey ölçüm:** kabul GERÇEK veriyle uçtan uca tamamlanmadı ("Kabulü tamamla"
+      basılmadı — stoğa yazar ve geri alınması elle düzeltme gerektirir).~~ **TUR KOŞTU (25.08).**
+  - **ÖLÇÜM TURU TAMAMLANDI (25.08) — ve tur bir KUSUR buldu.** `TS-26-VXRXYT` (5 kalem, biri 30 eksik) gerçek veriyle kabul edildi; doğrulama ekranın söylediğine değil DB'nin satırına bakarak yapıldı.
+    - **Vaatlerin hepsi ölçüldü:** "Kabulü tamamla" bastı ve parti yazıldı (lot `TUR-729995`, `initial_qty=30`, Strasbourg) · PO `partially_received` → **`received`**, eksik 30 → 0 · bildirim *"1 partide kısa raf ömrü uyarısı var; kabul engellenmedi"* — MLOR kuralı ekranda (DOMAIN §4) · kayıt defterinde **+30 · 90,00 €**, yani maliyet PO'dan eşleşti ve depocu fiyat girmedi · rozet 3→2, sipariş kuyruktan düştü · konsol temiz.
+    - **⚠ KUSUR: form ISMARLANAN TOPLAMI gösteriyordu, kalanı değil.** `expectedQtysOf` (kayıt tarafı) ilk günden `missingQty`ye bakıyor, `openIntakeForm` ise `line.qty` veriyordu. Kısmen gelmiş siparişte (60 ısmarlandı, 30 geldi) depocu ikinci 30'u sayıp yazınca ekran `30 / 60 · −30` diye **olmayan bir eksik** çiziyor, kayıt farkı sıfır yazıyordu — ekranla kayıt aynı olay hakkında iki farklı şey söylüyordu. Depocu ya olmayan eksiğin peşine düşer ya gerçek eksiği o gürültüde kaçırırdı.
+      - **Düzeltildi:** `openIntakeForm` artık `progressOf`tan okuyor (kayıtla aynı görünüm). Eşleme **kalem kimliğiyle**, varyantla değil: `expectedQtysOf` varyant anahtarlı toplar (fark varyant bazında hesaplandığı için orada doğru), ama form kalem başına satır çizer — aynı varyant iki kalemdeyse varyant anahtarlı okuma beklentiyi ikiye katlardı.
+      - Tamamı gelmiş kalem `0` ile döner ve satır **listede kalır**: ikinci koliden yine çıkabilir, fazla kabul meşrudur. Ekranda ölçüldü: `0 · 0 · 30 · 0 · 0` (düzeltme öncesi `48 · 54 · 60 · 66 · 72`).
+      - Testi `intake.test.ts`te (kısmi kabul → kalan → fark üretmeyen ikinci kabul); kasıtlı bozulup kırıldığı görüldü.
   - **"Alış fiyatı alanı yok" TİPTE zorlanıyor:** depocunun gönderdiği satırda (`IntakeFormLine`) `unitCost` alanı YOKTUR; maliyet PO'dan sunucu tarafında eşleşir. Testte depocu fiyat girmeden partinin alış fiyatı 6 € doğuyor — gördüğü bir sayı değil, admin'in girdiği.
   - **Fark hata değildir:** eksik/fazla gelen mal işaretlenir, kabul yine tamamlanır ve mal fiilen girer. **PO'suz alımda fark üretilmez** — karşılaştırılacak sipariş yok, her satırı "beklenmedik" saymak gürültü olurdu (bu kusuru test yakaladı).
   - **MLOR engellemez, uyarır:** ömrünün onda dokuzu geçmiş parti de kabul edilir, uyarı listelenir — karar mal kabul edende (DOMAIN §4).
