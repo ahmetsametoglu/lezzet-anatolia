@@ -5422,3 +5422,33 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   almıyor. İkisi de sözleşmeyi hafızadan yazmanın bedeli; typecheck birini, koşu ötekini tuttu.
 
   Doğrulama: `cart.test.ts` **13/13** · `@lezzet/mobile-api` typecheck temiz.
+
+- [x] (21.111) **ÖDEME ADIMI TESTLENDİ — ve iddia iki kez yazıldı, çünkü ilki SAHTE YEŞİLDİ (9 iddia)**
+  · touches: `apps/mobile-api/src/api/v1/checkout.test.ts`
+
+  **ÇİVİLENEN KARAR: NİYET SUNUCUDAN, GÖVDEDEN ASLA.** Siparişin KALEMLERİ istemciden gelmiyor,
+  sunucudaki sepetten okunuyor; gövde yalnız *"nasıl"* sorusunu cevaplıyor (adres · gün · yöntem ·
+  kupon). Kural gevşerse **istemci ne isterse sipariş eder** — kendi seçtiği ürünü, kendi yazdığı
+  adetle. Ve gevşemesi kolay: gövdeye bir `items` alanı eklemek "esneklik" gibi görünür.
+
+  **İLK İDDİA BOŞLUĞA GEÇİYORDU ve sabotaj yakaladı.** Test *"sepet değişmedi mi"* diye soruyordu;
+  siparişin kaynağını gövdeye çeviren sabotaj sepeti zaten değiştirmiyor, dolayısıyla test
+  **korumasız kodda da geçti**. Sepet yanlış ölçüttü — sınanması gereken şey siparişin NEREDEN
+  okunduğuydu.
+  **Ölçüm doğru iddiayı verdi:** bu fikstürde rota posta kodunu kapsamadığı için sipariş açılmıyor
+  ve ret, engellenen kalemi **ÜRÜN ADIYLA** döndürüyor (`blocked_lines`). Sepetteki ürünün adı
+  geliyorsa niyet sunucudan okunmuştur. Fikstür de buna göre değişti: ikinci varyant değil **ayrı
+  ürün** kuruluyor — aynı ürünün iki boyu aynı adı taşır ve soru cevapsız kalırdı.
+  Yeni iddia sabotajda kırmızı yanıyor (`blocked_lines` → `empty_cart`).
+
+  **BU, OTURUMUN DÖRDÜNCÜ SAHTE YEŞİLİ.** Sırayla: mail hizası sondası (küme boş kaldı) · yer adı
+  yarışı (`renderHook` kuyruğu boşaltıyordu) · sabotaj koşusunun tek-uçlu koşucuya katılması ·
+  ve bu. Dördünün de ortak dersi tek: **doğrulamanın kendisi doğrulanmadan bir şey kanıtlanmış
+  sayılmaz.**
+
+  **ÖTEKİ İDDİALAR:** taslak sepetten kurulur (satırlar `summary.lines` altında — kökte
+  aranmıştı) · boş sepette de taslak döner ve `summary: null` bir CEVAPTIR (sıfırlarla dolu sahte
+  bir özetten dürüst) · adressiz/bozuk/gövdesiz istek 400 · parmak izi BOŞ bırakılabilir (zorunlu
+  yapmak güncellemeyen her cihazı ödeme yapamaz hâle getirirdi) · Bearer olmadan 401.
+
+  Doğrulama: `checkout.test.ts` **9/9** · `@lezzet/mobile-api` typecheck temiz.
