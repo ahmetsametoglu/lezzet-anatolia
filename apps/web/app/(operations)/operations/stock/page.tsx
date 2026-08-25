@@ -27,6 +27,7 @@ import { pendingOrderCount, readIntakeProgress, readIntakeTab } from './intake-r
 import { readTransfersPage, readTransitCount } from './transfer-read';
 import { mixedLotCases } from './stock-labels';
 import { readActorNames, toLevelRows, toLossRows } from './stock-read';
+import { readReturnDrops } from './returns-read';
 import { parseStockUrl, periodStart, toStockFilters } from './stock-url';
 
 // Stok (09.13 · 22.26) — DEPO YÜZEYİNİN TAMAMI: ne var · ne karar bekliyor · ne girdi · ne çıktı.
@@ -76,6 +77,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   // Sekme okumanın kapsamını belirliyor; boş küme okumak yerine hiç okumamak (22.26 künyesi).
   const onLevels = urlState.tab === 'levels';
   const onOutgoing = urlState.tab === 'outgoing';
+  const onAttention = urlState.tab === 'attention';
 
   // Eşikler İŞLETMENİN kararıdır (`Setting`, 0016) — kod varsayılanı yalnız satır hiç yoksa geçerli.
   // `SettingsService` süreç içinde önbelleklidir: ilk istekte üç okuma, sonrakilerde sıfır.
@@ -134,7 +136,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     p.variants.map((v) => v.id),
   );
 
-  const [available, priceMap, actorNames, intake, transfers, transitCount] = await Promise.all([
+  const [available, priceMap, actorNames, intake, transfers, transitCount, returns] = await Promise.all([
     // Depo TANELİ okuma (19.5): satırın toplamı da kırılımı da bu tek kaynaktan türer. Depo-üstü
     // görünüm (`getNetworkAvailabilityMap`) burada YANLIŞ olurdu — birleştirilmiş stok kimsenin
     // stoğu değildir ve operatör "5 var" görüp iki şehirdeki malı tek siparişe yazamaz.
@@ -148,6 +150,10 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     // sayım her sekmede (intake rozetinin künyesi).
     urlState.tab === 'transfer' ? readTransfersPage() : null,
     readTransitCount(),
+    // Dönen koliler YALNIZ Dikkat sekmesinde okunur — rozeti yok ve olmamalı: sayı sekme başlığına
+    // yazılsaydı her açılışta okunması gerekirdi, oysa "kaç koli döndü" bir uyarı değil, sekmeye
+    // girince görülecek bir karar kuyruğu. Kapının kendi tavanı geçerli (`returns.ts`).
+    onAttention ? readReturnDrops(ctx.warehouseIds) : [],
   ]);
 
   // Liste fiyatı = b2c kanal fiyatı (KDV dahil). Müşteriye özel fiyat burada aranmaz: teklif herkese
@@ -188,6 +194,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         pinned: pinnedRow,
         nextCursor: productPage.nextCursor,
         attention,
+        returns,
         // Parti karışma sinyali (23.9) — zaten okunmuş partilerden türer, ek sorgu yok.
         mixedLotCount: mixedLotCases(batches),
         transfers,

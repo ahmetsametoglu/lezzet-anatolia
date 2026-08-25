@@ -151,7 +151,7 @@ function searchOptions(f: OrderListFilters): { orFilters?: string[]; rangeFilter
  * aynı listeyi kullanır. İki yerde ayrı yazılsaydı biri güncellenir öbürü unutulur ve RPC'ye giden
  * anahtar sessizce düşerdi (`rpcMoneyToEuro` künyesi).
  */
-const ITEM_MONEY_FIELDS = ['unitPriceCents', 'lineDiscountAmountCents'];
+const ITEM_MONEY_FIELDS = ['unitPriceCents', 'listUnitPriceCents', 'lineDiscountAmountCents'];
 const ORDER_MONEY_FIELDS = [
   'shippingFeeCents',
   'totalCents',
@@ -742,6 +742,11 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * `warehouseId` verilirse yalnız o deponun kuyruğu — depocu başka deponun siparişini görmez (C5)
    * ve zaten hazırlayamaz: partiler siparişin deposundan seçilir. Verilmezse depo-üstü (admin).
    *
+   * **Süzgeç TEK depo da olabilir, KÜME de** (25.08): telefondaki depocunun tek deposu vardır, ama
+   * masaüstündeki yöneticinin kapsamı bir listedir (`ctx.warehouseIds`). İkinci bir metot açmak aynı
+   * kuyruğu iki kapıdan okutmak olurdu. Boş dizi = "hiçbiri" (`.in(…, [])`), `undefined` = depo-üstü —
+   * ayrım `CLAUDE §1`'in kuralı ve burada da aynen geçerli.
+   *
    * **`id` süzgeci kuyruğun ÖLÇÜTLERİNİ değiştirmez** (10.1 · hazırlık kâğıdı): tek bir siparişi
    * adresleyen çağıran da aynı durum/depo kapısından geçer. Yani kapanmış ya da başka deponun
    * siparişinin kimliği verilse liste BOŞ döner — "kimlikle istedim, o hâlde bana ver" diye bir
@@ -749,16 +754,31 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    */
   listByStatus(
     status: OrderStatus | OrderStatus[],
-    opts: { deliveryDate?: string; limit?: number; warehouseId?: string; orderId?: string } = {},
+    opts: {
+      deliveryDate?: string;
+      limit?: number;
+      warehouseId?: string | readonly string[];
+      orderId?: string;
+      /**
+       * **Tavan hangi UÇTAN dolsun** (25.08 · ölçüldü). Varsayılan `asc` ve hazırlık kuyruğu için
+       * doğru: en eski sipariş önce hazırlanır, tavana dayanılırsa da bekleyen iş kaybolmaz.
+       *
+       * Ama `limit` ile birlikte kullanan ve sonucu YENİDEN eskiye sıralayan çağıran için tam tersi
+       * doğrudur (`warehouse/returns`): en eski N'i alıp en yeniyi başa koymak, tavana dayanan
+       * ekranın tam da göstermesi gereken satırları pencerenin dışında bırakır — ve bunu sessizce
+       * yapar, çünkü liste dolu görünür.
+       */
+      orderDirection?: 'asc' | 'desc';
+    } = {},
   ): Promise<Order[]> {
     return this.getAll(
       {
         status: Array.isArray(status) ? status : [status],
         deliveryDate: opts.deliveryDate,
-        warehouseId: opts.warehouseId,
+        warehouseId: typeof opts.warehouseId === 'string' ? opts.warehouseId : opts.warehouseId && [...opts.warehouseId],
         id: opts.orderId,
       },
-      { orderBy: 'createdAt', limit: opts.limit },
+      { orderBy: 'createdAt', orderDirection: opts.orderDirection, limit: opts.limit },
     );
   }
 

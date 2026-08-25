@@ -14,7 +14,7 @@ import {
   movedOutOf,
   type ExpiryGroupKey,
 } from '../stock-labels';
-import type { BatchView, StockViewProps } from '../stock-types';
+import type { BatchView, ReturnDropView, StockViewProps } from '../stock-types';
 import { EmptyState } from '@/components/operation/ui/empty-state';
 
 // Yaklaşan tarihli — KARAR kuyruğu. Ekranın en çok bakılan yeri: "hangi partiye bugün ne yapacağım".
@@ -32,10 +32,23 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
     (b) => !term || b.title.toLocaleLowerCase('tr').includes(term) || (b.lotNumber ?? '').toLocaleLowerCase('tr').includes(term),
   );
 
+  // Dönen koliler parti kuyruğundan BAĞIMSIZ süzülür: aranan terim bir referans numarası olabilir ve
+  // koli satırının ürün adı yoktur — parti süzgecini buraya uygulamak, aranan koliyi gizlerdi.
+  const drops = data.returns.filter(
+    (drop) => !term || (drop.referenceNo ?? '').toLocaleLowerCase('tr').includes(term),
+  );
+
   if (rows.length === 0) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <MixedLotLine count={data.mixedLotCount} />
+        {/* Parti kuyruğu temizken de çizilir — ve tam bu dal 23.13'te bir kez unutulmuştu: iki dallı
+            bir ekranda ikinci dalı atlamak, işi olan ekranı sessizce boş bırakır. */}
+        {drops.length > 0 ? (
+          <div className="flex flex-col gap-5 px-6 pb-[22px] pt-[18px]">
+            <ReturnsGroup drops={drops} />
+          </div>
+        ) : null}
         <CleanState filtered={Boolean(term)} inStock={data.counts.inStock} nearExpiryPercent={data.nearExpiryPercent} />
       </div>
     );
@@ -70,6 +83,9 @@ export function AttentionTab({ data, search, onOpenOffer }: StockViewProps) {
       <MixedLotLine count={data.mixedLotCount} />
 
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 pb-[22px] pt-[18px]">
+        {/* Dönenler ÜSTTE: koli rampada duruyor ve bugünün işi; DLC'sine beş gün kalan parti yarına
+            da bekler. Sıra bir önem hiyerarşisi değil, fiziksel aciliyet. */}
+        {drops.length > 0 ? <ReturnsGroup drops={drops} /> : null}
         {EXPIRY_GROUPS.map((group) => {
           const items = rows.filter((b) => groupOf(b) === group.key).sort(compareUrgency);
           if (items.length === 0) return null;
@@ -100,6 +116,107 @@ function MixedLotLine({ count }: { count: number }) {
       )}
     </div>
   );
+}
+
+/**
+ * **DEPOYA DÖNENLER — akıbeti bekleyen koliler** (10.5). Kuyruğun dördüncü grubu.
+ *
+ * ── KARAR BURADA VERİLMEZ, GÖRÜNÜR OLUR ─────────────────────────────────────
+ * Akıbetin (stoğa dön · imha · jest) iki yazma yolu zaten var: telefonda depocu (koli elinde),
+ * masaüstünde sipariş detayının karar diyaloğu (para tarafıyla birlikte). Bu grup üçüncü bir yol
+ * AÇMAZ — satır siparişin detayına götürür. Stok ekranına bir karar formu daha koymak, aynı kararı
+ * üç yerden verdirmek ve üçünü ayrı ayrı güncellemek olurdu.
+ *
+ * Eksik olan hiç yazma değil, GÖRÜNÜRLÜKTÜ: depocu telefonda işaretlemezse sipariş `returned`'da
+ * asılı kalıyor, mal rampada duruyor ve hiçbir masaüstü ekranı bunu söylemiyordu.
+ *
+ * **Tutar YOK ve olmayacak** — depo kapılarının kuralı (`returns.ts` künyesi): iade tutarını okuyan
+ * yönetim akışıdır, koliyi karşılayan değil.
+ */
+function ReturnsGroup({ drops }: { drops: ReturnDropView[] }) {
+  const pending = drops.reduce((sum, drop) => sum + drop.pendingLineCount, 0);
+  return (
+    <div className="flex flex-col gap-[11px]">
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="h-2 w-2 flex-none rounded-full bg-ops-red-dot" />
+        <span className="font-ops-display text-ops-base font-semibold text-ops-ink">Depoya dönenler</span>
+        <Badge tone="red">
+          {drops.length} koli · {pending} kalem
+        </Badge>
+        <span className="font-ops-body text-ops-xs text-ops-muted">
+          Akıbeti işaretlenmemiş kalemi olan iade — karar siparişin detayında (stoğa dön · imha · jest)
+        </span>
+      </div>
+      <div className="grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(320px,1fr))]">
+        {drops.map((drop) => (
+          <ReturnCard key={drop.orderId} drop={drop} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Dönen kolinin kartı. Kuryenin kapıdaki notu KARARIN TEK BAĞLAMIDIR (`returns.ts`) — "araç bozuldu"
+ * ile "müşteri açtı, beğenmedi" aynı malı iki farklı akıbete götürür; not gizlenirse karar körleşir.
+ *
+ * Kabuk karar kartıyla AYNI (sol kenar şeridi dahil): aynı kuyruğun iki satırı iki ayrı görsel dille
+ * konuşursa göz onları iki ayrı iş sanır. Şerit kırmızı — mal rampada duruyor ve karar bekliyor.
+ */
+function ReturnCard({ drop }: { drop: ReturnDropView }) {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={() => router.push(`/operations/orders/${drop.orderId}`)}
+      className="flex cursor-pointer flex-col gap-2 rounded-ops-card border border-ops-line border-l-[3px] border-l-ops-red-dot bg-ops-white px-4 py-3.5 text-left transition-colors hover:bg-ops-subtle"
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-ops-mono text-ops-sm font-semibold text-ops-ink">{drop.referenceNo ?? '—'}</span>
+        <Badge tone="red">{drop.pendingLineCount} kalem bekliyor</Badge>
+        {drop.warehouseName ? (
+          <span className="flex items-center gap-1 font-ops-body text-ops-xs text-ops-muted">
+            <WarehouseIcon size={14} />
+            {drop.warehouseName}
+          </span>
+        ) : null}
+      </div>
+      <span className="font-ops-body text-ops-xs text-ops-muted">
+        {drop.courierName ?? 'Kurye atanmamış'}
+        {drop.returnedAt ? ` · ${returnedLabel(drop.returnedAt)}` : ''}
+      </span>
+      {/* Kalem dökümü: koli açılmadan neyin döndüğü okunmalı. İşaretlenmiş satır da GÖRÜNÜR (soluk) —
+          yarısı karara bağlanmış bir kolide kalanı işaretleyen kişi neyi seçtiğini görmeli. */}
+      <div className="flex flex-col gap-1">
+        {drop.lines.map((line) => (
+          <span
+            key={line.orderItemId}
+            className={`font-ops-body text-ops-xs ${line.disposition ? 'text-ops-muted line-through' : 'text-ops-body'}`}
+          >
+            {line.name} · <span className="font-ops-mono">{line.fulfilledQty} ad.</span>
+          </span>
+        ))}
+      </div>
+      {drop.note ? (
+        <span className="rounded-ops-chip bg-ops-line-soft px-2.5 py-1 font-ops-body text-ops-xs italic text-ops-body">
+          “{drop.note}”
+        </span>
+      ) : null}
+      {/* Kartın nereye götürdüğü YAZILI — karar kartlarındaki "Depo ekranından" ipucunun emsali.
+          Tıklanabilir bir yüzeyin hedefini söylememek, operatörü denemeye zorlamaktır. */}
+      <span className="mt-0.5 font-ops-body text-ops-xs font-medium text-ops-blue-dark">
+        Karar için siparişe git →
+      </span>
+    </button>
+  );
+}
+
+/** "3 gün önce döndü" — mutlak tarih kart için fazla; kaç gündür rampada beklediği asıl bilgi. */
+function returnedLabel(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+  if (days <= 0) return 'bugün döndü';
+  if (days === 1) return 'dün döndü';
+  return `${days} gündür bekliyor`;
 }
 
 /** Kalan ömrü az olan üstte. Ömrü bilinmeyen en sona düşer — ölçüsü yoksa sırası da yoktur. */

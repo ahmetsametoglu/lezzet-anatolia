@@ -259,4 +259,63 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
     // Kalem gerçekten duruyor: iddia "sipariş yok" değil, "bu listede yok".
     expect(await items.listByOrder(order.id)).toHaveLength(1);
   });
+
+  /**
+   * **Masaüstünün süzgeci bir KÜMEdir** (10.5) — telefondaki depocunun tek deposu vardır, ama
+   * yöneticinin kapsamı `ctx.warehouseIds`tir. Sözleşmenin üç şekli de burada sınanıyor, çünkü
+   * ikisini karıştırmak sessizce yanlış cevap verirdi: boş dizi ile `undefined` arasındaki fark,
+   * "kapsamı olmayan kişi" ile "kapsamı sınırsız kişi" arasındaki farktır.
+   */
+  describe('süzgeç şekilleri — tek · küme · boş · depo-üstü (CLAUDE §1)', () => {
+    it('KÜME süzgeci iki deponun dönüşünü birlikte getirir — yöneticinin kapsamı tek depo değil', async () => {
+      const here = await refusedOrder(1);
+      const there = await refusedOrder(1, { inWarehouse: otherWarehouseId });
+
+      const drops = await listWarehouseReturns(db, { warehouseId: [warehouseId, otherWarehouseId] });
+      const mine = drops.filter((drop) => drop.orderId === here.orderId || drop.orderId === there.orderId);
+
+      expect(mine).toHaveLength(2);
+      // Kimin rampasında durduğu satırla birlikte gelir; yoksa "iki koli döndü" nerede olduklarını söylemez.
+      expect(new Set(mine.map((drop) => drop.warehouseId))).toEqual(new Set([warehouseId, otherWarehouseId]));
+
+      // ⚠ Kümenin GERÇEKTEN süzdüğü ayrıca sınanır: yukarıdaki iddia tek başına, süzgeç hiç
+      // uygulanmasa da geçerdi (süzgeçsiz okuma iki depoyu da getirir). TEK elemanlı küme ötekini
+      // dışarıda bırakmalı — dizi şekli tekil kimlikle aynı kapıdan geçiyor demektir.
+      const onlyHere = await listWarehouseReturns(db, { warehouseId: [warehouseId] });
+      expect(onlyHere.find((drop) => drop.orderId === here.orderId)).toBeDefined();
+      expect(onlyHere.find((drop) => drop.orderId === there.orderId)).toBeUndefined();
+    });
+
+    it('BOŞ dizi HİÇBİRİ demektir — kapsamsız personele depo-üstü liste açılmaz', async () => {
+      const { orderId } = await refusedOrder(1);
+
+      const drops = await listWarehouseReturns(db, { warehouseId: [] });
+
+      expect(drops.find((drop) => drop.orderId === orderId)).toBeUndefined();
+    });
+
+    it('`undefined` DEPO-ÜSTÜdür — kapsamı sınırsız yönetici her rampayı görür', async () => {
+      const { orderId } = await refusedOrder(1, { inWarehouse: otherWarehouseId });
+
+      const drops = await listWarehouseReturns(db, { warehouseId: undefined });
+
+      expect(drops.find((drop) => drop.orderId === orderId)).toBeDefined();
+    });
+  });
+
+  /**
+   * **Tavan EN YENİDEN dolar** (kusur, düzeltildi 25.08). Liste "en yeni başta" sıralandığı için
+   * tavanın öteki uçtan dolması, tavana dayanan rampada bugün dönen koliyi gizlerdi — ve liste dolu
+   * göründüğü için yokluğu fark edilmezdi. Sessiz kayıpların en pahalısı budur.
+   */
+  it('tavana dayanınca EN YENİ dönüş içeride, en eski dışarıda kalır', async () => {
+    const older = await refusedOrder(1);
+    const newer = await refusedOrder(1);
+
+    // Tavan bire indirildi: iki dönüşten yalnız biri sığar ve o BUGÜNKÜ olmalı.
+    const drops = await listWarehouseReturns(db, { warehouseId, limit: 1 });
+
+    expect(drops.map((drop) => drop.orderId)).toContain(newer.orderId);
+    expect(drops.map((drop) => drop.orderId)).not.toContain(older.orderId);
+  });
 });

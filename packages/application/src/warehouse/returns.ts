@@ -21,14 +21,29 @@ import { displayName, variantNames } from './names';
  * Deponun gerçek sorusu tek satır: **`returned` durumunda, BU depoda, akıbeti işaretlenmemiş kalemi
  * olan siparişler.** Üçü de gerçek kolon; hiçbiri türetilmiş bir varsayım değil.
  *
+ * ── AYNI KAPI İKİ YÜZEYE BAKAR (25.08) ──────────────────────────────────────
+ * Kapı doğduğunda tek okuyanı telefondaki depocuydu ve `warehouseId` tekildi. Masaüstü de aynı
+ * soruyu soruyor — ama yöneticinin kapsamı bir LİSTEdir (`ctx.warehouseIds`), tek depo değil. İkinci
+ * bir okuma yazmak yerine imza küme kabul ediyor: aynı gerçeği iki kapıdan okutmak, birini bir gün
+ * güncellemeyi unutmaktır. Yüzeylerin işi ayrışıyor ve bu bilinçli: **karar telefonda verilir**
+ * (depocu koliyi elinde tutar), masaüstü yalnız **görünürlük** sağlar — akıbeti bekleyen dönüş hiçbir
+ * ekranda görünmezse `returned` sipariş sessizce asılı kalır, ve tam olarak öyle oluyordu (10.5).
+ *
+ * Süzgeç sözleşmesi web bağlamının kendisidir (`CLAUDE §1` · `WarehouseContext.warehouseIds`):
+ * **tek kimlik ya da dizi = o depo(lar) · boş dizi = hiçbiri · `undefined` = depo-üstü.** Sonuncusu
+ * yalnız kapsamı sınırsız yönetici içindir ve bir kestirme DEĞİL: kapsamı olmayan kişiye boş liste
+ * göstermek, kapsamı sınırsız olana da boş liste göstermek olurdu — biri doğru, öteki yanlış cevap.
+ *
  * ── LİSTE NEDEN SINIRSIZ BÜYÜMEZ ────────────────────────────────────────────
  * `returned` kalıcı bir durum DEĞİL: durum makinesi `returned → completed` diyor (*"depo aksiyonu +
  * para iadesi bitince sipariş kapanır; kalıcı `returned`'da kalmaz"*). Küme, açık iade süreçleri
  * kadardır — transfer listesiyle aynı sınıf (CLAUDE.md §1'in "doğal tavanı olan küme" dalı).
- * **Bilinen sınır:** okuma yine de tavanlı (`limit`) ve tavan en ESKİ satırlardan doldurulur; iade
- * süreci kapatılmadan biriken sipariş sayısı tavanı aşarsa yeni dönüşler pencerenin dışında kalır.
- * Tavan bu yüzden cömert ve parametrik — imleç açmak, kümenin büyümemesi gerektiği gerçeğini
- * gizlemek olurdu.
+ * **Bilinen sınır:** okuma yine de tavanlı (`limit`) — ama tavan artık EN YENİDEN dolar (25.08).
+ * Eskiden en eski satırlardan doluyordu ve bu, tavanın en kötü uygulanışıydı: liste zaten "en yeni
+ * başta" sıralanıyor, yani birikmiş bir rampada bugün dönen koli hiç görünmüyor, üstelik liste dolu
+ * göründüğü için yokluğu da fark edilmiyordu. Kayan uç şimdi en eskiler; iade süreci kapatılmadan
+ * biriken en eski dönüşler pencerenin dışında kalır ve bu doğru ödünleşme — imleç açmak, kümenin
+ * büyümemesi gerektiği gerçeğini gizlemek olurdu.
  *
  * ── PARA BU DOSYADAN GEÇMEZ ─────────────────────────────────────────────────
  * Depo kapılarının kuralı burada da geçerli: dönen görünümde tutar YOK. İade tutarı yalnız YAZIM
@@ -56,6 +71,12 @@ export interface ReturnDropLine {
 export interface ReturnDrop {
   orderId: string;
   referenceNo: string | null;
+  /**
+   * Malın döndüğü depo. Telefondaki depocu için gereksizdi (kapsamı zaten tek depo), masaüstündeki
+   * yönetici için ZORUNLU: kapsamı bir liste olan kişiye "iki koli döndü" demek, hangi rampada
+   * durduklarını söylememektir.
+   */
+  warehouseId: string;
   /** `null` = sipariş bir kuryeye hiç atanmamış (kargo/mağaza yolu). */
   courierName: string | null;
   /** Kuryenin kapıdaki serbest notu — depocunun akıbet kararının tek bağlamı. */
@@ -79,11 +100,15 @@ export interface ReturnDrop {
  */
 export async function listWarehouseReturns(
   db: SupabaseClient,
-  input: { warehouseId: string; limit?: number },
+  input: { warehouseId: string | readonly string[] | undefined; limit?: number },
 ): Promise<ReturnDrop[]> {
   const orders = await new OrderService(db).listByStatus(['returned'], {
     warehouseId: input.warehouseId,
     limit: input.limit ?? 50,
+    // Tavan EN YENİDEN dolar (düzeltildi 25.08). Varsayılan `asc` ile en eski 50 alınıyordu ve
+    // aşağıdaki sıralama onları "en yeni başta" diye diziyordu — tavana dayanan bir rampada bugün
+    // dönen koli hiç görünmezdi, üstelik liste dolu göründüğü için kimse fark etmezdi.
+    orderDirection: 'desc',
   });
   if (orders.length === 0) return [];
 
@@ -110,6 +135,7 @@ export async function listWarehouseReturns(
     drops.push({
       orderId: order.id,
       referenceNo: order.referenceNo,
+      warehouseId: order.warehouseId,
       courierName: order.courierId ? (courierOf.get(order.courierId) ?? null) : null,
       note: returnedLog?.note ?? null,
       returnedAt: returnedLog?.createdAt ?? null,

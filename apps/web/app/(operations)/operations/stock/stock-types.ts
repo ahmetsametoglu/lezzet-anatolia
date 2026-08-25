@@ -12,6 +12,7 @@ import type {
   StockAdjustmentReason,
   StorageAreaKind,
 } from '@lezzet/types';
+import type { ReturnDrop } from '@lezzet/application';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { StockLevelRow } from '@/lib/stock/level-rows';
 import type { OfferHandoff } from './stock-handoff';
@@ -26,6 +27,18 @@ export type { BatchView } from '@/lib/stock/batch-types';
 // tanım `lib/stock/level-rows`a taşındı — bu klasördeki kullanım yerlerinin yolu değişmesin.
 // (Kırılım tipi `StockWarehouseSplit`i yalnız lib ve ortak panel okuyor; burada yeniden verilmez.)
 export type { StockLevelRow } from '@/lib/stock/level-rows';
+
+/**
+ * Rampaya dönmüş koli — kapının dökümü + masaüstünün iki ekstrası (10.5). Kapı tipini yeniden
+ * yazmıyoruz: satır alanı eklendiğinde iki tanım sessizce ayrışırdı (`returns.ts` künyesindeki
+ * `toDropLine` dersi).
+ */
+export type ReturnDropView = ReturnDrop & {
+  /** Çözülmüş depo adı; `null` = depo kaydı silinmiş (kimliği yine satırda durur). */
+  warehouseName: string | null;
+  /** Akıbeti BEKLEYEN satır sayısı — rozetin sayısı; toplam satır değil. */
+  pendingLineCount: number;
+};
 
 /** İmha/fire geçmişi satırı — kayıt + çözülmüş adlar; maliyet cent'e indirgenmiş. */
 export type LossRow = StockAdjustmentDetail & {
@@ -193,6 +206,14 @@ export interface StockData {
   nextCursor: KeysetCursor | null;
   /** Karar bekleyen TÜM partiler — sayfalanmaz; bir partiyi kaçırmak imhalık malı satmaktır. */
   attention: BatchView[];
+  /**
+   * **Depoya dönen, akıbeti bekleyen koliler** (10.5) — yalnız Dikkat sekmesi açıkken dolu.
+   *
+   * Dikkat kuyruğunun dördüncü grubudur ve orada olması bir yerleşim tercihi değil: sekmenin sorusu
+   * *"hangi mala bugün ne yapacağım"* ve rampada karar bekleyen koli tam olarak o soru. Ayrı bir yer
+   * açmak aynı soruyu iki ekrana bölerdi.
+   */
+  returns: ReturnDropView[];
   /**
    * Parti karışma sinyali (23.9): aynı varyantın aynı depoda 2+ açık partisi olan durum sayısı —
    * lot etiketi kararının SAYISAL ölçütü (etüt §1.10). Tüm partiler üzerinden, süzgeçsiz: sinyal
