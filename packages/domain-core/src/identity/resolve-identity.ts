@@ -8,6 +8,25 @@ import { normalizePhone } from '@lezzet/helper';
  * Anahtarlar: **telefon** (WhatsApp kimliği, E.164'e normalize edilir) ve **e-posta** (web kimliği).
  * İkisinden biri eşleşirse aynı müşteridir. Aynı kişi iki yüzeyden geldiğinde tek kayıtta birleşir.
  *
+ * ── KANITSIZ NUMARA KİMLİK DOĞURAMAZ (04.10, DOMAIN §10) ────────────────────────────────────────
+ * Ayrım okumada değil YAZMADA: *"bu numara kimde"* sorusunu sormak her zaman serbesttir, *"bu
+ * numara bundan sonra bu kişinin"* demek değildir.
+ *
+ *   **Bağlanmak (attach) serbesttir** — `byPhone` defterden gelir (`customer_phone`) ve o defterin
+ *   her satırı zaten bir kanıttır. Numara operatörün klavyesinden geçmiş olsa bile, eşleştiği kayıt
+ *   kanıtlanmış bir kayıttır; bağı kurmak yeni bir iddia üretmez.
+ *
+ *   **Yeni kimlik AÇMAK (create) kanıt ister** — `phoneProven`. Açığın tamamı buradaydı: kanıtsız
+ *   bir dizeyle kimlik açılabildiği için kayıtlı olmayan bir numara ÖNCEDEN sahiplenilebiliyordu.
+ *   Kanıt "bu hattı bugün elimde tutuyorum" demektir ve bugün tek kaynağı imzası doğrulanmış
+ *   webhook'tan gelen mesajdır (15.7); hesap kartına ya da checkout formuna yazılan numara değil.
+ *
+ * Kanıtsız numara yine de **normalize edilip döndürülür** — iletişim bilgisi olarak yazılsın diye.
+ *
+ * Kural motorda duruyor, çağıranda değil: çağıranın *"kanıtsızken yeni kayıt açmayayım"* diye
+ * davranması yeter gibi görünür ve bir gün biri unutur — o gün hata sessizdir, yalnız yanlış
+ * hesaba düşmüş bir konuşma olarak görünür.
+ *
  * Kopya yine de oluşabilir (WhatsApp taslağı + web kaydı ayrı ayrı açılmışsa) — o zaman admin'in
  * "müşteri birleştir" aksiyonu devreye girer. Bu fonksiyon o durumu **görünür kılar**: iki farklı
  * müşteri iki farklı anahtardan eşleşirse `conflict` döner, sessizce birini seçmez.
@@ -29,6 +48,13 @@ export interface IdentityCandidates {
 
 export interface IdentityInput {
   phone?: string | null;
+  /**
+   * Numaranın zilyetliği KANITLANDI mı (04.10). Varsayılan `false`.
+   *
+   * Yalnız **yeni kimlik açmayı** yönetir: kanıtsız numara var olan bir kayda bağlanabilir (defter
+   * zaten kanıt taşıyor) ama kendi başına bir kayıt DOĞURAMAZ. Gerekçe künyede.
+   */
+  phoneProven?: boolean;
   email?: string | null;
   /** Doğrulanmış oturum sahibi — kendi başına bir kimlik anahtarıdır (telefon/e-posta olmasa da). */
   authUserId?: string | null;
@@ -59,13 +85,18 @@ export function resolveIdentity(input: IdentityInput, candidates: IdentityCandid
   if (!normalizedPhone && !email && !input.authUserId) return { action: 'insufficient' };
 
   // Farklı profillere çıkan anahtarlar — sıra korunur (tekrarlar elenir).
-  const matches = [candidates.byAuthUser, candidates.byPhone, candidates.byEmail].filter(
-    (id): id is string => Boolean(id),
-  );
+  const matches = [candidates.byAuthUser, candidates.byPhone, candidates.byEmail].filter((id): id is string => Boolean(id));
   const distinct = [...new Set(matches)];
 
   if (distinct.length > 1) return { action: 'conflict', customerIds: distinct };
+  // Bağlanmak serbest: eşleşme defterden geliyor, yani zaten kanıtlı bir kayda çıkıyor.
   if (distinct.length === 1) return { action: 'attach', customerId: distinct[0]!, normalizedPhone, email };
+
+  // Yeni kimlik doğuyor — burada anahtarın KANITLI olması şart (04.10). Kanıtsız bir numaradan
+  // kayıt açmak, o numarayı sahiplenmektir; gerçek sahibi yazdığında kendi geçmişini yabancı bir
+  // hesapta bulur. E-posta ve oturum sahibi kendi doğrulama yollarından geçtiği için kanıtlıdır.
+  const acabilir = Boolean(email) || Boolean(input.authUserId) || (input.phoneProven === true && Boolean(normalizedPhone));
+  if (!acabilir) return { action: 'insufficient' };
 
   return { action: 'create', normalizedPhone, email };
 }

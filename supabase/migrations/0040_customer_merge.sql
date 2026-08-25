@@ -82,8 +82,8 @@ stable
 security invoker
 set search_path = public
 as $$
-  with hedef as (select phone, email from public.user_profiles where id = p_target_id),
-       kaynak as (select phone, email from public.user_profiles where id = p_source_id),
+  with hedef as (select email from public.user_profiles where id = p_target_id),
+       kaynak as (select email from public.user_profiles where id = p_source_id),
        -- Çakışan değerlendirme: kaynağın satırı, hedefte AYNI (ürün, bağlam) ikilisiyle zaten var.
        fb_cakisan as (
          select f.id from public.product_feedback f
@@ -118,7 +118,10 @@ as $$
     (select count(*)::int from pt_cakisan),
     (select exists (select 1 from public.cart where customer_id = p_source_id)
         and exists (select 1 from public.cart where customer_id = p_target_id)),
-    (select (select phone from hedef) is null and (select phone from kaynak) is not null),
+    -- Telefon artık kolonda değil KENDİ KAYDINDA (04.10 · 0001) ve soru da değişti: hedefin numarası
+    -- olup olmaması önemsiz — doğrulanmış numaralar TOPLANIR, biri ötekini dışlamaz. Sorulan şey
+    -- "hedef bu birleştirmeyle kimlik anahtarı kazanıyor mu": kaynakta aktif bir numara var mı.
+    (select exists (select 1 from public.customer_phone where customer_id = p_source_id and retired_at is null)),
     (select (select email from hedef) is null and (select email from kaynak) is not null);
 $$;
 
@@ -220,14 +223,20 @@ begin
   update public.discount_use     set customer_id = p_target_id where customer_id = p_source_id;
   update public.zone_notice      set customer_id = p_target_id where customer_id = p_source_id;
   update public.variant_stock_notice set customer_id = p_target_id where customer_id = p_source_id;
+  -- Doğrulanmış numaralar (04.10 · 0001): kimlik anahtarının KENDİSİ taşınır. Çakışma olamaz —
+  -- tekillik numarada, müşteride değil; aynı aktif numara zaten iki hesapta duramazdı. Emekli
+  -- satırlar da taşınır: kaynağın geçmişi hedefte devam etmeli, kapanmış kayıtta kalmamalı.
+  update public.customer_phone   set customer_id = p_target_id where customer_id = p_source_id;
   -- Getirdiği kişiler: bağ hedefe geçer, yoksa kaynak kapandığında getiren izi kopuk kalır.
   update public.user_profiles    set referred_by = p_target_id where referred_by = p_source_id;
 
   -- ── 3) ÖNCE KAYNAK KAPANIR — SIRA ZORUNLU ────────────────────────────────
   -- Anahtarlar boşaltılır; değerleri `v_source`da zaten duruyor. **Sıra ters olamaz:** hedefe önce
-  -- yazsaydık, kaynak numarayı hâlâ tutuyorken iki satırda aynı telefon bulunur ve
-  -- `user_profiles_phone_key` kısmi unique indeksi yazımı REDDEDERDİ. Testle ölçüldü — ilk yazımda
+  -- yazsaydık, kaynak e-postayı hâlâ tutuyorken iki satırda aynı adres bulunur ve
+  -- `user_profiles_email_key` kısmi unique indeksi yazımı REDDEDERDİ. Testle ölçüldü — ilk yazımda
   -- sıra tersti ve birleştirmenin ASIL işlevi (anahtarın hedefe geçmesi) hiç çalışmıyordu.
+  -- *(Aynı tuzak telefonda da vardı; `user_profiles_phone_key` 04.10'da kalktığı için oradaki
+  -- zorunluluk düştü — ama sıra e-posta yüzünden AYNEN geçerli.)*
   --
   -- `referral_code` da düşer: kapanmış bir kaydın davet bağlantısı çalışmamalı.
   update public.user_profiles
@@ -243,6 +252,10 @@ begin
   -- ── 4) KİMLİK ANAHTARLARI HEDEFE (boş olan dolar, dolu olan EZİLMEZ) ─────
   -- Birleştirmenin asıl sebebi: taslakta telefon, web kaydında e-posta. Hedef ikisini de taşımazsa
   -- aynı kişi yarın üçüncü kez taslak açar ve birleştirme hiçbir şey çözmemiş olur.
+  --
+  -- **Telefon burada artık ANAHTAR DEĞİL, iletişim bilgisidir** (04.10 · 0001) — kimlik anahtarı
+  -- yukarıda `customer_phone` satırlarıyla taşındı. Satır yine de duruyor: hedefin iletişim numarası
+  -- boşsa kaynağınki doldurur, doluysa ezilmez. Aynı kural, artık daha küçük bir iddiayla.
   update public.user_profiles
      set phone        = coalesce(v_target.phone, v_source.phone),
          email        = coalesce(v_target.email, v_source.email),

@@ -7,7 +7,8 @@ import { updateCustomerProfile } from './profile';
  * **Müşteri profil güncellemesi** (21.14c) — web hesap formuyla TEK kural olduğunun kanıtı:
  *   · ad boşa İNDİRİLEMEZ (adsız kart siparişin kime gittiğini söyleyemez),
  *   · telefon E.164'e iner ("06…" → "+33 6…"), çözülemeyen numara sessizce düşmez,
- *   · numara çakışması ADLI rettir (`phone_taken`) — kuralı veritabanı kısıtı tutar,
+ *   · numara ÇAKIŞMASI DİYE BİR ŞEY YOK (04.10): bu kolon iletişim numarasıdır, kimlik anahtarı
+ *     değil — aynı hattı iki müşteri taşıyabilir,
  *   · `phone: null` numarayı siler; gönderilmeyen alana dokunulmaz.
  *
  * Paylaşılan DB (CLAUDE.md §4b): satırlar damgalı (`profil-guncelleme-` öneki + Date.now),
@@ -60,12 +61,19 @@ describe('müşteri profil güncellemesi', () => {
     expect(untouched?.phone).toBeNull();
   });
 
-  it('başka hesabın numarası görünür retle döner (phone_taken) — kuralı kısıt tutar', async () => {
-    const taken = phoneOf(2);
-    await createProfile('sahip', taken.replace(/\s/g, '').replace(/^0/, '+33'));
-    const row = await createProfile('talip');
+  it('AYNI numarayı iki müşteri taşıyabilir — bu kolon iletişim numarasıdır (04.10)', async () => {
+    // Kural TERSİNE döndü. Eskiden `phone_taken` diye adlı bir ret vardı ve dayanağı
+    // `user_profiles_phone_key` tekil indeksiydi; o indeks kaldırıldı çünkü doğrulanmamış bir dizeyi
+    // kimlik anahtarı sayıyordu — kayıtlı olmayan bir numara formdan önceden sahiplenilebiliyordu.
+    // Kolon artık İLETİŞİM numarası ve paylaşılması meşru: aile telefonu, işyeri hattı, eş.
+    // Kimlik anahtarının tekilliği `customer_phone`da (`customer-phone.test.ts`).
+    const paylasilan = phoneOf(2);
+    const ilk = await createProfile('sahip', paylasilan.replace(/\s/g, '').replace(/^0/, '+33'));
+    const ikinci = await createProfile('ayni-hat');
 
-    const outcome = await updateCustomerProfile(db, { profileId: row.id, phone: taken });
-    expect(outcome.status).toBe('phone_taken');
+    const outcome = await updateCustomerProfile(db, { profileId: ikinci.id, phone: paylasilan });
+    expect(outcome.status).toBe('ok');
+    // İkisi de aynı numarayı taşıyor ve ilkinin kaydına dokunulmadı.
+    expect((await profiles.getById(ikinci.id))?.phone).toBe((await profiles.getById(ilk.id))?.phone);
   });
 });

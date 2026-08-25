@@ -52,8 +52,14 @@ export const MeUpdateSchema = z
   })
   .partial();
 
-/** Güncellemenin adlı retleri — cümleyi ekran kurar, anahtar sözleşmede yaşar. */
-export const MeUpdateErrorEnum = z.enum(['name_required', 'phone_invalid', 'phone_taken']);
+/**
+ * Güncellemenin adlı retleri — cümleyi ekran kurar, anahtar sözleşmede yaşar.
+ *
+ * **`phone_taken` KALDIRILDI (04.10):** dayandığı tekil indeks (`user_profiles_phone_key`) yok
+ * artık — bu kolon iletişim numarası oldu, kimlik anahtarı `customer_phone`a taşındı. Ret hiçbir
+ * hâlde dönmeyeceği için sözleşmede tutmak yalan olurdu; ekranlardaki cümlesi ölü metindir.
+ */
+export const MeUpdateErrorEnum = z.enum(['name_required', 'phone_invalid']);
 export type MeUpdateError = z.infer<typeof MeUpdateErrorEnum>;
 
 /**

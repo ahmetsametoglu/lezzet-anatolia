@@ -1,7 +1,8 @@
 'use server';
 
-import { UserProfileService, ZoneNoticeService, constraintOf, serviceDb } from '@lezzet/database';
-import { normalizePhone } from '@lezzet/helper';
+import { startWhatsappLink, updateCustomerProfile } from '@lezzet/application';
+import { whatsappHref } from '@lezzet/brand';
+import { UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
 import { currentCustomerId } from '@/lib/guard';
@@ -47,56 +48,57 @@ export async function updateProfileAction(input: { name?: string; phone?: string
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
 
-    const patch: { id: string; name?: string; phone?: string | null } = { id: customerId };
+    /**
+     * ── KURAL ARTIK PAKETTE, BURASI KÖPRÜ (21.14c'nin borcu kapandı) ───────────────────────────
+     * Ad/telefon kuralları bir tur burada VE `@lezzet/application/customer/profile`ta iki kopya
+     * hâlinde duruyordu; paket künyesi de *"benimsemesi web şeridinin işi"* diye bekliyordu.
+     * 04.10 ikisine birden dokunduğu için borcu şimdi kapatmak, aynı değişikliği iki yere yazmaktan
+     * ucuz — ve bir sonraki değişiklikte ayrışmalarını da imkânsız kılıyor (CLAUDE §1).
+     *
+     * ── "NUMARA BAŞKA HESAPTA" RETİ ARTIK YOK (04.10) ──────────────────────────────────────────
+     * Eylem bir tur `user_profiles_phone_key` ihlalini `phone_taken` cümlesine çeviriyordu (07.08).
+     * O düzeltme doğruydu ama bir BELİRTİYİ görünür kılıyordu, sebebini değil: numara tekildi çünkü
+     * kimlik anahtarıydı, ve kimlik anahtarıydı çünkü ayrım yapılmamıştı. Ayrım yapıldı, indeks
+     * kalktı, çarpışma ortadan kalktı — aynı iletişim numarasını iki müşterinin taşıması artık
+     * meşru (aile telefonu, işyeri hattı) ve kimseye "bu numara alınmış" denmiyor.
+     */
+    const sonuc = await updateCustomerProfile(serviceDb(), { profileId: customerId, name: input.name, phone: input.phone });
+    if (sonuc.status !== 'ok') throw new CustomerError(sonuc.status);
 
-    if (input.name !== undefined) {
-      const name = input.name.trim();
-      // Adsız bir kart, siparişin kime gittiğini söyleyemez; boş geçilemez.
-      if (!name) throw new CustomerError('name_required');
-      patch.name = name;
-    }
-
-    // BEKLEYEN(04.10): bu numara DOĞRULANMADAN `user_profiles.phone`'a yazılıyor ve o kolon bir
-    // kimlik anahtarı (0001'de benzersiz indeks) — henüz kayıtlı olmayan bir numara buradan
-    // önceden sahiplenilebilir, sonra gerçek sahibi WhatsApp'tan yazınca yabancı hesaba bağlanır.
-    // Kapanışı: numaraya kod → geri giriş; o zamana kadar bu alan bir İLETİŞİM numarasıdır.
-    if (input.phone !== undefined) {
-      const raw = input.phone?.trim() ?? '';
-      if (!raw) {
-        patch.phone = null;
-      } else {
-        // Telefon E.164'e indirgenir — yoksa "+33 6.." ile "0033 6.." aynı kişi için iki anahtar
-        // olur ve bul-veya-oluştur onları ayrı kişi sayar (`lib/identity/find-or-create.ts`).
-        const phone = normalizePhone(raw);
-        // Çözülemeyen numara SESSİZCE düşürülmez: `null` yazmak müşterinin girdiği numarayı
-        // kaybettirir ve o bunu ancak WhatsApp mesajı gelmediğinde fark eder.
-        if (!phone) throw new CustomerError('phone_invalid');
-        patch.phone = phone;
-      }
-    }
-
-    try {
-      await new UserProfileService(serviceDb()).update(patch);
-    } catch (err) {
-      /**
-       * **Numara başka bir hesapta** — bugüne dek müşteri bunu `unexpected` olarak görüyordu
-       * ("Bir şeyler ters gitti. Tekrar deneyin"), yani kendi yazdığı doğru numarayı sonsuza
-       * kadar tekrar denerdi. Ölçüldü (07.08): kısıt `user_profiles_phone_key` (0001:49) ihlali
-       * `CustomerError` olmadığı için jenerik dala düşüyordu.
-       *
-       * Bu **04.10'un kapanışı DEĞİL** ve öyle okunmamalı: numaranın doğrulanmadan kimlik
-       * anahtarına yazılması sürüyor (yukarıdaki işaret). Burada değişen tek şey, çarpışmanın
-       * artık GÖRÜNÜR olması — sessizce jenerik hataya düşen bir kural, altı ay sonra kimsenin
-       * sebebini bulamayacağı bir destek talebidir.
-       *
-       * Kısıt adından okunuyor, önceden sorgu atılmıyor: iki okuma arasındaki yarışta "boştu ama
-       * doldu" hâli sessizce geri gelirdi — kuralın tuttuğu yer veritabanı, ekran değil.
-       */
-      if (constraintOf(err) === 'user_profiles_phone_key') throw new CustomerError('phone_taken');
-      throw err;
-    }
     revalidateAccount();
     return { data: true, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/**
+ * **WhatsApp'ımı bağla** (04.10) — hesabı müşterinin kendi numarasına bağlayan akışın ilk yarısı.
+ *
+ * Jetonu üretir ve müşteriye **açacağı bağlantıyı** döner. İkinci yarısı webhook'ta: müşteri hazır
+ * mesajı gönderince gelen mesaj hem numarayı kanıtlar hem jetonla hesabı söyler
+ * (`consumeWhatsappLink`).
+ *
+ * **Mesaj metni BURADA kuruluyor** ve olması gereken yer burası: müşteriye görünen bir cümle, yani
+ * sayfanın i18n kopyası (`whatsappHref` künyesinin kuralı). Paket yalnız `code` döner; üç dilin
+ * sözlüğünü marka paketine ya da uygulama katmanına taşımak, metni değiştirecek kişinin onu
+ * bulamaması demekti.
+ *
+ * **Bağlantıyı SUNUCU üretir, istemci değil:** jeton üretimi bir yazma işlemidir ve bağlantının
+ * kendisi jetonu taşıyor. İstemcide kurulsaydı önce jetonu ona göndermek gerekirdi — aynı sırrın
+ * bir tur fazladan dolaşması.
+ */
+export async function startWhatsappLinkAction(message: string): Promise<CustomerResult<{ href: string }>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+
+    const sonuc = await startWhatsappLink(serviceDb(), customerId);
+    // İki ret de müşteri için aynı şeydir ("şimdi olmadı, tekrar deneyin"): biri kaydın kaybolması,
+    // öteki jeton çakışmasının tükenmesi — ikisi de onun düzeltebileceği bir şey değil.
+    if (sonuc.status !== 'ok') throw new CustomerError('unexpected');
+
+    return { data: { href: whatsappHref(`${message.trim()} ${sonuc.code}`) }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

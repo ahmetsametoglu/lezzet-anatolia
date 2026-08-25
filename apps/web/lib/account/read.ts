@@ -1,5 +1,5 @@
 import 'server-only';
-import { AddressService, CartService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
+import { AddressService, CartService, CustomerPhoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import type { Address, CompanyInfo, PointsEntry, PreferredLanguage } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { getCartView } from '@/lib/cart/read';
@@ -23,9 +23,23 @@ export interface AccountView {
   profile: {
     name: string;
     email: string | null;
+    /**
+     * **İLETİŞİM numarası** — kimlik anahtarı DEĞİL (04.10). Serbest metindir, doğrulanmamıştır ve
+     * asıl işi `addressDefaultsOf`: yeni adres formuna önerilen numara. Kimlik anahtarı ayrı yaşıyor
+     * (`whatsappNumbers`) ve ekran ikisini AYRI göstermek zorunda — tek kutuda toplandığında
+     * müşteri, kurye numarasıyla WhatsApp kimliğini aynı şey sanıyor (kullanıcı bulgusu 25.08).
+     */
     phone: string | null;
     preferredLanguage: PreferredLanguage;
   };
+  /**
+   * **Doğrulanmış WhatsApp numaraları** (04.10 · `customer_phone`). Boş dizi = hiç kanıt yok.
+   *
+   * Ekranda salt okunurdur ve olmak zorunda: bu satırlar bir KANITTIR, bir tercih değil — elle
+   * yazılabilseydi kanıt olmaktan çıkardı. Müşterinin buraya numara eklemesinin tek yolu bize
+   * WhatsApp'tan yazmasıdır.
+   */
+  whatsappNumbers: string[];
   /** Doluysa profil B2B — puan/kupon bölümleri hiç çizilmez, şirket bölümü çizilir. */
   company: CompanyInfo | null;
   addresses: Address[];
@@ -82,10 +96,13 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
   if (!profile) return null;
 
   const company = profile.companyInfo ?? null;
-  const [addresses, cart, zoneNotices] = await Promise.all([
+  const [addresses, cart, zoneNotices, phones] = await Promise.all([
     new AddressService(db).listByCustomer(customerId),
     new CartService(db).get(customerId),
     readZoneNotices(db, customerId),
+    // Kanıtlanmış numaralar (04.10). Emekli olanlar gelmez — müşteriye "bu numara sizde" demeyi
+    // bıraktığımız satırı ona hâlâ göstermek, en kafa karıştırıcı hâl olurdu.
+    new CustomerPhoneService(db).listActiveByCustomer(customerId),
   ]);
 
   // Kaydedilenler sepetin kendi okumasıyla çözülür: ad, görsel, fiyat ve "bölge içi mi" bilgisi
@@ -105,6 +122,7 @@ export async function getAccountView(locale: Locale, customerId: string): Promis
       phone: profile.phone,
       preferredLanguage: profile.preferredLanguage,
     },
+    whatsappNumbers: phones.map((p) => p.phone),
     company,
     addresses,
     consent: {

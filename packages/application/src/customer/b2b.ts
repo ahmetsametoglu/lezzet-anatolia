@@ -82,15 +82,20 @@ export async function submitB2bApplication(
     isActive: facts.isActive,
   };
 
-  const phone = normalizePhone(input.phone, isEuVat ? 'DE' : 'FR');
   /**
-   * Telefon KİMLİK ANAHTARI ve tekil (`user_profiles_phone_key`) — yani başka bir kayıtta
-   * duruyorsa buraya yazılamaz. Yazmayı denemek kısıt ihlaliyle patlar ve müşteri, düzeltemeyeceği
-   * bir "beklenmeyen hata" görür; oysa numarasını doğru yazmıştır, yalnız WhatsApp'tan açılmış
-   * eski bir taslağı vardır. Numara sessizce ATLANIR ve iki kaydın aynı kişi olabileceği zaten
-   * onay kartının mükerrer sinyaline düşer (`b2b-check`) — kararı orada operatör verir.
+   * ── ATLAMA KURALI KALKTI (04.10) ─────────────────────────────────────────────────────────────
+   * Bu satır bir tur şunu yapıyordu: numara başka bir kayıtta duruyorsa **sessizce atla**. Gerekçesi
+   * `user_profiles_phone_key` tekil indeksiydi — yazmayı denemek kısıt ihlaliyle patlar, müşteri
+   * düzeltemeyeceği bir "beklenmeyen hata" görürdü; oysa numarasını doğru yazmıştır, yalnız
+   * WhatsApp'tan açılmış eski bir taslağı vardır.
+   *
+   * O indeks 04.10'da kalktı: kolon artık İLETİŞİM numarasıdır, kimlik anahtarı doğrulanmış numaranın
+   * kendi kaydıdır (`customer_phone`). Yani çakışma diye bir şey kalmadı ve atlamanın bedeli görünür
+   * oldu — **başvuran numarasını yazıyordu, biz sessizce düşürüyorduk** ve onay kartında iletişim
+   * numarası boş görünüyordu. Numara artık yazılıyor; mükerrer kayıt şüphesi zaten onay kartının
+   * kendi sinyalinde (`b2b-check`) ve kararı orada operatör veriyor.
    */
-  const phoneTaken = phone ? Boolean(await profiles.findByPhone(phone)) : true;
+  const phone = normalizePhone(input.phone, isEuVat ? 'DE' : 'FR');
 
   const updated = await profiles.update({
     id: profile.id,
@@ -133,7 +138,7 @@ export async function submitB2bApplication(
     // Ad ve telefon YALNIZ BOŞSA yazılır: mevcut B2C hesabıyla başvuran müşterinin kendi adını
     // bir işletme yetkilisinin adıyla ezmek, geçmiş siparişlerinin sahibini değiştirmek olurdu.
     ...(profile.name.trim().length === 0 ? { name: input.contactName.trim() } : {}),
-    ...(profile.phone || phoneTaken ? {} : { phone }),
+    ...(profile.phone || !phone ? {} : { phone }),
     // Taslak (WhatsApp telefonuyla açılmış) kayıt, sahibi doğrulanmış bir başvuruyla kapanır.
     isDraft: false,
   });

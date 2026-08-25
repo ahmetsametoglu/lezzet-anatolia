@@ -11,6 +11,10 @@ export type { RequestOtpCodeResult, VerifyOtpCodeResult } from './auth/otp';
 // Müşteri profil güncellemesi (21.14c) — web hesap formunun kuralları paket hâlinde; web köprü.
 export { updateCustomerProfile } from './customer/profile';
 export type { UpdateCustomerProfileOutcome } from './customer/profile';
+// WhatsApp bağlama (04.10) — hesabı numaraya bağlayan jeton akışı; iki tüketici: hesap ekranı
+// (jetonu üretir) ve Meta webhook'u (tüketir).
+export { consumeWhatsappLink, startWhatsappLink, waLinkTokenIn, WA_LINK_TTL_MS } from './customer/whatsapp-link';
+export type { ConsumeWhatsappLinkOutcome, StartWhatsappLinkOutcome } from './customer/whatsapp-link';
 // Müşteri adres kapısı (21.15) — web hesap sayfasının adres kuralları paket hâlinde; web köprü.
 export {
   addCustomerAddress,

@@ -2,6 +2,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
 import { ConversationService } from './conversation.service';
+import { CustomerPhoneService } from './customer-phone.service';
 import { PointsBalanceService, PointsEntryService } from './points.service';
 import { UserProfileService } from './user-profile.service';
 
@@ -130,12 +131,26 @@ describe('çakışmada HEDEFİNKİ kalır — ve ön izleme onu ÖNCEDEN söyler
   });
 
   it('ön izleme hedefin hangi ANAHTARI kazanacağını söyler', async () => {
-    const webKaydi = await musteri('onizleme-web', { phone: null });
+    // `gainsPhone`ın SORUSU 04.10'da değişti: telefon artık kolonda değil kendi kaydında
+    // (`customer_phone`) ve doğrulanmış numaralar TOPLANIR — hedefin numarası olup olmaması
+    // önemsiz, biri ötekini dışlamıyor. Sorulan şey artık "kaynakta aktif bir KANIT var mı".
+    const webKaydi = await musteri('onizleme-web');
     const taslak = await musteri('onizleme-taslak', { email: null });
+    await new CustomerPhoneService(db).recordProof(taslak.id, `+336${String(stamp).slice(-6)}91`);
 
     const onizleme = await profiles.previewMerge(webKaydi.id, taslak.id);
     expect(onizleme.gainsPhone).toBe(true);
     expect(onizleme.gainsEmail).toBe(false);
+  });
+
+  it('kaynakta kanıt YOKSA hedef telefon kazanmaz — kolondaki numara anahtar DEĞİL (04.10)', async () => {
+    // Kaynağın `user_profiles.phone`u dolu ama o bir İLETİŞİM numarası: birleştirme onu taşısa da
+    // hedefe bir kimlik anahtarı kazandırmıyor. Ön izleme bunu doğru söylemeli, yoksa operatör
+    // olmayan bir kazanım görür.
+    const hedef = await musteri('onizleme-kanitsiz-hedef');
+    const kaynak = await musteri('onizleme-kanitsiz-kaynak', { email: null });
+
+    expect((await profiles.previewMerge(hedef.id, kaynak.id)).gainsPhone).toBe(false);
   });
 });
 

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { UserProfileService, serviceDb } from '@lezzet/database';
+import { CustomerPhoneService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { findOrCreateCustomer } from './find-or-create';
 
@@ -7,9 +7,14 @@ import { findOrCreateCustomer } from './find-or-create';
  * Bul-veya-oluştur (04.4/04.5) — DOMAIN §10. Motor kararının DB'ye doğru bağlandığı doğrulanır:
  * "hangi anahtar kazanır" kararı motorun birim testinde (`domain-core/identity`), burada
  * **kayıt gerçekten tek mi oldu** sorusu test edilir.
+ *
+ * **04.10 bu dosyanın telefon iddialarını değiştirdi.** Ayrım okumada değil yazmada: kanıtsız
+ * numara var olan bir kayda BAĞLANABİLİR (eşleşme kanıt defterinden gelir) ama yeni kimlik
+ * AÇAMAZ — açığın tamamı "açma" tarafındaydı.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
+const phones = new CustomerPhoneService(db);
 const stamp = Date.now();
 const createdIds: string[] = [];
 const authKullanicilari: string[] = [];
@@ -39,16 +44,24 @@ describe('kimlik kurulumu', () => {
     expect(await findOrCreate({ name: 'Kimliksiz' })).toEqual({ status: 'insufficient' });
   });
 
-  it('hiç eşleşme yoksa yeni müşteri açılır; telefon E.164 normalize yazılır', async () => {
-    const outcome = await findOrCreate({ phone: localPhone, name: 'Ayşe' });
+  it('KANITSIZ numara tek anahtarken kayıt AÇILMAZ — önceden sahiplenme kapısı (04.10)', async () => {
+    // Açığın tamamı buradaydı: kanıtsız bir dizeyle kayıt açılabildiği için, kayıtlı olmayan bir
+    // numarayı formuna yazan kişi onu kilitliyordu. Bağlanmak hâlâ serbest (aşağıda), açmak değil.
+    expect(await findOrCreate({ phone: phone(9), name: 'Kanıtsız' })).toEqual({ status: 'insufficient' });
+  });
+
+  it('KANITLI numara yeni müşteri açar; telefon E.164 normalize yazılır', async () => {
+    const outcome = await findOrCreate({ phone: localPhone, phoneProven: true, name: 'Ayşe' });
     expect(outcome.status).toBe('created');
     if (outcome.status !== 'created') return;
     expect(outcome.profile.phone).toBe(`+336${digits}`); // boşluklar ve baştaki 0 gitti
     expect(outcome.profile.isDraft).toBe(false);
+    // Kanıt satırı da doğdu: bir sonraki mesaj bu kişiye çözülecek.
+    expect((await phones.findActive(`+336${digits}`))?.customerId).toBe(outcome.profile.id);
   });
 
   it('WhatsApp taslağı işaretli açılır; adı yoksa numarasıyla anılır', async () => {
-    const outcome = await findOrCreate({ phone: phone(1), asDraft: true });
+    const outcome = await findOrCreate({ phone: phone(1), phoneProven: true, asDraft: true });
     expect(outcome.status).toBe('created');
     if (outcome.status !== 'created') return;
     expect(outcome.profile.isDraft).toBe(true);
@@ -57,8 +70,11 @@ describe('kimlik kurulumu', () => {
 });
 
 describe('aynı kişi tek müşteride birleşir', () => {
-  it('telefon eşleşirse ona bağlanır — ikinci kayıt AÇILMAZ', async () => {
-    const ilk = await findOrCreate({ phone: phone(2), name: 'Mehmet' });
+  it('telefon eşleşirse ona bağlanır — ikinci kayıt AÇILMAZ; İKİNCİ çağrı kanıt istemez', async () => {
+    const ilk = await findOrCreate({ phone: phone(2), phoneProven: true, name: 'Mehmet' });
+    // İkinci çağrı `phoneProven` GEÇMİYOR ve bu bilinçli: eşleşme kanıt defterinden geliyor
+    // (`customer_phone`), yani o satırın kendisi zaten bir kanıt. Bağlanmayı reddetmek, elimizdeki
+    // doğru cevabı kullanmamak olurdu (04.10 — motorun künyesi).
     const ikinci = await findOrCreate({ phone: phone(2), name: 'Mehmet Y.' });
 
     expect(ikinci.status).toBe('attached');
@@ -77,7 +93,7 @@ describe('aynı kişi tek müşteride birleşir', () => {
   });
 
   it('ikinci anahtar eksikse tamamlanır — bir sonraki gelişte tek sorguda bulunur', async () => {
-    const ilk = await findOrCreate({ phone: phone(4), name: 'Ali' });
+    const ilk = await findOrCreate({ phone: phone(4), phoneProven: true, name: 'Ali' });
     // Aynı kişi bu kez web'den, e-postasıyla geliyor: telefon eşleşiyor, e-posta karta yazılır.
     const ikinci = await findOrCreate({ phone: phone(4), email: emailFor(4) });
 
@@ -88,7 +104,7 @@ describe('aynı kişi tek müşteride birleşir', () => {
   });
 
   it('iki anahtar İKİ FARKLI müşteriye çıkarsa sessizce seçim yapılmaz — çakışma bildirilir', async () => {
-    await findOrCreate({ phone: phone(5), name: 'Telefonlu' });
+    await findOrCreate({ phone: phone(5), phoneProven: true, name: 'Telefonlu' });
     await findOrCreate({ email: emailFor(5), name: 'Postalı' });
 
     const outcome = await findOrCreate({ phone: phone(5), email: emailFor(5) });

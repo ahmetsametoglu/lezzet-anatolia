@@ -85,10 +85,15 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
    */
   protected override readonly moneyFields = ['creditLimitCents'];
 
-  /** Telefonla arar — anahtar E.164 NORMALİZE gelmeli (normalize eden motordur). */
-  findByPhone(phone: string): Promise<UserProfile | null> {
-    return this.getOneBy({ phone });
-  }
+  /**
+   * ⚠ `findByPhone` **KALDIRILDI** (04.10) ve geri gelmemeli. İki gerekçe, ikisi de sert:
+   *
+   *   1. **Artık tekil değil.** `user_profiles_phone_key` kalktı (0001) — aynı iletişim numarasını
+   *      taşıyan iki müşteri meşru (aile telefonu). "Telefonla ara" tek satır döndürmeye devam
+   *      etseydi ikisinden birini rastgele seçerdi ve hangisi olduğu sorguya göre değişirdi.
+   *   2. **Bu kolon kimlik değil.** Doğrulanmamış bir dizeyle kimlik çözmek 04.10'un kapattığı
+   *      açığın ta kendisi. Kimlik anahtarı `CustomerPhoneService.findActive` ile okunur.
+   */
 
   /** E-postayla arar — küçük harfe indirgenmiş gelmeli (DB indeksi de öyle). */
   findByEmail(email: string): Promise<UserProfile | null> {
@@ -129,16 +134,27 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
-   * Kimlik çözümünün DB yarısı: iki anahtar TEK turda aranır. Motor bu iki adaya bakıp
-   * bağlan/oluştur/çakışma kararını verir — servis hangisinin kazandığını bilmez.
+   * **WhatsApp bağlama jetonunun sahibi** (04.10) — gelen mesajın hangi hesaba ait olduğu sorusu.
+   *
+   * `findByNotificationToken` ile aynı şekil ama **süreyi BURADA sormaz**: geçerlilik bir iş
+   * kuralıdır ve uygulama katmanında yaşıyor (`consumeWhatsappLink`). Servise koysaydık, süresi
+   * geçmiş jeton "hiç yok" ile aynı cevaba düşerdi ve çağıran onu temizleyemezdi — ölü satırlar
+   * tekillik indeksinde sonsuza dek dururdu.
    */
-  async findIdentityCandidates(phone?: string | null, email?: string | null): Promise<{ byPhone: string | null; byEmail: string | null; byAuthUser?: string | null }> {
-    const [byPhone, byEmail] = await Promise.all([
-      phone ? this.findByPhone(phone) : Promise.resolve(null),
-      email ? this.findByEmail(email) : Promise.resolve(null),
-    ]);
-    return { byPhone: byPhone?.id ?? null, byEmail: byEmail?.id ?? null };
+  findByWaLinkToken(token: string): Promise<UserProfile | null> {
+    const temiz = token.trim().toUpperCase();
+    if (!temiz) return Promise.resolve(null);
+    return this.getOneBy({ waLinkToken: temiz });
   }
+
+  /**
+   * ⚠ `findIdentityCandidates` de **KALDIRILDI** (04.10) — aynı kökten.
+   *
+   * İki anahtarı tek turda arıyordu ve o hâliyle doğruydu; yanlış olan, ikisinin de AYNI TABLODA
+   * olduğu varsayımıydı. Telefon anahtarı `customer_phone`a taşınınca bileşim iki servise yayıldı
+   * ve yeri de değişti: kimlik kararının kurulduğu tek yer (`find-or-create`). Servisin içinde
+   * kalsaydı `UserProfileService` kimlik anahtarının nerede yaşadığını bilmek zorunda kalırdı.
+   */
 
   /**
    * Verilen kimlikler TEK sorguda — "bu kaydı kim girdi" gibi sorular için. FK taşımayan alanlar

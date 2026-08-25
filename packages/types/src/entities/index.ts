@@ -10,6 +10,9 @@
 // görünümü tek kapıdır, derin import yoktur.
 export * from './user-profile.schema';
 export * from './email-verification.schema';
+// Kimlik anahtarı: DOĞRULANMIŞ numara (04.10). `UserProfile.phone` yalnız iletişimdir — ayrımın
+// gerekçesi dosyada.
+export * from './customer-phone.schema';
 export * from './category.schema';
 export * from './category-image.schema';
 export * from './collection.schema';

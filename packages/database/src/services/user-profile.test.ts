@@ -42,21 +42,22 @@ describe('kimlik anahtarları tekildir (04.5)', () => {
     expect((await profiles.findByEmail(`MUSTERI${stamp}@ORNEK.FR`))?.id).toBe(customerId);
   });
 
-  it('aynı telefon iki müşteriye yazılamaz; boş telefonlar çakışmaz', async () => {
+  it('AYNI telefon iki müşteriye yazılabilir — bu kolon artık kimlik anahtarı DEĞİL (04.10)', async () => {
+    // Kural TERSİNE döndü ve dönmesi gerekiyordu: `user_profiles_phone_key` kaldırıldı, çünkü
+    // tekillik doğrulanmamış bir dizeyi kimlik anahtarı sayıyordu — kayıtlı olmayan bir numara
+    // formdan önceden sahiplenilebiliyordu. Kolon bugün İLETİŞİM numarası ve aynı numarayı iki
+    // müşterinin taşıması meşru: aile telefonu, işyeri hattı, eşle ortak numara.
+    // Kimlik anahtarının tekilliği `customer_phone` testinde (`customer-phone.test.ts`).
     const phone = `+3361111${String(stamp).slice(-4)}`;
-    const first = await profiles.insert({ name: 'Telefonlu', phone: phone });
+    const first = await profiles.insert({ name: 'Telefonlu', phone });
     createdIds.push(first.id);
-    await expect(profiles.insert({ name: 'Kopya telefon', phone: phone })).rejects.toThrow();
+    const second = await profiles.insert({ name: 'Aynı hattı paylaşan', phone });
+    createdIds.push(second.id);
+    expect(second.phone).toBe(phone);
 
-    // Telefonsuz iki kayıt yan yana yaşayabilir (kısmi indeks).
     const withoutPhone = await profiles.insert({ name: 'Telefonsuz' });
     createdIds.push(withoutPhone.id);
     expect(withoutPhone.phone).toBeNull();
-  });
-
-  it('iki anahtar tek turda aranır — motorun girdisi hazır gelir', async () => {
-    const candidates = await profiles.findIdentityCandidates(null, `musteri${stamp}@ornek.fr`);
-    expect(candidates).toEqual({ byPhone: null, byEmail: customerId });
   });
 });
 

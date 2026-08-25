@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ConversationService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, MessageService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { SERVICE_WINDOW_HOURS } from '@lezzet/domain-core';
 import type { Conversation, ConversationSource } from '@lezzet/types';
@@ -31,7 +31,7 @@ import { handleMetaWebhook } from './meta-webhook';
 const db = serviceDb();
 const conversations = new ConversationService(db);
 const messages = new MessageService(db);
-const profiles = new UserProfileService(db);
+const phones = new CustomerPhoneService(db);
 
 const stamp = Date.now();
 
@@ -117,9 +117,11 @@ beforeAll(() => {
 
 afterAll(async () => {
   // Taslak müşteri: WhatsApp yolu kimliği çözerken açıyor (`findOrCreateCustomer`, asDraft).
+  // Kimliğe KANIT DEFTERİNDEN gidiliyor (04.10) — `user_profiles.phone` artık anahtar değil ve
+  // tekil de değil, yani oradan aramak birden çok satıra çıkabilirdi.
   for (const telefon of [WA_PERSON, WA_TIME_PERSON]) {
-    const taslak = await profiles.findByPhone(`+${telefon}`);
-    if (taslak) profileIds.push(taslak.id);
+    const kanit = await phones.findActive(`+${telefon}`);
+    if (kanit) profileIds.push(kanit.customerId);
   }
   await purgeTestData(db, { conversationIds, profileIds, webhookEventIds });
   if (jetonYedegi !== undefined) process.env.META_PAGE_ACCESS_TOKEN = jetonYedegi;

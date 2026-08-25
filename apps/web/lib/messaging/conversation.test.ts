@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 // Kayıt kapıları 21.08'de `@lezzet/application`a terfi etti (`messaging/record.ts`); açılış webde.
 import { recordInboundMessage, recordOutboundMessage } from '@lezzet/application';
-import { ConversationService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { SERVICE_WINDOW_HOURS, serviceWindowState } from '@lezzet/domain-core';
 import { openWhatsappConversation } from './conversation';
@@ -13,11 +13,15 @@ import { openWhatsappConversation } from './conversation';
  * şey **kapının doğru bağlanıp bağlanmadığı**: bilinen numara mevcut müşteriye mi gidiyor, yeni
  * numara taslak mı açıyor, aynı numara ikinci kez kayıt ya da konuşma açıyor mu.
  *
- * Not: numaranın DOĞRULANMIŞ olması ayrı bir iştir (`04.10`) ve bugün açık — bu dosya çözümlemenin
- * mekaniğini çiviler, bağın güvenilirliğini değil.
+ * **04.10 bu dosyanın iddiasını DEĞİŞTİRDİ.** Bu kapı operatörün elle işlediği DM'i açıyor ve
+ * operatörün klavyesinden geçen numara KANIT değildir — o yüzden kapı `phoneProven` geçirmiyor.
+ * Sonucu iki yeni ölçüt: kanıtsız numara artık taslak müşteri AÇMAZ (sohbet kimliksiz açılır) ve
+ * `user_profiles.phone`ta duran bir numara eşleşme SAYILMAZ (o kolon iletişim numarası). Eşleşen
+ * tek şey kanıt defteridir: `customer_phone`.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
+const phones = new CustomerPhoneService(db);
 const conversations = new ConversationService(db);
 const messages = new MessageService(db);
 
@@ -41,10 +45,20 @@ const an = (value: string | null | undefined): string | null => (value ? new Dat
 async function ac(input: Parameters<typeof openWhatsappConversation>[0]) {
   const sonuc = await openWhatsappConversation(input);
   if (sonuc.status === 'ok') {
-    profileIds.push(sonuc.customer.id);
+    if (sonuc.customer) profileIds.push(sonuc.customer.id);
     conversationIds.push(sonuc.conversation.id);
   }
   return sonuc;
+}
+
+/**
+ * KANIT satırı kurar — "bu numara bu müşteride, ve bunu webhook'tan biliyoruz".
+ *
+ * Test bunu doğrudan yazıyor çünkü gerçek yazıcı imzalı webhook'tur (`meta-webhook`) ve o zincirin
+ * kendi testi var; burada sorulan şey kapının kanıt defterini OKUYUP okumadığı.
+ */
+async function kanitla(customerId: string, phone: string): Promise<void> {
+  await phones.recordProof(customerId, phone);
 }
 
 afterAll(async () => {
@@ -52,28 +66,32 @@ afterAll(async () => {
 });
 
 describe('numaradan konuşmaya (15.2)', () => {
-  it('eşleşmeyen numara TASLAK müşteri açar ve konuşma ona bağlanır', async () => {
+  it('KANITSIZ numara müşteri AÇMAZ — sohbet kimliksiz açılır, mesaj yine de yazılabilir (04.10)', async () => {
+    // Eski davranış taslak müşteri açmaktı ve o gün doğruydu: kanıt numaranın kendisi sayılıyordu.
+    // Bugün operatörün klavyesinden geçen dize kanıt değil — kimlik uydurmaktansa boş bırakılıyor.
     const telefon = numara();
     const sonuc = await ac({ phone: telefon, name: 'Yeni WhatsApp müşterisi' });
 
     expect(sonuc.status).toBe('ok');
     if (sonuc.status !== 'ok') return;
 
-    expect(sonuc.customerCreated).toBe(true);
-    expect(sonuc.customer.isDraft).toBe(true);
-    expect(sonuc.customer.phone).toBe(telefon);
-    expect(sonuc.conversation.customerId).toBe(sonuc.customer.id);
+    expect(sonuc.customer).toBeNull();
+    expect(sonuc.customerCreated).toBe(false);
+    expect(sonuc.conversation.customerId).toBeNull();
+    // Sohbetin kendisi tam: başlığı ve anahtarı var, yalnız sahibi iddia edilmiyor.
     expect(sonuc.conversation.externalRef).toBe(telefon);
+    expect(sonuc.conversation.profileName).toBe('Yeni WhatsApp müşterisi');
   });
 
-  it('BİLİNEN numara mevcut müşteriye bağlanır — taslak açılmaz', async () => {
+  it('KANIT DEFTERİNDEKİ numara mevcut müşteriye bağlanır', async () => {
     const telefon = numara();
-    const mevcut = await profiles.insert({ name: `Kayıtlı müşteri ${stamp}`, phone: telefon });
+    const mevcut = await profiles.insert({ name: `Kayıtlı müşteri ${stamp}` });
     profileIds.push(mevcut.id);
+    await kanitla(mevcut.id, telefon);
 
     const sonuc = await ac({ phone: telefon, name: 'WhatsApp profil adı' });
     expect(sonuc.status).toBe('ok');
-    if (sonuc.status !== 'ok') return;
+    if (sonuc.status !== 'ok' || !sonuc.customer) return;
 
     expect(sonuc.customerCreated).toBe(false);
     expect(sonuc.customer.id).toBe(mevcut.id);
@@ -81,7 +99,21 @@ describe('numaradan konuşmaya (15.2)', () => {
     expect(sonuc.customer.name).toBe(mevcut.name);
   });
 
-  it('aynı numara ikinci kez ne müşteri ne konuşma açar', async () => {
+  it('İLETİŞİM numarası eşleşme SAYILMAZ — önceden sahiplenme kapısı budur (04.10)', async () => {
+    // Açığın tam senaryosu: biri başkasının numarasını hesap kartına yazıyor. O kayıt artık kimlik
+    // kurmuyor; gerçek sahibi yazdığında sohbeti yabancı hesaba düşmüyor.
+    const telefon = numara();
+    const sahiplenen = await profiles.insert({ name: `Numarayı yazan ${stamp}`, phone: telefon });
+    profileIds.push(sahiplenen.id);
+
+    const sonuc = await ac({ phone: telefon });
+    expect(sonuc.status).toBe('ok');
+    if (sonuc.status !== 'ok') return;
+    expect(sonuc.customer).toBeNull();
+    expect(sonuc.conversation.customerId).toBeNull();
+  });
+
+  it('aynı numara ikinci kez konuşma açmaz', async () => {
     const telefon = numara();
     const ilk = await ac({ phone: telefon });
     const ikinci = await ac({ phone: telefon });
@@ -90,7 +122,6 @@ describe('numaradan konuşmaya (15.2)', () => {
     expect(ikinci.status).toBe('ok');
     if (ilk.status !== 'ok' || ikinci.status !== 'ok') return;
 
-    expect(ikinci.customer.id).toBe(ilk.customer.id);
     expect(ikinci.conversation.id).toBe(ilk.conversation.id);
     expect(ikinci.customerCreated).toBe(false);
   });
@@ -111,16 +142,17 @@ describe('numaradan konuşmaya (15.2)', () => {
     expect(ikinci.conversation.id).toBe(ilk.conversation.id);
   });
 
-  it('çevrilemeyen numara konuşma AÇMAZ — kimlik anahtarı yoksa sohbet kimseye bağlanamaz', async () => {
+  it('çevrilemeyen numara konuşma AÇMAZ — `external_ref` üretilemeyen sohbet açılamaz', async () => {
     expect(await ac({ phone: 'merhaba' })).toEqual({ status: 'invalid_phone' });
   });
 
   it('telefon ve e-posta AYRI müşterilere çıkarsa konuşma açılmaz — çakışmayı insan çözer', async () => {
     const telefon = numara();
     const eposta = `wa-cakisma-${stamp}@ornek.fr`;
-    const telefonlu = await profiles.insert({ name: `Telefonlu ${stamp}`, phone: telefon });
+    const telefonlu = await profiles.insert({ name: `Telefonlu ${stamp}` });
     const epostali = await profiles.insert({ name: `E-postalı ${stamp}`, email: eposta });
     profileIds.push(telefonlu.id, epostali.id);
+    await kanitla(telefonlu.id, telefon);
 
     const sonuc = await ac({ phone: telefon, email: eposta });
     expect(sonuc.status).toBe('conflict');

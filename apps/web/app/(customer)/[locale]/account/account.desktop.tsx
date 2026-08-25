@@ -25,7 +25,7 @@ export function AccountDesktop({ t, locale, account }: AccountViewProps) {
 
       <div className="grid grid-cols-2 items-start gap-5">
         <div className="flex flex-col gap-5">
-          <ProfileCard t={t} locale={locale} profile={account.profile} compact={compact} />
+          <ProfileCard t={t} locale={locale} profile={account.profile} whatsappNumbers={account.whatsappNumbers} compact={compact} />
 
           {account.company && (
             <Card compact={compact}>

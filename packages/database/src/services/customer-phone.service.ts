@@ -1,0 +1,78 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  CustomerPhoneInsertSchema,
+  CustomerPhoneSchema,
+  CustomerPhoneUpdateSchema,
+  type CustomerPhone,
+  type CustomerPhoneInsert,
+  type CustomerPhoneUpdate,
+} from '@lezzet/types';
+import { BaseDbService } from '../core/base.service';
+
+/**
+ * **Kimlik anahtarı: doğrulanmış telefon numarası** (04.10, migration 0001). DOMAIN §10.
+ *
+ * Servis karar vermez, satır getirir/yazar (STACK §4). Buradaki hiçbir metot *"bu numara kanıtlandı
+ * mı"* sorusunu sormaz — sorunun cevabı çağıranın bağlamındadır ve tek meşru cevabı bugün imzası
+ * doğrulanmış Meta webhook'udur (15.7). Servisi "kanıtı da ben ölçeyim" diye genişletmek, kanıtın
+ * ne olduğu kararını veri katmanına gömerdi.
+ *
+ * **Numara normalize GELİR.** Burada normalize edilmez ve edilmemeli: `conversation.external_ref`
+ * ile aynı dizeyi taşımak zorunda (0039) ve o dize çağıranda üretiliyor. İki yerde normalize etmek,
+ * bir gün iki farklı sonuç üretmenin en kısa yoludur.
+ */
+export class CustomerPhoneService extends BaseDbService<CustomerPhone, CustomerPhoneInsert, CustomerPhoneUpdate> {
+  constructor(supabase: SupabaseClient) {
+    super(supabase, 'customer_phone', CustomerPhoneSchema, CustomerPhoneInsertSchema, CustomerPhoneUpdateSchema, false);
+  }
+
+  /**
+   * **Kimlik çözümünün tek okuması:** bu numara bugün kimde.
+   *
+   * Emekli satırlar süzgecin DIŞINDA ve bu ayrım tasarımın kendisidir: devredilmiş bir hattın eski
+   * kaydı durur (geçmiş silinmez) ama gelen mesajı artık o kişiye bağlamaz. Süzgeç unutulsaydı yeni
+   * sahibin mesajı önceki kişinin hesabına düşerdi — düzeltmeye çalıştığımız arızanın ta kendisi.
+   */
+  findActive(phone: string): Promise<CustomerPhone | null> {
+    return this.getOneBy({ phone }, { isNullFields: ['retired_at'] });
+  }
+
+  /** Bir müşterinin AKTİF numaraları — müşteri kartı, sohbet paneli, çapa akışı. */
+  listActiveByCustomer(customerId: string): Promise<CustomerPhone[]> {
+    return this.getAll({ customerId }, { isNullFields: ['retired_at'], orderBy: 'verifiedAt', orderDirection: 'asc' });
+  }
+
+  /**
+   * **Kanıtı kaydet** — numara bu müşteride, ve şu an görüldü.
+   *
+   * Üç hâl döner ve üçü de çağıran için AYRI birer olaydır:
+   *   `bound`  — bağ yeni kuruldu (numaranın ilk kanıtı)
+   *   `seen`   — bağ zaten vardı, `lastSeenAt` tazelendi (sessizlik tetiğinin ölçütü)
+   *   `taken`  — numara BAŞKA bir müşteride aktif. Yazım yapılmaz.
+   *
+   * **`taken` bir hata değil, bir GERÇEKTİR** ve sessizce ezilemez: numaranın kimde olduğu bir
+   * kanıta dayanıyor ve ikinci bir kanıt onu geçersiz kılmaz — hattın devredildiğini söyleyen şey
+   * mesajın gelmesi değil, ESKİ bağın kopmasıdır (sessizlik ya da taşıyıcının `failed` beyanı).
+   * Çağıran bu hâlde konuşmayı kimliksiz açar; çözüm insana ya da çapaya kalır.
+   *
+   * **"Önce sorgula, yoksa yaz" yarışına karşı:** iki webhook mesajı aynı anda düşerse ikisi de
+   * "yok" görebilir; ikincinin yazımı kısmi unique indekse takılır (`23505`) ve satır yeniden
+   * okunur. Karar veritabanında kalır (`insertIgnoringConflict` künyesiyle aynı gerekçe).
+   */
+  async recordProof(customerId: string, phone: string): Promise<{ status: 'bound' | 'seen' | 'taken'; row: CustomerPhone | null }> {
+    const mevcut = await this.findActive(phone);
+    if (mevcut) {
+      if (mevcut.customerId !== customerId) return { status: 'taken', row: mevcut };
+      return { status: 'seen', row: await this.update({ id: mevcut.id, lastSeenAt: new Date().toISOString() }) };
+    }
+
+    const yeni = await this.insertIgnoringConflict({ customerId, phone });
+    if (yeni) return { status: 'bound', row: yeni };
+
+    // Yarışı kaybettik: satırı kazanan yazdı. Kim yazdıysa gerçeği o taşıyor — yeniden oku.
+    const kazanan = await this.findActive(phone);
+    if (!kazanan) return { status: 'taken', row: null }; // aynı anda emekliye ayrılmış: çağıran tekrar dener
+    if (kazanan.customerId !== customerId) return { status: 'taken', row: kazanan };
+    return { status: 'seen', row: kazanan };
+  }
+}

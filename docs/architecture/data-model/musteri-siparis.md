@@ -26,7 +26,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | vat_number_valid | boolean \| null | VIES doğrulaması (açık API) |
 | name | string | |
 | email | string \| null | web kimliği |
-| phone | string \| null | **kimlik anahtarı** — WhatsApp bununla tanır; normalize (E.164), bkz. `CHANNELS.md §3` |
+| phone | string \| null | **İLETİŞİM numarası** — kimlik anahtarı DEĞİL (04.10, 0049) ve benzersiz de değil. Formdan gelir (hesap kartı, misafir checkout), doğrulanmamıştır, kimlik çözümünde HİÇ okunmaz. Normalize (E.164). Bir tur bu kolon ikisini birden yapıyordu ve açık oradaydı — gerekçesi `CustomerPhone` bölümünde |
 | preferred_language | enum(`tr`,`fr`,`de`) | |
 | country | enum(`FR`,`DE`) | |
 | credit_enabled | boolean | vadeli (hesaba) sipariş yetkisi — **varsayılan false**, admin elle açar (bkz. `DOMAIN.md §7`) |
@@ -40,6 +40,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | marketing_consent | jsonb | kanal bazlı pazarlama izni: `{email: {granted, at, source}, whatsapp: {...}}` — GDPR kanıtı (ne zaman, nereden). **OPT-IN:** anahtar yoksa izin yoktur. Kampanya gönderimi henüz yok; alan bugün tercih sayfasının ve operasyon süzgecinin kaynağı (bkz. `DOMAIN.md §11`) |
 | notification_consent | jsonb | bildirim **TÜRÜ** bazlı ret: `{feedbackInvite: {granted, at, source}}`. `marketing_consent`ten AYRI çünkü orası KANAL sözlüğüdür ve `MarketingChannelEnum` onun anahtarlarından türer — tür oraya konsaydı operasyon süzgecinde bir kanal olarak belirirdi. **OPT-OUT:** anahtar yoksa gönderilir (kampanya açık rıza ister, teslim edilmiş siparişin değerlendirme daveti mevcut müşteri ilişkisine dayanır — gereken şey rıza değil kolay reddedilebilirlik). Değerlendirme daveti işi bunu **okuyor** (22.08) |
 | notification_token | text \| null (unique) | bildirim tercihleri sayfasının **oturumsuz** anahtarı — her mailin altbilgisindeki bağ bunu taşır (`?t=`). İstek üzerine doğar (`referral_code` deseni), süresi yok (jeton yıllar önceki bir mailde durabilir), yetkisi dar (yalnız tercihler; ad/adres/sipariş görünmez). `referral_code` ile karıştırılmaz: o paylaşılmak için var, bu paylaşılmamak için. `anonymize_customer` düşürür |
+| wa_link_token · wa_link_expires_at | text \| null · timestamptz \| null | **WhatsApp bağlama jetonu** (04.10) — "WhatsApp'ımı bağla" düğmesinin ürettiği, önceden yazılı mesajın içindeki dize. `null` = bekleyen bağlama yok. **Neden gerekiyor:** gelen mesaj numaranın zilyetliğini kanıtlar ama hangi HESAP olduğunu söylemez; web'den kaydolmuş müşteri kendiliğinden yazdığında yeni bir taslak doğardı. **`referral_code` ile karıştırılmaz:** o paylaşılmak için var ve ömürsüz, bu paylaşılmamak için var ve 15 dakikalık. **`notification_token` ile de karıştırılmaz:** onun süresi bilerek YOK (yıllar önceki bir mailin altbilgisinde yaşar, yalnız tercihleri açar); bu bir KİMLİK anahtarı yazdırıyor. Tekil kısmi indeks ZORUNLU — webhook satırı jetonla buluyor. Çift kısıtı: jeton ile süresi birlikte var ya da birlikte yok |
 | acquisition_source | jsonb \| null | edinim kaynağı — **ilk siparişte bir kez** yazılır (UTM snapshot + order_source), sonra değişmez; "kaynağa göre tekrar sipariş" raporunun temeli |
 | referred_by | uuid \| null | bu müşteriyi getiren müşteri (arkadaşını getir) — kayıtta bir kez |
 | b2b_approved | boolean \| null | B2B self-servis kayıt onayı — onaylanana dek toptan fiyat görünmez (bkz. `DOMAIN.md §10`); B2C'de null. **Tek başına "bekliyor" DEMEZ:** reddedilen kayıt da `false` taşır (09.11: ret silmez) — hâl için `b2b_pending` / `b2bStatusOf` okunur |
@@ -55,9 +56,31 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 
 **Birleştirmenin ASIL işi kimlik anahtarlarını taşımaktır** (09.10). Kopya kayıt, iki kanalın iki farklı anahtarla gelmesinden doğar — taslakta telefon, web kaydında e-posta. Hedef ikisini de almazsa aynı kişi yarın üçüncü kez taslak açar ve birleştirme hiçbir şey çözmemiş olur. Boş alan dolar, DOLU alan ezilmez (`enrich` ile aynı kural). **Sıra zorunlu:** önce kaynağın anahtarları boşalır, sonra hedefe yazılır — tersi kısmi unique indekse çarpar ve işlevin kendisi çalışmaz (ölçüldü, 08.08). Tekillik çakışmalarında (sepet · aynı ürün değerlendirmesi · aynı gün ziyaret puanı) **hedefinki kalır** ve düşenler onay dökümünde SAYILIR: yalnız kazanımı gösteren bir onay ekranı kaybı gizler.
 
-**Kimlik anahtarları tekildir (04.5):** `phone`, `email` (küçük harfe indirgenmiş) ve `auth_user_id` kısmi unique indekslidir — aynı anahtar iki profile yazılamaz, boş anahtarlar çakışmaz. Kopya kayıt birleştirme gerektiren bir **istisnadır**; veritabanı engellemezse sessizce çoğalır. Çözüm kararı (bağlan / oluştur / çakışma) motorundur (`domain-core/identity`), kapısı `apps/web/lib/identity` — servis yalnız aday getirir.
+**Kimlik anahtarları tekildir (04.5):** `email` (küçük harfe indirgenmiş) ve `auth_user_id` kısmi unique indekslidir — aynı anahtar iki profile yazılamaz, boş anahtarlar çakışmaz. Telefon **bu tablodan çıktı** (04.10): tekilliği `customer_phone`da ve orada doğru soruyu soruyor. Kopya kayıt birleştirme gerektiren bir **istisnadır**; veritabanı engellemezse sessizce çoğalır. Çözüm kararı (bağlan / oluştur / çakışma) motorundur (`domain-core/identity`), kapısı `apps/web/lib/identity` — servis yalnız aday getirir.
 
 **Trigger ile kapının iş bölümü:** `0002` trigger'ı `auth.users` insert'inde çalışır ve **yalnız e-postayla** eşleştirir — Google OAuth'ta sunucu kodumuz devrede olmayabilir, bağlama atomik olmalıdır. Sadece telefonu olan WhatsApp taslağı girişte eşleşmez, ikinci profil doğar; kapı bunu `conflict` olarak görünür kılar, birleştirme (04.7) çözer.
+
+## CustomerPhone (kimlik anahtarı: doğrulanmış numara — 0049 · 04.10)
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| customer_id | uuid → user_profiles | `cascade`: kanıt satırının kimlikten bağımsız bir hayatı yok. `restrict` olsaydı her teardown/silme onu ayrıca temizlemek zorunda kalır ve biri unuturdu — sonuç, aktif tekillik indeksinde sonsuza dek tutulan bir numara |
+| phone | text | E.164 normalize; `conversation.external_ref` ile **aynı dizeyi** taşır (0039) — biri normalize edilip öteki edilmezse aynı kişi iki anahtarla iki kez görünür |
+| verified_at | timestamptz | Zilyetliğin kanıtlandığı an. **not null ve bu kasıtlı:** satır varsa doğrulanmıştır. Nullable bıraksaydık tablo yine iki işi birden yapar, kolon modelinin hatasını bir tablo ötede tekrarlardı |
+| last_seen_at | timestamptz | Bu numaradan gelen SON mesajın anı — sessizlik tetiğinin (~3 ay, `DOMAIN.md §10`) ölçütü. `verified_at`ten ayrı durur çünkü iki ayrı soru: biri "ne zaman kanıtlandı" (değişmez), öteki "hâlâ canlı mı" |
+| retired_at | timestamptz \| null | Bağ koptu (hat devri · taşıyıcının `failed` beyanı). **Satır SİLİNMEZ.** Bugün YAZICISI YOK ve kolon yapısaldır — aşağıdaki kısmi indeks onsuz kurulamaz; tetikler 04.10'un devamında yazılıyor, gerekçe kolonu o gün yazıcısıyla birlikte doğar |
+
+**Neden ayrı tablo — `user_profiles.phone` iki işi birden yapıyordu.** Kolon hem formdan yazılan iletişim numarasıydı hem bul-veya-oluştur'un okuduğu kimlik anahtarı (`user_profiles_phone_key`). Doğrulanmamış bir dize kimlik kurabildiği için **önceden sahiplenme** mümkündü: birinin hesap kartına yazdığı numara, gerçek sahibi WhatsApp'tan yazdığında onun konuşmasını, siparişini ve puanını yabancı hesapta gösteriyordu. En sık hâli kötü niyet değil kaza — eşin numarası, tuşlama hatası, aile telefonu. Ayrım şudur: **numara VERİLİR, zilyetlik KANITLANIR.**
+
+**Satırı kim yazar:** bugün yalnız imzalı Meta webhook'u (15.7). Kod tarafında bayrak `phoneProven` ve tek `true` geçen yer orası; operatörün klavyesinden geçen numara, hesap kartı ve checkout formu kanıt değildir. `DOMAIN.md §10`'un *"bu güvenin dayanağı webhook imzasıdır"* cümlesi bu tablonun temelidir — imzasız bir uçta herkes "şu numaradan geliyorum" diyebilirdi.
+
+**Motorun kuralı OKUMAYA değil YAZMAYA bakar:** kanıtsız numara var olan bir kayda **bağlanabilir** (eşleşme bu defterden gelir ve her satırı zaten kanıttır), ama kendi başına yeni kimlik **açamaz**. Açığın tamamı "açma" tarafındaydı.
+
+**`customer_phone_active_key` (`phone` where `retired_at is null`):** bir numara en çok bir aktif hesaba çıkar — ürün tercihi değil zorunluluk, yoksa gelen mesaj tek müşteriye çözülemez. Süzgeç sayesinde devredilmiş hat **çözülebilir bir vaka** hâline gelir: eski satır emekliye ayrılır, geçmiş durur, numara yeni sahibine açılır. Kolon modelinde aynı şey ancak eski bağı `null`'layarak, yani "bu numara bir zamanlar kimdeydi" bilgisini silerek yapılabiliyordu.
+
+**Ters yön (bir hesap kaç numara) BİLEREK AÇIK:** kullanıcı kararı ertelendi (`DOMAIN.md §10`); meşru çok-numara halleri var (kişisel + işyeri, FR + TR hattı — diasporada yaygın). Yapı iki seçeneği de taşıyor, tavan gerekirse `Setting` ile konur.
+
+**Birleştirmede satırlar hedefe TAŞINIR** (`merge_customers`, 0040) — emekli olanlar dahil: kaynağın geçmişi hedefte devam etmeli, kapanmış kayıtta kalmamalı. Çakışma olamaz, tekillik numarada.
 
 ## Address (adres)
 

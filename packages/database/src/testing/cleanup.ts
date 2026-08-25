@@ -78,7 +78,13 @@ export interface PurgeTargets {
    */
   orderIds?: string[];
   /**
-   * Kimlik profilleri (`user_profiles`) — adresleri CASCADE ile gider. Ayrı müşteri tablosu yok.
+   * Kimlik profilleri (`user_profiles`) — adresleri ve **kanıtlanmış numaraları** (`customer_phone`,
+   * 04.10) CASCADE ile gider. Ayrı müşteri tablosu yok.
+   *
+   * `customer_phone` bilerek `cascade` ile bağlandı, `restrict` ile değil: kanıt satırı kimliğin
+   * kendisine ait bir künyedir, ondan bağımsız bir hayatı yoktur. `restrict` olsaydı her teardown
+   * onu ayrıca silmek zorunda kalırdı ve biri mutlaka unuturdu — sonuç, aktif tekillik indeksinde
+   * sonsuza dek tutulan bir test numarası olurdu.
    *
    * **Profilin SİPARİŞLERİ ve KURYE GÜN KAPANIŞLARI da burada gider** (14.08): ikisi de profili
    * `restrict` ile tutuyor, yani bildirilmezse profil silinemez. Testler bunu yıllarca kendi

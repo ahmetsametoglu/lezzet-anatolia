@@ -18,12 +18,17 @@ import { findOrCreateCustomer } from '../identity/find-or-create';
  * taşımaz). Messenger/IG konuşmalarını webhook açıyor (15.7) — kimlik çözümü hiç denenmez,
  * konuşma kimliksiz doğar (bağlama 15.16).
  *
- * ── BEKLEYEN(04.10): NUMARA DOĞRULANMIŞ DEĞİL ───────────────────────────────
- * Bu kapı `user_profiles.phone`'u kimlik anahtarı olarak okuyor, ama o kolon bugün serbest metinden
- * yazılabiliyor (hesap kartı + misafir checkout). Yani kayıtlı olmayan bir numara ÖNCEDEN
- * sahiplenilebilir ve gerçek sahibi WhatsApp'tan yazınca konuşması yabancı bir hesaba bağlanır.
- * Açığı bu dosya AÇMIYOR (yazma tarafında ve zaten açık), ama sonucunu buraya taşıyor. Kapatan iş
- * kimlik modülünde: `04.10` — e-posta çapası + güvenlik kodu.
+ * ── OPERATÖRÜN YAZDIĞI NUMARA KANIT DEĞİLDİR (04.10) ────────────────────────
+ * Bu kapı bir tur numarayı kimlik anahtarı olarak okuyordu ve o okuma bir açıktı: kolon serbest
+ * metinden yazılabildiği için kayıtlı olmayan bir numara ÖNCEDEN sahiplenilebiliyor, gerçek sahibi
+ * WhatsApp'tan yazınca konuşması yabancı bir hesaba bağlanıyordu.
+ *
+ * Artık kimlik anahtarı **kanıtlanmış** numaradır (`customer_phone`) ve kanıtın tek kaynağı imzalı
+ * webhook'tur. Operatörün telefonundan okuyup klavyeye geçirdiği numara kanıt değildir — bu yüzden
+ * bu kapı `phoneProven` BAYRAĞINI GEÇİRMEZ. Sonucu doğrudan görünür: elle işlenen sohbet, o numara
+ * daha önce WhatsApp'tan yazmadıysa **kimliksiz** açılır. Kaybedilen bir şey yok — kazanılan şey,
+ * sohbetin yanlış hesaba bağlanmamış olması; bağı kurmanın yolu ya müşterinin kendi mesajı ya
+ * operatörün kanıtlı bağlama eylemidir (15.19).
  */
 
 /**
@@ -33,8 +38,13 @@ import { findOrCreateCustomer } from '../identity/find-or-create';
  * dönüşünden çıkarım yapıyor. Ekran yazıldığında adı gerekirse o gün ihraç edilir.
  */
 type OpenConversationResult =
-  | { status: 'ok'; conversation: Conversation; customer: UserProfile; customerCreated: boolean }
-  /** Numara E.164'e çevrilemedi — kimlik anahtarı yok, konuşma bir kişiye bağlanamaz. */
+  /**
+   * Konuşma açıldı. **`customer` `null` OLABİLİR** (04.10): operatörün yazdığı numara kanıt
+   * olmadığı için, o numara daha önce WhatsApp'tan yazmamışsa kimlik kurulmaz. Bu bir hata değil
+   * doğru cevaptır — sohbet açılır ve mesaj yazılır, yalnız kime ait olduğunu iddia etmeyiz.
+   */
+  | { status: 'ok'; conversation: Conversation; customer: UserProfile | null; customerCreated: boolean }
+  /** Numara E.164'e çevrilemedi — `external_ref` üretilemez, konuşma açılamaz. */
   | { status: 'invalid_phone' }
   /**
    * Telefon ve e-posta AYRI müşterilere çıktı — sessizce seçim yapılmaz (DOMAIN §10). Konuşma
@@ -54,17 +64,18 @@ interface OpenConversationInput {
 /**
  * **Numaradan konuşmaya** (15.2): müşteriyi bul-veya-oluştur, konuşmayı aç-ya-da-bul.
  *
- * Eşleşmeyen numara `is_draft` taslak müşteri açar (DOMAIN §10): WhatsApp'tan yazan yabancıdan
- * e-posta istemek, WhatsApp'ı seçme sebebimizi bozar — sürtünme kaybedecek bir şeyin olduğu ilk
- * anda konur, "merhaba" diyen kişide değil.
+ * Kimlik ancak İKİNCİ anahtardan kurulabilir: operatörün yazdığı numara kanıt olmadığı için
+ * (`phoneProven` geçilmiyor), bağ ya e-posta verilmişse ya da o numara daha önce WhatsApp'tan
+ * yazıp kanıt satırını doğurmuşsa kurulur. İkisi de yoksa **konuşma kimliksiz açılır** — taslak
+ * müşteri de AÇILMAZ. Bir tur burada taslak açılıyordu ve doğruydu (kanıt o zaman numaranın
+ * kendisiydi); bugün açmak, klavyeden geçmiş bir dizeye kimlik uydurmak olurdu.
  *
- * **Aynı numara ikinci kez taslak AÇMAZ** ve bunu iki ayrı tekillik birden garantiliyor:
- * `user_profiles_phone_key` (kişi) ve `conversation_external_ref_key` (sohbet). Uygulama katmanı
- * unutsa bile veri katmanı ikinciyi reddeder.
+ * **Aynı numara ikinci kez sohbet AÇMAZ:** `conversation_external_ref_key` (0039) ikinciyi
+ * reddeder — uygulama katmanı unutsa bile veri katmanı tutar.
  */
 export async function openWhatsappConversation(input: OpenConversationInput): Promise<OpenConversationResult> {
-  // Normalize BURADA, çünkü `external_ref` ile `user_profiles.phone` AYNI dizeyi taşımak zorunda:
-  // biri normalize edilip öteki edilmezse aynı kişi iki anahtarla iki kez görünür.
+  // Normalize BURADA, çünkü `external_ref` ile kanıt satırının numarası AYNI dizeyi taşımak
+  // zorunda: biri normalize edilip öteki edilmezse aynı kişi iki anahtarla iki kez görünür.
   const phone = normalizePhone(input.phone);
   if (!phone) return { status: 'invalid_phone' };
 
@@ -77,14 +88,15 @@ export async function openWhatsappConversation(input: OpenConversationInput): Pr
   });
 
   if (identity.status === 'conflict') return { status: 'conflict', profileIds: identity.profileIds };
-  // `insufficient` buraya düşemez (telefon zaten normalize edildi), ama tip daraltması için gerekli;
-  // sessizce `ok` dönmek, kimliksiz bir konuşmayı kimlikli sanmak olurdu.
-  if (identity.status === 'insufficient') return { status: 'invalid_phone' };
+  // `insufficient` = elde kanıtlı anahtar yok (numara kanıtsız, e-posta verilmemiş). Konuşma yine
+  // açılır: mesaj kaybolmamalı (15.7'nin kuralı burada da geçerli), yalnız kime ait olduğunu
+  // iddia etmeyiz.
+  const customer = identity.status === 'insufficient' ? null : identity.profile;
 
   const conversation = await new ConversationService(serviceDb()).open({
     source: 'whatsapp',
     externalRef: phone,
-    customerId: identity.profile.id,
+    customerId: customer?.id ?? null,
     // Profil adı konuşmaya da yazılır: müşteri kaydı silinse/bağlanmasa da sohbetin bir başlığı olur.
     profileName: input.name?.trim() || null,
   });
@@ -92,7 +104,7 @@ export async function openWhatsappConversation(input: OpenConversationInput): Pr
   return {
     status: 'ok',
     conversation,
-    customer: identity.profile,
+    customer,
     customerCreated: identity.status === 'created',
   };
 }

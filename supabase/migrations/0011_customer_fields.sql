@@ -115,6 +115,35 @@ alter table public.user_profiles
   add column anonymized_at timestamptz,
   add column referral_code text,
 
+  /*
+    ── WHATSAPP BAĞLAMA JETONU (04.10) ────────────────────────────────────────────────────────────
+    Müşteri "WhatsApp'ımı bağla"ya bastığında üretilen, ÖNCEDEN YAZILI mesajın içine konan dize.
+    Müşteri o mesajı bize gönderir; webhook iki şeyi birden görür — **kimden geldiği** (numaranın
+    zilyetlik kanıtı) ve **jeton** (hangi hesap). Kanıt kurulur, jeton düşer.
+
+    **Neden gerekiyor:** numaranın kanıtlanması "bu hat bu kişide" der, "bu kişi ŞU HESAP" demez.
+    Müşteri kendiliğinden yazdığında elimizde hesabı gösteren hiçbir şey yoktur ve yeni bir taslak
+    doğar. Jeton tam olarak o boşluğu kapatır — ve bunu **bize hiç mesaj GÖNDERMEDEN** yapar:
+    bağlantıya basan müşteridir, 24 saatlik ücretsiz pencereyi de o açar (DOMAIN §11).
+
+    **JETON, 6 HANELİ GÜVENLİK KODU DEĞİLDİR — ikisini karıştırmak tehlikelidir.** DOMAIN §10 der ki
+    *"koddan kimliğe gidilmez, kimlikten koda gidilir"*; o kural 6 hanelik ÇAPA kodu içindir ve orada
+    doğrudur, çünkü kod kısa (10⁶) ve gücünü numaraya bağlı olmaktan alır. Burada sorgunun yönü
+    zorunlu olarak jetondan kimliğedir (mesaj gelene kadar kimin yazdığını bilmiyoruz), o yüzden
+    güvenlik **entropiden** gelmek zorunda: `readableCode(12)` ≈ 60 bit, artı kısa ömür, artı tek
+    kullanım. Tahminle bir jeton bulmak, bulanın numarasını başkasının hesabına yazdırırdı — yani
+    hesap devralma; kısa kod burada asla yeterli olmazdı.
+
+    **Süre ZORUNLU** (`notification_token`un tersi, ve ayrım bilinçli): o jeton yıllar önceki bir
+    mailin altbilgisinde yaşayabilmeli ve yalnız tercihleri açıyor. Bu jeton bir KİMLİK anahtarı
+    yazdırıyor; ömrü ekranla WhatsApp arasındaki birkaç dakikadan uzun olamaz. Kullanılınca ikisi de
+    `null`'lanır — tek kullanım kuralı veride değil kodda ama izi burada.
+  */
+  add column wa_link_token text,
+  add column wa_link_expires_at timestamptz,
+  -- Jeton ile süresi ayrışamaz: süresiz bir jeton sonsuza dek geçerli olurdu, jetonsuz bir süre
+  -- hiçbir şey ifade etmezdi. İkisi birlikte var ya da birlikte yok.
+  add constraint user_profiles_wa_link_pair check ((wa_link_token is null) = (wa_link_expires_at is null)),
 
   -- Gerekçesiz ret YAZILAMAZ. Ret e-postayla bildiriliyor ve "neden" sorusunun cevabı yoksa soru
   -- desteğe düşer; damgayı atıp gerekçeyi atlamak, verilmiş kararı kayıt dışı bırakır.
@@ -217,6 +246,13 @@ create trigger user_profiles_reject_reason_translation_trg
 create unique index user_profiles_referral_code_key
   on public.user_profiles (referral_code)
   where referral_code is not null;
+
+-- Bağlama jetonu TEKİLDİR (kısmi indeks, davet koduyla aynı gerekçe) — ve burada tekillik bir
+-- kolaylık değil ZORUNLULUK: webhook satırı jetonla buluyor, iki kayıt aynı jetonu taşısaydı gelen
+-- mesaj hangisine bağlanacağını söyleyemezdi. Çakışmada üretici yeniden dener.
+create unique index user_profiles_wa_link_token_key
+  on public.user_profiles (wa_link_token)
+  where wa_link_token is not null;
 
 -- Çeviri kuyruğu: gerekçesi yazılmış ama henüz çevrilmemiş retler.
 create index user_profiles_reject_reason_untranslated_idx

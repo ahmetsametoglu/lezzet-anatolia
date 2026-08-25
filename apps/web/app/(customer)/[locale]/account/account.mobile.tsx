@@ -53,7 +53,7 @@ export function AccountMobile({ t, locale, account }: AccountViewProps) {
         </Link>
       </Card>
 
-      <ProfileCard t={t} locale={locale} profile={account.profile} compact={compact} />
+      <ProfileCard t={t} locale={locale} profile={account.profile} whatsappNumbers={account.whatsappNumbers} compact={compact} />
 
       {account.company && (
         <Card compact={compact}>

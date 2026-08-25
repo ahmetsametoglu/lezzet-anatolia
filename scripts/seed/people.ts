@@ -1,4 +1,4 @@
-import { UserProfileService } from '@lezzet/database';
+import { CustomerPhoneService, UserProfileService } from '@lezzet/database';
 import { an, type Db, type Kisiler } from './shared';
 import type { Depolar } from './warehouse';
 
@@ -17,17 +17,25 @@ const DRAFT_CUSTOMERS = [
 
 export async function seedDraftCustomers(db: Db): Promise<void> {
   const profiles = new UserProfileService(db);
+  const phones = new CustomerPhoneService(db);
   console.log('▸ TASLAK MÜŞTERİ seed');
   let created = 0;
   for (const c of DRAFT_CUSTOMERS) {
     // Kimlik ÇÖZÜMÜ (bağlan / oluştur / çakışma) motorun işidir — servis yalnız aday getirir. Seed'in
     // ona ihtiyacı yok: telefonlar zaten E.164 yazılı ve tek beklenti "varsa dokunma, yoksa taslak aç"
     // (idempotent). Bu yüzden doğrudan arama + ekleme; iş kuralı burada hesaplanmıyor (STACK §4).
-    if (await profiles.findByPhone(c.phone)) {
+    //
+    // Varlık ölçütü KANIT DEFTERİ (04.10): bu kayıtlar WhatsApp'tan gelmiş sayılıyor, yani kimlikleri
+    // `customer_phone` satırında yaşıyor. `user_profiles.phone` artık tekil değil — oradan aramak
+    // "zaten var mı" sorusuna güvenilir cevap vermezdi.
+    if (await phones.findActive(c.phone)) {
       console.log(`  · ${c.name} (zaten var)`);
       continue;
     }
-    await profiles.insert({ ...c, type: 'type' in c ? c.type : 'individual', roles: ['customer'], isDraft: true });
+    const profile = await profiles.insert({ ...c, type: 'type' in c ? c.type : 'individual', roles: ['customer'], isDraft: true });
+    // Taslağın geldiği yer WhatsApp: numarası kanıtlıdır, yoksa seed'in kurduğu sohbetler kimliksiz
+    // kalır ve gelen kutusu ekranı hiç bağlı sohbet göstermezdi.
+    await phones.recordProof(profile.id, c.phone);
     created += 1;
     console.log(`  ✓ ${c.name} (taslak açıldı)`);
   }

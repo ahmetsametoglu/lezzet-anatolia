@@ -131,12 +131,16 @@ describe('başvurunun yazılması', () => {
   });
 
   /**
-   * Telefon TEKİL bir kimlik anahtarı: numarası WhatsApp'tan açılmış eski bir taslakta duran
-   * müşteri başvurduğunda yazma kısıt ihlaliyle patlıyordu ve ekranda "beklenmeyen hata"
-   * görünüyordu — düzeltilebilir bir şey yokken. Numara sessizce atlanır, başvuru geçer; iki
-   * kaydın aynı kişi olabileceğini onay kartının mükerrer sinyali zaten söylüyor.
+   * ── ATLAMA KURALI KALKTI (04.10) ────────────────────────────────────────────────────────────
+   * Bu test bir tur şunu çiviliyordu: numarası başka bir kayıtta duran aday başvurabilsin, ama
+   * numarası **sessizce atlansın**. Gerekçesi `user_profiles_phone_key` tekil indeksiydi — yazmayı
+   * denemek kısıt ihlaliyle patlıyor, ekranda düzeltilemeyecek bir "beklenmeyen hata" çıkıyordu.
+   *
+   * O indeks kaldırıldı (kolon iletişim numarası oldu, kimlik anahtarı `customer_phone`a taşındı),
+   * yani çakışma diye bir şey kalmadı — ve atlamanın bedeli görünür oldu: **aday numarasını
+   * yazıyordu, biz düşürüyorduk** ve onay kartında iletişim numarası boş görünüyordu.
    */
-  it('numarası BAŞKA bir kayıtta duran aday yine de başvurabilir', async () => {
+  it('numarası başka bir kayıtta da duruyor olsa aday numarasını YAZDIRIR (04.10)', async () => {
     const form = application();
     await newCustomer({ phone: form.phone });
 
@@ -144,8 +148,8 @@ describe('başvurunun yazılması', () => {
     const after = await submitB2bApplication(applicant, form, FACTS);
 
     expect(after.companyInfo?.siret).toBe('90749664000026');
-    expect(after.phone).toBeNull();
-    // Numara KAYBOLMUYOR: adres satırında duruyor, kurye kapıda arayacak birini bulur.
+    expect(after.phone).toBe(form.phone.replace(/\s/g, ''));
+    // Adres satırında da duruyor: kurye kapıda arayacak birini bulur.
     expect((await addresses.listByCustomer(applicant))[0]?.phone).toBe(form.phone);
   });
 

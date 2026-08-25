@@ -200,6 +200,22 @@ export const UserProfileSchema = z.object({
   referralCode: z.string().nullable(),
 
   /**
+   * **WhatsApp bağlama jetonu** (04.10) — "WhatsApp'ımı bağla" düğmesinin ürettiği, önceden yazılı
+   * mesajın içindeki dize. `null` = bekleyen bağlama yok.
+   *
+   * Numaranın kanıtlanması *"bu hat bu kişide"* der, *"bu kişi ŞU HESAP"* demez. Müşteri
+   * kendiliğinden yazdığında elimizde hesabı gösteren hiçbir şey olmadığı için yeni bir taslak
+   * doğar; jeton o boşluğu kapatır.
+   *
+   * **`referralCode` ile aynı şey DEĞİL:** o paylaşılmak için var ve ömürsüz; bu paylaşılmamak
+   * için var ve dakikalarla ölçülü. Karışırsa ortaya, herkesin gördüğü bir dizeyle kimlik anahtarı
+   * yazdıran bir kapı çıkar.
+   */
+  waLinkToken: z.string().nullable(),
+  /** Jetonun son geçerlilik anı. Jetonla birlikte var ya da birlikte yok (DB kısıtı). */
+  waLinkExpiresAt: z.string().datetime({ offset: true }).nullable(),
+
+  /**
    * GDPR silme damgası (05.08) — `null` = hiç silinmedi.
    *
    * Satır SİLİNMEZ, kimliği boşaltılır: `order` bu profile `restrict` ile bağlı ve sipariş/fatura

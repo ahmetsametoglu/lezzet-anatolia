@@ -120,7 +120,11 @@ v1.get('/me', async (c) => {
  * Profil güncellemesi (21.14c) — ad + telefon; gövde `MeUpdateSchema` (e-posta/dil bilerek dışarıda,
  * gerekçe şemada). KURAL BURADA DEĞİL: ad/telefon kuralları ve numara-çakışması okuma biçimi
  * `@lezzet/application.updateCustomerProfile`ta (web hesap formuyla TEK kural). Adlı retler
- * görünür döner: 400 (`name_required`/`phone_invalid`) · 409 (`phone_taken`).
+ * görünür döner: 400 (`name_required`/`phone_invalid`).
+ *
+ * **409 `phone_taken` KALKTI (04.10 · web şeridi):** dayandığı tekil indeks yok artık — bu kolon
+ * iletişim numarası oldu, kimlik anahtarı `customer_phone`a taşındı. Aynı numarayı iki müşterinin
+ * taşıması meşru; uç artık numarayı reddetmiyor. Ekrandaki cümlesi ölü metin (`docs/talep`).
  */
 v1.patch('/me', async (c) => {
   const body = MeUpdateSchema.safeParse(await c.req.json().catch(() => null));
@@ -132,7 +136,7 @@ v1.patch('/me', async (c) => {
   if (!profile) return fail(c, 'profile_not_found', 404);
 
   const outcome = await updateCustomerProfile(db, { profileId: profile.id, ...body.data });
-  if (outcome.status !== 'ok') return fail(c, outcome.status, outcome.status === 'phone_taken' ? 409 : 400);
+  if (outcome.status !== 'ok') return fail(c, outcome.status, 400);
   return ok(c, MeSchema.parse(outcome.profile));
 });
 

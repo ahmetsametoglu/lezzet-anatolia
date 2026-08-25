@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { recordInboundMessage, recordOutboundMessage, ringConversationsBell } from '@lezzet/application';
+import { consumeWhatsappLink, recordInboundMessage, recordOutboundMessage, ringConversationsBell } from '@lezzet/application';
 import { ConversationService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
@@ -189,14 +189,37 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
           // '+' önekiyle normalize edilir, external_ref sözleşmesi '+33…' (0039).
           const phone = normalizePhone(`+${message.from}`) ?? `+${message.from}`;
           const profileName = contacts.find((c) => c.wa_id === message.from)?.profile?.name?.trim() || null;
+          const { kind, text, payload } = waBodyOf(message);
+
+          // ── ÖNCE BAĞLAMA JETONU, SONRA KİMLİK ÇÖZÜMÜ (04.10) ─────────────────────────────────
+          // Sıra ZORUNLU: kimlik çözümü önce koşarsa tanımadığı numara için yeni bir taslak açar ve
+          // jeton o taslağa bakar — bağlamak istediğimiz hesap ortada kalırdı.
+          //
+          // Mesajların ezici çoğunluğunda jeton yoktur (`none`) ve bu kapı tek bir düzenli ifadeye
+          // mal olur; DB'ye ancak jeton görüldüğünde gidilir.
+          let customerId: string | null = null;
+          const bag = await consumeWhatsappLink(serviceDb(), phone, text);
+          if (bag.status === 'linked' || bag.status === 'merged') customerId = bag.customerId;
+          if (bag.status === 'conflict') {
+            // Numara BAŞKA bir gerçek kayıtta aktif — sessizce çevrilmez (DOMAIN §10: kalanı bir
+            // kapıya değil insana düşür). Konuşma aşağıda numaranın bugünkü sahibine bağlanır.
+            logger.warn({ conversationRef: phone.slice(-4), customerId: bag.customerId, holderId: bag.holderId }, 'meta webhook: bağlama jetonu geldi ama numara başka kayıtta aktif');
+          }
 
           // Kimliği çözmeyi DENE; çözülemezse kimliksiz aç — mesaj her durumda yazılır.
-          let customerId: string | null = null;
-          const identity = await findOrCreateCustomer({ phone, name: profileName, asDraft: true });
-          if (identity.status === 'conflict') {
-            logger.warn({ conversationRef: phone.slice(-4), profileIds: identity.profileIds }, 'meta webhook: kimlik çakışması — konuşma kimliksiz açıldı');
-          } else if (identity.status !== 'insufficient') {
-            customerId = identity.profile.id;
+          //
+          // **`phoneProven` yalnız BURADA true** (04.10, DOMAIN §10) ve dayanağı yukarıdaki imza
+          // doğrulamasıdır (`verifyMetaSignature`): bu gövdeyi Meta imzaladı, yani "şu numaradan
+          // mesaj geldi" bir beyan değil kanıttır — o hattı bugün elinde tutan biri bize yazdı.
+          // İmza olmasaydı bu bayrak da olamazdı; herkes uca istek atıp istediği numarayı iddia
+          // ederdi (DOMAIN §10: *"bu güvenin dayanağı webhook imzasıdır"*).
+          if (!customerId) {
+            const identity = await findOrCreateCustomer({ phone, phoneProven: true, name: profileName, asDraft: true });
+            if (identity.status === 'conflict') {
+              logger.warn({ conversationRef: phone.slice(-4), profileIds: identity.profileIds }, 'meta webhook: kimlik çakışması — konuşma kimliksiz açıldı');
+            } else if (identity.status !== 'insufficient') {
+              customerId = identity.profile.id;
+            }
           }
 
           const conversation = await new ConversationService(serviceDb()).open({
@@ -207,7 +230,6 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
             profileName,
           });
 
-          const { kind, text, payload } = waBodyOf(message);
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             text,

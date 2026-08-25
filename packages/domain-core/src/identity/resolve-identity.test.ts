@@ -23,7 +23,7 @@ describe('kimlik çözümü (03.9)', () => {
   });
 
   it('eşleşme yoksa yeni kayıt açılır; telefon normalize edilmiş döner', () => {
-    const r = resolveIdentity({ phone: '+33 6 12 34 56 78' });
+    const r = resolveIdentity({ phone: '+33 6 12 34 56 78', phoneProven: true });
     expect(r).toEqual({ action: 'create', normalizedPhone: '+33612345678', email: null });
   });
 
@@ -53,7 +53,48 @@ describe('kimlik çözümü (03.9)', () => {
   });
 
   it('Alman numarası varsayılan ülkeyle çözülür', () => {
-    const r = resolveIdentity({ phone: '0170 1234567', defaultCountry: 'DE' });
+    const r = resolveIdentity({ phone: '0170 1234567', phoneProven: true, defaultCountry: 'DE' });
     expect(r).toMatchObject({ action: 'create', normalizedPhone: '+491701234567' });
+  });
+});
+
+/**
+ * 04.10 — kanıt kuralı. Ayrım OKUMADA değil YAZMADA: bağlanmak serbest, kimlik AÇMAK kanıt ister.
+ * Kapatılan açık, hesap kartına ya da checkout formuna yazılan bir numaranın kimlik kurabilmesiydi.
+ */
+describe('kanıtsız numara kimlik DOĞURAMAZ (04.10)', () => {
+  it('kanıtsız numara tek anahtarken yeni kayıt AÇILMAZ — önceden sahiplenme kapısı burada kapanır', () => {
+    // Eski davranış `create` idi ve açığın kendisiydi: numarayı yazan onu kilitliyordu.
+    expect(resolveIdentity({ phone: '0612345678' })).toEqual({ action: 'insufficient' });
+    // Bayrağın YOKLUĞU ile açıkça `false` verilmesi aynı yere düşmeli — varsayılan güvenli taraf.
+    expect(resolveIdentity({ phone: '0612345678', phoneProven: false })).toEqual({ action: 'insufficient' });
+  });
+
+  it('KANITLI numara açar — imzalı webhooktan gelen mesaj zilyetliği gösterir', () => {
+    expect(resolveIdentity({ phone: '0612345678', phoneProven: true })).toMatchObject({ action: 'create' });
+  });
+
+  it('kanıtsız numara MEVCUT kayda bağlanabilir — eşleşme defterden geliyor, yeni iddia değil', () => {
+    // Operatörün klavyesinden geçen numara kanıt değil; ama `byPhone` kanıt defterinden (04.10'un
+    // `customer_phone` tablosu) geliyor ve o satırın kendisi zaten bir kanıt. Bağı kurmayı
+    // reddetmek, elimizdeki doğru cevabı kullanmamak olurdu.
+    expect(resolveIdentity({ phone: '0612345678' }, { byPhone: 'c1' })).toMatchObject({ action: 'attach', customerId: 'c1' });
+  });
+
+  it('kanıtsız numara + e-posta: kayıt E-POSTAYLA açılır ve numara yine de normalize döner', () => {
+    // İkinci anahtar kanıtlı olduğu için kayıt açılabilir; numara İLETİŞİM bilgisi olarak taşınır.
+    expect(resolveIdentity({ phone: '0612345678', email: 'a@b.fr' })).toEqual({
+      action: 'create',
+      normalizedPhone: '+33612345678',
+      email: 'a@b.fr',
+    });
+  });
+
+  it('çakışma kararı kanıttan ÖNCE gelir — iki kayda çıkan anahtarlar sessizce birleştirilmez', () => {
+    // Kanıtsız olmak çakışmayı "yok" saymaz: iki ayrı kayda düşen anahtarlar hâlâ insana gider.
+    expect(resolveIdentity({ phone: '0612345678', email: 'a@b.fr' }, { byPhone: 'c1', byEmail: 'c2' })).toEqual({
+      action: 'conflict',
+      customerIds: ['c1', 'c2'],
+    });
   });
 });
