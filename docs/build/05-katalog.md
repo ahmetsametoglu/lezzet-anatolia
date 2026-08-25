@@ -315,7 +315,13 @@ Kataloğun veri ve iş katmanı: `Category / Collection / Product / ProductVaria
     - **Servis KARAR VERMİYOR** (`STACK §4`): malzeme toplamı, tükenen kalem, persona fiyatı ve depo süzgeci serviste YOK. O birleştirme uygulama katmanının işi ve vitrin okumalarıyla **aynı depo süzgecinden** geçmek zorunda — süzgeci unutulan sorgu tek depolu veride doğru cevap verir ve sistem sessizce olmayan malı satar (`DOMAIN §17`). 08.24'ün künyesine yazılmalı.
     - **Slug operatörden İSTENMİYOR, addan türetiliyor** (emsal paket/ürün): ad üç dilde, slug tek; hangi dilden türeyeceği bir karardır ve yedek zinciri (TR→FR→DE) onu tek yerde veriyor. Sormak, aynı tarifin iki kez farklı slug'la açılmasına kapı açardı.
   - **`purgeTestData` AYNI TURDA büyüdü** (denetim eki 07.08, CLAUDE §4b): silme sırası tek yerde durur (`cleanup.ts`) ve `recipe_item → recipe` oraya girdi — `recipe_item.variant_id` FK'si `restrict` seçilirse tarif bağlı varyantın ürünü purge'den silinemez ve MEVCUT ürün-fikstürlü testlerin teardown'u kırılır; bu yüzden `recipe_item` temizliği ürün temizliğinden ÖNCE sıralanmalı. Veri modeli alanları `data-model/katalog.md`'ye aynı commit'te (`docs:check` migration↔Zod↔doküman karşılaştırır).
-- [~] (05.17) **Kategoriye kısa tanıtım metni — `tagline` (çok dilli, boş bırakılabilir)** *(denetim kaydı 08.08, kullanıcı onayı; kaynak: koleksiyon bütünlük notu + mobil vitrin tasarımı)* · `touches: supabase/migrations/0004_catalog_category_collection.sql, packages/types/src/entities/category.schema.ts, packages/database/src/services/category.service.ts, docs/architecture/data-model/katalog.md`
+- [x] (05.17) **Kategoriye kısa tanıtım metni — `tagline` (çok dilli, boş bırakılabilir)** *(denetim kaydı 08.08, kullanıcı onayı; kaynak: koleksiyon bütünlük notu + mobil vitrin tasarımı)* · `touches: supabase/migrations/0004_catalog_category_collection.sql, packages/types/src/entities/category.schema.ts, packages/database/src/services/category.service.ts, docs/architecture/data-model/katalog.md`
+  - **Durum (25.08 — KAPANDI; açık kalan ÜÇÜNCÜ ayağı mobil şerit kapatmış.)** Satır `[~]` idi ve
+    gerekçesi yazılıydı: *"`apps/mobile-api`'de `tagline` hiç geçmiyor"*. Bugün ölçüldü, artık geçiyor —
+    `apps/mobile-api/src/lib/home.ts` bant altyazısını `c.tagline`dan kuruyor, sözleşme alanı
+    `packages/types/src/contracts/home-api.schema.ts`te künyeli, ve mobil kendi testinde çiviliyor
+    (`home.test.ts`: *"bant altyazısının `tagline`dan (05.17) geldiği burada ölçülür"*). Web tarafında
+    zaten yapılacak bir şey kalmamıştı.
   - *Bitecek:* operatör kategoriye üç dilde bir cümlelik altyazı girebiliyor; boş bırakılan kategori altyazısız çizilir (yedek metin uydurulmaz); mobil-api katalog sözleşmesi alanı taşıyabiliyor
   - **Neden (ölçüldü 08.08):** mobil vitrinin kategori bandı başlık + altyazı gösterir; altyazı bugün TASARIMIN İÇİNDE SABİT sözlük (`Mobil - Musteri v3.dc.html:1766`, `CSUB`) — veriden gelmiyor, yeni kategori altyazısız doğar ve metin operatörün elinde değil. `CategorySchema` yalnız ad + slug + görsel taşır (`description` bile yok; `Collection`'da var). Web kategori kartında kullanımı tasarım kararına açık; alan boş bırakılabilir olduğu için ekran kararını beklemez.
   - **Durum (08.08 · arka uç) — ARKA UÇ TAMAM.** `category.tagline` (LocalizedText, nullable) 0004'te yerinde; şema + insert + `CategoryService`. `db:reset` sıfırdan koştu, 41 migration temiz.
@@ -330,7 +336,26 @@ Kataloğun veri ve iş katmanı: `Category / Collection / Product / ProductVaria
     - **`is_incomplete`in `tagline`a bakmaması KABUL** (arka ucun uyarısına cevap): alt yazı bir pazarlama metni, yasal beyan değil. İkisini aynı sayaca koymak *"24 beyan eksik"* rakamını yalancı yapardı — `05.15`'te aile etiketi için verilen kararın aynısı. Kolonun ölçütü genişletilmesin.
     - **Satır `[~]`, çünkü bitti-kriterinin üçüncü ayağı açık:** *"mobil-api katalog sözleşmesi alanı taşıyabiliyor"* — `apps/mobile-api`'de `tagline` hiç geçmiyor (ölçüldü). O ayak mobil şeridin işi (koordinasyon defteri 08.08); web tarafında yapılacak bir şey kalmadı.
   - Migration 0004 YERİNDE düzenlenir (greenfield); `db:refresh` penceresi kullanıcının — 05.18 ile AYNI turda. Mobil-api sözleşme ucu mobil şeridin işi (koordinasyon defteri 08.08). Operasyon form alanı 05.18'in ekran turuyla birlikte.
-- [ ] (05.18) **Vitrin kürasyonu — "ana sayfada göster" işareti (kategori · koleksiyon · paket)** *(kullanıcı kararı 08.08: seçim KATALOG ekranından, ayrı vitrin ekranı yok)* · `touches: supabase/migrations/0004_catalog_category_collection.sql, supabase/migrations/0005_catalog_product.sql, packages/types/src/entities/{category,collection,bundle}.schema.ts, packages/database/src/services/{category,collection,bundle}.service.ts, docs/architecture/data-model/katalog.md`
+- [x] (05.18) **Vitrin kürasyonu — "ana sayfada göster" işareti (kategori · koleksiyon · paket)** *(kullanıcı kararı 08.08: seçim KATALOG ekranından, ayrı vitrin ekranı yok)* · `touches: supabase/migrations/0004_catalog_category_collection.sql, supabase/migrations/0005_catalog_product.sql, packages/types/src/entities/{category,collection,bundle}.schema.ts, packages/database/src/services/{category,collection,bundle}.service.ts, docs/architecture/data-model/katalog.md`
+  - **Durum (25.08 — KAPANDI; dört ayağın dördü de ÖLÇÜLDÜ.)** Satır `[ ]` duruyordu ama 08.08'in iki
+    turu (arka uç + operasyon) ve 05.19'un beslemesi bitti-kriterini çoktan karşılamış; denetim bugün
+    uçtan uca ölçüp kapattı. Kanıt tek tek:
+    - **Veri (yerel DB):** kategori 4 işaretli/7 · koleksiyon 4/5 · paket 2/5 — üçü de aktif.
+    - **Ana sayfa YALNIZ işaretlileri çiziyor** (tarayıcı, 3001): kategori bandında dört işaretli
+      (`Boulangerie · Desserts · Gâteaux · Produits de volaille`) VAR, işaretsiz üçü (`Glaces` ·
+      `Cuisine anatolienne` · pasif `Table du Ramadan`) YOK. Koleksiyon bandı 4 işaretliden güne göre
+      **2** çiziyor (`rotateDaily`), pasif olan hiç girmiyor. Paket bandı 2 kart.
+      *Yanlış alarm not düşülsün:* ilk sayımda koleksiyon 3 göründü — üçüncüsü aslında `Coffret Table
+      de fête` adlı PAKET'ti. Sayfa metninde ad araması yapan ölçüm böyle yanılır; doğrusu bandın
+      bağlantılarını saymaktı (`/catalogue?collection=…` → tam 2).
+    - **Ekran sınırları tasarımın ızgarasıyla birebir:** `HOME_CATEGORY_LIMIT=6` · `HOME_COLLECTION_LIMIT=2`
+      · `HOME_PACKAGE_LIMIT=2`. Görev satırının 08.08'de yazdığı *"paketleri seçimsiz ilk 3'le keser
+      (tasarım 2)"* kusuru da kapanmış.
+    - **Operasyon anahtarı üç sekmede de çalışıyor** (tarayıcı): Kategoriler 7 anahtar · *"Vitrinde 4/6"* ·
+      Koleksiyonlar 5 anahtar · *"Vitrinde 4 işaretli — ana sayfada sıradan ilk 2 görünür"* (aşım uyarısı) ·
+      Paketler 5 anahtar · *"Vitrinde 2/2"*. Sayaçlar veriyle birebir.
+    - **Kural yerinde:** işaret SEÇİM, sıra `sort_order`'dan; hiç işaret yoksa sıradan ilk N (yedek yol
+      `pickFeatured` içinde ve yalnız web onu istiyor — mobil bilerek çağırmıyor).
   - *Bitecek:* üç varlıkta `is_featured` (vitrinde) alanı; servisler yazıp okuyor; ana sayfa okuma kapısı yalnız işaretlileri istiyor; operasyon katalog sekmelerinde işaret anahtarı var
   - **Neden (ölçüldü 08.08):** yeni ana sayfa tasarımı kategoride 6, pakette 2, koleksiyonda 2 slot çizer; kod bugün kategorileri SINIRSIZ okur (`getHomeData` → `CategoryService.list({activeOnly:true})`, seed'de 10 kategori → ızgara bozulur), paketleri seçimsiz ilk 3'le keser (`HOME_PACKAGE_LIMIT=3`, tasarım 2), koleksiyon bölümü hiç yok.
   - **Kural:** işaret SEÇİMDİR, sıra mevcut `sort_order`'dan gelir — ikinci bir vitrin sırası tutulmaz, iki sıra bir gün çelişir. Ekran sınırları parametrik sabit (kategori 6 · paket 2 · koleksiyon 2 — tasarımın ızgarası); işaretli sayı sınırı aşarsa ekran sırayla keser, hiç işaret yoksa bugünkü davranış (sıradan ilk N) sürer — vitrin boş kalmaz, tasarım bozulmaz. Ana sayfa uygulaması (08.26); koleksiyon slotlarının günlük rotasyonu orada.
