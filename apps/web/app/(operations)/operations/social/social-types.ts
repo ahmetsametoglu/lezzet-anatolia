@@ -9,6 +9,7 @@ import {
   type TicketHandler,
   type TicketSender,
 } from '@lezzet/types';
+import type { AnchorState } from '@lezzet/domain-core';
 import type { CustomerContextData } from '@/lib/customer/context';
 import type { SocialChannelKey, SocialFilterKey, SocialUrlState } from './social-url';
 
@@ -108,6 +109,14 @@ export interface ConversationDetailView {
    * kendisi karar vermez: müşteri sohbette ne dediyse o yazılır (15.12).
    */
   optIn: boolean;
+  /**
+   * **Kimlik çapası** (04.10 · DOMAIN §10) — "bu numaranın GEÇMİŞİ kimin" sorusunun cevabı.
+   *
+   * Kimliksiz sohbette `null`: çapa bir MÜŞTERİNİN künyesidir, konuşmanın değil. Operatör panelde
+   * ne yapabileceğini buradan görüyor — çapası olana ikinci çapa kurulmaz, bekleyen bir soru varsa
+   * yenisi sorulmaz.
+   */
+  anchor: { state: AnchorState; hasPendingEmail: boolean } | null;
 }
 
 export interface SocialData {
@@ -196,6 +205,21 @@ export const ConversationOptInSchema = z.object({
 });
 
 /**
+ * **E-posta çapası başlatma** (04.10 · DOMAIN §10) — kod bu adrese gider, cevap WhatsApp'tan döner.
+ *
+ * Adres burada SATIRA yazılıyor, sonra gelen mesajdan okunmuyor: doğrulama numaradan kimliğe,
+ * kimlikten BEKLEYEN ADRESE gidiyor. Adres cevabın içinden okunsaydı, kodu ele geçiren biri onu
+ * istediği adresle eşleştirebilirdi (`koddan kimliğe gidilmez` kuralının ikinci yüzü).
+ *
+ * Biçim doğrulaması BURADA DEĞİL, pakette (`startEmailAnchor`): aynı kural mobil/ajan kapısı
+ * doğduğunda ikinci kez yazılmasın. Buradaki `min(3)` yalnız boş gönderimi eliyor.
+ */
+export const AnchorEmailSchema = z.object({
+  conversationId: z.string().uuid(),
+  email: z.string().min(3),
+});
+
+/**
  * Konuşmadan talep açma — `ticket.conversation_id` FK'sini gerçekten dolduran TEK yol.
  *
  * Bağ 15.1'de kuruldu ama bugüne kadar hiçbir yazma yolu onu doldurmuyordu; Talepler ekranı da
@@ -239,4 +263,8 @@ export interface SocialViewProps {
   onLinkCustomer: () => void;
   /** Sohbette verilen izni KAYDET (15.12) — operatör karar vermez, müşterinin dediğini yazar. */
   onOptIn: (granted: boolean) => void;
+  /** Kimlik çapası (04.10) — kod adrese gider, cevap sohbetten döner. */
+  onStartEmailAnchor: (email: string) => void;
+  /** E-posta istemeyene 6 haneli kod ver; kod sohbete YAZILIR, ekrana değil. */
+  onIssueSecurityCode: () => void;
 }

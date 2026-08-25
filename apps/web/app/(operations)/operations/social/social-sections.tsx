@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import type { AnchorState } from '@lezzet/domain-core';
 import type { TicketHandler } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
 import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handling';
@@ -411,6 +412,79 @@ function OptInRecorder({
   );
 }
 
+/**
+ * **Kimlik çapası** (04.10 · DOMAIN §10) — "bu numaranın GEÇMİŞİ kimin" sorusunun kapısı.
+ *
+ * Numaranın kanıtlanması "bu hat BUGÜN bu kişide" der. Devredilmiş hattın yeni sahibi hattı da
+ * gelen kodu da meşru olarak alır — çözen tek şey, ŞÜPHE DOĞMADAN ÖNCE kurulmuş bir sırdır. Bu
+ * yüzden blok "dönüşte" değil, müşteri hâlâ tanıdığımız hâldeyken kullanılır.
+ *
+ * **"Kod doğrula" kutusu YOK ve olmayacak** (DOMAIN §10, açık yasak): doğrulama yalnız müşterinin
+ * KENDİ numarasından gelen mesajla olur. Telefonda arayan müşteriyi bu ekrandan doğrulamanın yolu
+ * yoktur; operatör ondan WhatsApp'tan yazmasını ister ya da birleştirmeye gider (04.7).
+ *
+ * Çapası olana ikinci çapa sunulmaz: iki anahtar bir arada bulunmaz ve ikincisi yalnız silinecek
+ * bir sır üretirdi.
+ */
+function AnchorPane({
+  anchor,
+  busy,
+  onStartEmail,
+  onIssueCode,
+}: {
+  anchor: { state: AnchorState; hasPendingEmail: boolean } | null;
+  busy: boolean;
+  onStartEmail: (email: string) => void;
+  onIssueCode: () => void;
+}) {
+  const [email, setEmail] = useState('');
+  if (!anchor) return null;
+
+  if (anchor.state !== 'none') {
+    return (
+      <div className="flex flex-col items-start gap-1">
+        <SectionLabel>Kimlik çapası</SectionLabel>
+        <span className="font-ops-body text-ops-sm font-semibold text-ops-olive">
+          {anchor.state === 'email' ? 'E-posta bağlı ✓' : 'Güvenlik kodu verildi ✓'}
+        </span>
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+          Dönüşünde kimliği bu çapadan teyit edilir. İkinci bir çapa kurulmaz.
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-start gap-1.5">
+      <SectionLabel>Kimlik çapası</SectionLabel>
+      {anchor.hasPendingEmail ? (
+        <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+          Kod gönderildi — müşteri onu <strong>bu sohbete</strong> yazınca bağlanacak. Cevap gelmezse yeniden gönderebilirsiniz.
+        </span>
+      ) : null}
+      <div className="flex w-full gap-1.5">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="musteri@ornek.fr"
+          className="min-w-0 flex-1 rounded-ops border border-ops-line bg-ops-surface px-2 py-1 font-ops-body text-ops-sm text-ops-ink placeholder:text-ops-muted"
+        />
+        <Button size="sm" disabled={busy || email.trim().length < 3} onClick={() => onStartEmail(email.trim())}>
+          {anchor.hasPendingEmail ? 'Yeniden gönder' : 'Kod gönder'}
+        </Button>
+      </div>
+      <Button variant="secondary" size="sm" disabled={busy} onClick={onIssueCode}>
+        E-posta istemiyor — 6 haneli kod ver
+      </Button>
+      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
+        Kod E-POSTAYA gider, cevap buradan döner — kanıtın gücü iki kanalın birden doğrulanmasından
+        gelir. Kod telefonda okunmaz, bu ekrandan doğrulanmaz.
+      </span>
+    </div>
+  );
+}
+
 interface SocialContextPaneProps {
   context: CustomerContextData | null;
   /** Konuşmanın dış anahtarı — WhatsApp'ta okunaklı telefon, Messenger/IG'de opak PSID/IGSID. */
@@ -425,9 +499,27 @@ interface SocialContextPaneProps {
   optIn: boolean;
   busy: boolean;
   onOptIn: (granted: boolean) => void;
+  /** Kimlik çapası (04.10) — kimliksiz sohbette `null`, blok hiç çizilmez. */
+  anchor: { state: AnchorState; hasPendingEmail: boolean } | null;
+  onStartEmailAnchor: (email: string) => void;
+  onIssueSecurityCode: () => void;
 }
 
-export function SocialContextPane({ context, externalRef, source, profileName, tickets, onNewTicket, onLinkCustomer, optIn, busy, onOptIn }: SocialContextPaneProps) {
+export function SocialContextPane({
+  context,
+  externalRef,
+  source,
+  profileName,
+  tickets,
+  onNewTicket,
+  onLinkCustomer,
+  optIn,
+  anchor,
+  onStartEmailAnchor,
+  onIssueSecurityCode,
+  busy,
+  onOptIn,
+}: SocialContextPaneProps) {
   const whatsapp = source === 'whatsapp';
   // Müşteri araması kanala göre ANLAMLI anahtarla yapılır: WhatsApp'ta numara kimlik anahtarıdır ve
   // kesin eşleşir; Messenger/IG'de elimizde yalnız görünen ad var — arama kesinlik değil ADAY verir.
@@ -498,6 +590,7 @@ export function SocialContextPane({ context, externalRef, source, profileName, t
           (izin şeması bugün email+whatsapp taşıyor) ve fark aşağıda operatöre SÖYLENİR — yoksa
           Messenger'da izni işaretleyen operatör onun kampanya listesine girdiğini sanırdı. */}
       <OptInRecorder source={source} optIn={optIn} busy={busy} onOptIn={onOptIn} />
+      <AnchorPane anchor={anchor} busy={busy} onStartEmail={onStartEmailAnchor} onIssueCode={onIssueSecurityCode} />
 
       <div className="flex flex-col gap-1.5">
         <SectionLabel>Bağlı talepler</SectionLabel>

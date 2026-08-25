@@ -1,4 +1,4 @@
-import { conversationsChannelName } from '@lezzet/application';
+import { anchorOf, conversationsChannelName } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TICKET_STATUS_LABELS } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
@@ -73,6 +73,8 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
   // Müşteri bağlamı ORTAK okumadan (`lib/customer/context`) — Talepler ekranı da aynısını okuyor.
   // Konuşmanın kendi okumasına gömülseydi iki ekran aynı soruyu iki biçimde cevaplardı.
   const context = detail?.conversation.customerId ? await readCustomerContext(detail.conversation.customerId) : null;
+  // Çapa MÜŞTERİNİN künyesi, konuşmanın değil (04.10) — kimliksiz sohbette sorulacak bir şey yok.
+  const anchor = detail?.conversation.customerId ? await anchorOf(serviceDb(), detail.conversation.customerId) : null;
 
   // Tek an, tüm pencereler: kuyruk rozetleri ve sohbet altlığı aynı `now`'a göre hesaplanır — ikisi
   // ayrı okunsaydı aynı konuşma listede "2 dk" derken altlıkta "kapalı" diyebilirdi.
@@ -95,6 +97,7 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
     handledBy: detail.conversation.handledBy,
     aiDraft: detail.conversation.aiDraftReply,
     optIn: detail.conversation.optIn,
+    anchor,
   };
 
   const data: SocialData = {

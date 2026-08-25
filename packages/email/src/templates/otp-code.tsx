@@ -6,6 +6,20 @@ import type { Locale } from '@lezzet/i18n';
 // otomatik runtime'da (Next/SWC) bu import kullanılmaz. `void` → noUnusedLocals susar.
 void React;
 
+/**
+ * Kodun NE İÇİN olduğu — kabuk aynı, CÜMLE farklı (04.10).
+ *
+ * `login`  → tarayıcıda açık duran `/connexion` sayfasına girilir.
+ * `anchor` → **WhatsApp sohbetine geri yazılır** (kimlik çapası): kod e-postaya gider, cevap
+ *            başka bir kanaldan döner ve kanıtın gücü tam olarak o çaprazlıktan gelir (DOMAIN §10).
+ *
+ * Ayrı bir şablon dosyası AÇILMADI (CLAUDE §1): görsel kabuk birebir aynı, ayrışan yalnız metin.
+ * İki dosya olsaydı marka rengi bir gün birinde değişir, ötekinde kalırdı. Ama tek metinle de
+ * yapılamazdı: giriş maili *"tarayıcınızda açık sayfaya girin"* diyor ve çapa kodunda bu cümle
+ * DÜPEDÜZ YANLIŞ — müşteri açık bir sayfa aramaya başlardı.
+ */
+export type OtpCodePurpose = 'login' | 'anchor';
+
 export interface OtpCodeEmailProps {
   /** 6-haneli plain kod (örn. "482917"). DB'de yalnız SHA-256 hash saklanır. */
   code: string;
@@ -13,6 +27,8 @@ export interface OtpCodeEmailProps {
   brandName: string;
   /** Kod geçerlilik süresi (dakika). */
   ttlMinutes?: number;
+  /** Kodun ne için olduğu — varsayılan giriş (mevcut tek çağıranın davranışı korunur). */
+  purpose?: OtpCodePurpose;
 }
 
 type Copy = { heading: string; intro: string; expires: (m: number) => string; ignore: string };
@@ -38,22 +54,56 @@ const COPY: Record<Locale, Copy> = {
   },
 };
 
-/** Giriş kodu maili için konu başlığı (seçili dilde). */
-export function otpSubject(locale: Locale, brandName: string): string {
-  const map: Record<Locale, string> = {
-    tr: `${brandName} giriş kodunuz`,
-    fr: `Votre code ${brandName}`,
-    de: `Ihr ${brandName} Code`,
+/**
+ * Kimlik ÇAPASI metni (04.10) — kod WhatsApp sohbetine geri yazılır.
+ *
+ * Cümle bunu açıkça söylüyor, çünkü müşteri bu maili **başka bir uygulamadayken** alıyor ve nereye
+ * yazacağını bilmesi gerekiyor. "Tarayıcınızda açık sayfa" cümlesi burada onu boş yere aratırdı.
+ */
+const ANCHOR_COPY: Record<Locale, Copy> = {
+  tr: {
+    heading: 'Hesap bağlama kodunuz',
+    intro: 'Bu kodu bize WhatsApp’tan yazın — hesabınız numaranıza bağlansın:',
+    expires: (m) => `seçmek için dokunun · ${m} dakika geçerli`,
+    ignore: 'Bu isteği siz yapmadıysanız bu mesajı yok sayabilirsiniz — hiçbir bağlama yapılmaz.',
+  },
+  fr: {
+    heading: 'Votre code de rattachement',
+    intro: 'Renvoyez-nous ce code sur WhatsApp pour rattacher votre compte à votre numéro :',
+    expires: (m) => `appuyez pour sélectionner · expire dans ${m} minutes`,
+    ignore: 'Si vous n’êtes pas à l’origine de cette demande, ignorez ce message — aucun rattachement ne sera effectué.',
+  },
+  de: {
+    heading: 'Ihr Verknüpfungscode',
+    intro: 'Senden Sie uns diesen Code auf WhatsApp zurück, um Ihr Konto mit Ihrer Nummer zu verknüpfen:',
+    expires: (m) => `zum Auswählen tippen · gültig für ${m} Minuten`,
+    ignore: 'Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese Nachricht — es wird nichts verknüpft.',
+  },
+};
+
+/** Kod maili için konu başlığı (seçili dilde, amaca göre). */
+export function otpSubject(locale: Locale, brandName: string, purpose: OtpCodePurpose = 'login'): string {
+  const map: Record<OtpCodePurpose, Record<Locale, string>> = {
+    login: {
+      tr: `${brandName} giriş kodunuz`,
+      fr: `Votre code ${brandName}`,
+      de: `Ihr ${brandName} Code`,
+    },
+    anchor: {
+      tr: `${brandName} hesap bağlama kodunuz`,
+      fr: `Votre code de rattachement ${brandName}`,
+      de: `Ihr ${brandName} Verknüpfungscode`,
+    },
   };
-  return map[locale];
+  return map[purpose][locale];
 }
 
 /**
  * Passwordless giriş için 6-haneli kod maili. Link İÇERMEZ (anti-phishing): kod,
  * kullanıcının zaten açık olduğu /connexion sayfasına elle girilir. İçerik seçili dilde.
  */
-export function OtpCodeEmail({ code, locale, brandName, ttlMinutes = 15 }: OtpCodeEmailProps) {
-  const t = COPY[locale];
+export function OtpCodeEmail({ code, locale, brandName, ttlMinutes = 15, purpose = 'login' }: OtpCodeEmailProps) {
+  const t = purpose === 'anchor' ? ANCHOR_COPY[locale] : COPY[locale];
 
   return (
     <Html lang={locale}>

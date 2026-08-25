@@ -45,6 +45,8 @@ export function SocialDesktop({
   onNewTicket,
   onLinkCustomer,
   onOptIn,
+  onStartEmailAnchor,
+  onIssueSecurityCode,
 }: SocialViewProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
@@ -116,6 +118,9 @@ export function SocialDesktop({
               onNewTicket={onNewTicket}
               onLinkCustomer={onLinkCustomer}
               optIn={data.detail.optIn}
+              anchor={data.detail.anchor}
+              onStartEmailAnchor={onStartEmailAnchor}
+              onIssueSecurityCode={onIssueSecurityCode}
               busy={busy}
               onOptIn={onOptIn}
             />

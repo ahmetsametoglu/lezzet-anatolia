@@ -15,6 +15,8 @@ export * from './order/reference-no';
 export * from './order/decisions';
 export * from './order/box-completion';
 export * from './order/customer-status';
+// Kimlik ÇAPASI (04.10) — "bu numaranın geçmişi kimin" sorusu; anahtar çözümünden ayrı bir karar.
+export * from './identity/anchor';
 export * from './identity/b2b-application';
 export * from './identity/b2b-approval';
 export * from './identity/resolve-identity';

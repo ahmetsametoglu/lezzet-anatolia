@@ -6,7 +6,9 @@ import type { TicketHandler } from '@lezzet/types';
 import {
   consumeConversationDraftAction,
   loadMoreConversationsAction,
+  issueSecurityCodeAction,
   recordConversationOptInAction,
+  startEmailAnchorAction,
   recordOutboundAction,
   setConversationModeAction,
   suggestConversationDraftAction,
@@ -140,6 +142,17 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     /** İzin kaydı (15.12) — yazma sarmalından geçer: hata görünür, başarıda sunucu yeniden okunur. */
     onOptIn: (granted: boolean) => {
       if (detail) void run(() => recordConversationOptInAction({ conversationId: detail.id, granted }));
+    },
+    /**
+     * Kimlik çapası (04.10) — aynı yazma sarmalı. Kod bu ekrandan GEÇMİYOR: e-posta çapasında
+     * müşterinin posta kutusuna gidiyor, güvenlik kodunda doğrudan sohbete yazılıyor. Operatörün
+     * ekranında bir sır durmuyor.
+     */
+    onStartEmailAnchor: (email: string) => {
+      if (detail) void run(() => startEmailAnchorAction({ conversationId: detail.id, email }));
+    },
+    onIssueSecurityCode: () => {
+      if (detail) void run(() => issueSecurityCodeAction(detail.id));
     },
   };
 

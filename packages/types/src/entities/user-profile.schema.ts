@@ -216,6 +216,31 @@ export const UserProfileSchema = z.object({
   waLinkExpiresAt: z.string().datetime({ offset: true }).nullable(),
 
   /**
+   * **E-posta çapası kanıtlandı** (04.10) — kod e-postaya gitti, müşteri WhatsApp'tan geri yazdı.
+   *
+   * `email is not null` bunun YERİNE geçmez: o kolon elle işlenen DM'de operatörün klavyesinden de
+   * dolabiliyor. "Adresi var" ile "adresi kanıtlandı" iki ayrı gerçek — telefonda yaptığımız
+   * ayrımın aynısı. Üçüncü kanıt yolu (`authUserId`) damga istemez: o kutuya gelen kodla giriş
+   * yapılmıştır. Çapa hâli üçünden TÜRETİLİR (`anchorStateOf`), saklanmaz.
+   */
+  emailAnchoredAt: z.string().datetime({ offset: true }).nullable(),
+  /** Doğrulanmayı BEKLEYEN adres — `null` = bekleyen bağlama yok. */
+  anchorEmail: z.string().nullable(),
+  /** Bekleyen adresin istendiği an. Adresle birlikte var ya da birlikte yok (DB kısıtı). */
+  anchorEmailAt: z.string().datetime({ offset: true }).nullable(),
+  /**
+   * **6 haneli güvenlik kodunun SHA-256 özeti** (04.10) — e-posta bağlamak istemeyene verilen çapa.
+   *
+   * Özet, canlı DB'ye yazma yetkisi olana karşı değil (o zaten cevabı değiştirebilir): **yedek
+   * sızarsa** ortaya (numara, kod) listesi çıkmasın diye. `email_verifications` ile aynı disiplin.
+   *
+   * E-posta çapası kurulunca DÜŞER — iki çapa aynı müşteride bulunmaz (DB kısıtı zorluyor).
+   */
+  securityCodeHash: z.string().nullable(),
+  /** Yanlış deneme sayacı; tavan 5 (DOMAIN §10). Doğru cevapta sıfırlanır. */
+  securityCodeAttempts: z.number().int(),
+
+  /**
    * GDPR silme damgası (05.08) — `null` = hiç silinmedi.
    *
    * Satır SİLİNMEZ, kimliği boşaltılır: `order` bu profile `restrict` ile bağlı ve sipariş/fatura

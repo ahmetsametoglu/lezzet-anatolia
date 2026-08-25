@@ -145,6 +145,51 @@ alter table public.user_profiles
   -- hiçbir şey ifade etmezdi. İkisi birlikte var ya da birlikte yok.
   add constraint user_profiles_wa_link_pair check ((wa_link_token is null) = (wa_link_expires_at is null)),
 
+  /*
+    ── KİMLİK ÇAPASI (04.10 · DOMAIN §10) ─────────────────────────────────────────────────────────
+    Numaranın kanıtlanması "bu hat BUGÜN bu kişide" der. Çapa başka bir soruyu cevaplar:
+    **"bu numaranın GEÇMİŞİ kimin?"** — çünkü zilyetlik gerçektir ama bağ bayat olabilir. Operatör
+    karantina süresi dolan bir numarayı yeniden dağıtır; yeni sahibi hattı meşru olarak elinde tutar
+    ve OTP'yi de meşru olarak alır. Çözen tek şey, **şüphe doğmadan ÖNCE kurulmuş bir sırdır.**
+
+    ── İKİ ÇAPA, İKİ AYRI KİTLE — YEDEK DEĞİL ─────────────────────────────────────────────────────
+    `email_anchored_at` → e-posta çapası: kod E-POSTAYA gider, müşteri WHATSAPP'TAN geri yazar.
+    Kanıtın gücü çaprazlıktan gelir: "bu hattı tutan kişi şu posta kutusunu da yönetiyor."
+    `security_code_hash` → e-posta bağlamak İSTEMEYENE verilen 6 hane.
+
+    İkisi aynı müşteride bir arada BULUNMAZ: e-posta doğrulanınca kod silinir (DOMAIN §10). Yani
+    "yedek" değiller — biri ötekinin yokluğunda tek çapadır.
+
+    ── NEDEN AYRI BİR DAMGA (`email_anchored_at`), `email is not null` YETMİYOR ────────────────────
+    `email` kolonu her zaman kanıt taşımıyor: elle işlenen DM'de operatör adresi klavyeden
+    girebiliyor (`openWhatsappConversation`). Yani "e-postası var" ile "e-postası kanıtlandı" iki
+    ayrı gerçek — telefonda yaptığımız ayrımın aynısı, bir kolon ötede. Üçüncü bir kanıt yolu daha
+    var ve o damga İSTEMİYOR: `auth_user_id` dolu ise müşteri o kutuya gelen kodla giriş yapmıştır.
+    Çapa hâli bu üçünden TÜRETİLİR, saklanmaz.
+
+    ── KOD ÖZETLENEREK SAKLANIR ───────────────────────────────────────────────────────────────────
+    Canlı DB'ye yazma yetkisi olana karşı değil (o zaten cevabı değiştirebilir): **yedek sızarsa**
+    ortaya (numara, kod) listesi çıkmasın diye. `email_verifications` ile aynı disiplin (0003).
+
+    ── BEKLEYEN ADRES NEDEN SATIRDA DURUYOR ───────────────────────────────────────────────────────
+    `email_verifications` e-postayla anahtarlanmış; "hangi MÜŞTERİ hangi adresi bağlamayı bekliyor"
+    sorusunu cevaplayamıyor. Ve o soru güvenliğin kendisi: doğrulama **numaradan kimliğe, kimlikten
+    bekleyen adrese** gider (DOMAIN §10 — "koddan kimliğe gidilmez"). Adres mesajdan okunsaydı,
+    kodu ele geçiren biri onu İSTEDİĞİ adresle eşleştirebilirdi.
+  */
+  add column email_anchored_at timestamptz,
+  add column anchor_email text,
+  add column anchor_email_at timestamptz,
+  add column security_code_hash text,
+  -- Yanlış deneme sayacı — tavan 5 (DOMAIN §10). Doğru cevapta sıfırlanır.
+  add column security_code_attempts integer not null default 0,
+  -- Bekleyen adres ile istendiği an ayrışamaz (jeton çiftiyle aynı gerekçe).
+  add constraint user_profiles_anchor_email_pair check ((anchor_email is null) = (anchor_email_at is null)),
+  -- **İki çapa aynı müşteride bulunmaz** (DOMAIN §10): e-posta kanıtlandığında kod silinir.
+  -- Kural veride duruyor çünkü ihlali sessiz olurdu — iki anahtar taşıyan bir kayıt hata vermez,
+  -- yalnız sızacak yüzeyi ve anlatılacak şeyi ikiye katlar.
+  add constraint user_profiles_single_anchor check (email_anchored_at is null or security_code_hash is null),
+
   -- Gerekçesiz ret YAZILAMAZ. Ret e-postayla bildiriliyor ve "neden" sorusunun cevabı yoksa soru
   -- desteğe düşer; damgayı atıp gerekçeyi atlamak, verilmiş kararı kayıt dışı bırakır.
   add constraint user_profiles_b2b_reject_stamp check (

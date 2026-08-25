@@ -1,5 +1,12 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import { consumeWhatsappLink, recordInboundMessage, recordOutboundMessage, ringConversationsBell } from '@lezzet/application';
+import {
+  answerEmailAnchor,
+  consumeWhatsappLink,
+  recordInboundMessage,
+  recordOutboundMessage,
+  ringConversationsBell,
+  verifySecurityCode,
+} from '@lezzet/application';
 import { ConversationService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
@@ -222,6 +229,16 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
             }
           }
 
+          // ── ÇAPA CEVABI: kimlik çözümünden SONRA (04.10) ─────────────────────────────────────
+          // Sıra bağlama jetonunun TERSİ ve gerekçesi de ters: jeton kimliği KURAR, çapa cevabı
+          // kimliği VARSAYAR. Zincir tek yönlü — numara → kimlik → o kimliğin bekleyen sorusu →
+          // kod ona karşı doğrulanır (DOMAIN §10: *"koddan kimliğe gidilmez"*).
+          //
+          // Altı haneli sayı gelen mesajlarda boldur (referans, adet, tutar, saat); bu yüzden kapı
+          // yalnız BEKLEYEN bir soru varken iş yapar — kapılar `not_pending`/`no_code` ile sessizce
+          // düşer ve tahmin denemesine ücretsiz tur açılmaz.
+          if (customerId) await cevabiIsle(phone, text);
+
           const conversation = await new ConversationService(serviceDb()).open({
             source: 'whatsapp',
             externalRef: phone,
@@ -243,6 +260,31 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
         },
       });
     }
+  }
+}
+
+/**
+ * **Çapa cevabını işle** (04.10) — gelen mesajda altı hane varsa, BEKLEYEN bir soruya karşı dener.
+ *
+ * İki çapa iki ayrı kitledir ve aynı müşteride bir arada bulunmaz (DOMAIN §10), ama bir müşteri
+ * kodu varken e-posta çapası da başlatabilir. Sıra bu yüzden belirli: **önce bekleyen e-posta**
+ * (açıkça istenmiş, kısa ömürlü ve tek seferlik bir soru), sonra güvenlik kodu (kalıcı sır). Ters
+ * sırada, bekleyen bir bağlama isteği varken gelen doğru kod sayaç yakardı.
+ *
+ * **Hiçbir hâl mesajın kaydını etkilemez:** yanlış kod da, süresi geçmiş cevap da deftere normal
+ * bir mesaj olarak yazılır. Cevabı müşteriye ajan verir; bu kapı yalnız gerçeği işler.
+ */
+async function cevabiIsle(phone: string, text: string | null): Promise<void> {
+  const capa = await answerEmailAnchor(serviceDb(), phone, text);
+  if (capa.status !== 'none' && capa.status !== 'not_pending') {
+    // Kodun kendisi ASLA loglanmaz (CLAUDE §1) — kimlik ve sonuç yeter.
+    logger.info({ conversationRef: phone.slice(-4), outcome: capa.status }, 'çapa: e-posta bağlama cevabı işlendi');
+    return;
+  }
+
+  const kod = await verifySecurityCode(serviceDb(), phone, text);
+  if (kod.status !== 'none' && kod.status !== 'no_code') {
+    logger.info({ conversationRef: phone.slice(-4), outcome: kod.status }, 'çapa: güvenlik kodu denendi');
   }
 }
 

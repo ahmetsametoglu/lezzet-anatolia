@@ -15,6 +15,15 @@ export type { UpdateCustomerProfileOutcome } from './customer/profile';
 // (jetonu üretir) ve Meta webhook'u (tüketir).
 export { consumeWhatsappLink, startWhatsappLink, waLinkTokenIn, WA_LINK_TTL_MS } from './customer/whatsapp-link';
 export type { ConsumeWhatsappLinkOutcome, StartWhatsappLinkOutcome } from './customer/whatsapp-link';
+// Kimlik ÇAPASI (04.10) — "bu numaranın geçmişi kimin". Kuruluş burada; kapılar ve tetikler motorda.
+export { anchorOf, answerEmailAnchor, issueSecurityCode, startEmailAnchor, verifySecurityCode, SECURITY_CODE_MAX_ATTEMPTS } from './customer/anchor';
+export type {
+  AnchorSnapshot,
+  AnswerAnchorOutcome,
+  IssueSecurityCodeOutcome,
+  StartEmailAnchorOutcome,
+  VerifySecurityCodeOutcome,
+} from './customer/anchor';
 // Müşteri adres kapısı (21.15) — web hesap sayfasının adres kuralları paket hâlinde; web köprü.
 export {
   addCustomerAddress,

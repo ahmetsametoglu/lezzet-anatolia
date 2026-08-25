@@ -48,7 +48,13 @@ const AUTH_OTP_SOURCE = 'application-auth';
  */
 let otpTestWarned = false;
 
-function devOtpCode(): string | null {
+/**
+ * İhraç EDİLİYOR ama paket barrel'ında YOK: ikinci tüketicisi `customer/anchor.ts` (04.10) ve
+ * gerekçesi aynı — çapa kodu da hiçbir yere yazılamaz, testin bilmesinin tek yolu sabit koddur.
+ * Kapının kendisi tek yerde kalıyor ki `BEKLEYEN(18.13)` sökümü de tek yerden yapılsın; iki kopya
+ * olsaydı biri sökülür, öteki üretime sızardı.
+ */
+export function devOtpCode(): string | null {
   if (process.env.NODE_ENV === 'production') return null;
   const raw = process.env.OTP_TEST_CODE;
   if (!raw || !/^\d{6}$/.test(raw)) return null;
