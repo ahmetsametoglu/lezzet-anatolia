@@ -253,11 +253,19 @@ async function awardNeighborPoints(db: SupabaseClient, order: Order): Promise<Po
  * `findAwardFor` o gün gerçekten yazılan tutarı verir. Bugünkü `points_neighbor` ayarını okusaydık,
  * ayar aradan değiştiğinde geri alma ödülden farklı çıkar ve defter kendi geçmişiyle çelişirdi.
  *
- * ── BAKİYE NEGATİFE DÜŞEBİLİR, VE DÜŞMELİ ───────────────────────────────────
- * Müşteri puanı çoktan kupona çevirmişse geri alma bakiyeyi eksiye indirir. Bu bilinçli: defterin
- * işi olanı SÖYLEMEKTİR, gizlemek değil (CLAUDE §1 — *"ölçülemeyen değer sıfır değildir"*nin aynı
- * ruhu). Sıfırda durdursaydık müşteri hak etmediği puanı elinde tutar, biz de bunu göremezdik.
- * Eksideyken yeni çevirme zaten açılmaz (`canRedeem` bakiyeyi eşikle karşılaştırıyor).
+ * ── BAKİYE EKSİYE DÜŞMEZ: GERİ ALMA BAKİYEYLE KIRPILIR (kullanıcı kararı 25.08) ──
+ * ~~Eski karar: "bakiye negatife düşebilir, ve düşmeli."~~ Gerekçesi şuydu: *"sıfırda durdursaydık
+ * müşteri hak etmediği puanı elinde tutar, biz de bunu göremezdik."* Ölçüldü (25.08): müşteri 500
+ * puanını kupona çevirdikten sonra sipariş iade edilince bakiye **−500**'e iniyordu.
+ *
+ * **Yeni kural: yalnız ELDE OLAN kadarı geri alınır.** Bakiye 200 ise 500 değil 200 yazılır ve
+ * defter gerçekten sıfırda durur; kalan 300 AF EDİLİR — müşteri sonradan puan kazanırsa o puan
+ * kendisinindir, eski bir borca sessizce gitmez.
+ *
+ * **Neden okuma tarafında kırpmadık:** `max(0, toplam)` göstermek borcu gizlerdi — defter −500
+ * derken ekran 0 der, müşteri 500 puan kazanınca bakiyesi yine 0 çıkar ve bunu hiçbir ekran
+ * açıklayamaz. Defterin işi olanı SÖYLEMEKTİR; o yüzden yazılan satır gerçekten geri alınan tutar.
+ * Kırpma bir gizleme değil, kararın kendisi: hak edişi geri alıyoruz, borç yazmıyoruz.
  *
  * ── YENİDEN ÖDENİRSE ÖDÜL GERİ GELMEZ ───────────────────────────────────────
  * Bilinçli sınır: pozitif satır defterde durduğu için `points_entry_source_key` ikinci bir ödülü
@@ -274,8 +282,15 @@ async function revokePoints(
   if (!award) return null; // Hiç ödül yazılmamış (tavan, B2B, kapıda ödeme) — geri alınacak şey yok.
   if (await entries.hasReversalFor(input.customerId, input.reason, input.refId)) return null;
 
+  /* ELDE OLAN KADARI (kullanıcı kararı 25.08 — künye yukarıda). Bakiye ödülden azsa aradaki fark
+     borç olarak yazılmaz; sıfır çıkarsa hiç satır yazılmaz — "0 puan geri alındı" defterde
+     anlamsız bir satırdır ve `hasReversalFor`u da kirletirdi. */
+  const { balance } = await getPointsBalance(db, input.customerId);
+  const geriAlinacak = Math.min(award.points, Math.max(0, balance));
+  if (geriAlinacak <= 0) return null;
+
   try {
-    return await entries.insert({ customerId: input.customerId, points: -award.points, reason: input.reason, refId: input.refId });
+    return await entries.insert({ customerId: input.customerId, points: -geriAlinacak, reason: input.reason, refId: input.refId });
   } catch (error) {
     // `awardPoints`taki yarış nezaketinin aynısı: iki eşzamanlı iade senkronunda biri yazar, öteki
     // tekillik ihlaliyle düşer. İade işleminin kendisi bundan etkilenmemeli.

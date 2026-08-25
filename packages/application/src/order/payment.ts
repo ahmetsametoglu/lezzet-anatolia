@@ -171,19 +171,33 @@ async function finalize(
     if (derivation.status === 'paid') await rewardReferralOnPaidOrder(db, order.id);
 
     /**
-     * ── PARA GERİ GİTTİ: ÖDÜL DE GERİ GİDER (★ karar 7 · kullanıcı kararı 17.08) ──
+     * ── PARA TAMAMEN GERİ GİTTİ: ÖDÜL DE GERİ GİDER (★ karar 7 · 17.08, DARALTILDI 25.08) ──
      * Yukarıdaki satırın simetriği. Ölçülen boşluk (17.08): burada yalnız `paid`e GİRİŞ
      * dinleniyordu, `paid`ten ÇIKIŞ hiçbir şey tetiklemiyordu — kartla ödenmiş bir sipariş iptal
      * edilip parası iade edilince davet edenin 100/500 puanı defterde kalıyordu.
      *
-     * **Koşul "eski durum `paid`di" değil, "yeni durum `paid` DEĞİL"** — çünkü buraya yalnız durum
-     * gerçekten değiştiğinde giriliyor (dıştaki `if`) ve `paid` dışındaki her hedef (`refunded` ·
-     * `partial` · `pending`) aynı şeyi söylüyor: elde tutulan para artık ödülü karşılamıyor. Kısmi
-     * iade de kapsanır ve kapsanması doğru: sipariş `partial`a düştüyse tam bedel alınmamıştır.
+     * ── KOŞUL DARALDI: `partial` ARTIK KAPSAM DIŞI (kullanıcı kararı 25.08) ───────
+     * Eski koşul *"yeni durum `paid` DEĞİL"*di ve künyesi *"kısmi iade de kapsanır ve kapsanması
+     * doğru"* diyordu. **Ölçüm bu gerekçeyi çürüttü** (25.08, 14 senaryo):
+     *   · 30 €'luk siparişte **1 €** iade → getirenin **500 puanı** siliniyordu;
+     *   · operatörün **jest iadesi** (mal müşteride KALIR, gönül alınır) aynı şeyi yapıyordu;
+     *   · ve geri dönüşü yoktu — para yeniden tahsil edilse bile ödül geri gelmiyor (tekillik).
+     * Kullanıcının kuralı: *"kısmî iade aslında kısmî sipariş de demektir, dolayısıyla puan geri
+     * alınmasın."* Kısmî karşılamada (depo eksik gönderdi) zaten sorun yoktu: orada beklenen tutar
+     * da düştüğü için durum `paid` kalıyor — ölçüldü.
+     *
+     * **Yeni ölçüt tek cümle: ELDE HİÇ PARA KALMADI MI.** `statusOf` bunu zaten ayırıyor —
+     * `net <= 0` ise `refunded` (bir iade oldu) ya da `pending` (hiç tahsil edilmedi); `partial`
+     * ise "bir kısmı elimizde" demek. Eşiğe gerek yok: ayrım motorda zaten var.
+     *
+     * `pending` de kapsanıyor ve bu savunma amaçlı: `paid`ten oraya düşmek "tahsilat defterden
+     * tümden kayboldu" demektir, yani hak ediş de yoktur.
      *
      * Geri alınacak ödül yoksa (kapıda ödeme, tavan, B2B) çağrı sessizce geçer.
      */
-    if (derivation.status !== 'paid') await revokeReferralOnUnpaidOrder(db, order.id);
+    if (derivation.status === 'refunded' || derivation.status === 'pending') {
+      await revokeReferralOnUnpaidOrder(db, order.id);
+    }
   }
 
   return {

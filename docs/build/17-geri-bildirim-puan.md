@@ -235,7 +235,55 @@ imzasıdır. Gerekçe migration'a yazıldı.
 ediliyor. Puan tarafı korunuyor (kimliksiz kayıt puan doğurmaz); korunmayan şey iş kararını besleyen
 sinyal. Bilinçli bir kabuldü (kimlik tutmamak) ama bedeli artık yazılı → `architecture/BACKLOG §16`.
 
-- [ ] (17.11) **İADE EDİLEN SİPARİŞİN PUANI GERİ ALINMIYOR** *(mobil şeridin puan incelemesinden, 11.08; 15.08'de ölçülerek doğrulandı)* · `touches: packages/application/src/order/refund.ts, packages/application/src/feedback/points.ts, packages/types/src/primitives/enums.schema.ts`
+- [x] (17.11) **İADE EDİLEN SİPARİŞİN PUANI — başlık YANILTICI: geri alınıyordu, FAZLA alınıyordu** *(mobil şeridin puan incelemesinden, 11.08; 15.08'de ölçülerek doğrulandı)* · `touches: packages/application/src/order/refund.ts, packages/application/src/feedback/points.ts, packages/types/src/primitives/enums.schema.ts`
+  - **Durum (25.08 — KAPANDI. Satırın iddiası BAYATTI; ölçüm tersini söyledi ve iki kullanıcı kararı yenilendi.)**
+    Kullanıcının talimatı: *"iade edilen siparişin puanı geri alınmıyor konusunu incele, bundan emin
+    ol, bu akışı uçtan uca birçok senaryoyla test et, ondan sonra müdahale et."* Öyle yapıldı — 14
+    senaryo gerçek kod yollarıyla koşuldu (`recordOrderPayment`/`recordOrderRefund`/`adjustFulfillment`/
+    `cancelOrder`, damgalı fikstür + `purgeTestData`).
+    - **İDDİA YANLIŞ ÇIKTI:** geri alma 17.08'de yazılmış (`revokeReferralOnUnpaidOrder`, `finalize`
+      içinden). Aşağıdaki 15.08 ölçümü o düzeltmeden ÖNCEYE ait. `refund.ts`te `points` geçmemesi
+      doğru ama yanıltıcı: geri alma iade dosyasında değil, ödeme durumunun türetildiği tek yerde.
+    - **GERÇEK ARIZA TERS YÖNDEYDİ — geri alma fazla agresifti.** Ölçülen dört hâl:
+      · 30 €'luk siparişte **1 €** iade → getirenin **500 puanı** siliniyordu;
+      · operatörün **jest iadesi** (mal müşteride KALIR, yalnız gönül alınır) aynı şeyi yapıyordu;
+      · komşu ödülü de aynı yoldan gidiyordu (5 € iade → 100 puan);
+      · ve **geri dönüşü yoktu**: para yeniden tahsil edilse bile ödül geri gelmiyor (tekillik
+        indeksi, bilinçli sınır). Yani 1 €'luk bir jest 500 puanı kalıcı olarak yok ediyordu.
+    - **Kısmî KARŞILAMADA sorun YOKTU** (depo 3 yerine 2 gönderir, fark otomatik iade edilir):
+      orada beklenen tutar da düştüğü için durum `paid` kalıyor ve ödül duruyor. Ölçüldü.
+    - **KULLANICI KARARI 1 (25.08) — kısmî iade puana DOKUNMAZ.** *"Kısmî aslında kısmî sipariş de
+      demektir, dolayısıyla puan geri alınmasın."* Bu, 17.08'in ★ karar 7 künyesindeki *"kısmi iade
+      de kapsanır ve kapsanması doğru"* cümlesini **yürürlükten kaldırır**; eski gerekçe künyede
+      üstü çizili olarak duruyor. Yeni ölçüt tek cümle: **elde hiç para kalmadı mı.** Motor bunu
+      zaten ayırıyor (`statusOf`: `net <= 0` → `refunded`/`pending`; aksi hâlde `partial`), o yüzden
+      eşik gerekmedi.
+    - **KULLANICI KARARI 2 (25.08) — bakiye eksiye DÜŞMEZ, geri alma bakiyeyle KIRPILIR.** Ölçüldü:
+      puanını kupona çevirmiş müşteride tam iade bakiyeyi **−500**'e indiriyordu. Artık bakiye 200
+      ise 500 değil 200 yazılıyor, sıfırsa hiç satır yazılmıyor; kalan af ediliyor. Bu da ★ karar
+      7'nin *"bakiye negatife düşebilir, ve düşmeli"* kararını yürürlükten kaldırır.
+      **Okuma tarafında kırpılmadı** ve gerekçesi künyede: `max(0, toplam)` göstermek borcu gizlerdi
+      ve müşterinin sonradan kazandığı puan sessizce eski borca giderdi.
+    - **Doğrulandı (25.08, düzeltme sonrası 9 senaryo · 17 iddia, hepsi geçti):** kısmî iade 500'ü
+      koruyor · aynı sipariş tam iadeye tamamlanınca 0'a iniyor · jest iadesi koruyor · 1 € iade
+      koruyor · kısmî karşılama koruyor (`paid`) · ödenmiş siparişin iptali sıfırlıyor (`refunded`) ·
+      kırpma çalışıyor (defterde `−200`, `−500` değil) · bakiye sıfırken hiç satır yazılmıyor ·
+      müşterinin başka ödenmiş siparişi varken ödül korunuyor.
+      Komşu testleri: `payment` · `refund` · `order-payment` · `invite` → 47/47.
+    - **TESTİ DE YAZILDI (kullanıcı isteği 25.08: *"önce testleri yaz"*).** Ölçülen boşluk gerçekti:
+      `revokeReferralOnUnpaidOrder` ve `revokePoints` hiçbir test dosyasında geçmiyordu — ne 17.08'in
+      davranışı çivilenmişti ne 25.08'inki. Paraya dokunan bir kural yalnız künyeyle korunuyordu.
+      `packages/application/src/feedback/reward-revoke.test.ts` — **13 iddia**, ikisi kararın kendisi:
+      kısmî iade (10 € · 1 € · jest iadesi · kısmî karşılama) ödülü KORUR · tam iade (doğrudan ·
+      kısmîden tamamlanan · iptal yoluyla) GERİ ALIR · kırpma çalışır · sıfır bakiyede satır yazılmaz ·
+      başka ödenmiş sipariş varken ödül korunur · yeniden ödeme ödülü geri getirmez · komşu ödülü
+      aynı kurala tabi.
+      **SABOTAJLA doğrulandı, yeşil olması yeterli sayılmadı:** koşul eski hâline (`!== 'paid'`)
+      döndürülünce **5 test** kırmızıya döndü; kırpma sökülünce **2 test**. İkisi de geri kondu ve
+      paket yeşil.
+      **Kurulum nüshası doğmadı:** `refund.test.ts` ile ortak olan beş adım (`aç → ayır → ilerlet →
+      hazırla → ready`) `advance.testkit.ts`e `prepareOrderToReady` olarak alındı ve iki dosya da
+      onu çağırıyor (CLAUDE §1).
   - **Ölçüm (15.08):** iade yolunda puan defterine hiçbir dokunuş yok — `refund.ts` içinde tek bir `points` geçmiyor. Yani müşteri sipariş verip puan kazanıyor, siparişi iade ediyor, parası dönüyor **ve puanı duruyor**. Bugün ödül `order` sebebiyle değil `referral`/`neighbor` sebebiyle yazılıyor (17.9 · 17.10), yani açık şu an davet ödüllerinde: getirilen kişinin ödediği sipariş iade edilirse getirenin 500 puanı yerinde kalır.
   - **Defter satırı SİLİNMEZ, KARŞI KAYIT yazılır** — `PointsEntry`in kendi kuralı (`17.4`: *"update/delete yok — defter satırı düzeltilmez, karşı kayıt yazılır"*). Yani gereken şey yeni bir sebep türü (`PointsReasonEnum`'a ek) ve iade yolundan ona bir çağrı.
   - **Karar gerektiren iki nokta:** *(1)* kısmi iadede puan orantılı mı geri alınır yoksa tamamı mı — ödül sipariş BAŞINA yazıldığı için "tamamı" tutarlı görünüyor ama kısmi iade siparişi yok etmiyor; *(2)* bakiye eksiye düşerse ne olur — müşteri puanı çoktan kupona çevirmiş olabilir. `canRedeem` negatif bakiyeyi zaten çevirtmez, ama eksi bakiye ekranda müşteriye ne der?

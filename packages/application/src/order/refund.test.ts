@@ -6,7 +6,7 @@ import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
 import { closeOrder, deliverOrder } from './fulfillment';
 import { adjustFulfillment, cancelOrder } from './refund';
-import { advanceOrder } from './advance.testkit';
+import { advanceOrder, prepareOrderToReady } from './advance.testkit';
 
 /**
  * Kısmi karşılama (07.8) ve iptal/iade (07.9) — terfi 21.10 ile taşındı (kaynağı
@@ -72,26 +72,23 @@ afterAll(async () => {
   });
 });
 
-/** Sipariş aç → ayır → hazırla. Kalem tek: `qty` adet, birim 10 €. Durum `ready`'de bırakılır. */
+/**
+ * Sipariş aç → ayır → hazırla. Kalem tek: `qty` adet, birim 10 €. Durum `ready`'de bırakılır.
+ *
+ * **Adımlar 25.08'de testkit'e taşındı** (`prepareOrderToReady`): ödül geri alma testi (17.11) aynı
+ * beş adıma ihtiyaç duydu ve ikinci nüsha yazmak yerine ortak eve alındı (CLAUDE §1). Burada kalan
+ * tek şey BU dosyanın sabitleri — depo, müşteri, varyant, parti ve 10 €'luk birim.
+ */
 async function prepare(qty: number, extra: { shippingFeeCents?: number; lineDiscountAmountCents?: number } = {}) {
-  const { order, items } = await orders.create(
-    // Başlıktaki indirim kalem paylarının toplamıdır ve bunu artık veritabanı zorluyor (0041) —
-    // tek kalemli fikstürde ikisi aynı sayı.
-    {
-      warehouseId,
-      customerId,
-      channel: 'b2c',
-      deliveryType: 'route',
-      shippingFeeCents: extra.shippingFeeCents ?? 0,
-      discountAmountCents: extra.lineDiscountAmountCents ?? 0,
-    },
-    [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5, lineDiscountAmountCents: extra.lineDiscountAmountCents ?? 0 }],
-  );
-  await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
-  await advanceOrder(db, order.id, ['confirmed', 'preparing']);
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId: batchId, qty }] }]);
-  await advanceOrder(db, order.id, ['ready']);
-  return { orderId: order.id, itemId: items[0]!.id };
+  return prepareOrderToReady(db, {
+    warehouseId,
+    customerId,
+    variantId,
+    stockId: batchId,
+    qty,
+    unitPriceCents: 1000,
+    ...extra,
+  });
 }
 
 /** Hazırlananı yola çıkarır — teslime hazır hâl. */

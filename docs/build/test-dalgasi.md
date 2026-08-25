@@ -126,8 +126,19 @@ işle mesaj GÖNDERMEZ"*. Bunu bilmeyen biri o testi yazarsa yanlış şeyi doğ
 pencere. Mobilin öteki alanları (kurye, sepet, barkod) kesinlikle kendi şeridinde.
 | **3** | **19** çoklu depo (transfer · besleme · yer çözümü) | Ağustos ortası; motorları `domain-core`da ve zaten testli, açık uygulama kapılarında | envanter sırası gelince |
 | **4** | **09.28 · 08.5x · 11.7 · 10.9** — fiyat grubu, adres, kurye kapsamı, kargo künyesi | Tekil ama para/yetkiye dokunan işler | envanter sırası gelince |
-| **5** | **16 · 17 · 20** talep/geri bildirim/AI çekirdeği | Temmuz sonu–ağustos başı | envanter sırası gelince |
+| **5** | **16 · 17 · 20** talep/geri bildirim/AI çekirdeği | Temmuz sonu–ağustos başı | envanter sırası gelince — **bir madde öne alınıp KAPANDI, aşağıda** |
 | **6** | **05–14** katalog·stok·sipariş·admin·depo·para·analitik·bildirim | En eski ve en çok testi olan katman; boşluklar burada nokta atışı | envanter sırası gelince |
+
+### ✅ Dalga 5'ten ÖNE ALINDI VE KAPANDI — ödül geri alma (17.11, 25.08)
+
+Envanter sırası gelmemişti ama kural o gün kullanıcı kararıyla değişti ve değişikliği çiviliyen
+hiçbir şey yoktu: `revokeReferralOnUnpaidOrder` ile `revokePoints` **hiçbir test dosyasında
+geçmiyordu.** Kullanıcı *"önce testleri yaz"* dedi, yazıldı:
+`packages/application/src/feedback/reward-revoke.test.ts` — 13 iddia, sabotajla doğrulanmış
+(koşul eski hâline döndürülünce 5 kırmızı, kırpma sökülünce 2 kırmızı).
+
+**Dalganın kendisi hâlâ sırasında** — bu tek madde, kuralın o gün değişmiş olması yüzünden öne
+alındı. Modül 17'nin geri kalanı Dalga 5'te.
 
 Her dalga **bir modül dosyasında bir görev satırı** açar. Dalga bitmeden sonrakine geçilmez —
 yarım bırakılan test envanteri, envanter olmayan durumdan daha yanıltıcıdır ("bunun testi var"
