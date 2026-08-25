@@ -268,4 +268,30 @@ describe('D2 · plansız kabulün boş hâli', () => {
     // ASIL İDDİA: çekmece görünür. Yoksa okutma hiçbir iz bırakmaz.
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-learn')).toBeOnTheScreen());
   });
+
+  it('ADAY LİSTESİ BOŞKEN çekmece aramaya yönlendirir — "satırı seçin" deyip boşluk göstermez', async () => {
+    /*
+      Cihazda görüldü (25.08): çekmece açıldı ama altı boştu — "Satırı seçin" cümlesi seçilecek
+      hiçbir şey olmadan duruyordu. Plansız kabulde İLK okutma tanınmayan bir kodsa aday kümesi
+      zaten boştur; o hâlde doğru cevap "seç" değil "önce bulalım".
+    */
+    unplannedMode();
+    fetchMock.mockImplementation((url, init) => {
+      const path = String(url);
+      if (path.includes('/codes/resolve')) return Promise.resolve(ok({ status: 'unknown' }));
+      if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
+      return Promise.resolve(ok({ purchaseOrder: null, rows: [] }));
+    });
+    await render(<IntakeScreen />);
+    await waitFor(() => expect(screen.queryByTestId('warehouse-intake-loading')).toBeNull());
+
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scan-cta'));
+    await fireEvent.press(screen.getByLabelText('Tanınmayan'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-learn')).toBeOnTheScreen());
+
+    // Arama düğmesi ÇİZİLİR: çıkış yolu çekmecenin içinde olmalı, başka ekranda değil.
+    expect(screen.getByTestId('warehouse-intake-learn-search')).toBeOnTheScreen();
+    // Ve satır seçtiren liste YOKTUR — olmayan bir seçim sunulmaz.
+    expect(screen.queryByTestId('warehouse-intake-learn-confirm')).toBeNull();
+  });
 });

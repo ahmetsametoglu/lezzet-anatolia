@@ -208,12 +208,23 @@ export function IntakeScreen() {
           onClose={() => setSearchOpen(false)}
           onPick={(variant) => {
             intake.addManualRow(variant);
+            /*
+              ARAMA ÖĞRENMEDEN AÇILDIYSA KOD DA BU ÜRÜNE GİDER (kullanıcı kararı 25.08).
+
+              Depocu tanınmayan bir kod okuttu, ürünü aradı ve buldu — kodu ikinci kez okutmasını
+              istemek, zaten yaptığı işi tekrarlatmak olurdu. `learn.variantId === null` koşulu
+              şart: arama öğrenmeden BAĞIMSIZ da açılabiliyor (boş hâlin kendi düğmesi) ve o
+              turda ortada öğretilecek bir kod yok.
+            */
+            if (intake.learn !== null && intake.learn.variantId === null) {
+              intake.pickLearnVariant(variant.variantId);
+            }
             setSearchOpen(false);
           }}
         />
         {/* Boş hâlde de ÇİZİLİR: plansız kabulün ilk okutması tanınmayan bir kod olabilir ve
             çekmece yoksa ekran hiç kıpırdamaz (cihaz turu 25.08 — künyesi `LearnSheet`te). */}
-        <LearnSheet intake={intake} />
+        <LearnSheet intake={intake} onLearnSearch={() => setSearchOpen(true)} />
       </View>
     );
   }
@@ -407,7 +418,7 @@ export function IntakeScreen() {
         )}
       </BottomSheet>
 
-      <LearnSheet intake={intake} />
+      <LearnSheet intake={intake} onLearnSearch={() => setSearchOpen(true)} />
     </View>
   );
 }
@@ -427,7 +438,7 @@ export function IntakeScreen() {
  * Kopyalamak yerine bileşen: iki dalda iki nüsha olsaydı biri gün gelip ötekinden ayrışırdı ve
  * ayrışma yine sessiz olurdu.
  */
-function LearnSheet({ intake }: { intake: ReturnType<typeof useIntake> }) {
+function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIntake>; onLearnSearch: () => void }) {
   return (
       <BottomSheet
         visible={intake.learn !== null}
@@ -436,6 +447,29 @@ function LearnSheet({ intake }: { intake: ReturnType<typeof useIntake> }) {
         testID="warehouse-intake-learn"
       >
         {intake.learn === null ? null : intake.learn.variantId === null ? (
+          intake.rows.length === 0 ? (
+            /*
+              ADAY LİSTESİ BOŞ — plansız kabulde İLK okutma tanınmayan bir kod olduğunda (cihaz
+              turu 25.08). Eski hâl *"Satırı seçin"* diyor ve altında hiçbir satır çizmiyordu:
+              depocu boşluğa bakıp çıkmaza giriyordu.
+
+              Çözüm iki adımı BİRLEŞTİRİYOR (kullanıcı kararı 25.08): arama açılır, seçilen ürün
+              hem satırı açar hem kodu alır. Ayrı bırakılsaydı depocu ürünü ekleyip kodu İKİNCİ
+              kez okutmak zorunda kalırdı — ve okutma zaten yaptığı işti.
+            */
+            <>
+              <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnEmptyBody, { code: intake.learn.code })}</Text>
+              <PressableSurface
+                onPress={onLearnSearch}
+                feedback="shadow"
+                style={[styles.cta, styles.ctaReady]}
+                accessibilityLabel={t.intake.scan.learnEmptyCta}
+                testID="warehouse-intake-learn-search"
+              >
+                <Text style={styles.ctaLabel}>{t.intake.scan.learnEmptyCta}</Text>
+              </PressableSurface>
+            </>
+          ) : (
           <>
             <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnBody, { code: intake.learn.code })}</Text>
             {intake.rows.map((row) => (
@@ -451,6 +485,7 @@ function LearnSheet({ intake }: { intake: ReturnType<typeof useIntake> }) {
               </PressableSurface>
             ))}
           </>
+          )
         ) : (
           /* 2. ADIM (23.12): bu kod NEYİ sayıyor? Çarpan öğrenme anında yazılmazsa yazılacak
              başka yeri yok — web'de kod ekleme bilinçle kapalı (öğrenme kabuldedir, karar §1.3). */

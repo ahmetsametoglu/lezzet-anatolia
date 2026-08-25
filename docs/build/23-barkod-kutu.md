@@ -499,9 +499,26 @@ arızanın tam tanımı: kod doğru, ekran boş, depocu kamerayı suçlar. Çekm
 çıkarılınca test kırılıyor). Testler bunu görmüyordu çünkü hepsi PO'lu kabulde koşuyordu — dal hiç
 uyanmıyordu.
 
-**Düzeltmenin cihazdaki hâli GÖRÜLMEDİ:** Metro taze bundle'ı göndermedi ve uygulama yeniden
-başlatılınca depo oturumu düştü. Kanıt bu yüzden testte: arıza cihazda görüldü, testte yeniden
-üretildi, düzeltme testi geçirdi.
+✅ **DÜZELTME CİHAZDA DOĞRULANDI (aynı oturum):** çekmece açıldı ve kodu okudu
+(*"8691000050007 sistemde kayıtlı değil"*).
+
+⚠ **VE HEMEN ARDINDAN İKİNCİ KUSUR GÖRÜNDÜ — aday listesi BOŞTU.** Çekmece *"Satırı seçin"*
+diyordu ama altında hiçbir satır yoktu: plansız kabulde İLK okutma tanınmayan bir kodsa aday
+kümesi zaten boştur ve depocu çıkmaza girer. Arızayı ancak çekmece açılınca görebildik — yani
+birinci düzeltme ikinciyi ortaya çıkardı.
+
+**Çözüm iki adımı BİRLEŞTİRDİ** (kullanıcı kararı 25.08): boş listede çekmece *"bu kabulde henüz
+ürün yok — ürünü arayıp seçin, satır açılır ve kod ona öğretilir"* diyor ve aramayı kendi içinden
+açıyor; seçilen ürün hem satırı açıyor hem kodu alıyor. Ayrı bırakılsaydı depocu ürünü ekleyip
+kodu İKİNCİ kez okutmak zorunda kalırdı — oysa okutma zaten yaptığı işti.
+
+**Cihazda uçtan uca koşuldu:** TANINMAYAN okutuldu → çekmece boş-liste hâlini gösterdi → arama
+açıldı ("baklava" → 7 sonuç, SKU'larıyla) → *Fıstıklı Baklava · 1250 g* seçildi → **arkada satır
+açıldı** ve çekmece **2. adıma geçti** (*"Bu kod neyi sayıyor?"* · Tek paket / Koli). Öğretme
+tuşuna basılmadı: kod kalıcı bağlanırsa etiket bir daha "tanınmayan" olmaz ve tur düzeneği bozulur.
+
+**İki test:** çekmece boş dalda açılıyor · boş listede arama düğmesi çiziliyor ve satır seçtiren
+liste ÇİZİLMİYOR. Birincisi mutasyonla doğrulandı.
 
 ## Kalan cihaz turu
 
