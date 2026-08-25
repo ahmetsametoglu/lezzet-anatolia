@@ -1,5 +1,12 @@
 import { AddressService, type Db } from '@lezzet/database';
-import { resolveLocalizedText, type Address, type LocalizedText, type PaymentMethod, type PreferredLanguage } from '@lezzet/types';
+import {
+  resolveLocalizedText,
+  type Address,
+  type AddressDeliveryType,
+  type LocalizedText,
+  type PaymentMethod,
+  type PreferredLanguage,
+} from '@lezzet/types';
 import { readPendingNeighborInvites } from '../customer/neighbor';
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { orderScopeOf } from '../cart/cart-types';
@@ -46,7 +53,8 @@ export interface CheckoutSnapshot {
   addresses: Address[];
   /** Seçili adrese göre çözülmüş teslimat; adres seçilmemişse null. */
   delivery: {
-    deliveryType: 'route' | 'shipping';
+    /** Checkout `pickup` üretemez — yerinde satışın adresi yok (`AddressDeliveryType`, 26.08). */
+    deliveryType: AddressDeliveryType;
     availableDates: string[];
     requiresDateChoice: boolean;
     /**

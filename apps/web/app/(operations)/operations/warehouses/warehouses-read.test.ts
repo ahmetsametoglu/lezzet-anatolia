@@ -13,6 +13,7 @@ const WAREHOUSE = {
   id: 'w1',
   code: 'STR',
   name: 'Strasbourg',
+  kind: 'facility' as const,
   countryCode: 'FR' as const,
   address: null,
   shipsOnline: false,

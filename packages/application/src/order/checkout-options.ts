@@ -9,7 +9,7 @@ import {
   type CreditPosition,
   type ShippingVatPart,
 } from '@lezzet/domain-core';
-import type { DeliveryType, PaymentMethod } from '@lezzet/types';
+import type { AddressDeliveryType, PaymentMethod } from '@lezzet/types';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { minBasketFor } from '../cart/min-basket';
 import { settingScopeOf } from '../cart/setting-scope';
@@ -73,7 +73,13 @@ export interface CheckoutPaymentResult {
 
 export interface CheckoutPaymentInput {
   customerId: string;
-  deliveryType: DeliveryType;
+  /**
+   * `AddressDeliveryType` — checkout bir ADRESE göre çözülür ve `pickup` üretemez (26.08).
+   * Yerinde satış checkout'tan geçmez: müşteri tezgâhın önündedir, ödeme yöntemi de kargo ücreti
+   * de orada başka kurallardan çıkar. Dar tutmak sözleşmeyi de koruyor — `shippingFreeReason`
+   * müşteriye ulaşamayacak bir değer taşımıyor.
+   */
+  deliveryType: AddressDeliveryType;
   /**
    * Sepet ara toplamı — **indirim UYGULANMIŞ**, kanal tabanında (cent). Kargo ücreti, bedava
    * kargo eşiği ve tahsil edilecek toplam bunu ister: müşteriden gerçekten alınacak paradır.

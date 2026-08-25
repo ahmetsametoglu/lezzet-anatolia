@@ -1,4 +1,5 @@
 import { distributeDiscount, vatPortion } from '@lezzet/helper';
+import type { AddressDeliveryType } from '@lezzet/types';
 
 /**
  * Kargo ücreti ve KDV'si (07.3) — DOMAIN §6.
@@ -8,10 +9,19 @@ import { distributeDiscount, vatPortion } from '@lezzet/helper';
  * - Ücret `Order.shipping_fee`'ye yazılır, `total`'a dâhildir ve **KDV'ye tabidir**.
  *
  * Saf: eşik/ücret değerlerini çağıran ayarlardan getirir.
+ *
+ * **`pickup` bu motorun sorusu DEĞİLDİR ve girdi tipi onu dışlıyor** (`AddressDeliveryType`, 26.08).
+ * Yerinde satışta taşıma yoktur; "kargo ücreti kaç" sorusunun cevabı "0" değil — sorunun kendisi
+ * geçersizdir. Sıfır döndürseydi motor cevabı olmayan bir soruya cevap vermiş olur, `freeReason`
+ * da müşteri sözleşmesine hiç ulaşamayacak bir değer taşırdı. Yerinde satış siparişi
+ * `shipping_fee`ye doğrudan 0 yazar, buraya hiç uğramaz.
+ *
+ * Dışlamanın TİPTE olması bilinçli: enum 26.08'de genişleyince `pickup` sessizce `else` dalına
+ * düşüp KARGO ÜCRETİ ödüyordu. Bugün aynı hatayı yapan çağıran derlemede durur, ekranda değil.
  */
 
 export interface ShippingFeeInput {
-  deliveryType: 'route' | 'shipping';
+  deliveryType: AddressDeliveryType;
   /** Sepet ara toplamı (indirim sonrası, kanal tabanında — cent). */
   basketCents: number;
   /** Bu tutarın üstünde kargo ücretsiz (cent). */

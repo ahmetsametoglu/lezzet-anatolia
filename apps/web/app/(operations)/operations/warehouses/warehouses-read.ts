@@ -69,6 +69,7 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
       id: w.id,
       code: w.code,
       name: w.name,
+      kind: w.kind,
       countryCode: w.countryCode,
       address: parseAddress(w.address),
       shipsOnline: w.shipsOnline,

@@ -55,8 +55,8 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   let strId = koduyla.get('STR');
   let kehlId = koduyla.get('KEHL');
   let colmarId = koduyla.get('COLMAR');
-  if (strId && kehlId && colmarId && koduyla.has('MULHOUSE')) {
-    console.log('▸ depolar zaten kurulu (STR + KEHL + COLMAR + MULHOUSE) — atlandı');
+  if (strId && kehlId && colmarId && koduyla.has('MULHOUSE') && koduyla.has('VAN-1')) {
+    console.log('▸ depolar zaten kurulu (STR + KEHL + COLMAR + MULHOUSE + VAN-1) — atlandı');
     return { str: strId, kehl: kehlId, colmar: colmarId };
   }
   console.log('▸ DEPO seed');
@@ -147,7 +147,34 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
     console.log(`  ✓ ${kapali.code} · ${kapali.name} · PASİF`);
   }
 
-  console.log('✓ depo: STR (kargo çıkışı) + KEHL + COLMAR (rota, kargosuz) + MULHOUSE pasif');
+  // ── ARAÇ DEPOSU (26.08, kullanıcı kararı) ───────────────────────────────────────────────────
+  //
+  // Kurye satılan maldan fazlasını yükleyip yolda isteyene satabiliyor — sahada olan bir şey. Araç
+  // bu yüzden bir DEPO TÜRÜ (`kind='vehicle'`): yükleme ve akşam dönüşü birer transfer, içindeki
+  // mal gerçek parti.
+  //
+  // **Seed'de bulunması şart, çünkü türün üç kuralı ancak böyle KOŞAR:** araca bölge bağlanamaz
+  // (tetikleyici), araç kargo deposu olamaz (kısıt), araç `available_stock_total`a girmez. Hiç
+  // araç satırı yoksa bu üç yol da hiç sınanmaz ve "yazdım ama çalışıyor mu bilmiyorum" hâli
+  // doğar — MULHOUSE'un pasif depo için var olmasıyla birebir aynı gerekçe.
+  //
+  // `shipsOnline` hiç verilmiyor: kısıt zaten reddederdi, ama varsayılana güvenmek de bir kural
+  // beyanıdır — araçtan kargo çıkmaz.
+  if (!koduyla.has('VAN-1')) {
+    const arac = await warehouses.insert({
+      code: 'VAN-1',
+      name: 'Kurye aracı 1',
+      kind: 'vehicle',
+      countryCode: 'FR',
+      // Adres YOK ve bu doğru: araç bir yerdir ama sabit bir adresi yoktur. `null` burada
+      // "girilmedi" değil "yok" demek — uydurma bir adres onu tesis gibi okuturdu.
+      address: null,
+      sortOrder: 5,
+    });
+    console.log(`  ✓ ${arac.code} · ${arac.name} · ARAÇ (bölge bağlanamaz, kargo çıkışı olamaz)`);
+  }
+
+  console.log('✓ depo: STR (kargo çıkışı) + KEHL + COLMAR (rota, kargosuz) + MULHOUSE pasif + VAN-1 araç');
   return { str: strId, kehl: kehlId, colmar: colmarId };
 }
 

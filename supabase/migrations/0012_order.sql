@@ -25,7 +25,13 @@ create type payment_status as enum ('pending', 'paid', 'partial', 'refunded');
 create type order_cancel_reason as enum ('payment_failed', 'superseded', 'out_of_stock', 'customer', 'staff');
 -- `on_account` (vadeli) BU LİSTEDE DEĞİL: vade bir yöntem değil, siparişin bayrağıdır (DOMAIN §7).
 create type payment_method as enum ('online', 'cash', 'card', 'cheque', 'bank_transfer');
-create type delivery_type as enum ('route', 'shipping');
+-- "Mal müşteriye NASIL ulaşır" — üç gerçek cevap: bizim aracımız · taşıyıcı · müşterinin kendisi.
+-- `pickup` 26.08'de eklendi (kullanıcı kararı): yerinde satışta mal hiç GİTMEZ, müşteri alır —
+-- depo kapısında ya da kuryenin arabasından. O güne kadar böyle bir satış varsayılana düşüp
+-- `route` yazılıyordu, yani aracımızın gitmediği bir teslimat rota teslimatı sayılıyordu:
+-- adressiz, bölgesiz, kuryesiz bir "rota siparişi". Kimse fark etmiyordu çünkü sipariş geçerli
+-- görünüyor, yalnız teslimat tipine göre kırılan her rapor onu yanlış kovaya koyuyordu.
+create type delivery_type as enum ('route', 'shipping', 'pickup');
 -- Kargo taşıyıcısı (07.12). TANIMLI küme çünkü takip bağlantısı URL kalıbından üretilir; `other`
 -- kümeyi kapatmamak için — yeni bir taşıyıcıyla çalışmaya başlamak migration beklememeli.
 create type carrier as enum ('colissimo', 'chronopost', 'dhl', 'ups', 'other');
@@ -196,6 +202,35 @@ create table public.order_item (
   -- etiketini sessizce boşaltmak, siparişi "tek tek alınmış" gibi göstermek olurdu.
   bundle_id uuid references public.bundle (id) on delete restrict,
   unit_price numeric(10, 2) not null,                -- CHECKOUT BAŞLANGICINDA sabitlenir (DOMAIN §5)
+  -- ── PAZARLIK İZİ (kullanıcı kararı 26.08) ─────────────────────────────────
+  -- Elle sipariş girişinde ve yerinde satışta fiyat alanı LİSTE fiyatıyla dolu gelir; satıcı
+  -- pazarlık ederse üstüne yazar. Bu iki kolon "üstüne yazılmadan ÖNCE ne yazıyordu ve kim
+  -- değiştirdi" sorusunun cevabıdır.
+  --
+  -- **Neden saklanıyor:** yalnız son fiyat yazılsaydı kayıt *"ürün 11,00 €'ya satıldı"* derdi,
+  -- *"1,50 € taviz verildi"* demezdi — ve kâr motoru (12.6) katkıyı ciro üzerinden hesapladığı
+  -- için kapıda verilen kişisel taviz ile planlanmış kampanya indirimi aynı kovaya düşerdi.
+  -- Biri bütçelenmiş bir maliyet, öteki tek tek verilmiş bir karar; ayrılmazlarsa ikisi de
+  -- yönetilemez.
+  --
+  -- **Neden `line_discount_amount` DEĞİL:** o kolon kupon/kampanya havuzunun ve
+  -- `discount_amount = Σ line_discount_amount` ertelenmiş kısıtına giriyor, yani kotayı tüketiyor.
+  -- Pazarlık bir kupon değildir, kotası yoktur ve bir kampanyaya bağlanamaz.
+  --
+  -- **NULLABLE ve anlamı var:** `null` = pazarlık olmadı, liste fiyatı `unit_price`in kendisidir
+  -- (`warehouse_variant_threshold`in "satır yoksa genel kural işler" deseni). Her normal checkout
+  -- kalemine aynı sayıyı ikinci kez yazmak, veriyi büyütüp hiçbir soruya yeni cevap vermezdi.
+  -- Türetme bu yüzden imzalıdır: taviz = `coalesce(list_unit_price, unit_price) − unit_price`;
+  -- eksi çıkabilir ve bu bir hata değildir (acele/az miktar listenin üstüne satılabilir).
+  list_unit_price numeric(10, 2) check (list_unit_price >= 0),
+  -- Kim değiştirdi. `restrict`: pazarlığı olan bir personel kaydı silinemez — iz sahipsiz kalırsa
+  -- "kim verdi" sorusu cevapsızdır ve kolonun tek varlık sebebi odur. GDPR anonimleştirmesi satırı
+  -- silmez, alanlarını temizler; bu bağ onu engellemez.
+  price_set_by uuid references public.user_profiles (id) on delete restrict,
+  -- Yarım iz diye bir şey yoktur: ya ikisi de yazılır ya hiçbiri. Tek başına bir liste fiyatı
+  -- "birileri indirdi" der ama kimin indirdiğini söylemez — kaydın kendisi soruyu açar, cevabı
+  -- vermez.
+  constraint order_item_negotiation_complete check ((list_unit_price is null) = (price_set_by is null)),
   -- Sepet/kupon indiriminin bu kaleme ORANSAL payı — kısmi iade ve kalem KDV'si indirimli birimden
   -- hesaplanır, sonradan hesap belirsizliği kalmaz (DOMAIN §5).
   line_discount_amount numeric(10, 2) not null default 0,

@@ -15,6 +15,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | id | uuid | |
 | code | string | benzersiz kısa kod (`STR`, `KEHL`) — belge numarasına girer (`IMH-STR-26-0012`), denetmen ve tedarikçi elle yazar |
 | name | string | ekranda okunan ad |
+| kind | warehouse_kind | `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil ÜÇ SORGUNUN süzgeci (aşağıda) |
 | country_code | country_code | **fiziksel tesis nerede.** Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır ötesi olabilir (ADR-002), depo olamaz. ⚠ KDV'nin bağlı olduğu alan (`DOMAIN §5/§17`) |
 | address | jsonb \| null | |
 | ships_online | boolean | kargo çıkış deposu — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu |
@@ -24,7 +25,11 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 **Ülke başına EN FAZLA bir aktif kargo deposu** — kural kayıt kapısında değil veritabanında: `unique (country_code) where ships_online and is_active`. Anahtarın ülke olması K9'un "ileride ülke başına bir" hedefini bugünden karşılar; DE deposu açıldığında kendi kargo deposunu alır, kod değişmez.
 
-**Varsayılan depo kavramı YOKTUR** (C2) — bu yüzden şemada bir `is_default` bayrağı da yoktur. Depo daima açık bir kaynaktan gelir: adresin posta kodu (uzaktan sipariş) ya da personelin sabit deposu (kapı önü).
+**Varsayılan depo kavramı YOKTUR** (C2) — bu yüzden şemada bir `is_default` bayrağı da yoktur. Depo daima açık bir kaynaktan gelir: adresin posta kodu (uzaktan sipariş) ya da personelin o anki deposu (yerinde satış: depo kapısı ya da kuryenin aracı).
+
+**Araç deposu — türün üç sonucu, üçü de VERİDE** (26.08, `DOMAIN §17`): *(a)* **araca bölge bağlanamaz** — `delivery_zone_warehouse_is_facility` tetikleyicisi; "posta kodu → bölge → depo" zincirinin sonu bir adres olmak zorunda, yoksa müşteri siparişi hareket hâlindeki bir yere yazılır ve hiçbir ekran fark etmez. *(b)* **araç kargo deposu olamaz** — `warehouse_vehicle_never_ships` kısıtı (taşıyıcı bir adrese gelir); aynı tabloda durabildiği için tetikleyiciye gerek yok. *(c)* **araç `available_stock_total`a girmez** — katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz; tedarik önerisi içinse o mal zaten tesisten çıkmış, akşam dönecektir (sayılsaydı ikinci kez sayılırdı). Depo bazlı `available_stock` aracı **aynen gösterir**: kurye arabasında ne olduğunu görmek zorunda — ayrım bu yüzden toplamda, kaynakta değil.
+
+`vehicle` TABLOSU AYRI YAŞAR (0045) ve bu duplication değil: orası aracın **soğuk zincirini ölçer** (ölçüm noktası kimliği), burası **içindeki malı sayar**. 0031'in künyesi *"araç bir depoya mı, bir güne mi, bir kuryeye mi bağlanır"* sorusunu açık bırakmıştı; cevap **hiçbirine — araç bir YERDİR.**
 
 ---
 

@@ -461,6 +461,10 @@ export const KAPSAM: KapsamAlani[] = [
       { ad: 'pasif', zorunlu: true, filtre: (q) => q.eq('is_active', false) },
       { ad: 'kargo çıkışlı', zorunlu: true, filtre: (q) => q.eq('ships_online', true) },
       { ad: 'yalnız rota', zorunlu: true, filtre: (q) => q.eq('ships_online', false) },
+      // Araç deposu (26.08): türün üç kuralı — bölge bağlanamaz · kargo çıkışı olamaz ·
+      // depo-üstü toplama girmez — ancak ortada bir araç satırı varsa koşar.
+      { ad: 'tesis', zorunlu: true, filtre: (q) => q.eq('kind', 'facility') },
+      { ad: 'araç', zorunlu: true, filtre: (q) => q.eq('kind', 'vehicle') },
     ],
   },
   {

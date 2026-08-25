@@ -18,6 +18,7 @@ import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
 import type {
   Carrier,
   CustomerOrderStatus,
+  DeliveryType,
   KeysetCursor,
   OrderItem,
   PaymentMethod,
@@ -208,7 +209,13 @@ export interface CustomerOrderDetail {
   createdAt: string;
   status: CustomerOrderStatus;
   active: boolean;
-  deliveryType: 'route' | 'shipping';
+  /**
+   * GENİŞ küme — checkout'un aksine burada `pickup` GÖRÜLÜR (26.08): müşteri tezgâhtan ya da
+   * kuryenin arabasından kendi hesabıyla alışveriş yapabilir ve o sipariş "Siparişlerim"e düşer.
+   * Dar bırakılsaydı ekran yerinde satışı rota teslimatı diye yazar, olmayan bir teslimat günü
+   * ve adresi gösterirdi.
+   */
+  deliveryType: DeliveryType;
   deliveryDate: string | null;
   address: { line1?: string; line2?: string; postalCode?: string; city?: string } | null;
   lines: readonly CustomerOrderDetailLine[];

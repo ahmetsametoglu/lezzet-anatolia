@@ -7,6 +7,7 @@
 // Para her yerde KURUŞ (STACK §8).
 import type { OrderDecision } from '@lezzet/domain-core';
 import type {
+  DeliveryType,
   OrderSource,
   OrderStatus,
   PaymentMethod,
@@ -273,7 +274,12 @@ export interface OrderDetailView {
   refundRoutes: RefundRouteView[];
 
   delivery: {
-    type: 'route' | 'shipping';
+    /**
+     * GENİŞ küme — `pickup` burada GÖRÜLÜR (26.08): yerinde satış da bir sipariştir ve operasyon
+     * onu bu ekranda açar. Dar bırakılsaydı ekran tezgâhtan satılan malı rota teslimatı diye
+     * yazar, olmayan bir teslimat günü ve kurye alanı gösterirdi.
+     */
+    type: DeliveryType;
     date: string | null;
     address: string;
     /**

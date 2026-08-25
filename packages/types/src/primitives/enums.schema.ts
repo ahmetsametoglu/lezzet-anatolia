@@ -107,8 +107,40 @@ export const COUNTRY_LABELS: Record<Country, string> = {
 };
 
 /** Teslimat tipi — rota içi kapı teslimi / kargo (DOMAIN §6). */
-export const DeliveryTypeEnum = z.enum(['route', 'shipping']);
+/**
+ * "Mal müşteriye NASIL ulaşır" — bizim aracımız · taşıyıcı · müşterinin kendisi.
+ *
+ * `pickup` yerinde satıştır (depo kapısı ya da kuryenin arabası): mal hiç gitmez, müşteri alır.
+ * Adres, bölge, kurye ve kargo künyesi ÜÇÜNÜN DE dışındadır — bu yüzden ayrı bir değer; `route`
+ * yazılsaydı aracımızın gitmediği bir teslimat rota teslimatı sayılırdı (0012 künyesi).
+ */
+export const DeliveryTypeEnum = z.enum(['route', 'shipping', 'pickup']);
 export type DeliveryType = z.infer<typeof DeliveryTypeEnum>;
+
+/**
+ * Bir ADRESİN çözülebildiği teslimat türleri — `pickup` hariç, TÜRETİLMİŞ (26.08).
+ *
+ * Yerinde satışın adresi yoktur: müşteri tezgâhın ya da arabanın önündedir, posta kodu → bölge →
+ * depo zinciri hiç çalışmaz. Bu yüzden checkout, adres çözümü ve kargo ücreti bu dar kümeyi
+ * konuşur; siparişin kendisi (`Order.deliveryType`) geniş kümeyi taşır.
+ *
+ * **Müşteri sözleşmeleri de bunu kullanır**, geniş olanı değil: checkout sonucu `pickup`
+ * döndüremez ve sözleşme döndürebilirmiş gibi yazılırsa istemci hiç oluşmayacak bir hâli ele
+ * almak zorunda kalır — "okuyan, var olmayan bir kabiliyeti varsayar" (0031 künyesi).
+ *
+ * `.exclude()` ile TÜRETİLİYOR, ikinci bir liste yazılmıyor: küme bir gün büyürse (örn. "gel-al"
+ * siteye açılırsa) tek yer değişir. Elle yazılmış dar birleşimler tam bu yüzden 26.08'de kırıldı.
+ */
+export const AddressDeliveryTypeEnum = DeliveryTypeEnum.exclude(['pickup']);
+export type AddressDeliveryType = z.infer<typeof AddressDeliveryTypeEnum>;
+
+/**
+ * Depo türü — tesis mi, kurye aracı mı (0031). Araç bir YERDİR: yüklenir, sayılır, transfer alır.
+ * Türün üç sonucu var ve üçü de veride zorlanıyor: araç bölgeye bağlanamaz (tetikleyici), kargo
+ * deposu olamaz (kısıt), depo-üstü toplama girmez (`available_stock_total`).
+ */
+export const WarehouseKindEnum = z.enum(['facility', 'vehicle']);
+export type WarehouseKind = z.infer<typeof WarehouseKindEnum>;
 
 /**
  * Kargo taşıyıcısı (07.12) — **tanımlı küme, serbest metin değil.**

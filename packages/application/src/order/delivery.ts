@@ -9,7 +9,7 @@ import {
   upcomingDeliveryDates,
 } from '@lezzet/domain-core';
 import type { WarehouseCandidate, ZoneWithWarehouse } from '@lezzet/domain-core';
-import type { DeliveryType } from '@lezzet/types';
+import type { AddressDeliveryType } from '@lezzet/types';
 import type { Country } from '@lezzet/types';
 
 /**
@@ -39,7 +39,11 @@ import type { Country } from '@lezzet/types';
  */
 
 export interface DeliveryResolution {
-  deliveryType: DeliveryType;
+  /**
+   * `AddressDeliveryType` — bu çözüm bir ADRESTEN çıkar, `pickup` üretemez (26.08). Yerinde satışın
+   * adresi yoktur; müşteri tezgâhın önündedir ve posta kodu → bölge → depo zinciri hiç çalışmaz.
+   */
+  deliveryType: AddressDeliveryType;
   zoneId: string | null;
   /**
    * Siparişin çıkacağı depo (DOMAIN §17) — teslimat kararıyla AYNI turda çözülür çünkü ikisi tek

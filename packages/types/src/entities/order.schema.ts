@@ -204,6 +204,16 @@ export const OrderItemSchema = z.object({
   stockId: z.string().uuid().nullable(),
   bundleId: z.string().uuid().nullable(),
   unitPriceCents: z.number().int(),
+  /**
+   * PAZARLIK İZİ — üstüne yazılmadan önce liste ne diyordu (**cent**). `null` = pazarlık olmadı,
+   * liste fiyatı `unitPriceCents`in kendisidir (0012 künyesi).
+   *
+   * Taviz **imzalı** türetilir: `(listUnitPriceCents ?? unitPriceCents) − unitPriceCents`. Eksi
+   * çıkabilir ve hata değildir — acele ya da az miktar listenin üstüne satılabilir.
+   */
+  listUnitPriceCents: z.number().int().nullable(),
+  /** Pazarlığı yapan personel. `listUnitPriceCents` ile birlikte yaşar — yarım iz yoktur (kısıt VERİDE). */
+  priceSetBy: z.string().uuid().nullable(),
   /** Sepet indiriminin bu kaleme ORANSAL payı (**cent**) — kısmi iade ve KDV indirimli birimden. */
   lineDiscountAmountCents: z.number().int(),
   /** ORAN, para değil (5.5 = %5,5) — bu yüzden `…Cents` almaz ve `dbNumeric` kalır. */
@@ -220,6 +230,9 @@ export const OrderItemInsertSchema = z.object({
   stockId: z.string().uuid().nullish(),
   bundleId: z.string().uuid().nullish(),
   unitPriceCents: z.number().int().nonnegative(),
+  /** Pazarlık izi — ikisi BİRLİKTE verilir ya da hiç verilmez (kısıt veritabanında). */
+  listUnitPriceCents: z.number().int().nonnegative().nullish(),
+  priceSetBy: z.string().uuid().nullish(),
   lineDiscountAmountCents: z.number().int().nonnegative().optional(),
   vatRate: z.number().nonnegative(),
   returnDisposition: ReturnDispositionEnum.nullish(),

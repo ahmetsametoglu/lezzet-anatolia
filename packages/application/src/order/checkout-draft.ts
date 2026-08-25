@@ -10,7 +10,7 @@ import {
 } from '@lezzet/database';
 import { cityMatchesPlaces, deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import type { DeliveryType, LocalizedText, OrderItemInsert, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type { AddressDeliveryType, LocalizedText, OrderItemInsert, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { matchNeighborInviteForOrder } from '../customer/neighbor';
 import { placesForPostalCode } from '../delivery/places';
@@ -66,7 +66,8 @@ import { readDeliveryInputs, resolveDelivery } from './delivery';
  */
 
 export type CheckoutDraftOutcome =
-  | { status: 'ok'; orderId: string; totalCents: number; deliveryType: DeliveryType }
+  // Taslak bir ADRESTEN doğar — `pickup` üretemez (26.08, `AddressDeliveryType`).
+  | { status: 'ok'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType }
   /**
    * Yer çözülemedi: sipariş açılamaz. `ambiguous_zone` bir VERİ hatasıdır (aynı kod iki bölgede),
    * `no_shipping_warehouse` bir YAPILANDIRMA eksiğidir (kargo deposu yok). İkisi de müşteriye

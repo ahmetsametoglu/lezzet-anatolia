@@ -1,6 +1,6 @@
 import { OrderService, ReservationService, type Db } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { DeliveryType, OrderCancelReason, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type { AddressDeliveryType, OrderCancelReason, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { clearOrderedLines } from '../cart/settle';
 import type { CartBundlePort } from '../cart/read';
 import type { CartEntry } from '../cart/cart-types';
@@ -81,9 +81,9 @@ export type PlaceOrderRejection =
 
 export type PlaceOrderOutcome =
   /** Kart yolu: sipariş `draft`, ödeme istemcide tamamlanacak. */
-  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: DeliveryType; clientSecret: string }
+  | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType; clientSecret: string }
   /** Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş AÇILDI ve kesinleşti. */
-  | { status: 'placed'; orderId: string; totalCents: number; deliveryType: DeliveryType }
+  | { status: 'placed'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType }
   | PlaceOrderRejection;
 
 export interface PlaceOrderInput {
@@ -158,7 +158,19 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
   if (input.idempotencyKey) {
     const already = await new OrderService(db).findByIdempotencyKey(input.idempotencyKey, input.customerId);
     if (already && already.status !== 'draft' && already.status !== 'cancelled') {
-      return { status: 'placed', orderId: already.id, totalCents: already.totalCents, deliveryType: already.deliveryType };
+      // Satır GENİŞ tipte okunuyor (`Order.deliveryType`), sonuç ise DAR (`AddressDeliveryType`).
+      // Daraltma güvenli çünkü `idempotency_key`i yalnız checkout yazar — yerinde satışın böyle
+      // bir anahtarı hiç olmaz. Yine de sessizce zorlanmıyor: beklenmedik bir satır gelirse
+      // (elle yazılmış anahtar, onarım betiği) kayıt düşülür ve `route` varsayılmaz — o an
+      // uydurulacak her değer müşteriye yanlış bir teslimat vaadi olurdu.
+      if (already.deliveryType === 'pickup') {
+        captureError(new Error('placeOrder: idempotency anahtarı yerinde satış siparişine düştü'), {
+          source: SOURCES.applicationOrder,
+          context: { orderId: already.id },
+        });
+      } else {
+        return { status: 'placed', orderId: already.id, totalCents: already.totalCents, deliveryType: already.deliveryType };
+      }
     }
   }
 

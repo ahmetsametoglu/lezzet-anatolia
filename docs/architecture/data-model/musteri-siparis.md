@@ -190,7 +190,9 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | stock_id | uuid \| null | partiye bağlı teklif satırıysa hangi parti (batch-pinned); normal satırda null. Fiilen çıkan parti(ler) `OrderItemBatch`'te |
 | bundle_id | uuid \| null | bu kalem bir paketten geldiyse hangi paket; normal satırda null |
 | unit_price | numeric (€) | **sabitlenmiş** fiyat (sepete eklenince). App: `unitPriceCents` |
-| line_discount_amount | numeric (€) | sepet/kupon indiriminin bu kaleme **oransal payı** (varsayılan 0). App: `lineDiscountAmountCents` — kısmi iade ve kalem KDV'si indirimli birimden hesaplanır (bkz. `DOMAIN.md §5`) |
+| list_unit_price | numeric (€) — null | **pazarlık izi** (26.08): üstüne yazılmadan önce liste ne diyordu. App: `listUnitPriceCents`. `null` = pazarlık olmadı, liste = `unit_price`. Taviz **imzalı** türetilir: `coalesce(list_unit_price, unit_price) − unit_price`; eksi çıkabilir (listenin üstüne satış meşrudur) |
+| price_set_by | uuid → user_profiles — null | pazarlığı yapan personel (`restrict`). `list_unit_price` ile **birlikte** yaşar — yarım iz yoktur, kısıt veride (`order_item_negotiation_complete`) |
+| line_discount_amount | numeric (€) | sepet/kupon indiriminin bu kaleme **oransal payı** (varsayılan 0). App: `lineDiscountAmountCents` — kısmi iade ve kalem KDV'si indirimli birimden hesaplanır (bkz. `DOMAIN.md §5`). **Pazarlık buraya YAZILMAZ:** bu kolon kupon/kampanya havuzunun ve `discount_amount = Σ line_discount_amount` kısıtına girer, yani kotayı tüketir |
 | vat_rate | number | o anki oran |
 | return_disposition | enum(`restock`,`discard`,`goodwill`) \| null | kalem iade edildiyse **mala ne oldu** (DOMAIN §8). `goodwill` = mal müşteride kaldı: `fulfilled_qty` ve stok DEĞİŞMEZ, yalnız para iade edilir — jestin maliyeti kârda görünür |
 

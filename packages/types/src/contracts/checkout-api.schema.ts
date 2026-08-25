@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { OrderSchema } from '../entities/order.schema';
-import { DeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
+import { AddressDeliveryTypeEnum, PaymentMethodEnum } from '../primitives/enums.schema';
 import { MeAddressSchema } from './address-api.schema';
 import { CartDiscountReasonSchema } from './cart-api.schema';
 
@@ -34,7 +34,12 @@ import { CartDiscountReasonSchema } from './cart-api.schema';
  * veride karşılığı olmayan bir söz vermek olurdu.
  */
 export const CheckoutDeliverySchema = z.object({
-  deliveryType: DeliveryTypeEnum,
+  /**
+   * DAR küme (`pickup` yok, 26.08): checkout bir adrese göre çözülür, yerinde satış buradan
+   * geçmez. Geniş `DeliveryTypeEnum` yazılsaydı istemci hiç gelmeyecek bir değeri ele almak
+   * zorunda kalırdı.
+   */
+  deliveryType: AddressDeliveryTypeEnum,
   /** Rota-içi teslimatın yaklaşan somut tarihleri (ISO gün); kargoda BOŞ — tarih taşıyıcıya bağlı. */
   availableDates: z.array(z.string()),
   /** Tek tarih varsa ekran seçim sunmaz, onu gösterir (DOMAIN §6). */
@@ -243,7 +248,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     orderId: OrderSchema.shape.id,
     /** Gösterim tutarı — ÇEKİLECEK tutar bu değil: onu sunucu siparişten yeniden çözer. */
     totalCents: z.number().int(),
-    deliveryType: DeliveryTypeEnum,
+    deliveryType: AddressDeliveryTypeEnum,
   }),
   /**
    * Sipariş açıldı, sıra ÖDEMEDE — ekran yerel ödeme sayfasını bu `clientSecret` ile açar.
@@ -256,7 +261,7 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     status: z.literal('payment_required'),
     orderId: OrderSchema.shape.id,
     totalCents: z.number().int(),
-    deliveryType: DeliveryTypeEnum,
+    deliveryType: AddressDeliveryTypeEnum,
     clientSecret: z.string().min(1),
   }),
   /** Yer çözülemedi — VERİ/YAPILANDIRMA hatası; müşteriye "bölge dışısınız" DENMEZ, o başka şey. */

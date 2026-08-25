@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { dbNumeric } from '../primitives/db-numeric';
-import { CountryEnum, TransferStatusEnum } from '../primitives/enums.schema';
+import { CountryEnum, TransferStatusEnum, WarehouseKindEnum } from '../primitives/enums.schema';
 
 // Depo ağı şemaları (DOMAIN §17, data-model/depo.md). Sistem tek depo varsayımıyla kuruldu;
 // bu dosya o varsayımın kalktığı yerdir.
@@ -16,8 +16,17 @@ export const WarehouseSchema = z.object({
   code: z.string(),
   name: z.string(),
   /**
+   * Tesis mi, kurye aracı mı (26.08). Araç bir YERDİR — yüklenir, sayılır, transfer alır ve
+   * içinden satış yapılır; ölçüm noktası kimliği (`vehicle`, 0045) ayrı yaşar.
+   *
+   * Okuyan tarafın bilmesi gereken üç sonuç, üçü de veride zorlanıyor: araca bölge bağlanamaz,
+   * araç kargo deposu olamaz, araç `available_stock_total`a girmez.
+   */
+  kind: WarehouseKindEnum,
+  /**
    * Deponun ülkesi — FİZİKSEL tesis nerede. Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır
    * ötesi olabilir (ADR-002), depo olamaz. KDV'nin bağlı olduğu alan da budur (DOMAIN §5/§17).
+   * Araçta da doludur: araç bir ülkenin içinde dolaşır, sınır geçmez.
    */
   countryCode: CountryEnum,
   address: z.record(z.unknown()).nullable(),
@@ -32,6 +41,8 @@ export type Warehouse = z.infer<typeof WarehouseSchema>;
 export const WarehouseInsertSchema = z.object({
   code: z.string().min(1),
   name: z.string().min(1),
+  /** Verilmezse `facility` — bugüne kadarki her satır bir tesistir, araç İSTİSNADIR. */
+  kind: WarehouseKindEnum.optional(),
   countryCode: CountryEnum.optional(),
   address: z.record(z.unknown()).nullish(),
   shipsOnline: z.boolean().optional(),

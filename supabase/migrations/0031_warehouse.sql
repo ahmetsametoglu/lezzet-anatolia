@@ -14,12 +14,29 @@
 -- dosyada kurulur, doğduğu 0006'da değil.
 
 -- ── Depo ────────────────────────────────────────────────────────────────────
+-- ── Deponun TÜRÜ — tesis mi, araç mı (kullanıcı kararı 26.08) ───────────────
+-- Kurye aracı satılan maldan fazlasını yükleyip gittiği yerde isteyene satabiliyor; pratikte olan
+-- bir şey ve modelde karşılığı yoktu. Araç bu yüzden bir DEPO TÜRÜDÜR: yükleme ve akşam dönüşü
+-- birer transfer (`dispatch_transfer`/`receive_transfer`), araçtaki mal gerçek partidir — son
+-- kullanma, FEFO, soğuk zincir ve belge öneki bedavaya gelir. `0045`in künyesi bu soruyu açık
+-- bırakmıştı (*"araç bir depoya mı, bir güne mi, bir kuryeye mi bağlanır"*); cevap: hiçbirine —
+-- araç bir YERDİR, tıpkı tesis gibi. Ölçüm noktası kimliği (`vehicle`, 0045) ayrı yaşamaya devam
+-- eder: orası aracın soğuk zincirini ölçer, burası içindeki malı sayar.
+--
+-- **Tür bir etiket değil, üç sorgunun süzgecidir** (aşağıda ve `available_stock_total`'da):
+-- araç bölgeye bağlanamaz, kargo deposu olamaz, katalog sözüne giremez. Tek alan olmasaydı bu üç
+-- kuralı üç ayrı yer ayrı ayrı hatırlamak zorunda kalırdı — ve hatırlamayan ilki sessizce yanlış
+-- cevap verirdi (depo süzgeci unutulan sorgunun tek depolu veride doğru görünmesiyle aynı tuzak).
+create type public.warehouse_kind as enum ('facility', 'vehicle');
+
 create table public.warehouse (
   id uuid primary key default gen_random_uuid(),
   -- Belge numarasına ve ekrana giren kısa kod ('STR', 'KEHL'). Kısa çünkü `IMH-STR-26-0012` gibi
   -- bir numarayı denetmen ve tedarikçi elle yazacak (0033'ün gerekçesi).
   code text not null unique,
   name text not null,
+  -- Varsayılan `facility`: bugüne kadarki her satır bir tesistir ve araç İSTİSNADIR.
+  kind warehouse_kind not null default 'facility',
   -- Deponun ülkesi — FİZİKSEL tesis nerede duruyor. Bölgenin ülkesiyle karıştırılmamalı: bir bölge
   -- sınır ötesi olabilir (ADR-002), depo olamaz. KDV'nin de bağlı olduğu alan budur:
   -- ⚠ DE'de depo açmak "uzaktan satış"ı "yerel satış"a çevirir (DOMAIN §5/§17) — mali danışman şart.
@@ -29,7 +46,10 @@ create table public.warehouse (
   ships_online boolean not null default false,
   is_active boolean not null default true,
   sort_order int not null default 0,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  -- Araçtan kargo çıkmaz: kargo çıkış deposu bir adrestir, taşıyıcı oraya gelir. Kısıt aynı
+  -- tabloda durabildiği için tetikleyiciye gerek yok — en ucuz yerde.
+  constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online)
 );
 
 -- **ÜLKE BAŞINA EN FAZLA BİR AKTİF KARGO DEPOSU** — kural kayıt kapısında değil BURADA duruyor.
@@ -141,6 +161,35 @@ alter table public.temperature_log add constraint temperature_log_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
 alter table public.delivery_zone add constraint delivery_zone_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
+
+-- ── Bölge bir ARACA bağlanamaz (26.08) ──────────────────────────────────────
+-- "Posta kodu → bölge → depo" zincirinin sonu bir ADRES olmak zorundadır: rota o depodan çıkar,
+-- mal kabul oraya yapılır, kargo dolgusu oradan gider. Zincir bir araca çözülseydi müşteri
+-- siparişi hareket hâlindeki bir yere yazılırdı ve hiçbir ekran bunu fark etmezdi — sipariş
+-- geçerli görünür, deposu geçerli görünür, yalnız mal olmayan bir yerde olurdu.
+--
+-- FK türü ayırt edemez, `check` başka tabloya bakamaz → tetikleyici. Kapsam kontrolünün
+-- (`assert_warehouse_ids_exist`) birebir gerekçesi: hata KAYIT ANINDA verilir, yoksa yanlış
+-- eşleşme sessiz kalır ve ertesi gün rota ekranında ortaya çıkar.
+create or replace function public.assert_zone_warehouse_is_facility() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if not exists (
+    select 1 from public.warehouse w
+     where w.id = new.warehouse_id and w.kind = 'facility'
+  ) then
+    raise exception 'delivery_zone.warehouse_id bir tesis olmalı (araç bölgeye bağlanamaz): %', new.warehouse_id
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger delivery_zone_warehouse_is_facility
+  before insert or update of warehouse_id on public.delivery_zone
+  for each row execute function public.assert_zone_warehouse_is_facility();
 -- Parti ↔ tedarik kalemi (T5): parçalı kabulde fark raporunun bağı.
 alter table public.stock add constraint stock_purchase_order_item_fk
   foreign key (purchase_order_item_id) references public.purchase_order_item (id) on delete set null;
@@ -255,15 +304,23 @@ where w.is_active;
 -- bir depoda duran parti burada görünmez ve rappel'de iz kaybolur. Doğru kaynak `stock` tablosunun
 -- kendisidir (parti/lot bazlı, aktiflikten bağımsız); bu görünüm "satılabilir mi / sipariş vermeli
 -- miyim" sorusunun cevabıdır ve o sorularda kapalı deponun malı gerçekten sayılmamalıdır.
+-- ARAÇLAR BU TOPLAMA GİRMEZ (26.08): görünümün iki tüketicisi de araçtaki malı saymamalı.
+-- *Katalog* için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz — yolda, başkasının
+-- rotasında. Sayılsaydı vitrin tutulamayacak bir söz verirdi. *Tedarik önerisi* için ise araç
+-- stoğu zaten tesisten çıkmış maldır; akşam geri döner, yani ikinci kez sayılırdı ve öneri
+-- olduğundan az mal görünmesini engellemek yerine olmayan bir bolluk gösterirdi.
+-- Depo bazlı `available_stock` aracı AYNEN gösterir — kuryenin ekranı arabasında ne olduğunu
+-- görmek zorunda; ayrım tam da bu yüzden burada, kaynakta değil.
 create or replace view public.available_stock_total as
 select
-  variant_id,
-  sum(physical_qty)    as physical_qty,
-  sum(reserved_qty)    as reserved_qty,
-  sum(available_qty)   as available_qty,
-  sum(expired_dlc_qty) as expired_dlc_qty
-from public.available_stock
-group by variant_id;
+  a.variant_id,
+  sum(a.physical_qty)    as physical_qty,
+  sum(a.reserved_qty)    as reserved_qty,
+  sum(a.available_qty)   as available_qty,
+  sum(a.expired_dlc_qty) as expired_dlc_qty
+from public.available_stock a
+join public.warehouse w on w.id = a.warehouse_id and w.kind = 'facility'
+group by a.variant_id;
 
 -- ── Tedarik siparişi ilerlemesi (K6, T5) ────────────────────────────────────
 -- PO durumu SAKLANAN SAYAÇ DEĞİL, buradan türer: `receive_intake` artık siparişi koşulsuz kapatmaz.

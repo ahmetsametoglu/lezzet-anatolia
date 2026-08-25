@@ -45,9 +45,12 @@ export function OrdersDesktop(props: OrdersViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      {/* BEKLEYEN(09.8): başlıktaki "+ Sipariş" girişi — elle sipariş/kapı satışı ekranı yok. Arka
-          ucu hazır (`lib/order/quick-sale.ts`) ama düğme bugün açacak bir yer bulamazdı; ölü
-          düğme, olmayan sayfaya davet eden linkten daha kötüdür (basılır, hiçbir şey olmaz). */}
+      {/* BEKLEYEN(09.8): başlıktaki "+ Sipariş" girişi — telefonla gelen siparişin elle yazıldığı
+          ekran henüz yok, düğme bugün açacak bir yer bulamazdı; ölü düğme, olmayan sayfaya davet
+          eden linkten daha kötüdür (basılır, hiçbir şey olmaz).
+          KAPI SATIŞI BURAYA GELMEYECEK (26.08): yerinde satış — depo kapısı ve kuryenin aracı —
+          native uygulamanın kurye/depo bölümünün işi (`DOMAIN §17`: "Admin yerinde satış yapmaz").
+          `lib/order/quick-sale.ts` o yüzden burada değil orada çağrılacak. */}
       {/* Arama HEADER'DA DEĞİL (15.08, kullanıcı kararı — fiyatlar emsali): header sekmelere ve
           süzgeçlere bağlı kontrol taşımaz; arama süzgeç şeridinin sağ ucunda, süzdüğü listenin yanında. */}
       <PageHeader title="Siparişler" subtitle={summaryText(counts)} />
