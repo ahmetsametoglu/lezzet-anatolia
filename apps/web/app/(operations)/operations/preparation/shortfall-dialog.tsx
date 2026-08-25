@@ -34,12 +34,23 @@ interface ShortfallDialogProps {
   busy: boolean;
   /** Soru kuyruğa düştü mü — basıldıktan sonra düğme yerine sonucu söyleyen satır çizilir. */
   asked: boolean;
+  /** Kapının reddi PENCEREDE görünür (`ProblemDialog` ile aynı karar): operatör buraya bakıyor. */
+  error: string | null;
   onClose: () => void;
   onShipRest: () => void;
   onAskCustomer: () => void;
 }
 
-export function ShortfallDialog({ title, suggestion, busy, asked, onClose, onShipRest, onAskCustomer }: ShortfallDialogProps) {
+export function ShortfallDialog({
+  title,
+  suggestion,
+  busy,
+  asked,
+  error,
+  onClose,
+  onShipRest,
+  onAskCustomer,
+}: ShortfallDialogProps) {
   return (
     <Dialog
       open
@@ -48,9 +59,12 @@ export function ShortfallDialog({ title, suggestion, busy, asked, onClose, onShi
       title={`Eksik kararı — ${title}`}
       subtitle={`${num(suggestion.missingQty)} paket eksik kaldı`}
       footer={
-        <Button variant="secondary" onClick={onClose} disabled={busy}>
-          Kapat
-        </Button>
+        <>
+          {error ? <span className="mr-auto font-ops-body text-ops-xs font-semibold text-ops-red">{error}</span> : null}
+          <Button variant="secondary" onClick={onClose} disabled={busy}>
+            Kapat
+          </Button>
+        </>
       }
     >
       <div className="flex flex-col gap-3">

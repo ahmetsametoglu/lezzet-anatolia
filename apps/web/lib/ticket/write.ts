@@ -1,5 +1,5 @@
 import 'server-only';
-import { OrderItemService, OrderService, TicketMessageService, TicketService, serviceDb } from '@lezzet/database';
+import { OrderItemService, OrderService, TicketService, serviceDb } from '@lezzet/database';
 import {
   canTransitionTicket,
   canTriggerReturn,
@@ -114,18 +114,20 @@ export async function openTicket(input: {
     // Personelin elle açtığı talepte ilk sözü o söyler; müşterinin kendi açtığında müşteri.
     sender: input.authorId ? 'admin' : 'customer',
   });
-  /* PERSONELİN YAZDIĞI İLK MESAJ DA ÇEVRİLİR (10.3 turunda ölçüldü) — `replyAsStaff` bunu ilk
-     günden yapıyordu ama talebi AÇAN mesaj atlanmıştı: operatör Türkçe yazıyor, Fransız müşteri
-     talep ekranında Türkçe bir metin görüyordu. Arıza sessizdi çünkü kuyruk gecikmeli olarak
-     telafi ediyor (`translate_user_text`) — yani metin bir süre sonra kendiliğinden düzeliyor ve
-     "bir kez gördüm" diyen kimse tekrar bakmıyor.
+  /* ── AÇAN MESAJ ANINDA ÇEVRİLMEZ, KUYRUĞA BIRAKILIR — ve bu bir eksiklik değil, ölçülmüş bir
+     karar (10.3 turu, 25.08).
 
-     Mesaj kimliği `create_ticket`ten dönmüyor (RPC talebi döndürüyor), o yüzden ilk mesaj ayrıca
-     okunuyor. Yalnız PERSONEL açtığında: müşterinin kendi yazdığı metin zaten kendi dilinde. */
-  if (input.authorId) {
-    const [first] = await new TicketMessageService(db).listByTicket(ticket.id);
-    if (first) await translateTicketMessageNow(db, first);
-  }
+     Önce buraya `translateTicketMessageNow` konmuştu (`replyAsStaff` ile simetri olsun diye) ve
+     ölçüm onu geri aldı: çeviri bir LLM turudur, personelin ekranını **3-6 saniye** bekletiyordu
+     (depo turunda saniye saniye ölçüldü — sonuç satırı 3 sn'de yok, 6 sn'de var). Bastığı
+     düğmeden cevap alamayan operatör ikinci kez basar.
+
+     `replyAsStaff`teki aciliyetin sebebi ZİLDİR: cevap yazılınca müşterinin ekranı uyanıyor ve
+     mesajı İLK GÖRÜŞTE kendi dilinde görmeli. Burada zil yok — personelin açtığı talepte
+     müşteriye teyit maili de GİTMİYOR (16.4). Yani müşteri o talebi kendiliğinden açmadıkça
+     görmez; kuyruk (`translate_user_text`, dakikada bir) çok daha önce yetişir.
+
+     Damga atılmadığı için satır kuyrukta duruyor — telafi kendiliğinden işliyor. */
   // Teyit maili — talep kaydedildikten SONRA ve sonucu beklenmeden değil, beklenerek: gönderim
   // zaten kendi içinde sessiz (hata yukarı çıkmaz), ama beklemezsek server action süreci mail
   // gitmeden sonlanabilir.

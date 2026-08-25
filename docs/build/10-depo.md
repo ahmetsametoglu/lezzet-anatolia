@@ -19,7 +19,7 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
 
 ## Görevler
 
-- [~] (10.1) **Hazırlık ekranı:** günün hazırlama listesi (FEFO sırası), sipariş kalemleri + sistem parti önerisi; "hazırlandı" onayı → `OrderItemBatch` otomatik yazılır (07 teslim akışına zemin)
+- [x] (10.1) **Hazırlık ekranı:** günün hazırlama listesi (FEFO sırası), sipariş kalemleri + sistem parti önerisi; "hazırlandı" onayı → `OrderItemBatch` otomatik yazılır (07 teslim akışına zemin)
   - *Bitti:* onayla parti kaydı düşüyor; ekranın hiçbir yerinde fiyat/kâr yok
   - **Durum (28.07) — ARKA UÇ HAZIR, ekran yok.** Kapı ~~`apps/web/lib/order/preparation.ts`~~ → **`@lezzet/application` (`warehouse/preparation`)**, 10.7'de taşındı ve web kopyası silindi: `listPreparationQueue` (gün süzgeci, kalem başına parti önerisi + konum + ilerleme) ve `confirmPreparation`. 11 test → paketin 14 testi. Ekranı yüzey ajanı yazacak; bu kapı onun sözleşmesidir.
   - **Altın kural YAPISAL hale getirildi:** "depocu fiyat/kâr/maliyet görmez" bir arayüz disiplini olarak bırakılsa er geç sızardı. Dönen görünüm modelinde para alanı YOK — ekran isteseydi bile gösteremez. Testte serileştirilmiş çıktıda `unitPrice`/`total`/`purchasePrice` aranıyor, bulunmaması şart. Müşteri e-postası ve adresi de yok; koli etiketi için yalnız ad var.
@@ -31,7 +31,11 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
     - ⚠ **Görsel doğrulamada bir sunum hatası çıktı ve düzeltildi:** toplanmış kalemde öneri sütunu kırmızı *"Uygun parti bulunamadı"* yazıyordu. Kapı öneriyi KALAN adet için kuruyor (toplanan tekrar toplanmaz), yani boşluğun iki ayrı anlamı var — bitmiş iş ile stoksuz kalem. Ekran ikisini artık ayırıyor.
     - **Gezinmeye ikon eklendi** (`hazirlik`): panoya tutturulmuş liste. Kutu/koli BİLEREK değil — stok ikonu zaten katman katman kutu ve ikisi rayda alt alta; aynı metafor bakışta ayırt edilemez olurdu.
     - **ONAY UÇTAN UCA ÖLÇÜLDÜ (08.08, kullanıcı isteğiyle gerçek siparişte).** `LA-26-393WX3` kuyruktan seçilip "✓ Hazırlandı" basıldı; veritabanı kanıtı: sipariş `confirmed → ready`, `fulfilled_qty` 3/3, `order_item_batch` 1 kayıt. Yani parti kaydı gerçekten düşüyor ve sipariş kendiliğinden hazıra geçiyor — bitti-kriterinin ilk yarısı karşılandı. Konsol temiz.
-    - **KALAN:** ekranın onay SONRASI tazelenmesi yakalanamadı — çekim yazım sürerken alındı (düğmeler `busy`) ve `router.refresh()` sonrası hâl görüntülenemedi; arıza kanıtı da yok, ölçülmemiş bir davranış var. ~~Ayrıca tasarımdaki **"Hazırlık kâğıdı bas"** düğmesi çizilmedi~~ → **YAZILDI 25.08**, aşağıya bakın. Satır bu yüzden `[~]`. BEKLEYEN(10.1)
+    - ~~**KALAN:** ekranın onay SONRASI tazelenmesi yakalanamadı~~ → **ÖLÇÜLDÜ 25.08:** kalem
+      onaylandıktan sonra kuyruk kendiliğinden tazeleniyor — ilerleme satırı (`0 / 1 kalem
+      toplandı`), öneri (kalan adet için yeniden kurulmuş) ve durum rozeti hepsi güncellendi.
+      ~~Ayrıca tasarımdaki **"Hazırlık kâğıdı bas"** düğmesi çizilmedi~~ → **YAZILDI 25.08**,
+      aşağıya bakın.
   - **Durum (25.08) — HAZIRLIK KÂĞIDI BASILIYOR** (`Belge - Hazirlik Kagidi.dc.html`, A4 / 14 mm) ·
     touches: `apps/web/app/(operations)/operations/preparation/[orderId]/paper/{page.tsx,paper-sheet.tsx}`,
     `apps/web/app/(operations)/operations/{layout.tsx,preparation/preparation.desktop.tsx,preparation/preparation-labels.ts,preparation/preparation-actions.ts}`,
@@ -66,12 +70,17 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
   - **Durum (08.08) — MASAÜSTÜ ÇİZİMİ YOK, istendi.** *(Aynı gün karşılandı — üstteki nota bakın.)* Ekranı yazmak için canvas'a bakıldı: `Operasyon - Depo Hazirlik.dc.html` başlığıyla *"Depo — Hazırlık · **mobil**"* diyor ve üç karesi de telefon (liste · toplama · eksik kararı). Masaüstü karesi yok. Aynısı 10.4 ve 10.5'in canvas'larında da geçerli — üçü de "· mobil". İçerik dosyaları (`design/pages/depo-*.md`) bağlayıcı ve tam; eksik olan yalnız görsel karar. İstek yazıldı: `design/project/uploads/depo-masaustu-tasarim-istegi.md`. **Kullanıcı kararı 08.08: önce çizim istenecek, ekran beklemede** — mobil çizimden masaüstü türetmek ya da depoyu tümüyle native'e bırakmak seçenekleri elendi.
     - **Çelişki DEĞİL, yüzey ayrımı:** içerik dosyası §7 *"telefon önceliklidir"* diyor, CLAUDE §2 ise operasyonu masaüstü-yalnız kılıyor. İkisi çelişmiyor — 06.08 yüzey formülü depocunun telefon işini native'e verdi (`21.11`, henüz `[ ]`) ve aynı dosya §7 web için zaten *"günün tamamını görüp planlamak"* diyor. Mevcut mobil kareler 21.11'in referansı, web şeridinin uygulayacağı çizim değil.
   - **KARGO TAKİP NUMARASI bu ekranın işi** (`yer-ekseni-arka-uc-talebi.md §5`: *"numarayı hazırlık ekranı girer — paketi kapatan kişi etiketi elinde tutuyor"*). ~~Kapı hazır ve bugün hiç çağrılmıyor~~ → **ÇAĞRILIYOR (21.08, 10.9'un kapanışı):** panele `ShipmentBox` yazıldı, `setShipment` ilk arayüz çağıranına kavuştu. Seed üç taşıyıcıyı da taşıyor (DHL · Colissimo · UPS) ve bir kargo siparişi bilinçle TAŞIYICISIZ — "henüz kargoya verilmedi" hâli ekranda o cümleyle duruyor.
-- [~] (10.2) **Öneriden sapma:** depocu farklı partiden aldıysa yalnız o satırı değiştirir; partiye kilitli teklif kalemi değiştirilemez
+- [x] (10.2) **Öneriden sapma:** depocu farklı partiden aldıysa yalnız o satırı değiştirir; partiye kilitli teklif kalemi değiştirilemez
   - *Bitti:* sapma kaydediliyor; pinned kalem sabit kalıyor
   - **Durum (28.07) — arka uç hazır.** Sapma zaten serbest (`record_preparation` neyi verirsen onu yazar); eklenen şey **kilitli kalem kontrolü**: teklife çıpalı kalem başka partiden verilmek istenirse kapı `pinned_violation` döner ve HİÇBİR yazım yapılmaz (testli).
-  - **Durum (08.08) — SAPMA PENCERESİ YAZILDI** (`problem-dialog.tsx`): "Sorun" penceresinde parti satırlarının adedi düzeltilebiliyor; kilitli teklif kaleminde parti EKLENEMİYOR (ekran önlüyor) ve adet yine düzeltilebiliyor — o partide fiilen eksik olabilir. Kapının `pinned_violation` cevabı da okunur bir cümleye çevrildi ("hiçbir kayıt yazılmadı"). Tasarımın üç sorunu tek pencerede: üçü de aynı iki sayıya dokunuyor (hangi parti, kaç paket) — üç ayrı pencere aynı tablonun üç kopyası olurdu. Gerçek veriyle denenmedi. BEKLEYEN(10.2)
+  - **Durum (08.08) — SAPMA PENCERESİ YAZILDI** (`problem-dialog.tsx`): "Sorun" penceresinde parti satırlarının adedi düzeltilebiliyor; kilitli teklif kaleminde parti EKLENEMİYOR (ekran önlüyor) ve adet yine düzeltilebiliyor — o partide fiilen eksik olabilir. Kapının `pinned_violation` cevabı da okunur bir cümleye çevrildi ("hiçbir kayıt yazılmadı"). Tasarımın üç sorunu tek pencerede: üçü de aynı iki sayıya dokunuyor (hangi parti, kaç paket) — üç ayrı pencere aynı tablonun üç kopyası olurdu. ~~Gerçek veriyle denenmedi.~~
+  - ✅ **GERÇEK VERİYLE ÖLÇÜLDÜ (25.08).** `LA-26-P9XHEL` · *Bitter Çikolatalı Profiterol Dilimi*:
+    pencere parti satırını son tarihi ve konum rozetiyle (`Derin dondurucu 2`) açtı; adet 3 → 1
+    yapılınca **kendiliğinden uyardı** (*"3 istendi, 1 var — 2 paket eksik kalacak. Kaydettikten
+    sonra ne yapılacağını soracağız."*) ve düğme *"Eksik kaydet (1 paket)"*e döndü. Kayıt yazıldı,
+    kuyruk tazelendi, eksik kararı penceresi açıldı. Para hiçbir adımda görünmedi.
   - **Kontrol neden kapıda, RPC'de değil:** RPC fiziksel gerçeği korur (olmayan mal yazılmaz); "bu kalem şu partiden çıkmalı" ise bir İŞ kuralıdır (DOMAIN §4) — yeri uygulama katmanıdır.
-- [~] (10.3) **Eksik işaretleme:** karşılanamayan adet işaretlenir; sistem akıllı öneri sunar (müşteriye sor / kalanı gönder) ama karar depocuda; para hesabı depocuya görünmez
+- [x] (10.3) **Eksik işaretleme:** karşılanamayan adet işaretlenir; sistem akıllı öneri sunar (müşteriye sor / kalanı gönder) ama karar depocuda; para hesabı depocuya görünmez
   - *Bitti:* eksik işareti 07 kısmi karşılama akışını tetikliyor; tutar görünmüyor
   - **Durum (28.07) — arka uç hazır.** Motor `domain-core/stock/shortfall.ts` (7 birim testi) + kapı eksik kalemler için tavsiyeyi döner. Para dallanması zaten 07.8'de: "kalanı gönder" seçilirse `adjustFulfillment` farkı çözüyor.
   - **Ölçüt İKİLİ (oran + tutar), çünkü tek başına ikisi de yanılır:** yalnız oran, 40 €'luk kalemin yarısını "önemsiz" sayardı; yalnız tutar, ucuz ama siparişin tamamını oluşturan kalemi kaçırırdı. Biri eşiği aşarsa müşteriye sorulur — şüphede insana danışılır. Eşikler ayardan (`shortfall_ask_ratio_percent`, `shortfall_ask_value_cents`).
@@ -110,10 +119,22 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
     - **Testler:** 10 iddia (`shortfall-question.test.ts`) — eksik hesabı, kapsam reddi, rol
       duvarı (ad/e-posta/tutar sızmıyor), çift talep, çözülmüş talebin engel olmaması, kuyruk
       izinin belirmesi ve kalkması. Çift talep süzgeci mutasyonla doğrulandı.
-    - **KALAN — ölçüm:** pencere ve kuyruk izi GERÇEK ekranda görülmedi. `ui:shot` hazırlık
-      kuyruğuna giremiyor (depo seçimi çerezde yaşıyor, araç yeni bağlam açıyor) ve diyalog ancak
-      bir kalem onaylanıp eksik çıkınca doğuyor. 10.2'nin ölçüm borcuyla aynı turda kapanmalı.
-      BEKLEYEN(10.3)
+    - ✅ **ÖLÇÜLDÜ (25.08, gerçek veriyle uçtan uca).** Playwright turu: kuyruk → sipariş → "Sorun ▾"
+      → adet düşür → "Eksik kaydet" → eksik kararı → "Müşteriye sorulsun". Talep veritabanında
+      doğrulandı (`admin` · `question` · `open` · kaleme bağlı), pencere *"Soru operasyona iletildi"*
+      yazdı, kuyruk satırında **"müşteriye soruldu — operasyon takip ediyor"** izi belirdi ve
+      kalem KİLİTLENMEDİ (düğmeler aktif kaldı — karar hep insanda).
+    - ⚠ **Tur İKİ gerçek kusur buldu ve ikisi de düzeltildi:**
+      1. **Sonuç 3-6 saniye gecikiyordu** (saniye saniye ölçüldü: 3 sn'de yok, 6 sn'de var).
+         Sebep bu turda EKLENEN anında çeviriydi — `openTicket`e `replyAsStaff` ile simetri olsun
+         diye konmuştu ve çeviri bir LLM turudur. Geri alındı: personelin açtığı talepte müşteriye
+         teyit maili GİTMİYOR (16.4) ve zil de yok, yani aciliyetin sebebi ortada yok; kuyruk
+         (`translate_user_text`, dakikada bir) çok önce yetişir. Ölçüm sonrası: **1 sn altı.**
+         Ayrıca `setShortfall` `startTransition`ın dışına alındı — transition `router.refresh()`
+         bitene kadar içindeki her state güncellemesini erteliyordu.
+      2. **Pencerede hata görünmüyordu:** kapının reddi (`already_asked`) sayfanın altına düşüyordu,
+         oysa operatör pencereye bakıyor. `ShortfallDialog` artık `error` alıyor (`ProblemDialog`
+         aynı kararı zaten vermişti).
   - **Kalemin tamamı eksikse oran hesaplanmaz:** müşteri sipariş ettiği şeyi hiç almayacak, doğrudan sorulur.
   - **Tavsiye TUTAR TAŞIMAZ:** parasal ölçüt motora GİRDİ olarak verilir, dönen değerde yer almaz (testli) — tasarımın "fark iadesi bile tutar olarak gösterilmez" kuralı.
 - [~] (10.4) **Mal kabul:** bekleyen tedarik siparişinden dolu form (yoksa boş); ürün/varyant + adet + son tarih + lot + tedarikçi + konum; MLOR uyarısı (engelsiz); paketleme girişi; PO → `received` · `touches: apps/web/app/(operations)/operations/receiving/** · apps/web/components/operation/**` *(üstlenildi 02.08 — operasyon yüzeyi ajanı)*

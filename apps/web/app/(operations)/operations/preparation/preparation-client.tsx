@@ -50,6 +50,8 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
     suggestion: ShortfallSuggestion;
     asked: boolean;
   } | null>(null);
+  /** Soru gönderimi kendi beklemesini taşır (künyesi `askCustomer`da) — `isPending` onu kapsamıyor. */
+  const [asking, setAsking] = useState(false);
 
   /**
    * Kalemi yazar. `batches` verilmezse SİSTEM ÖNERİSİ gider — "Hazırlandı" tuşunun anlamı tam
@@ -94,17 +96,32 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
    * Pencere KAPANMIYOR: depocu bastığı düğmenin ne yaptığını görmeli. Kapanan bir pencere, soru
    * gerçekten düştü mü sorusunu cevapsız bırakır ve tereddüt eden operatör ikinci kez basar.
    */
-  const askCustomer = (itemId: string) => {
+  /**
+   * **Soruyu gönder — KENDİ bekleme bayrağıyla, `startTransition`ın içinde değil.**
+   *
+   * Ölçüm turunda görüldü (25.08): soru veritabanına düştüğü hâlde pencere iki saniyeden uzun süre
+   * eski hâlinde kaldı. Sebep `router.refresh()`: transition sunucu turu bitene kadar "pending"
+   * kalıyor ve içindeki HER state güncellemesi onunla birlikte erteleniyor — yani "soruldu"
+   * cevabı, kuyruğun yeniden okunmasını bekliyordu. Depocu bastığı düğmeden cevap alamayınca
+   * ikinci kez basar.
+   *
+   * Şimdi sonuç anında yazılıyor, tazeleme arkada sürüyor. Kendi bayrağı var çünkü `isPending`
+   * artık bu isteği kapsamıyor: bayraksız bırakılsaydı düğme istek sürerken basılabilir kalırdı.
+   */
+  const askCustomer = async (itemId: string) => {
     setError(null);
-    startTransition(async () => {
+    setAsking(true);
+    try {
       const { error: failed } = await askCustomerAction(itemId);
       if (failed) {
         setError(failed);
         return;
       }
       setShortfall((cur) => (cur ? { ...cur, asked: true } : cur));
-      router.refresh();
-    });
+      startTransition(() => router.refresh());
+    } finally {
+      setAsking(false);
+    }
   };
 
   /** Kargo künyesini yazar (10.9) — kalem yazımından bağımsız, kendi tek turu. */
@@ -153,8 +170,12 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
         <ShortfallDialog
           title={shortfall.title}
           suggestion={shortfall.suggestion}
-          busy={busy}
+          busy={busy || asking}
           asked={shortfall.asked}
+          // Hata PENCEREDE gösteriliyor (ölçüm turu 25.08): kapı reddederse ("zaten açık bir soru
+          // var") cümle sayfanın altında kalırdı ve operatör pencereye bakıyor — `ProblemDialog`
+          // aynı kararı zaten vermişti.
+          error={error}
           onClose={() => setShortfall(null)}
           // "Kalanı gönder" AYRI BİR YAZIM DEĞİL: eksik zaten kaydedildi (kalem toplanan adetle
           // yazıldı) ve siparişin geri kalanı normal akışında sürüyor. Burada yapılacak tek şey
