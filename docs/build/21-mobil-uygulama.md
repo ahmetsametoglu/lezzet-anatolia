@@ -5395,3 +5395,30 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kez işe yaradı.
 
   Doğrulama: `cart-view.test.ts` **8/8** · `@lezzet/mobile-api` typecheck temiz.
+
+- [x] (21.110) **SEPET UÇLARI TESTLENDİ — ve testler GERÇEK bir sızıntı buldu (13 iddia)**
+  · touches: `apps/mobile-api/src/api/v1/cart.test.ts`, `apps/mobile-api/src/api/v1/cart.ts`
+
+  **BULGU: BEŞ UÇTAN ÜÇÜ İÇ NESNELERİ İSTEMCİYE SIZDIRIYORDU.** `viewOf` okuma kapısının TAM
+  dönüşünü veriyor (`CartRead = {body, source, place}`); `PATCH /items/:id`, `DELETE /items/:id` ve
+  `POST /takeover` `.body` çıkarmayı atlamış, tamamını göndermişti. `source` sepetin iç karar
+  nesnesi, `place` depo çözümü — ikisi de operasyonun künyesi, müşterinin değil.
+
+  **DERLEMEDE HATA VERMİYOR** çünkü `ok()` gevşek tipli. Bu yüzden bir gün önce (24.08) aynı
+  sınıftan bir sızıntı `cart-view`da **gözle** yakalanıp düzeltilmiş, **kardeşleri görülmemişti**.
+  Gözle arama tam olarak böyle yarım kalıyor: düzeltilen yer görülür, görülmeyen yer düzeltilmez.
+
+  **SIRA: ÖNCE TEST, SONRA DÜZELTME.** Testler yazıldı, altı iddia birden kırmızı yandı (üçü doğrudan
+  sızıntı iddiası, üçü de `lines`ın bir kat derinde kalmasından), sonra üç satır düzeltildi → 13/13.
+  Koruma künyeye de yazıldı: yeni bir uç `.body`yi unutursa `cart.test.ts` kırmızı yanar.
+
+  **ÖTEKİ ÇİVİLENEN KARARLAR:** gövde HER ZAMAN liste (09.08 — eşzamanlı ekleme birbirini eziyordu,
+  ölçüm: üç eşzamanlı ekleme → 1–2 satır) · aynı adres BİRLEŞİR, ikinci satır açılmaz · devir
+  sunucudaki sepeti KORUR, üstüne ekler (ezseydi telefonunda boş sepetle giren müşteri masaüstünde
+  biriktirdiğini kaybederdi) · boş liste geçerli bir devir gövdesidir · başkasının satırı silinemez.
+
+  **TESTİN İKİ HATASI ÖLÇÜLDÜ:** `lineId` ayrı bir kimlik sanılmıştı — sepette satır ADRESİYLE
+  yaşıyor, `lineId` varyantın kendisi (`readLineKey` künyesi). Ve `CartService.addItems` `kind`
+  almıyor. İkisi de sözleşmeyi hafızadan yazmanın bedeli; typecheck birini, koşu ötekini tuttu.
+
+  Doğrulama: `cart.test.ts` **13/13** · `@lezzet/mobile-api` typecheck temiz.

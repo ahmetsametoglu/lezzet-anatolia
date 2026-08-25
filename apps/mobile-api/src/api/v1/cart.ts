@@ -176,6 +176,15 @@ cart.use('*', resolveCustomer);
  * `previousPrices`: geçilmeyen tek uçta zam bildirimi sessizce doğmaz ve müşteri artmış fiyatı
  * uyarısız görür. Yer (`?postalCode=`) ve kupon (`?coupon=`) da her uçta okunur — yazma sonrası
  * dönen görünüm, `GET`in döndüreceğiyle birebir aynı olmalı.
+ *
+ * ── DÖNÜŞÜ TELE OLDUĞU GİBİ VERME: `.body` ÇIKAR ────────────────────────────
+ * `CartRead` ÜÇ parça taşıyor (`body` · `source` · `place`) ve yalnız ilki müşterinindir; `source`
+ * sepetin iç karar nesnesi, `place` depo çözümüdür. **`ok()` gevşek tipli, tamamını göndermek
+ * DERLEMEDE HATA VERMEZ** — ve tam bu yüzden yaşandı: 25.08'de beş uçtan ÜÇÜ (`PATCH` · `DELETE` ·
+ * `takeover`) `.body`yi atlıyordu ve ikisini istemciye sızdırıyordu. Aynı sınıftan bir sızıntı bir
+ * gün önce `cart-view`da gözle yakalanıp düzeltilmiş, kardeşleri görülmemişti.
+ * Koruma artık `cart.test.ts`te: beş ucun beşi de `source`/`place` taşımadığı için ayrı ayrı
+ * sınanıyor. Yeni bir uç eklerken `.body` unutulursa orada kırmızı yanar.
  */
 async function viewOf(c: Context<CustomerEnv>, db: Db, stored: Cart): Promise<CartRead> {
   return readCartView(db, c.get('locale'), stored.items.map(entryOfItem), {
@@ -279,7 +288,7 @@ cart.patch('/items/:lineId', async (c) => {
 
   const db = serviceDb();
   const updated = await new CartService(db).setQty(c.get('customerId'), key, body.data.qty);
-  return ok(c, await viewOf(c, db, updated));
+  return ok(c, (await viewOf(c, db, updated)).body);
 });
 
 /**
@@ -293,7 +302,7 @@ cart.delete('/items/:lineId', async (c) => {
 
   const db = serviceDb();
   const updated = await new CartService(db).removeItem(c.get('customerId'), key);
-  return ok(c, await viewOf(c, db, updated));
+  return ok(c, (await viewOf(c, db, updated)).body);
 });
 
 /**
@@ -313,5 +322,5 @@ cart.post('/takeover', async (c) => {
 
   const db = serviceDb();
   const updated = await new CartService(db).takeOver(c.get('customerId'), incomingOf(body.data.items));
-  return ok(c, await viewOf(c, db, updated));
+  return ok(c, (await viewOf(c, db, updated)).body);
 });
