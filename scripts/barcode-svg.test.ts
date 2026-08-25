@@ -118,8 +118,12 @@ describe('FİZİKSEL SET basılabilir', () => {
   */
   it('çizgili simgeli her etiketin sağlama basamağı geçerli', () => {
     for (const label of TEST_LABELS) {
-      if (label.symbology === 'qr') continue;
-      expect(() => assertCheckDigit(label.code, label.symbology)).not.toThrow();
+      // Alanlar ÖNCE ayrıştırılıyor: `label.symbology` daraltması `expect`in içindeki closure'a
+      // geçmiyor (TS callback'in ne zaman çağrılacağını bilemez) ve `'qr'` orada hâlâ olası
+      // görünüyordu. Ayrıştırılmış `const` daraltmayı korur.
+      const { code, symbology } = label;
+      if (symbology === 'qr') continue;
+      expect(() => assertCheckDigit(code, symbology)).not.toThrow();
     }
   });
 

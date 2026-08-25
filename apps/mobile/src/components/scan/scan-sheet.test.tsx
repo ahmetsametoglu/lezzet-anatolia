@@ -69,4 +69,32 @@ describe('ScanSheet', () => {
     // Simülasyon kameradan bağımsız: izin/kamera olmadan da akış koşturulabilir olmalı.
     expect(screen.getByTestId('scan-dev-pool')).toBeOnTheScreen();
   });
+
+  it('ÜRETİM derlemesinde havuz ÇİZİLMEZ — depocu sahte kod basamaz', async () => {
+    /*
+      Havuzun tek güvencesi `__DEV__` dalı ve o dalın sessizce kalkması hiçbir ekranı bozmaz:
+      uygulama çalışır, kamera çalışır, YALNIZ release'te de simülasyon çipleri görünür olur.
+      Depocu o çiplere basarak kamerayı hiç kullanmadan mal kabul yazabilir — kayıt gerçek,
+      okutma sahte. Kimse fark etmez çünkü kırılan bir şey yoktur (`not-barkod-arama-kapisi`).
+
+      Jest'te `__DEV__` bir global; üretimde metro onu `false` sabitine indirger ve ölü dalı
+      atar. İkisinde de ölçülen AYNI dal — burada değeri elle çevirip dalın gerçekten değere
+      bağlı olduğunu çiviliyoruz.
+    */
+    const globals = globalThis as unknown as { __DEV__: boolean };
+    const gercek = globals.__DEV__;
+    globals.__DEV__ = false;
+
+    try {
+      await renderSheet();
+
+      expect(screen.queryByTestId('scan-dev-pool')).toBeNull();
+      // Çipin kendisi de yok: `queryByTestId` bir kapsayıcıyı ölçer, bu satır teslim yolunu.
+      expect(screen.queryByLabelText('Paket')).toBeNull();
+    } finally {
+      // Değer küresel: geri konmazsa AYNI dosyadaki sonraki testler ve öteki dosyalar
+      // (jest her dosyayı ayrı ortamda koşsa da sıra içinde) üretim dalını görürdü.
+      globals.__DEV__ = gercek;
+    }
+  });
 });
