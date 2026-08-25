@@ -5642,6 +5642,57 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   oldu:** `customer.ts` YAPRAK modül (hiç göreli import'u yok) ve pakete **alt yol ihracı** eklendi
   (`"./customer": "./src/customer.ts"`). Paylaşılan alanda **EKLEME**; mevcut düzen korundu.
 
+  **PERDE İŞARETİ BÜYÜTÜLDÜ — 76 dp → 164 dp (kullanıcı kararı 25.08).**
+  *"Ekranın ortasında kocaman olsun."* Ölçüm gerekçeyi verdi: cihaz yoğunluğu 408 (ölçek 2,55),
+  ekran **423 dp** geniş — 76 dp, genişliğin yalnız **%18'i** demekti. Şimdi %40, yani 2,2 katı.
+  Kaynak da 512² → **1024²** büyütüldü (164 dp xxxhdpi'de 656 px eder).
+
+  **ARA BİR DEĞER YANLIŞTI VE CİHAZ TESTİ ONU YAKALAYAMAZDI — kaydı burada duruyor.** Önce 280 dp
+  yazıldı ve elimizdeki telefonda kusursuz göründü. Kullanıcı sordu (*"splash screen'de öyle bir
+  zorunluluk yok diye biliyorum"*), araştırıldı ve ölçüldü: Expo **Android 12'nin splash API'sini**
+  bildiriyor (`windowSplashScreenAnimatedIcon`) ve **API 31+ maskeliyor** — *"as with adaptive icons,
+  one-third of the foreground is masked"*; ikon zemini yoksa tuval 288 dp, görünen daire **192 dp**.
+  Test cihazı **Android 11 (API 30)** ve o sürümde androidx kendi UYUM katmanını çiziyor
+  (`compat_splash_screen.xml`), maskelemiyor. Yani 280 dp Android 12+ cihazların hepsinde kırpılırdı
+  (mürekkep 257 dp) **ve bizim doğrulamamız bunu hiç gösteremezdi.** Sınır ölçülerek bulundu:
+  164 dp → üretilen çizimde tüm mürekkebin çapı **191,5 dp** (izin verilen 192).
+
+  **CİHAZDA DOĞRULANDI — repodaki dosyalar değil, TELEFONDAN GERİ ÇEKİLEN APK ölçüldü**
+  (OPPO CPH1907, Wi-Fi, `adb pull` + kaynak pikselleri):
+
+  | Kaynak | Önce (kurulu APK) | Sonra (kurulu APK) |
+  | --- | --- | --- |
+  | `ic_launcher.webp` | `#399DFC · #0475E0` (Expo mavisi) | `#FAF6EC` %84 + zeytin `#575B31` |
+  | `ic_launcher_background.webp` | `#E6F4FE` %96 | `#FAF6EC` %100 |
+  | `splashscreen_logo.png` | opakların %100'ü `#FFFFFF` | zeytin `#575B31`, saydam zeminde |
+
+  Ekran görüntüsü de alındı: perde zemini **`#FAF6EC` %99,4**, işaret ortada ve genişliğin
+  **~%55'i**. Yani "beyaz üstüne beyaz" hâli artık üretilemiyor.
+
+  *(Derleme yerelde koşuldu: `expo prebuild --clean` + `gradlew app:assembleDebug`. `ANDROID_HOME`
+  ajan kabuğunda tanımlı değildi ve ilk deneme `SDK location not found` ile düştü — SDK
+  `~/Library/Android/sdk`. `expo run:android --device` cihaz adını tanımadı çünkü adb aynı telefonu
+  IP ve mDNS olmak üzere İKİ kayıtla listeliyor; cihaz seçimi atlanıp `adb install -r` kullanıldı.)*
+
+  **İKON ORANLARI BÜYÜTÜLDÜ — ve "daire" sorusunun cevabı kayda geçti (kullanıcı kararı 25.08).**
+  Kullanıcı cihazda gördü: *"resmi daire içerisinde küçültmüşsün… daire hiç olmasın istiyorum."*
+  **Daire bizim değil:** Android 8'den beri her ikon başlatıcının maskesinden geçiyor (ColorOS'ta
+  daire) ve `adaptiveIcon` kaldırılsa maske KALKMAZ, kötüleşir — eski tip ikonu sistem kendi
+  çizdiği zemine oturtup daha da küçültür. Elimizdeki tek değişken maskenin İÇİ.
+
+  Ödünleşme ölçüldü: mürekkebin merkezden en dış uzaklığı sanat genişliğinin **%61,7'si**
+  (köşelerde kıvılcım, ekmeğin ucu, A'nın ayağı), maskenin görünen daire yarıçapı tuvalin
+  **%33,3'ü** → **hiç kırpılmadan sığmak için azami oran %54**, ve o oranda logo küçük duruyor.
+  Üç oran çizilip bakıldı — %54 (%0,1 kayıp, küçük) · **%75 (%15,4 kayıp, seçildi)** · %95
+  (%35,8 kayıp, "A" kesiliyor). Yani **büyüklük ile kırpılmazlık bu kompozisyonda aynı anda
+  sağlanamıyor**; karar büyüklükten yana verildi.
+  Ön katman ve tek renk **%60 → %75**; iOS ikonu **%78 → %88** (kavisli kare maskesi daireden
+  cömert). Gerekçe kalıcı olarak `assets/brand/README.md`de.
+
+  **Bu iki değişiklik CİHAZDA DOĞRULANMADI** — kullanıcı yeniden derleme istemedi (*"fakat yeniden
+  derlemeni istemiyorum"*). Yerel maske önizlemeleriyle bakıldı; telefonda görünmesi için bir
+  sonraki derleme gerekiyor.
+
   Doğrulama: `expo config` → `backgroundColor: '#faf6ec'` (ham hex kalktı) · mobil paket
   **786/786** · `@lezzet/design-tokens` birim **30/30** · mobil + web + tokens typecheck temiz · lint temiz.
 

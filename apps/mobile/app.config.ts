@@ -154,7 +154,30 @@ const config: ExpoConfig = {
         // zemin bir kez zıplar. Değer artık token'dan — gerekçe ikon zemininin künyesinde.
         backgroundColor: customerSand['sand-25'],
         image: './assets/images/splash-icon.png',
-        imageWidth: 76,
+        /*
+          164 dp — büyütme kullanıcı kararı (25.08, *"ekranın ortasında kocaman olsun"*), ÜST SINIR
+          ise Android'in. Önceki değer 76 dp'ydi: cihazda ölçüldü, 408 yoğunlukta ekran 423 dp geniş,
+          yani işaret genişliğin yalnız %18'i kalıyordu. Şimdi %40 — 2,2 katı.
+
+          ── NEDEN 280 DEĞİL, VE BUNU CİHAZ TESTİ YAKALAYAMAZDI ────────────────────────────────
+          Bir tur 280 yazıldı ve elimizdeki telefonda kusursuz göründü. Sebebi yanıltıcıydı: cihaz
+          **Android 11 (API 30)** ve o sürümde androidx kendi UYUM katmanını çiziyor
+          (`compat_splash_screen.xml`), maske uygulamıyor. Oysa Expo Android 12'nin splash API'sini
+          bildiriyor (`windowSplashScreenAnimatedIcon`) ve **API 31+ maskeliyor**: Google'ın deyişiyle
+          *"as with adaptive icons, one-third of the foreground is masked"* — ikon zemini yoksa tuval
+          288 dp, **görünen daire 192 dp**. 280 dp'de mürekkep 257 dp'ye çıkıyordu, yani Android 12+
+          cihazların hepsinde kırpılırdı ve bizim telefonumuz bunu hiç göstermezdi.
+
+          ── SINIR ÖLÇÜLEREK BULUNDU ───────────────────────────────────────────────────────────
+          Mürekkebin merkezden en dış uzaklığı sanat genişliğinin %61,7'si (köşelerde kıvılcım,
+          ekmeğin ucu, A'nın ayağı). Sınırlayıcı çemberin 192 dp'ye sığması için mürekkep ≤ 155,6 dp;
+          sanat kare tuvalin %92'si olduğundan `imageWidth` ≤ 169,5 dp. Üretilen çizim ÖLÇÜLDÜ ve
+          169,5 sınırda 196,5 dp veriyordu (uç pikseller 2,3% taşıyor) — değer **164**'e indirildi,
+          ölçülen çap 191,8 dp.
+
+          Kaynak 512² → 1024² büyütüldü: 164 dp × 4 (xxxhdpi) = 672 px, 512'lik kaynak bulanıklaşırdı.
+        */
+        imageWidth: 164,
       },
     ],
     'react-native-edge-to-edge',
