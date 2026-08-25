@@ -210,7 +210,7 @@ export function AccountScreen({
 
   /* Profil çekmecesi (v3 `shPf`) — GERÇEK kayıt (21.14c): taslak alanlar açılışta karttan dolar,
      Kaydet `PATCH /me`ye gider; başarı `publishMe` ile yayınlanır (kart ve vitrin selamlaması
-     aynı anda döner), adlı retler (`name_required` · `phone_invalid` · `phone_taken`) cümleye
+     aynı anda döner), adlı retler (`name_required` · `phone_invalid`) cümleye
      çevrilip çekmecede söylenir. */
   const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [draftName, setDraftName] = useState('');

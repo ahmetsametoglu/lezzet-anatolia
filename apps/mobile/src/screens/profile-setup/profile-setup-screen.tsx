@@ -129,7 +129,7 @@ export function ProfileSetupScreen({ next = '/' }: ProfileSetupScreenProps) {
     setIndex(index + 1);
   };
 
-  /** `PATCH /me` — adlı retler (`name_required` · `phone_invalid` · `phone_taken`) cümleye çevrilir. */
+  /** `PATCH /me` — adlı retler (`name_required` · `phone_invalid`) cümleye çevrilir. */
   const savePatch = (patch: { name?: string; phone?: string }): void => {
     setSaving(true);
     setError(null);

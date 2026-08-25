@@ -5708,3 +5708,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: `expo config` → `backgroundColor: '#faf6ec'` (ham hex kalktı) · mobil paket
   **786/786** · `@lezzet/design-tokens` birim **30/30** · mobil + web + tokens typecheck temiz · lint temiz.
 
+- [x] (21.117) **`phone_taken` ÖLÜ METNİ SÖKÜLDÜ — sözlük artık olmayan bir kuralı anlatmıyor (04.10 artığı)**
+  · touches: `apps/mobile/src/screens/{profile-setup,checkout,account}/messages.json`, aynı üç ekranın künyeleri
+
+  Web şeridi `04.10`'da kimlik anahtarını taşıdı: `user_profiles.phone` artık **iletişim
+  numarasıdır**, kimlik `customer_phone`da (migration 0049). Tekil indeks (`user_profiles_phone_key`)
+  kalkınca ondan türeyen ret de kalktı — `MeUpdateErrorEnum` bugün `['name_required', 'phone_invalid']`.
+
+  **Mobilde cümle duruyordu: üç ekran × üç dil = 9 satır**, artı üç künye yorumu onu var gibi
+  anlatıyordu. Görünür bir arıza değildi (sunucu o anahtarı hiç döndürmüyor) ama **ileriye dönük
+  yanlış bilgiydi**: dosyayı okuyan "demek numara tekil" diye düşünüp olmayan bir kurala göre kod
+  yazardı. Sözleşmenin kendi künyesi de bunu adıyla koymuş: *"ekranlardaki cümlesi ölü metindir."*
+
+  **Silme güvenli, ölçüldü:** üç çağrı yerinde de bilinmeyen anahtar yedeğe düşüyor
+  (`t.errors[known] ?? t.errors.unexpected` · `?? t.contact.errors.generic`), yani bir gün
+  beklenmedik bir ret gelse ekran boş kalmaz.
+
+  **Müşteriye yansıması bir kayıp değil, kalkmış bir engelin artığı:** aynı numarayı iki hesabın
+  taşıması artık meşru (aile telefonu, işyeri hattı) ve kimseye *"bu numara başka bir hesapta
+  kayıtlı"* denmiyor.
+
+  Doğrulama: `apps/mobile`da `phone_taken` **0 eşleşme** · mobil paket **787/787** · typecheck ·
+  lint temiz. Notu kapatıldı (`not-mobil-phone-taken-reti-kalkti.md` silindi).
+

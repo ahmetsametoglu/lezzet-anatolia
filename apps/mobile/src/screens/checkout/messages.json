@@ -84,7 +84,6 @@
       "errors": {
         "name_required": "Ad soyad gerekli.",
         "phone_invalid": "Telefon numarası geçerli görünmüyor — ülke koduyla birlikte yazabilirsiniz.",
-        "phone_taken": "Bu numara başka bir hesapta kayıtlı.",
         "generic": "Kaydedilemedi. Bağlantınızı kontrol edip tekrar deneyin."
       }
     },
@@ -240,7 +239,6 @@
       "errors": {
         "name_required": "Le nom et le prénom sont obligatoires.",
         "phone_invalid": "Ce numéro ne semble pas valide — vous pouvez l'écrire avec l'indicatif du pays.",
-        "phone_taken": "Ce numéro est déjà enregistré sur un autre compte.",
         "generic": "Enregistrement impossible. Vérifiez votre connexion et réessayez."
       }
     },
@@ -396,7 +394,6 @@
       "errors": {
         "name_required": "Vor- und Nachname sind erforderlich.",
         "phone_invalid": "Diese Nummer scheint ungültig zu sein — Sie können sie mit Ländervorwahl angeben.",
-        "phone_taken": "Diese Nummer ist bereits einem anderen Konto zugeordnet.",
         "generic": "Speichern nicht möglich. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
       }
     },

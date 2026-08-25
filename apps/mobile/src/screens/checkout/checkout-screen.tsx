@@ -152,7 +152,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
      ise "siparişi tamamlıyorum" anı — adres, gün ve ödeme de burada seçiliyor.
 
      Yazım AYRI bir adım (kendi düğmesi), sipariş gönderimine iliştirilmedi: `updateMe`nin adlı
-     retleri var (`phone_invalid`, `phone_taken`) ve bunlar siparişin değil künyenin sorunudur.
+     retleri var (`phone_invalid`) ve bunlar siparişin değil künyenin sorunudur.
      Tek çağrıda birleştirilseydi geçersiz bir telefon "siparişiniz açılamadı" diye görünürdü. */
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
