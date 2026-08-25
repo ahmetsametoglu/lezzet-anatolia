@@ -10,6 +10,7 @@
 // Kullanım: `pnpm docs:check` (denetler, hatada 1 döner) · `pnpm docs:sync` (durum özetini yeniden yazar).
 // Kural gereği bu betik ASLA doküman metnini "düzeltmez" — yalnız türetilmiş bloğu üretir; gerisini insan/ajan yazar.
 
+import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +21,32 @@ const problems = [];
 const note = (m) => problems.push(m);
 
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
+
+/**
+ * HEAD'deki hâli — yoksa `null`. Türetilmiş özetin "kimin işi" sorusunu cevaplamak için.
+ *
+ * Denetimin kendisi HEAD okumaz ve okumamalı: pre-commit kancası betiği `git checkout-index -a`
+ * ile üretilmiş bir kopyada koşturuyor, yani zaten **commit'e girecek** dünyayı görüyor. Buradaki
+ * okuma yalnız `--fix` içindir ve amacı farklı: üretilen özetin HANGİ satırlarının değiştiğini,
+ * dolayısıyla hangilerinin çalıştıranın kendi işi OLMADIĞINI söyleyebilmek.
+ */
+function headRead(p) {
+  try {
+    return execFileSync('git', ['show', `HEAD:${p}`], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    return null; // HEAD'de yok (yeni dosya) ya da git yok — uyarı üretilemez, akış sürer
+  }
+}
+
+/** Çalışma ağacında değişik duran modül dosyalarının `NN`leri — commit'lenmemiş iş demek. */
+function dirtyModules() {
+  try {
+    const out = execFileSync('git', ['status', '--porcelain', '--', 'docs/build'], { cwd: ROOT, encoding: 'utf8' });
+    return new Set(out.split('\n').flatMap((l) => l.match(/docs\/build\/(\d\d)-.*\.md$/)?.slice(1, 2) ?? []));
+  } catch {
+    return new Set();
+  }
+}
 const snake = (s) => s.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase());
 
 // ── 1. DATA_MODEL ↔ migration ↔ Zod ────────────────────────────────────────────
@@ -768,6 +795,48 @@ for (const dir of ['apps/web/app/(operations)/operations']) {
   }
 }
 
+/**
+ * **PAYLAŞILAN AĞAÇ UYARISI** (25.08) — türetilmiş özetin en sinsi tuzağı, artık sessiz değil.
+ *
+ * ── ÖLÇÜLEN ARIZA ───────────────────────────────────────────────────────────
+ * Özet TÜM modül dosyalarından üretiliyor; paylaşılan ağaçta bu, kaçınılmaz olarak **başka şeridin
+ * henüz commit'lenmemiş işini de saymak** demek. O satır commit'e girerse HEAD kendi kaynağıyla
+ * çelişir ve **pre-commit kancası ağaçtaki herkesi durdurur** — kancanın künyesi bunu bilerek
+ * yapıyor (denetimi commit'e girecek içeriğe koşuyor), yan etkisi bu. 25.08'de üç kez yaşandı.
+ *
+ * ── NEDEN OTOMATİK DÜZELTİLEMİYOR ───────────────────────────────────────────
+ * Makine "benim kirli dosyam" ile "onun kirli dosyası"nı ayırt EDEMEZ: bu depoda akış
+ * `git commit -- <yollar>` (sahnelemesiz), yani kendi işiniz de indekste görünmez. `--fix`i
+ * indeksten okutmak, çalıştıranın kendi ilerlemesini saymamak olurdu — özet bu sefer geriye
+ * bayatlardı. Ayrım niyet bilgisidir ve yalnız insanda/ajanda vardır.
+ *
+ * ── O YÜZDEN: SESSİZ TUZAK YERİNE GÜRÜLTÜLÜ UYARI ───────────────────────────
+ * Hangi satırların oynadığını ve hangilerinin **commit'lenmemiş** bir modül dosyasından geldiğini
+ * yazıyoruz. Disiplin gerektiren koruma unutulduğu gün çalışmaz; adı konmuş bir uyarı, unutmayı
+ * zorlaştırır. Kendi satırınız da listede olur — kural şu: **kendinizinki DIŞINDAKİLERİ HEAD'deki
+ * hâline geri koyun.**
+ */
+function uyarPaylasilanAgac(yeniBlok) {
+  const headReadme = headRead('docs/build/README.md');
+  if (!headReadme) return;
+
+  const satirlar = (metin) =>
+    new Map(metin.split('\n').flatMap((l) => (l.match(/^\| (\d\d) \|/) ? [[l.slice(2, 4), l]] : [])));
+  const eski = satirlar(headReadme);
+  const yeni = satirlar(yeniBlok);
+  const kirli = dirtyModules();
+
+  const supheli = [...yeni].filter(([nn, satir]) => eski.get(nn) !== satir && kirli.has(nn)).map(([nn]) => nn);
+  if (supheli.length === 0) return;
+
+  console.log(
+    `\n⚠ Özette oynayan ${supheli.length} satır COMMIT'LENMEMİŞ modül dosyasından geliyor: ${supheli.map((n) => `modül ${n}`).join(' · ')}`,
+  );
+  console.log('  Kendi modülünüz dışındakileri commit ETMEYİN — HEAD\'deki hâllerine geri koyun:');
+  console.log('    diff <(git show HEAD:docs/build/README.md) docs/build/README.md');
+  console.log('  Aksi hâlde HEAD kendi kaynağıyla çelişir ve ağaçtaki HERKES commit atamaz.\n');
+}
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';
@@ -790,8 +859,18 @@ if (!readme.includes(BEGIN) || !readme.includes(END)) {
     if (FIX) {
       writeFileSync(join(ROOT, readmePath), readme.replace(current, block));
       console.log(`✔ ${readmePath} durum özeti güncellendi`);
+      uyarPaylasilanAgac(block);
     } else {
-      note(`${readmePath}: durum özeti bayat — \`pnpm docs:sync\` çalıştır`);
+      /* Mesaj sebebi de söylüyor: bayatlığın kaynağı SİZİN değişikliğiniz olmayabilir. Türetilmiş
+         özet ile kaynağı ayrı commit'lere düşerse HEAD kendi kaynağıyla çelişir ve kanca ağaçtaki
+         HERKESİ durdurur — o hâlde `docs:sync` yeter ve suç kimsede değildir. Eskiden mesaj yalnız
+         komutu söylüyordu; komutu koşan kişi de farkında olmadan başka şeridin yarım işini özete
+         alıp commit'liyor ve bir sonraki tıkanmayı üretiyordu (ölçüldü 25.08, üç tur). */
+      note(
+        `${readmePath}: durum özeti bayat — \`pnpm docs:sync\` çalıştır.` +
+          ' Sebep sizin değişikliğiniz değilse bu normaldir (türetilmiş özet ile kaynağı ayrı commit\'lere düşmüş);' +
+          ' sync sonrası YALNIZ kendi modülünüzün satırını commit\'e alın.',
+      );
     }
   }
 }
