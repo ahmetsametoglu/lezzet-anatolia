@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { deliveryRunWindow, findZoneForPostalCode, isInRoute, upcomingDeliveryDates } from './delivery-days';
+import {
+  cutoffBelongsToPreviousDay,
+  deliveryRunWindow,
+  findZoneForPostalCode,
+  isInRoute,
+  upcomingDeliveryDates,
+} from './delivery-days';
 
 // Posta kodu artık (ülke, kod) ikilisi (DOMAIN §17): `67000` iki ülkede de geçerli.
 const fr = (postalCode: string) => ({ country: 'FR' as const, postalCode });
@@ -120,5 +126,69 @@ describe('sefer penceresi (komşu daveti)', () => {
     const saliAksam = new Date(2026, 6, 28, 17, 0);
     expect(deliveryRunWindow({ deliveryDate: '2026-07-28', now: saliAksam, cutoffTime: 'bozuk' })).toBe('open');
     expect(deliveryRunWindow({ deliveryDate: '2026-07-28', now: saliAksam })).toBe('open');
+  });
+});
+
+/**
+ * **KESİM HANGİ GÜNÜN SAATİ** (19.x · kullanıcı kuralı 17.08) — kural yazılmıştı, **nöbeti yoktu**.
+ *
+ * Görev satırındaki kayıt aynen şuydu: *"Yeni dalın birim nöbeti yok: mevcut testler
+ * `prepCutoffTime` geçmediği için eski dalda kalıyor (1374/1374 yeşil ama yeni kural sınanmadı)."*
+ * Yani paket yeşildi ve hiçbir şey kanıtlamıyordu — yeni dal hiç koşmuyordu. Bu blok o borcu kapatıyor.
+ *
+ * ── SINANAN ŞEY BİR SAAT DEĞİL, BİR GÜN KAYMASI ─────────────────────────────
+ * Kural yanlış çalışırsa arıza sessizdir ve **bir gün** büyüklüğündedir: müşteriye yetişemeyeceği
+ * bir tarih gösterilir, sipariş o güne yazılır, araç çoktan çıkmıştır. Ekran hata vermez.
+ */
+describe('kesim ÖNCEKİ günün saati mi (hazırlık kapanışına göre)', () => {
+  it('kesim hazırlıktan SONRAYSA önceki günün saatidir', () => {
+    // 16:00'da gelen sipariş 11:00'da kapanan hazırlığa yetişemez → bu güne teslim için kapanış dün.
+    expect(cutoffBelongsToPreviousDay('16:00', '11:00')).toBe(true);
+  });
+
+  it('kesim hazırlıktan ÖNCEYSE aynı günün saatidir', () => {
+    expect(cutoffBelongsToPreviousDay('10:00', '11:00')).toBe(false);
+  });
+
+  it('EŞİTSE aynı gün — "sonra" kesin eşitsizliktir (kullanıcı onayı 17.08)', () => {
+    /* Sınırın hangi tarafa düştüğü bir tercih değil, kullanıcının verdiği karar. Ters yazılsaydı
+       kesimi hazırlıkla aynı saate kuran her bölge sessizce bir gün geriye kayardı. */
+    expect(cutoffBelongsToPreviousDay('11:00', '11:00')).toBe(false);
+  });
+
+  it('biri EKSİKSE kural uygulanmaz — yarım veriyle gün kaydırılmaz', () => {
+    expect(cutoffBelongsToPreviousDay('16:00', undefined)).toBe(false);
+    expect(cutoffBelongsToPreviousDay(undefined, '11:00')).toBe(false);
+  });
+
+  it('BOZUK saat de kuralı uygulatmaz — akış kilitlenmez, eski davranış sürer', () => {
+    expect(cutoffBelongsToPreviousDay('abc', '11:00')).toBe(false);
+    expect(cutoffBelongsToPreviousDay('25:00', '11:00')).toBe(false);
+  });
+});
+
+describe('önceki gün kuralı TARİH LİSTESİNE yansıyor', () => {
+  // Bölge yalnız Salı(2) teslim ediyor. Kesim 16:00, hazırlık 11:00 → kesim ÖNCEKİ günün saati.
+  const KURULUM = { weekdays: [2], cutoffTime: '16:00', prepCutoffTime: '11:00' } as const;
+
+  it('Pazartesi 15:00 — Salı hâlâ açık (bugünün kesimi henüz gelmedi)', () => {
+    const pazartesi15 = new Date(2026, 6, 27, 15, 0);
+    expect(upcomingDeliveryDates({ ...KURULUM, now: pazartesi15 })[0]).toBe('2026-07-28');
+  });
+
+  it('Pazartesi 17:00 — Salı KAPANDI, en erken gün sonraki Salı', () => {
+    // Künyedeki örneğin aynısı: kesim geçince taban öbür güne çıkar (`startOffset` 2).
+    const pazartesi17 = new Date(2026, 6, 27, 17, 0);
+    expect(upcomingDeliveryDates({ ...KURULUM, now: pazartesi17 })[0]).toBe('2026-08-04');
+  });
+
+  it('BUGÜN teslimat günü olsa ve saat erken olsa bile aday DEĞİLDİR', () => {
+    /* Eski dalın tam tersi ve borcun asıl sebebi: `prepCutoffTime` verilmediğinde Salı 09:00'da
+       bugün aday olur (yukarıdaki blok bunu zaten çiviliyor). Önceki gün kuralında ise bugünün
+       kesimi DÜN kapandığı için saat kaç olursa olsun bugün listeye giremez. */
+    const sali09 = new Date(2026, 6, 28, 9, 0);
+    expect(upcomingDeliveryDates({ ...KURULUM, now: sali09 })[0]).toBe('2026-08-04');
+    // Aynı an, kural olmadan: bugün aday. Fark tek başına `prepCutoffTime`tan doğuyor.
+    expect(upcomingDeliveryDates({ weekdays: [2], cutoffTime: '16:00', now: sali09 })[0]).toBe('2026-07-28');
   });
 });
