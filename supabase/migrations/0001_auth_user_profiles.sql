@@ -164,3 +164,33 @@ comment on column public.customer_phone.last_seen_at is
   'Bu numaradan gelen SON mesajın anı — sessizlik tetiğinin ölçütü.';
 comment on column public.customer_phone.retired_at is
   'Bağ koptu (hat devri / taşıyıcı beyanı). Satır silinmez; numara yeni sahibine açılır.';
+
+-- ─── "Bu numara şu an görüldü" ───────────────────────────────────────────────
+-- Damgayı **veritabanının saati** yazar, uygulamanınki değil. Küçük görünen ama gerçek bir kusuru
+-- kapatıyor: `verified_at` ve `last_seen_at` satır doğarken kolon varsayılanından (yani DB saatinden)
+-- geliyor; tazeleme uygulamadan `new Date()` ile yazılsaydı iki AYRI saat karışırdı ve aralarındaki
+-- kayma kadar **`last_seen_at` GERİYE gidebilirdi**.
+--
+-- ÖLÇÜLDÜ (25.08): tam pakette test düştü — ilk kanıt 1787685288518, tazelenmiş hâli 1787685288508.
+-- 10 milisaniye; ama sessizlik tetiği (~3 ay, DOMAIN §10) tam olarak bu damgadan hesaplanacak ve
+-- geriye giden bir damga o hesabı bozar. Testin yakaladığı şey bir kararsızlık değil, iki saatti.
+--
+-- Emekli satır TAZELENMEZ (`retired_at is null` süzgeci): bağı kopmuş bir numaranın "hâlâ canlı"
+-- damgası, emekliliğin kendisini görünmez kılardı.
+create or replace function public.touch_customer_phone(p_id uuid)
+returns setof public.customer_phone
+language sql
+security definer
+set search_path = public
+as $$
+  update public.customer_phone
+     set last_seen_at = now()
+   where id = p_id and retired_at is null
+  returning *;
+$$;
+
+revoke all on function public.touch_customer_phone(uuid) from public, anon, authenticated;
+grant execute on function public.touch_customer_phone(uuid) to service_role;
+
+comment on function public.touch_customer_phone(uuid) is
+  'Kanıt satırının son görülme damgasını DB saatiyle tazeler (04.10). Emekli satıra dokunmaz.';

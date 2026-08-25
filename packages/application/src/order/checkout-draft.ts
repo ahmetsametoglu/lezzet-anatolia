@@ -420,6 +420,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
     customerId: customer.id,
     deliveryType,
     basketCents: scope.basketCents,
+    // Asgari sepet eşiği İNDİRİM ÖNCESİNİ ister (kullanıcı kararı 11.08) — `basketCents` kargo ve
+    // toplam içindir. Ayrımın tamamı `CheckoutPaymentInput` künyesinde.
+    subtotalCents: scope.subtotalCents,
     lines: items.map((i) => ({ totalCents: i.unitPriceCents * i.qty, vatRate: i.vatRate })),
     /* ── AYAR KAPSAMI BURADA DA GEÇER (07.15'in ikinci yarısı, 09.08) ─────────
        Üç eksen de sepet okumasına ZATEN geçiliyordu (yukarıda, adım 3) ama ödeme kapısına

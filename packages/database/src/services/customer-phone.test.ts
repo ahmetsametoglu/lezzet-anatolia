@@ -58,6 +58,11 @@ describe('kanıt kaydı', () => {
   });
 
   it('`verifiedAt` DONMUŞ, `lastSeenAt` İLERLER — iki damga iki ayrı soruya cevap verir', async () => {
+    // **Bu iddia bir kusur yakaladı** (25.08, tam paket): tazeleme uygulamanın saatiyle yazılıyordu,
+    // satırın doğuşu ise kolon varsayılanından (DB saati). İki saat karışınca damga GERİYE gitti
+    // (ölçüldü: 1787685288518 → …508, 10 ms). Sessizlik tetiği (~3 ay) tam olarak bu damgadan
+    // hesaplanacak; geriye giden bir damga o hesabı bozar. Tazeleme artık `touch_customer_phone`
+    // RPC'siyle, yani TEK saatle yazılıyor.
     const id = await musteri('Damgalı');
     const telefon = numara();
 
@@ -68,6 +73,15 @@ describe('kanıt kaydı', () => {
     const ikinci = await phones.recordProof(id, telefon);
     expect(an(ikinci.row?.verifiedAt)).toBe(kanitAni); // kanıtın tarihi geriye alınamaz
     expect(an(ikinci.row?.lastSeenAt)).toBeGreaterThanOrEqual(ilkGorulme!);
+  });
+
+  it('EMEKLİ satırın son görülmesi tazelenmez — "hâlâ canlı" damgası emekliliği görünmez kılardı', async () => {
+    const id = await musteri('Emekli tazeleme');
+    const telefon = numara();
+    const kanit = await phones.recordProof(id, telefon);
+    await phones.update({ id: kanit.row!.id, retiredAt: new Date().toISOString() });
+
+    expect(await phones.touchSeen(kanit.row!.id)).toBeNull();
   });
 
   it('BAŞKA müşterinin aktif numarası ELE GEÇİRİLEMEZ — ikinci kanıt bağı çevirmez', async () => {

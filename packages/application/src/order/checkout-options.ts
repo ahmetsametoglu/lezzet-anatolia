@@ -74,8 +74,24 @@ export interface CheckoutPaymentResult {
 export interface CheckoutPaymentInput {
   customerId: string;
   deliveryType: DeliveryType;
-  /** Sepet ara toplamı — indirim uygulanmış, kanal tabanında (cent). */
+  /**
+   * Sepet ara toplamı — **indirim UYGULANMIŞ**, kanal tabanında (cent). Kargo ücreti, bedava
+   * kargo eşiği ve tahsil edilecek toplam bunu ister: müşteriden gerçekten alınacak paradır.
+   */
   basketCents: number;
+  /**
+   * Sepet ara toplamı — **indirim ÖNCESİ** (cent). Yalnız ASGARİ SEPET eşiği bunu okur.
+   *
+   * **Kullanıcı kararı 11.08:** eşik indirim öncesi tutara bakar — teslimatın ekonomisi taşınan
+   * malın değerine bağlıdır, kampanya eşiği düşürmez.
+   *
+   * **İki alan, çünkü iki ayrı soru** (mobil şeridin ölçümü 11.08): `orderScopeOf` ikisini de
+   * zaten üretiyordu ve künyesi ayrımı yazıyordu, ama bu kapı ikisini de `basketCents`ten
+   * okuyordu. Sonucu sessiz bir çelişkiydi: taslak kapısı eşiği indirim öncesinden ölçerken
+   * (`checkout-draft.ts`) ödeme kapısı indirim sonrasından ölçüyordu — eşiğin sınırında sepet
+   * "tamam" derken ödeme adımı "eksik" diyebilirdi ve müşteri kasada duvara çarpardı.
+   */
+  subtotalCents: number;
   /** KDV kırılımı için kalem tutarları + oranları. */
   lines: readonly { totalCents: number; vatRate: number }[];
   /**
@@ -156,7 +172,9 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     hasOverdue,
   });
 
-  const minBasket = meetsMinBasket(input.basketCents, minBasketCents);
+  // Eşik İNDİRİM ÖNCESİNİ ölçer (kullanıcı kararı 11.08) — `basketCents` DEĞİL. Kargo ve toplam
+  // yukarıda indirim sonrasını okuyor ve orası doğru; ikisi ayrı sorudur.
+  const minBasket = meetsMinBasket(input.subtotalCents, minBasketCents);
 
   return {
     ...options,

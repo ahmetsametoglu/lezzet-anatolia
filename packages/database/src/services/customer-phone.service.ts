@@ -63,7 +63,7 @@ export class CustomerPhoneService extends BaseDbService<CustomerPhone, CustomerP
     const mevcut = await this.findActive(phone);
     if (mevcut) {
       if (mevcut.customerId !== customerId) return { status: 'taken', row: mevcut };
-      return { status: 'seen', row: await this.update({ id: mevcut.id, lastSeenAt: new Date().toISOString() }) };
+      return { status: 'seen', row: await this.touchSeen(mevcut.id) };
     }
 
     const yeni = await this.insertIgnoringConflict({ customerId, phone });
@@ -74,5 +74,21 @@ export class CustomerPhoneService extends BaseDbService<CustomerPhone, CustomerP
     if (!kazanan) return { status: 'taken', row: null }; // aynı anda emekliye ayrılmış: çağıran tekrar dener
     if (kazanan.customerId !== customerId) return { status: 'taken', row: kazanan };
     return { status: 'seen', row: kazanan };
+  }
+
+  /**
+   * **Son görülmeyi tazele** — damgayı VERİTABANININ saati yazar (`touch_customer_phone`).
+   *
+   * `update({ lastSeenAt: new Date()… })` yazmıyoruz ve bu bir üslup tercihi değil: satır doğarken
+   * damgalar kolon varsayılanından, yani DB saatinden geliyor. Tazelemeyi uygulamanın saatiyle
+   * yazsaydık iki AYRI saat karışırdı ve aralarındaki kayma kadar **`lastSeenAt` geriye gidebilirdi**
+   * (ölçüldü 25.08, tam pakette test düştü: 10 ms). Sessizlik tetiği tam olarak bu damgadan
+   * hesaplanacak; geriye giden bir damga o hesabı bozar.
+   *
+   * Emekli satır tazelenmez → `null`. Çağıran bunu bir yarış olarak okur.
+   */
+  async touchSeen(id: string): Promise<CustomerPhone | null> {
+    const rows = await this.executeRpc<unknown[]>('touch_customer_phone', { p_id: id });
+    return this.parseRows(rows ?? [])[0] ?? null;
   }
 }

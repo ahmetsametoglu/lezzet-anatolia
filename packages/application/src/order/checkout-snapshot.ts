@@ -257,6 +257,9 @@ export async function readCheckoutSnapshot(
     customerId: input.customerId,
     deliveryType,
     basketCents: scope.basketCents,
+    // Asgari sepet eşiği İNDİRİM ÖNCESİNİ ister (kullanıcı kararı 11.08) — `basketCents` kargo ve
+    // toplam içindir. Ayrımın tamamı `CheckoutPaymentInput` künyesinde.
+    subtotalCents: scope.subtotalCents,
     // Oran satırın kendi gerçeğinden gelir (paketse kalemlerin en yükseği) — sabit yazmak
     // malzeme gibi %20'lik kalemlerde kargo KDV'sini yanlış bölerdi.
     lines: scope.lines.map((l) => ({ totalCents: l.lineTotalCents ?? 0, vatRate: l.vatRate })),

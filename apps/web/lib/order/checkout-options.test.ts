@@ -27,6 +27,17 @@ const createdProfiles: string[] = [];
 
 const LINES = [{ totalCents: 4000, vatRate: 5.5 }];
 
+/**
+ * Kapının girdisi İKİ tutar taşıyor (11.08 · mobil şeridin ölçümü): `basketCents` indirim SONRASI
+ * (kargo, bedava kargo eşiği, tahsil edilecek toplam), `subtotalCents` indirim ÖNCESİ (yalnız
+ * asgari sepet eşiği). Bu dosyadaki senaryoların çoğunda indirim YOK, yani ikisi eşit — yardımcı
+ * o hâli kısaltıyor. **Varsayılan testte, kapıda DEĞİL:** kapıda `subtotalCents` zorunlu, çünkü
+ * unutulduğunda düzeltmeye çalıştığımız arıza sessizce geri gelirdi.
+ */
+type OdemeGirdisi = Parameters<typeof resolveCheckoutPayment>[0];
+const odemeCozumle = (input: Omit<OdemeGirdisi, 'subtotalCents'> & { subtotalCents?: number }) =>
+  resolveCheckoutPayment({ subtotalCents: input.basketCents, ...input });
+
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Checkout testi ${stamp}` } });
@@ -62,13 +73,13 @@ afterAll(async () => {
 
 describe('kargo ücreti ve KDV (07.3)', () => {
   it('rota içi teslimat ücretsiz; toplam sepetin kendisidir', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r).toMatchObject({ shippingFeeCents: 0, shippingFreeReason: 'route', orderTotalCents: 4000 });
     expect(r.shippingVat).toEqual([]);
   });
 
   it('kargoda eşik altı sipariş ücret öder ve ücret toplama eklenir', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
     // Ayar varsayılanı 19.08'de piyasadan ölçüldü (05.30): ücret 7,90 → **11,90 €**, eşik 60 → **100 €**.
     expect(r.shippingFeeCents).toBe(1190);
     expect(r.orderTotalCents).toBe(5190);
@@ -78,7 +89,7 @@ describe('kargo ücreti ve KDV (07.3)', () => {
 
   it('eşik üstü kargo bedava', async () => {
     // Sepet eşiğin (100 €) ÜSTÜNDE olmalı — eski 80 € artık eşiğin altında kalıyordu.
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 12000, lines: [{ totalCents: 12000, vatRate: 5.5 }] });
+    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 12000, lines: [{ totalCents: 12000, vatRate: 5.5 }] });
     expect(r).toMatchObject({ shippingFeeCents: 0, shippingFreeReason: 'threshold' });
   });
 
@@ -86,7 +97,7 @@ describe('kargo ücreti ve KDV (07.3)', () => {
     const settings = settingsSnapshot(db);
     await settings.override('shipping_fee_cents', 1200);
     try {
-      const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
+      const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
       expect(r.shippingFeeCents).toBe(1200);
     } finally {
       await settings.restore();
@@ -99,31 +110,31 @@ describe('ödeme yöntemleri', () => {
   // 05.08'de değişti — eskiden `bank_transfer` misafire bile açıktı, yani ödeme alınmadan hazırlığa
   // geçilebiliyordu ve tahsilat riski tümüyle bizdeydi.
   it('rota içi + tavan altı → kapıda ödeme açık (bireysel: havale/çek yok)', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.methods).toEqual(['online', 'cash', 'card']);
     expect(r.codBlockedReason).toBeNull();
   });
 
   it('kargoda kapıda ödeme yok — bireysel müşteriye YALNIZ kart kalır', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId, deliveryType: 'shipping', basketCents: 4000, lines: LINES });
     expect(r.methods).toEqual(['online']);
     expect(r.codBlockedReason).toBe('shipping');
   });
 
   it('ONAYLI işletmede havale ve çek açılır', async () => {
-    const r = await resolveCheckoutPayment({ customerId: businessCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId: businessCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.methods).toEqual(['online', 'bank_transfer', 'cash', 'card', 'cheque']);
   });
 
   it('ONAYSIZ şirket kaydına havale AÇILMAZ — yoksa kapı kendi kendini onaylardı', async () => {
     // "Şirketim" yazan herkes ödemeden sipariş açabilseydi onay sürecinin bir anlamı kalmazdı.
-    const r = await resolveCheckoutPayment({ customerId: pendingBusinessId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId: pendingBusinessId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.methods).not.toContain('bank_transfer');
     expect(r.methods).not.toContain('cheque');
   });
 
   it('tavan aşan sipariş kapıda ödemeyi kapatır (ayardan okunur)', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 40_000, lines: [{ totalCents: 40_000, vatRate: 5.5 }] });
+    const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 40_000, lines: [{ totalCents: 40_000, vatRate: 5.5 }] });
     expect(r.codBlockedReason).toBe('over_limit');
   });
 
@@ -131,7 +142,7 @@ describe('ödeme yöntemleri', () => {
     const settings = settingsSnapshot(db);
     await settings.override('cod_max_cents', 200_000);
     try {
-      const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 120_000, lines: [{ totalCents: 120_000, vatRate: 5.5 }] });
+      const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 120_000, lines: [{ totalCents: 120_000, vatRate: 5.5 }] });
       expect(r.cashWarning).toBe(true);
       expect(r.methods).toContain('cash');
     } finally {
@@ -142,12 +153,12 @@ describe('ödeme yöntemleri', () => {
 
 describe('vade freni — açık bakiye TÜRETİLİR', () => {
   it('vade yetkisi olmayan müşteride "hesaba" kapalı', async () => {
-    const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r).toMatchObject({ creditAvailable: false, creditBlockedReason: 'not_enabled' });
   });
 
   it('limit içinde vade OTOMATİK açılır', async () => {
-    const r = await resolveCheckoutPayment({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.creditAvailable).toBe(true);
     expect(r.creditBlockedReason).toBeNull();
   });
@@ -159,7 +170,7 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
       [{ variantId, qty: 1, unitPriceCents: 8000, vatRate: 5.5 }],
     );
 
-    const r = await resolveCheckoutPayment({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
+    const r = await odemeCozumle({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 4000, lines: LINES });
     expect(r.creditAvailable).toBe(false);
     expect(r.creditBlockedReason).toBe('limit_exceeded');
     expect(r.creditRequiresApproval).toBe(true); // reddedilmez, admin'e düşer
@@ -174,7 +185,7 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
 
     // Yukarıdaki 80 € hâlâ açık; iptal edilen 500 € eklenmediği için sebep hâlâ limit aşımı,
     // "gecikme" değil ve bakiye patlamış görünmüyor.
-    const r = await resolveCheckoutPayment({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
+    const r = await odemeCozumle({ customerId: creditCustomerId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
     expect(r.creditAvailable).toBe(true); // 80 + 1 = 81 € < 100 € limit
   });
 });
@@ -195,7 +206,7 @@ describe('asgari sepet', () => {
     const settings = settingsSnapshot(db);
     await settings.override('min_basket_cents', 0);
     try {
-      const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
+      const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 100, lines: [{ totalCents: 100, vatRate: 5.5 }] });
       expect(r.minBasketOk).toBe(true);
     } finally {
       await settings.restore();
@@ -206,8 +217,38 @@ describe('asgari sepet', () => {
     const settings = settingsSnapshot(db);
     await settings.override('min_basket_cents', 2500);
     try {
-      const r = await resolveCheckoutPayment({ customerId, deliveryType: 'route', basketCents: 1500, lines: [{ totalCents: 1500, vatRate: 5.5 }] });
+      const r = await odemeCozumle({ customerId, deliveryType: 'route', basketCents: 1500, lines: [{ totalCents: 1500, vatRate: 5.5 }] });
       expect(r).toMatchObject({ minBasketOk: false, missingForMinBasketCents: 1000 });
+    } finally {
+      await settings.restore();
+    }
+  });
+
+  /**
+   * **Eşik İNDİRİM ÖNCESİNE bakar** (kullanıcı kararı 11.08) — teslimatın ekonomisi taşınan malın
+   * değerine bağlıdır, kampanya eşiği düşürmez.
+   *
+   * Bu iddia bir regresyon çivisi: kapı bir tur eşiği `basketCents`ten (indirim SONRASI) ölçüyordu
+   * ve taslak kapısı aynı soruyu `subtotalCents`ten ölçüyordu. Sonucu sessiz bir çelişkiydi —
+   * eşiğin sınırında sepet "tamam" derken ödeme adımı "eksik" diyebilirdi ve müşteri kasada
+   * duvara çarpardı (mobil şeridin 11.08 ölçümü). Tek satır geri alınırsa bu test kırmızıya döner.
+   */
+  it('KAMPANYA eşiği düşürmez — eşik indirim ÖNCESİ tutarı ölçer', async () => {
+    const settings = settingsSnapshot(db);
+    await settings.override('min_basket_cents', 2500);
+    try {
+      // Mal 26 €, kampanya 3 € indiriyor: tahsil edilecek 23 € ama taşınan mal 26 €.
+      const r = await odemeCozumle({
+        customerId,
+        deliveryType: 'route',
+        basketCents: 2300,
+        subtotalCents: 2600,
+        lines: [{ totalCents: 2300, vatRate: 5.5 }],
+      });
+      expect(r.minBasketOk).toBe(true);
+      expect(r.missingForMinBasketCents).toBe(0);
+      // Tahsil edilecek toplam yine İNDİRİM SONRASI — iki tutar iki ayrı soruya cevap veriyor.
+      expect(r.orderTotalCents).toBe(2300);
     } finally {
       await settings.restore();
     }
