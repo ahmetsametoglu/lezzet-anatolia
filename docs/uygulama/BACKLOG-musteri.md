@@ -856,12 +856,25 @@ migration künyesi *"düzeltme de negatif olabilir"* diyor.
   → **davet geri geldi**. Ziyaretçi sayısı ikisinde de 20 kaldı, yani eleme kimliğe bağlı çalışıyor.
   `typecheck` (çalışma alanı) · `lint` temiz, mobil paket **599/599**.
 
-- [ ] **MB-18 · Tüm puan senaryolarının uçtan uca denetimi.** Kapsam: sipariş · ürün yorumu ·
+- [~] **MB-18 · Tüm puan senaryolarının uçtan uca denetimi.** Kapsam: sipariş · ürün yorumu ·
   keşif turu · davet (referans) · ziyaret · günlük tavan (`points_daily_cap`) · B2B'de puan
   verilmemesi · ikinci kez tamamlamada puan verilmemesi · kupona çevirme eşiği
   (`points_redeem_min` = 500, `points_cent_value`). Her senaryo için: **motor ne yazıyor · ekran
-  ne diyor · ikisi tutuyor mu.** Bugünkü turda yalnız keşif ve geri bildirim ölçüldü; ikisi de
-  tutmadı — bu, kalanların da ölçülmesi için yeterli sebep.
+  ne diyor · ikisi tutuyor mu.** ~~Bugünkü turda yalnız keşif ve geri bildirim ölçüldü~~ *(bu cümle
+  24.08'de BAYAT çıktı — aşağıya bakın.)*
+
+  **DURUM 24.08 — kalem ölçüldü ve ÜÇE ayrıldı; ikisi kapalı, biri bu şeridin alanı DEĞİL:**
+  · **Motor yarısı KAPALI** — `packages/domain-core/src/feedback/points.test.ts` **18 test**:
+    B2B kazanmaz · günlük tavan · tavanın kısmi uygulanmaması · getiren/komşu ödülünün muafiyeti ·
+    eşik altı çevrilemez · sıfır değerli aksiyon. Yapılacak bir şey yok.
+  · **Uç yarısı KAPANDI, görev `(21.107)`** — `points.ts`in beş ucu testsizdi, artık **20 iddia**
+    taşıyor: B2B'de `points: null` (sıfır değil) · adlı retlerin AYRI kodları · açık ucun kişisel
+    veri taşımaması · defterin iç alanlarının sızmaması · bozuk imleç · tavanı aşan `limit`.
+  · **AÇIK ve bu şeritte DEĞİL** — `referral`/`neighbor` ödülleri başkasının eylemiyle doğuyor,
+    müşteri o an uygulamada değil, gösterilecek sonuç ekranı yok. Cevabın yarısı verildi (puan
+    geçmişi, `(21.60)`); öteki yarısı **bildirim** ve onun 1. katmanı (kayıt tablosu + olayı
+    doğuran sunucu kodu) **web şeridinin** alanında. `docs/talep/bildirim-modulu-web-mobil.md`
+    09.08'den beri *"AÇIK — cevap bekliyor"*; o katman doğmadan burada kodlanacak bir şey yok.
 
   **İKİNCİ TUR (15.08, görev `(21.59)`) — soru "sayı doğru mu"dan "ekran BUNU SÖYLÜYOR MU"ya
   döndü.** Kullanıcı isteği: *"her puan kazanma durumunun sonucunda aynı sayfayı göstermek lazım —

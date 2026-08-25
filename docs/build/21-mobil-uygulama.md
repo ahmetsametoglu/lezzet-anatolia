@@ -5282,3 +5282,48 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: `neighbor.test.ts` **21/21** · mobil paket **753/753** · typecheck temiz · lint temiz.
   Pakette kalan tek düşen test bu şeridin DEĞİL: `roles.test.ts` **15002 ms** = zaman aşımı
   (kardeşi 11475 ms — sıra bekleme, iddia değil).
+
+- [x] (21.107) **PUAN UÇLARI TESTLENDİ — MB-18'in adlandırdığı boşluk kapandı (20 iddia)**
+  · touches: `apps/mobile-api/src/api/v1/points.test.ts`
+
+  **MB-18 ÖLÇÜLDÜ VE İKİYE AYRILDI (24.08).** Kalem *"her puan senaryosunun uçtan uca denetimi"*ni
+  istiyor ve açılış cümlesi *"bugünkü turda yalnız keşif ve geri bildirim ölçüldü"* diyordu — o
+  cümle BAYATTI. Motor yarısı çoktan kapanmış: `domain-core/feedback/points.test.ts` **18 test**
+  taşıyor (B2B kazanmaz · günlük tavan · tavanın kısmi uygulanmaması · getiren/komşu ödülünün
+  muafiyeti · eşik altı çevrilemez · sıfır değerli aksiyon). Açık olan **uç yarısıydı**:
+  `points.ts` beş uç taşıyor ve **tek testi yoktu** — on altı mobil ucun on altısı testsizken,
+  bu ölçüte (para + yetki kapısı) göre en güçlü adaydı.
+
+  **BURADA KURAL DEĞİL KAPI SINANIYOR.** Kaç puan kazanıldığı ve eşiğin ne olduğu motorun testinde.
+  Bu dosya üç şeyi ölçüyor ve motor testleri üçünü de göremez: **kimlik doğru çözülüyor mu** ·
+  **ret doğru KODLA mı dönüyor** · **zarfa sızmaması gereken alan sızıyor mu**.
+
+  **ÇİVİLENEN KARARLAR:**
+  · **B2B'de `points: null`, sıfır DEĞİL** — "0 puan" yazmak kazanılamayacak bir bakiyeyi boş bir
+    hedef gibi gösterirdi (CLAUDE §1). Kuponlar da aynı koşula bağlı, ayrı sorulmuyor.
+  · **Adlı retler AYRI kodlarla** — 403 `not_eligible` (B2B) · 400 `below_minimum` (eşik altı).
+    Tek koda katmak ekranı *"neden olmadı"* diye tahmin etmeye bırakırdı.
+  · **`/points/rules` AÇIK ama kişisel hiçbir şey taşımaz** — bakiye/davet kodu/kupon sızarsa
+    kimliksiz okunan bir uç başkasının verisini herkese açar.
+  · **Defterin iç alanları zarfa sızmıyor** — `note`/`refId`/`createdBy` yok; anahtar kümesi tam
+    olarak `at·id·points·reason`.
+  · **Ziyaret ucu HEP `true` der** — gün içindeki ikinci çağrı arıza değil, tekillik veritabanında.
+    Hata dönseydi istemci *"bugün kazandın mı"* diye bir dal yazmaya davet edilirdi.
+  · **Bozuk imleç listeyi BAŞTAN verir, 400 dönmez**; tavanı aşan `limit` ise reddedilir.
+  · **Çevirme GÖVDE ALMAZ** — uydurulmuş bir miktar ne kabul edilir ne isteği düşürür.
+
+  **İKİ SABOTAJ, İKİSİ DE YALNIZ HEDEFİNDE:** ret kodları tek koda katılınca sadece
+  *"B2B 403 `not_eligible`"* düştü; B2B süzgeci kaldırılınca sadece *"B2B kartı `null`"* düştü.
+  Çiviler yayılmıyor.
+
+  **KÜRESEL AYAR DEĞİŞTİRİLDİ VE GERİ KONDU:** eşik `settings`te ve tüm suite onu okuyor
+  (`CLAUDE §4b`). `settingsSnapshot` ile önce okunup `afterAll`da geri konuyor — varsayılan 500
+  puanı ziyaret ödülleriyle biriktirmek onlarca gün simülasyonu isterdi.
+
+  **BEKLEYEN(MB-18):** geriye kalan tek parça bu şeridin alanı DEĞİL — `referral`/`neighbor`
+  ödülleri BAŞKASININ eylemiyle doğuyor, müşteri o an uygulamada değil ve gösterilecek bir sonuç
+  ekranı yok. Cevabın yarısı verildi (puan geçmişi, `21.60`), öteki yarısı **bildirim** ve onun
+  1. katmanı (kayıt tablosu) web şeridinin alanında — `docs/talep/bildirim-modulu-web-mobil.md`
+  09.08'den beri *"AÇIK — cevap bekliyor"*.
+
+  Doğrulama: `points.test.ts` **20/20**, 3,5 sn · `@lezzet/mobile-api` typecheck temiz.
