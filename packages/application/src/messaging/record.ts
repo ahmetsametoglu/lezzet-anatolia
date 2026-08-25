@@ -1,7 +1,7 @@
 import { ConversationService, MessageService } from '@lezzet/database';
 import { isAvoidableTemplate, serviceWindowExpiry, serviceWindowState } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { Message, MessageBody, MessageKind, TemplateCategory } from '@lezzet/types';
+import type { Message, MessageBody, MessageKind, TemplateCategory, TicketSender } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /*
@@ -33,6 +33,13 @@ export interface RecordMessageInput {
    * gibi saklanır — bugün uydurulmuş bir kolon kümesi, yarın bırakılacak bir kolon kümesi olurdu.
    */
   payload?: Record<string, unknown> | null;
+  /**
+   * Kim yazdı (15.8). Verilmezse RPC yönden türetir (gelen → `customer`, giden → `admin`) ve bu
+   * doğru varsayılandır: elle işlenen satırı gerçekten personel yazmıştır. **Özerk ajan kendini
+   * `ai` diye bildirmek ZORUNDA** — yoksa defter "bunu kim söyledi" sorusuna personel der ve
+   * ekranın AI tonu ile kuyruğun AI süzgeci sessizce yanlış kümeyi gösterir.
+   */
+  author?: TicketSender | null;
   /** Sağlayıcı mesaj kimliği; elle kayıtta yok, webhook'tan gelir (idempotency'nin son savunma hattı). */
   providerMessageId?: string | null;
 }
@@ -110,6 +117,7 @@ export async function recordOutboundMessage(
   return new MessageService(db).record({
     conversationId: input.conversationId,
     direction: 'outbound',
+    author: input.author,
     kind: input.kind ?? (input.templateName ? 'template' : 'text'),
     body: bodyOf(input.text, input.payload),
     templateName: input.templateName,

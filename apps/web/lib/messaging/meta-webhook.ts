@@ -353,6 +353,18 @@ function msTimestamp(timestamp: number | undefined): string {
 
 // ── Ortak sahiplenme iskeleti — Stripe deseni: claim → işle → markProcessed/markFailed ──
 
+/**
+ * Yazım, mesaj defterinin TEKİLLİK indeksine mi çarptı?
+ *
+ * Yalnız `23505` yetmez: aynı kod başka bir kısıttan da gelebilir (konuşma tekilliği gibi) ve onu
+ * "tekrar" saymak gerçek bir arızayı sessizce yutardı. İndeksin ADI aranıyor — kısıt veride durur,
+ * kontrol de onun adına bakar.
+ */
+function isDuplicateProviderMessage(error: unknown): boolean {
+  const e = error as { code?: string; message?: string } | null;
+  return e?.code === '23505' && (e.message ?? '').includes('message_provider_message_key');
+}
+
 async function ingestOne(
   tally: Tally,
   input: { provider: string; eventId: string; type: string; payload: Record<string, unknown>; write: () => Promise<void> },
@@ -376,6 +388,26 @@ async function ingestOne(
     await events.markProcessed(event.id);
     tally.written += 1;
   } catch (error) {
+    /*
+      ── AYNI MESAJ ZATEN DEFTERDE: HATA DEĞİL, TEKRAR ──────────────────────────
+      Veri katmanının son savunma hattı (`message_provider_message_key`) tetiklendiyse, o mesaj
+      deftere ZATEN yazılmış demektir — yapılacak iş kalmadı, olay işlenmiştir.
+
+      **Ölçüldü 24.08 (`send-echo.test.ts`):** biz Messenger'a bir mesaj gönderiyoruz ve saniyeler
+      sonra Meta aynı mesajı `message_echoes` olarak geri düşürüyor. Claim onu YENİ bir olay
+      sayıyor (echo'nun kendi `mid`'i ilk kez görülüyor), yazım tekillik indeksine çarpıyor ve
+      eskiden bu `errors`e düşüyordu: kabuk 500 dönüyor → Meta aynı echo'yu 7 GÜN boyunca yeniden
+      gönderiyor → hiçbir zaman başarılı olamayacak bir olay kuyruğu ve `error_log`'u şişiriyordu.
+      Defter zaten doğruydu; yalan söyleyen CEVAPTI.
+
+      Bu yol ancak gönderim ve echo birlikte taklit edilebildiği gün kurulabildi — sağlayıcı
+      kapalıyken iki yarısı da yoktu.
+    */
+    if (isDuplicateProviderMessage(error)) {
+      await events.markProcessed(event.id);
+      tally.duplicates += 1;
+      return;
+    }
     // Damga atılmaz: Meta'nın tekrar denemesi bu olayı yeniden işleyebilsin. Log'a yalnız kimlik.
     await events.markFailed(event.id, error instanceof Error ? error.message : String(error));
     captureError(error, { source: SOURCES.webhook, context: { provider: input.provider, eventId: input.eventId, type: input.type } });

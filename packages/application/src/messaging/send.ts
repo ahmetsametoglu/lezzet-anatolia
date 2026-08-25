@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { ConversationService } from '@lezzet/database';
 import { serviceWindowState } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { ConversationSource, Message, MessageKind, TemplateCategory } from '@lezzet/types';
+import type { ConversationSource, Message, MessageKind, TemplateCategory, TicketSender } from '@lezzet/types';
 import { recordOutboundMessage } from './record';
 
 /**
@@ -46,6 +46,8 @@ export interface SendMessageInput {
   text: string | null;
   kind?: MessageKind;
   payload?: Record<string, unknown> | null;
+  /** Kim yazdı — özerk ajan `ai` geçer; boş bırakılırsa defter gideni personel sayar (`record.ts`). */
+  author?: TicketSender | null;
   /** Dolu ise KALIP mesaj — yalnız WhatsApp, ve pencere kapalıyken tek gidebilen tür. */
   templateName?: string | null;
   templateCategory?: TemplateCategory | null;

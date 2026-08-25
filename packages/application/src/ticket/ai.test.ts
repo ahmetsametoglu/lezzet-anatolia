@@ -2,8 +2,11 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { fakeAiModel } from '@lezzet/ai/testing';
 import { ConversationService, MessageService, TicketMessageService, TicketService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
+import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';
+import { metaCloudSender } from '../messaging/meta-sender';
 import { recordInboundMessage, recordOutboundMessage } from '../messaging/record';
-import { generateConversationDraft, runAutonomousTicketReply } from './ai';
+import { unconfiguredSender } from '../messaging/send';
+import { generateConversationDraft, runAutonomousConversationReply, runAutonomousTicketReply } from './ai';
 
 /**
  * AI DESTEK ÇEKİRDEĞİNİN ÜÇ DALI (16.5 · 15.13 · test dalgası 15.18).
@@ -54,8 +57,14 @@ async function talepAc(mode: 'ai' | 'hybrid' | 'human'): Promise<string> {
   return ticket.id;
 }
 
-/** Kimliksiz sosyal sohbet — Messenger'ın olağan hâli (PSID telefon taşımaz). */
-async function sohbetAc(mode: 'hybrid' | 'human'): Promise<string> {
+/**
+ * Kimliksiz sosyal sohbet — Messenger'ın olağan hâli (PSID telefon taşımaz).
+ *
+ * `saatOnce` pencereyi geriye alır: gelen mesaj penceyi AÇAN tek olaydır (ADR-005) ve 24 saatten
+ * eski bir damga kapalı pencere demektir. Taze bir mesaj ÖNCE yazılıp sonra eskisi eklenemez —
+ * `record_message` pencereyi `greatest(...)` ile hesaplar, yani pencere geriye gitmez.
+ */
+async function sohbetAc(mode: 'ai' | 'hybrid' | 'human', saatOnce = 0): Promise<string> {
   sira += 1;
   const konusma = await conversations.open({
     source: 'messenger',
@@ -69,7 +78,7 @@ async function sohbetAc(mode: 'hybrid' | 'human'): Promise<string> {
   await recordInboundMessage(db, {
     conversationId: konusma.id,
     text: 'Fıstıklı baklava var mı?',
-    receivedAt: new Date().toISOString(),
+    receivedAt: new Date(Date.now() - saatOnce * 3_600_000).toISOString(),
   });
   return konusma.id;
 }
@@ -188,5 +197,118 @@ describe('sohbet taslağı — devirdeyken ajan SUSAR (15.13)', () => {
       model: fakeAiModel(TASLAK_CEVABI),
     });
     expect(sonuc).toEqual({ status: 'skipped', reason: 'not_found' });
+  });
+});
+
+/**
+ * **ÖZERK SOHBET MOTORU** (15.8) — talep eşinden ayrılan yer: cevap SAĞLAYICIYA gider.
+ *
+ * ── İKİ SAHTE, İKİ AYRI SORU ────────────────────────────────────────────────
+ * `fakeAiModel` "ajan ne karar verdi"yi, `fakeMeta` "istek Meta'nın sözleşmesine uyuyor mu"yu
+ * sabitliyor. İkisi birlikte, gerçek olan her şeyi (pencere kuralı, defter yazımı, mod geçişi,
+ * beyan) canlı sağlayıcı olmadan sınanabilir kılıyor.
+ *
+ * ── EN PAHALI İKİ İDDİA BURADA ──────────────────────────────────────────────
+ * 1. **Devir SESSİZ OLAMAZ.** Meta politikası: *"Automated bots must respond to any and all
+ *    input"*. Modu insana çevirip müşteriye hiçbir şey dememek, müşteri açısından cevapsız
+ *    kalmaktır.
+ * 2. **Jeton yokken mod DEĞİŞMEZ.** Yapılandırma boşluğu yüzünden her sohbeti insana devretmek,
+ *    geri alınması zor bir veri değişikliği olurdu: kanal açıldığında hiçbiri geri dönmez.
+ */
+describe('özerk sohbet motoru — cevap sağlayıcıya gider', () => {
+  /*
+    TEK sahte, tüm dosya için. Her teste yeni `fakeMeta()` kurmak kimlik dizisini baştan başlatır
+    (`m_FAKE1`…) ve `provider_message_id` DB'de küresel tekil olduğu için ikinci testin ilk
+    gönderimi birincinin kimliğine çarpar: mesaj gider, defter satırı OLUŞMAZ, test "gönderilmedi"
+    sanır. Ölçüldü 25.08 — iki iddia tam olarak böyle düştü (sahtenin künyesinde de yazılı).
+  */
+  const metaOrtak = fakeMeta();
+  const senderOrtak = metaCloudSender(fakeCloudApiConfig(metaOrtak));
+
+  it('cevap GÖNDERİLİR, deftere `ai` yazarıyla düşer ve beyanla başlar', async () => {
+    const conversationId = await sohbetAc('ai');
+    const oncekiCagri = metaOrtak.calls.length;
+    const sonuc = await runAutonomousConversationReply(db, senderOrtak, conversationId, {
+      model: fakeAiModel(AJAN_CEVABI),
+    });
+    expect(sonuc).toEqual({ status: 'replied' });
+
+    // Sağlayıcıya GERÇEKTEN gitti: kapı "gönderdim" deyip atlamıyor.
+    expect(metaOrtak.calls.length - oncekiCagri).toBe(1);
+
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden).toHaveLength(1);
+    /* YAZAR — bu alan boş bırakılsaydı RPC gideni `admin` sayardı ve ekranın AI tonu ile kuyruğun
+       AI süzgeci sessizce yanlış kümeyi gösterirdi. Sayı değil, KİMLİK sınanıyor. */
+    expect(giden[0]!.author).toBe('ai');
+    expect(giden[0]!.body.text?.startsWith('Bu cevabı otomatik asistanımız yazdı')).toBe(true);
+    expect(giden[0]!.body.text).toContain('Siparişiniz salı günü çıkıyor.');
+  });
+
+  it('ikinci cevapta beyan TEKRARLANMAZ — pencerede zaten AI var', async () => {
+    const conversationId = await sohbetAc('ai');
+    await runAutonomousConversationReply(db, senderOrtak, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+    // Müşteri yeniden yazıyor — top yine bizde.
+    await recordInboundMessage(db, { conversationId, text: 'Peki kaç paket var?', receivedAt: new Date().toISOString() });
+
+    await runAutonomousConversationReply(db, senderOrtak, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden).toHaveLength(2);
+    // Her cevaba beyan eklemek, cevabı okunmaz bir yasal metne çevirirdi.
+    expect(giden[1]!.body.text?.startsWith('Bu cevabı otomatik asistanımız yazdı')).toBe(false);
+  });
+
+  it('cevap ÜRETİLEMEZSE insana devredilir VE müşteri bunu ÖĞRENİR', async () => {
+    const conversationId = await sohbetAc('ai');
+    const sonuc = await runAutonomousConversationReply(db, senderOrtak, conversationId, {
+      model: fakeAiModel(AJAN_BOS_CEVAP),
+    });
+    expect(sonuc.status).toBe('handoff');
+
+    const konusma = await conversations.getById(conversationId);
+    expect(konusma?.handledBy).toBe('human');
+
+    /* ASIL İDDİA: sessiz devir yok. Bu satır düşerse müşteri, ajan sustuğu andan operatör
+       bakana kadar geçen sürede cevapsız kalır ve bunu bilmez. */
+    const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
+    expect(giden).toHaveLength(1);
+    expect(giden[0]!.body.text).toContain('yetkilimiz');
+    // Sebep MÜŞTERİYE yazılmaz: iç arıza müşterinin sorunu değildir, log'a ve kuyruğa gider.
+    expect(giden[0]!.body.text).not.toContain('sebep bildirmedi');
+  });
+
+  it('PENCERE KAPALIYSA devredilir ve sağlayıcıya hiç GİDİLMEZ', async () => {
+    // Kapının reddi bizim kuralımızdır: tekrar denemek aynı sonucu verir. İnsan ise onaylı şablon
+    // gönderebilir ya da arayabilir — o yüzden doğru davranış devirdir, susmak değil.
+    const conversationId = await sohbetAc('ai', 30);
+    const meta = fakeMeta();
+    const sonuc = await runAutonomousConversationReply(db, metaCloudSender(fakeCloudApiConfig(meta)), conversationId, {
+      model: fakeAiModel(AJAN_CEVABI),
+    });
+    expect(sonuc.status).toBe('handoff');
+    expect((await conversations.getById(conversationId))?.handledBy).toBe('human');
+    /* Devir haberi de gidemez ve DENENMEZ: aynı reddi ikinci kez yemek, log'u iki kat gürültüyle
+       doldurmaktan başka bir şey yapmazdı. Sağlayıcıya sıfır istek gitmeli. */
+    expect(meta.calls).toHaveLength(0);
+  });
+
+  it('JETON YOKSA mod DEĞİŞMEZ — yapılandırma boşluğu veriyi bozmaz', async () => {
+    const conversationId = await sohbetAc('ai');
+    const sonuc = await runAutonomousConversationReply(db, unconfiguredSender, conversationId, {
+      model: fakeAiModel(AJAN_CEVABI),
+    });
+    expect(sonuc).toEqual({ status: 'failed', reason: 'send_not_configured' });
+    /* Sohbet AI'da KALIR: jeton yapılandırıldığı gün bir sonraki tur cevabı gönderir. Devretseydi
+       kuyruktaki her satır "insanda" damgası yerdi ve hiçbiri geri dönmezdi. */
+    expect((await conversations.getById(conversationId))?.handledBy).toBe('ai');
+    expect((await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound')).toHaveLength(0);
+  });
+
+  it('modu `ai` DEĞİLSE hiç koşmaz — cron ile kapı aynı kuralı iki kez yazmasın', async () => {
+    const conversationId = await sohbetAc('hybrid');
+    const sonuc = await runAutonomousConversationReply(db, unconfiguredSender, conversationId, {
+      model: fakeAiModel(AJAN_CEVABI),
+    });
+    expect(sonuc).toEqual({ status: 'skipped', reason: 'wrong_mode' });
   });
 });

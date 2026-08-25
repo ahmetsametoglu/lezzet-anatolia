@@ -15,6 +15,7 @@ import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { sendOutboundMessage, type MessageSender } from '../messaging/send';
 import { ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
 import { translateTicketMessageNow } from './translate';
 import { customerSupportTools } from './support-tools';
@@ -59,7 +60,13 @@ export type SupportAiOutcome =
   | { status: 'replied' }
   | { status: 'handoff'; reason: string }
   | { status: 'skipped'; reason: 'not_found' | 'wrong_mode' | 'nothing_to_answer' | 'empty_thread' }
-  | { status: 'failed'; reason: 'not_configured' | 'provider_error' | 'invalid_output' };
+  /**
+   * `not_configured` **AI anahtarının** yokluğudur; `send_not_configured` **gönderim jetonunun**.
+   * İkisi ayrı, çünkü çağıranın tepkisi ayrı: ilkinde tüm tur anlamsızdır (her tarama model
+   * çağıracak), ikincisinde yalnız özerk sohbet taraması anlamsızdır — taslak üretimi çalışmalı.
+   * Tek kovaya atmak, jeton eksikken operatörün taslağını da sessizce durdururdu.
+   */
+  | { status: 'failed'; reason: 'not_configured' | 'send_not_configured' | 'provider_error' | 'invalid_output' };
 
 /** Test/enjeksiyon: model verilirse env ve ağ atlanır (`translate-user-text` deseniyle aynı). */
 export interface SupportAiOpts {
@@ -251,6 +258,15 @@ export async function generateConversationDraft(
 const AI_DISCLOSURE =
   'Bu cevabı otomatik asistanımız yazdı. Dilediğiniz an bir yetkiliye bağlanmak isterseniz yazmanız yeterli.';
 
+/**
+ * **DEVİR HABERİ** (15.8) — ajan susarken müşteriye söylenen tek cümle.
+ *
+ * Sebep YAZILMAZ ve bu bilinçli: *"stok verisine ulaşamadım"* ya da *"bu soruyu anlamadım"* gibi bir
+ * cümle, iç arızayı müşterinin sorunu hâline getirir. Sebep log'a ve kuyruğa gider — operatör görür,
+ * müşteri beklemesi gerektiğini bilir. İkisi ayrı bilgi ve ayrı yerlere aittir (`CLAUDE §1`).
+ */
+const HANDOFF_NOTICE = 'Bu konuda size bir yetkilimiz yardımcı olacak — en kısa sürede dönüş yapacağız.';
+
 export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: string, opts: SupportAiOpts = {}): Promise<SupportAiOutcome> {
   const tickets = new TicketService(db);
   const ticket = await tickets.getById(ticketId);
@@ -302,5 +318,124 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   await ringTicketsBell();
   // Müşteri de yazışmayı açık tutuyor olabilir — onun kanalı AYRI (künyesi `ringTicketBell`de).
   await ringTicketBell(ticket.id);
+  return { status: 'replied' };
+}
+
+/**
+ * **ÖZERK SOHBET CEVABI** (15.8) — `runAutonomousTicketReply`ın sohbet karşılığı.
+ *
+ * ── NEDEN AYRI BİR FONKSİYON, AMA AYNI DOSYA ────────────────────────────────
+ * İki kanal aynı işi yapmıyor: talep cevabı deftere yazılıp mail kuyruğuna girer, sohbet cevabı
+ * SAĞLAYICIYA GİDER ve gidemediği anlar vardır (pencere kapandı, hesap kimliği yok). Ama beyan,
+ * devir kuralı ve bağlam kurulumu ortaktır — bu yüzden ayrı dosya değil, aynı dosyada ikinci giriş:
+ * `AI_DISCLOSURE` ve `conversationContextOf` tek kopya kalsın.
+ *
+ * ── SAĞLAYICI PARAMETRE, ÇÜNKÜ UYGULAMA KATMANI HTTP BİLMEZ ─────────────────
+ * `sender` dışarıdan geçiliyor (`STACK §4`): cron gerçek Cloud API sürücüsünü verir, test sahte
+ * Meta'yı. Motor ikisini ayırt etmez ve etmemeli — ayırt etseydi testte koşan kod, canlıda koşan
+ * kod olmazdı.
+ *
+ * ── "REDDEDİLDİ" İLE "DÜŞTÜ" AYRI SONUÇ DOĞURUR ────────────────────────────
+ * Gönderim kapısı bu ikisini bilerek ayırıyor (`send.ts`) ve ajan da öyle davranmalı:
+ *
+ * · **`refused` → İNSANA DEVİR.** Bu BİZİM kuralımızdır (pencere kapandı, hesap kimliği yok);
+ *   tekrar denemek aynı sonucu verir ve müşteri cevapsız kalır. İnsan ise yapabileceği başka
+ *   şeyler bilir — onaylı şablon göndermek, aramak. Devretmemek, müşteriyi sessizce beklemede
+ *   bırakmak olurdu.
+ * · **`failed` → MOD DEĞİŞMEZ.** Bu sağlayıcı ya da YAPILANDIRMA tarafıdır (`not_configured`, ağ
+ *   hatası). Jeton eksik diye her sohbeti insana devretmek, bir yapılandırma boşluğunu geri
+ *   alınması zor bir VERİ değişikliğine çevirirdi: kuyruktaki her satır "insanda" damgası yer ve
+ *   kanal açıldığında hiçbiri geri dönmez. Bir sonraki tur yeniden dener.
+ *
+ * ── DEFTER YAZIMI BURADA DEĞİL, KAPIDA ──────────────────────────────────────
+ * `sendOutboundMessage` gönderimi ve defter yazımını tek kapıda tutuyor; ajan ikinci bir kayıt
+ * yazmaz. Yazsaydı, gönderilmemiş bir cevabın deftere düşmesi ihtimali geri gelirdi.
+ */
+export async function runAutonomousConversationReply(
+  db: SupabaseClient,
+  sender: MessageSender,
+  conversationId: string,
+  opts: SupportAiOpts = {},
+): Promise<SupportAiOutcome> {
+  const conversations = new ConversationService(db);
+  const conversation = await conversations.getById(conversationId);
+  if (!conversation) return { status: 'skipped', reason: 'not_found' };
+  if (conversation.handledBy !== 'ai') return { status: 'skipped', reason: 'wrong_mode' };
+
+  const context = await conversationContextOf(db, conversation);
+  if (!context) return { status: 'skipped', reason: 'empty_thread' };
+  if (context.messages[context.messages.length - 1]?.who !== 'customer') return { status: 'skipped', reason: 'nothing_to_answer' };
+
+  /* Beyan penceredeki AI mesajına bakar, yazışmanın tamamına değil — gerekçesi talep eşinin
+     künyesinde: otuz mesaj önceki beyan, müşteri için hiç yapılmamış beyandır. */
+  const alreadyDisclosed = context.messages.some((message) => message.who === 'ai');
+
+  /**
+   * Devir tek yerde: iki farklı sebeple (cevap üretilemedi · gönderilemedi) aynı sonuca varılıyor.
+   *
+   * ── SESSİZ DEVİR YASAK — BEKLEYEN(15.8) BURADA KAPANIYOR ────────────────────
+   * Meta mesajlaşma politikası: *"Automated bots must respond to any and all input"*. Modu insana
+   * çevirip müşteriye hiçbir şey söylememek, müşteri açısından **cevapsız kalmakla aynı şeydir** —
+   * ajan sustu, operatör henüz bakmadı, arada geçen süre müşteri için sessizlik.
+   *
+   * `notify` parametresi bir kaçamak değil, bir OLGU: devir zaten *gönderemediğimiz için* olduysa
+   * (pencere kapandı, hesap kimliği yok) haber de gidemez. O hâlde ikinci kez denemek, aynı reddi
+   * bir kez daha yemek ve log'u iki kat gürültüyle doldurmaktır. Devrin kendisi yine kayda geçer.
+   */
+  const handOff = async (reason: string, notify: boolean): Promise<SupportAiOutcome> => {
+    if (notify) {
+      const outcome = await sendOutboundMessage(db, sender, {
+        conversationId: conversation.id,
+        text: alreadyDisclosed ? HANDOFF_NOTICE : `${AI_DISCLOSURE}\n\n${HANDOFF_NOTICE}`,
+        author: 'ai',
+      });
+      /* Haber gidemezse DEVİR YİNE OLUR. Tersi olsaydı, gönderilemeyen bir bildirim yüzünden sohbet
+         AI'da asılı kalır ve ajan bir sonraki turda aynı cevabı yeniden üretmeye çalışırdı. */
+      if (outcome.status !== 'sent') {
+        logger.warn(
+          { context: 'application/conversation-ai', conversationId: conversation.id, reason: outcome.reason },
+          'devir haberi müşteriye GÖNDERİLEMEDİ — devir yine de yapılıyor',
+        );
+      }
+    }
+    await conversations.setMode(conversation.id, 'human');
+    logger.info({ context: 'application/conversation-ai', conversationId: conversation.id }, `özerk ajan insana devretti: ${reason}`);
+    // Zil şart: kuyruk hâlâ "AI yürütüyor" yazarsa kimse o sohbete bakmaz (16.8).
+    await ringConversationsBell();
+    return { status: 'handoff', reason };
+  };
+
+  /* Kimliği ÇÖZÜLMEMİŞ sohbette araç verilmez — taslak yolunun kuralının aynısı (16.9). Messenger/
+     IG'de PSID telefon taşımaz, yani kimliksiz sohbet istisna değil KURAL; ajan o hâlde de konuşur
+     ama yalnız herkese açık bilgiyle. */
+  const result = await runTask(
+    ticketAgentTask,
+    context,
+    conversation.customerId ? runOpts(db, conversation.customerId, opts) : opts.model ? { model: opts.model } : {},
+  );
+  if (!result.ok) return { status: 'failed', reason: result.reason };
+
+  const reply = result.data.action === 'reply' ? result.data.reply?.trim() : null;
+  if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
+
+  const outcome = await sendOutboundMessage(db, sender, {
+    conversationId: conversation.id,
+    text: alreadyDisclosed ? reply : `${AI_DISCLOSURE}\n\n${reply}`,
+    /* Yazar `ai` — "bunu kim söyledi" sorusu sonradan da cevaplanabilmeli (talep eşiyle aynı
+       karar). Boş bırakılsaydı RPC gideni `admin` sayardı: ekranın AI tonu ve kuyruğun AI süzgeci
+       sessizce yanlış kümeyi gösterirdi. */
+    author: 'ai',
+  });
+
+  if (outcome.status === 'refused') return handOff(`gönderilemedi: ${outcome.reason}`, false);
+  if (outcome.status === 'failed') {
+    logger.warn(
+      { context: 'application/conversation-ai', conversationId: conversation.id, reason: outcome.reason },
+      'özerk cevap gönderilemedi — mod DEĞİŞMEDİ, sonraki tur yeniden denenecek',
+    );
+    return { status: 'failed', reason: outcome.reason === 'not_configured' ? 'send_not_configured' : 'provider_error' };
+  }
+
+  await ringConversationsBell();
   return { status: 'replied' };
 }

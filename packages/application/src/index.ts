@@ -143,6 +143,8 @@ export {
   generateConversationDraft,
   generateTicketDraft,
   runAutonomousTicketReply,
+  // Özerk SOHBET motoru (15.8) — sağlayıcı port olarak geçilir, motor sürücüyü bilmez.
+  runAutonomousConversationReply,
   type SupportAiOpts,
   type SupportAiOutcome,
 } from './ticket/ai';
@@ -159,6 +161,8 @@ export { recordInboundMessage, recordOutboundMessage } from './messaging/record'
 export { linkConversationCustomer } from './messaging/link';
 // Sohbet izninin çift yazımı (15.12) — kural tek yerde, iki yüzey aynı kapıdan.
 export { recordConversationOptIn } from './messaging/opt-in';
+// Cloud API sürücüsü (15.11) — portun gerçek uygulaması; ekrana BAĞLI DEĞİL (künyesi dosyada).
+export { metaCloudSender, messageSenderFor } from './messaging/meta-sender';
 export {
   sendOutboundMessage,
   unconfiguredSender,
