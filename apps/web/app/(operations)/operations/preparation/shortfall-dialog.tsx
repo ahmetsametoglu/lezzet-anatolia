@@ -18,22 +18,28 @@ import type { ShortfallSuggestion } from '@lezzet/domain-core';
  * Motorun parasal ölçütü var ama dönen tavsiyede tutar YOK (testli). Bu pencere de tutar yazmıyor;
  * "fark iadesi" bile rakamsız anlatılıyor — tasarımın rol duvarı.
  *
- * ── "MÜŞTERİYE SOR" BUGÜN ÇİZİLMİYOR ────────────────────────────────────────
- * Tasarım *"Sipariş cevap-bekliyor durumuna geçer"* diyor; `OrderStatus` böyle bir hâl TAŞIMIYOR
- * (`draft·confirmed·preparing·ready·out_for_delivery·delivered·completed·cancelled·returned`) ve
- * o geçişi yazacak kapı da yok. Düğmeyi çalışıyormuş gibi koymak, basan operatöre müşterinin
- * sorulduğunu sandırırdı — oysa hiçbir yere düşmezdi. Kapalı ve sebebi yazılı.
- * BEKLEYEN(10.3)
+ * ── "MÜŞTERİYE SORULSUN" AÇILDI (25.08) ─────────────────────────────────────
+ * Tasarım *"sipariş cevap-bekliyor durumuna geçer"* diyordu ve `OrderStatus`ta böyle bir hâl yok.
+ * Eklenmedi de: bu bir DURUM değil — sipariş hâlâ hazırlanıyor, yalnız bir kalemi cevap bekliyor.
+ * Soru artık **talepler kuyruğuna** düşüyor (`askCustomerAction` → siparişe ve kaleme bağlı bir
+ * `question`), yani bir yere düşüyor ve unutulmuyor.
+ *
+ * **Düğmenin adı "sor" değil "sorulsun" ve bu kasıtlı:** soruyu depocu sormuyor — müşteriyle
+ * hangi kanaldan konuşulacağına operasyon karar veriyor (kullanıcı kararı 25.08). Depocu müşteri
+ * iletişimi görmez; bu pencerede de ne ad, ne adres, ne tutar var.
  */
 interface ShortfallDialogProps {
   title: string;
   suggestion: ShortfallSuggestion;
   busy: boolean;
+  /** Soru kuyruğa düştü mü — basıldıktan sonra düğme yerine sonucu söyleyen satır çizilir. */
+  asked: boolean;
   onClose: () => void;
   onShipRest: () => void;
+  onAskCustomer: () => void;
 }
 
-export function ShortfallDialog({ title, suggestion, busy, onClose, onShipRest }: ShortfallDialogProps) {
+export function ShortfallDialog({ title, suggestion, busy, asked, onClose, onShipRest, onAskCustomer }: ShortfallDialogProps) {
   return (
     <Dialog
       open
@@ -64,16 +70,32 @@ export function ShortfallDialog({ title, suggestion, busy, onClose, onShipRest }
           </span>
         </button>
 
-        {/* Kapalı ama SEBEBİ yazılı: basılınca hiçbir şey olmayan bir düğmeden iyidir. */}
-        <div className="flex flex-col gap-1 rounded-ops-card border border-ops-line bg-ops-subtle px-3.5 py-3 opacity-70">
-          <span className="font-ops-display text-ops-sm font-semibold text-ops-muted">
-            Müşteriye sor — &quot;kalanı göndereyim mi?&quot;
-          </span>
-          <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
-            Bu yol henüz açık değil: siparişin &quot;cevap bekliyor&quot; diye bir hâli yok, o yüzden soru hiçbir yere
-            düşmezdi. Müşteriyle konuşulacaksa şimdilik operasyona haber verin.
-          </span>
-        </div>
+        {/* Soru sorulduysa düğme YERİNE sonuç: aynı soruyu ikinci kez sordurmanın en kolay yolu,
+            basıldıktan sonra düğmeyi olduğu gibi bırakmaktır. Kapı da ayrıca koruyor
+            (`already_asked`), ama ekranın yalan söylememesi kapının işi değil. */}
+        {asked ? (
+          <div className="flex flex-col gap-1 rounded-ops-card border border-ops-blue-line bg-ops-blue-bg px-3.5 py-3">
+            <span className="font-ops-display text-ops-sm font-semibold text-ops-blue-dark">Soru operasyona iletildi</span>
+            <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
+              Talepler kuyruğuna düştü; müşteriyle operasyon konuşacak. Bu kalem cevap gelene kadar bekler — siz
+              öteki kalemlere devam edebilirsiniz.
+            </span>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onAskCustomer}
+            disabled={busy}
+            className="flex cursor-pointer flex-col gap-1 rounded-ops-card border border-ops-line bg-ops-white px-3.5 py-3 text-left transition-colors hover:border-ops-blue disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="font-ops-display text-ops-sm font-semibold text-ops-ink">
+              Müşteriye sorulsun — &quot;kalanı gönderelim mi?&quot;
+            </span>
+            <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-body">
+              Soru talepler kuyruğuna düşer; müşteriyle operasyon konuşur. Siparişe dokunulmaz, kalem cevabı bekler.
+            </span>
+          </button>
+        )}
 
         <p className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">{PREP_NOTES.moneyHidden}</p>
       </div>

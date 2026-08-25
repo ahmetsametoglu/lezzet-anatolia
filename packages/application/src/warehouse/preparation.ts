@@ -7,6 +7,7 @@ import {
   ReservationService,
   SettingsService,
   StockService,
+  TicketService,
   UserProfileService,
 } from '@lezzet/database';
 import { isSellableBatch, suggestFefoPicks, suggestShortfallAction, type ShortfallSuggestion } from '@lezzet/domain-core';
@@ -42,6 +43,14 @@ import { variantNames } from './names';
 /** Bir kalemin hazırlık satırı — ürün/adet/parti; fiyat yok. */
 export interface PreparationLine {
   itemId: string;
+  /**
+   * **Bu kalem müşterinin cevabını bekliyor** (10.3) — siparişe bağlı, kalemi işaretleyen ve henüz
+   * çözülmemiş bir talep var demek.
+   *
+   * Kalemi KİLİTLEMEZ ve kilitlememeli: cevap gecikirse depocu yine de "kalanı gönder" diyebilir —
+   * karar hep insanda (`DOMAIN §4`). İşaretin tek işi, sorulmuş bir sorunun ekranda iz bırakması.
+   */
+  awaitingAnswer: boolean;
   variantId: string;
   /** "Fıstıklı Baklava" — müşterinin dilinde değil, operasyon dilinde (Türkçe). */
   productName: string;
@@ -171,12 +180,15 @@ export async function listPreparationQueue(
   const items = await new OrderItemService(db).listByOrders(orders.map((order) => order.id));
   // Beşi AYNI dalgada: parti dağılımı ve kutu okumaları mevcut turların yanına giriyor,
   // arkalarına DEĞİL — ikinci bir uçuş açsaydı kuyruğun gecikmesi iki katına çıkardı (21.11d ölçümü).
-  const [names, customers, pinned, picked, boxes] = await Promise.all([
+  const [names, customers, pinned, picked, boxes, awaiting] = await Promise.all([
     variantNames(db, items.map((item) => item.variantId)),
     customerNames(db, orders),
     pinnedStockIds(db, orders.map((order) => order.id)),
     pickedBatches(db, orders.map((order) => order.id)),
     orderBoxes(db, orders.map((order) => order.id)),
+    // Cevap bekleyen kalemler (10.3) — AYNI dalgada, arkasında değil: soru sorulduktan sonra
+    // ekranda iz kalmazsa depocu o kalemi unutur ya da ikinci kez sordurur.
+    new TicketService(db).awaitingItemIds(orders.map((order) => order.id)),
   ]);
 
   const queue: PreparationOrder[] = [];
@@ -206,7 +218,9 @@ export async function listPreparationQueue(
     */
     const lines = built
       .sort((a, b) => (a.areaSort ?? Infinity) - (b.areaSort ?? Infinity))
-      .map((row) => row.line);
+      // İşaret `buildLine`in İÇİNE değil dışına konuyor: o kalemin FİZİKSEL gerçeğini kuruyor
+      // (kaç kaldı, hangi parti, hangi raf), bu ise siparişin çevresindeki bir hâl.
+      .map((row) => ({ ...row.line, awaitingAnswer: awaiting.has(row.line.itemId) }));
 
     queue.push({
       orderId: order.id,
@@ -242,7 +256,9 @@ async function buildLine(
   variant: { productName: string; variantLabel: string } | undefined,
   pinnedStockId: string | null,
   picked: PreparationPick['batches'],
-): Promise<{ line: PreparationLine; areaSort: number | null }> {
+  // `awaitingAnswer` dışarıda ekleniyor (çağıran künyesi): bu fonksiyon kalemin FİZİKSEL gerçeğini
+  // kuruyor, siparişin çevresindeki hâlleri değil. `Omit` niyeti tipe yazıyor — alan unutulmadı.
+): Promise<{ line: Omit<PreparationLine, 'awaitingAnswer'>; areaSort: number | null }> {
   const remaining = Math.max(0, item.qty - item.fulfilledQty);
   const base = {
     itemId: item.id,

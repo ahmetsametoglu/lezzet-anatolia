@@ -29,6 +29,9 @@
  */
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+// Node'da global ama lint'in `scripts/` ortamında tanımlı değil — açıkça almak sessiz bir
+// `no-undef`ten iyidir (dosya zaten `node:` önekli importlarla çalışıyor).
+import { URL } from 'node:url';
 // `@playwright/test` chromium/devices'ı yeniden dışa verir; pnpm'in katı node_modules'ünde
 // geçişli `playwright` paketine doğrudan uzanılamaz — kapı bu.
 import { chromium, devices } from '@playwright/test';

@@ -302,6 +302,13 @@ function LineRow({
             {num(line.shortfallQty)} paket karşılanamıyor — "Sorun" ile işaretleyin.
           </span>
         ) : null}
+        {/* Sorulmuş sorunun izi (10.3): iz olmasaydı depocu ya kalemi unuturdu ya ikinci kez
+            sordururdu. Kalemi KİLİTLEMİYOR — cevap gecikirse "kalanı gönder" hâlâ mümkün. */}
+        {line.awaitingAnswer ? (
+          <span className="font-ops-body text-ops-micro text-ops-blue-dark">
+            {PREP_NOTES.awaitingAnswer}
+          </span>
+        ) : null}
       </span>
 
       <span className="flex flex-col items-end gap-1.5">

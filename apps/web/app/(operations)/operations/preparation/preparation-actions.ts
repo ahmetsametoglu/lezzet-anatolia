@@ -2,10 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 import { confirmPreparation, recordShipment } from '@lezzet/application';
+// Alt yol: paketin barrel'ı başka şeridin aktif alanı ve aynı turda iki kez çakıştı (23.13).
+import { shortfallQuestion } from '@lezzet/application/warehouse/shortfall-question';
 import { serviceDb } from '@lezzet/database';
 import { CarrierEnum, type PreparationPick } from '@lezzet/types';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
+import { openTicket } from '@/lib/ticket/write';
 import { readWorkWarehouse } from '@/lib/warehouse/context';
 
 /**
@@ -115,6 +118,67 @@ export async function setShipmentAction(
 
     revalidatePath(PREP_PATH);
     return { data: { ok: true }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * **"Müşteriye sorulsun"** (10.3) — eksik kalan kalemin sorusu kuyruğa düşer.
+ *
+ * ── DEPOCU SORUYU SORMAZ, SORULMASINI İSTER ─────────────────────────────────
+ * Açılan talep operasyonun kuyruğuna girer; müşteriyle hangi kanaldan konuşulacağına orası karar
+ * verir (kullanıcı kararı 25.08). Müşteriye otomatik mesaj GİTMİYOR — `openTicket` personel
+ * kaynaklı talepte teyit maili göndermiyor (16.4) ve biz de ayrıca bir zil çalmıyoruz.
+ *
+ * ── DEPOCUYA MÜŞTERİ BİLGİSİ DÖNMEZ ─────────────────────────────────────────
+ * `customerId` sunucuda çözülüp sunucuda tüketiliyor; eylemin cevabı yalnız "soruldu"dur. Kimliği
+ * istemciye göndermek, rol duvarını bir `console.log` uzağına indirirdi.
+ *
+ * ── GÖVDE TÜRKÇE, MÜŞTERİ KENDİ DİLİNDE OKUR ────────────────────────────────
+ * Çeviri `openTicket` içinde, mesaj yazıldıktan hemen sonra (`replyAsStaff` ile aynı sıra).
+ */
+export async function askCustomerAction(orderItemId: string): Promise<ActionResult<{ ticketId: string }>> {
+  try {
+    const { user } = await requireWarehouseScope();
+    const workplace = await readWorkWarehouse();
+    if (workplace.status !== 'ok') {
+      throw new Error('Hangi depoda çalıştığınız belli değil — üst bardan depo seçip tekrar deneyin. Soru sorulmadı.');
+    }
+
+    const draft = await shortfallQuestion(serviceDb(), { orderItemId, warehouseId: workplace.warehouseId });
+    if (draft.status === 'not_found') throw new Error('Sipariş kalemi bulunamadı.');
+    if (draft.status === 'out_of_scope') {
+      throw new Error(
+        `Bu sipariş ${workplace.name} deposunun değil — başka bir deponun kuyruğundan geliyor. Soru sorulmadı; sayfayı tazeleyin.`,
+      );
+    }
+    // Eksik kapanmışsa soru anlamsızdır — ve bu bir hata değil, iyi haber: sayfa bayat.
+    if (draft.status === 'no_shortfall') {
+      throw new Error('Bu kalemde eksik kalmamış — sayfayı tazeleyin. Soru sorulmadı.');
+    }
+    // Çift talep koruması kapıda; buradaki cümle onu operatöre okunur hâle getiriyor.
+    if (draft.status === 'already_asked') {
+      throw new Error('Bu kalem için zaten açık bir soru var — operasyon takip ediyor. İkinci soru açılmadı.');
+    }
+
+    const result = await openTicket({
+      customerId: draft.customerId,
+      // `admin`: ilk sözü işletme söylüyor. `question`: bir arıza bildirimi değil, bir soru.
+      source: 'admin',
+      type: 'question',
+      body: draft.body,
+      subject: draft.subject,
+      orderId: draft.orderId,
+      // Kalem bağı ŞART: kuyruk "hangi kalem" sorusunu cevaplayabilmeli ve çift talep koruması
+      // (`findOpenByOrderItem`) tam bu alandan okuyor.
+      orderItemIds: [draft.orderItemId],
+      authorId: user.profileId,
+    });
+    if (!result.ok) throw new Error(`Soru açılamadı (${result.reason}).`);
+
+    revalidatePath(PREP_PATH);
+    return { data: { ticketId: result.data.id }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

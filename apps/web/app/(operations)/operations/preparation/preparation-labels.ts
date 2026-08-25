@@ -179,6 +179,12 @@ export const PREP_NOTES = {
   fieldHint: 'Raf karşısındaki toplama akışı cihaz uygulamasında; bu ekran masadan yönetim içindir.',
   /** Eksik kararı diyaloğunun altbilgisi — para depocuya görünmez. */
   moneyHidden: 'Para tarafı otomatik çözülür (iade / düşük tahsilat) — tutar bu yüzeyde görünmez.',
+  /**
+   * Cevap bekleyen kalem (10.3). Cümle **kilit vaat etmiyor**: kalem yine toplanabilir, "kalanı
+   * gönder" hâlâ mümkün. "Bekliyor" desek depocu dokunulmaz sanır ve cevap gecikirse sipariş
+   * kimsenin beklemediği bir yerde takılırdı.
+   */
+  awaitingAnswer: 'müşteriye soruldu — operasyon takip ediyor',
 } as const;
 
 /**

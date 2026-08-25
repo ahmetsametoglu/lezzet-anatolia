@@ -1,5 +1,5 @@
 import 'server-only';
-import { OrderItemService, OrderService, TicketService, serviceDb } from '@lezzet/database';
+import { OrderItemService, OrderService, TicketMessageService, TicketService, serviceDb } from '@lezzet/database';
 import {
   canTransitionTicket,
   canTriggerReturn,
@@ -107,12 +107,25 @@ export async function openTicket(input: {
     if (!owns.ok) return { ok: false, reason: owns.reason };
   }
 
-  const ticket = await new TicketService(serviceDb()).createWithMessage({
+  const db = serviceDb();
+  const ticket = await new TicketService(db).createWithMessage({
     ...input,
     body: input.body.trim(),
     // Personelin elle açtığı talepte ilk sözü o söyler; müşterinin kendi açtığında müşteri.
     sender: input.authorId ? 'admin' : 'customer',
   });
+  /* PERSONELİN YAZDIĞI İLK MESAJ DA ÇEVRİLİR (10.3 turunda ölçüldü) — `replyAsStaff` bunu ilk
+     günden yapıyordu ama talebi AÇAN mesaj atlanmıştı: operatör Türkçe yazıyor, Fransız müşteri
+     talep ekranında Türkçe bir metin görüyordu. Arıza sessizdi çünkü kuyruk gecikmeli olarak
+     telafi ediyor (`translate_user_text`) — yani metin bir süre sonra kendiliğinden düzeliyor ve
+     "bir kez gördüm" diyen kimse tekrar bakmıyor.
+
+     Mesaj kimliği `create_ticket`ten dönmüyor (RPC talebi döndürüyor), o yüzden ilk mesaj ayrıca
+     okunuyor. Yalnız PERSONEL açtığında: müşterinin kendi yazdığı metin zaten kendi dilinde. */
+  if (input.authorId) {
+    const [first] = await new TicketMessageService(db).listByTicket(ticket.id);
+    if (first) await translateTicketMessageNow(db, first);
+  }
   // Teyit maili — talep kaydedildikten SONRA ve sonucu beklenmeden değil, beklenerek: gönderim
   // zaten kendi içinde sessiz (hata yukarı çıkmaz), ama beklemezsek server action süreci mail
   // gitmeden sonlanabilir.

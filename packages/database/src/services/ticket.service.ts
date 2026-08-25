@@ -119,6 +119,60 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
+   * **Bu sipariş kalemine açık bir soru var mı** (10.3) — eksik kararının çift talep koruması.
+   *
+   * Depo ekranı "müşteriye sorulsun" düğmesini iki kez gördüğünde (yenilenmemiş sayfa, iki depocu,
+   * çift tıklama) aynı soru iki kez sorulur ve ikisi de ayrı kuyruk satırı olarak yaşar — müşteri
+   * aynı soruyu iki kez alır, operasyon hangisinin cevaplandığını bilemez.
+   *
+   * **`contains`, eşitlik değil:** `order_item_ids` bir dizi kolonu (junction tablosu yok) ve bir
+   * talep birden çok kalem işaretleyebilir. `@>` operatörü "bu kalem o dizinin içinde mi" diye
+   * sorar; eşitlik yalnız TEK kalemli talepleri bulurdu ve iki kalemli bir soru görünmez kalırdı.
+   *
+   * **Çözülmüş talep engel DEĞİL:** cevabı alınmış bir soru geçmiştir; aynı kalem yeniden eksik
+   * kalırsa yeniden sorulabilmeli.
+   */
+  async findOpenByOrderItem(orderItemId: string): Promise<Ticket | null> {
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select('*')
+      .contains('order_item_ids', [orderItemId])
+      .neq('status', 'resolved')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    const row = data?.[0];
+    return row ? TicketSchema.parse(dbToApp(row)) : null;
+  }
+
+  /**
+   * **Bu siparişlerde hangi kalemler cevap bekliyor** (10.3) — hazırlık kuyruğunun izi.
+   *
+   * Soru sorulduktan sonra ekranda hiçbir iz kalmazsa depocu o kalemi ya unutur ya ikinci kez
+   * sorar; kuyruk bu yüzden "cevap bekleniyor" diyebilmeli. **Sipariş başına sorgu YOK** — sayfanın
+   * tamamı tek turda okunur (N+1 kırılır), dönen küme yalnız kalem kimlikleri.
+   *
+   * Dar seçim (`order_item_ids`): kuyruğun sorusu "bu kalem bekliyor mu", talebin kendisi değil —
+   * talep satırını taşımak, depo ekranına müşteri yazışması getirmek olurdu (`DOMAIN §2`).
+   */
+  async awaitingItemIds(orderIds: readonly string[]): Promise<Set<string>> {
+    const awaiting = new Set<string>();
+    if (orderIds.length === 0) return awaiting;
+
+    const { data, error } = await this.supabase
+      .from(this.tableName)
+      .select('order_item_ids')
+      .in('order_id', [...orderIds])
+      .neq('status', 'resolved');
+    if (error) throw error;
+
+    for (const row of (data ?? []) as unknown as Array<{ order_item_ids: string[] | null }>) {
+      for (const id of row.order_item_ids ?? []) awaiting.add(id);
+    }
+    return awaiting;
+  }
+
+  /**
    * Müşterinin "Taleplerim" listesi — yeniden eskiye, keyset sayfalı.
    *
    * Sayfalı, çünkü talep sayısı veriyle büyür (CLAUDE.md: sınırsız büyüyen küme → keyset). Sıralama

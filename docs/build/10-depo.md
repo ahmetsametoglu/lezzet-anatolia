@@ -45,7 +45,44 @@ Depo sorumlusunun üç ekranı: sipariş hazırlama (FEFO önerisi + parti kayd�
   - **Durum (28.07) — arka uç hazır.** Motor `domain-core/stock/shortfall.ts` (7 birim testi) + kapı eksik kalemler için tavsiyeyi döner. Para dallanması zaten 07.8'de: "kalanı gönder" seçilirse `adjustFulfillment` farkı çözüyor.
   - **Ölçüt İKİLİ (oran + tutar), çünkü tek başına ikisi de yanılır:** yalnız oran, 40 €'luk kalemin yarısını "önemsiz" sayardı; yalnız tutar, ucuz ama siparişin tamamını oluşturan kalemi kaçırırdı. Biri eşiği aşarsa müşteriye sorulur — şüphede insana danışılır. Eşikler ayardan (`shortfall_ask_ratio_percent`, `shortfall_ask_value_cents`).
   - **Durum (08.08) — EKSİK KARARI YAZILDI, YARIM** (`shortfall-dialog.tsx`): onaydan sonra kapının döndürdüğü tavsiye gösteriliyor ve cümle SEBEPTEN türüyor (`line_fully_missing` · `large_share` · `high_value` · `minor`), eylemden değil — aynı tavsiye üç ayrı sebepten gelebiliyor ve operatörün kararı sebebi bilerek değişir. Tutar yazılmıyor.
-    - ⚠ **"Müşteriye sor" ÇİZİLDİ AMA KAPALI, sebebi yazılı.** Tasarım *"sipariş cevap-bekliyor durumuna geçer"* diyor; `OrderStatus` böyle bir hâl TAŞIMIYOR (`draft·confirmed·preparing·ready·out_for_delivery·delivered·completed·cancelled·returned`) ve o geçişi yazacak kapı da yok. Çalışıyormuş gibi koymak, basan depocuya müşterinin sorulduğunu sandırırdı — oysa soru hiçbir yere düşmezdi. "Kalanı gönder" çalışıyor (kalem eksik adetle yazılıyor, farkı 07.8 çözüyor). BEKLEYEN(10.3)
+    - ~~⚠ **"Müşteriye sor" ÇİZİLDİ AMA KAPALI, sebebi yazılı.**~~ → **AÇILDI (25.08)**, aşağıdaki nota bakın. Eski kayıt: `OrderStatus` "cevap bekliyor" hâli taşımıyordu ve geçişi yazacak kapı yoktu; düğmeyi çalışıyormuş gibi koymak basan depocuya müşterinin sorulduğunu sandırırdı. "Kalanı gönder" o gün de çalışıyordu (kalem eksik adetle yazılıyor, farkı 07.8 çözüyor).
+  - **Durum (25.08) — "MÜŞTERİYE SORULSUN" YAZILDI · touches:
+    `packages/application/src/warehouse/{shortfall-question.ts,preparation.ts}`,
+    `packages/database/src/services/ticket.service.ts`,
+    `apps/web/lib/ticket/write.ts`,
+    `apps/web/app/(operations)/operations/preparation/{preparation-actions.ts,preparation-client.tsx,shortfall-dialog.tsx,preparation-labels.ts,preparation.desktop.tsx}`**
+    - **`OrderStatus`'a HÂL EKLENMEDİ ve bu kararın kendisi.** Tasarım *"sipariş cevap-bekliyor
+      durumuna geçer"* diyordu; ölçünce görüldü ki bu bir DURUM değil — sipariş hâlâ hazırlanıyor,
+      yalnız bir kalemi cevap bekliyor. Durum makinesine hâl eklemek her ekranı, her rozeti ve her
+      süzgeci ilgilendirir; oysa "soru bir yere düşsün" ihtiyacının kuyruğu zaten vardı: **talepler**
+      (16). Şema da hazırdı — `TicketSource` `admin`i, `TicketType` `question`ı baştan taşıyor.
+      **Yeni kolon, yeni migration, `db:refresh` yok.**
+    - **Depocu soruyu SORMAZ, sorulmasını ister** (kullanıcı kararı 25.08). Talep operasyon
+      kuyruğuna düşer, müşteriyle hangi kanaldan konuşulacağına orası karar verir; müşteriye
+      otomatik sistem mesajı GİTMEZ (`16.4`in aynı kararı: müşteri, bir insanın yazmadığı metni
+      okumamalı). Düğmenin adı bu yüzden *"Müşteriye sorulsun"* — pencerede ne ad, ne adres, ne
+      tutar var ve kapı da hiçbirini döndürmüyor (testli).
+    - **Gövde Türkçe yazılır, müşteri kendi dilinde okur.** Üç dilli sözlük yazılmadı: talep
+      mesajları gönderim anında çevriliyor (17.08). ⚠ Ama **açan mesaj atlanmıştı** — `replyAsStaff`
+      çeviriyordu, `openTicket` çevirmiyordu. Yani elle açılan her talepte Fransız müşteri Türkçe
+      bir metin görüyordu ve arıza sessizdi (kuyruk gecikmeli telafi ediyor, "bir kez gördüm"
+      diyen kimse tekrar bakmıyor). Düzeltildi.
+    - **Çift talep koruması iki katmanlı:** kapı `already_asked` döner (`findOpenByOrderItem` —
+      `contains`, eşitlik değil: bir talep birden çok kalem işaretleyebilir), ekran da soru
+      düştükten sonra düğme yerine sonucu çizer. Kapı tek başına yeterdi ama ekranın yalan
+      söylememesi kapının işi değil. Çözülmüş talep engel DEĞİL: aynı kalem yeniden eksik kalırsa
+      yeniden sorulur (testli).
+    - **Kuyrukta İZ var:** kalem satırı *"müşteriye soruldu — operasyon takip ediyor"* yazıyor
+      (`TicketService.awaitingItemIds`, sipariş başına sorgu YOK — sayfanın tamamı tek turda).
+      Cümle **kilit vaat etmiyor**: kalem yine toplanabilir, "kalanı gönder" hâlâ mümkün — karar
+      hep insanda (`DOMAIN §4`).
+    - **Testler:** 10 iddia (`shortfall-question.test.ts`) — eksik hesabı, kapsam reddi, rol
+      duvarı (ad/e-posta/tutar sızmıyor), çift talep, çözülmüş talebin engel olmaması, kuyruk
+      izinin belirmesi ve kalkması. Çift talep süzgeci mutasyonla doğrulandı.
+    - **KALAN — ölçüm:** pencere ve kuyruk izi GERÇEK ekranda görülmedi. `ui:shot` hazırlık
+      kuyruğuna giremiyor (depo seçimi çerezde yaşıyor, araç yeni bağlam açıyor) ve diyalog ancak
+      bir kalem onaylanıp eksik çıkınca doğuyor. 10.2'nin ölçüm borcuyla aynı turda kapanmalı.
+      BEKLEYEN(10.3)
   - **Kalemin tamamı eksikse oran hesaplanmaz:** müşteri sipariş ettiği şeyi hiç almayacak, doğrudan sorulur.
   - **Tavsiye TUTAR TAŞIMAZ:** parasal ölçüt motora GİRDİ olarak verilir, dönen değerde yer almaz (testli) — tasarımın "fark iadesi bile tutar olarak gösterilmez" kuralı.
 - [~] (10.4) **Mal kabul:** bekleyen tedarik siparişinden dolu form (yoksa boş); ürün/varyant + adet + son tarih + lot + tedarikçi + konum; MLOR uyarısı (engelsiz); paketleme girişi; PO → `received` · `touches: apps/web/app/(operations)/operations/receiving/** · apps/web/components/operation/**` *(üstlenildi 02.08 — operasyon yüzeyi ajanı)*

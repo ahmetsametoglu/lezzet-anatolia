@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ShortfallSuggestion } from '@lezzet/domain-core';
-import { confirmPreparationAction, setShipmentAction } from './preparation-actions';
+import { askCustomerAction, confirmPreparationAction, setShipmentAction } from './preparation-actions';
 import { PreparationDesktop } from './preparation.desktop';
 import { ProblemDialog } from './problem-dialog';
 import { ShortfallDialog } from './shortfall-dialog';
@@ -41,7 +41,15 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
 
   const [selectedId, setSelectedId] = useState<string | null>(data.orders[0]?.orderId ?? null);
   const [problem, setProblem] = useState<{ order: PreparationOrderView; line: PreparationLineView } | null>(null);
-  const [shortfall, setShortfall] = useState<{ title: string; suggestion: ShortfallSuggestion } | null>(null);
+  // `itemId` pencerede TAŞINIYOR: "müşteriye sorulsun" hangi kaleme ait olduğunu bilmek zorunda ve
+  // başlık (`title`) bir kimlik değil. `asked` pencerenin kendi hâli — soru düştükten sonra düğme
+  // yerine sonucu çizer (aynı soruyu ikinci kez sordurmamanın ekran tarafı).
+  const [shortfall, setShortfall] = useState<{
+    title: string;
+    itemId: string;
+    suggestion: ShortfallSuggestion;
+    asked: boolean;
+  } | null>(null);
 
   /**
    * Kalemi yazar. `batches` verilmezse SİSTEM ÖNERİSİ gider — "Hazırlandı" tuşunun anlamı tam
@@ -67,8 +75,34 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
       // Eksik varsa kararı SOR — sessizce geçmek, depocunun vermesi gereken kararı sistemin
       // yerine vermesi olurdu. Kapı tavsiyeyi dönüyor, karar burada soruluyor.
       const eksik = result.shortfalls.find((row) => row.itemId === line.itemId);
-      if (eksik) setShortfall({ title: line.title, suggestion: eksik.suggestion as ShortfallSuggestion });
+      if (eksik) {
+        setShortfall({
+          title: line.title,
+          itemId: line.itemId,
+          suggestion: eksik.suggestion as ShortfallSuggestion,
+          asked: false,
+        });
+      }
 
+      router.refresh();
+    });
+  };
+
+  /**
+   * **"Müşteriye sorulsun"** (10.3) — soru talepler kuyruğuna düşer, sipariş olduğu yerde kalır.
+   *
+   * Pencere KAPANMIYOR: depocu bastığı düğmenin ne yaptığını görmeli. Kapanan bir pencere, soru
+   * gerçekten düştü mü sorusunu cevapsız bırakır ve tereddüt eden operatör ikinci kez basar.
+   */
+  const askCustomer = (itemId: string) => {
+    setError(null);
+    startTransition(async () => {
+      const { error: failed } = await askCustomerAction(itemId);
+      if (failed) {
+        setError(failed);
+        return;
+      }
+      setShortfall((cur) => (cur ? { ...cur, asked: true } : cur));
       router.refresh();
     });
   };
@@ -120,11 +154,13 @@ export function PreparationClient({ data, strip }: PreparationClientProps) {
           title={shortfall.title}
           suggestion={shortfall.suggestion}
           busy={busy}
+          asked={shortfall.asked}
           onClose={() => setShortfall(null)}
           // "Kalanı gönder" AYRI BİR YAZIM DEĞİL: eksik zaten kaydedildi (kalem toplanan adetle
           // yazıldı) ve siparişin geri kalanı normal akışında sürüyor. Burada yapılacak tek şey
           // kararı kapatmak — ikinci bir yazım aynı eksiği iki kez kaydetmek olurdu.
           onShipRest={() => setShortfall(null)}
+          onAskCustomer={() => askCustomer(shortfall.itemId)}
         />
       ) : null}
     </>
