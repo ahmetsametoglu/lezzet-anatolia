@@ -5647,15 +5647,23 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ekran **423 dp** geniş — 76 dp, genişliğin yalnız **%18'i** demekti. Şimdi %40, yani 2,2 katı.
   Kaynak da 512² → **1024²** büyütüldü (164 dp xxxhdpi'de 656 px eder).
 
-  **ARA BİR DEĞER YANLIŞTI VE CİHAZ TESTİ ONU YAKALAYAMAZDI — kaydı burada duruyor.** Önce 280 dp
-  yazıldı ve elimizdeki telefonda kusursuz göründü. Kullanıcı sordu (*"splash screen'de öyle bir
-  zorunluluk yok diye biliyorum"*), araştırıldı ve ölçüldü: Expo **Android 12'nin splash API'sini**
-  bildiriyor (`windowSplashScreenAnimatedIcon`) ve **API 31+ maskeliyor** — *"as with adaptive icons,
-  one-third of the foreground is masked"*; ikon zemini yoksa tuval 288 dp, görünen daire **192 dp**.
-  Test cihazı **Android 11 (API 30)** ve o sürümde androidx kendi UYUM katmanını çiziyor
-  (`compat_splash_screen.xml`), maskelemiyor. Yani 280 dp Android 12+ cihazların hepsinde kırpılırdı
-  (mürekkep 257 dp) **ve bizim doğrulamamız bunu hiç gösteremezdi.** Sınır ölçülerek bulundu:
-  164 dp → üretilen çizimde tüm mürekkebin çapı **191,5 dp** (izin verilen 192).
+  **ARA BİR DEĞER YANLIŞTI — VE ASIL DERS DEĞERDE DEĞİL, DOĞRULAMADA.** Önce 280 dp yazıldı ve
+  işaret cihazda **kırpıldı**: sol ilmik ve sağ süpürme gitti, "A"nın tepesi kesildi. Sebep:
+  Expo Android 12'nin splash API'sini bildiriyor (`windowSplashScreenAnimatedIcon`) ve işaret
+  maskeleniyor — *"as with adaptive icons, one-third of the foreground is masked"*; ikon zemini
+  yoksa tuval 288 dp, görünen daire **192 dp**. 280 dp'de mürekkep 257 dp'ye çıkıyordu.
+
+  **BİR TUR "API 30'DA UYUM KATMANI MASKELEMEZ" DENDİ VE YANLIŞTI.** androidx'in kendi kaynağı
+  aksini yazıyor (`compat_splash_screen_no_icon_background.xml`): *"We mask the outer bounds of the
+  icon **like we do on Android 12**."* Cihazda ölçüldü (Android 11): görünen daire ≈ **191 dp**.
+
+  **VE CİHAZ TURU BUNU GÖSTERMİŞTİ, GÖZDEN KAÇTI.** 280'lik derlemenin ekran görüntüsü alınmıştı ve
+  kırpma oradaydı; yalnız işaretin BOYU ölçülüp bütünlüğü karşılaştırılmadı. Ölçüt basitmiş: kaynak
+  sanatın oranı **1,141** (2377×2083), ekrandaki oran **0,85**. **Kırpılmış bir görüntünün oranı
+  sapar** — perde/ikon doğrulaması bundan sonra bu karşılaştırmayı içermeli; *"büyük görünüyor"*
+  bir doğrulama değildir. Kalıcı kaydı `assets/brand/README.md`de.
+
+  Sınır ölçülerek bulundu: 164 dp → üretilen çizimde tüm mürekkebin çapı **191,5 dp** (izin verilen 192).
 
   **CİHAZDA DOĞRULANDI — repodaki dosyalar değil, TELEFONDAN GERİ ÇEKİLEN APK ölçüldü**
   (OPPO CPH1907, Wi-Fi, `adb pull` + kaynak pikselleri):
@@ -5686,8 +5694,12 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Üç oran çizilip bakıldı — %54 (%0,1 kayıp, küçük) · **%75 (%15,4 kayıp, seçildi)** · %95
   (%35,8 kayıp, "A" kesiliyor). Yani **büyüklük ile kırpılmazlık bu kompozisyonda aynı anda
   sağlanamıyor**; karar büyüklükten yana verildi.
-  Ön katman ve tek renk **%60 → %75**; iOS ikonu **%78 → %88** (kavisli kare maskesi daireden
-  cömert). Gerekçe kalıcı olarak `assets/brand/README.md`de.
+  **BİR TUR %75 SEÇİLDİ, SONRA GERİ ALINDI.** Kırpma cihazda görülünce kullanıcı bütünlükten yana
+  karar verdi (*"%50'ye indir — hiçbir şey kesilmesin"*); ölçüm %50'nin de güvenli bölgeyi 2 puan
+  aştığını gösterdi (%63,4 > %61,1), o yüzden **%48**: mürekkebin çapı **65,8 dp**, Google'ın
+  **66 dp güvenli bölgesine** sığıyor — hiçbir OEM maskesinde kesilmiyor (daire ve kavisli kare
+  önizlemeleriyle doğrulandı). iOS ikonu **%78 → %88** (kavisli kare maskesi daireden cömert).
+  Gerekçe kalıcı olarak `assets/brand/README.md`de.
 
   **Bu iki değişiklik CİHAZDA DOĞRULANMADI** — kullanıcı yeniden derleme istemedi (*"fakat yeniden
   derlemeni istemiyorum"*). Yerel maske önizlemeleriyle bakıldı; telefonda görünmesi için bir

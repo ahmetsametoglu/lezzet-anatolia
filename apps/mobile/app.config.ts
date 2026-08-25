@@ -159,14 +159,23 @@ const config: ExpoConfig = {
           ise Android'in. Önceki değer 76 dp'ydi: cihazda ölçüldü, 408 yoğunlukta ekran 423 dp geniş,
           yani işaret genişliğin yalnız %18'i kalıyordu. Şimdi %40 — 2,2 katı.
 
-          ── NEDEN 280 DEĞİL, VE BUNU CİHAZ TESTİ YAKALAYAMAZDI ────────────────────────────────
-          Bir tur 280 yazıldı ve elimizdeki telefonda kusursuz göründü. Sebebi yanıltıcıydı: cihaz
-          **Android 11 (API 30)** ve o sürümde androidx kendi UYUM katmanını çiziyor
-          (`compat_splash_screen.xml`), maske uygulamıyor. Oysa Expo Android 12'nin splash API'sini
-          bildiriyor (`windowSplashScreenAnimatedIcon`) ve **API 31+ maskeliyor**: Google'ın deyişiyle
-          *"as with adaptive icons, one-third of the foreground is masked"* — ikon zemini yoksa tuval
-          288 dp, **görünen daire 192 dp**. 280 dp'de mürekkep 257 dp'ye çıkıyordu, yani Android 12+
-          cihazların hepsinde kırpılırdı ve bizim telefonumuz bunu hiç göstermezdi.
+          ── NEDEN 280 DEĞİL: MASKE HER SÜRÜMDE VAR ───────────────────────────────────────────
+          Bir tur 280 yazıldı. Perde işareti **kırpılıyor** — kullanıcı cihazda gördü ve söyledi.
+          Sebep: Expo Android 12'nin splash API'sini bildiriyor (`windowSplashScreenAnimatedIcon`) ve
+          işaret maskeleniyor — Google'ın deyişiyle *"as with adaptive icons, one-third of the
+          foreground is masked"*; ikon zemini yoksa tuval 288 dp, **görünen daire 192 dp**.
+          280 dp'de mürekkep 257 dp'ye çıkıyordu, yani daireyi taşıyordu.
+
+          **MASKE API 31'DEN ÖNCE DE VAR** — bir tur "API 30'da uyum katmanı maskelemez" diye yazıldı
+          ve YANLIŞTI. androidx'in kendi kaynağı bunu açıkça söylüyor
+          (`compat_splash_screen_no_icon_background.xml`): *"We mask the outer bounds of the icon
+          **like we do on Android 12**."* Cihazda ölçüldü (Android 11): görünen daire ≈ **191 dp**.
+
+          ── VE CİHAZ TURU BUNU GÖSTERMİŞTİ, GÖZDEN KAÇTI ─────────────────────────────────────
+          280'lik derlemenin ekran görüntüsü alınmıştı ve kırpma ORADAYDI; yalnız işaretin BOYU
+          ölçülüp bütünlüğü karşılaştırılmadı. Ölçüt basitmiş: kaynak sanatın oranı **1,141**
+          (2377×2083), ekrandaki oran **0,85** — kırpılmış bir görüntünün oranı sapar. Bundan sonra
+          perde/ikon doğrulaması bu karşılaştırmayı içermeli.
 
           ── SINIR ÖLÇÜLEREK BULUNDU ───────────────────────────────────────────────────────────
           Mürekkebin merkezden en dış uzaklığı sanat genişliğinin %61,7'si (köşelerde kıvılcım,
