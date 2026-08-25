@@ -21,6 +21,27 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
 
 ## Görevler
 
+- **Durum denetimi (25.08 — 14 kısmi satırın TAMAMI ölçüldü; DÜZELTİLECEK BİR ŞEY ÇIKMADI).**
+  Bu denetim bir hipotezle açıldı ve hipotez ÇÜRÜDÜ; sonucu buraya yazıyorum ki kimse aynı süpürmeyi
+  tekrarlamasın. Aynı gün `08.41`, `05.17` ve `05.18` açık dururken işleri bitmiş çıkmıştı; modül
+  09'un 14 `[~]` satırında da aynı bayatlık aranıyordu. **Yok.** Ondördünün de eksiği yazılı ve
+  gerçek:
+  - **Kodda CANLI `BEKLEYEN` işareti taşıyanlar** (ölçüldü, `grep`): `09.3` · `09.4` · `09.9` ·
+    `09.10` · `09.11` · `09.16` · `09.17` · `09.18` · `09.21` — artı `[ ]` olan `09.8`.
+  - **`09.1`** — kenarda oturum ön elemesi **kullanıcı kararıyla ERTELENDİ** (rol `service-role` ile
+    okunuyor, o anahtar kenar paketine sokulmuyor). Satır bilerek `[~]`.
+  - **`09.2`** — denetim maddeleri sıraya alınmış (combobox/multi-select açılırları + O5·O6·O8·O9·O10).
+  - **`09.5`** — başlık sayaçları YÜKLENMİŞ SAYFA kapsamında ve **ekran bunu söylüyor**
+    (*"N boy yüklendi"*, `tabSubtitle`). Künyesi gerekçeli: marj bir karardır, SQL süzgecine
+    çevrilemez; katalogun tamamının marjını saymak katalogun tamamını taşımaktır. Sayaç yalan
+    söylemek yerine kapsamını yazıyor.
+  - **`09.14`** — kalanlar küçük ve yazılı: taslağa kalem ekleme · PDF çıktısı · sipariş referans
+    numarası (şemada alan yok, ayrı karar) · tedarikçi kartının "Bu yıl" dönemi.
+  - **`09.15`** — duraklar arası sıra çizilmedi (sistem sırayı bilmiyor) · etiket/irsaliye PDF'i
+    (`BEKLEYEN(11.5)`) · bölge talep sıklığının rota ekranına düşmesi (kullanıcı kararı 04.08).
+  **Sonuç: modülün durum kaydı GÜVENİLİR.** Kalan iş gerçekten kalan iştir; `[~]` satırlarına
+  bakarken "acaba bitmiş midir" diye yeniden ölçmeye gerek yok.
+
 - **Durum (02.08 — DENETİM DALGA 2-3; O5·O6·O8·O9·O10 + şüpheliler kapandı):** Dalga 1'in ardından denetim dosyasının kalan altı maddesi indi ve altısının da cevabı `docs/denetim/denetim-operasyon-yuzeyi.md`'ye yazıldı. **O5** — `Segmented` silindi, iki çağrı yeri `MultiToggle`'a bağlandı; kopya yalnız fazlalık değil GERİDEYDİ (ok tuşu gezinmesi ve `radiogroup` rolü yoktu, sistem ekranı klavyeyle kullanılamıyordu). **O6** — `StepButton` ortak komponente çıktı (dört ölçüde ayrışmış iki kopya; "tasarım ölçüsü" künyeli olan kazandı, dört çağrı yerine `ariaLabel` eklendi) ve ürün durum sözlüğü `packages/types`'a taşındı (`PRODUCT_STATUS_LABELS`, enum'un yanında). Buradaki asıl bulgu denetimde yoktu: üç kopya ZATEN ayrışmıştı — `active` rozette "Aktif", seçicide "Satışta"; aynı ürün aynı ekranda iki ad taşıyordu. Kazanan "Satışta" (tasarımın kendi dili: *"aday ürün / satılabilir ürün"*). **O8** — `format.ts` dört yeni işlevle tek kaynak oldu (`num` · `decimal` · `megabytes`/`gigabytes` · `dayMonth`), sistem ekranının kardeş dosyalarındaki aynı adlı iki formatter seti ve altı dosyadaki `toLocaleString('tr-TR')` bağlandı. Sınıfı tararken üç sızıntı daha çıktı; biri gerçek kusurdu: sipariş detayında marj **noktalı ondalıkla** yazılıyordu ("%15.3"). **O9** — `customers-types.ts`'in "türetme yapılmaz burada" künyesi savunulmadı, tipler türetildi: sayınca `CustomerRow`'un 14 alanının 12'si birebir `UserProfile` alanıydı. Dört tip `Pick`/`z.infer`'e döndü; `ConsentSchema` `packages/types`'ta dışa açıldı. Künyeye ayrım yazıldı: **veride duran alan Pick'lenir, hesaplanan alan yazılır.** **O10** — iki kapanmış-göreve-asılı işaret taşındı (`18.5`→`09.17`, `09.13`→ yeni `09.18`); `docs:check` artık "✔ doküman/kod tutarlı". **Şüpheliler** — `paymentTone` iki tanımı birleştirildi (fark karar değildi: müşteri paneli gecikme dalını hiç bilmiyordu), `ChipTone`/`ErrorTone` `Extract<OpsTone,…>` ile türetildi (`ErrorTone` önce kendi `danger`/`warn` sözlüğünden `red`/`amber`'a geçti); `SignalTone` ve `BadgeTone` gerekçesiyle AYRI bırakıldı — biri domain sözlüğü, öteki müşteri yüzeyinin rol adları.
   - **Bir öneri UYGULANMADI:** `calendar-math.formatDay` `shortDate`'in kopyası GİBİ duruyor ama değil — `shortDate` günü UTC okur (saklanan bir andır), takvim günü yerel ayrıştırılır (kullanıcının seçtiği gündür); birleştirmek seçilen günü GMT-5'te bir gün geriye kaydırırdı. Birleştirmeye kalkışıp künyeyi okuyunca geri aldım; künyeye "onu KULLANMAZ ve bu bilinçli" cümlesi eklendi ki aynı yol tekrar denenmesin.
   - **Şerit notu:** `packages/types`'a iki eklemeli dokunuş yapıldı (`PRODUCT_STATUS_LABELS`, `ConsentSchema`'nın dışa açılması). Emsalli — aynı dosyalarda operasyon yüzeyi için üç etiket haritası zaten duruyor — ama arka uç şeridinin dosyası olduğu için burada kayıtlı.
