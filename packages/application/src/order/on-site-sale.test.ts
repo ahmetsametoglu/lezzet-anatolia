@@ -141,6 +141,23 @@ describe('yerinde satış', () => {
     expect(kalan).toBe(2);
   });
 
+  it('OLMAYAN MAL SATILMAZ — ve reddedilen satıştan ORTADA TASLAK KALMAZ', async () => {
+    /* Kullanıcının sorusu (26.08): "oranın stoğunu göz önünde bulunduracak mıyız?" Araçta 5 var;
+       6 istenirse satış olmamalı — ve olmayan satıştan geriye bir sipariş satırı da kalmamalı. */
+    const sayOrders = async () => (await db.from('order').select('id').eq('customer_id', customerId)).data?.length ?? 0;
+    const oncekiSayi = await sayOrders();
+
+    const result = await sale({ warehouseId: vehicleId, lines: [{ variantId, qty: 6 }] });
+
+    expect(result).toEqual({ status: 'insufficient_here', lines: [{ name: expect.any(String), available: 5 }] });
+    const sonrakiSayi = await sayOrders();
+    expect(sonrakiSayi).toBe(oncekiSayi);
+
+    // Araçtaki mal DA yerinde durmalı — reddedilen satış hiçbir şeye dokunmaz.
+    const kalan = (await stocks.listByVariant(vehicleId, variantId)).reduce((s, b) => s + b.physicalQty, 0);
+    expect(kalan).toBe(5);
+  });
+
   it('kalemsiz satış yazılmaz', async () => {
     expect(await sale({ lines: [] })).toEqual({ status: 'empty' });
   });

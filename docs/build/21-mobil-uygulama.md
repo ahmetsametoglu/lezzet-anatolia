@@ -5834,9 +5834,25 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (`user_profiles_warehouse_scope`: boş dizi "hiçbir depo" demek, kapı fail-closed kapanır). Yani
   araçtan satacak kuryenin kapsamına aracın deposu girmeli — ekran tarafının bileceği bir şey.
 
-  Doğrulama: **6/6** (DB'ye vuruyor) · **iki sabotaj, her biri TAM BİR testi düşürdü**: pazarlık
+  **KULLANICI SORDU, TEST BİR KUSUR BULDU (26.08):** *"oradan satış yaptırırken oranın stoğunu göz
+  önünde bulunduracak mıyız?"* Cevap evet ve iki katman birden — sepet okuması DEPO BAZLI
+  (`availableHere`, araç deposu da aynen görünür) ve son söz RPC'nin. **Ama kontrol yalnız
+  `quickSale`de kalınca satış doğru reddediliyor, geriye HAYALET BİR TASLAK kalıyordu:** hiçbir yere
+  teslim edilmeyecek, hiç kapanmayacak, kimsenin silmediği bir sipariş satırı. Ölçüldü — araçta 5
+  varken 6 istendi, satış olmadı, sipariş sayısı 0 → 1.
+
+  Çare uydurulmadı: `createCheckoutDraft` aynı reddi **yazımdan önce** veriyor (`insufficient_here`)
+  ve aynı alandan okuyor. Aynı ad, aynı biçim; **adet sessizce DÜŞÜRÜLMEZ**, kalan sayı söylenir —
+  personel müşteriye "üçü var" diyebilsin diye. *"Önce kontrol, sonra yazım"* zaten `07.10`'un
+  ilkesiydi; burada eksikti.
+
+  Doğrulama: **7/7** (DB'ye vuruyor) · **üç sabotaj, her biri TAM BİR testi düşürdü**: pazarlık
   sepet okumasına geçirilmeyince toplam listeden çıktı; anonim alıcıya `customer` rolü verilince
-  müşteri listesinde belirdi · beş paketin typecheck'i · lint · birim **1526/1526** · `docs:check`.
+  müşteri listesinde belirdi; yazım öncesi stok kontrolü sökülünce hayalet taslak geri geldi ·
+  lint · birim **1526/1526** · `docs:check`.
+  *(Not: `packages/application` typecheck'i şu an ÖTEKİ ŞERİDİN uçuşta olan değişikliği yüzünden
+  kırmızı — `discount.publicLabel` zorunlu yapılıyor, yani bıraktığım notun karşılığı yazılıyor.
+  Kendi dosyalarımda **0 hata**; ölçüldü.)*
 
   **ANONİM ALICI YAZILDI VE KOŞTU** (kullanıcı `db:refresh` izni 26.08). Sipariş sahipsiz olamıyor
   (`order.customer_id not null`) ama kimlik de sorulmuyor — `0001` sabit kimlikli tek satır açıyor:

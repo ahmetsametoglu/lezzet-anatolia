@@ -83,6 +83,14 @@ export type OnSiteSaleOutcome =
   | { status: 'warehouse_not_found' }
   /** Satılamaz satır (tükendi / satışa kapalı). Elle fiyat yazmak kapanmış ürünü DİRİLTMEZ. */
   | { status: 'blocked_lines'; lines: string[] }
+  /**
+   * Bu depoda o kadar yok — **sipariş HİÇ yazılmaz** ve kalan sayı söylenir.
+   *
+   * `createCheckoutDraft`in aynı reddi (aynı ad, aynı biçim): adet sessizce düşürülmez, çünkü
+   * müşterinin/personelin yazdığı sayıyı haber vermeden değiştirmek sepette yasakladığımız sessiz
+   * daralmanın ta kendisidir.
+   */
+  | { status: 'insufficient_here'; lines: { name: string; available: number }[] }
   /** Kapanış adımının reddi olduğu gibi taşınır — mal yok, yarış, kural reddi. */
   | { status: 'sale_failed'; outcome: Exclude<QuickSaleOutcome, { status: 'ok' }> };
 
@@ -113,6 +121,30 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
 
   const blocked = view.lines.filter((line) => line.unitPriceCents === null).map((line) => line.name);
   if (blocked.length > 0) return { status: 'blocked_lines', lines: blocked };
+
+  /*
+    ── ÖNCE KONTROL, SONRA YAZIM (07.10'un ilkesi, burada da geçerli) ─────────
+    Kullanıcının sorusu (26.08): *"oradan satış yaptırırken oranın stoğunu göz önünde bulunduracak
+    mıyız?"* Evet — ve iki katman birden: sepet okuması DEPO BAZLI (`availableHere` o deponun
+    kullanılabiliri; araç deposu da aynen görünür), son söz ise RPC'nindir (`quickSale` yazım anında
+    bir kez daha bakar, çünkü öneri ile yazım arasında raf değişebilir).
+
+    **Ama kontrol yazımdan ÖNCE olmak zorunda ve bu ölçülerek öğrenildi:** kontrol yalnız
+    `quickSale`de kalınca satış doğru reddediliyordu ama geriye **hayalet bir taslak** kalıyordu —
+    hiçbir yere teslim edilmeyecek, hiç kapanmayacak, kimsenin silmediği bir sipariş satırı. Test
+    bunu yakaladı (araçta 5 varken 6 istendi: satış olmadı, sipariş sayısı 0 → 1 oldu).
+
+    Ret biçimi `createCheckoutDraft`inkiyle AYNI (`insufficient_here`): adet sessizce DÜŞÜRÜLMEZ ve
+    kalan sayı söylenir — personel müşteriye "üçü var" diyebilsin diye. Sayı sepetin gösterdiğiyle
+    aynı kaynaktan geliyor, ikinci bir okuma yok.
+  */
+  const overCap = view.lines.filter((line) => line.availableHere !== null && line.availableHere < line.qty);
+  if (overCap.length > 0) {
+    return {
+      status: 'insufficient_here',
+      lines: overCap.map((line) => ({ name: line.name, available: line.availableHere ?? 0 })),
+    };
+  }
 
   /*
     PAKET SATIRI BURADA YOK ve bu bir eksiklik değil, girdinin şekli: bu kapı yalnız varyant
