@@ -522,7 +522,10 @@ liste ÇİZİLMİYOR. Birincisi mutasyonla doğrulandı.
 
 ## Cihaz turu — TAMAMLANDI (26.08)
 
-Her iki madde de kapandı; modülün cihazda görülmemiş yüzeyi kalmadı.
+Her iki madde de kapandı; **modülün cihazda görülmemiş yüzeyi kalmadı ve modül 23 kapanmıştır.**
+Barkod/QR okuma bundan sonra tekrar tekrar sınanmaz (kullanıcı kararı 26.08) — akış çalışıyor,
+simgelerin zor olanları gerçek kâğıttan okundu, kalan iş yalnız yeni ekranların aynı `onScan`
+sözleşmesini kullanması.
 
 - ~~**KUTU QR etiketi** → kurye yükleme + kapıda teslim okutması.~~ **KOŞULDU (26.08).** Zincirin
   tamamı gerçek cihazda (OPPO CPH1907, kablosuz ADB) ve her adım DB'nin satırından doğrulandı —
@@ -539,9 +542,14 @@ Her iki madde de kapandı; modülün cihazda görülmemiş yüzeyi kalmadı.
     teslimi böylece kanıtsız kapanmıyor.
   - **Kutusuz durak kutu yüzeyi ÇİZMEDİ** (aynı seferdeki `LA-26-H6NV7E`): `boxCounter` durakların
     kutularından türüyor, boş küme `null` demek. Doğru davranış, ölçülerek görüldü.
-  - **Simülasyon çipiyle koşuldu** (kullanıcı kararı): 23.14'ün havuzu setin aynası olduğu için
-    çipe basmak ile kâğıdı okutmak aynı kodu üretiyor. **Kameranın basılı QR'ı decode etmesi bu
-    turda sınanmadı** — tek açık kalan yol o, ve yalnız kâğıt elde tutularak sınanabilir.
+  - **Simülasyon çipiyle koşuldu ve BU YETERLİ** (kullanıcı kararı 26.08: *"barkod okuma işi
+    başarıyla gerçekleşiyor, tekrar tekrar test gerek yok"*). Gerekçe ölçümde: **optik decode yolu
+    çoktan sınanmış, üstelik en ZOR simgelerle** — seed'in EAN-13'ü kâğıttan okundu (ince çizgi;
+    ~3 mm güvenli boşluk ihtiyacı o turda ölçüldü), **ITF-14 koli kodu gerçek kameradan okundu**
+    (24.08) ve çekmeceyi 24 adetle açtı, TANINMAYAN etiketi kâğıttan okutulup öğrenme akışı koştu.
+    Kutu QR'ını ayrıca kâğıttan okutmak KOLAY yolu ikinci kez sınamak olurdu: 23.14'ün kendi künyesi
+    *"QR en kolay okunan simgedir"* diyor ve set tam bu yüzden karma simgeli basıldı. Çip ile kâğıt
+    aynı kodu üretiyor (havuz setin aynası), yani kutu akışının sınanmamış bir yanı kalmadı.
   - **23.14 çalıştı:** tur sırasında başka bir şerit `db:refresh` çalıştırdı, sipariş referansları
     tamamen değişti (`LA-26-3MDXY3` → `LA-26-D43LMU`) ama **kutu kodu sabit kaldı** ve yeni kayda
     kendiliğinden bağlandı. Kâğıt set yeniden basılmadı.
