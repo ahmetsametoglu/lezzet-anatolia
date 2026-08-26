@@ -75,7 +75,17 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
   - **Not:** `14.6` ile AYNI iştir; tek yerde yapılır (PDF üretimi + `delivered` mailine ek). Yeni bir PDF bağımlılığı gerektirdiği için ayrı ele alınıyor.
 - [x] (11.6) **Gün kapanışı (RPC):** ~~`CourierDayClose` — kurye×gün ekseni~~ → **18.08'de SEFER eksenine indi (11.7):** kapanışın sahibi artık `delivery_run_close`; buradaki mutabakat kuralları (beklenen dondurulur, fark açıklanır, salt-okunur kapanış) aynen 11.7'de yaşıyor
   - *Bitti:* fark hesabı doğru; kapanan gün değiştirilemiyor
-  - **Durum (28.07) — TAMAM.** `0025_courier_day_close.sql` (görünüm + tablo + RPC), `CourierDayCloseService`, kapı `apps/web/lib/courier/day-close.ts`. 9 test. Ekran yüzey ajanının.
+  - **Durum (28.07) — TAMAM.** ~~`0025_courier_day_close.sql` (görünüm + tablo + RPC), `CourierDayCloseService`~~, kapı `apps/web/lib/courier/day-close.ts`. 9 test. Ekran yüzey ajanının.
+  - **Durum (26.08 — DENETİM DÜZELTMESİ): yukarıdaki notun İKİ vaadi artık YOK.** Eksen 18.08'de
+    sefere inince `0025` migration'ı kaldırıldı (halefi `0046_delivery_run.sql`) ve
+    `CourierDayCloseService` söküldü; ölçüldü, ikisi de dosya sisteminde yok. Ayakta kalan tek şey
+    kapı: `apps/web/lib/courier/day-close.ts` — ama o da artık gövde değil, `@lezzet/application`a
+    giden bir **köprü** (terfi aşama 2/3). Başlık üstü çizilmişti, NOT çizilmemişti; satırı okuyup
+    notu okuyan bir ajan var olmayan bir migration arardı.
+    **`docs:check` bunu neden görmedi:** vaat denetimi (§3c) yalnız `apps/…`/`packages/…` gibi
+    ÖNEKLİ yolları tarıyordu; ~~`0025_courier_day_close.sql`~~ çıplak bir dosya adıydı ve desene hiç
+    girmiyordu. Denetim aynı turda genişletildi — migration adları tek klasörde yaşadığı için
+    çıplak yazılsalar da tekil olarak çözülebiliyor.
   - **Kapanış bir MUTABAKATTIR, para hareketi değil:** para kapıda tahsil edilirken yazıldı (11.3). Burada beklenen ile sayılan yan yana konur, fark aynı gün görünür.
   - **Beklenen toplam tek yerde toplanır:** `courier_day_collection` görünümü — hem kapanış öncesi ekran hem RPC oradan okur. Yalnız kapıda toplanan üç yöntem sayılır; online/havale kuryenin eline hiç girmez.
   - **`expected_*` saklanır ama `reconciled` SAKLANMAZ:** beklenen tutar kapanış anının fotoğrafıdır (sonradan bir hareket düzeltilse de o gün ne konuşulduğu değişmemeli — testli); "fark var/yok" ise iki kolondan generated kolonla türer, çelişme şemada kapalıdır.

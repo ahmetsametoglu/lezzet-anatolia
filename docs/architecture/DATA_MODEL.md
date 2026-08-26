@@ -32,50 +32,83 @@ Varlık tabloları konu dosyalarına ayrıldı — 700 satırlık tek dosya, par
 
 - [`data-model/katalog.md`](data-model/katalog.md) — **Katalog:** `Category`, `Collection`, `Product`, `ProductImage`, `ProductVariant`, `Price`, `Discount`, `Bundle`, `BundleItem`
 - [`data-model/stok-tedarik.md`](data-model/stok-tedarik.md) — **Stok ve Tedarik:** `Stock`, `Reservation`, `StockAdjustment`, `TemperatureLog`, `Supplier`, `SupplierProduct`, `PurchaseOrder`, `PurchaseOrderItem`, `StockIntake`
-- [`data-model/musteri-siparis.md`](data-model/musteri-siparis.md) — **Müşteri ve Sipariş:** `Customer`, `Address`, `DeliveryZone`, `Order`, `OrderItem`, `OrderItemBatch`, `OrderStatusLog`, `Cart`, `CourierDayClose`
+- [`data-model/musteri-siparis.md`](data-model/musteri-siparis.md) — **Müşteri ve Sipariş:** `Customer`, `Address`, `DeliveryZone`, `Order`, `OrderItem`, `OrderItemBatch`, `OrderStatusLog`, `OrderBox(+Item)`, `Cart`, `DeliveryRun`, `DeliveryRunClose`
 - [`data-model/para.md`](data-model/para.md) — **Para ve Ön Muhasebe:** `Account`, `MoneyMovement`, `BankImportProfile`
 - [`data-model/iletisim-geribildirim.md`](data-model/iletisim-geribildirim.md) — **İletişim, Geri Bildirim ve Analitik:** `Conversation`, `Message`, `WebhookEvent`, `AnalyticsEvent`, `ProductFeedback`, `FeedbackRequest`, `PointsEntry`, `Ticket`, `TicketMessage`, `Setting`
 - [`data-model/operasyon.md`](data-model/operasyon.md) — **Operasyon ve Gözlemleme:** `JobRun`, `ErrorLog`, `SystemHealthSnapshot` — sistemin kendi hakkındaki verisi; iş kaydı DEĞİL, saklama süresi var (bkz. [`OBSERVABILITY.md`](OBSERVABILITY.md))
 
 Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` → katalog).
 
-## Enum'lar (özet)
+## Enum'lar
 
+> **Bu liste MİGRATION'LARDAN ölçülür ve `pnpm docs:check` onu doğrular** (26.08). Elle tutulan
+> hâli bir ay içinde çürümüştü: altı ad veritabanında hiç yoktu (yeniden adlandırılmışlardı) ve
+> otuz bir enum listede hiç görünmüyordu; birkaçında değerler de ayrışmıştı. Bir listeyi doğru
+> tutmanın tek yolu onu denetlemektir — "özet" demek, eksikliğe izin vermek değil.
+> **Yalnız veritabanı enum'ları burada.** Kodda yaşayan ama tabloya inmeyen kümeler (`CatalogSort`,
+> `StockStatus`, `CartLineRoute`, `CouponRejection`) `packages/types/src/primitives/enums.schema.ts`ta
+> durur ve buraya girmez: bu bölüm VERİ modelini anlatıyor.
+
+- `account_type`: cash, bank, provider
+- `analytics_availability`: sellable, sold_out, closed, not_here *(ölçüm anında ürün alınabilir miydi)*
+- `analytics_blocked_reason`: min_basket, split *(sepet/checkout neden kapandı)*
+- `analytics_device`: mobile, desktop
+- `analytics_event_type`: page_view, product_view, search, place_resolved, add_to_cart, cart_blocked, checkout_start, checkout_blocked
+- `analytics_subject_type`: product, variant, bundle, category, collection, recipe
+- `analytics_surface`: web, native
+- `analytics_zero_result_kind`: search, filter *(sonuçsuz kalan neydi)*
+- `assistant_proposal_kind`: bundle_draft *(asistan kuyruğundaki öneri tipi)*
+- `assistant_proposal_status`: pending, applied, rejected, expired, failed
+- `barcode_kind`: unit, case *(tekil ürün mü koli mi)*
+- `carrier`: colissimo, chronopost, dhl, ups, other
 - `channel`: b2b, b2c
-- `order_source`: web, whatsapp, door, manual
-- `order_status`: draft, confirmed, preparing, ready, out_for_delivery, delivered, completed, cancelled, returned
-- `payment_status`: pending, paid, partial, refunded
-- `payment_method`: online, cash, card, cheque, bank_transfer
-- `delivery_type`: route, shipping, **pickup** *(yerinde satış — mal gitmez, müşteri alır)*
-- `warehouse_kind`: facility, vehicle
+- `conversation_source`: whatsapp, messenger, instagram
+- `country_code`: FR, DE *(faaliyet ülkeleri)*
+- `currency`: EUR
 - `customer_type`: individual, company
-- `date_type`: DLC, DDM
-- `allergen` (AB 14): gluten, kabuklu, yumurta, balık, yer_fıstığı, soya, süt, sert_kabuklu, kereviz, hardal, susam, sülfit, acı_bakla, yumuşakça
-- `vat_treatment`: domestic, intra_eu_b2b_reverse_charge
+- `delivery_type`: route, shipping, pickup *(`pickup` = yerinde satış; mal gitmez, müşteri alır)*
+- `discount_scope`: cart, category, collection
 - `discount_trigger`: coupon, automatic
 - `discount_type`: percent, fixed
-- `discount_scope`: cart, category, collection
-- `language`: tr, fr, de
-- `country`: FR, DE
-- `message_direction`: inbound, outbound
-- `message_kind`: text, interactive, template, media
-- `account_type`: cash, bank, provider
-- `movement_direction`: in, out
-- `movement_type`: order_payment, order_refund, purchase, expense, transfer, capital, misc
-- `movement_source`: manual, bank_import
-- `analytics_event_type`: page_view, product_view, add_to_cart, checkout_start, order_placed, share, search
+- `error_log_level`: warning, error, fatal
 - `feedback_channel`: email, whatsapp
 - `feedback_context`: purchase, candidate
 - `feedback_vote`: like, dislike
-- `points_reason`: review, feedback_purchase, feedback_candidate, order, referral, redemption, manual
+- `health_status`: ok, warn, crit
+- `message_direction`: inbound, outbound
+- `message_kind`: text, interactive, template, media
+- `movement_direction`: in, out
+- `movement_source`: manual, bank_import
+- `movement_type`: order_payment, order_refund, purchase, expense, transfer, capital, misc
+- `order_cancel_reason`: payment_failed, superseded, out_of_stock, customer, staff
+- `order_source`: web, whatsapp, door, manual
+- `order_status`: draft, confirmed, preparing, ready, out_for_delivery, delivered, completed, cancelled, returned
+- `payment_method`: online, cash, card, cheque, bank_transfer
+- `payment_status`: pending, paid, partial, refunded
+- `points_reason`: review, purchase
+- `portion_kind`: item, slice *(satış birimi — bütün mü dilim mi)*
+- `preferred_language`: tr, fr, de
+- `product_allergen`: gluten, kabuklu, yumurta, balik, yer_fistigi, soya, sut, sert_kabuklu, kereviz, hardal, susam, sulfit, aci_bakla, yumusaka *(AB 14 listesi; değerler ASCII (`balik`, `sut`) — veri anahtarıdır, ekran metni değil)*
+- `product_date_type`: DLC, DDM
+- `product_status`: active, passive, candidate
+- `product_storage_type`: ambient, chilled, frozen
+- `purchase_order_status`: draft, sent, partially_received, received, cancelled
+- `return_disposition`: restock, discard, goodwill
 - `review_status`: pending, approved, rejected
-- `ticket_type`: damaged, missing, question, other
-- `ticket_status`: open, in_progress, resolved
-- `ticket_source`: order, form, whatsapp, admin
-- `ticket_handler`: human, ai
+- `setting_scope`: global, channel, zone, country, warehouse *(ayarın hangi eksende istisna aldığı)*
+- `site_image_slot`: home_hero
+- `stock_adjustment_reason`: expired, damaged, count_diff
+- `storage_area_kind`: frozen, chilled, ambient, staging *(depo içi bölge türü)*
+- `template_category`: marketing, utility, authentication
+- `ticket_handler`: human, hybrid, ai
 - `ticket_sender`: customer, admin, ai
-- `adjustment_reason`: expired, damaged, count_diff, lost
-- `po_status`: draft, sent, received, cancelled
+- `ticket_source`: order, form, whatsapp, admin
+- `ticket_status`: open, in_progress, resolved
+- `ticket_type`: damaged, missing, question, other
+- `transfer_status`: in_transit, received, cancelled *(depolar arası sevk)*
+- `user_role`: customer, admin, warehouse, courier, accounting, system *(`system` = kişi değil, sistemin kendi kaydı)*
+- `vat_treatment`: domestic, intra_eu_b2b_reverse_charge *(`intra_eu_b2b_reverse_charge` = autoliquidation)*
+- `warehouse_kind`: facility, vehicle *(araç da bir depodur)*
 
 ---
 

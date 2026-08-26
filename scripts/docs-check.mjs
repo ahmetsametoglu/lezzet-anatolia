@@ -311,6 +311,34 @@ for (const j of JUNCTIONS) {
   if (missing.length) note(`${j.table}: tabloda var, data-model/${j.part}.md anlatımında yok → ${missing.join(', ')} — kod haklıdır, dokümanı güncelle`);
 }
 
+// ── 1c. Enum listesi ↔ migration'lar ─────────────────────────────────────────
+// **Neden makineye bağlandı (26.08).** `DATA_MODEL.md`'nin enum bölümü elle tutuluyordu ve bir ay
+// içinde çürüdü: ALTI ad veritabanında hiç yoktu (`adjustment_reason`, `po_status`, `language`…
+// hepsi yeniden adlandırılmıştı) ve OTUZ BİR enum listede hiç görünmüyordu. Başlığındaki "(özet)"
+// kelimesi eksikliği meşru gösteriyordu — oysa bir listenin özeti de yanlış olabilir, ve yanlış bir
+// liste hiç olmayan listeden kötüdür: okuyan ona güvenip `date_type` diye var olmayan bir tip arar.
+// Denetim yalnız ADLARI karşılaştırır, değerleri değil: değer eklemek sık ve zararsız bir iştir,
+// bir enum'un varlığı ise veri modelinin kendisidir.
+const dbEnums = new Set(
+  [...migrations.matchAll(/create type (?:public\.)?([a-z_]+) as enum/g)].map((m) => m[1]),
+);
+const enumSection = (() => {
+  const md = read('docs/architecture/DATA_MODEL.md');
+  const start = md.indexOf("## Enum'lar");
+  if (start === -1) return null;
+  const end = md.indexOf('\n## ', start + 1);
+  return md.slice(start, end === -1 ? undefined : end);
+})();
+if (enumSection === null) {
+  note("DATA_MODEL.md: \"## Enum'lar\" bölümü bulunamadı — denetim körleşti");
+} else {
+  const listed = new Set([...enumSection.matchAll(/^- `([a-z_]+)`:/gm)].map((m) => m[1]));
+  const eksik = [...dbEnums].filter((e) => !listed.has(e)).sort();
+  const hayalet = [...listed].filter((e) => !dbEnums.has(e)).sort();
+  if (eksik.length) note(`DATA_MODEL Enum'lar: veritabanında var, listede yok → ${eksik.join(', ')}`);
+  if (hayalet.length) note(`DATA_MODEL Enum'lar: listede var, veritabanında YOK → ${hayalet.join(', ')} — yeniden adlandırılmış ya da silinmiş olabilir`);
+}
+
 // ── 2. Dokümanlarda anılan yollar gerçekte var mı ──────────────────────────────
 // `packages/x`, `apps/web/lib/y.ts` gibi backtick içindeki somut yollar. Planlanan ama henüz
 // yazılmamış dosyalar da anılır — bu yüzden yalnız PAKET KÖKLERİ sıkı denetlenir.
@@ -426,6 +454,16 @@ for (const f of buildFiles) {
         if (!existsSync(join(ROOT, path))) {
           note(`docs/build/${f} (${task.id}): \`${path}\` teslim ediliyor ama dosya yok`);
         }
+      }
+    }
+    // ÖNEKSİZ MIGRATION ADI (26.08). Yukarıdaki desen `supabase/…` öneki ister; dokümanda migration
+    // neredeyse hep çıplak anılıyor (`0046_delivery_run.sql`) ve o hâliyle denetimin dışında
+    // kalıyordu. Kör nokta ölçüldü: 11.6'nın Durum notu 18.08'de KALDIRILMIŞ `0025`i teslim
+    // ediyordu ve denetim aylarca sessiz kaldı — başlık üstü çizilmiş, not çizilmemişti. Çıplak ad
+    // burada güvenle çözülebilir çünkü migration'lar TEK klasörde yaşar; ad tekildir.
+    for (const m of line.matchAll(/`(\d{4}_[a-z0-9_]+\.sql)`/g)) {
+      if (!existsSync(join(ROOT, 'supabase/migrations', m[1]))) {
+        note(`docs/build/${f} (${task.id}): \`${m[1]}\` teslim ediliyor ama böyle bir migration yok`);
       }
     }
   }
