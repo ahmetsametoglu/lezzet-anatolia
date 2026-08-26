@@ -79,7 +79,7 @@ export function CourierDayScreen() {
   const router = useRouter();
   const day = useCourierDay();
   const userName = useOperationsUserName();
-  const unread = useOperationsNotifications().length;
+  const unread = useOperationsNotifications().unread;
 
   const stops = day.stops;
   const doneCount = stops.filter((stop) => stop.outcome === 'delivered').length;

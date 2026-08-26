@@ -174,7 +174,7 @@ function decisionRowsOf(queue: ManagementQueue): DecisionRow[] {
 
 export function ManagementHubScreen() {
   const router = useRouter();
-  const unread = useOperationsNotifications().length;
+  const unread = useOperationsNotifications().unread;
   const { state, retry } = useManagementHub();
   const openSummary = () => router.navigate('/day-summary');
 

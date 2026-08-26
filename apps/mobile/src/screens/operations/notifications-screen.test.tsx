@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { OperationsSection } from '@/lib/operations/sections';
 import messages from './messages.json';
-import { NOTIFICATION_FIXTURE, type OperationsNotification } from './notifications-fixture';
+import type { OperationsNotification } from './notification-map';
 import { OperationsNotificationsScreen } from './notifications-screen';
 import { OperationsSessionProvider } from './sections-context';
 
@@ -23,8 +23,22 @@ jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: (href: unknown) => mockPush(href), back: () => mockPush('BACK') }),
 }));
 
+/* Fixture dosyası uca bağlanınca SİLİNDİ (kendi künyesinin verdiği söz); ekranın bütün hâllerini
+   çizebilmek için satırlar artık testin kendi sabitinde — v2'nin aynı altı satırı. */
+const FEED_ROWS: OperationsNotification[] = [
+  { id: 'n1', title: 'Yeni sipariş onaylandı — toplama bekliyor', section: 'warehouse', dot: 'warehouse', ago: '2 dk' },
+  { id: 'n2', title: 'Rota güncellendi — 1 durak eklendi', section: 'courier', dot: 'courier', ago: '9 dk' },
+  { id: 'n3', title: 'Eksik toplama — karar bekliyor', section: 'management', dot: 'attention', ago: '14 dk' },
+  { id: 'n4', title: 'Yeni şikâyet — Bozuk', section: 'management', dot: 'alert', ago: '12 dk' },
+  { id: 'n5', title: 'Uyuşmazlık göründü — gün sonu', section: 'money', dot: 'alert', ago: '25 dk' },
+  { id: 'n6', title: 'Azalan stok tespiti — tetik yakında', section: 'management', dot: 'quiet', ago: '1 sa' },
+];
+
 let mockFeed: OperationsNotification[] = [];
-jest.mock('./use-notifications.hook', () => ({ useOperationsNotifications: () => mockFeed }));
+const mockMarkAllSeen = jest.fn();
+jest.mock('./use-notifications.hook', () => ({
+  useOperationsNotifications: () => ({ rows: mockFeed, unread: mockFeed.length, markAllSeen: mockMarkAllSeen }),
+}));
 
 const t = messages;
 
@@ -44,7 +58,7 @@ beforeEach(() => {
 
 describe('OperationsNotificationsScreen', () => {
   it('çok şapkalı oturumda kapsam "tüm bölümler" ve satırlar bölüm · süre ile yazılır', async () => {
-    await renderScreen(['courier', 'warehouse', 'management', 'money'], NOTIFICATION_FIXTURE);
+    await renderScreen(['courier', 'warehouse', 'management', 'money'], FEED_ROWS);
 
     expect(screen.getByText(t.notifications.scopeAll)).toBeOnTheScreen();
     expect(screen.getByText('Rota güncellendi — 1 durak eklendi')).toBeOnTheScreen();
@@ -54,7 +68,7 @@ describe('OperationsNotificationsScreen', () => {
   });
 
   it('tek şapkada kapsam bölümün ADIYLA yazılır — "tüm bölümler" DENMEZ', async () => {
-    await renderScreen(['courier'], [NOTIFICATION_FIXTURE[1] as OperationsNotification]);
+    await renderScreen(['courier'], [FEED_ROWS[1] as OperationsNotification]);
 
     expect(screen.getByText('yalnız Kurye — rol süzmesi')).toBeOnTheScreen();
     expect(screen.queryByText(t.notifications.scopeAll)).toBeNull();
@@ -83,13 +97,13 @@ describe('OperationsNotificationsScreen', () => {
   });
 
   it('süzme kuralı notu DOLU hâlde de durur (listenin altında, tasarımda `sc-if` dışında)', async () => {
-    await renderScreen(['courier', 'warehouse', 'management', 'money'], NOTIFICATION_FIXTURE);
+    await renderScreen(['courier', 'warehouse', 'management', 'money'], FEED_ROWS);
 
     expect(screen.getByText(t.notifications.rule)).toBeOnTheScreen();
   });
 
   it('satıra basınca bildirimin BÖLÜMÜ açılır (derin bağ 21.10-21.12’de)', async () => {
-    await renderScreen(['money'], [NOTIFICATION_FIXTURE[4] as OperationsNotification]);
+    await renderScreen(['money'], [FEED_ROWS[4] as OperationsNotification]);
 
     await fireEvent.press(screen.getByTestId('operations-notification-n5'));
 

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -8,7 +9,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { notificationScopeOf, type OperationsSection } from '@/lib/operations/sections';
 import { operationsTheme } from '@/theme/unistyles';
 import { fillCopy, operationsCopy } from './copy';
-import type { NotificationDot } from './notifications-fixture';
+import type { NotificationDot } from './notification-map';
 import { useOperationsSections } from './sections-context';
 import { useOperationsNotifications } from './use-notifications.hook';
 
@@ -53,7 +54,20 @@ function scopeLabel(sections: OperationsSection[]): string {
 export function OperationsNotificationsScreen() {
   const router = useRouter();
   const sections = useOperationsSections();
-  const items = useOperationsNotifications();
+  const feed = useOperationsNotifications();
+  const items = feed.rows;
+
+  /* EKRANI AÇMAK = GÖRDÜM (14.13): akış okundu sayılır, hub'lardaki rozet söner — satırlar
+     listede kalır (akış ≠ gelen kutusu). Ayrı bir "okundu" dokunuşu yok; tasarımın satırında
+     öyle bir hedef hiç olmadı ve v2'nin sayacı da "yeni" sayacıydı. */
+  /* Yalnız AÇILIŞTA — bağımlılık bilerek boş: her odak tazelemesinde yeniden işaretlemek, ekran
+     açıkken düşen yeni bildirimi kullanıcı görmeden "gördü" saymak olurdu. Ref, kancanın taze
+     kopyasını taşır (stale-closure değil, tek-seferlik tetik). */
+  const markAllSeenRef = useRef(feed.markAllSeen);
+  markAllSeenRef.current = feed.markAllSeen;
+  useEffect(() => {
+    markAllSeenRef.current();
+  }, []);
 
   return (
     <View style={styles.screen}>

@@ -50,6 +50,15 @@ function meResponse(roles: Parameters<typeof meFixture>[0]): Response {
   } as unknown as Response;
 }
 
+/** Bildirim akışının zarfı (14.13) — adres-ayrımlı mock'un bildirim yarısı. */
+function notificationsResponse(notifications: unknown[]): Response {
+  return {
+    status: 200,
+    headers: { get: () => null },
+    json: async () => ({ data: { notifications, nextCursor: null, unread: notifications.length }, error: null }),
+  } as unknown as Response;
+}
+
 /** Ağ hiç kurulamadı — `fetch` yalnız bu durumda fırlatır. */
 function networkDown(): Promise<Response> {
   return Promise.reject(new Error('ağ yok'));
@@ -183,17 +192,35 @@ describe('operasyon kabuğu — bildirim kapısı', () => {
   });
 
   it('bildirim satırına basmak GERÇEKTEN o bölümün adresini açar', async () => {
-    fetchMock.mockImplementation(() => Promise.resolve(meResponse(['courier', 'accounting'])));
+    /* Fixture dönemi kapandı (14.13): satır artık UÇTAN gelir — mock adrese göre ayrışır. Satır
+       gerçek eşlemeden geçer (`document_undeliverable` → yönetim), yani basış yalnız gezinmeyi
+       değil kind→bölüm çevirisini de uçtan uca sınar. Rol de ona göre: kurye + admin (yönetim). */
+    fetchMock.mockImplementation((url) =>
+      Promise.resolve(
+        String(url).includes('/me/notifications')
+          ? notificationsResponse([
+              {
+                id: '00000000-0000-4000-8000-0000000000b1', // zarf uuid doğrular — takma ad parse'ı düşürür
+                kind: 'document_undeliverable',
+                targetType: 'order',
+                targetId: '00000000-0000-4000-8000-000000000009',
+                payload: { referenceNo: 'LA-26-TEST' },
+                createdAt: new Date().toISOString(),
+                readAt: null,
+              },
+            ])
+          : meResponse(['courier', 'admin']),
+      ),
+    );
 
     const { app } = await renderShell('/courier');
     await screen.findByTestId('operations-tabs');
     await fireEvent.press(screen.getByTestId('operations-bell'));
 
-    // Uyuşmazlık bildirimi Para bölümünün işi (v2 fixture'ının beşinci satırı).
-    await fireEvent.press(screen.getByTestId('operations-notification-n5'));
+    await fireEvent.press(await screen.findByTestId('operations-notification-00000000-0000-4000-8000-0000000000b1'));
 
-    expect(app).toHavePathname('/money');
-    expect(screen.getByRole('header', { name: 'Tahsilat İzleme' })).toBeOnTheScreen();
+    expect(app).toHavePathname('/management');
+    expect(await screen.findByTestId('operations-section-management')).toBeOnTheScreen();
   });
 
   it('PARA bölümünde zil YOKTUR — tasarım oraya metin eylemi koyuyor (v2:719)', async () => {

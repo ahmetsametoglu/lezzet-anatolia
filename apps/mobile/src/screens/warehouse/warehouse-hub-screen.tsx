@@ -63,7 +63,7 @@ export function WarehouseHubScreen() {
   const router = useRouter();
   const hub = useWarehouseHub();
   const { scope, offline } = useWarehouseStatus();
-  const unread = useOperationsNotifications().length;
+  const unread = useOperationsNotifications().unread;
 
   const header = (
     <OperationsSectionHeader
