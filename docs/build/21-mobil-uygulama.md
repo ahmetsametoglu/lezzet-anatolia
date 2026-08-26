@@ -6147,23 +6147,30 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   önerisiz Kaydet sönük, seçim kodu doldurdu; kapsam-dışı 75001 kaydedilince vitrin soğuk
   zincir ürününü "non livrable" griledi ve katalog bölge bandını çizdi.
 
-- [ ] (21.121) **CİHAZ TURU İKİ ARIZA ÖLÇTÜ — Fabric çökmesi (personel→müşteri geçişi) + unistyles
-  uyarısının nüksü; ikisi akraba olabilir** · touches: kabuk geçişi + Skeleton/Animated tüketicileri
+- [~] (21.121) **CİHAZ TURU İKİ ARIZA ÖLÇTÜ — Fabric çökmesi ÇÖZÜLDÜ, unistyles nüksü açık**
+  · touches: `apps/mobile/src/components/ui/bottom-sheet.tsx`, `apps/mobile/src/components/operations/staff-menu.tsx`
 
-  **1 · Fabric çökmesi, 3/3 TEKRARLANABİLİR (26.08, CPH1907, taze dev-client):** personel
-  kökünde avatar menüsünden **"Müşteri uygulamasına geç"** → kırmızı ekran
-  `IllegalStateException: addViewAt: failed to insert view [486] into parent [488] — The
-  specified child already has a parent` (Fabric `SurfaceMountingManager`). Soğuk açılışta da
-  aynı (hot-reload kalıntısı DEĞİL). Dökümde [486] bir `RCTText` ve MEVCUT parent'ı [490] —
-  Fabric metni [488]'e taşırken eski parent'tan sökülmemiş (view-flattening/yeniden-ebeveynleme
-  tutarsızlığı). **Temiz yollar sağlam:** çıkışla müşteri kabuğuna inmek ve müşteriden personele
-  geçmek sorunsuz; kırık olan yalnız oturum korunarak personel→müşteri kabuk değişimi.
-  **2 · Unistyles uyarısı geri döndü** (21.52 Skeleton düzeltmesi onu 0'a indirmişti):
+  **1 · Fabric çökmesi (personel→müşteri geçişi) — KÖK KANITLANDI ve KAPANDI (26.08 akşamı).**
+  Belirti: avatar menüsünden "Müşteri uygulamasına geç" → `IllegalStateException: addViewAt —
+  The specified child already has a parent`. Tek değişkenli ayrım deneyi cihazda koşuldu:
+  · taze süreç + ilk geçiş, basışta `router.replace` → **4/4 çöktü**
+  · aynı koşul, yönlendirme 400 ms ertelenmiş → geçti
+  · müşteri kabuğu o süreçte daha önce mount olmuşsa, basışta replace bile → 3/3 geçti
+  Yani kök: düğme çekmeceyi kapatıp AYNI karede kök yığını değiştiriyordu; `BottomSheet`in
+  Modal'ı kapanış animasyonu bitene dek ayakta (kendi künyesi) ve Modal'ın sökümü, yeni kabuğun
+  İLK (ağır) mount'uyla aynı Fabric penceresine binince "child already has a parent" doğuyor.
+  Nondeterminizmin sebebi de bu: hafif re-mount yarışı kazanıyor, ilk mount hep kaybediyordu.
+  **Çözüm sihirli bekleme DEĞİL:** `BottomSheet`e `onClosed` kancası (Modal söküldükten sonra,
+  bir kare ertelemeyle) ve köprünün yönlendirmesi ona bağlandı — basış yalnız niyet bayrağı
+  koyar. Cihazda taze-süreç senaryosuyla doğrulandı (çökme 0, vitrin açıldı). Testler:
+  `bottom-sheet.test` +1 (örtü dokunuşu tek başına onClosed'u ÇAĞIRMAZ; kapanış tamamlanınca
+  çağrılır) · yeni `staff-menu.test` 2 (replace ANINDA çekmece kapalı mıydı casusla ölçülür —
+  basışta-yönlendiren sabotaj testi düşürdü; niyetsiz kapanış yönlendirmez). 8/8 · bileşenler
+  172/172 · tsc · lint temiz.
+  **2 · AÇIK KALAN — unistyles uyarısının nüksü** (21.52 Skeleton düzeltmesi 0'a indirmişti):
   `we detected style object with 2 unistyles styles… check style prop for "View"` — turda
-  **7 kez**, hep kabuk/vitrin mount anlarında; ilki ilk çökmeyle AYNI SANİYEDE (20:03:25.634
-  uyarı → .735 çökme). Statik arama yine temiz (nesne-birleştirme deseni depoda yok) — 21.52'nin
-  dersi geçerli: suçlu muhtemelen yine bir kitaplık düzleştirmesi (`Animated.View` sınıfı) ve
-  ancak çalışma anında (warn.ts izi) bulunur. İki bulgu tek turda, aynı ekranlarda ve ilk
-  örnekleri milisaniye komşusu — kök ortaklığı hipotez, ölçülmeden düzeltmeye GİRİLMEZ
-  (CLAUDE §0). Logcat dökümü scratchpad'de alındı; tekrar adımları yukarıda.
+  **7 kez**, hep kabuk/vitrin mount anlarında (çökme ile korelasyonu vardı ama çökme onsuz da
+  oldu — ayrı kök). Statik arama yine temiz; 21.52'nin dersi geçerli: suçlu muhtemelen bir
+  kitaplık düzleştirmesi (`Animated.View` sınıfı) ve ancak çalışma anında (`warn.ts` izi)
+  bulunur. Riski 21.52'dekiyle aynı: "no updates" — tema değişimi o bileşene işlemeyebilir.
 

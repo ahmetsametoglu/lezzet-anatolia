@@ -70,11 +70,23 @@ interface BottomSheetProps {
    * sonraki ekranın onu yeniden keşfetmesine kapı olurdu (CLAUDE §1).
    */
   onClose: () => void;
+  /**
+   * Kapanış animasyonu bitip `Modal` SÖKÜLDÜKTEN sonra, bir kare ertelemeyle çağrılır.
+   *
+   * NEDEN VAR (21.121, cihazda kanıtlandı 26.08): çekmece açıkken kök yığını değiştirmek
+   * (`router.replace`) Fabric'i çökertiyor — Modal'ın sökümü ile yeni kabuğun İLK (ağır)
+   * mount'u aynı mount penceresine giriyor ve "The specified child already has a parent"
+   * fırlıyor (taze süreçte 4/4; yalnız yönlendirme geciktirilince 0). Çekmeceden çıkıp
+   * BAŞKA bir köke gidecek her eylem yönlendirmesini buraya bağlar: kare erteleme, Modal'ın
+   * söküm commit'inin Fabric'e işlenmesini garantiler. `onClose` niyetin kancasıdır (görünürlük
+   * state'ini düşürür), bu ise sökümün — ikisi bilerek ayrı.
+   */
+  onClosed?: () => void;
   children: ReactNode;
   testID?: string;
 }
 
-export function BottomSheet({ visible, title, onClose, children, testID }: BottomSheetProps) {
+export function BottomSheet({ visible, title, onClose, onClosed, children, testID }: BottomSheetProps) {
   /* `Modal` KAPANIŞ animasyonu bitene kadar ayakta kalmalı; bu yüzden görünürlüğün iki hâli var:
      çağıranın `visible`ı (niyet) ve buradaki `mounted` (ekranda mı). */
   const [mounted, setMounted] = useState(visible);
@@ -89,7 +101,9 @@ export function BottomSheet({ visible, title, onClose, children, testID }: Botto
   const finishClose = useCallback(() => {
     setMounted(false);
     onClose();
-  }, [onClose]);
+    // Söküm bu commit'te; onClosed BİR KARE sonra — künyesi prop'ta (21.121).
+    if (onClosed !== undefined) requestAnimationFrame(onClosed);
+  }, [onClose, onClosed]);
 
   /**
    * Açılış — panel aşağıdan gelir, örtü belirir.

@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -81,8 +81,20 @@ export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
   const initials = staffInitials(name, email);
   const sectionLine = sections.map((section) => operationsCopy.sections[section].tab).join(' · ');
 
+  /* Geçiş niyeti — düğme YALNIZ çekmeceyi kapatır, yönlendirme çekmece SÖKÜLÜNCE koşar
+     (`onClosed`). Basış anında `router.replace` çağırmak cihazda 4/4 Fabric çökmesiydi
+     (21.121, 26.08): Modal'ın kapanış animasyonu sürerken kök yığın değişince "child already
+     has a parent" — gerekçenin tamamı `bottom-sheet.tsx`in `onClosed` künyesinde. */
+  const pendingLeave = useRef(false);
+
   const leaveToCustomer = () => {
+    pendingLeave.current = true;
     setOpen(false);
+  };
+
+  const onSheetClosed = () => {
+    if (!pendingLeave.current) return;
+    pendingLeave.current = false;
     /* Bayrak BURADA tüketilir (künyesi `use-staff-landing`te): taze girişten sonra bayrak hiç
        tüketilmemiş olabiliyor ve müşteri kabuğu monte olur olmaz kullanıcıyı buraya geri
        fırlatırdı — köprü, basıldığı anda kendini iptal ederdi. */
@@ -109,6 +121,7 @@ export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
         visible={open}
         title={t.sheetTitle}
         onClose={() => setOpen(false)}
+        onClosed={onSheetClosed}
         testID={testID === undefined ? undefined : `${testID}-sheet`}
       >
         <View style={styles.identity}>

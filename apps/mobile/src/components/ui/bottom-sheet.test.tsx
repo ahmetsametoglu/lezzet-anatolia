@@ -1,5 +1,5 @@
 import { customerAppColors, customerAppText } from '@lezzet/design-tokens';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
@@ -41,6 +41,29 @@ describe('BottomSheet', () => {
     await fireEvent.press(screen.getByTestId('sheet-scrim', { includeHiddenElements: true }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('onClosed kapanış TAMAMLANINCA çağrılır — örtü dokunuşu tek başına yetmez (21.121)', async () => {
+    const onClose = jest.fn();
+    const onClosed = jest.fn();
+    const sheet = (visible: boolean) => (
+      <BottomSheet visible={visible} title="Sırala" onClose={onClose} onClosed={onClosed} testID="sheet">
+        <Text>içerik</Text>
+      </BottomSheet>
+    );
+    const { rerender } = await render(sheet(true));
+
+    // Örtü yalnız NİYETİ çağırır — görünürlük hâlâ çağıranın elindedir, söküm başlamamıştır.
+    await fireEvent.press(screen.getByTestId('sheet-scrim', { includeHiddenElements: true }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onClosed).not.toHaveBeenCalled();
+
+    // Çağıran görünürlüğü düşürünce kapanış animasyonu koşar; onClosed sökümün ARDINDAN bir
+    // kare ertelemeyle gelir — çekmeceden kök değiştiren eylemler (personel→müşteri köprüsü)
+    // yönlendirmeyi ona bağlar, basışa değil: basış anında replace cihazda 4/4 Fabric
+    // çökmesiydi (bileşendeki künye).
+    await rerender(sheet(false));
+    await waitFor(() => expect(onClosed).toHaveBeenCalledTimes(1));
   });
 
   it("Android'in geri hareketi de kapatır — çizili değil ama platformun sözü", async () => {
