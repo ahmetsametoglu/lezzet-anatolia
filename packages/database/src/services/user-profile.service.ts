@@ -501,11 +501,25 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
   }
 
   /**
-   * Müşteri arama (operasyon seçicileri) — ad · telefon · e-posta üzerinde tek `or` grubu.
+   * **MÜŞTERİ** arama (operasyon seçicileri) — ad · telefon · e-posta üzerinde tek `or` grubu.
    *
    * Sonuç TAVANLIDIR ve tavan çağırana bildirilir: seçici bir liste değil, bir bulma aracıdır.
    * Sayfalamak yerine sınırlamak doğru — operatör aradığını ilk on satırda görmüyorsa terimini
    * daraltır, kaydırmaz.
+   *
+   * ── ROL SÜZGECİ ZORUNLU (26.08, ölçülmüş arıza) ────────────────────────────
+   * Adı "müşteri arama"ydı ama süzgeci YOKTU: `user_profiles` müşteriyi ve personeli aynı tabloda
+   * tutuyor (`0001`), yani seçici depocuyu, kuryeyi ve yöneticiyi de döndürüyordu. Ölçüldü
+   * (tarayıcıda, elle sipariş girişi): *"Claire"* aramasının **İLK sonucu bir depo çalışanıydı**
+   * (`depo.colmar@lezzetanatolia.fr`) — operatör farkında olmadan personel adına sipariş
+   * açabilirdi. Belirtisi yoktu: satır geçerli bir profil, sipariş geçerli bir sipariş.
+   *
+   * Yerinde satışın **anonim alıcısı** (`roles={system}`, 21.119) aynı deliği daha görünür kıldı:
+   * "Yerinde satış (anonim)" adlı satır da seçilebilir hâldeydi.
+   *
+   * Süzgeç `list()`/`counts()` ile AYNI sabitten (`CUSTOMERS_ONLY`) geliyor — üç okuma aynı
+   * kümeyi konuşmak zorunda, yoksa "N müşteri" yazan sayaçla seçicinin listesi ayrışır.
+   * Personel araması ayrı bir sorudur ve kendi kapısı var (`listStaff`).
    */
   async search(term: string, limit = 10): Promise<UserProfile[]> {
     const safe = ilikeTerm(term);
@@ -513,6 +527,7 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     return this.getAll(
       {},
       {
+        ...CUSTOMERS_ONLY,
         orFilters: [PROFILE_SEARCH_FIELDS.map((f) => ilikeContains(f, safe)).join(',')],
         orderBy: 'name',
         limit,

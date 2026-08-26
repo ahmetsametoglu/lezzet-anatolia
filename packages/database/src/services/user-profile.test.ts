@@ -4,6 +4,7 @@ import { createTestWarehouse } from '../testing/warehouse';
 import { purgeTestData } from '../testing/cleanup';
 import { AddressService } from './address.service';
 import { UserProfileService } from './user-profile.service';
+import type { UserRole } from '@lezzet/types';
 
 /**
  * Kimlik profili ve adres servisleri (04.4/04.5) — DB üstünde. **Ayrı müşteri tablosu yoktur:**
@@ -397,5 +398,46 @@ describe('adresler (04.4)', () => {
     await db.from('user_profiles').delete().eq('id', temporary.id);
 
     expect(await addresses.listByCustomer(temporary.id)).toHaveLength(0);
+  });
+});
+
+/**
+ * **ARAMA YALNIZ MÜŞTERİ DÖNDÜRÜR** (26.08, ölçülmüş arıza).
+ *
+ * `user_profiles` müşteriyi ve personeli AYNI tabloda tutuyor (`0001`) ve `search()`ün adı
+ * "müşteri arama"ydı ama rol süzgeci YOKTU. Ölçüldü (tarayıcıda, elle sipariş girişi): "Claire"
+ * aramasının İLK sonucu bir depo çalışanıydı — operatör farkında olmadan personel adına sipariş
+ * açabilirdi. Belirtisi de yoktu: satır geçerli bir profil, sipariş geçerli bir sipariş.
+ *
+ * Yerinde satışın anonim alıcısı (`roles={system}`, 21.119) aynı deliği daha görünür kıldı.
+ */
+describe('müşteri arama rol süzer (26.08)', () => {
+  const damga = `AramaRol${stamp}`;
+
+  beforeAll(async () => {
+    const kur = async (ad: string, roles: UserRole[], ek: Record<string, unknown> = {}) => {
+      const row = await profiles.insert({ name: `${damga} ${ad}`, roles, ...ek });
+      createdIds.push(row.id);
+      return row;
+    };
+    await kur('Musteri', ['customer']);
+    // Depocu kapsamsız olamaz (`user_profiles_warehouse_scope`) — kendi deposunu alıyor.
+    const depo = await createTestWarehouse(db, { label: 'ARAMA' });
+    createdWarehouseIds.push(depo.id);
+    await kur('Depocu', ['warehouse'], { warehouseIds: [depo.id] });
+    await kur('Yonetici', ['admin']);
+    await kur('Anonim', ['system']);
+  });
+
+  it('personeli ve sistem kaydını DIŞLAR, müşteriyi bulur', async () => {
+    const sonuc = await profiles.search(damga, 20);
+    const adlar = sonuc.map((r) => r.name);
+
+    expect(adlar).toContain(`${damga} Musteri`);
+    // Üçü de aynı terimle eşleşiyor ama hiçbiri müşteri değil: seçicide görünmemeli.
+    expect(adlar).not.toContain(`${damga} Depocu`);
+    expect(adlar).not.toContain(`${damga} Yonetici`);
+    expect(adlar).not.toContain(`${damga} Anonim`);
+    expect(sonuc).toHaveLength(1);
   });
 });
