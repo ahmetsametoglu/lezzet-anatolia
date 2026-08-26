@@ -20,6 +20,7 @@ import { packages } from './packages';
 import { payments } from './payments';
 import { deliveryTerms } from './delivery-terms';
 import { places } from './places';
+import { notifications } from './notifications';
 import { points, pointsRules } from './points';
 import { preferences } from './preferences';
 import { recipes } from './recipes';
@@ -200,6 +201,11 @@ v1.route('/payments', payments);
 // Puan uçları (21.17) — Bearer'ın ARKASINDA: cüzdan müşterinin kendisidir. Kural ve B2B kısa
 // devresi `points.ts` + `@lezzet/application/customer/points` künyesinde.
 v1.route('/me/points', points);
+
+// Bildirim akışı (14.13) — Bearer'ın ARKASINDA: akış kişinin kendisidir. Sahiplik süzgeci, rozet
+// tanımı ve "akış ≠ gelen kutusu" kuralı `@lezzet/application/notification/read` künyesinde; web
+// hesap zili (14.15) aynı kapıdan okuyacak — iki yüzey tek kural.
+v1.route('/me/notifications', notifications);
 
 // Davetin hesaba bağlanması (21.44 · 21.45) — Bearer'ın ARDINDA, karşılamanın aksine: "bu daveti
 // BENİM hesabıma yaz" cümlesinin oturumsuz hâli yoktur (keşif talep kapısının aynı ayrımı). Cihaz

@@ -1,0 +1,117 @@
+import { Hono } from 'hono';
+import type { Context, Next } from 'hono';
+import { z } from 'zod';
+import {
+  dismissNotification,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  unreadNotificationCount,
+} from '@lezzet/application';
+import { serviceDb, UserProfileService } from '@lezzet/database';
+import { DEFAULT_PAGE_SIZE, MeNotificationBadgeSchema, MeNotificationsPageSchema } from '@lezzet/types';
+import { decodeCursor, encodeCursor } from '../../lib/request';
+import { fail, ok } from '../../lib/respond';
+import type { V1Env } from './auth';
+
+/*
+  `/me/notifications` (14.13) — uygulamadaki zilin veri kaynağı. KURAL BURADA DEĞİL: sahiplik
+  süzgeci, "akış ≠ gelen kutusu" davranışı ve rozet tanımı `@lezzet/application`ın okuma
+  kapısında (`notification/read.ts` künyesi — web hesap zili 14.15'te AYNI kapıdan okuyacak).
+  Bu dosya taşıma katmanıdır: kimliği çözer, imleci açar/kapar, sonucu zarfa koyar.
+
+  ── UÇ GÜVENLİĞİ İLKESİ (okuma kapısının künyesinden) ──────────────────────
+  `profileId` HER ZAMAN buradaki middleware'den (oturumdan) gelir, istemciden ASLA. İstemcinin
+  verdiği tek kimlik satır kimliğidir ve kapı onu daima sahiplik süzgeciyle kullanır — yabancı
+  satır `not_found` alır, "yasak" değil (yasak, satırın varlığını söylerdi).
+*/
+
+const ListQuerySchema = z.object({
+  cursor: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(DEFAULT_PAGE_SIZE),
+});
+
+const IdParamSchema = z.string().uuid();
+
+/** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`) — kapıların istediği hep ikincisi. */
+interface CustomerEnv {
+  Variables: V1Env['Variables'] & { customerId: string };
+}
+
+/** Profil çözümü tek middleware'de — beş uç aynı satırları tekrar etmesin (points/adres deseni). */
+async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Response | void> {
+  const profile = await new UserProfileService(serviceDb()).findByAuthUserId(c.get('authUser').id);
+  if (!profile) return fail(c, 'profile_not_found', 404);
+  c.set('customerId', profile.id);
+  await next();
+}
+
+export const notifications = new Hono<CustomerEnv>();
+notifications.use('*', resolveCustomer);
+
+/**
+ * Akış — satırlar + imleç + rozet TEK turda (ekran açılışının tamamı; ayrı istemek her açılışı
+ * iki tura mal ederdi). Gövde `z.input` ile tiplenir: kapının şekli sözleşmeden saparsa burası
+ * DERLENMEZ (points/history emsali). `parse` ayrıca süzgeçtir — `profileId`/`dedupeKey`/
+ * `warehouseId` zarfa sızamaz (sözleşme künyesindeki daraltma).
+ */
+notifications.get('/', async (c) => {
+  const parsed = ListQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) return fail(c, 'invalid_query', 400);
+
+  const feed = await listNotifications(serviceDb(), {
+    profileId: c.get('customerId'),
+    cursor: decodeCursor(parsed.data.cursor),
+    limit: parsed.data.limit,
+  });
+
+  const body: z.input<typeof MeNotificationsPageSchema> = {
+    notifications: feed.rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      targetType: row.targetType,
+      targetId: row.targetId,
+      payload: row.payload,
+      createdAt: row.createdAt,
+      readAt: row.readAt,
+    })),
+    nextCursor: feed.nextCursor ? encodeCursor(feed.nextCursor) : null,
+    unread: feed.unread,
+  };
+  return ok(c, MeNotificationsPageSchema.parse(body));
+});
+
+/** Rozet — zil çalınca (kanal yükü boş) liste çekmeden tazeleme. */
+notifications.get('/badge', async (c) => {
+  const unread = await unreadNotificationCount(serviceDb(), c.get('customerId'));
+  return ok(c, MeNotificationBadgeSchema.parse({ unread }));
+});
+
+/**
+ * Okundu işareti. `not_found` 404 ile döner ve iki hâli BİLEREK ayırt etmez (satır yok / satır
+ * başkasının) — ayrım, kimlik tahmin eden birine satırın varlığını söylerdi (okuma kapısı künyesi).
+ */
+notifications.post('/:id/read', async (c) => {
+  const id = IdParamSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+
+  const sonuc = await markNotificationRead(serviceDb(), { profileId: c.get('customerId'), notificationId: id.data });
+  if (sonuc !== 'ok') return fail(c, 'not_found', 404);
+  return ok(c, { done: true });
+});
+
+/** "Hepsini gördüm" — rozeti tek dokunuşta kapatır; imza gereği yalnız kendi satırları. */
+notifications.post('/read-all', async (c) => {
+  await markAllNotificationsRead(serviceDb(), c.get('customerId'));
+  return ok(c, { done: true });
+});
+
+/** Gizle — listeden ve rozetten kalkar; satır silinmez (akış kapısının kararı). */
+notifications.post('/:id/dismiss', async (c) => {
+  const id = IdParamSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+
+  const sonuc = await dismissNotification(serviceDb(), { profileId: c.get('customerId'), notificationId: id.data });
+  if (sonuc !== 'ok') return fail(c, 'not_found', 404);
+  return ok(c, { done: true });
+});
