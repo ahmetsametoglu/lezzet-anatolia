@@ -230,12 +230,32 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     - **`docs:check §3i`** *(26.08'e kadar `§3g` yazıyordu — araya kural eklendikçe bölüm harfleri kaydı, bkz. 02.17)* listeyi çürümeye karşı koruyor: DB'siz olup listede olmayan dosya ve listede kalmış silinmiş yol commit'ten geçmiyor. İz **geçişli** aranıyor (import zinciri, `@/` takma adı, döngü korumalı) ama kontrol **tek yönlü**: "listede ama DB'ye vuruyor" yönü yazılmadı, çünkü orada statik iz yanılıyor (ölçüldü: altı dosya `serviceDb` açan modülü import ediyor, beşi o yolu hiç çağırmıyor) ve daha iyi bir hakemi var — `pnpm test:unit` `.env` yüklemediği için böyle bir dosya ilk satırında patlar.
     - Ölçüm: `pnpm test:unit` **117 dosya / 1351 test yeşil, 3,3 sn** (önce 98 dosya / ~1190). `typecheck` · `lint` · `docs:check` temiz. Bekçinin üç yönü de elle sınandı (eksik satır · yanlış satır · bayat satır), üçü de ateşliyor.
     - **K3-1 reddedildi** (`denetim-K3-domain-core.md` Cevap'ında gerekçesiyle): "KDV bölmesi testsiz" bulgusu `line.test.ts` dosyasının yokluğuna dayanıyor, oysa üç iddianın üçü de `export.test.ts`/`profit.test.ts` içinde çivili — `net+vat=gross` beş yerde, kanal yönü iki bağımsız dosyada, kısmi teslimat payı `export.test.ts:96`'da.
-- [ ] (02.15) **"Grup içinde tek bayrak" kuralı VERİDE dursun — kısmi unique index** — `touches: supabase/migrations/**`
+- [x] (02.15) **"Grup içinde tek bayrak" kuralı VERİDE dursun — kısmi unique index** — `touches: supabase/migrations/**`
     - Bugün kuralı tutan tek şey `setExclusiveFlag` (`02.14`). Herhangi bir doğrudan yazım — tohum, düzeltme script'i, ileride yazılacak toplu içe alma — kuralı sessizce kırabilir. `CLAUDE §1`: *"Kural veride durur (ertelenmiş kısıtlar, `not null`, kısmi unique)."*
     - Kapsam: `address(customer_id) where is_default` · `supplier_product(variant_id) where is_preferred`. Aynı desen ileride her "grup içinde tek" alanında doğacak.
     - **Bugün ihlal YOK** (ölçüldü 10.08, salt-okuma): `address` 8 satır/6 grup, `supplier_product` 23 satır/18 grup — çoklu bayrak 0, bayraksız grup 0. Yani düzeltilecek veri yok; eksik olan güvence.
     - Index `setExclusiveFlag`'in sırasıyla uyumlu (*önce temizle, sonra işaretle*); ters sıra index'i anında ihlal ederdi.
     - **Neden bekliyor:** migration değişikliği `db:refresh` penceresi ister ve o kullanıcının kararıdır.
+    - **Durum (26.08) — YAZILDI (kullanıcı kararı: "migration'ı şimdi yaz, sonraki tazelemede uygulansın").**
+      İki kısmi indeks, tabloların KENDİ dosyalarına (greenfield: yama migration'ı yazılmaz):
+      `address_one_default_per_customer` (`0011_customer_fields.sql`) · `supplier_product_one_preferred_per_variant`
+      (`0010_supply.sql`). Kısmi, çünkü `false` satırlar sınırsızdır; tekillik yalnız İŞARETLİ olana aittir.
+      `setExclusiveFlag`in *önce temizle, sonra işaretle* sırasıyla uyumlu — ters sıra bir an iki
+      işaretli satır üretir ve indeksi o anda ihlal ederdi.
+    - **DOĞRULAMA GERİ ALINAN BİR İŞLEMDE YAPILDI — kalıcı hiçbir şey yazılmadı.** Şema değişikliği
+      kullanıcının penceresi olduğu için `db:refresh` beklenmedi; onun yerine `begin … rollback`
+      içinde indeksler kurulup dört iddia sınandı: *(1)* mevcut veri indeksleri KALDIRIYOR (yani
+      tazeleme kırılmayacak — ayrıca sayıldı: 6 müşteride 6 varsayılan adres, 28 varyantta 28
+      tercihli tedarikçi, çoklu bayrak sıfır) · *(2)* aynı müşteriye ikinci varsayılan adres
+      **reddedildi** · *(3)* aynı varyanta ikinci tercihli tedarikçi **reddedildi** · *(4)* işaretsiz
+      ikinci satır **serbest** (kural yalnız bayrağa ait).
+      **Ölçüm sırasında iki kez kendi sabotajım yanlış yerden patladı** ve ikisi de öğreticiydi:
+      önce eksik kolonlu bir satır yazdım (`recipient not null`), sonra kopyaladığım satır
+      `supplier_product_key`e çarptı — yani indeksimi hiç sınamamıştım. Bir sabotajın kırmızı
+      vermesi, DOĞRU kuralı kırdığı anlamına gelmiyor; hata mesajının hangi kısıttan geldiğine
+      bakmak gerekiyor.
+    - **Kalan tek adım kullanıcıda:** bir sonraki `db:refresh` indeksleri uygular. O ana kadar kural
+      yine yalnız kodda duruyor.
 - [x] (02.16) **Teardown kaçağı: elle silme purge'ü hiç çağıramıyordu (kullanıcı bildirimi 14.08)** — `touches: packages/database/src/testing/cleanup.ts, **/*.test.ts`
     - *Bitti:* 17 dosyadan `afterAll` içindeki elle `mustDelete` satırları kalktı; dört ayrı entegrasyon koşusunda **sıfır yeni artık** (DB'den sayımla kanıtlı).
     - **Ölçüm (kanıt önce, müdahale sonra — `CLAUDE §0`):** 51 artık depo (3 gerçek), 28 kategori, 8 profil, 1 hesap, 1 ürün. **%85'i tek bir çöken koşudan** (14.08 02:30–02:34). Ve asıl bulgu: **51 deponun 46'sı BOMBOŞTU** — stok/sipariş/kabul/bölge hiç yok, yani onları hiçbir FK tutmuyordu. Silme başarısız olmamıştı, **hiç denenmemişti**.

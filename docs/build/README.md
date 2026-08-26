@@ -35,7 +35,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | --- | --- | --- | --- | --- |
 | 00 | `00-iskelet.md` | Monorepo İskeleti | sürüyor | 8/10 (+1 kısmi) |
 | 01 | `01-types.md` | `packages/types`: Şemalar ve Enum'lar | tamam | 13/13 |
-| 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 14/17 (+1 kısmi) |
+| 02 | `02-database.md` | `packages/database`: Taban Servis ve İlk Şema | sürüyor | 15/17 (+1 kısmi) |
 | 03 | `03-domain-core.md` | `packages/domain-core`: İş Kuralları Motoru | tamam | 11/11 |
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 11/13 (+1 kısmi) |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 30/35 (+3 kısmi) |
@@ -47,7 +47,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 5/7 (+1 kısmi) |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 7/11 (+2 kısmi) |
 | 13 | `13-analitik.md` | Analitik | sürüyor | 6/8 (+2 kısmi) |
-| 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 11/16 |
+| 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 12/16 |
 | 15 | `15-whatsapp.md` | WhatsApp: Zemin ve Canlı Kanal | sürüyor | 9/19 (+6 kısmi) |
 | 16 | `16-talep-sikayet.md` | Talep / Şikâyet | sürüyor | 5/9 (+2 kısmi) |
 | 17 | `17-geri-bildirim-puan.md` | Geri Bildirim, Yorum ve Puan | sürüyor | 9/11 (+1 kısmi) |

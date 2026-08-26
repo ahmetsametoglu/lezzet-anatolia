@@ -416,6 +416,20 @@ create table public.address (
 
 create index address_customer_idx on public.address (customer_id);
 
+-- ── "MÜŞTERİ BAŞINA TEK VARSAYILAN" KURALI VERİDE (02.15) ────────────────────────────────────────
+-- Kuralı bugüne dek yalnız uygulama tutuyordu (`BaseDbService.setExclusiveFlag`). Bir kural yalnız
+-- kodda durduğu sürece o koddan GEÇMEYEN her yazım onu sessizce kırar: tohum, düzeltme betiği,
+-- ileride yazılacak toplu içe alma. Kırıldığında hata da vermez — checkout iki "varsayılan" adres
+-- görür ve hangisini seçtiği sıralamaya kalır, yani müşteri siparişini yanlış adrese verir ve
+-- sebebi hiçbir ekranda görünmez (`CLAUDE §1`: kural veride durur).
+--
+-- KISMİ indeks, çünkü `is_default = false` satırlar sınırsızdır; tekillik yalnız işaretlilere aittir.
+-- `setExclusiveFlag`in sırasıyla uyumlu (**önce temizle, sonra işaretle**): ters sıra bir an iki
+-- işaretli satır üretir ve indeks o anda ihlal olurdu.
+create unique index address_one_default_per_customer
+  on public.address (customer_id)
+  where is_default;
+
 alter table public.address enable row level security;
 
 -- Müşteriye özel fiyat satırı (0005'te FK'siz açılmıştı — kimlik tablosu hazır, bağ kuruldu).

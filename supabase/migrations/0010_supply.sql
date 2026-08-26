@@ -34,6 +34,15 @@ create unique index supplier_product_key on public.supplier_product (supplier_id
 -- "Bu varyantı kimden alıyorum" — alternatif kaynak listesi.
 create index supplier_product_variant_idx on public.supplier_product (variant_id);
 
+-- ── "VARYANT BAŞINA TEK TERCİHLİ TEDARİKÇİ" KURALI VERİDE (02.15) ───────────────────────────────
+-- `address_one_default_per_customer`ın kardeşi ve gerekçesi aynı: kural uygulamada (`setExclusiveFlag`)
+-- duruyordu, o koddan geçmeyen her yazım onu kırabilirdi. Burada bedeli para: otomatik alış önerisi
+-- "tercihli" tedarikçiden fiyat okur; iki tercihli satır varsa okuduğu fiyat sıralamaya kalır ve
+-- sipariş yanlış maliyetle açılır.
+create unique index supplier_product_one_preferred_per_variant
+  on public.supplier_product (variant_id)
+  where is_preferred;
+
 -- `partially_received` (DOMAIN §17): tek PO birden çok depoda parça parça kabul edilebilir —
 -- ilk kabul siparişi KAPATMAZ. Durum saklanan bir sayaçtan değil, kabullerden TÜRETİLİR
 -- (`purchase_order_progress`, 0042): kalem miktarı ↔ o kaleme giren partilerin `initial_qty`
