@@ -26,6 +26,7 @@ import { recipes } from './recipes';
 import { tickets } from './tickets';
 import { courier } from './courier';
 import { social } from './social';
+import { sale } from './sale';
 import { warehouse } from './warehouse';
 import { bearerAuth, type V1Env } from './auth';
 
@@ -231,6 +232,10 @@ v1.route('/me/b2b', b2b);
  */
 v1.route('/courier', courier);
 v1.route('/warehouse', warehouse);
+// Yerinde satış (21.119) — AYRI önek çünkü AYRI rol kümesi: burada `courier` de var, depo
+// yönlendiricisinde yok. Satan kişi malın yanında duran personeldir (DOMAIN §17) ve o kişi kimi
+// zaman kuryedir; ama kurye hazırlık kuyruğunu ya da mal kabulü görmez.
+v1.route('/sale', sale);
 // Sosyal gelen kutusu (15.15 mobil ayağı) — yalnız `admin` (rota dosyasının kendi kapısı):
 // yazışma içeriği kişisel veridir, kurye/depo rolleri görmez (`social.ts` künyesi).
 v1.route('/social', social);

@@ -64,6 +64,8 @@ const KORUMALI: readonly string[] = [
   '/api/v1/courier/day',
   '/api/v1/warehouse/intake',
   '/api/v1/social/conversations',
+  // Yerinde satış (21.119) — para alan bir uç; kimliksiz erişim hiçbir hâlde olmamalı.
+  '/api/v1/sale/on-site',
 ];
 
 describe('kapı sınırı — varsayılan KAPALI', () => {

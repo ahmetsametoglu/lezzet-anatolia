@@ -5766,10 +5766,15 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `lib/money/order-payment.ts`i 51 satırlık bir `serviceDb()` sarmalayıcısıydı, asıl uygulama
   zaten `packages/application/src/order/payment.ts`te — `quickSale` artık doğrudan onu çağırıyor.
 
-  **YAN ETKİ BİLDİRİLDİ:** `apps/web/lib/stock/fefo.ts` bu taşımayla ölü kaldı (tek üretim çağıranı
-  `quickSale`ti). Silmedim — web şeridinin dosyası ve testi üç fazladan alan doğruluyor
-  (`flag`, `remainingPercent`, `lotNumber`); karar onların
-  (`docs/talep/not-web-fefo-kopyasi-olu-kaldi.md`).
+  **YAN ETKİ BİLDİRİLDİ:** ~~`apps/web/lib/stock/fefo.ts`~~ bu taşımayla ölü kaldı (tek üretim çağıranı
+  `quickSale`ti). Silmediniz, karar web şeridine bırakıldı — **ve o karar 26.08'de verildi: SİLİNDİ.**
+  Ölçüm, notta önerilen "paket sürümünü zenginleştir" yolunu çürüttü: üç fazla alanı (`flag`,
+  `remainingPercent`, `lotNumber`) hiçbir üretim kodu okumuyordu — eski çağıran `quickSale` de
+  yalnız `stockId`+`qty` alıyordu, o alanları YALNIZ kendi testi doğruluyordu. Pakete taşımak
+  okuyanı olmayan üç alan eklemek olurdu (paket künyesinin kendi uyarısı: *"hesaplanıp atılan bir
+  değer, bir gün 'bu neden hep boş' diye aranacak ölü koddur"*). Alanlar, onları okuyacak ekran
+  (D3 raf ömrü) geldiği gün pakete eklenir. *(Bu satırı denetim düzeltti — dosyayı silen taraf
+  referansı da düzeltmeliydi.)*
 
   **KAPSAM BU TURDA KÜÇÜLDÜ — kullanıcıyla konuşarak (26.08).** Başta iki akış vardı: personelin
   cihazından misafir satış (A) ve müşterinin kendi telefonundan kimlikli satış (B, QR/kod ile).
@@ -5872,6 +5877,30 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (`packages/types`). İki değer de personel değil ama ayrı sebeple: biri müşteri ekseni, öteki bir
   kişi bile değil. Sonraki rol de aynı kapıdan geçecek (CLAUDE §1).
 
-  **KALAN:** *(a)* `apps/mobile-api` ucu; *(b)* native ekran (mevcut depo/kurye desenine uyarak
-  çizilecek — kullanıcı onayı 26.08).
+  **UÇ AÇILDI — `POST /api/v1/sale/on-site`** (sözleşme `sale-api.schema.ts`).
+
+  **AYRI YÖNLENDİRİCİ, ÇÜNKÜ AYRI ROL KÜMESİ.** Depo yönlendiricisinin kapısı `warehouse`/`admin` ve
+  kurye oraya giremez — hazırlık kuyruğu, mal kabul, kutu mühürleme onun işi değil. Ama yerinde
+  satışı **kurye de yapar** (`DOMAIN §17`). Rol kümesi farklı olduğu için kapı ayrı; paylaşılan tek
+  şey depo çözümü — `warehouseGuard` **ihraç edildi, kopyalanmadı** (kapsam kuralı iki yerde
+  yaşasaydı ayrıştığı gün biri sessizce zayıflardı).
+
+  **DEPO VE MÜŞTERİ GÖVDEDE YOK.** Depo personelin künyesinden geliyor (kapsam kontrolüyle), müşteri
+  anonim alıcı. İkisini de istemciden almak kararı istemciye vermek olurdu — `placeOrder`ın
+  *"müşteri kimliği istemciden ASLA alınmaz"* kuralının aynısı. Ölçüldü: kapsam dışı depo istenirse
+  **403** ve geriye sipariş kalmıyor.
+
+  **KAPININ KARARI NE OLURSA OLSUN 200.** Yetersiz stok bir HTTP hatası değil, bir cevap: kalan sayı
+  gövdede gelir ki personel müşteriye *"dördü var"* diyebilsin. Kapanış reddi ise gövdeye
+  AYRINTISIZ iniyor (`failed`) ve sebebi `captureError` ile kimlikle loglanıyor — personelin
+  yapabileceği bir şeye çevrilemeyen bir sebep, ekranda gürültüdür.
+
+  **KAPI BEYANI GÜNCELLENDİ:** `router.test`in `KORUMALI` listesi bir *beyandır* (künyesi: *"router'dan
+  türetilseydi taşınan bir satır testi de beraberinde taşırdı"*) — para alan bir uç oraya yazılmadan
+  bırakılamazdı. 30 → 31 iddia.
+
+  Doğrulama: uç testi **5/5** · `router` **31/31** · sabotaj: rol kümesinden `courier` çıkarılınca
+  **üç** test düştü (kuryeye ait olanlar) · `apps/mobile-api` typecheck · lint.
+
+  **KALAN:** native ekran (mevcut depo/kurye desenine uyarak çizilecek — kullanıcı onayı 26.08).
 

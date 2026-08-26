@@ -139,12 +139,19 @@ import { requireStaffRole, type StaffEnv } from './auth';
  */
 const WarehouseQuerySchema = z.object({ warehouseId: UuidSchema.optional() });
 
-/** Depo bölümünün bağlamı — personel profili (rol kapısından) + çözülmüş depo kimliği. */
-interface WarehouseEnv {
+/**
+ * Depo bölümünün bağlamı — personel profili (rol kapısından) + çözülmüş depo kimliği.
+ *
+ * **İhraç edildi (21.119):** yerinde satış ucu (`sale.ts`) aynı depo çözümünü kullanıyor ama ROL
+ * kümesi farklı — orada kurye de satar, burada satmaz. İkinci bir kopya yazmak, kapsam kuralının
+ * (kimliği doğrula · kapsamı kontrol et · belirsizse 400) iki yerde yaşaması olurdu ve ayrıştığı
+ * gün biri sessizce zayıflardı.
+ */
+export interface WarehouseEnv {
   Variables: StaffEnv['Variables'] & { warehouseId: string };
 }
 
-async function warehouseGuard(c: Context<WarehouseEnv>, next: Next): Promise<Response | void> {
+export async function warehouseGuard(c: Context<WarehouseEnv>, next: Next): Promise<Response | void> {
   const profile = c.get('staff');
 
   const query = WarehouseQuerySchema.safeParse(c.req.query());

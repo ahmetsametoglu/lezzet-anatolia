@@ -74,3 +74,7 @@ export * from './realtime.contract';
 // Sosyal gelen kutusu — üç Meta kanalının mobil operasyon yüzü (kuyruk · sohbet · cevap · mod ·
 // taslak). Varlık şemasından `pick` ile türer; ham alan taşır, hesaplanmış etiket taşımaz.
 export * from './social-api.schema';
+// Yerinde satış — depo kapısı ve kuryenin aracı (21.119). Depo ve müşteri gövdede YOK: ilki
+// personelin künyesinden, ikincisi anonim alıcıdan gelir; ikisini de istemciye sormak, kararı
+// istemciye vermek olurdu.
+export * from './sale-api.schema';
