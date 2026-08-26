@@ -2391,9 +2391,15 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **3**. Sayı ekrana gömülmedi — `NEIGHBOR_INVITE_MAX_USES` `domain-core`da adlı bir sabit, davet
   açılırken AÇIKÇA o değerle yazılıyor ve aynı sabit kural ucundan ekrana geliyor.
 
-  **Kalan (`BEKLEYEN(21.47)`):** kazanma yollarının BAĞLAM mesajları (karar 2h'nin tablosu —
-  teslimat sonrası bant, keşif kartı bildirimi) yazılmadı; `feedbackPointsReason` keşifte metin
-  varsa hâlâ `review` (20) döndürüyor (karar 6 — bugün keşifte metin alanı YOK, gizli tuzak).
+  **Kalan (`BEKLEYEN(21.47)`):** karar 2h'nin bağlam mesajlarından tek eksik parça —
+  **teslimat-sonrası yorum daveti bandı** ("uygulama açıldığında görünen bant", 20/ürün; push
+  altyapısı gelene dek bedava yol). Ölçüldü 26.08: tablonun öteki üç satırı zaten karşılanmış —
+  keşif kartı vitrinde sayı × aday puanıyla duruyor, "uygulama açılınca sessiz" `use-visit-points`
+  künyesiyle uygulanmış, sipariş-onayı ekranının puansızlığı bilinçli ve künyeli. Bant, bandın
+  görsel kararıyla birlikte iner (CLAUDE §3 — tasarımsız improvise edilmez).
+  ~~`feedbackPointsReason` keşifte metin varsa hâlâ `review` (20) döndürüyor (karar 6 — bugün
+  keşifte metin alanı YOK, gizli tuzak).~~ **Tuzak kapandı (26.08):** keşif artık metinle bile
+  aday puanında kalıyor; çivileyen test `domain-core/points.test`te.
 
 - [ ] (21.48) **CİHAZ TURU — MİSAFİR VE MÜŞTERİ YÜZEYİ, KAPSAMLI** (kullanıcı kararı 12.08).
   `touches: docs/uygulama/05-cihaz-turu-musteri.md, apps/mobile/src`

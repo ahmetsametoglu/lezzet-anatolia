@@ -108,7 +108,13 @@ describe('kupona çevirme', () => {
 describe('geri bildirimin puan sebebi', () => {
   it('metin yazan yorum puanı alır — biçim değil İÇERİK belirler', () => {
     expect(feedbackPointsReason({ context: 'purchase', hasText: true })).toBe('review');
-    expect(feedbackPointsReason({ context: 'candidate', hasText: true })).toBe('review');
+  });
+
+  it('KEŞİF metinle bile yorum puanına TERFİ ETMEZ — her hâlükârda aday puanı (karar 6)', () => {
+    // "metin varsa yorum puanı ile keşfin bir alakası yok" (kullanıcı kararı 11.08). Keşif
+    // akışında bugün metin alanı yok; bu test, alan bir gün eklendiğinde kimse fark etmeden
+    // 10 kat puan dağıtan kapının açılmamasını çiviler (21.47'nin gizli tuzağı).
+    expect(feedbackPointsReason({ context: 'candidate', hasText: true })).toBe('feedback_candidate');
   });
 
   it('metinsiz kayıt bağlamının puanını alır', () => {

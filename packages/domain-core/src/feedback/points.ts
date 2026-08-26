@@ -209,13 +209,19 @@ export function canRedeem(input: {
  * Metin yazmak kaydırmaktan daha zahmetlidir ve daha değerlidir; ödül bunu yansıtmalı. Müşteri
  * önce beğeni verip sonra yorum eklerse iki ayrı defter satırı doğar (`feedback_*` + `review`) ve
  * ikisi de bir kez verilir — tekillik `(müşteri, sebep, kaynak)` üzerindedir.
+ *
+ * **KEŞİF bu kuralın DIŞINDA (BACKLOG-musteri §4 karar 6, kullanıcı kararı 11.08):** *"metin
+ * varsa yorum puanı ile keşfin bir alakası yok"* — keşif kartı her hâlükârda aday puanıdır.
+ * Eski hâli bağlama bakmadan `hasText → review` diyordu; keşif akışında bugün metin alanı YOK,
+ * ama bir gün eklenseydi kimse fark etmeden 10 kat puan dağıtan bir kapı açılırdı (21.47'nin
+ * "gizli tuzak" kaydı — 26.08'de kapatıldı).
  */
 export function feedbackPointsReason(input: {
   context: 'purchase' | 'candidate';
   hasText: boolean;
 }): Extract<EarnablePointsReason, 'review' | 'feedback_purchase' | 'feedback_candidate'> {
-  if (input.hasText) return 'review';
-  return input.context === 'purchase' ? 'feedback_purchase' : 'feedback_candidate';
+  if (input.context === 'candidate') return 'feedback_candidate';
+  return input.hasText ? 'review' : 'feedback_purchase';
 }
 
 
