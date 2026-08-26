@@ -1,0 +1,27 @@
+import { createContext, useContext, type ReactNode } from 'react';
+
+import { useSale } from './use-sale.hook';
+
+/*
+  SATIŞ BAĞLAMI (kullanıcı kararı 26.08: "ürün listesi ve sepet aynı yerde olması kötü") — akış
+  iki yüzeye ayrıldı: katalog (`/sale`) ve sepet (`/sale/cart`). Sepet DURUMU ikisinin ortak
+  gerçeğidir ve rota değişince kaybolamaz; bu yüzden hook tek kez burada kurulur, iki ekran aynı
+  örneği okur. Param/route ile taşımak seçenek değildi: sepet bir kimlik değil, yaşayan durumdur.
+
+  Son satışlar (`/sale/history`) bu bağlama GİRMEZ: kendi okuması var, sepetle işi yok.
+*/
+
+type SaleStore = ReturnType<typeof useSale>;
+
+const SaleContext = createContext<SaleStore | null>(null);
+
+export function SaleProvider({ children }: { children: ReactNode }) {
+  const sale = useSale();
+  return <SaleContext.Provider value={sale}>{children}</SaleContext.Provider>;
+}
+
+export function useSaleContext(): SaleStore {
+  const value = useContext(SaleContext);
+  if (value === null) throw new Error('useSaleContext yalnız SaleProvider altında çağrılır (sale/_layout kurar)');
+  return value;
+}

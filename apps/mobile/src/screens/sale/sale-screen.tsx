@@ -10,50 +10,43 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtySlider } from '@/components/operations/qty-slider';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { CirclePhoto } from '@/components/ui/circle-photo';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { money, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
-import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { saleCopy } from './copy';
-import { selectionOf, useSale } from './use-sale.hook';
+import { useSaleContext } from './sale-context';
+import { selectionOf } from './use-sale.hook';
 
 /*
-  YERİNDE SATIŞ EKRANI (21.119) — depo kapısı ve kuryenin aracı, aynı ekran (`DOMAIN §17`: satan
-  kişi malın yanında duran personeldir; hangi depodan satıldığını SUNUCU künyeden çözer, ekran
-  depo sormaz).
+  YERİNDE SATIŞ · KATALOG — `/sale` (21.119 · `DOMAIN §17`: satan kişi malın yanında duran
+  personeldir; depoyu SUNUCU künyeden çözer, ekran depo sormaz).
 
-  Görsel dil mevcut operasyon deseninden (kullanıcı onayı 26.08: "mevcut desene uyarak kendimiz
-  hazırlayalım"): mal kabulün arama + çekmece akışı, sayım ekranının bölüm/CTA düzeni. Kararların
-  tamamı hook künyesinde; burada yalnız çizim var.
+  ── AKIŞ İKİ YÜZEY (kullanıcı kararı 26.08) ─────────────────────────────────
+  Liste ile sepet aynı sayfadaydı ve kötüydü: iki ayrı soru tek ekranda itişiyordu. Artık burası
+  yalnız "ne satıyorum" — ara, karta dokun, çekmecede adet+fiyat, sepete at. Sepet dolunca altta
+  ÇUBUK belirir ve `/sale/cart`a götürür: son kontrol, tahsilat seçimi ve yazma orada. Kaydedilen
+  satışlar `/sale/history`de (başlığın altındaki bağ). Durum `SaleProvider`da ortak.
 
-  Akış: ara → karta dokun → (çok boyluda boy seç) → adet + fiyat → sepete ekle → tahsilat türü →
-  tek CTA ile satış. Reddin üç hâli de sepeti bozmaz; sonuç cümlesi yapışkan bloktadır ki telefon
-  cebe girmeden görülsün.
+  Kartta ÜRÜN GÖRSELİ var (aynı karar): personel müşteriyle ürünün yüzü üstünden konuşur; görselsiz
+  liste, adı benzeyen iki böreği ayırt ettirmiyordu. Görsel yoksa baş harf çizilir (`CirclePhoto` —
+  kitin kendi yedeği), boş bir kare değil.
 */
 
 const t = saleCopy;
 
 export function SaleScreen() {
   const router = useRouter();
-  const sale = useSale();
+  const sale = useSaleContext();
 
   const draftSelection = sale.draft === null ? null : selectionOf(sale.draft);
   const draftPriceCents = sale.draft === null ? null : parseAmountToCents(sale.draft.priceText);
   const overStock = draftSelection !== null && sale.draft !== null && sale.draft.qty > draftSelection.availableHere;
   const draftReady = draftSelection !== null && sale.draft !== null && sale.draft.qty > 0 && draftPriceCents !== null && !overStock;
-
-  // Tahsilat türü SEÇİLMEDEN satış yazılamaz (kullanıcı bulgusu 26.08) — gerekçe hook künyesinde.
-  const cta = sale.sending
-    ? { label: t.cta.sending, enabled: false }
-    : sale.lines.length === 0
-      ? { label: t.cta.idle, enabled: false }
-      : sale.payment === null
-        ? { label: t.cta.pickPayment, enabled: false }
-        : { label: fillCopy(t.cta.ready, { total: money(sale.indicativeTotalCents) }), enabled: true };
 
   return (
     <View style={styles.screen} testID="sale-screen">
@@ -69,15 +62,20 @@ export function SaleScreen() {
           içinde olsaydı her yüklemede sökülüp odak/IME kompozisyonunu öldürürdü (cihazda ölçüldü
           26.08 — alanda tek harf kalıyordu). Alan hep ayakta durur, yalnız GÖVDE değişir. */}
       <View style={styles.searchBlock}>
-        <TextInput
-          value={sale.search}
-          onChangeText={sale.setSearch}
-          placeholder={t.searchPlaceholder}
-          placeholderTextColor={operationsTheme.colors.muted}
-          accessibilityLabel={t.searchPlaceholder}
-          style={styles.search}
-          testID="sale-search"
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            value={sale.search}
+            onChangeText={sale.setSearch}
+            placeholder={t.searchPlaceholder}
+            placeholderTextColor={operationsTheme.colors.muted}
+            accessibilityLabel={t.searchPlaceholder}
+            style={styles.search}
+            testID="sale-search"
+          />
+        </View>
+        <View style={styles.recentRow}>
+          <TextAction label={t.recentLink} onPress={() => router.navigate('/sale/history')} testID="sale-recent-link" />
+        </View>
       </View>
 
       {sale.status === 'loading' ? (
@@ -101,86 +99,29 @@ export function SaleScreen() {
             ))
           )}
           {sale.hasMore ? <TextAction label={t.loadMore} onPress={sale.loadMore} testID="sale-load-more" /> : null}
-
-          <View style={styles.section}>
-            <Text style={styles.heading}>{t.cart.heading}</Text>
-            {sale.lines.length === 0 ? (
-              <Text style={styles.hint}>{t.cart.empty}</Text>
-            ) : (
-              <>
-                {sale.lines.map((line) => (
-                  <View key={line.variantId} style={styles.cartRow} testID={`sale-cart-${line.variantId}`}>
-                    <View style={styles.cartInfo}>
-                      <Text style={styles.cartName}>{line.name}</Text>
-                      <Text style={styles.cartMeta}>
-                        {fillCopy(t.cart.line, {
-                          qty: String(line.qty),
-                          price: money(line.negotiatedCents ?? line.listPriceCents),
-                        })}
-                        {line.negotiatedCents === null ? '' : ` · ${t.cart.negotiated}`}
-                      </Text>
-                    </View>
-                    <PressableSurface
-                      onPress={() => sale.removeLine(line.variantId)}
-                      feedback="scale"
-                      compact
-                      style={styles.cartRemove}
-                      accessibilityLabel={fillCopy(t.cart.remove, { name: line.name })}
-                      testID={`sale-cart-remove-${line.variantId}`}
-                    >
-                      <Text style={styles.cartRemoveMark}>{t.cart.removeMark}</Text>
-                    </PressableSurface>
-                  </View>
-                ))}
-                <Text style={styles.cartTotal} testID="sale-cart-total">
-                  {fillCopy(t.cart.total, { total: money(sale.indicativeTotalCents) })}
-                </Text>
-                <Text style={styles.hint}>{t.cart.totalNote}</Text>
-              </>
-            )}
-          </View>
-
-          <View style={styles.section}>
-            <Text style={styles.heading}>{t.payment.heading}</Text>
-            <View style={styles.chipRow}>
-              <OperationsChoiceChip
-                label={t.payment.cash}
-                selected={sale.payment === 'cash'}
-                onPress={() => sale.setPayment('cash')}
-                testID="sale-payment-cash"
-              />
-              <OperationsChoiceChip
-                label={t.payment.card}
-                selected={sale.payment === 'card'}
-                onPress={() => sale.setPayment('card')}
-                testID="sale-payment-card"
-              />
-            </View>
-          </View>
         </FormScroll>
       )}
 
-      <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
-        {sale.notice === null ? null : (
-          <Text
-            style={[styles.notice, styles[`notice_${sale.notice.tone}`]]}
-            accessibilityRole="alert"
-            testID="sale-notice"
+      {/* SEPET ÇUBUĞU — yalnız sepet doluyken; dokunuş sepet yüzeyine götürür. Satışın kendisi
+          burada YAZILMAZ: parayı yazan düğme, kalemlerin son kez görüldüğü ekranda durur. */}
+      {sale.lines.length === 0 ? null : (
+        <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+          <PressableSurface
+            onPress={() => router.navigate('/sale/cart')}
+            feedback="shadow"
+            style={[styles.cta, styles.ctaReady]}
+            accessibilityLabel={t.cartBar.cta}
+            testID="sale-cart-bar"
           >
-            {sale.notice.text}
-          </Text>
-        )}
-        <PressableSurface
-          onPress={sale.submit}
-          disabled={!cta.enabled}
-          feedback="shadow"
-          style={[styles.cta, cta.enabled ? styles.ctaReady : styles.ctaIdle]}
-          accessibilityLabel={cta.label}
-          testID="sale-cta"
-        >
-          <Text style={styles.ctaLabel}>{cta.label}</Text>
-        </PressableSurface>
-      </LinearGradient>
+            <Text style={styles.ctaLabel}>
+              {fillCopy(t.cartBar.summary, {
+                n: String(sale.lines.reduce((sum, line) => sum + line.qty, 0)),
+                total: money(sale.indicativeTotalCents),
+              })}
+            </Text>
+          </PressableSurface>
+        </LinearGradient>
+      )}
 
       <BottomSheet
         visible={sale.draft !== null}
@@ -190,7 +131,15 @@ export function SaleScreen() {
       >
         {sale.draft === null ? null : (
           <>
-            <Text style={styles.drawerName}>{sale.draft.product.name}</Text>
+            <View style={styles.drawerHead}>
+              <CirclePhoto
+                size={44}
+                initial={sale.draft.product.name.slice(0, 1)}
+                initialFontSize={18}
+                photoUri={sale.draft.product.image.url}
+              />
+              <Text style={styles.drawerName}>{sale.draft.product.name}</Text>
+            </View>
 
             {sale.draft.variants === 'loading' ? (
               <Text style={styles.hint}>{t.drawer.variantsLoading}</Text>
@@ -286,7 +235,7 @@ interface ProductRowProps {
 }
 
 /**
- * Katalog kartı — ad + birim + fiyat solda, kalan/tükendi rozeti sağda.
+ * Katalog kartı — görsel + ad + birim + fiyat solda, kalan/tükendi rozeti sağda.
  *
  * **`memo` BİR SÜS DEĞİL, ÇEKMECE AKICILIĞININ KENDİSİ** (kullanıcı bulgusu 26.08: "çekmece
  * kasarak açılıyor", başka çekmecelerde yok). Karta dokunmak `draft` durumunu değiştiriyor ve
@@ -317,6 +266,7 @@ const ProductRow = memo(function ProductRow({ product, onOpen }: ProductRowProps
       accessibilityLabel={product.name}
       testID={`sale-product-${product.id}`}
     >
+      <CirclePhoto size={44} initial={product.name.slice(0, 1)} initialFontSize={18} photoUri={product.image.url} />
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{product.name}</Text>
         <Text style={styles.productMeta}>
@@ -351,9 +301,14 @@ const styles = StyleSheet.create({
   },
   searchBlock: {
     paddingHorizontal: operationsTheme.space['6xl'],
-    paddingBottom: operationsTheme.space.lg,
+    paddingBottom: operationsTheme.space.sm,
+    gap: operationsTheme.space['2xs'],
+  },
+  searchRow: {
+    flexDirection: 'row',
   },
   search: {
+    flex: 1,
     minHeight: operationsTheme.size.controlSm,
     paddingVertical: operationsTheme.space.lg,
     paddingHorizontal: operationsTheme.space['2xl'],
@@ -365,6 +320,9 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['field-label'],
     color: operationsTheme.colors.ink,
   },
+  recentRow: {
+    alignItems: 'flex-end',
+  },
   section: {
     gap: operationsTheme.space.md,
     paddingTop: operationsTheme.space.xl,
@@ -372,7 +330,6 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
   hint: {
@@ -421,48 +378,13 @@ const styles = StyleSheet.create({
   productBadgeClosed: {
     color: operationsTheme.colors.muted,
   },
-  cartRow: {
+  drawerHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.lg,
-    paddingVertical: operationsTheme.space.md,
-    borderBottomWidth: operationsTheme.border.base,
-    borderBottomColor: operationsTheme.colors['sand-500'],
-  },
-  cartInfo: {
-    flex: 1,
-    gap: operationsTheme.space['2xs'],
-  },
-  cartName: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.ink,
-  },
-  cartMeta: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors.muted,
-  },
-  cartRemove: {
-    width: operationsTheme.size.controlSm,
-    height: operationsTheme.size.controlSm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors['error-bg'],
-  },
-  cartRemoveMark: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.error,
-  },
-  cartTotal: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text['card-title-sm'],
-    color: operationsTheme.colors.ink,
-    paddingTop: operationsTheme.space.md,
   },
   drawerName: {
+    flex: 1,
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text['card-title-sm'],
     color: operationsTheme.colors.ink,
@@ -508,26 +430,6 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space.xl,
     paddingBottom: operationsTheme.space['3xl'],
     paddingHorizontal: operationsTheme.space['5xl'],
-  },
-  notice: {
-    marginBottom: operationsTheme.space.md,
-    padding: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.control,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-  },
-  notice_ok: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    color: operationsTheme.colors['olive-dark'],
-  },
-  notice_warn: {
-    backgroundColor: operationsTheme.colors['terracotta-bg'],
-    color: operationsTheme.colors.terracotta,
-  },
-  notice_error: {
-    backgroundColor: operationsTheme.colors['error-bg'],
-    color: operationsTheme.colors.error,
   },
   cta: {
     height: operationsTheme.size.controlLg,

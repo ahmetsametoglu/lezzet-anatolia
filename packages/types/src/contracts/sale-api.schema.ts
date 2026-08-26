@@ -119,3 +119,23 @@ export const SaleVariantsResponseSchema = z.object({
   variants: z.array(SaleVariantSchema),
 });
 export type SaleVariantsResponse = z.infer<typeof SaleVariantsResponseSchema>;
+
+/**
+ * **Son kapı satışları** — `GET /sale/recent` (kullanıcı isteği 26.08: "kaydedilen satışı
+ * görebileyim; kim yaptıysa görünsün"). Kaynak `listRecentDoorSales`; satıcı adı ayrı bir
+ * kolondan değil, zaten tutulan izden gelir (`order_status_log`un `completed` aktörü).
+ */
+export const SaleRecordSchema = z.object({
+  orderId: z.string().uuid(),
+  referenceNo: z.string().nullable(),
+  totalCents: z.number().int(),
+  paymentMethod: PaymentMethodEnum.nullable(),
+  createdAt: z.string(),
+  lineCount: z.number().int().nonnegative(),
+  /** `null` = iz yok (aktörsüz kayıt) — ekran "bilinmiyor" der, uydurmaz. */
+  sellerName: z.string().nullable(),
+});
+export type SaleRecord = z.infer<typeof SaleRecordSchema>;
+
+export const RecentSalesResponseSchema = z.object({ sales: z.array(SaleRecordSchema) });
+export type RecentSalesResponse = z.infer<typeof RecentSalesResponseSchema>;

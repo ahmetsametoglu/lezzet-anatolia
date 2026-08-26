@@ -186,6 +186,30 @@ describe('POST /sale/on-site', () => {
     expect(row?.warehouse_id).toBe(facilityId);
   });
 
+  it('SON SATIŞLAR satan kişiyi söylüyor — iz ayrı kolondan değil, geçiş kaydından', async () => {
+    const yazilan = await envelopeData<OnSiteSaleResponse>(await post(kurye, { lines: [{ variantId, qty: 1 }], paymentMethod: 'card' }));
+    expect(yazilan.status).toBe('ok');
+    if (yazilan.status !== 'ok') return;
+
+    const res = await app.request('/api/v1/sale/recent', { headers: bearer(kurye.token) });
+    expect(res.status).toBe(200);
+    const { sales } = await envelopeData<{ sales: Array<{ orderId: string; sellerName: string | null; lineCount: number; paymentMethod: string | null; totalCents: number }> }>(res);
+
+    const kayit = sales.find((s) => s.orderId === yazilan.orderId);
+    expect(kayit).toBeDefined();
+    expect(kayit?.lineCount).toBe(1);
+    expect(kayit?.paymentMethod).toBe('card');
+    expect(kayit?.totalCents).toBe(500);
+    // Satan kişi = completed geçişinin aktörü; fikstür kuryesinin profil adı.
+    expect(kayit?.sellerName).toBeTruthy();
+
+    // Depocu AYNI ucu okuyunca kendi deposunun satışlarını görür — kuryenin araç satışı listede olmaz.
+    const depocuGozu = await envelopeData<{ sales: Array<{ orderId: string }> }>(
+      await app.request('/api/v1/sale/recent', { headers: bearer(depocu.token) }),
+    );
+    expect(depocuGozu.sales.some((s) => s.orderId === yazilan.orderId)).toBe(false);
+  });
+
   it('olmayan ürün 404 — çekmece uydurma bir liste açmaz', async () => {
     const res = await app.request(`/api/v1/sale/catalog/olmayan-urun-${stamp}/variants?locale=tr`, {
       headers: bearer(kurye.token),

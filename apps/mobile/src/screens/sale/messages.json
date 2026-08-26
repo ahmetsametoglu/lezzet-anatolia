@@ -64,5 +64,44 @@
     "blockedIntro": "Satışa kapalı kalem — satış yazılmadı: {lines}",
     "failed": "Satış kapanmadı — bir daha deneyin; sürerse yöneticiye haber verin.",
     "network": "Bağlantı yok — satış yazılmadı."
+  },
+  "recentLink": "Son satışlar ›",
+  "cartBar": {
+    "summary": "Sepet · {n} kalem · ~{total}",
+    "cta": "Sepete git"
+  },
+  "cartScreen": {
+    "title": "Satış Sepeti",
+    "subtitle": "kontrol et · tahsilatı seç · yaz",
+    "empty": {
+      "title": "Sepet boş",
+      "body": "Katalogdan ürün seçin — kalemler burada birikir."
+    },
+    "backToCatalog": "Kataloğa dön"
+  },
+  "history": {
+    "title": "Son Satışlar",
+    "subtitle": "bu deponun kapı satışları · en yeni önce",
+    "loading": "Satışlar yükleniyor…",
+    "error": {
+      "title": "Satışlar yüklenemedi",
+      "body": "Bağlantı ya da sunucu sorunu — kayıtlar güvende, yalnız okunamadı."
+    },
+    "retry": "Tekrar dene",
+    "empty": {
+      "title": "Henüz satış yok",
+      "body": "Bu depodan yazılan ilk yerinde satış burada görünür."
+    },
+    "lines": "{n} kalem",
+    "seller": "satan: {name}",
+    "sellerUnknown": "satan: bilinmiyor",
+    "noRef": "referanssız",
+    "method": {
+      "cash": "Nakit",
+      "card": "Kart",
+      "online": "Online",
+      "cheque": "Çek",
+      "bank_transfer": "Havale"
+    }
   }
 }

@@ -2,6 +2,9 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import type { SaleCatalogProduct, SaleVariant } from '@lezzet/types';
 
 import { SaleScreen } from './sale-screen';
+import { SaleCartScreen } from './sale-cart-screen';
+import { SaleHistoryScreen } from './sale-history-screen';
+import { SaleProvider } from './sale-context';
 
 /*
   YERİNDE SATIŞ EKRAN TESTİ (21.119) — bu ekranın EN KRİTİK iddiaları paranın yazımıyla ilgilidir:
@@ -125,6 +128,7 @@ function withNetwork(saleResult: unknown) {
     const path = String(url);
     if (init?.method === 'POST') return Promise.resolve(ok(saleResult));
     if (path.includes('/variants')) return Promise.resolve(ok({ productId: COK_ID, name: 'Baklava', variants: BOYLAR }));
+    if (path.includes('/recent')) return Promise.resolve(ok({ sales: SATISLAR }));
     return Promise.resolve(ok({ products: [TEK, COK], total: 2, nextCursor: null }));
   });
 }
@@ -135,7 +139,14 @@ function postBody(): { lines: { variantId: string; qty: number; negotiatedUnitPr
 }
 
 async function renderSale() {
-  await render(<SaleScreen />);
+  // Katalog + sepet AYNI sağlayıcı altında birlikte çizilir: akış testleri rota geçişini değil,
+  // iki yüzeyin ORTAK durumunu sınar (gezinme expo-router'ın işi, bizim iddiamız değil).
+  await render(
+    <SaleProvider>
+      <SaleScreen />
+      <SaleCartScreen />
+    </SaleProvider>,
+  );
   await waitFor(() => expect(screen.getByTestId(`sale-product-${TEK_ID}`)).toBeTruthy());
 }
 
@@ -253,7 +264,7 @@ it('tahsilat türü SEÇİLMEDEN satış yazılamaz — para yazan alanda varsay
   await fireEvent.press(screen.getByTestId('sale-cta'));
   await waitFor(() => expect(screen.getByTestId('sale-notice')).toBeTruthy());
   expect(postBody().paymentMethod).toBe('cash');
-  expect(screen.getByText('Sepet boş')).toBeTruthy();
+  expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // satış kapandı, sepet boşaldı
 });
 
 it('karta dokunmak KART LİSTESİNİ yeniden çizdirmez — çekmece animasyonu listeyle yarışmaz', async () => {
@@ -286,4 +297,37 @@ it('adet kalanı aşınca çekmece onaylatmaz ve sebebini söyler', async () => 
   await waitFor(() => expect(screen.getByTestId('sale-drawer-overstock')).toBeTruthy());
   await fireEvent.press(screen.getByTestId('sale-drawer-confirm'));
   expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // sepete yazılmadı
+});
+
+const SATISLAR = [
+  {
+    orderId: '00000000-0000-4000-8000-000000000c01',
+    referenceNo: 'LA-26-TEST01',
+    totalCents: 1120,
+    paymentMethod: 'cash',
+    createdAt: '2026-08-26T13:30:00.000Z',
+    lineCount: 2,
+    sellerName: 'Marc Lemoine',
+  },
+  {
+    orderId: '00000000-0000-4000-8000-000000000c02',
+    referenceNo: null,
+    totalCents: 500,
+    paymentMethod: 'card',
+    createdAt: '2026-08-26T12:00:00.000Z',
+    lineCount: 1,
+    sellerName: null,
+  },
+];
+
+it('SON SATIŞLAR kim sattıysa onu söylüyor — iz yoksa uydurmuyor', async () => {
+  withNetwork({ status: 'failed' });
+  await render(<SaleHistoryScreen />);
+  await waitFor(() => expect(screen.getByTestId(`sale-history-${SATISLAR[0]!.orderId}`)).toBeTruthy());
+
+  expect(screen.getByText('LA-26-TEST01')).toBeTruthy();
+  expect(screen.getByText('satan: Marc Lemoine')).toBeTruthy();
+  // Aktörsüz kayıt "bilinmiyor" der — boş bırakmaz, ad da uydurmaz.
+  expect(screen.getByText('satan: bilinmiyor')).toBeTruthy();
+  expect(screen.getByText('referanssız')).toBeTruthy();
 });

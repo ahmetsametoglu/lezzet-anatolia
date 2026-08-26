@@ -459,6 +459,19 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     return this.getAll({ id: [...ids] });
   }
 
+  /**
+   * Deponun KAPI SATIŞLARI — en yeni önce, sabit tavan (yerinde satış ekranının "son satışlar"
+   * görünümü, 21.119). Tavan sayfalama değil BİLİNÇLİ SINIRDIR: bu okuma satış ANINDA "az önce
+   * yazdığım kayıt ne oldu, kim yazmış" kontrolüdür; geçmiş dökümü muhasebe/web'in işidir ve
+   * oranın okumaları zaten keyset'lidir.
+   */
+  async listDoorSales(warehouseId: string, limit = 30): Promise<Order[]> {
+    return this.getAll(
+      { orderSource: 'door', warehouseId },
+      { orderBy: 'createdAt', orderDirection: 'desc', limit },
+    );
+  }
+
   /** Sipariş + kalemleri TEK sorguda — kalem başına ayrı sorgu (N+1) yerine gömülü select. */
   async getWithItems(id: string): Promise<{ order: Order; items: OrderItem[] } | null> {
     const order = await this.getById(id);

@@ -46,6 +46,8 @@ export interface SaleCartLine {
   negotiatedCents: number | null;
   /** Çekmece açıldığı andaki kalan — gösterge (üst künye). */
   availableHere: number;
+  /** Ürün görseli (sepet satırı da yüzü gösterir) — boy görseli yok, ürününki kullanılır. */
+  imageUrl: string | null;
 }
 
 /** Çekmecenin konusu: kart + (çok boyluda) yüklenen boylar + seçim + adet + fiyat metni. */
@@ -72,6 +74,7 @@ export interface DraftSelection {
   listPriceCents: number;
   availableHere: number;
   name: string;
+  imageUrl: string | null;
 }
 
 /** Seçili boyun künyesi — tek boyluda karttan, çok boyluda yüklenen boydan. */
@@ -84,6 +87,7 @@ export function selectionOf(draft: SaleDraft): DraftSelection | null {
       listPriceCents: picked.priceCents,
       availableHere: picked.availableHere,
       name: picked.label.length === 0 ? draft.product.name : `${draft.product.name} · ${picked.label}`,
+      imageUrl: draft.product.image.url,
     };
   }
   if (draft.variants !== null) return null; // boylar hâlâ yolda ya da okunamadı
@@ -93,6 +97,7 @@ export function selectionOf(draft: SaleDraft): DraftSelection | null {
     listPriceCents: draft.product.priceCents,
     availableHere: draft.product.availableHere ?? 0,
     name: draft.product.name,
+    imageUrl: draft.product.image.url,
   };
 }
 
@@ -213,6 +218,7 @@ export function useSale() {
               listPriceCents: selection.listPriceCents,
               negotiatedCents: negotiated,
               availableHere: selection.availableHere,
+              imageUrl: selection.imageUrl,
             },
           ];
         }

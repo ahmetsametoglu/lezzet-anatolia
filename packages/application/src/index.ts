@@ -152,6 +152,21 @@ export type {
   TicketReturnOutcome,
 } from './ticket/ticket-types';
 
+// ── Bildirimin TEK KAPISI (14.12) ───────────────────────────────────────────
+// Olay önce KAYDA yazılır (uygulama içi zil + okundu + teslim defteri), sonra kanala gider. Beş
+// yayım noktası da buradan geçer; iki ayrı yerde "hem satır hem mail" yazılsaydı biri unutulurdu.
+export { dispatchCustomerNotification, dispatchStaffNotification } from './notification/dispatch';
+export type { CustomerNotificationInput, NotificationTargetRef, StaffNotificationInput } from './notification/dispatch';
+// Okuma kapısı (14.13): uç (mobil) ve web zili aynı fonksiyonlardan — profileId HER ZAMAN guard'dan.
+export {
+  dismissNotification,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
+  unreadNotificationCount,
+} from './notification/read';
+export type { NotificationFeed } from './notification/read';
+
 // ── Talep bildirimleri + AI destek çekirdeği (16.4 · 16.5 · 20.4) — terfi 16.08 ─────────────
 // Bildirim kurucusu webden geldi (web köprü, `order/notify` yolu): özerk AI cevabı backend
 // cron'unda yazılıyor ve personel cevabıyla AYNI maili doğurmalı. AI çekirdeği de burada — web'in
@@ -358,8 +373,8 @@ export type { QuickSaleInput, QuickSaleOutcome } from './order/quick-sale';
  * completed` kararı BU kapıda durur, `delivery_type` semantiğinde değil: Drive günü geldiğinde
  * aynı `pickup` değeri tam yoldan geçecek (DATA_MODEL › pickup).
  */
-export { sellOnSite, ANONYMOUS_BUYER_ID } from './order/on-site-sale';
-export type { OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome } from './order/on-site-sale';
+export { sellOnSite, listRecentDoorSales, ANONYMOUS_BUYER_ID } from './order/on-site-sale';
+export type { DoorSaleRecord, OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome } from './order/on-site-sale';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { boxLabelPayload, labelPrinterFor, markBoxPrinted, openBox, sealBox, LABEL_PRINTER_KEYS } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';

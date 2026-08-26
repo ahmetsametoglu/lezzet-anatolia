@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import {
   type OnSiteSaleRequest,
   OnSiteSaleResponseSchema,
+  RecentSalesResponseSchema,
   SaleCatalogPageSchema,
   SaleVariantsResponseSchema,
 } from '@lezzet/types';
@@ -58,4 +59,9 @@ export function fetchSaleVariants(slug: string): Promise<ApiResult<z.infer<typeo
  */
 export function sellOnSite(body: OnSiteSaleRequest): Promise<ApiResult<z.infer<typeof OnSiteSaleResponseSchema>>> {
   return authorizedFetch('/api/v1/sale/on-site', OnSiteSaleResponseSchema, { method: 'POST', body });
+}
+
+/** **Son satışlar** — bu deponun kapı satışları, kim yazdıysa adıyla (en yeni önce, sabit tavan). */
+export function fetchRecentSales(): Promise<ApiResult<z.infer<typeof RecentSalesResponseSchema>>> {
+  return authorizedFetch('/api/v1/sale/recent', RecentSalesResponseSchema);
 }

@@ -1,12 +1,13 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
 import { StockService, WarehouseService, serviceDb } from '@lezzet/database';
-import { ANONYMOUS_BUYER_ID, getCatalogData, getProductDetail, sellOnSite } from '@lezzet/application';
+import { ANONYMOUS_BUYER_ID, getCatalogData, getProductDetail, listRecentDoorSales, sellOnSite } from '@lezzet/application';
 import {
   DEFAULT_PAGE_SIZE,
   OnSiteSaleRequestSchema,
   OnSiteSaleResponseSchema,
   PreferredLanguageEnum,
+  RecentSalesResponseSchema,
   SaleCatalogPageSchema,
   SaleVariantsResponseSchema,
 } from '@lezzet/types';
@@ -210,4 +211,14 @@ sale.get('/catalog/:slug/variants', async (c) => {
       })),
     } satisfies z.input<typeof SaleVariantsResponseSchema>),
   );
+});
+
+/**
+ * **Son satışlar** — "az önce yazdığım kayıt ne oldu, kim yazmış" kontrolü (kullanıcı isteği
+ * 26.08). Depo yine künyeden: kurye ARACININ satışlarını, depocu TESİSİNİN satışlarını görür.
+ * Karar hesaplanmaz; okuma `listRecentDoorSales`ın kendisi.
+ */
+sale.get('/recent', async (c) => {
+  const sales = await listRecentDoorSales(serviceDb(), c.get('warehouseId'));
+  return ok(c, RecentSalesResponseSchema.parse({ sales } satisfies z.input<typeof RecentSalesResponseSchema>));
 });

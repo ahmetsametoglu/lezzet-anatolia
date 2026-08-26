@@ -1,4 +1,4 @@
-import { OrderService, WarehouseService, type Db } from '@lezzet/database';
+import { OrderItemService, OrderService, OrderStatusLogService, UserProfileService, WarehouseService, type Db } from '@lezzet/database';
 import type { CreateOrderItemInput } from '@lezzet/database';
 import type { PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView } from '../cart/read';
@@ -201,4 +201,61 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     referenceNo: outcome.referenceNo,
     paymentRecorded: outcome.paymentRecorded,
   };
+}
+
+/** Son satışlar görünümünün satırı — telin şekli `SaleRecordSchema`da aynalanır. */
+export interface DoorSaleRecord {
+  orderId: string;
+  referenceNo: string | null;
+  totalCents: number;
+  paymentMethod: PaymentMethod | null;
+  createdAt: string;
+  /** Kalem sayısı — ekran "N kalem" yazar; kalem adları bu görünümün sorusu değil. */
+  lineCount: number;
+  /**
+   * Satışı YAZAN personelin adı. Kaynağı ayrı bir kolon değil, zaten tutulan iz:
+   * `order_status_log`un `completed` geçişindeki `actorId` (`quick_sale` RPC yazıyor, 0017).
+   * `null` = iz yok (aktörsüz eski kayıt) — ekran "bilinmiyor" der, uydurmaz.
+   */
+  sellerName: string | null;
+}
+
+/**
+ * **SON KAPI SATIŞLARI** (21.119, kullanıcı isteği 26.08: "kaydedilen satışı görebileyim, kim
+ * yaptıysa görünsün") — personelin O ANKİ deposunun `door` siparişleri, en yeni önce.
+ *
+ * Üç okuma, üçü de TOPLU (N+1 yok): siparişler → kalemler → geçiş izleri; satıcı adları tek
+ * `listByIds` ile. Tavan `listDoorSales`ın bilinçli sınırı (künyesi orada).
+ */
+export async function listRecentDoorSales(db: Db, warehouseId: string): Promise<DoorSaleRecord[]> {
+  const orders = await new OrderService(db).listDoorSales(warehouseId);
+  if (orders.length === 0) return [];
+  const orderIds = orders.map((o) => o.id);
+
+  const [items, logs] = await Promise.all([
+    new OrderItemService(db).listByOrders(orderIds),
+    new OrderStatusLogService(db).listByOrders(orderIds),
+  ]);
+
+  const lineCounts = new Map<string, number>();
+  for (const item of items) lineCounts.set(item.orderId, (lineCounts.get(item.orderId) ?? 0) + 1);
+
+  // Satan kişi = `completed`a GEÇİREN aktör. Aynı sipariş iki kez completed olamaz (durum makinesi);
+  // yine de son yazılan kazanır — log kronolojik geliyor.
+  const sellerIds = new Map<string, string>();
+  for (const log of logs) {
+    if (log.toStatus === 'completed' && log.actorId !== null) sellerIds.set(log.orderId, log.actorId);
+  }
+  const sellers = await new UserProfileService(db).listByIds([...new Set(sellerIds.values())]);
+  const nameOf = new Map(sellers.map((s) => [s.id, s.name]));
+
+  return orders.map((order) => ({
+    orderId: order.id,
+    referenceNo: order.referenceNo,
+    totalCents: order.totalCents,
+    paymentMethod: order.paymentMethod,
+    createdAt: order.createdAt,
+    lineCount: lineCounts.get(order.id) ?? 0,
+    sellerName: nameOf.get(sellerIds.get(order.id) ?? '') ?? null,
+  }));
 }

@@ -5965,6 +5965,23 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   var, ekran vermiyor → her satış tam tahsil sayılır; kapı satışının olağan hâli bu); yanlış
   yazılmış satışı GERİ ALMA yolu bu ekranda yok — düzeltme, iade/istisna hattının işidir.
 
+  **AKIŞ YENİDEN KURGULANDI + İKİ YENİ YÜZEY (kullanıcı kararı 26.08: "liste ile sepet aynı yerde
+  olması kötü; resimler eklensin; kaydedilen satışı kim yaptıysa göreyim"):**
+  · `/sale` artık ÜÇ rotalı bir yığın (`sale/_layout` + `SaleProvider` — sepet durumu rotalar arası
+    ortak): **katalog** (görselli kartlar — `CirclePhoto`, görselsizde baş harf; sepet dolunca altta
+    çubuk) → **sepet** (`/sale/cart`: kalem kontrolü, tahsilat seçimi, CTA, sonuç) → **son satışlar**
+    (`/sale/history`).
+  · **Son satışlar** ucu: `GET /sale/recent` → `listRecentDoorSales` (deponun `door` siparişleri,
+    en yeni önce, sabit tavan — döküm değil satış anı kontrolü). **Satan kişi ayrı kolon DEĞİL,
+    zaten tutulan iz:** `order_status_log`un `completed` geçişindeki `actorId` (`quick_sale` RPC
+    0017'den beri yazıyordu); ad `null` ise ekran "bilinmiyor" der, uydurmaz.
+  · Cihazda uçtan uca koşuldu (yeni seed + web'in sefer düzeltmesi sonrası): kadayıf boy seçimiyle
+    satıldı (`LA-26-34UXXN`, 22,40 €) — kayıt **VAN-1 + SF-26-P6XUJL seferine bağlı + satan: Marc
+    Lemoine**; Son Satışlar ekranı aynı kaydı saat/kalem/yöntem/satıcıyla gösterdi. Sefer bağı
+    böylece canlıda İLK KEZ kurulmuş oldu (web'in `readCourierRun` hizalaması + açık seferli seed).
+  Doğrulama (dördüncü tur): uç **10/10** (`/recent`: satan adı + depo süzgeci) · ekran **9/9**
+  (tarihçe: satan adı, aktörsüzde "bilinmiyor") · mobil paket **796/796** · typecheck · lint.
+
   Turun kendisi: kurye "kalzone" aradı → "kalan 6" okudu → çekmecede adet 2 → **satış cihazdan
   yazıldı** (`LA-26-QECKQR`, 0,96 € — ara toplam 1,12 iken kampanya indirimini SUNUCU uyguladı,
   "kesin toplam sunucudan gelir" davranışı canlıda görüldü), sepet sıfırlandı, liste **kalan 4**'e
