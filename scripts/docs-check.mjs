@@ -31,8 +31,14 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf8');
  * dolayısıyla hangilerinin çalıştıranın kendi işi OLMADIĞINI söyleyebilmek.
  */
 function headRead(p) {
+  /* Kanca denetimi `checkout-index` ile üretilmiş bir kopyada koşar ve **o kopya bir git deposu
+     DEĞİLDİR** — `cwd: ROOT` ile `git show` orada sessizce düşer (ölçüldü 26.08). Sonuç sinsiydi:
+     `headRead` hep `null` dönüyor, "bu satır kimin işi" ayrımı her satırı çalıştırana yazıyordu.
+     Kanca gerçek depo yolunu `DOCS_CHECK_REPO` ile geçiriyor; elle koşulduğunda değişken yok ve
+     ROOT zaten gerçek depo. */
+  const gitCwd = process.env.DOCS_CHECK_REPO ?? ROOT;
   try {
-    return execFileSync('git', ['show', `HEAD:${p}`], { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    return execFileSync('git', ['show', `HEAD:${p}`], { cwd: gitCwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
   } catch {
     return null; // HEAD'de yok (yeni dosya) ya da git yok — uyarı üretilemez, akış sürer
   }

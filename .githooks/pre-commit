@@ -26,7 +26,11 @@ tmp=$(mktemp -d) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 git checkout-index -a --prefix="$tmp/" || exit 1
 
-if ! node "$tmp/scripts/docs-check.mjs"; then
+# GERÇEK DEPONUN YOLU denetime geçirilir (26.08). Kopya bir git deposu DEĞİL, yani orada `git show
+# HEAD:` çalışmaz ve denetim "bu satır kimin işi" sorusunu soramaz — her bayat satırı çalıştırana
+# yazardı. Özet denetimi tam olarak o ayrımı yapıyor (yalnız KENDİ modülünüzün satırı sizi durdurur),
+# dolayısıyla HEAD'e erişimi olmalı.
+if ! DOCS_CHECK_REPO="$PWD" node "$tmp/scripts/docs-check.mjs"; then
   echo ""
   echo "✗ Doküman/kod tutarsız — düzelt ya da bilinçliyse 'git commit --no-verify'."
   echo "  Not: denetim COMMIT'E GİREN içeriğe koştu; düzeltmeyi 'git add' ile sahnelemeyi unutma."
