@@ -1,8 +1,7 @@
-import { notificationPreferencesUrl } from '@lezzet/application';
+import { dispatchCustomerNotification, notificationPreferencesUrl } from '@lezzet/application';
 import { DeliveryZoneService, UserProfileService, ZoneNoticeService, serviceDb } from '@lezzet/database';
 import { isInRoute } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
-import { defaultNotifier } from '@lezzet/notify';
 import { logger } from '@lezzet/observability';
 import { maskEmail } from '@lezzet/observability/mask';
 import type { PreferredLanguage, ZoneNotice } from '@lezzet/types';
@@ -88,7 +87,6 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
   const profiles = customerIds.length > 0 ? await new UserProfileService(db).listByIds(customerIds) : [];
   const profileOf = new Map(profiles.map((p) => [p.id, p]));
 
-  const notifier = defaultNotifier();
   const sent: string[] = [];
   let failed = 0;
 
@@ -98,12 +96,22 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
 
     let delivered = false;
     try {
-      const results = await notifier.send(
-        'zone_available',
-        // Telefon YOK: `zone_notice` numara tutmuyor. Sürücü yeteneğe bakıyor, yani WhatsApp
-        // sürücüsü bu alıcıyı kendiliğinden atlar — burada kanal seçimi yapılmıyor.
-        { name: profile?.name ?? null, email: notice.email, phone: null, locale },
+      // TEK KAPI (14.12). `customerId` çoğu kayıtta NULL ve kapı bunu bilir: profilsiz alıcıya
+      // satır YAZILMAZ (uygulama içi zili yok ki), yalnız mail gider — bugüne kadarki davranışın
+      // aynısı. Profili olan alıcıda ise haber artık uygulamada da görünür. Dedupe anahtarı kaydın
+      // kendisi: aynı bölge kaydına ikinci satır açılmaz (mail tarafını zaten `sent` damgası korur).
+      const results = await dispatchCustomerNotification(
+        db,
         {
+          event: 'zone_available',
+          customerId: notice.customerId ?? null,
+          // Telefon YOK: `zone_notice` numara tutmuyor. Sürücü yeteneğe bakıyor, yani WhatsApp
+          // sürücüsü bu alıcıyı kendiliğinden atlar — burada kanal seçimi yapılmıyor.
+          recipient: { name: profile?.name ?? null, email: notice.email, phone: null, locale },
+          target: { type: 'zone_notice', id: notice.id },
+          dedupeKey: `zone:${notice.id}`,
+          payload: { postalCode: notice.postalCode },
+          data: {
           customerName: profile?.name ?? null,
           locale,
           postalCode: notice.postalCode,
@@ -116,6 +124,7 @@ export async function zoneAvailableJob(): Promise<Record<string, unknown>> {
             customerId: notice.customerId,
             zoneNoticeToken: notice.token,
           }),
+          },
         },
       );
       delivered = results.some((r) => r.status === 'sent');

@@ -67,6 +67,8 @@ const EXCEPTION_EVENTS: readonly NotifyEventName[] = ['order_cancelled', 'order_
 export interface NotificationBundle {
   data: OrderNotification;
   recipient: NotifyRecipient;
+  /** Bildirim SATIRININ öznesi (14.12) — gönderim kapısı ikinci bir sipariş okuması yapmasın. */
+  customerId: string;
 }
 
 /**
@@ -147,6 +149,9 @@ export async function buildOrderNotification(
   return {
     data,
     recipient: { name: customer?.name ?? null, email: customer?.email ?? null, phone: customer?.phone ?? null, locale },
+    // Bildirim SATIRININ öznesi (14.12) — gönderim kapısı kimliği buradan alır; ikinci bir sipariş
+    // okuması yapmasın diye pakete burada iliştirilir.
+    customerId: order.customerId,
   };
 }
 

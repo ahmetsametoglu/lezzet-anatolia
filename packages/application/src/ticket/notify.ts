@@ -1,10 +1,11 @@
 import { OrderService, TicketMessageService, UserProfileService, type Db } from '@lezzet/database';
 import { formatShortDate, formatTime } from '@lezzet/helper';
 import { localizedUrl } from '@lezzet/i18n';
-import { defaultNotifier, type NotifyResult } from '@lezzet/notify';
+import { type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { PreferredLanguage, Ticket, TicketHistoryEntry, TicketMessage, TicketStatus } from '@lezzet/types';
 import { notificationPreferencesUrl } from '../customer/notification-preferences';
+import { dispatchCustomerNotification } from '../notification/dispatch';
 
 /**
  * Talep bildirimlerinin tetiklendiği yer (16.4) — şablonlar 14.7'de.
@@ -24,7 +25,6 @@ import { notificationPreferencesUrl } from '../customer/notification-preferences
  * müşteriye bir şey anlatmaz, mesajın ulaştığını kanıtlar.
  */
 
-const notifier = defaultNotifier();
 
 /**
  * Mailde gösterilecek mesaj sayısı ve alıntı uzunluğu.
@@ -134,7 +134,18 @@ async function send(
   try {
     const bundle = await buildTicketNotification(db, ticket, { previousStatus });
     if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'customer_not_found' } as NotifyResult];
-    return await notifier.send(event, bundle.recipient, bundle.data);
+    // TEK KAPI (14.12). `ticket_received` satır YAZMAZ (meta: teyit — kendi mesajının yankısı
+    // zile düşmez), kapı bunu olay-metasından kendisi bilir. Dedupe anahtarı YOK: her cevap ve
+    // her durum değişimi ayrı bir haberdir. Payload BOŞ ve bu bilinçli: talebin konusu müşterinin
+    // kendi cümlesidir, bildirim satırı kişisel içerik taşımaz — ekran "Talebinize cevap geldi"
+    // genel cümlesini kurar, ayrıntı tıklanınca guard'lı sayfada okunur.
+    return await dispatchCustomerNotification(db, {
+      event,
+      customerId: ticket.customerId,
+      recipient: bundle.recipient,
+      data: bundle.data,
+      target: { type: 'ticket', id: ticket.id },
+    });
   } catch (error) {
     // Dönen sonucu okuyan yok; gitmeyen mail izsiz kalmasın → `warning`. Kimlik yazılır, içerik
     // yazılmaz (OBSERVABILITY §5). Kaynak AKIŞA bağlı (`applicationTicket`): web de backend'in

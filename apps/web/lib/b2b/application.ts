@@ -1,6 +1,7 @@
 import 'server-only';
 import { UserProfileService, serviceDb } from '@lezzet/database';
 import {
+  dispatchCustomerNotification,
   notificationPreferencesUrl,
   readB2bApplicant as readApplicant,
   submitB2bApplication as submitApplication,
@@ -8,7 +9,6 @@ import {
 } from '@lezzet/application';
 import { resolveUserText, type B2bApplicationInput, type B2bCompanyFacts } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
-import { defaultNotifier } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { PreferredLanguage, UserProfile } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
@@ -93,10 +93,15 @@ export async function notifyB2bDecision(customerId: string, approved: boolean): 
           locale,
         ).text;
 
-    await defaultNotifier().send(
-      'b2b_application_result',
-      { name: profile.name ?? null, email: profile.email, phone: profile.phone ?? null, locale },
-      {
+    // TEK KAPI (14.12): karar artık uygulama içinde de görünür. Dedupe YOK — yeniden başvuru
+    // yeni bir karar doğurur ve her karar ayrı haberdir (ret damgası eskir, 0011 kuralı).
+    await dispatchCustomerNotification(db, {
+      event: 'b2b_application_result',
+      customerId,
+      recipient: { name: profile.name ?? null, email: profile.email, phone: profile.phone ?? null, locale },
+      target: { type: 'customer', id: customerId },
+      payload: { approved },
+      data: {
         customerName: profile.name ?? null,
         locale,
         // Künyedeki ad RESMÎ addır (`legalName`) — ticari ad değil. Başvurunun konusu tüzel kişilik
@@ -110,7 +115,7 @@ export async function notifyB2bDecision(customerId: string, approved: boolean): 
         // Jetonlu (22.08) — tek kapıdan; gerekçesi `customer/notification-preferences` künyesinde.
         notificationPreferencesUrl: await notificationPreferencesUrl(db, locale, { customerId }),
       },
-    );
+    });
   } catch (err) {
     captureError(err, { source: SOURCES.webAction, level: 'warning', context: { job: 'b2b_application_result', customerId } });
   }

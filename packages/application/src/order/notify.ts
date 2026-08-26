@@ -1,7 +1,8 @@
 import { OrderStatusLogService, type Db } from '@lezzet/database';
-import { defaultNotifier, type NotifyEventName, type NotifyResult } from '@lezzet/notify';
+import { type NotifyEventName, type NotifyResult } from '@lezzet/notify';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { OrderStatus } from '@lezzet/types';
+import { dispatchCustomerNotification } from '../notification/dispatch';
 import { buildOrderNotification } from './notification-data';
 
 /**
@@ -30,6 +31,9 @@ const EVENT_OF_STATUS: Partial<Record<OrderStatus, NotifyEventName>> = {
 function notificationEventOf(status: OrderStatus): NotifyEventName | null {
   return EVENT_OF_STATUS[status] ?? null;
 }
+
+/** Durum olaylarının kümesi — dedupe anahtarı yalnız bunlarda kurulur (istisnalar tekrarlanabilir). */
+const EVENT_OF_STATUS_VALUES: NotifyEventName[] = Object.values(EVENT_OF_STATUS);
 
 /**
  * Geçiş sonrası bildirim. **Geçiş başına en fazla bir mail**: sipariş bu duruma ikinci kez
@@ -82,12 +86,19 @@ async function notifyOrderEvent(
   if (!bundle) return [{ status: 'skipped', channel: 'email', reason: 'order_not_found' }];
 
   try {
-    // Kurulum gönderim ANINDA yapılır, modül yüklenirken değil — `defaultNotifier`ın kendi künyesi:
-    // "sürücüler ortam değişkeni okuyor ve modül yüklenme anında donmuş bir liste, testin ortamı
-    // kurmasından önce oluşurdu". Web köprüsü tekil bir `notifier` tutuyordu ve o tekil, web'in
-    // istek yaşam döngüsünde sorun çıkarmıyordu; paket iki yüzeyden birden yükleniyor, garantiyi
-    // burada vermek daha ucuz.
-    return await defaultNotifier().send(event, bundle.recipient, bundle.data);
+    // TEK KAPI (14.12): satır + kanal + teslim defteri + zil bir arada. Durum olaylarında
+    // `dedupeKey` bugünkü "geçiş başına tek mail" kuralının satır hâli (yukarıdaki status-log
+    // sayımı ilk savunma olarak duruyor — iki kaynak değil, aynı kuralın kapı ve defter uçları);
+    // İSTİSNA olaylarında anahtar YOK: her düzeltme ayrı haberdir (bu dosyanın kendi kuralı).
+    return await dispatchCustomerNotification(db, {
+      event,
+      customerId: bundle.customerId,
+      recipient: bundle.recipient,
+      data: bundle.data,
+      target: { type: 'order', id: orderId },
+      dedupeKey: EVENT_OF_STATUS_VALUES.includes(event) ? `order:${orderId}:${event}` : null,
+      payload: { referenceNo: bundle.data.referenceNo },
+    });
   } catch (error) {
     // Sonuç nesnesi çağırana dönüyor ama ÇOĞU ÇAĞIRAN ONU OKUMUYOR (geçiş kapısı yalnız fırlatılan
     // hatayı yakalıyordu) — yani gitmeyen mail hiçbir yerde görünmüyordu. Kayıt burada düşülür.

@@ -7,10 +7,10 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { notificationPreferencesUrl } from '@lezzet/application';
+import { dispatchCustomerNotification, notificationPreferencesUrl } from '@lezzet/application';
 import { notificationAllowed } from '@lezzet/domain-core';
 import { localizedUrl } from '@lezzet/i18n';
-import { defaultNotifier, formatMessageDate, type NotifyChannel, type NotifyRecipient, type NotifyResult } from '@lezzet/notify';
+import { formatMessageDate, type NotifyChannel, type NotifyRecipient, type NotifyResult } from '@lezzet/notify';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { FeedbackChannel, FeedbackInviteNotification, FeedbackRequest, PreferredLanguage } from '@lezzet/types';
 
@@ -62,7 +62,6 @@ export async function sendPendingFeedbackInvites(opts: { limit?: number } = {}):
   if (pending.length === 0) return summary;
 
   const bundles = await buildInvites(db, pending);
-  const notifier = defaultNotifier();
 
   for (const request of pending) {
     const bundle = bundles.get(request.id);
@@ -73,7 +72,21 @@ export async function sendPendingFeedbackInvites(opts: { limit?: number } = {}):
 
     let results: NotifyResult[];
     try {
-      results = await notifier.send('feedback_invite', bundle.recipient, bundle.data);
+      // TEK KAPI (14.12): satır + kanal + zil. Dedupe anahtarı isteğin kendisi — iş zaten damgayla
+      // tekrar göndermiyor, anahtar o kuralın defterdeki eşidir (aynı istek iki tur yarışırsa da
+      // satır tek kalır). Payload'a referans: uygulama içi cümle siparişi okumadan kurulur.
+      results = await dispatchCustomerNotification(
+        db,
+        {
+          event: 'feedback_invite',
+          customerId: request.customerId,
+          recipient: bundle.recipient,
+          data: bundle.data,
+          target: { type: 'feedback_request', id: request.id },
+          dedupeKey: `feedback-invite:${request.id}`,
+          payload: { orderReferenceNo: bundle.data.orderReferenceNo },
+        },
+      );
     } catch (error) {
       // Gönderim hatası daveti YAKMAZ: damga atılmadığı için kuyrukta kalır ve sonraki tur dener.
       // `warning` — davet sağlam, eksik olan bir gönderim denemesi.
