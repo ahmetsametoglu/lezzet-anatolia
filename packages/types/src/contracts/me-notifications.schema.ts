@@ -15,12 +15,20 @@ import { AppNotificationSchema } from '../entities/app-notification.schema';
  */
 export const MeNotificationSchema = AppNotificationSchema.pick({
   id: true,
-  kind: true,
   targetType: true,
   targetId: true,
   payload: true,
   createdAt: true,
   readAt: true,
+}).extend({
+  /**
+   * ZARFTA DÜZ DİZE, enum DEĞİL — ve bu fark tasarımın kendisi: `kind` kümesi sunucuda her
+   * modülle büyür (0049) ve SAHADAKİ ESKİ SÜRÜM yeni türü almaya devam etmelidir. Enum'lu zarf,
+   * ilk yeni türde eski uygulamanın parse'ını — yani bütün bildirim sayfasını — düşürürdü.
+   * Ekran bilinmeyen türe genel cümleyle düşer (istemci sözlüklerinin sözleşmesi); YAZAN taraf
+   * ise entity'nin enum'una bağlı kalır — gevşeklik yalnız OKUYANA verildi.
+   */
+  kind: z.string(),
 });
 export type MeNotification = z.infer<typeof MeNotificationSchema>;
 

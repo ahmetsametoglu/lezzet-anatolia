@@ -41,6 +41,7 @@ import {
 } from './home-layout-memory';
 import { HomeSkeleton } from './home-skeleton';
 import messages from './messages.json';
+import { useNotificationBadge } from '@/screens/notifications/use-notification-badge.hook';
 import { useHome } from './use-home.hook';
 import { useHomeOrders } from './use-home-orders.hook';
 
@@ -178,12 +179,16 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
      selamlamadır; "İyi akşamlar, " diye yarım cümle kurulmaz. */
   const firstName = meState.status === 'ready' && meState.me !== null ? (meState.me.name.trim().split(/\s+/)[0] ?? '') : '';
   const signedIn = meState.status === 'ready' && meState.me !== null;
+  /* ROZET GERÇEK UÇTAN (14.13): sayı `/me/notifications/badge`ten, canlılık kişinin kendi
+     kanalından, odakta tazelenir — bildirim ekranından dönüşte okunan satır rozetten anında düşer
+     (hook künyesi). Fixture'ın sabit sayısı kalktı. */
+  const unreadNotifications = useNotificationBadge(signedIn && meState.me !== null ? meState.me.id : null);
   const customer = {
     ...fixtureCustomer,
     firstName: firstName === '' ? null : firstName,
     wholesale,
     points: null,
-    unreadNotifications: 0,
+    unreadNotifications,
   };
   /* Bantlar + seçki + FIRSATLAR + tarifler + paketler GERÇEK uçtan (`/api/v1/home`); yüklenirken/
      hata anında bu bölümler çizilmez (vitrin tasarımında iskelet/hata hâli yok; gerekçe hook

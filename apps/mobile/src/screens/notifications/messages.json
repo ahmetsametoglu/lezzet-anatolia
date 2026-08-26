@@ -1,0 +1,68 @@
+{
+  "tr": {
+    "back": "Geri",
+    "title": "Bildirimler",
+    "eyebrow": "Hesabım",
+    "markAll": "Tümünü okundu say",
+    "dismiss": "Bildirimi kaldır",
+    "empty": {
+      "title": "Şimdilik her şey sakin",
+      "body": "Siparişleriniz ve talepleriniz hakkındaki gelişmeler burada görünür."
+    },
+    "guest": {
+      "title": "Bildirimler hesabınıza özel",
+      "body": "Giriş yaparsanız siparişleriniz ve talepleriniz hakkındaki gelişmeleri burada görürsünüz.",
+      "cta": "Giriş yap"
+    },
+    "error": {
+      "title": "Bildirimler yüklenemedi",
+      "body": "Bağlantınızı kontrol edip tekrar deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "tailRetry": "Devamını yükle"
+  },
+  "fr": {
+    "back": "Retour",
+    "title": "Notifications",
+    "eyebrow": "Mon compte",
+    "markAll": "Tout marquer comme lu",
+    "dismiss": "Retirer la notification",
+    "empty": {
+      "title": "Tout est calme pour l'instant",
+      "body": "Les nouvelles concernant vos commandes et vos demandes apparaîtront ici."
+    },
+    "guest": {
+      "title": "Les notifications sont liées à votre compte",
+      "body": "Connectez-vous pour suivre ici les nouvelles de vos commandes et de vos demandes.",
+      "cta": "Se connecter"
+    },
+    "error": {
+      "title": "Impossible de charger les notifications",
+      "body": "Vérifiez votre connexion puis réessayez.",
+      "retry": "Réessayer"
+    },
+    "tailRetry": "Charger la suite"
+  },
+  "de": {
+    "back": "Zurück",
+    "title": "Mitteilungen",
+    "eyebrow": "Mein Konto",
+    "markAll": "Alle als gelesen markieren",
+    "dismiss": "Mitteilung entfernen",
+    "empty": {
+      "title": "Im Moment ist alles ruhig",
+      "body": "Neuigkeiten zu Ihren Bestellungen und Anfragen erscheinen hier."
+    },
+    "guest": {
+      "title": "Mitteilungen gehören zu Ihrem Konto",
+      "body": "Melden Sie sich an, um Neuigkeiten zu Bestellungen und Anfragen hier zu sehen.",
+      "cta": "Anmelden"
+    },
+    "error": {
+      "title": "Mitteilungen konnten nicht geladen werden",
+      "body": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "retry": "Erneut versuchen"
+    },
+    "tailRetry": "Mehr laden"
+  }
+}
