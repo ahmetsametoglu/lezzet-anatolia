@@ -104,11 +104,27 @@ export const NotificationDeliverySchema = z.object({
   status: z.enum(['sent', 'skipped', 'error']),
   /** skipped/error sebebi; sent'te null. */
   reason: z.string().nullable(),
-  /** Sağlayıcı referansı (mail id, wa.me bağlantısı) — "gerçekten ne gitti"nin izi. */
+  /**
+   * Sağlayıcı referansı — "gerçekten ne gitti"nin izi. Push'ta JSON eşleme
+   * (`[{token, ticket}]`): makbuz turu hangi biletin hangi cihaza ait olduğunu bilmek zorunda.
+   */
   ref: z.string().nullable(),
+  /**
+   * Makbuz (14.16) — Expo teslimi ASENKRON söyler: gönderimde dönen BİLETTİR, teslim tutanağı
+   * sonradan sorulur. `ok` · `error` · `expired` (24 saatlik makbuz penceresi kaçtı) ·
+   * `unparseable` (ref çözülemedi — döngüye girmesin diye kapatıldı). `null` = henüz sorulmadı.
+   */
+  receiptStatus: z.string().nullable(),
+  receiptCheckedAt: z.string().datetime({ offset: true }).nullable(),
   createdAt: z.string().datetime({ offset: true }),
 });
 export type NotificationDelivery = z.infer<typeof NotificationDeliverySchema>;
+
+/** Teslim satırının değişebilen TEK yüzü makbuzdur — gönderim gerçeği donuk kalır. */
+export const NotificationDeliveryUpdateSchema = NotificationDeliverySchema.pick({ id: true }).extend(
+  NotificationDeliverySchema.pick({ receiptStatus: true, receiptCheckedAt: true }).partial().shape,
+);
+export type NotificationDeliveryUpdate = z.infer<typeof NotificationDeliveryUpdateSchema>;
 
 export const NotificationDeliveryInsertSchema = NotificationDeliverySchema.pick({
   notificationId: true,

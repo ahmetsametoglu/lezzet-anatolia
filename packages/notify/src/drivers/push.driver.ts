@@ -70,13 +70,18 @@ export function pushDriver(options: PushDriverOptions = {}): NotifyDriver {
 
         const json = (await res.json()) as { data?: ExpoTicket[] };
         const tickets = json.data ?? [];
-        const ids = tickets.filter((t) => t.status === 'ok' && t.id).map((t) => t.id!);
+        // Biletler mesajlarla AYNI SIRADA döner (Expo sözleşmesi) — eşleme bu sıradan kurulur.
+        // `ref` düz kimlik listesi DEĞİL, {token, ticket} çiftleri: makbuz turu çürük bileti
+        // görünce hangi CİHAZI sileceğini bilmek zorunda; kimlik tek başına o soruyu cevaplamaz.
+        const pairs = tickets
+          .map((ticket, i) => (ticket.status === 'ok' && ticket.id ? { token: tokens[i]!, ticket: ticket.id } : null))
+          .filter((pair): pair is { token: string; ticket: string } => pair !== null);
         // HİÇBİR cihaza kabul edilmediyse bu bir arızadır; kısmi kabul `sent`tir — kalan cihazın
         // akıbetini makbuz turu söyler, burada tahmin edilmez.
-        if (ids.length === 0) {
+        if (pairs.length === 0) {
           return { status: 'error', channel: 'push', error: tickets[0]?.message ?? 'Expo bilet vermedi' };
         }
-        return { status: 'sent', channel: 'push', ref: ids.join(',') };
+        return { status: 'sent', channel: 'push', ref: JSON.stringify(pairs) };
       } catch (err) {
         return { status: 'error', channel: 'push', error: err instanceof Error ? err.message : String(err) };
       }

@@ -29,6 +29,7 @@ import { ANALYTICS_INSIGHT, analyticsInsightJob } from './jobs/analytics-insight
 import { ANALYTICS_ROLLUP, analyticsRollupJob } from './jobs/analytics-rollup';
 import { ZONE_AVAILABLE, zoneAvailableJob } from './jobs/zone-available';
 import { runJob } from './jobs/runner';
+import { PUSH_RECEIPTS, pushReceiptsJob } from './jobs/push-receipts';
 import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedback-invites';
 import { SUPPORT_AI, supportAiJob } from './jobs/support-ai';
 import { TICKET_REPLY_MAIL, ticketReplyMailJob } from './jobs/ticket-reply-mail';
@@ -127,6 +128,15 @@ cron.schedule('0 9 * * *', () => {
 // kuyruk boşken iş tek sorguyla no-op olduğu için bedeli de yok.
 cron.schedule('*/15 * * * *', () => {
   void runJob(SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob);
+});
+
+// Push makbuz süpürmesi (14.16) — bilet ≠ makbuz: Expo teslimi asenkron söyler ve makbuzu soran
+// olmazsa çürük jetonlar sonsuza dek denenir (`DeviceNotRegistered` alıp göndermeyi sürdüren
+// gönderici taşıyıcıda spam muamelesi görür). Tur, çürük jetonu budar; müşteri kendiliğinden mail
+// sınıfına döner. On beş dakika Expo'nun kendi işleme aralığıyla uyumlu; iş sorulmamış bilet
+// yokken tek sorguyla no-op.
+cron.schedule('4,19,34,49 * * * *', () => {
+  void runJob(PUSH_RECEIPTS, pushReceiptsJob);
 });
 
 // Sistem sağlığı (18.5) — iki dakikada bir sunucu/süreç/servis görüntüsü. `/operations/system` okur.

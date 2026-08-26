@@ -118,7 +118,9 @@ Bildirim OLGUsu ile kanala TESLİMİ ayrı kayıtlardır: BELGE sınıfı "e-pos
 | channel | string | küme `NotifyChannel`dan türer (+ ileride `push`); `whatsapp_api` 15.11 kapanana dek yazılamaz — sürücü `supports=false` |
 | status | string | sent · skipped · error (NotifyResult üçlüsü) |
 | reason | string \| null | skipped/error sebebi; sent'te null |
-| ref | string \| null | sağlayıcı referansı — "gerçekten ne gitti"nin izi |
+| ref | string \| null | sağlayıcı referansı — "gerçekten ne gitti"nin izi. Push'ta JSON eşleme `[{token, ticket}]`: makbuz turu hangi biletin hangi CİHAZA ait olduğunu bilmek zorunda (çürük jetonu silecek olan o) |
+| receipt_status | string \| null | MAKBUZ (14.16): Expo teslimi asenkron söyler — gönderimde dönen BİLETTİR, tutanak sonradan sorulur. `ok` · hata adı (`DeviceNotRegistered`…) · `expired` (24s pencere kaçtı) · `unparseable`. `null` = henüz sorulmadı |
+| receipt_checked_at | timestamptz \| null | teslim satırının değişebilen TEK yüzü — gönderim gerçeği donuk kalır (update şeması yalnız makbuzu açar) |
 | created_at | timestamptz | |
 
 ## PushDevice (cihaz jetonu)

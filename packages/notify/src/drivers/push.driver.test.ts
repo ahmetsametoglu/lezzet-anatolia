@@ -46,7 +46,16 @@ describe('pushDriver', () => {
     const { f, calls } = fakeFetch({ json: { data: [{ status: 'ok', id: 'T1' }, { status: 'ok', id: 'T2' }] } });
     const sonuc = await pushDriver({ fetcher: f }).send('ticket_replied', alici(['tok-1', 'tok-2']), data);
 
-    expect(sonuc).toEqual({ status: 'sent', channel: 'push', ref: 'T1,T2' });
+    // `ref` eşlemedir, düz liste değil: makbuz turu çürük bileti görünce hangi cihazı
+    // sileceğini buradan öğrenir.
+    expect(sonuc).toEqual({
+      status: 'sent',
+      channel: 'push',
+      ref: JSON.stringify([
+        { token: 'tok-1', ticket: 'T1' },
+        { token: 'tok-2', ticket: 'T2' },
+      ]),
+    });
     const mesajlar = calls[0]!.body as { to: string; body: string }[];
     expect(mesajlar).toHaveLength(2);
     expect(mesajlar[0]!.body).toContain('cevap'); // sözlüğün cümlesi — uydurma metin değil

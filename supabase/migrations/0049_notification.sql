@@ -99,10 +99,25 @@ create table public.notification_delivery (
   status     text not null,
   -- skipped/error sebebi (no_email, provider_key_absent, sağlayıcı hatası). sent'te null.
   reason     text,
-  -- Sağlayıcı referansı (mail id, wa.me bağlantısı) — "gerçekten ne gitti" sorusunun izi.
+  -- Sağlayıcı referansı — "gerçekten ne gitti" sorusunun izi. Push'ta JSON eşleme:
+  -- [{"token":..,"ticket":..}] — makbuz turu hangi biletin hangi CİHAZA ait olduğunu bilmek
+  -- zorunda (çürük jetonu silecek olan o). Jeton DB içinde zaten var (push_device); burada
+  -- tekrarı sızıntı değil, aynı veritabanının iki satırı.
   ref        text,
+  -- ── MAKBUZ (14.16): Expo teslimi ASENKRON söyler ─────────────────────────
+  -- Gönderim anında dönen şey BİLETTİR ("aldım, sıraya koydum") — teslim değil. Teslim tutanağı
+  -- (makbuz) 15-30 dk sonra bilet numarasıyla SORULUR; soran süpürme cron'u, cevabı buraya yazar.
+  -- Teslim satırının değişebilen TEK yüzü budur: gönderim gerçeği donuk kalır, makbuz sonradan
+  -- eklenen ikinci gerçektir. `null` = henüz sorulmadı (yalnız push'ta sorulur).
+  receipt_status     text,
+  receipt_checked_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+-- Süpürme turunun tek okuması: makbuzu sorulmamış push teslimleri, en eskiden.
+create index notification_delivery_receipt_idx
+  on public.notification_delivery (created_at)
+  where channel = 'push' and status = 'sent' and receipt_checked_at is null;
 
 create index notification_delivery_notification_idx
   on public.notification_delivery (notification_id);
