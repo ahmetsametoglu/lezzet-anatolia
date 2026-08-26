@@ -133,9 +133,9 @@ export function BundleFormBody({
             işareti bir yayın/seçki kararı ve görselle aynı sütunda durması onu "bu paket dışarıda
             nasıl görünüyor" grubuna sokuyor. */}
         <FormSection title="Vitrin">
-          {/* BEKLEYEN(22.19): `FormSwitch` `disabled` taşımıyor — karar verilmiş öneride bu anahtar
-              hâlâ çevrilebilir görünür (yazım yine engelli). Ortak kontrole eklenmesi kalem
-              editörünün kilidiyle aynı turda. */}
+          {/* Kilit KAPANDI (22.19 · 26.08): `FormSwitch` prop olarak `disabled` TAŞIMIYOR ama artık
+              gerekmiyor — kural `globals.css`te `fieldset:disabled` üzerinden, yani bayrak taşımayan
+              kontroller de kapsanıyor. Karar verilmiş öneride anahtar soluk çiziliyor. */}
           <FormSwitch control={control} name="isFeatured" label="Vitrinde göster (ana sayfa)" />
           <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
             Satışta olmaktan ayrıdır: satıştaki her paket paketler sayfasında görünür, ana sayfada yalnız burada
@@ -179,10 +179,10 @@ export function BundleFormBody({
         </FormSection>
 
         {/* Paylar burada TÜRETİLİR: editör yalnız alan yazar (`setValue`), formun sahibi çağıran.
-            BEKLEYEN(22.19): editör `disabled` TAŞIMIYOR — karar verilmiş bir öneride kalem satırları
-            hâlâ düzenlenebilir görünür (yazım engellenir, ama ekran onu söylemez). Gövdenin geri
-            kalanı kilitleniyor; editörün kendi kilidi ayrı bir turda, çünkü dört düğme ve iki
-            alanın hepsine tek tek geçmek bu ayrımın kapsamını iki katına çıkarırdı. */}
+            Kilit KAPANDI (22.19 · 26.08): editör hâlâ `disabled` prop'u taşımıyor ama kalem
+            satırları karar verilmiş bir öneride artık soluk çiziliyor — kural `globals.css`te
+            `fieldset:disabled` üzerinden işliyor. "Dört düğme ve iki alanın hepsine tek tek geçmek"
+            diye ertelenen iş, tek kuralla gereksizleşti. */}
         <BundleItemsEditor control={control} pool={pool} setValue={setValue} onSearch={onSearch} searching={searching} />
       </div>
     </div>

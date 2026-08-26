@@ -496,9 +496,11 @@ satırında.
       bileşeni yazmak duplikasyonun kendisiydi. Üçlünün yerini sabit sayılar alıyor — olup bitmiş bir
       işte düzenlenebilir kutu, hâlâ seçenekmiş gibi okunur.
   - *Doğrulandı:* `typecheck` (18/18) · `lint` · `boundaries` · `knip` temiz · birim 1346/1346.
-  - **BEKLEYEN(22.8):** kalan 9 tip. Sıra brief'te: `product_draft` → `zone_extend` (harita) →
-    B sınıfının kalan üçü → `stock_intake` ayrıca konuşulacak. **Desen kullanıcı onayından geçmeden
-    çoğaltılmıyor** — yanlış deseni 11 kez yazmak, bir kez yazıp düzeltmekten pahalı.
+  - ~~**BEKLEYEN(22.8):** kalan 9 tip. Sıra brief'te: `product_draft` → `zone_extend` (harita) →
+    B sınıfının kalan üçü → `stock_intake` ayrıca konuşulacak.~~ **KAPANDI — onbirin onbiri de
+    gövdeli** (son tip 22.36'da). Satırın kendi kuralı (*"desen kullanıcı onayından geçmeden
+    çoğaltılmıyor"*) işini gördü: desen 22.10'da onaylandı, kalan tipler ona göre yazıldı. İşaret
+    bayat kalmıştı, ölçümle düşürüldü 26.08.
 
 - [x] (22.9) **Önerinin KONU KARTI + kararın üç panel yerleşimi** *(kullanıcı kararı 10.08: "konu bir
   ürünle alakalı olduğu zaman buraya ürünün resmi gibi bilgiler koyabiliriz… tıklayınca o ürünün
@@ -1180,14 +1182,29 @@ satırında.
     seçicisi düzenlenebilir GÖRÜNÜYOR (yazım engelli, alt bar kapalı — ama ekran bunu söylemiyor).
     Ürün formunda da aynı iş ayrı turda yapılmıştı; üçü tek turda geçilecek.
 
-- [ ] (22.19) **Ortak form kontrollerine `disabled`** — karar verilmiş öneride form GERÇEKTEN kilitli görünsün
+- [x] (22.19) **Ortak form kontrollerine `disabled`** — karar verilmiş öneride form GERÇEKTEN kilitli görünsün · `touches: apps/web/app/globals.css`
   - *Bitti:* `readOnly` bir öneride kalem satırları, anahtarlar ve seçiciler düzenlenemez görünüyor
-  - **Neden açık bir madde:** bugün yazım engelli (alt bar kapalı, `disabled` gövdeye iniyor) ama üç
+  - ~~**Neden açık bir madde:** bugün yazım engelli (alt bar kapalı, `disabled` gövdeye iniyor) ama üç
     ortak kontrol bayrağı TAŞIMIYOR: `BundleItemsEditor` (dört düğme + iki alan) · `FormSwitch` ·
-    `MultiToggle` ve `FormSelect`. Operatör arşivdeki bir kararı açtığında kutulara yazabiliyor,
-    yazdığı hiçbir yere gitmiyor — ekranın söylediği ile sistemin yaptığı ayrışıyor.
-  - Ürün formunda aynı iş 22.14'te ayrı bir turda yapılmıştı (`LocalizedTextField` · `MultiSelect` ·
-    `EmphasisTextarea`); bu üçü de aynı desenle geçilecek. İş mekanik, kapsamı dar.
+    `MultiToggle` ve `FormSelect`.~~ ~~Ürün formunda aynı iş 22.14'te ayrı bir turda yapılmıştı; bu
+    üçü de aynı desenle geçilecek.~~
+  - **KAPANDI (26.08) — ve kontrol başına DEĞİL, tek kuralla.** Teşhis doğruydu ama çözüm yolu
+    değildi: ölçünce göründü ki form zaten `<fieldset disabled>` ile sarılı ve yazım GERÇEKTEN
+    engelli — native kontroller `fieldset`ten devralıyor. Eksik olan **görsel geri bildirimdi**;
+    `fieldset` hiçbir şeyi soluklaştırmaz. Operatör arşivdeki bir kararı açıp kutulara yazmayı
+    deniyordu, ekranın söylediği ile sistemin yaptığı ayrışıyordu.
+    - Kural `globals.css`te tek yerde: `fieldset:disabled :is(button, input, select, textarea)` →
+      `opacity .55` + `cursor: not-allowed`. Gerekçe `discount-form`un kendi künyesinden geliyor
+      (*"elle her kontrole `disabled` geçirmek, bir gün eklenen kutuda unutulurdu"*) — aynı mantık
+      görsel için de geçerli.
+    - **Bayrak TAŞIMAYAN kontroller de kapsandı:** `FormSwitch` ve `BundleItemsEditor` prop
+      almadıkları hâlde `fieldset`in içinde oldukları için artık soluk çiziliyorlar. Dört kontrole
+      tek tek dokunmaya gerek kalmadı.
+    - Opaklık ölçülü (0.55): daha koyusu arşiv kaydını okunmaz yapardı — kilitli form hâlâ OKUNMAK
+      için orada. Seçili öğeler koyu kalıyor, yani karar bilgisi kaybolmuyor.
+    - **Ekranda ölçüldü:** reddedilmiş bir kampanya dilekçesi açıldı; *Kupon (kodlu)*, *Sabit tutar*,
+      FR/DE sekmeleri ve tüm girdiler soluk, *Otomatik kampanya* · *Yüzde* · *TR* koyu. Alt bar
+      **REDDEDİLDİ · Selin Kaya · 25 Ağu 16:20**.
 
 - [x] (22.20) **Tarif formu dil kartına geçti, adım numarası kaynağında kırpılıyor** *(kullanıcı
   tespiti 12.08: "bu form hazırlanışı itibariyle komple yanlış … her input'un dil tabı ayrı değil
@@ -1312,11 +1329,17 @@ satırında.
     **üç ayrı sayfaya** yayılmış, oysa üçü tek işin üç anıdır. Bu yüzden form tek başına düzeltilmiyor:
     üç ekranın birleşimiyle birlikte ele alınacak → **BEKLEYEN(22.26)**.
 
-- [ ] (22.24) **Ölü devir yollarını sök** — `finance-handoff` · `receiving-handoff` ve ekranların `handoff` prop'ları
+- [~] (22.24) **Ölü devir yollarını sök** — ~~`finance-handoff` · `receiving-handoff`~~ ve ekranların `handoff` prop'ları
   - *Bitti:* devir okuması yalnız `zone_extend` için kalır; iki ekran `?proposal=` parametresini artık okumaz
   - Para (22.18) ve mal kabul (22.23) kuyruğa taşınınca bu iki yol ölü kaldı: kuyruk devir düğmesi
     çizmiyor, yani kimse oraya yönlenmiyor. Bugün zararsızlar ama okuyan ajana "bu tip devrediliyor"
     diye yanlış bilgi veriyorlar — ve bir gün biri o yolu düzeltmeye çalışır.
+  - **YARISI ZATEN SÖKÜLMÜŞ (kayıt düzeltmesi 26.08).** `receiving-handoff.ts` **artık yok** — 22.26'da
+    mal kabul Stok'a taşınırken `receiveGoodsAction` ve `costsForLines` ile birlikte silinmiş; o
+    satırın kendi notunda yazılı ama BU satır güncellenmemişti. Ölçümle düşürüldü.
+  - **KALAN:** `finance-handoff.ts` duruyor ve iki sayfa hâlâ `?proposal=` okuyor
+    (`finance/page.tsx:108` · `stock/page.tsx:187`). İkincisi ölü DEĞİL: parti teklifi devri (22.5)
+    o yoldan gidiyor, yani sökülecek olan yalnız para yarısı. Satır bu yüzden `[~]`. BEKLEYEN(22.24)
 
 - [x] (22.25) **Mal kabul ekranı da ortak satır editörüne geçsin** — `FreeIntake` ↔ `intake-form/body`
   - *Bitti:* iki yüzey aynı satır editörünü kullanır; "adet boşsa kabule girmez" ve SKT zorunluluğu tek yerde
@@ -1642,16 +1665,21 @@ satırında.
       tamamla" düğmesi aşağı itiliyordu. Panel iskeleti gerçek gövdenin sırasını izliyor (akış → dört
       ölçüm → geçmiş); KOŞULLU bloklar (rezervasyon, fire) çizilmiyor — olmayabilecek bir şeyin yerini
       önden ayırmak, iskeletin verdiği sözü tutmamak olurdu.
-    - **BEKLEYEN(22.34):** operasyon yüzeyinde AYNI ihlalden üç tane daha var ve bu turun dışında:
-      `bundle-form-dialog` ("Paket bilgileri yükleniyor…") · `order-dialog` ("yükleniyor…") ·
-      `catalog-form-dialog` (ad çözülemezken yer tutucu). Üçü de kendi ekranlarının işi.
+    - **BEKLEYEN(22.34):** operasyon yüzeyinde AYNI ihlalden ~~üç~~ **iki** tane daha var ve bu turun
+      dışında: `bundle-form-dialog` ("Paket bilgileri yükleniyor…") · `catalog-form-dialog` (ad
+      çözülemezken yer tutucu). İkisi de kendi ekranlarının işi.
+      *(Üçüncü olarak sayılan `order-dialog` diye bir dosya YOK — ölçüldü 26.08; ya adı değişti ya
+      hiç var olmadı. Olmayan bir dosyayı kovalamak, gerçek iki ihlali de erteler.)*
     - **BEKLEYEN(22.34):** kullanıcı ekranda denemedi. Ayrıca fire oranı `count_diff` negatifken hâlâ
       eksi çıkıyor (%−2,1) — ölçüm doğru (net kayıp) ama "FİRE" başlığı altında eksi sayı garip okunuyor;
       sayım farkını kendi satırına ayırmak kullanıcının kararına bırakıldı.
-    - **BEKLEYEN(22.33):** kullanıcı ekranda denemedi; kuyrukta bekleyen gerçek dilekçe duruyor.
-      Kalan iki gövdesiz tip `zone_extend` (harita ister) ve `featured_flag` (üç alan — form gerekmeyebilir,
-      ama o tipten hiç öneri üretilmediği için ölçülemedi: `BEKLEYEN(22.11)`). *(`featured_flag`
-      `22.35`'te yazıldı; `zone_extend` duruyor.)*
+    - ~~**BEKLEYEN(22.33):** kullanıcı ekranda denemedi; kuyrukta bekleyen gerçek dilekçe duruyor.
+      Kalan iki gövdesiz tip `zone_extend` (harita ister) ve `featured_flag`.~~ **KAPANDI (26.08):**
+      iki tip de yazıldı (`featured_flag` 22.35'te, `zone_extend` 22.36'da) ve **onbir tipin onbiri de
+      gövdeli** — ölçüldü, `bodies/` klasöründe onbir dosya var ve hepsi hem düzenleme hem kilit
+      taşıyor. Bu satırın parantez notu `featured_flag`ı güncellemiş ama `zone_extend`i unutmuştu;
+      okuyan ajana yapılmış bir işi yapılacak gösteriyordu.
+      Gövde kuyrukta gerçek dilekçeyle açıldı (`purchase-order-body`, kalemler düzenlenebilir).
 
 - [~] (22.35) **ARAÇ TAKIMININ AÇIKLARI KAPATILDI + VİTRİN GÖVDESİ** *(kullanıcı kararı 15.08:
   «taşıma yerine düzeltmen gereken yerler varsa düzelt» — MCP 8. turunun kendi raporu üzerine)* ·
@@ -1720,9 +1748,15 @@ satırında.
     - **DOĞRULAMA:** `typecheck` 18/18 · `lint` temiz · `docs:check` temiz · araç kayıt tablosu
       `araç: 25 · handler: 25` (eşleşme tam, `product_detail` ✓ `money_overview` ✓) · `db:refresh`
       sonrası kuyruk 31 → 0, 3 gerçek depo, 0 test artığı.
-    - **BEKLEYEN(22.35):** `zone_extend` hâlâ gövdesiz — harita gerektiriyor; `ZoneMap` ortak havuzda
-      hazır ama diyaloğa bağlanmadı. Kalan TEK gövdesiz tip bu.
-    - **BEKLEYEN(22.35):** kullanıcı ekranda denemedi; yeni araçlarla henüz öneri turu atılmadı.
+    - ~~**BEKLEYEN(22.35):** `zone_extend` hâlâ gövdesiz — harita gerektiriyor; `ZoneMap` ortak
+      havuzda hazır ama diyaloğa bağlanmadı. Kalan TEK gövdesiz tip bu.~~ **KAPANDI 22.36'da**
+      (satırın kendi başlığı: *"SON gövdesiz tip kuyruğun içine girdi, haritasıyla"*); bu işaret
+      bayat kalmıştı, ölçümle düşürüldü 26.08 — `bodies/zone-extend-body.tsx` var ve ekranda
+      gerçek haritayla açılıyor.
+    - ~~**BEKLEYEN(22.35):** kullanıcı ekranda denemedi; yeni araçlarla henüz öneri turu atılmadı.~~
+      **ÖLÇÜLDÜ (26.08):** kuyruk artık seed'le doluyor (22.40) ve araç takımı ekranda sınandı —
+      `TOOLS` tam 25 araç (10 `propose_*` + 15 okuma), vitrin gövdesi diyaloğun içinde. Aşağıdaki
+      `product_detail` uyarısı DURUYOR ve bir karar girdisidir, kapanmış bir madde değil.
       `product_detail`in çürüttüğü vaka duruyor: ölçümde 124 üründe `en` alanı boş görünüyordu ve o
       turun `product_draft` önerisi onaylansaydı dolu TR metni silecekti.
 
@@ -1909,3 +1943,44 @@ sınamış olacaktık.
       dosyada başka bir açık madde varsa kaybolmuştur. Aynı dosyanın öteki maddesi (22.6 belgeden
       ürün önizlemeleri) 09.08'de teslim edilmişti ve kaydı 271. satırda duruyor.
 
+
+- [x] (22.40) **Onay kuyruğu seed'le doluyor — onbir gövde ilk kez gözle sınanabildi** *(kullanıcı talimatı 26.08: "besleme dosyasına test için uygun adette data ekle")* · `touches: scripts/seed/{assistant.ts,assistant.test.ts,coverage.ts}, scripts/seed.ts, vitest.config.ts, apps/web/components/operation/ui/{subject-card.tsx,payload-tree.tsx}, apps/web/app/globals.css`
+  - *Bitti:* `db:refresh` sonrası kuyrukta onbir tipin her birinden bir dilekçe ve dolu bir karar geçmişi var; kapsam kovası eksik tipi yakalıyor
+  - **NEDEN GEREKTİ — beş BEKLEYEN aynı kökten takılıydı.** Kuyruk her `db:refresh`te boşalıyordu:
+    görev satırları *"kuyrukta iki `product_draft` önerisi var"* diye o günkü hâli anlatıyor,
+    kullanıcı ekranı açtığında boş sayfa görüyordu. `BEKLEYEN(22.10 · 22.11 · 22.14 · 22.33 · 22.35)`
+    hepsi *"kullanıcı ekranda denemedi"* diyordu ve **deneyecek bir şey yoktu.** Barkodun 23.14'te
+    öğrendiği ders: test verisi sabit ve refresh'e dayanıklı olmalı.
+  - **12 bekleyen + 4 karar geçmişi.** Onbir tipin hepsi (`money_movement` iki hâliyle: gider +
+    virman, çünkü transfer onun ikinci gövdesi — 22.22). Karar geçmişi kullanıcı kararıyla dolu:
+    yalnız `pending` yazsaydık kuyruğun üç sekmesinden ikisi boş kalır, iki davranış hiç sınanamazdı
+    (kilitli form 22.19 · tip süzgecinin geçmişte çalışması 22.37).
+  - **PAYLOAD GERÇEK KAYITLARDAN TÜRER.** Kimlikler ROLLE seçiliyor (*"eldeki en yakın tarihli
+    parti"*, *"ilk açık tedarik siparişi"*, *"aktif bölge"*), fiyatlar `price` tablosundan okunuyor.
+    Sahte uuid iki yerde birden patlardı: gövde açılırken ad `—` görünür, onayda uygulayıcı `23503`
+    ile kesilir.
+    - **Fiyat da uydurulmaz — ölçerek görüldü:** elle yazılan 24,90 €'luk paket kalemleri ayrı
+      almaktan pahalıya düşünce kart *"%−149 indirim"* çizdi. Kartın hesabı doğruydu, girdi saçmaydı.
+      Paket artık kalemlerin gerçek toplamından %15 indirimli, pay oransal.
+  - **KAPSAM KOVASI** (`coverage.ts`): dört durum + *"onbir tipin hepsi kuyrukta"*. Eksik tip = o
+    gövdenin ekranda hiç açılmaması; kova sayıyı değil KAPSAMI ölçüyor (elli dilekçe hepsi aynı
+    tiptense öteki on gövde yine açılamaz) ve eksik tipin adını basıyor.
+  - **TEST ÜÇ GERÇEK KUSUR YAKALADI** (`scripts/seed/assistant.test.ts`, DB'siz — üreticiler saf
+    fonksiyon). Üçü de gövde açılırken patlayacaktı: alerjenler İngilizceydi (enum ASCII-Türkçe:
+    `sut` · `sert_kabuklu`) · `dateType` küçük harfti (`'DDM'` olmalı) · `variants` hiç yoktu.
+    Kural gereği `vitest.config.ts`e DAR desenle eklendi: `scripts/seed/**` normalde hiçbir projede
+    değil, çünkü seed DB'ye vurur — buraya DB'li bir test yazılırsa entegrasyona alınmalı.
+  - **VERİTABANI DA İKİ KEZ KESTİ, İKİSİ DE HAKLIYDI:** `expired` bir KARAR DEĞİL
+    (`assistant_proposal_decided_status`: `decided_at` yalnız applied/rejected/failed'de dolu) ·
+    `expires_at > created_at` (sönmüş dilekçe geçmişte doğmuş olmalı).
+  - **ÜÇ KOD KUSURU BULUNDU VE DÜZELTİLDİ** (seed onları görünür kıldı):
+    - `subject-card`: görsel yığını `key={image.url}` kullanıyordu; aynı ürünün iki boyu aynı
+      görseli taşıyınca React karolardan birini **düşürüyordu**. Belirtisi sessizdi — üst üste binmiş
+      iki karo, konsolda tek satır. Anahtar artık `url-indeks`.
+    - `globals.css` → **22.19 kapandı** (o satırın kendi notunda).
+    - `payload-tree`: künye etiketi `shrink-0` olduğu için değer sütunu eziliyor, uzun değerler
+      **harf harf alt alta** kırılıyordu (`nutrition · ingredients`). Etiket artık yarıyı aşamıyor.
+  - **EKRANDA ÖLÇÜLDÜ (26.08):** kuyruk ızgarası + 12 tip rozeti + üç sekme · karar geçmişi ve tip
+    süzgecinin geçmişte de çalışması (**22.37**) · `zone_extend` gövdesi gerçek haritayla, kod
+    hâlleri lejantıyla (**22.35/22.36**) · `product_create` gövdesi (üç düzeltilmiş alan yerinde) ·
+    kilitli form (**22.19**). Konsol temiz.

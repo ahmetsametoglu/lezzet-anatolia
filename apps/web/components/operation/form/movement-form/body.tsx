@@ -73,10 +73,10 @@ export function MovementFormBody({ control, setValue, values, accounts, disabled
       />
 
       <div className="grid grid-cols-2 gap-3">
-        {/* BEKLEYEN(22.19): `FormSelect` ve `MultiToggle` `disabled` TAŞIMIYOR — karar verilmiş bir
-            öneride hesap seçici ve tür anahtarı hâlâ değiştirilebilir GÖRÜNÜR (yazım yine engelli,
-            alt bardaki düğme kapalı). Ortak kontrollere `disabled` geçirmek paket ve ürün
-            formlarındaki aynı işle birlikte, ayrı bir turda. */}
+        {/* Kilit KAPANDI (22.19 · 26.08): hesap seçici ve tür anahtarı karar verilmiş bir öneride
+            artık SOLUK çiziliyor. Çözüm kontrol başına `disabled` geçirmek değil, tek CSS kuralı
+            oldu (`globals.css` → `fieldset:disabled :is(button, input, select, textarea)`) — form
+            zaten `<fieldset disabled>` ile sarılıydı, eksik olan yalnız görsel geri bildirimdi. */}
         <FormSelect
           control={control}
           name="accountId"
