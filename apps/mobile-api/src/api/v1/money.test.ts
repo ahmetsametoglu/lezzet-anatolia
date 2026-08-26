@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CategoryService, OrderService, ProductService, serviceDb } from '@lezzet/database';
+import { AccountService, CategoryService, OrderService, ProductService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { recordOrderPayment } from '@lezzet/application';
 // Beklenen şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME kırılır.
 import type { MoneyDayEnd, MoneyOverview } from '@lezzet/types';
 import { app } from '../../app';
@@ -28,6 +29,8 @@ let categoryId: string;
 let productId: string;
 let variantId: string;
 let orderId: string;
+let partialOrderId: string;
+let accountId: string;
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -61,6 +64,27 @@ beforeAll(async () => {
     [{ variantId, qty: 2, unitPriceCents: 1300, vatRate: 5.5 }],
   );
   orderId = created.order.id;
+
+  // ── KISMİ ödenmiş sipariş + GERÇEK tahsilat hareketi: yöntem kırılımı ve gün sonu bu deftere
+  // bakar. Hesap TESTİN KENDİ hesabıdır (purge `accountIds` ile toplar) — işletmenin Kasa'sına
+  // test hareketi yazmak, paylaşılan defteri kirletmek olurdu (CLAUDE §4b).
+  accountId = (await new AccountService(db).insert({ name: `Test Kasa ${stamp}`, type: 'cash' })).id;
+  const partial = await new OrderService(db).create(
+    {
+      customerId: musteri.profileId,
+      warehouseId,
+      channel: 'b2c',
+      status: 'confirmed',
+      deliveryType: 'pickup',
+      deliveryDate: today,
+      paymentMethod: 'cash',
+      totalCents: 2000,
+    },
+    [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
+  );
+  partialOrderId = partial.order.id;
+  const payment = await recordOrderPayment(db, { orderId: partialOrderId, accountId, amountCents: 600 });
+  if (payment.status !== 'ok') throw new Error(`fikstür: tahsilat yazılamadı (${payment.status})`);
 });
 
 afterAll(async () => {
@@ -69,6 +93,7 @@ afterAll(async () => {
     categoryIds: [categoryId],
     profileIds: [muhasebeci.profileId, kurye.profileId, musteri.profileId],
     warehouseIds: [warehouseId],
+    accountIds: [accountId],
   });
 });
 
@@ -116,5 +141,24 @@ describe('GET /money/day-end', () => {
 
   it('KURYE 403', async () => {
     expect((await get(kurye, 'day-end')).status).toBe(403);
+  });
+});
+
+describe('M1/M2 · gerçek tahsilatın izi', () => {
+  it('kısmi ödenmiş sipariş KALANIYLA listede; ödenen tutar rakam olarak tekrarlanmaz', async () => {
+    const data = await envelopeData<MoneyOverview>(await get(muhasebeci, 'overview'));
+    const row = data.pending.find((pending) => pending.orderId === partialOrderId);
+    expect(row).toMatchObject({ kind: 'partial', remainingCents: 1400, method: 'cash' });
+  });
+
+  it('yöntem kırılımı ve gün sonu tahsilatı DEFTERDEN sayar — bizim hareket alt sınırdır', async () => {
+    const overview = await envelopeData<MoneyOverview>(await get(muhasebeci, 'overview'));
+    const cash = overview.todayByMethod.find((rowx) => rowx.method === 'cash');
+    // Paylaşılan DB: eşitlik değil ALT SINIR — bizim 6,00 €'luk hareket var oldukça nakit ≥ 600.
+    expect(cash).toBeDefined();
+    expect(cash!.cents).toBeGreaterThanOrEqual(600);
+
+    const dayEnd = await envelopeData<MoneyDayEnd>(await get(muhasebeci, 'day-end'));
+    expect(dayEnd.collectedCents).toBeGreaterThanOrEqual(600);
   });
 });

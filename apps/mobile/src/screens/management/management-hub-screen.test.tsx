@@ -18,10 +18,12 @@ import { managementCopy } from './copy';
   · İçgörü motoru yokken blok yokluğu SÖYLER, uydurma metin basmaz.
 */
 
+// Ad `mock` ile başlamak ZORUNDA (jest hoisting) — gezinme iddiaları bu casusa bakar.
+const mockNavigate = jest.fn();
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
-    useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
+    useRouter: () => ({ navigate: mockNavigate, back: jest.fn() }),
     useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
   };
 });
@@ -45,6 +47,18 @@ function ok(data: unknown): Response {
 
 function fail(error: string, status = 500): Response {
   return { status, headers: { get: () => null }, json: async () => ({ data: null, error }) } as unknown as Response;
+}
+
+/**
+ * Mock URL-YÖNLENDİRMELİDİR, sıra-bazlı değil (ölçüldü 26.08): başlıktaki zil de artık fetch'liyor
+ * (`/me/notifications`, bildirim şeridi) ve sıra-bazlı `mockResolvedValueOnce` hangi çağrının önce
+ * geldiğine göre YANLIŞ cevabı yutuyordu. Hub'a ait olmayan yol nötr bir hata alır — zil kancası
+ * kendi hatasını kendi yutar, ekran çizilir; bu testin konusu zil değil.
+ */
+function routeHub(hub: () => Response) {
+  fetchMock.mockImplementation((url) =>
+    Promise.resolve(String(url).includes('/management/hub') ? hub() : fail('not_in_this_test', 500)),
+  );
 }
 
 /** Sözleşme şeklinde hub zarfı — testler yalnız değiştirdikleri parçayı ezer. */
@@ -110,11 +124,12 @@ beforeAll(() => {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  mockNavigate.mockReset();
 });
 
 describe('yönetim hub — karar kutusu', () => {
   it('beş karar alanı da doluysa beş satır çizilir; "top bizde" rozeti başlıktan gelir', async () => {
-    fetchMock.mockResolvedValue(ok(hubData()));
+    routeHub(() => ok(hubData()));
 
     await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
 
@@ -127,7 +142,7 @@ describe('yönetim hub — karar kutusu', () => {
   });
 
   it('SIFIR sayılı alan HİÇ çizilmez — ölü satır yok', async () => {
-    fetchMock.mockResolvedValue(
+    routeHub(() =>
       ok(
         hubData({
           queue: {
@@ -148,21 +163,42 @@ describe('yönetim hub — karar kutusu', () => {
     }
   });
 
+  it('şikâyet satırı başı KİMLİĞİYLE açar; niyet satırı SOSYAL kutuya gider (Y6 kararı)', async () => {
+    routeHub(() => ok(hubData()));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    await fireEvent.press(screen.getByTestId('management-decision-complaint'));
+    // Kutunun gösterdiği satır ile açılan talep AYNI olmalı — adres kimlik taşır.
+    expect(mockNavigate).toHaveBeenCalledWith({
+      pathname: '/complaint',
+      params: { id: '00000000-0000-4000-8000-000000000001' },
+    });
+
+    await fireEvent.press(screen.getByTestId('management-decision-intent'));
+    // Ayrı niyet ekranı YOK (bilinçli sapma): gerçek sosyal gelen kutusu açılır.
+    expect(mockNavigate).toHaveBeenCalledWith('/social');
+  });
+
   it('okuma düşerse hata bloğu; "Tekrar dene" GERÇEKTEN yeniden okur ve toparlanır', async () => {
-    fetchMock.mockResolvedValueOnce(fail('boom')).mockResolvedValue(ok(hubData()));
+    let hubCalls = 0;
+    routeHub(() => {
+      hubCalls += 1;
+      return hubCalls === 1 ? fail('boom') : ok(hubData());
+    });
 
     await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
     expect(screen.getByTestId('management-hub-error')).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByTestId('management-hub-error-retry'));
     await waitFor(() => expect(screen.getByTestId('management-decision-complaint')).toBeOnTheScreen());
-    expect(fetchMock.mock.calls.length).toBe(2);
+    expect(hubCalls).toBe(2);
   });
 });
 
 describe('gün özeti', () => {
   it('ölçülemeyen kanal "bilinmiyor" yazar; içgörü yokken yokluk söylenir', async () => {
-    fetchMock.mockResolvedValue(ok(hubData()));
+    routeHub(() => ok(hubData()));
 
     await renderScreen(<DaySummaryScreen />, 'management-day-summary-loading');
 

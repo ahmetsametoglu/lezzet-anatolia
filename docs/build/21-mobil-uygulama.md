@@ -533,6 +533,23 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     sorulan kalemin kuyruktan düşüşü) · mobil jest **818/818** (6 yeni; sabotaj: "sunucudan dönen
     taslak" iddiası yerel kopyayla bozulunca yalnız o test düştü) · tsc/lint/knip temiz · KORUMALI
     40→47.
+  **Test tamamlama turu (26.08 akşam — kullanıcı talimatı "tüm testleri bitir"):**
+  · Para uçlarına GERÇEK tahsilat izi girdi: testin KENDİ hesabına (`accountIds` purge hedefi —
+    işletmenin Kasa'sı kirletilmez) `recordOrderPayment` ile 6,00 € yazılıyor → kısmi satır
+    `kind: partial` + kalan 14,00 €; yöntem kırılımı ve gün-sonu toplamı ALT SINIR iddiasıyla
+    (paylaşılan DB'de eşitlik yalan söyler). Uç toplamı **66/66** (yönetim 13 · para 6 · KORUMALI 47).
+  · Hub'a kimlikli gezinme testi: şikâyet satırı BAŞIN kimliğiyle `/complaint?id=` açar; niyet
+    satırı `/social`e gider (Y6 kararının çivisi).
+  · **Ders — ekran mock'ları URL-YÖNLENDİRMELİ olmalı, sıra-bazlı değil** (ölçüldü): bildirim
+    şeridi zili gerçek fetch'e bağlayınca sıra-bazlı `mockResolvedValueOnce` yanlış çağrıya denk
+    geldi; hub testleri yol süzgeçli `routeHub`a geçti — başka şeridin ekleyeceği yeni fetch'ler
+    bu testleri bir daha kıramaz.
+  · Float/fark TOPLAMASI için sefer fikstürü bilerek kurulmadı: toplama `delivery_run_collection`/
+    `delivery_run_close` satırlarının düz `reduce`'u; satırların doğruluğu kuryenin
+    `day-close.test` suite'inde çivili — boru hattını para testinde kopyalamak ikinci nüsha olurdu.
+  · Cihaz turu BEKLEMEDE: uygulama şu an bildirim şeridinin uçuşan işiyle AÇILMIYOR
+    (`ExpoPushTokenManager` native modülü dev-client derlemesinde yok — ölçüldü, ekran
+    görüntülü not şeride bırakıldı); tur, onların derlemesi/koruması sonrası koşulacak.
   **Bilinçli sınırlar (modül kapanışında açık kalanlar, sahipleriyle):** "kalanı gönder" karar
   kaydı (model işi — web şeridiyle) · kurye uçlarında `effects` (BEKLEYEN(14.11) hattı) · YZ
   içgörü motoru (modül 20/22) · hub'ın parti/tedarik taramasının maliyeti büyüyen katalogda
