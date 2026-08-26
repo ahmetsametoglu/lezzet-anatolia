@@ -112,6 +112,48 @@ export function stockEffectOf(
 }
 
 /**
+ * **Bu geçiş hangi kapıdan yazılır** — düz durum yazımı mı, kendi RPC'si mi?
+ *
+ * ── NEDEN VAR (denetim 26.08) ────────────────────────────────────────────────
+ * Operasyon sipariş detayının "İzinli geçişler" şeridi `allowedTransitions`ı SÜZMEDEN düğmeye
+ * çeviriyor ve hepsini düz yazıma (`transition_order_status`) yolluyordu. Ölçüldü: şeritten iptal
+ * edilen sipariş `cancelled` görünüyor ama **ayrılmış malı serbest kalmıyordu**; şeritten teslim
+ * edilen sipariş `delivered` görünüyor ama **fiili stok hiç düşmüyordu**. İkincisi daha ağır — mal
+ * müşteride, sayı depoda. Kapıda/vadeli siparişte rezervasyonun TTL'i olmadığı için süpürücü de o
+ * satırı görmüyor: hasar kalıcı, üstelik `cancelled` terminal olduğu için doğru kapı da kapanmış
+ * oluyordu.
+ *
+ * ── AYIRAN ÖLÇÜT: STOK İŞİNİN ZAMANI, VARLIĞI DEĞİL ──────────────────────────
+ * İlk yazılışı "stok etkisi varsa kapı ister" idi ve YANLIŞTI — ölçünce çıktı: `→ confirmed`in
+ * etkisi `reserve`dir ama ayırma geçişten ÖNCE, ayrı bir adımda yapılır (`reserveOrderStock`), yani
+ * o kural bugünkü checkout'u kırardı. Doğru ölçüt şu:
+ *
+ *   · **önce** yapılan iş (`→ confirmed`: ayırma) → düz kapı doğrudur, geçiş yalnız kaydeder.
+ *   · **sonra** yapılan iş (`→ returned`: akıbet depoda işlenince) → düz kapı doğrudur, geçiş
+ *     süreci açar.
+ *   · **geçişin KENDİSİYLE, aynı transaction'da** yapılan iş → kendi kapısı şarttır. Araya düz
+ *     yazım girerse durum ilerler ve stok yazımı HİÇ olmaz; yarım kalmış bir geçiş, hiç olmamış
+ *     geçişten beterdir çünkü geri dönüşü de kapatır.
+ *
+ * `stockEffectOf` bu ayrımı tek başına veremez: `release_on_warehouse_return` değeri iki farklı
+ * zamanı birden taşıyor (iptalde geçişle birlikte, iadede sonra). O yüzden kapı adıyla söylenir —
+ * ve ad gerçek bir RPC'ye karşılık gelir, uydurma bir sınıflandırmaya değil.
+ */
+export type OrderGate = 'plain' | 'cancel_order' | 'deliver_order' | 'quick_sale';
+
+export function gateFor(from: OrderStatus, to: OrderStatus): OrderGate {
+  if (to === 'cancelled') return 'cancel_order'; // rezervasyon + kalem-parti + para iadesi, hepsi orada
+  if (to === 'delivered') return 'deliver_order'; // fiili stok düşümü + rezervasyon kapanışı
+  if (to === 'completed' && from === 'draft') return 'quick_sale'; // hızlı satış: fiiliden doğrudan
+  return 'plain';
+}
+
+/** Düz durum yazımı bu geçiş için YETERSİZ mi — çağıranın tek soracağı soru. */
+export function needsDedicatedGate(from: OrderStatus, to: OrderStatus): boolean {
+  return gateFor(from, to) !== 'plain';
+}
+
+/**
  * `reference_no` bu geçişte üretilir mi — kural: **ilk kalıcı durum** (`confirmed`, hızlı satışta
  * `completed`). Numara rastgeledir ve hacim sızdırmaz (DATA_MODEL Kalıcı kararlar).
  */

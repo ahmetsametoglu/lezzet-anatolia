@@ -1,4 +1,4 @@
-import { allowedTransitions, dueDateOf, isOverdue, openAmountCents } from '@lezzet/domain-core';
+import { allowedTransitions, dueDateOf, isOverdue, needsDedicatedGate, openAmountCents } from '@lezzet/domain-core';
 import type { Order, OrderItem, UserProfile } from '@lezzet/types';
 import type { OrderCountsView, OrderRow } from './orders-types';
 import type { OrderCounts } from '@lezzet/database';
@@ -66,7 +66,11 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     },
     isGift: order.isGiftOrder,
     createdAt: order.createdAt,
-    allowedNext: [...allowedTransitions(order.status)],
+    // Detay şeridiyle AYNI süzgeç (denetim 26.08): düz durum yazımından geçemeyen geçiş burada da
+    // "ilerlenebilir" diye sunulmaz. Bugün bu alanı çizen bir liste ekranı yok; süzgeç yine de
+    // burada, çünkü ayrı bırakılan iki liste bir gün ayrışır ve ikincisini kullanan ekran aynı
+    // arızayı sıfırdan doğurur — ilkinde düzeltilmiş olması onu korumaz.
+    allowedNext: allowedTransitions(order.status).filter((to) => !needsDedicatedGate(order.status, to)),
     // Bir sipariş TEK depodan çıkar (DOMAIN §17) — bu yüzden satırda tek bir kod durur, liste değil.
     // Ad bilinmiyorsa (silinmiş değil, yalnız haritaya girmemiş bir kimlik) uydurma yapılmaz.
     warehouse: warehouse ? { code: warehouse.code, name: warehouse.name } : null,

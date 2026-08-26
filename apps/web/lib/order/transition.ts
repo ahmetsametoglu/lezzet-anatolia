@@ -28,6 +28,8 @@ export const webOrderEffects: OrderEffects = {
 interface TransitionInput {
   orderId: string;
   to: OrderStatus;
+  /** Çağıranın gördüğü durum — iyimser kilit (bayat sekme koruması); künyesi pakette. */
+  expectedFrom?: OrderStatus;
   /** Geçişi yapan personel; sistem olayında (webhook, cron) verilmez. */
   actorId?: string | null;
 }

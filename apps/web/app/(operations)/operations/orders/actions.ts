@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { OrderService, serviceDb } from '@lezzet/database';
-import { canTransition, derivePaymentStatusForOrder } from '@lezzet/domain-core';
+import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import {
   DEFAULT_PAGE_SIZE,
   ORDER_STATUS_LABELS,
@@ -13,6 +13,7 @@ import {
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { adjustFulfillment, cancelOrder, retryRefund, type RefundBlockReason } from '@/lib/order/refund';
+import { transitionOrder } from '@/lib/order/transition';
 import { readOrderDetail } from './[id]/order-detail-read';
 import { readOrdersPage } from './orders-page-read';
 import { ORDERS_PATH, parseOrdersUrl } from './orders-url';
@@ -229,10 +230,29 @@ function refundNotice(reason: RefundBlockReason | undefined): string | null {
 }
 
 /**
- * Durum ilerletme — **izin motorda** (`canTransition`), yazım RPC'de (durum + log tek transaction).
+ * Durum ilerletme — **uygulama katmanının kapısından** (`transitionOrder`).
  *
- * Ekran zaten yalnız izinli geçişleri sunuyor; buradaki kontrol ikinci kattır: eski bir sekmeden
- * gelen istek, ekranın sunmadığı bir geçişi yazmasın.
+ * ── NEDEN ARTIK SERVİSE DOĞRUDAN GİTMİYOR (denetim 26.08) ────────────────────
+ * Burası `OrderService.transition`ı doğrudan çağırıyordu, yani `transitionOrder`ın kurduğu
+ * orkestrasyonu ATLIYORDU. Sonucu iki katlıydı:
+ *
+ *   · **Kapı denetimi hiç uygulanmıyordu.** Şerit `cancelled` ve `delivered` düğmelerini de
+ *     çiziyor ve düz yazıma yolluyordu — iptal edilen siparişin ayrılmış malı serbest kalmıyor,
+ *     teslim edilenin fiili stoğu hiç düşmüyordu.
+ *   · **Test edilen yol ile operatörün yürüdüğü yol farklıydı.** `transitionOrder` on test
+ *     dosyasında sınanıyor; bu ekran onu çağırmadığı için o testlerin hiçbiri buraya bakmıyordu.
+ *     Bulgunun kökü buydu: her parça test edilmişti, aradaki dikiş edilmemişti.
+ *
+ * Ekran zaten yalnız izinli VE düz kapıdan geçebilen geçişleri sunuyor (`order-detail-read`);
+ * buradaki kontrol ikinci kattır — eski bir sekmeden gelen istek, ekranın sunmadığı bir geçişi
+ * yazmasın. Karar tek yerde (motor + `transitionOrder`), burada yalnız operatöre söylenecek cümle
+ * seçiliyor.
+ *
+ * **Müşteri haberi artık BU ekrandan da gider** ve bu bilinçli: `webOrderEffects` geçiyor. Aynı
+ * geçiş teslimat ekranından yapıldığında (`deliveries/[orderId]/actions.ts`) haber zaten
+ * gidiyordu — müşterinin "yolda" maili alıp almaması personelin hangi ekranı kullandığına bağlıydı.
+ * Haber veren üç durum var (`confirmed` · `out_for_delivery` · `delivered`) ve tekrarı `notifyOrderStatus`
+ * durum kaydından zaten engelliyor.
  */
 export async function advanceOrderStatusAction(
   orderId: string,
@@ -242,27 +262,36 @@ export async function advanceOrderStatusAction(
   try {
     const actor = await requireAdmin();
 
-    const check = canTransition(from, to);
-    if (!check.allowed) {
-      throw new Error(
-        check.reason === 'terminal'
-          ? 'Bu sipariş kapandı, durumu değişmez.'
-          : check.reason === 'same_status'
-            ? 'Sipariş zaten bu durumda.'
-            : 'Bu geçiş izinli değil.',
-      );
-    }
+    // `from` = ekranın gördüğü durum: iyimser kilit onunla kurulur, yoksa bayat bir sekmeden gelen
+    // istek operatörün beklediğinden başka bir durumdan ilerleyebilirdi.
+    const result = await transitionOrder({ orderId, to, expectedFrom: from, actorId: actor.profileId });
 
-    const result = await new OrderService(serviceDb()).transition({ orderId, from, to, actorId: actor.profileId });
-
+    if (result.status === 'not_found') throw new Error('Sipariş bulunamadı.');
+    if (result.status === 'forbidden') throw new Error(gecisReddiCumlesi(result.reason, result.gate));
     // `stale` = araya biri girdi (başka bir ekran ilerletti). Ezmek yerine gerçeği söyleriz.
-    if (!result.ok) {
+    if (result.status === 'stale') {
       throw new Error(`Sipariş bu sırada "${ORDER_STATUS_LABELS[result.currentStatus]}" durumuna geçmiş — ekranı tazeleyin.`);
     }
 
     revalidatePath(ORDERS_PATH);
-    return { data: { status: result.currentStatus }, error: null };
+    return { data: { status: result.to }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
+}
+
+/**
+ * Reddin operatöre söylenecek hâli. **"Yapılamaz" ile "başka kapıdan" ayrı cümlelerdir**: birincisi
+ * yolun kapalı olduğunu, ikincisi yolun BAŞKA olduğunu söyler. Aynı cümleyi kurmak, operatöre
+ * elindeki işi yapamayacağını söylemek olurdu — oysa yapabilir, doğru düğme ekranın altında duruyor.
+ */
+function gecisReddiCumlesi(reason: 'same_status' | 'terminal' | 'not_allowed' | 'needs_dedicated_gate', gate?: string): string {
+  if (reason === 'terminal') return 'Bu sipariş kapandı, durumu değişmez.';
+  if (reason === 'same_status') return 'Sipariş zaten bu durumda.';
+  if (reason === 'not_allowed') return 'Bu geçiş izinli değil.';
+  return gate === 'deliver_order'
+    ? 'Teslim işareti bu ekrandan verilmez — teslimat ekranından işaretleyin (stok düşümü orada yazılıyor).'
+    : gate === 'quick_sale'
+      ? 'Kapı önü satışı hızlı satış ekranından kapatılır.'
+      : 'İptal bu düğmeden yapılmaz — aşağıdaki "Siparişi iptal et" kararını kullanın (ayrılmış mal ve para iadesi orada işlenir).';
 }

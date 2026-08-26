@@ -9,6 +9,8 @@ import {
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { transitionOrder } from './transition';
+import { deliverOrder } from './fulfillment';
+import { cancelOrder } from './refund';
 
 /**
  * Durum ilerletme (07.6) — motor kararının DB'ye doğru bağlandığı doğrulanır.
@@ -93,10 +95,15 @@ describe('izinli geçişler ve iz (07.6)', () => {
 
   it('teslim anı log tablosundan TÜRETİLİR — siparişte ayrı kolon yok', async () => {
     const order = await createOrder();
-    for (const status of ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered'] as const) {
+    for (const status of ['confirmed', 'preparing', 'ready', 'out_for_delivery'] as const) {
       const outcome = await transitionOrder({ orderId: order.id, to: status });
       expect(outcome.status).toBe('ok');
     }
+    // Teslim BU KAPIDAN geçmez (denetim 26.08): fiili stok düşümü geçişle aynı transaction'da
+    // olmalı, o iş `deliver_order`ın içinde. Test'in iddiası teslim ANININ nereden okunduğu — kapı
+    // hangisi olursa olsun log satırı yazılmalı, ve doğru kapının yazdığını doğrulamak buradaki
+    // asıl soruyu daha iyi yanıtlıyor.
+    expect(await deliverOrder(order.id)).toMatchObject({ ok: true });
 
     expect(await logs.firstEntryAt(order.id, 'delivered')).not.toBeNull();
     expect(await logs.firstEntryAt(order.id, 'completed')).toBeNull();
@@ -127,9 +134,26 @@ describe('reddedilen geçişler', () => {
 
   it('kapanmış siparişten ilerletilemez', async () => {
     const order = await createOrder();
-    await transitionOrder({ orderId: order.id, to: 'cancelled' });
+    // İptal de bu kapıdan geçmez (yukarıdaki aynı gerekçe) — ayrılmış mal ve para `cancel_order`ın
+    // içinde işleniyor. Kapanmışlık iddiası kapıdan bağımsızdır: sipariş nasıl kapandıysa kapandı.
+    expect(await cancelOrder(order.id)).toMatchObject({ status: 'ok' });
 
     expect(await transitionOrder({ orderId: order.id, to: 'confirmed' })).toMatchObject({ reason: 'terminal' });
+  });
+
+  it('yan etkili geçiş bu kapıdan REDDEDİLİR — doğru kapının adıyla (denetim 26.08)', async () => {
+    const order = await createOrder();
+    await transitionOrder({ orderId: order.id, to: 'confirmed' });
+
+    // Düz yazım yalnız `status` + log yazar. Geçmesine izin verilseydi sipariş iptal görünür,
+    // ayrılmış malı ise serbest kalmazdı — ve `cancelled` terminal olduğu için doğru kapı da
+    // kapanırdı. Sebep `gate` ile söylenir: ekran operatöre hangi düğmeyi göstereceğini bilsin.
+    expect(await transitionOrder({ orderId: order.id, to: 'cancelled' })).toMatchObject({
+      status: 'forbidden',
+      reason: 'needs_dedicated_gate',
+      gate: 'cancel_order',
+    });
+    expect((await orders.getById(order.id))?.status).toBe('confirmed');
   });
 
   it('olmayan sipariş', async () => {

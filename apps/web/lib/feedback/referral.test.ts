@@ -4,7 +4,7 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { ensureCustomerReferralCode, linkReferrer, resolveReferrer } from '@lezzet/application';
 import { getPointsBalance, listPointsHistory } from './points';
 import { recordOrderPayment } from '../money/order-payment';
-import { transitionOrder } from '../order/transition';
+import { deliverOrder } from '../order/fulfillment';
 
 /**
  * Davet zinciri ve getirenin ödülü (17.4 · 17.7 · 17.9).
@@ -162,7 +162,10 @@ describe('getiren bağı', () => {
 describe('getirenin ödülü — para alındığında', () => {
   it('SİPARİŞ PUANI ARTIK YOK: teslimat da ödeme de `order` satırı doğurmaz', async () => {
     const orderId = await siparisAc(getirilenId);
-    expect((await transitionOrder({ orderId, to: 'delivered' })).status).toBe('ok');
+    // Teslim DÜZ DURUM YAZIMINDAN yapılmaz (denetim 26.08): fiili stok düşümü geçişle aynı
+    // transaction'da olmalı, o iş `deliver_order`ın içinde. Fikstür de gerçek kapıdan geçer —
+    // yoksa test, üretimde hiç oluşmayan bir durumdan ödül kuralını sınardı.
+    expect(await deliverOrder(orderId)).toMatchObject({ ok: true });
     await odemeAl(orderId);
 
     const gecmis = await listPointsHistory(getirilenId);
@@ -173,7 +176,9 @@ describe('getirenin ödülü — para alındığında', () => {
     const kod = await ensureCustomerReferralCode(db, getirenId);
     await linkReferrer(db, getirilenId, kod!);
 
-    await transitionOrder({ orderId: await siparisAc(getirilenId), to: 'delivered' });
+    // Sonucu İDDİA EDİLİYOR: teslim gerçekten olmadan "teslimat tek başına ödül doğurmaz" demek,
+    // olmayan bir olayın sonucunu ölçmek olurdu (aynı gerekçe yukarıda).
+    expect(await deliverOrder(await siparisAc(getirilenId))).toMatchObject({ ok: true });
     // Teslim edildi ama tahsilat yazılmadı: bedava sipariş verip puan üretme kapısı kapalı.
     expect((await getPointsBalance(getirenId)).balance).toBe(0);
   });

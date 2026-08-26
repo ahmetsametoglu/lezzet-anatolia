@@ -1,5 +1,5 @@
 import { OrderService, ReservationService } from '@lezzet/database';
-import { canTransition } from '@lezzet/domain-core';
+import { canTransition, gateFor } from '@lezzet/domain-core';
 import type { OrderStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -17,6 +17,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  *
  * Motor yine SORULUR (`canTransition`): fikstür yanlış bir geçişi sessizce yazarsa test, olmayan
  * bir durumdan doğru cevap alır ve yeşil yalan söyler.
+ *
+ * ── KAPI KURALI FİKSTÜRDE DE GEÇERLİ (denetim 26.08) ─────────────────────────
+ * Bu yardımcı düz durum yazımını (`OrderService.transition`) kullanıyor ve o kapı, stok yazımı
+ * geçişle aynı transaction'da olan hedefleri YAZAMAZ (`gateFor`). Fikstür o hedeflere yine de
+ * gidebilseydi, üretimde ASLA oluşamayacak bir durumu kurardı: `delivered` ama fiili stoğu hiç
+ * düşmemiş bir sipariş. Öyle bir zemin üstünde sınanan kural yeşil kalır ve hiçbir şey kanıtlamaz.
+ * Bu yüzden fırlatır — testin doğru kapıyı (`deliverOrder`/`cancelOrder`) çağırması gerekir.
  */
 export async function advanceOrder(db: SupabaseClient, orderId: string, path: readonly OrderStatus[]): Promise<void> {
   const orders = new OrderService(db);
@@ -27,6 +34,11 @@ export async function advanceOrder(db: SupabaseClient, orderId: string, path: re
 
     const verdict = canTransition(order.status, to);
     if (!verdict.allowed) throw new Error(`advanceOrder: ${order.status} → ${to} izinli değil (${verdict.reason})`);
+
+    const gate = gateFor(order.status, to);
+    if (gate !== 'plain') {
+      throw new Error(`advanceOrder: ${order.status} → ${to} düz yazımdan geçmez — fikstür \`${gate}\` kapısını çağırmalı`);
+    }
 
     const result = await orders.transition({ orderId, from: order.status, to });
     if (!result.ok) throw new Error(`advanceOrder: ${order.status} → ${to} yazılamadı (şu an ${result.currentStatus})`);

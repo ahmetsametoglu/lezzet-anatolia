@@ -24,6 +24,7 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 - [x] (03.1) **Durum makinesi:** izinli geçiş tablosu (`ORDER_LIFECYCLE.md` birebir: tam yol + hızlı satış + ek geçişler) + geçiş doğrulama fonksiyonu
   - *Bitti:* her izinli geçiş ve en az 5 yasak geçiş birim testli; `returned → completed` ve iptalde "karşılanan = 0" kuralları dahil
   - **Durum (27.07):** `status-machine.ts` — izinli geçiş tablosu (tam yol + hızlı satış + ek geçişler), `canTransition` hata DEĞERİ döner (fırlatma yok), `allowedTransitions` (UI yalnız izinliyi sunar), `stockEffectOf` (confirmed'de `alreadyReserved` ayrımı — online ödemede stok checkout'ta ayrılmıştır), `producesReferenceNo`. 22 test.
+  - **Durum (26.08 — kapı bekçisi eklendi):** `gateFor` + `needsDedicatedGate`. Bir geçişin İZİNLİ olması, düz durum yazımıyla (`transition_order_status`) yapılabileceği anlamına gelmiyordu ve bu ayrım hiçbir yerde yazılı değildi: `→ cancelled`, `→ delivered` ve `draft → completed`in stok yazımı geçişle **aynı transaction'da** olmak zorunda, o iş `cancel_order`/`deliver_order`/`quick_sale` içinde yapılıyor. Ölçüt etkinin varlığı DEĞİL zamanı — `→ confirmed`in ayırması önce (`reserveOrderStock`), `→ returned`in akıbeti sonra (`adjust_fulfillment`) yazılıyor, ikisi de düz kapıdan geçiyor. İlk yazılışı "stok etkisi varsa kapı ister" idi ve ölçünce yanlış çıktı: bugünkü checkout'u kırıyordu. Kural `ORDER_LIFECYCLE`'da; izinli geçişlerin tamamını dolaşan bir test sınıflandırmanın eksik kalmasını engelliyor.
 - [x] (03.2) **Kanal ve kaynak:** `company_info` → channel türetimi; order_source ekseninin bağımsızlığı
   - *Bitti:* şirketli müşteri → b2b, bireysel → b2c testleri
   - **Durum (27.07):** `channel.ts` — `deriveChannel` (şirket→b2b), `usesFastSalePath` (yalnız `door`), `canChangeChannel()=false` (kanal siparişe yazılınca donar). Kaynak ekseni kanaldan bağımsız.
@@ -71,4 +72,10 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 
 ---
 
-**Modül durumu (26.07.2026):** başlamadı. `packages/domain-core` kabuk (yalnız paket sabiti). 04/05'te yazılan servisler bugün domain-core'a bağımlı değil — fiyat çözümü, rezervasyon ve durum makinesi buraya geldiğinde 05/06/07'nin ilgili görevleri bu pakete devreder.
+**Modül durumu (26.08.2026):** 11/11 tamam. `packages/domain-core` 16 alanda **55 motor + 54 test dosyası** taşıyor (756 birim testi); 03'ün on bir görevi bunun ilk çekirdeğiydi, gerisi 05–23 modülleriyle geldi. Paket depoda **99 yerden** okunuyor (en çok `apps/web`, sonra `packages/application`).
+
+~~Modül durumu (26.07.2026): başlamadı.~~ — 27.07'de yazıldı; altbilgi bir ay boyunca "başlamadı" demeye devam etti ve denetimde (26.08) düzeltildi. Kapanmış görev satırlarının üstünde duran bayat bir özet, satırların kendisinden daha çok okunuyor.
+
+**Denetim notu (26.08):** on bir satırın davranışı kodda tek tek doğrulandı — anılan 21 fonksiyonun 21'i yerinde ve anlatıldığı gibi çalışıyor. Aynı denetimde çıkan iki açık ayrıca kaydedildi:
+- `03.3`'ün fiyat sırası satırı **üç basamak** yazıyor; kodda **dört** var — fiyat grubu (B2B alt kademesi) 20.08'de eklenmiş, satıra işlenmemiş. Kodu ve testi tam (`resolve-price.test.ts`, 21 test).
+- `03.1`'in `stockEffectOf`'u yazıldığı günden 26.08'e kadar **tek bir dalıyla** tüketiliyordu. `gateFor` ile artık durum geçişi kapısının ölçütü o (`ORDER_LIFECYCLE` "Geçiş İZİNLİ olabilir ama HER KAPIDAN yazılamaz").

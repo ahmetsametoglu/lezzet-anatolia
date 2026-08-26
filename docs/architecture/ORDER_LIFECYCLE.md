@@ -34,6 +34,7 @@ draft → confirmed → preparing → ready → out_for_delivery → delivered �
 ```
 
 Ek geçişler:
+- `draft → cancelled` (terk edilen checkout / rezervasyon TTL'inin dolması — DOMAIN §4). *(Bu satır kodda ve testte doğduğu günden beri vardı ama bu listede YOKTU; denetim 26.08'de eklendi.)*
 - `confirmed / preparing / ready → cancelled` (stok geri bırakılır — depo çıkışıysa depoya girişte)
 - `out_for_delivery → ready` (**ulaşılamadı** — yeniden teslim; mal ayrılmış kalır)
 - `out_for_delivery → returned` (**reddedildi** — mal depoya döner)
@@ -41,6 +42,22 @@ Ek geçişler:
 - `returned → completed` (iade süreci kapanışı: depo aksiyonu — restok/imha — ve para iadesi tamamlanınca sipariş kapanır; kalıcı `returned`'da kalmaz)
 
 **İptalde para kuralı:** ödenmiş sipariş iptal edilirse tutarın **tamamı otomatik iade** edilir; iptal edilen siparişte karşılanan tutar **0 sayılır** — `payment_status` türetimi buna göre `refunded` olur (hiç ödenmemişse `pending` kapanır).
+
+## Geçiş İZİNLİ olabilir ama HER KAPIDAN yazılamaz (26.08)
+
+Bir geçişin izinli olması, onu düz durum yazımıyla (`transition_order_status`) gerçekleştirebileceğin anlamına gelmez. O RPC yalnız `status` ve log satırını yazar; stoğu ayırmaz, tüketmez, geri bırakmaz. Üç geçişin stok yazımı **geçişle aynı transaction'da** olmak zorundadır ve bu yüzden kendi kapılarından geçerler:
+
+| Geçiş | Kapı | Kapının ayrıca yaptığı |
+| --- | --- | --- |
+| `→ cancelled` | `cancel_order` | rezervasyonu siler · `order_item_batch`i temizler · karşılananı sıfırlar · parayı iade eder |
+| `→ delivered` | `deliver_order` | fiili stoğu düşer · rezervasyonu kapatır · teslim kanıtını yazar |
+| `draft → completed` | `quick_sale` | fiiliden doğrudan düşer (hızlı satış, rezervasyon yok) |
+
+Ölçüt stok etkisinin **varlığı değil ZAMANI**: `→ confirmed`in de etkisi vardır (`reserve`) ama ayırma geçişten **önce**, ayrı bir adımda yapılır (`reserveOrderStock`); `→ returned`in işi ise **sonra**, depocu akıbeti işaretleyince (`adjust_fulfillment`) yazılır. İkisi de düz kapıdan geçer.
+
+Kararın tek yeri motordur: `gateFor(from, to)` (`domain-core/order/status-machine`). Uygulama kapısı `transitionOrder` yan etkili geçişi `forbidden / needs_dedicated_gate` ile reddeder ve **doğru kapının adını döndürür** — ekran operatöre hangi düğmeyi kullanacağını söyleyebilsin diye. Ekranlar da izinli geçiş listesini bu süzgeçten geçirir: sunulmayan düğme yanlış yola götüremez.
+
+> **Neden yazılı bir kural oldu:** operasyon sipariş detayının "İzinli geçişler" şeridi geçişleri süzmeden düğmeye çeviriyordu. Şeritten iptal edilen siparişin **ayrılmış malı serbest kalmıyor**, şeritten teslim edilenin **fiili stoğu hiç düşmüyordu**. Kapıda/vadeli siparişte rezervasyonun TTL'i olmadığı için süpürücü de o satırı görmüyordu; `cancelled` terminal olduğu için doğru kapı da kapanıyor, hasar geri alınamıyordu. Hiçbir test görmemişti çünkü her test kendi kapısını tek başına sınıyordu — kapıların **aynı odaya açtığını** soran test yoktu (`packages/application/src/order/refund.test.ts`, "kapı denkliği").
 
 ## Hızlı satış yolu
 

@@ -169,11 +169,18 @@ export async function markUndeliveredAction(
  * Motorun ret kodları — kuryenin diline. `not_allowed` en sık görülecek olan: durak henüz yola
  * çıkmamışken kapatılmak istendiğinde gelir, ve cevabı bir hata değil bir YÖNLENDİRMEDİR.
  */
-const FORBIDDEN: Record<'not_assigned' | 'same_status' | 'terminal' | 'not_allowed', string> = {
+const FORBIDDEN: Record<'not_assigned' | 'same_status' | 'terminal' | 'not_allowed' | 'needs_dedicated_gate', string> = {
   not_assigned: 'Bu durak size atanmamış.',
   same_status: 'Sipariş zaten bu durumda.',
   terminal: 'Bu sipariş kapanmış; üzerinde değişiklik yapılamaz.',
   not_allowed: 'Bu adım şu an yapılamaz — önce "Yola çıktım" işaretlenmeli.',
+  /*
+    Bu kapı yalnız `out_for_delivery` yazıyor ve o geçiş düz yazımdan geçer, yani burada pratikte
+    görülmez. Yine de bir cümlesi VAR ve olmalı: eşlemeye "bu asla olmaz" diye eksik bırakılan bir
+    anahtar, bir gün olduğunda `undefined` bir hata mesajı üretir — operatörün ekranında boş bir
+    uyarı, teşhis edilemeyen bir arızadır. Sebebin tanımı `transitionOrder` künyesinde (26.08).
+  */
+  needs_dedicated_gate: 'Bu adım kendi ekranından yapılır — teslim ve iptal ayrı kapılardan yazılıyor.',
 };
 
 /**

@@ -78,7 +78,11 @@ describe('sipariş satırı', () => {
 
   it('izinli geçişler MOTORDAN gelir — ekran kendi listesini kurmaz', () => {
     const [row] = build([order({ status: 'ready' })]);
-    expect(row?.allowedNext).toEqual(['out_for_delivery', 'cancelled']);
+    // `cancelled` BİLEREK yok (denetim 26.08): izinli bir geçiş ama düz durum yazımından
+    // üretilemez — iptalde ayrılmış mal ve para aynı transaction'da işlenmeli. Bu satır 26.08'e
+    // kadar `cancelled`ı BEKLİYORDU, yani arızayı sabitleyen testti: ekran yanlış kapıya götüren
+    // bir düğme çiziyordu ve test onu doğru sayıyordu. İptal artık "Kararlar" bloğundan yapılır.
+    expect(row?.allowedNext).toEqual(['out_for_delivery']);
   });
 
   it('kapanmış siparişin ilerleyeceği yer yoktur', () => {

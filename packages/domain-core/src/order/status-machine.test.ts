@@ -28,7 +28,7 @@ describe('isFulfillmentSettled', () => {
   });
 });
 import type { OrderStatus } from '@lezzet/types';
-import { MAIN_PATH, allowedTransitions, canTransition, isTerminal, producesReferenceNo, skippedBetween, stockEffectOf } from './status-machine';
+import { MAIN_PATH, allowedTransitions, canTransition, gateFor, isTerminal, needsDedicatedGate, producesReferenceNo, skippedBetween, stockEffectOf } from './status-machine';
 
 describe('tam yol', () => {
   it('draft → confirmed → preparing → ready → out_for_delivery → delivered → completed', () => {
@@ -128,6 +128,63 @@ describe('stok etkisi', () => {
 
   it('iade kapanışı stoğu bir kez daha değiştirmez', () => {
     expect(stockEffectOf('returned', 'completed')).toBe('none');
+  });
+});
+
+describe('kendi kapısını isteyen geçişler (denetim 26.08)', () => {
+  /*
+    İddia KURALDAN yazılıyor: "stok yazımı geçişin KENDİSİYLE aynı transaction'da olan geçiş, düz
+    durum yazımından üretilemez." Ölçüt etkinin varlığı değil ZAMANI — önce (ayırma) ya da sonra
+    (iade akıbeti) yapılan iş düz kapıyı bozmaz.
+
+    Liste elle sayılmıyor: izinli geçişlerin TAMAMI dolaşılıp her biri sınıflandırılıyor, çünkü elle
+    yazılan bir liste yeni bir durum eklendiğinde sessizce eksik kalır ve bekçi tam da o yeni
+    geçişte kör olur. Beklenen küme burada duruyor; tabloya bir geçiş eklenip bu küme
+    güncellenmezse test düşer ve ekleyen kişi "bunun stok yazımı nerede" sorusunu yanıtlamak
+    ZORUNDA kalır.
+  */
+  const KAPI_ISTEYEN = new Set(['draft→completed', 'draft→cancelled', 'confirmed→cancelled', 'preparing→cancelled', 'ready→cancelled', 'out_for_delivery→delivered']);
+
+  const tumGecisler: [OrderStatus, OrderStatus][] = (
+    ['draft', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'returned', 'completed', 'cancelled'] as OrderStatus[]
+  ).flatMap((from) => allowedTransitions(from).map((to) => [from, to] as [OrderStatus, OrderStatus]));
+
+  it('her izinli geçiş sınıflandırılmıştır — yeni geçiş cevapsız kalamaz', () => {
+    const olculen = tumGecisler.filter(([from, to]) => needsDedicatedGate(from, to)).map(([from, to]) => `${from}→${to}`);
+    expect(new Set(olculen)).toEqual(KAPI_ISTEYEN);
+  });
+
+  it('kapı adı gerçek bir RPC’ye karşılık gelir — uydurma sınıf değil', () => {
+    expect(gateFor('ready', 'cancelled')).toBe('cancel_order');
+    expect(gateFor('out_for_delivery', 'delivered')).toBe('deliver_order');
+    expect(gateFor('draft', 'completed')).toBe('quick_sale');
+  });
+
+  it('stok yazımı GEÇİŞLE BİRLİKTE olan geçiş kendi kapısını ister', () => {
+    expect(needsDedicatedGate('ready', 'cancelled')).toBe(true); // rezervasyon + para, aynı transaction
+    expect(needsDedicatedGate('out_for_delivery', 'delivered')).toBe(true); // fiili stok düşmeli
+    expect(needsDedicatedGate('draft', 'completed')).toBe(true); // hızlı satış: fiiliden doğrudan
+  });
+
+  it('stok işi ÖNCE yapılan geçiş düz yazımdan geçer — yoksa checkout kırılırdı', () => {
+    // `place-order` önce ayırır (`reserveOrderStock`), sonra buraya gelir; Stripe yolunda ayırma
+    // checkout başında yapılmıştır. Kapı istemek bu iki akışı da kesecekti — ölçüldü 26.08.
+    expect(needsDedicatedGate('draft', 'confirmed')).toBe(false);
+  });
+
+  it('stok işi SONRA yapılan geçiş düz yazımdan geçer — geçiş süreci açar, iş depoda biter', () => {
+    // İade: akıbet (restok/imha) depocu işaretleyince `adjust_fulfillment` içinde yazılır.
+    expect(needsDedicatedGate('out_for_delivery', 'returned')).toBe(false);
+    expect(needsDedicatedGate('delivered', 'returned')).toBe(false);
+  });
+
+  it('stoğa hiç dokunmayan geçişler düz yazımdan geçer — kural kapıyı daraltır, kapatmaz', () => {
+    expect(needsDedicatedGate('confirmed', 'preparing')).toBe(false);
+    expect(needsDedicatedGate('preparing', 'ready')).toBe(false);
+    expect(needsDedicatedGate('ready', 'out_for_delivery')).toBe(false);
+    expect(needsDedicatedGate('out_for_delivery', 'ready')).toBe(false); // ulaşılamadı: mal ayrılmış kalır
+    expect(needsDedicatedGate('delivered', 'completed')).toBe(false);
+    expect(needsDedicatedGate('returned', 'completed')).toBe(false);
   });
 });
 

@@ -38,6 +38,7 @@ import {
   isFulfillmentSettled,
   isOverdue,
   isTerminal,
+  needsDedicatedGate,
   openAmountCents,
   orderContribution,
   skippedBetween,
@@ -242,7 +243,16 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     })),
 
     timeline: timelineOf(logs, new Map(actors.map((a) => [a.id, a.name])), tickets, order.status),
-    allowedNext: [...allowedTransitions(order.status)],
+    /*
+      Şerit YALNIZ düz kapıdan yazılabilen geçişleri sunar (denetim 26.08). Süzgeçsiz hâli
+      `cancelled` ve `delivered` düğmelerini de çiziyordu ve ikisi de düz duruma yazılıyordu:
+      iptal edilen siparişin ayrılmış malı serbest kalmıyor, teslim edilenin fiili stoğu hiç
+      düşmüyordu. Yetenek KAYBOLMUYOR, doğru kapıya taşınıyor — iptal aşağıdaki "Kararlar"
+      bloğunda (`allowedDecisions` zaten aynı durumlarda `cancel` veriyor), teslim işareti
+      teslimat ekranında. Eylem tarafında ikinci bir kat daha var: eski bir sekmeden gelen
+      istek de reddedilir.
+    */
+    allowedNext: allowedTransitions(order.status).filter((to) => !needsDedicatedGate(order.status, to)),
     decisions: [...allowedDecisions(order.status)],
     refundRoutes: allowedDecisions(order.status).includes('refund') ? refundRoutesOf(accounts, movements) : [],
 

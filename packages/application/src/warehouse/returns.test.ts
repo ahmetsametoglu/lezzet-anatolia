@@ -11,6 +11,7 @@ import {
 } from '@lezzet/database';
 import { createTestWarehousePair, mustDelete, purgeTestData } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
+import { deliverOrder } from '../order/fulfillment';
 import { listWarehouseReturns, type ReturnDrop } from './returns';
 
 /**
@@ -253,7 +254,11 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
     await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 1 });
     await advanceOrder(db, order.id, ['confirmed', 'preparing']);
     await orders.recordPreparation(order.id, [{ orderItemId: lines[0]!.id, batches: [{ stockId: batchId, qty: 1 }] }]);
-    await advanceOrder(db, order.id, ['ready', 'out_for_delivery', 'delivered']);
+    await advanceOrder(db, order.id, ['ready', 'out_for_delivery']);
+    // Teslim GERÇEK kapıdan (denetim 26.08): düz yazım fiili stoğu düşmez ve fikstür üretimde
+    // oluşamayacak bir sipariş kurardı — "teslim edilmiş sipariş rampaya düşmez" iddiası ancak
+    // gerçekten teslim edilmiş bir sipariş üstünde bir şey kanıtlar.
+    expect(await deliverOrder(db, order.id)).toMatchObject({ ok: true });
 
     expect(await dropOf(order.id)).toBeUndefined();
     // Kalem gerçekten duruyor: iddia "sipariş yok" değil, "bu listede yok".

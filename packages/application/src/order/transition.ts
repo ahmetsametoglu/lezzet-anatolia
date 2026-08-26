@@ -1,5 +1,5 @@
 import { OrderService, type Db } from '@lezzet/database';
-import { canTransition, generateReferenceNo, producesReferenceNo } from '@lezzet/domain-core';
+import { canTransition, gateFor, generateReferenceNo, producesReferenceNo, type OrderGate } from '@lezzet/domain-core';
 import type { OrderStatus } from '@lezzet/types';
 import { notifyStatusEffect, type OrderEffects } from './effects';
 
@@ -10,8 +10,12 @@ import { notifyStatusEffect, type OrderEffects } from './effects';
  * yazım servisin (koşullu RPC: durum + log tek transaction'da). İkisi birbirini bilmez (STACK §4);
  * birleştiren yer burasıdır.
  *
- * İki ayrı "hayır" vardır ve karıştırılmaz:
- * - **`forbidden`** — geçiş kurallara aykırı (ör. `draft → delivered`). Motorun cevabı.
+ * ÜÇ ayrı "hayır" vardır ve karıştırılmaz:
+ * - **`forbidden` / `not_allowed` · `terminal` · `same_status`** — geçiş kurallara aykırı
+ *   (ör. `draft → delivered`). Motorun geçiş tablosunun cevabı.
+ * - **`forbidden` / `needs_dedicated_gate`** — geçiş kurallara UYGUN ama bu kapıdan yazılamaz:
+ *   stok yazımı geçişle aynı transaction'da olmalı, o iş `cancel_order` / `deliver_order` /
+ *   `quick_sale` içinde yapılıyor (denetim 26.08). "Yapılamaz" değil, "başka kapıdan" demektir.
  * - **`stale`** — geçiş kurallara uygun ama sipariş artık o durumda değil; araya biri girdi
  *   (depocu "hazır" derken kurye "yolda" demiş). Veritabanının cevabı.
  *
@@ -35,8 +39,11 @@ import { notifyStatusEffect, type OrderEffects } from './effects';
 
 export type TransitionOutcome =
   | { status: 'ok'; from: OrderStatus; to: OrderStatus; referenceNo: string | null }
-  /** Kurallara aykırı geçiş — sebep motorun kodu (`same_status` / `terminal` / `not_allowed`). */
-  | { status: 'forbidden'; reason: 'same_status' | 'terminal' | 'not_allowed' }
+  /**
+   * Kurallara aykırı geçiş. İlk üç sebep motorun geçiş tablosundan (`canTransition`); dördüncüsü
+   * KAPI kararıdır: geçiş izinli ama bu kapıdan yazılamaz (`needs_dedicated_gate`).
+   */
+  | { status: 'forbidden'; reason: 'same_status' | 'terminal' | 'not_allowed' | 'needs_dedicated_gate'; gate?: OrderGate }
   /** Sipariş bu arada başkası tarafından ilerletilmiş — çağıran yeni duruma göre yeniden karar verir. */
   | { status: 'stale'; currentStatus: OrderStatus }
   | { status: 'not_found' };
@@ -44,6 +51,17 @@ export type TransitionOutcome =
 export interface TransitionInput {
   orderId: string;
   to: OrderStatus;
+  /**
+   * Çağıranın GÖRDÜĞÜ durum — verilirse iyimser kilit buna göre kurulur (26.08).
+   *
+   * Kapı siparişin güncel durumunu zaten okuyor; o okumayla yazım arasındaki yarışı RPC'nin kendi
+   * koşullu update'i tutuyor. Ama bir de EKRANIN bayatlığı var ve o başka bir şey: operatör
+   * "Onaylandı" gördüğü sayfada dururken sipariş "Hazırlanıyor"a geçmiş olabilir. Bu alan
+   * verilmezse kapı yalnız kendi okumasını korur ve bayat bir ekrandan gelen istek, operatörün
+   * beklediğinden BAŞKA bir durumdan ilerleyebilir — sonuç doğru yazılır ama operatöre yanlış
+   * hikâyeyi anlatır.
+   */
+  expectedFrom?: OrderStatus;
   /** Geçişi yapan personel; sistem olayında (webhook, cron) verilmez. */
   actorId?: string | null;
   /**
@@ -59,18 +77,32 @@ export async function transitionOrder(db: Db, input: TransitionInput): Promise<T
   const order = await orders.getById(input.orderId);
   if (!order) return { status: 'not_found' };
 
+  // 0) Ekran bayat mı — çağıranın gördüğü durum hâlâ geçerli mi? (yalnız bildirdiyse)
+  if (input.expectedFrom && input.expectedFrom !== order.status) {
+    return { status: 'stale', currentStatus: order.status };
+  }
+
   // 1) Kural: bu geçiş izinli mi? Motor hata FIRLATMAZ, değer döner (03.1).
   const verdict = canTransition(order.status, input.to);
   if (!verdict.allowed) return { status: 'forbidden', reason: verdict.reason };
 
-  // 2) Referans numarası İLK KALICI DURUMDA üretilir (`confirmed`, hızlı satışta `completed`).
+  /* 2) Kapı: izinli olmak YETMEZ, bu kapıdan yazılabilir olmalı (denetim 26.08).
+     Stok yazımı geçişle AYNI transaction'da olan geçişler buradan geçmez — düz yazım yalnız
+     `status` + log yazar, stoğu düşmez/bırakmaz. Ölçüldü: şeritten iptal edilen siparişin
+     ayrılmış malı serbest kalmıyor, şeritten teslim edilenin fiili stoğu hiç düşmüyordu.
+     Reddetmek "yapılamaz" demek değil, "başka kapıdan" demektir — sebep `gate` ile söylenir ki
+     çağıran operatöre doğru düğmeyi gösterebilsin. */
+  const gate = gateFor(order.status, input.to);
+  if (gate !== 'plain') return { status: 'forbidden', reason: 'needs_dedicated_gate', gate };
+
+  // 3) Referans numarası İLK KALICI DURUMDA üretilir (`confirmed`, hızlı satışta `completed`).
   //    Zaten varsa yeniden üretilmez; RPC de mevcut numarayı ezmez (çift emniyet).
   const referenceNo =
     !order.referenceNo && producesReferenceNo(order.status, input.to)
       ? generateReferenceNo({ year: new Date(order.createdAt).getFullYear() })
       : null;
 
-  // 3) Yazım: koşullu (yalnız beklenen kaynaktan) + log satırı aynı transaction'da.
+  // 4) Yazım: koşullu (yalnız beklenen kaynaktan) + log satırı aynı transaction'da.
   const result = await orders.transition({
     orderId: order.id,
     from: order.status,
@@ -81,13 +113,13 @@ export async function transitionOrder(db: Db, input: TransitionInput): Promise<T
 
   if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
 
-  // 4) Haber müşteriye — YALNIZ geçiş gerçekten olduysa (14.5). Gönderim hatası geçişi geri almaz:
+  // 5) Haber müşteriye — YALNIZ geçiş gerçekten olduysa (14.5). Gönderim hatası geçişi geri almaz:
   //    sipariş ilerledi, mail gitmediyse tekrar gönderilir; tersi (ilerlemeyi iptal etmek) veriyi
   //    bozar. Yakalama portun içinde (`runEffect`) — çağıran kötü davranan bir port geçirse bile
   //    ilerlemiş bir sipariş "olmadı" diye görünmez.
   await notifyStatusEffect(input.effects, order.id, input.to);
 
-  // 5) ÖDÜL ÇAĞRISI BURADAN KALKTI (17.9). Sipariş puanı kaldırıldı (kullanıcı kararı 11.08) ve
+  // 6) ÖDÜL ÇAĞRISI BURADAN KALKTI (17.9). Sipariş puanı kaldırıldı (kullanıcı kararı 11.08) ve
   //    getirenin ödülü teslimattan ÖDEMEYE taşındı — `order/payment.ts` → `finalize`. Durum geçişi
   //    paranın alındığını BİLMEZ: `delivered` ödenmemiş bir siparişte de olabiliyor, yani burada
   //    yazılan puan "para alındığında yaz" kuralını deliyordu.

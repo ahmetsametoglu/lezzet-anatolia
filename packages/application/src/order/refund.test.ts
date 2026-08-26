@@ -7,6 +7,7 @@ import { recordOrderPayment } from './payment';
 import { closeOrder, deliverOrder } from './fulfillment';
 import { adjustFulfillment, cancelOrder } from './refund';
 import { advanceOrder, prepareOrderToReady } from './advance.testkit';
+import { transitionOrder } from './transition';
 
 /**
  * Kısmi karşılama (07.8) ve iptal/iade (07.9) — terfi 21.10 ile taşındı (kaynağı
@@ -256,6 +257,62 @@ describe('teslim sonrası iade — malın nereye gittiği maliyeti belirler (DOM
     await advanceOrder(db, orderId, ['returned']);
 
     expect(await closeOrder(db, orderId)).toMatchObject({ ok: true, currentStatus: 'completed', cogsAmountCents: 0 });
+  });
+});
+
+/**
+ * **KAPI DENKLİĞİ (02.20 · denetim 26.08).** Aşağıdaki testler bir SONUCU değil bir KURALI sabitler:
+ * *"iptal ve teslim, hangi kapıdan geçilirse geçilsin, malı doğru yere koyar."*
+ *
+ * Neden gerekti: iki kapı vardı ve ikisi zıt davranıyordu. `cancel_order` rezervasyonu siliyor,
+ * parayı iade ediyor, sebebi yazıyordu; düz durum yazımı (`transition_order_status`) yalnız
+ * `status` + log yazıyordu. Operasyon sipariş detayının "İzinli geçişler" şeridi ise geçişleri
+ * SÜZMEDEN düğmeye çeviriyordu — yani ekranda kırmızı bir "İptal" düğmesi vardı ve yanlış kapıya
+ * gidiyordu. Kapıda/vadeli siparişte rezervasyonun TTL'i olmadığı için (`place-order`, `expiring:
+ * false`) süpürücü de o satıra bakmıyordu: mal kalıcı olarak ayrılmış kalıyordu, üstelik `cancelled`
+ * terminal olduğu için doğru kapı da kapanıyordu.
+ *
+ * **Neden HİÇBİR test görmedi** — ve bu testlerin biçimi tam olarak o dersten çıktı:
+ *   · Doğru kapının testi vardı (aşağıdaki "ayrılmış geri bırakılır"), kesin ve yeşildi.
+ *   · Yanlış kapının testi de vardı (`transition.test.ts`) ve KODU DOĞRU ANLATIYORDU: durum, log,
+ *     referans, eşzamanlılık. Stoğa bakmıyordu — çünkü kod da bakmıyordu.
+ *   · Bir e2e testi tam o şeride basıyordu ama `confirmed → preparing`i seçmişti: şeritteki TEK
+ *     yan etkisiz geçiş.
+ * Yani her test kendi işini eksiksiz yapıyordu. Eksik olan, **kapıların aynı odaya açtığını**
+ * soran testti — koddan değil KURALDAN yazılan test. Buradakiler odur.
+ */
+describe('kapı denkliği: yan etkili geçiş düz durum yazımından ÜRETİLEMEZ', () => {
+  it('iptal — üretilebilseydi ayrılmış mal ortada kalırdı', async () => {
+    const { orderId } = await prepare(3);
+    expect(await reservations.listActiveByOrder(orderId)).toHaveLength(1);
+
+    // Operatörün "İzinli geçişler" şeridinden bastığı yol.
+    const outcome = await transitionOrder(db, { orderId, to: 'cancelled' });
+
+    expect(outcome).toMatchObject({ status: 'forbidden', reason: 'needs_dedicated_gate' });
+    // Sipariş OYNAMADI: yarım bir iptal, hiç iptal olmamasından beterdir — mal da para da asılı kalır.
+    expect((await orders.getById(orderId))?.status).toBe('ready');
+    expect(await reservations.listActiveByOrder(orderId)).toHaveLength(1);
+  });
+
+  it('teslim — üretilebilseydi mal gitmiş ama fiili stok düşmemiş olurdu', async () => {
+    const { orderId } = await prepare(3);
+    await advanceOrder(db, orderId, ['out_for_delivery']);
+
+    const outcome = await transitionOrder(db, { orderId, to: 'delivered' });
+
+    expect(outcome).toMatchObject({ status: 'forbidden', reason: 'needs_dedicated_gate' });
+    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+    expect((await stocks.getById(batchId))?.physicalQty).toBe(10); // mal hâlâ depoda sayılı
+  });
+
+  it('yan etkisiz geçişler düz kapıdan GEÇER — kural kapıyı daraltır, kapatmaz', async () => {
+    const { orderId } = await prepare(3);
+
+    expect(await transitionOrder(db, { orderId, to: 'out_for_delivery' })).toMatchObject({ status: 'ok' });
+    // "Ulaşılamadı": mal ayrılmış kalır, stok hiç oynamaz — bu yüzden düz kapı doğru kapıdır.
+    expect(await transitionOrder(db, { orderId, to: 'ready' })).toMatchObject({ status: 'ok' });
+    expect(await reservations.listActiveByOrder(orderId)).toHaveLength(1);
   });
 });
 
