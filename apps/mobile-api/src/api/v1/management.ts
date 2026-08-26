@@ -1,8 +1,26 @@
 import { Hono } from 'hono';
 import type { z } from 'zod';
-import { createSupplyDraft, listOfferCandidates, listSupplyGroups, openBatchOffer, readManagementHub } from '@lezzet/application';
+import {
+  askShortfall,
+  changeTicketStatus,
+  consumeTicketDraft,
+  createSupplyDraft,
+  listOfferCandidates,
+  listOrderExceptions,
+  listSupplyGroups,
+  openBatchOffer,
+  readComplaint,
+  readManagementHub,
+  replyAsStaff,
+} from '@lezzet/application';
 import { WarehouseService, serviceDb } from '@lezzet/database';
 import {
+  ComplaintDraftRequestSchema,
+  ComplaintDraftResponseSchema,
+  ComplaintReplyRequestSchema,
+  ComplaintResponseSchema,
+  ExceptionAskResponseSchema,
+  ExceptionsResponseSchema,
   ManagementHubSchema,
   OfferCandidatesResponseSchema,
   OfferOpenRequestSchema,
@@ -10,9 +28,10 @@ import {
   SupplyDraftRequestSchema,
   SupplyDraftResponseSchema,
   SupplyResponseSchema,
+  TicketActionResponseSchema,
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
-import { readJsonBody } from '../../lib/request';
+import { readJsonBody, UuidSchema } from '../../lib/request';
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
@@ -87,4 +106,95 @@ management.post('/supply/draft', async (c) => {
 
   const outcome = await createSupplyDraft(serviceDb(), parsed.data);
   return ok(c, SupplyDraftResponseSchema.parse(outcome satisfies z.input<typeof SupplyDraftResponseSchema>));
+});
+
+/* ── Y1 · Şikâyet / talep detayı ────────────────────────────────────────────── */
+
+management.get('/complaints/next', async (c) => {
+  const complaint = await readComplaint(serviceDb(), { next: true });
+  return ok(c, ComplaintResponseSchema.parse({ complaint } satisfies z.input<typeof ComplaintResponseSchema>));
+});
+
+management.get('/complaints/:id', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+  const complaint = await readComplaint(serviceDb(), { ticketId: id.data });
+  return ok(c, ComplaintResponseSchema.parse({ complaint } satisfies z.input<typeof ComplaintResponseSchema>));
+});
+
+management.post('/complaints/:id/reply', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+  const parsed = ComplaintReplyRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const result = await replyAsStaff(serviceDb(), {
+    ticketId: id.data,
+    authorId: c.get('staff').id,
+    body: parsed.data.body,
+  });
+  return ok(
+    c,
+    TicketActionResponseSchema.parse({
+      ok: result.ok,
+      reason: result.ok ? null : result.reason,
+    } satisfies z.input<typeof TicketActionResponseSchema>),
+  );
+});
+
+/** "Üstlen — İşlemde": durum kapısından geçer (izni motor verir; open→in_progress dışındaki hâl reddolur). */
+management.post('/complaints/:id/claim', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+
+  const result = await changeTicketStatus(serviceDb(), { ticketId: id.data, to: 'in_progress', by: 'staff' });
+  return ok(
+    c,
+    TicketActionResponseSchema.parse({
+      ok: result.ok,
+      reason: result.ok ? null : result.reason,
+    } satisfies z.input<typeof TicketActionResponseSchema>),
+  );
+});
+
+management.post('/complaints/:id/draft', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+  const parsed = ComplaintDraftRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const result = await consumeTicketDraft(serviceDb(), {
+    ticketId: id.data,
+    authorId: c.get('staff').id,
+    send: parsed.data.send,
+  });
+  return ok(
+    c,
+    ComplaintDraftResponseSchema.parse({
+      ok: result.ok,
+      reason: result.ok ? null : result.reason,
+      draft: result.ok ? result.data.draft : null,
+    } satisfies z.input<typeof ComplaintDraftResponseSchema>),
+  );
+});
+
+/* ── Y2 · Sipariş istisnaları (eksik toplama) ───────────────────────────────── */
+
+management.get('/exceptions', async (c) => {
+  const exceptions = await listOrderExceptions(serviceDb(), { warehouseIds: await activeFacilityIds() });
+  return ok(c, ExceptionsResponseSchema.parse({ exceptions } satisfies z.input<typeof ExceptionsResponseSchema>));
+});
+
+management.post('/exceptions/:orderItemId/ask', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('orderItemId'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+
+  const outcome = await askShortfall(serviceDb(), { orderItemId: id.data, authorId: c.get('staff').id });
+  return ok(
+    c,
+    ExceptionAskResponseSchema.parse({
+      status: outcome.status,
+      ticketId: 'ticketId' in outcome ? outcome.ticketId : null,
+    } satisfies z.input<typeof ExceptionAskResponseSchema>),
+  );
 });

@@ -1,9 +1,17 @@
 import {
+  ComplaintDraftResponseSchema,
+  ComplaintResponseSchema,
+  ExceptionAskResponseSchema,
+  ExceptionsResponseSchema,
   ManagementHubSchema,
   OfferCandidatesResponseSchema,
   OfferOpenResponseSchema,
   SupplyDraftResponseSchema,
   SupplyResponseSchema,
+  type ComplaintDraftResponse,
+  type ComplaintResponse,
+  type ExceptionAskResponse,
+  type ExceptionsResponse,
   type ManagementHub,
   type OfferCandidatesResponse,
   type OfferOpenRequest,
@@ -11,6 +19,8 @@ import {
   type SupplyDraftRequest,
   type SupplyDraftResponse,
   type SupplyResponse,
+  type TicketActionResponse,
+  TicketActionResponseSchema,
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
@@ -46,4 +56,46 @@ export function fetchSupplyGroups(): Promise<ApiResult<SupplyResponse>> {
 /** Grup onayı → taslak TS. Kalem listesi GÖNDERİLMEZ — sunucu öneriyi onay anında tazeler (sözleşme künyesi). */
 export function createSupplyDraft(body: SupplyDraftRequest): Promise<ApiResult<SupplyDraftResponse>> {
   return authorizedFetch('/api/v1/management/supply/draft', SupplyDraftResponseSchema, { method: 'POST', body });
+}
+
+/* ── Y1 · Şikâyet / talep ───────────────────────────────────────────────────── */
+
+/** `ticketId` verilmezse cevap bekleyen EN TAZE talep — hub'ın karar satırı parametresiz de açılır. */
+export function fetchComplaint(ticketId?: string): Promise<ApiResult<ComplaintResponse>> {
+  const path = ticketId === undefined ? '/api/v1/management/complaints/next' : `/api/v1/management/complaints/${ticketId}`;
+  return authorizedFetch(path, ComplaintResponseSchema);
+}
+
+export function replyComplaint(ticketId: string, body: string): Promise<ApiResult<TicketActionResponse>> {
+  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/reply`, TicketActionResponseSchema, {
+    method: 'POST',
+    body: { body },
+  });
+}
+
+export function claimComplaint(ticketId: string): Promise<ApiResult<TicketActionResponse>> {
+  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/claim`, TicketActionResponseSchema, {
+    method: 'POST',
+    body: {},
+  });
+}
+
+export function consumeComplaintDraft(ticketId: string, send: boolean): Promise<ApiResult<ComplaintDraftResponse>> {
+  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/draft`, ComplaintDraftResponseSchema, {
+    method: 'POST',
+    body: { send },
+  });
+}
+
+/* ── Y2 · Sipariş istisnaları ───────────────────────────────────────────────── */
+
+export function fetchExceptions(): Promise<ApiResult<ExceptionsResponse>> {
+  return authorizedFetch('/api/v1/management/exceptions', ExceptionsResponseSchema);
+}
+
+export function askException(orderItemId: string): Promise<ApiResult<ExceptionAskResponse>> {
+  return authorizedFetch(`/api/v1/management/exceptions/${orderItemId}/ask`, ExceptionAskResponseSchema, {
+    method: 'POST',
+    body: {},
+  });
 }

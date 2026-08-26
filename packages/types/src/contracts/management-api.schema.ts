@@ -1,5 +1,13 @@
 import { z } from 'zod';
-import { OrderSourceEnum, TicketTypeEnum } from '../primitives/enums.schema';
+import {
+  OrderSourceEnum,
+  OrderStatusEnum,
+  TicketHandlerEnum,
+  TicketSenderEnum,
+  TicketSourceEnum,
+  TicketStatusEnum,
+  TicketTypeEnum,
+} from '../primitives/enums.schema';
 
 /**
  * `/api/v1/management/*` SÖZLEŞME şemaları (21.12) — yönetim bölümünün (Y1–Y6 · gün özeti)
@@ -217,3 +225,114 @@ export const SupplyDraftResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('no_suggestion') }),
 ]);
 export type SupplyDraftResponse = z.infer<typeof SupplyDraftResponseSchema>;
+
+/* ── Y1 · ŞİKÂYET / TALEP DETAYI (v2:530-579) ───────────────────────────────── */
+
+/**
+ * Yazışmadaki tek mesaj — personel gözünden: gövde OPERASYON dilinde (çeviri uçta çözülür,
+ * `getStaffTicketDetail`), müşterinin aslı `originalBody`de ("orijinali gör" onu açar).
+ */
+export const ComplaintMessageSchema = z.object({
+  id: z.string().uuid(),
+  sender: TicketSenderEnum,
+  body: z.string(),
+  /** Gövde makine çevirisi mi — değilse "orijinal" düğmesi çizilmez (aynı metin iki kez açılmaz). */
+  bodyTranslated: z.boolean(),
+  originalBody: z.string(),
+  /** Müşterinin yazdığı dil (kod, ör. "fr") — etiket yüzeyde kurulur. */
+  language: z.string().nullable(),
+  /** Yalnız personel mesajında: yazan kişinin adı ("OPERATÖR · Selim"). */
+  authorName: z.string().nullable(),
+  attachmentUrls: z.array(z.string()),
+  createdAt: z.string(),
+});
+export type ComplaintMessage = z.infer<typeof ComplaintMessageSchema>;
+
+export const ComplaintDetailSchema = z.object({
+  ticketId: z.string().uuid(),
+  type: TicketTypeEnum,
+  status: TicketStatusEnum,
+  source: TicketSourceEnum,
+  handledBy: TicketHandlerEnum,
+  awaitingReply: z.boolean(),
+  customerName: z.string(),
+  orderReferenceNo: z.string().nullable(),
+  lastMessageAt: z.string(),
+  /** Hibrit modun bekleyen YZ taslağı — operatör cevabı DEĞİLDİR; tüketilince düşer (16.5). */
+  aiDraftReply: z.string().nullable(),
+  messages: z.array(ComplaintMessageSchema).min(1),
+});
+export type ComplaintDetail = z.infer<typeof ComplaintDetailSchema>;
+
+/** `complaint: null` = talep yok (ya da `next` istendi ve bekleyen kalmadı) — 404 değil, cevap. */
+export const ComplaintResponseSchema = z.object({ complaint: ComplaintDetailSchema.nullable() });
+export type ComplaintResponse = z.infer<typeof ComplaintResponseSchema>;
+
+export const ComplaintReplyRequestSchema = z.object({ body: z.string().trim().min(1) });
+export type ComplaintReplyRequest = z.infer<typeof ComplaintReplyRequestSchema>;
+
+/** Yazma kapılarının ortak zarfı — red bir CÜMLEDİR (`TicketWriteResult` deseni), HTTP hatası değil. */
+export const TicketActionResponseSchema = z.object({
+  ok: z.boolean(),
+  reason: z.string().nullable(),
+});
+export type TicketActionResponse = z.infer<typeof TicketActionResponseSchema>;
+
+export const ComplaintDraftRequestSchema = z.object({
+  /** true = taslak OLDUĞU GİBİ cevap olur; false = taslak düşer, metin cevap kutusuna taşınır. */
+  send: z.boolean(),
+});
+export type ComplaintDraftRequest = z.infer<typeof ComplaintDraftRequestSchema>;
+
+export const ComplaintDraftResponseSchema = z.object({
+  ok: z.boolean(),
+  reason: z.string().nullable(),
+  /** Tüketilen taslağın metni — `send=false` yolunda ekran bunu cevap kutusuna koyar. */
+  draft: z.string().nullable(),
+});
+export type ComplaintDraftResponse = z.infer<typeof ComplaintDraftResponseSchema>;
+
+/* ── Y2 · SİPARİŞ İSTİSNASI — EKSİK TOPLAMA (v2:581-610) ────────────────────── */
+
+/**
+ * Eksik kalemin karar satırı. `advice` MOTORUN sözüdür (`suggestShortfallAction` — oran/tutar
+ * eşikleri ayardan): ekran hesaplamaz, motora sorar. Para admin ekranında GÖRÜNÜR (doc 04: "para
+ * bilgisi BU ekranda görünebilir, D1'de değil").
+ */
+export const ExceptionLineSchema = z.object({
+  orderItemId: z.string().uuid(),
+  title: z.string(),
+  orderedQty: z.number().int().positive(),
+  pickedQty: z.number().int().nonnegative(),
+  missingQty: z.number().int().positive(),
+  unitPriceCents: z.number().int(),
+  missingValueCents: z.number().int(),
+  advice: z.object({
+    action: z.enum(['ask_customer', 'send_rest']),
+    reason: z.string(),
+  }),
+});
+export type ExceptionLine = z.infer<typeof ExceptionLineSchema>;
+
+export const OrderExceptionSchema = z.object({
+  orderId: z.string().uuid(),
+  referenceNo: z.string().nullable(),
+  customerName: z.string(),
+  status: OrderStatusEnum,
+  totalCents: z.number().int(),
+  lines: z.array(ExceptionLineSchema).min(1),
+});
+export type OrderException = z.infer<typeof OrderExceptionSchema>;
+
+export const ExceptionsResponseSchema = z.object({ exceptions: z.array(OrderExceptionSchema) });
+export type ExceptionsResponse = z.infer<typeof ExceptionsResponseSchema>;
+
+/**
+ * "Müşteriye sor" akıbeti — dördü de CEVAP (200): `no_shortfall` = ekran bayat (eksik kapanmış),
+ * `already_asked` = çift soru koruması kapıda (aynı kaleme ikinci talep açılmaz, 10.3).
+ */
+export const ExceptionAskResponseSchema = z.object({
+  status: z.enum(['ok', 'not_found', 'no_shortfall', 'already_asked']),
+  ticketId: z.string().uuid().nullable(),
+});
+export type ExceptionAskResponse = z.infer<typeof ExceptionAskResponseSchema>;

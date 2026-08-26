@@ -361,6 +361,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
 
     if (allOrderIds.length > 0) {
       await mustDelete(db, 'reservation', (q) => q.in('order_id', allOrderIds));
+      // Talepler SİPARİŞTEN ÖNCE (ölçüldü 26.08): kaleme bağlı talepte (`order_item_ids` dolu)
+      // sipariş silinince `ticket.order_id` `set null` düşer ve `ticket_items_need_order` kısıtı
+      // patlar — "kalemi olan talep siparişsiz olamaz". Profil-cascade buraya yetişmiyor: sıra
+      // gereği profil EN SONDA gidiyor. Mesajlar/kuyruk satırı talebe cascade.
+      await mustDelete(db, 'ticket', (q) => q.in('order_id', allOrderIds));
       await mustDelete(db, 'order', (q) => q.in('id', allOrderIds)); // kalem/log/discount_use CASCADE
     }
 
@@ -415,6 +420,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // Sefer kaydı kuryeyi `restrict` ile tutar (0046); kapanış da seferi tutar — ikisi tek
       // yardımcıdan, sabit sırayla gider. `closed_by` `set null`, ikinci silme gerektirmez.
       await purgeDeliveryRuns(db, 'courier_id', profileIds);
+      // Talepler PROFİLDEN ÖNCE ve AÇIKÇA (ölçüldü 26.08): profil cascade'i talebi de götürür ama
+      // tek DELETE içinde sıra tanımsız — personel profili müşterininkinden önce düşerse cevabının
+      // `author_id`si `set null` olur ve `ticket_message_author` kısıtı patlar ("admin mesajı
+      // yazarsız olamaz"). Önce müşterilerin talepleri (mesajlar cascade), sonra profiller.
+      await mustDelete(db, 'ticket', (q) => q.in('customer_id', profileIds));
       await mustDelete(db, 'user_profiles', (q) => q.in('id', profileIds)); // adresleri CASCADE
     }
 

@@ -18,7 +18,7 @@ import type {
   SummaryChannel,
 } from '@lezzet/types';
 import { readExpiryThresholds } from '../warehouse/batch-view';
-import { listPreparationQueue } from '../warehouse/preparation';
+import { countOrderExceptions } from './exceptions';
 
 /*
   YÖNETİM HUB'I — karar kutusu + gün özeti TEK okumada (21.12 · doc 04 "Y5 birleştirme ucu:
@@ -53,26 +53,18 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
   const tickets = new TicketQueueService(db);
   const stocks = new StockService(db);
 
-  const [complaintCount, complaintPage, prepQueues, batches, thresholds, supplyGroups, intentCount] =
+  const [complaintCount, complaintPage, exceptions, batches, thresholds, supplyGroups, intentCount] =
     await Promise.all([
       tickets.countAwaiting(),
       tickets.list({ openOnly: true, awaitingReply: true }, undefined, 1),
-      Promise.all(facilityIds.map((warehouseId) => listPreparationQueue(db, { warehouseId }))),
+      // İstisna sayısı Y2 ekranının OKUDUĞU motordan (`listOrderExceptions`) — kutu ile ekran
+      // aynı kümeyi sayar, ayrışamaz ("kutu 3 diyor, ekran 2" çelişkisi motor düzeyinde imkânsız).
+      countOrderExceptions(db, { warehouseIds: facilityIds }),
       stocks.listInStockDetailed(undefined, facilityIds),
       readExpiryThresholds(new SettingsService(db)),
       Promise.all(facilityIds.map((warehouseId) => new ReorderService(db).suggestions(warehouseId))),
       new ConversationInboxService(db).countAwaitingReply('whatsapp'),
     ]);
-
-  // Eksik toplamalı sipariş = hazırlıkta olup en az bir kalemi eksik VE henüz müşteriye sorulmamış.
-  // Sorulmuş kalem (awaitingAnswer) kararını almıştır; onu yeniden "karar bekliyor" saymak
-  // operatöre aynı işi iki kez gösterirdi.
-  const exceptions = prepQueues.flat().flatMap((order) => {
-    const shortLines = order.lines.filter((line) => line.shortfallQty > 0 && !line.awaitingAnswer);
-    return shortLines.length > 0
-      ? [{ orderId: order.orderId, referenceNo: order.referenceNo, shortLineCount: shortLines.length }]
-      : [];
-  });
 
   // Teklif adayı: raf ömrü motoru "teklife açılabilir" diyor ve parti HENÜZ teklifte değil.
   const now = new Date();
@@ -109,7 +101,7 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
           }
         : null,
     },
-    exceptions: { count: exceptions.length, head: exceptions[0] ?? null },
+    exceptions,
     offers: { candidateCount },
     supply: {
       groupCount: groups.filter((group) => group.supplierId !== null).length,

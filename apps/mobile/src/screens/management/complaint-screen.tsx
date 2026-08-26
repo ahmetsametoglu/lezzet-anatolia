@@ -1,187 +1,165 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
+import type { ComplaintDetail, ComplaintMessage } from '@lezzet/types';
 import { managementCopy } from './copy';
-import { COMPLAINT } from './management-fixture';
+import { useComplaint } from './use-complaint.hook';
 
 /*
-  Y1 · ŞİKÂYET (v2:530-579) — sohbet + YZ önerisi + üstlenme.
+  Y1 · ŞİKÂYET / TALEP (v2:530-579) — sohbet + YZ önerisi + üstlenme; ARTIK GERÇEK UÇTAN (21.12).
+
+  Okuma web talepler sayfasıyla AYNI motordan (`getStaffTicketDetail` terfisi): çeviri yönü, yazar
+  adları ve top-bizde bayrağı sunucuda çözülür. Kimlik `?id=` ile gelir (hub'ın karar satırı);
+  parametresiz açılış cevap bekleyen EN TAZE talebi getirir.
 
   ── YZ ÖNERİSİ BİR CEVAP DEĞİL, BİR TASLAKTIR ───────────────────────────────
-  Baloncuğun künyesi bunu açıkça yazıyor ("operatör cevabı değildir") ve iki çıkışı var. Tasarım
-  şablonunda ikisi de aynı sahte işlevi çağırıyor (mock), gerçekte AYRIŞIRLAR ve burada öyle
-  yazıldı — aynı ekranda aynı işi yapan iki düğme bırakmak, ikisinden birini yalan yapardı:
-  · "Cevaba çevir →"     — öneri OLDUĞU GİBİ operatörün cevabı olur, sohbete düşer.
-  · "Düzenleyerek gönder" — öneri CEVAP ALANINA taşınır; düzenleme yeri zaten orasıdır.
-  İkisinde de öneri "tüketilmiş" sayılır ve eylem satırı kapanır (v2'nin `yzBekliyor` kapısı).
+  Öneri artık bir mesaj DEĞİL, talebin bekleyen taslağıdır (`aiDraftReply`, 16.5) ve iki çıkışı
+  gerçek kapıya bağlı (`consumeTicketDraft`):
+  · "Cevaba çevir →"     — taslak OLDUĞU GİBİ operatörün cevabı olur, sohbete sunucudan döner.
+  · "Düzenleyerek gönder" — taslak düşer, metni cevap kutusuna taşınır; düzenleme yeri orasıdır.
+
+  ── GÖNDER DÜĞMESİ GELDİ (UI-only döneminden sapmanın kapanışı) ─────────────
+  Eski künye "gönderme kapısı yok, düğme de konmadı" diyordu; kapı geldi (`replyAsStaff`), düğme
+  de geldi — düğmesiz alan, yazdığını gönderemeyen ölü bir alan olurdu.
 
   ── ÇEVİRİ VE ORİJİNAL BİRLİKTE DURUR ───────────────────────────────────────
-  Müşteri baloncuğu çeviriyi gösterir, "orijinali gör" aslını açar (v2:546). Çevirinin yanlış
-  olduğu an operatörün bakacağı yer asıldır; onu saklamak, hatayı görünmez yapardı.
-
-  ── GÖNDERİM UCU BU ETAPTA YOK ──────────────────────────────────────────────
-  Cevap alanı gerçek bir alandır (yazılır, düzenlenir) ama gönderme kapısı bu dilimde YAZILMIYOR
-  (UI-only). Sahte bir "gönderildi" göstermemek için alanın yanına gönder düğmesi de KONMADI —
-  tasarımda da yok. BAĞLANMA NOKTASI: cevabın gönderimi + `talep` durum geçişi (Üstlen → İşlemde)
-  aynı uçtan gelir; ekranın yerel durumu o gün cevabın kendisiyle değişir.
+  Müşteri baloncuğu çeviriyi gösterir, "orijinali gör" aslını açar (v2:546). Yalnız GERÇEKTEN
+  çevrilmiş mesajda çizilir (`bodyTranslated`) — aynı metni iki kez açan düğme yalan olurdu.
 */
 
 const t = managementCopy;
 
 export function ComplaintScreen() {
   const router = useRouter();
-  const complaint = COMPLAINT;
-
-  /** v2 `talep` — "Açık" ile "İşlemde" arasındaki tek geçiş; ekranın kendi durumu. */
-  const [claimed, setClaimed] = useState(false);
-  /** v2 `yz` — öneri tüketildi mi (gönderildi ya da düzenlemeye alındı). */
-  const [assistantSent, setAssistantSent] = useState(false);
-  const [assistantMoved, setAssistantMoved] = useState(false);
-  const [showOriginal, setShowOriginal] = useState(false);
-  const [reply, setReply] = useState('');
-
-  const assistantMessage = complaint.messages.find((message) => message.author === 'assistant');
-  const assistantHandled = assistantSent || assistantMoved;
+  const params = useLocalSearchParams<{ id?: string }>();
+  const complaint = useComplaint(typeof params.id === 'string' ? params.id : undefined);
+  const { state } = complaint;
 
   return (
     <View style={styles.screen} testID="management-complaint">
       <OperationsStackHeader
         title={t.complaint.title}
-        subtitle={fillCopy(t.complaint.caption, {
-          reference: complaint.reference,
-          source: complaint.source,
-          ago: complaint.ago,
-        })}
+        subtitle={
+          state.status === 'ready' && state.complaint !== null
+            ? fillCopy(t.complaint.caption, {
+                reference: state.complaint.orderReferenceNo ?? t.complaint.noRef,
+                source: t.complaint.source[state.complaint.source],
+                stamp: stampOf(state.complaint.lastMessageAt),
+              })
+            : ''
+        }
         onBack={() => router.back()}
         backLabel={t.common.back}
         testID="management-complaint-header"
       />
 
+      {state.status === 'loading' ? (
+        <View style={styles.pending} testID="management-complaint-loading">
+          <ActivityIndicator color={operationsTheme.colors.olive} />
+        </View>
+      ) : state.status === 'error' ? (
+        <View style={styles.noticeBlock}>
+          <OperationsNoticeBlock
+            variant="error"
+            title={t.common.error.title}
+            description={t.common.error.body}
+            retry={{ label: t.common.error.retry, onPress: complaint.retry }}
+            testID="management-complaint-error"
+          />
+        </View>
+      ) : state.complaint === null ? (
+        <View style={styles.noticeBlock}>
+          <OperationsNoticeBlock
+            variant="empty"
+            title={t.complaint.empty.title}
+            description={t.complaint.empty.body}
+            testID="management-complaint-empty"
+          />
+        </View>
+      ) : (
+        <ComplaintBody detail={state.complaint} complaint={complaint} />
+      )}
+    </View>
+  );
+}
+
+interface ComplaintBodyProps {
+  detail: ComplaintDetail;
+  complaint: ReturnType<typeof useComplaint>;
+}
+
+function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
+  const attachmentCount = detail.messages.reduce((sum, message) => sum + message.attachmentUrls.length, 0);
+  const claimed = detail.status !== 'open';
+
+  return (
+    <>
       <View style={styles.tags}>
-        <Text style={[styles.tag, styles.tagKind]}>{complaint.kind}</Text>
+        <Text style={[styles.tag, styles.tagKind]}>{t.complaint.kind[detail.type]}</Text>
         <Text style={[styles.tag, claimed ? styles.tagInProgress : styles.tagOpen]} testID="management-complaint-status">
-          {claimed ? t.complaint.status.inProgress : t.complaint.status.open}
+          {t.complaint.status[detail.status]}
         </Text>
-        {complaint.ourTurn ? <Text style={[styles.tag, styles.tagOurTurn]}>{t.common.ourTurn}</Text> : null}
-        {/* Ataç ikonu KİTTE YOK (v2:537 bir ataç çiziyor) ve ikon eklemek bu dilimin yazı alanı
-            dışında — rozet metinle duruyor, sayı yine okunuyor. Raporlandı. */}
-        <Text style={[styles.tag, styles.tagAttachments]}>
-          {fillCopy(t.complaint.attachments, { n: String(complaint.attachmentCount) })}
-        </Text>
+        {detail.awaitingReply ? <Text style={[styles.tag, styles.tagOurTurn]}>{t.common.ourTurn}</Text> : null}
+        {attachmentCount === 0 ? null : (
+          <Text style={[styles.tag, styles.tagAttachments]}>
+            {fillCopy(t.complaint.attachments, { n: String(attachmentCount) })}
+          </Text>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.thread} testID="management-complaint-thread">
-        {complaint.messages.map((message) => {
-          if (message.author === 'customer') {
-            const original = message.originalBody;
-            return (
-              <View key={message.id} style={[styles.bubble, styles.bubbleLeft, styles.bubbleCustomer]}>
-                <Text style={styles.bubbleCaption}>
-                  {showOriginal && original !== undefined
-                    ? fillCopy(t.complaint.author.customerOriginal, { from: complaint.customerLanguage })
-                    : fillCopy(t.complaint.author.customer, {
-                        from: complaint.customerLanguage,
-                        to: complaint.surfaceLanguage,
-                      })}
-                </Text>
-                <Text style={styles.bubbleBody}>
-                  {showOriginal && original !== undefined ? original : message.body}
-                </Text>
-                {original === undefined ? null : (
-                  <PressableSurface
-                    onPress={() => setShowOriginal((value) => !value)}
-                    feedback="opacity"
-                    compact
-                    accessibilityLabel={showOriginal ? t.complaint.translated : t.complaint.original}
-                    testID="management-complaint-original"
-                  >
-                    <Text style={styles.bubbleLink}>
-                      {showOriginal ? t.complaint.translated : t.complaint.original}
-                    </Text>
-                  </PressableSurface>
-                )}
-              </View>
-            );
-          }
+        {detail.messages.map((message) => (
+          <MessageBubble key={message.id} message={message} />
+        ))}
 
-          if (message.author === 'assistant') {
-            return (
-              <View key={message.id} style={[styles.bubble, styles.bubbleRight, styles.bubbleAssistant]}>
-                <Text style={styles.bubbleCaption}>{t.complaint.author.assistant}</Text>
-                <Text style={styles.bubbleBody}>{message.body}</Text>
-                {assistantHandled ? (
-                  assistantMoved ? (
-                    <Text style={styles.bubbleNote} testID="management-complaint-assistant-moved">
-                      {t.complaint.assistantMoved}
-                    </Text>
-                  ) : null
-                ) : (
-                  <View style={styles.assistantActions}>
-                    <PressableSurface
-                      onPress={() => setAssistantSent(true)}
-                      feedback="scale"
-                      compact
-                      style={[styles.assistantChip, styles.assistantChipSend]}
-                      accessibilityLabel={t.complaint.assistantSend}
-                      testID="management-complaint-assistant-send"
-                    >
-                      <Text style={styles.assistantChipSendLabel}>{t.complaint.assistantSend}</Text>
-                    </PressableSurface>
-                    <PressableSurface
-                      onPress={() => {
-                        setReply(complaint.assistantReply);
-                        setAssistantMoved(true);
-                      }}
-                      feedback="scale"
-                      compact
-                      style={[styles.assistantChip, styles.assistantChipEdit]}
-                      accessibilityLabel={t.complaint.assistantEdit}
-                      testID="management-complaint-assistant-edit"
-                    >
-                      <Text style={styles.assistantChipEditLabel}>{t.complaint.assistantEdit}</Text>
-                    </PressableSurface>
-                  </View>
-                )}
-              </View>
-            );
-          }
-
-          return (
-            <View key={message.id} style={[styles.bubble, styles.bubbleRight, styles.bubbleOperator]}>
-              <Text style={styles.bubbleCaptionOperator}>
-                {fillCopy(t.complaint.author.operator, { name: message.operatorName ?? complaint.operatorName })}
-              </Text>
-              <Text style={styles.bubbleBody}>{message.body}</Text>
+        {/* YZ TASLAĞI — mesaj değil, bekleyen öneri (16.5): tüketilince satırdan düşer. */}
+        {detail.aiDraftReply === null ? null : (
+          <View style={[styles.bubble, styles.bubbleRight, styles.bubbleAssistant]} testID="management-complaint-draft">
+            <Text style={styles.bubbleCaption}>{t.complaint.author.assistantDraft}</Text>
+            <Text style={styles.bubbleBody}>{detail.aiDraftReply}</Text>
+            <View style={styles.assistantActions}>
+              <PressableSurface
+                onPress={() => complaint.consumeDraft(true)}
+                feedback="scale"
+                compact
+                style={[styles.assistantChip, styles.assistantChipSend]}
+                accessibilityLabel={t.complaint.assistantSend}
+                testID="management-complaint-assistant-send"
+              >
+                <Text style={styles.assistantChipSendLabel}>{t.complaint.assistantSend}</Text>
+              </PressableSurface>
+              <PressableSurface
+                onPress={() => complaint.consumeDraft(false)}
+                feedback="scale"
+                compact
+                style={[styles.assistantChip, styles.assistantChipEdit]}
+                accessibilityLabel={t.complaint.assistantEdit}
+                testID="management-complaint-assistant-edit"
+              >
+                <Text style={styles.assistantChipEditLabel}>{t.complaint.assistantEdit}</Text>
+              </PressableSurface>
             </View>
-          );
-        })}
-
-        {assistantSent && assistantMessage !== undefined ? (
-          <View
-            style={[styles.bubble, styles.bubbleRight, styles.bubbleOperator]}
-            testID="management-complaint-assistant-sent"
-          >
-            <Text style={styles.bubbleCaptionOperator}>
-              {fillCopy(t.complaint.author.operatorFromAssistant, { name: complaint.operatorName })}
-            </Text>
-            <Text style={styles.bubbleBody}>{complaint.assistantReply}</Text>
-            <Text style={styles.bubbleNote}>
-              {fillCopy(t.complaint.sentNote, { language: complaint.customerLanguage })}
-            </Text>
           </View>
-        ) : null}
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
+        {complaint.lastError === null ? null : (
+          <Text style={styles.actionError} testID="management-complaint-action-error">
+            {fillCopy(t.complaint.actionFailed, { reason: complaint.lastError })}
+          </Text>
+        )}
         <TextInput
-          value={reply}
-          onChangeText={setReply}
+          value={complaint.reply}
+          onChangeText={complaint.setReply}
           multiline
           placeholder={t.complaint.replyPlaceholder}
           placeholderTextColor={operationsTheme.colors.muted}
@@ -191,8 +169,21 @@ export function ComplaintScreen() {
         />
         <View style={styles.footerRow}>
           <PressableSurface
-            onPress={() => setClaimed(true)}
-            disabled={claimed}
+            onPress={complaint.sendReply}
+            disabled={complaint.sending || complaint.reply.trim().length === 0}
+            feedback="shadow"
+            style={[
+              styles.footerButton,
+              complaint.sending || complaint.reply.trim().length === 0 ? styles.claimDone : styles.claimOpen,
+            ]}
+            accessibilityLabel={complaint.sending ? t.complaint.sending : t.complaint.send}
+            testID="management-complaint-send"
+          >
+            <Text style={styles.claimLabel}>{complaint.sending ? t.complaint.sending : t.complaint.send}</Text>
+          </PressableSurface>
+          <PressableSurface
+            onPress={complaint.claim}
+            disabled={claimed || complaint.sending}
             feedback="shadow"
             style={[styles.footerButton, claimed ? styles.claimDone : styles.claimOpen]}
             accessibilityLabel={claimed ? t.complaint.claimed : t.complaint.claim}
@@ -200,12 +191,61 @@ export function ComplaintScreen() {
           >
             <Text style={styles.claimLabel}>{claimed ? t.complaint.claimed : t.complaint.claim}</Text>
           </PressableSurface>
-          {/* "Masada devam et" tasarımda EYLEMSİZ (v2:575) ve öyle bırakıldı: mobilde açacağı bir
-              kapı yok, dokunulabilir yapmak olmayan bir yol vaat ederdi. Cümlenin işi hatırlatmak —
-              uzun iş masaüstünde sürer. */}
-          <Text style={[styles.footerButton, styles.deskNote]}>{t.common.desk}</Text>
         </View>
+        {/* "Masada devam et" tasarımda EYLEMSİZ (v2:575) ve öyle kaldı: mobilde açacağı bir kapı
+            yok, dokunulabilir yapmak olmayan bir yol vaat ederdi. */}
+        <Text style={styles.deskNote}>{t.common.desk}</Text>
       </View>
+    </>
+  );
+}
+
+interface MessageBubbleProps {
+  message: ComplaintMessage;
+}
+
+function MessageBubble({ message }: MessageBubbleProps) {
+  /* Orijinal/çeviri geçişi BALONCUĞUN kendi durumu — tek mesajın düğmesi bütün yazışmayı çevirmez. */
+  const [showOriginal, setShowOriginal] = useState(false);
+
+  if (message.sender === 'customer') {
+    const from = (message.language ?? '?').toUpperCase();
+    return (
+      <View style={[styles.bubble, styles.bubbleLeft, styles.bubbleCustomer]}>
+        <Text style={styles.bubbleCaption}>
+          {message.bodyTranslated
+            ? showOriginal
+              ? fillCopy(t.complaint.author.customerOriginal, { from })
+              : fillCopy(t.complaint.author.customer, { from })
+            : t.complaint.author.customerPlain}
+        </Text>
+        <Text style={styles.bubbleBody}>{showOriginal ? message.originalBody : message.body}</Text>
+        {message.bodyTranslated ? (
+          <PressableSurface
+            onPress={() => setShowOriginal((value) => !value)}
+            feedback="opacity"
+            compact
+            accessibilityLabel={showOriginal ? t.complaint.translated : t.complaint.original}
+            testID={`management-complaint-original-${message.id}`}
+          >
+            <Text style={styles.bubbleLink}>{showOriginal ? t.complaint.translated : t.complaint.original}</Text>
+          </PressableSurface>
+        ) : null}
+      </View>
+    );
+  }
+
+  const caption =
+    message.sender === 'ai'
+      ? t.complaint.author.ai
+      : message.authorName === null
+        ? t.complaint.author.operatorUnknown
+        : fillCopy(t.complaint.author.operator, { name: message.authorName });
+
+  return (
+    <View style={[styles.bubble, styles.bubbleRight, styles.bubbleOperator]}>
+      <Text style={styles.bubbleCaptionOperator}>{caption}</Text>
+      <Text style={styles.bubbleBody}>{message.body}</Text>
     </View>
   );
 }
@@ -214,6 +254,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
+  },
+  pending: {
+    paddingTop: operationsTheme.space['8xl'],
+    alignItems: 'center',
+  },
+  noticeBlock: {
+    paddingTop: operationsTheme.space['7xl'],
+    paddingHorizontal: operationsTheme.space['6xl'],
   },
   tags: {
     flexDirection: 'row',
@@ -271,7 +319,7 @@ const styles = StyleSheet.create({
     borderWidth: operationsTheme.border.base,
     borderColor: operationsTheme.colors['sand-500'],
   },
-  /** YZ baloncuğu KESİKLİ çerçeveli: taslak olduğu şeklinden okunur (v2:548). */
+  /** YZ taslağı KESİKLİ çerçeveli: taslak olduğu şeklinden okunur (v2:548). */
   bubbleAssistant: {
     backgroundColor: operationsTheme.colors['neutral-bg'],
     borderWidth: operationsTheme.border.base,
@@ -302,11 +350,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.olive,
-  },
-  bubbleNote: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors.muted,
   },
   assistantActions: {
     flexDirection: 'row',
@@ -340,6 +383,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['5xl'],
     paddingTop: operationsTheme.space.lg,
     paddingBottom: operationsTheme.space['3xl'],
+  },
+  /** Reddin sebebi görünür durur — sessiz yutulan yazım, basılmamış düğmeyle aynı şey olurdu. */
+  actionError: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.error,
   },
   replyInput: {
     paddingVertical: operationsTheme.space['2xl'],
@@ -378,6 +427,8 @@ const styles = StyleSheet.create({
   deskNote: {
     borderWidth: operationsTheme.border.base,
     borderColor: operationsTheme.colors['sand-500'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space['2xl'],
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.note,
     color: operationsTheme.colors.ink,

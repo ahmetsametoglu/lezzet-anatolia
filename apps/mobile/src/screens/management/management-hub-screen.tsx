@@ -56,6 +56,8 @@ interface DecisionRow {
   tone: DecisionTone;
   /** "top bizde" — cevap sırası bizde (v2:493); yoksa rozet çizilmez. */
   ourTurn?: boolean;
+  /** Şikâyet başının kimliği — satır o kaydı açar (`/complaint?id=`); yoksa alan adresi. */
+  complaintId?: string;
 }
 
 /**
@@ -73,13 +75,20 @@ const TONE_COLOR = {
   quiet: operationsTheme.colors.ink,
 } as const satisfies Record<DecisionTone, string>;
 
-/** Hedef → adres. Rotalar `app/(operations)` altında düz durur (depo emsali: `/picking`, `/intake`). */
+/**
+ * Hedef → adres. Rotalar `app/(operations)` altında düz durur (depo emsali: `/picking`, `/intake`).
+ *
+ * `intent` SOSYAL GELEN KUTUSUNA gider (bilinçli sapma, 26.08): v2 ayrı bir "sipariş niyeti"
+ * ekranı çiziyordu ama o çizim sosyal gelen kutusundan (15.15) ÖNCEYDİ — bugün gerçek kutu var
+ * ve tek mesajlık bir kopyası, aynı konuşmanın ikinci zayıf ekranı olurdu (CLAUDE §1). Sipariş
+ * masada kurulur (doc 04 Y6 v1); konuşma kutudan okunur ve cevaplanır.
+ */
 const TARGET_ROUTE = {
   complaint: '/complaint',
   exception: '/order-exception',
   offer: '/offer-approval',
   supply: '/supply-suggestion',
-  intent: '/order-intent',
+  intent: '/social',
 } as const satisfies Record<DecisionTarget, string>;
 
 /**
@@ -106,6 +115,9 @@ function decisionRowsOf(queue: ManagementQueue): DecisionRow[] {
             }),
       tone: 'alert',
       ourTurn: head?.awaitingReply === true,
+      // En taze bekleyen doğrudan açılır — ekran parametresiz de çalışır (`next`), ama kutunun
+      // gösterdiği satırla açılan talebin AYNI olması kimlikle garanti edilir.
+      complaintId: head?.ticketId,
     });
   }
 
@@ -287,7 +299,11 @@ function HubBody({ queue, summary, onOpenSummary }: HubBodyProps) {
         {rows.map((row) => (
           <PressableSurface
             key={row.id}
-            onPress={() => router.navigate(TARGET_ROUTE[row.id])}
+            onPress={() =>
+              row.complaintId === undefined
+                ? router.navigate(TARGET_ROUTE[row.id])
+                : router.navigate({ pathname: '/complaint', params: { id: row.complaintId } })
+            }
             feedback="scale"
             style={styles.row}
             accessibilityLabel={`${row.title} — ${row.subtitle}`}

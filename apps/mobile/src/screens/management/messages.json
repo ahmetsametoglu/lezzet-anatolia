@@ -55,45 +55,85 @@
     }
   },
   "complaint": {
-    "title": "Şikâyet",
-    "caption": "{reference} · kaynak: {source} · {ago}",
+    "title": "Şikâyet / Talep",
+    "caption": "{reference} · kaynak: {source} · {stamp}",
+    "noRef": "siparişsiz",
+    "source": {
+      "order": "sipariş",
+      "form": "form",
+      "whatsapp": "WhatsApp",
+      "admin": "işletme"
+    },
+    "kind": {
+      "damaged": "Bozuk",
+      "missing": "Eksik",
+      "question": "Soru",
+      "other": "Diğer"
+    },
     "attachments": "{n} ek",
     "status": {
       "open": "Açık",
-      "inProgress": "İşlemde"
+      "in_progress": "İşlemde",
+      "resolved": "Çözüldü"
     },
     "author": {
-      "customer": "MÜŞTERİ · çeviri ({from} → {to})",
+      "customer": "MÜŞTERİ · çeviri ({from} → TR)",
       "customerOriginal": "MÜŞTERİ · orijinal ({from})",
-      "assistant": "YZ ÖNERİSİ — operatör cevabı değildir",
+      "customerPlain": "MÜŞTERİ",
+      "ai": "YZ AJANI",
+      "assistantDraft": "YZ ÖNERİSİ — operatör cevabı değildir",
       "operator": "OPERATÖR · {name}",
-      "operatorFromAssistant": "OPERATÖR · {name} — YZ önerisinden"
+      "operatorUnknown": "OPERATÖR"
     },
     "original": "orijinali gör",
     "translated": "çeviriyi gör",
     "assistantSend": "Cevaba çevir →",
     "assistantEdit": "Düzenleyerek gönder",
-    "assistantMoved": "Öneri cevap alanına alındı — düzenleyip gönderin.",
-    "sentNote": "müşteri dilinde ({language}) gönderildi ✓",
     "replyPlaceholder": "Kısa cevap yaz…",
-    "replyLabel": "Şikâyete kısa cevap",
+    "replyLabel": "Talebe kısa cevap",
+    "send": "Cevabı gönder",
+    "sending": "Yazılıyor…",
     "claim": "Üstlen — İşlemde",
-    "claimed": "Üstlenildi ✓"
+    "claimed": "Üstlenildi ✓",
+    "actionFailed": "Olmadı ({reason}) — yeniden deneyin.",
+    "empty": {
+      "title": "Bekleyen talep yok",
+      "body": "Cevap bekleyen açık talep kalmadı."
+    }
   },
   "exception": {
     "title": "Eksik Toplama Kararı",
-    "caption": "{reference} · {customer} · {status}",
-    "shortLine": "{line} — yalnız {picked} toplandı",
-    "total": "Sipariş toplamı",
-    "engine": {
-      "eyebrow": "MOTOR ÖNERİSİ — GEREKÇELİ",
-      "preview": "Para önizlemesi (motordan): iade edilecek {refund}"
+    "caption": "hazırlık kuyruğundan · karar insanın, öneri motorun",
+    "order": "{reference} · {customer} · {status}",
+    "noRef": "referanssız",
+    "status": {
+      "confirmed": "hazırlanacak",
+      "preparing": "hazırlanıyor"
     },
-    "footnote": "Karar insanın; izinli geçişleri motor bilir — yalnız geçerli seçenekler sunulur. İptal sebebi v1'de seçilmez.",
-    "sendRest": "Kalanı gönder — {refund} iade",
-    "sendRestDone": "Kalanı gönder — karar kaydedildi ✓",
-    "askCustomer": "Müşteriye sor",
-    "askCustomerDone": "Müşteriye soruldu ✓"
+    "line": "{title} — {ordered} istendi · yalnız {picked} toplanabiliyor",
+    "lineValue": "eksik {missing} adet · {value}",
+    "advice": {
+      "ask_customer": "motor önerisi: MÜŞTERİYE SOR",
+      "send_rest": "motor önerisi: kalanı gönder — eksik küçük"
+    },
+    "adviceReason": {
+      "line_fully_missing": "kalem tamamen eksik",
+      "large_share": "eksik oranı yüksek",
+      "high_value": "eksik tutarı yüksek",
+      "minor": "oran ve tutar eşiğin altında",
+      "complete": "eksik yok",
+      "unknown": ""
+    },
+    "ask": "Müşteriye sor",
+    "asking": "Soruluyor…",
+    "asked": "Soruldu ✓ — talep operasyon kuyruğunda",
+    "askedAlready": "Zaten açık bir soru var — operasyon takip ediyor",
+    "askStale": "Eksik kapanmış — liste tazelendi",
+    "sendRestNote": "\"Kalanı gönder\" için ayrı bir kayıt yok: depo kısmi hazırlığı sürdürür, fark teslim tarafında netleşir (07.8).",
+    "empty": {
+      "title": "Karar bekleyen eksik yok",
+      "body": "Hazırlık kuyruğunda eksik toplamalı sipariş kalmadı."
+    }
   },
   "offer": {
     "title": "Yakın-SKT Kampanya Onayı",
@@ -167,14 +207,6 @@
       "empty": "Bugün için üretilmiş içgörü yok — motor bağlandığında bu blok dolacak."
     },
     "stockRisk": "Stok riski bloğu ısınıyor — bekleyin (üç hâl: hazır · ısınıyor · yok)."
-  },
-  "intent": {
-    "title": "WhatsApp — Sipariş Niyeti",
-    "caption": "{phone} · {ago}",
-    "note": "Uygulamadan sipariş kaydı v1'de yok — kayıt masada kurulur (kaynak sözlüğünde \"whatsapp\" hazır).",
-    "cta": "\"Masada kur\" notu düş",
-    "ctaDone": "Not düştü — masada kurulacak ✓",
-    "openChat": "Konuşmayı WhatsApp'ta aç"
   },
   "social": {
     "title": "Sosyal Mesajlar",

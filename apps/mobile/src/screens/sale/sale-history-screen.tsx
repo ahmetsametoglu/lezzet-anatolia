@@ -11,6 +11,7 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { TextAction } from '@/components/ui/text-action';
 import { fetchRecentSales } from '@/lib/api/sale';
 import { money } from '@/lib/operations/money';
+import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -32,13 +33,6 @@ type HistoryState =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'ready'; sales: SaleRecord[] };
-
-/** `2026-08-26T13:27:41Z` → `26.08 · 15:27` (cihaz saatiyle) — sözleşme dil-bağımsız ISO taşır. */
-function stampOf(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function SaleHistoryScreen() {
   const router = useRouter();

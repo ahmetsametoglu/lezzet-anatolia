@@ -441,7 +441,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `?courierDayCloseId` İKİ ölçümle elendi) · `readIntakeHeader`. Doğrulama: paket +20 /
     uç +9 test; mobil kabul testi mock'u yeni zorunlu anahtara uyarlandı (`purchaseOrder: null`),
     mobil paket 449/449.
-- [~] (21.12) **Yönetim + Para bölümleri (Y1–Y6 · M1–M2 · gün özeti):** okuma ağırlıklı; Y5 gün
+- [x] (21.12) **Yönetim + Para bölümleri (Y1–Y6 · M1–M2 · gün özeti):** okuma ağırlıklı; Y5 gün
   özeti birleştirme ucu (doc 04 iş listesi) + Y1 üstlen/YZ-cevap aksiyonları, Y2 istisna kararı
   (motor önerisi + para önizlemesi uçtan), Y3 teklif onayı, Y4 taslak TS, Y6 not düşme; M1/M2
   salt okuma (yazma aksiyonu ÇİZİLMEZ — tasarım böyle). Para kökünün boş/hata durumu (21.8
@@ -502,7 +502,41 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `customer/label.ts` (`customerLabel`). Web dosyaları KÖPRÜ (notify köprüsünün deseni; 16 web
     tüketicisinin importu değişmedi). Davranış web'in kendi suite'iyle kanıtlı: `ticket.test`
     45/45 · `tickets-read` 5/5 · `notify`/`attachments`/`name` yeşil; web+application typecheck.
-  · Üç ekran uca bağlanana dek fixture'da; sıradaki adım Y1/Y2/Y6 uçları + ekranlar.
+  · ~~Üç ekran uca bağlanana dek fixture'da~~ — **DİLİM C tamam (26.08), modül fixture'sız:**
+    `management-fixture.ts` SİLİNDİ, dokuz ekranın dokuzu gerçek uçta.
+
+  **Durum (26.08 — DİLİM C: Y1 + Y2 canlı, Y6 çözüldü; 21.12 KAPANDI).**
+  · **Y1 şikâyet:** okuma web talepler sayfasıyla AYNI motordan (`readComplaint` →
+    `getStaffTicketDetail`); YZ önerisi artık mesaj değil TALEP TASLAĞI (`aiDraftReply`, 16.5) ve
+    iki çıkışı gerçek (`consumeTicketDraft`: cevaba çevir / kutuya taşı — metin SUNUCUDAN döner,
+    yerel kopya kullanılmaz); cevap `replyAsStaff` (çeviri → mail kuyruğu → zil sırası pakette),
+    üstlen `changeTicketStatus`. Mesaj görünümüne `authorId` eklendi (artımlı) — "OPERATÖR · Selim"
+    gerçek addan. UI-only döneminin "gönder düğmesi yok" sapması kapandı: kapı gelince düğme geldi.
+  · **Y2 istisna:** kuyruk hazırlık motorundan TÜRETİLİR (`listOrderExceptions` — ayrı defter yok;
+    hub'ın sayacı da aynı fonksiyondan), öneri `adviseShortfalls` (eşikler ayardan), eksik TUTARI
+    admin'e görünür (doc 04). "Müşteriye sor" web'in kapısının aynısı (`shortfallQuestion` +
+    `openTicket`); sorulan kalem kuyruktan kendiliğinden düşer. **"Kalanı gönder" düğmesi BİLİNÇLİ
+    ÇİZİLMEDİ** (tasarımdan sapma): o kararın modelde kalıcı kaydı yok — depo kısmi hazırlığı
+    sürdürür, fark teslim tarafında netleşir (07.8); mekanizmasız düğme ölü düğmedir (kullanıcı
+    talimatı 26.08). Motorun önerisi ("kalanı gönder — eksik küçük" dahil) satırda BİLGİ olarak
+    durur; karar kaydı modele girdiği gün düğme geri gelir (web şeridiyle konuşulacak).
+  · **Y6 niyet:** ayrı ekran SÖKÜLDÜ (bilinçli sapma): v2 o ekranı sosyal gelen kutusundan (15.15)
+    ÖNCE çizmişti — bugün gerçek kutu mobilde canlı ve tek mesajlık kopyası aynı konuşmanın ikinci
+    zayıf ekranı olurdu (CLAUDE §1). Karar kutusunun niyet satırı `/social`e gider; sipariş masada
+    kurulur (doc 04 Y6 v1 aynen).
+  · **Purge iki halka öğrendi** (ölçüldü — teardown yarım kalıyordu): siparişe kalem bağlı talep
+    SİPARİŞTEN önce (`ticket_items_need_order`), talepler PROFİLDEN önce (tek DELETE'te sıra
+    tanımsız; personel cevabının `author_id`si `set null` düşünce `ticket_message_author` patlıyordu).
+  · `stampOf` üçüncü tüketiciyle `lib/operations/stamp.ts`e indi (ilk ev satış geçmişiydi).
+  · Doğrulama: uç entegrasyonu **13/13** (cevap yazar adıyla döner · üstlen motor kapısından ·
+    taslaksız tüketme `no_draft` · istisna: eksik tutar + `already_asked` çift-soru koruması +
+    sorulan kalemin kuyruktan düşüşü) · mobil jest **818/818** (6 yeni; sabotaj: "sunucudan dönen
+    taslak" iddiası yerel kopyayla bozulunca yalnız o test düştü) · tsc/lint/knip temiz · KORUMALI
+    40→47.
+  **Bilinçli sınırlar (modül kapanışında açık kalanlar, sahipleriyle):** "kalanı gönder" karar
+  kaydı (model işi — web şeridiyle) · kurye uçlarında `effects` (BEKLEYEN(14.11) hattı) · YZ
+  içgörü motoru (modül 20/22) · hub'ın parti/tedarik taramasının maliyeti büyüyen katalogda
+  yeniden ölçülür (bugün tek okuma ~çeyrek saniye sınıfı, kabul).
 - [ ] (21.13) **Push altyapısı:** cihaz token modeli + teslim hattı — web şeridiyle koordineli
   (14 notify sürücüsü; defterden yürür). Kabuktaki bildirim ekranı ve rol süzmesi 21.9'da;
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief

@@ -75,6 +75,13 @@ const KORUMALI: readonly string[] = [
   '/api/v1/management/offers',
   '/api/v1/management/supply',
   '/api/v1/management/supply/draft',
+  '/api/v1/management/complaints/next',
+  '/api/v1/management/complaints/00000000-0000-4000-8000-000000000001',
+  '/api/v1/management/complaints/00000000-0000-4000-8000-000000000001/reply',
+  '/api/v1/management/complaints/00000000-0000-4000-8000-000000000001/claim',
+  '/api/v1/management/complaints/00000000-0000-4000-8000-000000000001/draft',
+  '/api/v1/management/exceptions',
+  '/api/v1/management/exceptions/00000000-0000-4000-8000-000000000001/ask',
   '/api/v1/money/overview',
   '/api/v1/money/day-end',
 ];

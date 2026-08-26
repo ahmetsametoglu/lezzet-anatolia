@@ -33,6 +33,8 @@ import type { SourceLanguage, Ticket, TicketMessage, TicketQueueRow } from '@lez
  */
 export interface TicketMessageView {
   id: string;
+  /** Personel mesajında yazan kişi (21.12 — Y1 "OPERATÖR · Selim" satırı); müşteri/AI'da null. */
+  authorId?: string | null;
   sender: TicketMessage['sender'];
   /** Okuyucunun dilinde gösterilecek metin; o dile çeviri yoksa orijinalin kendisi. */
   body: string;

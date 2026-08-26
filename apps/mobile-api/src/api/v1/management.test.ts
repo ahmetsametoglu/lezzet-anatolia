@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, OrderService, PriceService, ProductService, ProductVariantService, StockService, SupplierProductService, SupplierService, TicketService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import type { ManagementHub, OfferCandidatesResponse, OfferOpenResponse, SupplyDraftResponse, SupplyResponse } from '@lezzet/types';
+import type { ComplaintResponse, ExceptionAskResponse, ExceptionsResponse, ManagementHub, OfferCandidatesResponse, OfferOpenResponse, SupplyDraftResponse, SupplyResponse, TicketActionResponse } from '@lezzet/types';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
@@ -27,6 +27,10 @@ let productId: string;
 let variantId: string;
 let ticketId: string;
 let supplierId: string;
+let scarceProductId: string;
+let scarceVariantId: string;
+let shortOrderId: string;
+let shortItemId: string;
 let nearExpiryProductId: string;
 let nearExpiryVariantId: string;
 let nearExpiryStockId: string;
@@ -110,6 +114,33 @@ beforeAll(async () => {
     lastPurchasePriceCents: 810,
   });
 
+  // ── Y2 fikstürü: 3 istendi, rafta 1 var → 2 eksik; oran %66 > eşik → motor "müşteriye sor" der.
+  const scarce = await new ProductService(db).create({ name: { tr: `Kadayıf ${stamp}` }, categoryId });
+  scarceProductId = scarce.product.id;
+  scarceVariantId = scarce.variants[0]!.id;
+  await new StockService(db).insert({
+    warehouseId,
+    variantId: scarceVariantId,
+    physicalQty: 1,
+    expiryDate: dayOffset(30),
+    purchasePriceCents: 200,
+  });
+  const shortOrder = await new OrderService(db).create(
+    {
+      customerId: musteri.profileId,
+      warehouseId,
+      channel: 'b2c',
+      orderSource: 'web',
+      status: 'confirmed',
+      deliveryType: 'pickup',
+      deliveryDate: today,
+      totalCents: 1800,
+    },
+    [{ variantId: scarceVariantId, qty: 3, unitPriceCents: 600, vatRate: 5.5 }],
+  );
+  shortOrderId = shortOrder.order.id;
+  shortItemId = shortOrder.items[0]!.id;
+
   // Bugün teslim edilecek web siparişi — gün özetinin sayacına ve kanal kırılımına girer.
   await new OrderService(db).create(
     {
@@ -128,7 +159,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await purgeTestData(db, {
-    productIds: [productId, nearExpiryProductId],
+    productIds: [productId, nearExpiryProductId, scarceProductId],
     categoryIds: [categoryId],
     profileIds: [admin.profileId, depocu.profileId, musteri.profileId],
     warehouseIds: [warehouseId],
@@ -227,7 +258,10 @@ describe('Y3 · yakın-SKT teklif onayı', () => {
 describe('Y4 · tedarik önerisi', () => {
   it('grup tedarikçi adıyla ve motorun önerisiyle; onay TASLAK TS yazıyor', async () => {
     const supply = await envelopeData<SupplyResponse>(await get(admin, 'supply'));
-    const group = supply.groups.find((row) => row.supplierId === supplierId);
+    // Grup DEPO+tedarikçi ikilisiyle seçilir: eşleme varyant düzeyinde olduğundan öteki tesisler de
+    // (stok 0'la) aynı tedarikçiye grup üretir ve düz `find` sırası koşudan koşuya değişir (ölçüldü:
+    // STR'nin grubu yakalanınca öneri 10 çıkıyordu — bizim depoda 8).
+    const group = supply.groups.find((row) => row.supplierId === supplierId && row.warehouseId === warehouseId);
     expect(group).toBeDefined();
     expect(group!.supplierName).toContain('Yönetim Ucu Tedarik');
     const line = group!.lines.find((row) => row.variantId === variantId);
@@ -263,5 +297,77 @@ describe('Y4 · tedarik önerisi', () => {
       await post(admin, 'supply/draft', { warehouseId, supplierId: '00000000-0000-4000-8000-00000000dead' }),
     );
     expect(draft.status).toBe('no_suggestion');
+  });
+});
+
+describe('Y1 · şikâyet / talep detayı', () => {
+  it('detay yazışmayı taşıyor; CEVAP gerçek kapıdan yazılıyor ve yazarın ADI görünüyor', async () => {
+    const before = await envelopeData<ComplaintResponse>(await get(admin, `complaints/${ticketId}`));
+    expect(before.complaint).not.toBeNull();
+    expect(before.complaint!.customerName).toBe('musteri');
+    expect(before.complaint!.awaitingReply).toBe(true);
+    const messageCount = before.complaint!.messages.length;
+
+    const reply = await envelopeData<TicketActionResponse>(
+      await post(admin, `complaints/${ticketId}/reply`, { body: `Teslimat 14:00-16:00 arası — uç testi ${stamp}` }),
+    );
+    expect(reply).toEqual({ ok: true, reason: null });
+
+    const after = await envelopeData<ComplaintResponse>(await get(admin, `complaints/${ticketId}`));
+    expect(after.complaint!.messages.length).toBe(messageCount + 1);
+    const last = after.complaint!.messages[after.complaint!.messages.length - 1]!;
+    expect(last.sender).toBe('admin');
+    // Yazan kişi adıyla — "OPERATÖR · yonetici" satırının verisi (v2:557).
+    expect(last.authorName).toBe('yonetici');
+    // Top artık bizde değil: son sözü personel söyledi.
+    expect(after.complaint!.awaitingReply).toBe(false);
+  });
+
+  it('ÜSTLEN durum kapısından geçer; ikinci üstlenme reddi bir CÜMLEDİR, HTTP hatası değil', async () => {
+    const claim = await envelopeData<TicketActionResponse>(await post(admin, `complaints/${ticketId}/claim`, {}));
+    expect(claim.ok).toBe(true);
+
+    const again = await envelopeData<TicketActionResponse>(await post(admin, `complaints/${ticketId}/claim`, {}));
+    expect(again.ok).toBe(false);
+    expect(typeof again.reason).toBe('string');
+  });
+
+  it('taslak yokken tüketme reddi adlandırılır: no_draft', async () => {
+    const draft = await envelopeData<{ ok: boolean; reason: string | null; draft: string | null }>(
+      await post(admin, `complaints/${ticketId}/draft`, { send: false }),
+    );
+    expect(draft).toEqual({ ok: false, reason: 'no_draft', draft: null });
+  });
+
+  it('DEPOCU 403', async () => {
+    expect((await get(depocu, 'complaints/next')).status).toBe(403);
+  });
+});
+
+describe('Y2 · sipariş istisnaları', () => {
+  it('eksik kalem motor önerisi ve PARA önizlemesiyle listede; soru sorulunca kuyruktan düşer', async () => {
+    const list = await envelopeData<ExceptionsResponse>(await get(admin, 'exceptions'));
+    const mine = list.exceptions.find((row) => row.orderId === shortOrderId);
+    expect(mine).toBeDefined();
+    const line = mine!.lines.find((row) => row.orderItemId === shortItemId);
+    expect(line).toMatchObject({
+      orderedQty: 3,
+      missingQty: 2,
+      missingValueCents: 1200,
+      // %66 eksik > %50 eşiği → motorun sözü "müşteriye sor" (suggestShortfallAction · large_share).
+      advice: { action: 'ask_customer' },
+    });
+
+    const ask = await envelopeData<ExceptionAskResponse>(await post(admin, `exceptions/${shortItemId}/ask`, {}));
+    expect(ask.status).toBe('ok');
+    expect(ask.ticketId).not.toBeNull();
+
+    // Çift soru koruması kapıda: aynı kaleme ikinci talep AÇILMAZ (10.3).
+    const again = await envelopeData<ExceptionAskResponse>(await post(admin, `exceptions/${shortItemId}/ask`, {}));
+    expect(again).toEqual({ status: 'already_asked', ticketId: ask.ticketId });
+
+    // Soru sorulan kalem karar kuyruğundan KENDİLİĞİNDEN düşer — ikinci bir defter yok.
+    const after = await envelopeData<ExceptionsResponse>(await get(admin, 'exceptions'));
+    expect(after.exceptions.some((row) => row.orderId === shortOrderId)).toBe(false);
   });
 });

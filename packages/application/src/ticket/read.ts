@@ -70,6 +70,7 @@ export async function toMessageView(message: TicketMessage, viewLanguage: Prefer
   );
   return {
     id: message.id,
+    authorId: message.authorId ?? null,
     sender: message.sender,
     // Motor boş metinde `null` döner; mesaj gövdesi boş olamaz (`min(1)`) ama tip yalan söylemesin.
     body: shown.text ?? message.body,
