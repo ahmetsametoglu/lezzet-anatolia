@@ -166,6 +166,8 @@ export {
   unreadNotificationCount,
 } from './notification/read';
 export type { NotificationFeed } from './notification/read';
+// Cihaz jetonu kapısı (14.14): kayıt sahip devriyle, çıkışta silme ZORUNLU, izin raporu dahil.
+export { listSendablePushTokens, registerPushDevice, unregisterPushDevice } from './notification/devices';
 
 // ── Talep bildirimleri + AI destek çekirdeği (16.4 · 16.5 · 20.4) — terfi 16.08 ─────────────
 // Bildirim kurucusu webden geldi (web köprü, `order/notify` yolu): özerk AI cevabı backend

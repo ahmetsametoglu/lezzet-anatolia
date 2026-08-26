@@ -121,6 +121,22 @@ Bildirim OLGUsu ile kanala TESLİMİ ayrı kayıtlardır: BELGE sınıfı "e-pos
 | ref | string \| null | sağlayıcı referansı — "gerçekten ne gitti"nin izi |
 | created_at | timestamptz | |
 
+## PushDevice (cihaz jetonu)
+
+Push'un tek DB ayağı (14.14, migration 0050): "bu kişiye hangi cihazlardan ulaşılır". Sürücü ve makbuz cron'u 14.16'da; izin akışı/yönlendirme mobil şeritte. **Jeton bir ADRES değil YETKİDİR** (o cihaza bildirim gösterme) — hiçbir uçtan geri okutulmaz, URL'e yazılmaz (uçlar POST, jeton gövdede).
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| profile_id | uuid | sahip — müşteri de personel de (operasyon kabuğu da push alacak; ad bu yüzden `customer_id` değil); **cascade** |
+| token | string | **unique, TABLO GENELİ** — cihaz başına tek sahip. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi |
+| platform | string | `ios` · `android` — `web` BİLEREK yok (KARARLAR 26.08: müşteri yüzeyinde web push yapılmıyor); kısıt veride |
+| disabled_at | timestamptz \| null | OS bildirim İZNİ kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar ve sıra maile düşer. İzin karası: kapalı cihaza "gönderdim" demek sessiz kara deliktir |
+| last_seen_at | timestamptz | bakım damgası ("kayıt bayat mı") — karşılaştırılan bir ölçüt değil |
+| created_at | timestamptz | |
+
+**Çıkış (logout) ZORUNLU adım:** jeton silinmezse önceki hesabın bildirimi sonraki oturum sahibine düşer. Silme sahiplik süzgeçli (`token + profile_id`): devrolmuş cihazın gecikmiş çıkışı yeni sahbin kaydını sökemez. 0037 silme akışına dahil.
+
 ## AnalyticsEvent (analitik olayı)
 
 Cookie'siz, sunucu-tarafı, toplu ölçüm. **Kuralların tamamı `ANALYTICS.md`'de** (sınır · kimlik · olay şekli · kapı · saklama); burada yalnız ALANLAR durur.

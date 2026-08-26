@@ -91,6 +91,10 @@ begin
   -- fonksiyon personel kaydını zaten en başta reddediyor.
   delete from public.notification where profile_id = p_customer_id;
 
+  -- Cihaz jetonları (0050 · 14.14): jeton bir YETKİDİR (o cihaza bildirim gösterme) ve kişiye
+  -- bağlıdır — hesabı silinen kişinin telefonu sistemin kulağı olmaya devam edemez.
+  delete from public.push_device where profile_id = p_customer_id;
+
   -- Sadakat geçmişi: yasal saklama gerekçesi yok, kişiye bağlı olmadan da anlamsız.
   delete from public.points_entry where customer_id = p_customer_id;
 

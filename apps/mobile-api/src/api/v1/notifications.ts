@@ -6,10 +6,12 @@ import {
   listNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  registerPushDevice,
   unreadNotificationCount,
+  unregisterPushDevice,
 } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { DEFAULT_PAGE_SIZE, MeNotificationBadgeSchema, MeNotificationsPageSchema } from '@lezzet/types';
+import { DEFAULT_PAGE_SIZE, MeNotificationBadgeSchema, MeNotificationsPageSchema, PushPlatformEnum } from '@lezzet/types';
 import { decodeCursor, encodeCursor } from '../../lib/request';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
@@ -114,4 +116,47 @@ notifications.post('/:id/dismiss', async (c) => {
   const sonuc = await dismissNotification(serviceDb(), { profileId: c.get('customerId'), notificationId: id.data });
   if (sonuc !== 'ok') return fail(c, 'not_found', 404);
   return ok(c, { done: true });
+});
+
+/*
+  ── CİHAZ JETONU UÇLARI (14.14) — aynı taşıma dosyasında, aynı middleware ─────────────────────────
+  Ayrı dosya açılmadı: `resolveCustomer` üçüncü kez kopyalanacaktı (CLAUDE §1) ve iki uç ailesi
+  aynı konunun iki yarısı — bildirimi OKUYAN cihaz, bildirimi ALACAK cihazdır.
+
+  Jeton hiçbir cevapta GERİ OKUTULMAZ ve URL'e de yazılmaz (erişim logları): iki uç da POST, jeton
+  gövdede. Jeton bir yetkidir — o cihaza bildirim gösterme yetkisi.
+*/
+
+const RegisterDeviceSchema = z.object({
+  token: z.string().min(10).max(200),
+  platform: PushPlatformEnum,
+  /** OS bildirim izni — uygulama her açılışta raporlar; kapalıysa cihaz gönderilebilir sayılmaz. */
+  enabled: z.boolean(),
+});
+
+const RemoveDeviceSchema = z.object({ token: z.string().min(10).max(200) });
+
+export const pushDevices = new Hono<CustomerEnv>();
+pushDevices.use('*', resolveCustomer);
+
+/** Kaydol/tazele — çakışmada SAHİP DEVRİ (kapının künyesi: cihaz son girenin kulağıdır). */
+pushDevices.post('/', async (c) => {
+  const parsed = RegisterDeviceSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  await registerPushDevice(serviceDb(), { profileId: c.get('customerId'), ...parsed.data });
+  return ok(c, { done: true });
+});
+
+/**
+ * Çıkış — logout akışının ZORUNLU adımı: jeton kalırsa önceki hesabın bildirimi sonraki oturum
+ * sahibine düşer. `removed:false` hata DEĞİL (çıkış idempotent; cihaz devrolmuş olabilir) —
+ * istemci yine de görsün: sessizce hiçbir şey silmemiş bir çıkış, ölçülemeyen bir çıkıştır.
+ */
+pushDevices.post('/remove', async (c) => {
+  const parsed = RemoveDeviceSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const removed = await unregisterPushDevice(serviceDb(), { profileId: c.get('customerId'), token: parsed.data.token });
+  return ok(c, { removed });
 });

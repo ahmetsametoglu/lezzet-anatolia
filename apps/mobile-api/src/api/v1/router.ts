@@ -20,7 +20,7 @@ import { packages } from './packages';
 import { payments } from './payments';
 import { deliveryTerms } from './delivery-terms';
 import { places } from './places';
-import { notifications } from './notifications';
+import { notifications, pushDevices } from './notifications';
 import { points, pointsRules } from './points';
 import { preferences } from './preferences';
 import { recipes } from './recipes';
@@ -206,6 +206,9 @@ v1.route('/me/points', points);
 // tanımı ve "akış ≠ gelen kutusu" kuralı `@lezzet/application/notification/read` künyesinde; web
 // hesap zili (14.15) aynı kapıdan okuyacak — iki yüzey tek kural.
 v1.route('/me/notifications', notifications);
+// Cihaz jetonları (14.14) — kayıt sahip devriyle, çıkışta silme zorunlu; jeton URL'e yazılmaz
+// (erişim logları), iki uç da POST. Kural `@lezzet/application/notification/devices` künyesinde.
+v1.route('/me/push-devices', pushDevices);
 
 // Davetin hesaba bağlanması (21.44 · 21.45) — Bearer'ın ARDINDA, karşılamanın aksine: "bu daveti
 // BENİM hesabıma yaz" cümlesinin oturumsuz hâli yoktur (keşif talep kapısının aynı ayrımı). Cihaz

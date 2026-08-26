@@ -17,6 +17,8 @@ export { EmailVerificationService, type RequestCodeResult, type VerifyCodeResult
 // — o kolon iletişim numarasıdır ve kimlik çözümünde okunmaz.
 // Bildirim kaydı + teslim defteri (14.12) — karar tek kapıda (application/notification/dispatch).
 export { AppNotificationService, NotificationDeliveryService } from './services/app-notification.service';
+// Push cihaz jetonu (14.14) — kayıt sahip devriyle RPC'de; izin süzgeci `listSendable`da.
+export { PushDeviceService } from './services/push-device.service';
 export { CustomerPhoneService } from './services/customer-phone.service';
 export { CategoryService, type CreateCategoryInput } from './services/category.service';
 export { CategoryImageService } from './services/category-image.service';
