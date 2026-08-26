@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ordersColumnTracks } from './orders-columns';
 import { Badge } from '@/components/operation/ui/badge';
+import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { DateFilterChip } from '@/components/operation/ui/date-filter-chip';
 import { FilterChip } from '@/components/operation/ui/filter-chip';
@@ -45,15 +46,20 @@ export function OrdersDesktop(props: OrdersViewProps) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
-      {/* BEKLEYEN(09.8): başlıktaki "+ Sipariş" girişi — telefonla gelen siparişin elle yazıldığı
-          ekran henüz yok, düğme bugün açacak bir yer bulamazdı; ölü düğme, olmayan sayfaya davet
-          eden linkten daha kötüdür (basılır, hiçbir şey olmaz).
-          KAPI SATIŞI BURAYA GELMEYECEK (26.08): yerinde satış — depo kapısı ve kuryenin aracı —
-          native uygulamanın kurye/depo bölümünün işi (`DOMAIN §17`: "Admin yerinde satış yapmaz").
-          `lib/order/quick-sale.ts` o yüzden burada değil orada çağrılacak. */}
       {/* Arama HEADER'DA DEĞİL (15.08, kullanıcı kararı — fiyatlar emsali): header sekmelere ve
-          süzgeçlere bağlı kontrol taşımaz; arama süzgeç şeridinin sağ ucunda, süzdüğü listenin yanında. */}
-      <PageHeader title="Siparişler" subtitle={summaryText(counts)} />
+          süzgeçlere bağlı kontrol taşımaz; arama süzgeç şeridinin sağ ucunda, süzdüğü listenin yanında.
+          "+ Sipariş" ise bir SÜZGEÇ DEĞİL, sayfanın eylemidir — yeri burasıdır (09.8).
+          KAPIDA SATIŞ BU DÜĞMENİN ARDINDA DEĞİL (26.08): yerinde satış — depo kapısı ve kuryenin
+          aracı — native uygulamanın kurye/depo bölümünün işi (`DOMAIN §17`: "Admin yerinde satış
+          yapmaz"); `lib/order/quick-sale.ts` orada çağrılacak. Buradaki giriş TELEFONLA gelen
+          siparişin masada yazılmasıdır. */}
+      <PageHeader title="Siparişler" subtitle={summaryText(counts)}>
+        <Link href="/operations/orders/new" className="cursor-pointer">
+          <Button variant="primary" size="sm">
+            + Sipariş
+          </Button>
+        </Link>
+      </PageHeader>
 
       {/* Sekmeler = DURUMLAR; sayılar süzgecin TAMAMINDAN gelir (yüklenmiş sayfadan değil). */}
       <Tabs

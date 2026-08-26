@@ -145,6 +145,26 @@ export interface CheckoutDraftInput {
   customerId: string;
   entries: readonly CartEntry[];
   addressId: string;
+  /**
+   * **ELLE GİRİŞ — bu taslağı bir müşteri değil PERSONEL açıyor** (09.8). Boş = müşteri yolu.
+   *
+   * Ayrı bir orkestrasyon YAZILMADI ve bu bilinçli bir seçim: telefonla gelen sipariş de KDV
+   * işlemi, posta kodu → bölge → depo zinciri, tek-depo değişmezi, stok karşılanabilirliği,
+   * rezervasyon ve indirim dengesi bakımından müşterinin açtığı siparişle **aynı** kurallara
+   * tabidir. İkinci bir yol açmak o kuralların ikinci bir kopyasını doğururdu; ikisi bir gün
+   * ayrışır ve ayrıştığı gün kimse fark etmezdi. Farklı olan yalnız aşağıdaki dört şey.
+   */
+  staff?: {
+    /** Siparişi yazan personel — pazarlık izinin "kim" tarafı. */
+    actorId: string;
+    /**
+     * Pazarlıklı birim fiyatlar (`variantId` → cent). Verilmeyen kalem liste fiyatından gider;
+     * kural ve gerekçe `getCartView` künyesinde (tek sayı disiplini).
+     */
+    priceOverrides?: ReadonlyMap<string, number>;
+    /** Patron ikramı — operasyon ve iç muhasebe tam normal, yalnız muhasebe export'una girmez (DOMAIN §9). */
+    isGiftOrder?: boolean;
+  };
   /** Rota içi teslimatta seçilen gün; kargoda null (tarih taşıyıcıya bağlı, söz verilmez). */
   deliveryDate: string | null;
   paymentMethod: PaymentMethod;
@@ -275,6 +295,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   const cart = await getCartView(db, input.locale, input.entries, {
     customerId: customer.id,
     couponCode: input.couponCode,
+    // Pazarlıklı fiyatlar sepet okumasına GİRER, kalem yazımına değil: toplam, indirim matrahı,
+    // KDV kırılımı ve kargo eşiği hep bu okumadan türüyor (09.8, künye `getCartView`de).
+    priceOverrides: input.staff?.priceOverrides,
     warehouseId: orderWarehouseId,
     shippingWarehouseId: place.shippingWarehouseId,
     // ── AYAR KAPSAMININ ÜLKE VE BÖLGE EKSENLERİ (07.15) ───────────────────────
@@ -399,8 +422,13 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   /* Eşik SİPARİŞE GİREN tutara bakar: gelemeyen bir kalemle asgari sepeti geçmiş görünen müşteri
      kasada geri düşerdi. `cart.minBasketOk` sepetin TAMAMINI ölçüyor; kapsam daraldığında ölçüm de
      daralmalı. Eşiğin kendisi yine sunucunun (kapsamlı ayar) — burada yalnız matrah değişiyor. */
+  /* ASGARİ SEPET PERSONEL YOLUNDA SORULMAZ (09.8). Eşiğin amacı kendi kendine sipariş veren
+     müşteriyi kârsız bir teslimattan çevirmektir — telefondaki müşteriyi zaten operatör
+     karşılıyor ve küçük siparişi alıp almamak onun kararı. Kapı burada kalsaydı operatör
+     "sistem izin vermiyor" diyerek bir satışı reddetmek zorunda kalırdı; teslimat maliyeti
+     kararı ise fiyatı elle yazabilen kişinin verebileceği bir karardır. */
   const basket = meetsMinBasket(scope.subtotalCents, cart.minBasketCents);
-  if (!basket.ok) return { status: 'min_basket', missingCents: basket.missingCents };
+  if (!input.staff && !basket.ok) return { status: 'min_basket', missingCents: basket.missingCents };
 
   // Gün DOĞRULANIR, kabul edilmez: ekran açıkken kesim saati geçmiş ya da bölge günü değişmiş olabilir.
   // Kargo siparişinde gün HİÇ sorulmaz: tarih taşıyıcıya bağlıdır ve söz verilmez.
@@ -416,7 +444,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
   // Reverse charge'da kalem oranı SIFIRLANIR: `zeroRated` "ürünün kendi oranı geçerli değil"
   // demektir. Kargonun KDV'si taşıdığı malın oranını izlediği için (`apportionShippingVat`) ücret
   // de kendiliğinden sıfırlanır — ayrıca sıfırlamak, aynı kuralın ikinci bir tanımı olurdu.
-  const items = await expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated);
+  const items = await expandToOrderItems(db, orderedLines, orderedShares, vat.zeroRated, input.staff?.actorId ?? null);
   const options = await resolveCheckoutPayment(db, {
     customerId: customer.id,
     deliveryType,
@@ -509,7 +537,11 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       // varsayılan depo kavramı yoktur (C2). Yer çözümü teslimat kararıyla aynı turda yapıldı.
       warehouseId: orderWarehouseId,
       channel,
-      orderSource: 'web',
+      // Kaynak YÜZEYİ söyler, kanaldan bağımsız ayrı eksendir (DATA_MODEL). Telefonla gelip
+      // masada yazılan sipariş `manual`dır; WhatsApp köprüsü (15.4) kendi kaynağını geçirecek.
+      orderSource: input.staff ? 'manual' : 'web',
+      // Patron ikramı (DOMAIN §9) — yalnız personel yolundan işaretlenebilir.
+      isGiftOrder: input.staff?.isGiftOrder ?? false,
       status: 'draft',
       idempotencyKey: input.idempotencyKey ?? null,
       paymentMethod: input.paymentMethod,
@@ -583,6 +615,8 @@ async function expandToOrderItems(
   shares: readonly number[],
   /** Reverse charge (`vat.zeroRated`) — kalem oranı ürünün kendi oranı DEĞİL, sıfırdır. */
   zeroRated: boolean,
+  /** Pazarlığı yapan personel (09.8); `null` = müşteri yolu, iz yazılmaz. */
+  priceSetBy: string | null,
 ): Promise<Omit<OrderItemInsert, 'orderId'>[]> {
   const items = new BundleItemService(db);
   const bundleItems = new Map(
@@ -613,6 +647,11 @@ async function expandToOrderItems(
         stockId: line.stockId,
         bundleId: null,
         unitPriceCents: line.unitPriceCents ?? 0,
+        // PAZARLIK İZİ (09.8) — ikisi BİRLİKTE yazılır, kısıt veride (`order_item_negotiation_complete`).
+        // Satır pazarlık taşımıyorsa ikisi de `null`: eşit sayı yazmak kayda "indirim verildi"
+        // dedirtirdi ve her normal checkout kalemi sahte bir taviz kaydı taşırdı.
+        listUnitPriceCents: line.listUnitPriceCents ?? null,
+        priceSetBy: line.listUnitPriceCents != null ? priceSetBy : null,
         vatRate: vatByVariant.get(line.variantId) ?? 0,
         lineDiscountAmountCents: shares[index] ?? 0,
       });

@@ -4,7 +4,7 @@ import type { AddressDeliveryType, OrderCancelReason, PaymentMethod, PreferredLa
 import { clearOrderedLines } from '../cart/settle';
 import type { CartBundlePort } from '../cart/read';
 import type { CartEntry } from '../cart/cart-types';
-import { createCheckoutDraft, type CheckoutDraftOutcome } from './checkout-draft';
+import { createCheckoutDraft, type CheckoutDraftInput, type CheckoutDraftOutcome } from './checkout-draft';
 import { createCheckoutSession, type CheckoutSessionCreator } from './checkout-session';
 import { reserveOrderStock } from './reserve';
 import { transitionOrder } from './transition';
@@ -98,6 +98,11 @@ export interface PlaceOrderInput {
   deliveryDate: string | null;
   paymentMethod: PaymentMethod;
   onAccount?: boolean;
+  /**
+   * **ELLE GİRİŞ** (09.8) — dolu olduğunda siparişi personel yazıyor demektir; kural farkları ve
+   * gerekçeleri `CheckoutDraftInput.staff` künyesinde. Olduğu gibi taslağa geçer.
+   */
+  staff?: CheckoutDraftInput['staff'];
   /** Bülten/pazarlama izni — checkout kutusundan gelir, baştan işaretsizdir (DOMAIN §11). */
   marketingConsent?: boolean;
   /** Sepetteki kupon kodu; siparişin indirimi bunsuz hesaplanamaz. */
@@ -185,6 +190,10 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     deliveryDate: input.deliveryDate,
     paymentMethod: input.paymentMethod,
     onAccount: input.onAccount,
+    // Elle giriş künyesi (09.8) — alanların TEK TEK kopyalandığı bir kapı bu (yukarıdaki
+    // `expectedCartFingerprint` künyesinin aynı uyarısı): eklenip de geçirilmeyen bir alan kapıyı
+    // sessizce etkisiz bırakır.
+    staff: input.staff,
     couponCode: input.couponCode,
     expectedCartFingerprint: input.expectedCartFingerprint,
     idempotencyKey: input.idempotencyKey,

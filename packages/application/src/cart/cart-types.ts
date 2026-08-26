@@ -231,6 +231,16 @@ interface CartLineView {
   unitLabel: string;
   /** null = artık satışa kapalı (kanal fiyatı kalkmış) — satır çıkarılmadan devam edilemez. */
   unitPriceCents: number | null;
+  /**
+   * PAZARLIK İZİ (09.8) — yalnız personel fiyatı ÜSTÜNE YAZDIYSA dolu; motorun çözdüğü liste
+   * fiyatını taşır. `undefined` = pazarlık yok, `unitPriceCents` zaten listenin kendisi.
+   *
+   * Satırda durması şart, kalem yazımında yeniden çözülmesi değil: fiyat bir kez çözülür ve
+   * toplam, indirim matrahı, KDV kırılımı ile kalem kaydı **aynı sayıyı** görmek zorundadır.
+   * İkinci bir çözüm turu, aradan geçen sürede fiyat değişirse siparişi kendi toplamıyla
+   * çelişik bırakırdı.
+   */
+  listUnitPriceCents?: number | null;
   /** Teklif kazandıysa üstü çizilecek referans. */
   wasCents?: number;
   /** Teklifin adet tavanı (partide kalan); tavan yoksa null. */

@@ -106,6 +106,23 @@ export async function getCartView(
      */
     previousPrices?: ReadonlyMap<string, number>;
     /**
+     * **PAZARLIKLI FİYATLAR** (09.8) — `variantId` → birim fiyat (cent). Yalnız PERSONEL yolundan
+     * dolar (elle sipariş girişi, yerinde satış); müşteri yüzeyinde her zaman boştur.
+     *
+     * Buraya konmasının sebebi tek bir sayı disiplinidir: fiyat bu okumada çözülüyor ve satır
+     * toplamı, indirim matrahı, KDV kırılımı, kargo eşiği ile siparişin toplamı hep ondan
+     * türüyor. Üstüne yazma daha aşağıda yapılsaydı sipariş kendi toplamıyla çelişirdi.
+     *
+     * **Satışa kapalı ürünü DİRİLTMEZ:** `blocked` ölçütü liste fiyatının varlığıdır, buradaki
+     * sayı değil. Elle fiyat yazarak kapanmış bir ürünü satmak, kapanma kararını sessizce
+     * geçersiz kılardı.
+     *
+     * Paket satırına UYGULANMAZ (anahtar varyant kimliğidir): paketin fiyatı tek sayıdır ve
+     * parçalarına dağıtılmış payların toplamı olmak zorundadır (DOMAIN §13) — bir parçayı elle
+     * indirmek o dengeyi bozar. Pakette pazarlık istenirse paketin kendi fiyatı düzenlenir.
+     */
+    priceOverrides?: ReadonlyMap<string, number>;
+    /**
      * Müşterinin yerinden çözülen depo (DOMAIN §17). Null = yer bilinmiyor: sepet depo-ÜSTÜ okunur
      * ve "burada satılmıyor" denmez — yalnız hiçbir depoda yoksa tükendi denir (C3).
      *
@@ -239,7 +256,14 @@ export async function getCartView(
     const view = toVariant(variant, locale, ctx, product.shippable);
     // Sepetteki çıpa bugünkü teklifle uyuşmuyorsa teklif bu satırda GEÇERSİZDİR.
     const offerHolds = entry.stockId !== null && view.stockId === entry.stockId;
-    const unitPriceCents = view.priceCents;
+    // ── PAZARLIK (09.8) ─────────────────────────────────────────────────────
+    // Motorun çözdüğü fiyat LİSTEDİR; personel elle bir sayı yazdıysa satış fiyatı odur.
+    // Üstüne yazma BURADA yapılıyor çünkü aşağıdaki her şey — satır toplamı, indirim matrahı,
+    // KDV kırılımı, kargo eşiği, siparişin toplamı — bu tek sayıdan türüyor. Kalem yazımında
+    // (`expandToOrderItems`) yapılsaydı sipariş kendi toplamıyla çelişirdi.
+    const listPriceCents = view.priceCents;
+    const negotiatedCents = opts.priceOverrides?.get(entry.variantId);
+    const unitPriceCents = negotiatedCents ?? listPriceCents;
 
     lines.push({
       ...entry,
@@ -248,11 +272,14 @@ export async function getCartView(
       image: imageOf(product),
       unitLabel: view.label,
       unitPriceCents,
+      // Yalnız gerçekten pazarlık edildiyse dolu — eşit sayı yazmak "indirim verildi" der.
+      listUnitPriceCents: negotiatedCents != null && negotiatedCents !== listPriceCents ? listPriceCents : undefined,
       wasCents: offerHolds ? view.wasCents : undefined,
       limitCap: offerHolds && view.limitLabel ? Number(view.limitLabel) : null,
       lineTotalCents: unitPriceCents === null ? null : unitPriceCents * entry.qty,
-      // Satışa kapalı ya da tükendi → çıkarılmadan devam edilemez.
-      blocked: unitPriceCents === null || view.soldOut,
+      // ÖLÇÜT LİSTE FİYATI, pazarlıklı olan DEĞİL: kanal fiyatı kalkmış (satışa kapalı) bir ürünü
+      // elle fiyat yazarak diriltmek, kapanmış bir ürünü sessizce yeniden satmak olurdu.
+      blocked: listPriceCents === null || view.soldOut,
       // Yol kararı satırlar kurulduktan SONRA toplu veriliyor (motor sepetin tamamını görmeli).
       route: null,
       // Grup yolla birlikte tazelenir; başlangıç değeri yolun `null` hâlinin karşılığı (`cartGroupOf`).
