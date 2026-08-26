@@ -114,6 +114,44 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
       .is('dismissed_at', null);
     if (error) throw error;
   }
+
+  /**
+   * Saklama süpürmesi (14.15) — GÖRÜLMÜŞ personel satırlarını siler, sayıyı döner (süpürme izi,
+   * `deleteOlderThan` künyesinin aynı kuralı: eşik ancak sayıyla ölçülür).
+   *
+   * Base'in `deleteOlderThan`ı yetmiyor: süzgeç yalnız yaş değil — TÜR (müşteri satırı asla) ve
+   * GÖRÜLMÜŞLÜK (okunmamış satır bekleyen iştir, yaşı ne olursa olsun durur; süpürülen okunAN ya
+   * da gizlenendir).
+   *
+   * "Görülmüş" İKİ DÜZ DEYİMDE silinir, tek `or`lu deyimde DEĞİL — ölçüldü (26.08): PostgREST
+   * DELETE üstünde `or=` süzgecini her hâlde `42703 column … does not exist` ile reddediyor
+   * (AYNI or-ağacı SELECT'te çalışıyor; kolon DB'de var, `\d` ile doğrulandı). İkinci deyim yalnız
+   * okunMAmış-ama-gizlenmiş satırı alır — kesişim yok, sayı çift saymaz; tarama idempotent olduğu
+   * için iki deyim arasındaki an da zararsızdır.
+   */
+  async purgeSeenStaffBefore(cutoffIso: string, kinds: readonly string[]): Promise<number> {
+    if (kinds.length === 0) return 0;
+    const okunmus = await this.supabase
+      .from('notification')
+      .delete()
+      .in('kind', [...kinds])
+      .lt('created_at', cutoffIso)
+      .not('read_at', 'is', null)
+      .select('id');
+    if (okunmus.error) throw okunmus.error;
+
+    const gizlenmis = await this.supabase
+      .from('notification')
+      .delete()
+      .in('kind', [...kinds])
+      .lt('created_at', cutoffIso)
+      .is('read_at', null)
+      .not('dismissed_at', 'is', null)
+      .select('id');
+    if (gizlenmis.error) throw gizlenmis.error;
+
+    return (okunmus.data?.length ?? 0) + (gizlenmis.data?.length ?? 0);
+  }
 }
 
 /** Teslim defteri — bildirim olgusu ile kanala teslimi ayrı kayıtlardır (0049 künyesi). */

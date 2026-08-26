@@ -24,6 +24,7 @@ import { mcpHandler } from './mcp/route';
 import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
 import { EXPIRE_PROPOSALS, expireProposalsJob } from './jobs/expire-proposals';
 import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feedback-requests';
+import { NOTIFICATION_RETENTION, notificationRetentionJob } from './jobs/notification-retention';
 import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observability';
 import { ANALYTICS_INSIGHT, analyticsInsightJob } from './jobs/analytics-insight';
 import { ANALYTICS_ROLLUP, analyticsRollupJob } from './jobs/analytics-rollup';
@@ -154,6 +155,13 @@ cron.schedule(`*/${HEALTH_COLLECT_INTERVAL_MIN} * * * *`, () => {
 // silinince kaybolmaz, yalnız görünmez olur.
 cron.schedule('20 3 * * *', () => {
   void runJob(PURGE_OBSERVABILITY, purgeObservabilityJob);
+}, { timezone: 'Europe/Paris' });
+
+// Personel bildirim saklaması (14.15) — günde bir, aynı sessiz saatte, gözlemlemeden ayrı işte:
+// ayrı `job_run` izi, ayrı sayı. Görülmüş personel satırı 90 günde düşer; GÖRÜLMEMİŞ süpürülmez
+// (bekleyen işin işareti), müşteri satırına hiç dokunulmaz (akış müşterinin geçmişidir).
+cron.schedule('35 3 * * *', () => {
+  void runJob(NOTIFICATION_RETENTION, notificationRetentionJob);
 }, { timezone: 'Europe/Paris' });
 
 // Analitik özet + bakım (13.1) — günde bir, gözlemleme süpürmesinden SONRA.

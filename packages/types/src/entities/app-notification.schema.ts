@@ -48,6 +48,15 @@ export const AppNotificationKindEnum = z.enum([
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
+/**
+ * PERSONEL türleri — saklama süpürmesinin (14.15) süzgeci. Müşteri satırı SÜPÜRÜLMEZ (akış
+ * müşterinin geçmişidir); personel satırı ise fan-out ile kişi başına ÇOĞALIR ve görülmüş hâli
+ * yalnız gürültüdür. Yeni personel türü enum'a girerken BURAYA da girer — girmezse satırları
+ * sonsuza dek birikir (süpürme tanımadığı türe dokunmaz: müşteri satırını silmemek, birikimden
+ * pahalı bir yanlıştır).
+ */
+export const STAFF_NOTIFICATION_KINDS = ['document_undeliverable'] as const satisfies readonly AppNotificationKind[];
+
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */
 export const NotificationTargetTypeEnum = z.enum(['order', 'ticket', 'feedback_request', 'zone_notice', 'customer']);
 export type NotificationTargetType = z.infer<typeof NotificationTargetTypeEnum>;
