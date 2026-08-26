@@ -6,6 +6,7 @@ import { removeVat } from '@lezzet/helper';
 import type { BatchOfferPayload, ProductDateType } from '@lezzet/types';
 import { PriceTriple } from '@/components/operation/form/price-triple';
 import { money, percent } from '@/components/operation/ui/format';
+import { offerBlockedByExpiry } from '@/lib/assistant/offer-block';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
 import type { ProposalSubject } from '@/lib/assistant/subject';
 import { ProposalAside, type ProposalMeta } from '@/components/operation/ui/proposal-aside';
@@ -216,11 +217,17 @@ function Panel({ children }: { children: ReactNode }) {
  * KIRMIZI (satılamaz — indirim kararı burada anlamsız, tek yol imha). Tarih tipi okunamadıysa
  * (`null`) satır yalnız tarihi yazar ve tip uydurmaz: "DDM" diye bir tahmin, geçmiş tarihli bir
  * DLC partisini satılabilir gösterirdi.
+ *
+ * **"Satılamaz" kararı MOTORDAN geliyor** (`offerBlockedByExpiry` → `expiryFlagOf`), burada elle
+ * kurulmuyor (`STACK §4` · düzeltildi 26.08). İlk yazımda `gecti && dateType === 'DLC'` diye
+ * yazılmıştı; doğru cevabı veriyordu ama motorun kopyasıydı ve aynı kopya karar düğmesinin
+ * engelinde de duruyordu — bir kural, üç yer. Kalan GÜN burada hesaplanmaya devam ediyor ve bu
+ * ayrı bir şey: o bir gösterim (aciliyet), yasak değil.
  */
 function ExpiryLine({ dateType, expiryDate }: { dateType: ProductDateType | null; expiryDate: string }) {
   const gun = Math.round((new Date(`${expiryDate}T12:00:00`).getTime() - Date.now()) / 86_400_000);
   const gecti = gun < 0;
-  const engelli = gecti && dateType === 'DLC';
+  const engelli = offerBlockedByExpiry(dateType, expiryDate);
 
   const kabuk = engelli
     ? 'border-ops-red-line bg-ops-red-bg text-ops-red'

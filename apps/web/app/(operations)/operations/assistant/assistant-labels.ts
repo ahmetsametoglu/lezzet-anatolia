@@ -196,6 +196,15 @@ export const DECLARATION_FIELD_LABEL: Record<string, string> = {
   nutrition: 'Besin künyesi',
   allergens: 'Alerjenler',
   traces: 'İzler',
+  // **26.08, gövde turunda ölçüldü.** Sözlük yalnız BEYAN alanlarını tanıyordu; `product_create`
+  // aynı özeti kullanıyor ve payload'ında katalog alanları da var. Eksik anahtar `?? key` dalına
+  // düşünce özet Türkçe kelimelerin arasına ham `categoryId` yazıyordu — ekranda görüldü.
+  categoryId: 'Kategori',
+  dateType: 'Tarih tipi',
+  shelfLifeDays: 'Raf ömrü',
+  vatRate: 'KDV',
+  shippable: 'Kargo izni',
+  variants: 'Boylar',
 };
 
 /**

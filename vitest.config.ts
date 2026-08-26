@@ -69,6 +69,8 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/analytics/session-key.test.ts',
   'apps/web/lib/analytics/utm.test.ts',
   'apps/web/lib/assistant/economics.test.ts',
+  // Fırsat kararının yasakları (22.41) — saf: motoru (`expiryFlagOf`) çağırıyor, DB'ye gitmiyor.
+  'apps/web/lib/assistant/offer-block.test.ts',
   'apps/web/lib/auth/post-login-target.test.ts',
   'apps/web/lib/cart/cart-blocker.test.ts',
   'apps/web/lib/cart/discount-label.test.ts',

@@ -2,6 +2,9 @@
 
 import { useMemo, useState, type ReactNode } from 'react';
 import { LOCALES, type Locale } from '@lezzet/i18n';
+// Sözlükler ve saf çeviriciler AYRI dosyada (26.08): `.tsx` birim testinden import edilemiyor
+// (depoda jsdom yok, bilinçle) ve künyenin dili sınanması gereken bir söz — gerekçe orada.
+import { ENUM_LABEL, ID_TWIN, labelOf, memberLabel, textOf } from './payload-labels';
 import { UnderlineTabs } from './underline-tabs';
 import { ChevronDownIcon } from './icons';
 import { money, num, shortDate } from './format';
@@ -50,120 +53,6 @@ import { money, num, shortDate } from './format';
  * gizlemek, onu verilmiş gibi göstermektir. Kullanıcının ilk sorusu tam buydu — *"asgari sepete hiç
  * girmemiş, acaba haberi var mıydı?"*
  */
-
-/**
- * Şema ENUM'larının okunur karşılığı — **alan adı + değer** çiftiyle eşleşir (12.08).
- *
- * Künye "dilekçenin okunur hâli" diyor ama enum alanlarını ham basıyordu: para hareketinde "Yön: out",
- * "Tür: expense" yazıyor, hemen üstündeki künye satırı ise aynı şeye "Hesaptan çıktı" diyordu — aynı
- * ekranda iki dil. Eşleşme yalnız değere bakmıyor, çünkü aynı kelime başka bir alanda başka anlama
- * gelebilir ("type" hem hareket türü hem indirim türü).
- *
- * Sözlükte olmayan enum ham kalır ve bu bilinçli: uydurma bir çeviri, olmayan bir alanı varmış gibi
- * gösterirdi. Karşılıklar formların kendi sözlüklerinden geliyor (`MANUAL_TYPE_VIEW`,
- * `discount-form`) — burada yeniden ADLANDIRMA yapılmıyor, aynı kelimeler kullanılıyor.
- */
-const ENUM_LABEL: Record<string, Record<string, string>> = {
-  direction: { in: 'Hesaba girdi', out: 'Hesaptan çıktı' },
-  type: {
-    // para hareketi (`MANUAL_TYPE_VIEW` ile aynı kelimeler)
-    expense: 'Gider',
-    capital: 'Sermaye',
-    misc: 'Sınıflandırılmadı',
-    transfer: 'Transfer',
-    // indirim
-    percent: 'Yüzde',
-    fixed: 'Sabit tutar',
-  },
-  trigger: { coupon: 'Kupon kodu', automatic: 'Otomatik' },
-  scope: { cart: 'Sepetin tamamı', category: 'Kategori', collection: 'Koleksiyon' },
-  target: { category: 'Kategori', collection: 'Koleksiyon', bundle: 'Paket' },
-};
-
-/** Alan adlarının okunur karşılığı — sözlükte olmayan anahtar kelimelere ayrılıp yazılır. */
-const FIELD_LABEL: Record<string, string> = {
-  // ortak
-  name: 'Ad',
-  description: 'Açıklama',
-  reason: 'Gerekçe',
-  note: 'Not',
-  category: 'Kategori',
-  categoryName: 'Kategori',
-  scopeName: 'Kapsam',
-  warehouseCode: 'Depo',
-  supplierName: 'Tedarikçi',
-  accountName: 'Hesap',
-  counterAccountName: 'Hedef hesap',
-  counterpartyName: 'Karşı taraf',
-  productName: 'Ürün',
-  zoneName: 'Bölge',
-  country: 'Ülke',
-  qty: 'Adet',
-  lines: 'Kalemler',
-  items: 'Kalemler',
-  // ürün / beyan
-  ingredients: 'İçindekiler',
-  storageInstructions: 'Saklama',
-  nutrition: 'Besin künyesi',
-  allergens: 'Alerjenler',
-  traces: 'İzler',
-  dateType: 'Tarih tipi',
-  shelfLifeDays: 'Raf ömrü (gün)',
-  vatRate: 'KDV (%)',
-  shippable: 'Kargo izni',
-  variants: 'Boylar',
-  label: 'Etiket',
-  netWeightG: 'Net ağırlık (g)',
-  piecesCount: 'Adet (paket içi)',
-  fields: 'Asistanın yazacakları',
-  currentFields: 'Ürünün bugünkü hâli',
-  uncertainFields: 'Net okunmayan',
-  remainingGaps: 'Onay sonrası eksik',
-  // fiyat / para
-  offerPriceCents: 'Teklif fiyatı',
-  listPriceCents: 'Liste fiyatı',
-  amountCents: 'Tutar',
-  totalAmountCents: 'Fatura toplamı',
-  unitCostCents: 'Birim alış',
-  lastPurchasePriceCents: 'Son alış',
-  minBasketCents: 'Asgari sepet',
-  totalPrice: 'Paket fiyatı',
-  allocatedUnitPrice: 'Kaleme düşen',
-  percent: 'Oran (%)',
-  direction: 'Yön',
-  type: 'Tür',
-  publicLabel: 'Müşteri metni',
-  code: 'Kupon kodu',
-  trigger: 'Tetik',
-  scope: 'Kapsam türü',
-  firstOrderOnly: 'Yalnız ilk sipariş',
-  maxUses: 'Kullanım tavanı',
-  perCustomerLimit: 'Kişi başı tavan',
-  validFrom: 'Başlangıç',
-  validTo: 'Bitiş',
-  valueDate: 'Değer tarihi',
-  // stok / tedarik
-  expiryDate: 'SKT',
-  lotNumber: 'Lot',
-  physicalQty: 'Partide',
-  documentNo: 'Belge no',
-  date: 'Belge tarihi',
-  purchaseOrderId: 'Bağlı sipariş',
-  postalCodes: 'Posta kodları',
-  postalCode: 'Kod',
-  placeName: 'Yer',
-  requestCount: 'Talep',
-  waitingCount: 'Bekleyen',
-  // vitrin / tarif
-  target: 'Hedef türü',
-  isFeatured: 'Vitrine',
-  currentlyFeaturedCount: 'Vitrinde',
-  steps: 'Hazırlanış',
-  serves: 'Porsiyon',
-  duration: 'Süre',
-  meal: 'Öğün',
-  pantry: 'Evinizden',
-};
 
 /**
  * Kökteki grupların ne OLDUĞUNU söyleyen alt başlık — ve kapalı doğup doğmadıkları.
@@ -231,12 +120,6 @@ function isLocalized(value: object): boolean {
   return keys.length > 0 && keys.every((k) => (LOCALES as readonly string[]).includes(k));
 }
 
-/** Bir dilde yazılı mı — boşluk yazı sayılmaz. */
-function textOf(obj: Record<string, unknown>, lang: Locale): string {
-  const raw = obj[lang];
-  return typeof raw === 'string' ? raw.trim() : '';
-}
-
 interface TreeRow {
   key: string;
   label: string;
@@ -252,22 +135,23 @@ interface TreeRow {
   children?: TreeRow[];
 }
 
-/** Anahtarı okunur bir başlığa çevirir — sözlükte yoksa camelCase ayrılır. */
-function labelOf(key: string): string {
-  if (FIELD_LABEL[key]) return FIELD_LABEL[key];
-  const spaced = key.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
 function buildRows(value: unknown, depth: number, keyPrefix: string, lang: Locale): TreeRow[] {
   if (value === null || typeof value !== 'object') return [];
   if (Array.isArray(value)) return [];
   return Object.entries(value as Record<string, unknown>).flatMap(([key, raw]): TreeRow[] => {
     // Kimlik satırları GİZLİ: uuid okunmaz ve yanındaki ad alanı aynı şeyi söyler. Adı olmayan bir
     // kimlik varsa kısaltılıp yazılır — satırın sessizce kaybolması, alanın hiç olmamasından kötü.
+    //
+    // **İKİZ ARAMASI TEK KALIPLA YETMİYORDU (ölçüldü 26.08, gövde turunda).** Kural yalnız
+    // `<x>Id → <x>Name` arıyordu; oysa payload'ların bir kısmı adı BAŞKA anahtarda taşıyor —
+    // varyantın adı `productName`, deponun adı `warehouseCode`. Sonuç ekranda görünüyordu:
+    // Türkçe künyenin ortasında `Variant id 9a955167…` ve `Warehouse id 971f9aaa…` satırları,
+    // hemen altlarında aynı şeyi söyleyen `Ürün` ve `Depo` satırlarıyla birlikte. İkiz sözlüğü
+    // burada, çünkü "bu kimliğin adı hangi alanda" payload şemasının bilgisi.
     if (/(^id$|Id$)/.test(key)) {
-      const twin = key === 'id' ? 'name' : `${key.slice(0, -2)}Name`;
-      if (twin in (value as Record<string, unknown>)) return [];
+      const row = value as Record<string, unknown>;
+      const twins = ID_TWIN[key] ?? [key === 'id' ? 'name' : `${key.slice(0, -2)}Name`];
+      if (twins.some((twin) => twin in row)) return [];
       if (typeof raw === 'string' && raw.length > 12) {
         return [{ key: `${keyPrefix}${key}`, label: labelOf(key), value: `${raw.slice(0, 8)}…`, depth }];
       }
@@ -284,7 +168,7 @@ function buildRows(value: unknown, depth: number, keyPrefix: string, lang: Local
       if (raw.length === 0) return [{ key: id, label: labelOf(key), value: '—', depth, ...(section ?? {}) }];
       // Kapalı kümeler (alerjen, eksik beyan) tek satırda; nesne dizileri açılır.
       if (raw.every((item) => typeof item === 'string')) {
-        return [{ key: id, label: labelOf(key), value: raw.join(' · '), depth, ...(section ?? {}) }];
+        return [{ key: id, label: labelOf(key), value: raw.map((item) => memberLabel(key, item, lang)).join(' · '), depth, ...(section ?? {}) }];
       }
       return [
         {

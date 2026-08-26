@@ -181,7 +181,35 @@ function factsOf(
     { label: 'Bugünkü kod', value: num(context.currentCodes.length) },
     // Dilekçenin önerdiği sayı ile operatörün seçtiği: fark varsa "şimdi" sütunu belirir.
     { label: 'Eklenecek', value: num(payload.postalCodes.length), now: num(summary.selected) },
-    { label: 'Bildirim', value: `${num(summary.waiting)} müşteri` },
-    { label: 'Talep', value: `${num(summary.requests)} istek` },
+    /**
+     * ── ÖZET ÖNERİYİ OKUR, SEÇİMİ "ŞİMDİ" SÜTUNUNDA SÖYLER (26.08, ekranda ölçüldü) ──
+     *
+     * Bu iki satır YALNIZ seçime bakıyordu ve açılış seçimi boş olduğu için künye kendini
+     * yalanlıyordu: üstte *"Bildirim 0 müşteri · Talep 0 istek"*, hemen altındaki ham dilekçe
+     * listesinde *"Talep 14 · Bekleyen 9"* ve *"Talep 6 · Bekleyen 4"*. Aynı kutuda 0 ve 20.
+     *
+     * Seçimin boş açılması DOĞRU ve kullanıcı kararıdır (15.08 — gerekçesi `zoneValuesFrom`
+     * künyesinde: seçili açılış kararı verilmiş gibi gösterir ve burada onay geri alınamaz bir
+     * bildirim tetikler). Yanlış olan özetin o boşluğu ÖNERİNİN sayısı gibi sunmasıydı: asistan
+     * 20 istek görmüş, künye "0 istek" yazıyordu.
+     *
+     * Düzeltme `Eklenecek` satırının zaten kullandığı desen: **`value` dilekçenin, `now` kararın.**
+     * Sapma yoksa ikinci sütun hiç çizilmez (`ProposalAside` kuralı), yani hiçbir kod seçilmemişken
+     * satır dilekçenin sayısını gösterir ve seçim başladığı an fark görünür.
+     */
+    ...notifyFacts(payload, summary),
+  ];
+}
+
+/** Dilekçenin talep/bekleyen toplamları — kodlar seçilmemişken bile GÖRÜNÜR olan sayılar. */
+function notifyFacts(payload: ZoneExtendPayload, summary: { selected: number; waiting: number; requests: number }): ProposalFact[] {
+  const proposedWaiting = payload.postalCodes.reduce((sum, code) => sum + code.waitingCount, 0);
+  const proposedRequests = payload.postalCodes.reduce((sum, code) => sum + code.requestCount, 0);
+  // Sapma ölçütü SEÇİM sayısı: kodların tamamı seçiliyken toplamlar zaten eşittir ve ikinci sütun
+  // gereksiz gürültü olurdu. Kısmi seçimde ise fark tam olarak kararın etkisidir.
+  const partial = summary.selected !== payload.postalCodes.length;
+  return [
+    { label: 'Bildirim', value: `${num(proposedWaiting)} müşteri`, ...(partial ? { now: `${num(summary.waiting)} müşteri` } : {}) },
+    { label: 'Talep', value: `${num(proposedRequests)} istek`, ...(partial ? { now: `${num(summary.requests)} istek` } : {}) },
   ];
 }

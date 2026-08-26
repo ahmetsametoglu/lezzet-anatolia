@@ -37,6 +37,7 @@ import {
   toBundlePayload,
   type BundleFormValues,
 } from '@/components/operation/form/bundle-form/schema';
+import { batchOfferBlock } from '@/lib/assistant/offer-block';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
 import { saveDiscountAction } from '@/lib/prices/discount-actions';
 import { createProductAction, updateProductAction } from '@/lib/catalog/product-actions';
@@ -128,8 +129,16 @@ interface InlineBody<Payload, Draft> {
    */
   initial: (payload: Payload, options: AssistantFormOptions) => Draft;
   render: (args: InlineBodyArgs<Payload, Draft>) => ReactNode;
-  /** Kaydetmenin engeli ve SEBEBİ; `null` ise yol açık. Düğme etkin görünüp hiçbir şey yapmasın. */
-  blocked: (draft: Draft) => string | null;
+  /**
+   * Kaydetmenin engeli ve SEBEBİ; `null` ise yol açık. Düğme etkin görünüp hiçbir şey yapmasın.
+   *
+   * **`payload` ve `economics` de veriliyor (26.08)** — engel her zaman taslaktan okunmuyor.
+   * Ölçülen vaka: DLC'si geçmiş bir partide gövde doğru uyarıyordu (*"bu parti satılamaz, tek yol
+   * imha"*) ama düğme AÇIKTI, çünkü engel yalnız girilen fiyata bakıyordu. Kapı zaten reddedecekti
+   * (`setOfferPrice` → `must_discard`), yani operatör basıp hata alacaktı. Yasak partinin kendi
+   * hâlinde ve o hâl taslakta değil, dilekçede ve ekonomi okumasında duruyor.
+   */
+  blocked: (draft: Draft, payload: Payload, economics: ProposalEconomics | null) => string | null;
   submit: (payload: Payload, draft: Draft, proposalId: string) => Promise<{ error: string | null }>;
   /**
    * Diyaloğun genişliği — TİPE GÖRE (kullanıcı kararı 11.08: *"farklı öneri diyalogları farklı
@@ -190,9 +199,26 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
         readOnly={readOnly}
       />
     ),
-    // Maliyetin ALTINDA fiyat engel DEĞİLDİR — zararına satmak bir karardır; ekran onu cümleyle
-    // söyler, yolu kapatmaz. Engel yalnız yazılamayacak değerlerde.
-    blocked: (cents) => (cents === null ? 'Teklif fiyatı girilmeli' : cents <= 0 ? 'Fiyat sıfırdan büyük olmalı' : null),
+    /**
+     * Maliyetin ALTINDA fiyat engel DEĞİLDİR — zararına satmak bir karardır; ekran onu cümleyle
+     * söyler, yolu kapatmaz. Engel yalnız yazılamayacak değerlerde.
+     *
+     * **DLC GEÇMİŞ PARTİ ENGELDİR (26.08, gövde turunda ölçüldü)** ve öncekilerden farkı şu: bu bir
+     * TERCİH değil YASAK. Gıda güvenliği tarihi geçmiş parti satılamaz; `setOfferPrice` de zaten
+     * `must_discard` ile reddediyor. Engel yazılmadan önce gövde doğru uyarıyor ama düğme açık
+     * duruyordu — yani ekran "satılamaz" derken düğme "aç" diyordu ve basan hata alıyordu.
+     * 22.35'in dersiyle aynı çizgi: çağrıldığında reddedilecek bir şeyi sunmak, yapılamayacak işi
+     * vaat etmektir.
+     *
+     * **Kural MOTORDAN, çağrısı ORTAK KAPIDAN** (`lib/assistant/offer-block` — gerekçesi orada):
+     * aynı soru gövdenin uyarı satırında da soruluyor ve iki kopya bir gün ayrışırdı.
+     */
+    blocked: (cents, payload, economics) =>
+      batchOfferBlock({
+        offerPriceCents: cents,
+        dateType: economics?.kind === 'offer' ? economics.dateType : null,
+        expiryDate: payload.expiryDate,
+      }),
     submit: (payload, cents, proposalId) => setOfferPriceAction(payload.batchId, cents, proposalId),
     applyLabel: 'Teklifi aç',
     // Cümle İKİ dili birden taşıyor ve bu bilinçli: yapılan iş "teklif açmak" (operasyonun kelimesi),

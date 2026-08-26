@@ -36,8 +36,25 @@ Varlık tabloları konu dosyalarına ayrıldı — 700 satırlık tek dosya, par
 - [`data-model/para.md`](data-model/para.md) — **Para ve Ön Muhasebe:** `Account`, `MoneyMovement`, `BankImportProfile`
 - [`data-model/iletisim-geribildirim.md`](data-model/iletisim-geribildirim.md) — **İletişim, Geri Bildirim ve Analitik:** `Conversation`, `Message`, `WebhookEvent`, `AnalyticsEvent`, `ProductFeedback`, `FeedbackRequest`, `PointsEntry`, `Ticket`, `TicketMessage`, `Setting`
 - [`data-model/operasyon.md`](data-model/operasyon.md) — **Operasyon ve Gözlemleme:** `JobRun`, `ErrorLog`, `SystemHealthSnapshot` — sistemin kendi hakkındaki verisi; iş kaydı DEĞİL, saklama süresi var (bkz. [`OBSERVABILITY.md`](OBSERVABILITY.md))
+- [`data-model/asistan.md`](data-model/asistan.md) — **MCP Asistanı:** `AssistantProposal`, `McpConnectionKey`, `McpCallLog` — onay kuyruğu (asistanın TEK yazma kapısı) + kapının kimliği ve izi (bkz. [`AI_ADMIN_ASSISTANT.md`](AI_ADMIN_ASSISTANT.md))
 
 Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` → katalog).
+
+> **BÖLÜMÜ OLMAYAN TABLOLAR — ölçüldü ve gerekçelendirildi (02.4 · 26.08).** 84 tablonun **78'i**
+> kendi bölümüne ve türetilmiş alan listesine sahip. Kalan altı tablonun bölümü YOK ve bu bilinçli:
+> - **Ara tablo** (`product_collections` · `discount_use` · `email_verifications`) — kendi başına
+>   bir varlık değil, iki varlığı bağlayan satır; kararı bağladığı varlığın metninde yaşıyor.
+> - **Analitik ÖZETİ** (`analytics_daily` + `_product`/`_search`/`_source`) — ham olay değil,
+>   ondan türetilmiş gün toplamı. Kararları `ANALYTICS.md`'de; alan listesi burada tekrarlanırsa
+>   aynı şey iki yerden anlatılmış olur.
+> - ~~**Başka şeridin alanı** (`assistant_proposal` · `mcp_call_log` · `mcp_connection_key`)~~
+>   **YAZILDI 26.08** → [`data-model/asistan.md`](data-model/asistan.md). MCP şeridine bırakılan
+>   not (`docs/talep/not-mcp-veri-modeli-bolumu-bekliyor.md`) işlendi ve silindi; notun bildirdiği
+>   iki denetim açığı (`mcp_scope` enum satırı · `migrations/index.md`) `0051`in kendi commit'inde
+>   zaten kapanmıştı.
+>
+> Ölçüt şu: **bir tablo, bağladığı varlıktan bağımsız bir KARAR taşıyorsa bölümü olur.** Taşımıyorsa
+> bölüm açmak, okuyana yeni bir şey söylemeden doküman büyütmektir.
 
 ## Enum'lar
 

@@ -350,7 +350,7 @@ satırında.
     kolon) ile satış durumu (`status`) ayrı eksenler. Asistan birinciyi doldurabilir, **ikincisi
     hiçbir yoldan açılmaz** — ürün `candidate` doğar. En kötü hâlde yanlış okunmuş bir alerjen
     vitrine düşmez.
-  - **Kapsam dışı:** fiyat · stok · ürün görseli (medya ayrı yetki sınıfı, `§7 Faz C`).
+  - **Kapsam dışı:** fiyat · stok · ürün görseli (medya ayrı yetki sınıfı, `AI_ADMIN_ASSISTANT §7` Faz C).
   - *Kod tarafı BİTTİ (09.08) — araç kataloğu 20 → 21:*
     - `product_create` tipi (enum + payload + uygulayıcı + araç). Ürün **`candidate`** doğar;
       `status` payload'da yok, uygulayıcı elle yazıyor. Kategori ADLA çözülür (model uuid
@@ -585,7 +585,7 @@ satırında.
   `apps/web/app/(operations)/operations/assistant/**`,
   `packages/application/src/assistant/kind-meta.ts`
   - **Gövde SAYFADAN DA ÇIKTI, ortak komponentlere:** ilk tur `prices/discount-form.tsx` yazılmıştı
-    ve `docs:check` reddetti (`STACK §7`: kardeş sayfadan yalnız `*-url` import edilir). Kural burada
+    ve denetim reddetti — `STACK §7`, kardeş sayfadan yalnız `*-url` import edilir. Kural burada
     teknik bir ayrıntı değil ölçünün kendisi — iki yüzey aynı formu paylaşıyorsa o form bir sayfaya
     ait değildir. Aynı gerekçeyle `saveDiscountAction` da `lib/prices/discount-actions.ts`'e taşındı
     (teklif yazma yolunun `lib/stock/offer-actions` devriyle aynı desen).
@@ -2088,3 +2088,50 @@ sınamış olacaktık.
     süzgecinin geçmişte de çalışması (**22.37**) · `zone_extend` gövdesi gerçek haritayla, kod
     hâlleri lejantıyla (**22.35/22.36**) · `product_create` gövdesi (üç düzeltilmiş alan yerinde) ·
     kilitli form (**22.19**). Konsol temiz.
+
+- [x] (22.41) **ON BİR GÖVDENİN TASARIM TURU — künyede makine adı, açık duran yasak düğmesi, kendini yalanlayan özet** *(kullanıcı sorusu 26.08: «hepsi aynı tasarım desenine sahip mi? Bir problem görürsen bana haber verebilirsin»)* · `touches: apps/web/components/operation/ui/{payload-labels.ts,payload-labels.test.ts,payload-tree.tsx}, apps/web/lib/assistant/{offer-block.ts,offer-block.test.ts}, apps/web/app/(operations)/operations/assistant/{assistant-body.tsx,assistant-sections.tsx,assistant-labels.ts,bodies/batch-offer-body.tsx,bodies/zone-extend-body.tsx}`
+  - **Yöntem:** on bir tipin diyaloğu tek tek açıldı (`?p=<id>`, kuyruk 22.40'ın seed'iyle dolu) ve
+    görüntüler okundu. **Desen TUTARLI çıktı** — hepsi aynı iskelet: sol form · sağ "Asistanın
+    önerisi" künyesi (Görünüm ↔ Metadata) · altta üç düğme · üstte tip rozeti ve tutar. Ham hex yok,
+    sabit Tailwind rengi yok, on birinin on biri ortak form havuzundan besleniyor.
+  - **① KÜNYEDE MAKİNE ADI SIZIYORDU — her gövdede.** Türkçe künyenin ortasında `Variant id`,
+    `Batch id`, `Warehouse id`, `Supplier id`, `categoryId`, `gluten · sut · sert_kabuklu`,
+    `nutrition · ingredients`. Kök `labelOf`un doğasıydı: sözlükte olmayan anahtarı camelCase'den
+    türetiyor (`batchId` → "Batch id") ve **türetme İngilizce bir anahtarı Türkçeleştiremez**
+    (`CLAUDE §2`). İki ayrı düzeltme: kimlik alanları sözlüğe girdi, ve **ikiz araması tek kalıpla
+    yetmiyordu** — `<x>Id → <x>Name` kuralı varyantın adını `productName`de, deponunkini
+    `warehouseCode`da bulamıyordu, o yüzden gizlenmesi gereken satırlar görünüyordu (`ID_TWIN`).
+    Alerjen ve eksik-beyan sözlükleri **zaten vardı** (`@lezzet/types`), eksik olan çağrıydı.
+  - **② EKRAN "SATILAMAZ" DERKEN DÜĞME "AÇ" DİYORDU.** DLC'si geçmiş partide gövde doğru uyarıyordu
+    (22.38'in kırmızı satırı) ama **"Teklifi aç" düğmesi açıktı** — ve kapı zaten reddedecekti
+    (`setOfferPrice` → `must_discard`), yani basan hata alacaktı. 22.35'in dersiyle aynı çizgi:
+    *çağrıldığında reddedilecek bir şeyi sunmak, yapılamayacak işi vaat etmektir.* Engel `blocked`
+    kapısına eklendi; imzası `payload` ve `economics`i de görüyor artık, çünkü **her yasak taslakta
+    durmuyor** — bu yasak partinin kendi hâlinde.
+    **Ve kural ÜÇ YERDE ELLE yazılmıştı** (`tarih geçti && dateType === 'DLC'`): gövdenin uyarı
+    satırı, düğmenin engeli, kapının kendisi. Üçü bugün aynı cevabı veriyordu ama motor DDM'yi
+    `expired_sellable` sayıyor ve kopyalardan biri bir gün o dalı da kesse kimse fark etmezdi. Kural
+    motorda kaldı (`expiryFlagOf`), çağrı tek kapıya indi (`lib/assistant/offer-block`) — `STACK §4`.
+  - **③ BÖLGE ÖZETİ KENDİNİ YALANLIYORDU.** Künye üstte *"Eklenecek 0 · Bildirim 0 müşteri · Talep
+    0 istek"* yazarken hemen altındaki ham dilekçe *"Talep 14 · Bekleyen 9"* ve *"Talep 6 · Bekleyen
+    4"* diyordu — aynı kutuda 0 ve 20. Sebep: iki satır yalnız SEÇİME bakıyordu ve seçim boş açılır.
+    **Seçimin boş açılması DOĞRU ve değişmedi** (kullanıcı kararı 15.08 · commit `2e198fbc`: seçili
+    açılış kararı verilmiş gibi gösterir, üstelik onay geri alınamaz bir bildirim tetikler). Yanlış
+    olan özetin o boşluğu ÖNERİNİN sayısı gibi sunmasıydı: asistan 20 istek görmüş, künye "0 istek"
+    yazıyordu. Satırlar `Eklenecek`in zaten kullandığı desene geçti — **`value` dilekçenin, `now`
+    kararın**; sapma yoksa ikinci sütun hiç çizilmez.
+    ⚠ **ÇELİŞKİ AÇILDI VE KULLANICI KARAR VERDİ.** İlk turda "kodlar ön seçili gelsin" diye
+    önerilmişti; kod okunduğunda o önerinin 15.08 kararını GERİ ALDIĞI görüldü ve kullanıcıya
+    soruldu — *"15.08 kararı dursun, yalnız özeti düzelt"*. Öneri, geçmişi ölçmeden verilmişti.
+  - **TESTLER: 17 yeni iddia, ikisi de mutasyonla doğrulandı.** `offer-block.test.ts` (9) —
+    yasak sökülünce 3 test kırmızıya döndü; `payload-labels.test.ts` (8) — `batchId` etiketi
+    sökülünce 2 test düştü. Tarihler çalışma anına göre üretiliyor: sabit bir "geçmiş tarih" bir gün
+    gelecekte kalır ve test sessizce anlamsızlaşır.
+  - **SÖZLÜKLER `.tsx`TEN AYRILDI** (`payload-labels.ts`) ve sebep düzen değil ÖLÇÜLEBİLİRLİK: bu
+    depoda jsdom yok (bilinçle — `vitest.config.ts` künyesi), yani bir `.tsx` birim testinden import
+    EDİLEMİYOR. Künyenin dili bir görünüm ayrıntısı değil bir sözdür ve söz ancak sınanabildiği
+    yerde durur.
+  - **DOĞRULAMA:** on bir gövdenin görüntüsü + düzeltme sonrası dört gövdenin ikinci turu
+    (`Variant id`/`Supplier id` satırları kayboldu — ikizleri bulundu; `Parti kimliği` Türkçe;
+    alerjenler `Gluten · Süt · Sert kabuklu yemişler`; eksik beyan `besin değerleri · içindekiler`;
+    "Teklifi aç" **pasif**). `typecheck` · `lint` (kendi dosyaları) · `knip` · `boundaries` temiz.

@@ -203,7 +203,9 @@ export function ProposalDialog({
   // Açılış değeri seçenek havuzunu da görür: ürün taslağı gibi tiplerin tabanı dilekçeden değil,
   // KAYDIN bugünkü hâlinden çıkıyor (`InlineBody.initial` künyesi).
   const [draft, setDraft] = useState<unknown>(() => (inline && bodyPayload !== null ? inline.initial(bodyPayload, options) : null));
-  const blocked = inline ? inline.blocked(draft) : null;
+  // Engel taslağı, dilekçeyi ve ekonomi okumasını birlikte görür: bazı yasaklar girilen değerde
+  // değil, kaydın kendi hâlinde durur (`InlineBody.blocked` künyesi — DLC vakası).
+  const blocked = inline && bodyPayload !== null ? inline.blocked(draft, bodyPayload, row.economics) : null;
 
   return (
     <Dialog
