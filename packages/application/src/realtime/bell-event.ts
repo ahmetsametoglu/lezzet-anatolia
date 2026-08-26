@@ -8,5 +8,9 @@
  *
  * Adın kendisi de bir karar: "changed" der, NE değiştiğini söylemez — mesajın boş kalması kanalın
  * güvenlik dayanağı (`bell.ts` künyesi).
+ *
+ * DEĞERİN KAYNAĞI ARTIK `@lezzet/types` (`realtime.contract`, 14.15 temizliği): native uygulama
+ * oradan okuyor ve iki ayrı `'changed'` sabiti, biri değiştiği gün zilin sessizce susması demekti
+ * (CLAUDE §1). Bu dosya web istemcilerinin alıştığı alt yol olarak duruyor — yeniden yayım.
  */
-export const BELL_EVENT = 'changed';
+export { BELL_EVENT } from '@lezzet/types';

@@ -3,12 +3,12 @@
 // Tarayıcı dili tespiti ve next-intl yönlendirmesi apps/web'de; yol TABLOSU burada (aşağı bak).
 export const PACKAGE = '@lezzet/i18n' as const;
 
-/** Müşteri yüzeyinde desteklenen diller. Operasyon yüzeyi yalnız Türkçedir. */
-export const LOCALES = ['tr', 'fr', 'de'] as const;
-export type Locale = (typeof LOCALES)[number];
+// Dil birimleri kendi modülünde (`locale.ts` künyesi: `notification-copy` ile döngü olmasın);
+// buradan yeniden yayımlanır — tüketiciler için hiçbir şey değişmez.
+import type { Locale } from './locale';
 
-/** Öneksiz varsayılan (birincil pazar Fransa) — `/connexion` = fr, `/de/...`, `/tr/...`. */
-export const DEFAULT_LOCALE: Locale = 'fr';
+export { DEFAULT_LOCALE, LOCALES } from './locale';
+export type { Locale } from './locale';
 
 /**
  * Locale-anahtarlı bir metin nesnesinden ({tr,fr,de:{…}}) seçili dilin şeklini verir.
@@ -68,7 +68,15 @@ export const PATHNAMES = {
   // Sipariş bildirimi maillerinin hedefleri (14.5). Sayfaların kendisi modül 08'de doğar; adres
   // eşlemesi BURADA durur çünkü URL'in tek kaynağı bu tablodur — mail kendi yolunu kurmaz.
   '/orders/[reference]': { fr: '/commandes/[reference]', de: '/bestellungen/[reference]', tr: '/siparislerim/[reference]' },
-  '/account/notifications': { fr: '/compte/notifications', de: '/konto/benachrichtigungen', tr: '/hesap/bildirim-tercihleri' },
+  /**
+   * Bildirim AKIŞI (14.15) — hesap zilinin listesi. "notifications" kelimesi akışındır: müşteri
+   * zile basınca bildirimlerini bekler, ayar anahtarlarını değil. Tercih sayfası bu kelimeyi
+   * 22.08–26.08 arasında taşıdı ve 14.15'te `/account/preferences`a taşındı (greenfield — canlıya
+   * çıkmış mail bağı yok; KARARLAR 26.08 girdisi).
+   */
+  '/account/notifications': { fr: '/compte/notifications', de: '/konto/benachrichtigungen', tr: '/hesap/bildirimler' },
+  /** Bildirim TERCİHLERİ (22.08) — mail altbilgisinin "tercihlerinizi yönetin" hedefi; jetonla da açılır. */
+  '/account/preferences': { fr: '/compte/preferences', de: '/konto/einstellungen', tr: '/hesap/bildirim-tercihleri' },
   // Puan geçmişi (20.08) — hesabın "Son kazanımlar" listesinin tam dökümü; sayfalıdır (defter
   // sınırsız büyür → keyset). Segment üç dilde de programın kendi sözcüğü.
   '/account/points': { fr: '/compte/points', de: '/konto/punkte', tr: '/hesap/puan-gecmisi' },
@@ -168,3 +176,11 @@ export function siteOrigin(): string {
 export function localizedUrl(route: AppRoute, locale: Locale, params: Record<string, string> = {}): string {
   return `${siteOrigin()}/${locale}${localizedPath(route, locale, params)}`;
 }
+
+// Bildirim cümle sözlüğü — iki yüzeyin (native + web) ortak dili; gerekçe dosyanın kendisinde.
+export {
+  notificationSentence,
+  staffNotificationBrief,
+  type StaffNotificationBrief,
+  type StaffNotificationTone,
+} from './notification-copy';

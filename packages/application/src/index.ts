@@ -229,6 +229,8 @@ export {
   ringConversationsBell,
   ringTicketBell,
   ringTicketsBell,
+  // Personel bildirim kanalı (14.15): adı sunucu sırrından türer — operasyon layout'u zile taşır.
+  staffNotificationsChannelName,
   ticketChannelName,
   ticketsChannelName,
 } from './realtime/bell';

@@ -1,43 +1,12 @@
-import type { AppNotificationKind } from '@lezzet/types';
-
-import { notificationHref, notificationSentence } from './notification-copy';
+import { notificationHref } from './notification-copy';
 
 /*
-  BİLDİRİM SÖZLÜĞÜ (14.13) — çivilenenler:
-  · bilinen her tür × üç dil boş olmayan cümle üretir (küme AÇIK olduğu için tip bunu zorlayamaz)
-  · bilinmeyen tür GENEL cümleye düşer — eski sürüm yeni türü boş satırla karşılamaz
-  · payload cümleye girer (referans) ama YOKLUĞU cümleyi bozmaz
-  · hedef eşlemesi: sipariş REFERANSLA gider (rota sözleşmesi), talep kimlikle; davetin hedefi YOK
+  HEDEF EŞLEMESİ (14.13) — yüzeye özgü kalan parça: mobil rota sözleşmesi webinkinden farklı.
+  Cümle sözlüğünün testleri sözlükle birlikte `@lezzet/i18n`e taşındı (14.15) — aynı saf
+  fonksiyonu iki koşucuda iki kez test etmek, test kopyası olurdu.
+
+  Çivilenen: sipariş REFERANSLA gider (rota sözleşmesi), talep kimlikle; davetin hedefi YOK.
 */
-
-const KNOWN: AppNotificationKind[] = [
-  'order_confirmed', 'order_out_for_delivery', 'order_delivered', 'order_cancelled',
-  'order_shortfall', 'order_refunded', 'ticket_replied', 'ticket_status_changed',
-  'feedback_invite', 'zone_available', 'b2b_application_result',
-];
-
-describe('notificationSentence', () => {
-  it('bilinen her tür, üç dilde, boş olmayan cümle üretir', () => {
-    for (const kind of KNOWN) {
-      for (const locale of ['tr', 'fr', 'de'] as const) {
-        const cumle = notificationSentence({ kind, payload: { referenceNo: 'LA-26-TEST', postalCode: '67000', approved: true } }, locale);
-        expect(cumle.trim().length).toBeGreaterThan(5);
-      }
-    }
-  });
-
-  it('referans cümleye girer; yokluğu cümleyi bozmaz', () => {
-    expect(notificationSentence({ kind: 'order_confirmed', payload: { referenceNo: 'LA-26-X1' } }, 'tr')).toContain('LA-26-X1');
-    // '—' sunucunun "referans henüz yok" değeri — cümleye sızmaz.
-    expect(notificationSentence({ kind: 'order_confirmed', payload: { referenceNo: '—' } }, 'tr')).not.toContain('—');
-    expect(notificationSentence({ kind: 'order_confirmed', payload: {} }, 'tr')).toContain('alındı');
-  });
-
-  it('BİLİNMEYEN tür genel cümleye düşer — kind kümesi sunucuda büyür', () => {
-    const cumle = notificationSentence({ kind: 'yarin_gelecek_tur', payload: {} }, 'tr');
-    expect(cumle).toBe('Hesabınızla ilgili bir gelişme var.');
-  });
-});
 
 describe('notificationHref', () => {
   it('sipariş REFERANSLA gider (rota sözleşmesi) — referanssız siparişin hedefi yok', () => {

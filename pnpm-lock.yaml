@@ -687,6 +687,10 @@ importers:
         version: 5.9.3
 
   packages/i18n:
+    dependencies:
+      '@lezzet/types':
+        specifier: workspace:*
+        version: link:../types
     devDependencies:
       '@lezzet/typescript-config':
         specifier: workspace:*

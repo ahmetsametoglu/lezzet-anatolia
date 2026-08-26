@@ -195,7 +195,8 @@ export async function notificationPreferencesUrl(
   locale: Locale,
   subject: { customerId?: string | null; zoneNoticeToken?: string | null },
 ): Promise<string> {
-  const base = localizedUrl('/account/notifications', locale);
+  // Rota 14.15'te `/account/preferences`a taşındı: "notifications" kelimesi artık akışın (zil listesi).
+  const base = localizedUrl('/account/preferences', locale);
   const token = subject.customerId
     ? await ensureNotificationToken(db, subject.customerId)
     : (subject.zoneNoticeToken ?? null);
