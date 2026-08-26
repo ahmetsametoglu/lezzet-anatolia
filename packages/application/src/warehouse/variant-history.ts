@@ -214,6 +214,20 @@ export async function readVariantStockHistory(
     if (!seen || exit.at > seen) lastExit.set(exit.stockId, exit.at);
   }
 
+  /**
+   * **DENKLEMİN düşüleni** — sayım farkı DAHİL (ölçüldü ve düzeltildi 26.08).
+   *
+   * `loss.qty`den ayrı ve ayrım kritik: sayım farkı bir RAPOR kalemi olarak fireden ayrıldı (22.34)
+   * ama fiziksel bir hareket olarak yerinde duruyor — rafta fazla çıkan mal stoğu gerçekten
+   * artırır. İkisini aynı sayıya bağlayınca "giren − teslim − düşülen = elde" denklemi sayım farkı
+   * kadar sapıyordu ve ekran bunu *"kayda geçmemiş bir hareket var"* diye okudu (ekran görüntüsüyle
+   * yakalandı: `73 − 10 − 0 = 59`, fark tam olarak `+4`lük sayım farkıydı).
+   *
+   * `return_restock` yine dışarıda ve sebebi başka: onun karşılığı `order_item_batch`ten zaten
+   * düşülmüş, denkleme ikinci kez girse aynı iadeyi iki kez sayardı (`countsAsLoss` künyesi).
+   */
+  const movedQty = new Map<string, number>();
+  /** FİRE ORANININ payı — yalnız gerçek kayıplar (imha · hasar · kayıp). */
   const lostQty = new Map<string, number>();
   const byReason = new Map<StockAdjustmentReason, number>();
   /** Sayımın NET sapması (±) — fire toplamının dışında, kendi satırında gösterilir. */
@@ -223,6 +237,10 @@ export async function readVariantStockHistory(
     // kayıpları sayar — iade restokunun karşılığı `order_item_batch`ten zaten düşülmüştür
     // (`countsAsLoss` künyesi). İkisini ayırmamak aynı iadeyi iki kez saydırıyordu.
     if (countsAsLoss(row.reason)) lostQty.set(row.stockId, (lostQty.get(row.stockId) ?? 0) + row.qty);
+    // Denklem sayım farkını SAYAR (yukarıdaki künye): rapor ayrımı fiziksel hareketi silmez.
+    if (countsAsLoss(row.reason) || isCountDiff(row.reason)) {
+      movedQty.set(row.stockId, (movedQty.get(row.stockId) ?? 0) + row.qty);
+    }
     // Sayım farkı AYRI toplanır (22.34 · kullanıcı kararı 26.08): iki yönlü olduğu için fire
     // toplamını eksiye düşürüyordu (`%−2,1` — hesap doğru, "FİRE" başlığı altında okunmuyordu).
     if (isCountDiff(row.reason)) countDiff += row.qty;
@@ -240,7 +258,9 @@ export async function readVariantStockHistory(
     physicalQty: batch.physicalQty,
     unitCostCents: batch.purchasePriceCents,
     soldQty: soldQty.get(batch.id) ?? 0,
-    lostQty: lostQty.get(batch.id) ?? 0,
+    // Parti satırının düşüleni DENKLEMİN sayısıdır (sayım farkı dahil) — satır "bu partiden ne
+    // eksildi" diyor, "ne kadarı fire" demiyor. Fire ayrımı yalnız `loss` bloğunda.
+    lostQty: movedQty.get(batch.id) ?? 0,
     // **Ömür yalnız TÜKENMİŞ partide yazılır.** Elde duran partinin son çıkışı bir bitiş değil, ara
     // bir andır; onu ömür sayarsak "3 günde eridi" diyen bir parti yarın hâlâ rafta olur.
     lifeDays: batch.physicalQty === 0 ? batchLifeDays(batch.createdAt, lastExit.get(batch.id) ?? null) : null,
@@ -251,7 +271,10 @@ export async function readVariantStockHistory(
   const rate = dailyExitRate(inWindow, RATE_WINDOW_DAYS);
 
   const intakeQty = history.reduce((sum, batch) => sum + batch.initialQty, 0);
-  const totalLost = history.reduce((sum, batch) => sum + batch.lostQty, 0);
+  /** Denklemin düşüleni — parti satırlarının toplamı (sayım farkı dahil). */
+  const totalMoved = history.reduce((sum, batch) => sum + batch.lostQty, 0);
+  /** Fire oranının payı — GÖRÜNEN partilerin gerçek kayıpları; sayım farkı burada YOK. */
+  const totalLost = history.reduce((sum, batch) => sum + (lostQty.get(batch.stockId) ?? 0), 0);
   // Raftan AYRILMIŞ ↔ hazırlanmış ama hâlâ depoda: ikisi ayrı sayılır (`hasLeftShelf` künyesi).
   const deliveredQty = exits.filter((exit) => hasLeftShelf(exit.status)).reduce((sum, exit) => sum + exit.qty, 0);
   const pickedQty = exits.filter((exit) => !hasLeftShelf(exit.status)).reduce((sum, exit) => sum + exit.qty, 0);
@@ -264,7 +287,7 @@ export async function readVariantStockHistory(
       intakeQty,
       deliveredQty,
       pickedQty,
-      lostQty: totalLost,
+      lostQty: totalMoved,
       inTransitQty,
       // Elde kalan EKRANIN sayısıdır (görünüm), partilerin toplamı değil: ikisi ayrışırsa yanlış olan
       // liste değil okumadır ve o zaman akış satırı sorunu gizlemek yerine göstermeli.

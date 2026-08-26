@@ -1680,7 +1680,19 @@ satırında.
         yeni `isCountDiff` yüklemi net sapmayı ayrı topluyor. Fire toplamı hep pozitif (imha · hasar ·
         kayıp), sayım farkı kendi kutusunda ± işaretiyle ve **yalnız sapma varsa** çiziliyor.
       - `history.ts`in hiç testi yoktu; **8 iddia yazıldı** ve yeni kural mutasyonla doğrulandı.
-      · `touches: packages/domain-core/src/stock/{history.ts,history.test.ts}, packages/application/src/warehouse/variant-history.ts, apps/web/components/operation/stock/product-history-panel.tsx`
+      - **⚠ EKRAN GÖRÜNTÜSÜ BİR ARIZA YAKALADI ve düzeltildi (aynı tur).** İlk yazımda sayım farkını
+        fire toplamından çıkarırken **denklemden de çıkarmıştım**; panel *"Denklem tutmuyor — kayda
+        geçmemiş bir hareket var"* diye kırmızı uyarı çizdi (`73 − 10 − 0 = 59`, fark tam olarak
+        `+4`lük sayım farkı). Rapor ayrımı fiziksel hareketi silmez: rafta fazla çıkan mal stoğu
+        gerçekten artırır. İki sayı ayrıldı — `flow.lostQty` sayım farkını SAYAR (denklem),
+        `loss.qty` saymaz (fire oranı). Düzeltme sonrası denklem tutuyor ve uyarı kalktı.
+      - Ayrım `variant-history.test.ts`te çivilendi (3 iddia, DB'li) ve mutasyonla doğrulandı; test
+        yazılırken bir veri kuralı da yakalandı: negatif düzeltme **sebep notu ister**
+        (`adjust_stock`) — gerekçesiz bir "stoğa geri ekleme", kayıt boşluğunu örtmenin sessiz yolu
+        olurdu.
+      - Ekranda ölçüldü, **iki tema**: `FİRE · %0` + `SAYIM FARKI · +4 · sayımda fazla çıktı`; kutu
+        öteki `Stat` kutularıyla aynı desende, ham renk yok, token'lar temayla dönüyor.
+      · `touches: packages/domain-core/src/stock/{history.ts,history.test.ts}, packages/application/src/warehouse/{variant-history.ts,variant-history.test.ts}, apps/web/components/operation/stock/product-history-panel.tsx`
     - **BEKLEYEN(22.34):** kullanıcı panel akışını ekranda denemedi.
     - ~~**BEKLEYEN(22.33):** kullanıcı ekranda denemedi; kuyrukta bekleyen gerçek dilekçe duruyor.
       Kalan iki gövdesiz tip `zone_extend` (harita ister) ve `featured_flag`.~~ **KAPANDI (26.08):**
