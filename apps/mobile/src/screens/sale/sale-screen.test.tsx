@@ -43,7 +43,10 @@ jest.mock('@/components/ui/pressable-surface', () => {
   return {
     PressableSurface: (props: Record<string, unknown>) => {
       if (typeof props.testID === 'string' && props.testID.startsWith('sale-product-')) mockRowRenders.count += 1;
-      const { children, feedback: _feedback, compact: _compact, ...rest } = props;
+      // `feedback`/`compact` kitin süsü — RN Pressable tanımaz, sahteye geçirilmez.
+      const { children, feedback, compact, ...rest } = props;
+      void feedback;
+      void compact;
       return React.createElement(Pressable, rest, children);
     },
   };
