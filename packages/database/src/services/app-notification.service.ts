@@ -5,14 +5,12 @@ import {
   AppNotificationUpdateSchema,
   NotificationDeliveryInsertSchema,
   NotificationDeliverySchema,
-  NotificationDeliveryUpdateSchema,
   type AppNotification,
   type AppNotificationInsert,
   type AppNotificationUpdate,
   type KeysetCursor,
   type NotificationDelivery,
   type NotificationDeliveryInsert,
-  type NotificationDeliveryUpdate,
   type Page,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
@@ -120,7 +118,7 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
 export class NotificationDeliveryService extends BaseDbService<
   NotificationDelivery,
   NotificationDeliveryInsert,
-  NotificationDeliveryUpdate
+  NotificationDelivery
 > {
   constructor(supabase: SupabaseClient) {
     super(
@@ -128,35 +126,13 @@ export class NotificationDeliveryService extends BaseDbService<
       'notification_delivery',
       NotificationDeliverySchema,
       NotificationDeliveryInsertSchema,
-      // GÖNDERİM gerçeği donuk; değişebilen tek yüz MAKBUZ (14.16) — update şeması yalnız onu açar.
-      NotificationDeliveryUpdateSchema,
+      // Teslim kaydı DEĞİŞMEZ: yazıldığı anki gerçeği anlatır, güncellenecek bir hâli yoktur.
+      NotificationDeliverySchema,
       false,
     );
   }
 
   listByNotification(notificationId: string): Promise<NotificationDelivery[]> {
     return this.getAll({ notificationId }, { orderBy: 'createdAt', orderDirection: 'asc' });
-  }
-
-  /**
-   * Makbuzu sorulmamış push teslimleri — süpürme turunun tek okuması (kısmi indeks üstünde).
-   * `olderThan` şart: Expo makbuzu hemen üretmez; taze teslimi sormak boş tur attırır.
-   */
-  listUncheckedPush(olderThan: string, limit: number): Promise<NotificationDelivery[]> {
-    return this.getAll(
-      { channel: 'push', status: 'sent' },
-      {
-        isNullFields: ['receipt_checked_at'],
-        rangeFilters: [{ field: 'createdAt', operator: 'lte', value: olderThan }],
-        orderBy: 'createdAt',
-        orderDirection: 'asc',
-        limit,
-      },
-    );
-  }
-
-  /** Makbuzu işle — teslim satırının değişebilen tek yüzü (şema zorluyor). */
-  markReceipt(id: string, receiptStatus: string): Promise<NotificationDelivery> {
-    return this.update({ id, receiptStatus, receiptCheckedAt: new Date().toISOString() });
   }
 }

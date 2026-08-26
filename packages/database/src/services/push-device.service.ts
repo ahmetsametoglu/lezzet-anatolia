@@ -52,18 +52,6 @@ export class PushDeviceService extends BaseDbService<PushDevice, PushDeviceInser
     return (data ?? []).length > 0;
   }
 
-  /**
-   * **Sistem budaması** — makbuz turunun silmesi (14.16): SAHİPSİZ, çünkü kanıt sahiplikten
-   * üstün. `DeviceNotRegistered` taşıyıcının beyanıdır — cihaz uygulamayı silmiş; kim tutarsa
-   * tutsun o jetona bir daha gönderilmez (gönderilirse taşıyıcı bizi kısıtlar). Kullanıcı
-   * eylemi DEĞİLDİR: çıkış ucu `removeOwned` kullanır, bu kapı yalnız cron'undur.
-   */
-  async pruneByToken(token: string): Promise<boolean> {
-    const { data, error } = await this.supabase.from('push_device').delete().eq('token', token).select('id');
-    if (error) throw error;
-    return (data ?? []).length > 0;
-  }
-
   /** Jetonuyla tek kayıt — izin/bakım teşhisi (test dahil): "kayıt duruyor mu, kim tutuyor". */
   findByToken(token: string): Promise<PushDevice | null> {
     return this.getOneBy({ token });
