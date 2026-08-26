@@ -520,12 +520,37 @@ tuşuna basılmadı: kod kalıcı bağlanırsa etiket bir daha "tanınmayan" olm
 **İki test:** çekmece boş dalda açılıyor · boş listede arama düğmesi çiziliyor ve satır seçtiren
 liste ÇİZİLMİYOR. Birincisi mutasyonla doğrulandı.
 
-## Kalan cihaz turu
+## Cihaz turu — TAMAMLANDI (26.08)
 
-- **KUTU QR etiketi** → kurye yükleme + kapıda teslim okutması. Simülasyonla koşulamaz: kutu QR'ları
-  ÜRETİLMİŞ kayıtlardır (`KT-…`) ve havuz onları taşımaz — ekranın kendi `devCodes`'u gerekiyor
-  (23.8 künyesi). Kâğıt setteki KUTU QR etiketi `db:refresh` sonrası yeni bir kutuya bağlanmalı.
-- **Öğrenme çekmecesinin cihazda görülmesi** (yukarıdaki düzeltme).
+Her iki madde de kapandı; modülün cihazda görülmemiş yüzeyi kalmadı.
+
+- ~~**KUTU QR etiketi** → kurye yükleme + kapıda teslim okutması.~~ **KOŞULDU (26.08).** Zincirin
+  tamamı gerçek cihazda (OPPO CPH1907, kablosuz ADB) ve her adım DB'nin satırından doğrulandı —
+  ekranın söylediğine değil:
+  - **Yükleme:** `Kutu yükle` → `KT-99-TESTKUTU01` → `loaded_at` damgalandı, sayaç `0/1` → `1/1`,
+    sipariş `ready` → **`out_for_delivery`**. Ekranın bildirimi: *"Kutu 1 yüklendi — LA-26-D43LMU
+    YOLA ÇIKTI (1 kutu tamam)"*; tüm kutular binince `Kutu yükle` düğmesi kendiliğinden kayboldu.
+  - **Kapıda:** durak ekranında `KUTULAR · 0/1 okutuldu` + kural yazılı (*"Kutu QR'ları okutulmadan
+    teslim kapanmaz — yanlış kapıya inen kutu böyle yakalanır"*); teslim düğmesi KAPALI. Okutunca
+    `1/1`, çip ✓, sıra kılavuzundan *"kutuları okut"* adımı düştü ve düğme açıldı.
+  - **Teslim:** `delivered` · `amount_collected 22.60` · `payment_status paid`.
+  - **Kanıt (23.8'in vaadi):** `order.delivery_proof` → `{"kind":"box_scan","boxCodes":
+    ["KT-99-TESTKUTU01"],"imageKey":null}`. Okutulan kodun kendisi kanıt — B2C'nin görselsiz
+    teslimi böylece kanıtsız kapanmıyor.
+  - **Kutusuz durak kutu yüzeyi ÇİZMEDİ** (aynı seferdeki `LA-26-H6NV7E`): `boxCounter` durakların
+    kutularından türüyor, boş küme `null` demek. Doğru davranış, ölçülerek görüldü.
+  - **Simülasyon çipiyle koşuldu** (kullanıcı kararı): 23.14'ün havuzu setin aynası olduğu için
+    çipe basmak ile kâğıdı okutmak aynı kodu üretiyor. **Kameranın basılı QR'ı decode etmesi bu
+    turda sınanmadı** — tek açık kalan yol o, ve yalnız kâğıt elde tutularak sınanabilir.
+  - **23.14 çalıştı:** tur sırasında başka bir şerit `db:refresh` çalıştırdı, sipariş referansları
+    tamamen değişti (`LA-26-3MDXY3` → `LA-26-D43LMU`) ama **kutu kodu sabit kaldı** ve yeni kayda
+    kendiliğinden bağlandı. Kâğıt set yeniden basılmadı.
+  - **Turun kendi dersi — SEED SEFERİ SAAT 06:30'DA AÇILIYOR.** Sefer açılırken siparişleri kuryeye
+    damgalayan RPC (`start_delivery_run`) o anda koşuyor; sonradan o güne çekilen bir sipariş
+    **claim edilmiyor**, kurye onu durak olarak görmüyor ve kutusu okutulamıyor. Kod arızası değil,
+    ama cihaz turu kuran herkesin bileceği bir tuzak: test siparişi seferden ÖNCE güne alınmalı, ya
+    da kurye/sefer damgası elle yazılmalı. Bu turda ikincisi yapıldı (kullanıcı izniyle).
+- ~~**Öğrenme çekmecesinin cihazda görülmesi**~~ → 23.13'te koşuldu (yukarıda), satır bayat kalmıştı.
 
 ## Netleşecekler
 
