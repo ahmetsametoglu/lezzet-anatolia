@@ -547,9 +547,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   · Float/fark TOPLAMASI için sefer fikstürü bilerek kurulmadı: toplama `delivery_run_collection`/
     `delivery_run_close` satırlarının düz `reduce`'u; satırların doğruluğu kuryenin
     `day-close.test` suite'inde çivili — boru hattını para testinde kopyalamak ikinci nüsha olurdu.
-  · Cihaz turu BEKLEMEDE: uygulama şu an bildirim şeridinin uçuşan işiyle AÇILMIYOR
-    (`ExpoPushTokenManager` native modülü dev-client derlemesinde yok — ölçüldü, ekran
-    görüntülü not şeride bırakıldı); tur, onların derlemesi/koruması sonrası koşulacak.
+  · ~~Cihaz turu BEKLEMEDE~~ **Cihaz turu YAPILDI (26.08, OPPO CPH1907):** Android dev-client
+    `expo run:android` ile yeniden derlendi (`ExpoPushTokenManager` engeli böyle kapandı — native
+    modül eklendiğinde derleme şart, kullanıcı öngörüsü doğrulandı) ve dokuz ekran admin +
+    muhasebe oturumlarıyla gerçek veriyle gezildi: hub karar kutusu (beş alan; sıfır alan
+    çizilmiyor), gün özeti (kanal kırılımı + YZ boş hâli), teklif onayı (46 aday — hub sayacıyla
+    birebir, tek motor gözle doğrulandı), tedarik önerisi (grup + "başka depoda var"), şikâyet
+    (YZ taslak kutusu + iki taban düğmesi), sosyal geçiş (Y6: WhatsApp satırı gerçek kutuyu açtı),
+    para M1 (bekleyen liste + "referanssız" geri düşüşü) ve M2 (uyuşmazlık null hâli cihazda
+    görüldü: "kapanan sefer yok" — 0 değil). İstisna ekranı cihazda AÇILAMADI çünkü kuyruk boştu
+    (hub kuralı gereği satır çizilmez); kapsamı jest + entegrasyon taşıyor. **Turda bir arıza
+    bulunup düzeltildi:** şikâyet ekranının iki taban düğmesi metinsizdi — `flex: 1` `style`a
+    yazılmıştı, `grow` prop'u verilmemişti (pressable-surface künyesindeki 23.08 arızasının
+    birebir tekrarı; künye "Jest bunu göremez" diye uyarıyordu ve göremedi). Düzeltme cihazda
+    ekran görüntüsüyle doğrulandı.
   **Bilinçli sınırlar (modül kapanışında açık kalanlar, sahipleriyle):** "kalanı gönder" karar
   kaydı (model işi — web şeridiyle) · kurye uçlarında `effects` (BEKLEYEN(14.11) hattı) · YZ
   içgörü motoru (modül 20/22) · hub'ın parti/tedarik taramasının maliyeti büyüyen katalogda

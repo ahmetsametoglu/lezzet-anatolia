@@ -172,6 +172,7 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
             onPress={complaint.sendReply}
             disabled={complaint.sending || complaint.reply.trim().length === 0}
             feedback="shadow"
+            grow
             style={[
               styles.footerButton,
               complaint.sending || complaint.reply.trim().length === 0 ? styles.claimDone : styles.claimOpen,
@@ -185,6 +186,7 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
             onPress={complaint.claim}
             disabled={claimed || complaint.sending}
             feedback="shadow"
+            grow
             style={[styles.footerButton, claimed ? styles.claimDone : styles.claimOpen]}
             accessibilityLabel={claimed ? t.complaint.claimed : t.complaint.claim}
             testID="management-complaint-claim"
@@ -405,8 +407,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: operationsTheme.space.md,
   },
+  /** Esneme `grow` prop'undadır, buraya flex YAZILMAZ — iç yüzeye giden flex metni ezer
+      (pressable-surface künyesi; cihazda ölçüldü 26.08: iki düğme de metinsiz kalmıştı). */
   footerButton: {
-    flex: 1,
     paddingVertical: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.control,
   },
