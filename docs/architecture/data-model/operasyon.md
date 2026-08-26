@@ -16,13 +16,22 @@
 Cron'un **son turu** — tarihçe değil. İş adı tekildir ve upsert anahtarıdır; her tur aynı satırı
 üzerine yazar. "En son ne zaman koştu ve ne oldu" sorusunun en küçük cevabı budur.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | string | iş adı, **tekil** — upsert anahtarı (ör. `sweep_reservations`) |
-| last_run_at | timestamptz | son turun zamanı; **hatalı turda da yazılır** — "koştu ama düştü" ile "hiç koşmadı" ayrımı buradan doğar |
-| last_result | jsonb \| null | son turun özeti (`{"affected": 3}`); şeması işe göre değişir |
-| last_error | string \| null | son hata mesajı; başarılı turda `null`'lanır → "şu an sağlıklı mı" tek bakışta |
+<!-- alanlar:job_run -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | text |  |  |
+| `last_run_at` | timestamptz |  | `now()` |
+| `last_result` | jsonb | • |  |
+| `last_error` | text | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`name`** — iş adı, **tekil** — upsert anahtarı (ör. `sweep_reservations`)
+- **`last_run_at`** — son turun zamanı; **hatalı turda da yazılır** — "koştu ama düştü" ile "hiç koşmadı" ayrımı buradan doğar
+- **`last_result`** — son turun özeti (`{"affected": 3}`); şeması işe göre değişir
+- **`last_error`** — son hata mesajı; başarılı turda `null`'lanır → "şu an sağlıklı mı" tek bakışta
 
 **Neden bellekte değil:** backend yeniden başlayınca bellekteki iz silinir; "cron dün gece koştu mu"
 sorusu tam da yeniden başlatmalardan sonra sorulur.
@@ -38,22 +47,38 @@ sorduğumuz soru "geçmiş turların listesi" değil. Turun *neden* düştüğü
 Sunucu tarafı hataların gruplanmış kaydı. Dış izleme servisi (Sentry) yerine kendi tablomuz —
 gerekçe `OBSERVABILITY §2`.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| fingerprint | string | **gruplama anahtarı**: `source` + normalize edilmiş `message` + `node_modules` dışındaki ilk stack karesi. Mesajdaki UUID/uzun sayı/hex sabitlenir → "Order abc-123 not found" ile "Order def-456 not found" aynı gruba düşer. Servis katmanı hesaplar, DB değil |
-| level | enum(`warning`,`error`,`fatal`) | `warning` = beklenen ama izlenmeli · `error` = beklenmeyen istisna · `fatal` = akış tamamen koptu |
-| source | string | hatanın geldiği yer: `web-server` · `backend-http` · `backend-cron` · `backend-webhook` |
-| message | string | 2000 karaktere kırpılır |
-| stack | string \| null | 8000 karaktere kırpılır |
-| context | jsonb | ek bağlam: `orderId`, `jobName`, `provider`, method… **KİMLİK yazılır, İÇERİK yazılmaz** (`OBSERVABILITY §5`): e-posta/telefon/adres/ham gövde buraya girmez |
-| path | string \| null | istek yolu (varsa) |
-| count | int | aynı **aktif** parmak izi kaç kez görüldü |
-| first_seen_at | timestamptz | |
-| last_seen_at | timestamptz | listeleme sırası ve "son bir saatte kaç hata" sayımı bunun üstünde |
-| resolved_at | timestamptz \| null | operatör "çözüldü" işaretlediyse dolu |
-| resolved_by | uuid \| null | → `user_profiles`; `on delete set null` (personel silinse geçmiş karar bozulmaz) |
-| created_at | timestamptz | |
+<!-- alanlar:error_log -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `fingerprint` | text |  |  |
+| `level` | error_log_level |  | `'error'` |
+| `source` | text |  |  |
+| `message` | text |  |  |
+| `stack` | text | • |  |
+| `context` | jsonb |  | `'{}'::jsonb` |
+| `path` | text | • |  |
+| `count` | int |  | `1` |
+| `first_seen_at` | timestamptz |  | `now()` |
+| `last_seen_at` | timestamptz |  | `now()` |
+| `resolved_at` | timestamptz | • |  |
+| `resolved_by` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`fingerprint`** — **gruplama anahtarı**: `source` + normalize edilmiş `message` + `node_modules` dışındaki ilk stack karesi. Mesajdaki UUID/uzun sayı/hex sabitlenir → "Order abc-123 not found" ile "Order def-456 not found" aynı gruba düşer. Servis katmanı hesaplar, DB değil
+- **`level`** — `warning` = beklenen ama izlenmeli · `error` = beklenmeyen istisna · `fatal` = akış tamamen koptu
+- **`source`** — hatanın geldiği yer: `web-server` · `backend-http` · `backend-cron` · `backend-webhook`
+- **`message`** — 2000 karaktere kırpılır
+- **`stack`** — 8000 karaktere kırpılır
+- **`context`** — ek bağlam: `orderId`, `jobName`, `provider`, method… **KİMLİK yazılır, İÇERİK yazılmaz** (`OBSERVABILITY §5`): e-posta/telefon/adres/ham gövde buraya girmez
+- **`path`** — istek yolu (varsa)
+- **`count`** — aynı **aktif** parmak izi kaç kez görüldü
+- **`last_seen_at`** — listeleme sırası ve "son bir saatte kaç hata" sayımı bunun üstünde
+- **`resolved_at`** — operatör "çözüldü" işaretlediyse dolu
+- **`resolved_by`** — → `user_profiles`; `on delete set null` (personel silinse geçmiş karar bozulmaz)
 
 **Kısmi unique indeks — `(fingerprint) where resolved_at is null`.** Aktif bir parmak izi için tek satır
 olabilir; `capture_error` bunu `update … count = count + 1` ile yakalar, bulamazsa yeni satır açar.
@@ -74,12 +99,20 @@ süpürülürse yalnız görünmez olur). Süpürme mevcut cron kabuğundan geç
 Backend cron'unun iki dakikada bir aldığı sunucu görüntüsü. Ekran son satırı kart, geçmişi grafik
 olarak okur.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| created_at | timestamptz | trend sorgusu ve süpürme bu kolonun indeksini kullanır (`desc`) |
-| status | enum(`ok`,`warn`,`crit`) | eşiklerden **türetilir**, elle yazılmaz; panelin renk kodu |
-| metrics | jsonb | tam görüntü: `{ system, processes, services, app }` — alanları aşağıda |
+<!-- alanlar:system_health_snapshot -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `created_at` | timestamptz |  | `now()` |
+| `status` | health_status |  |  |
+| `metrics` | jsonb |  |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`created_at`** — trend sorgusu ve süpürme bu kolonun indeksini kullanır (`desc`)
+- **`status`** — eşiklerden **türetilir**, elle yazılmaz; panelin renk kodu
+- **`metrics`** — tam görüntü: `{ system, processes, services, app }` — alanları aşağıda
 
 `metrics` içeriği (Zod ile doğrulanır — `SystemHealthMetricsSchema`):
 

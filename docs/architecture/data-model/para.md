@@ -4,81 +4,116 @@ Hesaplar, para hareketleri, banka import şablonu.
 
 > Bu dosya `../DATA_MODEL.md`'nin parçasıdır. Ortak ilkeler (çok dilli alanlar, türetme ilkesi, enum listesi, kalıcı kararlar) ana dosyadadır; **karar oraya, alan buraya** yazılır.
 
+> **BİÇİM (02.18 · 26.08):** her varlık iki parçadır — **alan listesi TÜRETİLİR**
+> (`<!-- alanlar:… -->` bloğu; `pnpm docs:sync` migration'lardan üretir, arasına elle yazılan her
+> şey silinir) ve **kararlar İNSANIN** (yalnız söyleyecek şeyi olan alan). Kolon adını, tipini,
+> varsayılanını aramak için listeye bak; *neden öyle* sorusunun cevabı kararlardadır.
+> Doküman bilerek EKSİKTİR — her alanın kararı olmaz — ama **yalan söyleyemez**: anlatılan alan
+> gerçekten var olmalı, denetim bunu zorluyor.
+
 ---
 
 ## Account (hesap)
 
 Paranın durduğu yer. Kasa (nakit), bankalar (Revolut, Crédit Mutuel), Stripe — hepsi birer hesap. "Online havuz" ayrı değil = Stripe hesabı.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | string | Kasa / Revolut / Crédit Mutuel / Stripe |
-| type | enum(`cash`,`bank`,`provider`) | nakit / banka / ödeme sağlayıcı |
-| currency | enum(`EUR`) | |
-| is_active | boolean | |
+<!-- alanlar:account -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | text |  |  |
+| `type` | account_type |  |  |
+| `currency` | currency |  | `'EUR'` |
+| `is_active` | boolean |  | `true` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
 
 ## MoneyMovement (para hareketi)
 
 Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hesabı** (yer) ve **tipi** var.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| account_id | uuid | hangi hesap |
-| direction | enum(`in`,`out`) | giriş / çıkış |
-| amount | numeric (€) | İŞARETSİZ — yön `direction`tadır. Uygulamadaki adı `amountCents`, birimi **cent** (`STACK §8`); `account_movement` görünümü işaretli hâlini `signed_amount` olarak türetir (app: `signedAmountCents`) |
-| type | enum(`order_payment`,`order_refund`,`purchase`,`expense`,`transfer`,`capital`,`misc`) | hareketin sebebi |
-| category | string \| null | gider/gelir alt kategorisi (kira, akaryakıt, maaş, `advertising`…) |
-| meta | jsonb \| null | ek etiket — reklam giderinde `{campaign}`: kampanya gider↔ciro (gerçek ROI) raporu |
-| counter_account_id | uuid \| null | transferde karşı hesap (nakit→banka, Stripe→banka) |
-| order_id | uuid \| null | sipariş ödemesiyse |
-| stock_intake_id | uuid \| null | stok alımıysa |
-| supplier_id | uuid \| null | tedarikçiye ödemeyse — tedarikçi borcu türetimi (bkz. `Supplier`) |
-| value_date | date | |
-| description | string \| null | |
-| source | enum(`manual`,`bank_import`) | elle mi, banka import'undan mı |
-| reconciled | boolean | |
+<!-- alanlar:money_movement -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `account_id` | uuid |  |  |
+| `direction` | movement_direction |  |  |
+| `amount` | numeric(12, 2) |  |  |
+| `type` | movement_type |  |  |
+| `category` | text | • |  |
+| `meta` | jsonb | • |  |
+| `counter_account_id` | uuid | • |  |
+| `order_id` | uuid | • |  |
+| `stock_intake_id` | uuid | • |  |
+| `supplier_id` | uuid | • |  |
+| `value_date` | date |  | `current_date` |
+| `description` | text | • |  |
+| `source` | movement_source |  | `'manual'` |
+| `reconciled` | boolean |  | `false` |
+| `import_fingerprint` | text | • |  |
+| `bank_import_id` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
 
-## BankImportProfile (banka import şablonu)
+**Kararlar**
 
-AI ajanının banka dosyasından çıkardığı sütun eşlemesi; hesaba özel, sonraki importlar bununla otomatik.
+- **`amount`** — İŞARETSİZ tutulur, yön `direction`tadır. Uygulamadaki adı `amountCents` ve birimi **cent** (`STACK §8`); `account_movement` görünümü işaretli hâlini `signed_amount` diye türetir (app: `signedAmountCents`).
+- **`meta`** — ek etiket. Reklam giderinde `{campaign}` taşır: kampanya gideri ↔ ciro eşleşmesi (gerçek ROI) bu alandan çıkar.
+- **`counter_account_id`** — transferde karşı hesap (nakit→banka, Stripe→banka).
+- **`import_fingerprint`** — mükerrer koruması; aşağıdaki bölüme bak.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| account_id | uuid | hangi hesap/banka |
-| column_mapping | jsonb | AI eşlemesi (tarih/tutar/açıklama/yön) |
-| note | string \| null | |
+### Mükerrer koruması (`import_fingerprint`)
+
+Bankalar satır kimliği vermez, kimlik ÜRETİLİR: hesap + değer tarihi + tutar + yön + sadeleşmiş açıklama + **tekrar sırası**.
+
+Sıra şart: aynı gün çekilen iki ayrı 20 € gerçekten iki harekettir ve naif bir özet birini yutardı; dosya yeniden yüklendiğinde ise her satır kendi eşiyle çakışır ve hiçbiri tekrar yazılmaz.
+
+Tekil indeks kısmi DEĞİLDİR (`on conflict` kısmi indeksi hedefleyemez); NULL'lar tekil karşılaştırmada eşit sayılmadığı için elle girilen hareketler kısıta hiç takılmaz.
 
 ## BankImportProfile (banka import şablonu)
 
 Hesaba özeldir: her bankanın dosya düzeni farklıdır (işaretli tek tutar sütunu / ayrı borç-alacak, virgüllü ondalık, gün-ay sırası). Bir kez çıkarılır (yapay zekâ önerir, insan onaylar), sonraki dosyalarda otomatik uygulanır.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| account_id | uuid | hangi hesabın ekstresi |
-| name | string | hesap içinde benzersiz |
-| amount_mode | enum(`signed`,`debit_credit`) | tutar geleneği |
-| mapping | jsonb | hangi sütun hangi alan — **sütun başlığıyla** tutulur, sırasıyla değil: banka dosyaya sütun eklediğinde sıra kayar, başlık kalır |
-| decimal_separator | enum(`,`,`.`) | |
-| date_format | enum(`dmy`,`ymd`,`mdy`) | |
-| created_at | timestamptz | |
+> **26.08'e kadar bu başlık dosyada İKİ KEZ vardı** — biri eski ve dar, biri güncel; ikisi de kendi
+> "Alan" tablosunu taşıyordu ve okuyan hangisinin geçerli olduğunu bilemezdi. Güncel olan tutuldu.
+
+<!-- alanlar:bank_import_profile -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `account_id` | uuid |  |  |
+| `name` | text |  |  |
+| `amount_mode` | text |  |  |
+| `mapping` | jsonb |  |  |
+| `decimal_separator` | text |  | `','` |
+| `date_format` | text |  | `'dmy'` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`mapping`** — hangi sütun hangi alan. **Sütun BAŞLIĞIYLA** tutulur, sırasıyla değil: banka dosyaya sütun eklediğinde sıra kayar, başlık kalır.
+- **`name`** — hesap içinde benzersiz; bir hesabın birden çok dosya düzeni olabilir.
+- **`amount_mode`** — dosya geleneği: işaretli tek tutar sütunu mu, ayrı borç–alacak mı. `text` + `check`, enum DEĞİL — küme bankadan bankaya büyür ve her yeni gelenek için migration yazmak istemiyoruz. *(Doküman 26.08'e kadar bunu `enum(...)` diye anlatıyordu; türetilmiş liste yanlışı gösterdi.)*
 
 ## BankImport (yükleme kaydı)
 
 "Bu satır nereden geldi" sorusunun cevabı. Denetlenemeyen bir import korkutucudur: yanlış dosya yüklendiğinde neyin geri alınacağı bilinmelidir.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| account_id | uuid | |
-| profile_id | uuid \| null | şablon silinse de yükleme kaydı kalır |
-| file_name | string | |
-| row_count | number | dosyadaki satır |
-| inserted_count | number | gerçekten yazılan |
-| duplicate_count | number | zaten var olduğu için atlanan — **mükerrer korumasının görünür yüzü**; sessiz atlasaydık operatör "dosyam neden eksik girdi" diye soramazdı |
-| created_at | timestamptz | |
+<!-- alanlar:bank_import -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `account_id` | uuid |  |  |
+| `profile_id` | uuid | • |  |
+| `file_name` | text |  |  |
+| `row_count` | int |  | `0` |
+| `inserted_count` | int |  | `0` |
+| `duplicate_count` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
 
-**Mükerrer koruması (`MoneyMovement.import_fingerprint`):** bankalar satır kimliği vermez, kimlik üretilir — hesap + değer tarihi + tutar + yön + sadeleşmiş açıklama + **tekrar sırası**. Sıra şart: aynı gün çekilen iki ayrı 20 € gerçekten iki harekettir, naif bir özet birini yutardı; dosya yeniden yüklendiğinde ise her satır kendi eşiyle çakışır ve hiçbiri tekrar yazılmaz. Tekil indeks kısmi DEĞİLDİR (`on conflict` kısmi indeksi hedefleyemez); NULL'lar tekil karşılaştırmada eşit sayılmadığı için elle girilen hareketler kısıta takılmaz.
+**Kararlar**
+
+- **`profile_id`** — şablon silinse de yükleme kaydı kalır (`set null`): kaydın işi geçmişi anlatmak, şablonu değil.
+- **`duplicate_count`** — zaten var olduğu için atlanan satır sayısı; **mükerrer korumasının görünür yüzü.** Sessizce atlasaydık operatör "dosyam neden eksik girdi" diye soramazdı.

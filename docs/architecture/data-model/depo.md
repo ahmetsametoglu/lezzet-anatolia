@@ -10,18 +10,30 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 ## Warehouse (depo)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| code | string | benzersiz kısa kod (`STR`, `KEHL`) — belge numarasına girer (`IMH-STR-26-0012`), denetmen ve tedarikçi elle yazar |
-| name | string | ekranda okunan ad |
-| kind | warehouse_kind | `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil ÜÇ SORGUNUN süzgeci (aşağıda) |
-| country_code | country_code | **fiziksel tesis nerede.** Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır ötesi olabilir (ADR-002), depo olamaz. ⚠ KDV'nin bağlı olduğu alan (`DOMAIN §5/§17`) |
-| address | jsonb \| null | |
-| ships_online | boolean | kargo çıkış deposu — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu |
-| is_active | boolean | depo **kapatılır, silinmez**: geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorunda (FK'ler `restrict`) |
-| sort_order | number | operatörün seçici sırası |
-| created_at | timestamptz | |
+<!-- alanlar:warehouse -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `code` | text |  |  |
+| `name` | text |  |  |
+| `kind` | warehouse_kind |  | `'facility'` |
+| `country_code` | country_code |  | `'FR'` |
+| `address` | jsonb | • |  |
+| `ships_online` | boolean |  | `false` |
+| `is_active` | boolean |  | `true` |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`code`** — benzersiz kısa kod (`STR`, `KEHL`) — belge numarasına girer (`IMH-STR-26-0012`), denetmen ve tedarikçi elle yazar
+- **`name`** — ekranda okunan ad
+- **`kind`** — `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil ÜÇ SORGUNUN süzgeci (aşağıda)
+- **`country_code`** — **fiziksel tesis nerede.** Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır ötesi olabilir (ADR-002), depo olamaz. ⚠ KDV'nin bağlı olduğu alan (`DOMAIN §5/§17`)
+- **`ships_online`** — kargo çıkış deposu — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
+- **`is_active`** — depo **kapatılır, silinmez**: geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorunda (FK'ler `restrict`)
+- **`sort_order`** — operatörün seçici sırası
 
 **Ülke başına EN FAZLA bir aktif kargo deposu** — kural kayıt kapısında değil veritabanında: `unique (country_code) where ships_online and is_active`. Anahtarın ülke olması K9'un "ileride ülke başına bir" hedefini bugünden karşılar; DE deposu açıldığında kendi kargo deposunu alır, kod değişmez.
 
@@ -35,16 +47,29 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 ## StorageArea (depo içi stoklama alanı) — `0045`, 19.28
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| warehouse_id | uuid | **zorunlu**, `restrict` — bir dolap fiziksel olarak tek tesistedir |
-| name | string | tesis içinde benzersiz (`lower(name)`) |
-| kind | `storage_area_kind` | `frozen` · `chilled` · `ambient` · `staging` |
-| target_min_c / target_max_c | numeric \| null | beklenen aralık; **ikisi birlikte** ya da ikisi de null |
-| expected_daily_checks | smallint | günde beklenen ölçüm; varsayılan **1**, tavan 12 — takvimin "eksik gün" ölçütü (`19.30`) |
-| is_active | boolean | susturma — silme yok |
-| sort_order | int | operatörün turu |
+<!-- alanlar:storage_area -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `warehouse_id` | uuid |  |  |
+| `name` | text |  |  |
+| `kind` | storage_area_kind |  | `'chilled'` |
+| `target_min_c` | numeric(4, 1) | • |  |
+| `target_max_c` | numeric(4, 1) | • |  |
+| `expected_daily_checks` | smallint |  | `1` |
+| `is_active` | boolean |  | `true` |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`warehouse_id`** — **zorunlu**, `restrict` — bir dolap fiziksel olarak tek tesistedir
+- **`name`** — tesis içinde benzersiz (`lower(name)`)
+- **`target_min_c`** / `target_max_c` — beklenen aralık; **ikisi birlikte** ya da ikisi de null
+- **`expected_daily_checks`** — günde beklenen ölçüm; varsayılan **1**, tavan 12 — takvimin "eksik gün" ölçütü (`19.30`)
+- **`is_active`** — susturma — silme yok
+- **`sort_order`** — operatörün turu
 
 **Beklenen aralık sapmanın BİRİNCİL ölçütüdür.** İkincil ölçüt noktanın kendi alışkanlığı (geçmiş ölçümlerin ortancası ± tolerans) ve sıra önemli: alışkanlık bir tahmindir — bozuk bir dolap her gün −8 okuyorsa alışkanlığı −8'dir ve o ölçüt onu "normal" ilan eder. Aralık bu tuzağa düşmez. Aralığı olmayan noktalarda (raf, geçiş alanı) tek ölçüt alışkanlıktır ve örneklem azken **susar**.
 
@@ -56,16 +81,25 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 ## Vehicle (araç) — düşürüldü (03.08), **geri geldi** (17.08, `0045`)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| plate | string | benzersiz (büyük harfe çekilerek yazılır) |
-| label | string \| null | "Küçük kamyonet" — ekranda okunan ad |
-| warehouse_id | uuid \| null | **künye, kısıt değil** — `set null` |
-| expected_daily_checks | smallint | günde beklenen ölçüm; varsayılan **0** (soğutuculu/sıradan ayrımı veride yok) |
-| is_active | boolean | |
-| sort_order | int | |
-| created_at | timestamptz | |
+<!-- alanlar:vehicle -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `plate` | text |  |  |
+| `label` | text | • |  |
+| `warehouse_id` | uuid | • |  |
+| `expected_daily_checks` | smallint |  | `0` |
+| `is_active` | boolean |  | `true` |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`plate`** — benzersiz (büyük harfe çekilerek yazılır)
+- **`label`** — "Küçük kamyonet" — ekranda okunan ad
+- **`warehouse_id`** — **künye, kısıt değil** — `set null`
+- **`expected_daily_checks`** — günde beklenen ölçüm; varsayılan **0** (soğutuculu/sıradan ayrımı veride yok)
 
 **Tablo bir kez düşürülmüştü ve o karar doğruydu:** tüketeni yoktu, `from('vehicle')` hiçbir yerde geçmiyordu, sıfır satır taşıyordu — bir ihtiyacın karşılığı değil ileri tarihli bir tahmindi. Künyesi şunu yazmıştı: *"gerçekten gerekince geri gelir ve o gün doğru soruyu sorarız: araç bir depoya mı, bir güne mi, bir kuryeye mi bağlanır."*
 
@@ -94,11 +128,18 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 ## WarehouseVariantThreshold (depo bazlı asgari stok)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| warehouse_id | uuid | PK'nın parçası |
-| variant_id | uuid | PK'nın parçası |
-| min_stock_qty | number | |
+<!-- alanlar:warehouse_variant_threshold -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `warehouse_id` | uuid |  |  |
+| `variant_id` | uuid |  |  |
+| `min_stock_qty` | int |  |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`warehouse_id`** — PK'nın parçası
+- **`variant_id`** — PK'nın parçası
 
 **Yalnız İSTİSNA yazar** (C6): varyanttaki `min_stock_qty` varsayılan kalır, bu satır onu ezer. Fiyatın müşteriye-özel satır deseniyle aynı — satır yoksa genel kural işler, ikisi de yoksa varyantın eşiği yoktur ve öneri listesine hiç girmez. Küresel tek eşik çok depoda yapısal olarak yanlış cevap verir: 20 adet Strasbourg'da bol, Kehl'de kritik olabilir.
 
@@ -106,19 +147,32 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 ## WarehouseTransfer (depolar arası sevkiyat)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| from_warehouse_id | uuid | `restrict` |
-| to_warehouse_id | uuid | `restrict`; `check from <> to` |
-| status | transfer_status | `in_transit` \| `received` \| `cancelled` |
-| reference_no | string | benzersiz — `TRF-STR-26-0007` (**kaynak** deponun kodu: kâğıt klasör orada durur) |
-| dispatched_by / dispatched_at | uuid \| null / timestamptz | sevk anı |
-| received_by / received_at | uuid \| null / timestamptz \| null | kabul anı |
-| cancelled_by / cancelled_at | uuid \| null / timestamptz \| null | geri alma anı (19.6); `received_*`'a bindirilmedi — "kabul edildi" ile "hiç çıkmamış" birbirinin yerine geçemez |
-| cancel_reason | string \| null | geri almanın gerekçesi; `note` sevk anının notudur, bu onu iptal eden kararın |
-| note | string \| null | |
-| created_at | timestamptz | |
+<!-- alanlar:warehouse_transfer -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `from_warehouse_id` | uuid |  |  |
+| `to_warehouse_id` | uuid |  |  |
+| `status` | transfer_status |  | `'in_transit'` |
+| `reference_no` | text |  |  |
+| `dispatched_by` | uuid | • |  |
+| `dispatched_at` | timestamptz |  | `now()` |
+| `received_by` | uuid | • |  |
+| `received_at` | timestamptz | • |  |
+| `cancelled_by` | uuid | • |  |
+| `cancelled_at` | timestamptz | • |  |
+| `cancel_reason` | text | • |  |
+| `note` | text | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`from_warehouse_id`** — `restrict`
+- **`to_warehouse_id`** — `restrict`; `check from <> to`
+- **`reference_no`** — benzersiz — `TRF-STR-26-0007` (**kaynak** deponun kodu: kâğıt klasör orada durur)
+- **`cancelled_at`** — geri alma anı (19.6); `cancelled_by` ile birlikte yazılır. `received_*`'a bindirilmedi — "kabul edildi" ile "hiç çıkmamış" birbirinin yerine geçemez
+- **`cancel_reason`** — geri almanın gerekçesi; `note` sevk anının notudur, bu onu iptal eden kararın
 
 Kısıt: `warehouse_transfer_cancel_stamp` — `status = 'cancelled'` ile `cancelled_at is not null` **birbirini gerektirir**. Kural veride durur: RPC'yi atlayan bir `update` damgasız iptal yazamaz.
 
@@ -128,14 +182,24 @@ Bu yüzden **`cancelled`'ın anlamı dardır** (19.6): iptal edilen şey her zam
 
 ## WarehouseTransferLine (sevk kalemi)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| transfer_id | uuid | cascade |
-| source_stock_id | uuid | `restrict` — transfer kaydı partinin geçmişidir |
-| qty | number | sevk edilen |
-| target_stock_id | uuid \| null | kabulde hedefte doğan **yeni** parti |
-| received_qty | number \| null | **null = henüz kabul edilmedi; 0 = geldi ama kayıp.** İkisi ayrı şeydir: eksik satır kabulü bloklar, sıfır bir beyandır |
+<!-- alanlar:warehouse_transfer_line -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `transfer_id` | uuid |  |  |
+| `source_stock_id` | uuid |  |  |
+| `qty` | int |  |  |
+| `target_stock_id` | uuid | • |  |
+| `received_qty` | int | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`transfer_id`** — cascade
+- **`source_stock_id`** — `restrict` — transfer kaydı partinin geçmişidir
+- **`qty`** — sevk edilen
+- **`target_stock_id`** — kabulde hedefte doğan **yeni** parti
+- **`received_qty`** — **null = henüz kabul edilmedi; 0 = geldi ama kayıp.** İkisi ayrı şeydir: eksik satır kabulü bloklar, sıfır bir beyandır
 
 **Parti kimliği korunur, birleşmez** (T4): hedefte tarih/lot/alış kopyalanmış yeni satır doğar. Birleştirseydik `initial_qty` iki partinin toplamı olur, "bu partiden ne kadar tüketildi" ve geri çağırma izi bozulurdu. Transfer partisi `intake_id` ve `purchase_order_item_id` **taşımaz** (T5): transfer bir tedarik girişi değildir; köken izi `source_stock_id → target_stock_id` bağındadır.
 
@@ -145,11 +209,18 @@ Bu yüzden **`cancelled`'ın anlamı dardır** (19.6): iptal edilen şey her zam
 
 ## DeliveryZonePostalCode (posta kodu ↔ bölge)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| country | country_code | PK'nın parçası |
-| postal_code | string | PK'nın parçası; normalize saklanır (boşluksuz, büyük harf — CHECK ile zorlanır) |
-| zone_id | uuid | cascade |
+<!-- alanlar:delivery_zone_postal_code -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `country` | country_code |  |  |
+| `postal_code` | text |  |  |
+| `zone_id` | uuid |  |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`postal_code`** — PK'nın parçası; normalize saklanır (boşluksuz, büyük harf — CHECK ile zorlanır)
+- **`zone_id`** — cascade
 
 Kod kümesi eskiden `delivery_zone.postal_codes` dizisiydi ve iki bölgeye aynı kodu yazmak serbestti; çözücü "ilki kazanır" diyerek sessizce birini seçiyordu. Tek depoda bunun bedeli yanlış bir rota günüydü — **çok depoda siparişin yanlış depoya düşmesi** demek. Küme kendi tablosuna taşındı, çakışma kayıt anında reddediliyor.
 
@@ -163,13 +234,23 @@ Tekillik **tüm** bölgeleri kapsar, aktif/pasif ayırmaz: pasif bölge de kodu 
 
 ## PostalCodePlace (posta kodu referansı)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| country | country_code | PK'nın parçası |
-| postal_code | text | PK'nın parçası |
-| places | text[] | kodun kapsadığı **tüm** yerleşimler; boş olabilir |
-| lat | numeric(9,6) \| null | kapsanan yerleşimlerin ortalaması — kodun harita üstündeki merkezi |
-| lng | numeric(9,6) \| null | aynı; `lat` ile birlikte var ya da birlikte yok (CHECK) |
+<!-- alanlar:postal_code_place -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `country` | country_code |  |  |
+| `postal_code` | text |  |  |
+| `places` | text[] |  |  |
+| `places_search` | text | • | *üretilmiş* |
+| `lat` | numeric(9, 6) | • |  |
+| `lng` | numeric(9, 6) | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`postal_code`** — `country` ile birlikte PK'nın parçası
+- **`places`** — kodun kapsadığı **tüm** yerleşimler; boş olabilir
+- **`lat`** — kapsanan yerleşimlerin ortalaması — kodun harita üstündeki merkezi
+- **`lng`** — aynı; `lat` ile birlikte var ya da birlikte yok (CHECK)
 
 Üretilmiş, salt okunur referans (GeoNames FR+DE, CC-BY; 16.878 kod / 60.496 yerleşim). Veri migration'ın **içindedir**: tablo boşken sistem her kodu "tanınmadı" sayar, yani veri opsiyonel bir yükleme değil tanımın parçasıdır. Üreteç `scripts/build-postal-codes.mjs`, yılda bir koşar.
 

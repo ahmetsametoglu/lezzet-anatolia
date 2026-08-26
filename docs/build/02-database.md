@@ -25,7 +25,7 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - *Bitti:* lokal bağlantı smoke testi geçiyor
 - [x] (02.3) Migration altyapısı: numaralı SQL, tek transaction'da uygulama, `schema_migrations` kaydı, hata durumunda durma
   - *Bitti:* boş projeye sıfırdan kurulum tek komutla; ikinci çalıştırma no-op
-- [~] (02.4) İlk şema migration'ları — tüm tablolar + enum tipleri + kısıtlar: FK'lar, unique'ler (`Product.slug`, `Category.slug`, `WebhookEvent(provider, provider_event_id)`, `Cart.customer_id`), temel index'ler (sipariş/stok/hareket sorgu yolları)
+- [~] (02.4) İlk şema migration'ları — tüm tablolar + enum tipleri + kısıtlar: FK'lar, unique'ler (`Product.slug`, `Category.slug`, `WebhookEvent(provider, ~~provider_event_id~~ → `event_id`)`, `Cart.customer_id`), temel index'ler (sipariş/stok/hareket sorgu yolları)
   - *Bitti:* `DATA_MODEL.md`'deki her varlığın tablosu var; kısıt ihlali testle doğrulanmış (örnek: aynı webhook event iki kez yazılamıyor)
   - **Durum (26.08) — SATIR NEDEN `[~]` HİÇBİR YERDE YAZMIYORDU; ölçüldü, sebep artık kayıtlı.**
     Bir `[~]`, gerekçesi olmadan üstlenilemez: okuyan ajan neyin eksik olduğunu bilemez ve satır
@@ -282,6 +282,69 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     araya girmez; *(2)* `docs:check` kendi atıflarını doğrular: metinde geçen her `§3x`, gerçekten o
     harfi taşıyan bir bölüm başlığına gitmeli. Bugün altı atıf yanlıştı ve hiçbir bekçi görmedi.
   - **Neden bekliyor:** kullanıcı sırası (26.08) — önce 02'nin yalan söyleyen cümleleri susturuldu.
+
+- [x] (02.18) **Veri modeli dokümanı: alan listesi TÜRETİLİR, karar insanda kalır** (kullanıcı kararı 26.08) — `touches: docs/architecture/data-model/**, scripts/docs-check.mjs`
+  - **Kullanıcının sorusu işi başlattı:** *"Bu doküman güncel tutulması zor. Ama veritabanındaki
+    kritik değişiklikle alakalı data modellerinin görülmesi de gerekiyor. O zaman bunu uygun bir
+    şekilde kırpmak, sadeleştirmek ve eksikliklerini gidermek lazım."*
+  - **Ölçüm (26.08):** 7 dosya · 77 varlık · 1.796 satır · 728 alan satırı. Ağırlık dağılımı:
+    **%24 boş** (yalnız kolon adı) · **%42 çok kısa** (*"ekranda okunan ad"*, *"null"* — şemanın
+    zaten söylediği) · %12 orta · **yalnız %22 gerçek karar**. Yani satırların üçte ikisi taşımadığı
+    bir yükü taşıyordu ve asıl değer o gürültünün içinde kayboluyordu. Ayrıca 22 tabloda gerçek
+    ayrışma vardı — `bundle.serves` gibi **müşterinin gördüğü** alanlar dokümanda hiç yoktu.
+  - **Karar: bölüşüm.** Alan listesi makinenin (`<!-- alanlar:tablo -->` bloğu, `pnpm docs:sync`
+    migration'lardan üretir), karar insanın (yalnız söyleyecek şeyi olan alan). Gerekçe `CLAUDE §1`:
+    aynı bilgi zaten İKİ yerde ve ikisi de çalıştırılabilir (migration + Zod); markdown üçüncü
+    nüshaydı ve **tek çürüyebilen** oydu.
+  - **Denetim kuralı TERSİNE çevrildi.** Eskisi *"kolon var, dokümanda yok = hata"* idi ve dokümanı
+    EKSİKSİZ olmaya zorluyordu — çürümenin kaynağı da buydu. Yenisi: *"dokümanda anılan alan
+    veritabanında yok = hata."* Yani doküman **eksik olabilir ama yalan söyleyemez**; kırpılmış bir
+    doküman ancak böyle güvenli olur.
+  - **AYRIŞTIRICI CANLI VERİTABANINA KARŞI DOĞRULANDI:** 84 tablonun **84'ü** kolon kolon tuttu.
+    (Tutmayan üç ad çalışma anında doğan analitik BÖLMELERİ — migration'da yoklar, olmamaları doğru.)
+  - **PİLOT `para.md` ÜSTÜNDE KOŞTU VE İKİ HATA YAKALADI — küçük dosyada denemenin karşılığı budur:**
+    *(1)* **Üretici içerik YEDİ.** Desen boş bloğu tutmuyordu (`\n` iki yanda da zorunluydu), eşleşme
+    bir sonraki kapanış işaretine taşıyor ve aradaki `## MoneyMovement` · `## BankImport`
+    başlıklarını siliyordu. Düzeltildi (`\n?`) ve ikinci bir emniyet kondu: gövdede yeni bir açılış
+    işareti görülürse blok BOZUK sayılır, asla yazılmaz — sessiz veri kaybı yerine gürültü.
+    *(2)* **Tırnak içindeki virgül kolonu bölüyordu.** `default ','` satırı ikiye ayrılıyor,
+    varsayılan `'` diye yazılıyordu; virgül taşıyan her metin varsayılanı aynı hatayı üretirdi.
+  - **Pilotun bulduğu iki doküman hatası:** `para.md`'de **aynı başlıklı İKİ `BankImportProfile`
+    bölümü** vardı (ikisi de kendi tablosuyla — okuyan hangisinin geçerli olduğunu bilemezdi) ve
+    `amount_mode`/`decimal_separator`/`date_format` `enum(...)` diye anlatılıyordu; üçü de `text` +
+    `check`. Türetilmiş liste ikisini de görünür kıldı.
+  - **Üç korumanın da ısırdığı doğrulandı:** uydurma alan adı taşıyan karar satırı yakalandı · elle
+    düzenlenen blok "bayat" diye bildirildi · bozuk blok üretimi durdurdu.
+  - **KALAN 6 DOSYA DA BİTTİ (26.08) — altı OPUS ajanı, dosya başına bir tane, paralel** (kullanıcı
+    izni + model seçimi 26.08). Toplam: **67 varlık · 596 elle yazılmış alan satırı silindi ·
+    456 karar maddesi tutuldu.** Dosya başına: `iletisim-geribildirim` 16 varlık/106 karar ·
+    `musteri-siparis` 13/124 · `katalog` 17/120 · `stok-tedarik` 10/47 · `depo` 8/35 ·
+    `operasyon` 3/18.
+  - **HİÇBİR GERÇEK KARAR KAYBOLMADI — ölçüldü.** Eski dosyalardaki 60 karakterden uzun 161 notun
+    tamamı yeni dosyalarda arandı: ajanların dokunduğu altı dosyada **kayıp sıfır**. Bulunamayan üç
+    not PİLOTUNKİYDİ (benim yeniden ifade ettiklerim); üçü de yerinde, yalnız cümleleri değişmiş.
+  - **Sınır ihlali yok:** altı ajanın hiçbiri kendi dosyasının dışına çıkmadı, `scripts/` altına
+    dosya bırakmadı, `git` ya da `db:*` çalıştırmadı. `docs:sync`i de koşmadılar ve gerekçeleri
+    doğruydu: `--fix` bütün data-model dosyalarına yazar, yani o an başka ajanın yarım işini ezerdi;
+    onun yerine üretim fonksiyonunu kendi kopyalarında yalnız kendi dosyalarına uyguladılar.
+  - **"ŞÜPHEDEYSEN TUT" KURALI ÖLÇÜLEBİLİR BİÇİMDE ÇALIŞTI.** Ön ölçüm 480 satırın atılabilir
+    olduğunu söylüyordu; ajanlar 272 attı, yani **tahminden daha az kırptılar.** Bu bir eksiklik
+    değil, kuralın kendisi: hata yönü geri alınabilir tarafa çevrildi — fazla tutulan satır sonraki
+    turda kırpılır, silinen gerekçe geri gelmez. İkinci bir kırpma turu artık GÜVENLE yapılabilir.
+  - **Ajanlar üç doküman hatası daha buldu:** *(1)* `webhook_event` kolonu dokümanda
+    `provider_event_id` diye anlatılıyordu, gerçek ad `event_id` — **aynı yanlış ad 02.4'ün görev
+    satırında da duruyordu** (bu turda ikisi de düzeltildi); *(2)* `error_log.source` notundaki
+    kaynak listesi migration'daki `web-action`'ı içermiyor ve migration'ın gerekçesi
+    (*"serbest metin, enum DEĞİL — yeni bir kaynak migration istemesin"*) dokümanda hiç yok;
+    *(3)* `para.md`'de aynı başlıklı iki `BankImportProfile` bölümü vardı.
+  - **ESKİ `§1` EMEKLİ EDİLDİ (geçiş artığı 29 satırdı; iki ajan bağımsız bildirdi).** Doküman↔tablo
+    karşılaştırması türetilmiş bloğu olan varlıklarda ATLANIYOR — o karşılaştırma artık anlamsız,
+    çünkü liste zaten tablodan üretiliyor. **Zod↔tablo karşılaştırması AYNEN sürüyor** ve ısırdığı
+    doğrulandı (şemaya uydurma alan eklenince kırmızı). Şema elle yazılır, kayabilir; denetlenmesi
+    gereken tek çift artık odur.
+  - **KALAN (ayrı tur):** *(a)* ikinci kırpma turu — `path`/`(varsa)` gibi tipi tekrar eden satırlar
+    ajanların "şüphedeysen tut" kuralı gereği duruyor; *(b)* `error_log.source` listesinin
+    migration'la hizalanması. İkisi de içerik güvende olduğu için artık risksiz.
 
 ## Netleşecekler
 

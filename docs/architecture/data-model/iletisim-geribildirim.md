@@ -10,26 +10,46 @@ Konuşma/mesaj, webhook, analitik olayı, yorum, puan, talep, işletme ayarı.
 
 Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7`). Alanlar Faz 1'de tanımlı, otomasyon Faz 2'de doldurur. Üç Meta kanalı tek tabloya düşer (ADR-006, 21.08); kanal `source` ekseninde ayrışır.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| customer_id | uuid \| null | WhatsApp'ta telefonla çözülür; Messenger/IG'de otomatik çözüm YOK (PSID/IGSID telefon taşımaz) — kimliksiz doğar, bağlama 15.16 |
-| source | enum(`whatsapp`,`messenger`,`instagram`) | tekillik anahtarının uzayını söyler; `messenger`≠`instagram` (PSID ve IGSID ayrı uzaylar) |
-| external_ref | string | sağlayıcıdaki kişi anahtarı — WhatsApp: E.164 telefon · Messenger: PSID · Instagram: IGSID |
-| provider_account_ref | string \| null | konuşmanın aktığı İŞLETME hesabı (phone_number_id / sayfa id / IG hesap id); zeminde boş, webhook doldurur — cevap yönlendirme buradan |
-| profile_name | string \| null | sağlayıcı profil adı (push name / ad-soyad / kullanıcı adı) — GÖRÜNEN ad, kimlik değil; son görülen değer tutulur |
-| handled_by | enum(`human`,`hybrid`,`ai`) | sohbeti kim yürütüyor (16.08) — `ticket.handled_by` ile aynı enum ve sözleşme |
-| ai_draft_reply | text \| null | hibrit modun bekleyen AI taslağı — satırda durur, mesaj DEĞİL (defter gönderilmişi yazar) |
-| ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
-| opt_in | boolean | ticari mesaj izni — **bugünkü hâl** (double opt-in, `DOMAIN.md §11`) |
-| opt_in_at | timestamptz \| null | **iznin VERİLDİĞİ an**; bir kez yazılır, izin geri alınsa bile silinmez (ispat yükü bizde — GDPR md. 7/1) |
-| opt_in_asked_at | timestamptz \| null | **SORULDUĞU an**, cevap ne olursa olsun. Üç hâli bu ayırıyor: boş → hiç sorulmadı · dolu + `opt_in=false` → soruldu, reddetti · `opt_in_at` dolu → izin verildi. Ayrı kolon, çünkü iki alan üç hâli taşıyamıyordu: ret `opt_in=false, opt_in_at=null` yazıyor ve **varsayılan da tam olarak buydu** — yani ret hiçbir iz bırakmıyordu (ölçüldü 25.08) |
-| linked_by | uuid \| null | bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir |
-| linked_at | timestamptz \| null | bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt) |
-| link_proof | text \| null (`order_ref`,`email`,`phone`) | kanıtın TÜRÜ — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan) |
-| window_expires_at | timestamptz \| null | 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp) |
-| last_message_at | timestamptz \| null | |
-| created_at | timestamptz | |
+<!-- alanlar:conversation -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `customer_id` | uuid | • |  |
+| `source` | conversation_source |  |  |
+| `external_ref` | text |  |  |
+| `provider_account_ref` | text | • |  |
+| `profile_name` | text | • |  |
+| `handled_by` | ticket_handler |  | `'human'` |
+| `ai_draft_reply` | text | • |  |
+| `ai_draft_generated_at` | timestamptz | • |  |
+| `opt_in` | boolean |  | `false` |
+| `opt_in_at` | timestamptz | • |  |
+| `opt_in_asked_at` | timestamptz | • |  |
+| `linked_by` | uuid | • |  |
+| `linked_at` | timestamptz | • |  |
+| `link_proof` | text | • |  |
+| `window_expires_at` | timestamptz | • |  |
+| `last_message_at` | timestamptz | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`customer_id`** — WhatsApp'ta telefonla çözülür; Messenger/IG'de otomatik çözüm YOK (PSID/IGSID telefon taşımaz) — kimliksiz doğar, bağlama 15.16
+- **`source`** — tekillik anahtarının uzayını söyler; `messenger`≠`instagram` (PSID ve IGSID ayrı uzaylar)
+- **`external_ref`** — sağlayıcıdaki kişi anahtarı — WhatsApp: E.164 telefon · Messenger: PSID · Instagram: IGSID
+- **`provider_account_ref`** — konuşmanın aktığı İŞLETME hesabı (phone_number_id / sayfa id / IG hesap id); zeminde boş, webhook doldurur — cevap yönlendirme buradan
+- **`profile_name`** — sağlayıcı profil adı (push name / ad-soyad / kullanıcı adı) — GÖRÜNEN ad, kimlik değil; son görülen değer tutulur
+- **`handled_by`** — sohbeti kim yürütüyor (16.08) — `ticket.handled_by` ile aynı enum ve sözleşme
+- **`ai_draft_reply`** — hibrit modun bekleyen AI taslağı — satırda durur, mesaj DEĞİL (defter gönderilmişi yazar)
+- **`ai_draft_generated_at`** — taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt)
+- **`opt_in`** — ticari mesaj izni — **bugünkü hâl** (double opt-in, `DOMAIN.md §11`)
+- **`opt_in_at`** — **iznin VERİLDİĞİ an**; bir kez yazılır, izin geri alınsa bile silinmez (ispat yükü bizde — GDPR md. 7/1)
+- **`opt_in_asked_at`** — **SORULDUĞU an**, cevap ne olursa olsun. Üç hâli bu ayırıyor: boş → hiç sorulmadı · dolu + `opt_in=false` → soruldu, reddetti · `opt_in_at` dolu → izin verildi. Ayrı kolon, çünkü iki alan üç hâli taşıyamıyordu: ret `opt_in=false, opt_in_at=null` yazıyor ve **varsayılan da tam olarak buydu** — yani ret hiçbir iz bırakmıyordu (ölçüldü 25.08)
+- **`linked_by`** — bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir
+- **`linked_at`** — bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt)
+- **`link_proof`** — kanıtın TÜRÜ (`order_ref`,`email`,`phone`) — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan)
+- **`window_expires_at`** — 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp)
 
 **Bir kişi, bir konuşma — kanal başına** — tekillik `(source, external_ref)` üzerinde (0039). Üç kanalda da thread kavramı yoktur: aynı kişiden gelen her mesaj aynı sohbetin devamıdır. İndeks olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış bu yüzden tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve canlı kanalda arka arkaya gelen iki mesajın ikincisi kaybolurdu. **Hesap boyutu tekillikte DEĞİL (bilinçli):** PSID sayfa-kapsamlıdır ve ikinci bir işletme hesabı (ikinci numara/sayfa) açıldığı gün tekillik `(source, provider_account_ref, external_ref)` üçlüsüne genişletilir — bugün genişletmek, elle işlenen (hesapsız) geçmişi webhook geçmişinden bölerdi; kolon yine de bugünden var, çünkü sonradan eklenen kolon o güne kadarki geçmişi belirsiz bırakır.
 
@@ -47,18 +67,28 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 
 ## Message (mesaj)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| conversation_id | uuid | |
-| direction | enum(`inbound`,`outbound`) | müşteri→biz / biz→müşteri |
-| author | enum(`customer`,`admin`,`ai`) | kim yazdı (16.08) — yönle çelişemez (kısıt): gelen daima `customer` |
-| kind | enum(`text`,`interactive`,`template`,`media`) | |
-| body | jsonb | metin veya kart/interaktif yapı |
-| template_name | string \| null | outbound template ise (Meta-onaylı) |
-| template_category | enum(`marketing`,`utility`,`authentication`) \| null | şablonun **ücret sınıfı** — adla birlikte gelir, ondan ayrı düşemez |
-| provider_message_id | string \| null | Meta mesaj id'si (wamid/mid) — dolu olduğunda TEKİL (kısmi unique, 15.7): webhook tekrarında aynı mesaj deftere iki kez yazılamaz; birincil koruma `webhook_event` claim'i |
-| created_at | timestamptz | |
+<!-- alanlar:message -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `conversation_id` | uuid |  |  |
+| `direction` | message_direction |  |  |
+| `author` | ticket_sender |  |  |
+| `kind` | message_kind |  | `'text'` |
+| `body` | jsonb |  |  |
+| `template_name` | text | • |  |
+| `template_category` | template_category | • |  |
+| `provider_message_id` | text | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`direction`** — müşteri→biz / biz→müşteri
+- **`author`** — kim yazdı (16.08) — yönle çelişemez (kısıt): gelen daima `customer`
+- **`template_name`** — outbound template ise (Meta-onaylı)
+- **`template_category`** — şablonun **ücret sınıfı** — adla birlikte gelir, ondan ayrı düşemez
+- **`provider_message_id`** — Meta mesaj id'si (wamid/mid) — dolu olduğunda TEKİL (kısmi unique, 15.7): webhook tekrarında aynı mesaj deftere iki kez yazılamaz; birincil koruma `webhook_event` claim'i
 
 **Defterdir — yazılır, güncellenmez.** `TicketMessage` ile aynı gerekçe: gönderilmiş mesaj değişmez. Servisin güncelleme tipi bu yüzden `never`; bir gün biri "mesajı düzelt" demek istese derlemede durur.
 
@@ -79,63 +109,110 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 
 Stripe/360dialog webhook'ları için tekrar-işleme kilidi (idempotency): aynı olay ikinci kez gelirse no-op (bkz. `STACK.md §13`).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| provider | string | stripe / 360dialog |
-| provider_event_id | string | **unique** (provider ile birlikte) |
-| processed_at | timestamptz \| null | |
-| payload | jsonb \| null | ham gövde (hata ayıklama) |
+<!-- alanlar:webhook_event -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `provider` | text |  |  |
+| `event_id` | text |  |  |
+| `type` | text |  |  |
+| `payload` | jsonb | • |  |
+| `processed_at` | timestamptz | • |  |
+| `error` | text | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`provider`** — stripe / 360dialog
+- **`event_id`** — **unique** (provider ile birlikte). *(Doküman 26.08'e kadar bu kolonu `provider_event_id` diye anlatıyordu; migration'daki ad `event_id`.)*
+- **`payload`** — ham gövde (hata ayıklama)
 
 ## Notification (bildirim kaydı)
 
 "Şu kişiye şu oldu" satırı (14.12, migration 0049) — uygulama içi zilin, okundu hâlinin ve teslim defterinin öznesi. **Metin taşımaz:** dil müşterinin tercihine bağlıdır ve değişebilir; satır olayı (`kind`) ve dil-bağımsız küçük veriyi (`payload`) taşır, cümleyi okuyan yüzey kurar. **Bildirim ≠ kuyruk:** kuyruk maddesi (toplama bekleyen sipariş) buraya yazılmaz — bildirim bir AN'dır, iş listesi değil. Yazan tek yer bildirimin tek kapısıdır (`@lezzet/application/notification/dispatch`); beş yayım noktası (sipariş · talep · davet · bölge · B2B) oradan geçer.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| profile_id | uuid | alıcı — müşteri de personel de (kimlik tek tabloda, rol ayırır); **cascade**: purge ve GDPR silmesi ek hedef istemez |
-| kind | string | olay türü — kaynağı `AppNotificationKindEnum` (Zod); DB'de TEXT, enum değil (küme her modülle büyür; emekliye ayrılan tür eski satırları kırmasın) |
-| target_type | string \| null | "tıkla, git" hedefinin türü (order · ticket · feedback_request · zone_notice · customer) — adres, içerik değil |
-| target_id | uuid \| null | |
-| warehouse_id | uuid \| null | DEPO BOYUTU: depo-bağlamlı personel olayı rol × depo kesişimiyle dağıtılır (CLAUDE değişmezi); müşteri ve depo-üstü olaylarda null |
-| payload | jsonb | dil-bağımsız, KİMLİKSİZ küçük veri (referenceNo, postalCode) — hedefe N+1 gitmeden ve hedef silinse bile cümle kurulsun; serbest metin ve kişisel içerik girmez |
-| dedupe_key | string \| null | formülü OLAY tanımlar (`order:<id>:<durum>`); istisna olaylarında NULL — her düzeltme ayrı haberdir. Tekillik `(profile_id, dedupe_key)` kısmi unique |
-| created_at | timestamptz | |
-| read_at | timestamptz \| null | okundu |
-| dismissed_at | timestamptz \| null | gizlendi — okundudan AYRI; rozet = `read_at is null AND dismissed_at is null` (tanım tek yerde) |
+<!-- alanlar:notification -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `profile_id` | uuid |  |  |
+| `kind` | text |  |  |
+| `target_type` | text | • |  |
+| `target_id` | uuid | • |  |
+| `warehouse_id` | uuid | • |  |
+| `payload` | jsonb |  | `'{}'::jsonb` |
+| `dedupe_key` | text | • |  |
+| `created_at` | timestamptz |  | `now()` |
+| `read_at` | timestamptz | • |  |
+| `dismissed_at` | timestamptz | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`profile_id`** — alıcı — müşteri de personel de (kimlik tek tabloda, rol ayırır); **cascade**: purge ve GDPR silmesi ek hedef istemez
+- **`kind`** — olay türü — kaynağı `AppNotificationKindEnum` (Zod); DB'de TEXT, enum değil (küme her modülle büyür; emekliye ayrılan tür eski satırları kırmasın)
+- **`target_type`** — "tıkla, git" hedefinin türü (order · ticket · feedback_request · zone_notice · customer) — adres, içerik değil
+- **`warehouse_id`** — DEPO BOYUTU: depo-bağlamlı personel olayı rol × depo kesişimiyle dağıtılır (CLAUDE değişmezi); müşteri ve depo-üstü olaylarda null
+- **`payload`** — dil-bağımsız, KİMLİKSİZ küçük veri (referenceNo, postalCode) — hedefe N+1 gitmeden ve hedef silinse bile cümle kurulsun; serbest metin ve kişisel içerik girmez
+- **`dedupe_key`** — formülü OLAY tanımlar (`order:<id>:<durum>`); istisna olaylarında NULL — her düzeltme ayrı haberdir. Tekillik `(profile_id, dedupe_key)` kısmi unique
+- **`dismissed_at`** — gizlendi — okundudan AYRI; rozet = `read_at is null AND dismissed_at is null` (tanım tek yerde)
 
 **Personel dağıtımı yazarken (fan-out):** role giden olay, uyan her personele birer satır — rozet sayacı sıcak yoldur, okuma-anı join'ine bağlanmaz. Rolü sonradan verilen personel geçmişi görmez (kabul: bildirim an'dır, arşiv değil; işin kendisi kuyruklarda durur). `document_undeliverable`: e-postasız müşterinin BELGESİ (sipariş onayı — dayanıklı ortam yükümlülüğü) hiçbir kanala ulaşamadığında yöneticiye düşen satır.
+
+**Saklama (14.15):** GÖRÜLMÜŞ personel satırı `NOTIFICATION_RETENTION_DAYS` (varsayılan 90 gün) sonra günlük cron'la silinir (`notification-retention` — tür süzgeci `STAFF_NOTIFICATION_KINDS`). Görülmemiş satır süreden bağımsız durur (bekleyen işin işareti); müşteri satırı hiç süpürülmez — akış müşterinin geçmişidir ve hesabıyla yaşar (0037).
 
 ## NotificationDelivery (teslim defteri)
 
 Bildirim OLGUsu ile kanala TESLİMİ ayrı kayıtlardır: BELGE sınıfı "e-posta her zaman + push da" der — tek satır birden çok teslim doğurur; notifier zaten `NotifyResult[]` (dizi) döndürüyordu, tek kolon o diziyi ezerdi. "none" da iki şeyi birden söylerdi: "kanal yoktu" (skipped) ve "vardı, düştü" (error).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| notification_id | uuid | **cascade** |
-| channel | string | küme `NotifyChannel`dan türer (+ ileride `push`); `whatsapp_api` 15.11 kapanana dek yazılamaz — sürücü `supports=false` |
-| status | string | sent · skipped · error (NotifyResult üçlüsü) |
-| reason | string \| null | skipped/error sebebi; sent'te null |
-| ref | string \| null | sağlayıcı referansı — "gerçekten ne gitti"nin izi. Push'ta JSON eşleme `[{token, ticket}]`: makbuz turu hangi biletin hangi CİHAZA ait olduğunu bilmek zorunda (çürük jetonu silecek olan o) |
-| receipt_status | string \| null | MAKBUZ (14.16): Expo teslimi asenkron söyler — gönderimde dönen BİLETTİR, tutanak sonradan sorulur. `ok` · hata adı (`DeviceNotRegistered`…) · `expired` (24s pencere kaçtı) · `unparseable`. `null` = henüz sorulmadı |
-| receipt_checked_at | timestamptz \| null | teslim satırının değişebilen TEK yüzü — gönderim gerçeği donuk kalır (update şeması yalnız makbuzu açar) |
-| created_at | timestamptz | |
+<!-- alanlar:notification_delivery -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `notification_id` | uuid |  |  |
+| `channel` | text |  |  |
+| `status` | text |  |  |
+| `reason` | text | • |  |
+| `ref` | text | • |  |
+| `receipt_status` | text | • |  |
+| `receipt_checked_at` | timestamptz | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`notification_id`** — **cascade**
+- **`channel`** — küme `NotifyChannel`dan türer (+ ileride `push`); `whatsapp_api` 15.11 kapanana dek yazılamaz — sürücü `supports=false`
+- **`status`** — sent · skipped · error (NotifyResult üçlüsü)
+- **`reason`** — skipped/error sebebi; sent'te null
+- **`ref`** — sağlayıcı referansı — "gerçekten ne gitti"nin izi. Push'ta JSON eşleme `[{token, ticket}]`: makbuz turu hangi biletin hangi CİHAZA ait olduğunu bilmek zorunda (çürük jetonu silecek olan o)
+- **`receipt_status`** — MAKBUZ (14.16): Expo teslimi asenkron söyler — gönderimde dönen BİLETTİR, tutanak sonradan sorulur. `ok` · hata adı (`DeviceNotRegistered`…) · `expired` (24s pencere kaçtı) · `unparseable`. `null` = henüz sorulmadı
+- **`receipt_checked_at`** — teslim satırının değişebilen TEK yüzü — gönderim gerçeği donuk kalır (update şeması yalnız makbuzu açar)
 
 ## PushDevice (cihaz jetonu)
 
 Push'un tek DB ayağı (14.14, migration 0050): "bu kişiye hangi cihazlardan ulaşılır". Sürücü ve makbuz cron'u 14.16'da; izin akışı/yönlendirme mobil şeritte. **Jeton bir ADRES değil YETKİDİR** (o cihaza bildirim gösterme) — hiçbir uçtan geri okutulmaz, URL'e yazılmaz (uçlar POST, jeton gövdede).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| profile_id | uuid | sahip — müşteri de personel de (operasyon kabuğu da push alacak; ad bu yüzden `customer_id` değil); **cascade** |
-| token | string | **unique, TABLO GENELİ** — cihaz başına tek sahip. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi |
-| platform | string | `ios` · `android` — `web` BİLEREK yok (KARARLAR 26.08: müşteri yüzeyinde web push yapılmıyor); kısıt veride |
-| disabled_at | timestamptz \| null | OS bildirim İZNİ kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar ve sıra maile düşer. İzin karası: kapalı cihaza "gönderdim" demek sessiz kara deliktir |
-| last_seen_at | timestamptz | bakım damgası ("kayıt bayat mı") — karşılaştırılan bir ölçüt değil |
-| created_at | timestamptz | |
+<!-- alanlar:push_device -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `profile_id` | uuid |  |  |
+| `token` | text |  |  |
+| `platform` | text |  |  |
+| `disabled_at` | timestamptz | • |  |
+| `last_seen_at` | timestamptz |  | `now()` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`profile_id`** — sahip — müşteri de personel de (operasyon kabuğu da push alacak; ad bu yüzden `customer_id` değil); **cascade**
+- **`token`** — **unique, TABLO GENELİ** — cihaz başına tek sahip. Kayıt RPC'si (`register_push_device`) çakışmada SAHİBİ DEVREDER: son giren kazanır, cihaz fiziksel olarak onun elindedir. Devir olmasaydı aile telefonunda önceki hesabın bildirimi sonrakine düşerdi
+- **`platform`** — `ios` · `android` — `web` BİLEREK yok (KARARLAR 26.08: müşteri yüzeyinde web push yapılmıyor); kısıt veride
+- **`disabled_at`** — OS bildirim İZNİ kapalı (uygulamanın açılış raporu) — dolu ise sürücü cihazı yeteneksiz sayar ve sıra maile düşer. İzin karası: kapalı cihaza "gönderdim" demek sessiz kara deliktir
+- **`last_seen_at`** — bakım damgası ("kayıt bayat mı") — karşılaştırılan bir ölçüt değil
 
 **Çıkış (logout) ZORUNLU adım:** jeton silinmezse önceki hesabın bildirimi sonraki oturum sahibine düşer. Silme sahiplik süzgeçli (`token + profile_id`): devrolmuş cihazın gecikmiş çıkışı yeni sahbin kaydını sökemez. 0037 silme akışına dahil.
 
@@ -154,34 +231,59 @@ bölümlenmiştir**; saklama satır silerek değil bölüm düşürerek işler.
 başına bir kez düşer. Her olaya kopyalansaydı aynı bilgi ziyaret sayısı kadar tekrarlanır ve
 oturumun künyesi olayların arasında ayrışabilirdi.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| created_at | timestamptz | **bölüm anahtarı** |
-| type | enum(`page_view`,`product_view`,`search`,`place_resolved`,`add_to_cart`,`cart_blocked`,`checkout_start`,`checkout_blocked`,`order_placed`,`share`) | |
-| session_key | string | sunucu-tarafı günlük oturum (kişisel değil; tuz her gün döner) |
-| path | string \| null | **ROTA KALIBI** (`/product/[slug]`), somut değer asla |
-| subject_type | enum(`product`,`variant`,`bundle`,`category`,`collection`) \| null | ölçülen nesne; FK YOK |
-| subject_id | uuid \| null | |
-| product_id | uuid \| null | ürün kırılımı için denormalize anlık görüntü |
-| channel | enum(`b2c`,`b2b`) \| null | |
-| warehouse_id | uuid \| null | **DEPO granülü**, posta kodu değil (k-anonimlik). `null` = yer seçilmemiş, bir KOVA |
-| availability | enum(`sellable`,`sold_out`,`closed`,`not_here`) \| null | görüntüleme anındaki hâl (snapshot) |
-| blocked_reason | enum(`min_basket`,`split`,`place_change`,`coupon_invalid`,`out_of_stock`,`payment_failed`,`not_shippable`) \| null | yalnız `cart_blocked`/`checkout_blocked` |
-| device | enum(`mobile`,`desktop`) \| null | uygulamanın `Device` tipiyle aynı küme |
-| country | enum(`FR`,`DE`) \| null | IP'den türetilir; IP saklanmaz |
-| language | enum(`tr`,`fr`,`de`) \| null | |
-| meta | jsonb \| null | tipe özel, **kapalı sözlük** (Zod ayrık birliği). `search`: `{query, resultCount, zeroResultKind}` |
+<!-- alanlar:analytics_event -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `created_at` | timestamptz |  | `now()` |
+| `type` | analytics_event_type |  |  |
+| `session_key` | text |  |  |
+| `path` | text | • |  |
+| `subject_type` | analytics_subject_type | • |  |
+| `subject_id` | uuid | • |  |
+| `product_id` | uuid | • |  |
+| `channel` | channel | • |  |
+| `warehouse_id` | uuid | • |  |
+| `availability` | analytics_availability | • |  |
+| `blocked_reason` | analytics_blocked_reason | • |  |
+| `device` | analytics_device | • |  |
+| `surface` | analytics_surface |  |  |
+| `country` | country_code | • |  |
+| `language` | preferred_language | • |  |
+| `meta` | jsonb | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`created_at`** — **bölüm anahtarı**
+- **`session_key`** — sunucu-tarafı günlük oturum (kişisel değil; tuz her gün döner)
+- **`path`** — **ROTA KALIBI** (`/product/[slug]`), somut değer asla
+- **`subject_type`** — ölçülen nesne; FK YOK
+- **`product_id`** — ürün kırılımı için denormalize anlık görüntü
+- **`warehouse_id`** — **DEPO granülü**, posta kodu değil (k-anonimlik). `null` = yer seçilmemiş, bir KOVA
+- **`availability`** — görüntüleme anındaki hâl (snapshot)
+- **`blocked_reason`** — yalnız `cart_blocked`/`checkout_blocked`
+- **`device`** — uygulamanın `Device` tipiyle aynı küme
+- **`country`** — IP'den türetilir; IP saklanmaz
+- **`meta`** — tipe özel, **kapalı sözlük** (Zod ayrık birliği). `search`: `{query, resultCount, zeroResultKind}`
 
 ## AnalyticsSession (oturumun kampanya künyesi)
 
 UTM oturum başına **bir kez** düşer; ikinci yazım sessizce yutulur (ilk kaynak kazanır — `acquisition_source` kuralıyla aynı). Satır yalnız künyeli gelişte doğar: doğrudan gelen ziyaretçi için satır açmak, tabloyu defterin ikinci kopyasına çevirirdi.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| session_key | string | **birincil anahtar** |
-| utm | jsonb \| null | **kapalı sözlük**: `{source, medium, campaign, content, term}` — kapı indirger (`normalizeUtm`) |
-| source | string \| null | yönlendiren ALAN ADI (ham URL değil) |
-| first_seen_at | timestamptz | |
+<!-- alanlar:analytics_session -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `session_key` | text |  |  |
+| `utm` | jsonb | • |  |
+| `source` | text | • |  |
+| `first_seen_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`session_key`** — **birincil anahtar**
+- **`utm`** — **kapalı sözlük**: `{source, medium, campaign, content, term}` — kapı indirger (`normalizeUtm`)
+- **`source`** — yönlendiren ALAN ADI (ham URL değil)
 
 **Sözlüğün kapalı olması bir gizlilik kararıdır:** açık bırakılsaydı reklam aracının linke eklediği her parametre — `gclid`/`fbclid` gibi **tıklama kimlikleri** dâhil — anonim deftere girerdi. O kimlikler reklam ağının tarafında tek kullanıcıya çözülür.
 
@@ -212,25 +314,44 @@ Bu yüzden `product_swipe` bu listede DEĞİLDİR (29.07 düzeltmesi): beğen/ge
 
 Müşterinin bir ürün hakkında **bize vermeyi seçtiği** değerlendirme. Üç biçim tek varlıkta: yıldız, yazılı yorum, beğen/geç (bkz. `DOMAIN.md §14`).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| product_id | uuid | değerlendirme ürün düzeyinde (varyant değil) |
-| customer_id | uuid \| null | **null = giriş yapmamış ziyaretçinin keşif kaydırması**; puan yalnız kimliklide |
-| order_id | uuid \| null | doğrulanmış alışveriş (`purchase` bağlamında dolu) |
-| context | enum(`purchase`,`candidate`) | aldığı ürün / keşifteki aday ürün — **kapıları farklı** |
-| rating | int \| null | 1–5 yıldız |
-| vote | enum(`like`,`dislike`) \| null | beğen / geç |
-| comment | text \| null | yazılı yorum |
-| language | text \| null | metnin GERÇEK dili (ISO 639; enum DEĞİL — Boşnakça yorum da gelir). `null` = tespit koşmadı; metinsiz kayıtta boş |
-| translations | jsonb \| null | makine çevirileri `{tr?,fr?,de?}` — **kaynak dil torbada YOKTUR** |
-| translated_at | timestamptz \| null | çeviri işi baktı mı; **başarısızlıkta da dolar** |
-| dwell_ms | int \| null | kartta geçirilen süre — **sinyal kalitesi** için (yalnız kaydırmada) |
-| feedback_request_id | uuid \| null | alım-sonrası davetten geldiyse (`FeedbackRequest`) |
-| status | enum(`pending`,`approved`,`rejected`) | **moderasyon yalnız METİN içindir**; metinsiz kayıt doğrudan `approved` doğar |
-| moderated_at / moderated_by | timestamptz \| null / uuid \| null | kim ne zaman karar verdi (iz) |
-| notified_at | timestamptz \| null | **"bu ürün geldi" haberi bu kişiye verildi mi** (17.8 zemini). Aday kaydırması bir TALEP BEYANIDIR; ürün kataloğa girince beyanı yapana haber vermek, keşif turunun karşılığını ödediği andır. **Ayrı "ilgi" tablosu AÇILMADI:** kim hangi ürünü istiyor bilgisi zaten bu satırda (`customer_id` + `product_id` + `vote='like'` + `context='candidate'`) ve `product_feedback_customer_key` onu kişi başına teke indiriyor — ikinci tablo aynı gerçeği iki yerde tutar ve ayrışır. Eksik olan ilgi değil **teslimat muhasebesiydi**. Damga gönderimden SONRA atılır: tersi, gönderim düşerse müşteriyi kalıcı sessizliğe mahkûm ederdi |
-| created_at | timestamptz | |
+<!-- alanlar:product_feedback -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `product_id` | uuid |  |  |
+| `customer_id` | uuid | • |  |
+| `order_id` | uuid | • |  |
+| `feedback_request_id` | uuid | • |  |
+| `context` | feedback_context |  |  |
+| `rating` | int | • |  |
+| `vote` | feedback_vote | • |  |
+| `comment` | text | • |  |
+| `language` | text | • |  |
+| `translations` | jsonb | • |  |
+| `translated_at` | timestamptz | • |  |
+| `dwell_ms` | int | • |  |
+| `status` | review_status |  | `'pending'` |
+| `moderated_at` | timestamptz | • |  |
+| `moderated_by` | uuid | • |  |
+| `notified_at` | timestamptz | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`product_id`** — değerlendirme ürün düzeyinde (varyant değil)
+- **`customer_id`** — **null = giriş yapmamış ziyaretçinin keşif kaydırması**; puan yalnız kimliklide
+- **`order_id`** — doğrulanmış alışveriş (`purchase` bağlamında dolu)
+- **`context`** — aldığı ürün / keşifteki aday ürün — **kapıları farklı**
+- **`rating`** — 1–5 yıldız
+- **`language`** — metnin GERÇEK dili (ISO 639; enum DEĞİL — Boşnakça yorum da gelir). `null` = tespit koşmadı; metinsiz kayıtta boş
+- **`translations`** — makine çevirileri `{tr?,fr?,de?}` — **kaynak dil torbada YOKTUR**
+- **`translated_at`** — çeviri işi baktı mı; **başarısızlıkta da dolar**
+- **`dwell_ms`** — kartta geçirilen süre — **sinyal kalitesi** için (yalnız kaydırmada)
+- **`feedback_request_id`** — alım-sonrası davetten geldiyse (`FeedbackRequest`)
+- **`status`** — **moderasyon yalnız METİN içindir**; metinsiz kayıt doğrudan `approved` doğar
+- **`moderated_at`** / **`moderated_by`** — kim ne zaman karar verdi (iz)
+- **`notified_at`** — **"bu ürün geldi" haberi bu kişiye verildi mi** (17.8 zemini). Aday kaydırması bir TALEP BEYANIDIR; ürün kataloğa girince beyanı yapana haber vermek, keşif turunun karşılığını ödediği andır. **Ayrı "ilgi" tablosu AÇILMADI:** kim hangi ürünü istiyor bilgisi zaten bu satırda (`customer_id` + `product_id` + `vote='like'` + `context='candidate'`) ve `product_feedback_customer_key` onu kişi başına teke indiriyor — ikinci tablo aynı gerçeği iki yerde tutar ve ayrışır. Eksik olan ilgi değil **teslimat muhasebesiydi**. Damga gönderimden SONRA atılır: tersi, gönderim düşerse müşteriyi kalıcı sessizliğe mahkûm ederdi
 
 **Neden tek tablo:** ayrımları biçimden ibarettir — müşteri, ürün, tarih, puan kazanımı, "aynı ürüne bir kez" tekilliği, ürün skoruna katkı ve GDPR silme yolu üçünde de aynıdır. `Discount`'ın kuponu ve otomatik kampanyayı tek varlıkta tutmasıyla aynı gerekçe: iki tablo, aynı yedi alanı iki kez tanımlamak ve skoru iki yerden toplamak olurdu.
 
@@ -252,16 +373,26 @@ Müşterinin bir ürün hakkında **bize vermeyi seçtiği** değerlendirme. Ü�
 
 Teslim sonrası (~10 gün) swipe/yorum daveti; tamamlayınca ödül kuponu (bkz. `DOMAIN.md §14`).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| order_id | uuid | |
-| customer_id | uuid | |
-| token | text | **unique** — davet bağlantısının anahtarı; tahmin edilemez (rastgele), oturum yerine geçer |
-| channel | enum(`email`,`whatsapp`) | davetin gittiği kanal |
-| sent_at | timestamptz \| null | |
-| completed_at | timestamptz \| null | |
-| points_awarded | int \| null | tamamlayınca verilen puan (`PointsEntry`); puanlar sonra kişisel kupona çevrilir |
+<!-- alanlar:feedback_request -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `order_id` | uuid |  |  |
+| `customer_id` | uuid |  |  |
+| `token` | text |  |  |
+| `expires_at` | timestamptz |  | `(now()` |
+| `channel` | feedback_channel |  |  |
+| `sent_at` | timestamptz | • |  |
+| `completed_at` | timestamptz | • |  |
+| `points_awarded` | int | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`token`** — **unique** — davet bağlantısının anahtarı; tahmin edilemez (rastgele), oturum yerine geçer
+- **`channel`** — davetin gittiği kanal
+- **`points_awarded`** — tamamlayınca verilen puan (`PointsEntry`); puanlar sonra kişisel kupona çevrilir
 
 **İlerlemenin bağı:** davetten doğan her değerlendirme `ProductFeedback.feedback_request_id` ile buraya bağlanır; "2/5" o bağdan türetilir (`feedback_request_progress`).
 
@@ -273,16 +404,27 @@ Teslim sonrası (~10 gün) swipe/yorum daveti; tamamlayınca ödül kuponu (bkz.
 
 Rota-içi siparişi olan müşterinin komşusunu **aynı sefere** çağırdığı bağlantı (17.10, migration 0044). Getiren davetinden (`user_profiles.referred_by`) AYRI bir kavram: o **hesapsız birini müşteri yapmayı** ödüllendirir ve kimlik eksenlidir; bu **var olan bir sefere ikinci sipariş eklemeyi** ödüllendirir ve sefer eksenlidir. Davet edilen kişi zaten müşterimiz olabilir (kullanıcı kararı 11.08).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| token | text | **unique** — bağlantının anahtarı; sipariş referansıyla aynı okunabilir alfabe, CSPRNG |
-| inviter_id | uuid | daveti açan müşteri (`restrict` — kazanılmış ödülün kaynağı) |
-| order_id | uuid | **unique** — davetin doğduğu sipariş; "hangi sefer" sorusunun kaynağı |
-| delivery_zone_id | uuid | seferin bölgesi |
-| delivery_date | date | sefer günü |
-| max_uses | int | kaç komşu kullanabilir (varsayılan 3, 1–20) |
-| created_at | timestamptz | |
+<!-- alanlar:neighbor_invite -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `token` | text |  |  |
+| `inviter_id` | uuid |  |  |
+| `order_id` | uuid |  |  |
+| `delivery_zone_id` | uuid |  |  |
+| `delivery_date` | date |  |  |
+| `max_uses` | int |  | `3` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`token`** — **unique** — bağlantının anahtarı; sipariş referansıyla aynı okunabilir alfabe, CSPRNG
+- **`inviter_id`** — daveti açan müşteri (`restrict` — kazanılmış ödülün kaynağı)
+- **`order_id`** — **unique** — davetin doğduğu sipariş; "hangi sefer" sorusunun kaynağı
+- **`delivery_zone_id`** — seferin bölgesi
+- **`delivery_date`** — sefer günü
+- **`max_uses`** — kaç komşu kullanabilir (varsayılan 3, 1–20)
 
 **Sefer ayrı bir varlık DEĞİL:** rota günü zaten `(delivery_zone_id, delivery_date)` ikilisiyle tanımlı (`order` + `delivery_zone`) ve kurye ekranı da siparişleri bu ikiliyle topluyor. Ayrı bir `trip` tablosu, bugün türetilen bir gerçeği saklamak ve iki kaynağın bir gün ayrışmasını göze almak olurdu.
 
@@ -298,12 +440,21 @@ Rota-içi siparişi olan müşterinin komşusunu **aynı sefere** çağırdığ�
 
 Davetin **kişiye yapıştığı** yer (kullanıcı sorusu 12.08: *"web'de hesap açsın, gezsin, sonra uygulamayı yüklesin — sepete geldiğinde daveti görebilmeli"*). Çerez yalnız kimliği olmayan ziyaretçinin köprüsüdür; kimlik doğduğu an kabul buraya geçer.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| invite_id | uuid | hangi davet (`NeighborInvite`) |
-| customer_id | uuid | kabul eden müşteri |
-| created_at | timestamptz | |
+<!-- alanlar:neighbor_invite_claim -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `invite_id` | uuid |  |  |
+| `customer_id` | uuid |  |  |
+| `created_at` | timestamptz |  | `now()` |
+| `chosen_at` | timestamptz |  | `now()` |
+| `declined_at` | timestamptz | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`invite_id`** — hangi davet (`NeighborInvite`)
+- **`customer_id`** — kabul eden müşteri
 
 **Tekillik `(invite_id, customer_id)`:** aynı kişi aynı daveti bir kez kabul eder; ikinci tıklama yeni satır açmaz.
 
@@ -317,16 +468,26 @@ Davetin **kişiye yapıştığı** yer (kullanıcı sorusu 12.08: *"web'de hesap
 
 Oyunlaştırma/sadakat: müşteri aksiyonları puan kazandırır, biriken puan kişisel kupona çevrilir. Ledger; bakiye **türetilir** (Σ points).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| customer_id | uuid | |
-| points | int | +kazanım / −harcama (delta) |
-| reason | enum(`review`,`feedback_purchase`,`feedback_candidate`,`order`,`referral`,`neighbor`,`visit`,`redemption`,`manual`) | bağlam adları `ProductFeedback.context` ile **hizalı** — aynı olayı iki sözlükle adlandırmamak için |
-| ref_id | uuid \| null | ilgili kayıt (review/order/discount…) |
-| note | text \| null | serbest sebep — **yalnız `manual`'da**: "gecikme telafisi — jest" |
-| created_by | uuid \| null | elle girişte personel; sistemin verdiği puanda boş |
-| created_at | timestamptz | |
+<!-- alanlar:points_entry -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `customer_id` | uuid |  |  |
+| `points` | int |  |  |
+| `reason` | points_reason |  |  |
+| `ref_id` | uuid | • |  |
+| `note` | text | • |  |
+| `created_by` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`points`** — +kazanım / −harcama (delta)
+- **`reason`** — bağlam adları `ProductFeedback.context` ile **hizalı** — aynı olayı iki sözlükle adlandırmamak için
+- **`ref_id`** — ilgili kayıt (review/order/discount…)
+- **`note`** — serbest sebep — **yalnız `manual`'da**: "gecikme telafisi — jest"
+- **`created_by`** — elle girişte personel; sistemin verdiği puanda boş
 
 Puan bakiyesi = Σ `points` (saklanmaz, türetilir). Kupona çevirme: `redemption` (negatif) + kişisel `Discount` (`customer_id`).
 
@@ -340,23 +501,38 @@ Puan bakiyesi = Σ `points` (saklanmaz, türetilir). Kupona çevirme: `redemptio
 
 Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz. `DOMAIN.md §15`).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| customer_id | uuid | |
-| order_id | uuid \| null | siparişle ilgiliyse |
-| order_item_ids | uuid[] | ilgili sipariş kalemleri (boş olabilir) |
-| conversation_id | uuid \| null | WhatsApp'tan açıldıysa |
-| source | enum(`order`,`form`,`whatsapp`,`admin`) | **geliş yolu**: sipariş detayından / genel formdan / WhatsApp'tan / personelin elle açtığı |
-| type | enum(`damaged`,`missing`,`question`,`other`) | bozuk / eksik / soru / diğer |
-| status | enum(`open`,`in_progress`,`resolved`) | yeniden açılabilir → `open` |
-| handled_by | enum(`human`,`hybrid`,`ai`) | talebi kim yürütüyor (16.08); devralmada `human`'a döner ve AI o talepte susar |
-| ai_draft_reply | text \| null | hibrit modun bekleyen AI taslağı (16.5 deposu, UI 16.08) — mesaj DEĞİL, onaylanmadan gitmez |
-| ai_draft_generated_at | timestamptz \| null | taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt) |
-| subject | text \| null | kısa başlık |
-| return_triggered_at | timestamptz \| null | admin bu talepten iade akışını başlattı |
-| reply_pending_since | timestamptz \| null | müşterinin OKUMADIĞI bir karşı taraf cevabı ne zamandan beri bekliyor (17.08); cevap maili buradan gecikmeli gider |
-| created_at / resolved_at | timestamptz | |
+<!-- alanlar:ticket -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `customer_id` | uuid |  |  |
+| `order_id` | uuid | • |  |
+| `order_item_ids` | uuid[] |  | `'{}'` |
+| `conversation_id` | uuid | • |  |
+| `source` | ticket_source |  |  |
+| `type` | ticket_type |  |  |
+| `status` | ticket_status |  | `'open'` |
+| `handled_by` | ticket_handler |  | `'human'` |
+| `ai_draft_reply` | text | • |  |
+| `ai_draft_generated_at` | timestamptz | • |  |
+| `subject` | text | • |  |
+| `return_triggered_at` | timestamptz | • |  |
+| `reply_pending_since` | timestamptz | • |  |
+| `created_at` | timestamptz |  | `now()` |
+| `resolved_at` | timestamptz | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`order_item_ids`** — ilgili sipariş kalemleri (boş olabilir)
+- **`conversation_id`** — WhatsApp'tan açıldıysa
+- **`source`** — **geliş yolu**: sipariş detayından / genel formdan / WhatsApp'tan / personelin elle açtığı
+- **`status`** — yeniden açılabilir → `open`
+- **`handled_by`** — talebi kim yürütüyor (16.08); devralmada `human`'a döner ve AI o talepte susar
+- **`ai_draft_reply`** — hibrit modun bekleyen AI taslağı (16.5 deposu, UI 16.08) — mesaj DEĞİL, onaylanmadan gitmez
+- **`ai_draft_generated_at`** — taslağın üretim anı — önbellek anahtarı; taslakla birlikte dolar/boşalır (kısıt)
+- **`return_triggered_at`** — admin bu talepten iade akışını başlattı
+- **`reply_pending_since`** — müşterinin OKUMADIĞI bir karşı taraf cevabı ne zamandan beri bekliyor (17.08); cevap maili buradan gecikmeli gider
 
 **`reply_pending_since` — cevap maili ANINDA değil, OKUNMAMIŞSA gider (kullanıcı isteği 16.08, karar 17.08).** Eski kural "her cevap bir mail"di; operatör üç dakikada beş satır yazınca beş mail gidiyordu ve canlı zil (16.8) o mailleri büsbütün gereksiz kıldı — ekranı açık müşteri cevabı zaten anında görüyor. Şimdi cevap yazılınca bu damga **yalnız boşsa** dolar (gecikme İLK okunmamış cevaptan sayılsın; her satırda tazelenseydi hızlı yazan operatör maili sonsuza dek ertelerdi), müşteri yazışmayı okuyunca boşalır, dakikalık süpürge gecikme dolduğunda hâlâ doluysa maili gönderip boşaltır. **Ayrı bir "okundu" damgası AÇILMADI:** bu kolon zaten "okunmamış cevap var mı" sorusunun cevabıdır. Mail susturulmuyor ERTELENİYOR — müşteri yazıp uygulamayı kapatmış olabilir ve cevabı hiç öğrenmemesi en kötü sonuçtur.
 
@@ -370,18 +546,29 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 
 ## TicketMessage (talep yazışması)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| ticket_id | uuid | |
-| sender | enum(`customer`,`admin`,`ai`) | **`ai` ayrı bir göndericidir** — insanınkinden ayırt edilmeden gösterilemez |
-| author_id | uuid \| null | yazan personel (`admin`); müşteri ve AI mesajında boş |
-| body | text | |
-| language | text \| null | metnin GERÇEK dili (ISO 639; enum değil — müşteri Boşnakça yazabilir). `null` = tespit koşmadı |
-| translations | jsonb \| null | makine çevirileri `{tr?,fr?,de?}` — **kaynak dil torbada YOKTUR** |
-| translated_at | timestamptz \| null | çeviri işi baktı mı; **başarısızlıkta da dolar** (sonsuz retry yok) |
-| attachments | text[] | storage yolu (fotoğraf vb.) |
-| created_at | timestamptz | |
+<!-- alanlar:ticket_message -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `ticket_id` | uuid |  |  |
+| `sender` | ticket_sender |  |  |
+| `author_id` | uuid | • |  |
+| `body` | text |  |  |
+| `language` | text | • |  |
+| `translations` | jsonb | • |  |
+| `translated_at` | timestamptz | • |  |
+| `attachments` | text[] |  | `'{}'` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`sender`** — **`ai` ayrı bir göndericidir** — insanınkinden ayırt edilmeden gösterilemez
+- **`author_id`** — yazan personel (`admin`); müşteri ve AI mesajında boş
+- **`language`** — metnin GERÇEK dili (ISO 639; enum değil — müşteri Boşnakça yazabilir). `null` = tespit koşmadı
+- **`translations`** — makine çevirileri `{tr?,fr?,de?}` — **kaynak dil torbada YOKTUR**
+- **`translated_at`** — çeviri işi baktı mı; **başarısızlıkta da dolar** (sonsuz retry yok)
+- **`attachments`** — storage yolu (fotoğraf vb.)
 
 **Yazışma İKİ YÖNLÜ çevrilir (20.2):** müşteri kendi dilinde yazar personel Türkçe okur, personel Türkçe yazar müşteri kendi dilinde okur. Tek yön çevirmek yazışmanın yarısını anlaşılmaz bırakırdı. Orijinal `body`'de kalır, çeviri yanına yazılır — makine çevirisi hiçbir zaman yazanın cümlesi sanılamaz. Gösterim `resolveUserText` (domain-core): site dili → yoksa orijinal.
 
@@ -397,16 +584,27 @@ Basit yaşam döngüsü; siparişe ve ürünlere isteğe bağlı bağlanır (bkz
 
 Parametrik değerler **env'e veya koda gömülmez** (blueprint STACK §10): kesim saati, eşikler ve tavanlar işin sahibinin kararıdır ve dağıtım beklemeden değişebilmelidir.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| key | string | ör. `order_cutoff_time` |
-| scope_type | enum(`global`,`channel`,`zone`,`country`,`warehouse`) | Üç kaynak 03.08'de HİZALANDI (migration haklı sayıldı). Çözüm sırası **en özgülden en genele: `warehouse` > `zone` > `channel` > `country` > `global`** — depo bölgeden dardır (bir bölge tek depoya bağlıdır, bir depo çok bölgeye hizmet eder); sıra ters olsaydı bölge satırı depo satırını sessizce ezerdi. Gerekçe ölçüm doğruluğu: rota/paketleme birim maliyeti ve kesim saati depo başına farklılaşır, global kalırsa kâr sessizce yanlışlaşır (`0016` künyesi). Ayarlar ekranı (09.16) ekseni henüz SUNMUYOR — kablolama operasyon şeridinde, gerekçe `settings-catalog.ts` künyesinde |
-| scope_id | string \| null | kanal `b2b`, ülke `FR`, bölge uuid; global'de null. Üç farklı tipi taşıdığı için metin |
-| value | jsonb | ayar sayı, metin, saat, bayrak ya da nesne olabilir |
-| description | string \| null | admin ekranında ne işe yaradığı |
-| updated_at | timestamptz | |
-| updated_by | uuid \| null → user_profiles | Değişikliğin AKTÖRÜ (09.16). **`null` = "sistem kurdu", "bilinmiyor" DEĞİL** — tohum satırlarını kimse değiştirmedi; ekran boş aktörü "sistem varsayılanı" diye okur, uydurma isim yazmaz. `set(…, { actorId })` opsiyonel, çünkü ayar yazan her şey insan değil (tohum, göç, iş süreçleri) ve onlara sahte aktör atamak, izi *güvenilir sanılan* bir yalana çevirirdi. `on delete set null`: ayrılan personel izi götürür, ayarı değil |
+<!-- alanlar:settings -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `key` | text |  |  |
+| `scope_type` | setting_scope |  | `'global'` |
+| `scope_id` | text | • |  |
+| `value` | jsonb |  |  |
+| `description` | text | • |  |
+| `updated_at` | timestamptz |  | `now()` |
+| `updated_by` | uuid | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`key`** — ör. `order_cutoff_time`
+- **`scope_type`** — Üç kaynak 03.08'de HİZALANDI (migration haklı sayıldı). Çözüm sırası **en özgülden en genele: `warehouse` > `zone` > `channel` > `country` > `global`** — depo bölgeden dardır (bir bölge tek depoya bağlıdır, bir depo çok bölgeye hizmet eder); sıra ters olsaydı bölge satırı depo satırını sessizce ezerdi. Gerekçe ölçüm doğruluğu: rota/paketleme birim maliyeti ve kesim saati depo başına farklılaşır, global kalırsa kâr sessizce yanlışlaşır (`0016` künyesi). Ayarlar ekranı (09.16) ekseni henüz SUNMUYOR — kablolama operasyon şeridinde, gerekçe `settings-catalog.ts` künyesinde
+- **`scope_id`** — kanal `b2b`, ülke `FR`, bölge uuid; global'de null. Üç farklı tipi taşıdığı için metin
+- **`value`** — ayar sayı, metin, saat, bayrak ya da nesne olabilir
+- **`description`** — admin ekranında ne işe yaradığı
+- **`updated_by`** — Değişikliğin AKTÖRÜ (09.16). **`null` = "sistem kurdu", "bilinmiyor" DEĞİL** — tohum satırlarını kimse değiştirmedi; ekran boş aktörü "sistem varsayılanı" diye okur, uydurma isim yazmaz. `set(…, { actorId })` opsiyonel, çünkü ayar yazan her şey insan değil (tohum, göç, iş süreçleri) ve onlara sahte aktör atamak, izi *güvenilir sanılan* bir yalana çevirirdi. `on delete set null`: ayrılan personel izi götürür, ayarı değil |
 
 **Kapsamlı (scoped) çözüm:** aynı anahtar depoya/bölgeye/kanala/ülkeye göre farklılaşabilir; çözücü **en özgül** kapsamı seçer (depo > bölge > kanal > ülke > global), yoksa global'e düşer. Hiç satır yoksa **çağıranın verdiği varsayılana** düşülür — varsayılan koda gömülü kalmaz, çağrı yerinde görünür. Aynı anahtar + aynı kapsam iki kez tanımlanamaz (kısmi unique indeks). Önbellekli çözücü; yazmada önbellek düşer.
 

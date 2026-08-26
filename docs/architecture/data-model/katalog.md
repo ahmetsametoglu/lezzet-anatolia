@@ -10,22 +10,36 @@ Kategori, koleksiyon, ürün, varyant, görsel, fiyat, indirim, paket.
 
 Düz (tek seviye), iç içe ağaç yok. Her ürün tek kategoride (bkz. `DOMAIN.md §13`).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | LocalizedText (jsonb) | çok dilli |
-| tagline | LocalizedText (jsonb) \| null | **kısa tanıtım — vitrin bandının ALTYAZISI** (05.17). Başlık değil: başlık kategori adıdır; ikinci bir başlık alanı açılsaydı aynı şeyin iki kaynağı olurdu. Boş bırakılabilir ve öyle kalmalı — altyazısız kategori altyazısız çizilir, **yedek metin uydurulmaz** (ada düşmek "Börekler / Börekler" tekrarı üretirdi). Doğuş sebebi ölçüldü: mobil vitrin bandının altyazısı tasarımın içinde SABİT bir sözlüktü (`CSUB`), yani yeni kategori altyazısız doğuyor ve cümle operatörün elinde değildi |
-| slug | string | dil-bağımsız URL parçası; benzersiz |
-| image_key | string \| null | kategori KAPAĞI; depo anahtarı, tam URL değil (STACK §5). Anasayfa kategori şeridinde görünür: **web 3:2 kart, mobil daire** (aynı kare kırpma + yuvarlak maske). **Artık tek yüz değil** (05.23): kart görseli `category_image` havuzundan güne göre seçilir ve kapak o havuzun bir üyesidir — havuz boşsa kart eskisi gibi yalnız bunu gösterir |
-| image_focal_x | smallint | odak %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B) |
-| image_focal_y | smallint | odak %, 0-100 (object-position Y) |
-| image_zoom | smallint | zoom %, 100-400; dikey/kare kaynağı yatay çerçeveye kırpar (yeniden çektirmeden) |
-| image_alt | LocalizedText (jsonb) \| null | alternatif metin; **boşsa müşteride kategori adına düşer** (kopya tutulmaz) |
-| image_updated_at | timestamptz \| null | görsel DOSYASININ son değişme anı; public okuma URL'inin sürüm damgası (`?v=`). Anahtar deterministik + cache `immutable` olduğu için damgasız yeni dosya bir yıl görünmez. Kırpma (odak/zoom) dosyayı değiştirmez → damgayı yalnız yükleme yazar |
-| sort_order | int | |
-| is_active | boolean | |
-| is_featured | boolean | **ana sayfada göster** (05.18). `is_active` ile KARIŞTIRILMAZ — aktiflik "yayında mı", bu "vitrinde mi"; ikisi ayrı sorudur. **İşaret SEÇİMDİR, sıra `sort_order`'dan gelir**: ikinci bir vitrin sırası tutulmaz, iki sıra bir gün çelişir ve hangisinin kazandığı ekrandan anlaşılmaz. Hiç işaret yoksa okuma sıradan ilk N'e düşer — vitrin boş kalmaz |
-| created_at | timestamptz | |
+<!-- alanlar:category -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | jsonb |  |  |
+| `slug` | text |  |  |
+| `image_key` | text | • |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+| `tagline` | jsonb | • |  |
+| `sort_order` | int |  | `0` |
+| `is_active` | boolean |  | `true` |
+| `is_featured` | boolean |  | `false` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`tagline`** — **kısa tanıtım — vitrin bandının ALTYAZISI** (05.17). Başlık değil: başlık kategori adıdır; ikinci bir başlık alanı açılsaydı aynı şeyin iki kaynağı olurdu. Boş bırakılabilir ve öyle kalmalı — altyazısız kategori altyazısız çizilir, **yedek metin uydurulmaz** (ada düşmek "Börekler / Börekler" tekrarı üretirdi). Doğuş sebebi ölçüldü: mobil vitrin bandının altyazısı tasarımın içinde SABİT bir sözlüktü (`CSUB`), yani yeni kategori altyazısız doğuyor ve cümle operatörün elinde değildi
+- **`slug`** — dil-bağımsız URL parçası; benzersiz
+- **`image_key`** — kategori KAPAĞI; depo anahtarı, tam URL değil (STACK §5). Anasayfa kategori şeridinde görünür: **web 3:2 kart, mobil daire** (aynı kare kırpma + yuvarlak maske). **Artık tek yüz değil** (05.23): kart görseli `category_image` havuzundan güne göre seçilir ve kapak o havuzun bir üyesidir — havuz boşsa kart eskisi gibi yalnız bunu gösterir
+- **`image_focal_x`** — odak %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B)
+- **`image_focal_y`** — odak %, 0-100 (object-position Y)
+- **`image_zoom`** — zoom %, 100-400; dikey/kare kaynağı yatay çerçeveye kırpar (yeniden çektirmeden)
+- **`image_alt`** — alternatif metin; **boşsa müşteride kategori adına düşer** (kopya tutulmaz)
+- **`image_updated_at`** — görsel DOSYASININ son değişme anı; public okuma URL'inin sürüm damgası (`?v=`). Anahtar deterministik + cache `immutable` olduğu için damgasız yeni dosya bir yıl görünmez. Kırpma (odak/zoom) dosyayı değiştirmez → damgayı yalnız yükleme yazar
+- **`is_featured`** — **ana sayfada göster** (05.18). `is_active` ile KARIŞTIRILMAZ — aktiflik "yayında mı", bu "vitrinde mi"; ikisi ayrı sorudur. **İşaret SEÇİMDİR, sıra `sort_order`'dan gelir**: ikinci bir vitrin sırası tutulmaz, iki sıra bir gün çelişir ve hangisinin kazandığı ekrandan anlaşılmaz. Hiç işaret yoksa okuma sıradan ilk N'e düşer — vitrin boş kalmaz
 
 ## CategoryImage (kategori fotoğraf havuzu)
 
@@ -33,18 +47,31 @@ Kategori kartı bir kare çizer, ama o kare **sabit değil**: operatör havuza b
 
 Kapak `Category.image_key`'de kalır — kartı çizen okuma kategoriyi zaten satır olarak alıyor, kapak için ikinci sorgu doğmasın; **bu tablo yalnız ek fotoğrafları tutar.** Şema `ProductImage` ile birebir aynı gövdeden türer (`GalleryImageSchema`): aynı işi yapan iki tablonun alanları ayrışırsa editörü de, okuması da, kırpması da ikiye bölünür.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| category_id | uuid | kategoriye CASCADE bağlı |
-| image_key | string | depo anahtarı, tam URL değil (kapakla aynı desen). Kapaktan farklı olarak **zorunlu**: anahtarsız havuz satırı yoktur |
-| image_focal_x | smallint | odak %, 0-100 — her fotoğrafın KENDİ odağı vardır |
-| image_focal_y | smallint | odak %, 0-100 |
-| image_zoom | smallint | zoom %, 100-400 |
-| image_alt | LocalizedText (jsonb) \| null | erişilebilirlik/SEO; boşsa kategori adı kullanılır |
-| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
-| sort_order | int | **rotasyonun döngü sırası** — vitrin sırası değil (aşağıya bakınız) |
-| created_at | timestamptz | |
+<!-- alanlar:category_image -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `category_id` | uuid |  |  |
+| `image_key` | text |  |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`category_id`** — kategoriye CASCADE bağlı
+- **`image_key`** — depo anahtarı, tam URL değil (kapakla aynı desen). Kapaktan farklı olarak **zorunlu**: anahtarsız havuz satırı yoktur
+- **`image_focal_x`** — odak %, 0-100 — her fotoğrafın KENDİ odağı vardır
+- **`image_focal_y`** — odak %, 0-100
+- **`image_zoom`** — zoom %, 100-400
+- **`image_alt`** — erişilebilirlik/SEO; boşsa kategori adı kullanılır
+- **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`sort_order`** — **rotasyonun döngü sırası** — vitrin sırası değil (aşağıya bakınız)
 
 **Havuz = kapak + bu satırlar.** Kapak dışarıda bırakılsaydı, havuza ilk fotoğraf eklendiği gün kapak sessizce emekliye ayrılırdı. Anahtarı olmayan satır havuza girmez (kapağı henüz yüklenmemiş kategori boş kare göstermesin).
 
@@ -60,22 +87,36 @@ Kapak `Category.image_key`'de kalır — kartı çizen okuma kategoriyi zaten sa
 
 Esnek pazarlama grubu (Bayram, Yeni, İndirimde). Bir ürün birden çok koleksiyona girer; `product_collections` çoklu bağ.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | LocalizedText (jsonb) | çok dilli |
-| description | LocalizedText (jsonb) \| null | koleksiyon tanıtım metni — paylaşım/OG açıklaması |
-| slug | string | sosyal paylaşım/direkt bağlantı |
-| image_key | string \| null | kapak = paylaşım (OG) kartı görseli (16:9); depo anahtarı, tam URL değil (STACK §5). **Müşteri sayfasında render edilmez** — yalnız link önizleme kartını besler |
-| image_focal_x | smallint | OG kartı odak %, 0-100 (object-position X); dikey/kare kaynak odak+zoom ile 16:9'a kırpılır (§0B) |
-| image_focal_y | smallint | OG kartı odak %, 0-100 (object-position Y) |
-| image_zoom | smallint | OG kartı zoom %, 100-400 |
-| image_alt | LocalizedText (jsonb) \| null | OG kartı alt metni; boşsa ada düşer |
-| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
-| is_active | boolean | |
-| is_featured | boolean | ana sayfada göster (05.18) — kural Category satırındakiyle birebir. Pasif bir koleksiyon (hazırlanan kampanya) işaretli kalabilir; okuma ikisini birden sorar |
-| sort_order | int | |
-| created_at | timestamptz | |
+<!-- alanlar:collection -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | jsonb |  |  |
+| `description` | jsonb | • |  |
+| `slug` | text |  |  |
+| `image_key` | text | • |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+| `sort_order` | int |  | `0` |
+| `is_active` | boolean |  | `true` |
+| `is_featured` | boolean |  | `false` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`description`** — koleksiyon tanıtım metni — paylaşım/OG açıklaması
+- **`slug`** — sosyal paylaşım/direkt bağlantı
+- **`image_key`** — kapak = paylaşım (OG) kartı görseli (16:9); depo anahtarı, tam URL değil (STACK §5). **Müşteri sayfasında render edilmez** — yalnız link önizleme kartını besler
+- **`image_focal_x`** — OG kartı odak %, 0-100 (object-position X); dikey/kare kaynak odak+zoom ile 16:9'a kırpılır (§0B)
+- **`image_focal_y`** — OG kartı odak %, 0-100 (object-position Y)
+- **`image_zoom`** — OG kartı zoom %, 100-400
+- **`image_alt`** — OG kartı alt metni; boşsa ada düşer
+- **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`is_featured`** — ana sayfada göster (05.18) — kural Category satırındakiyle birebir. Pasif bir koleksiyon (hazırlanan kampanya) işaretli kalabilir; okuma ikisini birden sorar
 
 `product_collections`: (`product_id`, `collection_id`) çoklu bağ + `position` (int) — koleksiyon **içindeki** vitrin sırası; admin sürükle-bırakla kürasyon yapar. Üyeler koleksiyon başına `position` ile sıralı okunur.
 
@@ -85,12 +126,19 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 
 **Varyanttan ayrı eksen:** varyant aynı ürünün boyudur (500 g / 1 kg), aile kimlik seçimidir.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | string | **TEK DİLLİ ve bilinçli:** aile adı MÜŞTERİYE GÖRÜNMEZ (kullanıcı kararı 04.08). Müşterinin gördüğü başlık arayüz metnidir ("Çeşitler"); bu ad yalnız operatörün panelde aileyi tanımasına yarar ve operasyon yüzeyi tek dillidir |
-| is_active | boolean | pasif aile: üyeler satışta kalır, çeşit bloğu çizilmez |
-| created_at | timestamptz | |
+<!-- alanlar:product_family -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | text |  |  |
+| `is_active` | boolean |  | `true` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`name`** — **TEK DİLLİ ve bilinçli:** aile adı MÜŞTERİYE GÖRÜNMEZ (kullanıcı kararı 04.08). Müşterinin gördüğü başlık arayüz metnidir ("Çeşitler"); bu ad yalnız operatörün panelde aileyi tanımasına yarar ve operasyon yüzeyi tek dillidir
+- **`is_active`** — pasif aile: üyeler satışta kalır, çeşit bloğu çizilmez
 
 Üyelik `product` tarafında üç alanla durur: `family_id` · `family_label` · `family_position` (aşağıda).
 
@@ -100,39 +148,69 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 
 ## Product (ürün)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | LocalizedText (jsonb) | çok dilli |
-| description | LocalizedText (jsonb) | çok dilli |
-| slug | string | dil-bağımsız URL parçası (ör. `su-boregi`); benzersiz — path öneki dili taşır (`/fr/produits/su-boregi`), slug taşımaz (bkz. `SEO_I18N.md`) |
-| ingredients | LocalizedText (jsonb) \| null | içindekiler (çok dilli) — INCO: alerjenler metin içinde vurgulanır |
-| nutrition | jsonb (`Nutrition`) \| null | besin değerleri, **100 g başına** — sabit kalemli (aşağıda); uzaktan satışta ürün sayfasında beyan (INCO) |
-| allergens | string[] | AB 14 alerjeninden ürünün **içerdikleri** (FR/DE yasal beyan) |
-| is_incomplete | boolean | **Üretilmiş kolon** — beyan eksik mi (ad dillerinden biri yok · içindekiler/besin/saklama girilmemiş · alerjen listesi boş). Süzgeç ve sayaç AYNI gerçeği okusun diye DB'de hesaplanır; hangi beyanın eksik olduğu uygulamada (`missingDeclarations`) |
-| traces | string[] | AB 14'ten **çapraz bulaşma** riski olanlar ("aynı tesiste … işlenir"); cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz |
-| storage_instructions | LocalizedText (jsonb) \| null | saklama ve hazırlama metni (çözdürme, yeniden dondurmama, ısıtma) — müşteri ürün sayfasında ayrı bölüm; `shelf_life_days` sayısaldır, bu ise müşteriye gösterilen metindir |
-| category_id | uuid | |
-| image_key | string \| null | kapak görseli; depo anahtarı, tam URL değil (blueprint STACK §5) |
-| image_focal_x | smallint | kapak odak noktası %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B) |
-| image_focal_y | smallint | kapak odak noktası %, 0-100 (object-position Y) |
-| image_zoom | smallint | kapak zoom %, 100-400; dikey/kare kaynağı yatay banda kırpar (yeniden çektirmeden) |
-| image_alt | LocalizedText (jsonb) \| null | kapak alternatif metni (erişilebilirlik + SEO); **boşsa müşteride ürün adına düşer** (kopya tutulmaz) |
-| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
-| vat_rate | number | ürün bazında KDV (5.5 / 20) |
-| date_type | enum(`DLC`,`DDM`) | son tarih tipi — güvenlik/kalite (varsayılan `DDM`) |
-| shelf_life_days | int \| null | toplam raf ömrü (gün); kalan % hesabı için |
-| shippable | boolean | kargoyla gönderilebilir mi — **varsayılan `false`** (kullanıcı kararı 08.08: unutulan alanın bedeli "satılamadı" olmalı, "bozuk gitti" değil). **Soğuk zinciri ARTIK O ANLATMIYOR** → `storage_type` |
-| storage_type | enum(`ambient`,`chilled`,`frozen`) | **saklama rejimi — soğuk zincirin kendisi** (kullanıcı kararı 16.08); varsayılan `frozen`. `shippable` ile karıştırılmaz: o bir TESLİMAT olgusu ("kargoya verilir mi"), bu bir SAKLAMA olgusu. Ayrılmalarının sebebi bir kuralın yazılamıyor olmasıydı — `DOMAIN §8` *"teslim edilmiş ve sonra iade edilen **donuk** ürün varsayılan olarak imha edilir"* diyor ama hangi ürünün donuk olduğunu söyleyen alan yoktu ve iade penceresi her kalemde `restock`tan başlıyordu. Üç değer, çünkü ikisi yetmiyor: vitrin işareti `chilled`+`frozen`de çıkar, imha varsayılanı yalnız `frozen`de doğar. Kararlar motorda tek yerde: `requiresColdChain` · `defaultsToDiscardOnReturn`. Varsayılanın `frozen` olması `shippable`ınkiyle aynı aileden — yanlış `ambient` işaretli donuk ürünün iadesi rafa döner, bedeli gıda güvenliğidir |
-| status | product_status | satış durumu TEK alanda: `active` (satışta) · `passive` (satışa kapalı) · `candidate` (aday ürün — stokta yok, tedarik edilebilir; keşif bölümünde gösterilir, SATILAMAZ, bkz. `DOMAIN.md §13`). Önce `is_candidate` + `is_active` ikilisiydi: iki bayrak üç durum için dört bileşim üretiyordu ve "aday + pasif" gibi anlamsız bir hâl mümkündü — enum bunu kapatır; varsayılan `active` |
-| target_margin_percent | number \| null | hedef kâr marjı (maliyet üzerine markup %); marj uyarısı / otomatik fiyat için — ORTAK hedef, B2B'ye özel değer yoksa iki kanalda da geçerli |
-| target_margin_b2b_percent | number \| null | B2B'ye ÖZEL hedef marj (kullanıcı kararı 15.08): toptan marjı perakendeden farklı kurulabilir; null = ortak hedef geçerli. Çözüm tek yerde: `targetMarginFor` (domain-core) — diyalog önizlemesi, otomatik fiyat ve marj-altı uyarısı aynı fonksiyonu okur |
-| auto_price | boolean | otomatik fiyatlandırma açık mı (varsayılan false) — açıksa fiyat hedef marja göre otomatik güncellenir, kapalıysa sistem uyarır |
-| sort_order | int | |
-| family_id | uuid \| null | **ÇEŞİT EKSENİ** (`ProductFamily`, yukarıda). `null` = ailesiz → çeşit bloğu HİÇ çizilmez. `on delete set null` |
-| family_label | LocalizedText (jsonb) \| null | **Aile içi kart etiketi — ürün adından AYRI ve üç dilli.** Ürün "Limonlu kek", etiket "Limonlu"; kartta okunan ikincisidir (kartlar yan yanayken her birinde "kek"i tekrar etmek seçimi zorlaştırır). **Türetilemez:** ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi" yan yana gelince bozulur. **Veri kısıtı zorunlu kılıyor** (`family_id` doluyken): ekranda unutulursa kart ürün adına düşer, DOĞRU GÖRÜNÜR ve kısa etiketin amacı sessizce kaybolur |
-| family_position | int | **Aile İÇİNDEKİ sıra** — operatörün sürüklediği sıra. `sort_order` KULLANILMAZ: o katalog sırasıdır ve iki kararı tek kolona bağlamak, ailedeki sırayı değiştirene katalog sırasını da farkında olmadan değiştirtirdi. Yazma **tüm aileyi birden** günceller |
-| created_at | timestamptz | |
+<!-- alanlar:product -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | jsonb |  |  |
+| `description` | jsonb | • |  |
+| `slug` | text |  |  |
+| `category_id` | uuid | • |  |
+| `image_key` | text | • |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+| `ingredients` | jsonb | • |  |
+| `nutrition` | jsonb | • |  |
+| `storage_instructions` | jsonb | • |  |
+| `allergens` | product_allergen[] |  | `'{}'` |
+| `is_incomplete` | boolean | • | *üretilmiş* |
+| `traces` | product_allergen[] |  | `'{}'` |
+| `vat_rate` | numeric(4, 2) |  | `5.5` |
+| `date_type` | product_date_type |  | `'DDM'` |
+| `shelf_life_days` | int | • |  |
+| `shippable` | boolean |  | `false` |
+| `storage_type` | product_storage_type |  | `'frozen'` |
+| `status` | product_status |  | `'active'` |
+| `target_margin_percent` | numeric(5, 2) | • |  |
+| `target_margin_b2b_percent` | numeric(5, 2) | • |  |
+| `auto_price` | boolean |  | `false` |
+| `sort_order` | int |  | `0` |
+| `family_id` | uuid | • |  |
+| `family_label` | jsonb | • |  |
+| `family_position` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`slug`** — dil-bağımsız URL parçası (ör. `su-boregi`); benzersiz — path öneki dili taşır (`/fr/produits/su-boregi`), slug taşımaz (bkz. `SEO_I18N.md`)
+- **`ingredients`** — içindekiler (çok dilli) — INCO: alerjenler metin içinde vurgulanır
+- **`nutrition`** — besin değerleri, **100 g başına** — sabit kalemli (aşağıda); uzaktan satışta ürün sayfasında beyan (INCO)
+- **`allergens`** — AB 14 alerjeninden ürünün **içerdikleri** (FR/DE yasal beyan)
+- **`is_incomplete`** — **Üretilmiş kolon** — beyan eksik mi (ad dillerinden biri yok · içindekiler/besin/saklama girilmemiş · alerjen listesi boş). Süzgeç ve sayaç AYNI gerçeği okusun diye DB'de hesaplanır; hangi beyanın eksik olduğu uygulamada (`missingDeclarations`)
+- **`traces`** — AB 14'ten **çapraz bulaşma** riski olanlar ("aynı tesiste … işlenir"); cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz
+- **`storage_instructions`** — saklama ve hazırlama metni (çözdürme, yeniden dondurmama, ısıtma) — müşteri ürün sayfasında ayrı bölüm; `shelf_life_days` sayısaldır, bu ise müşteriye gösterilen metindir
+- **`image_key`** — kapak görseli; depo anahtarı, tam URL değil (blueprint STACK §5)
+- **`image_focal_x`** — kapak odak noktası %, 0-100 (object-position X); tek kaynak 3:2'den tüm çerçeveler bununla türer (Komponent Envanteri §0B)
+- **`image_focal_y`** — kapak odak noktası %, 0-100 (object-position Y)
+- **`image_zoom`** — kapak zoom %, 100-400; dikey/kare kaynağı yatay banda kırpar (yeniden çektirmeden)
+- **`image_alt`** — kapak alternatif metni (erişilebilirlik + SEO); **boşsa müşteride ürün adına düşer** (kopya tutulmaz)
+- **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`vat_rate`** — ürün bazında KDV (5.5 / 20)
+- **`date_type`** — son tarih tipi — güvenlik/kalite (varsayılan `DDM`)
+- **`shelf_life_days`** — toplam raf ömrü (gün); kalan % hesabı için
+- **`shippable`** — kargoyla gönderilebilir mi — **varsayılan `false`** (kullanıcı kararı 08.08: unutulan alanın bedeli "satılamadı" olmalı, "bozuk gitti" değil). **Soğuk zinciri ARTIK O ANLATMIYOR** → `storage_type`
+- **`storage_type`** — **saklama rejimi — soğuk zincirin kendisi** (kullanıcı kararı 16.08); varsayılan `frozen`. `shippable` ile karıştırılmaz: o bir TESLİMAT olgusu ("kargoya verilir mi"), bu bir SAKLAMA olgusu. Ayrılmalarının sebebi bir kuralın yazılamıyor olmasıydı — `DOMAIN §8` *"teslim edilmiş ve sonra iade edilen **donuk** ürün varsayılan olarak imha edilir"* diyor ama hangi ürünün donuk olduğunu söyleyen alan yoktu ve iade penceresi her kalemde `restock`tan başlıyordu. Üç değer, çünkü ikisi yetmiyor: vitrin işareti `chilled`+`frozen`de çıkar, imha varsayılanı yalnız `frozen`de doğar. Kararlar motorda tek yerde: `requiresColdChain` · `defaultsToDiscardOnReturn`. Varsayılanın `frozen` olması `shippable`ınkiyle aynı aileden — yanlış `ambient` işaretli donuk ürünün iadesi rafa döner, bedeli gıda güvenliğidir
+- **`status`** — satış durumu TEK alanda: `active` (satışta) · `passive` (satışa kapalı) · `candidate` (aday ürün — stokta yok, tedarik edilebilir; keşif bölümünde gösterilir, SATILAMAZ, bkz. `DOMAIN.md §13`). Önce `is_candidate` + `is_active` ikilisiydi: iki bayrak üç durum için dört bileşim üretiyordu ve "aday + pasif" gibi anlamsız bir hâl mümkündü — enum bunu kapatır; varsayılan `active`
+- **`target_margin_percent`** — hedef kâr marjı (maliyet üzerine markup %); marj uyarısı / otomatik fiyat için — ORTAK hedef, B2B'ye özel değer yoksa iki kanalda da geçerli
+- **`target_margin_b2b_percent`** — B2B'ye ÖZEL hedef marj (kullanıcı kararı 15.08): toptan marjı perakendeden farklı kurulabilir; null = ortak hedef geçerli. Çözüm tek yerde: `targetMarginFor` (domain-core) — diyalog önizlemesi, otomatik fiyat ve marj-altı uyarısı aynı fonksiyonu okur
+- **`auto_price`** — otomatik fiyatlandırma açık mı (varsayılan false) — açıksa fiyat hedef marja göre otomatik güncellenir, kapalıysa sistem uyarır
+- **`family_id`** — **ÇEŞİT EKSENİ** (`ProductFamily`, yukarıda). `null` = ailesiz → çeşit bloğu HİÇ çizilmez. `on delete set null`
+- **`family_label`** — **Aile içi kart etiketi — ürün adından AYRI ve üç dilli.** Ürün "Limonlu kek", etiket "Limonlu"; kartta okunan ikincisidir (kartlar yan yanayken her birinde "kek"i tekrar etmek seçimi zorlaştırır). **Türetilemez:** ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi" yan yana gelince bozulur. **Veri kısıtı zorunlu kılıyor** (`family_id` doluyken): ekranda unutulursa kart ürün adına düşer, DOĞRU GÖRÜNÜR ve kısa etiketin amacı sessizce kaybolur
+- **`family_position`** — **Aile İÇİNDEKİ sıra** — operatörün sürüklediği sıra. `sort_order` KULLANILMAZ: o katalog sırasıdır ve iki kararı tek kolona bağlamak, ailedeki sırayı değiştirene katalog sırasını da farkında olmadan değiştirtirdi. Yazma **tüm aileyi birden** günceller
 
 Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre değişir.
 
@@ -142,18 +220,31 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 
 Ürün detay sayfası galeri gösterir (web: büyük görsel + küçükler; mobil: kaydırmalı). Kapak `Product.image_key`'de kalır — liste/kart/OG paylaşımı tek sorguda okunsun diye; **bu tablo yalnız ek görselleri tutar, kapak burada tekrarlanmaz.**
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| product_id | uuid | ürüne CASCADE bağlı |
-| image_key | string | depo anahtarı, tam URL değil (kapakla aynı desen). Kapaktan farklı olarak **zorunlu**: anahtarsız galeri satırı yoktur |
-| image_focal_x | smallint | odak %, 0-100 — her fotoğrafın KENDİ odağı vardır |
-| image_focal_y | smallint | odak %, 0-100 |
-| image_zoom | smallint | zoom %, 100-400 |
-| image_alt | LocalizedText (jsonb) \| null | erişilebilirlik/SEO; boşsa ürün adı kullanılır |
-| image_updated_at | timestamptz \| null | görsel dosyasının sürüm damgası (gerekçe: Category satırı) |
-| sort_order | int | galeri sırası (sürükle-bırak) |
-| created_at | timestamptz | |
+<!-- alanlar:product_image -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `product_id` | uuid |  |  |
+| `image_key` | text |  |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`product_id`** — ürüne CASCADE bağlı
+- **`image_key`** — depo anahtarı, tam URL değil (kapakla aynı desen). Kapaktan farklı olarak **zorunlu**: anahtarsız galeri satırı yoktur
+- **`image_focal_x`** — odak %, 0-100 — her fotoğrafın KENDİ odağı vardır
+- **`image_focal_y`** — odak %, 0-100
+- **`image_zoom`** — zoom %, 100-400
+- **`image_alt`** — erişilebilirlik/SEO; boşsa ürün adı kullanılır
+- **`image_updated_at`** — görsel dosyasının sürüm damgası (gerekçe: Category satırı)
+- **`sort_order`** — galeri sırası (sürükle-bırak)
 
 **Kapak ↔ galeri takası:** "bunu kapak yap" silme değil yer değiştirmedir — seçilen fotoğraf kapağa geçerken eski kapak onun galerideki sırasına oturur, künye (dosya + odak + zoom + alt + damga) bütün hâlinde taşınır. Odak fotoğrafın özelliğidir, çerçevenin değil. Ürünün kapağı yoksa satır galeriden çıkar (aynı dosya iki yerde görünmez).
 
@@ -163,14 +254,26 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 
 **Bu tablo katalogun parçası DEĞİL, ama görsel ailesinin parçası** — bu yüzden burada, kardeşlerinin yanında duruyor. Ayıran şey sahiplik: ürünün/kategorinin/koleksiyonun/paketin/tarifin görseli **kendi satırının künyesinde** yaşar, çünkü görsel o varlığa aittir ve varlık silinince anlamsızlaşır. Buradakiler bir varlığa değil bir **sayfa yerine** aittir: ana sayfanın kahramanı, boş sepetin çizimi. "Boş sepet" diye bir varlık yoktur ve olmayacaktır.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| slot | enum | `home_hero` (16:9) · `packages_hero` (3:2) · `professionals_hero` (16:9) · `empty_cart` (illüstrasyon). **Kapalı küme** — yeni slot ancak onu çizen ekran doğunca eklenir |
-| image_key | string | depo anahtarı (`site/{slot}.{ext}`), tam URL değil. **null olamaz:** satırın kendisi görseldir |
-| image_focal_x / image_focal_y / image_zoom | int | odak + zoom — aynı fotoğraf 16:9 ve 3:2 çerçevelere farklı oturur |
-| image_alt | LocalizedText (jsonb) \| null | erişilebilirlik + SEO |
-| image_updated_at | timestamptz \| null | dosyanın sürüm damgası (`?v=`) — anahtar deterministik olduğu için public cache'i kıran tek şey bu |
+<!-- alanlar:site_image -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `slot` | public |  |  |
+| `image_key` | text |  |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`slot`** — `home_hero` (16:9) · `packages_hero` (3:2) · `professionals_hero` (16:9) · `empty_cart` (illüstrasyon). **Kapalı küme** — yeni slot ancak onu çizen ekran doğunca eklenir
+- **`image_key`** — depo anahtarı (`site/{slot}.{ext}`), tam URL değil. **null olamaz:** satırın kendisi görseldir
+- **`image_focal_x`** — odak + zoom — aynı fotoğraf 16:9 ve 3:2 çerçevelere farklı oturur (`image_focal_y`, `image_zoom` ile birlikte)
+- **`image_alt`** — erişilebilirlik + SEO
+- **`image_updated_at`** — dosyanın sürüm damgası (`?v=`) — anahtar deterministik olduğu için public cache'i kıran tek şey bu
 
 **Anahtar neden enum:** serbest metin, ekranda karşılığı olmayan bir görselin yüklenmesine izin verirdi — yüklendiği anda kaybolan, operatörün "yükledim ama görünmüyor" diye aradığı bir dosya. Enum, yeni slot açmayı migration'a (gözden geçirilen bir yere) taşır.
 
@@ -180,34 +283,56 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 
 **Satılabilir birim varyanttır.** Bir ürün bir veya birden çok varyant taşır (ör. "Maraş Dondurma" → 70gr, 500gr); müşteri ürün sayfasında varyantı seçer. Varyantsız görünen ürünler de aslında **tek (varsayılan) varyant** taşır — böylece fiyat/stok mantığı her yerde aynı çalışır.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| product_id | uuid | bağlı ürün (paylaşılan ad/açıklama/görsel/DLC/KDV orada) |
-| label | LocalizedText (jsonb) | varyant etiketi — **müşteriye görünür** (boy kartı: "700 g tepsi" / "plateau 700 g"), bu yüzden çok dilli; tek varyantlıda varsayılan |
-| net_weight_g | int \| null | net ağırlık (gram) — etiket beyanı ve €/kg birim fiyat gösterimi |
-| pieces_count | int \| null | paket içi adet ("12'li baklava"). Gramajın YERİNE değil yanına: 72'lik kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). `null` = bildirilmemiş (dökme ürün), **sıfır değil**. Alan yokken adet adın içinde kalıyor ve slug ayrıştığı için tek ürün ayrı ürünlere bölünüyordu (05.14) |
-| portion_kind | `item` \| `slice` \| null | `pieces_count`ın BİRİMİ — sayılan şey ne? `item` = ayrı ayrı paketlenmiş parça ("4 adet simit"), `slice` = tek gövdenin dilimi ("12 dilim cheesecake"). Adet varken birim yoksa vitrin "12 adet cheesecake" yazar ve müşteri 12 pasta bekler. `null` = dökme ürün (`pieces_count` da null) ya da tek parça. Ambalaj gerçeği: 2,5 kg'lık su böreği tepsisi 12 DİLİM'dir, 12 börek değil |
-| min_stock_qty | int \| null | asgari stok eşiği — kullanılabilir stok altına düşünce "sipariş zamanı" önerisine düşer (bkz. `DOMAIN.md §16`); null = öneri yok |
-| sku | string \| null | stok kodu |
-| is_active | boolean | |
-| sort_order | int | |
-| created_at | timestamptz | |
+<!-- alanlar:product_variant -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `product_id` | uuid |  |  |
+| `label` | jsonb |  | `'{}'::jsonb` |
+| `net_weight_g` | int | • |  |
+| `pieces_count` | int | • |  |
+| `portion_kind` | portion_kind | • |  |
+| `min_stock_qty` | int | • |  |
+| `sku` | text | • |  |
+| `is_active` | boolean |  | `true` |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`product_id`** — bağlı ürün (paylaşılan ad/açıklama/görsel/DLC/KDV orada)
+- **`label`** — varyant etiketi — **müşteriye görünür** (boy kartı: "700 g tepsi" / "plateau 700 g"), bu yüzden çok dilli; tek varyantlıda varsayılan
+- **`net_weight_g`** — net ağırlık (gram) — etiket beyanı ve €/kg birim fiyat gösterimi
+- **`pieces_count`** — paket içi adet ("12'li baklava"). Gramajın YERİNE değil yanına: 72'lik kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). `null` = bildirilmemiş (dökme ürün), **sıfır değil**. Alan yokken adet adın içinde kalıyor ve slug ayrıştığı için tek ürün ayrı ürünlere bölünüyordu (05.14)
+- **`portion_kind`** — `pieces_count`ın BİRİMİ — sayılan şey ne? `item` = ayrı ayrı paketlenmiş parça ("4 adet simit"), `slice` = tek gövdenin dilimi ("12 dilim cheesecake"). Adet varken birim yoksa vitrin "12 adet cheesecake" yazar ve müşteri 12 pasta bekler. `null` = dökme ürün (`pieces_count` da null) ya da tek parça. Ambalaj gerçeği: 2,5 kg'lık su böreği tepsisi 12 DİLİM'dir, 12 börek değil
+- **`min_stock_qty`** — asgari stok eşiği — kullanılabilir stok altına düşünce "sipariş zamanı" önerisine düşer (bkz. `DOMAIN.md §16`); null = öneri yok
+- **`sku`** — stok kodu
 
 Paylaşılan alanlar (ad, açıklama, kategori, görsel, `date_type`, `shelf_life_days`, `shippable`, `vat_rate`, hedef marj) **Product**'ta; boyuta göre değişen **fiyat, stok, indirimli teklif** ise **varyant** seviyesinde. Satış birimi **sabit paket** — her varyant sabit gramajlı bir pakettir, adet olarak satılır (tartıyla değişken ağırlık Faz 1'de yok).
 
 ## Price (fiyat)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| variant_id | uuid | fiyat varyant seviyesinde |
-| channel | enum(`b2b`,`b2c`) | kanal fiyatı |
-| customer_id | uuid \| null | doluysa müşteriye özel fiyat |
-| amount | numeric (€) | **KANAL TABANINDA**: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — bkz. `DOMAIN.md §5`. Uygulama tarafındaki adı `amountCents` ve birimi **cent**tir; dönüşümü `PriceService.moneyFields` yapar (`STACK §8`) |
-| currency | enum(`EUR`) | |
-| valid_from | timestamptz | tarihli geçerlilik; "geçmiş ve en yeni" kazanır, gelecek tarihli satır zammı önceden hazırlar |
-| created_at | timestamptz | |
+<!-- alanlar:price -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `variant_id` | uuid |  |  |
+| `channel` | channel |  |  |
+| `customer_id` | uuid | • |  |
+| `amount` | numeric(10, 2) |  |  |
+| `currency` | currency |  | `'EUR'` |
+| `valid_from` | timestamptz |  | `now()` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`variant_id`** — fiyat varyant seviyesinde
+- **`channel`** — kanal fiyatı
+- **`customer_id`** — doluysa müşteriye özel fiyat
+- **`amount`** — **KANAL TABANINDA**: b2c satırları KDV dahil (TTC), b2b satırları hariç (HT) — bkz. `DOMAIN.md §5`. Uygulama tarafındaki adı `amountCents` ve birimi **cent**tir; dönüşümü `PriceService.moneyFields` yapar (`STACK §8`)
+- **`valid_from`** — tarihli geçerlilik; "geçmiş ve en yeni" kazanır, gelecek tarihli satır zammı önceden hazırlar
 
 `customer_id` tek kimlik tablosunu (`user_profiles`) işaret eder — "müşteri rolüyle davranan profil".
 
@@ -223,15 +348,25 @@ diye sorar, cevap yazılır, ikinci gelişte tanınır. Geri alma = satırı sil
 kod tarihçesiz bir EŞLEMEDİR, beyan değil. Arama zinciri TEK kapıda
 (`VariantBarcodeService.findByCode`): `barkod → sku → supplier_code` — ekranlar başka yol kurmaz.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| variant_id | uuid | FK → product_variant, cascade |
-| code | text | **global unique** — bir kod tek varyanta (yanlış varyanta bağlanabilir, iki varyanta bağlanamaz) |
-| kind | barcode_kind | `unit` (paket) · `case` (koli) — kapalı küme |
-| qty_per_code | int | okutulunca kaç adet sayılır; `unit`te daima 1 (check) |
-| created_by | uuid | öğreten kişi; null = sistem kaydı (seed/içe aktarım) — `set null` |
-| created_at | timestamptz | |
+<!-- alanlar:variant_barcode -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `variant_id` | uuid |  |  |
+| `code` | text |  |  |
+| `kind` | public |  | `'unit'` |
+| `qty_per_code` | int |  | `1` |
+| `created_by` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`variant_id`** — FK → product_variant, cascade
+- **`code`** — **global unique** — bir kod tek varyanta (yanlış varyanta bağlanabilir, iki varyanta bağlanamaz)
+- **`kind`** — `unit` (paket) · `case` (koli) — kapalı küme
+- **`qty_per_code`** — okutulunca kaç adet sayılır; `unit`te daima 1 (check)
+- **`created_by`** — öğreten kişi; null = sistem kaydı (seed/içe aktarım) — `set null`
 
 ## PriceGroup (müşteri fiyat grubu)
 
@@ -243,38 +378,64 @@ Grup, B2B liste fiyatı üstünden yüzde taşır; **çözüm sırası motorda: 
 durur (`restrict` — üyeli grup silinemez); yalnız etkin kanal `b2b` iken uygulanır, onaysız şirket
 B2C'ye düşerken kademe de kapanır.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | text | operatörün iç etiketi ("Market") — müşteriye görünmez |
-| percent_off | numeric | B2B listeden düşülen yüzde; DB kısıtı 0 < x < 100 |
-| created_at | timestamptz | |
+<!-- alanlar:price_group -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | text |  |  |
+| `percent_off` | numeric(5, 2) |  |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`name`** — operatörün iç etiketi ("Market") — müşteriye görünmez
+- **`percent_off`** — B2B listeden düşülen yüzde; DB kısıtı 0 < x < 100
 
 ## Discount (indirim / kupon)
 
 Tek varlık; hem kupon (kod) hem otomatik kampanya. Kupon daima sepet düzeyi (bkz. `DOMAIN.md §5`).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | string | iç ad — operatörün listede tanıdığı ad, tek dilde (Türkçe); müşteriye GÖSTERİLMEZ |
-| public_label | jsonb \| null | **müşteriye görünen ad**, üç dilde (`{"fr":"Offre de bienvenue",…}`) — sepet/ödeme özetinde ve mailde indirim satırının yanına yazılır. `null`/boş = ad yok → yüzey genel "İndirim / Remise / Rabatt"a düşer. `name`'den ayrı, çünkü iki farklı okuyucusu var: biri operasyonun kendi dili, öbürü vitrinin cümlesi. Sipariş bu değerin ANLIK KOPYASINI tutar (`order.discount_label`) |
-| trigger | enum(`coupon`,`automatic`) | kod mu, otomatik mi |
-| type | enum(`percent`,`fixed`) | oran / sabit tutar |
-| percent | numeric \| null | `type=percent` satırında dolu; oran (15 = %15). Tavan %100 (kolon kısıtı) |
-| amount | numeric (€) \| null | `type=fixed` satırında dolu. Uygulamadaki adı `amountCents`, birimi **cent** (`STACK §8`) |
-| scope | enum(`cart`,`category`,`collection`) | kupon → daima `cart` |
-| category_id | uuid \| null | scope=category |
-| collection_id | uuid \| null | scope=collection |
-| min_basket | numeric (€) \| null | asgari sepet koşulu. Uygulamadaki adı `minBasketCents`, birimi **cent** |
-| first_order_only | boolean | yalnız ilk sipariş |
-| valid_from | timestamptz \| null | |
-| valid_to | timestamptz \| null | |
-| max_uses | int \| null | toplam kullanım (kupon) |
-| per_customer_limit | int \| null | müşteri başına |
-| customer_id | uuid \| null | kişisel kupon (ör. geri bildirim ödülü) — yalnız o müşteri kullanır |
-| is_active | boolean | |
-| created_at | timestamptz | |
+<!-- alanlar:discount -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | text |  |  |
+| `public_label` | jsonb |  |  |
+| `trigger` | discount_trigger |  |  |
+| `type` | discount_type |  |  |
+| `percent` | numeric(5, 2) | • |  |
+| `amount` | numeric(10, 2) | • |  |
+| `scope` | discount_scope |  |  |
+| `category_id` | uuid | • |  |
+| `collection_id` | uuid | • |  |
+| `min_basket` | numeric(10, 2) | • |  |
+| `first_order_only` | boolean |  | `false` |
+| `valid_from` | timestamptz | • |  |
+| `valid_to` | timestamptz | • |  |
+| `customer_id` | uuid | • |  |
+| `max_uses` | int | • |  |
+| `per_customer_limit` | int | • |  |
+| `is_active` | boolean |  | `true` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`name`** — iç ad — operatörün listede tanıdığı ad, tek dilde (Türkçe); müşteriye GÖSTERİLMEZ
+- **`public_label`** — **müşteriye görünen ad**, üç dilde (`{"fr":"Offre de bienvenue",…}`) — sepet/ödeme özetinde ve mailde indirim satırının yanına yazılır. `null`/boş = ad yok → yüzey genel "İndirim / Remise / Rabatt"a düşer. `name`'den ayrı, çünkü iki farklı okuyucusu var: biri operasyonun kendi dili, öbürü vitrinin cümlesi. Sipariş bu değerin ANLIK KOPYASINI tutar (`order.discount_label`)
+- **`trigger`** — kod mu, otomatik mi
+- **`type`** — oran / sabit tutar
+- **`percent`** — `type=percent` satırında dolu; oran (15 = %15). Tavan %100 (kolon kısıtı)
+- **`amount`** — `type=fixed` satırında dolu. Uygulamadaki adı `amountCents`, birimi **cent** (`STACK §8`)
+- **`scope`** — kupon → daima `cart`
+- **`category_id`** — scope=category
+- **`collection_id`** — scope=collection
+- **`min_basket`** — asgari sepet koşulu. Uygulamadaki adı `minBasketCents`, birimi **cent**
+- **`first_order_only`** — yalnız ilk sipariş
+- **`max_uses`** — toplam kullanım (kupon)
+- **`per_customer_limit`** — müşteri başına
+- **`customer_id`** — kişisel kupon (ör. geri bildirim ödülü) — yalnız o müşteri kullanır
 
 **Kodlar burada DEĞİL, `DiscountCode`'da:** bir kuponun birden çok kodu olabilir (bkz. aşağı).
 
@@ -294,13 +455,21 @@ için "BIENVENUE" ve "WILLKOMMEN" de açılabilmeli. Ama bunlar üç ayrı kampa
 değeri, tarihi ve kullanım tavanı tektir. Üç ayrı `Discount` satırı açmak "toplam 100 kullanım"
 sınırını sessizce 300'e çıkarırdı.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| discount_id | uuid | bağlı olduğu kural (cascade) |
-| code | string | müşterinin yazdığı kod; **harf ayrımsız ve TÜM kurallar arasında tekil** (`upper(code)` indeksi) — bir kod tek bir kuralı göstermeli, yoksa hangisinin uygulandığı yazılma sırasına kalırdı |
-| locale | enum(`tr`,`fr`,`de`) \| null | kodun yazıldığı dil; `null` = dilden bağımsız (matbu kart üstündeki tek kod). Zorunlu değil, her kod bir dile ait olmak zorunda değil |
-| created_at | timestamptz | |
+<!-- alanlar:discount_code -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `discount_id` | uuid |  |  |
+| `code` | text |  |  |
+| `locale` | preferred_language | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`discount_id`** — bağlı olduğu kural (cascade)
+- **`code`** — müşterinin yazdığı kod; **harf ayrımsız ve TÜM kurallar arasında tekil** (`upper(code)` indeksi) — bir kod tek bir kuralı göstermeli, yoksa hangisinin uygulandığı yazılma sırasına kalırdı
+- **`locale`** — kodun yazıldığı dil; `null` = dilden bağımsız (matbu kart üstündeki tek kod). Zorunlu değil, her kod bir dile ait olmak zorunda değil
 
 **Yalnız kuponun kodu olur:** kampanyaya kod yazılması DB trigger'ıyla engellenir
 (`discount_code_requires_coupon`) — "otomatik" adının yalanı olan kodlu bir kampanya, kutuya
@@ -331,27 +500,51 @@ Birden çok ürünü tek fiyata sunan katalog kısayolu; sepete eklenince tek te
 
 **Paket yalnız B2C'dedir** (karar 27.07): `total_price` ve kalemlerin `allocated_unit_price`'ı **KDV dahil (TTC)** — B2C kanal tabanı. Paketin kanal listesi, müşteriye özel fiyatı ve `Price` satırı YOKTUR; bu yüzden tek sayı yeter. Toptan müşteri paketi görmez, kalem kalem alır (gerekçe: paket bir pazarlama aracıdır, toptan pazarlık kalem üzerinden yürür).
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| name | LocalizedText (jsonb) | çok dilli |
-| description | LocalizedText (jsonb) | çok dilli |
-| image_key | string \| null | |
-| slug | string | sosyal paylaşım / direkt seçim bağlantısı |
-| total_price | number | müşterinin gördüğü paket fiyatı, **TTC** (= atanmış fiyatların toplamı); yalnız B2C |
-| is_active | boolean | |
-| sort_order | int | |
-| is_featured | boolean | ana sayfada göster (05.18) — kural Category satırındakiyle aynı; `is_active` "satışta mı", bu "vitrinde mi" |
+<!-- alanlar:bundle -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `name` | jsonb |  |  |
+| `description` | jsonb | • |  |
+| `slug` | text |  |  |
+| `image_key` | text | • |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+| `total_price` | numeric(10, 2) |  |  |
+| `serves` | int | • |  |
+| `is_active` | boolean |  | `true` |
+| `sort_order` | int |  | `0` |
+| `is_featured` | boolean |  | `false` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`slug`** — sosyal paylaşım / direkt seçim bağlantısı
+- **`total_price`** — müşterinin gördüğü paket fiyatı, **TTC** (= atanmış fiyatların toplamı); yalnız B2C
+- **`is_featured`** — ana sayfada göster (05.18) — kural Category satırındakiyle aynı; `is_active` "satışta mı", bu "vitrinde mi"
 
 ## BundleItem (paket kalemi)
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| bundle_id | uuid | |
-| variant_id | uuid | pakete dahil satılabilir birim |
-| qty | number | |
-| allocated_unit_price | number | bu kaleme atanmış birim fiyat, **TTC** (müşteri görmez); Σ(allocated×qty)=`Bundle.total_price`; **hediye = 0** |
+<!-- alanlar:bundle_item -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `bundle_id` | uuid |  |  |
+| `variant_id` | uuid |  |  |
+| `qty` | int |  |  |
+| `allocated_unit_price` | numeric(10, 2) |  |  |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`variant_id`** — pakete dahil satılabilir birim
+- **`allocated_unit_price`** — bu kaleme atanmış birim fiyat, **TTC** (müşteri görmez); Σ(allocated×qty)=`Bundle.total_price`; **hediye = 0**
 
 ## Recipe (tarif — "Sofradan Fikirler")
 
@@ -365,33 +558,61 @@ Tarif bir ürün DEĞİL, bir **vitrindir**: kendi ürünlerimizi bir yemeğin i
 
 **Malzeme toplamı KOLON DEĞİL** ve serviste de hesaplanmaz: fiyat personaya (B2B toptan) ve depoya bağlıdır, saklanan bir toplam ilk gün yalan söyler. **Depo ekseni tasarımda hiç anılmıyor ama en büyük gizli gereksinim odur** (`DOMAIN §17`): "6,40 €" de "tükendi" de müşterinin yerine bağlı; tarif okuması vitrin okumalarıyla aynı depo süzgecinden geçmek zorunda.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| slug | string | dil-bağımsız (tek); dış URL'in dil farkı `routing.ts`'ten (`SEO_I18N`) |
-| name | LocalizedText (jsonb) | |
-| description | LocalizedText (jsonb) \| null | |
-| duration | LocalizedText (jsonb) \| null | "35 dk" — serbest metin, hesap yok |
-| serves | LocalizedText (jsonb) \| null | "3–4 kişilik" — **aralık olabildiği için sayı değil** |
-| meal | LocalizedText (jsonb) \| null | "Akşam yemeği" |
-| steps | LocalizedText (jsonb) \| null | hazırlanış; **satır = adım**, numarayı ekran verir |
-| pantry | LocalizedText (jsonb) \| null | evde olması gerekenler; bizim ürünümüz DEĞİL |
-| image_* | ImageMeta | ürün/paketle aynı alanlar (3:2 kaynak + odak + alt) |
-| is_active | boolean | **varsayılan `false`** — `true` olsaydı tek dille açılan her tarif kısıtta patlardı |
-| sort_order | int | editoryal seçki sırası; müşteri sıralamaz |
-| created_at | timestamptz | |
+<!-- alanlar:recipe -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `slug` | text |  |  |
+| `name` | jsonb |  |  |
+| `description` | jsonb | • |  |
+| `duration` | jsonb | • |  |
+| `serves` | jsonb | • |  |
+| `meal` | jsonb | • |  |
+| `steps` | jsonb | • |  |
+| `pantry` | jsonb | • |  |
+| `image_key` | text | • |  |
+| `image_focal_x` | smallint |  | `50` |
+| `image_focal_y` | smallint |  | `50` |
+| `image_zoom` | smallint |  | `100` |
+| `image_alt` | jsonb | • |  |
+| `image_updated_at` | timestamptz | • |  |
+| `is_active` | boolean |  | `false` |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`slug`** — dil-bağımsız (tek); dış URL'in dil farkı `routing.ts`'ten (`SEO_I18N`)
+- **`duration`** — "35 dk" — serbest metin, hesap yok
+- **`serves`** — "3–4 kişilik" — **aralık olabildiği için sayı değil**
+- **`meal`** — "Akşam yemeği"
+- **`steps`** — hazırlanış; **satır = adım**, numarayı ekran verir
+- **`pantry`** — evde olması gerekenler; bizim ürünümüz DEĞİL
+- **`image_key`** — görsel künyesi (`image_*`): ürün/paketle aynı alanlar (3:2 kaynak + odak + alt)
+- **`is_active`** — **varsayılan `false`** — `true` olsaydı tek dille açılan her tarif kısıtta patlardı
+- **`sort_order`** — editoryal seçki sırası; müşteri sıralamaz
 
 ## RecipeItem (tarif kalemi)
 
 Bağ **varyanta** kurulur, ürüne değil: sepet yalnız varyantla çalışır ve `product_id` de tutmak bir gün ayrışan iki gerçek demekti (`CLAUDE §1`) — ürün varyanttan zaten türer. `variant_id` FK'si **`restrict`** (`BundleItem` ile aynı karar): tarifte duran varyant silinemez.
 
-| Alan | Tip | Not |
-| --- | --- | --- |
-| id | uuid | |
-| recipe_id | uuid | tarif silinince kalemler `cascade` ile gider |
-| variant_id | uuid | `restrict` — tarifte duran varyant silinemez |
-| qty | number | **sayı kalan tek alan**; toplam = Σ qty × fiyat |
-| sort_order | int | müşterinin malzeme listesinde gördüğü sıra |
-| created_at | timestamptz | |
+<!-- alanlar:recipe_item -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `recipe_id` | uuid |  |  |
+| `variant_id` | uuid |  |  |
+| `qty` | int |  |  |
+| `sort_order` | int |  | `0` |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`recipe_id`** — tarif silinince kalemler `cascade` ile gider
+- **`variant_id`** — `restrict` — tarifte duran varyant silinemez
+- **`qty`** — **sayı kalan tek alan**; toplam = Σ qty × fiyat
+- **`sort_order`** — müşterinin malzeme listesinde gördüğü sıra
 
 Aynı varyant bir tarifte **iki kez yazılamaz** (`unique(recipe_id, variant_id)`): iki satır toplamı iki kez sayar ve malzeme ekranda alt alta iki kere görünürdü — adet artırmak için `qty` var.

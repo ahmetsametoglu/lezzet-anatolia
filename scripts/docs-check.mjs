@@ -241,6 +241,163 @@ for (const f of readdirSync(join(ROOT, 'docs/architecture/data-model'))) {
   if (f.endsWith('.md')) parts.set(f.replace(/\.md$/, ''), read(`docs/architecture/data-model/${f}`));
 }
 
+// ── 1d. Veri modeli ALAN LİSTESİ TÜRETİLİR (02.18 · kullanıcı kararı 26.08) ──
+//
+// **Neden türetiliyor.** `data-model/*.md`'nin kolon tabloları elle tutuluyordu ve ölçüldü: 728
+// satırın %24'ü boş, %42'si şemanın zaten söylediğini tekrar eden bir cümle; yalnız %22'si gerçek
+// karar taşıyor. Aynı bilgi zaten İKİ yerde ve ikisi de çalıştırılabilir (migration + Zod) —
+// markdown üçüncü nüshaydı ve tek çürüyebilen oydu (`CLAUDE §1`: hiçbir türde duplication yok).
+// Ölçüldüğünde 22 tabloda ayrışma vardı: `bundle.serves` gibi MÜŞTERİNİN GÖRDÜĞÜ alanlar dokümanda
+// hiç yoktu.
+//
+// Bölüşüm: **liste makinenin, karar insanın.** Blok `<!-- alanlar:tablo -->` … `<!-- /alanlar -->`
+// arasında yaşar ve `pnpm docs:sync` ile yeniden üretilir; arasına elle yazılan her şey silinir.
+const KOLON_YOK = /^(constraint|primary key|unique|check|foreign key|exclude|like)\b/i;
+
+/** `(` … `)` DENGELİ okunur — `numeric(10, 2)` ve `check (…)` içeride kalır. */
+function parenGovde(sql, acilisIdx) {
+  let i = acilisIdx + 1;
+  for (let d = 1; d > 0 && i < sql.length; i += 1) {
+    if (sql[i] === '(') d += 1;
+    else if (sql[i] === ')') d -= 1;
+  }
+  return sql.slice(acilisIdx + 1, i - 1);
+}
+
+/**
+ * Virgülle böl — ama PARANTEZ ve TIRNAK içindeki virgülü bölme.
+ *
+ * Tırnak farkındalığı pilotta ölçülerek eklendi: `default ','` (ondalık ayracı) satırı ikiye
+ * bölünüyor ve kolonun varsayılanı `'` diye yazılıyordu. Virgül taşıyan her metin varsayılanı aynı
+ * hatayı üretirdi.
+ */
+function ustDuzeyParcala(govde) {
+  const out = [];
+  let d = 0;
+  let bas = 0;
+  let tirnak = false;
+  for (let i = 0; i < govde.length; i += 1) {
+    const c = govde[i];
+    if (c === "'") tirnak = !tirnak;
+    else if (tirnak) continue;
+    else if (c === '(') d += 1;
+    else if (c === ')') d -= 1;
+    else if (c === ',' && d === 0) {
+      out.push(govde.slice(bas, i));
+      bas = i + 1;
+    }
+  }
+  out.push(govde.slice(bas));
+  return out.map((x) => x.trim()).filter(Boolean);
+}
+
+function kolonAyristir(parca) {
+  if (KOLON_YOK.test(parca)) return null;
+  const m = parca.match(/^([a-z_][a-z0-9_]*)\s+([\s\S]+)$/i);
+  if (!m) return null;
+  const kalan = m[2].replace(/\s+/g, ' ').trim();
+  const tipM = kalan.match(/^([a-z_][a-z0-9_ ]*(?:\([^)]*\))?(?:\[\])?)/i);
+  const tip = (tipM ? tipM[1] : kalan)
+    .replace(/\s+(not null|null|default|references|generated|check|primary|unique|collate)\b[\s\S]*$/i, '')
+    .trim();
+  const varM = kalan.match(/\bdefault\s+((?:[^ ]|\([^)]*\))+)/i);
+  return {
+    ad: m[1],
+    tip,
+    nullable: !/\bnot null\b/i.test(kalan) && !/\bprimary key\b/i.test(kalan),
+    varsayilan: varM ? varM[1].replace(/[,;]$/, '') : null,
+    uretilmis: /\bgenerated always as\b/i.test(kalan),
+  };
+}
+
+/**
+ * Migration'lardan tablo → kolon listesi.
+ *
+ * Yorumlar ÖNCE atılır ve blok yorumu (`/* … *​/`) atlamak sessiz bir eksiklik üretir: 0011'de
+ * `add column` satırlarının arasına uzun künyeler girmiş; blok yorumu bırakan bir ayrıştırıcı
+ * `user_profiles`ın 48 kolonunun yalnız 33'ünü görüyordu ve hiçbir yerde patlamıyordu.
+ * (Aynı sınıf hata 26.08'de enum listesinde de yaşandı — naif desen bu dosyaya bir daha girmemeli.)
+ * **Ölçülerek doğrulandı:** canlı yerel veritabanındaki 84 tablonun 84'ü kolon kolon tuttu; tutmayan
+ * üç ad çalışma anında doğan analitik BÖLMELERİ (migration'da yoklar, olmamaları da doğru).
+ */
+function migrationKolonlari() {
+  const tablolar = new Map();
+  for (const f of migrationFiles) {
+    const sql = read(`supabase/migrations/${f}`)
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/--[^\n]*/g, '');
+    for (const m of sql.matchAll(/create table (?:if not exists )?public\.([a-z_]+)\s*\(/g)) {
+      tablolar.set(m[1], ustDuzeyParcala(parenGovde(sql, m.index + m[0].length - 1)).map(kolonAyristir).filter(Boolean));
+    }
+    for (const m of sql.matchAll(/alter table (?:only )?public\.([a-z_]+)([\s\S]*?);/g)) {
+      const mevcut = tablolar.get(m[1]);
+      if (!mevcut) continue;
+      for (const a of m[2].matchAll(/add column (?:if not exists )?([\s\S]*?)(?=,\s*add |,\s*$|$)/g)) {
+        const k = kolonAyristir(a[1].trim().replace(/,$/, ''));
+        if (k && !mevcut.some((x) => x.ad === k.ad)) mevcut.push(k);
+      }
+    }
+  }
+  return tablolar;
+}
+
+const KOLON_BASLIK = '| Kolon | Tip | Null | Varsayılan |\n| --- | --- | --- | --- |';
+
+function alanBloguUret(kolonlar) {
+  const satirlar = kolonlar.map((k) => {
+    const v = k.uretilmis ? '*üretilmiş*' : k.varsayilan ? `\`${k.varsayilan}\`` : '';
+    return `| \`${k.ad}\` | ${k.tip} | ${k.nullable ? '•' : ''} | ${v} |`;
+  });
+  return `${KOLON_BASLIK}\n${satirlar.join('\n')}`;
+}
+
+const dmKolonlar = migrationKolonlari();
+const dmDosyalar = readdirSync(join(ROOT, 'docs/architecture/data-model')).filter((f) => f.endsWith('.md'));
+for (const f of dmDosyalar) {
+  const yol = `docs/architecture/data-model/${f}`;
+  const md = read(yol);
+  let yeniMd = md;
+  // Desen BOŞ bloğu da tutmalı (`\n?`) — tutmazsa eşleşme bir sonraki kapanış işaretine taşar ve
+  // ARADAKİ BÖLÜMLERİ yutar. Pilotta birebir yaşandı: `## MoneyMovement` ve `## BankImport`
+  // başlıkları üretim sırasında silindi. İkinci emniyet aşağıda: gövdede yeni bir açılış işareti
+  // görülürse blok BOZUKTUR ve asla yazılmaz — sessiz veri kaybı yerine gürültü.
+  for (const m of md.matchAll(/<!-- alanlar:([a-z_]+) -->\n?([\s\S]*?)\n?<!-- \/alanlar -->/g)) {
+    if (m[2].includes('<!-- alanlar:')) {
+      note(`${yol}: \`${m[1]}\` bloğu KAPANMAMIŞ — gövdesinde ikinci bir açılış işareti var; üretim durduruldu`);
+      continue;
+    }
+    const kolonlar = dmKolonlar.get(m[1]);
+    if (!kolonlar) {
+      note(`${yol}: \`<!-- alanlar:${m[1]} -->\` — böyle bir tablo migration'larda YOK`);
+      continue;
+    }
+    const beklenen = alanBloguUret(kolonlar);
+    if (m[2] === beklenen) continue;
+    if (FIX) yeniMd = yeniMd.replace(m[0], `<!-- alanlar:${m[1]} -->\n${beklenen}\n<!-- /alanlar -->`);
+    else note(`${yol}: \`${m[1]}\` alan listesi bayat — \`pnpm docs:sync\` çalıştır (blok TÜRETİLİR, elle yazılmaz)`);
+  }
+  if (FIX && yeniMd !== md) {
+    writeFileSync(join(ROOT, yol), yeniMd);
+    console.log(`✔ ${yol} alan listeleri güncellendi`);
+  }
+
+  // ── Kararlar YALAN SÖYLEYEMEZ (yön TERSİNE çevrildi) ──────────────────────
+  // Eski kural "kolon var, dokümanda yok = hata" idi ve dokümanı EKSİKSİZ olmaya zorluyordu; asıl
+  // çürüme kaynağı oydu. Yeni kural: doküman EKSİK olabilir (kırpılmış), ama anlattığı alan
+  // gerçekten var olmalı. Kırpılmış bir doküman ancak böyle güvenli olur.
+  for (const bolum of md.split(/\n## /).slice(1)) {
+    const tabloM = bolum.match(/<!-- alanlar:([a-z_]+) -->/);
+    if (!tabloM) continue;
+    const kolonlar = new Set((dmKolonlar.get(tabloM[1]) ?? []).map((k) => k.ad));
+    const kararlar = bolum.split('<!-- /alanlar -->')[1] ?? '';
+    for (const k of kararlar.matchAll(/^- \*\*`([a-z_]+)`/gm)) {
+      if (!kolonlar.has(k[1])) {
+        note(`${yol} (${tabloM[1]}): karar satırı \`${k[1]}\` alanını anlatıyor ama tabloda böyle bir kolon YOK`);
+      }
+    }
+  }
+}
+
 // ── 1a. Para: `…Cents` şema alanı ↔ euro kolonu, BEYANLA bağlanır (02.9 · STACK §8) ──
 // Para DB'de euro `numeric`, uygulamada tamsayı cent. İkisini `BaseDbService.moneyFields` bağlar:
 // `amountCents` alanı `amount` kolonunu okur. Bu kural o bağın var olduğunu doğrular — beyansız bir
@@ -274,10 +431,18 @@ for (const m of allSchemaSrc().matchAll(/([A-Za-z0-9_]*Cents)\s*:\s*dbNumeric/g)
 const columnOf = (field) => snake(declaredCents.has(field) ? field.slice(0, -'Cents'.length) : field);
 
 for (const e of ENTITIES) {
-  const doc = docFields(parts.get(e.part) ?? '', e.doc);
+  const partMd = parts.get(e.part) ?? '';
+  // ── DOKÜMAN↔TABLO KARŞILAŞTIRMASI EMEKLİ OLDU (02.18 · 26.08) ──────────────
+  // Varlık türetilmiş alan bloğuna geçtiyse doküman tablosu ARTIK YOK ve olmaması doğru: liste
+  // migration'lardan üretiliyor, yani ayrışması yapısal olarak imkânsız. Eski karşılaştırma bu
+  // durumda her kolonu "DATA_MODEL'de YOK" diye bildirir — 29 satırlık bir geçiş artığı (iki ayrı
+  // ajan bağımsız olarak bildirdi). ZOD↔TABLO karşılaştırması ise AYNEN sürüyor: şema elle yazılır
+  // ve kayabilir, denetlenmesi gereken tek çift artık odur.
+  const tureyen = partMd.includes(`<!-- alanlar:${e.table} -->`);
+  const doc = tureyen ? null : docFields(partMd, e.doc);
   const cols = tableColumns(migrations, e.table);
   const zod = zodFields(allSchemaSrc(), e.zod);
-  if (!doc) { note(`data-model/${e.part}.md: "## ${e.doc}" başlığı ya da tablosu bulunamadı`); continue; }
+  if (!tureyen && !doc) { note(`data-model/${e.part}.md: "## ${e.doc}" başlığı ya da tablosu bulunamadı`); continue; }
   if (!cols || !zod) continue; // henüz kodlanmamış varlık — artımlı inşa, hata değil
 
   // Beyansız `…Cents` alanı: kolon adı eşleşmez ve aşağıdaki fark listesinde "tabloda yok" diye
@@ -289,10 +454,10 @@ for (const e of ENTITIES) {
     }
   }
 
-  const docSnake = doc.map(snake);
+  const docSnake = (doc ?? []).map(snake);
   const zodSnake = zod.map(columnOf);
-  const missInDb = docSnake.filter((f) => !cols.includes(f));
-  const extraInDb = cols.filter((c) => !docSnake.includes(c));
+  const missInDb = doc ? docSnake.filter((f) => !cols.includes(f)) : [];
+  const extraInDb = doc ? cols.filter((c) => !docSnake.includes(c)) : [];
   const zodVsDb = zodSnake.filter((f) => !cols.includes(f));
   const dbVsZod = cols.filter((c) => !zodSnake.includes(c));
 
