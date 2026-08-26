@@ -3,7 +3,7 @@ import { CategoryService, PriceService, ProductService, StockService, WarehouseS
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID } from '@lezzet/application';
 // Beklenen şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME kırılır.
-import type { OnSiteSaleResponse } from '@lezzet/types';
+import type { CatalogPage, OnSiteSaleResponse } from '@lezzet/types';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
@@ -44,6 +44,9 @@ beforeAll(async () => {
   productId = product.id;
   variantId = variants[0]!.id;
   await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: 500 });
+  // Katalog YALNIZ aktif ürünü listeler (`status: 'active'` süzgeci); aday ürün doğrudan bağlantıyla
+  // bile açılmıyor (DOMAIN §13). Fikstür bu yüzden ürünü yayına alıyor.
+  await new ProductService(db).update({ id: productId, status: 'active' });
 
   kurye = await createSignedInUser({ prefix: 'sale', label: 'kurye', roles: ['courier'], warehouseIds: [vehicleId] });
   depocu = await createSignedInUser({ prefix: 'sale', label: 'depocu', roles: ['warehouse'], warehouseIds: [facilityId] });
@@ -109,6 +112,30 @@ describe('POST /sale/on-site', () => {
 
     expect(res.status).toBe(200);
     expect(data).toMatchObject({ status: 'insufficient_here', lines: [{ available: 4 }] });
+  });
+
+  it('KATALOG ucu kuryeye de açık ve DEPOYU künyeden çözüyor', async () => {
+    /*
+      Bu dosyanın konusu KAPI kararlarıdır; katalogun depoya süzülmesi `getCatalogData`nın kendi
+      sözleşmesidir ve orada sınanır (`place.warehouseId`). Burada çivilenen iki şey var: ucun rol
+      kümesi (kurye de okur — satacağı şeyi görmek zorunda) ve deponun GÖVDEDEN değil künyeden
+      gelmesi.
+
+      Ayrı bir "araç stoğu" okuması YAZILMADI: katalog okumasının ta kendisi, yalnız `place`
+      değişiyor. İkinci bir okuma, vitrinle satış ekranının aynı ürün için farklı "tükendi"
+      demesine açık kapı bırakırdı.
+    */
+    const res = await app.request('/api/v1/sale/catalog?locale=tr', { headers: bearer(kurye.token) });
+    const data = await envelopeData<CatalogPage>(res);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(data.products)).toBe(true);
+
+    // Kapsam dışı depo BURADA da reddediliyor — okuma da yazma da aynı kapıdan geçiyor.
+    const disarida = await app.request(`/api/v1/sale/catalog?locale=tr&warehouseId=${baskaDepoId}`, {
+      headers: bearer(kurye.token),
+    });
+    expect(disarida.status).toBe(403);
   });
 
   it('kalemsiz gövde ŞEMADA elenir — kapıya hiç ulaşmaz', async () => {

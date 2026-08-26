@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
-import type { z } from 'zod';
+import { z } from 'zod';
 import { serviceDb } from '@lezzet/database';
-import { ANONYMOUS_BUYER_ID, sellOnSite } from '@lezzet/application';
-import { OnSiteSaleRequestSchema, OnSiteSaleResponseSchema } from '@lezzet/types';
+import { ANONYMOUS_BUYER_ID, getCatalogData, sellOnSite } from '@lezzet/application';
+import { CatalogPageSchema, DEFAULT_PAGE_SIZE, OnSiteSaleRequestSchema, OnSiteSaleResponseSchema, PreferredLanguageEnum } from '@lezzet/types';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { fail, ok } from '../../lib/respond';
-import { readJsonBody } from '../../lib/request';
+import { decodeCursor, encodeCursor, readJsonBody } from '../../lib/request';
+import { toWireCampaign } from '../../lib/campaign-wire';
 
 import { requireStaffRole } from './auth';
 import { warehouseGuard, type WarehouseEnv } from './warehouse';
@@ -69,4 +70,57 @@ sale.post('/on-site', async (c) => {
   });
   const body: z.input<typeof OnSiteSaleResponseSchema> = { status: 'failed' };
   return ok(c, OnSiteSaleResponseSchema.parse(body));
+});
+
+const SaleCatalogQuerySchema = z.object({
+  q: z.string().trim().min(1).max(100).optional(),
+  cursor: z.string().optional(),
+  locale: PreferredLanguageEnum.default('tr'),
+});
+
+/**
+ * **BU DEPODA NE VAR** — satış ekranının listesi.
+ *
+ * Katalog okumasının TA KENDİSİ (`getCatalogData`), yalnız YERİ değişiyor: `place.warehouseId`
+ * personelin o anki deposu. Ayrı bir "araç stoğu" okuması YAZILMADI ve yazılmamalı — depo bazlı
+ * `available_stock` aracı zaten aynen gösteriyor (`available_stock_total` araçları dışlıyor, ama
+ * bu okuma toplamı değil DEPOYU soruyor). İkinci bir okuma, vitrinle satış ekranının aynı ürün
+ * için farklı "tükendi" demesine açık kapı bırakırdı.
+ *
+ * **Kargo deposu bilerek `null`:** yerinde satışta kargo yok, o yüzden "burada yok ama kargoyla
+ * gelir" hâli de yok. Personel elinde olanı satar.
+ *
+ * **`b2c` görüşü:** alıcı anonim, kanal perakende. Toptan kademe kimliğe bağlıdır ve burada kimlik
+ * yok — onaysız şirketin B2C'ye düşmesiyle aynı kural.
+ *
+ * ── BİLİNEN SINIR: KALAN ADET GÖRÜNMÜYOR ────────────────────────────────────
+ * `BEKLEYEN(21.119)` — katalog sözleşmesi `soldOut`/`stockStatus` taşıyor ama **adet taşımıyor** ve
+ * bu müşteri vitrini için doğru bir karar (stok sayısı sızdırmaz). Satış ekranı içinse eksik:
+ * personel "kaç tane var" sorusunu ekrandan okuyamıyor, ancak satmayı deneyince `insufficient_here`
+ * ile öğreniyor. Çare sözleşmeyi genişletmek DEĞİL — o vitrini de etkilerdi; satışa özel bir
+ * okuma alanı gerekiyor ve kararı ekran yazılırken verilecek.
+ */
+sale.get('/catalog', async (c) => {
+  const parsed = SaleCatalogQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) return fail(c, 'invalid_query', 400);
+  const { locale, q } = parsed.data;
+
+  const data = await getCatalogData(serviceDb(), {
+    locale,
+    query: { search: q, cursor: decodeCursor(parsed.data.cursor) },
+    place: { warehouseId: c.get('warehouseId'), shippingWarehouseId: null },
+    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null },
+    limit: DEFAULT_PAGE_SIZE,
+  });
+
+  return ok(
+    c,
+    CatalogPageSchema.parse({
+      products: data.products.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale) ?? undefined })),
+      total: data.total,
+      nextCursor: data.nextCursor ? encodeCursor(data.nextCursor) : null,
+      activeCollection: null,
+      campaign: null,
+    } satisfies z.input<typeof CatalogPageSchema>),
+  );
 });

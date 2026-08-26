@@ -5902,5 +5902,20 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: uç testi **5/5** · `router` **31/31** · sabotaj: rol kümesinden `courier` çıkarılınca
   **üç** test düştü (kuryeye ait olanlar) · `apps/mobile-api` typecheck · lint.
 
+  **BU DEPODA NE VAR — `GET /api/v1/sale/catalog`.** Ayrı bir "araç stoğu" okuması YAZILMADI:
+  katalog okumasının (`getCatalogData`) ta kendisi, yalnız `place.warehouseId` personelin o anki
+  deposu. Depo bazlı `available_stock` aracı zaten aynen gösteriyor. İkinci bir okuma, vitrinle
+  satış ekranının aynı ürün için farklı *"tükendi"* demesine açık kapı bırakırdı. Kargo deposu
+  bilerek `null` (yerinde satışta kargo yok), görüş `b2c` (alıcı anonim, kimlik yok).
+
+  **BİLİNEN SINIR — `BEKLEYEN(21.119)`:** katalog sözleşmesi `soldOut`/`stockStatus` taşıyor ama
+  **kalan ADEDİ taşımıyor**, ve bu müşteri vitrini için doğru bir karar (stok sayısı sızdırmaz).
+  Satış ekranı içinse eksik: personel *"kaç tane var"* sorusunu ekrandan okuyamıyor, ancak satmayı
+  deneyince `insufficient_here` ile öğreniyor. Çare sözleşmeyi genişletmek DEĞİL (vitrini de
+  etkilerdi); satışa özel bir okuma alanı gerekiyor ve kararı ekran yazılırken verilecek.
+
+  Doğrulama (ikinci tur): uç testi **6/6** · `apps/mobile-api` typecheck · lint.
+
   **KALAN:** native ekran (mevcut depo/kurye desenine uyarak çizilecek — kullanıcı onayı 26.08).
+  Ekranın ilk kararı yukarıdaki adet sınırı olacak.
 
