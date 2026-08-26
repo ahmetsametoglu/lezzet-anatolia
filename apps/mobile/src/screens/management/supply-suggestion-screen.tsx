@@ -1,18 +1,24 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
+import type { SupplyGroup } from '@lezzet/types';
 import { managementCopy } from './copy';
-import { SUPPLY_GROUP, UNMAPPED_SUPPLY } from './management-fixture';
+import { supplyGroupKey, useSupply } from './use-supply.hook';
 
 /*
   Y4 · TEDARİK ÖNERİSİ (v2:635-662) — azalan stok listesi ve TASLAK tedarik siparişi.
+
+  ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
+  Öneri `ReorderService`ten (eşik depo bazlı · yoldaki düşülmüş · koli katına yuvarlı); onay
+  taslak TS yazar ve kalem listesi GÖNDERİLMEZ — sunucu öneriyi onay anında tazeler. `no_suggestion`
+  cevabı "ekran bayattı" demektir: liste yeniden okunur, grup kendiliğinden düşer.
 
   ── SİSTEM TEDARİKÇİYE BİR ŞEY GÖNDERMEZ ────────────────────────────────────
   Onay yalnız TASLAĞI kurar; gönderim (WhatsApp/PDF) insanın işidir ve referans (TS-26-…) gönderim
@@ -23,19 +29,14 @@ import { SUPPLY_GROUP, UNMAPPED_SUPPLY } from './management-fixture';
   Tedarikçisi eşlenmemiş varyant listede DURUR ama sipariş açamaz: "göremediğin eksik, sipariş
   edilmeyen eksiktir". Blok sönük değil AÇIK bir cümleyle kapalı — ne yapılacağı da yazıyor
   ("önce masada tedarikçi eşleyin").
-  TASARIMDAN TEK SAPMA: v2 bu bloğu `opacity:.65` ile söndürüyor; ölçekte 0,65 durağı YOK ve ham
-  bir sayı yazmak token disiplinini delerdi (CLAUDE §3). Blok zaten muted/kırmızı metinle sönük
-  okunuyor; durak ihtiyacı raporlandı.
-
-  BAĞLANMA NOKTASI: öneri listesi azalan-stok okumasından, onay ise taslak TS yazma ucundan gelir.
 */
 
 const t = managementCopy;
 
 export function SupplySuggestionScreen() {
   const router = useRouter();
-  const [drafted, setDrafted] = useState(false);
-  const group = SUPPLY_GROUP;
+  const supply = useSupply();
+  const { state } = supply;
 
   return (
     <View style={styles.screen} testID="management-supply-suggestion">
@@ -47,53 +48,133 @@ export function SupplySuggestionScreen() {
         testID="management-supply-suggestion-header"
       />
 
-      <ScrollView contentContainerStyle={styles.body} testID="management-supply-suggestion-body">
-        <View style={styles.group}>
-          <Text style={styles.groupTitle}>
-            {fillCopy(t.supply.group, { supplier: group.supplier, reference: group.reference })}
-          </Text>
-
-          {group.lines.map((line) => (
-            <View key={line.id} style={styles.line} testID={`management-supply-${line.id}`}>
-              <View style={styles.lineHead}>
-                <Text style={styles.lineName}>{line.name}</Text>
-                <Text style={styles.lineSuggested}>{`+${line.suggested}`}</Text>
-              </View>
-              <Text style={styles.lineMeta}>
-                {fillCopy(t.supply.row, {
-                  current: String(line.current),
-                  threshold: String(line.threshold),
-                  lastPurchase: money(line.lastPurchaseCents),
-                })}
-              </Text>
-              {line.elsewhere === undefined ? null : (
-                <Text style={styles.lineElsewhere}>{fillCopy(t.supply.elsewhere, { where: line.elsewhere })}</Text>
-              )}
-            </View>
-          ))}
-
-          <PressableSurface
-            onPress={() => setDrafted(true)}
-            disabled={drafted}
-            feedback="shadow"
-            style={[styles.cta, drafted ? styles.ctaDone : styles.ctaOpen]}
-            accessibilityLabel={drafted ? t.supply.ctaDone : t.supply.cta}
-            testID="management-supply-cta"
-          >
-            <Text style={styles.ctaLabel}>{drafted ? t.supply.ctaDone : t.supply.cta}</Text>
-          </PressableSurface>
-
-          <Text style={styles.note}>{t.supply.note}</Text>
+      {state.status === 'loading' ? (
+        <View style={styles.pending} testID="management-supply-loading">
+          <ActivityIndicator color={operationsTheme.colors.olive} />
         </View>
-
-        <View style={styles.unmapped} testID="management-supply-unmapped">
-          <Text style={styles.unmappedTitle}>
-            {fillCopy(t.supply.unmapped.title, { n: String(UNMAPPED_SUPPLY.variantCount) })}
-          </Text>
-          <Text style={styles.unmappedLine}>{UNMAPPED_SUPPLY.line}</Text>
-          <Text style={styles.unmappedBlocked}>{t.supply.unmapped.blocked}</Text>
+      ) : state.status === 'error' ? (
+        <View style={styles.errorBlock}>
+          <OperationsNoticeBlock
+            variant="error"
+            title={t.common.error.title}
+            description={t.common.error.body}
+            retry={{ label: t.common.error.retry, onPress: supply.retry }}
+            testID="management-supply-error"
+          />
         </View>
-      </ScrollView>
+      ) : state.groups.length === 0 ? (
+        <View style={styles.errorBlock}>
+          <OperationsNoticeBlock
+            variant="empty"
+            title={t.supply.empty.title}
+            description={t.supply.empty.body}
+            testID="management-supply-empty"
+          />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.body} testID="management-supply-suggestion-body">
+          {state.groups
+            .filter((group) => group.supplierId !== null)
+            .map((group) => (
+              <MappedGroup key={supplyGroupKey(group)} group={group} supply={supply} />
+            ))}
+          {state.groups
+            .filter((group) => group.supplierId === null)
+            .map((group) => (
+              <UnmappedGroup key={supplyGroupKey(group)} group={group} />
+            ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+/** Satırın orta cümlesi — son alış yoksa "—": bilinmeyen fiyat sıfır gibi okutulmaz. */
+function lineMeta(line: SupplyGroup['lines'][number]): string {
+  return fillCopy(t.supply.row, {
+    current: String(line.availableQty),
+    threshold: String(line.minStockQty),
+    lastPurchase: line.lastPurchaseCents === null ? t.supply.noPurchase : money(line.lastPurchaseCents),
+  });
+}
+
+interface MappedGroupProps {
+  group: SupplyGroup;
+  supply: ReturnType<typeof useSupply>;
+}
+
+function MappedGroup({ group, supply }: MappedGroupProps) {
+  const key = supplyGroupKey(group);
+  const draft = supply.drafts[key];
+  const label =
+    draft === undefined
+      ? t.supply.cta
+      : draft.status === 'sending'
+        ? t.supply.ctaSending
+        : draft.status === 'stale'
+          ? t.supply.ctaStale
+          : fillCopy(t.supply.ctaDone, { n: String(draft.itemCount) });
+
+  return (
+    <View style={styles.group} testID={`management-supply-group-${key}`}>
+      <Text style={styles.groupTitle}>
+        {fillCopy(t.supply.group, {
+          supplier: group.supplierName ?? '—',
+          warehouse: group.warehouseCode ?? '',
+        })}
+      </Text>
+
+      {group.lines.map((line) => (
+        <View key={line.variantId} style={styles.line} testID={`management-supply-${line.variantId}`}>
+          <View style={styles.lineHead}>
+            <Text style={styles.lineName}>{line.title}</Text>
+            <Text style={styles.lineSuggested}>{`+${line.suggestedQty}`}</Text>
+          </View>
+          <Text style={styles.lineMeta}>{lineMeta(line)}</Text>
+          {line.elsewhere.length === 0 ? null : (
+            <Text style={styles.lineElsewhere}>
+              {fillCopy(t.supply.elsewhere, {
+                where: line.elsewhere.map((spot) => `${spot.warehouseCode} ${spot.qty}`).join(' · '),
+              })}
+            </Text>
+          )}
+        </View>
+      ))}
+
+      <PressableSurface
+        onPress={() => supply.approve(group)}
+        disabled={draft !== undefined && draft.status !== 'stale'}
+        feedback="shadow"
+        style={[styles.cta, draft === undefined || draft.status === 'stale' ? styles.ctaOpen : styles.ctaDone]}
+        accessibilityLabel={label}
+        testID={`management-supply-cta-${key}`}
+      >
+        <Text style={styles.ctaLabel}>{label}</Text>
+      </PressableSurface>
+
+      <Text style={styles.note}>{t.supply.note}</Text>
+    </View>
+  );
+}
+
+interface UnmappedGroupProps {
+  group: SupplyGroup;
+}
+
+function UnmappedGroup({ group }: UnmappedGroupProps) {
+  return (
+    <View style={styles.unmapped} testID="management-supply-unmapped">
+      <Text style={styles.unmappedTitle}>{fillCopy(t.supply.unmapped.title, { n: String(group.lines.length) })}</Text>
+      {group.lines.map((line) => (
+        <Text key={line.variantId} style={styles.unmappedLine}>
+          {fillCopy(t.supply.unmapped.line, {
+            name: line.title,
+            current: String(line.availableQty),
+            threshold: String(line.minStockQty),
+          })}
+        </Text>
+      ))}
+      <Text style={styles.unmappedBlocked}>{t.supply.unmapped.blocked}</Text>
     </View>
   );
 }
@@ -102,6 +183,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
+  },
+  pending: {
+    paddingTop: operationsTheme.space['8xl'],
+    alignItems: 'center',
+  },
+  errorBlock: {
+    paddingTop: operationsTheme.space['7xl'],
+    paddingHorizontal: operationsTheme.space['6xl'],
   },
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],

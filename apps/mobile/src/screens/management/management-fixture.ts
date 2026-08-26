@@ -1,12 +1,11 @@
 /*
-  YÖNETİM KARAR EKRANLARININ VERİSİ — FIXTURE (Y1 · Y2 · Y3 · Y4 · Y6 gövdeleri, v2 birebir).
+  YÖNETİM KARAR EKRANLARININ VERİSİ — FIXTURE (Y1 · Y2 · Y6 gövdeleri, v2 birebir).
 
-  ── KALAN SON PARÇA (21.12 Dilim A sonrası) ─────────────────────────────────
-  Hub'ın karar kutusu, gün özeti ve Para ekranları GERÇEK uca bağlandı ve o fixture'lar silindi
-  (`money-fixture.ts` tamamen; buradan `DECISION_QUEUE` + `DAY_SUMMARY`). Bu dosyada yalnız beş
-  KARAR ekranının gövdesi kaldı — aksiyon uçları (Y1 cevap/üstlen · Y2 karar · Y3 teklif ·
-  Y4 taslak TS · Y6 not) sonraki dilimlerin işi; uç bağlandıkça ilgili blok silinir ve bu dosya
-  en sonunda yok olur.
+  ── KALAN SON PARÇA (21.12 Dilim B sonrası) ─────────────────────────────────
+  Hub, gün özeti, Para, TEKLİF ONAYI (Y3) ve TEDARİK (Y4) gerçek uca bağlandı; fixture'ları
+  silindi. Kalan yalnız Y1 (şikâyet) + Y2 (istisna) + Y6 (niyet) — üçü de talep/mesaj kümesine
+  bağlı ve Dilim C'nin işi (web `lib/ticket` personel yolunun terfisiyle). Uç bağlandıkça ilgili
+  blok silinir ve bu dosya en sonunda yok olur.
 
   ── ETİKET Mİ VERİ Mİ ───────────────────────────────────────────────────────
   Tutar CENT tutulur ve ekranda `money()` ile yazılır — para biçimi yüzeyin kuralıdır, veri değil.
@@ -118,68 +117,6 @@ export const ORDER_EXCEPTION: OrderException = {
     refundCents: 1290,
   },
 };
-
-/* ── Y3 · YAKIN-SKT TEKLİF ONAYI (v2:338-342) ──────────────────────────────── */
-
-interface OfferCandidate {
-  id: string;
-  name: string;
-  batchCode: string;
-  qty: number;
-  /** SKT'ye kalan gün. */
-  days: number;
-  /** Motorun önerdiği teklif fiyatı; operatör düzeltebilir. */
-  suggestedCents: number;
-}
-
-export const OFFER_CANDIDATES: OfferCandidate[] = [
-  { id: 'o1', name: 'Su Böreği · tepsi', batchCode: 'P-0698', qty: 6, days: 2, suggestedCents: 990 },
-  { id: 'o2', name: 'Şöbiyet · 500 g', batchCode: 'P-0703', qty: 9, days: 5, suggestedCents: 720 },
-  { id: 'o3', name: 'Kadayıf · 500 g', batchCode: 'P-0709', qty: 5, days: 4, suggestedCents: 560 },
-];
-
-/* ── Y4 · TEDARİK ÖNERİSİ (v2:354-357) ─────────────────────────────────────── */
-
-interface SupplyLine {
-  id: string;
-  name: string;
-  current: number;
-  threshold: number;
-  /** Önerilen sipariş adedi — yoldaki düşülmüş, koli katına yuvarlanmış (v2:648). */
-  suggested: number;
-  lastPurchaseCents: number;
-  /** Başka depoda duran adet — transfer seçeneğinin HAM verisi, kararı değil. */
-  elsewhere?: string;
-}
-
-interface SupplyGroup {
-  supplier: string;
-  reference: string;
-  lines: SupplyLine[];
-}
-
-export const SUPPLY_GROUP: SupplyGroup = {
-  supplier: 'Gaziantep Gıda',
-  reference: 'TED-04',
-  lines: [
-    {
-      id: 's1',
-      name: 'Fıstıklı Baklava · 1 kg',
-      current: 6,
-      threshold: 20,
-      suggested: 24,
-      lastPurchaseCents: 2140,
-      elsewhere: 'KEHL 14',
-    },
-    { id: 's2', name: 'Su Böreği · tepsi', current: 2, threshold: 10, suggested: 12, lastPurchaseCents: 810 },
-  ],
-};
-
-/** Tedarikçisi eşlenmemiş grup — sipariş AÇILAMAZ, ekranda soluk durur (v2:657-660). */
-export const UNMAPPED_SUPPLY = {
-  variantCount: 1,
-  line: 'Acılı Ezme · 250 g — mevcut 4 · eşik 12 · tedarikçi eşlemesi yok',
-} as const;
 
 /* ── Y6 · WHATSAPP SİPARİŞ NİYETİ (v2:698-714) ─────────────────────────────── */
 

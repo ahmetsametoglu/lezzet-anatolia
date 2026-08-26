@@ -2,7 +2,12 @@
   "common": {
     "back": "Geri",
     "desk": "Masada devam et",
-    "ourTurn": "top bizde"
+    "ourTurn": "top bizde",
+    "error": {
+      "title": "Okuma yüklenemedi",
+      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    }
   },
   "hub": {
     "summary": {
@@ -92,28 +97,49 @@
   },
   "offer": {
     "title": "Yakın-SKT Kampanya Onayı",
-    "caption": "D3 aday listesi · satır çıkarılabilir, fiyat düzeltilebilir",
-    "row": "{batch} · {qty} adet · {days} gün · öneri {suggested}",
+    "caption": "aday listesi motordan · satır çıkarılabilir, fiyat düzeltilebilir",
+    "row": "{batch} · {qty} adet · {days} gün · öneri {suggested}{warehouse}",
+    "noLot": "lotsuz",
+    "noSuggestion": "—",
+    "warehousePart": " · {code}",
     "priceLabel": "{name} teklif fiyatı",
     "remove": "Listeden çıkar",
     "restore": "Listeye geri al",
     "footnote": "Çıkarılan parti aday listesinde kalır — yarınki turda yeniden önerilir.",
     "cta": "{n} partiyi teklife aç",
     "ctaEmpty": "Listede parti kalmadı",
-    "ctaDone": "Teklife açıldı — vitrine düştü ✓"
+    "ctaSending": "Yazılıyor…",
+    "ctaDone": "Teklife açıldı — vitrine düştü ✓",
+    "failed": {
+      "must_discard": "DLC geçmiş — teklif açılamaz, yalnız imha",
+      "not_found": "parti bulunamadı — tükenmiş ya da silinmiş"
+    },
+    "partialNote": "{ok} parti açıldı · {failed} açılamadı — işaretli satırlara bakın.",
+    "empty": {
+      "title": "Aday parti yok",
+      "body": "Yakın-SKT eşiğinin altında, teklifsiz parti kalmadı."
+    }
   },
   "supply": {
     "title": "Tedarik Önerisi",
     "caption": "öneri listesi elle de açılır — bildirim tek kapı değil",
-    "group": "{supplier} · {reference}",
+    "group": "{supplier} · {warehouse}",
     "row": "mevcut {current} · eşik {threshold} · son alış {lastPurchase} · yoldaki düşülmüş, koli katına yuvarlı",
+    "noPurchase": "—",
     "elsewhere": "başka depoda var: {where} — transfer seçeneğinin ham verisi",
     "cta": "Grubu onayla — taslak TS",
-    "ctaDone": "Taslak TS oluşturuldu ✓",
+    "ctaSending": "Yazılıyor…",
+    "ctaDone": "Taslak TS oluşturuldu ✓ · {n} kalem",
+    "ctaStale": "Öneri güncel değilmiş — liste tazelendi",
     "note": "Sistem tedarikçiye bir şey göndermez — metni kurar, gönderim (WhatsApp/PDF) insanın. Referans TS-26-… gönderimde doğar.",
     "unmapped": {
       "title": "Eşlenmemiş grup · {n} varyant",
+      "line": "{name} — mevcut {current} · eşik {threshold} · tedarikçi eşlemesi yok",
       "blocked": "Bu gruptan sipariş açılamaz — önce masada tedarikçi eşleyin."
+    },
+    "empty": {
+      "title": "Eşik altı ürün yok",
+      "body": "Bütün tesislerde stok eşiklerin üstünde — öneri doğmadı."
     }
   },
   "summary": {

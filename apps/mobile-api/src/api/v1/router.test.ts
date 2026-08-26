@@ -71,6 +71,10 @@ const KORUMALI: readonly string[] = [
   '/api/v1/sale/catalog/su-boregi/variants',
   // Yönetim + Para (21.12) — ikisi de salt okuma; kapıları rol ister (admin · accounting+admin).
   '/api/v1/management/hub',
+  '/api/v1/management/offer-candidates',
+  '/api/v1/management/offers',
+  '/api/v1/management/supply',
+  '/api/v1/management/supply/draft',
   '/api/v1/money/overview',
   '/api/v1/money/day-end',
 ];

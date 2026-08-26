@@ -1,12 +1,11 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { SettingsService, StockService, serviceDb } from '@lezzet/database';
-import { offerDecisionOf } from '@lezzet/domain-core';
+import { serviceDb } from '@lezzet/database';
+import { openBatchOffer } from '@lezzet/application';
 import { requireStaff } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
-import { readExpiryThresholds } from './batch-view';
 
 // Teklif yazma yolu — İKİ ekranın ortak eylemi (stok 09.13 · fiyatlar 09.5). Server action'lar
 // kural gereği sayfa klasöründe kolokasyon eder; bu eylem artık tek bir sayfaya ait olmadığı için
@@ -38,38 +37,29 @@ export async function setOfferPriceAction(
   try {
     const staff = await requireStaff();
     const db = serviceDb();
-    const stockSvc = new StockService(db);
-
-    if (offerPriceCents !== null) {
-      if (offerPriceCents <= 0) throw new Error('Teklif fiyatı sıfırdan büyük olmalı.');
-      const [[batch], thresholds] = await Promise.all([
-        stockSvc.getBatchDetails([stockId]),
-        readExpiryThresholds(new SettingsService(db)),
-      ]);
-      if (!batch) throw new Error('Parti bulunamadı — listeyi yenileyin (tükenmiş ya da silinmiş olabilir).');
-      const { decision } = offerDecisionOf({
-        dateType: batch.variant.product.dateType,
-        expiryDate: batch.expiryDate,
-        shelfLifeDays: batch.variant.product.shelfLifeDays,
-        // Açık teklifi YOK SAYARAK sorulur: burada sorulan "teklif var mı" değil, "bu partiye teklif
-        // açılabilir mi". Var olan teklif cevabı `offer_open`'a çevirir ve güncelleme imkânsızlaşırdı.
-        offerPriceCents: null,
-        nearExpiryPercent: thresholds.nearExpiryPercent,
-      });
-      if (decision === 'must_discard') {
-        throw new Error('Son tüketim tarihi (DLC) geçmiş parti satılamaz — teklif açılamaz, yalnız imha edilir.');
-      }
-    }
+    if (offerPriceCents !== null && offerPriceCents <= 0) throw new Error('Teklif fiyatı sıfırdan büyük olmalı.');
 
     /**
      * Öneriden gelindiyse yazma ile kuyruk satırı BİRLİKTE koşar; sıra tek yerde (`withProposal`).
      * `resultOf` künyenin beklediği anahtarı döndürür (`KIND_META.batch_offer.resultKey`), yoksa
      * kuyruk "hangi kayıt doğdu" sorusuna cevap veremezdi.
      */
+    /* Karar + yazım TEK motordan (`openBatchOffer`, 21.12 terfisi): DLC kapısı ve "kapatma her
+       hâlde serbest" kuralı artık mobil Y3 ile aynı satırlarda yaşıyor — buradaki iş cümleye
+       çevirmek. Olumsuz sonuç fırlatılarak `ActionResult` hattına giriyor (eylemin mevcut dili). */
     await withProposal(
       proposalId,
       staff.profileId,
-      () => stockSvc.setOfferPrice(stockId, offerPriceCents),
+      async () => {
+        const outcome = await openBatchOffer(db, { stockId, offerPriceCents });
+        if (outcome.status === 'not_found') {
+          throw new Error('Parti bulunamadı — listeyi yenileyin (tükenmiş ya da silinmiş olabilir).');
+        }
+        if (outcome.status === 'must_discard') {
+          throw new Error('Son tüketim tarihi (DLC) geçmiş parti satılamaz — teklif açılamaz, yalnız imha edilir.');
+        }
+        return outcome.stock;
+      },
       (row) => ({ stockId: row.id }),
     );
     for (const path of OFFER_PATHS) revalidatePath(path);

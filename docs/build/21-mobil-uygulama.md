@@ -476,10 +476,27 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     mobil jest **806/806** (8 yeni ekran testi; sabotaj: sıfır-alan bekçisi kaldırılınca yalnız
     ilgili test düştü) · tsc (types/database/application/mobile-api/mobile/web) · lint · knip'e
     yeni bulgu eklenmedi.
-  **Kalan (sonraki dilimler):** B — Y2/Y3/Y4 karar aksiyonları (`shortfallQuestion` +
-  `adjustFulfillment` hazır; teklif/TS yazımı web `offer-actions`/`purchase-order-actions`
-  terfisiyle) ve okuma detay uçları; C — Y1 şikâyet detayı (web `lib/ticket` staff okuma/yazma
-  terfisi: mobil ikinci tüketici, terfi ölçütü doldu) + Y6 niyet akışı.
+  **Durum (26.08 — DİLİM B: Y3 teklif onayı + Y4 tedarik CANLI, okuma + aksiyon).**
+  · **Y3:** aday listesi raf ömrü motorundan (`listOfferCandidates` — hub'ın saydığı kümenin ta
+    kendisi, `can_offer`); onay `POST /management/offers`, akıbet SATIR SATIR gövdede (200 +
+    `ok|not_found|must_discard`). **DLC kuralı tek motora indi:** `openBatchOffer` terfisi — web
+    `setOfferPriceAction` artık aynı kapıyı çağırıyor (kural iki yüzeyde iki kez yaşamıyor;
+    `withProposal` sarmalı webde aynen durdu). Ekran: fiyat düzeltme + geri alınabilir çıkarma
+    aynen; açılamayan parti satırında İŞARETLİ kalır, onaydan sonra liste TAZE okunur.
+  · **Y4:** öneri `ReorderService`ten adlandırılarak (`listSupplyGroups` — varyant/tedarikçi/depo
+    adları + BAŞKA TESİSTEKİ adet transferin ham verisi olarak); onay `POST /supply/draft` —
+    gövde YALNIZ grup kimliği, kalem listesi gönderilmez: sunucu öneriyi onay anında yeniden
+    hesaplar, `no_suggestion` = "ekran bayattı" cevabı (liste tazelenir). Eşlenmemiş grup CTA
+    çizmez — ölü düğme yasağının kendisi.
+  · KORUMALI 36→40. Doğrulama: uç entegrasyonu **8/8** (aday→onay→DB'de `offer_price`; DLC geçmiş
+    partide yazım YOK; taslak TS satırı + kalemde hedef depo) · mobil jest **812/812** (6 yeni) ·
+    **sabotaj bir SAHTE YEŞİL yakaladı:** "çıkarılan satır gitmez" iddiası fiyatsız satırla
+    kanıtlanıyordu, süzgeç kaldırılınca test yine geçti — satıra önce fiyat yazdırıldı, sabotaj
+    artık yalnız o testi düşürüyor (21.111 dersinin üçüncü tekrarı) · tsc/lint/knip temiz;
+    `apps/web` typecheck temiz (offer-actions refaktörü).
+  **Kalan (Dilim C):** Y1 şikâyet detayı + Y2 istisna kararı + Y6 niyet — üçü talep/mesaj kümesi:
+  web `lib/ticket` personel okuma/yazmasının terfisi önkoşul (mobil ikinci tüketici, terfi ölçütü
+  doldu; `openTicket` Y2'nin "müşteriye sor"unun da kapısı). Üç ekran o güne dek fixture'da.
 - [ ] (21.13) **Push altyapısı:** cihaz token modeli + teslim hattı — web şeridiyle koordineli
   (14 notify sürücüsü; defterden yürür). Kabuktaki bildirim ekranı ve rol süzmesi 21.9'da;
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief

@@ -107,3 +107,113 @@ export const ManagementHubSchema = z.object({
   summary: ManagementSummarySchema,
 });
 export type ManagementHub = z.infer<typeof ManagementHubSchema>;
+
+/* ── Y3 · YAKIN-SKT TEKLİF ONAYI (v2:338-342) ───────────────────────────────── */
+
+/**
+ * Teklif adayı parti — raf ömrü motoru "teklife açılabilir" diyor (`can_offer`) ve parti henüz
+ * teklifte değil. Öneri fiyatı ve indirim yüzdesi AYARDAN türer ve satırla birlikte taşınır
+ * (`batch-view` künyesi): ekran eşiği yeniden okumaz, sabit yazmaz.
+ */
+export const OfferCandidateSchema = z.object({
+  stockId: z.string().uuid(),
+  /** "Fıstıklı Baklava · 1 kg" — dil yedek zinciri sunucuda çözülür (operasyon dili). */
+  title: z.string(),
+  lotNumber: z.string().nullable(),
+  qty: z.number().int().nonnegative(),
+  /** Son tarihe kalan gün — geçmişse negatif (satılabilir pencerede olabilir, motor bilir). */
+  daysLeft: z.number().int(),
+  listPriceCents: z.number().int().nullable(),
+  /** Liste fiyatı yoksa öneri de yok (`null`) — uydurulmaz; operatör fiyatı elle yazar. */
+  suggestedCents: z.number().int().nullable(),
+  offerDiscountPercent: z.number(),
+  /** Partinin durduğu depo; ad çözülemediyse `null` ve ekran depo SÖYLEMEZ (uydurmaz). */
+  warehouse: z.object({ code: z.string(), name: z.string() }).nullable(),
+});
+export type OfferCandidate = z.infer<typeof OfferCandidateSchema>;
+
+export const OfferCandidatesResponseSchema = z.object({
+  candidates: z.array(OfferCandidateSchema),
+});
+export type OfferCandidatesResponse = z.infer<typeof OfferCandidatesResponseSchema>;
+
+/** Onay tek turda birden çok partiyi teklife açar; fiyat operatörün son sözüdür (öneri düzeltilebilir). */
+export const OfferOpenRequestSchema = z.object({
+  items: z
+    .array(z.object({ stockId: z.string().uuid(), offerPriceCents: z.number().int().positive() }))
+    .min(1)
+    .max(50),
+});
+export type OfferOpenRequest = z.infer<typeof OfferOpenRequestSchema>;
+
+/**
+ * Parti başına AKIBET — olumsuzu bir HTTP hatası değil cevaptır (200 + gövde): listede 3 parti
+ * varken biri arada tükendiyse kalan ikisi yine açılır ve operatör hangisinin neden açılmadığını
+ * satır satır görür. `must_discard`: DLC geçmiş — satılamaz, yalnız imha (kapı sunucuda, ekranın
+ * iyi niyetine bırakılmaz — web `offer-actions` ile AYNI motor).
+ */
+export const OfferOpenResultSchema = z.object({
+  stockId: z.string().uuid(),
+  status: z.enum(['ok', 'not_found', 'must_discard']),
+});
+export type OfferOpenResult = z.infer<typeof OfferOpenResultSchema>;
+
+export const OfferOpenResponseSchema = z.object({ results: z.array(OfferOpenResultSchema) });
+export type OfferOpenResponse = z.infer<typeof OfferOpenResponseSchema>;
+
+/* ── Y4 · TEDARİK ÖNERİSİ (v2:354-357) ──────────────────────────────────────── */
+
+/** Başka tesiste duran adet — TRANSFER seçeneğinin ham verisi, kararı değil (v2:648). */
+export const SupplyElsewhereSchema = z.object({
+  warehouseCode: z.string(),
+  qty: z.number().int().positive(),
+});
+export type SupplyElsewhere = z.infer<typeof SupplyElsewhereSchema>;
+
+export const SupplyLineSchema = z.object({
+  variantId: z.string().uuid(),
+  title: z.string(),
+  availableQty: z.number().int(),
+  minStockQty: z.number().int(),
+  /** Yoldaki düşülmüş, koli katına yuvarlı — motorun sözü (`ReorderService` künyesi). */
+  suggestedQty: z.number().int(),
+  incomingQty: z.number().int().nonnegative(),
+  lastPurchaseCents: z.number().int().nullable(),
+  elsewhere: z.array(SupplyElsewhereSchema),
+});
+export type SupplyLine = z.infer<typeof SupplyLineSchema>;
+
+export const SupplyGroupSchema = z.object({
+  /** `null` = tedarikçisi eşlenmemiş grup — sipariş AÇILAMAZ, ekranda soluk durur (v2:657). */
+  supplierId: z.string().uuid().nullable(),
+  supplierName: z.string().nullable(),
+  warehouseId: z.string().uuid(),
+  warehouseCode: z.string().nullable(),
+  lines: z.array(SupplyLineSchema).min(1),
+});
+export type SupplyGroup = z.infer<typeof SupplyGroupSchema>;
+
+export const SupplyResponseSchema = z.object({ groups: z.array(SupplyGroupSchema) });
+export type SupplyResponse = z.infer<typeof SupplyResponseSchema>;
+
+/**
+ * Grup onayı = TASLAK TS. Kalem listesi GÖVDEDE YOK ve bu bilinçli: sunucu öneriyi onay anında
+ * yeniden hesaplar — bayat bir ekranın kalemlerini kayda geçirmek, stoktaki değişikliği yok saymak
+ * olurdu. Sistem tedarikçiye bir şey GÖNDERMEZ (DOMAIN §16); referans gönderimde doğar.
+ */
+export const SupplyDraftRequestSchema = z.object({
+  warehouseId: z.string().uuid(),
+  supplierId: z.string().uuid(),
+});
+export type SupplyDraftRequest = z.infer<typeof SupplyDraftRequestSchema>;
+
+export const SupplyDraftResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    purchaseOrderId: z.string().uuid(),
+    itemCount: z.number().int().positive(),
+  }),
+  /** Onay anında bu tedarikçi için eşik altı kalem kalmamış — ekran bayat; hata değil, cevap. */
+  z.object({ status: z.literal('no_suggestion') }),
+]);
+export type SupplyDraftResponse = z.infer<typeof SupplyDraftResponseSchema>;

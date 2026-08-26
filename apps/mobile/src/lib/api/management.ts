@@ -1,4 +1,17 @@
-import { ManagementHubSchema, type ManagementHub } from '@lezzet/types';
+import {
+  ManagementHubSchema,
+  OfferCandidatesResponseSchema,
+  OfferOpenResponseSchema,
+  SupplyDraftResponseSchema,
+  SupplyResponseSchema,
+  type ManagementHub,
+  type OfferCandidatesResponse,
+  type OfferOpenRequest,
+  type OfferOpenResponse,
+  type SupplyDraftRequest,
+  type SupplyDraftResponse,
+  type SupplyResponse,
+} from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import type { ApiResult } from './client';
@@ -15,4 +28,22 @@ import type { ApiResult } from './client';
 
 export function fetchManagementHub(): Promise<ApiResult<ManagementHub>> {
   return authorizedFetch('/api/v1/management/hub', ManagementHubSchema);
+}
+
+export function fetchOfferCandidates(): Promise<ApiResult<OfferCandidatesResponse>> {
+  return authorizedFetch('/api/v1/management/offer-candidates', OfferCandidatesResponseSchema);
+}
+
+/** Onay: seçili partiler operatörün SON fiyatıyla teklife açılır; akıbet satır satır gövdede. */
+export function openOffers(body: OfferOpenRequest): Promise<ApiResult<OfferOpenResponse>> {
+  return authorizedFetch('/api/v1/management/offers', OfferOpenResponseSchema, { method: 'POST', body });
+}
+
+export function fetchSupplyGroups(): Promise<ApiResult<SupplyResponse>> {
+  return authorizedFetch('/api/v1/management/supply', SupplyResponseSchema);
+}
+
+/** Grup onayı → taslak TS. Kalem listesi GÖNDERİLMEZ — sunucu öneriyi onay anında tazeler (sözleşme künyesi). */
+export function createSupplyDraft(body: SupplyDraftRequest): Promise<ApiResult<SupplyDraftResponse>> {
+  return authorizedFetch('/api/v1/management/supply/draft', SupplyDraftResponseSchema, { method: 'POST', body });
 }

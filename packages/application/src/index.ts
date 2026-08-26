@@ -603,3 +603,5 @@ export { checkoutBlockedAnalyticsReason } from './cart/cart-types';
 // Yönetim + Para bölümleri (21.12) — hub karar kutusu/gün özeti ve salt-okuma para özetleri.
 export { readManagementHub } from './management/hub';
 export { readMoneyDayEnd, readMoneyOverview } from './accounting/money';
+export { listOfferCandidates, openBatchOffer, type OpenBatchOfferOutcome } from './warehouse/offer';
+export { createSupplyDraft, listSupplyGroups } from './warehouse/supply';
