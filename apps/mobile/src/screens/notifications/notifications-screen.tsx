@@ -166,6 +166,7 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
       <View style={styles.row} testID={`notification-row-${row.id}`}>
         <PressableSurface
           feedback="opacity"
+          grow
           style={styles.rowBody}
           onPress={() => {
             feed.markRead(row.id);
@@ -270,8 +271,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors['sand-200'],
   },
+  /** Esneme `grow` prop'unda — stile flex yazınca iç yüzey metni eziyor (pressable-surface
+      künyesi; cihazda ölçüldü 26.08: satır cümleleri görünmez olmuştu). */
   rowBody: {
-    flex: 1,
     gap: theme.space['2xs'],
   },
   rowLine: {
