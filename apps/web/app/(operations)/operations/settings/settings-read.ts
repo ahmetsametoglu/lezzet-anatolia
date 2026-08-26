@@ -1,5 +1,5 @@
 import { isStaff, isOperationRole } from '@lezzet/domain-core';
-import type { Setting, UserProfile, UserRole } from '@lezzet/types';
+import type { Setting, StaffRole, UserProfile, UserRole } from '@lezzet/types';
 import { COUNTRY_OPTIONS } from '@/components/operation/ui/labels';
 import { SETTING_CATALOG, type SettingValue } from './settings-catalog';
 import { formatSettingValue, scopeLabel, STAFF_ROLE_LABELS } from './settings-labels';
@@ -110,7 +110,7 @@ export function toStaffRows(staff: UserProfile[], warehouses: SettingsReadInput[
         email: p.email,
         phone: p.phone,
         roles,
-        roleLabels: roles.map((r) => STAFF_ROLE_LABELS[r as Exclude<UserRole, 'customer'>]),
+        roleLabels: roles.map((r) => STAFF_ROLE_LABELS[r as StaffRole]),
         initials: initialsOf(p.name),
         warehouseIds: p.warehouseIds,
         scopeText: scopeTextOf(roles, p.warehouseIds, codes),

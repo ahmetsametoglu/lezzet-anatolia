@@ -339,6 +339,17 @@ export { suggestPicksForVariant } from './warehouse/preparation';
  */
 export { quickSale } from './order/quick-sale';
 export type { QuickSaleInput, QuickSaleOutcome } from './order/quick-sale';
+
+/**
+ * **YERİNDE SATIŞ** (21.118) — depo kapısı ve kuryenin aracı, tek adımda.
+ *
+ * Fiyat/KDV/indirim/toplam sepet okumasından geliyor (`getCartView`), pazarlık da oraya
+ * (`priceOverrides`) — yani ikinci bir sipariş kuralı yazılmadı (09.8'in dersi). `draft →
+ * completed` kararı BU kapıda durur, `delivery_type` semantiğinde değil: Drive günü geldiğinde
+ * aynı `pickup` değeri tam yoldan geçecek (DATA_MODEL › pickup).
+ */
+export { sellOnSite, ANONYMOUS_BUYER_ID } from './order/on-site-sale';
+export type { OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome } from './order/on-site-sale';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { boxLabelPayload, labelPrinterFor, markBoxPrinted, openBox, sealBox, LABEL_PRINTER_KEYS } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';

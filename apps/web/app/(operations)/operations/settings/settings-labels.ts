@@ -1,5 +1,5 @@
 import { toCents, fromCents } from '@lezzet/helper';
-import type { UserRole } from '@lezzet/types';
+import type { StaffRole } from '@lezzet/types';
 import { money, num } from '@/components/operation/ui/format';
 import type { SettingDef, SettingValue } from './settings-catalog';
 import type { ExceptionScope } from './settings-types';
@@ -27,7 +27,7 @@ export const SCOPE_AXIS_LABELS: Record<ExceptionScope, string> = {
   warehouse: 'Depo',
 };
 
-export const STAFF_ROLE_LABELS: Record<Exclude<UserRole, 'customer'>, string> = {
+export const STAFF_ROLE_LABELS: Record<StaffRole, string> = {
   admin: 'Yönetici',
   warehouse: 'Depo sorumlusu',
   courier: 'Kurye',
@@ -35,7 +35,7 @@ export const STAFF_ROLE_LABELS: Record<Exclude<UserRole, 'customer'>, string> = 
 };
 
 /** Rolün ne GÖRDÜĞÜ sabittir — pencere bunu yazar ki atama bir tahmin olmasın (`admin-ayarlar.md §6`). */
-export const STAFF_ROLE_HELP: Record<Exclude<UserRole, 'customer'>, string> = {
+export const STAFF_ROLE_HELP: Record<StaffRole, string> = {
   admin: 'Her ekranı görür; ayarları ve kullanıcıları yönetir.',
   warehouse: 'Stok, mal kabul, hazırlık ve transferi görür. Fiyat ve marj görmez.',
   courier: 'Yalnız kendi teslimatını görür; müşteri listesine ve fiyata erişmez.',

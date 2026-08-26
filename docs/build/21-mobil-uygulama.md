@@ -5806,3 +5806,56 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   birim paketi **1526/1526** · `packages/application` + `apps/web` + `apps/mobile-api` typecheck ·
   lint temiz.
 
+- [~] (21.119) **YERİNDE SATIŞ KAPISI YAZILDI — depo kapısı ve kuryenin aracı tek kapıdan satıyor**
+  · touches: `packages/application/src/order/on-site-sale.ts`, `packages/application/src/index.ts`
+
+  `sellOnSite(db, input)` — personelin O ANKİ deposundan (tesis **ya da araç**) tek adımda satış:
+  sepet okuması → taslak sipariş → `quickSale`. `DOMAIN §17`: *"Admin yerinde satış yapmaz — satan
+  kişi, malın yanında duran personeldir."*
+
+  **İKİNCİ BİR SİPARİŞ KURALI YAZILMADI (09.8'in dersi).** Fiyat, KDV, indirim ve toplam
+  `getCartView`ten geliyor — müşterinin gördüğü sayıyı üreten motorun ta kendisi. Pazarlık da oraya
+  giriyor (`priceOverrides`); o alanın künyesi zaten *"yalnız personel yolundan dolar (elle sipariş
+  girişi, **yerinde satış**)"* diyordu, yani web şeridi bu kapıyı öngörmüş.
+
+  **AMA `createCheckoutDraft` KULLANILMADI ve bu bilinçli.** O kapı **adresten çözülen** akıştır —
+  dönüş tipi bile `AddressDeliveryType`, yani `pickup` HARİÇ. Yerinde satışta adres, bölge, gün ve
+  kargo ücreti yok; dördü de `pickup`ın tanımı gereği anlamsız (`resolveShippingFee` `pickup`
+  ALMAZ: cevabı "0" değil, sorunun kendisi geçersiz). Adres yolunu zorlamak, dar kümenin taşıdığı
+  kararı sessizce delmek olurdu.
+
+  **`draft → completed` KARARI BU KAPIDA DURUR**, `delivery_type` semantiğinde değil — Drive'ın
+  önünü açık tutmanın birinci şartı buydu (`DATA_MODEL` › `pickup`). Aynı `pickup` değeri yarın tam
+  yoldan geçecek: ayırır → hazırlar → teslimde tüketir.
+
+  **`order_source='door'` ilk kez yazılıyor** — enum değeri tanımlıydı, yazan yolu yoktu.
+
+  **Testte ölçülen bir kısıt:** kurye/depocu **kapsamsız olamıyor**
+  (`user_profiles_warehouse_scope`: boş dizi "hiçbir depo" demek, kapı fail-closed kapanır). Yani
+  araçtan satacak kuryenin kapsamına aracın deposu girmeli — ekran tarafının bileceği bir şey.
+
+  Doğrulama: **6/6** (DB'ye vuruyor) · **iki sabotaj, her biri TAM BİR testi düşürdü**: pazarlık
+  sepet okumasına geçirilmeyince toplam listeden çıktı; anonim alıcıya `customer` rolü verilince
+  müşteri listesinde belirdi · beş paketin typecheck'i · lint · birim **1526/1526** · `docs:check`.
+
+  **ANONİM ALICI YAZILDI VE KOŞTU** (kullanıcı `db:refresh` izni 26.08). Sipariş sahipsiz olamıyor
+  (`order.customer_id not null`) ama kimlik de sorulmuyor — `0001` sabit kimlikli tek satır açıyor:
+  `roles = {system}`, `id = …d001`. **Rol bir yetki değil, bir beyandır:** *"bu satır bir kişi
+  değil."* Hiçbir guard'a uymuyor ve müşteri okumaları `roles @> {customer}` ile süzüldüğü için
+  (`CUSTOMERS_ONLY`, beş yerde) hepsinden **kendiliğinden düşüyor** — hiçbir sorgunun yeni bir kural
+  hatırlaması gerekmedi. Ölçüldü: 9 müşteri, 1 sistem; liste anonim satırı hiç görmüyor.
+
+  **Elenen alternatifler kayda geçiyor:** sefer/gün başına ayrı kayıt (sorun birikme değil GÖRÜNME —
+  o kayıtlar da müşteri olarak sayılırdı, *"500 müşterimiz var"* demek *"müşterisi bilinmiyor"*
+  demekten daha yanlış), rolsüz satır (kısıt reddediyor), personel rolü (kapı AÇARDI), ayrı bayrak
+  (her müşteri sorgusuna ikinci koşul — ekleyeni unutan ilk sorgu anonimi müşteri sayardı).
+
+  **VE ENUM GENİŞLEMESİ BİR DUPLİKASYONU AÇIĞA ÇIKARDI.** `system` eklenince web'de üç yerde elle
+  yazılmış `Exclude<UserRole, 'customer'>` kırıldı — derleme durdurduğu için kimse yanlış etiketle
+  karşılaşmadı. Tek ada toplandı: **`StaffRoleEnum = UserRoleEnum.exclude(['customer', 'system'])`**
+  (`packages/types`). İki değer de personel değil ama ayrı sebeple: biri müşteri ekseni, öteki bir
+  kişi bile değil. Sonraki rol de aynı kapıdan geçecek (CLAUDE §1).
+
+  **KALAN:** *(a)* `apps/mobile-api` ucu; *(b)* native ekran (mevcut depo/kurye desenine uyarak
+  çizilecek — kullanıcı onayı 26.08).
+

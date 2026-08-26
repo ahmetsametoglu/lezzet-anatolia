@@ -5,7 +5,18 @@
 -- Erişim modeli: tüm okuma/yazma sunucudan service_role ile; RLS deny-by-default (savunma katmanı).
 
 -- Roller. `customer` MÜŞTERİ eksenidir, diğerleri OPERASYON rolleridir (bkz. aşağıdaki kısıt).
-create type user_role as enum ('customer', 'admin', 'warehouse', 'courier', 'accounting');
+--
+-- `system` BİR YETKİ DEĞİL, BİR BEYANDIR (26.08 · yerinde satış): *"bu satır bir kişi değil."*
+-- Hiçbir kapı açmaz — guard'lar `admin`/`warehouse`/`courier`/`accounting` arar, bu rol hiçbirine
+-- uymaz. Var oluş sebebi tek bir soruya doğru cevap vermek: **müşteri listesi ve sayaçları
+-- `roles @> {customer}` ile süzülüyor** (`UserProfileService.CUSTOMERS_ONLY`, beş yerde), yani bu
+-- rolü taşıyan satır hepsinden KENDİLİĞİNDEN düşer — hiçbir sorgunun yeni bir kuralı hatırlaması
+-- gerekmiyor.
+--
+-- Alternatifleri elendi: rolsüz satır kısıt yüzünden yazılamıyor (`roles_not_empty`), personel
+-- rolü vermek kapı AÇARDI, ayrı bir bayrak ise her müşteri sorgusuna ikinci bir koşul eklemek
+-- olurdu — ve ekleyeni unutan ilk sorgu anonim satırı müşteri sayardı.
+create type user_role as enum ('customer', 'admin', 'warehouse', 'courier', 'accounting', 'system');
 create type customer_type as enum ('individual', 'company');
 create type preferred_language as enum ('tr', 'fr', 'de');
 create type country_code as enum ('FR', 'DE');
@@ -65,6 +76,25 @@ alter table public.user_profiles add constraint user_profiles_roles_exclusive
 create index user_profiles_roles_idx on public.user_profiles using gin (roles);
 
 -- RLS deny-by-default: politika tanımlanmadıkça anon/authenticated satır göremez; erişim service_role ile.
+-- ── YERİNDE SATIŞIN ANONİM ALICISI (26.08 · kullanıcı kararı) ───────────────
+-- Sipariş SAHİPSİZ olamaz (`order.customer_id not null`) ama yerinde satışta **kimlik sorulmaz** —
+-- ve bu bir ihmal değil, karardır: `customer_phone` künyesi *"operatörün elle yazdığı numara buraya
+-- YAZILMAZ, klavyeden geçmek kanıt değildir"* diyor. Kurye bir e-posta yazsaydı daha kötüsü olurdu:
+-- aşağıdaki kayıt tetikleyicisi taslağı E-POSTAYLA sahipleniyor ve koşulunda `is_draft` YOK, yani
+-- yanlış yazılan bir adresin gerçek sahibi bir gün tanımadığı bir satın alma geçmişini devralırdı.
+-- Kullanıcının cümlesi: *"onaylanmamış mail ile geçmiş miras alınamaz; geçmişini önemseyen hesap açsın."*
+--
+-- TEK SATIR, ÇOĞALTILMAZ. Sefer/gün başına ayrı kayıt açmak düşünüldü ve elendi: sorun birikme
+-- değil GÖRÜNME. O kayıtlar da `customer` rolüyle doğar, listede satır olur, "birleştirme adayı"
+-- sanılır — tek satırın 500 siparişi yerine 500 satırın birer siparişi olurdu ve "500 müşterimiz
+-- var" demek "müşterisi bilinmiyor" demekten daha yanlıştır.
+--
+-- SABİT KİMLİK, ARAMA DEĞİL: id sabit olduğu için "bul-veya-oluştur" yarışı hiç doğmuyor.
+-- `on conflict do nothing` — migration yeniden koşarsa ikinci satır yazılmaz.
+insert into public.user_profiles (id, name, roles, is_draft)
+values ('00000000-0000-4000-8000-00000000d001', 'Yerinde satış (anonim)', array['system']::user_role[], false)
+on conflict (id) do nothing;
+
 alter table public.user_profiles enable row level security;
 
 -- ============================================================================

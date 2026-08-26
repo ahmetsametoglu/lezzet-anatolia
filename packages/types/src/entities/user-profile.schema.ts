@@ -71,7 +71,28 @@ export type NotificationKind = z.infer<typeof NotificationKindEnum>;
 export const MarketingChannelEnum = MarketingConsentSchema.keyof();
 export type MarketingChannel = z.infer<typeof MarketingChannelEnum>;
 
-export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier', 'accounting']);
+/**
+ * `system` BİR YETKİ DEĞİL, BİR BEYANDIR (26.08 · yerinde satış): *"bu satır bir kişi değil."*
+ * Hiçbir guard'a uymaz. Var oluş sebebi müşteri okumalarının dışında kalmak — liste ve sayaçlar
+ * `roles @> {customer}` ile süzülüyor, yani bu rolü taşıyan satır hepsinden kendiliğinden düşer.
+ * Gerekçenin tamamı `0001_auth_user_profiles.sql` künyesinde.
+ */
+export const UserRoleEnum = z.enum(['customer', 'admin', 'warehouse', 'courier', 'accounting', 'system']);
+
+/**
+ * **PERSONEL ROLÜ** — atanabilir, ekran gösterir, kapı açar.
+ *
+ * `UserRole`ün iki değeri personel DEĞİLDİR ve ikisi ayrı sebeple dışarıda: `customer` müşteri
+ * eksenidir (kısıt zaten tek başına durmasını şart koşuyor), `system` ise bir kişi bile değildir
+ * (yerinde satışın anonim alıcısı, 26.08).
+ *
+ * **Türetilmiş olması bir kolaylık değil, koruma:** rol listesi üç yerde `Exclude<UserRole,
+ * 'customer'>` diye elle yazılıydı ve `system` eklenince üçü birden kırıldı — derleme durdurduğu
+ * için kimse yanlış bir etiketle karşılaşmadı. Tek adla toplanınca sonraki rol de aynı kapıdan
+ * geçecek (CLAUDE §1: bir bilgi tek yerde yaşar).
+ */
+export const StaffRoleEnum = UserRoleEnum.exclude(['customer', 'system']);
+export type StaffRole = z.infer<typeof StaffRoleEnum>;
 export type UserRole = z.infer<typeof UserRoleEnum>;
 
 /**
