@@ -73,6 +73,10 @@
       "network": "Bağlantı yok — sefer başlatılamadı. Bağlantı gelince tekrar deneyin.",
       "retry": "Kalanları yola çıkar"
     },
+    "sale": {
+      "label": "Yoldan gelen müşteri",
+      "cta": "Yerinde satış"
+    },
     "boxes": {
       "counter": "{loaded}/{total} kutu araçta",
       "scanCta": "📷 Kutu yükle",

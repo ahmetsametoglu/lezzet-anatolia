@@ -50,7 +50,9 @@ describe('operationsSectionsOf', () => {
     // Kaynak `UserRoleEnum`; elle yazılmış bir rol listesi bir gün şemadan ayrışırdı.
     const sectionsByRole = UserRoleEnum.options.map((role) => operationsSectionsOf([role]));
     expect(sectionsByRole.filter((sections) => sections.length === 1)).toHaveLength(OPERATIONS_SECTIONS.length);
-    expect(sectionsByRole.filter((sections) => sections.length === 0)).toHaveLength(1);
+    // Bölümsüz İKİ rol var ve ikisi de bilinçli: `customer` (operasyon yüzeyine girmez) ve
+    // `system` (yerinde satışın anonim alıcısı, 21.119 — oturum açamaz).
+    expect(sectionsByRole.filter((sections) => sections.length === 0)).toHaveLength(2);
   });
 });
 

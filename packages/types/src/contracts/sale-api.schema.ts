@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PaymentMethodEnum } from '../primitives/enums.schema';
+import { CatalogProductSchema, CatalogVariantSchema } from './catalog-api.schema';
 
 /**
  * **YERİNDE SATIŞ SÖZLEŞMESİ** (21.119 · `DOMAIN §17`) — depo kapısı ve kuryenin aracı.
@@ -64,3 +65,57 @@ export const OnSiteSaleResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('failed') }),
 ]);
 export type OnSiteSaleResponse = z.infer<typeof OnSiteSaleResponseSchema>;
+
+/* ────────────────────────────────────────────────────────────────────────────
+   SATIŞ KATALOĞU — vitrinin okuması, satışın ihtiyacıyla (21.119)
+   ──────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * Satış kartı = katalog kartı + **bu depoda kalan adet**.
+ *
+ * Vitrin sözleşmesi adet TAŞIMAZ ve taşımamalı (stok sayısı müşteriye sızdırılmaz — `soldOut`
+ * yeter). Satış ekranındaki kişi ise personeldir ve müşterinin yüzüne karşı "kaç tane var"
+ * sorusuna cevap vermek zorundadır; adet olmadan bunu ancak satmayı DENEYEREK öğrenirdi
+ * (`insufficient_here`). Alan bu yüzden vitrine değil, yalnız satış ucuna eklendi — türetme
+ * `extend` ile: kartın geri kalanı vitrinle AYNI kaynaktan gelir, ikinci bir kart şekli yoktur.
+ */
+export const SaleCatalogProductSchema = CatalogProductSchema.extend({
+  /**
+   * Bu depoda satılabilir adet (rezervasyonlar düşülmüş) — `variantId`nin stoğu.
+   * **`null` = satılacak birim yok** (aktif boy yok); `0` ise "var ama bitti" demektir. İkisi
+   * aynı kefeye konmaz: biri katalog sorunudur, öteki stok.
+   */
+  availableHere: z.number().int().nullable(),
+});
+export type SaleCatalogProduct = z.infer<typeof SaleCatalogProductSchema>;
+
+/**
+ * Sayfa zarfı — `CatalogPageSchema`nın satışa inen kesiti. `activeCollection`/`campaign` yuvası
+ * BİLEREK yok: onlar vitrinin kesit başlığıdır, satış ekranının başlığı depodur.
+ */
+export const SaleCatalogPageSchema = z.object({
+  products: z.array(SaleCatalogProductSchema),
+  total: z.number().int(),
+  nextCursor: z.string().nullable(),
+});
+export type SaleCatalogPage = z.infer<typeof SaleCatalogPageSchema>;
+
+/** Boy satırı = detayın boy kartı + kalan adet (kartla aynı gerekçe). */
+export const SaleVariantSchema = CatalogVariantSchema.extend({
+  availableHere: z.number().int(),
+});
+export type SaleVariant = z.infer<typeof SaleVariantSchema>;
+
+/**
+ * **Çok boylu ürünün çekmecesi** — `GET /sale/catalog/:slug/variants`.
+ *
+ * Liste kartı tek boy taşır (`variantId` = ilk aktif boy); boy SEÇİMİ detayın işidir ve satışta
+ * o "detay" bir çekmecedir. Kaynak `getProductDetail`in ta kendisi (yer = personelin deposu) —
+ * fiyat/indirim/stok kararları vitrinle aynı motordan çıkar, ekran ikinci bir fiyat yolu bilmez.
+ */
+export const SaleVariantsResponseSchema = z.object({
+  productId: z.string().uuid(),
+  name: z.string(),
+  variants: z.array(SaleVariantSchema),
+});
+export type SaleVariantsResponse = z.infer<typeof SaleVariantsResponseSchema>;

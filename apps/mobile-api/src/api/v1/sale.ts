@@ -1,8 +1,15 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { serviceDb } from '@lezzet/database';
-import { ANONYMOUS_BUYER_ID, getCatalogData, sellOnSite } from '@lezzet/application';
-import { CatalogPageSchema, DEFAULT_PAGE_SIZE, OnSiteSaleRequestSchema, OnSiteSaleResponseSchema, PreferredLanguageEnum } from '@lezzet/types';
+import { StockService, serviceDb } from '@lezzet/database';
+import { ANONYMOUS_BUYER_ID, getCatalogData, getProductDetail, sellOnSite } from '@lezzet/application';
+import {
+  DEFAULT_PAGE_SIZE,
+  OnSiteSaleRequestSchema,
+  OnSiteSaleResponseSchema,
+  PreferredLanguageEnum,
+  SaleCatalogPageSchema,
+  SaleVariantsResponseSchema,
+} from '@lezzet/types';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor, readJsonBody } from '../../lib/request';
@@ -93,19 +100,21 @@ const SaleCatalogQuerySchema = z.object({
  * **`b2c` görüşü:** alıcı anonim, kanal perakende. Toptan kademe kimliğe bağlıdır ve burada kimlik
  * yok — onaysız şirketin B2C'ye düşmesiyle aynı kural.
  *
- * ── BİLİNEN SINIR: KALAN ADET GÖRÜNMÜYOR ────────────────────────────────────
- * `BEKLEYEN(21.119)` — katalog sözleşmesi `soldOut`/`stockStatus` taşıyor ama **adet taşımıyor** ve
- * bu müşteri vitrini için doğru bir karar (stok sayısı sızdırmaz). Satış ekranı içinse eksik:
- * personel "kaç tane var" sorusunu ekrandan okuyamıyor, ancak satmayı deneyince `insufficient_here`
- * ile öğreniyor. Çare sözleşmeyi genişletmek DEĞİL — o vitrini de etkilerdi; satışa özel bir
- * okuma alanı gerekiyor ve kararı ekran yazılırken verilecek.
+ * ── KALAN ADET SATIŞA ÖZEL ALANDAN GELİR (21.119, BEKLEYEN kapandı) ─────────
+ * Katalog sözleşmesi adet TAŞIMAZ ve taşımamalı (müşteriye stok sayısı sızdırılmaz — `soldOut`
+ * yeter). Personelin ihtiyacı farklı: müşterinin yüzüne "kaç tane var" diyebilmek. Cevap vitrin
+ * sözleşmesini genişletmek değil, satış zarfına alan eklemek oldu (`SaleCatalogProductSchema.
+ * availableHere`) — kaynağı `getAvailableMap`, yani sepet doğrulamasının okuduğu görünümün
+ * TA KENDİSİ. İkinci bir stok gerçeği yok: ekranın gösterdiği sayı ile satışın reddettiği sayı
+ * aynı satırdan çıkıyor.
  */
 sale.get('/catalog', async (c) => {
   const parsed = SaleCatalogQuerySchema.safeParse(c.req.query());
   if (!parsed.success) return fail(c, 'invalid_query', 400);
   const { locale, q } = parsed.data;
 
-  const data = await getCatalogData(serviceDb(), {
+  const db = serviceDb();
+  const data = await getCatalogData(db, {
     locale,
     query: { search: q, cursor: decodeCursor(parsed.data.cursor) },
     place: { warehouseId: c.get('warehouseId'), shippingWarehouseId: null },
@@ -113,14 +122,59 @@ sale.get('/catalog', async (c) => {
     limit: DEFAULT_PAGE_SIZE,
   });
 
+  // Sayfanın satılabilir boyları TEK sorguda — kart başına ayrı okuma N+1 doğururdu. `variantId`
+  // olmayan kartın stoğu SORULMAZ: cevabı `null`dur ("satılacak birim yok"), `0` değil.
+  const variantIds = data.products.map((p) => p.variantId).filter((id): id is string => id !== null);
+  const available = await new StockService(db).getAvailableMap(c.get('warehouseId'), variantIds);
+
   return ok(
     c,
-    CatalogPageSchema.parse({
-      products: data.products.map((p) => ({ ...p, campaign: toWireCampaign(p.campaign, locale) ?? undefined })),
+    SaleCatalogPageSchema.parse({
+      products: data.products.map((p) => ({
+        ...p,
+        campaign: toWireCampaign(p.campaign, locale) ?? undefined,
+        availableHere: p.variantId === null ? null : (available.get(p.variantId)?.availableQty ?? 0),
+      })),
       total: data.total,
       nextCursor: data.nextCursor ? encodeCursor(data.nextCursor) : null,
-      activeCollection: null,
-      campaign: null,
-    } satisfies z.input<typeof CatalogPageSchema>),
+    } satisfies z.input<typeof SaleCatalogPageSchema>),
+  );
+});
+
+/**
+ * **Çok boylu ürünün boy çekmecesi** — kartta tek boy taşınır (vitrinle aynı karar), seçim burada.
+ *
+ * Kaynak `getProductDetail`in ta kendisi (yer = personelin deposu, görüş `b2c`): fiyat, indirim ve
+ * `soldOut` vitrinle aynı motordan çıkar. Buraya ikinci bir fiyat yolu yazılsaydı, çekmece ile
+ * satışın faturası bir gün ayrışırdı. Kalan adet katalogla aynı gerekçeyle ekleniyor (üst künye).
+ */
+sale.get('/catalog/:slug/variants', async (c) => {
+  const locale = PreferredLanguageEnum.default('tr').safeParse(c.req.query('locale') ?? undefined);
+  if (!locale.success) return fail(c, 'invalid_locale', 400);
+
+  const db = serviceDb();
+  const detail = await getProductDetail(db, {
+    locale: locale.data,
+    slug: c.req.param('slug'),
+    place: { warehouseId: c.get('warehouseId'), shippingWarehouseId: null },
+    viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null },
+  });
+  if (!detail) return fail(c, 'product_not_found', 404);
+
+  const available = await new StockService(db).getAvailableMap(
+    c.get('warehouseId'),
+    detail.variants.map((v) => v.id),
+  );
+
+  return ok(
+    c,
+    SaleVariantsResponseSchema.parse({
+      productId: detail.id,
+      name: detail.name,
+      variants: detail.variants.map((v) => ({
+        ...v,
+        availableHere: available.get(v.id)?.availableQty ?? 0,
+      })),
+    } satisfies z.input<typeof SaleVariantsResponseSchema>),
   );
 });

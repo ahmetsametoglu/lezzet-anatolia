@@ -451,6 +451,10 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   (14 notify sürücüsü; defterden yürür). Kabuktaki bildirim ekranı ve rol süzmesi 21.9'da;
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief
   kuralı) — her listeye elle giden yol push'suz da çalışır.
+  *(Bu hatta asılı kamera kanıtı için zemin DEĞİŞTİ — denetim gözlemi 23.08: `expo-camera` artık
+  dev-client'ta KURULU (modül 23 kutu QR'ı için girdi, 23.4'te cihazda ölçüldü). Teslim ekranının
+  "kamera modülü kurulu değil" açıklaması bayat; kalan iş modül kurmak değil, foto kanıtını aynı
+  yükleme kapısına BAĞLAMAK.)*
   `touches: apps/mobile, apps/mobile-api, packages/database (token modeli — talep gerekebilir)`
 
   **Durum (09.08):** modül sıraya alındı (kullanıcı kararı) ve **kalıcı defteri açıldı**:
@@ -5811,7 +5815,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   birim paketi **1526/1526** · `packages/application` + `apps/web` + `apps/mobile-api` typecheck ·
   lint temiz.
 
-- [~] (21.119) **YERİNDE SATIŞ KAPISI YAZILDI — depo kapısı ve kuryenin aracı tek kapıdan satıyor**
+- [x] (21.119) **YERİNDE SATIŞ TAMAM — depo kapısı ve kuryenin aracı tek kapıdan, tek ekrandan satıyor**
   · touches: `packages/application/src/order/on-site-sale.ts`, `packages/application/src/index.ts`
 
   `sellOnSite(db, input)` — personelin O ANKİ deposundan (tesis **ya da araç**) tek adımda satış:
@@ -5908,14 +5912,31 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   satış ekranının aynı ürün için farklı *"tükendi"* demesine açık kapı bırakırdı. Kargo deposu
   bilerek `null` (yerinde satışta kargo yok), görüş `b2c` (alıcı anonim, kimlik yok).
 
-  **BİLİNEN SINIR — `BEKLEYEN(21.119)`:** katalog sözleşmesi `soldOut`/`stockStatus` taşıyor ama
-  **kalan ADEDİ taşımıyor**, ve bu müşteri vitrini için doğru bir karar (stok sayısı sızdırmaz).
-  Satış ekranı içinse eksik: personel *"kaç tane var"* sorusunu ekrandan okuyamıyor, ancak satmayı
-  deneyince `insufficient_here` ile öğreniyor. Çare sözleşmeyi genişletmek DEĞİL (vitrini de
-  etkilerdi); satışa özel bir okuma alanı gerekiyor ve kararı ekran yazılırken verilecek.
+  **KALAN ADET SINIRI KAPANDI (26.08 — eski `BEKLEYEN` buradaydı).** Katalog sözleşmesi kalan adedi
+  bilerek taşımıyordu (müşteriye stok sayısı sızdırılmaz); personelin *"kaç tane var"* sorusu ise
+  cevapsızdı. Çözüm vitrine dokunmadı: satış zarfı ayrı (`SaleCatalogProductSchema.availableHere`
+  — `CatalogProductSchema.extend`, ikinci bir kart şekli YOK), kaynağı `getAvailableMap`, yani
+  sepet doğrulamasının okuduğu görünümün ta kendisi. Çok boylu ürün için ikinci uç:
+  `GET /sale/catalog/:slug/variants` — `getProductDetail`in kendisi (yer = personelin deposu), boy
+  başına fiyat + kalan. Ölçüldü: aynı ürün için kurye ARACIN sayısını (4), depocu TESİSİN sayısını
+  (9) görüyor — sayı ekranda, karar sunucuda.
 
-  Doğrulama (ikinci tur): uç testi **6/6** · `apps/mobile-api` typecheck · lint.
+  **NATIVE EKRAN YAZILDI — `/sale`, tek ekran iki bölümden** (kullanıcı onayı 26.08: *"mevcut
+  desene uyarak kendimiz hazırlayalım"*). Depo hub'ına D7 satırı, kurye gününe sabit şerit eklendi;
+  ikisi de aynı rotaya gider çünkü satan kişi malın yanındaki personeldir ve depoyu sunucu künyeden
+  çözer — ekran depo SORMAZ. Akış mal kabulün çekmece deseni: ara → karta dokun → (çok boyluda boy
+  seç) → `OperationsQtySlider` ile adet → fiyat alanı → sepet → nakit/kart → tek CTA.
+  `apps/mobile/src/screens/sale/` (ekran + hook + sözlük + test) · `lib/api/sale.ts` (istemci).
 
-  **KALAN:** native ekran (mevcut depo/kurye desenine uyarak çizilecek — kullanıcı onayı 26.08).
-  Ekranın ilk kararı yukarıdaki adet sınırı olacak.
+  Ekranın çivilenen kararları: **pazarlık yalnız DOKUNULAN kalemde gider** (alan liste fiyatıyla
+  açılır; değişmediyse istekte hiç yoktur — fiyatı sunucu çözer); **ara toplam GÖSTERGEDİR**,
+  kesin toplam (indirim/KDV) cevaptan okunur ve sözlük bunu söyler; **adet kalanı aşınca çekmece
+  onaylatmaz** ama bu ön kibarlıktır — gerçek kapı `insufficient_here`dir ve o cevap sepeti
+  BOZMADAN adı+kalanıyla gösterilir; **kasa ayarsız satışta** (`paymentRecorded: false`) başarı
+  cümlesi yerine "para deftere geçmedi" uyarısı basılır — CLAUDE §0 pansuman kuralının ekrandaki
+  hâli. `system` rolü kabuğun rol→bölüm haritasına `null` olarak işlendi (bölüm doğurmaz).
+
+  Doğrulama (üçüncü tur): uç testi **8/8** (kalan adet iki personel gözünden) · `router` **33/33**
+  · ekran testi **6/6** (jest) · sabotaj: "pazarlık her kaleme gönderilsin" yapılınca tel-şekil
+  testlerinin İKİSİ düştü, geri alınınca yeşil · mobil paket **793/793** · iki typecheck · lint.
 

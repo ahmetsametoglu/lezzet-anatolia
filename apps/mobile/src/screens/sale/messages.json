@@ -1,0 +1,67 @@
+{
+  "title": "Yerinde Satış",
+  "subtitle": "kapıya gelen müşteri · anonim satış",
+  "back": "geri",
+  "loading": "Katalog yükleniyor…",
+  "error": {
+    "title": "Katalog yüklenemedi",
+    "body": "Bağlantı ya da sunucu sorunu — hiçbir satış yazılmadı."
+  },
+  "retry": "Tekrar dene",
+  "searchPlaceholder": "Ürün adıyla ara",
+  "searchEmpty": "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin.",
+  "loadMore": "Daha fazla göster",
+  "card": {
+    "remaining": "kalan {n}",
+    "soldOut": "tükendi",
+    "noUnit": "satılacak boy yok",
+    "options": "{n} boy — dokun, seç"
+  },
+  "drawer": {
+    "title": "Sepete ekle",
+    "variantsLoading": "Boylar yükleniyor…",
+    "variantsError": "Boylar okunamadı — kapatıp yeniden deneyin.",
+    "variantHeading": "BOY SEÇ",
+    "variantMeta": "{label} · {price} · kalan {n}",
+    "variantMetaClosed": "{label} · satışa kapalı",
+    "qty": "Satılan adet",
+    "qtyIncrease": "adedi artır",
+    "qtyDecrease": "adedi azalt",
+    "overStock": "Bu depoda kalan {n} — daha fazlası tek satışta yazılamaz.",
+    "priceHeading": "BİRİM FİYAT",
+    "priceHint": "Liste {price}. Değiştirirseniz pazarlık fiyatı olarak, kim yazdıysa onun izinde kaydedilir.",
+    "priceField": "birim fiyat (euro)",
+    "invalidPrice": "Fiyat okunamadı — virgülle yazın (ör. 4,50).",
+    "confirm": "Sepete ekle"
+  },
+  "cart": {
+    "heading": "SATIŞ SEPETİ",
+    "empty": "Henüz kalem yok — listeden ürün seçin.",
+    "line": "{qty} × {price}",
+    "negotiated": "pazarlık",
+    "remove": "{name} kalemini çıkar",
+    "removeMark": "✕",
+    "total": "ara toplam {total}",
+    "totalNote": "kesin toplam (indirim · KDV) satış yazılınca sunucudan gelir"
+  },
+  "payment": {
+    "heading": "TAHSİLAT",
+    "cash": "Nakit",
+    "card": "Kart"
+  },
+  "cta": {
+    "idle": "Sepet boş",
+    "ready": "Satışı tamamla · {total}",
+    "sending": "Yazılıyor…"
+  },
+  "result": {
+    "ok": "Satış yazıldı — {ref} · {total}",
+    "okNoRef": "Satış yazıldı · {total}",
+    "paymentMissing": "Satış yazıldı ama tahsilat DEFTERE GEÇMEDİ (kasa hesabı ayarsız) — parayı elden takip edin, yöneticiye söyleyin.",
+    "insufficientIntro": "Bu depoda yeterli yok — satış yazılmadı: {lines}",
+    "insufficientLine": "{name} (kalan {n})",
+    "blockedIntro": "Satışa kapalı kalem — satış yazılmadı: {lines}",
+    "failed": "Satış kapanmadı — bir daha deneyin; sürerse yöneticiye haber verin.",
+    "network": "Bağlantı yok — satış yazılmadı."
+  }
+}

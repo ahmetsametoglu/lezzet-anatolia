@@ -63,6 +63,11 @@
         "code": "D6",
         "title": "Kurye dönüşü",
         "subtitle": "1 döküm bekliyor"
+      },
+      "sale": {
+        "code": "D7",
+        "title": "Yerinde satış",
+        "subtitle": "kapıya gelen müşteri · nakit / kart"
       }
     }
   },

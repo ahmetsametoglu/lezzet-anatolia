@@ -3,7 +3,7 @@ import { CategoryService, PriceService, ProductService, StockService, WarehouseS
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID } from '@lezzet/application';
 // Beklenen şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME kırılır.
-import type { CatalogPage, OnSiteSaleResponse } from '@lezzet/types';
+import type { OnSiteSaleResponse, SaleCatalogPage, SaleVariantsResponse } from '@lezzet/types';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
@@ -27,6 +27,7 @@ let vehicleId: string;
 let baskaDepoId: string;
 let variantId: string;
 let productId: string;
+let productSlug: string;
 let categoryId: string;
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -42,6 +43,7 @@ beforeAll(async () => {
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Simit ${stamp}` }, categoryId: category.id });
   categoryId = category.id;
   productId = product.id;
+  productSlug = product.slug;
   variantId = variants[0]!.id;
   await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: 500 });
   // Katalog YALNIZ aktif ürünü listeler (`status: 'active'` süzgeci); aday ürün doğrudan bağlantıyla
@@ -126,10 +128,13 @@ describe('POST /sale/on-site', () => {
       demesine açık kapı bırakırdı.
     */
     const res = await app.request('/api/v1/sale/catalog?locale=tr', { headers: bearer(kurye.token) });
-    const data = await envelopeData<CatalogPage>(res);
+    const data = await envelopeData<SaleCatalogPage>(res);
 
     expect(res.status).toBe(200);
     expect(Array.isArray(data.products)).toBe(true);
+    // 21.119'un kapanan boşluğu: her kart kalan adet YUVASINI taşır (sayının doğruluğu boy
+    // çekmecesi testinde ölçülür — liste, sayfalama/kesit süzgeçleri yüzünden fikstürü içermeyebilir).
+    expect(data.products.every((p) => 'availableHere' in p)).toBe(true);
 
     // Kapsam dışı depo BURADA da reddediliyor — okuma da yazma da aynı kapıdan geçiyor.
     const disarida = await app.request(`/api/v1/sale/catalog?locale=tr&warehouseId=${baskaDepoId}`, {
@@ -140,5 +145,34 @@ describe('POST /sale/on-site', () => {
 
   it('kalemsiz gövde ŞEMADA elenir — kapıya hiç ulaşmaz', async () => {
     expect((await post(kurye, { lines: [], paymentMethod: 'cash' })).status).toBe(400);
+  });
+
+  it('BOY ÇEKMECESİ kalan adedi HERKESİN KENDİ deposundan söylüyor', async () => {
+    /*
+      21.119'un kapanan boşluğu: personel "kaç tane var" sorusunu satmayı DENEMEDEN okuyabilmeli.
+      Aynı uç, aynı ürün — kurye ARACIN sayısını (4), depocu TESİSİN sayısını (9) görür; sayı
+      sepet doğrulamasının okuduğu görünümden gelir, ikinci bir stok gerçeği yoktur.
+    */
+    const varyantlar = async (user: SignedInUser) => {
+      const res = await app.request(`/api/v1/sale/catalog/${productSlug}/variants?locale=tr`, {
+        headers: bearer(user.token),
+      });
+      expect(res.status).toBe(200);
+      return envelopeData<SaleVariantsResponse>(res);
+    };
+
+    const kuryeGozu = await varyantlar(kurye);
+    expect(kuryeGozu.productId).toBe(productId);
+    expect(kuryeGozu.variants.find((v) => v.id === variantId)?.availableHere).toBe(4);
+
+    const depocuGozu = await varyantlar(depocu);
+    expect(depocuGozu.variants.find((v) => v.id === variantId)?.availableHere).toBe(9);
+  });
+
+  it('olmayan ürün 404 — çekmece uydurma bir liste açmaz', async () => {
+    const res = await app.request(`/api/v1/sale/catalog/olmayan-urun-${stamp}/variants?locale=tr`, {
+      headers: bearer(kurye.token),
+    });
+    expect(res.status).toBe(404);
   });
 });

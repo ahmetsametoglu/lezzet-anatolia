@@ -66,6 +66,9 @@ const KORUMALI: readonly string[] = [
   '/api/v1/social/conversations',
   // Yerinde satış (21.119) — para alan bir uç; kimliksiz erişim hiçbir hâlde olmamalı.
   '/api/v1/sale/on-site',
+  // Satış kataloğu da korumalı: kalan ADET taşıyor — vitrinin bilerek sızdırmadığı sayı.
+  '/api/v1/sale/catalog',
+  '/api/v1/sale/catalog/su-boregi/variants',
 ];
 
 describe('kapı sınırı — varsayılan KAPALI', () => {

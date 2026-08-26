@@ -35,6 +35,8 @@ const SECTION_OF_ROLE = {
   admin: 'management',
   /* Tasarımın "Para" sekmesi — SALT OKUMA (v2:721); muhasebe rolünün mobildeki karşılığı. */
   accounting: 'money',
+  /* Makine hesabı (yerinde satışın anonim alıcısı, 21.119) — oturum açamaz, bölüm doğurmaz. */
+  system: null,
 } as const satisfies Record<UserRole, OperationsSection | null>;
 
 /**

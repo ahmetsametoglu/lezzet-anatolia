@@ -182,6 +182,23 @@ export function CourierDayScreen() {
     <View style={styles.screen} testID="operations-section-courier">
       {header}
 
+      {/* YERİNDE SATIŞ GİRİŞİ (21.119) — araçtan yoldan gelen müşteriye elden satış. İki gövdede de
+          (rota seçimi / açık sefer) görünür, çünkü satışın şartı sefer değil ARAÇTIR: depo kapsamı
+          sunucuda çözülür, açık sefer varsa parası sefer kapanışına motor tarafından bağlanır. */}
+      <View style={styles.saleRow} testID="courier-day-sale">
+        <Text style={styles.saleLabel}>{t.day.sale.label}</Text>
+        <PressableSurface
+          onPress={() => router.navigate('/sale')}
+          feedback="scale"
+          compact
+          style={styles.saleButton}
+          accessibilityLabel={t.day.sale.cta}
+          testID="courier-day-sale-cta"
+        >
+          <Text style={styles.saleButtonLabel}>{t.day.sale.cta}</Text>
+        </PressableSurface>
+      </View>
+
       {selecting ? (
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-routes">
           {/* Kapanan seferin künyesi: "neyi bitirdim" sorusu ekrandan silinmez. */}
@@ -587,6 +604,32 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: operationsTheme.space.lg,
     paddingTop: operationsTheme.space.sm,
+  },
+  /** Yerinde satış şeridi — kutu yükleme satırının görsel dili, gövdenin ÜSTÜNDE sabit. */
+  saleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.sm,
+  },
+  saleLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  saleButton: {
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.lg,
+    borderWidth: operationsTheme.border.base,
+    borderRadius: operationsTheme.radius.badge,
+    borderColor: operationsTheme.colors['olive-line'],
+  },
+  saleButtonLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['olive-dark'],
   },
   boxLoadCounter: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

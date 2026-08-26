@@ -265,6 +265,16 @@ function buildRows(
       badge: null,
       onPress: () => router.navigate('/courier-return'),
     },
+    // Yerinde satış (21.119) — kapıya gelen müşteriye elden satış; kurye aynı ekrana kendi
+    // bölümünden gider, motor ikisini tek kapıdan geçirir (`DOMAIN §17`).
+    {
+      key: 'sale',
+      code: t.hub.rows.sale.code,
+      title: t.hub.rows.sale.title,
+      subtitle: t.hub.rows.sale.subtitle,
+      badge: null,
+      onPress: () => router.navigate('/sale'),
+    },
   ];
 }
 
