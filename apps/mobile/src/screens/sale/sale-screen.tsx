@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TextInput, View } from 'react-native';
@@ -45,11 +46,14 @@ export function SaleScreen() {
   const overStock = draftSelection !== null && sale.draft !== null && sale.draft.qty > draftSelection.availableHere;
   const draftReady = draftSelection !== null && sale.draft !== null && sale.draft.qty > 0 && draftPriceCents !== null && !overStock;
 
+  // Tahsilat türü SEÇİLMEDEN satış yazılamaz (kullanıcı bulgusu 26.08) — gerekçe hook künyesinde.
   const cta = sale.sending
     ? { label: t.cta.sending, enabled: false }
     : sale.lines.length === 0
       ? { label: t.cta.idle, enabled: false }
-      : { label: fillCopy(t.cta.ready, { total: money(sale.indicativeTotalCents) }), enabled: true };
+      : sale.payment === null
+        ? { label: t.cta.pickPayment, enabled: false }
+        : { label: fillCopy(t.cta.ready, { total: money(sale.indicativeTotalCents) }), enabled: true };
 
   return (
     <View style={styles.screen} testID="sale-screen">
@@ -93,7 +97,7 @@ export function SaleScreen() {
             </Text>
           ) : (
             sale.products.map((product) => (
-              <ProductRow key={product.id} product={product} onPress={() => sale.openProduct(product)} />
+              <ProductRow key={product.id} product={product} onOpen={sale.openProduct} />
             ))
           )}
           {sale.hasMore ? <TextAction label={t.loadMore} onPress={sale.loadMore} testID="sale-load-more" /> : null}
@@ -278,11 +282,20 @@ export function SaleScreen() {
 
 interface ProductRowProps {
   product: SaleCatalogProduct;
-  onPress: () => void;
+  onOpen: (product: SaleCatalogProduct) => void;
 }
 
-/** Katalog kartı — ad + birim + fiyat solda, kalan/tükendi rozeti sağda. */
-function ProductRow({ product, onPress }: ProductRowProps) {
+/**
+ * Katalog kartı — ad + birim + fiyat solda, kalan/tükendi rozeti sağda.
+ *
+ * **`memo` BİR SÜS DEĞİL, ÇEKMECE AKICILIĞININ KENDİSİ** (kullanıcı bulgusu 26.08: "çekmece
+ * kasarak açılıyor", başka çekmecelerde yok). Karta dokunmak `draft` durumunu değiştiriyor ve
+ * ekranın kökü yeniden çiziliyordu — 30 kart, çekmece animasyonuyla AYNI karede; çok boylu
+ * üründe boylar gelince animasyonun ortasında bir tur daha. Kartların hiçbiri o anda değişmiyor.
+ * `memo` + kararlı `onOpen` (hook'un `useCallback`'i) ile dokunuş yalnız çekmeceyi çizdirir;
+ * kartlar ancak LİSTE değişince (arama, sayfa, satış sonrası tazeleme) yeniden çizilir.
+ */
+const ProductRow = memo(function ProductRow({ product, onOpen }: ProductRowProps) {
   const multi = product.variantCount > 1;
   // Tek boyluda satılamaz hâller karttan bellidir; çok boyluda karar çekmecede verilir (boy boy).
   const sellable = multi || (product.variantId !== null && product.priceCents !== null && !product.soldOut);
@@ -297,7 +310,7 @@ function ProductRow({ product, onPress }: ProductRowProps) {
 
   return (
     <PressableSurface
-      onPress={onPress}
+      onPress={() => onOpen(product)}
       disabled={!sellable}
       feedback="scale"
       style={[styles.productRow, sellable ? null : styles.productRowClosed]}
@@ -315,7 +328,7 @@ function ProductRow({ product, onPress }: ProductRowProps) {
       <Text style={[styles.productBadge, sellable ? null : styles.productBadgeClosed]}>{badge}</Text>
     </PressableSurface>
   );
-}
+});
 
 const styles = StyleSheet.create({
   screen: {

@@ -51,6 +51,7 @@
   },
   "cta": {
     "idle": "Sepet boş",
+    "pickPayment": "Tahsilat türünü seçin — nakit mi kart mı?",
     "ready": "Satışı tamamla · {total}",
     "sending": "Yazılıyor…"
   },

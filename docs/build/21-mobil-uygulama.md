@@ -5952,6 +5952,19 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
      arama ALANINI da söküp yükleme halkasına çeviriyordu — odak ve IME kompozisyonu her tuşta
      ölüyordu. Alan durum dalının dışına alındı; yeniden yükleme artık ekranı karartmıyor.
 
+  **İKİ KULLANICI BULGUSU DAHA KAPANDI (26.08, tur sonrası):**
+  · *"Çekmece kasarak açılıyor"* — ölçüldü: karta dokunuş ve boy cevabı, animasyonla aynı karede
+    KART LİSTESİNİ de yeniden çizdiriyordu (`memo`'suz 2 kart × 2 tur = 4 çizim; cihazda 30 kartla
+    ~60). Kartlar `memo`'ya alındı; jest sayacı çiviliyor: dokunuştan sonra kart çizimi **0**.
+  · *"Neyle ödendiğini seçmedim"* — "Nakit" önseçiliydi, satış dokunmadan kapanabiliyordu. Para
+    yazan alanda varsayılan olmaz (kartla tahsil edilip "nakit" yazılan satış sefer kapanışının
+    nakit beklentisini sessizce bozar): seçim artık zorunlu, CTA seçimsiz açılmaz, başarıda
+    seçim sıfırlanır.
+
+  **Bilinçli sınırlar (v1):** kısmi/fazla tahsilat gönderilmiyor (sözleşmede `collectedAmountCents`
+  var, ekran vermiyor → her satış tam tahsil sayılır; kapı satışının olağan hâli bu); yanlış
+  yazılmış satışı GERİ ALMA yolu bu ekranda yok — düzeltme, iade/istisna hattının işidir.
+
   Turun kendisi: kurye "kalzone" aradı → "kalan 6" okudu → çekmecede adet 2 → **satış cihazdan
   yazıldı** (`LA-26-QECKQR`, 0,96 € — ara toplam 1,12 iken kampanya indirimini SUNUCU uyguladı,
   "kesin toplam sunucudan gelir" davranışı canlıda görüldü), sepet sıfırlandı, liste **kalan 4**'e

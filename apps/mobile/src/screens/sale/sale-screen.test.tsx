@@ -31,6 +31,24 @@ jest.mock('@/lib/auth/supabase', () => ({
   }),
 }));
 
+/*
+  KART ÇİZİM SAYACI (26.08 cihaz bulgusu: "çekmece kasarak açılıyor") — kasmanın ölçülen sebebi,
+  dokunuşun ve boy cevabının KART LİSTESİNİ animasyonla aynı karede yeniden çizdirmesiydi.
+  `PressableSurface` sahtesi ürün kartı çizimlerini sayar; iddia "dokunuştan sonra sayaç 0".
+*/
+const mockRowRenders = { count: 0 };
+jest.mock('@/components/ui/pressable-surface', () => {
+  const React = jest.requireActual('react');
+  const { Pressable } = jest.requireActual('react-native');
+  return {
+    PressableSurface: (props: Record<string, unknown>) => {
+      if (typeof props.testID === 'string' && props.testID.startsWith('sale-product-')) mockRowRenders.count += 1;
+      const { children, feedback: _feedback, compact: _compact, ...rest } = props;
+      return React.createElement(Pressable, rest, children);
+    },
+  };
+});
+
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 function ok(data: unknown): Response {
@@ -126,6 +144,11 @@ async function addSimit() {
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
 }
 
+/** Tahsilat türü ARTIK BİLİNÇLİ seçilir (varsayılan yok) — satışa giden her test bunu yapar. */
+async function pickCash() {
+  await fireEvent.press(screen.getByTestId('sale-payment-cash'));
+}
+
 beforeAll(() => {
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
   globalThis.fetch = fetchMock as unknown as typeof fetch;
@@ -148,6 +171,7 @@ it('dokunulmamış fiyat İSTEKTE YOK; satış yazılınca sepet sıfırlanır v
   withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: 'SP-26-0009', paymentRecorded: true });
   await renderSale();
   await addSimit();
+  await pickCash();
 
   await fireEvent.press(screen.getByTestId('sale-cta'));
   await waitFor(() => expect(screen.getByTestId('sale-notice')).toBeTruthy());
@@ -168,6 +192,7 @@ it('pazarlık fiyatı yalnız DEĞİŞTİRİLEN kalemde gider', async () => {
   await fireEvent.changeText(screen.getByTestId('sale-drawer-price'), '4,00');
   await fireEvent.press(screen.getByTestId('sale-drawer-confirm'));
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy());
+  await pickCash();
 
   await fireEvent.press(screen.getByTestId('sale-cta'));
   await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(true));
@@ -179,6 +204,7 @@ it('yetersiz stok cevabı adı ve kalanıyla görünür — sepet BOZULMAZ', asy
   withNetwork({ status: 'insufficient_here', lines: [{ name: 'Simit', available: 3 }] });
   await renderSale();
   await addSimit();
+  await pickCash();
 
   await fireEvent.press(screen.getByTestId('sale-cta'));
   await waitFor(() => expect(screen.getByTestId('sale-notice')).toBeTruthy());
@@ -197,11 +223,50 @@ it('çok boylu ürün boyunu çekmecede seçer — istek SEÇİLEN boyun kimliğ
   await fireEvent.press(screen.getByTestId(`sale-variant-${COK_VARYANT_2}`));
   await fireEvent.press(screen.getByTestId('sale-drawer-confirm'));
   await waitFor(() => expect(screen.getByTestId(`sale-cart-${COK_VARYANT_2}`)).toBeTruthy());
+  await pickCash();
 
   await fireEvent.press(screen.getByTestId('sale-cta'));
   await waitFor(() => expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(true));
 
   expect(postBody().lines).toEqual([{ variantId: COK_VARYANT_2, qty: 1 }]);
+});
+
+it('tahsilat türü SEÇİLMEDEN satış yazılamaz — para yazan alanda varsayılan yok', async () => {
+  /*
+    Kullanıcı bulgusu 26.08: "Nakit" önseçiliydi ve satış hiç dokunmadan kapanabiliyordu. Kartla
+    tahsil edilip "nakit" yazılan satış, sefer kapanışının nakit beklentisini sessizce bozar —
+    seçim artık bilinçli: sepet doluyken bile CTA kapalı, tek POST atılamaz.
+  */
+  withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: null, paymentRecorded: true });
+  await renderSale();
+  await addSimit();
+
+  expect(screen.getByText('Tahsilat türünü seçin — nakit mi kart mı?')).toBeTruthy();
+  await fireEvent.press(screen.getByTestId('sale-cta'));
+  expect(fetchMock.mock.calls.some((c) => c[1]?.method === 'POST')).toBe(false);
+
+  // Seçim gelince aynı düğme satışı yazar — ve başarıda seçim SIFIRLANIR (miras yok).
+  await pickCash();
+  await fireEvent.press(screen.getByTestId('sale-cta'));
+  await waitFor(() => expect(screen.getByTestId('sale-notice')).toBeTruthy());
+  expect(postBody().paymentMethod).toBe('cash');
+  expect(screen.getByText('Sepet boş')).toBeTruthy();
+});
+
+it('karta dokunmak KART LİSTESİNİ yeniden çizdirmez — çekmece animasyonu listeyle yarışmaz', async () => {
+  /*
+    Çok boylu kart en ağır yol: dokunuş çekmeceyi açar VE boy çağrısı atar; eski kodda ikisi de
+    tüm listeyi yeniden çizdiriyordu (animasyonla aynı karede — cihazda kasma olarak görüldü).
+    `memo` + kararlı `onOpen` ile ikisinde de kartlara dokunulmaz.
+  */
+  withNetwork({ status: 'failed' });
+  await renderSale();
+
+  mockRowRenders.count = 0;
+  await fireEvent.press(screen.getByTestId(`sale-product-${COK_ID}`));
+  await waitFor(() => expect(screen.getByTestId(`sale-variant-${COK_VARYANT_2}`)).toBeTruthy());
+
+  expect(mockRowRenders.count).toBe(0);
 });
 
 it('adet kalanı aşınca çekmece onaylatmaz ve sebebini söyler', async () => {

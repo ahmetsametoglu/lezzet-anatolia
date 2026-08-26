@@ -103,7 +103,14 @@ export function useSale() {
   const [search, setSearchState] = useState('');
   const [draft, setDraft] = useState<SaleDraft | null>(null);
   const [lines, setLines] = useState<SaleCartLine[]>([]);
-  const [payment, setPayment] = useState<'cash' | 'card'>('cash');
+  /*
+    TAHSİLAT TÜRÜNÜN VARSAYILANI YOK (kullanıcı bulgusu 26.08: "neyle ödendiğini dahi seçmedim").
+    "Nakit" önseçiliydi ve satış hiç dokunulmadan kapanabiliyordu — para yazan alanda bilinçsiz
+    varsayılan, yanlış kayıttır: kartla tahsil edilip "nakit" yazılan satış, sefer kapanışının
+    nakit beklentisini sessizce bozar. "Varsayılan depo yoktur" kuralının parasal karşılığı:
+    seçim yapılmadan CTA açılmaz, her satışta yeniden sorulur (başarıda sıfırlanır).
+  */
+  const [payment, setPayment] = useState<'cash' | 'card' | null>(null);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<SaleNotice>();
   const seqRef = useRef(0);
@@ -231,7 +238,7 @@ export function useSale() {
   );
 
   const submit = useCallback(() => {
-    if (lines.length === 0 || sending) return;
+    if (lines.length === 0 || payment === null || sending) return;
     setSending(true);
     setNotice(null);
 
@@ -254,6 +261,7 @@ export function useSale() {
       const outcome = result.data;
       if (outcome.status === 'ok') {
         setLines([]); // satış kapandı; sepet sıfırdan başlar
+        setPayment(null); // tahsilat türü de: her satış kendi kararını ister, öncekinden miras almaz
         setNotice(noticeOfOk(outcome));
         reload(); // stok değişti — kalan sayılar tazelensin
         return;
