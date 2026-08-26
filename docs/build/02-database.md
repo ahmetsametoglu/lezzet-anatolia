@@ -25,7 +25,7 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - *Bitti:* lokal bağlantı smoke testi geçiyor
 - [x] (02.3) Migration altyapısı: numaralı SQL, tek transaction'da uygulama, `schema_migrations` kaydı, hata durumunda durma
   - *Bitti:* boş projeye sıfırdan kurulum tek komutla; ikinci çalıştırma no-op
-- [~] (02.4) İlk şema migration'ları — tüm tablolar + enum tipleri + kısıtlar: FK'lar, unique'ler (`Product.slug`, `Category.slug`, `WebhookEvent(provider, ~~provider_event_id~~ → `event_id`)`, `Cart.customer_id`), temel index'ler (sipariş/stok/hareket sorgu yolları)
+- [x] (02.4) İlk şema migration'ları — tüm tablolar + enum tipleri + kısıtlar: FK'lar, unique'ler (`Product.slug`, `Category.slug`, `WebhookEvent(provider, ~~provider_event_id~~ → `event_id`)`, `Cart.customer_id`), temel index'ler (sipariş/stok/hareket sorgu yolları)
   - *Bitti:* `DATA_MODEL.md`'deki her varlığın tablosu var; kısıt ihlali testle doğrulanmış (örnek: aynı webhook event iki kez yazılamıyor)
   - **Durum (26.08) — SATIR NEDEN `[~]` HİÇBİR YERDE YAZMIYORDU; ölçüldü, sebep artık kayıtlı.**
     Bir `[~]`, gerekçesi olmadan üstlenilemez: okuyan ajan neyin eksik olduğunu bilemez ve satır
@@ -42,6 +42,30 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     - **Kapanış şartı artık yazılı:** §1 kapsamı 84 tabloya çıkar (ya da neden çıkmadığı yazılır) +
       webhook tekillik testi yazılır. İkisi de bu turun kapsamında DEĞİL (kullanıcı sırası 26.08:
       önce kayıt düzeltmesi).
+  - **Durum (26.08) — KAPANDI; iki şart da karşılandı, ama BEKLENDİĞİNDEN BAŞKA yoldan.**
+    - **Kapsam şartı 02.18 ile çözüldü.** "§1'i 84 tabloya çıkar" diye yazılmıştı; olan şu oldu ki
+      §1'in doküman↔tablo karşılaştırması **emekli edildi** — alan listesi artık migration'lardan
+      TÜRETİLDİĞİ için ayrışması yapısal olarak imkânsız, karşılaştırılacak iki taraf kalmadı.
+      Sonuç ölçüldü: **84 tablonun 75'i** kendi bölümüne ve türetilmiş listesine sahip (denetim
+      öncesi 29'du). Bu tur üç varlığa bölüm de yazıldı — `postal_code_demand` · `zone_notice`
+      (depo) ve `variant_stock_notice` (katalog); gerekçeleri migration künyelerinde zaten yazılıydı,
+      iş onları çıkarmaktı.
+    - **Bölümü OLMAYAN dokuz tablo gerekçelendirildi** (`DATA_MODEL.md` varlık indeksinde):
+      ara tablo (`product_collections` · `discount_use` · `email_verifications`) · analitik ÖZETİ
+      (`analytics_daily` + üç türevi) · başka şeridin alanı (`assistant_proposal` · `mcp_call_log`
+      · `mcp_connection_key`, `docs/talep/not-mcp-veri-modeli-bolumu-bekliyor.md` ile bildirildi).
+      Ölçüt yazıldı: **bir tablo, bağladığı varlıktan bağımsız bir KARAR taşıyorsa bölümü olur.**
+    - **WEBHOOK TEKİLLİK TESTİ YAZILDI** (`webhook-event.test.ts`, 3 iddia). Satırın bitiş örneği
+      buydu ve 26.08'de ölçüldü ki hiç yazılmamış: kısıt vardı, testi yoktu — yani ödeme akışını
+      tekrardan koruyan tek şey **hiç sınanmamış bir indeksti.** Çivilenenler: ikinci geliş taze
+      DEĞİL ve aynı satırı gösterir · EŞZAMANLI iki sahiplenmede yalnız biri taze döner (kontrol
+      ile yazım ayrı ifadeler olsaydı ikisi de "yeni" derdi ve **tahsilat iki kez yazılırdı**) ·
+      tekillik ÇİFTTEDİR, başka sağlayıcı aynı olay kimliğini kullanabilir.
+      **Testin yakaladığı doğrulandı:** `webhook_event_provider_key` indeksi geçici olarak
+      kaldırıldı → üç test de kırmızı; geri konunca üçü de yeşil.
+    - **Satırın kolon adı da düzeltildi:** `WebhookEvent(provider, provider_event_id)` yazıyordu,
+      gerçek ad `event_id` — aynı yanlış ad `data-model`'de de duruyordu (02.18 turunda bir ajan
+      buldu), ikisi de bu turda düzeldi.
 - [x] (02.5) `BaseDbService`: jsonb-güvenli case dönüştürücüler (LocalizedText içleri dönüşmez), `{data, error}` deseni, `toRpcParams` yardımcısı
   - *Bitti:* ~~dönüştürücü birim testleri (jsonb alanı bozulmuyor) geçiyor~~ **BÖYLE BİR TEST HİÇ YOKTU** (ölçüldü 15.08: `packages/database/src/utils/` altında tek test dosyası yok) — vaat edilmiş ama teslim edilmemiş bir kanıt, `13.5`'in *"export çalışıyor"* satırıyla aynı sınıf (`CLAUDE.md §5`).
   - **Durum (15.08 — KURAL NİHAYET KODA GEÇTİ; kullanıcı kararı).** Satırın kendisi *"jsonb-güvenli … LocalizedText içleri dönüşmez"* diyordu ve `STACK §211` de aynı sözü veriyordu; **ikisi de niyetti, kod jsonb'nin içine iniyordu.** Kimse fark etmedi çünkü kural `LocalizedText` için yazılmıştı ve `tr`/`fr`/`de` anahtarlarında ne alt tire ne büyük harf var — dönüştürücü onlara iki yönde de dokunmuyor. Yani koruma, yazıldığı durumda zaten gereksizdi; gerekli olduğu durumlar (serbest anahtarlı ve dış kaynaklı jsonb) sonradan geldi ve o arada repoda **iki biçim yan yana** oluştu.
@@ -268,7 +292,7 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     - **Kaçak senaryosu DOĞRUDAN ölçüldü** (atılabilir betik): depo açılmış, geri kalan kimlikler `undefined` — yani `beforeAll`ın yarıda düştüğü hâl. Teardown depoyu topladı. Eskiden bu tam olarak kaçağın doğduğu andı.
     - **Mevcut artıklar bu görevde silinmedi** (kullanıcı kararı 14.08); kullanıcı sonrasında veritabanını kendi sıfırladı — 51 artık depo gitti, geriye 3 gerçek depo kaldı.
     - **Geride kalan boşluk:** kural makineyle zorlanmıyor. Yeni yazılan bir test `afterAll`da yine elle silme yazabilir; bugün kuralı tutan tek şey disiplin ve `docs:check §3f`in yalnız `warehouse`/`account` için koyduğu dar kapı. `BEKLEYEN(02.16): afterAll içinde purgeTestData'dan önce mustDelete yazılmasını docs:check yakalasın.`
-- [ ] (02.17) **`docs:check` bölüm harfleri KONUMSAL — atıflar sessizce yanlışlanıyor** (denetim ölçümü 26.08) — `touches: scripts/docs-check.mjs, vitest.config.ts, docs/**`
+- [x] (02.17) **`docs:check` bölüm harfleri KONUMSAL — atıflar sessizce yanlışlanıyor** (denetim ölçümü 26.08) — `touches: scripts/docs-check.mjs, vitest.config.ts, docs/**`
   - **Ölçülen arıza:** `§3g` bir zamanlar "DB'siz test entegrasyon kuyruğunda kalmamalı" kuralıydı;
     araya yeni kurallar eklendikçe o kural **`§3i`**'ye kaydı ve `§3g` bugün bambaşka bir şeyi
     ("Operasyon ekranı KENDİ zeminini çizmeli") anlatıyor. Ona yapılmış **altı atıf** yanlış hedefi
@@ -281,7 +305,19 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - **İki iş:** *(1)* harf bir kez verilir ve **yeniden kullanılmaz** — yeni kural sona eklenir,
     araya girmez; *(2)* `docs:check` kendi atıflarını doğrular: metinde geçen her `§3x`, gerçekten o
     harfi taşıyan bir bölüm başlığına gitmeli. Bugün altı atıf yanlıştı ve hiçbir bekçi görmedi.
-  - **Neden bekliyor:** kullanıcı sırası (26.08) — önce 02'nin yalan söyleyen cümleleri susturuldu.
+  - **Durum (26.08) — KAPANDI: `§3j` bekçisi yazıldı.**
+    - **Varlık denetimi YETMEZDİ ve bu ölçüldü:** altı yanlış atfın hepsi VAR OLAN bir harfi
+      gösteriyordu. Yakalanması gereken şey harfin yokluğu değil, **anlamının değişmesi**.
+    - Bu yüzden bölüm künyesi betiğin içinde SABİT yazılı (`BOLUM_KUNYE`, 17 bölüm). Bir başlık
+      değişirse ya da harf başka bir kurala verilirse denetim kırmızıya döner ve yazan ya harfi geri
+      verir ya bütün atıfları günceller. **Harf bir kez verilir, yeniden kullanılmaz** — yeni kural
+      sona eklenir. Künyede olmayan yeni bölüm de bildiriliyor (kural kendi kendini kaydettiriyor).
+    - İkinci iddia: metinde geçen her `docs:check §x` atfı gerçekten bir bölüme gitmeli.
+      **Desen DAR tutuldu** ve bu bir ölçümün sonucu: ilk hâli 120 karakterlik bir yakınlık
+      arıyordu ve BAŞKA dokümanların bölümlerini yakalıyordu (`WORKFLOW §7`, `STACK §6c`) — aynı
+      paragrafta "docs:check" geçmesi, o atfın docs:check'e olduğunu göstermiyor.
+    - **Bekçinin ısırdığı doğrulandı:** `§3g`nin başlığı geçici olarak değiştirildi → *"ANLAMI
+      DEĞİŞMİŞ"* diye kırmızı; geri alınınca yeşil.
 
 - [x] (02.18) **Veri modeli dokümanı: alan listesi TÜRETİLİR, karar insanda kalır** (kullanıcı kararı 26.08) — `touches: docs/architecture/data-model/**, scripts/docs-check.mjs`
   - **Kullanıcının sorusu işi başlattı:** *"Bu doküman güncel tutulması zor. Ama veritabanındaki

@@ -1076,6 +1076,74 @@ function uyarPaylasilanAgac(yeniBlok) {
   console.log('  Aksi hâlde HEAD kendi kaynağıyla çelişir ve ağaçtaki HERKES commit atamaz.\n');
 }
 
+// ── 3j. BÖLÜM HARFLERİ SABİTTİR — atıflar sessizce yanlışlanamaz (02.17) ─────
+//
+// **Ölçülmüş arıza (26.08).** `§3g` bir zamanlar "DB'siz test entegrasyon kuyruğunda kalmamalı"
+// kuralıydı; araya yeni kurallar eklendikçe o kural `§3i`ye kaydı ve `§3g` bambaşka bir şeyi
+// anlatır oldu. Ona yapılmış ALTI atıf yanlış hedefi gösteriyordu (`vitest.config.ts` ×4,
+// `02-database.md`, iki denetim dosyası) — ve `STACK.md` aynı harfi DOĞRU anlamda kullanıyordu,
+// yani tek etiket iki anlamla dolaşıyordu.
+//
+// **Neden sinsi:** yanlış bölüm atfı hiçbir yerde hata VERMEZ. Okuyan ajan betiği açar, harfi
+// bulur, alakasız bir kural okur ve ya yanlış iş yapar ya da "böyle bir kural yok" sanır.
+//
+// **Neden varlık denetimi YETMEZ:** altı atfın hepsi VAR OLAN bir harfi gösteriyordu. Yakalanması
+// gereken şey harfin var olmaması değil, **anlamının değişmesi**. Bu yüzden künye aşağıda SABİT
+// yazılı: bir bölümün başlığı değişirse ya da harfi başka bir kurala verilirse burası kırmızıya
+// döner ve yazan, ya harfi geri verir ya da bütün atıfları günceller. Harf bir kez verilir,
+// YENİDEN KULLANILMAZ — yeni kural sona eklenir.
+const BOLUM_KUNYE = {
+  '0': 'Migration sürüm numarası TEKİL olmalı',
+  '1': 'DATA_MODEL ↔ migration ↔ Zod',
+  '1a': 'Para: `…Cents` şema alanı ↔ euro kolonu, BEYANLA bağlanır (02.9 · STACK §8)',
+  '1b': 'Junction/ara tablolar: metin satırında geçen kolonlar',
+  '1c': "Enum listesi ↔ migration'lar",
+  '1d': 'Veri modeli ALAN LİSTESİ TÜRETİLİR (02.18 · kullanıcı kararı 26.08)',
+  '2': 'Dokümanlarda anılan yollar gerçekte var mı',
+  '3': 'Görev kimlikleri eksiksiz ve sırasında mı',
+  '3b': 'BEKLEYEN(...) işaretleri geçerli bir kayda mı bağlı',
+  '3c': 'TAMAMLANMIŞ görev satırının vaat ettiği şey gerçekten var mı',
+  '3d': 'Çalışma-anı bağımlılığı mimari dokümanda BEYAN EDİLMİŞ mi',
+  '3e': 'Kardeş-sayfa importu YALNIZ `*-url` olabilir',
+  '3f': "Teardown'da elle `warehouse`/`account` silme YOK",
+  '3g': 'Operasyon ekranı KENDİ zeminini çizmeli',
+  '3h': 'Operasyon yüzeyinde HAM piksel yazı boyu yok',
+  '3i': "DB'siz test entegrasyon kuyruğunda kalmamalı",
+  '3j': 'BÖLÜM HARFLERİ SABİTTİR — atıflar sessizce yanlışlanamaz (02.17)',
+  '4': 'build/README durum özeti güncel mi',
+};
+
+{
+  const kendi = read('scripts/docs-check.mjs');
+  const gercek = new Map();
+  for (const m of kendi.matchAll(/^\/\/ ── ([0-9][a-z]?)\. (.+?) ─+$/gm)) gercek.set(m[1], m[2].trim());
+
+  for (const [harf, baslik] of Object.entries(BOLUM_KUNYE)) {
+    const simdi = gercek.get(harf);
+    if (!simdi) note(`docs-check §${harf}: künyede yazılı ama böyle bir bölüm YOK — harf silinmiş ya da yeniden adlandırılmış`);
+    else if (simdi !== baslik) {
+      note(`docs-check §${harf}: ANLAMI DEĞİŞMİŞ — künye "${baslik}" diyor, bölüm "${simdi}". Harf bir kez verilir; yeni kural sona eklenir (02.17)`);
+    }
+  }
+  for (const harf of gercek.keys()) {
+    if (!(harf in BOLUM_KUNYE)) note(`docs-check §${harf}: bölüm var ama BOLUM_KUNYE'de yok — yeni kural eklendiyse künyeye de yazılmalı (02.17)`);
+  }
+
+  // Atıflar: metinde geçen her `§3x` gerçekten bir bölüme gitmeli.
+  const atifKaynaklari = [...docFiles, 'vitest.config.ts', ...readdirSync(join(ROOT, 'docs/denetim')).map((f) => `docs/denetim/${f}`)];
+  for (const f of atifKaynaklari) {
+    if (!existsSync(join(ROOT, f)) || !/\.(md|ts|mjs)$/.test(f)) continue;
+    const icerik = read(f);
+    if (!icerik.includes('docs:check') && !icerik.includes('docs-check')) continue;
+    // Desen DAR: `docs:check` ile harf arasında en fazla 20 karakter olabilir. Gevşek bir yakınlık
+    // ölçütü (120 karakter) denendi ve BAŞKA dokümanların bölümlerini de yakaladı (`WORKFLOW §7`,
+    // `STACK §6c`) — aynı paragrafta "docs:check" geçmesi o atfın docs:check'e olduğunu göstermiyor.
+    for (const m of icerik.matchAll(/docs.?check[^\n]{0,20}?§([0-9][a-z]?)\b/gi)) {
+      if (!gercek.has(m[1])) note(`${f}: \`§${m[1]}\` diye bir docs:check bölümü yok — atıf boşa gidiyor (02.17)`);
+    }
+  }
+}
+
 // ── 4. build/README durum özeti güncel mi ──────────────────────────────────────
 const label = (m) =>
   m.total === 0 ? 'planlanıyor' : m.done === m.total ? 'tamam' : m.done + m.partial === 0 ? 'bekliyor' : 'sürüyor';

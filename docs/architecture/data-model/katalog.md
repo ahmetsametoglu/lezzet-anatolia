@@ -311,6 +311,30 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 
 Paylaşılan alanlar (ad, açıklama, kategori, görsel, `date_type`, `shelf_life_days`, `shippable`, `vat_rate`, hedef marj) **Product**'ta; boyuta göre değişen **fiyat, stok, indirimli teklif** ise **varyant** seviyesinde. Satış birimi **sabit paket** — her varyant sabit gramajlı bir pakettir, adet olarak satılır (tartıyla değişken ağırlık Faz 1'de yok).
 
+## VariantStockNotice ("gelince haber ver")
+
+Tükenmiş bir boyu bekleyen müşterinin bıraktığı kayıt. `ZoneNotice`in ürün eksenindeki kardeşi: biri *yer* bekler, bu *mal* bekler.
+
+<!-- alanlar:variant_stock_notice -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `variant_id` | uuid |  |  |
+| `country` | country_code |  |  |
+| `postal_code` | text |  |  |
+| `email` | text |  |  |
+| `customer_id` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+| `notified_at` | timestamptz | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`variant_id`** — karar **varyant** düzeyindedir, ürün düzeyinde değil. 700 g'ı bekleyen müşteriye "1,5 kg geldi" diye haber vermek, sözü tutmak değil **bozmaktır**.
+- **`country`** + **`postal_code`** — yer, müşterinin kendi cevabı (19.9 çerezinin taşıdığı ikili). Ülke posta kodundan türetilebilir görünse de **saklanır**: kod tek başına 610 vakada iki ülkeye çözülüyor (19.8).
+- **`customer_id`** — girişli müşteride kim olduğu, ziyaretçide `null`. **Hesap ZORUNLU DEĞİL:** "haber ver"in önüne giriş duvarı koymak, vazgeçmeye en yakın anda ikinci bir engel çıkarmaktır.
+- **`notified_at`** — haber gönderilince damgalanır; **tek hatırlatma** sözü bu alanla tutulur.
+
 ## Price (fiyat)
 
 <!-- alanlar:price -->

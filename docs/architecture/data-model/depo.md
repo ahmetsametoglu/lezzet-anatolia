@@ -264,6 +264,52 @@ Tekillik **tüm** bölgeleri kapsar, aktif/pasif ayırmaz: pasif bölge de kodu 
 
 ---
 
+## PostalCodeDemand (sorulmuş ama karşılanmamış posta kodu)
+
+Vitrinde yer soran ziyaretçinin kodu **teslim bölgesine düşmediğinde** burada birikir. Tablonun tek işi bir soruyu cevaplamak: *"nereye açılalım?"* — ve cevabı tahminden değil, ölçümden verir.
+
+<!-- alanlar:postal_code_demand -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `postal_code` | text |  |  |
+| `request_count` | integer |  | `0` |
+| `first_seen_at` | timestamptz |  | `now()` |
+| `last_seen_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`postal_code`** — kodun kendisi ANAHTARDIR; normalize edilmiş hâliyle yazılır (boşluksuz, büyük harf). Ayrı bir `id` yok: aynı kod iki satır olamaz.
+- **`request_count`** — kaç kez soruldu. **Aynı ziyaretçinin tekrar sorması ayrı sayılır ve bu bilinçli:** tekilleştirmek kimlik tutmayı gerektirirdi, tutmuyoruz. Sayı mutlak bir "kişi sayısı" değil, **ilgi yoğunluğudur** — karar verirken de öyle okunmalı.
+
+## ZoneNotice ("bölgem açılınca haber ver")
+
+Kodu teslim bölgesine düşmeyen müşterinin bıraktığı haber kaydı. `PostalCodeDemand` *kaç kişi sordu* der, bu tablo *kime haber vereceğiz* der — biri sayı, öteki söz.
+
+<!-- alanlar:zone_notice -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `postal_code` | text |  |  |
+| `country` | country_code |  |  |
+| `place_name` | text | • |  |
+| `source` | text |  | `'web'` |
+| `email` | text |  |  |
+| `customer_id` | uuid | • |  |
+| `locale` | preferred_language | • |  |
+| `created_at` | timestamptz |  | `now()` |
+| `notified_at` | timestamptz | • |  |
+| `token` | text | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`country`** — kod TEK BAŞINA yeri belirlemiyor. Ölçüldü (09.08): `postal_code_place`'teki 16.878 satırın **610 kodu iki ülkeye birden** çözülüyor. Ülke saklanmasaydı haber işi iki ülkeyi de dener ve *"biri tutarsa kapsanmış say"* derdi — yani Fransa'da açılan bir bölge, aynı kodu yazmış **Alman** müşteriye "bölgeniz açıldı" diye giderdi. Küçük kardeşi (`variant_stock_notice.country`) bu dersi 19.8'de zaten almıştı; burası ondan eski olduğu için geride kalmıştı.
+- **`place_name`** — kaydın alındığı gün çözülen şehir adı. Kod tablosu ileride değişse de o günkü ad kalır: operatör "68000" değil **"Colmar"** okur ve bölge açma kararını isimle verir.
+- **`source`** — kaydın hangi yüzeyden geldiği (`web` · `app-account` · `app-onboarding`…). **Enum DEĞİL:** değer bir karar girdisi değil, bir **denetim izidir**; yeni bir ekran açıldığında migration yazdırmasının karşılığı yok. Boş da bırakılamaz — "bilinmiyor" diye bir yüzey yok.
+- **`customer_id`** — girişli müşteride kim olduğu, ziyaretçide `null`. **Hesap ZORUNLU DEĞİL:** "haber ver"in önüne giriş duvarı koymak, tam da vazgeçmeye en yakın anda ikinci bir engel çıkarmaktır.
+- **`notified_at`** — haber gönderilince damgalanır. **Tek hatırlatma** sözü bu alanla tutulur: dolu satıra ikinci kez yazılmaz.
+
 ## Mevcut tablolara eklenen alanlar
 
 | Tablo | Alan | Not |
