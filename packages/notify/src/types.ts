@@ -16,7 +16,9 @@ import type {
  * buraya girmez — o çağıranın (uygulama katmanı) işidir.
  */
 
-export type NotifyChannel = 'email' | 'wa_link' | 'whatsapp_api';
+// `push` 14.16 ile geldi: Expo cihaz bildirimi. Kanal sırasında BAŞTA durur (HABER tek kanaldır
+// ve en ucuz/en hızlı kanal kazanır); BELGE'de e-postanın YERİNE GEÇMEZ, ilave gider (meta planı).
+export type NotifyChannel = 'email' | 'wa_link' | 'whatsapp_api' | 'push';
 
 /** Olay adı → o olayın taşıdığı veri. Yeni olay buraya eklenir; sürücüler eksik olayı reddeder. */
 export interface NotifyPayloads {
@@ -67,6 +69,12 @@ export interface NotifyRecipient {
   email: string | null;
   phone: string | null;
   locale: PreferredLanguage;
+  /**
+   * Gönderilebilir Expo jetonları (14.16) — tek kapı doldurur (`dispatch`, `listSendablePushTokens`:
+   * izni kapalı cihaz LİSTEYE HİÇ GİRMEZ). Sürücü DB bilmez; jeton buradan gelir (STACK §4).
+   * Opsiyonel: mevcut alıcı kurucuları değişmedi, jetonsuz alıcıda push sürücüsü yeteneksizdir.
+   */
+  pushTokens?: string[];
 }
 
 /**

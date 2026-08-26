@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AppNotificationService, NotificationDeliveryService, UserProfileService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { createNotifier, type NotifyDriver, type NotifyRecipient } from '@lezzet/notify';
+import { registerPushDevice } from './devices';
 import type { TicketNotification, ZoneAvailableNotification } from '@lezzet/types';
 import { dispatchCustomerNotification, dispatchStaffNotification } from './dispatch';
 
@@ -215,6 +216,32 @@ describe('müşteri kapısı', () => {
 
     const dusen = await db.from('notification').select('id').eq('dedupe_key', `undeliverable:${anahtar}`);
     expect(dusen.data ?? []).toHaveLength(0);
+  });
+});
+
+describe('jeton doldurma (14.16)', () => {
+  it('kayıtlı cihazın jetonu SÜRÜCÜYE ulaşır — beş çağıranın hiçbiri jeton bilmez', async () => {
+    const id = await musteri('Cihazlı', `bild-cihaz-${stamp}@ornek.test`);
+    await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}]`, platform: 'android', enabled: true });
+    // İzni kapalı ikinci cihaz LİSTEYE HİÇ GİRMEMELİ (süzgeç serviste, kapıda değil).
+    await registerPushDevice(db, { profileId: id, token: `ExponentPushToken[disp-${stamp}-kapali]`, platform: 'ios', enabled: false });
+
+    const goren: string[][] = [];
+    const casus: NotifyDriver = {
+      channel: 'push',
+      supports: () => true,
+      send: async (_e, recipient) => {
+        goren.push(recipient.pushTokens ?? []);
+        return { status: 'sent', channel: 'push', ref: 'T1' };
+      },
+    };
+    await dispatchCustomerNotification(
+      db,
+      { event: 'ticket_replied', customerId: id, recipient: alici(`bild-cihaz-${stamp}@ornek.test`), data: ticketData },
+      { notifier: createNotifier([casus]) },
+    );
+
+    expect(goren[0]).toEqual([`ExponentPushToken[disp-${stamp}]`]); // kapalı cihaz görünmedi
   });
 });
 

@@ -4,7 +4,7 @@ import { createNotifier } from './notifier';
 import { emailDriver } from './drivers/email.driver';
 import { waLinkDriver } from './drivers/wa-link.driver';
 import { whatsappApiDriver } from './drivers/whatsapp-api.driver';
-import type { NotifyRecipient } from './types';
+import type { NotifyEventName, NotifyRecipient } from './types';
 
 /**
  * Soyut bildirim katmanı (14.4). Doğrulanan tek şey: **aynı olay çağrısı, alıcının ulaşılabildiği
@@ -123,5 +123,50 @@ describe('talep bildirimleri', () => {
     const link = results[0]?.status === 'sent' ? decodeURIComponent(results[0].ref ?? '') : '';
     expect(link).toContain('Nous avons répondu à votre demande');
     expect(link).not.toContain('Bozuk et geldi');
+  });
+});
+
+/**
+ * SINIF PLANI (14.16 — kurgu incelemesinin 3. ve 7. düzeltmesi): seçim artık olayın sınıfından.
+ * Çivilenenler tam olarak incelemenin kırılma senaryoları:
+ *   · BELGE: push MAİLİN YERİNE GEÇMEZ — bildirim çubuğundan silinen onay, onay değildir
+ *   · BELGE + e-postasız: bugünkü wa_link yedeği korunur, push İLAVE
+ *   · HABER: tek kanal ve push kazanır — aynı haberi iki kanaldan almak gürültü
+ */
+describe('sınıf planı — push geldikten sonra', () => {
+  const pushFake = (calls: string[]) =>
+    ({
+      channel: 'push' as const,
+      supports: (event: NotifyEventName, r: NotifyRecipient) => event !== 'ticket_received' && (r.pushTokens?.length ?? 0) > 0,
+      send: async () => {
+        calls.push('push');
+        return { status: 'sent' as const, channel: 'push' as const, ref: 'T1' };
+      },
+    });
+
+  const jetonluMail: NotifyRecipient = { ...withEmail, pushTokens: ['tok-1'] };
+  const jetonluTelefon: NotifyRecipient = { ...withPhone, pushTokens: ['tok-1'] };
+
+  it('BELGE: push + e-posta BİRLİKTE — push yerine geçmez', async () => {
+    const calls: string[] = [];
+    const results = await createNotifier([pushFake(calls), ...drivers]).send('order_confirmed', jetonluMail, data);
+
+    expect(results.map((r) => r.channel).sort()).toEqual(['email', 'push']);
+    expect(calls).toEqual(['push']);
+  });
+
+  it('BELGE + e-postasız: wa_link yedeği KORUNUR, push ilave', async () => {
+    const results = await createNotifier([pushFake([]), ...drivers]).send('order_confirmed', jetonluTelefon, data);
+    expect(results.map((r) => r.channel).sort()).toEqual(['push', 'wa_link']);
+  });
+
+  it('HABER: TEK kanal ve push kazanır; jetonsuzda sıra maile düşer', async () => {
+    const notifier = createNotifier([pushFake([]), ...drivers]);
+
+    const pushlu = await notifier.send('order_out_for_delivery', jetonluMail, data);
+    expect(pushlu.map((r) => r.channel)).toEqual(['push']); // mail GİTMEDİ — aynı haber iki kez gürültü
+
+    const jetonsuz = await notifier.send('order_out_for_delivery', withEmail, data);
+    expect(jetonsuz.map((r) => r.channel)).toEqual(['email']);
   });
 });

@@ -12,6 +12,7 @@ import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { AppNotificationKind, NotificationTargetType, StaffRole } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ringNotificationsBell, ringStaffNotificationsBell } from '../realtime/bell';
+import { listSendablePushTokens } from './devices';
 
 /*
   ── BİLDİRİMİN TEK KAPISI (14.12) ────────────────────────────────────────────────────────────────
@@ -101,7 +102,18 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
     rowId = row?.id ?? null;
   }
 
-  const results = await (opts.notifier ?? defaultNotifier()).send(input.event, input.recipient, input.data);
+  /*
+    JETONLAR BURADA DOLDURULUR — TEK YERDE (14.16). Sürücü DB bilmez (STACK §4); beş çağıranın
+    her birine "jetonu da getir" dedirtmek, birinin unuttuğu gün push'un o olaydan sessizce
+    düşmesi demekti. Süzgeç kapının değil servisin: izni kapalı cihaz listeye HİÇ girmez.
+    Zile düşmeyen olayda (meta.inApp=false) sorgu hiç atılmaz — push da bir zildir.
+  */
+  const recipient: NotifyRecipient =
+    meta.inApp && input.customerId
+      ? { ...input.recipient, pushTokens: await listSendablePushTokens(db, input.customerId) }
+      : input.recipient;
+
+  const results = await (opts.notifier ?? defaultNotifier()).send(input.event, recipient, input.data);
 
   if (rowId) {
     const deliveries = new NotificationDeliveryService(db);
