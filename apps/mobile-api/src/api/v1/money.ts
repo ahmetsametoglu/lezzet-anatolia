@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { readMoneyDayEnd, readMoneyOverview } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { MoneyDayEndSchema, MoneyOverviewSchema } from '@lezzet/types';
