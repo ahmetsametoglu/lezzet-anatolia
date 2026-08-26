@@ -64,7 +64,10 @@ export function pushDriver(options: PushDriverOptions = {}): NotifyDriver {
           },
           // Cihaz başına bir mesaj, tek POST (Expo 100'e kadar kabul eder; kişi başına cihaz
           // sayısı bir avuç). `sound` varsayılan: sessiz bildirim, bildirim değildir.
-          body: JSON.stringify(tokens.map((to) => ({ to, body, sound: 'default' }))),
+          // `data` DOKUNUŞUN adresidir (kind + hedef + satır payload'u): uygulama bildirime
+          // dokununca bunu okuyup doğru ekrana gider. Alıcıyla gelir (jetonlarla aynı yol) —
+          // olay başına değişir, sürücü kuruluşunda donamaz; kuran tek kapıdır, sürücü taşır.
+          body: JSON.stringify(tokens.map((to) => ({ to, body, sound: 'default', ...(recipient.pushData ? { data: recipient.pushData } : {}) }))),
         });
         if (!res.ok) return { status: 'error', channel: 'push', error: `Expo ${res.status}` };
 

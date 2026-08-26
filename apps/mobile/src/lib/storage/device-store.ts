@@ -61,6 +61,12 @@ export const DEVICE_STORE_KEYS = {
   neighborInvite: 'lezzet.invite.neighbor',
   /** Posta kodunun ÇÖZÜLMÜŞ yer adı — vitrin başlığı cevabı beklerken çıplak kod yazmasın diye. */
   placeName: 'lezzet.place.name',
+  /**
+   * Sunucuya KAYITLI push jetonu (14.14) — çıkışta silinebilsin diye saklanır: jeton kalırsa
+   * önceki hesabın bildirimi sonraki oturum sahibine düşer (sunucu tarafındaki devir son emniyet,
+   * ilk emniyet çıkışın kendisi). Tek okuyanı/yazanı `lib/push`.
+   */
+  pushToken: 'lezzet.push.token',
 } as const;
 
 /**

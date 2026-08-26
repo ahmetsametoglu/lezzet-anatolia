@@ -13,6 +13,8 @@ import { initAppLocale } from '@/lib/i18n/app-locale';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
 import { PaymentProvider } from '@/lib/payment/payment-provider';
 import { useVisitPoints } from '@/lib/points/use-visit-points.hook';
+import { usePushNavigation } from '@/lib/push/use-push-navigation.hook';
+import { usePushRegistration } from '@/lib/push/use-push-registration.hook';
 import { applyFontScale, readFontScale } from '@/lib/settings/font-scale';
 import { ensureFreshInstall } from '@/lib/storage/device-store';
 import { appFontAssets } from '@/theme/fonts';
@@ -94,6 +96,10 @@ export default function RootLayout() {
   /* GÜNLÜK GİRİŞ PUANI (MB-50) — bir KAPI DEĞİL, sessiz bir yan etki: ilk karede ve uygulama her
      öne geldiğinde tetiklenir, sonucu beklenmez. Kökte olmasının gerekçesi hook'un künyesinde. */
   useVisitPoints();
+  // Push kaydı da kökte ve aynı gerekçeyle (hook künyesi): bir ekrana bağlanamaz.
+  usePushRegistration();
+  // Bildirime dokunuş → doğru ekran (uygulama içi listeyle AYNI adres sözlüğü — hook künyesi).
+  usePushNavigation();
 
   /* KÜNYE KAPISI BURADA DEĞİL (kullanıcı kararı 10.08): kökte dururken açık oturumla uygulamayı
      her açanın önüne çıkıyordu. Soru artık anlamlı olduğu üç anda soruluyor — giriş, OAuth

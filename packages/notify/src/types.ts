@@ -75,6 +75,12 @@ export interface NotifyRecipient {
    * Opsiyonel: mevcut alıcı kurucuları değişmedi, jetonsuz alıcıda push sürücüsü yeteneksizdir.
    */
   pushTokens?: string[];
+  /**
+   * Push bildiriminin `data` yükü (14.16) — DOKUNUŞUN adresi: `{ kind, targetType, targetId,
+   * payload }`. Tek kapı kurar (satırın kendisinden), sürücü olduğu gibi taşır; uygulama dokunuşta
+   * okuyup ekrana yönlendirir. Kişisel içerik girmez — satır payload'unun aynı disiplini.
+   */
+  pushData?: Record<string, unknown>;
 }
 
 /**

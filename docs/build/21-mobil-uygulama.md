@@ -554,7 +554,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   kaydı (model işi — web şeridiyle) · kurye uçlarında `effects` (BEKLEYEN(14.11) hattı) · YZ
   içgörü motoru (modül 20/22) · hub'ın parti/tedarik taramasının maliyeti büyüyen katalogda
   yeniden ölçülür (bugün tek okuma ~çeyrek saniye sınıfı, kabul).
-- [ ] (21.13) **Push altyapısı:** cihaz token modeli + teslim hattı — web şeridiyle koordineli
+- [x] (21.13) **Push altyapısı:** cihaz token modeli + teslim hattı — web şeridiyle koordineli
   (14 notify sürücüsü; defterden yürür). Kabuktaki bildirim ekranı ve rol süzmesi 21.9'da;
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief
   kuralı) — her listeye elle giden yol push'suz da çalışır.
@@ -564,6 +564,10 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   yükleme kapısına BAĞLAMAK.)*
   `touches: apps/mobile, apps/mobile-api, packages/database (token modeli — talep gerekebilir)`
 
+  **Durum (26.08) — KAPANDI; uçtan uca tamamlama KULLANICI KARARIYLA web sorumlusunun elinden** ("mobil şerit dahil bu özelliği uçtan uca entegre et"). Üç katmanın üçü de yazıldı ve testli:
+    **Katman 1-2 (kayıt + uygulama içi):** tablo/tek kapı/uç 14.12-14.13'te (defterde). Müşteri ekranı `screens/notifications/` (puan-geçmişi deseni birebir: keyset akış, beş hâl, iyimser okundu/gizle + düşerse GERİ ALMA — ekranda "okundu" duran ama sunucuda okunmamış satır, öteki cihazda rozeti yalancı çıkarırdı), cümle sözlüğü `notification-copy.ts` (üç dil; **bilinmeyen tür genel cümleye düşer** — küme sunucuda büyür, eski sürüm yeni türü boş satırla karşılamaz; zarfın `kind`'ı da bu yüzden düz dize, enum parse'ı ilk yeni türde bütün sayfayı düşürürdü). Vitrin zili gerçek rozete bağlandı (`use-notification-badge` — odak + kişinin kanalı; hata anında sayı SIFIRLANMAZ, son bilinen değerde kalır). Operasyon kabuğu fixture'dan uca geçti (`notification-map.ts` — kind→bölüm/nokta/başlık; fixture kendi künyesinin sözü gereği SİLİNDİ, süzme kuralı yerinde), hub rozetleri `unread` sayar, ekranı açmak "gördüm"dür.
+    **Katman 3 (cihaz):** `expo-notifications ~57.0.9` (sürüm Expo'nun kendi eşleme dosyasından — tahmin değil) + config plugin. Kayıt her açılışta ve İZİN RAPORUYLA (`ensurePushRegistration`: kanal → izin → jeton → uç; Android 13 sırası v57 dokümanından). Çıkışta jeton silme `signOut`un İLK adımı — oturum kapandıktan sonra silme isteği atılamaz. Dokunuş yönlendirmesi `use-push-navigation`: sunucunun `data` yükü uygulama içi listeyle AYNI adres sözlüğünden (`notificationHref`) çözülür — iki eşleme olsaydı biri gün gelip başka yere götürürdü. Expo Go/projectId'siz ortamda jeton alınamaz ve bu KÜNYELİ sessizliktir: uygulama içi zil aynı satırları zaten taşıyor.
+    **Testler:** mobil jest 108 suite / 827 (sözlük 5 · eşleme 3 · kabuk uçtan uca satır-basışı gerçek eşlemeden). **CİHAZDA DOĞRULANMADI ve açıkça yazılıyor:** gerçek push teslimi dev build + fiziksel cihaz ister (Expo Go Android'de kapalı) — cihaz turu mobil şeridin ilk fırsatına.
   **Durum (09.08):** modül sıraya alındı (kullanıcı kararı) ve **kalıcı defteri açıldı**:
   `docs/talep/bildirim-modulu-web-mobil.md`. Ölçüm: üç katmanın üçü de bugün YOK — bildirim
   tablosu yok (olaylar doğrudan maile gidiyor, `packages/notify` → `packages/email`),

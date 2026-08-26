@@ -110,7 +110,17 @@ export async function dispatchCustomerNotification<E extends NotifyEventName>(
   */
   const recipient: NotifyRecipient =
     meta.inApp && input.customerId
-      ? { ...input.recipient, pushTokens: await listSendablePushTokens(db, input.customerId) }
+      ? {
+          ...input.recipient,
+          pushTokens: await listSendablePushTokens(db, input.customerId),
+          // Dokunuşun adresi — bildirime basan kullanıcı doğru ekrana insin (sürücü künyesi).
+          pushData: {
+            kind: input.event,
+            targetType: input.target?.type ?? null,
+            targetId: input.target?.id ?? null,
+            payload: input.payload ?? {},
+          },
+        }
       : input.recipient;
 
   const results = await (opts.notifier ?? defaultNotifier()).send(input.event, recipient, input.data);

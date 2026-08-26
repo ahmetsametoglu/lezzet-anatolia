@@ -43,7 +43,7 @@ interface ExpoReceipt {
   details?: { error?: string };
 }
 
-export interface PushReceiptSummary extends Record<string, unknown> {
+interface PushReceiptSummary extends Record<string, unknown> {
   /** Taranan teslim satırı. */
   scanned: number;
   /** Makbuzu "ulaştı" çıkanlar. */

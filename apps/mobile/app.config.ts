@@ -147,6 +147,8 @@ const config: ExpoConfig = {
   },
   plugins: [
     'expo-router',
+    // Bildirim modülü (14.14): kanal/ikon yerlileri config plugin ister (v57 dokümanı).
+    'expo-notifications',
     [
       'expo-splash-screen',
       {

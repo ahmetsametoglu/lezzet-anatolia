@@ -42,9 +42,10 @@ function fakeFetch(response: { ok?: boolean; status?: number; json?: unknown }) 
 }
 
 describe('pushDriver', () => {
-  it('cihaz başına bir mesaj, gövde ORTAK sözlükten; biletler ref\'e iner', async () => {
+  it('cihaz başına bir mesaj, gövde ORTAK sözlükten, DOKUNUŞ adresi data\'da; biletler ref\'e iner', async () => {
     const { f, calls } = fakeFetch({ json: { data: [{ status: 'ok', id: 'T1' }, { status: 'ok', id: 'T2' }] } });
-    const sonuc = await pushDriver({ fetcher: f }).send('ticket_replied', alici(['tok-1', 'tok-2']), data);
+    const pushData = { kind: 'ticket_replied', targetType: 'ticket', targetId: 't-1', payload: {} };
+    const sonuc = await pushDriver({ fetcher: f }).send('ticket_replied', { ...alici(['tok-1', 'tok-2']), pushData }, data);
 
     // `ref` eşlemedir, düz liste değil: makbuz turu çürük bileti görünce hangi cihazı
     // sileceğini buradan öğrenir.
@@ -59,6 +60,8 @@ describe('pushDriver', () => {
     const mesajlar = calls[0]!.body as { to: string; body: string }[];
     expect(mesajlar).toHaveLength(2);
     expect(mesajlar[0]!.body).toContain('cevap'); // sözlüğün cümlesi — uydurma metin değil
+    // Dokunuşun adresi olduğu gibi taşınır — uygulama bunu okuyup doğru ekrana gider.
+    expect((mesajlar[0] as { data?: unknown }).data).toEqual(pushData);
   });
 
   it('jetonsuz alıcıda YETENEKSİZ; teyit olayı jetonla bile desteklenmez (zil kararı tek yerde)', () => {
