@@ -148,6 +148,15 @@ export default defineConfig({
               test sessizce hiç koşmazdı (yukarıdaki `mask.test.ts` tuzağının aynısı).
             */
             'scripts/*.test.ts',
+            /*
+              `scripts/seed` — YALNIZ DB'siz olanlar (26.08). Yukarıdaki ayrım "seed DB'ye vurur"
+              diyordu ve genelde doğru; ama asistan kuyruğu seed'inin dilekçe ÜRETİCİLERİ saf
+              fonksiyonlar (çapa + varyant alır, dizi döndürür) ve sınanacak şey yazımın kendisi
+              değil üretilen payload'ın ŞEKLİ — onu şemadan geçirmek DB istemez.
+              Desen dar tutuldu (`assistant.test.ts`), çünkü buraya DB'ye vuran bir test yazılırsa
+              entegrasyona alınmalı; geniş bir `seed/**` deseni o ayrımı sessizce silerdi.
+            */
+            'scripts/seed/assistant.test.ts',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
             // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).

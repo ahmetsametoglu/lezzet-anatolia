@@ -408,7 +408,14 @@ function TreeLine({
 
   const head = (
     <>
-      <dt className={`flex min-w-0 shrink-0 items-baseline gap-1.5 ${row.depth > 0 ? 'text-ops-faint' : 'text-ops-muted'}`}>
+      {/* ETİKET SÜTUNU YARIYI AŞMAZ (26.08, ölçüldü): `shrink-0` etiketi hiç küçültmüyordu ve
+          uzun bir not (`row.note`) değer sütununu eziyordu — "Onay sonrası eksik · onaydan sonra da
+          eksik kalır" satırında değer HARF HARF alt alta kırıldı. Notun kendi `truncate`i de
+          çalışamıyordu, çünkü kırpılacak yer kalmamıştı. Tavan yüzde olarak veriliyor: sabit bir
+          piksel, künyenin çizildiği iki farklı genişlikte (diyalog sütunu ↔ kart) ayrışırdı. */}
+      <dt
+        className={`flex min-w-0 max-w-[55%] shrink-0 items-baseline gap-1.5 ${row.depth > 0 ? 'text-ops-faint' : 'text-ops-muted'}`}
+      >
         {group ? (
           <span className={`flex-none transition-transform ${isOpen ? '' : '-rotate-90'}`}>
             <ChevronDownIcon size={10} />

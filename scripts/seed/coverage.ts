@@ -1,4 +1,5 @@
 import type { createServiceRoleClient } from '@lezzet/database';
+import { AssistantProposalKindEnum } from '@lezzet/types';
 
 /**
  * İstemci tipi `@supabase/supabase-js`'ten DEĞİL, fabrikanın dönüşünden türetiliyor: `scripts`
@@ -846,7 +847,42 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'sayılmamış (açık) sefer', zorunlu: true, sayac: sayilmamisSefer },
     ],
   },
+  {
+    // ASİSTAN KUYRUĞU (Modül 22 · 26.08): onbir öneri tipinin HER BİRİNİN kendi gövdesi var ve
+    // gövde ancak o tipten bir dilekçe kuyruktayken ekranda açılabiliyor. Kova sayısı onbirin
+    // altına düşerse bir gövde gözle hiç sınanamaz — modülün ekran doğrulamaları tam bu yüzden
+    // aylarca takılı kaldı (kuyruk her `db:refresh`te boşalıyordu).
+    //
+    // Karar geçmişi de zorunlu: kuyruğun üç sekmesinden ikisi ona bağlı ve iki davranış yalnız
+    // orada görünür — karar verilmiş öneride formun KİLİTLİ çizilmesi (22.19) ve tip süzgecinin
+    // geçmiş üzerinde çalışması (22.37).
+    baslik: 'Asistan onay kuyruğu (assistant_proposal)',
+    tablo: 'assistant_proposal',
+    kovalar: [
+      { ad: 'bekleyen dilekçe', zorunlu: true, filtre: (q) => q.eq('status', 'pending') },
+      { ad: 'onaylanmış', zorunlu: true, filtre: (q) => q.eq('status', 'applied') },
+      { ad: 'reddedilmiş', zorunlu: true, filtre: (q) => q.eq('status', 'rejected') },
+      { ad: 'süresi dolmuş', zorunlu: true, filtre: (q) => q.eq('status', 'expired') },
+      { ad: 'ONBİR tipin hepsi kuyrukta', zorunlu: true, sayac: tumTiplerKuyrukta },
+    ],
+  },
 ];
+
+/**
+ * Bekleyen dilekçelerin kaç FARKLI tip taşıdığı — onbir beklenir (`AssistantProposalKindEnum`).
+ *
+ * Sayı değil KAPSAM ölçüyor: elli dilekçe olsa ama hepsi aynı tipten olsa öteki on gövde yine
+ * ekranda açılamazdı. Eksik tipler adlarıyla basılır, çünkü "10/11" görüp hangisinin eksik
+ * olduğunu aramak teşhisi uzatır.
+ */
+async function tumTiplerKuyrukta(db: Db): Promise<number> {
+  const { data, error } = await db.from('assistant_proposal').select('kind').eq('status', 'pending');
+  if (error) throw error;
+  const tipler = new Set((data ?? []).map((r) => r.kind as string));
+  const eksik = AssistantProposalKindEnum.options.filter((k) => !tipler.has(k));
+  if (eksik.length > 0) console.warn(`    ⚠ kuyrukta olmayan tip: ${eksik.join(' · ')}`);
+  return tipler.size >= AssistantProposalKindEnum.options.length ? tipler.size : 0;
+}
 
 /** Kapanışı olmayan sefer — anti-join'i iki sorguyla kurar (PostgREST tek sorguda "not exists" bilmez). */
 async function sayilmamisSefer(db: Db): Promise<number> {

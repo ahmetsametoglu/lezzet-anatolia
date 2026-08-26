@@ -126,6 +126,7 @@ import { seedFeedbackRequests, seedPoints, seedProductFeedback } from './seed/fe
 import { seedJobRuns } from './seed/jobs';
 import { seedBankQueue, seedMoney } from './seed/money';
 import { seedErrorLog, seedSystemHealth } from './seed/observability';
+import { seedAssistantProposals } from './seed/assistant';
 import { seedBarcodes } from './seed/barcode';
 import { seedCarts, seedOrders } from './seed/orders';
 import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
@@ -314,6 +315,11 @@ async function main(): Promise<void> {
   await seedDeliveryRuns(db, kisiler);
   await seedRunCloses(db, kisiler); // kapanış, seferin tahsilat görünümünü okur
   await seedTickets(db, kisiler); // talep siparişe ve kalemine bağlanır
+  // Asistan kuyruğu HER ŞEYDEN SONRA: onbir dilekçenin payload'ı gerçek kimlikler taşıyor (varyant,
+  // depo, hesap, bölge, açık tedarik siparişi, eldeki en yakın tarihli parti) ve hepsi bu noktada
+  // kurulmuş oluyor. Erken koşsaydı çapalar bulunamaz, dilekçeler sahte uuid ile doğardı — gövde
+  // açılırken ad "—" görünür, onaylandığında uygulayıcı `23503` ile kesilirdi.
+  await seedAssistantProposals(db, varyantlar, kisiler);
   await seedJobRuns(db);
   // Gözlemleme EN SONDA: sağlık görüntüsünün "son bir saatte kaç hata" alanı ile hata kaydı aynı
   // hikâyeyi anlatıyor; hata satırları yazılmadan görüntü alınsaydı ekran kendiyle çelişirdi.

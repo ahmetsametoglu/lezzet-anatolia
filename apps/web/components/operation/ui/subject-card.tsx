@@ -227,7 +227,12 @@ function SubjectStack({ images, name }: { images: SubjectImage[]; name: string }
     <>
       {images.slice(0, STACK_TILES).map((image, i) => (
         <FramedImage
-          key={image.url}
+          // Anahtar URL DEĞİL sıra (bulundu 26.08, asistan kuyruğu seed'i ortaya çıkardı): aynı
+          // ürünün iki boyu aynı görseli taşıyor ve URL anahtarı çakışıyordu — React "two children
+          // with the same key" atıp karolardan birini DÜŞÜRÜYORDU. Belirtisi sessizdi: yığında üst
+          // üste binmiş iki karo, konsolda tek satır. Liste kalem sırasıdır ve yeniden
+          // sıralanmıyor; indeks burada kararlı bir kimlik.
+          key={`${image.url}-${i}`}
           src={image.url}
           alt={`${name} · ${i + 1}. kalem`}
           ratio={RATIO_SQUARE}

@@ -378,6 +378,25 @@ body {
   font-family: var(--font-ops-body);
 }
 
+/* KİLİTLİ FORM GÖRÜNÜR OLUR (22.19) — kural TEK YERDE, kontrol başına değil.
+
+   Karar verilmiş bir öneri açıldığında form `<fieldset disabled>` ile sarılıyor ve yazım GERÇEKTEN
+   engelli (native kontroller `fieldset`ten devralır). Ama `fieldset` görsel bir şey yapmaz: operatör
+   arşivdeki bir kararı açıp kutulara yazmayı DENİYOR, hiçbir şey olmuyordu — ekranın söylediği ile
+   sistemin yaptığı ayrışıyordu (ölçüldü 26.08, reddedilmiş bir kampanya dilekçesinde).
+
+   Neden her kontrole prop eklemek yerine burası: `discount-form` künyesinin kendi gerekçesi —
+   *"elle her kontrole `disabled` geçirmek, bir gün eklenen kutuda unutulurdu"*. Aynı mantık görsel
+   için de geçerli; üstelik kural böylece `FormSwitch` ve `BundleItemsEditor` gibi bayrak TAŞIMAYAN
+   kontrolleri de kapsıyor (onlar da `fieldset`in içinde).
+
+   Opaklık ölçülü (0.55): daha koyusu arşiv kaydını okunmaz yapardı — kilitli form hâlâ OKUNMAK
+   için orada. */
+[data-surface='operations'] fieldset:disabled :is(button, input, select, textarea) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    KARANLIK MOD — yalnız OPERASYON yüzeyi.
    Kaynak: Komponent Envanteri - Operasyon §0.6. Token ADLARI değişmez, yalnız
