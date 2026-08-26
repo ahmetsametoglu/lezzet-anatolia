@@ -94,16 +94,42 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
     `image` (şekil + politika), `user-profile` (`FindOrCreateInput`), `enums` (78 ihraç, aile
     bazlı bölünme). Doğrulama: typecheck 17/17 · birim 1103 · lint/knip/boundaries temiz.
 
+- [x] (01.13) **Kural taşıyan şema TESTSİZ kalamaz — kapsam makineye bağlandı** (kullanıcı sorusu 26.08:
+  *"grup bir ile alakalı tüm testler tamam mı?"*) · `touches: packages/types/src/**`
+  - **Durum (26.08) — SORU BİR BORCU AÇIĞA ÇIKARDI.** 01'i "tamam" diye kapattıktan sonra soruldu ve
+    ölçüldü: 81 şemanın 5 testi vardı, kural TAŞIYAN dokuz dosyanın ise hiçbirinin testi yoktu —
+    üstelik modülün kendi ortak bitiş kriteri *"örnek geçerli/geçersiz kayıtlarla parse birim
+    testleri geçiyor"* diyordu. **Satırları "şema var mı" ölçüsüyle kapatmıştım, modülün kendi
+    yazdığı ölçüyle değil.**
+  - **Ölçüt daraltıldı ve gerekçesi var:** testi hak eden şey, geçerli GÖRÜNEN bir girdiyi REDDEDEN
+    ya da onu DEĞİŞTİREN koddur (`refine` · `superRefine` · `transform` · `coerce`). İlk sayımda 18
+    dosya çıkmıştı ama dokuzu yalnız `discriminatedUnion` taşıyordu; o bir **şekil beyanıdır**, red
+    kuralı değil — ve uçlar zaten `z.input<typeof …>` derleme kilidine bağlı. Otuza yakın yanıt
+    şemasına değeri düşük parse testi yazdırmak, kuralı hak etmediği yere taşımak olurdu.
+  - **Sekiz yeni test dosyası** (49 → 60 birim testi): `localized-text` (boşluktan ibaret metin de
+    reddedilir — `.trim()` kuralın kendisi) · `db-numeric` (para sınırı; `null` sıfıra düşmez) ·
+    `points` (sıfır hareket kısmi tekil indeksi TÜKETİR) · `product-feedback` · `stock-adjustment`
+    (ölçüm tek noktaya: ya alan ya araç) · `user-profile` (telefon ya da e-posta; yoksa kapı hiç
+    BULAMAZ, her temasta ikiz doğar) · `system-health` (**ölçülemeyen değer sıfır değildir** —
+    `z.preprocess(Number, …)`e çeviren ilk düzenleme kırılır) · `assistant-proposal`.
+  - **Meta-test `rule-coverage.test.ts`** (`layering.test.ts`in kardeşi: o YAPIYI zorlar, bu
+    KAPSAMI). Kural taşıyan bir şema testsiz kalırsa kırmızı ve **dosya adını yazar** — "false
+    olmalıydı" diyen bir düşüş, yazanı elle taramaya gönderirdi. İkinci bir iddia da deseni
+    koruyor: hiçbir şey yakalamaz hâle gelirse test yeşil kalıp hiçbir şeyi korumazdı; sessizce
+    ölmüş bir kural, hiç yazılmamış kuraldan kötüdür. Sabotajla sınandı: `points.schema.test.ts`
+    kaldırılınca dosyayı adıyla söyleyerek kırıldı.
+
 **Modül durumu (26.08.2026 — denetim ölçümü):** artımlı ilerledi ve **fiilen tamamlandı**; şemalar
 ihtiyaç duyan modülle birlikte yazıldı (toptan değil, CLAUDE.md §1). 51 varlık · 6 yapı taşı ·
-4 sözleşme şeması; 41 enum.
+4 sözleşme şeması; 41 enum; 15 test dosyası (60 birim testi).
 
 > **Önceki alt bilgi bir ay bayattı ve bu satırın kendisi bir derstir.** *"Yok: Price, Discount,
 > Bundle, tüm stok/tedarik · sipariş · para · mesajlaşma · geri bildirim şemaları"* diyordu —
 > ölçüldüğünde hepsi vardı. Şema başka modülün turunda doğuyor, o modül kendi satırını işaretliyor,
 > **01'in satırı ise kimsenin işi olmadığı için açık kalıyordu.** Artımlı ilerleyen bir modülün
 > durumu, ancak birinin dönüp ÖLÇMESİYLE doğru kalır. Bugün ölçüldü: 12 satırın 11'i kapalı, biri
-> (01.11) yazıldı — modül kapandı.
+> (01.11) yazıldı. Sonra kullanıcı testleri sordu ve 13. satır oradan doğdu (01.13) — **kapanmış
+> bir modülü ölçmek hâlâ bir şey bulabilir.**
 
 ## Netleşecekler
 
