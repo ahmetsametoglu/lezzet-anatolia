@@ -100,8 +100,13 @@ export type ConsumeWhatsappLinkOutcome =
   | { status: 'invalid' }
   /** Bağ kuruldu (ya da zaten vardı, tazelendi). */
   | { status: 'linked'; customerId: string }
-  /** Numara BAŞKA bir kayıtta aktif ve o kayıt taslak değil — sessizce çözülmez, insana gider. */
-  | { status: 'conflict'; customerId: string; holderId: string }
+  /**
+   * Numara BAŞKA bir gerçek kayıtta aktifti; bağ o kayıttan ALINDI ve buraya verildi (04.10).
+   *
+   * **Taşınan tek şey KANAL.** Eski kaydın siparişleri, puanları, geçmişi yerinde kalır — birleşme
+   * değil, devir. `DOMAIN §10`: *"Numarayı çıkarmak bir KANALI kapatır, geçmişi geri almaz."*
+   */
+  | { status: 'transferred'; customerId: string; previousHolderId: string }
   /** Numara bir TASLAĞA bağlıydı; taslak hesaba birleştirildi ve bağ hesaba geçti. */
   | { status: 'merged'; customerId: string; mergedId: string };
 
@@ -120,9 +125,10 @@ export type ConsumeWhatsappLinkOutcome =
  * onunkinden GÜÇLÜDÜR: admin kayıtlara bakıp karar verir, burada müşteri hem oturumunu hem hattını
  * kanıtlamıştır. Yön sabittir: taslak KAYNAK, hesap HEDEF (kapanan taraf her zaman taslaktır).
  *
- * **Gerçek hesap sahibi bir kayıtsa birleştirme YOK.** Ne olduğu belirsizdir (aile telefonu? hat
- * devri? yanlış hesap?) ve iki gerçek kaydı otomatik birleştirmek geri alınamaz bir karardır.
- * DOMAIN §10'un kuralı burada da geçerli: kalanı bir kapıya değil İNSANA düşür.
+ * **Sahip gerçek bir kayıtsa BİRLEŞTİRME yok, DEVİR var** (kullanıcı kararı 26.08). İki gerçek
+ * kaydı birleştirmek hâlâ yasak — geri alınamaz. Ama numaranın eski kayıtta kalması da bir karardı
+ * ve bedeli ağırdı: yeni sahibin siparişleri, adresi, adı **yabancı bir kaydın içine** yazılırdı.
+ * Bağ bu yüzden kopuyor, geçmiş ise yerinde kalıyor (ayrıntı gövdedeki künyede).
  */
 export async function consumeWhatsappLink(db: SupabaseClient, phone: string, text: string | null): Promise<ConsumeWhatsappLinkOutcome> {
   const token = waLinkTokenIn(text);
@@ -151,8 +157,36 @@ export async function consumeWhatsappLink(db: SupabaseClient, phone: string, tex
   const holder = await profiles.getById(holderId);
   const taslakMi = holder?.isDraft === true && holder.authUserId === null && holder.mergedIntoId === null;
   if (!holder || !taslakMi) {
-    logger.warn({ context: 'customer/whatsapp-link', customerId: profile.id, holderId }, 'bağlama: numara başka bir KAYITTA aktif — birleştirme yapılmadı');
-    return { status: 'conflict', customerId: profile.id, holderId };
+    /*
+      ── NUMARA GERÇEK BİR KAYITTAN DEVRALINIYOR (kullanıcı kararı 26.08) ──────────────────────────
+      Bir tur bu hâl `conflict` deyip insana gidiyordu. Kullanıcı daha iyisini gösterdi: **bağı
+      koparan şey bir zaman aşımı değil, OLUMLU bir olay olmalı** — biri çıkıp "bu numara bende"
+      diyor ve bunu kanıtlıyor.
+
+      Kanıt burada iki katlı: bu kişi hem HESABINI açmış (posta kutusuna gelen kodla girdi) hem de
+      hattı ŞU AN elinde tutuyor (jetonu o numaradan gönderdi). Eski bağ ise hattın GEÇMİŞTEKİ bir
+      anına dayanıyor. Hatlar devredilir; taze zilyetlik eski zilyetliği geçer.
+
+      **Birleşme YOK, devir var.** Eski kaydın siparişleri, puanları ve geçmişi yerinde kalıyor;
+      taşınan tek şey kanaldır. Emekli satır da silinmiyor — "bu numara bir zamanlar kimdeydi"
+      sorusu sonradan da cevaplanabilmeli.
+
+      **Bedeli biliyoruz ve kabul ediyoruz:** aile telefonu. Anne hesabına bağlı hattan oğul
+      kaydolup bağlarsa numara oğula geçer ve annenin gelen mesajları artık onda görünür. Geri
+      alınabilir (anne kendi hattından yeniden bağlar) ve hiçbir veri kaybolmaz. Alternatifi her
+      devri insan kuyruğuna almaktı — DOMAIN §10'un uyardığı "bedeli kendi müşterilerimize ödeten
+      kapı" tam olarak o olurdu.
+    */
+    if (kanit.row) await phones.retire(kanit.row.id);
+    const yeni = await phones.recordProof(profile.id, phone);
+    if (yeni.status === 'taken') {
+      // Yarış: emeklilik ile yeni yazım arasında başkası kaptı. Sessiz geçilmez — tekrar eden bir
+      // `taken` yarış değil, aynı numaranın iki kimliğe düştüğü gerçek bir arızadır.
+      logger.warn({ context: 'customer/whatsapp-link', customerId: profile.id, holderId }, 'bağlama: devir yarışta kaybedildi');
+      return { status: 'invalid' };
+    }
+    logger.info({ context: 'customer/whatsapp-link', customerId: profile.id, previousHolderId: holderId }, 'bağlama: numara önceki kayıttan DEVRALINDI');
+    return { status: 'transferred', customerId: profile.id, previousHolderId: holderId };
   }
 
   // Taslak → hesap. Kanıt satırı da `merge_customers` içinde taşınıyor (0040), ayrıca yazılmaz.

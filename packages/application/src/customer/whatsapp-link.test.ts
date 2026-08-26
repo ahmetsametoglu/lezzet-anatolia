@@ -132,21 +132,33 @@ describe('numara başka kayıttaysa', () => {
     expect((await profiles.getById(taslak))?.mergedIntoId).toBe(hesap);
   });
 
-  it('GERÇEK bir kayıt sahipse birleştirme YOK — iki gerçek kaydı otomatik birleştirmek geri alınamaz', async () => {
+  it('GERÇEK bir kayıt sahipse numara DEVRALINIR — birleşme değil, kanal devri', async () => {
+    // Kullanıcı kararı 26.08: bağı koparan şey bir zaman aşımı değil, OLUMLU bir olay olmalı.
+    // Devralanın kanıtı iki katlı — hesabını açmış (posta kutusu) ve hattı ŞU AN elinde tutuyor.
     const telefon = numara();
     const sahip = await musteri('Gerçek sahip'); // taslak değil
-    await phones.recordProof(sahip, telefon);
+    const eskiKanit = await phones.recordProof(sahip, telefon);
 
     const isteyen = await musteri('Bağlamak isteyen');
     const baslangic = await startWhatsappLink(db, isteyen);
     if (baslangic.status !== 'ok') throw new Error('jeton üretilemedi');
 
     const sonuc = await consumeWhatsappLink(db, telefon, mesaj(baslangic.code));
-    expect(sonuc).toEqual({ status: 'conflict', customerId: isteyen, holderId: sahip });
+    expect(sonuc).toEqual({ status: 'transferred', customerId: isteyen, previousHolderId: sahip });
 
-    // Bağ DEĞİŞMEDİ ve jeton yine düştü: başarısız deneme de bir kullanımdır.
-    expect((await phones.findActive(telefon))?.customerId).toBe(sahip);
+    // Numara yeni sahibinde; jeton düştü (tek kullanım).
+    expect((await phones.findActive(telefon))?.customerId).toBe(isteyen);
     expect((await profiles.getById(isteyen))?.waLinkToken).toBeNull();
+
+    // ── DEVİR BİRLEŞME DEĞİL: eski kayıt AYAKTA ve kanıtı SİLİNMEDİ, emekliye ayrıldı ──────────
+    // Bu iddia tasarımın kendisi: taşınan yalnız kanaldır, geçmiş yerinde kalır. Emekli satır da
+    // duruyor ki "bu numara bir zamanlar kimdeydi" sorusu sonradan cevaplanabilsin.
+    const eski = await profiles.getById(sahip);
+    expect(eski?.mergedIntoId).toBeNull();
+    expect(eski?.isDraft).toBe(false);
+    const emekli = await phones.getById(eskiKanit.row!.id);
+    expect(emekli?.customerId).toBe(sahip);
+    expect(emekli?.retiredAt).not.toBeNull();
   });
 
   it('numara ZATEN bu hesaba bağlıysa bağlama sorunsuz tekrarlanır', async () => {

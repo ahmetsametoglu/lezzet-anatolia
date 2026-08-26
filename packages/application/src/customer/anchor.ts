@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { CustomerPhoneService, EmailVerificationService, UserProfileService } from '@lezzet/database';
+import { CustomerPhoneService, EmailVerificationService, OrderService, UserProfileService } from '@lezzet/database';
 import { anchorStateOf, canOpenHistory, needsChallenge, sixDigitCodeIn, type AnchorState } from '@lezzet/domain-core';
 import type { ChallengeReason, CustomerPhone, UserProfile } from '@lezzet/types';
 import { brand } from '@lezzet/brand';
@@ -7,6 +7,7 @@ import { OtpCodeEmail, otpSubject, sendEmail } from '@lezzet/email';
 import { captureError, logger, maskEmail, SOURCES } from '@lezzet/observability';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { devOtpCode } from '../auth/otp';
+import { sendOutboundMessage, type MessageSender } from '../messaging/send';
 
 /*
   ── KİMLİK ÇAPASI — KURULUŞ (04.10) ──────────────────────────────────────────────────────────────
@@ -48,15 +49,40 @@ async function customerOfPhone(db: SupabaseClient, phone: string): Promise<strin
   return (await new CustomerPhoneService(db).findActive(phone))?.customerId ?? null;
 }
 
-export type AnchorSnapshot = { state: AnchorState; hasPendingEmail: boolean };
+export type AnchorSnapshot = {
+  state: AnchorState;
+  hasPendingEmail: boolean;
+  /**
+   * Cevaplanmamış kimlik sorusu — operatörün ekranda GÖRMESİ gereken tek hâl (04.10).
+   *
+   * Sistem soruyu kendiliğinden soruyor ve kapıyı kapatıyor; ama cevap hiç gelmezse ortada
+   * **sessizce bekleyen bir insan** kalır. `ordersSince` o beklemenin ağırlığı: sıfırsa muhtemelen
+   * kimse yok, artıyorsa birinin siparişleri başkasının kaydına yazılıyor demektir (DOMAIN §10 —
+   * kalanı bir kapıya değil İNSANA düşür).
+   */
+  challenge: { reason: ChallengeReason; raisedAt: string; ordersSince: number } | null;
+};
 
 /** Müşterinin çapa hâli — kararın kendisi motorda, burada yalnız satır okunuyor. */
 export async function anchorOf(db: SupabaseClient, customerId: string): Promise<AnchorSnapshot | null> {
   const profile = await new UserProfileService(db).getById(customerId);
   if (!profile) return null;
+
+  // Sipariş sayımı YALNIZ bekleyen soru varken yapılıyor: her sohbet açılışında bir sayım turu,
+  // ekranın hiçbir zaman göstermeyeceği bir sayı için ödenmiş olurdu.
+  const challenge =
+    profile.challengeReason && profile.challengeRaisedAt
+      ? {
+          reason: profile.challengeReason,
+          raisedAt: profile.challengeRaisedAt,
+          ordersSince: await new OrderService(db).countPlacedForCustomerSince(customerId, profile.challengeRaisedAt),
+        }
+      : null;
+
   return {
     state: anchorStateOf(profile),
     hasPendingEmail: profile.anchorEmail !== null,
+    challenge,
   };
 }
 
@@ -403,4 +429,101 @@ export async function anchorGateOf(db: SupabaseClient, customerId: string): Prom
     // Çapası olmayana sorulacak bir şey yoktur: sormak, cevabı olmayan bir soruyu sormaktır.
     ask: bekleyen && state !== 'none' ? (state === 'email' ? 'email' : 'code') : null,
   };
+}
+
+/*
+  ── ÇAPAYI KENDİLİĞİNDEN VERMEK (04.10) ──────────────────────────────────────────────────────────
+  Yukarısı çapayı kurar, sorar ve kapıyı tutar — ama hepsi birinin düğmeye basmasına bağlıydı.
+  Operatörün aklına gelmezse müşteri çapasız kalır ve altı ay sonra döndüğünde **sorulacak bir şey
+  olmaz**: kapı sonsuza kadar kapalı, kimse de açamaz.
+*/
+
+/** Kodun müşteriye söylendiği CÜMLE — tek yerde. İki çağıran var (operatör düğmesi · otomatik kapı). */
+const SECURITY_CODE_MESSAGE = (code: string): string =>
+  `Güvenlik kodunuz: ${code}\nBunu saklayın — zaman zaman siz olduğunuzu teyit etmek için isteyebiliriz.`;
+
+export type IssueAndSendOutcome =
+  /** Kod üretildi ve sohbete yazıldı. `code` yalnız GÖNDERİM DÜŞTÜYSE dolu — çağıran elle iletsin diye. */
+  | { status: 'sent'; code: null }
+  | { status: 'send_failed'; code: string; reason: string }
+  | { status: 'profile_not_found' | 'already_anchored' };
+
+/**
+ * **Güvenlik kodunu ver VE sohbete yaz** — kodun müşteriye ulaşmasının tek gövdesi.
+ *
+ * Üretim ile gönderim ayrılamaz: kod üretilip iletilmezse satırda müşterinin bilmediği bir sır
+ * kalır ve dönüşünde ona cevaplayamayacağı bir soru sorulur — koruma değil, kapalı bir kapı.
+ *
+ * **Gönderim tuttuysa düz kod DÖNMÜYOR:** kod müşteride, özeti bizde; üçüncü bir kopya operatörün
+ * ekranında durmasın. Düşerse dönüyor, çünkü o hâlde kodu iletecek olan insandır.
+ */
+export async function issueAndSendSecurityCode(
+  db: SupabaseClient,
+  sender: MessageSender,
+  input: { conversationId: string; customerId: string },
+): Promise<IssueAndSendOutcome> {
+  const verilen = await issueSecurityCode(db, input.customerId);
+  if (verilen.status !== 'ok') return { status: verilen.status };
+
+  const gonderim = await sendOutboundMessage(db, sender, { conversationId: input.conversationId, text: SECURITY_CODE_MESSAGE(verilen.code) });
+  if (gonderim.status === 'sent') return { status: 'sent', code: null };
+  return { status: 'send_failed', code: verilen.code, reason: gonderim.reason };
+}
+
+/**
+ * **Kaybedecek bir şeyi olan müşteriye çapasını VER** — kimse düğmeye basmadan.
+ *
+ * ── NEDEN GELEN MESAJDA, SİPARİŞ ANINDA DEĞİL ───────────────────────────────────────────────────
+ * Kod ancak 24 saatlik servis penceresi açıkken ücretsiz gidebilir (DOMAIN §11). Sipariş anında o
+ * pencere kapalı olabilir — konuşma günler önce bitmiş olabilir — ve kapalı pencerede tek yol
+ * ücretli kalıp mesajdır. Gelen mesaj ise pencereyi TANIMI GEREĞİ açar: müşteri bize yazdığı anda
+ * gönderim hem mümkün hem bedava. Ayrıca zamanlayıcı, kuyruk ve "gönderilemedi, sonra dene" hâli
+ * de doğmuyor — koşul her mesajda yeniden ölçülüyor, tutmadığı gün kendiliğinden tekrar deniyor.
+ *
+ * ── EŞİK "SİPARİŞ VERİLDİ", "TESLİM EDİLDİ" DEĞİL ───────────────────────────────────────────────
+ * DOMAIN §10 *"ilk sipariş tamamlanınca"* diyordu; ölçünce eşiğin bir gün geç kaldığı görüldü:
+ * `completed` teslimden SONRA damgalanıyor ve müşteri o günden sonra bize bir daha yazmayabilir —
+ * o hâlde kod hiç gitmez. Oysa kaybedecek şey (geçmiş, puan) siparişin VERİLDİĞİ an doğuyor ve
+ * konuşma tam o sırada canlı. Taslak ve iptal sayılmıyor (`countPlacedForCustomer`): yarıda
+ * bırakılmış bir checkout kaybedilecek bir şey üretmez.
+ *
+ * ── ÇAPASI OLANA DOKUNULMAZ ─────────────────────────────────────────────────────────────────────
+ * `state !== 'none'` her üç hâli birden eler: e-posta bağlı · kodu zaten var · oturumu var. İkinci
+ * bir kod vermek öncekini geçersiz kılardı — müşteri sakladığı kodu bir gün boşuna yazardı.
+ */
+export async function offerAnchorIfDue(
+  db: SupabaseClient,
+  sender: MessageSender,
+  input: { conversationId: string; customerId: string },
+): Promise<'skipped' | IssueAndSendOutcome['status']> {
+  const profile = await new UserProfileService(db).getById(input.customerId);
+  if (!profile || anchorStateOf(profile) !== 'none') return 'skipped';
+
+  const siparis = await new OrderService(db).countPlacedForCustomer(input.customerId);
+  if (siparis === 0) return 'skipped';
+
+  const sonuc = await issueAndSendSecurityCode(db, sender, input);
+
+  /*
+    ── GÖNDERİM DÜŞERSE KOD GERİ ALINIR — VE BU, OTOMATİK YOLUN EN ÖNEMLİ KURALI ────────────────────
+    Operatör yolunda düşen gönderim sorun değil: kod insana döner, o iletir. Burada iletecek kimse
+    YOK. Satırda kalsaydı ortaya **müşterinin bilmediği bir sır** çıkardı ve dönüşünde ona
+    cevaplayamayacağı bir soru sorulurdu — çapasızlıktan BETER, çünkü çapasız müşteriye hiç soru
+    sorulmuyor, bu müşteriye sorulup kapı kapanıyor.
+
+    Ölçülmüş bir hâl, varsayım değil: gönderim jetonu (`META_ACCESS_TOKEN`) yapılandırılmadığında
+    sürücü `unconfiguredSender`dır ve her gönderimi reddeder (15.11 Meta tarafında hâlâ beklemede).
+    Yani bugün canlıya alınsa BÜTÜN otomatik kodlar sessizce bu hâle düşerdi.
+
+    Geri alma aynı zamanda kendini onarır: kod silindiği için bir sonraki gelen mesajda koşul yine
+    tutar ve yeniden denenir. Kuyruk, zamanlayıcı, "başarısızları tekrar dene" defteri gerekmiyor.
+  */
+  if (sonuc.status === 'send_failed') {
+    await new UserProfileService(db).update({ id: input.customerId, securityCodeHash: null, securityCodeAttempts: 0 });
+    logger.warn({ context: 'customer/anchor', customerId: input.customerId, reason: sonuc.reason }, 'çapa: kod gönderilemedi — satırdan geri alındı, sonraki mesajda yeniden denenecek');
+    return 'send_failed';
+  }
+
+  logger.info({ context: 'customer/anchor', customerId: input.customerId, outcome: sonuc.status }, 'çapa: güvenlik kodu kendiliğinden verildi');
+  return sonuc.status;
 }

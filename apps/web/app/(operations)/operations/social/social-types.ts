@@ -9,7 +9,7 @@ import {
   type TicketHandler,
   type TicketSender,
 } from '@lezzet/types';
-import type { AnchorState } from '@lezzet/domain-core';
+import type { AnchorSnapshot } from '@lezzet/application';
 import type { CustomerContextData } from '@/lib/customer/context';
 import type { SocialChannelKey, SocialFilterKey, SocialUrlState } from './social-url';
 
@@ -116,7 +116,7 @@ export interface ConversationDetailView {
    * ne yapabileceğini buradan görüyor — çapası olana ikinci çapa kurulmaz, bekleyen bir soru varsa
    * yenisi sorulmaz.
    */
-  anchor: { state: AnchorState; hasPendingEmail: boolean } | null;
+  anchor: AnchorSnapshot | null;
 }
 
 export interface SocialData {

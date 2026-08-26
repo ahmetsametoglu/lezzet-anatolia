@@ -2,6 +2,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import {
   answerEmailAnchor,
   consumeWhatsappLink,
+  messageSenderFor,
+  offerAnchorIfDue,
   recordInboundMessage,
   recordOutboundMessage,
   ringConversationsBell,
@@ -210,12 +212,10 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
           // mal olur; DB'ye ancak jeton görüldüğünde gidilir.
           let customerId: string | null = null;
           const bag = await consumeWhatsappLink(serviceDb(), phone, text);
-          if (bag.status === 'linked' || bag.status === 'merged') customerId = bag.customerId;
-          if (bag.status === 'conflict') {
-            // Numara BAŞKA bir gerçek kayıtta aktif — sessizce çevrilmez (DOMAIN §10: kalanı bir
-            // kapıya değil insana düşür). Konuşma aşağıda numaranın bugünkü sahibine bağlanır.
-            logger.warn({ conversationRef: phone.slice(-4), customerId: bag.customerId, holderId: bag.holderId }, 'meta webhook: bağlama jetonu geldi ama numara başka kayıtta aktif');
-          }
+          // `transferred` de bağlanmış sayılır: numara önceki kayıttan alındı ve bu hesaba verildi
+          // (04.10, kullanıcı kararı 26.08). Konuşma yeni sahibine gider — eski kaydın geçmişi
+          // yerinde kalır, taşınan yalnız kanaldır.
+          if (bag.status === 'linked' || bag.status === 'merged' || bag.status === 'transferred') customerId = bag.customerId;
 
           // Kimliği çözmeyi DENE; çözülemezse kimliksiz aç — mesaj her durumda yazılır.
           //
@@ -261,6 +261,20 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
             // penceresinden geç biter ve şablon ücreti ödetir (motorun kendi künyesi).
             receivedAt: waTimestamp(message.timestamp),
           });
+
+          // ── ÇAPAYI KENDİLİĞİNDEN VER (04.10) ─────────────────────────────────────────────────
+          // Sipariş vermiş ama çapasız müşteriye güvenlik kodu burada gider ve yeri BURASI: gelen
+          // mesaj 24 saatlik ücretsiz pencereyi tanımı gereği açar. Sipariş anında denenseydi
+          // pencere kapalı olabilirdi ve tek yol ücretli kalıp mesaj olurdu (DOMAIN §11).
+          //
+          // Mesaj kaydından SONRA: kod bir CEVAPTIR, müşterinin mesajı deftere girmeden gönderilen
+          // bir cevap yazışmayı ters sırada gösterirdi.
+          if (customerId) {
+            await offerAnchorIfDue(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+              conversationId: conversation.id,
+              customerId,
+            });
+          }
         },
       });
     }

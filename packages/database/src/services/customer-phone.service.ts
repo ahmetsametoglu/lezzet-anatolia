@@ -91,6 +91,21 @@ export class CustomerPhoneService extends BaseDbService<CustomerPhone, CustomerP
   }
 
   /**
+   * **Bağı emekliye ayır** — hat devredildi, satır SİLİNMEZ (04.10 · DOMAIN §10).
+   *
+   * Emeklilik bir silme değil bir KAPANIŞTIR: numaranın bir zamanlar bu kişide olduğu bilgisi
+   * durur, yalnız aktif tekillikten (`customer_phone_active_key`) ve kimlik çözümünden düşer.
+   * Silseydik "burada ne oldu" sorusunu sonradan kimse cevaplayamazdı.
+   *
+   * Damgayı uygulama yazıyor, `touchSeen`in aksine — ve fark bilinçli: `last_seen_at` başka bir
+   * damgayla KARŞILAŞTIRILIYOR (sessizlik hesabı), bu ise yalnız "dolu mu boş mu" diye okunuyor.
+   * Karşılaştırılmayan bir damgada iki saat sorunu doğmaz.
+   */
+  retire(id: string): Promise<CustomerPhone> {
+    return this.update({ id, retiredAt: new Date().toISOString() });
+  }
+
+  /**
    * **Taşıyıcının teslim beyanını yaz** (04.10) — `failed` damgalar, başarılı teslim SİLER.
    *
    * Numarayla çağrılır, satır kimliğiyle değil: taşıyıcının elinde bizim kimliğimiz yok,

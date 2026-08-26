@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ConversationService, CustomerPhoneService, MessageService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { SERVICE_WINDOW_HOURS } from '@lezzet/domain-core';
 import type { Conversation, ConversationSource } from '@lezzet/types';
@@ -32,6 +32,7 @@ const db = serviceDb();
 const conversations = new ConversationService(db);
 const messages = new MessageService(db);
 const phones = new CustomerPhoneService(db);
+const profiles = new UserProfileService(db);
 
 const stamp = Date.now();
 
@@ -205,6 +206,58 @@ describe('WhatsApp — üç tuzak tek gövdede', () => {
     );
     expect(sonuc).toEqual({ status: 'ok', written: 0, duplicates: 0, ignored: 1 });
     expect((await messages.listByConversation(konuOnce!.id)).length).toBe(oncekiSayi);
+  });
+
+  it('`failed` statüsü numaranın KİMLİK künyesine yazılır — erken tetiğin yakıtı', async () => {
+    /* Defter yarısı (mesaj durumu kolonu) hâlâ 15.11'in işi; buradaki okuma KİMLİK yarısı (04.10).
+       Taşıyıcının "ulaşamadım" beyanı bir tahmin değil ve 3 aylık sessizliği beklemeye gerek yok —
+       ama tetik ölçülemezse motorun o dalı hiç çalışmaz. Bu test o ölçümün var olduğunu çiviliyor. */
+    const musteri = await profiles.insert({ name: `Ulaşılamayan ${stamp}` });
+    profileIds.push(musteri.id);
+    const telefon = `+339${String(stamp).slice(-8)}`;
+    await phones.recordProof(musteri.id, telefon);
+
+    await handleMetaWebhook({
+      object: 'whatsapp_business_account',
+      entry: [
+        {
+          id: WA_ACCOUNT,
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: { phone_number_id: WA_ACCOUNT },
+                // `recipient_id` '+'SIZ gelir — gelen mesaj yolundaki normalize kuralının aynısı.
+                statuses: [{ id: 'wamid.F1', status: 'failed', recipient_id: telefon.slice(1) }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect((await phones.findActive(telefon))?.deliveryFailedAt).not.toBeNull();
+
+    // Başarılı teslim BEYANI ÇÜRÜTÜR: bayat damga her dönüşte gereksiz bir kimlik sorusu doğururdu.
+    await handleMetaWebhook({
+      object: 'whatsapp_business_account',
+      entry: [
+        {
+          id: WA_ACCOUNT,
+          changes: [
+            {
+              field: 'messages',
+              value: {
+                messaging_product: 'whatsapp',
+                metadata: { phone_number_id: WA_ACCOUNT },
+                statuses: [{ id: 'wamid.F2', status: 'delivered', recipient_id: telefon.slice(1) }],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect((await phones.findActive(telefon))?.deliveryFailedAt).toBeNull();
   });
 
   it('yalnız `statuses` taşıyan teslimat SAYILIR ve geçilir — tekrar döngüsüne girmez', async () => {

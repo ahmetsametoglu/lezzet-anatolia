@@ -624,6 +624,24 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
   }
 
   /**
+   * **Bir andan SONRA verilen sipariş sayısı** — kimlik şüphesinin ağırlığını ölçer (04.10).
+   *
+   * Cevaplanmayan bir kimlik sorusu tek başına bir şey söylemez: müşteri kodu unutmuş olabilir,
+   * mesajı görmemiş olabilir. Ama o sorudan SONRA sipariş gelmeye devam ediyorsa ortada bekleyen
+   * bir insan var demektir — ve o siparişler, kimliği doğrulanmamış birinin adına başkasının
+   * kaydına yazılıyordur. Operatörün ekranda gördüğü sayı budur; kapı değil, aciliyet ölçüsü.
+   *
+   * Süzgeç `countPlacedForCustomer` ile AYNI (taslak ve iptal hariç, iade dahil) — iki sayının
+   * farklı şeyleri sayması, ekrandaki "3 sipariş" ile karttaki "2 sipariş"i açıklanamaz kılardı.
+   */
+  countPlacedForCustomerSince(customerId: string, since: string): Promise<number> {
+    return this.count(
+      { customerId, status: ['confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'completed', 'returned'] },
+      { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: since }] },
+    );
+  }
+
+  /**
    * **Parası ALINMIŞ ve ayakta duran sipariş sayısı** — getiren ödülünün geri alınıp alınmayacağı
    * buradan sorulur (★ karar 7 · 17.08).
    *

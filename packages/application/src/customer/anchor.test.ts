@@ -1,10 +1,24 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CustomerPhoneService, EmailVerificationService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import {
+  CategoryService,
+  ConversationService,
+  CustomerPhoneService,
+  EmailVerificationService,
+  OrderService,
+  ProductService,
+  UserProfileService,
+  serviceDb,
+} from '@lezzet/database';
+import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import type { Order } from '@lezzet/types';
+import { recordInboundMessage } from '../messaging/record';
+import type { MessageSender } from '../messaging/send';
 import {
   anchorGateOf,
   answerEmailAnchor,
+  issueAndSendSecurityCode,
   issueSecurityCode,
+  offerAnchorIfDue,
   raiseChallengeIfDue,
   startEmailAnchor,
   verifySecurityCode,
@@ -26,6 +40,7 @@ import {
 const db = serviceDb();
 const profiles = new UserProfileService(db);
 const phones = new CustomerPhoneService(db);
+const conversations = new ConversationService(db);
 
 const stamp = Date.now();
 const profileIds: string[] = [];
@@ -338,5 +353,165 @@ describe('kimlik sorusu: tetik ve kapı', () => {
     expect(sonuc.previous?.lastSeenAt).toBe(once?.lastSeenAt);
     // Tazelenmiş hâl ileri gitti (ya da eşit — aynı milisaniye): geriye ASLA gitmez.
     expect(new Date(sonuc.row!.lastSeenAt).getTime()).toBeGreaterThanOrEqual(new Date(once!.lastSeenAt).getTime());
+  });
+});
+
+/**
+ * **Çapayı kendiliğinden vermek** (04.10 · kullanıcı senaryosu 26.08).
+ *
+ * Kullanıcının kurgusu: *"müşteri selam verir, selamını alırız; ilk siparişle beraber hesabı
+ * oluşturulur ve kendisine bu kod verilir, saklaması istenir."* Sınanan da tam olarak o sıra:
+ *   1. **Selamda kod YOK** — kaybedecek bir şeyi olmayan yabancıya sır kurulmaz.
+ *   2. **Siparişten sonraki mesajda kod VAR** — ve sohbete yazılır, ekrana değil.
+ *   3. **İkinci kez verilmez** — yeni kod öncekini geçersiz kılar, müşteri sakladığını boşuna yazar.
+ *   4. **Çapası olana hiç verilmez.**
+ *
+ * Pencere kuralı testin kurgusunda da geçerli: kod ancak GELEN mesajdan sonra gidebilir (ADR-005).
+ */
+describe('çapa kendiliğinden veriliyor', () => {
+  const conversationIds: string[] = [];
+  const orderIds: string[] = [];
+  let warehouseId: string;
+  let variantId: string;
+  let categoryId: string;
+
+  beforeAll(async () => {
+    warehouseId = (await createTestWarehouse(db)).id;
+    categoryId = (await new CategoryService(db).create({ name: { tr: `Çapa testi ${stamp}` } })).id;
+    const { variants } = await new ProductService(db).create({
+      name: { tr: `Çapa ürünü ${stamp}` },
+      categoryId,
+      variants: [{ label: { tr: '1 kg' } }],
+    });
+    variantId = variants[0]!.id;
+  });
+
+  afterAll(async () => {
+    await purgeTestData(db, { orderIds, conversationIds, warehouseIds: [warehouseId], categoryIds: [categoryId] });
+  });
+
+  /** Çağrıları KAYDEDEN sahte sağlayıcı — "gitti mi" ve "ne yazdı" ayrı sorular. */
+  function fakeSender(): MessageSender & { texts: string[] } {
+    const texts: string[] = [];
+    return {
+      name: 'fake',
+      texts,
+      send: async (_target, input) => {
+        texts.push(input.text ?? '');
+        return { ok: true, providerMessageId: `FAKE-${texts.length}` };
+      },
+    };
+  }
+
+  /** Penceresi AÇIK konuşma — pencereyi yalnız gelen mesaj açar; kod da ancak o zaman gidebilir. */
+  async function konusma(customerId: string, phone: string) {
+    const row = await conversations.open({ source: 'whatsapp', externalRef: phone, customerId, providerAccountRef: 'ACC-TEST', profileName: null });
+    conversationIds.push(row.id);
+    await recordInboundMessage(db, { conversationId: row.id, text: 'merhaba', receivedAt: new Date().toISOString() });
+    return row;
+  }
+
+  async function siparis(customerId: string, status: Order['status'] = 'confirmed') {
+    const { order } = await new OrderService(db).create(
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'shipping', totalCents: 2000, status },
+      [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
+    );
+    orderIds.push(order.id);
+    return order;
+  }
+
+  it('SELAM veren yabancıya kod VERİLMEZ — kaybedecek bir şeyi yok', async () => {
+    const m = await musteri('Selamlayan');
+    const sohbet = await konusma(m.id, m.phone);
+    const sender = fakeSender();
+
+    expect(await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id })).toBe('skipped');
+    expect(sender.texts).toEqual([]);
+    expect((await profiles.getById(m.id))?.securityCodeHash).toBeNull();
+  });
+
+  it('SİPARİŞ verdikten sonraki mesajda kod gider ve SOHBETE yazılır', async () => {
+    const m = await musteri('Sipariş veren');
+    await siparis(m.id);
+    const sohbet = await konusma(m.id, m.phone);
+    const sender = fakeSender();
+
+    expect(await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id })).toBe('sent');
+    expect(sender.texts).toHaveLength(1);
+    expect(sender.texts[0]).toContain('Bunu saklayın');
+    expect(sender.texts[0]).toMatch(/\d{6}/);
+
+    // Çapa gerçekten kuruldu: kapı açıldı ve dönüşünde sorulacak bir şey var.
+    expect((await profiles.getById(m.id))?.securityCodeHash).not.toBeNull();
+    expect(await anchorGateOf(db, m.id)).toMatchObject({ state: 'code', open: true });
+  });
+
+  it('kod İKİNCİ kez verilmez — yenisi öncekini geçersiz kılardı', async () => {
+    const m = await musteri('İki mesaj yazan');
+    await siparis(m.id);
+    const sohbet = await konusma(m.id, m.phone);
+    const sender = fakeSender();
+
+    await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id });
+    const ilkOzet = (await profiles.getById(m.id))?.securityCodeHash;
+    expect(await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id })).toBe('skipped');
+
+    expect(sender.texts).toHaveLength(1);
+    expect((await profiles.getById(m.id))?.securityCodeHash).toBe(ilkOzet); // müşterinin sakladığı kod yaşıyor
+  });
+
+  it('TASLAK sipariş sayılmaz — yarıda bırakılmış checkout kaybedilecek bir şey üretmez', async () => {
+    const m = await musteri('Yarıda bırakan');
+    await siparis(m.id, 'draft');
+    const sohbet = await konusma(m.id, m.phone);
+    const sender = fakeSender();
+
+    expect(await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id })).toBe('skipped');
+    expect(sender.texts).toEqual([]);
+  });
+
+  it('ÇAPASI olana kod verilmez — iki çapa bir arada bulunmaz', async () => {
+    const m = await musteri('E-postalı');
+    await siparis(m.id);
+    await profiles.update({ id: m.id, email: posta('otomatik'), emailAnchoredAt: new Date().toISOString() });
+    const sohbet = await konusma(m.id, m.phone);
+    const sender = fakeSender();
+
+    expect(await offerAnchorIfDue(db, sender, { conversationId: sohbet.id, customerId: m.id })).toBe('skipped');
+    expect(sender.texts).toEqual([]);
+    expect((await profiles.getById(m.id))?.securityCodeHash).toBeNull();
+  });
+
+  it('OTOMATİK yolda gönderim düşerse kod GERİ ALINIR — müşterinin bilmediği bir sır kalmasın', async () => {
+    // Bu, otomatik yolun en önemli kuralı: iletecek insan YOK. Satırda kalan bir kod, dönüşünde
+    // müşteriye cevaplayamayacağı bir soru sordururdu — çapasızlıktan BETER, çünkü çapasıza hiç
+    // soru sorulmuyor. Ölçülmüş hâl: gönderim jetonu yokken sürücü her gönderimi reddediyor.
+    const m = await musteri('Jetonsuz gönderim');
+    await siparis(m.id);
+    const sohbet = await konusma(m.id, m.phone);
+    const dusen: MessageSender = { name: 'fake-fail', send: async () => ({ ok: false, reason: 'not_configured', retryable: false }) };
+
+    expect(await offerAnchorIfDue(db, dusen, { conversationId: sohbet.id, customerId: m.id })).toBe('send_failed');
+    expect((await profiles.getById(m.id))?.securityCodeHash).toBeNull();
+
+    // Kendini onarır: kod silindiği için bir sonraki mesajda koşul yine tutuyor.
+    const calisan = fakeSender();
+    expect(await offerAnchorIfDue(db, calisan, { conversationId: sohbet.id, customerId: m.id })).toBe('sent');
+    expect(calisan.texts).toHaveLength(1);
+  });
+
+  it('OPERATÖR yolunda gönderim düşerse kod İNSANA döner — orada iletecek biri var', async () => {
+    const m = await musteri('Gönderimi düşen');
+    await siparis(m.id);
+    const sohbet = await konusma(m.id, m.phone);
+    const dusenSender: MessageSender = { name: 'fake-fail', send: async () => ({ ok: false, reason: 'provider_down', retryable: true }) };
+
+    const sonuc = await issueAndSendSecurityCode(db, dusenSender, { conversationId: sohbet.id, customerId: m.id });
+    expect(sonuc.status).toBe('send_failed');
+    if (sonuc.status !== 'send_failed') throw new Error('beklenen hâl değil');
+    expect(sonuc.code).toMatch(/^\d{6}$/);
+
+    // Kod SATIRDA duruyor: müşteri onu operatörden alacak ve kendi numarasından yazabilecek.
+    expect(await verifySecurityCode(db, m.phone, sonuc.code)).toEqual({ status: 'ok', customerId: m.id });
   });
 });

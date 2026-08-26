@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { AnchorState } from '@lezzet/domain-core';
+import type { AnchorSnapshot } from '@lezzet/application';
 import type { TicketHandler } from '@lezzet/types';
 import type { CustomerContextData } from '@/lib/customer/context';
 import { AiDraftCard, handlerOptions } from '@/components/operation/ui/ai-handling';
@@ -426,13 +426,43 @@ function OptInRecorder({
  * Çapası olana ikinci çapa sunulmaz: iki anahtar bir arada bulunmaz ve ikincisi yalnız silinecek
  * bir sır üretirdi.
  */
+/**
+ * **Cevaplanmayan kimlik sorusu** (04.10) — sistemin kendi başına bitiremediği tek hâl.
+ *
+ * Soru kendiliğinden soruluyor ve kapı kendiliğinden kapanıyor; ama cevap hiç gelmezse ortada
+ * SESSİZCE bekleyen bir insan kalır ve sistem bunu bir daha hatırlatmaz. `DOMAIN §10`: *"kalanı bir
+ * kapıya değil İNSANA düşür."* Bu blok o düşürmenin kendisi.
+ *
+ * **Sipariş sayısı aciliyettir, süs değil:** soru açıldıktan sonra sipariş gelmeye devam ediyorsa,
+ * kimliği doğrulanmamış birinin siparişleri başkasının kaydına yazılıyor olabilir. Sıfırsa acele
+ * yok — muhtemelen kimse dönmedi.
+ */
+function PendingChallenge({ challenge }: { challenge: AnchorSnapshot['challenge'] }) {
+  if (!challenge) return null;
+
+  const gun = Math.floor((Date.now() - new Date(challenge.raisedAt).getTime()) / 86_400_000);
+  const sebep = challenge.reason === 'delivery_failed' ? 'taşıyıcı ulaşamadı' : 'uzun sessizlik';
+
+  return (
+    <div className="mt-1 flex w-full flex-col gap-0.5 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-2.5 py-2">
+      <span className="font-ops-body text-ops-xs font-semibold text-ops-amber-dark">Kimlik sorusu cevapsız · {sebep}</span>
+      <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-amber-dark">
+        {gun === 0 ? 'Bugün soruldu' : `${gun} gündür bekliyor`}
+        {challenge.ordersSince > 0
+          ? ` · o gün bugündür ${challenge.ordersSince} sipariş geldi. Numara devredilmiş olabilir — kayıtları ayırmayı değerlendirin.`
+          : ' · sonrasında sipariş gelmedi.'}
+      </span>
+    </div>
+  );
+}
+
 function AnchorPane({
   anchor,
   busy,
   onStartEmail,
   onIssueCode,
 }: {
-  anchor: { state: AnchorState; hasPendingEmail: boolean } | null;
+  anchor: AnchorSnapshot | null;
   busy: boolean;
   onStartEmail: (email: string) => void;
   onIssueCode: () => void;
@@ -450,6 +480,7 @@ function AnchorPane({
         <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
           Dönüşünde kimliği bu çapadan teyit edilir. İkinci bir çapa kurulmaz.
         </span>
+        <PendingChallenge challenge={anchor.challenge} />
       </div>
     );
   }
@@ -500,7 +531,7 @@ interface SocialContextPaneProps {
   busy: boolean;
   onOptIn: (granted: boolean) => void;
   /** Kimlik çapası (04.10) — kimliksiz sohbette `null`, blok hiç çizilmez. */
-  anchor: { state: AnchorState; hasPendingEmail: boolean } | null;
+  anchor: AnchorSnapshot | null;
   onStartEmailAnchor: (email: string) => void;
   onIssueSecurityCode: () => void;
 }

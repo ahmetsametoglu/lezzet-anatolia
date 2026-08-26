@@ -3,13 +3,12 @@
 import { revalidatePath } from 'next/cache';
 import {
   generateConversationDraft,
-  issueSecurityCode,
+  issueAndSendSecurityCode,
   linkConversationCustomer,
   messageSenderFor,
   recordConversationOptIn,
   recordInboundMessage,
   recordOutboundMessage,
-  sendOutboundMessage,
   startEmailAnchor,
 } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
@@ -427,13 +426,18 @@ export async function startEmailAnchorAction(input: unknown): Promise<ActionResu
 /**
  * **6 haneli güvenlik kodunu ver** — e-posta bağlamak İSTEMEYENİN tek çapası.
  *
- * Kod sohbete YAZILIR (`sendOutboundMessage`), operatörün ekranına değil: DOMAIN §10 "aynı
+ * Kod sohbete YAZILIR (`issueAndSendSecurityCode`), operatörün ekranına değil: DOMAIN §10 "aynı
  * konuşmada verilir" diyor ve elle kopyalanan bir sır, kopyalanırken yanlış sohbete düşebilir.
  * Gönderim yapılandırılmamışsa kod yine de üretilmiş olur ve operatöre DÖNER — sır zaten satırda
  * özetli, geri almanın yolu yok; onu saklamak müşteriyi çapasız bırakmak olurdu.
  *
  * **Sır şüphe doğmadan ÖNCE kurulur:** dönüş anında üretilen bir kod hiçbir şey kanıtlamaz — kim
  * çıkarsa kodu o belirler ve geçmişi o devralır.
+ *
+ * **Düğme artık tek yol DEĞİL** (26.08): siparişi olan çapasız müşteriye kod, gelen ilk mesajda
+ * kendiliğinden gidiyor (`offerAnchorIfDue`). Düğme duruyor çünkü operatörün elinde kalması gereken
+ * bir kapı var — otomatik yolun kapsamadığı hâller (kanal dışından gelen sipariş, gönderimi düşmüş
+ * kod) ve müşterinin telefonda isteyebileceği durum.
  */
 export async function issueSecurityCodeAction(conversationId: string): Promise<ActionResult<{ code: string | null }>> {
   try {
@@ -442,24 +446,25 @@ export async function issueSecurityCodeAction(conversationId: string): Promise<A
     const conversation = await new ConversationService(serviceDb()).getById(conversationId);
     if (!conversation?.customerId) return { data: null, error: 'Sohbet bir müşteriye bağlı değil — önce bağlayın.' };
 
-    const sonuc = await issueSecurityCode(serviceDb(), conversation.customerId);
-    if (sonuc.status !== 'ok') {
-      const cumle: Record<typeof sonuc.status, string> = {
-        profile_not_found: 'Müşteri kaydı bulunamadı — ekranı tazeleyin.',
-        already_anchored: 'Bu müşterinin e-posta çapası var; kod gerekmiyor.',
-      };
-      return { data: null, error: cumle[sonuc.status] };
+    // Üretim + gönderim TEK gövdede (`issueAndSendSecurityCode`): aynı kodu otomatik kapı da
+    // veriyor (gelen mesajda, siparişi olan çapasız müşteriye) ve müşteriye söylenen cümlenin iki
+    // kopyası olsaydı biri gün gelip ötekinden ayrılırdı.
+    const sonuc = await issueAndSendSecurityCode(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+      conversationId,
+      customerId: conversation.customerId,
+    });
+    // Gönderim tuttuysa kodu ekrana DÖNDÜRMÜYORUZ: müşteride, bizde özeti var; üçüncü bir kopya
+    // operatörün ekranında durmasın. Düştüyse dönüyor — kodu iletecek olan artık insandır.
+    if (sonuc.status === 'sent' || sonuc.status === 'send_failed') {
+      refresh();
+      return { data: { code: sonuc.status === 'sent' ? null : sonuc.code }, error: null };
     }
 
-    const gonderim = await sendOutboundMessage(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
-      conversationId,
-      text: `Güvenlik kodunuz: ${sonuc.code}\nBunu saklayın — zaman zaman siz olduğunuzu teyit etmek için isteyebiliriz.`,
-    });
-
-    refresh();
-    // Gönderim tuttuysa kodu ekrana DÖNDÜRMÜYORUZ: müşteride, bizde özeti var; üçüncü bir kopya
-    // operatörün ekranında durmasın.
-    return { data: { code: gonderim.status === 'sent' ? null : sonuc.code }, error: null };
+    const cumle: Record<typeof sonuc.status, string> = {
+      profile_not_found: 'Müşteri kaydı bulunamadı — ekranı tazeleyin.',
+      already_anchored: 'Bu müşterinin e-posta çapası var; kod gerekmiyor.',
+    };
+    return { data: null, error: cumle[sonuc.status] };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
