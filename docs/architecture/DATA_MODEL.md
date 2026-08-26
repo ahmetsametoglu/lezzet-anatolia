@@ -45,19 +45,25 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 > hâli bir ay içinde çürümüştü: altı ad veritabanında hiç yoktu (yeniden adlandırılmışlardı) ve
 > otuz bir enum listede hiç görünmüyordu; birkaçında değerler de ayrışmıştı. Bir listeyi doğru
 > tutmanın tek yolu onu denetlemektir — "özet" demek, eksikliğe izin vermek değil.
+> **Değerler de denetleniyor, yalnız adlar değil** — ilk yazımda ad karşılaştırması yeterli
+> sanılmıştı (*"değer eklemek sık ve zararsız"*); aynı gün altı enum'un DEĞERİ eksik yazıldığı
+> hâlde denetim sessiz kaldı ve hatayı bir insan sorusu buldu. Ölçen betiğin kendisi yanılmıştı:
+> enum gövdesini ilk `)`e kadar okuyordu, oysa `points_reason`ın yorumlarında parantez vardı ve
+> liste orada kesiliyordu — dokuz değerden ikisi yazıldı, biri (`purchase`) zaten bir YORUMUN
+> içinden gelmişti. **Kesilmiş bir liste, eksik listeden tehlikelidir:** okuyan onu tam sanar.
 > **Yalnız veritabanı enum'ları burada.** Kodda yaşayan ama tabloya inmeyen kümeler (`CatalogSort`,
 > `StockStatus`, `CartLineRoute`, `CouponRejection`) `packages/types/src/primitives/enums.schema.ts`ta
 > durur ve buraya girmez: bu bölüm VERİ modelini anlatıyor.
 
 - `account_type`: cash, bank, provider
 - `analytics_availability`: sellable, sold_out, closed, not_here *(ölçüm anında ürün alınabilir miydi)*
-- `analytics_blocked_reason`: min_basket, split *(sepet/checkout neden kapandı)*
+- `analytics_blocked_reason`: min_basket, split, place_change, coupon_invalid, out_of_stock, payment_failed, not_shippable, date_unavailable *(sepet/checkout neden kapandı)*
 - `analytics_device`: mobile, desktop
-- `analytics_event_type`: page_view, product_view, search, place_resolved, add_to_cart, cart_blocked, checkout_start, checkout_blocked
+- `analytics_event_type`: page_view, product_view, search, place_resolved, add_to_cart, cart_blocked, checkout_start, checkout_blocked, order_placed, share
 - `analytics_subject_type`: product, variant, bundle, category, collection, recipe
 - `analytics_surface`: web, native
 - `analytics_zero_result_kind`: search, filter *(sonuçsuz kalan neydi)*
-- `assistant_proposal_kind`: bundle_draft *(asistan kuyruğundaki öneri tipi)*
+- `assistant_proposal_kind`: bundle_draft, featured_flag, discount_draft, purchase_order, stock_intake, money_movement, zone_extend, product_draft, recipe_draft, batch_offer, product_create *(asistan kuyruğundaki öneri tipi)*
 - `assistant_proposal_status`: pending, applied, rejected, expired, failed
 - `barcode_kind`: unit, case *(tekil ürün mü koli mi)*
 - `carrier`: colissimo, chronopost, dhl, ups, other
@@ -85,7 +91,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `order_status`: draft, confirmed, preparing, ready, out_for_delivery, delivered, completed, cancelled, returned
 - `payment_method`: online, cash, card, cheque, bank_transfer
 - `payment_status`: pending, paid, partial, refunded
-- `points_reason`: review, purchase
+- `points_reason`: review, feedback_purchase, feedback_candidate, order, referral, neighbor, visit, redemption, manual
 - `portion_kind`: item, slice *(satış birimi — bütün mü dilim mi)*
 - `preferred_language`: tr, fr, de
 - `product_allergen`: gluten, kabuklu, yumurta, balik, yer_fistigi, soya, sut, sert_kabuklu, kereviz, hardal, susam, sulfit, aci_bakla, yumusaka *(AB 14 listesi; değerler ASCII (`balik`, `sut`) — veri anahtarıdır, ekran metni değil)*
@@ -96,8 +102,8 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `return_disposition`: restock, discard, goodwill
 - `review_status`: pending, approved, rejected
 - `setting_scope`: global, channel, zone, country, warehouse *(ayarın hangi eksende istisna aldığı)*
-- `site_image_slot`: home_hero
-- `stock_adjustment_reason`: expired, damaged, count_diff
+- `site_image_slot`: home_hero, packages_hero, professionals_hero, empty_cart
+- `stock_adjustment_reason`: expired, damaged, count_diff, lost, return_restock
 - `storage_area_kind`: frozen, chilled, ambient, staging *(depo içi bölge türü)*
 - `template_category`: marketing, utility, authentication
 - `ticket_handler`: human, hybrid, ai

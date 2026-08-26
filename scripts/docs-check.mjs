@@ -317,11 +317,30 @@ for (const j of JUNCTIONS) {
 // hepsi yeniden adlandırılmıştı) ve OTUZ BİR enum listede hiç görünmüyordu. Başlığındaki "(özet)"
 // kelimesi eksikliği meşru gösteriyordu — oysa bir listenin özeti de yanlış olabilir, ve yanlış bir
 // liste hiç olmayan listeden kötüdür: okuyan ona güvenip `date_type` diye var olmayan bir tip arar.
-// Denetim yalnız ADLARI karşılaştırır, değerleri değil: değer eklemek sık ve zararsız bir iştir,
-// bir enum'un varlığı ise veri modelinin kendisidir.
-const dbEnums = new Set(
-  [...migrations.matchAll(/create type (?:public\.)?([a-z_]+) as enum/g)].map((m) => m[1]),
-);
+// **DEĞERLER DE KARŞILAŞTIRILIR** — ve bu ders pahalıya alındı (aynı gün). İlk yazımda yalnız adlar
+// denetleniyordu, gerekçesi de makul görünüyordu: *"değer eklemek sık ve zararsız, enum'un VARLIĞI
+// ise veri modelinin kendisi."* Yanlıştı: listeyi üreten betik enum gövdesini ilk `)`e kadar okuyor
+// ve `points_reason` gibi YORUMUNDA parantez taşıyan enum'larda liste sessizce kesiliyordu (dokuz
+// değerden ikisi yazıldı, biri de yorumun içinden). Ad denetimi bunu göremezdi ve görmedi — hatayı
+// bir insan sorusu buldu. Kesilmiş bir liste eksik listeden tehlikelidir: okuyan onu TAM sanar.
+//
+// Bu yüzden gövde okuması burada da dikkatli: önce `--` yorumları atılır, sonra parantez DENGELİ
+// biçimde kapanır. Naif `\(([^)]*)\)` deseni bu dosyaya bir daha girmemeli.
+const enumBodies = (() => {
+  const clean = migrations.replace(/--[^\n]*/g, '');
+  const out = new Map();
+  for (const m of clean.matchAll(/create type (?:public\.)?([a-z_]+) as enum\s*\(/g)) {
+    let i = m.index + m[0].length;
+    const start = i;
+    for (let depth = 1; depth > 0; i += 1) {
+      if (clean[i] === '(') depth += 1;
+      else if (clean[i] === ')') depth -= 1;
+    }
+    out.set(m[1], [...clean.slice(start, i - 1).matchAll(/'([^']+)'/g)].map((v) => v[1]));
+  }
+  return out;
+})();
+const dbEnums = new Set(enumBodies.keys());
 const enumSection = (() => {
   const md = read('docs/architecture/DATA_MODEL.md');
   const start = md.indexOf("## Enum'lar");
@@ -337,6 +356,17 @@ if (enumSection === null) {
   const hayalet = [...listed].filter((e) => !dbEnums.has(e)).sort();
   if (eksik.length) note(`DATA_MODEL Enum'lar: veritabanında var, listede yok → ${eksik.join(', ')}`);
   if (hayalet.length) note(`DATA_MODEL Enum'lar: listede var, veritabanında YOK → ${hayalet.join(', ')} — yeniden adlandırılmış ya da silinmiş olabilir`);
+
+  // Değer karşılaştırması — SIRA dahil (enum'da sıra anlamlıdır: `order by` onu kullanır).
+  // Satır biçimi: `- \`ad\`: v1, v2 *(isteğe bağlı şerh)*`
+  for (const m of enumSection.matchAll(/^- `([a-z_]+)`: ([^\n]*?)(?: \*\(.*\)\*)?$/gm)) {
+    const dbValues = enumBodies.get(m[1]);
+    if (!dbValues) continue; // adı zaten yukarıda "hayalet" diye raporlandı
+    const listed = m[2].split(',').map((v) => v.trim()).filter(Boolean);
+    if (listed.join('|') !== dbValues.join('|')) {
+      note(`DATA_MODEL Enum'lar \`${m[1]}\`: değerler ayrışmış → listede "${listed.join(', ')}", veritabanında "${dbValues.join(', ')}"`);
+    }
+  }
 }
 
 // ── 2. Dokümanlarda anılan yollar gerçekte var mı ──────────────────────────────
@@ -899,16 +929,44 @@ if (!readme.includes(BEGIN) || !readme.includes(END)) {
       console.log(`✔ ${readmePath} durum özeti güncellendi`);
       uyarPaylasilanAgac(block);
     } else {
-      /* Mesaj sebebi de söylüyor: bayatlığın kaynağı SİZİN değişikliğiniz olmayabilir. Türetilmiş
-         özet ile kaynağı ayrı commit'lere düşerse HEAD kendi kaynağıyla çelişir ve kanca ağaçtaki
-         HERKESİ durdurur — o hâlde `docs:sync` yeter ve suç kimsede değildir. Eskiden mesaj yalnız
-         komutu söylüyordu; komutu koşan kişi de farkında olmadan başka şeridin yarım işini özete
-         alıp commit'liyor ve bir sonraki tıkanmayı üretiyordu (ölçüldü 25.08, üç tur). */
-      note(
-        `${readmePath}: durum özeti bayat — \`pnpm docs:sync\` çalıştır.` +
-          ' Sebep sizin değişikliğiniz değilse bu normaldir (türetilmiş özet ile kaynağı ayrı commit\'lere düşmüş);' +
-          ' sync sonrası YALNIZ kendi modülünüzün satırını commit\'e alın.',
-      );
+      /* ── BAYATLIK YALNIZ KENDİ SATIRINIZDA HATADIR (26.08) ────────────────
+         Mesaj doğru kuralı söylüyordu — *"yalnız kendi modülünüzün satırını commit'e alın"* — ama
+         MAKİNE onu uygulamıyordu: tablo bütün olarak karşılaştırılıyor, tek satırlık bir fark
+         commit'i durduruyordu. Paylaşılan ağaçta o fark neredeyse hep BAŞKASININ işiydi.
+
+         Sebep yapısal ve iki evrenli: `docs:sync` ÇALIŞMA AĞACINI okur, bu kanca ise
+         `git checkout-index` ile üretilmiş **commit'e girecek** kopyada koşar. Dört şerit aynı anda
+         kendi modülünü değiştirdiğinde sync'lenmiş README hiçbir zaman kopyayla tutmaz — ve tek
+         çıkış `--no-verify` olur. Bir kaçış kapısı alışkanlığa dönüşünce kanca hiçbir şeyi
+         korumaz: `--no-verify` bütün denetimleri birden atlar, yalnız şikâyet edeni değil
+         (ölçüldü 26.08; ondan önce bir tur da tip hatası bu yoldan geçmişti).
+
+         Kural artık satır satır: bir modülün özet satırı, YALNIZ o modülün dosyası bu commit'te
+         değişiyorsa hatadır. Değişmeyen satır HEAD'den geliyordur ve onu düzeltmek başkasının
+         yarım işini kendi commit'ine almaktır — kancanın önlemeye çalıştığı şeyin ta kendisi. */
+      const kendiSatirlari = [];
+      const baskasininSatirlari = [];
+      for (const m of moduleStats) {
+        const beklenen = `| ${m.nn} | \`${m.file}\` | ${m.title} | ${label(m)} | ${m.done}/${m.total}${m.partial ? ` (+${m.partial} kısmi)` : ''} |`;
+        if (current.includes(beklenen)) continue;
+        // Dosyanın kendisi bu commit'te değişiyor mu — HEAD'le karşılaştırarak.
+        const yol = `docs/build/${m.file}`;
+        const degisti = headRead(yol) !== read(yol);
+        (degisti ? kendiSatirlari : baskasininSatirlari).push(m.nn);
+      }
+
+      if (kendiSatirlari.length > 0) {
+        note(
+          `${readmePath}: bu commit'te değişen modüllerin özet satırı bayat (${kendiSatirlari.join(' · ')}) —` +
+            ' `pnpm docs:sync` çalıştır ve README\'yi commit\'e ekle.',
+        );
+      }
+      if (baskasininSatirlari.length > 0) {
+        console.log(
+          `· ${readmePath}: ${baskasininSatirlari.join(' · ')} satırı da bayat ama o dosyalar bu commit'te DEĞİŞMİYOR —` +
+            ' başka şeridin işi, sizi durdurmuyor.',
+        );
+      }
     }
   }
 }
