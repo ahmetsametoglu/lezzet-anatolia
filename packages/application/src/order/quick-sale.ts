@@ -1,7 +1,8 @@
-import { DeliveryRunService, OrderService, SettingsService, WarehouseService, type Db } from '@lezzet/database';
+import { OrderService, SettingsService, WarehouseService, type Db } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
 import { recordOrderPayment } from './payment';
+import { readCourierRun } from '../courier/day';
 import { suggestPicksForVariant } from '../warehouse/preparation';
 
 /**
@@ -131,13 +132,28 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
   // Ölçüt satışın YERİ (`kind === 'vehicle'`), personelin rolü değil: depo kapısındaki satış bir
   // sefere ait değildir ve oradaki para kasaya girer. Açık sefer yoksa (kurye henüz çıkmamış ya da
   // dönmüş) bağ KURULMAZ — uydurulmuş bir sefer, parayı yanlış kapanışa yazardı.
+  //
+  // ── "AÇIK SEFER"İN TANIMI TEK YERDEN OKUNUR (mobil şeridin ölçümü, 26.08) ──
+  //
+  // İlk yazımda burası kendi tanımını kuruyordu (`returnedAt === null`), kurye ekranı ise başka bir
+  // tanımdan konuşuyordu (kapanış kaydı var mı). Gerçek akışta ikisi çakışır — `close_delivery_run`
+  // dönüş damgasını ve kapanış satırını AYNI çağrıda yazar (0046) — ama çakışmaları bir tesadüftür,
+  // kural değil: seed dönüş damgasını kapanış olmadan yazınca ikisi ayrıştı ve motor, ekranın
+  // "açık" dediği sefere bağ kurmayı reddetti. İki tanım varsa biri bir gün yanlış olur.
+  //
+  // Bu yüzden ölçüt artık ekranın okuduğu fonksiyonun ta kendisi (`readCourierRun`): aynı gün, aynı
+  // kurye, aynı öncelik kuralı. Ve tanım TEK sinyale indi — **sefer kapanmamışsa açıktır**. Ölçüt
+  // dönüş damgası DEĞİL, çünkü sorulan soru "araç yolda mı" değil, *"bu para hâlâ bir mutabakata
+  // girebilir mi"*: kapanmış sefere sonradan satış bağlamak, dün mutabık olan fotoğrafı bugün
+  // sebepsiz "eksik" göstermek olurdu. Damgayı ölçüt yapmak ise ekranla ayrışmayı geri getirirdi.
+  //
+  // "Günler önce dönülmüş, kapatılmamış bir sefer bugünün parasını yutar mı?" — yutamaz: okuma
+  // GÜNE bağlı (`readCourierRun` varsayılanı bugün), dünün seferi hiç aday olmaz.
   if (input.actorId) {
     const warehouse = await new WarehouseService(db).getById(order.warehouseId);
     if (warehouse?.kind === 'vehicle') {
-      const acikSefer = (await new DeliveryRunService(db).listByCourier(input.actorId, { limit: 5 })).find(
-        (run) => run.returnedAt === null,
-      );
-      if (acikSefer) await orders.update({ id: order.id, deliveryRunId: acikSefer.id });
+      const sefer = await readCourierRun(db, { courierId: input.actorId });
+      if (sefer && !sefer.closed) await orders.update({ id: order.id, deliveryRunId: sefer.runId });
     }
   }
 

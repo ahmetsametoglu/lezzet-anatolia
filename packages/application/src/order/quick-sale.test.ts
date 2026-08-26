@@ -349,4 +349,60 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
     expect((await orders.getById(order.id))!.deliveryRunId).toBeNull();
     await db.from('order').delete().eq('id', order.id);
   });
+
+  /**
+   * **"AÇIK SEFER" TEK TANIMDIR** (mobil şeridin ölçümü, 26.08) — ve tanım *kapanmamış olmak*tır,
+   * *dönmemiş olmak* değil.
+   *
+   * Ayrışma böyle görülmüştü: seed dönüş damgasını kapanış kaydı OLMADAN yazınca kurye ekranı
+   * seferi "açık" (kapat düğmesi çizili) gösterdi, motor ise kendi ölçütüyle "kapalı" saydı ve
+   * araçtan satılan malın parası hiçbir sefere bağlanmadı. İki tanım varsa biri bir gün yanlış olur.
+   *
+   * Burada o hâl elle kuruluyor (damga var, kapanış yok) ve iddia şu: ekran ne diyorsa motor da
+   * onu der. Ölçüt yeniden damgaya çevrilirse bu test kırmızıya döner.
+   */
+  it('DÖNÜŞ DAMGALI ama kapanmamış sefer hâlâ açıktır — motor ekranla aynı tanımı okur', async () => {
+    await db
+      .from('delivery_run')
+      .update({ returned_at: new Date().toISOString() })
+      .eq('id', yerel.runId!);
+
+    const { order } = await aracTaslagi();
+    const sonuc = await quickSale(db, {
+      orderId: order.id,
+      actorId: yerel.kuryeId,
+      paymentMethod: 'cash',
+      paymentAccountId: cashAccount,
+    });
+    expect(sonuc.status).toBe('ok');
+    expect((await orders.getById(order.id))!.deliveryRunId).toBe(yerel.runId);
+  });
+
+  /**
+   * **KAPANMIŞ SEFER PARA ALMAZ** (mobil şeridin ölçümü, 26.08).
+   *
+   * Mutabakat bir FOTOĞRAFTIR: kapanış anında beklenen nakit sayılan nakitle karşılaştırılır ve
+   * fark yazılır. Kapanmış bir sefere sonradan satış bağlamak o fotoğrafı geçmişe dönük değiştirir
+   * — dün mutabık olan sefer bugün kendiliğinden "eksik" görünür ve sebebi hiçbir ekranda yazmaz.
+   *
+   * Bu test aynı zamanda "açık sefer"in TEK tanımını çiviliyor: motor ile kurye ekranı aynı
+   * fonksiyondan (`readCourierRun`) okuyor. Ayrıştıkları gün burası kırmızıya döner — ilk yazımda
+   * motor kendi ölçütünü kurmuştu ve seed dönüş damgasını kapanışsız yazınca bağ hiç kurulmadı.
+   *
+   * SON sırada duruyor ve bilerek: seferi kapatmak yukarıdaki iki senaryonun zeminini kaldırır.
+   */
+  it('KAPANMIŞ sefere bağlanmaz — mutabakat fotoğrafı geçmişe dönük değişmez', async () => {
+    const kapanis = await new DeliveryRunService(db).close({ runId: yerel.runId!, countedCashCents: 0, actorId: null });
+    expect(kapanis.ok).toBe(true);
+
+    const { order } = await aracTaslagi();
+    const sonuc = await quickSale(db, {
+      orderId: order.id,
+      actorId: yerel.kuryeId,
+      paymentMethod: 'cash',
+      paymentAccountId: cashAccount,
+    });
+    expect(sonuc.status).toBe('ok'); // Satış kapanır — bağ kurulmaması satışı engellemez.
+    expect((await orders.getById(order.id))!.deliveryRunId).toBeNull();
+  });
 });

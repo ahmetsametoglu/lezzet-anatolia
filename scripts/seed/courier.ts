@@ -61,10 +61,22 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
   }
 
   const yil = new Date().getFullYear();
+  const bugun = new Date().toISOString().slice(0, 10);
+  let atlanan = 0;
   for (const grup of gruplar.values()) {
+    // ── DAMGA BİR PLAN DEĞİL, OLAYDIR (mobil şeridin ölçümü, 26.08) ────────────────────────────
+    // İlk hâlde her sefere çıkış VE dönüş yazılıyordu — yarınki sefer bile "dönmüş" görünüyordu.
+    // İki şeyi birden bozuyordu: (1) seed'in kendi niyetiyle çelişiyordu — aşağıdaki `seedRunCloses`
+    // bilerek "kapanmamış sefer" bırakıyor ama satır "kurye 16:45'te döndü" diyordu; (2) motorun
+    // araç satışını sefere bağlayan adımı bu yüzden hiç tetiklenemiyordu (`quick-sale` 4b).
+    // Gerçek akışta dönüş damgasını YALNIZ kapanış yazar (0046) — seed de artık aynısını söylüyor.
+    if (grup.date > bugun) {
+      atlanan += 1; // Sefer çıkışta doğar: yarının siparişi henüz bir sefere ait değil.
+      continue;
+    }
     // Çıkış sabah 08:30, dönüş 16:45 — kapanış ekranındaki süre hesabı gerçekçi dursun.
     const departed = `${grup.date}T08:30:00+02:00`;
-    const returned = `${grup.date}T16:45:00+02:00`;
+    const returned = grup.date < bugun ? `${grup.date}T16:45:00+02:00` : null;
     const { data: run, error: runErr } = await db
       .from('delivery_run')
       .insert({
@@ -86,9 +98,11 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       .update({ delivery_run_id: (run as { id: string }).id })
       .in('id', grup.orderIds);
     if (stampErr) throw stampErr;
-    console.log(`  ✓ ${(run as { reference_no: string }).reference_no} · ${grup.date} · ${grup.orderIds.length} durak`);
+    console.log(
+      `  ✓ ${(run as { reference_no: string }).reference_no} · ${grup.date} · ${grup.orderIds.length} durak${returned ? '' : ' · AÇIK (yolda)'}`,
+    );
   }
-  console.log(`✓ sefer: ${gruplar.size} sefer kuruldu (rota+gün başına tek)`);
+  console.log(`✓ sefer: ${gruplar.size - atlanan} sefer kuruldu (rota+gün başına tek) · ${atlanan} gelecek gün seferi kurulmadı`);
 }
 
 /** Sefer kapanışları — kapanış RPC'den geçer (yazım tek yol), yalnız sayılan tutarlar seed'indir. */
@@ -110,9 +124,14 @@ export async function seedRunCloses(db: Db, kisiler: Kisiler): Promise<void> {
 
   // Kapıda tahsilatı OLAN seferler — görünüm zaten "hangi sefer, ne kadar" diyor. Sıralama sefer
   // gününe göre: en yeni mutabık kapanır, önceki farklı, kalanlar açık kalır.
+  // BUGÜNÜN SEFERİ KAPATILMAZ (26.08): kapanış bir günün SONUNDA yapılır ve kurye hâlâ yolda.
+  // Kural pratikte de gerekli — araçtan satış yalnız açık sefere bağlanıyor (`quick-sale` 4b), yani
+  // bugünün seferi kapatılırsa yerinde satışın denenebileceği tek zemin seed'de hiç doğmaz.
+  const bugun = new Date().toISOString().slice(0, 10);
   const seferler = await runs.listByCourier(kurye, { limit: 30 });
   const tahsilatli: Array<{ runId: string; date: string }> = [];
   for (const sefer of seferler) {
+    if (sefer.deliveryDate >= bugun) continue;
     if (await collections.getByRun(sefer.id)) tahsilatli.push({ runId: sefer.id, date: sefer.deliveryDate });
   }
 

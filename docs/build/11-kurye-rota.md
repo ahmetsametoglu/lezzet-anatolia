@@ -119,6 +119,25 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     (kullanıcı onayı 21.08): `day.test` › *"başka deponun rotası listede görünmez ve kimliği elle
     verilse bile başlatılamaz"* — yabancı rota listede yok, elle `zoneId` `no_route` + sıfır sefer
     kaydı, boş kapsam boş liste (fail-closed).
+  - **Durum (26.08) — "AÇIK SEFER" ARTIK TEK TANIM (mobil şeridin cihaz turu ölçtü, kök bizde).**
+    Araç satışını sefere bağlayan adım (`quick-sale.ts` 4b, 26.08) kendi ölçütünü kurmuştu
+    (`returnedAt is null`), kurye ekranı ise başkasını okuyordu (kapanış kaydı var mı). Gerçek
+    akışta ikisi çakışıyor — `close_delivery_run` dönüş damgasını ve kapanış satırını **aynı
+    çağrıda** yazar (`0046:320`) — ama çakışmaları bir tesadüftü, kural değil: seed damgayı
+    kapanışsız yazınca ayrıştılar ve ekranın "açık · kapat" dediği sefere motor bağ kurmayı
+    reddetti; araçtan satılan malın parası yine hiçbir mutabakata girmedi (4b'nin kapatmak için
+    yazıldığı arıza, bu yoldan hâlâ doğuyordu).
+    **Tanım ölçütü DAMGA DEĞİL KAPANIŞ:** sorulan soru *"araç yolda mı"* değil, *"bu para hâlâ bir
+    mutabakata girebilir mi"*. Motor artık ekranın okuduğu fonksiyonu çağırıyor
+    (`readCourierRun`) — ikinci bir tanım kalmadı. Dünün kapatılmamış seferi bugünün parasını
+    yutamaz: okuma **güne** bağlı.
+    **Seed'deki kök de düzeldi:** her sefere çıkış VE dönüş damgası yazılıyordu, yarınki sefer bile
+    "dönmüş" görünüyordu — üstelik seed'in kendi niyetiyle çelişerek ("kapanmamış sefer" hâli
+    bilerek kuruluyor). Artık geçmiş gün = kapanmış sefer, **bugün = AÇIK sefer** (yerinde satışın
+    denenebileceği tek zemin), gelecek gün = sefer yok (sefer çıkışta doğar).
+    **İki test çiviliyor** (`quick-sale.test.ts`, ikisi de sabotajla sınandı): damgalı-ama-kapanmamış
+    sefer hâlâ açıktır (ölçüt damgaya çevrilirse kırmızı) · kapanmış sefere bağlanmaz (kapanış
+    denetimi kalkarsa kırmızı — mutabakat fotoğrafı geçmişe dönük değişmez).
 
 ## Netleşecekler
 
