@@ -6,6 +6,7 @@ import { Tabs } from '@/components/operation/ui/tabs';
 import { SETTING_GROUPS } from './settings-catalog';
 import { SettingList, StaffRow } from './settings-sections';
 import { SiteImagesTab } from './site-images-tab';
+import { McpTab } from './mcp-tab';
 import { isSettingGroup } from './settings-url';
 import type { SettingsViewProps } from './settings-types';
 
@@ -43,6 +44,14 @@ export function SettingsDesktop({ data, urlState, navPending, rows, search, onTa
             count: data.siteImages.filter((i) => i.id !== null).length,
           },
           { key: 'staff' as const, label: 'Kullanıcı & rol', count: data.staff.length },
+          // Sayaç GEÇERLİ anahtarları sayıyor: iptal edilmiş ya da süresi dolmuş bir anahtar
+          // listede durur (geçmişi taşır) ama bir bağlantı değildir — rozette sayılması "üç
+          // kişi bağlanabiliyor" diye okunurdu.
+          {
+            key: 'mcp' as const,
+            label: 'MCP anahtarları',
+            count: data.mcp.keys.filter((k) => k.status === 'active').length,
+          },
         ]}
         active={urlState.tab}
         onSelect={onTab}
@@ -69,6 +78,8 @@ export function SettingsDesktop({ data, urlState, navPending, rows, search, onTa
           <SettingList rows={rows} onOpen={onOpenSetting} searching={searching} />
         ) : urlState.tab === 'images' ? (
           <SiteImagesTab images={data.siteImages} />
+        ) : urlState.tab === 'mcp' ? (
+          <McpTab data={data.mcp} />
         ) : (
           <div className="flex flex-col gap-2.5">
             <p className="font-ops-body text-ops-xs text-ops-muted">

@@ -1,6 +1,9 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
-import { captureError, errorMessageOf, logger, SOURCES } from '@lezzet/observability';
+import { McpCallLogService, serviceDb } from '@lezzet/database';
+import { captureError, errorMessageOf, logger, scrubMessage, SOURCES } from '@lezzet/observability';
+import type { McpScope } from '@lezzet/types';
+import { scopeAllows, toolScope } from './guard';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
 import { catalogHealth, catalogLookup, productDetail, soldOutWatch, stockWatch } from './tools-catalog';
 import { customerPulse, demandSignals, moneyOverview } from './tools-signals';
@@ -578,26 +581,82 @@ function text(payload: unknown, isError = false) {
   return { content: [{ type: 'text' as const, text: body }], ...(isError ? { isError: true } : {}) };
 }
 
-export function createMcpServer(): Server {
+/**
+ * Bağlantının kimliği ve yetkisi — kapıdan (`mcpGuard`) gelir, sunucu kendisi çözmez.
+ *
+ * Ayrım STACK §4'ün aynısı: kapı kimlik doğrular, sunucu yalnız kendisine söyleneni uygular.
+ * Sunucu bir kez daha DB'ye gitseydi aynı soru iki yerden sorulmuş olurdu — ve iki yer bir gün
+ * farklı cevap verirdi.
+ */
+interface McpAuthContext {
+  /** `null` = env artçısıyla girildi; çağrı izi anahtarsız yazılır. */
+  connectionKeyId: string | null;
+  scope: McpScope;
+}
+
+/**
+ * Çağrı izi (§8) — FIRE-AND-FORGET.
+ *
+ * Beklenmez ve düşmesine izin verilir: iz tutma yolunda fırlayan bir hata, izi tutulan asıl işi
+ * maskeler (`capture_error`ın kendi künyesindeki gerekçenin aynısı). Ama sessiz de değil —
+ * `captureError`a gider.
+ *
+ * **ARGÜMAN YAZILMAZ.** Araç argümanı müşteri adı, adres, tutar taşıyabilir; teşhis için hangi
+ * aracın hangi hatayla düştüğü yeter. Hata mesajı `scrubMessage`den geçer çünkü en tehlikeli
+ * sızıntı bizim yazdığımız bağlam değil, veritabanının kısıt ihlaline gömdüğü değerdir.
+ */
+function recordCall(auth: McpAuthContext, tool: string, ok: boolean, startedAt: number, error?: string): void {
+  const row = {
+    connectionKeyId: auth.connectionKeyId,
+    tool,
+    ok,
+    durationMs: Date.now() - startedAt,
+    error: error ? scrubMessage(error) : null,
+  };
+  void new McpCallLogService(serviceDb())
+    .record(row)
+    .catch((err) => captureError(err, { source: SOURCES.mcp, context: { tool, stage: 'call_log' } }));
+}
+
+export function createMcpServer(auth: McpAuthContext): Server {
   const server = new Server(
     { name: 'lezzet-admin-assistant', version: '0.1.0' },
     { capabilities: { tools: {} }, instructions: INSTRUCTIONS },
   );
 
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: [...TOOLS] }));
+  /**
+   * Liste KAPSAMLA SÜZÜLÜR — okuma yetkisi olan bir anahtar `propose_*` araçlarını GÖRMEZ.
+   *
+   * Gizlemek değil, doğru söylemek: çağrıldığında reddedilecek bir aracı listelemek modele
+   * yapamayacağı işi vaat etmektir ve o vaat, denenip reddedildikten sonra "sistem bozuk" diye
+   * okunur (tur 8'in yanlış teşhis dersi).
+   */
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: TOOLS.filter((t) => scopeAllows(auth.scope, toolScope(t.name))),
+  }));
 
   server.setRequestHandler(CallToolRequestSchema, async (req) => {
     const toolName = req.params.name;
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
     const started = Date.now();
 
+    // Kapsam denetimi handler'dan ÖNCE: yetkisiz çağrı hiçbir sorgu doğurmadan döner.
+    if (!scopeAllows(auth.scope, toolScope(toolName))) {
+      const message = `'${toolName}' bu bağlantının kapsamı dışında. Anahtar yalnız OKUMA yetkisiyle üretilmiş; öneri araçları için yöneticiden 'propose' kapsamlı anahtar iste (Ayarlar → MCP).`;
+      recordCall(auth, toolName, false, started, 'scope_denied');
+      return text(message, true);
+    }
+
     try {
       const handler = HANDLERS[toolName];
-      if (!handler) return text(`Bilinmeyen araç: '${toolName}'.`, true);
+      if (!handler) {
+        recordCall(auth, toolName, false, started, 'unknown_tool');
+        return text(`Bilinmeyen araç: '${toolName}'.`, true);
+      }
       const result = await handler(args);
 
-      // Çağrı izi şimdilik LOG'a (üretimde `mcp_call_log` tablosu — §8): araç adı + süre, argüman değil.
       logger.info({ tool: toolName, ms: Date.now() - started }, 'mcp: araç çağrısı');
+      recordCall(auth, toolName, true, started);
       return text(result);
     } catch (err) {
       // `String(err)` Supabase hatasında `[object Object]` üretiyordu ve model neyi düzelteceğini
@@ -605,6 +664,7 @@ export function createMcpServer(): Server {
       const message = errorMessageOf(err);
       // Altyapı hatası admin hata ekranına da düşer — asistanın kendi arızası görünmez kalmasın (§8).
       void captureError(err, { source: SOURCES.mcp, context: { tool: toolName } });
+      recordCall(auth, toolName, false, started, message);
       return text(`Araç hatası: ${message}`, true);
     }
   });

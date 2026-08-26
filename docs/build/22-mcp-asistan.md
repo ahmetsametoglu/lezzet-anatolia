@@ -203,11 +203,66 @@ satırında.
       bilinçli, ölçüm ürünle birlikte kaybolmasın diye; o yüzden hiçbir cascade onu toplamıyor).
       Öksüz satırlar temizlendi.
 
-- [ ] (22.4) **Üretim turu — Faz 1 bitince AÇILIR:** ikili anahtar tablosu + Ayarlar paneli ·
-  oran sınırı · `mcp_call_log` · OAuth (`well-known`, claude.ai connector — canlıya çıkış 18'e
-  bağlı) · onay kuyruğu `assistant_proposal` + operasyon paneli (tasarım ısmarlaması burada) ·
-  araç fazları B1/B2 · oturum anahtarı (1 saat + kapsam). Ayrıntı ve sıra `AI_ADMIN_ASSISTANT
-  §4-7`; bu satır Faz 1 kapanışında gerçek görevlere bölünür.
+- [~] (22.4) **Üretim turu — MCP kapısının GÜVENLİK ve İZ katmanı** *(kullanıcı talimatı 26.08:
+  «önce MCP ile alakalı kısmı bitirelim»)* · `touches: supabase/migrations/0051_mcp.sql,
+  packages/types/src/entities/mcp.schema.ts, packages/database/src/services/mcp-*.service.ts,
+  packages/database/src/core/base.service.ts, packages/database/src/testing/cleanup.ts,
+  apps/backend/src/mcp/{guard,rate-limit,route,server-factory,mcp.test}.ts,
+  apps/backend/src/jobs/purge-observability.ts,
+  apps/web/app/(operations)/operations/settings/{mcp-read.ts,mcp-actions.ts,mcp-tab.tsx,settings-url.ts,settings-types.ts,page.tsx,settings.desktop.tsx}`
+
+  **SATIR YEDİ İŞ TAŞIYORDU, ÖLÇÜLDÜ VE AYRILDI (26.08).** Kullanıcı *"grup içinde birden fazla
+  küme varsa bunu vermeden ifade et"* dedi; ölçüm şunu buldu: üçü çoktan bitmişti, dördü hiç
+  başlamamıştı, biri başka modüle bağlıydı. Kapanan üç iş bu satırda değil, kendi satırlarında
+  yapılmıştı — onay kuyruğu + operasyon paneli (22.3, 22.5-22.40) ve araç fazları B1/B2 (25 araç:
+  10 `propose_*` + 15 okuma, 22.2/22.35). Bu satır artık YALNIZ güvenlik ve iz katmanıdır.
+
+    - *Bitti:* **anahtar tablosu + Ayarlar → MCP sekmesi · oran sınırı · `mcp_call_log` · kapsam
+      denetimi.** Kapı bugün: anahtar hash'li, süreli, iptal edilebilir ve kapsamlı; her çağrı iz
+      bırakıyor; anahtar başına dakikalık tavan var.
+    - **ENV ANAHTARININ ÜÇ KUSURU** ölçüldü ve kapatıldı: iptal edilemez (sızarsa tek çare süreci
+      durdurmak — yani herkesin bağlantısını birlikte kesmek) · süresiz · kapsamsız (anahtarı
+      bilen 25 aracın hepsini çağırır). **Env anahtarı ÖLMEDİ, artçı oldu** — tabloda eşleşme
+      yoksa devreye girer, kapsamı `propose`. Gerekçe: tablo boş doğuyor; kaldırılsaydı panelden
+      ilk anahtar üretilene kadar kullanıcının ÇALIŞAN bağlantısı sessizce ölürdü. Bir güvenlik
+      yükseltmesi, çalışan bir kurulumu habersiz kısıtlayarak başlamamalı.
+    - **KAPSAM ADLANDIRMADAN OKUNUYOR, SÖZLÜKTEN DEĞİL.** 25 araçlık bir eşleme tablosu yazmak
+      cazipti ve yanlış olurdu: yeni araç eklenip sözlüğe yazılmadığında sözlük **sessizce yanlış
+      cevap verir** (bilinmeyen araç hangi ailede sayılır?). Kuyruğa yazan 11 aracın hepsi
+      `propose_` ile başlıyor; kural yeni araçta kendiliğinden işler. Sözleşmeyi üç test kilitliyor.
+    - **`tools/list` KAPSAMLA SÜZÜLÜYOR** — okuma anahtarı `propose_*` araçlarını görmez. Gizleme
+      değil dürüstlük: çağrıldığında reddedilecek bir aracı listelemek modele yapamayacağı işi
+      vaat etmektir, ve o vaat denenip reddedildikten sonra "sistem bozuk" diye okunur (tur 8'in
+      yanlış teşhis dersi).
+    - **OTURUM ANAHTARI (ikinci katman) BİLİNÇLİ YAZILMADI — sapma ve gerekçesi.**
+      `AI_ADMIN_ASSISTANT §4` ikili anahtar tarif ediyor. Referans projede oturum anahtarı
+      ŞABLONA bağlıydı: model hangi tasarımın üzerinde çalıştığını ondan öğreniyordu, yani anahtar
+      bir BAĞLAM taşıyıcısıydı. Bizim asistanın böyle bir bağlamı yok — araçlar depoyu, ürünü,
+      tedarikçiyi argümanla alıyor. Geriye tek kazanım kalıyor (çalınan anahtarın ömrünü kısaltmak)
+      ve §4'ün kendi cümlesi onu ikincil ilan ediyor: *"asıl sınır süre değil KAPSAM + ONAY
+      KUYRUĞU"*. Kapsam tabloda, kuyruk `assistant_proposal`da, ömür `expires_at` + `revoked_at`te.
+      Yazılsaydı bedeli somuttu: 25 aracın şemasına `sessionKey` parametresi ve çalışan bağlantının
+      kırılması.
+    - **BAZ SERVİSİN SÖZÜ TUTULDU:** `SystemHealthService.deleteBefore` ham `this.supabase` ile
+      yazılmıştı ve künyesi *"bugün tek tüketicisi var; ikinciye çıktığında taşınır"* diyordu.
+      `mcp_call_log` ikinci tüketici oldu → `BaseDbService.deleteOlderThan` doğdu, iki kopya
+      doğmadan (CLAUDE §1).
+    - **EKRAN GÖRÜNTÜSÜ BİR YALAN YAKALADI.** Panelde `envKeyActive: Boolean(process.env
+      .MCP_CONNECTION_KEY)` vardı; o anahtar `apps/backend/.env.local`de, yani BAŞKA BİR SÜRECİN
+      ortamında yaşıyor — web sunucusu onu hiçbir koşulda göremez. Okuma her zaman `false` döner ve
+      panel "ortam anahtarı yok" yazardı, oysa kapı o anahtarla açık durur. Tam olarak CLAUDE §1'in
+      yasakladığı hâl: **ölçülemeyen değer sıfır değildir.** Alan söküldü; uyarı koşulsuz ve ölçüm
+      iddiasız yazılıyor. Tip temizdi, testler yeşildi — arıza yalnız ekranda görünüyordu.
+    - **DOĞRULAMA — kapının uçtan uca turu** (yerel backend, 26.08): anahtarsız `401` · uydurma
+      anahtar `401` · `read` anahtarı `tools/list` → **14 araç, hiç `propose_` yok** · `propose`
+      anahtarı → **25 araç** · `read` anahtarı `propose_featured_flag` çağırdı → reddedildi (okunur
+      cümleyle, model ne yapacağını biliyor) · `reference_data` çağrısı → başarılı ve **iz yazıldı**
+      (`reference_data(ok) 45ms · propose_featured_flag(scope_denied) 0ms`) · `last_used_at` yazıldı.
+      Panel turu: anahtar üretimi (43 karakter, `base64url`) → listede geçerli rozetiyle → iptal →
+      rozet `2→1`, satır "İptal edildi" olarak KALDI. `typecheck` · `lint` · `knip` · `boundaries` temiz.
+    - **BEKLEYEN(22.4):** OAuth / claude.ai connector (`well-known`, canlıya çıkış modül 18'e
+      bağlı — `index.ts:89` bugün bilinçle *"o uçlar bizde YOK ve olmamalı"* diyor). Bugünkü
+      bağlanma yolu CLI/Desktop'a Bearer başlığı yazmaktır ve panel onu üretiyor.
 
 - [~] (22.5) **Kuyruk ÜÇ KAPILI karara geçiyor + kimlik köprüsü + parti teklifi** *(kullanıcı kararı
   09.08; harici denetim turu 3)* — touches: `packages/application/src/assistant/`,
@@ -1177,10 +1232,13 @@ satırında.
   - **TRANSFER hâlâ devirle:** `money_movement` payload'ı `type: 'transfer'` taşıyorsa gövde formu
     hiç açmaz — iki hesap ister ve kendi kapısı vardır. Kuyruğa uymayan bir kararı zorla oraya
     sığdırmak, yanlış doldurulmuş bir defter satırı demekti.
-  - **BEKLEYEN(22.19): üç ortak kontrol `disabled` taşımıyor** — `BundleItemsEditor` · `FormSwitch` ·
-    `MultiToggle`/`FormSelect`. Karar VERİLMİŞ bir öneride kalem satırları, vitrin anahtarı ve hesap
-    seçicisi düzenlenebilir GÖRÜNÜYOR (yazım engelli, alt bar kapalı — ama ekran bunu söylemiyor).
-    Ürün formunda da aynı iş ayrı turda yapılmıştı; üçü tek turda geçilecek.
+  - ~~**BEKLEYEN(22.19): üç ortak kontrol `disabled` taşımıyor** — `BundleItemsEditor` · `FormSwitch` ·
+    `MultiToggle`/`FormSelect`.~~ **KAPANDI 26.08, ölçümle düşürüldü.** İşaret bir çözüm biçimi
+    varsayıyordu ("her kontrole prop ekle") ve çözüm başka türlü geldi: kural `globals.css`te tek
+    satır (`[data-surface='operations'] fieldset:disabled :is(button, input, select, textarea)`),
+    yani **bayrak taşımayan kontroller de kapsanıyor**. `bundle-form/body.tsx:135` künyesi bunu
+    aynı gün yazmış. Prop eklemek üç dosyada üç kopya kural olurdu; HTML'in kendi mekanizması
+    zaten yazımı da kapatıyor — eksik olan yalnız GÖRÜNÜMdü.
 
 - [x] (22.19) **Ortak form kontrollerine `disabled`** — karar verilmiş öneride form GERÇEKTEN kilitli görünsün · `touches: apps/web/app/globals.css`
   - *Bitti:* `readOnly` bir öneride kalem satırları, anahtarlar ve seçiciler düzenlenemez görünüyor

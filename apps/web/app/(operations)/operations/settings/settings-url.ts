@@ -10,17 +10,21 @@ import { SETTING_GROUPS, type SettingGroup } from './settings-catalog';
 const SETTINGS_PATH = '/operations/settings';
 
 /**
- * Ayar grupları + personel + vitrin görselleri.
+ * Ayar grupları + personel + vitrin görselleri + MCP anahtarları.
  *
- * Son ikisi bir AYAR DEĞİL, bu yüzden sözlükte de yoklar: personel bir kayıt, vitrin görseli bir
- * dosya. Sekme barını paylaşmalarının sebebi ikisinin de "kurulum işi" olması — nadiren bakılır,
- * yerini bilmek gerekir ve her ikisi de yalnız yöneticiye açıktır (ekranın kapısı `requireAdmin`).
+ * Son ÜÇÜ bir AYAR DEĞİL, bu yüzden sözlükte de yoklar: personel bir kayıt, vitrin görseli bir
+ * dosya, MCP anahtarı bir kimlik. Sekme barını paylaşmalarının sebebi hepsinin "kurulum işi"
+ * olması — nadiren bakılır, yerini bilmek gerekir ve hepsi yalnız yöneticiye açıktır (ekranın
+ * kapısı `requireAdmin`).
  */
-export const SETTINGS_TABS = [...SETTING_GROUPS.map((g) => g.key), 'images', 'staff'] as const;
+export const SETTINGS_TABS = [...SETTING_GROUPS.map((g) => g.key), 'images', 'staff', 'mcp'] as const;
 export type SettingsTab = (typeof SETTINGS_TABS)[number];
 
+/** Ayar OLMAYAN sekmeler — kurulum işleri. Arama bunları taramaz (arama bir AYAR aramasıdır). */
+const NON_SETTING_TABS = new Set<string>(['staff', 'images', 'mcp']);
+
 export function isSettingGroup(tab: SettingsTab): tab is SettingGroup {
-  return tab !== 'staff' && tab !== 'images';
+  return !NON_SETTING_TABS.has(tab);
 }
 
 export interface SettingsUrlState {

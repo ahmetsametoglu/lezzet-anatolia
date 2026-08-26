@@ -102,6 +102,16 @@ export interface PurgeTargets {
    */
   assistantProposalIds?: string[];
   /**
+   * MCP bağlantı anahtarları (`mcp_connection_key`, 0051) ve onların çağrı izleri.
+   *
+   * İz satırları anahtara `set null` ile bağlı — yani anahtar silinse iz KALIR ve sahipsizleşir.
+   * Bu üretimde doğru (iptal edilmiş anahtarın geçmişi cevaplanabilir olmalı), testte yanlış:
+   * teardown yalnız anahtarı silerse `mcp_call_log` sessizce birikir ve panelin "son çağrılar"
+   * listesi bir gün test artığıyla açılır. Bu yüzden İZ ÖNCE, anahtar sonra silinir — sıra tek
+   * yerde durmalı ki her dosya kendi sırasını uydurmasın.
+   */
+  mcpConnectionKeyIds?: string[];
+  /**
    * Bildirim satırları (`notification`, 0049) — YALNIZ personel fan-out'unun izleri için.
    * Müşteri satırları profille cascade gider (`profileIds` yeter); ama `dispatchStaffNotification`
    * GERÇEK personel profillerine yazar (seed yöneticileri dahil) ve o profiller purge'ün malı
@@ -216,6 +226,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     orderIds,
     profileIds,
     assistantProposalIds,
+    mcpConnectionKeyIds,
     notificationIds,
     webhookEventIds,
     conversationIds,
@@ -242,6 +253,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     orderIds: clean(targets.orderIds),
     profileIds: clean(targets.profileIds),
     assistantProposalIds: clean(targets.assistantProposalIds),
+    mcpConnectionKeyIds: clean(targets.mcpConnectionKeyIds),
     notificationIds: clean(targets.notificationIds),
     webhookEventIds: clean(targets.webhookEventIds),
     conversationIds: clean(targets.conversationIds),
@@ -341,6 +353,12 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     // kimliği bir daha ASLA yazılamaz (claim onu tekrar sayar) — sessiz bir kilit olurdu.
     if (webhookEventIds.length > 0) {
       await mustDelete(db, 'webhook_event', (q) => q.in('event_id', webhookEventIds));
+    }
+    // MCP anahtarı: İZ ÖNCE. Bağ `set null` olduğu için anahtar tek başına silinebilir ama izi
+    // sahipsiz kalır ve panelin "son çağrılar" listesinde birikir (künye yukarıda).
+    if (mcpConnectionKeyIds.length > 0) {
+      await mustDelete(db, 'mcp_call_log', (q) => q.in('connection_key_id', mcpConnectionKeyIds));
+      await mustDelete(db, 'mcp_connection_key', (q) => q.in('id', mcpConnectionKeyIds));
     }
   });
 

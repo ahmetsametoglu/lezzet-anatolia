@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { SettingScopeEnum, UserRoleEnum, type Setting, type UserProfile, type UserRole } from '@lezzet/types';
 import type { ExceptionScope, SettingDef, SettingValue } from './settings-catalog';
 import type { SiteImageView } from './site-images-read';
+import type { McpPanelData } from './mcp-read';
 import type { SettingsTab, SettingsUrlState } from './settings-url';
 
 // Ayarlar ekranının tipleri (09.16). Şema tek kaynak (`CLAUDE.md §1`): giriş şemaları
@@ -121,6 +122,13 @@ export interface SettingsData {
    * bir iştir.
    */
   siteImages: SiteImageView[];
+  /**
+   * MCP bağlantı anahtarları + çağrı izi (22.4) — asistanın kapısının kimlikleri.
+   *
+   * Sekme açık olmasa da okunuyor, `siteImages` ile aynı gerekçe: sekme rozeti geçerli anahtar
+   * sayısını yazıyor ve o sayı ancak veri gelince bilinir.
+   */
+  mcp: McpPanelData;
 }
 
 /**

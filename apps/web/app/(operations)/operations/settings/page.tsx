@@ -15,6 +15,7 @@ import { SettingsClient } from './settings-client';
 import { SETTING_CATALOG } from './settings-catalog';
 import { toScopeOptions, toSettingRows, toStaffRows } from './settings-read';
 import { readSiteImages } from './site-images-read';
+import { readMcpPanel } from './mcp-read';
 import { parseSettingsUrl } from './settings-url';
 import type { SettingsData } from './settings-types';
 
@@ -52,7 +53,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const urlState = parseSettingsUrl(await searchParams);
   const db = serviceDb();
 
-  const [settings, staff, zones, warehouses, accounts, siteImages] = await Promise.all([
+  const [settings, staff, zones, warehouses, accounts, siteImages, mcp] = await Promise.all([
     readAllSettings(new SettingsService(db)),
     readStaff(new UserProfileService(db)),
     new DeliveryZoneService(db).list(),
@@ -63,6 +64,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     // Vitrin görselleri sekmesi TEK sorgu (`bySlot`) — dört slot da aynı ekranda; sekme açık
     // olmasa bile okunuyor çünkü sekme rozeti dolu slot sayısını yazıyor.
     readSiteImages(),
+    // MCP anahtarları + son çağrılar (22.4) — sekme rozeti geçerli anahtar sayısını yazıyor,
+    // yani sekme kapalıyken de okunmalı (vitrin görselleriyle aynı gerekçe).
+    readMcpPanel(),
   ]);
 
   const { rows } = toSettingRows({ settings, zones, accounts });
@@ -82,6 +86,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     accountOptions: accounts.filter((a) => a.isActive).map((a) => ({ value: a.id, label: a.name })),
     propagationSeconds: Math.round(SETTINGS_CACHE_TTL_MS / 1000),
     siteImages,
+    mcp,
   };
 
   return <SettingsClient data={data} urlState={urlState} />;

@@ -15,18 +15,26 @@ import { createMcpServer } from './server-factory';
  * süreç yeniden başlasa bağlantı düşmez). `enableJsonResponse` curl/teşhis kolaylığı: istemci SSE
  * istemezse düz JSON alır.
  *
- * Guard EN ÖNDE ve jenerik 401: anahtar yoksa `tools/list` bile dönmez, hata gövdesi bilgi
- * sızdırmaz (petit guard sözleşmesi).
+ * Guard EN ÖNDE ve jenerik cevap: anahtar yoksa `tools/list` bile dönmez, gövde bilgi sızdırmaz
+ * (petit guard sözleşmesi). İki reddin ayrımı yalnız DURUM KODUNDA: `401` kimlik, `429` oran
+ * sınırı. İkincisi ayrı olmalı — istemci "yanlış anahtar" ile "çok hızlısın"ı ayırt edemezse
+ * yanlış tepki verir (anahtarı değiştirmeye çalışır, oysa beklemesi gerekir).
+ *
+ * Kapsam (`read`/`propose`) kapıdan çıkar ve sunucuya VERİLİR — sunucu aynı soruyu ikinci kez
+ * sormaz (STACK §4: iki yer bir gün farklı cevap verir).
  */
 export async function mcpHandler(c: Context<AppEnv>): Promise<Response> {
-  if (!mcpGuard(c.req.header('authorization'))) {
-    return c.json({ error: 'unauthorized' }, 401);
+  const auth = await mcpGuard(c.req.header('authorization'));
+  if (!auth.ok) {
+    return auth.status === 429
+      ? c.json({ error: 'rate limit' }, 429)
+      : c.json({ error: 'unauthorized' }, 401);
   }
 
   // Body yalnız POST'ta var; GET/DELETE (SSE aboneliği, oturum kapama) gövdesiz gelir.
   const body = c.req.method === 'POST' ? await c.req.json().catch(() => undefined) : undefined;
 
-  const server = createMcpServer();
+  const server = createMcpServer({ connectionKeyId: auth.connectionKeyId, scope: auth.scope });
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   await transport.handleRequest(c.env.incoming, c.env.outgoing, body);

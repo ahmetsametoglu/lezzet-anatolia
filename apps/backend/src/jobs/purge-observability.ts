@@ -1,4 +1,4 @@
-import { ErrorLogService, SystemHealthService, serviceDb } from '@lezzet/database';
+import { ErrorLogService, McpCallLogService, SystemHealthService, serviceDb } from '@lezzet/database';
 
 export const PURGE_OBSERVABILITY = 'purge_observability';
 
@@ -23,16 +23,26 @@ const RESOLVED_ERROR_RETENTION_DAYS = 90;
 /** Sağlık görüntüsü (gün). Ekranın en geniş penceresi 7 gün; iki katı bir haftalık geriye bakışı her koşulda garanti eder. */
 const HEALTH_RETENTION_DAYS = 14;
 
+/**
+ * MCP çağrı izi (gün) — 22.4.
+ *
+ * Çözülmüş hata kaydıyla AYNI süre ve gerekçesi aynı: iz bir teşhis verisidir, iş kaydı değil
+ * (`OBSERVABILITY §1`). Sorduğu soru "bu anahtar ne yaptı" — üç ay geriye bakmak kötüye kullanımı
+ * görmeye fazlasıyla yeter; daha uzunu, süresiz tutulan bir davranış geçmişi olurdu.
+ */
+const MCP_CALL_RETENTION_DAYS = 90;
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export async function purgeObservabilityJob(): Promise<Record<string, unknown>> {
   const db = serviceDb();
   const cutoff = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString();
 
-  const [errors, snapshots] = await Promise.all([
+  const [errors, snapshots, mcpCalls] = await Promise.all([
     new ErrorLogService(db).deleteResolvedBefore(cutoff(RESOLVED_ERROR_RETENTION_DAYS)),
     new SystemHealthService(db).deleteBefore(cutoff(HEALTH_RETENTION_DAYS)),
+    new McpCallLogService(db).deleteBefore(cutoff(MCP_CALL_RETENTION_DAYS)),
   ]);
 
-  return { errors, snapshots };
+  return { errors, snapshots, mcpCalls };
 }

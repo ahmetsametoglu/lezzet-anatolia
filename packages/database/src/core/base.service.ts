@@ -666,4 +666,22 @@ export abstract class BaseDbService<TDb, TInsert, TUpdate> {
     const { error } = await query;
     if (error) throw error;
   }
+
+  /**
+   * Saklama süpürmesi — verilen andan ESKİ satırları siler, SAYIYI döner (26.08).
+   *
+   * `deleteWhere` bunu karşılayamıyor: o yalnız `eq` süzgeçli ve `void` dönüyor; süpürmenin
+   * gerektirdiği `lt` ve "kaç satır gitti" sayısı ayrı bir imza ister. `SystemHealthService`
+   * bunu ham `this.supabase` ile yazmış ve künyesine *"bugün tek tüketicisi var; ikinciye
+   * çıktığında taşınır"* diye söz düşmüştü — `mcp_call_log` (22.4) ikinci tüketici oldu, söz
+   * tutuldu ve iki kopya doğmadan tabana geldi.
+   *
+   * Sayı bir SÜPÜRME İZİDİR: işler bunu `job_run.lastResult`a yazıyor ve "eşik çalışıyor mu"
+   * sorusu ancak o sayıyla ölçülür.
+   */
+  protected async deleteOlderThan(field: string, cutoff: string): Promise<number> {
+    const { data, error } = await this.supabase.from(this.tableName).delete().lt(this.column(field), cutoff).select('id');
+    if (error) throw error;
+    return data?.length ?? 0;
+  }
 }

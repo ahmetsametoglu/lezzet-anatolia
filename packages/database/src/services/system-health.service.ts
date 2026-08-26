@@ -90,15 +90,11 @@ export class SystemHealthService extends BaseDbService<
   /**
    * Saklama süresi süpürmesi (14 gün) — kaç satır silindiğini döner, iş bunu izine yazar.
    *
-   * **Ham `this.supabase` İKİ sebeple** (`STACK §6`: taban karşılamıyorsa ham + gerekçe):
-   * `deleteWhere` yalnız `eq` süzgeçli — burada gereken `lt('created_at')`; ve `void` dönüyor —
-   * burada gereken SAYI. İkincisi taban genişletilse bile ayrı bir imza isterdi.
-   *
-   * Tabana taşınMADI çünkü bugün tek tüketicisi var (YAGNI); ikinciye çıktığında taşınır.
+   * **Ham `this.supabase` KALKTI 26.08:** buradaki künye *"tabana taşınMADI çünkü bugün tek
+   * tüketicisi var; ikinciye çıktığında taşınır"* diyordu. `mcp_call_log` (22.4) ikinci tüketici
+   * oldu ve söz tutuldu — gövde `BaseDbService.deleteOlderThan`da.
    */
   async deleteBefore(cutoff: string): Promise<number> {
-    const { data, error } = await this.supabase.from(this.tableName).delete().lt('created_at', cutoff).select('id');
-    if (error) throw error;
-    return data?.length ?? 0;
+    return this.deleteOlderThan('createdAt', cutoff);
   }
 }

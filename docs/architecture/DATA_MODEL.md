@@ -81,6 +81,7 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `feedback_context`: purchase, candidate
 - `feedback_vote`: like, dislike
 - `health_status`: ok, warn, crit
+- `mcp_scope`: read, propose *(MCP anahtarının araç ailesi — `propose` `read`i kapsar)*
 - `message_direction`: inbound, outbound
 - `message_kind`: text, interactive, template, media
 - `movement_direction`: in, out

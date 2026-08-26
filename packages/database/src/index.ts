@@ -81,6 +81,10 @@ export { JobRunService } from './services/job-run.service';
 export { WebhookEventService } from './services/webhook-event.service';
 export { ErrorLogService, errorFingerprint, type ListErrorLogsOptions } from './services/error-log.service';
 export { SystemHealthService } from './services/system-health.service';
+// MCP kapısı (22.4) — anahtar doğrulaması ve çağrı izi. Gözlemleme servislerinin yanında:
+// ikisi de "sistem kendi hakkında ne biliyor" sorusunun parçası.
+export { McpConnectionKeyService } from './services/mcp-connection-key.service';
+export { McpCallLogService } from './services/mcp-call-log.service';
 export {
   AnalyticsDailyService,
   AnalyticsEventService,

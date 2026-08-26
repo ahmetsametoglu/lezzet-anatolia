@@ -1,5 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { mcpGuard } from './guard';
+import { createHash } from 'node:crypto';
+import { McpConnectionKeyService, serviceDb } from '@lezzet/database';
+import { purgeTestData } from '@lezzet/database/testing';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mcpGuard, scopeAllows, toolScope } from './guard';
+import { resetRateLimit } from './rate-limit';
 import { HANDLERS, TOOLS } from './server-factory';
 import { morningBriefing, salesSummary, systemErrors } from './tools';
 import { catalogHealth, soldOutWatch, stockWatch } from './tools-catalog';
@@ -21,30 +25,164 @@ import { customerPulse, demandSignals } from './tools-signals';
  */
 
 const KEY_ENV = 'MCP_CONNECTION_KEY';
-const original = process.env[KEY_ENV];
+const RATE_ENV = 'MCP_RATE_LIMIT_PER_MINUTE';
+const originalKey = process.env[KEY_ENV];
+const originalRate = process.env[RATE_ENV];
 
-afterEach(() => {
-  if (original === undefined) delete process.env[KEY_ENV];
-  else process.env[KEY_ENV] = original;
+/** Damga — paylaşılan DB'de kendi satırlarımızı ötekilerinkinden ayıran tek şey (CLAUDE §4b). */
+const stamp = Date.now();
+
+function restoreEnv(name: string, value: string | undefined) {
+  if (value === undefined) delete process.env[name];
+  else process.env[name] = value;
+}
+
+beforeEach(() => {
+  // Oran sınırı sayacı SÜREÇ ÖMRÜ boyunca yaşar — sıfırlanmazsa bir testin çağrıları bir
+  // sonrakini 429'a düşürür ve düşen test kendi sebebini göstermez.
+  resetRateLimit();
 });
 
-describe('mcpGuard — fail-closed kapı', () => {
-  it('anahtar yapılandırılmamışsa HERKESE kapalı (doğru anahtar bile giremez)', () => {
+afterEach(() => {
+  restoreEnv(KEY_ENV, originalKey);
+  restoreEnv(RATE_ENV, originalRate);
+});
+
+// ─── Kapı: env artçısı ───────────────────────────────────────────────────────
+
+describe('mcpGuard — fail-closed kapı (env artçısı)', () => {
+  it('anahtar yapılandırılmamışsa HERKESE kapalı (doğru anahtar bile giremez)', async () => {
     delete process.env[KEY_ENV];
-    expect(mcpGuard('Bearer herhangi')).toBe(false);
+    expect(await mcpGuard(`Bearer yok-${stamp}`)).toEqual({ ok: false, status: 401 });
   });
 
-  it('yanlış ya da eksik Bearer reddedilir', () => {
-    process.env[KEY_ENV] = 'dogru-anahtar';
-    expect(mcpGuard(undefined)).toBe(false);
-    expect(mcpGuard('Bearer yanlis')).toBe(false);
-    expect(mcpGuard('dogru-anahtar')).toBe(false); // Bearer öneki şart
+  it('yanlış ya da eksik Bearer reddedilir', async () => {
+    process.env[KEY_ENV] = `dogru-anahtar-${stamp}`;
+    expect(await mcpGuard(undefined)).toEqual({ ok: false, status: 401 });
+    expect(await mcpGuard(`Bearer yanlis-${stamp}`)).toEqual({ ok: false, status: 401 });
+    expect(await mcpGuard(`dogru-anahtar-${stamp}`)).toEqual({ ok: false, status: 401 }); // Bearer öneki şart
   });
 
-  it('doğru anahtar geçer (büyük/küçük Bearer toleransıyla)', () => {
-    process.env[KEY_ENV] = 'dogru-anahtar';
-    expect(mcpGuard('Bearer dogru-anahtar')).toBe(true);
-    expect(mcpGuard('bearer dogru-anahtar')).toBe(true);
+  it('env anahtarı geçer ve `propose` kapsamlı sayılır (bugünkü davranış korunuyor)', async () => {
+    process.env[KEY_ENV] = `dogru-anahtar-${stamp}`;
+    // Anahtar kimliği YOK: env yolunun tabloda satırı yoktur ve uydurulmaz.
+    expect(await mcpGuard(`Bearer dogru-anahtar-${stamp}`)).toEqual({ ok: true, connectionKeyId: null, scope: 'propose' });
+    expect(await mcpGuard(`bearer dogru-anahtar-${stamp}`)).toEqual({ ok: true, connectionKeyId: null, scope: 'propose' });
+  });
+});
+
+// ─── Kapı: tablo anahtarı (22.4) ─────────────────────────────────────────────
+
+const db = serviceDb();
+const keys = new McpConnectionKeyService(db);
+const createdKeys: string[] = [];
+
+/** Damgalı anahtar — küresel sayıya bakmadan kendi satırımızı izleyebilmek için. */
+async function makeKey(opts: { scope?: 'read' | 'propose'; expiresInMs?: number } = {}) {
+  const token = `test-anahtar-${stamp}-${createdKeys.length}`;
+  const row = await keys.insert({
+    label: `MCP testi ${stamp}`,
+    tokenHash: createHash('sha256').update(token).digest('hex'),
+    scope: opts.scope ?? 'read',
+    expiresAt: new Date(Date.now() + (opts.expiresInMs ?? 3600_000)).toISOString(),
+  });
+  createdKeys.push(row.id);
+  return { token, row };
+}
+
+afterAll(async () => {
+  await purgeTestData(db, { mcpConnectionKeyIds: createdKeys });
+});
+
+describe('mcpGuard — tablo anahtarı', () => {
+  it('geçerli anahtar kimliğiyle ve KENDİ kapsamıyla geçer', async () => {
+    delete process.env[KEY_ENV]; // env artçısı devrede olmasın: geçişin sebebi TABLO olmalı
+    const { token, row } = await makeKey({ scope: 'read' });
+    expect(await mcpGuard(`Bearer ${token}`)).toEqual({ ok: true, connectionKeyId: row.id, scope: 'read' });
+  });
+
+  it('İPTAL edilmiş anahtar reddedilir — ve satır silinmediği için geçmişi durur', async () => {
+    delete process.env[KEY_ENV];
+    const { token, row } = await makeKey();
+    await keys.revoke(row.id);
+    expect(await mcpGuard(`Bearer ${token}`)).toEqual({ ok: false, status: 401 });
+    expect(await keys.getById(row.id)).not.toBeNull();
+  });
+
+  it('SÜRESİ dolmuş anahtar reddedilir', async () => {
+    delete process.env[KEY_ENV];
+    const { token, row } = await makeKey();
+    // **İKİ damga birlikte geriye çekilir.** Yalnız `expires_at`i geçmişe almak `expires_at >
+    // created_at` kısıtını çiğniyor — ve bu kısıt doğru: süresi bitişi doğuşundan önce olan bir
+    // anahtar hiç doğmamış demektir. Geçmişte üretilip süresi dolmuş bir anahtarın gerçek hâli
+    // ikisinin de geride olmasıdır.
+    const twoHoursAgo = new Date(Date.now() - 2 * 3600_000).toISOString();
+    await keys.update({ id: row.id, createdAt: twoHoursAgo, expiresAt: new Date(Date.now() - 3600_000).toISOString() });
+    expect(await mcpGuard(`Bearer ${token}`)).toEqual({ ok: false, status: 401 });
+  });
+
+  it('tablo anahtarı env artçısını GÖLGELEMEZ — ikisi ayrı yollar', async () => {
+    process.env[KEY_ENV] = `env-anahtari-${stamp}`;
+    const { token, row } = await makeKey({ scope: 'read' });
+    // Tablodaki anahtar kendi (dar) kapsamıyla girer; env anahtarı hâlâ `propose`.
+    expect(await mcpGuard(`Bearer ${token}`)).toEqual({ ok: true, connectionKeyId: row.id, scope: 'read' });
+    expect(await mcpGuard(`Bearer env-anahtari-${stamp}`)).toEqual({ ok: true, connectionKeyId: null, scope: 'propose' });
+  });
+});
+
+describe('oran sınırı', () => {
+  it('pencere tavanı aşılınca 429 döner ve bu 401\'den AYRI bir cevaptır', async () => {
+    process.env[KEY_ENV] = `dogru-anahtar-${stamp}`;
+    process.env[RATE_ENV] = '3';
+    const header = `Bearer dogru-anahtar-${stamp}`;
+    for (let i = 0; i < 3; i += 1) expect((await mcpGuard(header)).ok).toBe(true);
+    expect(await mcpGuard(header)).toEqual({ ok: false, status: 429 });
+  });
+
+  it('sınır anahtar BAŞINA işler — bir anahtarın tükettiği kota ötekini kapatmaz', async () => {
+    process.env[KEY_ENV] = `dogru-anahtar-${stamp}`;
+    process.env[RATE_ENV] = '2';
+    const header = `Bearer dogru-anahtar-${stamp}`;
+    for (let i = 0; i < 2; i += 1) await mcpGuard(header);
+    expect(await mcpGuard(header)).toEqual({ ok: false, status: 429 });
+
+    // Başka bir (geçersiz) anahtar kendi sayacına düşer: cevabı 401, 429 DEĞİL.
+    expect(await mcpGuard(`Bearer baska-anahtar-${stamp}`)).toEqual({ ok: false, status: 401 });
+  });
+
+  it('geçersiz anahtar da sayaç doldurur — kapı DB\'ye gitmeden korunur', async () => {
+    delete process.env[KEY_ENV];
+    process.env[RATE_ENV] = '2';
+    const header = `Bearer hic-yok-${stamp}`;
+    expect(await mcpGuard(header)).toEqual({ ok: false, status: 401 });
+    expect(await mcpGuard(header)).toEqual({ ok: false, status: 401 });
+    expect(await mcpGuard(header)).toEqual({ ok: false, status: 429 });
+  });
+});
+
+describe('kapsam sözleşmesi', () => {
+  it('`propose_` ile başlayan HER araç öneri ailesinde, kalanların hepsi okuma', () => {
+    for (const tool of TOOLS) {
+      expect(toolScope(tool.name)).toBe(tool.name.startsWith('propose_') ? 'propose' : 'read');
+    }
+    // Sözleşmenin sayısal hâli — yeni araç eklenince bu satır düşer ve kapsam ailesi bilinçli seçilir.
+    expect(TOOLS.filter((t) => toolScope(t.name) === 'propose')).toHaveLength(11);
+    expect(TOOLS.filter((t) => toolScope(t.name) === 'read')).toHaveLength(14);
+  });
+
+  it('`propose` kapsamı `read`i KAPSAR; `read` öneriye yetmez', () => {
+    expect(scopeAllows('propose', 'read')).toBe(true);
+    expect(scopeAllows('propose', 'propose')).toBe(true);
+    expect(scopeAllows('read', 'read')).toBe(true);
+    expect(scopeAllows('read', 'propose')).toBe(false);
+  });
+
+  it('kuyruğa yazan araç adı `propose_` ÖNEKİ olmadan var olamaz', () => {
+    // Kural gizli değil, ama gizlice bozulabilir: kuyruğa yazan bir araç `queue_x` diye eklenirse
+    // `toolScope` onu OKUMA sayar ve dar kapsamlı bir anahtar onunla yazabilir. Handler adları
+    // tek kaynak olduğu için sözleşme burada kilitleniyor.
+    const writers = Object.keys(HANDLERS).filter((name) => name.includes('propose'));
+    for (const name of writers) expect(name.startsWith('propose_')).toBe(true);
   });
 });
 
