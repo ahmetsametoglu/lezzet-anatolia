@@ -11,7 +11,6 @@ import { RecallDialog } from './recall-dialog';
 import { StockDesktop } from './stock.desktop';
 import { stockUrl, type LossPeriod, type StockScope, type StockTab, type StockUrlState } from './stock-url';
 import type { ReceiveOutcome } from '@/lib/warehouse/intake-types';
-import type { OfferHandoff } from './stock-handoff';
 import type { BatchView, ReceivedIntake, StockData, StockLevelRow } from './stock-types';
 
 // Stok ekranı client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
@@ -24,10 +23,9 @@ interface StockClientProps {
   data: StockData;
   urlState: StockUrlState;
   /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
-  handoff?: OfferHandoff | null;
 }
 
-export function StockClient({ data, urlState, handoff = null }: StockClientProps) {
+export function StockClient({ data, urlState }: StockClientProps) {
   const router = useRouter();
   /**
    * Süzgeç/sekme turu SÜRÜYOR MU — `router.replace` bir RSC okumasıdır ve dönene kadar ekranda hiçbir
@@ -181,7 +179,7 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
   //
   // **Öneriden gelindiyse diyalog DOĞRUDAN açılır** (22.5): operatör kuyruktan bu ekrana zaten "bu
   // teklife bak" diye geldi, ayrıca satırı listede aratmak fazladan bir adım olurdu.
-  const [offerStockId, setOfferStockId] = useState<string | null>(handoff?.batchId ?? null);
+  const [offerStockId, setOfferStockId] = useState<string | null>(null);
   const allBatches = [...data.attention, ...levels.flatMap((r) => r.batches)];
   const offerBatch: BatchView | null = allBatches.find((b) => b.id === offerStockId) ?? null;
   useEffect(() => {
@@ -198,7 +196,6 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
    * `data.attention` sayfalanmıyor (`page.tsx`: parti listesi tek turda, eksiksiz) — yani "listede
    * yok" gerçekten yok demek, "bu sayfada yok" değil.
    */
-  const handoffMissing = handoff !== null && !allBatches.some((b) => b.id === handoff.batchId);
 
   // `null` = kapalı, '' = boş kutuyla açık, dolu = satırdan gelen lot ile açık.
   const [recallLot, setRecallLot] = useState<string | null>(null);
@@ -261,7 +258,6 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
     onOpenWriteOff: (stockId?: string) => setWriteOffStockId(stockId ?? ''),
     onOpenRecall: (lot?: string) => setRecallLot(lot ?? ''),
     // Yalnız BULUNAMAYAN devir sayfaya iner; bulunan hâlin künyesi diyaloğun içinde.
-    handoffMissing: handoffMissing ? handoff : null,
   };
 
   return (
@@ -273,7 +269,6 @@ export function StockClient({ data, urlState, handoff = null }: StockClientProps
           batch={offerBatch}
           // Künye yalnız DEVREDİLEN parti açıkken: operatör listeden başka bir partiye geçerse
           // pencere sıradan bir teklif penceresidir, asistanın cümlesi orada yanlış olurdu.
-          handoff={handoff && handoff.batchId === offerBatch.id ? handoff : null}
           onClose={() => setOfferStockId(null)}
         />
       ) : null}

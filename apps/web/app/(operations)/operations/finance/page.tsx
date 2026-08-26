@@ -4,7 +4,6 @@ import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
 import { matchQueue } from '@/lib/bank/reconcile';
 import { guarded, requireFinance } from '@/lib/guard';
 import { FinanceClient } from './finance-client';
-import { readMoneyHandoff } from './finance-handoff';
 import { NOTES } from './finance-labels';
 import { toAccountViews, toMatchRows, toMovementRows, totalBalance } from './finance-read';
 import type { FinanceData, LedgerView } from './finance-types';
@@ -105,15 +104,13 @@ export default async function FinancePage({ searchParams }: FinancePageProps) {
   };
 
   /**
-   * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) elle hareket penceresi ÖN DOLU açılır
-   * (22.5). Formun kabul etmediği iki tipte (stok alımı · transfer) pencere açılmaz, künye hangi
-   * yoldan gidileceğini söyler (`finance-handoff` künyesi).
+   * ── DEVİR YOLU SÖKÜLDÜ (22.24 · 26.08) ──────────────────────────────────
+   * Burada `?proposal=<id>` okunup elle hareket penceresi ön dolu açılırdı (22.5). Para önerisi
+   * 22.18'de kuyruğun İÇİNE taşındı; okuma o günden beri ölüydü (mod kontrolü her çağrıda `null`
+   * döndürüyordu) ama ekranın prop'ları duruyordu.
    */
-  const handoff = await readMoneyHandoff(typeof params.proposal === 'string' ? params.proposal : null);
-
   return (
     <FinanceClient
-      handoff={handoff}
       data={data}
       urlState={urlState}
       // Pasif hesap listede kalır (geçmişi ona bağlı) ama YENİ harekete kapanır — diyalogların

@@ -6,7 +6,6 @@ import { discountPercentOf, markupPercent } from '@lezzet/domain-core';
 import { fromCents, removeVat, toCents } from '@lezzet/helper';
 import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
-import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PriceTriple } from '@/components/operation/form/price-triple';
 import { daysLabel, money, percent, shortDate } from '@/components/operation/ui/format';
 import { setOfferPriceAction } from '@/lib/stock/offer-actions';
@@ -52,16 +51,15 @@ interface OfferDialogProps {
    * sayfayı kaplıyor. Künye arkada kalsaydı operatör fiyatın neden dolu geldiğini ancak pencereyi
    * kapattıktan sonra görürdü — yani kararı verdikten sonra.
    */
-  handoff?: { proposalId: string; summary: string; reason: string | null; offerPriceCents: number } | null;
 }
 
-export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps) {
+export function OfferDialog({ batch, onClose }: OfferDialogProps) {
   const router = useRouter();
   const editing = batch.offerPriceCents !== null;
 
   // Öneriden gelindiyse ONUN fiyatı; yoksa açık teklif, o da yoksa sistemin önerisi. Öneri de yoksa
   // (liste fiyatı girilmemiş) alan BOŞ gelir — sıfır yazmak "bedava" demekti.
-  const initial = handoff?.offerPriceCents ?? batch.offerPriceCents ?? batch.suggestedOfferCents;
+  const initial = batch.offerPriceCents ?? batch.suggestedOfferCents;
   const [price, setPrice] = useState<number | null>(initial === null ? null : fromCents(initial));
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -92,7 +90,7 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
     const { error: actionError } = await setOfferPriceAction(
       batch.id,
       nextCents,
-      nextCents === null ? null : handoff?.proposalId,
+      nextCents === null ? null : undefined,
     );
     setBusy(false);
     if (actionError) {
@@ -147,15 +145,6 @@ export function OfferDialog({ batch, onClose, handoff = null }: OfferDialogProps
         </>
       }
     >
-      {/* Devir künyesi EN ÜSTTE: fiyatın neden dolu geldiğini, alana bakmadan önce söyler. */}
-      {handoff ? (
-        <HandoffNote dense summary={handoff.summary} reason={handoff.reason}>
-          Fiyat önerideki gibi dolduruldu ama <strong className="font-semibold">kilitli değil</strong> — aşağıdaki
-          kâr satırına bakıp değiştirebilirsiniz. Kaydedince öneri kuyruktan düşer; teklifi kapatmak
-          öneriyi uygulamak sayılmaz.
-        </HandoffNote>
-      ) : null}
-
       <div className="grid grid-cols-3 gap-2.5">
         <Metric label="Kalan" value={`${batch.physicalQty} ad.`} />
         {/* Tarih GÖRÜNÜR satırda, tooltip'te değil (15.08, kullanıcı bildirimi): "tarihi yaklaşan"

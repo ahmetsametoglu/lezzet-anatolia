@@ -366,8 +366,8 @@ function BundlePreview({
  * alarm) ve payload ürünün toplam raf ömrünü taşımıyor. Uydurma bir gün eşiği, alan kuralıyla
  * çelişen bir alarm üretirdi.
  *
- * BEKLEYEN(22.3): payload'a `shelfLifeDays` (ya da hazır `expiryFlag`) eklenirse yakın-SKT vurgusu
- * buraya döner — denetime soruldu (`docs/talep/operasyon-asistan-kuyrugu-veri-sozlesmesi.md`).
+ * Payload'a `shelfLifeDays` (ya da hazır `expiryFlag`) eklenirse yakın-SKT vurgusu buraya döner;
+ * kayıt `BEKLEYEN(22.13)`te (payload alan eksikleri orada toplanıyor).
  */
 function StockIntakePreview({ payload }: { payload: StockIntakePayload }) {
   const today = new Date().toISOString().slice(0, 10);
@@ -963,7 +963,7 @@ function FeaturedFlagPreview({ payload }: { payload: FeaturedFlagPayload }) {
  * Hedef depo künyede YOK ve uydurulmuyor: payload deponun yalnız kimliğini taşıyor
  * (`PurchaseOrderPayloadSchema.warehouseId`), okunur kodunu değil — stok girişinin payload'ı ise
  * `warehouseCode`'u da taşıyor. Uuid yazmak operatöre hiçbir şey söylemez.
- * BEKLEYEN(22.3): denetime soruldu.
+ * Kayıt `BEKLEYEN(22.13)`te: payload'a `warehouseCode` eklenirse künye depoyu adıyla yazar.
  */
 function PurchaseOrderPreview({ payload }: { payload: PurchaseOrderPayload }) {
   const lines = payload.lines.map((line) => ({ ...line, ...splitVariantName(line.productName) }));

@@ -90,11 +90,17 @@ export type ApplyOutcome =
   | { status: 'failed'; error: string }
   | { status: 'gone' }
   /**
-   * Bu tip kuyruktan uygulanmaz, ilgili ekrana DEVREDİLİR (22.5). Hata değil yönlendirme: öneri
-   * `pending` kalır, ekran kullanıcıyı `target` ekranına götürür. Ekran düğmeyi gizlese bile kapı
-   * sunucuda durur — eski bir sekme geri alınamaz bir eylemi düzenlenmeden koşturamasın.
+   * **Bu tip genel kapıdan uygulanmaz — kararı gövdesi yazar** (22.8). Hata değil ret: öneri
+   * `pending` kalır ve ekran kendi kapısını kullanır (`setOfferPriceAction` → `withProposal`).
+   *
+   * Sebep düzenlenmiş değerin buraya GELMEMESİ: genel kapı asistanın ham dilekçesini yazardı,
+   * operatörün az önce elleriyle değiştirdiği sayıyı değil. Ekran düğmeyi zaten gövdeye bağlıyor
+   * ama kapı sunucuda durur — eski bir sekme, düzenlenmemiş bir öneriyi koşturamasın.
+   *
+   * **Adı 22.24'te düzeltildi:** `'handoff'`tu ve o kavram söküldü (devredilen tip kalmadı);
+   * dönüşün anlattığı şey devir değil, kararın kuyruğun İÇİNDE veriliyor olması.
    */
-  | { status: 'handoff'; target: string };
+  | { status: 'inline'; target: string };
 
 /** `rejectProposalAction` sonucu. */
 export type RejectOutcome = { status: 'rejected' } | { status: 'gone' };

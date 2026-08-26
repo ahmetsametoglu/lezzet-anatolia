@@ -5,7 +5,6 @@ import { toCents } from '@lezzet/helper';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Dialog, DialogFooter } from '@/components/operation/ui/dialog';
-import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { MovementFormBody } from '@/components/operation/form/movement-form/body';
 import {
   ManualMovementSchema,
@@ -37,7 +36,6 @@ interface MovementDialogProps {
    */
   initial?: ManualMovementForm | null;
   /** Öneri kimliği; verilirse kayıt kuyruk satırını da kapatır. */
-  proposalId?: string | null;
   /**
    * Devir künyesi — pencerenin İÇİNDE durur, sayfada değil (22.5).
    *
@@ -45,7 +43,6 @@ interface MovementDialogProps {
    * arkada kalsaydı operatör tutarın neden dolu geldiğini ancak pencereyi kapattıktan sonra
    * görürdü — yani kararı verdikten sonra.
    */
-  note?: { summary: string; reason: string | null } | null;
 }
 
 export function MovementDialog({
@@ -53,8 +50,6 @@ export function MovementDialog({
   onClose,
   onSaved,
   initial = null,
-  proposalId = null,
-  note = null,
 }: MovementDialogProps) {
   const [error, setError] = useState<string | null>(null);
 
@@ -89,7 +84,6 @@ export function MovementDialog({
       valueDate: values.valueDate,
       description: values.description,
       // Öneriden gelindiyse kuyruk satırı bu kayıtla kapanır (`withProposal`).
-      proposalId,
     });
     if (actionError) {
       setError(actionError);
@@ -117,16 +111,6 @@ export function MovementDialog({
       }
     >
       <form id={FORM_ID} onSubmit={onSubmit} className="flex flex-col gap-4">
-        {/* Devir künyesi EN ÜSTTE: alanların neden dolu geldiğini, alana bakmadan önce söyler.
-            22.11'den sonra bu yol nadir — para önerisi artık kuyruğun içinde karar veriliyor; künye
-            yine duruyor çünkü devir kapısı (`?movement=` ön dolgusu) kalkmadı. */}
-        {note ? (
-          <HandoffNote dense summary={note.summary} reason={note.reason}>
-            Alanlar önerideki gibi dolduruldu ama <strong className="font-semibold">hiçbiri kilitli değil</strong> —
-            kaydetmeden önce tutarı ve hesabı doğrulayın. Kaydedince öneri kuyruktan düşer.
-          </HandoffNote>
-        ) : null}
-
         {/* Gövde ORTAK (22.18): asistan kuyruğu da aynı formu kendi içinde açıyor. */}
         <MovementFormBody control={form.control} setValue={form.setValue} values={watched} accounts={accounts} />
 

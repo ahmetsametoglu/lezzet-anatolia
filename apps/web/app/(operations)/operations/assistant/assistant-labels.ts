@@ -141,11 +141,8 @@ export function notifyCountOf(row: AssistantQueueRow): number | null {
  * okunur. Geriye barın kendi işi kaldı: onayın ardından ne olabileceği.
  */
 export function decisionFooterNote(mode: ProposalMode): string {
-  // Devredilen öneride "motor reddederse" cümlesi anlamsız: kuyruk hiçbir şey uygulamıyor, karar
-  // hedef ekranda veriliyor. Barın işi burada operatöre NEDEN başka bir ekrana gittiğini söylemek.
-  if (mode === 'handoff') {
-    return 'Bu öneri kuyruktan uygulanmaz — etkisi geri alınamaz, o yüzden kayıt kendi ekranında gözden geçirilerek yazılır.';
-  }
+  // `handoff` dalı 22.24'te SÖKÜLDÜ: devredilen tip kalmadı, üçü de kuyruğun içine döndü
+  // (22.18 para · 22.23 mal kabul · 22.36 bölge).
   if (mode === 'draft_then_edit') {
     return 'Uygulanınca kayıt PASİF doğar; ince ayar ve yayına alma kendi ekranının işi.';
   }
@@ -168,8 +165,8 @@ export function decisionFooterNote(mode: ProposalMode): string {
  * Ayraç SONDAN aranır (ürün adının kendisinde " · " geçebilir) ve yoksa boy `null` kalır: ad bütün
  * hâlde Ürün sütununda durur, sütun "—" gösterir. Bozulduğunda EKSİLİR, yalan söylemez.
  *
- * BEKLEYEN(22.3): kalıcı çözüm ayrıştırmayı buradan kaldırmaktır — payload'ın `productName` yanında
- * `variantLabel` de taşıması. Denetime soruldu (`docs/talep/operasyon-asistan-kuyrugu-veri-sozlesmesi.md`).
+ * Kalıcı çözüm ayrıştırmayı buradan kaldırmaktır: payload `productName` yanında `variantLabel` de
+ * taşısın. Kayıt `BEKLEYEN(22.13)`te — payload alan eksiklerinin üçü de orada toplanıyor.
  */
 export function splitVariantName(productName: string): { name: string; size: string | null } {
   const at = productName.lastIndexOf(' · ');

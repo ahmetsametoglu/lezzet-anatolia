@@ -8,7 +8,6 @@ import { parseDeliveriesUrl, toIsoDate } from './deliveries-url';
 import { DispatchClient } from './dispatch-client';
 import { readDispatchDay } from './dispatch-read';
 import { RoutesClient } from './routes-client';
-import { readZoneHandoff } from './routes-handoff';
 import { readRoutes } from './routes-read';
 import { RunsClient } from './runs-client';
 import { readRunsPage } from './runs-read';
@@ -59,30 +58,19 @@ export default async function DeliveriesPage({ searchParams }: DeliveriesPagePro
       // kalıcı tercihinden tazedir.
       const warehouseId = typeof params.depo === 'string' ? params.depo : ctx.activeWarehouseId;
       /**
-       * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) rota kurulumu ÖN DOLDURULUR (22.5).
-       *
-       * Sebep kullanıcının kendi cümlesi: *"bölgeye hangi posta kodlarının gireceğine haritaya
-       * bakmadan karar veremem — diğer kodlar nerede, nerede değil."* Kuyruk bu yüzden bu tipi
-       * uygulamıyor; buraya getiriyor. Kodlar önerinin kümesiyle **başlar**, operatör haritada
-       * çıkarır/ekler ve kaydedilen küme ONUN kümesidir.
-       *
-       * `readHandoffProposal` üç hâlde `null` döner (satır yok · artık `pending` değil · devir
-       * tipi değil) ve üçünde de ekran normal açılır — uyarı göstermez. Sonuncusu bir yetki
-       * kapısıdır: adrese elle kimlik yazan biri `apply` modundaki bir öneriyi bu yoldan
-       * uygulatamaz (mod künyeden okunur, adresin iddiasından değil).
+       * ── DEVİR YOLU SÖKÜLDÜ (22.24 · 26.08) ────────────────────────────────
+       * Burada `?proposal=<id>` okunup rota kurulumu ön doldurulurdu (22.5). `zone_extend` artık
+       * kuyruğun İÇİNDE, kendi haritasıyla karara bağlanıyor (22.36) — yani bu ekrana devreden
+       * öneri kalmadı. Okuma zaten ölüydü: `readHandoffProposal` mod kontrolüyle başlıyordu ve
+       * hiçbir tip `handoff` olmadığı için her çağrıda `null` dönüyordu.
        */
-      const handoff = await readZoneHandoff(typeof params.proposal === 'string' ? params.proposal : null);
       return (
         <RoutesClient
-          // Öneriden gelen kod kümesi ilk taslağı kuruyor; öneri değişince bileşen yeniden doğmalı.
-          key={`${urlState.routeId ?? handoff?.zoneId ?? 'new'}:${handoff?.proposalId ?? ''}`}
+          key={urlState.routeId ?? 'new'}
           data={await readRoutes()}
-          // Öneri bir bölgeyi işaret ediyorsa adres seçim taşımasa bile o rota açılır: operatör
-          // "hangi rotaydı" diye aramak zorunda kalmamalı.
-          routeId={urlState.routeId ?? handoff?.zoneId ?? null}
+          routeId={urlState.routeId ?? null}
           warehouseId={warehouseId}
           contextWarehouseId={ctx.activeWarehouseId}
-          handoff={handoff}
         />
       );
     }

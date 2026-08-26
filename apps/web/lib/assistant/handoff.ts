@@ -1,65 +1,33 @@
 import 'server-only';
 import { AssistantProposalService, serviceDb } from '@lezzet/database';
-import { modeOf, type ApplyResult } from '@lezzet/application';
+import type { ApplyResult } from '@lezzet/application';
 import { captureError, SOURCES } from '@lezzet/observability';
-import type { AssistantProposalKind } from '@lezzet/types';
 
 /**
- * DEVREDİLEN önerinin iki ucu (22.5 · kullanıcı kararı 09.08).
+ * ÖNERİNİN KAYDA DÖNÜŞMESİ — kuyruk satırıyla işin tek turda koşması (22.5 · 22.24).
  *
- * Kuyruk ilk hâlinde tek kapılıydı — onayla ya da reddet. Gerçek kullanım bunu çürüttü: *"bölgeye
+ * ── BU DOSYA BİR ZAMANLAR "DEVİR"İN EVİYDİ, ARTIK DEĞİL (söküldü 26.08) ─────
+ * Kuyruk ilk hâlinde tek kapılıydı (onayla/reddet) ve gerçek kullanım bunu çürüttü: *"bölgeye
  * hangi posta kodlarının gireceğine haritaya bakmadan karar veremem"*. Geri alınamaz üç tip
- * (`zone_extend` · `stock_intake` · `money_movement`) bu yüzden kuyrukta UYGULANMIYORDU; ilgili
- * operasyon ekranı ön doldurulup düzenleme orada yapılıyordu.
+ * (`zone_extend` · `stock_intake` · `money_movement`) o yüzden kuyrukta uygulanmıyor, ilgili
+ * operasyon ekranı ön doldurulup karar orada veriliyordu — buna DEVİR deniyordu.
  *
- * **Üçün ikisi geri döndü** (22.18 · 22.23): para ve mal kabul formları ortak alana ayrılıp kuyruğun
- * içinde açıldı. Devrin gerekçesi ikisinde de "geri alınamaz, karar öncesi düzenleme şart"tı ve o
- * şart kalkmadı — düzenleme hâlâ karardan önce, yalnız formun yeri değişti. Geriye TEK devir kaldı:
- * **bölge**, çünkü orada kararın konusu gerçekten formda değil HARİTADA.
+ * **Üçünün üçü de kuyruğun içine döndü** (22.18 para · 22.23 mal kabul · 22.36 bölge, haritasıyla).
+ * Devrin gerekçesi *"geri alınamaz, karar öncesi düzenleme şart"*tı ve o şart hiç kalkmadı —
+ * düzenleme hâlâ karardan önce, yalnız formun YERİ değişti: ekran yerine diyalog.
  *
- * ── NEDEN İKİ FONKSİYON, HER EKRANDA BEŞ SATIR DEĞİL ────────────────────────
- * Hedef ekranların hepsi aynı şeyi yapacak: öneriyi oku → formu doldur → kaydederken kuyruğu kapat.
- * Her yere kopyalansaydı biri bir gün `claimForApply`i atlar ve aynı öneri iki kez uygulanırdı —
- * kuyruğun TEK vaadi de o olurdu. Sıra burada, tek yerde durur ve **kuyruk içi kapılar da onu
- * kullanıyor** (`withProposal`), yani "devir" adı artık dar kalıyor.
+ * **Ölçüm (26.08):** `KIND_META`da `handoff` modunda tip KALMADI — on bir tipin onu `inline`, biri
+ * `draft_then_edit`. Yani `readHandoffProposal` (`modeOf(kind) !== 'handoff'` kontrolüyle başlardı)
+ * çağrıldığı her yerde **zaten `null` dönüyordu**; üç ekran aylardır boş devir alıyordu. Ölü kod
+ * zararsız değildi: okuyan ajana "bu tip devrediliyor" diye yanlış bilgi veriyordu ve bir gün biri
+ * o yolu düzeltmeye çalışırdı.
  *
- * ── İKİNCİ YAZMA YOLU YİNE AÇILMIYOR ────────────────────────────────────────
- * Bu dosya hiçbir iş tablosuna dokunmaz. Ekranın kendi action'ı ne yapıyorsa onu yapar (mal kabul
- * `receive_intake` RPC'sini, rota `replacePostalCodes`ı çağırır); buradaki sarmalayıcı yalnız
- * kuyruk satırının hâlini yönetir. Öneriden gelen kayıt ile elle girilen kayıt AYNI yoldan doğar.
+ * ── İKİNCİ YAZMA YOLU AÇILMIYOR ─────────────────────────────────────────────
+ * Kalan tek fonksiyon hiçbir iş tablosuna dokunmaz. Ekranın kendi action'ı ne yapıyorsa onu yapar;
+ * buradaki sarmalayıcı yalnız kuyruk satırının hâlini yönetir. Öneriden gelen kayıt ile elle
+ * girilen kayıt AYNI yoldan doğar — ve sıra tek yerde durduğu için `claimForApply` hiçbir çağrıda
+ * atlanamaz (atlansaydı aynı öneri iki kez uygulanabilirdi; kuyruğun tek vaadi de o).
  */
-
-/** Hedef ekranın formu doldurmak için ihtiyacı olan her şey — payload HAM gelir, şekli `kind`'a göre. */
-interface HandoffProposal {
-  id: string;
-  kind: AssistantProposalKind;
-  summary: string;
-  reason: string | null;
-  payload: unknown;
-  expiresAt: string;
-}
-
-/**
- * Devredilen öneriyi okur. `null` dönüşün üç sebebi olabilir ve üçü de aynı şeyi gerektirir
- * (ekran formu boş açar, uyarı göstermez): satır yok · artık `pending` değil · devredilebilir
- * bir tip değil.
- *
- * Son madde bir yetki kapısıdır: URL'e elle `?proposal=<id>` yazan biri, `apply` modundaki bir
- * öneriyi bu yoldan uygulatamaz. Mod künyeden okunur, ekranın iddiasından değil.
- */
-export async function readHandoffProposal(id: string): Promise<HandoffProposal | null> {
-  const row = await new AssistantProposalService(serviceDb()).getById(id);
-  if (!row || row.status !== 'pending') return null;
-  if (modeOf(row.kind) !== 'handoff') return null;
-  return {
-    id: row.id,
-    kind: row.kind,
-    summary: row.summary,
-    reason: row.reason,
-    payload: row.payload,
-    expiresAt: row.expiresAt,
-  };
-}
 
 /**
  * Ekranın kaydetme işini kuyruk satırıyla birlikte koşar.

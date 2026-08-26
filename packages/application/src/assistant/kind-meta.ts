@@ -24,7 +24,7 @@ import { DECLARATION_GAP_LABELS, type AssistantProposalKind, type DeclarationGap
  * kuyruk satırını da kapatır. Yani kuyruk hâlâ uygulamıyor; uygulayan yine varlığın kendi kapısı,
  * değişen tek şey formun nerede DURDUĞU.
  */
-export type ProposalMode = 'apply' | 'draft_then_edit' | 'handoff' | 'inline';
+export type ProposalMode = 'apply' | 'draft_then_edit' | 'inline';
 
 interface KindMeta {
   label: string;

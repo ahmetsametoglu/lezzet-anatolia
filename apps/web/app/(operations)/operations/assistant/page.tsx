@@ -96,7 +96,7 @@ export default async function AssistantPage({ searchParams }: AssistantPageProps
     // istemci bileşeninden çağırmak sunucu modüllerini tarayıcı paketine sokuyor (`AssistantRowView`
     // künyesi — ölçülen 500). Sunucuda bir kez hesaplanıp satırla birlikte iner.
     mode: modeOf(row.kind),
-    bridge: proposalTargetUrl(KIND_META[row.kind].target, row.id, modeOf(row.kind)),
+    bridge: proposalTargetUrl(KIND_META[row.kind].target),
   }));
 
   /**

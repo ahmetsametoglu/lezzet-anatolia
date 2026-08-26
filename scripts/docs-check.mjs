@@ -908,10 +908,18 @@ for (const dir of ['apps/web/app/(operations)/operations']) {
     if (!src.includes('<PageHeader')) continue;
     // Kök öğe: `return (` sonrası ilk JSX etiketi. Yalnız DOSYADAKİ ANA görünüm bileşeni denetlenir —
     // aynı dosyadaki yardımcı bileşenlerin kendi kökleri zemin taşımak zorunda değil.
+    //
+    // **ARAMA JSX'E DARALTILDI (26.08).** Önceden ilk `return (` kök sayılıyordu ve bu kırılgandı:
+    // bileşenin içindeki bir `useMemo` parantezli dönerse (`return (draft?.codes ?? []).map(…)`)
+    // denetim ONU kök sanıp "zemin sınıfı yok" diye yanlış alarm veriyordu. Arıza bir kez
+    // yaşanmıştı ve çözümü koda not düşmekti (*"dönüş PARANTEZSİZ yazılıyor, bu bir üslup tercihi
+    // değil"* — `routes.desktop`, 09.08); o not silinen bir bloğun içindeydi ve 22.24'te alarm geri
+    // geldi. **Notla korunan bir denetim, notu silen ilk düzenlemede bozulur** — ölçüt artık
+    // aramanın kendisinde: `return (` DEĞİL, JSX açan `return (` + `<`.
     const exported = src.indexOf('export function ');
     if (exported === -1) continue;
     const head = src.slice(exported, exported + 4000);
-    const ret = head.indexOf('return (');
+    const ret = head.search(/return \(\s*</);
     if (ret === -1) continue;
     const rootTag = head.slice(ret, ret + 600);
     if (!rootTag.includes('bg-ops-')) {

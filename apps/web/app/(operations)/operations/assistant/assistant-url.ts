@@ -1,4 +1,3 @@
-import type { ProposalMode } from '@lezzet/application';
 import { AssistantProposalKindEnum, type AssistantProposalKind } from '@lezzet/types';
 import type { QueueTab } from '@/lib/assistant/assistant-types';
 import { one, oneOf, type RawParams } from '@/lib/url-params';
@@ -89,32 +88,21 @@ export function parseAssistantUrl(params: RawParams): AssistantUrlState {
  * varlığın hangi ADRESTE olduğu operasyon yüzeyinin sözleşmesi (`STACK §4` — uygulama katmanı ekran
  * bilmez). Bu yüzden eşleme burada, kuyruğun kendi `*-url` dosyasında duruyor.
  *
- * **Devir hâli BUGÜN BOŞ** (22.36 · 15.08): `zone_extend` son `handoff` tipiydi ve haritası
- * diyaloğun içine gelince küme boşaldı — kuyruktaki on bir tipin on biri kendi yerinde karar alıyor
- * (kanıtı `proposal.test.ts`, "hiçbir künye `handoff` değil" iddiası). Aşağıdaki `handoff` dalı yine
- * de duruyor: `ProposalMode` o hâli taşımaya devam ediyor ve yarın bir tip gerçekten devredilirse
- * (kararın konusu formda değil bir akışta olabilir) adresin kimlik taşıması gerekir. Dal silinseydi
- * o gün öneri, kendisini taşımayan bir ekrana giderdi — bir kez yaşandı (`batch_offer`, 10.08).
+ * **KÖPRÜ ARTIK YALNIZ LİSTEYE GÖTÜRÜR (22.24 · 26.08).** Burada bir de "devir" dalı vardı:
+ * `handoff` modundaki öneri hedef ekrana `?proposal=<id>` ile gidiyor, ekran formu ön dolduruyordu.
+ * O mod **boşaldı** — üç tipin üçü de kuyruğun içine döndü (22.18 para · 22.23 mal kabul · 22.36
+ * bölge) ve dal bir süre *"yarın bir tip gerçekten devredilirse"* diye korundu. Ölçüm o korumayı
+ * çürüttü: hedef ekranların okuması (`readHandoffProposal`) mod kontrolüyle başlıyordu ve hiçbir
+ * tip `handoff` olmadığı için **her çağrıda `null` dönüyordu** — yani dal çalışsa bile karşı taraf
+ * boş açılıyordu. Çalışmayan bir yolu "ihtiyaç olursa" diye tutmak, onu ilk ihtiyaçta bozuk bulmak
+ * demek. Gerektiği gün yeniden yazılır ve o gün ÇALIŞTIĞI ölçülür.
  *
  * `null` dönen tek hâl vitrin işareti: uygulandığında açılacak ayrı bir kayıt yok, değişen şey
  * zaten var olan bir kaydın bir alanı.
  */
-export function proposalTargetUrl(
-  target: string,
-  proposalId: string,
-  mode: ProposalMode,
-): { href: string; label: string } | null {
+export function proposalTargetUrl(target: string): { href: string; label: string } | null {
   const screen = TARGET_SCREENS[target];
   if (!screen) return null;
-
-  // **Öneri kimliği adrese MODA göre girer, hedefe göre değil.** Bir tur hedef adına göre
-  // yazılmıştı ve denetim `batch_offer`ı `apply`den `handoff`a çevirdiği gün adres sessizce
-  // kimliksiz kaldı — devredilen bir öneri, kendisini taşımayan bir ekrana gitti. Koşul artık
-  // kararın cinsinde: devir varsa kimlik de var.
-  if (mode === 'handoff') {
-    const sep = screen.path.includes('?') ? '&' : '?';
-    return { href: `${screen.path}${sep}proposal=${encodeURIComponent(proposalId)}`, label: `${screen.open} aç` };
-  }
   return { href: screen.path, label: `${screen.list} git` };
 }
 

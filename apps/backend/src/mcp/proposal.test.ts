@@ -1,6 +1,6 @@
 import { AssistantProposalService, CategoryService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { APPLIERS, KIND_META, amountCentsOf, applyProposal, impactOf, modeOf } from '@lezzet/application';
+import { APPLIERS, KIND_META, amountCentsOf, applyProposal, impactOf, modeOf, type ProposalMode } from '@lezzet/application';
 import {
   AssistantProposalKindEnum,
   DECLARATION_GAP_LABELS,
@@ -218,14 +218,20 @@ describe('ekran kapısının türetmeleri (panel bunları hesaplamaz)', () => {
     // kuralın kanıtı, o kuralın bozulduğu gün kırmızıya dönen bir satır olmalı. Boş bırakılmış bir
     // döngü hiçbir şey doğrulamaz; yeni bir `handoff` künyesi sessizce geçerdi.
     //
-    // Karşılaştırma `modeOf` üzerinden yapılıyor, `meta.mode` üzerinden DEĞİL: künye sözlüğü sabit
-    // olduğu için TypeScript alanı `'inline' | 'apply' | 'draft_then_edit'` diye daraltıyor ve
-    // `=== 'handoff'` satırı **derlenmiyor** (TS2367). Derleyicinin bu itirazı testten daha güçlü
-    // bir kanıt — ama kanıtı derleme hatasına bırakmak, künyeye yeniden `handoff` eklendiği gün
-    // sessizleşen bir güvence demekti. `modeOf` geniş `ProposalMode` döndürüyor: satır bugün de
-    // derleniyor, yarın da; ve o gün gelirse kırmızıya döner.
-    const devredilen = AssistantProposalKindEnum.options.filter((kind) => modeOf(kind) === 'handoff');
-    expect(devredilen).toEqual([]);
+    // ── İDDİA 22.24'te BİÇİM DEĞİŞTİRDİ (26.08) ────────────────────────────
+    // Burada `modeOf(kind) === 'handoff'` yazıyordu ve künyesi şöyle diyordu: *"`modeOf` geniş
+    // `ProposalMode` döndürüyor, satır bugün de derleniyor yarın da; künyeye yeniden `handoff`
+    // eklendiği gün kırmızıya döner."* O gün gelmedi — tersi oldu: **`handoff` değeri
+    // `ProposalMode`'dan tümüyle SÖKÜLDÜ** (devir yolları ölü çıktı, 22.24) ve satır derlenemez
+    // hâle geldi.
+    //
+    // Koruma kaybolmadı, TİPE taşındı ve güçlendi: künyeye `mode: 'handoff'` yazmak artık bir test
+    // düşürmüyor, doğrudan **derlemeyi** durduruyor. Geriye kalan iddia kümenin kapalılığı — her
+    // tipin modu bilinen üçten biri olmalı; dördüncü bir mod eklendiği gün burası kırmızıya döner
+    // ve o modun kuyrukta ne anlama geldiği düşünülmeden geçmez.
+    const BILINEN_MODLAR: readonly ProposalMode[] = ['inline', 'apply', 'draft_then_edit'];
+    const taninmayan = AssistantProposalKindEnum.options.filter((kind) => !BILINEN_MODLAR.includes(modeOf(kind)));
+    expect(taninmayan).toEqual([]);
     // `inline` = gövdesi kuyruğun içinde çizilen tipler. Üçü de bir tur devredilmişti; formları
     // kuyruğa taşındıkça devir kalktı (`kind-meta` künyeleri). Yazan kapı yine varlığın kendi
     // eylemi, o yüzden `resultKey` burada da şart.

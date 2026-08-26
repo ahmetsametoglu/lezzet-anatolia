@@ -7,7 +7,6 @@ import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { ChevronDownIcon } from '@/components/operation/ui/icons';
 import { EmptyState } from '@/components/operation/ui/empty-state';
-import { HandoffNote } from '@/components/operation/ui/handoff-note';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { DeliveryTabs } from './delivery-tabs';
 import { Input } from '@/components/operation/form/input';
@@ -32,7 +31,6 @@ import { ROUTE_NOTES } from './deliveries-labels';
 import type { RouteView, RoutesData } from './routes-read';
 import type { CodeStatsView, SuggestionView } from './routes-types';
 import type { Country } from '@lezzet/types';
-import type { ZoneHandoff } from './routes-handoff';
 
 /**
  * **Rotalar** — güzergâh kurulumu (19.20 · 09.15). `Depolar - Bolge Haritasi.html`.
@@ -89,7 +87,6 @@ interface RoutesViewProps {
   busy: boolean;
   error: string | null;
   /** Asistan önerisinden gelindiyse künye (22.5); `null` ise ekranda hiçbir iz yok. */
-  handoff: ZoneHandoff | null;
 }
 
 export function RoutesDesktop(props: RoutesViewProps) {
@@ -139,22 +136,6 @@ export function RoutesDesktop(props: RoutesViewProps) {
     }
     return { mine, taken };
   }, [data.routes, draft?.codes, selected?.id]);
-
-  /**
-   * Öneriden gelen kodların şu ANKİ seçimine karşılık gelen bekleyen müşteri sayısı.
-   *
-   * Taslaktan hesaplanıyor, payload'dan değil: operatör kod çıkardıkça sayı düşmeli — bildirim
-   * kaydedilen kümeye gidiyor, önerilen kümeye değil.
-   */
-  const handoffWaiting = useMemo(() => {
-    const waiting = props.handoff?.waitingByCode;
-    if (!waiting) return 0;
-    // Dönüş PARANTEZSİZ yazılıyor ve bu bir üslup tercihi değil: `docs:check` ekranın kök öğesini
-    // "`export function` sonrası ilk parantezli dönüş" diye buluyor; buradaki bir parantez o
-    // aramayı kaçırtıp "kök zemin sınıfı taşımıyor" diye yanlış alarm veriyor (ölçüldü 09.08).
-    const codes = draft?.codes ?? [];
-    return codes.reduce((sum, code) => sum + (waiting[code.postalCode] ?? 0), 0);
-  }, [props.handoff?.waitingByCode, draft?.codes]);
 
   // Öneri, SEÇİLİ rotaya girmiş kodu artık önermez: eklendiği an mor nokta yeşile döner.
   const suggested = useMemo(
@@ -323,28 +304,6 @@ export function RoutesDesktop(props: RoutesViewProps) {
 
         {draft ? (
           <div className={`flex flex-col gap-3 px-3 py-3 ${railOpen ? '' : 'hidden'}`}>
-            {/* **Öneriden gelindiyse künye** (22.5): operatör neyi düzenlediğini bilmeli. Mor bu
-                yüzeyde "makine konuştu" demek (`OpsTone.violet`) — kodların kendiliğinden seçili
-                gelmesi bir arıza değil, asistanın işi. Gerekçe varsa yazılır; yoksa satır kısalır,
-                cümle uydurulmaz. */}
-            {props.handoff ? (
-              <HandoffNote dense summary={props.handoff.summary} reason={props.handoff.reason}>
-                {/* **Bildirim sayısı CANLI ve seçime bağlı** — kullanıcının derdinin tam kalbi
-                    ("hepsine birden gidiyor, ben belki bir bölgeyi istiyorum"). Kodu haritadan
-                    çıkarınca o koddaki bekleyenler de sayıdan düşer, yani operatör kaydetmeden
-                    ÖNCE kaç kişiye mesaj gideceğini görür. Sayı kaydet düğmesinin yanında değil
-                    burada: karar kodlara dokunurken veriliyor. */}
-                Kodlar seçili geldi; haritadan çıkarabilir ya da ekleyebilirsiniz.{' '}
-                {handoffWaiting > 0 ? (
-                  <strong className="font-semibold text-ops-amber-dark">
-                    Şu seçimle {num(handoffWaiting)} müşteriye bildirim gider — geri alınamaz.
-                  </strong>
-                ) : (
-                  'Şu seçimde haber bekleyen müşteri yok, bildirim gitmez.'
-                )}
-              </HandoffNote>
-            ) : null}
-
             {/* **ÇIKIŞ DEPOSU EN ÜSTTE ve bu bir sıralama tercihi değil** (`OB-01`): depo rotanın
                 ülkesini belirliyor (`homeCountry` → kod etiketleri) ve hangi kodların anlamlı
                 olduğunu o karar veriyor. Addan sonra sorulsaydı, operatör kod eklemeye başladıktan

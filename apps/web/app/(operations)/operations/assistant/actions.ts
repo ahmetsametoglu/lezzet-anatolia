@@ -49,8 +49,8 @@ export async function applyProposalAction(id: string): Promise<ActionResult<Appl
     // ham fiyat yazılırdı — operatörün az önce elleriyle değiştirdiği sayı sessizce yok sayılarak.
     const pending = await service.getById(id);
     const pendingMode = pending ? modeOf(pending.kind) : null;
-    if (pending && (pendingMode === 'handoff' || pendingMode === 'inline')) {
-      return { data: { status: 'handoff', target: KIND_META[pending.kind].target }, error: null };
+    if (pending && pendingMode === 'inline') {
+      return { data: { status: 'inline', target: KIND_META[pending.kind].target }, error: null };
     }
 
     // PROFİL kimliği: `decided_by` `user_profiles`'a FK'li (`0042_assistant_proposal.sql`). Auth

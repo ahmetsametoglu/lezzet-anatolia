@@ -22,7 +22,6 @@ import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/conte
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
 import { StockClient } from './stock-client';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
-import { readOfferHandoff } from './stock-handoff';
 import { pendingOrderCount, readIntakeProgress, readIntakeTab } from './intake-read';
 import { readTransfersPage, readTransitCount } from './transfer-read';
 import { mixedLotCases } from './stock-labels';
@@ -181,14 +180,13 @@ export default async function StockPage({ searchParams }: StockPageProps) {
     ) ?? null;
 
   /**
-   * **Asistan önerisinden gelindiyse** (`?proposal=<id>`) teklif diyaloğu ÖN DOLU açılır (22.5).
-   * Öneriden gelen fiyat bir başlangıç değeridir, karar değil — üç yüzü de diyalogda görünür.
+   * ── DEVİR YOLU SÖKÜLDÜ (22.24 · 26.08) ──────────────────────────────────
+   * Burada `?proposal=<id>` okunup teklif diyaloğu ön dolu açılırdı (22.5). Parti teklifi
+   * (`batch_offer`) kuyruğun İÇİNDE karara bağlanıyor — gövdesi, ekonomisi ve raf ömrü satırıyla.
+   * Okuma zaten ölüydü: mod kontrolü her çağrıda `null` döndürüyordu.
    */
-  const handoff = await readOfferHandoff(typeof params.proposal === 'string' ? params.proposal : null);
-
   return (
     <StockClient
-      handoff={handoff}
       data={{
         levels,
         pinned: pinnedRow,

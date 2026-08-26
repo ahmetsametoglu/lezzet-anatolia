@@ -1,5 +1,4 @@
 import type { Account, AccountLedgerRow } from '@lezzet/types';
-import type { ManualMovementForm } from '@/components/operation/form/movement-form/schema';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { SuggestionStrength } from './finance-labels';
 import type { FinanceUrlState } from './finance-url';
@@ -145,8 +144,6 @@ export interface FinanceViewProps {
   writableAccounts: AccountView[];
   navPending: boolean;
   dialog: DialogKind;
-  /** Asistan önerisinden gelindiyse ön dolgu + künye (22.5); `null` ise ekranda iz yok. */
-  handoff: MoneyHandoff | null;
   busyId: string | null;
   queueError: string | null;
   onFilter: (next: Partial<FinanceUrlState>) => void;
@@ -180,20 +177,3 @@ export interface FinanceViewProps {
 // `components/operation/form/transfer-form/schema.ts`. Sebep aynı: transfer formu artık kuyruğun
 // içinde de açılıyor ve iki yüzey tek tanımı paylaşmalı.
 
-/**
- * Asistan önerisinden gelen ön dolgu (22.5).
- *
- * **Tip BURADA, `finance-handoff` içinde DEĞİL** ve sebebi mekanik: görünüm props'u bu tipi
- * istiyor, devir okuması ise formun tipini (`ManualMovementForm`) istiyor — ikisi karşılıklı
- * import edince `no-circular` düştü (ölçüldü 09.08). Tip dosyası yaprak kalmalı: herkes ondan
- * okur, o kimseden okumaz.
- */
-export interface MoneyHandoff {
-  proposalId: string;
-  summary: string;
-  reason: string | null;
-  /** Elle hareket formu bu tipi alabiliyor mu — alamıyorsa `blocked` doludur. */
-  form: ManualMovementForm | null;
-  /** Form doldurulamıyorsa sebebi ve operatörün gideceği yol. */
-  blocked: string | null;
-}

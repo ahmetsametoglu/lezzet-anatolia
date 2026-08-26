@@ -66,7 +66,7 @@ satırında.
     + 5 yaklaşan; talep panosunda 67500 kodu 47 kez sorulmuş (kapsanmıyor) — asistan artık gerçek
     bir haftalık gündem kurabiliyor.
 
-- [~] (22.3) **Faz B — onay kuyruğu: asistan YAZABİLİR, uygulayamaz** *(kullanıcı kararı 09.08;
+- [x] (22.3) **Faz B — onay kuyruğu: asistan YAZABİLİR, uygulayamaz** *(kullanıcı kararı 09.08;
   tablo `0042` canlıda)*: `assistant_proposal` + `AssistantProposalService` + payload şemaları +
   **uygulayıcı kaydı** (`packages/application/src/assistant/apply.ts`) + **yedi öneri tipi** +
   yedi `propose_*` aracı + `list_proposals` + süre süpürme cron'u (saatte bir) + onay ekranının
@@ -202,6 +202,9 @@ satırında.
       GEÇMESİNE bağlıydı. `afterAll`'a alındı (`analytics_daily_product`'ın ürüne FK'si yok —
       bilinçli, ölçüm ürünle birlikte kaybolmasın diye; o yüzden hiçbir cascade onu toplamıyor).
       Öksüz satırlar temizlendi.
+  - **KAPANDI 26.08 · ölçümle.** İşaret `[~]` kalmıştı ama açık maddesi yoktu ve kod bitmiş:
+    `APPLIERS` on bir tipin uygulayıcısını taşıyor (`packages/application/src/assistant/apply.ts:337`),
+    kuyruk şeması ↔ uygulayıcı eşliği testle kilitli. Asistanın yazma yolu bugün YALNIZ kuyruktan geçiyor.
 
 - [~] (22.4) **Üretim turu — MCP kapısının GÜVENLİK ve İZ katmanı** *(kullanıcı talimatı 26.08:
   «önce MCP ile alakalı kısmı bitirelim»)* · `touches: supabase/migrations/0051_mcp.sql,
@@ -264,7 +267,7 @@ satırında.
       bağlı — `index.ts:89` bugün bilinçle *"o uçlar bizde YOK ve olmamalı"* diyor). Bugünkü
       bağlanma yolu CLI/Desktop'a Bearer başlığı yazmaktır ve panel onu üretiyor.
 
-- [~] (22.5) **Kuyruk ÜÇ KAPILI karara geçiyor + kimlik köprüsü + parti teklifi** *(kullanıcı kararı
+- [x] (22.5) **Kuyruk ÜÇ KAPILI karara geçiyor + kimlik köprüsü + parti teklifi** *(kullanıcı kararı
   09.08; harici denetim turu 3)* — touches: `packages/application/src/assistant/`,
   `apps/web/lib/assistant/handoff.ts`, `apps/backend/src/mcp/`, `packages/types/src/entities/
   assistant-proposal.schema.ts`, `supabase/migrations/0042_*`
@@ -322,6 +325,10 @@ satırında.
     devir hedefinin dördü de bağlı, iki yeni payload alanı da önizlemede
     (`docs/talep/operasyon-asistan-kuyrugu-uc-kapili-karar.md` cevabı; ayrıntı 22.3'ün Durum
     notunda). Kalan tek boşluk 22.6'nın kendi ekranı.
+  - **KAPANDI 26.08 · ölçümle.** Üç kapı da bağlı ve ekranda çalışıyor: `later` · `reject` · `apply`
+    (`assistant-sections.tsx`). Kimlik köprüsü 22.13'te ayrıca ölçülmüştü; parti teklifi (`batch_offer`)
+    kendi gövdesiyle kuyrukta. Satırın kendi notu *"kalan tek boşluk 22.6'nın kendi ekranı"* diyordu ve
+    22.6 `[x]`.
 
 - [x] (22.6) **Belgeden ürün — ambalaj fotoğrafından ürün açma ve tamamlama** *(kullanıcı senaryosu
   09.08: "içindekiler fotoğrafını çekip yükleyeceğim, asistan bazen ürünü oluşturacak bazen
@@ -421,7 +428,7 @@ satırında.
       ve onaylayan aynı kişi — kaynağı ona tekrar okutmak boş yük) ve fiyat/stok/görsel için yer
       tutucu bile çizilmedi.
 
-- [~] (22.7) **Asistan KÖR SEÇİYORDU — referans okumaları + sistem modeli** *(kullanıcı sorusu 09.08:
+- [x] (22.7) **Asistan KÖR SEÇİYORDU — referans okumaları + sistem modeli** *(kullanıcı sorusu 09.08:
   "hangi depo hangi bölgeye tavsiyede bulunacağı ile ilgili bir yol haritası var mı, mevcut bölgeleri
   ve posta kodlarını veriyor muyuz? … onun sağlıklı analiz yapabilmesi için doğru dataları vermemiz
   gerek")* — touches: `apps/backend/src/mcp/tools-reference.ts`,
@@ -503,8 +510,11 @@ satırında.
         göre karar verdiğini gizlerdi.
       - Ölçüldü (`ui:shot`, açık + koyu): kârlı paket (1,63 € · %41,2) ve **zararına teklif**
         (0,08 € zarar · %-5,7 · parti toplamı 0,88 € zarar) gerçek fiyat/alış verisiyle.
+  - **KAPANDI 26.08 · ölçümle.** Asistanın körlüğünü kapatan dört okuma aracı da katalogda:
+    `reference_data` · `delivery_map` · `catalog_lookup` · `product_detail`. Satırın altındaki
+    doğrulama notları (kârlı paket ↔ zararına teklif, açık+koyu çekim) zaten yapılmış işi anlatıyordu.
 
-- [~] (22.8) **Karar KUYRUĞUN İÇİNDE veriliyor — öneri detayına form gövdesi** *(kullanıcı şikâyeti
+- [x] (22.8) **Karar KUYRUĞUN İÇİNDE veriliyor — öneri detayına form gövdesi** *(kullanıcı şikâyeti
   10.08: "öneri tiplerinin onaylanması sırasında asistan sayfasından dışarı çıkmam benim açımdan
   büyük problem, çünkü konseptten kopuyorum" · brief: `docs/talep/operasyon-oneri-onayi-formun-icinde.md`)* —
   touches: `packages/application/src/assistant/kind-meta.ts`, `apps/web/lib/assistant/economics.ts`,
@@ -556,6 +566,9 @@ satırında.
     gövdeli** (son tip 22.36'da). Satırın kendi kuralı (*"desen kullanıcı onayından geçmeden
     çoğaltılmıyor"*) işini gördü: desen 22.10'da onaylandı, kalan tipler ona göre yazıldı. İşaret
     bayat kalmıştı, ölçümle düşürüldü 26.08.
+  - **KAPANDI 26.08 · ölçümle.** Kuyruk içi karar on bir tipin hepsinde var: `bodies/` altında
+    on bir gövde dosyası duruyor ve on birinin diyaloğu 22.41'in tasarım turunda tek tek açıldı.
+    Satırın son maddesi zaten *"işaret bayat kalmıştı"* diyordu — bu tur onu da kapattı.
 
 - [x] (22.9) **Önerinin KONU KARTI + kararın üç panel yerleşimi** *(kullanıcı kararı 10.08: "konu bir
   ürünle alakalı olduğu zaman buraya ürünün resmi gibi bilgiler koyabiliriz… tıklayınca o ürünün
@@ -636,8 +649,9 @@ satırında.
     bekliyordu (22.8'de `inline` olmuştu). Dosya `apps/backend` altında, yani ENTEGRASYON projesinde
     koşuyor — DB'siz bir test olduğu hâlde birim koşusunda görünmediği için sessizce bayatlamış.
   - *Doğrulandı:* `typecheck` · `lint` · birim 1346/1346.
-  - **BEKLEYEN(22.10):** ekran doğrulaması kullanıcıda; yerleşim (form sütunu ↔ künye sütunu) geri
-    bildirime göre oturacak. `applyDiscountDraft`/`applyBatchOffer` uygulayıcıları artık ULAŞILAMAZ
+  - ~~**BEKLEYEN(22.10):** ekran doğrulaması kullanıcıda; yerleşim (form sütunu ↔ künye sütunu) geri
+    bildirime göre oturacak.~~ **KAPANDI 26.08 — kullanıcı incelemesiyle:** *«O beş ekranı daha önce inceledim.»* İşaret bayat kalmıştı; kuyruk 22.40'ın seed'iyle dolduğundan beri beş gövdenin de gerçek dilekçesi ekranda açılıyor.
+  - **BEKLEYEN(22.10): ölü uygulayıcı kaydı.** `applyDiscountDraft`/`applyBatchOffer` artık ULAŞILAMAZ
     (genel kapı `inline` tipini reddediyor) ama `APPLIERS` kaydında duruyor — `proposal.test.ts` şema
     ↔ uygulayıcı eşliğini şart koşuyor, yani temizlik o testin sözleşmesiyle birlikte düşünülmeli.
 
@@ -792,8 +806,9 @@ satırında.
     kılar. Sert bir kapı, dokunulan her eski dosyayı önce refactor etmeye zorlardı. Bugün 24 dosya
     eşiği aşıyor; en büyükleri mobil ekranlar ve `assistant-preview.tsx` (1115, tipe özel diyaloglar
     yazıldıkça eriyecek).
-  - **BEKLEYEN(22.11):** `featured_flag` kartı ekranda DOĞRULANMADI — kuyrukta o tipten öneri yok
-    (on tipin ikişer örneği var, bu tip hiç yazılmamış).
+  - ~~**BEKLEYEN(22.11):** `featured_flag` kartı ekranda DOĞRULANMADI — kuyrukta o tipten öneri yok.~~
+    **KAPANDI 26.08.** Engel iki kez düştü: önce ajanın kendi turu o tipi üretti (15.08), sonra seed
+    on bir tipin hepsini kuyruğa yazdı (22.40). Kart 22.41'in tasarım turunda açıldı ve incelendi.
     tipe özel DİYALOGLAR da sırada (kullanıcı planı: *"önce liste, sonra teker teker diyaloglar"*).
     `assistant-preview.tsx` blokları o sırada düşecek.
 
@@ -911,6 +926,16 @@ satırında.
     *"Maraş Dondurma Seti vitrine çıkarılsın"*; ikincisi paket hedefi, `reference_data`ya paket
     listesi eklendiği için mümkün oldu). Mal kabulün tedarikçi bağı 0/2'den 2/2'ye çıktı, 22.12'nin
     on iki alanının hepsi 2/2 dolu geldi.
+  - **BEKLEYEN(22.13): önizlemenin iki payload eksiği** *(22.3'ten taşındı 26.08 — o satır kapanınca
+    işaretler sahipsiz kaldı; `docs:check` yakaladı)*. İkisi de "alan yok, o yüzden ekran söyleyemiyor"
+    sınıfı: **(a)** `StockIntakePayload` ürünün toplam raf ömrünü taşımıyor, o yüzden yakın-SKT
+    vurgusu çizilemiyor — kararımız mutlak gün değil kalan ömür YÜZDESİ (`shelf-life.ts`) ve uydurma
+    bir gün eşiği alan kuralıyla çelişen bir alarm üretirdi. **(b)** `PurchaseOrderPayload` deponun
+    yalnız kimliğini taşıyor, kodunu değil; künye uuid yazmaktansa depoyu hiç yazmıyor. Çözüm ikisinde
+    de aynı: aracın payload'a alanı eklemesi. **(c)** Aynı sınıftan üçüncüsü: kuyruk kartı ürün adını
+    " · " ayracından bölerek boyu buluyor (`splitVariantName`) — payload `variantLabel` taşısaydı
+    tahmin gerekmezdi. Bugün bozulduğunda EKSİLİYOR (boy "—" olur), yalan söylemiyor; o yüzden acil
+    değil ama kalıcı çözüm ayrıştırmayı söküp alanı okumak.
   - **BEKLEYEN(22.13): iki bağ hâlâ boş ve ikisi de KİMLİK KÖPRÜSÜ SORUNU DEĞİL** — araç doğru
     davranıyor, modelin sorusu cevapsız kalıyor. İkisi de araç tarafında kapatılabilir ve **ilgili
     tipin kuyruk-içi FORMU yazılırken ele alınacak** (kullanıcı kararı 11.08: *"ilgili forma
@@ -976,8 +1001,7 @@ satırında.
   - **Ürünün tam kaydı seçenek havuzuna girdi** (`readAssistantFormOptions(productIds)`): form
     kategori, KDV, tarih tipi, raf ömrü ve varyantları da ister; dilekçe bunları taşımaz ve
     taşımamalı. Kataloğun tamamı değil, YALNIZ kuyruktaki taslakların ürünleri okunuyor.
-  - **BEKLEYEN(22.14):** ekran doğrulaması kullanıcıda — kuyrukta iki `product_draft` önerisi var
-    (*Chocolate Baklava* · *Sobiyet Baklava*, ikisi de `name` + `description`).
+  - ~~**BEKLEYEN(22.14):** ekran doğrulaması kullanıcıda — kuyrukta iki `product_draft` önerisi var.~~ **KAPANDI 26.08 — kullanıcı incelemesiyle:** *«O beş ekranı daha önce inceledim.»* İşaret bayat kalmıştı; kuyruk 22.40'ın seed'iyle dolduğundan beri beş gövdenin de gerçek dilekçesi ekranda açılıyor.
 
 - [x] (22.15) **Diyaloğun iki sütunu standartlaştı: solda iş, sağda DİLEKÇENİN KENDİSİ** *(kullanıcı
   kararı 11.08, ekran görüntüsüyle: "ajandan gelen bilginin en sağda bir sütun şeklinde özeti olsun.
@@ -1376,9 +1400,8 @@ satırında.
     Şemanın kendi künyesi bunu uyarıyordu bile (*"fatura dünkü olabilir ve genelde öyledir; yanlış
     tarihe yazılan kabul stok yaşını ve dönem mutabakatını sessizce kaydırır"*). Forma "Belge tarihi"
     alanı eklendi ve kapıya geçiyor; boş bırakılırsa kapı bugüne yazar.
-  - **BEKLEYEN(22.24): ölü kalan iki devir yolu.** `finance-handoff` ve `receiving-handoff` hâlâ kodda ama
-    ikisi de artık `inline`; `?proposal=` linki elle yazılmadıkça tetiklenmiyor. Sökülmesi ekranların
-    `handoff` prop'unu da kaldırmayı gerektiriyor, bu turda kapsam dışı bırakıldı.
+  - ~~**BEKLEYEN(22.24): ölü kalan iki devir yolu.**~~ **KAPANDI 26.08** — 22.24'te ÜÇ devir yolunun
+    üçü de söküldü (yalnız ikisi değil; ölçüm `stock-handoff`u da ölü buldu).
   - **DURUM 13.08 — ÖNERİ ONAYLANMADI, forma geri dönülecek** *(kullanıcı: "mal kabul öneri diyaloğunu
     kabul edemiyorum")*. Yazma yolu (kapı · fiyat · tarih · mutabakat) ayakta ve doğru; reddedilen
     FORMUN KENDİSİ. İki gerekçe: **(a)** mal kabul, ortak komponent havuzunu kullanmıyor — SKT alanı
@@ -1387,17 +1410,40 @@ satırında.
     **üç ayrı sayfaya** yayılmış, oysa üçü tek işin üç anıdır. Bu yüzden form tek başına düzeltilmiyor:
     üç ekranın birleşimiyle birlikte ele alınacak → **BEKLEYEN(22.26)**.
 
-- [~] (22.24) **Ölü devir yollarını sök** — ~~`finance-handoff` · `receiving-handoff`~~ ve ekranların `handoff` prop'ları
-  - *Bitti:* devir okuması yalnız `zone_extend` için kalır; iki ekran `?proposal=` parametresini artık okumaz
-  - Para (22.18) ve mal kabul (22.23) kuyruğa taşınınca bu iki yol ölü kaldı: kuyruk devir düğmesi
-    çizmiyor, yani kimse oraya yönlenmiyor. Bugün zararsızlar ama okuyan ajana "bu tip devrediliyor"
-    diye yanlış bilgi veriyorlar — ve bir gün biri o yolu düzeltmeye çalışır.
-  - **YARISI ZATEN SÖKÜLMÜŞ (kayıt düzeltmesi 26.08).** `receiving-handoff.ts` **artık yok** — 22.26'da
-    mal kabul Stok'a taşınırken `receiveGoodsAction` ve `costsForLines` ile birlikte silinmiş; o
-    satırın kendi notunda yazılı ama BU satır güncellenmemişti. Ölçümle düşürüldü.
-  - **KALAN:** `finance-handoff.ts` duruyor ve iki sayfa hâlâ `?proposal=` okuyor
-    (`finance/page.tsx:108` · `stock/page.tsx:187`). İkincisi ölü DEĞİL: parti teklifi devri (22.5)
-    o yoldan gidiyor, yani sökülecek olan yalnız para yarısı. Satır bu yüzden `[~]`. BEKLEYEN(22.24)
+- [x] (22.24) **Ölü devir yollarını sök — ÜÇÜ DE ölü çıktı** *(kullanıcı talimatı 26.08: «hepsini bitir»)* · `touches: apps/web/app/(operations)/operations/{finance,stock,deliveries}/**, apps/web/lib/assistant/{handoff.ts,assistant-types.ts}, apps/web/components/operation/{ui/handoff-note.tsx,stock/offer-dialog.tsx}, apps/web/app/(operations)/operations/assistant/{actions.ts,assistant-url.ts,assistant-labels.ts,assistant-sections.tsx,page.tsx}, packages/application/src/assistant/kind-meta.ts, apps/backend/src/mcp/proposal.test.ts`
+  - *Bitti:* devir kavramı koddan tümüyle kalktı; hiçbir ekran `?proposal=` okumuyor, `ProposalMode` o hâli taşımıyor
+  - **ÖNCEKİ KAYIT İKİ KEZ EKSİKTİ, ölçümle düzeltildi.** Satır *"`finance-handoff` · `receiving-handoff`"*
+    diyordu; sonra `receiving-handoff`un çoktan silindiği bulundu ve *"kalan yalnız para yarısı,
+    `stock-handoff` ölü DEĞİL"* yazıldı. **O da yanlıştı.** Bu turun ölçümü:
+    `KIND_META`da `handoff` modunda **tip kalmamış** — on bir tipin onu `inline`, biri
+    `draft_then_edit`. Yani `finance` · `stock` · `deliveries`, üçü birden ölü.
+  - **VE KOD ZATEN ÇALIŞMIYORDU — söküm bu yüzden risksizdi.** `readHandoffProposal`
+    `modeOf(row.kind) !== 'handoff'` kontrolüyle başlıyordu; hiçbir tip `handoff` olmadığı için
+    fonksiyon **her çağrıda `null`** dönüyordu. Üç ekran aylardır boş devir alıyor, prop'ları
+    taşıyor, künyelerini çiziyordu — çizmeden. Ölü kod zararsız değildi: okuyan ajana *"bu tip
+    devrediliyor"* diye yanlış bilgi veriyordu.
+  - **SÖKÜLENLER:** üç `*-handoff.ts` · `readHandoffProposal` · `HandoffNote` bileşeni (altı
+    tüketicisinin hepsi ölü dallardaydı) · üç ekranın `handoff` prop zinciri (page → client →
+    types → desktop) · `movement-dialog`/`offer-dialog`ın devir prop'ları ·
+    `assistant-url`in `?proposal=` dalı · `assistant-labels`in devir cümlesi · `ProposalMode`'daki
+    `'handoff'` değeri.
+  - **KORUNAN:** `withProposal` — adı devirden geliyor ama işi kuyruk satırını kararla birlikte
+    kapatmak ve **on bir tipin hepsi onu kullanıyor**. Dosya adı (`lib/assistant/handoff.ts`)
+    yanıltıcı kaldı ve bilerek dokunulmadı: on üç dosya onu import ediyor, yeniden adlandırma
+    kazancından çok gürültü üretirdi. Künyesi bugünkü gerçeği anlatıyor.
+  - **BİR AD YALAN SÖYLÜYORDU, DÜZELTİLDİ:** `ApplyOutcome`un `{ status: 'handoff' }` dalı `inline`
+    tiplerde dönüyordu — yani "devrediliyor" değil "kararı gövdesi yazar" demek istiyordu. Ad
+    `'inline'` oldu. (İstemci bu dalı zaten okumuyor; kapı sunucuda duruyor ki eski bir sekme
+    düzenlenmemiş bir öneriyi koşturamasın.)
+  - **TESTİN İDDİASI BİÇİM DEĞİŞTİRDİ, ZAYIFLAMADI.** `proposal.test.ts` *"hiçbir künye `handoff`
+    değil"* diye ölçüyordu ve künyesi *"künyeye yeniden `handoff` eklendiği gün kırmızıya döner"*
+    diyordu. `ProposalMode`'dan değer sökülünce o satır **derlenemez** hâle geldi; koruma tipe
+    taşındı ve güçlendi (artık test değil derleme durur). Yerine kümenin KAPALILIĞI sınanıyor: her
+    tipin modu bilinen üçten biri olmalı — dördüncü bir mod, kuyrukta ne anlama geldiği
+    düşünülmeden geçemez.
+  - **DOĞRULAMA:** `typecheck` (kendi ağacı) · `knip` (handoff izi yok) · `proposal.test.ts` 35/35 ·
+    üç ekranın turu (`ui:shot`): Para hesaplarıyla ve defteriyle, Stok sekmeleriyle, Rotalar
+    haritası ve yeni rota formuyla — üçünde de devir künyesi yok, ekranlar sağlam.
 
 - [x] (22.25) **Mal kabul ekranı da ortak satır editörüne geçsin** — `FreeIntake` ↔ `intake-form/body`
   - *Bitti:* iki yüzey aynı satır editörünü kullanır; "adet boşsa kabule girmez" ve SKT zorunluluğu tek yerde
@@ -1751,7 +1797,7 @@ satırında.
       - Ekranda ölçüldü, **iki tema**: `FİRE · %0` + `SAYIM FARKI · +4 · sayımda fazla çıktı`; kutu
         öteki `Stat` kutularıyla aynı desende, ham renk yok, token'lar temayla dönüyor.
       · `touches: packages/domain-core/src/stock/{history.ts,history.test.ts}, packages/application/src/warehouse/{variant-history.ts,variant-history.test.ts}, apps/web/components/operation/stock/product-history-panel.tsx`
-    - **BEKLEYEN(22.34):** kullanıcı panel akışını ekranda denemedi.
+    - ~~**BEKLEYEN(22.34):** kullanıcı panel akışını ekranda denemedi.~~ **KAPANDI 26.08 — kullanıcı incelemesiyle:** *«O beş ekranı daha önce inceledim.»* İşaret bayat kalmıştı; kuyruk 22.40'ın seed'iyle dolduğundan beri beş gövdenin de gerçek dilekçesi ekranda açılıyor.
     - ~~**BEKLEYEN(22.33):** kullanıcı ekranda denemedi; kuyrukta bekleyen gerçek dilekçe duruyor.
       Kalan iki gövdesiz tip `zone_extend` (harita ister) ve `featured_flag`.~~ **KAPANDI (26.08):**
       iki tip de yazıldı (`featured_flag` 22.35'te, `zone_extend` 22.36'da) ve **onbir tipin onbiri de
@@ -1941,12 +1987,12 @@ sınamış olacaktık.
         sözlüğü değil.
       - **HARİTA 420 → 630 piksel** (*"bir buçuk kat daha arttır"*). Karar coğrafi olduğu için
         haritanın ekranın baskın öğesi olması gerekiyor; kod listesi onun SONUCU.
-    - **BEKLEYEN(22.36):** kuyrukta gerçek dilekçe var (Schiltigheim + 67500), TTL 16.08; son hâli
-      henüz ekranda denenmedi.
-    - **BEKLEYEN(22.36):** rota ekranının devir yolu (`routes-handoff.ts` + `?proposal=` ön dolgusu)
-      artık HİÇBİR öneri tarafından tetiklenmiyor — `zone_extend` onun tek tüketicisiydi. Kod ölü
-      değil (sayfa hâlâ okuyor), ama pratikte ulaşılamaz. Sökülmesi rota ekranının kendi turunun işi;
-      bu turda dokunulmadı çünkü ekranı bozma riski kazancından büyük.
+    - ~~**BEKLEYEN(22.36):** kuyrukta gerçek dilekçe var (Schiltigheim + 67500); son hâli henüz
+      ekranda denenmedi.~~ **KAPANDI 26.08 — kullanıcı incelemesiyle:** *«O beş ekranı daha önce inceledim.»* İşaret bayat kalmıştı; kuyruk 22.40'ın seed'iyle dolduğundan beri beş gövdenin de gerçek dilekçesi ekranda açılıyor. Gövde 22.41'de haritasıyla turlandı; özetin çelişkisi de o turda düzeltildi.
+    - ~~**BEKLEYEN(22.36):** rota ekranının devir yolu (`routes-handoff.ts` + `?proposal=` ön dolgusu)
+      artık HİÇBİR öneri tarafından tetiklenmiyor.~~ **SÖKÜLDÜ 26.08 (22.24).** *"Ekranı bozma riski"*
+      ölçülünce çürüdü: okuma zaten `null` dönüyordu, yani sökülen şey çalışmayan bir yoldu. Rota
+      ekranı turlandı, sağlam.
     - **KURALIN KANITI GERİDE KALMIŞTI — düzeltildi (15.08).** `proposal.test.ts` hâlâ *"geriye tek
       devir kaldı: bölge"* diyip `zone_extend`den `handoff` bekliyordu; mod `inline` olunca test
       kırmızıya döndü ve bunu **birim koşusu göremiyor** (dosya entegrasyon projesinde). Aynı sınıf

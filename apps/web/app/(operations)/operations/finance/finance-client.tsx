@@ -6,7 +6,7 @@ import { applyMatchAction, classifyExpenseAction, dismissMatchAction } from '@/l
 import { MatchDialog } from './match-dialog';
 import { FinanceDesktop } from './finance.desktop';
 import { financeUrl, type FinanceUrlState } from './finance-url';
-import type { DialogKind, FinanceData, MatchRowView, MoneyHandoff } from './finance-types';
+import type { DialogKind, FinanceData, MatchRowView } from './finance-types';
 
 // Para client kökü: tek durum ağacı burada. Operasyon web'i masaüstü-yalnız (06.08);
 // mobil deneyim native uygulamada — `docs/uygulama`.
@@ -20,10 +20,9 @@ interface FinanceClientProps {
   urlState: FinanceUrlState;
   writableAccounts: FinanceData['accounts'];
   /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
-  handoff?: MoneyHandoff | null;
 }
 
-export function FinanceClient({ data, urlState, writableAccounts, handoff = null }: FinanceClientProps) {
+export function FinanceClient({ data, urlState, writableAccounts }: FinanceClientProps) {
   const router = useRouter();
   const [navPending, startNav] = useTransition();
   /**
@@ -31,7 +30,7 @@ export function FinanceClient({ data, urlState, writableAccounts, handoff = null
    * "bu kaydı gözden geçir" diye geldi; ayrıca "+ Hareket"e bastırmak fazladan bir adım olurdu.
    * Formun alamadığı iki tipte (`blocked`) pencere açılmaz — künye yolu söyler.
    */
-  const [dialog, setDialog] = useState<DialogKind>(handoff?.form ? 'movement' : null);
+  const [dialog, setDialog] = useState<DialogKind>(null);
   /** Hangi kuyruk satırı işleniyor — iki kez tıklanmasın, ve hangisinin beklediği görünsün. */
   const [busyId, setBusyId] = useState<string | null>(null);
   const [queueError, setQueueError] = useState<string | null>(null);
@@ -68,7 +67,6 @@ export function FinanceClient({ data, urlState, writableAccounts, handoff = null
     writableAccounts,
     navPending,
     dialog,
-    handoff,
     busyId,
     queueError,
     onFilter: go,

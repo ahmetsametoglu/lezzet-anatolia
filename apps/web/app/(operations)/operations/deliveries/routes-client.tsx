@@ -13,7 +13,6 @@ import { readMapCodesAction, saveZoneAction } from './routes-actions';
 import { RoutesDesktop } from './routes.desktop';
 import { ROUTE_NOTES } from './deliveries-labels';
 import type { RoutesData, RouteView } from './routes-read';
-import type { ZoneHandoff } from './routes-handoff';
 import type { PostalCodePick } from './routes-types';
 import { DAY_HOUR_KEYS, type DayHourKey } from '@/lib/settings/day-hours';
 import type { Country } from '@lezzet/types';
@@ -95,7 +94,6 @@ export function RoutesClient({
   routeId,
   warehouseId,
   contextWarehouseId,
-  handoff = null,
 }: {
   data: RoutesData;
   routeId: string | null;
@@ -106,7 +104,6 @@ export function RoutesClient({
    */
   contextWarehouseId: string | null;
   /** Asistan önerisinden gelindiyse ön dolgu (22.5); `null` ise ekran hiç değişmez. */
-  handoff?: ZoneHandoff | null;
 }) {
   const router = useRouter();
   const [busy, startTransition] = useTransition();
@@ -144,7 +141,7 @@ export function RoutesClient({
           hours: { ...selected.hours },
         }
       : {
-          name: handoff?.zoneName ?? '',
+          name: '',
           /**
            * Yeni rotanın açılış deposu — eski KAYDETME anı çözümünün aynısı, ama artık bir
            * ÖNERİ olarak taslağa konuyor, gizli bir varsayım olarak değil. Depolar'dan köprüyle
@@ -159,10 +156,7 @@ export function RoutesClient({
           // bir kararı veriye geçirmek olurdu.
           hours: {} as Partial<Record<DayHourKey, string | null>>,
         };
-    if (!handoff) return base;
-    const have = new Set(base.codes.map((code) => `${code.country}:${code.postalCode}`));
-    const added = handoff.codes.filter((code) => !have.has(`${code.country}:${code.postalCode}`));
-    return { ...base, codes: [...base.codes, ...added] };
+    return base;
   });
 
   /**
@@ -249,19 +243,9 @@ export function RoutesClient({
         isActive: draft.isActive,
         postalCodes: draft.codes,
         hours: hoursPatch(draft.hours, selected?.hours ?? {}),
-        // Öneriden gelindiyse kuyruk satırı bu kayıtla birlikte kapanır (`withProposal`). Elle
-        // kurulumda alan hiç gitmez ve akış değişmez.
-        proposalId: handoff?.proposalId,
       });
       if (result.error) {
         setError(result.error);
-        return;
-      }
-      // Öneri kapandıysa adresten de düşer: sayfa yenilenince aynı öneri ikinci kez ön dolgu
-      // yapmamalı — satır artık `pending` değil, `readZoneHandoff` zaten `null` dönerdi ama adreste
-      // ölü bir parametre bırakmak da bir sonraki paylaşımda kafa karıştırırdı.
-      if (handoff) {
-        router.replace(`/operations/deliveries?tab=routes&route=${selected?.id ?? handoff.zoneId}`);
         return;
       }
       router.refresh();
@@ -336,7 +320,6 @@ export function RoutesClient({
       homeCountry={(home?.countryCode ?? 'FR') as Country}
       busy={busy}
       error={error}
-      handoff={handoff}
     />
   );
 }

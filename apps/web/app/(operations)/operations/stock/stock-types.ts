@@ -15,7 +15,6 @@ import type {
 import type { ReturnDrop } from '@lezzet/application';
 import type { BatchView } from '@/lib/stock/batch-types';
 import type { StockLevelRow } from '@/lib/stock/level-rows';
-import type { OfferHandoff } from './stock-handoff';
 import type { LossPeriod, StockScope, StockTab } from './stock-url';
 import type { TransfersPageView } from './transfer-types';
 
@@ -344,6 +343,5 @@ export interface StockViewProps {
    * Yalnız bu hâl sayfaya iner: parti bulunduğunda künye teklif diyaloğunun içinde durur, çünkü
    * pencere kendiliğinden açılıp sayfayı örtüyor — arkada kalan künyeyi kimse okuyamaz.
    */
-  handoffMissing: OfferHandoff | null;
 }
 

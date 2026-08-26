@@ -280,7 +280,7 @@ export function ProposalDialog({
                   {busy ? 'Kaydediliyor…' : inline.applyLabel}
                 </Button>
               </>
-            ) : mode === 'handoff' || mode === 'inline' ? (
+            ) : mode === 'inline' ? (
               /* `inline` buraya YALNIZ dilekçenin şekli tanınmadığında düşer: gövde çizilemedi, yani
                  düzenlenecek form da yok. Genel "Uygula" gösterilemez — sunucudaki kapı onu zaten
                  reddeder ve operatör hiçbir şey olmadan bir düğmeye basmış olurdu. */
