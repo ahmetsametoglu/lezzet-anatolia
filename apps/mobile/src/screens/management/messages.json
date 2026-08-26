@@ -16,13 +16,47 @@
       "body": "Bekleyen karar yok — gün özeti aşağıdan hâlâ açılır.",
       "action": "Gün özeti →"
     },
-    "footnote": "Uzun iş masaya kalır — her ekran \"masada devam et\" der. Kurulum/ayar mobile taşınmaz."
+    "footnote": "Uzun iş masaya kalır — her ekran \"masada devam et\" der. Kurulum/ayar mobile taşınmaz.",
+    "error": {
+      "title": "Karar kutusu yüklenemedi",
+      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "rows": {
+      "complaint": {
+        "title": "Şikâyet / talep — {n} cevap bekliyor",
+        "subtitle": "{who}{ref}",
+        "refPart": " · {ref}"
+      },
+      "exception": {
+        "title": "Sipariş istisnası — eksik toplama",
+        "subtitle": "{ref} · {lines} kalem · motor önerisi hazır",
+        "subtitleMore": "{ref} · {lines} kalem · +{more} sipariş daha",
+        "noRef": "referanssız"
+      },
+      "offer": {
+        "title": "Yakın-SKT kampanya onayı",
+        "subtitle": "{n} aday parti · D3’ten"
+      },
+      "supply": {
+        "title": "Tedarik önerisi",
+        "subtitle": "{groups} grup",
+        "subtitleUnmapped": "{groups} grup · {unmapped} eşlenmemiş"
+      },
+      "intent": {
+        "title": "WhatsApp — cevap bekleyen",
+        "subtitle": "{n} konuşma · sipariş niyeti buradan çıkar"
+      }
+    }
   },
   "complaint": {
     "title": "Şikâyet",
     "caption": "{reference} · kaynak: {source} · {ago}",
     "attachments": "{n} ek",
-    "status": { "open": "Açık", "inProgress": "İşlemde" },
+    "status": {
+      "open": "Açık",
+      "inProgress": "İşlemde"
+    },
     "author": {
       "customer": "MÜŞTERİ · çeviri ({from} → {to})",
       "customerOriginal": "MÜŞTERİ · orijinal ({from})",
@@ -87,21 +121,25 @@
     "caption": "salt okuma · günün fotoğrafı",
     "headline": "{orders} sipariş · {preparing} hazırlanıyor · {awaiting} tahsilat bekliyor",
     "channels": {
-      "eyebrow": "CİRO — KANAL KIRILIMI (SİPARİŞ TARİHİNE GÖRE)",
+      "eyebrow": "CİRO — KANAL KIRILIMI (TESLİM GÜNÜNE GÖRE)",
       "web": "Web",
       "door": "Kapıda satış",
       "whatsapp": "WhatsApp",
       "unknown": "— bilinmiyor (sıfır değil)"
     },
-    "doorPending": { "label": "KAPIDA BEKLEYEN", "value": "{n} · {amount}" },
+    "doorPending": {
+      "label": "TAHSİLAT BEKLEYEN",
+      "value": "{n} · {amount}"
+    },
     "openComplaints": "AÇIK ŞİKÂYET",
     "tomorrow": {
       "eyebrow": "YARIN — SEVKİYAT",
-      "head": "{orders} sipariş · {ready} hazır · ",
-      "unassigned": "{n} rotaya atanmamış",
-      "tail": " · kapıda ödeme yükü {amount}"
+      "line": "{orders} sipariş · {ready} hazır · kapıda ödeme yükü {amount}"
     },
-    "insights": { "eyebrow": "HAFTALIK YZ İÇGÖRÜSÜ" },
+    "insights": {
+      "eyebrow": "YZ İÇGÖRÜSÜ",
+      "empty": "Bugün için üretilmiş içgörü yok — motor bağlandığında bu blok dolacak."
+    },
     "stockRisk": "Stok riski bloğu ısınıyor — bekleyin (üç hâl: hazır · ısınıyor · yok)."
   },
   "intent": {
@@ -119,18 +157,36 @@
       "title": "Sosyal Mesajlar",
       "subtitle": "WhatsApp · Messenger · Instagram — tek gelen kutusu"
     },
-    "filter": { "all": "Tümü", "awaiting": "Cevap bekleyen" },
+    "filter": {
+      "all": "Tümü",
+      "awaiting": "Cevap bekleyen"
+    },
     "channelAll": "Tüm kanallar",
-    "channel": { "whatsapp": "WhatsApp", "messenger": "Messenger", "instagram": "Instagram" },
+    "channel": {
+      "whatsapp": "WhatsApp",
+      "messenger": "Messenger",
+      "instagram": "Instagram"
+    },
     "kind": {
       "text": "[boş mesaj]",
       "interactive": "[etkileşimli kart]",
       "template": "[kalıp mesaj]",
       "media": "[görsel / dosya]"
     },
-    "empty": { "title": "Gelen kutusu boş", "body": "Bu süzgeçte konuşma yok." },
-    "error": { "title": "Liste yüklenemedi", "body": "Bağlantıyı kontrol edip yeniden deneyin.", "retry": "Tekrar dene" },
-    "tail": { "loading": "Yükleniyor…", "failed": "Devamı gelmedi — dokun, yeniden dene", "end": "Liste bitti" },
+    "empty": {
+      "title": "Gelen kutusu boş",
+      "body": "Bu süzgeçte konuşma yok."
+    },
+    "error": {
+      "title": "Liste yüklenemedi",
+      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "tail": {
+      "loading": "Yükleniyor…",
+      "failed": "Devamı gelmedi — dokun, yeniden dene",
+      "end": "Liste bitti"
+    },
     "detail": {
       "older": "Daha eski mesajları yükle",
       "olderLoading": "Geçmiş yükleniyor…",
@@ -140,7 +196,12 @@
       "draftCaption": "YZ TASLAĞI — operatör cevabı değildir",
       "draftTake": "Cevap kutusuna al",
       "suggest": "Taslak öner",
-      "mode": { "label": "Yürütücü:", "human": "İnsan", "hybrid": "Hibrit", "aiOrphan": "AI modunda ama sohbette ajan yok — cevapsız bekliyor, İnsan'a alın." },
+      "mode": {
+        "label": "Yürütücü:",
+        "human": "İnsan",
+        "hybrid": "Hibrit",
+        "aiOrphan": "AI modunda ama sohbette ajan yok — cevapsız bekliyor, İnsan'a alın."
+      },
       "replyPlaceholder": "Cevabı deftere yaz…",
       "replyLabel": "Konuşmanın defter cevabı",
       "record": "Deftere işle",
@@ -175,7 +236,11 @@
         "nothing_to_answer": "Cevaplanacak yeni müşteri mesajı yok — son sözü zaten biz söylemişiz.",
         "empty_thread": "Bu konuşmada hiç mesaj yok — taslak üretilecek soru yok."
       },
-      "notFound": { "title": "Sohbet yüklenemedi", "body": "Bağlantıyı kontrol edip yeniden deneyin.", "retry": "Tekrar dene" }
+      "notFound": {
+        "title": "Sohbet yüklenemedi",
+        "body": "Bağlantıyı kontrol edip yeniden deneyin.",
+        "retry": "Tekrar dene"
+      }
     }
   }
 }

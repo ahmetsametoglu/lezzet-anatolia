@@ -599,3 +599,7 @@ export { availabilityOf } from './analytics/availability';
 export { bundleAvailabilityOf } from './analytics/availability';
 export { effectiveChannelOf } from './catalog/pricing-viewer';
 export { checkoutBlockedAnalyticsReason } from './cart/cart-types';
+
+// Yönetim + Para bölümleri (21.12) — hub karar kutusu/gün özeti ve salt-okuma para özetleri.
+export { readManagementHub } from './management/hub';
+export { readMoneyDayEnd, readMoneyOverview } from './accounting/money';

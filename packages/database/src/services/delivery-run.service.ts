@@ -204,4 +204,10 @@ export class DeliveryRunCollectionService extends BaseDbService<DeliveryRunColle
   getByRun(runId: string): Promise<DeliveryRunCollection | null> {
     return this.getOneBy({ deliveryRunId: runId });
   }
+
+  /** Bir küme seferin beklenen tahsilatları — kuryelerin üstündeki paranın ham verisi (21.12). */
+  listByRuns(runIds: readonly string[]): Promise<DeliveryRunCollection[]> {
+    if (runIds.length === 0) return Promise.resolve([]);
+    return this.getAll({ deliveryRunId: [...runIds] });
+  }
 }

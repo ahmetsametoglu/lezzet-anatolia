@@ -1,128 +1,19 @@
 /*
-  YÖNETİM EKRANLARININ VERİSİ — FIXTURE (v2:331-357 + Y1–Y6 ekran gövdeleri birebir).
+  YÖNETİM KARAR EKRANLARININ VERİSİ — FIXTURE (Y1 · Y2 · Y3 · Y4 · Y6 gövdeleri, v2 birebir).
 
-  ── NEDEN FIXTURE, VE NE ZAMAN GİDECEK ──────────────────────────────────────
-  Bu etap UI-ONLY (yönetici kararı 09.08): karar kutusunun, şikâyet akışının, istisna motorunun,
-  teklif onayının ve gün özetinin BESLENECEĞİ uç yok ve bu dilimde YAZILMAYACAK. Ekranlar yine de
-  TAM çalışır (liste · seçim · fiyat düzeltme · üstlenme · onay) çünkü durum ekranın kendisinde
-  tutuluyor; uç geldiği gün bu dosya silinir, yerine cevap geçer ve ekranların gövdesi değişmez
-  (aynı karar: `near-expiry-fixture.ts`, `notifications-fixture.ts`).
+  ── KALAN SON PARÇA (21.12 Dilim A sonrası) ─────────────────────────────────
+  Hub'ın karar kutusu, gün özeti ve Para ekranları GERÇEK uca bağlandı ve o fixture'lar silindi
+  (`money-fixture.ts` tamamen; buradan `DECISION_QUEUE` + `DAY_SUMMARY`). Bu dosyada yalnız beş
+  KARAR ekranının gövdesi kaldı — aksiyon uçları (Y1 cevap/üstlen · Y2 karar · Y3 teklif ·
+  Y4 taslak TS · Y6 not) sonraki dilimlerin işi; uç bağlandıkça ilgili blok silinir ve bu dosya
+  en sonunda yok olur.
 
   ── ETİKET Mİ VERİ Mİ ───────────────────────────────────────────────────────
   Tutar CENT tutulur ve ekranda `money()` ile yazılır — para biçimi yüzeyin kuralıdır, veri değil.
-  Buna karşılık "12 dk", "2 gün", "kaynak: sipariş" gibi alanlar tasarımın CÜMLESİ olarak durur:
-  arkalarında bir damga/eşik hesabı var ve o hesabın kapısı yok; uydurma bir zaman aritmetiği
-  yazmak, ölçülmemiş bir şeyi ölçülmüş gibi göstermek olurdu (CLAUDE §1 — aynı gerekçe
-  `near-expiry-fixture.ts`in `daysLabel`inde).
+  Buna karşılık "12 dk", "2 gün" gibi alanlar tasarımın CÜMLESİ olarak durur: arkalarında bir
+  damga/eşik hesabı var ve o hesabın kapısı yok; uydurma bir zaman aritmetiği yazmak, ölçülmemiş
+  bir şeyi ölçülmüş gibi göstermek olurdu (CLAUDE §1).
 */
-
-/**
- * Karar satırının başındaki noktanın ANLAMI (renk değil — token ekranda çözülür, fixture'a hex
- * girmez). v2:332-336 ölçüldü: nokta bölümü değil işin ACİLİYETİNİ söylüyor.
- */
-export type DecisionTone = 'alert' | 'attention' | 'go' | 'warehouse' | 'quiet';
-
-/** Satırın açtığı ekran. Adres (rota dizesi) EKRANIN bilgisidir; veri yalnız hedefi adlandırır. */
-export type DecisionTarget = 'complaint' | 'exception' | 'offer' | 'supply' | 'intent';
-
-interface DecisionRow {
-  id: string;
-  title: string;
-  subtitle: string;
-  tone: DecisionTone;
-  /** "top bizde" — cevap sırası bizde (v2:493); yoksa rozet çizilmez. */
-  ourTurn?: boolean;
-  target: DecisionTarget;
-}
-
-/** v2:331-337 — beş satır, sırası dahil. */
-export const DECISION_QUEUE: DecisionRow[] = [
-  {
-    id: 'd1',
-    title: 'Şikâyet — Bozuk ürün',
-    subtitle: 'LZA-26-7K1A · 12 dk · 2 ek',
-    tone: 'alert',
-    ourTurn: true,
-    target: 'complaint',
-  },
-  {
-    id: 'd2',
-    title: 'Sipariş istisnası — eksik toplama',
-    subtitle: 'LZA-26-3M8C · motor önerisi hazır',
-    tone: 'attention',
-    target: 'exception',
-  },
-  {
-    id: 'd3',
-    title: 'Yakın-SKT kampanya onayı',
-    subtitle: '3 aday parti · D3’ten',
-    tone: 'go',
-    target: 'offer',
-  },
-  {
-    id: 'd4',
-    title: 'Tedarik önerisi',
-    subtitle: '2 grup · 1 eşlenmemiş',
-    tone: 'warehouse',
-    target: 'supply',
-  },
-  {
-    id: 'd5',
-    title: 'WhatsApp sipariş niyeti',
-    subtitle: '+33 6 12 … 84 · 4 dk',
-    tone: 'quiet',
-    target: 'intent',
-  },
-];
-
-/* ── Y5 · GÜN ÖZETİ (v2:664-696) ───────────────────────────────────────────── */
-
-/** Kanal kırılımının satırı. `cents: null` = ÖLÇÜLEMEDİ ve sıfır DEĞİLDİR (v2:673 aynen böyle). */
-interface RevenueChannel {
-  key: 'web' | 'door' | 'whatsapp';
-  cents: number | null;
-}
-
-/** YZ içgörüsünün tonu — iyi / izle / kötü (v2:686-688'in üç noktası). */
-export type InsightTone = 'good' | 'watch' | 'bad';
-
-interface DayInsight {
-  id: string;
-  tone: InsightTone;
-  text: string;
-}
-
-interface DaySummary {
-  orderCount: number;
-  preparingCount: number;
-  awaitingCollectionCount: number;
-  revenueCents: number;
-  openComplaintCount: number;
-  channels: RevenueChannel[];
-  doorPending: { count: number; cents: number };
-  tomorrow: { orderCount: number; readyCount: number; unassignedCount: number; doorPaymentCents: number };
-  insights: DayInsight[];
-}
-
-export const DAY_SUMMARY: DaySummary = {
-  orderCount: 31,
-  preparingCount: 6,
-  awaitingCollectionCount: 5,
-  revenueCents: 141260,
-  openComplaintCount: 3,
-  channels: [
-    { key: 'web', cents: 108640 },
-    { key: 'door', cents: 32620 },
-    { key: 'whatsapp', cents: null },
-  ],
-  doorPending: { count: 5, cents: 17850 },
-  tomorrow: { orderCount: 14, readyCount: 9, unassignedCount: 5, doorPaymentCents: 21200 },
-  insights: [
-    { id: 'i1', tone: 'good', text: 'B2B siparişleri %18 arttı — perşembe yoğunluğu sürüyor.' },
-    { id: 'i2', tone: 'watch', text: 'İzle: su böreği eksik toplaması bu hafta 3. kez.' },
-    { id: 'i3', tone: 'bad', text: 'Kötü: ulaşılamayan durak oranı %9’a çıktı — sonraki adım boş.' },
-  ],
-};
 
 /* ── Y1 · ŞİKÂYET (v2:530-579) ─────────────────────────────────────────────── */
 

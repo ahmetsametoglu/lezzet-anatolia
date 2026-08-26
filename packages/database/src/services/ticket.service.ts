@@ -375,6 +375,15 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
   }
 
   /**
+   * Cevap bekleyen AÇIK taleplerin SAYIMI — yönetim karar kutusunun rozeti (21.12).
+   * Sayfa uzunluğundan sayılmaz (`countAwaitingReply` künyesiyle aynı gerekçe): kalabalık kuyrukta
+   * "ilk sayfada N" ile "N bekliyor" aynı cümle değildir.
+   */
+  countAwaiting(): Promise<number> {
+    return this.count({ awaitingReply: true, status: ['open', 'in_progress'] });
+  }
+
+  /**
    * Operasyon kuyruğu — **son mesaja göre** sıralı: kuyruğun tek amacı cevap bekleyeni
    * bekletmemektir, o yüzden sıra açılış tarihine değil son harekete bakar.
    */

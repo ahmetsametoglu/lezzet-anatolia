@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
+import type { MoneyOverview, PendingCollection } from '@lezzet/types';
 import { moneyCopy } from './copy';
-import { ACCOUNT_BALANCES, COURIER_FLOAT, PENDING_COLLECTIONS, TODAY_BY_METHOD } from './money-fixture';
+import { useMoneyOverview } from './use-money.hook';
 
 /*
   PARA KÖKÜ · TAHSİLAT İZLEME (v2:716-756) — bölümün kökü ve SALT OKUMA.
@@ -21,18 +23,17 @@ import { ACCOUNT_BALANCES, COURIER_FLOAT, PENDING_COLLECTIONS, TODAY_BY_METHOD }
 
   ── ZİL YOK, METİN EYLEMİ VAR ───────────────────────────────────────────────
   Başlığın sağ yuvası bu bölümde bildirim düğmesi DEĞİL (v2:719) — karar `section-header.tsx`
-  künyesinde ve kabuk testinde ölçülü. Yalnız muhasebe rolü taşıyan kullanıcı bildirim ekranına
-  kabuktan ulaşamaz; bu bir eksik değil tasarımın hâli.
+  künyesinde ve kabuk testinde ölçülü.
 
-  ── BU EKRAN 21.9'un YER TUTUCUSUNUN YERİNİ ALDI ────────────────────────────
-  `screens/operations/section-screen.tsx` dört bölümün başlığını çiziyordu ve son iki tüketicisi
-  (Yönetim · Para) bu dilimde kendi gövdelerine kavuştu; ortak dosya SÖKÜLDÜ (ölü kod bırakılmaz).
+  ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
+  `/money/overview` okunur; 21.8'in açık bıraktığı "para kökünün boş/hata durumu" burada TAM
+  kapandı: boş liste de, yüklenememe de gerçek hâller ve ikisi de çizili. Bekleyen küme GÜNÜN
+  ödenmemiş siparişleridir (sözleşme künyesi) — tüm zamanların dökümü masaüstü muhasebenin işi.
 
-  ── BOŞ HÂL VAR, HATA HÂLİ YOK ──────────────────────────────────────────────
-  21.8'in açık bıraktığı "Para kökünün boş/hata durumu" burada kapanıyor — YARIM: bekleyen tahsilat
-  listesi boş olabilir ve o cümle yazıldı. "Yüklenemedi" hâli ise okuma yapan bir kapı olmadan
-  DOĞAMAZ; basıldığında hiçbir şey denemeyen bir "Tekrar dene" çizmek yerine, hata hâli uç
-  bağlandığı gün gerçek düşüşle birlikte gelecek (aynı karar: yönetim kökü).
+  ── HESAP SATIRLARI ADIYLA ──────────────────────────────────────────────────
+  v2 iki sabit satır çiziyordu (Kasa · Banka); defterde hesap SAYISI işletme kurulumudur (Kasa,
+  Revolut, Crédit Mutuel, Stripe…). Satır adı SUNUCUDAN gelir — iki ada indirmek, iki hesabı tek
+  satırda toplamak ya da birini gizlemek olurdu.
 */
 
 const t = moneyCopy;
@@ -40,6 +41,7 @@ const shell = operationsCopy;
 
 export function MoneyTrackingScreen() {
   const router = useRouter();
+  const { state, retry } = useMoneyOverview();
 
   return (
     <View style={styles.screen} testID="operations-section-money">
@@ -62,80 +64,119 @@ export function MoneyTrackingScreen() {
         identity={<OperationsStaffMenu testID="operations-staff-menu" />}
       />
 
-      <ScrollView contentContainerStyle={styles.body} testID="money-tracking-body">
-        <View style={styles.block}>
-          <Text style={styles.eyebrow}>{t.track.pending.eyebrow}</Text>
-          {PENDING_COLLECTIONS.length === 0 ? (
-            <Text style={styles.emptyLine} testID="money-pending-empty">
-              {t.track.pending.empty}
-            </Text>
-          ) : (
-            PENDING_COLLECTIONS.map((item) => (
-              <View key={item.id} style={styles.dashedRow} testID={`money-pending-${item.id}`}>
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle}>{item.reference}</Text>
-                  <Text style={styles.rowMeta}>{item.who}</Text>
-                </View>
-                <Text style={styles.pendingSentence}>{pendingSentence(item)}</Text>
-              </View>
-            ))
-          )}
-          <Text style={styles.note}>{t.track.pending.note}</Text>
+      {state.status === 'loading' ? (
+        <View style={styles.pending} testID="money-tracking-loading">
+          <ActivityIndicator color={operationsTheme.colors.olive} />
         </View>
-
-        <View style={styles.block}>
-          <Text style={styles.eyebrow}>{t.track.today.eyebrow}</Text>
-          {TODAY_BY_METHOD.map((row) => (
-            <View key={row.method} style={styles.dashedRow} testID={`money-today-${row.method}`}>
-              <Text style={styles.rowLabel}>{t.track.today[row.method]}</Text>
-              <Text style={styles.rowValue}>{money(row.cents)}</Text>
-            </View>
-          ))}
+      ) : state.status === 'error' ? (
+        <View style={styles.errorBlock}>
+          <OperationsNoticeBlock
+            variant="error"
+            title={t.common.error.title}
+            description={t.common.error.body}
+            retry={{ label: t.common.error.retry, onPress: retry }}
+            testID="money-tracking-error"
+          />
         </View>
-
-        <View style={styles.floatCard} testID="money-courier-float">
-          <Text style={styles.eyebrow}>{t.track.float.eyebrow}</Text>
-          <Text style={styles.floatValue}>
-            {fillCopy(t.track.float.value, {
-              cash: money(COURIER_FLOAT.cashCents),
-              card: money(COURIER_FLOAT.cardCents),
-            })}
-          </Text>
-          <Text style={styles.note}>{t.track.float.note}</Text>
-        </View>
-
-        <View style={styles.block}>
-          <Text style={styles.eyebrow}>{t.track.balances.eyebrow}</Text>
-          {ACCOUNT_BALANCES.map((balance, index) => (
-            <View
-              key={balance.account}
-              /* Son satırın altında ayraç YOK (v2:750): blok orada bitiyor ve altındaki not
-                 satırın devamı gibi okunmamalı. */
-              style={index === ACCOUNT_BALANCES.length - 1 ? styles.plainRow : styles.dashedRow}
-              testID={`money-balance-${balance.account}`}
-            >
-              <Text style={styles.rowLabel}>{t.track.balances[balance.account]}</Text>
-              <Text style={styles.rowValue}>{money(balance.cents)}</Text>
-            </View>
-          ))}
-          <Text style={styles.note}>{t.track.balances.note}</Text>
-        </View>
-      </ScrollView>
+      ) : (
+        <OverviewBody overview={state.data} />
+      )}
     </View>
   );
 }
 
+interface OverviewBodyProps {
+  overview: MoneyOverview;
+}
+
+function OverviewBody({ overview }: OverviewBodyProps) {
+  const floatValue =
+    overview.courierFloat.chequeCents > 0
+      ? fillCopy(t.track.float.valueWithCheque, {
+          cash: money(overview.courierFloat.cashCents),
+          card: money(overview.courierFloat.cardCents),
+          cheque: money(overview.courierFloat.chequeCents),
+        })
+      : fillCopy(t.track.float.value, {
+          cash: money(overview.courierFloat.cashCents),
+          card: money(overview.courierFloat.cardCents),
+        });
+
+  return (
+    <ScrollView contentContainerStyle={styles.body} testID="money-tracking-body">
+      <View style={styles.block}>
+        <Text style={styles.eyebrow}>{t.track.pending.eyebrow}</Text>
+        {overview.pending.length === 0 ? (
+          <Text style={styles.emptyLine} testID="money-pending-empty">
+            {t.track.pending.empty}
+          </Text>
+        ) : (
+          overview.pending.map((item) => (
+            <View key={item.orderId} style={styles.dashedRow} testID={`money-pending-${item.orderId}`}>
+              <View style={styles.rowText}>
+                <Text style={styles.rowTitle}>{item.referenceNo ?? t.track.pending.noRef}</Text>
+                <Text style={styles.rowMeta}>
+                  {item.customerName} · {t.track.pending.state[item.status]}
+                </Text>
+              </View>
+              <Text style={styles.pendingSentence}>{pendingSentence(item)}</Text>
+            </View>
+          ))
+        )}
+        <Text style={styles.note}>{t.track.pending.note}</Text>
+      </View>
+
+      <View style={styles.block}>
+        <Text style={styles.eyebrow}>{t.track.today.eyebrow}</Text>
+        {overview.todayByMethod.length === 0 ? (
+          <Text style={styles.emptyLine} testID="money-today-empty">
+            {t.track.today.empty}
+          </Text>
+        ) : (
+          overview.todayByMethod.map((row) => (
+            <View key={row.method} style={styles.dashedRow} testID={`money-today-${row.method}`}>
+              <Text style={styles.rowLabel}>{t.common.method[row.method]}</Text>
+              <Text style={styles.rowValue}>{money(row.cents)}</Text>
+            </View>
+          ))
+        )}
+      </View>
+
+      <View style={styles.floatCard} testID="money-courier-float">
+        <Text style={styles.eyebrow}>{t.track.float.eyebrow}</Text>
+        <Text style={styles.floatValue}>{floatValue}</Text>
+        <Text style={styles.note}>{t.track.float.note}</Text>
+      </View>
+
+      <View style={styles.block}>
+        <Text style={styles.eyebrow}>{t.track.balances.eyebrow}</Text>
+        {overview.accounts.map((account, index) => (
+          <View
+            key={`${account.type}-${account.name}`}
+            /* Son satırın altında ayraç YOK (v2:750): blok orada bitiyor ve altındaki not
+               satırın devamı gibi okunmamalı. */
+            style={index === overview.accounts.length - 1 ? styles.plainRow : styles.dashedRow}
+            testID={`money-balance-${index}`}
+          >
+            <Text style={styles.rowLabel}>{account.name}</Text>
+            <Text style={styles.rowValue}>{money(account.cents)}</Text>
+          </View>
+        ))}
+        <Text style={styles.note}>{t.track.balances.note}</Text>
+      </View>
+    </ScrollView>
+  );
+}
+
 /**
- * Bekleyen satırın SAĞ cümlesi (v2:733). Tutar yalnız tahsil EDİLECEKSE yazılır; vadeli satırda
- * rakam yoktur, çünkü o para bugün beklenmiyor — rakamı tekrarlamak "bugün tahsil edilecek" gibi
- * okunurdu.
+ * Bekleyen satırın SAĞ cümlesi (v2:733). Tutar tahsil EDİLECEK kalandır; yöntem biliniyorsa
+ * cümleye eklenir, bilinmiyorsa (henüz seçilmemiş kapıda ödeme) cümle yöntemsiz kalır — uydurulmaz.
  */
-function pendingSentence(item: (typeof PENDING_COLLECTIONS)[number]): string {
-  const method = item.method === undefined ? '' : t.common.method[item.method];
-  if (item.kind === 'term') return fillCopy(t.track.pending.term, { due: item.dueLabel ?? '' });
-  const amount = item.cents === undefined ? '' : money(item.cents);
+function pendingSentence(item: PendingCollection): string {
+  const method =
+    item.method === null ? '' : fillCopy(t.track.pending.methodPart, { method: t.common.method[item.method] });
   const template = item.kind === 'door' ? t.track.pending.door : t.track.pending.partial;
-  return fillCopy(template, { amount, method });
+  return fillCopy(template, { amount: money(item.remainingCents), method });
 }
 
 const styles = StyleSheet.create({
@@ -151,6 +192,14 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.olive,
+  },
+  pending: {
+    paddingTop: operationsTheme.space['8xl'],
+    alignItems: 'center',
+  },
+  errorBlock: {
+    paddingTop: operationsTheme.space['7xl'],
+    paddingHorizontal: operationsTheme.space['6xl'],
   },
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],

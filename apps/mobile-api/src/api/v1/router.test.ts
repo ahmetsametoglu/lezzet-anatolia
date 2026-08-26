@@ -69,6 +69,10 @@ const KORUMALI: readonly string[] = [
   // Satış kataloğu da korumalı: kalan ADET taşıyor — vitrinin bilerek sızdırmadığı sayı.
   '/api/v1/sale/catalog',
   '/api/v1/sale/catalog/su-boregi/variants',
+  // Yönetim + Para (21.12) — ikisi de salt okuma; kapıları rol ister (admin · accounting+admin).
+  '/api/v1/management/hub',
+  '/api/v1/money/overview',
+  '/api/v1/money/day-end',
 ];
 
 describe('kapı sınırı — varsayılan KAPALI', () => {

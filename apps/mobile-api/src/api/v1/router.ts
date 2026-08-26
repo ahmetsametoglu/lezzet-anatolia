@@ -28,6 +28,8 @@ import { tickets } from './tickets';
 import { courier } from './courier';
 import { social } from './social';
 import { sale } from './sale';
+import { management } from './management';
+import { money } from './money';
 import { warehouse } from './warehouse';
 import { bearerAuth, type V1Env } from './auth';
 
@@ -248,3 +250,7 @@ v1.route('/sale', sale);
 // Sosyal gelen kutusu (15.15 mobil ayağı) — yalnız `admin` (rota dosyasının kendi kapısı):
 // yazışma içeriği kişisel veridir, kurye/depo rolleri görmez (`social.ts` künyesi).
 v1.route('/social', social);
+// Yönetim + Para bölümleri (21.12) — ikisi de salt okuma zarfları taşır; kapılar rota
+// dosyalarının kendinde (yönetim: admin · para: accounting+admin).
+v1.route('/management', management);
+v1.route('/money', money);

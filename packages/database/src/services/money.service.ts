@@ -226,6 +226,14 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
    * Sipariş başına ayrı `listByOrder` çağırmak N+1 olurdu ve karne elli siparişe bakıyor. Kimlikler
    * öbeklenir: `in(...)` listesi URL'e gömülüyor (kalem okumasıyla aynı gerekçe).
    */
+  /**
+   * Günün SİPARİŞ para hareketleri (tahsilat + iade) — M1 yöntem kırılımı ve M2 gün sonu (21.12).
+   * Değer tarihi eşitliğiyle: gün sonu mutabakatının günü `value_date`tir, kayıt anı değil.
+   */
+  listOrderMoneyOfDay(date: string): Promise<MoneyMovement[]> {
+    return this.getAll({ type: ['order_payment', 'order_refund'], valueDate: date });
+  }
+
   async listByOrders(orderIds: readonly string[]): Promise<MoneyMovement[]> {
     const BATCH_SIZE = 200;
     const all: MoneyMovement[] = [];

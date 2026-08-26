@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
@@ -11,41 +11,55 @@ import { money } from '@/lib/operations/money';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
 import { operationsTheme } from '@/theme/unistyles';
+import type { ManagementQueue, ManagementSummary } from '@lezzet/types';
 import { managementCopy } from './copy';
-import { DAY_SUMMARY, DECISION_QUEUE, type DecisionTarget, type DecisionTone } from './management-fixture';
+import { useManagementHub } from './use-management-hub.hook';
 
 /*
   YÖNETİM KÖKÜ · KARAR KUTUSU (v2:483-528) — bölümün kökü, altı işin kapısı.
 
   Kurye (21.10) ve depo (21.11) köklerinin açtığı yol aynen: başlık üçlüsü ORTAK komponenttendir
-  (`OperationsSectionHeader` + zil), gövde ekranın kendisidir. Bu ekran 21.9'da yer tutucu olan
-  `screens/operations/section-screen.tsx`in yerini aldı — o dosya (Para köküyle birlikte) SÖKÜLDÜ,
-  çünkü dört bölümün dördü de artık kendi gövdesini çiziyor ve tüketicisi kalmamıştı.
+  (`OperationsSectionHeader` + zil), gövde ekranın kendisidir.
 
-  ── ÜÇ HÂLDEN İKİSİ ÇİZİLDİ ─────────────────────────────────────────────────
-  v2 üç hâl gösteriyor: `kList` (kuyruk), `kEmpty` (boş kutu), `kError` (yüklenemedi + tekrar dene).
-  Bu dilim UI-ONLY, yani okuma yapan bir kapı YOK — "yüklenemedi" hâli bugün DOĞABİLECEK bir hâl
-  değil. Uydurma bir hata düğmesi çizmek, basıldığında hiçbir şey denemeyen bir "Tekrar dene"
-  vaat etmek olurdu; hata hâli uç bağlandığı gün, gerçek düşüşle birlikte gelir. Boş hâl ise VERİNİN
-  bir fonksiyonu (kuyruk boş olabilir) ve o yüzden yazıldı.
+  ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
+  Kuyruk `/management/hub`tan okunur; fixture dönemi kapandı. v2'nin üç hâli artık üçü de gerçek:
+  `kList` (kuyruk) · `kEmpty` (boş kutu) · `kError` (yüklenemedi + tekrar dene — uç bağlandığı gün
+  gerçek düşüşle geldi, fixture künyesinin vaadi buydu).
+
+  ── KUYRUK SATIR DEĞİL, KARAR ALANIDIR ──────────────────────────────────────
+  v2'nin beş satırı beş karar ALANIdır (sözleşme künyesi): her alan canlı sayısını ve en taze
+  örneğini taşır, sıfır sayılı alan HİÇ çizilmez — ölü satır, dokununca boş ekran açan bir kapı
+  olurdu. Alan içi döküm hedef ekranın işi; kutu bir yönlendirmedir, liste değil.
 
   ── BOŞ HÂLİN "GÜN ÖZETİ →" EYLEMİ KUTUNUN ALTINDA ──────────────────────────
   Tasarımda bu metin eylemi boş kutunun İÇİNDE duruyor (v2:501). `OperationsNoticeBlock` yalnız
-  "Tekrar dene" yuvası taşıyor ve künyesi bu eylemi 21.12'ye bırakmış; ortak komponente ikinci bir
-  yuva açmak bu dilimin yazı alanı DIŞINDA (kit değişikliği yöneticiye raporlanır — kurum 08.08).
-  Sapma bilinçli ve küçük: eylem kutunun hemen altında, aynı hizada ve aynı sesle duruyor; kullanıcı
-  için kaybolan bir kapı yok. Yuva açıldığı gün üç satır içeri taşınır.
+  "Tekrar dene" yuvası taşıyor; ortak komponente ikinci yuva açmak kit değişikliğidir (kurum 08.08).
+  Sapma bilinçli ve küçük: eylem kutunun hemen altında, aynı hizada duruyor.
 
   ── SATIRIN AÇTIĞI ADRESİ EKRAN BİLİR ───────────────────────────────────────
-  Fixture hedefi ADLANDIRIR (`complaint`), adresi (`/complaint`) yazmaz: rota adresleri navigasyonun
-  bilgisidir, verinin değil (aynı karar: `(sections)/_layout.tsx`in ikon haritası).
+  Sözleşme hedefi ADLANDIRIR (alan anahtarı), adresi (`/complaint`) yazmaz: rota adresleri
+  navigasyonun bilgisidir, verinin değil (aynı karar: `(sections)/_layout.tsx`in ikon haritası).
 */
 
 const t = managementCopy;
 const shell = operationsCopy;
 
+/** Karar satırının aciliyeti — nokta bunun rengidir (v2:332-336). */
+type DecisionTone = 'alert' | 'attention' | 'go' | 'warehouse' | 'quiet';
+/** Satırın açtığı ekran. */
+type DecisionTarget = 'complaint' | 'exception' | 'offer' | 'supply' | 'intent';
+
+interface DecisionRow {
+  id: DecisionTarget;
+  title: string;
+  subtitle: string;
+  tone: DecisionTone;
+  /** "top bizde" — cevap sırası bizde (v2:493); yoksa rozet çizilmez. */
+  ourTurn?: boolean;
+}
+
 /**
- * Noktanın rengi — fixture ANLAM taşır, çeviri burada (tek yer).
+ * Noktanın rengi — satır ANLAM taşır, çeviri burada (tek yer).
  *
  * Bildirim ekranının `DOT_COLOR`u ile birleştirilMEdi: orada `courier` bir BÖLÜM kimliğidir, burada
  * `go` "karar hazır, yeşil ışık" demektir. İki sözlüğü tek ada indirmek, iki ekranın aynı noktayı
@@ -68,9 +82,88 @@ const TARGET_ROUTE = {
   intent: '/order-intent',
 } as const satisfies Record<DecisionTarget, string>;
 
+/**
+ * Karar kutusunun satırları — sayılar uçtan, cümleler sözlükten. Sıfır sayılı alan HİÇ dönmez.
+ * Sıra v2'nin sırası: şikâyet → istisna → teklif → tedarik → niyet (aciliyet aynı eksende azalır).
+ */
+function decisionRowsOf(queue: ManagementQueue): DecisionRow[] {
+  const rows: DecisionRow[] = [];
+
+  if (queue.complaints.count > 0) {
+    const head = queue.complaints.head;
+    rows.push({
+      id: 'complaint',
+      title: fillCopy(t.hub.rows.complaint.title, { n: String(queue.complaints.count) }),
+      subtitle:
+        head === null
+          ? ''
+          : fillCopy(t.hub.rows.complaint.subtitle, {
+              who: head.customerName,
+              ref:
+                head.orderReferenceNo === null
+                  ? ''
+                  : fillCopy(t.hub.rows.complaint.refPart, { ref: head.orderReferenceNo }),
+            }),
+      tone: 'alert',
+      ourTurn: head?.awaitingReply === true,
+    });
+  }
+
+  if (queue.exceptions.count > 0) {
+    const head = queue.exceptions.head;
+    const ref = head?.referenceNo ?? t.hub.rows.exception.noRef;
+    const lines = String(head?.shortLineCount ?? 0);
+    rows.push({
+      id: 'exception',
+      title: t.hub.rows.exception.title,
+      subtitle:
+        queue.exceptions.count > 1
+          ? fillCopy(t.hub.rows.exception.subtitleMore, { ref, lines, more: String(queue.exceptions.count - 1) })
+          : fillCopy(t.hub.rows.exception.subtitle, { ref, lines }),
+      tone: 'attention',
+    });
+  }
+
+  if (queue.offers.candidateCount > 0) {
+    rows.push({
+      id: 'offer',
+      title: t.hub.rows.offer.title,
+      subtitle: fillCopy(t.hub.rows.offer.subtitle, { n: String(queue.offers.candidateCount) }),
+      tone: 'go',
+    });
+  }
+
+  if (queue.supply.groupCount > 0 || queue.supply.unmappedVariantCount > 0) {
+    rows.push({
+      id: 'supply',
+      title: t.hub.rows.supply.title,
+      subtitle:
+        queue.supply.unmappedVariantCount > 0
+          ? fillCopy(t.hub.rows.supply.subtitleUnmapped, {
+              groups: String(queue.supply.groupCount),
+              unmapped: String(queue.supply.unmappedVariantCount),
+            })
+          : fillCopy(t.hub.rows.supply.subtitle, { groups: String(queue.supply.groupCount) }),
+      tone: 'warehouse',
+    });
+  }
+
+  if (queue.intents.count > 0) {
+    rows.push({
+      id: 'intent',
+      title: t.hub.rows.intent.title,
+      subtitle: fillCopy(t.hub.rows.intent.subtitle, { n: String(queue.intents.count) }),
+      tone: 'quiet',
+    });
+  }
+
+  return rows;
+}
+
 export function ManagementHubScreen() {
   const router = useRouter();
   const unread = useOperationsNotifications().length;
+  const { state, retry } = useManagementHub();
   const openSummary = () => router.navigate('/day-summary');
 
   return (
@@ -93,8 +186,8 @@ export function ManagementHubScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.body} testID="management-hub-body">
-        {/* Sosyal gelen kutusunun kapısı — karar kuyruğundan BAĞIMSIZ (gerçek uca bağlı tek satır,
-            fixture değil): kuyruk boşken de yazışma sürüyor olabilir, kapı iki hâlde de durur. */}
+        {/* Sosyal gelen kutusunun kapısı — karar kuyruğundan BAĞIMSIZ (kendi ekranı kendi ucunu
+            okur): kuyruk okuması düşse de yazışma kapısı durur, o yüzden durum dalının DIŞINDA. */}
         <PressableSurface
           onPress={() => router.navigate('/social')}
           feedback="scale"
@@ -109,77 +202,110 @@ export function ManagementHubScreen() {
           <Text style={styles.chevron}>›</Text>
         </PressableSurface>
 
-        {DECISION_QUEUE.length === 0 ? (
+        {state.status === 'loading' ? (
+          <View style={styles.pending} testID="management-hub-loading">
+            <ActivityIndicator color={operationsTheme.colors.olive} />
+          </View>
+        ) : state.status === 'error' ? (
           <View style={styles.emptyBlock}>
             <OperationsNoticeBlock
-              variant="empty"
-              title={t.hub.empty.title}
-              description={t.hub.empty.body}
-              testID="management-hub-empty"
+              variant="error"
+              title={t.hub.error.title}
+              description={t.hub.error.body}
+              retry={{ label: t.hub.error.retry, onPress: retry }}
+              testID="management-hub-error"
             />
-            <PressableSurface
-              onPress={openSummary}
-              feedback="opacity"
-              compact
-              style={styles.emptyAction}
-              accessibilityLabel={t.hub.empty.action}
-              testID="management-hub-empty-summary"
-            >
-              <Text style={styles.emptyActionLabel}>{t.hub.empty.action}</Text>
-            </PressableSurface>
           </View>
         ) : (
-          <>
-            <PressableSurface
-              onPress={openSummary}
-              feedback="scale"
-              style={styles.summaryCard}
-              accessibilityLabel={t.hub.summary.action}
-              testID="management-hub-summary"
-            >
-              <Text style={styles.summaryEyebrow}>{t.hub.summary.eyebrow}</Text>
-              <Text style={styles.summaryHeadline}>
-                {fillCopy(t.hub.summary.headline, {
-                  orders: String(DAY_SUMMARY.orderCount),
-                  preparing: String(DAY_SUMMARY.preparingCount),
-                  awaiting: String(DAY_SUMMARY.awaitingCollectionCount),
-                })}
-              </Text>
-              <Text style={styles.summaryDetail}>
-                {fillCopy(t.hub.summary.detail, {
-                  revenue: money(DAY_SUMMARY.revenueCents),
-                  complaints: String(DAY_SUMMARY.openComplaintCount),
-                  shipments: String(DAY_SUMMARY.tomorrow.orderCount),
-                })}
-              </Text>
-            </PressableSurface>
-
-            <View style={styles.list}>
-              {DECISION_QUEUE.map((row) => (
-                <PressableSurface
-                  key={row.id}
-                  onPress={() => router.navigate(TARGET_ROUTE[row.target])}
-                  feedback="scale"
-                  style={styles.row}
-                  accessibilityLabel={`${row.title} — ${row.subtitle}`}
-                  testID={`management-decision-${row.id}`}
-                >
-                  <View style={[styles.dot, { backgroundColor: TONE_COLOR[row.tone] }]} />
-                  <View style={styles.rowText}>
-                    <Text style={styles.rowTitle}>{row.title}</Text>
-                    <Text style={styles.rowSubtitle}>{row.subtitle}</Text>
-                  </View>
-                  {row.ourTurn === true ? <Text style={styles.ourTurn}>{t.common.ourTurn}</Text> : null}
-                  <Text style={styles.chevron}>›</Text>
-                </PressableSurface>
-              ))}
-            </View>
-
-            <Text style={styles.footnote}>{t.hub.footnote}</Text>
-          </>
+          <HubBody queue={state.hub.queue} summary={state.hub.summary} onOpenSummary={openSummary} />
         )}
       </ScrollView>
     </View>
+  );
+}
+
+interface HubBodyProps {
+  queue: ManagementQueue;
+  summary: ManagementSummary;
+  onOpenSummary: () => void;
+}
+
+function HubBody({ queue, summary, onOpenSummary }: HubBodyProps) {
+  const router = useRouter();
+  const rows = decisionRowsOf(queue);
+
+  if (rows.length === 0) {
+    return (
+      <View style={styles.emptyBlock}>
+        <OperationsNoticeBlock
+          variant="empty"
+          title={t.hub.empty.title}
+          description={t.hub.empty.body}
+          testID="management-hub-empty"
+        />
+        <PressableSurface
+          onPress={onOpenSummary}
+          feedback="opacity"
+          compact
+          style={styles.emptyAction}
+          accessibilityLabel={t.hub.empty.action}
+          testID="management-hub-empty-summary"
+        >
+          <Text style={styles.emptyActionLabel}>{t.hub.empty.action}</Text>
+        </PressableSurface>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      <PressableSurface
+        onPress={onOpenSummary}
+        feedback="scale"
+        style={styles.summaryCard}
+        accessibilityLabel={t.hub.summary.action}
+        testID="management-hub-summary"
+      >
+        <Text style={styles.summaryEyebrow}>{t.hub.summary.eyebrow}</Text>
+        <Text style={styles.summaryHeadline}>
+          {fillCopy(t.hub.summary.headline, {
+            orders: String(summary.orderCount),
+            preparing: String(summary.preparingCount),
+            awaiting: String(summary.pendingPayment.count),
+          })}
+        </Text>
+        <Text style={styles.summaryDetail}>
+          {fillCopy(t.hub.summary.detail, {
+            revenue: money(summary.revenueCents),
+            complaints: String(summary.openComplaintCount),
+            shipments: String(summary.tomorrow.orderCount),
+          })}
+        </Text>
+      </PressableSurface>
+
+      <View style={styles.list}>
+        {rows.map((row) => (
+          <PressableSurface
+            key={row.id}
+            onPress={() => router.navigate(TARGET_ROUTE[row.id])}
+            feedback="scale"
+            style={styles.row}
+            accessibilityLabel={`${row.title} — ${row.subtitle}`}
+            testID={`management-decision-${row.id}`}
+          >
+            <View style={[styles.dot, { backgroundColor: TONE_COLOR[row.tone] }]} />
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>{row.title}</Text>
+              <Text style={styles.rowSubtitle}>{row.subtitle}</Text>
+            </View>
+            {row.ourTurn === true ? <Text style={styles.ourTurn}>{t.common.ourTurn}</Text> : null}
+            <Text style={styles.chevron}>›</Text>
+          </PressableSurface>
+        ))}
+      </View>
+
+      <Text style={styles.footnote}>{t.hub.footnote}</Text>
+    </>
   );
 }
 
@@ -191,6 +317,10 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space['8xl'],
+  },
+  pending: {
+    paddingTop: operationsTheme.space['8xl'],
+    alignItems: 'center',
   },
   emptyBlock: {
     paddingTop: operationsTheme.space['7xl'],

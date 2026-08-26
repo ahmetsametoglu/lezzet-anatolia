@@ -1,33 +1,53 @@
 {
   "common": {
     "back": "Geri",
-    "method": { "cash": "nakit", "card": "kart", "online": "online" }
+    "method": {
+      "cash": "nakit",
+      "card": "kart",
+      "online": "online",
+      "cheque": "çek",
+      "bank_transfer": "havale"
+    },
+    "error": {
+      "title": "Okuma yüklenemedi",
+      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    }
   },
   "track": {
     "dayEnd": "Gün sonu →",
     "pending": {
-      "eyebrow": "BEKLEYEN KAPIDA ÖDEMELER — K4 İLE CANLI",
-      "door": "Kapıda {amount} · {method}",
-      "term": "Vade {due}",
-      "partial": "Kalan {amount} · {method}",
-      "empty": "Bekleyen kapıda ödeme yok — kuryenin üstünde de tahsilat kalmadıysa gün sonu temizdir.",
+      "eyebrow": "BEKLEYEN TAHSİLATLAR — GÜNÜN SİPARİŞLERİ",
+      "door": "Kapıda {amount}{method}",
+      "partial": "Kalan {amount}{method}",
+      "methodPart": " · {method}",
+      "noRef": "referanssız",
+      "state": {
+        "draft": "taslak",
+        "confirmed": "hazırlanacak",
+        "preparing": "hazırlanıyor",
+        "ready": "hazır",
+        "out_for_delivery": "rotada",
+        "delivered": "teslim edildi",
+        "completed": "kapandı",
+        "cancelled": "iptal",
+        "returned": "iade"
+      },
+      "empty": "Bekleyen tahsilat yok — kuryenin üstünde de para kalmadıysa gün sonu temizdir.",
       "note": "Tutar yalnız tahsil edilecekse yazılır — ödenmişte rakam tekrarlanmaz."
     },
     "today": {
       "eyebrow": "BUGÜN GERÇEKLEŞEN — YÖNTEM KIRILIMI",
-      "cash": "Nakit",
-      "card": "Kart",
-      "online": "Online"
+      "empty": "Bugün deftere tahsilat düşmedi."
     },
     "float": {
       "eyebrow": "KURYENİN ÜSTÜNDE (K7'YE DEK)",
       "value": "{cash} nakit · {card} kart",
+      "valueWithCheque": "{cash} nakit · {card} kart · {cheque} çek",
       "note": "yalnız nakit/kart/çek sayılır — online/havale bu dökümde yoktur"
     },
     "balances": {
       "eyebrow": "HESAP BAKİYELERİ — DEFTERDEN TOPLANIR",
-      "cash": "Kasa",
-      "bank": "Banka",
       "note": "\"bakiye düzeltme\" diye bir kavram yok — hiçbir yazma aksiyonu çizilmez."
     }
   },
@@ -39,9 +59,12 @@
     "courierHandover": "Kurye nakit teslimi (K7)",
     "discrepancy": {
       "eyebrow": "UYUŞMAZLIK — YALNIZ GÖRÜNÜR",
-      "body": "Beklenen {expected} ↔ teslim edilen {delivered} nakit. Eksi = eksik. Düzeltme kaydı masaüstünde.",
-      "none": "Uyuşmazlık yok — beklenen ile teslim edilen nakit tutuyor."
+      "body": "Beklenen {expected} ↔ sayılan {delivered} nakit. Eksi = eksik. Düzeltme kaydı masaüstünde.",
+      "none": "Uyuşmazlık yok — beklenen ile sayılan nakit tutuyor.",
+      "noRun": "Bugün kapanan sefer yok — mutabakat, sefer kapanışıyla doğar."
     },
-    "unmatched": { "label": "Eşleşmemiş hareket", "unknown": "sayaç yok (null ≠ 0)" }
+    "unmatched": {
+      "label": "Eşleşmemiş hareket"
+    }
   }
 }

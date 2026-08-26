@@ -1,13 +1,15 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { money } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
+import type { ManagementSummary } from '@lezzet/types';
 import { managementCopy } from './copy';
-import { DAY_SUMMARY, type InsightTone } from './management-fixture';
+import { useManagementHub } from './use-management-hub.hook';
 
 /*
   Y5 · GÜN ÖZETİ (v2:664-696) — yönetimin TEK salt-okunur ekranı: günün fotoğrafı.
@@ -15,15 +17,18 @@ import { DAY_SUMMARY, type InsightTone } from './management-fixture';
   Hiçbir eylem YOK ve bu tasarımın kararı ("salt okuma · günün fotoğrafı"). Ekran bir karar
   vermiyor, kararların ZEMİNİNİ gösteriyor; bir düğme eklemek burada olmayan bir yetki vaat ederdi.
 
-  ── ÖLÇÜLEMEYEN DEĞER SIFIR DEĞİLDİR ────────────────────────────────────────
-  WhatsApp kanalının cirosu `null` gelir ve ekran onu "— bilinmiyor (sıfır değil)" diye yazar
-  (v2:673 birebir). "0,00 €" yazmak, ölçülemeyen bir kanalı "hiç satış olmadı" diye okuturdu
-  (CLAUDE §1). Aynı disiplin M2'nin eşleşmemiş hareket sayacında da sürüyor.
+  ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
+  Hub ile AYNI zarf (`/management/hub`) okunur — "kutu 3 diyor, özet 2" çelişkisi motor düzeyinde
+  imkânsız. Kanal kırılımı sipariş sayacının eksenindedir: gün = TESLİM günü (`order_counts`).
 
-  ── VERİ FIXTURE, EKRAN TAM ────────────────────────────────────────────────
-  Gün özetini birleştiren uç bu etapta yazılmıyor (UI-only); gerekçe ve akıbet
-  `management-fixture.ts` künyesinde. Ekranın kendisi tam: kanal kırılımı, iki karo, yarının
-  sevkiyatı, üç içgörü ve stok riski notu tasarımdaki sırasıyla duruyor.
+  ── ÖLÇÜLEMEYEN DEĞER SIFIR DEĞİLDİR ────────────────────────────────────────
+  Kanal cirosu `null` gelirse ekran "— bilinmiyor (sıfır değil)" yazar (v2:673 birebir). YZ
+  içgörüsü de aynı disiplinde: motoru (modül 20/22) bağlanana dek uç BOŞ dizi döner ve blok bunu
+  dürüstçe söyler — uydurma içgörü, yerel veriden iş çıkarımı olurdu (CLAUDE §0).
+
+  ── "ROTAYA ATANMAMIŞ" CÜMLEDEN ÇIKTI ───────────────────────────────────────
+  v2 yarın satırında "atanmamış" sayıyordu; sefer SABAH kurulur (`delivery_run.start`), bugünden
+  o sayıyı üretecek bir ölçüm yok. Ölçülemeyeni yazmamak, sıfır ya da uydurma yazmaktan iyidir.
 */
 
 const t = managementCopy;
@@ -33,11 +38,18 @@ const INSIGHT_COLOR = {
   good: operationsTheme.colors.olive,
   watch: operationsTheme.colors.terracotta,
   bad: operationsTheme.colors.error,
-} as const satisfies Record<InsightTone, string>;
+} as const satisfies Record<ManagementSummary['insights'][number]['tone'], string>;
+
+/** Kanal etiketleri sözlükten — sözleşme `manual`ı da taşıyabilir diye anahtar kapalı okunur. */
+const CHANNEL_LABEL: Partial<Record<string, string>> = {
+  web: t.summary.channels.web,
+  door: t.summary.channels.door,
+  whatsapp: t.summary.channels.whatsapp,
+};
 
 export function DaySummaryScreen() {
   const router = useRouter();
-  const summary = DAY_SUMMARY;
+  const { state, retry } = useManagementHub();
 
   return (
     <View style={styles.screen} testID="management-day-summary">
@@ -49,75 +61,101 @@ export function DaySummaryScreen() {
         testID="management-day-summary-header"
       />
 
-      <ScrollView contentContainerStyle={styles.body} testID="management-day-summary-body">
-        <Text style={styles.headline}>
-          {fillCopy(t.summary.headline, {
-            orders: String(summary.orderCount),
-            preparing: String(summary.preparingCount),
-            awaiting: String(summary.awaitingCollectionCount),
-          })}
-        </Text>
-
-        <View style={styles.block}>
-          <Text style={styles.eyebrow}>{t.summary.channels.eyebrow}</Text>
-          {summary.channels.map((channel) => (
-            <View key={channel.key} style={styles.dashedRow} testID={`management-channel-${channel.key}`}>
-              <Text style={styles.rowLabel}>{t.summary.channels[channel.key]}</Text>
-              <Text style={channel.cents === null ? styles.rowValueUnknown : styles.rowValue}>
-                {channel.cents === null ? t.summary.channels.unknown : money(channel.cents)}
-              </Text>
-            </View>
-          ))}
+      {state.status === 'loading' ? (
+        <View style={styles.pending} testID="management-day-summary-loading">
+          <ActivityIndicator color={operationsTheme.colors.olive} />
         </View>
+      ) : state.status === 'error' ? (
+        <View style={styles.errorBlock}>
+          <OperationsNoticeBlock
+            variant="error"
+            title={t.hub.error.title}
+            description={t.hub.error.body}
+            retry={{ label: t.hub.error.retry, onPress: retry }}
+            testID="management-day-summary-error"
+          />
+        </View>
+      ) : (
+        <SummaryBody summary={state.hub.summary} />
+      )}
+    </View>
+  );
+}
 
-        <View style={styles.cards}>
-          <View style={styles.card} testID="management-summary-door-pending">
-            <Text style={styles.cardLabel}>{t.summary.doorPending.label}</Text>
-            <Text style={styles.cardValue}>
-              {fillCopy(t.summary.doorPending.value, {
-                n: String(summary.doorPending.count),
-                amount: money(summary.doorPending.cents),
-              })}
+interface SummaryBodyProps {
+  summary: ManagementSummary;
+}
+
+function SummaryBody({ summary }: SummaryBodyProps) {
+  return (
+    <ScrollView contentContainerStyle={styles.body} testID="management-day-summary-body">
+      <Text style={styles.headline}>
+        {fillCopy(t.summary.headline, {
+          orders: String(summary.orderCount),
+          preparing: String(summary.preparingCount),
+          awaiting: String(summary.pendingPayment.count),
+        })}
+      </Text>
+
+      <View style={styles.block}>
+        <Text style={styles.eyebrow}>{t.summary.channels.eyebrow}</Text>
+        {summary.channels.map((channel) => (
+          <View key={channel.source} style={styles.dashedRow} testID={`management-channel-${channel.source}`}>
+            <Text style={styles.rowLabel}>{CHANNEL_LABEL[channel.source] ?? channel.source}</Text>
+            <Text style={channel.cents === null ? styles.rowValueUnknown : styles.rowValue}>
+              {channel.cents === null ? t.summary.channels.unknown : money(channel.cents)}
             </Text>
           </View>
-          <View style={styles.card} testID="management-summary-complaints">
-            <Text style={styles.cardLabel}>{t.summary.openComplaints}</Text>
-            <Text style={styles.cardValue}>{String(summary.openComplaintCount)}</Text>
-          </View>
-        </View>
+        ))}
+      </View>
 
-        <View style={styles.block}>
-          <Text style={styles.eyebrow}>{t.summary.tomorrow.eyebrow}</Text>
-          {/* Tek cümlenin ORTASI vurgulu (v2:682): rotaya atanmamış sipariş sayısı yarının tek
-              gerçek riski. İç içe `Text` RN'de satır akışını bozmaz — ayrı bir satıra almak cümleyi
-              ikiye bölerdi. */}
-          <Text style={styles.tomorrow}>
-            {fillCopy(t.summary.tomorrow.head, {
-              orders: String(summary.tomorrow.orderCount),
-              ready: String(summary.tomorrow.readyCount),
+      <View style={styles.cards}>
+        <View style={styles.card} testID="management-summary-door-pending">
+          <Text style={styles.cardLabel}>{t.summary.doorPending.label}</Text>
+          <Text style={styles.cardValue}>
+            {fillCopy(t.summary.doorPending.value, {
+              n: String(summary.pendingPayment.count),
+              amount: money(summary.pendingPayment.cents),
             })}
-            <Text style={styles.tomorrowAlert}>
-              {fillCopy(t.summary.tomorrow.unassigned, { n: String(summary.tomorrow.unassignedCount) })}
-            </Text>
-            {fillCopy(t.summary.tomorrow.tail, { amount: money(summary.tomorrow.doorPaymentCents) })}
           </Text>
         </View>
+        <View style={styles.card} testID="management-summary-complaints">
+          <Text style={styles.cardLabel}>{t.summary.openComplaints}</Text>
+          <Text style={styles.cardValue}>{String(summary.openComplaintCount)}</Text>
+        </View>
+      </View>
 
-        <View style={styles.insights}>
-          <Text style={styles.eyebrow}>{t.summary.insights.eyebrow}</Text>
-          {summary.insights.map((insight) => (
+      <View style={styles.block}>
+        <Text style={styles.eyebrow}>{t.summary.tomorrow.eyebrow}</Text>
+        <Text style={styles.tomorrow}>
+          {fillCopy(t.summary.tomorrow.line, {
+            orders: String(summary.tomorrow.orderCount),
+            ready: String(summary.tomorrow.readyCount),
+            amount: money(summary.tomorrow.doorPaymentCents),
+          })}
+        </Text>
+      </View>
+
+      <View style={styles.insights}>
+        <Text style={styles.eyebrow}>{t.summary.insights.eyebrow}</Text>
+        {summary.insights.length === 0 ? (
+          <Text style={styles.insightEmpty} testID="management-insights-empty">
+            {t.summary.insights.empty}
+          </Text>
+        ) : (
+          summary.insights.map((insight) => (
             <View key={insight.id} style={styles.insightRow} testID={`management-insight-${insight.id}`}>
               <View style={[styles.insightDot, { backgroundColor: INSIGHT_COLOR[insight.tone] }]} />
               <Text style={styles.insightText}>{insight.text}</Text>
             </View>
-          ))}
-        </View>
+          ))
+        )}
+      </View>
 
-        <View style={styles.stockRisk}>
-          <Text style={styles.stockRiskText}>{t.summary.stockRisk}</Text>
-        </View>
-      </ScrollView>
-    </View>
+      <View style={styles.stockRisk}>
+        <Text style={styles.stockRiskText}>{t.summary.stockRisk}</Text>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -125,6 +163,14 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
+  },
+  pending: {
+    paddingTop: operationsTheme.space['8xl'],
+    alignItems: 'center',
+  },
+  errorBlock: {
+    paddingTop: operationsTheme.space['7xl'],
+    paddingHorizontal: operationsTheme.space['6xl'],
   },
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],
@@ -201,10 +247,6 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.ink,
   },
-  tomorrowAlert: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    color: operationsTheme.colors.terracotta,
-  },
   insights: {
     gap: operationsTheme.space.sm,
   },
@@ -238,5 +280,12 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.body,
+  },
+  /** İçgörü yokken blok susmaz, yokluğunu SÖYLER. */
+  insightEmpty: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text['field-label'],
+    lineHeight: operationsTheme.text['field-label'] * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
   },
 });

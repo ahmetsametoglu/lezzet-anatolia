@@ -441,12 +441,45 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `?courierDayCloseId` İKİ ölçümle elendi) · `readIntakeHeader`. Doğrulama: paket +20 /
     uç +9 test; mobil kabul testi mock'u yeni zorunlu anahtara uyarlandı (`purchaseOrder: null`),
     mobil paket 449/449.
-- [ ] (21.12) **Yönetim + Para bölümleri (Y1–Y6 · M1–M2 · gün özeti):** okuma ağırlıklı; Y5 gün
+- [~] (21.12) **Yönetim + Para bölümleri (Y1–Y6 · M1–M2 · gün özeti):** okuma ağırlıklı; Y5 gün
   özeti birleştirme ucu (doc 04 iş listesi) + Y1 üstlen/YZ-cevap aksiyonları, Y2 istisna kararı
   (motor önerisi + para önizlemesi uçtan), Y3 teklif onayı, Y4 taslak TS, Y6 not düşme; M1/M2
   salt okuma (yazma aksiyonu ÇİZİLMEZ — tasarım böyle). Para kökünün boş/hata durumu (21.8
   notu) burada eklenir.
-  `touches: apps/mobile, packages/application, apps/mobile-api`
+  `touches: apps/mobile, packages/application, apps/mobile-api, packages/{types,database}`
+
+  **Durum (26.08 — DİLİM A: okuma hattı canlı; hub · gün özeti · M1 · M2 gerçek uçta).**
+  Ölçümle başladı: 9 ekranın 9'u UI-TAM ama fixture'lıydı, mobile-api'de tek yönetim/para ucu
+  yoktu, motorların çoğu hazırdı. Bu dilim OKUMALARI bağladı:
+  · **Sözleşme:** `management-api.schema.ts` (karar kutusu ALAN bazlı — satır değil: her alan canlı
+    sayı + en taze örnek; sıfır alan hub'da hiç çizilmez) + `money-api.schema.ts` (M ekranlarında
+    istek gövdesi YOK — salt okuma sözleşmede de görünür).
+  · **Motor:** `application/management/hub.ts` — doc 04'ün "birleştiren kapı yok" dediği Y5 kapısı
+    açıldı; kutunun sayıları HEP mevcut motorlardan (hazırlık `shortfallQty` · raf ömrü
+    `offerDecisionOf(can_offer)` · `ReorderService.suggestions` · `ticket_queue` · sosyal gelen
+    kutusu) — ikinci bir kural yazılmadı. `application/accounting/money.ts` — M1/M2 defterden
+    TOPLAR, hesaplamaz; kurye float'u "bugünün kapanmamış seferlerinin beklenen tahsilatı"ndan
+    türer, ayrı bir "kurye kasası" uydurulmadı. Servis eklemeleri: `countAwaiting` ·
+    `listByRuns(collection)` · `listOrderMoneyOfDay` · `listUnpaidByDeliveryDate`.
+  · **Uçlar:** `/management/hub` (admin) · `/money/{overview,day-end}` (accounting+admin) —
+    KORUMALI beyanı 33→36. "Gün" TESLİM günüdür (`order_counts` ekseni).
+  · **Ekranlar:** hub + gün özeti aynı zarfı okur ("kutu 3 diyor, özet 2" çelişkisi motor düzeyinde
+    imkânsız); M1/M2 bağlandı, `money-fixture.ts` SİLİNDİ, `management-fixture.ts` beş karar
+    ekranının gövdesine inceldi. 21.8'in "para kökünün boş/hata durumu" TAM kapandı (boş liste +
+    gerçek `Tekrar dene`). Hesap satırları artık defterdeki ADIYLA (Kasa/Revolut/Stripe…) — v2'nin
+    iki sabit satırı gerçek kurulumu gizlerdi.
+  · **Bilinçli sınırlar:** YZ içgörüsü uçtan BOŞ döner (motor modül 20/22'nin; uydurma içgörü yerel
+    veriden iş çıkarımı olurdu — CLAUDE §0), ekran yokluğu söyler. Yarın satırından "rotaya
+    atanmamış" ÇIKTI: sefer sabah kurulur, o sayı bugünden ölçülemez. Vadeli (term) tahsilat satırı
+    yazılmadı: modelde vade alanı yok. M2 farkı kapanan sefer yokken `null` — 0 "fark yok" yalanı.
+  · Doğrulama: uç entegrasyonu **7/7** (kendi kurduğu satırı sayar — küresel sayı iddia edilmez) ·
+    mobil jest **806/806** (8 yeni ekran testi; sabotaj: sıfır-alan bekçisi kaldırılınca yalnız
+    ilgili test düştü) · tsc (types/database/application/mobile-api/mobile/web) · lint · knip'e
+    yeni bulgu eklenmedi.
+  **Kalan (sonraki dilimler):** B — Y2/Y3/Y4 karar aksiyonları (`shortfallQuestion` +
+  `adjustFulfillment` hazır; teklif/TS yazımı web `offer-actions`/`purchase-order-actions`
+  terfisiyle) ve okuma detay uçları; C — Y1 şikâyet detayı (web `lib/ticket` staff okuma/yazma
+  terfisi: mobil ikinci tüketici, terfi ölçütü doldu) + Y6 niyet akışı.
 - [ ] (21.13) **Push altyapısı:** cihaz token modeli + teslim hattı — web şeridiyle koordineli
   (14 notify sürücüsü; defterden yürür). Kabuktaki bildirim ekranı ve rol süzmesi 21.9'da;
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief

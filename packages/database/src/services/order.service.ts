@@ -465,6 +465,21 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    * yazdığım kayıt ne oldu, kim yazmış" kontrolüdür; geçmiş dökümü muhasebe/web'in işidir ve
    * oranın okumaları zaten keyset'lidir.
    */
+  /**
+   * Günün ödemesi tamamlanmamış siparişleri — M1 tahsilat izleme (21.12). Taslak ve iptal dışarıda:
+   * taslağın referansı bile yok, iptalin tahsil edilecek parası yok.
+   */
+  listUnpaidByDeliveryDate(date: string): Promise<Order[]> {
+    return this.getAll(
+      {
+        deliveryDate: date,
+        paymentStatus: ['pending', 'partial'],
+        status: LISTED_STATUSES.filter((status) => status !== 'cancelled'),
+      },
+      { orderBy: 'createdAt', orderDirection: 'desc' },
+    );
+  }
+
   async listDoorSales(warehouseId: string, limit = 30): Promise<Order[]> {
     return this.getAll(
       { orderSource: 'door', warehouseId },
