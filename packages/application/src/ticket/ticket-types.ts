@@ -1,4 +1,4 @@
-import type { SourceLanguage, Ticket, TicketMessage } from '@lezzet/types';
+import type { SourceLanguage, Ticket, TicketMessage, TicketQueueRow } from '@lezzet/types';
 
 /*
   MÜŞTERİ TALEP GÖRÜNÜMÜ — terfi 21.14 (modül 16).
@@ -8,11 +8,11 @@ import type { SourceLanguage, Ticket, TicketMessage } from '@lezzet/types';
   yasak (CLAUDE §1). Web dosyası bugün hâlâ kendi ekranlarını besliyor (KÖPRÜ); benimsemesi web
   şeridinin işi — `customer/addresses.ts` ve `order/customer-orders.ts` terfilerinin aynı yolu.
 
-  ── PERSONEL YARISI BİLEREK GELMEDİ ─────────────────────────────────────────
-  `TicketQueueItem` · `StaffTicketDetail` web'de kaldı ve orada kalmalı: paketin kabul ölçütü "en az
-  iki yüzeyin çağırdığı orkestrasyon"dur (`index.ts` künyesi) ve operasyon kuyruğunun ikinci bir
-  yüzeyi YOK — native operasyon uygulaması talep kuyruğunu çizmiyor. Erken taşımak, kullanılmayan
-  bir makineyi paketin sınırının içine almak olurdu.
+  ── PERSONEL YARISI 21.12'DE GELDİ ──────────────────────────────────────────
+  ~~`TicketQueueItem` · `StaffTicketDetail` web'de kaldı: operasyon kuyruğunun ikinci yüzeyi yok~~
+  — o ölçüt 26.08'de DOLDU: yönetim bölümünün Y1 şikâyet ekranı (mobil) personel detayını okuyor.
+  İki tip + `TicketOrderRef` artık burada; web `ticket-types.ts` köprüyle okur (müşteri üçlüsünün
+  10.08 yoluyla aynı). Orkestrasyonları `staff-read.ts` / `staff-write.ts`.
 
   Ayrımın kendisi de korunuyor ve asıl gerekçe o: müşteri ile operasyon aynı talebi okur ama aynı
   şeyi GÖRMEZ. Tek bir "her şeyi taşıyan" tip, bir gün müşteri ekranına iç bilgi sızdırmanın en
@@ -93,4 +93,57 @@ export interface CustomerTicketView extends CustomerTicketSummary {
   messages: TicketMessageView[];
   /** "↩ 5,90 € iade edildi" satırı; iade yoksa null. */
   returnOutcome: TicketReturnOutcome | null;
+}
+
+/* ── PERSONEL YARISI (terfi 21.12 — kaynağı web `ticket-types.ts`, birebir) ── */
+
+export interface TicketOrderRef {
+  id: string;
+  /** Müşterinin bildiği numara ("LZA-2451"). Henüz üretilmemişse null. */
+  referenceNo: string | null;
+  /** Müşterinin işaretlediği kalemler — şikâyetin somut zemini. */
+  markedItems: Array<{ id: string; name: string; qty: number }>;
+}
+
+/** Kuyruk satırı — tarama için gereken her şey, tek turda. */
+export interface TicketQueueItem {
+  id: string;
+  customerName: string;
+  type: Ticket['type'];
+  status: Ticket['status'];
+  /** Talebi ŞU AN kim yürütüyor — satır rozeti ("AI yürütüyor"). */
+  handledBy: Ticket['handledBy'];
+  /**
+   * AI bu talepte HİÇ konuştu mu — rozetten AYRI bir bilgi (16.5): devralınan talep "AI yürütüyor"
+   * değildir ama "AI yanıtladı"dır. Kalite denetimi tam da o kümeye bakar.
+   */
+  answeredByAi: boolean;
+  source: Ticket['source'];
+  /** Son mesajın ilk satırı, okuyucunun dilinde — kuyrukta okunan önizleme. */
+  preview: string;
+  /** Önizleme makine çevirisi mi — ekran isterse küçük bir işaret koyar. */
+  previewTranslated: boolean;
+  lastMessageAt: string;
+  /** Son sözü müşteri söyledi: top bizde. */
+  awaitingReply: boolean;
+  hasAttachment: boolean;
+  orderReferenceNo: string | null;
+  /** Bozuk/eksik — kuyruğun "bu iş para işi" işareti. */
+  returnBound: boolean;
+}
+
+/**
+ * Operasyonun gördüğü talep detayı. Kuyruk satırının üstüne yazışmayı, sipariş zeminini ve
+ * **müşteri bağlamını** ekler: sürekli şikâyet eden mi, ilk kez mi — karar verirken görülmeli.
+ */
+export interface StaffTicketDetail {
+  ticket: TicketQueueRow;
+  customer: { id: string; name: string; email: string | null; phone: string | null; totalTickets: number };
+  order: TicketOrderRef | null;
+  messages: TicketMessageView[];
+  returnOutcome: TicketReturnOutcome | null;
+  /** Ekran yalnız bunları sunar — yasak geçiş hiç gösterilmez. */
+  allowedTransitions: readonly Ticket['status'][];
+  /** İade tetikleme düğmesi açık mı; kapalıysa sebebiyle. */
+  returnTrigger: { allowed: true } | { allowed: false; reason: 'no_order' | 'already_triggered' };
 }

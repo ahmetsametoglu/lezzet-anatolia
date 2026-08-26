@@ -494,9 +494,15 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     kanıtlanıyordu, süzgeç kaldırılınca test yine geçti — satıra önce fiyat yazdırıldı, sabotaj
     artık yalnız o testi düşürüyor (21.111 dersinin üçüncü tekrarı) · tsc/lint/knip temiz;
     `apps/web` typecheck temiz (offer-actions refaktörü).
-  **Kalan (Dilim C):** Y1 şikâyet detayı + Y2 istisna kararı + Y6 niyet — üçü talep/mesaj kümesi:
-  web `lib/ticket` personel okuma/yazmasının terfisi önkoşul (mobil ikinci tüketici, terfi ölçütü
-  doldu; `openTicket` Y2'nin "müşteriye sor"unun da kapısı). Üç ekran o güne dek fixture'da.
+  **Kalan (Dilim C):** Y1 şikâyet detayı + Y2 istisna kararı + Y6 niyet — üçü talep/mesaj kümesi.
+  · **Önkoşul KAPANDI (26.08):** web `lib/ticket` personel yolu pakete terfi etti —
+    `staff-read.ts` (kuyruk + detay; `ticketOrderRefOf`/`ticketReturnOutcomeOf` ortak yardımcıları
+    web'in MÜŞTERİ detayı da kullanıyor, yerel kopyaları silindi) + `staff-write.ts` (`openTicket` ·
+    `replyAsStaff` · `changeTicketStatus` · `takeOverTicket` · `consumeTicketDraft`) +
+    `customer/label.ts` (`customerLabel`). Web dosyaları KÖPRÜ (notify köprüsünün deseni; 16 web
+    tüketicisinin importu değişmedi). Davranış web'in kendi suite'iyle kanıtlı: `ticket.test`
+    45/45 · `tickets-read` 5/5 · `notify`/`attachments`/`name` yeşil; web+application typecheck.
+  · Üç ekran uca bağlanana dek fixture'da; sıradaki adım Y1/Y2/Y6 uçları + ekranlar.
 - [ ] (21.13) **Push altyapısı:** cihaz token modeli + teslim hattı — web şeridiyle koordineli
   (14 notify sürücüsü; defterden yürür). Kabuktaki bildirim ekranı ve rol süzmesi 21.9'da;
   bu görev yalnız İLETİM altyapısıdır. Bildirim hızlandırıcıdır, tek kapı değil (zemin brief

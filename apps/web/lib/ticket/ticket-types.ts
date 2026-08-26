@@ -1,5 +1,12 @@
-import type { Ticket, TicketQueueRow } from '@lezzet/types';
-import type { CustomerTicketSummary, TicketMessageView, TicketReturnOutcome } from '@lezzet/application';
+import type { Ticket } from '@lezzet/types';
+import type {
+  CustomerTicketSummary,
+  StaffTicketDetail,
+  TicketMessageView,
+  TicketOrderRef,
+  TicketQueueItem,
+  TicketReturnOutcome,
+} from '@lezzet/application';
 
 /**
  * ── K5-1 KISMİ KÖPRÜ + BİR AYRIŞMA KAYDI (10.08) ────────────────────────────
@@ -30,18 +37,9 @@ import type { CustomerTicketSummary, TicketMessageView, TicketReturnOutcome } fr
 export type { CustomerTicketSummary, TicketMessageView, TicketReturnOutcome };
 
 /** Talebe bağlı siparişin künyesi — tam sipariş değil, tanınmasına yetecek kadarı. */
-export interface TicketOrderRef {
-  id: string;
-  /** Müşterinin bildiği numara ("LZA-2451"). Henüz üretilmemişse null. */
-  referenceNo: string | null;
-  /** Müşterinin işaretlediği kalemler — şikâyetin somut zemini. */
-  markedItems: Array<{ id: string; name: string; qty: number }>;
-}
+/** Personel üçlüsü de pakete terfi etti (21.12) — künyeleri `ticket/ticket-types`ta. */
+export type { StaffTicketDetail, TicketOrderRef, TicketQueueItem };
 
-/**
- * Müşterinin gördüğü talep. **İç durum adları burada da `status`'tür** — çeviri yüzeyin işi
- * (messages.json); veri kapısı iki ayrı durum alanı taşımaz.
- */
 export interface CustomerTicketView {
   id: string;
   type: Ticket['type'];
@@ -54,47 +52,4 @@ export interface CustomerTicketView {
   returnOutcome: TicketReturnOutcome | null;
   /** Müşterinin şu an yapabileceği durum değişiklikleri (pratikte yalnız "yeniden aç"). */
   allowedTransitions: readonly Ticket['status'][];
-}
-
-/** Kuyruk satırı — tarama için gereken her şey, tek turda. */
-export interface TicketQueueItem {
-  id: string;
-  customerName: string;
-  type: Ticket['type'];
-  status: Ticket['status'];
-  /** Talebi ŞU AN kim yürütüyor — satır rozeti ("AI yürütüyor"). */
-  handledBy: Ticket['handledBy'];
-  /**
-   * AI bu talepte HİÇ konuştu mu — rozetten AYRI bir bilgi (16.5): devralınan talep "AI yürütüyor"
-   * değildir ama "AI yanıtladı"dır. Kalite denetimi tam da o kümeye bakar.
-   */
-  answeredByAi: boolean;
-  source: Ticket['source'];
-  /** Son mesajın ilk satırı, okuyucunun dilinde — kuyrukta okunan önizleme. */
-  preview: string;
-  /** Önizleme makine çevirisi mi — ekran isterse küçük bir işaret koyar. */
-  previewTranslated: boolean;
-  lastMessageAt: string;
-  /** Son sözü müşteri söyledi: top bizde. */
-  awaitingReply: boolean;
-  hasAttachment: boolean;
-  orderReferenceNo: string | null;
-  /** Bozuk/eksik — kuyruğun "bu iş para işi" işareti. */
-  returnBound: boolean;
-}
-
-/**
- * Operasyonun gördüğü talep detayı. Kuyruk satırının üstüne yazışmayı, sipariş zeminini ve
- * **müşteri bağlamını** ekler: sürekli şikâyet eden mi, ilk kez mi — karar verirken görülmeli.
- */
-export interface StaffTicketDetail {
-  ticket: TicketQueueRow;
-  customer: { id: string; name: string; email: string | null; phone: string | null; totalTickets: number };
-  order: TicketOrderRef | null;
-  messages: TicketMessageView[];
-  returnOutcome: TicketReturnOutcome | null;
-  /** Ekran yalnız bunları sunar — yasak geçiş hiç gösterilmez. */
-  allowedTransitions: readonly Ticket['status'][];
-  /** İade tetikleme düğmesi açık mı; kapalıysa sebebiyle. */
-  returnTrigger: { allowed: true } | { allowed: false; reason: 'no_order' | 'already_triggered' };
 }

@@ -63,7 +63,7 @@ async function returnOutcomeOf(
  * `viewLanguage` varsayılansız ve bilerek: varsayılan koysaydık dilini vermeyi unutan bir ekran
  * herkese aynı dili gösterir ve bu hiçbir yerde hata vermezdi.
  */
-async function toMessageView(message: TicketMessage, viewLanguage: PreferredLanguage): Promise<TicketMessageView> {
+export async function toMessageView(message: TicketMessage, viewLanguage: PreferredLanguage): Promise<TicketMessageView> {
   const shown = resolveUserText(
     { text: message.body, language: message.language, translations: message.translations },
     viewLanguage,
@@ -80,6 +80,13 @@ async function toMessageView(message: TicketMessage, viewLanguage: PreferredLang
     createdAt: message.createdAt,
   };
 }
+
+/** Bir yazışmanın tamamı, birlikte imzalı (`Promise.all`) — staff-read (21.12) da bu kapıdan okur. */
+export const toTicketMessageViews = (
+  messages: readonly TicketMessage[],
+  viewLanguage: PreferredLanguage,
+): Promise<TicketMessageView[]> => Promise.all(messages.map((message) => toMessageView(message, viewLanguage)));
+
 
 /**
  * Kuyruk satırı → liste satırı.
