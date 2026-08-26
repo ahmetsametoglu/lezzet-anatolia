@@ -58,7 +58,7 @@ gelen `CLAUDE §4b` bunu bir **erişim** sorununa çevirdi. Künyeyi bu ayrımla
 
 **(a)nın bakım yükünü listeye değil makineye yıktım.** Yollar tek sabitte (`WEB_LIB_DBSIZ`); birim
 projesi `include`a, entegrasyon `exclude`a **aynı sabitten** alıyor — iki yerde tutulan bir liste
-zaten bir gün ayrışırdı. Çürümeyi `docs:check §3g` durduruyor: DB'siz olup listede olmayan dosya ve
+zaten bir gün ayrışırdı. Çürümeyi `docs:check §3i` durduruyor: DB'siz olup listede olmayan dosya ve
 listede kalmış silinmiş yol commit'ten geçmiyor. Üç yönünü de sınadım (eksik satır · yanlış satır ·
 bayat satır), üçü de ateşliyor.
 

@@ -27,6 +27,21 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - *Bitti:* boş projeye sıfırdan kurulum tek komutla; ikinci çalıştırma no-op
 - [~] (02.4) İlk şema migration'ları — tüm tablolar + enum tipleri + kısıtlar: FK'lar, unique'ler (`Product.slug`, `Category.slug`, `WebhookEvent(provider, provider_event_id)`, `Cart.customer_id`), temel index'ler (sipariş/stok/hareket sorgu yolları)
   - *Bitti:* `DATA_MODEL.md`'deki her varlığın tablosu var; kısıt ihlali testle doğrulanmış (örnek: aynı webhook event iki kez yazılamıyor)
+  - **Durum (26.08) — SATIR NEDEN `[~]` HİÇBİR YERDE YAZMIYORDU; ölçüldü, sebep artık kayıtlı.**
+    Bir `[~]`, gerekçesi olmadan üstlenilemez: okuyan ajan neyin eksik olduğunu bilemez ve satır
+    kapanmadan durur. İki ölçüm:
+    - **Kriter yalnız KISMEN makinede.** `docs:check §1` (DATA_MODEL ↔ migration ↔ Zod) **29 tabloyu**
+      denetliyor, veritabanında **84 tablo** var. Yani "her varlığın tablosu var" iddiası 29 için
+      doğrulanmış, 55 için **ölçülmemiş** — "karşılandı" da denemez, "karşılanmadı" da.
+    - **Satırın kendi bitiş ÖRNEĞİ olmayan bir teste dayanıyor.** *"aynı webhook event iki kez
+      yazılamıyor"* deniyor; kısıt gerçekten var (`webhook_event_provider_key (provider, event_id)`)
+      ama hiçbir test onu sınamıyor — `webhook-event.test.ts` diye bir dosya yok. Bu, **aynı dosyanın
+      02.5'te bir kez itiraf ettiği** hatanın ikinci örneği (*"BÖYLE BİR TEST HİÇ YOKTU"*).
+      Küçük ek: satır kısıtı `WebhookEvent(provider, provider_event_id)` diye anıyor, kolonun gerçek
+      adı `event_id`.
+    - **Kapanış şartı artık yazılı:** §1 kapsamı 84 tabloya çıkar (ya da neden çıkmadığı yazılır) +
+      webhook tekillik testi yazılır. İkisi de bu turun kapsamında DEĞİL (kullanıcı sırası 26.08:
+      önce kayıt düzeltmesi).
 - [x] (02.5) `BaseDbService`: jsonb-güvenli case dönüştürücüler (LocalizedText içleri dönüşmez), `{data, error}` deseni, `toRpcParams` yardımcısı
   - *Bitti:* ~~dönüştürücü birim testleri (jsonb alanı bozulmuyor) geçiyor~~ **BÖYLE BİR TEST HİÇ YOKTU** (ölçüldü 15.08: `packages/database/src/utils/` altında tek test dosyası yok) — vaat edilmiş ama teslim edilmemiş bir kanıt, `13.5`'in *"export çalışıyor"* satırıyla aynı sınıf (`CLAUDE.md §5`).
   - **Durum (15.08 — KURAL NİHAYET KODA GEÇTİ; kullanıcı kararı).** Satırın kendisi *"jsonb-güvenli … LocalizedText içleri dönüşmez"* diyordu ve `STACK §211` de aynı sözü veriyordu; **ikisi de niyetti, kod jsonb'nin içine iniyordu.** Kimse fark etmedi çünkü kural `LocalizedText` için yazılmıştı ve `tr`/`fr`/`de` anahtarlarında ne alt tire ne büyük harf var — dönüştürücü onlara iki yönde de dokunmuyor. Yani koruma, yazıldığı durumda zaten gereksizdi; gerekli olduğu durumlar (serbest anahtarlı ve dış kaynaklı jsonb) sonradan geldi ve o arada repoda **iki biçim yan yana** oluştu.
@@ -37,7 +52,7 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     - **Kapsam dar çıktı:** gömülü seçimi olan 9 dosyanın 7'si beyan etti; kalan ikisi (`discount`, `stock-adjustment`) ham sorgu — çeviriciye hiç uğramıyorlar. RPC'ler de etkilenmedi (`executeRpc` parametreleri hiç çevirmiyor).
     - **Doğrulama:** `db:refresh` (kapsam tam) · typecheck 18/18 · lint temiz · tam paket **2695/2696** (düşenler zaman aşımı, üçü de yalıtılmışta yeşil) · `mobile-api` katalog 25/25 · `proposal` 35/35.
     - **Vaat edilen test NİHAYET YAZILDI** (`case-transformers.test.ts`, 12 iddia · 147 ms). Çivilenenler: satır düzeyi dönüşüm iki yönde · jsonb'nin okumada **ve yazmada** korunması (iç içe nesne ve dizi dahil) · yazma yönünde gömme istisnasının OLMAMASI · beyan edilen gömmenin çevrilmesi ve **iki katlı** gömmenin tek beyanla kapsanması · beyanın app tarafı adıyla eşleşmesi (`order_item` → `orderItem`) · beyan yokken gömmenin ham kalması (yani arızanın sessiz değil gürültülü olması) · rakam tuzağının kolon adında SÜRDÜĞÜ ama jsonb içinde artık doğmadığı.
-    - Dosya **birim projesinde** koşuyor (`vitest.config` → yeni `PAKET_DBSIZ` sabiti): kaynak modül hiçbir şey import etmiyor, yani her şerit kendi değişikliğini DB'ye vurmadan sınayabilir (`CLAUDE §4b`). Sabit `WEB_LIB_DBSIZ`ten AYRI çünkü `docs:check §3g` onu adıyla okuyup `'apps/…'` önekiyle tarıyor — paket yolu oraya girseydi denetimin kapsamı ile listesi sessizce ayrışırdı.
+    - Dosya **birim projesinde** koşuyor (`vitest.config` → yeni `PAKET_DBSIZ` sabiti): kaynak modül hiçbir şey import etmiyor, yani her şerit kendi değişikliğini DB'ye vurmadan sınayabilir (`CLAUDE §4b`). Sabit `WEB_LIB_DBSIZ`ten AYRI çünkü `docs:check §3i` onu adıyla okuyup `'apps/…'` önekiyle tarıyor — paket yolu oraya girseydi denetimin kapsamı ile listesi sessizce ayrışırdı.
   - **Durum (28.07 — yerel yığının aralıklı 502'si teşhis edildi ve kapatıldı):** Haftalardır rastgele
     görünen `An invalid response was received from the upstream server` bir kod hatası değildi. Kong
     günlüğü sebebi yazıyordu: `recv() failed (104: Connection reset by peer) while reading response
@@ -57,7 +72,7 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     Sonuç: üç koşu üst üste 49/49 dosya · 491/491 test.
 - [x] (02.6) İlk somut servisler (okuma/yazma smoke): `SettingsService` (kapsamlı çözücü: özgül → global) + bir örnek CRUD servisi
   - *Bitti:* Setting çözücüsü "bölge değeri globali ezer" birim testini geçiyor
-  - **Durum (27.07):** `0013_settings.sql` + `SettingService`. Özgüllük sırası **bölge > kanal > ülke > global**; hiç satır yoksa çağıranın verdiği varsayılana düşer — kodda sabit kalmaz, varsayılan çağrı yerinde görünür. Süreç içi önbellek (ayarlar her checkout'ta okunur, neredeyse hiç değişmez); yazmada düşer. Bozuk değer akışı kilitlemez, varsayılana döner. 9 test.
+  - **Durum (27.07):** `0013_settings.sql` + `SettingsService` *(not 27.07'de `SettingService` diye yazılmıştı — aynı dosyanın alt bilgisindeki kullanıcı kararıyla çelişiyordu, 26.08'de düzeltildi)*. Özgüllük sırası **bölge > kanal > ülke > global**; hiç satır yoksa çağıranın verdiği varsayılana düşer — kodda sabit kalmaz, varsayılan çağrı yerinde görünür. Süreç içi önbellek (ayarlar her checkout'ta okunur, neredeyse hiç değişmez); yazmada düşer. Bozuk değer akışı kilitlemez, varsayılana döner. 9 test.
   - **Kapsam anahtarı metin:** `scope_id` üç farklı tipi taşıyor (kanal 'b2b', ülke 'FR', bölge uuid) — tip başına ayrı kolon açmak tabloyu boş kolonlarla doldururdu.
 - [x] (02.7) Seed: `Setting` varsayılanları (TTL 30 dk, eşikler, tavanlar — `DATA_MODEL.md` Setting listesi) + bir test kategorisi/ürünü
   - *Bitti:* temiz kurulum + seed sonrası vitrin sorgusu veri dönüyor
@@ -167,8 +182,19 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
   - **Üreteçte BAYAT ŞABLON bulundu** — plandan fazlası: dosyada `text_pattern_ops` vardı (19.19 ölçümü, `like '672%'` 36,9 ms → 0,11 ms), üreteçte YOKTU. Yani `pnpm postal:build` bugün koşsaydı ölçülmüş bir kazancı sessizce geri alacaktı. Kök sebep tam da P1'in tarif ettiği çelişkiydi: "elle düzenlenmez" diyen dosyanın şema yorumları elle düzenleniyordu. **Çözüm bölmenin kendisi:** üreteç artık YALNIZ veri dosyasını yazıyor, ürettiği dosyada elle bakılacak tek satır yok, kayma yüzeyi sıfır.
   - **P2 — aile içi birleştirme:** gözlemleme (üç dosya → `0008`), para (dört → `0018`), katalog fiyat, sıcaklık kaydı, düzeltme tutanağı, bildirimler (üç → `0023`), sepet → sipariş. Her taşınan bloğun başında ayrı bir dosyadan geldiğini söyleyen ayraç var; içerik değişmedi.
   - ~~**Numaralar yeniden VERİLMEZ, boşluk bırakılır**~~ — **kullanıcı kararı (03.08): boşluk bırakılmadı, numaralar sıfırdan sıralandı.** Gerekçem "toplu yeniden numaralandırma 28.07 çakışma vakasının zemini"ydi; kullanıcı greenfield'de bunun karşılığı olmadığını söyledi ve haklı: canlı yok, veri yok, tek ortam var, iş tek ajanın tek penceresinde yapıldı. **Bu kapı ilk üretim dağıtımında kapanır** — o günden sonra numara değişmez (WORKFLOW §2).
+    - **DURUM DEĞİŞTİ, KARAR ERTELENDİ (kullanıcı kararı 26.08).** Bugün ölçüldü: 50 dosya var,
+      aralık `0001`–`0051` ve **`0025` boşlukta** — 18.08'de kurye×gün kapanışı sefer eksenine
+      inince ~~`0025_courier_day_close.sql`~~ kaldırıldı, yeri kapatılmadı. Yani yukarıdaki
+      *"boşluksuz"* özelliği artık geçerli DEĞİL ve bunu kimse karar vererek yapmadı; bir dosya
+      silinince kendiliğinden oldu.
+      **Şimdi dokunulmuyor:** kullanıcı, migration dosyalarının adlandırması ve içeriğiyle ilgili
+      düzenlemenin **proje tam anlamıyla tamamlandıktan sonra** tek turda ele alınacağını söyledi.
+      Bugün yeniden numaralandırmak 26 dosyayı kaydırır ve üç şeridin aynı ağaçta çalıştığı bir
+      günde tam olarak 28.08 çakışma vakasının zeminini kurardı.
+      **Boşluk sessiz değil:** `docs:check §3c2` her migration dosyasının `index.md`'de bir satırı
+      olmasını zorluyor, yani eksik numara kayıttan da görünür.
   - **Sıra doğruluğu makineyle sınandı** (reset'i boşa harcamamak için): 34 dosyada şema düzeyinde ileri-atıf YOK — ne FK, ne enum tipi, ne görünüm. Tek istisna `auth.users` (Supabase'in kendi şeması). `adjust_stock_batch`'in `warehouse`'a değmesi fonksiyon gövdesindedir, plpgsql geç çözer; taşımadan önce de sonra da aynı.
-  - **`vehicle` tablosu DÜŞTÜ** — servisi yok, `from('vehicle')` hiç geçmiyor, 0 satır, hiçbir tasarım aracı bir VARLIK olarak kullanmıyor. **Zod şeması da düştü:** tablosu olmayan bir tip, okuyanı "araçlar sistemde tutuluyor" diye inandırır. Ölü şemayı `knip` YAKALAYAMAZ (SQL + Zod onun kapsamı dışında), yani kendiliğinden hiç görünmezdi.
+  - ~~**`vehicle` tablosu DÜŞTÜ** — servisi yok, `from('vehicle')` hiç geçmiyor, 0 satır, hiçbir tasarım aracı bir VARLIK olarak kullanmıyor. **Zod şeması da düştü:** tablosu olmayan bir tip, okuyanı "araçlar sistemde tutuluyor" diye inandırır.~~ **GERİ GELDİ (denetim ölçümü 26.08):** `0045_storage_area_vehicle.sql` tabloyu yeniden kuruyor ve `temperature_log.vehicle_id` ona FK ile bağlanıyor — yani araç artık gerçekten bir VARLIK (araç bir depo türü olduğu gün, 26.08, zemin de gerekti). Düşürme kararı yazıldığı gün doğruydu; **ölü şemayı `knip`in yakalayamayacağı gerekçesi de aynen geçerli.** Not olduğu gibi bırakılsaydı satırı okuyan "araç diye bir tablo yok" sonucuna varırdı.
   - **75 bayat atıf onarıldı** (27 dosya): yeniden adlandırma dokümanlarda ve kod künyelerinde asılı referanslar bırakmıştı. Aynı commit'te düzeltildi — 02.12 emsali: kural tek başına inseydi üç şerit kırmızı bir kapıyla yaşardı. Numara değişince bozulan Türkçe ekler de düzeltildi (`0006'de` → `0006'da`: sayı sesli okunur).
 - [x] (02.12) **Teardown'da elle silme kuralı + 34 dosyanın süpürülmesi (denetim R4-açık)** — `touches: **/*.test.ts, scripts/docs-check.mjs`
     - *Bitti:* `*.test.ts` içinde `from('warehouse'|'account').delete()` KALMADI; silme sırası tek yerde (`cleanup.ts`) ve kural `docs:check §3f` ile zorlanıyor.
@@ -201,7 +227,7 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     - **K4-2 — `zone-notice.markNotified` ham yazımdan çıktı:** `updateWhereIn`'e geçti, kolon adı (`notified_at`) artık elle yazılmıyor. Yol bir cron işinin içinde, yani kolon yeniden adlandırılsa hata kullanıcıya değil log'a düşerdi. Yan etki: `updateWhereIn`in "tek tüketicisi" durumu da kapandı.
     - **K8-1 — 18 DB'siz test entegrasyon kuyruğundan çıktı.** Yollar tek sabitte (`vitest.config.ts` → `WEB_LIB_DBSIZ`); birim `include`a, entegrasyon `exclude`a **aynı sabitten** alıyor. Denetimin (b) şıkkı (`*.unit.test.ts` adlandırması) alınmadı: yapılandırmanın künyesi isimle ayırmayı zaten gerekçesiyle reddetmiş (dosyalar dört ayrı şeridin). Çürüyen şey adlandırma kararı değil, aynı künyedeki *"birkaç saf dosya ihmal edilebilir"* cümlesiydi — 68'de 19 birkaç değil, ve `CLAUDE §4b` (08.08) bunu hız sorunundan **erişim** sorununa çevirmişti.
     - **Denetimin listesi 19'du, 18 çıktı.** `delivery/map-codes.test.ts` DB'ye vuruyor: iz kendi metninde değil, import ettiği modülde (`./map-codes` → `serviceDb`). Ekleyip koşunca 7 test patladı. Aynı hata bende de vardı; yakalayan şey grep değil koşu oldu.
-    - **`docs:check §3g`** listeyi çürümeye karşı koruyor: DB'siz olup listede olmayan dosya ve listede kalmış silinmiş yol commit'ten geçmiyor. İz **geçişli** aranıyor (import zinciri, `@/` takma adı, döngü korumalı) ama kontrol **tek yönlü**: "listede ama DB'ye vuruyor" yönü yazılmadı, çünkü orada statik iz yanılıyor (ölçüldü: altı dosya `serviceDb` açan modülü import ediyor, beşi o yolu hiç çağırmıyor) ve daha iyi bir hakemi var — `pnpm test:unit` `.env` yüklemediği için böyle bir dosya ilk satırında patlar.
+    - **`docs:check §3i`** *(26.08'e kadar `§3g` yazıyordu — araya kural eklendikçe bölüm harfleri kaydı, bkz. 02.17)* listeyi çürümeye karşı koruyor: DB'siz olup listede olmayan dosya ve listede kalmış silinmiş yol commit'ten geçmiyor. İz **geçişli** aranıyor (import zinciri, `@/` takma adı, döngü korumalı) ama kontrol **tek yönlü**: "listede ama DB'ye vuruyor" yönü yazılmadı, çünkü orada statik iz yanılıyor (ölçüldü: altı dosya `serviceDb` açan modülü import ediyor, beşi o yolu hiç çağırmıyor) ve daha iyi bir hakemi var — `pnpm test:unit` `.env` yüklemediği için böyle bir dosya ilk satırında patlar.
     - Ölçüm: `pnpm test:unit` **117 dosya / 1351 test yeşil, 3,3 sn** (önce 98 dosya / ~1190). `typecheck` · `lint` · `docs:check` temiz. Bekçinin üç yönü de elle sınandı (eksik satır · yanlış satır · bayat satır), üçü de ateşliyor.
     - **K3-1 reddedildi** (`denetim-K3-domain-core.md` Cevap'ında gerekçesiyle): "KDV bölmesi testsiz" bulgusu `line.test.ts` dosyasının yokluğuna dayanıyor, oysa üç iddianın üçü de `export.test.ts`/`profit.test.ts` içinde çivili — `net+vat=gross` beş yerde, kanal yönü iki bağımsız dosyada, kısmi teslimat payı `export.test.ts:96`'da.
 - [ ] (02.15) **"Grup içinde tek bayrak" kuralı VERİDE dursun — kısmi unique index** — `touches: supabase/migrations/**`
@@ -222,6 +248,21 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
     - **Kaçak senaryosu DOĞRUDAN ölçüldü** (atılabilir betik): depo açılmış, geri kalan kimlikler `undefined` — yani `beforeAll`ın yarıda düştüğü hâl. Teardown depoyu topladı. Eskiden bu tam olarak kaçağın doğduğu andı.
     - **Mevcut artıklar bu görevde silinmedi** (kullanıcı kararı 14.08); kullanıcı sonrasında veritabanını kendi sıfırladı — 51 artık depo gitti, geriye 3 gerçek depo kaldı.
     - **Geride kalan boşluk:** kural makineyle zorlanmıyor. Yeni yazılan bir test `afterAll`da yine elle silme yazabilir; bugün kuralı tutan tek şey disiplin ve `docs:check §3f`in yalnız `warehouse`/`account` için koyduğu dar kapı. `BEKLEYEN(02.16): afterAll içinde purgeTestData'dan önce mustDelete yazılmasını docs:check yakalasın.`
+- [ ] (02.17) **`docs:check` bölüm harfleri KONUMSAL — atıflar sessizce yanlışlanıyor** (denetim ölçümü 26.08) — `touches: scripts/docs-check.mjs, vitest.config.ts, docs/**`
+  - **Ölçülen arıza:** `§3g` bir zamanlar "DB'siz test entegrasyon kuyruğunda kalmamalı" kuralıydı;
+    araya yeni kurallar eklendikçe o kural **`§3i`**'ye kaydı ve `§3g` bugün bambaşka bir şeyi
+    ("Operasyon ekranı KENDİ zeminini çizmeli") anlatıyor. Ona yapılmış **altı atıf** yanlış hedefi
+    gösteriyordu: `vitest.config.ts` (4) · `02-database.md` (1) · iki denetim dosyası. Altısı da
+    26.08'de elle düzeltildi — ama **kusur duruyor**: bir sonraki eklenen kural aynı kaymayı yeniden
+    üretir. `STACK.md §251` ise `§3g`yi DOĞRU anlamda kullanıyor, yani aynı etiket iki anlamla
+    dolaşıyordu.
+  - **Neden sinsi:** yanlış bir bölüm atfı hiçbir yerde hata vermez. Okuyan ajan `docs-check.mjs`i
+    açar, `§3g`yi bulur, alakasız bir kural okur ve ya yanlış iş yapar ya da "bu kural yok" sanır.
+  - **İki iş:** *(1)* harf bir kez verilir ve **yeniden kullanılmaz** — yeni kural sona eklenir,
+    araya girmez; *(2)* `docs:check` kendi atıflarını doğrular: metinde geçen her `§3x`, gerçekten o
+    harfi taşıyan bir bölüm başlığına gitmeli. Bugün altı atıf yanlıştı ve hiçbir bekçi görmedi.
+  - **Neden bekliyor:** kullanıcı sırası (26.08) — önce 02'nin yalan söyleyen cümleleri susturuldu.
+
 ## Netleşecekler
 
 - **Migration aracı:** Supabase CLI mi, kendi küçük runner'ımız mı — artı/eksi masaya konup karar verilecek (STACK §13 statü notu gereği).
@@ -229,10 +270,20 @@ Veritabanına konuşan tek katman: Supabase istemci kurulumu (yalnız sunucu tar
 
 ---
 
-**Modül durumu (26.07.2026):** altyapı tamam, şema kapsamı artımlı.
-- **Var:** Supabase CLI + numaralı SQL migration'lar (`supabase/migrations/0001–0005`), `pnpm db:migrate/db:reset/db:new/db:seed`, `BaseDbService` (jsonb-güvenli case dönüşümü, `{data,error}`), servisler: `UserProfile`, `StaffRole`, `EmailVerification`, `Category`, `Collection`, `Product`, `ProductVariant`, `ProductCollection`; entegrasyon testleri (`catalog.test.ts`, `product.test.ts`).
-- **Yok:** `DATA_MODEL`'deki tabloların bir kısmı (para, mesajlaşma, geri bildirim) — ilgili modülleriyle gelir.
+**Modül durumu (26.08.2026 — denetim ölçümü):** altyapı tamam; şema kapsamı artımlı büyüdü ve
+`DATA_MODEL`'in tüm aileleri artık yerinde.
+- **Ölçülen:** 50 migration (`0001`–`0051`, `0025` boşlukta — aşağıya bak) · **84 tablo** ·
+  63 servis · `pnpm db:start/stop/reset/migrate/new/seed/refresh` · `BaseDbService`
+  (jsonb-güvenli case dönüşümü, `moneyFields` euro↔cent sınırı, `{data,error}`, keyset).
+- **Açık:** `02.15` (kısmi unique indeksler) ve `02.4`'ün ölçülmemiş kalan kapsamı — ikisi de
+  kendi satırlarında.
+
+> **Önceki alt bilgi bir aydan fazla bayattı ve üç yanlış şey söylüyordu** (26.08 ölçümü):
+> migration aralığı `0001–0005` yazıyordu (gerçek: 50 dosya) ve *"Yok: para, mesajlaşma, geri
+> bildirim tabloları"* diyordu — üçü de aylardır var. Sebep 01'dekiyle aynı ve yapısal: tablo
+> BAŞKA modülün turunda doğuyor, o modül kendi satırını işaretliyor, **02'nin alt bilgisi kimsenin
+> işi olmadığı için donuyor.** Bir alt bilgi, ancak birinin dönüp ÖLÇMESİYLE doğru kalır.
 
 **Adlandırma (27.07, kullanıcı kararı):** ayar tarafı **çoğuldur** — tablo `settings`, servis `SettingsService`. Gerekçe: orada bir ayar değil, ayarlar tutulur. Satır tipi tekil kalır (`Setting`) — bir satır bir ayardır; aynı desen `user_profiles` → `UserProfile`'da zaten var.
 
-> **Açık kalan tutarsızlık:** tabloların 23'ü tekil (`product`, `order`, `stock`…), 4'ü çoğul (`settings`, `user_profiles`, `email_verifications`, `product_collections`). "Tabloda çoğul şey durur" argümanı hepsi için geçerli; yani ya hepsi çoğul olmalı ya da ayrım bilinçli sayılmalı. Toptan yeniden adlandırma greenfield'da mümkün ama `user_profiles` her yerde geçiyor ve `product_collections` başka ajanın aktif alanında — ürün tarafı boşaldığında tek seferde konuşulacak.
+> **Açık kalan tutarsızlık:** tabloların ~~23'ü~~ **80'i** tekil (`product`, `order`, `stock`…), 4'ü çoğul (`settings`, `user_profiles`, `email_verifications`, `product_collections`). "Tabloda çoğul şey durur" argümanı hepsi için geçerli; yani ya hepsi çoğul olmalı ya da ayrım bilinçli sayılmalı. Toptan yeniden adlandırma greenfield'da mümkün ama `user_profiles` her yerde geçiyor ve `product_collections` başka ajanın aktif alanında — ürün tarafı boşaldığında tek seferde konuşulacak.

@@ -33,7 +33,7 @@ Maliyeti düşük, koruduğu şey sessiz veri kaybı. → sahibi **arka uç şer
 eklenip migration unutulursa DB gürültüyle reddeder, tersi **sessizce düşen bir olay** üretir. Tek
 yönlü bir risk, tek yönlü bir kontrolle kapanır.
 
-Bu tur K4-1 · K4-2 · K8-1'e ayrıldı (kullanıcı sırası). `docs:check §3g`'yi yazarken kalıbı zaten
+Bu tur K4-1 · K4-2 · K8-1'e ayrıldı (kullanıcı sırası). `docs:check §3i`'yi yazarken kalıbı zaten
 kurdum — enum karşılaştırması aynı iskelete oturuyor, ayrı bir keşif gerektirmiyor.
 
 Bir uyarı, kendi turumdan çıkan ders: metin düzeyinde karşılaştırma `create type` bloklarını

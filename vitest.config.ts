@@ -25,13 +25,13 @@ import { configDefaults, defineConfig } from 'vitest/config';
 //
 // Çözüm yeniden adlandırma DEĞİL (yukarıdaki gerekçe hâlâ geçerli: dosyalar başka şeritlerin),
 // **yolların tek yerde sayılması**. Liste ikiye bölünmez: birim projesi bunu `include`a ekler,
-// entegrasyon `exclude`a — aynı sabitten. Çürümesini `docs:check §3g` engelliyor: DB'siz olup
+// entegrasyon `exclude`a — aynı sabitten. Çürümesini `docs:check §3i` engelliyor: DB'siz olup
 // listede olmayan bir test dosyası commit'ten geçmez.
 /**
  * `packages/database` de entegrasyon köküdür ama `utils/` altındaki dönüştürücüler **saf**: DB
  * istemcisi hiç kurulmuyor, dosya kendinden başka hiçbir şey import etmiyor.
  *
- * **Ayrı sabit ve bu bilinçli:** `WEB_LIB_DBSIZ`i `docs:check §3g` **adıyla** okuyor ve içindeki
+ * **Ayrı sabit ve bu bilinçli:** `WEB_LIB_DBSIZ`i `docs:check §3i` **adıyla** okuyor ve içindeki
  * yolları `'apps/…'` önekiyle tarıyor; oraya bir paket yolu koymak denetimin kapsamını sessizce
  * bulandırırdı (liste ile taranan ağaç birbirini tutmaz hâle gelirdi). Yukarıdaki *"liste ikiye
  * bölünmez"* kuralı **kök başına** geçerli: aynı kökün iki listesi olmaz, ayrı köklerin ayrı
@@ -49,10 +49,10 @@ const PAKET_DBSIZ = ['packages/database/src/utils/case-transformers.test.ts'];
  * testini koşamıyor ve doğrulaması commit öncesi tam pakete erteleniyor. `WEB_LIB_DBSIZ`in K8-1
  * ölçümüyle çözdüğü sorunun aynısı, ikinci kökte.
  *
- * **Kök başına ayrı sabit** (üstteki künyenin kuralı): `docs:check §3g` `WEB_LIB_DBSIZ`i ADIYLA
+ * **Kök başına ayrı sabit** (üstteki künyenin kuralı): `docs:check §3i` `WEB_LIB_DBSIZ`i ADIYLA
  * okuyup `'apps/…'` önekiyle tarıyor, buraya paket yolu koymak denetimin kapsamını bulandırırdı.
  *
- * **BU LİSTE MAKİNEYLE DENETLENMİYOR ve bilerek yazılıyor:** §3g yalnız `apps/` ağacını tarar,
+ * **BU LİSTE MAKİNEYLE DENETLENMİYOR ve bilerek yazılıyor:** §3i yalnız `apps/` ağacını tarar,
  * yani buraya girmeyi hak eden yeni bir saf dosya sessizce entegrasyonda kalabilir. Bedeli
  * yavaşlık ve şeridin koşamaması; yanlış sonuç değil. Tersi — DB'ye vuran bir dosyayı buraya
  * yazmak — GÜRÜLTÜLÜ patlar: birim projesi `.env` yüklemez ve DB env'ini siler, dosya ilk
