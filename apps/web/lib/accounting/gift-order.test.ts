@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderService, ProductService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
-import { quickSale } from '../order/quick-sale';
+import { quickSale } from '@lezzet/application';
 import { buildExport } from './export';
 
 /**
@@ -75,7 +75,7 @@ describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
       [{ variantId, qty: QTY, unitPriceCents: UNIT_PRICE_CENTS, vatRate: 5.5 }],
     );
 
-    const result = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
+    const result = await quickSale(db, { orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
     expect(result.status).toBe('ok');
     if (result.status !== 'ok') return;
 

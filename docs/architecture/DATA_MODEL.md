@@ -151,6 +151,33 @@ tabloları (günlük KPI vb.) analitik modülüyle birlikte, soruları netleşin
   **Tür bir etiket değil, ÜÇ SORGUNUN süzgecidir ve üçü de veride zorlanır:** *(a)* araca bölge bağlanamaz (tetikleyici — zincir bir adrese çözülmek zorunda, yoksa müşteri siparişi hareket hâlindeki bir yere yazılır ve hiçbir ekran fark etmez), *(b)* araç kargo deposu olamaz (kısıt — taşıyıcı bir adrese gelir), *(c)* araç `available_stock_total`a girmez (katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz; tedarik önerisi için de o mal zaten tesisten çıkmıştır, akşam döner — sayılsaydı ikinci kez sayılırdı). Depo bazlı `available_stock` aracı **aynen gösterir**: kuryenin ekranı arabasında ne olduğunu görmek zorunda. Tek alan olmasaydı bu üç kuralı üç ayrı yer ayrı ayrı hatırlardı — ve hatırlamayan ilki sessizce yanlış cevap verirdi.
 - **Yerinde satış üçüncü bir teslimat tipidir — `pickup` (kullanıcı kararı 26.08).** `delivery_type`in sorusu "mal müşteriye NASIL ulaşır" ve üç gerçek cevabı var: bizim aracımız · taşıyıcı · **müşterinin kendisi**. Yerinde satışta mal hiç gitmez; müşteri tezgâhın ya da kuryenin arabasının önündedir. O güne kadar böyle bir satış varsayılana düşüp `route` yazıyordu — adressiz, bölgesiz, kuryesiz bir "rota siparişi"; sipariş geçerli görünüyor, yalnız teslimat tipine göre kırılan her rapor onu yanlış kovaya koyuyordu.
   **Enum genişlerken 36 dallanma noktası ölçüldü ve yönü karışıktı** (17 tanesi `=== 'shipping'`, 15 tanesi `=== 'route'`): iki varsayılan da yanlıştı, yani "additive" bir değişiklik değildi. Karşılığında **dar küme türetildi**: `AddressDeliveryType = DeliveryTypeEnum.exclude(['pickup'])`. Bir ADRESTEN çözülen her şey (checkout, teslimat çözümü, kargo ücreti, müşteri sözleşmeleri) dar kümeyi konuşur; siparişin kendisi ve onu GÖSTEREN her ekran (operasyon detayı, müşterinin "Siparişlerim"i) geniş kümeyi taşır. Ölçüt tek soru: *bu değer buraya gerçekten gelebilir mi.* Elle yazılmış `'route' | 'shipping'` birleşimleri tam bu yüzden kırıldı ve türetilmiş tiple değiştirildi (CLAUDE §1).
+  **`pickup` YALNIZ YERİNDE SATIŞ DEMEK DEĞİL — kapı bilerek açık bırakıldı (26.08, kullanıcı
+  sorusu üzerine).** Değerin sorusu *"mal müşteriye NASIL ulaşır"* ve cevabı **"müşterinin
+  kendisi"**; yerinde satış bugün bunu yazan TEK yol, tanımın kendisi değil. Kullanıcı ileriyi
+  sordu: *"Drive mantığı olacak — müşteri sipariş verip depodan gelip alacak, belki randevuyla.
+  Bu konunun önünü kapatmamamız lazım."*
+
+  Bir tur *"`pickup` ⇒ mal her zaman anında düşer"* diye bir değişmez önerildi ve **GERİ ALINDI**:
+  tam da o cümle kapıyı kapatırdı. Anında tüketim `pickup`ın değil **yerinde satışın** kuralıdır ve
+  ayrımı zaten motor yapıyor — stok etkisini teslimat tipi değil GEÇİŞ belirliyor
+  (`stockEffectOf`: `draft → completed` = `consume_direct`; `to === 'confirmed'` = `reserve`).
+  Yani aynı `pickup` siparişi iki yoldan da geçebilir ve bugünkü motor ikisini de doğru işler:
+  yerinde satış anında tüketir, Drive ayırır → hazırlar → teslimde tüketir. **Drive için yeni bir
+  stok kavramı gerekmiyor, dördüncü bir teslimat tipi de.**
+
+  **Kapıyı açık tutmanın dört şartı** (bu satır onların kaydı): *(1)* anında tüketim kuralı yerinde
+  satış orkestrasyonunda durur, `delivery_type` semantiğinde DEĞİL; *(2)* sipariş açan kapı
+  `pickup` gördüğü için tüketime karar VERMEZ — yolu çağıran seçer; *(3)* misafir müşteri kaydı
+  yerinde satışa özeldir, Drive'da müşteri gerçek ve kimliklidir; *(4)* `AddressDeliveryType`
+  dışlaması Drive'ı engellemez — o dışlama *"adresten çözülen akış"* kuralıdır ve Drive adresten
+  değil SEÇİLEN DEPODAN çözülür.
+
+  **Kodda kapanan bir şey yok; kapanan tek şey bir pazarlama kaydının bugünkü biçimi.** `DOMAIN
+  §624` işletmeyi Google'a **hizmet bölgesi (SAB)** olarak kaydediyor — adres gizli — ve gerekçesi
+  *"bu bir vitrin değildir: müşteri çekmez, ziyaret saati yoktur"*. Drive tam tersini gerektirir
+  (randevu, mesai, gelinebilir adres); o gün bu kayıt biçimi yeniden açılmalıdır. Engel değil,
+  bilinmesi gereken bedel.
+
   **`resolveShippingFee` `pickup` ALMAZ ve bu bilinçli:** yerinde satışta "kargo ücreti kaç" sorusunun cevabı "0" değil, sorunun kendisi geçersizdir. Sıfır döndürseydi motor cevabı olmayan bir soruya cevap vermiş olurdu; sipariş `shipping_fee`ye doğrudan 0 yazar.
 - **Pazarlık izi kalemde yaşar — `list_unit_price` + `price_set_by` (kullanıcı kararı 26.08).** Elle sipariş girişinde ve yerinde satışta fiyat alanı LİSTE fiyatıyla dolu gelir, satıcı pazarlık ederse üstüne yazar; bu iki kolon "üstüne yazılmadan önce ne yazıyordu ve kim değiştirdi" sorusunun cevabıdır. Yalnız son fiyat saklansaydı kayıt *"ürün 11,00 €'ya satıldı"* derdi, *"1,50 € taviz verildi"* demezdi — ve kâr motoru katkıyı ciro üzerinden hesapladığı için **kapıda verilen kişisel taviz ile planlanmış kampanya indirimi aynı kovaya düşerdi**; biri bütçelenmiş bir maliyet, öteki tek tek verilmiş bir karar.
   **`line_discount_amount` DEĞİL:** o kolon kupon/kampanya havuzunun ve `discount_amount = Σ line_discount_amount` ertelenmiş kısıtına giriyor, yani kotayı tüketiyor; pazarlığın kotası yoktur ve bir kampanyaya bağlanamaz. **Nullable ve anlamı var:** `null` = pazarlık olmadı, liste fiyatı `unit_price`in kendisidir (`warehouse_variant_threshold`in "satır yoksa genel kural işler" deseni) — her normal checkout kalemine aynı sayıyı ikinci kez yazmak veriyi büyütüp hiçbir soruya yeni cevap vermezdi. Türetme **imzalıdır**: taviz = `coalesce(list_unit_price, unit_price) − unit_price`; eksi çıkabilir ve hata değildir (acele/az miktar listenin üstüne satılabilir). **Yarım iz yoktur** — ikisi birlikte yazılır, kısıt veride (`order_item_negotiation_complete`): tek başına bir liste fiyatı "birileri indirdi" der ama kimin indirdiğini söylemez.

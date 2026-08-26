@@ -597,7 +597,7 @@ async function customerNames(db: SupabaseClient, orders: readonly Order[]): Prom
  * ekranı raf ömrü işareti göstermiyor (o D3'ün sorusu) ve kimse okumuyordu. Hesaplanıp atılan bir
  * değer, bir gün "bu neden hep boş" diye aranacak ölü koddur.
  */
-async function suggestPicksForVariant(
+export async function suggestPicksForVariant(
   db: SupabaseClient,
   warehouseId: string,
   variantId: string,

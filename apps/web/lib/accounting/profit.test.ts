@@ -4,7 +4,7 @@ import {
   StockAdjustmentService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
-import { quickSale } from '../order/quick-sale';
+import { quickSale } from '@lezzet/application';
 import { companyPnl, orderProfits, productProfits } from './profit';
 
 /**
@@ -72,7 +72,7 @@ async function sell(variantId: string, qty: number, unitPriceCents: number, opts
     { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: opts.gift ?? false, totalCents: qty * unitPriceCents },
     [{ variantId, qty, unitPriceCents, vatRate: 5.5 }],
   );
-  const result = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
+  const result = await quickSale(db, { orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
   expect(result.status).toBe('ok');
   return order;
 }

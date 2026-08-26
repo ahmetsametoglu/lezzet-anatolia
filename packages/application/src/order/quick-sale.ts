@@ -1,8 +1,8 @@
-import { OrderService, SettingsService, serviceDb } from '@lezzet/database';
+import { OrderService, SettingsService, type Db } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
-import { recordOrderPayment } from '../money/order-payment';
-import { suggestPicksForVariant } from '../stock/fefo';
+import { recordOrderPayment } from './payment';
+import { suggestPicksForVariant } from '../warehouse/preparation';
 
 /**
  * Hızlı satış kapısı (07.10) — **uygulama katmanı orkestrasyonu**. ORDER_LIFECYCLE "Hızlı satış yolu".
@@ -20,7 +20,7 @@ import { suggestPicksForVariant } from '../stock/fefo';
  * düşsün diye. Sıra bilinçlidir: mal zaten gitti, para kaydı onu geri alamaz.
  */
 
-type QuickSaleOutcome =
+export type QuickSaleOutcome =
   | {
       status: 'ok';
       referenceNo: string | null;
@@ -37,7 +37,7 @@ type QuickSaleOutcome =
   | { status: 'insufficient_stock'; variantId: string; available: number }
   | { status: 'not_found' };
 
-interface QuickSaleInput {
+export interface QuickSaleInput {
   orderId: string;
   /** Kapıdaki satışı yapan personel. */
   actorId?: string | null;
@@ -56,8 +56,7 @@ interface QuickSaleInput {
   picks?: readonly PreparationPick[];
 }
 
-export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome> {
-  const db = serviceDb();
+export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSaleOutcome> {
   const orders = new OrderService(db);
 
   const found = await orders.getWithItems(input.orderId);
@@ -79,7 +78,7 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
   } else {
     picks = [];
     for (const item of items) {
-      const suggestion = await suggestPicksForVariant(order.warehouseId, item.variantId, item.qty);
+      const suggestion = await suggestPicksForVariant(db, order.warehouseId, item.variantId, item.qty);
       if (suggestion.shortfall > 0) {
         return {
           status: 'insufficient_stock',
@@ -124,7 +123,7 @@ export async function quickSale(input: QuickSaleInput): Promise<QuickSaleOutcome
   const accountId = input.paymentAccountId ?? (await settings.get<string | null>('door_cash_account_id', null));
   let paymentRecorded = false;
   if (accountId) {
-    const collected = await recordOrderPayment({
+    const collected = await recordOrderPayment(db, {
       orderId: order.id,
       accountId,
       amountCents: input.collectedAmountCents ?? order.totalCents,

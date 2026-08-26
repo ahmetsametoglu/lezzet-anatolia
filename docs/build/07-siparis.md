@@ -107,7 +107,14 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
   - **`returned → completed` kapanışı:** iade süreci bitince sipariş kalıcı `returned`'da kalmaz. COGS kendiliğinden doğru çıkar — stoğa dönen mal kalem–parti kaydından düştüğü için hesaba girmez (tamamı iade edilen siparişte `cogs_amount = 0`, testli).
 - [x] (07.10) **Hızlı satış yolu (door):** `draft → completed` tek adım; rezervasyon atlanır, fiiliden düşülür; ödeme anında; `reference_no` `completed`'de üretilir
   - *Bitti:* kapı önü satış tek işlemde kapanıyor, stok anında düşüyor
-  - **Durum (27.07):** `0017_quick_sale.sql` (`quick_sale`) · `OrderService.quickSale` · kapı `apps/web/lib/order/quick-sale.ts`. 8 test.
+  - **Durum (27.07):** `0017_quick_sale.sql` (`quick_sale`) · `OrderService.quickSale` · kapı
+    ~~`apps/web/lib/order/quick-sale.ts`~~ → **`packages/application/src/order/quick-sale.ts`
+    (terfi 26.08, mobil şerit · `21.118`)**. 8 test → 10.
+    **Taşınma sebebi yüzey kararıdır:** yerinde satış (depo kapısı ve kuryenin aracı) native
+    uygulamanın işi oldu (`DOMAIN §17` — *"Admin yerinde satış yapmaz"*), yani çağıran
+    `apps/mobile-api` olacak ve o `apps/web/lib`den import edemez. **Kimsenin işini kesmedi:**
+    ölçüldü, motorun web'de üretim çağıranı yoktu — tek çağıranı testleriydi. İmza paket kuralına
+    uydu: `quickSale(db, input)`.
   - **Adım atlanır, İZ atlanmaz.** Tam yolun yedi adımı burada bir adım; ama kalem–parti kaydı, `reference_no`, geçiş logu ve kâr kalemleri tam yoldakiyle **aynı yerlere** yazılır. Geri çağırma ("bu parti kime gitti") ve gerçek COGS hızlı satışta da çalışır.
   - **Önce kontrol, sonra yazım.** Yetersiz stok bir hata değil, bir **cevaptır** (kasiyer ekranında kalan miktar yazar) — bu yüzden `return` ile bildirilir, `return` transaction'ı geri almadığı için kullanılabilirlik kontrolü tek satır yazılmadan önce biter. Kontrol iki katmanlı: **varyant toplamında** (başkasına ayrılmış mal kapıda satılamaz) ve **parti bazında** (seçilen parti tükenmiş olabilir).
   - **Kapıda hazırlık ekranı yok → partiler FEFO ile türetilir** (06.5 önerisi yeniden kullanılır); operatör isterse elle geçer. FEFO önerisi parti bazında baktığı için varyant-toplamı rezervasyonunu görmez; **son söz RPC'nindir** — emniyet, öneriyi üretenin değil, yazımın olduğu katmanda durur.

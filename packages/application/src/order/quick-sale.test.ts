@@ -77,7 +77,7 @@ describe('hızlı satış (07.10)', () => {
   it('tek çağrıda kapanır: stok fiiliden düşer, referans doğar, para yazılır', async () => {
     const { order } = await doorDraft(4);
 
-    const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
+    const outcome = await quickSale(db, { orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
     expect(outcome.status).toBe('ok');
     if (outcome.status !== 'ok') return;
 
@@ -108,7 +108,7 @@ describe('hızlı satış (07.10)', () => {
     const { order } = await doorDraft(2);
     // Hesap AÇIKÇA verilir: verilmezse `door_cash_account_id` ayarına düşülür ve o ayar yerelde
     // demo kasayı gösterir — tahsilat kullanıcının gerçek kasasına yazılırdı (denetim R2).
-    await quickSale({ orderId: order.id, paymentMethod: 'card', paymentAccountId: cashAccount });
+    await quickSale(db, { orderId: order.id, paymentMethod: 'card', paymentAccountId: cashAccount });
 
     // Geri çağırma ("bu parti kime gitti") hızlı satışta da çalışır.
     const partiler = await itemBatches.listByOrder(order.id);
@@ -124,7 +124,7 @@ describe('hızlı satış (07.10)', () => {
     // Online sepetini açmış, kapıya gelip almış: kendi ayırdığı mal kendisini engellemez.
     await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 2 });
 
-    expect((await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount })).status).toBe('ok');
+    expect((await quickSale(db, { orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount })).status).toBe('ok');
     expect(await reservations.listActiveByOrder(order.id)).toHaveLength(0);
     expect((await stocks.getById(batchA))?.physicalQty).toBe(1);
   });
@@ -136,7 +136,7 @@ describe('hızlı satış (07.10)', () => {
     // FEFO önerisi parti bazında bakar (varyant-toplamı rezervasyonu görmez); son söz RPC'nindir —
     // emniyet, öneriyi üreten katmanda değil, yazımın olduğu yerde durur.
     const { order } = await doorDraft(3);
-    const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash' });
+    const outcome = await quickSale(db, { orderId: order.id, paymentMethod: 'cash' });
     expect(outcome).toMatchObject({ status: 'insufficient_stock', variantId, available: 1 });
 
     // Reddedilen satış hiçbir iz bırakmaz.
@@ -147,10 +147,10 @@ describe('hızlı satış (07.10)', () => {
 
   it('taslak olmayan sipariş kapıda satılamaz', async () => {
     const { order } = await doorDraft(1);
-    await transitionOrder({ orderId: order.id, to: 'confirmed' });
+    await transitionOrder(db, { orderId: order.id, to: 'confirmed' });
 
     // `confirmed → completed` motorun geçiş tablosunda YOK: kural reddi, stok yarışı değil.
-    expect(await quickSale({ orderId: order.id, paymentMethod: 'cash' })).toMatchObject({
+    expect(await quickSale(db, { orderId: order.id, paymentMethod: 'cash' })).toMatchObject({
       status: 'forbidden',
       reason: 'not_allowed',
     });
@@ -162,7 +162,7 @@ describe('hızlı satış (07.10)', () => {
     await db.from('order').update({ status: 'delivered' }).eq('id', order.id);
 
     // `delivered → completed` İZİNLİ ama hızlı satış değil: stoğu ikinci kez düşürmemeli.
-    expect(await quickSale({ orderId: order.id, paymentMethod: 'cash' })).toMatchObject({
+    expect(await quickSale(db, { orderId: order.id, paymentMethod: 'cash' })).toMatchObject({
       status: 'forbidden',
       reason: 'not_fast_sale_path',
     });
@@ -174,7 +174,7 @@ describe('hızlı satış (07.10)', () => {
 
     // 4 istendi, 2 verildi; para yine 4'ünki alınmış olsa durum `paid` kalır ama fazlalık görünür —
     // burada gerçekten verilen kadarı tahsil ediliyor.
-    const outcome = await quickSale({
+    const outcome = await quickSale(db, {
       orderId: order.id,
       paymentMethod: 'cash',
       paymentAccountId: cashAccount,
@@ -200,7 +200,7 @@ describe('hızlı satış (07.10)', () => {
 
     try {
       const { order } = await doorDraft(3);
-      const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash' }); // hesap YOK, ayar var
+      const outcome = await quickSale(db, { orderId: order.id, paymentMethod: 'cash' }); // hesap YOK, ayar var
       expect(outcome).toMatchObject({ status: 'ok', paymentRecorded: true });
 
       // Para uydurulmadı ve DOĞRU çekmeceye girdi: testin kendi kasası boş kaldı.
@@ -220,7 +220,7 @@ describe('hızlı satış (07.10)', () => {
 
     try {
       const { order } = await doorDraft(1);
-      const outcome = await quickSale({ orderId: order.id, paymentMethod: 'cash' }); // hesap yok, ayar da yok
+      const outcome = await quickSale(db, { orderId: order.id, paymentMethod: 'cash' }); // hesap yok, ayar da yok
       expect(outcome.status).toBe('ok');
       if (outcome.status !== 'ok') return;
       expect(outcome.paymentRecorded).toBe(false);
@@ -238,10 +238,10 @@ describe('hızlı satış (07.10)', () => {
 
   it('iki kez satılamaz — stok bir kez düşer', async () => {
     const { order } = await doorDraft(2);
-    await quickSale({ orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
+    await quickSale(db, { orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
 
     // İkincide hesap gerekmez: satış zaten reddediliyor, tahsilat adımına hiç gelinmiyor.
-    const ikinci = await quickSale({ orderId: order.id, paymentMethod: 'cash' });
+    const ikinci = await quickSale(db, { orderId: order.id, paymentMethod: 'cash' });
     expect(ikinci.status).toBe('forbidden'); // `completed` terminal
     expect((await stocks.getById(batchA))?.physicalQty).toBe(1);
   });

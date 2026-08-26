@@ -324,6 +324,21 @@ export type {
 // **Her kapı DEPO KİMLİĞİ ister** (CLAUDE.md §1: varsayılan depo YOKTUR) ve kapsam dışı yazım
 // görünür retle döner (`forbidden`/`out_of_scope` — kurye kapılarının emsali).
 export { confirmPreparation, listPreparationQueue, recordShipment } from './warehouse/preparation';
+// FEFO önerisi paketin İÇİNDE zaten vardı (`preparation`in özel yardımcısı); hızlı satış onu
+// çağırabilsin diye ihraç edildi — ikinci bir kopya yazmak yerine (CLAUDE §1). Web'deki
+// `lib/stock/fefo.ts` hâlâ kendi ekranını besleyen KÖPRÜdür; benimsemesi web şeridinin işi.
+export { suggestPicksForVariant } from './warehouse/preparation';
+
+/**
+ * **HIZLI SATIŞ — YERİNDE SATIŞIN KAPANIŞ ADIMI** (terfi 26.08, `apps/web/lib/order/quick-sale.ts`).
+ *
+ * Taşınmasının sebebi kullanıcı kararıdır: yerinde satış (depo kapısı **ve kuryenin aracı**) artık
+ * native uygulamanın işi (`DOMAIN §17` — *"Admin yerinde satış yapmaz"*), yani çağıran
+ * `apps/mobile-api` olacak ve o `apps/web/lib`den import EDEMEZ. Motor web'de kaldığı sürece tek
+ * çağıranı testleriydi: web'de üretim çağrısı hiç yoktu, o yüzden taşıma kimsenin işini kesmedi.
+ */
+export { quickSale } from './order/quick-sale';
+export type { QuickSaleInput, QuickSaleOutcome } from './order/quick-sale';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { boxLabelPayload, labelPrinterFor, markBoxPrinted, openBox, sealBox, LABEL_PRINTER_KEYS } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';

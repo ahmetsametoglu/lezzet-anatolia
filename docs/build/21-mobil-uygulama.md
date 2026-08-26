@@ -5731,3 +5731,78 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: `apps/mobile`da `phone_taken` **0 eşleşme** · mobil paket **787/787** · typecheck ·
   lint temiz. Notu kapatıldı (`not-mobil-phone-taken-reti-kalkti.md` silindi).
 
+- [~] (21.118) **YERİNDE SATIŞ — ZEMİN: hızlı satış motoru pakete terfi etti (DOMAIN §17, kullanıcı kararı 26.08)**
+  · touches: `packages/application/src/order/quick-sale.ts`, `packages/application/src/warehouse/preparation.ts`,
+    `packages/application/src/index.ts`, `apps/web/lib/accounting/profit.test.ts`, `apps/web/lib/accounting/gift-order.test.ts`
+
+  **NEDEN BU ŞERİTTE.** Kullanıcı kurye aracından satışı açtı ve ölçüm bir çelişki buldu: `09.8`
+  kapı satışını admin ekranına koymuştu, oysa `DOMAIN §17` *"Admin yerinde satış yapmaz — satan
+  kişi, malın yanında duran personeldir"* diyor. Bir ay görünmemişti çünkü ekran hiç yazılmamıştı.
+  Karar: **yerinde satış (depo kapısı VE kuryenin aracı) native uygulamanın kurye/depo bölümünün
+  işidir**; web'de kalan yalnız telefonla gelen siparişin masada yazılması.
+
+  **ZEMİNİ WEB ŞERİDİ HAZIRLADI, ÖLÇÜLDÜ VE DOĞRU:**
+  · `warehouse.kind` = `facility` | `vehicle` — **araç ayrı bir kavram değil, bir depo TÜRÜ**.
+    Yükleme ve akşam dönüşü birer transfer; araçtaki mal gerçek parti, yani SKT · FEFO · geri
+    çağırma izi · soğuk zincir bedavaya geliyor.
+  · `delivery_type += 'pickup'` — yerinde satışta mal gitmez, müşteri alır. Eskiden varsayılana
+    düşüp `route` yazılıyordu: adressiz, bölgesiz, kuryesiz bir "rota siparişi".
+  · `order_item.list_unit_price` + `price_set_by` — pazarlık izi, kısıt veride
+    (`order_item_negotiation_complete`, yarım iz yok).
+  Üç kural VERİDE zorlanıyor (ölçüldü): araca bölge bağlanamaz (tetikleyici
+  `delivery_zone_warehouse_is_facility`), araç kargo deposu olamaz (kısıt
+  `warehouse_vehicle_never_ships`), araç depo-üstü toplama girmez (`available_stock_total`
+  görünümünde `join … w.kind = 'facility'`). Depo bazlı okuma aracı **aynen gösterir** — kurye
+  arabasında ne olduğunu görmek zorunda.
+
+  **BU DİLİMDE YAPILAN: motorun evi değişti.** `quickSale` `apps/web/lib`de duruyordu ve
+  `apps/mobile-api` oradan import EDEMEZ. Taşıma ucuz çıktı çünkü **web'de üretim çağıranı yoktu**
+  — ölçüldü, tek çağıranı testleriydi. İmza paket kuralına uydu (`quickSale(db, input)`;
+  `serviceDb()` uygulama katmanında çağrılmaz).
+
+  **İKİNCİ BİR FEFO YAZILMADI (CLAUDE §1).** `quickSale`in ihtiyaç duyduğu parti önerisi pakette
+  ZATEN vardı — `warehouse/preparation.ts` içinde özel bir `suggestPicksForVariant` (21.11
+  terfisinde yazılmış). Kopyalamak yerine **ihraç edildi** (tek kelime). Tahsilat da öyle: web'in
+  `lib/money/order-payment.ts`i 51 satırlık bir `serviceDb()` sarmalayıcısıydı, asıl uygulama
+  zaten `packages/application/src/order/payment.ts`te — `quickSale` artık doğrudan onu çağırıyor.
+
+  **YAN ETKİ BİLDİRİLDİ:** `apps/web/lib/stock/fefo.ts` bu taşımayla ölü kaldı (tek üretim çağıranı
+  `quickSale`ti). Silmedim — web şeridinin dosyası ve testi üç fazladan alan doğruluyor
+  (`flag`, `remainingPercent`, `lotNumber`); karar onların
+  (`docs/talep/not-web-fefo-kopyasi-olu-kaldi.md`).
+
+  **KAPSAM BU TURDA KÜÇÜLDÜ — kullanıcıyla konuşarak (26.08).** Başta iki akış vardı: personelin
+  cihazından misafir satış (A) ve müşterinin kendi telefonundan kimlikli satış (B, QR/kod ile).
+  **B tamamen düştü:** *"Geçmişi olsun isteyen önceden sipariş versin, bizim sipariş kanallarımızı
+  kullansın."* Böylece kod/QR, müşteri kataloğu, kuryeye devir ekranı — hepsi listeden çıktı.
+
+  **A üç sorunu birden çözdüğü için tek başına yeterli:** pazarlığı personel zaten kendi yazıyor
+  (`list_unit_price` doğal yerinde), kimlik hiç sorulmadığı için yanlış kimlik kurulamıyor, ve
+  müşteri tarafında sürtünme sıfır (malı alır, parayı verir).
+
+  **KİMLİK SORULMAMASI BİR KARARDIR, ihmal değil.** Ölçüldü: `customer_phone` künyesi
+  *"operatörün elle yazdığı numara buraya YAZILMAZ — klavyeden geçmek kanıt değildir"* diyor, ve
+  kayıt tetikleyicisi (`0002`) taslağı e-postayla sahipleniyor — koşulunda `is_draft` YOK. Yani
+  kurye yanlış bir e-posta yazsa, o adresin gerçek sahibi kayıt olduğunda tanımadığı bir satın
+  alma geçmişini devralırdı ve hiçbir yerde hata vermezdi. Kullanıcı kararı: *"onaylanmamış mail
+  ile geçmiş miras alınamaz; geçmişini önemseyen hesap açsın"* — ve bu ekranda birebir söylenecek.
+
+  **SIRADAKİ DİLİMLER (bu satır açık kalıyor):** *(a)* yerinde satış orkestrasyonu — `pickup` +
+  personelin o anki deposu, adres/gün/rezervasyon olmadan (emsal `shippingOrder`: AÇIK seçim,
+  varsayılanı yok — DOMAIN §17/C2); *(b)* misafir satışların müşteri kaydı (tek kayıt + analitikten
+  dışlayan işaret); *(c)* `apps/mobile-api` ucu; *(d)* native ekran — görsel tasarımı hiçbir
+  canvas'ta çizili DEĞİL, kullanıcıya sorulacak.
+
+  **DRIVE'IN ÖNÜ AÇIK BIRAKILDI ve şartları yazıldı** (`DATA_MODEL` › `pickup`). Kullanıcı sordu:
+  *"ileride Drive mantığı olacak — müşteri sipariş verip depodan gelip alacak, belki randevuyla."*
+  Bir tur *"pickup ⇒ anında tüketim"* diye bir değişmez önerilmişti ve **geri alındı**: tam o cümle
+  kapıyı kapatırdı. Stok etkisini teslimat tipi değil GEÇİŞ belirliyor (`stockEffectOf`), yani aynı
+  `pickup` siparişi hem anında tüketen hem ayıran yoldan geçebilir — Drive için ne yeni bir stok
+  kavramı gerekiyor ne dördüncü bir teslimat tipi. **Kodda kapanan yok; kapanan tek şey `DOMAIN
+  §624`'ün Google "hizmet bölgesi" kaydının bugünkü biçimi** (adres gizli, *"müşteri çekmez, ziyaret
+  saati yoktur"*) — Drive geldiği gün o karar yeniden açılmalı.
+
+  Doğrulama: taşınan test yeni evinde **10/10** (DB'ye vuruyor) · dokunulan iki web testi **7/7** ·
+  birim paketi **1526/1526** · `packages/application` + `apps/web` + `apps/mobile-api` typecheck ·
+  lint temiz.
+
