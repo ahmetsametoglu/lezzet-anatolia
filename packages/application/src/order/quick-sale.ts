@@ -1,4 +1,4 @@
-import { OrderService, SettingsService, type Db } from '@lezzet/database';
+import { DeliveryRunService, OrderService, SettingsService, WarehouseService, type Db } from '@lezzet/database';
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
 import { recordOrderPayment } from './payment';
@@ -115,6 +115,30 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
       return { status: 'insufficient_stock', variantId: result.variantId, available: result.available ?? 0 };
     }
     return { status: 'stale', currentStatus: result.currentStatus };
+  }
+
+  // ── 4b) ARAÇTAN SATIŞ SEFERE BAĞLANIR (ölçülmüş açık, 26.08) ──────────────
+  //
+  // Sefer kapanışının beklediği nakit `delivery_run_collection` görünümünden geliyor ve o görünüm
+  // `where o.delivery_run_id is not null` ile süzüyor. Kolonu YAZAN tek yer ise `start_delivery_run`
+  // (0046) — yani seferin DURAKLARI. Araçtan yapılan satış bir durak değildir; kolon boş kalırdı ve
+  // sonuç şu olurdu: kurye akşam elindeki parayı teslim eder, sistem onu beklemez, mutabakat
+  // **fazla** verir ve farkın sebebi hiçbir ekranda görünmez. Her araç satışında tekrarlardı.
+  //
+  // Kural EKRANDA değil BURADA, çünkü burası her yerinde satışın geçtiği tek kapı: ekranın
+  // hatırlamasına bırakılsaydı unutan ilk yol sessizce açık nakit üretirdi.
+  //
+  // Ölçüt satışın YERİ (`kind === 'vehicle'`), personelin rolü değil: depo kapısındaki satış bir
+  // sefere ait değildir ve oradaki para kasaya girer. Açık sefer yoksa (kurye henüz çıkmamış ya da
+  // dönmüş) bağ KURULMAZ — uydurulmuş bir sefer, parayı yanlış kapanışa yazardı.
+  if (input.actorId) {
+    const warehouse = await new WarehouseService(db).getById(order.warehouseId);
+    if (warehouse?.kind === 'vehicle') {
+      const acikSefer = (await new DeliveryRunService(db).listByCourier(input.actorId, { limit: 5 })).find(
+        (run) => run.returnedAt === null,
+      );
+      if (acikSefer) await orders.update({ id: order.id, deliveryRunId: acikSefer.id });
+    }
   }
 
   // 5) Tahsilat AYRI bir gerçektir (12.2): para bir hesaba girer, sipariş cache'i ondan türer.

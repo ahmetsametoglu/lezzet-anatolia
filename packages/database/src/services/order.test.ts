@@ -48,7 +48,12 @@ beforeAll(async () => {
   secondVariantId = variants[1]!.id;
   customerId = (await new UserProfileService(db).insert({ name: `Sipariş müşterisi ${stamp}` })).id;
   discountId = (
-    await discounts.insert({ name: `Sipariş testi kuponu ${stamp}`, trigger: 'coupon', type: 'fixed', amountCents: 300, scope: 'cart' })
+    await discounts.insert({
+      name: `Sipariş testi kuponu ${stamp}`,
+      // Etiket 26.08'den beri ZORUNLU (kısıt veride) — bu testin konusu değil, bir ad yeter.
+      publicLabel: { tr: `Sipariş testi kuponu ${stamp}` },
+      trigger: 'coupon', type: 'fixed', amountCents: 300, scope: 'cart',
+    })
   ).id;
 });
 

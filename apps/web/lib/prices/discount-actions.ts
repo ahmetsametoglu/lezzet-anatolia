@@ -43,12 +43,21 @@ export async function saveDiscountAction(
     const db = serviceDb();
     const svc = new DiscountService(db);
 
+    /* Boş diller AYIKLANIR: form dokunulup silinen dili `''` olarak gönderir ve o boş metin
+       "ad var" gibi okunup yüzeyde boş bir tire bırakırdı ("İndirim — ").
+
+       DOĞRULAMA GÖVDEDEN ÖNCE (26.08): alan artık ZORUNLU (kısıt veride, `discount_public_label_filled`)
+       ve `trimmedLabel` `null` dönebiliyor. Kontrol payload kurulduktan sonra yapılsaydı tip
+       daralmaz, `null` olabilen bir değer zorunlu alana yazılırdı — kapı çalışsa bile derleyici
+       haklı olarak itiraz ederdi. Sıra değişti, kural değil. */
+    const publicLabel = trimmedLabel(input.publicLabel);
+    if (!publicLabel) {
+      throw new Error('Müşteriye görünen ad girilmeli — boş bırakılırsa kampanya sepette ve kartta anonim "Kampanya" diye görünür.');
+    }
+
     const payload = {
       name: input.name.trim(),
-      // Boş diller AYIKLANIR: form dokunulup silinen dili `''` olarak gönderir ve o boş metin
-      // "ad var" gibi okunup yüzeyde boş bir tire bırakırdı ("İndirim — "). Hiçbir dil kalmazsa
-      // alan `null` yazılır — ad verilmemiş demektir.
-      publicLabel: trimmedLabel(input.publicLabel),
+      publicLabel,
       trigger: input.trigger,
       type: input.type,
       // Tipine uyan alan dolu, öteki null — DB kısıtı (`discount_value_matches_type`) bunu bekliyor.
@@ -78,13 +87,9 @@ export async function saveDiscountAction(
         : [];
 
     if (!payload.name) throw new Error('Ad girilmeli — listede kuralı bu adla tanıyacaksınız.');
-    /* Müşteriye görünen ad ZORUNLU (kullanıcı kararı 23.08). Kapıda da duruyor, yalnız formda
-       değil: aynı eylemi ASİSTAN kuyruğu da çağırıyor (`saveDiscountAction(payload, proposalId)`)
-       ve o yol formun `blocked` kontrolünden geçmiyor. Yüzeyde durdurulan bir kuralın ikinci bir
-       yazma yolu varsa, kural yok demektir. */
-    if (!payload.publicLabel) {
-      throw new Error('Müşteriye görünen ad girilmeli — boş bırakılırsa kampanya sepette ve kartta anonim "Kampanya" diye görünür.');
-    }
+    /* Müşteriye görünen adın kapısı YUKARI TAŞINDI (26.08) — gerekçesi orada. Kural üç yerde
+       birden duruyor artık: form · bu kapı · veritabanı kısıtı. Üçüncüsü geldiği için ilk ikisinin
+       biri unutulsa da etiketsiz indirim yazılamaz (kullanıcı kararı 23.08'in tamamlanmış hâli). */
     // Kodsuz kupon hiç uygulanamaz: kapısı olmayan bir kural, kimsenin giremediği bir odadır.
     // (Kural DB'de kısıt olarak DURAMAZ — kod ayrı tabloda ve kural yazılmadan satırı olamaz.)
     if (payload.trigger === 'coupon' && codes.length === 0) throw new Error('En az bir kupon kodu girilmeli.');

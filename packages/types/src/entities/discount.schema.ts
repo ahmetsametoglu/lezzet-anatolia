@@ -22,10 +22,16 @@ export const DiscountSchema = z.object({
   /** Operatörün listede tanıyacağı ad — kod değil ("Bayram indirimi"). Kampanyanın kodu yoktur. */
   name: z.string(),
   /**
-   * Müşteriye görünen ad, üç dilde. `name`'den ayrıdır: o operasyonun iç etiketi (Türkçe), bu
-   * vitrinin ve mailin cümlesi. Boşsa yüzey genel "İndirim/Remise/Rabatt"a düşer — 0031.
+   * Müşteriye görünen ad. `name`'den ayrıdır: o operasyonun iç etiketi (Türkçe), bu vitrinin ve
+   * mailin cümlesi.
+   *
+   * **ZORUNLU (26.08) — ve kural artık VERİDE** (`discount_public_label_filled`). Bir tur
+   * nullable'dı ve boş bırakılanı yüzey anonim yedeğe düşürüyordu ("İndirim · Kampanya · %8").
+   * `ec2d2341` kuralı iki uygulama kapısına koymuş ve *"üçüncü bir yazan yol doğarsa kısıt yeniden
+   * konuşulmalı"* demişti; üçüncü yol ölçülüp bulundu (asistan uygulayıcısı alanı düşürüyordu),
+   * kısıt veriye indi. **Bir dil yeter** — eksik dilleri `resolveLocalizedText` çözer.
    */
-  publicLabel: LocalizedTextDraftSchema.nullable(),
+  publicLabel: LocalizedTextDraftSchema,
   trigger: DiscountTriggerEnum,
   // Kupon KODLARI ayrı varlıktır (`DiscountCode`): bir kuponun birden çok kodu olur ve hepsi aynı
   // kotayı paylaşır. Kural satırında kod kolonu YOK — olsaydı "asıl kod" diye ikinci bir kavram
@@ -60,7 +66,8 @@ export type Discount = z.infer<typeof DiscountSchema>;
 // form da aynı kuralı gösterir ama gerçeğin sahibi tek yerdir.
 export const DiscountInsertSchema = z.object({
   name: z.string().min(1),
-  publicLabel: LocalizedTextDraftSchema.nullish(),
+  /** Zorunlu: etiketsiz indirim artık veritabanınca reddediliyor (`discount_public_label_filled`). */
+  publicLabel: LocalizedTextDraftSchema,
   trigger: DiscountTriggerEnum,
   type: DiscountTypeEnum,
   // Tipe uyan alan dolu olmalı; ikisini birden ya da hiçbirini yazmayı DB reddeder.

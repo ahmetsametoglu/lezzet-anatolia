@@ -244,6 +244,7 @@ describe('sepet → taslak sipariş', () => {
   it('indirimin kalem PAYI yazılır — sipariş kendi toplamıyla çelişmez', async () => {
     const kampanya = await new DiscountService(db).insert({
       name: `Pay testi ${stamp}`,
+      publicLabel: { tr: `Pay testi ${stamp}` },
       trigger: 'automatic',
       type: 'percent',
       percent: 10,
@@ -288,6 +289,7 @@ describe('sepet → taslak sipariş', () => {
   it('kupon reddedilip yerine kampanya inince KAYIT da indirimi gösterir', async () => {
     const kampanya = await new DiscountService(db).insert({
       name: `Ret testi ${stamp}`,
+      publicLabel: { tr: `Ret testi ${stamp}` },
       trigger: 'automatic',
       type: 'percent',
       percent: 10,
@@ -326,6 +328,8 @@ describe('sepet → taslak sipariş', () => {
     const discounts = new DiscountService(db);
     const kampanya = await discounts.insert({
       name: `Kota testi ${stamp}`,
+      // Etiket 26.08'den beri ZORUNLU (kısıt veride) — bu testin konusu değil, bir ad yeter.
+      publicLabel: { tr: `Kota testi ${stamp}` },
       trigger: 'automatic',
       type: 'percent',
       percent: 10,
@@ -368,6 +372,8 @@ describe('sepet → taslak sipariş', () => {
     const discounts = new DiscountService(db);
     const kupon = await discounts.insert({
       name: `Kapı testi ${stamp}`,
+      // Etiket 26.08'den beri ZORUNLU (kısıt veride) — bu testin konusu değil, bir ad yeter.
+      publicLabel: { tr: `Kapı testi ${stamp}` },
       trigger: 'coupon',
       type: 'percent',
       percent: 10,
@@ -402,6 +408,8 @@ describe('sepet → taslak sipariş', () => {
     const discounts = new DiscountService(db);
     const kampanya = await discounts.insert({
       name: `Idempotency testi ${stamp}`,
+      // Etiket 26.08'den beri ZORUNLU (kısıt veride) — bu testin konusu değil, bir ad yeter.
+      publicLabel: { tr: `Idempotency testi ${stamp}` },
       trigger: 'automatic',
       type: 'percent',
       percent: 10,

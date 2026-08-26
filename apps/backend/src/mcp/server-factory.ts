@@ -423,7 +423,7 @@ export const TOOLS = [
   {
     name: 'propose_discount_draft',
     description:
-      'PROPOSE (does not apply): a campaign/discount. Percent or fixed amount; scope cart, category or collection (matched BY NAME). A COUPON is always cart-scoped (domain rule) — the tool rejects any other combination. The admin approves it INSIDE the queue, on the real discount form: every field you send lands in a box they can edit, and the boxes you leave empty stay empty. So fill in what the campaign actually needs — publicLabel above all (that is the text the CUSTOMER reads in the basket; leave it out and they just see "Discount"), and for coupons the usage limits, because an unlimited coupon is a commercial risk. Coupon codes are not minted here — uniqueness belongs to the database.',
+      'PROPOSE (does not apply): a campaign/discount. Percent or fixed amount; scope cart, category or collection (matched BY NAME). A COUPON is always cart-scoped (domain rule) — the tool rejects any other combination. The admin approves it INSIDE the queue, on the real discount form: every field you send lands in a box they can edit, and the boxes you leave empty stay empty. So fill in what the campaign actually needs — publicLabel above all (that is the text the CUSTOMER reads in the basket; REQUIRED — an unlabeled discount is rejected by the database), and for coupons the usage limits, because an unlimited coupon is a commercial risk. Coupon codes are not minted here — uniqueness belongs to the database.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -459,7 +459,9 @@ export const TOOLS = [
         code: { type: 'string', description: 'Suggested coupon code (trigger=coupon only).' },
         reason: { type: 'string' },
       },
-      required: ['name', 'trigger', 'type', 'scope'],
+      // `publicLabel` ZORUNLU (26.08): etiketsiz indirim artık veritabanınca reddediliyor
+      // (`discount_public_label_filled`). Eksik gelen öneri UYGULAMA anında değil, burada durur.
+      required: ['name', 'publicLabel', 'trigger', 'type', 'scope'],
       additionalProperties: false,
     },
   },

@@ -391,9 +391,14 @@ export const DiscountDraftPayloadSchema = z.object({
    * Alan 10.08'de EKLENDİ ve gerekçesi kullanıcının sorusudur: form kuyruğa gelince boş kutular
    * görünür oldu ve *"bunlardan asistanın haberi var mıydı?"* diye soruldu. Yoktu — şemada bu alan
    * hiç bulunmuyordu. Boş kalan bir kutu "asistan atladı" gibi okunur; oysa gerçek "asistana
-   * sorulmadı"ydı ve ikisi bambaşka şeyler. Boş bırakılırsa müşteri yalnız "İndirim" görür.
+   * sorulmadı"ydı ve ikisi bambaşka şeyler.
+   *
+   * **ZORUNLU OLDU (26.08).** Alan burada vardı ama uygulayıcı onu DÜŞÜRÜYORDU (`applyDiscountDraft`)
+   * — yani asistan yolundan yazılan indirim etiketsiz doğardı. Kural artık veride
+   * (`discount_public_label_filled`); şema da onu istiyor ki eksik bir öneri UYGULAMA anında değil
+   * DOĞUŞ anında reddedilsin. Adsız bir kampanya önerisi zaten uygulanamaz bir öneridir.
    */
-  publicLabel: LocalizedTextSchema.nullable().optional(),
+  publicLabel: LocalizedTextSchema,
   trigger: z.enum(['coupon', 'automatic']),
   type: z.enum(['percent', 'fixed']),
   /** `percent` ise dolu; yüzde tavanı (%100) VERİDE — burada tekrarlanmaz. */

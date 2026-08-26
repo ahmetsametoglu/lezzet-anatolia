@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, DeliveryRunService, DeliveryZoneService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
@@ -244,5 +244,109 @@ describe('hızlı satış (07.10)', () => {
     const ikinci = await quickSale(db, { orderId: order.id, paymentMethod: 'cash' });
     expect(ikinci.status).toBe('forbidden'); // `completed` terminal
     expect((await stocks.getById(batchA))?.physicalQty).toBe(1);
+  });
+});
+
+/**
+ * **ARAÇTAN SATIŞ SEFERE BAĞLANIR** (ölçülmüş açık, 26.08).
+ *
+ * Sefer kapanışının beklediği nakit `delivery_run_collection`'dan geliyor ve o görünüm
+ * `delivery_run_id is not null` süzüyor; kolonu yazan tek yer ise seferin DURAKLARI
+ * (`start_delivery_run`). Araçtan yapılan satış bir durak değil — bağ kurulmasaydı kurye akşam
+ * parayı teslim eder, sistem onu beklemez ve mutabakat sebebi görünmeyen bir FAZLA verirdi.
+ *
+ * Kurulum bilerek AYRI (dosyanın `beforeAll`ına dokunulmuyor): bu senaryonun araç deposu, kuryesi,
+ * bölgesi ve açık seferi var; ötekilerin hiçbirinin yok.
+ */
+describe('araçtan satış — sefer bağı (26.08)', () => {
+  const yerel: { aracId?: string; tesisId?: string; kuryeId?: string; zoneId?: string; runId?: string; variantId?: string } = {};
+  const gun = new Date().toISOString().slice(0, 10);
+
+  beforeAll(async () => {
+    yerel.aracId = (await createTestWarehouse(db, { label: 'VAN', kind: 'vehicle' })).id;
+    yerel.tesisId = (await createTestWarehouse(db, { label: 'TESIS' })).id;
+
+    // Kurye kapsamsız OLAMAZ (`user_profiles_warehouse_scope`) — kapsamına aracı ve tesisi alıyor.
+    const kurye = await new UserProfileService(db).insert({
+      name: `Kurye ${stamp}`,
+      roles: ['courier'],
+      warehouseIds: [yerel.aracId, yerel.tesisId],
+    });
+    yerel.kuryeId = kurye.id;
+    // Dosyanın ortak listesine EKLENMİYOR: iç `afterAll` dıştakinden ÖNCE koşuyor ve depoyu
+    // silmeye çalıştığımda kurye hâlâ o depoları kapsamında taşıyordu (`restrict` — ölçüldü).
+    // Kuryeyi kendi temizliğimde, depolarla AYNI çağrıda topluyorum: sıra `purgeTestData`nın işi.
+
+    // Bölge TESİSE bağlanır — araca bağlanamaz (tetikleyici, `warehouse-vehicle.test.ts`).
+    const zoneSvc = new DeliveryZoneService(db);
+    yerel.zoneId = (await zoneSvc.insert({ name: `Sefer bölgesi ${stamp}`, warehouseId: yerel.tesisId, weekdays: [1, 2, 3, 4, 5, 6, 7] })).id;
+
+    const run = await new DeliveryRunService(db).start({
+      zoneId: yerel.zoneId,
+      date: gun,
+      courierId: kurye.id,
+      referenceNo: `SF-TEST-${String(stamp).slice(-6)}`,
+    });
+    yerel.runId = run.runId;
+
+    const { variants } = await new ProductService(db).create({ name: { tr: `Araç ürünü ${stamp}` }, categoryId });
+    yerel.variantId = variants[0]!.id;
+    await stocks.insert({ warehouseId: yerel.aracId, variantId: yerel.variantId, physicalQty: 20, expiryDate: dayOffset(90), purchasePriceCents: 100 });
+  });
+
+  afterAll(async () => {
+    await db.from('order').delete().eq('warehouse_id', yerel.aracId!);
+    await db.from('stock').delete().eq('variant_id', yerel.variantId!);
+    await db.from('delivery_run_close').delete().eq('delivery_run_id', yerel.runId!);
+    await db.from('order').delete().eq('delivery_run_id', yerel.runId!);
+    await db.from('delivery_run').delete().eq('id', yerel.runId!);
+    await db.from('delivery_zone').delete().eq('id', yerel.zoneId!);
+    await purgeTestData(db, { profileIds: [yerel.kuryeId!], warehouseIds: [yerel.aracId!, yerel.tesisId!] });
+  });
+
+  /** Araçtan açılan taslak — kaynağı `door`, deposu ARAÇ. */
+  async function aracTaslagi() {
+    return orders.create(
+      { warehouseId: yerel.aracId!, customerId, channel: 'b2c', orderSource: 'door', totalCents: 500 },
+      [{ variantId: yerel.variantId!, qty: 1, unitPriceCents: 500, vatRate: 5.5 }],
+    );
+  }
+
+  it('araçtan satış AÇIK SEFERE bağlanır ve beklenen nakde girer', async () => {
+    const collection = async () => {
+      const { data } = await db.from('delivery_run_collection').select('expected_cash').eq('delivery_run_id', yerel.runId!).maybeSingle();
+      return Number(data?.expected_cash ?? 0);
+    };
+    const once = await collection();
+
+    const { order } = await aracTaslagi();
+    const sonuc = await quickSale(db, {
+      orderId: order.id,
+      actorId: yerel.kuryeId,
+      paymentMethod: 'cash',
+      paymentAccountId: cashAccount,
+    });
+    expect(sonuc.status).toBe('ok');
+
+    const kapanmis = await orders.getById(order.id);
+    expect(kapanmis!.deliveryRunId).toBe(yerel.runId);
+    // Asıl iddia BU: para seferin beklenen nakdine girdi. Kolon yazılmasa görünüm onu hiç görmezdi.
+    expect(await collection()).toBe(once + 5);
+  });
+
+  /**
+   * DEPO KAPISINDAKİ satış bir sefere ait değildir — parası kasaya girer, kuryenin kapanışına
+   * değil. Ölçüt satışın YERİ, personelin rolü değil: aynı kurye tesisten satsa da bağ kurulmaz.
+   */
+  it('TESİSTEN yapılan satış sefere bağlanmaz — ölçüt satışın yeri', async () => {
+    await stocks.insert({ warehouseId: yerel.tesisId!, variantId: yerel.variantId!, physicalQty: 5, expiryDate: dayOffset(90), purchasePriceCents: 100 });
+    const { order } = await orders.create(
+      { warehouseId: yerel.tesisId!, customerId, channel: 'b2c', orderSource: 'door', totalCents: 500 },
+      [{ variantId: yerel.variantId!, qty: 1, unitPriceCents: 500, vatRate: 5.5 }],
+    );
+    const sonuc = await quickSale(db, { orderId: order.id, actorId: yerel.kuryeId, paymentMethod: 'cash', paymentAccountId: cashAccount });
+    expect(sonuc.status).toBe('ok');
+    expect((await orders.getById(order.id))!.deliveryRunId).toBeNull();
+    await db.from('order').delete().eq('id', order.id);
   });
 });

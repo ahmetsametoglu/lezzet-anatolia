@@ -1080,11 +1080,19 @@ export async function proposeDiscountDraft(args: Record<string, unknown>) {
     scopeName = resolveLocalizedText(found.name, 'tr');
   }
 
+  // Müşteri metni ÜÇ DİLDE beklenir ama TEK DİL de kabul edilir: eksik dili operatör formda
+  // tamamlar (çeviri düğmesi orada). **Hiç gelmezse öneri DOĞMAZ (26.08)** — etiketsiz indirim
+  // veritabanınca reddediliyor (`discount_public_label_filled`), yani böyle bir öneri kuyruğa
+  // düşse bile uygulanamazdı. Reddi buraya almak, operatörü uygulanamayacak bir öneriyi
+  // incelemekten kurtarıyor; hata mesajı da ajanın neyi eksik bıraktığını söylüyor.
+  const publicLabel = localizedArg(args.publicLabel);
+  if (!publicLabel) {
+    return { error: 'publicLabel gerekli — müşterinin sepette okuyacağı ad. En az bir dil dolu olmalı.' };
+  }
+
   const payload: DiscountDraftPayload = {
     name,
-    // Müşteri metni ÜÇ DİLDE beklenir ama tek dil de kabul edilir: eksik dili operatör formda
-    // tamamlar (çeviri düğmesi orada). Hiç gelmezse `null` — müşteri yalnız "İndirim" görür.
-    publicLabel: localizedArg(args.publicLabel),
+    publicLabel,
     trigger: trigger as DiscountDraftPayload['trigger'],
     type: type as DiscountDraftPayload['type'],
     percent,

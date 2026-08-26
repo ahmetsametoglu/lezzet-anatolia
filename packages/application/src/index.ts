@@ -328,8 +328,15 @@ export type {
 // görünür retle döner (`forbidden`/`out_of_scope` — kurye kapılarının emsali).
 export { confirmPreparation, listPreparationQueue, recordShipment } from './warehouse/preparation';
 // FEFO önerisi paketin İÇİNDE zaten vardı (`preparation`in özel yardımcısı); hızlı satış onu
-// çağırabilsin diye ihraç edildi — ikinci bir kopya yazmak yerine (CLAUDE §1). Web'deki
-// `lib/stock/fefo.ts` hâlâ kendi ekranını besleyen KÖPRÜdür; benimsemesi web şeridinin işi.
+// çağırabilsin diye ihraç edildi — ikinci bir kopya yazmak yerine (CLAUDE §1).
+//
+// **WEB KOPYASI SİLİNDİ (26.08).** Bu satır bir tur *"`lib/stock/fefo.ts` hâlâ kendi ekranını
+// besleyen KÖPRÜdür"* diyordu ve hızlı satış terfi edince o cümle YALAN oldu: kopyanın tek üretim
+// çağıranı `quickSale`di, o da pakete geçti. Ölçüldü — geriye yalnız kendi testi kalmıştı.
+// Kopyanın taşıdığı üç fazla alan (`flag` · `remainingPercent` · `lotNumber`) buraya TAŞINMADI ve
+// bu bilinçli: onları okuyan üretim kodu hiç olmamıştı (eski çağıran da yalnız `stockId`+`qty`
+// alıyordu). Okuyacak ekran (D3 raf ömrü) geldiği gün eklenir — hesaplanıp atılan bir değer, bir
+// gün "bu neden hep boş" diye aranacak ölü koddur (bu fonksiyonun kendi künyesi).
 export { suggestPicksForVariant } from './warehouse/preparation';
 
 /**

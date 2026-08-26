@@ -275,6 +275,11 @@ const applyDiscountDraft: Applier = async (db, raw) => {
   const payload = parseProposalPayload('discount_draft', raw) as DiscountDraftPayload;
   const row = await new DiscountService(db).insert({
     name: payload.name,
+    // ÜÇÜNCÜ YAZMA YOLU (26.08): bu alan sözleşmede vardı ama burada DÜŞÜRÜLÜYORDU — asistan
+    // yolundan yazılan indirim etiketsiz doğuyor, müşteri sepette "İndirim · Kampanya" görüyordu.
+    // Yol bugün ulaşılamıyor (öneri tipinin kendi gövdesi akışı forma sapıtıyor) ama sebebi
+    // tesadüfe yakındı. Kural artık veride de duruyor; burası onun uygulama tarafı.
+    publicLabel: payload.publicLabel,
     trigger: payload.trigger,
     type: payload.type,
     percent: payload.percent,

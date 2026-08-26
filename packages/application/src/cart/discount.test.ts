@@ -1,3 +1,4 @@
+import type { LocalizedText } from '@lezzet/types';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, DiscountCodeService, DiscountService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
@@ -14,6 +15,8 @@ import { resolveCartDiscount, type CartDiscountInput } from './discount';
  */
 const db = serviceDb();
 const discounts = new DiscountService(db);
+
+
 const codes = new DiscountCodeService(db);
 
 const stamp = Date.now();
@@ -56,8 +59,13 @@ afterAll(async () => {
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId, otherCategoryId], profileIds: createdProfiles });
 });
 
-async function makeDiscount(input: Parameters<DiscountService['insert']>[0]) {
-  const row = await discounts.insert(input);
+async function makeDiscount(
+  input: Omit<Parameters<DiscountService['insert']>[0], 'publicLabel'> & { publicLabel?: LocalizedText },
+) {
+  // Müşteriye görünen ad 26.08'den beri ZORUNLU (kısıt veride: `discount_public_label_filled`).
+  // Bu dosyanın ölçtüğü şey indirim SEÇİMİ — etiketi çağrı çağrı yazmak ilgisiz gürültü olurdu;
+  // tek yerden, operatörün iç adından türetiliyor. Etiketi sınayan bir test onu açıkça geçer.
+  const row = await discounts.insert({ publicLabel: { tr: input.name }, ...input });
   createdDiscounts.push(row.id);
   return row;
 }

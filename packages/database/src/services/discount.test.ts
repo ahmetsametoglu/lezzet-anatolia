@@ -1,3 +1,4 @@
+import type { LocalizedText } from '@lezzet/types';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { CategoryService } from './category.service';
@@ -15,6 +16,18 @@ import { UserProfileService } from './user-profile.service';
  */
 const db = serviceDb();
 const discounts = new DiscountService(db);
+
+/**
+ * Kural yazan test yardımcısı — **etiket bu dosyanın konusu değil.**
+ *
+ * `public_label` 26.08'de ZORUNLU oldu (kısıt veride: `discount_public_label_filled`; gerekçe
+ * `0024`in künyesinde). Testlerin ölçtüğü şey kod eşleşmesi, kota, kapsam ve tutar — hiçbiri adı
+ * sınamıyor. Etiketi çağrı çağrı yazmak, ölçülen şeyle ilgisiz bir gürültü olurdu; burada tek
+ * yerden ve operatörün iç adından türetiliyor. Etiketi SINAYAN bir test onu açıkça geçer.
+ */
+const yeniKural = (girdi: Omit<Parameters<DiscountService['insert']>[0], 'publicLabel'> & { publicLabel?: LocalizedText }) =>
+  discounts.insert({ publicLabel: { tr: girdi.name }, ...girdi });
+
 const codes = new DiscountCodeService(db);
 const categories = new CategoryService(db);
 const profiles = new UserProfileService(db);
@@ -45,7 +58,7 @@ const track = <T extends { id: string }>(row: T): T => {
 describe('DiscountService — yazma ve okuma', () => {
   it('kupon koda göre HARF AYRIMSIZ bulunur', async () => {
     const rule = track(
-      await discounts.insert({ name: 'Bayram kuponu', trigger: 'coupon', type: 'percent', percent: 10, scope: 'cart' }),
+      await yeniKural({ name: 'Bayram kuponu', trigger: 'coupon', type: 'percent', percent: 10, scope: 'cart' }),
     );
     await codes.insert({ discountId: rule.id, code: `BAYRAM${stamp}`, locale: 'tr' });
 
@@ -56,7 +69,7 @@ describe('DiscountService — yazma ve okuma', () => {
 
   it('bir kuponun HER kodu aynı kurala açılır — kota tek', async () => {
     const rule = track(
-      await discounts.insert({ name: 'Çok dilli kupon', trigger: 'coupon', type: 'percent', percent: 20, scope: 'cart' }),
+      await yeniKural({ name: 'Çok dilli kupon', trigger: 'coupon', type: 'percent', percent: 20, scope: 'cart' }),
     );
     await codes.replaceCodes(rule.id, [
       { discountId: rule.id, code: `HOSGELDIN${stamp}`, locale: 'tr' },
@@ -73,7 +86,7 @@ describe('DiscountService — yazma ve okuma', () => {
 
   it('kod eşitlemesi KALANLARA dokunmaz — kullanım geçmişi kodun kimliğinde yaşar', async () => {
     const rule = track(
-      await discounts.insert({ name: 'Eşitleme kuponu', trigger: 'coupon', type: 'fixed', amountCents: 400, scope: 'cart' }),
+      await yeniKural({ name: 'Eşitleme kuponu', trigger: 'coupon', type: 'fixed', amountCents: 400, scope: 'cart' }),
     );
     const first = await codes.replaceCodes(rule.id, [
       { discountId: rule.id, code: `KALAN${stamp}`, locale: 'tr' },
@@ -93,7 +106,7 @@ describe('DiscountService — yazma ve okuma', () => {
 
   it('kişisel kupon yalnız SAHİBİNE aday olur', async () => {
     const rule = track(
-      await discounts.insert({ name: 'Kişisel kupon', trigger: 'coupon', type: 'fixed', amountCents: 500, scope: 'cart', customerId }),
+      await yeniKural({ name: 'Kişisel kupon', trigger: 'coupon', type: 'fixed', amountCents: 500, scope: 'cart', customerId }),
     );
     await codes.insert({ discountId: rule.id, code: `KISISEL${stamp}`, locale: 'tr' });
 
@@ -106,7 +119,7 @@ describe('DiscountService — yazma ve okuma', () => {
 
   it('pasif kural adaylar arasında YOK ama listede DURUR — geçmiş silinmez', async () => {
     const rule = track(
-      await discounts.insert({
+      await yeniKural({
         name: 'Süresi dolan kampanya',
         trigger: 'automatic',
         type: 'percent',
@@ -123,7 +136,7 @@ describe('DiscountService — yazma ve okuma', () => {
 
   it('kullanım sayısı KAYITTAN türetilir — sayaç kolonu yok', async () => {
     const rule = track(
-      await discounts.insert({ name: 'Sayım kuponu', trigger: 'automatic', type: 'fixed', amountCents: 300, scope: 'cart' }),
+      await yeniKural({ name: 'Sayım kuponu', trigger: 'automatic', type: 'fixed', amountCents: 300, scope: 'cart' }),
     );
     await db.from('discount_use').insert([
       { discount_id: rule.id, customer_id: customerId, amount: 3 },
@@ -138,7 +151,7 @@ describe('DiscountService — yazma ve okuma', () => {
 
   it('kod kırılımı kotayı BÖLMEZ — üç kapı, tek tavan', async () => {
     const rule = track(
-      await discounts.insert({ name: 'Kapı sayımı', trigger: 'coupon', type: 'fixed', amountCents: 200, scope: 'cart' }),
+      await yeniKural({ name: 'Kapı sayımı', trigger: 'coupon', type: 'fixed', amountCents: 200, scope: 'cart' }),
     );
     const [tr, fr] = await codes.replaceCodes(rule.id, [
       { discountId: rule.id, code: `SAYIM-TR${stamp}`, locale: 'tr' },
@@ -160,8 +173,8 @@ describe('DiscountService — yazma ve okuma', () => {
 
 describe('DB kısıtları — tutarsız kural yazılamaz', () => {
   it('aynı kod İKİ kurala verilemez — müşteri hangisini kastettiğini bilemezdi', async () => {
-    const first = track(await discounts.insert({ name: 'Tekillik A', trigger: 'coupon', type: 'percent', percent: 5, scope: 'cart' }));
-    const second = track(await discounts.insert({ name: 'Tekillik B', trigger: 'coupon', type: 'percent', percent: 7, scope: 'cart' }));
+    const first = track(await yeniKural({ name: 'Tekillik A', trigger: 'coupon', type: 'percent', percent: 5, scope: 'cart' }));
+    const second = track(await yeniKural({ name: 'Tekillik B', trigger: 'coupon', type: 'percent', percent: 7, scope: 'cart' }));
     await codes.insert({ discountId: first.id, code: `TEKIL${stamp}` });
 
     // Harf ayrımı da korumaz: indeks `upper(code)` üstünde.
@@ -170,20 +183,20 @@ describe('DB kısıtları — tutarsız kural yazılamaz', () => {
 
   it('kodlu kampanya reddedilir — "otomatik" adının yalanı olurdu', async () => {
     const rule = track(
-      await discounts.insert({ name: 'Kodlu kampanya', trigger: 'automatic', type: 'percent', percent: 10, scope: 'cart' }),
+      await yeniKural({ name: 'Kodlu kampanya', trigger: 'automatic', type: 'percent', percent: 10, scope: 'cart' }),
     );
     await expect(codes.insert({ discountId: rule.id, code: `OTOMATIK${stamp}` })).rejects.toThrow();
   });
 
   it('hedefsiz kategori kapsamı reddedilir — hiçbir kaleme uymayan sessiz kural', async () => {
     await expect(
-      discounts.insert({ name: 'Hedefsiz', trigger: 'automatic', type: 'percent', percent: 10, scope: 'category' }),
+      yeniKural({ name: 'Hedefsiz', trigger: 'automatic', type: 'percent', percent: 10, scope: 'category' }),
     ).rejects.toThrow();
   });
 
   it('%100 üstü yüzde reddedilir', async () => {
     await expect(
-      discounts.insert({ name: 'Aşırı', trigger: 'automatic', type: 'percent', percent: 120, scope: 'cart' }),
+      yeniKural({ name: 'Aşırı', trigger: 'automatic', type: 'percent', percent: 120, scope: 'cart' }),
     ).rejects.toThrow();
   });
 
@@ -192,15 +205,15 @@ describe('DB kısıtları — tutarsız kural yazılamaz', () => {
   it('tipine uymayan değer kolonu reddedilir', async () => {
     // Yüzde kuralına sabit tutar yazılamaz.
     await expect(
-      discounts.insert({ name: 'Karışık', trigger: 'automatic', type: 'percent', percent: 10, amountCents: 500, scope: 'cart' }),
+      yeniKural({ name: 'Karışık', trigger: 'automatic', type: 'percent', percent: 10, amountCents: 500, scope: 'cart' }),
     ).rejects.toThrow();
     // Sabit kurala yüzde yazılamaz.
     await expect(
-      discounts.insert({ name: 'Karışık2', trigger: 'automatic', type: 'fixed', percent: 10, amountCents: 500, scope: 'cart' }),
+      yeniKural({ name: 'Karışık2', trigger: 'automatic', type: 'fixed', percent: 10, amountCents: 500, scope: 'cart' }),
     ).rejects.toThrow();
     // Değersiz kural: sessizce "sıfır indirim" uygulayan bir kayıt doğmaz.
     await expect(
-      discounts.insert({ name: 'Değersiz', trigger: 'automatic', type: 'fixed', scope: 'cart' }),
+      yeniKural({ name: 'Değersiz', trigger: 'automatic', type: 'fixed', scope: 'cart' }),
     ).rejects.toThrow();
   });
 
@@ -208,7 +221,7 @@ describe('DB kısıtları — tutarsız kural yazılamaz', () => {
   // okunan yine cent'tir. İki cent alanı da (tutar + asgari sepet) aynı yoldan geçiyor.
   it('cent yazılır, kolonlar euro tutar, cent okunur (gidiş-dönüş)', async () => {
     const rule = track(
-      await discounts.insert({
+      await yeniKural({
         name: 'Sınır testi',
         trigger: 'automatic',
         type: 'fixed',
@@ -232,7 +245,7 @@ describe('DB kısıtları — tutarsız kural yazılamaz', () => {
 
   it('ters tarih aralığı reddedilir — hiç geçerli olmayan kampanya', async () => {
     await expect(
-      discounts.insert({
+      yeniKural({
         name: 'Ters aralık',
         trigger: 'automatic',
         type: 'percent',
@@ -259,7 +272,7 @@ describe('DB kısıtları — tutarsız kural yazılamaz', () => {
  */
 describe('kişisel kupon — kullanılabilirlik penceresi (08.5)', () => {
   const kupon = (name: string, extra: Record<string, unknown> = {}) =>
-    discounts.insert({ name, trigger: 'coupon', type: 'fixed', amountCents: 500, scope: 'cart', customerId, ...extra });
+    yeniKural({ name, trigger: 'coupon', type: 'fixed', amountCents: 500, scope: 'cart', customerId, ...extra });
 
   it('pasif ve süresi geçmiş kupon SORGUDA elenir — uygulamada değil', async () => {
     const gecmis = new Date(Date.now() - 30 * 86_400_000).toISOString();
@@ -301,5 +314,37 @@ describe('kişisel kupon — kullanılabilirlik penceresi (08.5)', () => {
     track(await kupon('Süzgeçsiz okuma', { isActive: false }));
     const hepsi = await discounts.listByCustomer(customerId);
     expect(hepsi.filter((d) => d.name === 'Süzgeçsiz okuma')).toHaveLength(1);
+  });
+});
+
+/**
+ * **ETİKETSİZ İNDİRİM YAZILAMAZ — kural VERİDE** (26.08).
+ *
+ * Bir tur kural yalnız iki uygulama kapısında duruyordu ve `ec2d2341` künyesine şunu yazmıştı:
+ * *"üçüncü bir yazan yol doğarsa kısıt yeniden konuşulmalı — BEKLEYEN(09.6)."* Üçüncü yol ölçülüp
+ * bulundu (asistan uygulayıcısı alanı düşürüyordu), dördüncüsü de çıktı (MCP öneri üreteci).
+ * Kısıt veriye inince kaç yazma yolu olduğu ÖNEMSİZLEŞTİ — bu testin tuttuğu şey tam olarak o.
+ *
+ * Servis üzerinden değil HAM insert ile sınanıyor: Zod da aynı kuralı uyguluyor ve servisten
+ * geçseydi test uygulamanın kapısını ölçer, veritabanınınkini değil. Sınanan alt kapı.
+ */
+describe('müşteriye görünen ad — kısıt veritabanında', () => {
+  const taban = { trigger: 'automatic' as const, type: 'percent' as const, percent: 5, scope: 'cart' as const };
+  const ham = (label: unknown) =>
+    db.from('discount').insert({ name: `Etiket testi ${stamp}-${Math.round(performance.now())}`, public_label: label, ...taban }).select('id').single();
+
+  it('etiketsiz indirim REDDEDİLİR — null, boş nesne ve boş dize dahil', async () => {
+    // Üçü de "ad verilmemiş"in farklı yazılışı; üçü de anonim yedeğe düşerdi ("İndirim · Kampanya").
+    expect((await ham(null)).error).not.toBeNull();
+    expect((await ham({})).error?.code).toBe('23514');
+    expect((await ham({ fr: '   ' })).error?.code).toBe('23514');
+  });
+
+  it('BİR DİL YETER — üç dil şart değil', async () => {
+    // Eksik dilleri yüzey kendi geri düşüşüyle çözüyor (`resolveLocalizedText`); üç dili şart
+    // koşmak kampanyayı çeviri bekler hâlde bırakırdı (`ec2d2341` kararı).
+    const { data, error } = await ham({ fr: 'Offre test' });
+    expect(error).toBeNull();
+    if (data) created.push(data.id);
   });
 });

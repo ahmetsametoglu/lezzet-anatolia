@@ -16,6 +16,36 @@
 -- Pakete ve near-expiry teklife hiçbir genel indirim binmez; o muafiyet de motorda (kalem
 -- `bundle_id`/`offer_stock_id` taşıyorsa matrahın dışında).
 
+/**
+ * **Çok dilli metinde EN AZ BİR dil dolu mu** (26.08) — `public_label` kısıtının ölçütü.
+ *
+ * `has_all_locales`in (0038, tarif yayını) kardeşi ama ölçütü BİLEREK farklı ve iki kuralın
+ * gerekçesi ayrı: orada YAYIN kararı üç dilin varlığına bağlıdır (eksik dilli bir tarif yarım bir
+ * sayfadır); burada müşterinin bir ad GÖRMESİ yeterlidir — eksik dilleri yüzey kendi geri
+ * düşüşüyle çözüyor (`resolveLocalizedText`). Üç dili şart koşmak kampanyayı çeviri bekler hâlde
+ * bırakırdı (`ec2d2341` kararı: "bir dil yeter, üçü değil").
+ *
+ * **Anahtarın VARLIĞI yetmez, DOLU olması aranır:** operatör alanı açıp boş bırakırsa `{"fr": ""}`
+ * yazılır ve `? 'fr'` bunu "dolu" sayardı — o da anonim yedeğe düşerdi, yani kısıt hiçbir şey
+ * yapmamış olurdu.
+ *
+ * 0038'deki kardeşiyle birleştirilmedi: tek fonksiyona parametre eklemek ("kaç dil ara") kuralı
+ * çağıranın eline verirdi ve iki tablo aynı adı farklı anlamda okurdu.
+ */
+create or replace function public.has_any_locale(p jsonb) returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select p is not null
+     and (coalesce(btrim(p ->> 'tr'), '') <> ''
+       or coalesce(btrim(p ->> 'fr'), '') <> ''
+       or coalesce(btrim(p ->> 'de'), '') <> '');
+$$;
+
+comment on function public.has_any_locale(jsonb) is
+  'Çok dilli metinde en az bir dil DOLU mu (boş dize dolu sayılmaz). İndirim etiketi kısıtının ölçütü.';
+
 create type discount_trigger as enum ('coupon', 'automatic');
 create type discount_type as enum ('percent', 'fixed');
 create type discount_scope as enum ('cart', 'category', 'collection');
@@ -34,9 +64,26 @@ create table public.discount (
   -- müşterinin gördüğü cümledir. Tek alan olsaydı ya Fransız müşteri "Bayram indirimi" görürdü ya
   -- da operatör kendi listesini Fransızca aramak zorunda kalırdı.
   --
-  -- NULL/boş = ad verilmemiş → yüzey genel "İndirim / Remise / Rabatt"a düşer. Zorunlu değil:
-  -- adsız bir kampanya çalışır, yalnız daha az şey anlatır.
-  public_label jsonb,
+  -- **ZORUNLU — kural VERİDE (26.08).** Bir tur opsiyoneldi ve boş bırakılanı yüzey anonim yedeğe
+  -- düşürüyordu: müşteri sepette "İndirim · Kampanya · %8" okuyordu. `ec2d2341` bunu İKİ uygulama
+  -- kapısında kapattı (form + `saveDiscountAction`) ve künyesine şunu yazdı: *"Veride kısıt
+  -- açılmadı ve bu bilinçli… üçüncü bir yazan yol doğarsa kısıt yeniden konuşulmalı —
+  -- BEKLEYEN(09.6)."*
+  --
+  -- **O ŞART GERÇEKLEŞTİ.** Üçüncü yol zaten koddaydı ve ölçülüp bildirildi (mobil şeridin
+  -- gözlem notu, 25.08): asistan kuyruğunun `applyDiscountDraft` uygulayıcısı alanı sessizce
+  -- DÜŞÜRÜYOR — sözleşmesinde var, yazarken geçirilmiyor. O yol bugün ulaşılamıyor ama sebebi
+  -- tesadüfe yakın (öneri tipinin kendi gövdesi var, akış forma sapıyor); gövde kalkarsa kural
+  -- belirtisiz delinirdi: indirim yazılır, müşteri "Kampanya" görür, hiçbir şey patlamaz.
+  --
+  -- Kaç yazma yolu olduğu artık ÖNEMSİZ: kısıt burada. `not null` TEK BAŞINA yetmez — operatör
+  -- alanı açıp boş bırakırsa `{"fr": ""}` yazılır ve o da anonim yedeğe düşerdi; ölçüt DOLULUKTUR.
+  --
+  -- **BİR DİL YETER, üçü değil** (`ec2d2341` kararı): eksik dilleri yüzey kendi geri düşüşüyle
+  -- çözüyor (`resolveLocalizedText`); üç dili şart koşmak kampanyayı çeviri bekler hâlde bırakırdı.
+  -- Tarifin `has_all_locales` kısıtından ayrılan yer tam burası ve gerekçesi farklı: orada yayın
+  -- kararı üç dilin varlığına bağlı, burada müşterinin bir ad GÖRMESİ yeterli.
+  public_label jsonb not null constraint discount_public_label_filled check (public.has_any_locale(public_label)),
 
   trigger discount_trigger not null,
   -- Kupon KODLARI burada değil, `discount_code` tablosunda (aşağıda): bir kuponun birden çok kodu
