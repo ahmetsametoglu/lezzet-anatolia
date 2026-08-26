@@ -1,7 +1,10 @@
 import type { ExpoConfig } from 'expo/config';
-import { LOCALES, localizedPath } from '@lezzet/i18n';
-/* Alt yol ihracı (paketin GİRİŞİ değil) — gerekçesi `adaptiveIcon` künyesinde: giriş uzantısız
-   yeniden-ihraçlar taşıyor ve Node onları çözemiyor; `customer.ts` yaprak modül. */
+/* Alt yol ihraçları (paketlerin GİRİŞİ değil) — gerekçesi `adaptiveIcon` künyesinde: giriş
+   uzantısız yeniden-ihraçlar taşıyor ve Node onları çözemiyor; üçü de yaprak modül. i18n girişi
+   26.08'de `./locale` ayrıştırmasıyla aynı tuzağa düştü (`expo start` ERR_MODULE_NOT_FOUND) —
+   çare aynı desen: `@lezzet/i18n/{locale,paths}` (künyeleri o dosyalarda). */
+import { LOCALES } from '@lezzet/i18n/locale';
+import { localizedPath } from '@lezzet/i18n/paths';
 import { customerSand } from '@lezzet/design-tokens/customer';
 
 /*
