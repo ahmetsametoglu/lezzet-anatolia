@@ -4870,7 +4870,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   `typecheck` · `lint` · birim **1384/1384**.
 
-- [~] (21.99) **ADRES ARTIK TESLİM ALACAK KİŞİ VE NUMARAYLA BİRLİKTE KAYDEDİLİYOR — iki yüzeyin aynı veride zıt karar verdiği yer kapandı**
+- [x] (21.99) **ADRES ARTIK TESLİM ALACAK KİŞİ VE NUMARAYLA BİRLİKTE KAYDEDİLİYOR — iki yüzeyin aynı veride zıt karar verdiği yer kapandı**
   `touches:` `packages/types/src/contracts/address-api.schema.ts` · `packages/application/src/courier/day.ts` · `apps/mobile/src/screens/customer-kit/{address-form.tsx,address-sheet.tsx,address-sheet-messages.json}` · `apps/mobile/src/screens/{account/account-screen.tsx,cart/cart-screen.tsx,checkout/checkout-screen.tsx,profile-setup/profile-setup-screen.tsx}`
 
   **Kullanıcı kararı (22.08):** *"Her hâlükârda net bir şekilde bir teslimat kişisi ve teslimat
@@ -4946,6 +4946,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   üzerinde **temiz geçti** (web'in bildirdiği `ZodError: expected "string" · received "null"` artık
   üretilemiyor). Tam paket **2751/2751** (244 dosya, 127 sn). Web'e not bırakılmıştı
   (`docs/talep/not-web-adres-alici-telefon-degismez-oldu.md`) — form ön-doldurmasını kendileri yazdı.
+  *(Satır `[~]`de "reset onayı bekleniyor" aşamasında kalmıştı; reset 22.08'de koşulup ölçüldüğü
+  hâlde işaret çevrilmemişti — 26.08 tazelik turunda kapatıldı.)*
 
 - [x] (21.100) **KAMPANYA ARTIK KARTTA GÖRÜNÜYOR — cümlenin içinde kaybolmuyor (MB-22b)**
   · touches: `packages/application/src/catalog/{campaign,catalog,map,product,storefront-types}.ts`,

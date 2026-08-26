@@ -78,8 +78,8 @@ export const AddressWriteSchema = z.object({
    * müşteri ister değiştirir ister olduğu gibi kaydeder. Yani zorunluluk bir sürtünme değil,
    * müşterinin zaten verdiği cevabın kayda geçmesi.
    *
-   * `min(1)` gövde kapısıdır; asıl değişmez veride olmalı (`address.recipient not null`) —
-   * o adım `db:reset` gerektirdiği için kullanıcının kararına bırakıldı, kaydı `BEKLEYEN(21.99)`.
+   * `min(1)` gövde kapısıdır; asıl değişmez VERİDE (`address.recipient not null` — 0011,
+   * `db:refresh` 22.08'de kullanıcı onayıyla koşuldu ve ölçüldü).
    */
   recipient: z.string().min(1),
   /**
