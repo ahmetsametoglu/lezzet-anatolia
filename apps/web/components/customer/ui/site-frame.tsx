@@ -7,6 +7,7 @@ import { LocaleLinks } from './locale-switch';
 import { MobileMenu } from './mobile-menu';
 import type { NavKey as MobileMenuNavKey } from './mobile-menu';
 import { FunnelHeader } from './funnel-header';
+import { NotificationBell } from '@/components/customer/account/notification-bell';
 import { PlaceChip } from '@/components/customer/delivery/place-chip';
 import { CartBadge } from '@/components/customer/cart/cart-badge';
 import { CartFab } from '@/components/customer/cart/cart-fab';
@@ -208,7 +209,13 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
             backLabel={t.back}
             fallback={account.back?.href ?? '/'}
             title={account.title}
-            right={account.right}
+            right={
+              /* Zil hesap alanının HER ekranında (14.15): rozet müşteriyi bildirim akışına çağırır. */
+              <span className="flex items-center gap-4">
+                <NotificationBell locale={locale} compact />
+                {account.right}
+              </span>
+            }
           />
         ) : (
           <header className={`${SHELL} flex items-center gap-9 border-b border-sand-300 px-12 py-4.5`}>
@@ -233,7 +240,11 @@ export function SiteFrame({ device, locale, activeNav, mobileChrome = 'default',
                 {account.back.label}
               </Link>
             ) : null}
-            {account.right && <div className="ml-auto flex flex-none items-center">{account.right}</div>}
+            <div className="ml-auto flex flex-none items-center gap-5">
+              {/* Zil hesap alanının HER ekranında (14.15): rozet müşteriyi bildirim akışına çağırır. */}
+              <NotificationBell locale={locale} />
+              {account.right}
+            </div>
           </header>
         )
       ) : isMobileDetail ? (

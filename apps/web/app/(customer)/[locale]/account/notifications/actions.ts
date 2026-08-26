@@ -1,112 +1,84 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import type { KeysetCursor } from '@lezzet/types';
 import { serviceDb } from '@lezzet/database';
 import {
-  cancelZoneNotices,
-  preferencesSubjectOf,
-  resolvePreferencesToken,
-  setMarketingConsent,
-  setNotificationConsent,
-  type PreferencesSubject,
+  dismissNotification,
+  listNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
 } from '@lezzet/application';
-import type { MarketingChannel, NotificationKind } from '@lezzet/types';
 import { currentCustomerId } from '@/lib/guard';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
+import { FEED_PAGE_SIZE, type NotificationsFeedPage } from './notifications-types';
 
-/**
- * Bildirim tercihlerinin yazma eylemleri (22.08).
- *
- * ── ÖZNE HER EYLEMDE YENİDEN ÇÖZÜLÜR ────────────────────────────────────────
- * İstemci kimlik GÖNDERMEZ, yalnız jetonu geri verir — ve jeton da sunucuda çözülür. Kimliği
- * gövdeden almak, konsoldan gönderilen bir kimlikle başkasının tercihlerini kapatmaya açık kapı
- * bırakırdı (adres kapısının aynı dersi).
- *
- * ── JETON OTURUMUN YERİNE GEÇER, YETKİSİNİ ALMAZ ────────────────────────────
- * Yetkisi dar: yalnız tercihleri okumak ve yazmak. Jetonla gelen biri ad, adres, sipariş göremez —
- * bağ yıllar boyunca bir mailin altbilgisinde durabilir.
- *
- * ── OTURUM ÖNCE, JETON SONRA ────────────────────────────────────────────────
- * Girişli müşteri kendi sayfasındayken jeton hiç taşımaz; jeton yolu mailden gelen içindir.
- */
-async function subjectOf(token: string | null): Promise<PreferencesSubject> {
-  const db = serviceDb();
-  const customerId = await currentCustomerId();
-  if (customerId) {
-    const subject = await preferencesSubjectOf(db, customerId);
-    if (subject) return subject;
-  }
-  const byToken = token ? await resolvePreferencesToken(db, token) : null;
-  if (!byToken) throw new CustomerError('session_expired');
-  return byToken;
+/*
+  Bildirim akışının yazma/sayfalama eylemleri (14.15). Kural `@lezzet/application`da
+  (`notification/read.ts` — mobil uçla AYNI kapı); burası taşıma katmanı: kimliği OTURUMDAN çözer
+  (uç güvenliği ilkesi: `profileId` istemciden asla), sonucu sayfanın şekline koyar.
+
+  `not_found` hata OLARAK dönmez: satır ya silinmiş ya başkasının — ikisinde de ekranın yapacağı
+  tek şey iyimser işareti geri almaktır; ayrım kimlik tahmin edene satırın varlığını söylerdi.
+*/
+
+function toPage(feed: Awaited<ReturnType<typeof listNotifications>>): NotificationsFeedPage {
+  return {
+    // Daraltma sözleşmenin kendisi (`me-notifications.schema` künyesi): `profileId`/`dedupeKey`/
+    // `warehouseId`/`dismissedAt` istemciye sızmaz — action telinden geçen her alan sayfa yükünde.
+    rows: feed.rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      targetType: row.targetType,
+      targetId: row.targetId,
+      payload: row.payload,
+      createdAt: row.createdAt,
+      readAt: row.readAt,
+    })),
+    nextCursor: feed.nextCursor,
+    unread: feed.unread,
+  };
 }
 
-/** Sayfa sunucuda çiziliyor: yazımdan sonra tazelenmezse anahtar eski değerine geri döner. */
-function revalidate(): void {
-  revalidatePath('/[locale]/account/notifications', 'page');
-}
-
-export async function setCampaignConsentAction(
-  channel: MarketingChannel,
-  granted: boolean,
-  token: string | null,
-): Promise<CustomerResult<true>> {
+/** İlk sayfa sunucu render'ında gelir; bu eylem hem "devamı" hem zil çalınca tam tazelemedir. */
+export async function loadNotificationsAction(cursor?: KeysetCursor): Promise<CustomerResult<NotificationsFeedPage>> {
   try {
-    const subject = await subjectOf(token);
-    // Ziyaretçinin kampanya tercihi YOKTUR: kampanya hesaba bağlıdır, kaydı olmayan birinin
-    // kapatabileceği bir kanal da yok. Sessizce başarı dönmek, olmayan bir şeyi kapattığını
-    // sandırırdı.
-    if (subject.kind !== 'profile') throw new CustomerError('session_expired');
-    const ok = await setMarketingConsent(serviceDb(), {
-      customerId: subject.profile.id,
-      channel,
-      granted,
-      source: token ? 'email-link' : 'account',
-    });
-    if (!ok) throw new CustomerError('session_expired');
-    revalidate();
-    return { data: true, errorKey: null };
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    const feed = await listNotifications(serviceDb(), { profileId: customerId, cursor, limit: FEED_PAGE_SIZE });
+    return { data: toPage(feed), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
-export async function setKindConsentAction(
-  kind: NotificationKind,
-  granted: boolean,
-  token: string | null,
-): Promise<CustomerResult<true>> {
+export async function markNotificationReadAction(notificationId: string): Promise<CustomerResult<{ ok: boolean }>> {
   try {
-    const subject = await subjectOf(token);
-    if (subject.kind !== 'profile') throw new CustomerError('session_expired');
-    const ok = await setNotificationConsent(serviceDb(), {
-      customerId: subject.profile.id,
-      kind,
-      granted,
-      source: token ? 'email-link' : 'account',
-    });
-    if (!ok) throw new CustomerError('session_expired');
-    revalidate();
-    return { data: true, errorKey: null };
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    const sonuc = await markNotificationRead(serviceDb(), { profileId: customerId, notificationId });
+    return { data: { ok: sonuc === 'ok' }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
 }
 
-/**
- * Bekleyen bölge haberlerinden vazgeçme — **hem ziyaretçi hem girişli için**.
- *
- * Burada kapatılan bir izin değil, GERİ ALINAN bir istektir: müşteri "haber ver" demişti; vazgeçmek
- * o kaydı silmektir. Bu yüzden ziyaretçi de yapabilir — zaten kaydı olan tek şey bu.
- */
-export async function cancelZoneNoticesAction(token: string | null): Promise<CustomerResult<true>> {
+export async function markAllNotificationsReadAction(): Promise<CustomerResult<{ ok: true }>> {
   try {
-    const subject = await subjectOf(token);
-    const email = subject.kind === 'profile' ? subject.profile.email : subject.email;
-    if (!email) throw new CustomerError('session_expired');
-    await cancelZoneNotices(serviceDb(), email);
-    revalidate();
-    return { data: true, errorKey: null };
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    await markAllNotificationsRead(serviceDb(), customerId);
+    return { data: { ok: true }, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+export async function dismissNotificationAction(notificationId: string): Promise<CustomerResult<{ ok: boolean }>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+    const sonuc = await dismissNotification(serviceDb(), { profileId: customerId, notificationId });
+    return { data: { ok: sonuc === 'ok' }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
