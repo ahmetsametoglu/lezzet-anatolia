@@ -1,7 +1,20 @@
 /**
  * Paket sınırı kuralları — STACK §4 "bağımlılık tek yönlü".
  * İhlal `pnpm boundaries` ile hata olarak yakalanır.
- * Workspace bağımlılığı modül adıyla (`@lezzet/<ad>`) eşlenir.
+ *
+ * **HEDEF ÇÖZÜLMÜŞ YOLLA EŞLENİR, MODÜL ADIYLA DEĞİL — sadeleştirmeyin.** Bu satır 26.08'e kadar
+ * *"workspace bağımlılığı modül adıyla (`@lezzet/<ad>`) eşlenir"* diyordu ve YANLIŞTI: depcruise
+ * workspace importunu çözer, `@lezzet/domain-core` kenarda `packages/domain-core/src/index.ts`
+ * olarak görünür. Sonucu dört kuralın (`types-is-pure`, `domain-core-scope`, `database-scope`,
+ * `ai-scope`) **doğduklarından beri hiç ateşlenememesiydi** — ve altlarında gerçek bir ihlal
+ * duruyordu. `pnpm boundaries` yine de her koşuda yeşil dönüyordu: yeşillik "ihlal yok" değil,
+ * "bakamıyorum" demekti. Yanlış beyanın kendisi arızayı görünmez kıldı, çünkü okuyan kalıbı
+ * sorgulamak yerine künyeye güvendi.
+ *
+ * Kalıplar bu yüzden İKİ hâli birden kabul eder: çözülmüş yol (asıl hâl) ve ham modül adı (paket
+ * kurulu değilse depcruise dizeyi bırakır). Bekçinin ısırdığını `scripts/boundaries.test.ts`
+ * sabitliyor — depcruise'u koşturmaz, çünkü depo temizken koşu her hâlde yeşil döner ve tam da
+ * gizlemek istediğimiz körlüğü gizler; kalıpları gerçek yol biçimine karşı sınar.
  *
  * **`boundaries` komutu neden İKİ parçalı** (sadeleştirmeyin): `apps/web`'in `@/` takma adı
  * `apps/web/tsconfig.json`'un `paths`'inde tanımlı ve depcruise bunu ancak `--ts-config` ile
@@ -33,28 +46,28 @@ module.exports = {
       severity: 'error',
       comment: 'types hiçbir iç pakete bağlanmaz (yalnız zod).',
       from: { path: '^packages/types/' },
-      to: { path: '^@lezzet/(?!types$)' },
+      to: { path: '^(packages/(?!types/)|@lezzet/(?!types$))' },
     },
     {
       name: 'domain-core-scope',
       severity: 'error',
       comment: 'domain-core yalnız types + helper bilir.',
       from: { path: '^packages/domain-core/' },
-      to: { path: '^@lezzet/(?!(types|helper)$)' },
+      to: { path: '^(packages/(?!(types|helper|domain-core)/)|@lezzet/(?!(types|helper)$))' },
     },
     {
       name: 'database-scope',
       severity: 'error',
       comment: 'database yalnız types + helper bilir.',
       from: { path: '^packages/database/' },
-      to: { path: '^@lezzet/(?!(types|helper)$)' },
+      to: { path: '^(packages/(?!(types|helper|database)/)|@lezzet/(?!(types|helper)$))' },
     },
     {
       name: 'ai-scope',
       severity: 'error',
       comment: 'ai yalnız types bilir — DB/logger/iş kuralı yok (bkz. packages/ai/src/types.ts).',
       from: { path: '^packages/ai/' },
-      to: { path: '^@lezzet/(?!types$)' },
+      to: { path: '^(packages/(?!(types|ai)/)|@lezzet/(?!types$))' },
     },
     {
       name: 'no-orphans',

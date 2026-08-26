@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { bundleBalance } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import { serviceDb } from '../client';
@@ -19,8 +18,24 @@ import { StockService } from './stock.service';
  *   · aynı varyant iki kez EKLENEMEZ (adet artırılır) ve hata okunabilir
  *   · senkron sırayı yazar (müşterinin paket içeriğinde gördüğü sıra)
  *   · hediye kalem = 0 fiyat, kaydedilebilir
- *   · mutabakat: Σ(atanmış × adet) = paket fiyatı — kararı motor verir, servis satırı taşır
+ *   · mutabakat: Σ(atanmış × adet) = paket fiyatı — servisin yazdığı satır bu eşitliği tutuyor mu
  */
+
+/**
+ * Kalem paylarının toplamı (cent) — **bilerek burada, `bundleBalance` motoru ÇAĞRILMADAN.**
+ *
+ * İki sebep. Birincisi sınır: `database` motoru bilmez (`STACK §4`) ve bu dosya tek ihlalimizdi —
+ * `pnpm boundaries` 26.08'e kadar kalıp hatası yüzünden göremiyordu. İkincisi testin kendi
+ * dürüstlüğü: beklenen değeri motora hesaplatmak, servisin yazdığını motorun kendi tanımıyla
+ * onaylatmaktı. Eşitlik burada elle yazılır ki iddia servisten de motordan da BAĞIMSIZ olsun —
+ * motorun kuralı bozulsa bile bu test servisin satırını sınamaya devam eder.
+ *
+ * Motorun kendi doğruluğu kendi testinde: `domain-core/src/pricing/bundle-allocation.test.ts`.
+ */
+function paylarinToplami(items: readonly { qty: number; allocatedUnitPrice: number }[]): number {
+  return items.reduce((sum, i) => sum + toCents(i.allocatedUnitPrice) * i.qty, 0);
+}
+
 const db = serviceDb();
 const bundles = new BundleService(db);
 const products = new ProductService(db);
@@ -81,14 +96,12 @@ describe('BundleService', () => {
     expect(items.map((i) => i.sortOrder)).toEqual([0, 1]);
   });
 
-  it('kalemler TEK sorguda gelir (N+1 yok) ve mutabakat motorla doğrulanır', async () => {
+  it('kalemler TEK sorguda gelir (N+1 yok) ve kalem payları toplamı paketin fiyatını verir', async () => {
     const withItems = await bundles.listWithItems();
     const row = withItems.find((b) => bundleIds.includes(b.id));
     expect(row?.items.length).toBeGreaterThan(0);
 
-    const lines = (row?.items ?? []).map((i) => ({ qty: i.qty, allocatedUnitPriceCents: toCents(i.allocatedUnitPrice) }));
-    const balance = bundleBalance(lines, toCents(row!.totalPrice));
-    expect(balance.balanced).toBe(true);
+    expect(paylarinToplami(row?.items ?? [])).toBe(toCents(row!.totalPrice));
   });
 
   it('aynı varyant iki kez eklenemez — hata OKUNABİLİR', async () => {
@@ -109,8 +122,7 @@ describe('BundleService', () => {
     const items = await bundles.listItems(bundle.id);
     expect(items.find((i) => i.variantId === variantB)?.allocatedUnitPrice).toBe(0);
 
-    const lines = items.map((i) => ({ qty: i.qty, allocatedUnitPriceCents: toCents(i.allocatedUnitPrice) }));
-    expect(bundleBalance(lines, toCents(bundle.totalPrice)).balanced).toBe(true);
+    expect(paylarinToplami(items)).toBe(toCents(bundle.totalPrice));
   });
 
   it('senkron: listeden çıkan kalem silinir, sıra yeniden yazılır', async () => {
