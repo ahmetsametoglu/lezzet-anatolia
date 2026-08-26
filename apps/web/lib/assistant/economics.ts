@@ -10,7 +10,7 @@ import {
 } from '@lezzet/database';
 import { bundleEconomics as bundleEngine, markupPercent } from '@lezzet/domain-core';
 import { removeVat } from '@lezzet/helper';
-import type { AssistantProposal } from '@lezzet/types';
+import type { AssistantProposal, ProductDateType } from '@lezzet/types';
 
 /**
  * ÖNERİNİN KÂRLILIĞI (22.7) — operasyon şeridinin talebi, harici denetimin bulgusuyla doğdu.
@@ -97,6 +97,16 @@ export type ProposalEconomics =
        * bir değer.
        */
       vatRate: number;
+      /**
+       * Partinin TARİH TİPİ (22.38) — `null` = ürün okunamadı, tahmin edilmedi.
+       *
+       * Fırsat kararının en önemli girdilerinden biri ve payload'da YOK: dilekçe yalnız
+       * `expiryDate` taşıyor, tip ürünün alanı (`product.date_type`). Aynı tarih iki şey söyler —
+       * **DLC** geçince mal satılamaz (tek yol imha), **DDM** geçince satılabilir, yalnız kalite
+       * garantisi düşer. Operatör hangi tipe baktığını bilmeden "indirimle eritelim mi" kararını
+       * veremez. Aynı okumadan geliyor (`marketOf`), ek sorgu yok.
+       */
+      dateType: ProductDateType | null;
     }
   | {
       /**
@@ -224,7 +234,7 @@ async function offerEconomics(raw: unknown): Promise<ProposalEconomics | null> {
   const payload = raw as { variantId?: string; offerPriceCents?: number; listPriceCents?: number | null };
   if (typeof payload.variantId !== 'string' || typeof payload.offerPriceCents !== 'number') return null;
 
-  const { costByVariant, vatByVariant, listByVariant } = await marketOf([payload.variantId]);
+  const { costByVariant, vatByVariant, listByVariant, dateTypeByVariant } = await marketOf([payload.variantId]);
   const costCents = costByVariant.get(payload.variantId) ?? null;
   const vatRate = vatByVariant.get(payload.variantId) ?? 5.5;
   const offerHtCents = removeVat(payload.offerPriceCents, vatRate);
@@ -240,12 +250,18 @@ async function offerEconomics(raw: unknown): Promise<ProposalEconomics | null> {
     marginCents,
     marginPercent: costCents === null ? null : markupPercent(offerHtCents, costCents),
     vatRate,
+    dateType: dateTypeByVariant.get(payload.variantId) ?? null,
   };
 }
 
-/** Varyantların ŞU ANKİ piyasa künyesi: son alış · KDV oranı · liste fiyatı. */
+/** Varyantların ŞU ANKİ piyasa künyesi: son alış · KDV oranı · liste fiyatı · tarih tipi. */
 async function marketOf(variantIds: string[]) {
-  const empty = { costByVariant: new Map<string, number>(), vatByVariant: new Map<string, number>(), listByVariant: new Map<string, number>() };
+  const empty = {
+    costByVariant: new Map<string, number>(),
+    vatByVariant: new Map<string, number>(),
+    listByVariant: new Map<string, number>(),
+    dateTypeByVariant: new Map<string, ProductDateType>(),
+  };
   if (variantIds.length === 0) return empty;
 
   const db = serviceDb();
@@ -257,6 +273,10 @@ async function marketOf(variantIds: string[]) {
 
   const products = await new ProductService(db).listByIds([...new Set(variants.map((v) => v.productId))]);
   const vatByProduct = new Map(products.map((p) => [p.id, Number(p.vatRate)]));
+  // Tarih tipi de ÜRÜNÜN alanı ve aynı okumadan bedavaya geliyor (22.38): fırsat kararı "bu partiyi
+  // ne yapalım" kararıdır ve DLC ile DDM aynı tarihte bambaşka iki şey söyler — DLC geçince mal
+  // satılamaz (tek yol imha), DDM geçince satılabilir, yalnız kalite garantisi düşer.
+  const dateTypeByProduct = new Map(products.map((p) => [p.id, p.dateType]));
 
   const costByVariant = new Map<string, number>();
   // Son alış = en YENİ parti. Ortalama bilerek değil: paket fiyatı bugünkü yenileme maliyetine
@@ -268,6 +288,14 @@ async function marketOf(variantIds: string[]) {
   return {
     costByVariant,
     vatByVariant: new Map(variants.map((v) => [v.id, vatByProduct.get(v.productId) ?? 5.5])),
+    dateTypeByVariant: new Map(
+      variants.flatMap((v) => {
+        const kind = dateTypeByProduct.get(v.productId);
+        // Ürün okunamadıysa VARSAYILAN YAZILMAZ (`CLAUDE §1`): "DDM" diye bir tahmin, geçmiş tarihli
+        // bir DLC partisini satılabilir gösterirdi — gıdada en pahalı sessiz hata bu olurdu.
+        return kind ? [[v.id, kind] as const] : [];
+      }),
+    ),
     listByVariant: new Map(
       variants.flatMap((v) => {
         const amount = priceMap.get(v.id)?.channelPrice?.amountCents;

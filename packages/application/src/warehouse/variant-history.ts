@@ -13,6 +13,7 @@ import {
   dailyExitRate,
   daysOfCover,
   countsAsLoss,
+  isCountDiff,
   hasLeftShelf,
   lossPercent,
 } from '@lezzet/domain-core';
@@ -116,8 +117,20 @@ export interface VariantStockHistory {
   daysOfCover: { days: number; capped: boolean } | null;
   /** Tükenmiş partilerin ortalama ömrü + kaç partiye dayandığı. */
   averageLife: { days: number; sampleCount: number } | null;
-  /** Fire: işaretli toplam adet, sebep kırılımı ve girene oranı (%). */
-  loss: { qty: number; percent: number | null; byReason: Array<{ reason: StockAdjustmentReason; qty: number }> };
+  /**
+   * Fire: işaretli toplam adet, sebep kırılımı ve girene oranı (%).
+   *
+   * `qty`/`percent` yalnız GERÇEK kayıpları sayar (imha · hasar · kayıp) ve hep pozitiftir.
+   * `byReason` hepsini taşır — iade ve sayım farkı da birer olaydır, kırılımda görünmeleri gerekir.
+   * `countDiff` sayımın NET sapması (±): ayrı, çünkü *"ne kadarını çöpe attım"* ile *"saydığımda ne
+   * kadar saptım"* iki farklı soru (22.34 · kullanıcı kararı 26.08).
+   */
+  loss: {
+    qty: number;
+    percent: number | null;
+    byReason: Array<{ reason: StockAdjustmentReason; qty: number }>;
+    countDiff: number;
+  };
   /** Ayrılmış mal kime ayrılmış — boş dizi = ayrılmış yok. */
   reservations: VariantReservation[];
   /** İlk ve son satışın günü (ISO) — "hiç satılmış mı" sorusunun cevabı. Satış yoksa `null`. */
@@ -203,11 +216,16 @@ export async function readVariantStockHistory(
 
   const lostQty = new Map<string, number>();
   const byReason = new Map<StockAdjustmentReason, number>();
+  /** Sayımın NET sapması (±) — fire toplamının dışında, kendi satırında gösterilir. */
+  let countDiff = 0;
   for (const row of adjustments) {
     // Kırılım HEPSİNİ taşır (iade de bir olaydır ve görünmeli); fire TOPLAMI ise yalnız gerçek
     // kayıpları sayar — iade restokunun karşılığı `order_item_batch`ten zaten düşülmüştür
     // (`countsAsLoss` künyesi). İkisini ayırmamak aynı iadeyi iki kez saydırıyordu.
     if (countsAsLoss(row.reason)) lostQty.set(row.stockId, (lostQty.get(row.stockId) ?? 0) + row.qty);
+    // Sayım farkı AYRI toplanır (22.34 · kullanıcı kararı 26.08): iki yönlü olduğu için fire
+    // toplamını eksiye düşürüyordu (`%−2,1` — hesap doğru, "FİRE" başlığı altında okunmuyordu).
+    if (isCountDiff(row.reason)) countDiff += row.qty;
     byReason.set(row.reason, (byReason.get(row.reason) ?? 0) + row.qty);
   }
 
@@ -259,6 +277,7 @@ export async function readVariantStockHistory(
       qty: totalLost,
       percent: lossPercent(totalLost, intakeQty),
       byReason: [...byReason].map(([reason, qty]) => ({ reason, qty })).sort((a, b) => b.qty - a.qty),
+      countDiff,
     },
     // Aynı siparişin birden çok rezervasyon satırı olabilir (parti-çıpalı teklif + normal satır);
     // ekranda tek satır olarak toplanır — aynı siparişi iki kez listelemek bir tekrar olurdu.

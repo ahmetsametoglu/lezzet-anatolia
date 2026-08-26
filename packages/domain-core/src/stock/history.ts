@@ -56,11 +56,30 @@ export function hasLeftShelf(status: string): boolean {
  * Kırılımda GÖRÜNMEYE devam eder — *"iade → stoğa döndü"* operatörün bilmesi gereken bir olaydır;
  * saklanan şey olay değil, onun fire toplamına katkısıdır.
  *
- * Öteki negatif düzeltmeler (sayımda fazla çıkan mal) fireyi AZALTMAYA devam eder ve bu doğrudur:
- * orada karşı kayıt yoktur, net kayıp gerçekten daha azdır (`StockAdjustmentService.reasonSummary`).
+ * ── SAYIM FARKI DA AYRILDI (kullanıcı kararı 26.08) ─────────────────────────
+ * `count_diff` bir tur fireye giriyordu ve ölçüm doğruydu — sayımda fazla çıkan mal net kaybı
+ * gerçekten azaltır. Ama ekranda sonuç şuydu: **FİRE · %−2,1.** Hesap doğru, cümle yanlış; insan
+ * "fire nasıl eksi olur" diye takılıyor ve sayıya güvenmiyor.
+ *
+ * Ayrım kavramsal: fire *"ne kadarını çöpe attım"*, sayım farkı *"saydığımda ne kadar saptım"*.
+ * İkincisi iki yönlüdür ve bir ölçüm hatasının ya da kayıt boşluğunun izidir — imhayla aynı
+ * toplamda durması ikisini de okunmaz yapıyordu. `count_diff` artık kırılımda GÖRÜNÜR ama kendi
+ * satırında, ± işaretiyle; fire toplamı yalnız gerçek kayıpları sayar (imha · hasar · kayıp) ve
+ * hep pozitiftir.
  */
 export function countsAsLoss(reason: string): boolean {
-  return reason !== 'return_restock';
+  return reason !== 'return_restock' && reason !== 'count_diff';
+}
+
+/**
+ * Sayım farkı mı — fire toplamından ayrı, kendi satırında gösterilen tek sebep.
+ *
+ * Ayrı bir yüklem, çünkü ekranın sorusu `countsAsLoss`un değili DEĞİL: `return_restock` de fire
+ * sayılmaz ama o kırılımda "iade → stoğa döndü" diye kendi satırını zaten taşıyor. Sayım farkının
+ * ayrı toplanması gerekiyor (± net sapma), iadenin ise gerekmiyor.
+ */
+export function isCountDiff(reason: string): boolean {
+  return reason === 'count_diff';
 }
 
 /**

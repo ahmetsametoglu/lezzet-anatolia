@@ -460,12 +460,26 @@ function SummaryGrid({ history }: { history: VariantStockHistory }) {
         // olmayan bir kesinlik vaat etmektir.
         note={averageLife ? `${num(averageLife.sampleCount)} tükenmiş partinin ortalaması` : 'henüz tükenmiş parti yok'}
       />
+      {/* FİRE ARTIK HEP POZİTİF (22.34 · kullanıcı kararı 26.08): sayım farkı bu toplamdan çıkarıldı,
+          çünkü iki yönlü olduğu için oranı eksiye düşürüyordu (`%−2,1` — hesap doğru, "FİRE" başlığı
+          altında okunmuyordu). Burada yalnız gerçek kayıp var: imha · hasar · kayıp. */}
       <Stat
         label="Fire"
         value={loss.percent === null ? '—' : `%${loss.percent.toLocaleString('tr-TR', { maximumFractionDigits: 1 })}`}
         note={loss.qty === 0 ? 'düşülen mal yok' : `${num(loss.qty)} adet · girene oranla`}
         tone={loss.percent !== null && loss.percent > 0 ? 'amber' : 'plain'}
       />
+      {/* SAYIM FARKI KENDİ KUTUSUNDA ve yalnız sapma VARSA çizilir: sıfır bir sapma, gösterilecek
+          bir olay değil — sıfırla dolu bir kutu ölçümün kendisini gürültüye çevirirdi.
+          İşaret KORUNUR: eksi "eksik çıktı", artı "fazla çıktı" demektir ve ikisi ayrı sorulardır. */}
+      {loss.countDiff !== 0 ? (
+        <Stat
+          label="Sayım farkı"
+          value={`${loss.countDiff > 0 ? '+' : '−'}${num(Math.abs(loss.countDiff))}`}
+          note={loss.countDiff > 0 ? 'sayımda fazla çıktı' : 'sayımda eksik çıktı'}
+          tone="amber"
+        />
+      ) : null}
     </div>
   );
 }

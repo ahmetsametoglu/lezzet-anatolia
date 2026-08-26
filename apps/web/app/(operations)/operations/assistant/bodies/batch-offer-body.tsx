@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import { markupPercent } from '@lezzet/domain-core';
 import { removeVat } from '@lezzet/helper';
-import type { BatchOfferPayload } from '@lezzet/types';
+import type { BatchOfferPayload, ProductDateType } from '@lezzet/types';
 import { PriceTriple } from '@/components/operation/form/price-triple';
 import { money, percent } from '@/components/operation/ui/format';
 import type { ProposalEconomics } from '@/lib/assistant/economics';
@@ -132,6 +132,7 @@ export function BatchOfferBody({ payload, economics, subject, meta, valueCents, 
       </Panel>
 
       <Panel>
+        <ExpiryLine dateType={economics?.dateType ?? null} expiryDate={payload.expiryDate} />
         <MarginSentence
           costCents={costCents}
           offerHtCents={offerHtCents}
@@ -201,6 +202,52 @@ function Panel({ children }: { children: ReactNode }) {
 
 // Künye satırı (`Fact`) BURADAN KALKTI: aynı çift `ProposalAside` içinde duruyor ve sapmayı da
 // gösteriyor. İki kopya kalsaydı biri bir gün sapmayı öğrenir, öteki öğrenmezdi.
+
+/**
+ * **TARİH TİPİ + KALAN GÜN** (22.38 · 10.08 talimatının kapanmamış iki maddesi).
+ *
+ * Fırsat kararı tam olarak *"bu partiyi ne yapalım"* kararıdır ve iki girdisi ekranda yoktu:
+ * - **DLC ↔ DDM ayrımı gıda güvenliğinin özü.** DLC geçince mal SATILAMAZ (tek yol imha), DDM
+ *   geçince satılabilir, yalnız kalite garantisi düşer. Aynı tarih iki tipte iki farklı karar.
+ * - **Kalan gün** kararın aciliyeti. "16 Ağu 2026" tek başına bir tarihtir; "6 gün kaldı" bir
+ *   karardır.
+ *
+ * Ton kuralı ölçülü: süre varken NÖTR (bilgi), geçmişse DDM'de amber (kalite düştü), DLC'de
+ * KIRMIZI (satılamaz — indirim kararı burada anlamsız, tek yol imha). Tarih tipi okunamadıysa
+ * (`null`) satır yalnız tarihi yazar ve tip uydurmaz: "DDM" diye bir tahmin, geçmiş tarihli bir
+ * DLC partisini satılabilir gösterirdi.
+ */
+function ExpiryLine({ dateType, expiryDate }: { dateType: ProductDateType | null; expiryDate: string }) {
+  const gun = Math.round((new Date(`${expiryDate}T12:00:00`).getTime() - Date.now()) / 86_400_000);
+  const gecti = gun < 0;
+  const engelli = gecti && dateType === 'DLC';
+
+  const kabuk = engelli
+    ? 'border-ops-red-line bg-ops-red-bg text-ops-red'
+    : gecti
+      ? 'border-ops-amber-line bg-ops-amber-bg text-ops-amber-dark'
+      : 'border-ops-line bg-ops-white text-ops-body';
+
+  return (
+    <span className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-ops-card border px-3 py-2 font-ops-body text-ops-base ${kabuk}`}>
+      {dateType ? (
+        <strong className="font-ops-display font-semibold">
+          {dateType} · {dateType === 'DLC' ? 'güvenlik' : 'kalite'}
+        </strong>
+      ) : null}
+      <span className="font-ops-mono text-ops-sm">{dateLabel(expiryDate)}</span>
+      <span className={engelli || gecti ? 'font-medium' : 'text-ops-muted'}>
+        {gecti ? `${Math.abs(gun)} gün geçti` : gun === 0 ? 'bugün doluyor' : `${gun} gün kaldı`}
+      </span>
+      {engelli ? <span className="w-full font-medium">DLC geçti — bu parti satılamaz, tek yol imha.</span> : null}
+    </span>
+  );
+}
+
+/** `2026-09-15` → `15 Eyl 2026`. Operasyon dili Türkçe (CLAUDE §2). */
+function dateLabel(iso: string): string {
+  return new Date(`${iso}T12:00:00`).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 /**
  * Karar verilmiş öneride üçlünün yerini alan sabit sayı — `PriceTriple`in kutularıyla aynı sırada

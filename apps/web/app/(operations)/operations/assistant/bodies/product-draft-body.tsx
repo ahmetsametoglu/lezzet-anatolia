@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resolveLocalizedText, type ProductCreatePayload, type ProductDraftPayload } from '@lezzet/types';
 import { ProductFormPanels, ProductFormTabs, useProductFormFields } from '@/components/operation/form/product-form';
@@ -189,6 +189,9 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
    * asistanın DİLEKÇESİ; oraya dokunan tek yol hâlâ alt bardaki düğme.
    */
   const [crop, setCrop] = useImageCrop(form);
+  // Uyarı FORMUN yaşayan değerini izler, dilekçenin ilk hâlini değil: operatör kategoriyi seçer
+  // seçmez uyarı kalkmalı — yoksa düzeltilmiş bir eksik ekranda durmaya devam ederdi.
+  const categoryId = useWatch({ control: form.control, name: 'categoryId' });
   const fields = useProductFormFields({
     control: form.control,
     watch: form.watch,
@@ -266,6 +269,19 @@ export function ProductDraftBody({ payload, subject, options, meta, values, onCh
             // Kilit TEK yerden: `fieldset` bütün girdileri HTML'in kendi mekanizmasıyla kapatır.
             // Alan alan `disabled` geçmek, bir gün birinde unutulacak bir tekrar olurdu.
             <fieldset disabled={disabled || readOnly} className="min-w-0 border-0 p-0">
+              {/* KATEGORİSİZ ÜRÜN UYARIR, ENGELLEMEZ (22.39 · kullanıcı kararı 26.08).
+                  Asistan kategoriyi okuyamadığında dilekçe `categoryId: null` taşıyor ve şema da onu
+                  `nullable` kabul ediyor. Engellemek düşünüldü ve ELENDİ: ürün ADAY doğuyor, satışa
+                  çıkarken zaten ürün ekranından geçiyor — kapıyı kapatmak, rafta duran gerçek bir
+                  ambalajı kayda geçirmeyi kategori seçilene kadar erteletirdi.
+                  Ama sessiz de kalmıyor: kategorisiz kayıt katalog listelerinde HİÇBİR kategoriye
+                  düşmez, yani açılır ama görünmez — operatörün bunu onaydan ÖNCE bilmesi gerekir. */}
+              {categoryId === null || categoryId === '' ? (
+                <span className="mb-3 block rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3.5 py-2.5 font-ops-body text-ops-sm text-ops-amber-dark">
+                  Kategori seçilmedi — kayıt açılır ama katalog listelerinde görünmez. Şimdi seçebilir
+                  ya da sonra ürün ekranından tamamlayabilirsiniz.
+                </span>
+              ) : null}
               <ProductFormPanels fields={fields} tab={tab} />
             </fieldset>
           )}

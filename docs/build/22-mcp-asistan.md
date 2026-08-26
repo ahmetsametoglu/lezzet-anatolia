@@ -1670,9 +1670,18 @@ satırında.
       çözülemezken yer tutucu). İkisi de kendi ekranlarının işi.
       *(Üçüncü olarak sayılan `order-dialog` diye bir dosya YOK — ölçüldü 26.08; ya adı değişti ya
       hiç var olmadı. Olmayan bir dosyayı kovalamak, gerçek iki ihlali de erteler.)*
-    - **BEKLEYEN(22.34):** kullanıcı ekranda denemedi. Ayrıca fire oranı `count_diff` negatifken hâlâ
-      eksi çıkıyor (%−2,1) — ölçüm doğru (net kayıp) ama "FİRE" başlığı altında eksi sayı garip okunuyor;
-      sayım farkını kendi satırına ayırmak kullanıcının kararına bırakıldı.
+    - ~~**BEKLEYEN(22.34):** fire oranı `count_diff` negatifken hâlâ eksi çıkıyor (%−2,1) — sayım
+      farkını kendi satırına ayırmak kullanıcının kararına bırakıldı.~~ **KARAR VERİLDİ VE YAZILDI
+      (kullanıcı 26.08): SAYIM FARKI AYRILDI.**
+      - Ayrım kavramsal, kozmetik değil: fire *"ne kadarını çöpe attım"*, sayım farkı *"saydığımda ne
+        kadar saptım"*. İkincisi iki yönlü ve bir ölçüm hatasının izi; imhayla aynı toplamda durması
+        ikisini de okunmaz yapıyordu.
+      - Kural MOTORDA (`domain-core/stock/history`): `countsAsLoss` artık `count_diff`i de dışlıyor,
+        yeni `isCountDiff` yüklemi net sapmayı ayrı topluyor. Fire toplamı hep pozitif (imha · hasar ·
+        kayıp), sayım farkı kendi kutusunda ± işaretiyle ve **yalnız sapma varsa** çiziliyor.
+      - `history.ts`in hiç testi yoktu; **8 iddia yazıldı** ve yeni kural mutasyonla doğrulandı.
+      · `touches: packages/domain-core/src/stock/{history.ts,history.test.ts}, packages/application/src/warehouse/variant-history.ts, apps/web/components/operation/stock/product-history-panel.tsx`
+    - **BEKLEYEN(22.34):** kullanıcı panel akışını ekranda denemedi.
     - ~~**BEKLEYEN(22.33):** kullanıcı ekranda denemedi; kuyrukta bekleyen gerçek dilekçe duruyor.
       Kalan iki gövdesiz tip `zone_extend` (harita ister) ve `featured_flag`.~~ **KAPANDI (26.08):**
       iki tip de yazıldı (`featured_flag` 22.35'te, `zone_extend` 22.36'da) ve **onbir tipin onbiri de
@@ -1910,7 +1919,7 @@ sınamış olacaktık.
     - **Doğrulama:** typecheck (web · backend · domain-core) temiz · lint temiz · `knip` değişmedi ·
       birim 1358/1358.
 
-- [ ] (22.38) **Fırsat kararında TARİH TİPİ ve kalan gün ekranda yok** *(10.08 talimatının kapanmamış
+- [x] (22.38) **Fırsat kararında TARİH TİPİ ve kalan gün ekranda yok** *(10.08 talimatının kapanmamış
   iki maddesi; talep dosyası kapatılırken ölçülerek doğrulandı 15.08)* — `touches:
   apps/web/app/(operations)/operations/assistant/bodies/batch-offer-body.tsx`
     - **`DDM` ↔ `DLC` ayrımı gösterilmiyor.** Alan veride var (`product.date_type`) ve fark gıda
@@ -1925,8 +1934,21 @@ sınamış olacaktık.
       `ProposalAside`'a taşıdı (haklı olarak — iki kopya vardı) ama tarih oraya **ham ağaç** olarak
       düştü, yani okunan bir karar girdisi olmaktan çıktı. Talimatın öteki maddeleri (gri paragrafın
       silinmesi, üç bağlı kutu, başlıktan oranın çıkması, kâr satırı) uygulandı ve yerinde.
+  - **YAZILDI (26.08)** · `touches: apps/web/lib/assistant/economics.ts, apps/web/app/(operations)/operations/assistant/bodies/batch-offer-body.tsx`
+    - **Tip payload'da YOKTU ve oraya da eklenmedi:** dilekçe yalnız `expiryDate` taşıyor, tarih tipi
+      ürünün alanı (`product.date_type`). Şemaya eklemek kuyrukta bekleyen eski dilekçeleri
+      bozardı; onun yerine `economics` künyesine alındı — `marketOf` zaten ürünü okuyor, **ek sorgu
+      yok** (KDV oranının 22.8'de aynı yoldan gelmesinin emsali).
+    - **Ton kuralı ölçülü:** süre varken nötr, geçmişse DDM'de amber (kalite düştü), DLC'de KIRMIZI
+      + ek cümle (*"bu parti satılamaz, tek yol imha"*). Tip okunamadıysa satır yalnız tarihi yazar
+      ve **tip UYDURMAZ** — "DDM" diye bir tahmin, geçmiş tarihli bir DLC partisini satılabilir
+      gösterirdi (`CLAUDE §1`).
+    - **Ekranda ölçüldü, ilk gerçek dilekçede en sert hâliyle:** *Mangolu Artisan Kek · 9 × 90 g* →
+      **DLC · güvenlik · 20 Ağu 2026 · 6 gün geçti** + *"DLC geçti — bu parti satılamaz, tek yol
+      imha."* Operatör artık iki şeyi birden görüyor: partinin satılamaz olduğunu VE teklifin zaten
+      zararına olduğunu (−%9,0). Önceden ikisi de görünmüyordu.
 
-- [ ] (22.39) **`product_create` KATEGORİSİZ kayıt açabiliyor** *(kapatılan bir talep dosyasının
+- [x] (22.39) **`product_create` KATEGORİSİZ kayıt açabiliyor** *(kapatılan bir talep dosyasının
   açık maddesi; 15.08'de koda karşı ölçüldü)* — `touches:
   apps/web/app/(operations)/operations/assistant/assistant-body.tsx`
     - Dilekçe `categoryId: null` taşıyabiliyor (`ProductCreatePayloadSchema`), form da onu zorunlu
@@ -1942,6 +1964,18 @@ sınamış olacaktık.
       gelmiyor). Buradaki tarif envanterin kendi satırından ve koddan yeniden ölçülerek kuruldu;
       dosyada başka bir açık madde varsa kaybolmuştur. Aynı dosyanın öteki maddesi (22.6 belgeden
       ürün önizlemeleri) 09.08'de teslim edilmişti ve kaydı 271. satırda duruyor.
+  - **KARAR VERİLDİ VE YAZILDI (kullanıcı 26.08): ENGELLEME YOK, UYARI VAR.** *"Kategorisiz ürün
+    engellenmeyebilir."* Gerekçe satırın kendi tespitini destekliyor: ürün **ADAY** doğuyor ve satışa
+    çıkarken zaten ürün ekranından geçiyor — kapıyı kapatmak, rafta duran gerçek bir ambalajı
+    kategori seçilene kadar kayda geçirmemek olurdu.
+    - `blocked` DEĞİŞMEDİ (`ProductFormSchema` kategoriyi zorunlu kılmıyor); gövdeye amber bir uyarı
+      kutusu eklendi: *"Kategori seçilmedi — kayıt açılır ama katalog listelerinde görünmez. Şimdi
+      seçebilir ya da sonra ürün ekranından tamamlayabilirsiniz."*
+    - **Uyarı formun YAŞAYAN değerini izliyor** (`useWatch`), dilekçenin ilk hâlini değil: operatör
+      kategoriyi seçer seçmez uyarı kalkıyor — yoksa düzeltilmiş bir eksik ekranda durmaya devam
+      ederdi.
+    - Ekranda ölçüldü: uyarı görünüyor, *"Ürünü oluştur"* düğmesi **açık** kalıyor.
+    · `touches: apps/web/app/(operations)/operations/assistant/bodies/product-draft-body.tsx`
 
 
 - [x] (22.40) **Onay kuyruğu seed'le doluyor — onbir gövde ilk kez gözle sınanabildi** *(kullanıcı talimatı 26.08: "besleme dosyasına test için uygun adette data ekle")* · `touches: scripts/seed/{assistant.ts,assistant.test.ts,coverage.ts}, scripts/seed.ts, vitest.config.ts, apps/web/components/operation/ui/{subject-card.tsx,payload-tree.tsx}, apps/web/app/globals.css`
