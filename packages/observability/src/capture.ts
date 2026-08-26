@@ -105,6 +105,13 @@ export const SOURCES = {
    * yazılamadı) iki yüzeyde de aynı adla görünmeli.
    */
   applicationTicket: 'application-ticket',
+  /**
+   * Bildirimin tek kapısı (`packages/application/src/notification/dispatch`, 14.12) — satır + kanal
+   * + teslim defteri. Aynı ayrım: beş yayım noktası (sipariş, talep, davet, bölge, B2B) üç yüzeyden
+   * bu kapıyı çağırıyor; teslim defterinin yazılamaması hangi yüzeyden gelirse gelsin tek adla
+   * görünmeli.
+   */
+  applicationNotification: 'application-notification',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {

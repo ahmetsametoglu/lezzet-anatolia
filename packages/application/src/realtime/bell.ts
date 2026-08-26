@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { ticketChannelName } from '@lezzet/types';
+import { notificationsChannelName, ticketChannelName } from '@lezzet/types';
 import { BELL_EVENT } from './bell-event';
 
 /*
@@ -139,4 +139,31 @@ export function conversationsChannelName(): string {
 /** WhatsApp tarafında bir şey değişti (bugün: AI taslağını cron yazdı). */
 export async function ringConversationsBell(): Promise<void> {
   await ringBell(conversationsChannelName());
+}
+
+/**
+ * KİŞİNİN BİLDİRİM KANALI (14.12) — hesap zilinin ve native uygulamanın dinlediği yer.
+ *
+ * Ad `@lezzet/types`ta (`notificationsChannelName`) — ticket kanalıyla aynı gerekçe: duyan
+ * taraflardan biri native uygulama ve o, bu dosyayı (service-role + `node:crypto`) göremez.
+ * Doğal sır profilin UUID'si; yük yine boş — duyan taraf sayacı sunucudan yeniden ister.
+ */
+export async function ringNotificationsBell(profileId: string): Promise<void> {
+  await ringBell(notificationsChannelName(profileId));
+}
+
+/**
+ * Personel bildirimlerinin zili — operasyon başlığındaki rozet (14.15) bunu dinler.
+ *
+ * `opsChannel` kalıbı (sunucu sırından türetilmiş ad): personelin bildirim akışında doğal bir sır
+ * yok ve `ops:notifications` gibi açık bir ad, anon anahtarı olan herkese "operasyonda şu an bir
+ * şey oldu" zaman bilgisini sızdırırdı. Kişi başına kanal AÇILMADI: rozet zaten sunucudan sayım
+ * ister ve kim olduğunu o istek bilir — kanal yalnız "bak" der.
+ */
+export function staffNotificationsChannelName(): string {
+  return opsChannel('notifications');
+}
+
+export async function ringStaffNotificationsBell(): Promise<void> {
+  await ringBell(staffNotificationsChannelName());
 }

@@ -33,3 +33,17 @@ export const BELL_EVENT = 'changed';
 export function ticketChannelName(ticketId: string): string {
   return `ticket:${ticketId}`;
 }
+
+/**
+ * MÜŞTERİNİN BİLDİRİM KANALI (14.12) — adı profilin UUID'sidir.
+ *
+ * `ticketChannelName` ile aynı kalıp, bir fark: talep kanalı TEK yazışmayı izler, bu kanal kişinin
+ * TÜM bildirim akışını. Doğal sır yine var (profil UUID'si tahmin edilemez) ve yük yine boş —
+ * duyan taraf sunucudan sayacı/listeyi yeniden ister, kanaldan hiçbir içerik geçmez.
+ *
+ * İki dinleyicisi olacak: web hesap sayfasının zili (14.15) ve native uygulama (21.13 devamı) —
+ * sözleşmenin burada durmasının sebebi de bu iki istemci (dosya künyesi).
+ */
+export function notificationsChannelName(profileId: string): string {
+  return `notifications:${profileId}`;
+}

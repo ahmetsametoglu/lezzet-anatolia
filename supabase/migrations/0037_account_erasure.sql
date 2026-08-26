@@ -83,6 +83,14 @@ begin
   delete from public.zone_notice where customer_id = p_customer_id or (v_email is not null and lower(email) = lower(v_email));
   delete from public.variant_stock_notice where customer_id = p_customer_id or (v_email is not null and lower(email) = lower(v_email));
 
+  -- Bildirim KAYDI (0049 · 14.12): kime, ne zaman, hangi siparişe/talebe dair haber verildiği —
+  -- kişiye ait kayıt, yasal saklama gerekçesi yok. Teslim defteri (`notification_delivery`)
+  -- cascade ile gider. FK'nin kendisi de `on delete cascade`, yani bu satır aslında emniyet
+  -- kemeri değil BEYANDIR: silme kararı bu fonksiyonda görünür dursun (dosyanın kendi ilkesi —
+  -- "karar BURADA verilir, başka yerde tekrarlanmaz"). Personel bildirimi bu kapıdan geçmez:
+  -- fonksiyon personel kaydını zaten en başta reddediyor.
+  delete from public.notification where profile_id = p_customer_id;
+
   -- Sadakat geçmişi: yasal saklama gerekçesi yok, kişiye bağlı olmadan da anlamsız.
   delete from public.points_entry where customer_id = p_customer_id;
 

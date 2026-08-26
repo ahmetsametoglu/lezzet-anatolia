@@ -10,6 +10,9 @@
 // görünümü tek kapıdır, derin import yoktur.
 export * from './user-profile.schema';
 export * from './email-verification.schema';
+// Bildirim KAYDI (14.12) — giden kanal yükleriyle (contracts/notification.schema) karışmasın diye
+// `app-` önekli; ayrımın gerekçesi dosyada.
+export * from './app-notification.schema';
 // Kimlik anahtarı: DOĞRULANMIŞ numara (04.10). `UserProfile.phone` yalnız iletişimdir — ayrımın
 // gerekçesi dosyada.
 export * from './customer-phone.schema';

@@ -1818,3 +1818,25 @@ olmamalı.
 
 **ELENEN seçenek — "önce topla, sonra kâğıt otomatik çıksın":** kutu etiketi *"ne hazırlandı"*
 sorusunu zaten cevaplıyor; ikinci bir belge aynı gerçeğin ikinci nüshası olurdu (`CLAUDE §1`).
+
+## Müşteri yüzeyinde WEB PUSH YOK — bildirim kanalı üçlüsü kilitli (26.08, kullanıcı onayı)
+
+Bildirim modülünün kanal kararı: **mobil push → e-posta → (son çare, ücretli) WhatsApp şablonu.**
+Web tarayıcı push'u bu listede YOK ve eklenmeyecek; web'de "bildirim" = hesap sayfasındaki zil +
+liste (14.15).
+
+**Gerekçe teknik ve kapanmış:** aynı fiziksel telefonda tarayıcı aboneliği ile uygulama jetonu
+birbirinden AYIRT EDİLEMEZ — kullanıcının kendisinin tarif ettiği çift-bildirim senaryosu tam
+buradan doğar (web'den sipariş vermiş, sonra uygulamayı kurmuş müşteri). Tek güvenilir ayırt etme
+sinyali cihaz jetonunun kendisidir: jeton varsa push, yoksa e-posta. İkinci gerekçe platform
+gerçeği: iOS'ta web push ancak PWA kurulumuyla çalışıyor — güvenilmez bir kanala çift-bildirim
+riski alınmaz.
+
+**Karar kapıyı KİLİTLEMİYOR:** bir gün açılırsa `push_device.platform`a `web` değeri ve
+`packages/notify`a bir sürücü eklemek yeter — veri modeli buna engel değil. Ama o gün çift-bildirim
+sorusunun yeni bir cevabı bulunmak zorunda; bugünkü cevap "o kapıyı açmamak"tır.
+
+**Bir sınıf ayrımı da bu kararla birlikte kilitlendi:** HABER (ping) tek kanaldan gider — aynı
+haberi iki kez almak gürültüdür; BELGE (sipariş onayı, iade — dayanıklı ortam yükümlülüğü) e-postaya
+HER ZAMAN gider, push eklendiğinde İLAVE olur, yerine geçmez. Sınıf bilgisi tek yerde:
+`NOTIFY_EVENT_META` (`packages/notify`).

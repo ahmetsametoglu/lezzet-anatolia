@@ -15,6 +15,8 @@ export { UserProfileService } from './services/user-profile.service';
 export { EmailVerificationService, type RequestCodeResult, type VerifyCodeResult } from './services/email-verification.service';
 // Kimlik anahtarı (04.10): DOĞRULANMIŞ numara. `UserProfileService.findByPhone` bunun yerine geçmez
 // — o kolon iletişim numarasıdır ve kimlik çözümünde okunmaz.
+// Bildirim kaydı + teslim defteri (14.12) — karar tek kapıda (application/notification/dispatch).
+export { AppNotificationService, NotificationDeliveryService } from './services/app-notification.service';
 export { CustomerPhoneService } from './services/customer-phone.service';
 export { CategoryService, type CreateCategoryInput } from './services/category.service';
 export { CategoryImageService } from './services/category-image.service';

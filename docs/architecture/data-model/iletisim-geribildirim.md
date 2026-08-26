@@ -87,6 +87,40 @@ Stripe/360dialog webhook'ları için tekrar-işleme kilidi (idempotency): aynı 
 | processed_at | timestamptz \| null | |
 | payload | jsonb \| null | ham gövde (hata ayıklama) |
 
+## Notification (bildirim kaydı)
+
+"Şu kişiye şu oldu" satırı (14.12, migration 0049) — uygulama içi zilin, okundu hâlinin ve teslim defterinin öznesi. **Metin taşımaz:** dil müşterinin tercihine bağlıdır ve değişebilir; satır olayı (`kind`) ve dil-bağımsız küçük veriyi (`payload`) taşır, cümleyi okuyan yüzey kurar. **Bildirim ≠ kuyruk:** kuyruk maddesi (toplama bekleyen sipariş) buraya yazılmaz — bildirim bir AN'dır, iş listesi değil. Yazan tek yer bildirimin tek kapısıdır (`@lezzet/application/notification/dispatch`); beş yayım noktası (sipariş · talep · davet · bölge · B2B) oradan geçer.
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| profile_id | uuid | alıcı — müşteri de personel de (kimlik tek tabloda, rol ayırır); **cascade**: purge ve GDPR silmesi ek hedef istemez |
+| kind | string | olay türü — kaynağı `AppNotificationKindEnum` (Zod); DB'de TEXT, enum değil (küme her modülle büyür; emekliye ayrılan tür eski satırları kırmasın) |
+| target_type | string \| null | "tıkla, git" hedefinin türü (order · ticket · feedback_request · zone_notice · customer) — adres, içerik değil |
+| target_id | uuid \| null | |
+| warehouse_id | uuid \| null | DEPO BOYUTU: depo-bağlamlı personel olayı rol × depo kesişimiyle dağıtılır (CLAUDE değişmezi); müşteri ve depo-üstü olaylarda null |
+| payload | jsonb | dil-bağımsız, KİMLİKSİZ küçük veri (referenceNo, postalCode) — hedefe N+1 gitmeden ve hedef silinse bile cümle kurulsun; serbest metin ve kişisel içerik girmez |
+| dedupe_key | string \| null | formülü OLAY tanımlar (`order:<id>:<durum>`); istisna olaylarında NULL — her düzeltme ayrı haberdir. Tekillik `(profile_id, dedupe_key)` kısmi unique |
+| created_at | timestamptz | |
+| read_at | timestamptz \| null | okundu |
+| dismissed_at | timestamptz \| null | gizlendi — okundudan AYRI; rozet = `read_at is null AND dismissed_at is null` (tanım tek yerde) |
+
+**Personel dağıtımı yazarken (fan-out):** role giden olay, uyan her personele birer satır — rozet sayacı sıcak yoldur, okuma-anı join'ine bağlanmaz. Rolü sonradan verilen personel geçmişi görmez (kabul: bildirim an'dır, arşiv değil; işin kendisi kuyruklarda durur). `document_undeliverable`: e-postasız müşterinin BELGESİ (sipariş onayı — dayanıklı ortam yükümlülüğü) hiçbir kanala ulaşamadığında yöneticiye düşen satır.
+
+## NotificationDelivery (teslim defteri)
+
+Bildirim OLGUsu ile kanala TESLİMİ ayrı kayıtlardır: BELGE sınıfı "e-posta her zaman + push da" der — tek satır birden çok teslim doğurur; notifier zaten `NotifyResult[]` (dizi) döndürüyordu, tek kolon o diziyi ezerdi. "none" da iki şeyi birden söylerdi: "kanal yoktu" (skipped) ve "vardı, düştü" (error).
+
+| Alan | Tip | Not |
+| --- | --- | --- |
+| id | uuid | |
+| notification_id | uuid | **cascade** |
+| channel | string | küme `NotifyChannel`dan türer (+ ileride `push`); `whatsapp_api` 15.11 kapanana dek yazılamaz — sürücü `supports=false` |
+| status | string | sent · skipped · error (NotifyResult üçlüsü) |
+| reason | string \| null | skipped/error sebebi; sent'te null |
+| ref | string \| null | sağlayıcı referansı — "gerçekten ne gitti"nin izi |
+| created_at | timestamptz | |
+
 ## AnalyticsEvent (analitik olayı)
 
 Cookie'siz, sunucu-tarafı, toplu ölçüm. **Kuralların tamamı `ANALYTICS.md`'de** (sınır · kimlik · olay şekli · kapı · saklama); burada yalnız ALANLAR durur.

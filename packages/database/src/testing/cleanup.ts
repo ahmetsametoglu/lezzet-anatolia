@@ -102,6 +102,14 @@ export interface PurgeTargets {
    */
   assistantProposalIds?: string[];
   /**
+   * Bildirim satırları (`notification`, 0049) — YALNIZ personel fan-out'unun izleri için.
+   * Müşteri satırları profille cascade gider (`profileIds` yeter); ama `dispatchStaffNotification`
+   * GERÇEK personel profillerine yazar (seed yöneticileri dahil) ve o profiller purge'ün malı
+   * değildir. Kapı bu yüzden yazdığı kimlikleri döndürür; test onları buraya taşır. Teslim
+   * defteri (`notification_delivery`) satıra cascade bağlı, ayrıca anılmaz.
+   */
+  notificationIds?: string[];
+  /**
    * Sahiplenilmiş webhook olayları (`webhook_event`, 0022) — anahtar **sağlayıcı kimliği**
    * (`event_id`), bizim uuid'imiz değil: satırı testin kendi ürettiği `wamid.…`/`evt_…` damgası
    * tanır ve çağıran o damgayı zaten biliyor.
@@ -208,6 +216,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     orderIds,
     profileIds,
     assistantProposalIds,
+    notificationIds,
     webhookEventIds,
     conversationIds,
     storageAreaIds,
@@ -233,6 +242,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     orderIds: clean(targets.orderIds),
     profileIds: clean(targets.profileIds),
     assistantProposalIds: clean(targets.assistantProposalIds),
+    notificationIds: clean(targets.notificationIds),
     webhookEventIds: clean(targets.webhookEventIds),
     conversationIds: clean(targets.conversationIds),
     storageAreaIds: clean(targets.storageAreaIds),
@@ -321,6 +331,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   await step(async () => {
     if (assistantProposalIds.length > 0) {
       await mustDelete(db, 'assistant_proposal', (q) => q.in('id', assistantProposalIds));
+    }
+    // Bildirimler de bağımsız: hiçbir şey onları restrict ile tutmaz, ama personel fan-out'unun
+    // satırlarını profil cascade'i DE toplamaz — kimlikle gelirler (künye yukarıda).
+    if (notificationIds.length > 0) {
+      await mustDelete(db, 'notification', (q) => q.in('id', notificationIds));
     }
     // Webhook olayları da bağımsız: mesajı silinmiş bir olay kaydı geride kalırsa, aynı sağlayıcı
     // kimliği bir daha ASLA yazılamaz (claim onu tekrar sayar) — sessiz bir kilit olurdu.

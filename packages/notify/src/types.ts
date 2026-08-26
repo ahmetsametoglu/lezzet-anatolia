@@ -92,3 +92,45 @@ export interface NotifyDriver {
     payload: NotifyPayloads[E],
   ): Promise<NotifyResult>;
 }
+
+/**
+ * **Olay sınıfı** (14.12) — teslim güvencesini belirler, kanalı değil.
+ *
+ * `ping`     → HABER: tek kanaldan gitmesi yeter (aynı haberi iki kez almak gürültüdür) ve
+ *              ulaşamazsa dünyanın sonu değildir — uygulama içi satır zaten yazılmıştır.
+ * `document` → BELGE: mesafeli satışta DAYANIKLI ORTAMDA verilmesi gereken kayıt (sipariş onayı,
+ *              iade). E-posta HER ZAMAN denenir; push bir gün eklendiğinde İLAVE gider, yerine
+ *              geçmez. E-postasız müşteride belge kanalsız kalır — o hâl sessiz geçilmez,
+ *              operasyona düşer (`document_undeliverable`, tek kapının işi).
+ */
+export type NotifyClass = 'ping' | 'document';
+
+export interface NotifyEventMeta {
+  class: NotifyClass;
+  /**
+   * Uygulama içi bildirim SATIRI yazılır mı (14.12). Çoğu olayda evet; `ticket_received` hayır —
+   * o bir TEYİTTİR (yukarıdaki künyesi: "işi müşteriye bir şey anlatmak değil, mesajın ulaştığını
+   * kanıtlamak") ve müşterinin kendi eyleminin yankısını zile düşürmek gürültüdür.
+   */
+  inApp: boolean;
+}
+
+/**
+ * Olay → sınıf + satır kararı. `Record` KİLİTTİR: `NotifyPayloads`a eklenen olay burada karar
+ * verilmeden derlenmez — "yeni olay hangi sınıfta" sorusu sessizce atlanamaz (CLAUDE §1: sınıf
+ * bilgisi TEK yerde; uygulama katmanında if/else olarak ikinci kez yazılmaz).
+ */
+export const NOTIFY_EVENT_META: Record<NotifyEventName, NotifyEventMeta> = {
+  order_confirmed: { class: 'document', inApp: true },
+  order_out_for_delivery: { class: 'ping', inApp: true },
+  order_delivered: { class: 'document', inApp: true }, // teslim özeti/fiş taşır (14.6'nın zemini)
+  order_cancelled: { class: 'document', inApp: true },
+  order_shortfall: { class: 'document', inApp: true }, // para etkisi var — tutar değişti
+  order_refunded: { class: 'document', inApp: true },
+  ticket_received: { class: 'ping', inApp: false }, // teyit — satır yazmaz (gerekçe NotifyEventMeta)
+  ticket_replied: { class: 'ping', inApp: true },
+  ticket_status_changed: { class: 'ping', inApp: true },
+  feedback_invite: { class: 'ping', inApp: true },
+  zone_available: { class: 'ping', inApp: true }, // satır YALNIZ profili olan alıcıya (kapının işi)
+  b2b_application_result: { class: 'document', inApp: true }, // gerekçeli ticari karar
+};
