@@ -104,6 +104,13 @@ interface SiparisKalem {
   qty: number;
   unitPrice: number;
   vatRate: number;
+  /**
+   * PAZARLIK İZİ (26.08) — üstüne yazılmadan önceki LİSTE fiyatı. Verilirse `unitPrice` pazarlık
+   * sonucudur ve kalem "kim, ne kadar taviz verdi" sorusunu cevaplar. Verilmezse iz YOKTUR ve bu
+   * doğrudur: her normal kaleme aynı sayıyı ikinci kez yazmak veriyi büyütüp hiçbir soruya yeni
+   * cevap vermez (`order_item_negotiation_complete` kısıtının kendi gerekçesi).
+   */
+  listeFiyati?: number;
 }
 
 /** Tam yolun durakları — sırayla yürünür; hedef nerede ise orada durulur. */
@@ -158,6 +165,8 @@ export async function seedOrders(
   const satilabilir = varyantlar.filter((v) => v.status !== 'candidate');
   const kurye = kisiler.get('kurye') ?? null;
   const depocu = kisiler.get('depocu') ?? null;
+  // Pazarlığı YAZAN el: elle sipariş girişini de kapı önü satışını da personel yapar.
+  const pazarlikciId = kisiler.get('yonetici') ?? depocu ?? null;
 
   /** Kalem kurar: fiyat kanal tabanından, KDV üründen. */
   const kalem = (i: number, qty: number): SiparisKalem => {
@@ -302,7 +311,13 @@ export async function seedOrders(
     if (!customerId) throw new Error(`seed: bilinmeyen müşteri anahtarı "${opts.musteri}" (${opts.etiket})`);
 
     const adres = await varsayilanAdres(customerId);
-    const deliveryType = opts.deliveryType ?? 'route';
+    // KAPI ÖNÜ satışının teslimat türü `pickup`tır ve SORULMAZ, kaynaktan TÜRETİLİR (26.08):
+    // ikisi ayrı yazılsaydı bir gün ayrışırlardı. Kayıt `route` derken teslimatın öteki tüm izleri
+    // (gün, bölge, kurye) zaten boş bırakılıyordu — yani satır kendi içinde çelişiyordu ve teslimat
+    // türüne bakan her okuma kapı önü satışını bir ROTA teslimatı sayıyordu. Gerçek yol (yerinde
+    // satış, `on-site-sale.ts`) `pickup` yazıyor; seed de artık aynısını söylüyor.
+    const kapiOnu = opts.kaynak === 'door';
+    const deliveryType = kapiOnu ? 'pickup' : (opts.deliveryType ?? 'route');
     const zone =
       deliveryType === 'route'
         ? zones.find((z) => adres && z.postalCodes.some((c) => c.postalCode === adres.postalCode && c.country === adres.country))
@@ -316,7 +331,6 @@ export async function seedOrders(
     // KAPI ÖNÜ satışında teslimat YOKTUR: müşteri malı elden aldı. Teslim günü ve kurye yazmak,
     // o satışı bir SEFERE bağlar (`seedDeliveryRuns` kuryeli+günlü rota siparişlerini damgalar,
     // kapanış da seferin tahsilatını sayar) ve kuryeden hiç taşımadığı bir paranın hesabı sorulur.
-    const kapiOnu = opts.kaynak === 'door';
     const depoId = opts.depo === 'kehl' ? depolar.kehl : depolar.str;
     // TESLİMAT ÜLKESİ adresten gelir, varsayılandan değil: Almanya'ya giden bir siparişi `FR`
     // bırakmak hem OSS eşiği izlemini hem vergi modelini sessizce yanlışlar.
@@ -352,8 +366,11 @@ export async function seedOrders(
         channel: opts.channel,
         orderSource: opts.kaynak ?? 'web',
         deliveryType,
-        deliveryZoneId: kapiOnu ? null : (zone?.id ?? null),
-        deliveryDate: deliveryType === 'route' && !kapiOnu ? gun(teslimKaydirma) : null,
+        // Bölge ve teslim günü artık TÜRE bakıyor, kaynağa değil: `pickup`ta bölge zaten hiç
+        // aranmıyor (yukarıdaki `zone`) ve teslim günü yok. Ayrıca `kapiOnu` sormak aynı olguyu
+        // ikinci kez tanımlamak olurdu.
+        deliveryZoneId: zone?.id ?? null,
+        deliveryDate: deliveryType === 'route' ? gun(teslimKaydirma) : null,
         discountId: indirim,
         discountAmountCents: toCents(indirimTutari),
         discountLabel: indirim ? (kuralEtiketi.get(indirim) ?? null) : null,
@@ -401,6 +418,11 @@ export async function seedOrders(
         qty: k.qty,
         vatRate: k.vatRate,
         unitPriceCents: toCents(k.unitPrice),
+        // İZ YARIM YAZILMAZ — ikisi birlikte ya da hiç (`order_item_negotiation_complete`).
+        // Pazarlığı YAZAN personel kimliği gerçek olmalı: kolon `user_profiles`e `restrict` FK.
+        ...(k.listeFiyati != null && pazarlikciId
+          ? { listUnitPriceCents: toCents(k.listeFiyati), priceSetBy: pazarlikciId }
+          : {}),
         lineDiscountAmountCents: paylar[i] ?? 0,
       })),
     );
@@ -529,7 +551,10 @@ export async function seedOrders(
   await siparis({ musteri: 'b2bAlman', kalemler: [kalem(16, 6)], hedef: 'completed', channel: 'b2b', onAccount: true, tahsilat: euro(toplam([kalem(16, 6)]) / 2), yasi: 8, etiket: 'Vadeli — KISMİ ödenmiş' });
 
   // — Hızlı satış (kapı önü): tek adımda kapanır, rezervasyon yok
-  await siparis({ musteri: 'b2cKapaliKapida', kalemler: [kalem(17, 2)], hedef: 'completed', channel: 'b2c', kaynak: 'door', paymentMethod: 'cash', etiket: 'Hızlı satış — kapı önü (nakit)' });
+  // PAZARLIKLI kapı önü satışı (26.08): liste 22,20 €, kapıda 20,00 €'ya verilmiş — 2,20 € taviz.
+  // Yerel veride bu izin BİR örneği olmalı, yoksa "taviz" sütunu hiçbir ekranda dolu görünmez ve
+  // pazarlık izi ancak testte yaşar. Taviz KAMPANYA DEĞİLDİR: `line_discount_amount`a girmez.
+  await siparis({ musteri: 'b2cKapaliKapida', kalemler: [{ ...kalem(17, 2), unitPrice: 20, listeFiyati: 22.2 }], hedef: 'completed', channel: 'b2c', kaynak: 'door', paymentMethod: 'cash', etiket: 'Hızlı satış — kapı önü (nakit, PAZARLIKLI)' });
   await siparis({ musteri: 'b2cSadik', kalemler: [kalem(18, 1), kalem(19, 2)], hedef: 'completed', channel: 'b2c', kaynak: 'door', paymentMethod: 'card', etiket: 'Hızlı satış — kapı önü (kart)' });
 
   // — Patron ikramı: parayı patron öder, gelir/kâr/kasa TAM normal — yalnız muhasebe export'una
