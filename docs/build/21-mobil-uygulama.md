@@ -2831,7 +2831,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   (`docs/talep/musteri-liste-fiyati-baslangic.md`); iki yüzey bir süre ayrışacak ama **ayrışma
   doğru yönde** — mobil daha dürüst.
 
-- [~] (21.56) **PUAN SİSTEMİNİN UÇTAN UCA DENETİMİ — İLK TUR + GÜNLÜK TAVAN 270 (MB-18)**
+- [x] (21.56) **PUAN SİSTEMİNİN UÇTAN UCA DENETİMİ — İLK TUR + GÜNLÜK TAVAN 270 (MB-18)**
   `touches:` `supabase/migrations/0028_points.sql` ·
   `packages/{domain-core,application}/src/feedback/points.ts`
 
@@ -2878,8 +2878,23 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     "siparişten 10 puan veriliyor" sonucuna varır. Bugün kimse okumuyor, yani zararsız; **yanlış
     bilgi veren bir kayıt.** Kaldırmak migration işi → kullanıcının kararı, sıraya kondu.
 
-  **AÇIK KALAN (bu yüzden `[~]`):** yorum · ziyaret · getiren · komşu ödüllerinin gerçek yazım
-  yolları, teşekkür kartının sayıları ve "ikinci kez tamamlamada puan yok" hâli ölçülmedi.
+  ~~**AÇIK KALAN (bu yüzden `[~]`):** yorum · ziyaret · getiren · komşu ödüllerinin gerçek yazım
+  yolları, teşekkür kartının sayıları ve "ikinci kez tamamlamada puan yok" hâli ölçülmedi.~~
+  **İKİNCİ TUR KAPANDI (26.08) — liste bayatlamıştı, açıkların hepsi sonradan yazılmış
+  testlerle zaten kapalı çıktı** ("görev satırı iddiadır, ölç"):
+  · getiren + komşu yazımı, iade kuralları ve "yeniden ödemede geri gelmez" tekilliği →
+    `reward-revoke.test.ts` (25.08, 17 test) · yorum yolu (metinli `review`, boş metin reddi) →
+    `product-feedback.test.ts` · ziyaret: native `POST /points/visit` `points.test.ts`te,
+    günde-bir kuralı `visit-points.test.ts`te (tekillik `points_entry_visit_day` indeksinde) ·
+    teşekkür kartının sayıları 21.59'da cihazda görülmüştü. Defter dağılımı da ölçüldü:
+    `neighbor` satırı hiç yok — yol yalnız testte koşmuş, canlıda komşu davetli ödenmiş sipariş
+    henüz doğmadı (arıza değil, veri hâli).
+  · **`points_order` SÖKÜLDÜ (kullanıcı kararı 26.08):** `EarnablePointsReason` artık `order`'ı
+    dışlıyor (yazım tip düzeyinde imkânsız; sebep geçmişi adlandırmak için `PointsReason`da
+    durur), ayar satırı migration'dan ve Ayarlar kataloğunun "Sipariş puanı" girdisinden silindi
+    (web dosyalarına dokunuş mekanik zorunluluktu — tip zinciri). Canlı satır bir sonraki
+    `db:refresh`te düşer. Tavan 270'in canlıya inmesi de kullanıcı kararıyla `db:refresh`e
+    bırakıldı (bugünkü davranışı değiştirmiyor; azami günlük kazanç 18).
 
 - [~] (21.57) **YEDİ OPERASYON EKRANI KAYDIRMA KABINA GEÇTİ — ve MB-34'ün "39 ekran"ı beş kat abartılıymış**
   `touches:` `apps/mobile/src/screens/courier/delivery-screen.tsx` ·

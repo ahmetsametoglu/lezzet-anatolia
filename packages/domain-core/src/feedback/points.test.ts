@@ -126,7 +126,9 @@ describe('geri bildirimin puan sebebi', () => {
     expect(POINTS_SETTING_KEYS.review).toBe('points_review');
     expect(POINTS_SETTING_KEYS.feedback_candidate).toBe('points_feedback_candidate');
 
-    const kazanilabilir = PointsReasonEnum.options.filter((r) => r !== 'redemption' && r !== 'manual');
+    // `order` da dışarıda: sipariş puanı kaldırıldı, sebep yalnız GEÇMİŞİ adlandırmak için
+    // enum'da durur — kazanılamaz, dolayısıyla ayar anahtarı da yok (tipin künyesi).
+    const kazanilabilir = PointsReasonEnum.options.filter((r) => r !== 'redemption' && r !== 'manual' && r !== 'order');
     expect(Object.keys(POINTS_SETTING_KEYS).sort()).toEqual([...kazanilabilir].sort());
     // Her anahtar `points_` önekli ve sebebiyle aynı adı taşır — ayar tablosuyla eşleşmenin şartı.
     for (const reason of kazanilabilir) expect(POINTS_SETTING_KEYS[reason]).toBe(`points_${reason}`);

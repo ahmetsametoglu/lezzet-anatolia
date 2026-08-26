@@ -274,14 +274,16 @@ describe('getiren müşteri (17.7)', () => {
 });
 
 describe('doğrudan puan yazımı', () => {
+  // Sebep `review`: `order` artık KAZANILAMAZ (26.08 — sipariş puanı 11.08'de kalkmıştı, yetim
+  // `points_order` ayarı da söküldü; tip `EarnablePointsReason` yazımı derlemede engelliyor).
   it('bilinmeyen müşteriye puan yazılmaz', async () => {
-    expect(await awardPoints({ customerId: '00000000-0000-0000-0000-000000000000', reason: 'order', refId: crypto.randomUUID() })).toBeNull();
+    expect(await awardPoints({ customerId: '00000000-0000-0000-0000-000000000000', reason: 'review', refId: crypto.randomUUID() })).toBeNull();
   });
 
-  it('sipariş puanı kaynak başına bir kez yazılır', async () => {
+  it('puan kaynak başına BİR KEZ yazılır (tekillik indeksi)', async () => {
     const orderId = createdOrders[0]!;
-    expect(await awardPoints({ customerId: b2cId, reason: 'order', refId: orderId })).not.toBeNull();
-    expect(await awardPoints({ customerId: b2cId, reason: 'order', refId: orderId })).toBeNull();
-    expect((await getPointsBalance(b2cId)).balance).toBe(10);
+    expect(await awardPoints({ customerId: b2cId, reason: 'review', refId: orderId })).not.toBeNull();
+    expect(await awardPoints({ customerId: b2cId, reason: 'review', refId: orderId })).toBeNull();
+    expect((await getPointsBalance(b2cId)).balance).toBe(20);
   });
 });

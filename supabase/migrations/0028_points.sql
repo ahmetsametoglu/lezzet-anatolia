@@ -165,7 +165,6 @@ insert into public.settings (key, value, description) values
   ('points_review',             '20',  'Yazılı yorum/yıldız puanı — en değerli beyan.'),
   ('points_feedback_purchase',  '5',   'Alım-sonrası beğeni puanı (aldığı ürünü değerlendirme).'),
   ('points_feedback_candidate', '2',   'Keşifte aday ürün kaydırma puanı — en ucuz aksiyon.'),
-  ('points_order',              '10',  'Sipariş başına puan.'),
   -- DEĞER MERDİVENİ (kullanıcı kararı 11.08) — oran bilinçli BEŞ KAT: kalıcı bir müşteri
   -- kazandırmak, bir seferi doldurmaktan değerli. 500 aynı zamanda çevirme eşiğinin tamıdır
   -- (`points_redeem_min`), yani hesap ekranının "size de 5 € kupon" sözünü gerçek yapar.

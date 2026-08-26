@@ -51,7 +51,6 @@ export const POINTS_DEFAULTS: Record<EarnablePointsReason, number> = {
   review: 20,
   feedback_purchase: 5,
   feedback_candidate: 2,
-  order: 10,
   /**
    * ── DEĞER MERDİVENİ: 500 / 100 (kullanıcı kararı 11.08) ────────────────────
    * Değerler `docs/uygulama/BACKLOG-musteri.md §2f`de yazılı ve buradaki varsayılanlar onunla
@@ -83,18 +82,17 @@ export function feedbackCompletionPoints(db: SupabaseClient): Promise<number> {
 /** Puan ayarları tek turda — her aksiyonda ayar başına ayrı sorgu atmamak için. */
 async function pointsSettings(db: SupabaseClient): Promise<{ values: Record<string, number>; dailyCap: number }> {
   const settings = new SettingsService(db);
-  const [review, purchase, candidate, order, referral, neighbor, visit, dailyCap] = await Promise.all([
+  const [review, purchase, candidate, referral, neighbor, visit, dailyCap] = await Promise.all([
     settings.getNumber(POINTS_SETTING_KEYS.review, POINTS_DEFAULTS.review),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_purchase, POINTS_DEFAULTS.feedback_purchase),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_candidate, POINTS_DEFAULTS.feedback_candidate),
-    settings.getNumber(POINTS_SETTING_KEYS.order, POINTS_DEFAULTS.order),
     settings.getNumber(POINTS_SETTING_KEYS.referral, POINTS_DEFAULTS.referral),
     settings.getNumber(POINTS_SETTING_KEYS.neighbor, POINTS_DEFAULTS.neighbor),
     settings.getNumber(POINTS_SETTING_KEYS.visit, POINTS_DEFAULTS.visit),
     settings.getNumber(POINTS_DAILY_CAP_KEY, POINTS_DAILY_CAP_DEFAULT),
   ]);
   return {
-    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, neighbor, visit },
+    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, referral, neighbor, visit },
     dailyCap,
   };
 }

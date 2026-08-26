@@ -15,15 +15,20 @@ import { readableCode } from '../order/reference-no';
 /**
  * **Kazanılabilir** sebepler — harcama (`redemption`) ve elle düzeltme (`manual`) dışarıda.
  * Tip olarak ayrı durur ki "puan yaz" kapısına yanlışlıkla bir harcama sebebi geçilemesin.
+ *
+ * `order` da dışarıda: sipariş puanı 11.08'de kaldırıldı ("o siparişteki ürünlere yorum yapınca
+ * zaten veriyoruz") ve 26.08'de yetim `points_order` ayarı da kullanıcı kararıyla söküldü —
+ * Ayarlar'a bakan operatör "siparişten 10 puan veriliyor" diye okuyordu, oysa kimse yazmıyordu.
+ * Sebep `PointsReason`da DURUR: defterdeki eski `order` satırları kazanılmış puandır (DOMAIN §14)
+ * ve geçmişi okuyan ekranlar onları adlandırabilmeli; yazılamaz olması işte bu tiple zorlanır.
  */
-export type EarnablePointsReason = Exclude<PointsReason, 'redemption' | 'manual'>;
+export type EarnablePointsReason = Exclude<PointsReason, 'redemption' | 'manual' | 'order'>;
 
 /** Aksiyon başına puan — değerler `Setting`'ten gelir, burada yalnız hangi anahtarı okuyacağı yazılı. */
 export const POINTS_SETTING_KEYS: Record<EarnablePointsReason, string> = {
   review: 'points_review',
   feedback_purchase: 'points_feedback_purchase',
   feedback_candidate: 'points_feedback_candidate',
-  order: 'points_order',
   referral: 'points_referral',
   neighbor: 'points_neighbor',
   visit: 'points_visit',

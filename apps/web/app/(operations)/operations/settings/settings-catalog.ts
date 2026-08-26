@@ -386,17 +386,10 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
     exceptionScopes: NONE,
     fallback: 2,
   },
-  {
-    key: POINTS_SETTING_KEYS.order,
-    label: 'Sipariş puanı',
-    help: 'Tamamlanan sipariş başına verilen puan.',
-    group: 'points',
-    kind: 'integer',
-    unit: 'puan',
-    min: 0,
-    exceptionScopes: NONE,
-    fallback: 10,
-  },
+  // "Sipariş puanı" girdisi bilerek YOK (kullanıcı kararı 26.08): sipariş puanı 11.08'de
+  // kaldırıldı, kodda okuyan kalmadı ve ayar satırı yalnız yanlış bilgi veriyordu — Ayarlar'a
+  // bakan operatör "siparişten 10 puan veriliyor" sonucuna varıyordu. `points_order` migration'dan
+  // da söküldü; defterdeki eski `order` satırları kazanılmış puan olarak durur (DOMAIN §14).
   {
     key: POINTS_SETTING_KEYS.referral,
     label: 'Getiren müşteri puanı',

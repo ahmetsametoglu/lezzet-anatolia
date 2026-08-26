@@ -48,11 +48,10 @@ async function pointsSettings(): Promise<{ values: Record<string, number>; daily
   // VARSAYILANLAR PAKETTEN (17.11): burada kendi tablosu vardı ve 11.08'in değer merdiveninden
   // (getiren 500, komşu 100) habersizdi — ayar satırı yazılmamış bir kurulumda ekran 50 der, motor
   // 500 yazardı. İki kopya bugün ayrışmıştı bile; 29.07 denetiminin kapattığı arıza sınıfının aynısı.
-  const [review, purchase, candidate, order, referral, neighbor, visit, dailyCap, minimum, centValue] = await Promise.all([
+  const [review, purchase, candidate, referral, neighbor, visit, dailyCap, minimum, centValue] = await Promise.all([
     settings.getNumber(POINTS_SETTING_KEYS.review, POINTS_DEFAULTS.review),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_purchase, POINTS_DEFAULTS.feedback_purchase),
     settings.getNumber(POINTS_SETTING_KEYS.feedback_candidate, POINTS_DEFAULTS.feedback_candidate),
-    settings.getNumber(POINTS_SETTING_KEYS.order, POINTS_DEFAULTS.order),
     settings.getNumber(POINTS_SETTING_KEYS.referral, POINTS_DEFAULTS.referral),
     settings.getNumber(POINTS_SETTING_KEYS.neighbor, POINTS_DEFAULTS.neighbor),
     settings.getNumber(POINTS_SETTING_KEYS.visit, POINTS_DEFAULTS.visit),
@@ -66,7 +65,7 @@ async function pointsSettings(): Promise<{ values: Record<string, number>; daily
     settings.getNumber(POINTS_CENT_VALUE_KEY, 1),
   ]);
   return {
-    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, order, referral, neighbor, visit },
+    values: { review, feedback_purchase: purchase, feedback_candidate: candidate, referral, neighbor, visit },
     dailyCap,
     minimum,
     centValue,
