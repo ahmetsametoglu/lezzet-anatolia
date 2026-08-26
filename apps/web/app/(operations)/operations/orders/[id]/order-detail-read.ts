@@ -38,12 +38,14 @@ import {
   isFulfillmentSettled,
   isOverdue,
   isTerminal,
+  isZeroRated,
   needsDedicatedGate,
   openAmountCents,
   orderContribution,
   skippedBetween,
+  vatSplitOf,
 } from '@lezzet/domain-core';
-import { addVat, toCents, vatPortion } from '@lezzet/helper';
+import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readDeliveryProof } from '@/lib/courier/proof';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
@@ -450,7 +452,7 @@ function lineTotalOf(item: OrderItem): number {
  * Toplam bloğu — düşülenler satır satır. "Karşılanmayan adet" ayrı bir satırdır: sipariş tutarı ile
  * ödenecek tutarın neden farklı olduğu, tek bir "toplam" sayısına bakarak anlaşılmaz.
  */
-function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): OrderTotalLine[] {
+export function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): OrderTotalLine[] {
   const subtotal = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
   const shipping = order.shippingFeeCents;
   const discount = order.discountAmountCents;
@@ -477,22 +479,29 @@ function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): Order
   if (short > 0) rows.push({ label: 'Karşılanmayan adet', amountCents: short, kind: 'deduction' });
   // KDV bir DÜŞÜM DEĞİL, bilgi: b2c fiyatı zaten dahil, b2b'de fatura ayrı gösterir. Satırın işi
   // "bu siparişin vergisi ne" sorusunu tutarı bozmadan yanıtlamak.
-  rows.push({ label: 'İçindeki KDV', amountCents: vatInsideOf(order.channel, lines), kind: 'note' });
+  rows.push({ label: 'İçindeki KDV', amountCents: vatInsideOf(order, lines), kind: 'note' });
   rows.push({ label: 'Sipariş toplamı', amountCents: order.totalCents, kind: 'grand' });
   if (refunded > 0) rows.push({ label: 'İade edildi', amountCents: refunded, kind: 'refund' });
   return rows;
 }
 
-/** Kalemlerin içinde duran KDV payı — b2b'de tutar zaten hariçtir, oran üstüne eklenir. */
-function vatInsideOf(channel: Order['channel'], lines: OrderLineView[]): number {
-  return lines.reduce(
-    (sum, l) =>
-      sum +
-      (channel === 'b2c'
-        ? vatPortion(l.lineTotalCents, l.vatRate)
-        : addVat(l.lineTotalCents, l.vatRate) - l.lineTotalCents),
-    0,
-  );
+/**
+ * Kalemlerin içinde duran KDV payı — **kararı MOTOR verir** (`vatSplitOf`).
+ *
+ * ── NEDEN ARTIK BURADA HESAPLANMIYOR (denetim 26.08) ─────────────────────────
+ * Bu fonksiyon motorun kopyasıydı ve iki dalını (b2c'de içinden çıkar, b2b'de üstüne ekle) birebir
+ * tekrarlıyordu — ama motorun ÜÇÜNCÜ dalı, `zeroRated`, burada hiç yoktu. Sonucu şuydu: VIES ile
+ * doğrulanmış vergi numaralı Alman B2B siparişinde KDV yasal olarak SIFIRDIR (reverse charge,
+ * müşteri kendi ülkesinde beyan eder) ama ekran `addVat(...) − tutar` yazıyor, yani olmayan bir
+ * vergiyi varmış gibi gösteriyordu. Toplamı bozmuyordu (satır `note`), fakat operatörün mutabakat
+ * yaparken okuduğu sayı yanlıştı.
+ *
+ * Veri hep elin altındaydı: `order.vatTreatment` bu okumanın kendi çıktısında zaten taşınıyor.
+ * Eksik olan bilgi değil, motora sormaktı.
+ */
+function vatInsideOf(order: Pick<Order, 'channel' | 'vatTreatment'>, lines: OrderLineView[]): number {
+  const zeroRated = isZeroRated(order.vatTreatment);
+  return lines.reduce((sum, l) => sum + vatSplitOf(l.lineTotalCents, order.channel, l.vatRate, zeroRated).vatCents, 0);
 }
 
 /**

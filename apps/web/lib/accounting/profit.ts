@@ -1,6 +1,6 @@
 import { MoneyMovementService, OrderItemBatchService, OrderItemService, OrderSaleService, StockAdjustmentService, serviceDb } from '@lezzet/database';
 import {
-  companyProfit, orderContribution, variantProfit,
+  companyProfit, isZeroRated, orderContribution, variantProfit,
   type CompanyProfit, type OrderContribution, type SoldLine, type VariantProfit,
 } from '@lezzet/domain-core';
 import { fromCents } from '@lezzet/helper';
@@ -62,7 +62,10 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
     channel: salesById.get(item.orderId)?.channel ?? 'b2c',
     // Haritada yoksa parti kaydı hiç yok demektir → maliyet bilinmiyor (0 değil).
     costCents: costs.has(item.id) ? costs.get(item.id)! : null,
-    zeroRated: salesById.get(item.orderId)?.vatTreatment === 'intra_eu_b2b_reverse_charge',
+    zeroRated: (() => {
+      const treatment = salesById.get(item.orderId)?.vatTreatment;
+      return treatment ? isZeroRated(treatment) : false;
+    })(),
   }));
 
   const losses = await new StockAdjustmentService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`));

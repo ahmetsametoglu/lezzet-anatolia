@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveVatTreatment } from './vat-treatment';
+import { isZeroRated, resolveVatTreatment } from './vat-treatment';
 
 describe('KDV işleme (03.10)', () => {
   it('FR: her kanalda yurt içi KDV', () => {
@@ -41,5 +41,38 @@ describe('KDV işleme (03.10)', () => {
   it('DE B2B eşiği beslemez — eşik yalnız tüketici satışı içindir', () => {
     expect(resolveVatTreatment({ channel: 'b2b', deliveryCountry: 'DE', vatNumberValid: true }).countsTowardOssThreshold).toBe(false);
     expect(resolveVatTreatment({ channel: 'b2b', deliveryCountry: 'DE', vatNumberValid: false }).countsTowardOssThreshold).toBe(false);
+  });
+});
+
+describe('isZeroRated — siparişe YAZILMIŞ işlemeden okunur (denetim 26.08)', () => {
+  /*
+    Karar sipariş açılırken verilip kolona yazılıyor; sonradan okuyan yüzeyler (muhasebe dışa
+    aktarımı, kârlılık, sipariş detayı) aynı soruyu KOLONDAN soruyor — girdiler (ülke, kanal, vergi
+    no doğrulaması) o gün değişmiş olabilir, sipariş anındaki karar değişmez.
+
+    Bu karşılaştırma üç yerde elle yazılıydı ve dördüncü okuyan onu sormayı unutmuştu: sipariş
+    detayı "İçindeki KDV" satırında olmayan bir vergiyi gösteriyordu. İddia buradan kuruluyor ki
+    beşinci okuyan aramak zorunda kalsın, hatırlamak değil.
+  */
+  it('yalnız AB içi B2B reverse charge KDV\'siz sayılır', () => {
+    expect(isZeroRated('intra_eu_b2b_reverse_charge')).toBe(true);
+  });
+
+  it('yurt içi işleme KDV\'lidir — DE B2C dahil (OSS eşiği aşılana kadar Fransız KDV\'si)', () => {
+    expect(isZeroRated('domestic')).toBe(false);
+  });
+
+  it('motorun ANLIK kararıyla aynı cevabı verir — iki kaynak ayrışamaz', () => {
+    // Aynı gerçeğin iki okunuşu: karar anında `zeroRated`, sonradan kolondan `isZeroRated`.
+    for (const input of [
+      { channel: 'b2b', deliveryCountry: 'DE', vatNumberValid: true },
+      { channel: 'b2b', deliveryCountry: 'DE', vatNumberValid: false },
+      { channel: 'b2c', deliveryCountry: 'DE' },
+      { channel: 'b2c', deliveryCountry: 'FR' },
+      { channel: 'b2b', deliveryCountry: 'FR', vatNumberValid: true },
+    ] as const) {
+      const karar = resolveVatTreatment(input);
+      expect(isZeroRated(karar.treatment)).toBe(karar.zeroRated);
+    }
   });
 });

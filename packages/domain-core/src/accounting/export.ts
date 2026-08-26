@@ -1,6 +1,7 @@
 import { distributeProportional, fromCents, toCents } from '@lezzet/helper';
 import type { Channel, Country, OrderSale, PaymentMethod, VatTreatment } from '@lezzet/types';
 import { lineAmountCents, vatSplitOf, type AccountingLine } from './line';
+import { isZeroRated } from '../tax/vat-treatment';
 
 /**
  * Muhasebe export'u (12.7) — DOMAIN §9. **Sistem resmî muhasebe değildir:** fatura kesmez, numara
@@ -120,7 +121,7 @@ export function buildExportRow(sale: OrderSale, items: readonly AccountingLine[]
     deliveryCountry: sale.deliveryCountry,
     vatTreatment: sale.vatTreatment,
     vatNumber: sale.vatNumberSnapshot,
-    invoiceNote: sale.vatTreatment === 'intra_eu_b2b_reverse_charge' ? 'Autoliquidation' : null,
+    invoiceNote: isZeroRated(sale.vatTreatment) ? 'Autoliquidation' : null,
     gross: sumOf(vatLines, 'gross'),
     net: sumOf(vatLines, 'net'),
     vat: sumOf(vatLines, 'vat'),
@@ -152,7 +153,7 @@ export type SaleVatBasis = Pick<OrderSale, 'channel' | 'vatTreatment' | 'shippin
  * tek çevirip toplasaydık kuruş artıkları birikirdi.
  */
 export function vatLinesOf(sale: SaleVatBasis, items: readonly AccountingLine[]): ExportVatLine[] {
-  const zeroRated = sale.vatTreatment === 'intra_eu_b2b_reverse_charge';
+  const zeroRated = isZeroRated(sale.vatTreatment);
   const buckets = items.map((item) => ({ vatRate: zeroRated ? 0 : item.vatRate, amount: lineAmountCents(item) }));
 
   const shippingCents = sale.shippingFeeCents;

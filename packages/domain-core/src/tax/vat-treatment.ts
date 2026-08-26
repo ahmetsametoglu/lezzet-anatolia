@@ -14,6 +14,27 @@ import type { Channel, Country, VatTreatment } from '@lezzet/types';
  *   ciroyu izler ve eşiğe yaklaşınca uyarır (izleme 13-analitik'te).
  */
 
+/**
+ * **Siparişe YAZILMIŞ işlemeden KDV'siz mi** — `resolveVatTreatment`in `zeroRated`ının kalıcı hâli.
+ *
+ * Motor sipariş açılırken kararı verip `order.vat_treatment` kolonuna yazıyor; sonradan okuyan
+ * her yüzey (muhasebe dışa aktarımı, kârlılık, sipariş detayı) aynı soruyu KOLONDAN sormak
+ * zorunda — girdiler (ülke, kanal, vergi no doğrulaması) o an değişmiş olabilir, sipariş anındaki
+ * karar ise değişmez.
+ *
+ * ── NEDEN AYRI BİR FONKSİYON (denetim 26.08) ─────────────────────────────────
+ * Bu karşılaştırma depoda ÜÇ yerde elle yazılıydı (`accounting/export` iki kez, `lib/accounting/profit`)
+ * ve dördüncü okuyan onu hiç sormamıştı: operasyon sipariş detayı "İçindeki KDV" satırını kendi
+ * hesaplıyor, `zeroRated` dalını atlıyordu. Sonucu, KDV'si yasal olarak SIFIR olan bir reverse
+ * charge siparişinde ekranda duran hayalet bir vergi tutarıydı.
+ *
+ * Elle yazılan bir karşılaştırma "unutulabilir" bir karşılaştırmadır; sorulacak bir fonksiyon
+ * unutulduğunda en azından aranabilir olur.
+ */
+export function isZeroRated(treatment: VatTreatment): boolean {
+  return treatment === 'intra_eu_b2b_reverse_charge';
+}
+
 export interface VatTreatmentInput {
   channel: Channel;
   /** Teslimat ülkesi — kimlik değil, malın gittiği yer belirler. */
