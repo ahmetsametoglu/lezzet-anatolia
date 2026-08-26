@@ -5735,7 +5735,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: `apps/mobile`da `phone_taken` **0 eşleşme** · mobil paket **787/787** · typecheck ·
   lint temiz. Notu kapatıldı (`not-mobil-phone-taken-reti-kalkti.md` silindi).
 
-- [~] (21.118) **YERİNDE SATIŞ — ZEMİN: hızlı satış motoru pakete terfi etti (DOMAIN §17, kullanıcı kararı 26.08)**
+- [x] (21.118) **YERİNDE SATIŞ — ZEMİN: hızlı satış motoru pakete terfi etti (DOMAIN §17, kullanıcı kararı 26.08)**
   · touches: `packages/application/src/order/quick-sale.ts`, `packages/application/src/warehouse/preparation.ts`,
     `packages/application/src/index.ts`, `apps/web/lib/accounting/profit.test.ts`, `apps/web/lib/accounting/gift-order.test.ts`
 
@@ -5796,11 +5796,11 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   alma geçmişini devralırdı ve hiçbir yerde hata vermezdi. Kullanıcı kararı: *"onaylanmamış mail
   ile geçmiş miras alınamaz; geçmişini önemseyen hesap açsın"* — ve bu ekranda birebir söylenecek.
 
-  **SIRADAKİ DİLİMLER (bu satır açık kalıyor):** *(a)* yerinde satış orkestrasyonu — `pickup` +
-  personelin o anki deposu, adres/gün/rezervasyon olmadan (emsal `shippingOrder`: AÇIK seçim,
-  varsayılanı yok — DOMAIN §17/C2); *(b)* misafir satışların müşteri kaydı (tek kayıt + analitikten
-  dışlayan işaret); *(c)* `apps/mobile-api` ucu; *(d)* native ekran — görsel tasarımı hiçbir
-  canvas'ta çizili DEĞİL, kullanıcıya sorulacak.
+  ~~SIRADAKİ DİLİMLER (bu satır açık kalıyor): (a) orkestrasyon · (b) misafir alıcı kaydı ·
+  (c) mobile-api ucu · (d) native ekran~~ — **dördü de aynı gün `21.119`'da teslim edildi**
+  (`sellOnSite` · `ANONYMOUS_BUYER_ID` tek kayıt, `system` rolüyle müşteri listelerinden dışarıda ·
+  `/api/v1/sale/*` · üç yüzeyli ekran, cihazda canlı satışla kanıtlı). Satır o teslimle kapandı;
+  zemin kaydı (Drive şartları dahil) referans olarak duruyor.
 
   **DRIVE'IN ÖNÜ AÇIK BIRAKILDI ve şartları yazıldı** (`DATA_MODEL` › `pickup`). Kullanıcı sordu:
   *"ileride Drive mantığı olacak — müşteri sipariş verip depodan gelip alacak, belki randevuyla."*
