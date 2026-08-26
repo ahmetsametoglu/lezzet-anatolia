@@ -5940,3 +5940,24 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · ekran testi **6/6** (jest) · sabotaj: "pazarlık her kaleme gönderilsin" yapılınca tel-şekil
   testlerinin İKİSİ düştü, geri alınınca yeşil · mobil paket **793/793** · iki typecheck · lint.
 
+  **CİHAZ TURU KOŞULDU (26.08) ve İKİ GERÇEK ARIZA BULUP DÜZELTTİ** — jest ikisini de göremezdi:
+  1. **Kurye satış ekranını HİÇ açamıyordu** (`400 warehouse_required`): kapsamı bilerek çok
+     depolu (rota seçimi tesislere bakar, 19.25) ve guard'ın "tek depo" kuralı ona uymuyor.
+     Çözüm kural olarak veri modelinde zaten yazılıydı, uca uygulandı (`courierVehicleFirst`):
+     parametresiz gelen kuryenin satış deposu kapsamındaki TEK araçtır; parametre verilirse
+     kapsam kontrolü guard'da aynen koşar (depo kapısından satan kurye böyle mümkün). Seed de
+     gerçeğe getirildi: Marc'ın kapsamına VAN-1 + araca yükleme transferi (STR → VAN-1, 4 kalem);
+     `Depolar` tipine `van` girdi ve VAN-1 artık kendi seed kümesinde ("yabancı depo" raporu tuzağı).
+  2. **Arama alanı tek harften sonra siliniyordu:** her tuş `status='loading'` yapıyor, o durum
+     arama ALANINI da söküp yükleme halkasına çeviriyordu — odak ve IME kompozisyonu her tuşta
+     ölüyordu. Alan durum dalının dışına alındı; yeniden yükleme artık ekranı karartmıyor.
+
+  Turun kendisi: kurye "kalzone" aradı → "kalan 6" okudu → çekmecede adet 2 → **satış cihazdan
+  yazıldı** (`LA-26-QECKQR`, 0,96 € — ara toplam 1,12 iken kampanya indirimini SUNUCU uyguladı,
+  "kesin toplam sunucudan gelir" davranışı canlıda görüldü), sepet sıfırlandı, liste **kalan 4**'e
+  tazelendi. DB'den doğrulandı: completed · door · pickup · VAN-1 · anonim alıcı · `money_movement`
+  0,96 € "Kapı önü satış". Depocu gözü de doğrulandı: aynı ekran, STR sayıları (kalan 40/23), hub'da
+  D7 satırı. **Bir gözlem web'e devredildi** (`not-web-sefer-acik-tanimi-ayristi.md`): satış anında
+  ekran "1 açık" sefer gösterirken 4b bağ kurmadı — seed bugünün seferine bile `returned_at`
+  yazıyor, iki "açık" tanımı ayrışmış; karar ve alan web'in.
+

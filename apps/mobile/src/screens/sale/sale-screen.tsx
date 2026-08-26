@@ -61,6 +61,21 @@ export function SaleScreen() {
         testID="sale-header"
       />
 
+      {/* Arama DURUM DALININ DIŞINDA: her tuş bir yeniden yükleme tetikliyor ve alan o dalın
+          içinde olsaydı her yüklemede sökülüp odak/IME kompozisyonunu öldürürdü (cihazda ölçüldü
+          26.08 — alanda tek harf kalıyordu). Alan hep ayakta durur, yalnız GÖVDE değişir. */}
+      <View style={styles.searchBlock}>
+        <TextInput
+          value={sale.search}
+          onChangeText={sale.setSearch}
+          placeholder={t.searchPlaceholder}
+          placeholderTextColor={operationsTheme.colors.muted}
+          accessibilityLabel={t.searchPlaceholder}
+          style={styles.search}
+          testID="sale-search"
+        />
+      </View>
+
       {sale.status === 'loading' ? (
         <View style={styles.centered}>
           <LoadingState accessibilityLabel={t.loading} label={t.loading} />
@@ -72,16 +87,6 @@ export function SaleScreen() {
         </View>
       ) : (
         <FormScroll contentContainerStyle={styles.list} testID="sale-body">
-          <TextInput
-            value={sale.search}
-            onChangeText={sale.setSearch}
-            placeholder={t.searchPlaceholder}
-            placeholderTextColor={operationsTheme.colors.muted}
-            accessibilityLabel={t.searchPlaceholder}
-            style={styles.search}
-            testID="sale-search"
-          />
-
           {sale.products.length === 0 ? (
             <Text style={styles.hint} testID="sale-search-empty">
               {t.searchEmpty}
@@ -330,6 +335,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space.lg,
+  },
+  searchBlock: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingBottom: operationsTheme.space.lg,
   },
   search: {
     minHeight: operationsTheme.size.controlSm,

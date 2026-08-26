@@ -128,7 +128,7 @@ async function addSimit() {
 
 beforeAll(() => {
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
-  global.fetch = fetchMock as unknown as typeof fetch;
+  globalThis.fetch = fetchMock as unknown as typeof fetch;
 });
 
 beforeEach(() => {

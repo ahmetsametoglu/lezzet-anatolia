@@ -193,7 +193,10 @@ const KISILER: SeedKisi[] = [
   // kilitlemez, Colmar rotasının koşulabilmesi için şarttır (11.7: kapsam dışı rota görünmez).
   { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
   { key: 'depocuColmar', name: 'Claire Muller', email: 'depo.colmar@lezzetanatolia.fr', phone: '+33600000105', roles: ['warehouse'], depolar: ['colmar'], preferredLanguage: 'fr' },
-  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str', 'colmar'], preferredLanguage: 'fr' },
+  // Kapsama ARAÇ da girdi (26.08 · 21.119): yerinde satışın depo çözümü kuryenin kapsamındaki tek
+  // araçtır (`sale.ts` `courierVehicleFirst`) — araçsız kuryede satış ekranı hiç açılamaz (ölçüldü:
+  // {str, colmar} kapsamı `400 warehouse_required` veriyordu). Tesisler rota seçimi için kalır.
+  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str', 'colmar', 'van'], preferredLanguage: 'fr' },
   // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
   // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
   // seçmez (C2). Tek depolu bir seed'de bu ekran hiç denenemezdi.

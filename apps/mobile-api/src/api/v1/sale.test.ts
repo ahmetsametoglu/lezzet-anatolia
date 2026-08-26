@@ -50,7 +50,9 @@ beforeAll(async () => {
   // bile açılmıyor (DOMAIN §13). Fikstür bu yüzden ürünü yayına alıyor.
   await new ProductService(db).update({ id: productId, status: 'active' });
 
-  kurye = await createSignedInUser({ prefix: 'sale', label: 'kurye', roles: ['courier'], warehouseIds: [vehicleId] });
+  // Kapsam BİLEREK çift: tesis + araç (seed kuryesinin gerçeği — rota seçimi tesislere bakar,
+  // 19.25). Parametresiz her istek `courierVehicleFirst` çözümünden geçer: araç seçilmeli.
+  kurye = await createSignedInUser({ prefix: 'sale', label: 'kurye', roles: ['courier'], warehouseIds: [facilityId, vehicleId] });
   depocu = await createSignedInUser({ prefix: 'sale', label: 'depocu', roles: ['warehouse'], warehouseIds: [facilityId] });
 });
 
@@ -167,6 +169,21 @@ describe('POST /sale/on-site', () => {
 
     const depocuGozu = await varyantlar(depocu);
     expect(depocuGozu.variants.find((v) => v.id === variantId)?.availableHere).toBe(9);
+  });
+
+  it('KURYE parametre verirse kapsamındaki TESİSTEN de satabilir — araç önceliği yalnız belirsizlikte', async () => {
+    /*
+      `courierVehicleFirst` yalnız PARAMETRESİZ isteğe karışır. Depo kapısında duran kurye
+      `?warehouseId=` ile tesisi söylerse kapsam kontrolü guard'da aynen koşar ve satış o tesisin
+      stoğundan yazılır — araç önceliği bir KİLİT değil, belirsizliğin çözümüdür.
+    */
+    const res = await post(kurye, { lines: [{ variantId, qty: 1 }], paymentMethod: 'cash' }, `?warehouseId=${facilityId}`);
+    const data = await envelopeData<OnSiteSaleResponse>(res);
+    expect(data.status).toBe('ok');
+    if (data.status !== 'ok') return;
+
+    const { data: row } = await db.from('order').select('warehouse_id').eq('id', data.orderId).single();
+    expect(row?.warehouse_id).toBe(facilityId);
   });
 
   it('olmayan ürün 404 — çekmece uydurma bir liste açmaz', async () => {

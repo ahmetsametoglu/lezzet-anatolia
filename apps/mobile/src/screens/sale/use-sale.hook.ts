@@ -108,9 +108,15 @@ export function useSale() {
   const [notice, setNotice] = useNotice<SaleNotice>();
   const seqRef = useRef(0);
 
+  /*
+    YENİDEN YÜKLEME EKRANI KARARTMAZ (cihazda ölçüldü 26.08): burada her tuşta `setStatus('loading')`
+    vardı ve o durum LİSTEYLE BİRLİKTE ARAMA ALANINI da söküp yükleme halkasına çeviriyordu — odak
+    ve IME kompozisyonu her tuşta ölüyor, alanda tek harf kalıyordu (adb'de de, parmakla da).
+    Açılış durumu zaten 'loading' başlıyor; sonraki yüklemeler mevcut listeyi ekranda tutar ve
+    cevap gelince değiştirir. Yarışın bekçisi durum değil sıra numarasıdır (`seqRef`).
+  */
   const load = useCallback(async (term: string, cursor?: string) => {
     const seq = ++seqRef.current;
-    if (cursor === undefined) setStatus('loading');
     const result = await fetchSaleCatalog({ q: term.trim().length === 0 ? undefined : term.trim(), cursor });
     if (seq !== seqRef.current) return; // geciken cevap — taze listeyi ezmesin
     if (result.error !== null) {

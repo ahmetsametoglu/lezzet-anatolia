@@ -24,6 +24,12 @@ export interface Depolar {
    * yolu rota içi bir adres için matematiksel olarak doğamıyordu (ölçüldü 10.08, 15.08'de yeniden).
    */
   colmar: string;
+  /**
+   * VAN-1 — kurye aracı (`kind='vehicle'`, 26.08). Tipe 26.08'de girdi çünkü iki tüketicisi
+   * doğdu: kuryenin kapsamı (yerinde satışın depo çözümü araçtan — `sale.ts` `courierVehicleFirst`)
+   * ve araca yükleme transferi (araçta satılacak mal ancak böyle var olur).
+   */
+  van: string;
 }
 
 /**
@@ -45,7 +51,9 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   const koduyla = new Map(mevcut.map((w) => [w.code, w.id]));
   // Seed'in YÖNETTİĞİ kodlar tek yerde: listeye bir depo eklenip bu kümeye yazılmazsa, kendi
   // kurduğumuz kayıt bir sonraki koşuda "yabancı" diye raporlanır ve uyarı anlamsızlaşır.
-  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'COLMAR', 'MULHOUSE']);
+  // VAN-1 26.08'de eklendi — küme künyesinin uyardığı tuzak birebir yaşanmıştı: aracı seed'in
+  // kendisi kuruyor ama kümede olmadığı için ikinci koşu onu "yabancı depo" diye raporluyordu.
+  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'COLMAR', 'MULHOUSE', 'VAN-1']);
   const yabanci = mevcut.filter((w) => !SEED_DEPOLARI.has(w.code));
   if (yabanci.length > 0) {
     // Yabancı satır SESSİZ geçilmez: operasyon ekranında görünen her depo veriyi etkiler.
@@ -55,9 +63,10 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   let strId = koduyla.get('STR');
   let kehlId = koduyla.get('KEHL');
   let colmarId = koduyla.get('COLMAR');
-  if (strId && kehlId && colmarId && koduyla.has('MULHOUSE') && koduyla.has('VAN-1')) {
+  let vanId = koduyla.get('VAN-1');
+  if (strId && kehlId && colmarId && koduyla.has('MULHOUSE') && vanId) {
     console.log('▸ depolar zaten kurulu (STR + KEHL + COLMAR + MULHOUSE + VAN-1) — atlandı');
-    return { str: strId, kehl: kehlId, colmar: colmarId };
+    return { str: strId, kehl: kehlId, colmar: colmarId, van: vanId };
   }
   console.log('▸ DEPO seed');
 
@@ -160,7 +169,7 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   //
   // `shipsOnline` hiç verilmiyor: kısıt zaten reddederdi, ama varsayılana güvenmek de bir kural
   // beyanıdır — araçtan kargo çıkmaz.
-  if (!koduyla.has('VAN-1')) {
+  if (!vanId) {
     const arac = await warehouses.insert({
       code: 'VAN-1',
       name: 'Kurye aracı 1',
@@ -171,11 +180,12 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       address: null,
       sortOrder: 5,
     });
+    vanId = arac.id;
     console.log(`  ✓ ${arac.code} · ${arac.name} · ARAÇ (bölge bağlanamaz, kargo çıkışı olamaz)`);
   }
 
   console.log('✓ depo: STR (kargo çıkışı) + KEHL + COLMAR (rota, kargosuz) + MULHOUSE pasif + VAN-1 araç');
-  return { str: strId, kehl: kehlId, colmar: colmarId };
+  return { str: strId, kehl: kehlId, colmar: colmarId, van: vanId };
 }
 
 /**
@@ -313,7 +323,28 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
     console.log(`  ✓ ${gec.referenceNo} · YOLDA ve GECİKMİŞ (4 gün)`);
   }
 
-  console.log('✓ transfer: 5 kayıt (yolda · GECİKMİŞ yolda · tam kabul · eksikli kabul · geri alınmış)');
+  // 5) ARACA YÜKLEME (26.08 · 21.119) — serbest satış fazlası: kurye yolda isteyene bundan satar.
+  //    Yerinde satışın tek stok kaynağı budur (yerinde satış aracın KENDİ stoğundan yapılır,
+  //    rezerve maldan değil — `data-model/depo.md`); bu transfer olmadan satış ekranı araçta hep
+  //    "tükendi" gösterir ve akış yerelde hiç denenemez. Tam kabul: mal araca sayılarak yüklenir.
+  const aracPartileri = ((data ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
+    .filter((p) => !mesgulVaryantlar.has(p.variant_id) && !partiler.some((s) => s.id === p.id) && !digerPartiler.some((s) => s.id === p.id))
+    .slice(0, 4);
+  if (aracPartileri.length > 0) {
+    const yukleme = await transfers.dispatch({
+      toWarehouseId: depolar.van,
+      lines: aracPartileri.map((p) => ({ sourceStockId: p.id, qty: Math.min(6, p.physical_qty) })),
+      note: 'Sabah yüklemesi — serbest satış fazlası.',
+    });
+    const yuklemeSatirlari = await transfers.listLines(yukleme.transferId);
+    await transfers.receive({
+      transferId: yukleme.transferId,
+      lines: yuklemeSatirlari.map((l) => ({ lineId: l.id, receivedQty: l.qty })),
+    });
+    console.log(`  ✓ ${yukleme.referenceNo} · ARACA YÜKLENDİ · ${aracPartileri.length} kalem · STR → VAN-1`);
+  }
+
+  console.log('✓ transfer: 6 kayıt (yolda · GECİKMİŞ yolda · tam kabul · eksikli kabul · geri alınmış · araca yükleme)');
 }
 
 // ── Depo bazlı asgari stok eşiği (19.x) ──────────────────────────────────────────────────────────

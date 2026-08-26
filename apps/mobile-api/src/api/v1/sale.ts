@@ -1,6 +1,6 @@
-import { Hono } from 'hono';
+import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { StockService, serviceDb } from '@lezzet/database';
+import { StockService, WarehouseService, serviceDb } from '@lezzet/database';
 import { ANONYMOUS_BUYER_ID, getCatalogData, getProductDetail, sellOnSite } from '@lezzet/application';
 import {
   DEFAULT_PAGE_SIZE,
@@ -38,9 +38,42 @@ import { warehouseGuard, type WarehouseEnv } from './warehouse';
  */
 export const sale = new Hono<WarehouseEnv>();
 
+/**
+ * **Kuryenin satış deposu ARACIDIR** — depo çözümünün satışa özel ön adımı (cihazda ölçüldü 26.08).
+ *
+ * `warehouseGuard`ın kuralı "kapsamda tek depo varsa o, değilse söylenmeli" ve depocu için doğru.
+ * Kurye için değil: kapsamı BİLEREK çok depoludur (rota seçimi tesislere bakar — `seed/people.ts`
+ * 19.25 kararı) ve ekran depo SORAMAZ (sözleşme künyesi: istemcinin dolduracağı meşru kaynak yok).
+ * Ölçülen arıza: seed kuryesi {STR, COLMAR} ile `400 warehouse_required` aldı, satış ekranı hiç
+ * açılamadı.
+ *
+ * Kural veri modelinde zaten yazılıydı, buraya yalnız uygulandı: *"yerinde satış yalnız aracın
+ * KENDİ stoğundan yapılır — zaten ayrılmış mal satılamaz"* (`data-model/depo.md`, `DOMAIN §17`).
+ * Yani kurye parametresiz geldiyse satış yeri kapsamındaki **tek araçtır**; araç yoksa ya da
+ * birden çoksa çözüm belirsizdir ve cevap guard'ın dürüst 400'üdür. Parametre VERİLDİYSE bu adım
+ * hiç karışmaz — kapsam kontrolü guard'da tek yerde kalır (depo kapısından satan kurye da böyle
+ * mümkün olur: `?warehouseId=` kapsamındaki tesisi söyler).
+ *
+ * Depocu/admin bu adıma hiç girmez: onların çözümü guard'ın kendisidir.
+ */
+async function courierVehicleFirst(c: Context<WarehouseEnv>, next: Next): Promise<Response | void> {
+  const profile = c.get('staff');
+  const asked = c.req.query('warehouseId');
+  if (!asked && profile.roles.includes('courier') && profile.warehouseIds.length > 1) {
+    const service = new WarehouseService(serviceDb());
+    const scoped = await Promise.all(profile.warehouseIds.map((id) => service.getById(id)));
+    const vehicles = scoped.filter((w) => w?.kind === 'vehicle');
+    if (vehicles.length === 1 && vehicles[0]) {
+      c.set('warehouseId', vehicles[0].id);
+      return next();
+    }
+  }
+  return warehouseGuard(c, next);
+}
+
 // Sıra güvenlik kararının kendisi (depo ucunun aynı gerekçesi): önce rol (kim), sonra depo (nerede).
 sale.use('*', requireStaffRole('warehouse', 'courier', 'admin'));
-sale.use('*', warehouseGuard);
+sale.use('*', courierVehicleFirst);
 
 /**
  * Satış — tek çağrıda kapanır. **Kapının kararı ne olursa olsun 200**; "satış oldu mu" gövdede.
