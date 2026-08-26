@@ -313,7 +313,7 @@ function kolonAyristir(parca) {
 /**
  * Migration'lardan tablo → kolon listesi.
  *
- * Yorumlar ÖNCE atılır ve blok yorumu (`/* … *​/`) atlamak sessiz bir eksiklik üretir: 0011'de
+ * Yorumlar ÖNCE atılır ve blok yorumu (`/* … * /`) atlamak sessiz bir eksiklik üretir: 0011'de
  * `add column` satırlarının arasına uzun künyeler girmiş; blok yorumu bırakan bir ayrıştırıcı
  * `user_profiles`ın 48 kolonunun yalnız 33'ünü görüyordu ve hiçbir yerde patlamıyordu.
  * (Aynı sınıf hata 26.08'de enum listesinde de yaşandı — naif desen bu dosyaya bir daha girmemeli.)
