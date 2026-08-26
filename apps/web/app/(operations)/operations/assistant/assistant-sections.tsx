@@ -259,15 +259,27 @@ export function ProposalDialog({
             {inline ? (
               /* Gövdesi olan tipte kaydeden düğme GÖVDENİN kapısıdır (22.8). Metni "Uygula" değil
                  işin kendi adı ("Teklifi aç"): operatör bir öneriyi değil bir işi yapıyor, ve o iş
-                 gözünün önünde duruyor. Engel varsa sebebi düğmenin ipucunda yazar. */
-              <Button
-                variant="primary"
-                onClick={() => onDecision('apply', draft)}
-                disabled={busy || blocked !== null}
-                title={blocked ?? undefined}
-              >
-                {busy ? 'Kaydediliyor…' : inline.applyLabel}
-              </Button>
+                 gözünün önünde duruyor.
+
+                 ── ENGELİN SEBEBİ GÖRÜNÜR YAZILIR (kullanıcı kuralı 26.08) ────────
+                 Sebep bir tur boyunca YALNIZ `title` ile veriliyordu — yani tarayıcı ipucu: fare
+                 düğmenin üstünde bekletilmezse hiç okunmuyor. Sonuç, kullanıcının ölçtüğü hâl:
+                 *"düğmeyi kapattıysan niye kapattığını oraya düzgünce yazman gerekiyor."* Kapalı
+                 bir düğme sebepsizse operatör kendi hatasını arar; sebep yanındaysa ne yapacağını
+                 bilir. `title` da duruyor (uzun sebep kırpılırsa tamamı ipucunda). */
+              <>
+                {blocked ? (
+                  <span className="mr-2 font-ops-body text-ops-xs font-semibold text-ops-amber-dark">{blocked}</span>
+                ) : null}
+                <Button
+                  variant="primary"
+                  onClick={() => onDecision('apply', draft)}
+                  disabled={busy || blocked !== null}
+                  title={blocked ?? undefined}
+                >
+                  {busy ? 'Kaydediliyor…' : inline.applyLabel}
+                </Button>
+              </>
             ) : mode === 'handoff' || mode === 'inline' ? (
               /* `inline` buraya YALNIZ dilekçenin şekli tanınmadığında düşer: gövde çizilemedi, yani
                  düzenlenecek form da yok. Genel "Uygula" gösterilemez — sunucudaki kapı onu zaten

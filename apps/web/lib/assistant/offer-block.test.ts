@@ -37,29 +37,37 @@ describe('offerBlockedByExpiry — yasak motorun kelimesi', () => {
   });
 });
 
-describe('batchOfferBlock — düğmenin engeli ve sebebi', () => {
-  it('DLC geçmiş partide engel VAR ve sebebi imhayı söyler', () => {
-    const block = batchOfferBlock({ offerPriceCents: 686, dateType: 'DLC', expiryDate: iso(-6) });
-    expect(block).toContain('satılamaz');
-  });
-
-  it('yasak, geçerli bir fiyat girilmiş olsa bile önce gelir', () => {
-    // Sıra önemli: fiyat doğruyken engelin kalkması, yasağı fiyata bağlamak olurdu.
-    expect(batchOfferBlock({ offerPriceCents: 1200, dateType: 'DLC', expiryDate: iso(-1) })).not.toBeNull();
-  });
-
-  it('DDM geçmiş partide engel YOK — karar operatörün', () => {
-    expect(batchOfferBlock({ offerPriceCents: 686, dateType: 'DDM', expiryDate: iso(-30) })).toBeNull();
-  });
-
+describe('batchOfferBlock — düğmeyi YALNIZ yazılamayacak değer kapatır', () => {
   it('fiyat girilmemişse engel var; sıfır ve negatif de yazılamaz', () => {
-    expect(batchOfferBlock({ offerPriceCents: null, dateType: 'DDM', expiryDate: iso(5) })).toBe('Teklif fiyatı girilmeli');
-    expect(batchOfferBlock({ offerPriceCents: 0, dateType: 'DDM', expiryDate: iso(5) })).toContain('sıfırdan büyük');
-    expect(batchOfferBlock({ offerPriceCents: -1, dateType: 'DDM', expiryDate: iso(5) })).toContain('sıfırdan büyük');
+    expect(batchOfferBlock({ offerPriceCents: null })).toBe('Teklif fiyatı girilmeli');
+    expect(batchOfferBlock({ offerPriceCents: 0 })).toContain('sıfırdan büyük');
+    expect(batchOfferBlock({ offerPriceCents: -1 })).toContain('sıfırdan büyük');
   });
 
   it('MALİYETİN ALTINDA fiyat engel DEĞİLDİR — zararına satmak bir karardır', () => {
     // Ekran zararı cümleyle söyler (gövdedeki "0,64 € zarar" satırı), yolu kapatmaz.
-    expect(batchOfferBlock({ offerPriceCents: 1, dateType: 'DDM', expiryDate: iso(10) })).toBeNull();
+    expect(batchOfferBlock({ offerPriceCents: 1 })).toBeNull();
+  });
+
+  it('geçerli fiyat engelsizdir', () => {
+    expect(batchOfferBlock({ offerPriceCents: 686 })).toBeNull();
+  });
+});
+
+/**
+ * ── YASAK ≠ ENGEL (kullanıcı kuralı 26.08) ──────────────────────────────────
+ *
+ * `offerBlockedByExpiry` bir GERÇEĞİ söylüyor ve ekran onu kırmızı bir satırla yazıyor; ama
+ * düğmeyi KAPATMIYOR. Bir tur boyunca kapatıyordu ve kural tersine çevrildi:
+ *
+ *   *"Yanlış bir tespitte bulunup da o butonu kapatırsan daha büyük bir hataya sebep verirsin."*
+ *
+ * Bu test o ayrımı kilitliyor: yasak doğru hesaplanmaya devam etmeli (üstteki describe), ama
+ * engele DÖNÜŞMEMELİ. İkisi bir gün yeniden birleşirse burası kırmızıya döner.
+ */
+describe('yasak düğmeyi kapatmaz', () => {
+  it('DLC geçmiş partide yasak VAR ama geçerli fiyatla engel YOK', () => {
+    expect(offerBlockedByExpiry('DLC', iso(-6))).toBe(true);
+    expect(batchOfferBlock({ offerPriceCents: 686 })).toBeNull();
   });
 });

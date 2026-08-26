@@ -203,22 +203,14 @@ const INLINE_BODIES: Partial<Record<AssistantProposalKind, ErasedBody>> = {
      * Maliyetin ALTINDA fiyat engel DEĞİLDİR — zararına satmak bir karardır; ekran onu cümleyle
      * söyler, yolu kapatmaz. Engel yalnız yazılamayacak değerlerde.
      *
-     * **DLC GEÇMİŞ PARTİ ENGELDİR (26.08, gövde turunda ölçüldü)** ve öncekilerden farkı şu: bu bir
-     * TERCİH değil YASAK. Gıda güvenliği tarihi geçmiş parti satılamaz; `setOfferPrice` de zaten
-     * `must_discard` ile reddediyor. Engel yazılmadan önce gövde doğru uyarıyor ama düğme açık
-     * duruyordu — yani ekran "satılamaz" derken düğme "aç" diyordu ve basan hata alıyordu.
-     * 22.35'in dersiyle aynı çizgi: çağrıldığında reddedilecek bir şeyi sunmak, yapılamayacak işi
-     * vaat etmektir.
-     *
-     * **Kural MOTORDAN, çağrısı ORTAK KAPIDAN** (`lib/assistant/offer-block` — gerekçesi orada):
-     * aynı soru gövdenin uyarı satırında da soruluyor ve iki kopya bir gün ayrışırdı.
+     * **DLC GEÇMİŞ PARTİ BURADA ENGEL DEĞİLDİR** *(kullanıcı kuralı 26.08, bir turluk sapmadan
+     * sonra)*. Bir tur boyunca engeldi ve düğme kapanıyordu; gerekçem "kapı zaten reddediyor,
+     * basan boşuna basıyor"du. Kural tersine çevrildi: *"yanlış bir tespitte bulunup da o butonu
+     * kapatırsan daha büyük bir hataya sebep verirsin."* Tespit yanlışsa iki hatanın bedeli eşit
+     * değil — açık düğme bir hata mesajı üretir, haksız kapalı düğme tıkanmış bir akış. Yasak
+     * ekranda GÖRÜNMEYE devam ediyor (gövdenin kırmızı satırı). Tam gerekçe `offer-block` künyesinde.
      */
-    blocked: (cents, payload, economics) =>
-      batchOfferBlock({
-        offerPriceCents: cents,
-        dateType: economics?.kind === 'offer' ? economics.dateType : null,
-        expiryDate: payload.expiryDate,
-      }),
+    blocked: (cents) => batchOfferBlock({ offerPriceCents: cents }),
     submit: (payload, cents, proposalId) => setOfferPriceAction(payload.batchId, cents, proposalId),
     applyLabel: 'Teklifi aç',
     // Cümle İKİ dili birden taşıyor ve bu bilinçli: yapılan iş "teklif açmak" (operasyonun kelimesi),

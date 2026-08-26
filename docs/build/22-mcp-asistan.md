@@ -2102,17 +2102,40 @@ sınamış olacaktık.
     yetmiyordu** — `<x>Id → <x>Name` kuralı varyantın adını `productName`de, deponunkini
     `warehouseCode`da bulamıyordu, o yüzden gizlenmesi gereken satırlar görünüyordu (`ID_TWIN`).
     Alerjen ve eksik-beyan sözlükleri **zaten vardı** (`@lezzet/types`), eksik olan çağrıydı.
-  - **② EKRAN "SATILAMAZ" DERKEN DÜĞME "AÇ" DİYORDU.** DLC'si geçmiş partide gövde doğru uyarıyordu
-    (22.38'in kırmızı satırı) ama **"Teklifi aç" düğmesi açıktı** — ve kapı zaten reddedecekti
-    (`setOfferPrice` → `must_discard`), yani basan hata alacaktı. 22.35'in dersiyle aynı çizgi:
-    *çağrıldığında reddedilecek bir şeyi sunmak, yapılamayacak işi vaat etmektir.* Engel `blocked`
-    kapısına eklendi; imzası `payload` ve `economics`i de görüyor artık, çünkü **her yasak taslakta
-    durmuyor** — bu yasak partinin kendi hâlinde.
-    **Ve kural ÜÇ YERDE ELLE yazılmıştı** (`tarih geçti && dateType === 'DLC'`): gövdenin uyarı
-    satırı, düğmenin engeli, kapının kendisi. Üçü bugün aynı cevabı veriyordu ama motor DDM'yi
-    `expired_sellable` sayıyor ve kopyalardan biri bir gün o dalı da kesse kimse fark etmezdi. Kural
-    motorda kaldı (`expiryFlagOf`), çağrı tek kapıya indi (`lib/assistant/offer-block`) — `STACK §4`.
-  - **③ BÖLGE ÖZETİ KENDİNİ YALANLIYORDU.** Künye üstte *"Eklenecek 0 · Bildirim 0 müşteri · Talep
+  - **② DLC KURALI ÜÇ YERDE ELLE YAZILMIŞTI** (`tarih geçti && dateType === 'DLC'`): gövdenin uyarı
+    satırı, karar düğmesi, kapının kendisi. Üçü aynı cevabı veriyordu ama motor DDM'yi
+    `expired_sellable` sayıyor ve kopyalardan biri bir gün o dalı da kesse kimse fark etmezdi.
+    Kural motorda kaldı (`expiryFlagOf`), çağrı tek kapıya indi (`lib/assistant/offer-block`) —
+    `STACK §4`.
+
+    ⚠ **BU MADDE BİR TUR BOYUNCA YANLIŞTI VE KULLANICI DÜZELTTİ (26.08).** İlk hâlinde düğme de
+    KAPATILMIŞTI; gerekçem *"kapı zaten `must_discard` ile reddediyor, basan boşuna basıyor"*du ve
+    22.35'in `tools/list` süzgecine dayandırılmıştı. Kullanıcı kuralı tersine çevirdi:
+
+    > *"Kapattığın düğmeyi de gerekirse aç, zaten hata kodu geliyormuş. Yanlış bir tespitte bulunup
+    > da o butonu kapatırsan daha büyük bir hataya sebep verirsin."*
+
+    **Asimetri:** tespit yanlışsa iki hatanın bedeli eşit değil. Açık düğme + gerçek yasak = bir
+    hata mesajı, operatör sebebini öğrenir, iş sürer. Haksız kapalı düğme = yapılabilir bir iş
+    yapılamaz ve ekran sebebini doğru söylemez; operatör kendi hatasını arar. **22.35 ile karışmaz:**
+    orada süzülen MODELİN listesiydi — model hata mesajından öğrenemez, tur kaybeder ve "sistem
+    bozuk" diye yanlış teşhis üretir (turun kendi dersi). İnsan operatör hata mesajını okur.
+    Yasak GÖRÜNMEYE devam ediyor (gövdenin kırmızı satırı) ve `offerBlockedByExpiry` duruyor —
+    kalkan şey yalnız düğmenin kapanması. Test ayrımı kilitliyor (`yasak düğmeyi kapatmaz`).
+  - **③ ENGELİN SEBEBİ EKRANDA YAZMIYORDU** *(kullanıcı kuralı 26.08: «kapattıysan da niye
+    kapattığını oraya düzgünce yazman gerekiyor»)*. Ölçüldü: `blocked` sebebi yalnız `title` ile
+    veriliyordu — yani tarayıcı ipucu; fare düğmenin üstünde bekletilmezse hiç okunmuyor. Kapalı
+    bir düğme sebepsizse operatör kendi hatasını arar. Sebep artık düğmenin YANINDA, amber tonda.
+    Bu **tüm tipleri** kapsıyor ("Teklif fiyatı girilmeli", "Form eksik", paket mutabakatı) — kusur
+    DLC turunda görüldü ama ondan eskiydi.
+  - **İMHA ARACI GÜNDEMDEN DÜŞTÜ** *(kullanıcı kararı 26.08)*. `BEKLEYEN(22.13)`in "imha kaydı"
+    maddesi için asistana yeni bir öneri tipi önerilmişti; kullanıcı reddetti: *"bir ajanın bana
+    imha önermesi de çok mantıklı değil, zaten siz onu kırmızıya boyuyorsunuz."* Ölçüm de destekledi
+    — imha yolu ZATEN var (Stok → "Stoktan düş" tutanağı, sebep listesinde *"Son tarihi geçti"*) ve
+    Stok ekranı tarihi geçmiş partiyi en üste alıp kırmızıya boyuyor. Köprü de gereksiz: bulması zor
+    değil. **Ders:** "araç yok" demeden önce elle yapılan yolun var olup olmadığı ölçülür — ilk
+    raporumda "imha yolu yok" denmişti ve yanlıştı.
+  - **④ BÖLGE ÖZETİ KENDİNİ YALANLIYORDU.** Künye üstte *"Eklenecek 0 · Bildirim 0 müşteri · Talep
     0 istek"* yazarken hemen altındaki ham dilekçe *"Talep 14 · Bekleyen 9"* ve *"Talep 6 · Bekleyen
     4"* diyordu — aynı kutuda 0 ve 20. Sebep: iki satır yalnız SEÇİME bakıyordu ve seçim boş açılır.
     **Seçimin boş açılması DOĞRU ve değişmedi** (kullanıcı kararı 15.08 · commit `2e198fbc`: seçili
@@ -2123,10 +2146,12 @@ sınamış olacaktık.
     ⚠ **ÇELİŞKİ AÇILDI VE KULLANICI KARAR VERDİ.** İlk turda "kodlar ön seçili gelsin" diye
     önerilmişti; kod okunduğunda o önerinin 15.08 kararını GERİ ALDIĞI görüldü ve kullanıcıya
     soruldu — *"15.08 kararı dursun, yalnız özeti düzelt"*. Öneri, geçmişi ölçmeden verilmişti.
-  - **TESTLER: 17 yeni iddia, ikisi de mutasyonla doğrulandı.** `offer-block.test.ts` (9) —
-    yasak sökülünce 3 test kırmızıya döndü; `payload-labels.test.ts` (8) — `batchId` etiketi
-    sökülünce 2 test düştü. Tarihler çalışma anına göre üretiliyor: sabit bir "geçmiş tarih" bir gün
-    gelecekte kalır ve test sessizce anlamsızlaşır.
+  - **TESTLER: 16 yeni iddia, ikisi de mutasyonla doğrulandı.** `offer-block.test.ts` (8) —
+    yasak hesabı sökülünce testler kırmızıya döndü; `payload-labels.test.ts` (8) — `batchId`
+    etiketi sökülünce 2 test düştü. Tarihler çalışma anına göre üretiliyor: sabit bir "geçmiş
+    tarih" bir gün gelecekte kalır ve test sessizce anlamsızlaşır. **Bir test kural değişince
+    yeniden yazıldı** (`yasak düğmeyi kapatmaz`): eski hâli engelin varlığını iddia ediyordu, yenisi
+    yasağın hesaplandığını ama engele DÖNÜŞMEDİĞİNİ — sözleşme değişince onu koruyan test de değişir.
   - **SÖZLÜKLER `.tsx`TEN AYRILDI** (`payload-labels.ts`) ve sebep düzen değil ÖLÇÜLEBİLİRLİK: bu
     depoda jsdom yok (bilinçle — `vitest.config.ts` künyesi), yani bir `.tsx` birim testinden import
     EDİLEMİYOR. Künyenin dili bir görünüm ayrıntısı değil bir sözdür ve söz ancak sınanabildiği
