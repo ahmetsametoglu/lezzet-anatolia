@@ -56,7 +56,14 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
   - **Durum (26.08 — DENETİM ÖLÇÜMÜ):** beşi de var — `product-feedback.schema.ts` (`Review` bu adla doğdu) ·
     `feedback-request.schema.ts` · `points.schema.ts` · `analytics.schema.ts` · `setting.schema.ts`.
     Modül 13/17 ile doğdular.
-  - *Ortak bitti kriteri (tüm şema görevleri):* her şema `DATA_MODEL.md`'deki alan listesiyle birebir; `z.infer` ile tip export ediliyor; örnek geçerli/geçersiz kayıtlarla parse birim testleri geçiyor
+  - *Ortak bitti kriteri (tüm şema görevleri):* her şema `DATA_MODEL.md`'deki alan listesiyle birebir;
+    `z.infer` ile tip export ediliyor; ~~örnek geçerli/geçersiz kayıtlarla parse birim testleri geçiyor~~
+    → **KURAL TAŞIYAN şemalar için parse testi zorunlu, düz aynalar için değil (01.13, 26.08).**
+    Vaadin üstü çizildi çünkü tutulmuyordu ve tutulmaması DOĞRUYDU: `z.string()`in metni kabul
+    ettiğini sınamak Zod'u sınamaktır. Zorunluluk artık makinede (`rule-coverage.test.ts`) ve
+    kapsamı `refine`/`superRefine`/`transform`/`coerce` taşıyan dosyalar — yani geçerli GÖRÜNEN
+    bir girdiyi reddeden ya da değiştiren kod. Kriteri olduğu gibi bırakmak, kapanmış bir modülde
+    hiç karşılanmayacak bir vaat bırakmak olurdu.
 - [x] (01.10) Insert/Update türevleri (id/created_at hariç tutan `.omit()/.partial()` türevleri) — servis katmanının kullanacağı biçimler
   - *Bitti:* en az Order/Customer/Product için türev tipler derleniyor
   - **Durum (26.08 — DENETİM ÖLÇÜMÜ):** 46 varlık dosyasında Insert/Update türevi var; satırın kendi kriteri
@@ -120,8 +127,13 @@ Tüm veri modelinin **tek kaynak** Zod şemaları: varlıklar, enum'lar, `Locali
     kaldırılınca dosyayı adıyla söyleyerek kırıldı.
 
 **Modül durumu (26.08.2026 — denetim ölçümü):** artımlı ilerledi ve **fiilen tamamlandı**; şemalar
-ihtiyaç duyan modülle birlikte yazıldı (toptan değil, CLAUDE.md §1). 51 varlık · 6 yapı taşı ·
-4 sözleşme şeması; 41 enum; 15 test dosyası (60 birim testi).
+ihtiyaç duyan modülle birlikte yazıldı (toptan değil, CLAUDE.md §1). 50 varlık · 7 yapı taşı ·
+27 sözleşme şeması; 41 enum; 15 test dosyası (60 birim testi).
+
+> **Bu sayılar da bir kez yanlış yazıldı** (26.08, aynı gün düzeltildi): yapı taşı "6", sözleşme
+> "4" diye geçmişti — ikisi de 01.12'nin 08.08 tarihli Durum notundan kopyalanmış eski
+> sayılardı. Yani BAYAT bir alt bilgiyi tazelerken içine bayat sayı taşındı. Ders: bir sayıyı
+> dokümandan almak onu ölçmek değildir.
 
 > **Önceki alt bilgi bir ay bayattı ve bu satırın kendisi bir derstir.** *"Yok: Price, Discount,
 > Bundle, tüm stok/tedarik · sipariş · para · mesajlaşma · geri bildirim şemaları"* diyordu —
