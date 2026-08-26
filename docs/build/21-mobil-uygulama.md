@@ -579,6 +579,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     **Katman 1-2 (kayıt + uygulama içi):** tablo/tek kapı/uç 14.12-14.13'te (defterde). Müşteri ekranı `screens/notifications/` (puan-geçmişi deseni birebir: keyset akış, beş hâl, iyimser okundu/gizle + düşerse GERİ ALMA — ekranda "okundu" duran ama sunucuda okunmamış satır, öteki cihazda rozeti yalancı çıkarırdı), cümle sözlüğü `notification-copy.ts` (üç dil; **bilinmeyen tür genel cümleye düşer** — küme sunucuda büyür, eski sürüm yeni türü boş satırla karşılamaz; zarfın `kind`'ı da bu yüzden düz dize, enum parse'ı ilk yeni türde bütün sayfayı düşürürdü). Vitrin zili gerçek rozete bağlandı (`use-notification-badge` — odak + kişinin kanalı; hata anında sayı SIFIRLANMAZ, son bilinen değerde kalır). Operasyon kabuğu fixture'dan uca geçti (`notification-map.ts` — kind→bölüm/nokta/başlık; fixture kendi künyesinin sözü gereği SİLİNDİ, süzme kuralı yerinde), hub rozetleri `unread` sayar, ekranı açmak "gördüm"dür.
     **Katman 3 (cihaz):** `expo-notifications ~57.0.9` (sürüm Expo'nun kendi eşleme dosyasından — tahmin değil) + config plugin. Kayıt her açılışta ve İZİN RAPORUYLA (`ensurePushRegistration`: kanal → izin → jeton → uç; Android 13 sırası v57 dokümanından). Çıkışta jeton silme `signOut`un İLK adımı — oturum kapandıktan sonra silme isteği atılamaz. Dokunuş yönlendirmesi `use-push-navigation`: sunucunun `data` yükü uygulama içi listeyle AYNI adres sözlüğünden (`notificationHref`) çözülür — iki eşleme olsaydı biri gün gelip başka yere götürürdü. Expo Go/projectId'siz ortamda jeton alınamaz ve bu KÜNYELİ sessizliktir: uygulama içi zil aynı satırları zaten taşıyor.
     **Testler:** mobil jest 108 suite / 827 (sözlük 5 · eşleme 3 · kabuk uçtan uca satır-basışı gerçek eşlemeden). **CİHAZDA DOĞRULANMADI ve açıkça yazılıyor:** gerçek push teslimi dev build + fiziksel cihaz ister (Expo Go Android'de kapalı) — cihaz turu mobil şeridin ilk fırsatına.
+    **Cihaz ölçümü (26.08 turu, mobil şerit):** dev-client `expo run:android` ile yeniden derlendi — native modül engeli (`ExpoPushTokenManager`) kapandı, uygulama açılıyor. Ama **jeton kaydı hiç düşmüyor: `push_device` 0 satır** (defalarca açılışa rağmen) ve logcat'te push izi yok. Sebep ölçüldü: **`google-services.json` depoda/`app.config`te YOK** — Android'de `getExpoPushTokenAsync` FCM'siz fırlatır ve kayıt künyedeki gibi sessizce atlanır. Yani teslim turunun kalan engeli kod değil YAPILANDIRMA: Firebase projesi + `google-services.json` (+ Expo projectId) gelmeden push teslimi hiçbir cihazda ölçülemez — dış engel, kurulum kararı kullanıcının/şeridin.
   **Durum (09.08):** modül sıraya alındı (kullanıcı kararı) ve **kalıcı defteri açıldı**:
   `docs/talep/bildirim-modulu-web-mobil.md`. Ölçüm: üç katmanın üçü de bugün YOK — bildirim
   tablosu yok (olaylar doğrudan maile gidiyor, `packages/notify` → `packages/email`),
@@ -4293,9 +4294,11 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `pro-address-line` oldu), kalanı MB-38'in kayıtlı yük kırılganlığıydı (`app-shell` ·
   `operations-shell`) ve ikinci koşuda kendiliğinden temizlendi — defterdeki desenin birebir aynısı.
 
-  **Durum — cihazda doğrulanmadı:** mobil API (3002) bu oturumda düşmüş durumda (gözcü ayakta,
-  çocuk süreç yok; kod sağlam — soğuk sonda 200 verdi) ve dev sunucusu kullanıcının. Sunucu dönünce
-  başvuru formundaki BAN önerileri cihazda görülmeli.
+  ~~**Durum — cihazda doğrulanmadı:** mobil API (3002) bu oturumda düşmüş durumda~~ →
+  **CİHAZDA DOĞRULANDI (26.08 turu, CPH1907):** elle giriş modunda "Rue et numéro"ya
+  "8 rue de la Mesange" yazıldı, BAN önerileri geldi (dört şehirden "8 Rue des Mésanges" +
+  Etalab lisans atfı), öneri seçilince sokak + posta kodu + şehir üçü birden doldu
+  (53200 · Château-Gontier-sur-Mayenne). Form gönderilmedi — doğrulama görsel/akıştı.
 
 - [x] (21.85) **FIRSAT KARTI ARTIK GERÇEĞİ SÖYLÜYOR — "YALNIZ BUGÜN"ün arkasında hiçbir veri yokmuş
   (kullanıcı bulgusu + kararı 19.08)**
@@ -4443,8 +4446,15 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   (yük 13,55). Üç dilin gizlilik §7'si silmeden sonra da eşit uzunlukta — paritenin makine kontrolü.
   Ara koşularda `app-shell`/`operations-shell`/`account-routes` düştü ve **üçü de tek başına yeşildi**
   (5–7 sn; tam koşuda 12–19 sn): MB-38'in kayıtlı ailesi, hiçbiri yasal bloğa bakmıyor.
-  **Cihaz turu YAPILMADI** — yeni kapı ve yeni izin satırı görsel olarak doğrulanmalı, sıradaki
-  cihaz turuna kaldı.
+  ~~**Cihaz turu YAPILMADI**~~ → **CİHAZDA DOĞRULANDI (26.08 turu, CPH1907):** yasal kapılar
+  iki dilde görüldü (TR admin: Yasal bilgiler içerikli açıldı — şirket kimliği/yayın
+  sorumlusu/barındırma; FR Claire: Mentions légales · CGV · confidentialité · livraison · FAQ).
+  İzin satırı GERÇEK koşulunda görüldü: Lyon varsayılan adres yapılınca "Vous êtes hors de notre
+  zone" bloğu doğdu ve iki kanal da kapalıyken düğmenin üstünde kalın izin cümlesi çıktı
+  ("nous activerons le canal e-mail — vous pouvez le désactiver à tout moment…"), düğme
+  "Je veux la livraison ici". Düğmeye basılmadı (izni açardı); davranış jest'te çivili.
+  Tur sonrası müşteri verisi geri kondu: varsayılan adres Strasbourg'a, e-posta anahtarı
+  açığa, cihaz bölgesi 67000'e döndürüldü.
 
 Sonraki kalemler (sıra ve kapsam kullanıcıyla): **önce MÜŞTERİ tarafı** (kullanıcı kararı
 06.08 — uygulamanın müşteri yüzü mevcut müşteri tasarım deseninin ÇOK BENZERİ kurgulanır:
@@ -6133,4 +6143,27 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kaldırıldı) testi düşürmeyince görüldü, bekleme eklendi; sabotaj artık yalnız ilgili testi
   düşürüyor (21.111'in dersi ikinci kez işe yaradı). customer-kit + home **71/71** · `tsc` ·
   `lint` temiz.
+  **Cihazda doğrulandı (26.08 turu):** "75" yazınca öneriler indi (75000-75003 · Paris),
+  önerisiz Kaydet sönük, seçim kodu doldurdu; kapsam-dışı 75001 kaydedilince vitrin soğuk
+  zincir ürününü "non livrable" griledi ve katalog bölge bandını çizdi.
+
+- [ ] (21.121) **CİHAZ TURU İKİ ARIZA ÖLÇTÜ — Fabric çökmesi (personel→müşteri geçişi) + unistyles
+  uyarısının nüksü; ikisi akraba olabilir** · touches: kabuk geçişi + Skeleton/Animated tüketicileri
+
+  **1 · Fabric çökmesi, 3/3 TEKRARLANABİLİR (26.08, CPH1907, taze dev-client):** personel
+  kökünde avatar menüsünden **"Müşteri uygulamasına geç"** → kırmızı ekran
+  `IllegalStateException: addViewAt: failed to insert view [486] into parent [488] — The
+  specified child already has a parent` (Fabric `SurfaceMountingManager`). Soğuk açılışta da
+  aynı (hot-reload kalıntısı DEĞİL). Dökümde [486] bir `RCTText` ve MEVCUT parent'ı [490] —
+  Fabric metni [488]'e taşırken eski parent'tan sökülmemiş (view-flattening/yeniden-ebeveynleme
+  tutarsızlığı). **Temiz yollar sağlam:** çıkışla müşteri kabuğuna inmek ve müşteriden personele
+  geçmek sorunsuz; kırık olan yalnız oturum korunarak personel→müşteri kabuk değişimi.
+  **2 · Unistyles uyarısı geri döndü** (21.52 Skeleton düzeltmesi onu 0'a indirmişti):
+  `we detected style object with 2 unistyles styles… check style prop for "View"` — turda
+  **7 kez**, hep kabuk/vitrin mount anlarında; ilki ilk çökmeyle AYNI SANİYEDE (20:03:25.634
+  uyarı → .735 çökme). Statik arama yine temiz (nesne-birleştirme deseni depoda yok) — 21.52'nin
+  dersi geçerli: suçlu muhtemelen yine bir kitaplık düzleştirmesi (`Animated.View` sınıfı) ve
+  ancak çalışma anında (warn.ts izi) bulunur. İki bulgu tek turda, aynı ekranlarda ve ilk
+  örnekleri milisaniye komşusu — kök ortaklığı hipotez, ölçülmeden düzeltmeye GİRİLMEZ
+  (CLAUDE §0). Logcat dökümü scratchpad'de alındı; tekrar adımları yukarıda.
 
