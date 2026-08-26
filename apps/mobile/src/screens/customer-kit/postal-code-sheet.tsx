@@ -7,6 +7,7 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { SuggestionList } from '@/components/ui/suggestion-list';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { useAppLocale } from '@/lib/i18n/app-locale';
@@ -15,6 +16,7 @@ import messages from '@/lib/places/messages.json';
 import { maskPostalCode, POSTAL_CODE_LENGTH, usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { toastSuccess } from '@/lib/toast/toast-store';
 import { useMe } from './use-me.hook';
+import { usePostalSuggest } from './use-postal-suggest.hook';
 
 /*
   TESLİMAT BÖLGESİ ÇEKMECESİ (v3 `shZip`, açan `pillTap`) — vitrin başlığındaki "67000 STRASBOURG ▾"
@@ -85,10 +87,37 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
   const signedIn = meState.status === 'ready' && meState.me !== null;
 
   const [draft, setDraft] = useState(code ?? '');
-  // Açılışta saklı değere dönülür (künye: yarım kalmış düzenleme taşınmaz).
+  /* ÖNERİ LİSTESİ YALNIZ YAZARKEN VE YALNIZ EKSİK KODDA (kullanıcı kararı 26.08 — web
+     `place-dialog` ile aynı davranış; ayrışma denetimin 25.08 kaydıydı). Beş haneye ulaşınca
+     liste kapanır: o andan sonra soruyu yer ÇÖZÜMÜ cevaplıyor, aynı kodu bir de listede
+     göstermek cevabın yanına kopyasını koymak olurdu. Seçim yalnız KODU doldurur — ülke burada
+     saklanmıyor (kayıt `postalCode`tan ibaret) ve iki ülkede geçerli kodun ülkesi, adres
+     girilirken netleşir (`ambiguousNote` zaten bunu söylüyor). */
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  // Açılışta saklı değere dönülür (künye: yarım kalmış düzenleme taşınmaz); liste kapalı başlar.
   useEffect(() => {
-    if (visible) setDraft(code ?? '');
+    if (visible) {
+      setDraft(code ?? '');
+      setSuggestOpen(false);
+    }
   }, [code, visible]);
+  const suggestions = usePostalSuggest(draft, { enabled: visible && suggestOpen });
+
+  /** Aynı kod iki ülkede geçerli olabiliyor; satır anahtarı adres formundakiyle aynı gerekçeyle ikili. */
+  const suggestionKey = (country: string, postalCode: string) => `${country}:${postalCode}`;
+
+  const typeCode = (value: string) => {
+    const masked = maskPostalCode(value);
+    setDraft(masked);
+    setSuggestOpen(masked.length < POSTAL_CODE_LENGTH);
+  };
+
+  const applySuggestion = (id: string) => {
+    const picked = suggestions.find((option) => suggestionKey(option.country, option.postalCode) === id);
+    if (picked === undefined) return;
+    setSuggestOpen(false);
+    setDraft(picked.postalCode);
+  };
 
   /* Bekleyiş bayrağı hook'tan gelir, TÜRETİLMEZ: `place === null` "istek düştü" hâlini de kapsıyor
      ve türetilmiş bir bayrak orada sönmezdi — iskelet ebediyen dönerdi (künyesi hook'ta). */
@@ -136,13 +165,28 @@ export function PostalCodeSheet({ visible, code, onClose, showZonesLink, testID 
     <BottomSheet visible={visible} title={copy.title} onClose={onClose} testID={idOf('sheet')}>
       <TextField
         value={draft}
-        onChangeText={(value) => setDraft(maskPostalCode(value))}
+        onChangeText={typeCode}
         accessibilityLabel={copy.field}
         placeholder={copy.placeholder}
         content="postalCode"
         numeric
         testID={idOf('field')}
       />
+      {/* Kod önerileri — künye satırı YOK: veri kendi referansımız (adres formundaki kod
+          listesiyle aynı gerekçe), Etalab yükümlülüğü yalnız BAN listesinindir. */}
+      {!suggestOpen ? null : (
+        <SuggestionList
+          items={suggestions.map((option) => ({
+            id: suggestionKey(option.country, option.postalCode),
+            title: `${option.postalCode} · ${option.country}`,
+            // Ad yoksa alt satır çizilmez — uydurulacak ad yok (adres formunun künyesi).
+            subtitle: option.places.length === 0 ? undefined : option.places.join(', '),
+          }))}
+          onSelect={applySuggestion}
+          accessibilityLabel={copy.suggestLabel}
+          testID={idOf('suggestions')}
+        />
+      )}
       {/* CEVAP BEKLENİRKEN İSKELET (kullanıcı isteği 13.08) — onboarding'in posta kodu adımıyla
           AYNI davranış. İki yüzey aynı soruyu soruyor ve aynı kapıdan cevap alıyor; birinde bekleyiş
           görünür öteki sessiz kalsaydı, aynı sistemin iki farklı hâli olurdu. İskelet cevabın

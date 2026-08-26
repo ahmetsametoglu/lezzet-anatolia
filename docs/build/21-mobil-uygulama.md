@@ -5992,4 +5992,23 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   D7 satırı. **Bir gözlem web'e devredildi** (`not-web-sefer-acik-tanimi-ayristi.md`): satış anında
   ekran "1 açık" sefer gösterirken 4b bağ kurmadı — seed bugünün seferine bile `returned_at`
   yazıyor, iki "açık" tanımı ayrışmış; karar ve alan web'in.
+- [x] (21.120) **YER ÇEKMECESİNE KOD ÖNERİSİ — weble ayrışma kapandı (kullanıcı kararı 26.08)**
+  · touches: `apps/mobile/src/screens/customer-kit/postal-code-sheet.tsx`, `apps/mobile/src/lib/places/messages.json`
+
+  Denetimin 25.08 kaydı: başlıktaki yer çekmecesi ("67000 STRASBOURG ▾") mobilde öneri listesizdi —
+  müşteri beş haneyi eksiksiz yazmak zorundaydı, webde "672" sekiz aday getiriyordu. Kullanıcı
+  seçimi: web ile aynı davranış. Mevcut parçalarla kuruldu, yeni yol AÇILMADI: `usePostalSuggest`
+  (adres formununki) + `SuggestionList` (kitinki) + zaten hazır `/places/suggest` ucu.
+
+  İki kural: liste yalnız YAZARKEN ve yalnız EKSİK kodda (beş haneye ulaşınca soruyu yer ÇÖZÜMÜ
+  cevaplıyor; liste kapanmasaydı cevabın yanında kopyası dururdu) · seçim yalnız KODU doldurur —
+  kayıt `postalCode`tan ibaret, iki ülkede geçerli kodun ülkesi adres girilirken netleşir
+  (`ambiguousNote` bunu zaten söylüyor).
+
+  Doğrulama: yeni test **2/2** (`postal-code-sheet.test.tsx` — ağ fetch seviyesinde, cevaplar
+  sözleşme şeklinde; eksik bırakılan `places` alanını Zod anında yakaladı). İlk hâli SAHTE
+  YEŞİLDİ: "liste hiç açılmaz" iddiası debounce penceresinden ÖNCE bakıyordu — sabotaj (eşik
+  kaldırıldı) testi düşürmeyince görüldü, bekleme eklendi; sabotaj artık yalnız ilgili testi
+  düşürüyor (21.111'in dersi ikinci kez işe yaradı). customer-kit + home **71/71** · `tsc` ·
+  `lint` temiz.
 
