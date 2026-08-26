@@ -3,7 +3,9 @@
   "compilerOptions": {
     "strict": true,
     // TS 6 `@types`'ı otomatik dahil etmiyor; jest globalleri (describe/it/expect) açıkça bildirilir.
-    "types": ["jest"],
+    // `node`: app.config bekçisi (`app-config-guard.test.ts`) dosya okur — testler zaten node
+    // ortamında koşuyor; RN kodu node API'si çağırırsa Metro'da yine kırılır, tsc'ye güvenilmez.
+    "types": ["jest", "node"],
     "paths": {
       "@/*": ["./src/*"]
     }
