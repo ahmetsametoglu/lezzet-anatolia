@@ -210,6 +210,16 @@ export function SearchIcon({ size = 14 }: { size?: number }) {
   );
 }
 
+/** Zil — başlık barındaki bildirim girişi (14.15). */
+export function BellIcon({ size = 15 }: { size?: number }) {
+  return (
+    <Svg size={size} strokeWidth={2}>
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </Svg>
+  );
+}
+
 /** Ekle ikonu (+). */
 export function PlusIcon({ size = 14 }: { size?: number }) {
   return (

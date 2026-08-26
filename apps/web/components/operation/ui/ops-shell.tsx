@@ -28,6 +28,8 @@ import type { WarehouseContextPickerProps } from './warehouse-context-picker';
 interface OpsShellValue {
   user: { email: string; roles: readonly UserRole[] };
   warehouse: WarehouseContextPickerProps;
+  /** Zilin canlı kanalı (14.15) — adı sunucu sırrından türetilir, layout burada teslim eder. */
+  notifications: { channel: string };
 }
 
 const OpsShellContext = createContext<OpsShellValue | null>(null);

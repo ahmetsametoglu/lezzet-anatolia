@@ -5,6 +5,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { Space_Grotesk, IBM_Plex_Mono, Karla } from 'next/font/google';
 import { serviceDb, UserProfileService } from '@lezzet/database';
+import { staffNotificationsChannelName } from '@lezzet/application';
 import { STAFF_ROLES } from '@lezzet/types';
 import { AuthError, requireStaff } from '@/lib/guard';
 import { readWarehouseContext } from '@/lib/warehouse/context';
@@ -86,6 +87,9 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
           value={{
             user: { email: user.email ?? '', roles },
             warehouse: { warehouses, activeWarehouseId, unscoped: scope.kind === 'all' },
+            /* Zilin canlı kanal adı SUNUCUDA türetilir (`node:crypto` + sunucu sırrı — bell.ts
+               künyesi: adı yalnız guard'ın arkasındaki taraf öğrenir) ve buradan prop olarak iner. */
+            notifications: { channel: staffNotificationsChannelName() },
           }}
         >
           {/* Gezinme rayı KÂĞIDA gitmez (10.1): basılı belgede bir menü, mürekkebin yarısını

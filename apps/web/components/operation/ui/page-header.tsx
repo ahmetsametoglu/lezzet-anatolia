@@ -10,6 +10,7 @@ import { CommandPalette, useCommandPaletteShortcut } from './command-palette';
 import { useOpsShell } from './ops-shell';
 import { roleText } from './ops-nav';
 import { SearchIcon } from './icons';
+import { NotificationBell } from './notification-bell';
 import { WarehouseContextPicker } from './warehouse-context-picker';
 
 /**
@@ -121,6 +122,8 @@ export function PageHeader({ title, subtitle, status, search, children, hideWare
           <div className="flex items-center gap-2.5 border-l border-ops-line-soft pl-2.5">
             {hideWarehousePicker ? null : <WarehouseContextPicker {...shell.warehouse} variant="bar" />}
             <PaletteTrigger onOpen={openPalette} />
+            {/* Zil (14.15): kabuğun öğesi — personel satırlarının (ulaştırılamayan belge) webde görünen yeri. */}
+            <NotificationBell channel={shell.notifications.channel} />
             <UserAvatar email={shell.user.email} roles={shell.user.roles} />
           </div>
         ) : null}

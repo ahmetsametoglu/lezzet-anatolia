@@ -1840,3 +1840,28 @@ sorusunun yeni bir cevabı bulunmak zorunda; bugünkü cevap "o kapıyı açmama
 haberi iki kez almak gürültüdür; BELGE (sipariş onayı, iade — dayanıklı ortam yükümlülüğü) e-postaya
 HER ZAMAN gider, push eklendiğinde İLAVE olur, yerine geçmez. Sınıf bilgisi tek yerde:
 `NOTIFY_EVENT_META` (`packages/notify`).
+
+## Web bildirim yüzeyi: zil hesap ALANININ öğesi, "notifications" kelimesi AKIŞIN (26.08, 14.15)
+
+Bu ekranların `.dc.html`i yok — modül tasarım turundan sonra doğdu; görsel dil mevcut envanterden
+kuruldu (improvise yok, kelime dağarcığı var): müşteri zili `CartBadge`in birebir kuralları
+(emoji ikon + terracotta sayaç; **ilk okuma bitmeden rozet çizilmez** — 0 göstermek "bildiriminiz
+yok" derdi, oysa henüz ölçülmedi), akış sayfası puan geçmişinin liste kalıbı; operasyon zili başlık
+barının kabuk bloğunda `CONTROL_SQUARE` kare kontrol + `AnchoredMenu` paneli.
+
+**Yerleşim kararı:** müşteri zili hesap alanının HER ekranında (SiteFrame hesap başlığı — masaüstü
+sağ blok, mobil web FunnelHeader sağ yuvası). Vitrin başlığına KONMADI: bildirim girişli bir hesap
+nesnesidir, alışveriş akışının değil. Operasyonda zil ⌘K ile avatar arasında — kabuk oturumundur,
+sayfanın değil (09.19 kuralı).
+
+**Panelin açılışı "gördüm" beyanıdır** (native kabuğun aynı kararı): rozet söner, satırlar listede
+kalır — akış gelen kutusu değildir. Müşteri tarafında ise okundu/gizle İYİMSER ve **geri almalı**:
+düşen isteğin ardından ekranda "okundu" duran satır, rozetin öteki cihazda yalan söylemesi olurdu.
+
+**Rota taşıma (greenfield):** `/account/notifications` 22.08'den beri TERCİH sayfasınındı; müşteri
+zile basınca bildirimlerini bekler, ayar anahtarlarını değil — kelime akışa verildi
+(fr `/compte/notifications` · de `/konto/benachrichtigungen` · tr `/hesap/bildirimler`), tercihler
+`/account/preferences`a taşındı (fr `/compte/preferences` · de `/konto/einstellungen` · tr eskisi).
+Mail altbilgisinin "tercihlerinizi yönetin" bağı üreticiden okunuyor (`notificationPreferencesUrl`)
+ve taşımayla birlikte güncellendi; canlıya çıkmış mail olmadığı için kırılan bağ yok — bu pencere
+bir daha açılmayacak, karar o yüzden bugün verildi.
