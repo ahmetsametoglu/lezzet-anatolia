@@ -30,7 +30,7 @@ import type { AssistantProposalKind } from '@lezzet/types';
  */
 
 /** Hedef ekranın formu doldurmak için ihtiyacı olan her şey — payload HAM gelir, şekli `kind`'a göre. */
-export interface HandoffProposal {
+interface HandoffProposal {
   id: string;
   kind: AssistantProposalKind;
   summary: string;

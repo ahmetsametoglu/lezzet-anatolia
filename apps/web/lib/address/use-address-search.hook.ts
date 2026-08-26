@@ -85,7 +85,10 @@ async function lookup(term: string, near: NearPoint | undefined): Promise<Lookup
 }
 
 /** Yakınlık ipucunun noktası — `DeliveryPlace.point` ile aynı şekil, çağıran onu geçiriyor. */
-export interface NearPoint {
+/** Dışa AÇILMIYOR: tek kullanıcısı aşağıdaki `AddressSearchOptions` ve çağıran onu
+ *  çağrı yerinden çıkarıyor. Dışa verilmiş ama kimsenin almadığı bir ad, kapı sayısını
+ *  olduğundan çok gösterir (knip). */
+interface NearPoint {
   lat: number;
   lng: number;
 }

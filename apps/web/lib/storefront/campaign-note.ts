@@ -18,13 +18,13 @@ import { formatPrice } from './format';
  * taşır (`CampaignNoteCopy`); vitrin kartında cümle YOK, o yüzden orası bu daraltmayı kullanıyor
  * ve sözlüğüne iki fazla anahtar koymak zorunda kalmıyor.
  */
-export interface CampaignValueCopy {
+interface CampaignValueCopy {
   percent: string;
   amount: string;
   withMinimum: string;
 }
 
-export interface CampaignCopy extends CampaignValueCopy {
+interface CampaignCopy extends CampaignValueCopy {
   named: string;
   anon: string;
 }

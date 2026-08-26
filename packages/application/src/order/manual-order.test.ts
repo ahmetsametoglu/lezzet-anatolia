@@ -317,6 +317,37 @@ describe('elle sipariş — personel yolu (09.8)', () => {
     expect(await rezerveAdet()).toBe(oncekiRezerv + 2);
   });
 
+  /**
+   * **YARIM İZ VERİTABANINDA REDDEDİLİR** (`order_item_negotiation_complete`).
+   *
+   * Üstteki testler izi UYGULAMA yolundan sınıyor; bu onun altındaki kapıyı sınıyor. Ayrımı
+   * önemli: uygulama bir gün yanlış yazsa da (ya da ikinci bir yol açılsa — onarım betiği,
+   * doğrudan SQL) yarım bir iz yazılamamalı. Tek başına bir liste fiyatı "birileri indirdi" der
+   * ama kimin indirdiğini söylemez: kayıt soruyu açar, cevabı vermez.
+   */
+  it('yarım pazarlık izi VERİTABANINCA reddedilir — uygulamadan bağımsız', async () => {
+    const sonuc = await elleSiparis();
+    const orderId = (sonuc as { orderId: string }).orderId;
+    const { data: varyantli } = await db.from('order_item').select('variant_id,vat_rate').eq('order_id', orderId).single();
+
+    const yarim = (patch: Record<string, unknown>) =>
+      db.from('order_item').insert({
+        order_id: orderId,
+        variant_id: varyantli!.variant_id,
+        qty: 1,
+        unit_price: 11,
+        vat_rate: varyantli!.vat_rate,
+        ...patch,
+      });
+
+    // Liste var, yazan yok.
+    expect((await yarim({ list_unit_price: 12.5 })).error?.code).toBe('23514');
+    // Yazan var, liste yok.
+    expect((await yarim({ price_set_by: personelId })).error?.code).toBe('23514');
+    // İkisi birden → kabul (kısıt izi yasaklamıyor, YARIMINI yasaklıyor).
+    expect((await yarim({ list_unit_price: 12.5, price_set_by: personelId })).error).toBeNull();
+  });
+
   it('kanal fiyatı olmayan ürünü elle fiyatla satamaz', async () => {
     const sonuc = await elleSiparis({
       variant: fiyatsizVariantId,

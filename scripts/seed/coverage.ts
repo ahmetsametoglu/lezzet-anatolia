@@ -34,7 +34,7 @@ type Db = ReturnType<typeof createServiceRoleClient>;
  * Guard'a takılıp yarım kalan bir bölüm (yaşandı 08.08, `seedBankQueue`) kodda doğru görünür.
  */
 
-export interface KapsamKovasi {
+interface KapsamKovasi {
   ad: string;
   /** Boş kalırsa koşu KIRMIZI döner — bu hâlin bir ekranı/kuralı var. */
   zorunlu?: boolean;
@@ -44,7 +44,7 @@ export interface KapsamKovasi {
   sayac?: (db: Db) => Promise<number>;
 }
 
-export interface KapsamAlani {
+interface KapsamAlani {
   baslik: string;
   tablo?: string;
   kovalar: KapsamKovasi[];
@@ -120,7 +120,7 @@ async function marjDagilimi(db: Db): Promise<{ zarar: number; kar: number }> {
   return { zarar, kar };
 }
 
-export const KAPSAM: KapsamAlani[] = [
+const KAPSAM: KapsamAlani[] = [
   {
     baslik: 'Ürün — satış durumu',
     tablo: 'product',
@@ -859,11 +859,11 @@ async function sayilmamisSefer(db: Db): Promise<number> {
 }
 
 /** Sipariş DURUMLARI ayrı: kova listesi enum'dan gelmeli, elle yazılan liste enum büyüyünce eskir. */
-export const SIPARIS_DURUMLARI = [
+const SIPARIS_DURUMLARI = [
   'draft', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'completed', 'cancelled', 'returned',
 ] as const;
 
-export interface KapsamSonucu {
+interface KapsamSonucu {
   satirlar: { alan: string; kova: string; sayi: number; zorunlu: boolean }[];
   bosZorunlular: { alan: string; kova: string }[];
   kdvOranlari: unknown[];

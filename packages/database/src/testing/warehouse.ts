@@ -25,6 +25,12 @@ export interface TestWarehouseOptions {
   /** Okunur ek (`STR`, `KEHL`) — damganın önüne gelir; hata mesajlarında hangisi olduğu anlaşılsın. */
   label?: string;
   countryCode?: Warehouse['countryCode'];
+  /**
+   * Tesis mi araç mı (26.08). Varsayılan `facility` — bugüne kadarki her test bir tesis kuruyordu
+   * ve araç İSTİSNADIR. Araç kurulumu kendi kurallarını sınayan testin işidir: araca bölge
+   * bağlanamaz, araç kargo deposu olamaz, araç depo-üstü toplama girmez.
+   */
+  kind?: Warehouse['kind'];
   shipsOnline?: boolean;
   isActive?: boolean;
 }
@@ -40,6 +46,7 @@ export async function createTestWarehouse(db: SupabaseClient, opts: TestWarehous
     code: `T${opts.label ?? ''}-${stamp}`,
     name: `Test deposu ${opts.label ?? stamp}`,
     countryCode: opts.countryCode ?? 'FR',
+    kind: opts.kind ?? 'facility',
     shipsOnline: opts.shipsOnline ?? false,
     isActive: opts.isActive ?? true,
   });

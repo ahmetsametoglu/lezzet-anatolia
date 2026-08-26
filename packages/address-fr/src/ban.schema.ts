@@ -25,7 +25,8 @@ import { z } from 'zod';
 
 /** Sonucun inceliği — kaba (komün) ile kesin (kapı numarası) arasında dört kademe. */
 export const BanResultTypeSchema = z.enum(['housenumber', 'street', 'locality', 'municipality']);
-export type BanResultType = z.infer<typeof BanResultTypeSchema>;
+// Tipin adı `AddressKind` ve evi `address.ts` — buradaki ikinci `z.infer` takma adının hiçbir
+// çağıranı yoktu (26.08, knip). Aynı tipi iki adla taşımak, okuyana iki kavram varmış gibi görünür.
 
 const BanPropertiesSchema = z.object({
   label: z.string(),

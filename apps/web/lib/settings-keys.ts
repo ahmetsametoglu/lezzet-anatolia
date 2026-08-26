@@ -1,7 +1,7 @@
 /**
  * Ayar anahtarları ve varsayılanları — **kısmi geçiş köprüsü** (terfi aşama 2/3, denetim K5-1).
  *
- * Altı sepet/kargo sabiti `@lezzet/application/cart/settings-keys`ten geliyor; künyelerin tamamı
+ * Üç sepet/kargo ANAHTARI `@lezzet/application/cart/settings-keys`ten geliyor; künyelerin tamamı
  * orada (eşiğin neden koda gömülmediği, varsayılanın neden ayar okunamadığında devreye girdiği).
  *
  * ── NEDEN İKİZ TEHLİKELİYDİ ─────────────────────────────────────────────────
@@ -21,12 +21,15 @@
  * sepet köprüsünde aynı şey ödeme sayfasını 500'e düşürdü. Kaynak modül saf (hiç importu yok), o
  * yüzden derin yol hem doğru hem bedelsiz.
  */
+/*
+  KÖPRÜ YALNIZ WEB'İN OKUDUĞUNU GEÇİRİR (26.08, knip). Üç `_DEFAULT` sabiti de buradan
+  re-export ediliyordu ve web'de tek bir çağıranı yoktu — varsayılanı okuyan taraf sunucudaki
+  ayar çözümü, o da paketi doğrudan çağırıyor. Kimsenin almadığı bir re-export, köprüyü
+  olduğundan geniş gösterir; ihtiyaç doğduğu gün satır geri gelir (paket onları hâlâ veriyor).
+*/
 export {
-  FREE_SHIPPING_THRESHOLD_DEFAULT,
   FREE_SHIPPING_THRESHOLD_KEY,
-  MIN_BASKET_DEFAULT,
   MIN_BASKET_KEY,
-  SHIPPING_FEE_DEFAULT,
   SHIPPING_FEE_KEY,
 } from '@lezzet/application/cart/settings-keys';
 
