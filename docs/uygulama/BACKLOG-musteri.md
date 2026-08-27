@@ -401,9 +401,13 @@ tek şeyi söyleyen bağlam mesajları yapar:
 Hesap ekranındaki puan kartı **başvuru yeri** olarak kalır: öğretmez, merak edene cevap verir
 (MB-55'in sayfası da bu role hizmet eder).
 
-**AÇIK BAĞIMLILIKLAR (ölçüldü 11.08):** (a) teslimat sonrası yorum daveti bugün e-posta ile gidiyor,
-**uygulama bildirimi altyapısı yok** — o gelene kadar uygulama açıldığında görünen bir bant yapılır,
-bedava; (b) davet bağlantısının **karşılayan sayfası web'de** ve henüz yok — komşu davetinin
+**AÇIK BAĞIMLILIKLAR (ölçüldü 11.08):** ~~(a) teslimat sonrası yorum daveti bugün e-posta ile
+gidiyor, **uygulama bildirimi altyapısı yok** — o gelene kadar uygulama açıldığında görünen bir
+bant yapılır, bedava~~ → **(a) KAPANDI (27.08): altyapı geldi, bant gereksiz.** `feedback_invite`
+uygulama içi bildirim olarak işaretli (`notify/types.ts`) ve teslimat sonrası zamanlı iş
+gönderiyor; cihazda görüldü (*"AVIS · Que pensez-vous de votre commande (LA-26-KR7VGQ) ?"*).
+Şart kalkınca vaat de kalkar — aynı daveti hem zile hem vitrine koymak ikinci nüsha olurdu;
+(b) davet bağlantısının **karşılayan sayfası web'de** ve henüz yok — komşu davetinin
 çalışması için gereken TEK altyapı bu, gerisi mobil taraftadır (MB-53).
 
 **3 · "PARA ALINDIĞINDA" NE DEMEK:** kartla ödeyende sipariş anı, kapıda ödeyende teslimat anı.

@@ -2391,12 +2391,20 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **3**. Sayı ekrana gömülmedi — `NEIGHBOR_INVITE_MAX_USES` `domain-core`da adlı bir sabit, davet
   açılırken AÇIKÇA o değerle yazılıyor ve aynı sabit kural ucundan ekrana geliyor.
 
-  **Kalan (`BEKLEYEN(21.47)`):** karar 2h'nin bağlam mesajlarından tek eksik parça —
-  **teslimat-sonrası yorum daveti bandı** ("uygulama açıldığında görünen bant", 20/ürün; push
-  altyapısı gelene dek bedava yol). Ölçüldü 26.08: tablonun öteki üç satırı zaten karşılanmış —
-  keşif kartı vitrinde sayı × aday puanıyla duruyor, "uygulama açılınca sessiz" `use-visit-points`
-  künyesiyle uygulanmış, sipariş-onayı ekranının puansızlığı bilinçli ve künyeli. Bant, bandın
-  görsel kararıyla birlikte iner (CLAUDE §3 — tasarımsız improvise edilmez).
+  ~~**Kalan (`BEKLEYEN(21.47)`):** karar 2h'nin bağlam mesajlarından tek eksik parça —
+  **teslimat-sonrası yorum daveti bandı**~~ → **KAPANDI (27.08): bant YAZILMAYACAK, çünkü işini
+  BİLDİRİM yapıyor.** Kaydın kendi gerekçesi zaten şartlıydı (`BACKLOG-musteri §4` açık
+  bağımlılık (a)): *"teslimat sonrası yorum daveti bugün e-posta ile gidiyor, **uygulama bildirimi
+  altyapısı yok** — o gelene kadar uygulama açıldığında görünen bir bant yapılır, bedava"*.
+  Altyapı 14.13–14.15'te geldi ve ölçüldü: `feedback_invite` uygulama içi bildirim olarak
+  İŞARETLİ (`notify/types.ts`: `{ class: 'ping', inApp: true }`), teslimat sonrası zamanlı iş
+  gönderiyor (`backend/jobs/send-feedback-invites.ts`) ve **cihazda görüldü** (27.08, CPH1907:
+  *"AVIS · Que pensez-vous de votre commande (LA-26-KR7VGQ) ?"* — yıldız ikonlu, kendi tür
+  etiketiyle). Şartın kalkması vaadi de kaldırır: aynı daveti hem bildirime hem vitrine koymak
+  ikinci nüsha olurdu ve vitrin zaten dolu (kullanıcı bildirimi 27.08 — ayrı kalem).
+  Tablonun öteki üç satırı zaten karşılanmıştı: keşif kartı vitrinde sayı × aday puanıyla
+  duruyor, "uygulama açılınca sessiz" `use-visit-points` künyesiyle uygulanmış, sipariş-onayı
+  ekranının puansızlığı bilinçli ve künyeli. **Karar 2h böylece tamamen karşılandı.**
   ~~`feedbackPointsReason` keşifte metin varsa hâlâ `review` (20) döndürüyor (karar 6 — bugün
   keşifte metin alanı YOK, gizli tuzak).~~ **Tuzak kapandı (26.08):** keşif artık metinle bile
   aday puanında kalıyor; çivileyen test `domain-core/points.test`te.
