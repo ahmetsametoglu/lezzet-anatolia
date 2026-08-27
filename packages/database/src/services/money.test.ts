@@ -102,7 +102,13 @@ describe('transfer — tek satır, iki hesap', () => {
     // **HESAP-ÜSTÜ okumada transferin İKİ AYAĞI DA kalır** (karar 04.08, operasyon şeridinin
     // talebi). Birini seçip ötekini gizlemek keyfî olurdu ve "hangi ayak" sorusunun cevabı yok.
     // İkisi birbirini götürdüğü için "Tümü"nün toplamı da doğru çıkar: para işletmeden çıkmadı.
-    const hepsi = await movements.ledger();
+    // Süzgeç HESAP DEĞİL TİP: iddia "hesap-üstü okumada iki ayak da kalır"dır, o yüzden `accountId`
+    // verilemez — ama `type` verilebilir ve evreni daraltır. Çıplak `ledger()` idi ve paylaşılan
+    // veritabanında kırılgandı: okuma keyset sayfalı (`valueDate desc`), yani `money_movement`
+    // kirliliği biriktiğinde testin kendi satırı ilk sayfanın DIŞINA düşüyor ve `expected [] to
+    // have length 2` ile yalancı kırmızı veriyordu (bildirim şeridi 26.08'de bir kez ölçtü, not
+    // bıraktı; sebep bugün doğrulandı). `CLAUDE §4b`: kendi kurduğun satırları oku.
+    const hepsi = await movements.ledger({ type: 'transfer', limit: 200 });
     const ayaklar = hepsi.rows.filter((r) => r.id === cashLedger.rows[0]!.id);
     expect(ayaklar).toHaveLength(2);
     expect(ayaklar.reduce((a, r) => a + r.signedAmountCents, 0)).toBe(0);

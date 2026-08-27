@@ -3,7 +3,7 @@ import {
   AccountService, AddressService, CategoryService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { listCourierDay, markUndelivered, type CourierStop } from './day';
 import { recordOrderPayment } from '../money/order-payment';
 import { transitionOrder } from '../order/transition';
@@ -71,9 +71,12 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Özeti: teslimin `sale` satırı ikisini birden `restrict` ile tutuyor ve hatayı yutan `delete()`
+  // teardown'ı sessizce yarım bırakıyordu.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePriceCents: 300 })).id;
 });
 

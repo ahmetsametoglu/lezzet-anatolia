@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { getCartView } from '@/lib/cart/read';
 
 /**
@@ -84,7 +84,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // `purgeVariantStock`: silme sırası tek yerde durur ve hata FIRLAR — `delete()` onu yutuyordu
+  // (06.14 · künye `packages/application/src/courier/day.test.ts`te).
+  await purgeVariantStock(db, [variantId]);
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

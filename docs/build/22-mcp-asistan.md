@@ -1518,9 +1518,19 @@ satırında.
     (ölçüldü 27.08: `−13,49 €`), çünkü işaret miktara gömülüydü ve girişler çıkışlarla aynı toplamda
     eriyordu. Yön ayrı alana taşındı; toplam artık yapısal olarak pozitif (`158 ad. · 1.655,53 €`,
     DB ile birebir).
-  - ⚠ **`[x]` DEĞİL çünkü ekran turu yapılmadı.** Arka uç ve okuma tam, testli; kalan tek şey
-    kullanıcının iki temada gözle görmesi (`1501`in kuralı: *"kullanıcı ekranda görmeden `[x]`
-    yazılmıyor"*).
+  - **Ekran turu YAPILDI (27.08 · `ui:shot`, iki tema, 3001 prod kopyası).** Ölçülen hâl: toplam
+    `158 ad. · 1.715,28 €` (pozitif), tür dağılımı beş kovada — *Siparişe çıktı 90 · Sevk 51 ·
+    Kapı satışı 5 · Sayım farkı 4 · Fire 8* (toplamı tam 158). Depo sütunu (`STR`) tarih sütununa
+    binmiyor, belge numarası (`TRF-STR-26-0006`) satırdan okunuyor, koyu tema token'lardan geliyor.
+    - **Tur bir kusur yakaladı ve düzeltildi:** satır miktarı `−6` yazıyordu, başlık `158 ad.`
+      pozitifti. Tasarımın kendi kararına aykırıydı — `design/pages/admin-stok.md` (kullanıcı
+      itirazı 01.08) *"yönü sekmeye çıkarmak: giren mal bir sekme, çıkan mal bir sekme"* diyor,
+      yani yön SEKMENİN işi. Tablo zaten yalnız `out` satırlarını aldığı için işaret her satırda
+      aynıydı: ayrım yapmayan, yalnız gürültü üreten bir karakter. Üstelik sütunun adı "Miktar" ve
+      miktar bir büyüklüktür. Veride kural zaten doğruydu (`qty` pozitif, yön ayrı alanda); ekran
+      onu geri bozuyordu.
+  - ⚠ **`[x]` DEĞİL çünkü onay KULLANICININ**: çekim yapıldı ve kural gereği son söz onda
+    (`1501`: *"kullanıcı ekranda görmeden `[x]` yazılmıyor"*).
 
 - [x] (22.28) **Mal kabul sekmesine "kabul edilenler" listesi** — geçmiş girişler · touches:
   `packages/database/src/services/{stock-intake,stock,purchase-order,stock-movement}.service.ts`,

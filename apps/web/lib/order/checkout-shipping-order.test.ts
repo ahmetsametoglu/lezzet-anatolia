@@ -11,7 +11,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
@@ -140,12 +140,16 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().in('customer_id', [customerId, b2bCustomerId]);
+  // Parti BURADA SİLİNMEZ: `beforeAll`da bir kez kuruluyor ve bütün testler onu paylaşıyor.
+  // Silme `mustDelete` ile, çünkü `delete()` hatayı yutar: bu dosya bugün deftere yazan bir akış
+  // koşturmuyor, ama bir gün koşturursa sipariş `restrict` ile tutulur ve sessiz silme o günü
+  // görünmez kılardı (06.14 · künye `packages/application/src/courier/day.test.ts`te).
+  await mustDelete(db, 'order', (q) => q.in('customer_id', [customerId, b2bCustomerId]));
 });
 
 afterAll(async () => {
-  await db.from('order').delete().in('customer_id', [customerId, b2bCustomerId]);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  await mustDelete(db, 'order', (q) => q.in('customer_id', [customerId, b2bCustomerId]));
+  await purgeVariantStock(db, [variantId]);
   await db.from('address').delete().in('customer_id', [customerId, b2bCustomerId]);
   await db.from('delivery_zone').delete().eq('id', zoneId);
   await purgeTestData(db, {

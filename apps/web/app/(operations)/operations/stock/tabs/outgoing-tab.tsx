@@ -104,10 +104,17 @@ export function OutgoingTab({
       width: '72px',
       align: 'right',
       cell: (r) => (
-        // Hepsi çıkış: eksi işareti YÖNÜ değil, gözün okumasını kolaylaştırıyor. Yön artık kolonda
-        // duruyor ve bu tablo yalnız `out` satırlarını alıyor.
+        // **İŞARETSİZ — yön SEKMENİN işi** (`design/pages/admin-stok.md`, kullanıcı itirazı 01.08:
+        // *"yönü sekmeye çıkarmak: giren mal bir sekme, çıkan mal bir sekme"*). Burada `−{qty}`
+        // yazıyordu ve üç sebeple yanlıştı: (1) tablo yalnız `out` satırlarını alıyor, yani işaret
+        // her satırda AYNI ve hiçbir ayrım yapmıyor — bilgi değil gürültü; (2) sütunun adı
+        // "Miktar" ve miktar bir büyüklüktür, negatif olmaz; (3) başlıktaki dönem toplamı POZİTİF
+        // (`158 ad.`) ve aynı ekranda aynı büyüklük iki türlü görünüyordu.
+        //
+        // Verinin kendisinde bu kural zaten var (06.14): `qty` daima pozitif, yön ayrı alanda.
+        // Ekranın onu geri bozmaması gerekiyordu.
         <span className="font-ops-mono text-ops-sm font-medium text-ops-ink" title="Stoktan düşüldü">
-          −{r.qty}
+          {r.qty}
         </span>
       ),
     },

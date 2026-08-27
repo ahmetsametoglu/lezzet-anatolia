@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { decideReservation } from '@lezzet/domain-core';
 
 /**
@@ -54,9 +54,12 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Bu dosya bugün deftere yazan bir akış koşturmuyor, ama silme yolu hepsinde AYNI olmalı: hatayı
+  // yutan `delete()` bir gün sessizce yarım kalır ve o gün sebebi burada aranmaz.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   // İKİ parti: kullanılabilir hesabı varyant TOPLAMI üzerinden yapılıyor, tek parti bunu göstermez.
   await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: gunOffset(30), purchasePriceCents: 200 });
   await stocks.insert({ warehouseId, variantId, physicalQty: 5, expiryDate: gunOffset(60), purchasePriceCents: 200 });

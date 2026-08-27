@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, OrderItemBatchService, OrderService, ProductService, StockService, UserProfileService, serviceDb } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 
 /**
  * Hazırlık onayı (06.5'in yazım yarısı) — depocunun onayladığı partiler kalem–parti eşlemesine
@@ -38,14 +38,18 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // Hazırlık deftere YAZMAZ (mal ayrılır, düşmez — `DOMAIN §4`) ama `order_item_batch` partiyi
+  // `restrict` ile tutuyor; `purgeVariantStock` onu da topluyor.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(20), purchasePriceCents: 200 })).id;
   batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(200), purchasePriceCents: 300 })).id;
 });
 
 afterAll(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

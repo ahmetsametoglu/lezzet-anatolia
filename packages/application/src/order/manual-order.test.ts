@@ -11,7 +11,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, settingsSnapshot, type SettingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete, type SettingsSnapshot } from '@lezzet/database/testing';
 import { createCheckoutDraft } from './checkout-draft';
 import { placeOrder } from './place-order';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
@@ -127,13 +127,16 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
+  // Parti BURADA SİLİNMEZ (`beforeAll`da bir kez kuruluyor, testler paylaşıyor). Silme `mustDelete`
+  // ile: `delete()` hatayı yutar ve siparişi tutan bir defter satırı doğduğu gün teardown sessizce
+  // yarım kalırdı (06.14 · künye `packages/application/src/courier/day.test.ts`te).
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
 });
 
 afterAll(async () => {
   await minBasket.restore();
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('stock').delete().in('variant_id', [variantId, fiyatsizVariantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await purgeVariantStock(db, [variantId, fiyatsizVariantId]);
   await db.from('address').delete().eq('customer_id', customerId);
   await db.from('delivery_zone').delete().eq('id', zoneId);
   await purgeTestData(db, {

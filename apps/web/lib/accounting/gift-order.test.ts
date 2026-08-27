@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { quickSale } from '@lezzet/application';
 import { buildExport } from './export';
 
@@ -52,8 +52,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  // İkram da bir satıştır: deftere `counter_sale` yazıyor ve o satır ikisini birden tutuyor.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],
@@ -95,7 +97,14 @@ describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
     // 4) EXPORT: TEK fark burada — satır dosyaya girmez, ama tutarı özet'te açıkça durur.
     const exportAfter = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
     expect(exportAfter.rows.map((r) => r.orderId)).not.toContain(order.id);
-    expect(exportAfter.rows).toHaveLength(exportBefore.rows.length);
+    // **Mutlak sayı DEĞİL küme karşılaştırması** (`CLAUDE §4b`: küresel sayıya bakan test yazma).
+    // `toHaveLength(exportBefore.rows.length)` idi ve paylaşılan veritabanında kırılgandı: paralel
+    // koşan başka bir dosya kendi siparişini aynı güne yazdığında sayı artıyor ve test o satırı
+    // bizim ikramımız sanıyordu (ölçüldü 27.08, 11 dosyalık koşuda tam bu satır düştü — tek başına
+    // koşunca geçiyordu). İddia zaten "ikram araya girmedi"dir; onu üstteki satır söylüyor, bu satır
+    // da öncekilerin YERİNDE durduğunu.
+    const oncekiler = new Set(exportBefore.rows.map((r) => r.orderId));
+    expect(exportAfter.rows.filter((r) => oncekiler.has(r.orderId))).toHaveLength(exportBefore.rows.length);
     expect(exportAfter.summary.excludedGiftCount - exportBefore.summary.excludedGiftCount).toBe(1);
     expect(exportAfter.summary.excludedGiftGross - exportBefore.summary.excludedGiftGross).toBe(TOTAL_EURO);
   });

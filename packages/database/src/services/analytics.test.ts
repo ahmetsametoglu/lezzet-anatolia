@@ -314,8 +314,16 @@ describe('rapor okumaları', () => {
     // Bu testin koruduğu şey bir sayı değil, `analytics_order_base` görünümünün VAR OLMA sebebi:
     // "hangi sipariş ciro sayılır" üç yerde ayrı yazılsaydı biri iadeyi düşer öteki düşmezdi ve
     // aynı ekranda iki farklı ciro belirirdi — hiçbiri hata vermeden.
-    const donem = await reports.orderRevenue('2020-01-01', bugun);
-    const kampanya = await reports.campaignRevenue('2020-01-01', bugun);
+    // **İKİSİ AYNI ANI GÖRMELİ** — `Promise.all`, ardışık `await` değil (ölçüldü 27.08, mobil
+    // şeridin notu): iki okuma arasında koşan başka bir dosya sipariş yazar ya da teardown'ı bir
+    // sipariş siler ve toplamlar tutmaz. Testin iddiası "iki ciro aynı TANIMDAN çıkar"; sıralı
+    // okuma ona "aynı ANDAN çıkar" varsayımını da gizlice ekliyordu ve paylaşılan veritabanında o
+    // varsayım yanlış (`CLAUDE §4b`). Eşzamanlı gitmek pencereyi kapatmıyor ama milisaniyeye
+    // indiriyor; küme testin kendi verisi olmadığı için daha dar bir süzgeç de yazılamıyor.
+    const [donem, kampanya] = await Promise.all([
+      reports.orderRevenue('2020-01-01', bugun),
+      reports.campaignRevenue('2020-01-01', bugun),
+    ]);
 
     const topla = (rows: Array<{ revenueCents: number; orderCount: number }>) => ({
       ciro: rows.reduce((a, r) => a + r.revenueCents, 0),

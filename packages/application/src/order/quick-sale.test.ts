@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, DeliveryRunService, DeliveryZoneService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete, purgeVariantStock, purgeOrdersBy } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
 import { transitionOrder } from './transition';
 
@@ -48,9 +48,14 @@ beforeEach(async () => {
   // **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışı deftere `counter_sale` yazıyor ve satır
   // siparişi `restrict` ile tutuyor — sıra tersken sipariş silinemiyor, parti kalıyor, sonraki
   // test kirli zeminde koşuyordu. Hareketler partiden siliniyor (`stock_id` `not null`).
+  // **SİPARİŞ ÖNCE, sonra parti** — ve sipariş `purgeCustomerOrders`tan (06.14). Varyant bazlı
+  // temizlik burada YETMEZ: kapı satışı ARACIN partisinden mal çıkarıyor (iç blok, `yerel.variantId`)
+  // ama sipariş bu müşterinin; yani siparişi tutan hareket dıştaki partiye bağlı değil ve
+  // `purgeVariantStock(variantId)` onu göremiyor. Anahtar SİPARİŞTİR, parti değil (ölçüldü 27.08:
+  // `stock_movement_order_fk` ile silinemeyen sipariş deposunu da bırakıyordu).
+  await purgeOrdersBy(db, 'customer_id', [customerId]);
   await purgeVariantStock(db, [variantId]);
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   // A önce doluyor (yakın tarih) — FEFO onu önce çıkarmalı.
   batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(10), purchasePriceCents: 200 })).id;
   batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(300), purchasePriceCents: 300 })).id;
@@ -262,7 +267,7 @@ describe('hızlı satış (07.10)', () => {
  * bölgesi ve açık seferi var; ötekilerin hiçbirinin yok.
  */
 describe('araçtan satış — sefer bağı (26.08)', () => {
-  const yerel: { aracId?: string; tesisId?: string; kuryeId?: string; zoneId?: string; runId?: string; variantId?: string } = {};
+  const yerel: { aracId?: string; tesisId?: string; kuryeId?: string; zoneId?: string; runId?: string; variantId?: string; productId?: string } = {};
   const gun = new Date().toISOString().slice(0, 10);
 
   beforeAll(async () => {
@@ -292,21 +297,33 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
     });
     yerel.runId = run.runId;
 
-    const { variants } = await new ProductService(db).create({ name: { tr: `Araç ürünü ${stamp}` }, categoryId });
-    yerel.variantId = variants[0]!.id;
+    const arac = await new ProductService(db).create({ name: { tr: `Araç ürünü ${stamp}` }, categoryId });
+    yerel.productId = arac.product.id; // teardown'a bildirilmezse hiçbir cascade toplamaz
+    yerel.variantId = arac.variants[0]!.id;
     await stocks.insert({ warehouseId: yerel.aracId, variantId: yerel.variantId, physicalQty: 20, expiryDate: dayOffset(90), purchasePriceCents: 100 });
   });
 
   afterAll(async () => {
     // Parti (ve onu tutan defter/kalem bağları) SİPARİŞTEN ÖNCE — `stock_movement.order_id`
     // `restrict` ve kapı satışı deftere yazıyor (06.14).
+    // **HER İKİ DEPO DA** (ölçüldü 27.08): eskiden yalnız aracın siparişleri siliniyordu ve tesise
+    // bağlı olanlar kalıyordu — `order_warehouse_fk` `restrict`, yani tesis silinemiyor, teardown
+    // `purgeTestData`nın depo adımında patlıyordu. Görünmüyordu çünkü silmeler `delete()` ile
+    // yazılmıştı ve o çağrı hatayı YUTUYOR; `purgeOrders` sırayı taşıyor, `mustDelete` gürültüyü.
+    await mustDelete(db, 'delivery_run_close', (q) => q.eq('delivery_run_id', yerel.runId!));
+    await purgeOrdersBy(db, 'warehouse_id', [yerel.aracId!, yerel.tesisId!]);
+    await purgeOrdersBy(db, 'delivery_run_id', [yerel.runId!]);
     await purgeVariantStock(db, [yerel.variantId!]);
-    await db.from('order').delete().eq('warehouse_id', yerel.aracId!);
-    await db.from('delivery_run_close').delete().eq('delivery_run_id', yerel.runId!);
-    await db.from('order').delete().eq('delivery_run_id', yerel.runId!);
-    await db.from('delivery_run').delete().eq('id', yerel.runId!);
-    await db.from('delivery_zone').delete().eq('id', yerel.zoneId!);
-    await purgeTestData(db, { profileIds: [yerel.kuryeId!], warehouseIds: [yerel.aracId!, yerel.tesisId!] });
+    await mustDelete(db, 'delivery_run', (q) => q.eq('id', yerel.runId!));
+    await mustDelete(db, 'delivery_zone', (q) => q.eq('id', yerel.zoneId!));
+    // **ÜRÜN de bildirilir** (ölçüldü 27.08): bu blok kendi ürününü kuruyor ve onu hiçbir cascade
+    // toplamıyordu — yeşil koşular bile her turda bir "Araç ürünü …" bırakıyordu (yerelde 22 artık
+    // ürün birikmişti). Kategori dıştan geliyor, o yüzden burada anılmaz.
+    await purgeTestData(db, {
+      productIds: [yerel.productId!],
+      profileIds: [yerel.kuryeId!],
+      warehouseIds: [yerel.aracId!, yerel.tesisId!],
+    });
   });
 
   /** Araçtan açılan taslak — kaynağı `door`, deposu ARAÇ. */

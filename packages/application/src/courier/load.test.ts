@@ -9,7 +9,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
 import { openBox, sealBox } from '../warehouse/boxes';
 import { confirmDoorDelivery } from './delivery';
@@ -62,9 +62,10 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye kardeş dosyada (`courier/day.test.ts`).
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   stockId = (
     await stocks.insert({ warehouseId, variantId, physicalQty: 40, expiryDate: dayOffset(60), purchasePriceCents: 300 })
   ).id;

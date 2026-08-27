@@ -373,21 +373,25 @@ describe('çapa kendiliğinden veriliyor', () => {
   const orderIds: string[] = [];
   let warehouseId: string;
   let variantId: string;
+  let productId: string;
   let categoryId: string;
 
   beforeAll(async () => {
     warehouseId = (await createTestWarehouse(db)).id;
     categoryId = (await new CategoryService(db).create({ name: { tr: `Çapa testi ${stamp}` } })).id;
-    const { variants } = await new ProductService(db).create({
+    const { product, variants } = await new ProductService(db).create({
       name: { tr: `Çapa ürünü ${stamp}` },
       categoryId,
       variants: [{ label: { tr: '1 kg' } }],
     });
+    productId = product.id; // teardown'a bildirilmezse hiçbir cascade toplamaz
     variantId = variants[0]!.id;
   });
 
   afterAll(async () => {
-    await purgeTestData(db, { orderIds, conversationIds, warehouseIds: [warehouseId], categoryIds: [categoryId] });
+    // `productIds` eklendi (ölçüldü 27.08): ürün bildirilmiyordu ve hiçbir cascade onu toplamıyordu —
+    // yeşil koşular bile her turda bir "Çapa ürünü …" bırakıyordu.
+    await purgeTestData(db, { orderIds, conversationIds, productIds: [productId], warehouseIds: [warehouseId], categoryIds: [categoryId] });
   });
 
   /** Çağrıları KAYDEDEN sahte sağlayıcı — "gitti mi" ve "ne yazdı" ayrı sorular. */

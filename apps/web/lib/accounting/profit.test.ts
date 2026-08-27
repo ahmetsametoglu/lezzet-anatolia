@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, MoneyMovementService, OrderService, ProductService,
   StockMovementService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { quickSale } from '@lezzet/application';
 import { companyPnl, orderProfits, productProfits } from './profit';
 
@@ -52,11 +52,14 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
-  for (const v of [cheapVariant, costlyVariant]) {
-    await db.from('stock_adjustment').delete().in('stock_id', (await stocks.listByVariant(warehouseId, v)).map((s) => s.id));
-    await db.from('stock').delete().eq('variant_id', v);
-  }
+  // **SIRA: defter → parti → sipariş** (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  //
+  // Burada eskiden `stock_adjustment` siliniyordu; o tablo artık YOK ve satır sessizce başarısız
+  // oluyordu (`delete()` hatayı yutuyor). Görünmemesinin sebebi buydu: kapı satışı deftere
+  // `counter_sale` yazıyor, o satır hem partiyi hem siparişi `restrict` ile tutuyor, yani ikisi de
+  // silinemiyordu ve teardown her koşuda yarım kalıyordu.
+  await purgeVariantStock(db, [cheapVariant, costlyVariant]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

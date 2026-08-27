@@ -4,7 +4,7 @@ import {
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { startCourierDay } from '@lezzet/application';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
 import { markUndelivered } from './day';
@@ -79,9 +79,10 @@ beforeEach(async () => {
     await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
     await db.from('delivery_run').delete().in('id', runIds);
   }
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 60, expiryDate: dayOffset(60), purchasePriceCents: 200 })).id;
   day = dayOffset(++dayCounter);
 });

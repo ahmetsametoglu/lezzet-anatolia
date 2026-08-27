@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { handleStripeEvent, type VerifiedEvent } from './stripe-webhook';
 
 /**
@@ -58,15 +58,17 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('money_movement').delete().eq('account_id', stripeAccount);
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   await stocks.insert({ warehouseId, variantId, physicalQty: 5, expiryDate: dayOffset(30), purchasePriceCents: 400 });
 });
 
 afterAll(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   await db.from('webhook_event').delete().like('event_id', `evt_${stamp}_%`);
   await purgeTestData(db, {
     productIds: [productId],

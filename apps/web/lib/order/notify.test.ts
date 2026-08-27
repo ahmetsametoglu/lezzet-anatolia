@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { recordOrderPayment } from '../money/order-payment';
 import { buildOrderNotification } from './notification-data';
 import { notifyOrderStatus } from './notify';
@@ -56,17 +56,20 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('money_movement').delete().eq('account_id', cashAccount);
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // SIRA: defter → parti → sipariş (06.14) — künye `packages/application/src/courier/day.test.ts`te.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(30), purchasePriceCents: 400 })).id;
 });
 
 afterAll(async () => {
-  await db.from('order').delete().eq('customer_id', customerId);
+  // Parti ÖNCE: son testin siparişi deftere `sale` yazmış olabilir ve o satır siparişi tutuyor.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   // Rezervasyonun siparişe FK'sı YOKTUR (0007) — sipariş silinince kendiliğinden gitmez. Kalan
   // satır TTL süpürme testini yanıltır: o test genel sayı üzerinden çalışır.
-  await db.from('reservation').delete().eq('variant_id', variantId);
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { repriceAllAuto, repriceProduct, repriceVariants } from './auto-price';
 
 /**
@@ -36,7 +36,9 @@ async function priceRowCount(variantId: string): Promise<number> {
  * Tek fiyat verilirse karşılaştıracak geçmiş yoktur ve fren devreye girmez.
  */
 async function setCostHistory(variantId: string, ...purchasePricesCents: number[]) {
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // `purgeVariantStock`: silme sırası tek yerde durur ve hata FIRLAR — `delete()` onu yutuyordu
+  // (06.14 · künye `packages/application/src/courier/day.test.ts`te).
+  await purgeVariantStock(db, [variantId]);
   const stocks = new StockService(db);
   for (const purchasePriceCents of purchasePricesCents) {
     await stocks.insert({
@@ -75,17 +77,13 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  for (const id of [autoVariantId, manualVariantId]) {
-    await db.from('price').delete().eq('variant_id', id);
-    await db.from('stock').delete().eq('variant_id', id);
-  }
+  await mustDelete(db, 'price', (q) => q.in('variant_id', [autoVariantId, manualVariantId]));
+  await purgeVariantStock(db, [autoVariantId, manualVariantId]);
 });
 
 afterAll(async () => {
-  for (const id of [autoVariantId, manualVariantId]) {
-    await db.from('price').delete().eq('variant_id', id);
-    await db.from('stock').delete().eq('variant_id', id);
-  }
+  await mustDelete(db, 'price', (q) => q.in('variant_id', [autoVariantId, manualVariantId]));
+  await purgeVariantStock(db, [autoVariantId, manualVariantId]);
   await purgeTestData(db, { productIds: [autoProductId, manualProductId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 

@@ -3,7 +3,7 @@ import {
   AccountService, AddressService, CategoryService, DeliveryZoneService, OrderService, ProductService,
   ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, settingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { warehouseScope } from '@lezzet/domain-core';
 import { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
 import { loadBox } from './load';
@@ -111,9 +111,18 @@ beforeEach(async () => {
     await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
     await db.from('delivery_run').delete().in('id', runIds);
   }
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // **SIRA: defter → parti → sipariş** (06.14). Teslim deftere bir `sale` satırı yazıyor ve o satır
+  // İKİSİNİ birden `restrict` ile tutuyor (`stock_id` ve `order_id`); `purgeVariantStock` partinin
+  // bütün hareketlerini topladığı için sipariş de aynı anda serbest kalıyor. Sıra oradadır, burada
+  // değil (`CLAUDE §4b`).
+  //
+  // Eskiden üçü de `db.from(...).delete()` ile yazılmıştı ve o çağrı hatayı **yutuyor** — silme
+  // başarısız olur, kimse bakmaz, teardown sessizce yarım kalır. Belirtisi düşen teardown değil
+  // **çift sayım** olur: her test bir öncekinin malını da sayar (ölçüldü 27.08, kardeş dosyalarda:
+  // kalan stok 28 yerine 137, borç 4000 yerine 8000). Künye `cleanup.ts`te.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePriceCents: 300 })).id;
 });
 

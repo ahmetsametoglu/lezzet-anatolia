@@ -62,6 +62,76 @@ export async function purgeVariantStock(db: SupabaseClient, variantIds: readonly
 }
 
 /**
+ * **Siparişleri SIRASIYLA siler** — onları tutan dört bağ önce, sipariş sonra.
+ *
+ * `purgeTestData`nın içindeydi; dışa açıldı çünkü testlerin `beforeEach`i de aynı sıraya muhtaç:
+ * bir sipariş `db.from('order').delete()` ile silinemez olduğunda o çağrı hatayı **yutar** ve
+ * teardown sessizce yarım kalır (ölçüldü 27.08: `quick-sale.test.ts` deposunu bırakıyordu —
+ * sipariş kalıyor → deposu `order_warehouse_fk` ile tutuluyor → `purgeTestData` depo adımında
+ * patlıyor, ama koşu yine "geçti" diyor çünkü kırılan teardown'dur, test değil).
+ *
+ * Varyant bazlı `purgeVariantStock` bu işi göremez: siparişi tutan hareket BAŞKA bir partiye
+ * bağlı olabilir (kapı satışı aracın partisinden mal çıkarır, sipariş dıştaki müşterinindir).
+ * Anahtar SİPARİŞTİR, parti değil.
+ */
+export async function purgeOrders(db: SupabaseClient, orderIds: readonly string[]): Promise<void> {
+  const ids = [...new Set(orderIds.filter(Boolean))];
+  if (ids.length === 0) return;
+
+  await mustDelete(db, 'reservation', (q) => q.in('order_id', ids));
+  // Siparişe/talebe asılı BİLDİRİMLER hedefleriyle birlikte (ölçüldü 27.08): `notification`
+  // hedefini `target_type` + `target_id` ile tutuyor, FK ile DEĞİL — cascade onu toplamaz.
+  // Müşteri satırı profil cascade'iyle giderdi; ama `dispatchStaffNotification` e-postasız
+  // alıcıda `document_undeliverable`'ı GERÇEK yönetici profillerine yazıyor ve o profiller
+  // purge'ün malı değil. Yani her sipariş testi operasyon ziline KALICI bir satır bırakıyordu:
+  // yerelde 127 satır birikmişti ve zilin ilk sayfası tek türe dönmüştü — "hepsi tek tip"
+  // görüntüsünün yerel kaynağı buydu (176 satırın 127'si).
+  const ticketIds = await idsOf(db, 'ticket', 'order_id', ids);
+  const bildirimHedefleri: [string, string[]][] = [
+    ['order', ids],
+    ...(ticketIds.length > 0 ? ([['ticket', ticketIds]] as [string, string[]][]) : []),
+  ];
+  for (const [tur, kimlikler] of bildirimHedefleri) {
+    await mustDelete(db, 'notification', (q) => q.eq('target_type', tur).in('target_id', kimlikler));
+  }
+  // Talepler SİPARİŞTEN ÖNCE (ölçüldü 26.08): kaleme bağlı talepte (`order_item_ids` dolu)
+  // sipariş silinince `ticket.order_id` `set null` düşer ve `ticket_items_need_order` kısıtı
+  // patlar — "kalemi olan talep siparişsiz olamaz". Profil-cascade buraya yetişmiyor: sıra
+  // gereği profil EN SONDA gidiyor. Mesajlar/kuyruk satırı talebe cascade.
+  await mustDelete(db, 'ticket', (q) => q.in('order_id', ids));
+  // **HAREKET DEFTERİ SİPARİŞTEN ÖNCE** (06.14 · denetim ölçümü 27.08). `stock_movement.order_id`
+  // FK'si `restrict` — satış ve kapı satışı satırları siparişi tutuyor, yani sipariş onlardan
+  // önce silinemiyor. Sıra tersken hata ZİNCİRLENİYORDU: sipariş kalıyor → partisi kalıyor →
+  // deposu silinemiyor (`stock_warehouse_fk`), ve koşu yine "geçti" diyordu çünkü kırılan şey
+  // teardown'du, test değil. Reset öncesi bir koşuda aynı hata 94 kez logdaydı.
+  //
+  // `set null` ile çözülemezdi: `stock_movement_source` kısıtı `kind='sale'` satırında
+  // `order_id`yi ZORUNLU tutuyor — null'a düşen satır kısıtı ihlal ederdi. Kaynak belgesi
+  // silinen bir hareket zaten defterde durmamalı; üretimde sipariş hiç silinmiyor.
+  await mustDelete(db, 'stock_movement', (q) => q.in('order_id', ids));
+  // Kalem–parti eşlemesi siparişe `cascade`, partiye `restrict` bağlı: sipariş silinince kendi
+  // gider, ama partisi hâlâ duruyorsa `purgeVariantStock` onu ayrıca toplamak zorunda kalır.
+  await mustDelete(db, 'order', (q) => q.in('id', ids)); // kalem/log/discount_use CASCADE
+}
+
+/**
+ * Siparişleri BİR SÜTUNDAN bularak siler — `beforeEach` zemin temizliğinin kapısı.
+ *
+ * Testler siparişi kimlikten değil bağlamdan tanır: "bu müşterinin", "bu deponun", "bu seferin".
+ * Üç ayrı yardımcı yerine tek kapı, çünkü değişen şey yalnız süzgeç; SIRA (yukarıdaki dört bağ)
+ * hepsinde aynı ve `purgeOrders`ta duruyor.
+ */
+export async function purgeOrdersBy(
+  db: SupabaseClient,
+  column: 'customer_id' | 'warehouse_id' | 'delivery_run_id',
+  values: readonly string[],
+): Promise<void> {
+  const ids = values.filter(Boolean);
+  if (ids.length === 0) return;
+  await purgeOrders(db, await idsOf(db, 'order', column, [...ids]));
+}
+
+/**
  * Sefer + kapanışı (0046). Üç `restrict` FK'nin ÜÇÜ de buradan geçer: kurye profili, rota→depo
  * zinciri (`warehouse_id` snapshot'ı) ve araç — hangisi silinecekse önce o kaynağın seferleri
  * gitmek zorunda. Sıra sabit: kapanış seferi `restrict` ile tutar → önce `delivery_run_close`.
@@ -419,40 +489,7 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
         ? [...new Set([...orderIds, ...(await idsOf(db, 'order', 'customer_id', profileIds))])]
         : orderIds;
 
-    if (allOrderIds.length > 0) {
-      await mustDelete(db, 'reservation', (q) => q.in('order_id', allOrderIds));
-      // Siparişe/talebe asılı BİLDİRİMLER hedefleriyle birlikte (ölçüldü 27.08): `notification`
-      // hedefini `target_type` + `target_id` ile tutuyor, FK ile DEĞİL — cascade onu toplamaz.
-      // Müşteri satırı profil cascade'iyle giderdi; ama `dispatchStaffNotification` e-postasız
-      // alıcıda `document_undeliverable`'ı GERÇEK yönetici profillerine yazıyor ve o profiller
-      // purge'ün malı değil. Yani her sipariş testi operasyon ziline KALICI bir satır bırakıyordu:
-      // yerelde 127 satır birikmişti ve zilin ilk sayfası tek türe dönmüştü — "hepsi tek tip"
-      // görüntüsünün yerel kaynağı buydu (176 satırın 127'si).
-      const ticketIds = await idsOf(db, 'ticket', 'order_id', allOrderIds);
-      const bildirimHedefleri: [string, string[]][] = [
-        ['order', allOrderIds],
-        ...(ticketIds.length > 0 ? ([['ticket', ticketIds]] as [string, string[]][]) : []),
-      ];
-      for (const [tur, kimlikler] of bildirimHedefleri) {
-        await mustDelete(db, 'notification', (q) => q.eq('target_type', tur).in('target_id', kimlikler));
-      }
-      // Talepler SİPARİŞTEN ÖNCE (ölçüldü 26.08): kaleme bağlı talepte (`order_item_ids` dolu)
-      // sipariş silinince `ticket.order_id` `set null` düşer ve `ticket_items_need_order` kısıtı
-      // patlar — "kalemi olan talep siparişsiz olamaz". Profil-cascade buraya yetişmiyor: sıra
-      // gereği profil EN SONDA gidiyor. Mesajlar/kuyruk satırı talebe cascade.
-      await mustDelete(db, 'ticket', (q) => q.in('order_id', allOrderIds));
-      // **HAREKET DEFTERİ SİPARİŞTEN ÖNCE** (06.14 · denetim ölçümü 27.08). `stock_movement.order_id`
-      // FK'si `restrict` — satış ve kapı satışı satırları siparişi tutuyor, yani sipariş onlardan
-      // önce silinemiyor. Sıra tersken hata ZİNCİRLENİYORDU: sipariş kalıyor → partisi kalıyor →
-      // deposu silinemiyor (`stock_warehouse_fk`), ve koşu yine "geçti" diyordu çünkü kırılan şey
-      // teardown'du, test değil. Reset öncesi bir koşuda aynı hata 94 kez logdaydı.
-      //
-      // `set null` ile çözülemezdi: `stock_movement_source` kısıtı `kind='sale'` satırında
-      // `order_id`yi ZORUNLU tutuyor — null'a düşen satır kısıtı ihlal ederdi. Kaynak belgesi
-      // silinen bir hareket zaten defterde durmamalı; üretimde sipariş hiç silinmiyor.
-      await mustDelete(db, 'stock_movement', (q) => q.in('order_id', allOrderIds));
-      await mustDelete(db, 'order', (q) => q.in('id', allOrderIds)); // kalem/log/discount_use CASCADE
-    }
+    await purgeOrders(db, allOrderIds);
 
     // 0c) **Depo devirleri PARTİLERDEN ÖNCE** (ölçüldü 14.08): `warehouse_transfer_line` partiyi
     //     İKİ uçtan da `restrict` ile tutuyor (`source_stock_id`, `target_stock_id`). Devir
