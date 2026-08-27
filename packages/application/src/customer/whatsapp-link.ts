@@ -1,3 +1,4 @@
+import { mergeCustomers } from './merge';
 import { CustomerPhoneService, UserProfileService } from '@lezzet/database';
 import { readableCode } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
@@ -190,7 +191,9 @@ export async function consumeWhatsappLink(db: SupabaseClient, phone: string, tex
   }
 
   // Taslak → hesap. Kanıt satırı da `merge_customers` içinde taşınıyor (0040), ayrıca yazılmaz.
-  await profiles.merge({ targetId: profile.id, sourceId: holderId });
+  // Servis DEĞİL uygulama kapısı çağrılıyor (`customer/merge.ts`): birleşmenin ödül sonucu SQL'de
+  // yapılamıyor ve doğrudan RPC'ye gitmek onu sessizce atlardı.
+  await mergeCustomers(db, { targetId: profile.id, sourceId: holderId });
   logger.info({ context: 'customer/whatsapp-link', customerId: profile.id, mergedId: holderId }, 'bağlama: WhatsApp taslağı hesaba birleştirildi');
   return { status: 'merged', customerId: profile.id, mergedId: holderId };
 }

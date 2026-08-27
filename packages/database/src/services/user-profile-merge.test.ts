@@ -154,6 +154,33 @@ describe('çakışmada HEDEFİNKİ kalır — ve ön izleme onu ÖNCEDEN söyler
   });
 });
 
+describe('ön izleme getiren ödülünü ÖNCEDEN söyler', () => {
+  /*
+    Hakkaniyetin asıl yükü burada: kayıp, müşterinin o an yaptığı bir şeyden DEĞİL, bizim kayıt
+    düzeltmemizden doğuyor — birleştirme operatörün eylemi. En sık hâli de kötü niyet değil kaza
+    (aile telefonu, tuşlama hatası). Sessizce alınan puan, doğru olsa bile hakkaniyetsizdir.
+  */
+  it('kendi kendini getirme varsa ödül TUTARIYLA bildirilir', async () => {
+    const hesap = await musteri('OnizlemeHesap', { phone: null });
+    const taslak = await musteri('OnizlemeTaslak');
+    await profiles.update({ id: taslak.id, referredBy: hesap.id, isDraft: true });
+    await points.insert({ customerId: hesap.id, reason: 'referral', refId: taslak.id, points: 500 });
+
+    const on = await profiles.previewMerge(hesap.id, taslak.id);
+    expect(on.referralRevoked).toBe(500);
+  });
+
+  it('getiren BAŞKASIYSA ön izleme 0 der — uyarı yalnız gerçek vakada çıkar', async () => {
+    const getiren = await musteri('OnizlemeGetiren', { phone: null });
+    const hesap = await musteri('OnizlemeHesap2', { phone: null });
+    const taslak = await musteri('OnizlemeTaslak2');
+    await profiles.update({ id: taslak.id, referredBy: getiren.id, isDraft: true });
+    await points.insert({ customerId: getiren.id, reason: 'referral', refId: taslak.id, points: 500 });
+
+    expect((await profiles.previewMerge(hesap.id, taslak.id)).referralRevoked).toBe(0);
+  });
+});
+
 describe('yasaklar', () => {
   it('kendine birleştirme reddedilir', async () => {
     const p = await musteri('kendine');

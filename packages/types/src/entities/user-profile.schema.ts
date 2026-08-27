@@ -346,6 +346,15 @@ export const CustomerMergePreviewSchema = z.object({
   /** Hedef bu birleşmeyle TELEFONU kazanıyor — birleştirmenin asıl sebebi çoğu zaman budur. */
   gainsPhone: z.boolean(),
   gainsEmail: z.boolean(),
+  /**
+   * **Bu birleştirme getiren ödülünü götürecek mi** (27.08) — kaynağı HEDEF davet etmişse, yani
+   * kayıt kendi kendisinin getireni olacaksa. Ekran bunu onay düğmesinden önce göstermeli:
+   * kayıp müşterinin o an yaptığı bir şeyden değil, BİZİM kayıt düzeltmemizden doğuyor.
+   *
+   * Değer defterdeki ödülün kendisidir; fiilen yazılacak ters satır bakiyeye göre KIRPILIR
+   * (borç yazılmaz), yani gerçek düşüş bundan az olabilir, fazla olamaz. 0 = götürmeyecek.
+   */
+  referralRevoked: z.number().int(),
 });
 export type CustomerMergePreview = z.infer<typeof CustomerMergePreviewSchema>;
 

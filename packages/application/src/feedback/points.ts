@@ -363,6 +363,34 @@ export async function revokeReferralOnUnpaidOrder(db: SupabaseClient, orderId: s
 }
 
 /**
+ * **Birleşme kendi kendini getirmiş hâle getirdiyse getiren ödülünü geri alır** (27.08, `04.7`).
+ *
+ * Vaka: kişi kendi taslağını davet eder, taslak sipariş verir, getirene 500 puan yazılır — sonra
+ * taslak o kişiye birleştirilir. Ödül *"bize YENİ bir müşteri kazandırdın"* der; birleşme o
+ * olgunun hiç gerçekleşmediğini kanıtlar (getirilen, getirenin kendisiydi). Olgu çürüdüyse ödül
+ * duramaz. `merge_customers` bağın kendisini zaten kurdurmuyor (`nullif`, 0040); burada yapılan,
+ * ödülün defterdeki karşılığını kapatmaktır.
+ *
+ * **Silme değil TERS SATIR**, üç sebeple: puan çoktan harcanmış olabilir (silmek bakiyeyi eksiye
+ * düşürür ya da karşılıksız kupon bırakır — `revokePoints` elde olan kadarını alır, borç yazmaz);
+ * müşteri puanının neden azaldığını GÖREBİLMELİ; ve ödeme ekseninde geri alma zaten böyle
+ * çalışıyor — ikinci bir desen aynı olayın iki ayrı defter izini doğururdu.
+ *
+ * **Kapsam DAR ve bu bilinçli:** yalnız kaydın kendi getireni olduğu hâl. Gerçek bir üçüncü kişi
+ * getirmişse ödül DURUR — o kişi gerçekten müşteri oldu, kaydının başka bir kartla birleşmesi
+ * getirenin hakkını götürmez (`revokeReferralOnUnpaidOrder`ın *"olgu sürüyor mu"* ölçütü).
+ *
+ * Ödül kaynağı GETİRİLENİN kimliğidir (`awardReferralPoints` künyesi), yani birleşmede kaynak
+ * kaydın kimliği — hedefinki değil. Yanlış `refId` sessizce hiçbir şey bulmazdı.
+ */
+export async function revokeSelfReferralOnMerge(
+  db: SupabaseClient,
+  input: { targetId: string; sourceId: string },
+): Promise<PointsEntry | null> {
+  return revokePoints(db, { customerId: input.targetId, reason: 'referral', refId: input.sourceId });
+}
+
+/**
  * Defter sayfası boyu ve kaçak tavanı — `sumInvitePoints`in tek ayarı.
  *
  * 100 seçildi çünkü aranan pencere DAR: davetin doğduğu andan bugüne kadarki hareketler. Gerçek

@@ -577,6 +577,8 @@ export { notifyOrderException, notifyOrderStatus } from './order/notify';
 export { buildOrderNotification } from './order/notification-data';
 export type { NotificationBundle } from './order/notification-data';
 export { awardReferralPoints, revokeReferralOnUnpaidOrder, rewardReferralOnPaidOrder } from './feedback/points';
+export { mergeCustomers } from './customer/merge';
+export type { MergeCustomersInput, MergeCustomersOutcome } from './customer/merge';
 // ── "Buraya da gelin" kaydı — terfi 10.08 ───────────────────────────────────
 // Kaynağı `apps/web/lib/delivery/notice-actions.ts`in `recordZoneNoticeAction`ıydı; web köprü.
 // Mobil bant (21.20) aynı kaydı yazıyor ve kural TEK olmalı: yer adının KAYIT ANINDA dondurulması

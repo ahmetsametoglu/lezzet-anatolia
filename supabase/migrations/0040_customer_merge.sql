@@ -75,7 +75,19 @@ create or replace function public.preview_customer_merge(
   points_dropped int,
   cart_dropped boolean,
   gains_phone boolean,
-  gains_email boolean
+  gains_email boolean,
+  /*
+    **Bu birleştirme getiren ödülünü GÖTÜRECEK Mİ** (27.08) — ve neden önizlemede:
+    kayıp, müşterinin o an yaptığı bir şeyden doğmuyor; birleştirme BİZİM kayıt düzeltmemiz,
+    operatörün eylemi. En sık hâli de kötü niyet değil kaza (aile telefonu, tuşlama hatası).
+    Sessizce alınan puan, doğru olsa bile hakkaniyetsizdir — operatör "bu birleştirme 500 puan
+    götürecek" bilgisiyle karar vermeli.
+
+    Değer, defterdeki ÖDÜLÜN kendisidir. Fiilen yazılacak ters satır bakiyeye göre KIRPILIR
+    (`revokePoints`, kullanıcı kararı 25.08: borç yazılmaz) — yani gerçek düşüş bundan az
+    olabilir, fazla olamaz. Tavan göstermek doğru yön: operatör en kötü hâli görür.
+  */
+  referral_revoked int
 )
 language sql
 stable
@@ -122,7 +134,18 @@ as $$
     -- olup olmaması önemsiz — doğrulanmış numaralar TOPLANIR, biri ötekini dışlamaz. Sorulan şey
     -- "hedef bu birleştirmeyle kimlik anahtarı kazanıyor mu": kaynakta aktif bir numara var mı.
     (select exists (select 1 from public.customer_phone where customer_id = p_source_id and retired_at is null)),
-    (select (select email from hedef) is null and (select email from kaynak) is not null);
+    (select (select email from hedef) is null and (select email from kaynak) is not null),
+    -- Yalnız KENDİ KENDİNİN getireni olma hâli. Gerçek bir üçüncü kişi getirmişse ödül DURUR:
+    -- o kişi gerçekten müşteri oldu, kaydının sonradan başka kartla birleşmesi getirenin hakkını
+    -- götürmez (`revokeReferralOnUnpaidOrder`ın "olgu sürüyor mu" ölçütüyle aynı akıl).
+    -- Ters satır zaten yazılmışsa (ikinci önizleme) 0 döner — `hasReversalFor`un SQL karşılığı.
+    (select case
+       when (select referred_by from public.user_profiles where id = p_source_id) is distinct from p_target_id then 0
+       else coalesce((
+         select sum(points)::int from public.points_entry
+          where customer_id = p_target_id and reason = 'referral' and ref_id = p_source_id
+       ), 0)
+     end);
 $$;
 
 comment on function public.preview_customer_merge(uuid, uuid) is
@@ -376,7 +399,18 @@ begin
      set phone        = coalesce(v_target.phone, v_source.phone),
          email        = coalesce(v_target.email, v_source.email),
          auth_user_id = coalesce(v_target.auth_user_id, v_source.auth_user_id),
-         referred_by  = coalesce(v_target.referred_by, v_source.referred_by),
+         -- **KENDİ KENDİNİN GETİRENİ OLAMAZ (27.08).** `nullif` bir temizlik değil, ÖNLEME:
+         -- döngü önce kurulup sonra kırılsaydı, arada okuyan her sorgu (rapor, davet zinciri)
+         -- anlamsız veriyi görürdü. Vaka gerçek ve ölçüldü: kişi kendi taslağını davet eder,
+         -- taslak sipariş verir, sonra birleştirilir — `v_source.referred_by` zaten hedefi
+         -- gösterdiği için `coalesce` onu hedefin kendi alanına taşıyordu.
+         -- Bağ DÜŞÜRÜLÜR, kapanmış kaynağa bırakılmaz: "kim getirdi" sorusunun artık cevabı yok
+         -- ve olmayan bir cevabı uydurmaktansa boş bırakmak doğrudur (`CLAUDE §1`).
+         -- Ödülün geri alınması burada DEĞİL, uygulama katmanındadır (`customer/merge.ts`):
+         -- geri alma bakiyeye göre kırpılıyor ve o kural TypeScript'te yazılı — SQL'de ikinci
+         -- nüshasını açmak, bu oturumda üç kez düzelttiğimiz "kaldırılamayan nüsha"yı gönüllü
+         -- olarak yaratmak olurdu.
+         referred_by  = nullif(coalesce(v_target.referred_by, v_source.referred_by), p_target_id),
          marketing_consent    = public.merge_consent(v_target.marketing_consent, v_source.marketing_consent, true),
          notification_consent = public.merge_consent(v_target.notification_consent, v_source.notification_consent, false),
          -- Auth bağı geldiyse taslaklık düşer: doğrulanmış bir giriş var artık.
