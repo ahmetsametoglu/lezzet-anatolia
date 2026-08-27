@@ -9,6 +9,8 @@ import {
   type CartUpdate,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+import { BundleService } from './bundle.service';
+import { ProductVariantService } from './product-variant.service';
 
 /**
  * Sunucu sepeti (07.1) — DOMAIN §4, §5.
@@ -66,7 +68,7 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
     const { items } = await this.get(customerId);
     const merged = [...items];
 
-    for (const item of incoming) {
+    for (const item of await this.existingOnly(incoming)) {
       const index = merged.findIndex((row) => sameLine(row, item));
       if (index >= 0) merged[index] = { ...merged[index]!, qty: merged[index]!.qty + item.qty };
       else merged.push({ ...item, stockId: item.stockId ?? null, addedAt: new Date().toISOString() });
@@ -113,6 +115,52 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
       addedAt: current.find((row) => sameLine(row, item))?.addedAt ?? new Date().toISOString(),
     }));
     return this.write(customerId, next);
+  }
+
+  /**
+   * **VAR OLMAYAN KİMLİK SEPETE GİRMEZ** (ölçüldü 28.08).
+   *
+   * `cart.items` bir `jsonb` kolonudur, yani varyant ve paket kimliklerini koruyan bir yabancı
+   * anahtar YOKTUR — kural veride duramıyor, burada durmak zorunda. Kapı yokken uydurma bir kimlik
+   * `POST /me/cart/items` ile **200** alıyor ve sepete adsız · fiyatsız bir satır yazılıyordu:
+   * sayaç onu sayıyor (`itemCount` 7), toplam saymıyor (43,93 €) — başlık ile para birbirini
+   * yalanlıyordu. Sipariş yine de açılmıyordu (`blocked_lines`, motor sağlam), ama müşteri
+   * çıkaramadığı bir satırla kilitli kalıyordu.
+   *
+   * Gerçek hayatta bu, kötü niyet değil ZAMAN farkıdır: cihazdaki sepet katalogdan eski kalır
+   * (ürün satıştan kalkar, kimlik yenilenir) ve giriş anındaki devir onu sunucuya taşır.
+   *
+   * **REDDETMEZ, SÜZER.** `400` dönseydi meşru bir hâlde — kalemlerinden biri gerçekten silinmiş
+   * bir sepet devrederken — müşteri sepetine HİÇBİR ŞEY ekleyemez olurdu; bir kalemin yokluğu
+   * ötekileri de düşürürdü. "Olmayan şey sepete girmez" tek başına yeterli ve dürüst bir kural.
+   *
+   * İZ: süzülen satır ayrıca loglanmıyor, çünkü bu paket `@lezzet/observability`e bağlı değil ve
+   * bağımlılık eklemek sepet yazmasının maliyetini bir teşhis satırı için artırırdı. Kaybı da yok:
+   * süzülen satır zaten müşterinin göremediği, sunucunun çözemediği bir kimlik — teşhisi gereken
+   * şey KİMİN gönderdiği değil, kimliğin neden bayatladığıdır ve o katalog tarafında görülür.
+   *
+   * TEK EK SORGU, tek turda (`listByIds`): kimlik başına sorgu açılmıyor. Boş listede hiç ağa
+   * çıkılmaz.
+   */
+  private async existingOnly(incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<readonly Omit<CartItem, 'addedAt'>[]> {
+    const variantIds = [...new Set(incoming.map((item) => item.variantId).filter((id): id is string => typeof id === 'string'))];
+    const bundleIds = [...new Set(incoming.map((item) => item.bundleId).filter((id): id is string => typeof id === 'string'))];
+    if (variantIds.length === 0 && bundleIds.length === 0) return incoming;
+
+    const [variants, bundles] = await Promise.all([
+      variantIds.length > 0 ? new ProductVariantService(this.supabase).listByIds(variantIds) : Promise.resolve([]),
+      bundleIds.length > 0 ? new BundleService(this.supabase).listByIds(bundleIds) : Promise.resolve([]),
+    ]);
+    const knownVariants = new Set(variants.map((row) => row.id));
+    const knownBundles = new Set(bundles.map((row) => row.id));
+
+    /* Satırın TÜRÜ kimliğin varlığından okunur (`sameLine`in aynı kuralı): paket satırında
+       `bundleId` doludur, varyant satırında `variantId`. İkisi de boşsa satır zaten adressizdir. */
+    return incoming.filter((item) =>
+      typeof item.bundleId === 'string'
+        ? knownBundles.has(item.bundleId)
+        : typeof item.variantId === 'string' && knownVariants.has(item.variantId),
+    );
   }
 
   /** Sipariş kapandığında ya da müşteri boşalttığında — satır silinir, boş sepet satırı bırakılmaz. */

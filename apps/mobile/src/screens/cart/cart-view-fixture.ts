@@ -30,14 +30,22 @@ function routeOf(group: CartLineGroup): MeCartViewLine['route'] {
 
 interface CartLineOptions {
   qty?: number;
-  unitPriceCents?: number;
+  /**
+   * `null` = SUNUCU ÇÖZEMEDİ. Sözleşmenin gerçek bir hâli, uydurma bir uç değil: kimliği kataloğun
+   * gerisinde kalmış satır adsız ve fiyatsız döner (`unitPriceCents` ve `lineTotalCents` null,
+   * `blocked` true). Ekran onu "satışa kapandı" diye ayırıyor — fiyatı olan engelli satır
+   * "tükendi"dir ve ikisi aynı şey değildir.
+   */
+  unitPriceCents?: number | null;
   blocked?: boolean;
 }
 
 /** Tek varyant satırı — adı, grubu ve tutarı test kurar; kalanı sözleşmenin nötr hâli. */
 export function cartViewLine(index: number, name: string, group: CartLineGroup, options: CartLineOptions = {}): MeCartViewLine {
   const qty = options.qty ?? 1;
-  const unitPriceCents = options.unitPriceCents ?? 1000;
+  /* `undefined` (verilmedi) ile `null` (çözülemedi) AYRI: `??` ikisini birden yakalardı ve
+     çözülemeyen satır sessizce fiyatlı doğardı. */
+  const unitPriceCents = options.unitPriceCents === undefined ? 1000 : options.unitPriceCents;
   return {
     kind: 'variant',
     variantId: uuid(index),
@@ -51,7 +59,7 @@ export function cartViewLine(index: number, name: string, group: CartLineGroup, 
     unitLabel: '500 g',
     unitPriceCents,
     limitCap: null,
-    lineTotalCents: unitPriceCents * qty,
+    lineTotalCents: unitPriceCents === null ? null : unitPriceCents * qty,
     blocked: options.blocked ?? false,
     route: routeOf(group),
     group,

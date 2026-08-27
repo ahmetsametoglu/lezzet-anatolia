@@ -116,6 +116,51 @@ describe('adet ve çıkarma', () => {
   });
 });
 
+/*
+  VAR OLMAYAN KİMLİK SEPETE GİRMEZ (28.08). `cart.items` bir `jsonb` kolonu, yani kimlikleri koruyan
+  bir yabancı anahtar YOK — kural veride duramıyor, servis kapısında duruyor (`existingOnly`).
+
+  Kapı yokken uydurma bir kimlik `POST /me/cart/items`ten **200** alıyor ve sepete adsız · fiyatsız
+  bir satır yazılıyordu: sayaç onu sayıyor, toplam saymıyordu. Sipariş yine açılmıyordu
+  (`blocked_lines`) ama müşteri çıkaramadığı bir satırla kilitli kalıyordu.
+*/
+describe('var olmayan kimlik (28.08)', () => {
+  const GHOST = '00000000-0000-4000-8000-000000000001';
+
+  it('sepete YAZILMAZ — süzülür', async () => {
+    const cart = await carts.addItems(customerId, [{ variantId: GHOST, qty: 1, unitPrice: 5 }]);
+    expect(cart.items).toHaveLength(0);
+  });
+
+  it('REDDETMEZ, süzer: aynı istekteki GEÇERLİ kalemler girer', async () => {
+    /* Ayrım burada ölçülüyor. `400` dönseydi bir kalemin yokluğu ötekileri de düşürürdü — bayat bir
+       cihaz sepeti devrederken müşteri hiçbir şey ekleyemez olurdu. */
+    const cart = await carts.addItems(customerId, [
+      { variantId: variantA, qty: 2, unitPrice: 12.5 },
+      { variantId: GHOST, qty: 1, unitPrice: 5 },
+      { variantId: variantB, qty: 1, unitPrice: 22 },
+    ]);
+
+    expect(cart.items).toHaveLength(2);
+    expect(cart.items.map((i) => i.variantId).sort()).toEqual([variantA, variantB].sort());
+  });
+
+  it('DEVİR yolu da korunur — kapı `addItems`te, iki yol da oradan geçiyor', async () => {
+    const cart = await carts.takeOver(customerId, [
+      { variantId: variantA, qty: 1, unitPrice: 12.5 },
+      { variantId: GHOST, qty: 3, unitPrice: 5 },
+    ]);
+
+    expect(cart.items).toHaveLength(1);
+    expect(cart.items[0]?.variantId).toBe(variantA);
+  });
+
+  it('var olmayan PAKET de girmez (kimliğin türü ayrı tabloda sorulur)', async () => {
+    const cart = await carts.addItems(customerId, [{ bundleId: GHOST, qty: 1, unitPrice: 30 }]);
+    expect(cart.items).toHaveLength(0);
+  });
+});
+
 describe('anonim sepeti devralma (07.1)', () => {
   it('giriş yapınca sunucudaki sepet KORUNUR, gelen kalemler üstüne eklenir', async () => {
     await carts.addItem(customerId, { variantId: variantA, qty: 2, unitPrice: 12.5 });

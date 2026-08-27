@@ -10,6 +10,7 @@
     },
     "line": {
       "bundle": "Hazır Paket",
+      "unknown": "Artık satılmayan ürün",
       "unit": "{variant} · {price}",
       "discounted": "İndirimli fiyat",
       "soldOut": "Tükendi — teslim edilemez, kaldırın",
@@ -113,6 +114,7 @@
     },
     "line": {
       "bundle": "Panier prêt",
+      "unknown": "Produit retiré de la vente",
       "unit": "{variant} · {price}",
       "discounted": "Prix remisé",
       "soldOut": "Épuisé — non livrable, à retirer",
@@ -216,6 +218,7 @@
     },
     "line": {
       "bundle": "Fertiges Paket",
+      "unknown": "Nicht mehr im Verkauf",
       "unit": "{variant} · {price}",
       "discounted": "Reduzierter Preis",
       "soldOut": "Ausverkauft — nicht lieferbar, bitte entfernen",

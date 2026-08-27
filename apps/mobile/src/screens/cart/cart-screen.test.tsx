@@ -125,6 +125,22 @@ describe('CartScreen — üç gruplu sepet', () => {
     expect(cizilen).toEqual(['Yerel Baklava', 'Kargo Paketi']);
   });
 
+  /* ADI OLMAYAN SATIRA AD VERİLİR (28.08). Sunucu çözemediği kalemi boş adla döndürüyor — kimlik
+     kataloğun gerisinde kalmış. Kaynağı kesildi (`CartService.existingOnly`), ama ondan ÖNCE
+     yazılmış satırlar duruyor ve adsız bir kutu müşteriye neyi çıkaracağını söylemiyordu. */
+  it('adı çözülemeyen satır adsız kalmaz', async () => {
+    // Çözülemeyen satırın gerçek hâli: ad boş, fiyat `null`, engelli.
+    mockCart = cartWith(cartView([cartViewLine(1, '', 'local', { blocked: true, unitPriceCents: null })]));
+
+    await render(<CartScreen />);
+
+    expect(screen.getByText(t.line.unknown)).toBeOnTheScreen();
+    // Gerekçe zaten vardı; eksik olan adın kendisiydi — ikisi birlikte anlam taşıyor.
+    expect(screen.getByText(t.line.closed)).toBeOnTheScreen();
+    // Fiyatı çözülemeyen satır tutar yerine de bunu yazar; boş bir "0,00 €" göstermez.
+    expect(screen.getByText(t.line.noPrice)).toBeOnTheScreen();
+  });
+
   it('gelemeyen kalem için satırların üstünde TEK uyarı ve satırda kısa künye yazar', async () => {
     mockCart = cartWith(
       cartView([cartViewLine(1, 'Baklava', 'local'), cartViewLine(3, 'Kaymak', 'undeliverable')]),

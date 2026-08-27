@@ -6733,3 +6733,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Fikstür paket satırını taşımıyordu (`cartViewBundleLine` eklendi) — sepetin paket davranışları o
   güne dek yalnız varyantla sınanabiliyordu. İki test: grup içi sıra + grup sınırının korunduğu.
   Cihazda doğrulandı (üç açık ürün kartı, altında iki koyu paket kartı); 879/879.
+
+- [x] (21.126) **VAR OLMAYAN KİMLİK SEPETE GİRİYORDU — sunucu doğrulama yapmıyordu**
+  (cihaz turu bulgusu 28.08, uçtan ölçüldü)
+  `touches:` `packages/database/src/services/cart.service.ts` ·
+  `packages/database/src/services/cart.test.ts` ·
+  `apps/mobile/src/screens/cart/cart-screen.tsx` · `apps/mobile/src/screens/cart/messages.json`
+
+  **Ölçüm.** Uydurma bir varyant kimliği (`00000000-0000-4000-8000-000000000001`) `POST
+  /me/cart/items` ile **200** aldı; sepete adsız (`name: ""`), fiyatsız (`unitPriceCents: null`)
+  bir satır yazıldı. `itemCount: 7` — hayalet SAYILDI; `subtotalCents: 4393` — hayalet SAYILMADI.
+  Yani başlık ile para birbirini yalanlıyordu.
+
+  **Para riski YOK, motor sağlam:** sipariş açma denemesi `status: "blocked_lines"` ile reddedildi.
+  Ama reddin gövdesi `lines: [""]` — müşteri sipariş veremiyor ve NEYİ çıkaracağını okuyamıyordu.
+
+  **Kök.** `cart.items` bir `jsonb` kolonu, yani kimlikleri koruyan yabancı anahtar yok; kural
+  veride duramıyor. `CartService.addItems` de gelen kimliği hiç sormuyordu.
+
+  **Çözüm — REDDETMEZ, SÜZER** (`existingOnly`). Gelen varyant ve paket kimlikleri tek turda
+  sorulur (`listByIds`, kimlik başına sorgu yok; boş listede ağa hiç çıkılmaz), var olmayan satır
+  sepete YAZILMAZ. `400` dönmek yanlış olurdu: bayat bir cihaz sepeti devrederken bir kalemin
+  yokluğu ötekileri de düşürür, müşteri sepetine hiçbir şey ekleyemez olurdu. Kapı `addItems`te,
+  yani `takeOver` da oradan geçiyor — **ve web sepeti de aynı servisi kullandığı için iki yüzey
+  birden korunuyor.**
+
+  **Kalıntılar için AD** (`t.line.unknown`): sunucunun çözemediği satır artık adsız görünmüyor —
+  "Artık satılmayan ürün" · "Produit retiré de la vente" · "Nicht mehr im Verkauf". Satır sessizce
+  SİLİNMEZ (bugünkü "duruyor ama engelli" davranışı doğru), tek eksiği okunabilir olmamasıydı;
+  erişilebilirlik adları da aynı metni taşıyor.
+
+  **Hayalet nasıl doğdu:** `db:refresh` katalog kimliklerini yeniledi, cihazdaki sepet silinmiş
+  varyantı taşıyordu, giriş anındaki devir onu sunucuya taşıdı. Yani kötü niyet değil ZAMAN farkı —
+  ama kapı yokken token'ı olan herkes sepetine sınırsız çöp yazabilirdi.
+
+  **Doğrulama.** Uçtan: geçerli ürün + geçerli paket + hayalet aynı istekte gönderildi → ikisi
+  girdi, hayalet girmedi (adsız satır 0), HTTP 200. Dört yeni servis testi (`cart.test.ts`):
+  yazılmaz · geçerliler girer · devir yolu da korunur · var olmayan paket de girmez.

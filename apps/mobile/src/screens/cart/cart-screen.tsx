@@ -55,9 +55,10 @@ import messages from './messages.json';
   yüzeyde iki ayrı hesap bir gün iki farklı tutar gösterirdi. Görünümü misafirde de sunucu çözer
   (`POST /cart/view`) — aynı sepet misafirken bir, giriş yapınca başka bir tutar göstermesin.
 
-  Deponun kaynağını (sunucu ⟷ cihaz) ekran BİLMEZ; sunucu turunu da o AÇMAZ (`useCartSync` müşteri
-  sekme kabuğunda takılı — `app/(tabs)/_layout`; ikinci kez takmak aynı aboneliği iki yerden
-  yönetmek olurdu).
+  Deponun kaynağını (sunucu ⟷ cihaz) ekran BİLMEZ; sunucu turunu da o AÇMAZ (`useCartSync` KÖK
+  kabukta takılı — `app/_layout`; ikinci kez takmak aynı aboneliği iki yerden yönetmek olurdu).
+  Kapı 28.08'de sekme kabuğundan köke taşındı: bu ekran `(tabs)` grubunun DIŞINDA ve derin
+  bağlantıyla açıldığında kabuk hiç monte olmuyordu — gerekçenin tamamı `cart-store.ts` künyesinde.
 
   ── SEPETİN ÜÇ GRUBU (kullanıcı kararı 10.08) ───────────────────────────────
   Grubu SÖZLEŞME söyler (`line.group`), ekran türetmez: `local` kapıya teslim (bizim aracımız —
@@ -99,15 +100,6 @@ import messages from './messages.json';
 type Messages = LocalizedCopy<typeof messages>;
 
 /**
- * PAKET SATIRI DA DÜZENLENEBİLİR (20.08). Buradaki süzgeç, satırın adresi olmadığı döneme aitti:
- * `PATCH`/`DELETE` yalnız varyant + parti ile adresliyor, paket kimliğiyle atılan istek satırı
- * bulamıyordu — basılınca hiçbir şey yapmayan bir sayaç göstermektense sayaç hiç çizilmiyordu.
- * Servis imzası satır anahtarına geçince (`CartRef`) gerekçe düştü ve süzgeç kalktı.
- *
- * Fonksiyon DURUYOR çünkü salt-okunur hâl kavramı duruyor: yarın uygulamadan yazılamayan başka bir
- * satır türü doğarsa yeri burasıdır. Bugün hiçbir satır salt okunur değil.
- */
-/**
  * ÜRÜNLER ÜSTTE, PAKETLER ALTTA — grup İÇİ sıra (kullanıcı kararı 28.08: *"paketlerin arasına ürün
  * girmesi çok hoş görünmüyor"*).
  *
@@ -122,6 +114,15 @@ function productsFirst(lines: readonly MeCartViewLine[]): MeCartViewLine[] {
   return [...lines].sort((a, b) => Number(a.kind === 'bundle') - Number(b.kind === 'bundle'));
 }
 
+/**
+ * PAKET SATIRI DA DÜZENLENEBİLİR (20.08). Buradaki süzgeç, satırın adresi olmadığı döneme aitti:
+ * `PATCH`/`DELETE` yalnız varyant + parti ile adresliyor, paket kimliğiyle atılan istek satırı
+ * bulamıyordu — basılınca hiçbir şey yapmayan bir sayaç göstermektense sayaç hiç çizilmiyordu.
+ * Servis imzası satır anahtarına geçince (`CartRef`) gerekçe düştü ve süzgeç kalktı.
+ *
+ * Fonksiyon DURUYOR çünkü salt-okunur hâl kavramı duruyor: yarın uygulamadan yazılamayan başka bir
+ * satır türü doğarsa yeri burasıdır. Bugün hiçbir satır salt okunur değil.
+ */
 function isReadOnly(_line: MeCartViewLine): boolean {
   return false;
 }
@@ -341,10 +342,17 @@ export function CartScreen() {
           ? t.line.readOnly
           : undefined;
 
+    /* ADI OLMAYAN SATIRA AD VERİLİR (28.08). Sunucu çözemediği kalemi boş adla döndürüyor —
+       kimlik kataloğun gerisinde kalmış (ürün satıştan kalkmış, kimlik yenilenmiş). O hâlde satır
+       sepette DURUR ve gerekçesini de yazar (`t.line.closed`), ama adsız bir kutu müşteriye neyi
+       çıkaracağını söylemiyordu. Kaynağı ayrıca kesildi (`CartService.existingOnly`); buradaki ad
+       ondan ÖNCE yazılmış satırların ve yarın doğabilecek başka bir bayatlamanın karşılığı. */
+    const shownName = line.name === '' ? t.line.unknown : line.name;
+
     return (
       <CartLineRow
         key={id}
-        name={line.name}
+        name={shownName}
         subtitle={subtitle}
         totalLabel={line.lineTotalCents === null ? t.line.noPrice : formatPrice(line.lineTotalCents, locale)}
         quantity={line.qty}
@@ -358,9 +366,9 @@ export function CartScreen() {
         noticeLabel={notice}
         readOnly={isReadOnly(line)}
         removeLabel={t.line.remove}
-        removeAccessibilityLabel={t.line.removeLabel.replace('{name}', line.name)}
-        decreaseLabel={t.line.decrease.replace('{name}', line.name)}
-        increaseLabel={t.line.increase.replace('{name}', line.name)}
+        removeAccessibilityLabel={t.line.removeLabel.replace('{name}', shownName)}
+        decreaseLabel={t.line.decrease.replace('{name}', shownName)}
+        increaseLabel={t.line.increase.replace('{name}', shownName)}
         /* PAKET KENDİ KAPISINDAN geçer: `id` paket satırında `bundleId`dir ve ürün kapısına
            verilseydi `locate` onu bir VARYANT kimliği sanardı (ikisi de çıplak uuid) — sunucu
            eşleşme bulamaz, istek 200 döner, hiçbir şey olmazdı. */
