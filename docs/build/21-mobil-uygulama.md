@@ -931,7 +931,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   aile+ağırlık ikilisi iki platformda da sistem fontuna düşürüyordu, cihazda kanıtlandı).
   `touches: apps/mobile/src/{app,components,lib,screens,theme}`
 
-- [~] (21.20) **YER EKSENİ mobilde tek kaynaktan okunacak — posta kodu katalog okumasına TAŞINSIN**
+- [x] (21.20) **YER EKSENİ mobilde tek kaynaktan okunacak — posta kodu katalog okumasına TAŞINSIN**
   *(kullanıcı kararı 09.08: "biz müşterimize ürünlerimizin hepsini gösterme üzerine bir kurgu
   yapıyoruz"; iş birimi olarak alındı)*
   `touches: apps/mobile/src/{lib,screens}, apps/mobile-api/src, packages/application/src/delivery`
@@ -1031,17 +1031,35 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   · **Test borcu:** `packageStockStatus`, paket kartının solma/not kapısı ve bandın ikinci
     çağıranı için birim testi yazılmadı (görev kapsamı dışı).
 
-  Açık kalanlar (bu yüzden `[~]`):
+  **Durum (27.08) — ÜÇÜNCÜ TUR: KAYIT BAYATMIŞ, GERİYE YALNIZ TEST BORCU KALMIŞTI; O DA KAPANDI.**
+  Kullanıcı "incele, bayat olabilir" dedi ve haklı çıktı — aşağıdaki iki açık madde ölçülünce
+  ikisinin de gerçekte kapalı olduğu görüldü (görev satırı iddiadır, ölç):
+  · **Ürün detayı YAZILMIŞ.** `product-detail-screen.tsx` `stockMarkOf`u katalogla aynı yerden
+    okuyor; `info` tonu bilerek eleniyor (kullanıcı kararı 10.08 — "Kargoyla gelir" ekranlardan
+    kalktı, kargolanabilirlik `noShip` çipiyle konuşuyor) ve fiyatsız ürün sessiz kalıyor.
+  · **"Haber ver" bölge notuna DÖNMEDİ — ve dönmemesi doğru karar.** Kayıt onu bir borç gibi
+    yazmıştı; kod daha dar bir söz veriyor: `blocked` (bu adrese gitmiyor) haber-ver dalına HİÇ
+    girmiyor, çünkü orada beklenen kalem değil BÖLGEdir ve tutamayacağımız bir söz verilmez.
+    Dal yalnız `pending` ("bölgenizde şu an yok") ve tükendide açılıyor — ikisinde de müşterinin
+    yapabileceği şey aynı. Vaadin daralması kayda geçti; yeni düğme kurulmadı.
+  · **Test borcu kapandı (27.08):** `place-view.test` +3 (`shippableChipVisible` — kargo modunda
+    görünür, rota içinde ve yer bilinmezken görünmez: çipin sessiz arızası "basılır ama liste
+    değişmez"dir) ve yeni `stock-mark.test` 4 (üç ton → üç renk çifti; `pending`in olumlu tona
+    KATILMADIĞI ayrıca çivili — sabotaj turu ölçtü, olumlu tona çevirince test düştü). Yer
+    dosyaları toplam **37/37**.
+  **Kalan tek şey mobil kart/ekranların canlı cihaz turu değil, YOK — görev `[x]`.**
+
+  Açık kalanlar (~~bu yüzden `[~]`~~ → 27.08'de hepsi kapandı):
   · ~~**Paketler** — `inRouteOnly` kuralı mobil paket kartı/detayında okunmuyor~~ → 10.08'de
     kapandı (üstteki ikinci tur).
-  · **Ürün detayı** — bugün yalnız ürün düzeyli "kargoya verilmez" künyesi var (`product-noship`);
-    yere bağlı işaret (`stockMarkOf`) ve "haber ver"in rota dışında BÖLGE notuna dönmesi yazılmadı.
+  · ~~**Ürün detayı** — yere bağlı işaret ve "haber ver"in bölge notuna dönmesi yazılmadı~~ →
+    ölçüldü 27.08: işaret yazılmış, haber-ver kararı bilinçli olarak daha dar (üstteki blok).
   · **Sözleşme dosyası** — `packages/types/src/contracts/catalog-api.schema.ts`e sorgu alanı
     EKLENMEDİ: `contracts/` bugün yalnız CEVAP zarflarını tutuyor, orada tek bir sorgu şeması yok
     (ölçüldü). Sorgu şeması ucun kendi dosyasında kaldı — tek tüketicisi olan yeni bir desen açmak
     knip'in ölü göreceği bir sözleşme üretirdi.
-  · **Test borcu** — `StockMark`, `stockMarkOf`, `placeModeOf`/`shippableChipVisible` ve çipin
-    görünürlüğü için birim testi yazılmadı (görev kapsamı dışı bırakıldı).
+  · ~~**Test borcu** — `StockMark`, `stockMarkOf`, `placeModeOf`/`shippableChipVisible`~~ →
+    27.08'de kapandı (üstteki üçüncü tur; 37/37).
 
 - [x] (21.21) **Mobilden verilen siparişte "siparişiniz alındı" maili GİTMİYORDU — bildirim
   gönderimi `@lezzet/application`a terfi etti (10.08).**

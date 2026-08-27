@@ -4,7 +4,7 @@ import type { PlaceResolution } from '@lezzet/types';
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
 
 import messages from './messages.json';
-import { packageStockStatus, placeModeOf, stockMarkOf } from './place-view';
+import { packageStockStatus, placeModeOf, shippableChipVisible, stockMarkOf } from './place-view';
 
 /*
   YER İŞARETİ — "bu ürün BANA nasıl gelir" sorusunun cevabı (21.20 · kullanıcı kararı 09.08).
@@ -114,5 +114,27 @@ describe('stockMarkOf', () => {
 
     expect(fr?.label).toBe(messages.fr.shipMark);
     expect(fr?.label).not.toBe(tr.shipMark);
+  });
+});
+
+describe('shippableChipVisible — daraltma çipinin görünürlüğü', () => {
+  /*
+    Çip YALNIZ kargo modunda anlamlıdır ve üç hâlin ayrımı burada çivileniyor:
+    · rota içinde her ürün zaten geliyor — "adresime gönderilebilir" süzgeci hiçbir şeyi elemez,
+      çizilse müşteriye işe yaramaz bir düğme gösterilirdi;
+    · yer BİLİNMİYORSA soru zaten sorulamaz (aynı soru vitrinin hapıyla ve onboarding'le
+      soruluyor; üçüncü bir davet aynı şeyi üç yerden sormak olurdu).
+    Ters çevrilirse arıza SESSİZ olur: çip görünür, basılır ve liste hiç değişmez.
+  */
+  it('KARGO modunda görünür — daraltmanın anlamlı olduğu tek hâl', () => {
+    expect(shippableChipVisible('shipping')).toBe(true);
+  });
+
+  it('ROTA içinde görünmez — süzgeç hiçbir şeyi elemezdi', () => {
+    expect(shippableChipVisible('route')).toBe(false);
+  });
+
+  it('yer BİLİNMİYORKEN görünmez — cevabı olmayan soru sorulmaz', () => {
+    expect(shippableChipVisible('unknown')).toBe(false);
   });
 });
