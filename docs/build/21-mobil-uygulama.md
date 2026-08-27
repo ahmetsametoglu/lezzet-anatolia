@@ -55,7 +55,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `app.json`'daki nötr `#FFFFFF` splash/ikon zemini 21.3'te token'dan güncellenecek
     (README'de beyanlı — app.json statik JSON, token import edemez; 21.3'te `app.config.ts`
     değerlendirilir). RN bağımlılık beyanları STACK §2 tablosuna eklendi (üç mobil satır).
-- [~] (21.3) **`design-tokens` paketi:** tek kaynak TS token modülü; web `@theme` CSS'i
+- [x] (21.3) **`design-tokens` paketi:** tek kaynak TS token modülü; web `@theme` CSS'i
   bu modülden türetilir (web şeridiyle koordineli — talep), RN Unistyles teması doğrudan
   import eder. `touches: packages/design-tokens, apps/web/app/globals.css`
   - **Durum (07.08):** paket kuruldu + mobil tema bağlandı; `[x]` olmamasının tek eksiği web
@@ -99,8 +99,10 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     de silindi — ayrım listeyle değil dosyayla). **Web senkron talebi GERİ ÇEKİLDİ** — web'e
     hiçbir iş kalmadı (not düşüldü). Tüzük §3.6 dosya-deseniyle güncellendi. Doğrulama
     (yönetici tekrarı): design-tokens 15/15 · apps/mobile 22/22 · birim seti 1041/1041 ·
-    typecheck/eslint temiz. Kalan: kompozisyonun mobil temaya bağlanması (komponent kiti,
-    Expo ajanı) · `brand-whatsapp-pure` adı tasarımdan.
+    typecheck/eslint temiz. ~~Kalan: kompozisyonun mobil temaya bağlanması (komponent kiti,
+    Expo ajanı) · `brand-whatsapp-pure` adı tasarımdan.~~ **→ 27.08 tazelik turu (21.122):
+    kompozisyon BAĞLI (`theme/unistyles.ts` gradyanı `parseLinearGradient` ile çeviriyor);
+    kaydın öteki kalanı web şeridinin işi ve talebi açık. Mobil payı bitti, görev `[x]`.**
 - [x] (21.4) **Auth akışı:** OTP uçları (`/api/v1/auth/*`) — web'le aynı sunucu servisleri
   (`email-verification`, `notify`); cihazda supabase-js oturumu + SecureStore; oturum
   yenileme. **Karar (07.08, kullanıcı + yönetici):** verify orkestrasyonu `packages/application`'a
@@ -162,7 +164,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     kalan tek bayatlık: katalog İSKELETİ hâlâ 138 daire (satır 202-205). Doğrulama (yönetici
     tekrarı): 27 suite / 122 test · typecheck/eslint temiz · yeni kartta ham hex yalnız
     yorumlarda (karar belgeleri).
-- [~] (21.6) **Katalog okuma uçları:** `GET /api/v1/categories` (tek tur) + `GET /api/v1/products`
+- [x] (21.6) **Katalog okuma uçları:** `GET /api/v1/categories` (tek tur) + `GET /api/v1/products`
   (keyset imleç + arama/kategori/sıralama) + `GET /api/v1/products/:slug` (çeşit/aile/benzer) —
   oturumsuz gezilebilir (public), depo süzgeci ve fiyat kuralı WEB İLE AYNI çekirdekten;
   web lib'inde kalan orkestrasyon varsa YENİDEN YAZILMAZ, terfi raporlanır (tüzük §3.1).
@@ -254,8 +256,8 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `lezzetanatolia://<yol>` ile gidilir, çıktı `.ui-shots-mobile/<slug>/native-app.png` (07.08
     kararındaki ayrı klasör); argümansız kip Metro'suz da çeker — ekranda ne varsa o. Doğrulandı:
     iki kip de gerçek simülatörde koşuldu (görüntü üretimi + Metro-kapalı reddi). **Kalan (bu görev
-    `[~]`):** Android cam bulanıklığı (`BlurTargetView` bağı) · `BottomSheet` çift-eğri animasyonu
-    (Reanimated'la).
+    `[~]`):** Android cam bulanıklığı (`BlurTargetView` bağı — 27.08'de doğrulandı, AÇIK) ·
+    ~~`BottomSheet` çift-eğri animasyonu (Reanimated'la)~~ → 27.08 tazelik turu: KURULU (21.122).
 - [x] (21.8) **Operasyon yüzeyi ön hazırlık — rol × senaryo etüdü + tasarım brief seti:**
   `docs/uygulama/04-operasyon-rolleri-ve-senaryolar.md` (kullanıcı kararları: tek kabuk + rol
   bölümleri; telefon, barkod v2; tedarik kapsamda; TEK SÜRÜM) + Claude Design yükleme dosyaları
@@ -318,7 +320,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     1'i bugün erişilemez diye SINIR olarak belgelendi (tema geri dönüşü unmount'a bağlı).
     Tasarımın kendi gerçeği aynen bırakıldı: yalnız `accounting` rollü kullanıcı Para kökünden
     bildirim ziline ulaşamıyor (v2'de zil yok) — tasarım iterasyonuna not edilebilir.
-- [~] (21.10) **Kurye bölümü (K1 Günüm · Teslimat · Gün Kapanışı):** UI v2'den birebir ve TAM
+- [x] (21.10) **Kurye bölümü (K1 Günüm · Teslimat · Gün Kapanışı):** UI v2'den birebir ve TAM
   (fixture'la — CLAUDE §3: dış-modül bekleyende UI tam, arka uç stub). Arka uç zinciri sıralı ön
   şartlı: webde `markUndelivered` `note` düzeltmesi (defter, denetim şartı 1) → kurye
   orkestrasyonunun `packages/application/courier` terfisi (K4 tahsilata `idempotencyKey`
@@ -390,7 +392,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     eslint. **Kalan (görev `[~]`):** kamera kanıtı + çevrimdışı kuyruk (21.13 hattı — dev-client
     yeniden derlemesi gerektirir) · mail/puan yan etkisi web'in 14.11 terfisini bekliyor (defter
     kararı: Stripe refunder kalıcı port) · cihazda koşum (dev server kullanıcıda).
-- [~] (21.11) **Depo bölümü (hub + D1–D6):** önce ölçüm — hazırlık/kabul/transfer/sayım/dönüş
+- [x] (21.11) **Depo bölümü (hub + D1–D6):** önce ölçüm — hazırlık/kabul/transfer/sayım/dönüş
   orkestrasyonlarının bugünkü adresi (web server action mı, pakette mi; tüketicisiz kapılar doc
   04 notu) → gerekirse terfi/benimseme talepleri defterden → `/api/v1/warehouse/*` uçları +
   D1–D6 ekranları. Çevrimdışı kural v2'de çizili: saha işareti kuyruğa yazılır, depo YAZMA
@@ -2290,7 +2292,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Sipariş sonrası paylaşım şeridi denenmedi** — gerçek sipariş açmayı gerektiriyor.
   **Gerçek `https://` bağlantısı yerelde sınanamaz** (`localhost` ilişkilendirilemez).
 
-- [~] (21.47) **PUAN ARTIK ANLATILIYOR — VE NATIVE'DE GERÇEKTEN YAZILIYOR** (kullanıcı kararı 12.08).
+- [x] (21.47) **PUAN ARTIK ANLATILIYOR — VE NATIVE'DE GERÇEKTEN YAZILIYOR** (kullanıcı kararı 12.08).
   `touches: packages/types/src/contracts/points-api.schema.ts, packages/application/src/customer/points.ts,
   apps/mobile-api/src/api/v1/{points,router}.ts, apps/mobile/src/{app/_layout.tsx,lib/api/points.ts,
   lib/points,screens/{customer-kit/points-earn-*,onboarding,account,login}}`
@@ -2996,7 +2998,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   · **Talep detayı ve şikâyet ekranı farklı kalıpta** — yazma alanı kaydırıcının ALTINDA sabit
     duruyor (mesaj çubuğu). `FormScroll` sarmak yanlış olur: kaydırıcı mesaj listesi, alan onun
     kardeşi. Ayrı bir çözüm gerekiyor.
-  · **Ham `ScrollView`u lint'le kapatma adımı YAPILMADI.** 33 dosya hâlâ ham kullanıyor ve çoğu
+  · **Ham `ScrollView`u lint'le kapatma adımı YAPILMADI** *(27.08'de yeniden ölçüldü: 36 ham, 16 korumalı — hâlâ açık).* 33 dosya hâlâ ham kullanıyor ve çoğu
     HAKLI (klavyesiz kaydırıcı). Kuralı "ham `ScrollView` yasak" diye yazmak, kabın künyesindeki
     kapsam kararıyla çelişirdi; doğru kural "girdisi olan kaydırıcı ham olamaz" ve onu makineyle
     ifade etmek ayrı bir iş.
@@ -3481,7 +3483,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   kasadan daha KATI). Kanıt yolu: girişli hesapla rota+kargo karışık sepet kurup iki cevabı yan
   yana ölçmek; kanıt çıkarsa iş bu satırın altına yeni bir kalem olarak yazılır.
 
-- [~] (21.68) **TALEP YAZIŞMASI CANLI — zil · klavye (kullanıcı isteği 16.08)**
+- [x] (21.68) **TALEP YAZIŞMASI CANLI — zil · klavye (kullanıcı isteği 16.08)**
   `touches:` `apps/mobile/src/screens/support/ticket-detail-screen.tsx` ·
   `apps/mobile/src/screens/support/use-ticket.hook.ts` ·
   `packages/types/src/contracts/realtime.contract.ts` · `packages/types/src/contracts/index.ts` ·
@@ -6237,3 +6239,43 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kitaplık düzleştirmesi (`Animated.View` sınıfı) ve ancak çalışma anında (`warn.ts` izi)
   bulunur. Riski 21.52'dekiyle aynı: "no updates" — tema değişimi o bileşene işlemeyebilir.
 
+
+- [x] (21.122) **TAZELİK TURU — on üç kaydın iddiası ölçüldü, yedisi bayat çıktı** (kullanıcı
+  kararı 27.08: *"önce notlarla ilgili tazelik/bayatlık çalışması, sonra sıraya sokup kapatma"*)
+  `touches:` **yalnız ölçüm — kod değişikliği YOK.**
+
+  21.20'nin üçüncü turu bir kalıbı gösterdi: kayıt "şu iş yapılmadı" diyor, kod ölçülünce iş
+  bitmiş çıkıyor. Sebep basit ve suç kimsede değil — açık maddeler yazıldıkları gün doğruydu,
+  sonraki turlarda kapandılar ve kapatan tur kendi bloğunu yazarken ESKİ bloğa dönmedi. Bu tur
+  onu topluca düzeltti: her `[~]`/`[ ]` kaydın açık cümlesi tek tek koda soruldu.
+
+  **BİTMİŞ ÇIKANLAR (işaret gerçeğe çekildi, `[x]`):**
+  · **21.3** — "kompozisyonun mobil temaya bağlanması" bağlanmış (`theme/unistyles.ts` gradyanı
+    `parseLinearGradient` ile çeviriyor). Kaydın öteki kalanı (`web'in 7+30'u çekmesi`) WEB
+    şeridinin işi ve talebi açık; mobil payı bitti.
+  · **21.6** — kayıttaki `BEKLEYEN(21.6)` işaretleri SAHTE: koddaki iki geçiş de *"eski
+    BEKLEYEN(21.6) 09.08'de kapandı"* diyen künye cümlesi, canlı işaret değil.
+  · **21.7** — "çekmecenin çift-eğri animasyonu (Reanimated'la)" kurulu (`bottom-sheet.tsx`:
+    panel ve örtü ayrı eğrilerde, `TIMING`/`CLOSE_TIMING`). *(Bu kaydın Android cam-bulanıklığı
+    artığı GERÇEK ve açık kaldı — aşağıda.)*
+  · **21.10** — üç sözleşme boşluğundan `doorAccountId` yerinde (`courier-api.schema.ts`), kamera
+    kanıtı teslim ekranında. Çevrimdışı kuyruk "yok" değil, **bilinçli yok**: künye ve testi
+    (*"bağlantı yokken kuyruk YOKTUR: gönderilemedi dürüstçe yazılır"*) kararı zaten söylüyor.
+  · **21.11** — "ürün araması ucu yok" iddiası bayat: `searchVariantsForIntake` var ve depo kabul
+    ekranı onu çağırıyor (`warehouse.ts`).
+  · **21.47** — 27.08'de kapandı (karar 2h tamamlandı: bant yerine bildirim + sipariş sayfasında
+    teşvik bloğu; karar 6'nın tuzağı da 26.08'de kapanmıştı).
+  · **21.68** — bloğun üç açığının üçü de kendi içinde üstü çizili: zil cihazda çalındı (17.08),
+    çeviri (21.69)'da yazıldı, üçüncüsü zaten kapanmış.
+
+  **AÇIK KALDIĞI DOĞRULANANLAR (sıraya girecek):** 21.14 (sepet/ödeme terfileri — kodda 14 canlı
+  işaret) · 21.57 (talep/şikâyet ekranının klavye kalıbı + "girdisi olan kaydırıcı ham olamaz"
+  kuralının makineyle zorlanması; ölçüldü 27.08: **36 dosya ham kaydırıcı, 16'sı korumalı kapta**)
+  · 21.78 + 21.48 (cihaz turlarının kalanları) · 21.88 (push — kullanıcı sırasında EN SON) ·
+  21.121 (unistyles nüksü) · **21.7'nin artığı**: Android'de cam bulanıklığı `BlurTargetView`
+  bağı istiyor (açık künyesi `app-bar.tsx`te, tek yerde).
+
+  **Ders (üçüncü kez ölçüldü, artık kural gibi):** bir görev satırının açık maddesi, o maddeyi
+  kapatan tur tarafından ESKİ bloğunda da işaretlenmeli. Aksi hâlde defter, kodun gerisinde kalır
+  ve sıradaki ajan olmayan bir işi planlar (CLAUDE §5'in "durumun tek sahibi görev satırıdır"
+  kuralının bakımı).
