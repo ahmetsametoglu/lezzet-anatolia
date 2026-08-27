@@ -4189,6 +4189,45 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   **Cihaz durumu:** dil Türkçe · yazı boyutu Büyük · posta kodu 67000 geri kuruldu; kullanıcının
   **oturumu silindi**, yeniden OTP ile girmesi gerekiyor. Turda eklenen sepet kalemi temizlendi.
 
+
+  ## Turun devamı (27.08) — A17 koşuldu, klavye kalıbı cihazda doğrulandı
+
+  Bu tur **21.121'in unistyles avı** için açıldı (kökü bulundu, kendi kaydında) ve aynı pencerede
+  günün klavye değişiklikleri ile A17 de ölçüldü. Depo hesabıyla açıldı, personel köprüsünden
+  müşteri yüzeyine geçildi.
+
+  **A17 · YASAL SAYFA — GEÇTİ.** Checkout'un dibindeki "Satış koşullarını okuyun" bağlantısı
+  açıldı: başlık · son güncelleme tarihi · şirket künyesi (QUALITE SAS, SIRET, adres) · bölümler
+  tam, tipografi ve kaydırma sorunsuz.
+
+  **KLAVYE KALIBI CİHAZDA — üç ölçüm, üçü de geçti** (bugün kite çıkan `ChatLayout` ve checkout'un
+  `FormScroll`a geçişi):
+  · **Çekmece** ("Bize yazın") — klavye açıldı, panel yukarı itildi, alan ve "Gönder" görünür kaldı.
+  · **`ChatLayout`** (talep detayı) — klavye açıkken yazma çubuğu klavyenin TAM ÜSTÜNDE durdu,
+    yazışma listesi kısaldı, gönder düğmesi görünür kaldı. MB-02'nin karşılığı.
+  · **MB-01 (yutulan ilk dokunuş)** — klavye AÇIKKEN gönder düğmesine TEK dokunuşla mesaj gitti,
+    baloncuk düştü ve klavye kapandı. `keyboardShouldPersistTaps="handled"` çalışıyor.
+  · **Checkout `FormScroll`** — yerleşim BOZULMADI (asıl risk buydu: kap bir `KeyboardAvoidingView`
+    ekliyor ve flex zinciri bozulabilirdi). Başlık, kimlik şeridi, adres bloğu, özet, onay kutusu,
+    düğme ve satış koşulları bağlantısı yerinde. İletişim künyesi bölümü ÇİZİLMEDİ ve bu doğru —
+    hesabın adı ve telefonu dolu (bölüm yalnız künye eksikken doğar).
+
+  **SEPET AKIŞI DA GÖZLENDİ (planlı değildi, yol üstündeydi):** asgari sepet kilidi doğru çalışıyor —
+  düğme kapalıyken sebep düğmenin YANINDA ("Asgari sepete 33,02 € eksik"), eşiğin kendisi dipte
+  ("Asgari sepet 40,00 €"); iki uç ayrı şey söylüyor (MB-69'un kararı). Eşik aşılınca uyarılar
+  düştü ve düğme açıldı.
+
+  **AÇIK KALAN:**
+  · **A14'ün giriş duvarı** — bu turda da ölçülmedi; hesap zaten girişliydi.
+  · **Şikâyet (Y1) ve sosyal sohbet ekranlarının klavye turu** — ikisi de bugün `ChatLayout`a geçti
+    ama **admin kapısının arkasında** (`management` uçları yalnız `admin`; tur depo hesabıyla
+    koşuldu). Kalıbın kendisi talep detayında doğrulandı ve üçü aynı kabı kullanıyor; kalan risk
+    ekran BAZLI yerleşim (üstteki şeritler `above`'a taşındı). Admin girişiyle koşulacak.
+  · **21.7'nin Android cam bulanıklığı** — bu turda sıraya gelmedi.
+
+  **Bir dev aracı gözlemi:** ayarlar FAB'ı sepette "+" düğmesinin üstüne denk gelip dokunuşları
+  yutuyordu (adet artmıyordu). FAB sürüklenebilir olduğu için tur sürdürüldü — ama aynı örtüşme
+  operatörün önüne çıkarsa "düğme çalışmıyor" diye okunur. Alan dev aracının sahibinde.
 - [x] (21.79) **PUANIN PARA KARŞILIĞI OKUNUR HÂLE GELDİ — ve keşif kartının yokluğu araştırıldı
   (kullanıcı bulguları 18.08)**
   → MB-75 açıldı. `touches: apps/mobile/src/screens/customer-kit/{points-value.ts,points-earn-list.tsx},
