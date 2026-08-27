@@ -2,11 +2,13 @@ import { formatPrice } from '@lezzet/helper';
 import type { Locale, LocalizedCopy } from '@lezzet/i18n';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+// `ScrollView` artık yalnız TİP: kaydırıcıyı `ChatLayout` çiziyor, ekran ona yalnız ref veriyor.
+import { Image, Text, View, type ScrollView } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
+import { ChatLayout } from '@/components/ui/chat-layout';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Note } from '@/components/ui/note';
@@ -180,32 +182,66 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
     );
   };
 
+  /**
+   * Altta SABİT duran yazma çubuğu — kaydırılmaz.
+   *
+   * Kaydırma alanının DIŞINDA (RN'de `position: sticky` yok) ama AKIŞTA: kaydırıcı kalanı
+   * doldurduğu için kutu zaten en altta oturuyor, mutlak konuma gerek yok. Gereksiz de değil,
+   * ZARARLIYDI — gerekçesi `composer` stilinin künyesinde.
+   */
+  const composer = (
+    <View style={styles.composer}>
+      {/* Düşen gönderim SESSİZ DEĞİL: tek satırlık ret, taslak yerinde. */}
+      {ticket.sendFailed ? (
+        <Text style={styles.sendError} accessibilityRole="alert" testID="ticket-send-failed">
+          {t.detail.reply.failed}
+        </Text>
+      ) : null}
+      <View style={styles.composerRow}>
+        {/* Alanın kendi kökü esnemez (kit `TextField` bir `View` döndürüyor ve `flex` taşımıyor);
+            genişliği saran kutu verir — örtük esnemeye güvenilmez, kural açık yazılır. */}
+        <View style={styles.composerField}>
+          <TextField
+            value={draft}
+            onChangeText={setDraft}
+            accessibilityLabel={t.detail.reply.label}
+            placeholder={t.detail.reply.placeholder}
+            shape="pill"
+            editable={!ticket.sending}
+            testID="ticket-reply"
+          />
+        </View>
+        <PressableSurface
+          onPress={send}
+          feedback="scale-small"
+          disabled={!canSend}
+          style={[styles.sendButton, canSend ? styles.sendEnabled : styles.sendDisabled]}
+          accessibilityLabel={ticket.sending ? t.detail.reply.sending : t.detail.reply.send}
+          testID="ticket-send"
+        >
+          <Icon name="navigate" size={theme.size.inlineIcon} color={theme.colors.card} />
+        </PressableSurface>
+      </View>
+    </View>
+  );
+
   return (
     /*
-      KLAVYE KAÇINMASI EKRANIN KÖKÜNDE (kullanıcı bulgusu 16.08, iki cihazda birden).
+      KLAVYE KAÇINMASI KİTİN YAZIŞMA KABINDA (kullanıcı bulgusu 16.08, iki cihazda birden ölçüldü;
+      kap 27.08'de doğdu).
 
-      Yazma çubuğu klavyenin ALTINDA kalıyordu: müşteri yazdığını göremiyordu. Sebep `FormScroll`
-      künyesinde ölçülü ve burada da aynı: Android `Theme.EdgeToEdge` ile açıldığı için pencereyi
-      klavye için küçültmüyor, `adjustResize` işlemiyor; boşluğu uygulamanın kendisi tüketmeli.
+      Yazma çubuğu klavyenin ALTINDA kalıyordu: müşteri yazdığını göremiyordu. Çözüm ÖNCE burada
+      yazıldı — kaçınma kabı + kaydırıcıya `flex: 1` + kardeş çubuk. 27.08'de aynı arıza iki
+      operasyon ekranında daha bulununca çözüm oralara kopyalandı ve tekrar üçe çıktı; kural o gün
+      kite taşındı (`components/ui/chat-layout.tsx`). Ölçümün, `FormScroll`dan neden ayrıldığının ve
+      açık kalan platform sorusunun tamamı orada — bu ekran artık yalnız üç parçayı veriyor.
 
-      `FormScroll` KULLANILMADI ve bu bilinçli: o kap, içeriğin TAMAMINI tek bir kaydırıcıya koyan
-      form ekranları için. Burası yazışma — kaydırılan yalnız mesaj listesi, yazma çubuğu ise sabit
-      kalmalı. `FormScroll`a sarsaydık çubuk da kaydırma alanına girer ve "yapışkan" olmaktan
-      çıkardı. O yüzden aynı KORUMA, farklı KAP: `KeyboardAvoidingView` kökü sarar, liste ile çubuk
-      içeride kendi yerlerinde kalır.
-
-      `behavior` platforma göre: iOS klavyeyi bir dolgu gibi iterken (`padding`), Android'de yükseklik
-      ayarı doğru sonucu veriyor — kitin `bottom-sheet`i de aynı ayrımı yapıyor.
+      Başlık çubuğu KAPIN DIŞINDA ve bu ölçülmüş bir karar: içeride dururken iOS'ta hiçbir kaçınma
+      olmuyordu (simülatörde kare ile ölçüldü 16.08). Kullanıcının turu emsalin çalıştığını
+      doğrulamıştı — kusur kaçınmada değil, bu ekranın kabındaydı.
     */
     <View style={styles.screen}>
-      {/* BAŞLIK ÇUBUĞU KAPIN DIŞINDA — kitin çalışan emsalinin birebir yerleşimi (`FormScroll`
-          künyesi: *"üstündeki başlık çubuğu kendi yerini alır, kaydırıcı gerisini"*). İçeride
-          dururken iOS'ta hiçbir kaçınma olmuyordu (simülatörde kare ile ölçüldü 16.08: çubuk yok,
-          liste kısalmamış, dolgu eklenmemiş). Kullanıcının turu emsalin çalıştığını doğruladı —
-          adres formu ve çekmeceler iOS'ta sorunsuz — yani kusur kaçınmada değil, bu ekranın
-          kabında. Ofset de KALKTI: emsalde yok ve olmayan bir farkı düzeltmeye çalışıyordu. */}
       {appBar(title, <TicketStatusTag status={detail.status} label={t.status[detail.status]} testID="ticket-status" />)}
-      <KeyboardAvoidingView style={styles.keyboardLayer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Yazışma eskiden yeniye dizili: SON mesaj en altta. Kaydırma her içerik değişiminde sona
           çekilir — açılışta müşteri en yeni cevabı görür, kendi mesajını gönderince de baloncuğu
           ekranda belirir (onayın kendisi budur; toast yalnız onu süreler). */}
@@ -224,15 +260,9 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         gerek yok, kullanıcı en kötü çıkıp yeniden girer."* Ekrandan çıkıp girmek zaten tam bir
         okuma yapıyor.
       */}
-      <ScrollView
-        ref={threadRef}
-        /* LİSTE ESNER, ÇUBUK ESNEMEZ (iOS ölçümü 16.08, simülatörde kare ile).
-           Klavye açılınca `KeyboardAvoidingView` kabın altına klavye kadar dolgu koyuyor. Liste
-           `flex: 1` almadığı için İÇERİK BOYUNDA kalıyordu, yani kap küçülürken o küçülmüyor ve
-           yazma çubuğu ekranın dışına taşıyordu — ölçülen görüntü tam buydu: çubuk "klavyenin
-           altında" değil, HİÇ YOKTU; yazışmanın sonuyla klavye arasında dolgu kadar boşluk vardı.
-           Kısalması gereken listedir; çubuk sabit yükseklikte kalmalı. */
-        style={styles.thread}
+      <ChatLayout
+        composer={composer}
+        scrollRef={threadRef}
         onContentSizeChange={() => threadRef.current?.scrollToEnd({ animated: true })}
         contentContainerStyle={styles.content}
         testID="ticket-thread"
@@ -271,45 +301,7 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         ) : null}
 
         <Text style={styles.notice}>{t.detail.notice}</Text>
-      </ScrollView>
-
-      {/* Yapışkan kutu kaydırma alanının DIŞINDA (RN'de `position: sticky` yok — kitin kalıbı) ama
-          AKIŞTA: kaydırıcı `flex: 1` ile kalanı doldurduğu için kutu zaten en altta oturuyor,
-          mutlak konuma gerek yok. Gereksiz de değil, ZARARLIYDI — gerekçesi `composer` künyesinde. */}
-      <View style={styles.composer}>
-        {/* Düşen gönderim SESSİZ DEĞİL: tek satırlık ret, taslak yerinde. */}
-        {ticket.sendFailed ? (
-          <Text style={styles.sendError} accessibilityRole="alert" testID="ticket-send-failed">
-            {t.detail.reply.failed}
-          </Text>
-        ) : null}
-        <View style={styles.composerRow}>
-          {/* Alanın kendi kökü esnemez (kit `TextField` bir `View` döndürüyor ve `flex` taşımıyor);
-              genişliği saran kutu verir — örtük esnemeye güvenilmez, kural açık yazılır. */}
-          <View style={styles.composerField}>
-            <TextField
-              value={draft}
-              onChangeText={setDraft}
-              accessibilityLabel={t.detail.reply.label}
-              placeholder={t.detail.reply.placeholder}
-              shape="pill"
-              editable={!ticket.sending}
-              testID="ticket-reply"
-            />
-          </View>
-          <PressableSurface
-            onPress={send}
-            feedback="scale-small"
-            disabled={!canSend}
-            style={[styles.sendButton, canSend ? styles.sendEnabled : styles.sendDisabled]}
-            accessibilityLabel={ticket.sending ? t.detail.reply.sending : t.detail.reply.send}
-            testID="ticket-send"
-          >
-            <Icon name="navigate" size={theme.size.inlineIcon} color={theme.colors.card} />
-          </PressableSurface>
-        </View>
-      </View>
-      </KeyboardAvoidingView>
+      </ChatLayout>
     </View>
   );
 }
@@ -344,10 +336,8 @@ const styles = StyleSheet.create((theme, rt) => ({
     */
     paddingBottom: Math.min(rt.insets.bottom, theme.space['3xl']),
   },
-  /** Başlığın ALTINDAKİ her şey — kaçınma kabı buradan başlar (`FormScroll`un `layer`ıyla aynı rol). */
-  keyboardLayer: { flex: 1 },
-  /** Kaydırıcının KENDİSİ — kalan alanı doldurur ve klavye açılınca kısalır (künyesi kullanım yerinde). */
-  thread: { flex: 1 },
+  /* Kaçınma kabının ve kaydırıcının ölçüleri BURADA DEĞİL: ikisi de `ChatLayout`ın kuralı
+     (`chat-layout.tsx` künyesi). Ekran yalnız yazışmanın kendi dolgusunu söylüyor. */
   content: {
     /* Yatay dolgu yazışmada DAHA DAR (kullanıcı bulgusu 17.08). Ekranın geri kalanında `4xl` (18)
        doğru ölçü, ama orada kutunun içinde tek bir metin var; burada metin ikinci bir kabın

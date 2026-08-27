@@ -46,8 +46,15 @@ const screensRoot = path.resolve(__dirname, '..');
 /** Metin alanı olan bileşenler — RN'in kendi girdisi + kitin sarmalayıcıları. */
 const INPUT_TAGS = ['TextInput', 'TextField', 'CodeField'];
 
-/** Kaydırıcının kendisi kaba sarılıysa muaf: kap korumayı zaten taşıyor. */
-const SAFE_CONTAINERS = ['FormScroll', 'BottomSheet'];
+/**
+ * Korumayı KENDİSİ taşıyan kitin kapları — bunları kullanan ekran muaftır.
+ *
+ * Üçü de aynı iki yarıyı veriyor (kaçınma + `keyboardShouldPersistTaps`), farkları YERLEŞİM:
+ * çekmece · tam ekran form · yazışma (liste + yapışkan çubuk). Ekranların bu üçünün dışında bir
+ * kalıba ihtiyacı olursa doğru cevap dördüncü bir KAP yazmaktır, korumayı ekrana kopyalamak değil
+ * — üçü de zaten bir kopyalamanın toplanmasıyla doğdu (`chat-layout.tsx` künyesi, 27.08).
+ */
+const SAFE_CONTAINERS = ['FormScroll', 'BottomSheet', 'ChatLayout'];
 
 function sourceFiles(dir: string): string[] {
   const out: string[] = [];
@@ -159,11 +166,31 @@ describe('klavye koruması — girdisi olan kaydırıcı ham olamaz', () => {
     expect(bodyOf(source, 'ScrollView', openingsOf(source, 'ScrollView')[0]!)).toContain('<TextField');
   });
 
-  it('korumalı kabın adı sözlükte duruyor — kural "ham yasak" değil, "girdili ham yasak"', () => {
+  it('korumalı kapların ÜÇÜ de klavye açıkken ilk dokunuşu korur', () => {
     // Kap adları kuralın kendisinin parçası; biri yeniden adlandırılırsa burası hatırlatır.
-    expect(SAFE_CONTAINERS).toEqual(['FormScroll', 'BottomSheet']);
-    expect(readFileSync(path.join(screensRoot, 'components/ui/form-scroll.tsx'), 'utf8')).toContain(
-      'keyboardShouldPersistTaps="handled"',
+    expect(SAFE_CONTAINERS).toEqual(['FormScroll', 'BottomSheet', 'ChatLayout']);
+    /* Korumanın İKİNCİ yarısı (MB-01) üçünde de yazılı olmalı: kaçınma alanı klavyenin üstüne
+       taşır ama düğmeye ilk dokunuş yine yutulabilir — biri olmadan öteki yarım kalır. */
+    for (const file of ['form-scroll.tsx', 'chat-layout.tsx']) {
+      expect(readFileSync(path.join(screensRoot, 'components/ui', file), 'utf8')).toContain(
+        'keyboardShouldPersistTaps="handled"',
+      );
+    }
+    // Çekmece kendi paneliyle çalışıyor; korumasını kendi testi ölçüyor (`bottom-sheet.test.tsx`).
+    expect(readFileSync(path.join(screensRoot, 'components/ui/bottom-sheet.tsx'), 'utf8')).toContain(
+      'KeyboardAvoidingView',
     );
+  });
+
+  /* KAÇINMA ARTIK YALNIZ KİTTE: bir ekran elle `KeyboardAvoidingView` yazıyorsa kalıbı yeniden
+     kuruyordur ve bu, üç kapla kapatılan tekrarın geri gelmesi demektir (27.08'de üç ekran birden
+     böyleydi). Kural "yasak" değil "kitte" — dördüncü bir yerleşim gerekiyorsa dördüncü bir KAP
+     yazılır, koruma ekrana kopyalanmaz. */
+  it('hiçbir EKRAN kaçınmayı elle kurmaz — kalıp kitin kaplarında', () => {
+    const rogue = sourceFiles(screensRoot)
+      .filter((file) => !path.relative(screensRoot, file).startsWith('components/ui/'))
+      .filter((file) => openingsOf(readFileSync(file, 'utf8'), 'KeyboardAvoidingView').length > 0)
+      .map((file) => path.relative(screensRoot, file));
+    expect(rogue).toEqual([]);
   });
 });

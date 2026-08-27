@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+// `ScrollView` artık yalnız TİP: kaydırıcıyı `ChatLayout` çiziyor, ekran ona yalnız ref veriyor.
+import { ActivityIndicator, Text, TextInput, View, type ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ConversationHandlerEnum, type ConversationHandler } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { ChatLayout } from '@/components/ui/chat-layout';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import type { SocialMessage } from '@/lib/api/social';
 import { fillCopy } from '@/screens/operations/copy';
@@ -145,32 +147,9 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     );
   }
 
-  return (
-    <View style={styles.screen} testID="management-social-chat">
-      <OperationsStackHeader
-        title={socialTitle(conversation)}
-        // Kimlik satırı kanal-duyarlı: yalnız WhatsApp'ın anahtarı (telefon) operatöre bir şey söyler.
-        subtitle={
-          conversation.source === 'whatsapp'
-            ? `${t.channel[conversation.source]} · ${conversation.externalRef}`
-            : t.channel[conversation.source]
-        }
-        onBack={() => router.back()}
-        backLabel={managementCopy.common.back}
-        testID="management-social-chat-header"
-      />
-
-      {/*
-        KLAVYE KAÇINMASI — talep detayının çözülmüş kalıbı (27.08 · 21.57), şikâyet ekranıyla aynı
-        gün ve aynı gerekçeyle. Cevap çubuğu klavyenin altında kalıyordu; sebep müşteri yüzeyinde
-        ölçüldü (`support/ticket-detail-screen` künyesi, iki cihazda 16.08): Android
-        `Theme.EdgeToEdge` altında `adjustResize` işlemiyor, boşluğu uygulama tüketmeli.
-
-        `FormScroll` değil kaçınma KABI: kaydırılan yalnız yazışma, çubuk sabit kalmalı. Başlık
-        çubuğu kapın dışında (emsalin yerleşimi); mod satırı ve pencere bandı içeride, çünkü onlar
-        yazışmayla birlikte kısalması gereken alanın parçası.
-      */}
-      <KeyboardAvoidingView style={styles.keyboardLayer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+  /** Kaydırıcının ÜSTÜNDE sabit duran şeritler — kaçınmanın içinde ama yazışmayla kaymazlar. */
+  const above = (
+    <>
       <View style={styles.modeRow}>
         <Text style={styles.modeLabel}>{td.mode.label}</Text>
         {MODES.map((mode: ConversationHandler) => {
@@ -210,12 +189,68 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
             : td.window[conversation.source][window.state]}
         </Text>
       </View>
+    </>
+  );
 
-      {/* LİSTE ESNER, ÇUBUK ESNEMEZ (emsalin iOS ölçümü 16.08): `flex: 1` olmayan liste içerik
-          boyunda kalır, kap klavye kadar küçülürken küçülmez ve çubuk ekranın dışına taşar. */}
-      <ScrollView
-        ref={scrollRef}
-        style={styles.threadLayer}
+  /** Altta SABİT duran cevap çubuğu — kaydırılmaz, klavye açılınca onun üstünde kalır. */
+  const composer = (
+    <View style={styles.footer}>
+      {chat.lastError === null ? null : (
+        <Text style={styles.errorNote} testID="management-social-action-error">
+          {failureText(chat.lastError)}
+        </Text>
+      )}
+      <TextInput
+        value={reply}
+        onChangeText={setReply}
+        multiline
+        placeholder={td.replyPlaceholder}
+        placeholderTextColor={operationsTheme.colors.muted}
+        accessibilityLabel={td.replyLabel}
+        style={styles.replyInput}
+        testID="management-social-reply"
+      />
+      <PressableSurface
+        onPress={() => void send()}
+        disabled={chat.sending || reply.trim().length === 0}
+        feedback="shadow"
+        style={[styles.recordButton, chat.sending || reply.trim().length === 0 ? styles.recordDisabled : styles.recordEnabled]}
+        accessibilityLabel={td.record}
+        testID="management-social-record"
+      >
+        <Text style={styles.recordLabel}>{td.record}</Text>
+      </PressableSurface>
+      <Text style={styles.recordNote}>{td.recordNote}</Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.screen} testID="management-social-chat">
+      <OperationsStackHeader
+        title={socialTitle(conversation)}
+        // Kimlik satırı kanal-duyarlı: yalnız WhatsApp'ın anahtarı (telefon) operatöre bir şey söyler.
+        subtitle={
+          conversation.source === 'whatsapp'
+            ? `${t.channel[conversation.source]} · ${conversation.externalRef}`
+            : t.channel[conversation.source]
+        }
+        onBack={() => router.back()}
+        backLabel={managementCopy.common.back}
+        testID="management-social-chat-header"
+      />
+
+      {/*
+        YAZIŞMA KABI KİTTEN (27.08) — klavye kaçınması, listenin esnemesi ve çubuğun sabit kalması
+        onun kuralları (`chat-layout.tsx` künyesi: gerekçe, cihaz ölçümü ve açık kalan platform
+        sorusu orada). Ekran üç parça veriyor: üstteki şeritler, yazışma, çubuk.
+
+        Mod satırı ve pencere bandı `above`ta, yani kaçınmanın İÇİNDE ama kaydırılmıyorlar —
+        yazışmayla birlikte kısalması gereken alanın parçası oldukları için.
+      */}
+      <ChatLayout
+        above={above}
+        composer={composer}
+        scrollRef={scrollRef}
         contentContainerStyle={styles.thread}
         onContentSizeChange={() => {
           if (!scrollPending.current) return;
@@ -268,37 +303,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
             <Text style={styles.suggestLabel}>{td.suggest}</Text>
           </PressableSurface>
         ) : null}
-      </ScrollView>
-
-      <View style={styles.footer}>
-        {chat.lastError === null ? null : (
-          <Text style={styles.errorNote} testID="management-social-action-error">
-            {failureText(chat.lastError)}
-          </Text>
-        )}
-        <TextInput
-          value={reply}
-          onChangeText={setReply}
-          multiline
-          placeholder={td.replyPlaceholder}
-          placeholderTextColor={operationsTheme.colors.muted}
-          accessibilityLabel={td.replyLabel}
-          style={styles.replyInput}
-          testID="management-social-reply"
-        />
-        <PressableSurface
-          onPress={() => void send()}
-          disabled={chat.sending || reply.trim().length === 0}
-          feedback="shadow"
-          style={[styles.recordButton, chat.sending || reply.trim().length === 0 ? styles.recordDisabled : styles.recordEnabled]}
-          accessibilityLabel={td.record}
-          testID="management-social-record"
-        >
-          <Text style={styles.recordLabel}>{td.record}</Text>
-        </PressableSurface>
-        <Text style={styles.recordNote}>{td.recordNote}</Text>
-      </View>
-      </KeyboardAvoidingView>
+      </ChatLayout>
     </View>
   );
 }
@@ -386,10 +391,7 @@ const styles = StyleSheet.create({
   windowText_open: { color: operationsTheme.colors['olive-dark'] },
   windowText_closed: { color: operationsTheme.colors.terracotta },
   windowText_never: { color: operationsTheme.colors.muted },
-  /** Başlığın ALTINDAKİ her şey — kaçınma kabı buradan başlar (`FormScroll`un `layer`ıyla aynı rol). */
-  keyboardLayer: { flex: 1 },
-  /** Kaydırıcının KENDİSİ — kalan alanı doldurur ve klavye açılınca kısalır (künyesi kullanım yerinde). */
-  threadLayer: { flex: 1 },
+  /* Kaçınma kabının ve kaydırıcının ölçüleri BURADA DEĞİL: ikisi de `ChatLayout`ın kuralı. */
   thread: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space.xl,

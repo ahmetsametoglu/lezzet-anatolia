@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { ChatLayout } from '@/components/ui/chat-layout';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
@@ -100,40 +101,81 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
   const attachmentCount = detail.messages.reduce((sum, message) => sum + message.attachmentUrls.length, 0);
   const claimed = detail.status !== 'open';
 
+  const composer = (
+    <View style={styles.footer}>
+      {complaint.lastError === null ? null : (
+        <Text style={styles.actionError} testID="management-complaint-action-error">
+          {fillCopy(t.complaint.actionFailed, { reason: complaint.lastError })}
+        </Text>
+      )}
+      <TextInput
+        value={complaint.reply}
+        onChangeText={complaint.setReply}
+        multiline
+        placeholder={t.complaint.replyPlaceholder}
+        placeholderTextColor={operationsTheme.colors.muted}
+        accessibilityLabel={t.complaint.replyLabel}
+        style={styles.replyInput}
+        testID="management-complaint-reply"
+      />
+      <View style={styles.footerRow}>
+        <PressableSurface
+          onPress={complaint.sendReply}
+          disabled={complaint.sending || complaint.reply.trim().length === 0}
+          feedback="shadow"
+          grow
+          style={[
+            styles.footerButton,
+            complaint.sending || complaint.reply.trim().length === 0 ? styles.claimDone : styles.claimOpen,
+          ]}
+          accessibilityLabel={complaint.sending ? t.complaint.sending : t.complaint.send}
+          testID="management-complaint-send"
+        >
+          <Text style={styles.claimLabel}>{complaint.sending ? t.complaint.sending : t.complaint.send}</Text>
+        </PressableSurface>
+        <PressableSurface
+          onPress={complaint.claim}
+          disabled={claimed || complaint.sending}
+          feedback="shadow"
+          grow
+          style={[styles.footerButton, claimed ? styles.claimDone : styles.claimOpen]}
+          accessibilityLabel={claimed ? t.complaint.claimed : t.complaint.claim}
+          testID="management-complaint-claim"
+        >
+          <Text style={styles.claimLabel}>{claimed ? t.complaint.claimed : t.complaint.claim}</Text>
+        </PressableSurface>
+      </View>
+      {/* "Masada devam et" tasarımda EYLEMSİZ (v2:575) ve öyle kaldı: mobilde açacağı bir kapı
+          yok, dokunulabilir yapmak olmayan bir yol vaat ederdi. */}
+      <Text style={styles.deskNote}>{t.common.desk}</Text>
+    </View>
+  );
+
+  const tags = (
+    <View style={styles.tags}>
+      <Text style={[styles.tag, styles.tagKind]}>{t.complaint.kind[detail.type]}</Text>
+      <Text style={[styles.tag, claimed ? styles.tagInProgress : styles.tagOpen]} testID="management-complaint-status">
+        {t.complaint.status[detail.status]}
+      </Text>
+      {detail.awaitingReply ? <Text style={[styles.tag, styles.tagOurTurn]}>{t.common.ourTurn}</Text> : null}
+      {attachmentCount === 0 ? null : (
+        <Text style={[styles.tag, styles.tagAttachments]}>
+          {fillCopy(t.complaint.attachments, { n: String(attachmentCount) })}
+        </Text>
+      )}
+    </View>
+  );
+
   return (
     /*
-      KLAVYE KAÇINMASI — talep detayının çözülmüş kalıbı, birebir (27.08 · 21.57).
+      YAZIŞMA KABI KİTTEN (27.08) — klavye kaçınması, listenin esnemesi ve çubuğun sabit kalması
+      onun kuralları. Ekran yalnız üç parçayı veriyor: üstteki şeritler, yazışma, çubuk.
 
-      Yazma çubuğu klavyenin ALTINDA kalıyordu: operatör yazdığını göremiyordu. Sebep müşteri
-      yüzeyinde ÖLÇÜLDÜ ve orada da aynı (`support/ticket-detail-screen` künyesi, iki cihazda
-      16.08): Android `Theme.EdgeToEdge` ile açıldığı için pencereyi klavye için küçültmüyor,
-      `adjustResize` işlemiyor; boşluğu uygulamanın kendisi tüketmeli.
-
-      `FormScroll` KULLANILMAZ ve bu bilinçli: o kap içeriğin TAMAMINI tek kaydırıcıya koyan form
-      ekranları için. Burası yazışma — kaydırılan yalnız mesaj listesi, çubuk sabit kalmalı.
-      Aynı KORUMA, farklı KAP: kaçınma kökü sarar, liste ile çubuk içeride kendi yerlerinde kalır.
-
-      Başlık çubuğu KAPIN DIŞINDA (emsalin yerleşimi): kap `ComplaintScreen`in `screen`i içinde
-      başlığın altından başlıyor.
+      Kalıp önce talep detayında çözülmüştü (16.08, iki cihazda ölçülerek) ve bu ekrana KOPYALANDI;
+      aynı gün kitte bileşene çıktı (`chat-layout.tsx` künyesi: gerekçe, ölçüm ve açık kalan
+      platform sorusu orada). Kopya kaldı, kural tek yerde.
     */
-    <KeyboardAvoidingView style={styles.keyboardLayer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.tags}>
-        <Text style={[styles.tag, styles.tagKind]}>{t.complaint.kind[detail.type]}</Text>
-        <Text style={[styles.tag, claimed ? styles.tagInProgress : styles.tagOpen]} testID="management-complaint-status">
-          {t.complaint.status[detail.status]}
-        </Text>
-        {detail.awaitingReply ? <Text style={[styles.tag, styles.tagOurTurn]}>{t.common.ourTurn}</Text> : null}
-        {attachmentCount === 0 ? null : (
-          <Text style={[styles.tag, styles.tagAttachments]}>
-            {fillCopy(t.complaint.attachments, { n: String(attachmentCount) })}
-          </Text>
-        )}
-      </View>
-
-      {/* LİSTE ESNER, ÇUBUK ESNEMEZ (emsalin iOS ölçümü 16.08): kaçınma kabın altına klavye kadar
-          dolgu koyuyor; `flex: 1` olmayan liste İÇERİK BOYUNDA kalır, kap küçülürken küçülmez ve
-          yazma çubuğu ekranın dışına taşar. Kısalması gereken listedir. */}
-      <ScrollView style={styles.threadLayer} contentContainerStyle={styles.thread} testID="management-complaint-thread">
+    <ChatLayout above={tags} composer={composer} contentContainerStyle={styles.thread} testID="management-complaint-thread">
         {detail.messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
@@ -167,56 +209,7 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
             </View>
           </View>
         )}
-      </ScrollView>
-
-      <View style={styles.footer}>
-        {complaint.lastError === null ? null : (
-          <Text style={styles.actionError} testID="management-complaint-action-error">
-            {fillCopy(t.complaint.actionFailed, { reason: complaint.lastError })}
-          </Text>
-        )}
-        <TextInput
-          value={complaint.reply}
-          onChangeText={complaint.setReply}
-          multiline
-          placeholder={t.complaint.replyPlaceholder}
-          placeholderTextColor={operationsTheme.colors.muted}
-          accessibilityLabel={t.complaint.replyLabel}
-          style={styles.replyInput}
-          testID="management-complaint-reply"
-        />
-        <View style={styles.footerRow}>
-          <PressableSurface
-            onPress={complaint.sendReply}
-            disabled={complaint.sending || complaint.reply.trim().length === 0}
-            feedback="shadow"
-            grow
-            style={[
-              styles.footerButton,
-              complaint.sending || complaint.reply.trim().length === 0 ? styles.claimDone : styles.claimOpen,
-            ]}
-            accessibilityLabel={complaint.sending ? t.complaint.sending : t.complaint.send}
-            testID="management-complaint-send"
-          >
-            <Text style={styles.claimLabel}>{complaint.sending ? t.complaint.sending : t.complaint.send}</Text>
-          </PressableSurface>
-          <PressableSurface
-            onPress={complaint.claim}
-            disabled={claimed || complaint.sending}
-            feedback="shadow"
-            grow
-            style={[styles.footerButton, claimed ? styles.claimDone : styles.claimOpen]}
-            accessibilityLabel={claimed ? t.complaint.claimed : t.complaint.claim}
-            testID="management-complaint-claim"
-          >
-            <Text style={styles.claimLabel}>{claimed ? t.complaint.claimed : t.complaint.claim}</Text>
-          </PressableSurface>
-        </View>
-        {/* "Masada devam et" tasarımda EYLEMSİZ (v2:575) ve öyle kaldı: mobilde açacağı bir kapı
-            yok, dokunulabilir yapmak olmayan bir yol vaat ederdi. */}
-        <Text style={styles.deskNote}>{t.common.desk}</Text>
-      </View>
-    </KeyboardAvoidingView>
+    </ChatLayout>
   );
 }
 
@@ -318,10 +311,9 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors['sand-500'],
     color: operationsTheme.colors.muted,
   },
-  /** Başlığın ALTINDAKİ her şey — kaçınma kabı buradan başlar (`FormScroll`un `layer`ıyla aynı rol). */
-  keyboardLayer: { flex: 1 },
-  /** Kaydırıcının KENDİSİ — kalan alanı doldurur ve klavye açılınca kısalır (künyesi kullanım yerinde). */
-  threadLayer: { flex: 1 },
+  /* Kaçınma kabının ve kaydırıcının kendi ölçüleri BURADA DEĞİL: ikisi de `ChatLayout`ın kuralı
+     (klavye açılınca kısalması gereken listedir, çubuk değil). Ekran yalnız yazışmanın dolgusunu
+     ve aralığını söylüyor. */
   thread: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space.xl,

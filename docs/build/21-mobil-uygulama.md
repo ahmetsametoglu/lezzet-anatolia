@@ -3057,10 +3057,35 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   korumasızdı; emsal birebir uygulandı (kaçınma kabı + kaydırıcıya `flex: 1`, çünkü esnemesi gereken
   listedir, çubuk değil). Yeni bir çözüm İCAT EDİLMEDİ.
 
-  Doğrulama: `keyboard-scroll-guard` 4/4 · etkilenen 24 suite / 160 test yeşil · `eslint`/`knip`
-  temiz · `typecheck` kendi kapsamımda temiz (kalan iki hata paralel şeridin süren
-  `stock_adjustment` işinde). **Cihaz turu YAPILMADI** — üç ekran da klavye davranışını değiştirdi
-  ve kalıbın kendisi cihazda ölçülü olsa da bu üç ekranın turu operasyon yüzeyi çalışmasına kalıyor.
+  ## Kalıp KİTE ÇIKTI — üç kap, tek kural (aynı gün, kullanıcı sorusuyla)
+
+  Yukarıdaki düzeltme yazışma kalıbını iki ekrana KOPYALAMIŞTI (doğru hamle: emsal uygula, yeni
+  çözüm icat etme) — ama tekrarı üçe çıkardı. Kullanıcının sorusu bunu görünür kıldı: *"bizim
+  çekmecemiz bir komponent değil mi? tek komponent olunca tek yaklaşım sergilemesi gerekmez mi?"*
+
+  **Ölçüm:** çekmece gerçekten tek (`BottomSheet`, tek tanım, 12 kullanım) ve bulunan arızaların
+  hiçbiri orada değildi — sezgi doğruydu. Ama "kap" üç çeşitti ve yalnız İKİSİ bileşendi:
+  `BottomSheet` (12 kullanım) · `FormScroll` (15) · yazışma kalıbı (**3, bileşen değil**).
+
+  Üçüncüsü kite çıktı: **`components/ui/chat-layout.tsx`** — kaçınma + listenin esnemesi + kardeş
+  çubuk, tek yerde. Üç ekran (`support/ticket-detail` · `management/complaint` ·
+  `management/social-conversation`) artık yalnız üç parça veriyor: üstteki şeritler, yazışma, çubuk.
+  Bekçi de kapları tanıyor ve **dördüncü bir iddia** kazandı: hiçbir EKRAN kaçınmayı elle kurmaz —
+  dördüncü bir yerleşim gerekirse dördüncü bir KAP yazılır, koruma ekrana kopyalanmaz.
+
+  **AÇIK: PLATFORM STRATEJİSİ ÖLÇÜLMEDİ** (kullanıcı işaret etti: *"Android ile iOS farklı
+  refleksler gösterebiliyor"*). Depoda aynı sorunun İKİ cevabı var ve fark bilinçli değil, tarihsel:
+  `BottomSheet` ile `FormScroll` her platformda `behavior="padding"`, `ChatLayout` iOS'ta `padding`
+  Android'de `height` (16.08'de talep detayında yazıldı, öteki kapların kararıyla hiç
+  karşılaştırılmadı). İkisi de doğru olabilir — form ile yapışkan çubuk gerçekten farklı davranır —
+  ama bugün kimse kanıtlayamıyor. `BEKLEYEN(21.78)`: iki platformda ölçülüp tek karara bağlanacak.
+  Değer artık TEK yerde durduğu için o tur bir satır değiştirecek, üç ekranı gezmeyecek.
+
+  Doğrulama: `keyboard-scroll-guard` 5/5 · `chat-layout` 5/5 (yapışkanlık sabotajla doğrulandı) ·
+  mobil paket 862/863 (tek düşüş paralel şeridin süren `stock_adjustment` işinde) · `eslint`/`knip`
+  temiz. **Cihaz turu YAPILMADI** — üç ekran da klavye davranışını değiştirdi ve kalıbın kendisi
+  cihazda ölçülü olsa da bu üç ekranın turu operasyon yüzeyi çalışmasına kalıyor; platform sorusu
+  da o turda ölçülecek.
 
 - [x] (21.58) **TEŞEKKÜR SAYFASI KUTUSUZ VE BÜTÜNLEŞİK — kahraman işaret puan yıldızı oldu (MB-19)**
   `touches:` `apps/mobile/src/screens/feedback/feedback-screen.tsx` ·
