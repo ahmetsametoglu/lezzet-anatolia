@@ -102,6 +102,7 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
   - **KOD TARAFI 27.08'de bağımsız doğrulandı (denetim):** sözleşme yerinde — `guard.ts:50` `StaffUser.profileId`, `:157` profili tek okumadan dolduruyor; `deliveries/page.tsx:90` kuryeyi `courier.user.profileId` ile çağırıyor, yani envanterin işaret ettiği satır düzelmiş. Envanter dosyası (`docs/talep/arka-uc-guard-profil-kimligi.md`) da işlenip silinmiş.
   - **Ama vaat edilen ÇALIŞMA ANI onayı hiçbir yere yazılmadı:** `21.10` bu arada `[x]` oldu ve notlarında gerçek kurye oturumuyla yapılmış bir doğrulama kaydı YOK (arandı). Yani zincir "kodda doğru, sahada teyitsiz" hâlinde duruyor. İşaret bilerek `BEKLEYEN` yapılmadı — açık bir kod boşluğu değil, **kaydı düşülmemiş bir el yordamı kontrolü**; kapanmış bir göreve borç asmak da `docs:check`in reddettiği şeydir. Teyit ilk gerçek kurye oturumunda verilecek ve buraya bir satırla yazılacak.
     - **ARTIK ERİŞİLEBİLİR (15.08, `04.12`):** `/auth/dev-login` gerçek oturum kuruyor, yani "bypass'sız oturum açmak erişimimizde değil" cümlesi tarihe karıştı. Bu görevin ölçemediği şey — profil-FK'li yazımların gerçek girişte tutup tutmadığı — artık tek adresle sınanabilir (`?email=kurye@lezzetanatolia.fr`).
+    - ✅ **SAHADAN TEYİT VERİLDİ (27.08, denetim — bir aydır bekleyen kayıt).** Ölçüm: production sunucusunda (3001, yani dev bypass'ının hiç var olmadığı derleme) `/auth/dev-login?email=kurye@lezzetanatolia.fr` → **307 → `/operations`**, çerez yazıldı; aynı çerezle `/operations/deliveries` → **200** ve sayfa **gerçek durak getirdi**: *"Durak 0 / 1 · 12 rue du Faubourg de Pierre, 67000 Strasbourg · Restaurant Bosphore · B2B · 60,00 € kapıda·kart · 1 kalem (4 × Bitter Çikolatalı Pasta 1600 g)"*. Yani kurye OKUMALARININ boş dönme belirtisi geçti — zincir `guard.ts` → `courier.user.profileId` → `order.courier_id` gerçek oturumda tutuyor. **Yazma tarafı bu turda ölçülmedi** (durak "Bekliyor" hâlinde bırakıldı; teslim yazımı yerel veriyi değiştirirdi).
 
 - [x] (04.12) **HIZLI GİRİŞ KAPISI — production derlemesinde de gerçek oturum** (kullanıcı isteği 15.08).
   `touches: apps/web/app/auth/dev-login/route.ts, apps/web/lib/auth/dev-login-gate.ts,
@@ -158,6 +159,33 @@ Kim kimdir ve kim neye dokunabilir: Supabase Auth kurulumu (**yalnız kimlik/otu
   `procurement/actions.ts` → `StaffUser.user`). Kapının kendi mantığı `NODE_ENV`e hiç bakmadığı
   için davranışın değişmesini bekleyen bir sebep yok, ama **ölçülmedi** — derleme düzelince
   tek adresle doğrulanır.
+
+  **KURULMAMIŞ VERİTABANINA HESAP AÇMIYOR (27.08 · mobil şeridin saha bulgusu 26.08).** Kapının
+  kullandığı `generateLink` yalnız jeton üretmiyor: **kayıtsız e-postada `auth.users` satırını da
+  YARATIYOR** (aynı çağrının öteki yarısı `04.2` künyesinde yazılı). Ölçülen zarar şuydu: cihaz
+  turu sürerken `db:refresh` koştu, `auth.users` silindiği anda dev giriş düğmesi
+  `kurye@lezzetanatolia.fr`e bastı, auth kullanıcısı **seed'den önce** doğdu ve `0002`nin AÇILIŞ
+  KURALI (*"hiç admin yoksa doğan ilk hesap admin olur"*) ona `{admin}` verdi — **adsız,
+  kapsamsız bir "yönetici"**. Ardından `seedKisiler` o satırı *"Marc Lemoine zaten var"* diye
+  benimsedi; kurye hiç doğmadı ve hiçbir yerde hata yoktu.
+  **`{admin}` bir varsayılan DEĞİL** (notun sorduğu buydu): trigger'ın rol varsayılanı
+  `{customer}`, admin yalnız açılış kuralından geliyor. Kural üretimde gerekli ve doğru — birinin
+  ilk yönetici olması lazım ve o an tabloda kimse yoktur. **Trigger DEĞİŞMEDİ.**
+  Kapı artık yalnız o pencereyi kapatıyor: profili olmayan e-posta **+** tabloda hiç yönetici yok
+  → **409**, hiçbir şey yazılmaz. **E-posta süzgeci EKLENMEDİ** — mobil kapının çivili kararı
+  (*"kayıtsız e-posta da kabul edilir, ve bu BİLİNÇLİ"*, `preferences.test.ts`) yerinde duruyor ve
+  ölçüm onu yanlışlamıyor: zarar yaratmaktan değil, **açılış kuralı silahlıyken** yaratmaktan
+  doğdu. Kurulu bir veritabanında davranış hiç değişmedi.
+  **Ölçüt tek yerde** (`@lezzet/application` → `auth/dev-login.ts`), çünkü web ve mobil kapıları
+  aynı kararı veriyor. **Karar MOTORDA** (`devLoginRefusalOf`, 3 birim testi): sınadığı hâl —
+  *"hiç yönetici yok"* — kurulu bir veritabanında üretilemez, üretmek tüm paketin okuduğu yönetici
+  satırlarını silmek olurdu (`CLAUDE §4b`).
+  **İKİNCİ HAT SEED'DE, ve kapıdan bağımsız gerekliydi:** profili e-postadan açan tek yol dev
+  girişi değil (gerçek OTP akışı da açar), yani ölçüt yalnız uçta dursaydı aynı tuzak başka
+  kapıdan kurulurdu. `seedKisiler` artık benimsediği kimliği tanıma karşı doğruluyor
+  (`onarSapan`: ad · roller · depo kapsamı), sapmayı onarıyor ve **gürültü çıkarıyor**. Ölçüldü:
+  `pnpm set-role depo.kehl@… admin` ile bozulan rol, sonraki seed turunda
+  `⟳ rol {warehouse,admin} → {warehouse}` diye onarıldı; sapma yokken hiç satır basmıyor.
   - *Bitti:* doğrulanmamış numara kimlik anahtarı olmuyor; e-posta kodu WhatsApp'tan geri yazılınca hesap bağlanıyor; kod yalnız KENDİ numarasından geçerli (başka kanaldan reddediliyor); 3 ay sessizlik sonrası dönüşte geçmiş kod sorulmadan açılmıyor (dört dal testli)
   - **Kural metninin tamamı `DOMAIN §10`'da** ("Kimlik anahtarı, çapa ve süreklilik"). Kanal WhatsApp ama görev **kimlik** görevidir — bu yüzden 15'te değil burada. 15 yalnız mesajı taşır.
   - **Akış:** ilk sipariş tamamlanınca e-posta önerilir → kod **e-postaya** gider, müşteri **WhatsApp'tan** geri yazar (çapraz kanal kanıtı) → bağlanır. **İstemeyene** sistemin ürettiği 6 haneli güvenlik kodu verilir; e-posta sonradan doğrulanırsa kod silinir.

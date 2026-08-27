@@ -1,4 +1,5 @@
 import { CustomerPhoneService, UserProfileService } from '@lezzet/database';
+import type { UserProfile } from '@lezzet/types';
 import { an, type Db, type Kisiler } from './shared';
 import type { Depolar } from './warehouse';
 
@@ -211,7 +212,39 @@ const KISILER: SeedKisi[] = [
 ];
 
 
-/** Kartları açar (varsa dokunmaz) ve `key → profil id` haritasını döner. */
+const ayniKume = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && [...a].sort().every((v, i) => v === [...b].sort()[i]);
+
+/**
+ * **"Zaten var" YETMEZ — kimliğin DOĞRU olduğu da doğrulanır** (mobil şeridin bulgusu 26.08).
+ *
+ * `findByEmail` bir satır döndürdüğünde seed bugüne dek onu koşulsuz benimsiyordu. Satırın seed'in
+ * kendi kişisi olduğu bir VARSAYIMDI ve bir kez yanlış çıktı: `db:refresh` penceresinde basılan dev
+ * giriş düğmesi `auth.users`a satır açtı, `0002` trigger'ı boş tabloda **adsız, `{admin}`, kapsamsız**
+ * bir profil doğurdu, seed de onu "Marc Lemoine zaten var" diye kabul etti. Kurye hiç doğmadı;
+ * ortada kurye e-postalı bir yönetici vardı ve hiçbir yerde hata yoktu.
+ *
+ * Kapı artık kapandı (dev giriş kimlik yaratmıyor — `@lezzet/application` `auth/dev-login.ts`), ama
+ * **profili e-postadan açabilen tek yol o değil**: gerçek OTP akışı da açar, elle yazılan bir satır
+ * da. Yani ölçüt kapıda değil BURADA da durmalı — seed'in kişisi seed'in tanımına uymak zorunda.
+ *
+ * Onarılan alanlar seed'in SAHİP olduğu üç kimlik alanı: ad, roller, depo kapsamı. Sessiz değil,
+ * gürültülü: her onarım satır satır basılır, yoksa tuzak yine görünmez kalırdı — yalnız bu sefer
+ * seed'in içinde. Sapma yoksa hiç yazılmaz (idempotent).
+ */
+async function onarSapan(profiles: UserProfileService, mevcut: UserProfile, k: SeedKisi, depolar: Depolar): Promise<string[]> {
+  const beklenenKapsam = (k.depolar ?? []).map((d) => depolar[d]);
+  const sapma: string[] = [];
+  if ((mevcut.name ?? '') !== k.name) sapma.push(`ad "${mevcut.name || '(boş)'}" → "${k.name}"`);
+  if (!ayniKume(mevcut.roles, k.roles)) sapma.push(`rol {${mevcut.roles.join(',')}} → {${k.roles.join(',')}}`);
+  if (!ayniKume(mevcut.warehouseIds, beklenenKapsam)) sapma.push(`depo kapsamı ${mevcut.warehouseIds.length} → ${beklenenKapsam.length} depo`);
+  if (sapma.length === 0) return sapma;
+
+  await profiles.update({ id: mevcut.id, name: k.name, roles: k.roles, warehouseIds: beklenenKapsam });
+  return sapma;
+}
+
+/** Kartları açar (varsa TANIMA UYDURUR) ve `key → profil id` haritasını döner. */
 // **Bu bölüm `base` katmanında HİÇ KOŞMAZ** (kullanıcı kararı 16.08): buradaki altı kişi de uydurma
 // ve `seedStaffLogins` onlara giriş hesabı açıyor — üretime gitseydi bilinen e-postalarla sahte
 // hesaplar açılmış olurdu. Gerçek personeli üretimde operatör kurar. Künye `seed/tier.ts`.
@@ -224,6 +257,8 @@ export async function seedKisiler(db: Db, depolar: Depolar): Promise<Kisiler> {
     const mevcut = await profiles.findByEmail(k.email);
     if (mevcut) {
       harita.set(k.key, mevcut.id);
+      const onarilan = await onarSapan(profiles, mevcut, k, depolar);
+      if (onarilan.length > 0) console.log(`  ⟳ ${k.email} · profil ONARILDI: ${onarilan.join(' · ')}`);
       continue;
     }
     const { key, note, depolar: kapsam, ...alanlar } = k;

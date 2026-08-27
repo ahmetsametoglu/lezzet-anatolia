@@ -8,6 +8,10 @@
 // çağıracağı) bir orkestrasyon olması. Tek yüzeyin işi kendi uygulamasında kalır.
 export { requestOtpCode, tryAttachReferral, verifyOtpCode } from './auth/otp';
 export type { RequestOtpCodeResult, VerifyOtpCodeResult } from './auth/otp';
+// Hızlı giriş kapılarının ortak ön şartı (26.08 bulgusu): kurulmamış veritabanına hesap açılmaz —
+// açılış kuralı onu yönetici yapardı. Buraya konmasının ölçütü aynı: iki yüzey aynı kararı veriyor.
+export { DEV_LOGIN_UNSEEDED_DATABASE, devLoginRefusal, devLoginRefusalOf } from './auth/dev-login';
+export type { DevLoginRefusal } from './auth/dev-login';
 // Müşteri profil güncellemesi (21.14c) — web hesap formunun kuralları paket hâlinde; web köprü.
 export { updateCustomerProfile } from './customer/profile';
 export type { UpdateCustomerProfileOutcome } from './customer/profile';

@@ -535,6 +535,26 @@ export class UserProfileService extends BaseDbService<UserProfile, UserProfileIn
     );
   }
 
+  /**
+   * **"Bu veritabanında hiç yönetici var mı?"** — `0002` trigger'ının AÇILIŞ KURALININ ön şartı.
+   *
+   * O kural şunu der: *hiç admin yoksa, doğan ilk auth kullanıcısı admin olur.* Üretimde doğrudur
+   * ve gereklidir (birinin ilk yönetici olması lazım); yerelde ise `db:reset` ile pencere tekrar
+   * tekrar açılıyor ve o pencerede açılan HER hesap yönetici doğuyor. Soruyu soran taraf hızlı
+   * giriş kapısı (`@lezzet/application` → `auth/dev-login.ts`): kimlik yaratmadan önce açılış
+   * kuralının **kurulu mu yoksa hâlâ silahlı mı** olduğunu bilmek zorunda.
+   *
+   * Satır GETİRİLMEZ, sayılır (`head: true`): cevap tek bit ve sıcak yolda duruyor.
+   */
+  async hasAdmin(): Promise<boolean> {
+    const { count, error } = await this.supabase
+      .from('user_profiles')
+      .select('id', { count: 'exact', head: true })
+      .contains('roles', ['admin']);
+    if (error) throw error;
+    return (count ?? 0) > 0;
+  }
+
   /** Bir role sahip tüm profiller (personel listesi, kurye ataması) — dizi araması GIN indeksli. */
   async listByRole(role: UserRole): Promise<UserProfile[]> {
     const { data, error } = await this.supabase.from('user_profiles').select('*').contains('roles', [role]);

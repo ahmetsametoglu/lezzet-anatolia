@@ -60,6 +60,9 @@ const PAKET_DBSIZ = ['packages/database/src/utils/case-transformers.test.ts'];
  */
 const UYGULAMA_DBSIZ = [
   'packages/application/src/analytics/availability.test.ts',
+  // Hızlı giriş kapısının ret KARARI (27.08) — saf ve zorunlu olarak saf: sınadığı hâl "hiç
+  // yönetici yok" ve o hâl kurulu bir veritabanında üretilemez (dosya künyesi).
+  'packages/application/src/auth/dev-login.test.ts',
   'packages/application/src/cart/cart-blocker.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi

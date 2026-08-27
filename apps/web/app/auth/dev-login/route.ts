@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { DEV_LOGIN_UNSEEDED_DATABASE, devLoginRefusal } from '@lezzet/application';
 import { serviceDb } from '@lezzet/database';
 import { logger, maskEmail } from '@lezzet/observability';
 import { createClient } from '@/lib/supabase/server';
@@ -48,11 +49,14 @@ import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
        `x-forwarded-host` da okunuyor — proxy arkasında gerçek host odur (callback rotasının
        aynı deseni), yoksa proxy'nin kendi `host`u her isteği "yerel" gösterirdi.
 
-  ── E-POSTA SÜZGECİ YOK, VE BİLİNÇLİ ──────────────────────────────────────────
+  ── E-POSTA SÜZGECİ YOK; TEK ÖN ŞART, KURULU VERİTABANI (27.08) ───────────────
   Mobil kapının aynı kararı: yerel veritabanı, yerel ağ, ve test hesabı değiştikçe uca dokunmak
-  gerekmesin. İki kilit zaten yüzeyi yerel süreçle sınırlıyor; üçüncü bir liste yalnız bakım
-  yükü olurdu. Varsayılan adres seed'in yöneticisidir (`scripts/seed/people.ts`), yani çıplak
-  `/auth/dev-login` doğrudan admin oturumu açar.
+  gerekmesin. İki kilit zaten yüzeyi yerel süreçle sınırlıyor; üçüncü bir adres listesi yalnız
+  bakım yükü olurdu. **Eklenen tek ön şart bir liste değil, bir AN:** tabloda hiç yönetici yokken
+  kapı hesap AÇMAZ, çünkü `0002`nin açılış kuralı o hesabı yönetici yapar (ölçüm mobil şeritten,
+  26.08 — gerekçenin tamamı `@lezzet/application` → `auth/dev-login.ts`). Kurulu bir veritabanında
+  davranış hiç değişmedi. Varsayılan adres seed'in yöneticisidir (`scripts/seed/people.ts`), yani
+  çıplak `/auth/dev-login` doğrudan admin oturumu açar.
 
   Kullanımı (production sunucusu 3001'de ayaktayken):
     http://localhost:3001/auth/dev-login                                  → yönetici
@@ -77,6 +81,17 @@ export async function GET(request: Request): Promise<Response> {
   const next = url.searchParams.get('next');
 
   const db = serviceDb();
+
+  /* KURULMAMIŞ VERİTABANINA HESAP AÇMAZ (mobil şeridin ölçümü 26.08 · gerekçenin tamamı
+     `@lezzet/application` → `auth/dev-login.ts` künyesinde): `generateLink` kayıtsız e-postada auth
+     kullanıcısını AÇAR ve `0002`nin açılış kuralı boş tabloda ona `{admin}` verir — `db:refresh`
+     penceresine denk gelen tek bir düğme basışı, seed kişisini adsız bir yöneticiye çeviriyordu.
+     Ret 409: kapı ÇALIŞIYOR, ön şartı yok. */
+  if ((await devLoginRefusal(db, email)) !== null) {
+    logger.warn({ context: 'auth/dev-login', email: maskEmail(email) }, 'hızlı giriş: veritabanı kurulmamış');
+    return NextResponse.json({ error: DEV_LOGIN_UNSEEDED_DATABASE }, { status: 409 });
+  }
+
   const { data, error } = await db.auth.admin.generateLink({ type: 'magiclink', email });
   const tokenHash = data?.properties?.hashed_token;
   if (error !== null || !tokenHash) {
