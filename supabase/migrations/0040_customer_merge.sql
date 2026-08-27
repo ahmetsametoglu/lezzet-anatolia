@@ -129,6 +129,60 @@ comment on function public.preview_customer_merge(uuid, uuid) is
   'Birleştirme ön izlemesi (09.10): ne taşınacak, ne düşecek, hedef hangi kimlik anahtarını kazanacak.';
 
 -- ── Birleştirme ─────────────────────────────────────────────────────────────
+/**
+ * İki kaydın izin kütüğünü birleştirir — **KISITLAYICI OLAN KAZANIR** (kullanıcı kararı 27.08).
+ *
+ * Kural tek cümleyle: *birleşmiş kart, iki karttan hiçbirinin yapamadığı bir şeyi yapamaz.*
+ * Yani sonuç, iki kaydın izin verdiklerinin KESİŞİMİdir. Aksi hâlde birleştirme bir izin ÜRETİRDİ:
+ * hiç onay vermemiş bir kişiye, başka bir kartındaki onay miras kalırdı. İzin GDPR kanıtıdır;
+ * kanıt taşınmaz, en fazla dar tutulur.
+ *
+ * **İki kapının varsayılanı ZIT ve bu yüzden `p_opt_in` var** (`domain-core/messaging`):
+ *   · kampanya (`marketing_consent`) OPT-IN — anahtar yoksa izin YOK, sessizlik rıza değildir
+ *   · bildirim (`notification_consent`) OPT-OUT — anahtar yoksa gönderilir, gereken şey kolay ret
+ * Tek kurala indirseydik ya kampanya izinsiz giderdi ya davet hiç gitmezdi.
+ *
+ * **Kayıt UYDURULMAZ:** sonuç bir kanalda "izin yok" ise, o kanalın kaydı ya reddeden tarafın
+ * satırı OLDUĞU GİBİ alınır (tarihi ve kaynağı korunur) ya da anahtar hiç yazılmaz. Yeni bir
+ * `granted:false` satırı imal etmek, verilmemiş bir beyanı belgelemek olurdu.
+ */
+create or replace function public.merge_consent(p_target jsonb, p_source jsonb, p_opt_in boolean)
+returns jsonb
+language plpgsql
+immutable
+as $$
+declare
+  v_result jsonb := '{}'::jsonb;
+  v_key    text;
+  t        jsonb;
+  s        jsonb;
+  t_ok     boolean;
+  s_ok     boolean;
+begin
+  for v_key in
+    select jsonb_object_keys(coalesce(p_target, '{}'::jsonb) || coalesce(p_source, '{}'::jsonb))
+  loop
+    t := p_target -> v_key;
+    s := p_source -> v_key;
+    -- Anahtarın YOKLUĞU opt-in'de "hayır", opt-out'ta "evet" demektir.
+    t_ok := case when t is null then not p_opt_in else coalesce((t ->> 'granted')::boolean, false) end;
+    s_ok := case when s is null then not p_opt_in else coalesce((s ->> 'granted')::boolean, false) end;
+
+    if t_ok and s_ok then
+      -- İkisi de izin veriyor: hedefin kanıtı kalır (yoksa kaynağınki).
+      v_result := v_result || jsonb_build_object(v_key, coalesce(t, s));
+    elsif not t_ok and t is not null then
+      v_result := v_result || jsonb_build_object(v_key, t);
+    elsif not s_ok and s is not null then
+      v_result := v_result || jsonb_build_object(v_key, s);
+    end if;
+    -- Kalan hâl: ret YOKLUKTAN geliyor (opt-in) → anahtar hiç yazılmaz, yokluk zaten "hayır".
+  end loop;
+
+  return v_result;
+end;
+$$;
+
 create or replace function public.merge_customers(
   p_target_id uuid,
   p_source_id uuid,
@@ -175,6 +229,63 @@ begin
   -- Anonimleştirilmiş kayda taşımak, GDPR ile silinmiş bir kimliği geri doldurmak olurdu.
   if v_target.anonymized_at is not null or v_source.anonymized_at is not null then
     raise exception 'merge_customers: anonimleştirilmiş kayıt birleştirilemez';
+  end if;
+
+  /*
+    ── BİR TARAFTA ŞİRKET VARSA BİRLEŞME YOK — İSTİSNASIZ (kullanıcı kararı 27.08) ──────────────
+    Birleştirmenin varlık sebebi *"aynı kişi iki kez kaydolmuş"*tur. Şirket kaydı ile bireysel
+    kayıt ise çoğu zaman KOPYA DEĞİLDİR: lokanta sahibi işletmesi için faturalı/vadeli, evi için
+    normal fiyattan sipariş verir — aynı insan, ama iki ayrı MÜŞTERİ. İkisini tek karta indirmek
+    kopya temizlemek değil, iki gerçek müşteriyi ezmektir.
+
+    Somut zarar ölçüldü (27.08): birleştirme on yedi ticari alanın HİÇBİRİNE dokunmuyor —
+    `company_info`, `vat_number`, `credit_enabled`, `credit_limit`, `payment_term_days`,
+    `price_group_id`, `discount_percent`, `cod_allowed` kapanan kayıtta kalıyor. Ama SİPARİŞLER
+    taşınıyor. Yani şirketin ödenmemiş faturaları, vade ayarı olmayan bireysel bir kartın üstüne
+    geçiyordu: borç duruyor, freni gitmiş oluyordu (`checkout-options.ts` limiti müşteri
+    kartından okur). Alanları taşımak da çözüm değildi — iki ayrı tüzel/gerçek kişinin ticari
+    koşulları birleştirilemez, seçilir; ve seçim bir operatör kararıdır, sessiz bir `coalesce`
+    değil. Kullanıcı kararı bu yüzden "hiçbir şekilde" oldu.
+
+    **FAIL-CLOSED, çünkü "şirket mi" sorusunun üretimde İKİ cevabı var ve ayrışabiliyorlar:**
+    `type = 'company'` (çekirdek yol: `checkout-draft`, `pricing-viewer`, `checkout-options`) ve
+    `company_info is not null` (`prices-read`). İkisini bağlayan bir kısıt YOK — besleme bile
+    `type='company'` olup künyesi boş bir kayıt üretiyor (ölçüldü). Tek sinyale bakan bir kapı,
+    ayrışmanın olduğu satırda sessizce açık kalırdı. İkisinden HERHANGİ BİRİ şirket diyorsa kapı
+    kapalıdır — yanlış tarafa düşmek pahalı olan yön belli.
+
+    Not: bu kural `b2b_pending` (onay bekleyen başvuru) vakasını da kendiliğinden kapatır —
+    başvuran kaydın künyesi doludur, dolayısıyla buraya takılır. Ayrıca bir dal yazılmadı;
+    yazılsaydı erişilemez kod olurdu.
+
+    ── TEK İSTİSNA: KAYNAK SAF TASLAKSA (kullanıcı kararı 27.08, şıklı soruldu) ──────────────────
+    Kural "iki GERÇEK kaydı birleştirme" der; saf taslak ikinci bir müşteri değildir. Girişi yok,
+    birleştirilmemiş, şirket künyesi yok — yani ezilecek ticari bir kimlik de yok. Birleştirmenin
+    var olma sebebi zaten tam bu vaka (taslakta telefon, hesapta e-posta).
+
+    İstisna olmasaydı **canlı bir akış kesilirdi** ve bu ölçüldü: `merge_customers`ın üretimdeki
+    tek çağrısı WhatsApp bağlamadır (`whatsapp-link.ts:193`) ve oraya girme koşulu kaynağın saf
+    taslak olmasıdır (`:157`); hedef ise gerçek hesaptır ve ŞİRKET OLABİLİR. Yani şirket hesabı
+    olan müşteri WhatsApp'ını bağlayamaz, jetonu tükenir ve geçmişi ayrı bir taslakta kalırdı.
+
+    İstisna kapıyı gevşetmiyor: kaynağın şirket sinyali taşımadığı aynı koşulda ayrıca sınanıyor,
+    yani "taslak" etiketi şirket künyesini örtemez. Operatörün elle birleştirmesinde ise kaynak
+    taslak olmadığı için kapı tam kapalı kalır.
+  */
+  if (v_target.type = 'company' or v_target.company_info is not null
+      or v_source.type = 'company' or v_source.company_info is not null)
+     and not (
+       -- Saf taslak: üç koşul birden. `merged_into_id` zaten yukarıda reddedildi, burada da
+       -- yazılıyor çünkü istisnanın tanımı bu üç koşulun BİRLİKTE doğruluğudur.
+       v_source.is_draft is true
+       and v_source.auth_user_id is null
+       and v_source.merged_into_id is null
+       and v_source.type <> 'company'
+       and v_source.company_info is null
+     ) then
+    raise exception 'merge_customers: şirket kaydı birleştirilemez (hedef %, kaynak %) — bireysel ve kurumsal kayıt aynı kişiye ait olsa bile ayrı müşteridir',
+      p_target_id, p_source_id
+      using errcode = 'check_violation';
   end if;
 
   -- ── 1) ÇAKIŞANLAR DÜŞER (hedefinki kalır) ────────────────────────────────
@@ -256,11 +367,18 @@ begin
   -- **Telefon burada artık ANAHTAR DEĞİL, iletişim bilgisidir** (04.10 · 0001) — kimlik anahtarı
   -- yukarıda `customer_phone` satırlarıyla taşındı. Satır yine de duruyor: hedefin iletişim numarası
   -- boşsa kaynağınki doldurur, doluysa ezilmez. Aynı kural, artık daha küçük bir iddiayla.
+  --
+  -- **İZİNLER `coalesce` DEĞİL, KESİŞİM** (kullanıcı kararı 27.08): kimlik anahtarında "boş olan
+  -- dolar" doğru kuraldır — telefon bir olgudur, kişinin iki numarası olabilir. İzin ise bir
+  -- BEYANDIR ve beyan miras kalmaz. Aynı satırda iki ayrı kural olması bu yüzden tutarsızlık
+  -- değil: taşınan şeylerin cinsi farklı.
   update public.user_profiles
      set phone        = coalesce(v_target.phone, v_source.phone),
          email        = coalesce(v_target.email, v_source.email),
          auth_user_id = coalesce(v_target.auth_user_id, v_source.auth_user_id),
          referred_by  = coalesce(v_target.referred_by, v_source.referred_by),
+         marketing_consent    = public.merge_consent(v_target.marketing_consent, v_source.marketing_consent, true),
+         notification_consent = public.merge_consent(v_target.notification_consent, v_source.notification_consent, false),
          -- Auth bağı geldiyse taslaklık düşer: doğrulanmış bir giriş var artık.
          is_draft     = case when coalesce(v_target.auth_user_id, v_source.auth_user_id) is not null
                              then false else v_target.is_draft end

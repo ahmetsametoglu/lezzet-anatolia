@@ -187,3 +187,145 @@ describe('yasaklar', () => {
     await expect(profiles.merge({ targetId: musteriKayit.id, sourceId: personel.id })).rejects.toThrow();
   });
 });
+
+/**
+ * ŞİRKET KAYDI BİRLEŞMEZ (kullanıcı kararı 27.08) — ve bu bir kısıtlama değil, bir AYRIM.
+ *
+ * Birleştirmenin varlık sebebi *"aynı kişi iki kez kaydolmuş"*. Şirket kaydı ile bireysel kayıt ise
+ * çoğu zaman kopya DEĞİLDİR: lokanta sahibi işletmesi için faturalı/vadeli, evi için normal
+ * fiyattan sipariş verir — aynı insan, iki ayrı müşteri.
+ *
+ * Ölçülen zarar (27.08): RPC on yedi ticari alanın hiçbirine dokunmuyor ama SİPARİŞLERİ taşıyor.
+ * Yani şirketin ödenmemiş faturaları, vade ayarı olmayan bireysel bir kartın üstüne geçiyordu —
+ * borç duruyor, freni gidiyordu.
+ */
+describe('şirket kaydı birleştirilemez — bireysel ve kurumsal AYRI müşteridir', () => {
+  it('HEDEF şirketse reddedilir', async () => {
+    const hedef = await musteri('SirketHedef');
+    const kaynak = await musteri('BireyselKaynak');
+    await profiles.update({ id: hedef.id, type: 'company' });
+
+    await expect(profiles.merge({ targetId: hedef.id, sourceId: kaynak.id })).rejects.toThrow(/şirket kaydı birleştirilemez/);
+  });
+
+  it('KAYNAK şirketse de reddedilir — yön kapıyı açmaz', async () => {
+    const hedef = await musteri('BireyselHedef');
+    const kaynak = await musteri('SirketKaynak');
+    await profiles.update({ id: kaynak.id, type: 'company' });
+
+    await expect(profiles.merge({ targetId: hedef.id, sourceId: kaynak.id })).rejects.toThrow(/şirket kaydı birleştirilemez/);
+  });
+
+  /*
+    FAIL-CLOSED. "Şirket mi" sorusunun üretimde İKİ cevabı var — `type = 'company'` (çekirdek yol)
+    ve `company_info is not null` (`prices-read`) — ve onları bağlayan bir kısıt YOK; besleme bile
+    ayrışmış bir kayıt üretiyor. Tek sinyale bakan kapı, ayrışmanın olduğu satırda sessizce açık
+    kalırdı. Bu test o ikinci sinyali tek başına sınıyor: tür `individual`, künye dolu.
+  */
+  it('türü bireysel ama ŞİRKET KÜNYESİ doluysa yine reddedilir — iki sinyal de kapatır', async () => {
+    const hedef = await musteri('KunyeliHedef');
+    const kaynak = await musteri('DuzKaynak');
+    await profiles.update({ id: hedef.id, companyInfo: { legalName: `Ornek SARL ${stamp}` } });
+
+    const bakim = await profiles.getById(hedef.id);
+    expect(bakim?.type).toBe('individual'); // ayrışmanın gerçekten kurulduğunu doğrula
+    await expect(profiles.merge({ targetId: hedef.id, sourceId: kaynak.id })).rejects.toThrow(/şirket kaydı birleştirilemez/);
+  });
+
+  /*
+    TEK İSTİSNA — ve bu test onun SINIRINI da çiziyor. Saf taslak ikinci bir müşteri değildir:
+    girişi yok, şirket künyesi yok, ezilecek ticari kimliği yok. İstisna olmasaydı CANLI bir akış
+    kesilirdi (ölçüldü 27.08): `merge_customers`ın üretimdeki tek çağrısı WhatsApp bağlamadır ve
+    oraya yalnız kaynak saf taslakken girilir; hedef ise şirket olabilir. Şirket hesabı olan
+    müşteri WhatsApp'ını bağlayamaz, geçmişi ayrı bir taslakta kalırdı.
+  */
+  it('KAYNAK saf taslaksa şirket hedefe birleşir — WhatsApp bağlamanın yolu budur', async () => {
+    const hedef = await musteri('SirketHesap', { phone: null });
+    const taslak = await musteri('WaTaslak', { email: null });
+    await profiles.update({ id: hedef.id, type: 'company', companyInfo: { legalName: `Lokanta SARL ${stamp}` } });
+    await profiles.update({ id: taslak.id, isDraft: true });
+
+    await profiles.merge({ targetId: hedef.id, sourceId: taslak.id });
+
+    expect((await profiles.getById(taslak.id))?.mergedIntoId).toBe(hedef.id);
+    // Şirket künyesi ZARAR GÖRMEDİ — taslak hiçbir ticari alan taşımıyordu.
+    expect((await profiles.getById(hedef.id))?.type).toBe('company');
+  });
+
+  it('taslak ETİKETİ şirket künyesini ÖRTMEZ — istisna kaynağı da sınıyor', async () => {
+    const hedef = await musteri('DuzHedef2', { phone: null });
+    const taslakSirket = await musteri('TaslakSirket');
+    // Taslak ama şirket künyeli: istisnanın kapsamı dışında.
+    await profiles.update({ id: taslakSirket.id, isDraft: true, companyInfo: { legalName: `Sahte SARL ${stamp}` } });
+
+    await expect(profiles.merge({ targetId: hedef.id, sourceId: taslakSirket.id })).rejects.toThrow(/şirket kaydı birleştirilemez/);
+  });
+
+  it('iki taraf da bireyselse birleşme ÇALIŞIR — kapı yalnız şirketi kesiyor', async () => {
+    const hedef = await musteri('SafHedef', { phone: null });
+    const kaynak = await musteri('SafKaynak');
+
+    await profiles.merge({ targetId: hedef.id, sourceId: kaynak.id });
+    expect((await profiles.getById(kaynak.id))?.mergedIntoId).toBe(hedef.id);
+  });
+});
+
+/**
+ * İZİNLER KESİŞİR — kısıtlayıcı olan kazanır (kullanıcı kararı 27.08).
+ *
+ * Kural tek cümleyle: *birleşmiş kart, iki karttan hiçbirinin yapamadığı bir şeyi yapamaz.* İzin
+ * bir olgu değil BEYANDIR ve beyan miras kalmaz; aksi hâlde birleştirme bir izin ÜRETİRDİ.
+ *
+ * İki kapının varsayılanı zıt olduğu için tek kural yetmiyor: kampanya OPT-IN (anahtar yoksa
+ * hayır), bildirim OPT-OUT (anahtar yoksa evet).
+ */
+describe('izinler KESİŞİR, miras kalmaz', () => {
+  const izin = (granted: boolean) => ({ granted, at: '2026-08-01T00:00:00Z', source: 'test' });
+
+  it('kampanya: hedef izinli ama kaynak SUSMUŞSA izin DÜŞER — sessizlik rıza değildir', async () => {
+    const hedef = await musteri('IzinliHedef', { phone: null });
+    const kaynak = await musteri('SessizKaynak');
+    await profiles.update({ id: hedef.id, marketingConsent: { email: izin(true) } });
+
+    await profiles.merge({ targetId: hedef.id, sourceId: kaynak.id });
+
+    // Kaynakta hiç anahtar yoktu; opt-in'de yokluk "hayır"dır, dolayısıyla kesişim boş.
+    expect((await profiles.getById(hedef.id))?.marketingConsent ?? {}).toEqual({});
+  });
+
+  it('kampanya: İKİSİ de izinliyse izin KALIR ve kanıt uydurulmaz', async () => {
+    const hedef = await musteri('CiftIzinHedef', { phone: null });
+    const kaynak = await musteri('CiftIzinKaynak');
+    await profiles.update({ id: hedef.id, marketingConsent: { email: izin(true) } });
+    await profiles.update({ id: kaynak.id, marketingConsent: { email: izin(true) } });
+
+    await profiles.merge({ targetId: hedef.id, sourceId: kaynak.id });
+
+    // Hedefin kanıtı OLDUĞU GİBİ duruyor — yeni bir satır imal edilmedi.
+    expect((await profiles.getById(hedef.id))?.marketingConsent).toMatchObject({
+      email: { granted: true, at: '2026-08-01T00:00:00Z', source: 'test' },
+    });
+  });
+
+  it('bildirim: kaynaktaki AÇIK RET hedefe geçer — opt-out kapısında ret kazanır', async () => {
+    const hedef = await musteri('BildirimHedef', { phone: null });
+    const kaynak = await musteri('RedKaynak');
+    // Hedefte anahtar YOK (opt-out'ta bu "gönderilir" demek), kaynakta açık ret var.
+    await profiles.update({ id: kaynak.id, notificationConsent: { feedbackInvite: izin(false) } });
+
+    await profiles.merge({ targetId: hedef.id, sourceId: kaynak.id });
+
+    expect((await profiles.getById(hedef.id))?.notificationConsent).toMatchObject({
+      feedbackInvite: { granted: false },
+    });
+  });
+
+  it('bildirim: iki taraf da susuyorsa gönderim AÇIK kalır — opt-out varsayılanı korunur', async () => {
+    const hedef = await musteri('SessizBildirimHedef', { phone: null });
+    const kaynak = await musteri('SessizBildirimKaynak');
+
+    await profiles.merge({ targetId: hedef.id, sourceId: kaynak.id });
+
+    expect((await profiles.getById(hedef.id))?.notificationConsent ?? {}).toEqual({});
+  });
+});
