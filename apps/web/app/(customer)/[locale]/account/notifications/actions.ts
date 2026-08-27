@@ -44,7 +44,7 @@ export async function loadNotificationsAction(cursor?: KeysetCursor): Promise<Cu
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    const feed = await listNotifications(serviceDb(), { profileId: customerId, cursor, limit: FEED_PAGE_SIZE });
+    const feed = await listNotifications(serviceDb(), { profileId: customerId, audience: 'customer', cursor, limit: FEED_PAGE_SIZE });
     return { data: toPage(feed), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
@@ -66,7 +66,7 @@ export async function markAllNotificationsReadAction(): Promise<CustomerResult<{
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    await markAllNotificationsRead(serviceDb(), customerId);
+    await markAllNotificationsRead(serviceDb(), customerId, 'customer');
     return { data: { ok: true }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };

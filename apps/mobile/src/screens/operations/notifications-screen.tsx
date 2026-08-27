@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
@@ -79,7 +79,13 @@ export function OperationsNotificationsScreen() {
         testID="operations-notifications-header"
       />
       <ScrollView contentContainerStyle={styles.list} testID="operations-notifications-list">
-        {items.length === 0 ? (
+        {feed.loading ? (
+          /* İlk yük — boş hâlle KARIŞMAZ: yüklemeyi "sakin" gibi okutmak yanlış boştu (26.08).
+             Gösterge hub'ların yerleşik deseni (ActivityIndicator). */
+          <View style={styles.pending} testID="operations-notifications-loading">
+            <ActivityIndicator color={operationsTheme.colors.olive} />
+          </View>
+        ) : items.length === 0 ? (
           <OperationsNoticeBlock
             variant="empty"
             title={t.notifications.empty.title}
@@ -99,7 +105,8 @@ export function OperationsNotificationsScreen() {
               <View style={[styles.dot, { backgroundColor: DOT_COLOR[item.dot] }]} />
               <View style={styles.rowText}>
                 <Text style={styles.rowTitle}>{item.title}</Text>
-                <Text style={styles.rowMeta}>{`${t.sections[item.section].tab} · ${item.ago}`}</Text>
+                {/* Tür şapkası başta (26.08): operatör satırın NE olduğunu bölümden önce okur. */}
+                <Text style={styles.rowMeta}>{`${item.label} · ${t.sections[item.section].tab} · ${item.ago}`}</Text>
               </View>
             </PressableSurface>
           ))
@@ -151,6 +158,10 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
+  },
+  pending: {
+    paddingVertical: operationsTheme.space['6xl'],
+    alignItems: 'center',
   },
   rule: {
     fontFamily: operationsTheme.font.body[400],

@@ -31,6 +31,8 @@ import { useOperationsSections } from './sections-context';
 
 interface UseOperationsNotificationsResult {
   rows: OperationsNotification[];
+  /** İlk yük HENÜZ gelmedi — boş listeyle karışmaz: yüklemeyi yokluk gibi okutmak yanlış boştu (26.08). */
+  loading: boolean;
   /** Rol süzmesinden sonraki OKUNMAMIŞ sayısı — zilin rozeti. */
   unread: number;
   /** Ekran açılışının "gördüm" beyanı: akışı okundu sayar, rozet söner; satırlar listede kalır. */
@@ -39,12 +41,14 @@ interface UseOperationsNotificationsResult {
 
 export function useOperationsNotifications(): UseOperationsNotificationsResult {
   const sections = useOperationsSections();
-  const [raw, setRaw] = useState<{ id: string; readAt: string | null; mapped: OperationsNotification }[]>([]);
+  // `null` = henüz ölçülmedi; boş dizi = ölçüldü ve gerçekten boş.
+  const [raw, setRaw] = useState<{ id: string; readAt: string | null; mapped: OperationsNotification }[] | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       const now = new Date();
-      void fetchNotifications()
+      // `staff` kitlesi: karma profilde müşteri satırı operasyon akışına düşmesin (API künyesi).
+      void fetchNotifications(undefined, 'staff')
         .catch(() => null) // env'siz ortamda istemci kurulamadan fırlar — liste son hâlinde kalır
         .then((result) => {
           // Hata/misafirde eldeki liste korunur: rozeti sıfıra düşürmek, bozuk ölçümü sağlıklı
@@ -56,20 +60,21 @@ export function useOperationsNotifications(): UseOperationsNotificationsResult {
   );
 
   const markAllSeen = useCallback(() => {
-    if (!raw.some((row) => row.readAt === null)) return;
+    if (raw === null || !raw.some((row) => row.readAt === null)) return;
     const simdi = new Date().toISOString();
-    setRaw((current) => current.map((row) => (row.readAt === null ? { ...row, readAt: simdi } : row)));
+    setRaw((current) => (current === null ? current : current.map((row) => (row.readAt === null ? { ...row, readAt: simdi } : row))));
     // İyimser; düşerse bir sonraki odak tazelemesi gerçeği geri getirir (rozet yeniden yanar).
-    void markAllNotificationsRead().catch(() => undefined);
+    void markAllNotificationsRead('staff').catch(() => undefined);
   }, [raw]);
 
   return useMemo(() => {
     const visible = visibleNotifications(
-      raw.map((row) => ({ ...row.mapped, readAt: row.readAt })),
+      (raw ?? []).map((row) => ({ ...row.mapped, readAt: row.readAt })),
       sections,
     );
     return {
       rows: visible,
+      loading: raw === null,
       unread: visible.filter((row) => row.readAt === null).length,
       markAllSeen,
     };

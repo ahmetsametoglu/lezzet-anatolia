@@ -26,18 +26,18 @@ jest.mock('expo-router', () => ({
 /* Fixture dosyası uca bağlanınca SİLİNDİ (kendi künyesinin verdiği söz); ekranın bütün hâllerini
    çizebilmek için satırlar artık testin kendi sabitinde — v2'nin aynı altı satırı. */
 const FEED_ROWS: OperationsNotification[] = [
-  { id: 'n1', title: 'Yeni sipariş onaylandı — toplama bekliyor', section: 'warehouse', dot: 'warehouse', ago: '2 dk' },
-  { id: 'n2', title: 'Rota güncellendi — 1 durak eklendi', section: 'courier', dot: 'courier', ago: '9 dk' },
-  { id: 'n3', title: 'Eksik toplama — karar bekliyor', section: 'management', dot: 'attention', ago: '14 dk' },
-  { id: 'n4', title: 'Yeni şikâyet — Bozuk', section: 'management', dot: 'alert', ago: '12 dk' },
-  { id: 'n5', title: 'Uyuşmazlık göründü — gün sonu', section: 'money', dot: 'alert', ago: '25 dk' },
-  { id: 'n6', title: 'Azalan stok tespiti — tetik yakında', section: 'management', dot: 'quiet', ago: '1 sa' },
+  { id: 'n1', label: 'Sipariş', title: 'Yeni sipariş onaylandı — toplama bekliyor', section: 'warehouse', dot: 'warehouse', ago: '2 dk' },
+  { id: 'n2', label: 'Rota', title: 'Rota güncellendi — 1 durak eklendi', section: 'courier', dot: 'courier', ago: '9 dk' },
+  { id: 'n3', label: 'Sipariş', title: 'Eksik toplama — karar bekliyor', section: 'management', dot: 'attention', ago: '14 dk' },
+  { id: 'n4', label: 'Şikâyet', title: 'Yeni şikâyet — Bozuk', section: 'management', dot: 'alert', ago: '12 dk' },
+  { id: 'n5', label: 'Para', title: 'Uyuşmazlık göründü — gün sonu', section: 'money', dot: 'alert', ago: '25 dk' },
+  { id: 'n6', label: 'Stok', title: 'Azalan stok tespiti — tetik yakında', section: 'management', dot: 'quiet', ago: '1 sa' },
 ];
 
 let mockFeed: OperationsNotification[] = [];
 const mockMarkAllSeen = jest.fn();
 jest.mock('./use-notifications.hook', () => ({
-  useOperationsNotifications: () => ({ rows: mockFeed, unread: mockFeed.length, markAllSeen: mockMarkAllSeen }),
+  useOperationsNotifications: () => ({ rows: mockFeed, loading: false, unread: mockFeed.length, markAllSeen: mockMarkAllSeen }),
 }));
 
 const t = messages;
@@ -63,8 +63,9 @@ describe('OperationsNotificationsScreen', () => {
     expect(screen.getByText(t.notifications.scopeAll)).toBeOnTheScreen();
     expect(screen.getByText('Rota güncellendi — 1 durak eklendi')).toBeOnTheScreen();
     // Alt satır cihazda kuruluyor: sözleşme bölüm KİMLİĞİ taşır, etiketi ekran çözer.
-    expect(screen.getByText('Kurye · 9 dk')).toBeOnTheScreen();
-    expect(screen.getByText('Depo · 2 dk')).toBeOnTheScreen();
+    // Tür şapkası başta (26.08): satır NE olduğunu bölümden önce söyler.
+    expect(screen.getByText('Rota · Kurye · 9 dk')).toBeOnTheScreen();
+    expect(screen.getByText('Sipariş · Depo · 2 dk')).toBeOnTheScreen();
   });
 
   it('tek şapkada kapsam bölümün ADIYLA yazılır — "tüm bölümler" DENMEZ', async () => {

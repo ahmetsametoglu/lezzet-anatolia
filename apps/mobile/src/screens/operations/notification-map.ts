@@ -26,6 +26,8 @@ export type NotificationDot = 'courier' | 'warehouse' | 'attention' | 'alert' | 
 export interface OperationsNotification {
   id: string;
   title: string;
+  /** Kısa TÜR etiketi ("Belge") — bir bakışta ayırt etme (26.08); sözlükten gelir. */
+  label: string;
   section: OperationsSection;
   dot: NotificationDot;
   ago: string;
@@ -34,6 +36,10 @@ export interface OperationsNotification {
 /** Türün düştüğü bölüm — yüzeye özgü (webde karşılığı rota). Yeni personel türü eşlemesini BURAYA getirir. */
 const SECTION: Partial<Record<AppNotificationKind, OperationsSection>> = {
   document_undeliverable: 'management',
+  ticket_opened: 'management',
+  stock_low: 'warehouse',
+  run_close_mismatch: 'money',
+  b2b_application_received: 'management',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (yukarıdaki künye). */
@@ -58,6 +64,7 @@ export function toOperationsNotification(row: NotificationRow, now: Date): Opera
   return {
     id: row.id,
     title: brief?.title ?? FALLBACK.title,
+    label: brief?.label ?? 'Bildirim',
     section: SECTION[row.kind as AppNotificationKind] ?? FALLBACK.section,
     // Paylaşılan ton (`alert`/`quiet`) mobil nokta paletinin alt kümesi — doğrudan geçer.
     dot: brief?.tone ?? FALLBACK.dot,

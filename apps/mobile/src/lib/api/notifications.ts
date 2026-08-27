@@ -16,8 +16,18 @@ import type { ApiResult } from './client';
 export type NotificationsPage = z.infer<typeof MeNotificationsPageSchema>;
 export type NotificationRow = NotificationsPage['notifications'][number];
 
-export function fetchNotifications(cursor?: string): Promise<ApiResult<NotificationsPage>> {
-  const query = cursor === undefined ? '' : `?cursor=${encodeURIComponent(cursor)}`;
+/**
+ * KİTLE (26.08 — karma profil dersi, uç künyesi): müşteri ekranı/rozeti varsayılanla (customer)
+ * okur; operasyon kabuğu `staff` ister — personel satırı müşteri akışına, müşteri satırı personel
+ * akışına düşmez.
+ */
+export type NotificationAudience = 'customer' | 'staff';
+
+export function fetchNotifications(cursor?: string, audience: NotificationAudience = 'customer'): Promise<ApiResult<NotificationsPage>> {
+  const params = new URLSearchParams();
+  if (cursor !== undefined) params.set('cursor', cursor);
+  if (audience !== 'customer') params.set('audience', audience);
+  const query = params.size > 0 ? `?${params.toString()}` : '';
   return authorizedFetch(`/api/v1/me/notifications${query}`, MeNotificationsPageSchema);
 }
 
@@ -32,8 +42,9 @@ export function markNotificationRead(id: string): Promise<ApiResult<z.infer<type
   return authorizedFetch(`/api/v1/me/notifications/${id}/read`, DoneSchema, { method: 'POST' });
 }
 
-export function markAllNotificationsRead(): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
-  return authorizedFetch('/api/v1/me/notifications/read-all', DoneSchema, { method: 'POST' });
+export function markAllNotificationsRead(audience: NotificationAudience = 'customer'): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
+  const query = audience === 'customer' ? '' : `?audience=${audience}`;
+  return authorizedFetch(`/api/v1/me/notifications/read-all${query}`, DoneSchema, { method: 'POST' });
 }
 
 export function dismissNotification(id: string): Promise<ApiResult<z.infer<typeof DoneSchema>>> {

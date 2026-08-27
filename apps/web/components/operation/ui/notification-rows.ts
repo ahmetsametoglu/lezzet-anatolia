@@ -17,6 +17,8 @@ export interface OpsNotificationRow {
   id: string;
   title: string;
   tone: StaffNotificationTone;
+  /** Kısa TÜR etiketi ("Belge") — bir bakışta ayırt etme (26.08); sözlükten gelir. */
+  label: string;
   /** Operasyon rotası — hedefsiz satırda null: satır tıklanmaz, yalnız haber verir. */
   href: string | null;
   createdAt: string;
@@ -26,10 +28,15 @@ export interface OpsNotificationRow {
  * Hedef ADRESTEN, içerikten değil: `document_undeliverable` hedefi siparişin kendisi (dispatch
  * `input.target`ı aynen taşır) — operatör "hangi belge" sorusunu sipariş detayında cevaplar.
  * Talep hedefi kuyruğun `?t=` sözleşmesine gider (seçili yazışma adreste yaşar — tickets künyesi).
+ * Hedef nesnesi ekranlaşmamış türler EKRANA gider: eşik düşüşü tedarik önerisine (eşik listesi
+ * orada), kapanış uyuşmazlığı teslimat/rota ekranına, kurumsal başvuru müşteri/onay kuyruğuna.
  */
-export function opsNotificationHref(row: Pick<MeNotification, 'targetType' | 'targetId'>): string | null {
+export function opsNotificationHref(row: Pick<MeNotification, 'kind' | 'targetType' | 'targetId'>): string | null {
   if (row.targetType === 'order' && row.targetId) return `/operations/orders/${row.targetId}`;
   if (row.targetType === 'ticket' && row.targetId) return `/operations/tickets?t=${row.targetId}`;
+  if (row.kind === 'stock_low') return '/operations/procurement';
+  if (row.kind === 'run_close_mismatch') return '/operations/deliveries';
+  if (row.kind === 'b2b_application_received') return '/operations/customers';
   return null;
 }
 
@@ -40,6 +47,7 @@ export function toOpsNotificationRow(row: MeNotification): OpsNotificationRow {
     // Genel başlık webde KISA: "uygulamayı güncelleyin" tavsiyesi mobile özgü (orada sürüm eskir).
     title: brief?.title ?? 'Yeni bir bildirim',
     tone: brief?.tone ?? 'quiet',
+    label: brief?.label ?? 'Bildirim',
     href: opsNotificationHref(row),
     createdAt: row.createdAt,
   };

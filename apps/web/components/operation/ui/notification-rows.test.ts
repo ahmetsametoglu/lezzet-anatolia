@@ -39,7 +39,13 @@ describe('toOpsNotificationRow', () => {
 
 describe('opsNotificationHref', () => {
   it('talep kuyruğun ?t= sözleşmesine; hedefi düşmüş satır tıklanmaz', () => {
-    expect(opsNotificationHref({ targetType: 'ticket', targetId: 't-1' })).toBe('/operations/tickets?t=t-1');
-    expect(opsNotificationHref({ targetType: 'order', targetId: null })).toBeNull();
+    expect(opsNotificationHref({ kind: 'ticket_opened', targetType: 'ticket', targetId: 't-1' })).toBe('/operations/tickets?t=t-1');
+    expect(opsNotificationHref({ kind: 'document_undeliverable', targetType: 'order', targetId: null })).toBeNull();
+  });
+
+  it('yeni personel türleri EKRANLARINA gider (26.08): eşik→tedarik, kapanış→teslimat, başvuru→müşteriler', () => {
+    expect(opsNotificationHref({ kind: 'stock_low', targetType: 'variant', targetId: 'v-1' })).toBe('/operations/procurement');
+    expect(opsNotificationHref({ kind: 'run_close_mismatch', targetType: null, targetId: null })).toBe('/operations/deliveries');
+    expect(opsNotificationHref({ kind: 'b2b_application_received', targetType: 'customer', targetId: 'c-1' })).toBe('/operations/customers');
   });
 });

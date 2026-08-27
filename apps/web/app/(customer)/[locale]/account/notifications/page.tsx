@@ -38,7 +38,7 @@ export default async function NotificationsPage({ params }: NotificationsPagePro
   const [device, customerId] = await Promise.all([detectDevice(), currentCustomerId()]);
   if (!customerId) redirect(`/${locale}${routing.pathnames['/login'][locale]}`);
 
-  const feed = await listNotifications(serviceDb(), { profileId: customerId, limit: FEED_PAGE_SIZE });
+  const feed = await listNotifications(serviceDb(), { profileId: customerId, audience: 'customer', limit: FEED_PAGE_SIZE });
 
   return (
     <SiteFrame device={device} locale={locale} accountChrome={{ back: { label: t.back, href: '/account' }, title: t.title }}>

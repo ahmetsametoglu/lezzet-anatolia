@@ -32,7 +32,7 @@ export async function customerNotificationBadgeAction(): Promise<CustomerResult<
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    const unread = await unreadNotificationCount(serviceDb(), customerId);
+    const unread = await unreadNotificationCount(serviceDb(), customerId, 'customer');
     return { data: { unread, channel: notificationsChannelName(customerId) }, errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
@@ -56,7 +56,7 @@ interface StaffNotificationsFeed {
 export async function staffNotificationsFeedAction(): Promise<ActionResult<StaffNotificationsFeed>> {
   try {
     const user = await requireStaff();
-    const feed = await listNotifications(serviceDb(), { profileId: user.profileId, limit: STAFF_PANEL_LIMIT });
+    const feed = await listNotifications(serviceDb(), { profileId: user.profileId, audience: 'staff', limit: STAFF_PANEL_LIMIT });
     return {
       data: {
         // Daraltma sözleşmenin kendisi (`me-notifications.schema` künyesi): `profileId`/`dedupeKey`/
@@ -85,7 +85,7 @@ export async function staffNotificationsFeedAction(): Promise<ActionResult<Staff
 export async function staffMarkAllNotificationsReadAction(): Promise<ActionResult<{ ok: true }>> {
   try {
     const user = await requireStaff();
-    await markAllNotificationsRead(serviceDb(), user.profileId);
+    await markAllNotificationsRead(serviceDb(), user.profileId, 'staff');
     return { data: { ok: true }, error: null };
   } catch (e) {
     return { data: null, error: getErrorMessage(e) };

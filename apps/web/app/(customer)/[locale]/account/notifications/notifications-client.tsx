@@ -1,8 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Locale } from '@lezzet/i18n';
-import { notificationSentence } from '@lezzet/i18n';
+import type { Locale, NotificationVisualTone } from '@lezzet/i18n';
+import { notificationSentence, notificationVisual } from '@lezzet/i18n';
 import { BELL_EVENT, type MeNotification } from '@lezzet/types';
 import { createClient } from '@/lib/supabase/client';
 import { Link } from '@/i18n/navigation';
@@ -27,6 +27,25 @@ import type { Messages, NotificationsFeedPage } from './notifications-types';
   Kabuktaki zil ayrı bir komponent; ikisi `NOTIFICATIONS_CHANGED_EVENT` ile aynı sekmede senkron
   kalır — sayı yine SUNUCUDAN okunur, olay yalnız "bak" der (zil kanalının aynı felsefesi).
 */
+
+/*
+  TÜRÜN GÖRSEL KİMLİĞİ (kullanıcı kararı 26.08): satır tek tip metin değil — ikon dairesi + tür
+  etiketi + cümle. Anlam paylaşılan sözlükten (`notificationVisual`), renk BURADA token'a çevrilir
+  (semantik ton → müşteri paleti; sipariş durum hapının aynı aileleri).
+*/
+const TONE_BG: Record<NotificationVisualTone, string> = {
+  positive: 'bg-olive-bg',
+  attention: 'bg-honey-bg',
+  issue: 'bg-terracotta-bg',
+  neutral: 'bg-sand-100',
+};
+
+const TONE_TEXT: Record<NotificationVisualTone, string> = {
+  positive: 'text-olive-dark',
+  attention: 'text-honey',
+  issue: 'text-terracotta-bright',
+  neutral: 'text-muted',
+};
 
 interface NotificationsClientProps {
   t: Messages;
@@ -178,18 +197,28 @@ export function NotificationsClient({ t, locale, first, channel }: Notifications
           {rows.map((row) => {
             const target = notificationTarget(row);
             const sentence = notificationSentence(row, locale);
+            const visual = notificationVisual(row);
             const inner = (
               <>
-                {/* Okunmamış nokta: satırın hâli — sayı değil, vurgu. Okununca söner, satır kalır. */}
+                {/* İkon dairesi: türün yüzü — renk ailesi durum haplarıyla aynı anlamda. */}
                 <span
                   aria-hidden
-                  className={['mt-1.5 h-2 w-2 flex-none rounded-full', row.readAt === null ? 'bg-olive' : 'bg-transparent'].join(' ')}
-                />
+                  className={['flex h-9 w-9 flex-none items-center justify-center rounded-full text-icon-sm', TONE_BG[visual.tone]].join(' ')}
+                >
+                  {visual.icon}
+                </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="flex items-center gap-2">
+                    <span className={['font-sans text-micro font-bold uppercase tracking-[0.05em]', TONE_TEXT[visual.tone]].join(' ')}>
+                      {visual.label(locale)}
+                    </span>
+                    <span className="font-sans text-micro text-muted">{dateOf.format(new Date(row.createdAt))}</span>
+                    {/* Okunmamış nokta: satırın hâli — okununca söner, satır kalır. */}
+                    {row.readAt === null && <span aria-hidden className="h-1.5 w-1.5 flex-none rounded-full bg-olive" />}
+                  </span>
                   <span className={['font-sans text-body-sm text-ink', row.readAt === null ? 'font-semibold' : ''].join(' ')}>
                     {sentence}
                   </span>
-                  <span className="font-sans text-micro text-muted">{dateOf.format(new Date(row.createdAt))}</span>
                 </span>
               </>
             );
