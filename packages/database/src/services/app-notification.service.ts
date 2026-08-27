@@ -6,6 +6,7 @@ import {
   NotificationDeliveryInsertSchema,
   NotificationDeliverySchema,
   NotificationDeliveryUpdateSchema,
+  STAFF_NOTIFICATION_KINDS,
   type AppNotification,
   type AppNotificationInsert,
   type AppNotificationUpdate,
@@ -28,6 +29,22 @@ import { BaseDbService } from '../core/base.service';
  * liste iki satır gösterirdi (mobil kabuğun kendi künyesindeki tuzağın DB hâli).
  */
 const UNREAD = { isNullFields: ['read_at', 'dismissed_at'] as string[] };
+
+/**
+ * KİTLE süzgeci (26.08 — cihaz turu bulgusu): tek tabloda iki kitle yaşıyor ve KARMA profil
+ * (aynı kişi hem müşteri hem personel) gerçek: dev hesabında 120 personel satırı müşteri akışına
+ * düşüp müşteri sözlüğünde 120 kez "Hesabınızla ilgili bir gelişme var." diye çizildi — kullanıcıya
+ * hiçbir şey söylemeyen tek tip bir liste. Müşteri yüzeyi personel türünü GÖRMEZ ve SAYMAZ;
+ * operasyon yüzeyi yalnız personel türünü görür. Küme `STAFF_NOTIFICATION_KINDS` (types) —
+ * saklama süpürmesiyle aynı liste, aynı kural: yeni personel türü enum'a girerken oraya da girer.
+ */
+export type NotificationAudience = 'customer' | 'staff';
+
+/** PostgREST `or=(…)` grubu — tek koşullu grup düz süzgeçtir; `in` listesi buradan kurulur. */
+function audienceFilter(audience: NotificationAudience): string {
+  const liste = STAFF_NOTIFICATION_KINDS.join(',');
+  return audience === 'staff' ? `kind.in.(${liste})` : `kind.not.in.(${liste})`;
+}
 
 export class AppNotificationService extends BaseDbService<AppNotification, AppNotificationInsert, AppNotificationUpdate> {
   constructor(supabase: SupabaseClient) {
@@ -52,7 +69,7 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
    */
   listByProfile(
     profileId: string,
-    opts: { cursor?: KeysetCursor; limit?: number; includeDismissed?: boolean } = {},
+    opts: { cursor?: KeysetCursor; limit?: number; includeDismissed?: boolean; audience?: NotificationAudience } = {},
   ): Promise<Page<AppNotification>> {
     return this.getPage(
       { profileId },
@@ -62,6 +79,7 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
         keysetAfter: opts.cursor,
         limit: opts.limit ?? 20,
         ...(opts.includeDismissed ? {} : { isNullFields: ['dismissed_at'] }),
+        ...(opts.audience ? { orFilters: [audienceFilter(opts.audience)] } : {}),
       },
     );
   }
@@ -96,8 +114,8 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
   }
 
   /** Rozet sayacı — satır taşımadan (`head: true`), kısmi indeksin üstünde. */
-  unreadCount(profileId: string): Promise<number> {
-    return this.count({ profileId }, UNREAD);
+  unreadCount(profileId: string, audience?: NotificationAudience): Promise<number> {
+    return this.count({ profileId }, { ...UNREAD, ...(audience ? { orFilters: [audienceFilter(audience)] } : {}) });
   }
 
   /**
@@ -105,13 +123,18 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
    * saati yeterli (customer_phone'daki iki-saat dersinin tersi: orada damga sessizlik hesabına
    * giriyordu, burada yalnız "dolu mu" diye okunuyor).
    */
-  async markAllRead(profileId: string): Promise<void> {
-    const { error } = await this.supabase
+  async markAllRead(profileId: string, audience?: NotificationAudience): Promise<void> {
+    let query = this.supabase
       .from('notification')
       .update({ read_at: new Date().toISOString() })
       .eq('profile_id', profileId)
       .is('read_at', null)
       .is('dismissed_at', null);
+    // Kitle süzgeci "gördüm" beyanına da uygulanır: müşteri ekranının "tümünü okundu say"ı
+    // personel satırını okundu yapsaydı, operasyon rozeti kimse görmeden sönerdi (tersi de aynı).
+    if (audience === 'staff') query = query.in('kind', [...STAFF_NOTIFICATION_KINDS]);
+    else if (audience === 'customer') query = query.not('kind', 'in', `(${STAFF_NOTIFICATION_KINDS.join(',')})`);
+    const { error } = await query;
     if (error) throw error;
   }
 

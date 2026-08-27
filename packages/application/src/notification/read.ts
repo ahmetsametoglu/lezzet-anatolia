@@ -1,6 +1,10 @@
-import { AppNotificationService } from '@lezzet/database';
+import { AppNotificationService, type NotificationAudience } from '@lezzet/database';
 import type { AppNotification, KeysetCursor } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+// Çağıran yüzey kitlesini BEYAN EDER (zorunlu — servis künyesindeki karma-profil dersi):
+// müşteri yüzeyi personel satırını görmez/saymaz, operasyon yüzeyi yalnız onları görür.
+export type { NotificationAudience };
 
 /*
   ── BİLDİRİM OKUMASI (14.13) — web ve mobilin ORTAK kapısı ──────────────────────────────────────
@@ -31,19 +35,19 @@ export interface NotificationFeed {
  */
 export async function listNotifications(
   db: SupabaseClient,
-  input: { profileId: string; cursor?: KeysetCursor; limit?: number },
+  input: { profileId: string; audience: NotificationAudience; cursor?: KeysetCursor; limit?: number },
 ): Promise<NotificationFeed> {
   const service = new AppNotificationService(db);
   const [page, unread] = await Promise.all([
-    service.listByProfile(input.profileId, { cursor: input.cursor, limit: input.limit }),
-    service.unreadCount(input.profileId),
+    service.listByProfile(input.profileId, { cursor: input.cursor, limit: input.limit, audience: input.audience }),
+    service.unreadCount(input.profileId, input.audience),
   ]);
   return { rows: page.rows, nextCursor: page.nextCursor, unread };
 }
 
 /** Rozet — zil çalınca liste çekmeden tazelenir (kanal yükü boş, sayıyı bu kapı söyler). */
-export function unreadNotificationCount(db: SupabaseClient, profileId: string): Promise<number> {
-  return new AppNotificationService(db).unreadCount(profileId);
+export function unreadNotificationCount(db: SupabaseClient, profileId: string, audience: NotificationAudience): Promise<number> {
+  return new AppNotificationService(db).unreadCount(profileId, audience);
 }
 
 /**
@@ -58,9 +62,13 @@ export async function markNotificationRead(
   return oldu ? 'ok' : 'not_found';
 }
 
-/** Tümünü okundu say — "hepsini gördüm" düğmesi. Yalnız kendi satırları (imza bunu zorlar). */
-export function markAllNotificationsRead(db: SupabaseClient, profileId: string): Promise<void> {
-  return new AppNotificationService(db).markAllRead(profileId);
+/**
+ * Tümünü okundu say — "hepsini gördüm" beyanı. Yalnız kendi satırları (imza bunu zorlar) ve yalnız
+ * KENDİ KİTLESİ: müşteri ekranının beyanı personel satırını okundu yapsaydı operasyon rozeti kimse
+ * görmeden sönerdi (tersi de aynı).
+ */
+export function markAllNotificationsRead(db: SupabaseClient, profileId: string, audience: NotificationAudience): Promise<void> {
+  return new AppNotificationService(db).markAllRead(profileId, audience);
 }
 
 /** Satırı gizle — listeden kalkar, rozetten düşer; geçmiş silinmez (satır durur). */

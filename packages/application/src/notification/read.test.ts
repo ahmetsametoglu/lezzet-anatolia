@@ -44,6 +44,32 @@ afterAll(async () => {
   await purgeTestData(db, { profileIds });
 });
 
+describe('kitle süzgeci (karma profil — 26.08 cihaz turu bulgusu)', () => {
+  it('personel satırı müşteri akışına düşmez; iki kitle ayrı sayar ve ayrı "gördüm" der', async () => {
+    const karma = await musteri('Karma Profil');
+    await satir(karma, 1); // müşteri türü (ticket_replied)
+    const personel = await notifications.record({
+      profileId: karma,
+      kind: 'document_undeliverable',
+      dedupeKey: `test-read-staff:${stamp}:${karma}`,
+    });
+    if (!personel) throw new Error('personel satırı kurulamadı');
+
+    // Müşteri akışı personel satırını GÖRMEZ ve SAYMAZ; personel akışı tersini yapar.
+    const musteriAkisi = await listNotifications(db, { profileId: karma, audience: 'customer' });
+    expect(musteriAkisi.rows.map((r) => r.kind)).toEqual(['ticket_replied']);
+    expect(musteriAkisi.unread).toBe(1);
+    const personelAkisi = await listNotifications(db, { profileId: karma, audience: 'staff' });
+    expect(personelAkisi.rows.map((r) => r.kind)).toEqual(['document_undeliverable']);
+    expect(personelAkisi.unread).toBe(1);
+
+    // Müşteri ekranının "tümünü okundu say"ı personel rozetini SÖNDÜRMEZ.
+    await markAllNotificationsRead(db, karma, 'customer');
+    expect(await unreadNotificationCount(db, karma, 'customer')).toBe(0);
+    expect(await unreadNotificationCount(db, karma, 'staff')).toBe(1);
+  });
+});
+
 describe('sahiplik', () => {
   it('BAŞKASININ satırı işaretlenemez — not_found döner ve satır dokunulmamış kalır', async () => {
     const sahip = await musteri('Sahip');
@@ -53,7 +79,7 @@ describe('sahiplik', () => {
     expect(await markNotificationRead(db, { profileId: yabanci, notificationId: id })).toBe('not_found');
     expect(await dismissNotification(db, { profileId: yabanci, notificationId: id })).toBe('not_found');
 
-    const feed = await listNotifications(db, { profileId: sahip });
+    const feed = await listNotifications(db, { profileId: sahip, audience: 'customer' });
     expect(feed.rows[0]).toMatchObject({ id, readAt: null, dismissedAt: null }); // dokunulmadı
     expect(feed.unread).toBe(1);
   });
@@ -64,9 +90,9 @@ describe('sahiplik', () => {
     await satir(a, 1);
     await satir(b, 1);
 
-    await markAllNotificationsRead(db, a);
-    expect(await unreadNotificationCount(db, a)).toBe(0);
-    expect(await unreadNotificationCount(db, b)).toBe(1); // komşuya dokunulmadı
+    await markAllNotificationsRead(db, a, 'customer');
+    expect(await unreadNotificationCount(db, a, 'customer')).toBe(0);
+    expect(await unreadNotificationCount(db, b, 'customer')).toBe(1); // komşuya dokunulmadı
   });
 });
 
@@ -80,7 +106,7 @@ describe('akış davranışı', () => {
     await markNotificationRead(db, { profileId: id, notificationId: okunacak });
     await dismissNotification(db, { profileId: id, notificationId: gizlenecek });
 
-    const feed = await listNotifications(db, { profileId: id });
+    const feed = await listNotifications(db, { profileId: id, audience: 'customer' });
     expect(feed.rows.map((r) => r.id)).toContain(okunacak); // akış — gelen kutusu değil
     expect(feed.rows.map((r) => r.id)).not.toContain(gizlenecek);
     expect(feed.unread).toBe(1);
@@ -92,12 +118,12 @@ describe('akış davranışı', () => {
     const id = await musteri('Sayfalı');
     for (let i = 1; i <= 5; i += 1) await satir(id, i);
 
-    const ilk = await listNotifications(db, { profileId: id, limit: 2 });
+    const ilk = await listNotifications(db, { profileId: id, audience: 'customer', limit: 2 });
     expect(ilk.rows).toHaveLength(2);
     expect(ilk.nextCursor).not.toBeNull();
 
-    const ikinci = await listNotifications(db, { profileId: id, cursor: ilk.nextCursor!, limit: 2 });
-    const ucuncu = await listNotifications(db, { profileId: id, cursor: ikinci.nextCursor!, limit: 2 });
+    const ikinci = await listNotifications(db, { profileId: id, audience: 'customer', cursor: ilk.nextCursor!, limit: 2 });
+    const ucuncu = await listNotifications(db, { profileId: id, audience: 'customer', cursor: ikinci.nextCursor!, limit: 2 });
 
     const hepsi = [...ilk.rows, ...ikinci.rows, ...ucuncu.rows].map((r) => r.id);
     expect(new Set(hepsi).size).toBe(5); // ne tekrar ne kayıp

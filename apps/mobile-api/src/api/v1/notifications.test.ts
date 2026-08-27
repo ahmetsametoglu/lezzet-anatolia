@@ -81,6 +81,35 @@ describe('GET /me/notifications', () => {
   it('Bearer olmadan 401', async () => {
     expect((await app.request('/api/v1/me/notifications')).status).toBe(401);
   });
+
+  it('KİTLE süzgeci uçtan geçer (26.08): personel satırı müşteri akışına/rozetine düşmez, staff akışı tersini görür', async () => {
+    // Karma profil gerçeği: aynı kişiye bir müşteri + bir personel satırı.
+    const personelSatiri = await notifications.record({
+      profileId: musteriId,
+      kind: 'document_undeliverable',
+      payload: {},
+      dedupeKey: `test-uc-staff:${stamp}`,
+    });
+    if (!personelSatiri) throw new Error('personel satırı kurulamadı');
+
+    const musteriAkisi = await dataOf<{ notifications: { kind: string }[] }>(
+      await app.request('/api/v1/me/notifications', auth(musteriToken)),
+    );
+    expect(musteriAkisi.notifications.some((r) => r.kind === 'document_undeliverable')).toBe(false);
+
+    const personelAkisi = await dataOf<{ notifications: { kind: string }[]; unread: number }>(
+      await app.request('/api/v1/me/notifications?audience=staff', auth(musteriToken)),
+    );
+    expect(personelAkisi.notifications.map((r) => r.kind)).toEqual(['document_undeliverable']);
+    expect(personelAkisi.unread).toBe(1);
+
+    // read-all müşteri kitlesiyle: personel rozeti SÖNMEZ (öteki yüzeyin "gördüm"ü çalınmaz).
+    await app.request('/api/v1/me/notifications/read-all', authPost(musteriToken));
+    const staffRozet = await dataOf<{ unread: number }>(
+      await app.request('/api/v1/me/notifications/badge?audience=staff', auth(musteriToken)),
+    );
+    expect(staffRozet.unread).toBe(1);
+  });
 });
 
 describe('okundu / gizle / rozet', () => {

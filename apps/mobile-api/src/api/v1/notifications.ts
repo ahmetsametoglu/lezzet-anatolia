@@ -31,6 +31,12 @@ import type { V1Env } from './auth';
 const ListQuerySchema = z.object({
   cursor: z.string().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(DEFAULT_PAGE_SIZE),
+  /**
+   * KİTLE — çağıran yüzey beyan eder (kapı künyesi: karma profilde personel satırı müşteri
+   * akışına düşüp sözlükte genel cümleye iniyordu; ölçüldü 26.08 — 120 tek tip satır).
+   * Varsayılan müşteri: uygulamanın bildirim ekranı/rozeti; operasyon kabuğu `staff` ister.
+   */
+  audience: z.enum(['customer', 'staff']).default('customer'),
 });
 
 const IdParamSchema = z.string().uuid();
@@ -63,6 +69,7 @@ notifications.get('/', async (c) => {
 
   const feed = await listNotifications(serviceDb(), {
     profileId: c.get('customerId'),
+    audience: parsed.data.audience,
     cursor: decodeCursor(parsed.data.cursor),
     limit: parsed.data.limit,
   });
@@ -83,9 +90,10 @@ notifications.get('/', async (c) => {
   return ok(c, MeNotificationsPageSchema.parse(body));
 });
 
-/** Rozet — zil çalınca (kanal yükü boş) liste çekmeden tazeleme. */
+/** Rozet — zil çalınca (kanal yükü boş) liste çekmeden tazeleme. Kitle listedeki kuralın aynısı. */
 notifications.get('/badge', async (c) => {
-  const unread = await unreadNotificationCount(serviceDb(), c.get('customerId'));
+  const audience = c.req.query('audience') === 'staff' ? 'staff' : 'customer';
+  const unread = await unreadNotificationCount(serviceDb(), c.get('customerId'), audience);
   return ok(c, MeNotificationBadgeSchema.parse({ unread }));
 });
 
@@ -102,9 +110,10 @@ notifications.post('/:id/read', async (c) => {
   return ok(c, { done: true });
 });
 
-/** "Hepsini gördüm" — rozeti tek dokunuşta kapatır; imza gereği yalnız kendi satırları. */
+/** "Hepsini gördüm" — rozeti tek dokunuşta kapatır; imza gereği yalnız kendi satırları ve KENDİ kitlesi. */
 notifications.post('/read-all', async (c) => {
-  await markAllNotificationsRead(serviceDb(), c.get('customerId'));
+  const audience = c.req.query('audience') === 'staff' ? 'staff' : 'customer';
+  await markAllNotificationsRead(serviceDb(), c.get('customerId'), audience);
   return ok(c, { done: true });
 });
 

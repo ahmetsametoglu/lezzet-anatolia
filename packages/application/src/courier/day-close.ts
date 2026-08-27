@@ -1,4 +1,5 @@
 import { DeliveryRunCloseService, DeliveryRunCollectionService, DeliveryRunService, DeliveryZoneService } from '@lezzet/database';
+import { notifyRunCloseMismatch } from '../notification/staff-events';
 import type { CloseDeliveryRunResult, DeliveryRunClose } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { listCourierDay, readCourierRun, type CourierRunBriefView, type CourierStop } from './day';
@@ -104,7 +105,22 @@ export async function closeCourierDay(
   const run = await new DeliveryRunService(db).getById(input.runId);
   if (!run || run.courierId !== input.courierId) return { ok: false, reason: 'not_found' };
 
-  return new DeliveryRunService(db).close({ ...input, actorId: input.courierId });
+  const sonuc = await new DeliveryRunService(db).close({ ...input, actorId: input.courierId });
+  // UYUŞMAZLIK ZİLİ (26.08): kapanış YAZILDIKTAN sonra ve sonucu değiştirmeden — fark çıkan
+  // kapanış para tarafının kapı zilini çalar (üretici kendi içinde sessiz; kapanış asla geri
+  // dönmez). Fark üç kanalın herhangi birinde olabilir; sıfır fark sessizliktir.
+  if (
+    sonuc.ok &&
+    ((sonuc.differenceCashCents ?? 0) !== 0 || (sonuc.differenceCardCents ?? 0) !== 0 || (sonuc.differenceChequeCents ?? 0) !== 0)
+  ) {
+    await notifyRunCloseMismatch(db, {
+      runReferenceNo: run.referenceNo,
+      differenceCashCents: sonuc.differenceCashCents ?? 0,
+      differenceCardCents: sonuc.differenceCardCents ?? 0,
+      differenceChequeCents: sonuc.differenceChequeCents ?? 0,
+    });
+  }
+  return sonuc;
 }
 
 /** Run künyesi — sahiplik süzgeçli: kayıt bu kuryenin değilse `null`. */

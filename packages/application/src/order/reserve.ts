@@ -1,5 +1,6 @@
 import { OrderService, ReservationService, SettingsService, type Db } from '@lezzet/database';
 import type { OrderItem } from '@lezzet/types';
+import { notifyStockLowAfterReserve } from '../notification/staff-events';
 
 /**
  * Siparişin stoğunu ayırır — **iki ödeme yolunun ortak adımı**.
@@ -53,6 +54,13 @@ export async function reserveOrderStock(db: Db, input: ReserveOrderInput): Promi
       return { ok: false, variantId: item.variantId, available: result.available };
     }
   }
+
+  // EŞİK ZİLİ (26.08): ayırma kullanılabilir stoğu düşürdü — dokunulan varyantlar eşiğin altına
+  // İNDİYSE depo+yönetim haber alır (üretici sessiz-künyeli, dedupe "ilk iniş"; künyesi orada).
+  await notifyStockLowAfterReserve(db, {
+    warehouseId: order.warehouseId,
+    variantIds: [...new Set(input.items.map((item) => item.variantId))],
+  });
 
   return { ok: true, expiresAt: ttlMinutes === null ? null : new Date(Date.now() + ttlMinutes * 60_000).toISOString() };
 }

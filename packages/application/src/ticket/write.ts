@@ -5,6 +5,7 @@ import { ticketAttachmentScope } from '@lezzet/storage';
 import type { Order, PreferredLanguage, Ticket, TicketType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CustomerOrderLookup } from '../order/customer-orders';
+import { notifyTicketOpened } from '../notification/staff-events';
 import { ringTicketsBell } from '../realtime/bell';
 import { getCustomerTicket } from './read';
 import type { CustomerTicketView } from './ticket-types';
@@ -194,6 +195,8 @@ export async function openCustomerTicket(
   // Yeni talep kuyruğa düştü — operatörün ekranı elle yenilenmeden görsün (16.8). Zil PORT DEĞİL:
   // teyit maili gibi paket bağımlılığı istemiyor, tek `fetch` ve sessiz.
   await ringTicketsBell();
+  // Yönetimin zili de duysun (26.08): kuyruğa düşme ÂNI haberdir — üretici kendi içinde sessiz.
+  await notifyTicketOpened(db, { ticketId: ticket.id, type: input.type, referenceNo: order?.referenceNo ?? null });
   return { status: 'ok', ticket };
 }
 

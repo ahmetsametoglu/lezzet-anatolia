@@ -13,6 +13,7 @@ import {
 } from '@lezzet/domain-core';
 import type { CompanyInfo, PreferredLanguage, UserProfile } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { notifyB2bApplicationReceived } from '../notification/staff-events';
 
 import { checkEuVatNumber } from '../b2b/vat-check';
 
@@ -173,6 +174,10 @@ export async function submitB2bApplication(
       country: isEuVat ? 'DE' : 'FR',
     });
   }
+
+  // ONAY KUYRUĞUNUN KAPI ZİLİ (26.08): başvuru yazıldıktan sonra, sonucu değiştirmeden — yönetim
+  // "yeni başvuru düştü"yü zilden okur (üretici kendi içinde sessiz; başvuru kaydı zilden önemli).
+  await notifyB2bApplicationReceived(db, customerId);
 
   return { status: 'ok', profile: updated };
 }
