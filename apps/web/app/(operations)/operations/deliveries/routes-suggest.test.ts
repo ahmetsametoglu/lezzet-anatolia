@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   SUGGESTION_LIMIT,
   buildSuggestions,
-  distanceKm,
   type LocatedPlace,
   type SuggestionInputs,
 } from './routes-suggest';
@@ -139,13 +138,9 @@ describe('buildSuggestions', () => {
   });
 });
 
-describe('distanceKm', () => {
-  it('aynı nokta sıfır', () => {
-    expect(distanceKm(STRASBOURG, STRASBOURG)).toBe(0);
-  });
-
-  it('bilinen mesafeyi tutturur — Strasbourg ↔ Colmar ~60 km', () => {
-    // Gerçek koordinatlar; kuş uçuşu ölçüt olduğu için karayolu (~70 km) beklenmez.
-    expect(distanceKm(STRASBOURG, { lat: 48.0779, lng: 7.3585 })).toBeCloseTo(63, 0);
-  });
-});
+/*
+  `distanceKm` testleri BURADAN KALKTI (27.08): fonksiyon motorun kopyasıydı, söküldü.
+  Kapsam kaybı yok — motorun kendi testi (`domain-core/delivery/distance.test.ts`) aynı iki iddiayı
+  ve fazlasını taşıyor: aynı nokta sıfır, komşu şehir onlarca km, simetri, ve kopyada hiç
+  olmayan "koordinat yoksa NULL" dalı.
+*/

@@ -26,7 +26,7 @@ import { placesLabel } from '@/components/operation/ui/labels';
 import { PostalCodePicker } from './postal-code-picker';
 import { RouteHours } from './route-hours';
 import type { DayHourKey } from '@/lib/settings/day-hours';
-import { distanceKm } from './routes-suggest';
+import { nearestOf } from '@lezzet/domain-core';
 import { ROUTE_NOTES } from './deliveries-labels';
 import type { RouteView, RoutesData } from './routes-read';
 import type { CodeStatsView, SuggestionView } from './routes-types';
@@ -175,10 +175,21 @@ export function RoutesDesktop(props: RoutesViewProps) {
     return (draft?.codes ?? []).map((code) => coords.get(keyOfPoint(code))).filter((point) => point !== undefined);
   }, [data.points, draft?.codes]);
 
-  /** Rotanın hiç kodu yoksa uzaklık ÖLÇÜLEMEZ ve yazılmaz (`CLAUDE §1`) — "0 km" ölçmüş gibi okuturdu. */
+  /**
+   * Rotanın hiç kodu yoksa uzaklık ÖLÇÜLEMEZ ve yazılmaz (`CLAUDE §1`) — "0 km" ölçmüş gibi okuturdu.
+   *
+   * **Karar MOTORUN** (`nearestOf`, 27.08). Önceki hâli `Math.min(...)` ile en yakını burada
+   * seçiyor ve uzaklığı sayfa klasöründeki bir `distanceKm` KOPYASINDAN alıyordu — motorda aynı
+   * haversine zaten vardı ve kopyada iki koruma eksikti: koordinat yoksa `null` dönüşü ve `asin`
+   * girdisinin kırpılması. Kopya söküldü; motorun sürümü koordinatsız adayı eler ve hiçbiri
+   * ölçülemiyorsa `null` der — yani "hiç çıpa yok" ile "çıpaların koordinatı yok" artık aynı
+   * cevabı veriyor ve ikisi de sıfır sayılmıyor.
+   */
   const distanceOf = useCallback(
-    (point: { lat: number; lng: number }): number | null =>
-      anchors.length === 0 ? null : Math.round(Math.min(...anchors.map((anchor) => distanceKm(anchor, point)))),
+    (point: { lat: number; lng: number }): number | null => {
+      const nearest = nearestOf(point, anchors.map((anchor) => ({ item: anchor, point: anchor })));
+      return nearest === null ? null : Math.round(nearest.distanceKm);
+    },
     [anchors],
   );
 

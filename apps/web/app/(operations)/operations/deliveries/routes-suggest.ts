@@ -45,22 +45,15 @@ const REQUEST_WEIGHT = 1;
 /** Rayda kaç öneri gösterilir. Liste değil DAVET: on satır karar kolaylaştırmaz, erteletir. */
 export const SUGGESTION_LIMIT = 6;
 
-/**
- * İki nokta arası kuş uçuşu uzaklık (km) — haversine.
- *
- * Kuş uçuşu YETERLİ ve bilerek: soru "kaç dakika sürer" değil *"güzergâhın yakınında mı"*. Gerçek
- * yol mesafesi bir dış servis ister ve kararı değiştirmez — 30 km'lik bir yer yolla 38 km olabilir,
- * ikisi de "yakın"dır.
- */
-export function distanceKm(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
-  const R = 6371;
-  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
-  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
-  const h =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos((a.lat * Math.PI) / 180) * Math.cos((b.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(h));
-}
+/*
+  KUŞ UÇUŞU UZAKLIK BURADAN KALKTI (27.08) — motorun kopyasıydı.
+
+  `distanceKm` burada yeniden yazılmıştı: aynı haversine, aynı `R = 6371`. Ama motordaki sürümde
+  (`domain-core/delivery/distance.ts`) iki koruma vardı, kopyada yoktu: koordinat eksikse `null`
+  dönüşü (`CLAUDE §1` — "ölçülemeyen değer SIFIR değildir") ve `Math.asin` girdisinin kırpılması.
+  Tek çağıranı `routes.desktop.tsx`ti ve orada "en yakınını seç" de elle yazılıydı (`Math.min`);
+  ikisi de motora bağlandı (`nearestOf`). Motorun testi kopyanınkini tamamen kapsıyor.
+*/
 
 /** Motorun girdisi: koordinatı çözülmüş bir aday yer. */
 export interface LocatedPlace {
