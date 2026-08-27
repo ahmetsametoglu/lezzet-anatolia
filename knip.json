@@ -1,13 +1,27 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "ignoreBinaries": ["supabase", "stripe"],
-  "ignore": ["design/**"],
+  "ignoreBinaries": [
+    "supabase",
+    "stripe"
+  ],
+  "ignore": [
+    "design/**"
+  ],
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.ts", "e2e/setup/*.setup.ts"]
+      "entry": [
+        "scripts/*.ts",
+        "e2e/setup/*.setup.ts"
+      ]
     },
     "apps/web": {
-      "entry": ["lib/guard.ts"]
+      "entry": [
+        "lib/guard.ts"
+      ]
+    },
+    "packages/domain-core": {
+      "includeEntryExports": true
     }
-  }
+  },
+  "ignoreExportsUsedInFile": true
 }

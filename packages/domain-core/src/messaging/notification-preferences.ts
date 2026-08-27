@@ -28,6 +28,18 @@ export function notificationToken(random?: () => number): string {
  * Kampanya gönderilebilir mi — **OPT-IN**: anahtar yoksa izin yoktur.
  *
  * Sessizliği rıza saymak hem yanlış hem hukuken savunulamaz; kampanya açık onay ister.
+ *
+ * **BEKLEYEN(14.8): bu kapıyı SORAN bir gönderim yolu henüz yok.** Rıza toplanıyor (checkout,
+ * tercih sayfası, müşteri ekranı) ama kampanya e-postası elle gönderim aracı yazılmadı; araç
+ * geldiğinde alıcı listesi bu fonksiyondan süzülecek. Kapı önce yazıldı ve bu bilinçli: izin
+ * kuralını gönderim gününe bırakmak, o gün acele bir `consent?.email` kontrolü doğururdu ve
+ * opt-in/opt-out ayrımı (aşağıdaki künye) sessizce kaybolurdu.
+ *
+ * `@public` etiketi `knip`e "bu bilerek dışa açık" der ve onu susturur — ama borcu SUSTURMAZ:
+ * `BEKLEYEN(14.8)` işaretini `docs:check` denetliyor, yani görev satırı kapanmadan bu not ayakta
+ * kalır ve kapandığında işaret çürükse commit'ten geçmez. Sessiz kalan makine, kayıt tutan işaret.
+ *
+ * @public
  */
 export function marketingAllowed(consent: MarketingConsent | null | undefined, channel: MarketingChannel): boolean {
   return consent?.[channel]?.granted === true;

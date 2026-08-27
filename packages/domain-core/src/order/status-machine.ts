@@ -36,9 +36,6 @@ const TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
   cancelled: [],
 };
 
-/** Hızlı satış yolu — kapı önü: tek adımda kapanır, rezervasyon yapılmaz (DOMAIN §4). */
-export const FAST_SALE_PATH = ['draft', 'completed'] as const;
-
 /** Terminal durumlar — buradan çıkış yoktur. */
 export function isTerminal(status: OrderStatus): boolean {
   return TRANSITIONS[status].length === 0;

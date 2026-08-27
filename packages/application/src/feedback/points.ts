@@ -8,6 +8,7 @@ import {
 } from '@lezzet/database';
 import {
   CAPPED_POINTS_REASONS,
+  SOURCELESS_POINTS_REASONS,
   POINTS_DAILY_CAP_DEFAULT,
   POINTS_DAILY_CAP_KEY,
   POINTS_SETTING_KEYS,
@@ -118,11 +119,27 @@ export async function awardPoints(
 ): Promise<PointsEntry | null> {
   const entries = new PointsEntryService(db);
 
-  // Tekillik iki AYRI indekste: kaynaklı sebepte "bu satırdan zaten verildi mi"
-  // (`points_entry_source_key`), kaynaksızda "bugün zaten verildi mi" (`points_entry_visit_day`).
-  const zatenVar = input.refId
-    ? await entries.hasEntryFor(input.customerId, input.reason, input.refId)
-    : await entries.hasEntryOnBusinessDay(input.customerId, input.reason);
+  /* Tekillik iki AYRI indekste: kaynaklı sebepte "bu satırdan zaten verildi mi"
+     (`points_entry_source_key`), kaynaksızda "bugün zaten verildi mi" (`points_entry_visit_day`).
+
+     Hangisinin geçerli olduğunu SEBEP belirler, çağıranın `refId` verip vermemesi değil (denetim
+     26.08). Önceki hâli `input.refId ? … : …` diye soruyordu ve bugün doğru cevabı veriyordu —
+     ama tesadüfen: her çağıran, kaynaklı sebepte `refId` geçmeyi HATIRLADIĞI için. Hatırlamayan
+     bir çağıran çıktığında (ya da yeni bir sebep eklendiğinde) kapı sessizce yanlış indekse
+     bakardı: kaynaklı bir ödül "bugün verildi mi" diye sorulur, aynı satırdan ikinci kez
+     yazılabilir hâle gelirdi. Kural motorda zaten yazılıydı (`SOURCELESS_POINTS_REASONS`) ve
+     kimse sormuyordu. */
+  const kaynaksiz = SOURCELESS_POINTS_REASONS.includes(input.reason);
+  if (!kaynaksiz && !input.refId) {
+    // Kaynaklı sebepte `ref_id` yoksa tekillik HİÇBİR yerde tutulmaz: `points_entry_source_key`
+    // kısmi indeksi `ref_id is not null` ile sınırlı, yani satır sessizce yazılır ve aynı ödül
+    // ikinci kez verilebilir. Sessizce `null` yazmaktansa fırlatmak doğru — bu bir çalışma anı
+    // durumu değil, çağıranın sözleşme ihlali (paketin `reserveOrderStock` emsali).
+    throw new Error(`[awardPoints] "${input.reason}" kaynaklı bir sebep, refId zorunlu`);
+  }
+  const zatenVar = kaynaksiz
+    ? await entries.hasEntryOnBusinessDay(input.customerId, input.reason)
+    : await entries.hasEntryFor(input.customerId, input.reason, input.refId!);
   if (zatenVar) return null;
 
   const [profile, settings] = await Promise.all([new UserProfileService(db).getById(input.customerId), pointsSettings(db)]);

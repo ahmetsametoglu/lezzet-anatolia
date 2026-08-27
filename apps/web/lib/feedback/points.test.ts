@@ -286,4 +286,21 @@ describe('doğrudan puan yazımı', () => {
     expect(await awardPoints({ customerId: b2cId, reason: 'review', refId: orderId })).toBeNull();
     expect((await getPointsBalance(b2cId)).balance).toBe(20);
   });
+
+  /*
+    Hangi tekillik kuralının geçerli olduğunu SEBEP belirler, çağıranın `refId` verip vermemesi
+    değil (denetim 26.08). Kapı eskiden `refId`nin varlığına bakıyordu ve doğru cevabı TESADÜFEN
+    veriyordu: her çağıran kaynaklı sebepte `refId` geçmeyi hatırlıyordu. Hatırlamayan bir çağıran
+    kaynaklı bir ödülü "bugün verildi mi" indeksine sordurur, aynı satırdan ikinci kez yazdırırdı —
+    ve hata vermeden. Kural motorda (`SOURCELESS_POINTS_REASONS`) yazılıydı, kimse sormuyordu.
+  */
+  it('kaynaklı sebep refId’siz YAZILAMAZ — tekilliği tutacak indeks kalmazdı', async () => {
+    await expect(awardPoints({ customerId: b2cId, reason: 'review' })).rejects.toThrow(/refId zorunlu/);
+  });
+
+  it('kaynaksız sebep (ziyaret) refId İSTEMEZ — tekilliği güne bağlıdır', async () => {
+    // `visit` kümede yazılı; kapı onu `ref_id` beklemeden, gün indeksiyle karşılar.
+    expect(await awardPoints({ customerId: b2cId, reason: 'visit' })).not.toBeNull();
+    expect(await awardPoints({ customerId: b2cId, reason: 'visit' })).toBeNull();
+  });
 });

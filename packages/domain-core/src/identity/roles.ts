@@ -12,9 +12,6 @@ import type { UserRole } from '@lezzet/types';
  * içindir — "veremezsin" demek yetmez, neden veremediği yazmalı.
  */
 
-/** Operasyon (personel) rolleri — `customer` hariç hepsi. */
-export const OPERATION_ROLES = ['admin', 'warehouse', 'courier', 'accounting'] as const;
-
 export function isOperationRole(role: UserRole): boolean {
   return role !== 'customer';
 }

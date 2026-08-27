@@ -77,6 +77,14 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 
 ~~Modül durumu (26.07.2026): başlamadı.~~ — 27.07'de yazıldı; altbilgi bir ay boyunca "başlamadı" demeye devam etti ve denetimde (26.08) düzeltildi. Kapanmış görev satırlarının üstünde duran bayat bir özet, satırların kendisinden daha çok okunuyor.
 
+**Ölü ihracat bekçisi (26.08):** `knip` bu paketi **hiç görmüyordu** — `src/index.ts` bir `export *` barrel'ı ve knip barrel'dan yeniden ihraç edilen her şeyi "kullanılıyor" sayıyor. Yani nobody-calls-it sınıfı makineyle hiç yakalanmıyordu. `includeEntryExports` ile açıldı; gürültüyü de ölçtük: çıplak hâli **69 tip bulgusu** üretiyordu ve hepsi kendi dosyasında kullanılan imza tipiydi — yalan söyleyen uyarı okunmaz. `ignoreExportsUsedInFile` ile gürültü sıfıra indi, geriye **dört gerçek bulgu** kaldı ve dördü de ayrı cinsten çıktı:
+
+- `OPERATION_ROLES` · `FAST_SALE_PATH` — hiçbir yerde, kendi dosyasında bile anılmıyordu. Silindi. İlki ayrıca bir tehlikeydi: `isOperationRole` (`role !== 'customer'`) ile aynı kümenin ikinci tanımıydı ve ikisi bir gün ayrışabilirdi.
+- `SOURCELESS_POINTS_REASONS` — **kural motorda yazılıydı, uygulama kendi sorusunu soruyordu.** `awardPoints` tekillik indeksini `input.refId`nin varlığına göre seçiyordu ve bugün doğru cevabı TESADÜFEN veriyordu: her çağıran kaynaklı sebepte `refId` geçmeyi hatırlıyordu. Hatırlamayan bir çağıran (ya da yeni bir sebep) kaynaklı bir ödülü gün indeksine sordurur, aynı satırdan ikinci kez yazdırırdı — hata vermeden. Motora bağlandı; sözleşme ihlali artık fırlatıyor.
+- `marketingAllowed` — **özelliğinden önce yazılmış bir kapı.** Rıza toplanıyor ama kampanya gönderim aracı (`14.8`) yok. Silinmedi: `BEKLEYEN(14.8)` işaretiyle kayda geçti ve testi yazıldı — bağlandığı gün doğru beklediği bilinsin.
+
+Ölü kod aramaya çıkıp **iki bulgu** ile dönmek bu turun dersi: `knip`in "kullanılmıyor" dediği her şey çöp değildir; bir kısmı yazılmış ama hiç bağlanmamış kuraldır ve silmek, açığı kapatmak değil gizlemektir.
+
 **Denetim notu (26.08):** on bir satırın davranışı kodda tek tek doğrulandı — anılan 21 fonksiyonun 21'i yerinde ve anlatıldığı gibi çalışıyor. Aynı denetimde çıkan iki açık ayrıca kaydedildi:
 - `03.3`'ün fiyat sırası satırı **üç basamak** yazıyor; kodda **dört** var — fiyat grubu (B2B alt kademesi) 20.08'de eklenmiş, satıra işlenmemiş. Kodu ve testi tam (`resolve-price.test.ts`, 21 test).
 - `03.1`'in `stockEffectOf`'u yazıldığı günden 26.08'e kadar **tek bir dalıyla** tüketiliyordu. `gateFor` ile artık durum geçişi kapısının ölçütü o (`ORDER_LIFECYCLE` "Geçiş İZİNLİ olabilir ama HER KAPIDAN yazılamaz").
