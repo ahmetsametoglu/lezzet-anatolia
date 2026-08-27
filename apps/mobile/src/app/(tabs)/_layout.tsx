@@ -4,7 +4,6 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import { BottomTabBar, type BottomTabItem } from '@/components/ui/bottom-tab-bar';
 import type { IconName } from '@/components/ui/icon-paths';
 import { useAppLocale } from '@/lib/i18n/app-locale';
-import { useCartSync } from '@/screens/customer-kit/cart-store';
 import { useWholesale } from '@/screens/customer-kit/use-me.hook';
 import { useStaffLanding } from '@/screens/operations/use-staff-landing.hook';
 // `typeof messages` için DEĞER bağı gerek (Messages tipi JSON'dan türer) — `import type` olmaz.
@@ -73,13 +72,12 @@ export default function TabsLayout() {
      ezici çoğunluğu perakende ve her açılışta bir kere yanlış sekme görürlerdi. */
   const wholesale = useWholesale();
 
-  /* SUNUCU SEPETİ BURADAN AÇILIR — kökten değil, MÜŞTERİ kabuğundan. Kök `_layout` operasyon
-     kabuğuyla ORTAK ve personelin sepeti yoktur: orada takmak, her personel oturumunda
-     `profile_not_found` dönen bir tur açardı. Sekme kabuğu ise müşteri ağacının altındaki her
-     yığın ekranı (ürün, tarif, sepet) boyunca MONTE KALIR, yani tur bir kez açılır.
-     Önceden sepet ekranı takıyordu; o hâlde açılıştaki yüzen düğme sayacı sunucudaki satırları
-     henüz saymıyordu — sepet dolu, rozet boş görünüyordu. */
-  useCartSync();
+  /* SUNUCU SEPETİNİN KAPISI ARTIK KÖKTE (28.08) — burada DEĞİL. Kapı bu kabuktayken "müşteri
+     ağacının her yığın ekranı boyunca monte kalır" varsayımına dayanıyordu; ölçüm onu yalanladı:
+     sepet · ürün · paket · tarif · checkout `(tabs)` grubunun DIŞINDA ve derin bağlantıyla
+     doğrudan açıldıklarında bu kabuk hiç monte olmuyor. Gerekçenin tamamı `app/_layout.tsx`te.
+     Buraya YENİDEN EKLENMEZ: kök zaten bu ağacı da kapsıyor, ikinci çağrı aynı turu iki kez
+     saydırır. */
 
   /* AÇILIŞTA ROL KARARI (21.97) — personel bu kabukta karşılanır ve operasyona taşınır. Kararın
      tamamı ve gerekçeleri hook'ta; burada olmasının sebebi `/me` aboneliğinin (`useWholesale`)

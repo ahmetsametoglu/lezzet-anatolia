@@ -6631,3 +6631,42 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kapatan tur tarafından ESKİ bloğunda da işaretlenmeli. Aksi hâlde defter, kodun gerisinde kalır
   ve sıradaki ajan olmayan bir işi planlar (CLAUDE §5'in "durumun tek sahibi görev satırıdır"
   kuralının bakımı).
+
+- [x] (21.123) **SUNUCU SEPETİNİN KAPISI SEKME KABUĞUNDAYDI — derin bağlantıyla gelen müşterinin
+  sepeti sunucuya hiç yazılmıyordu** (cihaz turu bulgusu 28.08, fiziksel Android)
+  `touches:` `apps/mobile/src/app/_layout.tsx` · `apps/mobile/src/app/(tabs)/_layout.tsx` ·
+  `apps/mobile/src/screens/customer-kit/cart-store.ts` ·
+  `apps/mobile/src/screens/customer-kit/cart-sync-gate.test.tsx`
+
+  **Arıza.** Sunucu turunun tek kapısı `useCartSync()` ve o `(tabs)/_layout`ta takılıydı. Gerekçesi
+  yazılıydı: *"kabuk müşteri ağacının altındaki her yığın ekranı boyunca MONTE KALIR"*. Bu normal
+  gezinmede doğru, **derin bağlantıda değil** — sepet · ürün · paket · tarif · checkout rotalarının
+  hepsi `(tabs)` grubunun DIŞINDA. Bildirimden ya da paylaşılan bir linkten doğrudan açan girişli
+  müşteride kapı hiç açılmıyor, `source` `device`ta kilitleniyordu.
+
+  **Ölçüm (temiz ortamda tekrar üretildi; mobile-api 200/25 ms, Metro 200, Supabase 200):**
+  soğuk başlangıç + `/cart` derin bağlantısı → ekran **"0 articles"**, sunucuda 2 satır duruyor.
+  Kabuk monte değilken ürün eklendi → ekran **"1 articles · 0,00 €"**, sunucu 2 satırda kaldı.
+  Sekmeye dokunulur dokunulmaz → **"4 articles · 2,93 €"**, yerel niyet devredildi (3 satır).
+  Ağırlığı şurada: checkout HER ZAMAN sunucudaki sepeti okur — müşteri gördüğünden başka bir sepeti
+  onaylayabiliyordu (turun başında ölçüldü: ekran 43,10 €, checkout 22,61 €).
+
+  **Çözüm.** Kapı köke taşındı (`app/_layout`), `(tabs)`taki kopya kaldırıldı. Körlemesine değil:
+  kök yığından personel kabuğu ve kimliği TOKEN olan ziyaretçi yolları da geçiyor, onlar
+  `CARTLESS_TREES` ile dışarıda (`(operations)` · `feedback` · `invite`) ve `useCartSync(enabled)`
+  kapalıyken `getSupabase()` bile çağrılmıyor. Liste HARİÇ tutmadır: yeni bir müşteri rotası
+  eklendiğinde kapı kendiliğinden açık gelir.
+
+  **Eski gerekçe ölçülüp çürütüldü:** *"personelin sepeti yoktur, kökte takmak her personel
+  oturumunda `profile_not_found` dönen bir tur açardı"* deniyordu. Bugün personelin de profil satırı
+  var; `/api/v1/me/cart` yönetim ve depo oturumlarında **200 + boş sepet** dönüyor. Yine de kapı
+  operasyonda kapalı tutuldu — bedeli yok, gereksiz istek de yok.
+
+  **Doğrulama.** Cihazda: derin bağlantıdan ürün **ve** paket ekleme sunucuya yazıldı, sepet
+  43,93 € ↔ checkout 43,93 € beş satırda birebir uyuştu. Ziyaretçi yolu bozulmadı (geri bildirim
+  daveti açıldı; süresi dolmuş token'da doğru "Lien introuvable" ekranı). Testler 876/876, lint temiz.
+
+  **Ders.** Bir kapının kapsamı, takıldığı kabuğun *gezinmeyle* monte olduğu ağaçtır — **derin
+  bağlantı o ağacı atlar**. Kabuk-dışı rotası olan her kapı bu soruyu sormalı. Bekçi iki yönlü:
+  `cart-sync-gate.test.tsx` kapalı kapının Supabase'e dokunmadığını, `feedback-routes.test.tsx` ise
+  ziyaretçi yolunda kapının açılmadığını koruyor.

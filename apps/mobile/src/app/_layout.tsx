@@ -2,7 +2,7 @@
 import '@/theme/unistyles';
 
 import { loadAsync } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -17,6 +17,7 @@ import { usePushNavigation } from '@/lib/push/use-push-navigation.hook';
 import { usePushRegistration } from '@/lib/push/use-push-registration.hook';
 import { applyFontScale, readFontScale } from '@/lib/settings/font-scale';
 import { ensureFreshInstall } from '@/lib/storage/device-store';
+import { useCartSync } from '@/screens/customer-kit/cart-store';
 import { appFontAssets } from '@/theme/fonts';
 
 /*
@@ -32,6 +33,19 @@ import { appFontAssets } from '@/theme/fonts';
   aileleri KÜRESEL kaydeder — ikinci bir çağrı aynı işi tekrar eder ve hangi ekranın hangi aileyi
   yüklediği sorusunu doğururdu.
 */
+
+/**
+ * SEPETİ OLMAYAN ÜÇ AĞAÇ — kök yığından geçen ama alışverişle ilgisi olmayan yollar.
+ *
+ * · `(operations)` — personel kabuğu; personelin sepeti yok.
+ * · `feedback` · `invite` — kimlik TOKEN'ın kendisidir, ziyaretçi oturumsuz gelir (e-postadaki
+ *   link). Burada sepet turu açmak, oturumu olmayan birini oturum altyapısına bağlardı.
+ *
+ * DAHİL etme değil HARİÇ tutma listesi olması bilinçli: yeni bir müşteri rotası eklendiğinde kapı
+ * kendiliğinden AÇIK gelir. Ters kurgu, kapıyı takmayı unutan her yeni ekranda 28.08'de ölçülen
+ * arızayı sessizce geri getirirdi (`cart-store.ts` künyesi).
+ */
+const CARTLESS_TREES = new Set(['(operations)', 'feedback', 'invite']);
 export default function RootLayout() {
   const { theme } = useUnistyles();
 
@@ -100,6 +114,26 @@ export default function RootLayout() {
   usePushRegistration();
   // Bildirime dokunuş → doğru ekran (uygulama içi listeyle AYNI adres sözlüğü — hook künyesi).
   usePushNavigation();
+
+  /* SUNUCU SEPETİNİN KAPISI KÖKE TAŞINDI (ölçüldü 28.08, fiziksel Android).
+     Önce sekme kabuğundaydı ve gerekçesi şuydu: "kabuk müşteri ağacının altındaki her yığın
+     ekranı boyunca MONTE KALIR". Bu normal gezinmede doğru, DERİN BAĞLANTIDA değil — sepet ·
+     ürün · paket · tarif · checkout rotalarının hepsi `(tabs)` grubunun DIŞINDA ve bildirimden
+     ya da paylaşılan bir linkten doğrudan açıldıklarında kabuk hiç monte olmuyor. O hâlde kapı
+     kapalı kalıyordu ve sonucu sessizdi: girişli müşterinin yazmaları sunucuya HİÇ gitmiyor,
+     görünüm de çözülmüyordu — sepet "1 ürün" deyip toplamı "0,00 €" gösteriyordu. Checkout ise
+     her zaman SUNUCUDAKİ sepeti okur; yani müşteri gördüğünden başka bir sepeti onaylayabilirdi.
+
+     Kökte durmasının eski gerekçesi ÖLÇÜLDÜ ve artık geçerli değil: "personelin sepeti yoktur,
+     orada takmak her personel oturumunda `profile_not_found` dönen bir tur açardı" deniyordu.
+     Bugün personelin de profil satırı var (auth↔profile trigger) ve `/api/v1/me/cart` yönetim ile
+     depo oturumlarında `200` + BOŞ sepet dönüyor. Maliyet personel başına tek bir boş istek.
+
+     Kapı burada `useVisitPoints`/`usePushRegistration` ile aynı sınıftadır: bir ekrana
+     bağlanamayan, kök seviyeli yan etki — ama körlemesine değil: kök yığın müşterinin alışveriş
+     ağacından İBARET DEĞİL (`CARTLESS_TREES`). */
+  const segments = useSegments();
+  useCartSync(!CARTLESS_TREES.has(segments[0] ?? ''));
 
   /* KÜNYE KAPISI BURADA DEĞİL (kullanıcı kararı 10.08): kökte dururken açık oturumla uygulamayı
      her açanın önüne çıkıyordu. Soru artık anlamlı olduğu üç anda soruluyor — giriş, OAuth

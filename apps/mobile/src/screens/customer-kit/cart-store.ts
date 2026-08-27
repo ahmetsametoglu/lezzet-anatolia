@@ -42,11 +42,17 @@ import { getSupabase } from '@/lib/auth/supabase';
 
   ── OKUMA SAF, SUNUCU TURU TEK KAPIDA ───────────────────────────────────────
   `useCart()` YAN ETKİSİZDİR: abone olmak ağa çıkmaz, oturum okumaz. Sunucu turunu başlatan tek yer
-  `useCartSync()`tir ve o MÜŞTERİ SEKME KABUĞUNDA takılı (`app/(tabs)/_layout`). Ayrım bilinçli:
-  vitrin/ürün/paket ekranları sepeti yalnız SAYMAK için okuyor, o okumanın oturum altyapısına
-  bağlanması gerekmez — ve `useCart`ı yan etkili yapmak, env istemeyen onlarca komponent testini
-  `getSupabase()`e bağlardı (ölçüldü). Görünüm turu da AYNI KAPININ ardındadır: kapı kapalıyken
-  (kabuk monte değilken) ağa çıkılmaz.
+  `useCartSync()`tir ve o KÖK KABUKTA takılı (`app/_layout`). Ayrım bilinçli: vitrin/ürün/paket
+  ekranları sepeti yalnız SAYMAK için okuyor, o okumanın oturum altyapısına bağlanması gerekmez —
+  ve `useCart`ı yan etkili yapmak, env istemeyen onlarca komponent testini `getSupabase()`e
+  bağlardı (ölçüldü). Görünüm turu da AYNI KAPININ ardındadır: kapı kapalıyken ağa çıkılmaz.
+
+  KAPI SEKME KABUĞUNDAN KÖKE TAŞINDI (ölçüldü 28.08, fiziksel Android): `(tabs)` altındayken
+  yalnız sekmelerden gezilen akışı kapsıyordu, oysa sepet · ürün · paket · tarif · checkout o
+  grubun DIŞINDA. Derin bağlantıyla (bildirim, paylaşılan link) doğrudan açılan müşteri kapıyı
+  hiç açmıyor, dolayısıyla `source` `device`ta kilitleniyordu: yazmaları sunucuya gitmiyor,
+  görünümü çözülmüyordu — ekran "1 ürün · 0,00 €" gösterirken sunucuda başka bir sepet duruyordu
+  ve checkout'un okuduğu O sepetti. Gerekçenin tamamı `app/_layout.tsx` künyesinde.
 
   ── FİYAT CENT'TİR ──────────────────────────────────────────────────────────
   Biçimleme okuyan tarafın işi (`formatPrice`), depo ham tam sayı taşır — ondalık aritmetiği sepette
@@ -813,22 +819,34 @@ function setViewContext(next: ViewContext): void {
  * durmasının gerekçesi dosya künyesinde.
  *
  * DİL VE YER BURADAN GEÇER, depo onları kendi okumaz: ikisi de HOOK kaynaklı (`useAppLocale`,
- * onboarding deposu) ve modül düzeyinde bir depo hook çağıramaz. Kapı zaten kabukta takılı, yani
- * değer değiştiği an burada görünür.
+ * onboarding deposu) ve modül düzeyinde bir depo hook çağıramaz. Kapı kökte takılı, yani değer
+ * değiştiği an burada görünür.
+ *
+ * TEK YERDE TAKILIR (`app/_layout`). Sayaç (`watchers`) birden çok montajı kaldırır ama ikinci bir
+ * çağrı hiçbir şey KAZANDIRMAZ: abonelik zaten tekil, tur zaten açık. İkinci kapı, kapının nerede
+ * olduğu sorusunu iki cevaplı yapar.
+ *
+ * `enabled` KAPIYI KAPATIR, çünkü kök yığın müşterinin alışveriş ağacından İBARET DEĞİL: personel
+ * kabuğu ve kimliği TOKEN olan ziyaretçi yolları (geri bildirim · davet) da oradan geçiyor. Onlarda
+ * sepet diye bir kavram yok ve kapıyı açmak, oturumsuz bir ziyaretçiyi Supabase oturum altyapısına
+ * bağlardı — `use-me.hook` künyesinde ölçümüyle yazılı ders. Kapalıyken hook hiçbir şeye DOKUNMAZ:
+ * `getSupabase()` bile çağrılmaz (ölçüldü 28.08: çağrılınca `feedback-routes` testi env istedi).
  */
-export function useCartSync(): void {
+export function useCartSync(enabled = true): void {
   const locale = useAppLocale();
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
 
   useEffect(() => {
+    if (!enabled) return undefined;
     startWatching();
     return stopWatching;
-  }, []);
+  }, [enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     setViewContext({ locale, postalCode });
-  }, [locale, postalCode]);
+  }, [enabled, locale, postalCode]);
 }
 
 // ── YAZMA KAPILARI (ekranlar yalnız bunları çağırır) ────────────────────────
