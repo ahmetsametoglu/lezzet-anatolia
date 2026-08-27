@@ -14,10 +14,13 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
   a11y: `progressbar` rolü + `busy` durumu; etiket PROP'la gelir (i18n üstte).
 */
 
+/** Halkanın üç boyu — stil de bunu parametre olarak alıyor (`ring` künyesi). */
+type SpinnerSize = 'sm' | 'md' | 'lg';
+
 interface LoadingStateProps {
   /** Ekran okuyucu adı ("Yükleniyor") — ZORUNLU. */
   accessibilityLabel: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: SpinnerSize;
   /** Halkanın yanında görünen metin (isteğe bağlı). */
   label?: string;
   testID?: string;
@@ -51,7 +54,10 @@ export function LoadingState({ accessibilityLabel, size = 'md', label, testID }:
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ busy: true }}
     >
-      <Animated.View style={[styles.ring, styles[size], { transform: [{ rotate }] }]} />
+      {/* Boyut AYRI BİR STİL DEĞİL, aynı stilin parametresi (27.08 · 21.121) — gerekçe aşağıda,
+          `ring` künyesinde: `Animated.View` diziyi düzleştiriyor ve iki unistyles stili tek objede
+          buluşunca kütüphane "no updates" uyarısı veriyor. */}
+      <Animated.View style={[styles.ring(size), { transform: [{ rotate }] }]} />
       {label === undefined ? null : <Text style={styles.label}>{label}</Text>}
     </View>
   );
@@ -64,27 +70,34 @@ const styles = StyleSheet.create((theme) => ({
     justifyContent: 'center',
     gap: theme.space.md,
   },
-  ring: {
-    borderColor: theme.colors['sand-300'],
-    borderTopColor: theme.colors.olive,
-  },
-  sm: {
-    width: theme.size.spinnerSm,
-    height: theme.size.spinnerSm,
-    borderRadius: theme.size.spinnerSm / 2,
-    borderWidth: theme.border.spinnerSm,
-  },
-  md: {
-    width: theme.size.spinnerMd,
-    height: theme.size.spinnerMd,
-    borderRadius: theme.size.spinnerMd / 2,
-    borderWidth: theme.border.spinner,
-  },
-  lg: {
-    width: theme.size.spinnerLg,
-    height: theme.size.spinnerLg,
-    borderRadius: theme.size.spinnerLg / 2,
-    borderWidth: theme.border.spinner,
+  /**
+   * HALKA — boyut bir PARAMETRE, ayrı bir stil değil (27.08 · 21.121).
+   *
+   * Önce `ring` + `sm|md|lg` diye İKİ stil vardı ve ikisi `Animated.View`a dizi olarak
+   * geçiyordu (`[styles.ring, styles[size], …]`). Dizi sözdizimi doğruydu ama `Animated.View`
+   * style'ı DÜZLEŞTİRİYOR: unistyles iki stilini tek objede görüp uyarıyordu —
+   * *"we detected style object with 2 unistyles styles… might cause no updates"*. Uyarı boş
+   * değil: birleşen stiller tema değişimini alamayabilir, yani karanlık moda geçiş bu halkaya
+   * işlemeyebilirdi.
+   *
+   * **Bu KİTAPLIK DÜZLEŞTİRMESİYDİ, bizim obje yaymamız değil** — statik arama iki turdur bu
+   * yüzden temiz çıkıyordu (21.52'nin tahmini doğruymuş). Cihazda `logcat` iziyle bulundu:
+   * uyarı hub'ın yükleme anında, tam bu bileşen mount olurken düşüyordu.
+   *
+   * Dinamik stil TEK unistyles nesnesi döndürür; yanındaki `transform` düz bir objedir ve
+   * sayılmaz. Aynı desen `discover-screen`in beş yerinde daha var (künyesi orada).
+   */
+  ring: (size: SpinnerSize) => {
+    const dim = size === 'sm' ? theme.size.spinnerSm : size === 'lg' ? theme.size.spinnerLg : theme.size.spinnerMd;
+    return {
+      borderColor: theme.colors['sand-300'],
+      borderTopColor: theme.colors.olive,
+      width: dim,
+      height: dim,
+      borderRadius: dim / 2,
+      // Küçük halkanın çizgisi de ince: aynı kalınlık 16 dp'lik halkada kalın bir yüzük gibi durur.
+      borderWidth: size === 'sm' ? theme.border.spinnerSm : theme.border.spinner,
+    };
   },
   label: {
     fontFamily: theme.font.body[theme.text['card-title-sm--font-weight']],

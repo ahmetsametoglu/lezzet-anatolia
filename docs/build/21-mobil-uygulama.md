@@ -6332,7 +6332,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   önerisiz Kaydet sönük, seçim kodu doldurdu; kapsam-dışı 75001 kaydedilince vitrin soğuk
   zincir ürününü "non livrable" griledi ve katalog bölge bandını çizdi.
 
-- [~] (21.121) **CİHAZ TURU İKİ ARIZA ÖLÇTÜ — Fabric çökmesi ÇÖZÜLDÜ, unistyles nüksü açık**
+- [x] (21.121) **CİHAZ TURU İKİ ARIZA ÖLÇTÜ — ikisi de KAPANDI (Fabric çökmesi · unistyles nüksü)**
   · touches: `apps/mobile/src/components/ui/bottom-sheet.tsx`, `apps/mobile/src/components/operations/staff-menu.tsx`
 
   **1 · Fabric çökmesi (personel→müşteri geçişi) — KÖK KANITLANDI ve KAPANDI (26.08 akşamı).**
@@ -6352,12 +6352,33 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   çağrılır) · yeni `staff-menu.test` 2 (replace ANINDA çekmece kapalı mıydı casusla ölçülür —
   basışta-yönlendiren sabotaj testi düşürdü; niyetsiz kapanış yönlendirmez). 8/8 · bileşenler
   172/172 · tsc · lint temiz.
-  **2 · AÇIK KALAN — unistyles uyarısının nüksü** (21.52 Skeleton düzeltmesi 0'a indirmişti):
-  `we detected style object with 2 unistyles styles… check style prop for "View"` — turda
-  **7 kez**, hep kabuk/vitrin mount anlarında (çökme ile korelasyonu vardı ama çökme onsuz da
-  oldu — ayrı kök). Statik arama yine temiz; 21.52'nin dersi geçerli: suçlu muhtemelen bir
-  kitaplık düzleştirmesi (`Animated.View` sınıfı) ve ancak çalışma anında (`warn.ts` izi)
-  bulunur. Riski 21.52'dekiyle aynı: "no updates" — tema değişimi o bileşene işlemeyebilir.
+  **2 · unistyles nüksü — KÖK BULUNDU VE KAPANDI (27.08, cihazda).** Kayıt *"ancak çalışma anında
+  bulunur"* diyordu; öyle oldu. `adb logcat` ile taze süreç izlendi: uyarı depo hub'ının YÜKLEME
+  anında, **2 kez** düştü (`ReactNativeJS:W`, 16:09:53 ve 16:09:55).
+
+  **Suçlu `LoadingState`ti** — ekrandaki "İş listesi yükleniyor…" halkası:
+  `<Animated.View style={[styles.ring, styles[size], …]}>`. Dizi sözdizimi DOĞRUYDU; sorun RN'in
+  kendi `Animated`ının diziyi içeride tek nesneye DÜZLEŞTİRMESİ — düzleşen nesnede iki unistyles
+  anahtarı yan yana gelince kütüphane uyarıyor. Statik aramaların iki turdur temiz çıkması da bu
+  yüzdendi: aranan desen (obje yayma) hiç yoktu, kusur kitaplıktaydı. 21.52'nin tahmini doğruymuş.
+
+  **Çözüm:** boyut ayrı bir stil değil, stilin PARAMETRESİ (`styles.ring(size)` — unistyles 3.3
+  dinamik stili tek nesne döndürür). **Ölçüm: aynı senaryoda 2 → 0.** Hub tam yüklendi (D1–D7,
+  gerçek veriyle), çökme yok.
+
+  **REANIMATED MUAF ve bu da ÖLÇÜLDÜ:** `discover-screen`de aynı şekilli BEŞ kullanım var
+  (`[styles.glow, styles.glowRest, glowStyle]`). Keşif ekranı açıldı ve kart iki yöne sürüklendi —
+  **tek uyarı çıkmadı.** `react-native-reanimated`ın `Animated.View`'i düzleştirmiyor. Beş yeri
+  "ihtiyaten" değiştirmek olmayan bir arızaya makine kurmak olurdu.
+
+  **ÜÇÜNCÜSÜ OLMASIN DİYE KURAL MAKİNEYE VERİLDİ** (`lib/animated-style-guard.test.ts`): aynı arıza
+  iki kez ayrı ayrı bulunup her seferinde TEK dosyada düzeltilmişti (15.08 `skeleton.tsx`, bugün
+  `loading-state.tsx`) — 21.52 kardeşini görmedi çünkü arayacak bir yer yoktu. Bekçi importa bakıp
+  RN `Animated`ı Reanimated'dan ayırıyor; dinamik stili tek sayıyor. Üç testin ikisi bekçinin
+  kendisini ölçüyor, ihlal sabotajla doğrulandı (eski satır geri konunca dosya:satır ile yakalandı).
+
+  **1'in cihaz doğrulaması da tekrarlandı:** personel çekmecesinden "Müşteri uygulamasına geç"
+  basıldı — çökme yok, vitrin açıldı (`Merhaba, Deniz · 67000 Strasbourg`).
 
 
 - [x] (21.122) **TAZELİK TURU — on üç kaydın iddiası ölçüldü, yedisi bayat çıktı** (kullanıcı
@@ -6392,7 +6413,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (kendi bloklarında yazılı; ikisi de ölçülünce iddia edilenden küçük çıktı — 21.14'ün "14 canlı
   işaret"inin onu bayattı, 21.57'nin "36 ham kaydırıcı"sı yanlış ölçüttü ve gerçek ihlal tekti).
   Kalanlar: 21.78 + 21.48 (cihaz turlarının kalanları) · 21.88 (push — kullanıcı sırasında EN SON) ·
-  21.121 (unistyles nüksü) · **21.7'nin artığı**: Android'de cam bulanıklığı `BlurTargetView`
+  ~~21.121~~ (27.08'de kapandı: kök `LoadingState`, cihazda ölçüldü) · **21.7'nin artığı**: Android'de cam bulanıklığı `BlurTargetView`
   bağı istiyor (açık künyesi `app-bar.tsx`te, tek yerde).
 
   **İkinci ders (27.08, iki turda üst üste):** bayat bir kayıt yalnız "iş bitmiş ama işaret duruyor"
