@@ -54,15 +54,34 @@ export function canAccessWarehouse(scope: WarehouseScope, warehouseId: string): 
 /**
  * Ekranın depo seçicisinde hangi depolar listelenir.
  *
- * Kapsamı TEK depo olan personele seçici gösterilmez (`options` tek elemanlı) — seçenek sunmak,
- * olmayan bir kararı varmış gibi göstermektir. Kapsamı birden çok olana seçici gösterilir ama
- * **varsayılan seçilmez** (C2: varsayılan depo kavramı yok) — sistem onun yerine karar vermez.
+ * Seçenek TEK ise seçici gösterilmez — seçenek sunmak, olmayan bir kararı varmış gibi
+ * göstermektir. Birden çoksa seçici gösterilir ama **varsayılan seçilmez** (C2: varsayılan depo
+ * kavramı yok) — sistem onun yerine karar vermez.
+ *
+ * ── KAPSAM ≠ ELDEKİ DEPO: `allWarehouseIds` HER İKİ DALDA DA SÜZER ───────────
+ * `allWarehouseIds` "bugün seçilebilir olanlar"dır (çağıran onu aktiflikle ve neyi listelediğiyle
+ * belirler); kapsam ise "yetkim nereye yeter". İkisi ayrışır: iki depoya atanmış personelin
+ * depolarından biri KAPATILMIŞSA kapsam hâlâ iki kimlik taşır, seçilebilir tek depo kalmıştır ve
+ * doğru davranış SORMAMAKTIR.
+ *
+ * `limited` dalı 27.08'e kadar bu argümanı yok sayıyor, kapsamı olduğu gibi döndürüyordu — yani
+ * kapatılmış tesisi de seçenek sayıyor ve o hâlde *"seç"* diyordu. Fonksiyon üretimde hiç
+ * çağrılmadığı için arıza görünmüyordu; `03.12`de uygulama katmanındaki nüshayla karşılaştırılınca
+ * çıktı (`apps/web/lib/warehouse/context.ts`, `readWorkWarehouse`). Kesişim aynı zamanda
+ * argümanı ANLAMLI kılar: tek dalda kullanılan bir parametre, okuyanına yanlış söz verir.
+ *
+ * Sıra `allWarehouseIds`ten gelir, kapsamdan değil: ekranın listeleme sırası (`sort_order`)
+ * çağıranın bileceği iştir, kapsam satırı ise rastgele sıralıdır.
  */
 export function warehouseOptions(
   scope: WarehouseScope,
   allWarehouseIds: readonly string[],
 ): { options: readonly string[]; needsChoice: boolean } {
   const options =
-    scope.kind === 'all' ? [...allWarehouseIds] : scope.kind === 'limited' ? [...scope.warehouseIds] : [];
+    scope.kind === 'all'
+      ? [...allWarehouseIds]
+      : scope.kind === 'limited'
+        ? allWarehouseIds.filter((id) => scope.warehouseIds.includes(id))
+        : [];
   return { options, needsChoice: options.length > 1 };
 }

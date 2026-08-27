@@ -187,6 +187,39 @@ create index order_status_idx on public.order (warehouse_id, status, delivery_da
 -- Kuryenin günü.
 create index order_courier_idx on public.order (courier_id, delivery_date) where courier_id is not null;
 
+-- KANAL DONAR (27.08, `03.12`). Sipariş açılırken müşteri tipinden bir kez türetilir
+-- (`deriveChannel`) ve bir daha değişmez: müşteri sonradan şirkete dönse bile GEÇMİŞ siparişin
+-- kanalı sabit kalır.
+--
+-- Kural motorda yazılıydı (`canChangeChannel`, hep `false`) ama SORAN da zorlayan da yoktu —
+-- `OrderUpdateSchema` tam `partial()` olduğu için kanal sonradan yazılabilir bir alandı. İhlal
+-- eden bir yol bugün YOK; bu yüzden düzeltilen aktif bir arıza değil, **korumasız bir kural**.
+--
+-- Neden veride de zorlanıyor: kanal `vat_treatment`ı ve fiyat kademesini belirliyor. Kapanmış bir
+-- siparişin kanalını oynatmak, parası alınmış bir belgenin vergisini geriye dönük değiştirmek
+-- demektir — ve hiçbir yer itiraz etmediği için SESSİZCE olurdu. Şema yalnız kendi kapısından
+-- geçeni korur; doğrudan SQL yazan bir betiği (besleme, düzeltme, elle müdahale) yalnız burası
+-- durdurur.
+--
+-- `is distinct from` değil düz `<>`: kolon `not null`, dolayısıyla null dalı yok.
+create function public.order_channel_frozen() returns trigger
+language plpgsql
+as $$
+begin
+  if new.channel <> old.channel then
+    raise exception 'Siparişin kanalı değiştirilemez (%→%) — kanal sipariş açılırken türetilir ve donar.',
+      old.channel, new.channel
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger order_channel_frozen
+  before update of channel on public.order
+  for each row
+  execute function public.order_channel_frozen();
+
 create table public.order_item (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.order (id) on delete cascade,

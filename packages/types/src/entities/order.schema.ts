@@ -175,7 +175,21 @@ export const OrderInsertSchema = z.object({
 });
 export type OrderInsert = z.infer<typeof OrderInsertSchema>;
 
-export const OrderUpdateSchema = OrderSchema.partial().required({ id: true });
+/**
+ * `channel` YAZILAMAZ — sipariş açılırken bir kez türetilir (`deriveChannel`) ve DONAR.
+ *
+ * Kural motorda yazılıydı (`canChangeChannel`, hep `false`) ama 27.08'e kadar onu SORAN da,
+ * zorlayan da yoktu: şema tam `partial()` olduğu için kanal sonradan yazılabilir bir alandı.
+ * Bugün ihlal eden bir yol yok — yani düzeltilen aktif bir arıza değil, **korumasız bir kural**
+ * (`03.12`). Bedeli ihlal edildiği gün ödenirdi: kanal KDV işlemesini (`vat_treatment`) ve fiyat
+ * kademesini belirliyor, dolayısıyla kapanmış bir siparişin kanalını değiştirmek parası çoktan
+ * alınmış bir belgenin vergisini geriye dönük oynatırdı — sessizce, çünkü hiçbir yer itiraz etmezdi.
+ *
+ * Şemadan çıkarmak reddi ÇAĞRI YERİNE taşır; ikinci savunma veritabanındadır (`0012_order.sql`,
+ * `order_channel_frozen`). İkisi birden var çünkü şema yalnız bu kapıdan geçeni korur, doğrudan
+ * SQL yazan bir betiği korumaz.
+ */
+export const OrderUpdateSchema = OrderSchema.omit({ channel: true }).partial().required({ id: true });
 export type OrderUpdate = z.infer<typeof OrderUpdateSchema>;
 
 /**

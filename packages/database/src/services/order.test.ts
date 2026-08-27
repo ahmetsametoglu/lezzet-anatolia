@@ -286,3 +286,49 @@ describe('sipariş ailesi — euro↔cent sınırı', () => {
     expect(order.shippingFeeCents).toBe(0);
   });
 });
+
+/**
+ * KANAL DONAR (27.08, `03.12`) — kural VERİDE zorlanıyor mu?
+ *
+ * Kural motorda yazılıydı (`canChangeChannel`, hep `false`) ama 27.08'e kadar onu ne soran ne
+ * zorlayan vardı: `OrderUpdateSchema` tam `partial()`ti. Şema tarafı artık kanalı düşürüyor
+ * (`order.schema.test.ts`), ama şema yalnız KENDİ kapısından geçeni korur — besleme betiği,
+ * düzeltme sorgusu ya da elle müdahale o kapıdan geçmez. Bu dosyanın sorusu tam olarak o:
+ * **veritabanı bozuk güncellemeyi kabul ediyor mu?**
+ *
+ * Bedeli soyut değil: kanal `vat_treatment`ı ve fiyat kademesini belirliyor, yani kapanmış bir
+ * siparişin kanalını oynatmak parası çoktan alınmış bir belgenin vergisini geriye dönük
+ * değiştirmektir — ve hiçbir yer itiraz etmediği için SESSİZCE.
+ */
+describe('kanal DEĞİŞMEZ — tetikleyici (order_channel_frozen)', () => {
+  it('kanalı değiştiren doğrudan güncelleme REDDEDİLİR', async () => {
+    const { order } = await orders.create(header(), [line()]);
+    expect(order.channel).toBe('b2c');
+
+    // Servisi ATLAYARAK: şema kalkanının arkasındaki savunmayı sınıyoruz, kalkanın kendisini değil.
+    const { error } = await db.from('order').update({ channel: 'b2b' }).eq('id', order.id);
+
+    expect(error).not.toBeNull();
+    expect(error?.code).toBe('23514'); // check_violation — tetikleyicinin bildirdiği kod
+    // Ve kanal YERİNDE durmalı: red, "yarısını yazdı" demek değildir.
+    expect((await orders.getById(order.id))?.channel).toBe('b2c');
+  });
+
+  it('AYNI kanalı yeniden yazmak reddedilmez — donmak "dokunma" değil, "değiştirme" yasağıdır', async () => {
+    const { order } = await orders.create(header(), [line()]);
+
+    const { error } = await db.from('order').update({ channel: 'b2c' }).eq('id', order.id);
+
+    // Ayrım önemli: idempotent bir yazım (aynı satırı aynı değerlerle tazeleyen bir betik)
+    // kanalı da gönderebilir. Onu reddetmek, hiçbir şeyi değiştirmeyen bir işlemi kesmek olurdu.
+    expect(error).toBeNull();
+  });
+
+  it('kanala dokunmayan güncelleme etkilenmez — kalkan öteki alanları kesmez', async () => {
+    const { order } = await orders.create(header(), [line()]);
+
+    await orders.update({ id: order.id, paymentStatus: 'paid' });
+
+    expect((await orders.getById(order.id))?.paymentStatus).toBe('paid');
+  });
+});

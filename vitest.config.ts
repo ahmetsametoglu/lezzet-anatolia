@@ -91,6 +91,12 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/storefront/featured.test.ts',
   'apps/web/lib/storefront/showcase-rank.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',
+  // Bağlam kapısı (27.08) — DB'siz ama §3i'nin STATİK İZİ bunu göremez: dosya `@lezzet/database`
+  // dizgesini taşıyor, çünkü depo servisini `vi.mock` ile TAKLİT ediyor. Yani iz "DB'ye vuruyor"
+  // der, gerçek tam tersidir — üç sınır da (çerez · guard · servis) taklit, hiçbir istemci
+  // kurulmuyor. Denetimin kendi künyesi bu yanılmayı yazıyor ("statik iz orada YANILIR"); liste
+  // elle tutulmasının sebebi de bu. Koşuyla doğrulandı: birim projesinde 12/12.
+  'apps/web/lib/warehouse/context.test.ts',
   'apps/web/lib/warehouse/filter.test.ts',
 ];
 

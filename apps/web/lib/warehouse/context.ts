@@ -2,7 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { cookies } from 'next/headers';
 import { WarehouseService, serviceDb } from '@lezzet/database';
-import { canAccessWarehouse, type WarehouseScope } from '@lezzet/domain-core';
+import { canAccessWarehouse, warehouseOptions, type WarehouseScope } from '@lezzet/domain-core';
 import type { Warehouse } from '@lezzet/types';
 import { requireWarehouseScope } from '@/lib/guard';
 
@@ -108,8 +108,14 @@ export const readWarehouseContext = cache(async (): Promise<WarehouseContext> =>
  * - **`none`** — kapsamdaki depoların hepsi kapatılmış. Operatörü "depo seçin" diye boş bir
  *   seçiciye göndermek, çözemeyeceği bir iş vermek olurdu.
  *
- * Tek depolu kapsamda seçim SORULMAZ: `warehouseOptions`ın kuralı (*"seçenek sunmak, olmayan bir
- * kararı varmış gibi göstermektir"*) burada da geçerli — çerez boş olsa bile cevap bellidir.
+ * Tek seçenekte seçim SORULMAZ ve bu kural **motorundur** (`warehouseOptions`): *"seçenek sunmak,
+ * olmayan bir kararı varmış gibi göstermektir"*. 27.08'e kadar burada ELLE yeniden yazılmıştı —
+ * künye motoru alıntılıyor, kod kendi nüshasını çalıştırıyordu (`03.12`). Artık motora soruluyor.
+ *
+ * **Motora ne veriliyor, önemli:** `ctx.warehouses` — yani AKTİF ve kapsamla süzülmüş liste, ham
+ * kapsam değil. Motorun ikinci argümanı *"bugün seçilebilir olanlar"* demek; oraya ağın tamamını
+ * vermek kapatılmış bir tesisi seçenek yapardı. Kapsam denetimi zaten `readWarehouseContext`te
+ * yapıldı, burada ikinci kez sorulmaz.
  */
 type WorkWarehouse =
   | { status: 'ok'; warehouseId: string; name: string }
@@ -119,16 +125,20 @@ type WorkWarehouse =
 export async function readWorkWarehouse(): Promise<WorkWarehouse> {
   const ctx = await readWarehouseContext();
 
-  // Seçili bağlam kazanır. Kapsam doğrulaması `readWarehouseContext` içinde yapıldı — burada
-  // ikinci kez sorulmaz, yoksa aynı kuralın iki kopyası olurdu.
-  const chosen = ctx.activeWarehouseId
-    ? ctx.warehouses.find((w) => w.id === ctx.activeWarehouseId)
-    : ctx.warehouses.length === 1
-      ? ctx.warehouses[0]
-      : null;
+  const { options, needsChoice } = warehouseOptions(
+    ctx.scope,
+    ctx.warehouses.map((w) => w.id),
+  );
+  if (options.length === 0) return { status: 'none' };
+
+  // Seçili bağlam kazanır; yoksa motor "sorulmaz" diyorsa tek seçenek alınır. Kapsam doğrulaması
+  // `readWarehouseContext` içinde yapıldı — burada ikinci kez sorulmaz, yoksa aynı kuralın iki
+  // kopyası olurdu.
+  const secilenId = ctx.activeWarehouseId ?? (needsChoice ? null : options[0]);
+  const chosen = secilenId ? ctx.warehouses.find((w) => w.id === secilenId) : null;
 
   if (chosen) return { status: 'ok', warehouseId: chosen.id, name: chosen.name };
-  return ctx.warehouses.length === 0 ? { status: 'none' } : { status: 'needs_choice' };
+  return { status: 'needs_choice' };
 }
 
 /**

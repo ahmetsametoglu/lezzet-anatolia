@@ -75,4 +75,34 @@ describe('ekranın depo seçicisi', () => {
   it('kapsamsız depocuya hiçbir seçenek yok — kapalı kapı', () => {
     expect(warehouseOptions(warehouseScope(['warehouse'], []), hepsi).options).toEqual([]);
   });
+
+  /*
+    KAPSAM ≠ ELDEKİ DEPO (27.08, `03.12`). İkinci argüman "bugün seçilebilir olanlar"dır; kapsam
+    ise "yetkim nereye yeter". Ayrıştıklarında kesişim alınır — yoksa kapatılmış bir tesis seçenek
+    sayılır ve tek deposu kalmış personele boş yere "seç" denir.
+
+    `limited` dalı bu argümanı 27.08'e kadar YOK SAYIYORDU. Görünmüyordu çünkü fonksiyonu üretimde
+    çağıran yoktu; uygulama katmanı aynı kuralı kendi yazmıştı ve DOĞRU yazmıştı
+    (`apps/web/lib/warehouse/context.ts`). Aşağıdaki üç iddia o ayrışmanın geri gelmesini engelliyor.
+  */
+  it('kapsamda olup da ELDE OLMAYAN depo seçenek değildir', () => {
+    // Personelin iki deposu var ama `w-kehl` bugün listelenmiyor (kapatılmış tesis).
+    const { options, needsChoice } = warehouseOptions(warehouseScope(['warehouse'], ['w-str', 'w-kehl']), [
+      'w-str',
+      'w-de',
+    ]);
+    expect(options).toEqual(['w-str']);
+    // ASIL İDDİA: tek seçenek kaldığına göre SORULMAZ.
+    expect(needsChoice).toBe(false);
+  });
+
+  it('kapsamdaki depoların hiçbiri elde değilse seçenek kalmaz', () => {
+    expect(warehouseOptions(warehouseScope(['warehouse'], ['w-kehl']), ['w-str', 'w-de']).options).toEqual([]);
+  });
+
+  it('sıra ELDEKİ listeden gelir, kapsam satırının sırasından değil', () => {
+    // Kapsam ters sırada yazılmış; ekranın sırası (`sort_order`) kazanmalı.
+    const { options } = warehouseOptions(warehouseScope(['warehouse'], ['w-de', 'w-str']), hepsi);
+    expect(options).toEqual(['w-str', 'w-de']);
+  });
 });

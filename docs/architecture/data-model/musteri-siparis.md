@@ -256,7 +256,7 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 **Kararlar**
 
 - **`warehouse_id`** — **bir sipariş tek depodan çıkar** (`DOMAIN §17`, istisnasız): bölünmüş sipariş yoktur; kendi deposunda olmayan kargolanabilir ürün AYRI bir kargo siparişi olur. Kaynağı ya adresin posta kodu ya işlemi yapan personelin sabit deposudur — **varsayılan depo kavramı yoktur**. Siparişe yazılan partilerin de bu depodan olduğunu ertelenmiş kısıt tutar
-- **`channel`** — *kim* — müşteri tipinden otomatik, değişmez
+- **`channel`** — *kim* — müşteri tipinden otomatik (`deriveChannel`) ve **DONAR**: müşteri sonradan şirkete dönse bile geçmiş siparişin kanalı sabit kalır. 27.08'e kadar bu satırdaki *"değişmez"* yalnız bir İDDİAYDI — ne şema ne veri koruyordu (`03.12`); artık iki katman zorluyor: `OrderUpdateSchema` alanı `omit` eder, `order_channel_frozen` tetikleyicisi şemayı atlayan yolu keser. Gerekçe: kanal `vat_treatment`ı ve fiyat kademesini belirler, yani sonradan değişmesi parası alınmış bir belgenin vergisini geriye dönük oynatırdı
 - **`order_source`** — *nereden kapandı* — kanaldan bağımsız eksen (bkz. `CHANNELS.md §2`)
 - **`is_gift_order`** — patron ikramı (arkadaşa hediye); **yalnız muhasebe export'una girmez** — gelir/kâr/kasa/ortaklık dahil gerisi tam normal, parayı patron öder (bkz. `DOMAIN.md §9`)
 - **`status`** — bkz. `ORDER_LIFECYCLE.md`

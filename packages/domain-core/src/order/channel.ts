@@ -32,8 +32,22 @@ export function usesFastSalePath(source: OrderSource): boolean {
 }
 
 /**
- * Kanal siparişe yazıldıktan sonra değişmez. Müşteri sonradan şirkete dönse bile geçmiş
- * siparişin kanalı sabit kalır — bu fonksiyon o kuralı çağıranın sorabileceği hale getirir.
+ * Kanal siparişe yazıldıktan sonra değişmez. Müşteri sonradan şirkete dönse bile geçmiş siparişin
+ * kanalı sabit kalır.
+ *
+ * ── KURALI ZORLAYAN BURASI DEĞİL (27.08 düzeltmesi, `03.12`) ─────────────────
+ * Eski künye *"bu fonksiyon o kuralı çağıranın sorabileceği hale getirir"* diyordu; **soran yoktu
+ * ve zorlayan da yoktu.** `OrderUpdateSchema` tam `partial()` olduğu için kanal sonradan
+ * yazılabilir bir alandı — yani kural yalnızca burada, bir cümle olarak vardı. Yanlış teminat
+ * teminatsızlıktan kötüdür: okuyanı kontrol etmekten alıkoyar.
+ *
+ * Kural artık İKİ yerde gerçek:
+ *   · **Şema** — `OrderUpdateSchema` `channel`ı `omit` eder, reddi derleme anına taşır.
+ *   · **Veri** — `order_channel_frozen` tetikleyicisi (`0012_order.sql`), şemayı atlayan yolu keser.
+ *
+ * Bu fonksiyon geriye bir SORU CÜMLESİ olarak kalıyor (kural bir yerde okunabilir olmalı), ama
+ * girdisi yok ve cevabı sabit: kimse ona dayanarak dallanmamalı, çünkü ihlal zaten iki katman
+ * önce reddediliyor.
  */
 export function canChangeChannel(): false {
   return false;
