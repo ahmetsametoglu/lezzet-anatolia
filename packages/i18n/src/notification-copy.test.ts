@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AppNotificationKind } from '@lezzet/types';
-import { notificationSentence, staffNotificationBrief } from './notification-copy';
+import { notificationSentence, notificationVisual, staffNotificationBrief } from './notification-copy';
 
 /*
   BİLDİRİM SÖZLÜĞÜ (14.13 → 14.15'te paylaşılan pakete terfi) — çivilenenler:
@@ -40,7 +40,42 @@ describe('notificationSentence', () => {
   });
 });
 
+describe('notificationVisual', () => {
+  it('bilinen her tür ikon + ton + üç dilde etiket taşır — "bir bakışta tip" sözleşmesi', () => {
+    for (const kind of KNOWN) {
+      const visual = notificationVisual({ kind, payload: { approved: true } });
+      expect(visual.icon.length).toBeGreaterThan(0);
+      expect(['positive', 'attention', 'issue', 'neutral']).toContain(visual.tone);
+      for (const locale of ['tr', 'fr', 'de'] as const) expect(visual.label(locale).length).toBeGreaterThan(1);
+    }
+  });
+
+  it('iptal "issue", eksik teslim "attention"; B2B tonu SONUCA göre; bilinmeyen tür zile düşer', () => {
+    expect(notificationVisual({ kind: 'order_cancelled', payload: {} }).tone).toBe('issue');
+    expect(notificationVisual({ kind: 'order_shortfall', payload: {} }).tone).toBe('attention');
+    expect(notificationVisual({ kind: 'b2b_application_result', payload: { approved: true } }).tone).toBe('positive');
+    expect(notificationVisual({ kind: 'b2b_application_result', payload: { approved: false } }).tone).toBe('attention');
+    const bilinmeyen = notificationVisual({ kind: 'yarin_gelecek_tur', payload: {} });
+    expect(bilinmeyen.icon).toBe('🔔');
+    expect(bilinmeyen.label('tr')).toBe('Bildirim');
+  });
+});
+
+const KNOWN_STAFF: AppNotificationKind[] = [
+  'document_undeliverable', 'ticket_opened', 'stock_low', 'run_close_mismatch', 'b2b_application_received',
+];
+
 describe('staffNotificationBrief', () => {
+  it('bilinen her personel türü başlık + ton + tür etiketi taşır', () => {
+    for (const kind of KNOWN_STAFF) {
+      const brief = staffNotificationBrief({ kind, payload: { referenceNo: 'LA-26-X', ticketType: 'damaged', sku: 'SKU-1', availableQty: 2, minStockQty: 10 } });
+      expect(brief, kind).not.toBeNull();
+      expect(brief!.title.length, kind).toBeGreaterThan(5);
+      expect(brief!.label.length, kind).toBeGreaterThan(1);
+      expect(['alert', 'attention', 'quiet']).toContain(brief!.tone);
+    }
+  });
+
   it('ulaştırılamayan belge: alert tonu, başlıkta referans ve sebep', () => {
     const brief = staffNotificationBrief({ kind: 'document_undeliverable', payload: { referenceNo: 'LA-26-X1' } });
     expect(brief).not.toBeNull();
@@ -49,9 +84,34 @@ describe('staffNotificationBrief', () => {
     expect(brief!.title).toContain('e-postası yok');
   });
 
+  it('belge başlığı HANGİ belge olduğunu söyler — aynı siparişin iki olayı ayrı satır okunur', () => {
+    const baslik = (event: string) =>
+      staffNotificationBrief({ kind: 'document_undeliverable', payload: { event, referenceNo: 'LA-26-X1' } })!.title;
+    // Belge sınıfı altı olayı kapsıyor; 27.08'e kadar hepsi "sipariş onayı" diye görünüyordu.
+    expect(baslik('order_confirmed')).toContain('sipariş onayı');
+    expect(baslik('order_delivered')).toContain('teslim özeti');
+    expect(baslik('order_cancelled')).toContain('iptal bildirimi');
+    expect(baslik('order_refunded')).toContain('iade bildirimi');
+    // İki farklı olay AYNI metni üretmemeli — ekranda ayırt edilebilirliğin çivisi.
+    expect(baslik('order_confirmed')).not.toBe(baslik('order_delivered'));
+    // Tanınmayan olay başlığı bozmaz: genel "belge" der, satır yine okunur.
+    expect(baslik('yarin_gelecek_belge')).toContain('Ulaştırılamayan belge');
+  });
+
+  it('şikâyet tipi başlıkta Türkçedir; eşik satırı sayıları taşır; soru "Talep" etiketi alır', () => {
+    const sikayet = staffNotificationBrief({ kind: 'ticket_opened', payload: { ticketType: 'damaged', referenceNo: 'LA-26-X1' } });
+    expect(sikayet!.label).toBe('Şikâyet');
+    expect(sikayet!.title).toContain('hasarlı ürün');
+    const soru = staffNotificationBrief({ kind: 'ticket_opened', payload: { ticketType: 'question' } });
+    expect(soru!.label).toBe('Talep');
+    const esik = staffNotificationBrief({ kind: 'stock_low', payload: { sku: 'BKL-500', availableQty: 3, minStockQty: 10 } });
+    expect(esik!.title).toContain('BKL-500');
+    expect(esik!.title).toContain('3/10');
+  });
+
   it('referanssız payload başlığı bozmaz; bilinmeyen türde null — genel metin yüzeyin işi', () => {
     const brief = staffNotificationBrief({ kind: 'document_undeliverable', payload: {} });
-    expect(brief!.title).toContain('Ulaştırılamayan sipariş onayı');
+    expect(brief!.title).toContain('Ulaştırılamayan belge');
     expect(staffNotificationBrief({ kind: 'yeni_personel_turu', payload: {} })).toBeNull();
   });
 });
