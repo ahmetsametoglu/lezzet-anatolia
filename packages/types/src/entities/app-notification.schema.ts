@@ -45,6 +45,18 @@ export const AppNotificationKindEnum = z.enum([
    * yükümlülüğü olan belge hiçbir kanala ulaşamadıysa iş İNSANA düşer — bu tür o düşüşün satırı.
    */
   'document_undeliverable',
+  /*
+    Dört tür daha (kullanıcı kararı 26.08): "bildirim ≠ kuyruk" ilkesi bozulmadı — kuyruğun kendisi
+    değil, kuyruğa DÜŞME ÂNI haber olur. Üreticileri `notification/staff-events.ts`.
+  */
+  /** Müşteri şikâyet/talep açtı — yönetim kuyruğunun kapı zili. */
+  'ticket_opened',
+  /** Bir varyantın kullanılabilir stoğu eşiğin ALTINA indi (ilk iniş — künye staff-events'te). */
+  'stock_low',
+  /** Kurye gün kapanışında sayım/tahsilat farkı çıktı — para tarafının kapı zili. */
+  'run_close_mismatch',
+  /** Yeni kurumsal başvuru düştü — onay kuyruğunun kapı zili. */
+  'b2b_application_received',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -55,10 +67,16 @@ export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
  * sonsuza dek birikir (süpürme tanımadığı türe dokunmaz: müşteri satırını silmemek, birikimden
  * pahalı bir yanlıştır).
  */
-export const STAFF_NOTIFICATION_KINDS = ['document_undeliverable'] as const satisfies readonly AppNotificationKind[];
+export const STAFF_NOTIFICATION_KINDS = [
+  'document_undeliverable',
+  'ticket_opened',
+  'stock_low',
+  'run_close_mismatch',
+  'b2b_application_received',
+] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */
-export const NotificationTargetTypeEnum = z.enum(['order', 'ticket', 'feedback_request', 'zone_notice', 'customer']);
+export const NotificationTargetTypeEnum = z.enum(['order', 'ticket', 'feedback_request', 'zone_notice', 'customer', 'variant']);
 export type NotificationTargetType = z.infer<typeof NotificationTargetTypeEnum>;
 
 export const AppNotificationSchema = z.object({

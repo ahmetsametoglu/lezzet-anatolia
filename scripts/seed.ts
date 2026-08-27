@@ -43,7 +43,8 @@
  *   ✓ stock_intake        2 giriş — biri PO'lu ve bilinçli EKSİK geldi (sipariş↔gelen fark raporu)
  *   ✓ stock              ~140 parti: FEFO için farklı tarihler + sınır durumlar (indirimli teklif,
  *                         yaklaşan, DLC geçmiş, DDM geçmiş, tükenmiş, alış fiyatı girilmemiş)
- *   ✓ stock_adjustment    beş sebebin beşi; sayım farkı İKİ YÖNLÜ (işaretli alan görünsün)
+ *   ✓ stock_movement      elle düzeltmenin üç tipi (imha · sayım · iade) + imhanın üç sebebi;
+ *                        sayım farkı İKİ YÖNLÜ (yön kolonu boş bir kümeyle sınanmasın)
  *   ✓ temperature_log     4 nokta × 21 gün × 2 ölçüm (STR) + 7 gün (KEHL) — İKİ depo, biri aralık DIŞI
  *   ✓ cart                normal · toptan · BAYAT (1 yıllık) + partiye çıpalı teklif satırı
  *   ✓ order               9 durumun hepsi · 4 kaynak (web/whatsapp/door/manual) · tam yol + hızlı
@@ -139,6 +140,7 @@ import { enAz, katmanOku, uzakHedefMi } from './seed/tier';
 import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
 import { seedSupply } from './seed/supply';
 import { seedTestLabels } from './seed/test-labels';
+import { seedNotifications } from './seed/notifications';
 import { seedTickets } from './seed/support';
 import { seedStoragePoints, seedThresholds, seedTransfer, seedWarehouses } from './seed/warehouse';
 
@@ -315,6 +317,9 @@ async function main(): Promise<void> {
   await seedDeliveryRuns(db, kisiler);
   await seedRunCloses(db, kisiler); // kapanış, seferin tahsilat görünümünü okur
   await seedTickets(db, kisiler); // talep siparişe ve kalemine bağlanır
+  // Bildirimler EN SONA YAKIN: satırlar sipariş log'undan, davetten, bölge kaydından ve talep
+  // cevabından TÜRETİLİR (künye `seed/notifications.ts`) — kaynakları bu noktada kurulmuş olmalı.
+  await seedNotifications(db, kisiler);
   // Asistan kuyruğu HER ŞEYDEN SONRA: onbir dilekçenin payload'ı gerçek kimlikler taşıyor (varyant,
   // depo, hesap, bölge, açık tedarik siparişi, eldeki en yakın tarihli parti) ve hepsi bu noktada
   // kurulmuş oluyor. Erken koşsaydı çapalar bulunamaz, dilekçeler sahte uuid ile doğardı — gövde

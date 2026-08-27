@@ -117,6 +117,10 @@ export interface PurgeTargets {
    * GERÇEK personel profillerine yazar (seed yöneticileri dahil) ve o profiller purge'ün malı
    * değildir. Kapı bu yüzden yazdığı kimlikleri döndürür; test onları buraya taşır. Teslim
    * defteri (`notification_delivery`) satıra cascade bağlı, ayrıca anılmaz.
+   *
+   * **Sipariş/talep hedefli satırlar ARTIK BURAYA TAŞINMAZ** (27.08): `orderIds` dalı onları
+   * hedefleriyle birlikte siliyor. Geriye kalan iş hedefi bu ikisi OLMAYAN satırlar — `stock_low`
+   * (hedef varyant), `run_close_mismatch` (hedefsiz) gibi; onlar hâlâ kimlikle gelir.
    */
   notificationIds?: string[];
   /**
@@ -379,6 +383,21 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
 
     if (allOrderIds.length > 0) {
       await mustDelete(db, 'reservation', (q) => q.in('order_id', allOrderIds));
+      // Siparişe/talebe asılı BİLDİRİMLER hedefleriyle birlikte (ölçüldü 27.08): `notification`
+      // hedefini `target_type` + `target_id` ile tutuyor, FK ile DEĞİL — cascade onu toplamaz.
+      // Müşteri satırı profil cascade'iyle giderdi; ama `dispatchStaffNotification` e-postasız
+      // alıcıda `document_undeliverable`'ı GERÇEK yönetici profillerine yazıyor ve o profiller
+      // purge'ün malı değil. Yani her sipariş testi operasyon ziline KALICI bir satır bırakıyordu:
+      // yerelde 127 satır birikmişti ve zilin ilk sayfası tek türe dönmüştü — "hepsi tek tip"
+      // görüntüsünün yerel kaynağı buydu (176 satırın 127'si).
+      const ticketIds = await idsOf(db, 'ticket', 'order_id', allOrderIds);
+      const bildirimHedefleri: [string, string[]][] = [
+        ['order', allOrderIds],
+        ...(ticketIds.length > 0 ? ([['ticket', ticketIds]] as [string, string[]][]) : []),
+      ];
+      for (const [tur, kimlikler] of bildirimHedefleri) {
+        await mustDelete(db, 'notification', (q) => q.eq('target_type', tur).in('target_id', kimlikler));
+      }
       // Talepler SİPARİŞTEN ÖNCE (ölçüldü 26.08): kaleme bağlı talepte (`order_item_ids` dolu)
       // sipariş silinince `ticket.order_id` `set null` düşer ve `ticket_items_need_order` kısıtı
       // patlar — "kalemi olan talep siparişsiz olamaz". Profil-cascade buraya yetişmiyor: sıra
@@ -402,7 +421,13 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       const variantIds = await idsOf(db, 'product_variant', 'product_id', productIds);
       if (variantIds.length > 0) {
         const stockIds = await idsOf(db, 'stock', 'variant_id', variantIds);
-        if (stockIds.length > 0) await mustDelete(db, 'stock_adjustment', (q) => q.in('stock_id', stockIds));
+        // **HAREKET DEFTERİ partiden ÖNCE** (06.14): `stock_movement.stock_id` `restrict` — hareketi
+        // olan parti silinemez. Eskiden burada `stock_adjustment` vardı ve o tablo yalnız imhaları
+        // tutuyordu; defter satış/sevk/kabul hareketlerini de taşıdığı için artık HER partinin
+        // silinmesi bu satırdan geçiyor. Ayrıca `reverses_id` self-FK'sı yüzünden ters kayıtlar
+        // aslından ÖNCE gitmeli — tek `delete` ifadesi bunu kendiliğinden yapar (aynı ifade içindeki
+        // satırlar birbirini kısıtlamaz), satır satır silinseydi sıra tutturmak gerekirdi.
+        if (stockIds.length > 0) await mustDelete(db, 'stock_movement', (q) => q.in('stock_id', stockIds));
         await mustDelete(db, 'reservation', (q) => q.in('variant_id', variantIds));
         await mustDelete(db, 'purchase_order_item', (q) => q.in('variant_id', variantIds));
         // **Tarif kalemi ÜRÜNDEN ÖNCE** (05.16 · denetim eki 07.08): `recipe_item.variant_id` FK'si
@@ -530,6 +555,67 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       const codes = await codesOf(db, warehouseIds);
       for (const code of codes) await mustDelete(db, 'document_counter', (q) => q.like('prefix', `%-${code}`));
       await mustDelete(db, 'warehouse', (q) => q.in('id', warehouseIds));
+    }
+  });
+
+  // SAHİPSİZ BİLDİRİMLER — EN SONDA, hedefler silindikten sonra (27.08).
+  //
+  // `notification` hedefini `target_type` + `target_id` ile tutuyor, FK ile DEĞİL: cascade onu
+  // toplamaz. Müşteri satırı profil cascade'iyle giderdi, ama `dispatchStaffNotification`
+  // e-postasız alıcıda `document_undeliverable`'ı GERÇEK yönetici profillerine yazıyor ve o
+  // profiller purge'ün malı değil — her sipariş testi operasyon ziline KALICI bir satır
+  // bırakıyordu (yerelde 127 satır birikmişti; zilin ilk sayfası tek türe dönmüştü).
+  //
+  // Neden hedef listesine değil VARLIĞA bakıyor: teardown'ların çoğu siparişi `purgeTestData`ya
+  // vermek yerine ELLE siliyor (`db.from('order').delete()` — 40 dosya, 58 çağrı; CLAUDE §4b'nin
+  // yasakladığı desen). O yol izlendiğinde sipariş purge çağrılmadan önce yok oluyor, `orderIds`
+  // boş kalıyor ve listeye bağlı bir temizlik hiç koşmuyor — ölçüldü: iki koşu 42'şer satır
+  // bıraktı. Varlığa bakan süpürme o dosyalara dokunmadan aynı işi yapıyor.
+  //
+  // Süpürülen şey tanımı gereği ÇÖPTÜR: hedefi olmayan satır tıklanamaz (`href` null düşer).
+  // Duran hedefin satırına dokunulmaz — seed'in kendi örnekleri bu yüzden yerinde kalır.
+  await step(async () => {
+    // Liste `NotificationTargetTypeEnum`in TAMAMIDIR — eksik bırakılan tür sessizce birikir
+    // (ölçüldü 27.08: `ticket` unutulunca `ticket_opened` artığı 6 satır kaldı, ötekiler 1'e
+    // düşerken). Yeni hedef türü şemaya girdiğinde buraya da girmeli; karşılığı o türün TABLOSU.
+    for (const [tur, tablo] of [
+      ['order', 'order'],
+      ['ticket', 'ticket'],
+      ['feedback_request', 'feedback_request'],
+      ['zone_notice', 'zone_notice'],
+      ['customer', 'user_profiles'],
+      ['variant', 'product_variant'],
+    ] as const) {
+      const { data, error } = await db.from('notification').select('id, target_id').eq('target_type', tur).not('target_id', 'is', null);
+      if (error) throw error;
+      const satirlar = (data ?? []) as { id: string; target_id: string }[];
+      if (satirlar.length === 0) continue;
+      const hedefler = [...new Set(satirlar.map((r) => r.target_id))];
+      const { data: duran, error: duranHata } = await db.from(tablo).select('id').in('id', hedefler);
+      if (duranHata) throw duranHata;
+      const yasayan = new Set(((duran ?? []) as { id: string }[]).map((r) => r.id));
+      const sahipsiz = satirlar.filter((r) => !yasayan.has(r.target_id)).map((r) => r.id);
+      if (sahipsiz.length > 0) await mustDelete(db, 'notification', (q) => q.in('id', sahipsiz));
+    }
+
+    // `run_close_mismatch` HEDEFSİZ doğuyor — kapanış bir kayda değil MUTABAKATA bakar — ve
+    // seferine yalnız `payload.referenceNo` ile bağlanıyor. Hedef türü VERİLMEDİ çünkü şemanın
+    // künyesi "yeni hedef türü EKRANIYLA birlikte gelir" diyor ve sefer detay ekranı yok; o yüzden
+    // süpürme burada referanstan yürüyor. İki ayrı kapanış testi var (`apps/web/lib/courier` +
+    // `packages/application/src/courier`) ve ikisi de aynı artığı bırakıyordu — temizliği test
+    // dosyalarına kopyalamak yerine tek yerde tutmak, üçüncü test yazıldığında da çalışır.
+    const { data: uyusmazliklar, error: uyusmazlikHata } = await db.from('notification').select('id, payload').eq('kind', 'run_close_mismatch');
+    if (uyusmazlikHata) throw uyusmazlikHata;
+    const referansli = ((uyusmazliklar ?? []) as { id: string; payload: Record<string, unknown> }[]).filter(
+      (r): r is { id: string; payload: { referenceNo: string } } => typeof r.payload?.referenceNo === 'string',
+    );
+    if (referansli.length > 0) {
+      const referanslar = [...new Set(referansli.map((r) => r.payload.referenceNo))];
+      const { data: seferler, error: seferHata } = await db.from('delivery_run').select('reference_no').in('reference_no', referanslar);
+      if (seferHata) throw seferHata;
+      const yasayanSefer = new Set(((seferler ?? []) as { reference_no: string }[]).map((r) => r.reference_no));
+      const sahipsiz = referansli.filter((r) => !yasayanSefer.has(r.payload.referenceNo)).map((r) => r.id);
+      if (sahipsiz.length > 0) await mustDelete(db, 'notification', (q) => q.in('id', sahipsiz));
     }
   });
 

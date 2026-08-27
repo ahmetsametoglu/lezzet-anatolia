@@ -89,6 +89,8 @@ afterAll(async () => {
   // Sefer, kapanışı, sipariş ve rezervasyon AYRICA silinmez: hepsi `purgeTestData`'nın bildiği
   // bağlar (sefer `warehouseIds`/`profileIds`ten, sipariş `profileIds`ten, rezervasyon
   // `productIds`ten). Elle yazılan satırlar teardown'ı öldürüyordu (ölçüldü 14.08).
+  // `run_close_mismatch` bildirimleri de purge'ün işi (27.08 · sahipsiz süpürme): satır HEDEFSİZ
+  // doğuyor ve seferine yalnız payload'daki referanstan bağlanıyor — sıra `cleanup.ts`te.
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

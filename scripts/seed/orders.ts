@@ -819,6 +819,34 @@ export async function seedOrders(
     }
   }
 
+  /*
+    ── DEV/KARMA PROFİLİN SİPARİŞLERİ (kullanıcı kararı 26.08) ─────────────────
+    Cihaz turunun girişli hesabı `yonetici` (Selin) — hem personel hem müşteri. Bildirim akışının
+    çeşitliliği ONUN ekranında görünür olmalı ve sipariş bildirimleri gerçek hedef ister: hedefsiz
+    demo satırı "tıklayınca gitmeyen" satırdır. Bu blok tavandan SONRA durur (extend'de kesilebilir
+    — durum makinesi örneklemesi ondan önceliklidir); `full` katman her refresh'te kurar.
+  */
+  const yonetici = kisiler.get('yonetici');
+  if (yonetici) {
+    if (!(await varsayilanAdres(yonetici))) {
+      await addresses.addForCustomer({
+        customerId: yonetici,
+        label: 'Ev',
+        recipient: 'Selin Kaya',
+        line1: '12 Rue des Moulins',
+        postalCode: '67000',
+        city: 'Strasbourg',
+        phone: '+33600000104',
+        country: 'FR',
+        isDefault: true,
+      });
+    }
+    await siparis({ musteri: 'yonetici', kalemler: [kalem(30, 1), kalem(31, 2)], hedef: 'confirmed', channel: 'b2c', paymentMethod: 'online', tahsilat: toplam([kalem(30, 1), kalem(31, 2)]), etiket: 'Dev hesabı — onaylı (bildirim turu)' });
+    await siparis({ musteri: 'yonetici', kalemler: [kalem(32, 2)], hedef: 'out_for_delivery', channel: 'b2c', paymentMethod: 'cash', tahsilat: 0, etiket: 'Dev hesabı — yolda (bildirim turu)' });
+    await siparis({ musteri: 'yonetici', kalemler: [kalem(33, 1)], hedef: 'delivered', channel: 'b2c', paymentMethod: 'cash', tahsilat: 0, yasi: 3, etiket: 'Dev hesabı — teslim edilmiş (bildirim turu)' });
+    await siparis({ musteri: 'yonetici', kalemler: [kalem(34, 1)], hedef: 'cancelled', channel: 'b2c', paymentMethod: 'online', etiket: 'Dev hesabı — iptal (bildirim turu)' });
+  }
+
   const { count } = await db.from('order').select('*', { count: 'exact', head: true });
   console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · kuponlu · kısmi iade · kurye günleri · kutulu hazırlık)`);
 }
