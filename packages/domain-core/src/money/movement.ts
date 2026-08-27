@@ -90,8 +90,22 @@ export function validateMovement(input: MovementInput): MovementCheck {
  * gönderenden çıkar, alana girer.
  *
  * Aynı kural `account_movement` görünümünde SQL olarak da yaşıyor — orası toplama (bakiye) içindir,
- * burası tek satırın önizlemesi (form "bu hareket kasadan −50 € düşecek" der). İkisi aynı üç satırı
- * anlatır; ayrıştıklarında bu fonksiyonun testi sessiz kalmaz.
+ * burası tek satırın önizlemesi (form "bu hareket kasadan −50 € düşecek" der). Nüsha KALDIRILAMAZ:
+ * veritabanı bu fonksiyonu çağıramaz, bakiye de SQL'de toplanmak zorundadır.
+ *
+ * ── BU KÜNYE 27.08'E KADAR YALAN SÖYLÜYORDU ─────────────────────────────────
+ * Burada *"ayrıştıklarında bu fonksiyonun testi sessiz kalmaz"* yazıyordu. **Kalırdı:** bu dosyanın
+ * testi yalnız TypeScript'i ölçüyor, SQL'e hiç dokunmuyordu; `money.test.ts` de yalnız görünümü
+ * ölçüyordu. İkisini KARŞILAŞTIRAN test yoktu, yani işaret kuralı bir tarafta değişse öteki taraf
+ * sonsuza kadar yeşil kalırdı. Üstelik bu fonksiyonun üretimde çağıranı da yok — ayrışma yalnız
+ * canlı olan SQL tarafında görünürdü.
+ *
+ * Cümleyi silmek yerine DOĞRU hâline getirdik: karşılaştıran test artık var —
+ * `apps/web/lib/money/movement.test.ts` → *"işaret kuralı: SQL görünümü ile motor aynı cevabı
+ * veriyor"*. Defterin ürettiği her satırı bu fonksiyona sorup karşılaştırıyor.
+ *
+ * Ders künyeye yazılıyor çünkü asıl tehlike koddaki nüsha değil, nüshanın güvende olduğunu SÖYLEYEN
+ * nottu: yanlış teminat, okuyanı kontrol etmekten alıkoyar.
  */
 export function signedAmountCentsFor(
   movement: { accountId: string; counterAccountId?: string | null; direction: MovementDirection; amountCents: number },

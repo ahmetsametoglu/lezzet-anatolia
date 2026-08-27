@@ -66,6 +66,12 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
   - *Bitti:* biçim ve benzersizlik (çakışma yeniden deneme) testli
   - **Durum (27.07):** `reference-no.ts` — `LA-26-7K4M2P`; rastgele (sıralı numara hacim sızdırır), karışabilen karakterler (I O S Z 0 1 2 5 8) yok, rastgelelik enjekte edilebilir. Benzersizlik DB'nin işi: çakışmada çağıran yeniden üretir. 5 test.
 
+- [ ] (03.12) **İkiz kuralları teke indir ya da karşılaştır** — denetim 27.08'de motorun 11 kuralının üretimde hiç sorulmadığını ölçtü (üç bağımsız ölçüm aynı kümede buluştu). Üç ayrı iş, üçü de KULLANICI KARARI bekliyor:
+  - **Kaldırılamayan ikizler** (`signedAmountCentsFor` ↔ SQL görünümü · `decideReservation` ↔ `reserve_stock`): veritabanı motoru çağıramaz, nüsha kalmak zorunda. **Karşılaştırma testleri 27.08'de yazıldı** — bu ayak kapandı.
+  - **Kaldırılabilir ikizler** (`warehouseOptions` ↔ `readWorkWarehouse` · `distanceKm`/`nearestOf` ↔ `routes-suggest.ts`): aynı dil, birer çağrı noktası. Hangi nüshanın kalacağı karar; `routes-suggest` kopyasında motorun `null` dönüşü ve `asin` kırpması eksik, yani birleştirme aynı zamanda küçük bir düzeltme.
+  - **Korumasız kural** (`canChangeChannel`): *"kanal siparişe yazılınca donar"* diyor ama ne şema (`OrderUpdateSchema` tam `partial()`) ne veri koruyor. Bugün ihlal eden yol YOK — aktif arıza değil, korumasız kural. Korunacak mı, korunmayacaksa kural silinecek mi: karar.
+  - *Bitti ölçütü:* her ikiz için ya tek nüsha kalır ya karşılaştıran test durur; `canChangeChannel` ya korunur ya kaldırılır.
+
 ## Netleşecekler
 
 - ~~**Motor ↔ servis sınırı**~~ — 27.07'de karara bağlandı: `domain-core` ile `database` birbirini bilmez; satırları servis getirir, kararı motor verir, ikisini uygulama katmanı birleştirir. Uygulama iş kuralını kendi hesaplayamaz — motora sorar (STACK §4, §13).
@@ -76,6 +82,19 @@ Sistemin bütün ticari kuralları — **saf fonksiyonlar** olarak (veritabanı 
 **Modül durumu (26.08.2026):** 11/11 tamam. `packages/domain-core` 16 alanda **55 motor + 54 test dosyası** taşıyor (756 birim testi); 03'ün on bir görevi bunun ilk çekirdeğiydi, gerisi 05–23 modülleriyle geldi. Paket depoda **99 yerden** okunuyor (en çok `apps/web`, sonra `packages/application`).
 
 ~~Modül durumu (26.07.2026): başlamadı.~~ — 27.07'de yazıldı; altbilgi bir ay boyunca "başlamadı" demeye devam etti ve denetimde (26.08) düzeltildi. Kapanmış görev satırlarının üstünde duran bayat bir özet, satırların kendisinden daha çok okunuyor.
+
+**İKİZ KURALLAR ve karşılaştırma testleri (27.08):** motorun 229 kuralının **11'i üretimde hiç sorulmuyor** — üç bağımsız ölçüm (denetim + iki ajan, birbirinden habersiz) aynı 11'de buluştu. Sayı bir "ölü kod" listesi DEĞİL; açınca dört ayrı şey çıktı ve ayrımı yapmadan silmek iki gerçek bulguyu yok ederdi:
+
+- **Kural CANLI ama başka dilde** — `signedAmountCentsFor` ↔ `account_movement` görünümü, `decideReservation` ↔ `reserve_stock` RPC, `marketingAllowed` ↔ `user-profile.service`teki jsonb süzgeç. Nüsha **kaldırılamaz**: veritabanı motoru çağıramaz, ayırma da yarış durumu olduğu için SQL'de kilitli yapılmak zorunda (`STACK §13`).
+- **Üretim kuralı elle yeniden yazmış** — `warehouseOptions` (`lib/warehouse/context.ts:111` motorun cümlesini ALINTILAYIP altına kendi nüshasını yazmış), `nearestOf`/`distanceKm` (`deliveries/routes-suggest.ts` kendini *"Rota önerisi motoru — SAF karar"* diye tanıtıp gerekçe olarak `CLAUDE §1`in domain-core tanımını gösteriyor; kopyada motorun `null` dönüşü ve `asin` kırpması YOK).
+- **Sorun sanılan ama olmayan** — `priceIn`: ekran kuralı ZATEN motora soruyor (`vatBaseOf`), yalnız hazır kısayolun girdi şekli uymuyor. Kopya yok.
+- **Korumasız kural** — `canChangeChannel` *"kanal siparişe yazılınca donar"* diyor; ne `OrderUpdateSchema` (tam `partial()`) ne veri bunu koruyor. Bugün ihlal eden yol yok: **aktif arıza değil, korumasız kural.**
+
+**Kaldırılamayan nüshanın tek savunması karşılaştıran testtir** ve 27.08'e kadar yoktu — iki taraf ayrı ayrı sınanıyor, ayrıştıklarında ikisi de yeşil kalıyordu. İkisi yazıldı: `apps/web/lib/money/movement.test.ts` (defterin her satırını motora sorar) ve `packages/application/src/order/reserve.test.ts` (`reserve.ts`in İLK testi; ayrışmanın en kolay olduğu yeri seçer — süresi dolmuş rezervasyon, çünkü iki taraf o cümleyi ayrı ayrı kuruyor). İkisinin de ısırdığı doğrulandı.
+
+**Asıl desen — yalan söyleyen künye.** Üç yerde koda *"merak etme, korunuyor"* diyen not düşülmüştü ve üçü de yanlıştı: `.dependency-cruiser.cjs` (*"modül adıyla eşlenir"* — eşlenmiyordu, dört kural kördü), `movement.ts` (*"ayrıştıklarında testi sessiz kalmaz"* — kalırdı), `0018_money.sql` (*"kural TypeScript'te ayrı yazılmaz"* — yazılmıştı). İkisi birbirini teminat gösteriyordu. **Yanlış teminat, teminatsızlıktan kötüdür: okuyanı kontrol etmekten alıkoyar** — denetim bu oturumda ikisine bizzat kandı. Üçü de düzeltildi. `reserve_stock`ın künyesi ayrıca incelendi ve YANLIŞ ÇIKMADI (TTL ve tavan gerçekten çağırandan geliyor); kanıtlanamayan iddiaya dokunulmadı.
+
+Kalan ikiz nüshalar ve korumasız kural **`03.12`'ye** yazıldı — karar kullanıcının.
 
 **Ölü ihracat bekçisi (26.08):** `knip` bu paketi **hiç görmüyordu** — `src/index.ts` bir `export *` barrel'ı ve knip barrel'dan yeniden ihraç edilen her şeyi "kullanılıyor" sayıyor. Yani nobody-calls-it sınıfı makineyle hiç yakalanmıyordu. `includeEntryExports` ile açıldı; gürültüyü de ölçtük: çıplak hâli **69 tip bulgusu** üretiyordu ve hepsi kendi dosyasında kullanılan imza tipiydi — yalan söyleyen uyarı okunmaz. `ignoreExportsUsedInFile` ile gürültü sıfıra indi, geriye **dört gerçek bulgu** kaldı ve dördü de ayrı cinsten çıktı:
 

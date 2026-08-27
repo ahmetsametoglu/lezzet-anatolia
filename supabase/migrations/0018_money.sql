@@ -94,9 +94,14 @@ create index money_movement_unreconciled_idx on public.money_movement (account_i
 create unique index money_movement_import_key on public.money_movement (account_id, import_fingerprint);
 
 -- ── Defter satırı ────────────────────────────────────────────────────────────
--- Bir hareket DOKUNDUĞU HER HESAPTA bir satır üretir: normal hareket bir, transfer iki. İşaret
--- kuralının TEK uygulaması burasıdır — bakiye de hesap ekstresi de bunun üstünde durur, kural
--- SQL'de ve TypeScript'te ayrı ayrı yazılmaz.
+-- Bir hareket DOKUNDUĞU HER HESAPTA bir satır üretir: normal hareket bir, transfer iki. Bakiye de
+-- hesap ekstresi de bunun üstünde durur.
+--
+-- DÜZELTME (27.08): burada *"kural SQL'de ve TypeScript'te ayrı ayrı yazılmaz"* yazıyordu ve
+-- YANLIŞTI — aynı kural `domain-core/money/movement.ts`teki `signedAmountCentsFor`ta da yazılı
+-- (form önizlemesi için). Nüsha kaldırılamaz: veritabanı motoru çağıramaz. Kaldırılamayan nüshanın
+-- savunması karşılaştıran testtir ve artık var: `apps/web/lib/money/movement.test.ts` defterin her
+-- satırını motora sorup eşitliğini sınıyor. İki taraf ayrışırsa orası kırmızıya döner.
 create or replace view public.account_movement as
 select m.*,
        m.account_id as ledger_account_id,

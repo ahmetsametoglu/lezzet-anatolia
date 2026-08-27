@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AccountService, MoneyMovementService, serviceDb } from '@lezzet/database';
+import { signedAmountCentsFor } from '@lezzet/domain-core';
 import { purgeTestData } from '@lezzet/database/testing';
 import { recordMovement, transfer } from './movement';
 
@@ -78,5 +79,57 @@ describe('transfer', () => {
       status: 'invalid',
       reason: 'transfer_same_account',
     });
+  });
+});
+
+/**
+ * **KURAL İKİ DİLDE YAZILI — ikisi hâlâ aynı şeyi mi söylüyor?** (denetim 27.08)
+ *
+ * İşaret kuralı (*"girişte artı, çıkışta eksi; transferin karşı ucunda ters"*) iki yerde birden
+ * uygulanıyor ve ikisi de canlı:
+ *   · SQL — `account_movement` görünümü (`0018_money.sql:99-111`). Bakiye ve hesap ekstresi buradan.
+ *   · TypeScript — `signedAmountCentsFor` (`domain-core/money/movement.ts`). Form önizlemesi için.
+ *
+ * Veritabanı bizim motorumuzu çağıramaz (ayrı dil), yani nüsha KALDIRILAMAZ. Kaldırılamayan
+ * nüshanın tek savunması, ikisini karşılaştıran bir testtir — ve 27.08'e kadar öyle bir test YOKTU.
+ *
+ * ── İKİ KÜNYE BİRBİRİNİ TEMİNAT GÖSTERİYORDU, İKİSİ DE YANLIŞTI ─────────────
+ * Motor: *"ayrıştıklarında bu fonksiyonun testi sessiz kalmaz."* Kalırdı — kendi testi yalnız TS'i
+ * ölçüyor, SQL'e hiç dokunmuyordu.
+ * SQL: *"İşaret kuralının TEK uygulaması burasıdır — kural SQL'de ve TypeScript'te ayrı ayrı
+ * yazılmaz."* Yazılmıştı.
+ * Yani her iki taraf da okuyucuya "öteki taraf güvende" diyordu. Yanlış teminat, teminatsızlıktan
+ * kötüdür: okuyanı kontrol etmekten alıkoyar. Bu test o cümleleri DOĞRU hâle getiriyor.
+ *
+ * İddia satır satır kurulmuyor: defterin ÜRETTİĞİ her satır motora sorulup karşılaştırılıyor.
+ * Motorun girdisi satırın HAM alanları (`account_id`, `counter_account_id`, `direction`, `amount`),
+ * çıktısı ise görünümün TÜRETTİĞİ kolon — yani iki bağımsız yol, aynı soru.
+ */
+describe('işaret kuralı: SQL görünümü ile motor aynı cevabı veriyor', () => {
+  it('defterin her satırı motorun cevabıyla birebir aynı', async () => {
+    // Dört şekil de kurulur: giriş · çıkış · transferin gönderen ucu · transferin alan ucu.
+    await movements.insert({ accountId: cashAccount, direction: 'in', amountCents: 4321, type: 'capital', category: 'işaret testi' });
+    await movements.insert({ accountId: cashAccount, direction: 'out', amountCents: 1234, type: 'expense', category: 'işaret testi' });
+    const aktarim = await transfer({ fromAccountId: cashAccount, toAccountId: bankAccount, amountCents: 5000, description: 'işaret testi' });
+    expect(aktarim.status).toBe('ok');
+
+    const gorulen = new Set<string>();
+    for (const hesap of [cashAccount, bankAccount]) {
+      const sayfa = await movements.ledger({ accountId: hesap });
+      for (const satir of sayfa.rows) {
+        // ASIL İDDİA: görünümün türettiği sayı ile motorun hesapladığı sayı aynı olmalı.
+        expect(satir.signedAmountCents).toBe(signedAmountCentsFor(satir, satir.ledgerAccountId));
+        gorulen.add(`${satir.direction}-${satir.ledgerAccountId === satir.accountId ? 'kendi' : 'karşı'}`);
+      }
+    }
+
+    /* Kapsam iddiası — testin BOŞA yeşil olmamasının güvencesi. Yukarıdaki döngü sıfır satır
+       gezseydi de geçerdi; asıl korunmak istenen hâl bu. Üç şekil şart: giriş, çıkış ve transferin
+       karşı ucu. (`in`+karşı uç bugün ÜRETİLEMİYOR — transfer kapısı transferi hep gönderenin
+       gözünden `out` yazıyor. Motor o dalı yine de taşıyor; sınanamayan bir dalı sınıyormuş gibi
+       yapmak yerine burada yazılı bırakıyorum.) */
+    expect(gorulen).toContain('in-kendi');
+    expect(gorulen).toContain('out-kendi');
+    expect(gorulen).toContain('out-karşı');
   });
 });
