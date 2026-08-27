@@ -93,6 +93,16 @@ Migration künyesinin `status` için anlattığı arızanın birebir aynısı.
 - **Referans proje bağlayıcı değil** — bilgi kırıntısı, takılınca fikir verir. Kanonik olan
   sağlayıcının kendi dokümantasyonudur (**dokümantasyon-önce**).
 - **OpenAPI kullanılacak** (kullanıcı onayı 28.08).
+- **Tasarım yokluğunda EN YAKIN EMSALE dayanılır** (kullanıcı kararı 28.08). Çizim beklenmez;
+  kurulan her yüzey `design/BACKLOG.md`'ye **"çizilmedi, kodlandı"** kaydıyla girer (emsali var:
+  teslimat yeri paneli · mobil kargo künyesi). Emsalsiz görsel karar yine VERİLMEZ.
+- **`db:refresh` / `db:reset` bu özellik boyunca serbest** (kullanıcı izni 28.08) — top bırakıldığı
+  andan uçtan uca bitişe kadar. Her seferinde ayrıca sorulmaz; kilit yine beklenir (`CLAUDE §4b`).
+- **Alt ajan: EN FAZLA BİR, yalnız rapor için, YÖNLENDİRMESİZ** (kullanıcı kararı 28.08). Gerçekten
+  gereken teyitte kullanılır; görev metni cevabı ima etmez, yoksa dönen rapor kendi sorumun
+  yankısı olur.
+- **Her özellik testiyle birlikte commit'lenir** ve değişiklikler **uygun gruplar** hâlinde gider
+  (kullanıcı kararı 28.08).
 
 ---
 
@@ -674,7 +684,68 @@ Bunlar plandan değil ölçümden çıktı; iş başlamadan önce cevaplanmalı.
 
 ---
 
-## 10. Kaynaklar
+## 10. Test planı — dört tip, ve bir SESSİZ TUZAK
+
+> Kullanıcı şartı 28.08: *"eklediğin her özelliğin testlerini de beraber gönder."* Test tipleri
+> ölçüldü (`vitest.config.ts` · `playwright.config.ts` · `apps/mobile/jest.config.cjs`).
+
+### 11.1 Dört tip
+
+| Tip | Koşucu | Kapsam | Kural |
+| --- | --- | --- | --- |
+| **unit** | vitest `--project unit` | `packages/{domain-core,helper,types,notify,email,i18n,ai,observability,…}` · `apps/web/{app,components}` · `scripts/*.test.ts` + üç DB'siz liste | DB'siz, **paralel**, ~1,3 sn. Şeritlere HER AN açık |
+| **integration** | vitest `--project integration` | `apps/web/lib` · `packages/database` · `packages/application` · `apps/backend` · `apps/mobile-api` | Yerel Supabase, **seri**, kilit altında. `CLAUDE §4b`: şeritlere KAPALI, yalnız commit öncesi tam paket |
+| **e2e** | Playwright, `**/*.smoke.ts` | `e2e/{operations,customer}` · projeler: `ops-setup` · `operations` · `desktop` · `mobile-web` | Teslim noktalarında, sakin pencerede |
+| **jest** | `apps/mobile` | native ekranlar | **Mobil şeridin** işi |
+
+### 11.2 ⚠ SESSİZ TUZAK — yeni paketin testi HİÇ KOŞMAZ
+
+`vitest.config.ts`in `unit` projesi **`include` listesiyle** çalışıyor; listede olmayan bir paketin
+testi hata vermeden **hiç koşmaz**. Künye bunu iki kez, yaşanmış olarak yazıyor:
+
+> *"Maskeleme saf metin işi, DB'siz (05.08). Liste eksik olsaydı `mask.test.ts` sessizce hiç
+> koşmazdı — 'test yazdım' ile 'test koşuyor' arasındaki fark tam olarak budur."*
+
+**Bu iş yeni bir paket doğuruyor (`@lezzet/sendcloud`) → `include`a satır EKLENECEK.** Unutulursa
+istemcinin bütün testleri yeşil görünen bir boşluğa düşer. Aşama D'nin ilk adımı bu satırdır.
+
+### 11.3 Yeni testler nereye yazılır
+
+| Ne | Proje | Yer |
+| --- | --- | --- |
+| Koli planı (saf karar) | unit | `packages/domain-core/src/delivery/parcel-plan.test.ts` |
+| Taşıyıcı durum eşlemesi (bilinmeyen → `null`) | unit | `packages/domain-core/src/delivery/carrier-status.test.ts` |
+| Şemalar (`packed_*`, `shipping_box`, `shipment`) | unit | `packages/types/src/entities/*.test.ts` |
+| Sendcloud istemcisi — **sahte sağlayıcıyla, ağa çıkmadan** | unit | `packages/sendcloud/src/*.test.ts` **+ `include` satırı (§11.2)** |
+| `shipping_box` · `shipment` · `order_box` servisleri | integration | `packages/database/src/services/*.test.ts` |
+| Kutu döngüsü + etiket satın alma orkestrasyonu | integration | `packages/application/src/warehouse/*.test.ts` |
+| Teklif kapısı (tek kaynak · sunucu fiyatı) | integration | `apps/web/lib/order/*.test.ts` |
+| Webhook (imza · idempotens · Option B) | integration | `apps/backend/src/**/*.test.ts` |
+| Uç sözleşmeleri | integration | `apps/mobile-api/src/api/v1/*.test.ts` |
+| Form/komponent saf mantığı | unit | `apps/web/components/**/*.test.tsx` |
+| Uçtan uca duman | e2e | `e2e/operations/*.smoke.ts` · `e2e/customer/*.smoke.ts` |
+
+**`docs:check §3i` makineyle zorluyor:** `apps/web/lib`e yazılan DB'siz bir test dosyası
+`WEB_LIB_DBSIZ` listesine girmezse **commit'ten geçmez**. Saf dosya yazınca liste güncellenir.
+
+### 11.4 Bu işin kendi test kuralları
+
+- **Sahte sağlayıcı zorunlu.** `packages/ai/src/testing.ts` ve `packages/notify/src/whatsapp/testing.ts`
+  deseni: `fetchImpl` enjekte edilir, test ağa ÇIKMAZ. Gerçek çağrı yalnız elle prova içindir.
+- **Canlı prova YALNIZ ücretsiz seçenekle** (kullanıcı şartı 28.08): `sendcloud:letter` = 0,00 €
+  (§5.1'de ölçüldü). Etiket satın alma denemesi bu seçenekle yapılır.
+- **Teklif çağrısı ücretsizdir ve hiçbir şey yaratmaz** → ölçüm için serbest.
+- **POST retry YOK** (§5) — testin de bunu çivilemesi gerekiyor: 5xx'te ikinci `announce`
+  atılmadığı sınanır. Aksi hâlde bir gün gerçek para iki koli açar.
+- **Küresel sayıya bakan test YAZILMAZ** (`CLAUDE §4b`): "toplam N gönderi" değil, kendi kurduğun
+  satırları say — başka ajanın verisi o sayıyı oynatır.
+- **Teardown `purgeTestData` + `mustDelete`** (`@lezzet/database/testing`); `shipping_box` ve
+  `shipment` purge sırasına EKLENİR — `order_box` `restrict` FK'lerle korunuyor ve Supabase
+  `delete()` hatayı fırlatmaz, döndürür.
+- **`settings` gibi küresel tekil satır kirletilmez** — kargo ayarları için `overrideSetting` +
+  snapshot deseni (`lib/feedback/invite.test.ts` emsali).
+
+## 11. Kaynaklar
 
 - Sendcloud Developer Portal — `https://sendcloud.dev/` · doküman indeksi `https://sendcloud.dev/llms.txt`
 - Shipping Options & Quotes — `https://sendcloud.dev/docs/shipments/shipping-options-and-quotes.md`
