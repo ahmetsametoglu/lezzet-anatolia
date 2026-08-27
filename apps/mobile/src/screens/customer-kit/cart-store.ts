@@ -74,8 +74,8 @@ export interface CartProductLine {
    * SUNUCU SEPETİNDEKİ ADRESİ — varyantın kimliği (uuid). İsteğe bağlı çünkü satırı kuran ekranlar
    * (`product`/`recipe` detayları) bugün onu ayrı bir alan olarak GEÇMİYOR; kimliği `${slug}-${uuid}`
    * biçiminde birleşik `id`ye gömüyorlar (`recipe-api.schema.ts` bu biçimi sözleşmede yazıyor).
-   * O yüzden çözüm iki adımlı (`variantIdOf`): alan varsa o, yoksa `id`nin sonundaki uuid.
-   * BEKLEYEN(21.14): ekranlar `variantId`yi açıkça geçince ikinci adım silinir.
+   * Çözüm 27.08'e kadar iki adımlıydı (alan varsa o, yoksa `id`nin kuyruğundaki uuid); ekranlar
+   * kimliği açıkça geçmeye başlayınca ikinci adım SİLİNDİ (`variantIdOf` künyesi).
    */
   variantId?: string;
   /** Teklif çıpası (parti) — satırın adresi bir ÇİFTTİR: varyant + parti (DOMAIN §5). */
@@ -323,14 +323,26 @@ export function setPurchasePlace(postalCode: string | null): void {
  * sözleşmede de yazılı). Eşleşmezse satır sunucuya GİTMEZ: yanlış bir kimlikle yazmaktansa yerel
  * kalması iyidir (bozuk yazım sessiz değil — `variantIdOf` null döndüğü an satır senkron dışıdır).
  */
+/* NOT: aşağıdaki `UUID` artık YALNIZ adres anahtarının biçimi için — satır kimliğinden çıkarım
+   yapan `TRAILING_UUID` 27.08'de silindi (yukarıdaki `variantIdOf` künyesi). */
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
-const TRAILING_UUID = new RegExp(`${UUID}$`, 'i');
 /** Adres anahtarının biçimi — `variantId` ya da `variantId@stockId` (`cartLineId` üretir). */
 const ADDRESS_KEY = new RegExp(`^(${UUID})(?:@(${UUID}))?$`, 'i');
 
+/**
+ * Satırın varyant kimliği — TEK adım (27.08; eski `BEKLEYEN(21.14)`ün kapanışı).
+ *
+ * İkinci bir adım vardı: alan boşsa kimliği `id`nin kuyruğundaki uuid'den ÇIKARIYORDU. Çıkarım
+ * `id`nin biçimine bağlıydı ve biçim değişse satır sessizce adressiz kalırdı. İki çağıranın ikisi
+ * de (`product-detail-screen` · `recipe-detail-screen`) artık `variantId`yi açıkça geçiyor, yani
+ * künyenin söz verdiği koşul gerçekleşti ve yedek silindi.
+ *
+ * `null` dönüşü YAŞIYOR ve kalmalı: alan opsiyonel olduğu sürece üçüncü bir çağıran onu geçmeyi
+ * unutabilir; o zaman satır sunucuya GİTMEZ, yerelde kalır (`addressOf` künyesi). Sessiz yanlış
+ * yazmaktansa görünür biçimde senkron dışı kalması iyidir.
+ */
 function variantIdOf(line: CartProductLine): string | null {
-  if (line.variantId !== undefined) return line.variantId;
-  return TRAILING_UUID.exec(line.id)?.[0] ?? null;
+  return line.variantId ?? null;
 }
 
 /**

@@ -213,7 +213,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `BEKLEYEN(21.6)` `catalog.ts`te). Doğrulama (yönetici tekrarı): entegrasyon 34+28 · birim
     1068 · typecheck/boundaries/docs:check temiz.
 
-- [~] (21.7) **Katalog ekranı — ilk gerçek ekran:** v3 tasarımından birebir; kategori çipleri +
+- [x] (21.7) **Katalog ekranı — ilk gerçek ekran:** v3 tasarımından birebir; kategori çipleri +
   2 sütun kare kart ızgarası (`ProductPhotoCard`) + keyset sonsuz kaydırma + iskelet/boş/hata
   durumları; ekran başına messages (fr/de/tr, cihaz dili eşlemesi); fiyat cihazda biçimlenir.
   Ticari bağlamın uca bağlanmasıyla (21.6 kapanışı) aynı turda, iki ajan paralel.
@@ -256,8 +256,21 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `lezzetanatolia://<yol>` ile gidilir, çıktı `.ui-shots-mobile/<slug>/native-app.png` (07.08
     kararındaki ayrı klasör); argümansız kip Metro'suz da çeker — ekranda ne varsa o. Doğrulandı:
     iki kip de gerçek simülatörde koşuldu (görüntü üretimi + Metro-kapalı reddi). **Kalan (bu görev
-    `[~]`):** Android cam bulanıklığı (`BlurTargetView` bağı — 27.08'de doğrulandı, AÇIK) ·
-    ~~`BottomSheet` çift-eğri animasyonu (Reanimated'la)~~ → 27.08 tazelik turu: KURULU (21.122).
+    `[~]`):** ~~Android cam bulanıklığı (`BlurTargetView` bağı)~~ → **İSTENMİYOR, görev KAPANDI
+    (kullanıcı kararı 27.08: *"eğer bulanıklıksa yok böyle bir şey"*)** · ~~`BottomSheet` çift-eğri
+    animasyonu (Reanimated'la)~~ → 27.08 tazelik turu: KURULU (21.122).
+
+    **BLUR ARTIĞI — DENENDİ, ÖLÇÜLDÜ, ÇALIŞMADI, GERİ ALINDI ve artık İSTENMİYOR (27.08).**
+    Kimse yeniden denemesin diye ölçümüyle yazılıyor: `expo-blur@57`in Android yolu kuruldu —
+    ekranın kökü `BlurTargetView` ile sarıldı, ref bara `blurTarget` prop'uyla verildi,
+    `blurMethod="dimezisBlurViewSdk31Plus"` seçildi (paket kurulu olduğu için yeniden derleme
+    gerekmedi; kütüphanenin uyarısı da düşmedi, yani hedef bağlanmıştı). **Cihazda A/B ölçüldü**
+    (Oppo CPH1907, ürün detayının yapışkan barı): tek fark `blurMethod` prop'u olan iki kare
+    alındı, **bar bölgesinin özeti bit bit AYNI çıktı** (`768011b0…`) — prop'un ekranda SIFIR etkisi
+    vardı. Kullanıcı zaten bulanıklığı hiç görmediğini söylemişti ve ölçüm onu doğruladı;
+    *"bulanıklık sandığım şey"* barın kendi %96 krem yüzeyiydi.
+    **Ders:** tek kareye bakıp *"çalışıyor gibi"* demek ölçüm değildir — A/B alınana kadar iddia
+    kurulmadı sayılır (`CLAUDE §1`).
 - [x] (21.8) **Operasyon yüzeyi ön hazırlık — rol × senaryo etüdü + tasarım brief seti:**
   `docs/uygulama/04-operasyon-rolleri-ve-senaryolar.md` (kullanıcı kararları: tek kabuk + rol
   bölümleri; telefon, barkod v2; tedarik kapsamda; TEK SÜRÜM) + Claude Design yükleme dosyaları
@@ -627,7 +640,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   akışının kapsamı); **izin akışı · jeton alma · Expo teslim hattı · bildirime dokununca doğru
   ekrana gitme · uygulama içi bildirim listesi ekranı** bizde. Sıra: web'in kayıt katmanı
   gelmeden ekran yazılmaz — yazılırsa boş bir listeye bakar.
-- [~] (21.14) **Müşteri ekran seti — İLK ETAP: tasarım birebir, UI-only (kullanıcı kararı 08.08):**
+- [x] (21.14) **Müşteri ekran seti — İLK ETAP: tasarım birebir, UI-only (kullanıcı kararı 08.08):**
   `Mobil - Musteri v3.dc.html` (~21 ekran) fixture'la birebir geçirilir; **backend işi ÜRETMEZ**
   (uç yoksa ekran fixture'la TAM çalışır, bağlanma sonraki etap). Üçüncü alt ajan (musteri-expo)
   yürütür; yazı alanı yalnız müşteri ekran/rota dosyaları — **kit/tema/ikon değişikliği YASAK**,
@@ -954,6 +967,34 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     Terfi edecek kod `apps/web/lib/storefront/home.ts`te — not bırakıldı
     (`docs/talep/not-musteri-vitrin-seckisi-mobilde-sinyalsiz.md`). Terfi olduğu gün mobil tarafta
     iş tek satır.
+  - **KAPANDI (27.08 · kullanıcı sorusu üzerine ölçüldü).** Kullanıcı sordu: *"tüm ekranlar
+    fonksiyonelse 21.14 neden hâlâ açık?"* — ölçüm onu doğruladı, **satır hak etmediği hâlde
+    `[~]` duruyordu.**
+
+    **SAYILDI:** 23 müşteri ekran klasörü (tasarımda ~21 ekran) · 53 hook · 25 uç istemci modülü ·
+    `ScreenPlaceholder` kullanan **tek dosya yok**. Bilerek stub bırakılan iki yer var ve ikisi de
+    ekran değil, künyeli birer alt parça: ürün detayının "stok gelince haber ver" anahtarı
+    (aboneliği yazacak uç yok) ve kurye imzası — `CLAUDE §3`'ün *"UI tam, arka uç stub"* kuralı.
+
+    **Satırın vaadi** *"İLK ETAP: UI-only, fixture'la; backend işi ÜRETMEZ"* idi; o vaat
+    tamamlandı ve AŞILDI — ekranlar fixture'da kalmadı, gerçek uçlara da bağlandı (ikinci etap,
+    21.15 · 21.16 · 21.17 gibi kendi görevlerinde yürüdü).
+
+    **Kalan iki işaret de bugün kapandı:** vitrin seçkisi (`readShowcase` pakete terfi etti — kendi
+    bölümünde) ve `variantIdOf`un İKİNCİ ADIMI. İkincisi künyenin birebir söz verdiği şeydi
+    (*"ekranlar `variantId`yi açıkça geçince ikinci adım silinir"*): kimliği `id`nin kuyruğundan
+    çıkaran yedek silindi, `TRAILING_UUID` ile birlikte. Çıkarım `id` biçimine bağlıydı ve biçim
+    değişse satır sessizce adressiz kalırdı. `null` dönüşü YAŞIYOR ve kalmalı — alan opsiyonel
+    olduğu sürece üçüncü bir çağıran onu geçmeyi unutabilir; o zaman satır sunucuya gitmez, yerelde
+    kalır ve senkron dışılığı görünür olur. Sepet KALICI DEĞİL (bellekte + sunucu senkronu, ölçüldü:
+    `AsyncStorage` yok), yani eski biçimli satır riski de yoktu.
+    Doğrulama: `typecheck` temiz · sepet/checkout/kit jest **80/80**.
+
+    **DERS — satırın kendisi de bayatlayabilir.** 21.14f'de bu satırın iddia ettiği 14 borçtan onu
+    bayat çıkmıştı (borç ödenmiş, künye kalmış). Bugün görüldü ki aynı şey SATIRIN KENDİSİNE de
+    olmuş: bir aydır `[~]` görünüyordu çünkü kimse dönüp kapatmamıştı. `docs:check` bunu göremez —
+    kapalı görevdeki asılı işareti denetliyor, AÇIK görevin hâlâ açık olmayı hak edip etmediğini
+    değil.
 - [x] (21.15) **Adres dilimi — uçlar + v3 `shAddr` çekmecesi (kullanıcı onaylı sıra, 09.08):**
   hesap ekranının adres bölümü gerçek uçlara bağlanır; ekleme/düzenleme/silme/varsayılan v3
   çekmecesinden. Checkout adres seçiminin zemini.
@@ -4219,10 +4260,13 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
   **AÇIK KALAN:**
   · **A14'ün giriş duvarı** — bu turda da ölçülmedi; hesap zaten girişliydi.
-  · **Şikâyet (Y1) ve sosyal sohbet ekranlarının klavye turu** — ikisi de bugün `ChatLayout`a geçti
-    ama **admin kapısının arkasında** (`management` uçları yalnız `admin`; tur depo hesabıyla
-    koşuldu). Kalıbın kendisi talep detayında doğrulandı ve üçü aynı kabı kullanıyor; kalan risk
-    ekran BAZLI yerleşim (üstteki şeritler `above`'a taşındı). Admin girişiyle koşulacak.
+  · ~~**Şikâyet (Y1) ve sosyal sohbet ekranlarının klavye turu** — admin girişiyle koşulacak.~~
+    → **KAPANDI, koşulmayacak (kullanıcı kararı 27.08):** *"klavye eğer konu sadece oysa şimdilik
+    beklet veya tamamlandı diye işaretle; klavyeyle alakalı yeni şikâyet gelirse testlerde bakarız."*
+    Dayanak ölçülmüştü: kalıbın kendisi cihazda ÜÇ ölçümle doğrulandı (çekmece · `ChatLayout` ·
+    MB-01 yutulan dokunuş) ve bu üç ekran AYNI kabı kullanıyor — kalan yalnız ekran bazlı yerleşim
+    kontrolüydü. Admin hesabına geçmek cihazdaki oturumu değiştirmeyi gerektiriyordu; maliyet
+    kalan riski aşıyor. Yeni şikâyet gelirse tur `ChatLayout` testlerinden başlar.
   · **21.7'nin Android cam bulanıklığı** — bu turda sıraya gelmedi.
 
   **Bir dev aracı gözlemi:** ayarlar FAB'ı sepette "+" düğmesinin üstüne denk gelip dokunuşları
