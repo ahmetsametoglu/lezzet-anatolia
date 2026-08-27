@@ -82,8 +82,17 @@ export type PlaceOrderRejection =
 export type PlaceOrderOutcome =
   /** Kart yolu: sipariş `draft`, ödeme istemcide tamamlanacak. */
   | { status: 'payment_required'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType; clientSecret: string }
-  /** Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş AÇILDI ve kesinleşti. */
-  | { status: 'placed'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType }
+  /**
+   * Kapıda/vadeli: ödeme sağlayıcısı yok, sipariş AÇILDI ve kesinleşti.
+   *
+   * **`referenceNo` müşteriye gösterilen numaradır** (`LA-26-…`) ve BU DALA ÖZGÜ: numara ilk kalıcı
+   * durumda doğuyor (`confirmed` — `transition.ts` kuralı), yani kart yolunda sipariş henüz
+   * taslakken numara YOKTUR. Geçişin kendi cevabından geliyor (`transitionOrder` → `referenceNo`),
+   * ek okuma yok. `null` kalabilir — motor geçişi yazdı ama numara üretmediyse uydurulmaz;
+   * "bilinmiyor" yazan bir sipariş numarası, olmayan numaradan kötüdür (27.08 · eski
+   * `BEKLEYEN(21.14)`: native onay ekranı numarayı çizemiyordu çünkü cevapta hiç yoktu).
+   */
+  | { status: 'placed'; orderId: string; totalCents: number; deliveryType: AddressDeliveryType; referenceNo: string | null }
   | PlaceOrderRejection;
 
 export interface PlaceOrderInput {
@@ -174,7 +183,14 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
           context: { orderId: already.id },
         });
       } else {
-        return { status: 'placed', orderId: already.id, totalCents: already.totalCents, deliveryType: already.deliveryType };
+        // Numara SATIRDAN: bu dal zaten kesinleşmiş bir siparişi geri veriyor, numarası yazılı.
+        return {
+          status: 'placed',
+          orderId: already.id,
+          totalCents: already.totalCents,
+          deliveryType: already.deliveryType,
+          referenceNo: already.referenceNo,
+        };
       }
     }
   }
@@ -265,7 +281,15 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
     // Huninin son adımı (08.9). Tutar ve müşteri TAŞINMAZ — olay yalnız "bu oturum siparişle
     // bitti" der (`ANALYTICS §1`, İlke 2'nin bilinçli istisnası).
     input.onPlaced?.();
-    return { status: 'placed', orderId: draft.orderId, totalCents: draft.totalCents, deliveryType: draft.deliveryType };
+    /* Numara GEÇİŞİN cevabından — `transitionOrder` onu bu çağrıda üretti ve döndürdü. Siparişi
+       ikinci kez okumak aynı değeri bir tur daha sormak olurdu. */
+    return {
+      status: 'placed',
+      orderId: draft.orderId,
+      totalCents: draft.totalCents,
+      deliveryType: draft.deliveryType,
+      referenceNo: moved.referenceNo,
+    };
   }
 
   const session = await createCheckoutSession(

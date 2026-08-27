@@ -25,7 +25,7 @@ import type { Messages } from './professionals-types';
   Gerekçe ölçülebilir: aynı akışın parçaları iki dosyaya bölünseydi "hangi alan hangi kaynaktan
   doldu" sorusunun cevabı ikiye ayrılırdı.
 
-  Eski künyedeki **BEKLEYEN(21.14)** kalktı: üç ucun üçü de artık var (`GET /b2b/company/:siret` ·
+  Eski künyedeki **21.14 işareti** kalktı: üç ucun üçü de artık var (`GET /b2b/company/:siret` ·
   `GET /b2b/vat/:number` · `POST /me/b2b/application`).
 
   ── ŞABLONDAN SAPMALAR ──────────────────────────────────────────────────────

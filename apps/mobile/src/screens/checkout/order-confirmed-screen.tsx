@@ -29,13 +29,14 @@ import { useOrderNeighborInvite } from './use-neighbor-invite.hook';
   cevabı). Değerler rota PARAMETRESİYLE taşınıyor (durum deposuyla değil) çünkü bu ekranın hayatı
   tek bir geçişten ibarettir: geri gelinemez (`replace` ile açılır), yenilenmez, paylaşılmaz.
 
-  ── SİPARİŞ NUMARASI HENÜZ TAŞINMIYOR ───────────────────────────────────────
-  Sözleşme sipariş açıldığında yalnız `orderId` (uuid) döndürüyor; müşteriye gösterilen numara
-  (`LA-26-…`) `reference_no` alanıdır ve sipariş uçları YALNIZ o numarayla adreslenebiliyor
-  (`GET /me/orders/:reference`) — yani uuid'den numaraya giden bir yol YOK. Numara bilinmiyorsa
-  satır ÇİZİLMEZ: "bilinmiyor" yazan bir sipariş numarası, olmayan bir numaradan kötüdür.
-  Doğru çözüm `CheckoutOrderResultSchema`nın `placed`/`payment_required` dallarına `referenceNo`
-  eklemek — sözleşme bu şeridin yazma alanı değil, terfi ihtiyacı olarak raporlandı.
+  ── SİPARİŞ NUMARASI (27.08 · eski `BEKLEYEN(21.14)` kapandı) ───────────────
+  Numara artık cevapta: sözleşmenin `placed` dalı `referenceNo` taşıyor ve değer geçişin kendi
+  cevabından geliyor (`transitionOrder` — ek okuma yok, kural `place-order.ts` künyesinde).
+
+  **İKİ YOLUN CEVABI FARKLI ve bu doğru:** kapıda/vadeli ödemede sipariş bu çağrıda kesinleşiyor,
+  numara doğuyor ve satır çiziliyor. Kart yolunda sipariş ödeme kartı kapandığında hâlâ TASLAKTIR
+  (onayı webhook yazar) — numara henüz yok, `null` gelir ve satır ÇİZİLMEZ: "bilinmiyor" yazan bir
+  sipariş numarası, olmayan bir numaradan kötüdür. Müşteri numarayı "Siparişlerim"de görür.
 
   ── SAPMA: onay işaretinin "pop" animasyonu çizilmedi ───────────────────────
   Şablonda işaret 0,5 sn'lik bir yay ile büyüyerek geliyor. RN'de karşılığı `Animated`; tek bir

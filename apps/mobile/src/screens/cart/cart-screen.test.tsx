@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react-native';
+import { fireEvent, render, screen, within } from '@testing-library/react-native';
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { CartScreen } from './cart-screen';
@@ -32,7 +32,11 @@ jest.mock('@/lib/onboarding/onboarding-store', () => {
     getOnboardingSnapshot: () => snapshot,
   };
 });
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn() }) }));
+/* Yönlendirme CASUSU sabit: düğmenin hangi ROTAYI açtığı bu ekranın kararlarından biri
+   (salt-kargo sepette kargo taslağı) ve her çağrıda yeni bir `jest.fn()` üreten mock onu
+   ölçülemez kılardı. */
+const mockPush = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush, back: jest.fn() }) }));
 
 /* Posta kodu çekmecesi (bant içindeki "Posta kodunu değiştir") kitin kanonik dosyasıdır ve oturumu
    okur; ekran testinin oturum altyapısına bağlanmaması için supabase kapısı sahteleniyor —
@@ -199,5 +203,48 @@ describe('CartScreen — tek gruplu sepet', () => {
 
     expect(screen.queryByTestId('cart-group-undeliverable')).toBeNull();
     expect(screen.getByTestId('cart-undeliverable')).toBeOnTheScreen();
+  });
+});
+
+/*
+  DÜĞMENİN AÇTIĞI SİPARİŞ TÜRÜ (27.08 · eski `BEKLEYEN(21.14)`).
+
+  Bölünmüş sepetin kargo yarısının kendi düğmesi vardı; açık kalan hâl SALT-KARGO sepetti — orada
+  `split` false olduğu için o kart hiç çizilmiyor ve tek düğme düz `/checkout`a, yani ROTA taslağına
+  gidiyordu. Ekran "kargoyla gönderilir" derken açılan sipariş kapıya teslim siparişi oluyordu.
+
+  Bayrak TÜRETİLMEZ, ROTADAN gelir (`checkout-screen` künyesi): burada ölçülen tam olarak o —
+  ekranın hangi adresi açtığı, ne gösterdiği değil.
+*/
+describe('CartScreen — düğme hangi siparişi açıyor', () => {
+  beforeEach(() => mockPush.mockReset());
+
+  it('SALT-KARGO sepette kargo taslağını açar', async () => {
+    mockCart = cartWith(cartView([cartViewLine(1, 'Kuru kayısı', 'shipping'), cartViewLine(2, 'Ceviz', 'shipping')]));
+
+    await render(<CartScreen />);
+    await fireEvent.press(screen.getByTestId('cart-checkout'));
+
+    expect(mockPush).toHaveBeenCalledWith('/checkout?group=shipping');
+  });
+
+  it('KARIŞIK sepette bar ROTA taslağını açar — kargo yarısının kendi düğmesi var', async () => {
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local'), cartViewLine(2, 'Ceviz', 'shipping')]));
+
+    await render(<CartScreen />);
+    await fireEvent.press(screen.getByTestId('cart-checkout'));
+
+    expect(mockPush).toHaveBeenCalledWith('/checkout');
+    // İkinci sipariş bu ekranda ayrı bir düğmedir; bar onun yerine geçmez.
+    expect(screen.getByTestId('cart-shipping-checkout')).toBeOnTheScreen();
+  });
+
+  it('SALT-ROTA sepette düz checkout açar', async () => {
+    mockCart = cartWith(cartView([cartViewLine(1, 'Baklava', 'local')]));
+
+    await render(<CartScreen />);
+    await fireEvent.press(screen.getByTestId('cart-checkout'));
+
+    expect(mockPush).toHaveBeenCalledWith('/checkout');
   });
 });

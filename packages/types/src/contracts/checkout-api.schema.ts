@@ -249,6 +249,18 @@ export const CheckoutOrderResultSchema = z.discriminatedUnion('status', [
     /** Gösterim tutarı — ÇEKİLECEK tutar bu değil: onu sunucu siparişten yeniden çözer. */
     totalCents: z.number().int(),
     deliveryType: AddressDeliveryTypeEnum,
+    /**
+     * MÜŞTERİYE GÖSTERİLEN NUMARA (`LA-26-…`) — 27.08'de eklendi ve YALNIZ bu dalda var.
+     *
+     * `orderId` bir uuid'dir; müşteri onu telefonda okuyamaz, WhatsApp'a yazamaz, siparişini
+     * onunla soramaz. Numara ise ilk kalıcı durumda doğuyor (`confirmed`), yani `payment_required`
+     * dalında sipariş henüz TASLAK ve ortada numara yok — o dala eklemek, olmayan bir alanı hep
+     * `null` taşımak olurdu.
+     *
+     * `null` meşru bir hâl: motor geçişi yazdı ama numara üretmediyse ekran satırı hiç çizmez.
+     * Şemadan TÜRER (`OrderSchema.shape.referenceNo`) — biçim kuralı siparişin kendi alanındadır.
+     */
+    referenceNo: OrderSchema.shape.referenceNo,
   }),
   /**
    * Sipariş açıldı, sıra ÖDEMEDE — ekran yerel ödeme sayfasını bu `clientSecret` ile açar.

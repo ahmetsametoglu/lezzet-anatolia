@@ -30,7 +30,8 @@ export default function OrderConfirmedRoute() {
   return (
     <OrderConfirmedScreen
       /* Ekranda GÖRÜNMEZ (21.45): yalnız komşu davetini açmaya yarıyor. Uuid müşteriye
-         gösterilecek bir numara değil — gösterilen numara `reference`tır ve o hâlâ taşınmıyor. */
+         gösterilecek bir numara değil — gösterilen numara `reference`tır ve o 27.08'den beri
+         taşınıyor (kapıda/vadeli yolda dolu, kart yolunda yok: sipariş o an hâlâ taslak). */
       orderId={params.orderId ?? null}
       reference={params.reference ?? null}
       totalCents={intOf(params.total)}

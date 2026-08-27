@@ -76,6 +76,9 @@ function isAddable(row: RecipeRow): row is RecipeRow & { priceCents: number } {
 function cartLineOf(row: RecipeRow & { priceCents: number }) {
   return {
     id: `${row.productSlug}-${row.variantId}`,
+    /* Sunucudaki ADRES açıkça geçer (27.08 · eski 21.14 işareti) — depo `id`den ayıklayabiliyor
+       ama çıkarım biçime bağlıdır; bilen taraf burası (`cart-store` künyesi). */
+    variantId: row.variantId,
     slug: row.productSlug,
     name: row.name,
     variantLabel: row.variantLabel,

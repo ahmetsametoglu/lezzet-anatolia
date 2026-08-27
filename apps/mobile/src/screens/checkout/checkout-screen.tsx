@@ -100,8 +100,11 @@ interface PaymentOption {
 
 interface CheckoutScreenProps {
   /**
-   * Bölünmüş sepetin KARGO yarısı için ayrı sipariş (19.15). Bayrak TÜRETİLMEZ, rotadan gelir;
-   * bugün sepet ekranı bu yolu henüz açmıyor (varsayılan `false`) — BEKLEYEN(21.14).
+   * Bölünmüş sepetin KARGO yarısı için ayrı sipariş (19.15). Bayrak TÜRETİLMEZ, rotadan gelir.
+   *
+   * Sepet ekranı yolu İKİ yerden açıyor: bölünmüş sepette kargo grubunun kendi düğmesi, salt-kargo
+   * sepette ise yapışkan barın kendisi (`view.shippingOnly`, 27.08). Varsayılan `false` çünkü
+   * parametresiz açılan checkout rota siparişidir.
    */
   shippingOrder?: boolean;
 }
@@ -483,11 +486,15 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
   /**
    * Sipariş açıldı: onay ekranına SUNUCUNUN tutarı ve seçilen künyeler taşınır.
    *
-   * **Sipariş NUMARASI taşınmıyor çünkü cevapta yok:** sözleşme `orderId` (uuid) döndürüyor,
-   * müşteriye gösterilen `LA-26-…` ise `reference_no` ve ondan uuid'e giden bir okuma ucu YOK
-   * (`GET /me/orders/:reference` yalnız numarayla adresleniyor). Uuid'i "sipariş no" diye yazmak
-   * müşteriye kullanamayacağı bir numara vermek olurdu; onay ekranı o satırı hiç çizmiyor.
-   * Terfi ihtiyacı raporlandı — BEKLEYEN(21.14).
+   * **SİPARİŞ NUMARASI ARTIK TAŞINIYOR (27.08)** — sözleşme `placed` dalında `referenceNo`
+   * döndürüyor ve numara geçişin kendi cevabından geliyor (`transitionOrder`, ek okuma yok).
+   * Önceki hâlde cevapta yalnız uuid vardı; uuid'i "sipariş no" diye yazmak müşteriye telefonda
+   * okuyamayacağı bir numara vermek olurdu, o yüzden satır hiç çizilmiyordu.
+   *
+   * **KART YOLUNDA `null` GEÇER ve bu doğru:** numara ilk kalıcı durumda doğar (`confirmed`) ve
+   * kart yolunda sipariş ödeme kartı kapandığı an hâlâ TASLAKTIR — onayı webhook yazar, saniyeler
+   * sonra. O anda bir numara uydurmak yerine ekran satırı çizmez; müşteri numarayı "Siparişlerim"de
+   * görür. Ölçülemeyen değer boş bırakılır (CLAUDE §1).
    *
    * **`orderId` TAŞINIYOR ama gösterilmiyor** (21.45): onay ekranı komşu davetini onunla açıyor
    * (`POST /me/invite/neighbor`). Müşteriye çizilmiyor — uuid onun kullanabileceği bir numara
@@ -495,7 +502,12 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
    * SUNUCUDA: kargo siparişinde davet zaten açılmıyor ve cevap `null` dönüyor. İki yerde süzmek,
    * "hangi sipariş komşu çağırabilir" kuralının ikinci kopyası olurdu.
    */
-  const finish = (orderId: string, totalCents: number, deliveryType: 'route' | 'shipping'): void => {
+  const finish = (
+    orderId: string,
+    totalCents: number,
+    deliveryType: 'route' | 'shipping',
+    referenceNo: string | null,
+  ): void => {
     /* SEPET YERELDE BOŞALTILMAZ, SUNUCUDAN TAZELENİR (21.29a): sunucu o siparişin kalemlerini
        zaten düşürdü (`placeOrder` → `clearOrderedLines`) ve `resetCart()` iki gruplu sepette kargo
        yarısını da silerdi — müşterinin henüz sipariş etmediği kalemleri.
@@ -511,6 +523,9 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
       pathname: '/checkout/confirmed',
       params: {
         orderId,
+        /* Numarası olmayan geçişte parametre HİÇ YAZILMAZ (boş dize değil): boş dize de bir
+           değerdir ve ekranın "bilinmiyor" dalını kaçırırdı. */
+        ...(referenceNo === null ? {} : { reference: referenceNo }),
         total: String(totalCents),
         delivery: deliveryLabelOf(deliveryType, chosenDate, t, locale),
         payment: selectedPayment?.label ?? '',
@@ -564,7 +579,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
 
     const outcome = result.data;
     if (outcome.status === 'placed') {
-      finish(outcome.orderId, outcome.totalCents, outcome.deliveryType);
+      finish(outcome.orderId, outcome.totalCents, outcome.deliveryType, outcome.referenceNo);
       return;
     }
     if (outcome.status === 'payment_required') {
@@ -573,7 +588,9 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
          yerinde durur), başarısızlık sebebiyle söylenir. */
       const sheet = await presentPayment({ clientSecret: outcome.clientSecret });
       if (sheet.status === 'succeeded') {
-        finish(outcome.orderId, outcome.totalCents, outcome.deliveryType);
+        /* Numara YOK ve olamaz: sipariş bu anda hâlâ taslak, onayı webhook yazacak (`finish`
+           künyesi). `null` geçiyoruz, ekran satırı çizmiyor. */
+        finish(outcome.orderId, outcome.totalCents, outcome.deliveryType, null);
         return;
       }
       setSubmitting(false);

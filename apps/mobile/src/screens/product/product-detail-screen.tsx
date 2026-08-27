@@ -278,6 +278,10 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
     addProduct(
       {
         id: `${detail.slug}-${variant.id}`,
+        /* Sunucudaki ADRES açıkça geçer (27.08 · eski 21.14 işareti): depo kimliği `id`den
+           ayıklayabiliyor ama o bir ÇIKARIMDIR — `id`nin biçimi bir gün değişirse satır sessizce
+           adressiz kalır ve sunucuya hiç yazılamaz. Bilen taraf burası, söylemesi bedava. */
+        variantId: variant.id,
         slug: detail.slug,
         name: detail.name,
         variantLabel: variant.label,

@@ -5,8 +5,8 @@ import type { MeAddress } from '@/lib/api/addresses';
   saklanmaz: iki yerde tutulan aynı gerçek bir gün ayrışır.
 
   Buraya taşındı çünkü aynı birleşim üç yerde yazılıydı (hesap ekranının adres kartı, checkout'un
-  adres listesi ve adres çekmecesinin çağıranları) — checkout dosyasındaki `BEKLEYEN(21.14)` işareti
-  tam bunu söylüyordu; işaret kalktı, kaynak tekleşti.
+  adres listesi ve adres çekmecesinin çağıranları) — checkout dosyasındaki 21.14 işareti tam bunu
+  söylüyordu; işaret kalktı, kaynak tekleşti.
 */
 
 /** Etiketsiz adreste başlık ŞEHİRDİR — uydurma etiket yazılmaz (entity künyesindeki kural). */

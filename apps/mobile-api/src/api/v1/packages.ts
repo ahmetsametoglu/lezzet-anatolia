@@ -29,7 +29,7 @@ import { readPlace } from './catalog';
  * `@lezzet/application`a terfi etti; uç artık `getPackageDetail`i çağırıyor ve satılabilirlik
  * ölçütü webinkiyle AYNI: pasif paket, kalemsiz paket ve **kalemi satıştan kalkmış paket** 404
  * (`listSellable` — DOMAIN §13). Eski hâlinde son madde eksikti: boyu pasife alınmış bir ürünün
- * paketi mobilde hâlâ satılabilir görünüyordu. BEKLEYEN(21.14) kapandı.
+ * paketi mobilde hâlâ satılabilir görünüyordu. 21.14 işareti kapandı.
  *
  * ── YER ARTIK KAPIYA GEÇİYOR (10.08) ────────────────────────────────────────
  * Bu künye 09.08'de şöyle diyordu: *"`soldOut` hâlâ sözleşmede YOK … yer (posta kodu) bu yüzden

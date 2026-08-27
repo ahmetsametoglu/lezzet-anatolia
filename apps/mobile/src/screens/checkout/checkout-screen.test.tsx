@@ -19,7 +19,10 @@ import messages from './messages.json';
 */
 
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
-jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: jest.fn() }) }));
+/* `replace` CASUSU sabit: onay ekranına NE TAŞINDIĞI (özellikle sipariş numarası) bu ekranın
+   kararlarından biri ve her çağrıda yeni `jest.fn()` üreten bir mock onu ölçülemez kılardı. */
+const mockReplace = jest.fn();
+jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn(), back: jest.fn(), replace: mockReplace }) }));
 
 // Ad `mock` ile başlamak ZORUNDA: `jest.mock` fabrikası dosyanın tepesine kaldırılıyor.
 let mockCart: CartState;
@@ -210,5 +213,80 @@ describe('CheckoutScreen — siparişin kapsamı', () => {
     const summary = within(screen.getByTestId('checkout-summary'));
     expect(summary.getByText('1× Kaymak')).toBeOnTheScreen();
     expect(summary.getByText('32,50 €')).toBeOnTheScreen();
+  });
+});
+
+/*
+  SİPARİŞ NUMARASI ONAY EKRANINA TAŞINIYOR (27.08 · eski `BEKLEYEN(21.14)`).
+
+  Cevap eskiden yalnız `orderId` (uuid) taşıyordu; müşteriye gösterilen `LA-26-…` hiçbir yoldan
+  ekrana ulaşamıyor ve onay ekranı o satırı hiç çizmiyordu. Sözleşmenin `placed` dalı artık
+  `referenceNo` taşıyor (`transitionOrder`ın kendi cevabı — ek okuma yok).
+
+  ÖLÇÜLEN ŞEY GEÇİŞİN PARAMETRESİ, ekranın çizimi değil: numarayı çizen yer onay ekranı ve orası
+  kendi testinde ölçülüyor. Burada sorulan tek soru "cevaptaki numara rotaya yazıldı mı".
+
+  HAVALE YOLU seçildi çünkü sipariş bu yolda TEK çağrıda kesinleşiyor: kart yolu ödeme kartını
+  açar (`presentPayment` bu dosyada sahtelenmiş) ve orada numara zaten YOKTUR — sipariş o an hâlâ
+  taslaktır, onayı webhook yazar.
+*/
+describe('CheckoutScreen — sipariş numarası', () => {
+  /** Havale ile ödenen KARGO siparişi: gün sorulmaz, ödeme kartı açılmaz — tek çağrıda kesinleşir. */
+  function transferSnapshot(): CheckoutSnapshot {
+    const base = snapshot(false, 2000);
+    return { ...base, payment: { ...base.payment!, methods: ['bank_transfer'] } };
+  }
+
+  /** İki uç, tek mock: okuma GET'ten, sipariş POST'tan. URL'e bakmayan bir mock ikisine aynı cevabı verirdi. */
+  function routeFetch(orderBody: unknown): void {
+    fetchMock.mockImplementation(async (input, init) => {
+      const method = (init as { method?: string } | undefined)?.method ?? 'GET';
+      return method === 'POST' ? reply(orderBody) : reply(transferSnapshot());
+    });
+  }
+
+  async function placeOrder(): Promise<void> {
+    mockCart = cartWith(cartView([cartViewLine(2, 'Ceviz', 'shipping', { unitPriceCents: 2000 })]));
+
+    await render(<CheckoutScreen />);
+    await waitFor(() => expect(screen.getByTestId('checkout-summary')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByRole('button', { name: `${t.payment.transfer} · ${t.payment.transferBody}` }));
+    await fireEvent.press(screen.getByTestId('checkout-confirm'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalled());
+  }
+
+  beforeEach(() => mockReplace.mockReset());
+
+  it('cevaptaki numarayı onay ekranına TAŞIR', async () => {
+    routeFetch({
+      status: 'placed',
+      orderId: '22222222-2222-4222-8222-222222222222',
+      totalCents: 2000,
+      deliveryType: 'shipping',
+      referenceNo: 'LA-26-7K4M2P',
+    });
+
+    await placeOrder();
+
+    expect(mockReplace).toHaveBeenCalledWith(
+      expect.objectContaining({ params: expect.objectContaining({ reference: 'LA-26-7K4M2P' }) }),
+    );
+  });
+
+  it('numara YOKSA parametreyi hiç yazmaz — boş dize de bir değerdir', async () => {
+    routeFetch({
+      status: 'placed',
+      orderId: '22222222-2222-4222-8222-222222222222',
+      totalCents: 2000,
+      deliveryType: 'shipping',
+      referenceNo: null,
+    });
+
+    await placeOrder();
+
+    const params = (mockReplace.mock.calls[0]?.[0] as { params: Record<string, unknown> }).params;
+    expect(params).not.toHaveProperty('reference');
+    // Siparişin kimliği yine taşınıyor: komşu daveti onunla açılıyor (21.45).
+    expect(params.orderId).toBe('22222222-2222-4222-8222-222222222222');
   });
 });

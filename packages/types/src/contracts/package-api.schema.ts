@@ -14,7 +14,7 @@ import { HomePackageSchema } from './home-api.schema';
  * kargo kısıtı · içerik satırları. "İçerik değiştirilemez" notu SÖZLEŞMEDE YOK: statik metindir,
  * ekranın kendi sözlüğünde yaşar — API biçimli/sabit cümle göndermez (katalog kartının kuralı).
  *
- * ── STOK/YER EKSENİ 10.08'DE AÇILDI (eski `BEKLEYEN(21.14)` kapandı) ─────────
+ * ── STOK/YER EKSENİ 10.08'DE AÇILDI (eski 21.14 işareti kapandı) ────────────
  * Bu künye 10.08'e kadar "`soldOut`/stok zinciri BİLEREK YOK" diyordu ve gerekçesi şuydu: kural
  * web'de yaşıyor (`apps/web/lib/storefront/packages.ts`), kopyalamak yasak, hep `false` basmak ise
  * "tükendi yok" ile "bilinmiyor"u ayırt edilemez yapardı. **Gerekçenin ilk yarısı 09.08'de düştü:**

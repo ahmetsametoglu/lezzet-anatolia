@@ -32,12 +32,15 @@ import { apiFetch, type ApiResult } from './client';
   değildir ve TypeScript onunla daraltma yapamaz — o yoldan gidilseydi her okuma yerinde elle
   kontrol gerekirdi (`MeCartItemWriteSchema` künyesi).
 
-  ── PAKET SATIRININ YAZMA YOLU YARIM (ölçüldü 21.21, canlı `:3002`) ─────────
-  `POST /items` paket satırını EKLİYOR ve aynı paket ikinci kez gelirse adet birleşiyor (ölçüm:
-  1 + 2 → qty 3). Ama `PATCH`/`DELETE` yolu `/items/:variantId?stock=` ile adresleniyor ve paketin
-  varyantı YOK: paket kimliğiyle atılan `DELETE` satırı bulamıyor, sepet aynen dönüyor (ölçüldü).
-  Yani paket satırı sunucudan AZALTILAMIYOR ve SİLİNEMİYOR. Çözüm `CartService.setQty`/`removeItem`
-  imzasının satır anahtarına (`CartRef`) geçmesidir — `packages/database` kararı. BEKLEYEN(21.14).
+  ── PAKET SATIRININ YAZMA YOLU TAM (20.08) ─────────────────────────────────
+  Üç kapının üçü de paket satırında çalışıyor: `POST /items` ekliyor ve aynı paket ikinci kez
+  gelince adet birleşiyor, `PATCH`/`DELETE` ise `?kind=bundle` ile adresliyor (`linePath`).
+
+  Bir süre yarımdı ve ölçülmüştü (21.21): `PATCH`/`DELETE` yalnız `/items/:variantId?stock=` ile
+  adresliyordu, paketin varyantı olmadığı için satır bulunamıyor ve sepet aynen dönüyordu — yani
+  paket sunucudan azaltılamıyor, silinemiyordu. Çözüm `packages/database` tarafındaydı ve yazıldı:
+  `CartService.setQty`/`removeItem` artık satır ANAHTARI alıyor (`CartRef` — varyant+parti ya da
+  paket), tek kimlikle değil.
 */
 
 /** Yazma gövdesinin tek kalemi — sözleşmeden TÜRER, elle DTO yazılmaz (02-mimari §3.2). */

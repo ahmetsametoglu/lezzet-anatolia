@@ -665,8 +665,19 @@ export function CartScreen() {
             {barBlockText}
           </Text>
         )}
+        {/*
+          SEPETİN TAMAMI KARGODAYSA DÜĞME KARGO SİPARİŞİNİ AÇAR (19.15 · web `cart-checkout-bar`ın
+          aynı kararı, 27.08'de mobile de geçirildi — eski `BEKLEYEN(21.14)`ün kapanışı).
+
+          Bölünmüş sepetin kapısı zaten açıktı (kargo grubunun kendi düğmesi), açık kalan tek hâl
+          SALT-KARGO sepetti: orada `split` false olduğu için o kart hiç çizilmiyor ve tek düğme
+          düz `/checkout`a gidiyordu — yani ROTA taslağı. Sonucu ekranın kendisiyle çelişmesiydi:
+          sepet "kargoyla gönderilir" diyor, açılan sipariş kapıya teslim siparişi oluyor ve
+          teslimat/ödeme kararı adresin cevabından çözülüyordu (kargo siparişinde tür adresin
+          cevabını EZER — `checkout-snapshot` künyesi). Bayrak TÜRETİLMEZ, rotadan gelir.
+        */}
         <PressableSurface
-          onPress={() => router.push('/checkout')}
+          onPress={() => router.push(view.shippingOnly ? '/checkout?group=shipping' : '/checkout')}
           feedback="shadow"
           disabled={checkoutBlocked}
           style={[styles.checkoutButton, checkoutBlocked ? styles.checkoutDisabled : styles.checkoutEnabled]}

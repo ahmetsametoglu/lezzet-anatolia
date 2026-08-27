@@ -222,12 +222,15 @@ function getSnapshot(): CartState {
 }
 
 /**
- * Sepeti YERELDE boşaltır — testlerin `beforeEach`i ve checkout onayı.
+ * Sepeti YERELDE boşaltır — testlerin `beforeEach`i ve misafir devrinin temizliği.
  *
- * SUNUCU SEPETİNE DOKUNMAZ ve bu bilinçli: mobil checkout henüz sipariş OLUŞTURMUYOR (UI-only —
- * `checkout-screen` künyesi), yani burada sunucu sepetini silmek gerçekte var olmayan bir siparişin
- * ardından müşterinin webdeki sepetini de boşaltmak olurdu. Sipariş ucu bağlandığında sepeti
- * SUNUCU kapatır (`CartService.clear`, sipariş yazımıyla aynı pencerede) — BEKLEYEN(21.14).
+ * SUNUCU SEPETİNE DOKUNMAZ ve bu bilinçli — gerekçe 27.08'de değişti, kural değişmedi. Eski
+ * gerekçe "checkout henüz sipariş oluşturmuyor"du; artık oluşturuyor ve sepeti SUNUCU kapatıyor
+ * (`placeOrder` → `clearOrderedLines`, sipariş yazımıyla aynı pencerede). Yeni gerekçe daha da
+ * bağlayıcı: silme SEÇİCİDİR — o siparişin kalemleri düşer, iki gruplu sepette kargo yarısı
+ * yerinde kalır. Buradan toptan silmek, müşterinin henüz sipariş etmediği kalemleri silmek
+ * olurdu; checkout onayı da bu yüzden `resetCart` değil `refreshCart` çağırıyor
+ * (`checkout-screen` → `finish` künyesi, 21.29a).
  *
  * Havadaki turlar GEÇERSİZ kılınır (`revision`): boşaltmadan önce başlamış bir cevabın sepeti geri
  * doldurması, kullanıcının gördüğü boş sepeti sessizce bozardı.
@@ -579,8 +582,11 @@ function refreshed(known: CartProductLine, line: MeCartViewLine): CartProductLin
  * fiyatını da taşıyor, ekran doğrudan `view.lines`ı çiziyor. Yerel liste yalnız devir ve misafir
  * yolu için tutulur.
  *
- * Paket satırları dokunulmadan kalır: bu turda paket sunucuya YAZILMIYOR (paketin uuid'si paket
- * detay sözleşmesinde yok, yalnız `slug` var) — BEKLEYEN(21.14).
+ * Paket satırları dokunulmadan kalır ve GEREKÇE 27.08'de değişti: eskiden paket sunucuya hiç
+ * yazılamıyordu (uuid'si paket detay sözleşmesinde yoktu); 20.08'den beri yazılıyor, çözülüyor ve
+ * toplama giriyor. Bugünkü sebep varyant satırındakiyle aynı değil: paketin yerel kaydı ekranın
+ * çizdiği şey DEĞİL — ekran `view.lines`ı çiziyor ve paket satırı adıyla, fiyatıyla oradan geliyor.
+ * Yerel liste yalnız devir ve misafir yolu için tutuluyor, tazelenecek bir gösterimi yok.
  */
 function adopted(current: CartState, view: MeCartView): CartState {
   const products: CartProductLine[] = [];
@@ -907,31 +913,26 @@ export function removeProduct(id: string): void {
 }
 
 /*
-  PAKET SATIRLARI HÂLÂ CİHAZDA KALIR — ama sebep DEĞİŞTİ ve artık ÖLÇÜLDÜ (21.21, canlı `:3002`).
+  PAKET KAPILARI SUNUCUYA BAĞLI (20.08) — aşağıdaki üçü varyant kapılarıyla AYNI yoldan geçer:
+  iyimser yazım + `revision` sayacı + 401 dalı.
 
-  İki engel kalktı: paket detay sözleşmesi artık paketin uuid'sini taşıyor (`PackageDetailSchema.id`)
-  ve yazma gövdesi paket dalını kabul ediyor (`MeCartItemWriteSchema`). `POST /me/cart/items` paket
-  satırını gerçekten yazıyor, aynı paket ikinci kez gelince adet birleşiyor (ölçüm: 1 + 2 → qty 3).
+  ── BURASI BİR TARİH KAYDI: iki engelin ikisi de ödendi ─────────────────────
+  Kapılar bir süre YEREL kaldı ve sebebi ölçülmüştü (21.21, canlı `:3002`):
 
-  DEPOYU SUNUCUYA BAĞLAMAYI DURDURAN İKİ ÖLÇÜM — ikisi de bu şeridin DIŞINDA:
+  1. SATIR ÇÖZÜLEMİYORDU. `getCartView`in paket kapısı (`CartBundlePort`) mobil uçlarda
+     geçilemiyordu — kapıyı besleyecek okuma `apps/web`te ve `server-only`ydi. Kapısız paket satırı
+     `orphanLine`a düşüyordu: `name: ""`, `unitPriceCents: null`, `blocked: true` ve tutar toplama
+     hiç girmiyordu. ÖDENDİ: okuma `@lezzet/application`a terfi etti (`getPackagesByIds`) ve
+     `readCartView` kapıyı geçiyor (`cart-view.ts` künyesi) — vitrin, sepet ve checkout artık aynı
+     paketi aynı stok ve yol kararıyla görüyor.
 
-  1. SATIR ÇÖZÜLEMİYOR. `getCartView`in paket kapısı (`opts.bundles`, `CartBundlePort`) mobil
-     uçlarda geçilmiyor: kapıyı besleyecek okuma `apps/web/lib/storefront/packages.ts`
-     (`getPackagesByIds`) ve `server-only`; kopyalaması yasak (CLAUDE §1). Kapısız çözülen paket
-     satırı `orphanLine`a düşüyor. ÖLÇÜM (canlı cevap): `name: ""`, `unitPriceCents: null`,
-     `lineTotalCents: null`, `blocked: true` — ve `subtotalCents` paketi İÇERMİYOR (460, paketin
-     1923'ü yok), `hasBlocked: true`. Yani depoyu bugün sunucuya bağlamak, müşterinin doğru adla ve
-     doğru fiyatla gördüğü paketi ADSIZ, FİYATSIZ ve checkout'u KİLİTLEYEN bir satıra çevirirdi.
+  2. SATIR AZALTILAMIYOR/SİLİNEMİYORDU. `PATCH`/`DELETE` yolu varyant + parti ile adresliyordu;
+     paket kimliğiyle atılan `DELETE` satırı bulamıyordu. ÖDENDİ: `CartService.setQty`/`removeItem`
+     satır anahtarına geçti (`CartRef` — varyant+parti ya da paket) ve uç paket dalını
+     `?kind=bundle` ile adresliyor (`lib/api/cart.ts` → `linePath`).
 
-  2. SATIR AZALTILAMIYOR/SİLİNEMİYOR. `PATCH`/`DELETE` yolu varyant + parti ile adresliyor; paket
-     kimliğiyle atılan `DELETE` satırı bulamıyor ve sepet aynen dönüyor (ölçüldü). `POST /items`
-     yalnız EKLER — "−" ve "Kaldır" bir adet artışıyla ifade edilemez.
-
-  Bu yüzden aşağıdaki üç kapı YEREL kalıyor: yarım bir bağlanma, çalışan bir sepeti bozardı.
-  BEKLEYEN(21.14): (a) paket çözümü `@lezzet/application`a terfi edip `readCartView` kapıyı geçsin,
-  (b) `CartService.setQty`/`removeItem` satır anahtarına (`CartRef`) geçsin. İkisi indiği gün bu üç
-  kapı `addProducts`/`setProductQuantity`/`removeProduct` ile aynı yoldan (iyimser yazım + `revision`
-  + 401 dalı) geçer; dış API adları zaten aynı kalacak şekilde duruyor.
+  Kayıt duruyor çünkü kararın kendisi buradan okunuyor: paketin sepetteki adresi SLUG DEĞİL UUID'dir
+  ve bu üç kapı o kimliği taşıyor.
 */
 
 /**
@@ -1014,20 +1015,10 @@ export function cartCount(cart: CartState): number {
   return cart.products.reduce((total, line) => total + line.quantity, bundles);
 }
 
-/**
- * İndirim ÖNCESİ toplam (cent) — SUNUCUNUN çözdüğü ara toplam, burada hesap YOK.
- *
- * BUGÜNKÜ TEK ÇAĞIRANI CHECKOUT EKRANI: sepet ekranı görünümü doğrudan okuyor. Checkout kendi
- * görünümüne bağlandığında (sipariş ucu — BEKLEYEN(21.14)) bu iki kapı da silinir.
- */
-export function cartSubtotalCents(cart: CartState): number {
-  return cart.view.subtotalCents;
-}
-
-/** Ödenecek toplam (cent) — ara toplam eksi indirim; kararı sunucunun (`cartSubtotalCents` künyesi). */
-export function cartTotalCents(cart: CartState): number {
-  return cart.view.totalCents;
-}
+/* `cartSubtotalCents`/`cartTotalCents` SİLİNDİ (27.08). Künyeleri "tek çağıranı checkout ekranı,
+   kendi görünümüne bağlanınca silinir" diyordu; checkout o görünüme bağlandı (özet artık sunucunun
+   anlık görüntüsünden çiziliyor, 21.08) ve iki kapı çağıransız kaldı. Bir toplamı okumanın ikinci
+   yolu, ayrıştığı gün ekranla kasayı ayırır. Tutar isteyen `cart.view`i okur. */
 
 /** Ekranların okuma seam'i — depo değişince abone ekran yeniden çizilir. YAN ETKİSİZ (künye). */
 export function useCart(): CartState {

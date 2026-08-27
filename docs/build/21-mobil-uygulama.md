@@ -882,6 +882,42 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     kanıtlı. Ayrıca ölçüm sırasında görüldü: `locale=tr` istenen kartın adı İngilizce geldi
     ("Baklava with Walnut") — ürünün TR adı yoksa dil yedek zinciri böyle davranır, ama
     doğrulanması gereken bir veri gözlemi (katalog şeridine ait).
+  - **Durum (27.08 — SON TUR: on dört işaretin ölçümü, 21.14f):** görev satırı 14 canlı
+    `BEKLEYEN(21.14)` iddia ediyordu; her biri koda soruldu. **Onu bayat çıktı** — borç ödenmiş,
+    künye yerinde kalmıştı: paket çözümü `@lezzet/application`a terfi etmiş ve `readCartView`
+    kapıyı geçiyor (`getPackagesByIds`), `CartService.setQty`/`removeItem` satır anahtarına
+    (`CartRef`) geçmiş ve uç paketi `?kind=bundle` ile adresliyor, checkout gerçekten sipariş
+    açıyor, bölünmüş sepetin kargo düğmesi çalışıyor, `variantId`yi çıkarımla bulan ikinci adım
+    hâlâ yazılıydı. Bayat künyeler gerekçeleriyle birlikte gerçeğe çekildi (silinmedi: kararın
+    kendisi oradan okunuyor).
+    **DÖRT GERÇEK AÇIK KAPANDI:**
+    · **Salt-kargo sepette düğme YANLIŞ siparişi açıyordu.** Bölünmüş sepette kargo grubunun kendi
+      düğmesi vardı ama `shippingOnly` sepette `split` false olduğu için o kart hiç çizilmiyor ve
+      tek düğme düz `/checkout`a, yani ROTA taslağına gidiyordu — ekran "kargoyla gönderilir"
+      derken sipariş kapıya teslim siparişi olarak açılıyor ve teslimat/ödeme adresin cevabından
+      çözülüyordu. Web'in aynı kararı (`cart-checkout-bar`) mobile geçirildi; 3 test (sabotajla
+      doğrulandı: salt-kargo dalı kırmızıya döndü).
+    · **Sipariş NUMARASI onay ekranına taşınıyor.** Sözleşmenin `placed` dalına `referenceNo`
+      eklendi ve değer geçişin KENDİ cevabından geliyor (`transitionOrder` → `referenceNo`) — ek
+      okuma yok. Kart yolunda `null` ve bu doğru: sipariş o an hâlâ taslak, onayı webhook yazar.
+      5 test (ekran + rota parametresi; sabotajla doğrulandı).
+    · **`variantId` ekranlardan AÇIKÇA geçiyor** (ürün ve tarif detayı) — depo onu `id`nin sonundan
+      ayıklayabiliyordu ama o bir çıkarımdır ve `id` biçimi değişse satır sessizce adressiz kalırdı.
+    · **`resetDeliveryAddress` bağlandı.** Kendi künyesi "müşteri değişince seçim düşer" diyordu
+      ama çağıranı yoktu (knip ölü ihraç gösterdi); `signOut` artık çağırıyor — kalan kimlik yeni
+      müşteride karşılıksız.
+    **Ölü kapılar silindi:** `cartSubtotalCents`/`cartTotalCents` — künyeleri "checkout kendi
+    görünümüne bağlanınca silinir" diyordu, bağlandı (21.08) ve çağıransız kalmışlardı.
+    Doğrulama: mobil hedefli jest yeşil (sepet 12 · checkout 5 · onay 3 yeni) · `knip` temiz ·
+    `eslint` temiz · `typecheck` kendi kapsamımda temiz (kalan iki hata paralel şeridin süren
+    `stock_adjustment` işinde: `use-adjustment.hook.ts` ile `application/warehouse/adjustment`
+    sözleşmesi ayrışmış — bu dilimin dışında).
+    **AÇIK KALAN TEK MADDE — vitrin seçkisi (`readShowcase`), ve o web'in alanı:** native vitrin
+    kataloğun `featured` sırasını basıyor, web'in sinyalli seçkisi kopyalanmadı (yasak). Sinyalsiz
+    veride iki yüzey aynı listeyi veriyor; sinyal birikince ayrışırlar ve hiçbir yerde hata çıkmaz.
+    Terfi edecek kod `apps/web/lib/storefront/home.ts`te — not bırakıldı
+    (`docs/talep/not-musteri-vitrin-seckisi-mobilde-sinyalsiz.md`). Terfi olduğu gün mobil tarafta
+    iş tek satır.
 - [x] (21.15) **Adres dilimi — uçlar + v3 `shAddr` çekmecesi (kullanıcı onaylı sıra, 09.08):**
   hesap ekranının adres bölümü gerçek uçlara bağlanır; ekleme/düzenleme/silme/varsayılan v3
   çekmecesinden. Checkout adres seçiminin zemini.
