@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { WarehouseAdjustmentReason } from '@lezzet/types';
+import type { AdjustmentLineContract, WarehouseAdjustmentReason } from '@lezzet/types';
 
 import { recordAdjustment } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
@@ -10,17 +10,20 @@ import { trackWarehouse } from './warehouse-status';
 /*
   D4 · SAYIM / DÜZELTME (v2:427-455). `/warehouse/adjustments`.
 
-  ── İŞARET TERS ÇEVRİLİR, VE BU ÖLÇÜLMÜŞ BİR FARKTIR ────────────────────────
-  İki taraf aynı sayıyı TERS işaretle konuşuyor:
+  ── EKRAN İŞARETLE, KAYIT YÖN ALANIYLA KONUŞUR (27.08 · 06.14) ──────────────
+  İki taraf aynı olayı BAŞKA dilde anlatıyor ve çeviri tek yerde (`toRequestLine`, testli):
   · **Ekran** (v2:437): *"− düşüm · + yalnız sayım fazlasında"* — operatörün dili; stok azaldıysa
-    eksi, raftan fazla çıktıysa artı. Kâğıt tutanakla ve sağduyuyla uyumlu olan bu.
-  · **Kapı** (`AdjustmentLineSchema.qty`): *"+ stoktan düşüm, − stoğa geri ekleme"* — kaydın dili;
-    `stock_adjustment.qty` bir KAYIP sütunudur, net zayiat tek toplamla çıksın diye.
+    eksi, raftan fazla çıktıysa artı. Kâğıt tutanakla ve sağduyuyla uyumlu olan bu. DEĞİŞMEDİ.
+  · **Kapı** (`AdjustmentLine`): `qty` DAİMA POZİTİF, yön ayrı alanda (`direction: 'out' | 'in'`).
 
-  Çeviri TEK yerde (`toRequestQty`) ve testi var. İki dilden birini ötekine uydurmak seçenek
-  değildi: ekranın işaretini kapıya çevirmek operatöre yanlış geleni yazdırır, kapının işaretini
-  ekrana taşımak da `+`ı "imha ettim" gibi okuturdu. Sessiz bir işaret hatası burada en pahalı
-  hatadır — stoğu düşürmek yerine ARTIRIR ve kimse fark etmez.
+  **Kapının dili 06.14'te değişti ve gerekçesi ölçülmüş bir arızaydı** (stok hareket defteri talebi):
+  işaret miktara gömülüyken girişler ve çıkışlar aynı toplamda eriyor, "Çıkışlar" sekmesi dönem
+  toplamını EKSİ gösteriyordu (−13,49 €). Aynı kuralı para modülü yıllar önce koymuştu
+  (`0018_money.sql:35`: *"yön ayrı alandır, işaret tutara gömülmez"*). Öncesinde kapı `+` düşüm ·
+  `−` geri ekleme diyordu, yani ekranın TAM TERSİ; çeviri bir işaret çevirmesiydi (`toRequestQty`).
+
+  Ekranın dilini kapıya uydurmak yine seçenek DEĞİL: operatör tutanakta eksi görmeli. Sessiz bir
+  yön hatası burada en pahalı hatadır — stoğu düşürmek yerine ARTIRIR ve kimse fark etmez.
 
   ── SEBEP LİSTESİ TİPTEN GELİR ──────────────────────────────────────────────
   Dört sebep `WarehouseAdjustmentReason`ın kendisidir (`return_restock` varlık enum'undan
@@ -65,11 +68,15 @@ interface UseAdjustmentResult {
 }
 
 /**
- * EKRAN İŞARETİ → KAPI İŞARETİ. Ekranda eksi "stoktan düştü" demek; kayıtta düşüm ARTI yazılır.
- * Tek satır ama bu ekranın en kritik satırı — kendi birim testi var.
+ * EKRAN İŞARETİ → KAYIT SATIRI. Ekranda eksi "stoktan düştü" demek; kayıtta bu, pozitif bir adet
+ * ve `direction: 'out'` olur. Artı (sayım fazlası) `'in'`e gider.
+ *
+ * Bu ekranın en kritik dönüşümü — kendi birim testi var. `Math.abs` bilinçli: yön artık AYRI
+ * alanda taşındığı için miktarda işaret kalması, aynı bilgiyi iki yerde tutmak olurdu ve
+ * ayrıştıkları gün hangisinin doğru olduğunu söyleyecek bir yer kalmazdı.
  */
-export function toRequestQty(screenQty: number): number {
-  return -screenQty;
+export function toRequestLine(stockId: string, screenQty: number): AdjustmentLineContract {
+  return { stockId, qty: Math.abs(screenQty), direction: screenQty < 0 ? 'out' : 'in' };
 }
 
 export function useAdjustment(): UseAdjustmentResult {
@@ -110,7 +117,7 @@ export function useAdjustment(): UseAdjustmentResult {
         const trimmed = note.trim();
         const result = await trackWarehouse(
           recordAdjustment({
-            lines: [{ stockId, qty: toRequestQty(qty) }],
+            lines: [toRequestLine(stockId, qty)],
             reason,
             note: trimmed.length === 0 ? null : trimmed,
           }),
@@ -160,7 +167,11 @@ function noticeOf(outcome: AdjustOutcome): AdjustmentNotice {
         text: fillCopy(t.adjustment.result.ok, {
           ref: outcome.result.referenceNo,
           lines: String(outcome.result.lines),
-          qty: String(outcome.result.totalQty),
+          /* İKİ YÖN AYRI DÖNÜYOR (06.14) ve burada TOPLANMAZ: bu ekran tek satır gönderiyor, yani
+             ikisinden yalnız biri dolu — dolu olanı yazıyoruz. Toplamak, defterin ayırdığı iki
+             büyüklüğü geri birleştirmek olurdu; kapının künyesi karışık bir tutanakta çıkan
+             *"1 adet · −35,56 €"* sonucunu tam bu yüzden bir arıza olarak kaydetmiş. */
+          qty: String(outcome.result.outQty > 0 ? outcome.result.outQty : outcome.result.inQty),
         }),
       };
     case 'failed':

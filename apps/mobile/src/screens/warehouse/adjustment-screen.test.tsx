@@ -1,16 +1,23 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { AdjustmentScreen } from './adjustment-screen';
-import { toRequestQty } from './use-adjustment.hook';
+import { toRequestLine } from './use-adjustment.hook';
 import { STOCK_A } from './warehouse-fixture';
 import { resetWarehouseStatus } from './warehouse-status';
 
 /*
-  D4 EKRAN TESTİ — bu ekranın EN KRİTİK iddiası işaretin ters çevrilmesidir.
+  D4 EKRAN TESTİ — bu ekranın EN KRİTİK iddiası işaretin YÖNE çevrilmesidir.
 
-  Ekranda eksi "stoktan düştü"dür (operatörün dili), kayıtta düşüm ARTI yazılır (`stock_adjustment.qty`
-  bir KAYIP sütunudur). Sessiz bir işaret hatası burada stoğu düşürmek yerine ARTIRIR ve kimse fark
-  etmez — o yüzden hem saf çevirinin hem gönderilen gövdenin testi var.
+  Ekranda eksi "stoktan düştü"dür (operatörün dili); kayıtta adet DAİMA POZİTİF ve yön ayrı alanda
+  (`direction: 'out' | 'in'` — 06.14, stok hareket defteri). Sessiz bir yön hatası burada stoğu
+  düşürmek yerine ARTIRIR ve kimse fark etmez — o yüzden hem saf çevirinin hem gönderilen gövdenin
+  testi var.
+
+  **27.08'de sözleşme değişti, iddia değişmedi.** Kapı eskiden işaretli tek sayı alıyordu (`+` düşüm
+  · `−` geri ekleme) ve çeviri bir işaret çevirmesiydi. Yön açık alana çıktı çünkü işaretin miktara
+  gömülü olması rapor tarafında ölçülmüş bir arızaya yol açmıştı: girişlerle çıkışlar aynı toplamda
+  eriyor, "Çıkışlar" sekmesi dönem toplamını eksi gösteriyordu. Testin sorduğu soru aynı kaldı —
+  *ekranın eksisi kayıtta gerçekten "stoktan düş" mü oluyor?*
 
   Diğer iddialar: `return_restock` seçeneğinin HİÇ ÇİZİLMEMESİ, fazlanın yalnız sayım farkında ve
   NOTLA yazılabilmesi, belge numarasının kayıttan ÖNCE uydurulmaması ve RPC reddinin aynen gösterimi.
@@ -49,7 +56,17 @@ function withResult(result?: unknown) {
       ok(
         result ?? {
           status: 'ok',
-          result: { ok: true, referenceNo: 'IMH-STR-26-0004', lines: 1, totalQty: 4, costTotalCents: 1600 },
+          /* Kapının cevabı İKİ YÖNÜ AYRI taşıyor (06.14): tek satırlık bu ekranda yalnız biri
+             dolar. Düşüm senaryosu — `outQty` 4, `inQty` 0. */
+          result: {
+            ok: true,
+            referenceNo: 'IMH-STR-26-0004',
+            lines: 1,
+            outQty: 4,
+            inQty: 0,
+            outCostCents: 1600,
+            inCostCents: 0,
+          },
         },
       ),
     ),
@@ -67,10 +84,18 @@ beforeEach(() => {
   mockParams.stockId = STOCK_A;
 });
 
-describe('D4 · işaret çevrimi', () => {
-  it('ekranın eksisi kayıtta ARTI olur (düşüm), artısı EKSİ (geri ekleme)', () => {
-    expect(toRequestQty(-4)).toBe(4);
-    expect(toRequestQty(2)).toBe(-2);
+describe('D4 · işaret → yön çevrimi', () => {
+  it('ekranın eksisi kayıtta "out" olur, artısı "in"', () => {
+    expect(toRequestLine(STOCK_A, -4)).toEqual({ stockId: STOCK_A, qty: 4, direction: 'out' });
+    expect(toRequestLine(STOCK_A, 2)).toEqual({ stockId: STOCK_A, qty: 2, direction: 'in' });
+  });
+
+  /* ADET DAİMA POZİTİF: yön ayrı alanda taşındığı için miktarda işaret KALMAMALI — kalsaydı aynı
+     bilgi iki yerde dururdu ve ayrıştıkları gün hangisinin doğru olduğunu söyleyecek yer olmazdı
+     (sözleşmenin kendi kuralı: `qty: z.number().int().positive()`, negatif adet REDDEDİLİR). */
+  it('adet hiçbir yönde negatif göndermez', () => {
+    expect(toRequestLine(STOCK_A, -4).qty).toBeGreaterThan(0);
+    expect(toRequestLine(STOCK_A, 2).qty).toBeGreaterThan(0);
   });
 });
 
@@ -109,7 +134,7 @@ describe('D4 · sayım / düzeltme', () => {
     await waitFor(() => expect(screen.getByTestId('warehouse-adjustment-ref')).toHaveTextContent('IMH-STR-26-0004'));
   });
 
-  it('DÜŞÜM gövdeye ters işaretle gider', async () => {
+  it('DÜŞÜM gövdeye POZİTİF adet ve "out" yönüyle gider', async () => {
     withResult();
 
     await render(<AdjustmentScreen />);
@@ -118,7 +143,13 @@ describe('D4 · sayım / düzeltme', () => {
     await fireEvent.press(screen.getByTestId('warehouse-adjustment-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-adjustment-notice')).toBeOnTheScreen());
-    expect(lastPostBody()).toEqual({ lines: [{ stockId: STOCK_A, qty: 4 }], reason: 'expired', note: null });
+    /* Operatör "−4" yazdı (stoktan düştü); kayda giden `qty: 4, direction: 'out'`. Ekranın dili
+       değişmedi, kaydınki 06.14'te değişti — çeviri `toRequestLine`da ve yukarıda ayrıca testli. */
+    expect(lastPostBody()).toEqual({
+      lines: [{ stockId: STOCK_A, qty: 4, direction: 'out' }],
+      reason: 'expired',
+      note: null,
+    });
   });
 
   it('FAZLA yalnız sayım farkında yazılabilir — başka sebeple uyarı çıkar ve CTA kapalı kalır', async () => {
@@ -146,8 +177,10 @@ describe('D4 · sayım / düzeltme', () => {
     await fireEvent.press(screen.getByTestId('warehouse-adjustment-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-adjustment-notice')).toBeOnTheScreen());
+    /* GÖVDE YÖNÜ AÇIKÇA SÖYLER: ekranda "+2" (sayımda fazla çıktı) → kayıtta `qty: 2` ve
+       `direction: 'in'`. Eskiden bu satır `qty: -2` idi; yön işarete gömülüydü. */
     expect(lastPostBody()).toEqual({
-      lines: [{ stockId: STOCK_A, qty: -2 }],
+      lines: [{ stockId: STOCK_A, qty: 2, direction: 'in' }],
       reason: 'count_diff',
       note: 'sayımda 2 adet fazla çıktı',
     });

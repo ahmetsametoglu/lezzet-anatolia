@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID } from '@lezzet/application';
 // Beklenen şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME kırılır.
 import type { OnSiteSaleResponse, SaleCatalogPage, SaleVariantsResponse } from '@lezzet/types';
@@ -57,14 +57,27 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('order').delete().eq('customer_id', ANONYMOUS_BUYER_ID);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  /*
+    SİLME GÜRÜLTÜLÜ OLMAK ZORUNDA (27.08 · 06.14). Bu iki satır `db.from(...).delete()` idi ve o
+    çağrı hatayı FIRLATMAZ, sonuç nesnesinde döndürür. Defter gelmeden önce çalışıyorlardı; artık
+    her yerinde satış partiye bir `stock_movement` çıpalıyor ve o satır partiyi de siparişi de
+    `restrict` ile tutuyor — yani ikisi de silinemiyor ve kimse bakmadığı için teardown sessizce
+    yarım kalıyordu.
+
+    Belirtisi düşen teardown DEĞİL, ÇİFT SAYIMDI: kalan adet `4` yerine `17` ölçüldü — her test bir
+    öncekinin malını da sayıyordu. Sıra zorunlu: parti önce (purge bütün hareketleri toplar), sipariş
+    sonra.
+  */
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', ANONYMOUS_BUYER_ID));
   await new StockService(db).insert({ warehouseId: vehicleId, variantId, physicalQty: 4, expiryDate: dayOffset(20), purchasePriceCents: 200 });
   await new StockService(db).insert({ warehouseId: facilityId, variantId, physicalQty: 9, expiryDate: dayOffset(20), purchasePriceCents: 200 });
 });
 
 afterAll(async () => {
-  await db.from('order').delete().eq('customer_id', ANONYMOUS_BUYER_ID);
+  // Aynı gerekçe (`beforeEach` künyesi): parti önce, sipariş sonra — ve ikisi de GÜRÜLTÜLÜ.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', ANONYMOUS_BUYER_ID));
   await purgeTestData(db, {
     productIds: [productId], categoryIds: [categoryId],
     profileIds: [kurye.profileId, depocu.profileId],

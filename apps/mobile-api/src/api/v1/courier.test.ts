@@ -14,7 +14,7 @@ import {
   StockService,
   UserProfileService,
 } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData, settingsSnapshot } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, settingsSnapshot } from '@lezzet/database/testing';
 import { recordOrderPayment } from '@lezzet/application';
 // Beklenen şekiller ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME
 // kırılır (katalog testinin kararı). Kurye sözleşmelerinin ilk tüketicisi de budur.
@@ -261,11 +261,23 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Her test kendi siparişlerini kurar: gün listesi ve kapanış taslağı GÜNÜN TAMAMINI okur, önceki
-  // testin bıraktığı durak sessizce sonraki testin sayımına girerdi.
-  await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  /*
+    Her test kendi siparişlerini kurar: gün listesi ve kapanış taslağı GÜNÜN TAMAMINI okur, önceki
+    testin bıraktığı durak sessizce sonraki testin sayımına girerdi.
+
+    SİLME ARTIK GÜRÜLTÜLÜ (27.08 · 06.14). Bu üç satır `db.from(...).delete()` idi ve o çağrı
+    hatayı FIRLATMAZ, sonuç nesnesinde döndürür — kimse bakmadığı için teardown sessizce yarım
+    kalıyordu. Defter gelmeden önce satırlar yine de çalışıyordu; artık her teslim partiye bir
+    `stock_movement` çıpalıyor ve o satır hem partiyi hem siparişi `restrict` ile tutuyor.
+
+    Belirtisi düşen teardown DEĞİL, ÇİFT SAYIMDI: her test bir öncekinin malını da sayıyordu
+    (ölçüldü 27.08: kalan adet `18` yerine `137`). Testlerin iddiaları doğruydu; yalan söyleyen
+    zemin temizliğiydi. Sıra zorunlu: `purgeVariantStock` partinin bütün hareketlerini topladığı
+    için sipariş de aynı anda serbest kalıyor — tersi çalışmaz.
+  */
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   // SEFER de testler arasında YAŞAR ve rota+gün başına TEKtir (0046 `delivery_run_key`): önceki
   // testin açtığı sefer silinmezse sonraki test `already_started` alır ve iddia yanlış sebeple
   // kırılır. Sipariş silmesinden SONRA: `order.delivery_run_id` `set null` olduğu için sıra

@@ -14,7 +14,7 @@ import {
   UserProfileService,
   WarehouseTransferService,
 } from '@lezzet/database';
-import { createTestWarehousePair, mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehousePair, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { deliverOrder, dispatchTransfer } from '@lezzet/application';
 // Beklenen şekiller ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME
 // kırılır (katalog/kurye testlerinin kararı). Depo sözleşmelerinin ilk tüketicisi de budur.
@@ -252,19 +252,27 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Her test kendi zeminini kurar: kuyruk ve transfer listesi DEPONUN TAMAMINI okur, önceki testin
-  // bıraktığı sipariş sessizce sonraki testin sayımına girerdi.
+  /*
+    Her test kendi zeminini kurar: kuyruk ve transfer listesi DEPONUN TAMAMINI okur, önceki testin
+    bıraktığı sipariş sessizce sonraki testin sayımına girerdi.
+
+    SIRA TERSİNE DÖNDÜ (27.08 · 06.14) VE BU ÖLÇÜLMÜŞ BİR ARIZANIN DÜZELTMESİ. Burada partiyi
+    tutan bağlar elle ve TEK TEK siliniyordu; `stock_adjustment` tablosu kalkıp yerine defter
+    (`stock_movement`) gelince o satır olmayan bir tabloyu silmeye başladı ve **dosyanın 49
+    testini birden düşürdü** — zararı düşen testle de bitmiyordu: teardown patladığı için depo,
+    parti ve sipariş satırları veritabanında kalıyor ve SONRAKİ dosyaların sayımlarını bozuyordu
+    (ölçüm: `supplier-debt` 4000 beklerken 8000 gördü — aynı kabul iki kez sayıldı).
+
+    Artık silme sırası tek yerde: `purgeVariantStock` partiyi tutan DÖRT bağı doğru sırayla
+    topluyor (defter · kalem eşlemesi · sevk satırı iki uçtan · rezervasyon) ve o geçince sipariş
+    de serbest kalıyor. Bu yüzden ÖNCE parti, SONRA sipariş — tersi çalışmaz (CLAUDE §4b: silme
+    sırası `cleanup.ts`te durur, dosya kendi sırasını uydurmaz).
+  */
+  await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'warehouse_transfer', (q) => q.in('from_warehouse_id', [warehouseId, otherWarehouseId]));
-
-  // Düzeltme kaydı partiyi `restrict` ile tutuyor: sıra yanlışsa silme sessizce değil, `mustDelete`
-  // sayesinde GÜRÜLTÜYLE düşer (CLAUDE §4b).
-  const { data: rows, error } = await db.from('stock').select('id').eq('variant_id', variantId);
-  if (error) throw error;
-  const stockIds = (rows ?? []).map((row) => (row as { id: string }).id);
-  if (stockIds.length > 0) await mustDelete(db, 'stock_adjustment', (q) => q.in('stock_id', stockIds));
+  // Partiye çıpasız (yalnız varyanta bağlı) rezervasyon purge'ün kapsamında değil — o burada düşer.
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
 
   stockId = (
     await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePriceCents: 300, lotNumber: 'LOT-DEPO' })
@@ -650,9 +658,9 @@ describe('D2 · mal kabul', () => {
 });
 
 describe('D4 · POST /api/v1/warehouse/adjustments', () => {
-  it('imha: işaretli adet stoktan DÜŞER ve OLAY belgesi döner', async () => {
+  it('imha: `out` yönlü adet stoktan DÜŞER ve OLAY belgesi döner', async () => {
     const res = await post('/api/v1/warehouse/adjustments', {
-      lines: [{ stockId, qty: 3 }],
+      lines: [{ stockId, qty: 3, direction: 'out' }],
       reason: 'damaged',
       note: 'soğuk zincir kırıldı',
     });
@@ -665,10 +673,14 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
     expect((await stocks.getById(stockId))?.physicalQty).toBe(17);
   });
 
-  it('EKSİ adet stoğa geri ekler — işaret yönü taşır (sayım fazlası)', async () => {
+  /* YÖN AYRI ALANDA (06.14): eskiden bu satır `qty: -2` gönderiyordu — adet işaretliydi. Yön açık
+     alana çıktı çünkü işaretin miktara gömülü olması rapor tarafında ölçülmüş bir arızaya yol
+     açıyordu (girişlerle çıkışlar aynı toplamda eriyordu). Adet artık DAİMA pozitif ve sözleşme
+     negatifi reddediyor (`z.number().int().positive()`). */
+  it('`in` yönlü adet stoğa geri ekler (sayım fazlası)', async () => {
     const outcome = await dataOf<RecordAdjustmentResponse>(
       await post('/api/v1/warehouse/adjustments', {
-        lines: [{ stockId, qty: -2 }],
+        lines: [{ stockId, qty: 2, direction: 'in' }],
         reason: 'count_diff',
         note: 'sayımda 2 adet fazla çıktı',
       }),
@@ -680,8 +692,10 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
   });
 
   it('`return_restock` DEPOCUYA KAPALI — kural tipte duruyor, ekranda değil', async () => {
+    /* Gövdenin GERİ KALANI GEÇERLİ (yön dahil): reddin sebebi yalnız `reason` olsun. Eksik bir
+       alan da `invalid_body` üretirdi ve test doğru cümleyi yanlış sebeple geçerdi. */
     const res = await post('/api/v1/warehouse/adjustments', {
-      lines: [{ stockId, qty: 1 }],
+      lines: [{ stockId, qty: 1, direction: 'in' }],
       reason: 'return_restock',
       note: 'iade',
     });
@@ -695,7 +709,10 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
   it('BAŞKA DEPONUN partisi 200 + `out_of_scope`, hangi parti olduğu SÖYLENİR', async () => {
     const outcome = await dataOf<RecordAdjustmentResponse>(
       await post('/api/v1/warehouse/adjustments', {
-        lines: [{ stockId, qty: 1 }, { stockId: foreignStockId, qty: 1 }],
+        lines: [
+          { stockId, qty: 1, direction: 'out' },
+          { stockId: foreignStockId, qty: 1, direction: 'out' },
+        ],
         reason: 'lost',
       }),
     );
@@ -707,7 +724,10 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
 
   it('fiziksel gerçek ihlali `failed` döner ve MESAJ operatöre AYNEN ulaşır', async () => {
     const outcome = await dataOf<RecordAdjustmentResponse>(
-      await post('/api/v1/warehouse/adjustments', { lines: [{ stockId, qty: 999 }], reason: 'expired' }),
+      await post('/api/v1/warehouse/adjustments', {
+        lines: [{ stockId, qty: 999, direction: 'out' }],
+        reason: 'expired',
+      }),
     );
 
     // Ucun taşıdığı şey doğru: ret bir istisna değil, 200 ile dönen bir CEVAP ve hiçbir satır yazılmadı.

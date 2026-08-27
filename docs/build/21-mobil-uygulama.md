@@ -443,6 +443,42 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `?courierDayCloseId` İKİ ölçümle elendi) · `readIntakeHeader`. Doğrulama: paket +20 /
     uç +9 test; mobil kabul testi mock'u yeni zorunlu anahtara uyarlandı (`purchaseOrder: null`),
     mobil paket 449/449.
+  - **Durum (27.08 — stok hareket defteri sözleşmesine geçiş, 21.11e):** operasyon şeridinin
+    talebi üzerine (`docs/talep/mobil-stok-hareket-defteri-sozlesme-degisti.md`) sayım/düzeltme
+    ekranı yeni sözleşmeye taşındı. **`stock_adjustment` tablosu kalktı, yerine defter geldi**
+    (`stock_movement`, 06.14) ve iki şey değişti:
+    · **Yön artık ayrı alanda.** `qty` DAİMA pozitif, `direction: 'out' | 'in'`. Ekranın dili
+      DEĞİŞMEDİ (operatör hâlâ "−4" yazıyor); değişen çeviri: `toRequestQty` (işaret çevirmesi) →
+      `toRequestLine` (adet + yön). Gerekçe ölçülmüş bir arızaydı: işaret miktara gömülüyken
+      girişlerle çıkışlar aynı toplamda eriyor, "Çıkışlar" sekmesi dönem toplamını EKSİ
+      gösteriyordu. Para modülü aynı kuralı yıllar önce koymuş (`0018_money.sql:35`).
+    · **Sonuç iki yönü ayrı döndürüyor** (`outQty`/`inQty`, `totalQty` kalktı). Ekran tek satır
+      gönderdiği için dolu olanı yazıyor; TOPLAMIYOR — toplamak defterin ayırdığı iki büyüklüğü
+      geri birleştirmek olurdu.
+    **ASIL ZARAR TESTLERDE VE SESSİZDİ.** `warehouse.test.ts` olmayan bir tabloyu siliyordu ve
+    teardown patladığı için **dosyanın 49 testi birden düşüyordu**; `courier.test.ts` ile
+    `sale.test.ts` ise `db.from(...).delete()` kullanıyordu — o çağrı hatayı FIRLATMAZ, döndürür.
+    Defter gelince her teslim/satış partiye bir hareket çıpaladı ve o satır hem partiyi hem
+    siparişi `restrict` ile tuttu: silme sessizce yarım kalıyor, **her test bir öncekinin malını
+    da sayıyordu** (ölçüm: kalan adet `4` yerine `17`, `18` yerine `137`). Üçü de `purgeVariantStock`
+    + `mustDelete` kapısına geçti — sıra zorunlu: parti önce (purge bütün hareketleri toplar),
+    sipariş sonra.
+    Doğrulama: **kilitli tam paket 3579/3579 YEŞİL** (üçüncü tur; ilk turda kendi dört uç testim
+    eski gövdeyle düşüyordu — istek gövdelerine de `direction` yazıldı). Kalan tek "failed suite"
+    `packages/application/src/order/quick-sale.test.ts` teardown'ı ve **benim değil**: aynı düşüş
+    değişikliklerimden ÖNCEKİ koşuda da vardı (`.test-results/previous.log`), kökü denetimin arka
+    uca bıraktığı `not-arka-uc-stok-hareket-adlandirmasi-yarim-birakti.md`.
+    **İkinci turda bir yalancı düşüş görüldü ve kaydı burada duruyor:** `analytics.test.ts`in
+    *"iki ciro aynı tanımdan çıkar"* iddiası `2020-01-01`'den bugüne KÜRESEL toplam okuyor ve iki
+    sorgu arasında dünyanın durmasını varsayıyor — CLAUDE §4b'nin adıyla yasakladığı desen
+    (*"küresel sayıya bakan test yazma"*). Üçüncü turda tekrar üretilmedi. Dosya benim alanım
+    değil; işaret olarak bırakıldı.
+    **İki bayat not kapandı:** `not-mobil-management-teardown-yarim.md` (26.08) — ölçüldü, 13 test
+    yeşil ve teardown gürültüsü YOK, çözüm `cleanup.ts`e girmiş; `not-mobil-tarifler-okuma-sozlesmesi.md`
+    (07.08) — tarif ekranı 09.08'de yazıldı (21.14d). `not-mobil-test-defteri.md`nin son maddesi
+    (*"vFb fixture → şema dönüşü"*) de ölçülünce KAPALI çıktı: fixture artık `FeedbackCard`/
+    `FeedbackInvite`/`FeedbackCompletion`ten türüyor, elle yazılmış aynası silinmiş.
+
 - [x] (21.12) **Yönetim + Para bölümleri (Y1–Y6 · M1–M2 · gün özeti):** okuma ağırlıklı; Y5 gün
   özeti birleştirme ucu (doc 04 iş listesi) + Y1 üstlen/YZ-cevap aksiyonları, Y2 istisna kararı
   (motor önerisi + para önizlemesi uçtan), Y3 teklif onayı, Y4 taslak TS, Y6 not düşme; M1/M2
