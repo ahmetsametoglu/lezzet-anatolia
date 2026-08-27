@@ -5466,6 +5466,36 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `apps/mobile-api` bant testleri **12/12**. Uçtan: mobil `featured` 6 kart, kesişim boş.
   Web'in İKİ tüketeni de çiziliyor (`/fr` **200**, `/fr/panier` **200**).
 
+  ### YAYIN KISITI FİKSTÜRLERİ KESMİŞTİ — dört dosya sessizce ATLANIYORDU (27.08)
+
+  Operasyon/katalog şeridinden not geldi (`not-mobil-urun-yayin-kisiti-fikstur-uc-dil-istiyor.md`):
+  `0005_catalog_product.sql`e **`product_publish_requires_all_locales`** kısıtı kondu — `status:
+  'active'` ürün ad · açıklama · içindekiler · saklama metnini ÜÇ DİLDE dolu ister (ölçüt
+  `has_all_locales`: anahtarın varlığı yetmez, `{"fr": ""}` dolu sayılmaz) — ve `status` varsayılanı
+  `active` → `candidate` oldu.
+
+  **Kırılmanın biçimi tehlikeliydi: testler DÜŞMÜYOR, ATLANIYORDU.** Kısıt `beforeAll`da patlıyor,
+  vitest dosyanın tamamını `skipped` sayıyor ve sebep dosyanın kendi konusuyla ilgisiz görünüyor.
+  Yani paket YEŞİL kalırken dört dosyanın iddiası hiç koşmuyordu — ölçüldü, 7 yerde `status:
+  'active'` vardı ve hiçbirinde `ingredients`/`storageInstructions` yoktu:
+  `sale.test.ts` · `home.test.ts` · `packages.test.ts` · `feedback.test.ts`.
+
+  **YAPILAN:** her dosyaya kendi `yayinaHazir` fikstür bloğu (emsal operasyon şeridinin dokuz
+  dosyada yaptığı düzeltme: `packages/application/src/catalog/catalog.test.ts`). `feedback.test.ts`in
+  adı `{tr, fr}` idi — kısıt anahtarın VARLIĞINI değil DOLULUĞUNU aradığı için o da yetmiyordu.
+  `home.test.ts`te metinler PASİF ürüne de veriliyor: fikstürü iki dala bölmek, ileride biri
+  `passive`i `active` yaptığında yeniden sessizce atlanan bir dosya bırakırdı.
+
+  **ÖLÇÜLDÜ — 25 TEST KURTARILDI** (tam paket, 20.06): `sale` **10** · `home` **9** ·
+  `packages` **6** koştu ve sayılar notun bildirdiği "atlandı" sayılarıyla BİREBİR aynı; koşu
+  logunda tek bir `skipped` kalmadı.
+
+  **KENDİ DÜZELTMEM BİR İDDİAYI KIRDI ve tam paket onu yakaladı:** `feedback.test.ts`in adını
+  `ucDil` ile üç dile EŞİTLEMİŞTİM; oysa o dosyanın bir testi kartın adında *"FR"* arıyor (dil
+  çözümü sunucuda mı yapılıyor sorusu). Kısıt karşılanıyordu ama iddia sessizce boşa çıkıyordu —
+  3633/3634 ile düştü. Ad üç dilde AMA üç AYRI metin yapıldı. Ders kayda değer: *"kısıtı karşıla"*
+  ile *"testin ölçtüğünü koru"* aynı şey değil ve fikstür tektipleştirmek ikincisini sessizce yer.
+
 - [x] (21.101) **VİTRİN BAŞLIĞI YER ADINI ARTIK HATIRLIYOR — çıplak posta kodu karesi kapandı (MB-80)**
   · touches: `apps/mobile/src/lib/places/place-name-memory.ts`,
   `apps/mobile/src/lib/storage/device-store.ts`, `apps/mobile/src/screens/home/home-screen.tsx`

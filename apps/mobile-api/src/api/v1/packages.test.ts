@@ -27,6 +27,16 @@ let passiveSlug = '';
 
 const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 
+/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
+   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`). Kısıt karşılanmazsa
+   `beforeAll` düşer ve testler DÜŞMEZ, ATLANIR — dosyanın konusu (paket ucu) ile ilgisiz görünen
+   bir sebeple sessizce. */
+const yayinaHazir = {
+  description: tr3('Paket testi ürünü', 'Produit de test', 'Testprodukt'),
+  ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),
+  storageInstructions: tr3('Serin yerde saklayın', 'Conserver au frais', 'Kühl lagern'),
+};
+
 /** Zarfı açar; `error` doluysa iddia orada patlasın diye ayrıca kontrol edilir. */
 async function dataOf<T>(res: Response): Promise<T> {
   const envelope = (await res.json()) as { data: T; error: string | null };
@@ -44,6 +54,7 @@ beforeAll(async () => {
     name: tr3(`VPKG Baklava ${stamp}`, `VPKG Baklava FR ${stamp}`, `VPKG Baklava DE ${stamp}`),
     categoryId: category.id,
     status: 'active',
+    ...yayinaHazir,
     shippable: true,
     variants: [
       { label: tr3('500 g', '500 g', '500 g'), netWeightG: 500, sortOrder: 0 },
@@ -55,6 +66,7 @@ beforeAll(async () => {
     name: tr3(`VPKG Dondurma ${stamp}`, `VPKG Glace ${stamp}`, `VPKG Eis ${stamp}`),
     categoryId: category.id,
     status: 'active',
+    ...yayinaHazir,
     shippable: false,
     variants: [{ label: tr3('1 L', '1 L', '1 L'), netWeightG: 900, sortOrder: 0 }],
   });

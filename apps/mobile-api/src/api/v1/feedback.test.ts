@@ -38,13 +38,28 @@ async function dataOf<T>(res: Response): Promise<T> {
 const postJson = (path: string, body: unknown) =>
   app.request(path, { method: 'POST', body: JSON.stringify(body), headers: { 'content-type': 'application/json' } });
 
+/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
+   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`) — ölçüt anahtarın varlığı
+   değil DOLULUĞU, yani buradaki eski `{tr, fr}` adı da yetmiyordu. Kısıt karşılanmazsa `beforeAll`
+   düşer ve testler DÜŞMEZ, ATLANIR: sebebi dosyanın konusuyla (geri bildirim ucu) ilgisiz görünür. */
+const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
+const yayinaHazir = {
+  description: ucDil('Geri bildirim testi ürünü'),
+  ingredients: ucDil('Un, su, tuz'),
+  storageInstructions: ucDil('Serin yerde saklayın'),
+};
+
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'FB' })).id;
   categoryId = (await new CategoryService(db).create({ name: { tr: `VFB Kat ${stamp}` } })).id;
   const seeded = await new ProductService(db).create({
-    name: { tr: `VFB Börek ${stamp}`, fr: `VFB Börek FR ${stamp}` },
+    /* Ad ÜÇ DİLDE ama üçü AYRI metin: aşağıdaki test kartın adında "FR" arıyor (dil çözümü sunucuda
+       yapılıyor mu sorusu). `ucDil` ile eşitlemek kısıtı karşılar ama o iddiayı sessizce boşa
+       çıkarırdı — ölçüldü, tam paket bu yüzden düştü ve düzeltmesi burada. */
+    name: { tr: `VFB Börek ${stamp}`, fr: `VFB Börek FR ${stamp}`, de: `VFB Börek DE ${stamp}` },
     categoryId,
     status: 'active',
+    ...yayinaHazir,
     variants: [{ label: { tr: '500 g' } }],
   });
   productId = seeded.product.id;

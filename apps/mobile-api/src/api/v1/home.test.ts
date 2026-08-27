@@ -62,6 +62,16 @@ async function dataOf<T>(res: Response): Promise<T> {
 
 const tr3 = (tr: string, fr: string, de: string) => ({ tr, fr, de });
 
+/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
+   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`). Bu dosyanın adı zaten üç
+   dilliydi; eksik olan öteki üç metindi. Kısıt karşılanmazsa `beforeAll` düşer ve testler DÜŞMEZ,
+   ATLANIR — sebebi dosyanın konusuyla (vitrin ucu) ilgisiz göründüğü için en zor okunan kırılma. */
+const yayinaHazir = {
+  description: tr3('Vitrin testi ürünü', 'Produit de test', 'Testprodukt'),
+  ingredients: tr3('Un, su, tuz', 'Farine, eau, sel', 'Mehl, Wasser, Salz'),
+  storageInstructions: tr3('Serin yerde saklayın', 'Conserver au frais', 'Kühl lagern'),
+};
+
 beforeAll(async () => {
   const wa = await createTestWarehouse(db, { label: 'VHOME' });
   warehouseIds.push(wa.id);
@@ -78,7 +88,9 @@ beforeAll(async () => {
 
   const products = new ProductService(db);
   const mk = async (name: string, categoryId: string, status: 'active' | 'passive') => {
-    const { product } = await products.create({ name: tr3(name, `${name} FR`, `${name} DE`), categoryId, status });
+    /* Yayın metinleri PASİF üründe de veriliyor: kısıt onu aramıyor ama fikstürü iki dala bölmek,
+       ileride biri `passive`i `active` yaptığında sessizce atlanan bir dosya bırakırdı. */
+    const { product } = await products.create({ name: tr3(name, `${name} FR`, `${name} DE`), categoryId, status, ...yayinaHazir });
     productIds.push(product.id);
     return product;
   };
@@ -94,6 +106,7 @@ beforeAll(async () => {
     name: tr3(`VHOME Boylu ${stamp}`, `VHOME Boylu FR ${stamp}`, `VHOME Boylu DE ${stamp}`),
     categoryId: catPlain.id,
     status: 'active',
+    ...yayinaHazir,
     variants: [{ label: tr3('1 kg', '1 kg', '1 kg'), netWeightG: 1000, sortOrder: 0 }],
   });
   productIds.push(offerSeed.product.id);

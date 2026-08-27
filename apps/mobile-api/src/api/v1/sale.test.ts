@@ -20,6 +20,18 @@ import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../
 const db = serviceDb();
 const stamp = Date.now();
 
+/* YAYIN KISITININ ŞARTI (05.36): `status: 'active'` ürün ad · açıklama · içindekiler · saklama
+   metnini ÜÇ DİLDE dolu ister (`product_publish_requires_all_locales`). Metinlerin kendisi bu
+   testin konusu değil — konusu yerinde satış; ürünün yayında olması ise şart, çünkü katalog yalnız
+   aktif ürünü listeliyor. Kısıt karşılanmazsa `beforeAll` düşer ve testler DÜŞMEZ, ATLANIR:
+   sebebi dosyanın konusuyla ilgisiz göründüğü için en zor okunan kırılma budur. */
+const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
+const yayinaHazir = {
+  description: ucDil('Yerinde satış testi ürünü'),
+  ingredients: ucDil('Un, su, tuz'),
+  storageInstructions: ucDil('Serin yerde saklayın'),
+};
+
 let kurye: SignedInUser;
 let depocu: SignedInUser;
 let facilityId: string;
@@ -40,7 +52,11 @@ beforeAll(async () => {
   })).id;
 
   const category = await new CategoryService(db).create({ name: { tr: `Uç yerinde satış ${stamp}` } });
-  const { product, variants } = await new ProductService(db).create({ name: { tr: `Simit ${stamp}` }, categoryId: category.id });
+  const { product, variants } = await new ProductService(db).create({
+    name: ucDil(`Simit ${stamp}`),
+    categoryId: category.id,
+    ...yayinaHazir,
+  });
   categoryId = category.id;
   productId = product.id;
   productSlug = product.slug;
