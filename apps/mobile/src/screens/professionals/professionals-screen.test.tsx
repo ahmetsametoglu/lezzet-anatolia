@@ -53,6 +53,12 @@ const COMPANY = {
   activityCode: '10.71C',
   foundedYear: 2016,
   isActive: true,
+  /* Resmî kayıt KDV numarasını da veriyor (sözleşmeye 28.08'de eklendi, `B2bCompanySchema`).
+     Alan ZORUNLU — `nullable` ama `optional` değil — yani fikstür onu taşımazsa cevap şemaya
+     takılır ve ekran alanları BOŞ kalır; testin "Bul dolduruyor mu" iddiası o hâlde sessizce
+     çöker. Bugün mobil form bu alanı OKUMUYOR (numara başvuru gövdesine yazılmıyor); burada
+     durması sözleşmeyi karşılamak içindir. Okuma işi ayrı ve `docs/talep/`te. */
+  vatNumber: 'FR34387904527',
   line1: '8 rue du Fossé',
   postalCode: '67000',
   city: 'Strasbourg',
