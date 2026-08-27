@@ -15,25 +15,11 @@
  * biri gün gelip ötekinden ayrılırdı. `immutable` şart — kısıt ifadesi ancak değişmez fonksiyon
  * çağırabilir.
  *
- * **Anahtarın VARLIĞI yetmez, DOLU olması aranır:** operatör alanı açıp boş bırakırsa `{"fr": ""}`
- * yazılır ve `? 'fr'` bunu "dolu" sayardı — yayındaki tarifte boş bir hazırlanış adımı, hiç olmayan
- * adımdan kötüdür.
- *
- * ⚠ Kısıt YAZMA anında bakar: fonksiyon ileride değişirse mevcut satırlar yeniden doğrulanmaz.
+ * **TANIM ARTIK BURADA DEĞİL, `0004_catalog_category_collection.sql`DE** (27.08): ölçüt tarife özel
+ * değilmiş — ürün de aynı soruyu soruyor (`05.36`) ve `product` 0005'te doğduğu için buradaki tanımı
+ * göremiyordu. Tek kopya yukarı taşındı; bu dosya onu yalnız kullanıyor. Künyenin geri kalanı
+ * (neden fonksiyon, neden `immutable`, neden "varlık değil doluluk") orada duruyor.
  */
-create or replace function public.has_all_locales(p jsonb) returns boolean
-language sql
-immutable
-parallel safe
-as $$
-  select p is not null
-     and coalesce(btrim(p ->> 'tr'), '') <> ''
-     and coalesce(btrim(p ->> 'fr'), '') <> ''
-     and coalesce(btrim(p ->> 'de'), '') <> '';
-$$;
-
-comment on function public.has_all_locales(jsonb) is
-  'Çok dilli metin üç dilde de DOLU mu (boş dize dolu sayılmaz). Tarif yayın kısıtının ölçütü.';
 
 create table public.recipe (
   id uuid primary key default gen_random_uuid(),

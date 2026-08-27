@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CategoryImageService, CategoryService, ProductFamilyService, ProductImageService, ProductService } from '@lezzet/database';
-import { PRODUCT_GALLERY_MAX } from '@lezzet/types';
+import { PRODUCT_GALLERY_MAX, hasAllLocales } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus, ProductStorageType } from '@lezzet/types';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
 import { teklifSkulari } from './supplier-prices';
@@ -537,22 +537,40 @@ function satilabilirDurum(o: {
   zayifVeri: boolean;
   aileli: boolean;
   kusurlu: boolean;
+  /**
+   * **Üç dil / yasal beyan eksik → YAYINLANAMAZ** (05.36, 27.08). Kural artık veride:
+   * `product_publish_requires_all_locales`. Seed'in sentetik kusurları (`dilEksik`, `beyanEksik`)
+   * bu üretece bildirilmiyordu ve `active` doğabiliyorlardı — kısıt konunca `db:reset` o satırda
+   * kesilirdi.
+   *
+   * **Kova KAYBOLMUYOR, yerini buluyor:** "çevirisi tamamlanmamış ürün" hâli hâlâ doğuyor, artık
+   * `candidate` olarak. Formun "çeviri eksik" uyarısı aday üründe de koşar — zaten operatörün
+   * gerçek akışı da bu: ürün aday doğar, üç dil dolunca yayına alınır.
+   */
+  yayinaHazirDegil: boolean;
   i: number;
 }): ProductStatus {
-  // Gerçek alış fiyatı var → satıştadır. Stoğu da `stock.ts`te dolu doğar.
-  if (o.teklifli) return 'active';
-  // Paket/koleksiyon kalemi → aday yapılamaz, yoksa o kurgu sessizce satılamaz olur.
-  if (o.kurguda) return 'active';
-  // ── PASİF ARTIK İNDİSTEN DEĞİL, VERİNİN KENDİSİNDEN (kullanıcı kararı 19.08) ────────────────
+  // **TEKLİFLİ VE KURGUDAKİ ÜRÜNLER EN ÖNDE** — ama artık koşullu (05.36). Alış fiyatı olan ya da
+  // bir pakete/koleksiyona giren ürün satıştadır; bu kural duruyor. Değişen şu: yayın kısıtı
+  // (`product_publish_requires_all_locales`) bir kestirme tanımıyor — metinleri eksik ürün
+  // `active` YAZILAMAZ, veritabanı reddeder. O yüzden burada da aday'a düşüyor; "satın aldığımız
+  // mal satılamaz olmasın" kaygısının cevabı artık ürünün metinlerini tamamlamaktır, durumu
+  // zorlamak değil.
+  if (o.teklifli || o.kurguda) return o.yayinaHazirDegil ? 'candidate' : 'active';
+  // ── PASİF ARTIK İNDİSTEN DEĞİL, VERİNİN KENDİSİNDEN (kullanıcı kararı 19.08) ─────────────────
   // *"85 aday çok, bazılarını pasife çekelim — özenle seçelim: bilgilerinin düzgün olmayışı,
   // resimlerinin olmayışı."* Ölçüt artık o ve indis (`i % 23`) yerine geçti: görseli, açıklaması
   // ya da çevirisi olmayan ürün SATIŞA SUNULAMAZ, dolayısıyla "aday" da değildir — aday tedarik
-  // edilebilecek üründür, listelenebilecek olan. Ölçüldü: 11 ürün, hepsi tek-porsiyon "mono"
-  // kalemler (`… mono`, `Mono Pack`) — üreticinin kendi kaynağında da yarım duruyorlar.
+  // edilebilecek üründür, listelenebilecek olan.
   //
-  // Sıra ÖNEMLİ: teklifli ve kurgudaki ürünler bu ölçütten ÖNCE ayrılıyor. Aksi hâlde alış fiyatı
-  // olan `Kunefe with plate and syrup` (görselsiz) pasife düşer ve satın aldığımız mal satılamaz olurdu.
+  // **YAYIN KONTROLÜNDEN ÖNCE ve bu bir düzeltme** (ölçüldü 27.08): `yayinaHazirDegil` bir tur en
+  // öne konmuştu ve bu dalı YUTTU — `passive` ürün sayısı 3'ten **0'a** düştü, yani yukarıdaki
+  // kullanıcı kararı seed'den sessizce kayboldu. İkisi AYRI hâl ve `catalog_health` onları ayrı
+  // sayıyor: `passive` geri çekilmiş kaydın hâli, `candidate` henüz tamamlanmamış olanın. Kısıt
+  // açısından fark yok — ikisi de `active` değil, yani ikisi de kısıttan muaf.
   if (o.zayifVeri) return 'passive';
+  // Metinleri/beyanı eksik olan aday kalır — kısıt onu yayına almazdı zaten.
+  if (o.yayinaHazirDegil) return 'candidate';
   // `base`: alış fiyatı olmayan her ürün ADAY. Bitmiş parti ve geri çekme kararı zamanla doğar —
   // ama eksik künye kurulum gününde de eksiktir, o yüzden `passive` yukarıda katmandan bağımsız.
   if (!o.kusurlu) return 'candidate';
@@ -797,7 +815,7 @@ export async function seedLezzaProducts(
     // ikinci bir listeye kopyalanmıyor: aileye bir çeşit eklenince satış durumu da kendiliğinden
     // doğru olsun — iki liste bir gün ayrılsaydı, ayrıldığı gün aile yine yarım kalırdı.
     const aileli = AILE_UYESI_SLUG.has(p.slug);
-    const durum: ProductStatus = satilabilirDurum({ teklifli, kurguda, zayifVeri, aileli, kusurlu, i });
+    // `durum` METİNLERDEN VE GÖRSELDEN SONRA hesaplanıyor (aşağıda) — yayın kısıtı onlara bakıyor.
     // **Künyesi eksik ürün** (kapsam denetimi 09.08) — ikisi de ayrı bir EKRAN hâli, ayrı sebep:
     //   raf ömrü yok  → "kalan %" hesaplanamaz; parti kartı o çubuğu HİÇ basmamalı
     //   hedef marj yok → marj uyarısı hesaplanamaz; "uyarı yok" ile "veri yok" aynı şey değil
@@ -822,6 +840,17 @@ export async function seedLezzaProducts(
     // Kapak GERÇEK görselden; R2 ayarsızsa null döner ve kayıt görselsiz oluşur (graceful).
     const kapakUrl = kapaksiz ? null : p.imageUrls[0];
     const imageKey = kapakUrl ? await uploadImageFromUrl(kapakUrl, r2Keys.productImage(p.slug, kapakUrl.split('/').pop() || 'cover.webp')) : null;
+
+    // ── YAYINA HAZIR MI (05.36) ─────────────────────────────────────────────────────────────────
+    // Ölçüt `hasAllLocales` — `has_all_locales(jsonb)` kısıtının TS karşılığı, elle yeniden
+    // yazılmıyor. Beyan alanları (`ingredients`/`storage_instructions`) burada dolaylı sınanıyor:
+    // ikisi de `beyanEksik`/türetme kapalıyken `null` yazılıyor ve kısıt onları da arıyor.
+    //
+    // **`imageAlt` yok** — kısıt onu aramıyor (formda alanı da yok, boşsa ürün adına düşüyor;
+    // gerekçe `0005` kısıt künyesinde).
+    const yayinaHazirDegil =
+      !hasAllLocales(name) || !hasAllLocales(aciklama) || beyanEksik || (!beyan && !turetmeSerbest);
+    const durum: ProductStatus = satilabilirDurum({ teklifli, kurguda, zayifVeri, aileli, kusurlu, yayinaHazirDegil, i });
 
     const { product, variants } = await products.create({
       name,

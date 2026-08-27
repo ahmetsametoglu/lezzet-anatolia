@@ -3,6 +3,32 @@
 -- migration'da gelir. Erişim modeli 0001 ile aynı: RLS deny-by-default; erişim sunucudan
 -- service_role ile (RLS baypas). Client-side anon okuma gerekirse aktif-satır read policy'si eklenir.
 
+-- ── ÇOK DİLLİ METİN ÖLÇÜTÜ — katalogun ortak kapısı ───────────────────────────────────────────
+--
+-- **Anahtarın VARLIĞI yetmez, DOLU olması aranır:** operatör alanı açıp boş bırakırsa `{"fr": ""}`
+-- yazılır ve `? 'fr'` bunu "dolu" sayardı — yayındaki üründe boş bir içindekiler listesi, hiç
+-- olmayan listeden kötüdür (yasal beyan, üstelik gıda).
+--
+-- **Neden BURADA, `0038_recipe.sql`de değil** (27.08): fonksiyon tarif için yazılmıştı ama ölçüt
+-- tarife özel değil — ürün de aynı soruyu soruyor ve `product` bu dosyadan iki sıra sonra doğuyor
+-- (`0005`). Migration sırası gereği 0038'deki tanım 0005'ten görülemezdi; tek kopya yukarı taşındı,
+-- 0038 onu artık yalnız KULLANIYOR. İki ayrı tanım yazmak, bir gün ikisinin ayrışması demekti.
+--
+-- ⚠ Kısıt YAZMA anında bakar: fonksiyon ileride değişirse mevcut satırlar yeniden doğrulanmaz.
+create or replace function public.has_all_locales(p jsonb) returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select p is not null
+     and coalesce(btrim(p ->> 'tr'), '') <> ''
+     and coalesce(btrim(p ->> 'fr'), '') <> ''
+     and coalesce(btrim(p ->> 'de'), '') <> '';
+$$;
+
+comment on function public.has_all_locales(jsonb) is
+  'Çok dilli metin üç dilde de DOLU mu (boş dize dolu sayılmaz). Ürün ve tarif yayın kısıtının ortak ölçütü.';
+
 -- ── category — düz, tek seviye; her ürün tek kategoride (DATA_MODEL, DOMAIN §13) ──
 create table public.category (
   id uuid primary key default gen_random_uuid(),

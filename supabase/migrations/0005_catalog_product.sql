@@ -57,7 +57,11 @@ create table public.product (
   image_focal_x smallint not null default 50,        -- odak %, 0-100 (object-position X)
   image_focal_y smallint not null default 50,        -- odak %, 0-100 (object-position Y)
   image_zoom smallint not null default 100,          -- zoom %, 100-400 (dikey/kare kaynağı yatay banda kırpar)
-  image_alt jsonb,                                   -- LocalizedText; erişilebilirlik + SEO, kart görselinde zorunlu
+  -- LocalizedText; erişilebilirlik + SEO. **Boşsa ürün ADINA düşer** (kategori satırındaki desenin
+  -- aynısı) ve o yüzden ürün formunda alanı YOK (`product-form/schema.ts` `.omit()`). Künye bir
+  -- zamanlar "kart görselinde zorunlu" diyordu; yedek zinciri kurulunca o cümle geçerliliğini
+  -- yitirdi ve yayın kısıtına da bu yüzden alınmadı (27.08 künyesi aşağıda).
+  image_alt jsonb,
   image_updated_at timestamptz,                      -- görsel dosyasının sürüm damgası (gerekçe: 0004 kategori satırı)
   -- Yasal beyan (INCO) — müşteri ürün sayfasının zorunlu bölümleri.
   -- ingredients/storage_instructions DÜZ METİN'dir; içinde yalnız `**vurgu**` işareti taşır. HTML
@@ -73,7 +77,21 @@ create table public.product (
   -- eksik" yazıp süzgeçte 12 satır gösterir. Üretilmiş kolon: yazarken hesaplanır, indekslenebilir,
   -- hem süzgeç hem sayaç aynı gerçeği okur. HANGİ beyanın eksik olduğu (rozet ayrıntısı) uygulamada
   -- kalır; burada yalnız "eksik var mı" sorusu var.
-  is_incomplete boolean generated always as (name ->> 'tr' is null or name ->> 'fr' is null or name ->> 'de' is null or ingredients is null or nutrition is null or storage_instructions is null or allergens = '{}') stored,
+  --
+  -- **ÖLÇÜT `has_all_locales` (05.36, 27.08).** Eskiden `name ->> 'fr' is null` yazıyordu ve BOŞ
+  -- DİZEYİ dolu sayıyordu: operatör alanı açıp boş bırakınca `{"fr": ""}` yazılıyor, rozet
+  -- "tamam" diyor, müşteri Fransızca yerine Türkçe görüyordu (`resolveLocalizedText` yedek
+  -- zinciri sessiz). Aynı ölçüt aşağıdaki yayın kısıtında da geçiyor — ikisi ayrışırsa ekran
+  -- "eksik yok" derken veritabanı yayını reddeder ve operatör sebebi hiçbir yerde göremez.
+  -- Çok dilli beyan alanları da (`ingredients`, `storage_instructions`) artık varlığa değil
+  -- DOLULUĞA bakıyor: Fransızcası boş bir içindekiler listesi, INCO açısından yok hükmündedir.
+  is_incomplete boolean generated always as (
+    not public.has_all_locales(name)
+    or not public.has_all_locales(ingredients)
+    or not public.has_all_locales(storage_instructions)
+    or nutrition is null
+    or allergens = '{}'
+  ) stored,
   traces product_allergen[] not null default '{}',   -- çapraz bulaşma; cümle i18n şablonuyla kurulur
   -- Fransa gıda oranları: **5,5** (dondurulmuş/paketli) · **10** (hazır tüketim — "consommation
   -- immédiate", dondurma/porsiyon kalemler) · **20** (gıda dışı). Künye uzun süre "5.5 / 20"
@@ -92,7 +110,20 @@ create table public.product (
   -- şey değildir ve ayrı kararlardır — biri satış kanalını, öteki iade/imha ve vitrin işaretini
   -- belirler.
   storage_type product_storage_type not null default 'frozen',
-  status product_status not null default 'active',   -- satışta / pasif / aday (tek alan, yukarıdaki enum)
+  -- satışta / pasif / aday (tek alan, yukarıdaki enum)
+  --
+  -- **VARSAYILAN `candidate` — kolon `active` diyordu ve bu yaşanmış bir arızaydı** (05.36, 27.08).
+  -- Form zaten `candidate` gönderiyor ve künyesi sebebini yazmış: *"doğan iki ürün SATIŞTA doğdu,
+  -- üstelik beyanları eksikti — oysa ekran 'ADAY olarak doğar, vitrinde görünmez' diye söz
+  -- veriyordu."* Düzeltme yüzeyde yapılmış, veride yapılmamıştı: formu atlayan her yazan (asistan
+  -- dilekçesi, servis çağrısı, ileride bir uç) kolonun varsayılanını alıyor ve ürün fiyatsız,
+  -- stoksuz, beyansız hâlde SATIŞA doğuyordu. `MB-22a`/`09.6`in dersi birebir: *"yüzeyde
+  -- durdurulan bir kuralın ikinci bir yazma yolu varsa, kural yok demektir"*.
+  --
+  -- Aşağıdaki yayın kısıtının da ön şartı: `active` varsayılanıyla, üç dili henüz dolmamış her yeni
+  -- ürün doğar doğmaz kısıta çarpardı — oysa doğru davranış aday doğup üç dil dolunca yayına
+  -- alınmaktır (tarif emsali `0038`: `is_active` varsayılanı `false`).
+  status product_status not null default 'candidate',
   target_margin_percent numeric(5, 2),              -- hedef kâr marjı (markup %); marj uyarısı / oto-fiyat
   target_margin_b2b_percent numeric(5, 2),          -- B2B'ye ÖZEL hedef (15.08); boş = ortak hedef geçerli
   auto_price boolean not null default false,         -- açıksa fiyat hedef marja göre otomatik (motor sonraki modül)
@@ -121,6 +152,51 @@ create table public.product (
   -- vermez: kart ürün adına düşer, "Limonlu kek" yazar ve DOĞRU GÖRÜNÜR — kısa etiketin bütün
   -- amacı sessizce kaybolur. Gürültülü bir kayıt hatası, sessiz bir tasarım kaybından iyidir.
   constraint product_family_label_required check (family_id is null or family_label is not null),
+
+  -- ── YAYIN ÜÇ DİL İSTER (05.36 · mobil şeridin talebi 25.08, tarif emsali 07.08) ─────────────
+  --
+  -- **Ölçülmüş arıza:** Fransızcası olmayan ürün Fransız müşteriye SESSİZCE Türkçe gösteriliyordu.
+  -- Hiçbir yerde hata yok, hiçbir işaret yok — `resolveLocalizedText` yedek zinciri
+  -- (seçili → TR → FR → DE) eksikliği kendiliğinden kapatıyor. Talep mesajlarında bunun bir
+  -- karşılığı var (*"Traduit automatiquement"*), katalogda yok: ürün adı satın alma kararının
+  -- metnidir ve burada "otomatik çevrildi" demek de yetmez, üstelik gıda.
+  --
+  -- **Neden VERİDE, formda değil** (`MB-22a`/`09.6`in dersi): üründe en az üç yazan var — operasyon
+  -- formu, asistan dilekçesi (`product_draft`/`product_create`) ve seed. Kural yalnız yüzeyde
+  -- dururken ikinci bir yazma yolu kalıyor, ve *"yüzeyde durdurulan bir kuralın ikinci bir yazma
+  -- yolu varsa, kural yok demektir"*. Veride durunca kaç yazan olduğu önemsizleşir.
+  --
+  -- **YAZMA anına değil YAYIN anına bağlı** (tarif deseni): ürün `candidate`/`passive` olarak doğar,
+  -- üç dil dolunca `active` olur. Aksi hâlde operatör ürünü hiç oluşturamazdı — form da zaten tek
+  -- turda üç dil yazmıyor, "✦ AI çeviri" düğmesiyle dolduruluyor.
+  --
+  -- **Zorlama ÇEVİRİYE değil DOLULUĞA:** kısıt "AI çevirdi mi" diye sorsaydı kota bittiği gün ürün
+  -- yayınlanamaz olurdu (`20.1`: AI anahtarsızken özellik düşmez). Operatör üç dili elle de yazar.
+  --
+  -- **Kapsam kararı (talep bunu katalog şeridine bıraktı):** ölçüt "müşteriye görünen metin" değil,
+  -- **YEDEĞİ OLMAYAN metin**. `description` içeride: yedeği yok, boşsa ürün açıklamasız kalır ve
+  -- satın alma kararının metni odur. `ingredients`/`storage_instructions` yasal beyandır (INCO),
+  -- yedeği olamaz ve zaten `is_incomplete`in ölçütü. `family_label` aile üyesindeyken içeride:
+  -- kartta okunan odur ve boşsa sessizce ürün adına düşer — kısa etiketin bütün amacı kaybolur
+  -- (`product_family_label_required` künyesi).
+  --
+  -- **`image_alt` DIŞARIDA ve bu ölçülerek karara bağlandı (27.08):** alan ürün formunda YOK ve
+  -- bilerek yok — `product-form/schema.ts` onu `.omit()` ediyor, gerekçesi *"boşsa müşteride ürün
+  -- adına düşer"*. Kısıta konsaydı çıkmaz sokak olurdu: operatörün dolduramadığı bir alan yüzünden
+  -- hiçbir ürün yayınlanamazdı. Üstelik gerek de yok — yedek ürün ADIdır ve ad bu kısıtla üç dilde
+  -- zorunlu hâle geliyor, yani alt metin de kendiliğinden doğru dile düşüyor. Kolonun kendi künyesi
+  -- bir zamanlar "kart görselinde zorunlu" diyordu; form kararı ondan yenidir ve yedek zincirini
+  -- kurmuştur. `nutrition` da dışarıda — çok dilli değil, sabit kalemli sayı tablosu.
+  constraint product_publish_requires_all_locales check (
+    status <> 'active'
+    or (
+      public.has_all_locales(name)
+      and public.has_all_locales(description)
+      and public.has_all_locales(ingredients)
+      and public.has_all_locales(storage_instructions)
+      and (family_id is null or public.has_all_locales(family_label))
+    )
+  ),
 
   created_at timestamptz not null default now()
 );

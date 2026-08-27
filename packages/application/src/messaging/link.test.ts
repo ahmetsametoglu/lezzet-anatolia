@@ -54,8 +54,13 @@ async function taszeSohbet() {
 }
 
 async function siparisAc(customerId: string, label: string): Promise<string> {
+  // Yayın kısıtının (05.36) şartı: `active` ürün üç dilde dolu olmalı — metinler fikstürün konusu değil.
+  const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const { product, variants } = await new ProductService(db).create({
-    name: { tr: `Bağ ürünü ${label} ${stamp}` },
+    name: ucDil(`Bağ ürünü ${label} ${stamp}`),
+    description: ucDil('Mesaj bağı testi'),
+    ingredients: ucDil('Un, su, tuz'),
+    storageInstructions: ucDil('Serin yerde saklayın'),
     status: 'active',
     variants: [{ label: { tr: '1 kg' } }],
   });

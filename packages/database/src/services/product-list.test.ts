@@ -41,18 +41,33 @@ beforeAll(async () => {
   // Bilinçli çeşitlilik: beyanı TAM olan iki kayıt + her biri TEK bir eksikliği örnekleyen kayıtlar.
   // "Tam" olmak artık ad dilleri + alerjen DEĞİL; içindekiler, besin değerleri ve saklama da gerekiyor
   // (05.10 — ölçüt `missingDeclarations`'ta). Bu yüzden tam kayıtlar dörtlüyü de taşır.
+  /**
+   * **DURUM ARTIK AÇIKÇA YAZILIYOR** (05.36): kolonun varsayılanı `active`ti, `candidate` oldu ve
+   * bu fikstür eski varsayılana bel bağlamıştı — `status` vermeyen beş satır sessizce aktif
+   * doğuyordu. Değişiklik bilinçli (yeni ürün fiyatsız/stoksuz/beyansız hâlde satışa doğmasın);
+   * fikstür ona uyduruldu.
+   *
+   * **`description` DECL'e girdi**, çünkü yayın kısıtı (`product_publish_requires_all_locales`)
+   * onu da arıyor: aktif olacak satır üç dilde dolu olmak ZORUNDA. Eksik künyeli satırlar bu
+   * yüzden aday kalıyor — testin ölçtüğü şey (`is_incomplete`) durumdan bağımsız olduğu için
+   * "beyan eksik" kovası aynen yaşıyor.
+   */
   const DECL = {
+    description: { tr: 'Üç dilde dolu açıklama.', fr: 'Description complète.', de: 'Vollständige Beschreibung.' },
     ingredients: { tr: 'Un, su, tuz.', fr: 'Farine, eau, sel.', de: 'Mehl, Wasser, Salz.' },
     storageInstructions: { tr: 'Serin yerde saklayın.', fr: 'Conserver au frais.', de: 'Kühl lagern.' },
     nutrition: { energyKj: 1600, energyKcal: 380, fatG: 18, saturatedFatG: 7, carbohydrateG: 45, sugarsG: 22, proteinG: 6, saltG: 0.3 },
   };
   const seed: Array<{ name: Record<string, string>; extra?: Record<string, unknown> }> = [
-    { name: { tr: `${STAMP} tam bir`, fr: `${STAMP} complet un`, de: `${STAMP} voll eins` }, extra: { allergens: ['gluten'], ...DECL } },
-    { name: { tr: `${STAMP} tam iki`, fr: `${STAMP} complet deux`, de: `${STAMP} voll zwei` }, extra: { allergens: ['sut'], ...DECL } },
-    { name: { tr: `${STAMP} dil eksik` }, extra: { allergens: ['gluten'], ...DECL } }, // fr/de YOK → beyan eksik
-    { name: { tr: `${STAMP} alerjen yok`, fr: `${STAMP} sans`, de: `${STAMP} ohne` }, extra: { ...DECL } }, // allergens boş → beyan eksik
+    { name: { tr: `${STAMP} tam bir`, fr: `${STAMP} complet un`, de: `${STAMP} voll eins` }, extra: { allergens: ['gluten'], status: 'active', ...DECL } },
+    { name: { tr: `${STAMP} tam iki`, fr: `${STAMP} complet deux`, de: `${STAMP} voll zwei` }, extra: { allergens: ['sut'], status: 'active', ...DECL } },
+    // fr/de YOK → beyan eksik. **Aday kalmak ZORUNDA:** adı üç dilde dolu olmayan ürün yayına alınamaz.
+    { name: { tr: `${STAMP} dil eksik` }, extra: { allergens: ['gluten'], ...DECL } },
+    // allergens boş → beyan eksik; ama METİNLERİ tam, yani yayına alınabilir (iki ölçüt ayrı).
+    { name: { tr: `${STAMP} alerjen yok`, fr: `${STAMP} sans`, de: `${STAMP} ohne` }, extra: { status: 'active', ...DECL } },
     // İçindekiler YOK: yeni ölçütün kendi başına yakalaması gereken durum (diller ve alerjen tam).
-    { name: { tr: `${STAMP} icindekiler yok`, fr: `${STAMP} sans compo`, de: `${STAMP} ohne zutaten` }, extra: { allergens: ['soya'], storageInstructions: DECL.storageInstructions, nutrition: DECL.nutrition } },
+    // Yasal beyan eksik olduğu için yayın kısıtı da onu tutuyor → aday.
+    { name: { tr: `${STAMP} icindekiler yok`, fr: `${STAMP} sans compo`, de: `${STAMP} ohne zutaten` }, extra: { allergens: ['soya'], description: DECL.description, storageInstructions: DECL.storageInstructions, nutrition: DECL.nutrition } },
     { name: { tr: `${STAMP} pasif`, fr: `${STAMP} passif`, de: `${STAMP} passiv` }, extra: { allergens: ['soya'], status: 'passive', ...DECL } },
     { name: { tr: `${STAMP} aday`, fr: `${STAMP} candidat`, de: `${STAMP} kandidat` }, extra: { allergens: ['susam'], status: 'candidate', ...DECL } },
   ];
@@ -106,10 +121,14 @@ describe('ProductService.list — süzme', () => {
 
     expect(mine(passive.rows)).toHaveLength(1);
     expect(mine(passive.rows)[0]?.name.tr).toContain('pasif');
-    expect(mine(candidate.rows)).toHaveLength(1);
-    expect(mine(candidate.rows)[0]?.name.tr).toContain('aday');
-    // Durum TEK alan: 8 kaydın 1'i pasif, 1'i aday → 6 satışta kalır (diğer kategorideki dâhil).
-    expect(mine(active.rows)).toHaveLength(6);
+    // **Durum TEK alan; 8 kaydın dağılımı: 3 aktif · 1 pasif · 4 aday.** Aday sayısı 1'den 4'e
+    // çıktı ve sebebi kolonun varsayılanının `candidate` olması (05.36) — ama asıl anlamlı olan
+    // ÜÇÜNÜN AYNI SEBEPLE aday olması: adı/beyanı eksik ürün yayın kısıtından geçemez, yani
+    // "yayınlanamayan ürün aday kalır" kuralı bu listede de görünüyor.
+    expect(mine(candidate.rows).map((p) => p.name.tr ?? '').sort()).toEqual(
+      [`${STAMP} aday`, `${STAMP} baska kategori`, `${STAMP} dil eksik`, `${STAMP} icindekiler yok`].sort(),
+    );
+    expect(mine(active.rows)).toHaveLength(3);
     expect(mine(active.rows).every((p) => p.status === 'active')).toBe(true);
   });
 
@@ -234,8 +253,12 @@ describe('ProductService.counts (tek okuma)', () => {
   it('sayaçlar listeyle AYNI süzgeci kullanır', async () => {
     const c = await products.counts({ query: STAMP });
     expect(c.total).toBe(8);
-    expect(c.candidate).toBe(1);
-    // beyanı eksik: "dil eksik", "alerjen yok", "icindekiler yok", "baska kategori" → 4
+    // Aday: "dil eksik" · "icindekiler yok" · "aday" · "baska kategori" → 4 (künye durum testinde)
+    expect(c.candidate).toBe(4);
+    // beyanı eksik: "dil eksik", "alerjen yok", "icindekiler yok", "baska kategori" → 4.
+    // **Sayı aynı kaldı ve bu anlamlı:** `is_incomplete` durumdan BAĞIMSIZ — aday da olsa eksik
+    // beyan eksiktir. İki ölçüt kesişiyor ama aynı soruyu sormuyorlar ("alerjen yok" aktif ama
+    // eksik; "aday" üç dilde dolu ama aday).
     expect(c.incomplete).toBe(4);
   });
 
@@ -249,7 +272,7 @@ describe('ProductService.counts (tek okuma)', () => {
 
   it('aday sayacı DURUM süzgecini yok sayar (aday kuyruğu görünmeye devam eder)', async () => {
     const c = await products.counts({ query: STAMP, status: 'active' });
-    expect(c.candidate).toBe(1);
+    expect(c.candidate).toBe(4);
     expect(c.total).toBeLessThan(8); // toplam süzgeçten etkilenir
   });
 

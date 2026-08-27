@@ -47,11 +47,20 @@ const yerli = (): PlaceWarehouses => ({ warehouseId, shippingWarehouseId: null }
  * b2b'de Orta→Ucuz→Pahalı. Aynı oranla türetilmiş fiyatlar sıralamayı korur, yani kanal ekseni
  * kırılsa bile test yeşil kalırdı — çelişen sıra, kusuru görebilen tek fikstürdür.
  */
+/** Yayın kısıtının (05.36) şartı: `active` ürün üç dilde dolu olmalı. Metinler fikstürün konusu değil. */
+const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
+const yayinaHazir = {
+  description: ucDil('Katalog testi ürünü'),
+  ingredients: ucDil('Un, su, tuz'),
+  storageInstructions: ucDil('Serin yerde saklayın'),
+  status: 'active' as const,
+};
+
 async function makeProduct(label: string, priceCents: number, b2bCents: number) {
   const { product, variants } = await new ProductService(db).create({
-    name: { tr: `${label} ${stamp}` },
+    name: ucDil(`${label} ${stamp}`),
     categoryId,
-    status: 'active',
+    ...yayinaHazir,
     variants: [{ label: { tr: '1 kg' } }],
   });
   productIds.push(product.id);
@@ -262,9 +271,9 @@ describe('çok boylu üründe birincil boy EN UCUZ olandır', () => {
 
   it('kart en ucuz boyun fiyatını yazar VE sıralama da onu kullanır — operatörün sırası pahalı boyu öne alsa da', async () => {
     const { product, variants } = await new ProductService(db).create({
-      name: { tr: `Cokboy ${damga}` },
+      name: ucDil(`Cokboy ${damga}`),
       categoryId,
-      status: 'active',
+      ...yayinaHazir,
       // Sıra operatörün: 2 kg önce (sortOrder 0). Fiyat tersine — düzeltmeden önceki hâlde kart
       // 33,82 € yazar ve ürün sıralamada 33,82 €'ya göre yerleşirdi.
       variants: [{ label: { tr: '2 kg' } }, { label: { tr: '1 kg' } }],
@@ -277,9 +286,9 @@ describe('çok boylu üründe birincil boy EN UCUZ olandır', () => {
     // Kıyas ürünü: iki fiyatın ARASINDA. Kart doğru olup sıra yanlış kalsaydı bu ürün öne geçerdi —
     // yani tek başına kart iddiası, görünümün de düzeldiğini kanıtlamaz.
     const kiyas = await new ProductService(db).create({
-      name: { tr: `Kiyas ${damga}` },
+      name: ucDil(`Kiyas ${damga}`),
       categoryId,
-      status: 'active',
+      ...yayinaHazir,
       variants: [{ label: { tr: '1 kg' } }],
     });
     productIds.push(kiyas.product.id);
@@ -328,9 +337,9 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
    */
   it('kanalında fiyatı olmayan ürün o kanalda HİÇ listelenmez, ötekinde durur', async () => {
     const { product, variants } = await new ProductService(db).create({
-      name: { tr: `Yalnız toptan ${stamp}` },
+      name: ucDil(`Yalnız toptan ${stamp}`),
       categoryId,
-      status: 'active',
+      ...yayinaHazir,
       variants: [{ label: { tr: '1 kg' } }],
     });
     productIds.push(product.id);

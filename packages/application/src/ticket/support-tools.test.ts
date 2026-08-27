@@ -103,8 +103,14 @@ const gunSonra = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStrin
 
 /** Fiyatlı/fiyatsız, stoklu/stoksuz ürün — katalogda görünmesi için gereken en az şey. */
 async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boolean } = {}) {
+  // Yayın kısıtı (05.36) `active` ürünü üç dilde dolu görmek istiyor — metinler fikstürün konusu
+  // değil ama kapının şartı (`product_publish_requires_all_locales`).
+  const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const { product, variants } = await new ProductService(db).create({
-    name: { tr: `${ad} ${stamp}` },
+    name: ucDil(`${ad} ${stamp}`),
+    description: ucDil('Destek testi ürünü'),
+    ingredients: ucDil('Un, su, tuz'),
+    storageInstructions: ucDil('Serin yerde saklayın'),
     categoryId,
     status: 'active',
     variants: [{ label: { tr: '1 kg' } }],

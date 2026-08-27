@@ -217,11 +217,17 @@ describe('sinyal özetleri', () => {
    * özne varyant. Gerçek bir `product_variant` satırı şart: çözüm o tablodan okunuyor.
    */
   it('ürün kimliği YAZILMAMIŞ sepete ekleme de sayılır — özet onu varyanttan çözer', async () => {
-    const { data: urun } = await db
+    // **Durum ADAY bırakıldı** (05.36): satır bir tur `status: 'active'` yazıyordu ve yayın kısıtı
+    // (`product_publish_requires_all_locales`) onu reddediyordu — metinleri yok. Testin konusu
+    // analitik özeti; ürünün satışta olup olmaması ilgisiz, o yüzden kolonun varsayılanı yeterli.
+    // **Hata da artık kontrol ediliyor:** reddedilen insert `data: null` döndürüyordu ve test bir
+    // sonraki satırda `null.id` ile patlıyordu — sebebi kendi iddiasıyla ilgisiz görünen bir hata.
+    const { data: urun, error: urunHata } = await db
       .from('product')
-      .insert({ name: { tr: `Atıcı Kanıtı ${stamp}` }, slug: `atici-kaniti-${stamp}`, status: 'active' })
+      .insert({ name: { tr: `Atıcı Kanıtı ${stamp}` }, slug: `atici-kaniti-${stamp}` })
       .select('id')
       .single();
+    if (urunHata) throw urunHata;
     gercekUrunId = urun!.id as string;
     const { data: boy } = await db
       .from('product_variant')

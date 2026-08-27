@@ -53,8 +53,18 @@ const bundleIds: string[] = [];
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db, { label: 'PKT' })).id;
   const category = await categories.create({ name: { tr: `Paket testi ${stamp}` } });
+  // **YAYINA HAZIR kurulur** (05.36): bu dosyanın bütün iddiaları paketin SATILABİLİRLİĞİ üzerine
+  // ve o, kalemlerinin satılabilirliğinden türüyor. Ürün aday doğarsa (kolonun yeni varsayılanı)
+  // paket hiç satılabilir olmaz ve testler kendi konularıyla ilgisiz bir sebeple düşer. Üç dilli
+  // metinler de bu yüzden: yayın kısıtı (`product_publish_requires_all_locales`) onları arıyor ve
+  // testler ürünü `active`e geri çekiyor (pasife alma senaryoları).
+  const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
   const { product, variants } = await products.create({
-    name: { tr: `Paket ürünü ${stamp}` },
+    name: ucDil(`Paket ürünü ${stamp}`),
+    description: ucDil('Paket testinin ürünü'),
+    ingredients: ucDil('Un, su, tuz'),
+    storageInstructions: ucDil('Serin yerde saklayın'),
+    status: 'active',
     categoryId: category.id,
     variants: [
       { label: { tr: '500 g' }, netWeightG: 500 },

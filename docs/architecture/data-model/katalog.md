@@ -173,7 +173,7 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 | `shelf_life_days` | int | • |  |
 | `shippable` | boolean |  | `false` |
 | `storage_type` | product_storage_type |  | `'frozen'` |
-| `status` | product_status |  | `'active'` |
+| `status` | product_status |  | `'candidate'` |
 | `target_margin_percent` | numeric(5, 2) | • |  |
 | `target_margin_b2b_percent` | numeric(5, 2) | • |  |
 | `auto_price` | boolean |  | `false` |
@@ -190,7 +190,7 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 - **`ingredients`** — içindekiler (çok dilli) — INCO: alerjenler metin içinde vurgulanır
 - **`nutrition`** — besin değerleri, **100 g başına** — sabit kalemli (aşağıda); uzaktan satışta ürün sayfasında beyan (INCO)
 - **`allergens`** — AB 14 alerjeninden ürünün **içerdikleri** (FR/DE yasal beyan)
-- **`is_incomplete`** — **Üretilmiş kolon** — beyan eksik mi (ad dillerinden biri yok · içindekiler/besin/saklama girilmemiş · alerjen listesi boş). Süzgeç ve sayaç AYNI gerçeği okusun diye DB'de hesaplanır; hangi beyanın eksik olduğu uygulamada (`missingDeclarations`)
+- **`is_incomplete`** — **Üretilmiş kolon** — beyan eksik mi (ad · içindekiler · saklama metni üç dilde dolu değil · besin değeri girilmemiş · alerjen listesi boş). Süzgeç ve sayaç AYNI gerçeği okusun diye DB'de hesaplanır; hangi beyanın eksik olduğu uygulamada (`missingDeclarations`). **Ölçüt `has_all_locales`** (05.36): eskiden `name ->> 'fr' is null` yazıyordu ve boş dizeyi dolu sayıyordu — operatör alanı açıp boş bırakınca rozet "tamam" diyor, müşteri Türkçe görüyordu. Aynı ölçüt yayın kısıtında da geçer; ikisi ayrışırsa ekran "eksik yok" derken veritabanı yayını reddeder
 - **`traces`** — AB 14'ten **çapraz bulaşma** riski olanlar ("aynı tesiste … işlenir"); cümle bu listeden i18n şablonuyla kurulur, serbest metin tutulmaz
 - **`storage_instructions`** — saklama ve hazırlama metni (çözdürme, yeniden dondurmama, ısıtma) — müşteri ürün sayfasında ayrı bölüm; `shelf_life_days` sayısaldır, bu ise müşteriye gösterilen metindir
 - **`image_key`** — kapak görseli; depo anahtarı, tam URL değil (blueprint STACK §5)
@@ -204,13 +204,32 @@ Bazı ürünler bir ailenin üyesidir: aynı kekin limonlu/mangolu/çilekli hâl
 - **`shelf_life_days`** — toplam raf ömrü (gün); kalan % hesabı için
 - **`shippable`** — kargoyla gönderilebilir mi — **varsayılan `false`** (kullanıcı kararı 08.08: unutulan alanın bedeli "satılamadı" olmalı, "bozuk gitti" değil). **Soğuk zinciri ARTIK O ANLATMIYOR** → `storage_type`
 - **`storage_type`** — **saklama rejimi — soğuk zincirin kendisi** (kullanıcı kararı 16.08); varsayılan `frozen`. `shippable` ile karıştırılmaz: o bir TESLİMAT olgusu ("kargoya verilir mi"), bu bir SAKLAMA olgusu. Ayrılmalarının sebebi bir kuralın yazılamıyor olmasıydı — `DOMAIN §8` *"teslim edilmiş ve sonra iade edilen **donuk** ürün varsayılan olarak imha edilir"* diyor ama hangi ürünün donuk olduğunu söyleyen alan yoktu ve iade penceresi her kalemde `restock`tan başlıyordu. Üç değer, çünkü ikisi yetmiyor: vitrin işareti `chilled`+`frozen`de çıkar, imha varsayılanı yalnız `frozen`de doğar. Kararlar motorda tek yerde: `requiresColdChain` · `defaultsToDiscardOnReturn`. Varsayılanın `frozen` olması `shippable`ınkiyle aynı aileden — yanlış `ambient` işaretli donuk ürünün iadesi rafa döner, bedeli gıda güvenliğidir
-- **`status`** — satış durumu TEK alanda: `active` (satışta) · `passive` (satışa kapalı) · `candidate` (aday ürün — stokta yok, tedarik edilebilir; keşif bölümünde gösterilir, SATILAMAZ, bkz. `DOMAIN.md §13`). Önce `is_candidate` + `is_active` ikilisiydi: iki bayrak üç durum için dört bileşim üretiyordu ve "aday + pasif" gibi anlamsız bir hâl mümkündü — enum bunu kapatır; varsayılan `active`
+- **`status`** — satış durumu TEK alanda: `active` (satışta) · `passive` (satışa kapalı) · `candidate` (aday ürün — stokta yok, tedarik edilebilir; keşif bölümünde gösterilir, SATILAMAZ, bkz. `DOMAIN.md §13`). Önce `is_candidate` + `is_active` ikilisiydi: iki bayrak üç durum için dört bileşim üretiyordu ve "aday + pasif" gibi anlamsız bir hâl mümkündü — enum bunu kapatır. **Varsayılan `candidate`** (05.36 · kolon bir tur `active` diyordu ve bu yaşanmış bir arızaydı): yeni ürün doğduğu anda satılabilir olmamalı — fiyatı ve stoğu HENÜZ YOK, beyanı çoğu zaman eksik. Form zaten `candidate` gönderiyordu ama formu atlayan her yazan (asistan dilekçesi, servis çağrısı) kolonun varsayılanını alıyor ve ürün satışa doğuyordu. Yayına almak ayrı bir karardır ve aşağıdaki kısıttan geçer
 - **`target_margin_percent`** — hedef kâr marjı (maliyet üzerine markup %); marj uyarısı / otomatik fiyat için — ORTAK hedef, B2B'ye özel değer yoksa iki kanalda da geçerli
 - **`target_margin_b2b_percent`** — B2B'ye ÖZEL hedef marj (kullanıcı kararı 15.08): toptan marjı perakendeden farklı kurulabilir; null = ortak hedef geçerli. Çözüm tek yerde: `targetMarginFor` (domain-core) — diyalog önizlemesi, otomatik fiyat ve marj-altı uyarısı aynı fonksiyonu okur
 - **`auto_price`** — otomatik fiyatlandırma açık mı (varsayılan false) — açıksa fiyat hedef marja göre otomatik güncellenir, kapalıysa sistem uyarır
 - **`family_id`** — **ÇEŞİT EKSENİ** (`ProductFamily`, yukarıda). `null` = ailesiz → çeşit bloğu HİÇ çizilmez. `on delete set null`
 - **`family_label`** — **Aile içi kart etiketi — ürün adından AYRI ve üç dilli.** Ürün "Limonlu kek", etiket "Limonlu"; kartta okunan ikincisidir (kartlar yan yanayken her birinde "kek"i tekrar etmek seçimi zorlaştırır). **Türetilemez:** ortak eki kırpmak "Çilekli Kek" ile "Kek Dilimi" yan yana gelince bozulur. **Veri kısıtı zorunlu kılıyor** (`family_id` doluyken): ekranda unutulursa kart ürün adına düşer, DOĞRU GÖRÜNÜR ve kısa etiketin amacı sessizce kaybolur
 - **`family_position`** — **Aile İÇİNDEKİ sıra** — operatörün sürüklediği sıra. `sort_order` KULLANILMAZ: o katalog sırasıdır ve iki kararı tek kolona bağlamak, ailedeki sırayı değiştirene katalog sırasını da farkında olmadan değiştirtirdi. Yazma **tüm aileyi birden** günceller
+
+**Yayın kısıtı — `product_publish_requires_all_locales`** (05.36 · mobil şeridin talebi 25.08, tarif emsali):
+`status = 'active'` olan üründe **ad · açıklama · içindekiler · saklama metni** (aile üyesindeyse **aile
+etiketi** de) üç dilde de DOLU olmalı. Ölçüt `has_all_locales(jsonb)` — anahtarın varlığı yetmez,
+`{"fr": ""}` dolu sayılmaz.
+
+- **Neden veride:** Fransızcası olmayan ürün Fransız müşteriye **sessizce Türkçe** gösteriliyordu —
+  `resolveLocalizedText` yedek zinciri (seçili → TR → FR → DE) eksikliği kendiliğinden kapatıyor, ne
+  ekranda hata var ne logda iz. Üründe en az üç yazan var (form · asistan dilekçesi · seed) ve
+  *"yüzeyde durdurulan bir kuralın ikinci bir yazma yolu varsa, kural yok demektir"* (`MB-22a`/`09.6`).
+- **YAZMA anına değil YAYIN anına bağlı:** ürün aday doğar, üç dil dolunca `active` olur. Yayından
+  ÇIKARMAK her zaman serbest (kısıt `status <> 'active'` ile başlıyor) — eksik künyeli ürün pasife
+  çekilebilmeli, yoksa operatör onu ne düzeltebilir ne gizleyebilirdi.
+- **`image_alt` kapsam DIŞINDA:** alan ürün formunda yok ve bilerek yok (boşsa ürün adına düşer,
+  yukarıdaki satır). Kısıta konsaydı operatörün dolduramadığı bir alan yüzünden hiçbir ürün
+  yayınlanamazdı; gerek de yok, çünkü yedeği olan ad artık üç dilde zorunlu.
+- **Ölçüt tek yerde:** `has_all_locales` `0004`te tanımlı (tarif de onu kullanır), TS karşılığı
+  `hasAllLocales` (`@lezzet/types`), yayına engelleri sayan motor `productPublishGaps`
+  (`domain-core/catalog/publish.ts`) — o, kısıtın söyleyemediğini söyler: hangi alan hangi dilde eksik.
 
 Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre değişir.
 

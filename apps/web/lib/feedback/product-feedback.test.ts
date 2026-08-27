@@ -56,22 +56,34 @@ beforeAll(async () => {
   const products = new ProductService(db);
   categoryId = (await new CategoryService(db).create({ name: { tr: `Geri bildirim ${stamp}` } })).id;
 
+  /**
+   * **SATIŞTAKİ ürünler AÇIKÇA yayına alınıyor** (05.36): kolonun varsayılanı `active`ti,
+   * `candidate` oldu. Bu dosyanın ayrımı tam olarak "aday mı değil mi" üzerine kurulu — varsayılan
+   * değişince *"aday olmayan ürün keşif kartlarına düşmez"* iddiası kendi fikstürü yüzünden
+   * düşüyordu. Üç dilli metinler yayın kısıtının şartı (`product_publish_requires_all_locales`).
+   */
+  const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
+  const yayinaHazir = { description: ucDil('Test ürünü'), ingredients: ucDil('Un, su'), storageInstructions: ucDil('Serin yerde'), status: 'active' as const };
+
   const { product, variants } = await products.create({
-    name: { tr: `Değerlendirilen ürün ${stamp}` },
+    name: ucDil(`Değerlendirilen ürün ${stamp}`),
     categoryId,
+    ...yayinaHazir,
     variants: [{ label: { tr: '1 kg' } }],
   });
   productId = product.id;
   variantId = variants[0]!.id;
 
   otherProductId = (
-    await products.create({ name: { tr: `Değerlendirilmeyen ${stamp}` }, categoryId, variants: [{ label: { tr: '500 g' } }] })
+    await products.create({ name: ucDil(`Değerlendirilmeyen ${stamp}`), categoryId, ...yayinaHazir, variants: [{ label: { tr: '500 g' } }] })
   ).product.id;
 
-  // Aday ürün: satılmıyor, yalnız keşif kartlarında görünür.
-  const candidate = await products.create({ name: { tr: `Aday ürün ${stamp}` }, categoryId, variants: [{ label: { tr: '250 g' } }] });
+  // Aday ürün: satılmıyor, yalnız keşif kartlarında görünür. Durumu artık kolonun varsayılanı
+  // veriyor, ama NİYET açık yazılıyor — bu satırın kalkması testin konusunu görünmez kılardı.
+  const candidate = await products.create({
+    name: ucDil(`Aday ürün ${stamp}`), categoryId, status: 'candidate', variants: [{ label: { tr: '250 g' } }],
+  });
   candidateId = candidate.product.id;
-  await products.update({ id: candidateId, status: 'candidate' });
 
   const profiles = new UserProfileService(db);
   buyerId = (await profiles.insert({ name: 'Ayşe Kaya', email: `gb-${stamp}@example.test` })).id;

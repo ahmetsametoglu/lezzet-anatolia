@@ -34,6 +34,11 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 async function makeVariant(label: string, priceCents: number) {
   const { product, variants } = await new ProductService(db).create({
     name: { tr: `${label} ${stamp}`, fr: `${label} ${stamp}`, de: `${label} ${stamp}` },
+    // Yayın kısıtı (05.36) adın yanında açıklama ve yasal beyanı da üç dilde arıyor. Adı zaten üç
+    // dilliydi — tarif fikstürü kendi kısıtı için o alışkanlığı kurmuştu; şimdi ürün de aynı kapıdan.
+    description: { tr: 'Tarif malzemesi', fr: 'Ingrédient de recette', de: 'Rezeptzutat' },
+    ingredients: { tr: 'Un, su, tuz', fr: 'Farine, eau, sel', de: 'Mehl, Wasser, Salz' },
+    storageInstructions: { tr: 'Serin yerde saklayın', fr: 'Conserver au frais', de: 'Kühl lagern' },
     categoryId,
     status: 'active',
     variants: [{ label: { tr: '350 g' } }],

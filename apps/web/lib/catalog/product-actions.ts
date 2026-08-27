@@ -2,11 +2,28 @@
 
 import { revalidatePath } from 'next/cache';
 import { ProductService, ProductVariantService, serviceDb } from '@lezzet/database';
+import { productPublishGaps } from '@lezzet/domain-core';
 import { resolveLocalizedText, type LocalizedText, type ProductDetailsUpdate, type ProductVariantEntry } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
 import { withProposal } from '@/lib/assistant/handoff';
-import { getErrorMessage, type ActionResult } from '@/lib/error';
+import { constraintMessage } from '@/lib/constraint-message';
+import type { ActionResult } from '@/lib/error';
+import { publishGapMessage } from './publish-labels';
 import { PRODUCTS_PATH } from './paths';
+
+/**
+ * Kısıt ihlalinin operatör cümlesi — **ikinci savunma hattı** (05.36).
+ *
+ * Birinci hat `productPublishGaps`: yazmadan önce sorar ve hangi alanın hangi dilde eksik olduğunu
+ * söyler. Bu ise o hattı AŞAN durum içindir — başka bir yazan (asistan dilekçesi, ileride bir uç),
+ * ya da form ile veritabanı arasında değişen bir satır. Kısıt tek bir ihlal döndürür, alan adını
+ * söyleyemez; cümle en azından NE olduğunu ve nereye bakılacağını anlatır.
+ */
+const CONSTRAINT_MESSAGES: Record<string, string> = {
+  product_publish_requires_all_locales:
+    'Ürün yayına alınamıyor: ad, açıklama, içindekiler ve saklama metni (görsel/aile varsa alt metin ve aile etiketi) üç dilde de dolu olmalı.',
+  product_family_label_required: 'Aileye bağlı üründe aile etiketi zorunlu.',
+};
 
 // Ürün YAZMA yolu — İKİ yüzeyin ortak eylemi (ürün ekranı 05.x · asistan kuyruğu 22.14).
 //
@@ -43,6 +60,14 @@ export async function createProductAction(
     const { variants, ...fields } = input;
     const name = requireName(fields.name);
 
+    // **YAYIN KAPISI — yazmadan önce** (05.36). Yeni üründe birleştirilecek mevcut kayıt yok:
+    // formda ne varsa ürün odur. Aday/pasif doğan ürün bu kapıdan geçmez, kural yalnız `active`e
+    // bakar (kısıtla aynı cümle).
+    if (fields.status === 'active') {
+      const engel = publishGapMessage(productPublishGaps({ ...fields, name }));
+      if (engel) return { data: null, error: engel };
+    }
+
     await withProposal(
       proposalId,
       staff.profileId,
@@ -67,7 +92,7 @@ export async function createProductAction(
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGES) };
   }
 }
 
@@ -90,6 +115,16 @@ export async function updateProductAction(
     const { variants, ...fields } = input;
     requireName(fields.name);
 
+    // **YAYIN KAPISI — MEVCUT kayıtla BİRLEŞTİREREK** (05.36). Form kısmi gönderebiliyor
+    // (`ProductDetailsUpdate` `.partial()`): operatör yalnız durumu değiştirdiğinde `fields`
+    // içinde açıklama/beyan hiç gelmez ve tek başına bakılsaydı kapı yanlışlıkla "eksik" derdi.
+    // Kısıtın gördüğü şey de zaten satırın YAZIM SONRASI hâlidir — aynı hâle bakmak şart.
+    if (fields.status === 'active') {
+      const mevcut = await new ProductService(db).getById(id);
+      const engel = publishGapMessage(productPublishGaps({ ...mevcut, ...fields }));
+      if (engel) return { data: null, error: engel };
+    }
+
     await withProposal(
       proposalId,
       // PROFİL kimliği — `assistant_proposal.decided_by` `user_profiles`'a FK'li. Bir tur `staff.id`
@@ -110,6 +145,6 @@ export async function updateProductAction(
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
   } catch (err) {
-    return { data: null, error: getErrorMessage(err) };
+    return { data: null, error: constraintMessage(err, CONSTRAINT_MESSAGES) };
   }
 }

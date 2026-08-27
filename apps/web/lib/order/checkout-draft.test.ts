@@ -59,15 +59,30 @@ let authUserId: string;
 let minBasket: SettingsSnapshot;
 const createdProfiles: string[] = [];
 
+/**
+ * **Satılacak ürün YAYINA HAZIR kurulur** (05.36): kolonun varsayılanı `active`ti, `candidate` oldu
+ * ve aday ürün sepete giremiyor — paket kalemi `blocked_lines` alıyordu, yani testler kendi
+ * konularıyla (teslimat/ödeme doğrulaması) ilgisiz bir sebeple düşüyordu. Üç dilli metinler yayın
+ * kısıtının şartı (`product_publish_requires_all_locales`).
+ */
+const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
+const yayinaHazir = {
+  description: ucDil('Checkout testinin ürünü'),
+  ingredients: ucDil('Un, su, tuz'),
+  storageInstructions: ucDil('Serin yerde saklayın'),
+  status: 'active' as const,
+};
+
 beforeAll(async () => {
   warehouseId = (await createTestWarehouse(db)).id;
   const category = await new CategoryService(db).create({ name: { tr: `Checkout testi ${stamp}` } });
   categoryId = category.id;
 
   const kargolanir = await new ProductService(db).create({
-    name: { tr: `Baklava ${stamp}` },
+    name: ucDil(`Baklava ${stamp}`),
     categoryId,
     vatRate: 5.5,
+    ...yayinaHazir,
     variants: [{ label: { tr: '1 kg' }, sku: `CHK-B-${stamp}` }],
   });
   productId = kargolanir.product.id;
@@ -75,10 +90,11 @@ beforeAll(async () => {
 
   // Soğuk zincir: rota DIŞI adreste kargoya verilemez → sipariş açılamaz.
   const soguk = await new ProductService(db).create({
-    name: { tr: `Künefe ${stamp}` },
+    name: ucDil(`Künefe ${stamp}`),
     categoryId,
     vatRate: 5.5,
     shippable: false,
+    ...yayinaHazir,
     variants: [{ label: { tr: '2 kişilik' }, sku: `CHK-K-${stamp}` }],
   });
   coldProductId = soguk.product.id;

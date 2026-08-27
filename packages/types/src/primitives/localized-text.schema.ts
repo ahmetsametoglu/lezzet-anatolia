@@ -37,6 +37,27 @@ export const LocalizedTextSchema = LocalizedTextDraftSchema.refine(
 export type LocalizedText = z.infer<typeof LocalizedTextSchema>;
 
 /**
+ * **ÜÇ DİL DE DOLU MU** — yayın ölçütü (05.36). `has_all_locales(jsonb)` SQL fonksiyonunun birebir
+ * karşılığı (`0004_catalog_category_collection.sql`); ölçütün son sözü veritabanındadır, bu ise
+ * aynı cevabı yazma anından ÖNCE verir ki operatör kısıt ihlaline çarpmadan uyarıyı görsün.
+ *
+ * **Anahtarın VARLIĞI yetmez, DOLU olması aranır:** operatör alanı açıp boş bırakınca `{fr: ''}`
+ * yazılır. Aşağıdaki `resolveLocalizedText` bunu sessizce Türkçeye düşürür — arızanın kendisi de
+ * buydu: Fransızcası olmayan ürün Fransız müşteriye hiçbir işaret olmadan Türkçe görünüyordu.
+ *
+ * `null`/`undefined` alan da "eksik"tir: opsiyonel kolonlar (`description`, `ingredients`) yayında
+ * zorunlu hâle geliyor ve çağıranın iki ayrı kontrol yazması gerekmesin.
+ */
+export function hasAllLocales(text: LocalizedText | null | undefined): boolean {
+  return Boolean(text?.tr?.trim() && text.fr?.trim() && text.de?.trim());
+}
+
+/** Eksik olan diller — uyarı cümlesi bunu sayar ("Fransızca ve Almanca eksik"). */
+export function missingLocales(text: LocalizedText | null | undefined): Array<'tr' | 'fr' | 'de'> {
+  return (['tr', 'fr', 'de'] as const).filter((lang) => !text?.[lang]?.trim());
+}
+
+/**
  * Yedek zinciriyle ilk dolu metni seçer. `preferred` verilirse önce o dil (gösterim:
  * seçili → TR → FR → DE); verilmezse kanonik sıra TR → FR → DE (slug türetimi). Hiçbiri yoksa ''.
  */

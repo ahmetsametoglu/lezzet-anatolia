@@ -162,7 +162,24 @@ export async function seedOrders(
   const profiller = new Map(
     (await new UserProfileService(db).listByIds([...new Set(kisiler.values())])).map((p) => [p.id, p]),
   );
-  const satilabilir = varyantlar.filter((v) => v.status !== 'candidate');
+  /**
+   * **Kalem havuzu: STR'de STOĞU OLAN varyantlar** (05.36'da ölçülerek düzeltildi).
+   *
+   * Eskiden havuz `status !== 'candidate'` süzgeciydi ve kalemler indisle seçiliyordu
+   * (`satilabilir[i % len]`). O havuz siparişin ihtiyaç duyduğu şeyi — **malın kendisini** —
+   * garanti etmiyordu: `stock.ts` partileri kendi indisli dilimlerine kuruyor
+   * (`satilabilir.slice(0, 45)` gibi), yani iki dosya aynı listeyi farklı yerlerinden kesiyordu.
+   * Katalogda durum dağılımı değişince (05.36 yayın kısıtı aday sayısını 26→39 yaptı) indisler
+   * kaydı ve kutu seed'i *"tek kutulu kapanmadı"* diye düştü — sebebi kutuyla ilgisizdi, kalemin
+   * malı yoktu. Belirti bir yerde, arıza başka yerdeydi.
+   *
+   * Havuz artık DB'den ölçülüyor: hangi varyantın bu depoda fiili stoğu varsa o. Kalem sayısı
+   * katalog büyüyüp küçüldükçe kendiliğinden doğru kalır ve indis kayması bir daha bu sınıftan
+   * arıza üretmez.
+   */
+  const { data: stoklu } = await db.from('stock').select('variant_id').eq('warehouse_id', depolar.str).gt('physical_qty', 0);
+  const stokluVaryant = new Set((stoklu ?? []).map((r) => (r as { variant_id: string }).variant_id));
+  const satilabilir = varyantlar.filter((v) => v.status !== 'candidate' && stokluVaryant.has(v.id));
   const kurye = kisiler.get('kurye') ?? null;
   const depocu = kisiler.get('depocu') ?? null;
   // Pazarlığı YAZAN el: elle sipariş girişini de kapı önü satışını da personel yapar.
