@@ -15,6 +15,7 @@ import { TextAction } from '@/components/ui/text-action';
 import type { OrderDetail } from '@/lib/api/orders';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
+import { DashedInvite } from '@/screens/customer-kit/dashed-invite';
 import { OrderStatusTag } from '@/screens/customer-kit/order-status-tag';
 import { SummaryPanel, type SummaryRow } from '@/screens/customer-kit/summary-panel';
 import { DeliveryMap } from './delivery-map';
@@ -35,13 +36,16 @@ import { useOrder } from './use-order.hook';
   söylenmiyor.
 
   ── ŞABLONDAN SAPMALAR (hepsi bilinçli) ─────────────────────────────────────
-  1. **"↻ Tekrar sipariş ver" (v3:64) ve "★ Ürünleri değerlendir" (v3:65) ÇİZİLMEDİ.**
+  1. **"↻ Tekrar sipariş ver" (v3:64) ÇİZİLMEDİ; "★ Ürünleri değerlendir" (v3:65) 27.08'de GELDİ.**
      · Tekrar sipariş: kural henüz terfi etmedi ve uç yok — gerekçe liste ekranının künyesinde
-       (donmuş fiyatla sepet doldurmak sessizce eski fiyatı satmaktır).
-     · Değerlendirme: geri bildirim akışının kimliği bir TOKEN'dır (davet e-postasıyla gelir,
-       `GET /api/v1/feedback/:token`) ve sipariş numarasından token'a giden bir yol YOK. Düğmeyi
-       çizip hiçbir yere götürmemek ya da uydurma bir adrese gitmek, verilmiş bir sözü tutmamaktı.
-     İkisi de kendi uçları geldiği gün şablondaki yerlerine döner.
+       (donmuş fiyatla sepet doldurmak sessizce eski fiyatı satmaktır). Kendi ucu geldiği gün
+       şablondaki yerine döner.
+     · ~~Değerlendirme: … sipariş numarasından token'a giden bir yol YOK~~ → **yol açıldı**
+       (`readOrderFeedbackInvite`, kullanıcı kararı 27.08): yorum daveti bildirimi artık bu sayfaya
+       götürüyor, dolayısıyla burada yazacak bir kapı olmalıydı — yoksa bildirim boş vaat olurdu.
+       Şablonun düğmesi tek başına değil, TEŞVİK BLOĞU olarak geldi (kullanıcı isteği: puan
+       kazanımını söyleyen ifadelerle) ve kitin davet kartı desenini kullanıyor — yeni görsel dil
+       icat edilmedi. Blok yalnız AÇIK davet varken çizilir (aşağıdaki künye).
   2. **"Bize yazın" doğru yere gidiyor** (v3 `od.talep` → `openTalepNew(o.ref)`): önceki UI-only
      sürüm `/legal/faq`ye gidiyordu. Artık `/support?order=<referans>` — yeni talep bir sayfa değil,
      Taleplerim ekranının ÇEKMECESİDİR (kullanıcı kararı 09.08) ve parametre çekmeceyi doğrudan bu
@@ -299,6 +303,33 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
           totalTone="terracotta"
           testID="order-summary"
         />
+
+        {/* YORUM TEŞVİKİ (27.08 · kullanıcı kararı) — davet bildiriminin indiği yer burasıdır.
+            Blok YALNIZ açık davet varken çizilir; sözleşme `feedback: null` gönderdiğinde (davet
+            yok · tamamlandı · süresi doldu) hiç doğmaz — üçünü de ekran ayırt etmez, gerekçe
+            `readOrderFeedbackInvite` künyesinde. Kutunun tamamı basılabilir (davet kartı deseni)
+            ve açtığı yer akışın kendisidir: `/feedback/[token]`, yani düğme bir kapıdır.
+
+            PUAN SUNUCUDAN: cümledeki sayı ayardan gelen `points`tir, ekran rakam uydurmaz —
+            yazılmayacak bir ödülü vaat etmek, 29.07 denetiminin kapattığı arıza sınıfının aynısı. */}
+        {((invite) =>
+          invite === null ? null : (
+          <DashedInvite
+            tone="olive"
+            layout="stack"
+            title={t.detail.feedback.title}
+            description={t.detail.feedback.body.replace('{points}', String(invite.points))}
+            action={
+              <PrimaryButton
+                label={t.detail.feedback.cta}
+                shape="pill"
+                onPress={() => router.push({ pathname: '/feedback/[token]', params: { token: invite.token } })}
+                testID="order-feedback-cta"
+              />
+            }
+            testID="order-feedback-invite"
+          />
+          ))(detail.feedback)}
 
         {/* Takip bağı YALNIZ adres bilindiğinde: `other` taşıyıcıda ve boş numarada sözleşme
             `trackingUrl: null` gönderir ve tıklandığında hiçbir yere gitmeyen bir düğme, verilmiş

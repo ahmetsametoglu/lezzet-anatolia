@@ -192,3 +192,36 @@ export async function completeFeedbackInvite(db: SupabaseClient, token: string):
   ]);
   return { outcome, pointsAwarded: points, invitePointsTotal, balance: balance.balance, ...invite };
 }
+
+/** Siparişin AÇIK değerlendirme daveti — sipariş ekranının teşvik bloğunun tek kaynağı. */
+export interface OrderFeedbackInvite {
+  /** Akışın anahtarı; ekran `/feedback/[token]`e bununla gider (oturum yerine geçer). */
+  token: string;
+  /** Tamamlamanın kazandıracağı puan — AYARDAN, ekran sayı uydurmaz (`FeedbackInviteView` künyesi). */
+  completionPoints: number;
+}
+
+/**
+ * **Siparişten davete giden yol** (27.08 · kullanıcı kararı) — sipariş ekranındaki yorum teşviki.
+ *
+ * Bu yol BİLEREK yoktu ve yokluğu kayıtlıydı: sipariş detayı künyesi *"sipariş numarasından
+ * token'a giden bir yol YOK"* diyerek tasarımın "★ Ürünleri değerlendir" düğmesini çizmemişti —
+ * düğmeyi çizip hiçbir yere götürmemek verilmiş bir sözü tutmamaktır. Yol şimdi açılıyor çünkü
+ * yorum daveti bildirimi artık SİPARİŞ sayfasına götürüyor (kullanıcı kararı): götürülen yerde
+ * yorum yazacak bir kapı yoksa bildirim de boş bir vaat olurdu.
+ *
+ * **`null` ÜÇ HÂLİ birden kapsar ve ayrımı ekran BİLMEZ:** davet hiç yok (sipariş henüz teslim
+ * edilmedi — davet 10. günde doğar) · zaten tamamlandı · token'ın 90 günlük ömrü doldu. Üçünde de
+ * söylenecek bir şey yoktur ve blok çizilmez; "davetiniz sona erdi" demek, müşterinin hiç görmediği
+ * bir şeyin kaybını duyurmak olurdu.
+ *
+ * **Token'ı sipariş cevabında taşımanın sakıncası yok:** uç zaten kimlik süzüyor (müşteri kendi
+ * siparişini okuyor) ve aynı token davet e-postasında düz metin bağlantı olarak zaten gidiyor.
+ */
+export async function readOrderFeedbackInvite(db: SupabaseClient, orderId: string): Promise<OrderFeedbackInvite | null> {
+  const request = await new FeedbackRequestService(db).findByOrder(orderId);
+  if (!request || request.completedAt !== null) return null;
+  // Süresi dolmuş token akışı açmaz (`openFeedbackInvite` da reddeder); teşvik onu vaat etmemeli.
+  if (Date.parse(request.expiresAt) <= Date.now()) return null;
+  return { token: request.token, completionPoints: await feedbackCompletionPoints(db) };
+}

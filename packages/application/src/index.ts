@@ -238,7 +238,8 @@ export {
 // ── Geri bildirim akışı (17.2 · 17.6) — terfi: web davet sayfası + mobil vFb ────────────────
 // Kaynak `apps/web/lib/feedback/{invite,product-feedback,points}.ts`in TOKEN akışı dilimi; web
 // köprü, benimsemesi web şeridinin işi. Kimlik TOKEN'dan çözülür; kapılar customerId almaz.
-export { completeFeedbackInvite, openFeedbackInvite } from './feedback/invite';
+export { completeFeedbackInvite, openFeedbackInvite, readOrderFeedbackInvite } from './feedback/invite';
+export type { OrderFeedbackInvite } from './feedback/invite';
 export type { FeedbackCard, FeedbackCompletion, FeedbackInviteView } from './feedback/invite';
 export { reviewFeedbackInvite, voteOnFeedbackInvite } from './feedback/write';
 export type { FeedbackWriteOutcome } from './feedback/write';

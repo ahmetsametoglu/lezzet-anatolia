@@ -88,6 +88,11 @@
         "received": "Siparişiniz onaylandı",
         "prepared": "Siparişiniz özenle paketlendi",
         "on_the_way": "Kurye bölgenizde — kapınıza yaklaşıyor"
+      },
+      "feedback": {
+        "title": "Aldığınız ürünlere yorum yazın",
+        "body": "Birkaç dokunuşla değerlendirin — {points} puan kazanın ve bir sonraki alışverişinizde kullanın.",
+        "cta": "Değerlendirmeye başla"
       }
     }
   },
@@ -180,6 +185,11 @@
         "received": "Votre commande est confirmée",
         "prepared": "Votre commande a été emballée avec soin",
         "on_the_way": "Le livreur est dans votre quartier"
+      },
+      "feedback": {
+        "title": "Donnez votre avis sur vos produits",
+        "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
+        "cta": "Commencer l’évaluation"
       }
     }
   },
@@ -272,6 +282,11 @@
         "received": "Ihre Bestellung ist bestätigt",
         "prepared": "Ihre Bestellung wurde sorgfältig verpackt",
         "on_the_way": "Der Kurier ist in Ihrer Nähe"
+      },
+      "feedback": {
+        "title": "Bewerten Sie Ihre Produkte",
+        "body": "Wenige Handgriffe genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
+        "cta": "Bewertung starten"
       }
     }
   }

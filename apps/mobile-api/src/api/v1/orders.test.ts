@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CategoryService, OrderService, ProductService, serviceDb } from '@lezzet/database';
+import { CategoryService, FeedbackRequestService, OrderService, ProductService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, envelopeError } from '../../lib/testing';
@@ -38,6 +38,8 @@ let variantId: string;
 let benimToken: string;
 let otekiToken: string;
 let otekiReferansi: string;
+let otekiOrderId: string;
+let otekiProfileId: string;
 
 const req = (path: string, token: string) => app.request(`/api/v1/me/orders${path}${path.includes('?') ? '&' : '?'}locale=tr`, { headers: bearer(token) });
 
@@ -73,6 +75,8 @@ beforeAll(async () => {
   );
   await db.from('order').update({ reference_no: referans, status: 'confirmed' }).eq('id', order.id);
   otekiReferansi = referans;
+  otekiOrderId = order.id;
+  otekiProfileId = oteki.profileId;
 });
 
 afterAll(async () => {
@@ -142,5 +146,66 @@ describe('GET /api/v1/me/orders/:reference — detay', () => {
 
   it('Bearer olmadan 401', async () => {
     expect((await app.request(`/api/v1/me/orders/${otekiReferansi}?locale=tr`)).status).toBe(401);
+  });
+});
+
+describe('yorum teşviki — sipariş detayındaki AÇIK davet (27.08)', () => {
+  /*
+    Bloğun ekranda çizilip çizilmeyeceğini bu alan belirliyor ve bildirim artık bu sayfaya
+    götürüyor: alan yanlış dolarsa müşteri "değerlendirin" yazan bir kutuya basıp hiçbir yere
+    gitmez ya da hiç yazamayacağı bir ödül vaat edilir. İddialar bu yüzden ÜÇ hâli de sayıyor.
+  */
+  const requests = () => new FeedbackRequestService(db);
+  const detayOku = async () =>
+    envelopeData<{ feedback: { token: string; points: number } | null }>(
+      await app.request(`/api/v1/me/orders/${otekiReferansi}?locale=tr`, { headers: bearer(otekiToken) }),
+    );
+
+  it('davet YOKKEN alan null — teşvik bloğu doğmaz', async () => {
+    expect((await detayOku()).feedback).toBeNull();
+  });
+
+  it('AÇIK davet varken token ve AYARDAN gelen puan gelir', async () => {
+    const request = await requests().insert({
+      orderId: otekiOrderId,
+      customerId: otekiProfileId,
+      token: `fb-open-${stamp}`,
+      channel: 'email',
+    });
+
+    const detail = await detayOku();
+    expect(detail.feedback?.token).toBe(`fb-open-${stamp}`);
+    // Sayı ayardan türer; ekran onu cümleye koyuyor. Sıfır/eksi bir vaat sözleşmede zaten geçmez.
+    expect(detail.feedback?.points).toBeGreaterThan(0);
+
+    await db.from('feedback_request').delete().eq('id', request.id);
+  });
+
+  it('TAMAMLANMIŞ davet null döner — yazılmış yoruma ikinci kez davet edilmez', async () => {
+    const request = await requests().insert({
+      orderId: otekiOrderId,
+      customerId: otekiProfileId,
+      token: `fb-done-${stamp}`,
+      channel: 'email',
+    });
+    await requests().markCompleted(request.id, 5);
+
+    expect((await detayOku()).feedback).toBeNull();
+
+    await db.from('feedback_request').delete().eq('id', request.id);
+  });
+
+  it('SÜRESİ DOLMUŞ davet null döner — akış onu zaten açmaz, teşvik de vaat etmez', async () => {
+    const request = await requests().insert({
+      orderId: otekiOrderId,
+      customerId: otekiProfileId,
+      token: `fb-expired-${stamp}`,
+      channel: 'email',
+    });
+    await db.from('feedback_request').update({ expires_at: '2020-01-01T00:00:00Z' }).eq('id', request.id);
+
+    expect((await detayOku()).feedback).toBeNull();
+
+    await db.from('feedback_request').delete().eq('id', request.id);
   });
 });

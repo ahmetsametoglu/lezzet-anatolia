@@ -2405,6 +2405,22 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   Tablonun öteki üç satırı zaten karşılanmıştı: keşif kartı vitrinde sayı × aday puanıyla
   duruyor, "uygulama açılınca sessiz" `use-visit-points` künyesiyle uygulanmış, sipariş-onayı
   ekranının puansızlığı bilinçli ve künyeli. **Karar 2h böylece tamamen karşılandı.**
+
+  **YERİNE NE GELDİ (kullanıcı kararı 27.08 — davetin varış noktası):** bildirim müşteriyi
+  **sipariş sayfasına** götürecek ve orada yorum için teşvik bloğu duracak. Ölçüm önce bir
+  arıza buldu: davet bildirimi tıklanınca HİÇBİR YERE gitmiyordu (hedef `feedback_request`
+  yazılıyor, iki yüzeyin adres fonksiyonu da yalnız dört dal tanıyor → `null`); ayrıca payload
+  `orderReferenceNo`, adres fonksiyonu `referenceNo` arıyor. **Hedef çevirisi bildirim şeridine
+  notla bırakıldı** (`not-bildirim-yorum-daveti-tiklaninca-hicbir-yere-gitmiyor.md`) — iki
+  yüzeyin davranışı aynı olmalı, yoksa müşteri aynı bildirime iki cihazda başka tepki alır.
+  **Bu şeridin payı yapıldı (27.08):** sipariş detayına açık-davet alanı eklendi
+  (`MeOrderDetailSchema.feedback`), motoru `readOrderFeedbackInvite` (davet yok · tamamlandı ·
+  süresi doldu → hepsi `null`, ekran ayrımı bilmez) ve ekranda kitin davet-kartı desenli teşvik
+  bloğu — puan cümlesi AYARDAN, düğme akışın token'ıyla `/feedback/[token]` açıyor. Böylece
+  sipariş detay künyesinin *"numaradan token'a yol YOK"* engeli de kalktı ve tasarımın
+  v3:65 düğmesi yerine geldi. Testler: uç **12/12** (üç hâl + açık davet; iki sabotaj turu
+  ölçtü), ekran **3/3** (blok yok/var + token'lı gezinme; sabotaj doğrulandı), mobil paket
+  **838/838** · typecheck · lint temiz.
   ~~`feedbackPointsReason` keşifte metin varsa hâlâ `review` (20) döndürüyor (karar 6 — bugün
   keşifte metin alanı YOK, gizli tuzak).~~ **Tuzak kapandı (26.08):** keşif artık metinle bile
   aday puanında kalıyor; çivileyen test `domain-core/points.test`te.

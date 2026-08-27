@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import { z } from 'zod';
-import { getCustomerOrderDetail, listCustomerOrders } from '@lezzet/application';
+import { getCustomerOrderDetail, listCustomerOrders, readOrderFeedbackInvite } from '@lezzet/application';
 import type { CustomerOrderSummary } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { logger } from '@lezzet/observability';
@@ -129,6 +129,8 @@ orders.get('/:reference', async (c) => {
   });
   if (!detail || !detail.referenceNo) return fail(c, 'order_not_found', 404);
 
+  const feedback = await readOrderFeedbackInvite(serviceDb(), detail.id);
+
   const body: z.input<typeof MeOrderDetailSchema> = {
     reference: detail.referenceNo,
     placedAt: detail.createdAt,
@@ -172,6 +174,10 @@ orders.get('/:reference', async (c) => {
     paymentStatus: detail.paymentStatus,
     onAccount: detail.onAccount,
     shipment: detail.shipment,
+    /* Davet okuması detayın ARDINDAN: siparişin var olduğu (ve bu müşteriye ait olduğu) kanıtlanmadan
+       token okumak, başkasının siparişinin anahtarını sorgulamak olurdu. Kural motorda
+       (`readOrderFeedbackInvite`), uç yalnız zarfa koyar. */
+    feedback: feedback === null ? null : { token: feedback.token, points: feedback.completionPoints },
   };
   return ok(c, MeOrderDetailSchema.parse(body));
 });

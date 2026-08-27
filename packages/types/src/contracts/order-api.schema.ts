@@ -205,5 +205,21 @@ export const MeOrderDetailSchema = z.object({
   /** Vadeli (B2B) — ödeme hapının ayrı bir hâli. */
   onAccount: z.boolean(),
   shipment: MeOrderShipmentSchema.nullable(),
+  /**
+   * AÇIK değerlendirme daveti (27.08 · kullanıcı kararı) — ekranın yorum teşviki bunun VARLIĞIYLA
+   * çizilir, yokluğunda hiç çizilmez.
+   *
+   * `null` üç hâli birden kapsar ve ayrımı ekran BİLMEZ: davet yok · tamamlandı · süresi doldu
+   * (gerekçe `readOrderFeedbackInvite` künyesinde). Yorum daveti bildirimi bu sayfaya götürdüğü
+   * için blok bir kapıdır, süs değil: götürülen yerde yazacak bir yer yoksa bildirim boş vaat olur.
+   */
+  feedback: z
+    .object({
+      /** Akışın anahtarı — ekran `/feedback/[token]`e bununla gider. */
+      token: z.string().min(1),
+      /** Tamamlamanın kazandıracağı puan; AYARDAN gelir, ekran rakam uydurmaz. */
+      points: z.number().int().positive(),
+    })
+    .nullable(),
 });
 export type MeOrderDetail = z.infer<typeof MeOrderDetailSchema>;
