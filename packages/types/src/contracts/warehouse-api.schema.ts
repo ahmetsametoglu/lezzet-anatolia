@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/order.schema';
-import { AdjustBatchResultSchema, StockAdjustmentReasonEnum } from '../entities/stock-adjustment.schema';
+import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
 import { ReceiveIntakeResultSchema } from '../entities/supply.schema';
 import { DispatchLineSchema, ReceiveLineSchema } from '../entities/warehouse.schema';
 import {
@@ -433,16 +433,30 @@ export type ReceiveGoodsResponse = z.infer<typeof ReceiveGoodsResponseSchema>;
  * Depocunun seçebileceği sebepler — **`return_restock` YOK** (v2: *"'İade stoğa döndü' depocuya
  * açılmaz — yönetim istisnasıdır"*). Kural tipte duruyor, ekranda değil.
  *
- * Liste varlık enum'undan TÜRETİLİR (`.exclude`), elle yazılmaz: yarın yeni bir sebep eklenirse
- * depo kapısı onu kendiliğinden görür ve iki liste ayrışmaz.
+ * ── TEK LİSTE, İKİ SEVİYE (06.14) ───────────────────────────────────────────
+ * Veride bunlar artık iki ayrı şey: imhanın kendisi bir hareket TİPİ (`write_off`), DLC/hasar/kayıp
+ * ise onun SEBEBİ; sayım farkı ise ayrı bir tip. Depocunun ekranında ise tek bir seçim listesi
+ * olmalı — "tarihi geçti / hasar / kayıp / sayım farkı" diye seçer, tip-sebep ayrımı onun sorunu
+ * değil. Çeviriyi sunucu sınırı yapıyor (`recordAdjustment`).
+ *
+ * Liste yine TÜRETİLİR, elle yazılmaz: imha sebepleri varlık enum'undan geliyor, sayım farkı tek
+ * ek değer. Yarın yeni bir imha sebebi eklenirse depo kapısı onu kendiliğinden görür.
  */
-export const WarehouseAdjustmentReasonEnum = StockAdjustmentReasonEnum.exclude(['return_restock']);
+export const WarehouseAdjustmentReasonEnum = z.enum([...StockWriteOffReasonEnum.options, 'count_diff']);
 export type WarehouseAdjustmentReason = z.infer<typeof WarehouseAdjustmentReasonEnum>;
 
 export const AdjustmentLineSchema = z.object({
   stockId: z.string().uuid(),
-  /** İŞARETLİ: + stoktan düşüm, − stoğa geri ekleme (yalnız sayım FAZLASI). */
-  qty: z.number().int(),
+  /** DAİMA pozitif — yön ayrı alanda (06.14; `money_movement` kuralı, işaret miktara gömülmez). */
+  qty: z.number().int().positive(),
+  /**
+   * `out` = stoktan düş, `in` = stoğa ekle (yalnız sayım FAZLASI).
+   *
+   * Eskiden `qty` işaretliydi ve fazla çıkan mal negatif adetle gönderiliyordu. Yön açık alana
+   * çıktı çünkü aynı gömülülük rapor tarafında ölçülmüş bir arızaya yol açmıştı: "Çıkışlar"
+   * sekmesi dönem toplamını eksi gösteriyordu.
+   */
+  direction: StockDirectionEnum,
 });
 export type AdjustmentLineContract = z.infer<typeof AdjustmentLineSchema>;
 

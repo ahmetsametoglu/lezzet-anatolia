@@ -10,7 +10,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehousePair, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
 import { confirmPreparation, listPreparationQueue, type PreparationLine, type PreparationOrder } from './preparation';
 
@@ -80,7 +80,8 @@ beforeAll(async () => {
 beforeEach(async () => {
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+  await purgeVariantStock(db, [variantId]);
   // Yakın tarihli parti önce çıkmalı (FEFO) — konum da öneriyle birlikte gitmeli.
   nearBatch = (
     await stocks.insert({ warehouseId, variantId, physicalQty: 4, expiryDate: dayOffset(10), purchasePriceCents: 400, storageAreaId: areaA })

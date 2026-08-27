@@ -1500,16 +1500,30 @@ satırında.
     temiz, birim 1358/1358). Eksik kalan iki liste ayrı maddede: `BEKLEYEN(22.27)` · `BEKLEYEN(22.28)`.
     Kullanıcı ekranda görmeden `[x]` yazılmıyor.
 
-- [ ] (22.27) **Çıkışlar sekmesi TÜM çıkışları göstersin** — hazırlık · kapı satışı
+- [~] (22.27) **Çıkışlar sekmesi TÜM çıkışları göstersin** — hazırlık · kapı satışı
   - *Bitti:* "bu dönemde ne çıktı" sorusunun cevabı tam olur; dönem toplamı eksik bir sayı vermez
-  - Bugün sekme yalnız `stock_adjustment` kayıtlarını okuyor (imha · hasar · sayım farkı · kayıp ·
-    stoğa geri alma). Tasarımın istediği küme daha geniş ama **hazırlık ve kapı satışının hareket
-    kaydı YOK** (ölçüldü 14.08): stok siparişten doğrudan eriyor. Ekran bunu yazıyor, sessizce
-    toplamıyor — eksik bir toplam, doğru bir toplam gibi okunurdu.
-  - Sevk (`warehouse_transfer`) de burada: kaydı var ama listeye bağlı değil.
+  - ~~Bugün sekme yalnız `stock_adjustment` kayıtlarını okuyor~~ · ~~**hazırlık ve kapı satışının
+    hareket kaydı YOK** (ölçüldü 14.08): stok siparişten doğrudan eriyor~~ · ~~Sevk
+    (`warehouse_transfer`) de burada: kaydı var ama listeye bağlı değil~~
+  - **Durum (27.08) — ENGEL KALKTI, sekme tam okuyor** (`06.14`). Bu madde bir ekran işi değil bir
+    VERİ eksiğiydi ve maddenin kendisi bunu söylüyordu: hareketin kaydı yoksa ekran onu gösteremez.
+    `stock_movement` defteri açılınca satış (`sale`), kapı satışı (`counter_sale`) ve sevk
+    (`transfer_out`) kendi satırlarını yazmaya başladı; sekme artık tek kaynaktan ve **yön
+    süzgeçli** okuyor (`direction: 'out'`).
+  - **Hazırlık deftere YAZILMAZ ve bu doğru:** hazırlıkta fiili stok düşmüyor — mal hâlâ depoda,
+    "ayrılmış" durumda (`06.5` · `DOMAIN §4`). Düşüm teslimde olur ve orada `sale` satırı doğar.
+    Yani hazırlık bir stok hareketi değil, bir niyet; onu çıkışlara koymak aynı malı iki kez
+    saymak olurdu. Maddenin başlığındaki "hazırlık" bu yüzden **kapsam dışı** kaldı.
+  - **Yol üstünde bir arıza kökünden çözüldü:** sekmenin dönem toplamı **eksi** çıkabiliyordu
+    (ölçüldü 27.08: `−13,49 €`), çünkü işaret miktara gömülüydü ve girişler çıkışlarla aynı toplamda
+    eriyordu. Yön ayrı alana taşındı; toplam artık yapısal olarak pozitif (`158 ad. · 1.655,53 €`,
+    DB ile birebir).
+  - ⚠ **`[x]` DEĞİL çünkü ekran turu yapılmadı.** Arka uç ve okuma tam, testli; kalan tek şey
+    kullanıcının iki temada gözle görmesi (`1501`in kuralı: *"kullanıcı ekranda görmeden `[x]`
+    yazılmıyor"*).
 
 - [x] (22.28) **Mal kabul sekmesine "kabul edilenler" listesi** — geçmiş girişler · touches:
-  `packages/database/src/services/{stock-intake,stock,purchase-order,stock-adjustment}.service.ts`,
+  `packages/database/src/services/{stock-intake,stock,purchase-order,stock-movement}.service.ts`,
   `apps/web/app/(operations)/operations/stock/{intake-read.ts,actions.ts,page.tsx,stock-types.ts,stock-client.tsx,tabs/intake-tab.tsx}`
   - *Bitti:* sekme iki bölüm olur (bekleyenler + kabul edilenler); "ne geldi" sorusu Stok'tan yanıtlanır
   - ~~`stock_intake` için sayfalı bir okuma yok~~ → **YAZILDI (25.08).** `StockIntakeService.listRecent`

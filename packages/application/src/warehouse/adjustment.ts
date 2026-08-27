@@ -1,6 +1,6 @@
-import { StockAdjustmentService, StockService } from '@lezzet/database';
+import { StockMovementService, StockService } from '@lezzet/database';
 import { documentPrefixFor } from '@lezzet/domain-core';
-import type { AdjustBatchResult, StockAdjustmentReason } from '@lezzet/types';
+import type { AdjustBatchResult, StockDirection, StockMovementKind, StockWriteOffReason } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { rpcRejectionMessage } from './rpc-error';
 
@@ -26,13 +26,31 @@ import { rpcRejectionMessage } from './rpc-error';
  *    gösterebilir. Kapı kimliği ister, kapsam dışını GÖRÜNÜR retle döner.
  */
 
-/** Depocunun seçebileceği sebepler — `return_restock` YOK (admin istisnası). */
-export type WarehouseReason = Exclude<StockAdjustmentReason, 'return_restock'>;
+/**
+ * Depocunun seçebileceği sebepler — `return_restock` YOK (admin istisnası).
+ *
+ * **Tek liste, iki seviye** (06.14): veride imha bir hareket TİPİ (`write_off`) ve DLC/hasar/kayıp
+ * onun SEBEBİ; sayım farkı ayrı bir tip. Depocu ise tek bir listeden seçer — tip-sebep ayrımı onun
+ * sorunu değil. Çeviriyi bu kapı yapıyor (`kindOf`/`reasonOf`), ekran değil.
+ */
+export type WarehouseReason = StockWriteOffReason | 'count_diff';
+
+/** Depocunun seçimi → defterin hareket tipi. */
+function kindOf(reason: WarehouseReason): Extract<StockMovementKind, 'write_off' | 'count_diff'> {
+  return reason === 'count_diff' ? 'count_diff' : 'write_off';
+}
+
+/** Depocunun seçimi → imhanın sebebi. Sayım farkının sebebi YOKTUR (kısıt da öyle diyor). */
+function reasonOf(reason: WarehouseReason): StockWriteOffReason | null {
+  return reason === 'count_diff' ? null : reason;
+}
 
 export interface AdjustmentLine {
   stockId: string;
-  /** + stoktan düşüm (imha/fire/kayıp), − stoğa geri ekleme (yalnız sayım FAZLASI). */
+  /** DAİMA pozitif — yön ayrı alanda (06.14). */
   qty: number;
+  /** `out` = stoktan düş, `in` = stoğa ekle (yalnız sayım FAZLASI). */
+  direction: StockDirection;
 }
 
 export type AdjustmentOutcome =
@@ -54,9 +72,9 @@ export type AdjustmentOutcome =
  * paylaşır; bir satır düşerse HİÇBİRİ yazılmaz — yarım tutanak, hiç tutanak olmamasından kötüdür
  * (kâğıtla eşleşmez ve stok da yarı düşmüş kalır).
  *
- * Stoğa geri ekleme (negatif adet) yalnız **sayım fazlasında** meşrudur ve sebep notu ZORUNLUDUR;
- * kuralı veritabanı zorlar (0010/0033) — burada tekrarlanmaz (v2: *"Geri eklemede sebep notu
- * zorunlu — sistem zorlar"*).
+ * Stoğa geri ekleme (`direction: 'in'`) yalnız **sayım fazlasında** meşrudur ve sebep notu
+ * ZORUNLUDUR; kuralı veritabanı zorlar (`adjust_stock_batch`) — burada tekrarlanmaz (v2: *"Geri
+ * eklemede sebep notu zorunlu — sistem zorlar"*).
  *
  * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
  */
@@ -84,10 +102,13 @@ export async function recordAdjustment(
   if (foreign.length > 0) return { status: 'forbidden', reason: 'out_of_scope', stockIds: foreign };
 
   try {
-    const result = await new StockAdjustmentService(db).adjustBatch({
+    const kind = kindOf(input.reason);
+    const result = await new StockMovementService(db).adjustBatch({
       lines: input.lines,
-      reason: input.reason,
-      prefix: documentPrefixFor(input.reason),
+      kind,
+      // Önek TİPTEN seçilir, sebepten değil: DLC/hasar/kayıp üçü de aynı imha tutanağına yazılır.
+      prefix: documentPrefixFor(kind),
+      reason: reasonOf(input.reason),
       note: input.note,
       createdBy: input.actorId,
     });

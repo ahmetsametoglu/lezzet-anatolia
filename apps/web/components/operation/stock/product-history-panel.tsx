@@ -6,7 +6,7 @@ import { Select } from '@/components/operation/form/select';
 import { Skeleton, SkeletonCard, SkeletonMetric, SkeletonRows } from '@/components/operation/ui/skeleton';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
 import { money, num, shortDate } from '@/components/operation/ui/format';
-import { LOSS_REASON } from '@/lib/stock/loss-labels';
+import { MOVEMENT_KIND, WRITE_OFF_REASON } from '@/lib/stock/loss-labels';
 import { readVariantHistoryAction } from '@/lib/stock/history-actions';
 import { ORDER_STATUS_LABELS, type OrderStatus } from '@lezzet/types';
 import type { VariantBatchHistory, VariantStockHistory } from '@lezzet/application';
@@ -555,24 +555,43 @@ function BatchRow({ batch, warehouseName }: { batch: VariantBatchHistory; wareho
   );
 }
 
-/** Fire kırılımı — "ne kadarı çöpe gitti, neden". Sıfırsa blok hiç çizilmez. */
+/**
+ * Düzeltme kırılımı — "ne kadarı çöpe gitti, ne kadarı sayımdan, ne kadarı iadeden".
+ *
+ * **İki seviye çiziliyor** (06.14): önce hareket TİPİ (imha · sayım farkı · iade), sonra imhanın
+ * kendi SEBEPLERİ (DLC · hasar · kayıp). Eskiden tek listeydi ve içinde birbirine benzemeyen şeyler
+ * yan yanaydı — "Tarihi geçti" bir sebep, "Sayım farkı" bir olaydı; aynı şeritte durdukları için
+ * operatör de aynı türden sanıyordu.
+ *
+ * Sıfırsa blok hiç çizilmez.
+ */
 function LossBlock({ history }: { history: VariantStockHistory }) {
-  if (history.loss.byReason.length === 0) return null;
+  if (history.loss.byKind.length === 0) return null;
+  const chip = 'rounded-ops-chip border border-ops-line bg-ops-white px-2.5 py-1 font-ops-body text-ops-xs text-ops-body';
   return (
     <div className="flex flex-col gap-1.5">
       <span className="font-ops-display text-ops-micro font-semibold uppercase tracking-[0.08em] text-ops-muted">
-        Fire kırılımı
+        Düzeltme kırılımı
       </span>
       <div className="flex flex-wrap gap-1.5">
-        {history.loss.byReason.map((entry) => (
-          <span
-            key={entry.reason}
-            className="rounded-ops-chip border border-ops-line bg-ops-white px-2.5 py-1 font-ops-body text-ops-xs text-ops-body"
-          >
-            {LOSS_REASON[entry.reason]} <span className="font-ops-mono font-semibold text-ops-ink">{num(entry.qty)}</span>
+        {history.loss.byKind.map((entry) => (
+          <span key={entry.kind} className={chip}>
+            {MOVEMENT_KIND[entry.kind]} <span className="font-ops-mono font-semibold text-ops-ink">{num(entry.qty)}</span>
           </span>
         ))}
       </div>
+      {/* İmhanın içi ayrı satırda ve YALNIZ imha varsa: sebepsiz bir kırılım başlığı, olmayan bir
+          ayrıntı vaat ederdi. */}
+      {history.loss.byReason.length > 0 ? (
+        <div className="flex flex-wrap gap-1.5 pl-3">
+          {history.loss.byReason.map((entry) => (
+            <span key={entry.reason} className={`${chip} text-ops-muted`}>
+              {WRITE_OFF_REASON[entry.reason]}{' '}
+              <span className="font-ops-mono font-semibold text-ops-ink">{num(entry.qty)}</span>
+            </span>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
 import { closeOrder, deliverOrder } from './fulfillment';
 import { adjustFulfillment, cancelOrder } from './refund';
@@ -51,12 +51,12 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('money_movement').delete().eq('account_id', cashAccount);
+  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): `stock_movement.order_id` `restrict` — teslim ve kapı
+  // satışı satırları siparişi tutuyor. Eskiden burada `stock_adjustment` siliniyordu ve sipariş
+  // ondan önce gidebiliyordu, çünkü o tabloda sipariş bağı yoktu.
+  await purgeVariantStock(db, [variantId]);
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
-  const previous = await db.from('stock').select('id').eq('variant_id', variantId);
-  const ids = (previous.data ?? []).map((row) => row.id as string);
-  if (ids.length > 0) await db.from('stock_adjustment').delete().in('stock_id', ids);
-  await db.from('stock').delete().eq('variant_id', variantId);
   batchId = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePriceCents: 400 })).id;
 });
 

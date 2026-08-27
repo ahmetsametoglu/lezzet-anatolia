@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderItemService, OrderService, PriceService, ProductService,
   StockService, UserProfileService, WarehouseService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, sellOnSite } from './on-site-sale';
 
 /**
@@ -68,8 +68,10 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışının `counter_sale` satırı siparişi `restrict`
+  // ile tutuyor. Hareketler partiden siliniyor (`stock_id` `not null`).
+  await purgeVariantStock(db, [variantId]);
   await db.from('order').delete().eq('customer_id', customerId);
-  await db.from('stock').delete().eq('variant_id', variantId);
   await stocks.insert({ warehouseId: facilityId, variantId, physicalQty: 10, expiryDate: dayOffset(30), purchasePriceCents: 400 });
   await stocks.insert({ warehouseId: vehicleId, variantId, physicalQty: 5, expiryDate: dayOffset(20), purchasePriceCents: 400 });
 });
@@ -179,6 +181,10 @@ describe('yerinde satış', () => {
     const sayfa = await new UserProfileService(db).list({ limit: 200 });
     expect(sayfa.rows.some((row) => row.id === ANONYMOUS_BUYER_ID)).toBe(false);
 
+    // **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışı deftere `counter_sale` yazıyor ve satır
+    // siparişi `restrict` ile tutuyor. Anonim alıcının siparişi `purgeTestData`nın kapsamında
+    // DEĞİL (profil purge'ün malı değil), o yüzden temizliği burada ve sırasıyla yapılıyor.
+    await purgeVariantStock(db, [variantId]);
     await db.from('order').delete().eq('customer_id', ANONYMOUS_BUYER_ID);
   });
 });

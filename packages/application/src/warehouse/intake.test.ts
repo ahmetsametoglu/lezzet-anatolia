@@ -9,7 +9,7 @@ import {
   VariantBarcodeService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import {
   listPendingIntakes,
   openIntakeForm,
@@ -67,7 +67,9 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14 — `stock_movement.stock_id`
+  // `restrict` ve artık her partinin hareketi var, mal kabulün girişi bile).
+  await purgeVariantStock(db, [variantId]);
 });
 
 afterAll(async () => {

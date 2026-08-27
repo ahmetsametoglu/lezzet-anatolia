@@ -3,7 +3,7 @@ import { toCents } from '@lezzet/helper';
 import { resolveLocalizedText } from '@lezzet/types';
 import { serviceDb } from '../client';
 import { createTestWarehouse } from '../testing/warehouse';
-import { purgeTestData } from '../testing/cleanup';
+import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
 import { BundleService } from './bundle.service';
 import { CategoryService } from './category.service';
 import { PriceService } from './price.service';
@@ -216,7 +216,8 @@ describe('BundleService', () => {
     expect((await bundles.listRows()).find((r) => r.id === bundle.id)!.blockedItemCount).toBe(1);
     await products.update({ id: productId, status: 'active' });
 
-    await db.from('stock').delete().eq('variant_id', variantA);
+    // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+    await purgeVariantStock(db, [variantA]);
   });
 
   it('slug ile bulunur (paylaşılan link) ve ad çok dilli döner', async () => {

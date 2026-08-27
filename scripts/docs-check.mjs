@@ -71,8 +71,8 @@ const ENTITIES = [
   // Stok ve tedarik (modül 06)
   { doc: 'Stock (stok partisi)', part: 'stok-tedarik', table: 'stock', schema: 'stock.schema.ts', zod: 'StockSchema' },
   { doc: 'Reservation (rezervasyon)', part: 'stok-tedarik', table: 'reservation', schema: 'stock.schema.ts', zod: 'ReservationSchema' },
-  { doc: 'StockAdjustment (imha / fire / sayım düzeltmesi)', part: 'stok-tedarik', table: 'stock_adjustment', schema: 'stock-adjustment.schema.ts', zod: 'StockAdjustmentSchema' },
-  { doc: 'TemperatureLog (sıcaklık kaydı)', part: 'stok-tedarik', table: 'temperature_log', schema: 'stock-adjustment.schema.ts', zod: 'TemperatureLogSchema' },
+  { doc: 'StockMovement (stok hareket defteri)', part: 'stok-tedarik', table: 'stock_movement', schema: 'stock-movement.schema.ts', zod: 'StockMovementSchema' },
+  { doc: 'TemperatureLog (sıcaklık kaydı)', part: 'stok-tedarik', table: 'temperature_log', schema: 'temperature-log.schema.ts', zod: 'TemperatureLogSchema' },
   { doc: 'Supplier (tedarikçi)', part: 'stok-tedarik', table: 'supplier', schema: 'supply.schema.ts', zod: 'SupplierSchema' },
   { doc: 'SupplierProduct (ürün–tedarikçi eşlemesi)', part: 'stok-tedarik', table: 'supplier_product', schema: 'supply.schema.ts', zod: 'SupplierProductSchema' },
   { doc: 'PurchaseOrder (tedarik siparişi)', part: 'stok-tedarik', table: 'purchase_order', schema: 'supply.schema.ts', zod: 'PurchaseOrderSchema' },

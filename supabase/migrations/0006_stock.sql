@@ -128,6 +128,236 @@ alter table public.stock enable row level security;
 alter table public.reservation enable row level security;
 
 
+-- ═══ STOK HAREKET DEFTERİ (06.14) ═══
+--
+-- **NEDEN VAR: stokta hareketin defteri YOKTU ve bedeli üç kez ödendi.**
+-- Depodan mal çıkmasının beş yolu var (`deliver_order` · `quick_sale` · `dispatch_transfer` ·
+-- `adjust_stock` · `adjust_stock_batch`) ve bunların yalnız ikisi bir olay satırı yazıyordu.
+-- Kalanlar stoğu DURUM tablolarından eritiyordu: mal gitti, geriye "gitti" diyen bir kayıt kalmadı.
+--
+-- Ölçüldü (27.08, iki bağımsız inceleme):
+--   · "Çıkışlar" sekmesi dönemdeki çıkış olaylarının küçük bir dilimini görüyordu ve başlığında
+--     NEGATİF bir çıkış toplamı yazıyordu (`−13,49 €`) — çünkü iade restoku ve sayım fazlası birer
+--     GİRİŞ, ama işaret `qty`'ye gömülü olduğu için aynı toplamda eriyorlardı.
+--   · `order_item_batch`ten defter TÜRETİLEMİYOR: zaman damgası yok, `record_preparation` satırları
+--     silip yeniden yazıyor (`0015`), iade geriye dönük azaltıyor (`0020`). Yani o tablodan üretilen
+--     bir "Ağustos'ta ne çıktı" raporu, Eylül'de gelen bir iadeyle KENDİ GEÇMİŞİNİ DEĞİŞTİRİR.
+--   · Parti başına mutabakat bugün tutmuyor ve "doğru süzgeç" şemadan okunamıyor: aynı soruyu soran
+--     iki makul sorgu iki farklı sayı veriyor (`returned` siparişleri sayılsın mı, `delivered` mi
+--     `completed` mi damgalansın). Cevap sorgunun yazarına bağlı kalıyordu.
+--
+-- Boşluğun bedeli okuma katmanına bir TELAFİ MAKİNESİ olarak yayılmıştı (`domain-core/stock/history`
+-- + `application/warehouse/variant-history`, ~530 satır) ve künyeleri dört ayrı üretim arızası
+-- anlatıyor — dördü de "aynı hareketi iki yerde saymak" ya da "hiç sayamamak". Defterde hareket BİR
+-- KEZ vardır; o sınıf hata bir daha doğamaz.
+--
+-- **EVİN KENDİ EMSALİ:** para tarafında `money_movement` TEK defterdir (`0018`) ve künyesi bu
+-- arızayı önceden tarif etmiş: *"YÖN ayrı alandır, işaret tutara gömülmez (raporda '− yazılmış
+-- giriş' gibi çift-anlamlı satır doğmasın)."* Stok bunu yapmamıştı; ekrandaki negatif çıkış toplamı
+-- o kararın birebir öngörülmüş sonucuydu. Burada yön KOLONDA, miktar daima pozitif.
+--
+-- **`stock_adjustment` BU TABLOYA ERİDİ** (kullanıcı kararı 27.08). "money_movement + ayrıca
+-- cash_adjustment" diye bölünmemiş bir evde stok da bölünmez: iki tablo = iki toplam = düzeltilen
+-- hâlin ta kendisi. İmha artık defterin bir `kind`'ıdır.
+
+-- Yön: hareketin fiziksel işareti. `qty` DAİMA pozitif (`money_movement.direction` emsali).
+create type stock_direction as enum ('in', 'out');
+
+-- HAREKET TİPİ — kapalı liste. SAP'nin `BWART`ı, Odoo'nun konum çifti, D365'in `ReferenceCategory`si
+-- ile aynı iş: her hareket hangi OLAYDAN doğduğunu kendi taşır, çağıranın yorumuna bırakılmaz.
+create type stock_movement_kind as enum (
+  'intake',          -- tedarikten kabul                    (in)
+  'transfer_in',     -- sevkiyat kabulü — hedefte yeni parti (in)
+  'transfer_out',    -- sevk                                (out)
+  'transfer_cancel', -- sevk geri alındı — mal KAYNAĞA döndü (in)
+  'sale',            -- siparişe çıkan mal (teslim)         (out)
+  'counter_sale',    -- kapı satışı                         (out)
+  'return_restock',  -- iade → rafa döndü                   (in)
+  'write_off',       -- imha / hasar / kayıp                (out)
+  'count_diff'       -- sayım farkı                         (İKİ YÖNLÜ)
+);
+
+-- ── `transfer_loss` diye bir tip YOK ve bu ölçülmüş bir karar (27.08) ────────
+-- İlk tasarımda vardı (`BEKLEYEN(19.6)`: "sevk edildi, hedefe eksik ulaştı"). Yazılamadı, çünkü
+-- kaybın bir PARTİSİ yok: kaynak parti `transfer_out` ile zaten düşüldü — oraya ikinci bir çıkış
+-- yazmak aynı malı iki kez düşürür ve mutabakatı bozar; hedefte ise o mal için parti hiç doğmadı.
+-- Yazılabileceği tek yer bir transit deposudur ve tasarım onu açıkça yasaklıyor (*"sanal transit
+-- depo YOKTUR — ekran üçüncü bir envanter icat etmez"*).
+--
+-- Doğrusu: kayıp bir hareket değil, İKİ HAREKETİN FARKI (`transfer_out` − `transfer_in`) ve o fark
+-- zaten kayıtlı (`warehouse_transfer_line.qty` ↔ `received_qty`). Mutabakat da kendiliğinden tutar:
+-- mal kaynaktan çıktı (yazıldı), hedefe girmedi (yazılmadı) — iki depo arasında yok oldu, ki fiziksel
+-- gerçek de budur. `BEKLEYEN(19.6)` bu yüzden AÇIK kalıyor: kaybın kayda dönüşmesi bir defter işi
+-- değil, sorumluluk/telafi işi (tedarikçiye mi kurye şirketine mi yazılacağı kararı verilmemiş).
+
+-- SEBEP KODU — hareket tipinden AYRI bir seviye ve bu ayrım bilinçli (SAP: hareket tipi 551 +
+-- ayrıca reason code). "Çöpe attım" bir hareket tipidir; "neden" onun içinde bir kırılımdır ve
+-- ekranın "Neden dağılımı" şeridi tam bunu gösteriyor. Tek enuma çökertseydik ya kırılım kaybolur
+-- ya hareket tipi listesi sebep sayısınca şişerdi.
+--
+-- Eski `stock_adjustment_reason`dan İKİ değer buraya GELMEDİ, çünkü onlar sebep değil hareketti:
+-- `count_diff` ve `return_restock` artık birer `kind`.
+create type stock_write_off_reason as enum (
+  'expired',   -- DLC geçti → imha
+  'damaged',   -- hasar / soğuk zincir kırıldı
+  'lost'       -- kayıp (sayımda bulunamadı)
+);
+
+create table public.stock_movement (
+  id uuid primary key default gen_random_uuid(),
+  -- Parti: varyant · lot · SKT · alış fiyatı hep ondan okunur. `restrict` — hareketi olan parti
+  -- silinemez; defter partinin geçmişidir.
+  stock_id uuid not null references public.stock (id) on delete restrict,
+  -- **DEPO SATIRDA DURUR** (`CLAUDE §1`: "okuma depo süzgeçsiz yapılmaz"). Partiden türetilebilir
+  -- ama bu tablo SINIRSIZ büyüyen ve her dönem sorgusuyla taranan tablodur; her okumada bir join,
+  -- süzgecin unutulabildiği yerdir. Değeri çağıran YAZMAZ, aşağıdaki trigger türetir — iki yerde
+  -- tutulan bir gerçek, bir gün ayrışan bir gerçektir.
+  warehouse_id uuid not null,
+  direction stock_direction not null,
+  -- POZİTİF, DAİMA. Yön ayrı kolonda (`money_movement` kuralı, 0018): işareti miktara gömmek
+  -- "−13,49 € çıkış" gibi çift-anlamlı satırlar doğuruyordu.
+  qty int not null check (qty > 0),
+  kind stock_movement_kind not null,
+  -- Yalnız imhada dolu (aşağıdaki kısıt zorlar).
+  reason stock_write_off_reason,
+  -- Partinin alış fiyatı, işlem ANINDA kopyalanır: parti sonradan düzeltilse bile dönem raporu
+  -- kaymaz (eski `stock_adjustment.unit_cost` kuralı, aynen korundu — DOMAIN §12 gerçek COGS).
+  unit_cost numeric(10, 2),
+  -- **OLAYIN anı** — dönem süzgeci buna bakar ("bu çeyrekte ne çıktı" fiziksel bir sorudur).
+  occurred_at timestamptz not null default now(),
+  -- **KAYDIN anı** — defterin SIRASI budur. Ayrım `stock_intake`in `date`/`created_at` ayrımıyla
+  -- birebir aynı (22.28 kararı): "az önce ne yazdım" sorusunu yalnız ikincisi cevaplar; geriye
+  -- dönük girilen bir kayıt `occurred_at` sıralamasında listenin ortasına düşer ve bulunamaz.
+  created_at timestamptz not null default now(),
+  actor_id uuid,                                     -- FK yok: personel kimliği auth şemasında
+  note text,
+  -- Operatörün okuyacağı belge: `IMH-STR-26-0012` · `TRF-STR-26-0007` · siparişin referansı.
+  reference_no text,
+  -- KAYNAK BELGE — tipine göre biri zorunlu (aşağıdaki kısıt). FK YOK, üçü de sonraki dosyalarda
+  -- doğuyor (`stock.intake_id` emsali: kolon burada doğar, bağ 0010/0012/0031'de kurulur).
+  order_id uuid,
+  transfer_id uuid,
+  intake_id uuid,
+  -- **İPTAL = TERS KAYIT** (SAP 551↔552 deseni). Defter append-only'dir: `cancel_transfer` bugün
+  -- stoğu geri yazıp hiçbir yere satır düşmüyordu, yani "mal çıktı ve döndü" geçmişi yalanlanıyordu.
+  -- Artık iptal, aslını işaret eden yeni bir satırdır; ikisi de görünür.
+  reverses_id uuid references public.stock_movement (id) on delete restrict,
+
+  -- Hareket tipi yönünü BELİRLER — tek istisna sayım farkı, o gerçekten iki yönlüdür.
+  -- Kural veride durur (`CLAUDE §1`): RPC'yi atlayan bir insert bunu delemesin.
+  constraint stock_movement_direction_kind check (
+    case kind
+      when 'intake'          then direction = 'in'
+      when 'transfer_in'     then direction = 'in'
+      when 'transfer_cancel' then direction = 'in'
+      when 'return_restock'  then direction = 'in'
+      when 'transfer_out'   then direction = 'out'
+      when 'sale'           then direction = 'out'
+      when 'counter_sale'   then direction = 'out'
+      when 'write_off'      then direction = 'out'
+      else true
+    end
+  ),
+  -- Sebep YALNIZ imhada ve imhada ZORUNLU: sebepsiz bir imha "ne kadarını neden attım" sorusunu
+  -- cevaplayamaz, imha olmayan bir satırda sebep ise okuyanı yanıltır.
+  constraint stock_movement_reason_only_write_off check (
+    (kind = 'write_off') = (reason is not null)
+  ),
+  -- Kaynak belgesi olan tipte belge ZORUNLU. İmha/sayım/iade belgesiz olabilir (elle kayıt);
+  -- tutanakları varsa `reference_no` taşır.
+  constraint stock_movement_source check (
+    case kind
+      when 'intake'        then intake_id is not null
+      when 'sale'          then order_id is not null
+      when 'counter_sale'  then order_id is not null
+      when 'transfer_in'     then transfer_id is not null
+      when 'transfer_out'    then transfer_id is not null
+      when 'transfer_cancel' then transfer_id is not null
+      else true
+    end
+  )
+);
+
+-- Depo satırda ama çağıranın elinde DEĞİL — partiden türer (`stock_set_initial_qty` emsali).
+-- Parti hiç depo değiştirmez (transfer hedefte YENİ parti doğurur, `0031`), yani türetme kalıcıdır.
+create or replace function public.stock_movement_set_warehouse() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  select warehouse_id into new.warehouse_id from public.stock where id = new.stock_id;
+  if new.warehouse_id is null then
+    raise exception 'stock_movement: parti bulunamadı (%)', new.stock_id;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger stock_movement_warehouse_trg
+  before insert on public.stock_movement
+  for each row execute function public.stock_movement_set_warehouse();
+
+-- Sekmenin dönem sorgusu: depo + tarih aralığı + yön kırılımı.
+create index stock_movement_warehouse_date_idx on public.stock_movement (warehouse_id, occurred_at desc);
+-- Partinin geçmişi ve MUTABAKAT sorgusu (`Σin − Σout = physical_qty`); sıra kaydın anı.
+create index stock_movement_stock_idx on public.stock_movement (stock_id, created_at desc);
+-- Tür kırılımı ("bu çeyrekte ne kadarı imha, ne kadarı satış").
+create index stock_movement_kind_idx on public.stock_movement (kind, occurred_at desc);
+-- "Elimdeki kâğıdın karşılığı" — numara başına birkaç satır döner.
+create index stock_movement_reference_idx on public.stock_movement (reference_no)
+  where reference_no is not null;
+
+alter table public.stock_movement enable row level security;
+
+comment on table public.stock_movement is
+  'Stok hareket defteri (06.14) — append-only. Miktar değiştiren her olay burada bir satırdır; '
+  'düzeltme yoktur, iptal ters kayıttır (reverses_id). `stock.physical_qty` bu defterin bakiyesidir.';
+
+-- ── Defterin okunabilir yüzü ────────────────────────────────────────────────
+--
+-- `stock_adjustment_detail`in (09.18) devamı ve aynı gerekçe: ekran lot numarasına VEYA ürün adına
+-- göre arıyor, ikisi iki ayrı gömülü kaynakta. PostgREST'in `or=` grubu yalnız üst tablonun
+-- kolonlarına bakar — "lot VEYA ürün adı" sorgu kurucuyla ifade edilemiyor (`STACK §13` istisnası).
+-- Arama metni görünümün İÇİNDE kuruluyor; ekranın terimi tek düz kolona bakar.
+--
+-- İç birleştirme satır düşürmez: `stock_id` `not null` + `restrict`.
+create or replace view public.stock_movement_detail as
+select m.id,
+       m.stock_id,
+       m.warehouse_id,
+       m.direction,
+       m.qty,
+       m.kind,
+       m.reason,
+       m.unit_cost,
+       m.occurred_at,
+       m.created_at,
+       m.actor_id,
+       m.note,
+       m.reference_no,
+       m.order_id,
+       m.transfer_id,
+       m.intake_id,
+       m.reverses_id,
+       s.lot_number,
+       s.expiry_date,
+       v.id    as variant_id,
+       v.label as variant_label,
+       p.id    as product_id,
+       p.name  as product_name,
+       -- Üç dil birden: operasyon Türkçe ama katalog üç dilli ve operatör ürünü hangi adla
+       -- hatırlıyorsa onu yazar.
+       concat_ws(' ', s.lot_number, p.name ->> 'tr', p.name ->> 'fr', p.name ->> 'de',
+                 v.label ->> 'tr', m.reference_no) as search_text
+  from public.stock_movement m
+  join public.stock s on s.id = m.stock_id
+  join public.product_variant v on v.id = s.variant_id
+  join public.product p on p.id = v.product_id;
+
+comment on view public.stock_movement_detail is
+  'Hareket defteri + aranabilir metin (06.14, 09.18 devamı). Arama lot · ürün adı (3 dil) · varyant · belge no.';
+
+
 -- ═══ SICAKLIK KAYDI (06.7) ═══
 -- Buraya AYRI BİR MIGRATION dosyasından taşındı (02.11 · denetim P2 — aile içi
 -- birleştirme). İçerik değişmedi; eski dosya numarasıyla anılmıyor, çünkü o numara artık yok.

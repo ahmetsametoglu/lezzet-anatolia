@@ -1,4 +1,4 @@
-import type { StockAdjustmentReason } from '@lezzet/types';
+import type { StockMovementKind } from '@lezzet/types';
 
 /**
  * İmha/sayım OLAY belgesi (10.5) — `IMH-26-0012`, `SAY-26-0043`. **Saf karar**, I/O yok.
@@ -15,16 +15,20 @@ import type { StockAdjustmentReason } from '@lezzet/types';
 export type AdjustmentDocumentPrefix = 'IMH' | 'SAY' | 'IAD';
 
 /**
- * Sebep hangi belgeye düşer.
+ * Hareket tipi hangi belgeye düşer.
  *
  * Üç grup üç ayrı kâğıttır ve karıştırılmaz: **imha tutanağı** (mal çöpe gitti — denetimin konusu),
  * **sayım tutanağı** (fiziksel sayım farkı, iki yönlü olabilir) ve **iade girişi** (mal geri geldi,
  * stoğa döndü). Sayım farkını imha tutanağına yazmak, hiç imha edilmemiş malı imha edilmiş
  * göstermek olurdu.
+ *
+ * **Girdi artık SEBEP değil TİP** (06.14): `count_diff` ve `return_restock` birer sebep değil,
+ * birer hareket tipiydi ve defter bunu ayırdı. İmhanın kendi sebebi (`expired`/`damaged`/`lost`)
+ * belgeyi değiştirmez — üçü de aynı tutanağa yazılır, o yüzden bu fonksiyon onu hiç sormaz.
  */
-export function documentPrefixFor(reason: StockAdjustmentReason): AdjustmentDocumentPrefix {
-  if (reason === 'count_diff') return 'SAY';
-  if (reason === 'return_restock') return 'IAD';
+export function documentPrefixFor(kind: StockMovementKind): AdjustmentDocumentPrefix {
+  if (kind === 'count_diff') return 'SAY';
+  if (kind === 'return_restock') return 'IAD';
   return 'IMH';
 }
 

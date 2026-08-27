@@ -121,7 +121,9 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 - `review_status`: pending, approved, rejected
 - `setting_scope`: global, channel, zone, country, warehouse *(ayarın hangi eksende istisna aldığı)*
 - `site_image_slot`: home_hero, packages_hero, professionals_hero, empty_cart
-- `stock_adjustment_reason`: expired, damaged, count_diff, lost, return_restock
+- `stock_direction`: in, out
+- `stock_movement_kind`: intake, transfer_in, transfer_out, transfer_cancel, sale, counter_sale, return_restock, write_off, count_diff
+- `stock_write_off_reason`: expired, damaged, lost
 - `storage_area_kind`: frozen, chilled, ambient, staging *(depo içi bölge türü)*
 - `template_category`: marketing, utility, authentication
 - `ticket_handler`: human, hybrid, ai

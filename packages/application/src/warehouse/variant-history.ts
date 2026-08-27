@@ -3,7 +3,7 @@ import {
   OrderItemBatchService,
   OrderService,
   ReservationService,
-  StockAdjustmentService,
+  StockMovementService,
   StockService,
   WarehouseTransferLineService,
 } from '@lezzet/database';
@@ -14,30 +14,32 @@ import {
   daysOfCover,
   countsAsLoss,
   isCountDiff,
-  hasLeftShelf,
   lossPercent,
 } from '@lezzet/domain-core';
-import type { StockAdjustmentReason } from '@lezzet/types';
+import type { StockMovementKind, StockWriteOffReason } from '@lezzet/types';
 
 /**
  * **BİR ÜRÜNÜN STOK GEÇMİŞİ** (22.30) — "bu üründen ne zaman, kaça girdi; ne kadarı satıldı, ne
  * kadarı çöpe gitti, partiler kaç günde eridi".
  *
+ * ── BU DOSYA BİR TELAFİ MAKİNESİYDİ (06.14'te söküldü) ──────────────────────
+ * Stokta hareket defteri yoktu; "giren − çıkan = elde" denklemi burada, elde, altı servisten gelen
+ * satırlar birleştirilerek kuruluyordu. Künyeleri **dört ayrı üretim arızası** anlatıyordu ve
+ * dördü de kullanıcı ekran görüntüsüyle yakalanmıştı — hepsi aynı sınıftandı: bir hareketin iki
+ * yerde sayılması ya da hiç sayılamaması.
+ *
+ * `stock_movement` gelince o sınıf kapandı. Denklem artık burada KURULMUYOR, veritabanında zaten
+ * tutuyor (`Σin − Σout = physical_qty`) ve bir entegrasyon testi onu koruyor. Bu dosya yalnız
+ * okuyup sunuyor.
+ *
  * ── NEDEN AĞIR DEĞİL: SORU TEK VARYANTIN ────────────────────────────────────
  * Katalog geneli istatistik ağır bir iştir; bu okuma **seçili tek boyun** geçmişini, tıklandığı an
- * çekiyor. Üç sorgu ve üçü de indeksli: partiler (`stock_variant_expiry_idx`), çıkışlar
- * (`order_item_variant_idx`), düzeltmeler (`stock_adjustment_stock_idx`). Hiçbiri kataloğu taramıyor
- * ve sayfa açılışında hiç çalışmıyor.
- *
- * ── ÇIKIŞ = HAZIRLIKTA YAZILAN GERÇEK ───────────────────────────────────────
- * Satış hızı `order_item`ten değil `order_item_batch`ten geliyor: birincisi "sipariş edildi",
- * ikincisi "depodan fiilen çıktı". Stok sorusunun paydası ikincisidir — hazırlanmamış sipariş malı
- * henüz raftan almadı.
+ * çekiyor. Sorgular indeksli: partiler (`stock_variant_expiry_idx`), hareketler
+ * (`stock_movement_stock_idx`). Sayfa açılışında hiç çalışmıyor.
  *
  * ── KARAR MOTORUN, OKUMA BURANIN ────────────────────────────────────────────
- * Hız, yeterlilik, ortalama ömür ve fire oranı `domain-core/stock/history`ten geliyor; bu dosya
- * satırları getirip soruyor. Ölçülemeyen her değer `null` döner ve ekran onu "—" diye çizer
- * (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
+ * Hız, yeterlilik, ortalama ömür ve fire oranı `domain-core/stock/history`ten geliyor. Ölçülemeyen
+ * her değer `null` döner ve ekran onu "—" diye çizer (`CLAUDE §1`).
  */
 
 /** Geçmişte görünecek parti sayısının tavanı — "son N giriş" bir bakıştır, defter değil. */
@@ -45,6 +47,9 @@ const BATCH_LIMIT = 12;
 
 /** Hız penceresi (gün): mevsimsel dalgayı yutmayacak kadar kısa, tek bir günden etkilenmeyecek kadar uzun. */
 const RATE_WINDOW_DAYS = 90;
+
+/** Malın MÜŞTERİYE gittiği hareketler — hız hesabının paydası (sevk bir satış değildir). */
+const SALE_KINDS: readonly StockMovementKind[] = ['sale', 'counter_sale'];
 
 /** Geçmişteki bir parti — girişi ve akıbeti. */
 export interface VariantBatchHistory {
@@ -62,9 +67,9 @@ export interface VariantBatchHistory {
   physicalQty: number;
   /** Birim alış (cent); girilmemişse `null` — 0 ile karıştırılmaz. */
   unitCostCents: number | null;
-  /** Bu partiden fiilen çıkan (satılan) adet — hazırlık kaydından. */
+  /** Bu partiden MÜŞTERİYE giden adet (satış + kapı satışı). */
   soldQty: number;
-  /** Bu partiden düşülen (imha/sayım) adet; işaretli toplam — geri alma azaltır. */
+  /** Bu partiden düşülen adet — imha + sayım farkı (net; sayım fazlası azaltır). */
   lostQty: number;
   /**
    * Partinin ömrü: girişten SON çıkışa kaç gün. `null` = hiç çıkış görmemiş ya da hâlâ elde
@@ -88,16 +93,17 @@ export interface VariantStockHistory {
   /**
    * **MALIN AKIŞI** (22.31) — "aldığım stok nereye gitti" (kullanıcı tespiti 14.08).
    *
-   * Girenden çıkanı ve düşüleni ayırınca elde kalması gereken sayı çıkar; ekran bunu tek satırda
-   * gösteriyor. `intakeQty`/`lostQty` GÖRÜNEN partilerin toplamıdır — liste tavana dayandıysa
-   * (`truncated`) eksik kalır ve ekran o zaman akış satırını çizmez, çünkü tutmayan bir denklem
-   * tutuyormuş gibi görünür.
+   * ── SAYILAR ARTIK TEK KAYNAKTAN (06.14) ─────────────────────────────────────
+   * Çıkışlar ve düşülenler GÖRÜNEN partilerin hareket defterinden geliyor; eskiden üç ayrı tablodan
+   * kurulan bir yaklaşıklıktı ve tutmadığı her durumda ekran "kayda geçmemiş bir hareket var" diye
+   * uyarıyordu — uyarıların dördü de veri arızası değil, bu hesabın kendi kusuruydu. Giriş ise
+   * `initial_qty`den okunuyor (gerekçe aşağıda, `intakeQty`nin künyesinde).
    *
-   * `deliveredQty` varyant düzeyinde ve TÜM ZAMANLAR: parti listesinden bağımsız okunuyor.
+   * Liste tavana dayandıysa (`truncated`) toplamlar eksik kalır ve ekran akış satırını çizmez.
    *
-   * **`pickedQty` DENKLEME GİRMEZ** ve sebebi ölçüldü (14.08): hazırlanmış mal `physical_qty`de
-   * DURUYOR — stok teslimde düşüyor (`deliver_order`), hazırlıkta değil (`record_preparation`).
-   * Denklemden düşseydik her hazırlıktaki sipariş sahte bir "tutmuyor" uyarısı üretirdi.
+   * **`pickedQty` DENKLEME GİRMEZ** ve sebebi değişmedi: hazırlanmış mal `physical_qty`de DURUYOR
+   * (stok teslimde düşer, hazırlıkta değil). Defterde de hareketi yoktur — bir çıkış değil, bir ara
+   * hâldir. Ayrı okunur, ayrı gösterilir.
    */
   flow: {
     intakeQty: number;
@@ -108,7 +114,7 @@ export interface VariantStockHistory {
     inTransitQty: number;
     onHandQty: number;
   };
-  /** Penceredeki toplam çıkış ve günlük ortalama; hiç çıkış yoksa `null`. */
+  /** Penceredeki toplam satış ve günlük ortalama; hiç satış yoksa `null`. */
   rate: { windowDays: number; qty: number; perDay: number } | null;
   /**
    * Eldeki kullanılabilir mal kaç gün yeter — hız bilinmiyorsa `null`.
@@ -118,17 +124,19 @@ export interface VariantStockHistory {
   /** Tükenmiş partilerin ortalama ömrü + kaç partiye dayandığı. */
   averageLife: { days: number; sampleCount: number } | null;
   /**
-   * Fire: işaretli toplam adet, sebep kırılımı ve girene oranı (%).
+   * Fire: adet, girene oranı (%) ve kırılımlar.
    *
-   * `qty`/`percent` yalnız GERÇEK kayıpları sayar (imha · hasar · kayıp) ve hep pozitiftir.
-   * `byReason` hepsini taşır — iade ve sayım farkı da birer olaydır, kırılımda görünmeleri gerekir.
-   * `countDiff` sayımın NET sapması (±): ayrı, çünkü *"ne kadarını çöpe attım"* ile *"saydığımda ne
-   * kadar saptım"* iki farklı soru (22.34 · kullanıcı kararı 26.08).
+   * `qty`/`percent` yalnız İMHAYI sayar (`write_off`) ve hep pozitiftir. `byKind` düzeltme
+   * tiplerini taşır — iade ve sayım farkı da birer olaydır, kırılımda görünmeleri gerekir.
+   * `byReason` imhanın içini açar (DLC · hasar · kayıp), `countDiff` ise sayımın NET sapması (±):
+   * ayrı, çünkü *"ne kadarını çöpe attım"* ile *"saydığımda ne kadar saptım"* iki farklı soru
+   * (22.34 · kullanıcı kararı 26.08).
    */
   loss: {
     qty: number;
     percent: number | null;
-    byReason: Array<{ reason: StockAdjustmentReason; qty: number }>;
+    byKind: Array<{ kind: StockMovementKind; qty: number }>;
+    byReason: Array<{ reason: StockWriteOffReason; qty: number }>;
     countDiff: number;
   };
   /** Ayrılmış mal kime ayrılmış — boş dizi = ayrılmış yok. */
@@ -171,16 +179,18 @@ export async function readVariantStockHistory(
   input: { variantId: string; warehouseIds: readonly string[] | undefined; availableQty: number; now: Date },
 ): Promise<VariantStockHistory> {
   const stocks = new StockService(db);
+  const movements = new StockMovementService(db);
   const since = new Date(input.now.getTime() - RATE_WINDOW_DAYS * 86_400_000);
 
-  // Üç okuma TEK turda: hepsi aynı anın gerçeği ve sırayla beklemelerinin sebebi yok.
+  // Dört okuma TEK turda: hepsi aynı anın gerçeği ve sırayla beklemelerinin sebebi yok.
   // `BATCH_LIMIT + 1` çekilir ki tavana dayanıldığı ANLAŞILSIN (sayfalamanın `limit+1` deseni).
   //
   // **Çıkışlar TÜM ZAMANLAR için okunuyor, pencere için değil** (22.31): "bu ürün hiç satıldı mı"
   // sorusunun cevabı 90 günle sınırlanamaz — pencereyi tarih süzgeci değil, aşağıdaki hesap kuruyor.
-  const [batchRows, exits, reservationRows] = await Promise.all([
+  const [batchRows, exits, picked, reservationRows] = await Promise.all([
     stocks.listVariantHistory(input.variantId, input.warehouseIds, BATCH_LIMIT + 1),
-    new OrderItemBatchService(db).exitsByVariant(input.variantId),
+    movements.exitsByVariant(input.variantId),
+    new OrderItemBatchService(db).pickedByVariant(input.variantId),
     new ReservationService(db).listActiveByVariantScoped(input.variantId, input.warehouseIds),
   ]);
 
@@ -195,56 +205,59 @@ export async function readVariantStockHistory(
   const truncated = batchRows.length > BATCH_LIMIT;
   const batches = truncated ? batchRows.slice(0, BATCH_LIMIT) : batchRows;
   const stockIds = batches.map((batch) => batch.id);
+  const visible = new Set(stockIds);
 
-  // Düzeltmeler yalnız GÖRÜNEN partiler için: fire oranının paydası da aynı partilerin girişi —
-  // iki tarafı farklı kümeden almak, oranı sessizce yanlış yapardı.
-  const adjustments = stockIds.length > 0 ? await new StockAdjustmentService(db).listByStocks(stockIds) : [];
+  // **GÖRÜNEN partilerin BÜTÜN hareketleri, tek sorguda** — eskiden burada yalnız düzeltmeler
+  // okunuyordu (`StockAdjustmentService.listByStocks`) ve satışlar başka tablodan kurulup elde
+  // birleştiriliyordu. Defter tek olunca birleştirme de kalktı.
+  const ledger = stockIds.length > 0 ? await movements.listByStocks(stockIds) : [];
 
-  // **Yoldaki mal** — kaynaktan düşmüş, hedefte henüz parti değil. Hiçbir `physical_qty`de
-  // görünmediği için denklem onsuz tam o kadar sapıyordu (`inTransitFromStocks` künyesi).
+  // **Yoldaki mal** — kaynaktan düşmüş, hedefte henüz parti değil. Defterde `transfer_out` olarak
+  // görünüyor ve akış denklemine zaten dahil; bu okuma AYRI bir soruyu cevaplıyor ("şu an nerede"),
+  // denklemi düzeltmek için değil (`inTransitFromStocks` künyesi).
   const inTransitLines = stockIds.length > 0 ? await new WarehouseTransferLineService(db).inTransitFromStocks(stockIds) : [];
   const inTransitQty = inTransitLines.reduce((sum, line) => sum + line.qty, 0);
 
-  // Parti başına: bu partiden ne kadar çıktı ve en SON ne zaman çıktı.
+  // Parti başına: bu partiden müşteriye ne kadar gitti ve en SON ne zaman çıktı.
   const soldQty = new Map<string, number>();
   const lastExit = new Map<string, string>();
   for (const exit of exits) {
-    soldQty.set(exit.stockId, (soldQty.get(exit.stockId) ?? 0) + exit.qty);
+    if (SALE_KINDS.includes(exit.kind)) soldQty.set(exit.stockId, (soldQty.get(exit.stockId) ?? 0) + exit.qty);
+    // Ömür HER çıkışa bakar (sevk de partiyi eritir), satışa değil.
     const seen = lastExit.get(exit.stockId);
     if (!seen || exit.at > seen) lastExit.set(exit.stockId, exit.at);
   }
 
   /**
-   * **DENKLEMİN düşüleni** — sayım farkı DAHİL (ölçüldü ve düzeltildi 26.08).
+   * Parti satırının DÜŞÜLENİ — imha + sayım farkı, işaretli (sayım fazlası azaltır).
    *
-   * `loss.qty`den ayrı ve ayrım kritik: sayım farkı bir RAPOR kalemi olarak fireden ayrıldı (22.34)
-   * ama fiziksel bir hareket olarak yerinde duruyor — rafta fazla çıkan mal stoğu gerçekten
-   * artırır. İkisini aynı sayıya bağlayınca "giren − teslim − düşülen = elde" denklemi sayım farkı
-   * kadar sapıyordu ve ekran bunu *"kayda geçmemiş bir hareket var"* diye okudu (ekran görüntüsüyle
-   * yakalandı: `73 − 10 − 0 = 59`, fark tam olarak `+4`lük sayım farkıydı).
-   *
-   * `return_restock` yine dışarıda ve sebebi başka: onun karşılığı `order_item_batch`ten zaten
-   * düşülmüş, denkleme ikinci kez girse aynı iadeyi iki kez sayardı (`countsAsLoss` künyesi).
+   * Sayım farkının burada olması bilinçli (ölçüldü ve düzeltildi 26.08): rapor ayrımı fiziksel
+   * hareketi silmez — rafta fazla çıkan mal stoğu gerçekten artırır. Satış ve sevk BURADA YOK;
+   * onlar `soldQty`de ve akış denkleminde kendi kalemleriyle duruyor.
    */
   const movedQty = new Map<string, number>();
-  /** FİRE ORANININ payı — yalnız gerçek kayıplar (imha · hasar · kayıp). */
+  /** FİRE ORANININ payı — yalnız imha, hep pozitif. */
   const lostQty = new Map<string, number>();
-  const byReason = new Map<StockAdjustmentReason, number>();
+  const byKind = new Map<StockMovementKind, number>();
+  const byReason = new Map<StockWriteOffReason, number>();
   /** Sayımın NET sapması (±) — fire toplamının dışında, kendi satırında gösterilir. */
   let countDiff = 0;
-  for (const row of adjustments) {
-    // Kırılım HEPSİNİ taşır (iade de bir olaydır ve görünmeli); fire TOPLAMI ise yalnız gerçek
-    // kayıpları sayar — iade restokunun karşılığı `order_item_batch`ten zaten düşülmüştür
-    // (`countsAsLoss` künyesi). İkisini ayırmamak aynı iadeyi iki kez saydırıyordu.
-    if (countsAsLoss(row.reason)) lostQty.set(row.stockId, (lostQty.get(row.stockId) ?? 0) + row.qty);
-    // Denklem sayım farkını SAYAR (yukarıdaki künye): rapor ayrımı fiziksel hareketi silmez.
-    if (countsAsLoss(row.reason) || isCountDiff(row.reason)) {
-      movedQty.set(row.stockId, (movedQty.get(row.stockId) ?? 0) + row.qty);
+  for (const row of ledger) {
+    if (!visible.has(row.stockId)) continue;
+    const signed = row.direction === 'out' ? row.qty : -row.qty;
+
+    // Düzeltme tiplerinin kırılımı — satış/sevk buraya girmez, onlar akışın kendi kalemleri.
+    if (countsAsLoss(row.kind) || isCountDiff(row.kind) || row.kind === 'return_restock') {
+      byKind.set(row.kind, (byKind.get(row.kind) ?? 0) + row.qty);
     }
-    // Sayım farkı AYRI toplanır (22.34 · kullanıcı kararı 26.08): iki yönlü olduğu için fire
-    // toplamını eksiye düşürüyordu (`%−2,1` — hesap doğru, "FİRE" başlığı altında okunmuyordu).
-    if (isCountDiff(row.reason)) countDiff += row.qty;
-    byReason.set(row.reason, (byReason.get(row.reason) ?? 0) + row.qty);
+    if (countsAsLoss(row.kind)) {
+      lostQty.set(row.stockId, (lostQty.get(row.stockId) ?? 0) + row.qty);
+      if (row.reason) byReason.set(row.reason, (byReason.get(row.reason) ?? 0) + row.qty);
+    }
+    if (countsAsLoss(row.kind) || isCountDiff(row.kind)) {
+      movedQty.set(row.stockId, (movedQty.get(row.stockId) ?? 0) + signed);
+    }
+    if (isCountDiff(row.kind)) countDiff += signed;
   }
 
   const history: VariantBatchHistory[] = batches.map((batch) => ({
@@ -258,27 +271,37 @@ export async function readVariantStockHistory(
     physicalQty: batch.physicalQty,
     unitCostCents: batch.purchasePriceCents,
     soldQty: soldQty.get(batch.id) ?? 0,
-    // Parti satırının düşüleni DENKLEMİN sayısıdır (sayım farkı dahil) — satır "bu partiden ne
-    // eksildi" diyor, "ne kadarı fire" demiyor. Fire ayrımı yalnız `loss` bloğunda.
     lostQty: movedQty.get(batch.id) ?? 0,
     // **Ömür yalnız TÜKENMİŞ partide yazılır.** Elde duran partinin son çıkışı bir bitiş değil, ara
     // bir andır; onu ömür sayarsak "3 günde eridi" diyen bir parti yarın hâlâ rafta olur.
     lifeDays: batch.physicalQty === 0 ? batchLifeDays(batch.createdAt, lastExit.get(batch.id) ?? null) : null,
   }));
 
-  // Hız YALNIZ pencere içindeki çıkışlardan; liste tüm zamanları taşıyor, süzgeç burada.
-  const inWindow = exits.filter((exit) => new Date(exit.at) >= since);
-  const rate = dailyExitRate(inWindow, RATE_WINDOW_DAYS);
+  // Hız YALNIZ pencere içindeki SATIŞLARDAN; liste tüm zamanları taşıyor, süzgeç burada. Sevk
+  // dışarıda: başka depoya giden mal satılmadı, yalnız yer değiştirdi — hıza sayılsaydı bir
+  // transferden sonra ürün "hızlı satıyor" görünür ve yeterlilik yanlış hesaplanırdı.
+  const sales = exits.filter((exit) => SALE_KINDS.includes(exit.kind));
+  const rate = dailyExitRate(
+    sales.filter((exit) => new Date(exit.at) >= since),
+    RATE_WINDOW_DAYS,
+  );
 
+  /**
+   * **GİRİŞ `initial_qty`den, defterden DEĞİL** — ve bu bilinçli bir tercih (06.14).
+   *
+   * Defterde parti doğuşu da bir hareket (`intake`/`transfer_in`) ve gerçek akışta ikisi birebir
+   * aynı. Ama `stock` satırı doğrudan da yazılabiliyor (`StockService.insert` — testler, fikstürler,
+   * elle kurulan veri) ve o yol deftere satır düşürmüyor. Payda oradan gelseydi böyle bir partide
+   * fire oranı olmayan bir girişe bölünür ve saçmalardı.
+   *
+   * `initial_qty` zaten tam bu iş için var: *"partiye girişte yazılan miktar — tarihtir, değişmez"*
+   * (`0006` künyesi). Defterin kendi mutabakatı ayrı bir testin konusu ve orada gerçek akış koşuyor.
+   */
   const intakeQty = history.reduce((sum, batch) => sum + batch.initialQty, 0);
-  /** Denklemin düşüleni — parti satırlarının toplamı (sayım farkı dahil). */
-  const totalMoved = history.reduce((sum, batch) => sum + batch.lostQty, 0);
-  /** Fire oranının payı — GÖRÜNEN partilerin gerçek kayıpları; sayım farkı burada YOK. */
   const totalLost = history.reduce((sum, batch) => sum + (lostQty.get(batch.stockId) ?? 0), 0);
-  // Raftan AYRILMIŞ ↔ hazırlanmış ama hâlâ depoda: ikisi ayrı sayılır (`hasLeftShelf` künyesi).
-  const deliveredQty = exits.filter((exit) => hasLeftShelf(exit.status)).reduce((sum, exit) => sum + exit.qty, 0);
-  const pickedQty = exits.filter((exit) => !hasLeftShelf(exit.status)).reduce((sum, exit) => sum + exit.qty, 0);
-  const saleDays = exits.map((exit) => exit.at).sort();
+  const deliveredQty = history.reduce((sum, batch) => sum + batch.soldQty, 0);
+  const pickedQty = picked.filter((row) => visible.has(row.stockId)).reduce((sum, row) => sum + row.qty, 0);
+  const saleDays = sales.map((exit) => exit.at).sort();
 
   return {
     batches: history,
@@ -287,9 +310,9 @@ export async function readVariantStockHistory(
       intakeQty,
       deliveredQty,
       pickedQty,
-      lostQty: totalMoved,
+      lostQty: history.reduce((sum, batch) => sum + batch.lostQty, 0),
       inTransitQty,
-      // Elde kalan EKRANIN sayısıdır (görünüm), partilerin toplamı değil: ikisi ayrışırsa yanlış olan
+      // Elde kalan EKRANIN sayısıdır (görünüm), defterin farkı değil: ikisi ayrışırsa yanlış olan
       // liste değil okumadır ve o zaman akış satırı sorunu gizlemek yerine göstermeli.
       onHandQty: history.reduce((sum, batch) => sum + batch.physicalQty, 0),
     },
@@ -299,6 +322,7 @@ export async function readVariantStockHistory(
     loss: {
       qty: totalLost,
       percent: lossPercent(totalLost, intakeQty),
+      byKind: [...byKind].map(([kind, qty]) => ({ kind, qty })).sort((a, b) => b.qty - a.qty),
       byReason: [...byReason].map(([reason, qty]) => ({ reason, qty })).sort((a, b) => b.qty - a.qty),
       countDiff,
     },

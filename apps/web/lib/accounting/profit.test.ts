@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, MoneyMovementService, OrderService, ProductService,
-  StockAdjustmentService, StockService, UserProfileService, serviceDb,
+  StockMovementService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
 import { quickSale } from '@lezzet/application';
@@ -105,7 +105,14 @@ describe('ürün kârlılığı GERÇEK partiden hesaplanır', () => {
     const before = beforeRows.find((u) => u.variantId === cheapVariant)!;
 
     // 3 adet DLC imhası → 6 € kayıp.
-    await new StockAdjustmentService(db).adjust({ stockId: batch.id, qty: 3, reason: 'expired', note: 'DLC geçti' });
+    await new StockMovementService(db).adjust({
+      stockId: batch.id,
+      qty: 3,
+      direction: 'out',
+      kind: 'write_off',
+      reason: 'expired',
+      note: 'DLC geçti',
+    });
 
     const after = (await productProfits(TODAY)).find((u) => u.variantId === cheapVariant)!;
     expect(after.lossQty).toBe(3);

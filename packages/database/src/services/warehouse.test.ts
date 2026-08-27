@@ -10,7 +10,7 @@ import { PurchaseOrderService } from './purchase-order.service';
 import { WarehouseService } from './warehouse.service';
 import { WarehouseTransferService } from './warehouse-transfer.service';
 import { createTestWarehouse, createTestWarehousePair } from '../testing/warehouse';
-import { purgeTestData } from '../testing/cleanup';
+import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
 
 /**
  * Depo ağı (19.1) — DB üstünde. Burada **depo geçişinin çıkış ölçütü** doğrulanır: aynı varyant iki
@@ -81,9 +81,16 @@ beforeEach(async () => {
   if (ids.length > 0) {
     const { data: satirlar } = await db.from('warehouse_transfer_line').select('transfer_id').in('source_stock_id', ids);
     const transferIds = [...new Set((satirlar ?? []).map((l) => (l as { transfer_id: string }).transfer_id))];
-    if (transferIds.length > 0) await db.from('warehouse_transfer').delete().in('id', transferIds); // satırları CASCADE
+    // **DEFTER TRANSFERDEN ÖNCE** (06.14): sevk/kabul/iptal satırları transferi `restrict` ile
+    // tutuyor. Hareketler partiden siliniyor ve transferinkileri de topluyor — her hareket bir
+    // partiye bağlı (`stock_id` `not null`).
+    if (transferIds.length > 0) {
+      await db.from('stock_movement').delete().in('stock_id', ids);
+      await db.from('warehouse_transfer').delete().in('id', transferIds); // satırları CASCADE
+    }
   }
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti.
+  await purgeVariantStock(db, [variantId]);
 });
 
 describe('kullanılabilir stok depo içinde hesaplanır', () => {

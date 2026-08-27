@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { createTestWarehouse } from '../testing/warehouse';
-import { purgeTestData } from '../testing/cleanup';
+import { purgeTestData, purgeVariantStock } from '../testing/cleanup';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
 import { PurchaseOrderService } from './purchase-order.service';
@@ -55,7 +55,9 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14). Ayrıca `mustDelete` yoluna
+  // geçti — `db.from(...).delete()` hatayı YUTUYOR ve teardown sessizce yarım kalıyordu.
+  await purgeVariantStock(db, [variantId]);
 });
 
 // Tedarik grafiği `restrict` FK'lerle bağlı: giriş → sipariş → tedarikçi sırasıyla toplanır.

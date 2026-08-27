@@ -24,6 +24,44 @@ export async function mustDelete(
 }
 
 /**
+ * **Bir varyantın partilerini SIRASIYLA siler** — önce hareket defteri, sonra parti (06.14).
+ *
+ * Testlerin `beforeEach` zemin temizliği için: çoğu entegrasyon dosyası her testten önce kendi
+ * partilerini süpürüp yeniden kuruyor ve bunu `mustDelete(db, 'stock', …)` ile tek satırda
+ * yapıyordu. Defter gelince o satır **çalışamaz** oldu: `stock_movement.stock_id` `restrict` ve
+ * artık HER partinin hareketi var (mal kabul bile bir giriş satırı yazıyor) — eskiden yalnız imha
+ * edilmiş partilerin `stock_adjustment` kaydı olurdu, o yüzden sorun görünmüyordu.
+ *
+ * Ölçüldü (27.08): sıra tutturulmadığında hata teardown'da patlıyor, dosyanın TAMAMI kırmızıya
+ * dönüyor ve sebep testin kendi iddiasıyla hiç ilgisiz görünüyor.
+ *
+ * Sıra bilgisi burada duruyor, testte değil (`CLAUDE §4b`): her dosya kendi sırasını uydurursa
+ * biri mutlaka yanlış olur.
+ */
+export async function purgeVariantStock(db: SupabaseClient, variantIds: readonly string[]): Promise<void> {
+  const ids = variantIds.filter(Boolean);
+  if (ids.length === 0) return;
+  const stockIds = await idsOf(db, 'stock', 'variant_id', [...ids]);
+  if (stockIds.length > 0) {
+    // **PARTİYİ TUTAN DÖRT BAĞIN DÖRDÜ DE** — hepsi `restrict` ve hepsi burada, çünkü sıra tek
+    // yerde durmalı. Dördüncüsü (defter) 06.14'te eklendi; ilk üçü zaten vardı ama görünmüyordu:
+    // testler partiyi `db.from('stock').delete()` ile siliyordu ve o çağrı hatayı YUTUYOR — yani
+    // parti aslında silinemiyor, teardown sessizce yarım kalıyor, kirlilik birikiyordu. `mustDelete`
+    // yoluna geçince gizli arıza görünür oldu (ölçüldü 27.08: 4 dosyada `order_item_batch`, 1
+    // dosyada `warehouse_transfer_line` partiyi tutuyormuş).
+    await mustDelete(db, 'stock_movement', (q) => q.in('stock_id', stockIds));
+    // Hazırlık/satış kalem eşlemesi — siparişin kendisi durabilir, kalem–parti bağı gider.
+    await mustDelete(db, 'order_item_batch', (q) => q.in('stock_id', stockIds));
+    // Sevk satırı partiyi İKİ uçtan tutuyor (kaynak ve hedef).
+    await mustDelete(db, 'warehouse_transfer_line', (q) => q.in('source_stock_id', stockIds));
+    await mustDelete(db, 'warehouse_transfer_line', (q) => q.in('target_stock_id', stockIds));
+    // Partiye ÇIPALI rezervasyon (near-expiry teklif satırı).
+    await mustDelete(db, 'reservation', (q) => q.in('stock_id', stockIds));
+  }
+  await mustDelete(db, 'stock', (q) => q.in('variant_id', [...ids]));
+}
+
+/**
  * Sefer + kapanışı (0046). Üç `restrict` FK'nin ÜÇÜ de buradan geçer: kurye profili, rota→depo
  * zinciri (`warehouse_id` snapshot'ı) ve araç — hangisi silinecekse önce o kaynağın seferleri
  * gitmek zorunda. Sıra sabit: kapanış seferi `restrict` ile tutar → önce `delivery_run_close`.
@@ -403,6 +441,16 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // patlar — "kalemi olan talep siparişsiz olamaz". Profil-cascade buraya yetişmiyor: sıra
       // gereği profil EN SONDA gidiyor. Mesajlar/kuyruk satırı talebe cascade.
       await mustDelete(db, 'ticket', (q) => q.in('order_id', allOrderIds));
+      // **HAREKET DEFTERİ SİPARİŞTEN ÖNCE** (06.14 · denetim ölçümü 27.08). `stock_movement.order_id`
+      // FK'si `restrict` — satış ve kapı satışı satırları siparişi tutuyor, yani sipariş onlardan
+      // önce silinemiyor. Sıra tersken hata ZİNCİRLENİYORDU: sipariş kalıyor → partisi kalıyor →
+      // deposu silinemiyor (`stock_warehouse_fk`), ve koşu yine "geçti" diyordu çünkü kırılan şey
+      // teardown'du, test değil. Reset öncesi bir koşuda aynı hata 94 kez logdaydı.
+      //
+      // `set null` ile çözülemezdi: `stock_movement_source` kısıtı `kind='sale'` satırında
+      // `order_id`yi ZORUNLU tutuyor — null'a düşen satır kısıtı ihlal ederdi. Kaynak belgesi
+      // silinen bir hareket zaten defterde durmamalı; üretimde sipariş hiç silinmiyor.
+      await mustDelete(db, 'stock_movement', (q) => q.in('order_id', allOrderIds));
       await mustDelete(db, 'order', (q) => q.in('id', allOrderIds)); // kalem/log/discount_use CASCADE
     }
 
@@ -412,6 +460,11 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     //     silinemiyordu. Görünmüyordu çünkü devir testi kendi `mustDelete` satırıyla önden
     //     temizliyordu; o satır kalkınca eksik sıra ortaya çıktı. Başlık gider, satırları CASCADE.
     if (warehouseIds.length > 0) {
+      // **DEFTER TRANSFERDEN DE ÖNCE** (06.14): `stock_movement.transfer_id` `restrict` — sevk,
+      // kabul ve iptal satırları transfer başlığını tutuyor. Parti dalı (§1) bu satırları
+      // yakalıyor ama SIRA GEÇ: transfer temizliği partilerden önce koşuyor, yani o an hareketler
+      // hâlâ duruyor. Depo kimliğinden gitmek şart — hareketin kendi `warehouse_id`si var.
+      await mustDelete(db, 'stock_movement', (q) => q.in('warehouse_id', warehouseIds));
       await mustDelete(db, 'warehouse_transfer', (q) => q.in('from_warehouse_id', warehouseIds));
       await mustDelete(db, 'warehouse_transfer', (q) => q.in('to_warehouse_id', warehouseIds));
     }
@@ -427,7 +480,15 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
         // silinmesi bu satırdan geçiyor. Ayrıca `reverses_id` self-FK'sı yüzünden ters kayıtlar
         // aslından ÖNCE gitmeli — tek `delete` ifadesi bunu kendiliğinden yapar (aynı ifade içindeki
         // satırlar birbirini kısıtlamaz), satır satır silinseydi sıra tutturmak gerekirdi.
-        if (stockIds.length > 0) await mustDelete(db, 'stock_movement', (q) => q.in('stock_id', stockIds));
+        if (stockIds.length > 0) {
+          await mustDelete(db, 'stock_movement', (q) => q.in('stock_id', stockIds));
+          // **Kalem–parti eşlemesi de partiyi tutuyor** (`order_item_batch_stock_id_fkey`,
+          // `restrict`). Çoğu senaryoda sipariş cascade'i onu topluyordu — ama sipariş purge'ün
+          // kapsamı dışındaysa (başka müşterinin ya da anonim alıcının siparişi) parti asılı
+          // kalıyordu. Görünmüyordu çünkü testler partiyi hatayı YUTAN `delete()` ile siliyordu;
+          // `mustDelete` yoluna geçince ortaya çıktı (ölçüldü 27.08).
+          await mustDelete(db, 'order_item_batch', (q) => q.in('stock_id', stockIds));
+        }
         await mustDelete(db, 'reservation', (q) => q.in('variant_id', variantIds));
         await mustDelete(db, 'purchase_order_item', (q) => q.in('variant_id', variantIds));
         // **Tarif kalemi ÜRÜNDEN ÖNCE** (05.16 · denetim eki 07.08): `recipe_item.variant_id` FK'si
@@ -441,6 +502,12 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
 
     // 3) Tedarik grafiği: giriş → sipariş → tedarikçi. Girişler siparişe `set null`, partiler zaten gitti.
     if (supplierIds.length > 0) {
+      // **DEFTER MAL KABULDEN ÖNCE** (06.14): `stock_movement.intake_id` `restrict` — kabulün
+      // giriş satırı belgeyi tutuyor. Parti dalı (§1) bu satırları yakalıyor ama YALNIZ `productIds`
+      // verilmişse; tedarikçi-only bir purge'de kabul asılı kalır ve sonraki koşu onun tutarını
+      // yeniden sayar (ölçüldü 27.08: borç testi `4000` beklerken `8000` gördü — aynı kabul iki kez).
+      const intakeIds = await idsOf(db, 'stock_intake', 'supplier_id', supplierIds);
+      if (intakeIds.length > 0) await mustDelete(db, 'stock_movement', (q) => q.in('intake_id', intakeIds));
       await mustDelete(db, 'stock_intake', (q) => q.in('supplier_id', supplierIds));
       await mustDelete(db, 'purchase_order', (q) => q.in('supplier_id', supplierIds)); // kalemleri CASCADE
       await mustDelete(db, 'supplier', (q) => q.in('id', supplierIds)); // eşlemeleri CASCADE

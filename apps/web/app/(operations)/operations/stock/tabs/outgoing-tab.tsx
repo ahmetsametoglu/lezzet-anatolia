@@ -7,7 +7,7 @@ import { SearchInput } from '@/components/operation/ui/search-input';
 import { LoadMoreSentinel } from '@/components/operation/ui/load-more-sentinel';
 import { Table, type Column } from '@/components/operation/ui/table';
 import { money, shortDate, shortDateTime } from '@/components/operation/ui/format';
-import { LOSS_REASON, LOSS_REASON_TONE, lossKind } from '../stock-labels';
+import { MOVEMENT_KIND, MOVEMENT_KIND_TONE, movementBadge, movementLabel } from '../stock-labels';
 import { LOSS_PERIODS, PERIOD_LABEL } from '../stock-url';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import type { LossRow, StockViewProps } from '../stock-types';
@@ -24,21 +24,25 @@ const REASON_CHIP: Record<OpsTone, string> = {
   violet: 'border-ops-violet-line bg-ops-violet-bg text-ops-violet',
 };
 
-// ÇIKIŞLAR — depodan çıkan mal (22.26; eski adı "İmha geçmişi"). "Bu üründen ne kadar çöpe gitti"
-// görünür kalır; ayrıntılı analiz raporlarda (DOMAIN §12), burası olayın kendisidir.
+// ÇIKIŞLAR — depodan çıkan mal (22.26 · 22.27; eski adı "İmha geçmişi").
 //
-// **BUGÜN YALNIZ DÜZELTME KAYITLARI VAR** (`stock_adjustment`: imha · hasar · sayım farkı · kayıp ·
-// stoğa geri alma) ve bu eksiklik ekranda YAZILI. Tasarımın istediği çıkış kümesi daha geniş:
-// hazırlık (siparişe çıkan) ve kapı satışı da bir çıkıştır — ama ikisinin hareket kaydı YOK, stok
-// doğrudan siparişten eriyor (ölçüldü 14.08). Sessizce toplasaydık "bu çeyrek ne çıktı" sorusuna
-// eksik bir sayı doğru bir sayı gibi cevap verirdi. Açık madde: `BEKLEYEN(22.27)`.
+// ── SEKME ARTIK ADININ HAKKINI VERİYOR (06.14) ──────────────────────────────
+// Kaynağı `stock_adjustment`tı ve o tablonun sözleşmesi *"stok azalışının SATIŞ DIŞI her sebebi"*
+// diyordu: hazırlık, kapı satışı ve sevk hiç yazılmıyordu. Ekran bunu çıkışların TAMAMI sanıyordu
+// ve iki ölçülmüş sonucu vardı (27.08):
+//   · dönemdeki çıkış olaylarının küçük bir dilimini gösteriyordu;
+//   · başlıktaki dönem toplamı NEGATİFTİ (`−13,49 €`), çünkü iade restoku ve sayım fazlası birer
+//     GİRİŞ olduğu hâlde aynı toplamda eriyordu (işaret `qty`ye gömülüydü).
 //
-// DÖNEM + DAĞILIM + TABLO, bu sırayla: önce "ne kadar", sonra "neden", sonra "hangi kayıt". Toplam
-// dönemin TAMAMI üzerinden gelir (sunucudan), tablo ise sayfalı — ilk 30 satırın toplamı dönemin
-// toplamı değildir ve ikisini karıştırmak raporu sessizce yanlış gösterirdi.
+// Kaynak `stock_movement` defteri oldu ve okuma `direction: 'out'` ile süzülüyor. Girişler (iade
+// restoku · sayım fazlası · sevkiyat kabulü) artık Mal kabul sekmesinin — tasarım sözleşmesi zaten
+// oraya yazıyordu (`admin-stok.md §2`).
 //
-// Miktar İŞARETLİ: pozitif stoktan düşüm, negatif stoğa geri ekleme. Tek alanda tutulur ki toplam NET
-// kaybı versin. Ekran işareti YÖNLE söyler — geri ekleme bir kayıp değildir, kırmızı olmamalı.
+// DÖNEM + DAĞILIM + TABLO, bu sırayla: önce "ne kadar", sonra "hangi türden", sonra "hangi kayıt".
+// Toplam dönemin TAMAMI üzerinden gelir (sunucudan), tablo ise sayfalı — ilk 30 satırın toplamı
+// dönemin toplamı değildir ve ikisini karıştırmak raporu sessizce yanlış gösterirdi.
+//
+// Miktar POZİTİF ve hepsi çıkış: yön kolonda duruyor, ekran onu ayrıca söylemek zorunda değil.
 
 export function OutgoingTab({
   losses,
@@ -88,10 +92,10 @@ export function OutgoingTab({
     {
       key: 'kind',
       header: 'Tür',
-      width: '112px',
+      width: '120px',
       cell: (r) => {
-        const kind = lossKind(r.reason, r.qty);
-        return <Badge tone={kind.tone}>{kind.text}</Badge>;
+        const badge = movementBadge(r.kind, r.direction);
+        return <Badge tone={badge.tone}>{badge.text}</Badge>;
       },
     },
     {
@@ -100,8 +104,10 @@ export function OutgoingTab({
       width: '72px',
       align: 'right',
       cell: (r) => (
-        <span className="font-ops-mono text-ops-sm font-medium text-ops-ink" title={r.qty < 0 ? 'Stoğa geri eklendi' : 'Stoktan düşüldü'}>
-          {r.qty < 0 ? `+${-r.qty}` : `−${r.qty}`}
+        // Hepsi çıkış: eksi işareti YÖNÜ değil, gözün okumasını kolaylaştırıyor. Yön artık kolonda
+        // duruyor ve bu tablo yalnız `out` satırlarını alıyor.
+        <span className="font-ops-mono text-ops-sm font-medium text-ops-ink" title="Stoktan düşüldü">
+          −{r.qty}
         </span>
       ),
     },
@@ -111,13 +117,37 @@ export function OutgoingTab({
       width: '88px',
       align: 'right',
       cell: (r) => (
+        // Renk artık TÜRDEN geliyor, işaretten değil: fire bir kayıptır (kırmızı), satış ve sevk
+        // olağan çıkışlardır (nötr). Eskiden negatif maliyet zeytin, pozitif kırmızı çiziliyordu —
+        // ama o ayrım yönü anlatıyordu ve yön artık kendi sütununda.
         <span
-          className={`font-ops-mono text-ops-sm font-medium ${r.costCents === null ? 'text-ops-faint' : r.costCents < 0 ? 'text-ops-olive-dark' : 'text-ops-red'}`}
+          className={`font-ops-mono text-ops-sm font-medium ${
+            r.costCents === null ? 'text-ops-faint' : r.kind === 'write_off' ? 'text-ops-red' : 'text-ops-ink'
+          }`}
           title={r.costCents === null ? 'Partinin alış fiyatı girilmemiş — maliyet bilinmiyor' : 'İşlem anındaki alış fiyatından'}
         >
           {money(r.costCents)}
         </span>
       ),
+    },
+    {
+      // **DEPO** — tasarım §2 satırda istiyor ("tarih, depo, ürün/boy, parti, adet, tür, belge no")
+      // ve veri hep vardı, yalnız çizilmiyordu. "Tüm depolar" bakışında hangi tesisin kaydı olduğu
+      // okunamıyordu; tek depolu yerelde görünmeyen, çok depoluda karar bozan bir eksiklik.
+      key: 'warehouse',
+      header: 'Depo',
+      width: '64px',
+      cell: (r) =>
+        r.warehouseCode ? (
+          // KOD gösteriliyor, tam ad `title`da: "Strasbourg — ana depo" dar sütuna sığmıyor ve
+          // ölçüldüğünde komşu sütunun üstüne biniyordu (27.08). `block` ŞART — `truncate`
+          // inline bir `span`de çalışmaz (`overflow` uygulanmaz) ve metin kutudan taşar.
+          <span className="block truncate font-ops-mono text-ops-sm text-ops-body" title={r.warehouseName ?? undefined}>
+            {r.warehouseCode}
+          </span>
+        ) : (
+          <span className="font-ops-body text-ops-sm text-ops-faint">—</span>
+        ),
     },
     {
       key: 'when',
@@ -127,21 +157,34 @@ export function OutgoingTab({
       cell: (r) => (
         // Yalnız GÜN: tasarımın seçimi. Saat, kaydın kendisini ayırt etmeye yarar ama bu tablonun
         // sorusu "ne zaman oldu" değil "ne oldu" — saat sütunu genişletip adı daraltırdı.
-        <span className="font-ops-mono text-ops-sm font-medium text-ops-muted" title={shortDateTime(r.createdAt)}>
-          {shortDate(r.createdAt)}
+        //
+        // Gösterilen `occurredAt`: OLAYIN anı. Sıralama `createdAt`e göre (defterin sırası) ve
+        // ikisi gerçek akışta aynı; ayrıştıkları tek hâl geriye dönük yazılan bir kayıttır ve o
+        // zaman doğru olan, olayın kendi günüdür (`stock_intake`in `date`/`created_at` ayrımı).
+        <span className="font-ops-mono text-ops-sm font-medium text-ops-muted" title={shortDateTime(r.occurredAt)}>
+          {shortDate(r.occurredAt)}
         </span>
       ),
     },
     {
       key: 'reason',
-      header: 'Neden',
-      width: 'minmax(140px,1fr)',
+      header: 'Neden / belge',
+      width: 'minmax(150px,1fr)',
       cell: (r) => (
         <div className="flex min-w-0 flex-col gap-px">
-          <span className="truncate font-ops-body text-ops-sm text-ops-body">{LOSS_REASON[r.reason]}</span>
+          {/* İmhada SEBEP, ötekilerde tipin kendisi — sayım farkının sebebi yoktur ve olmayan bir
+              alanı boş göstermek yerine satır ne olduğunu söyler. */}
+          <span className="truncate font-ops-body text-ops-sm text-ops-body">{movementLabel(r.kind, r.reason)}</span>
           {r.note ? (
             <span className="truncate font-ops-body text-ops-xs text-ops-muted" title={r.note}>
               {r.note}
+            </span>
+          ) : r.referenceNo ? (
+            // **BELGE NUMARASI** — tasarım §2 satırda istiyor: `IMH-STR-26-0012` denetmenin elindeki
+            // kâğıtla eşleşen şeydir. Not varsa o öncelikli (operatörün yazdığı cümle daha bilgilidir);
+            // ikisini birden çizmek satırı üç kata çıkarırdı.
+            <span className="truncate font-ops-mono text-ops-xs text-ops-muted" title="Belge numarası">
+              {r.referenceNo}
             </span>
           ) : null}
         </div>
@@ -187,22 +230,24 @@ export function OutgoingTab({
         </div>
       </div>
 
-      {/* Neden dağılımı: "ne kadar" sorusunun hemen ardından gelen "neden". Dönemin TAMAMINDAN gelir. */}
-      {/* Şerit dönemde kayıt olmasa da KALIR (tasarımın temiz-hâl notu): "dönem seçici ve neden
-          dağılımı yerinde kalır, tablo yerine temiz hâl görünür". Kaybolan bir şerit, ekranın
-          yapısını döneme göre değiştirir. */}
+      {/* Tür dağılımı: "ne kadar" sorusunun hemen ardından gelen "hangi türden". Dönemin TAMAMINDAN
+          gelir. Başlık "Neden" değil "Tür" oldu (06.14): defterde satış ve sevk de var ve onların
+          bir "nedeni" yok — olağan işlerdir. İmhanın nedeni tablonun kendi sütununda. */}
+      {/* Şerit dönemde kayıt olmasa da KALIR (tasarımın temiz-hâl notu): "dönem seçici ve dağılım
+          yerinde kalır, tablo yerine temiz hâl görünür". Kaybolan bir şerit, ekranın yapısını
+          döneme göre değiştirir. */}
       <div className="flex flex-wrap items-center gap-2 border-b border-ops-line px-6 py-2.5">
         <span className="mr-1 font-ops-display text-ops-micro font-medium uppercase tracking-[0.06em] text-ops-muted">
-          Neden dağılımı
+          Tür dağılımı
         </span>
-        {summary.byReason.length === 0 ? (
+        {summary.byKind.length === 0 ? (
           <span className="font-ops-body text-ops-xs text-ops-faint">dönemde kayıt yok</span>
         ) : (
-          summary.byReason.map((r) => {
-            const t = REASON_CHIP[LOSS_REASON_TONE[r.reason]];
+          summary.byKind.map((r) => {
+            const t = REASON_CHIP[MOVEMENT_KIND_TONE[r.kind]];
             return (
-              <span key={r.reason} className={`rounded-ops-btn border px-[11px] py-[5px] font-ops-body text-ops-xs font-medium ${t}`}>
-                {LOSS_REASON[r.reason]} · <strong className="font-ops-mono">{r.qty} ad.</strong> ·{' '}
+              <span key={r.kind} className={`rounded-ops-btn border px-[11px] py-[5px] font-ops-body text-ops-xs font-medium ${t}`}>
+                {MOVEMENT_KIND[r.kind]} · <strong className="font-ops-mono">{r.qty} ad.</strong> ·{' '}
                 <strong className="font-ops-mono">{money(r.costCents)}</strong>
               </span>
             );

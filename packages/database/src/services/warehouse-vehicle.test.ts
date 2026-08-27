@@ -5,7 +5,7 @@ import { ProductService } from './product.service';
 import { StockService } from './stock.service';
 import { WarehouseService } from './warehouse.service';
 import { CategoryService } from './category.service';
-import { createTestWarehouse, purgeTestData } from '../testing';
+import { createTestWarehouse, purgeTestData, purgeVariantStock } from '../testing';
 
 /**
  * **Araç deposunun üç kuralı** (26.08, kullanıcı kararı · `DOMAIN §17`).
@@ -45,7 +45,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+  await purgeVariantStock(db, [variantId]);
   if (zoneIds.length > 0) await db.from('delivery_zone').delete().in('id', zoneIds);
   await purgeTestData(db, {
     productIds: [productId],

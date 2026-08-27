@@ -162,6 +162,18 @@ alter table public.temperature_log add constraint temperature_log_warehouse_fk
 alter table public.delivery_zone add constraint delivery_zone_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
 
+-- Hareket defterinin bağları (06.14) — dört kolonu da `0006`'da FK'siz doğdu, çünkü dördünün de
+-- tablosu ondan sonra açılıyor (`stock.intake_id` emsali). Hepsi `restrict`: hareketi olan hiçbir
+-- belge silinemez — defter append-only ise dayandığı belge de yok olamaz.
+alter table public.stock_movement add constraint stock_movement_warehouse_fk
+  foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
+alter table public.stock_movement add constraint stock_movement_order_fk
+  foreign key (order_id) references public.order (id) on delete restrict;
+alter table public.stock_movement add constraint stock_movement_transfer_fk
+  foreign key (transfer_id) references public.warehouse_transfer (id) on delete restrict;
+alter table public.stock_movement add constraint stock_movement_intake_fk
+  foreign key (intake_id) references public.stock_intake (id) on delete restrict;
+
 -- ── Bölge bir ARACA bağlanamaz (26.08) ──────────────────────────────────────
 -- "Posta kodu → bölge → depo" zincirinin sonu bir ADRES olmak zorundadır: rota o depodan çıkar,
 -- mal kabul oraya yapılır, kargo dolgusu oradan gider. Zincir bir araca çözülseydi müşteri
@@ -622,6 +634,17 @@ begin
 
     insert into public.warehouse_transfer_line (transfer_id, source_stock_id, qty)
     values (v_transfer_id, v_stock_id, v_qty);
+
+    -- Sevk kaynakta bir ÇIKIŞTIR ve deftere öyle yazılır (06.14). `warehouse_transfer_line` kaydı
+    -- yerinde duruyor ve işi değişmedi — o transferin İÇERİĞİDİR (kaynak/hedef parti eşlemesi);
+    -- defter ise stoğun hareketidir. İkisi aynı olsaydı "bu depodan bu çeyrek ne çıktı" sorusu
+    -- transfer tablosunu da taramak zorunda kalırdı, ki bugünkü hâl tam olarak buydu.
+    insert into public.stock_movement
+      (stock_id, direction, qty, kind, unit_cost, actor_id, reference_no, transfer_id)
+    values
+      (v_stock_id, 'out', v_qty, 'transfer_out',
+       (select purchase_price from public.stock where id = v_stock_id),
+       p_actor_id, v_reference, v_transfer_id);
   end loop;
 
   return jsonb_build_object('ok', true, 'transfer_id', v_transfer_id, 'reference_no', v_reference);
@@ -702,6 +725,14 @@ begin
       values (v_to_warehouse_id, v_src.variant_id, v_received, v_src.expiry_date, v_src.lot_number, v_src.purchase_price)
       returning id into v_target_stock_id;
       v_created := v_created + 1;
+
+      -- Hedefte mal DOĞDU: defterin giriş satırı (06.14). Eksik gelen kısım buraya YAZILMAZ ve
+      -- gerekçesi `stock_movement_kind` künyesinde — kaybın bir partisi yok, o fark `qty` ile
+      -- `received_qty` arasında duruyor.
+      insert into public.stock_movement
+        (stock_id, direction, qty, kind, unit_cost, actor_id, transfer_id)
+      values
+        (v_target_stock_id, 'in', v_received, 'transfer_in', v_src.purchase_price, p_actor_id, p_transfer_id);
     else
       v_target_stock_id := null;
     end if;
@@ -800,6 +831,28 @@ begin
     returning 1
   )
   select count(*) into v_restored from geri;
+
+  -- **İPTAL = TERS KAYIT, silme DEĞİL** (06.14 · SAP 551↔552 deseni). Bu RPC eskiden stoğu geri
+  -- yazıp hiçbir yere satır düşmüyordu: mal çıkmış ve dönmüştü ama defterde yalnız çıkışı vardı —
+  -- yani geçmiş yalanlanıyordu ve `physical_qty` deftere göre fazla görünüyordu. Artık her sevk
+  -- satırının karşısına, aslını işaret eden bir giriş satırı doğuyor.
+  --
+  -- Sıra ÖNEMLİ: bu insert yukarıdaki `update`ten SONRA, çünkü ikisi de aynı partiye dokunuyor ve
+  -- defter satırı fiili miktarın düzeltilmiş hâlini anlatıyor.
+  insert into public.stock_movement
+    (stock_id, direction, qty, kind, unit_cost, actor_id, note, reference_no, transfer_id, reverses_id)
+  select tl.source_stock_id, 'in', tl.qty, 'transfer_cancel', s.purchase_price, p_actor_id,
+         p_reason, t.reference_no, p_transfer_id, m.id
+    from public.warehouse_transfer_line tl
+    join public.stock s on s.id = tl.source_stock_id
+    join public.warehouse_transfer t on t.id = tl.transfer_id
+    -- Aslı: aynı transferin aynı partiye yazdığı çıkış satırı. `left join` DEĞİL — sevk satırı
+    -- varken çıkış satırının olmaması bir veri bozukluğudur ve sessizce geçilmemeli.
+    join public.stock_movement m
+      on m.transfer_id = tl.transfer_id
+     and m.stock_id = tl.source_stock_id
+     and m.kind = 'transfer_out'
+   where tl.transfer_id = p_transfer_id;
 
   update public.warehouse_transfer
      set status = 'cancelled', cancelled_by = p_actor_id, cancelled_at = now(), cancel_reason = p_reason

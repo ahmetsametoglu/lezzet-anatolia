@@ -1,4 +1,4 @@
-import { MoneyMovementService, OrderItemBatchService, OrderItemService, OrderSaleService, StockAdjustmentService, serviceDb } from '@lezzet/database';
+import { MoneyMovementService, OrderItemBatchService, OrderItemService, OrderSaleService, StockMovementService, serviceDb } from '@lezzet/database';
 import {
   companyProfit, isZeroRated, orderContribution, variantProfit,
   type CompanyProfit, type OrderContribution, type SoldLine, type VariantProfit,
@@ -68,7 +68,11 @@ export async function productProfits(period: ProfitPeriod): Promise<VariantProfi
     })(),
   }));
 
-  const losses = await new StockAdjustmentService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`));
+  // **FİRE ARTIK NET OLARAK TANIMLI** (06.14): `lossSummary` yalnız imha ve sayım farkını sayıyor;
+  // satış/sevk (maliyeti zaten COGS'ta) ve iade restoku (karşılığı `order_item_batch`ten düşülmüş)
+  // dışarıda. Eskiden kaynak tablo "satış dışı her azalış"tı ve iade de içindeydi — yani aynı iade
+  // hem COGS'u azaltıyor hem kârı artırıyordu.
+  const losses = await new StockMovementService(db).lossSummary(new Date(period.from), new Date(`${period.to}T23:59:59.999Z`));
   return variantProfit(lines, losses);
 }
 

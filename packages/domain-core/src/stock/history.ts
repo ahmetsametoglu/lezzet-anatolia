@@ -10,76 +10,54 @@
  * ve okuyan taraf bunu "—" diye çizer.
  */
 
-/** Bir partiden çıkan mal — hazırlıkta yazılan gerçek (`order_item_batch`). */
+/**
+ * Bir partiden çıkan mal — **hareket defterinin `out` satırı** (`stock_movement`, 06.14).
+ *
+ * ── BU ARAYÜZ BİR ZAMANLAR BİR TAHMİNDİ ─────────────────────────────────────
+ * Eskiden kaynağı `order_item_batch`ti ve iki alanı taşımak zorundaydı: `status` (mal raftan
+ * ayrıldı mı — çünkü o tablo hazırlıkta yazılıyor, stok ise teslimde düşüyordu) ve `at` olarak
+ * SİPARİŞİN anı (çünkü tablonun kendi zaman damgası yoktu — sipariş bir gün önce verilip ertesi
+ * hafta teslim edilirse bütün hız hesabı bir hafta kayıyordu).
+ *
+ * Defterde ikisi de gereksiz: satır yalnız mal FİİLEN çıkınca doğar ve kendi anını taşır.
+ */
 export interface StockExit {
   stockId: string;
   qty: number;
-  /** Siparişin anı (ISO). */
+  /** Hareketin anı (ISO) — `stock_movement.occurred_at`. */
   at: string;
-  /** Siparişin durumu — mal RAFTAN AYRILDI mı, yoksa hâlâ orada mı (aşağıdaki künye). */
-  status: string;
 }
 
 /**
- * **MAL FİİLEN NE ZAMAN GİDER — hazırlıkta değil, TESLİMDE** (ölçüldü 14.08).
+ * **FİRE = yalnız imha** (`write_off`: DLC geçti · hasar · kayıp).
  *
- * `record_preparation` yalnız `order_item_batch` satırını yazar: hangi partiden ne alındığı
- * kaydedilir ama `physical_qty` DOKUNULMAZ ve rezervasyon durur. `deliver_order` ise stoğu düşürür
- * ve rezervasyonu siler. Yani hazırlanmış bir sipariş için mal AYNI ANDA üç yerde sayılır: çıkış
- * kaydında, fiili stokta ve rezervasyonda.
+ * ── BU YÜKLEM ESKİDEN BİR TELAFİYDİ, ARTIK BİR TANIM ────────────────────────
+ * Girdisi `stock_adjustment.reason`dı ve iki değeri ELEMEK zorundaydı, çünkü o tablo birbirinden
+ * farklı üç olayı tek enumda taşıyordu:
+ *   · `return_restock` elenmeliydi — karşılığı `order_item_batch`ten zaten düşülmüştü, ikinci kez
+ *     saymak aynı iadeyi iki kez saymaktı (yaşandı: `120 − 3 − (−1) = 118` ama elde 117).
+ *   · `count_diff` elenmeliydi — iki yönlü olduğu için fire toplamını eksiye düşürüyordu ve ekranda
+ *     **FİRE · %−2,1** yazıyordu; hesap doğru, cümle yanlıştı (kullanıcı kararı 26.08).
  *
- * Bu ayrım olmadan "giren − satılan − düşülen = elde" denklemi hazırlıktaki her sipariş için
- * hazırlanan miktar kadar TUTMAZ — ve ekran bunu bir veri arızası sanıp operatörü olmayan bir
- * hareketi aramaya gönderir (yaşandı: kullanıcı ekran görüntüsü, "denklem tutmuyor" uyarısı
- * hazırlanmış 8 adet yüzünden çıkıyordu).
+ * Defterde bu üçü zaten üç ayrı `kind`. Yüklem artık bir şeyi elemiyor, bir şeyi TANIMLIYOR: fire
+ * *"ne kadarını çöpe attım"* sorusudur ve cevabı tek tiptir.
+ *
+ * Ötekiler kırılımda GÖRÜNMEYE devam eder — *"iade → stoğa döndü"* operatörün bilmesi gereken bir
+ * olaydır; saklanan şey olay değil, onun fire toplamına katkısıdır.
  */
-const DELIVERED_STATUSES = new Set(['delivered', 'completed', 'returned']);
-
-/** Mal raftan AYRILDI mı — teslim edilmiş (ve sonrası) sayılır; hazırlanan hâlâ depodadır. */
-export function hasLeftShelf(status: string): boolean {
-  return DELIVERED_STATUSES.has(status);
+export function countsAsLoss(kind: string): boolean {
+  return kind === 'write_off';
 }
 
 /**
- * **İADE RESTOKU FİRE DEĞİLDİR ve denkleme GİRMEZ** (ölçüldü 15.08).
+ * Sayım farkı mı — fire toplamından ayrı, kendi satırında gösterilen tip.
  *
- * Teslim sonrası iade `restock` ile geri alınınca iki şey birden olur (`0020_order_return`):
- * fiili stok artar (`return_restock` kaydı) **ve aynı adet `order_item_batch`ten düşülür**.
- * Migration bunu künyesinde şöyle diyor: *"`order_item_batch`'in anlamı bu kuralla keskinleşir:
- * bizden çıkıp GERİ GELMEYEN mal."*
- *
- * Yani `deliveredQty` zaten iadesi düşülmüş NET rakamdır. Restok kaydını bir de fire toplamına
- * katmak, aynı iadeyi İKİ KEZ saymak olur — ve denklem tam o kadar sapar (yaşandı: kullanıcı ekran
- * görüntüsü, `120 − 3 − (−1) = 118` ama elde 117; fark bire bir iadenin kendisiydi). Aynı sınıf hata
- * hazırlıkta da yaşanmıştı (`hasLeftShelf` künyesi): bir hareketin iki yerde sayılması.
- *
- * Kırılımda GÖRÜNMEYE devam eder — *"iade → stoğa döndü"* operatörün bilmesi gereken bir olaydır;
- * saklanan şey olay değil, onun fire toplamına katkısıdır.
- *
- * ── SAYIM FARKI DA AYRILDI (kullanıcı kararı 26.08) ─────────────────────────
- * `count_diff` bir tur fireye giriyordu ve ölçüm doğruydu — sayımda fazla çıkan mal net kaybı
- * gerçekten azaltır. Ama ekranda sonuç şuydu: **FİRE · %−2,1.** Hesap doğru, cümle yanlış; insan
- * "fire nasıl eksi olur" diye takılıyor ve sayıya güvenmiyor.
- *
- * Ayrım kavramsal: fire *"ne kadarını çöpe attım"*, sayım farkı *"saydığımda ne kadar saptım"*.
- * İkincisi iki yönlüdür ve bir ölçüm hatasının ya da kayıt boşluğunun izidir — imhayla aynı
- * toplamda durması ikisini de okunmaz yapıyordu. `count_diff` artık kırılımda GÖRÜNÜR ama kendi
- * satırında, ± işaretiyle; fire toplamı yalnız gerçek kayıpları sayar (imha · hasar · kayıp) ve
- * hep pozitiftir.
+ * Ayrı kalmasının sebebi kavramsal: fire *"ne kadarını çöpe attım"*, sayım farkı *"saydığımda ne
+ * kadar saptım"*. İkincisi iki yönlüdür ve bir ölçüm hatasının ya da kayıt boşluğunun izidir;
+ * imhayla aynı toplamda durması ikisini de okunmaz yapıyordu (22.34 · kullanıcı kararı 26.08).
  */
-export function countsAsLoss(reason: string): boolean {
-  return reason !== 'return_restock' && reason !== 'count_diff';
-}
-
-/**
- * Sayım farkı mı — fire toplamından ayrı, kendi satırında gösterilen tek sebep.
- *
- * Ayrı bir yüklem, çünkü ekranın sorusu `countsAsLoss`un değili DEĞİL: `return_restock` de fire
- * sayılmaz ama o kırılımda "iade → stoğa döndü" diye kendi satırını zaten taşıyor. Sayım farkının
- * ayrı toplanması gerekiyor (± net sapma), iadenin ise gerekmiyor.
- */
-export function isCountDiff(reason: string): boolean {
-  return reason === 'count_diff';
+export function isCountDiff(kind: string): boolean {
+  return kind === 'count_diff';
 }
 
 /**
@@ -147,11 +125,10 @@ export function averageBatchLife(lifeDays: readonly number[]): { days: number; s
 }
 
 /**
- * Fire oranı (%) — düşülen / giren. Hiç giriş yoksa `null` (payda yok, oran da yok).
+ * Fire oranı (%) — imha edilen / giren. Hiç giriş yoksa `null` (payda yok, oran da yok).
  *
- * Pay İŞARETLİ toplamdır: stoğa geri alma (negatif düzeltme) fireyi azaltır — rapor NET kaybı
- * gösterir, şişmiş bir "imha ettik" rakamı değil (`StockAdjustmentService.reasonSummary` ile aynı
- * kural).
+ * Pay artık POZİTİFTİR ve tek tiptendir (`countsAsLoss` künyesi): defterde yön ayrı kolonda
+ * durduğu için "negatif fire" diye bir hâl doğamıyor. Sayım farkı ve iade kendi satırlarında.
  */
 export function lossPercent(lostQty: number, intakeQty: number): number | null {
   if (intakeQty <= 0) return null;

@@ -56,7 +56,11 @@ export async function recordWriteOffAction(input: {
 
     const result = await recordAdjustment(db, {
       warehouseId,
-      lines: input.lines,
+      // **YÖN BURADA SABİT: `out`** (06.14). Kapının adı "Stoktan düş" ve web diyaloğu yalnız
+      // pozitif adet kabul ediyor (`qty <= 0` engelli) — yani bu yoldan sayım FAZLASI girilemiyor,
+      // bugün de girilemiyordu. Sözleşme yönü satır başına taşıyor çünkü mobil sayım ekranı tek
+      // tutanakta iki yönü birden yazabilir; bu kapı o yolun yalnız bir yarısını kullanıyor.
+      lines: input.lines.map((line) => ({ ...line, direction: 'out' as const })),
       reason: input.reason,
       note: input.note,
       actorId: user.profileId,

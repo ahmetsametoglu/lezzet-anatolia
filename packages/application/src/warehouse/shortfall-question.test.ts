@@ -9,7 +9,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehousePair, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
 import { listPreparationQueue } from './preparation';
 import { shortfallQuestion } from './shortfall-question';
@@ -88,7 +88,8 @@ beforeEach(async () => {
   await mustDelete(db, 'ticket', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+  await purgeVariantStock(db, [variantId]);
 });
 
 afterAll(async () => {

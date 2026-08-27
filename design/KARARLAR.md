@@ -611,11 +611,17 @@ indiriyor; stokta bunun karşılığı yazılmamış, sekiz RPC beş ayrı tablo
   giriş yolu hiç yok — bu bir tasarım açığı değil, sıra meselesi.
 - **Depolar ayrı sayfa kalır ve büyür:** künye + hizmet alanı + **karne** (risk, eşik altı, yolda
   bekleyen). Karne SAYAR, listelemez — her sayı Stok'a o depo bağlamıyla giden bir kapıdır.
-- **Veri temeli yeni tablo değil GÖRÜNÜM olabilir:** beş tablo da `stock_id`/`warehouse_id` taşıyor,
+- ~~**Veri temeli yeni tablo değil GÖRÜNÜM olabilir:** beş tablo da `stock_id`/`warehouse_id` taşıyor,
   `stock` da varyant/depoyu — `stock_movement` bir `union` görünümü olarak türetilebilir
-  (`available_stock` ve `purchase_order_progress` deseni). ⚠ Tek gerçek eksik: `order_item_batch`'te
-  zaman damgası yok (`id, order_item_id, stock_id, qty`), zaman sıralı defterde hazırlık hareketleri
-  yerini bulamaz → arka uca `created_at` isteği.
+  (`available_stock` ve `purchase_order_progress` deseni).~~
+  **ÖLÇÜLEREK ÇÜRÜTÜLDÜ (27.08 · 06.14) — defter GERÇEK bir tablo oldu.** Union görünümü çalışmıyor:
+  durum tabloları bir hareketin *olduğunu* değil *şu an nerede olduğunu* söyler. Ölçüm 222 partide
+  yapıldı ve mutabakat tutmadı; naif union aynı malı **%80 fazla** saydı. Üç yapısal sebep:
+  (1) `order_item_batch` **fotoğraftır, defter değil** — yeniden hazırlıkta satır silinip yeniden
+  yazılıyor, yani geçmiş kayboluyor (`created_at` eklemek bunu düzeltmezdi, silinen satırın damgası
+  da silinir); (2) sevk iptalinde stok geri yazılıyor ve union'da çıkışın karşılığı hiç doğmuyor;
+  (3) aynı olay iki tabloda birden görünüp iki kez sayılıyor. Defter bunu tersine çeviriyor: hareket
+  ÖNCE yazılır, durum ondan türer — ve `Σ(in) − Σ(out) = physical_qty` her koşuda sınanır.
 
 **Depo ekseni (19.5, 01.08) — çizimden iki sapma, ikisi de ölçülü.**
 

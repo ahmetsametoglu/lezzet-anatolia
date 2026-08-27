@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, ProductService, StockIntakeService, SupplierService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { recordMovement, recordSupplierPayment } from './movement';
 
 /**
@@ -39,14 +39,22 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await db.from('money_movement').delete().eq('supplier_id', supplierId);
-  await db.from('stock').delete().eq('variant_id', variantId);
-  await db.from('stock_intake').delete().eq('supplier_id', supplierId);
+  // **SIRA: defter → parti → kabul belgesi** (06.14). Üçü de `restrict` ile birbirini tutuyor ve
+  // sıra `purgeVariantStock`ta duruyor, burada değil (`CLAUDE §4b`).
+  //
+  // Eskiden bu iki satır `db.from(...).delete()` ile yazılmıştı ve o çağrı hatayı **yutuyor**.
+  // Defter gelince her kabul partisi bir `intake` satırı almaya başladı, yani parti artık
+  // silinemiyordu — ama kimse bakmadığı için teardown sessizce yarım kalıyor, her test bir önceki
+  // testin kabulünü de sayıyordu (ölçüldü 27.08: `intakeTotalCents` 4000 yerine 8000, dört kabul
+  // sonra 19000). Testin kendi iddiası doğruydu; yalan söyleyen zemin temizliğiydi.
+  await purgeVariantStock(db, [variantId]);
+  await mustDelete(db, 'stock_intake', (q) => q.eq('supplier_id', supplierId));
 });
 
 afterAll(async () => {
   // Hareketin tedarikçi bağı `set null`: tedarikçiyi silmek hareketi bırakır, hareket de hesabı
   // `restrict` ile tutar. Bu yüzden anahtar HESAP — sıra `cleanup.ts`'te.
-  await db.from('stock').delete().eq('variant_id', variantId);
+  await purgeVariantStock(db, [variantId]);
   await purgeTestData(db, {
     productIds: [productId],
     categoryIds: [categoryId],

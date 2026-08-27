@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { transitionOrder } from '../order/transition';
@@ -61,9 +61,12 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  for (const id of [customerId, b2bCustomerId]) await db.from('order').delete().eq('customer_id', id);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // **DEFTER SİPARİŞTEN DE PARTİDEN DE ÖNCE** (06.14) — künye `packages/application/src/courier/
+  // delivery.test.ts`te. Özeti: teslimin `sale` satırı ikisini birden `restrict` ile tutuyor ve
+  // eski `db.from(...).delete()` çağrıları hatayı yutup teardown'ı sessizce yarım bırakıyordu.
+  await purgeVariantStock(db, [variantId]);
+  for (const id of [customerId, b2bCustomerId]) await mustDelete(db, 'order', (q) => q.eq('customer_id', id));
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 30, expiryDate: dayOffset(60), purchasePriceCents: 400 })).id;
 });
 

@@ -1,6 +1,6 @@
 import {
-  PriceService, ProductService, ProductVariantService, StockAdjustmentService, StockIntakeService, StockService,
-  TemperatureLogService,
+  PriceService, ProductService, ProductVariantService, StockIntakeService, StockMovementService, StockService,
+  TemperatureLogService, type AdjustInput,
 } from '@lezzet/database';
 import { toCents } from '@lezzet/helper';
 import { euro, gun, tabloDolu, type Db, type Kisiler, type VaryantRef } from './shared';
@@ -395,12 +395,27 @@ export async function seedStock(
 // düzeltme tablosudur. Beş sebebin beşi de örneklenir — biri İKİ YÖNLÜ (sayım fazlası).
 
 export async function seedAdjustments(db: Db, kisiler: Kisiler): Promise<void> {
-  if (await tabloDolu(db, 'stock_adjustment')) {
+  // **ATLAMA KONTROLÜ TABLOYA DEĞİL, SAYIM FARKINA BAKAR** (06.14 · ölçüldü 27.08).
+  //
+  // Eskiden `tabloDolu('stock_adjustment')` yeterliydi: o tablo yalnız elle düzeltmeleri tutuyordu
+  // ve seed'den başka kimse yazmıyordu. Defter tek olunca kontrol SESSİZCE işlevsizleşti — mal
+  // kabul adımı (`receive_intake`) defteri zaten dolduruyor, yani bu adım her koşuda "zaten dolu"
+  // deyip atlanıyordu ve imha/sayım kovaları hiç doğmuyordu. Belirtisi yoktu: seed yeşil bitiyor,
+  // yalnız Çıkışlar sekmesi tek satırla açılıyordu.
+  //
+  // `count_diff` ölçütü, çünkü seed'den BAŞKA kimse sayım farkı yazmıyor: imha ve iade restoku
+  // sipariş iade akışından da doğabiliyor (`0020`), o yüzden onlar bu soruyu cevaplayamaz.
+  const { count, error: sayimError } = await db
+    .from('stock_movement')
+    .select('id', { count: 'exact', head: true })
+    .eq('kind', 'count_diff');
+  if (sayimError) throw sayimError;
+  if ((count ?? 0) > 0) {
     console.log('▸ stok düzeltmeleri zaten dolu — atlandı');
     return;
   }
   console.log('▸ STOK DÜZELTMESİ seed');
-  const adjustments = new StockAdjustmentService(db);
+  const movements = new StockMovementService(db);
   const depocu = kisiler.get('depocu') ?? null;
 
   // Düzeltme partiye yazılır → düzeltilecek partileri lot numarasından buluyoruz (seed'in kendi izi).
@@ -410,19 +425,26 @@ export async function seedAdjustments(db: Db, kisiler: Kisiler): Promise<void> {
   const bul = (lot: string) => partiler.find((p) => p.lot_number === lot);
   const dolu = partiler.filter((p) => p.physical_qty > 4);
 
-  const islemler: Array<{ stockId: string; qty: number; reason: 'expired' | 'damaged' | 'count_diff' | 'lost' | 'return_restock'; note: string }> = [];
+  // **Yön artık AYRI alanda** (06.14): eskiden `qty` işaretliydi ve fazla çıkan mal negatif adetle
+  // yazılıyordu. Kapsam kovaları da buna göre — her iki yönden de örnek olmalı ki ekranın yön
+  // süzgeci boş bir kümeyle sınanmasın.
+  const islemler: Array<AdjustInput & { note: string }> = [];
 
   const dlcGecmis = bul('EXP-DLC');
-  if (dlcGecmis) islemler.push({ stockId: dlcGecmis.id, qty: 3, reason: 'expired', note: 'DLC geçti — imha edildi (tutanak #12).' });
-  if (dolu[0]) islemler.push({ stockId: dolu[0].id, qty: 2, reason: 'damaged', note: 'Nakliyede kutu ezildi.' });
-  if (dolu[1]) islemler.push({ stockId: dolu[1].id, qty: 1, reason: 'lost', note: 'Sayımda bulunamadı.' });
-  // Sayım farkı İKİ YÖNLÜDÜR: eksik de çıkabilir fazla da. Tek yönlü örnek, işaretli alanı gizlerdi.
-  if (dolu[2]) islemler.push({ stockId: dolu[2].id, qty: 4, reason: 'count_diff', note: 'Yıl sonu sayımı — eksik.' });
-  if (dolu[3]) islemler.push({ stockId: dolu[3].id, qty: -3, reason: 'count_diff', note: 'Yıl sonu sayımı — fazla çıktı.' });
+  if (dlcGecmis) {
+    islemler.push({ stockId: dlcGecmis.id, qty: 3, direction: 'out', kind: 'write_off', reason: 'expired', note: 'DLC geçti — imha edildi (tutanak #12).' });
+  }
+  if (dolu[0]) islemler.push({ stockId: dolu[0].id, qty: 2, direction: 'out', kind: 'write_off', reason: 'damaged', note: 'Nakliyede kutu ezildi.' });
+  if (dolu[1]) islemler.push({ stockId: dolu[1].id, qty: 1, direction: 'out', kind: 'write_off', reason: 'lost', note: 'Sayımda bulunamadı.' });
+  // Sayım farkı İKİ YÖNLÜDÜR: eksik de çıkabilir fazla da. Tek yönlü örnek, yön kolonunu gizlerdi.
+  if (dolu[2]) islemler.push({ stockId: dolu[2].id, qty: 4, direction: 'out', kind: 'count_diff', note: 'Yıl sonu sayımı — eksik.' });
+  if (dolu[3]) islemler.push({ stockId: dolu[3].id, qty: 3, direction: 'in', kind: 'count_diff', note: 'Yıl sonu sayımı — fazla çıktı.' });
   // İade restoku istisnadır: sebep notu ZORUNLU (soğuk zincir belgelenemezse imha varsayılandır).
-  if (dolu[4]) islemler.push({ stockId: dolu[4].id, qty: -2, reason: 'return_restock', note: 'Kapıda reddedildi, frigo araçtan hiç çıkmadı — admin onayıyla restok.' });
+  if (dolu[4]) {
+    islemler.push({ stockId: dolu[4].id, qty: 2, direction: 'in', kind: 'return_restock', note: 'Kapıda reddedildi, frigo araçtan hiç çıkmadı — admin onayıyla restok.' });
+  }
 
-  for (const i of islemler) await adjustments.adjust({ ...i, createdBy: depocu });
+  for (const i of islemler) await movements.adjust({ ...i, createdBy: depocu });
   console.log(`✓ stok düzeltmesi: ${islemler.length} kayıt (imha · hasar · kayıp · sayım ±  · iade restoku)`);
 }
 

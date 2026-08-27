@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
-import { mustDelete, purgeTestData } from '../testing/cleanup';
+import { mustDelete, purgeTestData, purgeVariantStock } from '../testing/cleanup';
 import { createTestWarehouse } from '../testing/warehouse';
 import { CategoryService } from './category.service';
 import { ProductService } from './product.service';
@@ -56,7 +56,8 @@ afterAll(async () => {
 /** Her testin kendi zemini: varyantın partileri ve rezervasyonları sıfırlanır. */
 beforeEach(async () => {
   await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+  await purgeVariantStock(db, [variantId]);
 });
 
 /** n gün sonrası — ISO tarih (parti son tarihi). */

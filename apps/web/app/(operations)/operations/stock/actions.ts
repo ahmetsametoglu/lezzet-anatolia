@@ -7,7 +7,7 @@ import {
   PriceService,
   ProductService,
   SettingsService,
-  StockAdjustmentService,
+  StockMovementService,
   StockService,
   UserProfileService,
   serviceDb,
@@ -154,7 +154,7 @@ export async function loadMoreLossesAction(
     // sessizce ayrışır — "bu çeyrek 366 €" yazan başlığın altına geçen yılın kayıtları eklenirdi.
     const { period } = parseStockUrl(Object.fromEntries(new URLSearchParams(search)));
     const db = serviceDb();
-    const svc = new StockAdjustmentService(db);
+    const svc = new StockMovementService(db);
     // Depo süzgeci ilk sayfayla AYNI (22.28 turu): devam sayfası daha geniş bir evren görseydi
     // liste kaydırıldıkça başka depoların kayıtları sızardı — ve sızıntı yalnız aşağıda olurdu.
     const ctx = await readWarehouseContext();
@@ -163,9 +163,18 @@ export async function loadMoreLossesAction(
       cursor,
       limit: DEFAULT_PAGE_SIZE,
       warehouseIds: ctx.warehouseIds,
+      // **YÖN de ilk sayfayla aynı** (06.14): sekme yalnız çıkışları gösteriyor ve devam sayfası
+      // süzgeci düşürseydi liste kaydırıldıkça girişler sızardı — üstelik yalnız aşağıda.
+      direction: 'out',
     });
-    const actorNames = await readActorNames(new UserProfileService(db), page.rows);
-    return { data: { losses: toLossRows(page.rows, actorNames), nextCursor: page.nextCursor }, error: null };
+    const [actorNames, warehouseLabels] = await Promise.all([
+      readActorNames(new UserProfileService(db), page.rows),
+      readWarehouseLabels(),
+    ]);
+    return {
+      data: { losses: toLossRows(page.rows, actorNames, warehouseLabels), nextCursor: page.nextCursor },
+      error: null,
+    };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

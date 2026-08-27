@@ -16,7 +16,7 @@ export { EmailVerificationService, type RequestCodeResult, type VerifyCodeResult
 // Kimlik anahtarı (04.10): DOĞRULANMIŞ numara. `UserProfileService.findByPhone` bunun yerine geçmez
 // — o kolon iletişim numarasıdır ve kimlik çözümünde okunmaz.
 // Bildirim kaydı + teslim defteri (14.12) — karar tek kapıda (application/notification/dispatch).
-export { AppNotificationService, NotificationDeliveryService } from './services/app-notification.service';
+export { AppNotificationService, NotificationDeliveryService, type NotificationAudience } from './services/app-notification.service';
 // Push cihaz jetonu (14.14) — kayıt sahip devriyle RPC'de; izin süzgeci `listSendable`da.
 export { PushDeviceService } from './services/push-device.service';
 export { CustomerPhoneService } from './services/customer-phone.service';
@@ -68,7 +68,12 @@ export {
 } from './services/order.service';
 export { StockService, LOT_SEARCH_LIMIT } from './services/stock.service';
 export { ReservationService, type ReserveInput } from './services/reservation.service';
-export { StockAdjustmentService, StockAdjustmentDetailService, type AdjustInput } from './services/stock-adjustment.service';
+export {
+  StockMovementService,
+  StockMovementDetailService,
+  type AdjustInput,
+  type MovementTotal,
+} from './services/stock-movement.service';
 export { TemperatureLogService } from './services/temperature-log.service';
 export { SupplierService, SupplierProductService } from './services/supplier.service';
 export { PurchaseOrderService, PurchaseOrderItemService, type DraftLine, type PurchaseListLine } from './services/purchase-order.service';

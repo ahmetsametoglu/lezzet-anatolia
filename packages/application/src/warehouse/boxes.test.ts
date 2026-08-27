@@ -12,7 +12,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehousePair, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
 import { boxLabelPayload, labelPrinterFor, markBoxPrinted, openBox, sealBox, LABEL_PRINTER_KEYS } from './boxes';
 import { listPreparationQueue } from './preparation';
@@ -73,7 +73,8 @@ beforeEach(async () => {
   // Kutu satırları siparişle `cascade` gider — sipariş silinince kutu ayrıca silinmez.
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
-  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
+  // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+  await purgeVariantStock(db, [variantId]);
   nearBatch = (
     await stocks.insert({ warehouseId, variantId, physicalQty: 6, expiryDate: dayOffset(10), purchasePriceCents: 400 })
   ).id;

@@ -51,7 +51,10 @@ declare
   -- ayrışabileceği anlamına gelirdi.
   v_order_warehouse uuid;
 begin
-  select status, warehouse_id into v_current, v_order_warehouse
+  -- `reference_no` de BURADA okunuyor: defter satırı (adım 3) numarayı istiyor ve sipariş
+  -- güncellemesi (adım 5) ondan sonra geliyor. Mevcut numara varsa o kullanılır — `coalesce`
+  -- sırası aşağıdaki `update` ile aynı, yani defterdeki numara siparişin numarasıyla hep birebir.
+  select status, warehouse_id, reference_no into v_current, v_order_warehouse, v_reference
     from public.order where id = p_order_id for update;
   if not found then
     raise exception 'quick_sale: sipariş bulunamadı (%)', p_order_id;
@@ -165,14 +168,25 @@ begin
   end loop;
 
   -- ── 3) Stok FİİLİDEN düşer (rezervasyon adımı yok) ──────────────────────────
+  -- Deftere `counter_sale` olarak yazılır (06.14) — `sale`den AYRI bir tip, çünkü kapı satışı
+  -- hazırlık ve teslim adımlarını hiç görmez: mal tezgâhta el değiştirir. İkisini tek tipe
+  -- toplasaydık "bu çeyrekte tezgâhtan ne sattık" sorusu bir daha sorulamazdı.
   for v_row in
-    select b.stock_id, sum(b.qty) as qty
+    select b.stock_id, sum(b.qty) as qty, max(s.purchase_price) as unit_cost
       from public.order_item_batch b
       join public.order_item i on i.id = b.order_item_id
+      join public.stock s on s.id = b.stock_id
      where i.order_id = p_order_id
      group by b.stock_id
   loop
     update public.stock set physical_qty = physical_qty - v_row.qty where id = v_row.stock_id;
+
+    insert into public.stock_movement
+      (stock_id, direction, qty, kind, unit_cost, actor_id, reference_no, order_id)
+    values
+      (v_row.stock_id, 'out', v_row.qty, 'counter_sale', v_row.unit_cost, p_actor_id,
+       coalesce(v_reference, p_reference_no), p_order_id);
+
     v_consumed := v_consumed + v_row.qty;
   end loop;
 

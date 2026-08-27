@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TemperatureLogInsertSchema } from './stock-adjustment.schema';
+import { TemperatureLogInsertSchema } from './temperature-log.schema';
 
 /**
  * **Bir sıcaklık ölçümü TEK bir noktaya yazılır: ya depo alanı ya araç.**

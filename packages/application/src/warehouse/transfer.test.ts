@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, StockService, WarehouseTransferService, serviceDb } from '@lezzet/database';
-import { purgeTestData, createTestWarehousePair, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { cancelTransfer, dispatchTransfer, listInboundTransfers, receiveTransfer } from './transfer';
 
 /**
@@ -47,10 +47,15 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  // Transferler önce gider: satırları partiyi `restrict` ile tutuyor olabilir.
+  // **SIRA: hareket defteri → transfer → parti** (06.14). Defter transferi de partiyi de `restrict`
+  // ile tutuyor (`stock_movement_transfer_fk`, `stock_movement_stock_id_fkey`); eskiden transfer
+  // önce gidebiliyordu çünkü sevkin bir hareket kaydı yoktu.
+  //
+  // Hareketler PARTİDEN siliniyor ve bu transferinkileri de topluyor: her hareket bir partiye
+  // bağlı (`stock_id` `not null`), yani parti süpürülünce sevk/kabul satırları da gider.
+  await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'warehouse_transfer', (q) => q.eq('from_warehouse_id', fromWarehouseId));
   await mustDelete(db, 'warehouse_transfer', (q) => q.eq('from_warehouse_id', toWarehouseId));
-  await mustDelete(db, 'stock', (q) => q.eq('variant_id', variantId));
 
   sourceBatch = (
     await stocks.insert({ warehouseId: fromWarehouseId, variantId, physicalQty: 12, expiryDate: dayOffset(40), purchasePriceCents: 300, lotNumber: 'LOT-TRF' })

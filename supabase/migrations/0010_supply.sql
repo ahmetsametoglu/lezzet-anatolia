@@ -240,6 +240,18 @@ begin
     returning id into v_stock_id;
     v_stock_ids := v_stock_ids || v_stock_id;
 
+    -- **PARTİNİN DOĞUŞU DA BİR HAREKETTİR** (06.14). Defterin değişmezi `Σ(in) − Σ(out) =
+    -- physical_qty` ve `initial_qty`'den kurulmuyor — parti doğuşu deftere yazılmasaydı denklem her
+    -- partide giriş miktarı kadar sapardı ve mutabakat testi hiç yeşile dönmezdi.
+    --
+    -- `actor_id` NULL ve sebebi ölçüldü (27.08): bu RPC aktör parametresi almıyor, `stock_intake`
+    -- tablosu da "kim kabul etti"yi hiç tutmuyor. Uydurmak yerine boş bırakılıyor — defter
+    -- bilmediğini bilmiyor diye yazar (`CLAUDE §1`). Açık: `BEKLEYEN(06.14)`.
+    insert into public.stock_movement
+      (stock_id, direction, qty, kind, unit_cost, intake_id)
+    values
+      (v_stock_id, 'in', v_qty, 'intake', v_cost, v_intake_id);
+
     v_total := v_total + coalesce(v_cost, 0) * v_qty;
 
     -- "Geçen sefer kaçtı" — eşleme varsa son alış fiyatı tazelenir.

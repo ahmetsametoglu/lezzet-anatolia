@@ -25,8 +25,10 @@ declare
   v_current order_status;
   v_batch record;
   v_consumed int := 0;
+  v_reference text;
 begin
-  select status into v_current from public.order where id = p_order_id for update;
+  select status, reference_no into v_current, v_reference
+    from public.order where id = p_order_id for update;
   if not found then
     raise exception 'deliver_order: sipariş bulunamadı (%)', p_order_id;
   end if;
@@ -38,10 +40,16 @@ begin
   end if;
 
   -- Fiili stok düşümü: partiler kilitli okunur, sonra düşülür.
+  --
+  -- **MALIN ÇIKTIĞI AN BURASIDIR ve deftere burada yazılır** (06.14). `record_preparation` yalnız
+  -- kalem–parti eşlemesini kurar, fiili stoğa dokunmaz — yani "hazırlandı" bir çıkış değildir, mal
+  -- hâlâ raftadır. Defter satırı bu yüzden hazırlıkta değil TESLİMDE doğar; okuma katmanının
+  -- yıllarca elle ayırmaya çalıştığı ayrım (`hasLeftShelf`) artık verinin kendisinde.
   for v_batch in
-    select b.stock_id, sum(b.qty) as qty
+    select b.stock_id, sum(b.qty) as qty, max(s.purchase_price) as unit_cost
       from public.order_item_batch b
       join public.order_item i on i.id = b.order_item_id
+      join public.stock s on s.id = b.stock_id
      where i.order_id = p_order_id
      group by b.stock_id
   loop
@@ -50,6 +58,12 @@ begin
     update public.stock
        set physical_qty = physical_qty - v_batch.qty
      where id = v_batch.stock_id;
+
+    insert into public.stock_movement
+      (stock_id, direction, qty, kind, unit_cost, actor_id, reference_no, order_id)
+    values
+      (v_batch.stock_id, 'out', v_batch.qty, 'sale', v_batch.unit_cost, p_actor_id, v_reference, p_order_id);
+
     v_consumed := v_consumed + v_batch.qty;
   end loop;
 

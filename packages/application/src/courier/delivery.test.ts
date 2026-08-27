@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, MoneyMovementService, OrderItemBatchService, OrderService, ProductService,
   ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot, createTestWarehouse } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { advanceOrder } from '../order/advance.testkit';
@@ -63,9 +63,18 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  for (const id of [customerId, b2bCustomerId]) await db.from('order').delete().eq('customer_id', id);
-  await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
+  // **DEFTER SİPARİŞTEN DE PARTİDEN DE ÖNCE** (06.14). Teslim, deftere bir `sale` satırı yazıyor ve
+  // o satır İKİSİNİ birden `restrict` ile tutuyor — `order_id` ve `stock_id`. `purgeVariantStock`
+  // partinin bütün hareketlerini topladığı için sipariş de aynı anda serbest kalıyor.
+  //
+  // Eski hâlde üç silme de `db.from(...).delete()` ile yazılmıştı ve o çağrı hatayı **yutuyor**:
+  // ne sipariş ne parti gidiyordu, her test bir öncekinin malını da sayıyordu (ölçüldü 27.08:
+  // kalan stok 28 yerine 137). Testin iddiası doğruydu, zemin temizliği yalan söylüyordu.
+  await purgeVariantStock(db, [variantId]);
+  for (const id of [customerId, b2bCustomerId]) await mustDelete(db, 'order', (q) => q.eq('customer_id', id));
+  // Partiye çıpalanmamış (yalnız varyant taşıyan) rezervasyonlar `purgeVariantStock`ın kapsamında
+  // değil — partiyi tutmuyorlar ama kullanılabilir stoğu düşürüyorlar.
+  await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 30, expiryDate: dayOffset(60), purchasePriceCents: 400 })).id;
 });
 

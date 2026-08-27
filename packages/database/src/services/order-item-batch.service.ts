@@ -116,40 +116,29 @@ export class OrderItemBatchService extends BaseDbService<OrderItemBatch, OrderIt
   }
 
   /**
-   * **Varyantın PARTİDEN ÇIKIŞLARI** — hangi partiden, ne zaman, ne kadar mal gitti (22.30).
+   * **HAZIRLANMIŞ ama henüz ÇIKMAMIŞ mal** — varyant bazında (22.31 · 06.14).
    *
-   * `recallByStocks`in kardeşi ama sorusu başka: orada "kime gitti" (müşteri), burada "ne zaman
-   * gitti" (hız ve parti ömrü). Müşteri hiç okunmuyor — bu bir stok sorusudur ve kişisel veriyi
-   * gereksiz yere taşımak, en ucuz sızıntı yoludur.
+   * ── BU METOT BİR ZAMANLAR "ÇIKIŞLAR"DI, ARTIK DEĞİL ─────────────────────────
+   * Adı `exitsByVariant`di ve varyantın bütün çıkışlarını buradan okuyorduk. Yanlıştı ve iki
+   * sebebi de yapısaldı: bu tablonun zaman damgası yok (çıkış anı olarak siparişin VERİLDİĞİ gün
+   * kullanılıyordu) ve sevkle giden malı hiç görmüyordu. Gerçek çıkışların defteri artık
+   * `stock_movement` (`StockMovementService.exitsByVariant`).
    *
-   * **Süzgeç VARYANTTA, parti listesinde değil:** partiden gitseydik yalnız elimizdeki N partinin
-   * çıkışını görürdük ve hız hesabı, kaç parti okuduğumuza göre değişirdi. `order_item.variant_id`
-   * indeksli (`order_item_variant_idx`).
+   * Geriye bu tablonun GERÇEKTEN cevapladığı soru kaldı: *"şu an hazırlanmış, rafta duran ama
+   * siparişe ayrılmış ne var."* Mal fiilen çıkmadı — stok teslimde düşer (`deliver_order`),
+   * hazırlıkta değil — ama rafta serbest de değil. Bu bir çıkış DEĞİL, bir ara hâldir ve ekranda
+   * öyle gösterilir; dönem toplamına girmez.
    *
-   * **Kaynak HAZIRLIK kaydıdır:** bu tabloya depocu FEFO'yu onayladığında yazılır. Yani sayı
-   * "sipariş edildi" değil "depodan fiilen çıktı" demektir — stok sorusunun doğru paydası budur.
-   *
-   * **TARİH SÜZGECİ YOK ve bu bilinçli** (22.31): *"bu ürün hiç satıldı mı"* sorusu 90 günle
-   * sınırlanamaz — pencere okumanın değil hesabın işi. Küme bir varyantın çıkışlarıyla sınırlı,
-   * yani listenin boyu ürünün satış geçmişi kadar; tavan gerekirse ölçülüp konur, şimdiden konan bir
-   * tavan "hiç satılmamış" diyen yanlış bir cevap üretebilirdi.
+   * Durum listesi BURADA, motorda değil: bir siparişin hangi durumlarda "hazırlanmış sayıldığı"
+   * bir sipariş gerçeğidir ve stok motorunun bilmesi gereken bir şey değil.
    */
-  async exitsByVariant(
-    variantId: string,
-  ): Promise<Array<{ stockId: string; qty: number; at: string; status: OrderStatus }>> {
+  async pickedByVariant(variantId: string): Promise<Array<{ stockId: string; qty: number }>> {
     const rows = (await this.selectRows(
-      { 'order_item.variant_id': variantId },
-      { select: 'stock_id,qty,order_item!inner(variant_id,order:order!inner(created_at,status))' },
-    )) as Array<{ stock_id: string; qty: number; order_item: { order: { created_at: string; status: OrderStatus } } }>;
+      { 'order_item.variant_id': variantId, 'order_item.order.status': PICKED_STATUSES },
+      { select: 'stock_id,qty,order_item!inner(variant_id,order:order!inner(status))' },
+    )) as Array<{ stock_id: string; qty: number }>;
 
-    return rows.map((row) => ({
-      stockId: row.stock_id,
-      qty: row.qty,
-      at: row.order_item.order.created_at,
-      // **Durum ŞART** (22.34): hazırlanmış ile teslim edilmiş mal aynı şey değil — birincisi hâlâ
-      // rafta ve `physical_qty`de duruyor (`deliver_order` künyesi).
-      status: row.order_item.order.status,
-    }));
+    return rows.map((row) => ({ stockId: row.stock_id, qty: row.qty }));
   }
 
   /**
@@ -191,6 +180,15 @@ export class OrderItemBatchService extends BaseDbService<OrderItemBatch, OrderIt
 
 /** `in (…)` parça boyu — PostgREST süzgeci URL'de taşınıyor, uzun liste istek satırını aşar. */
 const IN_BATCH_SIZE = 200;
+
+/**
+ * Malın HAZIRLANDIĞI ama henüz çıkmadığı sipariş durumları (`pickedByVariant`).
+ *
+ * `deliver_order` stoğu düşürüp defter satırını yazana kadar mal fiziksel olarak raftadır; bu üç
+ * durum o aralığı tarif eder. Teslim edilmiş/iptal edilmiş siparişler burada YOK — birinin malı
+ * gitti (defterde), ötekinin satırları zaten silindi (`cancel_order`).
+ */
+const PICKED_STATUSES: readonly OrderStatus[] = ['preparing', 'ready', 'out_for_delivery'];
 
 /**
  * Gömülü ilişkilerden gelen HAM satır şekilleri.

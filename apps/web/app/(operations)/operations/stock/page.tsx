@@ -4,7 +4,7 @@ import {
   ProductService,
   ProductVariantService,
   SettingsService,
-  StockAdjustmentService,
+  StockMovementService,
   StockService,
   UserProfileService,
   serviceDb,
@@ -15,8 +15,9 @@ import {
   resolveLocalizedText,
   type Page,
   type ProductStockRow,
-  type StockAdjustmentDetail,
-  type StockAdjustmentReason,
+  type StockMovementDetail,
+  type StockMovementKind,
+  type StockWriteOffReason,
 } from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import { warehouseFilterOf } from '@/lib/warehouse/filter';
@@ -62,8 +63,13 @@ interface StockPageProps {
  * hiç okunmamış bir listeye "devamı var" dedirtirdi.
  */
 const EMPTY_PRODUCT_PAGE: Page<ProductStockRow> = { rows: [], nextCursor: null };
-const EMPTY_LOSS_PAGE: Page<StockAdjustmentDetail> = { rows: [], nextCursor: null };
-const EMPTY_LOSS_TOTALS = { byReason: new Map<StockAdjustmentReason, { qty: number; costCents: number }>(), qty: 0, costCents: 0 };
+const EMPTY_LOSS_PAGE: Page<StockMovementDetail> = { rows: [], nextCursor: null };
+const EMPTY_LOSS_TOTALS = {
+  byKind: new Map<StockMovementKind, { qty: number; costCents: number }>(),
+  byReason: new Map<StockWriteOffReason, { qty: number; costCents: number }>(),
+  qty: 0,
+  costCents: 0,
+};
 
 export default async function StockPage({ searchParams }: StockPageProps) {
   const params = await searchParams;
@@ -82,7 +88,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
   // `SettingsService` süreç içinde önbelleklidir: ilk istekte üç okuma, sonrakilerde sıfır.
   // İmha geçmişi DÖNEMLİDİR: liste sayfalı ama toplam dönemin TAMAMI üzerinden çıkar — ilk 30 satırın
   // toplamı "bu çeyrek ne kadar çöpe gitti" sorusunu yanıtlamaz.
-  const lossSvc = new StockAdjustmentService(db);
+  const lossSvc = new StockMovementService(db);
   const from = periodStart(urlState.period, new Date());
 
   // Bağlam ÖNCE: parti kuyruğu personelin kapsamıyla süzülür (19.14). Depocu başka deponun raf
@@ -111,8 +117,14 @@ export default async function StockPage({ searchParams }: StockPageProps) {
       // alınmıştı ama bu çağrı onu geçirmiyordu — sekme BÜTÜN depoların çıkışlarını listeliyordu
       // (10.7'de bir kez kapatılan açığın aynısı, bu kez sayfa tarafında). Tek depolu yerelde
       // görünmez, çok depoluda depo değişmezini deler (`CLAUDE §1`).
-      onOutgoing ? lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE, warehouseIds: ctx.warehouseIds }) : EMPTY_LOSS_PAGE,
-      onOutgoing ? lossSvc.reasonSummary(from, undefined, ctx.warehouseIds) : EMPTY_LOSS_TOTALS,
+      // **YÖN SÜZGECİ** (06.14): sekmenin adı "Çıkışlar" ve artık gerçekten yalnız çıkışları
+      // gösteriyor. Defter tek tablo olduğu için giriş satırları (iade restoku, sayım fazlası,
+      // sevkiyat kabulü) aynı kaynaktan geliyor ve süzgeç olmadan aynı toplamda erirlerdi — ölçülen
+      // hâl tam buydu: "Çıkışlar" başlığı altında NEGATİF bir dönem toplamı.
+      onOutgoing
+        ? lossSvc.listRecent({ from, limit: DEFAULT_PAGE_SIZE, warehouseIds: ctx.warehouseIds, direction: 'out' })
+        : EMPTY_LOSS_PAGE,
+      onOutgoing ? lossSvc.summary({ from, warehouseIds: ctx.warehouseIds, direction: 'out' }) : EMPTY_LOSS_TOTALS,
       readExpiryThresholds(new SettingsService(db)),
       readWarehouseLabels(),
       // Rozet HER sekmede okunuyor: "bugün ne bekliyorum" bir bakışta görünmeli (tasarım §7);
@@ -197,7 +209,7 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         mixedLotCount: mixedLotCases(batches),
         transfers,
         transitCount,
-        losses: toLossRows(lossPage.rows, actorNames),
+        losses: toLossRows(lossPage.rows, actorNames, warehouseLabels),
         lossCursor: lossPage.nextCursor,
         // Düşüm formunun seçenekleri — zaten okunmuş partilerden türer, ek sorgu yok. Yalnız Çıkışlar
         // sekmesinde taşınıyor: form orada açılıyor ve öteki sekmelere yüz kayıtlık bir liste
@@ -214,7 +226,8 @@ export default async function StockPage({ searchParams }: StockPageProps) {
             }))
           : [],
         lossSummary: {
-          // Sıra tutara göre: en pahalı sebep başta dursun — dağılıma bakan kişi onu arıyor.
+          // Sıra tutara göre: en pahalı kalem başta dursun — dağılıma bakan kişi onu arıyor.
+          byKind: [...lossTotals.byKind].map(([kind, v]) => ({ kind, ...v })).sort((a, b) => b.costCents - a.costCents),
           byReason: [...lossTotals.byReason]
             .map(([reason, v]) => ({ reason, ...v }))
             .sort((a, b) => b.costCents - a.costCents),

@@ -1,55 +1,40 @@
--- Modül 06 — Stok düzeltmesi: imha / fire / sayım farkı (06.6). DOMAIN §4, §12.
+-- Modül 06 — ELLE stok düzeltmesi: imha / fire / sayım farkı / iade restoku (06.6). DOMAIN §4, §12.
 --
--- Stok azalışının SATIŞ DIŞI her sebebi buraya yazılır — "bu üründen yılda ne kadar çöpe attım"
--- sorusunun tek cevabı bu tablodur. Kayıp görünmezse yönetilemez.
+-- ── `stock_adjustment` TABLOSU ARTIK YOK (06.14, 27.08) ─────────────────────
+-- Bu dosya bir zamanlar kendi tablosunu taşıyordu ve künyesi *"stok azalışının SATIŞ DIŞI her
+-- sebebi buraya yazılır"* diyordu. Sözleşme dürüsttü — sorun onu tüketen ekranındı: "Çıkışlar"
+-- sekmesi bu tabloyu çıkışların TAMAMI sanıyordu, oysa satış, kapı satışı ve sevk hiç buraya
+-- yazılmıyordu. Kaynağın kapsamını aşan bir tüketim, iki ayrı toplam ve bir daha hiç kapanmayan
+-- bir "hangi sayı doğru" sorusu doğurdu.
 --
--- NEDEN RPC: iki tabloya bölünemez yazım (düzeltme kaydı + partinin fiili miktarı). Yarısı
+-- Satırlar `stock_movement` defterine taşındı (`0006`, gerekçesi orada): imha artık defterin bir
+-- `kind`'ı. Para tarafında `money_movement` nasıl tek defterse — "ayrıca cash_adjustment" diye
+-- ikinci bir tablo yok — stok da öyle.
+--
+-- **BU DOSYADA KALAN:** elle düzeltmenin iki kapısı (`adjust_stock` tek parti, `adjust_stock_batch`
+-- tutanaklı çok parti) + belge numarası sayacı. Kapılar aynı işi yapıyor, yalnız yazdıkları yer
+-- değişti. Adları da korundu: çağıran için bu hâlâ "stoğu elle düzelt" işlemidir.
+--
+-- NEDEN RPC: iki tabloya bölünemez yazım (defter satırı + partinin fiili miktarı). Yarısı
 -- yazılırsa ya kaydı olmayan kayıp ya da karşılığı olmayan kayıt kalır (STACK §13 (b) koşulu).
 
-create type stock_adjustment_reason as enum (
-  'expired',        -- DLC geçti → imha
-  'damaged',        -- hasar / soğuk zincir kırıldı
-  'count_diff',     -- sayım farkı (iki yönlü olabilir)
-  'lost',           -- kayıp
-  'return_restock'  -- teslim-sonrası iade stoğa döndü — İSTİSNADIR, sebep notu zorunlu (DOMAIN §4)
-);
-
-create table public.stock_adjustment (
-  id uuid primary key default gen_random_uuid(),
-  stock_id uuid not null references public.stock (id) on delete restrict,
-  -- İŞARETLİ: pozitif = stoktan düşüm (imha/fire/kayıp), negatif = stoğa geri ekleme (sayım fazlası,
-  -- iade restoku). Tek alanda iki yön tutulur ki "net kayıp" tek toplamla çıksın.
-  qty int not null check (qty <> 0),
-  reason stock_adjustment_reason not null,
-  -- Partinin alış fiyatı, işlem ANINDA kopyalanır: parti sonradan düzeltilse bile fire maliyeti
-  -- kaymaz (DOMAIN §12 gerçek COGS).
-  unit_cost numeric(10, 2),
-  note text,
-  created_by uuid,                                   -- FK yok: personel kimliği auth şemasında
-  -- OLAY belgesi (10.5, `0009`): `IMH-26-0012`. Aynı imhanın/sayımın BÜTÜN satırları aynı numarayı
-  -- paylaşır — kâğıt tutanakla eşleşen şey satır değil olaydır. Tek partilik `adjust_stock`
-  -- çağrılarında null: kısmi karşılama ve kurye akışları tutanak üretmez, stoğu düzeltir.
-  reference_no text,
-  created_at timestamptz not null default now()
-);
-
-create index stock_adjustment_stock_idx on public.stock_adjustment (stock_id);
--- "Elimdeki kâğıdın karşılığı" araması — numara başına birkaç satır döner.
-create index stock_adjustment_reference_idx on public.stock_adjustment (reference_no)
-  where reference_no is not null;
--- Dönemsel fire raporu (DOMAIN §12): tarih aralığı + sebep kırılımı.
-create index stock_adjustment_date_idx on public.stock_adjustment (created_at desc);
-
-alter table public.stock_adjustment enable row level security;
-
--- Düzeltme kaydı + fiili düşüm TEK transaction'da. Fonksiyon karar vermez; tek kuralı fiziksel
+-- Defter satırı + fiili düşüm TEK transaction'da. Fonksiyon karar vermez; tek kuralı fiziksel
 -- gerçektir: partide olmayan miktar düşülemez, fiili negatife inemez.
+--
+-- ── İMZA DEĞİŞTİ: İŞARET ARTIK MİKTARDA DEĞİL ───────────────────────────────
+-- Eskiden `p_qty` işaretliydi (`+` düşüm, `−` geri ekleme) ve çağıranlar `-v_take` diye negatif
+-- geçiyordu. İşareti miktara gömmek `money_movement`ın (0018) açıkça yasakladığı şeydi ve bedeli
+-- ekranda ölçüldü: "Çıkışlar" başlığı altında negatif bir çıkış toplamı. Yön artık AYRI parametre,
+-- miktar daima pozitif — kolonun kuralıyla aynı.
 create or replace function public.adjust_stock(
   p_stock_id uuid,
-  p_qty int,                                         -- + düşüm, − geri ekleme
-  p_reason stock_adjustment_reason,
+  p_qty int,                                         -- POZİTİF, daima
+  p_direction stock_direction,                       -- 'out' = stoktan düş, 'in' = stoğa ekle
+  p_kind stock_movement_kind,                        -- write_off | count_diff | return_restock
+  p_reason stock_write_off_reason default null,      -- yalnız write_off'ta (kısıt zorlar)
   p_note text default null,
-  p_created_by uuid default null
+  p_created_by uuid default null,
+  p_order_id uuid default null                       -- iade restokunda hangi sipariş (isteğe bağlı iz)
 ) returns jsonb
 language plpgsql
 security invoker
@@ -60,12 +45,18 @@ declare
   v_cost numeric(10, 2);
   v_id uuid;
 begin
-  if p_qty is null or p_qty = 0 then
-    raise exception 'adjust_stock: qty sıfır olamaz';
+  if p_qty is null or p_qty <= 0 then
+    raise exception 'adjust_stock: qty pozitif olmalı (yön p_direction ile verilir)';
   end if;
 
-  -- Geri ekleme her zaman bir İSTİSNADIR (iade restoku, sayım fazlası) — sebebi yazılmadan geçmez.
-  if p_qty < 0 and (p_note is null or btrim(p_note) = '') then
+  -- ELLE düzeltmenin kapısı bu; satış/sevk/kabul kendi RPC'lerinden deftere yazar. Buradan
+  -- `sale` yazılabilseydi aynı olayın iki doğum yeri olurdu ve hangisinin geçtiği çağırana kalırdı.
+  if p_kind not in ('write_off', 'count_diff', 'return_restock') then
+    raise exception 'adjust_stock: bu kapı yalnız elle düzeltme yazar (% geçersiz)', p_kind;
+  end if;
+
+  -- Stoğa ekleme her zaman bir İSTİSNADIR (iade restoku, sayım fazlası) — sebebi yazılmadan geçmez.
+  if p_direction = 'in' and (p_note is null or btrim(p_note) = '') then
     raise exception 'adjust_stock: stoğa geri ekleme sebep notu ister';
   end if;
 
@@ -76,73 +67,34 @@ begin
     raise exception 'adjust_stock: parti bulunamadı (%)', p_stock_id;
   end if;
 
-  if p_qty > v_physical then
+  if p_direction = 'out' and p_qty > v_physical then
     raise exception 'adjust_stock: partide % adet var, % adet düşülemez', v_physical, p_qty;
   end if;
 
-  insert into public.stock_adjustment (stock_id, qty, reason, unit_cost, note, created_by)
-  values (p_stock_id, p_qty, p_reason, v_cost, p_note, p_created_by)
+  insert into public.stock_movement
+    (stock_id, direction, qty, kind, reason, unit_cost, note, actor_id, order_id)
+  values
+    (p_stock_id, p_direction, p_qty, p_kind, p_reason, v_cost, p_note, p_created_by, p_order_id)
   returning id into v_id;
 
-  update public.stock set physical_qty = physical_qty - p_qty where id = p_stock_id;
+  update public.stock
+     set physical_qty = physical_qty + case p_direction when 'out' then -p_qty else p_qty end
+   where id = p_stock_id;
 
-  return jsonb_build_object('ok', true, 'adjustment_id', v_id, 'remaining_qty', v_physical - p_qty);
+  return jsonb_build_object(
+    'ok', true,
+    'movement_id', v_id,
+    'remaining_qty', v_physical + case p_direction when 'out' then -p_qty else p_qty end
+  );
 end;
 $$;
 
-revoke execute on function public.adjust_stock(uuid, int, stock_adjustment_reason, text, uuid)
-  from public, anon, authenticated;
+revoke execute on function public.adjust_stock(
+  uuid, int, stock_direction, stock_movement_kind, stock_write_off_reason, text, uuid, uuid
+) from public, anon, authenticated;
 
--- ── İmha/fire LİSTESİNİN görünümü (09.18) ───────────────────────────────────
---
--- **Neden görünüm, gömülü `select` değil.** Ekran lot numarasına VEYA ürün adına göre arıyor; ikisi
--- iki ayrı gömülü kaynakta (`stock.lot_number`, `stock→variant→product.name`). PostgREST'in `or=`
--- grubu YALNIZ üst tablonun kolonlarına bakar — gömülü süzgeçler ayrı parametrelerdir ve birbirine
--- VE ile bağlanır. Yani "lot VEYA ürün adı" sorgu kurucuyla ifade edilemiyor; `STACK §13`'ün
--- "kurucunun ifade edemediği şey" istisnası tam bu.
---
--- Eleneni de yazalım: iki ayrı sorgu + birleştirme keyset sayfalamayı bozardı (iki imleçli sayfa
--- birleştirilemez), eşleşen `stock_id`'leri önce çözüp `in (…)` ile süzmek ise ya tavan (sessiz
--- kırpma) ya şişen sorgu demekti.
---
--- **İç birleştirme (join) hiçbir satır düşürmez:** `stock_id` `not null` ve `on delete restrict`,
--- yani partisi silinmiş bir düzeltme satırı yapısal olarak var olamıyor. `left join` yazmak
--- olmayan bir ihtimale karşı korunmak olurdu.
-create or replace view public.stock_adjustment_detail as
-select a.id,
-       a.stock_id,
-       a.qty,
-       a.reason,
-       a.unit_cost,
-       a.note,
-       a.created_by,
-       a.reference_no,
-       a.created_at,
-       s.lot_number,
-       s.expiry_date,
-       v.id                as variant_id,
-       v.label             as variant_label,
-       p.id                as product_id,
-       p.name              as product_name,
-       -- **DEPO** (10.5/10.7 · operasyon talebi 08.08). Görünüm depoyu select'e bile koymuyordu ve
-       -- `listPage` süzgeç almıyordu: "Bugünün kayıtları" şeridi BÜTÜN depoların imhasını
-       -- gösteriyordu. Tek depolu yerel veride bu görünmez — doğru cevap verir; çok depoluda
-       -- depocu başka deponun kaydını kendi şeridinde görür, hem "ben mi girdim" sorusunun cevabını
-       -- bozar hem depo değişmezini deler (`CLAUDE §1`). Parti zaten depoya bağlı, yani veri
-       -- buradaydı; yalnız dışarı verilmiyordu.
-       s.warehouse_id      as warehouse_id,
-       -- ARAMA METNİ görünümün içinde kuruluyor: ekranın terimi tek bir düz kolona bakar, `or`
-       -- gerekmez ve sorgu kurucusu yeterli olur. Üç dil birden: operasyon Türkçe ama katalog üç
-       -- dilli ve operatör ürünü hangi adla hatırlıyorsa onu yazar.
-       concat_ws(' ', s.lot_number, p.name ->> 'tr', p.name ->> 'fr', p.name ->> 'de',
-                 v.label ->> 'tr', a.reference_no) as search_text
-  from public.stock_adjustment a
-  join public.stock s on s.id = a.stock_id
-  join public.product_variant v on v.id = s.variant_id
-  join public.product p on p.id = v.product_id;
-
-comment on view public.stock_adjustment_detail is
-  'İmha/fire listesi + aranabilir metin (09.18). Arama lot · ürün adı (3 dil) · varyant · belge no.';
+-- Listenin görünümü (09.18) `stock_movement_detail` olarak `0006`'ya taşındı — defter tek tablo
+-- olunca "imha listesi" ayrı bir görünüm olmaktan çıktı, defterin süzülmüş bir yüzü oldu.
 
 
 -- ═══ DÜZELTME TUTANAĞI (06.11) ═══
@@ -221,10 +173,18 @@ $$;
 --
 -- Karşılığı aşağıdaki kuraldır: tek tutanak tek depodan olmak zorunda, çünkü kâğıt klasör fiziksel
 -- olarak o depoda duruyor.
+--
+-- ── YÖN SATIR BAŞINADIR (06.14) ─────────────────────────────────────────────
+-- Tutanağın TİPİ olaya aittir (`p_kind`: bir sayım tutanağı bir sayımdır), ama YÖNÜ satıra:
+-- tasarım sözleşmesinin ⚠ maddesi tam bunu söylüyor — *"tek sayım tutanağında hem fazla hem eksik
+-- satır olabilir; o belge iki sekmede de görünür ve ekran bunu belgenin iki yüzü olarak
+-- anlatmalıdır."* İşaret `qty`'de gömülüyken bu kendiliğinden çalışıyordu ama toplamları da
+-- kendiliğinden eritiyordu; artık her satır yönünü açıkça söyler.
 create or replace function public.adjust_stock_batch(
-  p_lines jsonb,                                     -- [{"stock_id": uuid, "qty": int}]
-  p_reason stock_adjustment_reason,
+  p_lines jsonb,                                     -- [{"stock_id": uuid, "qty": int>0, "direction": "in"|"out"}]
+  p_kind stock_movement_kind,                        -- write_off | count_diff | return_restock
   p_prefix text,                                     -- IMH | SAY | IAD (motor seçer; depo kodunu bu fonksiyon ekler)
+  p_reason stock_write_off_reason default null,      -- yalnız write_off'ta
   p_note text default null,
   p_created_by uuid default null
 ) returns jsonb
@@ -237,14 +197,21 @@ declare
   v_line jsonb;
   v_stock_id uuid;
   v_qty int;
+  v_direction stock_direction;
   v_physical int;
   v_cost numeric(10, 2);
   v_warehouse_count int;
   v_warehouse_code text;
   v_lines int := 0;
-  v_total_qty int := 0;
-  v_cost_total numeric(12, 2) := 0;
+  v_out_qty int := 0;
+  v_in_qty int := 0;
+  v_out_cost numeric(12, 2) := 0;
+  v_in_cost numeric(12, 2) := 0;
 begin
+  if p_kind not in ('write_off', 'count_diff', 'return_restock') then
+    raise exception 'adjust_stock_batch: bu kapı yalnız elle düzeltme yazar (% geçersiz)', p_kind;
+  end if;
+
   if p_lines is null or jsonb_array_length(p_lines) = 0 then
     raise exception 'adjust_stock_batch: satır listesi boş olamaz';
   end if;
@@ -273,13 +240,18 @@ begin
   loop
     v_stock_id := (v_line ->> 'stock_id')::uuid;
     v_qty := (v_line ->> 'qty')::int;
+    v_direction := (v_line ->> 'direction')::stock_direction;
 
-    if v_qty is null or v_qty = 0 then
-      raise exception 'adjust_stock_batch: qty sıfır olamaz (parti %)', v_stock_id;
+    if v_qty is null or v_qty <= 0 then
+      raise exception 'adjust_stock_batch: qty pozitif olmalı (parti %) — yön satırın direction alanında', v_stock_id;
     end if;
 
-    -- Geri ekleme her zaman bir İSTİSNADIR — sebebi yazılmadan geçmez (0010 ile aynı kural).
-    if v_qty < 0 and (p_note is null or btrim(p_note) = '') then
+    if v_direction is null then
+      raise exception 'adjust_stock_batch: satırın yönü yazılmalı (parti %)', v_stock_id;
+    end if;
+
+    -- Stoğa ekleme her zaman bir İSTİSNADIR — sebebi yazılmadan geçmez (`adjust_stock` ile aynı kural).
+    if v_direction = 'in' and (p_note is null or btrim(p_note) = '') then
       raise exception 'adjust_stock_batch: stoğa geri ekleme sebep notu ister';
     end if;
 
@@ -290,32 +262,47 @@ begin
       raise exception 'adjust_stock_batch: parti bulunamadı (%)', v_stock_id;
     end if;
 
-    if v_qty > v_physical then
+    if v_direction = 'out' and v_qty > v_physical then
       raise exception 'adjust_stock_batch: partide % adet var, % adet düşülemez', v_physical, v_qty;
     end if;
 
-    insert into public.stock_adjustment (stock_id, qty, reason, unit_cost, note, created_by, reference_no)
-    values (v_stock_id, v_qty, p_reason, v_cost, p_note, p_created_by, v_reference);
+    insert into public.stock_movement
+      (stock_id, direction, qty, kind, reason, unit_cost, note, actor_id, reference_no)
+    values
+      (v_stock_id, v_direction, v_qty, p_kind, p_reason, v_cost, p_note, p_created_by, v_reference);
 
-    update public.stock set physical_qty = physical_qty - v_qty where id = v_stock_id;
+    update public.stock
+       set physical_qty = physical_qty + case v_direction when 'out' then -v_qty else v_qty end
+     where id = v_stock_id;
 
     v_lines := v_lines + 1;
-    v_total_qty := v_total_qty + v_qty;
-    v_cost_total := v_cost_total + coalesce(v_cost, 0) * v_qty;
+    if v_direction = 'out' then
+      v_out_qty := v_out_qty + v_qty;
+      v_out_cost := v_out_cost + coalesce(v_cost, 0) * v_qty;
+    else
+      v_in_qty := v_in_qty + v_qty;
+      v_in_cost := v_in_cost + coalesce(v_cost, 0) * v_qty;
+    end if;
   end loop;
 
   return jsonb_build_object(
     'ok', true,
     'reference_no', v_reference,
     'lines', v_lines,
-    'total_qty', v_total_qty,
-    -- İşaret KORUNUR: geri ekleme toplamı düşürür → rapor NET kaybı gösterir (0010 ile aynı ilke).
+    -- **İKİ YÖN AYRI DÖNER, net TEK sayı değil** (06.14). Eskiden tek `total_qty`/`cost_total`
+    -- vardı ve işaret onların içinde eriyordu; karışık bir sayım tutanağı "1 adet · −35,56 €" gibi
+    -- hiçbir şeyin ölçüsü olmayan bir satır üretiyordu (ölçüldü 27.08). Net isteyen çağıran ikisini
+    -- çıkarır — ama artık bunu BİLEREK yapar.
     -- Birim EURO (kolonlarla aynı); cent'e çevrim servis sınırında (`adjustBatch`, STACK §8).
-    'cost_total', v_cost_total
+    'out_qty', v_out_qty,
+    'in_qty', v_in_qty,
+    'out_cost', v_out_cost,
+    'in_cost', v_in_cost
   );
 end;
 $$;
 
 revoke execute on function public.next_document_no(text, int) from public, anon, authenticated;
-revoke execute on function public.adjust_stock_batch(jsonb, stock_adjustment_reason, text, text, uuid)
-  from public, anon, authenticated;
+revoke execute on function public.adjust_stock_batch(
+  jsonb, stock_movement_kind, text, stock_write_off_reason, text, uuid
+) from public, anon, authenticated;

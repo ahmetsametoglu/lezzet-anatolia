@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, CategoryService, DeliveryRunService, DeliveryZoneService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete } from '@lezzet/database/testing';
+import { purgeTestData, settingsSnapshot, createTestWarehouse, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { quickSale } from './quick-sale';
 import { transitionOrder } from './transition';
 
@@ -45,9 +45,12 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışı deftere `counter_sale` yazıyor ve satır
+  // siparişi `restrict` ile tutuyor — sıra tersken sipariş silinemiyor, parti kalıyor, sonraki
+  // test kirli zeminde koşuyordu. Hareketler partiden siliniyor (`stock_id` `not null`).
+  await purgeVariantStock(db, [variantId]);
   await db.from('order').delete().eq('customer_id', customerId);
   await db.from('reservation').delete().eq('variant_id', variantId);
-  await db.from('stock').delete().eq('variant_id', variantId);
   // A önce doluyor (yakın tarih) — FEFO onu önce çıkarmalı.
   batchA = (await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(10), purchasePriceCents: 200 })).id;
   batchB = (await stocks.insert({ warehouseId, variantId, physicalQty: 10, expiryDate: dayOffset(300), purchasePriceCents: 300 })).id;
@@ -295,8 +298,10 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
   });
 
   afterAll(async () => {
+    // Parti (ve onu tutan defter/kalem bağları) SİPARİŞTEN ÖNCE — `stock_movement.order_id`
+    // `restrict` ve kapı satışı deftere yazıyor (06.14).
+    await purgeVariantStock(db, [yerel.variantId!]);
     await db.from('order').delete().eq('warehouse_id', yerel.aracId!);
-    await db.from('stock').delete().eq('variant_id', yerel.variantId!);
     await db.from('delivery_run_close').delete().eq('delivery_run_id', yerel.runId!);
     await db.from('order').delete().eq('delivery_run_id', yerel.runId!);
     await db.from('delivery_run').delete().eq('id', yerel.runId!);

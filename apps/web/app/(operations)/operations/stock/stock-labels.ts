@@ -1,4 +1,5 @@
-import type { StockAdjustmentReason } from '@lezzet/types';
+import type { StockDirection, StockMovementKind } from '@lezzet/types';
+import { MOVEMENT_KIND } from '@/lib/stock/loss-labels';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { money } from '@/components/operation/ui/format';
 import { riskCentsOf } from '@/lib/stock/batch-labels';
@@ -7,7 +8,10 @@ import type { BatchView } from '@/lib/stock/batch-types';
 // Stok ekranına ÖZGÜ sözlük. Birden çok ekranın paylaştığı parça (`expiryBadge` · `expiryLine` ·
 // `batchAction` · `suggestionText`, ve 19.5'te `riskCentsOf` · `totalRiskCents`)
 // `lib/stock/batch-labels`'a taşındı; burada kalanlar yalnız bu ekranın sorduğu sorular: maliyet
-// satırı, parti gruplama, imha sebebi sözlüğü.
+// satırı, parti gruplama, hareket rozeti.
+//
+// `MOVEMENT_KIND` ve `movementLabel` `lib/stock/loss-labels`tan geliyor (re-export aşağıda) —
+// hareket sözlüğü iki yüzeyin ortak metni.
 
 /** Kart alt satırı — "9,20 €/ad · 128,80 € riskte" (satılamazda "zarar"). */
 export function costLine(batch: BatchView): string {
@@ -65,33 +69,44 @@ export function groupOf(batch: BatchView): ExpiryGroupKey {
   return batch.variant.product.dateType === 'DLC' ? 'dlc' : 'ddm';
 }
 
-// Sebep sözlüğü LIB'E TAŞINDI (16.08 — `lib/stock/loss-labels`): parti geçmişi paneli ortak
-// komponente çıkınca metin iki yüzeyin oldu. Re-export bu klasördeki çağıranların yolunu korur.
-export { LOSS_REASON } from '@/lib/stock/loss-labels';
+// Sözlükler LIB'E TAŞINDI (16.08 — `lib/stock/loss-labels`): parti geçmişi paneli ortak komponente
+// çıkınca metin iki yüzeyin oldu. Re-export bu klasördeki çağıranların yolunu korur.
+//
+// `export … from` yerel bir bağ KURMAZ — aşağıdaki `movementBadge` sözlüğü kendisi de okuduğu için
+// ayrıca import ediliyor; tek satırla ikisini birden yapmanın yolu yok.
+export { WRITE_OFF_REASON, movementLabel } from '@/lib/stock/loss-labels';
+export { MOVEMENT_KIND };
 
 /**
- * Sebebin TONU — tasarım her sebep çipini kendi rengiyle çiziyor. Renk burada da anlam taşır: tarihi
- * geçen mal bir KURAL sonucudur (kırmızı), hasar/soğuk zincir bir KAZADIR (amber), sayım farkı bir
- * ÖLÇÜM sorunudur (nötr-mavi). Hepsi aynı renkte olsaydı dağılım şeridi yalnız sayı listesi olurdu.
+ * Hareket tipinin TONU — tasarım her çipi kendi rengiyle çiziyor ve renk burada da anlam taşır:
+ * imha bir KAYIPTIR (kırmızı), sayım farkı bir ÖLÇÜM sorunudur (nötr), satış ve kabul OLAĞAN
+ * işlerdir (mavi/zeytin). Hepsi aynı renkte olsaydı dağılım şeridi yalnız bir sayı listesi olurdu.
  */
-export const LOSS_REASON_TONE: Record<StockAdjustmentReason, OpsTone> = {
-  expired: 'red',
-  damaged: 'amber',
-  count_diff: 'slate',
-  lost: 'amber',
+export const MOVEMENT_KIND_TONE: Record<StockMovementKind, OpsTone> = {
+  intake: 'olive',
+  transfer_in: 'blue',
+  transfer_out: 'blue',
+  transfer_cancel: 'slate',
+  sale: 'blue',
+  counter_sale: 'violet',
   return_restock: 'olive',
+  write_off: 'red',
+  count_diff: 'slate',
 };
 
 /**
- * Kaydın TÜRÜ — sebepten türer, ayrı bir alan değil. Tasarım üç tür ayırıyor (İmha · Fire · Sayım
- * farkı) çünkü sorumluluk farklı: imha kuralın sonucudur, fire bir kazadır, sayım farkı bir
- * ölçüm hatasıdır. Stoğa GERİ EKLEME (negatif) bunların hiçbiri değildir, kendi adıyla görünür.
+ * Satırın rozeti — TİPTEN türer, artık işaretten değil.
+ *
+ * Eskiden bu fonksiyon `qty < 0` diye bakıp "Geri ekleme" diyordu: yön miktara gömülü olduğu için
+ * ekran onu ancak sayının işaretinden okuyabiliyordu. Yön kendi kolonuna çıkınca rozet de kendi
+ * alanından geliyor — ve "geri ekleme" diye tek bir kutu yerine hangi giriş olduğu görünüyor
+ * (sayım fazlası mı, iade mi, sevkiyat kabulü mü).
  */
-export function lossKind(reason: StockAdjustmentReason, qty: number): { text: string; tone: OpsTone } {
-  if (qty < 0) return { text: 'Geri ekleme', tone: 'olive' };
-  if (reason === 'expired') return { text: 'İmha', tone: 'red' };
-  if (reason === 'count_diff') return { text: 'Sayım farkı', tone: 'slate' };
-  return { text: 'Fire', tone: 'amber' };
+export function movementBadge(kind: StockMovementKind, direction: StockDirection): { text: string; tone: OpsTone } {
+  // İmhanın rozeti sebebine göre incelmez — o ayrım "Neden" sütununda; rozet türü söyler.
+  if (kind === 'write_off') return { text: 'Fire', tone: 'red' };
+  if (kind === 'count_diff') return { text: direction === 'in' ? 'Sayım fazlası' : 'Sayım eksiği', tone: 'slate' };
+  return { text: MOVEMENT_KIND[kind], tone: MOVEMENT_KIND_TONE[kind] };
 }
 
 /**

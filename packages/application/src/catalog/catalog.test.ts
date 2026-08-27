@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
-import { createTestWarehouse, mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { DEFAULT_CROP_FIELDS } from '@lezzet/types';
 import { getCatalogData } from './catalog';
 /* Künye açıkça geçilir çünkü kapı istek bağlamı okumaz — okusaydı bu dosya (ve mobil çağıran) hiç
@@ -362,7 +362,8 @@ describe('süzgeçler sıralamayla birlikte çalışır', () => {
       expect(toptanci.products.every((p) => p.priceCents != null)).toBe(true);
     } finally {
       // Ürün sonraki testlerin sayımına girmesin — hatası FIRLATILAN silme (`CLAUDE §4b`).
-      await mustDelete(db, 'stock', (q) => q.eq('variant_id', variants[0]!.id));
+      // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
+      await purgeVariantStock(db, [variants[0]!.id]);
       await mustDelete(db, 'price', (q) => q.eq('variant_id', variants[0]!.id));
     }
   });

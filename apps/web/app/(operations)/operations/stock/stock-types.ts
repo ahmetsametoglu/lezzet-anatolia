@@ -8,8 +8,9 @@
 import type {
   KeysetCursor,
   RecallHit,
-  StockAdjustmentDetail,
-  StockAdjustmentReason,
+  StockMovementDetail,
+  StockMovementKind,
+  StockWriteOffReason,
   StorageAreaKind,
 } from '@lezzet/types';
 import type { ReturnDrop } from '@lezzet/application';
@@ -39,11 +40,25 @@ export type ReturnDropView = ReturnDrop & {
   pendingLineCount: number;
 };
 
-/** İmha/fire geçmişi satırı — kayıt + çözülmüş adlar; maliyet cent'e indirgenmiş. */
-export type LossRow = StockAdjustmentDetail & {
+/**
+ * Hareket defteri satırı — kayıt + çözülmüş adlar; maliyet cent'e indirgenmiş.
+ *
+ * Ad `LossRow` kaldı ama kapsamı büyüdü (06.14): eskiden yalnız imha/sayım kayıtlarıydı, artık
+ * satış, kapı satışı, sevk ve kabul de aynı satır tipiyle geliyor. Yön `direction` alanında.
+ */
+export type LossRow = StockMovementDetail & {
   title: string;
-  /** İşaretli miktarın işareti korunur: + düşüm, − geri ekleme. */
+  /** POZİTİF — yön `direction`da. `null` = partinin alış fiyatı girilmemiş (0 ile karıştırılmaz). */
   costCents: number | null;
+  /**
+   * Hareketin deposu — tasarım §2 satırda istiyor ve veri hep vardı, yalnız çizilmiyordu.
+   * `null` = depo kaydı silinmiş (kimliği yine satırda durur).
+   *
+   * İkisi birden taşınır çünkü ekranın ihtiyacı ikisi: dar sütunda KOD görünür (`STR`), tam ad
+   * `title`da okunur. Tek başına ad sütunu taşırıyordu (ölçüldü 27.08).
+   */
+  warehouseCode: string | null;
+  warehouseName: string | null;
   /**
    * Kaydı giren personelin adı. `created_by` FK TAŞIMAZ (0010: "personel kimliği auth şemasında"),
    * bu yüzden gömülü `select` ile gelemiyor — sayfadaki kimlikler tek turda ayrıca çözülür.
@@ -71,9 +86,20 @@ export interface WriteOffBatch {
   warehouseName: string | null;
 }
 
-/** Dönemin sebep dağılımı — "bu çeyrek ne kadar, neden". Sayfalı liste bu soruyu yanıtlayamaz. */
+/**
+ * Dönemin dağılımı — "bu çeyrek ne kadar, hangi türden". Sayfalı liste bu soruyu yanıtlayamaz:
+ * ilk 30 satır dönemin toplamı değildir.
+ *
+ * **Toplam TEK YÖNLÜ ve POZİTİF** (06.14). Eskiden çıkış ve giriş aynı toplamda eriyordu ve
+ * "Çıkışlar" sekmesi dönem toplamını EKSİ gösterebiliyordu (ölçüldü 27.08: `−13,49 €`) — çünkü
+ * iade restoku ve sayım fazlası birer giriş olduğu hâlde aynı sayıya katılıyordu. Sekme artık
+ * yönünü seçiyor; giriş satırları Mal kabul'ün toplamında.
+ */
 export interface LossSummary {
-  byReason: Array<{ reason: StockAdjustmentReason; qty: number; costCents: number }>;
+  /** Hareket tipi kırılımı — sekmenin yönü içinde. */
+  byKind: Array<{ kind: StockMovementKind; qty: number; costCents: number }>;
+  /** İmhanın içi (DLC · hasar · kayıp) — yalnız `write_off` satırlarından. */
+  byReason: Array<{ reason: StockWriteOffReason; qty: number; costCents: number }>;
   qty: number;
   costCents: number;
 }

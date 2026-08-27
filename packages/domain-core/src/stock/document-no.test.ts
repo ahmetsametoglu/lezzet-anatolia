@@ -2,14 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { documentPrefixFor, isValidDocumentNo } from './document-no';
 
 /**
- * İmha/sayım belgesi (10.5). Sınanan şey **sınıflandırma**: hangi sebep hangi kâğıda düşer.
+ * İmha/sayım belgesi (10.5). Sınanan şey **sınıflandırma**: hangi hareket hangi kâğıda düşer.
  * Numaranın kendisi (sıra, benzersizlik) veritabanının işidir, burada değil.
+ *
+ * Girdi 06.14'te sebepten TİPE döndü: DLC/hasar/kayıp artık imhanın içindeki bir kırılım ve üçü de
+ * aynı tutanağa yazılıyor — belgeyi tip belirliyor, sebep değil.
  */
 describe('belge sınıflandırması', () => {
-  it('mal çöpe gidenler imha tutanağına düşer', () => {
-    for (const reason of ['expired', 'damaged', 'lost'] as const) {
-      expect(documentPrefixFor(reason)).toBe('IMH');
-    }
+  it('mal çöpe gidenler imha tutanağına düşer — sebebi ne olursa olsun', () => {
+    expect(documentPrefixFor('write_off')).toBe('IMH');
   });
 
   it('sayım farkı AYRI kâğıttır — imha tutanağına yazılmaz', () => {

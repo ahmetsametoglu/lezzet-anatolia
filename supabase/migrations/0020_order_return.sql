@@ -126,17 +126,20 @@ begin
         v_take := least(v_left, v_batch.qty);
 
         -- Geri dönen mal depoya girer — YALNIZ fiiliden düşmüşse (teslim sonrası iade).
+        -- İmza 06.14'te değişti: yön ayrı parametre, miktar DAİMA pozitif (eskiden `-v_take`
+        -- geçiliyordu). `p_order_id` de veriliyor — defterdeki iade satırı hangi siparişten
+        -- döndüğünü kendi taşısın diye; eskiden bu bağ yalnız serbest metin notta vardı.
         if v_consumed and v_disposition = 'restock' then
           perform public.adjust_stock(
-            v_batch.stock_id, -v_take, 'return_restock',
-            coalesce(v_note, 'Sipariş iadesi — stoğa dönüş'), p_actor_id
+            v_batch.stock_id, v_take, 'in', 'return_restock', null,
+            coalesce(v_note, 'Sipariş iadesi — stoğa dönüş'), p_actor_id, p_order_id
           );
           v_restocked := v_restocked + v_take;
         -- Mal hiç çıkmamışken imha (araçta bozuldu): fiili düşüm ve fire kaydı BURADA doğar.
         elsif not v_consumed and v_disposition = 'discard' then
           perform public.adjust_stock(
-            v_batch.stock_id, v_take, 'damaged',
-            coalesce(v_note, 'Teslim edilemeden hasarlandı'), p_actor_id
+            v_batch.stock_id, v_take, 'out', 'write_off', 'damaged',
+            coalesce(v_note, 'Teslim edilemeden hasarlandı'), p_actor_id, p_order_id
           );
           v_discarded := v_discarded + v_take;
         end if;

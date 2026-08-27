@@ -9,7 +9,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehousePair, mustDelete, purgeTestData } from '@lezzet/database/testing';
+import { createTestWarehousePair, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
 import { deliverOrder } from '../order/fulfillment';
 import { listWarehouseReturns, type ReturnDrop } from './returns';
@@ -77,6 +77,10 @@ beforeAll(async () => {
  * iddialar zaten kendi kimliklerimize bakıyor, küresel sayıya değil.
  */
 beforeEach(async () => {
+  // **DEFTER SİPARİŞTEN ÖNCE** (06.14): iade akışı imha/restok satırları yazıyor ve teslim edilmiş
+  // siparişin `sale` satırı siparişi `restrict` ile tutuyor. Partileri de süpürüyor — her testin
+  // kendi partisi aşağıda yeniden kuruluyor.
+  await purgeVariantStock(db, [variantId]);
   await mustDelete(db, 'order', (q) => q.eq('customer_id', customerId));
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   batchId = (

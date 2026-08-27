@@ -73,33 +73,47 @@ Her ayırma bir satırdır; "ayrılan toplam" bu satırlardan **türetilir** (sa
 
 Süresi dolan satır cron'la silinir/pasifleşir; teslim/iptalde sipariş kapanışıyla düşer. Atomik "ayır" işlemi tek koşullu sorguda çalışır (`available >= qty` sağlanıyorsa satır yaz).
 
-## StockAdjustment (imha / fire / sayım düzeltmesi)
+## StockMovement (stok hareket defteri)
 
-Stok azalışının satış dışı her sebebi kayıt altına alınır — "bu üründen yılda ne kadar çöpe attım" buradan görünür (bkz. `DOMAIN.md §12`).
+Miktar değiştiren **her** olayın tek kaydı — mal kabul, satış, kapı satışı, sevk, kabul, imha, sayım farkı, iade restoku. `stock.physical_qty` bu defterin bakiyesidir (bkz. `DOMAIN.md §12`).
 
-<!-- alanlar:stock_adjustment -->
+> **`StockAdjustment` bu tabloya eridi (06.14, kullanıcı kararı 27.08).** Eski tablo yalnız *"satış dışı"* azalışları tutuyordu ve sözleşmesi dürüsttü — sorun onu tüketen ekrandı: "Çıkışlar" sekmesi onu çıkışların tamamı sanıyordu. Ölçüldüğünde iki sonucu vardı: dönemdeki çıkış olaylarının küçük bir dilimini gösteriyordu ve dönem toplamını **negatif** yazıyordu (iade restoku ile sayım fazlası birer giriş olduğu hâlde aynı toplamda eriyordu). Emsal para modülüdür: `money_movement` tek defterdir, "ayrıca cash_adjustment" diye ikinci bir tablo yoktur.
+
+<!-- alanlar:stock_movement -->
 | Kolon | Tip | Null | Varsayılan |
 | --- | --- | --- | --- |
 | `id` | uuid |  | `gen_random_uuid()` |
 | `stock_id` | uuid |  |  |
+| `warehouse_id` | uuid |  |  |
+| `direction` | stock_direction |  |  |
 | `qty` | int |  |  |
-| `reason` | stock_adjustment_reason |  |  |
+| `kind` | stock_movement_kind |  |  |
+| `reason` | stock_write_off_reason | • |  |
 | `unit_cost` | numeric(10, 2) | • |  |
-| `note` | text | • |  |
-| `created_by` | uuid | • |  |
-| `reference_no` | text | • |  |
+| `occurred_at` | timestamptz |  | `now()` |
 | `created_at` | timestamptz |  | `now()` |
+| `actor_id` | uuid | • |  |
+| `note` | text | • |  |
+| `reference_no` | text | • |  |
+| `order_id` | uuid | • |  |
+| `transfer_id` | uuid | • |  |
+| `intake_id` | uuid | • |  |
+| `reverses_id` | uuid | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
-- **`stock_id`** — hangi parti
-- **`qty`** — **işaretli**: + stoktan düşüm, − stoğa geri ekleme. Tek alanda iki yön → "net kayıp" tek toplamla çıkar; rapor şişmez
-- **`reason`** — DLC imhası / hasar / sayım farkı / kayıp / teslim-sonrası iade restoku
-- **`unit_cost`** — partinin alış fiyatı (snapshot) — fire maliyeti; parti sonradan düzeltilse kaymaz. Uygulamadaki adı `unitCostCents`, birimi **cent**
-- **`note`** — teslim-sonrası iade restoku gibi istisnalarda sebep — **geri eklemede zorunlu** (DB seviyesinde)
-- **`created_by`** — kaydı giren personel
-- **`reference_no`** — **OLAY belgesi** (`IMH-26-0012`) — aynı imhanın/sayımın bütün satırları paylaşır; geçmiş kayıtlarda null
+- **`direction` + `qty > 0`** — **yön ayrı kolonda, işaret miktara gömülmez.** `money_movement`ın kuralı (`0018`): *"raporda '− yazılmış giriş' gibi çift-anlamlı satır doğmasın"*. Stok bunu yapmamıştı ve ekrandaki negatif çıkış toplamı o kararın birebir öngörülmüş sonucuydu
+- **`kind`** — hareketin TİPİ, kapalı liste (SAP `BWART` · Odoo konum çifti emsali). `transfer_loss` YOK ve bu ölçülmüş bir karar: kaybın bir partisi yok (kaynak `transfer_out` ile zaten düşüldü, hedefte parti hiç doğmadı) ve tasarım sanal transit depoyu yasaklıyor — kayıp iki hareketin farkıdır
+- **`reason`** — imhanın sebebi (DLC · hasar · kayıp); **yalnız `write_off`ta dolu**, kısıt zorlar. Tip ve sebep iki ayrı seviye: "çöpe attım" bir harekettir, "neden" onun içindeki kırılım
+- **`occurred_at` ≠ `created_at`** — ilki OLAYIN anı (dönem süzgeci buna bakar), ikincisi kaydın anı (defterin sırası). `stock_intake`in `date`/`created_at` ayrımıyla aynı gerekçe
+- **`unit_cost`** — partinin alış fiyatı (snapshot); parti sonradan düzeltilse dönem raporu kaymaz. Uygulamadaki adı `unitCostCents`, birimi **cent**
+- **`warehouse_id`** — satırda DURUR, türetilmez: defter sınırsız büyüyen ve her dönem sorgusuyla taranan tablodur, her okumada bir join süzgecin unutulabildiği yerdir (`CLAUDE §1`). Değeri çağıran yazmaz, trigger partiden türetir
+- **`order_id` · `transfer_id` · `intake_id`** — kaynak belge; tipine göre biri **zorunlu** (kısıt). İmha/sayım/iade belgesiz olabilir, tutanakları varsa `reference_no` taşır
+- **`reverses_id`** — **iptal = ters kayıt** (SAP 551↔552). Defter append-only'dir: `cancel_transfer` eskiden stoğu geri yazıp hiçbir yere satır düşmüyordu, yani "mal çıktı ve döndü" geçmişi yalanlanıyordu
+- **`reference_no`** — **OLAY belgesi** (`IMH-STR-26-0012`) — aynı imhanın/sayımın bütün satırları paylaşır
+
+**Değişmez:** parti başına `Σ(in) − Σ(out) = physical_qty`. `stock.physical_qty` bir bakiye önbelleğidir (Odoo `quant` / SAP `MARD` emsali), defter ise gerçek.
 
 **`adjust_stock` fonksiyonu (06.6):** düzeltme kaydı + partinin fiili düşümü tek transaction'da — yarısı yazılırsa ya kaydı olmayan kayıp ya da karşılığı olmayan kayıt kalır. Partide olmayan miktar düşülemez; geri ekleme sebep notu ister.
 

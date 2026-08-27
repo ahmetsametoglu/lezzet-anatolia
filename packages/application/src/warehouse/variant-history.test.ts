@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CategoryService, ProductService, StockAdjustmentService, StockService, serviceDb } from '@lezzet/database';
+import { CategoryService, ProductService, StockMovementService, StockService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import { readVariantStockHistory } from './variant-history';
 
@@ -55,13 +55,21 @@ async function oku() {
 
 describe('varyant stok geçmişi — fire ↔ denklem ayrımı', () => {
   it('SAYIM FARKI fire toplamına girmez ama DENKLEME girer', async () => {
-    const adjustments = new StockAdjustmentService(db);
-    // 6 imha (gerçek kayıp) + sayımda 4 FAZLA çıktı (negatif düzeltme = stoğa geri ekleme).
-    await adjustments.adjust({ stockId, qty: 6, reason: 'expired' });
-    // Negatif düzeltme (stoğa geri ekleme) SEBEP NOTU ister — kural veride
-    // (`adjust_stock`: *"stoğa geri ekleme sebep notu ister"*) ve haklı: stoğu artıran bir düzeltme
-    // gerekçesiz kalırsa sayım farkı, kayıt boşluğunu örtmenin sessiz yolu olurdu.
-    await adjustments.adjust({ stockId, qty: -4, reason: 'count_diff', note: 'Rafta 4 adet fazla sayıldı' });
+    const movements = new StockMovementService(db);
+    // 6 imha (gerçek kayıp) + sayımda 4 FAZLA çıktı (stoğa geri ekleme).
+    await movements.adjust({ stockId, qty: 6, direction: 'out', kind: 'write_off', reason: 'expired' });
+    // Stoğa ekleme SEBEP NOTU ister — kural veride (`adjust_stock`: *"stoğa geri ekleme sebep notu
+    // ister"*) ve haklı: stoğu artıran bir düzeltme gerekçesiz kalırsa sayım farkı, kayıt boşluğunu
+    // örtmenin sessiz yolu olurdu.
+    //
+    // Yön artık AYRI parametrede (06.14): eskiden `qty: -4` yazılıyordu ve işaret miktara gömülüydü.
+    await movements.adjust({
+      stockId,
+      qty: 4,
+      direction: 'in',
+      kind: 'count_diff',
+      note: 'Rafta 4 adet fazla sayıldı',
+    });
 
     const history = await oku();
 
@@ -80,11 +88,19 @@ describe('varyant stok geçmişi — fire ↔ denklem ayrımı', () => {
     expect(history.loss.percent).toBe(6);
   });
 
+  /**
+   * Kırılım artık İKİ SEVİYE (06.14): `byKind` hareket tiplerini taşır (imha · sayım · iade),
+   * `byReason` ise imhanın içini açar (DLC · hasar · kayıp). Eskiden tek listeydi ve içinde
+   * birbirine benzemeyen şeyler yan yana duruyordu — "expired" bir sebep, "count_diff" bir olaydı.
+   */
   it('kırılım HEPSİNİ taşır — sayım farkı da bir olaydır ve görünmelidir', async () => {
     const history = await oku();
+    const tipler = new Map(history.loss.byKind.map((r) => [r.kind, r.qty]));
     const sebepler = new Map(history.loss.byReason.map((r) => [r.reason, r.qty]));
 
+    expect(tipler.get('write_off')).toBe(6);
+    // Kırılımda adet POZİTİF — yön `direction`da duruyor; net sapma `countDiff` alanında.
+    expect(tipler.get('count_diff')).toBe(4);
     expect(sebepler.get('expired')).toBe(6);
-    expect(sebepler.get('count_diff')).toBe(-4);
   });
 });

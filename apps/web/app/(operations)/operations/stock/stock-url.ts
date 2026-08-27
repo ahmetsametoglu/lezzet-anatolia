@@ -11,7 +11,7 @@ import { one, oneOf, type RawParams } from '@/lib/url-params';
 const STOCK_PATH = '/operations/stock';
 
 /**
- * **DÖRT SEKME — depo yüzeyinin tamamı tek sayfada** (22.26).
+ * **BEŞ SEKME — depo yüzeyinin tamamı tek sayfada** (22.26; transfer 19.08'de eklendi).
  *
  * Mal kabul (`/operations/receiving`) ve stoktan düş (`/operations/adjustments`) ayrı sayfalardı;
  * tasarımın 01.08 kararı ikisini de buraya alıyordu ve gerekçesi paranın emsalidir: *"kasa hareketi

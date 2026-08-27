@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, ProductService, StockAdjustmentService, StockService, serviceDb } from '@lezzet/database';
+import { CategoryService, ProductService, StockMovementService, StockService, serviceDb } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair } from '@lezzet/database/testing';
 import { recordAdjustment, type AdjustmentLine, type WarehouseReason } from './adjustment';
 
@@ -15,7 +15,7 @@ import { recordAdjustment, type AdjustmentLine, type WarehouseReason } from './a
  */
 const db = serviceDb();
 const stocks = new StockService(db);
-const adjustments = new StockAdjustmentService(db);
+const movements = new StockMovementService(db);
 
 const stamp = Date.now();
 let variantId: string;
@@ -75,7 +75,10 @@ afterAll(async () => {
 
 describe('olay belgesi', () => {
   it('İKİ parti tek numarayı paylaşır — kâğıt ikiye bölünmez', async () => {
-    const lines: AdjustmentLine[] = [{ stockId: batchA, qty: 3 }, { stockId: batchB, qty: 2 }];
+    const lines: AdjustmentLine[] = [
+      { stockId: batchA, qty: 3, direction: 'out' },
+      { stockId: batchB, qty: 2, direction: 'out' },
+    ];
 
     const outcome = await recordAdjustment(db, { warehouseId, lines, reason: 'expired', note: 'DLC geçti' });
 
@@ -84,14 +87,15 @@ describe('olay belgesi', () => {
     // Önek DEPO KODU taşıyor (DOMAIN §17): `IMH-STR-26-0012`. Seriler depo başına ayrışır.
     expect(reference).toMatch(/^IMH-[A-Z0-9-]+-\d{2}-\d{4}$/);
 
-    const rows = await adjustments.listByReference(reference);
+    const rows = await movements.listByReference(reference);
     expect(rows).toHaveLength(2);
     expect(new Set(rows.map((row) => row.referenceNo))).toEqual(new Set([reference]));
   });
 
   it('numara SIRALI ilerler — denetmen okuyup yazabilsin', async () => {
-    const first = await recordAdjustment(db, { warehouseId, lines: [{ stockId: batchA, qty: 1 }], reason: 'damaged' });
-    const second = await recordAdjustment(db, { warehouseId, lines: [{ stockId: batchA, qty: 1 }], reason: 'damaged' });
+    const line = [{ stockId: batchA, qty: 1, direction: 'out' as const }];
+    const first = await recordAdjustment(db, { warehouseId, lines: line, reason: 'damaged' });
+    const second = await recordAdjustment(db, { warehouseId, lines: line, reason: 'damaged' });
 
     const numberOf = (ref: string) => Number(ref.split('-').at(-1));
     const a = first.status === 'ok' ? numberOf(first.result.referenceNo) : 0;
@@ -102,7 +106,7 @@ describe('olay belgesi', () => {
   it('sebep belgeyi belirler: sayım farkı imha tutanağına yazılmaz', async () => {
     const sayim = await recordAdjustment(db, {
       warehouseId,
-      lines: [{ stockId: batchA, qty: 2 }],
+      lines: [{ stockId: batchA, qty: 2, direction: 'out' }],
       reason: 'count_diff',
       note: 'sayım',
     });
@@ -110,15 +114,18 @@ describe('olay belgesi', () => {
     expect(sayim.status === 'ok' ? sayim.result.referenceNo : '').toMatch(/^SAY-/);
   });
 
-  it('olayın net maliyeti dönüşte gelir — farklı partiler kendi alış fiyatıyla', async () => {
+  it('olayın maliyeti dönüşte gelir — farklı partiler kendi alış fiyatıyla', async () => {
     const outcome = await recordAdjustment(db, {
       warehouseId,
-      lines: [{ stockId: batchA, qty: 2 }, { stockId: batchB, qty: 1 }],
+      lines: [
+        { stockId: batchA, qty: 2, direction: 'out' },
+        { stockId: batchB, qty: 1, direction: 'out' },
+      ],
       reason: 'expired',
     });
 
     // 2 × 4 € + 1 × 5 € = 13 €; her parti KENDİ maliyetinden sayılır, ortalamadan değil.
-    expect(outcome.status === 'ok' ? outcome.result.costTotalCents : 0).toBe(1300);
+    expect(outcome.status === 'ok' ? outcome.result.outCostCents : 0).toBe(1300);
   });
 });
 
@@ -126,7 +133,10 @@ describe('bölünmezlik', () => {
   it('bir satır tutmazsa HİÇBİRİ yazılmaz — yarım tutanak kalmaz', async () => {
     const outcome = await recordAdjustment(db, {
       warehouseId,
-      lines: [{ stockId: batchA, qty: 3 }, { stockId: batchB, qty: 99 }], // ikincisi partiyi aşıyor
+      lines: [
+        { stockId: batchA, qty: 3, direction: 'out' },
+        { stockId: batchB, qty: 99, direction: 'out' }, // ikincisi partiyi aşıyor
+      ],
       reason: 'expired',
     });
 
@@ -136,7 +146,7 @@ describe('bölünmezlik', () => {
     expect(outcome.status === 'failed' ? outcome.message : '').toMatch(/partide 8 adet var, 99 adet düşülemez/);
     // İlk satır da yazılmadı: stok el değmemiş.
     expect((await stocks.getById(batchA))?.physicalQty).toBe(10);
-    expect(await adjustments.listByStock(batchA)).toHaveLength(0);
+    expect(await movements.listByStock(batchA)).toHaveLength(0);
   });
 
   it('satırsız çağrı yazım YAPMAZ', async () => {
@@ -144,7 +154,11 @@ describe('bölünmezlik', () => {
   });
 
   it('stoğa geri ekleme sebep notu ister — istisna sebepsiz yazılmaz', async () => {
-    const outcome = await recordAdjustment(db, { warehouseId, lines: [{ stockId: batchA, qty: -2 }], reason: 'count_diff' });
+    const outcome = await recordAdjustment(db, {
+      warehouseId,
+      lines: [{ stockId: batchA, qty: 2, direction: 'in' }],
+      reason: 'count_diff',
+    });
 
     expect(outcome.status).toBe('failed');
     // Kuralı VERİTABANI zorluyor ve cümlesini de o kuruyor; ekran onu aynen gösterir (21.11c).
@@ -155,15 +169,18 @@ describe('bölünmezlik', () => {
   it('sayım FAZLASI notla yazılır ve stoğu artırır', async () => {
     const outcome = await recordAdjustment(db, {
       warehouseId,
-      lines: [{ stockId: batchA, qty: -2 }],
+      lines: [{ stockId: batchA, qty: 2, direction: 'in' }],
       reason: 'count_diff',
       note: 'sayımda 2 adet fazla çıktı',
     });
 
     expect(outcome.status).toBe('ok');
     expect((await stocks.getById(batchA))?.physicalQty).toBe(12);
-    // İşaret korunur: net kayıp eksiye döner, şişmiş bir "imha ettik" rakamı doğmaz.
-    expect(outcome.status === 'ok' ? outcome.result.costTotalCents : 0).toBe(-800);
+    // **Giriş kendi kaleminde** (06.14): eskiden tek `costTotalCents` vardı ve bu satır onu eksiye
+    // düşürüyordu — "olayın maliyeti −8 €" gibi okunmayan bir sonuç. Artık çıkış ve giriş ayrı
+    // dönüyor; ikisini çıkarmak isteyen çağıran bunu bilerek yapar.
+    expect(outcome.status === 'ok' ? outcome.result.inCostCents : 0).toBe(800);
+    expect(outcome.status === 'ok' ? outcome.result.outCostCents : -1).toBe(0);
   });
 });
 
@@ -179,7 +196,10 @@ describe('depo kimliği (21.11 — CLAUDE.md §1)', () => {
   it('BAŞKA DEPONUN partisi düşülemez — hiçbir satır yazılmaz, hangi parti olduğu döner', async () => {
     const outcome = await recordAdjustment(db, {
       warehouseId,
-      lines: [{ stockId: batchA, qty: 1 }, { stockId: foreignBatch, qty: 1 }],
+      lines: [
+        { stockId: batchA, qty: 1, direction: 'out' },
+        { stockId: foreignBatch, qty: 1, direction: 'out' },
+      ],
       reason: 'expired',
     });
 
@@ -192,7 +212,7 @@ describe('depo kimliği (21.11 — CLAUDE.md §1)', () => {
   it('aynı parti KENDİ deposundan düşülebilir — süzgeç körlük değil, kapsam', async () => {
     const outcome = await recordAdjustment(db, {
       warehouseId: otherWarehouseId,
-      lines: [{ stockId: foreignBatch, qty: 2 }],
+      lines: [{ stockId: foreignBatch, qty: 2, direction: 'out' }],
       reason: 'damaged',
     });
 
@@ -203,7 +223,11 @@ describe('depo kimliği (21.11 — CLAUDE.md §1)', () => {
   it('olmayan parti `not_found` döner — "başka deponun" ile aynı şey DEĞİL', async () => {
     const ghost = '00000000-0000-0000-0000-000000000000';
 
-    const outcome = await recordAdjustment(db, { warehouseId, lines: [{ stockId: ghost, qty: 1 }], reason: 'lost' });
+    const outcome = await recordAdjustment(db, {
+      warehouseId,
+      lines: [{ stockId: ghost, qty: 1, direction: 'out' }],
+      reason: 'lost',
+    });
 
     expect(outcome).toEqual({ status: 'not_found', stockIds: [ghost] });
   });
