@@ -745,6 +745,33 @@ istemcinin bütün testleri yeşil görünen bir boşluğa düşer. Aşama D'nin
 - **`settings` gibi küresel tekil satır kirletilmez** — kargo ayarları için `overrideSetting` +
   snapshot deseni (`lib/feedback/invite.test.ts` emsali).
 
+### 10.5 Cihazda doğrulama — rozet çipleriyle kamerasız tarama
+
+> Kullanıcı bilgisi 28.08: fiziksel Android cihaz bağlı; kamera gerektiren akışlar alttaki
+> **rozet çiplerine** basılarak simüle ediliyor.
+
+**Ölçüldü 28.08:** cihaz bağlı (`adb` seri `5cf6c351`), `com.lezzetanatolia.app` ön planda.
+
+- **Mekanizma:** `ScanSheet` `__DEV__` altında bir çip paneli çiziyor. Çipe basmak kameranın kodu
+  okumasıyla **aynı yoldan** geçiyor (`onScan` + tekrar-okuma kilidi); tek fark kodun kaynağı.
+  Release derlemesinde dal ölü koddur, bundler atar — ayrı env bayrağı bilerek yok.
+- **Havuz gerçek kâğıdın aynası:** `DEV_SCAN_POOL` beş çipi `scripts/seed/test-labels.ts`teki
+  **fiziksel test etiketi setiyle** birebir aynı kodları taşıyor (24.08 kararı). Çipe basmak ile
+  kâğıdı okutmak aynı metni üretir → simülasyonda bulunan arıza cihazda da tekrarlanır.
+- **KARGO DEVİR OKUTMASI KENDİ `devCodes`'UNU VERİR** — kutu QR'ı deseninin aynısı
+  (`scan-sheet.tsx` künyesi: *"uydurma bir kod değil, ekranın elindeki gerçek kutuların kodları"*).
+  Bizim durumumuzda bunlar `sendcloud:letter` ile açılmış **gerçek test gönderilerinin takip
+  numaraları** olur → simülasyon gerçek veriyle çalışır ve **para harcanmaz** (§5.1: letter 0,00 €).
+  Devir okutmasının taşıyıcı barkodunu okuduğu kararı (§4.6) bu yüzden sınanabilir.
+- **Ekran görüntüsü:** `adb -s <seri> exec-out screencap -p > <dosya>`.
+  ⚠ **Seri ZORUNLU:** cihaz iki kez listeleniyor (USB + kablosuz, aynı telefon) ve serisiz her
+  `adb` komutu `more than one device/emulator` ile düşüyor. Ölçüldü 28.08.
+
+⚠ **BAYAT KÜNYE (mobil şeridin işi, not bırakıldı):** `scripts/ui-shot-mobile.mjs` künyesinde
+*"Android: dev-client daha derlenmedi (21.7 kalanı) … bugün iOS-yalnız olması bilinçli kapsam"*
+yazıyor. **21.7 kapandı** (`0ac97be0`) ve Android cihaz bağlı — yani cümle artık doğru değil ve
+araç hâlâ iOS-yalnız. Native görüntü bugün elle `adb` ile alınıyor.
+
 ## 11. Kaynaklar
 
 - Sendcloud Developer Portal — `https://sendcloud.dev/` · doküman indeksi `https://sendcloud.dev/llms.txt`
