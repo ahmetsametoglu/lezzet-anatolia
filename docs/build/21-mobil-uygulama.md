@@ -6670,3 +6670,46 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   bağlantı o ağacı atlar**. Kabuk-dışı rotası olan her kapı bu soruyu sormalı. Bekçi iki yönlü:
   `cart-sync-gate.test.tsx` kapalı kapının Supabase'e dokunmadığını, `feedback-routes.test.tsx` ise
   ziyaretçi yolunda kapının açılmadığını koruyor.
+
+- [x] (21.124) **BÜYÜK HARF CİHAZIN DİLİYLE ÇEVRİLİYORDU — Fransızca arayüzde "PANİER PRÊT"**
+  (cihaz turu bulgusu 28.08, fiziksel Android)
+  `touches:` `apps/mobile/src/components/ui/section-header.tsx` ·
+  `apps/mobile/src/components/operations/section-header.tsx` ·
+  `apps/mobile/src/components/ui/product-photo-card.tsx` ·
+  `apps/mobile/src/screens/cart/cart-line-row.tsx` ·
+  `apps/mobile/src/screens/customer-kit/summary-panel.tsx` ·
+  `apps/mobile/src/screens/discover/discover-screen.tsx` ·
+  `apps/mobile/src/screens/professionals/professionals-screen.tsx` ·
+  `apps/mobile/src/screens/package/package-detail-screen.tsx`
+
+  **Arıza.** `upperIn` kuralı (i/İ ayrımı dilin kendi kuralıyla) 17.08'de kurulmuştu ama yalnız
+  KODU kapsıyordu; stil katmanındaki `textTransform: 'uppercase'` aynı işi Android'de **native**
+  yapıyor ve **CİHAZIN** dilini kullanıyor — uygulamanınkini değil. Türkçe telefonda Fransızca
+  arayüz açan müşteride ölçüldü: sepetteki paket üstbaşlığı **"PANİER PRÊT"**.
+
+  **Teşhis aynı ekranda, yan yana:** paketler sekmesinin üstbaşlığı "PANIERS PRÊTS" diye DOĞRU
+  çıkıyordu. İkisi de aynı `textTransform`u alıyor, ikisi de kaynakta küçük harfli. Fark koddaydı —
+  `packages-list-screen` metni `upperIn`den geçiriyor, `cart-line-row` geçirmiyordu. Yani kuralın
+  var olması yetmemiş, uygulanmadığı yer sessizce dile kör kalmıştı.
+
+  **Kapsam ölçüldü:** `textTransform: 'uppercase'` kullanan 11 dosyanın **8'i** `upperIn`
+  çağırmıyordu. Ekranda o an bozulan tek metin sepettekiydi, ama ötekiler yalnız "bugün `i`
+  içermedikleri" için sağlamdı: `t.stamp.like` ("J'aime"), `t.hero.eyebrow` ("Professionnels"),
+  `t.badge.soldOut` ("Épuisé") hepsi `i` taşıyor ve ekrana koşullu geliyor — yani ölçüm anında
+  görünmüyorlardı. Sekizi de düzeltildi.
+
+  **Karar.** Metin `upperIn(text, locale)` ile büyür; `textTransform` kuralı stilde KALIR ve
+  zararsızdır — buradan zaten büyük çıkan harflere dokunmaz (`courier-format` künyesinin aynı
+  gerekçesi). Operasyon `section-header`ında dil SABİT `tr`: operasyon yüzeyi yalnız Türkçedir
+  (CLAUDE §2), uygulama diline bağlansaydı Fransızca arayüz seçen personelde "Sipariş" → "SIPARIŞ"
+  olurdu. Erişilebilirlik adları HAM kalır: ekran okuyucu büyük harfi hecelemez.
+
+  **Doğrulama.** Cihazda (tr-TR telefon, fr arayüz): sepet **"PANIER PRÊT"** — noktasız I;
+  profesyoneller **"ÉPICERIE · CUISINE COLLECTIVE"** (önce `ÉPİCERİE` olurdu). Testler iki yönü de
+  tutuyor ve ikisi de gerçek: `catalog-screen.test.tsx` dili `tr-FR` mock'luyor → **"TÜKENDİ"**
+  (noktalı İ), `section-header.test.tsx` varsayılan `fr` → **"KOLEKSIYONLAR"** (noktasız I). Aynı
+  kod, iki dilde iki ayrı doğru sonuç. 877/877 test, lint ve typecheck temiz.
+
+  **Ders.** Bir dil kuralı **stil katmanında uygulanamaz**: CSS-benzeri dönüşümleri platform yapar
+  ve platformun bildiği tek dil cihazınkidir. Kuralın adı olması (`upperIn`) onu kendiliğinden
+  yaymıyor — 17.08'de 17 çağrı düzeltilmişti, stil katmanı o turda hiç sorulmamıştı.

@@ -22,6 +22,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { CLIENT_ERROR } from '@/lib/api/client';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { toastInfo } from '@/lib/toast/toast-store';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
 import { OtpSignInFields } from '@/screens/customer-kit/otp-sign-in-fields';
@@ -359,7 +360,9 @@ export function ProfessionalsScreen() {
       <FormScroll contentContainerStyle={styles.content} testID="pro-form">
         {/* Tanıtım kartı — v3'ün mürekkep bloğu: üstbaşlık · vaat · gerekçe. */}
         <View style={styles.hero}>
-          <Text style={styles.heroEyebrow}>{t.hero.eyebrow}</Text>
+          {/* Büyük harf dilin kuralıyla; stilin `textTransform`u Android'de CİHAZIN dilini
+              kullanıyor (ölçüldü 28.08 — `cart-line-row` künyesi). */}
+          <Text style={styles.heroEyebrow}>{upperIn(t.hero.eyebrow, locale)}</Text>
           <Text style={styles.heroTitle} accessibilityRole="header">
             {t.hero.title}
           </Text>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { upperIn } from '@/lib/i18n/locale';
 import { operationsTheme } from '@/theme/unistyles';
 import { emToDp } from '@/theme/parse';
 import type { OperationsSection } from '@/lib/operations/sections';
@@ -63,7 +64,12 @@ export function OperationsSectionHeader({
   return (
     <View style={styles.header} testID={testID}>
       <View style={styles.titles}>
-        <Text style={[styles.eyebrow, { color: EYEBROW_COLOR[section] }]}>{eyebrow}</Text>
+        {/* Büyük harf dilin kuralıyla — ve burada dil SABİT `tr`, çünkü operasyon yüzeyi yalnız
+            Türkçedir (CLAUDE §2). Uygulama diline bağlansaydı Fransızca arayüz seçmiş bir personelde
+            Türkçe başlıklar yanlış büyürdü ("Sipariş" → "SIPARIŞ"). Stilin `textTransform`u bu işi
+            yapamaz: onu Android native CİHAZIN diliyle uyguluyor (müşteri tarafında ölçüldü 28.08,
+            `cart-line-row` künyesi). */}
+        <Text style={[styles.eyebrow, { color: EYEBROW_COLOR[section] }]}>{upperIn(eyebrow, 'tr')}</Text>
         <Text style={styles.title} accessibilityRole="header">
           {title}
         </Text>

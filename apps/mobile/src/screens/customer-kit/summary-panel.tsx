@@ -1,6 +1,9 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
+
 /*
   TUTAR ÖZETİ — sepet (v3:464), checkout (v3:544) ve sipariş onayı/detayı (v3:617, 744) aynı
   paneli çiziyor: kum zemin, alt alta "etiket ⟷ tutar" satırları, kesikli bir çizgiden sonra
@@ -56,9 +59,12 @@ export function SummaryPanel({
   note,
   testID,
 }: SummaryPanelProps) {
+  /* Büyük harf dilin kuralıyla (`upperIn`), stilin `textTransform`una bırakılmaz — o dönüşümü
+     Android native CİHAZIN diliyle yapıyor (ölçüldü 28.08, `cart-line-row` künyesi). */
+  const locale = useAppLocale();
   return (
     <View style={styles.panel} testID={testID}>
-      {eyebrow === undefined ? null : <Text style={styles.eyebrow}>{eyebrow}</Text>}
+      {eyebrow === undefined ? null : <Text style={styles.eyebrow}>{upperIn(eyebrow, locale)}</Text>}
       {rows.map((row) => {
         const toneStyle =
           row.tone === 'olive' ? styles.oliveLabel : row.tone === 'danger' ? styles.dangerLabel : styles.mutedLabel;

@@ -119,7 +119,10 @@ describe('CatalogScreen', () => {
 
     await render(<CatalogScreen />);
 
-    await waitFor(() => expect(screen.getByText(t.card.soldOut)).toBeOnTheScreen());
+    /* Rozet BÜYÜK HARFTE ve dönüşüm UYGULAMANIN diliyle: bu dosya `tr-FR` mock'luyor, yani
+       "Tükendi" → "TÜKENDİ" (noktalı İ). Stilin `textTransform`una bırakılsaydı dönüşümü Android
+       native CİHAZIN diliyle yapardı (ölçüldü 28.08 — `cart-line-row` künyesi). */
+    await waitFor(() => expect(screen.getByText('TÜKENDİ')).toBeOnTheScreen());
     // İki üründen yalnız birinin fiyatı var.
     expect(screen.getAllByText('12,90 €')).toHaveLength(1);
   });

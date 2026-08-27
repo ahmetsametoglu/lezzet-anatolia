@@ -4,6 +4,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { PressableSurface } from './pressable-surface';
 import { Tag } from './tag';
+import { useAppLocale } from '../../lib/i18n/app-locale';
+import { upperIn } from '../../lib/i18n/locale';
 import { emToDp } from '../../theme/parse';
 
 /*
@@ -119,6 +121,7 @@ export function ProductPhotoCard({
   testID,
 }: ProductPhotoCardProps) {
   const { theme } = useUnistyles();
+  const locale = useAppLocale();
 
   /* Durum rozeti TEK yuvadadır (şablonda ikisi de sol üst köşede): tükendi indirimin önüne geçer,
      çünkü tükenmiş bir üründe indirim bilgisi alınabilir bir şey söylemez. */
@@ -169,7 +172,11 @@ export function ProductPhotoCard({
           buraya girmiyor (künye §ROZET DEĞİL), yani yuva yeniden tekildir. */}
       {statusLabel === undefined ? null : (
         <View style={[styles.statusBadge, soldOut ? styles.soldOutBadge : styles.discountBadge]}>
-          <Text style={[styles.statusLabel, soldOut ? styles.soldOutText : styles.discountText]}>{statusLabel}</Text>
+          {/* Büyük harf dilin kuralıyla (`upperIn`), stilin `textTransform`una bırakılmaz — o
+              dönüşümü Android native CİHAZIN diliyle yapıyor (ölçüldü 28.08, `cart-line-row`). */}
+          <Text style={[styles.statusLabel, soldOut ? styles.soldOutText : styles.discountText]}>
+            {upperIn(statusLabel, locale)}
+          </Text>
         </View>
       )}
       <View style={styles.caption}>

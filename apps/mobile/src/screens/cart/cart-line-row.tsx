@@ -3,6 +3,8 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { TextAction } from '@/components/ui/text-action';
+import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { QuantityStepper } from '@/screens/customer-kit/quantity-stepper';
 
 /*
@@ -87,6 +89,13 @@ export function CartLineRow({
   testID,
 }: CartLineRowProps) {
   const { theme } = useUnistyles();
+  /* Üstbaşlık BÜYÜK HARFE dilin kuralıyla çevrilir (`upperIn`), stilin `textTransform`una
+     bırakılmaz: onu Android native yapıyor ve CİHAZIN dilini kullanıyor. Bu satırda ölçüldü
+     (28.08, Türkçe telefon + Fransızca arayüz): "Panier prêt" → **"PANİER PRÊT"**. Aynı ekranda
+     paketler sekmesinin üstbaşlığı doğruydu, çünkü o `upperIn`den geçiyordu — fark koddaydı,
+     metinde değil. `styles.eyebrow`daki kural yerinde kalıyor: buradan zaten büyük çıkan harflere
+     dokunmaz. */
+  const locale = useAppLocale();
   const isBundle = tone === 'bundle';
 
   return (
@@ -99,7 +108,7 @@ export function CartLineRow({
         testID={testID === undefined ? undefined : `${testID}-photo`}
       />
       <View style={styles.text}>
-        {eyebrow === undefined ? null : <Text style={styles.eyebrow}>{eyebrow}</Text>}
+        {eyebrow === undefined ? null : <Text style={styles.eyebrow}>{upperIn(eyebrow, locale)}</Text>}
         <Text style={[styles.name, isBundle ? styles.onInk : styles.onSand]}>{name}</Text>
         <Text style={[styles.subtitle, isBundle ? styles.onInkMuted : styles.onSandMuted]}>{subtitle}</Text>
         <Text style={[styles.total, isBundle ? styles.onInk : styles.onSand]}>{totalLabel}</Text>

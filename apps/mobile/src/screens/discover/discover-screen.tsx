@@ -25,6 +25,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { hapticCommit, hapticSelect } from '@/lib/haptics/haptics';
 import { toastInfo } from '@/lib/toast/toast-store';
 import { PointsAward, PointsSpark } from '@/screens/customer-kit/points-award';
@@ -1091,14 +1092,17 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
                         pointerEvents="none"
                         testID="discover-stamp-like"
                       >
-                        <Text style={[styles.stampLabel, styles.stampLikeLabel]}>{t.stamp.like}</Text>
+                        {/* Damga metni dilin kuralıyla büyür (`upperIn`); stilin `textTransform`u
+                            Android'de CİHAZIN dilini kullanıyor (ölçüldü 28.08 — `cart-line-row`
+                            künyesi). "J'aime" tam da `i` taşıyan metinlerden. */}
+                        <Text style={[styles.stampLabel, styles.stampLikeLabel]}>{upperIn(t.stamp.like, locale)}</Text>
                       </Animated.View>
                       <Animated.View
                         style={[styles.stamp, styles.stampPass, passStampStyle]}
                         pointerEvents="none"
                         testID="discover-stamp-pass"
                       >
-                        <Text style={[styles.stampLabel, styles.stampPassLabel]}>{t.stamp.pass}</Text>
+                        <Text style={[styles.stampLabel, styles.stampPassLabel]}>{upperIn(t.stamp.pass, locale)}</Text>
                       </Animated.View>
                     </>
                   )
@@ -1135,7 +1139,7 @@ export function DiscoverScreen({ signedIn, locale: forcedLocale }: DiscoverScree
                         exiting.choice === 'like' ? styles.stampLikeLabel : styles.stampPassLabel,
                       ]}
                     >
-                      {exiting.choice === 'like' ? t.stamp.like : t.stamp.pass}
+                      {upperIn(exiting.choice === 'like' ? t.stamp.like : t.stamp.pass, locale)}
                     </Text>
                   </View>
                 }

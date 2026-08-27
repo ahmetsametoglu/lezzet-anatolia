@@ -2,6 +2,8 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { TextAction } from './text-action';
+import { useAppLocale } from '../../lib/i18n/app-locale';
+import { upperIn } from '../../lib/i18n/locale';
 import { emToDp } from '../../theme/parse';
 
 /*
@@ -25,10 +27,16 @@ interface SectionHeaderProps {
 }
 
 export function SectionHeader({ eyebrow, title, actionLabel, onActionPress, testID }: SectionHeaderProps) {
+  /* BÜYÜK HARF DİLİN KURALIYLA (`upperIn`), stilin `textTransform`una BIRAKILMAZ: o dönüşümü
+     Android native yapar ve CİHAZIN dilini kullanır — uygulamanınkini değil. Türkçe telefonda
+     Fransızca arayüz açan müşteride ölçüldü (28.08): "Panier prêt" → "PANİER PRÊT". Stil kuralı
+     yerinde kalıyor, zararsız: buradan zaten büyük çıkan harflere dokunmaz (`courier-format`
+     künyesinin aynı gerekçesi). */
+  const locale = useAppLocale();
   return (
     <View style={styles.row} testID={testID}>
       <View style={styles.stack}>
-        <Text style={styles.eyebrow}>{eyebrow}</Text>
+        <Text style={styles.eyebrow}>{upperIn(eyebrow, locale)}</Text>
         {title === undefined ? null : (
           <Text style={styles.title} accessibilityRole="header">
             {title}

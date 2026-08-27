@@ -69,7 +69,10 @@ describe('ProductPhotoCard', () => {
       />,
     );
 
-    expect(screen.getByText('Tükendi')).toHaveStyle({ color: customerColors['sand-50'] });
+    /* Rozet metni BÜYÜK HARFE komponentte döner (`upperIn`) — stilin `textTransform`una
+       bırakılmaz, o dönüşümü Android native CİHAZIN diliyle yapıyor (ölçüldü 28.08). Erişilebilirlik
+       adı ise HAM kalır (aşağıdaki iddia): ekran okuyucu büyük harfi hecelemez. */
+    expect(screen.getByText('TÜKENDI')).toHaveStyle({ color: customerColors['sand-50'] });
     expect(screen.getByTestId('card').children[0]).toHaveStyle({ opacity: appMetrics.soldOutOpacity });
     expect(screen.getByRole('button', { name: 'Nar ekşisi · 6 € · Tükendi' })).toBeOnTheScreen();
   });
@@ -86,8 +89,8 @@ describe('ProductPhotoCard', () => {
       />,
     );
 
-    expect(screen.getByText('Tükendi')).toBeOnTheScreen();
-    expect(screen.queryByText('İndirim')).toBeNull();
+    expect(screen.getByText('TÜKENDI')).toBeOnTheScreen();
+    expect(screen.queryByText('İNDIRIM')).toBeNull();
   });
 
   it('indirim rozeti terracotta metin taşır ve KÜÇÜK ROZET kademesinde büyük harfe döner', async () => {
@@ -95,7 +98,7 @@ describe('ProductPhotoCard', () => {
     // harf aralığı da şablonun kendi değerine (.06em) döndü.
     await render(<ProductPhotoCard name="Bal" priceLabel="14 €" onPress={jest.fn()} discountLabel="İndirim" />);
 
-    expect(screen.getByText('İndirim')).toHaveStyle({
+    expect(screen.getByText('İNDIRIM')).toHaveStyle({
       color: customerColors.terracotta,
       fontSize: appText['badge-sm'],
       letterSpacing: emToDp(appText['badge--letter-spacing'], appText['badge-sm']),
@@ -107,7 +110,7 @@ describe('ProductPhotoCard', () => {
     // Token Kararlari #18: .72 fotoğrafı SOLDURUR, .82 metni okunur kılar — iki ayrı iş.
     await render(<ProductPhotoCard name="Kekik" priceLabel="4 €" onPress={jest.fn()} soldOut soldOutLabel="Tükendi" />);
 
-    expect(screen.getByText('Tükendi').parent).toHaveStyle({
+    expect(screen.getByText('TÜKENDI').parent).toHaveStyle({
       backgroundColor: customerAppColors['scrim-72'],
     });
   });

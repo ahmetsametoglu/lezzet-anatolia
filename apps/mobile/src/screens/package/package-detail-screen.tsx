@@ -14,6 +14,7 @@ import { PhotoGallery } from '@/components/ui/photo-gallery';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useAppLocale } from '@/lib/i18n/app-locale';
+import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
@@ -230,7 +231,9 @@ export function PackageDetailScreen({ slug }: PackageDetailScreenProps) {
           </View>
           {detail.soldOut ? (
             <View style={styles.heroBadge} testID="package-soldout-badge">
-              <Text style={styles.heroBadgeLabel}>{t.badge.soldOut}</Text>
+              {/* Büyük harf dilin kuralıyla; stilin `textTransform`u Android'de CİHAZIN dilini
+                  kullanıyor (ölçüldü 28.08 — `cart-line-row` künyesi). */}
+              <Text style={styles.heroBadgeLabel}>{upperIn(t.badge.soldOut, locale)}</Text>
             </View>
           ) : null}
         </View>
