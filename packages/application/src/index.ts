@@ -558,6 +558,9 @@ export type { TransitionInput, TransitionOutcome } from './order/transition';
 // `toCategory` indirgemesinde, yani mobil API'nin de çağırdığı yerde yapılıyor. `pickRandom` webde
 // KALDI: tek tüketeni hâlâ web ana sayfasının fırsat bandı.
 export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
+// Tarif malzeme okumasının TEK kapısı (05.16) — web ve mobil aynı kararı buradan alır.
+export { readRecipeItems, recipeSoldOut, recipeTotalCents } from './catalog/recipe';
+export type { RecipeItemReading } from './catalog/recipe';
 export { dailyRng, pickFeatured, rotateDaily } from './catalog/featured';
 /* VİTRİN SEÇKİSİ — iki yüzeyin tek kaynağı (terfi 27.08; kaynağı `apps/web/lib/storefront/home.ts`
    idi ve native uygulama onu kopyalamak yerine kataloğun ham sırasını okuyordu). */

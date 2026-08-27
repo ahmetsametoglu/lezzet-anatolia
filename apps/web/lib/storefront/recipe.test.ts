@@ -193,3 +193,44 @@ describe('tarif detayı', () => {
     expect(await getRecipeDetail(`yok-${stamp}`, 'tr', place(), VISITOR)).toBeNull();
   });
 });
+
+/**
+ * **SATIŞTAN KALKMIŞ MALZEME** — `05.16`nın tek kapıya taşınmasıyla web'de DEĞİŞEN davranış (28.08).
+ *
+ * Web eskiden bu satırı "tükendi" diye çiziyordu; mobil-api aynı durumda satırı düşürüyordu. İki
+ * nüsha aynı soruya farklı cevap veriyordu ve doğrusu mobilinkiydi (`DOMAIN §13`): **"tükendi"
+ * yeniden geleceğini söyler**, satıştan kalkan gelmeyecek — üstelik ürünün detay sayfası zaten 404,
+ * yani müşteri tıklayınca boşluğa düşerdi. Kural `readRecipeItems`te birleştirildi.
+ *
+ * Ayrım korunmalı ve üstteki *"satır listede KALIR ve tükenmiş işaretlenir"* testiyle birlikte
+ * okunmalı: **stoğu biten** malzeme listede kalır (geri gelecek), **satıştan kalkan** düşer.
+ */
+describe('satıştan kalkmış malzeme', () => {
+  const products = new ProductService(db);
+
+  it('satırı HİÇ taşınmaz ve kart sayısı da onunla düşer — "tükendi" burada yalan olurdu', async () => {
+    try {
+      await products.update({ id: tereyagi.productId, status: 'passive' });
+
+      const kart = await bizimki();
+      // Kalan tek malzeme peynir (1 × 6,40 €). Tereyağı ne satırda ne toplamda.
+      expect(kart?.itemCount).toBe(1);
+      expect(kart?.totalCents).toBe(640);
+
+      const detay = await getRecipeDetail(yayindaSlug, 'tr', place(), VISITOR);
+      expect(detay?.items).toHaveLength(1);
+      expect(detay?.items.map((i) => i.variantId)).not.toContain(tereyagi.variantId);
+      // Düşen satır "tükendi" olarak da görünmüyor — gerçekten yok.
+      expect(detay?.items.every((i) => !i.soldOut)).toBe(true);
+    } finally {
+      // Fikstür ORTAK: bu satırı geri koymayan test, kendinden sonrakileri sessizce bozar.
+      await products.update({ id: tereyagi.productId, status: 'active' });
+    }
+  });
+
+  it('geri açılınca satır KENDİLİĞİNDEN döner — okuma niyeti değil durumu okur', async () => {
+    const kart = await bizimki();
+    expect(kart?.itemCount).toBe(2);
+    expect(kart?.totalCents).toBe(640 + 360 * 2);
+  });
+});
