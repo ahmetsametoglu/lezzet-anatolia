@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
@@ -151,6 +152,60 @@ describe('çakışmada HEDEFİNKİ kalır — ve ön izleme onu ÖNCEDEN söyler
     const kaynak = await musteri('onizleme-kanitsiz-kaynak', { email: null });
 
     expect((await profiles.previewMerge(hedef.id, kaynak.id)).gainsPhone).toBe(false);
+  });
+});
+
+describe('ATOMİKLİK — yarıda kesilirse hiçbir şey taşınmaz', () => {
+  /*
+    Görev satırının bitti-ölçütünün ikinci yarısı (`04.7`) ve 27.08'e kadar SINANMAMIŞTI. Dosya
+    künyesi *"bir satır taşınamazsa hiçbiri taşınmamalı"* diyor; yarısı taşınmış iki kayıt, hiç
+    birleştirilmemiş iki kayıttan KÖTÜDÜR — artık hangisinin doğru olduğu belli değildir ve
+    operatörün elinde onu anlayacak bir iz yoktur.
+
+    **Kesinti nasıl ZORLANIYOR:** `points_entry_source_key` tekilliği `(müşteri, sebep, kaynak)`
+    üçlüsünde ve pozitif satırlarda geçerli. RPC yalnız `visit` çakışmalarını önceden düşürüyor;
+    başka bir sebepte aynı `ref_id` iki kayıtta da varsa taşıma o satırda PATLAR. Patladığı yer de
+    doğru yer: puan hareketi sırada BEŞİNCİ (sipariş · adres · sepet · talep · konuşma ondan önce
+    taşınıyor), yani hata anında dört tablo çoktan yazılmıştır.
+
+    İddia bu yüzden konuşma üzerinden kuruluyor: o, patlama anında ZATEN taşınmış olması gereken
+    bir satır. Geri dönmüşse transaction gerçekten bütün.
+
+    **Bu test NEYE karşı duruyor — açıkça yazıyorum, yoksa "Postgres zaten atomik" diye silinir.**
+    Doğru: plpgsql fonksiyonu çağıranın transaction'ında koşar, yani bugün bütünlük YAPISALDIR ve
+    bu test bugün düşemez. Koruduğu şey gelecekteki bir "iyileştirme": gövdeye bir
+    `exception when others then …` bloğu eklemek. O blok hatayı yutar, fonksiyon başarıyla döner ve
+    geriye YARIM birleştirilmiş iki kayıt kalır — sipariş ve konuşma hedefte, puan ve anahtarlar
+    kaynakta. Böyle bir blok makul bir niyetle eklenir ("çakışmayı zarifçe geç") ve hiçbir tip ya da
+    lint kontrolü onu görmez. Görebilecek tek şey budur.
+  */
+  it('puan tekilliği taşımayı keserse ÖNCE taşınanlar da geri döner', async () => {
+    const hedefKayit = await musteri('atom-hedef', { phone: null });
+    const kaynakKayit = await musteri('atom-kaynak');
+
+    const konusma = await conversations.open({
+      source: 'whatsapp',
+      externalRef: `+33901${String(stamp).slice(-6)}`,
+      customerId: kaynakKayit.id,
+    });
+    conversationIds.push(konusma.id);
+
+    // Aynı `(sebep, kaynak)` ikisinde de VAR ve `visit` değil → RPC bunu önceden düşürmüyor.
+    // `order` seçildi: `manual` iki CHECK kısıtı istiyor (aktör + not) ve testin konusu o değil.
+    const ortakKaynak = randomUUID();
+    await points.insert({ customerId: kaynakKayit.id, points: 25, reason: 'order', refId: ortakKaynak });
+    await points.insert({ customerId: hedefKayit.id, points: 25, reason: 'order', refId: ortakKaynak });
+
+    await expect(profiles.merge({ targetId: hedefKayit.id, sourceId: kaynakKayit.id })).rejects.toThrow();
+
+    // ── HİÇBİR ŞEY TAŞINMAMIŞ OLMALI ──
+    expect((await conversations.getById(konusma.id))?.customerId).toBe(kaynakKayit.id);
+    // Kaynak KAPANMAMIŞ: yarım birleşme, kapanmış ama içi boşalmamış bir kayıt bırakırdı.
+    const kaynakSonra = await profiles.getById(kaynakKayit.id);
+    expect(kaynakSonra?.mergedIntoId).toBeNull();
+    expect(kaynakSonra?.email).not.toBeNull(); // anahtarları da boşaltılmamış
+    // Ve puan hareketi yerinde: bakiye kaynakta duruyor.
+    expect((await balances.getByCustomer(kaynakKayit.id))?.balance).toBe(25);
   });
 });
 
