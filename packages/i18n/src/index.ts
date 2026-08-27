@@ -45,10 +45,13 @@ export function localizedUrl(route: AppRoute, locale: Locale, params: Record<str
   return `${siteOrigin()}/${locale}${localizedPath(route, locale, params)}`;
 }
 
-// Bildirim cümle sözlüğü — iki yüzeyin (native + web) ortak dili; gerekçe dosyanın kendisinde.
+// Bildirim cümle + görsel kimlik sözlüğü — iki yüzeyin (native + web) ortak dili; gerekçe dosyada.
 export {
   notificationSentence,
+  notificationVisual,
   staffNotificationBrief,
+  type NotificationVisual,
+  type NotificationVisualTone,
   type StaffNotificationBrief,
   type StaffNotificationTone,
 } from './notification-copy';
