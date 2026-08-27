@@ -5419,6 +5419,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ölçüldü — çap küçülmemişti, 07.08'den beri 96'ydı (şablonun kendi değeri). Tasarımdan bilinçli
   sapma, `design/KARARLAR.md`'ye yazıldı.
 
+  ### VİTRİN SEÇKİSİ: altı kart, fırsatlı ürün girmiyor (27.08, kullanıcı bulgusu)
+
+  Kullanıcı sordu: *"bu haftanın seçkisi … ürünler nasıl seçiliyor, adedini altı yedi yapalım"* ve
+  *"karttaki fırsat ürünlerinin aşağıda bir daha çıkması anlamlı mı?"*
+
+  **Cevap ölçümle:** seçkinin arkasında editoryal bir seçim YOK — `readHomeFeatured` kataloğun
+  `sortOrder` sırasının ilk N'ini alıyor. Web'in sinyalli seçkisi (`readShowcase`) mobile hiç terfi
+  etmedi; bu zaten `BEKLEYEN(21.14)` ve **açık kalmaya devam ediyor** (not web şeridinde:
+  `docs/talep/not-musteri-vitrin-seckisi-mobilde-sinyalsiz.md`). Yani başlık *"Bu haftanın seçkisi"*
+  diyor ama liste ne haftalık ne seçilmiş.
+
+  **Tekrar gerçekti:** cihazda seçkinin ilk iki kartı fırsat şeridinin aynı iki ürünüydü (Limonlu ·
+  Mangolu Artisan Kek, ikisi de "Fırsat" rozetli) — fırsatlılar `sortOrder`ın başındaydı.
+
+  **YAPILAN:** `featuredFrom` saf kuralı (fiyatsız + fırsatlı elenir, dilimleme elemeden SONRA) ve
+  sınır **4 → 6**. Eleme sorgudan sonra olduğu için okuma bir pay ile çekiyor
+  (`HOME_FEATURED_OVERSCAN = 10`); sınırı sorguya birebir vermek, fırsatlılar sıranın başındayken
+  rayı boşaltabilirdi — testin üçüncü iddiası tam bunu çiviliyor.
+  **Doğrulama:** `featuredFrom` 4 birim testi (`home.test.ts`, 16/16) · uçtan ölçüldü:
+  `featured` 6 kart, fırsat rayıyla kesişim **boş** (`offers: limonlu · mangolu`,
+  `featured: fistikli-artisan-kek · cilekli-artisan-kek · karisik-baklava · fistikli-baklava ·
+  cevizli-baklava · kara-orman-pastasi`).
+
 - [x] (21.101) **VİTRİN BAŞLIĞI YER ADINI ARTIK HATIRLIYOR — çıplak posta kodu karesi kapandı (MB-80)**
   · touches: `apps/mobile/src/lib/places/place-name-memory.ts`,
   `apps/mobile/src/lib/storage/device-store.ts`, `apps/mobile/src/screens/home/home-screen.tsx`

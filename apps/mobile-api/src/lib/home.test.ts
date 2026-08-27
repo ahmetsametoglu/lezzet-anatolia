@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  featuredFrom,
   HOME_BAND_CATEGORY_COUNT,
   HOME_BAND_COLLECTION_COUNT,
   interleaveAtRandom,
@@ -136,5 +137,46 @@ describe('selectHomeBandSources', () => {
     const chosen = selectHomeBandSources([src('k1', false)], [src('c1', false)], seededRng(1));
     expect(chosen.categories).toEqual([]);
     expect(chosen.collections).toEqual([]);
+  });
+});
+
+/*
+  SEÇKİ RAYININ ELEMESİ (27.08 · kullanıcı bulgusu).
+
+  Kullanıcı vitrine baktı: seçkinin ilk iki kartı, sayfanın en üstündeki fırsat şeridinin AYNI iki
+  ürünüydü. Sebep okumanın kataloğun `sortOrder` sırasını olduğu gibi almasıydı — fırsatlılar o
+  sıranın başındaysa seçkiyi baştan sona doldururlar.
+
+  Tekrar yalnız yer israfı değil: iki ray iki ayrı soru sorar ("bugün ne ucuz" · "ne öneriyorsunuz")
+  ve aynı cevabı verirlerse ikinci ray bir seçki değil bir yankıdır. Kuralın tel(ler)i kartın
+  kendisinde: `wasCents` motorun teklifi kazandırdığının, `priceCents: null` ürünün satışa kapalı
+  olduğunun işareti.
+*/
+describe('featuredFrom', () => {
+  const card = (name: string, over: { priceCents?: number | null; wasCents?: number } = {}) =>
+    ({ slug: name, priceCents: 500, ...over }) as never;
+
+  it('FIRSATLI ürün seçkiye girmez — üstteki şeritte zaten var', () => {
+    const rows = featuredFrom([card('a'), card('firsat', { wasCents: 900 }), card('b')], 6);
+    expect(rows.map((r: { slug: string }) => r.slug)).toEqual(['a', 'b']);
+  });
+
+  it('fiyatsız (satışa kapalı) ürün de girmez — kart fiyat etiketi zorunlu bir davettir', () => {
+    const rows = featuredFrom([card('a'), card('kapali', { priceCents: null }), card('b')], 6);
+    expect(rows.map((r: { slug: string }) => r.slug)).toEqual(['a', 'b']);
+  });
+
+  it('DİLİMLEME ELEMEDEN SONRA — sınır rayın çizeceği kart sayısıdır, okunanın değil', () => {
+    // Fırsatlılar başta: sınır elemeden önce uygulansaydı ray boş kalırdı (ölçülen arızanın teli).
+    const rows = featuredFrom(
+      [card('f1', { wasCents: 900 }), card('f2', { wasCents: 900 }), card('a'), card('b'), card('c')],
+      2,
+    );
+    expect(rows.map((r: { slug: string }) => r.slug)).toEqual(['a', 'b']);
+  });
+
+  it('eleyecek bir şey yoksa sıra korunur ve sınıra kadar dolar', () => {
+    const rows = featuredFrom([card('a'), card('b'), card('c')], 2);
+    expect(rows.map((r: { slug: string }) => r.slug)).toEqual(['a', 'b']);
   });
 });

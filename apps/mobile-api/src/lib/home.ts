@@ -54,8 +54,20 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * Tek sayı; artırmak isteyen burayı değiştirir.
  */
 const HOME_OFFER_LIMIT = 10;
-/** Vitrin seçkisi rayı — v3'te dört daire. */
-const HOME_FEATURED_LIMIT = 4;
+/**
+ * Vitrin seçkisi rayı — v3'te dört daire, **27.08'de altıya çıktı (kullanıcı isteği)**: ray yatay
+ * kaydırılıyor ve dört kart parmağa "kaydırılacak bir şey var" demeye yetmiyordu.
+ */
+const HOME_FEATURED_LIMIT = 6;
+/**
+ * Seçki okumasının FAZLADAN çektiği kart sayısı — fırsatlıları eledikten sonra ray yine dolsun diye.
+ *
+ * Eleme uçta değil BURADA yapılıyor (aşağıdaki künye) ve eleme sorgudan SONRA olduğu için sınırı
+ * sorguya birebir vermek rayı kısaltırdı: fırsatlı ürünler katalog sırasının başındaysa altı kartın
+ * altısı da elenip ray boş kalabilirdi. Pay fırsat rayının kendi tavanı kadar (`HOME_OFFER_LIMIT`) —
+ * fırsat sayısı o tavanı aşamadığına göre, elemeden sonra en az `HOME_FEATURED_LIMIT` kart kalır.
+ */
+const HOME_FEATURED_OVERSCAN = 10;
 /** Bant karışımı: 4 kategori + 2 koleksiyon = 6 slot (kullanıcı kararı 08.08). */
 export const HOME_BAND_CATEGORY_COUNT = 4;
 export const HOME_BAND_COLLECTION_COUNT = 2;
@@ -311,6 +323,17 @@ export async function readHomeOffers(
  * (defter kaydı 08.08) bu okuma o kapıya döner. BEKLEYEN(21.14).
  *
  * Fiyatsız (satışa kapalı) ürün rayda taşınmaz: kart fiyat etiketi zorunlu bir gezinme davetidir.
+ *
+ * ── FIRSAT ÜRÜNÜ SEÇKİYE GİRMEZ (27.08 · kullanıcı bulgusu) ─────────────────
+ * Kullanıcı vitrine baktı ve *"kartaki fırsat ürünlerinin aşağıda bir daha çıkması anlamlı mı"*
+ * diye sordu. Ölçüm: cihazda seçkinin ilk İKİ kartı, sayfanın en üstündeki fırsat şeridinin AYNI
+ * iki ürünüydü (Limonlu ve Mangolu Artisan Kek — ikisi de "Fırsat" rozetli). Sebep bu okumanın
+ * kataloğun `sortOrder` sırasını olduğu gibi alması: fırsatlı ürünler o sıranın başındaysa seçkiyi
+ * baştan sona doldururlar.
+ *
+ * Tekrar yalnız yer israfı değil, vitrinin VAADİNİ boşa çıkarır: iki ray iki ayrı soru sorar
+ * ("bugün ne ucuz" · "ne öneriyorsunuz") ve ikisi aynı cevabı verirse ikinci ray bir seçki değil
+ * bir yankıdır. Ölçüt kartın kendisinde: `wasCents` motorun teklifi kazandırdığının teli.
  */
 export async function readHomeFeatured(
   db: SupabaseClient,
@@ -318,8 +341,25 @@ export async function readHomeFeatured(
   place: PlaceWarehouses,
   viewer: PricingViewer,
 ): Promise<StorefrontProduct[]> {
-  const page = await getCatalogData(db, { locale, query: {}, place, viewer, limit: HOME_FEATURED_LIMIT });
-  return page.products.filter((p) => p.priceCents !== null);
+  const page = await getCatalogData(db, {
+    locale,
+    query: {},
+    place,
+    viewer,
+    limit: HOME_FEATURED_LIMIT + HOME_FEATURED_OVERSCAN,
+  });
+  return featuredFrom(page.products, HOME_FEATURED_LIMIT);
+}
+
+/**
+ * Seçki rayının SAF kuralı — okumadan ayrı durur ki testi DB'siz koşsun.
+ *
+ * İki eleme, ikisi de yukarıdaki künyede gerekçeli: fiyatsız ürün (satışa kapalı) ve fırsatlı ürün
+ * (sayfanın üstündeki şeritte zaten var). Dilimleme elemeden SONRA: sınır rayın kaç kart çizeceği,
+ * kaç kart okunduğu değil.
+ */
+export function featuredFrom(products: StorefrontProduct[], limit: number): StorefrontProduct[] {
+  return products.filter((p) => p.priceCents !== null && p.wasCents === undefined).slice(0, limit);
 }
 
 /*

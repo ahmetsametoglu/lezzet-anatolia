@@ -1950,3 +1950,27 @@ kalıyor, çünkü *"60 € üzeri −%15"* bir hapa sığmaz.
 **Sapma:** 96 → 120. 146'ya çıkarılmadı; vitrin rayının dairesiyle eşitlemek iki kademeyi tek
 kademeye indirirdi ve öneri şeridi ikincil bir şerittir. Ölçü tek yerden (`theme/metrics.ts`),
 şeridi kullanan her yer birlikte büyür.
+
+## Vitrin seçkisi: altı kart ve FIRSATLI ürün girmiyor (27.08, kullanıcı bulgusu · tasarımdan sapma)
+
+Kullanıcı vitrine baktı ve iki şey sordu: *"bu haftanın seçkisi dediğimiz kısımla alakalı ürünler
+nasıl seçiliyor, buradaki ürün adedini altı yedi yapalım"* ve *"karttaki fırsat ürünlerinin aşağıda
+bir daha çıkması anlamlı mı?"*
+
+**ÖLÇÜM — seçkinin arkasında editoryal bir seçim YOK.** `readHomeFeatured` kataloğun kendi
+`sortOrder` sırasının ilk N'ini alıyor; web'in sinyalli seçkisi (`readShowcase` — görüntüleme +
+sepet sinyali + ayar) mobile hiç terfi etmedi ve bu `BEKLEYEN(21.14)` olarak kayıtlı. Yani başlık
+*"Bu haftanın seçkisi"* diyor ama liste ne haftalık ne de seçilmiş — katalog sırasının başı.
+**Bu açık kapanmadı**, kullanıcının sorusuna verilen cevap kayda geçti; sinyal kuralı pakete terfi
+ettiği gün okuma o kapıya döner.
+
+**TEKRAR ÖLÇÜLDÜ VE GERÇEKTİ:** cihazda seçkinin ilk iki kartı, sayfanın en üstündeki fırsat
+şeridinin AYNI iki ürünüydü (Limonlu ve Mangolu Artisan Kek — ikisi de "Fırsat" rozetli), çünkü
+fırsatlı ürünler `sortOrder`ın başındaydı. İki ray iki ayrı soru sorar (*"bugün ne ucuz"* ·
+*"ne öneriyorsunuz"*); aynı cevabı verirlerse ikinci ray bir seçki değil bir yankıdır.
+
+**YAPILAN:** fırsatlı ürün seçkiye girmiyor (ölçüt kartın kendisinde: `wasCents`) ve sınır **4 → 6**
+(tasarım v3'te dört daire çiziyordu — sapma bilinçli: dört kart yatay bir raya "kaydırılacak bir şey
+var" demeye yetmiyordu). Eleme sorgudan sonra olduğu için okuma bir pay ile çekiyor
+(`HOME_FEATURED_OVERSCAN`) — sınırı sorguya birebir vermek, fırsatlılar sıranın başındayken rayı
+boşaltabilirdi. Uçtan doğrulandı: `featured` 6 kart, fırsat rayıyla kesişim **boş**.
