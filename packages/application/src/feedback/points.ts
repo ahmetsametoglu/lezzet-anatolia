@@ -122,24 +122,25 @@ export async function awardPoints(
   /* Tekillik iki AYRI indekste: kaynaklı sebepte "bu satırdan zaten verildi mi"
      (`points_entry_source_key`), kaynaksızda "bugün zaten verildi mi" (`points_entry_visit_day`).
 
-     Hangisinin geçerli olduğunu SEBEP belirler, çağıranın `refId` verip vermemesi değil (denetim
-     26.08). Önceki hâli `input.refId ? … : …` diye soruyordu ve bugün doğru cevabı veriyordu —
-     ama tesadüfen: her çağıran, kaynaklı sebepte `refId` geçmeyi HATIRLADIĞI için. Hatırlamayan
-     bir çağıran çıktığında (ya da yeni bir sebep eklendiğinde) kapı sessizce yanlış indekse
-     bakardı: kaynaklı bir ödül "bugün verildi mi" diye sorulur, aynı satırdan ikinci kez
-     yazılabilir hâle gelirdi. Kural motorda zaten yazılıydı (`SOURCELESS_POINTS_REASONS`) ve
-     kimse sormuyordu. */
-  const kaynaksiz = SOURCELESS_POINTS_REASONS.includes(input.reason);
-  if (!kaynaksiz && !input.refId) {
-    // Kaynaklı sebepte `ref_id` yoksa tekillik HİÇBİR yerde tutulmaz: `points_entry_source_key`
-    // kısmi indeksi `ref_id is not null` ile sınırlı, yani satır sessizce yazılır ve aynı ödül
-    // ikinci kez verilebilir. Sessizce `null` yazmaktansa fırlatmak doğru — bu bir çalışma anı
-    // durumu değil, çağıranın sözleşme ihlali (paketin `reserveOrderStock` emsali).
-    throw new Error(`[awardPoints] "${input.reason}" kaynaklı bir sebep, refId zorunlu`);
-  }
-  const zatenVar = kaynaksiz
-    ? await entries.hasEntryOnBusinessDay(input.customerId, input.reason)
-    : await entries.hasEntryFor(input.customerId, input.reason, input.refId!);
+     Hangisinin geçerli olduğunu SEBEP söyler (`SOURCELESS_POINTS_REASONS`) — kural motorda zaten
+     yazılıydı ve burası onu sormuyordu, kendi ölçütünü (`input.refId` var mı) kullanıyordu. Aynı
+     gerçeğin iki ifadesiydi; motora bağlandı.
+
+     **Bu bir hata düzeltmesi DEĞİL, sadeleştirme** (düzeltildi 27.08). İlk yazılışında "yanlış
+     indekse bakılabilirdi" diye kaydetmiştim ve ölçmemiştim: kusurun doğması için kaynaklı bir
+     sebebi `refId`siz çağıran biri gerekiyor ve **öyle bir çağıran yok** — yedi çağrı yeri tek tek
+     bakıldı, `refId`siz olan yalnız `visit` ve o zaten kaynaksız. Yani eski ve yeni kod erişilebilir
+     her girdi için AYNI cevabı veriyor. Kazanç davranışta değil, kuralın tek yerde ifade
+     edilmesinde.
+
+     Değişken kaynağın KENDİSİ (bayrak değil): "bu ödülün işaret ettiği satır" — kural kaynaksız
+     diyorsa ya da çağıran vermemişse `null`. İkinci hâl bugün ulaşılamıyor; fırlatmaktansa eski
+     davranışı sürdürüyor, çünkü olmayan bir duruma karşı eklenen istisna gerçek bir çalışma anı
+     riskidir. */
+  const kaynakSatiri = SOURCELESS_POINTS_REASONS.includes(input.reason) ? null : (input.refId ?? null);
+  const zatenVar = kaynakSatiri
+    ? await entries.hasEntryFor(input.customerId, input.reason, kaynakSatiri)
+    : await entries.hasEntryOnBusinessDay(input.customerId, input.reason);
   if (zatenVar) return null;
 
   const [profile, settings] = await Promise.all([new UserProfileService(db).getById(input.customerId), pointsSettings(db)]);

@@ -29,17 +29,25 @@ export function notificationToken(random?: () => number): string {
  *
  * Sessizliği rıza saymak hem yanlış hem hukuken savunulamaz; kampanya açık onay ister.
  *
- * **BEKLEYEN(14.8): bu kapıyı SORAN bir gönderim yolu henüz yok.** Rıza toplanıyor (checkout,
- * tercih sayfası, müşteri ekranı) ama kampanya e-postası elle gönderim aracı yazılmadı; araç
- * geldiğinde alıcı listesi bu fonksiyondan süzülecek. Kapı önce yazıldı ve bu bilinçli: izin
- * kuralını gönderim gününe bırakmak, o gün acele bir `consent?.email` kontrolü doğururdu ve
- * opt-in/opt-out ayrımı (aşağıdaki künye) sessizce kaybolurdu.
+ * ── DİKKAT: BU KURALIN İKİNCİ BİR İFADESİ VAR ve YAŞAYAN O (ölçüldü 27.08) ───
+ * Aynı izin ölçütü `packages/database/src/services/user-profile.service.ts` içinde **SQL olarak**
+ * da yazılı (`consentFilter` → `marketing_consent-><kanal>->>granted = 'true'`) ve çalışan hâli
+ * odur: müşteri listesini ve sayacını o süzüyor, operasyon ekranının "pazarlama" kapsamı onu
+ * çağırıyor. Bu TypeScript nüshasının ise **hiçbir çağıranı yok.**
  *
- * `@public` etiketi `knip`e "bu bilerek dışa açık" der ve onu susturur — ama borcu SUSTURMAZ:
- * `BEKLEYEN(14.8)` işaretini `docs:check` denetliyor, yani görev satırı kapanmadan bu not ayakta
- * kalır ve kapandığında işaret çürükse commit'ten geçmez. Sessiz kalan makine, kayıt tutan işaret.
+ * 26.08'de buraya *"özelliğinden önce yazılmış kapı, `14.8` gelince bağlanacak"* diye bir
+ * `BEKLEYEN` işareti konmuştu; **yanlıştı ve kaldırıldı** — bağlanacak bir şey yok, kural zaten
+ * uygulanıyor. Yanlış işaret sessiz koddan kötüdür: `14.8`i yazacak kişiye olmayan bir borç
+ * gösterirdi.
  *
- * @public
+ * **Açık karar (sahibi kullanıcı):** iki ifadeden hangisi kalacak. Toplu süzme SQL ister (on bin
+ * profil TS'te süzülmez); tek kayıt sorusunun ise bugün soranı yok.
+ *
+ * **`knip` bunu ARTIK BİLDİRMİYOR ve sebebi öğreticidir:** testi yazıldığı an test dosyası bir
+ * "kullanan" sayıldı. Yani bekçi "üretimde çağrılmıyor" sınıfını değil, "hiçbir yerde
+ * çağrılmıyor" sınıfını görüyor — test yazmak bir ölü ihracatı makinenin gözünden SAKLIYOR.
+ * Bekçinin sınırı budur ve kayıt bu yüzden burada, künyede duruyor: susan makinenin yerine
+ * yazılı not geçer.
  */
 export function marketingAllowed(consent: MarketingConsent | null | undefined, channel: MarketingChannel): boolean {
   return consent?.[channel]?.granted === true;

@@ -288,18 +288,16 @@ describe('doğrudan puan yazımı', () => {
   });
 
   /*
-    Hangi tekillik kuralının geçerli olduğunu SEBEP belirler, çağıranın `refId` verip vermemesi
-    değil (denetim 26.08). Kapı eskiden `refId`nin varlığına bakıyordu ve doğru cevabı TESADÜFEN
-    veriyordu: her çağıran kaynaklı sebepte `refId` geçmeyi hatırlıyordu. Hatırlamayan bir çağıran
-    kaynaklı bir ödülü "bugün verildi mi" indeksine sordurur, aynı satırdan ikinci kez yazdırırdı —
-    ve hata vermeden. Kural motorda (`SOURCELESS_POINTS_REASONS`) yazılıydı, kimse sormuyordu.
-  */
-  it('kaynaklı sebep refId’siz YAZILAMAZ — tekilliği tutacak indeks kalmazdı', async () => {
-    await expect(awardPoints({ customerId: b2cId, reason: 'review' })).rejects.toThrow(/refId zorunlu/);
-  });
+    Hangi tekillik kuralının geçerli olduğunu SEBEP söyler (`SOURCELESS_POINTS_REASONS`), çağıranın
+    `refId` verip vermemesi değil. Kapı eskiden `refId`nin varlığına bakıyordu; motora bağlandı.
 
-  it('kaynaksız sebep (ziyaret) refId İSTEMEZ — tekilliği güne bağlıdır', async () => {
-    // `visit` kümede yazılı; kapı onu `ref_id` beklemeden, gün indeksiyle karşılar.
+    **Bu bir hata düzeltmesi değildi, sadeleştirmeydi** (düzeltildi 27.08): kusurun doğması için
+    kaynaklı bir sebebi `refId`siz çağıran biri gerekiyor ve öyle bir çağıran yok — yani eski ve
+    yeni kod erişilebilir her girdi için aynı cevabı veriyor. Bu yüzden aşağıdaki test "eskiden
+    bozuktu"yu değil, kuralın BUGÜN nereden geldiğini sabitliyor: sınanamayan bir kusuru sınıyormuş
+    gibi yapan test, yeşilken bile yanıltıcıdır.
+  */
+  it('kaynaksız sebep (ziyaret) gün indeksiyle tekildir — `refId` beklemez', async () => {
     expect(await awardPoints({ customerId: b2cId, reason: 'visit' })).not.toBeNull();
     expect(await awardPoints({ customerId: b2cId, reason: 'visit' })).toBeNull();
   });
