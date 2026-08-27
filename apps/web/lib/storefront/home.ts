@@ -1,11 +1,7 @@
 import 'server-only';
-import { AnalyticsProductDailyService, CategoryImageService, CategoryService, CollectionService, ProductListingService, ProductService, SettingsService, serviceDb } from '@lezzet/database';
-import type { ProductListingScope } from '@lezzet/database';
+import { CategoryImageService, CategoryService, CollectionService, ProductService, serviceDb } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Locale } from '@lezzet/i18n';
-// `ProductWithRelations` şema tipidir, servis tipi değil — kaynağı `@lezzet/types` (`CLAUDE §1`:
-// şema tek kaynak). `@lezzet/database`'ten yeniden dışa açmak aynı tipe ikinci bir yol açardı.
-import type { AnalyticsProductSignal, ProductWithRelations } from '@lezzet/types';
 import type { PlaceWarehouses } from '@/lib/delivery/place-types';
 import { resolveLocalizedText } from '@lezzet/types';
 import { FIXTURE_CATEGORIES } from './fixtures';
@@ -14,6 +10,7 @@ import {
   listOfferProductIds,
   loadProductContext,
   readScopeCampaigns,
+  readShowcase,
   EMPTY_PRODUCT_CONTEXT,
   toCategory,
   toProduct,
@@ -67,139 +64,17 @@ const HOME_COLLECTION_LIMIT = 2;
 /**
  * Vitrin seçkisinde kaç kart — tasarımda dörtlü ızgara (anasayfa ve boş sepet, ikisinde de 4).
  * Seçki bir LİSTE DEĞİL, tıklatma davetidir: sayfalanmaz ama sabit sınırı vardır (CLAUDE.md §1).
+ *
+ * **OKUMANIN KENDİSİ ARTIK PAKETTE** (terfi 27.08, kullanıcı kararı): `readShowcase` ölçütüyle
+ * (görüntüleme + sepete ekleme sinyali · ayardan gelen pencere · veri yokken katalog yedeği)
+ * birlikte `@lezzet/application`a taşındı ve native uygulama da onu okuyor. Mobil kopyalamamıştı —
+ * kataloğun ham sırasını alıyordu, yani "seçki" ne haftalık ne seçilmişti (`BEKLEYEN(21.14)`).
+ * Buraya kalan tek şey web'in SINIRI: kaç kart çizileceği yüzeyin tasarım kararıdır. Export,
+ * çünkü boş sepet de aynı bandı çiziyor (`lib/cart/empty-cart.ts`) ve iki yerde iki sayı yazmak
+ * bir gün iki farklı ızgara üretirdi.
  */
-const SHOWCASE_LIMIT = 4;
+export const SHOWCASE_LIMIT = 4;
 
-/**
- * Seçkinin penceresi (gün). Ayardan gelir — `DOMAIN §6`: eşik/süre kod sabiti değil işletme ayarı.
- *
- * Anahtar BURADA, `settings-keys.ts`'te değil: o dosya yalnız **iki yüzeyde birden** okunan,
- * müşteriye söz veren ayarları toplar (kendi künyesinin kuralı). Bu ayarı okuyan tek yer burası.
- *
- * Varsayılan 7 ve keyfi değil: bandın başlığı *"Bu hafta çok sevilenler"* diyor. Pencere ondan
- * uzun olsaydı ekran haftalık bir vaat verip aylık bir sıralama gösterirdi.
- */
-const SHOWCASE_WINDOW_KEY = 'showcase_window_days';
-const SHOWCASE_WINDOW_DEFAULT = 7;
-
-/**
- * Sinyal kapısından kaç satır istenir. Dörtten fazlası şart: sıralamanın başındaki ürün pasife
- * çekilmiş ya da bu yerde satılamıyor olabilir; tam dört isteseydik band eksik kalırdı.
- */
-const SIGNAL_OVERFETCH = SHOWCASE_LIMIT * 5;
-
-/**
- * **Vitrin seçkisi** — anasayfanın "Bu hafta çok sevilenler" bandı ile boş sepetin öneri alanı AYNI
- * dörtlüyü okur. İki yerde ayrı yazılsaydı müşteri iki ekranda iki farklı "seçki" görürdü.
- *
- * ── ÖLÇÜT ARTIK GERÇEK (08.9 · 04.08) ────────────────────────────────────────
- * Sıralama son N günün **görüntüleme + sepete ekleme** toplamından geliyor
- * (`analytics_daily_product`). Uzun süre "aktif katalogdan ilk dörtlü"ydü ve o bir yedekti, ölçüt
- * değil; artık yedek yalnız **veri birikmemişken** devrede.
- *
- * **Ham deftere DEĞİL günlük özete bağlı** (`ANALYTICS §5`): ham defterden okusaydık her ana sayfa
- * açılışı ayın tüm bölümünü tarardı ve sayfa her hafta biraz daha yavaşlardı — kimse tek bir günü
- * işaret edemezdi.
- *
- * **Seçki bir liste değil, tıklatma davetidir:** sayfalanmaz ama sabit sınırı vardır (`CLAUDE §1`).
- */
-export async function readShowcase(
-  db: SupabaseClient,
-  locale: Locale,
-  place: PlaceWarehouses,
-  viewer: PricingViewer,
-): Promise<StorefrontProduct[]> {
-  const rows = await showcaseRows(db, { warehouseId: place.warehouseId, channel: viewer.channel });
-  const context = await loadProductContext(db, rows, place, viewer);
-  return rows.map((p) => toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT));
-}
-
-/**
- * Seçkinin ürün satırları: önce ölçüt, eksik kalırsa katalogla tamamlanır.
- *
- * **Kaynak `product_listing` görünümü** (08.46, 24.08), ham `product` tablosu değil: bant kartlarda
- * FİYAT gösteriyor ve kanalında satılamayan ürün orada fiyatsız bir kart olarak çiziliyordu.
- *
- * Süzgeç okuma SONRASINDA olamazdı — `similar`/`family`den ayrılan yer burası: bant sabit dört kart
- * ister (`topUp`) ve elemeyi sonradan yapsaydık bant üçe düşerdi. *"Eksik bir band, tasarımın
- * dörtlü ızgarasını bozar"* kuralı zaten bu dosyada yazılı; süzgeç kaynağa taşınınca `topUp`
- * yeniden doldurabiliyor.
- */
-async function showcaseRows(db: SupabaseClient, scope: ProductListingScope): Promise<ProductWithRelations[]> {
-  const products = new ProductListingService(db);
-  const ranked = await rankedProductIds(db);
-  if (!ranked.length) {
-    // **İlk gün hâli birinci sınıf:** sinyal birikmeden band boş kalmaz, katalogla dolar. Bu bir
-    // uydurma sıralama değil — "en çok sevilen" iddiası yalnız ölçüt varken kuruluyor.
-    return (await products.list({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT, ...scope })).rows;
-  }
-
-  const page = await products.list({ filters: { ids: ranked, status: 'active' }, limit: SIGNAL_OVERFETCH, ...scope });
-  const picked = orderByRank(page.rows, ranked);
-  if (picked.length >= SHOWCASE_LIMIT) return picked.slice(0, SHOWCASE_LIMIT);
-
-  // Ölçütü olan ürünlerin bir kısmı pasifleşmişse band yine dört kart ister: kalanı katalogdan.
-  // Eksik bir band, tasarımın dörtlü ızgarasını bozar ve müşteriye "bir şeyler eksik" dedirtir.
-  const filler = await products.list({ filters: { status: 'active' }, limit: SHOWCASE_LIMIT + picked.length, ...scope });
-  return topUp(picked, filler.rows, SHOWCASE_LIMIT);
-}
-
-/**
- * Satırları ÖLÇÜT sırasına dizer — servisin döndürdüğü sıra veritabanınındır, seçkinin değil.
- *
- * Sıralamada olmayan satır sona düşer (`Infinity`): kapı yalnız `ranked` içindeki kimlikleri
- * istedi, yine de savunmacı — bir gün süzgeç genişlerse seçki sessizce rastgele sıralanmasın.
- */
-export function orderByRank<T extends { id: string }>(rows: readonly T[], ranked: readonly string[]): T[] {
-  const order = new Map(ranked.map((id, index) => [id, index]));
-  return [...rows].sort((a, b) => (order.get(a.id) ?? Infinity) - (order.get(b.id) ?? Infinity));
-}
-
-/** Eksik kalan bandı tamamlar — zaten seçilmiş ürün ikinci kez girmez. */
-export function topUp<T extends { id: string }>(picked: readonly T[], filler: readonly T[], limit: number): T[] {
-  const seen = new Set(picked.map((p) => p.id));
-  return [...picked, ...filler.filter((p) => !seen.has(p.id))].slice(0, limit);
-}
-
-/**
- * Sinyalleri seçkinin ölçütüne göre sıralar: **görüntüleme + sepete ekleme.**
- *
- * Sepete ekleme görüntülemeden daha güçlü bir "sevme" beyanıdır ama ayrı ağırlık VERİLMEDİ: ağırlık
- * seçmek, ölçüsü olmayan bir katsayıyı ekrana yansıtmak olurdu. Toplam yeterince dürüst — ve
- * değiştirmek gerekirse tek satır.
- */
-export function rankSignals(signals: readonly AnalyticsProductSignal[]): string[] {
-  return signals
-    .slice()
-    .sort((a, b) => b.viewCount + b.cartCount - (a.viewCount + a.cartCount))
-    .map((s) => s.productId);
-}
-
-/**
- * Ölçüte göre sıralı ürün kimlikleri; sinyal yoksa boş dizi.
- *
- * **Kesme ile sıralama aynı ölçüt değil ve bu bilinçli:** kapı ilk N'i SQL'de görüntülemeye göre
- * kesiyor (`STACK §13` — türetilmiş oran uygulamada toplanamaz), biz elimizdeki satırı
- * `görüntüleme + sepete ekleme` ile yeniden sıralıyoruz. Yani "az bakılıp çok sepete atılan" bir
- * ürün, ilk yirmiye giremiyorsa seçkiye de giremez. Yaklaşıklık kabul edilebilir: seçkinin sorusu
- * "kim çok isteniyor", en ince ölçüm değil.
- *
- * **Ölçüm düşerse seçki de düşmez:** hata yutulur ve yedek devreye girer (`CLAUDE §1` — sessiz
- * catch yok, gerekçe burada). Analitik bir yan üründür; anasayfanın açılmasını engelleyemez.
- */
-async function rankedProductIds(db: SupabaseClient): Promise<string[]> {
-  try {
-    const days = await new SettingsService(db).getNumber(SHOWCASE_WINDOW_KEY, SHOWCASE_WINDOW_DEFAULT);
-    const to = new Date();
-    const from = new Date(to.getTime() - days * 24 * 60 * 60 * 1000);
-    return rankSignals(await new AnalyticsProductDailyService(db).signals(day(from), day(to), SIGNAL_OVERFETCH));
-  } catch {
-    // Sinyal okunamadı (tablo yok, RPC düştü): seçki yedeğe düşer, müşteri farkı görmez.
-    return [];
-  }
-}
-
-const day = (value: Date): string => value.toISOString().slice(0, 10);
 
 /** Kartın fırsat hâline geçtiğinin tek ölçütü: motor teklifi kazandırdı → üstü çizili referans var. */
 function isOffer(p: StorefrontProduct): p is StorefrontOffer {
@@ -300,8 +175,8 @@ export async function getHomeData(locale: Locale, place: PlaceWarehouses, viewer
   const db = serviceDb();
   const [categoryRows, featured, offers, packages, collections, recipes] = await Promise.all([
     new CategoryService(db).list({ activeOnly: true }),
-    // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`).
-    readShowcase(db, locale, place, viewer),
+    // Vitrin seçkisi boş sepetle PAYLAŞILIR — tek kaynak (`readShowcase`, artık pakette).
+    readShowcase(db, locale, place, viewer, { limit: SHOWCASE_LIMIT }),
     readOffers(db, locale, place, viewer),
     // Yer paket bandına da geçer (19.22): kart yol işaretini ancak yeri bilirse basabilir.
     listStorefrontPackages(locale, HOME_PACKAGE_LIMIT, place),

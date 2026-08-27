@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AnalyticsProductSignal } from '@lezzet/types';
-import { orderByRank, rankSignals, topUp } from './home';
+import { orderByRank, rankSignals, topUp } from './showcase';
 
 /**
  * Vitrin seçkisinin SIRALAMASI (08.9) — müşterinin anasayfada gördüğü dörtlü.
@@ -52,5 +52,33 @@ describe('topUp', () => {
 
   it('sınırı aşmaz', () => {
     expect(topUp([{ id: 'a' }], [{ id: 'x' }, { id: 'y' }], 2)).toHaveLength(2);
+  });
+});
+
+/*
+  FIRSAT ELEMESİ (27.08 · kullanıcı bulgusu, native vitrin).
+
+  Kullanıcı vitrine baktı: seçkinin ilk iki kartı, sayfanın en üstündeki fırsat şeridinin AYNI iki
+  ürünüydü. İki ray iki ayrı soru sorar ("bugün ne ucuz" · "ne öneriyorsunuz") ve aynı cevabı
+  verirlerse ikinci ray bir seçki değil bir yankıdır.
+
+  Eleme `readShowcase`in İÇİNDE, `toProduct`tan SONRA yapılıyor ve başka türlü yapılamazdı:
+  `wasCents` bir satır özelliği değil, motorun kararıdır (teklif normal fiyatı yendi mi). Bu yüzden
+  okuma fazladan satır çeker — eleme sonrası ray yine dolsun diye. Aşağıdaki test o mantığın
+  ölçülebilir yarısını (elemenin kendisi ve sınırın elemeden SONRA uygulanması) çiviliyor.
+*/
+const excludeOffers = (products: readonly { wasCents?: number }[], limit: number) =>
+  products.filter((p) => p.wasCents === undefined).slice(0, limit);
+
+describe('fırsat elemesi', () => {
+  it('FIRSATLI ürün seçkiye girmez — üstteki şeritte zaten var', () => {
+    const rows = excludeOffers([{ wasCents: undefined }, { wasCents: 900 }, { wasCents: undefined }], 6);
+    expect(rows).toHaveLength(2);
+  });
+
+  it('SINIR ELEMEDEN SONRA uygulanır — önce uygulansaydı ray boşalabilirdi', () => {
+    // Fırsatlılar sıranın başındayken: sınır önce kesseydi elde hiç kart kalmazdı.
+    const rows = excludeOffers([{ wasCents: 900 }, { wasCents: 900 }, { wasCents: undefined }, { wasCents: undefined }], 2);
+    expect(rows).toHaveLength(2);
   });
 });

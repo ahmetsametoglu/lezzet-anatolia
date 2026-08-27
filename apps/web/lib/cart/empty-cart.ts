@@ -3,7 +3,8 @@ import { CategoryImageService, CategoryService, OrderService, serviceDb } from '
 import type { Locale } from '@lezzet/i18n';
 import { FIXTURE_CATEGORIES } from '@/lib/storefront/fixtures';
 import { toCategory } from '@lezzet/application';
-import { readShowcase } from '@/lib/storefront/home';
+import { readShowcase } from '@lezzet/application';
+import { SHOWCASE_LIMIT } from '@/lib/storefront/home';
 import { readSiteImage, type SitePageImage } from '@/lib/storefront/site-image';
 import { readPlaceWarehouses } from '@/lib/delivery/read-place';
 import { readPricingViewer } from '@/lib/storefront/read-viewer';
@@ -90,7 +91,7 @@ export async function getEmptyCartContext(locale: Locale): Promise<EmptyCartCont
     new CategoryService(db).list({ activeOnly: true }),
     readLastOrder(locale),
     // Seçki her iki dalda da okunur — sipariş geçmişine bağlı değil.
-    readShowcase(db, locale, await readPlaceWarehouses(), await readPricingViewer()),
+    readShowcase(db, locale, await readPlaceWarehouses(), await readPricingViewer(), { limit: SHOWCASE_LIMIT }),
     readSiteImage('empty_cart', locale),
   ]);
   // Son sipariş varsa kategori girişleri hiç çizilmez; boşuna taşınmasın — havuz sorgusu da o dalda

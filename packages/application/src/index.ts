@@ -554,6 +554,10 @@ export type { TransitionInput, TransitionOutcome } from './order/transition';
 // KALDI: tek tüketeni hâlâ web ana sayfasının fırsat bandı.
 export { getPackageDetail, getPackagesByIds, listStorefrontPackages } from './catalog/packages';
 export { dailyRng, pickFeatured, rotateDaily } from './catalog/featured';
+/* VİTRİN SEÇKİSİ — iki yüzeyin tek kaynağı (terfi 27.08; kaynağı `apps/web/lib/storefront/home.ts`
+   idi ve native uygulama onu kopyalamak yerine kataloğun ham sırasını okuyordu). */
+export { orderByRank, rankSignals, readShowcase, SHOWCASE_LIMIT_DEFAULT, topUp } from './catalog/showcase';
+export type { ShowcaseOptions } from './catalog/showcase';
 export type { StorefrontPackage, StorefrontPackageDetail, StorefrontPackageItem } from './catalog/storefront-types';
 // ── Sipariş BİLDİRİMİ + sipariş puanı — terfi 10.08 ─────────────────────────
 // Kaynağı `apps/web/lib/order/{notify,notification-data}.ts` ve `lib/feedback/points.ts`ti; web

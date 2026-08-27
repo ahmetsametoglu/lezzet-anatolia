@@ -62,6 +62,9 @@ const UYGULAMA_DBSIZ = [
   'packages/application/src/analytics/availability.test.ts',
   'packages/application/src/cart/cart-blocker.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
+  // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi
+  // edince testi de birlikte taşındı (27.08). Üç fonksiyon da saf: dizi girer, dizi çıkar.
+  'packages/application/src/catalog/showcase.test.ts',
 ];
 
 const WEB_LIB_DBSIZ = [
@@ -89,7 +92,6 @@ const WEB_LIB_DBSIZ = [
   'apps/web/lib/messaging/meta-signature.test.ts',
   'apps/web/lib/order/order-id.test.ts',
   'apps/web/lib/storefront/featured.test.ts',
-  'apps/web/lib/storefront/showcase-rank.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',
   // Bağlam kapısı (27.08) — DB'siz ama §3i'nin STATİK İZİ bunu göremez: dosya `@lezzet/database`
   // dizgesini taşıyor, çünkü depo servisini `vi.mock` ile TAKLİT ediyor. Yani iz "DB'ye vuruyor"
