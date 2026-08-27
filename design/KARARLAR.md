@@ -1865,3 +1865,29 @@ zile basınca bildirimlerini bekler, ayar anahtarlarını değil — kelime akı
 Mail altbilgisinin "tercihlerinizi yönetin" bağı üreticiden okunuyor (`notificationPreferencesUrl`)
 ve taşımayla birlikte güncellendi; canlıya çıkmış mail olmadığı için kırılan bağ yok — bu pencere
 bir daha açılmayacak, karar o yüzden bugün verildi.
+
+## Bildirim satırı TÜRÜNÜ giyer; müşteri ile personel akışı ayrışır (27.08, kullanıcı kararı)
+
+Cihaz turunun bulgusu iki katmanlıydı ve ikisi de düzeltildi:
+
+**1. Karma profil sızıntısı.** Dev hesabı (hem müşteri hem yönetici) müşteri akışında 120 personel
+satırını "Hesabınızla ilgili bir gelişme var." genel cümlesiyle görüyordu — kullanıcıya hiçbir şey
+söylemeyen tek tip bir liste. Karar: **kitle (audience) beyanı zorunlu** — müşteri yüzeyi personel
+türünü görmez ve saymaz; operasyon yüzeyi yalnız onları görür; "tümünü okundu say" öteki kitlenin
+rozetini söndürmez. Küme `STAFF_NOTIFICATION_KINDS` (saklama süpürmesiyle aynı liste, aynı kural).
+
+**2. Satır tek tip metin olmaz.** "Kullanıcı baktığında bir bakışta tipi anlamalı": her türün
+İKONU, TONU ve kısa TÜR ETİKETİ var (`notificationVisual` — cümlelerle aynı paylaşılan sözlük).
+Müşteri satırı: renkli ikon dairesi (emoji — yüzeyin yerleşik ikon dili) + renkli tür şapkası +
+cümle; ton aileleri sipariş durum haplarıyla aynı anlamda (olive=yolunda · honey=bekleyen ·
+terracotta=sorun · kum=nötr). Operasyon satırı: tür şapkası hap (kırmızı/amber/nötr) + Türkçe
+başlık — emoji YOK (ops SVG dili). Bilinmeyen tür 🔔/nötr "Bildirim" ile çizilir, kaybolmaz.
+
+**Operasyon türleri dörde çıktı (kullanıcı seçimi, dördü de):** yeni şikâyet/talep · stok eşik
+altı ("ilk iniş" dedupe'u — süregelen hâli tedarik ekranının listesi taşır) · gün kapanışı
+uyuşmazlığı · B2B başvuru. "Bildirim ≠ kuyruk" ilkesi korunarak: kuyruğun kendisi değil, kuyruğa
+düşme ÂNI haberdir; üreticiler sessiz-künyeli (zil, taşıdığı işin kaydından önemli değildir).
+
+**Skeleton kuralı bildirimde de geçerli:** ilk yük boş hâlle KARIŞMAZ — web akışı rota
+`loading.tsx`, ops paneli iskelet, mobil ops ActivityIndicator (hub deseni), mobil müşteri
+iskeleti yeni satır anatomisiyle. "Açılırken bekliyor gibi" hâli tasarım hatasıydı, kapandı.
