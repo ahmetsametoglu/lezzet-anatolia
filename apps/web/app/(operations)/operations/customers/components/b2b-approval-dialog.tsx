@@ -226,9 +226,10 @@ function CheckPane({
       <p className="font-ops-body text-ops-xs leading-[1.6] text-ops-muted">
         Onay yalnız <strong>toptan fiyatı</strong> açar — vade/limit ayrı karardır ve müşteri panelinden
         verilir. Ret kaydı silmez: hesap B2C olarak kalır.
-        {/* Resmî kayıt künyesi kart AÇILIRKEN tazeleniyor (04.08): bugün kapanmış bir şirket dünkü
-            "Aktif" ile görünmüyor. BEKLEYEN(09.11): VIES çağrısı kartın turunda değil — KDV
-            numarası başvuru anında doğrulandıysa doğrulanmış, sonradan tazelenmiyor. */}
+        {/* İKİ dış doğrulama da kart AÇILIRKEN tazeleniyor: resmî kayıt künyesi (04.08) ve KDV
+            numarası (27.08). Bugün kapanmış bir şirket dünkü "Aktif" ile görünmüyor; iptal edilmiş
+            bir numara da dünkü "Geçerli" ile görünmüyor. VIES cevap veremezse eski sonuç YAŞIYLA
+            gösteriliyor ("Geçerli · 12 gün önce"), silinmiyor — gerekçe `refreshVatNumberCheck`. */}
       </p>
 
       <div className="flex flex-wrap items-center gap-2 border-t border-ops-line pt-3">

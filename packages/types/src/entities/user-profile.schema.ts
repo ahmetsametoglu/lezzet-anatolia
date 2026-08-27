@@ -193,6 +193,14 @@ export const UserProfileSchema = z.object({
   vatNumber: z.string().nullable(),
   /** VIES doğrulaması; null = hiç sorulmadı. Reverse charge YALNIZ true'da açılır (DOMAIN §5). */
   vatNumberValid: z.boolean().nullable(),
+  /**
+   * Yukarıdaki bayrağın YAŞI — `null` = hiç sorulmadı (bayrakla birlikte).
+   *
+   * Bayrak "doğru mu"yu söyler, damga "ne zaman doğruydu"yu. Ayrımı taşıyan şey şu: bu bayrak
+   * %0 KDV açıyor, yani bayat bir `true` vergi hatasıdır. Damga yalnız KESİN cevapta yazılır —
+   * VIES "meşgulüm" dediğinde ne bayrak ne damga değişir (o bir bilgi değil, bilginin yokluğu).
+   */
+  vatNumberCheckedAt: z.string().nullable(),
   creditEnabled: z.boolean(),
   /**
    * Vade tavanı — **cent** (02.9 dilim: profil ailesi). DB kolonu `credit_limit` euro `numeric`

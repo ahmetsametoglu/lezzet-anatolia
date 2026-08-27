@@ -61,6 +61,9 @@ type PostgrestFilter = {
   lt: (c: string, v: unknown) => PostgrestFilter;
 };
 
+/** N gün öncesinin ISO damgası — yaş kovalarının eşiği (eşiğin kendisi `domain-core`da). */
+const gunOnce = (n: number): string => new Date(Date.now() - n * 86_400_000).toISOString();
+
 /** Bir tablodaki satır sayısı — gövde çekilmez (`head`), yalnız sayı. */
 async function say(db: Db, tablo: string, filtre?: KapsamKovasi['filtre']): Promise<number> {
   const q = db.from(tablo).select('*', { count: 'exact', head: true });
@@ -864,6 +867,36 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'reddedilmiş', zorunlu: true, filtre: (q) => q.eq('status', 'rejected') },
       { ad: 'süresi dolmuş', zorunlu: true, filtre: (q) => q.eq('status', 'expired') },
       { ad: 'ONBİR tipin hepsi kuyrukta', zorunlu: true, sayac: tumTiplerKuyrukta },
+    ],
+  },
+  {
+    // ── KDV DOĞRULAMASININ YAŞI (27.08) ──────────────────────────────────────────────────────
+    // Onay kartı bu bayrağın yaşını üç ayrı hâlde çiziyor ve **hiçbiri koddan uydurulamıyor** —
+    // veriden geliyor. Kovalar bu yüzden zorunlu: yaş ayrımı yazıldığı gün seed'de yalnız "taze"
+    // hâli vardı, yani "bayat" rozeti hiçbir ekranda görülemezdi.
+    //
+    // Ayrımın bedeli kartta değil vergide: bayrak ters yükümlülüğü (%0 KDV) açıyor
+    // (`domain-core/tax/vat-treatment`), yani bayat bir "Geçerli" bir vergi hatasıdır.
+    baslik: 'B2B — KDV doğrulamasının yaşı (user_profiles)',
+    tablo: 'user_profiles',
+    kovalar: [
+      {
+        ad: 'TAZE doğrulama (30 gün içinde)',
+        zorunlu: true,
+        filtre: (q) => q.eq('vat_number_valid', true).gt('vat_number_checked_at', gunOnce(30)),
+      },
+      {
+        ad: 'BAYAT doğrulama (30 günden eski)',
+        zorunlu: true,
+        filtre: (q) => q.eq('vat_number_valid', true).lt('vat_number_checked_at', gunOnce(30)),
+      },
+      {
+        // Numarası var ama VIES cevap vermemiş: Fransa'nın düğümü sık sık meşgul (ölçüldü 27.08),
+        // yani bu hâl istisna değil GÜNLÜK — kartın en sık çizeceği KDV satırı bu.
+        ad: 'SORULMAMIŞ (numara var, cevap yok)',
+        zorunlu: true,
+        filtre: (q) => q.not('vat_number', 'is', null).is('vat_number_valid', null),
+      },
     ],
   },
 ];

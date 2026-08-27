@@ -74,6 +74,9 @@ export async function submitB2bApplication(
   // Doğrulama YAZMADAN ÖNCE: sonuç kaydın parçası. Sorulamadıysa `null` yazılır ve onay kartı
   // bunu "Sorulmadı" diye gösterir — sessizce "geçerli" varsaymak reverse charge'ı açardı.
   const vatNumberValid = vatNumber ? await checkEuVatNumber(vatNumber) : null;
+  // Damga YALNIZ kesin cevapta: "sorulamadı" bir cevap değil, cevabın yokluğudur — damgalanırsa
+  // onay kartı hiç alınmamış bir doğrulamaya yaş atfeder (`b2b-approval` → `vatSignal`).
+  const vatNumberCheckedAt = vatNumberValid === null ? null : new Date().toISOString();
 
   const companyInfo: CompanyInfo = {
     legalName: input.legalName.trim(),
@@ -133,6 +136,7 @@ export async function submitB2bApplication(
     companyInfo,
     vatNumber,
     vatNumberValid,
+    vatNumberCheckedAt,
     // Kuyruğa girer, onaylanmaz. `false` DOMAIN §10'un ve `user_profiles_b2b_pending_idx` kısmi
     // indeksinin sözleşmesi — `null` yazmak kaydı operasyonun bekleyen listesinden düşürürdü.
     b2bApproved: false,

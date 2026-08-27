@@ -158,6 +158,9 @@ begin
          company_info = null,
          vat_number = null,
          vat_number_valid = null,
+         -- Damga da gider: numara silinince "ne zaman doğrulandı" bir kimlik izidir, saklanacak
+         -- bir olgu değil — kalsaydı anonimleştirilmiş satırda o kişiye ait tek tarih olurdu.
+         vat_number_checked_at = null,
          referral_code = null,
          acquisition_source = null,
          marketing_consent = '{}'::jsonb,

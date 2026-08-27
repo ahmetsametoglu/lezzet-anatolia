@@ -2,6 +2,7 @@ import 'server-only';
 import { AddressService, DeliveryZoneService, UserProfileService, type Db } from '@lezzet/database';
 import { b2bFlag, b2bSignals, b2bStatusOf, isInRoute } from '@lezzet/domain-core';
 import type { Address, CompanyInfo, DeliveryZoneWithCodes, UserProfile } from '@lezzet/types';
+import { refreshVatNumberCheck } from '@lezzet/application';
 import { lookupCompanyBySiret } from '@/lib/b2b/company-registry';
 import type { B2bCheckView, B2bDuplicateRow } from '@/app/(operations)/operations/customers/customers-types';
 
@@ -18,10 +19,11 @@ import type { B2bCheckView, B2bDuplicateRow } from '@/app/(operations)/operation
  * motora yem hazırlamak.
  *
  * **Eksikler bilinçli ve işaretli:**
- *  · `BEKLEYEN(09.11)`: VIES çağrısı yok — `vatNumberValid` kolonu `null` kalıyor ve sinyal bunu
- *    "Sorulmadı" diye YAZIYOR. Sessizce "geçerli" varsaymak, reverse charge'ı yanlış açardı.
- *    *(İstemci hazır: `lib/b2b/vat-check.ts` → `checkEuVatNumber`; başvuru anında çağrılıyor,
- *    kartın tazeleme çağrısı ayrı bir tur.)*
+ *  · ~~`BEKLEYEN(09.11)`: VIES çağrısı yok~~ **KAPANDI (27.08):** numara kart açılırken yeniden
+ *    soruluyor (`refreshVatNumberCheck`) ve KESİN cevap profile damgasıyla yazılıyor. Kapanmasının
+ *    sebebi kart değil VERGİ: bu bayrak ters yükümlülüğü açıyor (`tax/vat-treatment`), yani
+ *    başvuruda geçerli olup sonradan iptal edilen bir numara hiç sorulmadığı için sonsuza kadar
+ *    %0 KDV üretiyordu. "Sorulamadı" hiçbir şeyi silmiyor — gerekçe istemcinin künyesinde.
  *  · ~~Sirene/Annuaire çağrısı yok~~ **KAPANDI (04.08):** künye kart açılırken tazeleniyor
  *    (`refreshedCompanyInfo`); servis düşerse profildeki künyeye dönülüyor, sessizce "kapandı"
  *    denmiyor.
@@ -101,7 +103,9 @@ export async function readB2bCheck(db: Db, customerId: string): Promise<B2bCheck
   const profile = await profiles.getById(customerId);
   if (!profile) return null;
 
-  const [addresses, zones, duplicates, fresh] = await Promise.all([
+  // İKİ dış çağrı da bu turda ve YAN YANA: resmî kayıt ile KDV numarası aynı kartın iki satırı,
+  // biri bugünü öteki başvuru gününü gösterirse operatör hangisine bakacağını bilemez.
+  const [addresses, zones, duplicates, fresh, vat] = await Promise.all([
     new AddressService(db).listByCustomer(customerId),
     // Bölgeler operatörün elle kurduğu, doğal tavanı olan bir küme → tek turda (CLAUDE.md §1).
     new DeliveryZoneService(db).listWithCodes({ activeOnly: true }),
@@ -113,13 +117,16 @@ export async function readB2bCheck(db: Db, customerId: string): Promise<B2bCheck
       name: profile.name,
     }),
     refreshedCompanyInfo(profile),
+    refreshVatNumberCheck(db, profile),
   ]);
 
   const address = primaryAddressOf(addresses);
   const signals = b2bSignals({
     companyInfo: fresh ?? profile.companyInfo,
     vatNumber: profile.vatNumber,
-    vatNumberValid: profile.vatNumberValid,
+    vatNumberValid: vat.valid,
+    vatCheckedAt: vat.checkedAt,
+    now: new Date(),
     country: profile.country,
     inRoute: inRouteOf(address, zones),
     duplicateCount: duplicates.length,

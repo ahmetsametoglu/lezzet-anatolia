@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { b2bFlag, b2bSignals, isFoodActivityCode, type B2bSignalInput } from './b2b-approval';
+import { b2bFlag, b2bSignals, isFoodActivityCode, VAT_CHECK_FRESH_DAYS, type B2bSignalInput } from './b2b-approval';
+
+/** Sabit "şimdi" — yaş hesabı sınandığı için saat okumak testi bir gün kendiliğinden kırardı. */
+const SIMDI = new Date('2026-08-27T12:00:00.000Z');
+const gunOnce = (n: number) => new Date(SIMDI.getTime() - n * 86_400_000).toISOString();
 
 const temiz: B2bSignalInput = {
   companyInfo: { legalName: 'SARL BOSPHORE', siret: '81234567800019', activityCode: '5610A', foundedYear: 2016, isActive: true },
   vatNumber: 'FR81812345678',
   vatNumberValid: true,
+  vatCheckedAt: SIMDI.toISOString(),
+  now: SIMDI,
   country: 'FR',
   inRoute: true,
   duplicateCount: 0,
@@ -34,12 +40,54 @@ describe('b2bSignals', () => {
   });
 
   it('SORULMAMIŞ VIES ile GEÇERSİZ VIES ayrı — eksik veri kötü veri gibi okunmaz', () => {
-    expect(bul({ ...temiz, vatNumberValid: null }, 'KDV no')).toMatchObject({ value: 'Sorulmadı', tone: 'warn' });
+    expect(bul({ ...temiz, vatNumberValid: null, vatCheckedAt: null }, 'KDV no')).toMatchObject({ value: 'Sorulmadı', tone: 'warn' });
     expect(bul({ ...temiz, vatNumberValid: false }, 'KDV no')).toMatchObject({ value: 'Geçersiz', tone: 'bad' });
   });
 
   it('numara hiç yoksa "Numara yok" der — "Sorulmadı" demek numara varmış izlenimi verirdi', () => {
-    expect(bul({ ...temiz, vatNumber: null, vatNumberValid: null }, 'KDV no')?.value).toBe('Numara yok');
+    expect(bul({ ...temiz, vatNumber: null, vatNumberValid: null, vatCheckedAt: null }, 'KDV no')?.value).toBe('Numara yok');
+  });
+});
+
+/**
+ * **Doğrulamanın YAŞI** (27.08) — bu bayrak %0 KDV açıyor (`tax/vat-treatment`), yani bayat bir
+ * "Geçerli" vergi hatasıdır. Sinyal yaşı söylemek zorunda; ama eski doğrulama GEÇERSİZLİK değildir,
+ * o yüzden hiçbir yaşta kırmızıya dönmez.
+ */
+describe('KDV sinyalinin yaşı', () => {
+  const kdv = (over: Partial<B2bSignalInput>) => bul({ ...temiz, ...over }, 'KDV no');
+
+  it('bugün doğrulanmışsa gününü söyler ve yeşildir', () => {
+    expect(kdv({ vatCheckedAt: SIMDI.toISOString() })).toMatchObject({ value: 'Geçerli · bugün', tone: 'ok' });
+  });
+
+  it('eşiğin İÇİNDE yaşını söyler ama yeşil kalır', () => {
+    expect(kdv({ vatCheckedAt: gunOnce(VAT_CHECK_FRESH_DAYS) })).toMatchObject({
+      value: `Geçerli · ${VAT_CHECK_FRESH_DAYS} gün önce`,
+      tone: 'ok',
+    });
+  });
+
+  it('eşiği AŞINCA bayat der ve sararır — ama KIRMIZI olmaz: eskimek geçersizlik değildir', () => {
+    const s = kdv({ vatCheckedAt: gunOnce(VAT_CHECK_FRESH_DAYS + 1) });
+    expect(s?.value).toContain('bayat');
+    expect(s?.tone).toBe('warn');
+  });
+
+  it('DAMGASIZ "geçerli" taze SAYILMAZ — yaşı bilinmeyen doğrulama, kapatılan hatanın ta kendisi', () => {
+    expect(kdv({ vatCheckedAt: null })).toMatchObject({ value: 'Geçerli · yaşı bilinmiyor', tone: 'warn' });
+  });
+
+  it('bozuk damga yaş UYDURMAZ, bilinmiyora düşer', () => {
+    expect(kdv({ vatCheckedAt: 'dün' })?.value).toBe('Geçerli · yaşı bilinmiyor');
+  });
+
+  it('GEÇERSİZ numarada yaş hiç sorulmaz — damgası taze de olsa kırmızıdır', () => {
+    expect(kdv({ vatNumberValid: false, vatCheckedAt: gunOnce(400) })).toMatchObject({ value: 'Geçersiz', tone: 'bad' });
+  });
+
+  it('bayat doğrulama bayrağı sarıya çeker, kırmızıya değil', () => {
+    expect(b2bFlag(b2bSignals({ ...temiz, vatCheckedAt: gunOnce(365) }))).toMatchObject({ label: 'Dikkat', tone: 'warn' });
   });
 
   it('kapalı resmî kayıt kırmızı, EKSİK resmî kayıt yalnız uyarı', () => {

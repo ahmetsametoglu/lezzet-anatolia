@@ -36,6 +36,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `company_info` | jsonb | • |  |
 | `vat_number` | text | • |  |
 | `vat_number_valid` | boolean | • |  |
+| `vat_number_checked_at` | timestamptz | • |  |
 | `b2b_applied_at` | timestamptz | • |  |
 | `b2b_rejected_at` | timestamptz | • |  |
 | `b2b_rejected_by` | uuid | • |  |
@@ -75,7 +76,8 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 - **`type`** — kanal bunu belirler
 - **`company_info`** — şirket bilgisi — doluysa B2B. Alanlar (`CompanyInfoSchema`): `legalName` · `siret` · `activityCode` (APE/NAF) · `foundedYear` · `isActive`. Self-servis başvuruda (08.7) SIRET yolunda resmî kayıttan dolar, AB yolunda elle girilir. jsonb olduğu için yeni alan migration istemez
 - **`vat_number`** — AB vergi no (Alman USt-IdNr); reverse charge için
-- **`vat_number_valid`** — VIES doğrulaması (açık API)
+- **`vat_number_valid`** — VIES doğrulaması (açık API). Üç değerli: `true` geçerli · `false` geçersiz · `null` **sorulmadı**. Reverse charge YALNIZ `true`da açılır
+- **`vat_number_checked_at`** — yukarıdaki sonucun ALINDIĞI an; `null` = hiç kesin cevap alınmamış. Damga yalnız KESİN cevapta yazılır — VIES "meşgulüm" dediğinde ne bayrak ne damga değişir, çünkü bilgi yokluğu bilgiyi silmez. Var olma sebebi: bayrak %0 KDV açıyor, yani yaşını söylemeyen bir `true` vergi hatasıdır (27.08). Onay kartı hem tazeliyor hem yaşı gösteriyor ("Geçerli · 12 gün önce"); eşik `domain-core` → `VAT_CHECK_FRESH_DAYS`
 - **`email`** — web kimliği
 - **`phone`** — **İLETİŞİM numarası** — kimlik anahtarı DEĞİL (04.10, 0049) ve benzersiz de değil. Formdan gelir (hesap kartı, misafir checkout), doğrulanmamıştır, kimlik çözümünde HİÇ okunmaz. Normalize (E.164). Bir tur bu kolon ikisini birden yapıyordu ve açık oradaydı — gerekçesi `CustomerPhone` bölümünde
 - **`credit_enabled`** — vadeli (hesaba) sipariş yetkisi — **varsayılan false**, admin elle açar (bkz. `DOMAIN.md §7`)

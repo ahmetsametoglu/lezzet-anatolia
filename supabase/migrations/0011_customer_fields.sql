@@ -14,6 +14,12 @@ alter table public.user_profiles
   add column company_info jsonb,
   add column vat_number text,                        -- AB vergi no (Alman USt-IdNr) — reverse charge
   add column vat_number_valid boolean,               -- VIES doğrulaması; null = hiç sorulmadı
+  -- Sonucun YAŞI. Bayrak tek başına "doğru mu" der, "ne zaman doğruydu" demez — ve bu kolon
+  -- reverse charge'ı (%0 KDV) açan kolondur: başvuruda geçerli olup sonradan iptal edilmiş bir
+  -- numara, damga olmadan sonsuza kadar geçerli görünür. Damga `vat_number_valid` ile BİRLİKTE
+  -- yazılır ve yalnız KESİN cevapta (true/false); "sorulamadı" ne bayrağı ne damgayı değiştirir,
+  -- yoksa VIES'in meşgul olduğu bir gün bilgimizi silerdi.
+  add column vat_number_checked_at timestamptz,
 
   -- ── B2B başvurusunun ZAMAN EKSENİ (08.7 · 09.11) ─────────────────────────────────────────────
   -- `b2b_approved` iki hâl taşıyor ama başvurunun ÜÇ hâli var: bekliyor · onaylandı · reddedildi.

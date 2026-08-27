@@ -51,6 +51,17 @@ export interface B2bSignalInput {
   /** KDV numarası ve VIES sonucu; `null` sonuç = hiç sorulmadı (geçersizden AYRI). */
   vatNumber: string | null;
   vatNumberValid: boolean | null;
+  /**
+   * Yukarıdaki sonucun ALINDIĞI an (ISO) — `null` = hiç kesin cevap alınmamış.
+   *
+   * Sinyale girmesinin sebebi: kart VIES'i her açılışta soruyor ama üye ülke sunucusu sık sık
+   * cevap vermiyor (ölçüldü 27.08, Fransa'nın düğümü). O hâlde ekranda duran "Geçerli" bugünün
+   * değil başvuru gününün cevabıdır — ve bu bayrak %0 KDV açıyor. Yaşı söylemeyen bir sinyal,
+   * operatöre bilmediği bir şeyi biliyormuş gibi gösterir.
+   */
+  vatCheckedAt: string | null;
+  /** "Şimdi" — motor saat okumaz (saf karar); yaş hesabı için çağıran verir. */
+  now: Date;
   /** Başvuranın ülkesi — FR'de resmî kayıt sinyali beklenir, DE'de beklenmez. */
   country: 'FR' | 'DE';
   /**
@@ -60,6 +71,50 @@ export interface B2bSignalInput {
   inRoute: boolean | null;
   /** Aynı kişi olabilecek başka kayıt sayısı (telefon kuyruğu ya da ad benzerliği). */
   duplicateCount: number;
+}
+
+/**
+ * Doğrulamanın "taze" sayıldığı süre — **gün**.
+ *
+ * Eşik keyfî değil, KDV numarasının değişme hızına göre seçildi: numara iptali seyrek ve resmî bir
+ * olaydır, günlük değil. 30 gün, "geçen ay doğruydu" ile "geçen yıl doğruydu" arasını ayırır ve
+ * kartı gereksiz sarıya boyamaz. Değiştirmek isteyen buradan değiştirir; sinyalin metni de
+ * eşikten türer, iki yerde yaşamaz.
+ */
+export const VAT_CHECK_FRESH_DAYS = 30;
+
+const DAY_MS = 86_400_000;
+
+/** Gün farkı — tam gün, aşağı yuvarlı. Geçersiz damga `null` verir (uydurma yaş üretilmez). */
+function ageInDays(checkedAt: string | null, now: Date): number | null {
+  if (!checkedAt) return null;
+  const at = Date.parse(checkedAt);
+  if (Number.isNaN(at)) return null;
+  return Math.max(0, Math.floor((now.getTime() - at) / DAY_MS));
+}
+
+/**
+ * **KDV sinyali — tek yerde, çünkü üç bilgiyi birlikte okuması gerekiyor:** bayrak, numara ve YAŞ.
+ *
+ * Ayrı ayrı doğru olan üç değer, birlikte okunmadığında yanlış bir cümle kuruyordu: bayat bir
+ * "Geçerli", operatöre bugünün cevabı gibi görünüyordu. Kural şu — kesin cevap ne kadar eskiyse
+ * ton o kadar düşer, ama **hiçbir zaman `bad` olmaz**: eski bir doğrulama, geçersizlik değildir.
+ */
+function vatSignal(label: string, input: B2bSignalInput): B2bSignal {
+  const { vatNumber, vatNumberValid } = input;
+  if (vatNumberValid === false) return { label, value: 'Geçersiz', tone: 'bad' };
+  if (vatNumberValid === null) {
+    // Sorulmamış soru `warn`: numara duruyor ama doğrulanmadı — geçersiz demek yalan olurdu.
+    return { label, value: vatNumber ? 'Sorulmadı' : 'Numara yok', tone: 'warn' };
+  }
+
+  const age = ageInDays(input.vatCheckedAt, input.now);
+  // Damgasız `true`: eski kayıtlar (damga alanı doğmadan yazılmış) ve elle kurulan veri. Yaşını
+  // bilmediğimiz bir doğrulamayı taze saymak, tam da kapatmaya çalıştığımız hatadır.
+  if (age === null) return { label, value: 'Geçerli · yaşı bilinmiyor', tone: 'warn' };
+  if (age === 0) return { label, value: 'Geçerli · bugün', tone: 'ok' };
+  if (age <= VAT_CHECK_FRESH_DAYS) return { label, value: `Geçerli · ${age} gün önce`, tone: 'ok' };
+  return { label, value: `Geçerli · ${age} gün önce (bayat)`, tone: 'warn' };
 }
 
 /**
@@ -87,19 +142,7 @@ export function b2bSignals(input: B2bSignalInput): B2bSignal[] {
               : 'Sinyal yok (DE)',
       tone: ci?.isActive === true ? 'ok' : ci?.isActive === false ? 'bad' : 'warn',
     },
-    {
-      label: frDeki ? 'KDV no (VIES)' : 'VIES (USt-IdNr)',
-      value:
-        input.vatNumberValid === true
-          ? 'Geçerli'
-          : input.vatNumberValid === false
-            ? 'Geçersiz'
-            : input.vatNumber
-              ? 'Sorulmadı'
-              : 'Numara yok',
-      // Sorulmamış soru `warn`: numara duruyor ama doğrulanmadı — geçersiz olduğunu söylemek yalan olur.
-      tone: input.vatNumberValid === true ? 'ok' : input.vatNumberValid === false ? 'bad' : 'warn',
-    },
+    vatSignal(frDeki ? 'KDV no (VIES)' : 'VIES (USt-IdNr)', input),
     {
       label: 'Faaliyet',
       value: ci?.activityCode

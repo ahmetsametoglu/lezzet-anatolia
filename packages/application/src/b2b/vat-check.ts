@@ -1,5 +1,8 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { UserProfileService } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
 import { splitVatNumber } from '@lezzet/domain-core';
+import type { UserProfile } from '@lezzet/types';
 
 /**
  * **AB vergi numarası doğrulaması** (VIES) — Alman/AB başvurusunun kimlik kanıtı.
@@ -75,4 +78,55 @@ export async function checkEuVatNumber(rawVatNumber: string): Promise<boolean | 
     });
     return null;
   }
+}
+
+/** Numaranın bugünkü hâli + o cevabın yaşı. `checkedAt` `null` ise hiç kesin cevap alınmamış. */
+export interface VatCheckState {
+  valid: boolean | null;
+  checkedAt: string | null;
+  /** Bu turda VIES'ten KESİN cevap alındı mı — ekran "bugün soruldu" diyebilsin diye. */
+  refreshed: boolean;
+}
+
+/**
+ * **Kayıtlı VIES sonucunu TAZELER** (09.11 · `BEKLEYEN` kapanışı 27.08).
+ *
+ * ── NEDEN GEREKLİ ────────────────────────────────────────────────────────────
+ * Numara bugüne kadar yalnız **başvuru anında bir kez** soruluyordu ve sonuç profilde donuyordu.
+ * Onay kartı SIRET künyesini her açılışta tazeliyor (`b2b-check.ts` → `refreshedCompanyInfo`) ama
+ * KDV numarasını tazelemiyordu, yani kart bir alanda bugünü, öteki alanda başvuru gününü
+ * gösteriyordu.
+ *
+ * **Asıl bedeli kartta değil VERGİDE:** bu bayrak ters yükümlülüğü açan bayrak
+ * (`domain-core/tax/vat-treatment` → DE + b2b + `true` = %0 KDV). Başvuruda geçerli olup sonradan
+ * iptal edilmiş bir numara, hiç yeniden sorulmadığı için sonsuza kadar %0 KDV üretirdi.
+ *
+ * ── "SORULAMADI" HİÇBİR ŞEYİ SİLMEZ ──────────────────────────────────────────
+ * Yalnız KESİN cevap (true/false) yazılır. VIES üye ülke sunucusuna bağlı ve tek tek ülkeler
+ * saatlerce cevap vermiyor — ölçüldü (27.08): Fransa'nın düğümü art arda beş sorguya da
+ * `MS_MAX_CONCURRENT_REQ` döndü, Almanya normal cevapladı. `null`ı yazsaydık, servisin meşgul
+ * olduğu bir gün elimizdeki doğrulanmış bilgiyi silerdik — `CLAUDE §1`: ölçülemeyen değer, değerin
+ * yokluğu değildir.
+ *
+ * Numarası olmayan kayıtta hiç çağrı yapılmaz: cevabı zaten biliyoruz.
+ *
+ * **`ask` bir PORT'tur, test kancası değil** (`packages/ai`nin sağlayıcı deseni): buradaki kural
+ * *"yalnız kesin cevap yazılır"* ve o kuralın sınanabilmesi için VIES'in `null` dönmesi gerekiyor —
+ * gerçek serviste o hâl ısmarlanamaz, ancak Fransa'nın düğümü meşgulken rastlanır. Kuralı
+ * sınanamaz bırakmak, en pahalı hatayı (elimizdeki doğrulamayı silmek) sessiz bırakmak olurdu.
+ */
+export async function refreshVatNumberCheck(
+  db: SupabaseClient,
+  profile: UserProfile,
+  ask: (vatNumber: string) => Promise<boolean | null> = checkEuVatNumber,
+): Promise<VatCheckState> {
+  const stored: VatCheckState = { valid: profile.vatNumberValid, checkedAt: profile.vatNumberCheckedAt, refreshed: false };
+  if (!profile.vatNumber) return stored;
+
+  const valid = await ask(profile.vatNumber);
+  if (valid === null) return stored;
+
+  const checkedAt = new Date().toISOString();
+  await new UserProfileService(db).update({ id: profile.id, vatNumberValid: valid, vatNumberCheckedAt: checkedAt });
+  return { valid, checkedAt, refreshed: true };
 }

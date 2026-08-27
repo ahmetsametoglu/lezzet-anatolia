@@ -69,6 +69,8 @@ interface SeedKisi {
   companyInfo?: { legalName: string; siret?: string; activityCode?: string; foundedYear?: number; isActive?: boolean };
   vatNumber?: string;
   vatNumberValid?: boolean;
+  /** Doğrulamanın yaşı — onay kartının "taze / bayat" ayrımının kovası (`b2b-approval`). */
+  vatNumberCheckedAt?: string;
   b2bApproved?: boolean;
   creditEnabled?: boolean;
   /** Vade tavanı — CENT (02.9 profil dilimi). 250000 = 2.500,00 €. */
@@ -93,8 +95,18 @@ const KISILER: SeedKisi[] = [
     // yerelde hiç `tr` sipariş doğmuyor ve üç dilli mail/belge yolunun üçte biri hiç görülmüyordu.
     preferredLanguage: 'tr',
     companyInfo: { legalName: 'SARL BOSPHORE', siret: '81234567800019', activityCode: '5610A', foundedYear: 2015, isActive: true },
-    vatNumber: 'FR81812345678',
+    // ── NUMARA GERÇEK VE GEÇERLİ, ve bu ÖLÇÜLEREK seçildi (27.08) ──────────────────────────────
+    // Buradaki numara `FR81812345678` idi, yani uydurma. Zararsız görünüyordu ama onay kartı artık
+    // VIES'i kart açılışında SORUYOR: ilk açılışta uydurma numara `Geçersiz` damgalanıyor ve
+    // satıra `false` yazılıyor (ölçüldü — üç seed müşterisinin üçü de bir turda kırmızıya döndü).
+    // Sonuç, kartın NORMAL hâlinin yerelde hiç görülememesiydi: her B2B başvurusu "Geçersiz".
+    // Seed'in ürettiği hâl, dış dünyanın söylediğiyle çelişmemeli — yoksa kova bir kez bakılınca
+    // buharlaşır. `FR27552032534` VIES'te VALID (ölçüldü 27.08); kamuya açık bir işletme numarası,
+    // kişisel veri değil ve ekranda hiçbir yerde gösterilmiyor (yalnız bayrak okunuyor).
+    vatNumber: 'FR27552032534',
     vatNumberValid: true,
+    // TAZE doğrulama kovası — kart "Geçerli · N gün önce" der ve yeşil kalır.
+    vatNumberCheckedAt: an(-3),
     b2bApproved: true,
     creditEnabled: true,
     creditLimitCents: 250000,
@@ -130,8 +142,15 @@ const KISILER: SeedKisi[] = [
     country: 'DE',
     preferredLanguage: 'de',
     companyInfo: { legalName: 'Anadolu Markt Kehl GmbH', foundedYear: 2019, isActive: true },
-    vatNumber: 'DE811234567',
+    // Gerçek ve geçerli (VIES'te VALID, ölçüldü 27.08) — gerekçe `b2bOnayli` satırında.
+    // ALMAN kaydında ayrıca ZORUNLU: ters yükümlülüğü (%0 KDV) açan tek yol bu bayrak ve o dal
+    // yalnız DE + b2b + geçerli numarada koşuyor. Uydurma numarayla checkout'un reverse charge
+    // dalı yerelde hiç denenemezdi.
+    vatNumber: 'DE129274202',
     vatNumberValid: true,
+    // BAYAT doğrulama kovası (27.08): geçen yıl doğrulanmış numara. Kart "bayat" der ve sararır —
+    // ters yükümlülüğü açan bayrağın yaşlanabildiği tek yerde bu hâl görülebilsin.
+    vatNumberCheckedAt: an(-400),
     b2bApproved: true,
     creditEnabled: true,
     creditLimitCents: 120000,
