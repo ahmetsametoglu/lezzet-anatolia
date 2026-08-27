@@ -5374,6 +5374,42 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kampanyalar müşteriye anonim *"Kampanya"* diye görünüyor. Rozet geldiği için artık daha görünür
   bir eksik. Not bırakıldı (`docs/talep/not-operasyon-kampanya-etiketi-zorunlu-olmali.md`).
 
+  ### KATMAN DÜZELTMESİ (27.08, kullanıcı bildirimi) — rozet ÜRÜN kartından KESİT kartına
+
+  Yukarıdaki iş rozeti doğru kurdu ama **yanlış katmana koydu.** Kullanıcı 23.08'de kampanyayı
+  *"vitrin sayfasındaki ilgili katalog veya kategori kartlarında"* istemişti; rozet bir katman
+  aşağıya, o kesitlerin İÇİNDEKİ ürün kartlarına konmuştu. 27.08'de bildirdi ve **yanıltıcı**
+  olduğunu söyledi: *"sepette üç euro indirimken doğrudan burada üç indirim koyuyormuş gibi
+  oluyor."*
+
+  **ÖLÇÜM ŞİKÂYETİ DOĞRULADI** (`applyBestDiscount`): sabit tutar
+  `Math.min(rule.amountCents, scopeBase)` ile sepetin kapsam toplamına **BİR KEZ** iniyor — rozeti
+  gören müşteri üç ürün alsa 9 € değil 3 € indirim alır; üstelik motor adaylardan **tek kazanan**
+  seçiyor, yani iki kampanyalı üründen birinin rozeti her hâlükârda tutulmayan bir söz.
+
+  **YAPILAN:** `cardBadgeOf` kampanya dalını kaybetti — imzası artık yalnız `wasCents` okuyor,
+  yani bir kampanyayı ürün kartına yazmanın yolu **derleyici düzeyinde** kapandı. Üç ekran birden
+  sadeleşti (katalog ızgarası · vitrin seçkisi · ürün detayının öneri şeridi) ve üç sözlükten dokuz
+  ölü anahtar (`card.campaign`, tr/fr/de) silindi. Yeni türetme `scopeBadgeOf` kitte; vitrin bandı
+  (`CollectionBand`) `discountLabel` prop'uyla hap çiziyor — sayaç satırının yanında, ayrı satır
+  DEĞİL (bandın yüksekliği bir ölçü değil sözleşme: üst katman dairesi `index * collectionBand`
+  ile konumlanıyor). Hap üç tonda üç kontrast çifti taşıyor; `sand-150` bandın üstünde krem hap
+  kaybolacağı için orada ters çift (terracotta zemin + krem yazı).
+
+  **Eşikli kampanya rozete girmiyor** (23.08 kuralı aynen): *"60 € üzeri −%15"* hapa sığmaz, o
+  yüzden bandın sayaç satırında tam cümlesiyle kalıyor. Kural tek yerde — iki türetme de aynı
+  ölçütü okuyor. "Fırsat" rozeti ürün kartında KALDI: o sepete bağlı değil, ürünün kendi fiyatı.
+
+  **Doğrulama:** `typecheck` temiz · `lint` temiz · `knip` temiz · mobil jest **544/544** (60 dosya,
+  `src/screens`) · yeni `collection-band.test.tsx` (3 test) **sabotajla doğrulandı** (rozet çizimi
+  susturulunca 2 test düştü). **Cihazda ölçüldü** (Oppo CPH1907): katalogda "3,00 € İNDİRİM"
+  rozetleri gitti ve "FIRSAT" kaldı · vitrin bantlarında hap çıktı (*"Bayram klasikleri −3,00 €"*,
+  aynalanmış *"Börekler ve hamur işleri −%15"*) · ürün detayının öneri şeridi kampanyasız.
+
+  **AYNI TURDA:** öneri şeridinin daireleri **96 → 120** (`circleSm`, kullanıcı isteği). Tarihçe
+  ölçüldü — çap küçülmemişti, 07.08'den beri 96'ydı (şablonun kendi değeri). Tasarımdan bilinçli
+  sapma, `design/KARARLAR.md`'ye yazıldı.
+
 - [x] (21.101) **VİTRİN BAŞLIĞI YER ADINI ARTIK HATIRLIYOR — çıplak posta kodu karesi kapandı (MB-80)**
   · touches: `apps/mobile/src/lib/places/place-name-memory.ts`,
   `apps/mobile/src/lib/storage/device-store.ts`, `apps/mobile/src/screens/home/home-screen.tsx`

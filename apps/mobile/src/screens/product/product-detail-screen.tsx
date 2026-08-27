@@ -540,9 +540,9 @@ export function ProductDetailScreen({ slug }: ProductDetailScreenProps) {
                   key={product.slug}
                   name={product.name}
                   priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
-                  /* KAMPANYA ROZETİ (23.08) — öneri şeridi karışık bir listedir, kampanyayı
-                     söyleyecek başlığı yok. Kural kitte; katalog ve vitrinle aynı. */
-                  discountLabel={cardBadgeOf(product, { offer: t.card.offer, campaign: t.card.campaign }, locale)}
+                  /* Yalnız FIRSAT rozeti (27.08) — kapsam kampanyası ürün kartında yanıltıcıydı,
+                     yeri vitrin bandı oldu. Kural kitte; katalog ve vitrinle aynı. */
+                  discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                   size="sm"
                   photoUri={product.image.url}
                   initial={product.name.slice(0, 1)}

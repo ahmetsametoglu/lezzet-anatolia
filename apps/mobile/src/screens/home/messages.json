@@ -94,11 +94,7 @@
       "retry": "Tekrar dene"
     },
     "card": {
-      "offer": "Fırsat",
-      "campaign": {
-        "percent": "%{n} indirim",
-        "amount": "{amount} indirim"
-      }
+      "offer": "Fırsat"
     }
   },
   "fr": {
@@ -196,11 +192,7 @@
       "retry": "Réessayer"
     },
     "card": {
-      "offer": "Offre",
-      "campaign": {
-        "percent": "{n} % de remise",
-        "amount": "{amount} de remise"
-      }
+      "offer": "Offre"
     }
   },
   "de": {
@@ -298,11 +290,7 @@
       "retry": "Erneut versuchen"
     },
     "card": {
-      "offer": "Angebot",
-      "campaign": {
-        "percent": "{n} % Rabatt",
-        "amount": "{amount} Rabatt"
-      }
+      "offer": "Angebot"
     }
   }
 }

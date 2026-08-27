@@ -221,10 +221,10 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
       priceLabel: productPriceLabel(product.priceCents, product.variantCount, locale),
       soldOut: product.soldOut,
       soldOutLabel: t.card.soldOut,
-      /* Rozet kararı KİTTE (23.08): "Fırsat kampanyayı yener" ve "eşikli kampanya rozete girmez"
-         kuralları tek yerde yaşasın diye. Kategori/koleksiyon seçiliyken sunucu kampanyayı zaten
-         göndermiyor — orada kesit başlığı söylüyor ve 40 özdeş rozet rozeti anlamsızlaştırırdı. */
-      discountLabel: cardBadgeOf(product, { offer: t.card.offer, campaign: t.card.campaign }, locale),
+      /* Rozet kararı KİTTE: artık yalnız FIRSAT (27.08). Kapsam kampanyası ızgaradan kalktı —
+         40 karta basılan aynı rozet hem rozeti anlamsızlaştırıyor hem de sepete bir kez inen
+         indirimi ürün başına vaat gibi gösteriyordu. Kampanyayı kesitin kartı söyler. */
+      discountLabel: cardBadgeOf(product, { offer: t.card.offer }),
       placeNote,
       /* SOLMA yalnız KAPALI kapıda: "bu adrese gönderemiyoruz" kalıcı bir hâl ve kart bir satın
          alma değil bir bilgi. `shipping` ve rota içi `elsewhere` SOLMAZ — ikisinde de ürün

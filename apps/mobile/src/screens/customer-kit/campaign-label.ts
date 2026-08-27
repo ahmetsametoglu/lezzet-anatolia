@@ -53,51 +53,49 @@ export function campaignValueOf(campaign: CampaignView, t: CampaignCopy, locale:
   return t.withMinimum.replace('{minimum}', formatPrice(campaign.minBasketCents, locale)).replace('{value}', value);
 }
 
-/** Rozetin kendi sözlüğü — cümlenin biçiminden AYRI (aşağıdaki künye). */
-export interface CampaignBadgeCopy {
-  /** "%{n} indirim" */
-  percent: string;
-  /** "{amount} indirim" */
-  amount: string;
-}
-
 /**
- * KARTIN İNDİRİM ROZETİ — üç ekranın tek kararı (kullanıcı kararı 23.08).
+ * KARTIN İNDİRİM ROZETİ — yalnız FIRSAT (kullanıcı kararı 27.08, 23.08'in düzeltmesi).
  *
  * ── NEDEN KİTTE, ÜÇ EKRANDA DEĞİL ───────────────────────────────────────────
  * Aynı rozet katalog ızgarasında, vitrin seçkisinde ve ürün detayının öneri şeridinde çiziliyor.
  * Karar üçe yazılsaydı dördüncü ekran geldiği gün biri unutulurdu — `price-label` kitinin aynı
  * gerekçesi.
  *
- * ── FIRSAT KAMPANYAYI YENER ─────────────────────────────────────────────────
- * "Fırsat" birim fiyatta GERÇEKTEN düşen, üstü çizili eski fiyatı olan kesin bir indirimdir;
- * kapsam kampanyası sepete bağlıdır ve tutarı ancak sepet varken bilinir. Kesin olan, koşullu
- * olanın önüne geçer. Sunucu bunu zaten uyguluyor (`toProduct`: teklif kazanmışsa `campaign`
- * gelmez), buradaki sıra o güvencenin ekrandaki karşılığıdır — ikinci bir kural değil.
+ * ── KAMPANYA ROZETİ ÜRÜN KARTINDAN KALKTI ───────────────────────────────────
+ * 23.08'de rozet kapsam kampanyasını da söylüyordu (*"3,00 € indirim"*) ve bu YANILTICIYDI —
+ * kullanıcı bildirdi (27.08), motor ölçümü doğruladı:
+ * · `applyBestDiscount` sabit tutarı `Math.min(amountCents, scopeBase)` ile **sepetin kapsam
+ *   toplamına BİR KEZ** indiriyor. Rozeti gören müşteri üç ürün alırsa 9 € değil 3 € indirim alır.
+ * · Dahası motor **tek kazanan** seçiyor: iki farklı kampanyalı ürün sepete girse yalnız biri
+ *   uygulanır, öbürünün rozeti tutulmayan bir söz olur.
+ * Kampanya bir ÜRÜNÜN değil bir KESİTİN özelliğidir (`matchesScope`: `category` | `collection`),
+ * o yüzden yeri de kesitin kartıdır — vitrin bandı (`CollectionBand`). Kullanıcının 23.08'de
+ * istediği yer de zaten orasıydı; rozet bir katman aşağıya, ürünlerin üstüne konmuştu.
  *
- * ── EŞİKLİ KAMPANYA ROZETE GİRMEZ ───────────────────────────────────────────
- * *"60 € üzeri −%15"* rozete sığmaz; eşiği yutup yalnız *"−%15"* yazmak ise tutulmayan bir söz
- * vermektir — müşteri koşulu ancak sepete gelince öğrenir ve bu, düzeltmeye çalıştığımız
- * sessizliğin ta kendisidir. Eşikli kampanyanın yeri, tam cümlesinin sığdığı kesit başlığıdır.
- *
- * ── ROZETİN SÖZLÜĞÜ CÜMLENİNKİNDEN AYRI ─────────────────────────────────────
- * Ekranların cümle biçimi bugün ayrışık (vitrin *"−%15"*, katalog *"%15"*); rozet ikisinden
- * birini ödünç alsaydı aynı rozet iki ekranda farklı görünürdü. Kendi anahtarı var ve NE OLDUĞUNU
- * söylüyor (*"%15 indirim"*) — çıplak bir sayı, kullanıcının şikâyet ettiği "metnin arasında
- * kaybolma" hâlinin rozet hâli olurdu.
+ * "Fırsat" ise KALIR: birim fiyatta gerçekten düşen, üstü çizili eski fiyatı olan kesin bir
+ * indirimdir — sepete bağlı değildir, ürünün kendi fiyatıdır.
  *
  * `undefined` döner (null değil): kartın `discountLabel` alanı isteğe bağlı ve "rozet çizme"nin
  * yazılışı odur.
  */
-export function cardBadgeOf(
-  product: { wasCents?: number; campaign?: CampaignView },
-  t: { offer: string; campaign: CampaignBadgeCopy },
-  locale: Locale,
-): string | undefined {
-  if (product.wasCents !== undefined) return t.offer;
-  const campaign = product.campaign;
-  if (campaign === undefined || campaign.minBasketCents !== null) return undefined;
-  if (campaign.percent != null) return t.campaign.percent.replace('{n}', String(campaign.percent));
-  if (campaign.amountCents != null) return t.campaign.amount.replace('{amount}', formatPrice(campaign.amountCents, locale));
-  return undefined;
+export function cardBadgeOf(product: { wasCents?: number }, t: { offer: string }): string | undefined {
+  return product.wasCents === undefined ? undefined : t.offer;
+}
+
+/**
+ * KESİT KARTININ İNDİRİM ROZETİ — kampanyanın doğru katmanı (kullanıcı kararı 27.08).
+ *
+ * Kampanya bir kesite aittir (kategori ya da koleksiyon), o yüzden rozeti de kesitin kartında
+ * durur: vitrin bandı. Orada bir vaat değil bir DAVETtir — *"bu kesitte indirim var"* — ve
+ * müşteri karta basınca kesitin tamamını görür.
+ *
+ * ── EŞİKLİ KAMPANYA ROZETE GİRMEZ ───────────────────────────────────────────
+ * *"60 € üzeri −%15"* bir rozete sığmaz; eşiği yutup yalnız *"−%15"* yazmak ise tutulmayan bir
+ * söz vermektir. Eşikli kampanya bandın SAYAÇ SATIRINDA tam cümlesiyle kalır (`countWithCampaign`)
+ * — orada yer var ve koşul söylenebiliyor. Kural burada, tek yerde: iki türetme de aynı ölçütü
+ * okur, biri rozeti çizer öteki cümleyi kurar.
+ */
+export function scopeBadgeOf(campaign: CampaignView | null, t: CampaignCopy, locale: Locale): string | undefined {
+  if (campaign === null || campaign.minBasketCents !== null) return undefined;
+  return campaignValueOf(campaign, t, locale) ?? undefined;
 }

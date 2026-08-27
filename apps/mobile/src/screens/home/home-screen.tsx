@@ -30,7 +30,7 @@ import { PhotoTile } from '@/screens/customer-kit/photo-tile';
 import { PostalCodeSheet } from '@/screens/customer-kit/postal-code-sheet';
 import { useMe, useWholesale } from '@/screens/customer-kit/use-me.hook';
 import { emToDp } from '@/theme/parse';
-import { campaignValueOf, cardBadgeOf } from '@/screens/customer-kit/campaign-label';
+import { campaignValueOf, cardBadgeOf, scopeBadgeOf } from '@/screens/customer-kit/campaign-label';
 import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 import { homeData, type HomeData } from './home-fixture';
 import {
@@ -146,7 +146,13 @@ function offerLimitOf(limitLabel: string | null, t: Messages['offers']): string 
  */
 function bandCountLabel(band: HomeBand, t: Messages, locale: Locale): string {
   const count = String(band.productCount);
-  const campaign = band.campaign === null ? null : campaignValueOf(band.campaign, t.campaign, locale);
+  /* EŞİKSİZ KAMPANYA ARTIK ROZETTE (27.08 · `scopeBadgeOf`) — satırda tekrar edilmez, yoksa aynı
+     indirim aynı kartta iki kez yazardı. Satıra yalnız EŞİKLİ kampanya kalır, çünkü koşulunu
+     ("60 € üzeri") ancak tam cümle söyleyebilir ve rozete sığmaz. */
+  const campaign =
+    band.campaign === null || band.campaign.minBasketCents === null
+      ? null
+      : campaignValueOf(band.campaign, t.campaign, locale);
   if (campaign === null) return t.collections.count.replace('{n}', count);
   return t.collections.countWithCampaign.replace('{n}', count).replace('{campaign}', campaign);
 }
@@ -551,6 +557,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   name={band.name}
                   subtitle={band.subtitle}
                   countLabel={bandCountLabel(band, t, locale)}
+                  /* Kampanyanın DOĞRU katmanı burası: rozet kesitin kartında durur, ürünlerin
+                     üstünde değil (kullanıcı kararı 27.08 — kural ve gerekçe `scopeBadgeOf`da). */
+                  discountLabel={scopeBadgeOf(band.campaign, t.campaign, locale)}
                   index={index}
                   photoUri={band.image.url}
                   onPress={() =>
@@ -601,11 +610,10 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                        çizilmez. Buradaki eski `?? 0` gerekçeliydi (uç fiyatsızı süzer) ama artık
                        gereksiz — kural tek yerde ve sıfıra düşmüyor (`customer-kit/price-label`). */
                     priceLabel={productPriceLabel(product.priceCents, product.variantCount, locale)}
-                    /* KAMPANYA ROZETİ (23.08) — seçki KARIŞIK bir liste: kartları farklı
-                       kategorilerden gelir ve üstünde kampanyayı söyleyecek bir başlık yok.
-                       Kullanıcı kararının tarif ettiği yer tam burası. Kural kitte (`cardBadgeOf`):
-                       Fırsat kampanyayı yener, eşikli kampanya rozete girmez. */
-                    discountLabel={cardBadgeOf(product, { offer: t.card.offer, campaign: t.card.campaign }, locale)}
+                    /* Yalnız FIRSAT rozeti (27.08). Kapsam kampanyası buradan kalktı: sepete bir
+                       kez inen indirimi ürünün üstüne yazmak, ürün başına vaat gibi okunuyordu —
+                       yeri kesitin kendi kartı oldu (yukarıdaki koleksiyon bantları). */
+                    discountLabel={cardBadgeOf(product, { offer: t.card.offer })}
                     photoUri={product.image.url}
                     stockMark={placeMark}
                     // Solma yalnız KAPALI kapıda (gerekçe: katalog ekranının aynı satırı).

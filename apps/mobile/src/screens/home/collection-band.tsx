@@ -6,6 +6,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
+import { emToDp } from '@/theme/parse';
 
 /*
   KOLEKSİYON BANDI (v3:105) — vitrinin kenardan kenara uzanan renkli şeridi. Üç şey birden yapar:
@@ -28,6 +29,17 @@ interface CollectionBandProps {
   subtitle: string | null;
   /** "12 çeşit ›" — cümle cihazda kurulur, sayı veriden. */
   countLabel: string;
+  /**
+   * KESİTİN İNDİRİM ROZETİ ("−%15" / "−3,00 €") — verilirse sayaç satırının başında hap çıkar.
+   *
+   * Kampanya bir ÜRÜNÜN değil bir KESİTİN özelliğidir (motor kapsamı: kategori | koleksiyon), o
+   * yüzden rozetin yeri burasıdır — 23.08'de ürün kartlarına konmuştu ve sepete bir kez inen
+   * indirimi ürün başına vaat gibi gösteriyordu (kullanıcı bildirimi 27.08).
+   *
+   * Eşikli kampanya buraya GELMEZ: koşulu rozete sığmaz, o yüzden `countLabel` içinde tam
+   * cümlesiyle kalır. Ölçüt kitte (`scopeBadgeOf`), bant yalnız sonucu çizer.
+   */
+  discountLabel?: string;
   /** Listedeki sıra — ton ve yön bundan türer. */
   index: number;
   photoUri: string | null;
@@ -44,7 +56,17 @@ interface CollectionBandProps {
 /** Şablonun `BS` dizisi: üç ton, sırayla. */
 const TONES = ['olive', 'sand', 'terracotta'] as const;
 
-export function CollectionBand({ name, subtitle, countLabel, index, photoUri, onPress, testID, photoInOverlay = false }: CollectionBandProps) {
+export function CollectionBand({
+  name,
+  subtitle,
+  countLabel,
+  discountLabel,
+  index,
+  photoUri,
+  onPress,
+  testID,
+  photoInOverlay = false,
+}: CollectionBandProps) {
   const { theme } = useUnistyles();
   /* Koleksiyon adı SUNUCUDAN müşterinin dilinde geliyor; büyütmesi de o dilin kuralıyla yapılmalı
      (MB-71). Bant `locale` prop'u almıyor ve almamalı — çağıranların hepsi aynı tek kaynağı
@@ -93,7 +115,17 @@ export function CollectionBand({ name, subtitle, countLabel, index, photoUri, on
             {subtitle}
           </Text>
         )}
-        <Text style={[styles.count, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}>{countLabel}</Text>
+        {/* Sayaç satırı rozeti de taşır: rozet AYRI BİR SATIR OLAMAZ — bandın yüksekliği bir ölçü
+            değil bir sözleşmedir (yukarıdaki künye), üçüncü satır daireleri kaydırırdı. Hap tek
+            satırlık sayaçtan yalnız birkaç dp yüksek ve o pay bütçede var. */}
+        <View style={[styles.countRow, mirrored ? styles.countRowMirrored : undefined]}>
+          {discountLabel === undefined ? null : (
+            <View style={[styles.badge, styles[`${tone}Badge`]]}>
+              <Text style={[styles.badgeText, styles[`${tone}BadgeText`]]}>{discountLabel}</Text>
+            </View>
+          )}
+          <Text style={[styles.count, styles[`${tone}Accent`]]}>{countLabel}</Text>
+        </View>
       </View>
       {photoInOverlay ? null : (
       <View style={[styles.photo, mirrored ? styles.photoMirrored : styles.photoNormal]} pointerEvents="none">
@@ -174,6 +206,35 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.helper,
   },
+  /* Rozet + sayaç TEK satırda; aynalanmış bantta sıra da aynalanır ki hap dış kenarda kalsın. */
+  countRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.md,
+  },
+  countRowMirrored: {
+    flexDirection: 'row-reverse',
+  },
+  /* Hap ürün kartının durum rozetiyle AYNI ölçüde (`statusBadge`): aynı uygulamada iki farklı
+     rozet iriliği, ikisini de tesadüf gibi gösterirdi. Ayrışan tek şey RENK — bandın tonu. */
+  badge: {
+    paddingVertical: theme.space['2xs'],
+    paddingHorizontal: theme.space.md,
+    borderRadius: theme.radius.badge,
+  },
+  badgeText: {
+    fontFamily: theme.font.body[theme.text['badge--font-weight']],
+    fontSize: theme.text['badge-sm'],
+    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
+  },
+  /* Üç ton, üç kontrast çifti: hap her bantta zeminden ayrılmak zorunda. Krem hap `sand-150`
+     bandın üstünde kaybolurdu, o yüzden orada tam ters çift (terracotta zemin + krem yazı). */
+  oliveBadge: { backgroundColor: theme.colors['sand-50'] },
+  oliveBadgeText: { color: theme.colors.olive },
+  sandBadge: { backgroundColor: theme.colors.terracotta },
+  sandBadgeText: { color: theme.colors['sand-50'] },
+  terracottaBadge: { backgroundColor: theme.colors['sand-50'] },
+  terracottaBadgeText: { color: theme.colors.terracotta },
   oliveAccent: { color: theme.colors['olive-light'] },
   oliveTitle: { color: theme.colors['sand-50'] },
   sandAccent: { color: theme.colors.terracotta },

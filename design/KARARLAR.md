@@ -1754,6 +1754,10 @@ dokunulabileceğini bilmez, dokunanlar da kazara dokunur.
 
 ## Kampanya rozeti — HAP köşe evet, RENK yükseltmesi HAYIR (23.08, native müşteri kartı)
 
+> **KATMANI 27.08'DE DÜZELTİLDİ** — aşağıdaki *"Kampanya rozeti YANLIŞ KATMANDAYDI"* bölümü.
+> Bu bölümdeki stil kararları (hap köşe, ton gerekçeleri) geçerli; değişen tek şey rozetin
+> ÜRÜN kartında değil KESİT kartında (vitrin bandı) çizilmesi.
+
 Kullanıcı kategori/koleksiyon kampanyalarının kartlarda görünmesini isterken şunu söyledi:
 *"Oradaki gösterme tipi biraz daha görsel yapabiliriz belki rozet koyarız falan yuvarlak biraz daha
 dikkat çekici bir şey yapabiliriz; bir de ne olduğu anlaşılmıyor, metinlerin arasında kayboluyor."*
@@ -1897,3 +1901,44 @@ düşme ÂNI haberdir; üreticiler sessiz-künyeli (zil, taşıdığı işin kay
 **Skeleton kuralı bildirimde de geçerli:** ilk yük boş hâlle KARIŞMAZ — web akışı rota
 `loading.tsx`, ops paneli iskelet, mobil ops ActivityIndicator (hub deseni), mobil müşteri
 iskeleti yeni satır anatomisiyle. "Açılırken bekliyor gibi" hâli tasarım hatasıydı, kapandı.
+
+## Kampanya rozeti YANLIŞ KATMANDAYDI — ürün kartından kesit kartına taşındı (27.08, kullanıcı kararı)
+
+23.08'in düzeltmesi (yukarıdaki *"Kampanya rozeti — HAP köşe evet"* bölümü). Kullanıcının o gün
+istediği yer **vitrinin kategori/koleksiyon kartlarıydı**; rozet bir katman aşağıya, o kesitlerin
+İÇİNDEKİ ürün kartlarına konmuştu. Kullanıcı bildirdi:
+
+> *"Ben indirim rozeti istemiştim ama vitrin sayfasındaki ilgili katalog veya kategori kartlarına
+> istemiştim. Sen ise o katalog veya kategorinin içindeki ürünlerin üzerine koymuşsun. … Ayrıca
+> yanıltıcı da oluyor çünkü sepette üç euro indirimken doğrudan burada üç indirim koyuyormuş gibi
+> oluyor."*
+
+**ÖLÇÜM ŞİKÂYETİ DOĞRULADI** (`applyBestDiscount`, `packages/domain-core/src/pricing`):
+· sabit tutar `Math.min(rule.amountCents, scopeBase)` ile **sepetin kapsam toplamına BİR KEZ**
+  iniyor — "3,00 € indirim" yazan üç ürünü alan müşteri 9 € değil 3 € indirim alıyor;
+· motor adaylardan **tek kazanan** seçiyor — iki farklı kampanyalı ürün sepete girse yalnız biri
+  uygulanır, öbürünün rozeti tutulmayan bir söz olur.
+Yani rozet ürün kartında bir bilgi değil, **yanlış bir fiyat vaadiydi**.
+
+**YAPILAN:** kampanya rozeti üç ürün kartından da kalktı (katalog ızgarası · vitrin seçkisi · ürün
+detayının öneri şeridi) ve vitrin bandına (`CollectionBand`) hap olarak taşındı — kesitin kendi
+kartı, çünkü kampanyanın kapsamı da bir kesittir (`matchesScope`: kategori | koleksiyon).
+Hap sayaç satırının yanında durur, ayrı satır değil: bandın yüksekliği bir ölçü değil sözleşmedir
+(üst katman dairesi `index * collectionBand` ile konumlanıyor).
+
+**KALAN:** "Fırsat" rozeti ürün kartında **kalır** — o birim fiyatta gerçekten düşen, üstü çizili
+eski fiyatı olan, sepete bağlı OLMAYAN bir indirimdir. 23.08'in üç kuralından ikisi de yaşıyor,
+yalnız katmanları değişti: *Fırsat kampanyayı yener* artık gereksiz (kartta kampanya yok),
+*eşikli kampanya rozete girmez* aynen sürüyor — eşikli olan bandın sayaç satırında tam cümlesiyle
+kalıyor, çünkü *"60 € üzeri −%15"* bir hapa sığmaz.
+
+## Öneri şeridinin daireleri 96 → 120 (27.08, kullanıcı isteği · tasarımdan bilinçli sapma)
+
+Ürün detayının *"Bunları da sevebilirsiniz"* şeridi. Kullanıcı büyütülmesini istedi ve
+*"bunlar daha önce bu kadar küçük müydü"* diye sordu — **tarihçe ölçüldü: küçülmemiş.**
+`circleSm: 96` 07.08'de (`88a92c98`) konmuş ve hiç değişmemiş; şablonun kendi değeri
+("tasarım: vitrin 146 · benzerler 96"). Yani bir gerileme değil, baştan beri öyleydi.
+
+**Sapma:** 96 → 120. 146'ya çıkarılmadı; vitrin rayının dairesiyle eşitlemek iki kademeyi tek
+kademeye indirirdi ve öneri şeridi ikincil bir şerittir. Ölçü tek yerden (`theme/metrics.ts`),
+şeridi kullanan her yer birlikte büyür.

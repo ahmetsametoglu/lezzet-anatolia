@@ -42,11 +42,7 @@
     "card": {
       "soldOut": "Tükendi",
       "offer": "Fırsat",
-      "options": "{n} seçenek",
-      "campaign": {
-        "percent": "%{n} indirim",
-        "amount": "{amount} indirim"
-      }
+      "options": "{n} seçenek"
     },
     "cart": {
       "open": "Sepeti aç, {n} ürün"
@@ -95,11 +91,7 @@
     "card": {
       "soldOut": "Épuisé",
       "offer": "Offre",
-      "options": "{n} options",
-      "campaign": {
-        "percent": "{n} % de remise",
-        "amount": "{amount} de remise"
-      }
+      "options": "{n} options"
     },
     "cart": {
       "open": "Ouvrir le panier, {n} articles"
@@ -148,11 +140,7 @@
     "card": {
       "soldOut": "Ausverkauft",
       "offer": "Angebot",
-      "options": "{n} Optionen",
-      "campaign": {
-        "percent": "{n} % Rabatt",
-        "amount": "{amount} Rabatt"
-      }
+      "options": "{n} Optionen"
     },
     "cart": {
       "open": "Warenkorb öffnen, {n} Artikel"

@@ -66,9 +66,16 @@ export const appMetrics = {
      * Izgaranın 138'lik dairesi EMEKLİ (kullanıcı kararı 07.08): katalog kare karta geçti
      * (`ProductPhotoCard`), dolayısıyla o çapın tek tüketicisi kalmadı. Şablonun iskeleti de
      * Token Kararlari #22 ile kareye çekildi — 138 artık tasarımda da yok.
+     *
+     * **KÜÇÜK ÇAP 96 → 120 (kullanıcı kararı 27.08 · tasarımdan bilinçli sapma).** Şikâyet ürün
+     * detayının "Bunları da sevebilirsiniz" şeridiydi: 96 dp dairede yemek fotoğrafı ne olduğu
+     * anlaşılacak kadar büyük değil ve şerit bir davet olmaktan çıkıyor. Tarihçe ölçüldü — çap
+     * KÜÇÜLMEDİ, 07.08'den beri 96'ydı, yani bir gerileme değil şablonun kendi değeri. Sapma
+     * `design/KARARLAR.md`'ye yazıldı; 146'ya çıkarılmadı çünkü vitrin rayının dairesiyle eşitlemek
+     * iki farklı kademeyi tek kademeye indirirdi (öneri şeridi ikincil bir şerittir).
      */
     circleLg: 146,
-    circleSm: 96,
+    circleSm: 120,
     /** Avatar üç boyutu (tasarım aralığı 34–56; kullanılan üç durak). */
     avatarLg: 56,
     avatarMd: 46,

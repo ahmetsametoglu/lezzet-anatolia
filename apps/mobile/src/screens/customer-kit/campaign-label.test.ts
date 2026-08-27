@@ -1,24 +1,29 @@
 import { formatPrice } from '@lezzet/helper';
-import { campaignValueOf, cardBadgeOf, type CampaignView } from './campaign-label';
+import { campaignValueOf, cardBadgeOf, scopeBadgeOf, type CampaignView } from './campaign-label';
 
 /**
- * KARTIN İNDİRİM ROZETİ VE KAMPANYA CÜMLESİ (21.100 · MB-22b).
+ * İNDİRİM ROZETLERİ VE KAMPANYA CÜMLESİ (21.100 · MB-22b · 27.08 katman düzeltmesi).
  *
- * **Bu dosyanın koruduğu şey bir metin değil, ÜÇ SESSİZ SÖZ.** Üçü de bozulduğunda ekran yine bir
- * rozet çizer — yalnız yanlışını, ya da tutulmayacak olanını:
+ * **Bu dosyanın koruduğu şey bir metin değil, DÖRT SESSİZ SÖZ.** Dördü de bozulduğunda ekran yine
+ * bir rozet çizer — yalnız yanlışını, ya da tutulmayacak olanını:
  *
- *   1. **Fırsat kampanyayı yener.** Ters çevrilirse kart, birim fiyatta gerçekten düşmüş bir
- *      indirimin yerine sepete bağlı bir vaadi yazar.
- *   2. **Eşikli kampanya rozete GİRMEZ.** Eşik yutulup yalnız *"−%15"* yazılırsa müşteri koşulu
+ *   1. **Kampanya ÜRÜN kartına girmez, KESİT kartına girer** (kullanıcı kararı 27.08). Ters
+ *      çevrilirse sepete bir kez inen indirim ürün başına vaat gibi okunur: motor sabit tutarı
+ *      `Math.min(amountCents, scopeBase)` ile sepete BİR KEZ indiriyor ve tek kazanan seçiyor,
+ *      yani rozeti gören müşteri üç ürün alsa 9 € değil 3 € indirim alır.
+ *   2. **Fırsat kalır.** Birim fiyatta gerçekten düşen, sepete bağlı olmayan tek indirim odur.
+ *   3. **Eşikli kampanya rozete GİRMEZ.** Eşik yutulup yalnız *"−%15"* yazılırsa müşteri koşulu
  *      ancak sepete gelince öğrenir — düzeltmeye çalıştığımız sessizliğin ta kendisi.
- *   3. **Değeri olmayan kampanya hiç konuşmaz.** *"%0 indirim"* diye bir şey yoktur.
+ *   4. **Değeri olmayan kampanya hiç konuşmaz.** *"%0 indirim"* diye bir şey yoktur.
  *
- * Üçü de `undefined`/yanlış metinle biter, hiçbiri hata vermez.
+ * Dördü de `undefined`/yanlış metinle biter, hiçbiri hata vermez.
  */
 const t = {
   offer: 'Fırsat',
-  campaign: { percent: '%{n} indirim', amount: '{amount} indirim' },
 };
+
+/** Kesit rozetinin sözlüğü — cümleyle AYNI kalıplar (rozet cümlenin kısa hâlidir). */
+const tc = { percent: '−%{n}', amount: '−{amount}', withMinimum: '{minimum} üzeri {value}' };
 
 function campaign(over: Partial<CampaignView> = {}): CampaignView {
   return { label: null, percent: 15, amountCents: null, minBasketCents: null, ...over };
@@ -37,38 +42,46 @@ function campaign(over: Partial<CampaignView> = {}): CampaignView {
  */
 const para = (cents: number, locale: 'tr' | 'fr' | 'de'): string => formatPrice(cents, locale);
 
-describe('cardBadgeOf', () => {
-  it('koşulsuz yüzde kampanyası NE OLDUĞUNU söyleyen bir rozete döner', () => {
-    // Çıplak "%15" değil: kullanıcının şikâyeti "ifade metinlerin arasında kayboluyor"du.
-    expect(cardBadgeOf({ campaign: campaign() }, t, 'tr')).toBe('%15 indirim');
+describe('cardBadgeOf — ÜRÜN kartı yalnız fırsatı söyler', () => {
+  it('fırsat rozeti çizilir', () => {
+    expect(cardBadgeOf({ wasCents: 1500 }, t)).toBe('Fırsat');
   });
 
-  it('koşulsuz sabit tutar kampanyası müşterinin dilinde biçimlenir', () => {
-    expect(cardBadgeOf({ campaign: campaign({ percent: null, amountCents: 300 }) }, t, 'tr')).toBe(`${para(300, 'tr')} indirim`);
-  });
-
-  it('FIRSAT KAMPANYAYI YENER — kesin indirim, koşullu olanın önüne geçer', () => {
-    // Sunucu bunu zaten uyguluyor (`toProduct` teklif kazanınca `campaign` göndermiyor); burası o
-    // güvencenin ekran karşılığı. İkisi birden geldiğinde bile kart doğru olanı yazmalı.
-    expect(cardBadgeOf({ wasCents: 1500, campaign: campaign() }, t, 'tr')).toBe('Fırsat');
-  });
-
-  it('EŞİKLİ kampanya rozet ÇIKARMAZ — eşiği yutan bir rozet tutulmayan bir sözdür', () => {
-    expect(cardBadgeOf({ campaign: campaign({ minBasketCents: 6000 }) }, t, 'tr')).toBeUndefined();
-    expect(cardBadgeOf({ campaign: campaign({ percent: null, amountCents: 300, minBasketCents: 6000 }) }, t, 'tr')).toBeUndefined();
-  });
-
-  it('kampanyası olmayan ürün rozetsizdir', () => {
-    expect(cardBadgeOf({}, t, 'tr')).toBeUndefined();
-  });
-
-  it('DEĞERİ OLMAYAN kampanya konuşmaz — "%0 indirim" diye bir şey yok', () => {
-    expect(cardBadgeOf({ campaign: campaign({ percent: null, amountCents: null }) }, t, 'tr')).toBeUndefined();
+  it('fırsatı olmayan ürün rozetsizdir', () => {
+    expect(cardBadgeOf({}, t)).toBeUndefined();
   });
 
   it('`wasCents: 0` de bir fırsattır — varlık sınanır, doğruluk değil', () => {
     // `if (product.wasCents)` diye yazılsaydı sıfır eski fiyat sessizce fırsat olmaktan çıkardı.
-    expect(cardBadgeOf({ wasCents: 0 }, t, 'tr')).toBe('Fırsat');
+    expect(cardBadgeOf({ wasCents: 0 }, t)).toBe('Fırsat');
+  });
+
+  /* KAMPANYA ARTIK BU İMZAYA GİREMEZ (27.08) — kural tipin kendisinde yaşıyor: `cardBadgeOf`
+     yalnız `wasCents` okuyor, yani bir kampanyayı ürün kartına yazmanın yolu yok. Bu satır bir
+     iddia değil bir HATIRLATMA; asıl koruma derleyicide. */
+});
+
+describe('scopeBadgeOf — KESİT kartının rozeti', () => {
+  it('koşulsuz yüzde kampanyası kısa değeriyle rozete döner', () => {
+    expect(scopeBadgeOf(campaign(), tc, 'tr')).toBe('−%15');
+  });
+
+  it('koşulsuz sabit tutar müşterinin dilinde biçimlenir', () => {
+    expect(scopeBadgeOf(campaign({ percent: null, amountCents: 300 }), tc, 'tr')).toBe(`−${para(300, 'tr')}`);
+  });
+
+  it('EŞİKLİ kampanya rozet ÇIKARMAZ — eşiği yutan bir rozet tutulmayan bir sözdür', () => {
+    // Eşikli olan kaybolmaz: bandın sayaç satırında TAM cümlesiyle kalır (`countWithCampaign`).
+    expect(scopeBadgeOf(campaign({ minBasketCents: 6000 }), tc, 'tr')).toBeUndefined();
+    expect(scopeBadgeOf(campaign({ percent: null, amountCents: 300, minBasketCents: 6000 }), tc, 'tr')).toBeUndefined();
+  });
+
+  it('kampanyası olmayan kesit rozetsizdir', () => {
+    expect(scopeBadgeOf(null, tc, 'tr')).toBeUndefined();
+  });
+
+  it('DEĞERİ OLMAYAN kampanya konuşmaz — "%0 indirim" diye bir şey yok', () => {
+    expect(scopeBadgeOf(campaign({ percent: null, amountCents: null }), tc, 'tr')).toBeUndefined();
   });
 });
 
