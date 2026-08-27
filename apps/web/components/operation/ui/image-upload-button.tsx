@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition, type ChangeEvent, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import { IMAGE_ACCEPT_ATTR } from '@lezzet/types';
 import type { ActionResult } from '@/lib/error';
 
 /**
@@ -62,7 +63,10 @@ export function ImageUploadButton({ upload, camera = false, multiple = false, cl
       <input
         ref={inputRef}
         type="file"
-        accept="image/*"
+        // Sunucudaki kabul listesiyle TEK KAYNAK (05.7). Bu bir SINIR DEĞİL — kullanıcı "tüm
+        // dosyalar"a geçebilir ve Server Action tarayıcısız da çağrılabilir; kapı sunucuda durur
+        // (`readImageUpload`). Buradaki değer yalnız operatörü baştan yanlış seçimden korur.
+        accept={IMAGE_ACCEPT_ATTR}
         multiple={multiple}
         {...(camera ? { capture: 'environment' as const } : {})}
         onChange={onPick}

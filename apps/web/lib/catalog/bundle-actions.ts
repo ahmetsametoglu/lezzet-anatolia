@@ -13,6 +13,7 @@ import {
 } from '@lezzet/types';
 import { amount } from '@/components/operation/ui/format';
 import { requireStaff } from '@/lib/guard';
+import { readImageUpload } from '@/lib/media/upload';
 import { withProposal } from '@/lib/assistant/handoff';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from '@/lib/catalog/paths';
@@ -247,8 +248,7 @@ export async function reorderBundlesAction(orderedIds: string[]): Promise<Action
 export async function uploadBundleImageAction(id: string, form: FormData): Promise<ActionResult> {
   try {
     await requireStaff();
-    const file = form.get('file');
-    if (!(file instanceof File) || file.size === 0) throw new Error('Görsel dosyası bulunamadı.');
+    const file = readImageUpload(form);
     const r2 = getR2();
     if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
 
@@ -257,7 +257,8 @@ export async function uploadBundleImageAction(id: string, form: FormData): Promi
     if (!bundle) throw new Error('Paket bulunamadı.');
 
     const key = r2Keys.bundleImage(bundle.slug, file.name);
-    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
+    // Biçim kapıda doğrulandı (`readImageUpload`); eski `|| 'image/jpeg'` yedeği bir tahmindi.
+    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
     await svc.setImageKey(id, key);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };

@@ -6,6 +6,7 @@ import { CategoryImageService, CategoryService, serviceDb } from '@lezzet/databa
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFields, CATEGORY_GALLERY_MAX, type CategoryImage, type ImageCropFields } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
+import { readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from './paths';
 import type { GalleryPhotoView } from '@/components/operation/form/image-gallery-types';
@@ -44,8 +45,7 @@ export async function listCategoryPhotosAction(categoryId: string): Promise<Acti
 export async function uploadCategoryPhotoAction(categoryId: string, form: FormData): Promise<ActionResult<GalleryPhotoView>> {
   try {
     await requireStaff();
-    const file = form.get('file');
-    if (!(file instanceof File) || file.size === 0) throw new Error('Görsel dosyası bulunamadı.');
+    const file = readImageUpload(form);
     const r2 = getR2();
     if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
 
@@ -61,7 +61,9 @@ export async function uploadCategoryPhotoAction(categoryId: string, form: FormDa
 
     // Anahtar fotoğrafa özgü: kategori başına çok dosya var, slug tek başına ayırt etmez.
     const key = r2Keys.categoryGalleryImage(category.slug, randomUUID(), file.name);
-    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
+    // Biçim kapıda doğrulandı (`readImageUpload`) — `file.type` artık kabul listesinden bir değer,
+    // eski `|| 'image/jpeg'` yedeği bilinmeyen biçimi JPEG diye etiketleyen bir tahmindi.
+    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
     const row = await svc.add(categoryId, key);
     revalidatePath(PRODUCTS_PATH);
     return { data: toPhotoView(row), error: null };

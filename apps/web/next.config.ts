@@ -170,7 +170,14 @@ const config: NextConfig = {
   ],
   experimental: {
     serverActions: {
-      // İleride görsel/dosya yüklemeleri için başlangıç sınırı (modülü gelince ayarlanır).
+      /**
+       * Görsel yüklemelerinin taşıyıcı sınırı. **Bizim kapımızın tavanından YÜKSEK olmalı**
+       * (`IMAGE_MAX_UPLOAD_BYTES` = 8 MB, `packages/types/src/primitives/image.schema.ts`).
+       *
+       * Sıra önemli: burası düşük olsaydı Next isteği bizim kapımıza hiç ulaştırmaz, operatör
+       * "Görsel en çok 8 MB olabilir" yerine anlamsız bir ağ hatası görürdü — yazılı kural bir
+       * daha hiç çalışmazdı. Aradaki pay, çok parçalı gövdenin dosya dışındaki alanları içindir.
+       */
       bodySizeLimit: '10mb',
     },
   },

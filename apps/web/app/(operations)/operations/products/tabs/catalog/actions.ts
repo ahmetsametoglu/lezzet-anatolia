@@ -5,6 +5,7 @@ import { CategoryService, CollectionService, ProductService, serviceDb } from '@
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFieldsPartial, resolveLocalizedText, type ImageCropFields, type LocalizedText } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
+import { readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from '../../products-paths';
 import type { CatalogKind } from '../../products-types';
@@ -119,15 +120,15 @@ export async function updateCatalogAction(kind: CatalogKind, id: string, input: 
 export async function uploadCatalogImageAction(kind: CatalogKind, id: string, form: FormData): Promise<ActionResult> {
   try {
     await requireStaff();
-    const file = form.get('file');
-    if (!(file instanceof File) || file.size === 0) throw new Error('Görsel dosyası bulunamadı.');
+    const file = readImageUpload(form);
     const r2 = getR2();
     if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
     const svc = catalogService(kind);
     const row = await svc.getById(id);
     if (!row) throw new Error(`${CATALOG_LABEL[kind]} bulunamadı.`);
     const key = kind === 'category' ? r2Keys.categoryImage(row.slug, file.name) : r2Keys.collectionImage(row.slug, file.name);
-    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
+    // Biçim kapıda doğrulandı (`readImageUpload`); eski `|| 'image/jpeg'` yedeği bir tahmindi.
+    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
     await svc.setImageKey(id, key);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };

@@ -145,25 +145,60 @@ export const PRODUCT_GALLERY_MAX = 5;
  */
 export const CATEGORY_GALLERY_MAX = 7;
 
-// ── Yükleme (yalnız kullanılamaz dosyayı ele: biçim). Oran/yön KIRPMAYLA çözülür ────────────────
+// ── Yükleme (yalnız kullanılamaz dosyayı ele: biçim + tavan). Oran/yön KIRPMAYLA çözülür ────────
 /** Kabul edilen biçimler — animasyon/vektör dışı yaygın raster. Şeffaflık kırpma sonrası önemsiz. */
 export const IMAGE_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 /** Dosya seçicinin `accept` değeri — biçim listesiyle TEK KAYNAK. */
 export const IMAGE_ACCEPT_ATTR = IMAGE_ACCEPTED_TYPES.join(',');
 
+/**
+ * Yükleme tavanı — **parametrik**, tek yerden değişir (05.7).
+ *
+ * **8 MB seçildi ve sayı keyfî değil: Next'in Server Action gövde sınırının ALTINDA olmak zorunda**
+ * (`apps/web/next.config.ts` → `serverActions.bodySizeLimit: '10mb'`). Tavan o sınırın üstünde
+ * olsaydı kural okunur bir cümle üretemezdi: dosya bizim kapımıza hiç ulaşmaz, istek Next tarafında
+ * kesilir ve operatör "Görsel en çok N MB olabilir" yerine anlamsız bir ağ hatası görürdü — yani
+ * yazılı kural bir daha asla çalışmazdı. İkisinden biri değişirse öteki de gözden geçirilmeli;
+ * bağıntı iki dosyanın künyesinde de yazılı.
+ *
+ * 8 MB gerçek kaynakları rahat alır (24 MP telefon/DSLR JPEG'i ~8 MB'ın altında, 2400 px PNG ~5 MB)
+ * ve asıl işini yapar: yanlışlıkla seçilmiş bir video ya da tarama arşivi depoya girmez.
+ */
+export const IMAGE_MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+/** Yüklenen dosyanın kapıda ölçülebilen künyesi — çözünürlük GEREKMEZ, çözmeden bilinemez. */
+export interface UploadedImageInfo {
+  type: string;
+  size: number;
+}
+
+/**
+ * **Yükleme kapısının kuralı** — R2'ye yazan her eylem buradan geçer (`apps/web/lib/media/upload.ts`).
+ * Uygunsa `null`, değilse operatöre gösterilecek cümle.
+ *
+ * **Çözünürlüğe BAKMAZ ve bakamaz:** genişlik/yükseklik ancak dosyayı çözerek öğrenilir, sunucuda
+ * çözücü yok. Kalite sorusunun yeri zaten burası değil — kırpma editörü `sourceAdvisory` ile
+ * UYARIR, reddetmez (operatör kadrajı görüp karar verir). Burada yalnız **kullanılamaz** dosya
+ * elenir: okuyamayacağımız biçim, ve taşıyamayacağımız boy.
+ *
+ * **Boş dosya BURADA elenmez** — onu `readImageUpload` "dosya bulunamadı" diye ele alır, çünkü
+ * sıfır baytlık bir `File` bir boyut ihlali değil, seçimin hiç yapılmamış olmasıdır.
+ */
+export function validateImageUpload(file: UploadedImageInfo): string | null {
+  if (!IMAGE_ACCEPTED_TYPES.includes(file.type as (typeof IMAGE_ACCEPTED_TYPES)[number])) {
+    return 'Yalnız JPEG, PNG veya WebP yüklenebilir.';
+  }
+  if (file.size > IMAGE_MAX_UPLOAD_BYTES) {
+    return `Görsel en çok ${Math.round(IMAGE_MAX_UPLOAD_BYTES / (1024 * 1024))} MB olabilir.`;
+  }
+  return null;
+}
+
 export interface SourceImageInfo {
   width: number;
   height: number;
   type: string;
-}
-
-/** Yalnız gerçekten kullanılamaz dosya (yanlış biçim) reddedilir. Uygunsa `null`. */
-export function validateSourceImage(info: SourceImageInfo): string | null {
-  if (!IMAGE_ACCEPTED_TYPES.includes(info.type as (typeof IMAGE_ACCEPTED_TYPES)[number])) {
-    return 'Yalnız JPEG, PNG veya WebP yüklenebilir.';
-  }
-  return null;
 }
 
 /**

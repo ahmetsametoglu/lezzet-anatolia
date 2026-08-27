@@ -93,6 +93,9 @@ const WEB_LIB_DBSIZ = [
   // (istemci fonksiyon içinde kuruluyor) — bu yüzden birim projesinde güvenle koşuyor. Ölçüldü 23.08;
   // `delivery/map-codes.test.ts`in listeye ALINMAMA gerekçesi tam da bunun tersiydi.
   'apps/web/lib/messaging/meta-signature.test.ts',
+  // Görsel yükleme kapısı (05.7) — saf: gerçek `File`/`FormData` kurar, biçim ve tavan sorar.
+  // Ne DB'ye ne R2'ye gider; modül `server-only` taşıyor ama koşucu onu boş modüle bağlıyor.
+  'apps/web/lib/media/upload.test.ts',
   'apps/web/lib/order/order-id.test.ts',
   'apps/web/lib/storefront/featured.test.ts',
   'apps/web/lib/use-load-more.hook.test.ts',

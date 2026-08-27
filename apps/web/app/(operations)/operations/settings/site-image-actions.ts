@@ -5,6 +5,7 @@ import { SiteImageService, serviceDb } from '@lezzet/database';
 import { getR2, r2Keys } from '@lezzet/storage';
 import { SiteImageSlotSchema, type ImageCrop, type LocalizedText, type SiteImageSlot } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
+import { readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { SETTINGS_PATH } from './settings-url';
 
@@ -41,8 +42,7 @@ export async function uploadSiteImageAction(slot: string, form: FormData): Promi
   try {
     await requireAdmin();
     const target = slotOf(slot);
-    const file = form.get('file');
-    if (!(file instanceof File) || file.size === 0) throw new Error('Görsel dosyası bulunamadı.');
+    const file = readImageUpload(form);
 
     const r2 = getR2();
     // Kova ayarsızsa yükleme SESSİZCE başarısız olmamalı: kayıt yazılıp dosya yazılmasaydı ekran
@@ -50,7 +50,8 @@ export async function uploadSiteImageAction(slot: string, form: FormData): Promi
     if (!r2) throw new Error('Depolama (R2) ayarlı değil — görsel yüklenemez.');
 
     const key = r2Keys.siteImage(target, file.name);
-    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
+    // Biçim kapıda doğrulandı (`readImageUpload`); eski `|| 'image/jpeg'` yedeği bir tahmindi.
+    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
     await new SiteImageService(serviceDb()).put(target, key);
 
     revalidateSurfaces();

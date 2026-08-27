@@ -6,6 +6,7 @@ import { ProductImageService, ProductService, serviceDb } from '@lezzet/database
 import { getR2, publicImageUrl, r2Keys } from '@lezzet/storage';
 import { pickCropFields, PRODUCT_GALLERY_MAX, type ImageCropFields, type ProductImage } from '@lezzet/types';
 import { requireStaff } from '@/lib/guard';
+import { readImageUpload } from '@/lib/media/upload';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { PRODUCTS_PATH } from './paths';
 import type { GalleryPhotoView } from '@/components/operation/form/image-gallery-types';
@@ -30,25 +31,23 @@ const toPhotoView = (row: ProductImage): GalleryPhotoView => ({
   imageUrl: publicImageUrl(row.imageKey, row.imageUpdatedAt),
 });
 
-/** Formdaki dosyayı okur — üç yükleme action'ı aynı denetimi tekrarlamasın. */
-function readUpload(form: FormData): File {
-  const file = form.get('file');
-  if (!(file instanceof File) || file.size === 0) throw new Error('Görsel dosyası bulunamadı.');
-  return file;
-}
+// Buradaki yerel `readUpload` kaldırıldı (05.7): niyeti doğruydu ("üç action aynı denetimi
+// tekrarlamasın") ama kapsamı bu dosyaydı — öteki üç yükleme eylemi denetimi yine kendi içinde
+// tekrarlıyordu ve hiçbiri biçim/boyut sormuyordu. Kapı `@/lib/media/upload`a taşındı.
 
 /** Ürün KAPAK görselini R2'ye yükler ve imageKey'i günceller. */
 export async function uploadProductImageAction(id: string, form: FormData): Promise<ActionResult> {
   try {
     await requireStaff();
-    const file = readUpload(form);
+    const file = readImageUpload(form);
     const r2 = getR2();
     if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
     const svc = new ProductService(serviceDb());
     const product = await svc.getById(id);
     if (!product) throw new Error('Ürün bulunamadı.');
     const key = r2Keys.productImage(product.slug, file.name);
-    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
+    // Biçim kapıda doğrulandı (`readImageUpload`); eski `|| 'image/jpeg'` yedeği bir tahmindi.
+    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
     await svc.setImageKey(id, key);
     revalidatePath(PRODUCTS_PATH);
     return { data: null, error: null };
@@ -72,7 +71,7 @@ export async function listProductPhotosAction(productId: string): Promise<Action
 export async function uploadGalleryPhotoAction(productId: string, form: FormData): Promise<ActionResult<GalleryPhotoView>> {
   try {
     await requireStaff();
-    const file = readUpload(form);
+    const file = readImageUpload(form);
     const r2 = getR2();
     if (!r2) throw new Error('Depolama (R2) ayarlı değil.');
 
@@ -88,7 +87,7 @@ export async function uploadGalleryPhotoAction(productId: string, form: FormData
 
     // Anahtar fotoğrafa özgü: ürün başına çok dosya var, slug tek başına ayırt etmez.
     const key = r2Keys.productGalleryImage(product.slug, randomUUID(), file.name);
-    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type || 'image/jpeg');
+    await r2.uploadFile(key, Buffer.from(await file.arrayBuffer()), file.type);
     const row = await svc.add(productId, key);
     revalidatePath(PRODUCTS_PATH);
     return { data: toPhotoView(row), error: null };
