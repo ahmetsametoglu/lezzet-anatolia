@@ -557,9 +557,9 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                   name={band.name}
                   subtitle={band.subtitle}
                   countLabel={bandCountLabel(band, t, locale)}
-                  /* Kampanyanın DOĞRU katmanı burası: rozet kesitin kartında durur, ürünlerin
-                     üstünde değil (kullanıcı kararı 27.08 — kural ve gerekçe `scopeBadgeOf`da). */
-                  discountLabel={scopeBadgeOf(band.campaign, t.campaign, locale)}
+                  /* ROZET BURAYA VERİLMEZ, aşağıdaki üst katmana verilir: vitrinde daireler
+                     bantların ÜSTÜNDE çiziliyor (`photoInOverlay`) ve rozet dairenin köşesinde
+                     duruyor — burada verilirse hiç çizilmezdi. */
                   index={index}
                   photoUri={band.image.url}
                   onPress={() =>
@@ -576,7 +576,15 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                 />
               ))}
               {bands.map((band, index) => (
-                <CollectionPhotoOverlay key={`photo-${band.slug}`} name={band.name} index={index} photoUri={band.image.url} />
+                <CollectionPhotoOverlay
+                  key={`photo-${band.slug}`}
+                  name={band.name}
+                  index={index}
+                  photoUri={band.image.url}
+                  /* Rozet DAİRENİN köşesinde (27.08 · kullanıcı isteği) ve daireler bu katmanda
+                     çiziliyor — bandın kendi dalına verilen `discountLabel` vitrinde kullanılmaz. */
+                  discountLabel={scopeBadgeOf(band.campaign, t.campaign, locale)}
+                />
               ))}
             </View>
           </View>

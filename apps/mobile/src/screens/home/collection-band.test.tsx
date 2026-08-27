@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react-native';
 
-import { CollectionBand } from './collection-band';
+import { CollectionBand, CollectionPhotoOverlay } from './collection-band';
 
 // Bant adı müşterinin diline göre büyütülüyor (`upperIn`) — cihaz dili sabitlenmezse ortam kararır.
 jest.mock('expo-localization', () => ({ getLocales: () => [{ languageTag: 'tr-FR' }] }));
@@ -41,11 +41,30 @@ describe('CollectionBand — kesit rozeti', () => {
     expect(screen.getByText('20 çeşit ›')).toBeOnTheScreen();
   });
 
-  it('rozet SAYACIN yanında durur, onun yerine geçmez', async () => {
-    // İkisi birlikte okunmalı: hap indirimi söyler, sayaç kesitin büyüklüğünü. Biri ötekini
-    // düşürürse müşteri ya indirimi ya kesiti kaybeder.
+  it('rozet SAYAÇ SATIRINI düşürmez — ikisi birlikte okunur', async () => {
+    // Hap indirimi söyler, sayaç kesitin büyüklüğünü. Biri ötekinin yerine geçerse müşteri ya
+    // indirimi ya kesiti kaybeder.
     await render(<CollectionBand {...band} discountLabel="−%15" testID="band" />);
     expect(screen.getByText('−%15')).toBeOnTheScreen();
     expect(screen.getByText('20 çeşit ›')).toBeOnTheScreen();
+  });
+});
+
+/*
+  VİTRİNİN GERÇEKTEN KULLANDIĞI YOL BUDUR (`photoInOverlay`): daireler bantların ÜSTÜNDE, ayrı bir
+  katmanda çizilir çünkü v3'te daire komşu banda taşar ve RN'de kardeş sırası z-sırasıdır. Rozet
+  dairenin köşesinde durduğuna göre onunla birlikte bu katmana geçmek ZORUNDA — bandın içinde
+  kalsaydı vitrinde hiç görünmezdi. Yukarıdaki testler bandın kendi dairesini çizdiği hâli ölçüyor;
+  bu blok olmasa vitrindeki rozetin kaybolması hiçbir testi düşürmezdi.
+*/
+describe('CollectionPhotoOverlay — vitrinin üst katmanı', () => {
+  it('rozeti dairesiyle birlikte taşır', async () => {
+    await render(<CollectionPhotoOverlay name="Bayram Sofrası" index={0} photoUri={null} discountLabel="−3,00 €" />);
+    expect(screen.getByText('−3,00 €')).toBeOnTheScreen();
+  });
+
+  it('kampanyasız kesitte sessizdir', async () => {
+    await render(<CollectionPhotoOverlay name="Bayram Sofrası" index={0} photoUri={null} />);
+    expect(screen.queryByText('−3,00 €')).toBeNull();
   });
 });

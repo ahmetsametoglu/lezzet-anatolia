@@ -3,10 +3,10 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { CirclePhoto } from '@/components/ui/circle-photo';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { Tag } from '@/components/ui/tag';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
 import { customerMetrics } from '@/screens/customer-kit/customer-metrics';
-import { emToDp } from '@/theme/parse';
 
 /*
   KOLEKSİYON BANDI (v3:105) — vitrinin kenardan kenara uzanan renkli şeridi. Üç şey birden yapar:
@@ -67,7 +67,6 @@ export function CollectionBand({
   testID,
   photoInOverlay = false,
 }: CollectionBandProps) {
-  const { theme } = useUnistyles();
   /* Koleksiyon adı SUNUCUDAN müşterinin dilinde geliyor; büyütmesi de o dilin kuralıyla yapılmalı
      (MB-71). Bant `locale` prop'u almıyor ve almamalı — çağıranların hepsi aynı tek kaynağı
      okuyor (`useAppLocale`), prop'a çevirmek o kaynağı ikinci bir yoldan taşımak olurdu. */
@@ -115,32 +114,65 @@ export function CollectionBand({
             {subtitle}
           </Text>
         )}
-        {/* Sayaç satırı rozeti de taşır: rozet AYRI BİR SATIR OLAMAZ — bandın yüksekliği bir ölçü
-            değil bir sözleşmedir (yukarıdaki künye), üçüncü satır daireleri kaydırırdı. Hap tek
-            satırlık sayaçtan yalnız birkaç dp yüksek ve o pay bütçede var. */}
-        <View style={[styles.countRow, mirrored ? styles.countRowMirrored : undefined]}>
-          {discountLabel === undefined ? null : (
-            <View style={[styles.badge, styles[`${tone}Badge`]]}>
-              <Text style={[styles.badgeText, styles[`${tone}BadgeText`]]}>{discountLabel}</Text>
-            </View>
-          )}
-          <Text style={[styles.count, styles[`${tone}Accent`]]}>{countLabel}</Text>
-        </View>
+        <Text style={[styles.count, styles[`${tone}Accent`], mirrored ? styles.alignEnd : undefined]}>{countLabel}</Text>
       </View>
       {photoInOverlay ? null : (
-      <View style={[styles.photo, mirrored ? styles.photoMirrored : styles.photoNormal]} pointerEvents="none">
-        <CirclePhoto
-          size={customerMetrics.collectionPhoto}
-          initial={name.slice(0, 1)}
-          // Şablon burada devasa bir harf çiziyor (`64px`); ölçekte en büyük mobil durak `h1-sm`.
-          initialFontSize={theme.text['h1-sm']}
-          initialStyle={styles.initial}
-          photoUri={photoUri}
-          style={styles.photoSurface}
-        />
-      </View>
+        <View style={[styles.photo, mirrored ? styles.photoMirrored : styles.photoNormal]} pointerEvents="none">
+          <BandPhoto name={name} photoUri={photoUri} discountLabel={discountLabel} mirrored={mirrored} />
+        </View>
       )}
     </PressableSurface>
+  );
+}
+
+/**
+ * DAİRE + KÖŞESİNDEKİ ROZET — ikisi TEK yerde, çünkü daire İKİ yoldan çiziliyor: bandın kendi
+ * içinde ya da vitrinin üst katmanında (`CollectionPhotoOverlay`). Rozet iki yere ayrı yazılsaydı
+ * bir gün biri güncellenir öteki kalırdı.
+ *
+ * ── ROZET NEDEN DAİRENİN KÖŞESİNDE (kullanıcı isteği 27.08) ─────────────────
+ * Rozet önce sayaç satırındaydı ve kullanıcı *"indirim oranı anlaşılmıyor"* dedi: 10 px'lik bir hap
+ * iki metin satırının altında, sayfanın en sakin yerinde duruyordu. Fotoğrafın köşesi tam tersi —
+ * gözün ilk gittiği yer ve uygulamanın kendi dilinde ORASI rozetin yeri (fırsat kartı da rozetini
+ * dairesinin köşesine koyuyor).
+ *
+ * Rozet KİTİN `Tag`i, ikinci bir hap değil: fırsat kartıyla aynı ölçü, aynı ton, aynı gölge. Hap
+ * köşe (`shape="pill"`) 23.08'in kullanıcı kararı. Dönüşü YOK çünkü kapsayıcı zaten dönük
+ * (`photoNormal`/`photoMirrored` 5°/−6°) ve rozet o açıyı miras alıyor — daireyle birlikte duran
+ * tek bir kompozisyon.
+ *
+ * Yan (`left`/`right`) AYNALANIR: rozet daima dairenin BANDA BAKAN kenarındadır, yoksa ekranın
+ * dışına taşardı (daire yatayda 30 dp taşıyor).
+ */
+function BandPhoto({
+  name,
+  photoUri,
+  discountLabel,
+  mirrored,
+}: {
+  name: string;
+  photoUri: string | null;
+  discountLabel?: string;
+  mirrored: boolean;
+}) {
+  const { theme } = useUnistyles();
+  return (
+    <>
+      <CirclePhoto
+        size={customerMetrics.collectionPhoto}
+        initial={name.slice(0, 1)}
+        // Şablon burada devasa bir harf çiziyor (`64px`); ölçekte en büyük mobil durak `h1-sm`.
+        initialFontSize={theme.text['h1-sm']}
+        initialStyle={styles.initial}
+        photoUri={photoUri}
+        style={styles.photoSurface}
+      />
+      {discountLabel === undefined ? null : (
+        <View style={[styles.photoBadge, mirrored ? styles.photoBadgeMirrored : styles.photoBadgeNormal]}>
+          <Tag label={discountLabel} shape="pill" shadow />
+        </View>
+      )}
+    </>
   );
 }
 
@@ -149,8 +181,12 @@ export function CollectionBand({
  * Bandın kendi dairesiyle AYNI ölçü/dönüş/yön kuralları (tek kaynak: bu dosya) — iki yerde
  * çizim kuralı yaşamasın diye band'la yan yana burada durur.
  */
-export function CollectionPhotoOverlay({ name, index, photoUri }: Pick<CollectionBandProps, 'name' | 'index' | 'photoUri'>) {
-  const { theme } = useUnistyles();
+export function CollectionPhotoOverlay({
+  name,
+  index,
+  photoUri,
+  discountLabel,
+}: Pick<CollectionBandProps, 'name' | 'index' | 'photoUri' | 'discountLabel'>) {
   const mirrored = index % 2 === 1;
   return (
     <View
@@ -161,14 +197,9 @@ export function CollectionPhotoOverlay({ name, index, photoUri }: Pick<Collectio
       ]}
       pointerEvents="none"
     >
-      <CirclePhoto
-        size={customerMetrics.collectionPhoto}
-        initial={name.slice(0, 1)}
-        initialFontSize={theme.text['h1-sm']}
-        initialStyle={styles.initial}
-        photoUri={photoUri}
-        style={styles.photoSurface}
-      />
+      {/* Rozet DAİRENİN yanında yolculuk eder: vitrinde daireler bu üst katmanda çiziliyor, yani
+          rozet bandın içinde kalsaydı dairesinden ayrı düşerdi (künyesi `BandPhoto`da). */}
+      <BandPhoto name={name} photoUri={photoUri} discountLabel={discountLabel} mirrored={mirrored} />
     </View>
   );
 }
@@ -206,35 +237,17 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.helper,
   },
-  /* Rozet + sayaç TEK satırda; aynalanmış bantta sıra da aynalanır ki hap dış kenarda kalsın. */
-  countRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.md,
+  /* ROZET DAİRENİN ÜST KÖŞESİNDE — bandın tonu ne olursa olsun rozet FOTOĞRAFIN üstünde durur,
+     yani zemini hep açık. Bu yüzden ton başına kontrast çifti gerekmiyor: `Tag`in varsayılan
+     terracotta'sı üç bantta da okunur (fırsat kartındaki rozetin aynı gerekçesi). */
+  photoBadge: {
+    position: 'absolute',
+    top: theme.space.xl,
   },
-  countRowMirrored: {
-    flexDirection: 'row-reverse',
-  },
-  /* Hap ürün kartının durum rozetiyle AYNI ölçüde (`statusBadge`): aynı uygulamada iki farklı
-     rozet iriliği, ikisini de tesadüf gibi gösterirdi. Ayrışan tek şey RENK — bandın tonu. */
-  badge: {
-    paddingVertical: theme.space['2xs'],
-    paddingHorizontal: theme.space.md,
-    borderRadius: theme.radius.badge,
-  },
-  badgeText: {
-    fontFamily: theme.font.body[theme.text['badge--font-weight']],
-    fontSize: theme.text['badge-sm'],
-    letterSpacing: emToDp(theme.text['badge--letter-spacing'], theme.text['badge-sm']),
-  },
-  /* Üç ton, üç kontrast çifti: hap her bantta zeminden ayrılmak zorunda. Krem hap `sand-150`
-     bandın üstünde kaybolurdu, o yüzden orada tam ters çift (terracotta zemin + krem yazı). */
-  oliveBadge: { backgroundColor: theme.colors['sand-50'] },
-  oliveBadgeText: { color: theme.colors.olive },
-  sandBadge: { backgroundColor: theme.colors.terracotta },
-  sandBadgeText: { color: theme.colors['sand-50'] },
-  terracottaBadge: { backgroundColor: theme.colors['sand-50'] },
-  terracottaBadgeText: { color: theme.colors.terracotta },
+  /* Daire yatayda 30 dp taşıyor; rozet daima onun BANDA BAKAN kenarında durur, yoksa ekranın
+     dışına düşerdi. Normal bantta daire sağda → rozet solda; aynalanmışta tersi. */
+  photoBadgeNormal: { left: -theme.space.md },
+  photoBadgeMirrored: { right: -theme.space.md },
   oliveAccent: { color: theme.colors['olive-light'] },
   oliveTitle: { color: theme.colors['sand-50'] },
   sandAccent: { color: theme.colors.terracotta },

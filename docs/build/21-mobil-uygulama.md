@@ -5393,18 +5393,27 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ölü anahtar (`card.campaign`, tr/fr/de) silindi. Yeni türetme `scopeBadgeOf` kitte; vitrin bandı
   (`CollectionBand`) `discountLabel` prop'uyla hap çiziyor — sayaç satırının yanında, ayrı satır
   DEĞİL (bandın yüksekliği bir ölçü değil sözleşme: üst katman dairesi `index * collectionBand`
-  ile konumlanıyor). Hap üç tonda üç kontrast çifti taşıyor; `sand-150` bandın üstünde krem hap
-  kaybolacağı için orada ters çift (terracotta zemin + krem yazı).
+  ile konumlanıyor).
+
+  **ROZETİN YERİ AYNI TURDA BİR KEZ DAHA DÜZELTİLDİ (kullanıcı isteği):** önce sayaç satırının
+  yanındaydı; kullanıcı cihazda baktı ve *"indirim oranı anlaşılmıyor — bu rozetleri resimlerin
+  köşelerine koyalım"* dedi. Rozet dairenin üst köşesine taşındı ve kitin `Tag`ine devredildi
+  (fırsat kartıyla aynı ölçü/ton/gölge; kendi hapı yazılmadı). Daire İKİ yoldan çizildiği için
+  (bandın içinde · vitrinin üst katmanında) daire+rozet tek iç komponentte birleşti (`BandPhoto`)
+  — iki yere ayrı yazılsaydı biri güncellenir öteki kalırdı. Rozetin yanı aynalanır: daima
+  dairenin banda bakan kenarında, çünkü daire yatayda 30 dp taşıyor.
 
   **Eşikli kampanya rozete girmiyor** (23.08 kuralı aynen): *"60 € üzeri −%15"* hapa sığmaz, o
   yüzden bandın sayaç satırında tam cümlesiyle kalıyor. Kural tek yerde — iki türetme de aynı
   ölçütü okuyor. "Fırsat" rozeti ürün kartında KALDI: o sepete bağlı değil, ürünün kendi fiyatı.
 
   **Doğrulama:** `typecheck` temiz · `lint` temiz · `knip` temiz · mobil jest **544/544** (60 dosya,
-  `src/screens`) · yeni `collection-band.test.tsx` (3 test) **sabotajla doğrulandı** (rozet çizimi
-  susturulunca 2 test düştü). **Cihazda ölçüldü** (Oppo CPH1907): katalogda "3,00 € İNDİRİM"
-  rozetleri gitti ve "FIRSAT" kaldı · vitrin bantlarında hap çıktı (*"Bayram klasikleri −3,00 €"*,
-  aynalanmış *"Börekler ve hamur işleri −%15"*) · ürün detayının öneri şeridi kampanyasız.
+  `src/screens`) · yeni `collection-band.test.tsx` (5 test) **sabotajla doğrulandı** (rozet çizimi
+  susturulunca 2 test düştü). Testin ikinci bloğu vitrinin GERÇEKTEN kullandığı yolu (üst katman)
+  ölçüyor: o blok olmasa vitrindeki rozetin kaybolması hiçbir testi düşürmezdi.
+  **Cihazda ölçüldü** (Oppo CPH1907): katalogda "3,00 € İNDİRİM" rozetleri gitti ve "FIRSAT" kaldı ·
+  ürün detayının öneri şeridi kampanyasız · vitrin bantlarında hap dairenin köşesinde
+  (*"Bayram klasikleri −3,00 €"* sol üstte, aynalanmış *"Börekler ve hamur işleri −%15"* sağ üstte).
 
   **AYNI TURDA:** öneri şeridinin daireleri **96 → 120** (`circleSm`, kullanıcı isteği). Tarihçe
   ölçüldü — çap küçülmemişti, 07.08'den beri 96'ydı (şablonun kendi değeri). Tasarımdan bilinçli

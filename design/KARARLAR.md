@@ -1923,8 +1923,16 @@ Yani rozet ürün kartında bir bilgi değil, **yanlış bir fiyat vaadiydi**.
 **YAPILAN:** kampanya rozeti üç ürün kartından da kalktı (katalog ızgarası · vitrin seçkisi · ürün
 detayının öneri şeridi) ve vitrin bandına (`CollectionBand`) hap olarak taşındı — kesitin kendi
 kartı, çünkü kampanyanın kapsamı da bir kesittir (`matchesScope`: kategori | koleksiyon).
-Hap sayaç satırının yanında durur, ayrı satır değil: bandın yüksekliği bir ölçü değil sözleşmedir
-(üst katman dairesi `index * collectionBand` ile konumlanıyor).
+**ROZETİN YERİ AYNI GÜN BİR KEZ DAHA DÜZELTİLDİ.** Önce sayaç satırının yanına konmuştu; kullanıcı
+baktı ve *"Börek ve hamur işleri, indirim oranı anlaşılmıyor — bu indirim rozetlerini resimlerin
+köşelerine koyalım"* dedi. Haklıydı: 10 px'lik bir hap iki metin satırının altında, bandın en sakin
+yerinde duruyordu. Rozet dairenin üst köşesine taşındı — gözün ilk gittiği yer, ve uygulamanın
+kendi dilinde ORASI rozetin yeri (fırsat kartı da rozetini dairesinin köşesine koyuyor).
+
+Rozet kitin `Tag`i, ikinci bir hap DEĞİL: fırsat kartıyla aynı ölçü, ton ve gölge; hap köşe
+(`shape="pill"`) 23.08'in kararı. Kendi dönüşü yok çünkü kapsayıcı zaten dönük (5°/−6°) ve rozet o
+açıyı miras alıyor. Yanı aynalanır — rozet daima dairenin BANDA BAKAN kenarındadır, yoksa daire
+yatayda 30 dp taştığı için ekran dışına düşerdi.
 
 **KALAN:** "Fırsat" rozeti ürün kartında **kalır** — o birim fiyatta gerçekten düşen, üstü çizili
 eski fiyatı olan, sepete bağlı OLMAYAN bir indirimdir. 23.08'in üç kuralından ikisi de yaşıyor,
