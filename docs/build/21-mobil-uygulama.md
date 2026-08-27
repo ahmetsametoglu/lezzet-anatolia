@@ -2982,7 +2982,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
     `db:refresh`te düşer. Tavan 270'in canlıya inmesi de kullanıcı kararıyla `db:refresh`e
     bırakıldı (bugünkü davranışı değiştirmiyor; azami günlük kazanç 18).
 
-- [~] (21.57) **YEDİ OPERASYON EKRANI KAYDIRMA KABINA GEÇTİ — ve MB-34'ün "39 ekran"ı beş kat abartılıymış**
+- [x] (21.57) **YEDİ OPERASYON EKRANI KAYDIRMA KABINA GEÇTİ — ve MB-34'ün "39 ekran"ı beş kat abartılıymış**
   `touches:` `apps/mobile/src/screens/courier/delivery-screen.tsx` ·
   `apps/mobile/src/screens/courier/day-close-screen.tsx` ·
   `apps/mobile/src/screens/warehouse/transfer-screen.tsx` ·
@@ -3030,14 +3030,37 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   alttaki yapışkan düğme yerleşimi bozulmadı. **Yedi ekranın hepsi cihazda gezilmedi** — kullanıcı
   operasyon yüzeyine ayrıca çalışacağımızı söyledi (15.08), görsel tur o çalışmaya bırakıldı.
 
-  **AÇIK KALAN (bu yüzden `[~]`):**
-  · **Talep detayı ve şikâyet ekranı farklı kalıpta** — yazma alanı kaydırıcının ALTINDA sabit
-    duruyor (mesaj çubuğu). `FormScroll` sarmak yanlış olur: kaydırıcı mesaj listesi, alan onun
-    kardeşi. Ayrı bir çözüm gerekiyor.
-  · **Ham `ScrollView`u lint'le kapatma adımı YAPILMADI** *(27.08'de yeniden ölçüldü: 36 ham, 16 korumalı — hâlâ açık).* 33 dosya hâlâ ham kullanıyor ve çoğu
-    HAKLI (klavyesiz kaydırıcı). Kuralı "ham `ScrollView` yasak" diye yazmak, kabın künyesindeki
-    kapsam kararıyla çelişirdi; doğru kural "girdisi olan kaydırıcı ham olamaz" ve onu makineyle
-    ifade etmek ayrı bir iş.
+  ## İki açık madde de kapandı (27.08) — ve kural artık MAKİNEDE
+
+  **KURAL BEKÇİYE VERİLDİ:** `apps/mobile/src/lib/keyboard-scroll-guard.test.ts`. Kural "ham
+  `ScrollView` yasak" DEĞİL (kabın kapsam kararıyla çelişirdi), **"girdisi olan kaydırıcı ham
+  olamaz"** — ve ikinci kalıbı da soruyor: yapışkan yazma çubuğu olan ekranda kaçınma kabı bulunmalı.
+  Her iki iddia da sabotajla doğrulandı; üçüncü test bekçinin KENDİSİNİ ölçüyor.
+
+  **DEFTERDEKİ "36 ham, 16 korumalı" SAYISI YANLIŞ ÖLÇÜTTÜ.** O sayım *"dosyada kaydırıcı var,
+  dosyada girdi de var"* diyordu. Gerçek ölçüt — girdi kaydırıcının İÇİNDE mi — uygulanınca depoda
+  **tek ihlal** kaldı. Bekçinin ilk taslağı da aynı kusurun bir başka biçimini taşıyordu: generic
+  tip parametresini (`useRef<ScrollView>`) açılış etiketi sanıyor ve iki sohbet ekranını haksız yere
+  suçluyordu; ayraç daraltıldı (`<` hemen bir tanımlayıcıdan sonra geliyorsa tip parametresidir).
+
+  **BULUNAN İHLAL GERÇEKTİ VE MÜŞTERİ YÜZEYİNDEYDİ:** `checkout-screen` ham kaydırıcı kullanıyordu
+  ve 11.08'de bu DOĞRUYDU — o gün içinde metin alanı yoktu. **İletişim künyesi bölümü (ad + telefon)
+  15.08'de eklendi** ve kaydırıcının içine düştü; koruma onunla gelmedi. Yani müşterinin ödeme
+  yaptığı ekranda MB-01 ve MB-02'nin ikisi de açıktı. Kimse hata yapmadı: 21.57'nin *"müşteri
+  yüzeyi zaten kapalı"* ölçümü doğruydu ama **bir kereye mahsustu** — bekçinin var olma sebebi tam
+  olarak bu. Ekran `FormScroll`a geçti (yerleşim değişmedi: yapışkan bar yok, onay düğmesi zaten
+  kaydırıcının içinde).
+
+  **YAZIŞMA KALIBININ İKİ EKRANI DA KAPANDI.** Talep detayı bunu 16.08'de zaten çözmüştü
+  (`KeyboardAvoidingView` kökü sarar, künyesi iki cihazda ölçülü) — defterdeki madde o gün bayatladı.
+  Aynı kalıbın kopyaları olan `management/complaint-screen` ve `management/social-conversation-screen`
+  korumasızdı; emsal birebir uygulandı (kaçınma kabı + kaydırıcıya `flex: 1`, çünkü esnemesi gereken
+  listedir, çubuk değil). Yeni bir çözüm İCAT EDİLMEDİ.
+
+  Doğrulama: `keyboard-scroll-guard` 4/4 · etkilenen 24 suite / 160 test yeşil · `eslint`/`knip`
+  temiz · `typecheck` kendi kapsamımda temiz (kalan iki hata paralel şeridin süren
+  `stock_adjustment` işinde). **Cihaz turu YAPILMADI** — üç ekran da klavye davranışını değiştirdi
+  ve kalıbın kendisi cihazda ölçülü olsa da bu üç ekranın turu operasyon yüzeyi çalışmasına kalıyor.
 
 - [x] (21.58) **TEŞEKKÜR SAYFASI KUTUSUZ VE BÜTÜNLEŞİK — kahraman işaret puan yıldızı oldu (MB-19)**
   `touches:` `apps/mobile/src/screens/feedback/feedback-screen.tsx` ·
@@ -6304,12 +6327,18 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   · **21.68** — bloğun üç açığının üçü de kendi içinde üstü çizili: zil cihazda çalındı (17.08),
     çeviri (21.69)'da yazıldı, üçüncüsü zaten kapanmış.
 
-  **AÇIK KALDIĞI DOĞRULANANLAR (sıraya girecek):** 21.14 (sepet/ödeme terfileri — kodda 14 canlı
-  işaret) · 21.57 (talep/şikâyet ekranının klavye kalıbı + "girdisi olan kaydırıcı ham olamaz"
-  kuralının makineyle zorlanması; ölçüldü 27.08: **36 dosya ham kaydırıcı, 16'sı korumalı kapta**)
-  · 21.78 + 21.48 (cihaz turlarının kalanları) · 21.88 (push — kullanıcı sırasında EN SON) ·
+  **AÇIK KALDIĞI DOĞRULANANLAR (sıraya girecek):** ~~21.14~~ ve ~~21.57~~ **27.08'de kapandı**
+  (kendi bloklarında yazılı; ikisi de ölçülünce iddia edilenden küçük çıktı — 21.14'ün "14 canlı
+  işaret"inin onu bayattı, 21.57'nin "36 ham kaydırıcı"sı yanlış ölçüttü ve gerçek ihlal tekti).
+  Kalanlar: 21.78 + 21.48 (cihaz turlarının kalanları) · 21.88 (push — kullanıcı sırasında EN SON) ·
   21.121 (unistyles nüksü) · **21.7'nin artığı**: Android'de cam bulanıklığı `BlurTargetView`
   bağı istiyor (açık künyesi `app-bar.tsx`te, tek yerde).
+
+  **İkinci ders (27.08, iki turda üst üste):** bayat bir kayıt yalnız "iş bitmiş ama işaret duruyor"
+  diye bayatlamaz — **yanlış ÖLÇÜTLE sayılmış bir sayı da bayattır ve daha tehlikelidir**, çünkü
+  büyük görünür ve işi sıraya sokarken abartır. İki kez aynı biçimde oldu: "14 canlı işaret"
+  (`grep BEKLEYEN`) ve "36 ham kaydırıcı" (`grep ScrollView`). İkisi de metin araması, ikisi de
+  kuralın kendisini değil ismini sayıyordu. Bir sayı deftere yazılırken NASIL sayıldığı da yazılmalı.
 
   **Ders (üçüncü kez ölçüldü, artık kural gibi):** bir görev satırının açık maddesi, o maddeyi
   kapatan tur tarafından ESKİ bloğunda da işaretlenmeli. Aksi hâlde defter, kodun gerisinde kalır

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ConversationHandlerEnum, type ConversationHandler } from '@lezzet/types';
 
@@ -160,6 +160,17 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         testID="management-social-chat-header"
       />
 
+      {/*
+        KLAVYE KAÇINMASI — talep detayının çözülmüş kalıbı (27.08 · 21.57), şikâyet ekranıyla aynı
+        gün ve aynı gerekçeyle. Cevap çubuğu klavyenin altında kalıyordu; sebep müşteri yüzeyinde
+        ölçüldü (`support/ticket-detail-screen` künyesi, iki cihazda 16.08): Android
+        `Theme.EdgeToEdge` altında `adjustResize` işlemiyor, boşluğu uygulama tüketmeli.
+
+        `FormScroll` değil kaçınma KABI: kaydırılan yalnız yazışma, çubuk sabit kalmalı. Başlık
+        çubuğu kapın dışında (emsalin yerleşimi); mod satırı ve pencere bandı içeride, çünkü onlar
+        yazışmayla birlikte kısalması gereken alanın parçası.
+      */}
+      <KeyboardAvoidingView style={styles.keyboardLayer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.modeRow}>
         <Text style={styles.modeLabel}>{td.mode.label}</Text>
         {MODES.map((mode: ConversationHandler) => {
@@ -200,8 +211,11 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         </Text>
       </View>
 
+      {/* LİSTE ESNER, ÇUBUK ESNEMEZ (emsalin iOS ölçümü 16.08): `flex: 1` olmayan liste içerik
+          boyunda kalır, kap klavye kadar küçülürken küçülmez ve çubuk ekranın dışına taşar. */}
       <ScrollView
         ref={scrollRef}
+        style={styles.threadLayer}
         contentContainerStyle={styles.thread}
         onContentSizeChange={() => {
           if (!scrollPending.current) return;
@@ -284,6 +298,7 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         </PressableSurface>
         <Text style={styles.recordNote}>{td.recordNote}</Text>
       </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -371,6 +386,10 @@ const styles = StyleSheet.create({
   windowText_open: { color: operationsTheme.colors['olive-dark'] },
   windowText_closed: { color: operationsTheme.colors.terracotta },
   windowText_never: { color: operationsTheme.colors.muted },
+  /** Başlığın ALTINDAKİ her şey — kaçınma kabı buradan başlar (`FormScroll`un `layer`ıyla aynı rol). */
+  keyboardLayer: { flex: 1 },
+  /** Kaydırıcının KENDİSİ — kalan alanı doldurur ve klavye açılınca kısalır (künyesi kullanım yerinde). */
+  threadLayer: { flex: 1 },
   thread: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space.xl,

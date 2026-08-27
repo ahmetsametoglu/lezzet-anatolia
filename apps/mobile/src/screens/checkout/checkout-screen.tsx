@@ -3,13 +3,14 @@ import type { LocalizedCopy } from '@lezzet/i18n';
 import type { PaymentMethod } from '@lezzet/types';
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { AppBar } from '@/components/ui/app-bar';
 import { AvatarThumb } from '@/components/ui/avatar-thumb';
 import { BackButton } from '@/components/ui/back-button';
 import { Chip } from '@/components/ui/chip';
+import { FormScroll } from '@/components/ui/form-scroll';
 import { Note } from '@/components/ui/note';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -628,7 +629,21 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
         left={<BackButton onPress={() => router.back()} accessibilityLabel={t.back} testID="checkout-back" />}
         testID="checkout-appbar"
       />
-      <ScrollView contentContainerStyle={styles.content} testID="checkout-scroll">
+      {/*
+        KLAVYE KORUMALI KAP (27.08 · 21.57'nin bekçisi bunu yakaladı).
+
+        Ekran ham `ScrollView` kullanıyordu ve 11.08'de bu DOĞRUYDU — o gün içinde metin alanı
+        yoktu. İletişim künyesi bölümü 15.08'de eklendi (ad + telefon) ve kaydırıcının içine
+        düştü; koruma ise ekranla birlikte gelmedi. Sonuç, müşterinin ödeme yaptığı ekranda iki
+        açık arızaydı: odaklanan alan klavyenin altında kalıyor (MB-02) ve klavye açıkken
+        düğmeye ilk dokunuş yutuluyordu (MB-01). Kimse hata yapmadı — kural o gün makinede
+        değildi; artık `lib/keyboard-scroll-guard.test.ts` onu her koşuda soruyor.
+
+        Kap ikisini birlikte taşıyor ve yerleşim değişmiyor: `FormScroll` da kabuğun kalan
+        yüksekliğini dolduruyor (`flex: 1`), onay düğmesi zaten kaydırıcının içinde — yapışkan
+        bar yok, itilecek bir yerleşim de yok.
+      */}
+      <FormScroll contentContainerStyle={styles.content} testID="checkout-scroll">
         <View style={styles.hero}>
           <Text style={styles.heroTitle} accessibilityRole="header">
             {t.hero}
@@ -973,7 +988,7 @@ export function CheckoutScreen({ shippingOrder = false }: CheckoutScreenProps) {
             testID="checkout-terms"
           />
         </View>
-      </ScrollView>
+      </FormScroll>
 
       {/* Adres çekmecesi — hesap ekranının kullandığı KİT bileşeni. Sipariş akışı kesilmez:
           müşteri adresini burada yazar, seçili hâle gelir ve görüntü onunla yenilenir. */}

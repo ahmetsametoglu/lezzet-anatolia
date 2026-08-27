@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
@@ -101,7 +101,22 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
   const claimed = detail.status !== 'open';
 
   return (
-    <>
+    /*
+      KLAVYE KAÇINMASI — talep detayının çözülmüş kalıbı, birebir (27.08 · 21.57).
+
+      Yazma çubuğu klavyenin ALTINDA kalıyordu: operatör yazdığını göremiyordu. Sebep müşteri
+      yüzeyinde ÖLÇÜLDÜ ve orada da aynı (`support/ticket-detail-screen` künyesi, iki cihazda
+      16.08): Android `Theme.EdgeToEdge` ile açıldığı için pencereyi klavye için küçültmüyor,
+      `adjustResize` işlemiyor; boşluğu uygulamanın kendisi tüketmeli.
+
+      `FormScroll` KULLANILMAZ ve bu bilinçli: o kap içeriğin TAMAMINI tek kaydırıcıya koyan form
+      ekranları için. Burası yazışma — kaydırılan yalnız mesaj listesi, çubuk sabit kalmalı.
+      Aynı KORUMA, farklı KAP: kaçınma kökü sarar, liste ile çubuk içeride kendi yerlerinde kalır.
+
+      Başlık çubuğu KAPIN DIŞINDA (emsalin yerleşimi): kap `ComplaintScreen`in `screen`i içinde
+      başlığın altından başlıyor.
+    */
+    <KeyboardAvoidingView style={styles.keyboardLayer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={styles.tags}>
         <Text style={[styles.tag, styles.tagKind]}>{t.complaint.kind[detail.type]}</Text>
         <Text style={[styles.tag, claimed ? styles.tagInProgress : styles.tagOpen]} testID="management-complaint-status">
@@ -115,7 +130,10 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
         )}
       </View>
 
-      <ScrollView contentContainerStyle={styles.thread} testID="management-complaint-thread">
+      {/* LİSTE ESNER, ÇUBUK ESNEMEZ (emsalin iOS ölçümü 16.08): kaçınma kabın altına klavye kadar
+          dolgu koyuyor; `flex: 1` olmayan liste İÇERİK BOYUNDA kalır, kap küçülürken küçülmez ve
+          yazma çubuğu ekranın dışına taşar. Kısalması gereken listedir. */}
+      <ScrollView style={styles.threadLayer} contentContainerStyle={styles.thread} testID="management-complaint-thread">
         {detail.messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
@@ -198,7 +216,7 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
             yok, dokunulabilir yapmak olmayan bir yol vaat ederdi. */}
         <Text style={styles.deskNote}>{t.common.desk}</Text>
       </View>
-    </>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -300,6 +318,10 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors['sand-500'],
     color: operationsTheme.colors.muted,
   },
+  /** Başlığın ALTINDAKİ her şey — kaçınma kabı buradan başlar (`FormScroll`un `layer`ıyla aynı rol). */
+  keyboardLayer: { flex: 1 },
+  /** Kaydırıcının KENDİSİ — kalan alanı doldurur ve klavye açılınca kısalır (künyesi kullanım yerinde). */
+  threadLayer: { flex: 1 },
   thread: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space.xl,
