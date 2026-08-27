@@ -100,6 +100,19 @@ export const B2bCompanySchema = z.object({
   activityCode: z.string().nullable(),
   foundedYear: z.number().int().nullable(),
   isActive: z.boolean().nullable(),
+  /**
+   * **KDV numarası — kayıttan gelir, hesaplanmaz** (28.08). Resmî kayıt `tva` alanında zaten
+   * veriyor; taşınmadığı sürece Fransız başvurusunda `user_profiles.vat_number` boş kalıyordu ve
+   * onay kartının KDV satırı daima "Numara yok" diyordu.
+   *
+   * Sözleşmeye eklenmesinin sebebi ikinci yüzey: mobil başvuru formu bu alanı okuyup başvurunun
+   * `facts`ına koyarsa numara orada da yazılır. **Bugün okunmuyor ve bu bir arıza değil** —
+   * `B2bCompanyFacts.vatNumber` isteğe bağlı, vermeyen yüzeyde davranış bugünküyle aynı kalıyor
+   * (numara yazılmaz). Notu `docs/talep/`te; alan burada duruyor ki iş mekanik bir ekleme olsun.
+   *
+   * `null` = işletmenin KDV numarası YOK (eşik altı mikro işletme) ya da kayıt vermedi.
+   */
+  vatNumber: z.string().nullable(),
   line1: z.string(),
   postalCode: z.string(),
   city: z.string(),

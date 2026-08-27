@@ -11,9 +11,12 @@ import { submitB2bApplication } from './application';
  * ezilmez**, **işletme adresi kaydedilir** (onay kartının rota sinyali ona bakıyor) ve **eksik
  * başvuru yazılmaz**.
  *
- * `siret` yolu seçildi çünkü DIŞ SERVİSE HİÇ ÇIKMIYOR: vergi numarası yalnız AB yolunda yazılır,
- * dolayısıyla VIES çağrısı hiç kurulmaz. Ağa çıkan bir birim testi, servis yavaşladığı gün
- * "bizim kodumuz bozuldu" diye okunan bir düşüş üretir.
+ * `siret` yolu seçildi çünkü DIŞ SERVİSE HİÇ ÇIKMIYOR — ve bu özellik 28.08'de bir kez kırılıp
+ * geri alındı: SIRET yolu künyeyi sunucuda yeniden okumaya başlamıştı ve bu dosya 5,7 saniyeden
+ * 16,9 saniyeye çıkarak haklı çıktı. Bugünkü hâl: numara resmî kayıttan `facts` üzerinden geliyor
+ * (form onu zaten sormuştu), **doğrulama ise başvuruda değil ONAY KARTINDA** yapılıyor
+ * (`refreshVatNumberCheck`, 09.11) — yani VIES çağrısı bu yolda hiç kurulmuyor. Ağa çıkan bir birim
+ * testi, servis yavaşladığı gün "bizim kodumuz bozuldu" diye okunan bir düşüş üretir.
  */
 const db = serviceDb();
 const profiles = new UserProfileService(db);
@@ -22,7 +25,7 @@ const addresses = new AddressService(db);
 const stamp = Date.now();
 const createdProfiles: string[] = [];
 
-const FACTS: B2bCompanyFacts = { activityCode: '56.10A', foundedYear: 2016, isActive: true };
+const FACTS: B2bCompanyFacts = { activityCode: '56.10A', foundedYear: 2016, isActive: true, vatNumber: 'FR34387904527' };
 
 /**
  * Damgayla ayrılmış satır — paylaşılan veritabanında başka bir ajanın verisiyle çakışmaz.
@@ -84,9 +87,21 @@ describe('başvurunun yazılması', () => {
     // `false` = bekliyor. `true` yazmak toptan fiyatı doğrulanmamış bir kayda açardı; `null`
     // yazmak kaydı operasyonun bekleyen kuyruğundan (kısmi indeks) düşürürdü.
     expect(updated.b2bApproved).toBe(false);
-    // SIRET yolunda vergi numarası hiç sorulmuyor — sorulmamış soru `null` kalır.
-    expect(updated.vatNumber).toBeNull();
+    /**
+     * **Numara YAZILIR, doğrulama SONRAYA kalır** (28.08 · eskiden ikisi de `null`dı).
+     *
+     * Bu satır bir tur `vatNumber`ı da `null` bekliyordu ve iddia doğruydu — ama çivilediği şey bir
+     * AÇIKTI: resmî kayıt numarayı `tva` alanında zaten veriyordu, biz taşımıyorduk. Sonucu şuydu:
+     * gerçek bir Fransız başvurusunda `user_profiles.vat_number` boş kalıyor, onay kartının KDV
+     * satırı daima "Numara yok" diyor ve 09.11'in tazeleme mekanizmasının tazeleyecek bir şeyi
+     * olmuyordu. **Testin geçmesi, davranışın doğru olduğunu göstermez.**
+     *
+     * `vatNumberValid` hâlâ `null` ve bilerek: SIRET yolunda VIES çağrılmıyor (dosya künyesi),
+     * numarayı onay kartı açılışta soruyor. `null` burada "sorulmadı" demek.
+     */
+    expect(updated.vatNumber).toBe('FR34387904527');
     expect(updated.vatNumberValid).toBeNull();
+    expect(updated.vatNumberCheckedAt).toBeNull();
   });
 
   it('işletme adresi kaydedilir — onay kartının rota sinyali buna bakıyor', async () => {

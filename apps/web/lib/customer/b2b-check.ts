@@ -98,7 +98,28 @@ async function refreshedCompanyInfo(profile: UserProfile): Promise<CompanyInfo |
   };
 }
 
-export async function readB2bCheck(db: Db, customerId: string): Promise<B2bCheckView | null> {
+/**
+ * **`refreshExternal: false` — AYNI kartı ikinci kez okuyan için** (28.08).
+ *
+ * Kart açılışı iki server action tetikliyor: önce `readB2bCheckAction` (kartı çizer), sonra
+ * `b2bSummaryAction` (AI cümlesini alır). İkincisi de bu fonksiyonu çağırıyor ve **dış servisleri
+ * bir kez daha** soruyordu — kart başına iki SIRET sorgusu, iki VIES sorgusu ve KDV damgasına
+ * ikinci bir yazım. VIES'in eşzamanlılık sınırı olduğu düşünülürse ikinci çağrı yalnız israf değil,
+ * `MS_MAX_CONCURRENT_REQ` ihtimalini kendi elimizle artırmaktı.
+ *
+ * İkinci okuma tazelemeyi ATLIYOR ve doğru sonucu veriyor: ilk okuma az önce koştu, yani profilde
+ * duran değerler zaten bugünün cevabı. **Sinyaller de aynı kalmak ZORUNDA** — AI cümlesi kartta
+ * yazandan başka bir şey anlatırsa operatör hangisine inanacağını bilemez.
+ *
+ * İstemciden sinyal ALMAK da bir seçenekti ve seçilmedi: özet metni sunucunun ürettiği olgulardan
+ * doğmalı, tarayıcının gönderdiği metinden değil.
+ */
+export async function readB2bCheck(
+  db: Db,
+  customerId: string,
+  opts: { refreshExternal?: boolean } = {},
+): Promise<B2bCheckView | null> {
+  const refreshExternal = opts.refreshExternal ?? true;
   const profiles = new UserProfileService(db);
   const profile = await profiles.getById(customerId);
   if (!profile) return null;
@@ -116,8 +137,10 @@ export async function readB2bCheck(db: Db, customerId: string): Promise<B2bCheck
       // `name`, mükerrer de o gözle aranır.
       name: profile.name,
     }),
-    refreshedCompanyInfo(profile),
-    refreshVatNumberCheck(db, profile),
+    refreshExternal ? refreshedCompanyInfo(profile) : null,
+    refreshExternal
+      ? refreshVatNumberCheck(db, profile)
+      : { valid: profile.vatNumberValid, checkedAt: profile.vatNumberCheckedAt, refreshed: false },
   ]);
 
   const address = primaryAddressOf(addresses);

@@ -213,7 +213,7 @@ export async function seedZoneNotices(db: Db, kisiler: Kisiler): Promise<void> {
     { postal_code: '68000', country: 'FR', place_name: null, locale: 'fr', email: 'sophie.klein@example.fr', not: 'bekliyor · yer adı yok' },
     // ALMAN kod: ülke ayrımının tek gerçek denek taşı — kod FR'de de geçerli olsa haber işi bunu
     // Fransız bölge açılışında GÖNDERMEMELİ (21.16).
-    { postal_code: '77694', country: 'DE', place_name: 'Kehl', locale: 'de', source: 'app-onboarding', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMAN kayıt, Kehl deposu var ama rota yok' },
+    { postal_code: '77694', country: 'DE', place_name: 'Kehl', locale: 'de', source: 'app-onboarding', email: 'einkauf.vihado@example.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMAN kayıt, Kehl deposu var ama rota yok' },
     // HABER VERİLMİŞ kayıt: bölge açıldı, mektup gitti. Listenin "bitmiş" ucu da görünsün —
     // hepsi bekliyorsa gönderim akışının çalıştığı hiç görülmez.
     //
@@ -291,10 +291,10 @@ export async function seedStockNotices(db: Db, kisiler: Kisiler): Promise<void> 
     // Aynı varyantı bekleyen ÜÇ kişi: mal gelince kaç kişiye haber gideceği ancak yığılma varsa görünür.
     { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67000', email: 'claire.weber@example.fr', customer_id: kisiler.get('b2cSadik') ?? null, not: 'bekliyor · KAYITLI müşteri' },
     { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67300', email: 'passant@example.fr', not: 'bekliyor · ziyaretçi (kimliksiz)' },
-    { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67000', email: 'compta@bosphore-strasbourg.fr', customer_id: kisiler.get('b2bOnayli') ?? null, not: 'bekliyor · B2B müşteri' },
+    { variant_id: varyantlar[0]!, country: 'FR', postal_code: '67000', email: 'compta.oberjaegerhof@example.fr', customer_id: kisiler.get('b2bOnayli') ?? null, not: 'bekliyor · B2B müşteri' },
     // BAŞKA ÜLKE: mal Strasbourg'a gelirse bu kayda haber gitmemeli — yer süzgecinin sınavı.
     ...(varyantlar[1]
-      ? [{ variant_id: varyantlar[1], country: 'DE' as const, postal_code: '77694', email: 'einkauf@anadolu-markt.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMANYA (yer süzgeci)' }]
+      ? [{ variant_id: varyantlar[1], country: 'DE' as const, postal_code: '77694', email: 'einkauf.vihado@example.de', customer_id: kisiler.get('b2bAlman') ?? null, not: 'bekliyor · ALMANYA (yer süzgeci)' }]
       : []),
     // HABER VERİLMİŞ kayıt: söz tutulmuş hâli de görünsün. Damgalı satıra ikinci kez yazılmaz —
     // "tek hatırlatma" sözü bu alanla tutulur.

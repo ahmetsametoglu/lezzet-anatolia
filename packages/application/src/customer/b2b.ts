@@ -70,17 +70,51 @@ export async function submitB2bApplication(
   if (!profile) return { status: 'profile_not_found' };
 
   const isEuVat = input.kind === 'eu_vat';
-  const vatNumber = isEuVat ? normalizeVatNumber(input.vatNumber) : null;
-  // Doğrulama YAZMADAN ÖNCE: sonuç kaydın parçası. Sorulamadıysa `null` yazılır ve onay kartı
-  // bunu "Sorulmadı" diye gösterir — sessizce "geçerli" varsaymak reverse charge'ı açardı.
-  const vatNumberValid = vatNumber ? await checkEuVatNumber(vatNumber) : null;
+  const siret = input.kind === 'siret' ? normalizeSiret(input.siret) : null;
+
+  /**
+   * ── SIRET YOLUNDA DA KDV NUMARASI YAZILIYOR (28.08) ──────────────────────────────────────────
+   * Bu satır `vatNumber`ı SIRET yolunda `null` bırakıyordu ve kimse fark etmemişti, çünkü seed'in
+   * Fransız müşterilerine numara ELLE veriliyor. Gerçek bir Fransız başvurusunda ise
+   * `user_profiles.vat_number` boş kalıyor, onay kartının KDV satırı daima *"Numara yok"* diyor ve
+   * tazeleme mekanizmasının (09.11) tazeleyecek bir şeyi olmuyordu. Oysa resmî kayıt numarayı zaten
+   * veriyor (`tva` alanı) — sormamışız.
+   *
+   * **Numara İSTEMCİDEN geliyor ve bu bilinçli.** Buradan resmî kaydı yeniden okumak da denendi
+   * (28.08) ve GERİ ALINDI: form o sorguyu zaten yaptı (`facts`ın kaynağı o), ikinci kez sormak
+   * başvuruya bir 6 saniye daha eklerdi — VIES çağrısıyla birlikte en kötü hâlde 12 saniyelik bir
+   * "Gönder". Ayrıca testin künyesindeki özelliği kırıyordu: *"SIRET yolu dış servise hiç çıkmaz."*
+   *
+   * Güven modeli öteki olgularla AYNI (`activityCode`, `foundedYear`, `isActive` de formdan gelir)
+   * ve düzeltmesi de aynı yerde: onay kartı künyeyi açılışta resmî kayıttan tazeliyor (04.08),
+   * numarayı da VIES'e soruyor. Yani uydurma bir numara kayda `true` olarak giremiyor — VIES onu
+   * `false` yapar; operatör de kararı taze veriye bakarak verir.
+   */
+  const vatNumber = isEuVat ? normalizeVatNumber(input.vatNumber) : facts.vatNumber ?? null;
+
+  /**
+   * **Doğrulama YALNIZ AB yolunda, ve bu bir eksiklik değil bir iş bölümü.**
+   *
+   * AB yolunda numarayı BAŞVURAN yazıyor: yanlış yazılmış olabilir, formun canlı ✓ işareti de zaten
+   * onu gösteriyor — doğrulamanın yeri orası. SIRET yolunda numara resmî KAYITTAN geliyor, kimse
+   * yazmadı; burada bir kez daha sormak başvuruya bir 6 saniye daha ekler ve testin künyesindeki
+   * özelliği kırardı (*"SIRET yolu dış servise hiç çıkmaz"*).
+   *
+   * Numara doğrulanmamış KALMIYOR, sırası geliyor: `null` = "sorulmadı" ve onay kartı açılışta
+   * VIES'e soruyor (09.11 · `refreshVatNumberCheck`). Doğrulamanın en taze anı da zaten orası —
+   * operatör kararı verirken. Başvuru anında sorulan bir cevap, karar anına kadar bayatlayabilirdi.
+   *
+   * Sorulamadığında `null` yazılır ve kart bunu "Sorulmadı" diye gösterir — sessizce "geçerli"
+   * varsaymak reverse charge'ı açardı.
+   */
+  const vatNumberValid = isEuVat && vatNumber ? await checkEuVatNumber(vatNumber) : null;
   // Damga YALNIZ kesin cevapta: "sorulamadı" bir cevap değil, cevabın yokluğudur — damgalanırsa
   // onay kartı hiç alınmamış bir doğrulamaya yaş atfeder (`b2b-approval` → `vatSignal`).
   const vatNumberCheckedAt = vatNumberValid === null ? null : new Date().toISOString();
 
   const companyInfo: CompanyInfo = {
     legalName: input.legalName.trim(),
-    siret: input.kind === 'siret' ? normalizeSiret(input.siret) : null,
+    siret,
     activityCode: facts.activityCode,
     foundedYear: facts.foundedYear,
     isActive: facts.isActive,

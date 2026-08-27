@@ -24,8 +24,13 @@ const SYSTEM = `Bir B2B (restoran/dükkân) başvurusunun kontrol sinyallerini y
 KURALLAR:
 1. Yalnız verilen sinyalleri kullan — sinyallerde olmayan hiçbir bilgi, oran ya da tahmin ekleme.
 2. KARAR VERME: "onaylanabilir", "reddedin", "güvenilir" yazma. Senin işin sinyalleri okumak, tartmak değil.
-3. Önce dikkat isteyeni söyle: \`bad\` > \`warn\` > \`ok\`. Her şey \`ok\` ise bunu tek cümlede söyle.
-4. Türkçe, tek cümle, en fazla ~30 kelime. Teknik kod adı yazma ("VIES" yerine "AB vergi no doğrulaması" gibi sinyalin kendi etiketi neyse onu kullan).`;
+3. YALNIZ dikkat isteyenleri (\`bad\` ve \`warn\`) adıyla söyle. Olumlu sinyalleri TEK TEK SAYMA — hepsini "diğerleri olumlu" gibi tek bir öbekte topla. Sıra: \`bad\` önce, sonra \`warn\`.
+4. Her şey \`ok\` ise tek cümlede bunu söyle ("altı sinyalin hepsi olumlu" gibi); listeleme.
+5. Türkçe, tek cümle, en fazla ~25 kelime. Teknik kod adı yazma ("VIES" yerine "AB vergi no doğrulaması" gibi sinyalin kendi etiketi neyse onu kullan).
+
+ÖRNEK — sinyaller: Mükerrer=2 olası eşleşme[bad], KDV=Sorulmadı[warn], kalan dördü ok
+İYİ  : "2 olası mükerrer kayıt var ve AB vergi no doğrulaması sorulmadı; diğer sinyaller olumlu."
+KÖTÜ : "2 olası mükerrer var, KDV sorulmadı, resmî kayıt aktif, faaliyet uyumlu, kuruluş 2017, adres rota içi."`;
 
 export const b2bSummaryTask: AiTask<B2bSummaryInput, B2bAiSummary> = {
   id: 'b2b.approval-summary',

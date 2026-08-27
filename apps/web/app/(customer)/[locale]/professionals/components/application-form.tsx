@@ -64,7 +64,7 @@ function emptyInput(defaults: ApplicationDefaults): B2bApplicationInput {
   };
 }
 
-const NO_FACTS: B2bCompanyFacts = { activityCode: null, foundedYear: null, isActive: null };
+const NO_FACTS: B2bCompanyFacts = { activityCode: null, foundedYear: null, isActive: null, vatNumber: null };
 
 export function ApplicationForm({ t, locale, signedIn, defaults, compact = false }: ApplicationFormProps) {
   const [step, setStep] = useState<ApplicationStep>('form');
@@ -117,7 +117,16 @@ export function ApplicationForm({ t, locale, signedIn, defaults, compact = false
       }
       const record = res.data;
       setFetched(true);
-      setFacts({ activityCode: record.activityCode, foundedYear: record.foundedYear, isActive: record.isActive });
+      // KDV numarası da künyenin parçası (28.08): kayıt onu `tva` alanında zaten veriyor ve
+      // taşınmadığı sürece Fransız başvurusunda `user_profiles.vat_number` boş kalıyordu — onay
+      // kartının KDV satırı daima "Numara yok" diyordu. Form onu göstermiyor (başvuranın
+      // doldurduğu bir alan değil), yalnız taşıyor.
+      setFacts({
+        activityCode: record.activityCode,
+        foundedYear: record.foundedYear,
+        isActive: record.isActive,
+        vatNumber: record.vatNumber,
+      });
       set({
         siret: record.siret,
         legalName: record.legalName,

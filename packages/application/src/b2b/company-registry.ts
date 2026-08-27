@@ -49,6 +49,22 @@ export interface CompanyRegistryRecord {
   foundedYear: number | null;
   /** Resmî kayıt açık mı (`etat_administratif === 'A'`). */
   isActive: boolean | null;
+  /**
+   * **KDV numarası — kayıttan gelir, HESAPLANMAZ** (28.08).
+   *
+   * Uç nokta `tva` alanında zaten veriyor (`["FR34387904527"]`) ve bu alanın var olduğu ölçülene
+   * kadar Fransız başvurusunda numara HİÇ yazılmıyordu: `submitB2bApplication` SIRET yolunda
+   * `vatNumber`ı `null` bırakıyordu, yani gerçek bir Fransız başvurusunda onay kartının KDV satırı
+   * daima "Numara yok" diyordu.
+   *
+   * Anahtar hanesi SIREN'den türetilebilir (`(12 + 3 × SIREN mod 97) mod 97`) ama türetmiyoruz:
+   * formül doğru olsa bile **KDV'ye tabi olmayan** işletmede numara diye bir şey yoktur (eşik altı
+   * mikro işletme), ve türetilmiş numara VIES'te `INVALID` döner. Kayıt bunu zaten biliyor —
+   * numarası olmayanda alan boş gelir. Uydurmak yerine sormak.
+   *
+   * Dizi geliyor çünkü kayıt birden çok numara taşıyabiliyor; ilki alınır.
+   */
+  vatNumber: string | null;
   line1: string;
   postalCode: string;
   city: string;
@@ -98,8 +114,17 @@ interface RawResult {
   date_creation?: unknown;
   activite_principale?: unknown;
   etat_administratif?: unknown;
+  /** KDV numaraları — kayıtta dizi; numarası olmayan işletmede boş/eksik gelir. */
+  tva?: unknown;
   siege?: RawEstablishment;
   matching_etablissements?: RawEstablishment[];
+}
+
+/** Kayıttaki ilk KDV numarası; biçimi bozuk ya da boşsa `null` (uydurulmaz). */
+function vatOf(value: unknown): string | null {
+  const first = Array.isArray(value) ? value[0] : value;
+  const raw = str(first)?.replace(/\s/g, '').toUpperCase() ?? null;
+  return raw && /^[A-Z]{2}[0-9A-Z]{2,13}$/.test(raw) ? raw : null;
 }
 
 export async function lookupCompanyBySiret(rawSiret: string): Promise<CompanyRegistryRecord | CompanyLookupFailure> {
@@ -162,6 +187,8 @@ export async function lookupCompanyBySiret(rawSiret: string): Promise<CompanyReg
     // Bilinmeyen durum `false` DEĞİL `null`: "kapalı" ile "söylemedi" ayrı şeyler ve onay kartı
     // ikisini ayrı tonda gösteriyor (`b2b-approval`: `bad` ile `warn` ayrımı).
     isActive: state === null ? null : state === 'A',
+    // KDV numarası ŞİRKETİN (SIREN), işletmenin değil — şubeye ayrı numara verilmez.
+    vatNumber: vatOf(result.tva),
     line1: streetOf(str(establishment.adresse), postalCode, city),
     postalCode,
     city,

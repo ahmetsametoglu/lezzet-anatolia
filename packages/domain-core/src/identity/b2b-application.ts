@@ -129,6 +129,16 @@ export interface B2bCompanyFacts {
   foundedYear: number | null;
   /** Resmî kayıt açık mı; `null` = sorulamadı ya da hiç sorulmadı (AB yolu). */
   isActive: boolean | null;
+  /**
+   * **KDV numarası — SIRET yolunda resmî kayıttan gelir** (28.08). AB yolunda kullanılmaz: orada
+   * numarayı başvuran kendi yazar ve girdiden okunur.
+   *
+   * `?` İSTEĞE BAĞLI ve bu bilinçli: alan zorunlu yapılsaydı mobil başvuru formunun çağrısı derleme
+   * hatasına düşerdi ve onu düzeltmek başka bir şeridin dosyasına dokunmak olurdu (`CLAUDE §0` —
+   * imza değişikliği, çağrı satırını düzeltme hakkı vermez). Vermeyen yüzeyde davranış bugünküyle
+   * aynı kalıyor: numara yazılmaz, kart "Numara yok" der. Notu `docs/talep/`te.
+   */
+  vatNumber?: string | null;
 }
 
 /**

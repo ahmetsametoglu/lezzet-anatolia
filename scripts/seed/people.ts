@@ -44,6 +44,28 @@ export async function seedDraftCustomers(db: Db): Promise<void> {
 }
 
 // ── Müşteri kartları + personel (04) ─────────────────────────────────────────────────────────────
+//
+// **B2B KAYITLARININ KİMLİĞİ GERÇEK** (kullanıcı isteği 28.08). Şirket adı, SIRET, faaliyet kodu,
+// kuruluş yılı ve KDV numarası **gerçek, kamuya açık kayıtlardan** geliyor: Fransa'da devletin
+// anahtarsız işletme kaydı (`recherche-entreprises.api.gouv.fr` — `societe.com`un da kaynağı),
+// Almanya'da şirketin kendi künye (Impressum) sayfası. Her KDV numarası VIES'te tek tek
+// DOĞRULANDI, uydurulmadı.
+//
+// Sebebi test sağlığı ve ölçüldü: onay kartı artık VIES'i kart açılışında soruyor ve **uydurma
+// numaralar ilk açılışta "Geçersiz" damgalanıyordu** — üç müşterinin üçü de bir turda kırmızıya
+// döndü. Yani seed'in ürettiği hâl dış dünyanın söylediğiyle çelişiyordu ve kartın NORMAL hâli
+// ("Geçerli", "Aktif kayıt") yerelde hiç görülemiyordu. Aynı sebeple SIRET'ler de gerçek: kart
+// künyeyi resmî kayıttan TAZELİYOR, uydurma SIRET'te o yol "kayıt bulunamadı"ya düşüyordu.
+//
+// **KİMLİK GERÇEK, İLETİŞİM KANALI ASLA.** E-posta ve telefon uydurma kalır (`@example.fr`,
+// `@example.de`) — gerçek işletmenin adresine seed'in ya da bir testin mail göndermesi, kimsenin
+// istemediği bir dış etkidir. Ayrım net: kimlik verisi kamuya açık bir kayıttır ve DOĞRULANIR;
+// iletişim kanalı bir kapıdır ve çalınırsa gerçek birine varır.
+//
+// **Olumsuz anlatı gerçek şirkete BAĞLANMAZ.** "Kapıda ödemesi kapatıldı — iki sipariş teslim
+// alınmadı" gibi notlar uydurma BİREYLERDE durur (`b2cKapaliKapida`), gerçek işletmelerde değil.
+// Ticari koşullar (vade, limit, indirim) uydurmadır ve nötrdür; itibarla ilgili hiçbir iddia
+// gerçek bir ada iliştirilmez.
 // Ticari alanlar (vade, limit, kapıda ödeme, KDV no, indirim) checkout'un ödeme seçeneklerini
 // belirler — hepsi aynı satırdadır (user_profiles). Kanal SAKLANMAZ: `companyInfo` varlığından
 // türetilir, o yüzden B2B kartlarında künye dolu, B2C'de null.
@@ -86,24 +108,16 @@ const KISILER: SeedKisi[] = [
   // — B2B: onaylı, vadeli, indirimli. Açık bakiye/gecikme testinin öznesi.
   {
     key: 'b2bOnayli',
-    name: 'Restaurant Bosphore',
-    email: 'compta@bosphore-strasbourg.fr',
+    name: 'Restaurant Oberjaegerhof',
+    email: 'compta.oberjaegerhof@example.fr',
     phone: '+33388221100',
     roles: ['customer'],
     type: 'company',
     // TÜRKÇE müşteri — siparişin dili müşteriden kopyalanır (`order.locale`). Bu satır olmadan
     // yerelde hiç `tr` sipariş doğmuyor ve üç dilli mail/belge yolunun üçte biri hiç görülmüyordu.
     preferredLanguage: 'tr',
-    companyInfo: { legalName: 'SARL BOSPHORE', siret: '81234567800019', activityCode: '5610A', foundedYear: 2015, isActive: true },
-    // ── NUMARA GERÇEK VE GEÇERLİ, ve bu ÖLÇÜLEREK seçildi (27.08) ──────────────────────────────
-    // Buradaki numara `FR81812345678` idi, yani uydurma. Zararsız görünüyordu ama onay kartı artık
-    // VIES'i kart açılışında SORUYOR: ilk açılışta uydurma numara `Geçersiz` damgalanıyor ve
-    // satıra `false` yazılıyor (ölçüldü — üç seed müşterisinin üçü de bir turda kırmızıya döndü).
-    // Sonuç, kartın NORMAL hâlinin yerelde hiç görülememesiydi: her B2B başvurusu "Geçersiz".
-    // Seed'in ürettiği hâl, dış dünyanın söylediğiyle çelişmemeli — yoksa kova bir kez bakılınca
-    // buharlaşır. `FR27552032534` VIES'te VALID (ölçüldü 27.08); kamuya açık bir işletme numarası,
-    // kişisel veri değil ve ekranda hiçbir yerde gösterilmiyor (yalnız bayrak okunuyor).
-    vatNumber: 'FR27552032534',
+    companyInfo: { legalName: 'RESTAURANT OBERJAEGERHOF', siret: '38790452700018', activityCode: '56.10A', foundedYear: 1992, isActive: true },
+    vatNumber: 'FR34387904527',
     vatNumberValid: true,
     // TAZE doğrulama kovası — kart "Geçerli · N gün önce" der ve yeşil kalır.
     vatNumberCheckedAt: an(-3),
@@ -119,13 +133,13 @@ const KISILER: SeedKisi[] = [
   // — B2B: kaydolmuş ama ONAY BEKLİYOR. Toptan fiyatı görmemeli (b2bApproved=false).
   {
     key: 'b2bBekleyen',
-    name: 'Épicerie Anatolia',
-    email: 'contact@epicerie-anatolia.fr',
+    name: 'Épicerie Madame',
+    email: 'contact.epicerie-madame@example.fr',
     phone: '+33390445566',
     roles: ['customer'],
     type: 'company',
-    companyInfo: { legalName: 'EPICERIE ANATOLIA SAS', siret: '90011223300017', activityCode: '4711B', foundedYear: 2023, isActive: true },
-    vatNumber: 'FR90900112233',
+    companyInfo: { legalName: 'EPICERIE MADAME', siret: '82532201900043', activityCode: '47.11B', foundedYear: 2017, isActive: true },
+    vatNumber: 'FR38825322019',
     vatNumberValid: null as unknown as undefined, // hiç sorulmadı — VIES çağrısı yapılmamış
     b2bApproved: false,
     codAllowed: true,
@@ -134,19 +148,29 @@ const KISILER: SeedKisi[] = [
   // — B2B Almanya: yurt içi DEĞİL, reverse charge adayı (geçerli KDV no).
   {
     key: 'b2bAlman',
-    name: 'Anadolu Markt Kehl GmbH',
-    email: 'einkauf@anadolu-markt.de',
+    name: 'Vihado Kehl',
+    email: 'einkauf.vihado@example.de',
     phone: '+4978519900',
     roles: ['customer'],
     type: 'company',
     country: 'DE',
     preferredLanguage: 'de',
-    companyInfo: { legalName: 'Anadolu Markt Kehl GmbH', foundedYear: 2019, isActive: true },
-    // Gerçek ve geçerli (VIES'te VALID, ölçüldü 27.08) — gerekçe `b2bOnayli` satırında.
-    // ALMAN kaydında ayrıca ZORUNLU: ters yükümlülüğü (%0 KDV) açan tek yol bu bayrak ve o dal
-    // yalnız DE + b2b + geçerli numarada koşuyor. Uydurma numarayla checkout'un reverse charge
+    // Almanya'da resmî kayıt SORGUSU YOK (Fransa'nın `recherche-entreprises`i gibi anahtarsız bir
+    // uç bulunmuyor) — künye elle giriliyor ve `isActive` bilerek boş: kartın "Sinyal yok (DE)"
+    // hâli buradan doğuyor. Kaynak şirketin kendi künye (Impressum) sayfası, yani kamuya açık.
+    companyInfo: { legalName: 'Vihado GmbH & Co. KG', foundedYear: 2019, isActive: true },
+    // ALMAN kaydında gerçek numara ZORUNLU: ters yükümlülüğü (%0 KDV) açan tek yol bu bayrak ve o
+    // dal yalnız DE + b2b + geçerli numarada koşuyor — uydurma numarayla checkout'un reverse charge
     // dalı yerelde hiç denenemezdi.
-    vatNumber: 'DE129274202',
+    //
+    // Kaynak şirketin KENDİ künyesi (28.08): `Vihado GmbH & Co. KG · Am Güterbahnhof 1, 77694 Kehl ·
+    // DE315300442 · HRA 705424, AG Freiburg`. Kehl'de gerçek bir gıda işletmesi olması bilinçli —
+    // seed'in sınır ötesi hikâyesi (Kehl deposu, DE rotası, reverse charge) oraya oturuyor.
+    // ⚠ VIES'te DOĞRULANAMADI ve sebebi bizde değil: **Almanya'nın düğümü o gün kapalıydı**
+    // (`MS_UNAVAILABLE`, art arda yedi denemede de). Yani numara kaynağından doğrulandı ama
+    // servisten teyit edilmedi; ilk kart açılışında VIES ayaktaysa kendiliğinden damgalanacak.
+    // Tekrar denemek için: curl -s "https://ec.europa.eu/taxation_customs/vies/rest-api/ms/DE/vat/315300442"
+    vatNumber: 'DE315300442',
     vatNumberValid: true,
     // BAYAT doğrulama kovası (27.08): geçen yıl doğrulanmış numara. Kart "bayat" der ve sararır —
     // ters yükümlülüğü açan bayrağın yaşlanabildiği tek yerde bu hâl görülebilsin.

@@ -205,7 +205,10 @@ export async function readB2bCheckAction(customerId: string): Promise<ActionResu
 export async function b2bSummaryAction(customerId: string): Promise<ActionResult<{ summary: string }>> {
   try {
     await requireAdmin();
-    const check = await readB2bCheck(serviceDb(), customerId);
+    // TAZELEME YOK: kartı `readB2bCheckAction` az önce okudu ve dış servisleri o sordu (ekran
+    // sıraya bağlı — özet ancak kart çizildikten sonra isteniyor). Burada bir kez daha sormak kart
+    // başına iki SIRET + iki VIES çağrısı demekti; künye `lib/customer/b2b-check.ts`.
+    const check = await readB2bCheck(serviceDb(), customerId, { refreshExternal: false });
     if (!check) throw new Error('Müşteri bulunamadı.');
     const result = await runTask(b2bSummaryTask, {
       legalName: check.legalName,
