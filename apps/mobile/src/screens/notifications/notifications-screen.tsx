@@ -15,8 +15,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useAppLocale } from '@/lib/i18n/app-locale';
 import { upperIn } from '@/lib/i18n/locale';
 import { useMe } from '@/screens/customer-kit/use-me.hook';
-import { formatOrderDate } from '@/screens/orders/order-format';
+// Damga `formatStamp`ten (gün + uzun ay + SAAT, yılsız): akış bir arşiv değil, yakın zamanın
+// sırası — aynı güne düşen onlarca satırı yalnız saat ayırır. `formatOrderDate` yıl yazıp saati
+// atıyordu ve cihazda otuz satır birden "27 août 2026" diyordu (ölçüldü 27.08); web aynı ekranda
+// zaten saatli damgayı gösteriyor, iki yüzey ayrışmamalı.
+import { formatStamp } from '@/screens/orders/order-format';
 import messages from './messages.json';
+import { notificationVisual, type NotificationVisualTone } from '@lezzet/i18n';
 import { notificationHref, notificationSentence } from './notification-copy';
 import { useNotifications } from './use-notifications.hook';
 
@@ -83,10 +88,14 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
       <View style={styles.screen}>
         <View style={styles.headerPad}>{header}</View>
         <View style={styles.skeletonBody} testID="notifications-loading">
+          {/* İskelet, gelen satırın YENİ anatomisiyle aynı yeri tutar: ikon dairesi + etiket + cümle. */}
           {[0, 1, 2, 3, 4].map((row) => (
-            <View key={row} style={styles.skeletonRow}>
-              <Skeleton width="75%" height={theme.text.note} radius="badge" />
-              <Skeleton width="30%" height={theme.text.micro} radius="badge" tone="soft" />
+            <View key={row} style={styles.skeletonLine}>
+              <Skeleton width={theme.space['4xl']} height={theme.space['4xl']} radius="full" tone="soft" />
+              <View style={styles.skeletonRow}>
+                <Skeleton width="30%" height={theme.text.micro} radius="badge" tone="soft" />
+                <Skeleton width="75%" height={theme.text.note} radius="badge" />
+              </View>
             </View>
           ))}
         </View>
@@ -159,11 +168,31 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
     return null;
   };
 
+  /* TÜRÜN GÖRSEL KİMLİĞİ (kullanıcı kararı 26.08): satır tek tip metin değil — ikon dairesi +
+     tür etiketi + cümle. Anlam paylaşılan sözlükten (`notificationVisual`), renk BURADA temaya
+     çevrilir (webin aynı aileleri: olive/honey/terracotta/kum). */
+  const toneBg: Record<NotificationVisualTone, string> = {
+    positive: theme.colors['olive-bg'],
+    attention: theme.colors['honey-bg'],
+    issue: theme.colors['terracotta-bg'],
+    neutral: theme.colors['sand-100'],
+  };
+  const toneText: Record<NotificationVisualTone, string> = {
+    positive: theme.colors['olive-dark'],
+    attention: theme.colors.honey,
+    issue: theme.colors.terracotta,
+    neutral: theme.colors['sand-600'],
+  };
+
   const renderRow = (row: NotificationRow) => {
     const unread = row.readAt === null;
     const href = notificationHref(row);
+    const visual = notificationVisual(row);
     return (
       <View style={styles.row} testID={`notification-row-${row.id}`}>
+        <View style={[styles.iconCircle, { backgroundColor: toneBg[visual.tone] }]}>
+          <Text style={styles.iconEmoji}>{visual.icon}</Text>
+        </View>
         <PressableSurface
           feedback="opacity"
           grow
@@ -175,10 +204,11 @@ export function NotificationsScreen({ locale: forcedLocale }: NotificationsScree
           testID={`notification-open-${row.id}`}
         >
           <View style={styles.rowLine}>
+            <Text style={[styles.kindLabel, { color: toneText[visual.tone] }]}>{upperIn(visual.label(locale), locale)}</Text>
+            <Text style={styles.date}>{formatStamp(row.createdAt, locale)}</Text>
             {unread ? <View style={styles.unreadDot} /> : null}
-            <Text style={unread ? styles.sentenceUnread : styles.sentence}>{notificationSentence(row, locale)}</Text>
           </View>
-          <Text style={styles.date}>{formatOrderDate(row.createdAt, locale)}</Text>
+          <Text style={unread ? styles.sentenceUnread : styles.sentence}>{notificationSentence(row, locale)}</Text>
         </PressableSurface>
         <PressableSurface
           feedback="opacity"
@@ -260,7 +290,13 @@ const styles = StyleSheet.create((theme, rt) => ({
     gap: theme.space['2xl'],
     paddingTop: theme.space.lg,
   },
+  skeletonLine: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.space.md,
+  },
   skeletonRow: {
+    flex: 1,
     gap: theme.space.xs,
   },
   row: {
@@ -280,6 +316,31 @@ const styles = StyleSheet.create((theme, rt) => ({
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.space.sm,
+  },
+  /**
+   * Türün yüzü — renk render'da tondan gelir (toneBg); ölçü sabit: satırlar arası hiza.
+   *
+   * Ölçü webin `h-9 w-9`una denk gelen jetondan (`size.iconButton`). Önceki değer `space['4xl']`
+   * (18px) idi ve emojiyle AYNI boydaydı: daire çiziliyordu ama hiç görünmüyordu — tonlu zemin
+   * emojinin altında kayboluyor, satır webdeki anatomiyi taşımıyordu (cihazda ölçüldü 27.08).
+   * Emoji de webin `text-icon-sm`i (20px): iki yüzeyde türün yüzü aynı büyüklükte okunur.
+   */
+  iconCircle: {
+    width: theme.size.iconButton,
+    height: theme.size.iconButton,
+    borderRadius: theme.size.iconButton / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconEmoji: {
+    fontSize: theme.text['icon-sm'],
+    lineHeight: theme.text['icon-sm'],
+  },
+  /** Tür şapkası — eyebrow ailesinin küçük boyu; rengi tondan (render'da). */
+  kindLabel: {
+    fontFamily: theme.font.body[700],
+    fontSize: theme.text.micro,
+    letterSpacing: theme.text.micro * 0.05,
   },
   unreadDot: {
     width: theme.space.sm,

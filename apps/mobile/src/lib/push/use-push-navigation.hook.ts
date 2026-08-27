@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
-import * as Notifications from 'expo-notifications';
+import type * as NotificationsModule from 'expo-notifications';
 
 import { notificationHref } from '@/screens/notifications/notification-copy';
+import { pushNative } from './native-module';
 
 /*
   PUSH DOKUNUŞU → EKRAN (14.16 / 21.13'ün "dokununca doğru ekrana gitme" maddesi).
@@ -24,7 +25,7 @@ export function usePushNavigation(): void {
   const router = useRouter();
 
   useEffect(() => {
-    const yonlendir = (response: Notifications.NotificationResponse | null) => {
+    const yonlendir = (response: NotificationsModule.NotificationResponse | null) => {
       const data = response?.notification.request.content.data as
         | { kind?: unknown; targetType?: unknown; targetId?: unknown; payload?: unknown }
         | undefined;
@@ -37,6 +38,11 @@ export function usePushNavigation(): void {
       });
       if (href !== null) router.push(href as never);
     };
+
+    /* Modül binary'de yoksa hiç kurulmaz — kapı `pushNative` (künyesi orada): statik import
+       derlenmemiş kurulumu açılışta düşürüyordu. */
+    const Notifications = pushNative();
+    if (!Notifications) return undefined;
 
     /* Env'siz/native-modülsüz ortamda (test, Expo Go Android) kurulum fırlayabilir — künyeli
        yutma (kayıt hook'unun aynısı): dokunuş yönlendirmesi bir hızlandırıcıdır. */

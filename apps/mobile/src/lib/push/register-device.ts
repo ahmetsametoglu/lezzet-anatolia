@@ -1,8 +1,8 @@
 import { Platform } from 'react-native';
-import * as Notifications from 'expo-notifications';
 
 import { registerPushDevice, removePushDevice } from '@/lib/api/notifications';
 import { deviceStore, DEVICE_STORE_KEYS } from '@/lib/storage/device-store';
+import { pushNative } from './native-module';
 
 /*
   CİHAZ KAYDI (14.14'ün cihaz yarısı — 21.13). Sunucu tarafı hazırdı (uç + sahip devri + izin
@@ -27,6 +27,11 @@ import { deviceStore, DEVICE_STORE_KEYS } from '@/lib/storage/device-store';
 /** İzin isteme + jeton alma + sunucuya yazma. Oturum AÇIKKEN çağrılır (hook karar verir). */
 export async function ensurePushRegistration(): Promise<void> {
   if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
+
+  // Modül binary'de yoksa kayıt hiç denenmez — kapı `pushNative` (künyesi orada): statik import
+  // bu dosyayı açılış zincirinde patlatıyor ve uygulama hiç açılmıyordu (26.08).
+  const Notifications = pushNative();
+  if (!Notifications) return;
 
   try {
     if (Platform.OS === 'android') {
