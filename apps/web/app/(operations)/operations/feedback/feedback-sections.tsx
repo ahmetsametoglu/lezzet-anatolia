@@ -135,7 +135,7 @@ export function CandidateRow({ card, onActivate }: { card: CandidateCardView; on
  * kupon çıktığını taşımıyor; bugünkü veri harcanan puanın toplamı (`spent`). Sayıyı uydurmaktansa
  * elde olanı doğru adıyla göstermek yeğdir — kupon sayısı arka uçtan istendi.
  */
-export function PointsRow({ row, onAdjust }: { row: PointsRowView; onAdjust?: (customerId: string, customerName: string) => void }) {
+export function PointsRow({ row, onAdjust }: { row: PointsRowView; onAdjust?: (customer: { id: string; name: string }) => void }) {
   return (
     <div className={`grid ${POINTS_GRID(Boolean(onAdjust))} items-center gap-x-2.5 border-b border-ops-line-soft px-6 py-3 last:border-b-0`}>
       <span className="truncate font-ops-body text-ops-sm font-semibold text-ops-ink">{row.customerName}</span>
@@ -156,7 +156,7 @@ export function PointsRow({ row, onAdjust }: { row: PointsRowView; onAdjust?: (c
           yazsaydı operatör yalnız değiştirmek istediğinde tıklardı ve GÖRMEK için bir yol kalmazdı;
           oysa asıl eksik olan görmekti. */}
       {onAdjust ? (
-        <Button variant="secondary" size="sm" onClick={() => onAdjust(row.customerId, row.customerName)}>
+        <Button variant="secondary" size="sm" onClick={() => onAdjust({ id: row.customerId, name: row.customerName })}>
           Geçmiş
         </Button>
       ) : null}

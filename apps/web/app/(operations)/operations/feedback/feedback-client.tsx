@@ -28,7 +28,12 @@ export function FeedbackClient({ data, urlState }: FeedbackClientProps) {
   const [actionPending, startAction] = useTransition();
   const [error, setError] = useState<string | null>(null);
   /** Elle puan düzeltmesi açık olan müşteri — çizimdeki modal tek müşteriye çalışır. */
-  const [adjusting, setAdjusting] = useState<{ customerId: string; customerName: string } | null>(null);
+  /**
+   * Puan penceresinin durumu — İKİ katmanlı `null` ve ikisi ayrı şey (28.08):
+   * dış `null` "pencere kapalı", iç `customer: null` "pencere açık ama müşteri henüz seçilmedi"
+   * (üst bardaki düğme). Tek `null`la taşınsaydı düğme pencereyi hiç açtıramazdı.
+   */
+  const [adjusting, setAdjusting] = useState<{ customer: { id: string; name: string } | null } | null>(null);
 
   const go = (next: Partial<FeedbackUrlState>) => {
     setError(null);
@@ -99,7 +104,10 @@ export function FeedbackClient({ data, urlState }: FeedbackClientProps) {
     onStack: (rs: ReviewStack) => go({ rs }),
     onScoreDirection: (sd: ScoreDirection) => go({ sd }),
     onModerate: moderate,
-    onAdjustPoints: (customerId: string, customerName: string) => setAdjusting({ customerId, customerName }),
+    // `null` = üst bardaki düğme (müşteri belli değil). `{ adjusting: null }` ile karışmasın diye
+    // durum SARMALANIYOR: "pencere kapalı" ile "pencere açık, müşteri seçilmedi" ayrı hâller ve
+    // ikisini tek `null`la taşımak pencereyi hiç açtırmazdı.
+    onAdjustPoints: (customer: { id: string; name: string } | null) => setAdjusting({ customer }),
     /**
      * "Satışa aç →" — adayı ürün yönetiminde açar (`admin-geri-bildirim.md §5` köprüsü).
      *
@@ -116,14 +124,7 @@ export function FeedbackClient({ data, urlState }: FeedbackClientProps) {
   return (
     <>
       <FeedbackDesktop {...view} />
-      {adjusting ? (
-        <PointsAdjustDialog
-          customerId={adjusting.customerId}
-          customerName={adjusting.customerName}
-          currentBalance={data.points?.find((p) => p.customerId === adjusting.customerId)?.balance ?? 0}
-          onClose={() => setAdjusting(null)}
-        />
-      ) : null}
+      {adjusting ? <PointsAdjustDialog customer={adjusting.customer} onClose={() => setAdjusting(null)} /> : null}
     </>
   );
 }

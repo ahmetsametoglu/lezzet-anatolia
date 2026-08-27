@@ -319,11 +319,19 @@ denmişti. Tablo çizimin dört kolonunu taşıyor (Ürün · Skor · Beğeni ·
 sevilmeyen" yönü `MultiToggle` ile seçiliyor ve `confident` düşükse not satırı amber yazılıyor —
 tasarımın *"3 yorumla en kötü ürün damgası vurulmaz"* kuralı böyle görünür oluyor.
 
-**4. "Elle puan düzelt" düğmesi üst barda DEĞİL, satırda.** Çizim barın sağına tek koyu düğme
-koyuyor ve pencere müşteriyi kendi soruyor (bir seçici var). Bugün düzeltme puan satırından açılıyor,
-tablo da çizimde olmayan bir düğme kolonu taşıyor. Üst bara taşımak müşteri seçicisini gerektiriyor
-(`searchCustomerOptions` üzerinden, ayrı bir tur işi) ve müşterisiz bir düğme, basıldığında kime puan
-yazacağını bilmeyen bir pencere açardı. Kod `BEKLEYEN` işaretiyle bu maddeye bağlı.
+**4. ~~"Elle puan düzelt" düğmesi üst barda DEĞİL, satırda.~~ → DÜĞME GELDİ (28.08); kalan sapma
+yalnız TABLODAKİ KOLON.** Çizimin düğmesi barın sağında, koyu, ve pencere müşteriyi kendi soruyor —
+üçü de yapıldı (`Combobox` + `searchCustomerOptions`, Fiyatlar/Sosyal ekranlarının aynı kapısı).
+İşaretin engel diye yazdığı *"seçici ayrı bir tur işi"* ölçüldüğünde yanlış çıktı: seçici işaretten
+bir gün önce yazılmıştı.
+
+**Kalan ve BİLİNÇLİ olan:** tablo hâlâ çizimde olmayan bir "Geçmiş" kolonu taşıyor. Silinmedi çünkü
+o kolon sonradan doğmuş bir yeteneğin tek kısayolu: pencerenin içindeki **puan geçmişi paneli**
+çizim yapıldıktan sonra eklendi ve kolonun künyesi bunu yazıyor — *"'Düzelt' yazsaydı operatör
+yalnız değiştirmek istediğinde tıklardı ve GÖRMEK için bir yol kalmazdı; oysa asıl eksik olan
+görmekti."* Çizim satırı tıklanabilir de yapmıyor, yani kolonu silmek geçmişe bakmayı "adı yaz,
+ara, seç" hâline indirirdi. **Çizime uymak ile yeteneği geri almak burada aynı şey oldu; ikincisi
+seçilmedi ve karar kullanıcıya açık bırakıldı** — istenirse kolon tek satırda kalkar.
 
 **5. Mobil, çizimin iki-kart düzeni yerine masaüstünün sekmeli kabuğunu daraltıyor.** Çizim telefonda
 sekme şeridi göstermiyor; alt alta iki kart var ("Onay bekleyen" rozetli · "Aday ürün talebi") ve

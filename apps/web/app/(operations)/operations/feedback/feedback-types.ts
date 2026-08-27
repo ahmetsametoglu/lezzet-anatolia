@@ -84,8 +84,11 @@ export interface FeedbackViewProps {
   /** Skor tablosunun yönünü değiştirir (en sevilen ↔ en sevilmeyen). */
   onScoreDirection: (sd: ScoreDirection) => void;
   onModerate: (reviewId: string, to: 'approved' | 'rejected') => void;
-  /** Elle puan düzeltmesini açar. */
-  onAdjustPoints: (customerId: string, customerName: string) => void;
+  /**
+   * Elle puan düzeltmesini açar. `null` = müşteri BELLİ DEĞİL (üst bardaki düğme) — pencere onu
+   * kendi seçicisiyle sorar; satırdan açıldığında müşteri hazır gelir ve seçici çizilmez.
+   */
+  onAdjustPoints: (customer: { id: string; name: string } | null) => void;
   /** Adayı ürün yönetiminde açar (aday panosunun tek eylemi). */
   onActivate: (productId: string) => void;
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { MultiToggle } from '@/components/operation/form/multi-toggle';
+import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { Tabs } from '@/components/operation/ui/tabs';
 import { EmptyState } from '@/components/operation/ui/empty-state';
@@ -145,12 +146,13 @@ export function FeedbackDesktop({
             <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-muted">
               Puan yalnız son tüketici içindir (B2C). Kurallar Ayarlar'da; burası bakiye ve hareket.
             </span>
-            {/* BEKLEYEN(17.1): çizimdeki "Elle puan düzelt" düğmesi buraya gelecek (design/BACKLOG,
-                "Geri Bildirim — sapmalar", madde 4).
-                Üst bardan açılan pencere müşteriyi KENDİ sormalı (çizimde bir seçici var) ve o
-                seçici `searchCustomerOptions` üzerinden ayrı bir tur işi; düğmeyi müşterisiz
-                bağlamak, basıldığında kime puan yazacağını bilmeyen bir pencere açardı. Bugün
-                düzeltme satırdan açılıyor — kayıtlı sapma. */}
+            {/* Çizimin düğmesi (17.1, 28.08). Müşterisiz açılır ve pencere onu KENDİ sorar —
+                seçici `searchCustomerOptions` üzerinden, Fiyatlar ve Sosyal ekranlarının kullandığı
+                aynı kapı. Bu düğme, puanı HİÇ OLMAYAN müşteriye de yazmanın tek yolu: tablo yalnız
+                bakiyesi olanları listeliyor, yani satırdan açılan yol ilk puanı yazamıyordu. */}
+            <Button variant="primary" size="sm" onClick={() => onAdjustPoints(null)}>
+              Elle puan düzelt
+            </Button>
           </div>
           {points.length === 0 ? (
             <EmptyState title="Puan bakiyesi olan müşteri yok" description="Yorum, kaydırma ve siparişlerden puan biriktikçe liste dolar." />

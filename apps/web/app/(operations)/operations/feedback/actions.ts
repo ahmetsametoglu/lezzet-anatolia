@@ -7,7 +7,8 @@ import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { agoShort } from '@/components/operation/ui/format';
 import { listModerationQueue } from '@/lib/feedback/moderation-read';
 import { moderateReview } from '@/lib/feedback/product-feedback';
-import { adjustPointsManually, listPointsHistory } from '@/lib/feedback/points';
+import { adjustPointsManually, getPointsBalance, listPointsHistory } from '@/lib/feedback/points';
+import { searchCustomerOptions, type CustomerOption } from '@/lib/customer-options';
 import { toModerationCards } from './feedback-read';
 import type { ModerationCardView } from './feedback-types';
 import { FEEDBACK_PATH } from './feedback-url';
@@ -123,12 +124,38 @@ export async function loadMoreReviewsAction(status: ReviewStatus, cursor: Keyset
  *
  * İlk sayfa yeter (`DEFAULT_PAGE_SIZE`): pencere bir inceleme yüzeyi değil, bir karar yüzeyi. Daha
  * derin geçmiş gerekiyorsa o, müşteri detayının işi.
+ *
+ * **BAKİYE de burada dönüyor** (17.1, 28.08): pencere üst bardan da açılabiliyor ve orada müşteri
+ * SEÇİLİYOR — tablodan gelmiyor, yani "bugünkü bakiye" satırdan okunamıyor. Üstelik seçilen müşteri
+ * tabloda hiç olmayabilir (tablo yalnız puanı OLANLARI listeliyor, seçici herkesi arıyor). İki ayrı
+ * çağrı yerine tek tur: pencerenin ikisine de aynı anda ihtiyacı var ve ikisi de aynı müşterinin.
  */
-export async function loadPointsHistoryAction(customerId: string): Promise<ActionResult<PointsEntry[]>> {
+export async function loadPointsHistoryAction(
+  customerId: string,
+): Promise<ActionResult<{ entries: PointsEntry[]; balance: number }>> {
   try {
     await requireAdmin();
-    const page = await listPointsHistory(customerId, undefined, DEFAULT_PAGE_SIZE);
-    return { data: page.rows, error: null };
+    const [page, balance] = await Promise.all([
+      listPointsHistory(customerId, undefined, DEFAULT_PAGE_SIZE),
+      getPointsBalance(customerId),
+    ]);
+    return { data: { entries: page.rows, balance: balance.balance }, error: null };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Pencerenin müşteri seçicisi — arama SUNUCUDA (`searchCustomerOptions`, tek kaynak).
+ *
+ * Kapı zaten iki ekranda kullanımda (Fiyatlar, Sosyal); üçüncüsü kendi aramasını yazmıyor.
+ * `requireAdmin` burada da var ve gerekli: action doğrudan çağrılabilir ve müşteri listesi
+ * operasyon verisidir.
+ */
+export async function searchPointsCustomersAction(term: string): Promise<ActionResult<CustomerOption[]>> {
+  try {
+    await requireAdmin();
+    return { data: await searchCustomerOptions(term), error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }
