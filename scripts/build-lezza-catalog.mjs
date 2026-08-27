@@ -7,9 +7,10 @@
  * ── ÜÇ KAYNAK, TEK OMURGA (15.08) ────────────────────────────────────────────
  * 1. **WooCommerce Store API** (`…/wc/store/v1/products`, ağ) — **OMURGA.** Ürün, boy, kategori,
  *    açıklama, görsel, kanal. Kapsamı en geniş kaynak budur (166 SKU) ve ötekiler onu zenginleştirir.
- * 2. **`data/sources/catalog-pdf.json`** (repo) — 2026 basılı kataloğun lojistiği: koli içi adet,
- *    kolinin paket sayısı, paletteki paket. API'de bu bilgi HİÇ yok. Ayrıca API'nin listelemediği
- *    9 SKU'yu taşır (perakende `mono` paketleri, tabaklı künefeler).
+ * 2. **`data/sources/catalog-pdf.json`** (repo) — 2026 basılı katalog: SATILAN BİRİMİN gramajı ve
+ *    porsiyon künyesi (API bunları yanlış tanıyor — bkz. 3. adım), API'nin listelemediği 9 SKU
+ *    (perakende `mono` paketleri, tabaklı künefeler) ve SKU'su boş kalan iki varyantın kimliği.
+ *    Dosya lojistik sütunlarını da taşır (koli/palet) ama **onlar okunmuyor** — gerekçe 3. adımda.
  * 3. **`data/sources/specs-docx.json`** (repo) — 6 ürünün ÜRETİCİ SPESİFİKASYONU: gerçek içindekiler,
  *    alerjen, besin değeri, saklama, raf ömrü.
  *
@@ -438,23 +439,29 @@ for (const [sku, p] of Object.entries(pdfKatalog)) {
 }
 dizin = skuDizini();
 
-// 3) LOJİSTİK — koli içi adet, kolinin paket sayısı, paletteki paket.
+// 3) SATILAN BİRİM — basılı katalogun gramajı ve porsiyon künyesi.
 //
-// `piecesCount` API'den geldiyse KORUNUR: o ürün ADININ beyanıdır (`(12 Pieces)`) ve müşteri raftaki
-// kutuda onu görüyor; koli içi adet ise depo bilgisidir. Boşsa PDF'ten dolar, ama **yalnız 1'den
-// büyükse**: "kolide 1 adet" bir paketleme bilgisi değil, adet bilgisinin yokluğudur — `null`
-// kalması gerekir (`CLAUDE §1`: ölçülemeyen değer sıfır/bir değildir).
-let lojistikli = 0;
+// ── LOJİSTİK ALANLARI SÖKÜLDÜ (kullanıcı kararı 28.08 · `05.22`) ────────────────────────────────
+// Buradan bir zamanlar `varyant.logistics = { piecesPerBox, boxesPerParcel, parcelsPerPallet }`
+// yazılıyordu ve **hiçbir tüketeni yoktu**: JSON'a düşüyor, `catalog-lezza.ts` onu tipinde
+// tanımlıyor ama okumuyordu, DB'de de kolonu yoktu. `piecesPerBox`ın `piecesCount`a aktığı da
+// doğru değildi — o değer aşağıda `birim.portions`tan geliyor, bu bloktan değil.
+//
+// Sökülmesinin sebebi yalnız ölü olması değil, SORUNUN BAŞKA YERDE ÇÖZÜLMÜŞ olması: "kolide kaç
+// adet var" artık `variant_barcode.qty_per_code` (`0047`, `kind='case'`) — çarpan KODUN üstünde
+// durur ve mal kabulde okutularak öğrenilir. Aynı varyantın iki kolisi farklı adet taşıyabilir,
+// yani varyanta yazılmış tek bir sayı zaten yanlış cevap verirdi. Palet ekseni (`boxesPerParcel`,
+// `parcelsPerPallet`) ise kullanıcı kararıyla KAPSAM DIŞI — mevcut düzen ihtiyacı görüyor.
+//
+// Kaynak dosya (`catalog-pdf.json`) alanları taşımaya devam ediyor ve etmeli: o basılı kataloğun
+// aynasıdır, bizim neyi kullandığımızın değil.
+/** Basılı katalogla eşleşen varyant sayısı — koşu sonunda raporlanır. */
+let pdfEslesen = 0;
 /** Kaynağın `unit` künyesine göre düzeltilen gramajlar — koşu sonunda raporlanır. */
 const boyDuzeltilen = [];
 for (const [sku, p] of Object.entries(pdfKatalog)) {
   const hedef = dizin.get(sku);
   if (!hedef) continue;
-  hedef.varyant.logistics = {
-    piecesPerBox: p.piecesPerBox ?? null,
-    boxesPerParcel: p.boxesPerParcel ?? null,
-    parcelsPerPallet: p.parcelsPerPallet ?? null,
-  };
   // ── PAKET FORMATINI BASILI KATALOG SÖYLER, API DEĞİL (ölçüldü 19.08) ─────────────────────────
   // API bu ürünleri TEK DİLİM olarak tanıyor (`artisan-lemon-cake-90g`), basılı katalog ise satılan
   // kutuyu: `Artisan Lemon Cake 9x90g`. İkisi aynı SKU. Sonuç sekiz üründe ölçüldü: `netWeightG`
@@ -489,7 +496,7 @@ for (const [sku, p] of Object.entries(pdfKatalog)) {
   hedef.varyant.portionKind = birim.portionKind ?? null;
   // Etiket AŞAĞIDA tek kuralla yazılıyor (3b): kaynağın dizgisi parça gramajını tek başına
   // gösterip yanıltıyordu ("90g" ama kutu 810 g).
-  lojistikli += 1;
+  pdfEslesen += 1;
 }
 
 // ── 3b) AMBALAJ BOYU AYRI ÜRÜN DEĞİL, VARYANT (kullanıcı kararı 19.08) ────────────────────────
@@ -574,7 +581,7 @@ const cikti = {
     by: 'scripts/build-lezza-catalog.mjs (pnpm lezza:catalog)',
     sources: {
       api: `${API} — omurga (${ham.length} kayıt)`,
-      pdf: `data/sources/catalog-pdf.json — lojistik ${lojistikli} varyant, API'de olmayan ${pdfDenGelen} kalem`,
+      pdf: `data/sources/catalog-pdf.json — satılan birim ${pdfEslesen} varyant, API'de olmayan ${pdfDenGelen} kalem`,
       spec: `data/sources/specs-docx.json — ${beyanli} ürünün gerçek yasal beyanı`,
     },
     note:
@@ -600,7 +607,7 @@ console.log(
     `  ${cikti.products.length} ürün · ${varyantSayisi} varyant (${cokBoylu} ürün çok boylu)\n` +
     `  kanal: ${cikti.products.filter((p) => p.channels.includes('b2b')).length} b2b · ` +
     `${cikti.products.filter((p) => p.channels.includes('b2c')).length} b2c\n` +
-    `  basılı katalog: ${lojistikli} varyanta lojistik · ${pdfDenGelen} kalem API'de yoktu\n` +
+    `  basılı katalog: ${pdfEslesen} varyantın satılan birimi · ${pdfDenGelen} kalem API'de yoktu\n` +
     `  ambalaj boyu: ${birlestirilen} mono kayıt ana ürüne varyant olarak bağlandı · ${etiketDuzeltilen} etiket yeniden yazıldı\n` +
     `  üretici speki: ${beyanli} ürüne gerçek yasal beyan\n` +
     `  ⚠ kategorisiz ${kategorisiz} ürün · SKU'suz ${skusuz} varyant`,

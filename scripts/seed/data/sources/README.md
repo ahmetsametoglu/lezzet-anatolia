@@ -59,10 +59,17 @@ Eşleştirme ad+gramajla ELLE yapıldı; otomatik ad eşleştirmesi denendi ve g
 adlarımız İngilizce, listedeki adlar Türkçe/Fransızca, gramajlar tutmuyor). Emin olunmayan 29 satır
 **bilerek dışarıda** — yanlış eşleşmiş bir fiyat, fiyatsızlıktan pahalıdır.
 
-⚠ **Teklifin lojistik sütunları bizim alan adlarımızla bir sütun kaymış durumda:** PCS/BOX bizim
-`logistics.boxesPerParcel`, BOX/PLT ise `parcelsPerPallet` alanımıza denk geliyor (33/34 ve 28/34
-tutuyor). Bu dosyadaki adlar teklifin kendi anlamını taşır; `lezza-catalog.json`'daki `logistics`
-ile karıştırılmamalı. → `BEKLEYEN(05.22)`
+ℹ **Teklifin lojistik sütunları (PCS/BOX · BOX/PLT) OKUNMUYOR** (kullanıcı kararı 28.08 · `05.22`).
+Kaynak dosyalar onları taşımaya devam ediyor — bu klasör basılı belgelerin aynasıdır, bizim neyi
+kullandığımızın değil — ama üreteç artık `lezza-catalog.json`'a `logistics` bloğu yazmıyor ve
+`piecesPerBox` de hiçbir kolona akmıyor. Sebep iki katmanlı: alan zaten okunmuyordu, ve sorduğu
+soru başka bir eksende çözüldü — "bu koliyi okutunca kaç adet sayılır" `variant_barcode.qty_per_code`
+(`0047`, `kind='case'`), yani çarpan varyantta değil KODUN üstünde durur ve mal kabulde öğrenilir.
+Palet ekseni kapsam dışı bırakıldı.
+
+*(Kayıt için: bu sütunlar bizim eski alan adlarımızla bir sütun kaymıştı — PCS/BOX `boxesPerParcel`e,
+BOX/PLT `parcelsPerPallet`a denk geliyordu, 33/34 ve 28/34 tutuyordu. Alanlar kalktığı için
+karışma riski de kalktı.)*
 
 ## Tedarikçiye sorulacaklar
 

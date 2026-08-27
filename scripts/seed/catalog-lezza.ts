@@ -45,13 +45,9 @@ interface LezzaVariant {
   /** Paket içi adet (`(12 Pieces)` · `4x80g`). `null` = bildirilmemiş — sıfır DEĞİL. */
   piecesCount: number | null;
   sku: string | null;
-  /**
-   * Basılı katalogdan koli/palet künyesi; `null` = o SKU katalogda yok.
-   *
-   * `piecesPerBox` üreteçte `piecesCount`a akıyor; öteki ikisinin DB'de kolonu YOK ve veri 164
-   * varyant için hazır bekliyor → `BEKLEYEN(05.22)`: koli/palet künyesinin veri modeline girmesi.
-   */
-  logistics: { piecesPerBox: number | null; boxesPerParcel: number | null; parcelsPerPallet: number | null } | null;
+  // `logistics` (koli/palet künyesi) BU TİPTE ARTIK YOK ve üreteç de yazmıyor (kullanıcı kararı
+  // 28.08 · `05.22`): alan hiç okunmuyordu ve sorduğu soru başka yerde çözüldü — "kolide kaç adet"
+  // `variant_barcode.qty_per_code`, palet ekseni ise kapsam dışı. Gerekçenin tamamı üreteçte.
   /** Kaynağı API OLMAYAN kalemlerde (basılı katalogdan gelen 7 SKU) `null`. */
   sourceId: number | null;
   sourceSlug: string | null;

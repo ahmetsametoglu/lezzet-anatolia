@@ -3,7 +3,7 @@
     "by": "scripts/build-lezza-catalog.mjs (pnpm lezza:catalog)",
     "sources": {
       "api": "https://lezzafoods.eu/wp-json/wc/store/v1/products — omurga (168 kayıt)",
-      "pdf": "data/sources/catalog-pdf.json — lojistik 164 varyant, API'de olmayan 7 kalem",
+      "pdf": "data/sources/catalog-pdf.json — satılan birim 164 varyant, API'de olmayan 7 kalem",
       "spec": "data/sources/specs-docx.json — 6 ürünün gerçek yasal beyanı"
     },
     "note": "ÜRETİLMİŞ DOSYA — elle düzenlenmez. Fiyat ve stok hiçbir kaynakta yoktur ve burada UYDURULMAZ; onlar seed fikstürüdür. Yasal beyan yalnız spek belgesi olan üründe doludur (`declarations`), ötekilerde bilerek `null` — ürün \"beyan eksik\" hâlinde durur."
@@ -96,11 +96,6 @@
           "sku": "700404",
           "sourceId": 9753,
           "sourceSlug": "adana-borek-with-cheese-1250g",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -136,11 +131,6 @@
           "sku": "901026B",
           "sourceId": 10358,
           "sourceSlug": "artisan-lemon-cake-mono-pack-90g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 77
-          },
           "portionKind": null
         },
         {
@@ -154,11 +144,6 @@
           "sku": "901016B",
           "sourceId": 10199,
           "sourceSlug": "artisan-lemon-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          },
           "portionKind": "item"
         }
       ]
@@ -194,11 +179,6 @@
           "sku": "901025B",
           "sourceId": 10356,
           "sourceSlug": "artisan-mango-cake-mono-pack-90g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 77
-          },
           "portionKind": null
         },
         {
@@ -212,11 +192,6 @@
           "sku": "901023B",
           "sourceId": 10195,
           "sourceSlug": "artisan-mango-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          },
           "portionKind": "item"
         }
       ]
@@ -252,11 +227,6 @@
           "sku": "901028B",
           "sourceId": 10362,
           "sourceSlug": "artisan-pistachio-cake-mono-pack-90g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 77
-          },
           "portionKind": null
         },
         {
@@ -270,11 +240,6 @@
           "sku": "901015B",
           "sourceId": 10201,
           "sourceSlug": "artisan-pistachio-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          },
           "portionKind": "item"
         }
       ]
@@ -310,11 +275,6 @@
           "sku": "901027B",
           "sourceId": 10360,
           "sourceSlug": "artisan-strawberry-cake-mono-pack-90g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 77
-          },
           "portionKind": null
         },
         {
@@ -328,11 +288,6 @@
           "sku": "901024B",
           "sourceId": 10200,
           "sourceSlug": "artisan-strawberry-cake-90g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 77
-          },
           "portionKind": "item"
         }
       ]
@@ -369,11 +324,6 @@
           "sku": "601202",
           "sourceId": 10239,
           "sourceSlug": "assorted-baklava-225g",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 144
-          },
           "portionKind": "item"
         },
         {
@@ -387,11 +337,6 @@
           "sku": "601201",
           "sourceId": 10243,
           "sourceSlug": "assorted-baklava-450g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         }
       ]
@@ -433,11 +378,6 @@
           "sku": "600106",
           "sourceId": 9241,
           "sourceSlug": "baklava-with-pistachio-225g-6-pieces",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 144
-          },
           "portionKind": "item"
         },
         {
@@ -451,11 +391,6 @@
           "sku": "600102",
           "sourceId": 9245,
           "sourceSlug": "baklava-with-pistachio-450g-12-pieces",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         },
         {
@@ -469,11 +404,6 @@
           "sku": "600214",
           "sourceId": 9215,
           "sourceSlug": "baklava-with-pistachio-1250g",
-          "logistics": {
-            "piecesPerBox": 36,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         },
         {
@@ -487,11 +417,6 @@
           "sku": "600101",
           "sourceId": 9218,
           "sourceSlug": "baklava-with-pistachio-2500g-72-pieces",
-          "logistics": {
-            "piecesPerBox": 72,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         }
       ]
@@ -531,11 +456,6 @@
           "sku": "600208",
           "sourceId": 9418,
           "sourceSlug": "baklava-with-walnut-225g-6-pieces",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 144
-          },
           "portionKind": "item"
         },
         {
@@ -549,11 +469,6 @@
           "sku": "600202",
           "sourceId": 9420,
           "sourceSlug": "baklava-with-walnut-450g-12-pieces",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         },
         {
@@ -567,11 +482,6 @@
           "sku": "600207",
           "sourceId": 9412,
           "sourceSlug": "baklava-with-walnut-1250g",
-          "logistics": {
-            "piecesPerBox": 36,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         },
         {
@@ -585,11 +495,6 @@
           "sku": "600201",
           "sourceId": 9416,
           "sourceSlug": "baklava-with-walnut-2500g",
-          "logistics": {
-            "piecesPerBox": 72,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         }
       ]
@@ -625,11 +530,6 @@
           "sku": "900401",
           "sourceId": 10015,
           "sourceSlug": "black-forest-whole-cake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -665,11 +565,6 @@
           "sku": "900308",
           "sourceId": 10174,
           "sourceSlug": "blueberry-peach-cake-580g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 6,
-            "parcelsPerPallet": 49
-          },
           "portionKind": "slice"
         }
       ]
@@ -709,11 +604,6 @@
           "sku": "600402",
           "sourceId": 10244,
           "sourceSlug": "carrot-slice-baklava-420g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         },
         {
@@ -727,11 +617,6 @@
           "sku": "600404",
           "sourceId": 9428,
           "sourceSlug": "carrot-slice-baklava-1350g",
-          "logistics": {
-            "piecesPerBox": 16,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 30
-          },
           "portionKind": "item"
         },
         {
@@ -745,11 +630,6 @@
           "sku": "600403",
           "sourceId": 9431,
           "sourceSlug": "carrot-slice-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 20,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 36
-          },
           "portionKind": "item"
         }
       ]
@@ -784,11 +664,6 @@
           "sku": "200413",
           "sourceId": 10338,
           "sourceSlug": "carrot-tarator-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -823,11 +698,6 @@
           "sku": "701424",
           "sourceId": 10232,
           "sourceSlug": "cheese-calzone-80g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 50,
-            "parcelsPerPallet": 88
-          },
           "portionKind": null
         }
       ]
@@ -865,11 +735,6 @@
           "sku": "700210",
           "sourceId": 9767,
           "sourceSlug": "cheese-filled-pastry-130g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 90,
-            "parcelsPerPallet": 64
-          },
           "portionKind": null
         },
         {
@@ -883,11 +748,6 @@
           "sku": "700202",
           "sourceId": 9770,
           "sourceSlug": "cheese-filled-pastry-4x80g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         }
       ]
@@ -964,11 +824,6 @@
           "sku": "700402",
           "sourceId": 9759,
           "sourceSlug": "cheese-pastry-su-borek-800g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 54
-          },
           "portionKind": null
         },
         {
@@ -982,11 +837,6 @@
           "sku": "700405",
           "sourceId": 9750,
           "sourceSlug": "cheese-pastry-su-borek-2500g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "slice"
         }
       ]
@@ -1035,11 +885,6 @@
           "sku": "700901",
           "sourceId": 9849,
           "sourceSlug": "cheese-rolls-handmade-480g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         }
       ]
@@ -1074,11 +919,6 @@
           "sku": "312241",
           "sourceId": 10386,
           "sourceSlug": "chicken-tender-fillet-700g",
-          "logistics": {
-            "piecesPerBox": 10,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 80
-          },
           "portionKind": "item"
         }
       ]
@@ -1116,11 +956,6 @@
           "sku": "600904",
           "sourceId": 9563,
           "sourceSlug": "chocolate-baklava-1250g",
-          "logistics": {
-            "piecesPerBox": 36,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         },
         {
@@ -1134,11 +969,6 @@
           "sku": "600903",
           "sourceId": 9566,
           "sourceSlug": "chocolate-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 54,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          },
           "portionKind": "item"
         }
       ]
@@ -1173,11 +1003,6 @@
           "sku": "900415",
           "sourceId": 10210,
           "sourceSlug": "chocolate-cake-cup-165g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 3,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -1213,11 +1038,6 @@
           "sku": "500111",
           "sourceId": 9676,
           "sourceSlug": "chocolate-souffle-lava-cake-200g",
-          "logistics": {
-            "piecesPerBox": 2,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 110
-          },
           "portionKind": "item"
         }
       ]
@@ -1253,11 +1073,6 @@
           "sku": "600807",
           "sourceId": 9622,
           "sourceSlug": "cold-baklava-with-pistachio-1850g",
-          "logistics": {
-            "piecesPerBox": 36,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         }
       ]
@@ -1295,11 +1110,6 @@
           "sku": "600810",
           "sourceId": 10326,
           "sourceSlug": "cold-baklava-with-walnut-400g",
-          "logistics": {
-            "piecesPerBox": 10,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 104
-          },
           "portionKind": "item"
         },
         {
@@ -1313,11 +1123,6 @@
           "sku": "600809",
           "sourceId": 9625,
           "sourceSlug": "cold-baklava-with-walnut-1850g",
-          "logistics": {
-            "piecesPerBox": 36,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         }
       ]
@@ -1354,11 +1159,6 @@
           "sku": "312682",
           "sourceId": 10377,
           "sourceSlug": "crispy-chicken-burger-720g",
-          "logistics": {
-            "piecesPerBox": 8,
-            "boxesPerParcel": 14,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         },
         {
@@ -1372,11 +1172,6 @@
           "sku": "312681",
           "sourceId": 10390,
           "sourceSlug": "crispy-chicken-burger-1080g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -1413,11 +1208,6 @@
           "sku": "312141",
           "sourceId": 10379,
           "sourceSlug": "crispy-chicken-nugget-720g",
-          "logistics": {
-            "piecesPerBox": 30,
-            "boxesPerParcel": 14,
-            "parcelsPerPallet": 80
-          },
           "portionKind": "item"
         },
         {
@@ -1431,11 +1221,6 @@
           "sku": "311101",
           "sourceId": 10392,
           "sourceSlug": "crispy-chicken-nugget-1000g",
-          "logistics": {
-            "piecesPerBox": 43,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -1470,11 +1255,6 @@
           "sku": "311501",
           "sourceId": 10394,
           "sourceSlug": "crispy-chicken-wings-1000g",
-          "logistics": {
-            "piecesPerBox": 18,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -1509,11 +1289,6 @@
           "sku": "311401",
           "sourceId": 10396,
           "sourceSlug": "crispy-spicy-chicken-wings-1000g",
-          "logistics": {
-            "piecesPerBox": 18,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -1548,11 +1323,6 @@
           "sku": "311301",
           "sourceId": 10398,
           "sourceSlug": "crispy-spicy-tender-fillet-1000g",
-          "logistics": {
-            "piecesPerBox": 14,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -1587,11 +1357,6 @@
           "sku": "311201",
           "sourceId": 10400,
           "sourceSlug": "crispy-tender-fillet-1000g",
-          "logistics": {
-            "piecesPerBox": 14,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -1627,11 +1392,6 @@
           "sku": "901812",
           "sourceId": null,
           "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 120
-          },
           "portionKind": null
         },
         {
@@ -1645,11 +1405,6 @@
           "sku": "901817",
           "sourceId": 10186,
           "sourceSlug": "dark-chocolate-profiterol-cake-175g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         }
       ]
@@ -1685,11 +1440,6 @@
           "sku": "902301",
           "sourceId": 10024,
           "sourceSlug": "dark-chocolate-profiterol-whole-cake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -1725,11 +1475,6 @@
           "sku": "900201",
           "sourceId": 10009,
           "sourceSlug": "dark-chocolate-whole-cake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -1819,11 +1564,6 @@
           "sku": "700604",
           "sourceId": 9954,
           "sourceSlug": "dough-leaves-1000g",
-          "logistics": {
-            "piecesPerBox": 8,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 63
-          },
           "portionKind": "item"
         }
       ]
@@ -1858,11 +1598,6 @@
           "sku": "700904",
           "sourceId": 9778,
           "sourceSlug": "e-shaped-borek-with-cheese-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -1897,11 +1632,6 @@
           "sku": "700914",
           "sourceId": 9806,
           "sourceSlug": "e-shaped-borek-with-meat-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -1936,11 +1666,6 @@
           "sku": "700911",
           "sourceId": 9804,
           "sourceSlug": "e-shaped-borek-with-potato-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -1975,11 +1700,6 @@
           "sku": "700905",
           "sourceId": 9802,
           "sourceSlug": "e-shaped-borek-with-spinach-cheese-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -2014,11 +1734,6 @@
           "sku": "200410",
           "sourceId": 10344,
           "sourceSlug": "eggplant-with-yogurt-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -2053,11 +1768,6 @@
           "sku": "201401",
           "sourceId": 10325,
           "sourceSlug": "falafel-hummus-filled-300g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": null
         }
       ]
@@ -2140,11 +1850,6 @@
           "sku": "600211",
           "sourceId": 9619,
           "sourceSlug": "homemade-style-walnut-baklava-1250g",
-          "logistics": {
-            "piecesPerBox": 28,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 56
-          },
           "portionKind": "item"
         }
       ]
@@ -2179,11 +1884,6 @@
           "sku": "200412",
           "sourceId": 10340,
           "sourceSlug": "hummus-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -2218,11 +1918,6 @@
           "sku": "900411",
           "sourceId": 10202,
           "sourceSlug": "italian-tiramisu-cup-165g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 3,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -2257,11 +1952,6 @@
           "sku": "700310",
           "sourceId": 10227,
           "sourceSlug": "izmir-boyoz-75g",
-          "logistics": {
-            "piecesPerBox": 60,
-            "boxesPerParcel": 1,
-            "parcelsPerPallet": 96
-          },
           "portionKind": null
         }
       ]
@@ -2296,11 +1986,6 @@
           "sku": "700110",
           "sourceId": 10225,
           "sourceSlug": "kumru-bagel-140g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 45,
-            "parcelsPerPallet": 40
-          },
           "portionKind": null
         }
       ]
@@ -2335,11 +2020,6 @@
           "sku": "500102",
           "sourceId": 9661,
           "sourceSlug": "kunefe-bulk-145g-65g-syrup",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 120
-          },
           "portionKind": null
         }
       ]
@@ -2398,11 +2078,6 @@
           "sku": "500103",
           "sourceId": 9663,
           "sourceSlug": "kunefe-420g-including-syrup",
-          "logistics": {
-            "piecesPerBox": 2,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 120
-          },
           "portionKind": "item"
         }
       ]
@@ -2435,11 +2110,6 @@
           "sku": "500104",
           "sourceId": null,
           "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 2,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 120
-          },
           "portionKind": "item"
         },
         {
@@ -2453,11 +2123,6 @@
           "sku": "500109",
           "sourceId": null,
           "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 192
-          },
           "portionKind": null
         }
       ]
@@ -2494,11 +2159,6 @@
           "sku": "200105",
           "sourceId": 9976,
           "sourceSlug": "lahmacun-5x170g",
-          "logistics": {
-            "piecesPerBox": 5,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 66
-          },
           "portionKind": "item"
         },
         {
@@ -2512,11 +2172,6 @@
           "sku": "200103",
           "sourceId": 9973,
           "sourceSlug": "lahmacun-3x180g",
-          "logistics": {
-            "piecesPerBox": 3,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         }
       ]
@@ -2552,11 +2207,6 @@
           "sku": "900801",
           "sourceId": 10021,
           "sourceSlug": "latte-whole-cake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -2592,11 +2242,6 @@
           "sku": "901809",
           "sourceId": 10031,
           "sourceSlug": "lemon-cheesecake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -2632,11 +2277,6 @@
           "sku": "902804",
           "sourceId": 10194,
           "sourceSlug": "lemon-cheesecake-slice-150g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 150
-          },
           "portionKind": null
         }
       ]
@@ -2673,11 +2313,6 @@
           "sku": "900808",
           "sourceId": 10169,
           "sourceSlug": "lotus-caramel-cake-with-nutella",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 6,
-            "parcelsPerPallet": 70
-          },
           "portionKind": null
         }
       ]
@@ -2713,11 +2348,6 @@
           "sku": "111107",
           "sourceId": 9963,
           "sourceSlug": "maras-ice-cream-cocoa-250g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 15,
-            "parcelsPerPallet": 99
-          },
           "portionKind": null
         }
       ]
@@ -2753,11 +2383,6 @@
           "sku": "111112",
           "sourceId": 9966,
           "sourceSlug": "maras-ice-cream-pistachio-250g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 15,
-            "parcelsPerPallet": 99
-          },
           "portionKind": null
         }
       ]
@@ -2794,11 +2419,6 @@
           "sku": "111106",
           "sourceId": 9958,
           "sourceSlug": "maras-ice-cream-plain-250g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 15,
-            "parcelsPerPallet": 99
-          },
           "portionKind": null
         },
         {
@@ -2812,11 +2432,6 @@
           "sku": "111101",
           "sourceId": 9962,
           "sourceSlug": "maras-ice-cream-plain-500g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 9,
-            "parcelsPerPallet": 99
-          },
           "portionKind": null
         }
       ]
@@ -2852,11 +2467,6 @@
           "sku": "111141",
           "sourceId": 10350,
           "sourceSlug": "maras-ice-cream-slice-cocoa-70g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 72,
-            "parcelsPerPallet": 101
-          },
           "portionKind": null
         }
       ]
@@ -2892,11 +2502,6 @@
           "sku": "111131",
           "sourceId": 10353,
           "sourceSlug": "maras-ice-cream-slice-lemon-70g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 72,
-            "parcelsPerPallet": 101
-          },
           "portionKind": null
         }
       ]
@@ -2932,11 +2537,6 @@
           "sku": "111121",
           "sourceId": 10347,
           "sourceSlug": "maras-ice-cream-slice-plain-70g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 72,
-            "parcelsPerPallet": 101
-          },
           "portionKind": null
         }
       ]
@@ -2972,11 +2572,6 @@
           "sku": "111113",
           "sourceId": 9969,
           "sourceSlug": "maras-ice-cream-trio-mix-500g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 9,
-            "parcelsPerPallet": 99
-          },
           "portionKind": null
         }
       ]
@@ -3014,11 +2609,6 @@
           "sku": "701223",
           "sourceId": 9736,
           "sourceSlug": "mini-pide-with-cheese-50g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 80,
-            "parcelsPerPallet": 88
-          },
           "portionKind": null
         },
         {
@@ -3032,11 +2622,6 @@
           "sku": "701221",
           "sourceId": 9740,
           "sourceSlug": "mini-pide-with-cheese-250g",
-          "logistics": {
-            "piecesPerBox": 5,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 96
-          },
           "portionKind": "item"
         }
       ]
@@ -3074,11 +2659,6 @@
           "sku": "701224",
           "sourceId": 9738,
           "sourceSlug": "mini-pide-with-spinach-cheese-50g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 80,
-            "parcelsPerPallet": 88
-          },
           "portionKind": null
         },
         {
@@ -3092,11 +2672,6 @@
           "sku": "701222",
           "sourceId": 9743,
           "sourceSlug": "mini-pide-with-spinach-cheese-250g",
-          "logistics": {
-            "piecesPerBox": 5,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 96
-          },
           "portionKind": "item"
         }
       ]
@@ -3132,11 +2707,6 @@
           "sku": "700801",
           "sourceId": 10233,
           "sourceSlug": "mini-roll-borek-with-cheese-500g",
-          "logistics": {
-            "piecesPerBox": 10,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         }
       ]
@@ -3172,11 +2742,6 @@
           "sku": "700802",
           "sourceId": 10238,
           "sourceSlug": "mini-roll-borek-with-spinach-cheese-500g",
-          "logistics": {
-            "piecesPerBox": 10,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         }
       ]
@@ -3214,11 +2779,6 @@
           "sku": "600808",
           "sourceId": 9550,
           "sourceSlug": "mussel-baklava-1250g",
-          "logistics": {
-            "piecesPerBox": 40,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         },
         {
@@ -3232,11 +2792,6 @@
           "sku": "600802",
           "sourceId": 9553,
           "sourceSlug": "mussel-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 48,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          },
           "portionKind": "item"
         }
       ]
@@ -3271,11 +2826,6 @@
           "sku": "700212",
           "sourceId": 9774,
           "sourceSlug": "olive-filled-pastry-130g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 90,
-            "parcelsPerPallet": 64
-          },
           "portionKind": null
         }
       ]
@@ -3311,11 +2861,6 @@
           "sku": "500107",
           "sourceId": 9673,
           "sourceSlug": "pista-leaves-150g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 156
-          },
           "portionKind": null
         }
       ]
@@ -3350,11 +2895,6 @@
           "sku": "500106",
           "sourceId": 9671,
           "sourceSlug": "pista-leaves-bulk-300g",
-          "logistics": {
-            "piecesPerBox": 2,
-            "boxesPerParcel": 20,
-            "parcelsPerPallet": 84
-          },
           "portionKind": "item"
         }
       ]
@@ -3389,11 +2929,6 @@
           "sku": "900414",
           "sourceId": 10208,
           "sourceSlug": "pistachio-cake-cup-165g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 3,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -3429,11 +2964,6 @@
           "sku": "900104",
           "sourceId": 10167,
           "sourceSlug": "pistachio-cream-cake",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 6,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "slice"
         }
       ]
@@ -3519,11 +3049,6 @@
           "sku": "600505",
           "sourceId": 9590,
           "sourceSlug": "pistachio-rolls-baklava-1250g",
-          "logistics": {
-            "piecesPerBox": 48,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         },
         {
@@ -3537,11 +3062,6 @@
           "sku": "600503",
           "sourceId": 9593,
           "sourceSlug": "pistachio-rolls-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 56,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          },
           "portionKind": "item"
         }
       ]
@@ -3579,11 +3099,6 @@
           "sku": "700209",
           "sourceId": 9762,
           "sourceSlug": "plain-pastry-130g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 90,
-            "parcelsPerPallet": 64
-          },
           "portionKind": null
         },
         {
@@ -3597,11 +3112,6 @@
           "sku": "700201",
           "sourceId": 9765,
           "sourceSlug": "plain-pastry-4x80g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 24,
-            "parcelsPerPallet": 44
-          },
           "portionKind": "item"
         }
       ]
@@ -3636,11 +3146,6 @@
           "sku": "700211",
           "sourceId": 9772,
           "sourceSlug": "potato-filled-pastry-130g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 90,
-            "parcelsPerPallet": 64
-          },
           "portionKind": null
         }
       ]
@@ -3676,11 +3181,6 @@
           "sku": "903108",
           "sourceId": null,
           "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 120
-          },
           "portionKind": null
         },
         {
@@ -3694,11 +3194,6 @@
           "sku": "903109",
           "sourceId": 10180,
           "sourceSlug": "rainbow-velvet-cake-150g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 66
-          },
           "portionKind": "item"
         }
       ]
@@ -3734,11 +3229,6 @@
           "sku": "901804",
           "sourceId": 10027,
           "sourceSlug": "raspberry-cheesecake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -3773,11 +3263,6 @@
           "sku": "900416",
           "sourceId": 10212,
           "sourceSlug": "raspberry-cheesecake-cup-165g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 3,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -3813,11 +3298,6 @@
           "sku": "902803",
           "sourceId": 10189,
           "sourceSlug": "raspberry-cheesecake-slice-150g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 150
-          },
           "portionKind": null
         }
       ]
@@ -3853,11 +3333,6 @@
           "sku": "900903",
           "sourceId": null,
           "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 120
-          },
           "portionKind": null
         },
         {
@@ -3871,11 +3346,6 @@
           "sku": "900906",
           "sourceId": 10177,
           "sourceSlug": "red-velvet-cake-165g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         }
       ]
@@ -3910,11 +3380,6 @@
           "sku": "900412",
           "sourceId": 10204,
           "sourceSlug": "red-velvet-cup-165g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 3,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -3950,11 +3415,6 @@
           "sku": "900901",
           "sourceId": 10012,
           "sourceSlug": "red-velvet-whole-cake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -3989,11 +3449,6 @@
           "sku": "200411",
           "sourceId": 10342,
           "sourceSlug": "saksuka-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -4029,11 +3484,6 @@
           "sku": "901807",
           "sourceId": 10034,
           "sourceSlug": "san-sebastian-cheesecake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -4068,11 +3518,6 @@
           "sku": "700302",
           "sourceId": 9729,
           "sourceSlug": "savoury-bun-130g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 80,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -4108,11 +3553,6 @@
           "sku": "700301",
           "sourceId": 9733,
           "sourceSlug": "savoury-bun-acma-320g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 44
-          },
           "portionKind": "item"
         }
       ]
@@ -4147,11 +3587,6 @@
           "sku": "700305",
           "sourceId": 9731,
           "sourceSlug": "savoury-bun-with-cheese-130g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 80,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -4189,11 +3624,6 @@
           "sku": "601402",
           "sourceId": 9556,
           "sourceSlug": "sobiyet-baklava-1250g",
-          "logistics": {
-            "piecesPerBox": 28,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         },
         {
@@ -4207,11 +3637,6 @@
           "sku": "600702",
           "sourceId": 9559,
           "sourceSlug": "sobiyet-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 40,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          },
           "portionKind": "item"
         }
       ]
@@ -4249,11 +3674,6 @@
           "sku": "601103",
           "sourceId": 9612,
           "sourceSlug": "special-antep-baklava-1250g",
-          "logistics": {
-            "piecesPerBox": 48,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 48
-          },
           "portionKind": "item"
         },
         {
@@ -4267,11 +3687,6 @@
           "sku": "601102",
           "sourceId": 9615,
           "sourceSlug": "special-antep-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 76,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          },
           "portionKind": "item"
         }
       ]
@@ -4304,11 +3719,6 @@
           "sku": "500105",
           "sourceId": null,
           "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 192
-          },
           "portionKind": null
         }
       ]
@@ -4344,11 +3754,6 @@
           "sku": "900105",
           "sourceId": 10005,
           "sourceSlug": "special-pistachio-garden-whole-cake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -4386,11 +3791,6 @@
           "sku": "600601",
           "sourceId": 9596,
           "sourceSlug": "special-square-baklava-1250g",
-          "logistics": {
-            "piecesPerBox": 15,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 36
-          },
           "portionKind": "item"
         },
         {
@@ -4404,11 +3804,6 @@
           "sku": "600602",
           "sourceId": 9599,
           "sourceSlug": "special-square-baklava-2000g",
-          "logistics": {
-            "piecesPerBox": 28,
-            "boxesPerParcel": 5,
-            "parcelsPerPallet": 56
-          },
           "portionKind": "item"
         }
       ]
@@ -4443,11 +3838,6 @@
           "sku": "312341",
           "sourceId": 10383,
           "sourceSlug": "spicy-chicken-tender-fillet-700g",
-          "logistics": {
-            "piecesPerBox": 10,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 80
-          },
           "portionKind": "item"
         }
       ]
@@ -4482,11 +3872,6 @@
           "sku": "312442",
           "sourceId": 10381,
           "sourceSlug": "spicy-chicken-wings-700g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 14,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "item"
         }
       ]
@@ -4521,11 +3906,6 @@
           "sku": "200414",
           "sourceId": 10336,
           "sourceSlug": "spicy-turkish-tomato-dip-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 8,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -4561,11 +3941,6 @@
           "sku": "700501",
           "sourceId": 9328,
           "sourceSlug": "spiral-pie-borek-with-cheese-800-g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 6,
-            "parcelsPerPallet": 108
-          },
           "portionKind": null
         }
       ]
@@ -4601,11 +3976,6 @@
           "sku": "700504",
           "sourceId": 9341,
           "sourceSlug": "spiral-pie-borek-with-potato-800-g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 6,
-            "parcelsPerPallet": 108
-          },
           "portionKind": null
         }
       ]
@@ -4641,11 +4011,6 @@
           "sku": "700503",
           "sourceId": 9331,
           "sourceSlug": "spiral-pie-borek-with-spinach-cheese-800-g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 6,
-            "parcelsPerPallet": 108
-          },
           "portionKind": null
         }
       ]
@@ -4683,11 +4048,6 @@
           "sku": "700906",
           "sourceId": 9816,
           "sourceSlug": "spiral-rose-borek-with-cheese-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         },
         {
@@ -4701,11 +4061,6 @@
           "sku": "700701",
           "sourceId": 10219,
           "sourceSlug": "spiral-rose-borek-with-cheese-6x80g",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         }
       ]
@@ -4740,11 +4095,6 @@
           "sku": "700913",
           "sourceId": 9822,
           "sourceSlug": "spiral-rose-borek-with-meat-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -4779,11 +4129,6 @@
           "sku": "700912",
           "sourceId": 9820,
           "sourceSlug": "spiral-rose-borek-with-potato-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -4821,11 +4166,6 @@
           "sku": "700907",
           "sourceId": 9819,
           "sourceSlug": "spiral-rose-borek-with-spinach-cheese-200g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 40,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         },
         {
@@ -4839,11 +4179,6 @@
           "sku": "700703",
           "sourceId": 10224,
           "sourceSlug": "spiral-rose-borek-with-spinach-cheese-6x80g",
-          "logistics": {
-            "piecesPerBox": 6,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         }
       ]
@@ -4878,11 +4213,6 @@
           "sku": "700908",
           "sourceId": 9808,
           "sourceSlug": "stick-borek-with-cheese-150g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 50,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -4917,11 +4247,6 @@
           "sku": "700917",
           "sourceId": 9814,
           "sourceSlug": "stick-borek-with-meat-150g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 50,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -4956,11 +4281,6 @@
           "sku": "700910",
           "sourceId": 9812,
           "sourceSlug": "stick-borek-with-potato-150g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 50,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -4995,11 +4315,6 @@
           "sku": "700909",
           "sourceId": 9810,
           "sourceSlug": "stick-borek-with-spinach-cheese-150g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 50,
-            "parcelsPerPallet": 72
-          },
           "portionKind": null
         }
       ]
@@ -5036,11 +4351,6 @@
           "sku": "200201",
           "sourceId": 9980,
           "sourceSlug": "stuffed-vine-leaves-500g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": null
         },
         {
@@ -5054,11 +4364,6 @@
           "sku": "200202",
           "sourceId": 9977,
           "sourceSlug": "stuffed-vine-leaves-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 48
-          },
           "portionKind": null
         }
       ]
@@ -5094,11 +4399,6 @@
           "sku": "700107",
           "sourceId": 9276,
           "sourceSlug": "sweet-turkish-bagel-simit-135g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 80,
-            "parcelsPerPallet": 52
-          },
           "portionKind": null
         },
         {
@@ -5146,11 +4446,6 @@
           "sku": "901813",
           "sourceId": null,
           "sourceSlug": null,
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 120
-          },
           "portionKind": null
         },
         {
@@ -5164,11 +4459,6 @@
           "sku": "900306",
           "sourceId": 10183,
           "sourceSlug": "tiramisu-145g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "item"
         }
       ]
@@ -5204,11 +4494,6 @@
           "sku": "900304",
           "sourceId": 10172,
           "sourceSlug": "tiramisu-cake-600g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 6,
-            "parcelsPerPallet": 70
-          },
           "portionKind": "slice"
         }
       ]
@@ -5244,11 +4529,6 @@
           "sku": "900301",
           "sourceId": 10018,
           "sourceSlug": "tiramisu-whole-cake",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 60
-          },
           "portionKind": "slice"
         }
       ]
@@ -5283,11 +4563,6 @@
           "sku": "900413",
           "sourceId": 10206,
           "sourceSlug": "toffee-caramel-cake-cup-165g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 3,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -5323,11 +4598,6 @@
           "sku": "500115",
           "sourceId": 9652,
           "sourceSlug": "tres-leches-caramel-2000g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 84
-          },
           "portionKind": "slice"
         }
       ]
@@ -5362,11 +4632,6 @@
           "sku": "900417",
           "sourceId": 10214,
           "sourceSlug": "tres-leches-caramel-cup-165g",
-          "logistics": {
-            "piecesPerBox": 12,
-            "boxesPerParcel": 3,
-            "parcelsPerPallet": 56
-          },
           "portionKind": null
         }
       ]
@@ -5402,11 +4667,6 @@
           "sku": "500125",
           "sourceId": 9656,
           "sourceSlug": "tres-leches-raspberry-2000g",
-          "logistics": {
-            "piecesPerBox": 9,
-            "boxesPerParcel": 4,
-            "parcelsPerPallet": 84
-          },
           "portionKind": "slice"
         }
       ]
@@ -5445,11 +4705,6 @@
           "sku": "601002",
           "sourceId": 9641,
           "sourceSlug": "tulumba-dessert-400g",
-          "logistics": {
-            "piecesPerBox": 25,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         },
         {
@@ -5463,11 +4718,6 @@
           "sku": "601001",
           "sourceId": 9638,
           "sourceSlug": "tulumba-dessert-5000g",
-          "logistics": {
-            "piecesPerBox": 250,
-            "boxesPerParcel": 1,
-            "parcelsPerPallet": 84
-          },
           "portionKind": "item"
         }
       ]
@@ -5529,11 +4779,6 @@
           "sku": "700102",
           "sourceId": 9274,
           "sourceSlug": "turkish-bagel-simit-125g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 100,
-            "parcelsPerPallet": 52
-          },
           "portionKind": null
         },
         {
@@ -5547,11 +4792,6 @@
           "sku": "700101",
           "sourceId": 9310,
           "sourceSlug": "turkish-bagel-simit-4-x-105g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 44
-          },
           "portionKind": "item"
         }
       ]
@@ -5587,11 +4827,6 @@
           "sku": "700109",
           "sourceId": 10332,
           "sourceSlug": "turkish-fermented-bagel-125g",
-          "logistics": {
-            "piecesPerBox": 40,
-            "boxesPerParcel": 1,
-            "parcelsPerPallet": 64
-          },
           "portionKind": null
         },
         {
@@ -5605,11 +4840,6 @@
           "sku": "700108",
           "sourceId": 10334,
           "sourceSlug": "turkish-fermented-bagel-135g",
-          "logistics": {
-            "piecesPerBox": 50,
-            "boxesPerParcel": 1,
-            "parcelsPerPallet": 52
-          },
           "portionKind": null
         }
       ]
@@ -5645,11 +4875,6 @@
           "sku": "201503",
           "sourceId": 9988,
           "sourceSlug": "turkish-ravioli-with-meat-manti-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 64
-          },
           "portionKind": null
         }
       ]
@@ -5688,11 +4913,6 @@
           "sku": "601004",
           "sourceId": 9649,
           "sourceSlug": "turkish-ring-churros-300g",
-          "logistics": {
-            "piecesPerBox": 4,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         },
         {
@@ -5706,11 +4926,6 @@
           "sku": "601003",
           "sourceId": 9644,
           "sourceSlug": "turkish-ring-churros-4200g",
-          "logistics": {
-            "piecesPerBox": 60,
-            "boxesPerParcel": 1,
-            "parcelsPerPallet": 84
-          },
           "portionKind": "item"
         }
       ]
@@ -5745,11 +4960,6 @@
           "sku": "201302",
           "sourceId": 10330,
           "sourceSlug": "vegan-cig-kofte-400g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": null
         }
       ]
@@ -5786,11 +4996,6 @@
           "sku": "200702",
           "sourceId": 10002,
           "sourceSlug": "vegan-falafel-500g",
-          "logistics": {
-            "piecesPerBox": 20,
-            "boxesPerParcel": 20,
-            "parcelsPerPallet": 54
-          },
           "portionKind": "item"
         },
         {
@@ -5804,11 +5009,6 @@
           "sku": "200701",
           "sourceId": 9999,
           "sourceSlug": "vegan-falafel-1000g",
-          "logistics": {
-            "piecesPerBox": 40,
-            "boxesPerParcel": 10,
-            "parcelsPerPallet": 54
-          },
           "portionKind": "item"
         }
       ]
@@ -5871,11 +5071,6 @@
           "sku": "200301",
           "sourceId": 9323,
           "sourceSlug": "vegan-kibbeh-5-x-70-g",
-          "logistics": {
-            "piecesPerBox": 5,
-            "boxesPerParcel": 12,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         },
         {
@@ -5889,11 +5084,6 @@
           "sku": "200302",
           "sourceId": 9321,
           "sourceSlug": "vegan-kibbeh-10-x-70-g",
-          "logistics": {
-            "piecesPerBox": 10,
-            "boxesPerParcel": 9,
-            "parcelsPerPallet": 88
-          },
           "portionKind": "item"
         }
       ]
@@ -5968,11 +5158,6 @@
           "sku": "201301",
           "sourceId": 9994,
           "sourceSlug": "vegan-raw-meatballs-1000g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 16,
-            "parcelsPerPallet": 64
-          },
           "portionKind": null
         }
       ]
@@ -6007,11 +5192,6 @@
           "sku": "701423",
           "sourceId": 10229,
           "sourceSlug": "vegetable-calzone-80g",
-          "logistics": {
-            "piecesPerBox": 1,
-            "boxesPerParcel": 50,
-            "parcelsPerPallet": 88
-          },
           "portionKind": null
         }
       ]
