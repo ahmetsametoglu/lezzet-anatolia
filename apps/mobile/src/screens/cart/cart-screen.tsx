@@ -107,6 +107,21 @@ type Messages = LocalizedCopy<typeof messages>;
  * Fonksiyon DURUYOR çünkü salt-okunur hâl kavramı duruyor: yarın uygulamadan yazılamayan başka bir
  * satır türü doğarsa yeri burasıdır. Bugün hiçbir satır salt okunur değil.
  */
+/**
+ * ÜRÜNLER ÜSTTE, PAKETLER ALTTA — grup İÇİ sıra (kullanıcı kararı 28.08: *"paketlerin arasına ürün
+ * girmesi çok hoş görünmüyor"*).
+ *
+ * Teslimat grubunun (`local` · `shipping` · `undeliverable`) sırasına DOKUNMAZ: o tasarımın kendi
+ * ayrımı ve daha üst bir bilgi — bir kalemin nasıl geleceği, ne olduğundan önce gelir. Sıralama her
+ * grubun kendi içinde yapılır, yani "kargoyla gelen paket" hâlâ kargo başlığının altındadır.
+ *
+ * Sıra KARARLIDIR (`sort` ES2019'dan beri kararlı): iki ürün ya da iki paket arasında sunucunun
+ * verdiği sıra — sepete eklenme sırası — olduğu gibi korunur. Yalnız tür sınırı taşınır.
+ */
+function productsFirst(lines: readonly MeCartViewLine[]): MeCartViewLine[] {
+  return [...lines].sort((a, b) => Number(a.kind === 'bundle') - Number(b.kind === 'bundle'));
+}
+
 function isReadOnly(_line: MeCartViewLine): boolean {
   return false;
 }
@@ -183,9 +198,9 @@ export function CartScreen() {
 
   /* GRUP SÖZLEŞMEDEN OKUNUR, yoldan TÜRETİLMEZ (künye: elle süzgecin ölçülmüş arızası). Sıra
      tasarımın sırası: önce gelenler, sonra kargoyla gelenler, en sonda bu adrese gelemeyenler. */
-  const localLines = lines.filter((line) => line.group === 'local');
-  const shippingLines = lines.filter((line) => line.group === 'shipping');
-  const undeliverableLines = lines.filter((line) => line.group === 'undeliverable');
+  const localLines = productsFirst(lines.filter((line) => line.group === 'local'));
+  const shippingLines = productsFirst(lines.filter((line) => line.group === 'shipping'));
+  const undeliverableLines = productsFirst(lines.filter((line) => line.group === 'undeliverable'));
   const groups = [
     { key: 'local', eyebrow: t.group.local, lines: localLines },
     { key: 'shipping', eyebrow: t.group.shipping, lines: shippingLines },

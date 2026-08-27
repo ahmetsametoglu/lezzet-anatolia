@@ -61,6 +61,35 @@ export function cartViewLine(index: number, name: string, group: CartLineGroup, 
 }
 
 /**
+ * Tek PAKET satırı — sözleşmenin öteki dalı (`kind: 'bundle'`).
+ *
+ * Varyant satırından ayrı bir kapı, çünkü şekli de ayrı: kimliği `bundleId`, boy etiketi yok ve
+ * içeriği `contents`ta duruyor. Fikstür bunu taşımıyordu ve sepetin paket davranışları (grup içi
+ * sıra, koyu ton, salt-okunur adet) yalnız varyantla sınanabiliyordu.
+ */
+export function cartViewBundleLine(index: number, name: string, group: CartLineGroup, options: CartLineOptions = {}): MeCartViewLine {
+  const qty = options.qty ?? 1;
+  const unitPriceCents = options.unitPriceCents ?? 2500;
+  return {
+    kind: 'bundle',
+    bundleId: uuid(index),
+    qty,
+    slug: `paket-${index}`,
+    name,
+    image: { url: null, crop: { x: 50, y: 50, zoom: 100 } },
+    unitLabel: '',
+    unitPriceCents,
+    limitCap: null,
+    lineTotalCents: unitPriceCents * qty,
+    blocked: options.blocked ?? false,
+    route: routeOf(group),
+    group,
+    availableHere: null,
+    contents: [],
+  };
+}
+
+/**
  * Satırlardan tam görünüm kurar. TOPLAMLAR SATIRLARDAN TÜRETİLİR — sunucu da öyle yapıyor ve
  * elle yazılan bir ara toplam, testi ekranın hiç karşılaşmayacağı bir sepetle koşturur.
  *

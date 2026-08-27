@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react-native
 
 import type { CartState } from '@/screens/customer-kit/cart-store';
 import { CartScreen } from './cart-screen';
-import { cartView, cartViewLine } from './cart-view-fixture';
+import { cartView, cartViewBundleLine, cartViewLine } from './cart-view-fixture';
 import messages from './messages.json';
 
 /*
@@ -84,6 +84,45 @@ describe('CartScreen — üç gruplu sepet', () => {
     expect(screen.getByText('Baklava')).toBeOnTheScreen();
     expect(screen.getByText('Kuru kayısı')).toBeOnTheScreen();
     expect(screen.getByText('Kaymak')).toBeOnTheScreen();
+  });
+
+  /* ÜRÜNLER ÜSTTE, PAKETLER ALTTA (kullanıcı kararı 28.08: *"paketlerin arasına ürün girmesi çok
+     hoş görünmüyor"*). Sunucu satırları eklenme sırasında veriyor — burada bilerek KARIŞIK geliyor
+     ve ekranın onları ayırması bekleniyor. İki şey birden tutuluyor: tür sınırı (paketler sonda) ve
+     sıranın KARARLILIĞI (iki ürün ile iki paket kendi aralarında eklenme sırasını korur). */
+  it('grup içinde ürünleri paketlerin ÜSTÜNE alır, eklenme sırasını bozmadan', async () => {
+    mockCart = cartWith(
+      cartView([
+        cartViewBundleLine(10, 'Bayram Sofrası', 'local'),
+        cartViewLine(1, 'Baklava', 'local'),
+        cartViewBundleLine(11, 'Fıstık Sevenler', 'local'),
+        cartViewLine(2, 'Şekerpare', 'local'),
+      ]),
+    );
+
+    await render(<CartScreen />);
+
+    /* Sıra EKRANDAN okunur: `cart-group-*` testID'si başlığa ait, satırları sarmıyor — tek gruplu
+       bu sepette zaten başlık da çizilmiyor. Dört ad tek eşleşmeyle alınıp çizim sırası ölçülüyor. */
+    const cizilen = screen.getAllByText(/^(Baklava|Şekerpare|Bayram Sofrası|Fıstık Sevenler)$/).map((n) => n.props.children);
+    expect(cizilen).toEqual(['Baklava', 'Şekerpare', 'Bayram Sofrası', 'Fıstık Sevenler']);
+  });
+
+  it('teslimat grubunun sırasını BOZMAZ — paket kargo grubunda kalır', async () => {
+    mockCart = cartWith(
+      cartView([
+        cartViewBundleLine(10, 'Kargo Paketi', 'shipping'),
+        cartViewLine(1, 'Yerel Baklava', 'local'),
+      ]),
+    );
+
+    await render(<CartScreen />);
+
+    /* Paket bütün sepetin en altına İNMEZ, kendi grubunda kalır: grup ayrımı tür ayrımından ÖNCE
+       gelir (bir kalemin nasıl geleceği, ne olduğundan önce). Sıra `local` → `shipping` olduğu için
+       yerel ÜRÜN, kargo PAKETİNDEN önce çizilir — tür sıralaması grupları karıştırsaydı ters olurdu. */
+    const cizilen = screen.getAllByText(/^(Kargo Paketi|Yerel Baklava)$/).map((n) => n.props.children);
+    expect(cizilen).toEqual(['Yerel Baklava', 'Kargo Paketi']);
   });
 
   it('gelemeyen kalem için satırların üstünde TEK uyarı ve satırda kısa künye yazar', async () => {

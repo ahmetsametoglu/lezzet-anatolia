@@ -6713,3 +6713,23 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Ders.** Bir dil kuralı **stil katmanında uygulanamaz**: CSS-benzeri dönüşümleri platform yapar
   ve platformun bildiği tek dil cihazınkidir. Kuralın adı olması (`upperIn`) onu kendiliğinden
   yaymıyor — 17.08'de 17 çağrı düzeltilmişti, stil katmanı o turda hiç sorulmamıştı.
+
+- [x] (21.125) **SEPETTE ÜRÜNLER ÜSTTE, PAKETLER ALTTA** (kullanıcı kararı 28.08: *"paketlerin
+  arasına ürün girmesi çok hoş görünmüyor"*)
+  `touches:` `apps/mobile/src/screens/cart/cart-screen.tsx` ·
+  `apps/mobile/src/screens/cart/cart-view-fixture.ts` ·
+  `apps/mobile/src/screens/cart/cart-screen.test.tsx`
+
+  Sunucu satırları EKLENME sırasında veriyor, yani paket kartları ürünlerin arasına serpiliyordu.
+  Paket kartı koyu mürekkep zeminli (`cart-line-row` tone `bundle`), ürün kartı açık kum — ikisi
+  dönüşümlü gelince liste dikişli görünüyor. Sıralama artık grup içinde: ürünler önce, paketler
+  sonra.
+
+  **Teslimat grubunun sırası BOZULMADI** (`local` → `shipping` → `undeliverable`). O ayrım daha üst
+  bir bilgidir — bir kalemin NASIL geleceği, NE olduğundan önce gelir; tür sıralaması grupları
+  aşsaydı "kargoyla gelen paket" yerel başlığın altına düşerdi. Sıra ayrıca KARARLI (`sort` ES2019):
+  iki ürün ya da iki paket kendi aralarında eklenme sırasını koruyor.
+
+  Fikstür paket satırını taşımıyordu (`cartViewBundleLine` eklendi) — sepetin paket davranışları o
+  güne dek yalnız varyantla sınanabiliyordu. İki test: grup içi sıra + grup sınırının korunduğu.
+  Cihazda doğrulandı (üç açık ürün kartı, altında iki koyu paket kartı); 879/879.
