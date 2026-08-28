@@ -448,9 +448,16 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    *
    * Üç turda okur (varsayılanlar · istisnalar · kullanılabilirler) — varyant başına sorgu YOK.
    */
-  async listBelowMinStock(warehouseId: string): Promise<Array<AvailableStock & { minStockQty: number }>> {
+  async listBelowMinStock(warehouseId: string, variantIds?: readonly string[]): Promise<Array<AvailableStock & { minStockQty: number }>> {
+    // Daraltma (14.15 stock_low üreticisi): rezervasyon SONRASI yalnız dokunulan varyantlar sorulur —
+    // her checkout'ta tüm katalogu taramak, kapı zilinin bedelini sipariş yoluna ödetmek olurdu.
+    let variantQuery = this.supabase.from('product_variant').select('id,min_stock_qty').eq('is_active', true);
+    if (variantIds !== undefined) {
+      if (variantIds.length === 0) return [];
+      variantQuery = variantQuery.in('id', [...variantIds]);
+    }
     const [{ data: variantRows, error: variantError }, { data: overrideRows, error: overrideError }] = await Promise.all([
-      this.supabase.from('product_variant').select('id,min_stock_qty').eq('is_active', true),
+      variantQuery,
       // Projeksiyon ŞEMANIN İSTEDİĞİ ÜÇ KOLONU da çeker. `warehouse_id` süzgeçte var diye
       // seçilmemişti; şema onu zorunlu tuttuğu için `parse` `undefined` görüp patlıyordu ve
       // `/operations/procurement` tamamen çöküyordu. Arıza kodun girdiği gün değil, o depoya
