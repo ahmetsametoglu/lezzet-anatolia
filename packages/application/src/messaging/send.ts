@@ -51,6 +51,15 @@ export interface SendMessageInput {
   /** Dolu ise KALIP mesaj — yalnız WhatsApp, ve pencere kapalıyken tek gidebilen tür. */
   templateName?: string | null;
   templateCategory?: TemplateCategory | null;
+  /**
+   * Şablonun DİLİ (`en_US`, `tr`, `fr`…) — Meta şablonu ad + dil ÇİFTİYLE arar, yalnız adla değil.
+   *
+   * Geçilmezse istemcinin varsayılanı (`tr`) kullanılır. Alan 28.08'de açıldı: sabit `tr` yüzünden
+   * `en_US` dilinde onaylanmış hiçbir şablon gönderilemiyordu — Meta'nın kendi test şablonları
+   * (`hello_world`) dahil, ve hata `132001` ("şablon bulunamadı") diye geliyordu, yani sebep bizim
+   * dilimizken sağlayıcı arızası gibi okunuyordu.
+   */
+  templateLanguage?: string | null;
 }
 
 export type SendResult =

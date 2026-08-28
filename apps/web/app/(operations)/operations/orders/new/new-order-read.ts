@@ -1,5 +1,6 @@
 import {
   AddressService,
+  ConversationService,
   ProductService,
   UserProfileService,
   WarehouseService,
@@ -53,6 +54,24 @@ export function toCustomerOption(row: UserProfile): CustomerPickOption {
     channel: effectiveChannelOf(row),
     isDraft: row.isDraft,
   };
+}
+
+/**
+ * SOHBET KÖPRÜSÜ (15.4) — konuşmadan gelindiğinde müşteriyi önseçili getirir.
+ *
+ * Operatör sohbette kiminle konuştuğunu zaten biliyor; köprüden geçince o kişiyi bir kez daha
+ * aratmak, bilinen bir bilgiyi elle tekrar ettirmektir. Bu yüzden ekranın "hiçbir şey okumam"
+ * kuralının TEK istisnası burasıdır (sayfa künyesi): okuma seçime bağlı değil, seçim ZATEN yapılmış.
+ *
+ * `null` dönen üç hâl aynı sonucu verir ve ekran üçünü ayırt etmez — konuşma yok · kimliğe
+ * bağlanmamış (kimliksiz sohbet, 15.16) · profil silinmiş. Üçünde de ekran boş seçiciyle açılır,
+ * yani köprü çalışmazsa operatör normal akışa düşer; hiçbir hâlde hata göstermez.
+ */
+export async function readConversationCustomer(db: Db, conversationId: string): Promise<CustomerPickOption | null> {
+  const conversation = await new ConversationService(db).getById(conversationId);
+  if (!conversation?.customerId) return null;
+  const profile = await new UserProfileService(db).getById(conversation.customerId);
+  return profile ? toCustomerOption(profile) : null;
 }
 
 /** Telefon ya da ad ile müşteri arama — operatörün elindeki tek ipucu genelde numaradır. */

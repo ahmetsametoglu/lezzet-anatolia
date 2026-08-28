@@ -111,6 +111,7 @@ export function SocialDesktop({
             />
             <SocialContextPane
               context={data.detail.context}
+              conversationId={data.detail.id}
               externalRef={data.detail.externalRef}
               source={data.detail.source}
               profileName={data.detail.profileName}

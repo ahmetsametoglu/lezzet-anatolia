@@ -34,10 +34,14 @@ export function metaCloudSender(config: CloudApiConfig): MessageSender {
         channel: target.source,
         text: input.text,
         templateName: input.templateName,
-        /* Şablonun dili: bugün tek dil var (`tr`) ve VARSAYILAN BURADA DEĞİL istemcide olmalı —
-           ama şablonlar henüz onaylanmadığı için (Meta kısıtı) çok dilli seçim yazılmadı.
-           BEKLEYEN(15.11): şablon dili müşterinin `preferredLanguage`inden gelecek; bugün
-           uydurulacak eşleme, onaylanmamış şablon adlarına bağlı olurdu. */
+        /* Şablonun dili ÇAĞIRANDAN gelir (28.08): Meta şablonu ad + dil ÇİFTİYLE arar. Sabit `tr`
+           varsayımı `en_US` dilinde onaylanmış hiçbir şablonu gönderemiyordu — Meta'nın kendi test
+           şablonları dahil — ve hata `132001` diye, yani "şablon yok" gibi geliyordu; oysa şablon
+           vardı, dili başkaydı. Geçilmezse istemcinin varsayılanı (`tr`) sürüyor.
+           BEKLEYEN(15.11): dilin müşterinin `preferredLanguage`inden TÜREMESİ hâlâ açık — bugün
+           çağıran açıkça söylüyor, çünkü hangi şablonun hangi dilde onaylandığı Meta tarafında
+           belirlenir ve bizim tercihimizle örtüşmeyebilir. */
+        templateLanguage: input.templateLanguage ?? undefined,
         interactive: (input.payload?.interactive as Record<string, unknown> | undefined) ?? null,
       });
 

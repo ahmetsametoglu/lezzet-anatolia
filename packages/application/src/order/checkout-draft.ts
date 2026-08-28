@@ -10,7 +10,7 @@ import {
 } from '@lezzet/database';
 import { cityMatchesPlaces, deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import type { AddressDeliveryType, LocalizedText, OrderItemInsert, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type { AddressDeliveryType, LocalizedText, OrderItemInsert, OrderSource, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { matchNeighborInviteForOrder } from '../customer/neighbor';
 import { placesForPostalCode } from '../delivery/places';
@@ -164,6 +164,15 @@ export interface CheckoutDraftInput {
     priceOverrides?: ReadonlyMap<string, number>;
     /** Patron ikramı — operasyon ve iç muhasebe tam normal, yalnız muhasebe export'una girmez (DOMAIN §9). */
     isGiftOrder?: boolean;
+    /**
+     * **Siparişin KAYNAĞI** — personel yolunun varsayılanı `manual` ama tek doğrusu o değil (15.4).
+     *
+     * Telefonla gelip masada yazılan sipariş gerçekten `manual`dır; sohbetten açılan sipariş ise
+     * WhatsApp'tan gelmiştir ve raporda öyle görünmelidir — kanal (`channel`) ile kaynak
+     * (`orderSource`) ayrı eksenlerdir (DATA_MODEL). Köprü kendi kaynağını geçirir; geçirmeyen
+     * çağıran için davranış DEĞİŞMEZ.
+     */
+    orderSource?: OrderSource;
   };
   /** Rota içi teslimatta seçilen gün; kargoda null (tarih taşıyıcıya bağlı, söz verilmez). */
   deliveryDate: string | null;
@@ -538,8 +547,9 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       warehouseId: orderWarehouseId,
       channel,
       // Kaynak YÜZEYİ söyler, kanaldan bağımsız ayrı eksendir (DATA_MODEL). Telefonla gelip
-      // masada yazılan sipariş `manual`dır; WhatsApp köprüsü (15.4) kendi kaynağını geçirecek.
-      orderSource: input.staff ? 'manual' : 'web',
+      // masada yazılan sipariş `manual`dır; sohbetten açılan sipariş kendi kaynağını geçirir
+      // (15.4 köprüsü — `staff.orderSource`), geçirmeyen personel yolu `manual` kalır.
+      orderSource: input.staff ? (input.staff.orderSource ?? 'manual') : 'web',
       // Patron ikramı (DOMAIN §9) — yalnız personel yolundan işaretlenebilir.
       isGiftOrder: input.staff?.isGiftOrder ?? false,
       status: 'draft',

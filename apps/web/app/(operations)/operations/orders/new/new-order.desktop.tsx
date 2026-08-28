@@ -50,10 +50,22 @@ const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   bank_transfer: 'Havale',
 };
 
-export function NewOrderDesktop() {
+/**
+ * Sohbet köprüsünün taşıdığı iki şey (15.4): önseçili müşteri ve konuşmanın kimliği.
+ *
+ * Kimlik ekranda HİÇ kullanılmıyor, yalnız kaydederken geri gönderiliyor — kaynağı (`order_source`)
+ * sunucu ondan çözüyor. Ekranın kaynağı kendisi göndermesi, istemciye "bu sipariş WhatsApp'tan
+ * geldi" dedirtmek olurdu; o iddiayı adres çubuğunu düzenleyen biri de yazabilirdi.
+ */
+interface NewOrderDesktopProps {
+  conversationId: string | null;
+  initialCustomer: CustomerPickOption | null;
+}
+
+export function NewOrderDesktop({ conversationId, initialCustomer }: NewOrderDesktopProps) {
   const router = useRouter();
 
-  const [customer, setCustomer] = useState<CustomerPickOption | null>(null);
+  const [customer, setCustomer] = useState<CustomerPickOption | null>(initialCustomer);
   const [customerOptions, setCustomerOptions] = useState<CustomerPickOption[]>([]);
   const [customerDialog, setCustomerDialog] = useState(false);
 
@@ -151,6 +163,8 @@ export function NewOrderDesktop() {
       paymentMethod,
       onAccount,
       isGiftOrder: isGift,
+      // Köprüden gelindiyse konuşmanın kimliği; kaynağı SUNUCU ondan çözer (künye props tipinde).
+      conversationId,
       // **Fiyat YALNIZ pazarlık edildiyse gönderilir.** Dokunulmamış kalemde `null` gider ve
       // sunucu fiyatı kendisi çözer; her kaleme bir sayı göndermek siparişin parasını tarayıcıya
       // yazdırmak olurdu (kapının künyesi `createManualOrderAction`da).

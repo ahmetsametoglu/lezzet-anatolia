@@ -21,6 +21,7 @@ import { AlertIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
 import { bubbleClass, MessageRow, MessageThread, SectionLabel } from '@/components/operation/ui/message-thread';
 import { QueueRow } from '@/components/operation/ui/queue-pane';
 import { Textarea } from '@/components/operation/form/input';
+import { ORDERS_PATH } from '../orders/orders-url';
 import { TICKETS_PATH } from '../tickets/tickets-url';
 import { customersUrl } from '../customers/customers-url';
 import { AI_MODE_UNAVAILABLE, AI_OUTBOUND_LABEL, OUTBOUND_LABEL, SOURCE_EDGE, SOURCE_LABELS, WINDOW_NOTE, WINDOW_TONE } from './social-labels';
@@ -518,6 +519,8 @@ function AnchorPane({
 
 interface SocialContextPaneProps {
   context: CustomerContextData | null;
+  /** Sipariş köprüsünün taşıdığı kimlik (15.4) — kaynağı sunucu bundan çözer. */
+  conversationId: string;
   /** Konuşmanın dış anahtarı — WhatsApp'ta okunaklı telefon, Messenger/IG'de opak PSID/IGSID. */
   externalRef: string;
   source: ConversationDetailView['source'];
@@ -538,6 +541,7 @@ interface SocialContextPaneProps {
 
 export function SocialContextPane({
   context,
+  conversationId,
   externalRef,
   source,
   profileName,
@@ -643,6 +647,24 @@ export function SocialContextPane({
           Talep (şikâyet) aç
         </Button>
       </div>
+
+      {/* SİPARİŞ KÖPRÜSÜ (15.4) — sohbette anlaşılan siparişi operatör masada yazar.
+          YALNIZ kimlik çözülmüşken çizilir: köprü kimliksiz sohbette de açılır ama müşteri seçimi
+          boş gelir, yani düğme "önseçili giriş" sözünü tutamazdı. Kimliksiz sohbette operatörün
+          ilk işi zaten yukarıdaki "Müşteriye bağla" (15.16).
+          Bağ tek parametre taşıyor: KAYNAĞI sunucu konuşmadan çözüyor (`orderSourceOfConversation`)
+          — kanalı adres çubuğuna yazdırmak, raporlardaki dağılımı elle düzenlenebilir kılardı. */}
+      {context ? (
+        <div className="flex flex-col gap-1.5">
+          <SectionLabel>Sipariş</SectionLabel>
+          <Link
+            href={`${ORDERS_PATH}/new?conversation=${conversationId}`}
+            className="cursor-pointer rounded-ops-card border border-ops-line bg-ops-card px-2.5 py-2 text-center font-ops-body text-ops-xs text-ops-ink hover:border-ops-line-strong"
+          >
+            Bu sohbetten sipariş oluştur
+          </Link>
+        </div>
+      ) : null}
     </ContextPane>
   );
 }

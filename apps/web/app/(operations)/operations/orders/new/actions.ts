@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AddressService, UserProfileService, serviceDb } from '@lezzet/database';
+import { AddressService, ConversationService, UserProfileService, serviceDb } from '@lezzet/database';
 import { effectiveChannelOf, placeOrder } from '@lezzet/application';
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
@@ -12,6 +12,7 @@ import {
   searchCustomerOptions,
   searchVariantRows,
 } from './new-order-read';
+import type { OrderSource } from '@lezzet/types';
 import type {
   AddressPickOption,
   CustomerPickOption,
@@ -175,6 +176,14 @@ interface ManualOrderInput {
   paymentMethod: PaymentMethod;
   onAccount: boolean;
   isGiftOrder: boolean;
+  /**
+   * SOHBET KÖPRÜSÜ (15.4) — sipariş bir konuşmadan açıldıysa onun kimliği.
+   *
+   * Kaynağı (`order_source`) buradan TÜRETİYORUZ, istemciden almıyoruz: ekran "bu sipariş
+   * WhatsApp'tan geldi" diye bir iddia gönderemez, sunucu konuşmaya bakıp kendi kararını verir.
+   * Aksi hâlde adres çubuğunu düzenleyen biri raporlardaki kanal dağılımını yazabilirdi.
+   */
+  conversationId?: string | null;
   /** Kalemler; `unitPriceCents` YALNIZ pazarlık edildiyse gönderilir (aşağıdaki künye). */
   lines: { variantId: string; qty: number; unitPriceCents: number | null }[];
 }
@@ -196,6 +205,23 @@ interface ManualOrderInput {
  * seçilirse sipariş yine açılır ve tahsilat kapıda/kuryede gerçekleşir — `payment_method` o anlamı
  * zaten taşıyor. Online ödeme müşterinin kendi checkout'unun işi.
  */
+/**
+ * Sohbetten açılan siparişin KAYNAĞI — konuşmanın kanalından türer (15.4).
+ *
+ * Konuşma kimliği yoksa (masadan girilen normal sipariş) `undefined` döner ve motor kendi
+ * varsayılanını (`manual`) kullanır — köprüsüz çağıranın davranışı DEĞİŞMEZ.
+ *
+ * Bugün yalnız WhatsApp eşleniyor: `order_source` enum'unda messenger/instagram YOK ve bu bilinçli
+ * (15.15 künyesi) — kullanılmayan enum değeri, yazılabilirmiş gibi görünüp yazılamayan bir yalandır.
+ * Messenger köprüsü açıldığı gün enum da o yolla birlikte büyür. O güne kadar Messenger sohbetinden
+ * açılan sipariş `manual` kalır: eksik ama DOĞRU bir kayıt, uydurulmuş bir kanaldan iyidir.
+ */
+async function orderSourceOfConversation(conversationId: string | null | undefined): Promise<OrderSource | undefined> {
+  if (!conversationId) return undefined;
+  const conversation = await new ConversationService(serviceDb()).getById(conversationId);
+  return conversation?.source === 'whatsapp' ? 'whatsapp' : undefined;
+}
+
 export async function createManualOrderAction(input: ManualOrderInput): Promise<ActionResult<{ orderId: string }>> {
   try {
     const staff = await requireAdmin();
@@ -224,6 +250,11 @@ export async function createManualOrderAction(input: ManualOrderInput): Promise<
         actorId: staff.profileId,
         priceOverrides: overrides.size > 0 ? overrides : undefined,
         isGiftOrder: input.isGiftOrder,
+        // Kaynak SUNUCUDA çözülür (künye `conversationId`de): konuşma WhatsApp'sa sipariş de
+        // WhatsApp kaynaklıdır. Messenger/Instagram bugün `manual` kalıyor — `order_source`
+        // enum'unda o değerler YOK ve bilerek (15.15): kullanılmayan enum değeri yalan söyler,
+        // o yol açıldığı gün (Messenger köprüsü) enum da büyür.
+        orderSource: await orderSourceOfConversation(input.conversationId),
       },
       createPaymentSession: null,
     });

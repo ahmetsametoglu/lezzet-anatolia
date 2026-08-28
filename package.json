@@ -62,6 +62,7 @@
     "stripe:smoke": "tsx scripts/stripe-smoke.ts",
     "ai:smoke": "tsx scripts/ai-smoke.ts",
     "meta:smoke": "tsx scripts/meta-smoke.ts",
+    "whatsapp:smoke": "tsx scripts/whatsapp-send-smoke.ts",
     "sendcloud:smoke": "tsx scripts/sendcloud-smoke.ts",
     "sendcloud:label:smoke": "tsx scripts/sendcloud-label-smoke.ts"
   },
