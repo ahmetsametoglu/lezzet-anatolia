@@ -1,5 +1,6 @@
 import { SendcloudError, classify } from './errors';
 import {
+  ShipmentListResponseSchema,
   ShipmentResponseSchema,
   ShippingOptionsResponseSchema,
   toLastMile,
@@ -331,21 +332,101 @@ export async function cancelShipment(config: SendcloudConfig, providerShipmentId
   throw new SendcloudError(classify(res.status, await readBody(res)));
 }
 
+/** Bir kolinin sağlayıcıdaki güncel hâli. `code` null = sağlayıcı durum vermedi. */
+export interface ParcelStatus {
+  /** Sağlayıcının KOLİ kimliği — `order_box.provider_parcel_ref` ile eşleşir. */
+  parcelId: string | null;
+  trackingNumber: string | null;
+  code: string | null;
+  message: string | null;
+}
+
 /**
- * **Gönderinin GERÇEK durumu** — `GET /api/v3/shipments/{id}`.
+ * **Gönderinin GERÇEK durumu — KOLİ KOLİ** — `GET /api/v3/shipments/{id}`.
  *
- * Webhook yalnız "değişti" tetikleyicisidir; durum buradan okunur (tek taksonomi). Gerekçe
- * tasarım kaydında: webhook'un durum alanının biçimi sürümler arasında oynak, ve yanlış eşlenen
- * bir durum siparişi yanlış yere taşır.
+ * Webhook yalnız "değişti" tetikleyicisidir; durum buradan okunur (tek taksonomi, "Option B").
+ * Gerekçe tasarım kaydında: webhook gövdesinin şeması belgeli değil ve yanlış eşlenen bir durum
+ * siparişi yanlış yere taşır.
+ *
+ * **Dizi dönüyor, tek durum değil — ve bu bir düzeltmedir.** İlk yazım `parcels[0]`ı okuyordu;
+ * çok kolili (multicollo) gönderide birinci koli teslim olup ötekiler yoldayken sipariş TESLİM
+ * sayılırdı. Gönderi, en gerideki kolisi kadar ilerlemiştir (`aggregateShipmentStatus`) —
+ * o kararı verebilmek için kolilerin hepsi lazım.
  */
-export async function fetchShipmentStatus(config: SendcloudConfig, providerShipmentId: string): Promise<{ code: string | null; message: string | null }> {
-  const json = (await request(config, `/api/v3/shipments/${encodeURIComponent(providerShipmentId)}`, {
+export async function fetchShipmentParcels(config: SendcloudConfig, providerShipmentId: string): Promise<ParcelStatus[]> {
+  const json = await request(config, `/api/v3/shipments/${encodeURIComponent(providerShipmentId)}`, {
     method: 'GET',
     timeoutMs: 10_000,
-  })) as { data?: { parcels?: Array<{ status?: { code?: unknown; message?: unknown } }> } } | null;
-  const status = json?.data?.parcels?.[0]?.status;
-  return {
-    code: typeof status?.code === 'string' ? status.code : null,
-    message: typeof status?.message === 'string' ? status.message : null,
-  };
+  });
+
+  const parsed = ShipmentResponseSchema.safeParse(json);
+  if (!parsed.success) {
+    throw new SendcloudError({ code: 'parse', message: 'Sendcloud gönderi durumu beklenen şekilde değil', detail: parsed.error.issues });
+  }
+
+  return parsed.data.data.parcels.map((p) => ({
+    parcelId: p.id == null ? null : String(p.id),
+    trackingNumber: p.tracking_number ?? null,
+    code: p.status?.code ?? null,
+    message: p.status?.message ?? null,
+  }));
+}
+
+/** Sağlayıcıdaki bir gönderinin kimlik yüzü — öksüz nöbetinin karşılaştırdığı tek şey. */
+export interface RemoteShipment {
+  providerShipmentId: string;
+  /** Duyuruda BİZİM yazdığımız kimlik (`shipment.id`). Boşsa bizden çıkmamış demektir. */
+  externalReferenceId: string | null;
+  parcelIds: string[];
+}
+
+/**
+ * **Sağlayıcıdaki gönderiler** — `GET /api/v3/shipments`, öksüz gönderi nöbetinin girdisi.
+ *
+ * Sayfalama **`Link` başlığından imleçle** yürüyor (doküman + canlı ölçüm 28.08: gövdede `meta`
+ * YOK, yalnız `data`). `maxPages` bir emniyet freni: aşıldığında `truncated: true` döner ve
+ * çağıran bunu SÖYLER — sessizce kesilen bir tarama, "hiç öksüz yok" diye okunurdu.
+ */
+export async function listShipments(
+  config: SendcloudConfig,
+  args: { announcedAfter?: Date; pageSize?: number; maxPages?: number } = {},
+): Promise<{ shipments: RemoteShipment[]; truncated: boolean }> {
+  const maxPages = args.maxPages ?? 10;
+  const query = new URLSearchParams({ page_size: String(Math.min(args.pageSize ?? 100, 100)) });
+  if (args.announcedAfter) query.set('announced_after', args.announcedAfter.toISOString());
+
+  const shipments: RemoteShipment[] = [];
+  let path: string | null = `/api/v3/shipments?${query.toString()}`;
+
+  for (let page = 0; page < maxPages; page++) {
+    if (!path) break;
+    const res = await once(config, path, { method: 'GET', timeoutMs: 15_000 });
+    if (!res.ok) throw new SendcloudError(classify(res.status, await readBody(res)));
+
+    const parsed = ShipmentListResponseSchema.safeParse(await res.json());
+    if (!parsed.success) {
+      throw new SendcloudError({ code: 'parse', message: 'Sendcloud gönderi listesi beklenen şekilde değil', detail: parsed.error.issues });
+    }
+    for (const row of parsed.data.data ?? []) {
+      if (row.id == null) continue;
+      shipments.push({
+        providerShipmentId: String(row.id),
+        externalReferenceId: row.external_reference_id ?? null,
+        parcelIds: (row.parcels ?? []).flatMap((p) => (p.id == null ? [] : [String(p.id)])),
+      });
+    }
+    path = nextLink(res.headers.get('link'));
+    if (!path) return { shipments, truncated: false };
+  }
+  return { shipments, truncated: path !== null };
+}
+
+/** `Link: <...?cursor=x>; rel="next"` → yol. Başlık yoksa ya da `next` yoksa `null`. */
+function nextLink(header: string | null): string | null {
+  if (!header) return null;
+  for (const part of header.split(',')) {
+    const match = /<([^>]+)>\s*;\s*rel="?next"?/i.exec(part.trim());
+    if (match?.[1]) return match[1].replace(/^https?:\/\/[^/]+/, '');
+  }
+  return null;
 }

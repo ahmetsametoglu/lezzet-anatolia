@@ -390,6 +390,19 @@ cümle karta yazılır, "yeniden bas" eli bekler.
 - **Oran sınırı:** GET 1000/dk · POST/PATCH/PUT/DELETE 100/dk (+15/sn burst). Aşımda 429.
 - **Idempotency anahtarı YOK** → **POST'ta retry YAPILMAZ** (yoksa ikinci koli açılır, gerçek para).
   GET'te retry serbest.
+- ⚠ **DÜZELTME (28.08) — TAM DURUM LİSTESİ YAYINDA.** Bu bölüm bir süre *"kamuya açık kod listesi
+  yok, eşleme sezgisel kalacak"* diyordu; **yanlıştı.** `GET /api/v3/parcels/statuses` taksonominin
+  tamamını veriyor (canlı ölçüm: HTTP 200, **35 kod**) ve `llms.txt` indeksinde *"Retrieve a list of
+  parcel statuses"* diye duruyor — ilk tarama sayfayı görmemiş. Sezgisel tablo gerçek listeye karşı
+  koşturuldu: **yedi kod yanlış, on biri tanınmıyordu.** En pahalıları `CANCELLATION_FAILED →
+  cancelled` (iptal EDİLEMEDİ demekken koliyi defterden düşürüyordu), `COLLECTED_BY_CUSTOMER →
+  handed_over` (teslim noktasından alınan sipariş sonsuza dek "yolda" kalırdı) ve
+  `SHIPMENT_ON_ROUTE`/`DRIVER_ON_ROUTE`ın hiç tanınmaması (sipariş `out_for_delivery`ye HİÇ
+  geçemezdi). Ders kayda değer: **kalıp araması bir taksonomi değildir** — `CANCELLATION_FAILED`
+  içinde "CANCEL" geçiyor ama kod iptalin OLMADIĞINI söylüyor.
+- **Gönderi listesi:** `GET /api/v3/shipments`, `announced_after` süzgeci + **`Link` başlığıyla
+  imleç sayfalaması** (gövdede `meta` YOK — ölçüldü). Öksüz mutabakatının girdisi; `external_
+  reference_id` bizim yazdığımız `shipment.id`'yi geri veriyor (canlı ölçümde doğrulandı).
 - **Webhook:** `Sendcloud-Signature` başlığı, HMAC-SHA256. Başarısız çağrı 10 kez üstel geri
   çekilmeyle yeniden denenir (5 dk → 1 saat). Webhook **entegrasyon kapsamlı**. `external_reference_id`
   alanı var → kendi `shipment.id`'mizi yazıp ikinci eşleşme bağı kurarız.
@@ -556,6 +569,19 @@ Yani durum makinesi kargoyu tanıyor. **Ama o durumu kargo için yazan hiçbir �
 snapshot'ı, `completed` kapanışı, teslim maili ve geri bildirim daveti bu yüzden kargo kulvarında
 hiç doğmuyor. Taşıyıcı webhook'u bu boşluğu doldurur: *handed over* → `out_for_delivery`,
 *delivered* → `deliver_order`. **Çok kutuluda tüm kutular teslim olmadan sipariş kapanmaz.**
+
+> ✅ **KAPANDI (28.08).** Zincir yazıldı: `application/shipping/sync-status.ts` tek kapı, webhook
+> (`apps/backend/webhooks/sendcloud.ts`) ve nöbet cron'u ikisi de oradan geçiyor. Sipariş
+> `out_for_delivery`ye taşınıyor, tüm koliler teslim olunca `deliver_order`dan teslim ediliyor;
+> `ready` iken atlanan ara adım da yazılıyor (RPC yalnız `out_for_delivery`den teslim eder).
+>
+> **İki şey bilerek DIŞARIDA kaldı:**
+> - **`returned`/`error` siparişe yazılmıyor** — iade stok ve paraya dokunur, stok etkisi de malın
+>   FİZİKSEL depoya dönüşüne çıpalıdır (`DOMAIN §4`). Taşıyıcının "gönderene dönüyor" demesi malın
+>   depoda olduğu anlamına gelmez; o an `returned` yazmak olmamış bir fiziksel olayı kaydetmek olurdu.
+> - **Kapanış (`completed`)** — ölçüldü: `closeOrder`ın bugün **hiçbir üretim çağıranı yok**, rota
+>   kulvarında da yok. Yani eksik olan kargoya özel bir halka değil, zincirin tamamı; kargoya özel
+>   bir kapanış yazmak iki kulvarı ayrı kurallara bölerdi → görev satırı `(07.16)`.
 
 ### 8.2 Bildirim + e-posta — altyapı HAZIR, kaynağı yok
 

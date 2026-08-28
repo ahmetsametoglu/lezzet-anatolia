@@ -1,4 +1,4 @@
-import { announceShipment, cancelShipment, fetchShippingQuotes, type SendcloudConfig } from '@lezzet/sendcloud';
+import { announceShipment, cancelShipment, fetchShipmentParcels, fetchShippingQuotes, listShipments, type SendcloudConfig } from '@lezzet/sendcloud';
 import type { ShippingRateProvider } from './port';
 
 /**
@@ -19,6 +19,8 @@ export function sendcloudProvider(overrides: Partial<SendcloudConfig> = {}): Shi
     quote: (args) => fetchShippingQuotes(config, args),
     announce: (args) => announceShipment(config, args),
     cancel: (providerShipmentId) => cancelShipment(config, providerShipmentId),
+    status: (providerShipmentId) => fetchShipmentParcels(config, providerShipmentId),
+    listRecent: (args) => listShipments(config, args),
   };
 }
 

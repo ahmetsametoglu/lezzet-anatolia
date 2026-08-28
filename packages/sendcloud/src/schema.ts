@@ -80,6 +80,19 @@ const ParcelSchema = z.object({
   status: z.object({ code: z.string().nullish(), message: z.string().nullish() }).nullish(),
 });
 
+/** Liste ucu — öksüz gönderi nöbetinin okuması. Tek gönderi şemasının dar hâli. */
+export const ShipmentListResponseSchema = z.object({
+  data: z
+    .array(
+      z.object({
+        id: z.union([z.string(), z.number()]).nullish(),
+        external_reference_id: z.string().nullish(),
+        parcels: z.array(z.object({ id: z.union([z.string(), z.number()]).nullish() })).nullish(),
+      }),
+    )
+    .nullish(),
+});
+
 export const ShipmentResponseSchema = z.object({
   data: z.object({
     id: z.union([z.string(), z.number()]).nullish(),

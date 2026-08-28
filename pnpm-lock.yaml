@@ -101,6 +101,9 @@ importers:
       '@lezzet/observability':
         specifier: workspace:*
         version: link:../../packages/observability
+      '@lezzet/sendcloud':
+        specifier: workspace:*
+        version: link:../../packages/sendcloud
       '@lezzet/types':
         specifier: workspace:*
         version: link:../../packages/types

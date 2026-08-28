@@ -1,4 +1,4 @@
-import type { AnnouncedShipment, ParcelSpec, ShippingQuote } from '@lezzet/sendcloud';
+import type { AnnouncedShipment, ParcelSpec, ParcelStatus, RemoteShipment, ShippingQuote } from '@lezzet/sendcloud';
 
 /**
  * **KARGO TARİFESİ PORTU** — sağlayıcı bir UYGULAMADIR, sözleşme değil (`packages/ai` deseni).
@@ -34,6 +34,18 @@ export interface ShippingRateProvider {
   }): Promise<AnnouncedShipment>;
   /** Gönderiyi iptal et — 404 başarı sayılır, yolda olan koli reddedilir. */
   cancel(providerShipmentId: string): Promise<void>;
+  /**
+   * **Gönderinin gerçek durumu, KOLİ KOLİ.** Webhook yalnız "değişti" tetikleyicisidir; durumu
+   * bu çağrı söyler ("Option B"). Dizi dönüyor çünkü gönderi, en gerideki kolisi kadar
+   * ilerlemiştir — tek koliye bakan bir okuma çok kolili siparişi erken teslim sayardı.
+   */
+  status(providerShipmentId: string): Promise<ParcelStatus[]>;
+  /**
+   * **Sağlayıcıdaki gönderiler** — öksüz nöbetinin girdisi ve portun tek "bizden bağımsız"
+   * okuması. `truncated` sessiz kesme olmasın diye var: taranamayan kuyruk, "öksüz yok" diye
+   * okunmamalı.
+   */
+  listRecent(args: { announcedAfter?: Date; pageSize?: number; maxPages?: number }): Promise<{ shipments: RemoteShipment[]; truncated: boolean }>;
 }
 
 export interface SenderAddress {

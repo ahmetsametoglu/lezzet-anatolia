@@ -46,6 +46,17 @@ export class OrderBoxService extends BaseDbService<OrderBox, OrderBoxInsert, Ord
   }
 
   /**
+   * **Taşıyıcı webhook'unun eşleşme kapısı** (07.12) — sağlayıcının KOLİ kimliği.
+   *
+   * `getByCode` ile karıştırılmaz: o BİZİM bastığımız QR, bu SAĞLAYICININ kimliği; iki ayrı
+   * kimlik uzayı. Takip numarasına bağlanan bir eşleşme erken olayları kaçırır — numara bazı
+   * taşıyıcılarda geç atanıyor (tasarım kaydı §6.2).
+   */
+  async getByParcelRef(providerParcelRef: string): Promise<OrderBox | null> {
+    return this.getOneBy({ providerParcelRef });
+  }
+
+  /**
    * **Kutu kapanışı** (`seal_order_box`, 0048): kutu kalemleri + hazırlık kaydı + mühür TEK
    * transaction. `picks` ABSOLÜT birleşimdir — kurma sorumluluğu çağıran kapıda (`sealBox`);
    * RPC eşitliği denetler (Σ kutu = karşılanan) ve bozuksa TÜMÜNÜ geri alır.

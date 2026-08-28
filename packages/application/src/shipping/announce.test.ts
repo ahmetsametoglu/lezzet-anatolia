@@ -15,6 +15,7 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { AnnouncedShipment } from '@lezzet/sendcloud';
 import { announceOrderShipment } from './announce';
 import type { ShippingRateProvider } from './port';
+import { providerStub } from './provider.testkit';
 
 /**
  * GÖNDERİ DUYURUSU (07.12) — gerçek para harcayan tek kapı.
@@ -72,11 +73,10 @@ let sahteGonderiSayaci = 0;
 function fakeProvider(opts: { throws?: boolean; parcels?: number } = {}): ShippingRateProvider & { calls: number } {
   const state = { calls: 0 };
   return {
+    ...providerStub({ cancel: () => Promise.resolve() }),
     get calls() {
       return state.calls;
     },
-    quote: () => Promise.reject(new Error('bu testte teklif çağrılmamalı')),
-    cancel: () => Promise.resolve(),
     announce: async (args): Promise<AnnouncedShipment> => {
       state.calls += 1;
       if (opts.throws) throw Object.assign(new Error('sağlayıcı reddetti'), { code: 'validation' });
@@ -247,9 +247,7 @@ describe('announceOrderShipment — duyuru', () => {
     await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
 
     let gonderilen: number | null = null;
-    const p: ShippingRateProvider = {
-      quote: () => Promise.reject(new Error('çağrılmamalı')),
-      cancel: () => Promise.resolve(),
+    const p: ShippingRateProvider = providerStub({
       announce: async (args) => {
         gonderilen = args.parcels[0]!.weightG;
         const tur = (sahteGonderiSayaci += 1);
@@ -261,7 +259,7 @@ describe('announceOrderShipment — duyuru', () => {
           warnings: [],
         };
       },
-    };
+    });
     await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload);
     // 2 × 600 g içerik + 130 g dara
     expect(gonderilen).toBe(1330);

@@ -4,6 +4,7 @@ import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { ShippingQuote } from '@lezzet/sendcloud';
 import { quoteShipping } from './quote';
 import type { ShippingRateProvider } from './port';
+import { providerStub } from './provider.testkit';
 
 /**
  * KARGO TEKLİFİ — TEK KAPI (07.12).
@@ -30,16 +31,16 @@ let olcusuzId: string;
 /** Sahte sağlayıcı — test AĞA ÇIKMAZ; dönen liste testin kendi kurgusudur. */
 function fakeProvider(options: ShippingQuote[], opts: { throws?: boolean } = {}): ShippingRateProvider & { parcels: number[] } {
   const parcels: number[] = [];
+  // Bu dosyanın konusu TEKLİF — portun ötekileri çağrılırsa test yanlış yazılmış demektir.
   return {
+    ...providerStub({
+      quote: async (args) => {
+        parcels.push(args.parcels.length);
+        if (opts.throws) throw new Error('sağlayıcı düştü');
+        return options;
+      },
+    }),
     parcels,
-    quote: async (args) => {
-      parcels.push(args.parcels.length);
-      if (opts.throws) throw new Error('sağlayıcı düştü');
-      return options;
-    },
-    // Bu dosyanın konusu TEKLİF — duyuru ve iptal çağrılırsa test yanlış yazılmış demektir.
-    announce: () => Promise.reject(new Error('bu testte duyuru çağrılmamalı')),
-    cancel: () => Promise.reject(new Error('bu testte iptal çağrılmamalı')),
   };
 }
 

@@ -40,7 +40,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 12/13 (+1 kısmi) |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 37/38 |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | tamam | 14/14 |
-| 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/15 (+2 kısmi) |
+| 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/16 (+2 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 53/57 (+4 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 14/28 (+14 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | tamam | 9/9 |

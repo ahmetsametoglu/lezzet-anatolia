@@ -16,7 +16,7 @@ Top bırakıldı. Hedef: özelliği uçtan uca entegre etmek ve test etmek.
 | C | Koli planı (saf karar) | ✅ |
 | D | Sağlayıcı paketi + canlı doğrulama | ✅ |
 | E | Canlı teklif — sunucu + checkout ekranı | ✅ |
-| F | Gönderi kaydı + duyuru ✅ · webhook/etiket ⏳ | 🔶 |
+| F | Gönderi kaydı ✅ · duyuru ✅ · webhook + nöbet ✅ · etiket basımı ⏳ | 🔶 |
 
 ---
 
@@ -274,3 +274,87 @@ Kırmızı da ürünü değil "sepete ekle" düğmesini gösteriyordu. Düzeltil
 **Testler:** 5 birim (motor) + tam paket 3764/3764 + müşteri e2e 13/15. Düşen 2 senaryo bildirim
 şeridinin alanı (girişsiz ziyaretçi hesap sayfasından yönlendirilmiyor) — not bırakıldı.
 
+
+
+---
+
+## F (kalan) — webhook + durum zinciri + nöbet ✅
+
+**Ne yaptım:** kargo siparişinin `ready`de takılı kalma sorununu bitirdim. Artık taşıyıcı koliyi
+alınca sipariş yola çıkıyor, **tüm kutular** teslim olunca teslim ediliyor.
+
+Uzlaştırma tek kapıda: webhook da saatlik nöbet turu da aynı fonksiyondan geçiyor. Gelen olay
+yalnız *"bir şey değişti"* demek; durumun kendisi taşıyıcıya sorulup okunuyor. Sebep basit — gelen
+gövdenin şeması belgeli değil, biçim oynadığı gün siparişi sessizce yanlış yere taşırdı.
+
+### Yol boyunca bulduğum en önemli şey: durum tablosu yanlıştı
+
+Kendi yazdığım eşleme tablosunu *"taşıyıcının tam kod listesi yayında yok"* varsayımıyla kurmuştum
+ve metin araması yapıyordu. **Varsayım yanlıştı** — liste yayında ve tek çağrıyla alınıyor. Aldım
+(35 kod), eski tabloyu ona karşı koşturdum:
+
+| kod | benim tablom ne diyordu | gerçek | ne olurdu |
+| --- | --- | --- | --- |
+| `CANCELLATION_FAILED` | iptal edildi | **hata** | iptal EDİLEMEDİ demekken koliyi defterden düşürüp izlemeyi bırakırdık |
+| `COLLECTED_BY_CUSTOMER` | taşıyıcı topladı | **teslim edildi** | teslim noktasından alınan sipariş sonsuza dek "yolda" kalırdı |
+| `SHIPMENT_ON_ROUTE` · `DRIVER_ON_ROUTE` | tanımıyordu | **dağıtımda** | **sipariş "yola çıktı"ya hiç geçemezdi** |
+| `ANNOUNCED_UNCOLLECTED` | taşıyıcıda | **hâlâ bizde** | taşıyıcı hiç almamışken "aldı" derdik |
+| `REFUSED_BY_RECIPIENT` · `UNDELIVERABLE` · `ADDRESS_INVALID` | tanımıyordu | ret / müdahale | müşteri reddettiğinde hiçbir şey görünmezdi |
+
+Toplam **yedi kod yanlış, on biri tanınmıyordu.** Hepsi sessiz arızaydı — her biri makul görünen
+bir cevap üretiyordu. Tabloyu ölçülen listeden baştan yazdım; harf benzerliğine bakan kod kalmadı.
+
+### Ekleyeceğim bir ayrım
+
+Eskiden "cevap veremedim" tek bir şeydi. Artık üç: **tanıdım ve yerini biliyorum** ·
+**tanıdım ama yerini söylemiyor** ("teslim adresi değişti", "iptal sürüyor") · **hiç tanımadım**.
+Üçüncüsü operasyonda sayılıyor — tablonun büyümesi gerektiğinin işareti. Ayrım olmasaydı her adres
+değişikliği o sayacı şişirirdi, hep yanan bir uyarı da uyarı olmaktan çıkardı.
+
+### Bilerek yapmadıklarım
+
+- **İade siparişe yazılmıyor.** Taşıyıcı "gönderene dönüyor" dediğinde mal daha kamyonda. İade
+  stoğa ve paraya dokunuyor ve stok etkisi malın fiilen depoya girmesine bağlı — o an "iade edildi"
+  yazmak olmamış bir olayı kaydetmek olurdu. Gönderi durumu ve ham kod deftere yazılıyor, kararı
+  operatör veriyor.
+- **Sipariş kapanışı (`completed`) yazılmadı.** Ölçtüm: kapanışı çağıran hiçbir üretim kodu yok —
+  kargoda da rotada da. Yani eksik olan kargoya özel bir halka değil, zincirin tamamı. Kargoya özel
+  bir kapanış yazmak iki kulvarı ayrı kurallara bölerdi. Görev satırı açtım (07.16), kararı sana
+  soruyor: kapanış otomatik mi (teslimden N gün sonra) yoksa operatörün eylemi mi?
+
+### Nöbet — webhook'un kaçırdığını yakalayan iki tur
+
+Taşıyıcı başarısız çağrıyı 10 kez deniyor, sonra pes ediyor. Yarım günlük bir kesinti olayları
+kalıcı yutabilir, o yüzden iki tarama var:
+
+- **Takılı gönderi** (saat başı): ilerlemeyen gönderileri taşıyıcıya yeniden soruyor. Sorduktan
+  sonra da ilerlememişse operasyon ekranına uyarı düşüyor — **kaç tane değil, hangileri**.
+- **Öksüz/hayalet mutabakatı** (haftada bir): taşıyıcıda olup bizde olmayan koli (para ödendi,
+  kayıt yok) ya da tersi. **Yalnız buluyor, hiçbir şey düzeltmiyor** — yolda olan bir koliyi
+  otomatik iptal etmek, teslim edilecek malı yolundan çevirmek olurdu. El kitabı yazıldı:
+  `docs/runbook/kargo-oksuz-gonderi.md`.
+
+Tarama sonuna kadar gidemezse bunu **söylüyor**. Yarım tarama "öksüz yok" diye okunmamalı.
+
+### Ölçerek bulduğum bir hâl
+
+Kutusu olmayan bir gönderi ilerlemiyor — ve doğrusu bu. Uzlaştırma bizim kutularımız üzerinden
+yürüyor; kutusu yoksa "en gerideki koli" diye bir şey yok, cevap "bilmiyorum". Taşıyıcının
+listesine düşseydik kutuları kaybolmuş bir gönderi sessizce teslim sayılabilirdi. Nöbet onu takılı
+diye raporluyor — susturmak değil, seni masaya çağırmak doğru davranış.
+
+**Testler:** 50 birim (durum tablosu, 35 kodun hepsi) + 11 birim (imza + kimlik) + 15 entegrasyon
+(durum zinciri) + 9 entegrasyon (nöbet) + 7 entegrasyon (webhook ucu). İmzayı taşıyıcının kendi
+yayımladığı örnek değerle sınadım — kendi hesabımla değil.
+
+**Testlerin gerçekten yakaladığını doğruladım:** iki korumayı geçici olarak kaldırdım, biri 1 test
+diğeri 4 test düşürdü; geri koyunca yeşile döndü.
+
+Tam paket **3850/3850**.
+
+### Kalan
+
+- **Etiket basımı** — `printPDF` telefonda var (ölçüldü), kalan iş çağıranı ve fiziksel prova.
+  Senin kararınla gerçek bir akışta denenecek.
+- **Native ekranlar** — mobil şeride talep açılacak.
+- **Sipariş kapanışı** — yukarıdaki soru.

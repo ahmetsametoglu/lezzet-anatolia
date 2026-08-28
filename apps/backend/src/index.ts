@@ -21,6 +21,7 @@ import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { requestLog, type AppEnv } from './http/request-log';
 import { mcpHandler } from './mcp/route';
+import { sendcloudWebhook } from './webhooks/sendcloud';
 import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
 import { EXPIRE_PROPOSALS, expireProposalsJob } from './jobs/expire-proposals';
 import { CREATE_FEEDBACK_REQUESTS, createFeedbackRequestsJob } from './jobs/feedback-requests';
@@ -35,6 +36,8 @@ import { SEND_FEEDBACK_INVITES, sendFeedbackInvitesJob } from './jobs/send-feedb
 import { SUPPORT_AI, supportAiJob } from './jobs/support-ai';
 import { TICKET_REPLY_MAIL, ticketReplyMailJob } from './jobs/ticket-reply-mail';
 import { SWEEP_RESERVATIONS, sweepReservations } from './jobs/sweep-reservations';
+import { SHIPMENT_WATCH, shipmentWatchJob } from './jobs/shipment-watch';
+import { SHIPMENT_ORPHAN, shipmentOrphanJob } from './jobs/shipment-orphan';
 import { TRANSLATE_USER_TEXT, translateUserTextJob } from './jobs/translate-user-text';
 
 /**
@@ -101,6 +104,18 @@ app.notFound((c) => c.json({ error: 'not_found', path: c.req.path }, 404));
 // (AI_ADMIN_ASSISTANT §11). Tüm metodlar tek handler'da: streamable HTTP, POST/GET/DELETE ayrımını
 // SDK transport'u yapar.
 app.all('/mcp', mcpHandler);
+
+/*
+  TAŞIYICI WEBHOOK'U (07.12) — kargo siparişinin durum zincirini kapatan uç.
+
+  **Neden burada, Stripe web'deyken:** `STACK §7` webhook'ları zaten backend'e koyuyor ve
+  Stripe'ınki künyesinde gerekçesi yazılı bir sapma. Burada sapmaya gerek yok, üstelik ters yönde
+  bir bağ var — aynı uzlaştırmayı (`syncShipmentStatus`) altta iki cron da çağırıyor ve onlar
+  zaten bu süreçte. Webhook'u web'e koymak tek bir işi iki sürece bölmek olurdu.
+
+  Gövde imza doğrulanmadan İŞLENMEZ; doğrulama ham gövde ister ve handler `c.req.text()` okur.
+*/
+app.post('/webhooks/sendcloud', sendcloudWebhook);
 
 // Zamanlı işler buraya takılır. Kural (STACK §13): her iş taramalı + idempotent; backend tek
 // instance (fork mode). Kabuk (`runJob`) üst üste binmeyi engeller, hatayı yutmaz, `last_run` bırakır.
@@ -235,6 +250,35 @@ cron.schedule('*/5 * * * *', () => {
 cron.schedule('* * * * *', () => {
   void runJob(TICKET_REPLY_MAIL, ticketReplyMailJob);
 });
+
+/*
+  TAKILI GÖNDERİ NÖBETİ (07.12) — saatte bir, 25. dakikada.
+
+  Webhook anlık yoldur ama GARANTİLİ değildir: Sendcloud 10 denemeden sonra pes eder ve yalnız
+  kendi kaydına yazar. Yarım günlük bir kesinti webhook'ları kalıcı yutar; o gönderiler bizde
+  `created`ta, siparişleri `ready`de donar. Bu tur o hâli kapatıyor.
+
+  **Saat başında DEĞİL 25'inde:** gece 3 ve 4'te sıkışan bakım işlerinden ve saat başı koşan
+  bölge turundan uzak tutuluyor — hepsi aynı dakikada koşarsa yerel Supabase'de birbirlerini
+  bekletirler.
+*/
+cron.schedule('25 * * * *', () => {
+  void runJob(SHIPMENT_WATCH, shipmentWatchJob);
+});
+
+/*
+  ÖKSÜZ / HAYALET GÖNDERİ MUTABAKATI (07.12) — haftada bir, pazartesi sabahı erken.
+
+  Aranan şey nadir ve pahalı: sağlayıcıda açılmış ama bizde satırı olmayan koli (para ödendi,
+  kayıt yok) ya da tersi. Günlük tarama aynı listeyi yedi kez okur, hiçbir şey bulmaz ve oran
+  sınırını yerdi.
+
+  **Yalnız TESPİT eder** — düzeltme elle (`docs/runbook/kargo-oksuz-gonderi.md`): yolda olan bir
+  koliyi otomatik iptal etmek, teslim edilecek malı yolundan çevirmek demektir.
+*/
+cron.schedule('50 5 * * 1', () => {
+  void runJob(SHIPMENT_ORPHAN, shipmentOrphanJob);
+}, { timezone: 'Europe/Paris' });
 
 // `??` DEĞİL `||` — ve bu bir arıza düzeltmesidir (ölçüldü 09.08): `.env.local`'da değişken
 // TANIMLI ama BOŞ bırakılmıştı (`BACKEND_PORT=`). Boş dizgi nullish değildir, yani `??` onu

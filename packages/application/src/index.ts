@@ -644,4 +644,6 @@ export { quoteShipping, type ShippingQuoteInput, type ShippingQuoteOutcome } fro
 export { announceOrderShipment, type AnnounceInput, type AnnounceOutcome } from './shipping/announce';
 export { sendcloudProvider, shippingProviderConfigured } from './shipping/provider';
 export type { RecipientAddress, SenderAddress, ShippingRateProvider } from './shipping/port';
+export { syncShipmentStatus, type SyncInput, type SyncOutcome } from './shipping/sync-status';
+export { scanOrphanShipments, sweepStuckShipments, type OrphanScanResult, type StuckSweepResult } from './shipping/watch';
 
