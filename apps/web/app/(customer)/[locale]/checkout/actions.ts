@@ -2,7 +2,7 @@
 
 import { AddressService, serviceDb } from '@lezzet/database';
 import { hasLocale } from 'next-intl';
-import { placeOrder, readCheckoutSnapshot, type CheckoutSnapshot, type PlaceOrderRejection } from '@lezzet/application';
+import { checkoutBlockedAnalyticsReason, placeOrder, readCheckoutSnapshot, type CheckoutSnapshot, type PlaceOrderRejection } from '@lezzet/application';
 import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
@@ -364,19 +364,8 @@ async function raceDetail(outcome: { variantId: string; available: number }, loc
  * ayrıntısı — mobil bu kapıyı hiç geçmeyecek.
  */
 function measureRejection(reason: string): void {
-  // `price_changed` BİLEREK ölçülmüyor (07.13): `checkout_blocked` sebep kümesi tiplidir
-  // (`AnalyticsBlockedReason` — `not_shippable · out_of_stock · min_basket`) ve zam o sözlüğün
-  // konusu değil; müşteri engellenmiyor, onayı yenileniyor. Kümeye yeni bir değer eklemek
-  // analitiğin şemasını (13.x) ilgilendirir — unutulduğu için değil, ait olmadığı için yok.
-  const mapped =
-    reason === 'blocked_lines'
-      ? 'not_shippable'
-      : reason === 'insufficient_here' || reason === 'insufficient_stock'
-        ? 'out_of_stock'
-        : // Ödeme oturumu açılamadı — enum'da KENDİ karşılığı var ve kapı onu adıyla veriyor.
-          // (Eskiden bu olay zincirin içinden doğrudan atılıyordu; terfide tek kapıya toplandı.)
-          reason === 'payment_failed'
-          ? 'payment_failed'
-          : null;
+  // Eşleme ORTAK PAKETTE (24.08 · MB-63): native de aynı retleri sayıyor ve iki kopya bir gün
+  // ayrışırdı. Neyin ölçülmediği ve NEDEN ölçülmediği künyesiyle birlikte oraya taşındı.
+  const mapped = checkoutBlockedAnalyticsReason(reason);
   if (mapped) void recordEvent({ type: 'checkout_blocked', reason: mapped });
 }
