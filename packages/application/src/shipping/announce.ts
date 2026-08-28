@@ -1,19 +1,8 @@
-import {
-  OrderBoxItemService,
-  OrderBoxService,
-  OrderItemService,
-  OrderService,
-  ProductVariantService,
-  ShipmentEventService,
-  ShipmentService,
-  ShippingBoxService,
-  WarehouseService,
-} from '@lezzet/database';
-import type { OrderBox, ShippingBox } from '@lezzet/types';
-import type { ParcelSpec } from '@lezzet/sendcloud';
+import { OrderBoxService, ShipmentEventService, ShipmentService } from '@lezzet/database';
 import { getR2Private, r2Keys } from '@lezzet/storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { RecipientAddress, SenderAddress, ShippingRateProvider } from './port';
+import { resolveDispatch, type DispatchBlock } from './dispatch';
+import type { ShippingRateProvider } from './port';
 
 /**
  * **GÖNDERİYİ DUYUR + ETİKETLERİ AL** (07.12) — gerçek para harcayan tek kapı.
@@ -44,19 +33,19 @@ export type AnnounceOutcome =
   | {
       status: 'ok';
       shipmentId: string;
-      parcels: ReadonlyArray<{ boxId: string; trackingNumber: string; labelKey: string | null }>;
+      parcels: Array<{ boxId: string; trackingNumber: string; labelKey: string | null }>;
       /** Etiketi saklanamayan kutuların numarası — gönderi ALINDI, dosya kaydedilemedi. */
-      labelFailures: readonly number[];
+      labelFailures: number[];
     }
-  | { status: 'not_found' }
-  | { status: 'not_shipping' }
-  | { status: 'no_sealed_box' }
-  | { status: 'box_type_missing'; boxNos: readonly number[] }
-  | { status: 'unmeasured'; variantIds: readonly string[] }
-  | { status: 'no_sender' }
-  | { status: 'too_many_parcels'; count: number; max: number }
+  /** Zaten duyurulmuş: ikinci duyuru ikinci koli ve GERÇEK PARA demek — kapı onu açmaz. */
   | { status: 'already_announced'; shipmentId: string }
-  | { status: 'provider_error'; code: string; message: string };
+  | { status: 'provider_error'; code: string; message: string }
+  /**
+   * Ön koşul dalları teklifle ORTAK (`dispatch.ts`) ve burada YENİDEN YAZILMIYOR: ikinci bir
+   * kopya, bir gün yalnız birinde büyüyen iki liste olurdu ve ekran hangisinde olduğunu
+   * bilemezdi.
+   */
+  | DispatchBlock;
 
 /**
  * Etiket yükleyicisi — **enjekte edilebilir, ve bunun tek sebebi TESTİN DIŞ DEPOYA YAZMAMASI.**
@@ -73,7 +62,6 @@ export interface AnnounceInput {
   /** Depocunun çalıştığı depo — siparişinki değilse yazım HİÇ yapılmaz (CLAUDE §1). */
   warehouseId: string;
   shippingOptionCode: string;
-  to: RecipientAddress & { name?: string; addressLine1?: string; email?: string; phone?: string };
   servicePointId?: string;
   /** Müşteriye gösterilen teklif (cent) — maliyetin ilk kaydı; fatura sonradan düzeltebilir. */
   quotedCents?: number;
@@ -85,90 +73,28 @@ function defaultLabelUploader(): LabelUploader | null {
   return r2 ? (key, pdf) => r2.uploadFile(key, pdf, 'application/pdf') : null;
 }
 
-/** Sağlayıcının senkron duyuru tavanı — çağrıdan ÖNCE denetlenir. */
-const MAX_PARCELS = 15;
-
-function senderOf(w: { countryCode: string; address: Record<string, unknown> | null; name: string }): SenderAddress | null {
-  const a = w.address ?? {};
-  const postalCode = typeof a.postalCode === 'string' ? a.postalCode : null;
-  if (!postalCode) return null;
-  return {
-    countryCode: w.countryCode,
-    postalCode,
-    city: typeof a.city === 'string' ? a.city : undefined,
-    name: w.name,
-    addressLine1: typeof a.line1 === 'string' ? a.line1 : undefined,
-  };
-}
-
 export async function announceOrderShipment(
   db: SupabaseClient,
   provider: ShippingRateProvider,
   input: AnnounceInput,
   uploadLabel: LabelUploader | null = defaultLabelUploader(),
 ): Promise<AnnounceOutcome> {
-  const orders = new OrderService(db);
-  const order = await orders.getById(input.orderId);
-  if (!order) return { status: 'not_found' };
-  if (order.warehouseId !== input.warehouseId) return { status: 'not_found' };
-  // (1) Kural burada, veride değil — `check` başka tabloya bakamaz (0053 künyesi).
-  if (order.deliveryType !== 'shipping') return { status: 'not_shipping' };
+  /*
+    ÖN KOŞULLAR + KOLİ KURULUMU ARTIK ORTAK (`resolveDispatch`, 29.08).
+
+    Aynı hesap iki kapıya lazım oldu: duyuru ve depocunun servis seçtiği teklif. İkisi ayrı
+    yazılsaydı listede görünen seçenek satın alma anında reddedilebilirdi — koli sayısı iki
+    hesapta ayrışırdı. Adres de artık siparişin kendi anlık görüntüsünden okunuyor; çağıran
+    yalnız "hangi sipariş" diyor (künyesi `dispatch.ts`te).
+  */
+  const resolved = await resolveDispatch(db, { orderId: input.orderId, warehouseId: input.warehouseId });
+  if (!resolved.ok) return resolved.block;
+  const { order, boxes: ordered, from, to, parcels } = resolved.plan;
 
   const shipments = new ShipmentService(db);
   const mevcut = (await shipments.listByOrder(input.orderId)).find((s) => s.cancelledAt === null && s.status !== 'cancelled');
   // Aynı siparişe ikinci kez duyuru = ikinci koli = gerçek para. Operatöre "zaten var" denir.
   if (mevcut) return { status: 'already_announced', shipmentId: mevcut.id };
-
-  // (2) Mühürlenmiş kutular — açık kutunun içeriği kesinleşmemiştir, ağırlığı da öyle.
-  const boxes = (await new OrderBoxService(db).listByOrder(input.orderId)).filter((b) => b.sealedAt !== null);
-  if (boxes.length === 0) return { status: 'no_sealed_box' };
-  if (boxes.length > MAX_PARCELS) return { status: 'too_many_parcels', count: boxes.length, max: MAX_PARCELS };
-
-  // (3) Her kutunun TİPİ seçilmiş olmalı — ölçü oradan geliyor.
-  const tipsiz = boxes.filter((b) => b.shippingBoxId === null).map((b) => b.boxNo);
-  if (tipsiz.length > 0) return { status: 'box_type_missing', boxNos: tipsiz };
-
-  const [boxTypes, contents, warehouse] = await Promise.all([
-    new ShippingBoxService(db).listForWarehouse(input.warehouseId),
-    new OrderBoxItemService(db).listByBoxes(boxes.map((b) => b.id)),
-    new WarehouseService(db).getById(input.warehouseId),
-  ]);
-
-  // (5) Gönderici adresi.
-  const from = warehouse ? senderOf(warehouse) : null;
-  if (!from) return { status: 'no_sender' };
-
-  // Kalem → varyant → ambalaj ağırlığı.
-  const items = await new OrderItemService(db).listByOrder(input.orderId);
-  const itemVariant = new Map<string, string | null>(items.map((i) => [i.id, i.variantId]));
-  const variantIds = [...new Set([...itemVariant.values()].filter((v): v is string => v !== null))];
-  const variants = await new ProductVariantService(db).listByIds(variantIds);
-  const weightOf = new Map(variants.map((v) => [v.id, v.packedWeightG]));
-
-  // (4) Tartılmamış mal tarifeye giremez — hangi varyant olduğunu söyler.
-  const unmeasured = [...new Set(variantIds.filter((id) => (weightOf.get(id) ?? null) === null))];
-  if (unmeasured.length > 0) return { status: 'unmeasured', variantIds: unmeasured };
-
-  const typeById = new Map<string, ShippingBox>(boxTypes.map((t) => [t.id, t]));
-  const parcels: ParcelSpec[] = [];
-  const ordered: OrderBox[] = [...boxes].sort((a, b) => a.boxNo - b.boxNo);
-
-  for (const box of ordered) {
-    const type = typeById.get(box.shippingBoxId!);
-    // Tip başka depoya ait olamaz (bileşik FK) — buraya düşmesi tipin silinmiş olması demektir.
-    if (!type) return { status: 'box_type_missing', boxNos: [box.boxNo] };
-    const icerik = contents
-      .filter((c) => c.boxId === box.id)
-      .reduce((sum, c) => sum + (weightOf.get(itemVariant.get(c.orderItemId) ?? '') ?? 0) * c.qty, 0);
-    parcels.push({
-      // Taşıyıcıya bildirilen ağırlık İÇERİK + DARA. Tavan denetimi içeriğe bakar, bu sayı ise
-      // kutuyla birlikte olandır (`planParcels` ile aynı ayrım).
-      weightG: icerik + type.tareG,
-      lengthMm: type.lengthMm,
-      widthMm: type.widthMm,
-      heightMm: type.heightMm,
-    });
-  }
 
   // ── SAĞLAYICI ÇAĞRISI — buradan sonrası gerçek para ────────────────────────
   const shipmentId = crypto.randomUUID();
@@ -180,7 +106,7 @@ export async function announceOrderShipment(
       orderNumber: order.referenceNo ?? undefined,
       reference: ordered[0]?.code,
       from,
-      to: input.to,
+      to,
       parcels,
       shippingOptionCode: input.shippingOptionCode,
       servicePointId: input.servicePointId,

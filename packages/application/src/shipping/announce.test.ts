@@ -12,7 +12,8 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import type { AnnouncedShipment } from '@lezzet/sendcloud';
+import type { AnnouncedShipment, ShippingQuote } from '@lezzet/sendcloud';
+import { quoteOrderShipment } from './dispatch';
 import { announceOrderShipment } from './announce';
 import type { ShippingRateProvider } from './port';
 import { providerStub } from './provider.testkit';
@@ -43,7 +44,6 @@ let variantId: string;
 let olcusuzVariantId: string;
 let boxTypeId: string;
 
-const paris = { countryCode: 'FR', postalCode: '75001', city: 'Paris', name: 'Test Alıcı' };
 
 /**
  * Sahte etiket yükleyicisi — **test GERÇEK ÖZEL KOVAYA YAZMAZ.**
@@ -118,9 +118,15 @@ async function kutuKur(orderId: string, opts: { boxNo: number; tipli?: boolean; 
   return box.id;
 }
 
-async function siparisKur(deliveryType: 'shipping' | 'route', useVariant = variantId): Promise<{ orderId: string; itemId: string }> {
+async function siparisKur(
+  deliveryType: 'shipping' | 'route',
+  useVariant = variantId,
+  /* Adres kopyası siparişin kendisinde durur ve gönderi ORAYA gider — kapı onu buradan okuyor.
+     `null` geçmek "adres kopyası hiç yazılmamış" hâlini kurar (`no_recipient` testi). */
+  addressSnapshot: Record<string, unknown> | null = { country: 'FR', postalCode: '75001', city: 'Paris', recipient: 'Alıcı', line1: '1 rue de Rivoli', phone: '+33100000000' },
+): Promise<{ orderId: string; itemId: string }> {
   const { order, items } = await new OrderService(db).create(
-    { customerId, warehouseId, channel: 'b2c', deliveryType, status: 'confirmed' },
+    { customerId, warehouseId, channel: 'b2c', deliveryType, status: 'confirmed', addressSnapshot },
     [{ variantId: useVariant, qty: 2, unitPriceCents: 1500, vatRate: 5.5 }],
   );
   return { orderId: order.id, itemId: items[0]!.id };
@@ -167,11 +173,12 @@ afterAll(async () => {
   await purgeTestData(db, { productIds, categoryIds, profileIds, warehouseIds });
 });
 
+/* Alıcı adresi artık GİRDİDE DEĞİL: kapı onu siparişin kendi kopyasından okuyor (29.08 —
+   `dispatch.ts` künyesi). Çağıran yalnız "hangi sipariş, hangi servis" diyor. */
 const girdi = (orderId: string) => ({
   orderId,
   warehouseId,
   shippingOptionCode: 'sendcloud:letter',
-  to: paris,
 });
 
 describe('announceOrderShipment — ön koşullar (sağlayıcıya eksik girdiyle gidilmez)', () => {
@@ -320,5 +327,105 @@ describe('announceOrderShipment — duyuru', () => {
     const [box] = (await new OrderBoxService(db).listByOrder(orderId)).filter((b) => b.id === boxId);
     expect(box?.trackingNumber).toBeNull();
     expect(box?.shipmentId).toBeNull();
+  });
+});
+
+/*
+  ALICI ADRESİ SİPARİŞTEN OKUNUYOR (29.08) — çağıran adres göndermiyor.
+
+  Ölçülen iddia: adres kopyası olmayan bir sipariş sağlayıcıya HİÇ gitmiyor. Eskiden adres girdide
+  geliyordu; o hâlde depocunun telefonu müşteri adresini kuran taraf olurdu ve yanlış yazılmış bir
+  posta kodu hem yanlış tarife hem yanlış teslimat demekti.
+*/
+describe('alıcı adresi (29.08)', () => {
+  it('adres kopyası YOKSA duyurulmaz ve sağlayıcıya çıkılmaz', async () => {
+    const { orderId, itemId } = await siparisKur('shipping', variantId, null);
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const p = fakeProvider();
+
+    expect(await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload)).toEqual({ status: 'no_recipient' });
+    expect(p.calls).toBe(0);
+  });
+
+  it('POSTA KODU boşsa da duyurulmaz — ülke tek başına tarife hesaplatmaz', async () => {
+    const { orderId, itemId } = await siparisKur('shipping', variantId, { country: 'FR', city: 'Paris' });
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const p = fakeProvider();
+
+    expect(await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload)).toEqual({ status: 'no_recipient' });
+    expect(p.calls).toBe(0);
+  });
+});
+
+/*
+  DEPOCUNUN SERVİS LİSTESİ (`quoteOrderShipment`, 29.08) — üç iddia.
+
+  Liste GERÇEK kolilere göre soruluyor: sağlayıcıya giden koli sayısı, duyuruda gidecek olanla aynı
+  olmak zorunda. Ayrı hesaplansaydı "listede gördüğüm seçenek satın alırken reddedildi" hâli doğardı
+  ve o hâl PARA harcandıktan sonra görünürdü.
+*/
+describe('sevk seçenekleri (quoteOrderShipment · 29.08)', () => {
+  function teklifVeren(options: Array<Partial<ShippingQuote> & { code: string }>): ShippingRateProvider & { parcels: number } {
+    const state = { parcels: 0 };
+    return {
+      ...providerStub({ cancel: () => Promise.resolve() }),
+      get parcels() {
+        return state.parcels;
+      },
+      quote: async (args) => {
+        state.parcels = args.parcels.length;
+        return options.map((o) => ({
+          carrierCode: 'x', carrierName: 'X', name: o.code, currency: 'EUR', priceCents: 1000,
+          leadTimeHours: null, lastMile: 'home_delivery', signature: false, tracked: true,
+          ecoDelivery: false, multicollo: true, ...o,
+        })) as ShippingQuote[];
+      },
+    };
+  }
+
+  it('ön koşullar duyuruyla AYNI kapıdan geçiyor — tipsiz kutuda sağlayıcıya çıkılmaz', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2, tipli: false });
+    const p = teklifVeren([{ code: 'a' }]);
+
+    expect(await quoteOrderShipment(db, p, { orderId, warehouseId })).toMatchObject({ status: 'box_type_missing', boxNos: [1] });
+    expect(p.parcels).toBe(0);
+  });
+
+  it('koliler MÜHÜRLÜ KUTULARDAN kuruluyor ve fiyatsız/sıfır seçenekler eleniyor', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 1 });
+    await kutuKur(orderId, { boxNo: 2, itemId, qty: 1 });
+    const p = teklifVeren([
+      // Sağlayıcının her sorguya döndürdüğü ücretsiz "mektup" kanalı — GERÇEK bir kargo hizmeti
+      // değil ve ucuzdan sıralı listede daima başa geçer. Elenmezse depocuya 15 kg'lık koliyi
+      // mektupla göndermeyi önerirdik (müşteri yüzeyinde ölçülen arızanın aynısı).
+      { code: 'sendcloud:letter', priceCents: 0 },
+      { code: 'pahali', priceCents: 2500 },
+      { code: 'ucuz', priceCents: 900 },
+      { code: 'fiyatsiz', priceCents: null },
+    ]);
+
+    const sonuc = await quoteOrderShipment(db, p, { orderId, warehouseId });
+    expect(p.parcels).toBe(2);
+    expect(sonuc).toMatchObject({ status: 'ok', parcelCount: 2 });
+    if (sonuc.status !== 'ok') throw new Error('teklif bekleniyordu');
+    expect(sonuc.options.map((o) => o.code)).toEqual(['ucuz', 'pahali']);
+  });
+
+  it('ÇOK KOLİDE multicollo desteklemeyen seçenek listeden düşer', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 1 });
+    await kutuKur(orderId, { boxNo: 2, itemId, qty: 1 });
+    const p = teklifVeren([
+      { code: 'tek-koli', priceCents: 500, multicollo: false },
+      { code: 'cok-koli', priceCents: 1500, multicollo: true },
+    ]);
+
+    const sonuc = await quoteOrderShipment(db, p, { orderId, warehouseId });
+    if (sonuc.status !== 'ok') throw new Error('teklif bekleniyordu');
+    // En UCUZ olan elendi ve bu doğru: satın alma anında sağlayıcı onu reddeder ve sipariş
+    // sevk edilemez hâlde kalırdı.
+    expect(sonuc.options.map((o) => o.code)).toEqual(['cok-koli']);
   });
 });

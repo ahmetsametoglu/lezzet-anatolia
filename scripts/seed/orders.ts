@@ -857,6 +857,10 @@ export async function seedOrders(
     */
     const kutuTipi = (await new ShippingBoxService(db).listForWarehouse(depolar.str))[0] ?? null;
     if (kutuTipi) {
+      // İç fonksiyon `kutuTipi`nin daraltmasını GÖRMÜYOR (hoisted `function`, kapanışta yeniden
+      // geniş tip): kök `tsc -p scripts` bu yüzden 28.08'den beri kırmızıydı. Daraltılmış değeri
+      // yerel bir sabite almak, `!` ile susturmaktan iyi — kontrolü koruyor.
+      const kutuTipiSecili = kutuTipi;
       const gonderiler = new ShipmentService(db);
       const olaylar = new ShipmentEventService(db);
       const kutular = new OrderBoxService(db);
@@ -896,7 +900,7 @@ export async function seedOrders(
             .from('order_box')
             .update({
               sealed_at: an(0),
-              shipping_box_id: kutuTipi.id,
+              shipping_box_id: kutuTipiSecili.id,
               shipment_id: gonderi.id,
               provider_parcel_ref: `seed-p-${opts.kod}-${n}`,
               tracking_number: `SEED${opts.kod.toUpperCase()}${n}00${n}`,

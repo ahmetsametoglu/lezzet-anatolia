@@ -580,3 +580,65 @@ Mobil jest **891/891**, `typecheck` · `lint` temiz.
 **Sözleşme borcu kapandı:** `not-mobil-cok-kutulu-kargo-takibi.md` notunun istediği geçiş bitti.
 Eski üçlü (`carrier` · `trackingNumber` · `trackingUrl`) artık native tarafından **okunmuyor** —
 sözleşmeden silinebilir.
+
+---
+
+## Faz 1.2 — etiket satın alma ucu açıldı (zincirin kopuk halkası) ✅
+
+**Ne kopuktu:** `announceOrderShipment` üretimde **hiç çağrılmıyordu**. Yani kutu kapanıyor,
+mühürleniyor — ve orada duruyordu. Motoru vardı, kapısı yoktu.
+
+**Ne yaptım:** iki uç açtım ve ikisinin de arkasına ORTAK bir zemin koydum.
+
+    GET  /warehouse/orders/:id/dispatch-options   ← salt okuma, para harcamaz
+    POST /warehouse/orders/:id/announce           ← GERÇEK PARA
+
+### Ortak zemin, çünkü iki hesap bir gün ayrışırdı (`shipping/dispatch.ts`)
+
+Depocuya "hangi servisle gönderelim" diye sormak, ön koşulların ve koli kurulumunun **ikinci kez**
+yapılması demekti. Ayrı yazılsaydı listede görünen seçenek satın alma anında reddedilebilirdi —
+ve o hâl **para harcandıktan sonra** görünürdü.
+
+`resolveDispatch` artık tek yerde: ön koşullar (kulvar · adres · mühürlü kutu · kutu tipi ·
+tartılmış mal · gönderici · koli tavanı) + kolilerin mühürlü kutulardan kurulması. Duyuru da
+teklif de oradan geçiyor, yani listedeki fiyat gerçekten satın alınacak olanın fiyatı.
+
+### Teklif niye checkout'unkinden ayrı
+
+`quoteShipping` müşterinin sepetinden bir plan **kurar**; `quoteOrderShipment` depoda mühürlenmiş
+kutuları **ölçer**. Sevk anında bağlayıcı olan ikincisidir — depocu üç kalemi tek kutuya sığdırmış
+olabilir, ya da tam tersi.
+
+Ve **ücretsiz "mektup" kanalı burada da eleniyor**: fiyatı sıfır olan seçenek gerçek bir kargo
+hizmeti değil, ucuzdan sıralı listede daima başa geçiyor. Müşteri yüzeyinde ölçülen arızanın
+aynısını depocuya yaşatmak, reddedilecek bir etiketi satın almaya davet etmek olurdu.
+
+### Alıcı adresi artık ÇAĞIRANDAN alınmıyor
+
+Eskiden duyuru girdisinde `to` vardı. Kaldırdım: adres siparişin kendi kopyasında
+(`addressSnapshot`) duruyor ve gönderi oraya gidecek. İstemciden almak, depocunun telefonunu
+müşteri adresini kuran taraf yapardı — yanlış yazılmış bir posta kodu hem yanlış tarife hem yanlış
+teslimat demek. Yeni bir ön koşul dalı doğdu: `no_recipient`.
+
+**E-posta bilerek gönderilmiyor:** sağlayıcı e-posta gördüğünde kendi takip bildirimlerini
+yolluyor ve müşteriye biz zaten yazıyoruz. Telefon gidiyor — taşıyıcının teslimat için aradığı
+numaranın bizde karşılığı yok.
+
+### Ucun kendi kararı: sağlayıcı kapalıysa 503, boş liste DEĞİL
+
+Anahtar yoksa ağa hiç çıkılmıyor ve uç bunu söylüyor. Boş liste dönseydi ekran "bu siparişe hiç
+servis yok" derdi — yapılandırma eksiği, veri eksikliği gibi okunurdu.
+
+### Yol boyunca: kök `typecheck` 28.08'den beri kırmızıymış
+
+`scripts/seed/orders.ts:899` — `'kutuTipi' is possibly null`. Sebep: `if (kutuTipi)` daraltması
+**hoisted iç fonksiyonda görünmüyor**. Turbo adımları yeşil olduğu için gözden kaçmış; kırmızı olan
+kökün `tsc -p scripts` adımıydı. Daraltılmış değeri yerel bir sabite aldım (`!` ile susturmak
+kontrolü de silerdi). Artık kök typecheck temiz.
+
+**Doğrulama.** 5 yeni entegrasyon (adres kopyası yoksa/posta kodu boşsa sağlayıcıya çıkılmaz ·
+ön koşullar teklifle ortak · koliler mühürlü kutulardan · fiyatsız ve sıfır seçenek elenir · çok
+kolide multicollo süzgeci) + 3 uç testi (sağlayıcı kapalı 503 · gövdesiz duyuru 400 · bozuk kimlik
+400). **Kilitli tam paket 3886/3886**, `typecheck` · `lint` temiz.
+
+**Kalan (Faz 1.3):** telefonun bu ucu çağıran ekranı ve etiketin Brother'dan basımı.

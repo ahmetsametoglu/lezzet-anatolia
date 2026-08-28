@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { serviceDb, ShippingBoxService, WarehouseService } from '@lezzet/database';
 import {
   adjustFulfillment,
+  announceOrderShipment,
   boxLabelPayload,
   boxLabelSvg,
   confirmPreparation,
@@ -15,20 +16,26 @@ import {
   listWarehouseReturns,
   openBox,
   openIntakeForm,
+  quoteOrderShipment,
   readIntakeHeader,
   receiveGoods,
   receiveTransfer,
   recordAdjustment,
   resolveScannedCode,
   sealBox,
+  sendcloudProvider,
+  shippingProviderConfigured,
 } from '@lezzet/application';
 // Alt yol (paketin `./*` ihracı): arama kapısı bugün TEK yüzeyin işi — barrel'a ad eklemek, henüz
 // ortak olmayan bir şeyi paketin kamu sözleşmesine yazmak olurdu. İkinci çağıran doğduğunda terfi eder.
 import { searchVariantsForIntake } from '@lezzet/application/warehouse/variant-search';
 import {
+  AnnounceShipmentRequestSchema,
+  AnnounceShipmentResponseSchema,
   BoxLabelResponseSchema,
   ConfirmPreparationRequestSchema,
   ConfirmPreparationResponseSchema,
+  DispatchOptionsResponseSchema,
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
   LearnCodeRequestSchema,
@@ -347,6 +354,69 @@ warehouse.get('/boxes/:boxId/label.png', async (c) => {
 
   const png = renderLabelPng(boxLabelSvg(outcome.label));
   return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
+});
+
+// ── D1 · Sevk: teklif + duyuru (07.12) ──────────────────────────────────────
+
+/**
+ * **SEVK SEÇENEKLERİ** — depocunun servis seçtiği liste, GERÇEK kolilere göre fiyatlı.
+ *
+ * Salt okuma: sağlayıcıya teklif sorar, hiçbir şey yaratmaz, **para harcamaz**. Ön koşullar
+ * duyurunun kullandığı kapıdan geçiyor (`resolveDispatch`), yani burada görünen liste satın alma
+ * anında da geçerli — iki ayrı hesap olsaydı listedeki seçenek duyuruda reddedilebilirdi.
+ *
+ * Sağlayıcı yapılandırılmamışsa ağa HİÇ çıkılmaz; ekran "teklif alınamadı" der ve elle giriş
+ * yedek şeridi (`setShipment`) açık kalır.
+ */
+warehouse.get('/orders/:orderId/dispatch-options', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'invalid_order_id', 400);
+
+  const provider = shippingProviderConfigured() ? sendcloudProvider() : null;
+  if (!provider) return fail(c, 'shipping_provider_off', 503);
+
+  const outcome = await quoteOrderShipment(serviceDb(), provider, {
+    orderId: orderId.data,
+    warehouseId: c.get('warehouseId'),
+  });
+  const body: z.input<typeof DispatchOptionsResponseSchema> = outcome;
+  return ok(c, DispatchOptionsResponseSchema.parse(body));
+});
+
+/**
+ * **GÖNDERİYİ DUYUR + ETİKETLERİ AL — GERÇEK PARA HARCAR.**
+ *
+ * Zincirin telefondaki halkası: kutu kapandı → burası etiketi satın alır → telefon PDF'i indirip
+ * Brother'a basar. Sunucudan geçmesinin sebebi ağ değil para: satın alma tek yerde, tek kayıtla
+ * ve tekrar denemesiz olmalı.
+ *
+ * **Yeniden deneme YOK** (sağlayıcıda idempotency anahtarı yok — ikinci çağrı ikinci koli açar).
+ * Bu yüzden `already_announced` bir hata değil CEVAPTIR: ekran "zaten duyurulmuş" der ve
+ * operatör etiketi yeniden basmayı seçer.
+ *
+ * Olumsuz dalların hepsi **200** ve ADLI: ölçüsüz mal tartıya, tipsiz kutu seçime, adressiz
+ * sipariş yönetime gider — tek bir 4xx bunların üçünü aynı çıkmaza çevirirdi.
+ */
+warehouse.post('/orders/:orderId/announce', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'invalid_order_id', 400);
+
+  const parsed = AnnounceShipmentRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const provider = shippingProviderConfigured() ? sendcloudProvider() : null;
+  if (!provider) return fail(c, 'shipping_provider_off', 503);
+
+  const outcome = await announceOrderShipment(serviceDb(), provider, {
+    orderId: orderId.data,
+    warehouseId: c.get('warehouseId'),
+    shippingOptionCode: parsed.data.shippingOptionCode,
+    servicePointId: parsed.data.servicePointId ?? undefined,
+    quotedCents: parsed.data.quotedCents ?? undefined,
+  });
+
+  const body: z.input<typeof AnnounceShipmentResponseSchema> = outcome;
+  return ok(c, AnnounceShipmentResponseSchema.parse(body));
 });
 
 /**

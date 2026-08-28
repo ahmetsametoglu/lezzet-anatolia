@@ -980,3 +980,40 @@ describe('D6 · POST /api/v1/warehouse/returns/:orderId', () => {
     expect(await bozuk.json()).toEqual({ data: null, error: 'invalid_order_id' });
   });
 });
+
+/*
+  D1 · SEVK UÇLARI (07.12) — bu describe **yalnız UCUN kendi kararlarını** ölçüyor.
+
+  Kapının iş kuralları (ön koşullar, koli kurulumu, çok koli süzgeci, duyurunun tekrarsızlığı)
+  `packages/application/src/shipping/announce.test.ts`te çivili ve burada tekrar edilmiyor —
+  kutu döngüsü uçlarının (23.6/23.7) izlediği çizginin aynısı.
+
+  Ucun KENDİ kararı iki tane: sağlayıcı yapılandırılmamışsa ağa hiç çıkmamak, ve depo kapsamı.
+*/
+describe('D1 · sevk uçları (teklif + duyuru)', () => {
+  it('sağlayıcı yapılandırılmamışken 503 — boş anahtarla ağa çıkılmaz', async () => {
+    const { orderId } = await pendingOrder();
+
+    // Test ortamında Sendcloud anahtarı yok; uç bunu SÖYLÜYOR ve sessizce boş liste dönmüyor.
+    // Boş liste dönseydi ekran "bu siparişe hiç servis yok" derdi — yapılandırma eksiği,
+    // veri eksikliği gibi okunurdu.
+    const teklif = await asStaff(`/api/v1/warehouse/orders/${orderId}/dispatch-options`);
+    expect(teklif.status).toBe(503);
+
+    const duyuru = await post(`/api/v1/warehouse/orders/${orderId}/announce`, { shippingOptionCode: 'x' });
+    expect(duyuru.status).toBe(503);
+  });
+
+  it('duyuru gövdesi ZORUNLU alan istiyor — servis kodsuz çağrı 400', async () => {
+    const { orderId } = await pendingOrder();
+
+    const res = await post(`/api/v1/warehouse/orders/${orderId}/announce`, {});
+    // Gövde denetimi sağlayıcı kontrolünden ÖNCE: hangi servisin satın alınacağı belli değilse
+    // yapılandırma sorusunu sormanın anlamı yok.
+    expect(res.status).toBe(400);
+  });
+
+  it('bozuk sipariş kimliği 400 — uuid olmayan yol parçası kapıya hiç ulaşmaz', async () => {
+    expect((await asStaff('/api/v1/warehouse/orders/bozuk/dispatch-options')).status).toBe(400);
+  });
+});

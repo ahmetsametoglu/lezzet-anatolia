@@ -266,6 +266,98 @@ export const OpenBoxResponseSchema = z.discriminatedUnion('status', [
 ]);
 export type OpenBoxResponse = z.infer<typeof OpenBoxResponseSchema>;
 
+// ── D1 · Sevk: teklif + duyuru (07.12) ──────────────────────────────────────
+
+/**
+ * **SEVKİN ÖN KOŞULU TUTMADI** — teklif ve duyuru AYNI kümeyi paylaşır.
+ *
+ * Hepsi adlı, çünkü depocunun sorusu "olmadı" değil **"neden olmadı"**: ölçüsüz mal tartıya
+ * gider, tipsiz kutu ekrandan seçilir, adressiz sipariş yönetime sorulur. Tek bir `error`a
+ * indirgemek, üç ayrı işi tek bir çıkmaza çevirirdi.
+ */
+export const DispatchBlockSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('not_found') }),
+  /** Rota siparişine taşıyıcı yazılmaz — kısıt veride de var (`order_carrier_only_shipping`). */
+  z.object({ status: z.literal('not_shipping') }),
+  /** Hiç mühürlü kutu yok: açık kutunun içeriği kesinleşmemiştir, ağırlığı da öyle. */
+  z.object({ status: z.literal('no_sealed_box') }),
+  /** Kutu tipi seçilmemiş — ölçü oradan geliyor. Hangi kutu olduğu söylenir. */
+  z.object({ status: z.literal('box_type_missing'), boxNos: z.array(z.number().int().positive()) }),
+  /** Ambalaj ağırlığı yazılmamış varyantlar — tartılmamış mal tarifeye giremez. */
+  z.object({ status: z.literal('unmeasured'), variantIds: z.array(z.string().uuid()) }),
+  /** Deponun adresi eksik: gönderici olmadan tarife hesaplanamaz. */
+  z.object({ status: z.literal('no_sender') }),
+  /** Siparişin adres kopyası eksik: gönderi nereye gideceğini bilmiyor. */
+  z.object({ status: z.literal('no_recipient') }),
+  /** Sağlayıcının senkron duyuru tavanı aşıldı. */
+  z.object({ status: z.literal('too_many_parcels'), count: z.number().int(), max: z.number().int() }),
+]);
+
+/** Depocunun seçtiği kargo servisi — fiyat SUNUCUDAN, istemci tutar göndermez. */
+export const DispatchOptionSchema = z.object({
+  code: z.string(),
+  /** Taşıyıcının GERÇEK adı ("Chronopost") — özel isim, çeviri istemez. */
+  carrierName: z.string(),
+  name: z.string(),
+  priceCents: z.number().int().positive(),
+  /** Teslim süresi; **`null` yaygın bir hâl** — bazı taşıyıcılar bildirmiyor (ölçüldü 28.08). */
+  leadTimeHours: z.number().int().nullable(),
+  lastMile: z.string().nullable(),
+  tracked: z.boolean(),
+});
+export type DispatchOptionContract = z.infer<typeof DispatchOptionSchema>;
+
+/**
+ * `GET /warehouse/orders/:orderId/dispatch-options` — GERÇEK kolilere göre teklif.
+ *
+ * Checkout'un teklifinden farkı girdisi: orası sepetten bir plan kurar, burası depoda
+ * MÜHÜRLENMİŞ kutuları ölçer. Sevk anında bağlayıcı olan ikincisidir.
+ */
+export const DispatchOptionsResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    options: z.array(DispatchOptionSchema),
+    parcelCount: z.number().int().positive(),
+    /** Koli + dara toplamı (g) — ekran "3 koli · 7,4 kg" diyebilsin diye. */
+    totalWeightG: z.number().int().nonnegative(),
+  }),
+  z.object({ status: z.literal('provider_error'), message: z.string() }),
+  ...DispatchBlockSchema.options,
+]);
+export type DispatchOptionsResponse = z.infer<typeof DispatchOptionsResponseSchema>;
+
+/**
+ * Duyuru isteği — **GERÇEK PARA HARCAR.** Gövdede yalnız SEÇİM var: tutar yok, adres yok, koli
+ * listesi yok. Adres siparişin kendi kopyasından okunuyor ve koliler mühürlü kutulardan çıkıyor;
+ * hepsini istemciden almak, ödenen etiketin ne olacağına telefonun karar vermesi olurdu.
+ */
+export const AnnounceShipmentRequestSchema = z.object({
+  shippingOptionCode: z.string().min(1),
+  /** Teslimat noktası seçildiyse kimliği; eve teslimde `null`. */
+  servicePointId: z.string().nullable().default(null),
+  /** Depocuya gösterilen fiyat — maliyetin ilk kaydı. Sunucu bunu FİYAT olarak kullanmaz. */
+  quotedCents: z.number().int().nonnegative().nullable().default(null),
+});
+export type AnnounceShipmentRequest = z.infer<typeof AnnounceShipmentRequestSchema>;
+
+export const AnnounceShipmentResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    shipmentId: z.string().uuid(),
+    parcels: z.array(z.object({ boxId: z.string().uuid(), trackingNumber: z.string(), labelKey: z.string().nullable() })),
+    /**
+     * Etiketi SAKLANAMAYAN kutuların numarası. Gönderi ALINDI ve parası ödendi — yükleme hatası
+     * duyuruyu geri çekmez (23.7'nin "basım hatası kutu kapanışını geri çekmez" çizgisi).
+     */
+    labelFailures: z.array(z.number().int().positive()),
+  }),
+  /** Zaten duyurulmuş: ikinci duyuru ikinci koli ve gerçek para demek — kapı ONU açmaz. */
+  z.object({ status: z.literal('already_announced'), shipmentId: z.string().uuid() }),
+  z.object({ status: z.literal('provider_error'), code: z.string(), message: z.string() }),
+  ...DispatchBlockSchema.options,
+]);
+export type AnnounceShipmentResponse = z.infer<typeof AnnounceShipmentResponseSchema>;
+
 /**
  * Kutu kapanışı isteği — `picks` BU KUTUYA konanlardır (kutu başına dağılım), kümülatif değil:
  * absolüt birleşimi kapı kurar (`sealBox` — `record_preparation`ın absolüt yazımıyla çok kutulu
