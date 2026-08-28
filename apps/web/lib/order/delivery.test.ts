@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { DeliveryZoneService, SettingsService, serviceDb } from '@lezzet/database';
-import { settingsSnapshot, createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
+import { settingsSnapshot, createTestWarehouse, purgeTestData, testPostalCode } from '@lezzet/database/testing';
 import { resolveDelivery } from './delivery';
 
 /**
@@ -12,7 +12,7 @@ const db = serviceDb();
 const zones = new DeliveryZoneService(db);
 
 const stamp = Date.now();
-const rotaKodu = `67${String(stamp).slice(-3)}`;
+const rotaKodu = testPostalCode();
 const createdZones: string[] = [];
 // Bölge tek depoya bağlanır (DOMAIN §17) — testin kendi deposu, sonunda toplanıyor.
 let warehouseId: string;

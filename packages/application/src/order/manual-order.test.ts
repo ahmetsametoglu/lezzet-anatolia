@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
+import type { OrderSource } from '@lezzet/types';
 import {
   AddressService,
   CategoryService,
@@ -11,7 +12,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete, type SettingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete, type SettingsSnapshot, testPostalCode } from '@lezzet/database/testing';
 import { createCheckoutDraft } from './checkout-draft';
 import { placeOrder } from './place-order';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
@@ -31,7 +32,7 @@ import { readDeliveryInputs, resolveDelivery } from './delivery';
 const db = serviceDb();
 const stamp = Date.now();
 /** Önek 99: FR referansında 99 ile başlayan kod yok — gerçek bir kodla çakışıp şehir kontrolüne takılmasın. */
-const rotaKodu = `99${String(stamp).slice(-3)}`;
+const rotaKodu = testPostalCode();
 
 let categoryId: string;
 let warehouseId: string;
@@ -156,6 +157,8 @@ async function elleSiparis(
     isGiftOrder?: boolean;
     variant?: string;
     staff?: boolean;
+    /** Sohbet köprüsünün geçirdiği kaynak (15.4) — verilmezse personel yolu `manual` kalır. */
+    orderSource?: OrderSource;
   } = {},
 ) {
   return createCheckoutDraft(db, {
@@ -168,7 +171,12 @@ async function elleSiparis(
     staff:
       opts.staff === false
         ? undefined
-        : { actorId: personelId, priceOverrides: opts.overrides, isGiftOrder: opts.isGiftOrder },
+        : {
+            actorId: personelId,
+            priceOverrides: opts.overrides,
+            isGiftOrder: opts.isGiftOrder,
+            orderSource: opts.orderSource,
+          },
   });
 }
 
@@ -198,6 +206,18 @@ describe('elle sipariş — personel yolu (09.8)', () => {
     expect(musteriSip.status).toBe('ok');
     const b = await new OrderService(db).getById((musteriSip as { orderId: string }).orderId);
     expect(b!.orderSource).toBe('web');
+  });
+
+  it('SOHBET köprüsü kendi kaynağını geçirir (15.4) — köprüsüz personel yolu `manual` kalır', async () => {
+    // Kanal (`channel`) ile kaynak (`orderSource`) AYRI eksenler: ikisi de b2c bir siparişte,
+    // biri "hangi fiyat listesi", öteki "hangi yüzeyden geldi" sorusunu cevaplar. Sohbetten açılan
+    // sipariş masada yazılır ama WhatsApp'tan gelmiştir ve raporda öyle görünmelidir.
+    const sohbetten = await elleSiparis({ orderSource: 'whatsapp' });
+    expect(sohbetten.status).toBe('ok');
+    const order = await new OrderService(db).getById((sohbetten as { orderId: string }).orderId);
+    expect(order!.orderSource).toBe('whatsapp');
+    // Kanal DEĞİŞMEZ: kaynak kanalı belirlemez, müşterinin kendisi belirler.
+    expect(order!.channel).toBe('b2c');
   });
 
   it('hediye işaretini yalnız personel yolu yazar', async () => {

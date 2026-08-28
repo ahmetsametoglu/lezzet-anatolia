@@ -843,9 +843,13 @@ export async function seedOrders(
       tablosunda tek satır yoktu, yani hepsi yalnız testlerde görülebiliyordu.
 
       **SAĞLAYICIYA ÇIKILMIYOR ve bu şart:** duyuru gerçek para harcar (`announceOrderShipment`).
-      Seed satırları doğrudan yazıyor; alanlar duyurunun yazdıklarının aynısı, sağlayıcı kimlikleri
-      `seed-` önekli — canlı bir gönderiyle karıştırılamasınlar ve öksüz nöbeti onları kendi
-      hesabımızda ARAMASIN.
+      Seed satırları doğrudan yazıyor; alanlar duyurunun yazdıklarının aynısı.
+
+      **`seed-` öneki SÜS DEĞİL, nöbetin okuduğu işaret** (`shipping/watch.ts` → `SEED_PREFIX`):
+      bu gönderilerin sağlayıcıda karşılığı YOKTUR ve olması da beklenmez, yani hayalet taraması
+      onları atlamak zorunda. Ölçülerek öğrenildi — süzgeç yokken tur gerçek hesapta iki seed
+      satırını hayalet diye saydı; yerel makinede her hafta yanlış alarm veren bir nöbet
+      susturulmayı öğretir.
 
       İKİ HÂL bilerek: tek kutulu (taşıyıcıda) ve ÇOK KUTULU (yolda, iki ayrı takip numarası).
       İkincisi olmadan "her kolinin ayrı numarası" kuralı hiçbir ekranda görünmez — ve o kural tam

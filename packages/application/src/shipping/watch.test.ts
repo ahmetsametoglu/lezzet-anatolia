@@ -199,6 +199,21 @@ describe('scanOrphanShipments — yalnız TESPİT', () => {
     expect(sonuc.orphans).toContain(`sc-yabanci-${stamp}`);
   });
 
+  /**
+   * Süzgeç ÖLÇÜMLE doğdu: nöbet gerçek hesapta koşturulunca iki besleme gönderisini hayalet diye
+   * saydı. Seed sağlayıcıya hiç çıkmıyor (duyuru gerçek para harcar), yani o satırların orada
+   * OLMAMASI beklenen hâldir. Yerel makinede her hafta yanlış alarm veren bir nöbet susturulmayı
+   * öğretir — ve susturulan alarm alarm değildir.
+   */
+  it('BESLEME satırı hayalet sayılmaz — sağlayıcıda olmaması beklenen hâl', async () => {
+    const seedli = await gonderiKur({ providerId: `seed-hayalet-${stamp}` });
+    const gercek = await gonderiKur();
+
+    const sonuc = await scanOrphanShipments(db, providerStub({ listRecent: async () => ({ shipments: [], truncated: false }) }), { sinceDays: 1 });
+    expect(sonuc.ghosts).not.toContain(seedli);
+    expect(sonuc.ghosts).toContain(gercek);
+  });
+
   it('liste kesildiyse SÖYLENİR — eksik tarama "öksüz yok" diye okunamaz', async () => {
     const sonuc = await scanOrphanShipments(db, providerStub({ listRecent: async () => ({ shipments: [], truncated: true }) }), { sinceDays: 1 });
     expect(sonuc).toMatchObject({ truncated: true, remote: 0 });

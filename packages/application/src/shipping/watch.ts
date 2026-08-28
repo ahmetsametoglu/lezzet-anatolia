@@ -57,6 +57,12 @@ export async function sweepStuckShipments(
   return result;
 }
 
+/**
+ * Besleme gönderilerinin sağlayıcı kimliği bu önekle doğar (`scripts/seed/orders.ts`). Üretimde
+ * hiç doğmaz; yerel makinede ise nöbeti yanlış alarmdan korur.
+ */
+const SEED_PREFIX = 'seed-';
+
 export interface OrphanScanResult {
   /** Sağlayıcıda bulunan gönderi sayısı (taranan pencere içinde). */
   remote: number;
@@ -105,6 +111,11 @@ export async function scanOrphanShipments(
   const ghosts = bizimkiler
     .filter((s) => s.providerShipmentId !== null && !uzakKimlikler.has(s.providerShipmentId))
     .filter((s) => s.status !== 'cancelled')
+    // BESLEME SATIRLARI hayalet DEĞİLDİR: sağlayıcıda karşılıkları yoktur ve olması da beklenmez —
+    // seed sağlayıcıya hiç çıkmaz (duyuru gerçek para harcar). Süzgeç ÖLÇÜMLE eklendi: gerçek
+    // hesapta koşturunca tur iki seed gönderisini hayalet diye saydı. Yerel makinede her hafta
+    // yanlış alarm veren bir nöbet, susturulmayı öğretir — ve susturulan alarm alarm değildir.
+    .filter((s) => !s.providerShipmentId!.startsWith(SEED_PREFIX))
     .map((s) => s.id);
 
   return { remote: remote.length, orphans, ghosts, truncated };

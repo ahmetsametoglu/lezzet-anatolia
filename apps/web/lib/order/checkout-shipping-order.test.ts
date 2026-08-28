@@ -11,7 +11,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
+import { createTestWarehouse, purgeTestData, purgeVariantStock, mustDelete, testPostalCode } from '@lezzet/database/testing';
 import { createCheckoutDraft } from './checkout-draft';
 
 /**
@@ -39,7 +39,7 @@ const stamp = Date.now();
  * düşerdi. Şimdi iddia ölçülmüş bir gerçek: test aynı zamanda 19.16a'yı sınıyor — kendi bölge
  * tablomuz dış referanstan üstündür.
  */
-const rotaKodu = `43${String(stamp).slice(-3)}`;
+const rotaKodu = testPostalCode();
 
 let categoryId: string;
 let productId: string;

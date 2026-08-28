@@ -16,7 +16,7 @@ import {
   UserProfileService,
   serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete, type SettingsSnapshot } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete, type SettingsSnapshot, testPostalCode } from '@lezzet/database/testing';
 import { derivePaymentStatusForOrder } from '@lezzet/domain-core';
 import { createCheckoutDraft } from './checkout-draft';
 
@@ -41,7 +41,7 @@ const stamp = Date.now();
  * Referansın tanımadığı kod gerçekçi de bir hâldir: kendi bölge tablomuz o kodlar için otoritedir
  * (19.16a) ve kapı ölçüm yokken engellemez.
  */
-const rotaKodu = `99${String(stamp).slice(-3)}`;
+const rotaKodu = testPostalCode();
 
 let categoryId: string;
 // Depo geçişi (DOMAIN §17): parti/sipariş/kabul deposuz yazılamaz — testin kendi deposu.

@@ -456,3 +456,37 @@ altında "Kutu 1/2" ve "Kutu 2/2" ayrı takip numaralarıyla. Kurye/Sefer satır
 
 **Testler:** 1 entegrasyon daha (tanınmayan kodun hata kaydına düşmesi). Tam paket **3863/3863**.
 Kapsam turu 157 kovanın hepsinde örnek buluyor.
+
+
+---
+
+## Yol boyunca: iki kararsız test kaynağı (yalancı kırmızı)
+
+Tam paket bir koşuda kırmızı döndü ve **kod hatası değildi**: `delivery.test.ts` kurulumda
+*"duplicate key value violates unique constraint"* deyip düştü, 7 test hiç koşamadı. Tekrar
+koşturunca yeşildi — yani kaçırılması en kolay türden.
+
+Ölçünce sebep çıktı: test posta kodları **1000 değerlik** bir alandan üretiliyordu
+(`67` + `Date.now()`in son üç hanesi). İki ayrı çarpışma yolu vardı:
+
+- `67` önekli dosya beslemenin gerçek Alsace kodlarıyla çarpışıyor (`67000` · `67100` · `67300` ·
+  `67500`) — koşu başına **binde dört**. Düşen buydu.
+- İki ayrı dosya aynı `99` önekini kullanıyordu; modül yükleme anları saniyenin aynı milisaniyesine
+  denk gelirse birbirlerini eziyorlardı.
+
+Kod artık tek bir yardımcıdan geliyor: `9` öneki (besleme hiç kullanmıyor) + süreç içinde artan
+sayaç + rastgele hane. Sayaç aynı süreçteki dosyaları kesin ayırır, rastgele hane ayrı süreçlere ve
+önceki koşulardan kalan satırlara karşı.
+
+Yalancı kırmızı yavaş koşudan pahalı: olmayan bir hatanın teşhisine harcanan zaman geri gelmiyor —
+üstelik bu düşüş koda hiç benzemiyor, "bölge kurulamadı" diyor.
+
+## Ayrıca: nöbeti gerçek hesapta koşturdum
+
+Öksüz/hayalet turunu canlı hesapta çalıştırdım (ücretsiz okuma). İlk sonuç bir **yalanımı** yakaladı:
+seed satırlarına `seed-` öneki koyup künyeye *"öksüz nöbeti onları aramasın"* yazmıştım — ama nöbet
+onları hayalet diye sayıyordu (2 adet). Önek artık gerçekten okunuyor; tur temiz.
+
+Geriye kalan bulgu gerçek: **sağlayıcıda 1 öksüz gönderi var** — D aşamasında canlı denerken
+açtığım ücretsiz mektup etiketi. Veritabanı o günden beri birkaç kez tazelendiği için bizdeki satırı
+kalmadı. Yani nöbet ilk gerçek koşusunda gerçek bir öksüzü buldu; el kitabı tam bu hâl için yazılı.
