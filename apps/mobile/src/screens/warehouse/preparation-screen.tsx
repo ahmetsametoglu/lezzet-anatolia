@@ -9,6 +9,7 @@ import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PrintProbe } from '@/components/print/print-probe';
 import { ScanSheet } from '@/components/scan/scan-sheet';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
@@ -17,7 +18,7 @@ import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { usePreparation, type PrintState } from './use-preparation.hook';
-import { batchLabel, parseQty, productLabel, qtyToText } from './warehouse-format';
+import { batchLabel, boxSizeLine, parseQty, productLabel, qtyToText } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -172,7 +173,12 @@ export function PreparationScreen() {
   const cta = picking.boxMode
     ? boxCtaOf(picking.openBox !== null, picking.boxes.length, picking.anyQty, picking.anyShort, picking.sending, offline)
     : ctaOf(picking.resolved, picking.anyShort, picking.sending, offline);
-  const onCta = picking.boxMode ? (picking.openBox === null ? picking.openNewBox : picking.sealCurrentBox) : picking.submit;
+  /*
+    KUTU AÇMA İKİ ADIMLI OLABİLİR (07.12): kargo kulvarında önce TİP sorulur, sonra kutu açılır.
+    Rota siparişinde ve tipsiz depoda soru hiç doğmaz — CTA doğrudan kutuyu açar (23.6 akışı).
+  */
+  const onOpenBox = () => (picking.askBoxType ? picking.setBoxTypeOpen(true) : picking.openNewBox(null));
+  const onCta = picking.boxMode ? (picking.openBox === null ? onOpenBox : picking.sealCurrentBox) : picking.submit;
 
   return (
     <View style={styles.screen} testID="warehouse-picking">
@@ -205,10 +211,27 @@ export function PreparationScreen() {
               ))}
             {picking.openBox === null ? null : (
               <Text style={styles.boxCurrent} testID="warehouse-picking-box-open">
-                {fillCopy(t.picking.box.current, { n: String(picking.openBox.boxNo) })}
+                {/* Tip SEÇİLDİYSE adı da yazılır: kutu açıldıktan sonra seçimi düzeltmenin yolu
+                    yok, dolayısıyla depocu yanlış kartona doldurmaya başlamadan görmeli. Adı
+                    listeden çözüyoruz — sözleşme yalnız kimlik taşıyor (künyesi orada). */}
+                {((name) =>
+                  name === null
+                    ? fillCopy(t.picking.box.current, { n: String(picking.openBox!.boxNo) })
+                    : fillCopy(t.picking.box.currentTyped, { n: String(picking.openBox!.boxNo), name }))(
+                  picking.shippingBoxes.find((box) => box.id === picking.openBox?.shippingBoxId)?.name ?? null,
+                )}
               </Text>
             )}
           </View>
+        ) : null}
+
+        {/* KUTU TİPİ TANIMSIZ (07.12) — geçici bir cümle değil, sürekli görünen bir uyarı:
+            ölçüsüz kapanan kutu etiket satın alınırken ön koşula takılır ve o an kartonu geri
+            açmak gerekir. Akış DURDURULMUYOR (tipsiz kutu meşru bir hâl), yalnız söyleniyor. */}
+        {picking.boxTypeMissing ? (
+          <Text style={[styles.notice, styles.notice_warn]} testID="warehouse-picking-box-type-missing">
+            {t.picking.box.typeEmpty}
+          </Text>
         ) : null}
         {/* Çevrimdışıyken okutma düğmesi ÇİZİLMEZ (kabul ekranı deseni): kod çözümü sunucuda,
             kuyruğu yok — basılamayan düğme yerine yokluk, kilidin kendisini anlatır. */}
@@ -250,6 +273,55 @@ export function PreparationScreen() {
         onScan={picking.handleScan}
         testID="warehouse-picking-scan-sheet"
       />
+
+      {/*
+        KARGO KUTUSU TİPİ (07.12) — kutu AÇILMADAN önceki tek soru.
+
+        ── ÇEKMECE, ÇÜNKÜ CEVAP TEK BİR DOKUNUŞ ────────────────────────────────
+        Satırlar kuyruğun sipariş satırlarıyla AYNI iskelette (`queueRow` + ad/alt satır +
+        chevron): aynı ekranda "listeden birini seç" sorusu ikinci kez soruluyor ve ikinci bir
+        görsel dil kurmak, aynı hareketi iki farklı şeye benzetmek olurdu.
+
+        ── SEÇİM ÇİPİ KULLANILMADI ─────────────────────────────────────────────
+        Komponent haritası `OperationsChoiceChip` öneriyordu; çipin taşıdığı bilgi SEÇİLİLİKTİR
+        ve burada seçililik hiç yaşamıyor — dokunuş kutuyu doğrudan açıyor, `selected` daima
+        yanlış kalırdı. Ayrıca ölçü satırı (40×30×25 · dara) tek satırlık bir çipe sığmıyor ve
+        depocunun elindeki kartonu tanıması tam ona bağlı.
+
+        ── ATLAMA KAPISI DURUYOR ───────────────────────────────────────────────
+        Tipsiz kutu meşru bir hâl (sözleşme künyesi): listede olmayan bir karton kullanılıyor
+        olabilir. Kapatmak, depocuyu yanlış bir tip seçmeye zorlardı — yanlış ölçü, ölçüsüzlükten
+        beterdir çünkü kendini söylemez.
+      */}
+      <BottomSheet
+        visible={picking.boxTypeOpen}
+        title={t.picking.box.typeTitle}
+        onClose={() => picking.setBoxTypeOpen(false)}
+        testID="warehouse-picking-box-type-sheet"
+      >
+        <Text style={styles.boxTypeHint}>{t.picking.box.typeHint}</Text>
+        {picking.shippingBoxes.map((box) => (
+          <PressableSurface
+            key={box.id}
+            onPress={() => picking.openNewBox(box.id)}
+            feedback="scale"
+            style={styles.queueRow}
+            accessibilityLabel={box.name}
+            testID={`warehouse-picking-box-type-${box.id}`}
+          >
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle}>{box.name}</Text>
+              <Text style={styles.rowSub}>{boxSizeLine(box, t.picking.box)}</Text>
+            </View>
+            <Text style={styles.chevron}>›</Text>
+          </PressableSurface>
+        ))}
+        <TextAction
+          label={t.picking.box.typeSkip}
+          onPress={() => picking.openNewBox(null)}
+          testID="warehouse-picking-box-type-skip"
+        />
+      </BottomSheet>
 
       {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (kurye emsali). */}
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
@@ -609,6 +681,13 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors.cream,
+  },
+  /** Çekmecenin açıklama satırı — kimlik bloğunun `email` satırıyla aynı ton (staff-menu emsali). */
+  boxTypeHint: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.muted,
+    marginBottom: operationsTheme.space.md,
   },
   scanButton: {
     marginTop: operationsTheme.space.xl,

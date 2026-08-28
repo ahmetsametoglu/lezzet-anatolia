@@ -155,6 +155,8 @@ export interface PreparationBox {
   code: string;
   sealedAt: string | null;
   items: Array<{ orderItemId: string; qty: number }>;
+  /** Hangi kargo kutusu tipiyle açıldı (07.12); `null` = tip seçilmedi (rota kulvarı ya da eski kutu). */
+  shippingBoxId: string | null;
 }
 
 /**
@@ -539,6 +541,7 @@ async function orderBoxes(db: SupabaseClient, orderIds: readonly string[]): Prom
       code: box.code,
       sealedAt: box.sealedAt,
       items: itemsByBox.get(box.id) ?? [],
+      shippingBoxId: box.shippingBoxId,
     };
     const list = map.get(box.orderId);
     if (list) list.push(view);

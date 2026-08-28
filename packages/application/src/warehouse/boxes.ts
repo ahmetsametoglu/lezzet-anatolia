@@ -4,6 +4,7 @@ import {
   OrderBoxService,
   OrderService,
   SettingsService,
+  ShippingBoxService,
   UserProfileService,
 } from '@lezzet/database';
 import { boxCompletion, orderBoxCode } from '@lezzet/domain-core';
@@ -43,15 +44,28 @@ export type OpenBoxOutcome =
   | { status: 'ok'; box: PreparationBox }
   | { status: 'forbidden'; reason: 'out_of_scope' }
   | { status: 'stale'; currentStatus: Order['status'] }
+  /** Kutu TİPİ geçersiz — başka deponun kutusu ya da kapatılmış bir tip. Sipariş duruyor. */
+  | { status: 'unknown_box' }
   | { status: 'not_found' };
 
 /**
  * **Kutu açar** — sipariş içi sıradaki numarayla, üretilmiş QR koduyla (`orderBoxCode`; sipariş
  * referansı DEĞİL — Netleşecek 4). Benzersizlik DB'de; çakışmada yeniden denenir.
+ *
+ * ── KUTU TİPİ BURADA SEÇİLİR (07.12) ────────────────────────────────────────
+ * `shippingBoxId` kargo kulvarının FİZİKSEL kimliğidir: gönderi ağırlığı ve dış ölçüsü ondan
+ * çıkıyor (§4.4). Açılışta sorulmasının sebebi zamanlama: depocu kartonu kutuyu doldurmaya
+ * başlarken eline alıyor, duyuru anında ise kutu çoktan kapalı — o an sorulsaydı cevap hatırlanan
+ * bir şey olurdu, elde tutulan değil.
+ *
+ * Tip **veriden de korunuyor** (bileşik FK `(warehouse_id, shipping_box_id)`, `0052`), ama kapı
+ * onu yeniden ölçüyor: kısıt ihlali depocuya `23503` diye görünürdü ve okunur bir cevap yerine
+ * bir veritabanı hatası, ekranı "sunucu hatası"na düşürürdü. `isActive` denetimi ise VERİDE HİÇ
+ * YOK — kapatılmış bir tipi FK memnuniyetle kabul eder; kural yalnız burada durabiliyor.
  */
 export async function openBox(
   db: SupabaseClient,
-  input: { orderId: string; warehouseId: string },
+  input: { orderId: string; warehouseId: string; shippingBoxId?: string | null },
 ): Promise<OpenBoxOutcome> {
   const order = await new OrderService(db).getById(input.orderId);
   if (!order) return { status: 'not_found' };
@@ -59,6 +73,12 @@ export async function openBox(
   // Kutu yalnız TOPLANABİLİR siparişe açılır — hazırlık kuyruğunun kendi kümesi (0015 çizgisi).
   if (order.status !== 'confirmed' && order.status !== 'preparing') {
     return { status: 'stale', currentStatus: order.status };
+  }
+
+  const shippingBoxId = input.shippingBoxId ?? null;
+  if (shippingBoxId !== null) {
+    const known = await new ShippingBoxService(db).listForWarehouse(order.warehouseId, { onlyActive: true });
+    if (!known.some((row) => row.id === shippingBoxId)) return { status: 'unknown_box' };
   }
 
   const service = new OrderBoxService(db);
@@ -75,8 +95,12 @@ export async function openBox(
         warehouseId: order.warehouseId,
         boxNo,
         code: orderBoxCode(new Date().getFullYear()),
+        shippingBoxId,
       });
-      return { status: 'ok', box: { boxId: box.id, boxNo: box.boxNo, code: box.code, sealedAt: null, items: [] } };
+      return {
+        status: 'ok',
+        box: { boxId: box.id, boxNo: box.boxNo, code: box.code, sealedAt: null, items: [], shippingBoxId: box.shippingBoxId },
+      };
     } catch (error) {
       if (!isUniqueViolation(error)) throw error;
       boxNo += 1;

@@ -6770,3 +6770,62 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Uçtan: geçerli ürün + geçerli paket + hayalet aynı istekte gönderildi → ikisi
   girdi, hayalet girmedi (adsız satır 0), HTTP 200. Dört yeni servis testi (`cart.test.ts`):
   yazılmaz · geçerliler girer · devir yolu da korunur · var olmayan paket de girmez.
+
+- [x] (21.127) **KARGO KUTUSU TİPİ HAZIRLIK EKRANINDA SORULUYOR — gönderinin ağırlığı artık
+  bilinen bir kartondan çıkıyor** (kargo kanalı 07.12'nin native yarısı; kullanıcı talebi 28.08:
+  *"depoda kargo alma, kargo gönderme"*)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/types/src/entities/order-box.schema.ts` ·
+  `packages/application/src/warehouse/{boxes,preparation}.ts` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{preparation-screen,use-preparation.hook,warehouse-format,messages.json}` ·
+  `apps/mobile/src/lib/api/warehouse.ts`
+
+  **Durum (28.08).** Kargo kanalının tasarım kaydı (`kargo-kanali-tasarimi.md §8.6`) native depo
+  yüzeyinden üç iş istiyordu; bu tur BİRİNCİSİ: kutu açılırken **kargo kutusu tipi** seçimi.
+
+  **Neden açılışta soruluyor, kapanışta değil.** Gönderi ağırlığı `Σ(ambalajlı ürün) + kutunun
+  darası`, dış ölçü de kutunun kendisi (§4.4). Soru duyuru anında sorulsaydı cevap HATIRLANAN bir
+  şey olurdu — depocu kartonu kutuyu doldurmaya başlarken eline alıyor, kapanışta karton çoktan
+  kapalı.
+
+  **Zincirin tamamı yazıldı:** `GET /warehouse/shipping-boxes` (deponun benimsediği AÇIK tipler;
+  sistem şablonu gelmez — şablon seçilmez, benimsenir) → açılış gövdesinde `shippingBoxId` →
+  `openBox` tipi doğrular → `order_box.shipping_box_id` (kolon `0052`'den beri vardı, yazanı yoktu)
+  → kuyruk sözleşmesi tipi geri taşır → ekran açık kutunun künyesinde adını yazar.
+
+  **Kural veride DURAMIYORDU, kapıya kondu.** Bileşik FK `(warehouse_id, shipping_box_id)` başka
+  deponun kutusunu zaten engelliyor ama iki hâli yakalamıyor: *(1)* **kapatılmış tip** — FK
+  `is_active`e bakmaz; *(2)* **okunur cevap** — kısıt ihlali depocuya `23503` diye görünür, ekran
+  onu "sunucu hatası"na indirir. `unknown_box` bu yüzden ayrı bir dal ve `not_found`a katlanmıyor:
+  ikisi tek cevap olsaydı depocu var olan bir siparişi yok sanardı, oysa gerçek çare listeyi
+  tazelemek.
+
+  **Rota kulvarı hiç değişmedi.** Soru yalnız `deliveryType === 'shipping'`te doğuyor (kuyruk
+  sözleşmesine `deliveryType` eklendi — kapı alanı zaten okuyordu, sözleşmeye ulaşmıyordu). Tipsiz
+  açılış meşru kaldı: gövde isteğe bağlı, atlama kapısı çekmecede duruyor. Kapatmak depocuyu
+  YANLIŞ bir tip seçmeye zorlardı ve yanlış ölçü, ölçüsüzlükten beterdir — kendini söylemez.
+
+  **Boş katalog sessiz geçmiyor.** Depo hiç kutu benimsememişse akış durmuyor ama uyarı SÜREKLİ
+  görünüyor (geçici cümle değil): ölçüsüz kapanan kutu, etiket satın alınırken duyuru kapısının ön
+  koşuluna takılır ve o an kartonu geri açmak gerekir.
+
+  **Yeni paylaşılan komponent SIFIR** (§8.11 şartı): çekmece `BottomSheet`, satırlar kuyruğun
+  `queueRow` iskeletinin aynısı, atlama `TextAction`. Komponent haritası `OperationsChoiceChip`
+  öneriyordu — kullanılmadı ve gerekçesi kodda yazılı: çipin taşıdığı bilgi SEÇİLİLİKTİR, burada
+  dokunuş kutuyu doğrudan açıyor ve `selected` daima yanlış kalırdı.
+
+  **Doğrulama.** 4 entegrasyon (`boxes.test.ts`: tip yazılır ve kuyruk taşır · tipsiz açılış ·
+  yabancı depo `unknown_box` ve **hiç kutu açılmaz** · kapatılmış tip) + 4 ekran testi
+  (`picking-box.test.tsx`: rota sormaz ve tipleri OKUMAZ · kargo sorar ve gövdeye yazar · atlama
+  tipsiz açar · boş katalog uyarısı) + 3 birim (`boxSizeLine`: mm→cm, `null` sınır, sıfır dara).
+  Mobil jest **887/887**, `typecheck` · `lint` · `knip` · `docs:check` temiz.
+
+  **BEKLEYEN(kargo-kanali-tasarimi.md §8.6):** aynı bölümün kalan iki işi — **etiket satın alma
+  + PDF basımı** (`announceOrderShipment`in bugün hiç üretim çağıranı yok, ölçüldü) ve **devir
+  okutması** (kutular okutulur, gönderi "taşıyıcıya verildi" olur). Üçüncüsü hub sayacı
+  ("kargoya verilecek N kutu").
+
+  **Ölçülen, bize ait olmayan bir arıza:** kök `pnpm typecheck`in `scripts` adımı **bu turdan
+  ÖNCE de kırmızıydı** — `scripts/seed/orders.ts:899` `'kutuTipi' is possibly null` (HEAD sürümüyle
+  yeniden üretildi). Kargo şeridinin dosyası; dokunulmadı, bildirildi.

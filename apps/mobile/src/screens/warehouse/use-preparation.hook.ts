@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import type {
   BoxLabelContract,
@@ -7,6 +7,7 @@ import type {
   PreparationLineContract,
   PreparationOrderContract,
   PreparationPick,
+  ShippingBoxOptionContract,
   ShortfallSuggestionContract,
 } from '@lezzet/types';
 
@@ -14,6 +15,7 @@ import {
   confirmPreparation,
   fetchBoxLabel,
   fetchPreparationQueue,
+  fetchShippingBoxes,
   markBoxPrinted,
   openOrderBox,
   resolveScannedCode,
@@ -109,7 +111,28 @@ interface UsePreparationResult {
   openBox: PreparationBoxContract | null;
   /** Herhangi bir satıra adet girildi mi — "Kutuyu kapat"ın ön koşulu (boş kutu kapanmaz). */
   anyQty: boolean;
-  openNewBox: () => void;
+  /**
+   * Kutu açılırken KARGO KUTUSU TİPİ sorulacak mı (07.12) — yalnız kargo kulvarında ve yalnız
+   * deponun benimsediği tip varsa. Rota siparişinde soru anlamsız (kutu araca biner), tipsiz
+   * depoda ise cevaplanamaz — ikisinde de eski akış aynen sürer.
+   */
+  askBoxType: boolean;
+  /**
+   * Kargo siparişi ama deponun HİÇ kutu tipi yok. Ekran bunu sürekli görünen bir uyarı olarak
+   * çizer, geçici bir cümle olarak değil: ölçüsüz kapanan kutu, etiket satın alınırken ön koşula
+   * takılır ve o an kartonu geri açmak gerekir — depocu bunu kutuyu doldurmadan bilmeli.
+   */
+  boxTypeMissing: boolean;
+  /** Deponun açık kargo kutusu tipleri; `askBoxType` yanlışken boş kalır (okuma hiç koşmaz). */
+  shippingBoxes: ShippingBoxOptionContract[];
+  /**
+   * Kutu tipi seçimi açık mı. Ayrı bir state, `scanOpen`la paylaşılmaz: ikisi ayrı soru soruyor
+   * ve tek bayrağı paylaşsalardı biri kapanırken öteki de kapanırdı.
+   */
+  boxTypeOpen: boolean;
+  setBoxTypeOpen: (open: boolean) => void;
+  /** `shippingBoxId` = seçilen tip; `null` = tipsiz aç (rota kulvarı ya da bilinçli atlama). */
+  openNewBox: (shippingBoxId?: string | null) => void;
   sealCurrentBox: () => void;
   scanOpen: boolean;
   setScanOpen: (open: boolean) => void;
@@ -318,6 +341,8 @@ export function usePreparation(): UsePreparationResult {
   const anyQty = order !== null && order.lines.some((line) => (lines[line.itemId]?.qty ?? 0) > 0);
   const [scanOpen, setScanOpen] = useState(false);
   const [queueScanOpen, setQueueScanOpen] = useState(false);
+  const [shippingBoxes, setShippingBoxes] = useState<ShippingBoxOptionContract[]>([]);
+  const [boxTypeOpen, setBoxTypeOpen] = useState(false);
   const [label, setLabel] = useState<BoxLabelContract | null>(null);
   const [printState, setPrintState] = useState<PrintState>({ phase: 'off' });
   /** Basımın hedefi — etiketle birlikte gelir; yeniden basım aynı kutu + aynı yazıcıyla koşar. */
@@ -338,19 +363,50 @@ export function usePreparation(): UsePreparationResult {
     }
   }, []);
 
+  /*
+    KARGO KUTUSU TİPLERİ (07.12) — kutu açılmadan ÖNCE okunur.
+
+    Sessiz düşüş bilinçli: liste gelmezse soru sorulmaz ve kutu tipsiz açılır. Kutu döngüsünü
+    ikinci bir ağ turuna bağlamak, bugün çalışan bir akışı kargo kataloğunun sağlığına
+    bağlamak olurdu — tipsiz kutu meşru bir hâl (sözleşme künyesi), duyuru kapısı zaten ölçüsüz
+    kutuyu ön koşulda durduruyor ve sebebini söylüyor.
+  */
+  const loadShippingBoxes = useCallback(async () => {
+    const result = await trackWarehouse(fetchShippingBoxes());
+    setShippingBoxes(result.error === null ? result.data.boxes : []);
+  }, []);
+
+  /*
+    Kargo siparişi seçilince tipler okunur — kutu açılmadan önce, çünkü soru o an sorulacak.
+
+    BOŞ KATALOG SESSİZ GEÇMEZ: depo hiç kutu benimsememişse kutu tipsiz açılır (akış durmaz) ama
+    depocu bunu SEÇİM ANINDA değil, siparişi açtığı anda öğrenir — ölçüsüz kutuyla kapanan bir
+    gönderi, etiket satın alınırken ön koşula takılır ve o an kartonu geri açmak gerekir.
+  */
+  const shippingLane = order?.deliveryType === 'shipping';
+  useEffect(() => {
+    if (!shippingLane) {
+      setShippingBoxes([]);
+      return;
+    }
+    void loadShippingBoxes();
+  }, [loadShippingBoxes, shippingLane]);
+
   const reprintLabel = useCallback(() => {
     const target = printTarget.current;
     if (target === null || printState.phase === 'printing') return;
     void runPrint(target.boxId, target.printer);
   }, [printState.phase, runPrint]);
 
-  const openNewBox = useCallback(() => {
+  const openNewBox = useCallback(
+    (shippingBoxId: string | null = null) => {
     if (order === null || sending) return;
+    setBoxTypeOpen(false);
     setSending(true);
     setNotice(null);
 
     void (async () => {
-      const result = await trackWarehouse(openOrderBox(order.orderId));
+      const result = await trackWarehouse(openOrderBox(order.orderId, shippingBoxId));
       setSending(false);
 
       if (result.error !== null) {
@@ -370,9 +426,18 @@ export function usePreparation(): UsePreparationResult {
         await load();
         return;
       }
+      // Kutu TİPİ geçersiz — sipariş duruyor, liste bayat. `not_found`a katlanmıyor: depocu var
+      // olan bir siparişi yok sanardı ve gerçek çare (listeyi tazele) hiç akla gelmezdi.
+      if (result.data.status === 'unknown_box') {
+        setNotice({ tone: 'warn', text: t.picking.box.typeUnknown });
+        void loadShippingBoxes();
+        return;
+      }
       setNotice({ tone: 'error', text: result.data.status === 'forbidden' ? t.common.outOfScope : t.common.notFound });
     })();
-  }, [load, order, sending]);
+    },
+    [load, loadShippingBoxes, order, sending],
+  );
 
   const handleScan = useCallback(
     (code: string) => {
@@ -555,6 +620,11 @@ export function usePreparation(): UsePreparationResult {
     boxes,
     openBox: currentBox,
     anyQty,
+    askBoxType: shippingLane && shippingBoxes.length > 0,
+    boxTypeMissing: shippingLane && shippingBoxes.length === 0,
+    shippingBoxes,
+    boxTypeOpen,
+    setBoxTypeOpen,
     openNewBox,
     sealCurrentBox,
     scanOpen,

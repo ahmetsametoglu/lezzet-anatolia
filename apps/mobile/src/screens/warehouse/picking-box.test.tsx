@@ -71,12 +71,16 @@ interface Net {
   seal?: unknown;
   resolve?: unknown;
   label?: unknown;
+  /** Deponun kargo kutusu tipleri (07.12) — varsayılan BOŞ: rota testleri bu okumayı hiç görmez. */
+  shippingBoxes?: unknown[];
 }
 
 const net: Net = { orders: [] };
 
 fetchMock.mockImplementation((url, init) => {
   const path = String(url);
+  // Kutu TİPLERİ kutulardan önce eşleşmeli: `/shipping-boxes` de `/boxes` ile bitiyor.
+  if (path.endsWith('/shipping-boxes')) return Promise.resolve(ok({ boxes: net.shippingBoxes ?? [] }));
   if (path.includes('/codes/resolve')) return Promise.resolve(ok(net.resolve));
   if (path.endsWith('/seal')) return Promise.resolve(ok(net.seal));
   if (path.endsWith('/label')) return Promise.resolve(ok(net.label ?? { status: 'not_found' }));
@@ -116,6 +120,7 @@ beforeEach(() => {
   net.seal = undefined;
   net.resolve = undefined;
   net.label = undefined;
+  net.shippingBoxes = undefined;
   mockPrinterModule.available = false;
   mockPrintLabel.mockClear();
   mockPrintLabel.mockImplementation(async () => undefined);
@@ -297,5 +302,88 @@ describe('D1 · kutu döngüsü', () => {
     expect(screen.queryByTestId('warehouse-picking-boxes')).toBeNull();
     expect(screen.queryByTestId('warehouse-picking-scan')).toBeNull();
     expect(screen.getByTestId('warehouse-picking-cta')).toHaveTextContent(/Kalem kalem say/);
+  });
+});
+
+/*
+  KARGO KUTUSU TİPİ (07.12) — kutu açılmadan önceki tek soru.
+
+  Ölçülen dört iddia, dördü de "soru DOĞRU ZAMANDA sorulsun" ekseninde:
+  · rota siparişinde soru HİÇ doğmaz (kutu araca biner, taşıyıcıya değil) ve tipler okunmaz bile
+  · kargo siparişinde CTA çekmeceyi açar; seçilen tip AÇILIŞ GÖVDESİNE yazılır
+  · atlama kapısı tipsiz açar — listede olmayan bir karton kullanılıyor olabilir
+  · depoda hiç tip yoksa akış DURMAZ ama uyarı sürekli görünür: ölçüsüz kapanan kutu, etiket
+    satın alınırken ön koşula takılır ve o an kartonu geri açmak gerekir
+*/
+describe('D1 · kargo kutusu tipi', () => {
+  const ORTA = {
+    id: '00000000-0000-4000-8000-0000000000c1',
+    name: 'Orta karton',
+    lengthMm: 400,
+    widthMm: 300,
+    heightMm: 250,
+    tareG: 220,
+    maxContentG: 20_000,
+  };
+
+  it('ROTA siparişinde tip sorulmaz — CTA kutuyu doğrudan açar, tipler hiç okunmaz', async () => {
+    net.orders = [preparationOrder()];
+    net.open = { status: 'ok', box: preparationBox() };
+    await renderPicking();
+
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+
+    await waitFor(() => expect(lastBodyOf('/boxes')).toEqual({ shippingBoxId: null }));
+    expect(screen.queryByTestId('warehouse-picking-box-type-sheet')).toBeNull();
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/shipping-boxes'))).toBe(false);
+  });
+
+  it('KARGO siparişinde CTA çekmeceyi açar; seçilen tip açılış gövdesine yazılır', async () => {
+    net.orders = [preparationOrder({ deliveryType: 'shipping' })];
+    net.shippingBoxes = [ORTA];
+    net.open = { status: 'ok', box: preparationBox({ shippingBoxId: ORTA.id }) };
+    await renderPicking();
+
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/shipping-boxes'))).toBe(true));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+
+    // Ölçü satırı SANTİMDİR: veri mm ama depocu kartonu "40×30×25" diye tanıyor.
+    expect(screen.getByTestId(`warehouse-picking-box-type-${ORTA.id}`)).toHaveTextContent(/40×30×25 cm/);
+    expect(screen.getByTestId(`warehouse-picking-box-type-${ORTA.id}`)).toHaveTextContent(/en çok 20 kg/);
+
+    net.orders = [preparationOrder({ deliveryType: 'shipping', boxes: [preparationBox({ shippingBoxId: ORTA.id })] })];
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-box-type-${ORTA.id}`));
+
+    await waitFor(() => expect(lastBodyOf('/boxes')).toEqual({ shippingBoxId: ORTA.id }));
+    // Seçim açık kutunun künyesinde GÖRÜNÜR: açıldıktan sonra düzeltme yolu yok, depocu yanlış
+    // kartona doldurmaya başlamadan görmeli.
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-open')).toHaveTextContent(/Orta karton/));
+  });
+
+  it('atlama kapısı TİPSİZ açar — listede olmayan bir karton kullanılıyor olabilir', async () => {
+    net.orders = [preparationOrder({ deliveryType: 'shipping' })];
+    net.shippingBoxes = [ORTA];
+    net.open = { status: 'ok', box: preparationBox() };
+    await renderPicking();
+
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/shipping-boxes'))).toBe(true));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-box-type-skip'));
+
+    await waitFor(() => expect(lastBodyOf('/boxes')).toEqual({ shippingBoxId: null }));
+  });
+
+  it('depoda hiç tip yoksa akış DURMAZ ama uyarı sürekli görünür', async () => {
+    net.orders = [preparationOrder({ deliveryType: 'shipping' })];
+    net.shippingBoxes = [];
+    net.open = { status: 'ok', box: preparationBox() };
+    await renderPicking();
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-type-missing')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+
+    // Çekmece hiç açılmaz: cevabı olmayan bir soru sormak, depocuyu boş bir listeye bakmaya zorlar.
+    expect(screen.queryByTestId('warehouse-picking-box-type-skip')).toBeNull();
+    await waitFor(() => expect(lastBodyOf('/boxes')).toEqual({ shippingBoxId: null }));
   });
 });

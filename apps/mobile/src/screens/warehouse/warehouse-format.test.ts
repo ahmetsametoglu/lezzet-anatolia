@@ -1,4 +1,5 @@
-import { batchLabel, parseDate, parseQty, productLabel, qtyToText, shortDate } from './warehouse-format';
+import { batchLabel, boxSizeLine, parseDate, parseQty, productLabel, qtyToText, shortDate } from './warehouse-format';
+import { warehouseCopy } from './copy';
 
 /*
   BİÇİMLEME BİRİM TESTİ — ekran çizmeden, yalnız kurallar.
@@ -76,5 +77,32 @@ describe('künye yazımı', () => {
   it('tek boylu üründe ayraç yazılmaz', () => {
     expect(productLabel('Mantı', '500 g')).toBe('Mantı · 500 g');
     expect(productLabel('Künefe', '')).toBe('Künefe');
+  });
+});
+
+/*
+  KARGO KUTUSU TANITIM SATIRI (07.12) — iki iddia, ikisi de `CLAUDE §1`in aynı kuralı:
+
+  · mm → cm YALNIZ GÖSTERİMDE; kayda giden değer hep mm (ondalık kalınlık yuvarlanmasın diye)
+  · `maxContentG: null` = sınır BİLİNMİYOR, sıfır değil — "en çok 0 kg" kutuyu kullanılamaz
+    gösterirdi ve bilinmeyen bir sınır uydurulmuş bir sınırdan iyidir
+*/
+describe('boxSizeLine · ölçü satırı', () => {
+  const copy = warehouseCopy.picking.box;
+  const karton = { lengthMm: 400, widthMm: 300, heightMm: 250, tareG: 220, maxContentG: 20_000 };
+
+  it('mm santime çevrilir ve dara gram kalır', () => {
+    expect(boxSizeLine({ ...karton, maxContentG: null }, copy)).toBe('40×30×25 cm · dara 220 g');
+  });
+
+  it('sınır varsa kilo yazılır; tam sayıda ondalık asılmaz', () => {
+    expect(boxSizeLine(karton, copy)).toBe('40×30×25 cm · dara 220 g · en çok 20 kg');
+    expect(boxSizeLine({ ...karton, maxContentG: 2500 }, copy)).toContain('en çok 2,5 kg');
+  });
+
+  it('dara SIFIR meşrudur (poşet/zarf) — satır yine yazılır', () => {
+    expect(boxSizeLine({ lengthMm: 350, widthMm: 250, heightMm: 30, tareG: 0, maxContentG: null }, copy)).toBe(
+      '35×25×3 cm · dara 0 g',
+    );
   });
 });

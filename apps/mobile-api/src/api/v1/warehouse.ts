@@ -1,6 +1,6 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { serviceDb, WarehouseService } from '@lezzet/database';
+import { serviceDb, ShippingBoxService, WarehouseService } from '@lezzet/database';
 import {
   adjustFulfillment,
   boxLabelPayload,
@@ -34,6 +34,7 @@ import {
   LearnCodeRequestSchema,
   LearnCodeResponseSchema,
   MarkBoxPrintedResponseSchema,
+  OpenBoxRequestSchema,
   OpenBoxResponseSchema,
   PendingIntakesResponseSchema,
   VariantSearchResponseSchema,
@@ -48,6 +49,7 @@ import {
   ResolveCodeResponseSchema,
   SealBoxRequestSchema,
   SealBoxResponseSchema,
+  ShippingBoxesResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
@@ -245,15 +247,43 @@ warehouse.post('/preparation/:orderId/confirm', async (c) => {
 // ── D1 · Kutu döngüsü (23.6) ────────────────────────────────────────────────
 
 /**
- * **Kutu açar** (karar §1.4). Gövde YOK: kutunun içeriği doğumda yoktur, numarası sipariş içi
+ * **Deponun kargo kutuları** (07.12) — kutu açılırken sorulan tipin listesi.
+ *
+ * Yalnız AÇIK tipler ve yalnız BU deponun benimsedikleri: sistem şablonu doğrudan seçilemez
+ * (kopyalanarak benimsenir — `ShippingBoxSchema` künyesi), kapatılmış tip de yeni kutuya
+ * konamaz. Süzgeç sunucuda; istemciye "seçme" diye işaretli bir satır göndermek, ekranın
+ * gösterebileceği ama kullanamayacağı bir seçenek üretirdi.
+ *
+ * Sayfalama YOK ve bu bilinçli (`CLAUDE §1`): küme operatörün elle kurduğu, doğal tavanı olan
+ * bir katalog — veriyle büyümüyor.
+ */
+warehouse.get('/shipping-boxes', async (c) => {
+  const boxes = await new ShippingBoxService(serviceDb()).listForWarehouse(c.get('warehouseId'), { onlyActive: true });
+  const body: z.input<typeof ShippingBoxesResponseSchema> = { boxes };
+  return ok(c, ShippingBoxesResponseSchema.parse(body));
+});
+
+/**
+ * **Kutu açar** (karar §1.4). Gövdede TEK alan var (`shippingBoxId`) ve o da kutunun içeriği
+ * değil FİZİKSEL KİMLİĞİDİR: gönderi ağırlığı ve ölçüsü ondan çıkıyor. Numarası sipariş içi
  * sıradan, kodu üreteçten gelir. `stale` cevabın kendisidir — sipariş artık toplanabilir değilse
  * ekran hangi durumda olduğunu söyler, sessiz 4xx'e indirgemez.
+ *
+ * **Gövdesiz istek hâlâ geçerli** (`shippingBoxId` varsayılanı `null`): rota kulvarında tip
+ * sorulmuyor ve gövde zorunlu olsaydı o akış kırılırdı.
  */
 warehouse.post('/orders/:orderId/boxes', async (c) => {
   const orderId = UuidSchema.safeParse(c.req.param('orderId'));
   if (!orderId.success) return fail(c, 'invalid_order_id', 400);
 
-  const outcome = await openBox(serviceDb(), { orderId: orderId.data, warehouseId: c.get('warehouseId') });
+  const parsed = OpenBoxRequestSchema.safeParse((await readJsonBody(c)) ?? {});
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await openBox(serviceDb(), {
+    orderId: orderId.data,
+    warehouseId: c.get('warehouseId'),
+    shippingBoxId: parsed.data.shippingBoxId,
+  });
   const body: z.input<typeof OpenBoxResponseSchema> = outcome;
   return ok(c, OpenBoxResponseSchema.parse(body));
 });

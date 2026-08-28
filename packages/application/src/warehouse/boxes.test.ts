@@ -8,6 +8,7 @@ import {
   ProductService,
   ReservationService,
   SettingsService,
+  ShippingBoxService,
   StockService,
   UserProfileService,
   serviceDb,
@@ -139,6 +140,50 @@ describe('kutu açılışı (openBox)', () => {
       status: 'forbidden',
       reason: 'out_of_scope',
     });
+  });
+});
+
+/*
+  KARGO KUTUSU TİPİ (07.12) — kutunun FİZİKSEL kimliği açılışta yazılır.
+
+  Kural veride de duruyor (bileşik FK `(warehouse_id, shipping_box_id)`, 0052) ama iki hâli VERİ
+  YAKALAYAMAZ: kapatılmış tip (FK `is_active`e bakmaz) ve okunur cevap (kısıt ihlali depocuya
+  `23503` diye görünürdü). İkisi de burada ölçülüyor.
+*/
+describe('kutu tipi (openBox · 07.12)', () => {
+  const boxTypes = new ShippingBoxService(db);
+
+  it('seçilen tip kutuya yazılır ve kuyruk onu taşır', async () => {
+    const type = await boxTypes.insert({ warehouseId, name: `Orta karton ${stamp}`, lengthMm: 400, widthMm: 300, heightMm: 250, tareG: 220 });
+    const { orderId } = await confirmedOrder([1]);
+
+    const opened = await openBox(db, { orderId, warehouseId, shippingBoxId: type.id });
+    expect(opened).toMatchObject({ status: 'ok', box: { shippingBoxId: type.id } });
+
+    const row = (await listPreparationQueue(db, { warehouseId })).find((o) => o.orderId === orderId)!;
+    expect(row.boxes[0]?.shippingBoxId).toBe(type.id);
+  });
+
+  it('tip VERİLMEZSE kutu tipsiz açılır — rota kulvarının bugünkü akışı kırılmaz', async () => {
+    const { orderId } = await confirmedOrder([1]);
+    expect(await openBox(db, { orderId, warehouseId })).toMatchObject({ status: 'ok', box: { shippingBoxId: null } });
+  });
+
+  it('BAŞKA DEPONUN kutu tipi reddedilir — `unknown_box`, ve kutu HİÇ açılmaz', async () => {
+    const foreign = await boxTypes.insert({ warehouseId: otherWarehouseId, name: `Yabancı karton ${stamp}`, lengthMm: 300, widthMm: 200, heightMm: 150, tareG: 100 });
+    const { orderId } = await confirmedOrder([1]);
+
+    expect(await openBox(db, { orderId, warehouseId, shippingBoxId: foreign.id })).toEqual({ status: 'unknown_box' });
+    // Ret HİÇBİR yazım bırakmamalı: yarım açılmış bir kutu, sipariş içi numarada boşluk açardı.
+    expect(await boxService.listByOrder(orderId)).toHaveLength(0);
+  });
+
+  it('KAPATILMIŞ tip reddedilir — bunu yalnız kapı yakalayabiliyor (FK `is_active`e bakmaz)', async () => {
+    const retired = await boxTypes.insert({ warehouseId, name: `Kalkan karton ${stamp}`, lengthMm: 500, widthMm: 400, heightMm: 300, tareG: 300 });
+    await boxTypes.setActive(retired.id, false);
+    const { orderId } = await confirmedOrder([1]);
+
+    expect(await openBox(db, { orderId, warehouseId, shippingBoxId: retired.id })).toEqual({ status: 'unknown_box' });
   });
 });
 

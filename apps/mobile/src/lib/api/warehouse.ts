@@ -14,6 +14,7 @@ import {
   RecordAdjustmentResponseSchema,
   ResolveCodeResponseSchema,
   SealBoxResponseSchema,
+  ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
   WarehouseReturnResponseSchema,
   type ConfirmPreparationRequest,
@@ -83,9 +84,30 @@ export function confirmPreparation(
   });
 }
 
-/** **Kutu açar** (23.6 · karar §1.4). Gövde yok: içerik doğumda yoktur, numara/kod sunucudan. */
-export function openOrderBox(orderId: string): Promise<ApiResult<z.infer<typeof OpenBoxResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/boxes`, OpenBoxResponseSchema, { method: 'POST' });
+/**
+ * **Deponun kargo kutusu tipleri** (07.12) — kutu açılırken sorulan listenin kaynağı.
+ *
+ * Yalnız açık tipler ve yalnız bu deponunkiler gelir; süzgeç sunucuda (uç künyesi). Liste
+ * ekranda ÖNCEDEN okunur: seçim anında ağ turu beklemek, depocuyu kartonu elinde tutarken
+ * bekletirdi.
+ */
+export function fetchShippingBoxes(): Promise<ApiResult<z.infer<typeof ShippingBoxesResponseSchema>>> {
+  return authorizedFetch('/api/v1/warehouse/shipping-boxes', ShippingBoxesResponseSchema);
+}
+
+/**
+ * **Kutu açar** (23.6 · karar §1.4). İçerik doğumda yoktur, numara/kod sunucudan gelir; gövdedeki
+ * tek alan kutunun FİZİKSEL KİMLİĞİDİR (`shippingBoxId`, 07.12) — gönderi ağırlığı ondan çıkıyor.
+ * `null` = tip sorulmadı (rota kulvarı ya da deponun benimsediği kutu yok).
+ */
+export function openOrderBox(
+  orderId: string,
+  shippingBoxId: string | null = null,
+): Promise<ApiResult<z.infer<typeof OpenBoxResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/boxes`, OpenBoxResponseSchema, {
+    method: 'POST',
+    body: { shippingBoxId },
+  });
 }
 
 /**

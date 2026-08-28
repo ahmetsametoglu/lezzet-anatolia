@@ -57,6 +57,8 @@ export function preparationOrder(overrides: Partial<PreparationOrderContract> = 
     channel: 'b2b',
     status: 'confirmed',
     deliveryDate: '2026-08-09',
+    // Varsayılan ROTA kulvarı: kutu tipi sorusu kargoya özgüdür ve testlerin çoğu onu görmemeli.
+    deliveryType: 'route',
     lineCount: lines.length,
     pickedLineCount: 0,
     // 23.6: kuyruk kutuları da taşıyor — varsayılan "kutusuz akış" (eski yol).
@@ -74,6 +76,8 @@ export function preparationBox(overrides: Partial<PreparationBoxContract> = {}):
     code: 'KT-26-4K2M9P7HWX',
     sealedAt: null,
     items: [],
+    // Varsayılan "tip seçilmedi" — rota kutusunun ve 07.12 öncesi açılmış kutuların hâli.
+    shippingBoxId: null,
     ...overrides,
   };
 }

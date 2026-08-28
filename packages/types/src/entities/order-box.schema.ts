@@ -55,13 +55,19 @@ export const OrderBoxSchema = z.object({
 });
 export type OrderBox = z.infer<typeof OrderBoxSchema>;
 
-/** Kutu AÇIK doğar: kapanış/basım/yükleme damgaları doğumda yazılmaz — hepsi kendi kapısından. */
+/**
+ * Kutu AÇIK doğar: kapanış/basım/yükleme damgaları doğumda yazılmaz — hepsi kendi kapısından.
+ *
+ * **`shippingBoxId` istisnadır ve doğumda yazılır** (07.12): depocu kartonu kutuyu doldurmaya
+ * başlarken eline alıyor, yani tip açılış anında BİLİNİYOR. İsteğe bağlı — rota kulvarında kargo
+ * kutusu diye bir şey yok.
+ */
 export const OrderBoxInsertSchema = OrderBoxSchema.pick({
   orderId: true,
   warehouseId: true,
   boxNo: true,
   code: true,
-});
+}).extend(OrderBoxSchema.pick({ shippingBoxId: true }).partial().shape);
 export type OrderBoxInsert = z.infer<typeof OrderBoxInsertSchema>;
 
 /**

@@ -7,6 +7,8 @@
   olmayacak — depo ekranları tutar görmez (v2'nin altın kuralı, sözleşmede de aynen duruyor).
 */
 
+import { fillCopy } from '@/screens/operations/copy';
+
 /**
  * GİRDİ METNİ → ADET. `null` = "hiç yazmadım"; `0` = "sıfır yazdım" ve İKİSİ AYRI ŞEYDİR.
  *
@@ -91,4 +93,32 @@ export function batchLabel(code: string | null, expiryDate: string): string {
  */
 export function productLabel(productName: string, variantLabel: string): string {
   return variantLabel.length === 0 ? productName : `${productName} · ${variantLabel}`;
+}
+
+/**
+ * Kargo kutusunun tanıtım satırı — "40×30×25 cm · dara 220 g · en çok 20 kg" (07.12).
+ *
+ * ── NEDEN CM ────────────────────────────────────────────────────────────────
+ * Veri MİLİMETRE (ondalık kalınlık tam sayıda yuvarlanmasın diye — `ShippingBoxSchema` künyesi),
+ * ama depocu kartonu santimle tanıyor: "400×300×250" okunmaz, "40×30×25" bir kutudur. Çeviri
+ * yalnız GÖSTERİMDE; kayda giden değer hep mm.
+ *
+ * ── SINIR YOKSA SATIR DA YOK ────────────────────────────────────────────────
+ * `maxContentG: null` = sınır bilinmiyor, sıfır DEĞİL (`CLAUDE §1`). "en çok 0 kg" yazmak
+ * kutuyu kullanılamaz gösterirdi; bilinmeyen bir sınır hiç yazılmaz.
+ */
+export function boxSizeLine(
+  box: { lengthMm: number; widthMm: number; heightMm: number; tareG: number; maxContentG: number | null },
+  copy: { typeSize: string; typeSizeCapped: string },
+): string {
+  const slots = {
+    l: String(Math.round(box.lengthMm / 10)),
+    w: String(Math.round(box.widthMm / 10)),
+    h: String(Math.round(box.heightMm / 10)),
+    tare: String(box.tareG),
+  };
+  if (box.maxContentG === null) return fillCopy(copy.typeSize, slots);
+  // Kilo tek ondalıkla ve gereksiz sıfır atılarak: "20 kg" · "2,5 kg" (Türkçe ondalık ayracı).
+  const kg = (box.maxContentG / 1000).toFixed(1).replace(/\.0$/, '').replace('.', ',');
+  return fillCopy(copy.typeSizeCapped, { ...slots, max: kg });
 }

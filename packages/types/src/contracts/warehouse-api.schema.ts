@@ -112,6 +112,13 @@ export const PreparationBoxSchema = z.object({
   code: z.string(),
   sealedAt: z.string().nullable(),
   items: z.array(z.object({ orderItemId: z.string().uuid(), qty: z.number().int().positive() })),
+  /**
+   * Hangi KARGO KUTUSU tipiyle açıldı (07.12) — `null` = tip seçilmedi (rota kulvarı ya da
+   * seçimden önce açılmış kutu). Yalnız kimlik taşınır, ADI değil: ekran zaten kutu tipleri
+   * listesini okuyor (`GET /warehouse/shipping-boxes`) ve adı ikinci kez göndermek aynı bilgiyi
+   * iki kaynaktan taşımak olurdu — biri bir gün ötekiyle çelişirdi.
+   */
+  shippingBoxId: z.string().uuid().nullable(),
 });
 export type PreparationBoxContract = z.infer<typeof PreparationBoxSchema>;
 
@@ -131,6 +138,12 @@ export const PreparationOrderSchema = z.object({
   channel: ChannelEnum,
   status: OrderStatusEnum,
   deliveryDate: z.string().nullable(),
+  /**
+   * Hangi kulvar — `shipping` ise sipariş taşıyıcıya verilecek (07.12). Ekran bunu kutu tipi
+   * SORULACAK MI sorusu için okuyor: rota siparişinde kargo kutusu seçimi anlamsızdır (kutu
+   * araca biner, taşıyıcıya değil) ve sormak depocuya cevabı olmayan bir soru sormaktır.
+   */
+  deliveryType: DeliveryTypeEnum,
   lineCount: z.number().int(),
   pickedLineCount: z.number().int(),
   lines: z.array(PreparationLineSchema),
@@ -191,14 +204,64 @@ export type ConfirmPreparationResponse = z.infer<typeof ConfirmPreparationRespon
 // ── D1 · Kutu döngüsü (23.6 — karar §1.4) ───────────────────────────────────
 
 /**
+ * **KARGO KUTUSU SEÇENEĞİ** (07.12) — deponun benimsediği dış kutu tiplerinden biri.
+ *
+ * Varyantın kendi ambalajıyla karıştırılmaz: `packed_*` "bu ürün paketiyle ne kadar yer kaplar"
+ * der, bu ise "onları içine koyduğumuz kutu ne" der (`ShippingBoxSchema` künyesi).
+ *
+ * Ölçüler depocuya BİLGİ olarak taşınıyor, karar olarak değil: liste kısa ve fiziksel kutular
+ * birbirine benziyor — "40×30×25" satırı, adı ezberlememiş depocunun elindekini tanımasını
+ * sağlar. Sözleşme sistem şablonlarını HİÇ taşımaz (yalnız deponun benimsedikleri gelir);
+ * şablon seçilemez, benimsenir (Depolar ekranının işi).
+ */
+export const ShippingBoxOptionSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1),
+  lengthMm: z.number().int().positive(),
+  widthMm: z.number().int().positive(),
+  heightMm: z.number().int().positive(),
+  /** Boş kutunun ağırlığı (g) — gönderi ağırlığına eklenir. `0` meşrudur (poşet/zarf). */
+  tareG: z.number().int().nonnegative(),
+  /** Azami İÇERİK ağırlığı (g, dara hariç). `null` = sınır bilinmiyor, sıfır DEĞİL. */
+  maxContentG: z.number().int().positive().nullable(),
+});
+export type ShippingBoxOptionContract = z.infer<typeof ShippingBoxOptionSchema>;
+
+/** `GET /warehouse/shipping-boxes` — yalnız AÇIK kutular; kapatılmış tip yeni kutuya seçilemez. */
+export const ShippingBoxesResponseSchema = z.object({ boxes: z.array(ShippingBoxOptionSchema) });
+export type ShippingBoxesResponse = z.infer<typeof ShippingBoxesResponseSchema>;
+
+/**
+ * Kutu açılış gövdesi — TEK alan ve o da isteğe bağlı.
+ *
+ * Gövde 23.6'da bilerek YOKTU (*"kutunun içeriği doğumda yoktur"*) ve o gerekçe hâlâ geçerli:
+ * burada gelen şey içerik değil, kutunun FİZİKSEL KİMLİĞİ — depocunun eline aldığı karton.
+ * Kargo kulvarında gönderi ağırlığı ve ölçüsü bundan çıkıyor, yani seçim sipariş açılışında
+ * yapılmazsa duyuru anında tahmine düşülürdü (§4.4).
+ *
+ * `null` meşru: rota siparişinde kutu tipi sorulmaz ve kargo siparişinde de depo hiç kutu
+ * benimsememiş olabilir. Eksik ölçü SIFIR değildir — duyuru kapısı ölçüsüz kutuyu ön koşulda
+ * durdurur ve sebebini söyler.
+ */
+export const OpenBoxRequestSchema = z.object({
+  shippingBoxId: z.string().uuid().nullable().default(null),
+});
+export type OpenBoxRequest = z.infer<typeof OpenBoxRequestSchema>;
+
+/**
  * Kutu açılışının cevabı. `stale` bir hata değil cevabın kendisidir: sipariş artık toplanabilir
  * durumda değil (araya biri girdi — teslim edildi, iptal oldu) ve ekran hangi durumda olduğunu
- * söyleyebilmeli. Açılış gövdesizdir: kutunun içeriği yoktur, sayısı sipariş içi sıradan türer.
+ * söyleyebilmeli.
+ *
+ * `unknown_box` ayrı bir daldır ve `not_found`a katlanmaz: sipariş duruyor, KUTU TİPİ geçersiz
+ * (başka deponun kutusu ya da kapatılmış bir tip). İkisi tek cevaba indirgenseydi depocu var olan
+ * bir siparişi yok sanardı — ve gerçek çare listeyi tazelemek olurdu.
  */
 export const OpenBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('ok'), box: PreparationBoxSchema }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
+  z.object({ status: z.literal('unknown_box') }),
   z.object({ status: z.literal('not_found') }),
 ]);
 export type OpenBoxResponse = z.infer<typeof OpenBoxResponseSchema>;
