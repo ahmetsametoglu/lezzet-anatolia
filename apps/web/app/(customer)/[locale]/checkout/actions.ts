@@ -71,11 +71,18 @@ export async function loadCheckoutAction(
    * ödeme yöntemini seçer, onaylar ve kasada reddedilirdi.
    */
   shippingOrder = false,
+  /**
+   * Müşterinin seçtiği kargo servisi (07.12) — **YALNIZ KOD, tutar değil.**
+   *
+   * Fiyat sunucudaki teklif listesinden okunur; istemcinin gönderdiği bir tutar hiç sorulmaz.
+   * Referans projede bunun tersi kayda geçmiş bir sömürü kapısıydı (`priceEur=0` yükü).
+   */
+  shippingOptionCode: string | null = null,
 ): Promise<CustomerResult<CheckoutSnapshot>> {
   try {
     if (!hasLocale(routing.locales, locale)) throw new Error('Geçersiz dil');
     const customerId = await currentCustomerId();
-    if (!customerId) return { data: { addresses: [], delivery: null, payment: null, summary: null }, errorKey: null };
+    if (!customerId) return { data: { addresses: [], delivery: null, shipping: null, payment: null, summary: null }, errorKey: null };
 
     // Sıra, iki tur teslimat çözümü ve kargo siparişinin bölgesizliği — hepsi kapının kendi
     // künyesinde (`@lezzet/application`, `order/checkout-snapshot`). Uç yalnız kimliği çözer,
@@ -86,6 +93,7 @@ export async function loadCheckoutAction(
       addressId,
       couponCode,
       shippingOrder,
+      shippingOptionCode,
       // Paket türetmesi hâlâ web'te (`lib/storefront/packages.ts`), terfisi ayrı bir adım — kapı
       // geçiliyor ki bugünkü paket davranışı birebir korunsun.
       bundles: getPackagesByIds,

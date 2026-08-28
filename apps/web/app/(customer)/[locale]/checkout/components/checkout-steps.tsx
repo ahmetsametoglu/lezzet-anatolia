@@ -279,7 +279,7 @@ export function AddressStep({ t, locale, snapshot, state, compact, selectedAddre
  */
 
 export function DeliveryStep(props: CheckoutViewProps) {
-  const { t, locale, snapshot, state, compact, onSelectDate, cart, selectedAddress } = props;
+  const { t, locale, snapshot, state, compact, onSelectDate, onSelectShipping, cart, selectedAddress } = props;
   const delivery = snapshot.delivery;
   const payment = snapshot.payment;
   if (!delivery) return null;
@@ -399,6 +399,65 @@ export function DeliveryStep(props: CheckoutViewProps) {
             📅 {t.delivery.single.replace('{date}', formatDeliveryDate(delivery.availableDates[0] ?? '', locale))}
           </span>
         )
+      )}
+      {/* ── KARGO SERVİSİ SEÇİMİ (07.12) ────────────────────────────────────────
+          Burada eskiden statik bir "2-3 iş gününde kargoda" satırı vardı; artık taşıyıcı
+          seçenekleri canlı geliyor. `ChoiceCard` bu ekranda ZATEN üç yerde kullanılıyor (adres ·
+          gün · ödeme yöntemi) — bu dördüncüsü, yeni bir komponent yazılmadı.
+
+          Fiyat İSTEMCİDE hesaplanmıyor: kart yalnız sunucudan gelen tutarı yazıyor ve seçim
+          sunucuya gidip anlık görüntüyü yeniden çözüyor. */}
+      {!inRoute && !delivery.blocked && (
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>
+            {snapshot.shipping !== null && snapshot.shipping.parcelCount > 1 && (
+              <span className="font-sans text-note text-muted">
+                {t.delivery.carrierParcels.replace('{count}', String(snapshot.shipping.parcelCount))}
+              </span>
+            )}
+          </div>
+
+          {snapshot.shipping !== null && snapshot.shipping.options.length > 0 ? (
+            <>
+              <div className={compact ? 'flex flex-col gap-2' : 'grid grid-cols-2 gap-2.5'}>
+                {snapshot.shipping.options.map((option) => (
+                  <ChoiceCard
+                    key={option.code}
+                    selected={state.shippingOptionCode === option.code}
+                    onClick={() => onSelectShipping(option.code)}
+                  >
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="font-sans text-body-sm font-bold text-ink">{option.carrierName}</span>
+                      <span className="font-sans text-body-sm font-bold text-ink">{formatPrice(option.priceCents, locale)}</span>
+                    </span>
+                    <span className="font-sans text-note text-muted">
+                      {[
+                        option.leadTimeHours ? t.delivery.carrierDays.replace('{hours}', String(option.leadTimeHours)) : null,
+                        option.tracked ? t.delivery.carrierTracked : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  </ChoiceCard>
+                ))}
+              </div>
+              <span className="font-sans text-note text-muted">{t.delivery.carrierHint}</span>
+            </>
+          ) : (
+            /* SESSİZ GERİ DÜŞÜŞ YOK (07.12): teklif alınamadıysa sebebi yazılır ve sabit tarife
+               uygulandığı SÖYLENİR — hesaplanmamış bir sayıyı "canlı fiyat" diye göstermek
+               müşteriye yalan olurdu. Sebep ayrı cümleler çünkü çözümü de ayrı: ölçü eksikliği
+               bizim işimiz, seçenek yokluğu adresin gerçeği. */
+            <span className="font-sans text-note leading-relaxed text-muted">
+              {snapshot.shipping?.status === 'unmeasured'
+                ? t.delivery.carrierUnmeasured
+                : snapshot.shipping?.status === 'ok'
+                  ? t.delivery.carrierNone
+                  : t.delivery.carrierOff}
+            </span>
+          )}
+        </div>
       )}
       {!inRoute && <span className="font-sans text-note font-semibold text-body">📦 {t.delivery.shippingDays}</span>}
     </StepShell>

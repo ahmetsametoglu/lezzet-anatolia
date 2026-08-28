@@ -49,7 +49,7 @@ interface CheckoutClientProps {
   customer: { name: string; email: string; phone: string | null } | null;
 }
 
-const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, payment: null, summary: null };
+const EMPTY: CheckoutSnapshot = { addresses: [], delivery: null, shipping: null, payment: null, summary: null };
 
 /** `crypto.randomUUID` sunucu render'ında da var (Node 19+); yine de eski tarayıcı için yedeği var. */
 function newAttemptKey(): string {
@@ -70,6 +70,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
   const [state, setState] = useState<CheckoutState>({
     addressId: null,
     deliveryDate: null,
+    shippingOptionCode: null,
     paymentMethod: null,
     onAccount: false,
     marketingConsent: false,
@@ -112,9 +113,9 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
 
   /** Adım verisini tazeler. Seçili adres değiştikçe ve sepet değiştikçe koşar. */
   const refresh = useCallback(
-    async (addressId: string | null) => {
+    async (addressId: string | null, shippingOptionCode: string | null = null) => {
       const ticket = ++seq.current;
-      const { data, errorKey } = await loadCheckoutAction(locale, cartEntries, addressId, coupon, shippingOrder);
+      const { data, errorKey } = await loadCheckoutAction(locale, cartEntries, addressId, coupon, shippingOrder, shippingOptionCode);
       if (ticket !== seq.current) return;
       // Okuma düşse de bayrak kalkar: sonsuza kadar iskelet göstermek, hatayı gizlemenin bir
       // başka biçimi olurdu — ekran hata satırını gösterebilmeli.
@@ -140,7 +141,11 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
           prev.deliveryDate && dates.includes(prev.deliveryDate)
             ? prev.deliveryDate
             : (invited ?? (dates.length === 1 ? dates[0]! : null));
-        return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate };
+        /* KARGO SERVİSİ — seçimi SUNUCU yapıyor, ekran onu yansıtıyor. Burada kendi önseçimimizi
+           kursaydık ilk açılışta liste seçili görünür ama ücret sabit tarifeden hesaplanmış olurdu
+           (kapının künyesi). Adres değişince eski kod başka taşıyıcının kodu olabilir; sunucu onu
+           da zaten süzüyor. */
+        return { ...prev, addressId: selected?.id ?? null, deliveryDate: keepDate, shippingOptionCode: data.shipping?.selectedCode ?? null };
       });
     },
     [t, locale, cartEntries, coupon, shippingOrder],
@@ -287,6 +292,13 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     paymentSlot,
     onSelectAddress: (id) => void refresh(id),
     onSelectDate: (date) => setState((prev) => ({ ...prev, deliveryDate: date })),
+    /* Seçim SUNUCUYA gidiyor: ücret, KDV kırılımı ve toplam ona bağlı ve hiçbiri istemcide
+       hesaplanmıyor. Yerel `setState` ile yetinseydik ekran seçili seçeneği gösterir ama toplam
+       eski ücretle kalırdı — checkout'un en pahalı çelişkisi. */
+    onSelectShipping: (code) => {
+      setState((prev) => ({ ...prev, shippingOptionCode: code }));
+      void refresh(state.addressId, code);
+    },
     onSelectPayment: (method, onAccount) => setState((prev) => ({ ...prev, paymentMethod: method, onAccount })),
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),
     onAddAddress: async (input: NewAddressInput) => {

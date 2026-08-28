@@ -7,7 +7,7 @@ const UCRET = 790; // 7,90 €
 describe('kargo ücreti (07.3)', () => {
   it('rota içi teslimat her zaman ücretsiz — sepet ne olursa olsun', () => {
     const r = resolveShippingFee({ deliveryType: 'route', basketCents: 500, freeThresholdCents: ESIK, feeCents: UCRET });
-    expect(r).toEqual({ feeCents: 0, freeReason: 'route', remainingForFreeCents: 0 });
+    expect(r).toEqual({ feeCents: 0, freeReason: 'route', remainingForFreeCents: 0, source: null });
   });
 
   it('kargoda eşik altı sipariş ücret öder', () => {
@@ -73,5 +73,36 @@ describe('kargo ücretinin KDV\'si — taşıdığı malın oranını izler', ()
   it('ücret yoksa ya da kalem yoksa parça üretilmez', () => {
     expect(apportionShippingVat(0, [{ totalCents: 1000, vatRate: 20 }])).toEqual([]);
     expect(apportionShippingVat(790, [])).toEqual([]);
+  });
+});
+
+describe('canlı teklif — hibrit fiyat modeli (07.12)', () => {
+  const taban = { deliveryType: 'shipping' as const, basketCents: 4000, freeThresholdCents: 10_000, feeCents: 1190 };
+
+  it('teklif VARSA ücret ondan gelir ve kaynağı söylenir', () => {
+    expect(resolveShippingFee({ ...taban, quotedFeeCents: 499 })).toMatchObject({ feeCents: 499, source: 'quote' });
+  });
+
+  it('teklif YOKSA sabit tarifeye düşer — ve DÜŞTÜĞÜNÜ söyler', () => {
+    // Sessizce düşmek, müşteriye "canlı fiyat" diye hesaplanmamış bir sayı göstermek olurdu.
+    expect(resolveShippingFee({ ...taban, quotedFeeCents: null })).toMatchObject({ feeCents: 1190, source: 'tariff' });
+    expect(resolveShippingFee(taban)).toMatchObject({ feeCents: 1190, source: 'tariff' });
+  });
+
+  it('ÜCRETSİZ teklif (0) sabit tarifeye DÜŞMEZ — sıfır geçerli bir fiyattır', () => {
+    // `0 || fallback` tuzağı: sıfır yanlışlıkla "yok" sayılırsa ücretsiz seçenek para keserdi.
+    expect(resolveShippingFee({ ...taban, quotedFeeCents: 0 })).toMatchObject({ feeCents: 0, source: 'quote' });
+  });
+
+  it('⚠ EŞİK canlı fiyata BAKMAZ — teklif ne olursa olsun eşik üstü ücretsiz', () => {
+    // Eşik bir pazarlama sözüdür ve maliyete bağlanamaz: "100 € üzeri ücretsiz" cümlesi bazı
+    // adreslerde yalan olamaz.
+    const sonuc = resolveShippingFee({ ...taban, basketCents: 12_000, quotedFeeCents: 2500 });
+    expect(sonuc).toMatchObject({ feeCents: 0, freeReason: 'threshold', source: null });
+  });
+
+  it('ROTA teklifi hiç sormaz — kendi aracımızla giden malın tarifesi yok', () => {
+    const sonuc = resolveShippingFee({ ...taban, deliveryType: 'route', quotedFeeCents: 2500 });
+    expect(sonuc).toMatchObject({ feeCents: 0, freeReason: 'route', source: null });
   });
 });

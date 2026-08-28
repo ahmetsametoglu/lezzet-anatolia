@@ -114,8 +114,32 @@ export async function createStampedProduct(opts: StampedProductOptions = {}): Pr
     }
   }
   const category = await new CategoryService(db).create({ name: { tr: `E2E kategori ${stamp}` } });
-  // Varsayılanlar vitrin koşullarını zaten karşılar: status 'active', shippable true, tek varyant.
-  const { product, variants } = await new ProductService(db).create({ name: { tr: productName }, categoryId: category.id });
+  /*
+    ⚠ **YAYIN ŞARTLARI AÇIKÇA VERİLİR — künye "varsayılanlar yeter" diyordu ve BAYATTI (28.08).**
+
+    05.36 (27.08) iki şeyi birden değiştirdi: `product.status` varsayılanı `active`ten
+    `candidate`e döndü VE üç dil yayın kısıtı veriye kondu
+    (`product_publish_requires_all_locales`). Fikstür ikisini de bilmiyordu, yani o günden beri
+    e2e ürünü **aday** doğuyor ve vitrinde hiç görünmüyordu — "sepete ekle" düğmesi bulunamıyor,
+    müşteri checkout senaryosu ölçülemiyordu.
+
+    Arıza SESSİZDİ çünkü fikstür hata vermiyor: ürün gerçekten yaratılıyor, yalnız satılabilir
+    olmuyor. Senaryonun kırmızısı da ürünü değil düğmeyi işaret ediyordu.
+
+    Dört alan üç dilde çünkü kısıt dördünü birden istiyor: ad · açıklama · içindekiler · saklama.
+  */
+  const uc = (metin: string) => ({ tr: metin, fr: metin, de: metin });
+  const { product, variants } = await new ProductService(db).create({
+    name: uc(productName),
+    description: uc(`E2E ${stamp}`),
+    ingredients: uc(`E2E ${stamp}`),
+    storageInstructions: uc(`E2E ${stamp}`),
+    status: 'active',
+    // Kargo izni AÇIK: kolon varsayılanı `false` (08.08 kararı — unutulanın bedeli "satılamadı"
+    // olmalı) ve senaryolar ürünü rota DIŞI adreste de sepete atabilmeli.
+    shippable: true,
+    categoryId: category.id,
+  });
   const variantId = variants[0]!.id;
   await new PriceService(db).insert({ variantId, channel: 'b2c', amountCents: opts.priceCents ?? PRICE_CENTS });
 

@@ -619,7 +619,8 @@ export function undeliverableTotalOf(lines: readonly CartLine[]): number {
 export function shippingGroupFee(
   view: Pick<CartView, 'shippingSubtotalCents' | 'freeShippingCents' | 'shippingTariffCents'>,
 ): ShippingFeeResult {
-  if (view.shippingSubtotalCents <= 0) return { feeCents: 0, freeReason: null, remainingForFreeCents: 0 };
+  // Kargo grubu yok: ücret sorusu doğmuyor, o yüzden kaynağı da yok (`source: null`).
+  if (view.shippingSubtotalCents <= 0) return { feeCents: 0, freeReason: null, remainingForFreeCents: 0, source: null };
   return resolveShippingFee({
     deliveryType: 'shipping',
     basketCents: view.shippingSubtotalCents,

@@ -59,6 +59,8 @@ export interface CheckoutPaymentResult {
   /** Kargo ücreti (cent) ve neden ücretsiz olduğu. */
   shippingFeeCents: number;
   shippingFreeReason: 'route' | 'threshold' | null;
+  /** Ücret nereden geldi: `quote` canlı teklif · `tariff` sabit tarife · `null` ücret yok. */
+  shippingFeeSource: 'quote' | 'tariff' | null;
   /** "X € daha ekleyin, kargo bedava" mesajının girdisi. */
   remainingForFreeShippingCents: number;
   /** Ücretin KDV kırılımı — taşıdığı malın oranını izler (karışık sepette oransal). */
@@ -109,6 +111,14 @@ export interface CheckoutPaymentInput {
   country?: string | null;
   zoneId?: string | null;
   warehouseId?: string | null;
+  /**
+   * **Canlı kargo teklifinin fiyatı** (cent, 07.12) — müşterinin seçtiği servisin SUNUCUDA
+   * hesaplanmış tutarı. `null`/verilmemiş = teklif yok → sabit tarife.
+   *
+   * Motor değişmedi, yalnız girdisi genişledi (07.12 kararı): teklif ücretin TUTARINI belirler,
+   * ücretsiz kargo eşiği ise ALINIP ALINMAYACAĞINI.
+   */
+  quotedFeeCents?: number | null;
 }
 
 export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput): Promise<CheckoutPaymentResult> {
@@ -143,6 +153,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     basketCents: input.basketCents,
     freeThresholdCents,
     feeCents,
+    quotedFeeCents: input.quotedFeeCents,
   });
   const orderTotalCents = input.basketCents + shipping.feeCents;
 
@@ -186,6 +197,7 @@ export async function resolveCheckoutPayment(db: Db, input: CheckoutPaymentInput
     ...options,
     shippingFeeCents: shipping.feeCents,
     shippingFreeReason: shipping.freeReason,
+    shippingFeeSource: shipping.source,
     remainingForFreeShippingCents: shipping.remainingForFreeCents,
     shippingVat: apportionShippingVat(shipping.feeCents, input.lines),
     minBasketOk: minBasket.ok,

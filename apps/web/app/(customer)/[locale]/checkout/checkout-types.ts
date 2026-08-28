@@ -28,6 +28,11 @@ interface StepProps {
 export interface CheckoutState {
   addressId: string | null;
   deliveryDate: string | null;
+  /**
+   * Seçilen kargo servisinin kodu (07.12) — tutar DEĞİL. Fiyat sunucudan gelir; ekran yalnız
+   * hangi seçeneğin işaretli olduğunu tutar.
+   */
+  shippingOptionCode: string | null;
   paymentMethod: PaymentMethod | null;
   /** Vadeli satın alma işaretlendi mi — ödeme yöntemi değil, siparişin bayrağı. */
   onAccount: boolean;
@@ -61,6 +66,11 @@ export interface CheckoutViewProps extends StepProps {
   error: string | null;
   onSelectAddress: (id: string) => void;
   onSelectDate: (date: string) => void;
+  /**
+   * Kargo servisi seçimi (07.12) — seçim SUNUCUYA gider ve anlık görüntü yeniden çözülür, çünkü
+   * ücret ve toplam ona bağlı. İstemci tarafında bir fiyat hesabı YOKTUR.
+   */
+  onSelectShipping: (code: string) => void;
   onSelectPayment: (method: PaymentMethod, onAccount: boolean) => void;
   onToggleConsent: (value: boolean) => void;
   /**

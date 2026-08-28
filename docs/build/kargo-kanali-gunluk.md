@@ -15,7 +15,7 @@ Top bırakıldı. Hedef: özelliği uçtan uca entegre etmek ve test etmek.
 | B | Kargo kutusu kataloğu | ✅ |
 | C | Koli planı (saf karar) | ✅ |
 | D | Sağlayıcı paketi + canlı doğrulama | ✅ |
-| E | Teklif kapısı (sunucu) ✅ · ekranlar ⏳ | 🔶 |
+| E | Canlı teklif — sunucu + checkout ekranı | ✅ |
 | F | Gönderi kaydı + duyuru ✅ · webhook/etiket ⏳ | 🔶 |
 
 ---
@@ -242,4 +242,35 @@ yükleyiciyle koşuyor. Kovada kalan **6 sahte dosya silindi** (`dev/` önekinde
 değil).
 
 Tam paket **3759/3759**.
+
+---
+
+## 28.08 öğleden sonra — E tamam: müşteri artık kargo servisi seçiyor
+
+Checkout'un teslimat adımında eskiden statik bir *"2-3 iş gününde kargoda"* satırı vardı. Artık
+taşıyıcı seçenekleri **canlı** geliyor: taşıyıcı adı, fiyat, süre, takipli mi. Müşteri seçiyor,
+ücret ve toplam anında yeniden hesaplanıyor.
+
+**Fiyat istemciden hiç sorulmuyor.** Ekran yalnız hangi seçeneği seçtiğini söylüyor; tutar
+sunucudaki teklif listesinden okunuyor. Önseçimi de sunucu yapıyor (en ucuz) — istemci kendi
+önseçseydi liste seçili görünür ama ücret sabit tarifeden hesaplanmış olurdu, yani ekran kendi
+kendisiyle çelişirdi.
+
+**Sessiz geri düşüş yok:** teklif alınamazsa sabit tarife uygulanıyor ve ekran bunu *söylüyor* —
+sebebi ayrı cümlelerle (ölçü eksikliği bizim işimiz, seçenek yokluğu adresin gerçeği).
+
+Yeni komponent yazılmadı: `ChoiceCard` bu ekranda zaten adres, gün ve ödeme yönteminde
+kullanılıyordu — bu dördüncüsü.
+
+### Yol boyunca: müşteri checkout e2e'si 27.08'den beri düşüyormuş
+
+Kendi değişikliğimi doğrularken çıktı. Test fikstürünün künyesi *"varsayılanlar yeter, ürün
+`active` doğar"* diyordu; ama 05.36 (27.08) hem varsayılanı `candidate` yapmış hem üç dil yayın
+kısıtı eklemişti. Fikstür o günden beri **vitrinde hiç görünmeyen** ürün üretiyordu.
+
+Arıza sessizdi: fikstür hata vermiyor, ürün gerçekten yaratılıyor — yalnız satılabilir olmuyor.
+Kırmızı da ürünü değil "sepete ekle" düğmesini gösteriyordu. Düzeltildi, senaryo geçiyor.
+
+**Testler:** 5 birim (motor) + tam paket 3764/3764 + müşteri e2e 13/15. Düşen 2 senaryo bildirim
+şeridinin alanı (girişsiz ziyaretçi hesap sayfasından yönlendirilmiyor) — not bırakıldı.
 

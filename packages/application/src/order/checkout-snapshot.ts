@@ -13,6 +13,9 @@ import { orderScopeOf } from '../cart/cart-types';
 import { cartFingerprint } from '../cart/fingerprint';
 import type { CartDiscount, CartEntry, CartLine, DiscountReason } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
+import { quoteShipping } from '../shipping/quote';
+import { sendcloudProvider, shippingProviderConfigured } from '../shipping/provider';
+import type { ShippingRateProvider } from '../shipping/port';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
 
 /**
@@ -79,6 +82,31 @@ export interface CheckoutSnapshot {
     blocked: boolean;
   } | null;
   /** Ödeme seçenekleri + kargo + toplam; adres seçilmemişse null. */
+  /**
+   * **CANLI KARGO TEKLİFİ** (07.12) — yalnız kargo kulvarında dolu, rota siparişinde `null`.
+   *
+   * Liste sunucuda hesaplanır ve **fiyat istemciden ASLA kabul edilmez**: istemci yalnız hangi
+   * `code`u seçtiğini söyler, tutar sipariş anında yeniden hesaplanır (`checkout-draft` aynı
+   * kapıyı çağırır). Referans projede bunun tersi kayda geçmiş bir sömürü kapısıydı.
+   *
+   * `status` ekranın cümlesini belirler: teklif alınamadıysa sebebi söylenir ve sabit tarife
+   * uygulandığı yazılır — sessiz geri düşüş yok.
+   */
+  shipping: {
+    status: 'ok' | 'unmeasured' | 'no_box' | 'too_large' | 'no_sender' | 'provider_error' | 'off';
+    options: ReadonlyArray<{
+      code: string;
+      carrierName: string;
+      name: string;
+      priceCents: number;
+      leadTimeHours: number | null;
+      lastMile: string | null;
+      tracked: boolean;
+    }>;
+    /** Kaç kutuya bölünüyor — ekran "2 koli" diyebilsin diye. */
+    parcelCount: number;
+    selectedCode: string | null;
+  } | null;
   payment: {
     methods: PaymentMethod[];
     creditAvailable: boolean;
@@ -86,6 +114,12 @@ export interface CheckoutSnapshot {
     cashWarning: boolean;
     shippingFeeCents: number;
     shippingFreeReason: 'route' | 'threshold' | null;
+    /**
+     * Ücret NEREDEN geldi (07.12): `quote` canlı teklif · `tariff` sabit tarife · `null` ücret yok.
+     * Ekran bunu SÖYLEMEK zorunda — teklif alınamadığında sessizce tarifeye düşmek, müşteriye
+     * "canlı fiyat" diye hesaplanmamış bir sayı göstermek olurdu.
+     */
+    shippingFeeSource: 'quote' | 'tariff' | null;
     orderTotalCents: number;
     minBasketOk: boolean;
     missingForMinBasketCents: number;
@@ -186,6 +220,13 @@ export interface CheckoutSnapshotInput {
    */
   shippingOrder?: boolean;
   /**
+   * Müşterinin seçtiği kargo servisi (`code`). **Tutar İSTEMCİDEN ALINMAZ** — kod sunucudaki
+   * teklif listesinde aranır ve fiyatı oradan okunur (07.12 kararı).
+   */
+  shippingOptionCode?: string | null;
+  /** Kargo tarifesi sağlayıcısı — test sahte sağlayıcı geçirir, üretimde varsayılan kullanılır. */
+  rateProvider?: ShippingRateProvider | null;
+  /**
    * Paket çözümünün kapısı (`CartBundlePort`) — sepet okumasına olduğu gibi geçilir. Verilmezse
    * paket satırı ENGELLİ durur; sepette paket taşımayan yüzey bu kapıyı hiç geçmez.
    */
@@ -203,7 +244,7 @@ export async function readCheckoutSnapshot(
 ): Promise<CheckoutSnapshot> {
   const addresses = await new AddressService(db).listByCustomer(input.customerId);
   const selected = addresses.find((a) => a.id === input.addressId) ?? addresses.find((a) => a.isDefault) ?? addresses[0];
-  if (!selected) return { addresses, delivery: null, payment: null, summary: null };
+  if (!selected) return { addresses, delivery: null, shipping: null, payment: null, summary: null };
 
   // ── YER ÖNCE, SEPET SONRA (07.15'in kalanı, arka-uç talebi 09.08) ────────
   // Sepet yeri ÇEREZTEN alıyordu (`readPlaceWarehouses`) ve ayar kapsamının ülke/bölge eksenleri
@@ -261,9 +302,50 @@ export async function readCheckoutSnapshot(
   // bağlıdır, söz verilmez. Ezme tek yönlü — normal taslak adresin cevabını olduğu gibi kullanır.
   const deliveryType = input.shippingOrder ? ('shipping' as const) : delivery.deliveryType;
 
+  /*
+    ── CANLI KARGO TEKLİFİ (07.12) ─────────────────────────────────────────────
+    Yalnız KARGO kulvarında sorulur: rota siparişinde taşıyıcı yok, tarife de yok.
+
+    Sağlayıcı yapılandırılmamışsa ağa HİÇ çıkılmaz (`off`) — anahtarı olmayan bir kurulumda her
+    checkout açılışında bir hata turu atmak, hem yavaşlık hem gürültüdür.
+
+    Teklif düşerse sipariş yolu KAPANMAZ: `resolveShippingFee` sabit tarifeye düşer ve
+    `shippingFeeSource: 'tariff'` ile bunu SÖYLER.
+  */
+  const rateProvider = input.rateProvider ?? (shippingProviderConfigured() ? sendcloudProvider() : null);
+  // Kargo ÇIKIŞ deposu — rota deposu değil (19.23 ayrımı). Depo çözülemediyse teklif SORULMAZ:
+  // gönderici olmadan tarife hesaplanamaz ve uydurma bir depodan sorulan fiyat yanlış olur.
+  const quoteWarehouseId = place.shippingWarehouseId ?? place.warehouseId;
+  const shipping =
+    deliveryType === 'shipping' && rateProvider && quoteWarehouseId
+      ? await quoteShipping(db, rateProvider, {
+          warehouseId: quoteWarehouseId,
+          to: { countryCode: selected.country, postalCode: selected.postalCode, city: selected.city ?? undefined },
+          items: scope.lines.flatMap((l) => (l.variantId ? [{ variantId: l.variantId, qty: l.qty }] : [])),
+        })
+      : null;
+
+  /*
+    Seçilen servisin fiyatı SUNUCUDAN okunur — istemcinin gönderdiği tutar hiç sorulmaz.
+
+    **ÖNSEÇİM DE SUNUCUDA** ve bu bir tur kazandırmıyor, bir ÇELİŞKİYİ önlüyor: istemci kendi
+    önseçseydi ilk açılışta liste seçili görünür ama ücret hâlâ sabit tarifeden hesaplanmış
+    olurdu — ekran "Chronopost 4,99 €" derken toplamda 11,90 € görünürdü. Sunucu seçince liste
+    ve ücret aynı hesaptan çıkıyor.
+
+    Seçim yoksa EN UCUZ: liste zaten ucuzdan pahalıya sıralı (`quoteShipping`). Müşteriye
+    seçeneksiz bir "seçim" göstermek yerine en ucuzu işaretlemek, hem ücreti baştan doğru
+    gösteriyor hem de değiştirme hakkını elinden almıyor.
+  */
+  const chosen =
+    shipping?.status === 'ok'
+      ? (shipping.options.find((o) => o.code === input.shippingOptionCode) ?? shipping.options[0] ?? null)
+      : null;
+
   const options = await resolveCheckoutPayment(db, {
     customerId: input.customerId,
     deliveryType,
+    quotedFeeCents: chosen?.priceCents ?? null,
     basketCents: scope.basketCents,
     // Asgari sepet eşiği İNDİRİM ÖNCESİNİ ister (kullanıcı kararı 11.08) — `basketCents` kargo ve
     // toplam içindir. Ayrımın tamamı `CheckoutPaymentInput` künyesinde.
@@ -305,6 +387,31 @@ export async function readCheckoutSnapshot(
       // bunu ayrıca reddediyor (`cold_chain_unshippable`); ekran aynı gerçeği önce söyler.
       blocked: input.shippingOrder ? cart.lines.some((l) => !l.shippable) : delivery.shippingBlockedReason === 'cold_chain',
     },
+    /* Kargo bloğu YALNIZ kargo kulvarında dolu (yukarıdaki künye). `off` = sağlayıcı
+       yapılandırılmamış: ekran "canlı fiyat kapalı, sabit tarife geçerli" der. */
+    shipping:
+      shipping === null
+        ? deliveryType === 'shipping'
+          ? { status: 'off' as const, options: [], parcelCount: 0, selectedCode: null }
+          : null
+        : {
+            status: shipping.status,
+            options:
+              shipping.status === 'ok'
+                ? shipping.options.map((o) => ({
+                    code: o.code,
+                    carrierName: o.carrierName,
+                    name: o.name,
+                    // Fiyatsız seçenek zaten `quoteShipping`te süzülüyor — burada tip daraltması.
+                    priceCents: o.priceCents ?? 0,
+                    leadTimeHours: o.leadTimeHours,
+                    lastMile: o.lastMile,
+                    tracked: o.tracked,
+                  }))
+                : [],
+            parcelCount: shipping.status === 'ok' ? shipping.parcelCount : 0,
+            selectedCode: chosen?.code ?? null,
+          },
     payment: {
       methods: options.methods,
       creditAvailable: options.creditAvailable,
@@ -312,6 +419,7 @@ export async function readCheckoutSnapshot(
       cashWarning: options.cashWarning,
       shippingFeeCents: options.shippingFeeCents,
       shippingFreeReason: options.shippingFreeReason,
+      shippingFeeSource: options.shippingFeeSource,
       orderTotalCents: options.orderTotalCents,
       minBasketOk: options.minBasketOk,
       missingForMinBasketCents: options.missingForMinBasketCents,

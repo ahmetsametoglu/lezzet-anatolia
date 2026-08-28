@@ -68,7 +68,15 @@
       "blocked": "Sepetinizdeki soğuk zincir ürünleri bu adrese gönderemiyoruz. Sepete dönüp o kalemleri sonraya kaydedebilir ya da teslimat adresinizi değiştirebilirsiniz.",
       "shippingFee": "{fee}",
       "shippingFree": "{threshold} üzeri ücretsiz.",
-      "shippingScope": "Kargoya uygun ürünlerle. Soğuk zincir gerektiren ürünler kargoya verilemez."
+      "shippingScope": "Kargoya uygun ürünlerle. Soğuk zincir gerektiren ürünler kargoya verilemez.",
+      "carrierTitle": "Kargo servisi",
+      "carrierHint": "Fiyat ve süre taşıyıcıdan anlık geliyor.",
+      "carrierDays": "{hours} saat içinde",
+      "carrierTracked": "takipli",
+      "carrierParcels": "{count} koli",
+      "carrierOff": "Kargo ücreti sabit tarifeden hesaplandı — anlık taşıyıcı fiyatı bu sipariş için alınamadı.",
+      "carrierUnmeasured": "Sepetinizdeki bir ürünün paket ölçüsü kayıtlı değil, bu yüzden anlık kargo fiyatı hesaplanamadı. Sabit tarife uygulandı.",
+      "carrierNone": "Bu adres için taşıyıcı seçeneği bulunamadı — sabit tarife uygulandı."
     },
     "payment": {
       "step": "3",
@@ -218,7 +226,15 @@
       "blocked": "Nous ne pouvons pas envoyer les articles en chaîne du froid à cette adresse. Retournez au panier pour les garder pour plus tard, ou changez d'adresse.",
       "shippingFee": "{fee}",
       "shippingFree": "Offerte au-delà de {threshold}.",
-      "shippingScope": "Uniquement les articles expédiables. Les produits en chaîne du froid ne partent pas en colis."
+      "shippingScope": "Uniquement les articles expédiables. Les produits en chaîne du froid ne partent pas en colis.",
+      "carrierTitle": "Service de livraison",
+      "carrierHint": "Prix et délai en direct du transporteur.",
+      "carrierDays": "sous {hours} h",
+      "carrierTracked": "suivi",
+      "carrierParcels": "{count} colis",
+      "carrierOff": "Les frais de port ont été calculés au tarif fixe — le prix en direct du transporteur n'a pas pu être obtenu pour cette commande.",
+      "carrierUnmeasured": "Les dimensions d'emballage d'un article de votre panier ne sont pas enregistrées, le prix en direct n'a pas pu être calculé. Tarif fixe appliqué.",
+      "carrierNone": "Aucune option de transporteur pour cette adresse — tarif fixe appliqué."
     },
     "payment": {
       "step": "3",
@@ -368,7 +384,15 @@
       "blocked": "Kühlkettenartikel können wir nicht an diese Adresse senden. Gehen Sie zum Warenkorb, um sie für später zu merken, oder ändern Sie die Adresse.",
       "shippingFee": "{fee}",
       "shippingFree": "Ab {threshold} kostenlos.",
-      "shippingScope": "Nur versandfähige Artikel. Kühlkettenprodukte gehen nicht per Paket."
+      "shippingScope": "Nur versandfähige Artikel. Kühlkettenprodukte gehen nicht per Paket.",
+      "carrierTitle": "Versandservice",
+      "carrierHint": "Preis und Laufzeit direkt vom Transporteur.",
+      "carrierDays": "in {hours} Std.",
+      "carrierTracked": "mit Sendungsverfolgung",
+      "carrierParcels": "{count} Pakete",
+      "carrierOff": "Die Versandkosten wurden nach Festtarif berechnet — der Live-Preis des Transporteurs war für diese Bestellung nicht verfügbar.",
+      "carrierUnmeasured": "Für einen Artikel in Ihrem Warenkorb sind keine Verpackungsmaße hinterlegt, daher konnte kein Live-Preis berechnet werden. Festtarif angewendet.",
+      "carrierNone": "Für diese Adresse wurde keine Transporteur-Option gefunden — Festtarif angewendet."
     },
     "payment": {
       "step": "3",

@@ -26,8 +26,18 @@ export interface ShippingFeeInput {
   basketCents: number;
   /** Bu tutarın üstünde kargo ücretsiz (cent). */
   freeThresholdCents: number;
-  /** Eşik altında alınan ücret (cent). */
+  /** Eşik altında alınan ücret (cent) — SABİT tarife; canlı teklif yoksa geçerli. */
   feeCents: number;
+  /**
+   * **CANLI TEKLİF** (07.12) — müşterinin seçtiği kargo seçeneğinin sunucuda yeniden hesaplanmış
+   * fiyatı (cent). `null` = teklif alınamadı ya da seçim yapılmadı → sabit tarife geçerli.
+   *
+   * **Fiyat modeli HİBRİT ve motor bu yüzden değişmedi, yalnız GİRDİSİ genişledi** (07.12 kararı):
+   * canlı teklif ücretin *tutarını* belirler, ücretsiz kargo eşiği ise *alınıp alınmayacağını*.
+   * Eşik canlı fiyata bakmaz — 100 €'yu geçen sepet, taşıma bize kaça mal olursa olsun ücretsiz
+   * gider; bu bir pazarlama sözüdür ve maliyete bağlanamaz.
+   */
+  quotedFeeCents?: number | null;
 }
 
 export interface ShippingFeeResult {
@@ -36,19 +46,33 @@ export interface ShippingFeeResult {
   freeReason: 'route' | 'threshold' | null;
   /** Ücretsiz kargoya kalan tutar (cent); zaten ücretsizse 0. "X € daha ekleyin" mesajının girdisi. */
   remainingForFreeCents: number;
+  /**
+   * Ücret NEREDEN geldi — `quote` canlı teklif, `tariff` sabit tarife.
+   *
+   * **Ekranın bunu söylemesi gerekiyor** (07.12): teklif alınamadığında sessizce sabit tarifeye
+   * düşmek, müşteriye "canlı fiyat" diye hesaplanmamış bir sayı göstermek olurdu. Ücret
+   * alınmadığında (rota / eşik) kaynak sorusu doğmaz — `null`.
+   */
+  source: 'quote' | 'tariff' | null;
 }
 
 export function resolveShippingFee(input: ShippingFeeInput): ShippingFeeResult {
   if (input.deliveryType === 'route') {
-    return { feeCents: 0, freeReason: 'route', remainingForFreeCents: 0 };
+    return { feeCents: 0, freeReason: 'route', remainingForFreeCents: 0, source: null };
   }
+  // **EŞİK CANLI FİYATA BAKMAZ** (künye: `quotedFeeCents`): eşik bir pazarlama sözüdür, taşımanın
+  // bize maliyeti ne olursa olsun tutar. Sırayı ters çevirmek (önce teklif, sonra eşik) sözü
+  // maliyete bağlardı ve "100 € üzeri ücretsiz" cümlesi bazı adreslerde yalan olurdu.
   if (input.basketCents >= input.freeThresholdCents) {
-    return { feeCents: 0, freeReason: 'threshold', remainingForFreeCents: 0 };
+    return { feeCents: 0, freeReason: 'threshold', remainingForFreeCents: 0, source: null };
   }
+  const quoted = input.quotedFeeCents;
+  const live = typeof quoted === 'number' && quoted >= 0;
   return {
-    feeCents: input.feeCents,
+    feeCents: live ? quoted : input.feeCents,
     freeReason: null,
     remainingForFreeCents: Math.max(0, input.freeThresholdCents - input.basketCents),
+    source: live ? 'quote' : 'tariff',
   };
 }
 
