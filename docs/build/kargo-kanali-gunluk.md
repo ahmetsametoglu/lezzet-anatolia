@@ -15,8 +15,8 @@ Top bırakıldı. Hedef: özelliği uçtan uca entegre etmek ve test etmek.
 | B | Kargo kutusu kataloğu | ✅ |
 | C | Koli planı (saf karar) | ✅ |
 | D | Sağlayıcı paketi + canlı doğrulama | ✅ |
-| E | Sepet & checkout canlı teklif | ⏳ |
-| F | Gönderi + etiket + webhook + durum zinciri | ⏳ |
+| E | Teklif kapısı (sunucu) ✅ · ekranlar ⏳ | 🔶 |
+| F | Gönderi kaydı + duyuru ✅ · webhook/etiket ⏳ | 🔶 |
 
 ---
 
@@ -113,4 +113,43 @@ hatasında da tam bir çağrı.
 20 birim test, hepsi sahte `fetch` ile — otomatik testler ağa çıkmıyor.
 
 Tam paket **3735/3735**.
+
+---
+
+## E — Teklif kapısı ✅ (ekranlar kaldı)
+
+Sepet, checkout ve sipariş yaratma **aynı kapıyı** çağıracak. İki yerde ayrı kurulsaydı müşterinin
+gördüğü fiyat ile tahsil edilen ayrışabilirdi.
+
+**Gecenin en pahalı bulgusu buradan çıktı:** seçeneklerin hepsi çok koli desteklemiyor. Gerçek
+hesapta 17 seçeneğin 10'u destekliyor ve **Mondial Relay'in hiçbiri desteklemiyor** — üstelik en
+ucuz üç seçeneğin ikisi o. Süzgeç koymasaydık müşteri en ucuzu seçer, etiket satın alma anında
+sağlayıcı reddeder ve **sipariş sevk edilemez hâlde kalırdı.** Sıra artık zorunlu: kutu planı →
+süzgeç → teklif.
+
+7 entegrasyon testi.
+
+---
+
+## F — Gönderi kaydı + duyuru ✅ (webhook kaldı)
+
+`shipment` + olay defteri tabloları, ve etiket satın alan kapı.
+
+**Senin kararın uygulandı:** sipariş kutusu = taşıyıcıya verilen kutu. Ayrı bir koli satırı
+açılmadı; taşıyıcı kimliği kutunun üstüne bindi. `shipment` yine de ayrı, çünkü sağlayıcı gönderi
+kimliği ve maliyet kutu başına tekrarlanamaz.
+
+**Duyuru kapısı altı ön koşulu çağrıdan ÖNCE ölçüyor** (rota siparişi mi · mühürlü kutu var mı ·
+kutu tipi seçilmiş mi · mal tartılmış mı · deponun adresi var mı · koli tavanı aşılmış mı).
+Sebep: `announce` para harcayan bir çağrı ve yarım açılmış bir gönderiyi geri almak elle iş.
+
+**Ve sağlayıcı düşerse hiçbir satır yazılmıyor.** Referans projede sıra tersti — satır önce
+yazılıyor, çağrı düşünce yarım kayıt kalıyordu; "öksüz koli" runbook'u tam bunun içindi.
+
+9 entegrasyon + 6 birim test.
+
+**Not:** testleri yazarken sahte sağlayıcı sabit kimlikler döndürüyordu ve testler birbirinin
+satırlarıyla çarpıştı — yani iki benzersizlik kısıtı da yaşanarak doğrulandı.
+
+Tam paket **3757/3757**.
 

@@ -39,6 +39,7 @@ export * from './delivery/cart-warehouse';
 export * from './delivery/bundle-warehouse';
 export * from './delivery/shipping-fee';
 export * from './delivery/parcel-plan';
+export * from './delivery/carrier-status';
 export * from './delivery/on-the-way';
 export * from './payment/checkout-options';
 export * from './payment/credit';

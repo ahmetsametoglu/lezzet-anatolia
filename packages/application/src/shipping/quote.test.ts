@@ -37,6 +37,9 @@ function fakeProvider(options: ShippingQuote[], opts: { throws?: boolean } = {})
       if (opts.throws) throw new Error('sağlayıcı düştü');
       return options;
     },
+    // Bu dosyanın konusu TEKLİF — duyuru ve iptal çağrılırsa test yanlış yazılmış demektir.
+    announce: () => Promise.reject(new Error('bu testte duyuru çağrılmamalı')),
+    cancel: () => Promise.reject(new Error('bu testte iptal çağrılmamalı')),
   };
 }
 

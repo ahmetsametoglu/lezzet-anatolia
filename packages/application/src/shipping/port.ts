@@ -1,4 +1,4 @@
-import type { ParcelSpec, ShippingQuote } from '@lezzet/sendcloud';
+import type { AnnouncedShipment, ParcelSpec, ShippingQuote } from '@lezzet/sendcloud';
 
 /**
  * **KARGO TARİFESİ PORTU** — sağlayıcı bir UYGULAMADIR, sözleşme değil (`packages/ai` deseni).
@@ -15,6 +15,25 @@ import type { ParcelSpec, ShippingQuote } from '@lezzet/sendcloud';
 export interface ShippingRateProvider {
   /** Teklif — hiçbir şey yaratmaz, para harcamaz. */
   quote(args: { from: SenderAddress; to: RecipientAddress; parcels: readonly ParcelSpec[] }): Promise<ShippingQuote[]>;
+  /**
+   * **Gönderiyi duyur ve etiketi al — GERÇEK PARA HARCAR.**
+   *
+   * Port'ta ayrı bir metot çünkü çağıranın sorumluluğu bambaşka: teklif serbestçe çağrılabilir,
+   * bu çağrı bir kez ve dikkatle. Yeniden deneme YOK (idempotency anahtarı yok — ikinci çağrı
+   * ikinci koli açar).
+   */
+  announce(args: {
+    externalReferenceId: string;
+    orderNumber?: string;
+    reference?: string;
+    from: SenderAddress;
+    to: RecipientAddress;
+    parcels: readonly ParcelSpec[];
+    shippingOptionCode: string;
+    servicePointId?: string;
+  }): Promise<AnnouncedShipment>;
+  /** Gönderiyi iptal et — 404 başarı sayılır, yolda olan koli reddedilir. */
+  cancel(providerShipmentId: string): Promise<void>;
 }
 
 export interface SenderAddress {

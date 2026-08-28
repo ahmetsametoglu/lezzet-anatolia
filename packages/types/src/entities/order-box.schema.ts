@@ -29,6 +29,28 @@ export const OrderBoxSchema = z.object({
   /** Araca yükleme damgası (23.8); sayaç bu damgalardan türer, ayrı tablo yok. */
   loadedAt: z.string().nullable(),
   loadedBy: z.string().uuid().nullable(),
+  /**
+   * Hangi KARGO KUTUSU tipinde (0052) — ölçü ve dara oradan gelir. `null` = tip seçilmemiş;
+   * rota kulvarında meşru, kargoda etiketin ÖN ŞARTIDIR. Bileşik FK deposuyla birlikte doğrular:
+   * şablon seçilemez, başka deponun kutusu seçilemez.
+   */
+  shippingBoxId: z.string().uuid().nullable(),
+  /**
+   * ── TAŞIYICI KİMLİĞİ (0053) ────────────────────────────────────────────────
+   * **Sipariş kutusu = taşıyıcıya verilen kutu** (kullanıcı kararı 28.08) — ayrı bir "koli"
+   * varlığı yok, kimlik bu satırın üstüne biniyor.
+   */
+  shipmentId: z.string().uuid().nullable(),
+  /**
+   * Sağlayıcının KOLİ kimliği — webhook eşleşmesinin BİRİNCİL anahtarı.
+   * `Shipment.providerShipmentId` ile karıştırılmaz: farklı kimlik uzayları. Takip numarası bazı
+   * taşıyıcılarda geç atanır; ona bağlanan eşleşme erken webhook'ları kaçırır.
+   */
+  providerParcelRef: z.string().nullable(),
+  trackingNumber: z.string().nullable(),
+  trackingUrl: z.string().nullable(),
+  /** Etiket dosyasının depo anahtarı — tam URL değil (STACK §5). */
+  labelKey: z.string().nullable(),
   createdAt: z.string(),
 });
 export type OrderBox = z.infer<typeof OrderBoxSchema>;
@@ -48,8 +70,23 @@ export type OrderBoxInsert = z.infer<typeof OrderBoxInsertSchema>;
  */
 export const OrderBoxUpdateSchema = OrderBoxSchema.pick({
   id: true,
-})
-  .extend(OrderBoxSchema.pick({ printedAt: true, loadedAt: true, loadedBy: true }).partial().shape);
+}).extend(
+  OrderBoxSchema.pick({
+    printedAt: true,
+    loadedAt: true,
+    loadedBy: true,
+    // Kutu tipi kapanışa kadar değişebilir (depocu yanlış kutu seçmiş olabilir); mühürden sonra
+    // değişmesi anlamsız ama kural veride değil kapıda — kutu döngüsü zaten mühürlüyü korur.
+    shippingBoxId: true,
+    // Taşıyıcı kimliği duyuru kapısından yazılır (`announceOrderShipment`) — tek yazan orası.
+    shipmentId: true,
+    providerParcelRef: true,
+    trackingNumber: true,
+    trackingUrl: true,
+    labelKey: true,
+  })
+    .partial().shape,
+);
 export type OrderBoxUpdate = z.infer<typeof OrderBoxUpdateSchema>;
 
 export const OrderBoxItemSchema = z.object({

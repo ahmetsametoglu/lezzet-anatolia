@@ -641,6 +641,7 @@ export { askShortfall, countOrderExceptions, listOrderExceptions } from './manag
 
 // ── Kargo tarifesi (07.12) ──────────────────────────────────────────────────
 export { quoteShipping, type ShippingQuoteInput, type ShippingQuoteOutcome } from './shipping/quote';
+export { announceOrderShipment, type AnnounceInput, type AnnounceOutcome } from './shipping/announce';
 export { sendcloudProvider, shippingProviderConfigured } from './shipping/provider';
 export type { RecipientAddress, SenderAddress, ShippingRateProvider } from './shipping/port';
 

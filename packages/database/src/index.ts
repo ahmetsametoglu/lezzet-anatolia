@@ -59,6 +59,7 @@ export { CartService, type CartRef } from './services/cart.service';
 export { OrderItemBatchService } from './services/order-item-batch.service';
 export { OrderBoxService, OrderBoxItemService } from './services/order-box.service';
 export { ShippingBoxService } from './services/shipping-box.service';
+export { ShipmentService, ShipmentEventService } from './services/shipment.service';
 export {
   OrderService,
   OrderItemService,
