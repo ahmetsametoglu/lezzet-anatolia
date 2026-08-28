@@ -219,7 +219,7 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
         {/* Taşıyıcı adı teslimat satırının DEVAMI, ayrı satır değil — tasarımda tek cümle:
             "📦 Kargo ile — Colissimo". Gün ile aynı yeri paylaşamazlar (kargoda teslim günü
             taşıyıcının işidir, biz söz veremeyiz), o yüzden ikisi de aynı ayraçla ekleniyor. */}
-        {shipment && ` — ${t.carrier[shipment.carrier]}`}
+        {shipment && ` — ${carrierLabel(t, shipment.carrierName)}`}
         {day && (
           <>
             {' — '}
@@ -232,15 +232,58 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
             {address}
           </>
         )}
-        {shipment?.trackingNumber && (
-          <>
-            <br />
-            {t.trackingLabel}: <strong className="text-ink">{shipment.trackingNumber}</strong>
-          </>
-        )}
+        <TrackingLines t={t} shipment={shipment} />
       </span>
       <TrackingButton t={t} shipment={shipment} />
     </Panel>
+  );
+}
+
+/**
+ * **Taşıyıcı adı** — sağlayıcıdan gelen özel isim ("Chronopost") çeviri istemez, elle girilen
+ * taşıyıcı anahtarı ise ister (`other` → "Kargo firması"). Tek arama iki hâli de karşılıyor:
+ * tanıdığımız anahtar çevrilir, tanımadığımız olduğu gibi basılır.
+ *
+ * İki ayrı alana bölmek ("enum ya da isim") derleyicinin doğrulayamayacağı bir sözleşme kurardı —
+ * "tam olarak biri dolu" tipte yazılamaz, ve bir gün ikisi de boş kalırdı.
+ */
+function carrierLabel(t: DetailViewProps['t'], name: string | null): string {
+  if (!name) return '';
+  return t.carrier[name as keyof DetailViewProps['t']['carrier']] ?? name;
+}
+
+/**
+ * **KOLİ BAŞINA TAKİP SATIRI** (07.12) — iki cihaz dalının ortak parçası.
+ *
+ * Çok kolili gönderide her kolinin AYRI takip numarası var (multicollo). Eskiden tek numara
+ * basılıyordu; üç kutulu bir siparişin ikisi ekranda HİÇ görünmüyordu.
+ *
+ * **Tek kutuluda görüntü değişmiyor:** sıra (`2/3`) yalnız birden çok kutuda basılır — `1/1`
+ * yazmak olmayan bir bölünmeyi varmış gibi gösterirdi. Çok kutuluda her numara kendi bağlantısını
+ * satır içinde taşır; büyük düğme (`TrackingButton`) o hâlde çizilmez, çünkü üç kutu için üç
+ * büyük düğme kartı okunmaz yapardı.
+ */
+function TrackingLines({ t, shipment }: { t: DetailViewProps['t']; shipment: CustomerOrderDetail['shipment'] }) {
+  if (!shipment?.parcels.length) return null;
+  const cok = shipment.parcels.length > 1;
+
+  return (
+    <>
+      {shipment.parcels.map((parcel) => (
+        <span key={parcel.trackingNumber}>
+          <br />
+          {t.trackingLabel}
+          {parcel.ordinal ? ` ${parcel.ordinal}` : ''}:{' '}
+          {cok && parcel.trackingUrl ? (
+            <a href={parcel.trackingUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer font-semibold text-ink underline hover:text-primary">
+              {parcel.trackingNumber}
+            </a>
+          ) : (
+            <strong className="text-ink">{parcel.trackingNumber}</strong>
+          )}
+        </span>
+      ))}
+    </>
   );
 }
 
@@ -254,10 +297,13 @@ export function DeliveryCard({ t, locale, order, title }: Pick<DetailViewProps, 
  * `rel="noopener"` şart: `_blank` ile açılan sekme `window.opener` üzerinden bu sayfaya erişebilir.
  */
 function TrackingButton({ t, shipment }: { t: DetailViewProps['t']; shipment: CustomerOrderDetail['shipment'] }) {
-  if (!shipment?.trackingUrl) return null;
+  // TEK kutuda büyük düğme; çok kutuda bağlantılar satır içinde (`TrackingLines`) — üç kutu için
+  // üç büyük düğme kartı okunmaz yapardı ve hangisinin hangi kutu olduğunu da söylemezdi.
+  const tek = shipment?.parcels.length === 1 ? shipment.parcels[0] : null;
+  if (!tek?.trackingUrl) return null;
   return (
     <a
-      href={shipment.trackingUrl}
+      href={tek.trackingUrl}
       target="_blank"
       rel="noopener noreferrer"
       className={buttonClass({ variant: 'primary', compact: true, fullWidth: true, className: 'mt-3' })}
@@ -287,13 +333,8 @@ export function ShipmentCard({ t, order, title }: Pick<DetailViewProps, 't' | 'o
   return (
     <Panel title={title}>
       <span className="font-sans text-body-sm leading-relaxed text-body">
-        {t.shippingLine} — {t.carrier[shipment.carrier]}
-        {shipment.trackingNumber && (
-          <>
-            <br />
-            {t.trackingLabel}: <strong className="text-ink">{shipment.trackingNumber}</strong>
-          </>
-        )}
+        {t.shippingLine} — {carrierLabel(t, shipment.carrierName)}
+        <TrackingLines t={t} shipment={shipment} />
       </span>
       <TrackingButton t={t} shipment={shipment} />
     </Panel>

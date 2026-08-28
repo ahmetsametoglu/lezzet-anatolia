@@ -358,3 +358,52 @@ Tam paket **3850/3850**.
   Senin kararınla gerçek bir akışta denenecek.
 - **Native ekranlar** — mobil şeride talep açılacak.
 - **Sipariş kapanışı** — yukarıdaki soru.
+
+
+---
+
+## F (kalan 2) — takip numarası müşteriye ulaştı ✅
+
+**Ne yaptım:** bir önceki turda yazdığım zincir siparişi "yola çıktı"ya taşıyor ve müşteriye mail
+gönderiyordu — ama o mailin takip kutusu **boş çıkıyordu**. Şablon takibi çiziyor, şema alanı
+taşıyor, veri katmanı ise sabit `null` yazıyordu: *"alan hazır, kaynak yok."* Kaynağı bağladım.
+
+Aynı bilgi üç yerde görünüyor (mail · müşteri sipariş detayı · mobil sözleşmesi). Üçü kendi
+sorgusunu yazsaydı, çok kutulu hâl birinde doğru ötekinde eksik olurdu — ve eksik olan taraf hata
+vermez, yalnız bir kutuyu hiç göstermez. Tek kapı yazdım, üçü oradan besleniyor.
+
+### Tahminim yanlıştı, düzelttim
+
+Tasarım kaydında *"şablon ve şema değişmiyor"* yazmıştım. Yanlıştı: çok kolili gönderide **her
+kolinin ayrı takip numarası var**. Tek numara basan bir mail, üç kutulu siparişin ikisini görünmez
+kılardı — müşteri eksik kutuyu bize sorardı. Şema diziye çevrildi, mail koli başına satır basıyor.
+
+Kutu sırasını **`2/3`** diye yazdım, "Kutu 2/3" diye değil: rakam çifti her dilde aynı okunuyor ve
+üç dile sözlük satırı eklemek gerekmedi. Tek kutuluda sıra hiç basılmıyor — `1/1` yazmak olmayan
+bir bölünmeyi varmış gibi göstermek olurdu.
+
+### İki meşru kaynak var, sessiz yedek yok
+
+Duyurulan gönderi konuşuyor. Yoksa hazırlık panelinden **elle girilen** numaraya düşülüyor — o da
+gerçek bir yol, sağlayıcının kapsamadığı taşıyıcı için. İkisi de doluysa gönderi kazanıyor; elle
+girilen o durumda bayattır.
+
+Elle girişte takip **bağlantısı** taşıyıcının adres kalıbından üretilmeye devam ediyor. Bunu
+atlasaydım bugün çalışan "Kargoyu takip et" düğmesi elle girilen numaralarda sessizce kaybolurdu —
+kimse fark etmezdi, çünkü hiçbir şey patlamaz.
+
+### Müşteri ekranı
+
+Tek kutuda görüntü **birebir aynı** kaldı (satır + büyük düğme). Çok kutuda numaralar alt alta ve
+her biri kendi bağlantısını taşıyor; büyük düğme çizilmiyor — üç büyük düğme kartı okunmaz yapardı
+ve hangisinin hangi kutu olduğunu da söylemezdi.
+
+### Mobil şeridine dokunmadım
+
+Native ekran eski üç alanı okuyor. Sözleşmeyi **ekleyerek** genişlettim (eski alanlar duruyor), yani
+onların ağacı kırılmadı. Ama dürüst olmak gerekirse bugün orada üç kutulu bir sipariş yanlış
+görünüyor: taşıyıcı adı "Kargo firması" diyor ve 3 numaradan 1'i gösteriliyor. Not bıraktım, geçiş
+mekanik — onlar geçtiğinde eski alanları silerim.
+
+**Testler:** 12 entegrasyon (kaynak + iki yüzey). Kaynağı koparıp doğruladım: 2 test kırmızıya
+döndü. Tam paket **3862/3862**.

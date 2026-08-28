@@ -16,7 +16,6 @@ import {
 import type { OrderTimelineStep } from '@lezzet/domain-core';
 import { CROP_CENTER, resolveLocalizedText } from '@lezzet/types';
 import type {
-  Carrier,
   CustomerOrderStatus,
   DeliveryType,
   KeysetCursor,
@@ -27,8 +26,8 @@ import type {
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { imageOf } from '../catalog/map';
+import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 import type { StorefrontImage } from '../catalog/storefront-types';
-import { trackingUrlOf } from './carrier';
 
 /*
   MÜŞTERİ SİPARİŞ OKUMASI — "Siparişlerim" listesi + sipariş detayı. Terfi 21.18.
@@ -234,11 +233,22 @@ export interface CustomerOrderDetail {
   /** Vadeli (B2B) — ödeme hapının ayrı bir hâli. */
   onAccount: boolean;
   /**
-   * **Kargo künyesi** — `null` iki ayrı hâlde: rota siparişi (kısıt veride —
-   * `order_carrier_only_shipping`) ve taşıyıcısı henüz girilmemiş kargo siparişi. İkisini
-   * ayırmıyoruz çünkü ekranda ikisi de aynı şeyi yapar: blok çizilmez.
+   * **Kargo künyesi** — `null` iki ayrı hâlde: rota siparişi ve takibi henüz olmayan kargo
+   * siparişi. İkisini ayırmıyoruz çünkü ekranda ikisi de aynı şeyi yapar: blok çizilmez.
+   *
+   * **`parcels` DİZİ, çünkü çok kolili gönderide her kolinin ayrı takip numarası var**
+   * (multicollo, 07.12). Tek numara taşıyan eski şekil üç kutulu bir siparişin ikisini görünmez
+   * kılıyordu.
+   *
+   * `carrierName` ya sağlayıcının verdiği özel isimdir ("Chronopost") ya da elle girişte taşıyıcı
+   * enum'unun anahtarı — ekran tanıdığı anahtarı çevirir, tanımadığını olduğu gibi basar. İkisini
+   * ayrı alanlara bölmek, "tam olarak biri dolu" diyen ve derleyicinin doğrulayamadığı bir
+   * sözleşme kurardı.
    */
-  shipment: { carrier: Carrier; trackingNumber: string | null; trackingUrl: string | null } | null;
+  shipment: {
+    carrierName: string | null;
+    parcels: ReadonlyArray<{ ordinal: string | null; trackingNumber: string; trackingUrl: string | null }>;
+  } | null;
 }
 
 /**
@@ -392,6 +402,17 @@ export async function getCustomerOrderDetail(
     });
   }
 
+  /*
+    Takip künyesi EN SONDA okunuyor ve yalnız kargo siparişinde: rota siparişinde gönderi satırı
+    hiç doğmaz, sorgu baştan cevabı belli bir soru olurdu. Kalem/paket çözümünün turlarına
+    katılmadı çünkü onlar sipariş kalemlerine bağlı; bu okuma bağımsız ve tek kutulu siparişte
+    iki küçük sorgu.
+  */
+  const tracking =
+    order.deliveryType === 'shipping'
+      ? await readOrderTracking(db, order.id, { carrier: order.carrier, trackingNumber: order.trackingNumber })
+      : null;
+
   return {
     id: order.id,
     referenceNo: order.referenceNo,
@@ -413,16 +434,25 @@ export async function getCustomerOrderDetail(
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     onAccount: order.onAccount,
-    // Taşıyıcı YOKSA künye de yok — numarası olup taşıyıcısı olmayan bir kargo anlamsız (kolonlar
-    // birlikte yazılıyor, `setShipment`). Numara `null` olabilir: taşıyıcı belli, numara henüz
-    // gelmemiş olabilir ve o hâlde ekran taşıyıcıyı söyleyip numarayı beklemekte haklıdır.
-    shipment: order.carrier
-      ? {
-          carrier: order.carrier,
-          trackingNumber: order.trackingNumber,
-          trackingUrl: trackingUrlOf(order.carrier, order.trackingNumber),
-        }
-      : null,
+    /*
+      Künye TEK KAPIDAN geliyor (`readOrderTracking`, 07.12): duyurulan gönderi varsa o konuşur,
+      yoksa hazırlık panelinden ELLE girilen numaraya düşülür. İkisi de meşru yol — sağlayıcının
+      kapsamadığı taşıyıcı elle giriliyor.
+
+      Numarası olmayan gönderi künye AÇMAZ: taşıyıcı belli ama numara henüz gelmemişse ekranın
+      söyleyeceği bir şey yok ve boş bir "Takip no:" satırı müşteriye bilgi değil kaygı verir.
+    */
+    shipment:
+      tracking && tracking.parcels.length > 0
+        ? {
+            carrierName: tracking.carrierName,
+            parcels: tracking.parcels.map((parcel) => ({
+              ordinal: parcelOrdinal(parcel),
+              trackingNumber: parcel.trackingNumber,
+              trackingUrl: parcel.trackingUrl,
+            })),
+          }
+        : null,
   };
 }
 

@@ -127,9 +127,25 @@ export function OrderOutForDeliveryEmail({ data, brandName, postalAddress }: Ord
       <Headline title={t.title} intro={t.intro(window)} />
       <HeaderCard title={data.referenceNo} meta={data.orderedOn} statusLabel={t.status} />
       <Timeline steps={data.steps} labels={shared.steps} />
-      {/* Kargoda kurye penceresi yoktur: yerine takip numarası + bağlantı (tasarım kuralı). */}
-      {data.tracking ? (
-        <InfoBlock icon="📦" headline={data.tracking.number} detail={<a href={data.tracking.url} style={{ color: '#5f7a2c' }}>{data.tracking.url}</a>} />
+      {/*
+        Kargoda kurye penceresi yoktur: yerine takip numarası + bağlantı (tasarım kuralı).
+
+        **Her koli kendi satırında** — çok kolili gönderide numaralar farklı ve tek satır
+        gösterseydik öteki kutular mailde hiç görünmezdi. Sıra (`2/3`) yalnız çok kutuluda basılır;
+        `1/1` yazmak olmayan bir bölünmeyi varmış gibi gösterirdi.
+
+        Bağlantısı olmayan koli numarayı yine gösterir: numara elle de aratılabilir, gizlemek
+        müşteriyi elindeki tek bilgiden ederdi.
+      */}
+      {data.tracking?.length ? (
+        data.tracking.map((parcel) => (
+          <InfoBlock
+            key={parcel.number}
+            icon="📦"
+            headline={parcel.ordinal ? `${parcel.ordinal} · ${parcel.number}` : parcel.number}
+            detail={parcel.url ? <a href={parcel.url} style={{ color: '#5f7a2c' }}>{parcel.url}</a> : ''}
+          />
+        ))
       ) : (
         data.delivery && <InfoBlock icon={data.delivery.icon} headline={data.delivery.headline} detail={data.delivery.detail} />
       )}

@@ -14,6 +14,7 @@ import type { NotifyEventName, NotifyRecipient } from '@lezzet/notify';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Order, OrderItem, OrderNotification, NotificationStep, PreferredLanguage } from '@lezzet/types';
 import { notificationPreferencesUrl } from '../customer/notification-preferences';
+import { parcelOrdinal, readOrderTracking } from '../shipping/tracking';
 
 /**
  * Sipariş bildiriminin VERİSİNİ kurar (14.5) — **uygulama katmanı orkestrasyonu**.
@@ -95,7 +96,19 @@ export async function buildOrderNotification(
   // Aynı ayrım hem kalem satırlarını hem para türetimini yönetir — iki yerde farklı okunursa
   // mailin listesi ile toplamı çelişir.
   const settled = isFulfillmentSettled(order.status, items);
-  const [lines, steps] = await Promise.all([buildLines(db, items, locale, settled), buildSteps(db, orderId, event)]);
+  /*
+    TAKİP YALNIZ KARGO SİPARİŞİNDE SORULUR. Rota teslimatında gönderi satırı hiç doğmaz; her mailde
+    o sorguyu atmak, cevabı baştan belli bir soruyu sormak olurdu. Ayrım `delivery_type`tan gelir,
+    olayın adından değil: aynı mail (`order_out_for_delivery`) iki kulvarda da kullanılıyor ve
+    kargoda kurye penceresi yerine takip gösteriliyor (DOMAIN §6).
+  */
+  const [lines, steps, tracking] = await Promise.all([
+    buildLines(db, items, locale, settled),
+    buildSteps(db, orderId, event),
+    order.deliveryType === 'shipping'
+      ? readOrderTracking(db, orderId, { carrier: order.carrier, trackingNumber: order.trackingNumber })
+      : Promise.resolve(null),
+  ]);
 
   const derivation = derivePaymentStatusForOrder(order, items, {
     collectedCents: order.amountCollectedCents,
@@ -128,7 +141,18 @@ export async function buildOrderNotification(
     paidOnline: order.amountCollectedCents > 0,
     paymentNote: paymentNote(order, derivation.amountToCollectCents, locale),
     delivery: buildDelivery(order, locale),
-    tracking: null, // Kargo takibi 07.4/07.5 ile gelir; alan hazır, kaynak yok.
+    /*
+      KARGO TAKİBİ — kaynağı 07.12'de bağlandı (önceden `null` sabitti ve şablon takip kutusunu
+      hiç çizemiyordu: alan hazır, kaynağı yoktu).
+
+      **Numarası olmayan gönderi mailde takip kutusu AÇMAZ:** duyurulmuş ama numara henüz
+      yazılmamış olabilir ve boş bir "📦" kutusu, teslimat bilgisinin yerini alıp müşteriyi
+      bilgisiz bırakırdı. Boş dizi `null`a indiriliyor — sözleşmenin künyesi bu ayrımı yazıyor.
+    */
+    tracking:
+      tracking && tracking.parcels.length > 0
+        ? tracking.parcels.map((parcel) => ({ ordinal: parcelOrdinal(parcel), number: parcel.trackingNumber, url: parcel.trackingUrl }))
+        : null,
     /**
      * **Bağda KİMLİK taşınır, referans numarası değil** (03.08 düzeltmesi).
      *

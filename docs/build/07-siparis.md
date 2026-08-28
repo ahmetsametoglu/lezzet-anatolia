@@ -166,6 +166,20 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
       **Webhook `apps/backend`'de** (`/webhooks/sendcloud`) — Stripe'ınki web'de ama o künyesinde gerekçesi yazılı bir sapma; burada ters yönde bir bağ var: aynı uzlaştırmayı nöbet cron'u da çağırıyor ve o zaten bu süreçte. İmza HAM gövde üzerinden HMAC-SHA256 (sağlayıcının yayımladığı vektörle sınandı). **İşlenememiş olayın tekrarı yeniden denenir** — damgasız kayıt "işlendi" sayılmaz; Stripe kapısı koşulsuz `duplicate` diyor, bu kulvarda ayrım gerekli çünkü en olası düşüş sebebi geçici.
       **İki nöbet:** takılı gönderi (saatlik, `:25`) ve öksüz/hayalet mutabakatı (haftalık, pazartesi). İkincisi yalnız TESPİT eder — düzeltme elle, runbook `docs/runbook/kargo-oksuz-gonderi.md`.
       **Ölçülerek bulunan bir hâl çivilendi:** kutusuz gönderi ilerlemez. Uzlaştırma BİZİM kutularımız üzerinden yürüyor; kutusu olmayan gönderide "en gerideki koli" yoktur, cevap "bilmiyorum"dur ve nöbet onu takılı raporlar. Sağlayıcının dizisine düşülseydi kutuları kaybolmuş bir gönderi sessizce teslim sayılabilirdi.
+      **Takip müşteriye ULAŞTI (28.08, ikinci tur):** künye tek kapıdan (`shipping/tracking.ts` →
+      `readOrderTracking`) ve üç yüzey de oradan besleniyor — "yolda" maili, müşteri sipariş detayı
+      ve `/api/v1/me/orders/:ref`. Öncesinde `notification-data.ts` `tracking: null` sabitini
+      taşıyordu: e-posta şablonu takip kutusunu çiziyordu ama kaynağı hiç yoktu.
+      **Şema DİZİYE çevrildi** çünkü multicollo'da her kolinin ayrı numarası var; tek numara basan
+      mail üç kutulu siparişin ikisini görünmez kılardı. Kutu sırası (`"2/3"`) dilden bağımsız
+      seçildi — üç dile sözlük satırı eklemek yerine rakam çifti; tek kutuluda hiç basılmıyor.
+      **İki meşru kaynak:** duyurulan gönderi konuşur, yoksa hazırlık panelinden elle girilen
+      numaraya düşülür (sağlayıcının kapsamadığı taşıyıcı için bilinçli kapı); ikisi de doluysa
+      gönderi kazanır. Elle girişte takip bağlantısı taşıyıcı kalıbından üretilmeye devam ediyor —
+      atlansaydı bugün çalışan bir düğme sessizce kaybolurdu.
+      **Mobil sözleşmesi EKLEMELİ genişledi** (`carrierName` + `parcels`): eski üç alan native
+      ekranı kırmamak için duruyor ve İLK koliyi anlatıyor; native geçince silinecek
+      (`docs/talep/not-mobil-cok-kutulu-kargo-takibi.md`).
       **Kapanış (`completed`) BU TURUN KONUSU DEĞİL** — ölçüldü: `closeOrder`ın bugün hiçbir üretim çağıranı yok, rota kulvarında da yok. Kargoya özel bir kapanış yazmak iki kulvarı ayrı kurallara bölerdi → görev satırı `(07.16)`.
 
 - [x] (07.13) **Bağlayıcı fiyat sabitlenirken artış SESSİZ uygulanıyor** · `touches: apps/web/lib/order/checkout-draft.ts, apps/web/lib/cart/{cart-types,actions}.ts, apps/web/app/(customer)/[locale]/checkout/**`

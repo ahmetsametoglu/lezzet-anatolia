@@ -161,10 +161,40 @@ export type MeOrderLine = z.infer<typeof MeOrderLineSchema>;
  * taşıyıcıyı kendisi arayabilir; çalışmayan bir düğme işe yaramaz).
  */
 export const MeOrderShipmentSchema = z.object({
+  /**
+   * ⚠ **`carrier` · `trackingNumber` · `trackingUrl` GERİYE UYUM İÇİN duruyor** (07.12) ve
+   * ekranın okuması gereken alanlar artık `carrierName` + `parcels`.
+   *
+   * Üçü de **İLK KOLİYİ** anlatıyor; çok kolili gönderide öteki kutuları söylemezler ve
+   * `carrier` sağlayıcıdan gelen taşıyıcıyı enum'a sıkıştırdığı için çoğu zaman `other` der.
+   * Alanların bugün silinmemesinin sebebi teknik değil ŞERİT: native ekranı bunları okuyor ve iki
+   * ayrı ağaçtaki değişiklik aynı anda inemiyor. Native yeni alanlara geçtiğinde bu üçü silinir
+   * (talep: `docs/talep/not-mobil-cok-kutulu-kargo-takibi.md`).
+   */
   carrier: CarrierEnum,
   trackingNumber: z.string().nullable(),
   trackingUrl: z.string().nullable(),
+  /**
+   * Taşıyıcının GERÇEK adı ("Chronopost") — sağlayıcıdan geliyor ve çeviri istemez (özel isim).
+   * Elle girilen taşıyıcıda enum anahtarıdır; ekran tanıdığı anahtarı çevirir, tanımadığını
+   * olduğu gibi basar.
+   */
+  carrierName: z.string().nullable(),
+  /**
+   * **KOLİ BAŞINA TAKİP** — çok kolili gönderide (multicollo) her kolinin AYRI numarası var.
+   * Tek numara taşıyan eski üç alan, üç kutulu bir siparişin ikisini görünmez kılıyordu.
+   */
+  parcels: z.array(
+    z.object({
+      /** Kutu sırası (`"2/3"`) — tek kutuluda `null`; dilden bağımsız, rakam çifti her dilde aynı. */
+      ordinal: z.string().nullable(),
+      trackingNumber: z.string(),
+      trackingUrl: z.string().nullable(),
+    }),
+  ),
 });
+
+export type MeOrderShipment = z.infer<typeof MeOrderShipmentSchema>;
 
 /** Sipariş detayı — sayfanın TAMAMI tek turda (kalemler, çizgi, adres, para; bölüm başına çağrı yok). */
 export const MeOrderDetailSchema = z.object({

@@ -11,6 +11,7 @@ import {
   MeOrderPageSchema,
   PreferredLanguageEnum,
 } from '@lezzet/types';
+import type { MeOrderShipment } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor } from '../../lib/request';
 import type { V1Env } from './auth';
@@ -30,6 +31,31 @@ import type { V1Env } from './auth';
 
 /** Sayfa boyutu tavanı — katalogun aynı kararı: tek istekle geçmişi boşaltmak sayfalamayı anlamsız kılar. */
 const MAX_PAGE_SIZE = 50;
+
+/** Sözleşmenin tanıdığı taşıyıcılar — bunun dışındaki her ad `other`a düşer (geriye uyum alanı). */
+const BILINEN_TASIYICILAR = ['colissimo', 'chronopost', 'dhl', 'ups', 'other'] as const;
+
+/**
+ * Kargo künyesini sözleşmeye çevirir (07.12).
+ *
+ * **Neden bir çevirici var:** motor artık koli başına takip döndürüyor (multicollo), sözleşme ise
+ * hem yeni listeyi hem de native ekranın hâlâ okuduğu üç eski alanı taşıyor. Eski alanlar İLK
+ * koliyi anlatır — ve `carrier` sağlayıcının adını enum'a sıkıştırdığı için çoğu zaman `other`
+ * der. Bu bir kayıp ama SESSİZ değil: gerçek ad `carrierName`de, öteki kutular `parcels`ta duruyor
+ * ve native o alanlara geçince eski üçlü silinecek (`docs/talep/not-mobil-cok-kutulu-kargo-takibi.md`).
+ */
+function toMeShipment(shipment: NonNullable<Awaited<ReturnType<typeof getCustomerOrderDetail>>>['shipment']): MeOrderShipment | null {
+  if (!shipment) return null;
+  const ilk = shipment.parcels[0] ?? null;
+  const bilinen = BILINEN_TASIYICILAR.find((c) => c === shipment.carrierName);
+  return {
+    carrier: bilinen ?? 'other',
+    trackingNumber: ilk?.trackingNumber ?? null,
+    trackingUrl: ilk?.trackingUrl ?? null,
+    carrierName: shipment.carrierName,
+    parcels: shipment.parcels.map((parcel) => ({ ...parcel })),
+  };
+}
 
 /** `authUser` (auth uuid) ≠ müşteri kimliği (`user_profiles.id`) — kapıların istediği hep ikincisi. */
 interface CustomerEnv {
@@ -173,7 +199,7 @@ orders.get('/:reference', async (c) => {
     paymentMethod: detail.paymentMethod,
     paymentStatus: detail.paymentStatus,
     onAccount: detail.onAccount,
-    shipment: detail.shipment,
+    shipment: toMeShipment(detail.shipment),
     /* Davet okuması detayın ARDINDAN: siparişin var olduğu (ve bu müşteriye ait olduğu) kanıtlanmadan
        token okumak, başkasının siparişinin anahtarını sorgulamak olurdu. Kural motorda
        (`readOrderFeedbackInvite`), uç yalnız zarfa koyar. */

@@ -590,7 +590,24 @@ hiç doğmuyor. Taşıyıcı webhook'u bu boşluğu doldurur: *handed over* → 
 - E-posta şablonu takibi **zaten çiziyor** (`order-out-for-delivery.tsx:131` — numara + bağlantı).
 - Fakat `application/order/notification-data.ts:131` şunu yazıyor:
   `tracking: null, // Kargo takibi 07.4/07.5 ile gelir; alan hazır, kaynak yok.`
-  → **Bu iş o kaynağı bağlar.** Şablon ve şema değişmiyor.
+  → **Bu iş o kaynağı bağlar.** ~~Şablon ve şema değişmiyor.~~
+- ✅ **YAPILDI (28.08) — ama şema ve şablon DEĞİŞTİ, çünkü tahmin yanlıştı.** *"Şablon ve şema
+  değişmiyor"* cümlesi tek takip numarası varsayıyordu; multicollo'da **her kolinin ayrı numarası
+  var** (ölçüldü). Tek numara basan bir mail, üç kutulu siparişin ikisini görünmez kılardı ve
+  müşteri eksik olanı desteğe sorardı. `OrderNotification.tracking` **diziye** çevrildi
+  (`{ ordinal, number, url }`), şablon koli başına satır basıyor. Sıra (`"2/3"`) **dilden
+  bağımsız** seçildi — "Kutu 2/3" demek üç dile sözlük satırı eklemekti, rakam çifti her dilde
+  aynı okunuyor. Tek kutuluda sıra basılmaz: `1/1` olmayan bir bölünmeyi varmış gibi gösterirdi.
+- **Kaynak TEK KAPI:** `application/shipping/tracking.ts` → `readOrderTracking`. Üç yüzey (mail,
+  müşteri sipariş detayı, mobil sözleşmesi) aynı kapıdan besleniyor; üçü kendi sorgusunu yazsaydı
+  çok kutulu hâl birinde doğru ötekinde eksik olurdu — ve eksik olan taraf hata vermez, yalnız bir
+  kutuyu hiç göstermez.
+- **İki meşru kaynak, sessiz yedek değil:** duyurulan gönderi (`shipment` + `order_box`) konuşur;
+  yoksa hazırlık panelinden ELLE girilen numaraya düşülür (`setShipmentAction` — sağlayıcının
+  kapsamadığı taşıyıcı için bilinçli kapı). İkisi de doluysa gönderi kazanır, elle girilen bayattır.
+- **Numarası olmayan gönderi mailde takip kutusu AÇMAZ** ve bu ayrı bir hâl: `null` = takip
+  edilecek şey yok · boş dizi = gönderi var, numara bekleniyor. Boş bir "📦" kutusu teslimat
+  bilgisinin yerini alıp müşteriyi bilgisiz bırakırdı.
 - **Zaman çizgisi 4 adım kalır** (`received · prepared · on_the_way · delivered`); kargoda
   `on_the_way` = "kargoya verildi". Beşinci adım eklenmez; değişen yalnız adımın **detay metni**.
 - **Yeni müşteri bildirim türü açılmaz** — `order_out_for_delivery` kargoda da doğru cümle.
@@ -618,7 +635,7 @@ hiç doğmuyor. Taşıyıcı webhook'u bu boşluğu doldurur: *handed over* → 
 | --- | --- | --- |
 | Sepet (`cart-summary.tsx`, `cart-group.tsx`) | Ücretsiz kargo çubuğu ve kargo grubu duruyor; ücret **canlı teklifle değişken** olur. "Şu kadar daha ekleyin" cümlesi korunur | E |
 | Checkout (`checkout-client.tsx`) | **Taşıyıcı/servis seçimi** yeni bileşen. Ekran adres değişince her şeyi yeniden çözüyor — teklif o zincire girer. İstemci **kod** gönderir, tutar sunucuda yeniden hesaplanır | E |
-| Sipariş detayı | `ShipmentCard`/`TrackingButton` var (09.08'de yazıldı) → **çok kutulu** hâl için genişler | F |
+| Sipariş detayı | ✅ **yapıldı 28.08** — `ShipmentCard`/`TrackingButton` çok kutuluya genişledi; ortak `TrackingLines` iki cihaz dalında da aynı satırları basıyor. Tek kutuda görüntü AYNI kaldı (büyük düğme), çok kutuda bağlantılar satır içinde | F |
 | Siparişler listesi | Takip özeti (bugün tek numara varsayıyor) | F |
 
 ### 8.5 Müşteri — native (mobil şeridin işi)

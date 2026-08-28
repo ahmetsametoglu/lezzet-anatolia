@@ -70,8 +70,27 @@ export const OrderNotificationSchema = z.object({
   delivery: z
     .object({ headline: z.string(), detail: z.string(), icon: z.string() })
     .nullable(),
-  /** Kargoda kurye penceresi yerine takip: numara + bağlantı (DOMAIN §6). */
-  tracking: z.object({ number: z.string(), url: z.string() }).nullable(),
+  /**
+   * Kargoda kurye penceresi yerine takip (DOMAIN §6).
+   *
+   * **DİZİ, çünkü çok kolili gönderide her kolinin AYRI takip numarası var** (multicollo,
+   * ölçüldü 28.08). Tek numara taşısaydı üç kutulu bir siparişin ikisi mailde hiç görünmezdi —
+   * ve müşteri eksik olanı aramak için desteğe yazardı.
+   *
+   * `null` = takip edilecek bir şey yok. **Boş dizi başka bir hâldir** ve o hâl buraya hiç
+   * gelmez: "gönderi var ama numarası henüz yazılmadı" bir maile konu olmaz.
+   */
+  tracking: z
+    .array(
+      z.object({
+        /** Kutu sırası (`"2/3"`) — tek kutuluda `null`. Dilden bağımsız: rakam çifti her dilde aynı. */
+        ordinal: z.string().nullable(),
+        number: z.string(),
+        /** Taşıyıcının takip sayfası; bazı taşıyıcıda yok. */
+        url: z.string().nullable(),
+      }),
+    )
+    .nullable(),
 
   /**
    * İSTİSNA bildirimlerinde (iptal / iade / eksik karşılanma) olayın anı, biçimlenmiş
