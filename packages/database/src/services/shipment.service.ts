@@ -40,6 +40,25 @@ export class ShipmentService extends BaseDbService<Shipment, ShipmentInsert, Shi
   }
 
   /**
+   * Belirli bir tarihten SONRA açılmış gönderiler — öksüz nöbetinin bizim taraftaki okuması.
+   * Pencere sağlayıcı sorgusuyla AYNI olmalı; farklı olsaydı iki listenin farkı "öksüz" değil
+   * "pencere kayması" olurdu.
+   */
+  async listSince(since: Date, limit = 1000): Promise<Shipment[]> {
+    return this.getAll({}, { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: since.toISOString() }], orderBy: 'createdAt', limit });
+  }
+
+  /**
+   * Belirli bir andan sonra AÇILMIŞ gönderiler — öksüz/hayalet taramasının bizim tarafı.
+   *
+   * Süzgeç `created_at` üzerinden ve sağlayıcı listesi `announced_after` ile aynı pencereyi
+   * okuyor: iki taraf farklı pencerelere baksaydı fark, arıza değil pencere kayması olurdu.
+   */
+  async listAnnouncedSince(since: string): Promise<Shipment[]> {
+    return this.getAll({}, { rangeFilters: [{ field: 'createdAt', operator: 'gte', value: since }], orderBy: 'createdAt' });
+  }
+
+  /**
    * **TAKILI GÖNDERİLER** — terminal olmayan ve N saatten eski. Webhook kaçtığında ya da geç
    * geldiğinde tek emniyet kemeri budur (nöbet cron'u bunları REST'ten yeniden sorar).
    *
@@ -73,13 +92,17 @@ export class ShipmentEventService extends BaseDbService<ShipmentEvent, ShipmentE
 
   /**
    * **Tanınmayan kod sayısı** — operasyon sistem ekranının okuduğu sayı ve eşleme tablosunun
-   * büyüme sinyali. Sıfırdan büyükse `mapCarrierStatus` eksik demektir.
+   * büyüme sinyali. Sıfırdan büyükse `classifyCarrierStatus` tablosu eksik demektir.
+   *
+   * Süzgeç `mapped_status` DEĞİL `recognized`: bilgi olaylarının ("teslim adresi değişti") da
+   * eşlenmiş durumu yoktur ama onlar bir eksiklik değildir. Onları saymak, hep açık duran bir
+   * alarm üretirdi.
    */
   async countUnmapped(): Promise<number> {
     const { count, error } = await this.supabase
       .from('shipment_event')
       .select('id', { count: 'exact', head: true })
-      .is('mapped_status', null);
+      .eq('recognized', false);
     if (error) throw error;
     return count ?? 0;
   }

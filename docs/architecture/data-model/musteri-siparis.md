@@ -408,6 +408,80 @@ Bizim bastığımız QR'ın kaydı ("bu hangi kayıt" — ürün barkodunun "bu 
 
 **Yazma yolu yalnız `seal_order_box` RPC'si** (kutu içeriği + `record_preparation` + mühür TEK transaction — "kutu var ama parti izi yok" doğamaz). RPC kapanışta **Σ kutu = `fulfilled_qty`** eşitliğini denetler: çok kutulu birleşimi `sealBox` kapısı kurar (0015'in absolüt yazımı), eksik kurulmuş birleşim tümüyle geri alınır. Kutulanmış kalem kutusuz akışla karışamaz — çift akış sipariş düzeyinde meşru, kalem düzeyinde değil.
 
+## Shipment (taşıyıcıdaki gönderi partisi — 0053 · 07.12)
+
+Bir siparişin birden çok gönderisi olabilir (iki kutu bugün, geciken kalem yarın); kutular
+`order_box.shipment_id` ile bağlanır. **Sipariş kutusu = taşıyıcıya verilen kutu** (kullanıcı
+kararı 28.08), o yüzden ayrı bir "koli" varlığı YOK.
+
+<!-- alanlar:shipment -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `order_id` | uuid |  |  |
+| `warehouse_id` | uuid |  |  |
+| `status` | shipment_status |  | `'created'` |
+| `provider_shipment_id` | text | • |  |
+| `shipping_option_code` | text | • |  |
+| `carrier_code` | text | • |  |
+| `carrier_name` | text | • |  |
+| `service_point_id` | text | • |  |
+| `quoted_cents` | int | • |  |
+| `actual_cost_cents` | int | • |  |
+| `cancelled_at` | timestamptz | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`provider_shipment_id`** — sağlayıcının GÖNDERİ kimliği; iptal ve durum sorgusu bunu ister.
+  **`order_box.provider_parcel_ref` ile KARIŞTIRILMAZ** — o kolinin kimliği ve webhook onu
+  gönderir. İki ayrı kimlik uzayı; referans proje bunu 13 migration sonra öğrendi, biz baştan iki
+  alanla doğduk.
+- **`quoted_cents` / `actual_cost_cents`** — **BİZİM** maliyetimiz (teklif → fatura). Müşteriden
+  alınan `order.shipping_fee`dedir; ikisi ayrı kolonda çünkü kâr hesabı farkı görmek zorunda.
+- **`status`** — taşıyıcının taksonomisi bizimkine `classifyCarrierStatus` ile eşlenir
+  (`domain-core/delivery/carrier-status.ts`; tablo `GET /api/v3/parcels/statuses` ölçümünden — 35 kod).
+  Çok kolili gönderide durum **en gerideki kolinin** durumudur (`aggregateShipmentStatus`).
+- **Sipariş kulvarı kısıtı `check` OLAMAZ** — başka tabloya bakar (`order.delivery_type`); kural
+  duyuru kapısında ve testinde çivili.
+
+## ShipmentEvent (taşıyıcı olay defteri — 0053 · 07.12)
+
+**Append-only.** Güncelleme kapısı bilinçli olarak yok: olay olmuş bir şeydir, düzeltilmez.
+`webhook_event` (idempotens defteri, "bu çağrı işlendi mi") ve `order_status_log` (bizim sipariş
+durumumuzun geçiş defteri) **yerine geçmez** — bu koli düzeyi ve taşıyıcının taksonomisi.
+
+<!-- alanlar:shipment_event -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `shipment_id` | uuid |  |  |
+| `order_box_id` | uuid | • |  |
+| `provider_code` | text |  |  |
+| `mapped_status` | shipment_status | • |  |
+| `recognized` | boolean |  | `true` |
+| `message` | text | • |  |
+| `occurred_at` | timestamptz |  |  |
+| `received_at` | timestamptz |  | `now()` |
+| `raw` | jsonb | • |  |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`recognized`** — `mapped_status` null olmasının İKİ sebebi var ve ayrılmaları şart:
+  `false` = kodu **tanımıyoruz** (tablo eksik, operasyon sayar); `true` + `mapped_status null` =
+  kodu tanıyoruz ama gönderinin **yerini söylemiyor** (bilgi olayı: "teslim adresi değişti",
+  "iptal sürüyor"). Ayrım olmasaydı her adres değişikliği alarmı şişirir, hep açık duran bir alarm
+  da alarm olmaktan çıkardı.
+- **`occurred_at` ≠ `received_at`** — webhook 10 kez yeniden deneniyor ve saatler sonra gelebilir;
+  zaman çizgisini olayın kendi damgası kurar.
+- **`raw` yalnız TANINMAYAN kodda** ve sağlayıcı yükünün tamamı değil, **okuduğumuz iki alan**
+  (kod + cümle). Kişisel veri kuralı böyle YAPICA sağlanıyor — ayıklamaya güvenmek, bir gün
+  ayıklamayı unutmaya güvenmektir.
+- **Defter DEĞİŞİM kaydeder, yoklama değil** — nöbet saat başı koşuyor; her turda satır yazsaydı
+  bir haftalık gönderi 168 özdeş satır bırakırdı.
+
 ## OrderStatusLog (durum geçiş kaydı)
 
 "Her geçiş kaydedilir" kuralının varlığı (bkz. `ORDER_LIFECYCLE.md`). Teslim anı, kapanış anı ve geri bildirim zamanlaması (~10 gün) buradan türetilir.

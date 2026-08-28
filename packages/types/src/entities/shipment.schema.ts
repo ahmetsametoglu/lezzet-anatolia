@@ -69,8 +69,10 @@ export type ShipmentUpdate = z.infer<typeof ShipmentUpdateSchema>;
 /**
  * TAŞIYICI OLAY DEFTERİ (`shipment_event`, 0053) — append-only.
  *
- * `mappedStatus === null` = kod TANINMADI ve satır yine yazıldı. Bu satırlar operasyonda sayılır
- * ("N tanınmayan taşıyıcı kodu"); eşleme sonradan yazıldığında geçmiş yeniden okunabilir.
+ * **`mappedStatus === null`ın İKİ sebebi var ve `recognized` onları ayırır:** kodu tanımıyorsak
+ * (`recognized: false`) eşleme tablosu eksiktir ve operasyon bunu sayar; kodu tanıyıp da durumu
+ * değiştirmiyorsak (`recognized: true`) o bir bilgi olayıdır ("teslim adresi değişti") ve
+ * sayılmaz. Ayrım olmasaydı hep açık duran bir alarm doğardı.
  */
 export const ShipmentEventSchema = z.object({
   id: z.string().uuid(),
@@ -79,6 +81,8 @@ export const ShipmentEventSchema = z.object({
   orderBoxId: z.string().uuid().nullable(),
   providerCode: z.string(),
   mappedStatus: ShipmentStatusEnum.nullable(),
+  /** Kod eşleme tablomuzda var mı — `false` = tanınmadı, tablo büyümeli (operasyon sayar). */
+  recognized: z.boolean(),
   message: z.string().nullable(),
   /** Olayın KENDİ zamanı — bizim aldığımız an değil (webhook saatler sonra gelebilir). */
   occurredAt: z.string(),
@@ -91,6 +95,7 @@ export type ShipmentEvent = z.infer<typeof ShipmentEventSchema>;
 export const ShipmentEventInsertSchema = ShipmentEventSchema.omit({ id: true, receivedAt: true }).partial({
   orderBoxId: true,
   mappedStatus: true,
+  recognized: true,
   message: true,
   raw: true,
 });

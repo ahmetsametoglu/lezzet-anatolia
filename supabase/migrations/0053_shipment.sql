@@ -102,10 +102,18 @@ create table public.shipment_event (
   order_box_id uuid references public.order_box (id) on delete set null,
   -- Sağlayıcının HAM kodu ("DELIVERED", "ANNOUNCING"). Eşlenmese de saklanır.
   provider_code text not null,
-  -- Bizim eşlememiz. **`null` = TANINMADI ve satır yine yazılır** (CLAUDE §1: ölçülemeyen değer
-  -- sıfır değildir). Bu satırlar operasyonda sayılır ("N tanınmayan taşıyıcı kodu") ve eşleme
-  -- tablosunun büyüme sinyalidir; sessizce düşürülseydi taksonomi hiç tamamlanmazdı.
+  -- Bizim eşlememiz. **`null` = durumu DEĞİŞTİRMEDİ ve satır yine yazılır** (CLAUDE §1:
+  -- ölçülemeyen değer sıfır değildir).
   mapped_status shipment_status,
+  -- **Kod eşleme tablomuzda VAR mı.** `mapped_status` null olmasının İKİ sebebi var ve ayrılmaları
+  -- şart (28.08, taksonomi ölçüldükten sonra eklendi):
+  --   (a) `recognized = false` → kodu TANIMIYORUZ. Tablo eksik demektir; operasyon bunu sayar
+  --       ("N tanınmayan taşıyıcı kodu") ve eşleme büyütülünce geçmiş yeniden okunabilir.
+  --   (b) `recognized = true` + `mapped_status null` → kodu tanıyoruz ama gönderinin YERİNİ
+  --       söylemiyor ("teslim adresi değişti", "iptal sürüyor"). Bilgi olayıdır.
+  -- Ayrım olmasaydı her adres değişikliği alarmı şişirirdi; hep açık duran bir alarm da alarm
+  -- olmaktan çıkar.
+  recognized boolean not null default true,
   message text,
   -- Olayın KENDİ zamanı — bizim aldığımız an DEĞİL. Webhook 10 kez yeniden deneniyor ve saatler
   -- sonra gelebilir; zaman çizgisini olayın kendi damgası kurar.
@@ -124,10 +132,11 @@ create table public.shipment_event (
 );
 
 create index shipment_event_shipment_idx on public.shipment_event (shipment_id, occurred_at desc);
--- "Tanınmayan kod" sayacı — operasyon sistem ekranının okuması.
-create index shipment_event_unmapped_idx on public.shipment_event (received_at desc) where mapped_status is null;
+-- "Tanınmayan kod" sayacı — operasyon sistem ekranının okuması. Süzgeç `mapped_status` DEĞİL
+-- `recognized`: bilgi olaylarının da eşlenmiş durumu yoktur ve onlar sayılmamalı.
+create index shipment_event_unmapped_idx on public.shipment_event (received_at desc) where not recognized;
 
 alter table public.shipment_event enable row level security;
 
 comment on table public.shipment_event is
-  'Taşıyıcı olay defteri (07.12). Append-only. mapped_status null = kod TANINMADI ve satır yine yazılır — eşleme sonradan yazılınca geçmiş yeniden okunabilir. raw yalnız tanınmayan kodda ve KİŞİSEL VERİ AYIKLANARAK saklanır.';
+  'Taşıyıcı olay defteri (07.12). Append-only. recognized=false = kod TANINMADI (eşleme tablosu eksik, operasyon sayar); recognized=true + mapped_status null = tanınan ama durumu değiştirmeyen bilgi olayı. raw yalnız TANINMAYAN kodda ve KİŞİSEL VERİ AYIKLANARAK saklanır.';
