@@ -153,3 +153,60 @@ satırlarıyla çarpıştı — yani iki benzersizlik kısıtı da yaşanarak do
 
 Tam paket **3757/3757**.
 
+---
+
+# Sabah özeti — 28.08, 03:20
+
+## Ne çalışıyor
+
+Kanalın **omurgası uçtan uca kuruldu.** Zincir şu:
+
+    varyantın ambalaj ölçüsü  →  deponun kargo kutusu  →  koli planı
+      →  canlı teklif (çok koli süzgeciyle)  →  gönderi duyurusu + etiket
+
+Her halkanın testi var ve tam paket **3757/3757** yeşil. Veritabanı tazelendi, kapsam 155/155.
+
+**Gerçek hesapla doğrulandı:** `pnpm sendcloud:smoke` 17 kargo seçeneği döndürüyor. Para
+harcanmadı — teklif çağrısı ücretsiz. Depolar ekranında kutu benimseme tarayıcıda denendi.
+
+## Altı grup hâlinde gönderildi
+
+| Commit | Ne |
+| --- | --- |
+| `405bbfee` | Ambalajlı ürün ölçüsü — şema, operatör formu, MCP dilekçesi, besleme |
+| `13c81c68` | Kargo kutusu kataloğu + Depolar ekranı bölümü |
+| `423a2512` | Koli planı motoru + Sendcloud istemcisi |
+| `121396fe` | Teklif kapısı (çok koli süzgeci) |
+| `ad908bd8` | Gönderi kaydı + duyuru kapısı |
+
+## Gece boyunca bulduğum dört şey
+
+1. **Formdan açılan her yeni ürün "donuk ama kargolanabilir" doğuyordu.** Veritabanı "kargoya
+   verilemez" diyordu, form "verilebilir" gönderiyordu. Düzeltildi.
+2. **Porsiyon türü ("12 dilim" mi "12 adet" mi) formda hiç yoktu** — yalnız besleme yazabiliyordu.
+3. **Kargo seçeneklerinin hepsi çok koli desteklemiyor** — ve en ucuz ikisi (Mondial Relay)
+   desteklemiyor. Süzgeç koymasaydık müşteri onu seçer, etiket alınırken reddedilir, sipariş
+   sevk edilemez kalırdı. Gecenin en pahalı bulgusu buydu.
+4. **Bir kargo siparişi bugün hâlâ "teslim edildi" olamıyor** — bu düzeltilmedi, aşağıda.
+
+## Kalan işler
+
+Kanal açık ama üç ucu bağlanmadı:
+
+- **Müşteri ekranları.** Sepet ve checkout hâlâ sabit tarifeyi gösteriyor; canlı teklif sunucuda
+  hazır ama ekrana bağlanmadı. Bu, müşterinin gördüğü fiyatı değiştireceği için ayrı bir tur —
+  ve tasarımı olmadığı için en yakın emsale dayanacak.
+- **Etiketin yazıcıya gitmesi.** Sağlayıcı PDF veriyor, Brother yalnız görüntü basıyor. Önce
+  ölçülecek şey: sağlayıcıdan doğrudan PNG istenebiliyor mu? İstenebiliyorsa yeni bir bağımlılık
+  gerekmiyor. Ayrıca **4×6 kâğıtla gerçek bir prova şart** — kâğıdımız 103×164 mm, etiket A6
+  (105×148) görünüyor, genişlikte ~2 mm taşma riski var.
+- **Webhook ve durum zinciri.** Kargo siparişi bugün `ready`de takılı kalıyor: `out_for_delivery`
+  ve `delivered`ı kargo kulvarında yazan hiçbir şey yok (bunu ölçtüm, tasarım kaydı §8.1). Tablolar
+  ve durum eşlemesi hazır; webhook ucu ve nöbet cron'u yazılacak.
+- **Native ekranlar** — mobil şeridin alanı; sözleşmeler hazır olunca talep açılacak.
+
+## Senden bir karar
+
+Etiket basımı için: sağlayıcıdan PNG istenemezse PDF→PNG çeviren bir bağımlılık eklemem gerekecek.
+Küçük bir paket ama yeni bir bağımlılık — onayını almadan eklemem.
+

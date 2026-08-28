@@ -90,5 +90,3 @@ export const ShipmentResponseSchema = z.object({
   }),
 });
 
-export type SendcloudShippingOption = z.infer<typeof ShippingOptionSchema>;
-export type SendcloudShipmentResponse = z.infer<typeof ShipmentResponseSchema>;
