@@ -1,5 +1,5 @@
 import type { OrderDecision } from '@lezzet/domain-core';
-import type { OrderSource } from '@lezzet/types';
+import type { OrderSource, ShipmentStatus } from '@lezzet/types';
 import { money, shortDateTime } from '@/components/operation/ui/format';
 import type { TimelineStep } from '@/components/operation/ui/timeline';
 import type { DeliveryProofView, OrderDetailView } from './order-detail-types';
@@ -172,6 +172,26 @@ export function creditFill(order: OrderDetailView): string {
  * Kanıt türünün yüzü. Ham `kind` ekrana yazılmaz (`signature`/`photo`); ihtilafta sorulan soru
  * "imza mı foto mu" diye Türkçe sorulur.
  */
+/**
+ * Gönderi durumu — TAŞIYICININ taksonomisi, bizim sipariş durumumuz DEĞİL. İkisi ayrı eksen:
+ * sipariş "yolda" iken gönderi "sıralama merkezinde" olabilir ve operatörün müşteriye söyleyeceği
+ * cümle bu ikincisidir.
+ *
+ * `error` "hata" değil **"müdahale gerekiyor"** diye yazılıyor: kod bir arıza bildirmiyor, bir
+ * karar bekliyor (adres geçersiz, teslim edilemedi). "Hata" yazsaydık operatör kendi sisteminde
+ * bir bozukluk arardı.
+ */
+export const SHIPMENT_STATUS_LABEL: Record<ShipmentStatus, string> = {
+  created: 'Etiket hazır',
+  handed_over: 'Taşıyıcıda',
+  in_transit: 'Yolda',
+  out_for_delivery: 'Dağıtımda',
+  delivered: 'Teslim edildi',
+  returned: 'Geri dönüyor',
+  cancelled: 'İptal edildi',
+  error: 'Müdahale gerekiyor',
+};
+
 export const PROOF_KIND_LABEL: Record<DeliveryProofView['kind'], string> = {
   signature: 'imza',
   photo: 'foto',

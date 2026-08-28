@@ -13,6 +13,7 @@ import type {
   PaymentMethod,
   PaymentStatus,
   ReturnDisposition,
+  ShipmentStatus,
 } from '@lezzet/types';
 
 /** Kalem satırı — paket grubunun içindeyse `bundleId` dolu gelir. */
@@ -305,6 +306,22 @@ export interface OrderDetailView {
      * o depo adresten türemiştir, buradan değiştirilmez. `null` yalnız ad çözülemediğinde.
      */
     warehouse: { code: string; name: string } | null;
+    /**
+     * **KARGO GÖNDERİSİ** (07.12) — `null` = rota siparişi ya da henüz duyurulmamış kargo.
+     *
+     * Kaynak müşteri yüzeyiyle AYNI kapı (`readOrderTracking`): operatörün gördüğü numara ile
+     * müşteriye gösterilen numara aynı olmak zorunda — ikisi ayrı sorgudan gelseydi bir gün
+     * ayrışır ve destek konuşması "bende başka görünüyor"a dönerdi.
+     *
+     * `parcels` BOŞ olabilir ve `null`dan farklıdır: gönderi duyuruldu ama taşıyıcı takip
+     * numarasını henüz atamadı. Ekran o hâlde taşıyıcıyı söyleyip numarayı bekler.
+     */
+    shipment: {
+      carrierName: string | null;
+      /** Gönderi durumu; elle girilen numarada `null` — o yolda gönderi satırı yok. */
+      status: ShipmentStatus | null;
+      parcels: ReadonlyArray<{ boxNo: number; totalBoxes: number; trackingNumber: string; trackingUrl: string | null }>;
+    } | null;
   };
 
   customer: CustomerContextView;

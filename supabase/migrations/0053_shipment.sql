@@ -132,8 +132,11 @@ create table public.shipment_event (
 );
 
 create index shipment_event_shipment_idx on public.shipment_event (shipment_id, occurred_at desc);
--- "Tanınmayan kod" sayacı — operasyon sistem ekranının okuması. Süzgeç `mapped_status` DEĞİL
--- `recognized`: bilgi olaylarının da eşlenmiş durumu yoktur ve onlar sayılmamalı.
+-- "Tanınmayan kod" dökümü — eşleme tablosu büyütüldükten sonra GEÇMİŞİ YENİDEN OKUMA turunun
+-- girdisi. Süzgeç `mapped_status` DEĞİL `recognized`: bilgi olaylarının da eşlenmiş durumu yoktur
+-- ve onlar bir eksiklik değildir.
+-- (Anlık uyarı buradan okunmuyor: uzlaştırma tanınmayan kodu `error_log`'a warning olarak düşüyor
+--  — orada kod başına gruplanır ve çözülene kadar durur; bir sayaç pencere geçince sıfırlanırdı.)
 create index shipment_event_unmapped_idx on public.shipment_event (received_at desc) where not recognized;
 
 alter table public.shipment_event enable row level security;

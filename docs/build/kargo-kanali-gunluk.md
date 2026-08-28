@@ -407,3 +407,52 @@ mekanik — onlar geçtiğinde eski alanları silerim.
 
 **Testler:** 12 entegrasyon (kaynak + iki yüzey). Kaynağı koparıp doğruladım: 2 test kırmızıya
 döndü. Tam paket **3862/3862**.
+
+
+---
+
+## F (kalan 3) — operasyon yüzeyi + besleme ✅
+
+**Ne yaptım:** yazdığım zincirin ürettiği bilgiyi operatörün ekranına taşıdım ve beslemeyi
+düzelttim.
+
+### Sayaç yerine hata kaydı
+
+Kendi açtığım borcu kapatırken fikrimi değiştirdim. Tasarım *"sistem ekranında N tanınmayan
+taşıyıcı kodu"* diyordu ve ben o sayacı yazmıştım — ama çağıranını yazarken şunu gördüm: **sayaç
+kaç tane olduğunu söyler, operatörün ihtiyacı hangi kod olduğudur.** Eşleme tablosuna yazılacak şey
+odur.
+
+Onun yerine her tanınmayan kod artık hata kaydına **uyarı** olarak düşüyor. Orada kod başına
+gruplanıyor, sayılıyor ve **çözülene kadar duruyor** — bir sayaç ise pencere geçince sıfırlanır,
+gece gelen kod sabah görünmez olurdu. Sayacı sildim; çağıranı hiç doğmamıştı.
+
+### Ölçerken bulduğum bir arıza
+
+Kargo siparişinin Teslimat kartı **"Kurye: sefer bekliyor · Sefer: açılmadı"** yazıyordu — sonsuza
+dek. O iki satır rota kulvarının; kargoda kurye de sefer de hiç doğmuyor. Cevabı olmayan bir soruyu
+boş bırakmak, operatöre eksik bir şey varmış gibi okutuyordu. Artık kargoda o iki satır yerine
+taşıyıcı, gönderi durumu ve **kutu başına** takip numarası var; numaralar tıklanabilir.
+
+Kaynak müşteri yüzeyiyle aynı kapı. İki ayrı sorgu bir gün ayrışır ve destek konuşması "bende
+başka görünüyor"a dönerdi.
+
+### Besleme boştu
+
+Ölçtüm: `shipment` tablosunda **tek satır yoktu**. Yani yazdığım üç ekran da yalnız testlerde
+görülebiliyordu — kimse bakıp "böyle mi görünmeli" diyemezdi. Beslemeye iki gönderi ekledim: tek
+koli (taşıyıcıda) ve **çok koli** (yolda, iki ayrı takip numarası). İkincisi zorunlu bir kapsam
+kovası oldu: "her kolinin ayrı numarası" kuralı tek kolili veride hiçbir ekranda görünmez — ve o
+kural bir kez tam bu yüzden yanlış yazılmıştı.
+
+Besleme **sağlayıcıya çıkmıyor**: duyuru gerçek para harcıyor. Satırlar doğrudan yazılıyor,
+sağlayıcı kimlikleri `seed-` önekli — canlı bir gönderiyle karışmasınlar ve öksüz nöbeti onları
+kendi hesabımızda aramasın.
+
+### Ekranı kendim gördüm
+
+`ui:shot` ile çektim, aydınlık ve karanlık modda kontrol ettim: taşıyıcı "Chronopost · Yolda",
+altında "Kutu 1/2" ve "Kutu 2/2" ayrı takip numaralarıyla. Kurye/Sefer satırları gitmiş.
+
+**Testler:** 1 entegrasyon daha (tanınmayan kodun hata kaydına düşmesi). Tam paket **3863/3863**.
+Kapsam turu 157 kovanın hepsinde örnek buluyor.

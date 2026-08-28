@@ -140,6 +140,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Hata kaydı `purgeTestData`nın hedefi DEĞİL (iş kaydı değil, gözlemleme kaydı) — bu dosya
+  // bilerek warning ürettiği için kendi satırını kendisi topluyor. Damgayla süzülüyor: küresel
+  // bir silme başka şeridin kaydını götürürdü.
+  await db.from('error_log').delete().ilike('message', `%BILINMEYEN_${stamp}%`);
   await db.from('order').delete().eq('customer_id', customerId);
   await purgeTestData(db, { productIds, categoryIds, profileIds, warehouseIds });
 });
@@ -223,6 +227,23 @@ describe('syncShipmentStatus — defter', () => {
     expect(olay).toMatchObject({ providerCode: 'QUANTUM_TELEPORTED', mappedStatus: null, recognized: false });
     // Ham hâl sağlayıcı yükünün TAMAMI değil, okuduğumuz iki alan — kişisel veri yapıca giremez.
     expect(olay!.raw).toEqual({ code: 'QUANTUM_TELEPORTED', message: 'ışınlandı', source: 'rest' });
+  });
+
+  /**
+   * Tanınmayan kod **operatöre görünür** olmalı ve görünme yeri bir sayaç değil hata kaydıdır:
+   * sayaç kaç tane olduğunu söyler, operatörün ihtiyacı HANGİ kod olduğudur — eşleme tablosuna
+   * yazılacak şey odur. `error_log` kod başına gruplayıp sayıyor ve çözülmemiş kaydı süresiz
+   * tutuyor; bir sayaç pencere geçince sıfırlanırdı.
+   */
+  it('bilinmeyen kod HATA KAYDINA warning olarak düşer — hangi kod olduğu yazılı', async () => {
+    const k = await gonderiKur({ boxes: 1 });
+    const kod = `BILINMEYEN_${stamp}`;
+    await syncShipmentStatus(db, fakeProvider([koli(k.parcelRefs[0]!, kod)]), { shipmentId: k.shipmentId });
+
+    const { data } = await db.from('error_log').select('level, source, message, context').ilike('message', `%${kod}%`).limit(1).single();
+    expect(data).toMatchObject({ level: 'warning', source: 'application-shipping' });
+    // Kimlik yazılır, içerik yazılmaz.
+    expect((data!.context as Record<string, unknown>).shipmentId).toBe(k.shipmentId);
   });
 
   it('BİLGİ olayı deftere girer ama alarmı şişirmez — tanınıyor, yalnız yer söylemiyor', async () => {

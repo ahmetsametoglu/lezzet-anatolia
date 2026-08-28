@@ -45,6 +45,7 @@ import {
   skippedBetween,
   vatSplitOf,
 } from '@lezzet/domain-core';
+import { readOrderTracking } from '@lezzet/application';
 import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readDeliveryProof } from '@/lib/courier/proof';
@@ -267,6 +268,17 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       runReference: run?.referenceNo ?? null,
       proof: await proofOf(order.deliveryProof),
       warehouse: warehouseLabels.get(order.warehouseId) ?? null,
+      /*
+        Kargo künyesi MÜŞTERİ YÜZEYİYLE AYNI kapıdan (`readOrderTracking`): operatörün gördüğü
+        numara ile müşteriye gösterilen aynı olmak zorunda. İki ayrı sorgu bir gün ayrışır ve
+        destek konuşması "bende başka görünüyor"a döner.
+
+        Yalnız kargo siparişinde soruluyor — rotada gönderi satırı hiç doğmaz.
+      */
+      shipment:
+        order.deliveryType === 'shipping'
+          ? await readOrderTracking(db, order.id, { carrier: order.carrier, trackingNumber: order.trackingNumber })
+          : null,
     },
 
     customer: {

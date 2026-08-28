@@ -106,6 +106,14 @@ export const SOURCES = {
    */
   applicationTicket: 'application-ticket',
   /**
+   * Paylaşılan KARGO akışı (`packages/application/src/shipping`) — taşıyıcı uzlaştırması (07.12).
+   * Aynı ayrım: uzlaştırmayı hem webhook (`apps/backend/webhooks`) hem nöbet cron'u çağırıyor;
+   * arıza akışın kendisindeyse (tanınmayan durum kodu, sağlayıcıya ulaşılamaması) iki yolda da
+   * aynı adla görünmeli. Çağırana bağlansaydı tek bir eksik eşleme iki kova arasında bölünür ve
+   * ikisi de dikkat çekmezdi.
+   */
+  applicationShipping: 'application-shipping',
+  /**
    * Bildirimin tek kapısı (`packages/application/src/notification/dispatch`, 14.12) — satır + kanal
    * + teslim defteri. Aynı ayrım: beş yayım noktası (sipariş, talep, davet, bölge, B2B) üç yüzeyden
    * bu kapıyı çağırıyor; teslim defterinin yazılamaması hangi yüzeyden gelirse gelsin tek adla

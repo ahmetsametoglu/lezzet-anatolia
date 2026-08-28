@@ -646,4 +646,7 @@ export { sendcloudProvider, shippingProviderConfigured } from './shipping/provid
 export type { RecipientAddress, SenderAddress, ShippingRateProvider } from './shipping/port';
 export { syncShipmentStatus, type SyncInput, type SyncOutcome } from './shipping/sync-status';
 export { scanOrphanShipments, sweepStuckShipments, type OrphanScanResult, type StuckSweepResult } from './shipping/watch';
+/* Takip künyesinin TEK kapısı — dört yüzey (mail · müşteri detayı · mobil sözleşmesi · operasyon
+   sipariş detayı) buradan okuyor. Barrel'a çıkması dördüncü tüketicide gerekti. */
+export { parcelOrdinal, readOrderTracking, type OrderTracking, type TrackedParcel } from './shipping/tracking';
 

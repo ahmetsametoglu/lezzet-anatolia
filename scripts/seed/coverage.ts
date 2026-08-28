@@ -514,6 +514,24 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    /*
+      ── KARGO GÖNDERİSİ (07.12) ────────────────────────────────────────────────────────────────
+      Üç ekranın görünürlüğü buna bağlı: müşteri sipariş detayının takip bloğu, operasyon sipariş
+      detayının gönderi künyesi ve "yolda" mailinin takip kutusu. Kova açılmadan önce `shipment`
+      tablosunda TEK satır yoktu — üçü de yalnız testlerde görülebiliyordu.
+
+      **ÇOK KOLİ ayrı kova ve zorunlu:** "her kolinin AYRI takip numarası var" kuralı tek kolili
+      veride hiçbir ekranda görünmez — ve o kural bir kez tam bu yüzden yanlış yazıldı (tek numara
+      varsayılmıştı, çok kutulu siparişin ikisi görünmez kalıyordu).
+    */
+    baslik: 'Kargo gönderisi',
+    tablo: 'shipment',
+    kovalar: [
+      { ad: 'taşıyıcıda (tek koli)', zorunlu: true, filtre: (q) => q.eq('status', 'handed_over') },
+      { ad: 'yolda (çok koli)', zorunlu: true, filtre: (q) => q.eq('status', 'in_transit') },
+    ],
+  },
+  {
     // ── SİPARİŞ KUTUSU (23.6) ─────────────────────────────────────────────────────────────────
     // Kutu döngüsünün dört hâli, dördü de ayrı bir ekran/kural açıyor: AÇIK kutu = masada
     // dolduruluyor (yarım iş kaldığı yerden sürer), KAPALI = salt-okunur + etiketi basılacak,

@@ -180,6 +180,26 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
       **Mobil sözleşmesi EKLEMELİ genişledi** (`carrierName` + `parcels`): eski üç alan native
       ekranı kırmamak için duruyor ve İLK koliyi anlatıyor; native geçince silinecek
       (`docs/talep/not-mobil-cok-kutulu-kargo-takibi.md`).
+      **Operasyon yüzeyi (28.08, üçüncü tur):** sipariş detayının Teslimat kartında taşıyıcı + gönderi
+      durumu + **kutu başına** takip (tıklanabilir). Kaynak müşteri yüzeyiyle AYNI kapı — operatörün
+      gördüğü numara ile müşteriye gösterilen ayrışamaz. Aynı turda ölçülen bir arıza da düzeldi:
+      kargo siparişinde *"Kurye: sefer bekliyor / Sefer: açılmadı"* satırları sonsuza dek duruyordu
+      (o iki satır rota kulvarının), artık kargo kulvarında çizilmiyor.
+      **Tanınmayan kod SAYAÇ değil HATA KAYDI oldu:** tasarım `/operations/system`de sayaç
+      öngörüyordu; yazarken görüldü ki sayaç "kaç tane" der, operatörün ihtiyacı "hangi kod"dur.
+      `error_log`'a `warning` düşüyor — kod başına gruplanıyor ve çözülene kadar duruyor; sayaç
+      pencere geçince sıfırlanırdı. `countUnmapped` çağıranı doğmadan silindi.
+      **Besleme:** `shipment` tablosunda TEK satır yoktu, yani üç ekran da yalnız testlerde
+      görülebiliyordu. Seed artık iki gönderi kuruyor — tek koli (taşıyıcıda) ve **çok koli** (yolda,
+      iki ayrı takip numarası); `seed:coverage`'a "Kargo gönderisi" kovası eklendi. Çok koli kovası
+      ZORUNLU: "her kolinin ayrı numarası" kuralı tek kolili veride hiçbir ekranda görünmez ve o
+      kural bir kez tam bu yüzden yanlış yazılmıştı. Seed sağlayıcıya ÇIKMIYOR (duyuru gerçek para
+      harcar) — satırlar doğrudan yazılıyor, sağlayıcı kimlikleri `seed-` önekli.
+      **AÇIK — `.env.example`'a Sendcloud anahtarları yazılmadı** (`SENDCLOUD_PUBLIC_KEY` ·
+      `SENDCLOUD_SECRET_KEY` · `SENDCLOUD_API_BASE_URL` · `SENDCLOUD_WEBHOOK_SECRET`). Dosya o an
+      başka şeridin değişikliğini taşıyordu; yol adı vererek commit atmak onların satırlarını benim
+      künyemin altına alırdı (`CLAUDE §0`). Dosya temizlendiğinde eklenecek — anahtar listesi
+      olmadan yeni bir ortam kurmak, hangi değişkenin gerektiğini koddan aramak demek.
       **Kapanış (`completed`) BU TURUN KONUSU DEĞİL** — ölçüldü: `closeOrder`ın bugün hiçbir üretim çağıranı yok, rota kulvarında da yok. Kargoya özel bir kapanış yazmak iki kulvarı ayrı kurallara bölerdi → görev satırı `(07.16)`.
 
 - [x] (07.13) **Bağlayıcı fiyat sabitlenirken artış SESSİZ uygulanıyor** · `touches: apps/web/lib/order/checkout-draft.ts, apps/web/lib/cart/{cart-types,actions}.ts, apps/web/app/(customer)/[locale]/checkout/**`

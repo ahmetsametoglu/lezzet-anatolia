@@ -625,9 +625,9 @@ hiç doğmuyor. Taşıyıcı webhook'u bu boşluğu doldurur: *handed over* → 
 | Ürün listesi | "ambalaj ölçüsü eksik" süzgeci + rozet | B |
 | **Depolar** (`operations/warehouses/`) | **Kargo kutuları bölümü** — şablondan benimse · yeni oluştur · kapat. Emsal birebir var: `printer-dialog.tsx` + `warehouses-sections.tsx` deseni | B |
 | Hazırlık masası (`preparation.desktop.tsx`) | Kargo kutusu telefonda kapanır (§4.6) → satın alma ORADA. Web'in `ShipmentBox`'ı **görüntüleme + yedek şerit** olur: elle taşıyıcı/numara (`other`), etiketi yeniden bas, gönderiyi iptal et | F |
-| Sipariş detayı | Teslimat kartı: gönderi künyesi + **kutu başına** takip (1/3, 2/3…) + etiketi yeniden bas | F |
+| Sipariş detayı | ✅ **yapıldı 28.08** — Teslimat kartında taşıyıcı + durum + **kutu başına** takip (tıklanabilir). Aynı turda ölçülen bir arıza da düzeldi: kargo siparişinde "Kurye / Sefer" satırları sonsuza dek *"sefer bekliyor / açılmadı"* yazıyordu (o iki satır ROTA kulvarının), artık kargo kulvarında hiç çizilmiyor. *(Etiketi yeniden bas → basım işiyle birlikte)* | F |
 | Ayarlar | Kargo maliyet payı (parametrik, `settings-catalog.ts` sözlüğüne satır) | E |
-| Sistem (`/operations/system`) | **"N tanınmayan taşıyıcı kodu"** sayacı — `shipment_event.mapped_status is null` (§4.5); eşleme tablosunun büyüme sinyali | F |
+| Sistem (`/operations/system`) | ✅ **yapıldı 28.08, ama SAYAÇ OLARAK DEĞİL.** Yazarken görüldü ki sayaç kaç tane olduğunu söyler, operatörün ihtiyacı ise HANGİ kod olduğudur — eşleme tablosuna yazılacak şey odur. Uzlaştırma artık her tanınmayan kod için `error_log`'a **warning** düşüyor: kod başına gruplanır, sayılır ve **çözülmemiş kayıt süresiz durur**; bir sayaç pencere geçince sıfırlanırdı. `ShipmentEventService.countUnmapped` çağıranı doğmadan silindi | F |
 
 ### 8.4 Müşteri — web
 

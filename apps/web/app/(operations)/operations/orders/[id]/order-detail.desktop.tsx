@@ -13,6 +13,7 @@ import {
   DECISION_COPY,
   ORDER_NOTES,
   PROOF_KIND_LABEL,
+  SHIPMENT_STATUS_LABEL,
   creditFill,
   creditPercent,
   initialsOf,
@@ -479,9 +480,20 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
               ) : null}
               {/* Kurye YALNIZ GÖRÜNÜR: kuryeyi sefer yazar (kurye rotayı alınca), tek siparişin
                   özelliği değil. Sefer satırı da künyedir — "bu durak hangi araç turuyla gitti"
-                  sorusunun cevabı; geçmişi Teslimat & Rota → Seferler'de. */}
-              <InfoRow label="Kurye" value={order.delivery.courierName ?? 'sefer bekliyor'} />
-              <InfoRow label="Sefer" value={order.delivery.runReference ?? 'açılmadı'} />
+                  sorusunun cevabı; geçmişi Teslimat & Rota → Seferler'de.
+
+                  **İkisi de ROTA kulvarının satırı** (07.12 düzeltmesi): kargo siparişinde kurye
+                  de sefer de HİÇ doğmaz, yani o siparişte bu iki satır sonsuza dek "sefer
+                  bekliyor / açılmadı" yazıyordu. Cevabı olmayan bir soruyu boş bırakmak, operatöre
+                  eksik bir şey varmış gibi okutur. */}
+              {order.delivery.type !== 'shipping' ? (
+                <>
+                  <InfoRow label="Kurye" value={order.delivery.courierName ?? 'sefer bekliyor'} />
+                  <InfoRow label="Sefer" value={order.delivery.runReference ?? 'açılmadı'} />
+                </>
+              ) : (
+                <ShipmentRows shipment={order.delivery.shipment} />
+              )}
               {/* Kanıt AÇILABİLİR olmalı (07.08): türünü yazmak yetmiyor, ihtilafta bakılan şey
                   görselin kendisi. `imageUrl` süreli imzalı adres — sayfa her açıldığında yeniden
                   doğuyor, saklanmıyor. Kova yoksa görsel yerine SEBEP yazılır; boş bir çerçeve
@@ -625,6 +637,60 @@ function InfoRow({ label, value, hint }: { label: string; value: string; hint?: 
         {hint ? <span className="text-ops-micro text-ops-muted"> · {hint}</span> : null}
       </span>
     </div>
+  );
+}
+
+/**
+ * **KARGO GÖNDERİSİ** (07.12) — rota kulvarının "Kurye / Sefer" satırlarının kargodaki karşılığı.
+ *
+ * Üç ayrı hâl ve üçü de farklı cümle kuruyor; hiçbiri boş satır bırakmıyor:
+ *   · gönderi YOK           → "duyurulmadı" (hazırlık bitince açılacak)
+ *   · gönderi VAR, numara yok → taşıyıcı + durum yazılır, numara beklenir
+ *   · gönderi VAR, numara var → koli başına satır
+ *
+ * **Koli başına satır**, çünkü çok kolili gönderide her kolinin AYRI numarası var. Operatör
+ * müşteriye "hangi kutu nerede" sorusunu ancak böyle cevaplayabilir; tek numara gösteren bir kart
+ * üç kutulu siparişte yanlış cevap verirdi.
+ *
+ * Numara TIKLANABİLİR (bağlantısı varsa): operatör telefondayken numarayı elle kopyalamak zorunda
+ * kalmasın.
+ */
+function ShipmentRows({ shipment }: { shipment: OrderDetailView['delivery']['shipment'] }) {
+  if (!shipment) return <InfoRow label="Gönderi" value="duyurulmadı" />;
+
+  return (
+    <>
+      <InfoRow
+        label="Taşıyıcı"
+        value={shipment.carrierName ?? 'bilinmiyor'}
+        hint={shipment.status ? SHIPMENT_STATUS_LABEL[shipment.status] : 'elle girildi'}
+      />
+      {shipment.parcels.length === 0 ? (
+        <InfoRow label="Takip" value="taşıyıcı numarayı henüz atamadı" />
+      ) : (
+        shipment.parcels.map((parcel) => (
+          <div key={parcel.trackingNumber} className="flex items-baseline gap-2">
+            <span className="w-[78px] flex-none font-ops-body text-ops-xs text-ops-muted">
+              {parcel.totalBoxes > 1 ? `Kutu ${parcel.boxNo}/${parcel.totalBoxes}` : 'Takip'}
+            </span>
+            <span className="min-w-0 flex-1 font-ops-mono text-ops-xs text-ops-ink">
+              {parcel.trackingUrl ? (
+                <a
+                  href={parcel.trackingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="cursor-pointer underline hover:text-ops-olive-dark"
+                >
+                  {parcel.trackingNumber}
+                </a>
+              ) : (
+                parcel.trackingNumber
+              )}
+            </span>
+          </div>
+        ))
+      )}
+    </>
   );
 }
 

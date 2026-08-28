@@ -1,7 +1,8 @@
 import { openBox, sealBox } from '@lezzet/application';
 import {
   AccountService, AddressService, CartService, DeliveryZoneService, DiscountService, MoneyMovementService,
-  OrderBoxService, OrderService, ReservationService, StockService, UserProfileService,
+  OrderBoxService, OrderService, ReservationService, ShipmentEventService, ShipmentService,
+  ShippingBoxService, StockService, UserProfileService,
 } from '@lezzet/database';
 import { derivePaymentStatusForOrder, generateReferenceNo, resolveVatTreatment } from '@lezzet/domain-core';
 import { distributeDiscount, toCents } from '@lezzet/helper';
@@ -833,6 +834,80 @@ export async function seedOrders(
       const kutu2 = await openBox(db, { orderId: cokKutulu, warehouseId: depolar.str });
       if (kutu2.status !== 'ok') throw new Error('seed kutu: ikinci kutu açılamadı');
       console.log('  ✓ kutu döngüsü: tek kutu KAPALI + çok kutulu (1 kapalı · 1 açık) — hepsi yüklenmemiş');
+    }
+
+    /*
+      ── KARGOYA VERİLMİŞ GÖNDERİLER (07.12) ─────────────────────────────────────────────────────
+      Üç ekran bu satırlar olmadan BOŞ kalıyordu: müşteri sipariş detayının takip bloğu, operasyon
+      sipariş detayının gönderi künyesi ve "yolda" mailinin takip kutusu. Ölçüldü — `shipment`
+      tablosunda tek satır yoktu, yani hepsi yalnız testlerde görülebiliyordu.
+
+      **SAĞLAYICIYA ÇIKILMIYOR ve bu şart:** duyuru gerçek para harcar (`announceOrderShipment`).
+      Seed satırları doğrudan yazıyor; alanlar duyurunun yazdıklarının aynısı, sağlayıcı kimlikleri
+      `seed-` önekli — canlı bir gönderiyle karıştırılamasınlar ve öksüz nöbeti onları kendi
+      hesabımızda ARAMASIN.
+
+      İKİ HÂL bilerek: tek kutulu (taşıyıcıda) ve ÇOK KUTULU (yolda, iki ayrı takip numarası).
+      İkincisi olmadan "her kolinin ayrı numarası" kuralı hiçbir ekranda görünmez — ve o kural tam
+      olarak tek numara varsayıldığı için bir kez yanlış yazılmıştı.
+    */
+    const kutuTipi = (await new ShippingBoxService(db).listForWarehouse(depolar.str))[0] ?? null;
+    if (kutuTipi) {
+      const gonderiler = new ShipmentService(db);
+      const olaylar = new ShipmentEventService(db);
+      const kutular = new OrderBoxService(db);
+
+      async function kargoyaVer(opts: {
+        etiket: string;
+        kutuSayisi: number;
+        durum: 'handed_over' | 'in_transit';
+        kod: string;
+      }): Promise<void> {
+        const orderId = await siparis({
+          musteri: 'b2cSadik',
+          kalemler: [kalem(49, opts.kutuSayisi * 2)],
+          hedef: 'ready',
+          channel: 'b2c',
+          deliveryType: 'shipping',
+          paymentMethod: 'online',
+          tahsilat: toplam([kalem(49, opts.kutuSayisi * 2)]),
+          etiket: opts.etiket,
+        });
+        if (!orderId) return;
+
+        const gonderi = await gonderiler.insert({
+          orderId,
+          warehouseId: depolar.str,
+          status: opts.durum,
+          providerShipmentId: `seed-${opts.kod}`,
+          shippingOptionCode: 'chronopost:shop2shop',
+          carrierCode: 'chronopost',
+          carrierName: 'Chronopost',
+          quotedCents: 499 * opts.kutuSayisi,
+        });
+
+        for (let n = 1; n <= opts.kutuSayisi; n++) {
+          const kutu = await kutular.insert({ orderId, warehouseId: depolar.str, boxNo: n, code: `KG-${opts.kod}-${n}` });
+          await db
+            .from('order_box')
+            .update({
+              sealed_at: an(0),
+              shipping_box_id: kutuTipi.id,
+              shipment_id: gonderi.id,
+              provider_parcel_ref: `seed-p-${opts.kod}-${n}`,
+              tracking_number: `SEED${opts.kod.toUpperCase()}${n}00${n}`,
+              tracking_url: `https://www.chronopost.fr/tracking-no-cms/suivi-page?listeNumerosLT=SEED${opts.kod.toUpperCase()}${n}00${n}`,
+            })
+            .eq('id', kutu.id);
+        }
+
+        // Defterin ilk satırı — duyuru kapısının yazdığının aynısı (gönderi düzeyi, kutusuz).
+        await olaylar.insert({ shipmentId: gonderi.id, providerCode: 'ANNOUNCED', mappedStatus: 'created', occurredAt: an(0) });
+      }
+
+      await kargoyaVer({ etiket: 'KARGO — tek koli, taşıyıcıda', kutuSayisi: 1, durum: 'handed_over', kod: 'tek' });
+      await kargoyaVer({ etiket: 'KARGO — İKİ koli, yolda (ayrı takip numaraları)', kutuSayisi: 2, durum: 'in_transit', kod: 'cift' });
+      console.log('  ✓ kargo gönderisi: 1 tek koli (taşıyıcıda) + 1 çok koli (yolda, iki takip numarası)');
     }
   }
 

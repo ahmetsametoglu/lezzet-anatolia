@@ -90,20 +90,16 @@ export class ShipmentEventService extends BaseDbService<ShipmentEvent, ShipmentE
     return this.getAll({ shipmentId }, { orderBy: 'occurredAt', orderDirection: 'desc' });
   }
 
-  /**
-   * **Tanınmayan kod sayısı** — operasyon sistem ekranının okuduğu sayı ve eşleme tablosunun
-   * büyüme sinyali. Sıfırdan büyükse `classifyCarrierStatus` tablosu eksik demektir.
-   *
-   * Süzgeç `mapped_status` DEĞİL `recognized`: bilgi olaylarının ("teslim adresi değişti") da
-   * eşlenmiş durumu yoktur ama onlar bir eksiklik değildir. Onları saymak, hep açık duran bir
-   * alarm üretirdi.
-   */
-  async countUnmapped(): Promise<number> {
-    const { count, error } = await this.supabase
-      .from('shipment_event')
-      .select('id', { count: 'exact', head: true })
-      .eq('recognized', false);
-    if (error) throw error;
-    return count ?? 0;
-  }
+  /*
+    ⚠ `countUnmapped` SİLİNDİ (28.08) — çağıranı hiç doğmadan daha iyisi bulundu.
+
+    Tasarım `/operations/system`de "N tanınmayan kod" sayacı öngörüyordu; yazarken görüldü ki sayaç
+    kaç tane olduğunu söyler, operatörün ihtiyacı ise HANGİ kod olduğudur — eşleme tablosuna
+    yazılacak şey odur. Uzlaştırma artık her tanınmayan kod için `error_log`'a **warning** düşüyor
+    (`sync-status.ts`): parmak izine göre gruplanır, sayılır ve çözülmemiş kayıt SÜRESİZ durur.
+    Bir sayaç ise pencere geçince sıfıra dönerdi.
+
+    Tanınmayan kodların TAMAMINI dökmek gerekirse (geçmişi yeniden okuma turu) `shipment_event`
+    `recognized = false` ile sorgulanır — kısmi indeks o okuma için duruyor.
+  */
 }

@@ -1,5 +1,6 @@
 import { OrderBoxService, OrderService, ShipmentEventService, ShipmentService } from '@lezzet/database';
 import { aggregateShipmentStatus, classifyCarrierStatus, isTerminalShipmentStatus } from '@lezzet/domain-core';
+import { captureError, SOURCES } from '@lezzet/observability';
 import type { OrderBox, OrderStatus, Shipment, ShipmentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { deliverOrder } from '../order/fulfillment';
@@ -106,6 +107,31 @@ export async function syncShipmentStatus(db: SupabaseClient, provider: ShippingR
     // bir koli varsa bu ÖKSÜZ KOLİ'nin ilk izidir ve kaybolmamalı.
     const boxId = box?.id ?? null;
     if (boxId && sonKod.get(boxId) === parcel.code.trim().toUpperCase()) continue;
+
+    /*
+      TANINMAYAN KOD OPERATÖRE GÖRÜNÜR OLMALI — ve görünme yeri bir SAYAÇ değil, hata kaydıdır.
+
+      Tasarım kaydı önce `/operations/system`de "N tanınmayan kod" sayacı öngörüyordu. Yazarken
+      ölçünce daha iyisi çıktı: sayaç kaç tane olduğunu söyler, operatörün ihtiyacı ise HANGİ kod
+      olduğudur — eşleme tablosuna yazılacak şey odur. `error_log` bunu zaten yapıyor: parmak izine
+      göre gruplar (kod normalizasyondan geçmez, yani her kod kendi satırında toplanır), sayar ve
+      **çözülmemiş kaydı süresiz tutar**. Bir sayaç ise pencere geçince sıfıra döner ve gece gelen
+      kod sabah görünmez olurdu.
+
+      `warning` seviyesi: beklenen ama izlenmesi gereken hâl. `error` deseydik gerçek arızaların
+      sayacını şişirir, o sayacı da anlamsızlaştırırdık.
+
+      **Yalnız DEĞİŞİMDE yazılır** çünkü bu blok yalnız değişimde koşuyor: aynı koli aynı kodda
+      kaldığı sürece nöbet her saat aynı uyarıyı tekrarlamaz.
+    */
+    if (verdict.kind === 'unknown') {
+      await captureError(new Error(`Tanınmayan taşıyıcı durum kodu: ${parcel.code.trim().toUpperCase()}`), {
+        source: SOURCES.applicationShipping,
+        level: 'warning',
+        // Kimlik yazılır, içerik yazılmaz: hangi gönderi olduğu yeter, o kimlikle deftere bakılır.
+        context: { shipmentId: shipment.id, orderBoxId: boxId, carrierCode: shipment.carrierCode },
+      });
+    }
 
     await events.insert({
       shipmentId: shipment.id,
