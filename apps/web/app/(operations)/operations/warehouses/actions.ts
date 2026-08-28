@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { SettingsService, StorageAreaService, TemperatureLogService, VehicleService, WarehouseService, serviceDb } from '@lezzet/database';
+import { SettingsService, StorageAreaService, TemperatureLogService, VehicleService, WarehouseService, serviceDb, ShippingBoxService } from '@lezzet/database';
 import { LABEL_PRINTER_KEYS } from '@lezzet/application';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
@@ -10,6 +10,7 @@ import type { ActionResult } from '@/lib/error';
 import { isUnusualReading } from './measure-read';
 import type { TemperatureDeviation } from './measure-rules';
 import { WAREHOUSES_PATH } from './warehouses-url';
+import { ShippingBoxFormSchema } from './warehouses-types';
 import { LabelPrinterFormSchema, StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema } from './warehouses-types';
 
 // Depolar ekranının yazma kapıları (19.5).
@@ -341,3 +342,68 @@ export async function recordTemperatureAction(input: {
  */
 const SANE_MIN_C = -60;
 const SANE_MAX_C = 60;
+
+// ── KARGO KUTUSU (07.12) ─────────────────────────────────────────────────────
+//
+// Kutu tipi DEPOYA aittir ve bu bir boyut değil DEĞİŞMEZDİR (CLAUDE §1): her action deponun
+// kimliğini ayrıca alır ve servis onu yazar. Kural ayrıca veride duruyor — `order_box`taki
+// bileşik FK başka deponun kutusunun seçilmesini reddediyor (0052).
+
+/** Yeni kutu ya da düzenleme. `id` varsa güncelle, yoksa deponun listesine ekle. */
+export async function saveShippingBoxAction(input: unknown): Promise<ActionResult<{ id: string }>> {
+  try {
+    await requireAdmin();
+    const { warehouseId, id } = z.object({ warehouseId: z.string().uuid(), id: z.string().uuid().optional() }).parse(input);
+    const parsed = ShippingBoxFormSchema.parse(input);
+    const svc = new ShippingBoxService(serviceDb());
+    const row = id ? await svc.update({ id, ...parsed }) : await svc.insert({ warehouseId, ...parsed });
+    revalidatePath(WAREHOUSES_PATH);
+    return { data: { id: row.id }, error: null };
+  } catch (error) {
+    return { data: null, error: readable(error) };
+  }
+}
+
+/**
+ * **Şablonu benimse** — bağlama değil KOPYALAMA (kullanıcı kararı 28.08). Kopya deponun malıdır:
+ * ölçüsünü kendi gerçeğine göre düzeltebilir ve şablon sonradan değişse kopya değişmez.
+ */
+export async function adoptShippingBoxAction(input: { warehouseId: string; templateId: string }): Promise<ActionResult<{ id: string }>> {
+  try {
+    await requireAdmin();
+    const { warehouseId, templateId } = z.object({ warehouseId: z.string().uuid(), templateId: z.string().uuid() }).parse(input);
+    const row = await new ShippingBoxService(serviceDb()).adopt(warehouseId, templateId);
+    revalidatePath(WAREHOUSES_PATH);
+    return { data: { id: row.id }, error: null };
+  } catch (error) {
+    return { data: null, error: readable(error) };
+  }
+}
+
+/** Kutuyu kapat/aç — kapalı kutu listede kalır ama seçicide görünmez. */
+export async function setShippingBoxActiveAction(input: { id: string; isActive: boolean }): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const parsed = z.object({ id: z.string().uuid(), isActive: z.boolean() }).parse(input);
+    await new ShippingBoxService(serviceDb()).setActive(parsed.id, parsed.isActive);
+    revalidatePath(WAREHOUSES_PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: readable(error) };
+  }
+}
+
+/**
+ * Kutuyu SİL — yalnız hiç kullanılmamışsa geçer. Kullanılmışsa servis okunabilir cümleye çeviriyor
+ * ("gerçekleşmiş bir gönderinin ölçüsü silinemez"), ham FK hatası ekrana düşmüyor.
+ */
+export async function deleteShippingBoxAction(id: string): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    await new ShippingBoxService(serviceDb()).deleteBox(z.string().uuid().parse(id));
+    revalidatePath(WAREHOUSES_PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: readable(error) };
+  }
+}

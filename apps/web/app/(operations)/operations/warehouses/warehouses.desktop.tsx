@@ -11,7 +11,8 @@ import { SectionHead, SetupGapNote } from '@/components/operation/ui/section-hea
 import { addressForClipboard, addressOneLine, statusLabel, statusTone } from './warehouses-labels';
 import { reorderWarehousesAction } from './actions';
 import { MeasurePoints } from './measure-points';
-import { FacilityStrip, PrinterCard, Scorecard, StaffChips, ZoneCard } from './warehouses-sections';
+import type { ShippingBox } from '@lezzet/types';
+import { FacilityStrip, PrinterCard, Scorecard, ShippingBoxCard, StaffChips, ZoneCard } from './warehouses-sections';
 import type { MeasurePointView, WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
 
 // Depolar — web. **TEK görünüm** (kullanıcı kararı 16.08): başlık · tesis şeridi · seçili tesisin
@@ -51,6 +52,11 @@ interface WarehousesViewProps {
   onTogglePoint: (point: MeasurePointView) => void;
   /** Etiket yazıcısı penceresi (23.7) — kurulum künyesinin düzenlemesi. */
   onEditPrinter: () => void;
+  onAddShippingBox: () => void;
+  onEditShippingBox: (box: ShippingBox) => void;
+  onAdoptShippingBox: (templateId: string) => void;
+  onToggleShippingBox: (box: ShippingBox) => void;
+  onDeleteShippingBox: (box: ShippingBox) => void;
 }
 
 export function WarehousesDesktop(props: WarehousesViewProps) {
@@ -93,6 +99,11 @@ function FacilityView({
   onEditPoint,
   onTogglePoint,
   onEditPrinter,
+  onAddShippingBox,
+  onEditShippingBox,
+  onAdoptShippingBox,
+  onToggleShippingBox,
+  onDeleteShippingBox,
   card,
 }: WarehousesViewProps & { card: WarehouseCardView | null }) {
   const { order, reorder } = useFacilityOrder(data.rows);
@@ -235,6 +246,22 @@ function FacilityView({
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
             <SectionHead title="Etiket yazıcısı" hint="kutu kapanınca 4×6 etiket buradan çıkar — boy, takılı kâğıdın beyanıdır" />
             <PrinterCard printer={card.printer} onEdit={onEditPrinter} />
+          </section>
+
+          {/* ── Kargo kutuları ── (07.12) taşıyıcıya verilen dış kutunun ölçüsü; etiketin ön şartı. */}
+          <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
+            <SectionHead
+              title="Kargo kutuları"
+              hint="taşıyıcıya verilen dış kutu — gönderi ağırlığı ürünlerin ambalajlı ağırlığı + kutunun darasıdır"
+            />
+            <ShippingBoxCard
+              view={card.shippingBoxes}
+              onAdd={onAddShippingBox}
+              onEdit={onEditShippingBox}
+              onAdopt={onAdoptShippingBox}
+              onToggle={onToggleShippingBox}
+              onDelete={onDeleteShippingBox}
+            />
           </section>
 
           {/* ── Bağlı personel ── okunur; kapsam ataması Ayarlar'da. */}

@@ -34,6 +34,7 @@ export * from './address.schema';
 export * from './cart.schema';
 export * from './order.schema';
 export * from './order-box.schema';
+export * from './shipping-box.schema';
 export * from './courier.schema';
 export * from './delivery-run.schema';
 export * from './setting.schema';

@@ -115,6 +115,8 @@ describe('kapatmanın sonuçları', () => {
     zones: [],
     staff: [],
     printer: null,
+    // Kargo kutuları bu dosyanın konusu değil (URL/okuma çözümü) — boş künye.
+    shippingBoxes: { boxes: [], adoptable: [] },
     points: [],
     measureTruncated: false,
     scorecard: {

@@ -1,4 +1,4 @@
-import { StorageAreaService, VehicleService, WarehouseService, WarehouseTransferService } from '@lezzet/database';
+import { StorageAreaService, VehicleService, WarehouseService, WarehouseTransferService, ShippingBoxService } from '@lezzet/database';
 import { tabloDolu, type Db } from './shared';
 
 // ── Depo ağı (19) ────────────────────────────────────────────────────────────────────────────────
@@ -515,4 +515,45 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
 
   console.log(`✓ ölçüm noktası: ${strAlan.size} alan (STR) · 1 alan (KEHL) · 1 araç`);
   return { strAlan, kehlAlan, arac };
+}
+
+/*
+  ── KARGO KUTULARI (07.12, 28.08) ────────────────────────────────────────────
+
+  Depoların kutu listesi. **Şablondan BENİMSENİR, elle yazılmaz**: seed operatörün yapacağı şeyin
+  aynısını yapıyor (`ShippingBoxService.adopt`), yani benimseme yolu her `db:refresh`te fiilen
+  koşuyor. Elle `insert` etseydik o yol yalnız testte sınanır, beslemede hiç yürümezdi.
+
+  ── ÜÇ HÂL, ve üçü de bir ekranın karşılığı ─────────────────────────────────
+    STR    → üç kutu, biri KAPALI (kapanmış kutu listede görünür ama seçicide görünmez)
+    KEHL   → bir kutu (asgari hâl: kargo çıkışı olmayan depo da kutu tanımlayabilir)
+    COLMAR → HİÇ kutu yok — "bu depodan kargo etiketi alınamaz" uyarısının tek kaynağı
+
+  Kargo çıkışı olan depo (STR) kutusuz bırakılsaydı ekranın amber cümlesi doğru görünür ama
+  hiçbir gönderi hazırlanamazdı; kutusuz hâli TAŞIMAYAN bir depoda (COLMAR) göstermek ise o
+  cümleyi zararsız bir yerde sınıyor.
+*/
+export async function seedShippingBoxes(db: Db, depolar: Depolar): Promise<void> {
+  const svc = new ShippingBoxService(db);
+  const sablonlar = await svc.listTemplates();
+  const sablon = (ad: string): string => {
+    const row = sablonlar.find((t) => t.name.startsWith(ad));
+    if (!row) throw new Error(`Kargo kutusu şablonu bulunamadı: ${ad} (migration 0052 değişti mi?)`);
+    return row.id;
+  };
+
+  const plan: Array<{ depo: string; sablonlar: string[]; kapali?: string }> = [
+    { depo: depolar.str, sablonlar: ['Küçük kutu', 'Orta kutu', 'Büyük kutu'], kapali: 'Büyük kutu' },
+    { depo: depolar.kehl, sablonlar: ['Orta kutu'] },
+  ];
+
+  for (const satir of plan) {
+    // Guard depo BAZINDA: tablo dolu olabilir (başka deponun kutuları) ve o, bu deponun
+    // listesinin kurulmuş olduğu anlamına gelmez — depo seed'inin kendi gerekçesinin aynısı.
+    if ((await svc.listForWarehouse(satir.depo)).length > 0) continue;
+    for (const ad of satir.sablonlar) {
+      const kutu = await svc.adopt(satir.depo, sablon(ad));
+      if (satir.kapali === ad) await svc.setActive(kutu.id, false);
+    }
+  }
 }

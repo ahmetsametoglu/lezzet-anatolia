@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import type { ShippingBox } from '@lezzet/types';
 import { useRouter } from 'next/navigation';
-import { setPointActiveAction } from './actions';
+import { setPointActiveAction, adoptShippingBoxAction, deleteShippingBoxAction, setShippingBoxActiveAction } from './actions';
 import { CloseWarehouseDialog } from './close-warehouse-dialog';
 import { MeasurePointDialog } from './measure-point-dialog';
 import { PrinterDialog } from './printer-dialog';
+import { ShippingBoxDialog } from './shipping-box-dialog';
 import { WarehouseDialog } from './warehouse-dialog';
 import { WarehousesDesktop } from './warehouses.desktop';
 import { warehousesUrl, type WarehousesUrlState } from './warehouses-url';
@@ -48,6 +50,11 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
   /** Etiket yazıcısı penceresi (23.7) — seçili tesisin kurulum künyesi, değerler karttan. */
   const [printerOpen, setPrinterOpen] = useState(false);
   /**
+   * Kargo kutusu penceresi (07.12). `'new'` yeni kutu, satır düzenleme. Kutu tipi bir KÜNYEDİR
+   * (yazıcı gibi), karne değil — kapalı tesiste de tanımlanabilir.
+   */
+  const [boxState, setBoxState] = useState<'closed' | 'new' | ShippingBox>('closed');
+  /**
    * **Rota KURULUMU burada değil (07.08, kullanıcı kararı).** Rota tanımlamak ile günü planlamak
    * aynı işin iki anıdır; tasarım ikisini tek sayfada topluyor ve kurulum Teslimat & Rota'ya taşındı.
    * Bu ekran rotaları OKUR — "bu depo şu güzergâhlara bakıyor" künyesi burada anlamlı — ama
@@ -67,6 +74,29 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
     onAddPoint: (kind: 'area' | 'vehicle') => setPoint({ kind, editing: null }),
     onEditPoint: (point: MeasurePointView) => setPoint({ kind: point.kind, editing: point }),
     onEditPrinter: () => setPrinterOpen(true),
+    onAddShippingBox: () => setBoxState('new'),
+    onEditShippingBox: (box: ShippingBox) => setBoxState(box),
+    // Benimseme tek tık: şablonun ölçüsü zaten belli, pencere açmak operatöre aynı sayıları
+    // ikinci kez onaylatmak olurdu. Düzeltmek isterse satırdaki "Düzenle" orada.
+    onAdoptShippingBox: (templateId: string) => {
+      if (!data.card) return;
+      void adoptShippingBoxAction({ warehouseId: data.card.row.id, templateId }).then(() => router.refresh());
+    },
+    // Onay YOK, yazıcı/ölçüm noktası çizgisiyle aynı: kapatmak yıkıcı değil, geri açılabilir.
+    onToggleShippingBox: (box: ShippingBox) => {
+      void setShippingBoxActiveAction({ id: box.id, isActive: !box.isActive }).then(() => router.refresh());
+    },
+    /**
+     * Silme onaysız ve bu bilinçli: kullanılmış kutu ZATEN silinemez (veritabanı `restrict` ile
+     * reddediyor ve servis okunabilir cümleye çeviriyor). Yani buradan silinebilen tek şey hiç
+     * kullanılmamış bir kayıt — kaybedilen şey birkaç sayı, yeniden yazılır.
+     */
+    onDeleteShippingBox: (box: ShippingBox) => {
+      void deleteShippingBoxAction(box.id).then(({ error }) => {
+        if (error) window.alert(error);
+        router.refresh();
+      });
+    },
     onTogglePoint: (point: MeasurePointView) => {
       // Onay penceresi YOK ve bu bilinçli: susturmak yıkıcı değil, geri açılabilir ve hiçbir kayıt
       // kaybolmuyor. Depo kapatmanın (dört sonuçlu, kod yazdıran) yanına konsaydı ikisi aynı
@@ -121,6 +151,19 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
           onClose={() => setPrinterOpen(false)}
           onSaved={() => {
             setPrinterOpen(false);
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {boxState !== 'closed' && data.card ? (
+        <ShippingBoxDialog
+          key={boxState === 'new' ? 'new' : boxState.id}
+          warehouseId={data.card.row.id}
+          box={boxState === 'new' ? null : boxState}
+          onClose={() => setBoxState('closed')}
+          onSaved={() => {
+            setBoxState('closed');
             router.refresh();
           }}
         />

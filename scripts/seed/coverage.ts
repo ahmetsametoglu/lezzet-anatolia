@@ -248,6 +248,19 @@ const KAPSAM: KapsamAlani[] = [
     ],
   },
   {
+    baslik: 'Kargo kutusu',
+    tablo: 'shipping_box',
+    kovalar: [
+      // Şablonlar migration'ın kurduğu kalıcı kayıtlar — biri silinirse benimseme yolu kırılır.
+      { ad: 'sistem şablonu', zorunlu: true, filtre: (q) => q.is('warehouse_id', null) },
+      { ad: 'deponun kendi kutusu', zorunlu: true, filtre: (q) => q.not('warehouse_id', 'is', null) },
+      // Kapalı kutu: listede görünür, seçicide görünmez. İki ayrı okumanın tek kaynağı.
+      { ad: 'kapalı kutu', zorunlu: true, filtre: (q) => q.eq('is_active', false) },
+      // Azami içerik bildirilmemiş kutu — "sınır bilinmiyor" ile "sınır yok" ayrımının kaynağı.
+      { ad: 'azami içerik bildirilmiş', filtre: (q) => q.not('max_content_g', 'is', null) },
+    ],
+  },
+  {
     baslik: 'Varyant',
     tablo: 'product_variant',
     kovalar: [

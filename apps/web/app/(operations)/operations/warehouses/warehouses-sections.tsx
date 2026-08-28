@@ -4,17 +4,18 @@ import Link from 'next/link';
 import { Badge } from '@/components/operation/ui/badge';
 import { cardClass } from '@/components/operation/ui/card';
 import { Button } from '@/components/operation/ui/button';
-import { WarehouseIcon } from '@/components/operation/ui/icons';
+import { TrashIcon, WarehouseIcon } from '@/components/operation/ui/icons';
 import { ScoreTile } from '@/components/operation/ui/score-tile';
 import { SortableList } from '@/components/operation/ui/sortable-list';
+import { Toggle } from '@/components/operation/form/toggle';
 import { COUNTRY_LABELS } from '@/components/operation/ui/labels';
 import { money, num, shortDate, shortDateTime } from '@/components/operation/ui/format';
-import type { Country } from '@lezzet/types';
+import type { Country, ShippingBox } from '@lezzet/types';
 import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
 import { LABEL_SIZE_OPTIONS, postalCodeLabel, weekdayList } from './warehouses-labels';
-import type { ScorecardView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
+import type { ScorecardView, ShippingBoxesView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
 
 // Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
 // durur ki "karne başka yerde başka şey sayar" gibi bir ayrışma doğmasın.
@@ -307,6 +308,109 @@ export function PrinterCard({ printer, onEdit }: { printer: { address: string; m
       <Button variant="secondary" size="sm" onClick={onEdit}>
         {printer ? 'Düzenle' : 'Yazıcı tanımla'}
       </Button>
+    </div>
+  );
+}
+
+/**
+ * **KARGO KUTULARI** (07.12) — deponun taşıyıcıya verdiği dış kutuların listesi.
+ *
+ * Görsel dili `PrinterCard`/`MeasurePoints` ile ortak (aynı satır kabı, aynı ikincil düğme, aynı
+ * amber "tanımsız" cümlesi): üçü de deponun KÜNYE bölümleridir, karne değil.
+ *
+ * **Sistem şablonları listenin ALTINDA ayrı bir şerit** ve bilerek: onlar deponun kutusu DEĞİL,
+ * benimsenmeyi bekleyen adaylar. Aynı listede gösterilseydi operatör "listemde on kutu var"
+ * sanır, seçtiği an reddedilirdi (şablon `order_box`a bağlanamaz — kural veride).
+ *
+ * Benimsenmiş şablon şeritten DÜŞER: zaten listesinde olan bir kutuyu "ekle" diye sunmak,
+ * tıklandığında reddedilen bir davettir (ad depo içinde benzersiz).
+ */
+export function ShippingBoxCard({
+  view,
+  onAdd,
+  onEdit,
+  onAdopt,
+  onToggle,
+  onDelete,
+}: {
+  view: ShippingBoxesView;
+  onAdd: () => void;
+  onEdit: (box: ShippingBox) => void;
+  onAdopt: (templateId: string) => void;
+  onToggle: (box: ShippingBox) => void;
+  onDelete: (box: ShippingBox) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-3">
+      {view.boxes.length === 0 ? (
+        <span className="font-ops-body text-ops-sm text-ops-amber">
+          Kutu tanımlı değil — bu depodan kargo etiketi alınamaz. Aşağıdan bir sistem kutusu ekleyin ya da kendi
+          kutunuzu tanımlayın.
+        </span>
+      ) : (
+        <div className="overflow-hidden rounded-ops-card border border-ops-line">
+          {view.boxes.map((box) => (
+            <div
+              key={box.id}
+              className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-ops-line-soft bg-ops-white px-[13px] py-2 last:border-b-0"
+            >
+              <span className={`font-ops-body text-ops-sm font-semibold ${box.isActive ? 'text-ops-strong' : 'text-ops-faint line-through'}`}>
+                {box.name}
+              </span>
+              <span className="font-ops-mono text-ops-xs text-ops-muted">
+                {box.lengthMm}×{box.widthMm}×{box.heightMm} mm
+              </span>
+              <span className="font-ops-body text-ops-xs text-ops-muted">dara {box.tareG} g</span>
+              {/* Azami içerik boşsa satır HİÇ çizilmez: "sınır yok" ile "sınır bilinmiyor" ayrı
+                  şeyler ve ikincisini birincisi gibi yazmak, kutuya fazla yük koydururdu. */}
+              {box.maxContentG !== null && (
+                <span className="font-ops-body text-ops-xs text-ops-muted">azami {box.maxContentG} g</span>
+              )}
+              <span className="ml-auto flex items-center gap-2">
+                <Toggle on={box.isActive} size="sm" onChange={() => onToggle(box)} />
+                <button
+                  type="button"
+                  onClick={() => onEdit(box)}
+                  className="cursor-pointer font-ops-display text-ops-micro font-semibold uppercase tracking-[0.05em] text-ops-olive hover:text-ops-olive-dark"
+                >
+                  Düzenle
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDelete(box)}
+                  className="cursor-pointer text-ops-faint hover:text-ops-red"
+                  aria-label={`${box.name} kutusunu sil`}
+                  title="Hiç kullanılmamış kutu silinebilir; kullanılmışsa yalnız kapatılır"
+                >
+                  <TrashIcon />
+                </button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" size="sm" onClick={onAdd}>
+          Yeni kutu
+        </Button>
+        {view.adoptable.length > 0 && (
+          <>
+            <span className="ml-1 font-ops-body text-ops-xs text-ops-muted">sistem kutularından ekle:</span>
+            {view.adoptable.map((tpl) => (
+              <button
+                key={tpl.id}
+                type="button"
+                onClick={() => onAdopt(tpl.id)}
+                className="cursor-pointer rounded-full border border-dashed border-ops-line px-2.5 py-1 font-ops-body text-ops-xs text-ops-body hover:border-ops-olive hover:text-ops-olive"
+                title={`${tpl.lengthMm}×${tpl.widthMm}×${tpl.heightMm} mm · dara ${tpl.tareG} g — kopyalanır, sonra kendi ölçünüze göre düzeltebilirsiniz`}
+              >
+                + {tpl.name}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }

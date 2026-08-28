@@ -373,6 +373,7 @@ Bizim bastığımız QR'ın kaydı ("bu hangi kayıt" — ürün barkodunun "bu 
 | `loaded_at` | timestamptz | • |  |
 | `loaded_by` | uuid | • |  |
 | `created_at` | timestamptz |  | `now()` |
+| `shipping_box_id` | uuid | • |  |
 <!-- /alanlar -->
 
 **Kararlar**

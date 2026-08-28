@@ -658,6 +658,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // yüzden bu satır sessizce birikirdi — sayacı silmemek hiçbir yerde hata üretmez.
       const codes = await codesOf(db, warehouseIds);
       for (const code of codes) await mustDelete(db, 'document_counter', (q) => q.like('prefix', `%-${code}`));
+      // Kargo kutusu tipleri (0052) — depoyu `restrict` ile tutuyorlar, yani depodan ÖNCE gitmeli.
+      // Süzgeç `warehouse_id`: **sistem şablonları (`warehouse_id null`) BU SÜZGECE GİRMEZ** ve
+      // girmemeli — onlar migration'ın kurduğu kalıcı kayıtlar, testin çöpü değil.
+      await mustDelete(db, 'shipping_box', (q) => q.in('warehouse_id', warehouseIds));
       await mustDelete(db, 'warehouse', (q) => q.in('id', warehouseIds));
     }
   });

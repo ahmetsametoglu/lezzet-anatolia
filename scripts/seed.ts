@@ -142,7 +142,7 @@ import { seedSupply } from './seed/supply';
 import { seedTestLabels } from './seed/test-labels';
 import { seedNotifications } from './seed/notifications';
 import { seedTickets } from './seed/support';
-import { seedStoragePoints, seedThresholds, seedTransfer, seedWarehouses } from './seed/warehouse';
+import { seedStoragePoints, seedShippingBoxes, seedThresholds, seedTransfer, seedWarehouses } from './seed/warehouse';
 
 // Seed Next.js dışında çalışır — .env'i elle yükle (Node 22 process.loadEnvFile).
 try {
@@ -259,6 +259,8 @@ async function main(): Promise<void> {
   // Ölçüm noktaları depodan HEMEN sonra (19.28/19.29): hem sıcaklık kaydı hem stok partisi onlara
   // `restrict` ile bağlı, yani ikisinden de önce var olmaları gerekiyor.
   const noktalar = await seedStoragePoints(db, depolar);
+  // Kargo kutuları (07.12) — depolardan HEMEN sonra: kutu deponun künyesidir, alan gibi.
+  await seedShippingBoxes(db, depolar);
   // Ticari zemin — SIRA BAĞLAYICIDIR: her bölüm bir öncekinin ürettiği kimliğe dayanır.
   const kisiler = await seedKisiler(db, depolar);
   // Giriş hesapları profillerden SONRA: trigger yeni auth kullanıcısını e-postayla eşleşen profile

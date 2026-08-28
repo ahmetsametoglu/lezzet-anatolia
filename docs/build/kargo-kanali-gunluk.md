@@ -12,7 +12,7 @@ Top bırakıldı. Hedef: özelliği uçtan uca entegre etmek ve test etmek.
 | Aşama | Ne | Durum |
 | --- | --- | --- |
 | A | Ambalajlı ürün ölçüsü — şema, form, MCP, besleme | ✅ |
-| B | Kargo kutusu kataloğu + ölçü görünürlüğü | ⏳ |
+| B | Kargo kutusu kataloğu | ✅ |
 | C | Koli planı (saf karar) | ⏳ |
 | D | Sağlayıcı portu + `@lezzet/sendcloud` | ⏳ |
 | E | Sepet & checkout canlı teklif | ⏳ |
@@ -43,4 +43,35 @@ porsiyon türü). Tam paket **3691/3691 yeşil**.
 
 **Bir tuzağa da düşmedim:** yeni test dosyasının vitest listesine eklenmesi gerekiyordu, yoksa
 hata vermeden hiç koşmayacaktı. Eklendi ve koştuğunu ayrıca doğruladım (12 test).
+
+---
+
+## B — Kargo kutusu kataloğu ✅
+
+**Ne yaptım:** taşıyıcıya verilen dış kutunun tipini tutan tablo, Depolar ekranına "Kargo kutuları"
+bölümü, ve sipariş kutusuyla bağı.
+
+**Model (senin kararın):** tek tablo, sistem kutuları **şablon** olarak duruyor ve depo onları
+benimserken **kopyalanıyor**. Böylece bir depo kutuyu bırakabiliyor, başka depo etkilenmiyor; ve
+şablonun sonradan düzeltilmesi Strasbourg'daki fiziksel kutuyu değiştirmiyor.
+
+**Kural veritabanında:** sipariş kutusuna bileşik bir yabancı anahtar koydum. Tek kısıt iki şeyi
+birden engelliyor — şablon seçilemiyor, başka deponun kutusu da seçilemiyor. Ekran unutabilir,
+veritabanı unutmaz.
+
+**Canlı denedim (tarayıcıda, gerçek veriyle):** Depolar ekranından iki sistem kutusunu benimsedim,
+ikisi de listeye düştü ve **benimsenen şablonlar "ekle" şeridinden kayboldu** — zaten listende olan
+bir kutuyu "ekle" diye sunmak, tıklanınca reddedilen bir davet olurdu.
+
+**Testler:** 11 entegrasyon. İçlerinden ikisi ilk yazımda **yanlış sebeple geçiyordu** — sahte
+sipariş numarası yüzünden başka bir kısıt tetikleniyordu, yani kendi kısıtım hiç silinse testler
+yine yeşil kalacaktı. Gerçek sipariş kurup kısıtı adıyla çiviledim ve bir de "doğru kutu geçiyor"
+kontrol testi ekledim.
+
+**Besleme:** kutular artık her tazelemede şablondan **benimsenerek** kuruluyor (elle yazılarak
+değil) — yani benimseme yolu her `db:refresh`te fiilen koşuyor. Üç hâl birden var: üç kutulu depo
+(biri kapalı), tek kutulu depo, ve hiç kutusu olmayan depo (ekranın "bu depodan kargo etiketi
+alınamaz" uyarısının tek kaynağı).
+
+Tam paket **3702/3702**.
 

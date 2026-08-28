@@ -13,6 +13,7 @@ import {
   type StorageAreaKind,
   type Warehouse,
 } from '@lezzet/types';
+import { ShippingBoxInsertSchema, type ShippingBox } from '@lezzet/types';
 import type { MeasureDayState, TemperatureDeviation } from './measure-rules';
 
 // Depolar ekranının (19.5) tipleri. Varlık şemaları `packages/types`'ta; burada YALNIZ görünümün
@@ -201,6 +202,8 @@ export interface WarehouseCardView {
   scorecard: ScorecardView;
   /** Etiket yazıcısı (23.7) — `settings` warehouse kapsamından; `null` = tanımsız, basım denenmez. */
   printer: BoxPrinterContract | null;
+  /** Deponun kargo kutuları + benimsenmemiş sistem şablonları (07.12). */
+  shippingBoxes: ShippingBoxesView;
   /** Ölçüm noktaları (19.28) — depo içi alanlar + bu tesise künyelenmiş araçlar. */
   points: MeasurePointView[];
   /**
@@ -289,4 +292,29 @@ export interface WarehousesData {
    * ve 07.08'de geçerliliğini yitirdi: bölge kurulumu haritayla birlikte Teslimat & Rota'ya taşındı,
    * karar da onunla gitti. Gerekçesi biten bir alan, alan olarak kalmaz. Ayrıntı `19.27`.
    */
+}
+
+// ── Kargo kutusu (07.12) ────────────────────────────────────────────────────
+
+/**
+ * Kutu formu — `ShippingBoxInsertSchema`'dan TÜRER (elle alan yazılmaz, `CLAUDE §1`).
+ *
+ * `warehouseId` formda YOK: kutu her zaman AÇIK OLAN deponun listesine girer ve kimliği action'a
+ * ayrı geçer. Form alanı olsaydı ekranda seçili olan depo ile forma yazılan depo ayrışabilirdi —
+ * ve o ayrışma, kutuyu görünmeyen bir listeye yazardı.
+ *
+ * `isActive`/`sortOrder` de yok: ilki bir DÜĞMEDİR (satırda), ikincisi listenin sırasıdır.
+ */
+export const ShippingBoxFormSchema = ShippingBoxInsertSchema.omit({ warehouseId: true, isActive: true, sortOrder: true });
+export type ShippingBoxFormInput = z.infer<typeof ShippingBoxFormSchema>;
+
+/**
+ * Ekranın okuduğu hâl: deponun kutuları + HENÜZ BENİMSENMEMİŞ şablonlar.
+ *
+ * Şablonlar süzülmüş geliyor (benimsenenler listeden düşüyor): operatöre zaten listesinde olan
+ * bir kutuyu "ekle" diye sunmak, tıklandığında reddedilen bir davettir (ad depo içinde benzersiz).
+ */
+export interface ShippingBoxesView {
+  boxes: readonly ShippingBox[];
+  adoptable: readonly ShippingBox[];
 }

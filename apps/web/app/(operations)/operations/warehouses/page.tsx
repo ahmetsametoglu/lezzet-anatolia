@@ -8,6 +8,7 @@ import {
   WarehouseService,
   WarehouseTransferService,
   ZoneNoticeService,
+  ShippingBoxService,
   serviceDb,
 } from '@lezzet/database';
 import type { Country, UserProfile } from '@lezzet/types';
@@ -155,6 +156,18 @@ async function readCard(
   const printer = await labelPrinterFor(db, row.id);
 
   /**
+   * Kargo kutuları (07.12) — deponun kutuları + HENÜZ BENİMSENMEMİŞ şablonlar.
+   *
+   * Şablonlar burada süzülüyor, ekranda değil: benimsenmişi "ekle" diye sunmak tıklanınca
+   * reddedilen bir davet olurdu (ad depo içinde benzersiz). Ölçüt AD — kopya şablonun adını
+   * taşıyor ve kimliği taşımıyor (kopyalama, bağlama değil).
+   */
+  const boxSvc = new ShippingBoxService(db);
+  const [ownBoxes, templates] = await Promise.all([boxSvc.listForWarehouse(row.id), boxSvc.listTemplates()]);
+  const ownNames = new Set(ownBoxes.map((b) => b.name));
+  const shippingBoxes = { boxes: ownBoxes, adoptable: templates.filter((t) => !ownNames.has(t.name)) };
+
+  /**
    * **Bölgelerin ağırlığı** (19.28) — kart artık yalnız tanımı değil sonucu da gösteriyor.
    *
    * Kodlar TEK turda soruluyor: bölge başına sorgu atmak (N+1) beş bölgede beş tur demekti ve
@@ -174,6 +187,7 @@ async function readCard(
     zones: toZoneCards(zones, row.id, { orders: zoneOrders, waiting: zoneWaiting, now: new Date() }),
     staff: toStaffChips(staff, row.id),
     printer,
+    shippingBoxes,
     points: measure.points,
     measureTruncated: measure.truncated,
     scorecard: toScorecard({
