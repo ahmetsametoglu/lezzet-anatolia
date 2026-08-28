@@ -237,11 +237,41 @@ create table public.product_variant (
   --
   -- `null` = tek parça ürün; porsiyon sorusu hiç doğmuyor (`pieces_count` de null olur).
   portion_kind portion_kind,
+  -- ── AMBALAJLI ÜRÜN ÖLÇÜSÜ — kargo kanalının girdisi (07.12) ─────────────────
+  -- `net_weight_g` ile KARIŞTIRILMAZ ve o yüzden adı sıfatlı: net ağırlık INCO beyanıdır ve
+  -- €/kg gösterimini besler (içindeki GIDANIN ağırlığı); bu ise taşınan şeyin ağırlığıdır —
+  -- ürün + kendi ambalajı. 810 g'lık bir kek kutusu ambalajıyla 1,1 kg olabilir ve taşıyıcıya
+  -- söylenecek sayı ikincisidir. Çıplak `weight_g` adı ilk tasarımda yazılmıştı; `net_weight_g`
+  -- ile yan yana durunca hangisi olduğu okunmuyordu (28.08 sapma kaydı).
+  --
+  -- **MİLİMETRE, santimetre değil:** ondalık kalınlık (1,5 cm) tam sayı alanında sessizce
+  -- yuvarlanır. Sağlayıcı `mm` birimini doğrudan kabul ediyor (canlı ölçüm 28.08) — saklanan
+  -- sayı dönüşümsüz tele giriyor.
+  --
+  -- **GRAM, kilogram değil:** aynı gerekçe + sağlayıcı `g` kabul ediyor. Kilogramı ondalıkla
+  -- taşımak kayan nokta artefaktı üretiyordu (referans projede `toFixed(3)` yaması bu yüzden var).
+  --
+  -- **null = ÖLÇÜLMEDİ, sıfır DEĞİL** (CLAUDE §1). Ölçüsüz varyant için canlı teklif alınmaz;
+  -- ekran "ölçüsü eksik" der. Sıfır yazsaydık koli planı onu "hiç yer kaplamıyor" diye okurdu.
+  -- Kısıt pozitiflik zorluyor: ölçülmüş bir ambalaj sıfır olamaz.
+  packed_weight_g int check (packed_weight_g is null or packed_weight_g > 0),
+  packed_length_mm int check (packed_length_mm is null or packed_length_mm > 0),
+  packed_width_mm int check (packed_width_mm is null or packed_width_mm > 0),
+  packed_height_mm int check (packed_height_mm is null or packed_height_mm > 0),
   min_stock_qty int,                                 -- asgari eşik (DOMAIN §16); null = öneri yok
   sku text,
   is_active boolean not null default true,
   sort_order int not null default 0,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+
+  -- ÜÇ ÖLÇÜ BİRLİKTE YAŞAR ya da hiç yaşamaz. İkisi dolu biri boş bir kutu hiçbir soruya cevap
+  -- vermez: hacim hesaplanamaz, taşıyıcıya gönderilemez, ama ekran "ölçüsü var" diye okur.
+  -- Ağırlık BU KURALIN DIŞINDA ve bilerek: kimi tarife yalnız ağırlığa bakar, üstelik operatör
+  -- önce tartıp sonra ölçebilir — yarım ilerlemeyi engellemek kimseye hizmet etmez.
+  constraint product_variant_packed_dims_all_or_none check (
+    (packed_length_mm is null and packed_width_mm is null and packed_height_mm is null)
+    or (packed_length_mm is not null and packed_width_mm is not null and packed_height_mm is not null)
+  )
 );
 create index product_variant_product_idx on public.product_variant (product_id);
 

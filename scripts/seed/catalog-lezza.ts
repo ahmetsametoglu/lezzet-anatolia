@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import type { CategoryImageService, CategoryService, ProductFamilyService, ProductImageService, ProductService } from '@lezzet/database';
 import { PRODUCT_GALLERY_MAX, hasAllLocales } from '@lezzet/types';
 import type { LocalizedText, Nutrition, ProductAllergen, ProductStatus, ProductStorageType } from '@lezzet/types';
+import { ambalajAlanlari, olcuHali } from './packing';
 import { NOW, r2Keys, uploadImageFromUrl } from './shared';
 import { teklifSkulari } from './supplier-prices';
 import { enAz, type Katman } from './tier';
@@ -928,6 +929,21 @@ export async function seedLezzaProducts(
         piecesCount: v.piecesCount ?? undefined,
         portionKind: v.portionKind ?? undefined,
         sku: v.sku ?? undefined,
+        /*
+          AMBALAJ ÖLÇÜSÜ (28.08) — kargo kanalının girdisi. Sayılar net ağırlıktan TÜRETİLİR ve
+          uydurmadır; gerçek ambalaj ölçüsü tartılıp ölçülür ve hiçbir kaynağımızda yok
+          (`packing.ts` künyesi). Beslemenin işi gerçeği taklit etmek değil, ekranların
+          karşılaşacağı ÜÇ HÂLİ birden kurmak:
+            tam   → canlı teklif alınabilir
+            yarım → tartılmış, ölçülmemiş (kısıt izin veriyor; ekran ayırt etmeli)
+            yok   → "ölçüsü eksik" süzgecinin ve teklif reddinin sınandığı hâl
+          Kusursuz katmanda (`base`) hepsi TAM: gerçek veride uydurma eksiklik olmaz — gramajın
+          kendi kuralının aynısı (yukarıdaki künye).
+        */
+        ...ambalajAlanlari(
+          kusurlu && durum === 'candidate' && i % 37 === 0 && n === 0 ? null : (v.netWeightG ?? null),
+          olcuHali(i + n, kusurlu),
+        ),
         // **"Bu boy satıştan kalktı"** (kapsam denetimi 09.08) — kendi başına küçük bir alan ama
         // BÜYÜK bir kuralın tek tetikleyicisi: pasif varyant, o varyantı taşıyan PAKETİ
         // `listSellable`'dan tamamen düşürür (detay sayfası da 404). O kural bu hâl seed'de hiç

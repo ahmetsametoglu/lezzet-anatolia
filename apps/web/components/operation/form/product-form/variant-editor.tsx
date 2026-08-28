@@ -5,6 +5,7 @@ import { Controller, useFieldArray, useWatch, type Control } from 'react-hook-fo
 import { resolveLocalizedText, type LocalizedText, type VariantBarcode } from '@lezzet/types';
 import { LOCALES, type Locale } from '@lezzet/i18n';
 import { Input } from '@/components/operation/form/input';
+import { Select } from '@/components/operation/form/select';
 import { LocaleTabs } from '@/components/operation/form/locale-tabs';
 import { Toggle } from '@/components/operation/form/toggle';
 import { TranslateInput } from '@/components/operation/form/translate-input';
@@ -37,10 +38,17 @@ function NumberCell({
   value,
   onChange,
   onBlur,
+  className,
+  title,
+  placeholder = '—',
 }: {
   value: number | null | undefined;
   onChange: (v: number | null) => void;
   onBlur: () => void;
+  /** Ambalaj satırındaki dar kutular için — tablo hücresinde verilmez (ızgara genişliği yönetir). */
+  className?: string;
+  title?: string;
+  placeholder?: string;
 }) {
   return (
     <Input
@@ -50,8 +58,93 @@ function NumberCell({
       value={value ?? ''}
       onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
       onBlur={onBlur}
-      placeholder="—"
+      placeholder={placeholder}
+      className={className}
+      title={title}
     />
+  );
+}
+
+/** Porsiyon türü seçenekleri — boş değer "tek parça / dökme" demektir, sıfır değil. */
+const PORTION_OPTIONS = [
+  { value: '', label: '—' },
+  { value: 'item', label: 'adet' },
+  { value: 'slice', label: 'dilim' },
+];
+
+/**
+ * **AMBALAJ SATIRI** (07.12) — varyantın fiziksel gerçeği: kutuda ne var, kutu ne kadar yer kaplar.
+ *
+ * Barkod satırının görsel dilini birebir izler (aynı ped, aynı küçük başlık, aynı girinti): ikisi
+ * de satırın ALTINDA yaşayan, tabloya sığmayan ama satıra ait bilgiler. Ayrı bir katlanır komponent
+ * AÇILMADI — operasyon evreninde paylaşılan bir açılır parça yok ve bu beş alan her üründe
+ * doldurulacak; bir tık arkasına saklamak onları unutturur.
+ *
+ * **Neden tabloya kolon olarak girmiyor:** satır zaten sekiz kolon. Dört kolon daha eklemek her
+ * girdiyi okunmaz genişliğe düşürürdü.
+ *
+ * **`netWeightG` ile karışmasın diye BRÜT yazıyor** ve ipucu farkı açıklıyor: biri beyan (içindeki
+ * gıda), öteki taşınan (ürün + ambalaj). İkisi aynı satırda görünmüyor ki operatör hangisini
+ * doldurduğunu bilsin.
+ */
+function PackingRow({ control, index }: { control: Control<ProductFormValues>; index: number }) {
+  const box = 'w-[58px]';
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 px-[13px] pb-2 pl-[31px]">
+      <span className="font-ops-display text-ops-micro font-medium uppercase tracking-[0.05em] text-ops-faint">Ambalaj</span>
+
+      <span className="font-ops-body text-ops-micro text-ops-muted">porsiyon</span>
+      <Controller
+        control={control}
+        name={`variants.${index}.portionKind`}
+        render={({ field }) => (
+          <Select
+            value={field.value ?? ''}
+            onChange={(v) => field.onChange(v === '' ? null : (v as 'item' | 'slice'))}
+            options={PORTION_OPTIONS}
+            className="w-[86px]"
+          />
+        )}
+      />
+
+      <span className="ml-1 font-ops-body text-ops-micro text-ops-muted">brüt</span>
+      <Controller
+        control={control}
+        name={`variants.${index}.packedWeightG`}
+        render={({ field }) => (
+          <NumberCell
+            value={field.value}
+            onChange={field.onChange}
+            onBlur={field.onBlur}
+            className={box}
+            title="Ambalajıyla birlikte ağırlık (g) — kargo tarifesi bunu okur. Net ağırlıkla karıştırmayın: o beyan, bu taşınan."
+          />
+        )}
+      />
+      <span className="font-ops-body text-ops-micro text-ops-faint">g</span>
+
+      <span className="ml-1 font-ops-body text-ops-micro text-ops-muted">ölçü</span>
+      {(['packedLengthMm', 'packedWidthMm', 'packedHeightMm'] as const).map((name, n) => (
+        <span key={name} className="flex items-center gap-1">
+          {n > 0 && <span className="font-ops-body text-ops-micro text-ops-faint">×</span>}
+          <Controller
+            control={control}
+            name={`variants.${index}.${name}`}
+            render={({ field }) => (
+              <NumberCell
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                className={box}
+                placeholder={['boy', 'en', 'yük.'][n]}
+                title="Kutunun dış ölçüsü (mm). Üçü birlikte doldurulur — ikisi dolu biri boş bir kutu hesaplanamaz."
+              />
+            )}
+          />
+        </span>
+      ))}
+      <span className="font-ops-body text-ops-micro text-ops-faint">mm</span>
+    </div>
   );
 }
 
@@ -121,7 +214,7 @@ export function VariantEditor({ control }: VariantEditorProps) {
         <span className="font-ops-display text-ops-xs font-semibold uppercase tracking-[0.1em] text-ops-muted">Varyantlar</span>
         <button
           type="button"
-          onClick={() => append({ label: {}, netWeightG: null, piecesCount: null, minStockQty: null, sku: null, isActive: true })}
+          onClick={() => append({ label: {}, netWeightG: null, piecesCount: null, portionKind: null, packedWeightG: null, packedLengthMm: null, packedWidthMm: null, packedHeightMm: null, minStockQty: null, sku: null, isActive: true })}
           className="cursor-pointer font-ops-body text-ops-xs font-semibold text-ops-olive hover:text-ops-olive-dark"
         >
           + varyant
@@ -274,6 +367,7 @@ export function VariantEditor({ control }: VariantEditorProps) {
                   </button>
                 )}
               </div>
+              <PackingRow control={control} index={i} />
               {/* Barkodlar (23.3): mal kabulde ÖĞRETİLEN kodlar — yanlış öğretilenin geri alma
                   yeri burası. Kod eklenmez (öğrenme kabuldedir, karar §1.3); yalnız silinir. */}
               {rowCodes.length === 0 ? null : (
@@ -310,7 +404,10 @@ export function VariantEditor({ control }: VariantEditorProps) {
 
       <span className="font-ops-body text-ops-xs leading-[1.5] text-ops-muted">
         Sıra, müşterinin gördüğü boy sırasıdır — satırları tutamaktan sürükleyerek değiştirin. Min. stok, altına
-        düşünce uyarı çıkacak eşiktir; boş bırakılırsa uyarı üretilmez.
+        düşünce uyarı çıkacak eşiktir; boş bırakılırsa uyarı üretilmez. <strong>Ambalaj</strong> satırı kargonun
+        girdisidir: brüt ağırlık ürünün kendi paketiyle birlikte ağırlığıdır (net ağırlık beyandır, o ayrı), ölçüler
+        milimetredir ve üçü birlikte doldurulur. Boş bırakılan ölçü “bilinmiyor” demektir — o varyant için canlı
+        kargo teklifi alınamaz.
       </span>
     </section>
   );

@@ -218,7 +218,7 @@ export const TOOLS = [
         variants: {
           type: 'array',
           description:
-            'Sizes: [{ "label": { "tr": "500 g" }, "netWeightG": 500 }]. At least one — a product with no size cannot be sold. label is the TEXT the customer reads; netWeightG (grams) and piecesCount are the NUMBERS behind it, and price-per-kilo and shipping are computed from them. Both are printed on the package — fill them in; leave a number out only when the package does not state it.',
+            'Sizes: [{ "label": { "tr": "500 g" }, "netWeightG": 500, "piecesCount": 12, "portionKind": "slice" }]. At least one — a product with no size cannot be sold. label is the TEXT the customer reads; netWeightG (grams) and piecesCount are the NUMBERS behind it, and price-per-kilo is computed from them. portionKind says WHAT is being counted: "item" = separate pieces (4 simit in a bag), "slice" = slices of one body (12-slice cheesecake). These are all PRINTED ON THE PACKAGE — fill them in; leave one out only when the package does not state it. SEPARATELY, and only if you actually know them: packedWeightG (gross weight in grams, product WITH its packaging) and packedLengthMm/packedWidthMm/packedHeightMm (outer box, millimetres). THESE ARE NOT PRINTED ON THE PACKAGE — they are weighed and measured. NEVER estimate them from a photo: a guessed number goes straight into the shipping tariff and the carrier corrects it on the invoice. Leave them out unless someone told you the measured values.',
         },
         dateType: { type: 'string', description: "'DLC' or 'DDM' — read it off the label." },
         shelfLifeDays: { type: 'number', description: 'Total shelf life in days, if the label states it.' },

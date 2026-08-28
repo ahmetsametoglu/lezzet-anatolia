@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import type { ProductVariantEntry } from '@lezzet/types';
 import { resolveLocalizedText } from '@lezzet/types';
 import { serviceDb } from '../client';
 import { createTestWarehouse } from '../testing/warehouse';
@@ -55,11 +56,35 @@ afterAll(async () => {
   });
 });
 
+/**
+ * Form satırı üreticisi — testin YALNIZ sınadığı alanı yazmasını sağlar.
+ *
+ * `ProductVariantEntry` alanları bilerek ZORUNLU (künyesi şemada): alanı göstermeyen bir yazan,
+ * üretecin bulduğu değeri her kayıtta ezerdi. Ama o disiplin fikstürlerde on kez beş `null`
+ * yazdırmak anlamına geliyordu ve okunan şey sınanan şey olmaktan çıkıyordu.
+ */
+function entry(over: Partial<ProductVariantEntry> = {}): ProductVariantEntry {
+  return {
+    label: {},
+    netWeightG: null,
+    piecesCount: null,
+    portionKind: null,
+    packedWeightG: null,
+    packedLengthMm: null,
+    packedWidthMm: null,
+    packedHeightMm: null,
+    minStockQty: null,
+    sku: null,
+    isActive: true,
+    ...over,
+  };
+}
+
 describe('ProductVariantService.syncVariants', () => {
   it('boy etiketini üç dilde saklar ve min. stok eşiğini yazar', async () => {
     const [mevcut] = await variants.listByProduct(productId);
     const outcome = await variants.syncVariants(productId, [
-      {
+      entry({
         id: mevcut?.id,
         label: { tr: '700 g tepsi', fr: 'plateau 700 g', de: 'Platte 700 g' },
         netWeightG: 700,
@@ -67,8 +92,7 @@ describe('ProductVariantService.syncVariants', () => {
         piecesCount: 12,
         minStockQty: 6,
         sku: 'TST-700',
-        isActive: true,
-      },
+      }),
     ]);
 
     expect(outcome).toHaveLength(1);
@@ -83,7 +107,7 @@ describe('ProductVariantService.syncVariants', () => {
   it('etiketi yalnız bir dilde dolu bırakılabilir — eksik dil kayda engel değil', async () => {
     const [mevcut] = await variants.listByProduct(productId);
     const outcome = await variants.syncVariants(productId, [
-      { id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, piecesCount: null, minStockQty: 6, sku: 'TST-700', isActive: true },
+      entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, minStockQty: 6, sku: 'TST-700' }),
     ]);
     expect(outcome[0]?.label).toEqual({ tr: 'Tepsi' });
     // Adet BİLDİRİLMEMİŞ (dökme ürün) — `null` sıfıra çevrilmez.
@@ -92,8 +116,8 @@ describe('ProductVariantService.syncVariants', () => {
 
   it('sıra form dizisinin KONUMUNDAN yazılır (müşterinin gördüğü boy sırası)', async () => {
     const [mevcut] = await variants.listByProduct(productId);
-    const first = { id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, piecesCount: null, minStockQty: 6, sku: 'TST-700', isActive: true };
-    const created = { label: { tr: '1 kg' }, netWeightG: 1000, piecesCount: null, minStockQty: null, sku: 'TST-1000', isActive: true };
+    const first = entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, netWeightG: 700, minStockQty: 6, sku: 'TST-700' });
+    const created = entry({ label: { tr: '1 kg' }, netWeightG: 1000, sku: 'TST-1000' });
 
     const added = await variants.syncVariants(productId, [first, created]);
     expect(added.map((v) => resolveLocalizedText(v.label))).toEqual(['Tepsi', '1 kg']);
@@ -118,23 +142,86 @@ describe('ProductVariantService.syncVariants', () => {
     expect(await prices.listByVariant(toDelete.id)).toHaveLength(1);
 
     await variants.syncVariants(productId, [
-      { id: loaded[0]!.id, label: loaded[0]!.label, netWeightG: null, piecesCount: null, minStockQty: null, sku: null, isActive: true },
+      entry({ id: loaded[0]!.id, label: loaded[0]!.label }),
     ]);
 
     expect((await variants.listByProduct(productId)).map((v) => v.id)).toEqual([loaded[0]!.id]);
     expect(await prices.listByVariant(toDelete.id)).toHaveLength(0);
   });
 
+  it('ambalaj ölçüsü yazılır ve geri okunur — kargo tarifesinin girdisi', async () => {
+    const [mevcut] = await variants.listByProduct(productId);
+    const outcome = await variants.syncVariants(productId, [
+      entry({
+        id: mevcut?.id,
+        label: { tr: 'Tepsi' },
+        // Net ağırlık BEYAN, brüt ağırlık TAŞINAN — ikisi ayrı alanda ve ayrı sayı.
+        netWeightG: 700,
+        packedWeightG: 780,
+        packedLengthMm: 240,
+        packedWidthMm: 165,
+        packedHeightMm: 60,
+      }),
+    ]);
+    expect(outcome[0]).toMatchObject({
+      netWeightG: 700,
+      packedWeightG: 780,
+      packedLengthMm: 240,
+      packedWidthMm: 165,
+      packedHeightMm: 60,
+    });
+  });
+
+  it('yalnız TARTILMIŞ varyant geçerlidir — ölçü beklemek yarım ilerlemeyi engellerdi', async () => {
+    const [mevcut] = await variants.listByProduct(productId);
+    const outcome = await variants.syncVariants(productId, [
+      entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, packedWeightG: 780 }),
+    ]);
+    expect(outcome[0]?.packedWeightG).toBe(780);
+    expect(outcome[0]?.packedLengthMm).toBeNull();
+  });
+
+  it('YARIM ÖLÇÜ veritabanınca REDDEDİLİR — kural ekranda değil veride duruyor', async () => {
+    const [mevcut] = await variants.listByProduct(productId);
+    // İkisi dolu biri boş bir kutu hiçbir soruya cevap vermez: hacim hesaplanamaz, taşıyıcıya
+    // gönderilemez, ama ekran "ölçüsü var" diye okur. Ekran unutabilir, veritabanı unutmaz.
+    await expect(
+      variants.syncVariants(productId, [
+        entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, packedLengthMm: 240, packedWidthMm: 165 }),
+      ]),
+    ).rejects.toThrow(/packed_dims_all_or_none/);
+  });
+
+  it('SIFIR ölçü ÇİFT KAT reddedilir — "0 g" ölçüm değil, ölçülmemişliğin yanlış yazılmış hâli', async () => {
+    // İlk kapı şemadır (`positive()`), ikincisi veritabanı kısıtı. Bu koşuda düşen ŞEMA — ama
+    // ikisi de yerinde durmalı: şemayı atlayan bir yazan (onarım betiği, doğrudan SQL) kısıta
+    // çarpar. Tek kat savunma, ikinci yazma yolu açıldığı gün delinir (MB-22a dersi).
+    const [mevcut] = await variants.listByProduct(productId);
+    await expect(
+      variants.syncVariants(productId, [entry({ id: mevcut?.id, label: { tr: 'Tepsi' }, packedWeightG: 0 })]),
+    ).rejects.toThrow();
+  });
+
+  it('porsiyon türü artık FORMDAN yazılıyor — bir tur yalnız besleme yazabiliyordu', async () => {
+    const [mevcut] = await variants.listByProduct(productId);
+    const outcome = await variants.syncVariants(productId, [
+      entry({ id: mevcut?.id, label: { tr: 'Cheesecake' }, piecesCount: 12, portionKind: 'slice' }),
+    ]);
+    // "12 dilim" ile "12 adet" aynı şey değil: vitrin ikisine aynı kelimeyi yazarsa müşteri
+    // 12 cheesecake aldığını sanır (19.08 ölçümü).
+    expect(outcome[0]).toMatchObject({ piecesCount: 12, portionKind: 'slice' });
+  });
+
   it('stok partisi olan varyant silinemez — hata OKUNABİLİR cümleye çevrilir', async () => {
     const added = await variants.syncVariants(productId, [
-      { id: (await variants.listByProduct(productId))[0]?.id, label: { tr: '1 kg' }, netWeightG: 1000, piecesCount: null, minStockQty: null, sku: null, isActive: true },
-      { label: { tr: 'Kutu' }, netWeightG: 250, piecesCount: null, minStockQty: null, sku: null, isActive: true },
+      entry({ id: (await variants.listByProduct(productId))[0]?.id, label: { tr: '1 kg' }, netWeightG: 1000 }),
+      entry({ label: { tr: 'Kutu' }, netWeightG: 250 }),
     ]);
     const withStock = added[1]!;
     await stocks.insert({ variantId: withStock.id, warehouseId, physicalQty: 4, expiryDate: '2030-01-01' });
 
     const remaining = [
-      { id: added[0]!.id, label: added[0]!.label, netWeightG: null, piecesCount: null, minStockQty: null, sku: null, isActive: true },
+      entry({ id: added[0]!.id, label: added[0]!.label }),
     ];
     await expect(variants.syncVariants(productId, remaining)).rejects.toThrow(/«Kutu» silinemedi.*stok partisi/s);
 

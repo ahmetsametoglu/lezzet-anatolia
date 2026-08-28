@@ -643,7 +643,18 @@ function ProductCreatePreview({ payload }: { payload: ProductCreatePayload }) {
             label: 'Boylar',
             value: payload.variants
               .map((v) => {
-                const size = [v.netWeightG ? `${num(v.netWeightG)} g` : null, v.piecesCount ? `${num(v.piecesCount)} ad.` : null]
+                // Ambalaj ölçüsü de künyeye giriyor (28.08): operatör onaylamadan önce asistanın
+                // TAHMİN etmediğini görebilmeli — boşsa "ölçülmedi" yazar, uydurma sayı yazmaz.
+                const dims =
+                  v.packedLengthMm && v.packedWidthMm && v.packedHeightMm
+                    ? `${num(v.packedLengthMm)}×${num(v.packedWidthMm)}×${num(v.packedHeightMm)} mm`
+                    : null;
+                const size = [
+                  v.netWeightG ? `${num(v.netWeightG)} g` : null,
+                  v.piecesCount ? `${num(v.piecesCount)} ${v.portionKind === 'slice' ? 'dilim' : 'ad.'}` : null,
+                  v.packedWeightG ? `brüt ${num(v.packedWeightG)} g` : null,
+                  dims,
+                ]
                   .filter(Boolean)
                   .join(' · ');
                 return `${resolveLocalizedText(v.label)}${size ? ` (${size})` : ' (ölçü yok)'}`;

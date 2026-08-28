@@ -173,6 +173,13 @@ export default defineConfig({
               entegrasyona alınmalı; geniş bir `seed/**` deseni o ayrımı sessizce silerdi.
             */
             'scripts/seed/assistant.test.ts',
+            /*
+              Ambalaj ölçüsü üreteci (28.08) — saf: sayı girer, künye çıkar. DB istemcisi yok.
+              **Satır UNUTULURSA test sessizce hiç koşmaz** ve yukarıdaki `mask.test.ts` tuzağı
+              tekrar eder; dar desen (`assistant.test.ts`) bilerek seçildiği için her yeni saf
+              seed testi kendi satırını ister.
+            */
+            'scripts/seed/packing.test.ts',
             'apps/web/app/**/*.test.ts?(x)',
             'apps/web/components/**/*.test.ts?(x)',
             // `apps/web/lib` entegrasyon köküdür ama içindeki bu 19 dosya DB'ye vurmuyor (K8-1).

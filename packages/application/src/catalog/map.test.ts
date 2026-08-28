@@ -94,6 +94,11 @@ const BOS_VARYANT: ProductVariant = {
   piecesCount: null,
   // Tek parça ürün: porsiyon sorusu hiç doğmuyor (`pieces_count` de null).
   portionKind: null,
+  // Ambalaj ölçüsü bu dosyanın konusu DEĞİL (vitrin eşlemesi): ölçülmemiş varyant hâli.
+  packedWeightG: null,
+  packedLengthMm: null,
+  packedWidthMm: null,
+  packedHeightMm: null,
   minStockQty: null,
   sku: null,
   isActive: true,

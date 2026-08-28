@@ -83,7 +83,13 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       vatRate: '5.5',
       dateType: 'DDM',
       shelfLifeDays: null,
-      shippable: true,
+      // **`false` — veriyle AYNI (28.08 düzeltmesi).** Kolon `0005`te bilerek `false` doğuyor
+      // (kullanıcı kararı 08.08: *"unutulan alanın bedeli 'satılamadı' olmalı, 'bozuk gitti'
+      // değil"*), ama form `true` ile doğuruyordu — üstelik aynı formda `storageType: 'frozen'`.
+      // Yani formdan açılan her yeni ürün "donuk ama kargolanabilir" doğuyordu. `status`
+      // varsayılanının 05.36'da düzeltilen arızasının birebir aynısı: yüzeyde verilmiş bir karar
+      // veride verilmemişti — burada tersiydi, veride verilmiş karar yüzeyde eziliyordu.
+      shippable: false,
       // Yeni ürün DONUK doğar — migration `0005` künyesindeki gerekçe: unutulan alanın bedeli
       // güvenli tarafta kalmalı. Yanlış `ambient` işaretlenmiş donuk ürünün iadesi rafa döner.
       storageType: 'frozen',
@@ -100,7 +106,7 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       targetMarginPercent: null,
       autoPrice: false,
       ...DEFAULT_CROP_FIELDS,
-      variants: [{ label: {}, netWeightG: null, piecesCount: null, minStockQty: null, sku: null, isActive: true }],
+      variants: [{ label: {}, netWeightG: null, piecesCount: null, portionKind: null, packedWeightG: null, packedLengthMm: null, packedWidthMm: null, packedHeightMm: null, minStockQty: null, sku: null, isActive: true }],
     };
   }
   return {
@@ -126,6 +132,11 @@ export function buildDefaults(p: ProductFormSource | null): ProductFormValues {
       label: v.label,
       netWeightG: v.netWeightG,
       piecesCount: v.piecesCount,
+      portionKind: v.portionKind,
+      packedWeightG: v.packedWeightG,
+      packedLengthMm: v.packedLengthMm,
+      packedWidthMm: v.packedWidthMm,
+      packedHeightMm: v.packedHeightMm,
       minStockQty: v.minStockQty,
       sku: v.sku,
       isActive: v.isActive,
@@ -149,7 +160,7 @@ export function toActionPayload(values: ProductFormValues) {
     vatRate: Number(values.vatRate),
     dateType: values.dateType ?? 'DDM',
     shelfLifeDays: values.shelfLifeDays ?? null,
-    shippable: values.shippable ?? true,
+    shippable: values.shippable ?? false,
     storageType: values.storageType ?? 'frozen',
     status: values.status,
     targetMarginPercent: values.targetMarginPercent ?? null,
@@ -161,13 +172,28 @@ export function toActionPayload(values: ProductFormValues) {
     variants: values.variants
       .filter(
         (v) =>
-          v.id || resolveLocalizedText(v.label) || v.sku?.trim() || v.netWeightG != null || v.piecesCount != null || v.minStockQty != null,
+          v.id ||
+          resolveLocalizedText(v.label) ||
+          v.sku?.trim() ||
+          v.netWeightG != null ||
+          v.piecesCount != null ||
+          v.minStockQty != null ||
+          // Ambalaj bölmesi de "dokunulmuş satır" sayılır: yalnız ölçü girip etiketi boş bırakan
+          // operatörün satırı atılırsa girdiği sayı sessizce kaybolur.
+          v.portionKind != null ||
+          v.packedWeightG != null ||
+          v.packedLengthMm != null,
       )
       .map((v) => ({
         id: v.id,
         label: cleanLocalized(v.label),
         netWeightG: v.netWeightG,
         piecesCount: v.piecesCount,
+        portionKind: v.portionKind,
+        packedWeightG: v.packedWeightG,
+        packedLengthMm: v.packedLengthMm,
+        packedWidthMm: v.packedWidthMm,
+        packedHeightMm: v.packedHeightMm,
         minStockQty: v.minStockQty,
         sku: v.sku?.trim() || null,
         isActive: v.isActive,

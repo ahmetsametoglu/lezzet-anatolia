@@ -33,6 +33,25 @@ export const ProductVariantSchema = z.object({
    * "12 adet cheesecake" 12 pasta demek olurdu.
    */
   portionKind: PortionKindEnum.nullable(),
+  /**
+   * ── AMBALAJLI ÜRÜN ÖLÇÜSÜ (07.12) ─────────────────────────────────────────
+   * Taşınan şeyin ağırlığı: ürün + KENDİ ambalajı. `netWeightG` ile karıştırılmaz — o INCO
+   * beyanıdır ve €/kg gösterimini besler (içindeki gıdanın ağırlığı). Kargo tarifesi bunu ister.
+   *
+   * `null` = ÖLÇÜLMEDİ, sıfır DEĞİL: ölçüsüz varyant için canlı teklif alınmaz ve ekran "ölçüsü
+   * eksik" der. Sıfır, koli planına "hiç yer kaplamıyor" diye okunurdu (CLAUDE §1).
+   */
+  packedWeightG: z.number().int().positive().nullable(),
+  /**
+   * Dış ölçüler — **milimetre**: ondalık kalınlık (1,5 cm) tam sayı alanında sessizce yuvarlanır.
+   * Sağlayıcı `mm` birimini doğrudan kabul ediyor, sayı dönüşümsüz tele giriyor.
+   *
+   * **Üçü birlikte yaşar ya da hiç yaşamaz** — kısıt veride (`product_variant_packed_dims_all_or_none`).
+   * İkisi dolu biri boş bir kutu hiçbir soruya cevap vermez ama ekran "ölçüsü var" diye okur.
+   */
+  packedLengthMm: z.number().int().positive().nullable(),
+  packedWidthMm: z.number().int().positive().nullable(),
+  packedHeightMm: z.number().int().positive().nullable(),
   minStockQty: z.number().int().nullable(),
   sku: z.string().nullable(),
   isActive: z.boolean(),
@@ -47,6 +66,10 @@ export const ProductVariantInsertSchema = z.object({
   netWeightG: z.number().int().nullish(),
   piecesCount: z.number().int().nullish(),
   portionKind: PortionKindEnum.nullish(),
+  packedWeightG: z.number().int().positive().nullish(),
+  packedLengthMm: z.number().int().positive().nullish(),
+  packedWidthMm: z.number().int().positive().nullish(),
+  packedHeightMm: z.number().int().positive().nullish(),
   minStockQty: z.number().int().nullish(),
   sku: z.string().nullish(),
   isActive: z.boolean().optional(),
@@ -71,6 +94,17 @@ export const ProductVariantEntrySchema = ProductVariantSchema.pick({
    * — ölçüldü: `variant-editor` · `product-form-schema` (yükleme + gönderme) · `createProductAction`.
    */
   piecesCount: true,
+  /**
+   * Porsiyon türü — **formda bugüne kadar YOKTU** ve yalnız besleme yazıyordu (ölçüldü 28.08).
+   * Operatörün elle açtığı her varyant `null` porsiyon türüyle doğuyordu, yani "12 dilim" ile
+   * "12 adet" ayrımı yalnız üretecin dokunduğu kayıtlarda vardı. Ambalaj ölçüsüyle aynı bölmeye
+   * giriyor: ikisi de "bu paket fiziksel olarak nedir" sorusunun cevabı.
+   */
+  portionKind: true,
+  packedWeightG: true,
+  packedLengthMm: true,
+  packedWidthMm: true,
+  packedHeightMm: true,
   minStockQty: true,
   sku: true,
   isActive: true,

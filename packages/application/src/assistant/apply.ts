@@ -249,7 +249,9 @@ const applyProductCreate: Applier = async (db, raw) => {
     vatRate: payload.vatRate,
     status: 'candidate',
     // Kargolanabilirlik yalnız BİLİNİYORSA yazılır: `null` "okunamadı" demek ve kapının kendi
-    // varsayılanı (kargolanabilir) geçerli kalmalı — `false` yazmak bilinmeyeni "hayır"a çevirirdi.
+    // varsayılanı geçerli kalmalı — `false` yazmak bilinmeyeni "hayır"a çevirirdi. (Varsayılanın
+    // kendisi `false`'tur, 08.08 kararı: unutulan alanın bedeli "satılamadı" olmalı, "bozuk
+    // gitti" değil. Yani bilinmeyen zaten güvenli tarafa düşüyor.)
     ...(payload.shippable === null ? {} : { shippable: payload.shippable }),
     variants: payload.variants.map((v, index) => ({
       label: v.label,
@@ -257,6 +259,13 @@ const applyProductCreate: Applier = async (db, raw) => {
       // kaydetmek olurdu — kilo başı fiyat ve kargo hesabı bu alandan çıkar.
       netWeightG: v.netWeightG,
       piecesCount: v.piecesCount,
+      portionKind: v.portionKind,
+      // Ambalajlı ürün ölçüsü — ambalajda YAZMAZ, ölçülür (şema künyesi). Model tahmin etmesin
+      // diye araç künyesi açıkça uyarıyor; buraya ne geldiyse o yazılır, `null` "ölçülmedi"dir.
+      packedWeightG: v.packedWeightG,
+      packedLengthMm: v.packedLengthMm,
+      packedWidthMm: v.packedWidthMm,
+      packedHeightMm: v.packedHeightMm,
       sortOrder: index,
     })),
   } as Parameters<ProductService['create']>[0]);

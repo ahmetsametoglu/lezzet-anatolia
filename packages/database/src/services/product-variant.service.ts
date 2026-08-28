@@ -79,6 +79,16 @@ export class ProductVariantService extends BaseDbService<ProductVariant, Product
         // Adet artık koşulsuz yazılıyor: formda girdisi var (09.08). Bir tur koşullu kalmıştı —
         // alanı göstermeyen bir ekran, üretecin bulduğu değeri her kayıtta `null`'a ezerdi.
         piecesCount: e.piecesCount,
+        // Porsiyon türü artık FORMDAN geliyor (28.08). Bir tur yazılmıyordu ve gerekçesi doğruydu:
+        // alanı göstermeyen bir ekran, üretecin bulduğu değeri her kayıtta `null`'a ezerdi. Form
+        // alanı açıldığı an o gerekçe düştü — yazılmaması artık operatörün girdisini yutmak olurdu.
+        portionKind: e.portionKind,
+        // Ambalajlı ürün ölçüsü (07.12) — kargo tarifesinin girdisi. `netWeightG` ile aynı satırda
+        // durur ama ayrı soruya cevap verir: o beyan, bu taşınan.
+        packedWeightG: e.packedWeightG,
+        packedLengthMm: e.packedLengthMm,
+        packedWidthMm: e.packedWidthMm,
+        packedHeightMm: e.packedHeightMm,
         minStockQty: e.minStockQty,
         sku: e.sku,
         isActive: e.isActive,

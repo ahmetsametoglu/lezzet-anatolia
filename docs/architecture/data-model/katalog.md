@@ -311,6 +311,10 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 | `net_weight_g` | int | • |  |
 | `pieces_count` | int | • |  |
 | `portion_kind` | portion_kind | • |  |
+| `packed_weight_g` | int | • |  |
+| `packed_length_mm` | int | • |  |
+| `packed_width_mm` | int | • |  |
+| `packed_height_mm` | int | • |  |
 | `min_stock_qty` | int | • |  |
 | `sku` | text | • |  |
 | `is_active` | boolean |  | `true` |
@@ -325,6 +329,12 @@ Fiyat **ayrı** tutulur (aşağıda), çünkü kanal ve müşteriye göre deği�
 - **`net_weight_g`** — net ağırlık (gram) — etiket beyanı ve €/kg birim fiyat gösterimi
 - **`pieces_count`** — paket içi adet ("12'li baklava"). Gramajın YERİNE değil yanına: 72'lik kutu hem 72 adet hem 2500 g'dır, ikisi ayrı soruya cevap verir ("kaç kişilik" ↔ "ne kadar yer kaplar"). `null` = bildirilmemiş (dökme ürün), **sıfır değil**. Alan yokken adet adın içinde kalıyor ve slug ayrıştığı için tek ürün ayrı ürünlere bölünüyordu (05.14)
 - **`portion_kind`** — `pieces_count`ın BİRİMİ — sayılan şey ne? `item` = ayrı ayrı paketlenmiş parça ("4 adet simit"), `slice` = tek gövdenin dilimi ("12 dilim cheesecake"). Adet varken birim yoksa vitrin "12 adet cheesecake" yazar ve müşteri 12 pasta bekler. `null` = dökme ürün (`pieces_count` da null) ya da tek parça. Ambalaj gerçeği: 2,5 kg'lık su böreği tepsisi 12 DİLİM'dir, 12 börek değil
+- **`packed_weight_g` · `packed_length_mm` · `packed_width_mm` · `packed_height_mm`** — **ambalajlı ürün ölçüsü** (07.12): ürün + KENDİ ambalajı. Kargo tarifesinin girdisi.
+  - **`net_weight_g` ile KARIŞTIRILMAZ ve adı bu yüzden sıfatlı.** Net ağırlık INCO beyanıdır ve €/kg gösterimini besler — *içindeki gıdanın* ağırlığı. Bu ise *taşınan şeyin* ağırlığı: 810 g'lık bir kek kutusu ambalajıyla 1,1 kg olabilir ve taşıyıcıya söylenecek sayı ikincisidir. Çıplak `weight_g` adı ilk tasarımda yazılmıştı; `net_weight_g` ile yan yana durunca hangisi olduğu okunmuyordu
+  - **Milimetre, santimetre değil:** ondalık kalınlık (1,5 cm) tam sayı alanında sessizce yuvarlanır. Sağlayıcı `mm` birimini doğrudan kabul ediyor (canlı ölçüm 28.08) — saklanan sayı dönüşümsüz tele giriyor. Aynı gerekçe gram için: kilogramı ondalıkla taşımak kayan nokta artefaktı üretiyordu
+  - **`null` = ölçülmedi, sıfır DEĞİL.** Ölçüsüz varyant için canlı teklif alınmaz, ekran "ölçüsü eksik" der. Sıfır yazılsaydı koli planı onu "hiç yer kaplamıyor" diye okurdu
+  - **Üç ölçü birlikte yaşar ya da hiç yaşamaz** — kısıt veride (`product_variant_packed_dims_all_or_none`). İkisi dolu biri boş bir kutu hiçbir soruya cevap vermez ama ekran "ölçüsü var" diye okur. **Ağırlık bu kuralın dışında ve bilerek:** kimi tarife yalnız ağırlığa bakar, üstelik operatör önce tartıp sonra ölçebilir — yarım ilerlemeyi engellemek kimseye hizmet etmez
+  - **Ambalajın üstünde YAZMAZ, ölçülür.** MCP ürün dilekçesi bu alanları taşıyor ama araç künyesi modele açıkça *"tahmin etme, bilmiyorsan boş bırak"* diyor: uydurulmuş bir sayı kargo tarifesine girer ve yanlış tarife faturada düzeltilir
 - **`min_stock_qty`** — asgari stok eşiği — kullanılabilir stok altına düşünce "sipariş zamanı" önerisine düşer (bkz. `DOMAIN.md §16`); null = öneri yok
 - **`sku`** — stok kodu
 

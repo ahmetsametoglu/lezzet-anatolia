@@ -649,7 +649,12 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
     return { error: 'variants boş — en az bir boy gerekir ("500 g", "1 kg"). Varyantsız ürün satılamaz: fiyat ve stok boya bağlıdır.' };
   }
   // Etiket ("500 g") ile ölçü (500) AYRI alanlar: biri müşterinin okuduğu metin, öteki kilo başı
-  // fiyatın ve kargo hesabının tabanı. İkisi de ambalajda yazıyor (11.08).
+  // fiyatın tabanı. İkisi de ambalajda yazıyor (11.08).
+  //
+  // **AMBALAJ ÖLÇÜSÜ AYRI BİR SINIF (28.08):** `packed*` alanları ambalajın üstünde YAZMAZ —
+  // tartılıp ölçülür. Araç künyesi modele "bilmiyorsan boş bırak" diyor; buradaki okuma da
+  // savunmacı: pozitif tam sayı değilse `null`, yani "ölçülmedi". Tahmin edilmiş bir sayı kargo
+  // tarifesine girer ve yanlış tarife faturada düzeltilir.
   const variants = rawVariants.flatMap((v) =>
     v.label && typeof v.label === 'object'
       ? [
@@ -657,6 +662,11 @@ export async function proposeProductCreate(args: Record<string, unknown>) {
             label: v.label as ProductCreatePayload['variants'][number]['label'],
             netWeightG: typeof v.netWeightG === 'number' && v.netWeightG > 0 ? v.netWeightG : null,
             piecesCount: Number.isInteger(v.piecesCount) && (v.piecesCount as number) > 0 ? (v.piecesCount as number) : null,
+            portionKind: porsiyonTuru(v.portionKind),
+            packedWeightG: pozitifTam(v.packedWeightG),
+            packedLengthMm: pozitifTam(v.packedLengthMm),
+            packedWidthMm: pozitifTam(v.packedWidthMm),
+            packedHeightMm: pozitifTam(v.packedHeightMm),
           },
         ]
       : [],
@@ -1214,4 +1224,19 @@ export async function listProposals(limit: number) {
       error: p.error,
     })),
   };
+}
+
+/**
+ * Pozitif tam sayı ya da `null` — ambalaj ölçülerinin savunmacı okuması.
+ *
+ * Sıfır ve negatif de `null`'a düşer: "0 mm" bir ölçü değil, ölçülmemişliğin yanlış yazılmış
+ * hâlidir (`CLAUDE §1`). Ondalık da düşer — alan milimetre ve gram, ikisi de tam sayı.
+ */
+function pozitifTam(value: unknown): number | null {
+  return Number.isInteger(value) && (value as number) > 0 ? (value as number) : null;
+}
+
+/** Porsiyon türü — kümenin dışındaki her şey `null` ("tek parça / dökme"). */
+function porsiyonTuru(value: unknown): 'item' | 'slice' | null {
+  return value === 'item' || value === 'slice' ? value : null;
 }

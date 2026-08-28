@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PortionKindEnum } from './product-variant.schema';
 import { LocalizedTextSchema } from '../primitives/localized-text.schema';
 import { CountryEnum } from '../primitives/enums.schema';
 import { ProductDateTypeEnum, ProductSchema } from './product.schema';
@@ -336,6 +337,22 @@ export const ProductCreatePayloadSchema = ProductDeclarationSchema.merge(Product
         label: LocalizedTextSchema,
         netWeightG: z.number().positive().nullable().default(null),
         piecesCount: z.number().int().positive().nullable().default(null),
+        portionKind: PortionKindEnum.nullable().default(null),
+        /**
+         * ── AMBALAJLI ÜRÜN ÖLÇÜSÜ (28.08) ───────────────────────────────────
+         * **Bu alanlar ambalajın ÜSTÜNDE YAZMAZ** ve künyenin en önemli cümlesi budur: net
+         * ağırlık etikette basılıdır, brüt ağırlık ve dış ölçü ise TARTILIP ÖLÇÜLÜR. Model
+         * fotoğraftan tahmin ederse üretilen sayı kargo tarifesine girer ve yanlış tarife
+         * faturada düzeltilir — sessiz değil, pahalı bir hata.
+         *
+         * Bu yüzden varsayılan `null` ve araç künyesi modele açıkça *"bilmiyorsan boş bırak,
+         * tahmin etme"* diyor. Alan yine de burada, çünkü operatör asistana ölçüyü SÖYLEYEBİLİR
+         * ("kutusu 30×20×15, brüt 1,2 kg") ya da tedarikçi künyesinde yazılı olabilir.
+         */
+        packedWeightG: z.number().int().positive().nullable().default(null),
+        packedLengthMm: z.number().int().positive().nullable().default(null),
+        packedWidthMm: z.number().int().positive().nullable().default(null),
+        packedHeightMm: z.number().int().positive().nullable().default(null),
       }),
     )
     .min(1),

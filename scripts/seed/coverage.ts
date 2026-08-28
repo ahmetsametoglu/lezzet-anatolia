@@ -257,6 +257,20 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'SKU yok', filtre: (q) => q.is('sku', null) },
       // Ağırlıksız varyant: paketin toplam ağırlığı hesaplanamaz, satır basılmamalı.
       { ad: 'ağırlıksız', zorunlu: true, filtre: (q) => q.is('net_weight_g', null) },
+      /*
+        AMBALAJ ÖLÇÜSÜ — ÜÇ HÂL, üçü de zorunlu (28.08). Kargo kanalının girdisi ve her hâlin
+        ekranda ayrı bir karşılığı var; biri hiç doğmazsa o karşılık sınanmamış olur:
+          ölçülü  → canlı teklif alınabilir
+          yarım   → tartılmış ama ölçülmemiş; kısıt buna İZİN veriyor ve ekran ayırt etmeli
+          ölçüsüz → "ölçüsü eksik" süzgecinin ve teklif reddinin tek kaynağı
+      */
+      { ad: 'ambalajı ölçülü', zorunlu: true, filtre: (q) => q.not('packed_length_mm', 'is', null) },
+      {
+        ad: 'ambalajı yarım ölçülü (tartıldı, ölçülmedi)',
+        zorunlu: true,
+        filtre: (q) => q.not('packed_weight_g', 'is', null).is('packed_length_mm', null),
+      },
+      { ad: 'ambalajı ölçüsüz', zorunlu: true, filtre: (q) => q.is('packed_weight_g', null) },
       {
         ad: 'paket içi adet bildirilmiş',
         zorunlu: true,
