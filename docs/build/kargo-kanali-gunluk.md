@@ -13,8 +13,8 @@ Top bırakıldı. Hedef: özelliği uçtan uca entegre etmek ve test etmek.
 | --- | --- | --- |
 | A | Ambalajlı ürün ölçüsü — şema, form, MCP, besleme | ✅ |
 | B | Kargo kutusu kataloğu | ✅ |
-| C | Koli planı (saf karar) | ⏳ |
-| D | Sağlayıcı portu + `@lezzet/sendcloud` | ⏳ |
+| C | Koli planı (saf karar) | ✅ |
+| D | Sağlayıcı paketi + canlı doğrulama | ✅ |
 | E | Sepet & checkout canlı teklif | ⏳ |
 | F | Gönderi + etiket + webhook + durum zinciri | ⏳ |
 
@@ -74,4 +74,43 @@ değil) — yani benimseme yolu her `db:refresh`te fiilen koşuyor. Üç hâl bi
 alınamaz" uyarısının tek kaynağı).
 
 Tam paket **3702/3702**.
+
+---
+
+## C — Koli planı ✅
+
+Sepetteki kalemleri kutulara bölen saf motor. Ölçüt **hacim + ağırlık tavanı**, adet değil —
+90 g'lık dilim ile 2,5 kg'lık tepsi aynı kutuya sığmaz ve sabit bir adet böleni ikisini de yanlış
+yerleştirir.
+
+**En önemli kararı: ölçüsüz kalem planı DURDURUR.** Yedek sabit yok. Uydurulmuş bir ölçü doğrudan
+tarifeye girer, taşıyıcı gerçeği tartar ve farkı faturaya yazar. Plan hangi varyantların ölçüsüz
+olduğunu söylüyor, ekran onu gösterecek.
+
+13 birim test.
+
+---
+
+## D — Sağlayıcı paketi ✅
+
+`@lezzet/sendcloud` — REST v3 istemcisi. **Resmî SDK yok** (npm'deki aynı adlı paketler bambaşka
+bir servise ait, 9 yıldır güncellenmemiş), o yüzden kendimiz yazdık.
+
+**Gerçek hesapla doğrulandı** (`pnpm sendcloud:smoke`, para harcamayan teklif çağrısı):
+
+    ✓ 17 seçenek · 10'i çok koli destekliyor · 1 ücretsiz
+        0.00 €  sendcloud:letter        home_delivery  ×koli
+        4.99 €  chronopost:shop2shop    service_point  ×koli
+        5.24 €  mondial_relay:locker    locker
+
+Yani gram/milimetre gerçekten kabul ediliyor, şemamız gerçek cevabı ayrıştırıyor ve fiyat cent'e
+doğru çevriliyor.
+
+**En sert kural: gönderi duyurusu YENİDEN DENENMEZ.** Sendcloud'da idempotency anahtarı yok —
+hatada tekrar denemek **ikinci koli açar** ve o gerçek paradır. Test bunu çiviliyor: 5xx'te de ağ
+hatasında da tam bir çağrı.
+
+20 birim test, hepsi sahte `fetch` ile — otomatik testler ağa çıkmıyor.
+
+Tam paket **3735/3735**.
 

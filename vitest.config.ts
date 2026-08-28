@@ -150,6 +150,12 @@ export default defineConfig({
             */
             'packages/react-hooks/src/**/*.test.ts?(x)',
             'packages/ai/src/**/*.test.ts?(x)',
+            /*
+              Sendcloud istemcisi (07.12) — saf: sahte `fetch` enjekte edilir, test AĞA ÇIKMAZ.
+              **Bu satır olmadan paketin bütün testleri sessizce hiç koşmazdı** (`mask.test.ts`
+              tuzağı, künyesi aşağıda). Yeni paket doğduğu gün ilk yazılan satır budur.
+            */
+            'packages/sendcloud/src/**/*.test.ts?(x)',
             // Maskeleme saf metin işi, DB'siz (05.08). Liste eksik olsaydı `mask.test.ts` sessizce
             // hiç koşmazdı — "test yazdım" ile "test koşuyor" arasındaki fark tam olarak budur.
             'packages/observability/src/**/*.test.ts?(x)',

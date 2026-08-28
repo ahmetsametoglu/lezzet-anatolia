@@ -61,7 +61,8 @@
     "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
     "stripe:smoke": "tsx scripts/stripe-smoke.ts",
     "ai:smoke": "tsx scripts/ai-smoke.ts",
-    "meta:smoke": "tsx scripts/meta-smoke.ts"
+    "meta:smoke": "tsx scripts/meta-smoke.ts",
+    "sendcloud:smoke": "tsx scripts/sendcloud-smoke.ts"
   },
   "devDependencies": {
     "@lezzet/ai": "workspace:*",
@@ -70,6 +71,7 @@
     "@lezzet/domain-core": "workspace:*",
     "@lezzet/eslint-config": "workspace:*",
     "@lezzet/helper": "workspace:*",
+    "@lezzet/sendcloud": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@lezzet/typescript-config": "workspace:*",

@@ -26,6 +26,9 @@ importers:
       '@lezzet/helper':
         specifier: workspace:*
         version: link:packages/helper
+      '@lezzet/sendcloud':
+        specifier: workspace:*
+        version: link:packages/sendcloud
       '@lezzet/storage':
         specifier: workspace:*
         version: link:packages/storage
@@ -769,6 +772,22 @@ importers:
       react:
         specifier: ^19.0.0
         version: 19.2.3
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
+  packages/sendcloud:
+    dependencies:
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
+    devDependencies:
+      '@lezzet/typescript-config':
+        specifier: workspace:*
+        version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.20.1
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -9534,9 +9553,7 @@ snapshots:
       metro-runtime: 0.84.4
     transitivePeerDependencies:
       - '@babel/core'
-      - bufferutil
       - supports-color
-      - utf-8-validate
 
   '@react-native/normalize-colors@0.86.2': {}
 
