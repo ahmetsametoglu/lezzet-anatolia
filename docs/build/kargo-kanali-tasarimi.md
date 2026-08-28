@@ -720,6 +720,45 @@ zaman boş kalmaz.
 **Ne zaman:** basım akışı yazılırken (07.12 kalanı) — o turda zaten `labelPrinterFor` çağrısı
 değişecek; şimdi ayrı bir tur açmak aynı dosyaları iki kez elden geçirmek olurdu.
 
+**Kullanıcı düzeltmeleri (28.08) — üç varsayımım yanlıştı:**
+1. **Telefon depolar arası GEZMİYOR** — o deponun cihazı. "Ayar telefonu takip etmeli" gerekçem düştü.
+2. Bir depoda **aynı iş için birden çok yazıcı** olabilir; kurulumu yapan kişi doğru olanı seçer.
+3. **Üçüncü bir kâğıt var: A4 TOPLAMA LİSTESİ.** Depocu "hazırlıyorum" dediğinde çıkıp elinde
+   tur atacağı kâğıt: hangi ürün, kaç adet, deponun neresinde.
+
+**Düzeltilmiş bölüşüm — seçim CİHAZIN, envanter DEPONUN:**
+- Sunucu: bu depoda hangi yazıcılar var (adres · model · takılı kâğıt · hangi işe uygun)
+- Cihaz: hangisini kullanıyor — **listeden seçer, elle IP yazmaz**
+
+Envanterin sunucuda kalmasının üç somut karşılığı: telefon değişince kurulum "listeden seç" olur ·
+kâğıt boyunun tek doğru kaynağı olur (yanlış boy SDK'da `SetLabelSizeError`, 23.5 ölçümü) ·
+Depolar ekranı "bu depoda hangi yazıcılar var"ı cevaplayabilir.
+
+### 4.8 A4 TOPLAMA LİSTESİ — telefondan DEĞİL, depodaki PC'den (kullanıcı kararı 28.08)
+
+**Ölçüm:** verisi zaten hazır — `listPreparationQueue` kalemleri `storage_area.sort_order`'a, yani
+**deponun yürüyüş sırasına** göre diziyor; her satırda alan adı, parti ve son tarih var. Kâğıt
+bunun çıktısı.
+
+⚠ **A4 Brother SDK'dan basılmaz** (SDK QL serisi etiket yazıcıları için) ve `expo-print` depoda
+YOK. Telefondan basmak yeni bir bağımlılık + Android sistem yazdırma diyaloğu demekti.
+
+**Sessiz baskı sorusu (kullanıcı 28.08):** IPP düz bir HTTP POST'tur, diyalogsuz — ama bunu
+yapabilecek makine **depo ağındaki PC**. Sunucu VPS ve depo ağına rotası yok (ölçüldü);
+telefondan sessiz IPP ise protokolü RN içinde elle kurmak demek.
+
+**KARAR: kâğıtlar ÖNDEN VE TOPLU basılır, telefon göndermez.** Depocu kâğıtlarla turu bir kez
+atar. Üç şeyi birden çözüyor: yeni bağımlılık yok · üçüncü yazıcı cihaz seçiminden düşüyor
+(telefon yalnız iki etiket yazıcısı tanıyor) · iş akışı da daha iyi.
+
+**Yeri:** operasyon hazırlık ekranı (masaüstü, depodaki PC LAN'da) — "seçili siparişlerin toplama
+listesini bas" → tek PDF. Tarayıcı diyaloğu N sipariş için bir kez çıkar.
+
+**Kapsam:** bu kargo turunun DIŞI — depo modülünün işi (`10-depo` / `23`). Netleşmeyen iki ayrıntı
+kayda geçti: toplu çıktının kapsamı (günün siparişleri mi, ekrandan seçilenler mi) ve kâğıdın
+sipariş başına sayfa mı birleşik liste mi olduğu.
+
+
 ---
 
 ## 9. Açık kalan iki karar
