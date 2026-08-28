@@ -82,9 +82,16 @@ export async function sendPendingFeedbackInvites(opts: { limit?: number } = {}):
           customerId: request.customerId,
           recipient: bundle.recipient,
           data: bundle.data,
-          target: { type: 'feedback_request', id: request.id },
+          // HEDEF SİPARİŞTİR, davet kaydı değil (kullanıcı kararı 27.08). `feedback_request` iki
+          // yüzeyin adres sözlüğünde de karşılıksızdı: satır tıklanıyor, "okundu" işaretleniyor ve
+          // HİÇBİR YERE gitmiyordu (ölçüldü 27.08 — mobil şeridin notu). Sipariş hedefi seçildi
+          // çünkü iki yüzeyin MEVCUT dalları onu zaten çözüyor (web `targetId` uuid'siyle, native
+          // `payload.referenceNo` numarasıyla) ve müşteri orada yorum teşvikini buluyor.
+          // Davet kaydının kimliği payload'da duruyor — değerlendirme ekranına DOĞRUDAN gitme
+          // seçeneği ileride açılırsa çapa elde (bugün seçilmedi: kullanıcı siparişi istedi).
+          target: { type: 'order', id: request.orderId },
           dedupeKey: `feedback-invite:${request.id}`,
-          payload: { orderReferenceNo: bundle.data.orderReferenceNo },
+          payload: { referenceNo: bundle.data.orderReferenceNo, requestId: request.id },
         },
       );
     } catch (error) {

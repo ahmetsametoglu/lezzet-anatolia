@@ -2,7 +2,7 @@
 
 import { formatOrderDate } from '@/lib/storefront/format';
 import { OrderStatusBadge } from '../components/order-status-badge';
-import { DeliveryCard, HelpCard, ItemsCard, SummaryCard, TimelineCard } from './components/detail-sections';
+import { DeliveryCard, FeedbackInviteCard, HelpCard, ItemsCard, SummaryCard, TimelineCard } from './components/detail-sections';
 import type { DetailViewProps } from './detail-types';
 
 /**
@@ -17,7 +17,7 @@ import type { DetailViewProps } from './detail-types';
  * **"↻ Tekrar sipariş" bu sayfada DEĞİL, `SiteFrame`'in hesap başlığında** (08.14) — tasarımda
  * logo ve "← Siparişlerim" ile aynı çubukta duruyor.
  */
-export function DetailDesktop({ t, listT, locale, order }: DetailViewProps) {
+export function DetailDesktop({ t, listT, locale, order, feedbackInvite }: DetailViewProps) {
   return (
       <div className="mx-auto grid w-full max-w-[1100px] grid-cols-[1.5fr_1fr] items-start gap-9 px-12 py-8">
       <div className="flex flex-col gap-4.5">
@@ -34,6 +34,9 @@ export function DetailDesktop({ t, listT, locale, order }: DetailViewProps) {
       <div className="flex flex-col gap-3.5">
         <DeliveryCard t={t} locale={locale} order={order} title={t.deliveryTitle} />
         <SummaryCard t={t} locale={locale} order={order} title={t.amountTitle} />
+        {/* Teşvik özetin ALTINDA (native ile aynı sıra): müşteri ne aldığını ve ne ödediğini
+            gördükten sonra davet edilir — yardım kartından önce, çünkü bu bir sorun değil davet. */}
+        <FeedbackInviteCard t={t} invite={feedbackInvite} />
         <HelpCard t={t} order={order} />
       </div>
     </div>

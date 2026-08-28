@@ -2,6 +2,8 @@ import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import type { Locale } from '@lezzet/i18n';
+import { readOrderFeedbackInvite } from '@lezzet/application';
+import { serviceDb } from '@lezzet/database';
 import { detectDevice } from '@/lib/device';
 import { currentCustomerId } from '@/lib/guard';
 import { getCustomerOrderDetail } from '@/lib/order/customer-orders';
@@ -50,6 +52,11 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const order = orderId ? await getCustomerOrderDetail(locale as Locale, customerId, orderId) : null;
   if (!order) notFound();
 
+  // Yorum daveti SİPARİŞ DOĞRULANDIKTAN sonra okunur: sahiplik yukarıda çözüldü, token'ı ondan
+  // önce okumak başkasının siparişine ait bir daveti sızdırmanın yolu olurdu. Sözleşme paylaşılan
+  // (native aynısını uçtan alıyor) — iki yüzey aynı üç hâli aynı biçimde `null` görür.
+  const feedbackInvite = await readOrderFeedbackInvite(serviceDb(), order.id);
+
   return (
     <SiteFrame
       device={device}
@@ -65,7 +72,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           ),
       }}
     >
-      <DetailClient t={t} listT={listT} locale={locale as Locale} order={order} device={device} />
+      <DetailClient t={t} listT={listT} locale={locale as Locale} order={order} device={device} feedbackInvite={feedbackInvite} />
     </SiteFrame>
   );
 }

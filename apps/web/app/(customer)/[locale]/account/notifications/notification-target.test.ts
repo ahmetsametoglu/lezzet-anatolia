@@ -19,13 +19,24 @@ describe('notificationTarget', () => {
     expect(notificationTarget({ kind: 'order_confirmed', targetType: 'order', targetId: null })).toBeNull();
   });
 
-  it('talep kimlikle; bölge kataloğa, B2B hesaba; davetin hedefi YOK', () => {
+  it('talep kimlikle; bölge kataloğa, B2B hesaba', () => {
     expect(notificationTarget({ kind: 'ticket_replied', targetType: 'ticket', targetId: 't-1' })).toEqual({
       pathname: '/support/[ticket]',
       params: { ticket: 't-1' },
     });
     expect(notificationTarget({ kind: 'zone_available', targetType: 'zone_notice', targetId: 'z-1' })).toBe('/catalog');
     expect(notificationTarget({ kind: 'b2b_application_result', targetType: 'customer', targetId: 'c-1' })).toBe('/account');
+  });
+
+  it('YORUM DAVETİ sipariş sayfasına gider (27.08) — teşvik bloğunun indiği yer orası', () => {
+    // Üretici 27.08'de hedefi `feedback_request`ten SİPARİŞE çevirdi: davet satırı tıklanıyor ama
+    // hiçbir yere gitmiyordu (iki yüzeyin adres sözlüğünde `feedback_request` karşılıksızdı).
+    expect(notificationTarget({ kind: 'feedback_invite', targetType: 'order', targetId: 'o-9' })).toEqual({
+      pathname: '/orders/[reference]',
+      params: { reference: 'o-9' },
+    });
+    // Eski satır (çeviriden önce doğmuş) yine hedefsiz — cümle durur, bağ verilmez: olmayan bir
+    // yere götürmektense götürmemek dürüsttür.
     expect(notificationTarget({ kind: 'feedback_invite', targetType: 'feedback_request', targetId: 'f-1' })).toBeNull();
   });
 });

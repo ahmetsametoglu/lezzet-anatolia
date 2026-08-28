@@ -13,4 +13,9 @@ export interface DetailViewProps {
   listT: ListMessages;
   locale: Locale;
   order: CustomerOrderDetail;
+  /**
+   * Açık yorum daveti — `null` ise davet yok ya da kapanmış (üç hâl tek cevapta, künye
+   * `readOrderFeedbackInvite`). Sayfaya sunucuda okunup geçilir; istemci token üretmez.
+   */
+  feedbackInvite: { token: string; completionPoints: number } | null;
 }

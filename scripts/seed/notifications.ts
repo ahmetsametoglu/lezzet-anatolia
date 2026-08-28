@@ -122,18 +122,20 @@ export async function seedNotifications(db: Db, kisiler: Kisiler): Promise<void>
   // ── Değerlendirme davetleri: feedback_request'ten ────────────────────────────────────────────
   const { data: davetler, error: davetHata } = await db
     .from('feedback_request')
-    .select('id, customer_id, created_at, order:order_id(reference_no)')
+    .select('id, customer_id, order_id, created_at, order:order_id(reference_no)')
     .limit(10);
   if (davetHata) throw davetHata;
-  type Davet = { id: string; customer_id: string | null; created_at: string; order: { reference_no: string | null } | null };
+  type Davet = { id: string; customer_id: string | null; order_id: string; created_at: string; order: { reference_no: string | null } | null };
   for (const davet of ((davetler ?? []) as unknown as Davet[]).slice(0, 5)) {
     if (!davet.customer_id) continue;
     satirlar.push({
       profile_id: davet.customer_id,
       kind: 'feedback_invite',
-      target_type: 'feedback_request',
-      target_id: davet.id,
-      payload: { orderReferenceNo: davet.order?.reference_no ?? '—' },
+      // Hedef SİPARİŞ (27.08 · üreticinin aynısı): davet satırı sipariş sayfasına götürür, yorum
+      // teşviki orada. `feedback_request` hedefi iki yüzeyin adres sözlüğünde karşılıksızdı.
+      target_type: 'order',
+      target_id: davet.order_id,
+      payload: { referenceNo: davet.order?.reference_no ?? '—', requestId: davet.id },
       dedupe_key: `feedback-invite:${davet.id}`,
       created_at: davet.created_at,
     });

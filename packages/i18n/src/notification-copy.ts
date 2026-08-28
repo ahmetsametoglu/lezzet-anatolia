@@ -98,11 +98,14 @@ const COPY: Partial<Record<AppNotificationKind, NotificationCopy>> = {
       }),
   },
   feedback_invite: {
+    // Referans `referenceNo`dan okunur, `orderReferenceNo`dan DEĞİL (27.08): satırın hedefi
+    // siparişe çevrilince payload öteki sipariş türleriyle aynı ada geçti — tek ad, tek anlam.
+    // (`orderReferenceNo` yaşıyor ama MESAJIN alanı olarak: mail/WhatsApp gövdesi onu okuyor.)
     sentence: (p, l) =>
       say(l, {
-        tr: `Siparişinizi${typeof p.orderReferenceNo === 'string' && p.orderReferenceNo !== '—' ? ` (${p.orderReferenceNo})` : ''} değerlendirir misiniz?`,
-        fr: `Que pensez-vous de votre commande${typeof p.orderReferenceNo === 'string' && p.orderReferenceNo !== '—' ? ` (${p.orderReferenceNo})` : ''} ?`,
-        de: `Wie fanden Sie Ihre Bestellung${typeof p.orderReferenceNo === 'string' && p.orderReferenceNo !== '—' ? ` (${p.orderReferenceNo})` : ''}?`,
+        tr: `Siparişinizi${referans(p) ? ` (${p.referenceNo})` : ''} değerlendirir misiniz?`,
+        fr: `Que pensez-vous de votre commande${referans(p) ? ` (${p.referenceNo})` : ''} ?`,
+        de: `Wie fanden Sie Ihre Bestellung${referans(p) ? ` (${p.referenceNo})` : ''}?`,
       }),
   },
   zone_available: {

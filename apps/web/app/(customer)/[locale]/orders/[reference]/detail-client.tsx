@@ -23,9 +23,11 @@ interface DetailClientProps {
   locale: Locale;
   order: CustomerOrderDetail;
   device: Device;
+  /** Açık yorum daveti — sunucuda okundu, iki fork da aynı bloğu çiziyor (künye `FeedbackInviteCard`). */
+  feedbackInvite: { token: string; completionPoints: number } | null;
 }
 
-export function DetailClient({ t, listT, locale, order, device }: DetailClientProps) {
-  const view = { t, listT, locale, order };
+export function DetailClient({ t, listT, locale, order, device, feedbackInvite }: DetailClientProps) {
+  const view = { t, listT, locale, order, feedbackInvite };
   return useDevice(device) === 'mobile' ? <DetailMobile {...view} /> : <DetailDesktop {...view} />;
 }

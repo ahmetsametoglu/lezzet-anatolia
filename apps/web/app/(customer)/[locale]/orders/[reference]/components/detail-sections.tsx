@@ -392,6 +392,39 @@ export function HelpCard({ t, order }: Pick<DetailViewProps, 't' | 'order'>) {
 }
 
 /**
+ * YORUM TEŞVİKİ (27.08 · kullanıcı kararı) — davet bildiriminin indiği yer burasıdır.
+ *
+ * Blok YALNIZ açık davet varken çizilir: sözleşme (`readOrderFeedbackInvite`) davet yok ·
+ * tamamlanmış · süresi dolmuş hâllerinin ÜÇÜNDE de `null` döner ve ekran üçünü ayırt etmez —
+ * gerekçe o künyede. Kapalı davette blok hiç doğmaz, çünkü tıklanınca akış açmayan bir düğme
+ * verilmiş bir sözün geri alınmasıdır.
+ *
+ * PUAN SUNUCUDAN gelir (`completionPoints`, ayardan) — ekran rakam uydurmaz: yazılmayacak bir
+ * ödülü vaat etmek 29.07 denetiminin kapattığı arıza sınıfının aynısıdır.
+ *
+ * Görsel dil YENİ DEĞİL: kesikli zeytin çerçeve hesap alanının kupon kartından (`coupons-card`),
+ * native karşılığı da kitin davet kartını kullanıyor (`DashedInvite`) — iki yüzey aynı vaadi aynı
+ * biçimde söylüyor.
+ */
+export function FeedbackInviteCard({
+  t,
+  invite,
+}: Pick<DetailViewProps, 't'> & { invite: { token: string; completionPoints: number } | null }) {
+  if (invite === null) return null;
+  return (
+    <section className="flex flex-col gap-2 rounded-soft border border-dashed border-olive bg-olive-bg px-5.5 py-4.5">
+      <span className="font-serif text-body font-semibold leading-tight text-ink">{t.feedback.title}</span>
+      <span className="font-sans text-note leading-relaxed text-body">
+        {t.feedback.body.replace('{points}', String(invite.completionPoints))}
+      </span>
+      <Link href={{ pathname: '/feedback/[token]', params: { token: invite.token } }} className={buttonClass({ fullWidth: true })}>
+        {t.feedback.cta}
+      </Link>
+    </section>
+  );
+}
+
+/**
  * Mobilin zaman çizgisi — tasarımda **yatay** dört adım, tek satırda (dikey çizginin dar ekrandaki
  * karşılığı değil, ayrı bir çizim). Damga yazılmaz: dört etiket bir satıra ancak böyle sığıyor ve
  * bildirimden gelen müşterinin sorusu "neredeyim", "ne zaman"dan önce geliyor.

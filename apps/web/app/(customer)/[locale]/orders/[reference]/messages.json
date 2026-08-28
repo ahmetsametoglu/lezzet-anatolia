@@ -40,7 +40,12 @@
     "returningTitle": "İade süreci sürüyor",
     "itemsTitle": "Kalemler",
     "deliveryTitle": "Teslimat",
-    "amountTitle": "Tutar"
+    "amountTitle": "Tutar",
+    "feedback": {
+      "title": "Aldığınız ürünlere yorum yazın",
+      "body": "Birkaç dokunuşla değerlendirin — {points} puan kazanın ve bir sonraki alışverişinizde kullanın.",
+      "cta": "Değerlendirmeye başla"
+    }
   },
   "fr": {
     "back": "← Mes commandes",
@@ -83,7 +88,12 @@
     "returningTitle": "Un retour est en cours",
     "itemsTitle": "Articles",
     "deliveryTitle": "Livraison",
-    "amountTitle": "Montant"
+    "amountTitle": "Montant",
+    "feedback": {
+      "title": "Donnez votre avis sur vos produits",
+      "body": "Quelques gestes suffisent — gagnez {points} points à utiliser lors de votre prochaine commande.",
+      "cta": "Commencer l’évaluation"
+    }
   },
   "de": {
     "back": "← Meine Bestellungen",
@@ -126,6 +136,11 @@
     "returningTitle": "Eine Rückgabe ist im Gange",
     "itemsTitle": "Artikel",
     "deliveryTitle": "Lieferung",
-    "amountTitle": "Betrag"
+    "amountTitle": "Betrag",
+    "feedback": {
+      "title": "Bewerten Sie Ihre Produkte",
+      "body": "Wenige Handgriffe genügen — sichern Sie sich {points} Punkte für Ihren nächsten Einkauf.",
+      "cta": "Bewertung starten"
+    }
   }
 }
