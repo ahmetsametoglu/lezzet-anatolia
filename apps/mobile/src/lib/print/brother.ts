@@ -46,6 +46,18 @@ export async function findNetworkPrinters(): Promise<PrinterChannel[]> {
   return channels.map((channel) => ({ address: channel.address, modelName: channel.modelName }));
 }
 
+/*
+  ── KARGO ETİKETİ PDF OLARAK BASILABİLİR (ölçüldü 28.08, 07.12) ─────────────
+  SDK'nın dışa açtığı dört basım kapısından İKİSİ PDF: `printPDF` / `printPDFWithURL` (native
+  `printPDFAtPath`), ayarları görüntü basımıyla AYNI (`labelSize`, `autoCut`, `cutAtEnd`) ve
+  sayfa seçimi de var. Yani sağlayıcının PDF etiketi için **PDF→PNG çeviren bir bağımlılık
+  GEREKMİYOR** — aşağıdaki `printLabel`in PNG olması BİZİM etiketimizin SVG'den gelmesindendir,
+  bir SDK sınırı değil.
+
+  Kapı buraya ÇAĞIRANIYLA BİRLİKTE yazılacak (07.12 kalanı): çağıransız bir `printLabelPdf`
+  `knip`e ölü kod olarak düşüyor ve haklı — bugün kimse basmıyor.
+*/
+
 /**
  * **Gerçek etiket basımı** (23.7) — sunucunun ürettiği PNG dosyasını deponun ayarlı yazıcısına
  * basar. Boy AYARDAN gelir (`label_printer_label_size`, Depolar ekranı): takılı kâğıt SDK'dan
@@ -65,36 +77,6 @@ export async function printLabel(
 
   const channel = { type: sdk.BPChannelType.WiFi, address: printer.address, modelName: printer.model };
   await sdk.BrotherPrinterSDK.printImage(fileUri, channel, { labelSize, autoCut: true, cutAtEnd: true });
-}
-
-/**
- * **KARGO ETİKETİ BASIMI (07.12) — PDF DOĞRUDAN GİDİYOR, çevrilmiyor.**
- *
- * Sağlayıcı etiketi PDF veriyor ve `expo-brother-printer-sdk` PDF'i doğrudan basabiliyor
- * (`printPDF` → native `printPDFAtPath`). Ölçüldü 28.08: SDK'nın dışa açtığı dört kapıdan ikisi
- * PDF (`printPDF`, `printPDFWithURL`), ayarları görüntü basımıyla AYNI (`labelSize`, `autoCut`).
- *
- * Yani **PDF→PNG çeviren bir bağımlılığa gerek YOK.** 23.7'nin *"Brother SDK yalnız görüntü
- * basıyor"* cümlesi BİZİM kutu etiketimiz içindi (SVG üretiyoruz, PNG'ye çevirmek doğal yol);
- * dışarıdan gelen PDF için geçerli değil ve ölçmeden varsaymak gereksiz bir bağımlılık
- * eklettirecekti.
- *
- * **YALNIZ İLK SAYFA** (`[1]`): kargo etiketi tek sayfadır, ama sağlayıcı bir gün gümrük belgesi
- * eklerse onlar da aynı PDF'e girer ve etiket ruloya art arda basılırdı. Sayfa seçimi bunu
- * baştan kapatıyor.
- */
-export async function printLabelPdf(
-  fileUri: string,
-  printer: { address: string; model: string; labelSize: string },
-): Promise<void> {
-  const sdk = loadSdk();
-  if (!sdk) throw new Error('yazıcı modülü bu derlemede yok');
-
-  const labelSize = sdk.BPQLLabelSize[printer.labelSize as keyof typeof sdk.BPQLLabelSize];
-  if (typeof labelSize !== 'number') throw new Error(`bilinmeyen etiket boyu: ${printer.labelSize}`);
-
-  const channel = { type: sdk.BPChannelType.WiFi, address: printer.address, modelName: printer.model };
-  await sdk.BrotherPrinterSDK.printPDF(fileUri, [1], channel, { labelSize, autoCut: true, cutAtEnd: true });
 }
 
 /**

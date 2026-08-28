@@ -337,10 +337,23 @@ varsaymak gereksiz bir bağımlılık eklettirecekti. `printLabelPdf` bu yüzden
 sayfayı** basıyor: kargo etiketi tek sayfadır, ama sağlayıcı bir gün gümrük belgesi eklerse
 ruloya art arda basılırdı.
 
-⚠ **4×6 FİZİKSEL PROVA ŞART.** Ölçülen kâğıt `DieCutW103H164` = 103×164 mm. 4×6 inç =
-101,6×152,4 mm. Sağlayıcının belge yanıtı `size: "a6"` diyor = 105×148 mm → **genişlikte ~2 mm
-taşma riski**. 23.5'in "iğne deneyi" emsali aynen geçerli: **gerçek kâğıtla basılıp gözle
-onaylanmadan bu iş bitti sayılmaz.**
+⚠ **ETİKET ÖLÇÜSÜ ÖLÇÜLDÜ (28.08) — 2 mm taşma GERÇEK.** Ücretsiz `sendcloud:letter` ile gerçek
+bir etiket alındı (`pnpm sendcloud:label:smoke`) ve PDF'in `MediaBox`'ı okundu:
+
+    etiket : 148,0 × 105,0 mm  (A6 YATAY)
+    kâğıt  : 103   × 164   mm  (DieCutW103H164)
+
+Yani etiket **90° döndürülmek zorunda** (SDK'da `imageRotation` var) ve döndürülünce **105 mm
+genişlik** istiyor — kâğıt 103 mm. **2 mm taşıyor**; yükseklikte 16 mm boşluk kalıyor. Sürücü
+büyük olasılıkla sığdırmak için ~%3 küçültecek, ki bu barkodu da küçültür — **basılan barkodun
+okutularak doğrulanması gerekiyor**, gözle bakmak yetmez.
+
+Alternatif kâğıt SDK'nın listesinde var: `DieCutW102H152` (4×6 inç = 101,6×152,4) — o daha da dar.
+Karar fiziksel: hangi rulo takılı ve barkod okunuyor mu. 23.5'in "iğne deneyi" emsali aynen
+geçerli — **gerçek kâğıtla basılıp barkodu okutulmadan bu iş bitti sayılmaz.**
+
+**Prova GERÇEK AKIŞTA yapılacak** (kullanıcı kararı 28.08): yapay bir prova düğmesi yerine
+sipariş → kutu → etiket zinciri kurulunca, o zincirin kendi basımıyla.
 
 **Basım hatası satın almayı GERİ ÇEKMEZ** (23.7 çizgisi): etiket alınmıştır ve parası ödenmiştir;
 cümle karta yazılır, "yeniden bas" eli bekler.
@@ -671,6 +684,41 @@ karar **verilmez**.
 ekranlar mobil şeride `docs/talep/` üzerinden geçer. Talep, sözleşme yazıldıktan SONRA açılır
 (boş sözleşmeye ekran yazılmaz) ve tek dosyada tüm kümeyi taşır (`CLAUDE §4`: aynı konudaki
 talepler kümelenir).
+
+---
+
+### 4.7 AÇIK — hangi iş hangi yazıcıya? (kullanıcı sorusu 28.08)
+
+**Ölçülen durum:** yazıcı ayarı `settings`in **depo kapsamında** ve **TEK** (`label_printer_address`
+· `_model` · `_label_size`; bugün yalnız STR dolu). Ama fiziksel gerçek çoğul:
+
+- **İki yazıcı, iki farklı rulo** (23.5 karar §1.6): QL-1110NWB 102 mm · QL-820NWB 62 mm.
+- **Ve artık iki etiket TÜRÜ var:** bizim kutu etiketimiz (QR) ve taşıyıcının etiketi (A6 yatay).
+
+Yani eksik olan eksen **"hangi cihaz"** değil **"hangi İŞ"**: bir depoda N yazıcı olabilir ve her
+BASIM TÜRÜ birine bakmalı.
+
+**Kullanıcının sezgisi (*"bu telefonda yaşamalı gibi"*) kısmen doğru ama önerim SUNUCU tarafı:**
+
+- *Tutarlılık:* aynı depodaki iki depocu farklı yazıcıya basarsa etiketler iki ayrı rafta çıkar —
+  hangi kâğıdın nerede olduğu telefonun kararı olmamalı.
+- *Yeni cihaz sıfırdan başlar:* cihaz-yerel ayarda her yeni telefon "hangi yazıcı" sorusunu
+  yeniden sorar ve yanlış cevap **sessizce yanlış ruloya** basar.
+- *Görünürlük:* bugün Depolar ekranı "bu depo neye basıyor"u gösteriyor; telefona taşınırsa
+  operasyon o soruyu hiçbir yerden cevaplayamaz.
+- *Yazıcı deponun malıdır*, telefonun değil — depo boyutu zaten doğru eksen.
+
+**Öneri:** `warehouse_printer(warehouse_id, purpose, address, model, label_size, is_active)`,
+`unique (warehouse_id, purpose)`. `purpose` = `box` · `shipping`. 23.7 tek yazıcı için *"yeni tablo
+YOK, `settings` yeter"* demişti ve o gün haklıydı; N yazıcı × M amaç tam da bir tablonun hak
+ettiği yer.
+
+**Cihaz ezmesi SONRA ve opsiyonel:** varsayılan depodan gelir, telefon isterse kendi seçimini
+yapar ve o seçim cihazda yaşar. Böylece kullanıcının sezgisi karşılanır ama varsayılan hiçbir
+zaman boş kalmaz.
+
+**Ne zaman:** basım akışı yazılırken (07.12 kalanı) — o turda zaten `labelPrinterFor` çağrısı
+değişecek; şimdi ayrı bir tur açmak aynı dosyaları iki kez elden geçirmek olurdu.
 
 ---
 
