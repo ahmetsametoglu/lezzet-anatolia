@@ -326,11 +326,16 @@ kapatılmasını ister). Bunun bedeli yok, çünkü:
 - Kargo kulvarının **devir okutması taşıyıcının takip barkodunu okutur**. `order_box.tracking_number`
   bizde duruyor, okutulan numara kutuya çözülür. İkinci bir etikete gerek yok.
 
-**PDF → PNG dönüşümü gerekiyor (yeni bağımlılık).** 23.7 biçim kararını gerekçesiyle vermişti:
-*"Brother SDK yalnız görüntü basıyor, PDF ara katmanı kimseye hizmet etmeyecekti"* → zincir PNG
-taşıyor (`@resvg/resvg-js`, SVG→PNG). Sağlayıcı ise `label_details.mime_type: application/pdf`
-veriyor ve `resvg` PDF çevirmez. İki yol: (a) `label_details`ten PNG istenebiliyorsa bağımlılık
-DÜŞER — **önce bu ölçülür**; (b) ölçülemezse pdfium/mupdf tabanlı bir rasterleştirici eklenir.
+**✅ PDF DÖNÜŞÜMÜ GEREKMİYOR — ölçüldü 28.08, varsayım YANLIŞTI.** Bu satır önce *"yeni bir
+bağımlılık gerekebilir"* diyordu. `expo-brother-printer-sdk@0.7.0` incelendi: dışa açtığı dört
+basım kapısından **ikisi PDF** (`printPDF`, `printPDFWithURL` → native `printPDFAtPath`), ayarları
+görüntü basımıyla AYNI (`labelSize`, `autoCut`, `cutAtEnd`) ve **sayfa seçimi** de var.
+
+23.7'nin *"Brother SDK yalnız görüntü basıyor"* cümlesi BİZİM kutu etiketimiz içindi — onu SVG
+üretiyoruz ve PNG'ye çevirmek doğal yoldu. Dışarıdan gelen PDF için geçerli değil; ölçmeden
+varsaymak gereksiz bir bağımlılık eklettirecekti. `printLabelPdf` bu yüzden `[1]` ile **yalnız ilk
+sayfayı** basıyor: kargo etiketi tek sayfadır, ama sağlayıcı bir gün gümrük belgesi eklerse
+ruloya art arda basılırdı.
 
 ⚠ **4×6 FİZİKSEL PROVA ŞART.** Ölçülen kâğıt `DieCutW103H164` = 103×164 mm. 4×6 inç =
 101,6×152,4 mm. Sağlayıcının belge yanıtı `size: "a6"` diyor = 105×148 mm → **genişlikte ~2 mm

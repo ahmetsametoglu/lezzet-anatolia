@@ -110,6 +110,17 @@ export const r2Keys = {
    * `delivery/proofs/{orderId}/` tek seferde temizlenebilir. Kanıt, siparişin kendisi gibi yasal
    * saklamaya tabidir — silme kararı buranın değil, saklama süresinin işidir.
    */
+  /**
+   * KARGO ETİKETİ (07.12) — sağlayıcıdan gelen PDF, **ÖZEL kovada**.
+   *
+   * Etiketin üstünde alıcının adı ve adresi yazıyor: herkese açık bir adreste durursa, kutu
+   * kimliğini bilen biri müşterinin adresini okur. `deliveryProof` ile aynı gerekçe.
+   *
+   * Anahtar KUTUYA çıpalı ve deterministik: bir kutunun bir etiketi vardır ve etiket yeniden
+   * alınırsa (iptal + yeniden duyuru) eskisinin üstüne yazılır — yetim obje kalmaz.
+   */
+  shippingLabel: (boxId: string): string => `shipping-labels/${sanitize(boxId)}.pdf`,
+
   deliveryProof: (orderId: string, photoToken: string, sourceFilename: string): string =>
     `delivery/proofs/${sanitize(orderId)}/${sanitize(photoToken)}.${extOf(sourceFilename)}`,
 } as const;

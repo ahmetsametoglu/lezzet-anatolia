@@ -210,3 +210,36 @@ Kanal açık ama üç ucu bağlanmadı:
 Etiket basımı için: sağlayıcıdan PNG istenemezse PDF→PNG çeviren bir bağımlılık eklemem gerekecek.
 Küçük bir paket ama yeni bir bağımlılık — onayını almadan eklemem.
 
+---
+
+## 28.08 sabah — etiket basımı çözüldü, bağımlılık gerekmiyor
+
+**Sorduğun soru doğru soruydu.** Ölçtüm: `expo-brother-printer-sdk` PDF'i **doğrudan basabiliyor**
+(`printPDF`, native tarafta `printPDFAtPath`), ayarları görüntü basımıyla aynı. Çeviriye ve yeni
+bir bağımlılığa gerek yok — bekleyen karar kapandı.
+
+23.7'deki *"Brother yalnız görüntü basıyor"* notu bizim kendi kutu etiketimiz içindi (onu SVG
+üretiyoruz); dışarıdan gelen PDF'e uygulanmıyormuş. Ölçmeden varsaysaydım gereksiz bir paket
+eklemiş olacaktım.
+
+**Yazılanlar:** etiket PDF'i özel kovaya kaydediliyor (`shipping-labels/{kutuId}.pdf` — üstünde
+alıcının adresi var, herkese açık kovada duramaz), anahtarı kutuya yazılıyor, ve telefon tarafına
+`printLabelPdf` eklendi (yalnız ilk sayfa: sağlayıcı bir gün gümrük belgesi eklerse ruloya art
+arda basılırdı).
+
+**Etiket saklanamazsa duyuru geri çekilmiyor** — gönderi alındı ve parası ödendi; satırı yazmamak
+ödenmiş bir etiketi kayıt dışı bırakmak olurdu. `labelKey` boş kalıyor, hangi kutu olduğu
+söyleniyor ve deftere yazılıyor.
+
+### ⚠ Kendi hatam: test gerçek depoya yazmıştı
+
+İlk yazımda duyuru kapısı doğrudan R2'yi çağırıyordu ve entegrasyon testi sahte bir PDF'i
+**gerçek özel kovaya** yükledi. Depoda R2'ye yazan başka test yok — yani sessizce bir kural
+çiğnenmişti: test yeşil geçiyor, kovada dosya kalıyordu.
+
+Düzeltildi: yükleyici artık enjekte ediliyor (`fetchImpl` deseninin aynısı), testler sahte
+yükleyiciyle koşuyor. Kovada kalan **6 sahte dosya silindi** (`dev/` önekindeydi, üretim kovası
+değil).
+
+Tam paket **3759/3759**.
+

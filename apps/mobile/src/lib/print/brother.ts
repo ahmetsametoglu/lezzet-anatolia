@@ -68,6 +68,36 @@ export async function printLabel(
 }
 
 /**
+ * **KARGO ETİKETİ BASIMI (07.12) — PDF DOĞRUDAN GİDİYOR, çevrilmiyor.**
+ *
+ * Sağlayıcı etiketi PDF veriyor ve `expo-brother-printer-sdk` PDF'i doğrudan basabiliyor
+ * (`printPDF` → native `printPDFAtPath`). Ölçüldü 28.08: SDK'nın dışa açtığı dört kapıdan ikisi
+ * PDF (`printPDF`, `printPDFWithURL`), ayarları görüntü basımıyla AYNI (`labelSize`, `autoCut`).
+ *
+ * Yani **PDF→PNG çeviren bir bağımlılığa gerek YOK.** 23.7'nin *"Brother SDK yalnız görüntü
+ * basıyor"* cümlesi BİZİM kutu etiketimiz içindi (SVG üretiyoruz, PNG'ye çevirmek doğal yol);
+ * dışarıdan gelen PDF için geçerli değil ve ölçmeden varsaymak gereksiz bir bağımlılık
+ * eklettirecekti.
+ *
+ * **YALNIZ İLK SAYFA** (`[1]`): kargo etiketi tek sayfadır, ama sağlayıcı bir gün gümrük belgesi
+ * eklerse onlar da aynı PDF'e girer ve etiket ruloya art arda basılırdı. Sayfa seçimi bunu
+ * baştan kapatıyor.
+ */
+export async function printLabelPdf(
+  fileUri: string,
+  printer: { address: string; model: string; labelSize: string },
+): Promise<void> {
+  const sdk = loadSdk();
+  if (!sdk) throw new Error('yazıcı modülü bu derlemede yok');
+
+  const labelSize = sdk.BPQLLabelSize[printer.labelSize as keyof typeof sdk.BPQLLabelSize];
+  if (typeof labelSize !== 'number') throw new Error(`bilinmeyen etiket boyu: ${printer.labelSize}`);
+
+  const channel = { type: sdk.BPChannelType.WiFi, address: printer.address, modelName: printer.model };
+  await sdk.BrotherPrinterSDK.printPDF(fileUri, [1], channel, { labelSize, autoCut: true, cutAtEnd: true });
+}
+
+/**
  * İğne deneyi baskısı: paketlenmiş test desenini verilen yazıcıya basar. Başarı = kâğıt çıktı;
  * dönüş, tutan etiket boyunun adıdır (23.7'nin `label_printer_*` ayarına ölçülmüş değer).
  * SDK reddi fırlar ve çağıran cümleyi AYNEN gösterir (yutulmaz — arıza deneyin verisidir).

@@ -11,6 +11,7 @@ import {
 } from '@lezzet/database';
 import type { OrderBox, ShippingBox } from '@lezzet/types';
 import type { ParcelSpec } from '@lezzet/sendcloud';
+import { getR2Private, r2Keys } from '@lezzet/storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { RecipientAddress, SenderAddress, ShippingRateProvider } from './port';
 
@@ -40,7 +41,13 @@ import type { RecipientAddress, SenderAddress, ShippingRateProvider } from './po
  */
 
 export type AnnounceOutcome =
-  | { status: 'ok'; shipmentId: string; parcels: ReadonlyArray<{ boxId: string; trackingNumber: string; labelPdf: Buffer | null }> }
+  | {
+      status: 'ok';
+      shipmentId: string;
+      parcels: ReadonlyArray<{ boxId: string; trackingNumber: string; labelKey: string | null }>;
+      /** Etiketi saklanamayan kutuların numarası — gönderi ALINDI, dosya kaydedilemedi. */
+      labelFailures: readonly number[];
+    }
   | { status: 'not_found' }
   | { status: 'not_shipping' }
   | { status: 'no_sealed_box' }
@@ -51,6 +58,16 @@ export type AnnounceOutcome =
   | { status: 'already_announced'; shipmentId: string }
   | { status: 'provider_error'; code: string; message: string };
 
+/**
+ * Etiket yükleyicisi — **enjekte edilebilir, ve bunun tek sebebi TESTİN DIŞ DEPOYA YAZMAMASI.**
+ *
+ * Yaşandı 28.08: ilk yazımda kapı doğrudan `getR2Private()` çağırıyordu ve entegrasyon testi
+ * sahte etiketi GERÇEK özel kovaya yükledi. Depoda o güne kadar hiçbir testin yazmadığı bir yerdi
+ * — yani ihlal sessizdi: test yeşil geçti, kovada bir dosya kaldı. `fetchImpl` enjeksiyonunun
+ * (`@lezzet/sendcloud`) aynı gerekçesi: dış dünyaya çıkan her kapı testte kapatılabilmeli.
+ */
+export type LabelUploader = (key: string, pdf: Buffer) => Promise<void>;
+
 export interface AnnounceInput {
   orderId: string;
   /** Depocunun çalıştığı depo — siparişinki değilse yazım HİÇ yapılmaz (CLAUDE §1). */
@@ -60,6 +77,12 @@ export interface AnnounceInput {
   servicePointId?: string;
   /** Müşteriye gösterilen teklif (cent) — maliyetin ilk kaydı; fatura sonradan düzeltebilir. */
   quotedCents?: number;
+}
+
+/** Üretimin yükleyicisi: özel kova. Yapılandırılmamışsa `null` — etiket saklanamaz, söylenir. */
+function defaultLabelUploader(): LabelUploader | null {
+  const r2 = getR2Private();
+  return r2 ? (key, pdf) => r2.uploadFile(key, pdf, 'application/pdf') : null;
 }
 
 /** Sağlayıcının senkron duyuru tavanı — çağrıdan ÖNCE denetlenir. */
@@ -82,6 +105,7 @@ export async function announceOrderShipment(
   db: SupabaseClient,
   provider: ShippingRateProvider,
   input: AnnounceInput,
+  uploadLabel: LabelUploader | null = defaultLabelUploader(),
 ): Promise<AnnounceOutcome> {
   const orders = new OrderService(db);
   const order = await orders.getById(input.orderId);
@@ -186,18 +210,45 @@ export async function announceOrderShipment(
   });
 
   const boxSvc = new OrderBoxService(db);
-  const sonuc: Array<{ boxId: string; trackingNumber: string; labelPdf: Buffer | null }> = [];
+  const sonuc: Array<{ boxId: string; trackingNumber: string; labelKey: string | null }> = [];
+  const labelFailures: number[] = [];
+
   for (const [i, box] of ordered.entries()) {
     const parcel = announced.parcels[i];
     if (!parcel) continue;
+
+    /*
+      ETİKET ÖZEL KOVAYA — ve yükleme HATASI duyuruyu GERİ ÇEKMEZ.
+
+      Gönderi alındı, parası ödendi: yüklemenin düşmesi yüzünden satırı yazmamak, ödenmiş bir
+      etiketi kayıt dışı bırakmak olurdu (öksüz koli'nin ta kendisi). Bunun yerine `label_key`
+      boş kalıyor ve hangi kutuda olduğu çağırana söyleniyor — ekran "etiketi yeniden al" der.
+      23.7'nin çizgisi: *"basım hatası kutu kapanışını geri çekmez"*.
+    */
+    let labelKey: string | null = null;
+    if (parcel.labelPdf) {
+      if (!uploadLabel) {
+        labelFailures.push(box.boxNo);
+      } else {
+        const key = r2Keys.shippingLabel(box.id);
+        try {
+          await uploadLabel(key, parcel.labelPdf);
+          labelKey = key;
+        } catch {
+          labelFailures.push(box.boxNo);
+        }
+      }
+    }
+
     await boxSvc.update({
       id: box.id,
       shipmentId: shipment.id,
       providerParcelRef: parcel.providerParcelRef,
       trackingNumber: parcel.trackingNumber,
       trackingUrl: parcel.trackingUrl,
+      labelKey,
     });
-    sonuc.push({ boxId: box.id, trackingNumber: parcel.trackingNumber, labelPdf: parcel.labelPdf });
+    sonuc.push({ boxId: box.id, trackingNumber: parcel.trackingNumber, labelKey });
   }
 
   // Defterin ilk satırı — gönderi düzeyi olay (`orderBoxId` null).
@@ -205,9 +256,12 @@ export async function announceOrderShipment(
     shipmentId: shipment.id,
     providerCode: 'ANNOUNCED',
     mappedStatus: 'created',
-    message: announced.warnings.length > 0 ? announced.warnings.join(' · ') : null,
+    message: [
+      ...announced.warnings,
+      ...(labelFailures.length > 0 ? [`etiket saklanamadı: kutu ${labelFailures.join(', ')}`] : []),
+    ].join(' · ') || null,
     occurredAt: new Date().toISOString(),
   });
 
-  return { status: 'ok', shipmentId: shipment.id, parcels: sonuc };
+  return { status: 'ok', shipmentId: shipment.id, parcels: sonuc, labelFailures };
 }

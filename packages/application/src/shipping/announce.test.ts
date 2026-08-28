@@ -45,6 +45,21 @@ let boxTypeId: string;
 const paris = { countryCode: 'FR', postalCode: '75001', city: 'Paris', name: 'Test Alıcı' };
 
 /**
+ * Sahte etiket yükleyicisi — **test GERÇEK ÖZEL KOVAYA YAZMAZ.**
+ *
+ * Yaşandı 28.08: kapı doğrudan `getR2Private()` çağırırken bu dosya sahte bir PDF'i gerçek kovaya
+ * yükledi ve kimse fark etmedi (test yeşil, kovada dosya). Depoda R2'ye yazan başka test YOK —
+ * yani sessizce bir kural çiğnenmişti. Yükleyici artık enjekte ediliyor.
+ */
+function fakeUploader(): { upload: (key: string, pdf: Buffer) => Promise<void>; keys: string[] } {
+  const keys: string[] = [];
+  return { keys, upload: async (key) => void keys.push(key) };
+}
+
+/** Yükleyicisi OLMAYAN kapı — "özel kova yapılandırılmamış" hâli. */
+const yukleyicisiz = null;
+
+/**
  * Sahte kimlik sayacı — **dosya düzeyinde**, sağlayıcı örneği düzeyinde DEĞİL.
  *
  * Hem `shipment.provider_shipment_id` hem `order_box.provider_parcel_ref` veritabanında
@@ -164,14 +179,14 @@ describe('announceOrderShipment — ön koşullar (sağlayıcıya eksik girdiyle
     const { orderId, itemId } = await siparisKur('route');
     await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
     const p = fakeProvider();
-    expect(await announceOrderShipment(db, p, girdi(orderId))).toMatchObject({ status: 'not_shipping' });
+    expect(await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload)).toMatchObject({ status: 'not_shipping' });
     expect(p.calls).toBe(0);
   });
 
   it('MÜHÜRSÜZ sipariş duyurulmaz — açık kutunun ağırlığı kesinleşmemiştir', async () => {
     const { orderId } = await siparisKur('shipping');
     const p = fakeProvider();
-    expect(await announceOrderShipment(db, p, girdi(orderId))).toMatchObject({ status: 'no_sealed_box' });
+    expect(await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload)).toMatchObject({ status: 'no_sealed_box' });
     expect(p.calls).toBe(0);
   });
 
@@ -179,7 +194,7 @@ describe('announceOrderShipment — ön koşullar (sağlayıcıya eksik girdiyle
     const { orderId, itemId } = await siparisKur('shipping');
     await kutuKur(orderId, { boxNo: 1, itemId, qty: 2, tipli: false });
     const p = fakeProvider();
-    expect(await announceOrderShipment(db, p, girdi(orderId))).toMatchObject({ status: 'box_type_missing', boxNos: [1] });
+    expect(await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload)).toMatchObject({ status: 'box_type_missing', boxNos: [1] });
     expect(p.calls).toBe(0);
   });
 
@@ -187,7 +202,7 @@ describe('announceOrderShipment — ön koşullar (sağlayıcıya eksik girdiyle
     const { orderId, itemId } = await siparisKur('shipping', olcusuzVariantId);
     await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
     const p = fakeProvider();
-    expect(await announceOrderShipment(db, p, girdi(orderId))).toMatchObject({ status: 'unmeasured', variantIds: [olcusuzVariantId] });
+    expect(await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload)).toMatchObject({ status: 'unmeasured', variantIds: [olcusuzVariantId] });
     expect(p.calls).toBe(0);
   });
 
@@ -195,7 +210,7 @@ describe('announceOrderShipment — ön koşullar (sağlayıcıya eksik girdiyle
     const { orderId, itemId } = await siparisKur('shipping');
     await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
     const p = fakeProvider();
-    const yabanci = await announceOrderShipment(db, p, { ...girdi(orderId), warehouseId: warehouseIds[0] === warehouseId ? crypto.randomUUID() : warehouseId });
+    const yabanci = await announceOrderShipment(db, p, { ...girdi(orderId), warehouseId: crypto.randomUUID() }, fakeUploader().upload);
     expect(yabanci).toMatchObject({ status: 'not_found' });
     expect(p.calls).toBe(0);
   });
@@ -207,7 +222,7 @@ describe('announceOrderShipment — duyuru', () => {
     const box1 = await kutuKur(orderId, { boxNo: 1, itemId, qty: 1 });
     const box2 = await kutuKur(orderId, { boxNo: 2, itemId, qty: 1 });
 
-    const sonuc = await announceOrderShipment(db, fakeProvider(), { ...girdi(orderId), quotedCents: 1190 });
+    const sonuc = await announceOrderShipment(db, fakeProvider(), { ...girdi(orderId), quotedCents: 1190 }, fakeUploader().upload);
     expect(sonuc.status).toBe('ok');
 
     const boxes = await new OrderBoxService(db).listByOrder(orderId);
@@ -247,19 +262,50 @@ describe('announceOrderShipment — duyuru', () => {
         };
       },
     };
-    await announceOrderShipment(db, p, girdi(orderId));
+    await announceOrderShipment(db, p, girdi(orderId), fakeUploader().upload);
     // 2 × 600 g içerik + 130 g dara
     expect(gonderilen).toBe(1330);
+  });
+
+  it('etiket saklanır ve anahtarı KUTUYA yazılır', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    const boxId = await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const yukleyici = fakeUploader();
+
+    const sonuc = await announceOrderShipment(db, fakeProvider(), girdi(orderId), yukleyici.upload);
+    expect(sonuc.status).toBe('ok');
+    // Anahtar KUTUYA çıpalı — bir kutunun bir etiketi vardır, yeniden alınırsa üstüne yazılır.
+    expect(yukleyici.keys).toEqual([`shipping-labels/${boxId}.pdf`]);
+    const [box] = (await new OrderBoxService(db).listByOrder(orderId)).filter((b) => b.id === boxId);
+    expect(box?.labelKey).toBe(`shipping-labels/${boxId}.pdf`);
+  });
+
+  it('ETİKET saklanamazsa duyuru GERİ ÇEKİLMEZ — ödenmiş etiket kayıt dışı bırakılmaz', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+
+    // Özel kova yapılandırılmamış hâli. Doğru davranış: gönderi YAZILIR, `labelKey` boş kalır
+    // ve hangi kutu olduğu SÖYLENİR (23.7 çizgisi: basım hatası kutu kapanışını geri çekmez).
+    const sonuc = await announceOrderShipment(db, fakeProvider(), girdi(orderId), yukleyicisiz);
+    expect(sonuc.status).toBe('ok');
+    expect(sonuc.status === 'ok' && sonuc.labelFailures).toEqual([1]);
+    expect(await new ShipmentService(db).listByOrder(orderId)).toHaveLength(1);
+
+    // Ve eksiklik DEFTERE yazılıyor — sessizce kaybolmuyor.
+    const [shipment] = await new ShipmentService(db).listByOrder(orderId);
+    const [event] = await new ShipmentEventService(db).listByShipment(shipment!.id);
+    expect(event?.message).toMatch(/etiket saklanamadı/);
   });
 
   it('İKİNCİ duyuru reddedilir — ikinci koli gerçek paradır', async () => {
     const { orderId, itemId } = await siparisKur('shipping');
     await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
     const p = fakeProvider();
-    const ilk = await announceOrderShipment(db, p, girdi(orderId));
+    const yukleyici = fakeUploader();
+    const ilk = await announceOrderShipment(db, p, girdi(orderId), yukleyici.upload);
     expect(ilk.status).toBe('ok');
 
-    const ikinci = await announceOrderShipment(db, p, girdi(orderId));
+    const ikinci = await announceOrderShipment(db, p, girdi(orderId), yukleyici.upload);
     expect(ikinci).toMatchObject({ status: 'already_announced' });
     // Sağlayıcıya İKİNCİ kez gidilmedi.
     expect(p.calls).toBe(1);
@@ -269,7 +315,7 @@ describe('announceOrderShipment — duyuru', () => {
     const { orderId, itemId } = await siparisKur('shipping');
     const boxId = await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
 
-    const sonuc = await announceOrderShipment(db, fakeProvider({ throws: true }), girdi(orderId));
+    const sonuc = await announceOrderShipment(db, fakeProvider({ throws: true }), girdi(orderId), fakeUploader().upload);
     expect(sonuc).toMatchObject({ status: 'provider_error', code: 'validation' });
 
     expect(await new ShipmentService(db).listByOrder(orderId)).toHaveLength(0);
