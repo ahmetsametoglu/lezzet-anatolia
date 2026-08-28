@@ -638,3 +638,9 @@ export {
 export type { StaffTicketDetail, TicketOrderRef, TicketQueueItem } from './ticket/ticket-types';
 export { readComplaint } from './management/complaint';
 export { askShortfall, countOrderExceptions, listOrderExceptions } from './management/exceptions';
+
+// ── Kargo tarifesi (07.12) ──────────────────────────────────────────────────
+export { quoteShipping, type ShippingQuoteInput, type ShippingQuoteOutcome } from './shipping/quote';
+export { sendcloudProvider, shippingProviderConfigured } from './shipping/provider';
+export type { RecipientAddress, SenderAddress, ShippingRateProvider } from './shipping/port';
+

@@ -545,6 +545,9 @@ importers:
       '@lezzet/observability':
         specifier: workspace:*
         version: link:../observability
+      '@lezzet/sendcloud':
+        specifier: workspace:*
+        version: link:../sendcloud
       '@lezzet/storage':
         specifier: workspace:*
         version: link:../storage

@@ -22,6 +22,7 @@
     "@lezzet/i18n": "workspace:*",
     "@lezzet/notify": "workspace:*",
     "@lezzet/observability": "workspace:*",
+    "@lezzet/sendcloud": "workspace:*",
     "@lezzet/storage": "workspace:*",
     "@lezzet/types": "workspace:*",
     "@supabase/supabase-js": "^2.48.1",
