@@ -92,6 +92,22 @@ function paymentKey(order: OrderDetail): keyof Messages['detail']['pay'] {
   return 'door';
 }
 
+/**
+ * **TAŞIYICI ADI** (07.12) — iki kaynak, tek arama.
+ *
+ * Sağlayıcıdan gelen ad özel isimdir ("Chronopost") ve çeviri istemez; elle girilen taşıyıcı ise
+ * bir anahtardır ve ister (`other` → "Kargo firması"). Tanıdığımız anahtar çevrilir, tanımadığımız
+ * OLDUĞU GİBİ basılır — webin `carrierLabel` kararının aynısı.
+ *
+ * Eski `carrier` enum'una geri düşmenin sebebi geçiş: sözleşme onu geriye uyum için hâlâ taşıyor
+ * ve `carrierName` boş gelen bir gönderi (henüz duyurulmamış, elle girilmiş) hâlâ mümkün.
+ */
+function carrierLabel(t: Messages, shipment: NonNullable<OrderDetail['shipment']>): string {
+  const known = t.detail.carrier as Record<string, string | undefined>;
+  if (shipment.carrierName) return known[shipment.carrierName] ?? shipment.carrierName;
+  return t.detail.carrier[shipment.carrier];
+}
+
 interface OrderDetailScreenProps {
   reference: string;
   /** Testlerin ve demo hâllerinin kapısı; verilmezse uygulamanın dili (`useAppLocale`). */
@@ -207,15 +223,39 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
     { key: 'payment', label: t.detail.payment, value: t.detail.pay[paymentKey(detail)] },
     ...(detail.shipment
       ? [
-          { key: 'carrier', label: t.detail.carrierLabel, value: t.detail.carrier[detail.shipment.carrier] },
-          ...(detail.shipment.trackingNumber
-            ? [{ key: 'tracking', label: t.detail.trackingNumber, value: detail.shipment.trackingNumber }]
-            : []),
+          { key: 'carrier', label: t.detail.carrierLabel, value: carrierLabel(t, detail.shipment) },
+          /* KOLİ BAŞINA TAKİP (07.12): çok kolili gönderide her kutunun AYRI numarası var.
+             Eskiden tek numara basılıyordu ve üç kutulu bir siparişin ikisi ekranda HİÇ
+             görünmüyordu. Sıra (`2/3`) yalnız birden çok kutuda yazılır — `1/1` olmayan bir
+             bölünmeyi varmış gibi gösterirdi (webin aynı kararı). */
+          ...detail.shipment.parcels.map((parcel) => ({
+            key: `tracking-${parcel.trackingNumber}`,
+            label:
+              parcel.ordinal === null
+                ? t.detail.trackingNumber
+                : `${t.detail.trackingNumber} ${parcel.ordinal}`,
+            value: parcel.trackingNumber,
+          })),
         ]
       : []),
   ];
 
-  const trackingUrl = detail.shipment?.trackingUrl ?? null;
+  /*
+    TAKİP BAĞLANTILARI — adresi olan her koli için bir eylem satırı.
+
+    Tek kutuda görüntü BİREBİR eskisi gibi kalıyor (tek "Kargoyu takip et ↗" düğmesi); çok kutuda
+    her kutu kendi satırını alıyor ve etiketinde sırası yazıyor. Web aynı kararı verdi ve orada
+    numaralar satır içi bağlantı oldu — burada `TextAction` satırı, çünkü mobil özet paneli
+    dokunulabilir satır taşımıyor ve onu dokunulabilir yapmak paylaşılan komponenti bu ekranın
+    ihtiyacına göre değiştirmek olurdu (CLAUDE §1).
+
+    Adresi olmayan koli satır AÇMAZ (`other` taşıyıcıda `trackingUrl` null gelir): tıklanınca
+    hiçbir yere gitmeyen bir düğme, verilmiş bir söz olmazdı. Numarası yukarıdaki özette yine
+    görünüyor.
+  */
+  const trackable = (detail.shipment?.parcels ?? []).filter(
+    (parcel): parcel is typeof parcel & { trackingUrl: string } => parcel.trackingUrl !== null,
+  );
 
   return (
     <View style={styles.screen} testID="order-detail">
@@ -331,19 +371,21 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
           />
           ))(detail.feedback)}
 
-        {/* Takip bağı YALNIZ adres bilindiğinde: `other` taşıyıcıda ve boş numarada sözleşme
-            `trackingUrl: null` gönderir ve tıklandığında hiçbir yere gitmeyen bir düğme, verilmiş
-            bir söz olmazdı. Numara yukarıdaki özette yine görünüyor. */}
-        {trackingUrl === null ? null : (
-          <View style={styles.actionRow}>
+        {/* Künyesi yukarıda (`trackable`): tek kutuda tek düğme, çok kutuda kutu başına satır. */}
+        {trackable.map((parcel) => (
+          <View style={styles.actionRow} key={parcel.trackingNumber}>
             <TextAction
-              label={t.detail.trackingCta}
-              onPress={() => void Linking.openURL(trackingUrl)}
+              label={
+                parcel.ordinal === null
+                  ? t.detail.trackingCta
+                  : fill(t.detail.trackingCtaBox, { ordinal: parcel.ordinal })
+              }
+              onPress={() => void Linking.openURL(parcel.trackingUrl)}
               tone="olive"
-              testID="order-tracking"
+              testID={parcel.ordinal === null ? 'order-tracking' : `order-tracking-${parcel.ordinal.replace('/', '-')}`}
             />
           </View>
-        )}
+        ))}
 
         <View style={styles.actionRow}>
           <TextAction

@@ -490,3 +490,93 @@ onları hayalet diye sayıyordu (2 adet). Önek artık gerçekten okunuyor; tur 
 Geriye kalan bulgu gerçek: **sağlayıcıda 1 öksüz gönderi var** — D aşamasında canlı denerken
 açtığım ücretsiz mektup etiketi. Veritabanı o günden beri birkaç kez tazelendiği için bizdeki satırı
 kalmadı. Yani nöbet ilk gerçek koşusunda gerçek bir öksüzü buldu; el kitabı tam bu hâl için yazılı.
+
+
+---
+
+# 29.08 — günlük mobil şeride devroldu
+
+**Neden devir:** kargo kanalının kalan işi native yüzeylerde (`kargo-kanali-tasarimi.md §8.5–8.6`)
+ve kullanıcı 29.08'de bu özellik için alan sınırını kaldırdı: *"sadece bu özellik için kendi alanın
+dışına çıkabilirsin, projenin tamamına müdahale edebilirsin."* Günlük aynı defterde sürüyor —
+ikinci bir defter açmak zincirin hikâyesini ikiye bölerdi.
+
+**Devraldığımda ne buldum (ölçüldü, iddia edilmedi):**
+
+| Halka | Durum |
+| --- | --- |
+| Ölçü · kutu kataloğu · koli planı · teklif · webhook · nöbet · takip kaynağı | ✅ çalışıyor |
+| **Etiket satın alma** (`announceOrderShipment`) | ⚠ motor var, **üretim çağıranı YOK** |
+| Etiket basımı (PDF) | ⚠ SDK'da kapı var, `printLabelPdf` yazılmadı |
+| İş başına yazıcı seçimi | ❌ tek `settings` satırı, amaç ayrımı yok |
+| Devir okutması | ❌ yok |
+| Kargoda kutusuz onay reddi | ❌ karar var, kod yok |
+| Kapanış (`completed`) | ❌ `closeOrder`ın hiç çağıranı yok — iki kulvarda da |
+
+**Yani zincir tam ortasında kopuk:** sipariş hazırlanıyor, kutulanıyor, mühürleniyor — ve orada
+duruyor. Sonrasındaki her şey bugün yalnız beslemeyle görülebiliyor.
+
+## Kullanıcının 28–29.08'de verdiği kararlar (kanalın modelini değiştiriyor)
+
+1. **Eşik ALTI müşteri seçer** — ve seçim iki kademeli: *teslimat noktası* ↔ *adrese teslim*.
+2. **Eşik ÜSTÜ seçim sorulmaz** ve **ücretsiz kargo EVE gider**, noktaya değil.
+3. **Sınırı geçen sipariş EVE gider** — yurt dışında nokta kademesi hiç çizilmez.
+4. **Elle taşıyıcı seçimi yok:** ön tanımlı (onaylı) taşıyıcılar ∩ belirlenen süre ∩ (çok koliyse)
+   multicollo → **en ucuzu otomatik**. Hiçbiri kalmazsa ham liste **depocuya** gösterilir.
+5. **Yazıcı: envanter deposunda, seçim cihazın local storage'ında.**
+6. **Kargoda kutusuz onay reddedilir.**
+
+Bunların kod karşılığı ve ölçüm dayanağı `kargo-secim-ve-fiyat-raporu.md`'de.
+
+## Ölçerken bulduğum arıza — mektup seçeneği otomatik seçiliyor
+
+`quoteShipping` fiyatı **`null`** olanı süzüyor ama **sıfır** olanı süzmüyor (`quote.ts:61`).
+Sağlayıcı her sorguya `sendcloud:letter` · **0,00 €** döndürüyor, liste ucuzdan sıralı ve
+`checkout-snapshot.ts:342` seçim yoksa `options[0]`'ı alıyor — yani **daima mektup.** Her kargo
+siparişinde ücret 0,00 € hesaplanıyor ve 15 kg'lık koli mektup tarifesiyle işaretlenmiş oluyor.
+
+Ölçüm (FR→Paris, 5 kg): ilk satır `0.00 € sendcloud:letter`, ikinci satır `8.50 €
+mondial_relay:home_domestic`. Sipariş başına kaçan **8,50 €**.
+
+**Yaması "sıfırı at" DEĞİL** — yarın gerçek bir kampanya tarifesi de düşerdi. Doğrusu kullanıcının
+istediği onaylı taşıyıcı listesi (Faz 2). Talep dosyası açıldı.
+
+## Faz planı — zincirin koptuğu yerden başlıyorum
+
+**Faz 1 (zinciri kapat):** çok kutulu takip · etiket satın alma ucu · PDF basımı + iş başına
+yazıcı · devir okutması · kargoda kutusuz onay reddi
+**Faz 2:** onaylı liste + otomatik seçim + iki kademe + depocu fallback
+**Faz 3:** teslimat noktası (arama ucu · `service_point` adres türü · harita)
+**Faz 4:** kapanış (`completed`) + iki yeni bildirim türü
+
+---
+
+## Faz 1.1 — mobil çok kutulu takip ✅
+
+**Ne vardı:** native sipariş detayı eski üç alanı okuyordu (`carrier` · `trackingNumber` ·
+`trackingUrl`). Üçü de İLK koliyi anlatıyor ve `carrier` sağlayıcının adını enum'a sıkıştırdığı
+için çoğu gönderide `other` diyor. Yani üç kutulu bir siparişte ekran **yanlış taşıyıcı adı + üç
+numaradan biri** gösteriyordu.
+
+**Ne yaptım:** ekran `carrierName` + `parcels`a geçti.
+
+- **Taşıyıcı adı iki kaynaklı, tek arama:** sağlayıcıdan gelen ad özel isimdir ve çeviri istemez;
+  elle girilen taşıyıcı bir anahtardır ve ister. Tanıdığımız anahtar çevrilir, tanımadığımız olduğu
+  gibi basılır — webin `carrierLabel` kararının aynısı. `carrierName` boşsa eski enum'a düşülüyor;
+  elle girilmiş gönderi hâlâ meşru bir hâl.
+- **Özet paneli koli başına satır yazıyor**, sıra (`2/3`) yalnız birden çok kutuda.
+- **Takip bağlantısı:** tek kutuda görüntü **birebir eskisi gibi** (tek "Kargoyu takip et ↗"); çok
+  kutuda kutu başına bir `TextAction` satırı, etiketinde sırası yazılı.
+
+**Bir tasarım kararı, gerekçesiyle:** web numaraları satır içi bağlantı yaptı; mobilde özet paneli
+(`SummaryPanel`) dokunulabilir satır taşımıyor. Onu dokunulabilir yapmak, paylaşılan bir kit
+komponentini tek ekranın ihtiyacına göre genişletmek olurdu (`CLAUDE §1`) — bunun yerine ekranın
+zaten kullandığı eylem satırı deseni çoğaltıldı.
+
+**Doğrulama:** 4 yeni ekran testi (tek kutu değişmedi · çok kutuda her koli kendi satırı ve
+bağlantısı · gerçek taşıyıcı adı · adresi olmayan koli düğme açmaz ama numarası durur).
+Mobil jest **891/891**, `typecheck` · `lint` temiz.
+
+**Sözleşme borcu kapandı:** `not-mobil-cok-kutulu-kargo-takibi.md` notunun istediği geçiş bitti.
+Eski üçlü (`carrier` · `trackingNumber` · `trackingUrl`) artık native tarafından **okunmuyor** —
+sözleşmeden silinebilir.

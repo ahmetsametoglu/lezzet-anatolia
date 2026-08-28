@@ -6829,3 +6829,32 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Ölçülen, bize ait olmayan bir arıza:** kök `pnpm typecheck`in `scripts` adımı **bu turdan
   ÖNCE de kırmızıydı** — `scripts/seed/orders.ts:899` `'kutuTipi' is possibly null` (HEAD sürümüyle
   yeniden üretildi). Kargo şeridinin dosyası; dokunulmadı, bildirildi.
+
+- [x] (21.128) **NATIVE SİPARİŞ DETAYI ÇOK KUTULU GÖNDERİYİ DOĞRU ANLATIYOR** (kargo kanalı Faz 1.1;
+  açık nottu: `docs/talep/not-mobil-cok-kutulu-kargo-takibi.md`)
+  `touches:` `apps/mobile/src/screens/orders/{order-detail-screen.tsx,order-detail-screen.test.tsx,messages.json}`
+
+  **Durum (29.08).** Sözleşme 28.08'de genişledi (`carrierName` + `parcels`), native ekran ise eski
+  üç alanı okumaya devam ediyordu. Üçü de **İLK KOLİYİ** anlatıyor ve `carrier` sağlayıcının adını
+  enum'a sıkıştırdığı için çoğu gönderide `other` diyor: üç kutulu bir siparişte ekran **yanlış
+  taşıyıcı adı + üç numaradan biri** gösteriyordu.
+
+  **Taşıyıcı adı iki kaynaklı, tek arama** (`carrierLabel`): sağlayıcıdan gelen ad özel isimdir,
+  çeviri istemez; elle girilen taşıyıcı anahtardır, ister. Tanıdığımız anahtar çevrilir,
+  tanımadığımız olduğu gibi basılır — webin aynı kararı. `carrierName` boşsa eski enum'a düşülür;
+  elle girilmiş gönderi hâlâ meşru bir hâl ve o yol silinmedi.
+
+  **Özet paneli koli başına satır yazıyor**; sıra (`2/3`) yalnız birden çok kutuda — `1/1` yazmak
+  olmayan bir bölünmeyi varmış gibi göstermek olurdu.
+
+  **Takip bağlantısı:** tek kutuda görüntü BİREBİR eskisi gibi (tek "Kargoyu takip et ↗"); çok
+  kutuda kutu başına bir `TextAction`, etiketinde sırası yazılı. Web numaraları satır içi bağlantı
+  yaptı — mobilde `SummaryPanel` dokunulabilir satır taşımıyor ve onu taşır hâle getirmek
+  paylaşılan bir kit komponentini tek ekranın ihtiyacına göre genişletmek olurdu (`CLAUDE §1`).
+
+  **Doğrulama.** 4 ekran testi: tek kutu değişmedi · çok kutuda her koli kendi satırı ve bağlantısı
+  · gerçek taşıyıcı adı yazılıyor (`carrier: 'other'` gelmesine rağmen) · adresi olmayan koli düğme
+  açmaz ama numarası özette durur. Mobil jest **891/891**, `typecheck` · `lint` temiz.
+
+  **Sözleşme borcu:** eski üçlü artık native tarafından okunmuyor; kargo şeridi onları sözleşmeden
+  silebilir (nota cevap yazıldı).

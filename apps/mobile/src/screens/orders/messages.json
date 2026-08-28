@@ -64,6 +64,7 @@
       "carrierLabel": "Kargo",
       "trackingNumber": "Takip no",
       "trackingCta": "Kargoyu takip et ↗",
+      "trackingCtaBox": "Kutu {ordinal} · takip et ↗",
       "carrier": {
         "colissimo": "Colissimo",
         "chronopost": "Chronopost",
@@ -161,6 +162,7 @@
       "carrierLabel": "Transporteur",
       "trackingNumber": "N° de suivi",
       "trackingCta": "Suivre mon colis ↗",
+      "trackingCtaBox": "Colis {ordinal} · suivre ↗",
       "carrier": {
         "colissimo": "Colissimo",
         "chronopost": "Chronopost",
@@ -258,6 +260,7 @@
       "carrierLabel": "Versand",
       "trackingNumber": "Sendungsnummer",
       "trackingCta": "Sendung verfolgen ↗",
+      "trackingCtaBox": "Paket {ordinal} · verfolgen ↗",
       "carrier": {
         "colissimo": "Colissimo",
         "chronopost": "Chronopost",
