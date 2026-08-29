@@ -52,12 +52,23 @@ describe('parseWebhookIdentity', () => {
     const id = parseWebhookIdentity(
       JSON.stringify({ action: 'parcel_status_changed', timestamp: 1735689600, parcel: { id: 123, tracking_number: 'TR1', status: { code: 'DELIVERED' } } }),
     );
-    expect(id).toEqual({ parcelId: '123', trackingNumber: 'TR1', action: 'parcel_status_changed', eventId: '123:1735689600', reportedCode: 'DELIVERED' });
+    expect(id).toEqual({ parcelId: '123', trackingNumber: 'TR1', action: 'parcel_status_changed', eventId: '123:DELIVERED:1735689600', reportedCode: 'DELIVERED' });
   });
 
   it('v3 zarfı ve çıplak koli nesnesi de okunur — şema belgeli değil, tolerans bilinçli', () => {
     expect(parseWebhookIdentity(JSON.stringify({ timestamp: 9, data: { id: 'p1' } }))?.parcelId).toBe('p1');
     expect(parseWebhookIdentity(JSON.stringify({ timestamp: 9, id: 'p2' }))?.parcelId).toBe('p2');
+  });
+
+  /**
+   * **AYNI SANİYEYE DÜŞEN İKİ DURUM DEĞİŞİMİ AYRI OLAYDIR** — referans projeden alınan ders.
+   * Anahtar yalnız koli+damga olsaydı ikincisi "tekrar" sayılıp sessizce düşerdi; kaçan şey bir
+   * kayıt değil bir DURUM olurdu ve sipariş yanlış yerde takılı kalırdı.
+   */
+  it('aynı damgada FARKLI durum ayrı anahtar üretir — ikincisi tekrar sayılmaz', () => {
+    const a = parseWebhookIdentity(JSON.stringify({ timestamp: 5, parcel: { id: 7, status: { code: 'SORTED' } } }))!;
+    const b = parseWebhookIdentity(JSON.stringify({ timestamp: 5, parcel: { id: 7, status: { code: 'DELIVERED' } } }))!;
+    expect(a.eventId).not.toBe(b.eventId);
   });
 
   it('aynı olay aynı anahtarı, farklı damga farklı anahtarı üretir', () => {

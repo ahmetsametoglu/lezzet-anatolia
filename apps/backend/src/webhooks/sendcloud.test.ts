@@ -174,7 +174,9 @@ describe('sendcloud webhook — işleme', () => {
     expect(res.status).toBe(500);
 
     // Damga ATILMAZ: olay işlenmemiş kalır, yeniden denendiğinde işlenecek.
-    const { data } = await db.from('webhook_event').select('processed_at, error').eq('provider', 'sendcloud').eq('event_id', `bizde-yok-${stamp}:${stamp}`).single();
+    // Anahtar koli + BİLDİRİLEN DURUM + damga (29.08): aynı saniyeye düşen iki ayrı durum
+    // değişimi aynı anahtarı üretmesin — ikincisi "tekrar" sayılıp sessizce düşerdi.
+    const { data } = await db.from('webhook_event').select('processed_at, error').eq('provider', 'sendcloud').eq('event_id', `bizde-yok-${stamp}:DELIVERED:${stamp}`).single();
     expect(data?.processed_at).toBeNull();
     expect(data?.error).toMatch(/öksüz/);
   });

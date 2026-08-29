@@ -67,9 +67,18 @@ export interface WebhookIdentity {
   action: string | null;
   /**
    * İDEMPOTENS ANAHTARI. Sendcloud olay kimliği GÖNDERMİYOR; doküman yalnız her webhook'ta bir
-   * `timestamp` olduğunu söylüyor. Anahtar bu yüzden **koli + damga**dan kuruluyor: aynı olayın
-   * tekrarı aynı anahtarı üretir, farklı bir durum değişimi farklı damga taşır. Damga yoksa ham
-   * gövdenin özeti kullanılır — tahmin değil, ölçülebilir bir kimlik.
+   * `timestamp` olduğunu söylüyor. Anahtar bu yüzden **koli + damga + BİLDİRİLEN DURUM**dan
+   * kuruluyor.
+   *
+   * **Durumun anahtara girmesi referans projeden alınmış bir ders** (`sc_<id>_<status>_<ts>`) ve
+   * gerekçesi ince: damga saniye çözünürlüğündeyse aynı saniyeye düşen İKİ ayrı durum değişimi
+   * aynı anahtarı üretir — ikincisi "tekrar" sayılır ve **sessizce düşer**. Kaçan şey bir kayıt
+   * değil bir DURUM olurdu; sipariş yanlış yerde takılı kalırdı.
+   *
+   * Bu, gelen durumu KULLANMAK değildir (Option B hâlâ geçerli: gerçek durum REST'ten okunuyor) —
+   * yalnız anahtarı ayırt edici kılmaktır. Kod bir değere değil, bir FARKA tanıklık ediyor.
+   *
+   * Damga yoksa ham gövdenin özeti kullanılır — tahmin değil, ölçülebilir bir kimlik.
    */
   eventId: string;
   /** Sağlayıcının söylediği durum — **KULLANILMAZ**, yalnız deftere not düşülür (Option B). */
@@ -97,11 +106,12 @@ export function parseWebhookIdentity(rawBody: string): WebhookIdentity | null {
 
   const stamp = e.timestamp == null ? createHmac('sha256', 'sendcloud-event').update(rawBody, 'utf8').digest('hex').slice(0, 32) : String(e.timestamp);
 
+  const reportedCode = parcel.status?.code?.trim() || null;
   return {
     parcelId,
     trackingNumber: parcel.tracking_number?.trim() || null,
     action: e.action?.trim() || null,
-    eventId: `${parcelId}:${stamp}`,
-    reportedCode: parcel.status?.code?.trim() || null,
+    eventId: `${parcelId}:${reportedCode ?? '-'}:${stamp}`,
+    reportedCode,
   };
 }

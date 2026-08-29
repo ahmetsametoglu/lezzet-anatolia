@@ -80,9 +80,32 @@ export async function handleSendcloudWebhook(c: Context<AppEnv>, provider: Shipp
 
   const identity = parseWebhookIdentity(raw);
   if (!identity) {
-    // Entegrasyon olayları (bağlandı/silindi) aynı adrese düşüyor ve koli kimliği taşımıyorlar.
-    // Bunlar bir arıza değil; kabul edilir ve işlenmez.
-    logger.info({ context: 'webhook/sendcloud' }, 'koli kimliği taşımayan olay — işlenmedi');
+    /*
+      Entegrasyon olayları (bağlandı/silindi) aynı adrese düşüyor ve koli kimliği taşımıyorlar.
+      Bunlar bir arıza değil; kabul edilir ve işlenmez.
+
+      **GÖVDENİN ŞEKLİ YAZILIR, İÇERİĞİ YAZILMAZ** — ve bu ayrım burada hem kural hem ihtiyaç.
+      Kural: taşıyıcı yükü alıcı adı/adresi/telefonu taşıyabilir (`CLAUDE §1` kırmızı çizgi).
+      İhtiyaç: v3 dokümanı webhook gövdesinin şemasını VERMİYOR, yani tanımadığımız bir zarf
+      geldiğinde onu ancak buradan öğrenebiliriz. Anahtar adları içerik değildir — `parcel`,
+      `action`, `timestamp` bir kimlik ya da adres taşımaz, yalnız zarfın biçimini söyler.
+
+      Ölçülerek gerekti (29.08): sağlayıcı beş olay gönderdi, imza TUTTU, ama ayrıştırıcı hiçbirinde
+      koli kimliği bulamadı ve hepsi sessizce "ignored" oldu. Şekli görmeden hangi alanın nerede
+      olduğunu tahmin etmek gerekirdi.
+    */
+    let sekil: string[] = [];
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        sekil = Object.entries(parsed as Record<string, unknown>).map(([k, v]) =>
+          v && typeof v === 'object' && !Array.isArray(v) ? `${k}{${Object.keys(v as object).join(',')}}` : k,
+        );
+      }
+    } catch {
+      sekil = ['<json değil>'];
+    }
+    logger.warn({ context: 'webhook/sendcloud', shape: sekil, bytes: raw.length }, 'koli kimliği ÇIKARILAMADI — olay işlenmedi');
     return c.json({ ignored: true }, 200);
   }
 
