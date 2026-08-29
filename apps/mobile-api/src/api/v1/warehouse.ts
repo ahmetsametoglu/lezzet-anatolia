@@ -1,6 +1,6 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { serviceDb, ShippingBoxService, WarehouseService } from '@lezzet/database';
+import { OrderBoxService, serviceDb, ShippingBoxService, WarehouseService } from '@lezzet/database';
 import {
   adjustFulfillment,
   announceOrderShipment,
@@ -57,10 +57,12 @@ import {
   SealBoxRequestSchema,
   SealBoxResponseSchema,
   ShippingBoxesResponseSchema,
+  ShippingLabelResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
 } from '@lezzet/types';
+import { privateReadUrl } from '@lezzet/storage';
 import { fail, ok } from '../../lib/respond';
 import { IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
 import { renderLabelPng } from '../../lib/label-png';
@@ -417,6 +419,36 @@ warehouse.post('/orders/:orderId/announce', async (c) => {
 
   const body: z.input<typeof AnnounceShipmentResponseSchema> = outcome;
   return ok(c, AnnounceShipmentResponseSchema.parse(body));
+});
+
+/**
+ * **TAŞIYICININ ETİKETİ** (07.12) — duyuruda satın alınan PDF'in imzalı adresi.
+ *
+ * Kutu etiketinden (`/label.png`) AYRI bir uç ve ayrı bir kâğıt: kargo kulvarında bizim QR'lı
+ * etiketimiz basılmaz (tasarım §4.6 — iki barkod taşıyıcının tarayıcısını şaşırtır), taşıyıcının
+ * A6 etiketi basılır.
+ *
+ * Dosya AKITILMIYOR, imzalı adres dönüyor: PDF özel kovada ve telefon onu doğrudan indiriyor.
+ * Sunucudan geçirmek her basımda VPS'i aradaki boru yapardı.
+ *
+ * `not_announced` ile `no_label` AYRI: birincisi "henüz satın alınmadı" (çare: duyur), ikincisi
+ * "satın alındı ama dosya saklanamadı" (çare: gönderiyi iptal edip yeniden duyur — ve o bir
+ * OPERATÖR kararıdır, çünkü ikinci duyuru gerçek para).
+ */
+warehouse.get('/boxes/:boxId/shipping-label', async (c) => {
+  const boxId = UuidSchema.safeParse(c.req.param('boxId'));
+  if (!boxId.success) return fail(c, 'invalid_box_id', 400);
+
+  const box = await new OrderBoxService(serviceDb()).getById(boxId.data);
+  // Kapsam dışı kutu "yok" sayılır — başka deponun kutusunun varlığı bile söylenmez.
+  if (!box || box.warehouseId !== c.get('warehouseId')) {
+    return ok(c, ShippingLabelResponseSchema.parse({ status: 'not_found' }));
+  }
+  if (box.shipmentId === null) return ok(c, ShippingLabelResponseSchema.parse({ status: 'not_announced' }));
+
+  const url = await privateReadUrl(box.labelKey);
+  const body: z.input<typeof ShippingLabelResponseSchema> = url === null ? { status: 'no_label' } : { status: 'ok', url };
+  return ok(c, ShippingLabelResponseSchema.parse(body));
 });
 
 /**

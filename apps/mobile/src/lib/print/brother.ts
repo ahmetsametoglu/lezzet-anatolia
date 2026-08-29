@@ -54,9 +54,42 @@ export async function findNetworkPrinters(): Promise<PrinterChannel[]> {
   GEREKMİYOR** — aşağıdaki `printLabel`in PNG olması BİZİM etiketimizin SVG'den gelmesindendir,
   bir SDK sınırı değil.
 
-  Kapı buraya ÇAĞIRANIYLA BİRLİKTE yazılacak (07.12 kalanı): çağıransız bir `printLabelPdf`
-  `knip`e ölü kod olarak düşüyor ve haklı — bugün kimse basmıyor.
+  Kapı 29.08'de çağıranıyla birlikte yazıldı (aşağıda) — hazırlık ekranı gönderiyi duyurup
+  etiketi bastırıyor.
 */
+
+/**
+ * **Taşıyıcının kargo etiketi** (07.12) — sağlayıcının PDF'ini ayarlı yazıcıya basar.
+ *
+ * ── NEDEN AYRI KAPI ─────────────────────────────────────────────────────────
+ * `printLabel` PNG basar ve bu bizim kutu etiketimizin SVG'den gelmesindendir. Kargo etiketi
+ * DIŞARIDAN geliyor ve PDF; SDK'nın `printPDF` kapısı ayarları görüntü basımıyla aynı tutuyor,
+ * yani araya bir PDF→PNG çevirici bağımlılık koymaya gerek yok (ölçüldü 28.08 — önceki varsayım
+ * yanlıştı).
+ *
+ * ── YALNIZ İLK SAYFA ────────────────────────────────────────────────────────
+ * Kargo etiketi tek sayfadır. Sağlayıcı bir gün gümrük belgesi eklerse sayfa sınırı olmadan
+ * hepsi ruloya art arda basılırdı — `pages: [1]` bunu baştan kapatıyor.
+ *
+ * ⚠ **Kâğıt uyuşmazlığı GERÇEK ve ölçülü** (tasarım §4.6): alınan gerçek etiket A6 yatay
+ * (148×105 mm), elimizdeki rulo 103×164 mm — döndürülünce 2 mm taşıyor. Sürücü küçültürse
+ * barkod da küçülür, yani **basılan barkod okutularak doğrulanmadan bu iş bitmiş sayılmaz.**
+ * Kod bunu çözemez; kâğıt kararı fizikseldir.
+ */
+export async function printLabelPdf(
+  fileUri: string,
+  printer: { address: string; model: string; labelSize: string },
+): Promise<void> {
+  const sdk = loadSdk();
+  if (!sdk) throw new Error('yazıcı modülü bu derlemede yok');
+
+  const labelSize = sdk.BPQLLabelSize[printer.labelSize as keyof typeof sdk.BPQLLabelSize];
+  if (typeof labelSize !== 'number') throw new Error(`bilinmeyen etiket boyu: ${printer.labelSize}`);
+
+  const channel = { type: sdk.BPChannelType.WiFi, address: printer.address, modelName: printer.model };
+  // Sayfa listesi AYRI parametre (SDK'nın ikinci aşırı yüklemesi), ayar nesnesinin alanı değil.
+  await sdk.BrotherPrinterSDK.printPDF(fileUri, [1], channel, { labelSize, autoCut: true, cutAtEnd: true });
+}
 
 /**
  * **Gerçek etiket basımı** (23.7) — sunucunun ürettiği PNG dosyasını deponun ayarlı yazıcısına

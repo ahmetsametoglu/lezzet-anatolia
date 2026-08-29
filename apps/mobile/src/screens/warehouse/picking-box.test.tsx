@@ -73,6 +73,9 @@ interface Net {
   label?: unknown;
   /** Deponun kargo kutusu tipleri (07.12) — varsayılan BOŞ: rota testleri bu okumayı hiç görmez. */
   shippingBoxes?: unknown[];
+  /** Sevk seçenekleri ve duyuru cevabı (07.12). */
+  dispatchOptions?: unknown;
+  announce?: unknown;
 }
 
 const net: Net = { orders: [] };
@@ -81,6 +84,8 @@ fetchMock.mockImplementation((url, init) => {
   const path = String(url);
   // Kutu TİPLERİ kutulardan önce eşleşmeli: `/shipping-boxes` de `/boxes` ile bitiyor.
   if (path.endsWith('/shipping-boxes')) return Promise.resolve(ok({ boxes: net.shippingBoxes ?? [] }));
+  if (path.endsWith('/dispatch-options')) return Promise.resolve(ok(net.dispatchOptions));
+  if (path.endsWith('/announce')) return Promise.resolve(ok(net.announce));
   if (path.includes('/codes/resolve')) return Promise.resolve(ok(net.resolve));
   if (path.endsWith('/seal')) return Promise.resolve(ok(net.seal));
   if (path.endsWith('/label')) return Promise.resolve(ok(net.label ?? { status: 'not_found' }));
@@ -121,6 +126,8 @@ beforeEach(() => {
   net.resolve = undefined;
   net.label = undefined;
   net.shippingBoxes = undefined;
+  net.dispatchOptions = undefined;
+  net.announce = undefined;
   mockPrinterModule.available = false;
   mockPrintLabel.mockClear();
   mockPrintLabel.mockImplementation(async () => undefined);
@@ -385,5 +392,93 @@ describe('D1 · kargo kutusu tipi', () => {
     // Çekmece hiç açılmaz: cevabı olmayan bir soru sormak, depocuyu boş bir listeye bakmaya zorlar.
     expect(screen.queryByTestId('warehouse-picking-box-type-skip')).toBeNull();
     await waitFor(() => expect(lastBodyOf('/boxes')).toEqual({ shippingBoxId: null }));
+  });
+});
+
+/*
+  SEVK — kutu kapandıktan sonraki adım (07.12 · Faz 1.3).
+
+  Dört iddia, hepsi "doğru anda, doğru cümle" ekseninde:
+  · rota siparişinde sevk kartı HİÇ doğmaz
+  · kargo siparişinde son kutu kapanınca kart doğar — ve sipariş kuyruktan DÜŞSE de kalır
+  · seçenek listesi gerçek kolileri anlatır; seçim duyuruya gider ve takip numaraları yazılır
+  · ön koşul tutmazsa SEBEP yazılır ("olmadı" değil)
+
+  Yazıcı modülü jest'te yok (`mockPrinterModule.available = false`), yani basım hiç denenmiyor ve
+  kart bunu SÖYLÜYOR — sessiz kalmak "bastı" sanılırdı.
+*/
+describe('D1 · sevk (kargoya ver)', () => {
+  /** Son kutuyu kapatıp `ready` döndüren kısa yol — sevk teklifi tam bu anda doğuyor. */
+  async function sonKutuyuKapat(deliveryType: 'route' | 'shipping') {
+    net.orders = [preparationOrder({ deliveryType, boxes: [preparationBox()] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    await renderPicking();
+    await fireEvent.changeText(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`), '2');
+    // Kapanıştan sonra kuyruk yeniden okunuyor: `ready` sipariş listeden DÜŞÜYOR.
+    net.orders = [];
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/seal'))).toBe(true));
+  }
+
+  it('ROTA siparişinde sevk kartı HİÇ doğmaz — kutu araca biner, taşıyıcıya değil', async () => {
+    await sonKutuyuKapat('route');
+    expect(screen.queryByTestId('warehouse-dispatch')).toBeNull();
+  });
+
+  it('KARGO siparişinde kart doğar ve sipariş kuyruktan düşse de KALIR', async () => {
+    await sonKutuyuKapat('shipping');
+
+    // Kuyruk boş döndü (sipariş `ready`), ekran kuyruk görünümünde — kart yine burada.
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-dispatch-start')).toBeOnTheScreen();
+  });
+
+  it('seçenek listesi GERÇEK kolileri anlatır; seçim duyuruya gider ve takip numaraları yazılır', async () => {
+    await sonKutuyuKapat('shipping');
+    net.dispatchOptions = {
+      status: 'ok',
+      parcelCount: 2,
+      totalWeightG: 7400,
+      options: [
+        { code: 'chronopost:classic', carrierName: 'Chronopost', name: 'Classic', priceCents: 1348, leadTimeHours: 72, lastMile: 'home_delivery', tracked: true },
+        { code: 'mr:point', carrierName: 'Mondial Relay', name: 'Point', priceCents: 1050, leadTimeHours: null, lastMile: 'service_point', tracked: true },
+      ],
+    };
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
+
+    // Başlıkta koli sayısı ve ağırlık: depocu elindekiyle ekrandakini karşılaştırabilsin.
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-sheet')).toBeOnTheScreen());
+    expect(screen.getByText(/2 koli · 7,4 kg/)).toBeOnTheScreen();
+    // Süresi BİLDİRİLMEYEN seçenek gizlenmiyor, "bilinmiyor" yazıyor (CLAUDE §1).
+    expect(screen.getByText(/teslim süresi bildirilmiyor/)).toBeOnTheScreen();
+
+    net.announce = {
+      status: 'ok',
+      shipmentId: '00000000-0000-4000-8000-0000000000f1',
+      parcels: [
+        { boxId: '00000000-0000-4000-8000-0000000000b1', trackingNumber: 'CH0001', labelKey: 'k1' },
+        { boxId: '00000000-0000-4000-8000-0000000000b2', trackingNumber: 'CH0002', labelKey: 'k2' },
+      ],
+      labelFailures: [],
+    };
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-option-chronopost:classic'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-done')).toBeOnTheScreen());
+    expect(screen.getByText('CH0001')).toBeOnTheScreen();
+    expect(screen.getByText('CH0002')).toBeOnTheScreen();
+    // Yazıcı modülü bu derlemede yok — kart bunu SÖYLÜYOR, sessiz kalıp "bastı" sandırmıyor.
+    expect(screen.getByText(/yazıcı modülü yok/)).toBeOnTheScreen();
+  });
+
+  it('ön koşul tutmazsa SEBEP yazılır — "olmadı" değil', async () => {
+    await sonKutuyuKapat('shipping');
+    net.dispatchOptions = { status: 'unmeasured', variantIds: ['00000000-0000-4000-8000-000000000031'] };
+
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-blocked')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-dispatch-blocked')).toHaveTextContent(/ambalaj ağırlığı yazılmamış/);
+    // Çekmece hiç açılmadı: cevabı olmayan bir listeyi göstermek boş bir seçim ekranı olurdu.
+    expect(screen.queryByTestId('warehouse-dispatch-sheet')).toBeNull();
   });
 });

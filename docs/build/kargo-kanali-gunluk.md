@@ -681,3 +681,97 @@ listesi) geçersiz kılıyor.
 
 Kararı ikinci elden okuyup yüzeyi yeniden kurmadım — sana soruyorum. Onaylarsan sıra: onaylı
 taşıyıcı listesi → otomatik seçim politikası → checkout iki kademe → `/service-points` ucu.
+
+---
+
+## Faz 1.3 — telefon artık kargoya veriyor ✅
+
+**Zincir tamamlandı:** kutu kapanır → **"Kargoya ver"** → servis listesi → duyuru → etiket PDF'i
+indirilir → Brother'a basılır → damga.
+
+### Ekranın en zor kararı: sipariş kuyruktan DÜŞÜYOR
+
+Son kutu mühürlenince sipariş `ready`ye geçiyor ve hazırlık kuyruğu yalnız `confirmed`+`preparing`
+okuyor — yani sevk anında sipariş listeden **kayboluyor**. Sevk kartı bu yüzden `order`a bağlı
+değil, kendi durumunu taşıyor (etiket kartının aynı gerekçesi).
+
+**Ve bunu test yakaladı:** kartı kuyruk ve sipariş dallarına koymuştum; kuyrukta TEK sipariş varsa
+liste boşalıyor ve ekran "Toplanacak sipariş yok" dalına giriyor. Depocu tam kutuyu mühürlediği
+anda etiket alma yolunu kaybediyordu. Kart üç dalda da çiziliyor artık — ve boş dal onun **en olası
+yeri**.
+
+### Seçim para harcıyor, o yüzden karttan ayrı katmanda
+
+Servis listesi karta gömülseydi kart ekranın yarısını kaplayan bir tabloya dönerdi — ve kaza eseri
+basılmaya en açık yer listenin ortasıdır. Çekmece niyeti ayırıyor: *"seçenekleri gör"* ayrı bir
+adım, *"şununla gönder"* ayrı. Çekmece komponent oldu çünkü üç dalda da açılabilmeli.
+
+Başlıkta **koli sayısı + ağırlık** yazıyor (`2 koli · 7,4 kg`): depocu elindekiyle ekrandakinin
+aynı olduğunu doğrulayabilsin.
+
+### Üç hâl de söyleniyor, hiçbiri sessiz değil
+
+- **Ön koşul tutmadı** → sebebin ADI ("kalemlerin ambalaj ağırlığı yazılmamış"), "olmadı" değil.
+  Çekmece hiç açılmıyor: cevabı olmayan bir listeyi göstermek boş bir seçim ekranı olurdu.
+- **Süre bildirilmeyen servis** → "teslim süresi bildirilmiyor". Gizlemek depocuya "hemen gider"
+  dedirtirdi (`CLAUDE §1`) — ve ölçüldü ki en ucuz seçenekler tam da süresi bilinmeyenler.
+- **Basım** → basıldı / yazıcı modülü yok / hata cümlesi. Sessiz kalmak "bastı" sanılırdı.
+  **Basım hatası duyuruyu geri çekmiyor** (23.7 çizgisi): gönderi alındı, parası ödendi.
+
+### Etiket sunucudan AKITILMIYOR
+
+`GET /warehouse/boxes/:id/shipping-label` imzalı bir adres döndürüyor, telefon PDF'i doğrudan
+kovadan indiriyor. Sunucudan geçirmek her basımda VPS'i aradaki boru yapardı. İki hâl AYRI:
+`not_announced` ("henüz satın alınmadı" → duyur) ve `no_label` ("alındı ama dosya saklanamadı" →
+gönderiyi iptal edip yeniden duyur, ve bu bir OPERATÖR kararı çünkü ikinci duyuru gerçek para).
+
+`printLabelPdf` SDK'nın `printPDF` kapısına bağlandı — **yalnız ilk sayfa** (`pages: [1]`): kargo
+etiketi tek sayfadır ve sağlayıcı bir gün gümrük belgesi eklerse hepsi ruloya art arda basılırdı.
+
+### ⚠ Kalan iki fiziksel açık
+
+1. **İş başına yazıcı yok.** Etiket bugün deponun TEK ayarlı yazıcısından çıkıyor. Kargo etiketi A6
+   yatay, bizim kutu etiketimiz 4×6 — aynı ruloya basılmaları fiziksel bir tesadüf olurdu.
+   BEKLEYEN(kargo-kanali-tasarimi.md §4.7): `warehouse_printer(warehouse_id, purpose, …)` envanteri
+   sunucuda, seçim cihazın local storage'ında (kullanıcı kararı 29.08).
+2. **Kâğıt uyuşmazlığı ölçüldü ve duruyor** (tasarım §4.6): gerçek etiket 148×105 mm, rulo
+   103×164 mm — döndürülünce 2 mm taşıyor. Sürücü küçültürse barkod da küçülür. **Basılan barkod
+   okutularak doğrulanmadan bu iş bitmiş sayılmaz** ve bunu kod çözemez.
+
+**Doğrulama.** 4 ekran testi (rota kartı doğurmaz · kargo kartı kuyruktan düşse de kalır · liste
+gerçek kolileri anlatır ve seçim duyuruya gider · ön koşul tutmazsa sebep yazılır) + sözleşme
+uçtan. Mobil jest **895/895**, `typecheck` · `lint` · `knip` temiz.
+
+### Kargo şeridinden cevap geldi
+
+`sendcloud:letter` arızasını doğrulayıp `quote.ts`te kapatmışlar. **Bir itirazları haklı:**
+"sıfırı süzerek yamamayın" demiştim, oysa benim `dispatch.ts`im tam olarak `priceCents > 0` yapıyor.
+Gerekçeleri de doğru — **bu liste bizim MALİYETİMİZ, müşteriden aldığımız ücret değil**; ücretsiz
+kargo kararı eşik mantığında yaşıyor ve taşıyıcının 15 kg'ı sıfıra taşıması diye bir şey yok.
+Beyaz liste hâlâ gerekli ama bu arıza için değil, **onaylı taşıyıcı ve teslim süresi** için.
+
+**Ve açık bir uyarı bırakmışlar:** mektup elendiği için listenin başı artık
+`chronopost:shop2shop` — yani bir **teslimat noktası**. *"Eşik üstünde ücretsiz kargo EVE gider"*
+kuralı bugünkü otomatik seçimde henüz yok. Faz 2'nin ilk maddesi bu.
+
+### Tam paket turunda üç düşüş — üçü de bize ait değil, ölçüldü
+
+`pnpm test` **3895/3898**. Üç düşenin sahipliğini tek tek ölçtüm:
+
+| Düşen | Sahibi | Kanıt |
+| --- | --- | --- |
+| `messaging/send.test.ts` | WhatsApp/sosyal şeridi | `send.ts` + `send.test.ts` ŞU AN çalışma ağacında kirli |
+| `ticket/ai.test.ts` (servis penceresi) | aynı şerit | `domain-core/messaging/service-window.ts` kirli |
+| `checkout-shipping-order.test.ts` | kargo şeridi (yalancı kırmızı) | **tek başına koşunca 5/5 GEÇİYOR** |
+
+Üçüncüsü ilginç ve kayda değer: `blocked_lines` beklerken `address_city_mismatch` geliyor. Tek
+başına yeşil, pakette kırmızı — yani **çapraz dosya girişimi**. Test rota siparişi kuruyor ve
+`placesForPostalCode` sorusunu soruyor; posta kodu damgayla üretiliyor ve başka bir dosyanın
+`postal_code_place` satırıyla çakışınca şehir eşleşmesi düşüyor. 28.08'de aynı sınıftan bir çakışma
+zaten ölçülüp düzeltilmişti (`9` öneki + sayaç + rastgele hane) — bu, aynı kalıbın **ikinci
+yüzü**: çakışan kod değil, çakışan YER kaydı.
+
+**Kendi alanımı ayrıca koşturdum:** `shipping/*` + `warehouse/boxes` + `mobile-api/warehouse`
+→ **133/133 geçti**. Mobil jest 895/895.
+
+Kargo şeridine not bırakıldı; kendi test dosyaları ve kendi üreteçleri.

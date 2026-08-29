@@ -6,14 +6,17 @@ import type {
   PreparationBoxContract,
   PreparationLineContract,
   PreparationOrderContract,
+  DispatchOptionContract,
   PreparationPick,
   ShippingBoxOptionContract,
   ShortfallSuggestionContract,
 } from '@lezzet/types';
 
 import {
+  announceShipment,
   confirmPreparation,
   fetchBoxLabel,
+  fetchDispatchOptions,
   fetchPreparationQueue,
   fetchShippingBoxes,
   markBoxPrinted,
@@ -21,8 +24,8 @@ import {
   resolveScannedCode,
   sealOrderBox,
 } from '@/lib/api/warehouse';
-import { printLabel } from '@/lib/print/brother';
-import { downloadLabelPng } from '@/lib/print/label-file';
+import { printLabel, printLabelPdf } from '@/lib/print/brother';
+import { downloadLabelPng, downloadShippingLabelPdf } from '@/lib/print/label-file';
 import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
@@ -164,7 +167,40 @@ interface UsePreparationResult {
   printState: PrintState;
   /** Yeniden basım — yırtılan/silik etiket için; damga güncellenir. */
   reprintLabel: () => void;
+  /**
+   * **SEVK (07.12)** — kutu kapandıktan sonraki adım: etiket satın alınır ve basılır.
+   *
+   * Kendi durumunu taşıyor, `order`a bağlı DEĞİL: son kutu mühürlenince sipariş `ready`ye geçiyor
+   * ve hazırlık kuyruğundan DÜŞÜYOR (`listPreparationQueue` yalnız `confirmed`+`preparing` okur).
+   * Etiket kartının aynı gerekçesi — depocu kutuyu elinde tutarken ekran kaybolmamalı.
+   */
+  dispatch: DispatchState;
+  /** Seçenekleri getirir ve çekmeceyi açar; salt okuma, para harcamaz. */
+  startDispatch: () => void;
+  /** Servisi seçer → **GERÇEK PARA**: etiket satın alınır, indirilir, basılır. */
+  chooseService: (option: DispatchOptionContract) => void;
+  dismissDispatch: () => void;
 }
+
+/**
+ * Sevkin hâli — her adım ADLI, çünkü ekranın cümlesi her adımda başka: "kargoya verilebilir",
+ * "seçenekler geliyor", "hangi servis", "satın alınıyor", "alındı ve basıldı", "önkoşul tutmadı".
+ * Tek bir `loading` bayrağı bunların hepsini aynı sessizliğe indirirdi.
+ */
+export type DispatchState =
+  | { phase: 'idle' }
+  /** Kutular mühürlendi, sipariş kargo kulvarında — "Kargoya ver" görünür. */
+  | { phase: 'offer'; orderId: string; reference: string }
+  | { phase: 'loading'; orderId: string; reference: string }
+  | { phase: 'options'; orderId: string; reference: string; options: DispatchOptionContract[]; parcelCount: number; totalWeightG: number }
+  /** Ön koşul tutmadı — sebebin ADI taşınıyor, ekran ona göre cümle kuruyor. */
+  | { phase: 'blocked'; reference: string; reason: string }
+  | { phase: 'announcing'; orderId: string; reference: string }
+  /**
+   * Alındı. `printed` fiilen basılan etiket sayısı — `parcels`tan AZ olabilir ve bu bir hata
+   * değil bir HÂL: gönderi alındı, parası ödendi; basım ayrı bir olay ve "yeniden bas" eli bekler.
+   */
+  | { phase: 'done'; reference: string; trackingNumbers: string[]; printed: number; printError: string | null };
 
 export type PrintState =
   | { phase: 'off' }
@@ -198,6 +234,43 @@ function allocate(line: PreparationLineContract, qty: number): PreparationPick['
   }
 
   return batches;
+}
+
+/**
+ * **Kargo etiketlerini bas** — duyurudan hemen sonra, kutu kutu.
+ *
+ * Yazıcı bugün deponun TEK ayarlı yazıcısından geliyor (`fetchBoxLabel` cevabındaki `printer`).
+ * ⚠ **İş başına yazıcı ayrımı (`box` ↔ `shipping`) HENÜZ YOK** ve gerekiyor: kargo etiketi A6
+ * yatay, bizim kutu etiketimiz 4×6 — aynı ruloya basılmaları fiziksel bir tesadüf olurdu.
+ * BEKLEYEN(kargo-kanali-tasarimi.md §4.7): `warehouse_printer(warehouse_id, purpose, …)` envanteri
+ * sunucuda, seçim cihazda.
+ *
+ * **Basım hatası akışı geriye çekmez:** kaç etiket çıktığı sayılıyor, ilk hata cümlesi taşınıyor
+ * ve döngü DEVAM ediyor — ikinci kutunun etiketi birincinin hatasına kurban edilmez.
+ */
+async function printShippingLabels(boxIds: readonly string[]): Promise<{ printed: number; error: string | null }> {
+  if (!hasPrinterNativeModule()) return { printed: 0, error: null };
+
+  let printed = 0;
+  let error: string | null = null;
+  for (const boxId of boxIds) {
+    try {
+      const meta = await fetchBoxLabel(boxId);
+      const printer = meta.error === null && meta.data.status === 'ok' ? meta.data.printer : null;
+      if (!printer) {
+        error ??= 'yazıcı tanımlı değil';
+        continue;
+      }
+      const fileUri = await downloadShippingLabelPdf(boxId);
+      await printLabelPdf(fileUri, printer);
+      // Damga başarının kaydı; düşmesi kâğıdı geri almaz (23.7 dersi) — sayaç yine artar.
+      await markBoxPrinted(boxId);
+      printed += 1;
+    } catch (err) {
+      error ??= err instanceof Error ? err.message : String(err);
+    }
+  }
+  return { printed, error };
 }
 
 export function usePreparation(): UsePreparationResult {
@@ -343,6 +416,7 @@ export function usePreparation(): UsePreparationResult {
   const [queueScanOpen, setQueueScanOpen] = useState(false);
   const [shippingBoxes, setShippingBoxes] = useState<ShippingBoxOptionContract[]>([]);
   const [boxTypeOpen, setBoxTypeOpen] = useState(false);
+  const [dispatch, setDispatch] = useState<DispatchState>({ phase: 'idle' });
   const [label, setLabel] = useState<BoxLabelContract | null>(null);
   const [printState, setPrintState] = useState<PrintState>({ phase: 'off' });
   /** Basımın hedefi — etiketle birlikte gelir; yeniden basım aynı kutu + aynı yazıcıyla koşar. */
@@ -391,6 +465,79 @@ export function usePreparation(): UsePreparationResult {
     }
     void loadShippingBoxes();
   }, [loadShippingBoxes, shippingLane]);
+
+  /*
+    SEVK — kutu kapandıktan sonraki adım (07.12).
+
+    İki tur: önce SALT OKUMA teklif (para harcamaz), sonra depocunun seçimiyle duyuru (gerçek
+    para). Araya seçim koymamızın sebebi kullanıcının kuralı: otomatik seçim boş dönerse liste
+    DEPOCUYA gösterilir. Otomatik ön seçim (onaylı taşıyıcı ∩ süre) kargo şeridinin teklif
+    kapısına inince buraya hazır seçimle gelecek; bugün liste her hâlde gösteriliyor.
+  */
+  const startDispatch = useCallback(() => {
+    setDispatch((current) => {
+      if (current.phase !== 'offer') return current;
+      const { orderId, reference } = current;
+
+      void (async () => {
+        const result = await trackWarehouse(fetchDispatchOptions(orderId));
+        if (result.error !== null) {
+          setDispatch({ phase: 'blocked', reference, reason: result.error });
+          return;
+        }
+        const data = result.data;
+        if (data.status !== 'ok') {
+          // Ön koşulun ADI taşınıyor: "ölçüsüz mal" tartıya, "tipsiz kutu" seçime, "adressiz
+          // sipariş" yönetime gider — hepsini "olmadı"ya indirmek üç işi tek çıkmaza çevirirdi.
+          setDispatch({ phase: 'blocked', reference, reason: data.status });
+          return;
+        }
+        setDispatch({ phase: 'options', orderId, reference, options: data.options, parcelCount: data.parcelCount, totalWeightG: data.totalWeightG });
+      })();
+
+      return { phase: 'loading', orderId, reference };
+    });
+  }, []);
+
+  /**
+   * Servis seçildi → **GERÇEK PARA**. Duyuru başarılıysa etiketler indirilip basılıyor.
+   *
+   * **Basım hatası duyuruyu GERİ ÇEKMEZ** (23.7 çizgisi): gönderi alındı ve parası ödendi;
+   * basımın düşmesi yüzünden akışı geriye çekmek, ödenmiş bir etiketi kayıt dışı bırakmak olurdu.
+   * Kaç etiketin çıktığı ve hata varsa cümlesi karta yazılıyor.
+   *
+   * Yeniden deneme YOK: sağlayıcıda idempotency anahtarı yok, ikinci çağrı ikinci koli açar.
+   */
+  const chooseService = useCallback((option: DispatchOptionContract) => {
+    setDispatch((current) => {
+      if (current.phase !== 'options') return current;
+      const { orderId, reference } = current;
+
+      void (async () => {
+        const result = await trackWarehouse(
+          announceShipment(orderId, { shippingOptionCode: option.code, servicePointId: null, quotedCents: option.priceCents }),
+        );
+        if (result.error !== null) {
+          setDispatch({ phase: 'blocked', reference, reason: result.error });
+          return;
+        }
+        const data = result.data;
+        if (data.status !== 'ok') {
+          setDispatch({ phase: 'blocked', reference, reason: data.status });
+          return;
+        }
+
+        const trackingNumbers = data.parcels.map((p) => p.trackingNumber);
+        const { printed, error } = await printShippingLabels(data.parcels.map((p) => p.boxId));
+        setDispatch({ phase: 'done', reference, trackingNumbers, printed, printError: error });
+        await load();
+      })();
+
+      return { phase: 'announcing', orderId, reference };
+    });
+  }, [load]);
+
+  const dismissDispatch = useCallback(() => setDispatch({ phase: 'idle' }), []);
 
   const reprintLabel = useCallback(() => {
     const target = printTarget.current;
@@ -529,6 +676,12 @@ export function usePreparation(): UsePreparationResult {
         const shortfalls = shortfallSentences(data.shortfalls, order);
         setNotice({ tone: data.ready && shortfalls.length === 0 ? 'ok' : 'warn', text: [head, ...shortfalls].join(' ') });
         setLines({});
+        /* SEVK TEKLİFİ (07.12) — son kutu kapandığında ve YALNIZ kargo kulvarında.
+           Bu satır burada olmak zorunda: sipariş `ready`ye geçince hazırlık kuyruğundan düşüyor
+           ve `order` bir sonraki okumada `null` oluyor. Teklif kendi durumunda yaşıyor. */
+        if (data.ready && order.deliveryType === 'shipping') {
+          setDispatch({ phase: 'offer', orderId: order.orderId, reference: order.referenceNo ?? '—' });
+        }
         // Etiket önizlemesi (23.7): içerik kapanışta kesinleşti, sunucudan okunur. Okuma düşerse
         // sessiz kalınır — kapanışın kendisi yazıldı, etiket karta sonra da bakılabilir.
         const labelResult = await fetchBoxLabel(currentBox.boxId);
@@ -641,6 +794,10 @@ export function usePreparation(): UsePreparationResult {
     }, []),
     printState,
     reprintLabel,
+    dispatch,
+    startDispatch,
+    chooseService,
+    dismissDispatch,
   };
 }
 

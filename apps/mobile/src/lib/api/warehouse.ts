@@ -13,6 +13,8 @@ import {
   ReceiveTransferResponseSchema,
   RecordAdjustmentResponseSchema,
   ResolveCodeResponseSchema,
+  AnnounceShipmentResponseSchema,
+  DispatchOptionsResponseSchema,
   SealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
@@ -22,6 +24,7 @@ import {
   type RecordAdjustmentRequest,
   type ReceiveGoodsRequest,
   type ReceiveTransferRequest,
+  type AnnounceShipmentRequest,
   type SealBoxRequest,
   type WarehouseReturnRequest,
 } from '@lezzet/types';
@@ -233,6 +236,30 @@ export function submitWarehouseReturn(
   body: WarehouseReturnRequest,
 ): Promise<ApiResult<z.infer<typeof WarehouseReturnResponseSchema>>> {
   return authorizedFetch(`/api/v1/warehouse/returns/${orderId}`, WarehouseReturnResponseSchema, {
+    method: 'POST',
+    body,
+  });
+}
+
+/**
+ * **SEVK SEÇENEKLERİ** (07.12) — depocunun servis seçtiği liste, GERÇEK kolilere göre fiyatlı.
+ *
+ * Salt okuma, para harcamaz. Ön koşullar duyurunun kullandığı kapıdan geçiyor, yani burada
+ * görünen seçenek satın alma anında da geçerli.
+ */
+export function fetchDispatchOptions(orderId: string): Promise<ApiResult<z.infer<typeof DispatchOptionsResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/dispatch-options`, DispatchOptionsResponseSchema);
+}
+
+/**
+ * **GÖNDERİYİ DUYUR — GERÇEK PARA HARCAR.** Yeniden deneme YOK: sağlayıcıda idempotency anahtarı
+ * yok ve ikinci çağrı ikinci koli açar. `already_announced` bu yüzden bir hata değil cevaptır.
+ */
+export function announceShipment(
+  orderId: string,
+  body: AnnounceShipmentRequest,
+): Promise<ApiResult<z.infer<typeof AnnounceShipmentResponseSchema>>> {
+  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/announce`, AnnounceShipmentResponseSchema, {
     method: 'POST',
     body,
   });

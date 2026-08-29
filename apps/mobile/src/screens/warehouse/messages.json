@@ -178,6 +178,40 @@
       "labelPrinted": "✓ Etiket basıldı ({model}).",
       "labelPrintFailed": "✗ Basım düştü: {error}",
       "labelReprint": "yeniden bas"
+    },
+    "dispatch": {
+      "title": "Kargoya ver",
+      "offer": "{ref} hazır — kutular mühürlendi. Etiketi şimdi alabilirsin.",
+      "cta": "📦 Kargoya ver",
+      "loading": "Servisler soruluyor…",
+      "sheetTitle": "Hangi servisle gönderelim?",
+      "sheetHint": "{n} koli · {kg} kg. Fiyat sunucudan geliyor; seçtiğin an etiket SATIN ALINIR.",
+      "option": "{carrier} · {price}",
+      "optionLead": "{hours} saatte teslim",
+      "optionNoLead": "teslim süresi bildirilmiyor",
+      "optionPoint": "teslimat noktasına",
+      "optionHome": "adrese teslim",
+      "announcing": "Etiket satın alınıyor…",
+      "done": "Kargoya verildi — {n} takip numarası alındı.",
+      "donePrinted": "{n} etiket basıldı.",
+      "donePrintFailed": "Etiket basılamadı: {error}. Gönderi ALINDI — yeniden basmayı deneyebilirsin.",
+      "donePrintOff": "Bu cihazda yazıcı modülü yok — etiket basılmadı.",
+      "empty": "Bu koli için uygun servis çıkmadı. Elle taşıyıcı girişi hazırlık masasında.",
+      "close": "kapat",
+      "blocked": "Kargoya verilemedi: {reason}",
+      "reason": {
+        "not_found": "sipariş bulunamadı",
+        "not_shipping": "bu sipariş kargo kulvarında değil",
+        "no_sealed_box": "mühürlü kutu yok",
+        "box_type_missing": "kutu tipi seçilmemiş",
+        "unmeasured": "kalemlerin ambalaj ağırlığı yazılmamış",
+        "no_sender": "deponun adresi eksik",
+        "no_recipient": "siparişin adres kopyası eksik",
+        "too_many_parcels": "koli sayısı sağlayıcının tavanını aşıyor",
+        "already_announced": "bu sipariş zaten kargoya verilmiş",
+        "provider_error": "sağlayıcı cevap vermedi",
+        "network_error": "bağlantı kurulamadı"
+      }
     }
   },
   "intake": {

@@ -359,6 +359,36 @@ export const AnnounceShipmentResponseSchema = z.discriminatedUnion('status', [
 export type AnnounceShipmentResponse = z.infer<typeof AnnounceShipmentResponseSchema>;
 
 /**
+ * `GET /warehouse/boxes/:boxId/shipping-label` — TAŞIYICININ etiketi (bizimki değil).
+ *
+ * **İmzalı adres dönüyor, dosyanın kendisi değil:** PDF özel kovada duruyor ve telefon onu
+ * doğrudan indiriyor. Sunucudan akıtmak, ödenmiş bir etiketin her basımında VPS'i aradaki boru
+ * yapardı — ve kova zaten imzalı okuma veriyor.
+ *
+ * ⚠ **Bizim kutu etiketimizle (`/label.png`) KARIŞTIRILMAZ.** Kargo kulvarında bizim QR'lı
+ * etiketimiz BASILMAZ (tasarım §4.6): kutunun üstünde iki barkod taşıyıcının tarayıcısını
+ * şaşırtır. Bu uç taşıyıcının kendi A6 etiketini verir.
+ */
+export const ShippingLabelResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    /** İmzalı, süreli okuma adresi — kalıcı değil, her istekte yeniden üretilir. */
+    url: z.string().min(1),
+  }),
+  /** Kutu bu depoya ait değil ya da hiç yok. */
+  z.object({ status: z.literal('not_found') }),
+  /** Gönderi henüz duyurulmadı: satın alınmamış bir etiket basılamaz. */
+  z.object({ status: z.literal('not_announced') }),
+  /**
+   * Gönderi duyuruldu ama etiket SAKLANAMADI (`labelFailures`). Ayrı bir dal, çünkü çaresi de
+   * ayrı: duyuruyu tekrarlamak ikinci koli açar — burada yapılacak şey gönderiyi iptal edip
+   * yeniden duyurmaktır ve bu bir OPERATÖR kararıdır.
+   */
+  z.object({ status: z.literal('no_label') }),
+]);
+export type ShippingLabelResponse = z.infer<typeof ShippingLabelResponseSchema>;
+
+/**
  * Kutu kapanışı isteği — `picks` BU KUTUYA konanlardır (kutu başına dağılım), kümülatif değil:
  * absolüt birleşimi kapı kurar (`sealBox` — `record_preparation`ın absolüt yazımıyla çok kutulu
  * birleşim ekranın değil sunucunun işidir; ekran kurmaya kalksaydı yarım işte eski dağılımı

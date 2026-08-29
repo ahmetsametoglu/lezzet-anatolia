@@ -6858,3 +6858,37 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Sözleşme borcu:** eski üçlü artık native tarafından okunmuyor; kargo şeridi onları sözleşmeden
   silebilir (nota cevap yazıldı).
+
+- [x] (21.129) **TELEFON ARTIK KARGOYA VERİYOR — kutu kapanışından etiket basımına** (kargo kanalı
+  Faz 1.3)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/lib/print/{brother,label-file}.ts` · `apps/mobile/src/lib/api/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{preparation-screen,use-preparation.hook,picking-box.test,messages.json}`
+
+  **Durum (29.08).** Zincir tamam: kutu kapanır → "Kargoya ver" → servis listesi → duyuru → etiket
+  PDF'i indirilir → Brother'a basılır → damga.
+
+  **Ekranın en zor kararı:** son kutu mühürlenince sipariş `ready`ye geçiyor ve hazırlık kuyruğu
+  yalnız `confirmed`+`preparing` okuduğu için **listeden düşüyor**. Sevk kartı bu yüzden `order`a
+  bağlı değil, kendi durumunu taşıyor. **Test bir arıza yakaladı:** kartı kuyruk ve sipariş
+  dallarına koymuştum; kuyrukta tek sipariş varsa liste boşalıyor ve ekran "Toplanacak sipariş yok"
+  dalına giriyor — depocu tam kutuyu mühürlediği anda etiket alma yolunu kaybediyordu. Kart üç
+  dalda da çiziliyor ve boş dal onun EN OLASI yeri.
+
+  **Seçim para harcıyor**, o yüzden karttan ayrı bir çekmecede: liste karta gömülseydi kart ekranın
+  yarısını kaplayan bir tabloya dönerdi ve kaza eseri basılmaya en açık yer listenin ortasıdır.
+  Çekmece komponent oldu — üç dalda da açılabilmeli.
+
+  **Üç hâl de söyleniyor:** ön koşul tutmazsa sebebin ADI · süre bildirilmeyen serviste
+  "bilinmiyor" (gizlemek "hemen gider" dedirtirdi) · basım için basıldı/modül yok/hata cümlesi.
+  Basım hatası duyuruyu GERİ ÇEKMİYOR (23.7 çizgisi).
+
+  **Etiket akıtılmıyor:** `GET /boxes/:id/shipping-label` imzalı adres döndürüyor, telefon kovadan
+  indiriyor. `not_announced` ile `no_label` ayrı dallar — çareleri ayrı.
+
+  **BEKLEYEN(kargo-kanali-tasarimi.md §4.7):** iş başına yazıcı yok; etiket bugün deponun tek
+  ayarlı yazıcısından çıkıyor. Kargo etiketi A6 yatay, kutu etiketimiz 4×6 — aynı ruloya basılmaları
+  fiziksel bir tesadüf olurdu. Envanter sunucuda, seçim cihazın local storage'ında olacak.
+
+  **Doğrulama.** 4 ekran testi. Mobil jest **895/895**, `typecheck` · `lint` · `knip` temiz.

@@ -17,7 +17,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
-import { usePreparation, type PrintState } from './use-preparation.hook';
+import { usePreparation, type DispatchState, type PrintState } from './use-preparation.hook';
 import { batchLabel, boxSizeLine, parseQty, productLabel, qtyToText } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
@@ -93,14 +93,25 @@ export function PreparationScreen() {
     return (
       <View style={styles.screen} testID="warehouse-picking">
         {header}
-        <View style={styles.block}>
-          <OperationsNoticeBlock
-            variant="empty"
-            title={t.picking.empty.title}
-            description={t.picking.empty.body}
-            testID="warehouse-picking-empty"
-          />
-        </View>
+        <ScrollView contentContainerStyle={styles.list}>
+          {/* ⚠ SEVK KARTI BU DALDA DA ÇİZİLİR — ve burası onun EN OLASI yeri.
+              Son kutu kapanınca sipariş `ready`ye geçip kuyruktan düşüyor; kuyrukta tek sipariş
+              varsa liste BOŞALIYOR ve ekran bu dala giriyor. Kart yalnız kuyruk/sipariş
+              dallarında olsaydı, depocu tam kutuyu mühürlediği anda etiketi alma yolunu
+              kaybederdi (testle yakalandı 29.08). Etiket kartının aynı gerekçesi. */}
+          {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
+          <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
+          <View style={styles.block}>
+            <OperationsNoticeBlock
+              variant="empty"
+              title={t.picking.empty.title}
+              description={t.picking.empty.body}
+              testID="warehouse-picking-empty"
+            />
+          </View>
+        </ScrollView>
+
+        <DispatchSheet picking={picking} />
       </View>
     );
   }
@@ -113,6 +124,7 @@ export function PreparationScreen() {
           {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
               burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
           {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
+          <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
 
           {/* HAZIRLIK KÂĞIDININ QR'I (10.1) — masada basılan kâğıt buradan telefona bağlanıyor.
               Düğme listenin ÜSTÜNDE: kâğıdı eline almış depocu listeye hiç bakmadan okutur;
@@ -155,6 +167,8 @@ export function PreparationScreen() {
 
         {/* Okutucu kuyruk dalında da çizilir — `ScanSheet` bir Modal ve listenin içinde değil.
             Kutu okutmasından AYRI bayrak: iki farklı soru, iki farklı cevap yolu. */}
+        <DispatchSheet picking={picking} />
+
         <ScanSheet
           open={picking.queueScanOpen}
           title={t.picking.queueScan.title}
@@ -187,6 +201,7 @@ export function PreparationScreen() {
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-lines">
         {/* Son kapanan kutunun etiketi (23.7) — ara kutu kapanışında burada görünür. */}
         {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
+          <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
         {/* KOLİYE YAZILACAK AD (23.3, mobil şeridin işareti) — yalnız alıcı hesabın sahibinden
             FARKLIYSA çizilir (web `parcelName` kuralı birebir): ikisi aynıyken satır, hiçbir şey
             söylemeyen bir tekrar olurdu. Adres/telefon yine YOK (tasarım §6). */}
@@ -293,6 +308,8 @@ export function PreparationScreen() {
         olabilir. Kapatmak, depocuyu yanlış bir tip seçmeye zorlardı — yanlış ölçü, ölçüsüzlükten
         beterdir çünkü kendini söylemez.
       */}
+      <DispatchSheet picking={picking} />
+
       <BottomSheet
         visible={picking.boxTypeOpen}
         title={t.picking.box.typeTitle}
@@ -557,6 +574,167 @@ function LineRow({ line, boxMode, qty, shortReported, capacity, onQty, onComplet
   );
 }
 
+/**
+ * **SERVİS SEÇİM ÇEKMECESİ** (07.12) — üç ekran dalında da çizilmesi gerektiği için komponent.
+ *
+ * Sipariş `ready`ye geçip kuyruktan düşünce ekran dal değiştiriyor (sipariş → kuyruk → boş) ve
+ * çekmece bir Modal: hangi dalda olursa olsun aynı katman açılmalı. Üç yere kopyalamak, bir gün
+ * yalnız birinde değişen üç çekmece demekti.
+ *
+ * **Seçim PARA HARCAR** ve bu yüzden karttan ayrı bir katmanda: "seçenekleri gör" ayrı bir adım,
+ * "şununla gönder" ayrı. Liste GERÇEK kolilere göre fiyatlı (sunucu mühürlü kutuları ölçüyor),
+ * başlıkta koli sayısı ve ağırlık yazıyor — depocu elindekiyle ekrandakini karşılaştırabilsin.
+ */
+function DispatchSheet({ picking }: { picking: ReturnType<typeof usePreparation> }) {
+  const d = t.picking.dispatch;
+  const state = picking.dispatch;
+
+  return (
+    <BottomSheet
+      visible={state.phase === 'options'}
+      title={d.sheetTitle}
+      onClose={picking.dismissDispatch}
+      testID="warehouse-dispatch-sheet"
+    >
+      {state.phase === 'options' ? (
+        <>
+          <Text style={styles.boxTypeHint}>
+            {fillCopy(d.sheetHint, {
+              n: String(state.parcelCount),
+              kg: (state.totalWeightG / 1000).toFixed(1).replace('.', ','),
+            })}
+          </Text>
+          {/* Boş liste bir HÂL, hata değil: çok kutulu gönderide multicollo süzgeci her şeyi
+              elemiş olabilir ve çare elle taşıyıcı girişidir (yedek şerit, 10.9). */}
+          {state.options.length === 0 ? (
+            <Text style={styles.dispatchBody}>{d.empty}</Text>
+          ) : (
+            state.options.map((option) => (
+              <PressableSurface
+                key={option.code}
+                onPress={() => picking.chooseService(option)}
+                feedback="scale"
+                style={styles.queueRow}
+                accessibilityLabel={option.carrierName}
+                testID={`warehouse-dispatch-option-${option.code}`}
+              >
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>
+                    {fillCopy(d.option, {
+                      carrier: option.carrierName,
+                      price: `${(option.priceCents / 100).toFixed(2).replace('.', ',')} €`,
+                    })}
+                  </Text>
+                  <Text style={styles.rowSub}>{serviceDetail(option)}</Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
+              </PressableSurface>
+            ))
+          )}
+        </>
+      ) : null}
+    </BottomSheet>
+  );
+}
+
+/**
+ * **SEVK KARTI** (07.12) — kutu kapandıktan sonraki adım, kendi kartında.
+ *
+ * ── NEDEN KUYRUK DALINDA DA ÇİZİLİYOR ───────────────────────────────────────
+ * Son kutu mühürlenince sipariş `ready`ye geçiyor ve hazırlık kuyruğundan DÜŞÜYOR; ekran kuyruk
+ * görünümüne dönüyor. Kart o anda kaybolsaydı depocu kutuyu elinde tutarken etiketi alamazdı.
+ * Etiket kartının (23.7) aynı gerekçesi ve aynı deseni.
+ *
+ * ── SEÇİM ÇEKMECEDE, KARTTA DEĞİL ───────────────────────────────────────────
+ * Servis listesi karta gömülseydi kart, ekranın yarısını kaplayan bir tabloya dönerdi ve seçim
+ * PARA HARCAYAN bir dokunuş — kaza eseri basılmaya en açık yer, listenin ortasıdır. Çekmece
+ * niyeti ayırıyor: "seçenekleri gör" ayrı bir adım, "şununla gönder" ayrı.
+ */
+interface DispatchCardProps {
+  state: DispatchState;
+  onStart: () => void;
+  onClose: () => void;
+}
+
+function DispatchCard({ state, onStart, onClose }: DispatchCardProps) {
+  const d = t.picking.dispatch;
+  if (state.phase === 'idle') return null;
+
+  return (
+    <View style={styles.dispatchCard} testID="warehouse-dispatch">
+      <Text style={styles.dispatchTitle}>{d.title}</Text>
+
+      {state.phase === 'offer' ? (
+        <>
+          <Text style={styles.dispatchBody}>{fillCopy(d.offer, { ref: state.reference })}</Text>
+          <PressableSurface
+            onPress={onStart}
+            feedback="scale"
+            style={styles.dispatchCta}
+            accessibilityLabel={d.cta}
+            testID="warehouse-dispatch-start"
+          >
+            <Text style={styles.dispatchCtaLabel}>{d.cta}</Text>
+          </PressableSurface>
+        </>
+      ) : null}
+
+      {state.phase === 'loading' ? <Text style={styles.dispatchBody}>{d.loading}</Text> : null}
+      {state.phase === 'announcing' ? <Text style={styles.dispatchBody}>{d.announcing}</Text> : null}
+
+      {state.phase === 'blocked' ? (
+        <Text style={[styles.dispatchBody, styles.dispatchError]} accessibilityRole="alert" testID="warehouse-dispatch-blocked">
+          {fillCopy(d.blocked, { reason: reasonText(state.reason) })}
+        </Text>
+      ) : null}
+
+      {state.phase === 'done' ? (
+        <View style={styles.dispatchDone} testID="warehouse-dispatch-done">
+          <Text style={styles.dispatchBody}>{fillCopy(d.done, { n: String(state.trackingNumbers.length) })}</Text>
+          {state.trackingNumbers.map((no) => (
+            <Text key={no} style={styles.dispatchTracking}>
+              {no}
+            </Text>
+          ))}
+          {/* Basım AYRI bir olay: gönderi alındı ve parası ödendi, kâğıt çıkmasa bile geri
+              çekilmez (23.7 çizgisi). Üç hâl de söyleniyor — sessiz kalmak "bastı" sanılırdı. */}
+          <Text style={[styles.dispatchBody, state.printError === null ? undefined : styles.dispatchError]}>
+            {state.printError !== null
+              ? fillCopy(d.donePrintFailed, { error: state.printError })
+              : state.printed === 0
+                ? d.donePrintOff
+                : fillCopy(d.donePrinted, { n: String(state.printed) })}
+          </Text>
+        </View>
+      ) : null}
+
+      {state.phase === 'offer' || state.phase === 'blocked' || state.phase === 'done' ? (
+        <TextAction label={d.close} onPress={onClose} testID="warehouse-dispatch-close" />
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * Servis satırının alt cümlesi — süre + son mil.
+ *
+ * **Süre `null` YAYGIN bir hâl** (ölçüldü 28.08: bazı taşıyıcılar hiç bildirmiyor) ve o zaman
+ * "bilinmiyor" yazılıyor, sıfır ya da boşluk değil: bilinmeyen bir süreyi gizlemek depocuya
+ * "hemen gider" dedirtirdi (`CLAUDE §1`).
+ */
+function serviceDetail(option: { leadTimeHours: number | null; lastMile: string | null }): string {
+  const d = t.picking.dispatch;
+  const sure = option.leadTimeHours === null ? d.optionNoLead : fillCopy(d.optionLead, { hours: String(option.leadTimeHours) });
+  const mil = option.lastMile === 'home_delivery' ? d.optionHome : option.lastMile === null ? null : d.optionPoint;
+  return [sure, mil].filter(Boolean).join(' · ');
+}
+
+/** Ön koşulun ADI → depocunun cümlesi. Tanınmayan anahtar HAM geçer: gizlemek teşhisi siler. */
+function reasonText(reason: string): string {
+  const sozluk = t.picking.dispatch.reason as Record<string, string | undefined>;
+  return sozluk[reason] ?? reason;
+}
+
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -678,6 +856,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   queueScanLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors.cream,
+  },
+  /** Sevk kartı — etiket kartının iskeleti, ayrı tonda: bu kart PARA harcayan bir eylem taşıyor. */
+  dispatchCard: {
+    marginTop: operationsTheme.space.xl,
+    padding: operationsTheme.space.lg,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+    backgroundColor: operationsTheme.colors.card,
+    gap: operationsTheme.space.sm,
+  },
+  dispatchTitle: {
+    fontFamily: operationsTheme.font.display[operationsTheme.text['card-title-sm--font-weight']],
+    fontSize: operationsTheme.text['card-title-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  dispatchBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.muted,
+  },
+  dispatchError: { color: operationsTheme.colors.terracotta },
+  dispatchDone: { gap: operationsTheme.space['2xs'] },
+  dispatchTracking: {
+    // Tema tek-aralıklı yüz taşımıyor; takip numarası gövde yüzünün KALIN hâliyle yazılıyor —
+    // kopyalanacak bir dize olduğu için çevresinden ayrılması yeter.
+    fontFamily: operationsTheme.font.body[600],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  dispatchCta: {
+    height: operationsTheme.size.controlSm,
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.olive,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dispatchCtaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors.cream,
