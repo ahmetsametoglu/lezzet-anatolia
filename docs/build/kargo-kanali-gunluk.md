@@ -642,3 +642,42 @@ kolide multicollo süzgeci) + 3 uç testi (sağlayıcı kapalı 503 · gövdesiz
 400). **Kilitli tam paket 3886/3886**, `typecheck` · `lint` temiz.
 
 **Kalan (Faz 1.3):** telefonun bu ucu çağıran ekranı ve etiketin Brother'dan basımı.
+
+
+---
+
+## Mobil şeridin notu bir para kaçağı yakaladı ✅
+
+Uyandığında ilk bakman gereken yer burası olabilir: **checkout her kargo siparişinde ücreti
+0,00 € hesaplıyormuş.**
+
+Sağlayıcı her sorguya ücretsiz bir "mektup" kanalı da döndürüyor (`sendcloud:letter` — bizim
+bilinçli prova kanalımız). Yazdığım süzgeç yalnız *fiyatı olmayan* seçeneği eliyordu, **sıfır
+olanı elemiyordu**; liste ucuzdan sıralı ve müşteri seçim yapmadığında ilk sıra alınıyor. Yani
+15 kg'lık koli mektup tarifesiyle işaretlenip ücret sıfır yazılıyordu.
+
+Canlı ölçtüm (Strasbourg → Paris, 5 kg):
+
+```
+   0,00 €  sendcloud:letter          ← alınan
+   7,74 €  chronopost:shop2shop
+```
+
+Sipariş başına kaçan tutar bu örnekte **7,74 €**. Düzeltildi ve testi yazıldı; testin yakaladığını
+süzgeci geri alarak doğruladım.
+
+Notta *"fiyatı sıfır olanı atma, kampanya tarifesi de düşer"* uyarısı vardı — katılmadım ve
+gerekçemi cevaba yazdım: **bu liste bizim maliyetimiz, müşteriden aldığımız ücret değil.** Ücretsiz
+kargo bizim kararımız ve eşik mantığında yaşıyor; taşıyıcının 15 kg'ı sıfıra taşıması diye bir şey
+yok. Sıfır, "bu kanalı fiyatlamıyorum" demek. (Mobil şeridin kendi kodu da zaten aynı kuralı
+uyguluyordu.)
+
+### Senin kararını bekleyen bir konu var
+
+Aynı notta bir **kullanıcı kararı** aktarılmış: müşteri artık taşıyıcı seçmeyecek — eşik üstünde
+"Ücretsiz kargo · adrese teslim" yazılacak, eşik altında iki kademeli seçim (teslimat noktası ↔
+adrese teslim) ve nokta kademesinde harita olacak. Bu, dün yazdığım checkout adımını (düz taşıyıcı
+listesi) geçersiz kılıyor.
+
+Kararı ikinci elden okuyup yüzeyi yeniden kurmadım — sana soruyorum. Onaylarsan sıra: onaylı
+taşıyıcı listesi → otomatik seçim politikası → checkout iki kademe → `/service-points` ucu.

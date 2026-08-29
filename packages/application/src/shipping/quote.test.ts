@@ -178,6 +178,22 @@ describe('quoteShipping — teklif', () => {
     expect(sonuc.status === 'ok' && sonuc.options.map((o) => o.code)).toEqual(['fiyatlı']);
   });
 
+  /**
+   * ⚠ ÖLÇÜLMÜŞ ARIZANIN ÇİVİSİ (28.08). Sağlayıcı her sorguya ücretsiz `sendcloud:letter` kanalını
+   * da döndürüyor; liste ucuzdan sıralı ve seçim yapılmadığında ilk sıra alınıyor. Süzgeç yalnız
+   * `null` fiyatı elediği için **her kargo siparişinde ücret 0,00 € hesaplanıyordu** ve 15 kg'lık
+   * koli mektup tarifesiyle işaretleniyordu. Canlı ölçüm: `0,00 € letter` · `7,74 € shop2shop`
+   * → sipariş başına 7,74 € kaçıyordu.
+   *
+   * Sıfır bir kampanya DEĞİLDİR: bu liste bizim maliyetimiz, müşteriden aldığımız ücret değil.
+   * Ücretsiz kargo bizim kararımız ve eşik mantığında yaşıyor.
+   */
+  it('SIFIR fiyatlı seçenek listede durmaz — ve sıralamanın başını kapmaz', async () => {
+    const p = fakeProvider([secenek({ code: 'sendcloud:letter', priceCents: 0 }), secenek({ code: 'gerçek', priceCents: 774 })]);
+    const sonuc = await quoteShipping(db, p, { warehouseId, to: paris, items: [{ variantId: olculuId, qty: 1 }] });
+    expect(sonuc.status === 'ok' && sonuc.options.map((o) => o.code)).toEqual(['gerçek']);
+  });
+
   it('sağlayıcı düşerse teklif YOK ama yol kapanmaz — çağıran düştüğünü BİLİR', async () => {
     const p = fakeProvider([], { throws: true });
     const sonuc = await quoteShipping(db, p, { warehouseId, to: paris, items: [{ variantId: olculuId, qty: 1 }] });

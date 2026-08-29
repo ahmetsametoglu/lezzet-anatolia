@@ -122,9 +122,31 @@ export async function quoteShipping(
 
   return {
     status: 'ok',
-    // Fiyatı olmayan seçenek listede DURMAZ: tıklanabilir ama tutarı olmayan bir satır,
-    // müşteriye cevaplayamayacağımız bir soru sordurur.
-    options: usable.filter((o) => o.priceCents !== null).sort((a, b) => a.priceCents! - b.priceCents!),
+    /*
+      **FİYATI OLMAYAN VE SIFIR OLAN SEÇENEKLER ELENİR.**
+
+      `null` = tarife hesaplanamadı: tıklanabilir ama tutarı olmayan bir satır, müşteriye
+      cevaplayamayacağımız bir soru sordurur.
+
+      **Sıfır ise gerçek bir kargo hizmeti DEĞİLDİR** — ve bu ölçülmüş bir arızanın düzeltmesidir
+      (28.08, mobil şeridin tespiti): sağlayıcı her sorguya ücretsiz `sendcloud:letter` kanalını da
+      döndürüyor, liste ucuzdan sıralı ve seçim yapılmadığında ilk sıra alınıyordu. Sonuç: **her
+      kargo siparişinde ücret 0,00 € hesaplanıyor** ve 15 kg'lık koli mektup tarifesiyle
+      işaretleniyordu. Canlı ölçüm (FR 67000 → FR 75001, 5 kg): `0,00 € sendcloud:letter` ·
+      `7,74 € chronopost:shop2shop` — yani sipariş başına kaçan tutar 7,74 €.
+
+      **"Kampanya tarifesi de düşer" itirazı geçerli değil** (notta öyle deniyordu): bu liste bizim
+      MALİYETİMİZ, müşteriden aldığımız ücret değil. Ücretsiz kargo bizim kararımızdır ve eşik
+      mantığında yaşar (`resolveShippingFee` → `freeReason: 'threshold'`); taşıyıcının 15 kg'ı
+      sıfıra taşıması diye bir şey yok. Sıfır, "bu kanalı fiyatlamıyorum" demektir — fiyatlamadığı
+      bir kanalın maliyetini de biz bilemeyiz.
+
+      Aynı kural sevk kapısında da uygulanıyor (`dispatch.ts` → `quoteOrderShipment`): iki kapı
+      ayrı davransaydı, checkout'ta görünen seçenek satın alma anında reddedilirdi.
+    */
+    options: usable
+      .filter((o): o is typeof o & { priceCents: number } => typeof o.priceCents === 'number' && o.priceCents > 0)
+      .sort((a, b) => a.priceCents - b.priceCents),
     parcelCount: plan.parcels.length,
     totalWeightG: plan.parcels.reduce((sum, p) => sum + p.weightG, 0),
   };
