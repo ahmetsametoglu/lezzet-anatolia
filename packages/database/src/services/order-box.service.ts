@@ -34,6 +34,23 @@ export class OrderBoxService extends BaseDbService<OrderBox, OrderBoxInsert, Ord
     return this.getAll({ orderId }, { orderBy: 'boxNo' });
   }
 
+  /**
+   * **Taşıyıcıya verilmeyi bekleyen kutu sayısı** — deponun rampasındaki yığın (07.12).
+   *
+   * Üç şartın ÜÇÜ birden gerekiyor ve her biri ayrı bir gerçeği eliyor:
+   *   · `sealed_at not null` — açık kutu taşıyıcıya verilemez (hâlâ doluyor)
+   *   · `shipment_id not null` — etiketi satın alınmamış kutu da verilemez (devir kapısının şartı)
+   *   · `loaded_at is null` — verilmiş kutu yığında değildir
+   *
+   * Süzgeçler **devir kapısının reddettikleriyle birebir aynı** (`handOverBox`: `not_sealed` ·
+   * `not_announced`) ve bu bir tercih değil zorunluluk: sayaç kapıdan gevşek olsaydı hub "3 kutu
+   * bekliyor" der, depocu rampada üçünü de okutur ve biri reddedilirdi — sayının söylediği iş
+   * yapılamaz çıkardı.
+   */
+  async countAwaitingHandover(warehouseId: string): Promise<number> {
+    return this.count({ warehouseId }, { isNotNullFields: ['sealedAt', 'shipmentId'], isNullFields: ['loadedAt'] });
+  }
+
   /** Birden çok siparişin kutuları TEK sorguda — kuyruk sipariş başına tur atmasın (21.11d dersi). */
   async listByOrders(orderIds: string[]): Promise<OrderBox[]> {
     if (orderIds.length === 0) return [];

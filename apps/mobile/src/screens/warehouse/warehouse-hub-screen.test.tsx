@@ -47,10 +47,17 @@ function offline(): Promise<Response> {
   return Promise.reject(new Error('network down'));
 }
 
-function routeReplies(replies: { preparation?: () => Promise<Response>; transfers?: () => Promise<Response> }) {
+function routeReplies(replies: {
+  preparation?: () => Promise<Response>;
+  transfers?: () => Promise<Response>;
+  handover?: () => Promise<Response>;
+}) {
   fetchMock.mockImplementation((url) => {
     const path = String(url);
     if (path.includes('/preparation')) return (replies.preparation ?? (() => Promise.resolve(ok({ date: null, orders: [] }))))();
+    // Devir sayacı KENDİ ucundan geliyor (07.12): bekleyen kutuları hiçbir liste taşımıyor,
+    // çünkü duyurulmuş siparişin kutuları hazırlık kuyruğundan çoktan düşmüştür.
+    if (path.includes('/handover/pending')) return (replies.handover ?? (() => Promise.resolve(ok({ boxes: 0 }))))();
     return (replies.transfers ?? (() => Promise.resolve(ok({ transfers: [] }))))();
   });
 }
@@ -109,6 +116,42 @@ describe('depo hub', () => {
     expect(screen.getByTestId('warehouse-hub-transfer')).toHaveTextContent(/TRF-COL-26-0007 yolda/);
   });
 
+  /*
+    KARGO DEVRİ SAYACI (07.12 · tasarım §8.6) — hub'ın "listeden say" kuralının TEK istisnası.
+
+    Bekleyen kutuları hiçbir liste taşımıyor: duyurulmuş bir siparişin kutuları hazırlık
+    kuyruğundan düşmüştür ve gelen transferlerle ilgisi yok. Sayaç bu yüzden kendi ucundan geliyor.
+  */
+  it('devir satırı KENDİ ucundan sayıyor — rozet ve cümle birlikte', async () => {
+    routeReplies({ handover: () => Promise.resolve(ok({ boxes: 4 })) });
+
+    await renderHub();
+
+    expect(screen.getByTestId('warehouse-hub-handover-badge')).toHaveTextContent('4');
+    expect(screen.getByTestId('warehouse-hub-handover')).toHaveTextContent(/4 kutu taşıyıcıyı bekliyor/);
+  });
+
+  it('devirde sıfır ile OKUNAMADI ayrı cümleler — "rampa boş" yanlış bir izdir', async () => {
+    routeReplies({ handover: () => Promise.resolve(ok({ boxes: 0 })) });
+    await renderHub();
+
+    // Sıfırda rozet YOK: rozet bir işe çağrıdır, olmayan işe çağırmaz.
+    expect(screen.queryByTestId('warehouse-hub-handover-badge')).toBeNull();
+    // Alt metin küçük harfle: hub satırlarının deseni ("yolda transfer yok"), cümle değil etiket.
+    expect(screen.getByTestId('warehouse-hub-handover')).toHaveTextContent(/rampa boş — bekleyen kutu yok/);
+  });
+
+  it('devir sayacı DÜŞERSE hub ayakta kalır — bir rozet, iki listeyi gizlemez', async () => {
+    routeReplies({ handover: () => Promise.resolve(fail('server_error')) });
+
+    await renderHub();
+
+    // Sayaç bir rozettir: düşmesi hub'ı kullanılamaz yapmaz, yalnız o satırın rakamını söylemez.
+    expect(screen.queryByTestId('warehouse-hub-error')).toBeNull();
+    expect(screen.getByTestId('warehouse-hub-handover')).toHaveTextContent(/okunamadı/);
+    expect(screen.getByTestId('warehouse-hub-picking')).toBeOnTheScreen();
+  });
+
   it('boş liste "yok" der; OKUNAMAYAN liste "okunamadı" — ikisi ayrı şeydir', async () => {
     routeReplies({ preparation: () => Promise.resolve(fail('server_error')) });
 
@@ -124,6 +167,7 @@ describe('depo hub', () => {
     routeReplies({
       preparation: () => Promise.resolve(fail('server_error')),
       transfers: () => Promise.resolve(fail('server_error')),
+      handover: () => Promise.resolve(fail('server_error')),
     });
 
     await renderHub();
@@ -133,7 +177,7 @@ describe('depo hub', () => {
   });
 
   it('bağlantı yoksa kilit uyarısı ÇIKAR (v2:290) — kuyruk sözü verilmez', async () => {
-    routeReplies({ preparation: offline, transfers: offline });
+    routeReplies({ preparation: offline, transfers: offline, handover: offline });
 
     await renderHub();
 
@@ -152,6 +196,7 @@ describe('depo hub', () => {
     routeReplies({
       preparation: () => Promise.resolve(fail('warehouse_required', 400)),
       transfers: () => Promise.resolve(fail('warehouse_required', 400)),
+      handover: () => Promise.resolve(fail('warehouse_required', 400)),
     });
 
     await renderHub();

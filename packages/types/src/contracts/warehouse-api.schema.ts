@@ -419,6 +419,23 @@ export const HandoverResponseSchema = z.discriminatedUnion('status', [
 export type HandoverResponse = z.infer<typeof HandoverResponseSchema>;
 
 /**
+ * `GET /warehouse/handover/pending` — **rampada bekleyen kutu sayısı** (07.12 · tasarım §8.6).
+ *
+ * Hub rozetinin ve devir ekranı başlığının tek kaynağı. **Liste değil sayı** olması bilinçli:
+ * devir ekranı bir okutucudur, depocu elindeki kutuyu okutur ve "hangi siparişi vereyim" diye bir
+ * seçim yoktur. Sayı bir seçim davet etmiyor, bir BİTİŞ ölçüsü veriyor — sıfıra inince rampa
+ * boşalmıştır.
+ *
+ * Sayaç devir kapısının reddettikleriyle **birebir aynı** süzgeci kullanıyor (mühürsüz ve
+ * duyurulmamış kutu sayılmaz): gevşek bir sayaç, yapılamayacak bir işi varmış gibi gösterirdi.
+ */
+export const HandoverPendingResponseSchema = z.object({
+  /** Mühürlü + duyurulmuş + henüz verilmemiş kutu adedi. Sıfır meşru bir cevap: rampa boş. */
+  boxes: z.number().int().nonnegative(),
+});
+export type HandoverPendingResponse = z.infer<typeof HandoverPendingResponseSchema>;
+
+/**
  * `GET /warehouse/boxes/:boxId/shipping-label` — TAŞIYICININ etiketi (bizimki değil).
  *
  * **İmzalı adres dönüyor, dosyanın kendisi değil:** PDF özel kovada duruyor ve telefon onu

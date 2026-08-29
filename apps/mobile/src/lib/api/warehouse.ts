@@ -15,6 +15,7 @@ import {
   ResolveCodeResponseSchema,
   AnnounceShipmentResponseSchema,
   DispatchOptionsResponseSchema,
+  HandoverPendingResponseSchema,
   HandoverResponseSchema,
   WarehousePrintersResponseSchema,
   SealBoxResponseSchema,
@@ -275,6 +276,16 @@ export function announceShipment(
  */
 export function handOverBox(code: string): Promise<ApiResult<z.infer<typeof HandoverResponseSchema>>> {
   return authorizedFetch('/api/v1/warehouse/handover', HandoverResponseSchema, { method: 'POST', body: { code } });
+}
+
+/**
+ * **Rampada bekleyen kutu sayısı** (07.12) — hub rozeti + devir ekranının başlığı.
+ *
+ * Salt okuma ve liste DEĞİL sayı: devir bir okutma işidir, seçim değil. Sayının işi rampanın
+ * bitişini ölçmek — sıfıra inince yığın boşalmıştır.
+ */
+export function fetchPendingHandover(): Promise<ApiResult<z.infer<typeof HandoverPendingResponseSchema>>> {
+  return authorizedFetch('/api/v1/warehouse/handover/pending', HandoverPendingResponseSchema);
 }
 
 /**

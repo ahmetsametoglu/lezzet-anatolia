@@ -67,7 +67,10 @@
       "handover": {
         "code": "D8",
         "title": "Kargo devri",
-        "subtitle": "kutuları taşıyıcıya ver · okutarak"
+        "some": "{n} kutu taşıyıcıyı bekliyor",
+        "one": "1 kutu taşıyıcıyı bekliyor",
+        "none": "rampa boş — bekleyen kutu yok",
+        "unknown": "okunamadı"
       },
       "printers": {
         "code": "⚙",
@@ -452,6 +455,10 @@
     "subtitle": "kutuları taşıyıcıya ver",
     "cta": "📷 Kutuyu okut",
     "busy": "Okutuluyor…",
+    "pending": "Rampada {n} kutu taşıyıcıyı bekliyor.",
+    "pendingOne": "Rampada 1 kutu taşıyıcıyı bekliyor.",
+    "pendingNone": "Rampa boş — okutulacak kutu kalmadı.",
+    "pendingUnknown": "Bekleyen kutu sayısı okunamadı.",
     "scanTitle": "Kutuyu okut",
     "scanHint": "Taşıyıcının etiketindeki takip barkodunu çerçeveye getirin.",
     "hint": "Henüz kutu okutulmadı. Elindeki kutuyu okut — hangi gönderi olduğunu sistem çözer.",

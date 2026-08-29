@@ -32,8 +32,22 @@ function ok(data: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data, error: null }) } as unknown as Response;
 }
 
-const net: { handover?: unknown } = {};
-fetchMock.mockImplementation(() => Promise.resolve(ok(net.handover)));
+/*
+  SAHTE AĞ YOLA GÖRE AYIRIYOR — tek cevap dönmek artık yanlış olurdu.
+
+  Ekran iki uç okuyor: okutma (`POST /handover`) ve rampada bekleyen kutu sayısı
+  (`GET /handover/pending`). İkincisi ilkinin ÖNEKİNİ paylaşıyor (`/warehouse/handover…`), yani
+  gevşek bir eşleşme sayaç cevabını okutmaya, okutma cevabını sayaca verirdi.
+*/
+const net: { handover?: unknown; pending?: unknown } = {};
+fetchMock.mockImplementation((url) =>
+  Promise.resolve(ok(String(url).includes('/handover/pending') ? net.pending : net.handover)),
+);
+
+/** O turda giden okutma çağrıları — sayaç tazelemesi karışmasın diye yol TAM eşleşiyor. */
+function okutmaCagrilari() {
+  return fetchMock.mock.calls.filter((call) => String(call[0]).endsWith('/warehouse/handover'));
+}
 
 beforeAll(() => {
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
@@ -44,6 +58,7 @@ beforeEach(() => {
   fetchMock.mockClear();
   resetWarehouseStatus();
   net.handover = undefined;
+  net.pending = { boxes: 3 };
 });
 
 /** Okutucuyu açıp simülasyon çipiyle bir kod gönderir — cihazsız ortamın tek yolu. */
@@ -61,8 +76,7 @@ describe('kargo devri', () => {
 
     await waitFor(() => expect(screen.getByText(/Kutu 2 verildi — 2\/3/)).toBeOnTheScreen());
     // Gövde SUNUCUYA gidiyor: hangi kolonda aranacağını telefon bilmiyor, kod olduğu gibi gidiyor.
-    const call = fetchMock.mock.calls.at(-1);
-    expect(String(call?.[0])).toContain('/warehouse/handover');
+    expect(okutmaCagrilari()).toHaveLength(1);
   });
 
   it('SON kutuda cümle değişir — gönderi verildi, sipariş yola çıktı', async () => {
@@ -84,6 +98,44 @@ describe('kargo devri', () => {
     // Depocu rampada aynı kutuyu iki kez okutabilir; hata cümlesi onu kendi sayımından
     // şüphelendirirdi.
     await waitFor(() => expect(screen.getByText(/zaten verilmişti — sayı değişmedi \(1\/2\)/)).toBeOnTheScreen());
+  });
+
+  /*
+    RAMPADAKİ SAYI (§8.6) — okutmadan ÖNCE cevabı olan tek soru.
+
+    Bugüne kadar "kaç kaldı" ancak ilk okutmadan sonra ve yalnız O gönderi için biliniyordu;
+    rampada üç ayrı siparişin kutuları varken "bitti mi" sorusunun cevabı hiçbir yerde yoktu.
+  */
+  it('rampada bekleyen kutu sayısı okutmadan ÖNCE yazılır', async () => {
+    net.pending = { boxes: 4 };
+    await render(<HandoverScreen />);
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/4 kutu taşıyıcıyı bekliyor/));
+  });
+
+  it('sayı her okutmadan sonra SUNUCUDAN tazelenir — yerelde eksiltilmiyor', async () => {
+    net.pending = { boxes: 2 };
+    net.handover = { status: 'ok', boxNo: 1, referenceNo: 'LZA-26-3M8C', handedBoxes: 1, boxCount: 2, shipmentHandedOver: false };
+    await render(<HandoverScreen />);
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/2 kutu/));
+
+    // Sunucu artık BİR kutu diyor: aynı depodaki ikinci telefon da okutmuş olabilir ve yerel bir
+    // eksiltme o gerçeği kaçırırdı.
+    net.pending = { boxes: 1 };
+    await okut('Toplama');
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/1 kutu taşıyıcıyı bekliyor/));
+  });
+
+  it('sıfır ile OKUNAMADI ayrı cümleler — "rampa boş" yanlış bir izdir', async () => {
+    net.pending = { boxes: 0 };
+    await render(<HandoverScreen />);
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/Rampa boş/));
+
+    // Bozuk cevap: sayı OKUNAMADI. Sıfıra düşürmek depocuyu kutuların yanından uzaklaştırırdı.
+    net.pending = { bozuk: true };
+    await render(<HandoverScreen />);
+    await waitFor(() => expect(screen.getAllByTestId('warehouse-handover-pending').at(-1)).toHaveTextContent(/okunamadı/));
   });
 
   it('adlı retler SEBEBİYLE yazılır — mühürsüz kutu ve duyurulmamış gönderi ayrı cümleler', async () => {

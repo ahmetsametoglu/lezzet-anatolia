@@ -50,6 +50,26 @@ export type HandoverOutcome =
   /** Gönderi henüz duyurulmadı — satın alınmamış bir etiketle kutu taşıyıcıya verilemez. */
   | { status: 'not_announced'; boxNo: number };
 
+/**
+ * **Rampada bekleyen kutu sayısı** (07.12 · §8.6) — hub rozetinin ve devir ekranının başlığı.
+ *
+ * ── NEDEN SAYI, NEDEN LİSTE DEĞİL ───────────────────────────────────────────
+ * Devir ekranı bilerek bir okutucudur, liste değil: depocu rampada elindeki kutuyu okutur, "hangi
+ * siparişi vereyim" diye bir seçim yoktur. Ama okutmaya BAŞLAMADAN önce cevabı olmayan bir soru
+ * kalıyordu — *"bugün kaç kutu var?"*. Ekran bunu ancak İLK okutmadan sonra söyleyebiliyordu
+ * (`handedBoxes/boxCount`) ve o da yalnız o gönderi için.
+ *
+ * Sayı bir seçim davet etmiyor, bir BİTİŞ ölçüsü veriyor: sıfıra inince rampa boşalmıştır.
+ *
+ * ── SÜZGEÇ DEVİR KAPISININ REDDETTİKLERİYLE AYNI ────────────────────────────
+ * `countAwaitingHandover` mühürsüz ve duyurulmamış kutuyu saymıyor — tam olarak `handOverBox`in
+ * `not_sealed`/`not_announced` ile reddettikleri. Gevşek bir sayaç, yapılamayacak bir işi varmış
+ * gibi gösterirdi.
+ */
+export async function countAwaitingHandover(db: SupabaseClient, input: { warehouseId: string }): Promise<number> {
+  return new OrderBoxService(db).countAwaitingHandover(input.warehouseId);
+}
+
 export async function handOverBox(
   db: SupabaseClient,
   input: { code: string; warehouseId: string; actorId: string; effects?: OrderEffects },

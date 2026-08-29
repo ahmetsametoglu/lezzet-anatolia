@@ -1151,3 +1151,80 @@ tazeliğini kontrol et."* Not okumak yetmez — her madde için **kodu ölçtüm
 Bugünkü tek-mod davranış eksik değil, **doğru**: elimizde bir öneri yokken ekranda öneri varmış
 gibi davranmak depocuyu yanıltırdı. Sıradaki işim kendi alanımda: hub rozeti "kargoya verilecek
 N kutu" (`warehouse-hub-screen.tsx:270` BEKLEYEN'i — ucu da benim).
+
+## Faz 2.2 — rampada bekleyen kutu sayacı ✅ (21.130'un BEKLEYEN'i kapandı)
+
+Faz 2'nin kalanı kargo şeridinin politikasını beklerken kendi alanımdaki açık işaret kapandı.
+
+### Rozet yoktu ve künyesi sebebini yazıyordu
+
+Hub'ın devir satırı (`D8 · Kargo devri`) sayaçsızdı; yorumu şunu diyordu: *"'kaç kutu bekliyor'
+sorusunun bir ucu henüz yok ve uydurulmuş bir sayı, olmayan bir işi varmış gibi gösterirdi."*
+Doğruydu — uç yoktu. Şimdi var: `GET /warehouse/handover/pending`.
+
+### Hub'ın kendi kuralının TEK istisnası, ve gerekçesi ölçüldü
+
+Hub künyesi net: *"sayaç uçtan gelmez, listeden sayılır"* — üçüncü bir özet ucu, iki kez okunan
+aynı gerçeği bir kez daha okumak olurdu. Devir bu kuralın dışında kalıyor çünkü **bekleyen
+kutuları hiçbir liste taşımıyor**: duyurulmuş bir siparişin kutuları hazırlık kuyruğundan
+DÜŞMÜŞTÜR (sipariş `ready`/`out_for_delivery`) ve gelen transferlerle hiç ilgisi yok. "Listeden
+say" burada uygulanabilir değildi, tercih edilmedi diye değil.
+
+### Liste değil SAYI — ve fark bir tasarım kararı
+
+Devir ekranı bilerek bir okutucudur: depocu rampada, kurye karşısında, elindeki kutuyu uzatıyor.
+"Hangi siparişi vereceğim" diye bir soru YOK. Bir bekleyenler listesi çizmek, olmayan bir seçimi
+varmış gibi göstermek olurdu.
+
+Sayı başka bir şey yapıyor: **bitiş ölçüsü** veriyor. Depocunun cevapsız kalan sorusu buydu —
+rampada üç ayrı siparişin kutuları varken *"bitti mi"*. Bugüne kadar cevap ancak İLK okutmadan
+sonra ve yalnız O gönderi için vardı (`handedBoxes/boxCount`).
+
+### Süzgeç kapının reddettikleriyle BİREBİR aynı olmak zorunda
+
+`countAwaitingHandover` üç şartı birden arıyor: mühürlü · duyurulmuş · verilmemiş — tam olarak
+`handOverBox`in `not_sealed`/`not_announced` ile reddettikleri. Gevşek bir sayaç hub'a "3 kutu
+bekliyor" yazdırırdı; depocu rampada üçünü de okuturdu ve biri reddedilirdi. **Sayının söylediği
+iş yapılamaz çıkardı** — bu, yanlış sayıdan daha kötüdür, çünkü sayı doğru görünür.
+
+### Üç hâl ayrı cümle, ve sayaç hub'ı düşürmüyor
+
+Okunamadı ≠ sıfır (`CLAUDE §1`): "rampa boş" demek depocuyu kutuların yanından uzaklaştırırdı.
+Rozet yalnız gerçekten bekleyen kutu varken çizilir — rozet bir işe çağrıdır, olmayan işe çağırmaz.
+
+Sayacın düşüşü hub'ın hata hâlini **tetiklemiyor**: bir rozetin okunamaması, çalışan iki listeyi
+gizleyen tam ekran hata bloğu doğurmamalı. Karar testle çivilendi.
+
+### Devir ekranında sayı yerelde eksiltilmiyor
+
+Her okutmadan sonra sunucudan yeniden okunuyor — başarısız okutmadan sonra da. Yerel eksiltme daha
+ucuzdu ama iki hâli kaçırırdı: aynı depoda ikinci bir telefon da okutuyor olabilir, ve
+`not_announced` alan bir kutu o arada BAŞKASI tarafından hazırlanmış olabilir.
+
+### Testler ve bir ölçüm kısıtı
+
+3 entegrasyon + 1 uç testi + 6 ekran testi. Entegrasyonlar **delta ile** ölçüyor (önce oku, işi
+yap, farkı doğrula), mutlak sayıyla değil: aynı depoda bu dosyanın öteki testleri de kutu kuruyor
+ve mutlak bir sayı koşu sırasına göre değişen kırılgan bir iddia olurdu (`CLAUDE §4b`).
+
+Ekran testlerinin yakaladığı **sabotajla doğrulandı** ("okunamadı"yı sıfıra düşürdüm, ilgili test
+kırmızıya döndü). Entegrasyon tarafında aynı doğrulama YAPILMADI ve sebebi kural: tek bir
+entegrasyon dosyasını koşmak şeride kapalı (`CLAUDE §4b`), tam paketi sabotajla ikinci kez koşmak
+da öteki şeritlerin penceresini işgal ederdi.
+
+Kilitli tam paket **3945/3945**, depo jest **124/124**.
+
+### Ölçülen ama BENİM OLMAYAN üç kırmızı
+
+Kök `typecheck` ve `docs:check` şu an kırmızı; üçü de **başka şeritlerin indekste bekleyen**
+işinden ve hiçbiri commit'li değil:
+
+- `@lezzet/web` — beş dosya indekste SİLİNMİŞ (`apps/web/lib/{identity/find-or-create,messaging/meta-webhook,…}`),
+  onlara bakan importlar hâlâ duruyor. Sosyal şeridin yarım taşıma işi.
+- `@lezzet/application` — `messaging/meta-profile.ts` indekse EKLENMİŞ ve `RequestInit`e
+  `cache` yazıyor (`TS2353`).
+- `docs:check` — `04.5` ve `15.18` görev satırları silinen dosyaları teslim ediyor.
+
+Dokunulmadı. **Kendi commit'im pathspec ile atıldı** (`git commit -- <yollar>`), yani indekste
+bekleyen bu dosyaların hiçbiri benim commit'ime giremez (`CLAUDE §0`). Ayrıca sosyal şeridin
+COMMIT'Lİ bir hatası da duruyor: mobil mod çipi `ai` metnini bulamıyor — notu açıldı.

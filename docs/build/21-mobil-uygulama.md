@@ -7000,3 +7000,39 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** 3 sözleşme birimi + 3 ekran testi; alan şemadan çıkarılınca üçü de kırmızıya
   döndü, geri konunca yeşil. Depo jest paketi **118/118**.
+
+- [x] (21.134) **RAMPADA BEKLEYEN KUTU SAYACI — hub rozeti + devir ekranı başlığı**
+  (tasarım `kargo-kanali-tasarimi.md §8.6`; `21.130`'un BEKLEYEN'i kapandı)
+  `touches:` `packages/database/src/services/order-box.service.ts` ·
+  `packages/application/src/shipping/handover.ts` ·
+  `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{use-warehouse-hub.hook.ts,warehouse-hub-screen.tsx,handover-screen.tsx}`
+
+  **Durum (29.08).** Devir satırının rozeti YOKTU ve künyesi sebebini yazıyordu: *"kaç kutu
+  bekliyor sorusunun bir ucu henüz yok."* Uç yazıldı (`GET /warehouse/handover/pending`).
+
+  **Hub'ın "sayaç listeden sayılır" kuralının TEK istisnası** ve gerekçesi ölçüldü: bekleyen
+  kutuları hiçbir liste taşımıyor. Duyurulmuş bir siparişin kutuları hazırlık kuyruğundan
+  DÜŞMÜŞTÜR (sipariş `ready`/`out_for_delivery`) ve gelen transferlerle ilgisi yok.
+
+  **Liste değil SAYI:** devir ekranı bilerek bir okutucudur — depocu elindeki kutuyu okutur,
+  "hangi siparişi vereyim" diye bir seçim yoktur. Sayı seçim davet etmiyor, **bitiş ölçüsü**
+  veriyor. Bu soru bugüne kadar ancak İLK okutmadan sonra ve yalnız O gönderi için
+  cevaplanabiliyordu (`handedBoxes/boxCount`); rampada üç ayrı siparişin kutuları varken
+  "bitti mi" sorusunun cevabı hiçbir yerde yoktu.
+
+  **Süzgeç devir kapısının reddettikleriyle BİREBİR aynı** (mühürsüz · duyurulmamış · verilmiş):
+  gevşek bir sayaç "3 kutu bekliyor" der, depocu üçünü okutur ve biri reddedilirdi — sayının
+  söylediği iş yapılamaz çıkardı.
+
+  **Üç hâl ayrı cümle:** okunamadı ≠ sıfır (`CLAUDE §1`). "Rampa boş" demek, depocuyu kutuların
+  yanından uzaklaştırırdı. Rozet yalnız gerçekten bekleyen kutu varken çizilir.
+
+  **Sayaç hub'ın hata hâlini TETİKLEMİYOR:** bir rozetin düşmesi, çalışan iki listeyi gizleyen tam
+  ekran hata bloğu doğurmamalı. Devir ekranında sayı her okutmadan sonra sunucudan tazeleniyor,
+  yerelde eksiltilmiyor — aynı depoda ikinci bir telefon da okutuyor olabilir.
+
+  **Doğrulama.** 3 entegrasyon (delta ile ölçüldü, mutlak sayıyla değil — `CLAUDE §4b`) + 1 uç
+  testi + 6 ekran testi. Sabotajla doğrulandı: "okunamadı"yı sıfıra düşürünce ilgili test kırmızı.
+  Depo jest paketi **124/124**, kilitli tam paket **3945/3945**.

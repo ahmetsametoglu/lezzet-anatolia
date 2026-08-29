@@ -7,6 +7,7 @@ import {
   boxLabelPayload,
   boxLabelSvg,
   confirmPreparation,
+  countAwaitingHandover,
   handOverBox,
   printersFor,
   markBoxPrinted,
@@ -38,6 +39,7 @@ import {
   ConfirmPreparationResponseSchema,
   DispatchOptionsResponseSchema,
   HandoverRequestSchema,
+  HandoverPendingResponseSchema,
   HandoverResponseSchema,
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
@@ -460,6 +462,23 @@ warehouse.post('/handover', async (c) => {
   });
   const body: z.input<typeof HandoverResponseSchema> = outcome;
   return ok(c, HandoverResponseSchema.parse(body));
+});
+
+/**
+ * **RAMPADA BEKLEYEN KUTU SAYISI** (07.12 · tasarım §8.6) — hub rozeti + devir ekranı başlığı.
+ *
+ * Salt okuma ve **liste değil sayı**: devir ekranı bir okutucudur, depocu elindeki kutuyu okutur
+ * ve "hangi siparişi vereyim" diye bir seçim yoktur. Bir bekleyenler listesi, olmayan bir seçimi
+ * varmış gibi gösterirdi. Sayının işi başka: rampanın BİTİŞİNİ ölçmek — sıfıra inince yığın
+ * boşalmıştır. Bugüne kadar bu soru ancak İLK okutmadan sonra ve yalnız o gönderi için
+ * cevaplanabiliyordu.
+ *
+ * Kapsam depodan (`warehouseId`) geliyor, istemciden değil — depo bir boyut değil DEĞİŞMEZ
+ * (`CLAUDE §1`) ve süzgeci istemciye bırakmak, başka deponun yığınını saydırabilirdi.
+ */
+warehouse.get('/handover/pending', async (c) => {
+  const boxes = await countAwaitingHandover(serviceDb(), { warehouseId: c.get('warehouseId') });
+  return ok(c, HandoverPendingResponseSchema.parse({ boxes }));
 });
 
 /**

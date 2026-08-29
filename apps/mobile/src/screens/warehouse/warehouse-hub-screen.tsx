@@ -138,7 +138,7 @@ export function WarehouseHubScreen() {
     );
   }
 
-  const rows = buildRows(hub.orders, hub.transfers, router);
+  const rows = buildRows(hub.orders, hub.transfers, hub.pendingHandover, router);
 
   return (
     <View style={styles.screen} testID="operations-section-warehouse">
@@ -187,6 +187,8 @@ export function WarehouseHubScreen() {
 function buildRows(
   orders: readonly { lineCount: number; pickedLineCount: number }[] | null,
   transfers: readonly { referenceNo: string }[] | null,
+  /** Rampada bekleyen kutu; `null` = OKUNAMADI ve sıfırdan AYRI okunur. */
+  pendingHandover: number | null,
   router: ReturnType<typeof useRouter>,
 ): HubRow[] {
   const picking = t.hub.rows.picking;
@@ -201,6 +203,16 @@ function buildRows(
           : fillCopy(picking.some, { n: String(orders.length) });
 
   const transfer = t.hub.rows.transfer;
+  const handover = t.hub.rows.handover;
+  const handoverSubtitle =
+    pendingHandover === null
+      ? handover.unknown
+      : pendingHandover === 0
+        ? handover.none
+        : pendingHandover === 1
+          ? handover.one
+          : fillCopy(handover.some, { n: String(pendingHandover) });
+
   const firstTransfer = transfers?.[0];
   const transferSubtitle =
     transfers === null
@@ -265,15 +277,22 @@ function buildRows(
       badge: null,
       onPress: () => router.navigate('/courier-return'),
     },
-    // KARGO DEVRİ (07.12) — kutuların taşıyıcıya verildiği an. Rozet YOK ve bu bilinçli: "kaç kutu
-    // bekliyor" sorusunun bir ucu henüz yok ve uydurulmuş bir sayı, olmayan bir işi varmış gibi
-    // gösterirdi. BEKLEYEN(kargo-kanali-tasarimi.md §8.6): "kargoya verilecek N kutu" sayacı.
+    /*
+      KARGO DEVRİ (07.12 · tasarım §8.6) — kutuların taşıyıcıya verildiği an.
+
+      Sayaç kendi ucundan geliyor ve bu bir istisna: bekleyen kutuları hiçbir liste taşımıyor.
+      Duyurulmuş bir siparişin kutuları hazırlık kuyruğundan DÜŞMÜŞTÜR (sipariş `ready`), yani
+      hub'ın "listeden say" kuralı burada uygulanamıyordu.
+
+      Üç hâl AYRI cümle: okunamadı ≠ sıfır (CLAUDE §1 — "rampa boş" demek, depocuyu kutuların
+      yanından uzaklaştırır). Rozet yalnız gerçekten bekleyen kutu varken çizilir.
+    */
     {
       key: 'handover',
       code: t.hub.rows.handover.code,
       title: t.hub.rows.handover.title,
-      subtitle: t.hub.rows.handover.subtitle,
-      badge: null,
+      subtitle: handoverSubtitle,
+      badge: pendingHandover === null || pendingHandover === 0 ? null : String(pendingHandover),
       onPress: () => router.navigate('/handover'),
     },
     // BU CİHAZ · YAZICILAR (07.12) — kurulum satırı; günlük işin değil, bir kereliğin parçası.

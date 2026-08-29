@@ -14,7 +14,7 @@ import {
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { AnnouncedShipment, ShippingQuote } from '@lezzet/sendcloud';
 import { quoteOrderShipment } from './dispatch';
-import { handOverBox } from './handover';
+import { countAwaitingHandover, handOverBox } from './handover';
 import { announceOrderShipment } from './announce';
 import type { ShippingRateProvider } from './port';
 import { providerStub } from './provider.testkit';
@@ -526,6 +526,51 @@ describe('devir okutması (29.08)', () => {
 
     const ikinci = await handOverBox(db, { code: kutular[0]!.code, warehouseId, actorId: customerId });
     expect(ikinci).toEqual({ status: 'already_handed', boxNo: 1, handedBoxes: 1, boxCount: 2 });
+  });
+
+  /*
+    RAMPADA BEKLEYEN KUTU SAYISI (§8.6) — hub rozetinin ve devir ekranı başlığının kaynağı.
+
+    **DELTA ile ölçülüyor, mutlak sayıyla değil** (`CLAUDE §4b`): aynı depoda bu dosyanın öteki
+    testleri de kutu kuruyor ve mutlak bir sayı, koşu sırasına göre değişen kırılgan bir iddia
+    olurdu. Ölçülen tek şey BENİM kurduğum satırların sayıya etkisi.
+  */
+  it('sayaç mühürlü + duyurulmuş + verilmemiş kutuları sayar; her devirde AZALIR', async () => {
+    const once = await countAwaitingHandover(db, { warehouseId });
+
+    const { kutular } = await duyurulmusGonderi(2);
+    expect(await countAwaitingHandover(db, { warehouseId })).toBe(once + 2);
+
+    await handOverBox(db, { code: kutular[0]!.code, warehouseId, actorId: customerId });
+    expect(await countAwaitingHandover(db, { warehouseId })).toBe(once + 1);
+
+    await handOverBox(db, { code: kutular[1]!.code, warehouseId, actorId: customerId });
+    // Rampa (benim kurduğum kadarıyla) boşaldı: sayaç devir kapısıyla aynı gerçeği anlatıyor.
+    expect(await countAwaitingHandover(db, { warehouseId })).toBe(once);
+  });
+
+  it('DUYURULMAMIŞ kutu sayıya girmez — süzgeç devir kapısının reddiyle aynı', async () => {
+    const once = await countAwaitingHandover(db, { warehouseId });
+
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+
+    /*
+      Sayaç kapıdan GEVŞEK olsaydı hub "1 kutu bekliyor" derdi; depocu rampada onu okuturdu ve
+      `not_announced` ile reddedilirdi — sayının söylediği iş yapılamaz çıkardı.
+    */
+    expect(await countAwaitingHandover(db, { warehouseId })).toBe(once);
+  });
+
+  it('BAŞKA deponun kutusu sayıya girmez — depo bir boyut değil DEĞİŞMEZ', async () => {
+    const yabanci = await createTestWarehouse(db, { label: 'SAY' });
+    warehouseIds.push(yabanci.id);
+    const once = await countAwaitingHandover(db, { warehouseId: yabanci.id });
+
+    await duyurulmusGonderi(2);
+
+    // İki kutu BİZİM depomuzda doğdu; yabancı deponun rampası kıpırdamamalı.
+    expect(await countAwaitingHandover(db, { warehouseId: yabanci.id })).toBe(once);
   });
 
   it('DUYURULMAMIŞ kutu devredilemez ve BAŞKA deponun kutusu reddedilir', async () => {

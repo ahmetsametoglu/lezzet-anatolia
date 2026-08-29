@@ -1013,6 +1013,22 @@ describe('D1 · sevk uçları (teklif + duyuru)', () => {
     expect(res.status).toBe(400);
   });
 
+  /*
+    RAMPADA BEKLEYEN KUTU SAYISI — ucun kendi kararı KAPSAM: sayı depodan gelir, istemciden değil.
+
+    Sayacın KURALLARI (mühürsüz/duyurulmamış kutu sayılmaz, başka deponun kutusu sayılmaz)
+    `packages/application/src/shipping/announce.test.ts`te çivili; burada tekrar edilmiyor —
+    dosyanın künyesindeki çizgi bu.
+  */
+  it('bekleyen kutu sayısı SAĞLAYICIDAN bağımsız — kargo kapalıyken de cevap verir', async () => {
+    const res = await asStaff('/api/v1/warehouse/handover/pending');
+
+    // 503 dönmüyor: bu uç sağlayıcıya HİÇ çıkmıyor, kendi tablomuzu sayıyor. Teklif/duyuru
+    // uçlarıyla aynı kefeye konsaydı depocu, kargo anahtarı yokken rampasını da göremezdi.
+    expect(res.status).toBe(200);
+    expect(await dataOf<{ boxes: number }>(res)).toEqual({ boxes: 0 });
+  });
+
   it('bozuk sipariş kimliği 400 — uuid olmayan yol parçası kapıya hiç ulaşmaz', async () => {
     expect((await asStaff('/api/v1/warehouse/orders/bozuk/dispatch-options')).status).toBe(400);
   });

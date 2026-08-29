@@ -1,12 +1,12 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { PressableSurface } from '@/components/ui/pressable-surface';
-import { handOverBox } from '@/lib/api/warehouse';
+import { fetchPendingHandover, handOverBox } from '@/lib/api/warehouse';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
@@ -18,11 +18,19 @@ import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
   ── EKRAN BİR LİSTE DEĞİL, BİR OKUTUCU ──────────────────────────────────────
   Fiziksel an şu: depocu rampada, kurye karşısında, kutuları tek tek uzatıyor. "Hangi siparişi
   vereceğim" diye bir soru YOK — elindeki kutuyu okutuyor ve sistem hangi gönderi olduğunu kendisi
-  çözüyor. Bir bekleyenler listesi çizmek, olmayan bir seçimi varmış gibi göstermek olurdu (ve
-  besleyeceği bir uç da yok).
+  çözüyor. Bir bekleyenler listesi çizmek, olmayan bir seçimi varmış gibi göstermek olurdu.
 
-  Bu yüzden ekranın gövdesi OKUTMA GEÇMİŞİ: hangi kutu verildi, kaç kaldı. Depocunun tek sorusu
-  odur ve cevabı her okutmadan sonra yazılıyor.
+  Bu yüzden ekranın gövdesi OKUTMA GEÇMİŞİ: hangi kutu verildi, kaç kaldı.
+
+  ── AMA BİR SAYI VAR, VE LİSTEDEN FARKI ─────────────────────────────────────
+  Başlıkta rampada bekleyen kutu ADEDİ yazıyor (07.12 · §8.6). Sayı bir seçim davet etmiyor, bir
+  BİTİŞ ölçüsü veriyor: depocu okutmaya başlamadan önce kaç kutu olduğunu, okuturken de kaç
+  kaldığını görüyor. Bu soru bugüne kadar ancak İLK okutmadan sonra ve yalnız O gönderi için
+  cevaplanabiliyordu (`handedBoxes/boxCount`) — rampada üç ayrı siparişin kutuları varken
+  "bitti mi" sorusunun cevabı hiçbir yerde yoktu.
+
+  Sayı her okutmadan sonra SUNUCUDAN yeniden okunuyor, yerelde eksiltilmiyor: aynı depoda ikinci
+  bir telefon da okutuyor olabilir ve yerel bir sayaç sessizce yanlışa kayardı.
 
   ── SAYIM GÖNDERİNİN, SİPARİŞİN DEĞİL ───────────────────────────────────────
   "2/3 kutu verildi" cümlesi duyurulan GÖNDERİYİ sayıyor (kapı künyesi): bir siparişin kutuları
@@ -48,8 +56,21 @@ export function HandoverScreen() {
   const [scanOpen, setScanOpen] = useState(false);
   const [rows, setRows] = useState<ScanRow[]>([]);
   const [busy, setBusy] = useState(false);
+  /** Rampada bekleyen kutu; **`null` = OKUNAMADI, sıfır DEĞİL** — "rampa boş" yanlış bir izindir. */
+  const [pending, setPending] = useState<number | null>(null);
 
-  const handleScan = useCallback((code: string) => {
+  const loadPending = useCallback(async () => {
+    const result = await trackWarehouse(fetchPendingHandover());
+    setPending(result.error === null ? result.data.boxes : null);
+  }, []);
+
+  // Ekran açılınca bir kez: sayının işi okutmaya BAŞLAMADAN önce cevap vermek.
+  useEffect(() => {
+    void loadPending();
+  }, [loadPending]);
+
+  const handleScan = useCallback(
+    (code: string) => {
     // Sayfa okuma başına kapanır (mal kabul deseni): sonuç listenin üstünde okunur, ikinci kutu
     // için düğme yeniden açar. Rampada elinde kutu olan depocu için bu bir adım değil, bir ritim.
     setScanOpen(false);
@@ -90,8 +111,19 @@ export function HandoverScreen() {
 
       // En yeni ÜSTTE: depocu son okuttuğunun cevabını aramak için listeyi kaydırmasın.
       setRows((current) => [satir, ...current]);
+
+      /*
+        SAYI HER OKUTMADAN SONRA TAZELENİR — başarısızdan sonra da.
+
+        Yerelde eksiltmek daha ucuz olurdu ama yanlışa kayardı: aynı depoda ikinci bir telefon da
+        okutuyor olabilir. Başarısız okutmadan sonra da tazelenmesinin sebebi ayrı — `not_sealed`
+        ya da `not_announced` alan bir kutu, o arada BAŞKASI tarafından hazırlanmış olabilir.
+      */
+      void loadPending();
     })();
-  }, []);
+    },
+    [loadPending],
+  );
 
   return (
     <View style={styles.screen} testID="warehouse-handover">
@@ -104,6 +136,17 @@ export function HandoverScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-handover-list">
+        {/* Sayı düğmenin ÜSTÜNDE: depocu "daha var mı" sorusunu okutmadan ÖNCE soruyor. */}
+        <Text style={styles.pending} testID="warehouse-handover-pending">
+          {pending === null
+            ? t.handover.pendingUnknown
+            : pending === 0
+              ? t.handover.pendingNone
+              : pending === 1
+                ? t.handover.pendingOne
+                : fillCopy(t.handover.pending, { n: String(pending) })}
+        </Text>
+
         {offline ? (
           <Text style={[styles.notice, styles.notice_error]} accessibilityRole="alert">
             {t.common.offlineHint}
@@ -165,6 +208,13 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors.cream,
+  },
+  /** Sayı satırı — ipucundan AYRI yüz: bu bir açıklama değil, işin ölçüsü. */
+  pending: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+    marginTop: operationsTheme.space.lg,
   },
   hint: {
     fontFamily: operationsTheme.font.body[400],
