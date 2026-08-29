@@ -64,6 +64,11 @@
         "title": "Kurye dönüşü",
         "subtitle": "1 döküm bekliyor"
       },
+      "handover": {
+        "code": "D8",
+        "title": "Kargo devri",
+        "subtitle": "kutuları taşıyıcıya ver · okutarak"
+      },
       "sale": {
         "code": "D7",
         "title": "Yerinde satış",
@@ -433,5 +438,22 @@
       "provider_unavailable": "İade borcu YAZILAMADI: ödeme sağlayıcısı bağlı değil.",
       "provider_failed": "İade borcu YAZILAMADI: sağlayıcı reddetti."
     }
+  },
+  "handover": {
+    "title": "Kargo devri",
+    "subtitle": "kutuları taşıyıcıya ver",
+    "cta": "📷 Kutuyu okut",
+    "busy": "Okutuluyor…",
+    "scanTitle": "Kutuyu okut",
+    "scanHint": "Taşıyıcının etiketindeki takip barkodunu çerçeveye getirin.",
+    "hint": "Henüz kutu okutulmadı. Elindeki kutuyu okut — hangi gönderi olduğunu sistem çözer.",
+    "done": "Kutu {n} verildi — {handed}/{total}.",
+    "doneAll": "{ref} TAŞIYICIYA VERİLDİ — {n} kutunun hepsi okutuldu, sipariş yola çıktı.",
+    "already": "Kutu {n} zaten verilmişti — sayı değişmedi ({handed}/{total}).",
+    "outOfScope": "Bu kutu başka deponun ({ref}) — geri koy.",
+    "notSealed": "Kutu {n} mühürlü değil — açık kutu taşıyıcıya verilemez.",
+    "notAnnounced": "Kutu {n} için etiket alınmamış — önce hazırlık ekranından kargoya ver.",
+    "unknownCode": "{code} tanınmıyor — taşıyıcı etiketinin barkodunu okutun.",
+    "footnote": "Sayım GÖNDERİYİ sayar: son kutu okutulunca sipariş kendiliğinden yola çıkar."
   }
 }

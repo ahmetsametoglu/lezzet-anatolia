@@ -57,6 +57,17 @@ export class OrderBoxService extends BaseDbService<OrderBox, OrderBoxInsert, Ord
   }
 
   /**
+   * **Devir okutmasının eşleşme kapısı** (07.12) — taşıyıcının TAKİP numarası.
+   *
+   * `getByParcelRef` ile karıştırılmaz: o sağlayıcının İÇ koli kimliği (webhook'un eşleşmesi),
+   * bu ise etiketin ÜSTÜNDE yazan ve barkodu okutulabilen numara. Devir okutması etiketi okuyor,
+   * webhook ise sağlayıcının kendi kimliğiyle konuşuyor — iki ayrı kaynak, iki ayrı kolon.
+   */
+  async getByTrackingNumber(trackingNumber: string): Promise<OrderBox | null> {
+    return this.getOneBy({ trackingNumber });
+  }
+
+  /**
    * **Kutu kapanışı** (`seal_order_box`, 0048): kutu kalemleri + hazırlık kaydı + mühür TEK
    * transaction. `picks` ABSOLÜT birleşimdir — kurma sorumluluğu çağıran kapıda (`sealBox`);
    * RPC eşitliği denetler (Σ kutu = karşılanan) ve bozuksa TÜMÜNÜ geri alır.

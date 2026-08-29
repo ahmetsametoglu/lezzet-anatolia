@@ -179,12 +179,17 @@ function eslesenKutu(boxes: readonly OrderBox[], parcelId: string | null, tracki
 /**
  * Gönderi durumundan SİPARİŞ durumuna — zincirin kargo kulvarındaki halkası.
  *
+ * **Dışa açık, çünkü İKİ olay onu tetikliyor** (29.08): taşıyıcının webhook'u ve depodaki DEVİR
+ * OKUTMASI. İkincisi bizim kendi gözlemimiz — kutu fiziksel olarak taşıyıcıya verildi ve
+ * sağlayıcının haberi henüz yok. Aynı kuralı iki yere yazmak, bir gün yalnız birinde değişen iki
+ * durum makinesi olurdu (`CLAUDE §1`).
+ *
  * Atlanan adım yazılır: sipariş `ready`deyken gönderi doğrudan `delivered` görünürse önce
  * `out_for_delivery` yazılır, sonra teslim edilir. `deliver_order` RPC'si yalnız
  * `out_for_delivery`den teslim ediyor (0016) — ara adımı atlamak teslim çağrısını `stale`e
  * düşürürdü ve sipariş yine takılı kalırdı, ama bu kez sebebi görünmez olurdu.
  */
-async function siparisiTasi(
+export async function siparisiTasi(
   db: SupabaseClient,
   shipment: Shipment,
   toplu: ShipmentStatus | null,

@@ -15,6 +15,7 @@ import {
   ResolveCodeResponseSchema,
   AnnounceShipmentResponseSchema,
   DispatchOptionsResponseSchema,
+  HandoverResponseSchema,
   SealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
@@ -263,4 +264,14 @@ export function announceShipment(
     method: 'POST',
     body,
   });
+}
+
+/**
+ * **DEVİR OKUTMASI** (07.12) — kutu taşıyıcıya verildi.
+ *
+ * Kod ya taşıyıcının takip numarası ya bizim kutu kodumuz; hangisi olduğunu SUNUCU çözüyor.
+ * `already_handed` bir hata değil cevaptır — depocu rampada aynı kutuyu iki kez okutabilir.
+ */
+export function handOverBox(code: string): Promise<ApiResult<z.infer<typeof HandoverResponseSchema>>> {
+  return authorizedFetch('/api/v1/warehouse/handover', HandoverResponseSchema, { method: 'POST', body: { code } });
 }

@@ -7,6 +7,7 @@ import {
   boxLabelPayload,
   boxLabelSvg,
   confirmPreparation,
+  handOverBox,
   labelPrinterFor,
   markBoxPrinted,
   learnCode,
@@ -36,6 +37,8 @@ import {
   ConfirmPreparationRequestSchema,
   ConfirmPreparationResponseSchema,
   DispatchOptionsResponseSchema,
+  HandoverRequestSchema,
+  HandoverResponseSchema,
   InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
   LearnCodeRequestSchema,
@@ -419,6 +422,30 @@ warehouse.post('/orders/:orderId/announce', async (c) => {
 
   const body: z.input<typeof AnnounceShipmentResponseSchema> = outcome;
   return ok(c, AnnounceShipmentResponseSchema.parse(body));
+});
+
+/**
+ * **DEVİR OKUTMASI** (07.12) — kutu taşıyıcıya verildi.
+ *
+ * Kurye yükleme ucundan (`courier`) ayrı ve olmak zorunda: orası `order.courierId` şartına bakıyor
+ * ve kargo siparişinin kuryesi YOK. Sahiplik sorusu da farklı — orada "bu kutu senin rotanın mı",
+ * burada "bu kutu senin deponun mu".
+ *
+ * Gövde tek alan (okutulan kod); hangi kolonda aranacağını SUNUCU biliyor. Olumsuz dalların hepsi
+ * 200 ve adlı: `already_handed` ikinci okutmadır ve sayaç kıpırdamaz — hata cümlesi depocuyu kendi
+ * sayımından şüphelendirirdi.
+ */
+warehouse.post('/handover', async (c) => {
+  const parsed = HandoverRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await handOverBox(serviceDb(), {
+    code: parsed.data.code,
+    warehouseId: c.get('warehouseId'),
+    actorId: c.get('staff').id,
+  });
+  const body: z.input<typeof HandoverResponseSchema> = outcome;
+  return ok(c, HandoverResponseSchema.parse(body));
 });
 
 /**

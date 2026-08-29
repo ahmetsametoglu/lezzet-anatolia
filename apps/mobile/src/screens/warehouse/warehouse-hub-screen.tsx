@@ -265,6 +265,17 @@ function buildRows(
       badge: null,
       onPress: () => router.navigate('/courier-return'),
     },
+    // KARGO DEVRİ (07.12) — kutuların taşıyıcıya verildiği an. Rozet YOK ve bu bilinçli: "kaç kutu
+    // bekliyor" sorusunun bir ucu henüz yok ve uydurulmuş bir sayı, olmayan bir işi varmış gibi
+    // gösterirdi. BEKLEYEN(kargo-kanali-tasarimi.md §8.6): "kargoya verilecek N kutu" sayacı.
+    {
+      key: 'handover',
+      code: t.hub.rows.handover.code,
+      title: t.hub.rows.handover.title,
+      subtitle: t.hub.rows.handover.subtitle,
+      badge: null,
+      onPress: () => router.navigate('/handover'),
+    },
     // Yerinde satış (21.119) — kapıya gelen müşteriye elden satış; kurye aynı ekrana kendi
     // bölümünden gider, motor ikisini tek kapıdan geçirir (`DOMAIN §17`).
     {

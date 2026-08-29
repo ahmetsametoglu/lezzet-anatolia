@@ -359,6 +359,48 @@ export const AnnounceShipmentResponseSchema = z.discriminatedUnion('status', [
 export type AnnounceShipmentResponse = z.infer<typeof AnnounceShipmentResponseSchema>;
 
 /**
+ * **DEVİR OKUTMASI** (07.12) — kutu fiziksel olarak taşıyıcıya verildi.
+ *
+ * Gövde tek alan: okutulan kod. Hangi kutu olduğunu SUNUCU çözüyor — telefon kodun taşıyıcı
+ * numarası mı bizim kodumuz mu olduğunu bilmek zorunda değil (iki kolonda da aranıyor).
+ */
+export const HandoverRequestSchema = z.object({ code: z.string().trim().min(1).max(64) });
+export type HandoverRequest = z.infer<typeof HandoverRequestSchema>;
+
+/**
+ * Devir cevabı — olumsuz dallar da 200 ve ADLI.
+ *
+ * `already_handed` bir hata DEĞİL: ikinci okutma "zaten verildi" demektir ve sayaç kıpırdamaz.
+ * Depocu rampada aynı kutuyu iki kez okutabilir; hata cümlesi onu saymanın doğruluğundan
+ * şüphelendirirdi.
+ */
+export const HandoverResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    boxNo: z.number().int().positive(),
+    referenceNo: z.string().nullable(),
+    /** Bu GÖNDERİNİN kaç kutusu verildi / toplam — depocunun "kaç kaldı" sorusu. */
+    handedBoxes: z.number().int().positive(),
+    boxCount: z.number().int().positive(),
+    /** Son kutuydu: gönderi "taşıyıcıya verildi"ye geçti ve sipariş yola çıktı. */
+    shipmentHandedOver: z.boolean(),
+  }),
+  z.object({
+    status: z.literal('already_handed'),
+    boxNo: z.number().int().positive(),
+    handedBoxes: z.number().int().positive(),
+    boxCount: z.number().int().positive(),
+  }),
+  z.object({ status: z.literal('unknown_code') }),
+  /** Başka deponun kutusu — referans söylenir ki depocu onu doğru yığına geri koysun. */
+  z.object({ status: z.literal('out_of_scope'), referenceNo: z.string().nullable() }),
+  z.object({ status: z.literal('not_sealed'), boxNo: z.number().int().positive() }),
+  /** Gönderi duyurulmadı: satın alınmamış etiketle kutu taşıyıcıya verilemez. */
+  z.object({ status: z.literal('not_announced'), boxNo: z.number().int().positive() }),
+]);
+export type HandoverResponse = z.infer<typeof HandoverResponseSchema>;
+
+/**
  * `GET /warehouse/boxes/:boxId/shipping-label` — TAŞIYICININ etiketi (bizimki değil).
  *
  * **İmzalı adres dönüyor, dosyanın kendisi değil:** PDF özel kovada duruyor ve telefon onu

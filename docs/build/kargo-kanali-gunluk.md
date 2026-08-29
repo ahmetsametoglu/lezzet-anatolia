@@ -813,3 +813,59 @@ sonucu kullanılmıyor (ücret zaten sıfır, kod saklanmıyor); ve onaylı taş
 süresi süzgeci henüz yok.
 
 Tam paket **3911/3911**.
+
+---
+
+## Faz 1.4 — devir okutması ✅
+
+**Ne eksikti:** kutu etiketi alıp basılıyordu ama taşıyıcıya verildiğini yazan bir şey yoktu.
+`courier/load.ts` aynı fiziksel olayı yazıyor (kutu depodan çıktı) ama kapısı `order.courierId`
+şartına bağlı — **kargo siparişinin kuryesi yok.** Kargo kulvarına kendi kapısı gerekti.
+
+### Sahiplik sorusu farklı, o yüzden kapı ayrı
+
+Kurye kapısında soru *"bu kutu senin rotanın mı"*, kargoda *"bu kutu senin deponun mu"*. İkisi ayrı
+kural; tek kapıya sıkıştırmak, birinin şartını ötekine borç yazmak olurdu.
+
+### Okutulan şey taşıyıcının numarası — ama bizim kodumuz da kabul
+
+Kargo kulvarında bizim QR'lı etiketimiz basılmıyor (tasarım §4.6: iki barkod taşıyıcının
+tarayıcısını şaşırtır), yani kutunun üstündeki tek barkod taşıyıcınınki. **Bizim kodumuzun da kabul
+edilmesi bir yedek değil bir gerçek:** etiketi saklanamamış (`no_label`) ya da elle taşıyıcı
+girilmiş gönderide kutunun üstünde taşıyıcı barkodu olmayabilir; o hâlde depocunun elinde hazırlık
+kâğıdındaki kod kalır. İki kimlik uzayı da BİZİM kayıtlarımız — tahmin yok, iki kolonda arama var.
+
+### Sipariş taşıyan kural KOPYALANMADI
+
+"Gönderi yolda ⇒ sipariş `out_for_delivery`" kuralı webhook'un kapısında yazılıydı; onu dışa açtım
+(`siparisiTasi`) ve devir de oradan geçiyor. İkinci bir kopya, bir gün yalnız birinde değişen iki
+durum makinesi olurdu (`CLAUDE §1`). Gönderi ilerideyse geri çekilmiyor: taşıyıcı bizden önce
+okutmuş olabilir ve devir onu `in_transit`ten `handed_over`a geri almamalı.
+
+### Ekran bir liste değil, bir okutucu
+
+Fiziksel an şu: depocu rampada, kurye karşısında, kutuları tek tek uzatıyor. *"Hangi siparişi
+vereceğim"* diye bir soru YOK. Bekleyenler listesi çizmek olmayan bir seçimi varmış gibi göstermek
+olurdu — ekranın gövdesi bu yüzden **okutma geçmişi**: hangi kutu verildi, kaç kaldı. En yeni
+üstte, çünkü depocu son okuttuğunun cevabını aramak için kaydırmamalı.
+
+**Sayım GÖNDERİYİ sayıyor, siparişi değil:** bir siparişin kutuları iptal + yeniden duyuruyla iki
+gönderiye bölünmüş olabilir ve depocunun elindeki yığın ikincisidir.
+
+**İkinci okutma hata değil:** "zaten verilmişti, sayı değişmedi". Depocu rampada aynı kutuyu iki kez
+okutabilir; hata cümlesi onu kendi sayımından şüphelendirirdi.
+
+### Yol boyunca: expo-router tipleri bayattı
+
+Yeni rota (`/handover`) eklendi ama `.expo/types/router.d.ts` üretilmiş bir dosya ve dev server
+kapalıyken tazelenmiyor — `typecheck` "böyle bir rota yok" diyordu. Kullanıcının 8081'ine
+dokunmadan **8099'da kısa süreli** bir Metro açıp tipleri ürettim ve kapattım. SDK 57'de bağımsız
+bir `typegen` komutu yok (dokümandan doğrulandı).
+
+**Doğrulama.** 4 entegrasyon (iki kimlik uzayı da çözülüyor · son kutu gönderiyi ve siparişi taşıyor
+· ikinci okutma sayacı kıpırdatmıyor · duyurulmamış kutu ve başka depo reddediliyor) + 4 ekran
+testi. Mobil jest **899/899**, `typecheck` · `lint` · `knip` temiz.
+
+**Hub'a satır eklendi** (`D8 · Kargo devri`) — **rozet bilerek YOK**: "kaç kutu bekliyor" sorusunun
+bir ucu henüz yok ve uydurulmuş bir sayı olmayan bir işi varmış gibi gösterirdi.
+BEKLEYEN(kargo-kanali-tasarimi.md §8.6).

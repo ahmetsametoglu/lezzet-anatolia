@@ -6892,3 +6892,33 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   fiziksel bir tesadüf olurdu. Envanter sunucuda, seçim cihazın local storage'ında olacak.
 
   **Doğrulama.** 4 ekran testi. Mobil jest **895/895**, `typecheck` · `lint` · `knip` temiz.
+
+- [x] (21.130) **KARGO DEVRİ — kutular okutularak taşıyıcıya veriliyor** (kargo kanalı Faz 1.4)
+  `touches:` `packages/application/src/shipping/{handover,sync-status}.ts` ·
+  `packages/database/src/services/order-box.service.ts` ·
+  `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{handover-screen,handover-screen.test,warehouse-hub-screen,messages.json}` ·
+  `apps/mobile/src/app/(operations)/handover.tsx`
+
+  **Durum (29.08).** Kutu etiketi alıp basılıyordu ama taşıyıcıya verildiğini yazan bir şey yoktu.
+  `courier/load.ts` aynı fiziksel olayı yazıyor ama kapısı `order.courierId` şartına bağlı ve
+  **kargo siparişinin kuryesi yok** — kendi kapısı gerekti. Sahiplik sorusu da farklı: orada "bu
+  kutu senin rotanın mı", burada "bu kutu senin deponun mu".
+
+  **İki kimlik uzayı da kabul:** kargo kulvarında bizim QR'lı etiketimiz basılmıyor, yani kutunun
+  üstündeki tek barkod taşıyıcınınki. Bizim kodumuzun da kabul edilmesi yedek değil GERÇEK —
+  etiketi saklanamamış ya da elle taşıyıcı girilmiş gönderide taşıyıcı barkodu olmayabilir.
+
+  **Sipariş taşıyan kural kopyalanmadı:** webhook'un `siparisiTasi`sı dışa açıldı, devir de oradan
+  geçiyor. Gönderi ilerideyse geri çekilmiyor (taşıyıcı bizden önce okutmuş olabilir).
+
+  **Ekran bir liste değil okutucu:** depocu rampada kutuları tek tek uzatıyor, "hangi sipariş"
+  sorusu yok. Gövde okutma geçmişi; en yeni üstte. Sayım GÖNDERİYİ sayıyor. İkinci okutma hata
+  değil ("zaten verilmişti, sayı değişmedi").
+
+  **Doğrulama.** 4 entegrasyon + 4 ekran testi. Mobil jest **899/899**, `typecheck` · `lint` ·
+  `knip` temiz.
+
+  **BEKLEYEN(kargo-kanali-tasarimi.md §8.6):** hub satırında rozet yok — "kargoya verilecek N kutu"
+  sayacının ucu henüz yazılmadı ve uydurulmuş bir sayı olmayan bir işi varmış gibi gösterirdi.
