@@ -194,7 +194,21 @@ export type DispatchState =
   /** Kutular mühürlendi, sipariş kargo kulvarında — "Kargoya ver" görünür. */
   | { phase: 'offer'; orderId: string; reference: string }
   | { phase: 'loading'; orderId: string; reference: string }
-  | { phase: 'options'; orderId: string; reference: string; options: DispatchOptionContract[]; parcelCount: number; totalWeightG: number }
+  /**
+   * Seçim bekleniyor. `homeOnly` listenin "yalnız adrese teslim"e daraltıldığını söyler —
+   * ücretsiz kargoda koli EVE gider (kullanıcı kararı 29.08) ve nokta seçenekleri elenmiştir.
+   * Bayrağı taşımak şart: daraltılmış bir listeyi tam sanmak, depocuyu "neden bu kadar az
+   * seçenek var" sorusuyla baş başa bırakır ve liste boşsa yanlış sebebi düşündürür.
+   */
+  | {
+      phase: 'options';
+      orderId: string;
+      reference: string;
+      options: DispatchOptionContract[];
+      parcelCount: number;
+      totalWeightG: number;
+      homeOnly: boolean;
+    }
   /** Ön koşul tutmadı — sebebin ADI taşınıyor, ekran ona göre cümle kuruyor. */
   | { phase: 'blocked'; reference: string; reason: string }
   | { phase: 'announcing'; orderId: string; reference: string }
@@ -494,7 +508,15 @@ export function usePreparation(): UsePreparationResult {
           setDispatch({ phase: 'blocked', reference, reason: data.status });
           return;
         }
-        setDispatch({ phase: 'options', orderId, reference, options: data.options, parcelCount: data.parcelCount, totalWeightG: data.totalWeightG });
+        setDispatch({
+          phase: 'options',
+          orderId,
+          reference,
+          options: data.options,
+          parcelCount: data.parcelCount,
+          totalWeightG: data.totalWeightG,
+          homeOnly: data.homeOnly,
+        });
       })();
 
       return { phase: 'loading', orderId, reference };

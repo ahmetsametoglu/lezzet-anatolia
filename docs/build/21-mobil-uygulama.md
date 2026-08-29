@@ -6974,3 +6974,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** 2 entegrasyon + 7 birim + 4 ekran testi. Mobil jest **910/911** (düşen 1 sosyal
   şeridin), kilitli tam paket **3937/3937**. `db:refresh` koşuldu (kullanıcı izni), kapsam 157/157.
+
+- [x] (21.133) **SEVK LİSTESİ DARALTILDIĞINI SÖYLÜYOR — `homeOnly` telde kayboluyordu**
+  (kargo kanalı Faz 2.1)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/types/src/contracts/warehouse-dispatch.schema.test.ts` ·
+  `apps/mobile/src/screens/warehouse/use-preparation.hook.ts` ·
+  `apps/mobile/src/screens/warehouse/preparation-screen.tsx`
+
+  **Durum (29.08).** `quoteOrderShipment` "ücretsiz kargo EVE gider" süzgecini uyguladığında
+  `homeOnly` bayrağını üretiyordu (`c7835348`), ama **sözleşmede karşılığı yoktu** ve uçtaki
+  `DispatchOptionsResponseSchema.parse` onu her cevapta sessizce siliyordu.
+
+  **Derleyici göremezdi:** uç `const body: z.input<Schema> = outcome` yazıyor ve TypeScript'in
+  fazla-alan denetimi yalnız NESNE SABİTLERİNE uygulanır — değişkende duran fazla alan tipe uyar,
+  derleme geçer, alan telde kaybolur.
+
+  **Bedeli:** depocu daraltılmış listeye TAM liste diye bakıyordu; liste boşaldığında ekranın tek
+  cümlesi "uygun servis çıkmadı"ydı ve sebebi taşıyıcıda/kolide arattırırdı — oysa KURAL elemişti.
+
+  Bayrak **zorunlu** alan olarak eklendi: eksik cevap reddediliyor, "bilinmiyor" sessizce `false`a
+  düşmüyor (`CLAUDE §1`). Atama artık ters yönü de kilitliyor — motor bayrağı üretmeyi bırakırsa
+  uç derlenmez. Ekran iki cümle söylüyor: daraltma uyarısı, ve daraltma yüzünden BOŞ kalan liste
+  için ayrı sebep metni.
+
+  **Doğrulama.** 3 sözleşme birimi + 3 ekran testi; alan şemadan çıkarılınca üçü de kırmızıya
+  döndü, geri konunca yeşil. Depo jest paketi **118/118**.

@@ -197,6 +197,7 @@
       "loading": "Servisler soruluyor…",
       "sheetTitle": "Hangi servisle gönderelim?",
       "sheetHint": "{n} koli · {kg} kg. Fiyat sunucudan geliyor; seçtiğin an etiket SATIN ALINIR.",
+      "homeOnly": "Ücretsiz kargo — koli EVE gider. Teslimat noktası seçenekleri listeden çıkarıldı.",
       "option": "{carrier} · {price}",
       "optionLead": "{hours} saatte teslim",
       "optionNoLead": "teslim süresi bildirilmiyor",
@@ -208,6 +209,7 @@
       "donePrintFailed": "Etiket basılamadı: {error}. Gönderi ALINDI — yeniden basmayı deneyebilirsin.",
       "donePrintOff": "Bu cihazda yazıcı modülü yok — etiket basılmadı.",
       "empty": "Bu koli için uygun servis çıkmadı. Elle taşıyıcı girişi hazırlık masasında.",
+      "emptyHomeOnly": "Adrese teslim eden uygun servis çıkmadı (teslimat noktaları ücretsiz kargoda kullanılmıyor). Elle taşıyıcı girişi hazırlık masasında.",
       "close": "kapat",
       "blocked": "Kargoya verilemedi: {reason}",
       "reason": {

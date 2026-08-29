@@ -604,10 +604,18 @@ function DispatchSheet({ picking }: { picking: ReturnType<typeof usePreparation>
               kg: (state.totalWeightG / 1000).toFixed(1).replace('.', ','),
             })}
           </Text>
+          {/* LİSTE DARALTILDIYSA SÖYLENİR (Faz 2 · kullanıcı kararı 29.08). Ücretsiz kargoda
+              koli eve gider ve nokta seçenekleri sunucuda eleniyor; bayrak olmasa depocu
+              daraltılmış listeye TAM liste diye bakardı — ve seçenekler azaldığında sebebi
+              taşıyıcıda arardı. */}
+          {state.homeOnly ? <Text style={styles.dispatchNotice}>{d.homeOnly}</Text> : null}
           {/* Boş liste bir HÂL, hata değil: çok kutulu gönderide multicollo süzgeci her şeyi
-              elemiş olabilir ve çare elle taşıyıcı girişidir (yedek şerit, 10.9). */}
+              elemiş olabilir ve çare elle taşıyıcı girişidir (yedek şerit, 10.9).
+
+              Boşluğun SEBEBİ ayrı yazılıyor: "eve teslim" süzgeci açıkken listeyi o boşaltmış
+              olabilir ve tek bir "servis çıkmadı" cümlesi depocuyu yanlış yere bakmaya gönderir. */}
           {state.options.length === 0 ? (
-            <Text style={styles.dispatchBody}>{d.empty}</Text>
+            <Text style={styles.dispatchBody}>{state.homeOnly ? d.emptyHomeOnly : d.empty}</Text>
           ) : (
             state.options.map((option) => (
               <PressableSurface
@@ -881,6 +889,16 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   dispatchError: { color: operationsTheme.colors.terracotta },
+  /**
+   * "Liste daraltıldı" satırı — ipucu gövdesinden AYRI bir yüz: bu bir açıklama değil, listenin
+   * eksik olduğunu söyleyen bir uyarı. Muted yazılsaydı depocunun gözü onu atlardı.
+   */
+  dispatchNotice: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+    marginBottom: operationsTheme.space.md,
+  },
   dispatchDone: { gap: operationsTheme.space['2xs'] },
   dispatchTracking: {
     // Tema tek-aralıklı yüz taşımıyor; takip numarası gövde yüzünün KALIN hâliyle yazılıyor —

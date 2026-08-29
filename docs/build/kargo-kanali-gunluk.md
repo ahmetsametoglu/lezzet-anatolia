@@ -1024,3 +1024,84 @@ yazıcı meşru) + 7 birim (`resolvePrinter`ın üç dalı, amaç karışmaması
 `social-conversation-screen.test.tsx` (1 test) ve `knip`in "duplicate exports"u
 (`TicketHandlerEnum|ConversationHandlerEnum`) — ikisi de sosyal şeridin **commit'li** işinden;
 `enums.schema.ts` kirli değil. Dokunulmadı.
+
+---
+
+# Faz 2 — otomatik seçim
+
+## Faz 2.1 — liste daraltıldığını SÖYLÜYOR ✅
+
+Faz 2'ye başlarken önce sınırı ölçtüm (kullanıcı isteği 29.08: *"diğer ajanla aynı şey üzerinde
+çalışmadığınızdan emin ol"*). Ölçerken kargo şeridinin Faz 2 işinde **kopuk bir halka** çıktı.
+
+### Bayrak üretiliyordu, tele hiç çıkmıyordu
+
+`c7835348`in commit mesajı *"sevk listesi daraltıldığını SÖYLÜYOR (`homeOnly`)"* diyor ve motor
+gerçekten söylüyor — `quoteOrderShipment` "ücretsiz kargo eve gider" süzgecini uyguladığında
+bayrağı dönüyor. Ama **sözleşmede o alan yoktu** ve uçtaki `DispatchOptionsResponseSchema.parse`
+onu her cevapta sessizce siliyordu. Bayrak uygulama katmanından çıkıp telefona hiç ulaşmıyordu.
+
+### Derleyicinin göremediği bir sınır — ve sınıfı önemli
+
+```ts
+const body: z.input<typeof DispatchOptionsResponseSchema> = outcome;   // outcome bir DEĞİŞKEN
+```
+
+TypeScript'in fazla-alan denetimi **yalnız nesne sabitlerine** uygulanır. Değişkende duran fazla
+alan tipe uyar, derleme geçer, `.parse` alanı düşürür. Yani `typecheck` bu kaybı **hiçbir zaman**
+göremezdi ve gösterge de yoktu: uç 200 dönüyor, liste geliyor, her şey çalışıyor görünüyor.
+
+Kayda geçiyor çünkü bu bir sınıf: **motorun ürettiği her yeni alan sözleşmeye ayrıca yazılmalı**,
+yoksa sessizce kaybolur. Şemasız kalan alan, olmayan alandır.
+
+### Bedeli ekranda somut
+
+Depocu daraltılmış listeye TAM liste diye bakıyordu. İki ayrı yanlış:
+
+- **Seçenekler azalınca** sebebi taşıyıcıda arardı ("Mondial Relay bugün niye yok?") — oysa kural
+  elemişti ve kural bizimdi.
+- **Liste tamamen boşalınca** ekranın tek cümlesi *"uygun servis çıkmadı"*ydı; bu cümle koliyi ve
+  multicollo süzgecini düşündürür, ücretsiz kargo kuralını değil. Depocu elle taşıyıcı girişine
+  erken kaçardı.
+
+En kötü eksik liste, eksik olduğunu söylemeyendir.
+
+### Zorunlu alan, çünkü "bilinmiyor" `false` değildir
+
+Bayrak `z.boolean()` ve **isteğe bağlı değil**: eksik cevap reddediliyor. Varsayılan `false`
+verseydik, alanı unutan bir uç daraltılmış listeyi "daraltılmadı" diye okutur ve arıza aynen geri
+gelirdi — bu kez şema onaylayarak (`CLAUDE §1`: ölçülemeyen değer sıfır değildir).
+
+Yan etkisi istediğimiz yönde: atama artık **ters yönü de** kilitliyor — motor bayrağı üretmeyi
+bırakırsa uç derlenmez.
+
+### Ekran iki ayrı cümle söylüyor
+
+Daraltma uyarısı ipucu gövdesinden ayrı bir yüzle yazılıyor (muted değil): bu bir açıklama değil,
+listenin eksik olduğunu söyleyen bir uyarı. Ve boş liste için ayrı metin — sebebin adı yazılıyor,
+"servis çıkmadı"ya indirilmiyor.
+
+**Doğrulama.** 3 sözleşme birimi + 3 ekran testi. Testin yakaladığını doğruladım: alanı şemadan
+çıkarınca üçü de kırmızıya döndü, geri konunca yeşil. Depo jest paketi **118/118**.
+
+### Sınır beyanı — Faz 2'de kim neyi alıyor
+
+Deftere yazıldı (`docs/talep/not-kargo-homeonly-telde-kayboluyordu-ve-faz2-is-bolumu.md`):
+
+**Kargo/web şeridinde:** onaylı taşıyıcı listesi (ayar — kodda henüz sıfır iz) · otomatik seçim
+politikası · checkout iki kademe.
+**Bende:** `homeOnly` (bitti) · otomatik seçim gelince sevk çekmecesinin iki moda ayrılması
+("otomatik seçildi · değiştir" ↔ ham liste; bugün kalıcı fallback modundayız) · Faz 3'te harita.
+
+Bir ricayla: beyaz liste süzgeci `domain-core`da **tek yerde** dursun ve **iki kapıdan** geçsin —
+checkout (`quoteShipping`) ve sevk (`quoteOrderShipment`). Ayrı ayrı yazılırsa checkout'ta görünen
+seçenek satın alma anında reddedilir. `priceCents > 0` kuralında bunu bir kez yaşadık. Süzgeci
+onlar yazar, `quoteOrderShipment`e bağlamayı ben yaparım — o dosya benim (Faz 1.2), böylece aynı
+satıra iki el değmez.
+
+### Bize ait olmayan bir kırmızı (ölçüldü)
+
+Kök `pnpm typecheck` **`@lezzet/mobile`de kırmızı**: `social-conversation-screen.tsx:167,170` —
+`TS7053`, `'human' | 'hybrid' | 'ai'` ile indekslenen sözlükte `ai` anahtarı yok (`aiOrphan` var).
+Sosyal şeridin **commit'li** işinden (`ee3c3ba3` · `b8072b72`), dosya kirli değil, benim
+değişikliğimden bağımsız. Dokunulmadı; not açıldı.

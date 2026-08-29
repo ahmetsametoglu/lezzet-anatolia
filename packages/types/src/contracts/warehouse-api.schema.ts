@@ -326,6 +326,18 @@ export const DispatchOptionsResponseSchema = z.discriminatedUnion('status', [
     parcelCount: z.number().int().positive(),
     /** Koli + dara toplamı (g) — ekran "3 koli · 7,4 kg" diyebilsin diye. */
     totalWeightG: z.number().int().nonnegative(),
+    /**
+     * **Liste "yalnız adrese teslim"e DARALTILDI mı** (kullanıcı kararı 29.08 · Faz 2).
+     *
+     * Ücretsiz kargoda parayı biz ödüyoruz, koli EVE gider ve teslimat noktası seçenekleri
+     * `quoteOrderShipment` içinde eleniyor. Bayrak o eleme yapıldığında `true`.
+     *
+     * **Sözleşmeye taşınmasının sebebi ölçülmüş bir sessizlik:** motor bu bayrağı 29.08'den beri
+     * üretiyordu ama şemada karşılığı yoktu ve `.parse` onu her cevapta siliyordu — depocu
+     * daraltılmış listeye TAM liste diye bakıyordu. Eksik listenin en kötü hâli, eksik olduğunu
+     * söylemeyendir: liste boş kaldığında sebep "multicollo eledi" sanılırdı.
+     */
+    homeOnly: z.boolean(),
   }),
   z.object({ status: z.literal('provider_error'), message: z.string() }),
   ...DispatchBlockSchema.options,

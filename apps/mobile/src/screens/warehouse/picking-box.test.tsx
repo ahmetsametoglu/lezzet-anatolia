@@ -446,6 +446,7 @@ describe('D1 · sevk (kargoya ver)', () => {
       status: 'ok',
       parcelCount: 2,
       totalWeightG: 7400,
+      homeOnly: false,
       options: [
         { code: 'chronopost:classic', carrierName: 'Chronopost', name: 'Classic', priceCents: 1348, leadTimeHours: 72, lastMile: 'home_delivery', tracked: true },
         { code: 'mr:point', carrierName: 'Mondial Relay', name: 'Point', priceCents: 1050, leadTimeHours: null, lastMile: 'service_point', tracked: true },
@@ -475,6 +476,57 @@ describe('D1 · sevk (kargoya ver)', () => {
     expect(screen.getByText('CH0002')).toBeOnTheScreen();
     // Yazıcı modülü bu derlemede yok — kart bunu SÖYLÜYOR, sessiz kalıp "bastı" sandırmıyor.
     expect(screen.getByText(/yazıcı modülü yok/)).toBeOnTheScreen();
+  });
+
+  /*
+    LİSTE DARALTILDIYSA SÖYLENİR (Faz 2 · kullanıcı kararı 29.08).
+
+    Bayrak sunucuda 29.08'den beri üretiliyordu ama sözleşmede karşılığı yoktu ve `.parse` onu her
+    cevapta siliyordu — depocu daraltılmış listeye TAM liste diye bakıyordu. Test iki şeyi birden
+    tutuyor: uyarının çizilmesini ve BOŞ listenin doğru sebebi söylemesini.
+  */
+  it('ücretsiz kargoda liste EVE daraltıldığını söyler', async () => {
+    await sonKutuyuKapat('shipping');
+    net.dispatchOptions = {
+      status: 'ok',
+      parcelCount: 1,
+      totalWeightG: 3200,
+      homeOnly: true,
+      options: [
+        { code: 'colissimo:home', carrierName: 'Colissimo', name: 'Domicile', priceCents: 892, leadTimeHours: 48, lastMile: 'home_delivery', tracked: true },
+      ],
+    };
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-sheet')).toBeOnTheScreen());
+    expect(screen.getByText(/koli EVE gider/)).toBeOnTheScreen();
+  });
+
+  it('daraltma listeyi BOŞALTTIYSA sebep taşıyıcıda değil kuralda aranır', async () => {
+    await sonKutuyuKapat('shipping');
+    net.dispatchOptions = { status: 'ok', parcelCount: 1, totalWeightG: 3200, homeOnly: true, options: [] };
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-sheet')).toBeOnTheScreen());
+    // "uygun servis çıkmadı" tek başına depocuyu koliye/taşıyıcıya baktırırdı; sebep KURAL.
+    expect(screen.getByText(/teslimat noktaları ücretsiz kargoda kullanılmıyor/)).toBeOnTheScreen();
+  });
+
+  it('daraltma YOKSA uyarı hiç çizilmez — her listeye asılan not okunmaz olurdu', async () => {
+    await sonKutuyuKapat('shipping');
+    net.dispatchOptions = {
+      status: 'ok',
+      parcelCount: 1,
+      totalWeightG: 3200,
+      homeOnly: false,
+      options: [
+        { code: 'mr:point', carrierName: 'Mondial Relay', name: 'Point', priceCents: 1050, leadTimeHours: null, lastMile: 'service_point', tracked: true },
+      ],
+    };
+    await fireEvent.press(screen.getByTestId('warehouse-dispatch-start'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-dispatch-sheet')).toBeOnTheScreen());
+    expect(screen.queryByText(/koli EVE gider/)).toBeNull();
   });
 
   it('ön koşul tutmazsa SEBEP yazılır — "olmadı" değil', async () => {
