@@ -201,6 +201,30 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
   (ölçümde 48 · 24 · 72 saat). Tek bir "azami 3 gün" ayarı üç yönü birden yönetemez; ayar ya
   yön/ülke kırılımlı olmalı ya da eşik yalnız BİLİNEN süreye uygulanmalı. Karar verilmedi.
 
+- **SINIR ÖTESİ SATIŞ — üç ayrı eksik** *(kullanıcı gözlemi 30.08; ölçüldü, analiz ertelendi)*.
+  Üçü birbirine bağlı ve hiçbiri bugün arıza değil — kapsamın kendisi; ama ilk üçüncü ülkeye
+  açıldığımız gün üçü birden önümüze çıkar.
+
+  **(a) Depo → ülke eşlemesi YOK.** Kargo deposu bugün `countryCode === varış ülkesi` ile
+  seçiliyor (`domain-core/delivery/warehouse-resolve.ts`) — yani kural katı: *aynı ülke, ya da
+  hiç*. Kullanıcının istediği "hangi depo hangi ülkeye hizmet verir" ayarı yok. Ölçüm o eşlemenin
+  varsayılanını veriyor (canlı tarife, 30.08, kutu 40×30×25, eve teslim): **Fransa hariç her yer
+  Almanya'dan** — Avusturya'ya 5 kg'da 9,02 €, Almanya'ya 6,66 €, Benelüks'e 2,65 € daha ucuz.
+  Tersi de doğru: Fransa'yı Almanya'dan göndermek 5,32 € pahalı. **Ağırlığa göre depo seçilmez**
+  (kullanıcı kararı) — eşleme ülke düzeyinde kalır.
+
+  **(b) BE · LU · NL · AT adresi HİÇ girilemiyor** ve sınır tipte: `CountryEnum = ['FR','DE']`
+  (`packages/types/src/primitives/enums.schema.ts`). Yani eksik olan şey bir veri satırı değil,
+  şemanın kendisi — enum büyümeden o ülkelerden alışveriş yapılamaz. Ölçüm bu ülkelere gönderimin
+  Kehl'den **düz 17,50 €** (20 kg) olduğunu söylüyor, yani pazar teknik olarak erişilebilir.
+
+  **(c) Adres DOĞRULANMIYOR.** Ülke posta kodundan türetiliyor (`resolveAddressCountry`) ama
+  sokak/numara düzeyinde bir teyit yok: müşteri birbirini tutmayan posta kodu + adres girebilir ve
+  kargo hiç ulaşamaz. Bugün bedeli görünmez çünkü rota kulvarında kurye düzeltiyor; kargoda
+  düzeltecek kimse yok — koli geri döner ve iki yönün ücreti de bizde kalır. Çare bir dış adres
+  doğrulama servisi (sağlayıcının kendi `address-check` ucu dâhil) ya da en azından
+  posta kodu ↔ şehir tutarlılığının kayıt anında sınanması.
+
 ## 9. İade/hasar
 
 - İade/hasar bildirimi + durum (returned)
