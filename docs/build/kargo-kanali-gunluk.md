@@ -775,3 +775,41 @@ yüzü**: çakışan kod değil, çakışan YER kaydı.
 → **133/133 geçti**. Mobil jest 895/895.
 
 Kargo şeridine not bırakıldı; kendi test dosyaları ve kendi üreteçleri.
+
+
+---
+
+## Taşıyıcı seçimi — kararını yazdım ✅
+
+Cümlen şuydu: *"Teslimat noktasına kullanıcı kendisi seçiyorsa ve kargo parası siparişin üzerine
+ekleniyorsa olabilir. Ama eşiği geçtiyse ve kargo ücretsiz diyorsak evine teslim senaryosu
+devrede."* Ayıran şeyi **paranın kimden çıktığı** diye yazdım:
+
+- **Müşteri ödüyor** → seçim onun; teslimat noktası da meşru.
+- **Biz ödüyoruz** ("ücretsiz kargo") → seçim bizim, koli **eve** gider, müşteriye sorulmaz.
+
+### Kuralı checkout'a koymadım — çünkü orada işe yaramazdı
+
+Ölçtüm: **müşterinin checkout'ta seçtiği servis kodu hiçbir yere yazılmıyor.** Yalnız gösterilen
+ücreti belirliyor; taşıyıcıyı gerçekte depo seçiyor, sevk anında. Yani kuralı yalnız checkout'a
+koysaydım onu *söylemiş* ama *uygulamamış* olurdum — depo yine teslimat noktası satın alabilirdi ve
+müşteri ücretsiz kargo bekleyip kolisini noktada bulurdu.
+
+Kural artık sevk kapısında bağlayıcı; checkout'ta yalnız **sormama** kısmı var: eşik üstünde liste
+çizilmiyor, "Ücretsiz kargo — adresinize teslim" yazıyor (üç dil).
+
+Bir incelik: son adımı **bilinmeyen** seçenek de eleniyor. "Bilmiyorum" ile "eve gidiyor" aynı şey
+değil ve burada yanılmanın bedeli somut.
+
+### Doğrulayamadığım bir şey
+
+Checkout ekranını **gözle göremedim**: dev server kapalı (3000 cevap vermiyor). Paralel üretim
+kopyası (3001) ayakta ama o donmuş bir kopya, benim değişikliğim orada yok. Kuralın kendisi birim
+testli, sevkteki uygulaması entegrasyon testli ve ikisinin de yakaladığını kuralı geri alarak
+doğruladım — ama ekranın son hâline bakmadım. Sunucuyu açtığında bir bakmak isteyebilirsin.
+
+**Açık bıraktığım iki şey, ikisi de kayıtlı:** eşik üstünde teklif çağrısı hâlâ yapılıyor ve
+sonucu kullanılmıyor (ücret zaten sıfır, kod saklanmıyor); ve onaylı taşıyıcı listesi + teslim
+süresi süzgeci henüz yok.
+
+Tam paket **3911/3911**.

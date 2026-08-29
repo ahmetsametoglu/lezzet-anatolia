@@ -14,6 +14,7 @@ import {
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { AnnouncedShipment, ShippingQuote } from '@lezzet/sendcloud';
 import { quoteOrderShipment } from './dispatch';
+import { handOverBox } from './handover';
 import { announceOrderShipment } from './announce';
 import type { ShippingRateProvider } from './port';
 import { providerStub } from './provider.testkit';
@@ -413,6 +414,48 @@ describe('sevk seçenekleri (quoteOrderShipment · 29.08)', () => {
     expect(sonuc.options.map((o) => o.code)).toEqual(['ucuz', 'pahali']);
   });
 
+  /**
+   * **ÜCRETSİZ KARGO EVE GİDER** (kullanıcı kararı 29.08) — ve kural BURADA bağlayıcı.
+   *
+   * Ölçüldü: müşterinin checkout'ta seçtiği servis kodu hiçbir yere yazılmıyor, taşıyıcıyı sevk
+   * anında depo seçiyor. Kuralı yalnız checkout'a koysaydık onu SÖYLEMİŞ ama UYGULAMAMIŞ olurduk:
+   * depo yine teslim noktası satın alabilirdi ve müşteri ücretsiz kargo bekleyip kolisini
+   * noktada bulurdu.
+   */
+  it('ÜCRETSİZ kargoda yalnız ADRESE TESLİM seçenekleri kalır — parayı biz ödüyoruz', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    await db.from('order').update({ shipping_fee: 0 }).eq('id', orderId);
+    const p = teklifVeren([
+      { code: 'ucuz-nokta', priceCents: 500, lastMile: 'service_point' },
+      { code: 'bilinmeyen', priceCents: 600, lastMile: null },
+      { code: 'eve', priceCents: 1500, lastMile: 'home_delivery' },
+    ]);
+
+    const sonuc = await quoteOrderShipment(db, p, { orderId, warehouseId });
+    if (sonuc.status !== 'ok') throw new Error('teklif bekleniyordu');
+    // En ucuz iki seçenek elendi ve bu doğru: biri teslimat noktası, ötekinin son adımı BİLİNMİYOR
+    // — "bilmiyorum" ile "eve gidiyor" aynı şey değil (CLAUDE §1).
+    expect(sonuc.options.map((o) => o.code)).toEqual(['eve']);
+    // Daraltma EKRANDA da söylenir: bayrak olmadan depocu listeyi eksik sanardı.
+    expect(sonuc.homeOnly).toBe(true);
+  });
+
+  it('müşteri ÖDÜYORSA teslimat noktası da listede kalır — seçim onun', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    await db.from('order').update({ shipping_fee: 4.99 }).eq('id', orderId);
+    const p = teklifVeren([
+      { code: 'nokta', priceCents: 500, lastMile: 'service_point' },
+      { code: 'eve', priceCents: 1500, lastMile: 'home_delivery' },
+    ]);
+
+    const sonuc = await quoteOrderShipment(db, p, { orderId, warehouseId });
+    if (sonuc.status !== 'ok') throw new Error('teklif bekleniyordu');
+    expect(sonuc.options.map((o) => o.code)).toEqual(['nokta', 'eve']);
+    expect(sonuc.homeOnly).toBe(false);
+  });
+
   it('ÇOK KOLİDE multicollo desteklemeyen seçenek listeden düşer', async () => {
     const { orderId, itemId } = await siparisKur('shipping');
     await kutuKur(orderId, { boxNo: 1, itemId, qty: 1 });
@@ -427,5 +470,82 @@ describe('sevk seçenekleri (quoteOrderShipment · 29.08)', () => {
     // En UCUZ olan elendi ve bu doğru: satın alma anında sağlayıcı onu reddeder ve sipariş
     // sevk edilemez hâlde kalırdı.
     expect(sonuc.options.map((o) => o.code)).toEqual(['cok-koli']);
+  });
+});
+
+/*
+  DEVİR OKUTMASI (`handOverBox`, 29.08) — kutu fiziksel olarak taşıyıcıya verildi.
+
+  Ölçülen dört iddia: iki kimlik uzayı da kabul ediliyor · sayım GÖNDERİYİ sayıyor · SON kutu
+  gönderiyi ve siparişi taşıyor · ikinci okutma sayacı kıpırdatmıyor.
+*/
+describe('devir okutması (29.08)', () => {
+  const shipments = new ShipmentService(db);
+
+  /** Duyurulmuş bir gönderi kurar ve kutularını döndürür — devirin ön koşulu budur. */
+  async function duyurulmusGonderi(kutuSayisi: number) {
+    const { orderId, itemId } = await siparisKur('shipping');
+    for (let n = 1; n <= kutuSayisi; n++) await kutuKur(orderId, { boxNo: n, itemId, qty: 1 });
+    const sonuc = await announceOrderShipment(db, fakeProvider(), girdi(orderId), fakeUploader().upload);
+    if (sonuc.status !== 'ok') throw new Error(`duyuru bekleniyordu: ${sonuc.status}`);
+    const kutular = await new OrderBoxService(db).listByOrder(orderId);
+    return { orderId, sonuc, kutular: [...kutular].sort((a, b) => a.boxNo - b.boxNo) };
+  }
+
+  it('TAŞIYICININ numarası da BİZİM kodumuz da kutuya çözülür', async () => {
+    const { kutular } = await duyurulmusGonderi(2);
+
+    const takiple = await handOverBox(db, { code: kutular[0]!.trackingNumber!, warehouseId, actorId: customerId });
+    expect(takiple).toMatchObject({ status: 'ok', boxNo: 1, handedBoxes: 1, boxCount: 2, shipmentHandedOver: false });
+
+    // Etiketi basılamamış ya da elle taşıyıcı girilmiş gönderide kutunun üstünde taşıyıcı barkodu
+    // olmayabilir; depocunun elinde hazırlık kâğıdındaki kod kalır. İkisi de BİZİM kayıtlarımız.
+    const kodla = await handOverBox(db, { code: kutular[1]!.code, warehouseId, actorId: customerId });
+    expect(kodla).toMatchObject({ status: 'ok', boxNo: 2, handedBoxes: 2, shipmentHandedOver: true });
+  });
+
+  it('SON kutu gönderiyi `handed_over` yapar ve siparişi YOLA çıkarır', async () => {
+    const { orderId, sonuc, kutular } = await duyurulmusGonderi(2);
+    if (sonuc.status !== 'ok') throw new Error('duyuru bekleniyordu');
+
+    await handOverBox(db, { code: kutular[0]!.code, warehouseId, actorId: customerId });
+    // İlk kutudan SONRA hiçbir şey kıpırdamamalı: yarım devredilmiş gönderi yola çıkmış sayılmaz.
+    // (Fikstür siparişi `confirmed` kuruyor — kutular doğrudan yazıldığı için mühür RPC'si hiç
+    // koşmadı ve sipariş `ready`ye geçmedi. Kapı üç hazırlık durumundan da yola çıkarıyor.)
+    expect((await shipments.getById(sonuc.shipmentId))!.status).toBe('created');
+    expect((await new OrderService(db).getById(orderId))!.status).toBe('confirmed');
+
+    await handOverBox(db, { code: kutular[1]!.code, warehouseId, actorId: customerId });
+    expect((await shipments.getById(sonuc.shipmentId))!.status).toBe('handed_over');
+    expect((await new OrderService(db).getById(orderId))!.status).toBe('out_for_delivery');
+  });
+
+  it('İKİNCİ okutma sayacı KIPIRDATMAZ — "zaten verildi"', async () => {
+    const { kutular } = await duyurulmusGonderi(2);
+    await handOverBox(db, { code: kutular[0]!.code, warehouseId, actorId: customerId });
+
+    const ikinci = await handOverBox(db, { code: kutular[0]!.code, warehouseId, actorId: customerId });
+    expect(ikinci).toEqual({ status: 'already_handed', boxNo: 1, handedBoxes: 1, boxCount: 2 });
+  });
+
+  it('DUYURULMAMIŞ kutu devredilemez ve BAŞKA deponun kutusu reddedilir', async () => {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 2 });
+    const kutu = (await new OrderBoxService(db).listByOrder(orderId))[0]!;
+
+    // Satın alınmamış etiketle kutu taşıyıcıya verilemez — verilse takip numarası hiç doğmazdı.
+    expect(await handOverBox(db, { code: kutu.code, warehouseId, actorId: customerId })).toEqual({
+      status: 'not_announced',
+      boxNo: 1,
+    });
+
+    // Kapsam dışı depo: kutu var ama bu depocunun değil. Referans söyleniyor ki depocu onu
+    // rampada DOĞRU yığına geri koysun — sessiz bir ret kutuyu yanlış araca bindirirdi.
+    const yabanci = await createTestWarehouse(db, { label: 'DVR' });
+    warehouseIds.push(yabanci.id);
+    const { kutular } = await duyurulmusGonderi(1);
+    expect(await handOverBox(db, { code: kutular[0]!.code, warehouseId: yabanci.id, actorId: customerId })).toMatchObject({
+      status: 'out_of_scope',
+    });
   });
 });

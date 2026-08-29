@@ -106,6 +106,19 @@ export interface CheckoutSnapshot {
     /** Kaç kutuya bölünüyor — ekran "2 koli" diyebilsin diye. */
     parcelCount: number;
     selectedCode: string | null;
+    /**
+     * **Müşteriye seçim SORULUYOR mu** (kullanıcı kararı 29.08).
+     *
+     * - `customer` — kargo ücreti siparişin üzerine ekleniyor, yani parayı müşteri ödüyor:
+     *   seçim onun ve teslimat noktası da meşru bir seçenek.
+     * - `auto` — eşik geçildi, "ücretsiz kargo" diyoruz: parayı BİZ ödüyoruz, koli EVE gider ve
+     *   müşteriye hiçbir şey sorulmaz. Sorsaydık ücreti hiç etkilemeyen bir soru sormuş olurduk.
+     *
+     * `auto` hâlinde `options` yine dolu gelir ama ekran onları ÇİZMEZ — liste operasyon
+     * tarafında (`quoteOrderShipment`) hâlâ gerekli ve kural asıl orada bağlayıcı: müşterinin
+     * seçtiği kod hiçbir yere yazılmıyor (ölçüldü 29.08), taşıyıcıyı sevk anında depo seçiyor.
+     */
+    mode: 'customer' | 'auto';
   } | null;
   payment: {
     methods: PaymentMethod[];
@@ -392,7 +405,7 @@ export async function readCheckoutSnapshot(
     shipping:
       shipping === null
         ? deliveryType === 'shipping'
-          ? { status: 'off' as const, options: [], parcelCount: 0, selectedCode: null }
+          ? { status: 'off' as const, options: [], parcelCount: 0, selectedCode: null, mode: 'customer' as const }
           : null
         : {
             status: shipping.status,
@@ -411,6 +424,8 @@ export async function readCheckoutSnapshot(
                 : [],
             parcelCount: shipping.status === 'ok' ? shipping.parcelCount : 0,
             selectedCode: chosen?.code ?? null,
+            // Eşik geçildiyse ücret zaten sıfır: seçimin tutara etkisi YOK, o yüzden sorulmuyor.
+            mode: options.shippingFreeReason === 'threshold' ? ('auto' as const) : ('customer' as const),
           },
     payment: {
       methods: options.methods,

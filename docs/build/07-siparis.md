@@ -200,6 +200,22 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
       başka şeridin değişikliğini taşıyordu; yol adı vererek commit atmak onların satırlarını benim
       künyemin altına alırdı (`CLAUDE §0`). Dosya temizlendiğinde eklenecek — anahtar listesi
       olmadan yeni bir ortam kurmak, hangi değişkenin gerektiğini koddan aramak demek.
+      **TAŞIYICI SEÇİMİ (kullanıcı kararı 29.08):** *"Teslimat noktasına kullanıcı kendisi seçiyorsa
+      ve kargo parası siparişin üzerine ekleniyorsa olabilir. Ama eşiği geçtiyse ve kargo ücretsiz
+      diyorsak evine teslim senaryosu devrede."* Ayıran şey PARANIN KİMDEN çıktığı — kural
+      `domain-core/delivery/shipping-choice.ts`te (`requiresHomeDelivery` · `homeDeliveryOnly`).
+      **Kural SEVKTE bağlayıcı, checkout'ta değil** ve bu ölçümle belirlendi: müşterinin seçtiği
+      servis kodu HİÇBİR YERE yazılmıyor (29.08), taşıyıcıyı sevk anında depo seçiyor
+      (`quoteOrderShipment`). Yalnız checkout'a koysaydık kuralı söylemiş ama uygulamamış olurduk.
+      Checkout tarafı SORMAMA kısmı: eşik üstünde liste çizilmiyor, "Ücretsiz kargo — adresinize
+      teslim" yazıyor (üç dil). Son adımı BİLİNMEYEN seçenek eve teslim sayılmaz.
+      **AÇIK — eşik üstünde teklif çağrısı hâlâ yapılıyor ve sonucu kullanılmıyor:** ücret zaten
+      sıfır, kod da saklanmıyor. Eşik `resolveCheckoutPayment` içinde okunduğu için tekliften ÖNCE
+      bilinmiyor; çağrıyı atlamak sırayı değiştirmeyi ister. Bedeli sağlayıcıya boş bir tur
+      (~300-500 ms) — ölçülüp kaydedildi, yamayla geçiştirilmedi.
+      **AÇIK — onaylı taşıyıcı listesi ve teslim süresi süzgeci** (mobil şeridin notu §2/§3):
+      teslim süresi seçeneklerin çoğunda BOŞ geliyor (ölçüldü), o yüzden süre bilinmiyorsa seçenek
+      ELENMEYECEK — "bilinmiyor" ile "sıfır" ayrı (`CLAUDE §1`).
       **Kapanış (`completed`) BU TURUN KONUSU DEĞİL** — ölçüldü: `closeOrder`ın bugün hiçbir üretim çağıranı yok, rota kulvarında da yok. Kargoya özel bir kapanış yazmak iki kulvarı ayrı kurallara bölerdi → görev satırı `(07.16)`.
 
 - [x] (07.13) **Bağlayıcı fiyat sabitlenirken artış SESSİZ uygulanıyor** · `touches: apps/web/lib/order/checkout-draft.ts, apps/web/lib/cart/{cart-types,actions}.ts, apps/web/app/(customer)/[locale]/checkout/**`

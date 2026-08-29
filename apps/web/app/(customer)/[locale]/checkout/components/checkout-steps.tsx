@@ -407,7 +407,24 @@ export function DeliveryStep(props: CheckoutViewProps) {
 
           Fiyat İSTEMCİDE hesaplanmıyor: kart yalnız sunucudan gelen tutarı yazıyor ve seçim
           sunucuya gidip anlık görüntüyü yeniden çözüyor. */}
-      {!inRoute && !delivery.blocked && (
+      {/*
+        **EŞİK ÜSTÜNDE SEÇİM SORULMAZ** (kullanıcı kararı 29.08): kargo ücretsizse parayı BİZ
+        ödüyoruz, koli EVE gider ve müşteriye sorulacak bir şey yoktur — sorsaydık ücreti hiç
+        etkilemeyen bir soru sormuş olurduk (ölçüldü: eşik üstünde seçimin tutara etkisi sıfır).
+        Eşik altında liste aynen duruyor; orada parayı müşteri ödüyor ve teslimat noktasını kendisi
+        seçebilir.
+
+        Kural asıl SEVKTE bağlayıcı (`quoteOrderShipment` → `requiresHomeDelivery`): seçilen kod
+        hiçbir yere yazılmıyor, taşıyıcıyı depo seçiyor. Burası yalnız SORMAMA kısmı.
+      */}
+      {!inRoute && !delivery.blocked && snapshot.shipping?.mode === 'auto' && (
+        <div className="flex flex-col gap-1">
+          <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>
+          <span className="font-sans text-body-sm text-body">{t.delivery.carrierFreeHome}</span>
+        </div>
+      )}
+
+      {!inRoute && !delivery.blocked && snapshot.shipping?.mode !== 'auto' && (
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-baseline gap-2">
             <span className="font-sans text-body-sm font-bold text-ink">{t.delivery.carrierTitle}</span>

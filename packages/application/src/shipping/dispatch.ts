@@ -7,6 +7,7 @@ import {
   ShippingBoxService,
   WarehouseService,
 } from '@lezzet/database';
+import { homeDeliveryOnly, requiresHomeDelivery } from '@lezzet/domain-core';
 import type { ParcelSpec } from '@lezzet/sendcloud';
 import type { Order, OrderBox, ShippingBox } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -180,6 +181,12 @@ export type DispatchQuoteOutcome =
       }>;
       parcelCount: number;
       totalWeightG: number;
+      /**
+       * **Liste "yalnız adrese teslim"e daraltıldı mı** (kullanıcı kararı 29.08). Ücretsiz kargoda
+       * parayı biz ödüyoruz ve koli EVE gider; ekran bunu SÖYLEMELİ, yoksa depocu listeyi eksik
+       * sanır. Liste boş kaldıysa sebebini de bu bayrak anlatır.
+       */
+      homeOnly: boolean;
     }
   | DispatchBlock
   | { status: 'provider_error'; message: string };
@@ -219,9 +226,24 @@ export async function quoteOrderShipment(
   }
 
   const usable = plan.parcels.length > 1 ? options.filter((o) => o.multicollo) : options;
+
+  /*
+    **ÜCRETSİZ KARGO EVE GİDER** (kullanıcı kararı 29.08) — ve kural BURADA bağlayıcı, checkout'ta
+    değil: müşterinin seçtiği servis kodu hiçbir yere yazılmıyor (ölçüldü), taşıyıcıyı gerçekte bu
+    kapı seçtiriyor. Checkout'a koysaydık kuralı söylemiş ama uygulamamış olurduk — depo yine
+    teslim noktası satın alabilirdi.
+
+    Ölçüt ücretin sıfır olması: müşteri ödemediyse seçim bizimdir ve "ücretsiz kargo" sözü
+    kapıya teslimi kapsar. Müşteri ödüyorsa teslim noktasını KENDİSİ seçebilir — o hâlde bu süzgeç
+    hiç çalışmaz.
+  */
+  const homeOnly = requiresHomeDelivery(plan.order);
+  const izinli = homeOnly ? homeDeliveryOnly(usable) : usable;
+
   return {
     status: 'ok',
-    options: usable
+    homeOnly,
+    options: izinli
       .filter((o): o is typeof o & { priceCents: number } => typeof o.priceCents === 'number' && o.priceCents > 0)
       .sort((a, b) => a.priceCents - b.priceCents)
       .map((o) => ({
