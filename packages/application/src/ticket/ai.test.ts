@@ -7,7 +7,7 @@ import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';
 import { metaCloudSender } from '../messaging/meta-sender';
 import { recordInboundMessage, recordOutboundMessage } from '../messaging/record';
 import { unconfiguredSender } from '../messaging/send';
-import { generateConversationDraft, runAutonomousConversationReply, runAutonomousTicketReply } from './ai';
+import { generateConversationDraft, runAutonomousConversationReply, runAutonomousTicketReply, toolsIdentityOf } from './ai';
 
 /**
  * AI DESTEK ÇEKİRDEĞİNİN ÜÇ DALI (16.5 · 15.13 · test dalgası 15.18).
@@ -99,6 +99,23 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await purgeTestData(db, { conversationIds, profileIds });
+});
+
+describe('araç kimliği ÜÇLÜ kapıdan geçer (28.08 · CHANNELS §3b)', () => {
+  /* Kapının tamamı tek satır ama üç ayrı karar taşıyor ve ikisi güvenlik kararı. Saf olduğu için
+     DB'siz sınanıyor; `customerSupportTools`un o kimlikle ne verdiği kendi dosyasında. */
+  it('kimlik YOKSA kamusal set — Messenger/IG\'nin olağan hâli', () => {
+    expect(toolsIdentityOf(null, null)).toBeNull();
+  });
+
+  it('kimlik VAR ama çapa KAPALIYSA yine kamusal set — geçmiş açılmaz', () => {
+    // Sessiz regresyonun tam yeri: kimliği geçirmek hata VERMEZ, ajan yalnız fazla şey bilirdi.
+    expect(toolsIdentityOf('musteri-1', { open: false, state: 'none', ask: null })).toBeNull();
+  });
+
+  it('çapa AÇIKSA kimlik geçer — tam set', () => {
+    expect(toolsIdentityOf('musteri-1', { open: true, state: 'email', ask: null })).toBe('musteri-1');
+  });
 });
 
 describe('özerk cevap KENDİNİ TANITIR — beyan hukuki bir yükümlülük', () => {

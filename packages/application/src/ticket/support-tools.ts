@@ -104,8 +104,28 @@ function birincilAdres(adresler: Address[]): Address | null {
  * Çağıran talebin sahibini geçirir; model o kimliği ne görür ne değiştirebilir. Araç gövdesinde
  * hata olursa fırlatmaz — `bilinmiyor` döner ve log'a KİMLİK düşer (içerik değil): fırlatan bir
  * araç koşuyu düşürür ve müşteri cevapsız kalırdı.
+ *
+ * ── KİMLİK YOKSA SET BOŞ DEĞİL, DAR (28.08 · `CHANNELS §3b`) ────────────────
+ * `customerId` **null olabilir** ve bu hâl Messenger/Instagram'da istisna değil KURAL: PSID telefon
+ * taşımaz, sohbet kimliksiz doğar. Bir tur boyunca o sohbetlerde HİÇ araç verilmiyordu ve bu,
+ * `ai.ts`'in kendi künyesiyle çelişiyordu (*"ajan o hâlde de konuşur ama yalnız herkese açık
+ * bilgiyle"*) — ajan herkese açık bilgiyi bile okuyamıyordu. "67000'e geliyor musunuz" sorusunun
+ * cevabı sitede ziyaretçiye açıkken sohbette cevapsız kalıyordu.
+ *
+ * Ayrım kanalda değil SORUDA: kimseye ait olmayan bilgi (katalog, fiyat listesi, teslimat şartları,
+ * bir posta koduna gidip gitmediğimiz) kimlik istemez; müşterinin GEÇMİŞİ ister.
  */
-export function customerSupportTools(db: Db, customerId: string): ToolSet {
+export function customerSupportTools(db: Db, customerId: string | null): ToolSet {
+  return { ...publicTools(db, customerId), ...(customerId ? identityTools(db, customerId) : {}) };
+}
+
+/**
+ * Müşterinin KENDİ verisini okuyan araçlar — kimlik çapası açıkken verilir (`ai.ts` kapısı).
+ *
+ * Girdileri BOŞ ve bilerek: sorulacak tek şey "benimki"dir. Kimlik argüman olsaydı model
+ * başkasınınkini sorabilirdi (dosya başındaki değişmez).
+ */
+function identityTools(db: Db, customerId: string): ToolSet {
   return {
     teslimat_gunleri: tool({
       description:
@@ -151,28 +171,82 @@ export function customerSupportTools(db: Db, customerId: string): ToolSet {
       },
     }),
 
+    siparislerim: tool({
+      description:
+        'Müşterinin son siparişlerini listeler: sipariş numarası, durumu ve teslim günü. ' +
+        'Sipariş durumu, "nerede kaldı", "ne zaman gelecek" sorularında çağır. Tutar bilgisi VERMEZ.',
+      inputSchema: z.object({}),
+      execute: async () => {
+        try {
+          const sayfa = await new OrderService(db).listByCustomer(customerId, { limit: 5 });
+          return {
+            siparisler: sayfa.rows.map((o) => ({
+              numara: o.referenceNo,
+              durum: ORDER_STATUS_LABELS[o.status],
+              teslimGunu: o.deliveryDate ? tarihAdi(o.deliveryDate) : 'kargo (rota günü yok)',
+            })),
+          };
+        } catch (err) {
+          logger.warn(
+            { context: 'application/support-tools', tool: 'siparislerim', customerId, err: String(err) },
+            'destek aracı okuyamadı',
+          );
+          return { bilinmiyor: 'Sipariş bilgisi şu an okunamadı.' };
+        }
+      },
+    }),
+  };
+}
+
+/**
+ * KİMLİK İSTEMEYEN araçlar — kimliksiz sohbette de verilir.
+ *
+ * `customerId` yine geçiliyor ama **zorunlu değil**: varsa cevap müşterinin kapsamıyla daralır
+ * (B2B fiyatı, kendi bölgesinin stoğu), yoksa ziyaretçi kapsamına düşer — `pricingViewerOf`'un
+ * kendi kuralı (`!customerId → VISITOR`). Yani aynı araç iki modda çalışır ve ikisi de dürüsttür;
+ * ikinci bir "ziyaretçi seti" yazmak aynı üç aracın ikinci kopyası olurdu.
+ */
+function publicTools(db: Db, customerId: string | null): ToolSet {
+  return {
     urun_ara: tool({
       description:
         'Katalogda ürün arar ve müşterinin KENDİ fiyatıyla, KENDİ adresine göre satın alınabilirliğini söyler. ' +
         '"X var mı", "fiyatı ne", "kaça", "hangi boyları var" sorularında MUTLAKA bunu çağır. Tahmin etme.',
       inputSchema: z.object({
         terim: z.string().min(2).describe('Aranacak ürün adı ya da anahtar kelime — örn. "baklava", "su böreği"'),
+        postaKodu: z
+          .string()
+          .min(4)
+          .optional()
+          .describe(
+            'Müşteri SÖYLEDİYSE posta kodu — stok o bölgenin deposundan okunur. ' +
+              'Kayıtlı adresi olan müşteride bile SÖYLENEN kod önceliklidir (başka adrese gönderiyor olabilir). ' +
+              'Müşteri söylemediyse BOŞ bırak, uydurma.',
+          ),
       }),
-      execute: async ({ terim }) => {
+      execute: async ({ terim, postaKodu }) => {
         try {
           /*
-            İKİ BAĞLAM ZORUNLU ve ikisi de MÜŞTERİDEN çözülür — katalog kapısının kendi kuralı:
-            `place` (hangi depo) ve `viewer` (hangi kanal/kademe). Varsayılan geçmek, B2B müşteriye
-            B2C fiyatı ya da başka deponun stoğunu okutmak olurdu; kapı bu yüzden ikisini de
-            zorunlu istiyor (`CatalogInput` künyesi) ve araç da uydurmuyor.
+            İKİ BAĞLAM ZORUNLU — katalog kapısının kendi kuralı: `place` (hangi depo) ve `viewer`
+            (hangi kanal/kademe). Varsayılan geçmek, B2B müşteriye B2C fiyatı ya da başka deponun
+            stoğunu okutmak olurdu; kapı bu yüzden ikisini de zorunlu istiyor (`CatalogInput`
+            künyesi) ve araç da uydurmuyor.
 
-            Adres yoksa `place` DEPO-ÜSTÜ okunur (`UNRESOLVED_PLACE`): "hiç var mı" sorusu
-            cevaplanabilir, "sana gelir mi" sorusu cevaplanamaz — ve model bunu bilsin diye
-            cevapta ayrıca söyleniyor (`adresBilinmiyor`).
+            ── YER ÜÇ KAYNAKTAN, BU SIRAYLA (28.08 · `CHANNELS §3b`) ─────────────
+            (1) sohbette SÖYLENEN posta kodu · (2) müşterinin kayıtlı adresi · (3) hiçbiri.
+            Söylenen kod öndedir ve bilerek: "annemin evine, 75001'e gelir mi" diyen müşteride
+            kayıtlı adres YANLIŞ cevabı verirdi. Posta kodu KİMLİK DEĞİL — herkese açık bir soru
+            (`posta_kodu_kontrol` künyesinin kurduğu gerekçe); o yüzden bu araç kimliksiz sohbette
+            de tam çalışır ve kimliksizlik yalnız FİYAT kapsamını ziyaretçiye düşürür.
+
+            Yer hiç çözülemezse `place` DEPO-ÜSTÜ okunur (`UNRESOLVED_PLACE`): "hiç var mı" sorusu
+            cevaplanabilir, "sana gelir mi" cevaplanamaz — ve model bunu bilsin diye cevapta ayrıca
+            söyleniyor (`yerBilinmiyor`), üstelik çaresiyle: posta kodunu SOR ve yeniden çağır.
           */
-          const adres = birincilAdres(await new AddressService(db).listByCustomer(customerId));
+          const adres = customerId ? birincilAdres(await new AddressService(db).listByCustomer(customerId)) : null;
+          const kod = postaKodu?.trim() || adres?.postalCode || null;
           const [place, viewer] = await Promise.all([
-            adres ? resolvePlaceWarehouses(db, adres.postalCode) : Promise.resolve(UNRESOLVED_PLACE),
+            kod ? resolvePlaceWarehouses(db, kod) : Promise.resolve(UNRESOLVED_PLACE),
             pricingViewerOf(db, customerId),
           ]);
 
@@ -200,7 +274,14 @@ export function customerSupportTools(db: Db, customerId: string): ToolSet {
           }));
 
           if (urunler.length === 0) return { bilinmiyor: `"${terim}" için katalogda eşleşen ürün yok.` };
-          return adres ? { urunler } : { urunler, adresBilinmiyor: 'Müşterinin adresi yok — stok "hiç var mı" düzeyinde okundu, adrese göre değil.' };
+          return kod
+            ? { urunler, yer: kod }
+            : {
+                urunler,
+                yerBilinmiyor:
+                  'Yer bilinmiyor — stok "hiç var mı" düzeyinde okundu, bir depoya göre değil. ' +
+                  'Müşteriden POSTA KODU iste ve bu aracı postaKodu ile yeniden çağır.',
+              };
         } catch (err) {
           logger.warn(
             { context: 'application/support-tools', tool: 'urun_ara', customerId, err: String(err) },
@@ -303,31 +384,6 @@ export function customerSupportTools(db: Db, customerId: string): ToolSet {
             'destek aracı okuyamadı',
           );
           return { bilinmiyor: 'Teslimat şartları şu an okunamadı.' };
-        }
-      },
-    }),
-
-    siparislerim: tool({
-      description:
-        'Müşterinin son siparişlerini listeler: sipariş numarası, durumu ve teslim günü. ' +
-        'Sipariş durumu, "nerede kaldı", "ne zaman gelecek" sorularında çağır. Tutar bilgisi VERMEZ.',
-      inputSchema: z.object({}),
-      execute: async () => {
-        try {
-          const sayfa = await new OrderService(db).listByCustomer(customerId, { limit: 5 });
-          return {
-            siparisler: sayfa.rows.map((o) => ({
-              numara: o.referenceNo,
-              durum: ORDER_STATUS_LABELS[o.status],
-              teslimGunu: o.deliveryDate ? tarihAdi(o.deliveryDate) : 'kargo (rota günü yok)',
-            })),
-          };
-        } catch (err) {
-          logger.warn(
-            { context: 'application/support-tools', tool: 'siparislerim', customerId, err: String(err) },
-            'destek aracı okuyamadı',
-          );
-          return { bilinmiyor: 'Sipariş bilgisi şu an okunamadı.' };
         }
       },
     }),

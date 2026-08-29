@@ -50,21 +50,36 @@ const THREAD_LIMIT = 12;
  * olduklarını değiştiremez (`support-tools.ts` künyesi). Enjekte model verildiğinde (test) araç
  * geçilmiyor: sahte model araç çağırmaz ve geçmek testi ağa açardı.
  */
-async function runOpts(db: SupabaseClient, customerId: string, opts: SupportAiOpts, known: AnchorGate | null = null) {
+async function runOpts(db: SupabaseClient, customerId: string | null, opts: SupportAiOpts, known: AnchorGate | null = null) {
   if (opts.model) return { model: opts.model };
-  // ── KİMLİK KAPISI (04.10, DOMAIN §10) ─────────────────────────────────────
-  // Araç seti müşterinin GEÇMİŞİDİR (siparişleri, adresine gelinen günler). Çapası olmayan ya da
-  // dönüşü şüpheli müşteride verilmez: *"kimliği bilmeden ne açtığımız asıl sorudur."*
+  // ── KİMLİK KAPISI ÜÇLÜDÜR (04.10 · DOMAIN §10 · 28.08'de genişledi) ───────
+  // Kapı GEÇMİŞ araçlarını korur (siparişler, adrese gelinen günler): *"kimliği bilmeden ne
+  // açtığımız asıl sorudur."* Ama kapatılan şey bir tur boyunca **araç setinin tamamıydı** ve bu
+  // fazlaydı — katalog, fiyat listesi, teslimat şartları ve "şu posta koduna geliyor musunuz"
+  // kimseye ait değil; cevapları sitede ziyaretçiye zaten açık. Kimliksiz sohbette (Messenger/IG'de
+  // KURAL, WhatsApp'ta kanıtsız numarada) ajan bunları bile okuyamıyordu (`CHANNELS §3b`).
   //
-  // Kapı ARAÇTA, prompt'ta değil. Modele "söyleme" demek bir ricadır; aracı vermemek bir kısıttır.
+  // Üç hâl: kimlik yok → kamusal set · kimlik var ama çapa kapalı → yine kamusal set (kimliğe
+  // GÜVENİLMEDİĞİ için fiyat kapsamı da ziyaretçiye düşer, B2B kademesi sızmaz) · çapa açık → tam
+  // set. Kapı ARAÇTA, prompt'ta değil: modele "söyleme" demek bir ricadır, aracı vermemek kısıttır.
+  //
   // `known` sohbet yolundan gelir: orada kapı zaten okundu (soruyu da o okuma söylüyor) — iki kez
   // okumak aynı cevabı iki sorguya mal ederdi.
+  if (!customerId) return { tools: customerSupportTools(db, null) };
   const gate = known ?? (await anchorGateOf(db, customerId));
-  if (!gate.open) {
-    logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — geçmiş araçları verilmedi');
-    return {};
-  }
-  return { tools: customerSupportTools(db, customerId) };
+  if (!gate.open) logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — yalnız kamusal araçlar verildi');
+  return { tools: customerSupportTools(db, toolsIdentityOf(customerId, gate)) };
+}
+
+/**
+ * Araç seti hangi kimliğe kapatılacak — `null` demek "kamusal set" demektir, "araç yok" değil.
+ *
+ * Karar saf tutuldu ve export edildi çünkü **sessiz bir regresyonun tam yeri burası**: koşul
+ * yanlışlıkla `customerId ?? null` olsaydı çapası kapalı müşterinin geçmişi açılırdı ve hiçbir yerde
+ * hata görünmezdi — ajan yalnız fazla şey bilirdi. Gövdesi tek satır, ama sınandığı için öyle.
+ */
+export function toolsIdentityOf(customerId: string | null, gate: AnchorGate | null): string | null {
+  return customerId && gate?.open ? customerId : null;
 }
 
 export type SupportAiOutcome =
@@ -218,13 +233,14 @@ export async function generateConversationDraft(
     if (conversation.aiDraftGeneratedAt >= conversation.lastMessageAt) return { status: 'cached' };
   }
 
-  // Kimliği ÇÖZÜLMEMİŞ konuşmada araç verilmez (16.9): tanımadığımız bir numaranın "benim
-  // siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kapalı girdiyle koşar.
+  // Kimliği ÇÖZÜLMEMİŞ konuşmada GEÇMİŞ araçları verilmez (16.9): tanımadığımız bir numaranın
+  // "benim siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kamusal araçlar
+  // (katalog, teslimat şartları, posta kodu) yine verilir — `runOpts`un üçlü kapısı.
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
   const result = await runTask(
     ticketDraftTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
-    conversation.customerId ? await runOpts(db, conversation.customerId, opts, gate) : opts.model ? { model: opts.model } : {},
+    await runOpts(db, conversation.customerId, opts, gate),
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
@@ -449,9 +465,10 @@ export async function runAutonomousConversationReply(
     return { status: 'handoff', reason };
   };
 
-  /* Kimliği ÇÖZÜLMEMİŞ sohbette araç verilmez — taslak yolunun kuralının aynısı (16.9). Messenger/
-     IG'de PSID telefon taşımaz, yani kimliksiz sohbet istisna değil KURAL; ajan o hâlde de konuşur
-     ama yalnız herkese açık bilgiyle. */
+  /* Kimliği ÇÖZÜLMEMİŞ sohbette GEÇMİŞ araçları verilmez — taslak yolunun kuralının aynısı (16.9).
+     Messenger/IG'de PSID telefon taşımaz, yani kimliksiz sohbet istisna değil KURAL; ajan o hâlde
+     de konuşur ve **yalnız herkese açık bilgiyle** — bu künye 28.08'e kadar bir VAATTİ, araç seti
+     tümüyle kapatıldığı için ajan herkese açık bilgiyi de okuyamıyordu (`CHANNELS §3b`). */
   /* Kimlik sorusu YALNIZ sohbet yolunda soruluyor (04.10): çapanın cevabı müşterinin KENDİ
      numarasından gelmek zorunda (`verifySecurityCode` imzası), yani e-posta talebinde sormak
      cevaplanamayacak bir soru sormaktır. Kapı orada da kapalı — ama soru burada. */
@@ -459,7 +476,7 @@ export async function runAutonomousConversationReply(
   const result = await runTask(
     ticketAgentTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
-    conversation.customerId ? await runOpts(db, conversation.customerId, opts, gate) : opts.model ? { model: opts.model } : {},
+    await runOpts(db, conversation.customerId, opts, gate),
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 

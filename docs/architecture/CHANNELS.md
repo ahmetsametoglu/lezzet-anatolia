@@ -23,6 +23,10 @@ Sistem üzerinden geçen her sipariş aynı `orders` tablosuna, aynı durum maki
 
 > WhatsApp, ADR-001'de **merkezî satış kanalı** olarak konumlandı: site vitrin ve katalog kalır, satışın kapandığı yer büyük ölçüde WhatsApp'tır. Ama sistem tarafında hiçbir yüzey ayrıcalıklı değildir — hepsi domain-core'u çağırır.
 
+> **Messenger/Instagram bu listede YOK ve bilerek:** sipariş orada kapanmıyor, yani bir *sipariş
+> kaynağı* değiller (`order_source` enum'unda karşılıkları da yok — §2'nin "kullanılmayan enum
+> değeri yalan söyler" kuralı). Rolleri ayrı bölümde: **§3b**.
+
 ---
 
 ## 2. Üç bağımsız eksen — karıştırılmaz
@@ -59,6 +63,64 @@ WhatsApp müşteriyi **telefon numarasıyla** tanır; web müşteriyi e-posta/ot
   eylemi (15.16) ya da 04.10 çapraz-kanal çapasının bu kanallara genellenmesi (kod e-postaya
   gider, müşteri sohbetten geri yazar). Sohbetin görünen adı `conversation.profile_name`'dir —
   görünen ad, kimlik değil.
+
+---
+
+## 3b. Sosyal kanalların iş rolü — danışma orada, işlem sitede
+
+> **Karar (28.08, kullanıcı turu).** ADR-006 Messenger/Instagram'ı kapsama aldı ama gerekçesi
+> tümüyle teknikti (tek app, tek webhook, tek jeton). Bu bölüm o boşluğu kapatıyor: **iki kanalın
+> işi nedir.**
+
+**Kanalı değil SORUYU ayır.** Ayrım kimliğe göre kurulur, kanala göre değil:
+
+| Soru | Kimlik gerekir mi | Nerede biter |
+| --- | --- | --- |
+| "Şu posta koduna geliyor musunuz, hangi gün?" | hayır | sohbette |
+| "Şu ürün var mı, kaça?" | hayır (ziyaretçi = B2C liste fiyatı) | sohbette |
+| "Kargo kaç para, ücretsiz kargo eşiği ne?" | hayır | sohbette |
+| "Siparişim nerede?" | **evet** | kimlik bağlanır ya da devredilir |
+| Satın alma | **evet** (+ adres + ödeme) | **sitede / checkout** |
+
+- **Instagram = danışman vitrin.** Gıdada IG görsel bir kanal; DM'lerin çoğu düşük niyetli ve
+  kimliksizdir ("bu var mı", "nereye gönderiyorsunuz", story cevabı). Doğru kullanımı soruyu orada
+  **bitirmek**, satın almayı siteye taşımaktır.
+- **Messenger = aynı rol, düşük hacim.** Kendi başına yatırım hak etmiyor; aynı webhook'a, aynı
+  gelen kutusuna, aynı araç setine **bedava biniyor**. Değeri "gelen mesaj cevapsız kalmasın"dır.
+- **WhatsApp = satışın kapandığı yer** (ADR-001) — kimlik telefondan otomatik çözüldüğü için tek
+  kanal orada tam hizmet verebiliyor.
+
+### Neden satış sohbette kapanmıyor — ve neden bu bir kusur değil
+
+Satış kapatmak **kimlik + adres + ödeme** ister. Messenger/IG'de üçü de yok ve posta kodu bunları
+çözmez: posta kodu *depoyu* ve *teslimat biçimini* çözer, **teslim adresini değil**. Adresi serbest
+metinden almak, doğrulama makinesini (BAN sorgusu · posta kodu çözümü · bölge eşleşmesi) tümüyle
+atlamak olurdu; yanlış adres soğuk zincirde malın kendisidir (22.08 kararının gerekçesi).
+
+Bu yüzden iş bölümü şudur ve sitenin kendisi de böyle çalışır: **sohbet danışmanlık, checkout işlem.**
+
+### Kimliksiz sohbette araç kapısı ÜÇLÜDÜR
+
+`customerSupportTools` beş araç veriyor ve kimlik ihtiyaçları aynı değil:
+
+- **Kamusal** (`posta_kodu_kontrol` · `teslimat_sartlari` · `urun_ara`): girdi kimlik değil, herkese
+  açık bir sorudur — cevapları sitede ziyaretçiye zaten görünüyor. `pricingViewerOf(db, null)`
+  ziyaretçi kapsamına düşer, yani fiyat da okunabilir.
+- **Kimliğe bağlı** (`siparislerim` · `teslimat_gunleri`): çapa kapısının arkasında kalır.
+
+Kapının "kimlik yoksa hiçbir araç yok" biçiminde ikili olması bir **eksiklikti**: Messenger'dan
+"67000'e geliyor musunuz" diye soran kişiye ajan, cevaplayabilecekken araçsız cevap veriyordu.
+Aynı düzeltme WhatsApp'ta da kazandırır — 04.10'dan sonra kanıtsız numara kimlik kurmuyor, yani
+orada da kimliksiz sohbetler var.
+
+### Devir — ne zaman, nereye
+
+Devir bir **kaçış değil**, kimliğin ya da ödemenin gerektiği andır:
+
+- Kimliğe bağlı soru gelince → önce **kimlik bağlama** denenir (operatör eylemi 15.16 · çapraz-kanal
+  çapası 04.10), bağlanamıyorsa devir.
+- Satış kapanacaksa → hedef **site/checkout**, WhatsApp değil. WhatsApp'a devretmek satışı bir adım
+  yaklaştırmaz, yalnız uygulama değiştirir; üstelik müşteri o kanala geçmek istemeyebilir.
 
 ---
 

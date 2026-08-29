@@ -223,6 +223,56 @@ describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
   });
 });
 
+describe('kimliksiz sohbet — set BOŞ değil, DAR (28.08 · CHANNELS §3b)', () => {
+  it('kimliksizde GEÇMİŞ araçları yok, kamusal üçü VAR', async () => {
+    /* İki yönlü iddia ve ikisi de gerekli: eksik yarısı bir güvenlik açığı (kimliksiz sohbette
+       "siparişlerim" okunabilseydi kimin siparişi olduğu belirsizken veri açılırdı), fazlası bir
+       yetenek kaybı (bir tur boyunca HİÇ araç verilmiyordu ve ajan katalogu bile okuyamıyordu). */
+    expect(Object.keys(customerSupportTools(db, null)).sort()).toEqual([
+      'posta_kodu_kontrol',
+      'teslimat_sartlari',
+      'urun_ara',
+    ]);
+  });
+
+  it('kimliksizde posta kodu sorusu TAM cevaplanır — kanalın asıl işi bu', async () => {
+    // Messenger/IG'de sohbet kimliksiz DOĞAR (PSID telefon taşımaz). "Şu koda geliyor musunuz"
+    // sorusunun cevabı sitede ziyaretçiye açıkken sohbette cevapsız kalıyordu.
+    const sonuc = await cagir(customerSupportTools(db, null), 'posta_kodu_kontrol', { postaKodu: ROTA_KODU });
+    expect(sonuc.teslimat).toContain('kapıya teslim');
+    expect(sonuc.haftalikGunler).toBeDefined();
+  });
+
+  it('kimliksizde ürün + fiyat okunur ve fiyat ZİYARETÇİ kapsamıdır', async () => {
+    /* Kimlik yokken B2B kademesi sızmamalı: `pricingViewerOf(db, null)` ziyaretçiye düşüyor.
+       İddia B2B'ye EŞİT OLMAMAK üzerinden kuruluyor — tutara yazılan bir iddia fikstür değişince
+       sebebi anlaşılmayan bir kırmızı olurdu. */
+    const kimliksiz = await cagir(customerSupportTools(db, null), 'urun_ara', { terim: `Fistikli ${stamp}` });
+    const toptan = await cagir(customerSupportTools(db, b2bId), 'urun_ara', { terim: `Fistikli ${stamp}` });
+    const fiyatZiyaretci = (kimliksiz.urunler as { fiyat: string }[])[0]!.fiyat;
+    expect(fiyatZiyaretci).toContain('€');
+    expect(fiyatZiyaretci).not.toBe((toptan.urunler as { fiyat: string }[])[0]!.fiyat);
+  });
+
+  it('kimliksiz + posta kodu = stok DEPO-DOĞRU okunur (kimlik gerekmiyor)', async () => {
+    /* Asıl kazanç bu: kimliksiz sohbette müşteri kodunu söyleyince "sana gelir mi" sorusu
+       cevaplanabilir hâle geliyor. Kimlik istenseydi Messenger'da bu soru hiç cevaplanamazdı. */
+    const sonuc = await cagir(customerSupportTools(db, null), 'urun_ara', {
+      terim: `Fistikli ${stamp}`,
+      postaKodu: ROTA_KODU,
+    });
+    expect(sonuc.yer).toBe(ROTA_KODU);
+    expect(sonuc.yerBilinmiyor).toBeUndefined();
+    expect((sonuc.urunler as { durum: string }[])[0]!.durum).toContain('teslim edilebilir');
+  });
+
+  it('kimliksizde teslimat şartları okunur — sayılar ziyaretçi kapsamından', async () => {
+    const sonuc = await cagir(customerSupportTools(db, null), 'teslimat_sartlari', {});
+    expect(sonuc.kargoUcreti).toContain('€');
+    expect(sonuc.kargoGonderilenUlkeler).toBeDefined();
+  });
+});
+
 describe('teslimat_gunleri — bilinmeyen SIFIR değildir', () => {
   it('adres yoksa gün UYDURULMAZ, `bilinmiyor` döner', async () => {
     // "Teslimat günü yok" cümlesi müşteriye yanlış bir kesinlik verirdi; burada eksik olan gün
@@ -278,16 +328,32 @@ describe('urun_ara — fiyat MÜŞTERİNİN kendi fiyatıdır', () => {
   it('stoklu ürün müşterinin adresine göre "teslim edilebilir" der', async () => {
     const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', { terim: `Fistikli ${stamp}` });
     expect((sonuc.urunler as { durum: string }[])[0]!.durum).toContain('teslim edilebilir');
-    // Adres BİLİNİYOR: uyarı alanı hiç görünmemeli, yoksa model gereksiz bir çekince yazardı.
-    expect(sonuc.adresBilinmiyor).toBeUndefined();
+    // Yer BİLİNİYOR: uyarı alanı hiç görünmemeli, yoksa model gereksiz bir çekince yazardı.
+    expect(sonuc.yerBilinmiyor).toBeUndefined();
+    expect(sonuc.yer).toBe(ROTA_KODU);
   });
 
-  it('adressiz müşteride stok "hiç var mı" düzeyinde okunur ve bu SÖYLENİR', async () => {
+  it('yer hiç çözülemeyince stok "hiç var mı" düzeyinde okunur, SÖYLENİR ve ÇARESİ verilir', async () => {
     // Depo-üstü okuma meşru bir cevaptır ama farklı bir sorunun cevabıdır; model farkı ancak
-    // kendisine söylenirse bilir.
+    // kendisine söylenirse bilir. Ve yalnız "bilmiyorum" demek yetmez — modelin bir sonraki hamlesi
+    // (posta kodunu SOR, aracı yeniden çağır) cevabın içinde duruyor.
     const sonuc = await cagir(customerSupportTools(db, adressizId), 'urun_ara', { terim: `Fistikli ${stamp}` });
     expect(sonuc.urunler).toBeDefined();
-    expect(sonuc.adresBilinmiyor).toContain('adresi yok');
+    expect(sonuc.yerBilinmiyor).toContain('POSTA KODU');
+  });
+
+  it('SÖYLENEN posta kodu kayıtlı adresi EZER — başka adrese gönderen müşteri (28.08)', async () => {
+    /* Kayıtlı adresi olan müşteri "annemin evine, şu koda gelir mi" diyebilir. Kayıtlı adres
+       kazansaydı araç DOĞRU bir cevabı YANLIŞ soruya vermiş olurdu — ve müşteri farkı anlayamazdı,
+       çünkü cevapta hangi yere bakıldığı yazmazdı. `yer` alanı tam da bunun için var. */
+    const sonuc = await cagir(customerSupportTools(db, musteriId), 'urun_ara', {
+      terim: `Fistikli ${stamp}`,
+      postaKodu: YABANCI_KOD,
+    });
+    expect(sonuc.yer).toBe(YABANCI_KOD);
+    // Yabancı kod hiçbir bölgeye düşmüyor → depo çözülemez → stok depo-üstü okunur, ama araç
+    // sustuğu için değil, o kod bize gitmediği için: ürün yine listeleniyor.
+    expect(sonuc.urunler).toBeDefined();
   });
 
   it('fiyatsız ürün "0,00 €" değil "bu kanalda satışa kapalı" der', async () => {
