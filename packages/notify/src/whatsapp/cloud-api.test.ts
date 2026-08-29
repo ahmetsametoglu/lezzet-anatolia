@@ -60,6 +60,32 @@ describe('WhatsApp gövdesi Meta sözleşmesine uyar', () => {
     });
   });
 
+  it('şablon dili ÇAĞIRANDAN gelir — sabit "tr" varsayımı `en_US` şablonlarını gönderemiyordu', async () => {
+    /* 28.08'de ölçülen sessiz arıza: dil hiç geçirilmiyordu ve varsayılan sabit `tr`ydi. Meta
+       şablonu ad + dil ÇİFTİYLE arıyor, yani `en_US`te onaylanmış hiçbir şablon — Meta'nın kendi
+       `hello_world`ü dahil — gönderilemiyordu. Hata `132001` ("şablon bulunamadı") diye geliyordu:
+       şablon VARDI, dili başkaydı. Sebep bizdeyken sağlayıcı arızası gibi okunacaktı. */
+    const meta = fakeMeta();
+    const sonuc = await sendCloudApiMessage(
+      fakeCloudApiConfig(meta),
+      wa({ text: null, templateName: 'hello_world', templateLanguage: 'en_US' }),
+    );
+
+    expect(sonuc.ok).toBe(true);
+    expect(meta.calls[0]!.body).toMatchObject({
+      type: 'template',
+      template: { name: 'hello_world', language: { code: 'en_US' } },
+    });
+  });
+
+  it('dil GEÇİLMEZSE `tr`ye düşer — varsayılanın kaybolmadığı da bir iddiadır', async () => {
+    // Üstteki testin karşı yakası: dil parametrik oldu diye varsayılanı kaybetmiş olmayalım.
+    // Çağıranların çoğu Türkçe şablon gönderiyor ve her çağrıda dil yazmak zorunda kalmamalı.
+    const meta = fakeMeta();
+    await sendCloudApiMessage(fakeCloudApiConfig(meta), wa({ text: null, templateName: 'siparis_onayi' }));
+    expect(meta.calls[0]!.body).toMatchObject({ template: { language: { code: 'tr' } } });
+  });
+
   it('interaktif kart HAM hâliyle geçer — burada yeniden şekillendirilmez', async () => {
     // Sağlayıcının sözleşmesini ikinci kez yazmak, Meta kartın şeklini değiştirdiği gün iki yerde
     // birden düzeltme demekti.

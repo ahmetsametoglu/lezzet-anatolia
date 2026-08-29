@@ -315,24 +315,34 @@ export const TicketHandlerEnum = z.enum(['human', 'hybrid', 'ai']);
 export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
 
 /**
- * Sohbette OPERATÖRÜN seçebileceği modlar (15.13 · 22.08) — `ai` YOK ve bu bilinçli.
+ * Sohbette OPERATÖRÜN seçebileceği modlar — **29.08'den beri talepteki ÜÇÜN aynısı**.
  *
- * Talepte üç modun üçünün de arkasında bir motor var: `human` operatör, `hybrid` taslak üreticisi
- * (`generateTicketDraft`), `ai` özerk cevaplayıcı (`runAutonomousTicketReply`). Sohbette üçüncüsü
- * YOK — özerk sohbet motoru 15.8'in işi ve o da gönderim kanalı olmadan yazılamıyor (15.11).
+ * ── DARALTMA KALKTI, ÇÜNKÜ ŞARTI KARŞILANDI (kullanıcı kararı 29.08) ────────
+ * Bu enum bir tur boyunca `exclude(['ai'])` idi ve gerekçesi sağlamdı: seçenek duruyordu ama
+ * **hiçbir şey koşmuyordu** — operatör "AI" diyor, kuyruk "AI" rozeti takıyor, başlık `N AI'da`
+ * sayıyor, sohbet ise cevapsız bekliyordu. Sessiz ve en pahalı arıza türü.
  *
- * Seçenek yine de duruyordu: operatör "AI" diyebiliyor, kuyruk satırı "AI" rozeti takıyor, başlık
- * `N AI'da` sayıyordu — ve **hiçbir şey koşmuyordu**. Ne cron o modu tarıyor (hibriti tarıyor) ne
- * taslak kapısı açılıyor (`handledBy !== 'hybrid'` → `wrong_mode`). Yani sohbet, operatör AI'ın
- * ilgilendiğini sanarken cevapsız kalıyordu — sessiz ve en pahalı hâliyle: müşteri bekliyor,
- * kuyrukta kimse "cevap bekliyor" görmüyor.
+ * Daraltmanın kendi künyesi çıkış şartını da yazmıştı: *"Motor doğduğu gün bu satır silinir."*
+ * Üç parça da ölçülerek doğrulandı, o yüzden silindi:
+ *   1. **Motor var** — `runAutonomousConversationReply` (15.8).
+ *   2. **Cron o modu tarıyor** — `support-ai.ts` `rows.filter((r) => r.handledBy === 'ai')`;
+ *      daraltma konduğu gün cron yalnız hibriti tarıyordu, artık ikisini de tarıyor.
+ *   3. **Gönderim kanalı açık** — Meta Cloud API jetonu yapılandırıldı ve gerçek bir WhatsApp
+ *      mesajı uçtan uca gönderildi (15.11, 28.08). Şartın son parçası buydu.
  *
- * ── OKUMA DEĞİL, YAZMA DARALTILDI ───────────────────────────────────────────
- * Kolon (`conversation.handled_by`) hâlâ `ticket_handler` ve `ai` değeri geçerli: 16.08 ile bugün
- * arasında o modu seçmiş satırlar olabilir ve okuma yolu onları GÖSTEREBİLMELİ. Daralan yalnız
- * girdi tarafı — "hangi modu seçebilirsin" sorusu. Motor doğduğu gün bu satır silinir.
+ * ── AD KORUNDU, DEĞER TALEPLE AYNI ──────────────────────────────────────────
+ * `TicketHandlerEnum`'a takma ad gibi görünüyor ve bugün öyle. Ayrı ad iki sebeple duruyor:
+ * mobil sözleşme onu adıyla tüketiyor (`ConversationHandler` — `apps/mobile` sosyal ekranı
+ * `.options`tan türetiyor, yani bu satır değişince orası da kendiliğinden açıldı) ve "sohbette
+ * hangi modlar" sorusunun tek bir adresi olması, gelecekte ayrışma gerekirse tek dosyayı
+ * değiştirmeyi yeterli kılıyor.
+ *
+ * ── OKUMA HİÇ DARALMAMIŞTI ──────────────────────────────────────────────────
+ * Kolon (`conversation.handled_by`) baştan beri `ticket_handler` ve `ai` değeri geçerliydi;
+ * daralan yalnız girdi tarafıydı. Bu yüzden açılış **migration istemedi** — veri zaten bu değeri
+ * taşıyabiliyordu.
  */
-export const ConversationHandlerEnum = TicketHandlerEnum.exclude(['ai']);
+export const ConversationHandlerEnum = TicketHandlerEnum;
 export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
 
 /**

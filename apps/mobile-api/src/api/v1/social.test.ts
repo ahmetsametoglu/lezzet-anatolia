@@ -136,10 +136,25 @@ describe('kapı: Bearer + YALNIZ yönetici', () => {
 });
 
 describe('yürütücü modu — kural SUNUCUDA durur', () => {
-  it('`ai` modu 400 ile REDDEDİLİR — arkasında motoru olmayan mod yazılamaz', async () => {
-    // Ekranda çipi kaldırmak yetmez: tek istemcinin nezaketine bırakılan bir kural, ikinci
-    // istemcide (ya da elle atılan bir istekte) yok demektir.
+  it('`ai` modu KABUL EDİLİR (29.08) — artık arkasında motoru olan bir mod', async () => {
+    /* Bu iddia bir tur boyunca TERSİNİ söylüyordu ("400 ile reddedilir — arkasında motoru olmayan
+       mod yazılamaz") ve o gün haklıydı. Kısıt kullanıcı kararıyla kalktı; şart üç ölçümle
+       karşılandı: motor (`runAutonomousConversationReply`), cron taraması (`support-ai.ts`
+       `handledBy === 'ai'`) ve gönderim kanalı (Meta jetonu, canlı doğrulandı).
+
+       Uç HİÇ değişmedi — doğrulama `SocialModeRequestSchema`den, o da `ConversationHandlerEnum`den
+       türüyor. Yani bu testin düşmesi tam olarak istenen şeydi: sözleşme genişleyince mobil uç da
+       elle dokunulmadan genişledi ve bunu haber veren şey bu satır oldu. */
     const res = await post(`/api/v1/social/conversations/${conversationId}/mode`, { mode: 'ai' }, adminToken);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { data: SocialModeResponse; error: null };
+    expect(body.data.mode).toBe('ai');
+  });
+
+  it('bilinmeyen mod HÂLÂ 400 — genişleme "her şeyi kabul et" demek değil', async () => {
+    // Kural yerinde duruyor, yalnız ne dediği değişti: `ticket_handler` kolonu bu üç değerden
+    // başkasını taşıyamaz ve uç da taşıtmamalı.
+    const res = await post(`/api/v1/social/conversations/${conversationId}/mode`, { mode: 'robot' }, adminToken);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ data: null, error: 'invalid_body' });
   });

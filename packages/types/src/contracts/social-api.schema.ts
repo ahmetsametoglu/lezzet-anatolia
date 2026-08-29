@@ -107,12 +107,13 @@ export const SocialReplyRequestSchema = z.object({
 export type SocialReplyRequest = z.infer<typeof SocialReplyRequestSchema>;
 
 /**
- * Yürütücü modu isteği — sohbette İKİ mod (`ConversationHandlerEnum`), talepteki üçlü değil (15.13).
+ * Yürütücü modu isteği — `ConversationHandlerEnum`den TÜRER, elle sayılmaz.
  *
- * `ai` isteği kapıda reddedilir: sohbette özerk motor yok (15.8, gönderim kanalı 15.11'e bağlı) ve
- * kabul edilseydi API, arkasında hiçbir şey koşmayan bir modu yazmış olurdu — mobil ekran da
- * "AI yürütüyor" derdi. Doğrulama İSTEK tarafında; kural sunucuda durmalı, tek istemcinin
- * nezaketine bırakılmamalı.
+ * Enum bir tur boyunca `ai`yi dışlıyordu ve istek onu kapıda reddediyordu: arkasında hiçbir şey
+ * koşmayan bir modu yazmak, mobil ekrana da "AI yürütüyor" dedirtirdi. Kısıt **29.08'de kalktı**
+ * (motor + cron taraması + gönderim kanalı, üçü de ölçüldü) ve bu şema tek satır bile değişmeden
+ * genişledi — türetmenin karşılığı tam olarak bu. Kural yine SUNUCUDA duruyor, tek istemcinin
+ * nezaketine bırakılmıyor; değişen yalnız kuralın ne dediği.
  */
 export const SocialModeRequestSchema = z.object({
   mode: ConversationHandlerEnum,

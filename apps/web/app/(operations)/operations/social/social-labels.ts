@@ -104,12 +104,9 @@ export const OUTBOUND_LABEL = 'Siz';
 /** AI'ın KENDİ gönderdiği balonun künyesi (16.08) — çizimin sözcüğü ("AI ajanı"), mor tonla okunur. */
 export const AI_OUTBOUND_LABEL = 'AI ajanı';
 
-/**
- * `AI` modunun KAPALI olma sebebi — mod anahtarındaki ipucu (15.13 · 22.08).
- *
- * Cümle operatörün diliyle yazıldı, görev kimliğiyle değil: ekranı okuyan kişi "15.8" nedir bilmez;
- * bilmesi gereken tek şey **ne yapabileceği** (hibrit) ve **neden şimdi olmadığı** (gönderecek kanal
- * yok). Gerekçenin uzun hâli `ConversationHandlerEnum` künyesinde.
- */
-export const AI_MODE_UNAVAILABLE =
-  'Sohbette özerk AI henüz yok: mesajı gönderecek kanal açılmadı. Hibrit modda AI taslak yazar, gönderimi siz yaparsınız.';
+/*
+  `AI_MODE_UNAVAILABLE` KALDIRILDI (29.08) — mod açıldı, ipucunun anlattığı kısıt kalmadı.
+  Cümle *"mesajı gönderecek kanal açılmadı"* diyordu ve 28.08'de o kanal açıldı (15.11); kapalı bir
+  düğmenin yanında duran eskimiş bir açıklama, düğmenin kendisinden daha yanıltıcıdır. Gerekçenin
+  tarihsel hâli `ConversationHandlerEnum` künyesinde duruyor.
+*/
