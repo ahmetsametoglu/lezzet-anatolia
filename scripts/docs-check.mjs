@@ -1258,6 +1258,59 @@ if (oversized.length) {
   );
 }
 
+/*
+  ── §3j — ORTAM DEĞİŞKENİ BELGESİZ KALMAZ ────────────────────────────────────────────────────────
+
+  Kod `process.env.X` okuyorsa, o uygulamanın `.env.example`inde `X=` satırı OLMALI.
+
+  **Neden makineyle zorlanıyor:** eksik bir env satırı hiçbir şeyi kırmaz — derleme geçer, lint
+  geçer, testler geçer. Arıza yalnız YENİ bir ortam kurulurken görünür ve orada da "neden
+  çalışmıyor" diye koda bakmak gerekir. Ölçüldü 29.08: kargo anahtarları (`SENDCLOUD_*`) üç
+  uygulamada da okunuyordu ve HİÇBİR `.env.example`de yazılı değildi; arka uç anahtarsız kaldığı
+  için nöbet cron'u sessizce kendini atlıyordu.
+
+  **Kapsam UYGULAMA ağacı** (`apps/*`), paketler değil: paketi hangi sürecin çalıştırdığını
+  buradan bilemeyiz — `SENDCLOUD_*` `packages/application`da okunuyor ama üç ayrı süreç kuruyor.
+  Paket düzeyi bir kural, "hangi örneğe yazılmalı" sorusunu cevaplayamadığı için ya yanlış yeri
+  gösterir ya hiç bir şey demez.
+
+  Testler dışarıda: test kendi ortamını kurabilir (`shipment-watch.test.ts` anahtarları elle
+  yazıp sonunda geri veriyor) ve o değişkenler bir kurulum gereği değildir.
+*/
+const ENV_SKIP = /^(NODE_|npm_|CI$|VITEST|PORT$|NEXT_RUNTIME$|TZ$)/;
+
+function envOku(dir, out = new Set()) {
+  for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+    const rel = `${dir}/${entry.name}`;
+    if (/node_modules|\.next|\.turbo|dist/.test(rel)) continue;
+    if (entry.isDirectory()) envOku(rel, out);
+    else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$|\.testkit\.ts$/.test(entry.name)) {
+      /*
+        YORUMLAR AYIKLANIR — ölçülmüş yanlış pozitif (29.08): `apps/mobile/src/lib/env.ts`in künyesi
+        kuralı anlatırken `process.env.EXPO_PUBLIC_X` yazıyor ve ham tarama onu GERÇEK bir okuma
+        sandı. Var olmayan bir değişkeni belgelemeye zorlayan bir denetim, görmezden gelinmeyi
+        öğretir — ve görmezden gelinen denetim, denetim değildir.
+      */
+      const kod = read(rel)
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/^\s*\/\/.*$/gm, '')
+        .replace(/([^:])\/\/.*$/gm, '$1');
+      for (const m of kod.matchAll(/process\.env\.([A-Z][A-Z0-9_]*)/g)) out.add(m[1]);
+    }
+  }
+  return out;
+}
+
+for (const app of readdirSync(join(ROOT, 'apps'), { withFileTypes: true }).filter((e) => e.isDirectory())) {
+  const ornekYol = `apps/${app.name}/.env.example`;
+  if (!existsSync(join(ROOT, ornekYol))) continue;
+  const yazili = new Set([...read(ornekYol).matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]));
+  const eksik = [...envOku(`apps/${app.name}`)].filter((v) => !yazili.has(v) && !ENV_SKIP.test(v)).sort();
+  if (eksik.length) {
+    note(`§3j ${ornekYol}: kodda okunan ${eksik.length} değişken belgesiz — ${eksik.join(', ')}`);
+  }
+}
+
 // ── Sonuç ─────────────────────────────────────────────────────────────────────
 const hard = problems.filter((p) => !p.startsWith('[bilgi]'));
 for (const p of problems) console.log((p.startsWith('[bilgi]') ? '· ' : '✗ ') + p);
