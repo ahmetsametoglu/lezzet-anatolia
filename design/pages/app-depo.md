@@ -1,4 +1,4 @@
-# App — Depo Bölümü (D1–D6)
+# App — Depo Bölümü (D1–D8)
 
 > Zemin: `app-operasyon-zemin.md`. Web brief'leri `depo-hazirlik` / `depo-stok-giris` /
 > `depo-imha-sayim` ile aynı iş — bu dosya NATIVE anları ve veri gerçekliğini bağlar.
@@ -82,9 +82,84 @@
   açılması bizim iş listemizde; ekran depocu akışı olarak çizilir, "yönetici onayı" hâli
   varyasyon değildir.
 
+## D7 · Yerinde satış (kapıya gelen müşteri)
+
+> Brief'e 29.08'de eklendi — ekran ÇALIŞIYOR ama bu dosyada hiç anlatılmamıştı; v3 tasarımı bu
+> yüzden akışı eksik kurguladı. Aynı ekrana KURYE de kendi bölümünden girer ("yoldan gelen müşteri").
+
+- **An:** kapı çalıyor, müşteri hesabı yok, elden alıp gidecek. **Anonim satış** — müşteri kaydı
+  istenmez, adres sorulmaz.
+- **Veri:** deponun satılabilir katalogu — ürün · **boy/varyant** · liste fiyatı · **kalan stok**.
+  Ürünün birden çok boyu varsa satır "kaç boy" olduğunu söyler; boy seçilmeden sepete girilemez.
+  Satışa kapalı ve tükenmiş boy AYRI hâllerdir ("satılacak boy yok" ≠ "tükendi").
+- **İş (üç adım):** ürün/boy seç → **adet** ver → **birim fiyatı onayla ya da değiştir** → sepet →
+  tahsilat türü (nakit/kart) → satışı yaz.
+  - **Adet stoğa karşı sınırlıdır:** kalan adetten fazlası tek satışta yazılamaz, ekran sebebiyle
+    söyler.
+  - **PAZARLIK FİYATI MEŞRUDUR** (bugün çalışan davranış): birim fiyat düzenlenebilir; liste
+    fiyatından SAPAN satır "pazarlık" olarak işaretlenir ve **kim yazdıysa onun izinde** kaydedilir.
+    Ekran bunu saklamaz — sepette pazarlıklı satır görünür durur. *(Bu, D7'nin depo "para görmez"
+    kuralının bilinçli istisnasıdır: kapıda satış para konuşmadan olmaz.)*
+  - Ara toplam gösterilir ama **kesin toplam sunucudan gelir** (indirim/KDV) — ekran "~" ile
+    yaklaşık olduğunu söyler.
+- **Satış sonrası:** yazılan satışın künyesi (referans · tutar · yöntem · saat). **Fiş yazdırma
+  bugün bağlı değil** — ekran bunu söyler, sözü olmayan bir düğme çizmez.
+- **Son satışlar:** bu deponun kapı satışları, en yeni önce — referans · tutar · kalem sayısı ·
+  yöntem · **satan personelin adı**. Ayrı bir ekran; "kim sattı" sorusunun tek cevabı burası.
+- **Başarısızlık hâlleri ekranda cümleyle durur:** stok yetmedi (hangi satır, kalan kaç) · satışa
+  kapalı kalem · **satış yazıldı ama tahsilat deftere geçmedi (kasa hesabı ayarsız)** — bu üçü
+  birbirinden farklı ve üçünde de para/stok durumu farklıdır.
+
+## D8 · Kargo devri (kutuları taşıyıcıya verme)
+
+> Brief'e 29.08'de eklendi — ekran ÇALIŞIYOR, v3 tasarımında hiç yok.
+
+- **An:** taşıyıcı kurye rampada, depocu kutuları tek tek uzatıyor.
+- **Ekran bir LİSTE DEĞİL, bir OKUTUCUDUR.** "Hangi siparişi vereceğim" diye bir soru yok —
+  eldeki kutu okutulur, hangi gönderi olduğunu sistem çözer. Bekleyenler listesi çizilmez:
+  olmayan bir seçimi varmış gibi göstermek olur.
+- **Gövde = okutma geçmişi:** hangi kutu verildi, kaç kaldı. Depocunun tek sorusu budur.
+- **Sayım GÖNDERİYİ sayar, siparişi değil** — bir siparişin kutuları iki gönderiye bölünmüş
+  olabilir; ekran "2/3 kutu verildi" derken duyurulan gönderiyi sayar.
+- **Sonuç cümleleri birbirinden ayrı:** kutu verildi (k/m) · **son kutuyla sipariş YOLA ÇIKTI** ·
+  zaten verilmişti · **başka deponun kutusu (geri koy)** · **mühürlü değil (açık kutu verilmez)** ·
+  **etiket alınmamış (önce hazırlıktan kargoya ver)** · kod tanınmıyor.
+- **Çevrimdışıyken okutma düğmesi çizilmez** (bölüm kuralı: kuyruk yok).
+
+## Kargo zinciri — D1'in devamı (brief'te yoktu)
+
+Hazırlık kutu kapanışında bitmiyor; kargo kulvarındaki sipariş için iki halka daha var:
+
+1. **Kutu tipi sorusu (kutu AÇILIRKEN).** Kargo kulvarındaki siparişte "elindeki kartonu seç"
+   sorulur — **gönderinin ağırlığı ve ölçüsü buradan hesaplanır**. Seçenek satırı kutunun adı ve
+   ölçüsüdür (en×boy×yükseklik · dara · varsa ağırlık tavanı). **"Tip seçmeden aç" çıkışı ZORUNLU**:
+   listede olmayan bir karton kullanılıyor olabilir; depocuyu yanlış tip seçmeye zorlamak,
+   ölçüsüzlükten beterdir (yanlış ölçü kendini söylemez). Deponun hiç kutusu tanımlı değilse ekran
+   bunu söyler ve "etiket alınırken ölçü sorulacak" diye uyarır.
+   *(Not: bu, mal kabuldeki "kolide kaç paket var" sorusuyla KARIŞTIRILMAMALI — o sayım çarpanı,
+   bu fiziksel karton.)*
+2. **"Kargoya ver" (etiket satın alma).** Kutular mühürlenince hazırlık ekranında bir teklif
+   doğar: *"<ref> hazır — kutular mühürlendi, etiketi şimdi alabilirsin."*
+   - Servis seçimi bir çekmecedir: **kaç koli · toplam kg** yazılı, altında seçenekler —
+     **taşıyıcı · fiyat**, teslim süresi (bilinmiyorsa "bildirilmiyor"), **noktaya mı adrese mi**.
+   - **Seçmek satın almaktır:** ekran bunu SEÇMEDEN ÖNCE söyler ("seçtiğin an etiket SATIN ALINIR").
+   - Sonuç: alınan **takip numaraları listesi** + basım sonucu. Basım düşse bile **gönderi
+     ALINMIŞTIR** — ekran bu ikisini ayırır, "yeniden bas" teklif eder.
+   - Uygun servis çıkmayabilir ("elle taşıyıcı girişi hazırlık masasında").
+   - **Engel sebepleri tek tek söylenir** (kargo kulvarında değil · mühürlü kutu yok · **kutu tipi
+     seçilmemiş** · ambalaj ağırlığı yazılmamış · deponun adresi eksik · adres kopyası eksik · koli
+     sayısı tavanı aşıyor · zaten kargoya verilmiş · sağlayıcı cevap vermedi · bağlantı yok).
+3. Sonra **D8** devreye girer (yukarıda).
+
+## Bu cihaz · Yazıcılar (hub'da ⚙ satırı)
+
+- Kutu etiketi ve kargo etiketi **hangi yazıcıdan** basılacak — cihaz başına ayar. Etiket kartının
+  "yazıcı tanımlı değil" hâli buraya gönderir.
+
 ## Yapmaması gerekenler
 
-- Fiyat/maliyet/fark tutarı HİÇBİR depo ekranında görünmez.
+- Fiyat/maliyet/fark tutarı HİÇBİR depo ekranında görünmez. **Tek istisna D7 yerinde satış** —
+  kapıda para konuşulur (satış fiyatı ve tahsilat); maliyet/marj orada da yoktur.
 - Depocu partiyi kendisi SEÇMEZ (hangi partiden toplanacağını motor söyler); sipariş içeriğini
   değiştiremez; teklif oranı belirleyemez.
 - İç terimler yok ("rezervasyon", "keyset").
@@ -140,3 +215,59 @@ döngünün özel hâlidir — ayrı bir "tek kutulu" akış çizilmez. Çizilec
 (kutu kodu — sipariş referansı DEĞİL). **Fiyat/tutar ASLA yazılmaz** — depo yüzeyi tutar görmez;
 kurye QR'ı okutunca tahsil edilecek tutarı kendi ekranında görür. Basım sistem diyaloğu olmadan,
 kapanışta kendiliğinden (karar §1.8).
+
+---
+
+## v3 tasarım denetimi (29.08) — brief'te VARDI, tasarımda DÜŞTÜ
+
+> `Operasyon Mobil v3.dc.html` depo ekranlarıyla bu dosya karşılaştırıldı. Aşağıdakiler yukarıda
+> zaten anlatılmıştı ama v3'te karşılığı çizilmemiş. Yeni bilgi değil — **kapatılacak açık**.
+
+**Toplama (D1):**
+- **Çok kutulu hazırlık çizilmemiş.** Kutu döngüsünün özü "tek kutu, döngünün özel hâlidir" iken
+  tasarım tek kutuyu TEK hâl saymış: kapanmış kutuların şeridi, "önceki kutularda N", "yeni kutu aç
+  (Kutu 2)" yok. B2B siparişleri çok kutuludur.
+- **Çıpalı parti (⚓) uyarısı yok** — indirimli teklife bağlı kalem başka partiden verilemez;
+  ekranın bunu göstermesi brief'te yazılı.
+- **"Önceden N yazılmış — yeni kayıt onun yerine geçer"** uyarısı yok (yarım iş sürer kuralının
+  görünen yüzü).
+- **Kapanış CTA'sının iki sonucu ayrılmamış:** "Sipariş HAZIR" ile "Bildirildi — Hazırlanıyor'da
+  kalır" farklı sonuçlardır; tasarımda tek düğme var.
+- **Toplama sırası** (`storage_area` sırası + alan adının satırda görünmesi) çizilmemiş.
+- Çok kalemli sipariş hiç çizilmemiş — tasarımda tek kalem var.
+
+**Mal kabul (D2):**
+- **"Bu kod hangi ürün?" öğrenen eşleme yok.** Tanınmayan kod tasarımda yalnız "yabancı ürün"
+  uyarısına düşüyor. Brief: kod bilinmiyorsa satır seçilir, kod o varyanta kaydedilir, ikinci
+  gelişte tanınır. *(Tasarımdaki "başka koli boyu" bundan farklı bir şey — o çarpan ekler.)*
+- **Fark özeti yok** (kabul sonunda yalnız sapan satırlar: beklenen ↔ gelen).
+- **Raf ömrü uyarısı yok** ("kalan ömür %X — uyarı, engellemez") ve **"bilinmiyor" hâli** yok.
+- **Kısmi kabul düğmesi yok** — parçalı kabul dipnotta anlatılmış ama "kısmen teslim alındı olarak
+  kaydet" çıkışı çizilmemiş; tek düğme "Kabulü kapat".
+- Okutma sonucunun türü söylenmiyor (barkod / SKU eşleşmesi / tedarikçi kodu).
+
+**Sayım (D4):**
+- **Geri eklemede sebep notu zorunlu** — not alanı çizilmemiş (brief: "sistem zorlar").
+- **Parti seçilmeden girilen hâl** yok; ekran hep parti seçiliymiş gibi başlıyor.
+
+**Transfer (D5):**
+- **`0` ile boş ayrımı düşmüş.** Brief: boş bırakmak kabulü BLOKLAR, `0` "geldi ama kayıp"
+  demektir — ekran bu farkı sorar. Tasarım transfer kabulünü doğrudan mal kabul satırlarına
+  bağlamış; o ekran ise SKT'yi zorunlu kılıyor, oysa transferde **SKT/lot yeniden yazılmaz**
+  (tasarımın kendi dipnotu da bunu söylüyor — iki ifade çelişiyor).
+
+**Kurye dönüşü (D6):**
+- "Jest"in ne yaptığı yazılmamış (mal ve stok DEĞİŞMEZ, yalnız kayıt düşülür).
+
+**Bölüm geneli:**
+- **Çevrimdışı hâli hiçbir depo ekranında yok.** Bölüm kuralı bağlayıcı: bağlantı yokken yazma
+  kapalıdır ve ekran bunu açıkça söyler (kuyruk yok).
+- **Boş · hata · yükleniyor hâlleri çizilmemiş** (hiçbir depo ekranında). Her listenin boş hâli
+  ne olduğunu ve nereden dolacağını söylemeli.
+- **"Hangi depoda çalıştığın belli değil" hâli yok** — kapsamında birden çok depo olan (ya da
+  ataması yapılmamış) personelde bölüm açılmaz; bunun bir ekranı olmalı.
+- **Alt sekme çubuğu dört sekmeyi sabit gösteriyor.** Zemin kuralı: kişi hangi rollere sahipse o
+  bölümler görünür; tek bölümlüde çubuk hiç çizilmez. Prototipte kolaylık olabilir, ama tasarım
+  rol süzmesini bir hâl olarak göstermeli.
+- **Hub'da "vardiya 08:00–17:00" yazıyor — böyle bir veri yok.** Brief'te olmayan alan
+  uydurulmaz (zemin §7, paket-etiketi dersi); ya kaldırılmalı ya da veri olarak istenmelidir.

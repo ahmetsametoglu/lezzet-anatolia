@@ -49,6 +49,18 @@ uyguladığı denetimi bu şeride de uygular.
   21 ekran, ~35 tekrar kullanılabilir komponent adayı, token açıkları (renk/yazı/yarıçap),
   navigasyon modeli, eksik durumlar, API imaları ve **18 maddelik karar listesi** (§8 —
   kullanıcıyla konuşulacak; ekran işi bu kararlar verilmeden başlamaz).
+- `06-operasyon-ekran-envanteri.md` — **ENVANTER · YEREL** (28.08, repoya girmez → `.gitignore`):
+  native OPERASYON yüzeyinin bugünkü hâli — fiziksel cihazda (OPPO CPH1907) dört rolle gezilerek
+  çekilmiş 59 kare (`ekran-goruntuleri/operasyon/`)
+  ve her karenin işlev notu: dört bölümün ekranları, çekmeceler/paneller/hata bantları/boş hâller,
+  yakalanamayan hâllerin koşulları ve tekrar eden desenler. **Claude Design'ın operasyon yeniden
+  kurgusuna girdi**; tasarım kararı içermez.
+- `07-operasyon-fonksiyonel-kontrol-listesi.md` — **DENETİM ARACI · YEREL** (29.08, repoya girmez):
+  operasyon yüzeyinin yapabildiği HER ŞEYİN madde listesi — ekran görüntüsü alınamamış hâller
+  (hata dalları, çevrimdışı
+  kilidi, kod öğretme, onay kutuları) dâhil; kaynağı sözlükler + ekran kodu. Yeni bir operasyon
+  tasarımı geldiğinde **fonksiyonel eksik** bu listeyle aranır. `06` göründüğünü, `07` yapılabileni
+  anlatır.
 - `BACKLOG-musteri.md` — **KAPSAM** (11.08): native MÜŞTERİ yüzeyinin açık işleri tek listede —
   fiziksel cihaz turunda ölçülen bulgular + kullanıcı yönergeleri + `design/BACKLOG.md`'nin
   müşteriyi ilgilendiren maddeleri. Kimlikler `MB-nn`; **ilerleme tutmaz**, durumun sahibi

@@ -27,3 +27,12 @@ docs/talep/*
 # web'in .ui-shots/'u her çekimde silindiği için ayrı klasör; Maestro screenshot çıktıları da buraya.
 .ui-shots-mobile/
 playwright-report/
+
+# Operasyon envanter turu (28-29.08): fiziksel cihazda çekilen 59 kare (12 MB) ve onları anlatan
+# iki doküman. Claude Design'ın operasyon yeniden kurgusuna GİRDİ olarak üretildi; tasarım kararı
+# taşımaz ve tasarım kesinleşince değerini yitirir — repoya taşınacak kalıcı bilgi değil.
+# `.ui-shots-mobile/` ile aynı gerekçe (07.08); ayrı klasör, çünkü kareler kendi dokümanının
+# yanında duruyor ve markdown görsel bağları göreli yoldan çözülüyor.
+docs/uygulama/ekran-goruntuleri/
+docs/uygulama/06-operasyon-ekran-envanteri.md
+docs/uygulama/07-operasyon-fonksiyonel-kontrol-listesi.md

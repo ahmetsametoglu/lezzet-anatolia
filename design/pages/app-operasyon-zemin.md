@@ -16,8 +16,10 @@
 
 ## 2. Cihaz ve kullanım gerçekliği
 
-- **Telefon.** Barkod/QR okuma v1'de YOK (v2 — etiketleme süreciyle birlikte); v1 düzeni
-  liste-işaretle.
+- **Telefon.** ~~Barkod/QR okuma v1'de YOK (v2 — etiketleme süreciyle birlikte); v1 düzeni
+  liste-işaretle.~~ **Karar değişti (21.08):** tarama artık ÇEKİRDEK — daima telefon kamerasıyla;
+  toplama, mal kabul, kargo devri ve kurye kutu okutması onun üstüne kurulu (`app-depo.md`
+  "Barkod güncellemesi"). Liste-işaretle düzeni tarama olmayan yerlerde sürer.
 - Kurye ve depo bölümleri **tek elle, eldivenle, hareket hâlinde** kullanılır: büyük dokunma
   hedefleri; yıkıcı onay (iptal, fark girişi) iki adım.
 - Güneş altında / soğuk depoda okunurluk işlevsel gerekliliktir.
@@ -56,7 +58,7 @@ hızlandırıcıdır, tek kapı değil).
 ## 5. v1 sınırları (çizilmeyecekler / stub kalacaklar)
 
 - Canlı kurye haritası: **v2** (kullanıcı kararı). Navigasyon, harita uygulamasına köprüdür.
-- Barkod/QR: **v2**.
+- ~~Barkod/QR: **v2**.~~ **Artık v1'de ve çekirdekte** (21.08 — §2'deki künye).
 - WhatsApp'tan sipariş KAYDI: v1'de "masaya erteleme" dalı (kapı henüz yok) — bildirim + not.
 - Azalan-stok tetiği: arka uçta hazırlanıyor; ekran tasarlanır, v1'de tetik "yakında" durumunda.
 - Muhasebe bölümü v1'de YALNIZ OKUR (yazma işleri masaüstünde).
@@ -66,7 +68,8 @@ hızlandırıcıdır, tek kapı değil).
 - **Kurye** (`app-kurye.md`): günün rotası · durak/teslim + kanıt · kapıda tahsilat ·
   teslim-edilemedi · sahada iade · günü kapat (mal + NAKİT mutabakatı).
 - **Depo** (`app-depo.md`): toplama listesi · mal kabul · yakın-SKT turu · sayım/düzeltme ·
-  transfer · kurye dönüşü kabulü.
+  transfer · kurye dönüşü kabulü · **yerinde satış (D7)** · **kargo devri (D8)** + hazırlığın
+  kargo halkası (kutu tipi → "kargoya ver"/etiket satın alma) ve cihaz yazıcı ayarı.
 - **Yönetim** (`app-yonetim.md`): bildirim + hızlı aksiyon ekranları — şikâyet cevabı · sipariş
   istisnası kararı · SKT kampanya onayı · tedarik önerisi onayı · gün özeti · WhatsApp.
 - **Para** (`app-para.md`): tahsilat izleme · gün sonu özeti (salt okuma).
