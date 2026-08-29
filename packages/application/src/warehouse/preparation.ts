@@ -323,6 +323,18 @@ type ConfirmOutcome =
    * var ve o bir İŞ kuralıdır (DOMAIN §17).
    */
   | { status: 'forbidden'; reason: 'out_of_scope' }
+  /**
+   * **Kargo siparişi kutusuz onaylanamaz** (kullanıcı kararı 28.08).
+   *
+   * Kutusuz akış rota kulvarında meşru ve öyle kalıyor (23.6'nın bilinçli çift akışı). Kargoda
+   * DEĞİL: kutusuz kapanan siparişin ölçüsü de ağırlığı da yoktur — ikisi de kutu tipinden geliyor
+   * (`dispatch.ts`) — ve etiket satın alma o yüzden HİÇ yapılamaz. Sipariş "hazır" görünüp sevk
+   * edilemez hâlde kalırdı; en kötü arıza türü, çünkü hiçbir yerde hata vermez.
+   *
+   * Duvar burada, duyuruda değil: orada çarpmak kutuların çoktan mühürlenmiş ve kartonun kapanmış
+   * olması demekti — depocu malı geri açardı.
+   */
+  | { status: 'box_required' }
   | { status: 'not_found' };
 
 /**
@@ -350,6 +362,10 @@ export async function confirmPreparation(
   const found = await new OrderService(db).getWithItems(input.orderId);
   if (!found) return { status: 'not_found' };
   if (found.order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+
+  // Kargo kulvarında kutusuz onay YOK (künye yukarıda). Sıra bilinçli: yazımdan ÖNCE, çünkü
+  // reddedilen bir onay hiçbir satır bırakmamalı.
+  if (found.order.deliveryType === 'shipping') return { status: 'box_required' };
 
   const violation = await findPinnedViolation(db, input.orderId, found.items, input.picks);
   if (violation) return { status: 'pinned_violation', ...violation };

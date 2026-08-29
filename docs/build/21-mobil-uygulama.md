@@ -6922,3 +6922,25 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **BEKLEYEN(kargo-kanali-tasarimi.md §8.6):** hub satırında rozet yok — "kargoya verilecek N kutu"
   sayacının ucu henüz yazılmadı ve uydurulmuş bir sayı olmayan bir işi varmış gibi gösterirdi.
+
+- [x] (21.131) **KARGODA KUTUSUZ ONAY REDDEDİLİYOR** (kullanıcı kararı 28.08 · kargo kanalı Faz 1.5)
+  `touches:` `packages/application/src/warehouse/{preparation,preparation.test}.ts` ·
+  `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `apps/web/app/(operations)/operations/preparation/preparation-actions.ts` ·
+  `apps/mobile/src/screens/warehouse/{use-preparation.hook,preparation-screen.test,messages.json}`
+
+  **Durum (29.08).** Gönderinin ölçüsü de ağırlığı da kutu tipinden geliyor; kutusuz kapanan bir
+  kargo siparişinde ikisi de yok ve etiket satın alma HİÇ yapılamıyor — sipariş "hazır" görünüp
+  sevk edilemez hâlde kalıyordu ve hiçbir yerde hata vermiyordu.
+
+  **Duvarın yeri karar:** duyuruda çarpmak kutuların çoktan mühürlenmiş olması demekti. Kapı
+  hazırlık onayında — kartonu doldurmadan önce.
+
+  **Masa kısıtı açıkça söyleniyor:** kutu döngüsü yalnız telefonda (23.6 §1.1), yani kargo
+  hazırlığı artık telefondan yürüyor. Web masasının cümlesi çareyi de yazıyor.
+
+  **Rota kulvarı etkilenmedi** — kutusuz onay orada meşru ve testle korunuyor.
+
+  **Doğrulama.** 2 entegrasyon (kargo reddedilir ve hiçbir satır yazılmaz · rota sürüyor) + 1 ekran
+  testi (web masasından yarım başlamış kargo siparişi — ekranın ulaşabildiği gerçek hâl).
+  Mobil jest **900/900**, kilitli tam paket **3935/3935**.

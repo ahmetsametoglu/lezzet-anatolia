@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   CategoryService,
   OrderItemBatchService,
+  OrderItemService,
   OrderService,
   ProductService,
   ReservationService,
@@ -108,11 +109,11 @@ afterAll(async () => {
 /** Onaylanmış sipariş — kuyruğa düşmesi için gereken en kısa yol. */
 async function confirmedOrder(
   qty: number,
-  opts: { pinTo?: string; deliveryDate?: string; inWarehouse?: string; stockId?: string } = {},
+  opts: { pinTo?: string; deliveryDate?: string; inWarehouse?: string; stockId?: string; deliveryType?: 'route' | 'shipping' } = {},
 ) {
   const warehouse = opts.inWarehouse ?? warehouseId;
   const { order, items } = await orders.create(
-    { warehouseId: warehouse, customerId, channel: 'b2c', deliveryType: 'route', deliveryDate: opts.deliveryDate, totalCents: qty * 1000 },
+    { warehouseId: warehouse, customerId, channel: 'b2c', deliveryType: opts.deliveryType ?? 'route', deliveryDate: opts.deliveryDate, totalCents: qty * 1000 },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5, stockId: opts.pinTo }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId: warehouse, variantId, qty, stockId: opts.pinTo });
@@ -375,5 +376,45 @@ describe('hazırlık onayı ve eksik kararı (10.3)', () => {
     });
 
     expect(outcome).toEqual({ status: 'not_found' });
+  });
+});
+
+/*
+  KARGO SİPARİŞİ KUTUSUZ KAPATILAMAZ (kullanıcı kararı 28.08).
+
+  Kutusuz akış ROTA kulvarında meşru ve öyle kalıyor (23.6'nın bilinçli çift akışı) — ikinci test
+  tam da onu koruyor: yeni kural eski yolu kırmamalı.
+
+  Kargoda duvarın burada olmasının sebebi zamanlama: duyuruda çarpmak kutuların çoktan mühürlenmiş
+  olması demekti ve depocu kartonu geri açardı.
+*/
+describe('kargoda kutusuz onay reddi (28.08)', () => {
+  it('KARGO siparişi reddedilir ve HİÇBİR satır yazılmaz', async () => {
+    const { orderId, itemId } = await confirmedOrder(2, { deliveryType: 'shipping' });
+
+    const sonuc = await confirmPreparation(db, {
+      orderId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }],
+    });
+
+    expect(sonuc).toEqual({ status: 'box_required' });
+    // Ret hiçbir iz bırakmamalı: yarım yazılmış bir hazırlık, "kim ne kadar topladı" sorusunu
+    // cevapsız bırakır ve sipariş de ilerlemiş görünür.
+    const kalem = (await new OrderItemService(db).listByOrder(orderId)).find((row) => row.id === itemId)!;
+    expect(kalem.fulfilledQty).toBe(0);
+    expect((await new OrderService(db).getById(orderId))!.status).toBe('confirmed');
+  });
+
+  it('ROTA siparişi ETKİLENMEDİ — kutusuz akış orada meşru ve sürüyor', async () => {
+    const { orderId, itemId } = await confirmedOrder(2);
+
+    const sonuc = await confirmPreparation(db, {
+      orderId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }],
+    });
+
+    expect(sonuc).toMatchObject({ status: 'ok', ready: true });
   });
 });

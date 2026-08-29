@@ -72,6 +72,25 @@ export async function confirmPreparationAction(
       );
     }
 
+    /*
+      **KARGO SİPARİŞİ KUTUSUZ KAPATILAMAZ** (kullanıcı kararı 28.08) — ve bu masaya bir kısıt
+      getiriyor: kargo kulvarının hazırlığı TELEFONDAN yürüyor.
+
+      Gerekçe ölçülebilir: gönderinin ölçüsü ve ağırlığı kutu tipinden geliyor ve kutu döngüsü
+      yalnız telefonda var (23.6 karar §1.1: *"web'de kutu açılmaz/kapanmaz"*). Kutusuz kapanan bir
+      kargo siparişi "hazır" görünür ama etiketi HİÇ alınamaz — sipariş sevk edilemez hâlde kalır
+      ve hiçbir yerde hata vermez. Duvarı buraya koymak, depocuyu kartonu kapattıktan sonra değil
+      ÖNCE durdurur.
+
+      Rota kulvarı etkilenmedi: kutusuz onay orada meşru ve öyle kalıyor.
+    */
+    if (result.status === 'box_required') {
+      throw new Error(
+        'Kargo siparişi kutusuz kapatılamaz: gönderinin ölçüsü ve ağırlığı kutu tipinden geliyor. ' +
+          'Bu siparişin hazırlığı telefondan yürütülür — kutu aç, doldur, kapat. Hiçbir kayıt yazılmadı.',
+      );
+    }
+
     revalidatePath(PREP_PATH);
     return {
       data: { items: result.items, ready: result.ready, shortfalls: result.shortfalls },

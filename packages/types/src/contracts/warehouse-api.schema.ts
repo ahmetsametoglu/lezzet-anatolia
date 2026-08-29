@@ -196,6 +196,11 @@ export const ConfirmPreparationResponseSchema = z.discriminatedUnion('status', [
   }),
   /** Kilitli kalem başka partiden verilmek istendi — HİÇBİR yazım yapılmadı. */
   z.object({ status: z.literal('pinned_violation'), itemId: z.string().uuid(), requiredStockId: z.string().uuid() }),
+  /**
+   * **Kargo siparişi kutusuz onaylanamaz** (kullanıcı kararı 28.08). Ölçü ve ağırlık kutu
+   * tipinden geliyor; kutusuz kapanan sipariş "hazır" görünüp sevk edilemez hâlde kalırdı.
+   */
+  z.object({ status: z.literal('box_required') }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('not_found') }),
 ]);

@@ -303,3 +303,30 @@ describe('D1 · koliye yazılacak ad (23.3 — mobil şeridin işareti)', () => 
     expect(screen.queryByTestId('warehouse-picking-parcel')).toBeNull();
   });
 });
+
+/*
+  KARGODA KUTUSUZ ONAY REDDİ (28.08 · Faz 1.5) — ekranın ULAŞABİLDİĞİ bir hâl.
+
+  Normalde kargo siparişi kutu moduyla açılıyor ve kutusuz CTA hiç çizilmiyor. Ama **web
+  masasından yarım başlamış** bir kargo siparişi (kutusuz `pickedQty > 0`) kutu moduna GİRMİYOR
+  (23.6'nın kalem düzeyinde karışım yasağı) ve o hâlde eski CTA çıkıyor. Kapı onu reddediyor;
+  ekranın cevabı olmalı, yoksa depocu "hiçbir şey olmadı" sanır.
+*/
+describe('D1 · kargoda kutusuz onay', () => {
+  it('kapı reddedince SEBEP yazılır — "hiçbir şey olmadı" sessizliği yok', async () => {
+    withQueue(
+      [preparationOrder({ deliveryType: 'shipping', lines: [preparationLine({ pickedQty: 1 })] })],
+      { status: 'box_required' },
+    );
+    await renderPicking();
+
+    await fireEvent.changeText(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`), '2');
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/kutusuz kapatılamaz/),
+    );
+    // Çare de yazılıyor: "kutu aç, doldur, kapat" — ret bir çıkmaz değil bir yönlendirme.
+    expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/kutu aç/i);
+  });
+});

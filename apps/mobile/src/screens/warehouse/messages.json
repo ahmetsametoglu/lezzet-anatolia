@@ -123,6 +123,7 @@
       "partial": "{n} kalem yazıldı; sipariş \"Hazırlanıyor\"da sürüyor.",
       "shortfall": "{name}: {qty} adet eksik — {reason}; öneri: {action}.",
       "pinned": "Bu kalem çıpalı partiden verilmeli — hiçbir satır yazılmadı.",
+      "boxRequired": "Kargo siparişi kutusuz kapatılamaz — kutu aç, doldur ve kapat. Gönderi ölçüsü kutudan geliyor.",
       "empty": "Hiçbir kalem işaretlenmedi."
     },
     "shortfallReason": {

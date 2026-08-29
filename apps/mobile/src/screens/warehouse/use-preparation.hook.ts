@@ -802,14 +802,19 @@ export function usePreparation(): UsePreparationResult {
 }
 
 /**
- * Kapının cevabı → ekrandaki cümle. Dört dalın DÖRDÜ de gösterilir: `ok`+`ready:false` bir hata
+ * Kapının cevabı → ekrandaki cümle. Dallardan HİÇBİRİ gizlenmez: `ok`+`ready:false` bir hata
  * değil yarım iştir, `pinned_violation` hiçbir şeyin yazılmadığını söyler ve o bilgi bir HTTP
  * koduna indirgenirse depocu neyi yanlış yaptığını göremez.
+ *
+ * `box_required` pratikte bu ekrandan doğmaz — kargo siparişi zaten kutu moduyla açılıyor ve
+ * kutusuz onay CTA'sı hiç çizilmiyor. Yine de yazılı: kapı onu döndürebiliyorsa ekranın cevabı
+ * olmalı, yoksa bir gün sessiz bir "hiçbir şey olmadı" hâli doğar.
  */
 function noticeOf(outcome: ConfirmOutcome, order: PreparationOrderContract): PreparationNotice {
   if (outcome.status === 'pinned_violation') return { tone: 'error', text: t.picking.result.pinned };
   if (outcome.status === 'forbidden') return { tone: 'error', text: t.common.outOfScope };
   if (outcome.status === 'not_found') return { tone: 'error', text: t.common.notFound };
+  if (outcome.status === 'box_required') return { tone: 'error', text: t.picking.result.boxRequired };
 
   const head = outcome.ready
     ? fillCopy(t.picking.result.ready, { n: String(outcome.items) })

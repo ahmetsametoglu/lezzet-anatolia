@@ -898,3 +898,63 @@ gün kendi kararsız testini doğururdu.
 Üçünün de yakaladığını kuralları tek tek geri alarak doğruladım.
 
 Tam paket **3935/3935**.
+
+---
+
+## Faz 1.5 — kargoda kutusuz onay reddi ✅ (Faz 1 tamam)
+
+**Kullanıcı kararı 28.08 uygulandı.** Kutusuz akış ROTA kulvarında meşru ve öyle kalıyor (23.6'nın
+bilinçli çift akışı); kargoda değil.
+
+**Gerekçe ölçülebilir:** gönderinin ölçüsü de ağırlığı da **kutu tipinden** geliyor
+(`dispatch.ts`). Kutusuz kapanan bir kargo siparişinin ikisi de yoktur → etiket satın alma HİÇ
+yapılamaz → sipariş "hazır" görünür ve **sevk edilemez hâlde kalır.** En kötü arıza türü, çünkü
+hiçbir yerde hata vermez.
+
+**Duvarın yeri de bir karar:** duyuruda çarpmak, kutuların çoktan mühürlenmiş ve kartonun kapanmış
+olması demekti — depocu malı geri açardı. Kapı hazırlık onayında, yani kartonu doldurmadan önce.
+
+### Bu bir masa kısıtı getiriyor ve açıkça söyleniyor
+
+Kutu döngüsü yalnız telefonda var (23.6 karar §1.1: *"web'de kutu açılmaz/kapanmaz"*). Yani
+**kargo kulvarının hazırlığı artık telefondan yürüyor.** Web masasının cümlesi bunu söylüyor ve
+çareyi de yazıyor — ret bir çıkmaz değil bir yönlendirme.
+
+### Ekranın ulaşabildiği bir hâl var, o da yazıldı
+
+Normalde kargo siparişi kutu moduyla açılıyor ve kutusuz CTA hiç çizilmiyor. Ama **web masasından
+yarım başlamış** bir kargo siparişi (kutusuz `pickedQty > 0`) kutu moduna girmiyor — kalem düzeyinde
+karışım RPC'ce reddediliyor (0048) — ve o hâlde eski CTA çıkıyor. Kapı reddediyor, ekran sebebi
+yazıyor.
+
+**Doğrulama.** 2 entegrasyon (kargo reddedilir ve **hiçbir satır yazılmaz** — `fulfilledQty` 0,
+sipariş `confirmed` · rota etkilenmedi) + 1 ekran testi. Mobil jest **900/900**.
+
+### Tam paket: bir kez daha yalancı kırmızı, bu kez env'den
+
+İlk tur **3923/3927** döndü; düşen dördü de `shipment-watch.test.ts` ve hepsi
+`{ skipped: 'not_configured' }` diyordu — yani sağlayıcı anahtarı o an ortamda yoktu. Dosya
+anahtarları **süreç-genel `process.env`e** yazıyor (`beforeAll`) ve bir testinde geçici olarak
+siliyor.
+
+Ölçtüm: tek başına **5/5**, kardeş iş dosyasıyla **10/10**, benim uç testimle **58/58** — hiçbir
+ikili bileşimde üretilemedi. İkinci tam paket **3935/3935 yeşil**.
+
+**Kayda geçiyor çünkü üçüncüsü:** bugün üç ayrı yalancı kırmızı sınıfı görüldü — çakışan posta
+kodu (28.08'de düzeltildi), çakışan **yer kaydı**, ve şimdi süreç-genel **env mutasyonu**. Üçünün
+ortak kökü aynı: paylaşılan durumu değiştiren test. `SENDCLOUD_*` anahtarlarını enjeksiyonla
+geçirmek (`sendcloudProvider(overrides)` zaten kabul ediyor) bu sınıfı kapatır —
+BEKLEYEN(kargo-kanali-tasarimi.md §11.4).
+
+---
+
+# Faz 1 KAPANDI — zincir uçtan uca çalışıyor
+
+    sipariş → hazırlık → kutu aç (TİP seçilir) → doldur → kapat
+      → "Kargoya ver" → servis seç → etiket SATIN ALINIR → PDF basılır
+      → devir okutması → gönderi taşıyıcıda, sipariş YOLDA
+      → webhook/nöbet → teslim
+
+**Faz 2'ye kalan ve ACİL olan:** kargo şeridinin uyarısı — mektup kanalı elendiği için otomatik
+seçimin başı artık `chronopost:shop2shop`, yani bir **teslimat noktası**. Kullanıcının *"eşik
+üstünde ücretsiz kargo EVE gider"* kuralı bugünkü seçimde YOK. Faz 2'nin ilk maddesi bu.
