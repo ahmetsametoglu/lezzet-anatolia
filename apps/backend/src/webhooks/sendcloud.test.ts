@@ -123,7 +123,15 @@ afterAll(async () => {
   if (oncekiSecret === undefined) delete process.env.SENDCLOUD_WEBHOOK_SECRET;
   else process.env.SENDCLOUD_WEBHOOK_SECRET = oncekiSecret;
 
-  await db.from('webhook_event').delete().eq('provider', 'sendcloud').like('event_id', `pw-${stamp}-%`);
+  /*
+    SÜZGEÇ ÖNEKE DEĞİL DAMGAYA bakıyor — ölçülmüş bir sızıntının düzeltmesi (29.08): önek
+    `pw-<stamp>-%` idi, ama "eşleşmeyen koli" testi olayı `bizde-yok-<stamp>:<stamp>` diye
+    yazıyor ve o kalıba UYMUYORDU. Satır her koşuda birikiyordu; canlı webhook'u ararken
+    `webhook_event`te onu bulup gerçek sanmak an meselesiydi.
+
+    Damga `Date.now()` ve bu koşuya ait, yani süzgeç başka şeridin satırına dokunamaz.
+  */
+  await db.from('webhook_event').delete().eq('provider', 'sendcloud').like('event_id', `%${stamp}%`);
   await db.from('order').delete().eq('customer_id', customerId);
   await purgeTestData(db, { productIds, categoryIds, profileIds, warehouseIds });
 });
