@@ -869,3 +869,32 @@ testi. Mobil jest **899/899**, `typecheck` · `lint` · `knip` temiz.
 **Hub'a satır eklendi** (`D8 · Kargo devri`) — **rozet bilerek YOK**: "kaç kutu bekliyor" sorusunun
 bir ucu henüz yok ve uydurulmuş bir sayı olmayan bir işi varmış gibi gösterirdi.
 BEKLEYEN(kargo-kanali-tasarimi.md §8.6).
+
+
+---
+
+## Test borcumu kapattım
+
+Kendi işimi denetledim: hangi parçanın testi yok diye baktım. Üç boşluk buldum, üçünü de kapattım.
+
+**İki cron nöbetinin testi yoktu** — takılı gönderi ve öksüz gönderi turları. Altlarındaki motorlar
+testliydi ama işin kendisi (anahtar yoksa atlama, eşiğin env'den okunması, operatöre ne yazıldığı)
+denetlenmiyordu. Test yazabilmek için sağlayıcıyı enjekte edilebilir yaptım — depoda emsali vardı.
+
+**Test yazarken iki şey ortaya çıktı:**
+
+1. **Arka ucun kendi ortamında Sendcloud anahtarları yok.** Anahtarlar `apps/web/.env.local`da; arka
+   uç onları görmüyor, yani nöbet orada sessizce kendini atlıyor. Bunu söylüyor (`job_run`a
+   `skipped` yazıyor), ama canlıya çıkarken anahtarların arka uca da verilmesi gerekecek.
+2. **İlk yazdığım test küresel bir sayıya bakıyordu** — `CLAUDE §4b`'nin tam yasakladığı şey. Aynı
+   dosyanın önceki testleri de gönderi bırakıyor, yani sayı benim kontrolümde değildi. Kendi
+   satırıma bakacak şekilde düzelttim.
+
+**Posta kodu üretecinin de testi yoktu.** Tek işi kararsızlığı önlemek; sessizce bozulursa geri
+gelen şey bir hata değil, teşhisi en pahalı arıza türü olur. İddiaları yalnız gerçekten garanti
+edilene bağladım — "1000 çağrı hepsi benzersiz" yazmak tutmayacağı bilinen bir iddia olurdu ve bir
+gün kendi kararsız testini doğururdu.
+
+Üçünün de yakaladığını kuralları tek tek geri alarak doğruladım.
+
+Tam paket **3935/3935**.

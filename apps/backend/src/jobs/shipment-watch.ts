@@ -1,6 +1,7 @@
 import { serviceDb } from '@lezzet/database';
 import { notifyOrderStatus, sendcloudProvider, shippingProviderConfigured, sweepStuckShipments } from '@lezzet/application';
 import { captureError, SOURCES } from '@lezzet/observability';
+import type { ShippingRateProvider } from '@lezzet/application';
 
 export const SHIPMENT_WATCH = 'shipment_watch';
 
@@ -26,14 +27,20 @@ export const SHIPMENT_WATCH = 'shipment_watch';
  * **Sayı değil KİMLİK yazılır** (OBSERVABILITY §5): kaç tane olduğu `job_run`'da zaten var;
  * ekranda gereken "hangisi" — o kimlikle veritabanına bakılır.
  */
-export async function shipmentWatchJob(): Promise<Record<string, unknown>> {
+
+/**
+ * **Sağlayıcı ENJEKTE EDİLEBİLİR — tek sebebi TESTİN AĞA ÇIKMAMASI** (`sweepPushReceipts`ın
+ * `fetcher` parametresiyle aynı desen ve aynı gerekçe). Üretimde parametre geçilmez; varsayılanı
+ * env'den kurulan gerçek sağlayıcıdır.
+ */
+export async function shipmentWatchJob(opts: { provider?: ShippingRateProvider } = {}): Promise<Record<string, unknown>> {
   // Anahtarsız ortamda tur kendini atlar ve bunu SÖYLER: sessiz no-op, "nöbet tutuluyor" diye
   // okunurdu (`CLAUDE §1` — ölçülemeyen değer sıfır değildir).
   if (!shippingProviderConfigured()) return { skipped: 'not_configured' };
 
   const db = serviceDb();
   const hours = Number(process.env.SHIPMENT_STUCK_HOURS) || 24;
-  const result = await sweepStuckShipments(db, sendcloudProvider(), {
+  const result = await sweepStuckShipments(db, opts.provider ?? sendcloudProvider(), {
     olderThanHours: hours,
     limit: 50,
     effects: { notifyStatus: (orderId, status) => notifyOrderStatus(db, orderId, status) },

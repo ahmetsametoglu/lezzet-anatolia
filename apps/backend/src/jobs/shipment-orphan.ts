@@ -1,6 +1,7 @@
 import { serviceDb } from '@lezzet/database';
 import { scanOrphanShipments, sendcloudProvider, shippingProviderConfigured } from '@lezzet/application';
 import { captureError, SOURCES } from '@lezzet/observability';
+import type { ShippingRateProvider } from '@lezzet/application';
 
 export const SHIPMENT_ORPHAN = 'shipment_orphan';
 
@@ -21,10 +22,16 @@ export const SHIPMENT_ORPHAN = 'shipment_orphan';
  * hiçbir şey bulmaz ve oran sınırını yerdi. Pencere (8 gün) turdan bir gün GENİŞ — tam bir haftaya
  * ayarlansaydı, gecikmiş bir tur o günün gönderilerini hiç görmeden geçerdi.
  */
-export async function shipmentOrphanJob(): Promise<Record<string, unknown>> {
+
+/**
+ * **Sağlayıcı ENJEKTE EDİLEBİLİR — tek sebebi TESTİN AĞA ÇIKMAMASI** (`sweepPushReceipts`ın
+ * `fetcher` parametresiyle aynı desen ve aynı gerekçe). Üretimde parametre geçilmez; varsayılanı
+ * env'den kurulan gerçek sağlayıcıdır.
+ */
+export async function shipmentOrphanJob(opts: { provider?: ShippingRateProvider } = {}): Promise<Record<string, unknown>> {
   if (!shippingProviderConfigured()) return { skipped: 'not_configured' };
 
-  const result = await scanOrphanShipments(serviceDb(), sendcloudProvider(), { sinceDays: 8 });
+  const result = await scanOrphanShipments(serviceDb(), opts.provider ?? sendcloudProvider(), { sinceDays: 8 });
 
   if (result.orphans.length > 0 || result.ghosts.length > 0) {
     await captureError(new Error(`kargo mutabakatı: ${result.orphans.length} öksüz, ${result.ghosts.length} hayalet gönderi`), {

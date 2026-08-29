@@ -37,7 +37,13 @@ import { configDefaults, defineConfig } from 'vitest/config';
  * bölünmez"* kuralı **kök başına** geçerli: aynı kökün iki listesi olmaz, ayrı köklerin ayrı
  * listesi olur.
  */
-const PAKET_DBSIZ = ['packages/database/src/utils/case-transformers.test.ts'];
+const PAKET_DBSIZ = [
+  'packages/database/src/utils/case-transformers.test.ts',
+  // Test posta kodu üreteci — saf (dize + sayaç), DB istemcisi kurmuyor. Yardımcının kendisi
+  // `testing/` altında ama testi entegrasyonda koşsaydı, kararsızlığı önleyen kuralın testi de
+  // kilitli tam pakete ertelenirdi.
+  'packages/database/src/testing/postal-code.test.ts',
+];
 
 /**
  * `packages/application` de entegrasyon köküdür (orkestrasyonlar servislerle DB'ye vurur) ama
