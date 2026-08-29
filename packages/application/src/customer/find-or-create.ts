@@ -1,4 +1,5 @@
-import { linkReferrer, raiseChallengeIfDue } from '@lezzet/application';
+import { raiseChallengeIfDue } from './anchor';
+import { linkReferrer } from './referral';
 import { CustomerPhoneService, UserProfileService, serviceDb } from '@lezzet/database';
 import { resolveIdentity } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';

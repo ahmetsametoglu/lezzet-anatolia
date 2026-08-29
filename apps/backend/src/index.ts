@@ -21,6 +21,7 @@ import { HEALTH_COLLECT_INTERVAL_MIN } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import { requestLog, type AppEnv } from './http/request-log';
 import { mcpHandler } from './mcp/route';
+import { metaWebhook, metaWebhookVerify } from './webhooks/meta';
 import { sendcloudWebhook } from './webhooks/sendcloud';
 import { COLLECT_HEALTH, collectHealthJob } from './jobs/collect-health';
 import { EXPIRE_PROPOSALS, expireProposalsJob } from './jobs/expire-proposals';
@@ -116,6 +117,21 @@ app.all('/mcp', mcpHandler);
   Gövde imza doğrulanmadan İŞLENMEZ; doğrulama ham gövde ister ve handler `c.req.text()` okur.
 */
 app.post('/webhooks/sendcloud', sendcloudWebhook);
+
+/*
+  META WEBHOOK'U (15.7) — WhatsApp + Messenger + Instagram, TEK adres ve iki yöntem: kurulum el
+  sıkışması `GET`, olaylar `POST`.
+
+  **29.08'de `apps/web`'den taşındı** (kullanıcı kararı) ve gerekçesi kabuğun künyesinde: Sapma
+  5'in çıkış şartı ("ikinci bir sağlayıcı webhook'u") Meta ile zaten tetiklenmişti, sebebi de
+  çürümüştü (çağırdığı kapılar pakete terfi etti). Pratik sebep ölçüldü: Next.js dev sunucusu
+  rotayı ilk çağrıda derliyor ve sağlayıcı o kadar beklemiyor.
+
+  **Yan kazanç tek tünel:** geliştirmede genel adres `cloudflared` ile açılıyor; kargo webhook'u
+  zaten buradaydı, Meta de gelince ikinci tünel gereksizleşti.
+*/
+app.get('/webhooks/meta', metaWebhookVerify);
+app.post('/webhooks/meta', metaWebhook);
 
 // Zamanlı işler buraya takılır. Kural (STACK §13): her iş taramalı + idempotent; backend tek
 // instance (fork mode). Kabuk (`runJob`) üst üste binmeyi engeller, hatayı yutmaz, `last_run` bırakır.

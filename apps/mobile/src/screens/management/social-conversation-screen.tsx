@@ -174,13 +174,10 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         {conversation.awaitingReply ? <Text style={styles.ourTurn}>{managementCopy.common.ourTurn}</Text> : null}
       </View>
 
-      {/* Eski `ai` satırının ÇIKIŞ uyarısı: mod artık seçilemiyor ama kolonda durabilir (16.08 ile
-          22.08 arası). Hiçbir çip aktif görünmez ve sebebi söylenmezse ekran bozuk sanılır. */}
-      {conversation.handledBy === 'ai' ? (
-        <Text style={styles.modeOrphan} testID="management-social-mode-orphan">
-          {td.mode.aiOrphan}
-        </Text>
-      ) : null}
+      {/* ÇIKIŞ UYARISI KALDIRILDI (29.08): `ai` modu artık seçilebiliyor ve arkasında koşan bir
+          motor var (`ConversationHandlerEnum` künyesi). Uyarı *"AI modunda ama sohbette ajan yok"*
+          diyordu — o cümle bugünden itibaren YALAN olurdu ve operatörü çalışan bir modu terk
+          etmeye iterdi. Üçüncü çip zaten `MODES`ten kendiliğinden doğdu (enum'dan türüyor). */}
 
       <View style={[styles.windowBand, styles[`windowBand_${window.state}`]]} testID="management-social-window">
         <Text style={[styles.windowText, styles[`windowText_${window.state}`]]}>
@@ -354,14 +351,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.ink,
-  },
-  /** Yetim `ai` satırının uyarısı — pencere bandı gibi zeminli değil, tek satır not (uyarı değil bilgi). */
-  modeOrphan: {
-    paddingHorizontal: operationsTheme.space['6xl'],
-    paddingTop: operationsTheme.space.sm,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors.terracotta,
   },
   ourTurn: {
     paddingVertical: operationsTheme.space.xs,

@@ -88,6 +88,25 @@ Kapılar bir gün pakete çıkarsa taşınacak olan tek dosyadır.
 **Ne zaman geri dönülür:** İkinci bir sağlayıcı webhook'u geldiğinde ya da ödeme akışı `apps/web`
 dışından da tetiklenmesi gerektiğinde — o noktada kapıları pakete çıkarmak zaten kaçınılmaz olur.
 
+**KISMEN GERİ DÖNÜLDÜ (29.08 · kullanıcı kararı) — Meta webhook'u `apps/backend`'e taşındı.**
+Yukarıdaki çıkış şartı aslında **iki kez** tetiklenmişti ve ikisi de gözden kaçtı: ikinci sağlayıcı
+webhook'u (Meta, 15.7) geldiğinde karar gözden geçirilmeden o da web'e kondu; kapılar pakete
+terfi ettiğinde de "sapmanın sebebi kalktı mı" diye kimse sormadı. Ölçüldüğünde `meta-webhook`'un
+çağırdığı sekiz kapının sekizi de `@lezzet/application`'daydı — web'e bağlayan yalnız kimlik çözümü
+(222 satır) ve profil adı (80 satır) kalmıştı ve **ikisinde de sıfır Next.js bağımlılığı** vardı.
+İkisi de pakete taşındı, kabuk `apps/backend/src/webhooks/meta.ts` oldu (Sendcloud emsali).
+
+Kullanıcının itirazı kararı hızlandırdı ve haklıydı: *"bunlar normalde backend'de yapılması gereken
+işler değil mi? Next.js'in soğuk start yapısı geliştirme ortamı için ürünü mümkün olmaktan
+çıkarmıyor mu?"* — ölçüm bunu doğruladı: tünel log'unda `Failed to proxy HTTP: Incoming request
+ended abruptly ... originService=http://localhost:3000`. Next dev sunucusu rotayı ilk çağrıda
+derliyor, sağlayıcı o kadar beklemiyor. **Yan kazanç tek tünel:** kargo webhook'u zaten backend'e
+bakıyordu; ikinci tünel gereksizleşti (o gün üç kez tünel arızası yaşandı ve her biri sessizdi).
+
+**Stripe DURUYOR ve bilinçli:** para akışının kapıları hâlâ `apps/web/lib`'de. Onu taşımak
+`lib/money` + `lib/order/transition` + `lib/order/notify` üçlüsünü de pakete çıkarmak demek — ayrı
+bir iş ve para akışında acele edilecek bir yer değil. Yani sapma daralmıştır, kapanmamıştır.
+
 ---
 
 ## Sapma 6 — Stripe kart alanı SAYFA İÇİNDE, ham renk orada meşru

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { metaCloudSender, recordInboundMessage, sendOutboundMessage } from '@lezzet/application';
+import { metaCloudSender } from './meta-sender';
+import { recordInboundMessage } from './record';
+import { sendOutboundMessage } from './send';
 import { ConversationService, MessageService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import { fakeCloudApiConfig, fakeMeta } from '@lezzet/notify/testing';

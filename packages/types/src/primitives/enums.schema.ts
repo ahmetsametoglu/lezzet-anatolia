@@ -330,19 +330,24 @@ export type TicketHandler = z.infer<typeof TicketHandlerEnum>;
  *   3. **Gönderim kanalı açık** — Meta Cloud API jetonu yapılandırıldı ve gerçek bir WhatsApp
  *      mesajı uçtan uca gönderildi (15.11, 28.08). Şartın son parçası buydu.
  *
- * ── AD KORUNDU, DEĞER TALEPLE AYNI ──────────────────────────────────────────
- * `TicketHandlerEnum`'a takma ad gibi görünüyor ve bugün öyle. Ayrı ad iki sebeple duruyor:
- * mobil sözleşme onu adıyla tüketiyor (`ConversationHandler` — `apps/mobile` sosyal ekranı
- * `.options`tan türetiyor, yani bu satır değişince orası da kendiliğinden açıldı) ve "sohbette
- * hangi modlar" sorusunun tek bir adresi olması, gelecekte ayrışma gerekirse tek dosyayı
- * değiştirmeyi yeterli kılıyor.
+ * ── AD KORUNDU, LİSTE TALEPTEN TÜRÜYOR ──────────────────────────────────────
+ * Ayrı ad iki sebeple duruyor: mobil sözleşme onu adıyla tüketiyor (`ConversationHandler` —
+ * `apps/mobile` sosyal ekranı `.options`tan türetiyor, yani bu satır değişince orası da
+ * kendiliğinden açıldı) ve "sohbette hangi modlar" sorusunun tek adresi olması, gelecekte ayrışma
+ * gerekirse tek dosyayı değiştirmeyi yeterli kılıyor.
+ *
+ * **Liste ELLE YAZILMIYOR, `TicketHandlerEnum.options`tan türüyor** — iki liste yan yana yazılsaydı
+ * biri gün gelip ötekinden sapardı ve sapma sessiz olurdu. Doğrudan atama (`= TicketHandlerEnum`)
+ * da denendi ve `knip` haklı olarak "aynı değer iki adla export ediliyor" dedi: o gerçekten tek
+ * nesneydi. `z.enum(...options)` ayrı bir şema üretir ama kaynağı tektir — kavramsal ayrım korunur,
+ * duplikasyon doğmaz.
  *
  * ── OKUMA HİÇ DARALMAMIŞTI ──────────────────────────────────────────────────
  * Kolon (`conversation.handled_by`) baştan beri `ticket_handler` ve `ai` değeri geçerliydi;
  * daralan yalnız girdi tarafıydı. Bu yüzden açılış **migration istemedi** — veri zaten bu değeri
  * taşıyabiliyordu.
  */
-export const ConversationHandlerEnum = TicketHandlerEnum;
+export const ConversationHandlerEnum = z.enum(TicketHandlerEnum.options);
 export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
 
 /**

@@ -1,19 +1,14 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
-import {
-  answerEmailAnchor,
-  consumeWhatsappLink,
-  messageSenderFor,
-  offerAnchorIfDue,
-  recordInboundMessage,
-  recordOutboundMessage,
-  ringConversationsBell,
-  verifySecurityCode,
-} from '@lezzet/application';
+import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
+import { consumeWhatsappLink } from '../customer/whatsapp-link';
+import { ringConversationsBell } from '../realtime/bell';
+import { messageSenderFor } from './meta-sender';
+import { recordInboundMessage, recordOutboundMessage } from './record';
 import { ConversationService, CustomerPhoneService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, MessageKind } from '@lezzet/types';
-import { findOrCreateCustomer } from '../identity/find-or-create';
+import { findOrCreateCustomer } from '../customer/find-or-create';
 import { fetchMetaProfileName } from './meta-profile';
 
 /**

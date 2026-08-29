@@ -98,7 +98,10 @@ const WEB_LIB_DBSIZ = [
   // `verifyMetaSignature` saf: node:crypto + dize. Modül `serviceDb`i import ediyor ama ÇAĞIRMIYOR
   // (istemci fonksiyon içinde kuruluyor) — bu yüzden birim projesinde güvenle koşuyor. Ölçüldü 23.08;
   // `delivery/map-codes.test.ts`in listeye ALINMAMA gerekçesi tam da bunun tersiydi.
-  'apps/web/lib/messaging/meta-signature.test.ts',
+  // 29.08: dosya `apps/web/lib/messaging/`den pakete taşındı (webhook backend'e geçti) — yol da
+  // taşındı. Eski yol bırakılsaydı SESSİZ kalırdı: vitest olmayan bir dosyayı hata vermeden atlar
+  // ve imza testi bir daha hiç koşmazdı.
+  'packages/application/src/messaging/meta-signature.test.ts',
   // Görsel yükleme kapısı (05.7) — saf: gerçek `File`/`FormData` kurar, biçim ve tavan sorar.
   // Ne DB'ye ne R2'ye gider; modül `server-only` taşıyor ama koşucu onu boş modüle bağlıyor.
   'apps/web/lib/media/upload.test.ts',

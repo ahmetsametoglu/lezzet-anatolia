@@ -1,7 +1,7 @@
 import { ConversationService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import type { Conversation, UserProfile } from '@lezzet/types';
-import { findOrCreateCustomer } from '../identity/find-or-create';
+import { findOrCreateCustomer } from '@lezzet/application';
 
 /**
  * Konuşma AÇILIŞ kapısı (15.1/15.2; üç kanal 21.08, ADR-006) — **motor ile servisi birleştiren

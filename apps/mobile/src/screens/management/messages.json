@@ -258,7 +258,7 @@
         "label": "Yürütücü:",
         "human": "İnsan",
         "hybrid": "Hibrit",
-        "aiOrphan": "AI modunda ama sohbette ajan yok — cevapsız bekliyor, İnsan'a alın."
+        "ai": "Yapay zeka"
       },
       "replyPlaceholder": "Cevabı deftere yaz…",
       "replyLabel": "Konuşmanın defter cevabı",

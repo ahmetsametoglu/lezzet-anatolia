@@ -1,6 +1,6 @@
 import { EmailVerificationService, serviceDb } from '@lezzet/database';
 import type { PreferredLanguage, UserProfile } from '@lezzet/types';
-import { findOrCreateCustomer } from './find-or-create';
+import { findOrCreateCustomer } from '@lezzet/application';
 
 /**
  * Misafir hızlı doğrulama — sunucu tarafı (04.6). DOMAIN §10.

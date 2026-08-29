@@ -205,6 +205,27 @@ export { customerSupportTools } from './ticket/support-tools';
 // webhook'u artık buradan çağırıyor, mobil `/social` uçları da aynı kapıya yazıyor. Konuşma
 // AÇILIŞI webde kaldı — kimlik çözümü web'in identity katmanında (gerekçe dosya başlığında).
 export { recordInboundMessage, recordOutboundMessage } from './messaging/record';
+/*
+  META WEBHOOK İŞLEYİCİSİ (15.7 · 29.08'de `apps/web`'den TAŞINDI).
+
+  Bir tur boyunca `apps/web/lib/messaging/`de yaşıyordu ve gerekçesi Stripe'ın sapmasıydı
+  (`ADR Sapma 5`): *"kapılar uygulama katmanında, backend onları göremez."* O gerekçe bu dosya için
+  ÇÜRÜDÜ — çağırdığı sekiz kapının sekizi de bu pakete terfi etmişti; geriye web'e bağlayan yalnız
+  kimlik çözümü ve profil adı kalmıştı, ikisi de buraya taşındı. Sapmanın kendi çıkış şartı da
+  ("ikinci bir sağlayıcı webhook'u geldiğinde") Meta ile birlikte zaten tetiklenmişti.
+
+  HTTP kabuğu artık `apps/backend/src/webhooks/meta.ts` — Sendcloud'la aynı yer, aynı desen.
+*/
+export { handleMetaWebhook, metaAppSecret, metaVerifyToken, verifyMetaSignature } from './messaging/meta-webhook';
+export { fetchMetaProfileName } from './messaging/meta-profile';
+/*
+  KİMLİK ÇÖZÜMÜ (04.10 · 29.08'de taşındı) — "bul ya da oluştur", üç yüzeyin ortak kapısı.
+
+  Web'in `lib/identity`sinde durduğu sürece webhook'u da web'e mıhlıyordu; oysa hiçbir Next.js
+  bağımlılığı yoktu (ölçüldü: 0). Tüketicileri: misafir doğrulama (web), konuşma açılışı (web),
+  Meta webhook'u (backend).
+*/
+export { findOrCreateCustomer } from './customer/find-or-create';
 // Kimlik bağlama KAPISI (15.19) — kanıt sunucuda doğrulanır; ikinci yüzey kendi kapısını yazmasın.
 export { linkConversationCustomer } from './messaging/link';
 // Sohbet izninin çift yazımı (15.12) — kural tek yerde, iki yüzey aynı kapıdan.

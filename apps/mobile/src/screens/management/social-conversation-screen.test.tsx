@@ -151,15 +151,18 @@ describe('yürütücü modu — İKİ değer, üçüncüsü YOK', () => {
     await ekranAc();
     expect(screen.getByTestId('management-social-mode-human')).toBeOnTheScreen();
     expect(screen.getByTestId('management-social-mode-hybrid')).toBeOnTheScreen();
-    expect(screen.queryByTestId('management-social-mode-ai')).toBeNull();
+    /* ÜÇÜNCÜ ÇİP 29.08'DE DOĞDU ve bu dosyaya elle eklenmedi: ekran modları
+       `ConversationHandlerEnum.options`tan türetiyor, enum da o gün `ai`yi geri aldı. İddia
+       tersine çevrildi — eskiden "görünmemeli" diyordu. */
+    expect(screen.getByTestId('management-social-mode-ai')).toBeOnTheScreen();
   });
 
-  it('eski `ai` satırında ÇIKIŞ uyarısı gösterilir — ekran bozuk sanılmasın', async () => {
-    // Mod artık seçilemiyor ama kolonda durabilir (16.08–22.08 arası). Hiçbir çip aktif
-    // görünmezken sebep söylenmezse operatör ekranı bozuk sanar.
+  it('`ai` modunda ÇIKIŞ uyarısı YOK — mod artık çalışıyor', async () => {
+    /* Uyarı *"AI modunda ama sohbette ajan yok — İnsan'a alın"* diyordu ve motor doğmadan önce
+       doğruydu. Bugün yalan olurdu: operatörü çalışan bir modu terk etmeye iterdi. */
     mockDetay(detay({ handledBy: 'ai' }));
     await ekranAc();
-    expect(screen.getByTestId('management-social-mode-orphan')).toBeOnTheScreen();
+    expect(screen.queryByTestId('management-social-mode-orphan')).toBeNull();
   });
 });
 
