@@ -43,6 +43,10 @@ export function metaCloudSender(config: CloudApiConfig): MessageSender {
            belirlenir ve bizim tercihimizle örtüşmeyebilir. */
         templateLanguage: input.templateLanguage ?? undefined,
         interactive: (input.payload?.interactive as Record<string, unknown> | undefined) ?? null,
+        /* Kararı `send.ts` verdi (pencere kapalı + kanal Messenger/IG + 7 gün içinde); burası
+           yalnız taşıyor. Sürücünün kendi pencere hesabı YOK ve olmamalı — kural iki yerde
+           yaşasaydı biri gün gelip ötekinden sapardı ve sapma sessiz olurdu. */
+        humanAgent: target.humanAgent ?? false,
       });
 
       if (!result.ok) return { ok: false, reason: result.reason, retryable: result.retryable };

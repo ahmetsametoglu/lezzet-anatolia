@@ -53,6 +53,13 @@ export interface CloudApiMessage {
    * burada yeniden şekillendirmek, sağlayıcının sözleşmesini ikinci kez yazmak olurdu.
    */
   interactive?: Record<string, unknown> | null;
+  /**
+   * **İNSAN TEMSİLCİ ETİKETİ** (yalnız Messenger/Instagram) — 24 saat kapandıktan sonra 7 güne
+   * kadar cevap yazmanın Meta'daki tek yolu. Kararı `send.ts` verir (pencere hesabı orada); burası
+   * yalnız çevirir. WhatsApp gövdesinde karşılığı YOK ve olmamalı: orada kapalı pencerenin çaresi
+   * ücretli şablondur, etiket değil.
+   */
+  humanAgent?: boolean;
 }
 
 export type CloudApiResult =
@@ -110,11 +117,15 @@ function whatsappBody(message: CloudApiMessage): Record<string, unknown> {
  * `messaging_type: 'RESPONSE'`: bu bir CEVAPTIR, işletme-başlatan bir mesaj değil. Alan boş
  * bırakılırsa Meta isteği reddediyor; yanlış değer ("UPDATE") ise pencere dışında ücret/etiket
  * kurallarına takılır. Şablon kavramı bu kanallarda YOK — gönderim kapısı zaten öyle reddediyor.
+ *
+ * **İki zarf, tek gövde:** pencere kapandıktan sonra aynı mesaj `MESSAGE_TAG` + `HUMAN_AGENT` ile
+ * gider (Meta'nın belgelediği alan adları; 7 günlük aralık). `messaging_type` ile `tag` BİRLİKTE
+ * yazılır — etiketsiz `MESSAGE_TAG` da, `RESPONSE` yanında duran bir `tag` de reddedilir.
  */
 function messengerBody(message: CloudApiMessage): Record<string, unknown> {
   return {
     recipient: { id: message.to },
-    messaging_type: 'RESPONSE',
+    ...(message.humanAgent ? { messaging_type: 'MESSAGE_TAG', tag: 'HUMAN_AGENT' } : { messaging_type: 'RESPONSE' }),
     message: message.interactive ? { attachment: message.interactive } : { text: message.text ?? '' },
   };
 }

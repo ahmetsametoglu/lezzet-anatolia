@@ -95,6 +95,36 @@ describe('Messenger/Instagram gövdesi AYRI — alıcı `recipient.id`de', () =>
     expect(sonuc.ok).toBe(true);
     expect(meta.calls[0]!.body).toMatchObject({ recipient: { id: 'IGSID-9' } });
   });
+
+  it('insan-temsilci etiketi İKİ alanı birden değiştirir (28.08)', async () => {
+    /* `messaging_type` ile `tag` birlikte yazılır: etiketsiz `MESSAGE_TAG` da, `RESPONSE` yanında
+       duran bir `tag` de Meta tarafında reddedilir. Yarım yazım en tehlikelisi — istek gider,
+       sağlayıcı reddeder ve sebep bizim tarafta okunamaz. */
+    const meta = fakeMeta();
+    await sendCloudApiMessage(fakeCloudApiConfig(meta), fb({ humanAgent: true }));
+    expect(meta.calls[0]!.body).toMatchObject({
+      recipient: { id: 'PSID-1' },
+      messaging_type: 'MESSAGE_TAG',
+      tag: 'HUMAN_AGENT',
+      message: { text: 'Merhaba!' },
+    });
+  });
+
+  it('etiket İSTENMEDİKÇE yazılmaz — `RESPONSE` varsayılan kalır', async () => {
+    // Her mesajı etiketlemek, etiketin dayandığı gerekçeyi (insan temsilci devrede, pencere kapalı)
+    // yalan yapardı; Meta bu etiketin kötüye kullanımını denetliyor.
+    const meta = fakeMeta();
+    await sendCloudApiMessage(fakeCloudApiConfig(meta), fb());
+    expect(meta.calls[0]!.body.messaging_type).toBe('RESPONSE');
+    expect(meta.calls[0]!.body.tag).toBeUndefined();
+  });
+
+  it('WhatsApp gövdesine etiket SIZMAZ — orada karşılığı ücretli şablondur', async () => {
+    const meta = fakeMeta();
+    await sendCloudApiMessage(fakeCloudApiConfig(meta), fb({ channel: 'whatsapp', to: '+33600000000', humanAgent: true }));
+    expect(meta.calls[0]!.body.tag).toBeUndefined();
+    expect(meta.calls[0]!.body.messaging_type).toBeUndefined();
+  });
 });
 
 describe('hata sınıflandırması — "yeniden dene" düğmesi doğru yere konsun', () => {

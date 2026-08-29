@@ -64,6 +64,44 @@ export function serviceWindowState(windowExpiresAt: string | null | undefined, n
 }
 
 /**
+ * Meta'nın **insan-temsilci** uzatması: Messenger/Instagram'da müşterinin son mesajından itibaren
+ * 7 gün. Sabit; işletme ayarı DEĞİL — kuralı biz koymuyoruz (`developers.facebook.com` ·
+ * *"Human Agent tag allows a business representative to manually respond to a person's messages
+ * within a 7-day period"*).
+ */
+export const HUMAN_AGENT_WINDOW_DAYS = 7;
+
+const DAY_MS = 24 * HOUR_MS;
+
+/**
+ * **İnsan-temsilci penceresinin hâli** — 24 saat kapandıktan SONRA da cevap yazılabilen aralık.
+ *
+ * ── NEDEN AYRI BİR PENCERE ──────────────────────────────────────────────────
+ * Danışma kanalında (`CHANNELS §3b`) asıl sıkıntı şuydu: müşteri cuma akşamı yazar, cevap pazartesi
+ * yazılır ve 24 saat çoktan geçmiştir. WhatsApp'ta bunun çaresi ücretli şablondur; Messenger/IG'de
+ * ücret yok, **kural** var — mesaj "insan temsilci cevaplıyor" etiketiyle gider ve süre 7 güne çıkar.
+ *
+ * ── AYNI DAMGADAN TÜRER, İKİNCİ BİR ALAN YOK ────────────────────────────────
+ * `window_expires_at` gelen mesajın anı + 24 saattir; yani mesajın anı o damgadan geriye
+ * çıkarılabilir ve 7 günlük bitiş `+ 6 gün` demektir. İkinci bir kolon açmak aynı olguyu iki yerde
+ * saklamak olurdu ve biri bir gün ötekini yalanlardı. Türetme burada, tek satırda ve künyeli.
+ *
+ * ── KANAL AYRIMI BURADA DEĞİL, ÇAĞIRANDA ────────────────────────────────────
+ * Bu fonksiyon "7 gün geçti mi" sorusunu cevaplar, "bu kanalda geçerli mi" sorusunu değil. WhatsApp
+ * için çağrılmamalı (orada karşılığı ücretli şablondur); kanal kararı `send.ts`in işi.
+ */
+export function humanAgentWindowState(
+  windowExpiresAt: string | null | undefined,
+  now: Date = new Date(),
+): ServiceWindowState {
+  if (!windowExpiresAt) return { open: false, everOpened: false, msRemaining: 0 };
+
+  const inboundAt = new Date(windowExpiresAt).getTime() - SERVICE_WINDOW_HOURS * HOUR_MS;
+  const remaining = inboundAt + HUMAN_AGENT_WINDOW_DAYS * DAY_MS - now.getTime();
+  return { open: remaining > 0, everOpened: true, msRemaining: remaining > 0 ? remaining : 0 };
+}
+
+/**
  * **Bu şablon gönderilmeseydi de olur muydu** — yani bedava olana para mı ödendi?
  *
  * "Pencere açıkken şablon = israf" kestirmesi YANLIŞ ve fark kategoride:

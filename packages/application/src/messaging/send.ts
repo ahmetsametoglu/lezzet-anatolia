@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ConversationService } from '@lezzet/database';
-import { serviceWindowState } from '@lezzet/domain-core';
+import { humanAgentWindowState, serviceWindowState } from '@lezzet/domain-core';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, Message, MessageKind, TemplateCategory, TicketSender } from '@lezzet/types';
 import { recordOutboundMessage } from './record';
@@ -39,6 +39,13 @@ export interface SendTarget {
   externalRef: string;
   /** WhatsApp'ta `phone_number_id`, Messenger/IG'de Sayfa kimliği. Yoksa gönderim yönlendirilemez. */
   accountRef: string | null;
+  /**
+   * **İnsan-temsilci etiketiyle mi gidiyor** (yalnız Messenger/IG) — 24 saat kapandıktan sonraki
+   * 7 günlük aralık. Hedefin "kime"si değil "nasıl"ı ama burada duruyor ve bilerek: kararı bu kapı
+   * veriyor (pencere hesabı, kanal ayrımı), sürücü yalnız uyguluyor. Ayrı bir parametre olsaydı
+   * `send` imzası üçe çıkar ve her sürücü onu geçirmeyi ayrı ayrı hatırlamak zorunda kalırdı.
+   */
+  humanAgent?: boolean;
 }
 
 export interface SendMessageInput {
@@ -119,16 +126,39 @@ export async function sendOutboundMessage(
     PENCERE KURALI — bu kapının en pahalı kararı.
 
     Serbest metin ancak 24 saatlik servis penceresi AÇIKKEN gidebilir; üç kanalda da böyle. Pencere
-    kapalıyken:
-      · WhatsApp    → yalnız onaylı KALIP mesaj (ücretli)
-      · Messenger/IG → "insan-temsilci" etiketiyle 7 güne kadar (ücretsiz) — BEKLEYEN(15.11)
+    kapalıyken çare KANALA GÖRE ayrışıyor:
+      · WhatsApp     → yalnız onaylı KALIP mesaj (ücretli)
+      · Messenger/IG → "insan-temsilci" etiketiyle 7 güne kadar (ÜCRETSİZ) — 28.08'de yazıldı
 
-    İkinci yol henüz yazılmadı, o yüzden bugün kapalı pencerede Messenger/IG'ye serbest metin
-    REDDEDİLİYOR. Reddetmek, sağlayıcının reddedeceği bir isteği göndermekten iyidir: burada sebep
-    okunur, orada ham hata kodu.
+    ── NEDEN GEREKTİ (`CHANNELS §3b`) ─────────────────────────────────────────
+    Danışma kanalının tek gerçek altyapı borcu buydu: müşteri cuma akşamı yazar, cevap pazartesi
+    yazılır ve 24 saat çoktan geçmiştir. O ana kadar kapı serbest metni REDDEDİYORDU — yani
+    operatör cevabı yazar, ekran "gönderilemedi" derdi ve müşteri hafta sonu sorduğu sorunun
+    cevabını hiç almazdı. Ücret sebebi de yoktu: Meta bu kanallarda para değil KURAL koyuyor.
+
+    Etiket YALNIZ gerçekten kapalı pencerede kullanılıyor: açıkken `RESPONSE` doğru zarftır ve
+    her mesajı etiketlemek, etiketin dayandığı gerekçeyi (insan temsilci devrede) yalan yapardı.
+    7 gün de geçmişse yine reddediliyor — o noktada Meta'nın kendisi de kabul etmez ve reddin
+    sebebi burada okunur, orada ham hata kodu olurdu.
+
+    ── ETİKET ÖZERK AJANA KAPALI, VE BU ADININ GEREĞİ ─────────────────────────
+    Meta'nın tanımı harfiyen şu: *"the Human Agent tag allows a business representative to MANUALLY
+    respond to a person's messages"*. Özerk ajanın otomatik cevabı bu tanıma girmiyor — etiketi
+    oraya açmak, Meta'nın denetlediği bir beyanı yanlış yapmaktı (ve yaptırımı hesap düzeyindedir,
+    tek mesaj düzeyinde değil). Bu satır bir TESTİN bulgusudur: kapı ilk yazımda ajana da açıktı ve
+    *"pencere kapalıysa devredilir"* iddiası düştü — iddia haklıydı, kapı fazla genişti.
+    Ajan için doğru davranış değişmedi: pencere kapalıysa İNSANA DEVREDER; operatör aynı sohbete
+    kendi eliyle yazdığında etiket zaten devreye girer.
   */
   const pencere = serviceWindowState(conversation.windowExpiresAt);
-  if (!input.templateName && !pencere.open) {
+  const insanTemsilci =
+    !input.templateName &&
+    !pencere.open &&
+    conversation.source !== 'whatsapp' &&
+    input.author !== 'ai' &&
+    humanAgentWindowState(conversation.windowExpiresAt).open;
+
+  if (!input.templateName && !pencere.open && !insanTemsilci) {
     return { status: 'refused', reason: pencere.everOpened ? 'window_closed' : 'window_never_opened' };
   }
 
@@ -141,7 +171,18 @@ export async function sendOutboundMessage(
     source: conversation.source,
     externalRef: conversation.externalRef,
     accountRef: conversation.providerAccountRef,
+    humanAgent: insanTemsilci,
   };
+
+  if (insanTemsilci) {
+    // Etiketli gönderim bir İSTİSNADIR ve izi kalmalı: Meta bu etiketin kötüye kullanımını
+    // denetliyor (pazarlama içeriği insan-temsilci etiketiyle gönderilemez). Sayı değil KİMLİK
+    // yazılıyor — hangi sohbet olduğu yeter, içeriği defterde zaten duruyor (`CLAUDE §1`).
+    logger.info(
+      { context: 'messaging/send', conversationId: conversation.id, source: conversation.source },
+      'pencere kapalı — insan-temsilci etiketiyle gönderiliyor',
+    );
+  }
 
   const result = await sender.send(target, input);
   if (!result.ok) {

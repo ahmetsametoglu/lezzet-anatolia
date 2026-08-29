@@ -122,6 +122,15 @@ Devir bir **kaçış değil**, kimliğin ya da ödemenin gerektiği andır:
 - Satış kapanacaksa → hedef **site/checkout**, WhatsApp değil. WhatsApp'a devretmek satışı bir adım
   yaklaştırmaz, yalnız uygulama değiştirir; üstelik müşteri o kanala geçmek istemeyebilir.
 
+### Danışma kanalının altyapı borcu: 7 günlük cevap penceresi
+
+Danışmanlık bir **hafta sonu** boyunca sürebilir; 24 saatlik servis penceresi buna yetmiyor. Meta'nın
+karşılığı Messenger/IG'de ücret değil kural: mesaj `MESSAGE_TAG` + `HUMAN_AGENT` zarfıyla gider ve
+süre 7 güne çıkar (`humanAgentWindowState`, 15.11 · 28.08). Bu dal açılmadan önce operatörün
+pazartesi yazdığı cevap "gönderilemedi" ile geri dönüyordu — kanalın kendi işini yapamadığı tek yer
+burasıydı. Etiket yalnız pencere gerçekten kapalıyken kullanılır; gerekçesi olmayan etiket, Meta'nın
+denetlediği bir dayanağı yalan yapardı.
+
 ---
 
 ## 4. Inbound ≠ Outbound

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isAvoidableTemplate, SERVICE_WINDOW_HOURS, serviceWindowExpiry, serviceWindowState } from './service-window';
+import {
+  humanAgentWindowState,
+  isAvoidableTemplate,
+  SERVICE_WINDOW_HOURS,
+  serviceWindowExpiry,
+  serviceWindowState,
+} from './service-window';
 
 /**
  * Servis penceresi (15.1). Sınanan tek şey pencerenin **neye göre** hesaplandığı: mesajın anına
@@ -55,6 +61,40 @@ describe('pencerenin şu anki hâli — ücret kararının tek kapısı', () => 
 
   it('tam bitiş anında pencere KAPALIDIR — sınırda iyimserlik fatura yazar', () => {
     expect(serviceWindowState('2026-08-08T12:00:00.000Z', simdi).open).toBe(false);
+  });
+});
+
+describe('insan-temsilci penceresi — 24 saat kapandıktan SONRAKİ 7 gün (28.08)', () => {
+  /* Damga her testte gelen mesajın anı + 24 saattir (`serviceWindowExpiry`'nin yazdığı şey).
+     Aşağıdaki değerler o kabule göre okunuyor: müşteri 8 Ağustos 12:00'de yazmış. */
+  const gelenMesaj = '2026-08-08T12:00:00.000Z';
+  const damga = '2026-08-09T12:00:00.000Z'; // gelen + 24 saat
+
+  it('24 saat kapandıktan sonra da AÇIK — danışma kanalının varlık sebebi', () => {
+    // Müşteri cuma yazdı, cevap pazartesi yazılıyor. Servis penceresi kapalı ama etiketli yol açık.
+    const pazartesi = new Date('2026-08-11T09:00:00.000Z');
+    expect(serviceWindowState(damga, pazartesi).open).toBe(false);
+    expect(humanAgentWindowState(damga, pazartesi).open).toBe(true);
+  });
+
+  it('7 GÜN gelen mesajdan sayılır, damgadan değil — bir gün fark eder', () => {
+    /* Damga zaten +24 saat taşıyor; 7 günü damgaya eklemek pencereyi 8 güne çıkarır ve son gün
+       Meta reddederken bizim kapımız "gönderilebilir" derdi. Sınır: gelen + 7 gün. */
+    const sonAn = new Date(new Date(gelenMesaj).getTime() + 7 * 24 * 60 * 60 * 1000 - 1000);
+    const hemenSonrasi = new Date(new Date(gelenMesaj).getTime() + 7 * 24 * 60 * 60 * 1000 + 1000);
+    expect(humanAgentWindowState(damga, sonAn).open).toBe(true);
+    expect(humanAgentWindowState(damga, hemenSonrasi).open).toBe(false);
+  });
+
+  it('kapandığında kalan süre SIFIR, eksi değil — servis penceresiyle aynı kural', () => {
+    const cokSonra = new Date('2026-09-01T00:00:00.000Z');
+    expect(humanAgentWindowState(damga, cokSonra)).toEqual({ open: false, everOpened: true, msRemaining: 0 });
+  });
+
+  it('müşteri HİÇ yazmamışsa etiketli yol da yok — etiketin dayanağı gelen mesajdır', () => {
+    // İnsan-temsilci etiketi "müşterinin sorusuna cevap veriyoruz" demektir; ortada soru yoksa
+    // etiket bir gerekçe değil bahane olurdu.
+    expect(humanAgentWindowState(null)).toEqual({ open: false, everOpened: false, msRemaining: 0 });
   });
 });
 
