@@ -172,6 +172,35 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
   karışık değil (üçü FR, biri DE) — ama ADR-002 sınır ötesi rotayı meşru sayıyor, yani karışık bölge
   doğduğu gün yanlış ülkeye yazılan kod sessizce kapsam dışı kalır.
 
+- **Otomatik taşıyıcı seçiminde ONAYLI LİSTE + AZAMİ TESLİM SÜRESİ** *(kullanıcı notu 29.08 —
+  "muallak, sona bırakalım")*. Bugün kargoyu biz ödediğimizde tek ölçüt **en ucuz**: hiç çalışmak
+  istemediğimiz bir firma en ucuzsa o seçilir. İki eksik var ve ikisi de ayarlar ekranına bir
+  bölüm ister: **(a) onaylı taşıyıcı listesi** — hangi firmalarla çalıştığımız bir İŞ kararı,
+  ölçülecek bir şey değil; **(b) azami teslim süresi** (varsayılan 3/4/5 gün), aşan seçenek elenir.
+
+  ⚠ **(b) göründüğü kadar basit değil ve sebebi ÖLÇÜLDÜ (29.08, gerçek hesap, 3 kg):** taşıyıcıların
+  bir kısmı teslim süresini HİÇ bildirmiyor ve oranı yöne göre sert değişiyor.
+
+  | yön | seçenek | süresi bilinen | en ucuz | ham süzgecin bedeli |
+  | --- | --- | --- | --- | --- |
+  | FR→FR (Strasbourg→Paris) | 16 | 11 | 5,51 € · **48 sa** | +0,00 € |
+  | FR→DE (Strasbourg→Berlin) | 9 | 4 | 8,86 € · **72 sa** | +0,00 € |
+  | DE→DE (Kehl→Berlin) | 40 | **19** | 4,30 € · **süre YOK** | **+1,82 €** |
+
+  Fransa içinde sorun yok — en ucuz seçenek zaten 2 günde teslim ediyor, yani "azami 3 gün" kuralı
+  bedelsiz çalışır. **Almanya içinde tersine dönüyor:** 40 seçeneğin 21'i süresiz ve **en ucuz altı
+  seçeneğin altısı da süresiz**. "Süresi bilinmeyeni ele" diyen ham bir süzgeç orada gönderi başına
+  **1,82 €** pahalıya mal olur — üstelik elenen seçenekler yavaş oldukları için değil, taşıyıcı
+  konuşmadığı için elenir.
+
+  **Kural bu yüzden "süre bilinmiyorsa ELEME" olmalı** (`CLAUDE §1`: ölçülemeyen değer sıfır
+  değildir). Onaylı liste satırına süre **elle yazılabilir** olmalı: sağlayıcı söylemiyorsa biz
+  biliyoruz.
+
+  **Üçüncü katman — süre YÖNE bağlı:** Fransa içi, Almanya içi ve Fransa→Almanya apayrı süreler
+  (ölçümde 48 · 24 · 72 saat). Tek bir "azami 3 gün" ayarı üç yönü birden yönetemez; ayar ya
+  yön/ülke kırılımlı olmalı ya da eşik yalnız BİLİNEN süreye uygulanmalı. Karar verilmedi.
+
 ## 9. İade/hasar
 
 - İade/hasar bildirimi + durum (returned)

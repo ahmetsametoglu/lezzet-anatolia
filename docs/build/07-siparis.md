@@ -213,9 +213,12 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
       sıfır, kod da saklanmıyor. Eşik `resolveCheckoutPayment` içinde okunduğu için tekliften ÖNCE
       bilinmiyor; çağrıyı atlamak sırayı değiştirmeyi ister. Bedeli sağlayıcıya boş bir tur
       (~300-500 ms) — ölçülüp kaydedildi, yamayla geçiştirilmedi.
-      **AÇIK — onaylı taşıyıcı listesi ve teslim süresi süzgeci** (mobil şeridin notu §2/§3):
-      teslim süresi seçeneklerin çoğunda BOŞ geliyor (ölçüldü), o yüzden süre bilinmiyorsa seçenek
-      ELENMEYECEK — "bilinmiyor" ile "sıfır" ayrı (`CLAUDE §1`).
+      **ERTELENDİ — onaylı taşıyıcı listesi ve azami teslim süresi** (kullanıcı kararı 29.08:
+      *"muallak bir konu, sona bırak, backlog'a not düşelim"*). Ölçüm yapıldı ve `BACKLOG §8`'e
+      tabloyla yazıldı: Fransa içinde ham bir süre süzgeci bedelsiz (en ucuz zaten 48 sa), ama
+      Almanya içinde 40 seçeneğin 21'i süresiz ve **en ucuz altısı da süresiz** — orada aynı süzgeç
+      gönderi başına **1,82 €** pahalıya mal oluyor. Ayrıca süre YÖNE bağlı (FR içi · DE içi ·
+      FR→DE üç ayrı süre), yani tek bir "azami 3 gün" ayarı üç yönü birden yönetemiyor.
       **Kapanış (`completed`) BU TURUN KONUSU DEĞİL** — ölçüldü: `closeOrder`ın bugün hiçbir üretim çağıranı yok, rota kulvarında da yok. Kargoya özel bir kapanış yazmak iki kulvarı ayrı kurallara bölerdi → görev satırı `(07.16)`.
 
 - [x] (07.13) **Bağlayıcı fiyat sabitlenirken artış SESSİZ uygulanıyor** · `touches: apps/web/lib/order/checkout-draft.ts, apps/web/lib/cart/{cart-types,actions}.ts, apps/web/app/(customer)/[locale]/checkout/**`
