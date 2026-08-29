@@ -1228,3 +1228,23 @@ işinden ve hiçbiri commit'li değil:
 Dokunulmadı. **Kendi commit'im pathspec ile atıldı** (`git commit -- <yollar>`), yani indekste
 bekleyen bu dosyaların hiçbiri benim commit'ime giremez (`CLAUDE §0`). Ayrıca sosyal şeridin
 COMMIT'Lİ bir hatası da duruyor: mobil mod çipi `ai` metnini bulamıyor — notu açıldı.
+
+### Commit'ten sonra yakalanan bir karışma — ve dosya bazlı pathspec'in YETMEDİĞİ yer
+
+Commit atıldıktan sonra `git show`la denetlerken sosyal şeridin **barrel'a eklediği 21 satırın
+benim commit'ime karıştığını** gördüm (`packages/application/src/index.ts`).
+
+**Pathspec disiplini çalışmıştı ama yetmedi.** `git commit -- <dosya listesi>` indekste bekleyen
+başka dosyaları (beş silinmiş, altı eklenmiş/taşınmış) commit'ime SOKMADI — kural tam olarak bunun
+içindi ve tuttu. Kaçırdığı şey başka: **iki şeridin AYNI dosyaya dokunduğu hâl.** Barrel'ı ben de
+düzenledim (bir satır), onlar da (yirmi bir satır); dosyayı pathspec'e yazınca içindeki her şey
+gitti.
+
+Ders, mevcut kuralın bir adım incelmiş hâli: *paylaşılan bir dosyayı commit'lemeden önce
+`git diff <dosya>` oku — pathspec dosyayı korur, dosyanın İÇİNİ korumaz.*
+
+**Onarım:** `git commit --amend --only -- <dosya>` (indekse hiç dokunmadan, yalnız o yolu çalışma
+ağacından alarak) ile commit benim tek satırıma indirgendi; sonra dosyanın tam hâli geri konarak
+onların yirmi bir satırı **commit'siz** durumuna döndürüldü — kendi künyeleriyle commit'lesinler.
+Doğrulandı: commit 17 dosya, barrel farkı tek satır; çalışma ağacında onların 21 satırı duruyor;
+depo jest 124/124, dokunduğum paketlerin typecheck'i temiz.
