@@ -255,11 +255,12 @@ function allocate(line: PreparationLineContract, qty: number): PreparationPick['
 /**
  * **Kargo etiketlerini bas** — duyurudan hemen sonra, kutu kutu.
  *
- * Yazıcı bugün deponun TEK ayarlı yazıcısından geliyor (`fetchBoxLabel` cevabındaki `printer`).
- * ⚠ **İş başına yazıcı ayrımı (`box` ↔ `shipping`) HENÜZ YOK** ve gerekiyor: kargo etiketi A6
- * yatay, bizim kutu etiketimiz 4×6 — aynı ruloya basılmaları fiziksel bir tesadüf olurdu.
- * BEKLEYEN(kargo-kanali-tasarimi.md §4.7): `warehouse_printer(warehouse_id, purpose, …)` envanteri
- * sunucuda, seçim cihazda.
+ * Hedef **iş başına** çözülüyor (21.132): envanter deponun (`warehouse_printer`), seçim cihazın
+ * (telefonun yerel deposu). Kutu etiketiyle aynı yazıcıya basmak fiziksel bir hataydı — kargo
+ * etiketi A6 yatay, bizim kutu etiketimiz 4×6 kalıp kesim.
+ *
+ * **Yazıcı seçilmemişse basım yapılmaz ve bu SÖYLENİR:** sessiz geçmek, gönderi alınmışken
+ * etiketsiz kalan bir kutuyu "basıldı" sandırırdı.
  *
  * **Basım hatası akışı geriye çekmez:** kaç etiket çıktığı sayılıyor, ilk hata cümlesi taşınıyor
  * ve döngü DEVAM ediyor — ikinci kutunun etiketi birincinin hatasına kurban edilmez.
