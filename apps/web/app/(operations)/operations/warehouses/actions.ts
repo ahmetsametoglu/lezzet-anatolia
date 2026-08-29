@@ -2,8 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { SettingsService, StorageAreaService, TemperatureLogService, VehicleService, WarehouseService, serviceDb, ShippingBoxService } from '@lezzet/database';
-import { LABEL_PRINTER_KEYS } from '@lezzet/application';
+import { StorageAreaService, TemperatureLogService, VehicleService, WarehousePrinterService, WarehouseService, serviceDb, ShippingBoxService } from '@lezzet/database';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
 import type { ActionResult } from '@/lib/error';
@@ -11,7 +10,7 @@ import { isUnusualReading } from './measure-read';
 import type { TemperatureDeviation } from './measure-rules';
 import { WAREHOUSES_PATH } from './warehouses-url';
 import { ShippingBoxFormSchema } from './warehouses-types';
-import { LabelPrinterFormSchema, StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema } from './warehouses-types';
+import { StorageAreaFormSchema, VehicleFormSchema, WarehouseFormSchema, WarehousePrinterFormSchema } from './warehouses-types';
 
 // Depolar ekranının yazma kapıları (19.5).
 //
@@ -100,24 +99,45 @@ export async function setWarehouseActiveAction(input: { id: string; isActive: bo
 }
 
 /**
- * Etiket yazıcısı ayarı (23.7) — `settings` warehouse kapsamına üç anahtar (`LABEL_PRINTER_KEYS`;
- * yeni tablo YOK, plan kararı). Üçü boş = yazıcıyı KALDIR: `labelPrinterFor` boş değeri tanımsız
- * okur ve telefon basmayı hiç denemez. Yarım ayar form şemasında reddedilir (`LabelPrinterFormSchema`).
+ * **YAZICI ENVANTERİ** (07.12 · 29.08) — `saveLabelPrinterAction`ın halefi.
+ *
+ * 23.7'nin üç ayar anahtarı emekli oldu: TEK yazıcı varsayıyordu ve kargo kanalı hem yazıcıyı
+ * (iki rulo) hem etiket TÜRÜNÜ (bizim 4×6 kutu etiketimiz ↔ taşıyıcının A6'sı) çoğalttı.
+ * Ayarla ifade edilemeyen şey bir LİSTEdir.
+ *
+ * **Bu ekran envanteri yönetir, SEÇİMİ değil:** hangi yazıcının kullanılacağı cihazın bilgisi
+ * (kullanıcı kararı 29.08) ve telefonun yerel deposunda yaşıyor. Buradan bir "varsayılan yazıcı"
+ * işaretlemek, cihazın seçimini sunucudan ezmek olurdu.
  */
-export async function saveLabelPrinterAction(input: unknown): Promise<ActionResult> {
+export async function addWarehousePrinterAction(input: unknown): Promise<ActionResult> {
   try {
-    const staff = await requireAdmin();
-    // `refine`li şema `extend` taşımaz (ZodEffects) — kimlik ayrı, form alanları ayrı ayrıştırılır.
-    const { warehouseId } = z.object({ warehouseId: z.string().uuid() }).parse(input);
-    const parsed = LabelPrinterFormSchema.parse(input);
+    await requireAdmin();
+    const parsed = WarehousePrinterFormSchema.parse(input);
+    await new WarehousePrinterService(serviceDb()).insert({
+      warehouseId: parsed.warehouseId,
+      name: parsed.name,
+      purpose: parsed.purpose,
+      address: parsed.address,
+      model: parsed.model,
+      labelSize: parsed.labelSize,
+    });
+    revalidatePath(WAREHOUSES_PATH);
+    return { data: null, error: null };
+  } catch (error) {
+    return { data: null, error: readable(error) };
+  }
+}
 
-    const settings = new SettingsService(serviceDb());
-    const scope = { scopeType: 'warehouse' as const, scopeId: warehouseId, actorId: staff.id };
-    await Promise.all([
-      settings.set(LABEL_PRINTER_KEYS.address, parsed.address, scope),
-      settings.set(LABEL_PRINTER_KEYS.model, parsed.model, scope),
-      settings.set(LABEL_PRINTER_KEYS.labelSize, parsed.labelSize, scope),
-    ]);
+/**
+ * Yazıcıyı aç/kapat — **silme YOK ve bu bilinçli**: cihazların seçimi kimliğe bağlı ve silinen bir
+ * satır o seçimleri sessizce "yazıcı yok"a düşürürdü. Kapatma bunu SÖYLER (liste satırı durur,
+ * seçiciden düşer).
+ */
+export async function setWarehousePrinterActiveAction(input: unknown): Promise<ActionResult> {
+  try {
+    await requireAdmin();
+    const parsed = z.object({ id: z.string().uuid(), isActive: z.boolean() }).parse(input);
+    await new WarehousePrinterService(serviceDb()).update({ id: parsed.id, isActive: parsed.isActive });
     revalidatePath(WAREHOUSES_PATH);
     return { data: null, error: null };
   } catch (error) {

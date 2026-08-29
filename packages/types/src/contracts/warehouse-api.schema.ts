@@ -3,6 +3,7 @@ import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/
 import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
 import { ReceiveIntakeResultSchema } from '../entities/supply.schema';
 import { DispatchLineSchema, ReceiveLineSchema } from '../entities/warehouse.schema';
+import { PrinterPurposeEnum } from '../entities/warehouse-printer.schema';
 import {
   ChannelEnum,
   DeliveryTypeEnum,
@@ -502,15 +503,40 @@ export type BoxLabelContract = z.infer<typeof BoxLabelSchema>;
  * `labelSize` Brother SDK'nın boy adıdır (23.5 ölçümü: takılı kâğıt SDK'dan okunamıyor —
  * ör. `DieCutW103H164`, `RollW62`). `null` = yazıcı tanımsız; telefon basmayı hiç denemez.
  */
+/**
+ * **DEPONUN BİR YAZICISI** (07.12 · `0054`).
+ *
+ * `purpose` iki değerli ve ayrım FİZİKSEL: `box` bizim 4×6 QR'lı kutu etiketimiz, `shipping`
+ * taşıyıcının A6 yatay etiketi. Yanlış yazıcıya giden etiket ya reddedilir ya küçültülür
+ * (ölçüldü, tasarım §4.6) — küçülen barkod okunmaz.
+ *
+ * **SEÇİM BU SÖZLEŞMEDE YOK ve olmayacak:** hangi yazıcının kullanıldığı cihazın kendi bilgisi
+ * (kullanıcı kararı 29.08) ve telefonun yerel deposunda yaşıyor. Aynı depodaki iki telefon iki
+ * ayrı yazıcıya basabilir — biri rampada, biri masada; bu bir çelişki değil kurulumun kendisi.
+ */
 export const BoxPrinterSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+  purpose: PrinterPurposeEnum,
   address: z.string(),
   model: z.string(),
   labelSize: z.string(),
 });
 export type BoxPrinterContract = z.infer<typeof BoxPrinterSchema>;
 
+/** `GET /warehouse/printers` — deponun AÇIK yazıcıları; cihaz listeden seçer, elle IP yazmaz. */
+export const WarehousePrintersResponseSchema = z.object({ printers: z.array(BoxPrinterSchema) });
+export type WarehousePrintersResponse = z.infer<typeof WarehousePrintersResponseSchema>;
+
+/**
+ * Etiket içeriği cevabı (23.7).
+ *
+ * ⚠ **`printer` alanı 29.08'de KALDIRILDI.** Tek yazıcı varsayımının kalıntısıydı: cevap deponun
+ * tek ayarlı yazıcısını iliştiriyordu. Artık depoda N yazıcı var ve hangisinin kullanılacağı
+ * CİHAZIN bilgisi — sunucunun cevaba iliştirdiği bir yazıcı, cihazın seçimini sessizce ezerdi.
+ */
 export const BoxLabelResponseSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('ok'), label: BoxLabelSchema, printer: BoxPrinterSchema.nullable() }),
+  z.object({ status: z.literal('ok'), label: BoxLabelSchema }),
   /** Açık kutunun etiketi yoktur — içerik kesinleşmedi; basılan etiket yalan söylerdi. */
   z.object({ status: z.literal('not_sealed') }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),

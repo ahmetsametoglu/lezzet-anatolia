@@ -7,6 +7,7 @@ import {
   StorageAreaInsertSchema,
   VehicleInsertSchema,
   WarehouseInsertSchema,
+  PrinterPurposeEnum,
   type BoxPrinterContract,
   type Country,
   type DeliveryZone,
@@ -182,17 +183,26 @@ export interface ScorecardView {
  * kaydetmek yazıcıyı KALDIRIR (geçerli bir karar — depo etiketsiz çalışabilir, kutu akışı basımsız
  * da tamamlanır).
  */
-export const LabelPrinterFormSchema = z
-  .object({
-    address: z.string().trim(),
-    model: z.string().trim(),
-    labelSize: z.string().trim(),
-  })
-  .refine((v) => [v.address, v.model, v.labelSize].every((s) => s === '') || [v.address, v.model, v.labelSize].every((s) => s !== ''), {
-    message: 'Üç alan birlikte doldurulur — ya da yazıcıyı kaldırmak için üçü birden boş bırakılır.',
-    path: ['address'],
-  });
-export type LabelPrinterFormInput = z.infer<typeof LabelPrinterFormSchema>;
+/**
+ * **YAZICI ENVANTERİ FORMU** (07.12 · 29.08) — `LabelPrinterFormSchema`ın halefi.
+ *
+ * Eski şema "üçü birlikte ya da üçü boş" diyordu, çünkü ayar TEK yazıcıyı tarif ediyordu ve
+ * "boş = yazıcıyı kaldır" onun tek silme yoluydu. Tabloya geçince o kural anlamını yitirdi:
+ * satır eklemek eklemektir, kaldırmak ayrı bir eylem (ve **silme değil kapatma** — cihazların
+ * seçimi kimliğe bağlı).
+ *
+ * `name` zorunlu ve bu kozmetik değil: iki yazıcı arasında seçim yapan depocu `192.168.1.90` ile
+ * `.91`i ayırt edemez.
+ */
+export const WarehousePrinterFormSchema = z.object({
+  warehouseId: z.string().uuid(),
+  name: z.string().trim().min(1),
+  purpose: PrinterPurposeEnum,
+  address: z.string().trim().min(1),
+  model: z.string().trim().min(1),
+  labelSize: z.string().trim().min(1),
+});
+export type WarehousePrinterFormInput = z.infer<typeof WarehousePrinterFormSchema>;
 
 /** Seçili tesisin tam kartı. */
 export interface WarehouseCardView {
@@ -200,8 +210,11 @@ export interface WarehouseCardView {
   zones: ZoneCardView[];
   staff: StaffChipView[];
   scorecard: ScorecardView;
-  /** Etiket yazıcısı (23.7) — `settings` warehouse kapsamından; `null` = tanımsız, basım denenmez. */
-  printer: BoxPrinterContract | null;
+  /**
+   * Deponun YAZICILARI (07.12 · 29.08) — envanter, seçim değil. Boş dizi = tanımsız; telefon
+   * basmayı hiç denemez ve kart önizleme olarak kalır.
+   */
+  printers: BoxPrinterContract[];
   /** Deponun kargo kutuları + benimsenmemiş sistem şablonları (07.12). */
   shippingBoxes: ShippingBoxesView;
   /** Ölçüm noktaları (19.28) — depo içi alanlar + bu tesise künyelenmiş araçlar. */

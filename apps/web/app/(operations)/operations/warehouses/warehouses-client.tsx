@@ -147,7 +147,7 @@ export function WarehousesClient({ data, urlState }: WarehousesClientProps) {
         <PrinterDialog
           key={data.card.row.id}
           warehouseId={data.card.row.id}
-          printer={data.card.printer}
+          printers={data.card.printers}
           onClose={() => setPrinterOpen(false)}
           onSaved={() => {
             setPrinterOpen(false);

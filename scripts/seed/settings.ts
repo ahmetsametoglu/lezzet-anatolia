@@ -12,11 +12,11 @@ import type { Depolar } from './warehouse';
 //
 // `warehouse` KAPSAMI ARTIK YAZILIYOR (23.7): bu başlıktaki eski "okunmaz" notu bayattı —
 // `SCOPE_PRIORITY` 03.08'den beri `warehouse` ile BAŞLIYOR (en dar kapsam kazanır). İlk gerçek
-// depo-kapsamlı ayar etiket yazıcısı: kutu kapanışında basımın hedefi depoya göre değişir ve
-// değerler 22.08 iğne deneyinin ÖLÇÜMÜdür (QL-1110NWB · 192.168.1.90 · DieCutW103H164) — cihaz
-// turu refresh sonrası da basabilsin diye seed taşıyor; gerçek kurulumda Depolar ekranından yazılır.
+// ⚠ Etiket yazıcısı ayarları 29.08'de bu dosyadan ÇIKTI ve `warehouse_printer` tablosuna taşındı
+// (0054): ayar tek yazıcı varsayıyordu, kargo kanalı hem yazıcıyı hem etiket türünü çoğalttı.
+// Besleme karşılığı `seed/warehouse.ts → seedWarehousePrinters`.
 
-export async function seedScopedSettings(db: Db, depolar: Depolar): Promise<void> {
+export async function seedScopedSettings(db: Db, _depolar: Depolar): Promise<void> {
   const settings = new SettingsService(db);
 
   // Kapsamlı satır zaten varsa dokunma — bölüm guard'ı `settings` tablosuna bakamaz, çünkü tablo
@@ -107,17 +107,16 @@ export async function seedScopedSettings(db: Db, depolar: Depolar): Promise<void
     description: `Çevre bölge kesim saati — araç erken çıkar (${cevreBolge?.name ?? '—'})`,
   });
 
-  // DEPO: Strasbourg'un etiket yazıcısı (23.7) — üç anahtar BİRLİKTE (yarımı `labelPrinterFor`
-  // tanımsız okur). Öteki depolara bilerek yazılmıyor: "yazıcısız depo" hâli de coverage'dır
-  // (telefon basımı atlar, kart önizleme kalır).
-  const yazici = async (key: string, value: string, description: string): Promise<void> => {
-    await settings.set(key, value, { scopeType: 'warehouse', scopeId: depolar.str, description });
-    sayi += 1;
-    console.log(`  ✓ ${key} · warehouse · ${JSON.stringify(value)} — ${description}`);
-  };
-  await yazici('label_printer_address', '192.168.1.90', 'Etiket yazıcısının ağ adresi (iğne deneyi ölçümü)');
-  await yazici('label_printer_model', 'QL-1110NWB', 'Brother QL model adı');
-  await yazici('label_printer_label_size', 'DieCutW103H164', 'Takılı kâğıt — 103×164 mm kalıp kesim (DK-1247)');
+  /*
+    YAZICI AYARLARI 29.08'DE TABLOYA TAŞINDI (`warehouse_printer`, 0054).
+
+    Üç `label_printer_*` anahtarı buradan silindi: ayar TEK yazıcı varsayıyordu ve kargo kanalı hem
+    yazıcıyı hem etiket TÜRÜNÜ çoğalttı. Anahtarları bırakmak ikinci bir kaynak demekti — biri
+    Depolar ekranından, öteki tablodan okunurdu ve bir gün ayrışırlardı.
+
+    Besleme karşılığı: `seed/warehouse.ts → seedWarehousePrinters` (üç hâl: iki yazıcılı depo ·
+    yalnız kutu yazıcısı olan depo · hiç yazıcısı olmayan depo).
+  */
 
   console.log(`✓ kapsamlı ayar: ${sayi} satır (kanal · bölge · depo) — aynı anahtar bağlama göre başka cevap verir`);
 }

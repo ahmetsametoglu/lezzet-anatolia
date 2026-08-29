@@ -1,4 +1,6 @@
-import { StorageAreaService, VehicleService, WarehouseService, WarehouseTransferService, ShippingBoxService } from '@lezzet/database';
+import { StorageAreaService, VehicleService, WarehouseService, WarehouseTransferService, ShippingBoxService,
+  WarehousePrinterService,
+} from '@lezzet/database';
 import { tabloDolu, type Db } from './shared';
 
 // ── Depo ağı (19) ────────────────────────────────────────────────────────────────────────────────
@@ -555,5 +557,45 @@ export async function seedShippingBoxes(db: Db, depolar: Depolar): Promise<void>
       const kutu = await svc.adopt(satir.depo, sablon(ad));
       if (satir.kapali === ad) await svc.setActive(kutu.id, false);
     }
+  }
+}
+
+/*
+  ── DEPO YAZICILARI (07.12, 29.08) ───────────────────────────────────────────
+
+  23.7'nin üç `label_printer_*` ayarının halefi. Ayar tek yazıcı varsayıyordu; kargo kanalı hem
+  yazıcıyı hem etiket TÜRÜNÜ çoğalttı ve envanter tabloya taşındı (`0054`).
+
+  ── ÜÇ HÂL, üçü de bir ekranın karşılığı ────────────────────────────────────
+    STR    → İKİ yazıcı (kutu + kargo) — cihaz seçicisinin normal hâli
+    KEHL   → TEK yazıcı, yalnız `box` — kargo etiketi basamayan depo; ekran bunu söylemeli
+    COLMAR → HİÇ yazıcı yok — "yazıcı tanımlı değil" cümlesinin tek kaynağı
+
+  Adresler 23.5'in iğne deneyinde ÖLÇÜLEN gerçek yazıcıdan (`192.168.1.90`); ikincisi ondan
+  türetilmiş makul bir varsayım — depo kurulumunda düzeltilir.
+*/
+export async function seedWarehousePrinters(db: Db, depolar: Depolar): Promise<void> {
+  const svc = new WarehousePrinterService(db);
+
+  const plan = [
+    // Kutu etiketi 4×6 kalıp kesim (DK-1247) — 23.5'te ölçülen kâğıt.
+    { depo: depolar.str, name: 'Masa · QL-1110', purpose: 'box' as const, address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' },
+    // Kargo etiketi A6 yatay; sürekli rulo, çünkü taşıyıcının boyu kalıp kesimle tutmuyor (§4.6).
+    { depo: depolar.str, name: 'Rampa · QL-820', purpose: 'shipping' as const, address: '192.168.1.91', model: 'QL-820NWB', labelSize: 'RollW62' },
+    { depo: depolar.kehl, name: 'Kehl · QL-1110', purpose: 'box' as const, address: '192.168.2.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' },
+  ];
+
+  for (const satir of plan) {
+    // Guard depo BAZINDA (kutu kataloğunun aynı gerekçesi): tablo dolu olabilir ve bu, BU deponun
+    // yazıcılarının kurulduğu anlamına gelmez.
+    if ((await svc.listForWarehouse(satir.depo)).length > 0) continue;
+    await svc.insert({
+      warehouseId: satir.depo,
+      name: satir.name,
+      purpose: satir.purpose,
+      address: satir.address,
+      model: satir.model,
+      labelSize: satir.labelSize,
+    });
   }
 }

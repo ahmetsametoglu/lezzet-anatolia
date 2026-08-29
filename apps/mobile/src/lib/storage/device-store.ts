@@ -47,6 +47,12 @@ export const DEVICE_STORE_KEYS = {
   /** Yazı boyutu tercihi. */
   fontScale: 'lezzet.fontScale',
   /**
+   * **Bu cihaz hangi yazıcıyı kullanıyor** (07.12 · kullanıcı kararı 29.08) — iş başına kimlik
+   * (`{ box, shipping }`). Envanter SUNUCUDA (`warehouse_printer`), seçim burada: aynı depodaki
+   * iki telefon iki ayrı yazıcıya basabilir (biri rampada, biri masada).
+   */
+  printerChoice: 'lezzet.printer.choice',
+  /**
    * Uygulamanın dili — kullanıcının AÇIK seçimi (kayıt yoksa seçim de yok, cihaz dili geçerli).
    * Tek okuyanı/yazanı `lib/i18n/app-locale.ts` ve o da bu kapıdan geçer.
    */

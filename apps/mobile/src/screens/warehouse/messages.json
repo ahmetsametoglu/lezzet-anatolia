@@ -69,6 +69,11 @@
         "title": "Kargo devri",
         "subtitle": "kutuları taşıyıcıya ver · okutarak"
       },
+      "printers": {
+        "code": "⚙",
+        "title": "Bu cihaz · Yazıcılar",
+        "subtitle": "kutu ve kargo etiketi hangi yazıcıdan"
+      },
       "sale": {
         "code": "D7",
         "title": "Yerinde satış",
@@ -456,5 +461,22 @@
     "notAnnounced": "Kutu {n} için etiket alınmamış — önce hazırlık ekranından kargoya ver.",
     "unknownCode": "{code} tanınmıyor — taşıyıcı etiketinin barkodunu okutun.",
     "footnote": "Sayım GÖNDERİYİ sayar: son kutu okutulunca sipariş kendiliğinden yola çıkar."
+  },
+  "printers": {
+    "title": "Bu cihaz · Yazıcılar",
+    "subtitle": "hangi işi hangi yazıcıdan bastığın",
+    "loading": "Yazıcılar yükleniyor…",
+    "error": {
+      "title": "Yazıcı listesi alınamadı",
+      "body": "Bağlantı ya da sunucu sorunu — seçimin cihazda duruyor, değişmedi."
+    },
+    "purpose": {
+      "box": "Kutu etiketi (bizim 4×6 QR’lı)",
+      "shipping": "Kargo etiketi (taşıyıcının A6’sı)"
+    },
+    "none": "Bu iş için tanımlı yazıcı yok — Depolar ekranından tanımlanır. Bu cihaz o etiketi basamaz.",
+    "detail": "{model} · {address} · {size}",
+    "only": "tek",
+    "footnote": "Seçim BU CİHAZDA kalır, sunucuya gitmez: aynı depodaki başka telefon başka yazıcıya basabilir. Bir iş için tek yazıcı varsa seçim sorulmaz."
   }
 }

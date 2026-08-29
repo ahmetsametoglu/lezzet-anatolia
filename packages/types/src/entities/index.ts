@@ -35,6 +35,7 @@ export * from './cart.schema';
 export * from './order.schema';
 export * from './order-box.schema';
 export * from './shipping-box.schema';
+export * from './warehouse-printer.schema';
 export * from './shipment.schema';
 export * from './courier.schema';
 export * from './delivery-run.schema';

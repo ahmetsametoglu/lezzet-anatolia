@@ -76,6 +76,8 @@ interface Net {
   /** Sevk seçenekleri ve duyuru cevabı (07.12). */
   dispatchOptions?: unknown;
   announce?: unknown;
+  /** Deponun yazıcı ENVANTERİ (07.12 · 29.08) — hedef artık etiket cevabından değil buradan. */
+  printers?: unknown[];
 }
 
 const net: Net = { orders: [] };
@@ -84,6 +86,7 @@ fetchMock.mockImplementation((url, init) => {
   const path = String(url);
   // Kutu TİPLERİ kutulardan önce eşleşmeli: `/shipping-boxes` de `/boxes` ile bitiyor.
   if (path.endsWith('/shipping-boxes')) return Promise.resolve(ok({ boxes: net.shippingBoxes ?? [] }));
+  if (path.endsWith('/printers')) return Promise.resolve(ok({ printers: net.printers ?? [] }));
   if (path.endsWith('/dispatch-options')) return Promise.resolve(ok(net.dispatchOptions));
   if (path.endsWith('/announce')) return Promise.resolve(ok(net.announce));
   if (path.includes('/codes/resolve')) return Promise.resolve(ok(net.resolve));
@@ -128,6 +131,7 @@ beforeEach(() => {
   net.shippingBoxes = undefined;
   net.dispatchOptions = undefined;
   net.announce = undefined;
+  net.printers = undefined;
   mockPrinterModule.available = false;
   mockPrintLabel.mockClear();
   mockPrintLabel.mockImplementation(async () => undefined);
@@ -189,9 +193,10 @@ describe('D1 · kutu döngüsü', () => {
         deliveryDate: '2026-08-24', paymentMethod: 'cash',
         items: [{ name: 'Fıstıklı Baklava · 1 kg', qty: 2 }],
       },
-      // Yazıcı tanımsız — kart önizleme hâlinde kalır, basım hiç denenmez.
-      printer: null,
     };
+    // Envanter BOŞ — kart önizleme hâlinde kalır, basım hiç denenmez. (Hedef 29.08'den beri
+    // etiket cevabından değil `/printers`ten geliyor.)
+    net.printers = [];
     await renderPicking();
 
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
@@ -216,7 +221,8 @@ describe('D1 · kutu döngüsü', () => {
 
   it('yazıcı ayarlıysa kapanış etiketi KENDİLİĞİNDEN basar: PNG sunucudan, damga başarıdan sonra', async () => {
     mockPrinterModule.available = true;
-    const printer = { address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
+    // Depoda o iş için TEK yazıcı → seçim sorulmaz, hedef kendiliğinden o (`resolvePrinter`).
+    const printer = { id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa · QL-1110', purpose: 'box' as const, address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
     net.orders = [preparationOrder({ boxes: [preparationBox()] })];
     net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
     net.label = {
@@ -226,15 +232,15 @@ describe('D1 · kutu döngüsü', () => {
         parcelName: 'Restaurant Bosphore', routeName: 'Kuzey rotası', deliveryType: 'route',
         deliveryDate: '2026-08-24', paymentMethod: null, items: [],
       },
-      printer,
     };
+    net.printers = [printer];
     await renderPicking();
 
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Etiket basıldı \(QL-1110NWB\)/));
-    // PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef AYARDAN geldi.
+    // PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef ENVANTERDEN geldi.
     expect(mockPrintLabel).toHaveBeenCalledWith('file:///cache/box-label-00000000-0000-4000-8000-0000000000b1.png', printer);
     // Damga başarıdan SONRA vuruldu — niyet sayılmaz (05.08 dersi).
     expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/printed'))).toBe(true);
@@ -256,8 +262,9 @@ describe('D1 · kutu döngüsü', () => {
         parcelName: 'Restaurant Bosphore', routeName: 'Kuzey rotası', deliveryType: 'route',
         deliveryDate: '2026-08-24', paymentMethod: null, items: [],
       },
-      printer: { address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'RollW62' },
     };
+    // Yanlış rulo BİLEREK: SDK'nın `SetLabelSizeError`ı 23.5'te ölçülen gerçek reddin kendisi.
+    net.printers = [{ id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa', purpose: 'box', address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'RollW62' }];
     await renderPicking();
 
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));

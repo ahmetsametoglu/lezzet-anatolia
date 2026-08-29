@@ -290,24 +290,63 @@ export function StaffChips({ staff }: { staff: readonly StaffChipView[] }) {
  * Tanımsızlık bir ARIZA değil bir hâldir (depo etiketsiz çalışabilir) ama amber'le söylenir:
  * kutu akışı kurulmuş bir depoda yazıcısızlık büyük olasılıkla unutulmuş kurulumdur.
  */
-export function PrinterCard({ printer, onEdit }: { printer: { address: string; model: string; labelSize: string } | null; onEdit: () => void }) {
-  const size = LABEL_SIZE_OPTIONS.find((o) => o.value === printer?.labelSize)?.label ?? printer?.labelSize;
+export function PrinterCard({
+  printers,
+  onEdit,
+}: {
+  printers: Array<{ id: string; name: string; purpose: 'box' | 'shipping'; address: string; model: string; labelSize: string }>;
+  onEdit: () => void;
+}) {
+  /*
+    İKİ AMAÇ AYRI SAYILIYOR ve eksik olan SÖYLENİYOR.
+
+    Ayrım fiziksel (tasarım §4.6): kargo etiketi A6 yatay, bizim kutu etiketimiz 4×6 kalıp kesim.
+    Kargo yazıcısı tanımlı olmayan bir depo kutu etiketi basabilir ama kargo etiketi BASAMAZ — ve
+    o eksik yalnız sevk anında, kutu kapandıktan sonra görünürdü. Kart onu burada söylüyor.
+  */
+  const kutu = printers.filter((p) => p.purpose === 'box');
+  const kargo = printers.filter((p) => p.purpose === 'shipping');
+  const sizeOf = (v: string) => LABEL_SIZE_OPTIONS.find((o) => o.value === v)?.label ?? v;
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      {printer ? (
-        <span className="flex items-center gap-1.5 rounded-full border border-ops-line bg-ops-card px-3 py-1.5 font-ops-body text-ops-sm text-ops-strong">
-          {printer.model}
-          <span className="font-ops-mono text-ops-xs text-ops-muted">{printer.address}</span>
-          <span className="font-ops-body text-ops-xs text-ops-muted">· {size}</span>
+    <div className="flex flex-col gap-2">
+      {printers.length === 0 ? (
+        <span className="font-ops-body text-ops-sm text-ops-amber">
+          Yazıcı tanımlı değil — telefon basmayı hiç denemez, etiket kartı yalnız önizleme gösterir.
         </span>
       ) : (
-        <span className="font-ops-body text-ops-sm text-ops-amber">
-          Yazıcı tanımlı değil — kutu kapanışında etiket basılmaz, telefon yalnız önizleme gösterir.
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          {printers.map((row) => (
+            <span
+              key={row.id}
+              className="flex items-center gap-1.5 rounded-full border border-ops-line bg-ops-card px-3 py-1.5 font-ops-body text-ops-sm text-ops-strong"
+            >
+              {row.name}
+              <span className="font-ops-body text-ops-xs text-ops-muted">
+                · {row.purpose === 'shipping' ? 'kargo' : 'kutu'}
+              </span>
+              <span className="font-ops-mono text-ops-xs text-ops-muted">{row.address}</span>
+              <span className="font-ops-body text-ops-xs text-ops-muted">· {sizeOf(row.labelSize)}</span>
+            </span>
+          ))}
+        </div>
       )}
-      <Button variant="secondary" size="sm" onClick={onEdit}>
-        {printer ? 'Düzenle' : 'Yazıcı tanımla'}
-      </Button>
+
+      {/* Eksik AMAÇ ayrı ayrı söyleniyor: "yazıcı var" cümlesi hangi işin karşılıksız olduğunu gizler. */}
+      {printers.length > 0 && kutu.length === 0 ? (
+        <span className="font-ops-body text-ops-xs text-ops-amber">Kutu etiketi yazıcısı yok — kapanışta etiket basılmaz.</span>
+      ) : null}
+      {printers.length > 0 && kargo.length === 0 ? (
+        <span className="font-ops-body text-ops-xs text-ops-amber">
+          Kargo etiketi yazıcısı yok — bu depodan taşıyıcı etiketi basılamaz.
+        </span>
+      ) : null}
+
+      <div>
+        <Button variant="secondary" size="sm" onClick={onEdit}>
+          {printers.length > 0 ? 'Yazıcıları düzenle' : 'Yazıcı tanımla'}
+        </Button>
+      </div>
     </div>
   );
 }

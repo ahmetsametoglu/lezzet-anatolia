@@ -7,15 +7,15 @@ import {
   OrderService,
   ProductService,
   ReservationService,
-  SettingsService,
   ShippingBoxService,
   StockService,
   UserProfileService,
+  WarehousePrinterService,
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
-import { boxLabelPayload, labelPrinterFor, markBoxPrinted, openBox, sealBox, LABEL_PRINTER_KEYS } from './boxes';
+import { boxLabelPayload, markBoxPrinted, openBox, printersFor, sealBox } from './boxes';
 import { listPreparationQueue } from './preparation';
 
 /**
@@ -76,6 +76,12 @@ beforeEach(async () => {
   await mustDelete(db, 'reservation', (q) => q.eq('variant_id', variantId));
   // Parti SIRASIYLA gider: önce hareket defteri, sonra parti (06.14).
   await purgeVariantStock(db, [variantId]);
+  // Yazıcı satırları: iki test birbirinin listesini görmesin (CLAUDE §4b — küresel sayıya bakan
+  // test yazılmaz, ama BU testler kendi kurduklarını sayıyor ve arada kalan satır onları bozar).
+  if (createdPrinterIds.length > 0) {
+    await mustDelete(db, 'warehouse_printer', (q) => q.in('id', createdPrinterIds));
+    createdPrinterIds.length = 0;
+  }
   nearBatch = (
     await stocks.insert({ warehouseId, variantId, physicalQty: 6, expiryDate: dayOffset(10), purchasePriceCents: 400 })
   ).id;
@@ -84,7 +90,9 @@ beforeEach(async () => {
   ).id;
 });
 
-const createdSettingIds: string[] = [];
+/** Yazıcı satırları `purgeTestData`nın hedefi değil — depo silinince cascade gider, yine de
+    beforeEach'te temizleniyor ki iki test birbirinin listesini görmesin (CLAUDE §4b). */
+const createdPrinterIds: string[] = [];
 
 afterAll(async () => {
   await purgeTestData(db, {
@@ -92,7 +100,6 @@ afterAll(async () => {
     categoryIds: [categoryId],
     profileIds: createdProfiles,
     warehouseIds: [warehouseId, otherWarehouseId],
-    settingIds: createdSettingIds,
   });
 });
 
@@ -367,27 +374,62 @@ describe('etiket içeriği (boxLabelPayload · 23.7)', () => {
   });
 });
 
-describe('basım (markBoxPrinted + labelPrinterFor · 23.7)', () => {
-  it('yazıcı ayarı ÜÇÜ BİRDEN doluysa döner; eksik ya da hiç yoksa null (yarım ayarla basılmaz)', async () => {
-    const settings = new SettingsService(db);
-    const scope = { scopeType: 'warehouse' as const, scopeId: warehouseId };
+/*
+  YAZICI ENVANTERİ (07.12 · 29.08) — `labelPrinterFor`un halefi.
 
-    // Hiç ayar yok → tanımsız.
-    expect(await labelPrinterFor(db, warehouseId)).toBeNull();
+  23.7'nin ayar üçlüsü emekli oldu: tek yazıcı varsayıyordu ve kargo kanalı hem yazıcıyı hem
+  etiket türünü çoğalttı. Yeni kapı bir LİSTE döndürüyor ve seçimi CİHAZA bırakıyor — ölçülen üç
+  iddia da bunun etrafında.
+*/
+describe('basım (markBoxPrinted + printersFor · 23.7 → 07.12)', () => {
+  it('deponun AÇIK yazıcıları döner; kapalı olan listeye girmez ve kapsam sızmaz', async () => {
+    const printers = new WarehousePrinterService(db);
 
-    // Yarım ayar (yalnız adres) → yine tanımsız: hata depocunun telefonuna taşınmaz.
-    createdSettingIds.push((await settings.set(LABEL_PRINTER_KEYS.address, '192.168.1.90', scope)).id);
-    expect(await labelPrinterFor(db, warehouseId)).toBeNull();
+    // Hiç yazıcı yok → boş liste. `null` DEĞİL: "yazıcı yok" bir hâl, hata değil.
+    expect(await printersFor(db, warehouseId)).toEqual([]);
 
-    createdSettingIds.push((await settings.set(LABEL_PRINTER_KEYS.model, 'QL-1110NWB', scope)).id);
-    createdSettingIds.push((await settings.set(LABEL_PRINTER_KEYS.labelSize, 'DieCutW103H164', scope)).id);
-    expect(await labelPrinterFor(db, warehouseId)).toEqual({
-      address: '192.168.1.90',
-      model: 'QL-1110NWB',
-      labelSize: 'DieCutW103H164',
+    const kutu = await printers.insert({
+      warehouseId, name: 'Masa · QL-1110', purpose: 'box',
+      address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164',
     });
-    // BAŞKA deponun ayarı yok — kapsam sızmaz.
-    expect(await labelPrinterFor(db, otherWarehouseId)).toBeNull();
+    const kargo = await printers.insert({
+      warehouseId, name: 'Rampa · QL-820', purpose: 'shipping',
+      address: '192.168.1.91', model: 'QL-820NWB', labelSize: 'RollW62',
+    });
+    // Sökülmüş yazıcı: satır DURUYOR ama seçim listesine girmiyor — silinseydi cihazların
+    // kimliğe bağlı seçimi sessizce "yazıcı yok"a düşerdi.
+    const kapali = await printers.insert({
+      warehouseId, name: 'Eski · QL-700', purpose: 'box',
+      address: '192.168.1.92', model: 'QL-700', labelSize: 'RollW62', isActive: false,
+    });
+    createdPrinterIds.push(kutu.id, kargo.id, kapali.id);
+
+    const liste = await printersFor(db, warehouseId);
+    expect(liste.map((p) => p.id).sort()).toEqual([kutu.id, kargo.id].sort());
+    // AMAÇ taşınıyor: ayrım fiziksel (4×6 kutu etiketi ↔ A6 kargo etiketi), kozmetik değil.
+    expect(liste.find((p) => p.id === kargo.id)?.purpose).toBe('shipping');
+    expect(liste.find((p) => p.id === kutu.id)?.labelSize).toBe('DieCutW103H164');
+
+    // BAŞKA deponun listesi boş — kapsam sızmaz.
+    expect(await printersFor(db, otherWarehouseId)).toEqual([]);
+  });
+
+  it('AYNI iş için birden çok yazıcı meşru — kullanıcı düzeltmesi 28.08', async () => {
+    const printers = new WarehousePrinterService(db);
+    const a = await printers.insert({
+      warehouseId, name: 'Rampa 1', purpose: 'shipping',
+      address: '10.0.0.1', model: 'QL-820NWB', labelSize: 'RollW62',
+    });
+    // Tasarım kaydı önce `unique (warehouse_id, purpose)` öneriyordu; kısıt konsaydı bu satır
+    // tabloya HİÇ giremezdi ve depocu ikinci yazıcıyı yanlış amaca yazardı.
+    const b = await printers.insert({
+      warehouseId, name: 'Rampa 2', purpose: 'shipping',
+      address: '10.0.0.2', model: 'QL-820NWB', labelSize: 'RollW62',
+    });
+    createdPrinterIds.push(a.id, b.id);
+
+    const kargoYazicilari = (await printersFor(db, warehouseId)).filter((p) => p.purpose === 'shipping');
+    expect(kargoYazicilari).toHaveLength(2);
   });
 
   it('damga yalnız KAPALI kutuya vurulur ve yeniden basımda güncellenir', async () => {

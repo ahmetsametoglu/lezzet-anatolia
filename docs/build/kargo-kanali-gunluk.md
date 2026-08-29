@@ -958,3 +958,69 @@ BEKLEYEN(kargo-kanali-tasarimi.md §11.4).
 **Faz 2'ye kalan ve ACİL olan:** kargo şeridinin uyarısı — mektup kanalı elendiği için otomatik
 seçimin başı artık `chronopost:shop2shop`, yani bir **teslimat noktası**. Kullanıcının *"eşik
 üstünde ücretsiz kargo EVE gider"* kuralı bugünkü seçimde YOK. Faz 2'nin ilk maddesi bu.
+
+---
+
+## Faz 1.6 — iş başına yazıcı ✅ (Faz 1 GERÇEKTEN kapandı)
+
+1.3'te bıraktığım `BEKLEYEN` kapandı. Etiket deponun **tek** ayarlı yazıcısından çıkıyordu ve bu
+fiziksel bir hataydı: kargo etiketi A6 yatay (148×105), bizim kutu etiketimiz 4×6 kalıp kesim
+(103×164). Aynı ruloya basılmaları bir tesadüf olurdu.
+
+### Ayar neden yetmedi — ve tabloya ne zaman geçilir
+
+23.7'de yazıcı `settings`in depo kapsamında ve TEKti; **o gün doğruydu** (tek yazıcı, tek etiket).
+Kargo kanalı ikisini de çoğalttı: iki etiket TÜRÜ ve iki rulo. Ayarla ifade edilemeyen şey bir
+**listedir** — `warehouse_printer` (0054) o listedir.
+
+**`(warehouse_id, purpose)` bilerek benzersiz DEĞİL:** tasarım kaydı önce unique öneriyordu,
+kullanıcı 28.08'de düzeltti (*"bir depoda aynı iş için birden çok yazıcı olabilir"*). Kısıt
+konsaydı ikinci kargo yazıcısı tabloya hiç giremez, depocu onu yanlış amaca yazardı.
+
+### Envanter deponun, seçim cihazın — ve seçim sunucuya HİÇ gitmiyor
+
+Kullanıcı kararı 29.08. Aynı depodaki iki telefon iki ayrı yazıcıya basabilir (biri rampada, biri
+masada) ve bu bir çelişki değil kurulumun kendisi. Sunucuda tutulan tek bir "varsayılan yazıcı",
+ikinci telefonun kâğıdını yanlış odaya yollardı.
+
+**Çözüm kuralının üç dalı ayrı:** seçim var ve hâlâ listedeyse o · o iş için TEK yazıcı varsa o
+(seçenek yoksa seçim de yoktur) · başka her hâlde `null` ve ekran sorar. **Birini kendiliğinden
+seçmek**, kâğıdın hangi odadan çıkacağına yazılımın karar vermesi olurdu.
+
+Seçim **kimliğe** bağlı, adrese değil: IP değişebilir (DHCP), kimlik değişmez.
+
+### Yazıcı silinmez, kapatılır
+
+Cihazların seçimi kimliğe bağlı; satırı silmek o seçimleri sessizce "yazıcı yok"a düşürürdü.
+Kapatma bunu söyler — satır listede kalır, seçiciden düşer.
+
+### Üç yüzey birden değişti
+
+- **Sunucu:** `BoxLabelResponse.printer` **kaldırıldı** — tek yazıcı varsayımının kalıntısıydı ve
+  sunucunun iliştirdiği bir yazıcı cihazın seçimini sessizce ezerdi. Yerine `GET /warehouse/printers`.
+- **Web Depolar:** tek yazıcı formu envanter yönetimine döndü; kart artık **eksik AMACI** ayrı ayrı
+  söylüyor ("kargo etiketi yazıcısı yok — bu depodan taşıyıcı etiketi basılamaz"). "Yazıcı var"
+  cümlesi hangi işin karşılıksız olduğunu gizlerdi.
+- **Telefon:** `Bu cihaz · Yazıcılar` ekranı (hub'ın sonunda — her gün değil, telefon değişince
+  açılan bir ekran).
+
+### Bir savunma, ölçülerek eklendi
+
+`readPrinterChoice` deponun kendisini de `try` içine aldı: cihaz deposu düşebilir (izin, bozuk
+kayıt, taze kurulum) ve o düşüş **basım zincirini kırmamalı** — kutu kapandı, etiketin çıkması bir
+tercih kaydına bağlı olmamalı. Testte bu yaşandı: sahte olmayan native depo, etiket kartını hiç
+doğurmadı.
+
+Şema da gevşetildi (`uuid()` değil `min(1)`): değeri bizim kodumuz sunucudan gelen kimlikle
+yazıyor, biçim denetimi gerçek bir şeye karşı korumuyor — ama başarısızlığı SESSİZ ve TÜM seçimi
+silerdi.
+
+**Doğrulama.** 2 entegrasyon (açık yazıcılar döner, kapalı düşer, kapsam sızmaz · aynı iş için iki
+yazıcı meşru) + 7 birim (`resolvePrinter`ın üç dalı, amaç karışmaması, kalıcılık, bozuk kayıt) +
+4 ekran testi. Mobil jest **910/911**, kilitli tam paket **3937/3937**.
+
+### Bize ait olmayan iki kırmızı (ölçüldü)
+
+`social-conversation-screen.test.tsx` (1 test) ve `knip`in "duplicate exports"u
+(`TicketHandlerEnum|ConversationHandlerEnum`) — ikisi de sosyal şeridin **commit'li** işinden;
+`enums.schema.ts` kirli değil. Dokunulmadı.

@@ -18,6 +18,7 @@ import {
   fetchBoxLabel,
   fetchDispatchOptions,
   fetchPreparationQueue,
+  fetchPrinters,
   fetchShippingBoxes,
   markBoxPrinted,
   openOrderBox,
@@ -26,6 +27,7 @@ import {
 } from '@/lib/api/warehouse';
 import { printLabel, printLabelPdf } from '@/lib/print/brother';
 import { downloadLabelPng, downloadShippingLabelPdf } from '@/lib/print/label-file';
+import { readPrinterChoice, resolvePrinter } from '@/lib/print/printer-choice';
 import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
@@ -251,16 +253,16 @@ function allocate(line: PreparationLineContract, qty: number): PreparationPick['
 async function printShippingLabels(boxIds: readonly string[]): Promise<{ printed: number; error: string | null }> {
   if (!hasPrinterNativeModule()) return { printed: 0, error: null };
 
+  // Hedef ENVANTERDEN + CİHAZIN seçiminden çözülüyor (07.12 · 29.08). Kutu etiketiyle AYNI
+  // yazıcıya basmak fiziksel bir hataydı: kargo etiketi A6 yatay, bizimki 4×6 kalıp kesim.
+  const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
+  const printer = liste.error === null ? resolvePrinter(liste.data.printers, 'shipping', secim) : null;
+  if (!printer) return { printed: 0, error: 'kargo yazıcısı seçilmedi' };
+
   let printed = 0;
   let error: string | null = null;
   for (const boxId of boxIds) {
     try {
-      const meta = await fetchBoxLabel(boxId);
-      const printer = meta.error === null && meta.data.status === 'ok' ? meta.data.printer : null;
-      if (!printer) {
-        error ??= 'yazıcı tanımlı değil';
-        continue;
-      }
       const fileUri = await downloadShippingLabelPdf(boxId);
       await printLabelPdf(fileUri, printer);
       // Damga başarının kaydı; düşmesi kâğıdı geri almaz (23.7 dersi) — sayaç yine artar.
@@ -689,7 +691,9 @@ export function usePreparation(): UsePreparationResult {
           setLabel(labelResult.data.label);
           // Basım kutu kapanışında (karar §1.6) — yazıcı ayarlıysa ve modül bu derlemede varsa.
           // Beklenmez (`void`): kapanışın kendisi yazıldı, kâğıdın seyri kartta ayrıca akar.
-          const printer = labelResult.data.printer;
+          // Kutu yazıcısı da envanterden (07.12 · 29.08): uç artık cevaba yazıcı iliştirmiyor.
+          const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
+          const printer = liste.error === null ? resolvePrinter(liste.data.printers, 'box', secim) : null;
           if (printer !== null && hasPrinterNativeModule()) {
             printTarget.current = { boxId: currentBox.boxId, printer };
             void runPrint(currentBox.boxId, printer);

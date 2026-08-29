@@ -242,10 +242,15 @@ function FacilityView({
             />
           </section>
 
-          {/* ── Etiket yazıcısı ── kurulum künyesi (23.7): kutu kapanışının basım hedefi. */}
+          {/* ── Etiket yazıcıları ── (23.7 → 07.12) İKİ etiket türü, iki kâğıt: bizim 4×6 kutu
+              etiketimiz ve taşıyıcının A6'sı. Envanter burada; hangisini kullanacağını TELEFON
+              seçer (kullanıcı kararı 29.08). */}
           <section className="flex flex-col gap-2.5 border-t border-ops-line-soft pt-4">
-            <SectionHead title="Etiket yazıcısı" hint="kutu kapanınca 4×6 etiket buradan çıkar — boy, takılı kâğıdın beyanıdır" />
-            <PrinterCard printer={card.printer} onEdit={onEditPrinter} />
+            <SectionHead
+              title="Etiket yazıcıları"
+              hint="kutu etiketi ve kargo etiketi ayrı kâğıtlara basılır — boy, takılı kâğıdın beyanıdır"
+            />
+            <PrinterCard printers={card.printers} onEdit={onEditPrinter} />
           </section>
 
           {/* ── Kargo kutuları ── (07.12) taşıyıcıya verilen dış kutunun ölçüsü; etiketin ön şartı. */}

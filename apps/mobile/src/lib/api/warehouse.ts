@@ -16,6 +16,7 @@ import {
   AnnounceShipmentResponseSchema,
   DispatchOptionsResponseSchema,
   HandoverResponseSchema,
+  WarehousePrintersResponseSchema,
   SealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
@@ -274,4 +275,14 @@ export function announceShipment(
  */
 export function handOverBox(code: string): Promise<ApiResult<z.infer<typeof HandoverResponseSchema>>> {
   return authorizedFetch('/api/v1/warehouse/handover', HandoverResponseSchema, { method: 'POST', body: { code } });
+}
+
+/**
+ * **Deponun yazıcıları** (07.12) — envanter; SEÇİM cihazda (`lib/print/printer-choice`).
+ *
+ * Yalnız açık satırlar gelir. Liste basımdan hemen önce okunuyor: kurulum değişebilir (yazıcı
+ * kapatılmış olabilir) ve önbelleğe alınmış bayat bir liste, sökülmüş bir cihaza basmayı denerdi.
+ */
+export function fetchPrinters(): Promise<ApiResult<z.infer<typeof WarehousePrintersResponseSchema>>> {
+  return authorizedFetch('/api/v1/warehouse/printers', WarehousePrintersResponseSchema);
 }

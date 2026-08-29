@@ -3,12 +3,12 @@ import {
   OrderBoxItemService,
   OrderBoxService,
   OrderService,
-  SettingsService,
   ShippingBoxService,
   UserProfileService,
+  WarehousePrinterService,
 } from '@lezzet/database';
 import { boxCompletion, orderBoxCode } from '@lezzet/domain-core';
-import type { Order, PreparationPick, TransitionResult } from '@lezzet/types';
+import type { Order, PreparationPick, PrinterPurpose, TransitionResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
 import { adviseShortfalls, findPinnedViolation, pickedBatches, recipientOf, type PreparationBox } from './preparation';
@@ -304,27 +304,36 @@ export async function boxLabelPayload(
  * okunamıyor, boyu ayar söylemek zorunda — ör. `DieCutW103H164`, `RollW62`).
  */
 export interface BoxPrinter {
+  id: string;
+  /** Operatörün gördüğü ad — adres teknik kimlik, bu insan kimliği. */
+  name: string;
+  /** `box` bizim 4×6 QR'lı etiketimiz · `shipping` taşıyıcının A6 etiketi (ayrım FİZİKSEL). */
+  purpose: PrinterPurpose;
   address: string;
   model: string;
   labelSize: string;
 }
 
-export const LABEL_PRINTER_KEYS = {
-  address: 'label_printer_address',
-  model: 'label_printer_model',
-  labelSize: 'label_printer_label_size',
-} as const;
-
-export async function labelPrinterFor(db: SupabaseClient, warehouseId: string): Promise<BoxPrinter | null> {
-  const settings = new SettingsService(db);
-  const scope = { warehouseId };
-  const [address, model, labelSize] = await Promise.all([
-    settings.get<string>(LABEL_PRINTER_KEYS.address, '', scope),
-    settings.get<string>(LABEL_PRINTER_KEYS.model, '', scope),
-    settings.get<string>(LABEL_PRINTER_KEYS.labelSize, '', scope),
-  ]);
-  if (!address || !model || !labelSize) return null;
-  return { address, model, labelSize };
+/**
+ * **Deponun yazıcıları** (07.12) — envanter, seçim DEĞİL.
+ *
+ * 23.7'nin `labelPrinterFor`u burada emekli oldu: `settings`ten tek yazıcı okuyordu ve kargo
+ * kanalı hem yazıcıyı hem etiket türünü çoğalttı. Hangi yazıcının kullanılacağı artık CİHAZIN
+ * bilgisi (kullanıcı kararı 29.08); bu kapı yalnız "bu depoda hangi yazıcılar var" diyor.
+ *
+ * Yalnız AÇIK satırlar: kapalı bir yazıcıyı cihazın seçim listesine koymak, sökülmüş bir cihaza
+ * basmayı denetmektir.
+ */
+export async function printersFor(db: SupabaseClient, warehouseId: string): Promise<BoxPrinter[]> {
+  const rows = await new WarehousePrinterService(db).listForWarehouse(warehouseId, { onlyActive: true });
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    purpose: row.purpose,
+    address: row.address,
+    model: row.model,
+    labelSize: row.labelSize,
+  }));
 }
 
 export type MarkPrintedOutcome =

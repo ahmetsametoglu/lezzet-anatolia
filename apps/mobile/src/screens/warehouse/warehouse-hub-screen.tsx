@@ -276,6 +276,16 @@ function buildRows(
       badge: null,
       onPress: () => router.navigate('/handover'),
     },
+    // BU CİHAZ · YAZICILAR (07.12) — kurulum satırı; günlük işin değil, bir kereliğin parçası.
+    // Listenin SONUNDA: her gün açılan bir ekran değil, telefon değişince açılan bir ekran.
+    {
+      key: 'printers',
+      code: t.hub.rows.printers.code,
+      title: t.hub.rows.printers.title,
+      subtitle: t.hub.rows.printers.subtitle,
+      badge: null,
+      onPress: () => router.navigate('/printers'),
+    },
     // Yerinde satış (21.119) — kapıya gelen müşteriye elden satış; kurye aynı ekrana kendi
     // bölümünden gider, motor ikisini tek kapıdan geçirir (`DOMAIN §17`).
     {

@@ -8,7 +8,7 @@ import {
   boxLabelSvg,
   confirmPreparation,
   handOverBox,
-  labelPrinterFor,
+  printersFor,
   markBoxPrinted,
   learnCode,
   listInboundTransfers,
@@ -61,6 +61,7 @@ import {
   SealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   ShippingLabelResponseSchema,
+  WarehousePrintersResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
@@ -259,6 +260,21 @@ warehouse.post('/preparation/:orderId/confirm', async (c) => {
 // ── D1 · Kutu döngüsü (23.6) ────────────────────────────────────────────────
 
 /**
+ * **DEPONUN YAZICILARI** (07.12 · kullanıcı kararı 29.08) — envanter, seçim DEĞİL.
+ *
+ * *"Sunucu: bu depoda hangi yazıcılar var. Cihaz: hangisini kullanıyor — listeden seçer, elle IP
+ * yazmaz."* Bu uç birinci yarıdır; ikinci yarı telefonun yerel deposunda ve buraya HİÇ gelmez.
+ *
+ * Yalnız açık satırlar: kapalı bir yazıcıyı seçim listesine koymak, sökülmüş bir cihaza basmayı
+ * denetmektir. Sayfalama yok — küme operatörün elle kurduğu, doğal tavanı olan bir envanter.
+ */
+warehouse.get('/printers', async (c) => {
+  const printers = await printersFor(serviceDb(), c.get('warehouseId'));
+  const body: z.input<typeof WarehousePrintersResponseSchema> = { printers };
+  return ok(c, WarehousePrintersResponseSchema.parse(body));
+});
+
+/**
  * **Deponun kargo kutuları** (07.12) — kutu açılırken sorulan tipin listesi.
  *
  * Yalnız AÇIK tipler ve yalnız BU deponun benimsedikleri: sistem şablonu doğrudan seçilemez
@@ -336,12 +352,10 @@ warehouse.get('/boxes/:boxId/label', async (c) => {
   if (!boxId.success) return fail(c, 'invalid_box_id', 400);
 
   const outcome = await boxLabelPayload(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
-  // Yazıcı yalnız BAŞARILI etikete iliştirilir: telefon "basabilir miyim" sorusunu tek cevaptan
-  // okur (ayrı ayar ucu açılmaz — ayarın tüketicisi bu an). `null` = tanımsız, basım hiç denenmez.
-  const body: z.input<typeof BoxLabelResponseSchema> =
-    outcome.status === 'ok'
-      ? { ...outcome, printer: await labelPrinterFor(serviceDb(), c.get('warehouseId')) }
-      : outcome;
+  // ⚠ Yazıcı ARTIK BU CEVABA İLİŞTİRİLMİYOR (29.08): tek yazıcı varsayımının kalıntısıydı. Depoda
+  // N yazıcı var ve hangisinin kullanılacağı CİHAZIN bilgisi — sunucunun iliştirdiği bir yazıcı,
+  // cihazın seçimini sessizce ezerdi. Liste kendi ucundan geliyor (`GET /warehouse/printers`).
+  const body: z.input<typeof BoxLabelResponseSchema> = outcome;
   return ok(c, BoxLabelResponseSchema.parse(body));
 });
 

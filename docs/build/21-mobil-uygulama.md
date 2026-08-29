@@ -6944,3 +6944,33 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** 2 entegrasyon (kargo reddedilir ve hiçbir satır yazılmaz · rota sürüyor) + 1 ekran
   testi (web masasından yarım başlamış kargo siparişi — ekranın ulaşabildiği gerçek hâl).
   Mobil jest **900/900**, kilitli tam paket **3935/3935**.
+
+- [x] (21.132) **İŞ BAŞINA YAZICI — envanter deponun, seçim cihazın** (kullanıcı kararı 29.08 ·
+  kargo kanalı Faz 1.6; `21.129`'un BEKLEYEN'i kapandı)
+  `touches:` `supabase/migrations/0054_warehouse_printer.sql` ·
+  `packages/types/src/entities/warehouse-printer.schema.ts` ·
+  `packages/database/src/services/warehouse-printer.service.ts` ·
+  `packages/application/src/warehouse/boxes.ts` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/lib/print/printer-choice.ts` ·
+  `apps/mobile/src/screens/warehouse/printer-setup-screen.tsx` ·
+  `apps/web/app/(operations)/operations/warehouses/*`
+
+  **Durum (29.08).** Etiket deponun TEK ayarlı yazıcısından çıkıyordu; kargo etiketi A6 yatay,
+  kutu etiketimiz 4×6 kalıp kesim — aynı ruloya basılmaları fiziksel bir tesadüf olurdu.
+
+  **Ayar yerine tablo:** 23.7'nin üç `label_printer_*` anahtarı o gün doğruydu (tek yazıcı, tek
+  etiket); kargo kanalı ikisini de çoğalttı ve ayarla ifade edilemeyen şey bir LİSTEdir.
+  `(warehouse_id, purpose)` bilerek benzersiz DEĞİL (kullanıcı düzeltmesi 28.08).
+
+  **Seçim sunucuya HİÇ gitmiyor:** aynı depodaki iki telefon iki ayrı yazıcıya basabilir. Çözümün
+  üç dalı ayrı — seçim varsa o · tek yazıcı varsa o · başka her hâlde ekran sorar. Birini
+  kendiliğinden seçmek, kâğıdın hangi odadan çıkacağına yazılımın karar vermesi olurdu.
+
+  **`BoxLabelResponse.printer` kaldırıldı** — sunucunun iliştirdiği yazıcı cihazın seçimini ezerdi.
+
+  **Web Depolar kartı eksik AMACI ayrı söylüyor** ("kargo etiketi yazıcısı yok"): "yazıcı var"
+  cümlesi hangi işin karşılıksız olduğunu gizlerdi.
+
+  **Doğrulama.** 2 entegrasyon + 7 birim + 4 ekran testi. Mobil jest **910/911** (düşen 1 sosyal
+  şeridin), kilitli tam paket **3937/3937**. `db:refresh` koşuldu (kullanıcı izni), kapsam 157/157.

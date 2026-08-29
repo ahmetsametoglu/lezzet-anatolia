@@ -12,7 +12,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import type { Country, UserProfile } from '@lezzet/types';
-import { labelPrinterFor } from '@lezzet/application';
+import { printersFor } from '@lezzet/application';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { readStaff } from '@/lib/staff';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
@@ -152,8 +152,9 @@ async function readCard(
    */
   const measure = await readMeasurePoints(db, row.id, new Date());
 
-  // Etiket yazıcısı (23.7) — kapalı tesiste de okunur: yazıcı da nokta gibi KÜNYEDİR.
-  const printer = await labelPrinterFor(db, row.id);
+  // Yazıcı ENVANTERİ (07.12 · 29.08) — kapalı tesiste de okunur: yazıcı da nokta gibi KÜNYEDİR.
+  // Liste, tek satır değil: bir depoda N yazıcı ve iki etiket türü var.
+  const printers = await printersFor(db, row.id);
 
   /**
    * Kargo kutuları (07.12) — deponun kutuları + HENÜZ BENİMSENMEMİŞ şablonlar.
@@ -186,7 +187,7 @@ async function readCard(
     row,
     zones: toZoneCards(zones, row.id, { orders: zoneOrders, waiting: zoneWaiting, now: new Date() }),
     staff: toStaffChips(staff, row.id),
-    printer,
+    printers,
     shippingBoxes,
     points: measure.points,
     measureTruncated: measure.truncated,
