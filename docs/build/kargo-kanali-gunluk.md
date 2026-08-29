@@ -955,9 +955,14 @@ BEKLEYEN(kargo-kanali-tasarimi.md §11.4).
       → devir okutması → gönderi taşıyıcıda, sipariş YOLDA
       → webhook/nöbet → teslim
 
-**Faz 2'ye kalan ve ACİL olan:** kargo şeridinin uyarısı — mektup kanalı elendiği için otomatik
+~~**Faz 2'ye kalan ve ACİL olan:** kargo şeridinin uyarısı — mektup kanalı elendiği için otomatik
 seçimin başı artık `chronopost:shop2shop`, yani bir **teslimat noktası**. Kullanıcının *"eşik
-üstünde ücretsiz kargo EVE gider"* kuralı bugünkü seçimde YOK. Faz 2'nin ilk maddesi bu.
+üstünde ücretsiz kargo EVE gider"* kuralı bugünkü seçimde YOK. Faz 2'nin ilk maddesi bu.~~
+
+**GÜNCEL (29.08):** üstü çizili paragraf **bayattı** — kargo şeridi `c7835348` ile kuralı yazdı
+(`domain-core/delivery/shipping-choice.ts`: `requiresHomeDelivery` · `homeDeliveryOnly`, sevkte
+bağlayıcı). Faz 2'nin kalan ilk maddesi artık **onaylı taşıyıcı listesi**; kodda hâlâ sıfır iz var.
+*(Kural bir sonraki bölümde ayrıca açıldı: motor bayrağı üretiyordu ama tele hiç çıkmıyordu.)*
 
 ---
 
@@ -1105,3 +1110,44 @@ Kök `pnpm typecheck` **`@lezzet/mobile`de kırmızı**: `social-conversation-sc
 `TS7053`, `'human' | 'hybrid' | 'ai'` ile indekslenen sözlükte `ai` anahtarı yok (`aiOrphan` var).
 Sosyal şeridin **commit'li** işinden (`ee3c3ba3` · `b8072b72`), dosya kirli değil, benim
 değişikliğimden bağımsız. Dokunulmadı; not açıldı.
+
+## Faz 2 tazelik denetimi (29.08) — maddeleri koda karşı ölçtüm
+
+Kullanıcı isteği: *"Faz iki ile alakalı tekrar bir kontrol yap. Ve bu konuyla alakalı maddelerin
+tazeliğini kontrol et."* Not okumak yetmez — her madde için **kodu ölçtüm**.
+
+| # | Madde | Kaynak iddia | Ölçüm | Tazelik |
+|---|---|---|---|---|
+| 1 | Onaylı taşıyıcı listesi | "henüz yok" | `grep`: `approved_carrier` · `carrierWhitelist` · `allowedCarrier` → **sıfır iz** | ✅ taze |
+| 2 | Otomatik seçim politikası | "yok" | seçim hâlâ salt **en ucuz** (`dispatch.ts` sıralaması); onaylı/süre süzgeci yok | ✅ taze |
+| 3a | Eşik ÜSTÜ seçim sorulmuyor | "açık" | `checkout-steps.tsx:420` — `mode === 'auto'` dalında liste ÇİZİLMİYOR, "ücretsiz · adrese teslim" yazıyor | ❌ **bayat: bitmiş** (`c7835348`) |
+| 3b | Eşik ALTI iki kademe | "açık" | `:427` düz liste, kademe yok | ✅ taze |
+| 3c | Kural sevkte bağlayıcı | "açık" | `quoteOrderShipment` → `requiresHomeDelivery` var | ❌ **bayat: bitmiş** |
+| 3d | `homeOnly` depocuya ulaşıyor | (iddia yoktu) | sözleşmede alan yoktu, `.parse` siliyordu | ⚠ **arıza — bu turda kapatıldı (21.133)** |
+| 4 | `/service-points` ucu | "yok" | sağlayıcı istemcisinde arama yok, uç yok | ✅ taze (Faz 3) |
+| 5 | `service_point` ADRES türü | "yok" | yalnız GÖNDERİ tarafında var (`shipment.service_point_id` · `0053:42`); adres tarafında yok | ✅ taze (Faz 3) |
+| 6 | Eşik üstünde boş teklif turu | "açık, ~300-500 ms" | `checkout-snapshot.ts:332` teklif koşulsuz çağrılıyor, eşik `resolveCheckoutPayment`te (`:358`) sonra okunuyor | ✅ taze |
+| 7 | Süre süzgeci | "ertelendi" | kod yok, ölçüm `BACKLOG §8`'de tabloyla | ✅ taze |
+| 8 | Depocu fallback (bende) | "liste her hâlde gösteriliyor" | `use-preparation.hook.ts` — ön seçim yok, liste hep çiziliyor | ✅ taze |
+
+### Bulunan üç bayatlık — üçü de düzeltildi
+
+1. **Bu günlüğün "Faz 1 KAPANDI" özeti**, "eşik üstünde ücretsiz kargo EVE gider kuralı bugünkü
+   seçimde YOK" diyordu. `c7835348` onu yazmıştı. Paragrafın üstü çizildi ve güncel hâli altına
+   yazıldı — tarihi silmek yerine, çünkü o cümle yazıldığı gün doğruydu.
+2. **`use-preparation.hook.ts` künyesi yasak kelime taşıyordu:** *"teklif kapısına **inince**"* —
+   `CLAUDE §4`'ün açıkça yasakladığı *"a change landed"* çevirisi. Düzeltilirken cümle de
+   iyileştirildi: bugün kalıcı olarak fallback modunda olduğumuz ve bunun **doğru davranış**
+   olduğu yazıldı (seçemeyeceğimiz bir kuralı varmış gibi davranmak, depocuya olmayan bir öneriyi
+   doğrulatmak olurdu).
+3. **Defterde aynı konuda iki canlı not vardı** — 28.08 ve 29.08 tarihli. 28.08'in beş
+   bölümünden üçü kapanmıştı (`c4260df9` · `82bbbb04` · `bb0cbb9e`); iki not aynı konuyu iki farklı
+   tazelikte anlatıyordu. Açanı ben olduğum için silen de ben oldum (`docs/talep` kuralı); açık
+   maddeleri ve kapanan maddelerin künyeleri 29.08 notuna taşındı, hiçbiri kaybolmadı.
+
+### Faz 2'de bana kalan iş, kargo şeridi olmadan yazılamaz — ve bu kayıtta
+
+İki mod ("otomatik seçildi · değiştir" ↔ ham liste) onların politikası yazılmadan kurulamaz.
+Bugünkü tek-mod davranış eksik değil, **doğru**: elimizde bir öneri yokken ekranda öneri varmış
+gibi davranmak depocuyu yanıltırdı. Sıradaki işim kendi alanımda: hub rozeti "kargoya verilecek
+N kutu" (`warehouse-hub-screen.tsx:270` BEKLEYEN'i — ucu da benim).

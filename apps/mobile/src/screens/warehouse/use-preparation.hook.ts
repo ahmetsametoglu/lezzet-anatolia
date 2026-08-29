@@ -489,7 +489,9 @@ export function usePreparation(): UsePreparationResult {
     İki tur: önce SALT OKUMA teklif (para harcamaz), sonra depocunun seçimiyle duyuru (gerçek
     para). Araya seçim koymamızın sebebi kullanıcının kuralı: otomatik seçim boş dönerse liste
     DEPOCUYA gösterilir. Otomatik ön seçim (onaylı taşıyıcı ∩ süre) kargo şeridinin teklif
-    kapısına inince buraya hazır seçimle gelecek; bugün liste her hâlde gösteriliyor.
+    kapısında yazıldığında buraya hazır seçimle gelecek; **bugün liste HER hâlde gösteriliyor**,
+    yani kalıcı olarak fallback modundayız ve bu doğru davranış — seçemeyeceğimiz bir kuralı
+    varmış gibi davranmak, depocuya olmayan bir öneriyi doğrulatmak olurdu.
   */
   const startDispatch = useCallback(() => {
     setDispatch((current) => {
