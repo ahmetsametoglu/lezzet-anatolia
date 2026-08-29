@@ -159,6 +159,15 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
     - **CANLI DOĞRULAMA:** `pnpm sendcloud:smoke` gerçek hesapla 17 seçenek döndürdü (para harcamayan teklif çağrısı). Depolar ekranında kutu benimseme tarayıcıda denendi.
     - **Testler:** 13 + 20 + 6 birim · 11 + 7 + 9 entegrasyon. Tam paket yeşil.
     - **KALAN (kanal açık ama uçları bağlanmadı):** ~~*(a)* checkout/sepet ekranlarının canlı teklifi göstermesi~~ → **yapıldı 07.12**; *(b)* etiket basımı (23.7 zinciri; `printPDF` ölçüldü ve var, kalan iş çağıranı + fiziksel prova); ~~*(c)* webhook + durum zinciri~~ → **yapıldı 07.12**; ~~*(d)* takılı/öksüz gönderi nöbeti~~ → **yapıldı 07.12**; *(e)* native ekranlar (mobil şeride talep).
+    - **E2E (29.08):** `e2e/operations/cargo-shipment.smoke.ts` — çok kolili gönderi kutu başına
+      takip numarasıyla çiziliyor · kargo kulvarında kurye/sefer satırları çizilmiyor · **taşıyıcı
+      TESLİM deyince sipariş teslim oluyor**. Kargo kanalının ilk uçtan uca kanıtı: o güne kadar her
+      halkanın kendi testi vardı ama hiçbiri BİR ARADA koşmuyordu. Sağlayıcı sahte — ağ yok, para
+      harcanmıyor.
+      **İkinci senaryonun ilk hâli YANLIŞ SEBEPTEN geçiyordu** (ölçüldü): sayfada "Teslim edildi"
+      metni aranıyordu, oysa aynı cümle GÖNDERİNİN durumu için de basılıyor — zincir koparıldığında
+      test yine yeşildi. İddia siparişin kendi rozetine daraltıldı; artık koparınca kırmızıya
+      dönüyor.
     - **Durum (28.08 · webhook + durum zinciri + nöbet yazıldı, testli):** kargo siparişi artık `ready`de takılı kalmıyor. Uzlaştırma tek kapıda (`application/shipping/sync-status.ts`) ve **webhook da nöbet cron'u da oradan geçiyor**: taşıyıcı olayı `handed_over`/`in_transit`/`out_for_delivery` gösterirse sipariş yola çıkar, **tüm koliler** teslim olunca `deliver_order`dan teslim edilir. Ara adım atlanmaz — RPC yalnız `out_for_delivery`den teslim ediyor.
       **`returned`/`error` siparişe YAZILMAZ ve bu bilinçli:** iade stok ve paraya dokunur, stok etkisi de malın FİZİKSEL depoya dönüşüne çıpalıdır (`DOMAIN §4`). Taşıyıcının "gönderene dönüyor" demesi malın depoda olduğu anlamına gelmez. Gönderi durumu ve ham kod deftere yazılır, kararı operatör verir.
       **Durum eşleme tablosu ÖLÇÜLDÜ ve baştan yazıldı:** `GET /api/v3/parcels/statuses` taksonominin tamamını veriyor (35 kod, HTTP 200) — ilk yazımın *"kamuya açık liste yok"* varsayımı yanlıştı. Sezgisel (metin araması) tablo gerçek listeye karşı koşturulunca **yedi kod yanlış, on biri tanınmıyor** çıktı; en tehlikelisi `CANCELLATION_FAILED` → `cancelled` (iptal EDİLEMEDİ demekken koliyi defterden düşürüyordu) ve `SHIPMENT_ON_ROUTE`/`DRIVER_ON_ROUTE` tanınmadığı için siparişin `out_for_delivery`ye HİÇ geçememesiydi.
