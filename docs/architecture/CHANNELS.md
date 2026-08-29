@@ -122,6 +122,13 @@ Devir bir **kaçış değil**, kimliğin ya da ödemenin gerektiği andır:
 - Satış kapanacaksa → hedef **site/checkout**, WhatsApp değil. WhatsApp'a devretmek satışı bir adım
   yaklaştırmaz, yalnız uygulama değiştirir; üstelik müşteri o kanala geçmek istemeyebilir.
 
+**Bugünkü hâli (29.08):** devrin **ajan yarısı yazıldı** — sipariş vermek isteyen müşteriye "siparişi
+ben alamam, sitemizden verebilirsiniz" denir ve gerekçesi gerçektir (adres doğrulaması, stok ayırma
+ve ödeme orada birlikte çalışır); adres sohbette ALINMAZ. Site adresi prompt'a taşınmadı, model
+ezberden yazmaz. **Operatör yarısı (sağ panelde hazır devir cümlesi) çizilmedi** ve `design/BACKLOG
+§4`'e gerekçesiyle yazıldı: bugün taşıyabileceği tek şey jenerik bir bağlantı olurdu — öğeyi anlamlı
+kılacak iki parça (adreslenebilir sepet · müşterinin dili) henüz yok.
+
 ### Danışma kanalının altyapı borcu: 7 günlük cevap penceresi
 
 Danışmanlık bir **hafta sonu** boyunca sürebilir; 24 saatlik servis penceresi buna yetmiyor. Meta'nın

@@ -119,7 +119,9 @@ const FACTS = `GERÇEKLİK KURALLARI:
 - Tarih/gün bağlamda yazıyorsa aynen kullan; yazmıyorsa ARAÇLARA bak; araç da bilmiyorsa "teslimat gününüzü kontrol edip döneceğiz" de.
 - "Gelip alabilir miyim", "mağazanız nerede", "adresiniz ne" sorularına NET cevap ver: gel-al noktamız yok, teslimat kapıya ya da kargoyla yapılır. Devretme — bu bilgi sende.
 - ADRES ve ÇALIŞMA SAATİ SÖYLEME: elimizdeki adres yasal merkezdir, ziyarete açık bir yer değil. "Bize uğrayın" deme, saat vaat etme.
-- Fatura, vergi numarası, şirket unvanı gibi yasal künye sorulursa sitedeki "Yasal bilgiler" sayfasına yönlendir; numaraları hafızandan yazma.`;
+- Fatura, vergi numarası, şirket unvanı gibi yasal künye sorulursa sitedeki "Yasal bilgiler" sayfasına yönlendir; numaraları hafızandan yazma.
+- SİPARİŞ VERMEK isteyen müşteriye: siparişi SEN alamazsın — sepet kuramaz, adres yazamaz, kayıt açamazsın. Bunu bir eksiklik gibi anlatma; doğru yol sitemizden sipariş vermektir, çünkü adres doğrulaması, stok ayırma ve ödeme orada birlikte çalışır. "Sitemizden verebilirsiniz" de ve nasıl ilerleyeceğini kısaca söyle. Site adresini, bağlantıyı ya da kampanya kodunu EZBERDEN YAZMA.
+- Adresi sohbette ALMA: "adresinizi yazın, ben girerim" deme. Serbest metinden alınan adres, teslim edilemeyen bir kolidir.`;
 
 /**
  * Araç kuralları (16.9) — **araç verilmediğinde de zararsız**, çünkü hepsi "araç varsa" diye

@@ -92,6 +92,48 @@ describe('yazışma — kim konuştuğu ayrışır', () => {
   });
 });
 
+describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.08 · CHANNELS §3b)', () => {
+  /* Kanal rolünün ajandaki karşılığı. Kimliksiz sohbette ajan artık araçlı (16.9 · üçlü kapı):
+     ürünü buluyor, fiyatı ve teslimatı söylüyor — ama "peki nasıl sipariş veririm" sorusuna
+     verecek cevabı YOKTU. Danışmanlığın son adımı eksikti. */
+  /* İDDİA HER İKİ GÖREVE AYRI AYRI kuruluyor: iki metni birleştirip aramak, kuralın yalnız BİRİNDE
+     kalmasını gözden kaçırırdı — ve kaçan taraf taslak olsaydı operatörün önüne "adresinizi yazın"
+     diyen bir öneri gelirdi. Ortak sabit (`FACTS`) bugün ikisine de giriyor; test bunu çiviliyor. */
+  const talimatlar = [
+    ['özerk ajan', ticketAgentTask.system],
+    ['taslak', ticketDraftTask.system],
+  ] as const;
+  const herIkisinde = (parca: string) => {
+    for (const [ad, talimat] of talimatlar) expect(talimat, `${ad} talimatında eksik`).toContain(parca);
+  };
+
+  it('ajan sipariş ALAMAYACAĞINI biliyor — sepet/adres/kayıt üçü de kapalı', () => {
+    // Araçların değişmezi zaten "yalnız okur"; ama değişmezi KOD zorlar, modeli PROMPT bilgilendirir.
+    // İkisi ayrı katman: araç vermemek modelin uydurmasını engellemez, yalnız yapmasını engeller.
+    herIkisinde('siparişi SEN alamazsın');
+  });
+
+  it('yönlendirme bir EKSİKLİK gibi değil, doğru yol olarak anlatılıyor', () => {
+    /* "Ben yapamıyorum, siteye gidin" cümlesi müşteriye bir kusur bildirir. Gerekçe gerçek:
+       adres doğrulaması, stok ayırma ve ödeme sitede BİRLİKTE çalışıyor. */
+    herIkisinde('adres doğrulaması, stok ayırma ve ödeme orada birlikte çalışır');
+  });
+
+  it('site adresi EZBERDEN yazılmıyor — uydurulan bağlantı yanlış bilgiden kötüdür', () => {
+    // Adres ortama göre değişiyor (`NEXT_PUBLIC_SITE_URL`) ve prompt'a taşınmadı; model
+    // hafızasından bir alan adı üretirse müşteri var olmayan bir sayfaya giderdi.
+    herIkisinde('EZBERDEN YAZMA');
+  });
+
+  it('ADRES sohbette alınmıyor — 22.08 kararının prompt karşılığı', () => {
+    /* Kararın gerekçesi ölçülmüştü: serbest metinden çıkarılan adreste doğrulama makinesi (BAN
+       sorgusu · posta kodu çözümü · bölge eşleşmesi) tümüyle atlanır ve soğuk zincirde yanlış
+       adres malın kendisidir. Kod tarafında yazan araç zaten yok; bu satır modelin SÖZ VERMESİNİ
+       engelliyor — "adresinizi yazın, ben girerim" cümlesi araçsız da kurulabilirdi. */
+    herIkisinde('Adresi sohbette ALMA');
+  });
+});
+
 describe('iki görev — ortak girdi, AYRI talimat ve AYRI risk', () => {
   it('prompt kurucusu ORTAK', () => {
     expect(ticketAgentTask.buildPrompt(base)).toBe(ticketDraftTask.buildPrompt(base));

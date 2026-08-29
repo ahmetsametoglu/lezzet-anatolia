@@ -476,6 +476,21 @@ Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel k
 Paketler istisnası dışında). Operasyon, depo ve kurye yüzeylerinin **sayfa** tasarımları da mevcut;
 onların kod tarafındaki açıkları kendi `docs/build` dosyalarında izlenir, burada tekrarlanmaz.
 
+**Sosyal gelen kutusu — "siteye devir" öğesi çizilmedi, 29.08.** `CHANNELS §3b` (28.08 kararı)
+Messenger/Instagram'ın rolünü *"danışma sohbette, işlem sitede"* diye bağladı ve devir anını
+tanımladı: kimliğe bağlı soru gelince ya da satış kapanacakken müşteri siteye yönlendirilir.
+Ajandaki yarısı YAZILDI (prompt kuralı — sipariş isteyen müşteriye "sitemizden verebilirsiniz",
+adres sohbette alınmaz). **Operatör yarısı çizilmedi:** sağ panelde (`SocialContextPane`) hazır
+devir cümlesini mesaj kutusuna koyan bir öğe. Ölçüldü — `Operasyon - WhatsApp.dc.html` yalnız
+"Sipariş oluştur" veriyor (o da uygulandı, 15.4), devir/yönlendirme öğesi yok; icat etmek
+`CLAUDE §3`'ü çiğnerdi.
+
+Çizime girmeden önce **değeri tartışılmalı**, çünkü bugün taşıyabileceği tek şey jenerik bir
+bağlantıdır ve operatör onu zaten elle yazabiliyor. Öğeyi anlamlı kılan iki şey ayrı işlerde duruyor:
+**adreslenebilir sepet** (`15-whatsapp.md` "Netleşecekler" — sepeti sohbette kur, bağlantıyı gönder;
+ön koşulu 15.8) ve **müşterinin dili** (`CustomerContextData` bugün `preferredLanguage` taşımıyor,
+yani doğru dilde bağlantı verilemiyor). İkisinden biri gelmeden düğme yalnız bir kısayoldur.
+
 **Yeni sayfa — Sistem (sağlık + hatalar), 29.07.** `pages/admin-sistem.md` yazıldı, **görsel kararı
 (`.dc.html`) yok** — Claude Design'a verilecek. Diğer 38 sayfa gibi tasarımdan doğmadı, ihtiyaçtan
 doğdu (bkz. `build/18-operasyon-guvenlik.md` 18.5): e-posta alarmı bilinçli olarak kaldırıldığı için
