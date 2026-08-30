@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Text, TextInput, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // Ömür kararı MOTORDAN: ekran kendi yüzdesini kurmaz — kabul kapısı da aynı motoru çağırıyor ve
 // ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı (`CLAUDE §1`).
@@ -10,6 +10,7 @@ import type { IntakeFormRowContract, VariantSearchRowContract } from '@lezzet/ty
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsDateSheet } from '@/components/operations/date-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtySlider } from '@/components/operations/qty-slider';
@@ -93,8 +94,7 @@ function isRowDone(state: { qty: number | null; expiryText: string }): boolean {
 export function IntakeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ purchaseOrderId?: string; unplanned?: string }>();
-  const purchaseOrderId =
-    typeof params.purchaseOrderId === 'string' && params.purchaseOrderId.length > 0 ? params.purchaseOrderId : null;
+  const purchaseOrderId = typeof params.purchaseOrderId === 'string' && params.purchaseOrderId.length > 0 ? params.purchaseOrderId : null;
   /** Plansız kabul (23.13): PO'suz gelen mal — satırları depocu kurar. */
   const unplanned = params.unplanned === '1' && purchaseOrderId === null;
   const intake = useIntake(purchaseOrderId, unplanned);
@@ -113,11 +113,7 @@ export function IntakeScreen() {
 
          Kod OKUNAMADIYSA ekranın adına düşer: künyesiz bir sevkiyatı "—" diye başlıklamak,
          okunamayan bir kimliği boş bir kimlik gibi gösterirdi. */
-      title={
-        unplanned
-          ? t.intake.unplannedTitle
-          : (intake.purchaseOrder?.referenceNo ?? t.intake.title)
-      }
+      title={unplanned ? t.intake.unplannedTitle : (intake.purchaseOrder?.referenceNo ?? t.intake.title)}
       /* Bekleyen listesinde künye LİSTEYİ anlatır (v3:517 `ov.maKabulAlt`), kategoriyi değil:
          "bekleyen sevkiyatlar" bir başlık tekrarıydı; "2 bekleyen sevkiyat · 11 kalem" depocunun
          işe başlamadan önce sorduğu şeyin cevabı. Liste okunamadıysa sayı da yok — künye
@@ -126,7 +122,9 @@ export function IntakeScreen() {
         unplanned
           ? t.intake.captionUnplanned
           : purchaseOrderId === null
-            ? (intake.status === 'ready' ? pendingSummary(intake.pending) : t.intake.captionPending)
+            ? intake.status === 'ready'
+              ? pendingSummary(intake.pending)
+              : t.intake.captionPending
             : /* FORMDA künye İLERLEMEYİ söyler (v3:598 `maDetayAlt`): "tedarik siparişi · 5 kalem ·
                  1 tamam". "gönderildi" bir kategoriydi ve depocu zaten oraya gönderildiği için
                  girmişti; kaçının bittiği ise her satırdan sonra değişen tek sayı. Satır henüz
@@ -398,13 +396,27 @@ export function IntakeScreen() {
     );
   }
 
+  /*
+    DÜĞME ASIL EYLEMİ YAZAR, KAPIYI DEĞİL (Komponent Envanteri M1e, 30.08).
+    Envanterin yapışkan taban kuralı: *"üstte gradient maske, gerekiyorsa TEK SATIR KAPI METNİ,
+    sonra tek birincil buton."* Eskiden kapı metni düğmenin ETİKETİNE giriyordu ("Her satırda adet
+    + SKT zorunlu") ve düğme ne yapacağını hiç söylemiyordu; tasarım karesinde ise düğme pasifken
+    de "Kabulü kaydet" yazıyor, eksik olan şey üstteki gri satırda duruyor.
+  */
   const cta = offline
     ? { label: t.common.offlineCta, enabled: false }
     : intake.sending
       ? { label: t.intake.cta.sending, enabled: false }
-      : !intake.complete
-        ? { label: t.intake.cta.pending, enabled: false }
-        : { label: intake.differences.length > 0 ? t.intake.cta.partial : t.intake.cta.ready, enabled: true };
+      : intake.complete
+        ? { label: intake.differences.length > 0 ? t.intake.cta.partial : t.intake.cta.ready, enabled: true }
+        : { label: t.intake.cta.ready, enabled: false };
+
+  /* KAPI METNİ — niçin kapalı olduğunu ve NE KADAR KALDIĞINI söyler (v3:05 "0/5 satır dolu").
+     Sayaç olmadan depocu kaç satırın eksik olduğunu ancak listeyi baştan sona gezerek görüyordu. */
+  const gateNote =
+    offline || intake.sending || intake.complete || intake.rows.length === 0
+      ? null
+      : fillCopy(t.intake.cta.gate, { filled: String(intake.filledCount), total: String(intake.rows.length) });
 
   return (
     <View style={styles.screen} testID="warehouse-intake">
@@ -445,12 +457,8 @@ export function IntakeScreen() {
              bir şey yok, sorun SATIRIN kendisinin doğamamasıdır (kod eşleşmesi ve parti oluşumu
              sunucuda). Tek metin ikisini de anlatsaydı, ikisinde de yarısı yanlış olurdu. */
           <View style={styles.formLocked} testID="warehouse-intake-locked">
-            <Text style={styles.formLockedTitle}>
-              {unplanned ? t.intake.unplannedLocked.title : t.intake.formLocked.title}
-            </Text>
-            <Text style={styles.formLockedBody}>
-              {unplanned ? t.intake.unplannedLocked.body : t.intake.formLocked.body}
-            </Text>
+            <Text style={styles.formLockedTitle}>{unplanned ? t.intake.unplannedLocked.title : t.intake.formLocked.title}</Text>
+            <Text style={styles.formLockedBody}>{unplanned ? t.intake.unplannedLocked.body : t.intake.formLocked.body}</Text>
           </View>
         ) : (
           <View style={styles.altCtas}>
@@ -485,6 +493,7 @@ export function IntakeScreen() {
             state={intake.stateOf(row.variantId)}
             unplanned={unplanned}
             mlorPercent={intake.mlorPercent}
+            lotSuggestions={intake.lotsUsedBy(row.variantId)}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
           />
         ))}
@@ -520,12 +529,13 @@ export function IntakeScreen() {
 
       <OperationsStickyBar>
         {intake.notice === null ? null : (
-          <Text
-            style={[styles.notice, styles[`notice_${intake.notice.tone}`]]}
-            accessibilityRole="alert"
-            testID="warehouse-intake-notice"
-          >
+          <Text style={[styles.notice, styles[`notice_${intake.notice.tone}`]]} accessibilityRole="alert" testID="warehouse-intake-notice">
             {intake.notice.text}
+          </Text>
+        )}
+        {gateNote === null ? null : (
+          <Text style={styles.stickyNote} testID="warehouse-intake-gate">
+            {gateNote}
           </Text>
         )}
         <PrimaryButton
@@ -605,13 +615,9 @@ export function IntakeScreen() {
               )}
             </View>
             <View style={styles.scannedNames}>
-              <Text style={styles.scannedName}>
-                {productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
-              </Text>
+              <Text style={styles.scannedName}>{productLabel(intake.scanned.productName, intake.scanned.variantLabel)}</Text>
               <Text style={styles.scannedMeta}>{scanMeta(intake.scanned)}</Text>
-              <Text style={styles.scannedMeta}>
-                {fillCopy(t.intake.expected, { qty: String(intake.scanned.expectedQty) })}
-              </Text>
+              <Text style={styles.scannedMeta}>{fillCopy(t.intake.expected, { qty: String(intake.scanned.expectedQty) })}</Text>
             </View>
             <OperationsQtySlider
               key={intake.scanned.variantId}
@@ -657,15 +663,15 @@ export function IntakeScreen() {
  */
 function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIntake>; onLearnSearch: () => void }) {
   return (
-      <BottomSheet
-        visible={intake.learn !== null}
-        title={intake.learn?.variantId === null ? t.intake.scan.learnTitle : t.intake.scan.learnUnitTitle}
-        onClose={intake.cancelLearn}
-        testID="warehouse-intake-learn"
-      >
-        {intake.learn === null ? null : intake.learn.variantId === null ? (
-          intake.rows.length === 0 ? (
-            /*
+    <BottomSheet
+      visible={intake.learn !== null}
+      title={intake.learn?.variantId === null ? t.intake.scan.learnTitle : t.intake.scan.learnUnitTitle}
+      onClose={intake.cancelLearn}
+      testID="warehouse-intake-learn"
+    >
+      {intake.learn === null ? null : intake.learn.variantId === null ? (
+        intake.rows.length === 0 ? (
+          /*
               ADAY LİSTESİ BOŞ — plansız kabulde İLK okutma tanınmayan bir kod olduğunda (cihaz
               turu 25.08). Eski hâl *"Satırı seçin"* diyor ve altında hiçbir satır çizmiyordu:
               depocu boşluğa bakıp çıkmaza giriyordu.
@@ -674,16 +680,16 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
               hem satırı açar hem kodu alır. Ayrı bırakılsaydı depocu ürünü ekleyip kodu İKİNCİ
               kez okutmak zorunda kalırdı — ve okutma zaten yaptığı işti.
             */
-            <>
-              <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnEmptyBody, { code: intake.learn.code })}</Text>
-              <PrimaryButton
-                label={t.intake.scan.learnEmptyCta}
-                onPress={onLearnSearch}
-                elevation="flat"
-                testID="warehouse-intake-learn-search"
-              />
-            </>
-          ) : (
+          <>
+            <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnEmptyBody, { code: intake.learn.code })}</Text>
+            <PrimaryButton
+              label={t.intake.scan.learnEmptyCta}
+              onPress={onLearnSearch}
+              elevation="flat"
+              testID="warehouse-intake-learn-search"
+            />
+          </>
+        ) : (
           <>
             <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnBody, { code: intake.learn.code })}</Text>
             {intake.rows.map((row) => (
@@ -699,56 +705,61 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
               </PressableSurface>
             ))}
           </>
-          )
-        ) : (
-          /* 2. ADIM (23.12): bu kod NEYİ sayıyor? Çarpan öğrenme anında yazılmazsa yazılacak
+        )
+      ) : (
+        /* 2. ADIM (23.12): bu kod NEYİ sayıyor? Çarpan öğrenme anında yazılmazsa yazılacak
              başka yeri yok — web'de kod ekleme bilinçle kapalı (öğrenme kabuldedir, karar §1.3). */
-          <>
-            <Text style={styles.learnBody}>
-              {fillCopy(t.intake.scan.learnUnitBody, {
-                name: nameOfRow(intake.rows, intake.learn.variantId),
-              })}
-            </Text>
-            <View style={styles.learnKindRow}>
-              <OperationsChoiceChip
-                label={t.intake.scan.learnUnitSingle}
-                selected={intake.learn.kind === 'unit'}
-                onPress={() => intake.setLearnKind('unit')}
-                fill
-                testID="warehouse-intake-learn-unit"
-              />
-              <OperationsChoiceChip
-                label={t.intake.scan.learnUnitCase}
-                selected={intake.learn.kind === 'case'}
-                onPress={() => intake.setLearnKind('case')}
-                fill
-                testID="warehouse-intake-learn-case"
-              />
-            </View>
-            {intake.learn.kind === 'unit' ? null : (
-              <OperationsQtySlider
-                value={intake.learn.qtyPerCode}
-                onChange={intake.setLearnQty}
-                step={1}
-                accessibilityLabel={t.intake.scan.learnUnitQty}
-                fineLabels={{ increase: t.intake.scan.drawerQtyIncrease, decrease: t.intake.scan.drawerQtyDecrease }}
-                caption={t.intake.scan.learnUnitCaption}
-                testID="warehouse-intake-learn-qty"
-              />
-            )}
-            <PrimaryButton
-              label={t.intake.scan.learnConfirm}
-              onPress={intake.confirmLearn}
-              disabled={intake.learn.kind === 'case' && intake.learn.qtyPerCode < 2}
-              elevation="flat"
-              testID="warehouse-intake-learn-confirm"
+        <>
+          <Text style={styles.learnBody}>
+            {fillCopy(t.intake.scan.learnUnitBody, {
+              name: nameOfRow(intake.rows, intake.learn.variantId),
+            })}
+          </Text>
+          <View style={styles.learnKindRow}>
+            <OperationsChoiceChip
+              label={t.intake.scan.learnUnitSingle}
+              selected={intake.learn.kind === 'unit'}
+              onPress={() => intake.setLearnKind('unit')}
+              fill
+              testID="warehouse-intake-learn-unit"
             />
-          </>
-        )}
-        <PressableSurface onPress={intake.cancelLearn} feedback="opacity" style={styles.learnCancel} accessibilityLabel={t.intake.scan.learnCancel}>
-          <Text style={styles.learnCancelLabel}>{t.intake.scan.learnCancel}</Text>
-        </PressableSurface>
-      </BottomSheet>
+            <OperationsChoiceChip
+              label={t.intake.scan.learnUnitCase}
+              selected={intake.learn.kind === 'case'}
+              onPress={() => intake.setLearnKind('case')}
+              fill
+              testID="warehouse-intake-learn-case"
+            />
+          </View>
+          {intake.learn.kind === 'unit' ? null : (
+            <OperationsQtySlider
+              value={intake.learn.qtyPerCode}
+              onChange={intake.setLearnQty}
+              step={1}
+              accessibilityLabel={t.intake.scan.learnUnitQty}
+              fineLabels={{ increase: t.intake.scan.drawerQtyIncrease, decrease: t.intake.scan.drawerQtyDecrease }}
+              caption={t.intake.scan.learnUnitCaption}
+              testID="warehouse-intake-learn-qty"
+            />
+          )}
+          <PrimaryButton
+            label={t.intake.scan.learnConfirm}
+            onPress={intake.confirmLearn}
+            disabled={intake.learn.kind === 'case' && intake.learn.qtyPerCode < 2}
+            elevation="flat"
+            testID="warehouse-intake-learn-confirm"
+          />
+        </>
+      )}
+      <PressableSurface
+        onPress={intake.cancelLearn}
+        feedback="opacity"
+        style={styles.learnCancel}
+        accessibilityLabel={t.intake.scan.learnCancel}
+      >
+        <Text style={styles.learnCancelLabel}>{t.intake.scan.learnCancel}</Text>
+      </PressableSurface>
+    </BottomSheet>
   );
 }
 
@@ -810,9 +821,7 @@ function VariantSearchSheet({ visible, onClose, onPick }: VariantSearchSheetProp
         testID="warehouse-intake-search-input"
       />
       <Text style={styles.learnRowMeta}>{t.intake.searchHint}</Text>
-      {query.trim().length > 0 && rows.length === 0 ? (
-        <Text style={styles.learnRowMeta}>{t.intake.searchEmpty}</Text>
-      ) : null}
+      {query.trim().length > 0 && rows.length === 0 ? <Text style={styles.learnRowMeta}>{t.intake.searchEmpty}</Text> : null}
       {rows.map((row) => (
         /* SATIR TASARIMIN SATIRI (kullanıcı bulgusu N1, 30.08): ad + "kod · stok N" + yön oku.
            Önceki hâli iki çıplak metindi ve SKU'yu tek başına yazıyordu — depocunun sorduğu
@@ -865,9 +874,7 @@ function nameOfRow(rows: readonly IntakeFormRowContract[], variantId: string): s
 function scanMeta(scanned: ScannedCode): string {
   if (scanned.source === 'sku') return t.intake.scan.drawerSku;
   if (scanned.source === 'supplier_code') return t.intake.scan.drawerSupplier;
-  return scanned.kind === 'case'
-    ? fillCopy(t.intake.scan.drawerCase, { n: String(scanned.qtyPerCode) })
-    : t.intake.scan.drawerUnit;
+  return scanned.kind === 'case' ? fillCopy(t.intake.scan.drawerCase, { n: String(scanned.qtyPerCode) }) : t.intake.scan.drawerUnit;
 }
 
 /** Koli dökümü ("10 koli + 3 adet") — yalnız gerçek koli kodunda; tekilde sayının kendisi yeter. */
@@ -887,13 +894,23 @@ interface IntakeRowProps {
   unplanned: boolean;
   /** MLOR eşiği (%) — SUNUCUDAN gelen ayar; satırın kendi değeri değil, formun kuralı. */
   mlorPercent: number;
+  /**
+   * Lot ÖNERİLERİ — bu kabulde başka satırlara girilmiş kodlar (kullanıcı kararı 30.08).
+   *
+   * Ekran seviyesinde hesaplanır, satırda değil: satır yalnız kendi durumunu bilir, "bu sevkiyatta
+   * hangi lotlar yazıldı" sorusu FORMUN sorusudur. Kendi kodu listede olmaz — depocuya zaten
+   * yazdığı şeyi önermek gürültüdür.
+   */
+  lotSuggestions: string[];
   onPatch: (patch: Partial<IntakeRowState>) => void;
 }
 
-function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowProps) {
+function IntakeRow({ row, state, unplanned, mlorPercent, lotSuggestions, onPatch }: IntakeRowProps) {
   const [dateOpen, setDateOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
   const [lotOpen, setLotOpen] = useState(false);
+  /** Hasar SEBEBİ çekmecesi (kullanıcı kararı 30.08) — kartın içinde çip yok, liste burada. */
+  const [reasonOpen, setReasonOpen] = useState(false);
   /* SATIR SAYILDIĞINDA AÇILIR. Ölçüt adedin GİRİLMİŞ olması (`qty !== null`), sıfırdan büyük
      olması değil: "0 adet geldi" de bir sayımdır ve o satırın SKT'si sorulmaz ama sapma özetine
      girer. Sıfırı kapalı saymak, depocunun bilinçli beyanını "hiç dokunmadım"la eşitlerdi. */
@@ -901,7 +918,7 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
   const counted = state.qty !== null || expanded;
   const name = productLabel(row.productName, row.variantLabel);
   const expiry = parseDate(state.expiryText);
-  const damaged = state.damageNote.length > 0;
+  const damaged = state.damageOpen;
   // Tarih girilmeden ölçüt YOKTUR — `meetsMlor`a boş bir tarih vermek, olmayan bir ölçümden karar
   // üretmek olurdu. `null` = "henüz sorulmadı"; motorun kendi `null`ı ("ömür bilinmiyor") ondan ayrı
   // ve o da uyarı üretmiyor (`ok: true` ile döner).
@@ -993,10 +1010,18 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
           </PressableSurface>
         ) : (
           <PressableSurface
-            /* Düğme satırı AÇAR, adedi YAZMAZ. Bir an beklenen adedi otomatik doldurmayı yazmıştım
-               ve yanlıştı: o hâlde "saydım" ile "dokundum" aynı kayda düşerdi. Sayı depocunun
-               beyanıdır; ekran onu asla onun yerine söylemez (CLAUDE §1). */
-            onPress={() => setExpanded(true)}
+            /* Düğme satırı AÇAR ve ÇEKMECEYİ DE AÇAR (kullanıcı bulgusu 30.08): eskiden yalnız
+               satırı açıyordu, depocu adedi girmek için bir kez daha ADET kutusuna dokunmak
+               zorundaydı. "Say" bir niyet cümlesidir — dokunan kişi saymaya başlamak istiyor,
+               satırı seyretmek değil.
+
+               Adedi YAZMAZ, yalnız kapıyı açar: beklenen adedi otomatik doldurmayı bir kez
+               yazmıştım ve yanlıştı — o hâlde "saydım" ile "dokundum" aynı kayda düşerdi. Sayı
+               depocunun beyanıdır; ekran onu asla onun yerine söylemez (CLAUDE §1). */
+            onPress={() => {
+              setExpanded(true);
+              setQtyOpen(true);
+            }}
             feedback="scale"
             style={styles.countCta}
             accessibilityLabel={fillCopy(t.intake.qtyLabel, { name })}
@@ -1011,9 +1036,7 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
           İkisi de DOLGULU rozet ve ayrı ailelerden: zorunluluk terracotta, durum nötr krem. */}
       {counted ? null : (
         <View style={styles.chipRow}>
-          <Text style={[styles.badge, styles.badgeRequired]}>
-            {fillCopy(t.intake.dateTag, { type: row.dateType })}
-          </Text>
+          <Text style={[styles.badge, styles.badgeRequired]}>{fillCopy(t.intake.dateTag, { type: row.dateType })}</Text>
           <Text style={[styles.badge, styles.badgeLot]}>
             {fillCopy(t.intake.lot.short, { lot: state.lotText.length === 0 ? '—' : state.lotText })}
           </Text>
@@ -1021,8 +1044,8 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
       )}
 
       {counted ? (
-      <>
-      {/*
+        <>
+          {/*
         AÇIK SATIRIN KÜNYE SATIRI (v3:05) — rozet + KAYNAK NOTU, başka hiçbir şey.
 
         Buradaki dört çipten üçü tasarımda YOK ve niçin olmadığı ölçülünce anlaşılıyor:
@@ -1034,149 +1057,151 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
         Yerine gelen `kaynakNotu`, satırın adedinin nereden geldiğini söyler ("barkod okutulmadı"
         ⟷ okutuldu). Denetim bilgisi: elle sayılan satırla okutulan satır aynı görünmemeli.
       */}
-      <View style={styles.chipRow}>
-        {/* TARİH REJİMİ ÜRÜNDEN (v3:606). Etiketin iki yarısı iki ayrı şey: "SKT ZORUNLU" her
+          <View style={styles.chipRow}>
+            {/* TARİH REJİMİ ÜRÜNDEN (v3:606). Etiketin iki yarısı iki ayrı şey: "SKT ZORUNLU" her
             satırda aynı (sözleşme kuralı — `expiryDate` zorunlu), "DLC/DDM" ise ÜRÜNE göre
             değişiyor ve depocunun kutunun üstünde arayacağı yazı bu. Kapalı satırla AYNI rozet:
             açıkken gri olsaydı depocu zorunluluğun kalktığını sanabilirdi. */}
-        <Text
-          style={[styles.badge, styles.badgeRequired]}
-          testID={`warehouse-intake-datetype-${row.variantId}`}
-        >
-          {fillCopy(t.intake.dateTag, { type: row.dateType })}
-        </Text>
-        <Text style={styles.sourceNote} testID={`warehouse-intake-source-${row.variantId}`}>
-          {state.scan === null ? t.intake.source.manual : t.intake.source.scanned}
-        </Text>
-      </View>
+            <Text style={[styles.badge, styles.badgeRequired]} testID={`warehouse-intake-datetype-${row.variantId}`}>
+              {fillCopy(t.intake.dateTag, { type: row.dateType })}
+            </Text>
+            <Text style={styles.sourceNote} testID={`warehouse-intake-source-${row.variantId}`}>
+              {state.scan === null ? t.intake.source.manual : t.intake.source.scanned}
+            </Text>
+          </View>
 
-      {/* OKUTMA KUTUSU (v3:05 · `okutTuru`/`okutNotu`) — satır okutularak açıldıysa NEYİN
+          {/* OKUTMA KUTUSU (v3:05 · `okutTuru`/`okutNotu`) — satır okutularak açıldıysa NEYİN
           okutulduğunu söyler. Zeytin ton bilinçli: bu bir uyarı değil, bir DOĞRULAMA — kutunun
           üstündeki kod ile kayıt eşleşti. Elle sayılan satırda hiç çizilmez, çünkü söyleyecek
           bir şey yok. */}
-      {state.scan === null ? null : (
-        <View style={styles.scanNote} testID={`warehouse-intake-scan-note-${row.variantId}`}>
-          <Text style={styles.scanNoteTitle}>{t.intake.scan.kind[state.scan.kind]}</Text>
-          <Text style={styles.scanNoteBody}>
-            {fillCopy(t.intake.scan.perCode, { n: String(state.scan.qtyPerCode) })}
-          </Text>
-        </View>
-      )}
+          {state.scan === null ? null : (
+            <View style={styles.scanNote} testID={`warehouse-intake-scan-note-${row.variantId}`}>
+              <Text style={styles.scanNoteTitle}>{t.intake.scan.kind[state.scan.kind]}</Text>
+              <Text style={styles.scanNoteBody}>{fillCopy(t.intake.scan.perCode, { n: String(state.scan.qtyPerCode) })}</Text>
+            </View>
+          )}
 
-      {/* SKT SEÇİCİYLE GİRİLİR, KLAVYEYLE DEĞİL (v3 · `00-ortak` → `openSkt`).
+          {/* SKT SEÇİCİYLE GİRİLİR, KLAVYEYLE DEĞİL (v3 · `00-ortak` → `openSkt`).
           Rampada koli tutulurken, eldivenle yazılan tarih iki yerden bozuluyordu: olmayan gün
           ("31.02") ve belirsiz biçim ("2.6.26" mi 6.2.26 mı). Üç sütunlu seçicide ikisi de
           imkânsız — gün listesi ayın gerçek uzunluğu kadar. Alan artık bir GİRDİ değil, seçiciyi
           açan düğme. */}
-      {/* SATIRIN ÜÇ ÖĞESİ TASARIMDAN (kullanıcı bulgusu N2, 30.08): takvim ikonu · seçili tarih ·
+          {/* SATIRIN ÜÇ ÖĞESİ TASARIMDAN (kullanıcı bulgusu N2, 30.08): takvim ikonu · seçili tarih ·
           "seç →". Önceki hâli çıplak bir metindi ve dokunulabilir olduğu hiçbir yerden
           anlaşılmıyordu — depocu tarihi yazmayı bekleyip klavye açılmayınca duruyordu. */}
-      {/* ALAN DURUMU KENDİ ÜSTÜNDE TAŞIR (v3:05 — `c2.sktAlan` üçlüsü): SKT girilmemişken çerçeve,
+          {/* ALAN DURUMU KENDİ ÜSTÜNDE TAŞIR (v3:05 — `c2.sktAlan` üçlüsü): SKT girilmemişken çerçeve,
           ikon ve metin TERRACOTTA, girilmişse nötr. Ayrı bir "SKT gir *" çipi bu yüzden yok —
           eksikliği söyleyen şey alanın kendisi. Metin de bir yer tutucu değil EYLEM: "gg.aa.yyyy"
           neyin isteneceğini söylüyordu ama ne yapılacağını değil; alan zaten klavye açmıyor. */}
-      <PressableSurface
-        onPress={() => setDateOpen(true)}
-        feedback="scale"
-        style={[styles.expiryField, expiry === null ? styles.expiryFieldMissing : null]}
-        accessibilityLabel={fillCopy(t.intake.expiry.field, { name })}
-        accessibilityHint={t.intake.expiry.pick}
-        testID={`warehouse-intake-expiry-${row.variantId}`}
-      >
-        <Icon
-          name="calendar"
-          size={operationsTheme.size.stripIcon}
-          color={expiry === null ? operationsTheme.colors.terracotta : operationsTheme.colors.ink}
-        />
-        <Text
-          style={expiry === null ? styles.fieldMissing : styles.fieldValue}
-          testID={`warehouse-intake-expiry-state-${row.variantId}`}
-        >
-          {expiry === null ? t.intake.expiry.missing : (shortDate(expiry) ?? expiry)}
-        </Text>
-        <Text style={styles.fieldPick}>{t.intake.expiry.pick}</Text>
-      </PressableSurface>
+          <PressableSurface
+            onPress={() => setDateOpen(true)}
+            feedback="scale"
+            style={[styles.expiryField, expiry === null ? styles.expiryFieldMissing : styles.expiryFieldFilled]}
+            accessibilityLabel={fillCopy(t.intake.expiry.field, { name })}
+            accessibilityHint={t.intake.expiry.pick}
+            testID={`warehouse-intake-expiry-${row.variantId}`}
+          >
+            <Icon
+              name="calendar"
+              size={operationsTheme.size.stripIcon}
+              color={expiry === null ? operationsTheme.colors.terracotta : operationsTheme.colors['olive-dark']}
+            />
+            <Text
+              style={expiry === null ? styles.fieldMissing : styles.fieldFilled}
+              testID={`warehouse-intake-expiry-state-${row.variantId}`}
+            >
+              {expiry === null ? t.intake.expiry.missing : (shortDate(expiry) ?? expiry)}
+            </Text>
+            <Text style={styles.fieldPick}>{t.intake.expiry.pick}</Text>
+          </PressableSurface>
 
-      {/* LOT VE HASAR: İKİ ALAN, İKİ ÇİP DEĞİL (v3:05 · `openLot` + `tg.hasarNotu`).
+          {/* LOT VE HASAR: İKİ ALAN, İKİ ÇİP DEĞİL (v3:05 · `openLot` + `tg.hasarNotu`).
           Lot bir DEĞER taşıyor ("lot seç" → "L-2291"), hasar ise bir NOT açıyor; çip ikisini de
           aç/kapa anahtarına indirgiyordu ve lotun değeri hiçbir yerde görünmüyordu. */}
-      <View style={styles.fieldRow}>
-        <PressableSurface
-          onPress={() => setLotOpen(true)}
-          feedback="scale"
-          grow
-          selected={state.lotSkipped}
-          style={[styles.subField, state.lotSkipped ? styles.subFieldSkipped : null]}
-          accessibilityLabel={
-            state.lotSkipped ? t.intake.lot.empty : fillCopy(t.intake.lot.known, { lot: state.lotText })
-          }
-          testID={`warehouse-intake-lot-toggle-${row.variantId}`}
-        >
-          <Text style={state.lotSkipped ? styles.subFieldLabelSkipped : styles.subFieldLabel}>
-            {state.lotSkipped ? t.intake.lot.empty : state.lotText.length > 0 ? state.lotText : t.intake.lot.pick}
-          </Text>
-        </PressableSurface>
-        <PressableSurface
-          onPress={() => onPatch({ damageNote: damaged ? '' : ' ' })}
-          feedback="scale"
-          selected={damaged}
-          style={[styles.subField, damaged ? styles.subFieldDamaged : null]}
-          accessibilityLabel={damaged ? t.intake.damage.set : t.intake.damage.idle}
-          testID={`warehouse-intake-damage-toggle-${row.variantId}`}
-        >
-          <Text style={damaged ? styles.subFieldLabelDamaged : styles.subFieldLabel}>
-            {damaged ? t.intake.damage.set : t.intake.damage.idle}
-          </Text>
-        </PressableSurface>
-      </View>
+          <View style={styles.fieldRow}>
+            <PressableSurface
+              onPress={() => setLotOpen(true)}
+              feedback="scale"
+              grow
+              selected={state.lotText.length > 0}
+              /* YEŞİL = LOT GİRİLDİ (tasarım `lotAlan`, `v3.dc.html:3969`): dolu alan yeşile
+                 boyanır, boş alan dolgusuz kalır. Eskiden yeşil olan şey "lot yok" seçimiydi —
+                 yani gösterge tersine çalışıyor, hiçbir kod girilmemiş satır tamamlanmış gibi
+                 görünüyordu. "Lot yok" bilinçli bir boşluktur; işaretini METNİ taşır, rengi
+                 değil. */
+              style={[styles.subField, state.lotText.length > 0 ? styles.subFieldFilled : null]}
+              accessibilityLabel={state.lotText.length === 0 ? t.intake.lot.pick : fillCopy(t.intake.lot.known, { lot: state.lotText })}
+              testID={`warehouse-intake-lot-toggle-${row.variantId}`}
+            >
+              <Text style={state.lotText.length > 0 ? styles.subFieldLabelFilled : styles.subFieldLabel}>
+                {state.lotText.length > 0 ? state.lotText : t.intake.lot.pick}
+              </Text>
+            </PressableSurface>
+            <PressableSurface
+              /* Kartı AÇAR, hasar "beyan etmez": sayaç 0'dan başlar. Kapatınca beyan da silinir —
+                 açık bir kartın kapanması "yanlış alarmdı" demektir. */
+              onPress={() =>
+                onPatch(damaged ? { damageOpen: false, damagedQty: 0, damageReason: null, damageNote: '' } : { damageOpen: true })
+              }
+              feedback="scale"
+              selected={damaged}
+              style={[styles.subField, damaged ? styles.subFieldDamaged : null]}
+              accessibilityLabel={damaged ? t.intake.damage.set : t.intake.damage.idle}
+              testID={`warehouse-intake-damage-toggle-${row.variantId}`}
+            >
+              <Text style={damaged ? styles.subFieldLabelDamaged : styles.subFieldLabel}>
+                {damaged ? fillCopy(t.intake.damage.set, { n: String(state.damagedQty) }) : t.intake.damage.idle}
+              </Text>
+            </PressableSurface>
+          </View>
 
-      {/* ADET ÇEKMECESİ — tuş takımı DEĞİL (v3 `sheetAdet`; künyesi komponentte). Toplam ile döküm
+          {/* ADET ÇEKMECESİ — tuş takımı DEĞİL (v3 `sheetAdet`; künyesi komponentte). Toplam ile döküm
           TEK yamada yazılır: ikisi ayrı gitseydi biri bir gün ötekinden geride kalırdı. */}
-      <OperationsQuantitySheet
-        visible={qtyOpen}
-        title={t.intake.qtySheet.title}
-        value={state.breakdown}
-        caseSizes={row.caseSizes}
-        onChange={(next) => onPatch({ breakdown: next, qty: quantityTotal(next) })}
-        copy={{
-          ...t.intake.qtySheet,
-          /* Künye satırı v3'ün kendi cümlesi: ürün + boy + SAYININ KAYNAĞI ("barkod okutulmadı"
+          <OperationsQuantitySheet
+            visible={qtyOpen}
+            title={t.intake.qtySheet.title}
+            value={state.breakdown}
+            caseSizes={row.caseSizes}
+            onChange={(next) => onPatch({ breakdown: next, qty: quantityTotal(next) })}
+            copy={{
+              ...t.intake.qtySheet,
+              /* Künye satırı v3'ün kendi cümlesi: ürün + boy + SAYININ KAYNAĞI ("barkod okutulmadı"
              ya da "koli barkodu okundu"). Kaynak denetim bilgisidir — elle sayılmış satırla
              okutularak sayılmış satır aynı görünmemeli (satırın `scan` alanının künyesi). */
-          subject: fillCopy(t.intake.qtySheet.subject, {
-            name,
-            source: state.scan === null ? t.intake.source.manual : t.intake.source.scanned,
-          }),
-        }}
-        onClose={() => setQtyOpen(false)}
-        testID={`warehouse-intake-qty-sheet-${row.variantId}`}
-      />
+              subject: fillCopy(t.intake.qtySheet.subject, {
+                name,
+                source: state.scan === null ? t.intake.source.manual : t.intake.source.scanned,
+              }),
+            }}
+            onClose={() => setQtyOpen(false)}
+            testID={`warehouse-intake-qty-sheet-${row.variantId}`}
+          />
 
-      <OperationsDateSheet
-        visible={dateOpen}
-        title={t.intake.expiry.sheet.title}
-        subject={fillCopy(t.intake.expiry.sheet.subject, {
-          name,
-          selected: expiry === null ? t.intake.expiry.sheet.none : (shortDate(expiry) ?? expiry),
-        })}
-        value={expiry ?? ''}
-        shelfLifeDays={row.shelfLifeDays}
-        columnLabels={{
-          day: t.intake.expiry.sheet.day,
-          month: t.intake.expiry.sheet.month,
-          year: t.intake.expiry.sheet.year,
-        }}
-        confirmLabel={t.intake.expiry.sheet.confirm}
-        cancelLabel={t.intake.expiry.sheet.cancel}
-        onConfirm={(iso) => {
-          onPatch({ expiryText: iso });
-          setDateOpen(false);
-        }}
-        onClose={() => setDateOpen(false)}
-        testID={`warehouse-intake-expiry-sheet-${row.variantId}`}
-      />
+          <OperationsDateSheet
+            visible={dateOpen}
+            title={t.intake.expiry.sheet.title}
+            subject={fillCopy(t.intake.expiry.sheet.subject, {
+              name,
+              selected: expiry === null ? t.intake.expiry.sheet.none : (shortDate(expiry) ?? expiry),
+            })}
+            value={expiry ?? ''}
+            shelfLifeDays={row.shelfLifeDays}
+            columnLabels={{
+              day: t.intake.expiry.sheet.day,
+              month: t.intake.expiry.sheet.month,
+              year: t.intake.expiry.sheet.year,
+            }}
+            confirmLabel={t.intake.expiry.sheet.confirm}
+            cancelLabel={t.intake.expiry.sheet.cancel}
+            onConfirm={(iso) => {
+              onPatch({ expiryText: iso });
+              setDateOpen(false);
+            }}
+            onClose={() => setDateOpen(false)}
+            testID={`warehouse-intake-expiry-sheet-${row.variantId}`}
+          />
 
-      {/* KALAN ÖMÜR SATIRIN İÇİNDE, KAYITTAN SONRA DEĞİL (v3:610 · 30.08).
+          {/* KALAN ÖMÜR SATIRIN İÇİNDE, KAYITTAN SONRA DEĞİL (v3:610 · 30.08).
           Uyarı zaten vardı ama yalnız kabul YAZILDIKTAN sonra, ekranın altında (`intake.warnings`)
           — yani depocu kararı verdikten sonra. Şablonun istediği an başka: SKT girilir girilmez,
           o satırın içinde. Karar "kabul edeyim mi" sorusudur ve cevabı yazmadan ÖNCE gerekir.
@@ -1188,16 +1213,14 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
 
           ENGELLEMEZ (DOMAIN §4) ve raf ömrü bilinmiyorsa hiç görünmez: ölçüt yokken uyarı üretmek
           yanlış alarmdır (`remainingShelfLifePercent` `null` döner). */}
-      {life === null || life.ok ? null : (
-        <View style={styles.lifeBox} testID={`warehouse-intake-life-${row.variantId}`}>
-          <Text style={styles.lifeText}>
-            {fillCopy(t.intake.lifeInline, { pct: String(Math.round(life.remainingPercent ?? 0)) })}
-          </Text>
-          <Text style={styles.lifeHint}>{fillCopy(t.intake.lifeInlineHint, { mlor: String(Math.round(mlorPercent)) })}</Text>
-        </View>
-      )}
+          {life === null || life.ok ? null : (
+            <View style={styles.lifeBox} testID={`warehouse-intake-life-${row.variantId}`}>
+              <Text style={styles.lifeText}>{fillCopy(t.intake.lifeInline, { pct: String(Math.round(life.remainingPercent ?? 0)) })}</Text>
+              <Text style={styles.lifeHint}>{fillCopy(t.intake.lifeInlineHint, { mlor: String(Math.round(mlorPercent)) })}</Text>
+            </View>
+          )}
 
-      {/*
+          {/*
         LOT ÇEKMECESİ (v3 · `sheetLot`) — cihazda görüldü 30.08: "lot seç" düğmesi VARDI ama
         altında ayrıca ham bir metin kutusu duruyordu, yani TEK değer için İKİ kontrol. Düğme
         değeri göstermiyor, kutu neyin sorulduğunu söylemiyordu.
@@ -1208,53 +1231,163 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
         satır tek bir alanla temsil ediliyor. Adaylar sözleşme genişleyince buraya eklenir
         (kayıt: `v3-tasarim-veri-modeli-notlari.md`).
       */}
-      <BottomSheet
-        visible={lotOpen}
-        title={t.intake.lot.sheet.title}
-        onClose={() => setLotOpen(false)}
-        testID={`warehouse-intake-lot-sheet-${row.variantId}`}
-      >
-        <Text style={styles.learnRowMeta}>{t.intake.lot.sheet.hint}</Text>
-        <TextField
-          value={state.lotText}
-          onChangeText={(text) => onPatch({ lotText: text, lotSkipped: false })}
-          placeholder="GAZ-7120"
-          accessibilityLabel={fillCopy(t.intake.lot.field, { name })}
-          density="compact"
-          testID={`warehouse-intake-lot-${row.variantId}`}
-        />
-        <View style={styles.fieldRow}>
-          <SecondaryButton
-            label={t.intake.lot.sheet.skip}
-            onPress={() => {
-              onPatch({ lotSkipped: true, lotText: '' });
-              setLotOpen(false);
-            }}
-            tone="sand"
-            elevation="flat"
-            testID={`warehouse-intake-lot-skip-${row.variantId}`}
-          />
-          <PrimaryButton
-            label={t.intake.lot.sheet.confirm}
-            onPress={() => setLotOpen(false)}
-            elevation="flat"
-            testID={`warehouse-intake-lot-confirm-${row.variantId}`}
-          />
-        </View>
-      </BottomSheet>
+          <BottomSheet
+            visible={lotOpen}
+            title={t.intake.lot.sheet.title}
+            onClose={() => setLotOpen(false)}
+            testID={`warehouse-intake-lot-sheet-${row.variantId}`}
+          >
+            <Text style={styles.learnRowMeta}>{t.intake.lot.sheet.hint}</Text>
 
-      {damaged ? (
-        <TextInput
-          value={state.damageNote}
-          onChangeText={(text) => onPatch({ damageNote: text })}
-          placeholder={t.intake.damage.placeholder}
-          placeholderTextColor={operationsTheme.colors.muted}
-          accessibilityLabel={fillCopy(t.intake.damage.field, { name })}
-          style={styles.textInput}
-          testID={`warehouse-intake-damage-${row.variantId}`}
-        />
-      ) : null}
-      </>
+            {/* ALANIN KENDİSİ KAYITTIR, ONAY DÜĞMESİ YOK (kullanıcı kararı 30.08). Eskiden altta
+                iki düğme vardı ("Lot yok" ve "Yaz") ve ikisi de aynı şeyi ikinci kez soruyordu:
+                kutuya yazılan kod zaten satıra işleniyordu, "Yaz" yalnız çekmeceyi kapatıyordu.
+                Bugün kutu doluysa lot VARDIR, boşsa YOKTUR; temizleme kutunun sağındaki düğmede.
+                Böylece "bilinçli boş" ayrı bir beyan olmaktan çıktı — boş bırakmak zaten karardır
+                ve sözleşme de onu `lotNumber: null` diye taşıyor. */}
+            <View style={styles.lotFieldRow}>
+              <View style={styles.lotFieldInput}>
+                <TextField
+                  value={state.lotText}
+                  onChangeText={(text) => onPatch({ lotText: text })}
+                  placeholder="GAZ-7120"
+                  accessibilityLabel={fillCopy(t.intake.lot.field, { name })}
+                  density="compact"
+                  testID={`warehouse-intake-lot-${row.variantId}`}
+                />
+              </View>
+              {state.lotText.length === 0 ? null : (
+                <PressableSurface
+                  onPress={() => onPatch({ lotText: '' })}
+                  feedback="scale"
+                  style={styles.lotClear}
+                  accessibilityLabel={t.intake.lot.sheet.clear}
+                  testID={`warehouse-intake-lot-clear-${row.variantId}`}
+                >
+                  <Text style={styles.lotClearLabel}>{t.intake.lot.sheet.clear}</Text>
+                </PressableSurface>
+              )}
+            </View>
+
+            {/* ÖNERİLER — bugünkü tek kaynak AYNI KABULDE girilen lotlar. Bir sevkiyatın satırları
+                çoğunlukla aynı lottan ya da iki üç lottan gelir; depocu bir kez yazar, ötekilerde
+                seçer. Tasarımın kaynağı başkadır ("okunan koliden gelen adaylar") ve o veri bugün
+                hiçbir uçtan gelmiyor — kaynağı saklamak, listeye olmayan bir kesinlik atfetmek
+                olurdu. Depodaki partilerin lotları ikinci kaynak olarak sözleşme genişleyince
+                eklenecek (kullanıcı kararı 30.08). */}
+            {lotSuggestions.length === 0 ? null : (
+              <View style={styles.lotSuggestions}>
+                <Text style={styles.lotSuggestionsLabel}>{t.intake.lot.sheet.suggestions}</Text>
+                {lotSuggestions.map((code) => (
+                  <PressableSurface
+                    key={code}
+                    onPress={() => {
+                      onPatch({ lotText: code });
+                      setLotOpen(false);
+                    }}
+                    feedback="scale"
+                    selected={state.lotText === code}
+                    style={[styles.lotSuggestion, state.lotText === code ? styles.lotSuggestionSet : null]}
+                    testID={`warehouse-intake-lot-suggestion-${row.variantId}-${code}`}
+                  >
+                    <Text style={state.lotText === code ? styles.subFieldLabelFilled : styles.subFieldLabel}>{code}</Text>
+                  </PressableSurface>
+                ))}
+              </View>
+            )}
+          </BottomSheet>
+
+          {/* HASAR KARTI (v3:05 · `hasarAcik`) — tasarımın kendi bloğu: adet SAYILIR, sebep
+              İŞARETLENİR, not isteğe bağlı kalır. Eskiden yalnız serbest bir not kutusu vardı ve
+              "kaç paket hasarlı" sorusu hiç sorulmuyordu; oysa kabul edilen adet değişmiyor,
+              hasar onun İÇİNDEN işaretleniyor. */}
+          {damaged ? (
+            <View style={styles.damageCard} testID={`warehouse-intake-damage-card-${row.variantId}`}>
+              <Text style={styles.damageTitle}>{t.intake.damage.title}</Text>
+              {/* SAYAÇLAR SORU CÜMLESİNİN SONUNDA (kullanıcı kararı 30.08 — tasarımdan sapma):
+                  şablon "sağlam/hasarlı" ikilisini sayacın SAĞINA koyuyor; kullanıcı onu gri
+                  metnin devamına aldı ve sağdaki alanı sebep düğmesine ayırdı. Sayı zaten cümlenin
+                  konusu ("4 paketin kaçı"), bir kelime sonra tekrar etmesi doğal okunuyor. */}
+              <Text style={styles.damageQuestion}>
+                {fillCopy(t.intake.damage.question, { n: String(state.qty ?? 0) })}{' '}
+                <Text style={styles.damageSound}>
+                  {fillCopy(t.intake.damage.sound, { n: String(Math.max(0, (state.qty ?? 0) - state.damagedQty)) })}
+                </Text>
+                {' · '}
+                <Text style={styles.damageBroken}>{fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}</Text>
+              </Text>
+
+              <View style={styles.damageRow}>
+                <OperationsStepperGroup
+                  value={state.damagedQty}
+                  min={0}
+                  label={fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}
+                  tone="error"
+                  /* Üst sınır KABUL EDİLEN ADET: hasar toplamın içinden işaretlenir, onu aşamaz —
+                     "12 paketin 15'i hasarlı" bir sayım değil, bir çelişkidir. Stepper'ın kendi
+                     `max`ı yok, o yüzden kapı burada. */
+                  onChange={(next: number) => onPatch({ damagedQty: Math.min(next, state.qty ?? 0) })}
+                  testID={`warehouse-intake-damage-qty-${row.variantId}`}
+                />
+                {/* SEBEP ARTIK ÇEKMECEDEN, TEK SEÇİM (kullanıcı kararı 30.08 — tasarımdan sapma):
+                    şablon dört çipi karta seriyor ve çoklu seçime izin veriyor (`multi:true`).
+                    Kullanıcı sayacın sağındaki boş alanı bir düğmeye verdi; liste aşağıdan açılan
+                    çekmecede ve tek sebep seçiliyor. Kart kısalıyor, seçim tek bir cümleye iniyor. */}
+                <PressableSurface
+                  onPress={() => setReasonOpen(true)}
+                  feedback="scale"
+                  grow
+                  selected={state.damageReason !== null}
+                  style={[styles.damageReasonField, state.damageReason === null ? null : styles.damageReasonFieldSet]}
+                  accessibilityLabel={state.damageReason ?? t.intake.damage.reasonPick}
+                  testID={`warehouse-intake-damage-reason-${row.variantId}`}
+                >
+                  <Text style={state.damageReason === null ? styles.damageReasonIdle : styles.damageReasonLabel}>
+                    {state.damageReason ?? t.intake.damage.reasonPick}
+                  </Text>
+                </PressableSurface>
+              </View>
+
+              <BottomSheet
+                visible={reasonOpen}
+                title={t.intake.damage.reasonTitle}
+                onClose={() => setReasonOpen(false)}
+                testID={`warehouse-intake-damage-reason-sheet-${row.variantId}`}
+              >
+                <Text style={styles.damageQuestion}>{t.intake.damage.reasonHint}</Text>
+                {t.intake.damage.reasons.map((reason) => (
+                  <PressableSurface
+                    key={reason}
+                    onPress={() => {
+                      /* Aynı sebebe ikinci dokunuş SEÇİMİ KALDIRIR: yanlış seçilen sebebin geri
+                         alınabilmesi için ayrı bir "temizle" düğmesi koymaya gerek yok. */
+                      onPatch({ damageReason: state.damageReason === reason ? null : reason });
+                      setReasonOpen(false);
+                    }}
+                    feedback="scale"
+                    selected={state.damageReason === reason}
+                    style={[styles.damageReasonRow, state.damageReason === reason ? styles.damageReasonRowSet : null]}
+                    testID={`warehouse-intake-damage-reason-option-${row.variantId}-${reason}`}
+                  >
+                    <Text style={state.damageReason === reason ? styles.damageReasonLabel : styles.subFieldLabel}>{reason}</Text>
+                  </PressableSurface>
+                ))}
+              </BottomSheet>
+
+              {/* SERBEST NOT KUTUSU YOK — tasarımda öyle bir alan hiç çizilmemiş (kullanıcı
+                  bulgusu 30.08). Eski koddan taşımıştım ve bu bir FAZLALIKTI: hasarın ne olduğunu
+                  dört sebep çipi söylüyor, serbest metin aynı bilgiyi ikinci kez ve denetlenemez
+                  biçimde topluyordu. Kaldırıldı; `damageNote` alanı sözleşmede duruyor ama ekran
+                  onu artık doldurmuyor.
+
+                  DİPNOT TASARIMDAN SAPIYOR VE SEBEBİ ÖLÇÜLDÜ: şablon "hasarlı paketler stoğa
+                  'hasarlı' olarak girer" diyor; bizde öyle bir ayrım YOK — sözleşmede satır başına
+                  hasar alanı bulunmuyor, bilgi kabul notuna yazılıyor. Tasarımın cümlesini aynen
+                  yazmak, depocuya olmayan bir makineyi vaat etmek olurdu (CLAUDE §1). */}
+              <Text style={styles.damageFootnote}>{t.intake.damage.footnote}</Text>
+            </View>
+          ) : null}
+        </>
       ) : null}
     </View>
   );
@@ -1341,6 +1474,14 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.control,
     color: operationsTheme.colors.ink,
   },
+  /* Dolu alanın METNİ de yeşil ailesinden (tasarım `fg:#46601f` → `olive-dark`): kutu yeşile
+     boyanınca mürekkep metin ailesinden düşüyordu. */
+  fieldFilled: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors['olive-dark'],
+  },
   /* SKT ALANI (v3 · `openSkt`): 50 dp, kontrol yarıçapı, `sand-300` kenar — girdi değil SEÇİCİ
      açan bir satır. Kenarlık `ink` DEĞİL: alan kendi başına bir karar taşımıyor, kararı çekmece
      veriyor; mürekkep kenar onu doldurulacak bir kutu gibi gösteriyordu. */
@@ -1355,12 +1496,22 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors.card,
   },
-  /* SKT GİRİLMEMİŞ HÂL: çerçeve ve metin terracotta, zemin çok açık terracotta. Kutuyu "hata"
-     yapan şey KENARI ve metnidir (token künyesi §4) — dolgulu kırmızı bir kutu, kabulü durduran
-     bir engel gibi okunurdu; oysa bu bir eksik, bir arıza değil. */
+  /* SKT GİRİLMEMİŞ HÂL: DOLGUSUZ, yalnız kenar ve metin uyarı tonunda (kullanıcı bulgusu 30.08).
+     Tasarımın kuralı tek satırda yazılı (`v3.dc.html:3968`) ve iki hâli birden tanımlıyor:
+       boş  → `bg:#fff · bd:#d9a97f · fg:#b05c2e`
+       dolu → `bg:#f2f7e8 · bd:#c3d3a4 · fg:#46601f`
+     Yani DOLGU BİR TAMAMLANDI İŞARETİDİR: alan doldukça yeşile boyanır, boş alan dolgusuz kalır.
+     Bizde tersiydi — boş alan şeftaliye boyanıyor, dolan alan nötr kalıyordu; gösterge tersine
+     çalışıyor, ekranda renkli olan şey "yapılmamış" oluyordu. Eski künye bunu bilinçli sanmıştı
+     ("dolgulu kutu engel gibi okunur"); gerekçe kendi içinde tutarlıydı ama tasarımın anlamını
+     ters çeviriyordu. Kenar artık `warning-line` (#d9a97f — tasarımın kenarıyla BİREBİR). */
   expiryFieldMissing: {
-    borderColor: operationsTheme.colors['terracotta-line'],
-    backgroundColor: operationsTheme.colors['terracotta-bg'],
+    borderColor: operationsTheme.colors['warning-line'],
+  },
+  /* SKT GİRİLMİŞ HÂL: yeşil onay. Depocu listeye bakınca yeşil olanların bittiğini görür. */
+  expiryFieldFilled: {
+    borderColor: operationsTheme.colors['olive-line'],
+    backgroundColor: operationsTheme.colors['olive-bg'],
   },
   fieldMissing: {
     flex: 1,
@@ -1391,7 +1542,8 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors.card,
   },
-  subFieldSkipped: {
+  /* Lot GİRİLMİŞ hâl — tasarımın `lotAlan` kuralı: dolu alan yeşil onay taşır. */
+  subFieldFilled: {
     borderColor: operationsTheme.colors['olive-line'],
     backgroundColor: operationsTheme.colors['olive-bg'],
   },
@@ -1404,7 +1556,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['field-label'],
     color: operationsTheme.colors.muted,
   },
-  subFieldLabelSkipped: {
+  subFieldLabelFilled: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['field-label'],
     color: operationsTheme.colors['olive-dark'],
@@ -1559,6 +1711,121 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors['tab-inactive'],
+  },
+  /* HASAR KARTI (v3:05) — kabul satırının içinde açılan kırmızı aileli blok. Kartı ailesine
+     bağlayan şey ZEMİN değil KENARDIR (token künyesi §4): zemin `error-bg`, kenar `error-line`. */
+  damageCard: {
+    gap: operationsTheme.space.lg,
+    padding: operationsTheme.space['3xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['error-line'],
+    borderRadius: operationsTheme.radius.card,
+    backgroundColor: operationsTheme.colors['error-bg'],
+  },
+  damageTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.error,
+  },
+  damageQuestion: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.body,
+  },
+  /** Sayaç solda, sağlam/hasarlı sayacı sağda — tasarımın iki sütunu. */
+  damageRow: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space['3xl'] },
+  damageTally: { gap: operationsTheme.space['2xs'] },
+  damageSound: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors['olive-dark'],
+  },
+  damageBroken: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors.error,
+  },
+  /* SEBEP DÜĞMESİ — sayacın sağındaki boş alan (kullanıcı kararı 30.08). Boşken kum çerçeveli
+     ve sessiz; sebep seçilince hasar ailesine geçer (kenar + metin), çünkü artık bir beyan var. */
+  /* LOT ALANI + TEMİZLE (kullanıcı kararı 30.08): kutu esner, temizle içeriği kadar yer kaplar
+     ve YALNIZ dolu kutuda çizilir — boş kutunun yanında "temizle" bir şey vaat edip yapmazdı. */
+  lotFieldRow: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.lg },
+  lotFieldInput: { flex: 1 },
+  lotClear: {
+    height: operationsTheme.size.controlSm,
+    justifyContent: 'center',
+    paddingHorizontal: operationsTheme.space['2xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
+  lotClearLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors.muted,
+  },
+  lotSuggestions: { gap: operationsTheme.space.md },
+  lotSuggestionsLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.muted,
+  },
+  /** Öneri satırı — dokunulunca lot yazılır ve çekmece kapanır (tek adım). */
+  lotSuggestion: {
+    height: operationsTheme.size.controlLg,
+    justifyContent: 'center',
+    paddingHorizontal: operationsTheme.space['3xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
+  lotSuggestionSet: {
+    borderColor: operationsTheme.colors['olive-line'],
+    backgroundColor: operationsTheme.colors['olive-bg'],
+  },
+  damageReasonField: {
+    height: operationsTheme.size.controlMd,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: operationsTheme.space['2xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
+  damageReasonFieldSet: { borderColor: operationsTheme.colors['error-line'] },
+  damageReasonIdle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors.muted,
+  },
+  damageReasonLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors.error,
+  },
+  /** Çekmecedeki sebep satırı — tam genişlik, seçili olan hasar ailesine geçer. */
+  damageReasonRow: {
+    height: operationsTheme.size.controlLg,
+    justifyContent: 'center',
+    paddingHorizontal: operationsTheme.space['3xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
+  damageReasonRowSet: {
+    borderColor: operationsTheme.colors['error-line'],
+    backgroundColor: operationsTheme.colors['error-bg'],
+  },
+  damageFootnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
   },
   textInput: {
     paddingVertical: operationsTheme.space.lg,

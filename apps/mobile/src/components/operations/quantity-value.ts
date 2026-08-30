@@ -110,12 +110,25 @@ export function breakdownText(
 }
 
 /**
- * "Başka koli boyu" çekmecesinin sunduğu çarpanlar (tasarımın kendi listesi).
+ * "Başka koli boyu" çekmecesinin sunduğu çarpanlar.
  *
- * Sabit ve KISA: saha uydurma çarpan giremesin diye. Tasarımın dipnotu bunu söylüyor — *"Bu
- * listede de yoksa masada ürün kartına eklenir; sahada uydurulmuş çarpan stok sayımını bozar."*
+ * SABİT VE SEÇMELİ: saha uydurma çarpan GİREMEZ, yalnız listeden seçer. Tasarımın dipnotu bu
+ * kuralı koyuyor — *"Bu listede de yoksa masada ürün kartına eklenir; sahada uydurulmuş çarpan
+ * stok sayımını bozar."* Kural aynen duruyor; değişen şey listenin İÇERİĞİ.
+ *
+ * ── ÜÇ SAYI EKLENDİ: 4 · 12 · 24 (kullanıcı kararı 30.08, ölçümle) ──────────
+ * Tasarımın listesi sekiz sayıydı (2·3·6·8·10·16·20·36) ve ölçüldü ki **sahadaki gerçek koli
+ * boylarının hiçbirini içermiyor**: seed'in ürettiği çarpanlar `4, 12, 24`
+ * (`scripts/seed/barcode.ts:90`). Yani "istisna listesi" tam da istisnaların dışında kalıyordu.
+ *
+ * Sonucu somut: ürün kartında kayıtlı OLMAYAN 12'lik bir koli geldiğinde depocu onu koli olarak
+ * hiç kaydedemiyor, 12 paketi tek tek sayıyordu — adet doğru çıkıyor ama "12'lik koli geldi"
+ * bilgisi ürün kartına yazılmadığı için bir sonraki kabulde aynı iş baştan yapılıyordu.
+ *
+ * Bu bir sapmadır ve gerekçesi ölçümdür; uydurma çarpan kapısı AÇILMADI — eklenen üç sayı da
+ * kartlarda gerçekten kullanılan boylar.
  */
-export const EXTRA_CASE_SIZES = [2, 3, 6, 8, 10, 16, 20, 36] as const;
+export const EXTRA_CASE_SIZES = [2, 3, 4, 6, 8, 10, 12, 16, 20, 24, 36] as const;
 
 /** Tek paket cetvelinin durakları — 0'dan 24'e (tasarım: `for (let i = 0; i <= 24; i++)`). */
 export const LOOSE_RULER = Array.from({ length: 25 }, (_, index) => index);

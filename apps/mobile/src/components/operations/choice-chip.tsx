@@ -36,14 +36,7 @@ interface OperationsChoiceChipProps {
   testID?: string;
 }
 
-export function OperationsChoiceChip({
-  label,
-  onPress,
-  selected,
-  tone = 'ink',
-  fill = false,
-  testID,
-}: OperationsChoiceChipProps) {
+export function OperationsChoiceChip({ label, onPress, selected, tone = 'ink', fill = false, testID }: OperationsChoiceChipProps) {
   return (
     <PressableSurface
       onPress={onPress}
@@ -53,11 +46,11 @@ export function OperationsChoiceChip({
       // Segment eşitliği `grow` ile — stile `flex` yazmak dış Pressable'ı esnetmiyor ve iç
       // yükseklik hesabını çökertiyordu (23.08 ölçümü — `PressableSurface.grow` künyesi).
       grow={fill || undefined}
-      style={[styles.base, fill ? undefined : styles.hug, selected ? styles[tone] : styles.idle]}
+      style={[styles.base, fill ? undefined : styles.hug, selected ? styles[tone] : styles[`idle_${tone}`]]}
       accessibilityLabel={label}
       testID={testID}
     >
-      <Text style={[styles.label, selected ? styles.selectedLabel : styles.idleLabel]}>{label}</Text>
+      <Text style={[styles.label, selected ? styles.selectedLabel : styles[`idleLabel_${tone}`]]}>{label}</Text>
     </PressableSurface>
   );
 }
@@ -81,13 +74,20 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors.error,
   },
   /* Boştaki çip ZEMİNSİZDİR (v2: `background:transparent`) — palete sahte bir "saydam" rengi
-     eklemek yerine zemin hiç verilmiyor (katalog süzgeç düğmesinin aynı kararı). */
-  idle: { borderColor: operationsTheme.colors['sand-500'] },
+     eklemek yerine zemin hiç verilmiyor (katalog süzgeç düğmesinin aynı kararı).
+
+     BOŞTAKİ ÇİP DE TONUNU TAŞIR (düzeltildi 30.08, kullanıcı bulgusu). Eskiden `idle` tek tondu:
+     `tone="error"` yalnız SEÇİLİ hâli kırmızıya çeviriyordu, boştaki çip nötr kalıyordu. Tasarımın
+     hasar bloğunda (v3:05) dört sebep çipi seçilmemişken de kırmızı çerçeve ve kırmızı metin
+     taşıyor — çünkü çipin ailesi neyi sorduğunu söylüyor, seçili olup olmaması değil. */
+  idle_ink: { borderColor: operationsTheme.colors['sand-500'] },
+  idle_error: { borderColor: operationsTheme.colors['error-line'] },
   label: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
     textAlign: 'center',
   },
   selectedLabel: { color: operationsTheme.colors.card },
-  idleLabel: { color: operationsTheme.colors.ink },
+  idleLabel_ink: { color: operationsTheme.colors.ink },
+  idleLabel_error: { color: operationsTheme.colors.error },
 });

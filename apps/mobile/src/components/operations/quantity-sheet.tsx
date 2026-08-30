@@ -49,10 +49,15 @@ import {
   içeriği değişiyor: iç içe iki `Modal`, `BottomSheet` künyesindeki Fabric söküm arızasının
   (21.121) tam olarak tetikleyicisidir ve ikinci bir örtünün tek kazancı görsel.
 
-  ── LİSTE BOŞSA UYDURULMAZ ──────────────────────────────────────────────────
-  Koli boyu kayıtlı olmayan üründe "kaç koli geldi" bölümü hiç çizilmez, yalnız tek paket sayılır.
-  Varsayılan bir 12'lik koli koymak, ölçülmemiş bir çarpanı ölçülmüş gibi gösterip stoğu sessizce
-  bozardı (CLAUDE §1).
+  ── LİSTE BOŞSA UYDURULMAZ — AMA KAPI KAPANMAZ (düzeltildi 30.08) ───────────
+  Varsayılan bir 12'lik koli KONMAZ: ölçülmemiş bir çarpanı ölçülmüş gibi göstermek stoğu sessizce
+  bozar (CLAUDE §1). Bu kural yerinde.
+
+  Eskiden aynı gerekçeyle bölümün TAMAMI gizleniyordu ve o fazlaydı: "Başka koli boyu" kapısı da
+  bölümün içinde olduğu için, kayıtlı boyu olmayan üründe depocu koli SAYAMIYOR, 30 paketi tek tek
+  sayıyordu (cihazda görüldü: Fıstıklı Baklava 2500 g). Oysa boy eklemek bir varsayım değil bir
+  ÖLÇÜMDÜR — depocu elindeki koliye bakıp listeden seçer ve seçim ürün kartına kaydedilir.
+  Bugün bölüm hep çizilir; liste boşken yalnız başlık ve ekleme satırı görünür.
 */
 
 interface QuantitySheetCopy {
@@ -108,6 +113,8 @@ export function OperationsQuantitySheet({
 }: OperationsQuantitySheetProps) {
   /** `sizes` = "başka koli boyu" adımı. Çekmece her açılışta ADET adımıyla başlar. */
   const [step, setStep] = useState<'count' | 'sizes'>('count');
+  /** Boy ızgarasının ölçülen genişliği — hücre genişliği bundan türer (künyesi ızgarada). */
+  const [gridWidth, setGridWidth] = useState(0);
   useEffect(() => {
     if (visible) setStep('count');
   }, [visible]);
@@ -120,7 +127,14 @@ export function OperationsQuantitySheet({
     return (
       <BottomSheet visible={visible} title={copy.extra.title} onClose={onClose} testID={testID}>
         <Text style={styles.subject}>{copy.extra.hint}</Text>
-        <View style={styles.sizeGrid}>
+        <View
+          style={styles.sizeGrid}
+          /* KAP ÖLÇÜLÜR, YÜZDE KULLANILMAZ (üç turda ölçüldü 30.08). `flexBasis: '22%'` bu panelde
+             hiç çözülmüyor: hücreler içeriğe göre daralıp SEKİZİ DE tek satıra diziliyor
+             (`alignSelf: 'stretch'` ve `flexGrow: 0` de çözmedi). Genişliği `onLayout`tan alıp
+             dörde bölmek varsayımsız tek yol — tasarımın 2×4 ızgarası buradan çıkıyor. */
+          onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}
+        >
           {EXTRA_CASE_SIZES.map((size) => (
             <PressableSurface
               key={size}
@@ -132,7 +146,7 @@ export function OperationsQuantitySheet({
                 setStep('count');
               }}
               feedback="scale"
-              style={styles.sizeCell}
+              style={[styles.sizeCell, gridWidth === 0 ? null : { width: (gridWidth - 3 * operationsTheme.space.md) / 4 }]}
               accessibilityLabel={copy.caseLabel.replace('{n}', String(size))}
               testID={id(`size-${size}`)}
             >
@@ -141,23 +155,20 @@ export function OperationsQuantitySheet({
           ))}
         </View>
         <Text style={styles.footnote}>{copy.extra.footnote}</Text>
-        <SecondaryButton
-          label={copy.extra.cancel}
-          onPress={() => setStep('count')}
-          elevation="flat"
-          testID={id('size-cancel')}
-        />
+        <SecondaryButton label={copy.extra.cancel} onPress={() => setStep('count')} elevation="flat" testID={id('size-cancel')} />
       </BottomSheet>
     );
   }
 
   return (
-    <BottomSheet visible={visible} title={title} onClose={onClose} testID={testID}>
-      {/* Künye ile "sıfırla" AYNI SATIRDA: tasarımda ikisi başlık bloğunun iki ucunda durur ve
-          sıfırlama satırın konusunun yanında olmalı — çekmecenin dibindeki bir "sıfırla", yanlış
-          satırı silme riskini taşırdı. Başlığın kendisi `BottomSheet`in işi. */}
-      <View style={styles.header}>
-        <Text style={styles.subject}>{copy.subject}</Text>
+    <BottomSheet
+      visible={visible}
+      title={title}
+      /* "SIFIRLA" BAŞLIKLA AYNI HİZADA (kullanıcı bulgusu 30.08 · tasarım karesi
+         `02b-Adet-Klavyesi`): eskiden künye satırındaydı, yani bir kademe aşağıda ve ürün adının
+         yanında duruyordu. Sıfırlanan şey bir alan değil çekmecenin TAMAMI; yeri de panelin
+         başlığıdır. */
+      titleAction={
         <PressableSurface
           onPress={() => onChange({ cases: [], loose: 0 })}
           feedback="scale"
@@ -168,7 +179,11 @@ export function OperationsQuantitySheet({
         >
           <Text style={styles.resetLabel}>{copy.reset}</Text>
         </PressableSurface>
-      </View>
+      }
+      onClose={onClose}
+      testID={testID}
+    >
+      <Text style={styles.subject}>{copy.subject}</Text>
 
       {/* TOPLAM KOYU KARTTA: ekranın tek konusu bu sayı ve krem bir yüzeyde krem bir kartla
           ayrışmazdı. Altındaki hesap satırı sonucu DOĞRULATIR — depocu 27'yi değil, 27'nin
@@ -185,9 +200,16 @@ export function OperationsQuantitySheet({
         </Text>
       </View>
 
-      {/* KAYITLI BOY YOKSA BÖLÜM HİÇ ÇİZİLMEZ — künyedeki gerekçe. Sahada eklenen boy varsa
-          bölüm yine açılır: o satırlar da burada yaşar. */}
-      {rows.length === 0 ? null : (
+      {/* BÖLÜM HER ZAMAN ÇİZİLİR, AMA VARSAYILAN KOLİ YOKTUR (düzeltildi 30.08, kullanıcı bulgusu).
+          Eskiden kayıtlı boyu olmayan üründe bölüm hiç çizilmiyordu ve künyesi bunu şöyle
+          gerekçelendiriyordu: *"varsayılan bir 12'lik koli koymak, ölçülmemiş bir çarpanı ölçülmüş
+          gibi gösterip stoğu bozardı."* Gerekçe DOĞRU ama kapattığı şey fazlaydı: bölümle birlikte
+          "Başka koli boyu" kapısı da kayboluyordu, yani kayıtlı boyu olmayan üründe depocu koli
+          SAYAMIYOR, yalnız tek tek sayabiliyordu (cihazda görüldü: Fıstıklı Baklava 2500 g).
+          Boy eklemek bir varsayım değil bir ÖLÇÜM: depocu elindeki koliye bakıp listeden seçiyor
+          (`sheetKutuTip`) ve seçim ürün kartına kaydediliyor. Liste boşken yalnız başlık ve ekleme
+          satırı görünür — hiçbir koli önceden sayılmaz. */}
+      {
         <View style={styles.section}>
           <View style={styles.sectionHead}>
             <Text style={styles.eyebrow}>{copy.casesTitle}</Text>
@@ -205,9 +227,7 @@ export function OperationsQuantitySheet({
                 </Text>
                 <Text style={styles.caseMeta}>
                   {`${row.code ?? copy.caseNew} · ${
-                    row.count > 0
-                      ? copy.caseTotal.replace('{n}', String(row.count * row.qtyPerCode))
-                      : copy.caseIdle
+                    row.count > 0 ? copy.caseTotal.replace('{n}', String(row.count * row.qtyPerCode)) : copy.caseIdle
                   }`}
                 </Text>
               </View>
@@ -236,7 +256,7 @@ export function OperationsQuantitySheet({
             </View>
           </PressableSurface>
         </View>
-      )}
+      }
 
       <View style={styles.section}>
         <View style={styles.looseHead}>
@@ -462,13 +482,23 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors['on-image'],
   },
 
-  sizeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: operationsTheme.space.md },
+  /* `alignSelf: 'stretch'` ZORUNLU (cihazda ölçüldü 30.08, kullanıcı bulgusu): satır kabı kendi
+     genişliğini almadan `flexBasis: '22%'` çözülemiyor — yüzde neyin yüzdesi olduğunu bilmediği
+     için `0` gibi davranıyor, hücreler içeriğe göre daralıyor ve SEKİZİ DE tek satıra diziliyor.
+     Tasarım 2×4 ızgara istiyor (`02e-Kutu-Tipi-Cekmecesi`); ekranda dar, dikey elipsler çıkıyordu. */
+  sizeGrid: { alignSelf: 'stretch', flexDirection: 'row', flexWrap: 'wrap', gap: operationsTheme.space.md },
   /* DÖRT SÜTUN: `%25` boşlukları saymaz, `%22` sayar. `flexShrink: 0` ZORUNLU — Yoga sarmadan
      ÖNCE küçültür, yani küçülebilen hücreler hiç alt satıra inmez, hepsi tek satırda ince
      dilimlere döner (aynı arıza tuş takımında ölçüldü 30.08). */
   sizeCell: {
-    flexBasis: '22%',
-    flexGrow: 1,
+    /* SARMAYI `minWidth` ZORLUYOR, yüzde değil (iki turda ölçüldü 30.08).
+       `flexBasis: '22%'` tek başına sarmıyordu: sekiz hücre tek satırda dikey elipslere dönüyordu
+       ve `alignSelf: 'stretch'` de çözmedi — yüzde temel bu kapta çözülmüyor. İlk alt genişlik
+       (52) altı hücreyi bir satıra sığdırdı; tasarım 2×4 istiyor (`02e-Kutu-Tipi-Cekmecesi`).
+       68 dp'de beşinci hücre satıra sığmıyor (5×68+4×10 > 320), dördü sığıyor. Değer token'lardan
+       türetildi, ham sayı yazılmadı. */
+    /* Genişlik ÖLÇÜLEN kaptan geliyor (ızgaradaki künye); burada yalnız küçülmeye kapı kapalı —
+       Yoga sarmadan ÖNCE küçültür, yani küçülebilen hücreler hiç alt satıra inmez. */
     flexShrink: 0,
     height: operationsTheme.size.controlLg,
     alignItems: 'center',

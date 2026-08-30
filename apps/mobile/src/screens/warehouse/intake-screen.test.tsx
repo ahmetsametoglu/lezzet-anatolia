@@ -31,12 +31,16 @@ jest.mock('@/lib/auth/supabase', () => ({
 
 const PO_ID = '00000000-0000-4000-8000-000000000091';
 const ROW_A = intakeRow();
-const ROW_B = intakeRow({ variantId: '00000000-0000-4000-8000-000000000042', productName: 'Mısır Unu', variantLabel: '25 kg', expectedQty: 4 });
+const ROW_B = intakeRow({
+  variantId: '00000000-0000-4000-8000-000000000042',
+  productName: 'Mısır Unu',
+  variantLabel: '25 kg',
+  expectedQty: 4,
+});
 
 /* MLOR eşiği YANITIN alanıdır (ayardan gelir, satırın değil) — fikstür onu taşımazsa cevap
    ayrıştırılamaz ve ekran "sevkiyatlar yüklenemedi" der. Değer ayarın varsayılanı. */
 const MLOR = 75;
-
 
 /*
   SKT ARTIK SEÇİCİYLE giriliyor (v3 · `00-ortak` → `openSkt`, 30.08): alan bir `TextInput` değil,
@@ -95,7 +99,10 @@ function serverError(): Response {
   } as unknown as Response;
 }
 
-function lastPostBody(): { lines: { variantId: string; qty: number; expiryDate: string; lotNumber: string | null }[]; note: string | null } {
+function lastPostBody(): {
+  lines: { variantId: string; qty: number; expiryDate: string; lotNumber: string | null }[];
+  note: string | null;
+} {
   const call = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
 }
@@ -146,7 +153,9 @@ describe('D2 · mal kabul', () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(
         ok({
-          intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-ABC123', supplierName: 'Gaziantep', lineCount: 4, status: 'sent' as const }],
+          intakes: [
+            { purchaseOrderId: PO_ID, referenceNo: 'TS-26-ABC123', supplierName: 'Gaziantep', lineCount: 4, status: 'sent' as const },
+          ],
         }),
       ),
     );
@@ -170,7 +179,13 @@ describe('D2 · mal kabul', () => {
         ok({
           intakes: [
             { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'Gaziantep', lineCount: 5, status: 'sent' as const },
-            { purchaseOrderId: '00000000-0000-4000-8000-0000000000c2', referenceNo: 'TS-26-B', supplierName: 'Gaziantep', lineCount: 6, status: 'sent' as const },
+            {
+              purchaseOrderId: '00000000-0000-4000-8000-0000000000c2',
+              referenceNo: 'TS-26-B',
+              supplierName: 'Gaziantep',
+              lineCount: 6,
+              status: 'sent' as const,
+            },
           ],
         }),
       ),
@@ -257,7 +272,9 @@ describe('D2 · mal kabul', () => {
     fetchMock.mockImplementation(() => {
       if (first) {
         first = false;
-        return Promise.resolve(ok({ purchaseOrder: { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X' }, rows: [ROW_A], mlorPercent: MLOR }));
+        return Promise.resolve(
+          ok({ purchaseOrder: { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X' }, rows: [ROW_A], mlorPercent: MLOR }),
+        );
       }
       return Promise.reject(new Error('network down'));
     });
@@ -309,8 +326,24 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
 
-    expect(screen.getByTestId('warehouse-intake-cta')).toHaveTextContent(/adet \+ SKT zorunlu/);
+    /* DÜĞME ASIL EYLEMİ YAZAR, KAPIYI ÜSTTEKİ SATIR SÖYLER (Komponent Envanteri M1e, 30.08).
+       Eskiden bu beklenti düğmenin ETİKETİNDEYDİ; tasarım karesinde düğme pasifken de "Kabulü
+       kaydet" yazıyor ve eksik olan şey üstteki gri satırda duruyor — sayacıyla birlikte. */
+    expect(screen.getByTestId('warehouse-intake-cta')).toBeDisabled();
+    expect(screen.getByTestId('warehouse-intake-gate')).toHaveTextContent(/adet \+ SKT zorunlu/);
     expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_A.variantId}`)).toHaveTextContent('SKT gir *');
+  });
+
+  it('KAPI SATIRI kaç satırın dolduğunu sayar — depocu listeyi gezmeden görür', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+    expect(screen.getByTestId('warehouse-intake-gate')).toHaveTextContent(/0\/2 satır dolu/);
+
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 5, 9, 2027);
+
+    expect(screen.getByTestId('warehouse-intake-gate')).toHaveTextContent(/1\/2 satır dolu/);
   });
 
   /* CİHAZDA GÖRÜLDÜ 30.08: PO'lu kabulden siparişsize geçince ekran bir önceki siparişin
@@ -361,9 +394,7 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
 
-    expect(lastPostBody().lines).toEqual([
-      { variantId: ROW_A.variantId, qty: 10, expiryDate: '2026-08-12', lotNumber: null },
-    ]);
+    expect(lastPostBody().lines).toEqual([{ variantId: ROW_A.variantId, qty: 10, expiryDate: '2026-08-12', lotNumber: null }]);
   });
 
   it('fark özeti YALNIZ sapan satırı taşır — uyan satır listeye girmez', async () => {
@@ -395,13 +426,11 @@ describe('D2 · mal kabul', () => {
     await countRow(ROW_A.variantId, '10');
     await pickExpiry(ROW_A.variantId, 12, 8, 2026);
 
-    /* Lot artık ÇEKMECEDE (30.08): satırda tek bir alan var, kod da "bilinçli boş" kararı da
-       orada veriliyor. Eskiden satırın altında ayrıca ham bir metin kutusu duruyordu — tek değer
-       için iki kontrol; cihazda ikisi birden görüldü. */
+    /* KUTU BOŞSA LOT YOKTUR (kullanıcı kararı 30.08): "Lot yok" diye ayrı bir düğme kalmadı —
+       yazılanı TEMİZLE düğmesi siler ve boş kutu zaten `lotNumber: null` demektir. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
-    // Yazdıktan SONRA "lot yok" demek, yazılanı da siler: karar kodun kendisini geçersiz kılar.
-    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-skip-${ROW_A.variantId}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-clear-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
@@ -415,9 +444,9 @@ describe('D2 · mal kabul', () => {
     await countRow(ROW_A.variantId, '10');
     await pickExpiry(ROW_A.variantId, 12, 8, 2026);
 
+    /* ONAY DÜĞMESİ YOK: kutuya yazılan kod satıra CANLI işleniyor, çekmece yalnız kapanıyor. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
-    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-confirm-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
@@ -436,9 +465,7 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
 
-    expect(screen.getByTestId(`warehouse-intake-source-${ROW_A.variantId}`)).toHaveTextContent(
-      /barkod okutulmadı/,
-    );
+    expect(screen.getByTestId(`warehouse-intake-source-${ROW_A.variantId}`)).toHaveTextContent(/barkod okutulmadı/);
     // Okutma kutusu da ÇİZİLMEZ: söyleyecek bir şey yok.
     expect(screen.queryByTestId(`warehouse-intake-scan-note-${ROW_A.variantId}`)).toBeNull();
   });
@@ -498,8 +525,12 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`));
-    // Kayıtlı boyu olmayan üründe bölüm hiç çizilmez — yalnız tek paket sayılır.
-    expect(screen.queryByTestId(`${sheet}-add-size`)).toBeNull();
+    /* KAYITLI BOYU OLMAYAN ÜRÜNDE DE EKLEME KAPISI DURUR (düzeltildi 30.08, cihaz bulgusu).
+       Eskiden bölüm hiç çizilmiyordu ve bu satır onu ölçüyordu; kapatılan şey gerekçesinden
+       fazlaydı — depocu kayıtlı boyu olmayan üründe koli SAYAMIYORDU. Uydurma çarpan yasağı
+       yerinde duruyor: liste boş, önceden sayılmış hiçbir koli yok, yalnız ekleme satırı var. */
+    expect(screen.getByTestId(`${sheet}-add-size`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('0');
 
     await fireEvent.press(screen.getByTestId(`${sheet}-ruler-2`));
     expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('2');
@@ -548,18 +579,42 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId('warehouse-intake-cta')).toBeOnTheScreen();
   });
 
-  it('hasar notu HANGİ satıra ait olduğu yazılarak isteğe taşınır (satır notu şemada yok)', async () => {
+  /* HASAR ARTIK SAYI + SEBEP (v3:05, düzeltildi 30.08). Eskiden serbest bir not kutusu vardı ve
+     bu test onu dolduruyordu; tasarımda öyle bir alan hiç yok — hasar, kabul edilen adedin
+     İÇİNDEN sayaçla işaretleniyor ve sebep çiplerden seçiliyor. Sözleşmede satır başına hasar
+     alanı olmadığı için üçü isteğin tek notunda, satır adı yazılarak birleşiyor. */
+  it('hasar SAYI ve SEBEP olarak işaretlenir; satır adıyla birlikte isteğin notuna taşınır', async () => {
     withForm([ROW_A]);
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
     await pickExpiry(ROW_A.variantId, 12, 8, 2026);
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}`), 'kutu ezik');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-qty-${ROW_A.variantId}-increase`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-qty-${ROW_A.variantId}-increase`));
+    /* Sebep artık çekmeceden ve TEK seçim (kullanıcı kararı 30.08): kartta çip yok, sayacın
+       sağındaki düğme listeyi açıyor. */
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-reason-${ROW_A.variantId}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-reason-option-${ROW_A.variantId}-ezik / kırık`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
-    expect(lastPostBody().note).toBe('Antep Fıstığı · 5 kg: kutu ezik');
+    expect(lastPostBody().note).toBe('Antep Fıstığı · 5 kg: hasarlı 2 · ezik / kırık');
+  });
+
+  /* HASAR KABUL EDİLEN ADEDİ AŞAMAZ: "10 paketin 12'si hasarlı" bir sayım değil, bir çelişkidir. */
+  it('hasar sayacı kabul edilen adette DURUR', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '2');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
+    for (let press = 0; press < 4; press += 1) {
+      await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-qty-${ROW_A.variantId}-increase`));
+    }
+
+    expect(screen.getByTestId(`warehouse-intake-damage-card-${ROW_A.variantId}`)).toHaveTextContent(/hasarlı 2/);
+    expect(screen.getByTestId(`warehouse-intake-damage-card-${ROW_A.variantId}`)).toHaveTextContent(/sağlam 0/);
   });
 
   it('raf ömrü uyarısı KAPIDAN gelir; ölçülemeyen ömür "bilinmiyor" der (sıfır DEĞİL)', async () => {
@@ -664,5 +719,4 @@ describe('D2 · plansız kabul', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/intake?unplanned=1');
   });
-
 });

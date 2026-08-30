@@ -42,6 +42,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    /* ÇOCUKLAR ARASINDA BOŞLUK (eksikti — kullanıcı bulgusu 30.08): çubuk birden çok öğe
+       taşıyabiliyor (kapı metni · birincil düğme · kısmi kayıt düğmesi + notu) ve `gap`
+       olmadığı için hepsi bitişik çiziliyordu — iki düğme tek bir blok gibi görünüyordu.
+       Tasarımın yapışkan tabanında öğeler ayrık duruyor (`02c-SKT-Cekmecesi` karesi). */
+    gap: operationsTheme.space.lg,
     paddingTop: operationsTheme.space.xl,
     paddingBottom: operationsTheme.space['3xl'],
     paddingHorizontal: operationsTheme.space['5xl'],

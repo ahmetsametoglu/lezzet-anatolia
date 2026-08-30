@@ -1,13 +1,7 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-  type WithTimingConfig,
-} from 'react-native-reanimated';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming, type WithTimingConfig } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
@@ -63,6 +57,14 @@ interface BottomSheetProps {
   /** Başlık — i18n üstte çözülür; ekran okuyucuda katmanın adıdır. */
   title: string;
   /**
+   * Başlık satırının SAĞ yuvası — "sıfırla" gibi panelin tamamına ait bir eylem (tasarım karesi
+   * `02b-Adet-Klavyesi`: başlık solda, sıfırla onunla aynı hizada sağda).
+   *
+   * Eylem başlığın ALTINA konsaydı satırın konusuyla karışırdı: "sıfırla" bir alanı değil
+   * çekmecenin tamamını sıfırlıyor.
+   */
+  titleAction?: ReactNode;
+  /**
    * **SABİT BOYLU PANEL** — yalnız içeriği SIFIRDAN büyüyen çekmecelerde (kullanıcı bulgusu 30.08).
    *
    * 10.08'de eklenip aynı gün geri alınan `tall` kademesiyle karıştırılmamalı: o, TEK bir bağlantı
@@ -91,7 +93,7 @@ interface BottomSheetProps {
   testID?: string;
 }
 
-export function BottomSheet({ visible, title, fill = false, onClose, onClosed, children, testID }: BottomSheetProps) {
+export function BottomSheet({ visible, title, titleAction, fill = false, onClose, onClosed, children, testID }: BottomSheetProps) {
   /* `Modal` KAPANIŞ animasyonu bitene kadar ayakta kalmalı; bu yüzden görünürlüğün iki hâli var:
      çağıranın `visible`ı (niyet) ve buradaki `mounted` (ekranda mı). */
   const [mounted, setMounted] = useState(visible);
@@ -222,45 +224,53 @@ export function BottomSheet({ visible, title, fill = false, onClose, onClosed, c
           jestler (adet seçicinin rayı — kullanıcı bulgusu 24.08: "sağa sola çektiğimde hareket
           etmiyor") kökü bulamıyordu. Kök burada olunca çekmecenin içine konan HER jest çalışır. */}
       <GestureHandlerRootView style={styles.layer}>
-      {/* KLAVYE PANELİ EZEMEZ (kullanıcı bulgusu 08.08 — profil çekmecesinde alanlar klavyenin
+        {/* KLAVYE PANELİ EZEMEZ (kullanıcı bulgusu 08.08 — profil çekmecesinde alanlar klavyenin
           altında kalıyordu): `statusBarTranslucent` bir Modal'da Android pencereyi kendiliğinden
           daraltmaz; kaçınma burada, KİTTE durur — girdili her çekmece (adres, kupon…) aynı
           korumayı otomatik alır, ekranlar tek tek uğraşmaz. */}
-      <KeyboardAvoidingView behavior="padding" style={styles.layer} accessibilityViewIsModal>
-        {/* Örtü DOKUNULABİLİR ama düğme DEĞİLDİR: ekran okuyucuya "kapat" diye bir hedef eklemek
+        <KeyboardAvoidingView behavior="padding" style={styles.layer} accessibilityViewIsModal>
+          {/* Örtü DOKUNULABİLİR ama düğme DEĞİLDİR: ekran okuyucuya "kapat" diye bir hedef eklemek
             yerine katmanın kendi kapatma düğmeleri okunur — örtü yalnız işaretçi kısayoludur. */}
-        <Animated.View style={[styles.scrimLayer, scrimStyle]}>
-          <Pressable
-            style={styles.scrim}
-            onPress={onClose}
-            accessibilityElementsHidden
-            importantForAccessibility="no-hide-descendants"
-            testID={testID === undefined ? undefined : `${testID}-scrim`}
-          />
-        </Animated.View>
-        <Animated.View
-          style={[styles.panel, fill ? styles.panelFill : null, panelStyle]}
-          onLayout={(event) => onPanelLayout(event.nativeEvent.layout.height)}
-        >
-          {/* Panelin ALT KANAMASI — klavye kaçınması paneli kaldırınca panel ile ekran altı
+          <Animated.View style={[styles.scrimLayer, scrimStyle]}>
+            <Pressable
+              style={styles.scrim}
+              onPress={onClose}
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+              testID={testID === undefined ? undefined : `${testID}-scrim`}
+            />
+          </Animated.View>
+          <Animated.View
+            style={[styles.panel, fill ? styles.panelFill : null, panelStyle]}
+            onLayout={(event) => onPanelLayout(event.nativeEvent.layout.height)}
+          >
+            {/* Panelin ALT KANAMASI — klavye kaçınması paneli kaldırınca panel ile ekran altı
               arasında kalan bölge (klavyenin arkası) örtü renginde kalıyordu ve modern klavyelerin
               KIVRIMLI köşelerinden garip görünüyordu (kullanıcı bulgusu 08.08). Bu katman panel
               zeminini aşağı taşırır: köşelerden görünen artık panelin kendisidir. Klavye kapalıyken
               ekran dışında durur, zararsız. Sürüklenen panelde de altını kapatır. */}
-          <View style={styles.keyboardBleed} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" />
-          {/* Tutamak SÜRÜKLEME HEDEFİDİR (09.08). Dokunma alanı çubuğun kendisinden büyük:
+            <View
+              style={styles.keyboardBleed}
+              pointerEvents="none"
+              accessibilityElementsHidden
+              importantForAccessibility="no-hide-descendants"
+            />
+            {/* Tutamak SÜRÜKLEME HEDEFİDİR (09.08). Dokunma alanı çubuğun kendisinden büyük:
               5 dp'lik bir çizgiye parmakla isabet ettirmek beklenemez — kavrama bölgesi çubuğu
               saran şeffaf bir bant. Ekran okuyucudan gizli kalır: sürükleme onun için bir yol
               değil, katmanın kendi kapatma düğmeleri okunur. */}
-          <GestureDetector gesture={drag}>
-            <View style={styles.handleZone} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-              <View style={styles.handle} />
+            <GestureDetector gesture={drag}>
+              <View style={styles.handleZone} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                <View style={styles.handle} />
+              </View>
+            </GestureDetector>
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, styles.titleText]} accessibilityRole="header">
+                {title}
+              </Text>
+              {titleAction}
             </View>
-          </GestureDetector>
-          <Text style={styles.title} accessibilityRole="header">
-            {title}
-          </Text>
-          {/* İÇERİK KAYAR — kitte, bir kez (kullanıcı bulgusu 11.08, cihazda ölçüldü).
+            {/* İÇERİK KAYAR — kitte, bir kez (kullanıcı bulgusu 11.08, cihazda ölçüldü).
               Panelin boyu içerikten gelir ve tavanı vardır; tavanı aşan içerik daha önce sessizce
               kırpılmıyor, panel ALTA yaslı olduğu için YUKARIDAN taşıyordu: başlık, ilk alan ve
               müşterinin YAZDIĞI kutu ekranın dışına — durum çubuğunun altına — kaçıyordu ve geri
@@ -271,16 +281,16 @@ export function BottomSheet({ visible, title, fill = false, onClose, onClosed, c
               kırpılırdı"*); tek ekranda kalması CLAUDE §1'in duplikasyonuydu — kaba taşındı, oradan
               kaldırıldı. `keyboardShouldPersistTaps`: klavye açıkken gönder düğmesi İLK dokunuşta
               çalışsın (`(21.33)` tuzağı). */}
-          <ScrollView
-            style={styles.scroll}
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            testID={testID === undefined ? undefined : `${testID}-scroll`}
-          >
-            {children}
-          </ScrollView>
-        </Animated.View>
-      </KeyboardAvoidingView>
+            <ScrollView
+              style={styles.scroll}
+              contentContainerStyle={styles.scrollContent}
+              keyboardShouldPersistTaps="handled"
+              testID={testID === undefined ? undefined : `${testID}-scroll`}
+            >
+              {children}
+            </ScrollView>
+          </Animated.View>
+        </KeyboardAvoidingView>
       </GestureHandlerRootView>
     </Modal>
   );
@@ -326,10 +336,7 @@ const styles = StyleSheet.create((theme, rt) => ({
            taşan içerik durum çubuğunun/çentiğin altına giriyordu.
        `insets.ime` klavye yüksekliğidir ve klavye açılıp kapandıkça bu stil kendiliğinden yeniden
        hesaplanır — ölçüyü ekranların tek tek taşımasına gerek kalmaz. */
-    maxHeight: Math.min(
-      rt.screen.height * theme.sheetMaxHeightRatio,
-      rt.screen.height - rt.insets.ime - rt.insets.top,
-    ),
+    maxHeight: Math.min(rt.screen.height * theme.sheetMaxHeightRatio, rt.screen.height - rt.insets.ime - rt.insets.top),
     /* TAVAN TEK BAŞINA YETMİYOR (cihazda ölçüldü 11.08, düzeltmenin ilk turu): yukarıdaki ölçü
        `insets.ime`ye dayanıyor ve klavye yüksekliği HER ZAMAN raporlanmıyor — raporlanmadığında
        ikinci sınır düşüyor, oran sınırı da tam ekrana göre olduğu için bağlamıyor ve panel yine
@@ -346,10 +353,7 @@ const styles = StyleSheet.create((theme, rt) => ({
      prop'ta. `flexShrink: 1` yukarıda duruyor ve burada da geçerli: klavye açılınca panel yine
      kaçınma katmanının bıraktığı yere sığar, tavana yapışıp taşmaz. */
   panelFill: {
-    height: Math.min(
-      rt.screen.height * theme.sheetMaxHeightRatio,
-      rt.screen.height - rt.insets.ime - rt.insets.top,
-    ),
+    height: Math.min(rt.screen.height * theme.sheetMaxHeightRatio, rt.screen.height - rt.insets.ime - rt.insets.top),
   },
   /** Kayan bölge: panelin geri kalanı (tutamak + başlık) sabit kalsın, yalnız içerik kaysın. */
   scroll: {
@@ -385,6 +389,9 @@ const styles = StyleSheet.create((theme, rt) => ({
     borderRadius: theme.border.sheetHandle / 2,
     backgroundColor: theme.colors['sand-400'],
   },
+  /** Başlık ile sağ eylem AYNI HİZADA (tasarım) — eylem yoksa satır tek çocuklu kalır. */
+  titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: theme.space.lg },
+  titleText: { flex: 1 },
   title: {
     fontFamily: theme.font.display[theme.text['sheet-title--font-weight']],
     fontSize: theme.text['sheet-title'],

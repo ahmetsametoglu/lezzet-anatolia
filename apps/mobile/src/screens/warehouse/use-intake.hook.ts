@@ -73,8 +73,20 @@ export interface IntakeRowState {
   /** Ham metin: alan yazılırken geçersiz ara hâllerden geçer, ISO'ya ancak tamamlanınca döner. */
   expiryText: string;
   lotText: string;
-  /** Lot BİLEREK boş bırakıldı mı — geri çağırma anahtarının yokluğu bilinçli olmalı (v2). */
-  lotSkipped: boolean;
+  /**
+   * Hasar kartı AÇIK mı — sayacın kendisi 0'dan başladığı için "açıldı" ile "hasar var" ayrı
+   * sorulardır (v3:05 `hasarAcik`). Eskiden bu bayrak yoktu ve kart, nota tek boşluk yazılarak
+   * açılıyordu; o hile notu da kirletiyordu.
+   */
+  damageOpen: boolean;
+  /** Kaç paket hasarlı — kabul edilen adedin İÇİNDEN işaretlenir, toplamı değiştirmez. */
+  damagedQty: number;
+  /**
+   * İşaretlenen hasar sebebi — TEK (kullanıcı kararı 30.08, tasarımdan sapma). Şablon dört çipi
+   * karta serip çoklu seçime izin veriyordu (`multi:true`); kullanıcı listeyi çekmeceye aldı ve
+   * tek sebebe indirdi. Sebepsiz hasar da geçerlidir: `null` kalabilir.
+   */
+  damageReason: string | null;
   damageNote: string;
   /**
    * Bu satırın adedi BARKOD OKUTULARAK mı yazıldı, ve okutulduysa NE ile (v3:05 — `kaynakNotu`
@@ -98,7 +110,9 @@ const EMPTY_ROW: IntakeRowState = {
   breakdown: EMPTY_BREAKDOWN,
   expiryText: '',
   lotText: '',
-  lotSkipped: false,
+  damageOpen: false,
+  damagedQty: 0,
+  damageReason: null,
   damageNote: '',
   scan: null,
 };
@@ -202,6 +216,10 @@ interface UseIntakeResult {
   complete: boolean;
   /** En az bir satır yazılabilir mi — KISMİ kaydın ölçütü (künyesi türetildiği yerde). */
   hasAnyCounted: boolean;
+  /** Kaç satır yazılabilir durumda — yapışkan çubuğun kapı metni ("3/5 satır dolu"). */
+  filledCount: number;
+  /** Bu kabulde BAŞKA satırlara girilmiş lot kodları — çekmecenin öneri listesi. */
+  lotsUsedBy: (variantId: string) => string[];
   /** Beklenenden SAPAN satırlar — yalnız onlar gösterilir (v2'nin fark özeti). */
   differences: { name: string; expected: number; received: number }[];
   sending: boolean;
@@ -359,6 +377,33 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
    */
   const hasAnyCounted = rows.some((row) => writable(row.variantId));
 
+  /**
+   * KAÇ SATIR DOLU — yapışkan çubuğun kapı metni bunu söyler (v3:05 "0/5 satır dolu").
+   *
+   * `complete`/`hasAnyCounted` ile aynı ölçütten (`writable`) sayılıyor, ayrı bir "dolu" tanımı
+   * yazılmadı: üç cümle de aynı soruyu soruyor — satır yazılabilir mi? İkinci bir ölçüt, bir gün
+   * "sayaç 5/5 diyor ama düğme açılmıyor" gibi açıklanamaz bir hâl üretirdi.
+   */
+  const filledCount = rows.filter((row) => writable(row.variantId)).length;
+
+  /**
+   * LOT ÖNERİLERİ — bu kabulde BAŞKA satırlara girilmiş kodlar (kullanıcı kararı 30.08).
+   *
+   * Bir sevkiyatın satırları çoğunlukla aynı lottan ya da iki üç lottan gelir; depocu kodu bir kez
+   * yazar, ötekilerde listeden seçer. Kaynak formun kendi durumudur — hiçbir uç sorulmuyor.
+   *
+   * Satırın KENDİ kodu listede olmaz: depocuya zaten yazdığı şeyi önermek gürültüdür.
+   */
+  const lotsUsedBy = (variantId: string): string[] => {
+    const seen = new Set<string>();
+    for (const row of rows) {
+      if (row.variantId === variantId) continue;
+      const code = states[row.variantId]?.lotText.trim() ?? '';
+      if (code.length > 0) seen.add(code);
+    }
+    return [...seen];
+  };
+
   const differences = rows
     .map((row) => ({
       name: productLabel(row.productName, row.variantLabel),
@@ -385,65 +430,77 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
    * Kısmi kayıtta da EN AZ BİR sayılmış satır şart — hiçbir şey sayılmadan yazmak, kapıya boş bir
    * kabul göndermek olurdu.
    */
-  const submit = useCallback((options?: { partial?: boolean }) => {
-    const partial = options?.partial === true;
-    if (sending) return;
-    if (!partial && !complete) return;
-    if (partial && !hasAnyCounted) return;
-    setSending(true);
-    setNotice(null);
+  const submit = useCallback(
+    (options?: { partial?: boolean }) => {
+      const partial = options?.partial === true;
+      if (sending) return;
+      if (!partial && !complete) return;
+      if (partial && !hasAnyCounted) return;
+      setSending(true);
+      setNotice(null);
 
-    void (async () => {
-      const lines = rows.flatMap((row) => {
-        const state = states[row.variantId];
-        const expiryDate = state === undefined ? null : parseDate(state.expiryText);
-        if (state === undefined || state.qty === null || state.qty <= 0 || expiryDate === null) return [];
-        const lot = state.lotText.trim();
-        return [
-          {
-            variantId: row.variantId,
-            qty: state.qty,
-            expiryDate,
-            // Boş lot BİLİNÇLİ bir karardır; "atlandı" işaretiyle boş gider, uydurma bir kod DEĞİL.
-            lotNumber: state.lotSkipped || lot.length === 0 ? null : lot,
-          },
-        ];
-      });
-
-      // Hasar notları satır başına tutulur ama sözleşmede satır notu YOK — isteğin tek notunda,
-      // hangi satıra ait olduğu YAZILARAK toplanır (bilginin kaybolmasındansa birleşmesi).
-      const damage = rows
-        .map((row) => ({ row, note: states[row.variantId]?.damageNote.trim() ?? '' }))
-        .filter((entry) => entry.note.length > 0)
-        .map((entry) => `${productLabel(entry.row.productName, entry.row.variantLabel)}: ${entry.note}`);
-
-      const result = await trackWarehouse(
-        receiveGoods(purchaseOrderId, { lines, note: damage.length === 0 ? null : damage.join(' · ') }),
-      );
-      setSending(false);
-
-      if (result.error !== null) {
-        setNotice({
-          tone: 'error',
-          text:
-            result.error === 'network_error'
-              ? t.common.networkError
-              : fillCopy(t.common.serverError, { error: result.error }),
+      void (async () => {
+        const lines = rows.flatMap((row) => {
+          const state = states[row.variantId];
+          const expiryDate = state === undefined ? null : parseDate(state.expiryText);
+          if (state === undefined || state.qty === null || state.qty <= 0 || expiryDate === null) return [];
+          const lot = state.lotText.trim();
+          return [
+            {
+              variantId: row.variantId,
+              qty: state.qty,
+              expiryDate,
+              // Boş lot BİLİNÇLİ bir karardır; "atlandı" işaretiyle boş gider, uydurma bir kod DEĞİL.
+              lotNumber: lot.length === 0 ? null : lot,
+            },
+          ];
         });
-        return;
-      }
 
-      setWarnings(
-        result.data.status === 'ok'
-          ? result.data.warnings.map((warning) => ({
-              name: nameOf(rows, warning.variantId),
-              remainingPercent: warning.remainingPercent,
-            }))
-          : [],
-      );
-      setNotice(noticeOf(result.data));
-    })();
-  }, [complete, hasAnyCounted, purchaseOrderId, rows, sending, states]);
+        // Hasar notları satır başına tutulur ama sözleşmede satır notu YOK — isteğin tek notunda,
+        // hangi satıra ait olduğu YAZILARAK toplanır (bilginin kaybolmasındansa birleşmesi).
+        /* Hasarın ÜÇ parçası tek cümlede toplanır: adet · sebepler · serbest not. Sözleşmede
+           satır başına hasar alanı yok (`damagedQty` diye bir alan hiç açılmadı), o yüzden bilgi
+           isteğin tek notuna yazılıyor — kaybolmasındansa birleşmesi. Stokta ayrı bir "hasarlı"
+           kalem AÇILMIYOR ve ekran bunu saklamıyor (kartın dipnotu söylüyor). */
+        const damage = rows
+          .map((row) => {
+            const state = states[row.variantId];
+            const parts = [
+              state === undefined || state.damagedQty === 0 ? '' : fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) }),
+              state?.damageReason ?? '',
+              state?.damageNote.trim() ?? '',
+            ].filter((part) => part.length > 0);
+            return { row, note: parts.join(' · ') };
+          })
+          .filter((entry) => entry.note.length > 0)
+          .map((entry) => `${productLabel(entry.row.productName, entry.row.variantLabel)}: ${entry.note}`);
+
+        const result = await trackWarehouse(
+          receiveGoods(purchaseOrderId, { lines, note: damage.length === 0 ? null : damage.join(' · ') }),
+        );
+        setSending(false);
+
+        if (result.error !== null) {
+          setNotice({
+            tone: 'error',
+            text: result.error === 'network_error' ? t.common.networkError : fillCopy(t.common.serverError, { error: result.error }),
+          });
+          return;
+        }
+
+        setWarnings(
+          result.data.status === 'ok'
+            ? result.data.warnings.map((warning) => ({
+                name: nameOf(rows, warning.variantId),
+                remainingPercent: warning.remainingPercent,
+              }))
+            : [],
+        );
+        setNotice(noticeOf(result.data));
+      })();
+    },
+    [complete, hasAnyCounted, purchaseOrderId, rows, sending, states],
+  );
 
   /*
     ── TARAMA (Modül 23 · etüt 2.1 · kullanıcı tasarımı 23.08) ───────────────
@@ -465,12 +522,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
 
   /** Bulunan satıra okumanın adedini ekler ve cümlesini kurar — tarama ile öğrenmenin ortak ucu. */
   const addScanned = useCallback(
-    (
-      variantId: string,
-      qty: number,
-      text: (name: string) => string,
-      scan: { kind: BarcodeKind; qtyPerCode: number },
-    ) => {
+    (variantId: string, qty: number, text: (name: string) => string, scan: { kind: BarcodeKind; qtyPerCode: number }) => {
       const row = rows.find((candidate) => candidate.variantId === variantId);
       if (row === undefined) return false;
       setStates((current) => {
@@ -570,31 +622,28 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
    * Plansız kabulde aramadan seçilen ürün satır olur (23.13). Zaten varsa İKİNCİ KEZ eklenmez:
    * aynı ürünün iki satırı, kabulün toplamını iki yere bölerdi.
    */
-  const addManualRow = useCallback(
-    (variant: VariantSearchRowContract) => {
-      setRows((current) =>
-        current.some((row) => row.variantId === variant.variantId)
-          ? current
-          : [
-              ...current,
-              {
-                variantId: variant.variantId,
-                productName: variant.productName,
-                variantLabel: variant.variantLabel,
-                expectedQty: 0,
-                // Okutmayla açılan satırla aynı ikili: kod yok (sipariş kalemi yok), tarih rejimi
-                // var (ürünün kendi alanı) — gerekçe `handleScan`in satır açan dalında.
-                supplierCode: null,
-                sku: variant.sku,
-                dateType: variant.dateType,
-                shelfLifeDays: variant.shelfLifeDays,
-                caseSizes: variant.caseSizes,
-              },
-            ],
-      );
-    },
-    [],
-  );
+  const addManualRow = useCallback((variant: VariantSearchRowContract) => {
+    setRows((current) =>
+      current.some((row) => row.variantId === variant.variantId)
+        ? current
+        : [
+            ...current,
+            {
+              variantId: variant.variantId,
+              productName: variant.productName,
+              variantLabel: variant.variantLabel,
+              expectedQty: 0,
+              // Okutmayla açılan satırla aynı ikili: kod yok (sipariş kalemi yok), tarih rejimi
+              // var (ürünün kendi alanı) — gerekçe `handleScan`in satır açan dalında.
+              supplierCode: null,
+              sku: variant.sku,
+              dateType: variant.dateType,
+              shelfLifeDays: variant.shelfLifeDays,
+              caseSizes: variant.caseSizes,
+            },
+          ],
+    );
+  }, []);
 
   const setScannedQty = useCallback((qty: number) => {
     setScanned((current) => (current === null ? null : { ...current, qty }));
@@ -653,12 +702,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       if (result.data.status === 'ok') {
         // Öğretilen kod ÇARPANI kadar sayılır: az önce "bu koli 12 adet" denmişken satıra 1 yazmak,
         // kendi söylediğimizi ilk kullanımda yok saymak olurdu.
-        addScanned(
-          variantId,
-          qtyPerCode,
-          (name) => fillCopy(t.intake.scan.learned, { name, n: String(qtyPerCode) }),
-          { kind, qtyPerCode },
-        );
+        addScanned(variantId, qtyPerCode, (name) => fillCopy(t.intake.scan.learned, { name, n: String(qtyPerCode) }), { kind, qtyPerCode });
         /* ÖĞRENME EKRANDA KALIR (v3:05 · kullanıcı bulgusu 30.08): tasarım listenin üstüne kalıcı
            bir kart koyuyor ("Kod öğrenildi · 869… → Fıstıklı Baklava 450 g · koli barkodu ·
            çarpan 12 · ikinci gelişte tanınacak"). Bizde yalnız geçip giden bir bildirimdi ve
@@ -705,6 +749,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     patch,
     complete,
     hasAnyCounted,
+    filledCount,
+    lotsUsedBy,
     differences,
     sending,
     notice,

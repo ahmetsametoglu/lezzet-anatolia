@@ -268,9 +268,14 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors.panel,
   },
+  /* SEÇİLİ SATIR KOYU, YEŞİL DEĞİL (düzeltildi 30.08, kullanıcı bulgusu · tasarım karesi
+     `02c-SKT-Cekmecesi`). Çekmecede iki renk kararı vardı ve ikisi de birbirinin yerine geçmişti:
+     seçili satır yeşil, onay düğmesi koyuydu. Tasarım tersini söylüyor — SEÇİM koyu (mürekkep
+     dolgu + beyaz metin), EYLEM yeşil. Anlamı da o yönde: yeşil bu ekranda "olur" demek ve tek
+     bir olur vardır, o da yazma eylemidir; sütundaki seçim bir onay değil, bir imleçtir. */
   cellSelected: {
-    borderColor: operationsTheme.colors.olive,
-    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderColor: operationsTheme.colors.ink,
+    backgroundColor: operationsTheme.colors.ink,
   },
   cellLabel: {
     fontFamily: operationsTheme.font.body[700],
@@ -280,7 +285,7 @@ const styles = StyleSheet.create({
   cellLabelSelected: {
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors['olive-dark'],
+    color: operationsTheme.colors['on-image'],
   },
   actions: {
     flexDirection: 'row',
@@ -306,7 +311,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.ink,
+    // YEŞİL: ekranın tek "olur"u bu düğme (tasarım karesi `02c`). Koyu dolgu seçili satıra ait.
+    backgroundColor: operationsTheme.colors.olive,
     // Gölge YOK: v3'te sert gölge sıfır kez geçiyor (ölçüldü — v2'de 3, v3'te 0).
   },
   confirmLabel: {

@@ -8417,3 +8417,86 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   sayarak sayma 3), `tsc` temiz, `eslint` temiz, `docs:check` temiz. Entegrasyon testleri yazıldı
   (`scan.test.ts` koli boyu listesi, `intake.test.ts` alan listesi dokuza çıktı) — koşusu
   denetmende (CLAUDE §4b).
+
+- [x] (21.174) **MAL KABUL: KAPI METNİ, HASAR SAYISI, LOT ÇEKMECESİ VE ÜÇ TERS RENK** (kullanıcı bulguları 30.08 · v3:05)
+
+  Kullanıcı ekranı cihazda gezip tasarım kareleriyle karşılaştırdı; çıkan sekiz farkın hepsi
+  kapandı. Üçü **renk eşlemesinin ters olmasıydı** ve üçü de aynı kalıptan: kit doğru kullanılıyor,
+  yanlış olan hangi tonun hangi HÂLE ait olduğu.
+
+  **Dolgu bir TAMAMLANDI işaretidir, eksik işareti değil.** Tasarım kuralı tek satırda yazılı
+  (`Operasyon Mobil v3.dc.html:3968-3969`): SKT/lot alanı boşken `bg:#fff · bd:#d9a97f`, doluyken
+  `bg:#f2f7e8 · bd:#c3d3a4 · fg:#46601f`. Bizde tersiydi — boş alan şeftaliye boyanıyor, dolan alan
+  nötr kalıyordu; ekranda renkli olan şey "yapılmamış" oluyordu. Eski künye bunu bilinçli sanmıştı
+  (*"dolgulu kutu engel gibi okunur"*); gerekçe tutarlıydı ama tasarımın anlamını çeviriyordu.
+  Aynı ters eşleme SKT ÇEKMECESİNDE de vardı: seçili satır yeşil, onay düğmesi koyuydu — tasarım
+  tersini söylüyor (seçim koyu, eylem yeşil; ekranın tek "olur"u yazma düğmesidir). Üçüncüsü
+  `ChoiceChip`teydi: `idle` hâli TEK tondu, yani `tone="error"` yalnız seçili çipi kırmızı
+  yapıyordu; tasarımın hasar çipleri seçilmemişken de kırmızı ailesinde.
+
+  **Düğme asıl eylemi yazar, kapıyı üstteki satır söyler** (Komponent Envanteri M1e). Kapı metni
+  düğmenin ETİKETİNE girmişti ("Her satırda adet + SKT zorunlu") ve düğme ne yapacağını hiç
+  söylemiyordu; sayaç da yoktu. Artık üstte gri kapı satırı **"— N/M satır dolu"** ile duruyor,
+  düğme pasifken de "Kabulü kaydet" yazıyor. Sayı `writable` ölçütünden — `complete` ve
+  `hasAnyCounted` ile aynı kaynak; ikinci bir "dolu" tanımı bir gün "5/5 diyor ama düğme açılmıyor"
+  hâli üretirdi.
+
+  **Hasar nottan SAYIYA döndü.** Eskiden serbest bir not kutusu vardı ve "kaç paket hasarlı" hiç
+  sorulmuyordu. Şimdi kabul edilen adedin İÇİNDEN sayaçla işaretleniyor (üst sınır o adet), sebep
+  seçiliyor, üçü isteğin tek notunda birleşiyor. **Kullanıcı kararıyla tasarımdan iki sapma:**
+  sayaçlar ("sağlam N · hasarlı M") soru cümlesinin sonunda, sebep ise kartta çip değil sayacın
+  sağındaki düğmeden açılan çekmecede ve TEK seçim (şablon dört çipi karta serip `multi:true`
+  veriyor). Şablonun *"hasarlı paketler stoğa 'hasarlı' olarak girer"* cümlesi de yazılmadı: bizde
+  öyle bir ayrım yok, sözleşmede satır başına hasar alanı bulunmuyor — olmayan bir makineyi vaat
+  etmek olurdu (CLAUDE §1). Dipnot bugünkü gerçeği söylüyor.
+
+  **Lot çekmecesi kullanıcının kurduğu yapıya geçti:** alt iki düğme ("Lot yok" / "Yaz") kalktı,
+  kutuya yazılan kod satıra CANLI işleniyor, temizleme kutunun sağında ve yalnız dolu kutuda
+  çiziliyor, öneriler kutunun altında ve dokunulunca lotu yazıp çekmeceyi kapatıyor. `lotSkipped`
+  ("bilinçli boş" beyanı) kavramı kalktı — kutu boşsa lot yoktur ve sözleşme bunu zaten
+  `lotNumber: null` diye taşıyor; tek değer için iki kontrol vardı.
+
+  **Yanında kapanan beş ufak iş:** "say →" tek dokunuşta satırı VE adet çekmecesini açıyor (eskiden
+  ikinci dokunuş gerekiyordu) · "sıfırla" adet çekmecesinin başlık hizasına taşındı (`BottomSheet`e
+  `titleAction` yuvası açıldı) · yapışkan çubuğa `gap` eklendi (hiç yoktu, iki düğme bitişikti) ·
+  "KAÇ KOLİ GELDİ" bölümü kayıtlı boyu olmayan üründe artık gizlenmiyor (uydurma çarpan yasağı
+  duruyor, kapanan şey gerekçesinden fazlaydı: depocu koli sayamıyordu) · kutu tipi ızgarası
+  tasarımın 2×4'üne oturdu.
+
+  **Izgara üç turda çözüldü ve ölçümü künyede:** `flexBasis: '22%'` bu panelde hiç çözülmüyor —
+  `alignSelf: 'stretch'` de `flexGrow: 0` da işe yaramadı, sekiz hücre tek satıra diziliyordu.
+  Kabın genişliğini `onLayout` ile ölçüp dörde bölmek varsayımsız tek yol oldu.
+
+  **Kutu tipi listesine 4 · 12 · 24 eklendi** (kullanıcı kararı): tasarımın sekiz sayısı
+  (2·3·6·8·10·16·20·36) sahadaki gerçek boyların HİÇBİRİNİ içermiyordu — seed'in ürettiği çarpanlar
+  `4, 12, 24` (`scripts/seed/barcode.ts:90`). Uydurma çarpan kapısı açılmadı; eklenen üçü de
+  kartlarda gerçekten kullanılan boylar.
+
+  **Doğrulama.** Kit + depo jest **294/294**, mobil paket **1140/1140**, `tsc` temiz, `eslint`
+  temiz; sekiz farkın hepsi cihazda (CPH1907) tek tek görüldü.
+
+  **BEKLEYEN(21.175):** lot önerilerinin İKİNCİ kaynağı — depodaki partilerin lot kodları.
+
+- [ ] (21.175) **LOT ÖNERİLERİ: DEPODAKİ PARTİLERDEN** (kullanıcı kararı 30.08 · ertelendi)
+
+  Lot çekmecesinin öneri listesi bugün TEK kaynaktan besleniyor: aynı kabulde başka satırlara
+  girilen kodlar (`use-intake.hook.ts` → `lotsUsedBy`). Bu kaynak sözleşme istemiyor ve bir
+  sevkiyatın satırları çoğunlukla aynı lottan geldiği için işe yarıyor — ama ilk satırda liste boş.
+
+  **İkinci kaynak:** o varyantın depoda duran partilerinin lot kodları. Veri VAR
+  (`stock_batch.lot_number`, `0006_stock.sql:28`), taşıyan yok: `IntakeFormRowSchema` lot alanı
+  içermiyor ve `openIntakeForm` motoru satırlara aday koymuyor. İş üç dosyada: sözleşmeye
+  `lotCandidates: string[]`, motorda varyant başına son N partinin kodunu okuyan tek sorgu,
+  ekranda iki kaynağın birleştirilmesi (aynı kabuldekiler önce).
+
+  **Tasarımın kaynağı BAŞKA ve o bugün kurulamıyor:** şablon *"okunan koliden gelen adaylar"*
+  diyor, yani kolinin üstündeki lot etiketinden. Okutma cevabı (`ResolveCodeResponse`) lot
+  taşımıyor ve kolinin lot kodunu okuyacak bir alan yok. Kaynağın farklı olduğu ekranda saklanmıyor
+  — listeye olmayan bir kesinlik atfetmemek için künyeye yazıldı.
+
+  **Kullanıcının işaret ettiği üçüncü yol (30.08):** lot çoğu zaman FATURADA/irsaliyede yazar ve
+  mal kabulde oradan okunur. Fatura kaydı bugün sistemde hiç yok (`purchase_order_item` alanları:
+  variant · qty · unit_price · supplier_product · target_warehouse — lot yok) ve siparişe lot alanı
+  koymak yanlış olur: sipariş verildiğinde lot diye bir şey yoktur, lot MALLA doğar. Belge kaydı
+  açılırsa adaylar oradan gelir; bugünkü çekmece şekli o güne hazır — kaynak değişse de arayüz
+  aynı kalır.

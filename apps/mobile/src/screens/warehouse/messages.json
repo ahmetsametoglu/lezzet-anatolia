@@ -393,7 +393,8 @@
       "sheet": {
         "title": "Lot / parti kodu",
         "hint": "Kolinin üstündeki parti kodunu yaz — geri çağırma anahtarı budur. Kod yoksa boş bırakmak bilinçli bir karardır.",
-        "skip": "Lot yok",
+        "clear": "temizle",
+        "suggestions": "BU KABULDE GİRİLEN LOTLAR",
         "confirm": "Yaz"
       },
       "empty": "lot yok — bilinçli boş",
@@ -401,9 +402,18 @@
     },
     "damage": {
       "idle": "hasar bildir",
-      "set": "hasar notu eklendi ✓",
+      "set": "hasarlı {n} ✓",
       "field": "{name} için hasar notu",
-      "placeholder": "ne oldu?"
+      "placeholder": "ne oldu?",
+      "title": "HASARLI PAKET SAYISI",
+      "question": "Kabul ettiğin {n} paketin kaçı hasarlı? Toplam değişmez, içinden işaretlenir.",
+      "sound": "sağlam {n}",
+      "broken": "hasarlı {n}",
+      "reasons": ["ıslak koli", "ezik / kırık", "soğuk zincir şüphesi", "ambalaj açık"],
+      "reasonPick": "sebep seç",
+      "reasonTitle": "Hasarın sebebi",
+      "reasonHint": "Tek sebep seçilir; aynı satıra ikinci kez dokunmak seçimi kaldırır.",
+      "footnote": "Hasarlı sayı ve sebep kabul NOTUNA yazılır; stokta ayrı bir \"hasarlı\" kalem bu sürümde açılmıyor."
     },
     "lifeWarning": "⚠ kalan ömür %{pct} — uyarı, engellemez",
     "lifeUnknown": "⚠ raf ömrü bilinmiyor — uyarı, engellemez",
@@ -417,6 +427,7 @@
       "partialAction": "Kısmen teslim alındı olarak kaydet",
       "partialNote": "Kısmi kayıtta kalan satırlar açık kalır; sevkiyat \"kısmen teslim alındı\"ya döner.",
       "pending": "Her satırda adet + SKT zorunlu",
+      "gate": "Her satırda adet + SKT zorunlu — {filled}/{total} satır dolu",
       "sending": "Yazılıyor…"
     },
     "result": {
