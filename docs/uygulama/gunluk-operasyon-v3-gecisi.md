@@ -763,6 +763,53 @@ Burada durulmaz — yazılır, geçilir.
 
 ---
 
+## Defterin önceliklendirmesi (30.08 · geçiş bittikten sonra)
+
+24 maddenin 3'ü kapandı, 21'i açık. Ölçüt tek: **bir maddeyi kapatmak ne kadar iş, karşılığında kaç
+ekran düzelir.** Sıra bu; tasarımın önem sırası değil.
+
+### A. TEK ALAN, ÇOK EKRAN — önce bunlar
+| Ne | Nerede | Kaç ekranı düzeltir |
+| --- | --- | --- |
+| **Deponun ADI** (`warehouseName` ya da `/me`'ye `warehouses[]`) | 1 · 10 · 21 · 23 | **5+** üstbaşlık (depo hub, gün özeti, tahsilat izleme, transfer, son satışlar) |
+| **Bekleyen kabul satırına `status` + "SKT gerektiren kalem var mı"** | 5 | 1 (mal kabul listesi) |
+| **Okutma çözümünün yanıtına `sku`** | 7 | 1 (siparişsiz kabul — satırların yarısı bugün kodsuz) |
+| **`SaleRecord`a `negotiated` + `paymentRecorded`** | 13 | 1 (son satışlar — pazarlık izi ve kasa uyarısı listede) |
+| **`todayByMethod`a tahsilat ADEDİ** | 16 | 1 (tahsilat izleme) |
+
+Beşi de sunucuda mevcut veriyi taşımaktan ibaret; yeni kural, yeni tablo, yeni karar yok.
+
+### B. YENİ ÖLÇÜM — motor işi, sözleşme işi değil
+| Ne | Nerede | Not |
+| --- | --- | --- |
+| Kalan raf ömrü **yüzdesi** (parti toplam ömrü) | 6 · 22 | Ürünün raf ömrü günü gerekiyor; iki ekran aynı sayıyı ister |
+| Günlük satış hızı + **gün kapağı** | 23 | Tedarik önerisinin zaten kullandığı ama dışarı vermediği hesap |
+| **Zamanında teslim** oranı | 21 | Söz verilen pencere + teslim damgası ikisi de yok |
+| **İmha + iade** tutarı | 21 | Para tarafında var, yönetim özetine taşınmıyor |
+| Kurye kurye **nakit dökümü** · uyuşmazlığın **sefer künyesi** | 17 · 18 | İkisi de aynı ailenin iki ucu: `courierFloat` dizi olmalı |
+
+### C. YENİ YETENEK — bunlar bir modül, bir alan değil
+| Ne | Nerede | Niçin ağır |
+| --- | --- | --- |
+| **Şikâyet kararı** (seçenekler + "Kararı uygula") | 19 | Müşteriye giden mesajı ve stok akıbetini TEK kayıtta yazıyor — yeni bir yazma kapısı, yeni bir durum makinesi |
+| **Asistan taslağını reddetme** | 20 | Hibrit modun ikinci yarısı; bugün yalnız "al" var |
+| **Parti etiketini okuma** (`P-0698` → parti) | 8 | Yeni bir çözümleme ucu |
+| **Yazıcı durumu + test basımı** | 9 | Cihaz erişilebilirliği + örnek etiket ucu |
+| **Barkodla sepete ekleme** | 14 | Çözülen varyantı çekmeceye bağlayan yol |
+| **Transferin ÇIKAN ve KAPANAN listesi** | 10 | İki yeni okuma ucu |
+| Kabul **fotoğrafı** (`BEKLEYEN(21.13)`) | — | Kamera modülü → dev-client yeniden derlemesi |
+
+### D. TASARIM KARARI BEKLEYEN — kod işi yok
+- **11** Kurye dönüşünün dört sebep çipinin METNİ tasarımda yok (yer tutucu döngü).
+- **24** Bildirim kartının iki varyantı ↔ sözleşmenin beş `dot` tonu: hangisi hangisine düşecek.
+- **15** "SIK SATILANLAR" başlığı: satış sıklığına göre sıralama İSTENİYOR mu, yoksa başlık mı düşecek.
+- **22** Kampanyanın üç indirim çipi: ayardan gelen tek oran mı, üç sabit oran mı.
+
+**Önerim:** A'nın ilk satırı (deponun adı) tek başına beş ekranın üstbaşlığını düzeltiyor ve hiçbir
+karar gerektirmiyor — geçişin bıraktığı en ucuz, en görünür açık o.
+
+---
+
 ## Açık maddeler (kullanıcı kararı bekleyen)
 
 Geçiş sırasında ölçülen, ama bu turun işi olmayan konular. Sırası gelince ya da kullanıcı
