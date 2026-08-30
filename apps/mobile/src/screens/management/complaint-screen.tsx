@@ -12,6 +12,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { ComplaintDetail, ComplaintMessage } from '@lezzet/types';
+import { ManagementChatBubble } from './chat-bubble';
 import { managementCopy } from './copy';
 import { useComplaint } from './use-complaint.hook';
 
@@ -130,8 +131,48 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
   const attachmentCount = detail.messages.reduce((sum, message) => sum + message.attachmentUrls.length, 0);
   const claimed = detail.status !== 'open';
 
+  /*
+    BEKLEYEN TASLAK YUVASI — cevap kutusunun hemen ÜSTÜ (kullanıcı kararı 30.08, N10; sosyal
+    sohbetle aynı yer, v3:2262).
+
+    Taslak eskiden yazışmanın İÇİNDE bir baloncuktu ve kullanıcı farkı cihazda gördü: taslak bir
+    MESAJ DEĞİLDİR — gönderilmemiş, onay bekleyen bir öneridir. Yazışmanın içinde durduğunda
+    "gönderilmiş" gibi okunuyor, üstelik ekranın en altındaki cevap kutusundan uzakta kalıyordu.
+    Yuva şimdi kararın verildiği yerde: metni okuyup düğmeye basacağın nokta.
+  */
+  const draftSlot =
+    detail.aiDraftReply === null ? null : (
+      <View style={styles.draft} testID="management-complaint-draft">
+        <Text style={styles.draftEyebrow}>{t.complaint.author.assistantDraft}</Text>
+        <Text style={styles.draftBody}>{detail.aiDraftReply}</Text>
+        <View style={styles.assistantActions}>
+          <PressableSurface
+            onPress={() => complaint.consumeDraft(true)}
+            feedback="scale"
+            compact
+            style={[styles.assistantChip, styles.assistantChipSend]}
+            accessibilityLabel={t.complaint.assistantSend}
+            testID="management-complaint-assistant-send"
+          >
+            <Text style={styles.assistantChipSendLabel}>{t.complaint.assistantSend}</Text>
+          </PressableSurface>
+          <PressableSurface
+            onPress={() => complaint.consumeDraft(false)}
+            feedback="scale"
+            compact
+            style={[styles.assistantChip, styles.assistantChipEdit]}
+            accessibilityLabel={t.complaint.assistantEdit}
+            testID="management-complaint-assistant-edit"
+          >
+            <Text style={styles.assistantChipEditLabel}>{t.complaint.assistantEdit}</Text>
+          </PressableSurface>
+        </View>
+      </View>
+    );
+
   const composer = (
     <View style={styles.footer}>
+      {draftSlot}
       {complaint.lastError === null ? null : (
         <Text style={styles.actionError} testID="management-complaint-action-error">
           {fillCopy(t.complaint.actionFailed, { reason: complaint.lastError })}
@@ -234,35 +275,6 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
           <MessageBubble key={message.id} message={message} />
         ))}
 
-        {/* YZ TASLAĞI — mesaj değil, bekleyen öneri (16.5): tüketilince satırdan düşer. */}
-        {detail.aiDraftReply === null ? null : (
-          <View style={[styles.bubble, styles.bubbleRight, styles.bubbleAssistant]} testID="management-complaint-draft">
-            <Text style={styles.bubbleCaption}>{t.complaint.author.assistantDraft}</Text>
-            <Text style={styles.bubbleBody}>{detail.aiDraftReply}</Text>
-            <View style={styles.assistantActions}>
-              <PressableSurface
-                onPress={() => complaint.consumeDraft(true)}
-                feedback="scale"
-                compact
-                style={[styles.assistantChip, styles.assistantChipSend]}
-                accessibilityLabel={t.complaint.assistantSend}
-                testID="management-complaint-assistant-send"
-              >
-                <Text style={styles.assistantChipSendLabel}>{t.complaint.assistantSend}</Text>
-              </PressableSurface>
-              <PressableSurface
-                onPress={() => complaint.consumeDraft(false)}
-                feedback="scale"
-                compact
-                style={[styles.assistantChip, styles.assistantChipEdit]}
-                accessibilityLabel={t.complaint.assistantEdit}
-                testID="management-complaint-assistant-edit"
-              >
-                <Text style={styles.assistantChipEditLabel}>{t.complaint.assistantEdit}</Text>
-              </PressableSurface>
-            </View>
-          </View>
-        )}
     </ChatLayout>
   );
 }
@@ -278,27 +290,32 @@ function MessageBubble({ message }: MessageBubbleProps) {
   if (message.sender === 'customer') {
     const from = (message.language ?? '?').toUpperCase();
     return (
-      <View style={[styles.bubble, styles.bubbleLeft, styles.bubbleCustomer]}>
-        <Text style={styles.bubbleCaption}>
-          {message.bodyTranslated
+      <ManagementChatBubble
+        tone="customer"
+        body={showOriginal ? message.originalBody : message.body}
+        caption={
+          message.bodyTranslated
             ? showOriginal
               ? fillCopy(t.complaint.author.customerOriginal, { from })
               : fillCopy(t.complaint.author.customer, { from })
-            : t.complaint.author.customerPlain}
-        </Text>
-        <Text style={styles.bubbleBody}>{showOriginal ? message.originalBody : message.body}</Text>
-        {message.bodyTranslated ? (
-          <PressableSurface
-            onPress={() => setShowOriginal((value) => !value)}
-            feedback="opacity"
-            compact
-            accessibilityLabel={showOriginal ? t.complaint.translated : t.complaint.original}
-            testID={`management-complaint-original-${message.id}`}
-          >
-            <Text style={styles.bubbleLink}>{showOriginal ? t.complaint.translated : t.complaint.original}</Text>
-          </PressableSurface>
-        ) : null}
-      </View>
+            : t.complaint.author.customerPlain
+        }
+        /* Çeviri düğmesi künyenin ALTINDA (ortak baloncuk künyesi): baloncuk yalnız söyleneni
+           taşır, düğme içindeyken mesajın parçası gibi okunuyordu. */
+        footer={
+          message.bodyTranslated ? (
+            <PressableSurface
+              onPress={() => setShowOriginal((value) => !value)}
+              feedback="opacity"
+              compact
+              accessibilityLabel={showOriginal ? t.complaint.translated : t.complaint.original}
+              testID={`management-complaint-original-${message.id}`}
+            >
+              <Text style={styles.bubbleLink}>{showOriginal ? t.complaint.translated : t.complaint.original}</Text>
+            </PressableSurface>
+          ) : null
+        }
+      />
     );
   }
 
@@ -309,12 +326,9 @@ function MessageBubble({ message }: MessageBubbleProps) {
         ? t.complaint.author.operatorUnknown
         : fillCopy(t.complaint.author.operator, { name: message.authorName });
 
-  return (
-    <View style={[styles.bubble, styles.bubbleRight, styles.bubbleOperator]}>
-      <Text style={styles.bubbleCaptionOperator}>{caption}</Text>
-      <Text style={styles.bubbleBody}>{message.body}</Text>
-    </View>
-  );
+  /* AI'ın GÖNDERİLMİŞ mesajı operatörden ayrı tonda (sosyal sohbetin kararı): ekran, cevabı kimin
+     yazdığını gizlemez. */
+  return <ManagementChatBubble tone={message.sender === 'ai' ? 'ai' : 'operator'} body={message.body} caption={caption} />;
 }
 
 const styles = StyleSheet.create({
@@ -394,52 +408,33 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.ink,
   },
-  bubble: {
-    // v2: `max-width:86%` — baloncuk satırı doldurmaz, kimin konuştuğu hizadan okunur.
-    maxWidth: '86%',
-    gap: operationsTheme.space['2xs'],
-    paddingVertical: operationsTheme.space.xl,
-    paddingHorizontal: operationsTheme.space['2xl'],
-    borderRadius: operationsTheme.radius.control,
-  },
-  bubbleLeft: { alignSelf: 'flex-start' },
-  bubbleRight: { alignSelf: 'flex-end' },
-  bubbleCustomer: {
-    backgroundColor: operationsTheme.colors.panel,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-500'],
-  },
-  /** YZ taslağı KESİKLİ çerçeveli: taslak olduğu şeklinden okunur (v2:548). */
-  bubbleAssistant: {
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-    borderWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderColor: operationsTheme.colors.muted,
-    gap: operationsTheme.space.sm,
-  },
-  bubbleOperator: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-  },
-  bubbleCaption: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors.muted,
-  },
-  bubbleCaptionOperator: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors['olive-dark'],
-  },
-  bubbleBody: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.note,
-    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.ink,
-  },
   bubbleLink: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.olive,
+  },
+  /* TASLAK YUVASI — sosyal sohbetin yuvasıyla AYNI kabuk (zeytin zemin + zeytin çizgi + kontrol
+     yarıçapı): iki yazışma ekranı aynı şeye aynı biçimi veriyor. Yazışmanın içindeki kesikli
+     baloncuk kalktı; taslak artık cevap kutusunun üstünde, kararın verildiği yerde. */
+  draft: {
+    gap: operationsTheme.space.md,
+    padding: operationsTheme.space['2xl'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+  },
+  draftEyebrow: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors['olive-dark'],
+  },
+  draftBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.note,
+    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.ink,
   },
   assistantActions: {
     flexDirection: 'row',

@@ -13,6 +13,7 @@ import type { SocialMessage } from '@/lib/api/social';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
+import { ManagementChatBubble } from './chat-bubble';
 import { managementCopy } from './copy';
 import { socialStamp, socialTitle, socialWindowOf } from './social-format';
 import { useSocialConversation } from './use-social-conversation.hook';
@@ -132,26 +133,19 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     const stamp = socialStamp(message.createdAt);
 
     if (message.direction === 'inbound') {
-      return (
-        <View key={message.id} style={[styles.line, styles.lineLeft]}>
-          <View style={[styles.bubble, styles.bubbleCustomer]}>
-            <Text style={styles.bubbleBody}>{body}</Text>
-          </View>
-          <Text style={styles.bubbleCaption}>{stamp}</Text>
-        </View>
-      );
+      return <ManagementChatBubble key={message.id} tone="customer" body={body} caption={stamp} />;
     }
 
     const fromAi = message.author === 'ai';
     const caption = [fromAi ? td.ai : td.you, stamp];
     if (message.templateName) caption.push(fillCopy(td.template, { name: message.templateName }));
     return (
-      <View key={message.id} style={[styles.line, styles.lineRight]}>
-        <View style={[styles.bubble, fromAi ? styles.bubbleAi : styles.bubbleOperator]}>
-          <Text style={fromAi ? styles.bubbleBody : styles.bubbleBodyOnInk}>{body}</Text>
-        </View>
-        <Text style={fromAi ? styles.bubbleCaption : styles.bubbleCaptionOperator}>{caption.join(' · ')}</Text>
-      </View>
+      <ManagementChatBubble
+        key={message.id}
+        tone={fromAi ? 'ai' : 'operator'}
+        body={body}
+        caption={caption.join(' · ')}
+      />
     );
   };
 
@@ -451,59 +445,9 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.olive,
   },
-  /** Mesaj SATIRI — baloncuk ve altındaki künye; hiza satırın kendisinde (v3:2246). */
-  line: {
-    maxWidth: '86%',
-    gap: operationsTheme.space['2xs'],
-  },
-  lineLeft: { alignSelf: 'flex-start', alignItems: 'flex-start' },
-  lineRight: { alignSelf: 'flex-end', alignItems: 'flex-end' },
-  bubble: {
-    paddingVertical: operationsTheme.space.xl,
-    paddingHorizontal: operationsTheme.space['2xl'],
-    borderRadius: operationsTheme.radius.control,
-  },
   /* KUYRUK KÖŞESİ (v3: 5px) — konuşanın tarafına bakan alt köşe sivrileşir, baloncuk ona
      "yapışır". Ölçekte 5'lik bir yarıçap yok; `tight` (8) en yakın durak ve rol olarak da doğru:
      küçük, kırpmayan bir kavis. */
-  bubbleCustomer: {
-    borderBottomLeftRadius: operationsTheme.radius.tight,
-    backgroundColor: operationsTheme.colors.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-  },
-  /** BİZİM sözümüz koyu (v3:2249): kontrast "kim konuşuyor"u hizadan bağımsız söyler. */
-  bubbleOperator: {
-    borderBottomRightRadius: operationsTheme.radius.tight,
-    backgroundColor: operationsTheme.colors.ink,
-  },
-  /** AI'ın GÖNDERİLMİŞ mesajı — operatörden ayrı ton (varlık künyesi: ekran AI'ı ayrı gösterir). */
-  bubbleAi: {
-    borderBottomRightRadius: operationsTheme.radius.tight,
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-  },
-  bubbleCaption: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors['sand-600'],
-  },
-  bubbleCaptionOperator: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors['sand-600'],
-  },
-  bubbleBody: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.note,
-    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.ink,
-  },
-  bubbleBodyOnInk: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.note,
-    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors['on-image'],
-  },
 
   /* ── Bekleyen taslak kartı — çubuğun üstünde (v3:2262) ─────────────────── */
   draft: {

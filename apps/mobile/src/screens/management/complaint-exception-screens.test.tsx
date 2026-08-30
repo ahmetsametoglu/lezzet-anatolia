@@ -164,6 +164,25 @@ describe('Y1 · şikâyet', () => {
     await waitFor(() => expect(reads).toBeGreaterThanOrEqual(2));
   });
 
+  /*
+    TASLAK YAZIŞMANIN İÇİNDE DEĞİL, CEVAP KUTUSUNUN ÜSTÜNDE (kullanıcı kararı 30.08 · N10 —
+    sosyal sohbetle aynı yer). Taslak gönderilmemiş bir öneridir; yazışmanın içinde durduğunda
+    gönderilmiş bir söz gibi okunuyordu. Test YERİ ölçüyor: taslak kutusu, mesaj listesinin
+    kabında (`…-thread`) DEĞİL.
+  */
+  it('YZ taslağı yazışmanın içinde değil, cevap kutusunun üstünde durur', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(ok(complaintData())));
+
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    const draft = screen.getByTestId('management-complaint-draft');
+    const thread = screen.getByTestId('management-complaint-thread');
+    const insideThread = (node: typeof draft | null): boolean =>
+      node === null ? false : node === thread || insideThread(node.parent);
+
+    expect(insideThread(draft.parent)).toBe(false);
+  });
+
   it('YZ taslağının düzenleme yolu SUNUCUNUN döndürdüğü metni kutuya koyar', async () => {
     fetchMock.mockImplementation((url, init) => {
       if (init?.method === 'POST') {
