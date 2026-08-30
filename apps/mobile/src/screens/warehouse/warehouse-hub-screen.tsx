@@ -10,7 +10,8 @@ import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
-import { useOperationsIdentity } from '@/screens/operations/sections-context';
+import { operationsSectionRoute } from '@/screens/login/post-login-route';
+import { useOperationsIdentity, useOperationsSections } from '@/screens/operations/sections-context';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -91,6 +92,7 @@ export function WarehouseHubScreen() {
   const { scope, offline } = useWarehouseStatus();
   const unread = useOperationsNotifications().unread;
   const identity = useOperationsIdentity();
+  const sections = useOperationsSections();
   const { width } = useWindowDimensions();
 
   /* IZGARANIN SÜTUN GENİŞLİĞİ HESAPLANIR, YÜZDEYLE VERİLMEZ (ölçüldü 30.08, OPPO CPH1907).
@@ -144,6 +146,36 @@ export function WarehouseHubScreen() {
             description={t.common.scope.body}
             testID="warehouse-scope-block"
           />
+
+          {/*
+            ÇIKIŞ YOLLARI (v3:1057) — kapsam belirsizken depo bölümü kullanılamaz ama personelin
+            BAŞKA bölümleri açık olabilir ("Ayşe Demir · depo + para"). Şablonun "Para bölümüne
+            geç" düğmesi işte bu: kullanıcıyı kapalı bir kapının önünde bırakmamak.
+
+            YALNIZ GERÇEKTEN AÇIK bölümler çizilir. Şablon "Para"yı sabit yazıyor; sabit yazmak,
+            para yetkisi olmayan bir depocuya açamayacağı bir kapı göstermek olurdu — ve o kapı
+            "yetkin yok" diye geri atardı. Bölüm listesi kapıdan geliyor (`useOperationsSections`).
+          */}
+          {sections
+            .filter((section) => section !== 'warehouse')
+            .map((section) => (
+              <PressableSurface
+                key={section}
+                onPress={() => router.navigate(operationsSectionRoute(section))}
+                feedback="scale"
+                style={styles.scopeExit}
+                accessibilityLabel={fillCopy(t.common.scope.otherSection, { section: shell.sections[section].tab })}
+                testID={`warehouse-scope-to-${section}`}
+              >
+                <Text style={styles.scopeExitLabel}>
+                  {fillCopy(t.common.scope.otherSection, { section: shell.sections[section].tab })}
+                </Text>
+              </PressableSurface>
+            ))}
+
+          {/* Kararın kendisi yazılı: depo SEÇTİRİLMİYOR. Bir liste koymak kolay olurdu; yanlış
+              depoya yazılan sayım iki deponun stokunu birden bozar (DOMAIN §17). */}
+          <Text style={styles.scopeFootnote}>{t.common.scope.footnote}</Text>
         </View>
       </View>
     );
@@ -495,6 +527,26 @@ const styles = StyleSheet.create({
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space['7xl'],
+    gap: operationsTheme.space.xl,
+  },
+  /** Kapsam belirsizken açık kalan bölümlere çıkış — kullanıcı kapalı kapının önünde bırakılmaz. */
+  scopeExit: {
+    alignItems: 'center',
+    paddingVertical: operationsTheme.space.xl,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-500'],
+  },
+  scopeExitLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  scopeFootnote: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
   },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],

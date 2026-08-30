@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 9/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 10/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -387,6 +387,32 @@ iptal olmaz. İkisinin bedeli ayrı, ortak dipnot ikisini de yarım anlatırdı.
 
 ---
 
+## 30.08 gece — Faz 2 · Ekran 10: Kapsam belirsiz ✅
+
+**Ne değişti.** Hub'ın "hangi depo" dalı artık v3'ün 10. ekranının kendisi: gerekçe metni
+keskinleşti (*"Depo işleri 'benim depom' bağlamında yürür — sistem hangisi olduğunu bilmeden
+toplama, kabul ya da sayım açamaz"*), **çıkış yolları** geldi ve **kararın kendisi** yazıldı:
+*"Depo seçtirme bilinçli olarak yoktur — yanlış depoya yazılan sayım iki deponun stokunu birden
+bozar."*
+
+**Çıkışlar personelin GERÇEKTEN açık bölümlerinden doğuyor.** Şablon "Para bölümüne geç" düğmesini
+sabit yazıyor; sabit yazmak, para yetkisi olmayan bir depocuya açamayacağı bir kapı göstermek
+olurdu — ve o kapı "yetkin yok" diye geri atardı. Tek bölümlü personelde hiç düğme doğmuyor.
+
+**Bir duplikasyon önlendi:** bölüm adresi deseni (`/${section}`) `operationsHomeRoute` içinde
+gömülüydü; ikinci çağıran doğunca `operationsSectionRoute` olarak çıkarıldı — adres düzeni
+değiştiği gün birinin geride kalmaması için.
+
+**Uyuşmazlık #2 daraldı.** Şablon kapsam sorusunu hub'ın ÜSTÜNDE ince bir şerit yapıp altında dolu
+bir hub çiziyor; bu hâlâ mümkün değil (kapsam çözülmeden uçlar veri döndürmüyor). Ama ekranın
+içeriği artık şablonunkiyle bire bir.
+
+**Doğrulama.** Hub jest **17/17** (ikisi yeni) · mobil paket **960/960** · statik kapılar yeşil ·
+**cihazda gözle doğrulandı** — muhasebe rolüyle (depo + para) girildi, yalnız "Para bölümüne geç"
+çizildi.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -395,7 +421,7 @@ Burada durulmaz — yazılır, geçilir.
 | # | Ekran | Uyuşmazlık | Durum |
 | --- | --- | --- | --- |
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
-| 2 | 01 Depo Hub | Şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
+| 2 | 01 Depo Hub · 10 Kapsam | **DARALDI (30.08).** Ekranın içeriği artık şablonunkiyle birebir (gerekçe, çıkış yolları, karar dipnotu). Kalan tek fark yerleşim: şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
 | 9 | 09 Yazıcılar | Şablon seçili yazıcının **bağlantı durumunu** ("bağlı · Wi-Fi") ve bir **"test bas"** eylemini gösteriyor. Yazıcı sözleşmesi yalnız `id · name · purpose · address · model · labelSize` taşıyor — durum alanı yok; test basımı da örnek bir etiket yükü gerektirir (basım hattı gerçek etiket PNG'siyle çalışıyor). | Açık — ikisi de yazılmadı. Çözümü: yazıcı yanıtına erişilebilirlik durumu + sunucuda bir örnek etiket ucu. |
 | 8 | 08 Sayım/düzeltme | Şablon boş hâlde İKİ çıkış yolu veriyor: "Yakın-SKT turuna git" ve **"Parti etiketini okut"**. İkincisi yazılamadı — parti etiketini çözen bir uç YOK; `codes/resolve` barkod/SKU/tedarikçi kodunu **varyanta** çeviriyor, partiye değil. | Açık — yalnız birinci yol yazıldı. Çözümü tek alan: parti kodunu (P-0698) çözen bir uç. |

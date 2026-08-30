@@ -1,6 +1,6 @@
 import type { Href } from 'expo-router';
 
-import { operationsSectionsOf } from '@/lib/operations/sections';
+import { operationsSectionsOf, type OperationsSection } from '@/lib/operations/sections';
 import type { Me } from '@/lib/api/me';
 
 /*
@@ -39,5 +39,14 @@ import type { Me } from '@/lib/api/me';
  */
 export function operationsHomeRoute(me: Pick<Me, 'roles'>): Href | null {
   const [first] = operationsSectionsOf(me.roles);
-  return first === undefined ? null : (`/${first}` as Href);
+  return first === undefined ? null : operationsSectionRoute(first);
+}
+
+/**
+ * Bir bölümün adresi. Desen tek yerde durur (`/${section}`): ikinci bir çağıran doğduğunda
+ * (kapsam belirsizken depo hub'ının sunduğu çıkış yolları, 30.08) aynı şablonu elle yazmak,
+ * adres düzeni değiştiği gün birinin geride kalması demekti (CLAUDE §1).
+ */
+export function operationsSectionRoute(section: OperationsSection): Href {
+  return `/${section}` as Href;
 }

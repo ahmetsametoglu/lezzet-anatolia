@@ -14,7 +14,9 @@
     "notFound": "Kayıt bulunamadı — araya biri girmiş olabilir.",
     "scope": {
       "title": "Hangi depoda çalıştığın belli değil",
-      "body": "Kapının kapsamında birden çok depo var (ya da hiç yok) ve seçim yapılacak bir depo listesi henüz uçtan gelmiyor. Depo ataması yapılınca bu bölüm kendiliğinden açılır."
+      "body": "Depo işleri “benim depom” bağlamında yürür — sistem hangisi olduğunu bilmeden toplama, kabul ya da sayım açamaz. Yönetici seni bir depoya atadığında bu bölüm kendiliğinden açılır.",
+      "otherSection": "{section} bölümüne geç →",
+      "footnote": "Depo seçtirme bilinçli olarak yoktur — yanlış depoya yazılan sayım iki deponun stokunu birden bozar."
     }
   },
   "hub": {

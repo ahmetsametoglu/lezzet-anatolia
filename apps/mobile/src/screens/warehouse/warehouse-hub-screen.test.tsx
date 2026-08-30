@@ -288,6 +288,50 @@ describe('depo hub', () => {
     expect(screen.queryByTestId('warehouse-hub-offline')).toBeNull();
   });
 
+  /*
+    KAPSAM BELİRSİZ EKRANI (v3:1043) — hub'ın bu dalı o ekranın kendisidir (ayrı rota yok).
+    Şablon "Para bölümüne geç" düğmesini SABİT yazıyor; sabit yazmak, para yetkisi olmayan bir
+    depocuya açamayacağı bir kapı göstermek olurdu — o kapı "yetkin yok" diye geri atardı.
+    Çıkışlar personelin GERÇEKTEN açık bölümlerinden doğuyor.
+  */
+  it('kapsam belirsizken AÇIK olan öteki bölümlere çıkış verilir', async () => {
+    routeReplies({
+      preparation: () => Promise.resolve(fail('warehouse_required', 400)),
+      transfers: () => Promise.resolve(fail('warehouse_required', 400)),
+      handover: () => Promise.resolve(fail('warehouse_required', 400)),
+    });
+
+    await render(
+      <OperationsSessionProvider
+        value={{ sections: ['warehouse', 'money'], userName: 'Ayşe D.', userEmail: 'ayse@lezzetanatolia.fr' }}
+      >
+        <WarehouseHubScreen />
+      </OperationsSessionProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('warehouse-scope-block')).toBeOnTheScreen());
+
+    expect(screen.getByTestId('warehouse-scope-to-money')).toHaveTextContent(/Para bölümüne geç/);
+    // Kendi bölümüne çıkış verilmez: zaten oradayız ve kapalı.
+    expect(screen.queryByTestId('warehouse-scope-to-warehouse')).toBeNull();
+    // Kararın kendisi yazılı: depo SEÇTİRİLMİYOR.
+    expect(screen.getByTestId('operations-section-warehouse')).toHaveTextContent(/Depo seçtirme bilinçli olarak yoktur/);
+  });
+
+  it('tek bölümlü personelde çıkış yolu HİÇ doğmaz — gösterilecek kapı yok', async () => {
+    routeReplies({
+      preparation: () => Promise.resolve(fail('warehouse_required', 400)),
+      transfers: () => Promise.resolve(fail('warehouse_required', 400)),
+      handover: () => Promise.resolve(fail('warehouse_required', 400)),
+    });
+
+    await renderHub();
+
+    expect(screen.getByTestId('warehouse-scope-block')).toBeOnTheScreen();
+    for (const section of ['courier', 'management', 'money']) {
+      expect(screen.queryByTestId(`warehouse-scope-to-${section}`)).toBeNull();
+    }
+  });
+
   it('kapı "hangi depo" diye sorarsa liste ÇİZİLMEZ — yanlış deponun işi gösterilmez', async () => {
     routeReplies({
       preparation: () => Promise.resolve(fail('warehouse_required', 400)),

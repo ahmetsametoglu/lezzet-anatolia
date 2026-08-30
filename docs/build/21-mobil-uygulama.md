@@ -7325,3 +7325,28 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** Yazıcı jest **5/5** (biri yeni) · mobil paket **958/958**; typecheck · lint ·
   knip yeşil; **cihazda gözle doğrulandı**.
+
+- [x] (21.145) **KAPSAM BELİRSİZ v3 — çıkış yolları ve kararın kendisi** (v3:1043-1065)
+  `touches:` `apps/mobile/src/screens/warehouse/{warehouse-hub-screen.tsx,messages.json,warehouse-hub-screen.test.tsx}` ·
+  `apps/mobile/src/screens/login/post-login-route.ts`
+
+  **Durum (30.08).** Hub'ın "hangi depo" dalı v3'ün 10. ekranının kendisidir (ayrı rota yok).
+  Gerekçe metni keskinleşti, **çıkış yolları** geldi, ve **kararın kendisi** yazıldı: "Depo
+  seçtirme bilinçli olarak yoktur — yanlış depoya yazılan sayım iki deponun stokunu birden bozar"
+  (DOMAIN §17). Bir liste koymak kolay olurdu; kararın nedeni ekranda durmalı.
+
+  **ÇIKIŞLAR PERSONELİN GERÇEKTEN AÇIK BÖLÜMLERİNDEN doğuyor.** Şablon "Para bölümüne geç"i SABİT
+  yazıyor; sabit yazmak, para yetkisi olmayan bir depocuya açamayacağı bir kapı göstermek olurdu —
+  o kapı "yetkin yok" diye geri atardı. Liste kapıdan geliyor (`useOperationsSections`); tek
+  bölümlü personelde hiç düğme doğmuyor.
+
+  **Bir duplikasyon önlendi:** bölüm adresi deseni (`/${section}`) `operationsHomeRoute` içinde
+  gömülüydü; ikinci çağıran doğunca `operationsSectionRoute` olarak çıkarıldı (CLAUDE §1).
+
+  **Uyuşmazlık #2 daraldı:** kalan tek fark yerleşim — şablon kapsam sorusunu hub'ın üstünde ince
+  bir şerit yapıp altında dolu bir hub çiziyor; kapsam çözülmeden uçların hiçbiri veri döndürmediği
+  için bu hâlâ mümkün değil.
+
+  **Doğrulama.** Hub jest **17/17** (ikisi yeni: açık bölüme çıkış, tek bölümlüde çıkışsızlık) ·
+  mobil paket **960/960**; typecheck · lint · knip yeşil; **cihazda gözle doğrulandı** — muhasebe
+  rolüyle (depo + para) girildi, yalnız "Para bölümüne geç" çizildi.
