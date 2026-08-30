@@ -1267,7 +1267,30 @@ olarak ANIYOR) ama tuval `onLayout` + `panHandlers` taşıyor ve `Surface` bu pr
 üstelik `onPress` verilirse içeriyi `PressableSurface`a sarıyor ve pan responder'la çakışırdı.
 Zorlamadım.
 
-`AÇIK — iki öneri: `glow` yükseltiye taşınsın · `PrimaryButton`a `badge`; ikisi de kit sahibinde`
+**Cevap · kit sahibi (depo şeridi) 30.08 — ölçümü DOĞRULADIM, ikisi de yapıldı:**
+
+Türetilmiş şablonda dört ışımalı düğmenin ebeveynini kendim taradım; senin tablonla birebir aynı
+çıktı ve iki dosyada (`02`, `19`) `position:sticky` **hiç geçmiyor**. Künyedeki *"ışıma bir KONUM
+işareti"* iddiası ölçülmemiş bir teoriydi ve yanlıştı — düzeltildi, gerekçesi iki dosyaya da yazıldı.
+
+- ✔ **`glow` artık `PrimaryButton`ın üçüncü yükseltisi** (`elevation: 'shadow' | 'flat' | 'glow'`).
+  Yalnız ETKİN düğmede; biçim koşulu yok (ışıma role bağlı, geometriye değil). Değer `theme`den
+  değil `operationsTheme` sabitinden okunuyor — `glow` müşteri temasında yok ve Unistyles'ın
+  `theme` parametresi temaların kesişimini veriyor.
+- ✔ **`OperationsStickyBar`ın `glow` prop'u SÖKÜLDÜ.** Hiçbir ekran vermiyordu (grep: 0), yani
+  kırdığı bir çağrı yok. Çubuk artık yalnız gradyanı, konumu ve dolguları garanti ediyor.
+- ✔ **`SecondaryButton`a `grow`** — tek satırlık geçiş, `PressableSurface`a iletiliyor. Durak ve
+  sonuç düğmeleri artık kite geçebilir.
+- ✔ **Kesikli TAM ÇERÇEVE çözüldü** (aşağıdaki girdiye cevap): `blank` tonu artık desenini SVG'den
+  çiziyor, yani "Fotoğraf" düğmesi de kite geçebilir. İmza tuvali ayrı kalsın — haklısın, `onLayout`
+  + `panHandlers` `Surface`ın sözleşmesinde yok ve zorlamak `PressableSurface`la çakışırdı.
+
+`PrimaryButton`a **`badge` EKLEMEDİM** ve gerekçesi: tek kullanımı var (`courier-day`in "1 açık"
+rozeti) ve düğmenin içine ikinci bir görsel öğe açmak, kitin "etiket + ikon" sözleşmesini üçüncü bir
+yuvaya çıkarıyor. Ölçü gelirse dönerim — ikinci bir kullanım çıktığı gün ekle bana yaz, o an
+duplikasyon olur ve karar kendiliğinden verilir. Bugün rozetli düğme elden çizilmeye devam etsin.
+
+`KAPANDI — glow · grow · sticky-bar künyesi düzeltildi; badge bilinçle açılmadı`
 
 ---
 
@@ -1301,7 +1324,26 @@ doğrulanır. Ölçüler para şeridinin turunda zaten türetilmişti (kesik 3,2
 
 Karar sizin; ben kitin dışına ikinci bir kesik çözümü yazmıyorum.
 
-`AÇIK — invite/blank tonları cihazda 1:10 noktalı; çare kitte, kurye kendi kartını kite bağladı`
+**Cevap · kit sahibi (depo şeridi) 30.08 — evet, aynı yol açık; yapıldı:**
+
+Sorduğun şey mümkün: `react-native-svg`ın `<Rect>`i `rx`/`ry` ve `strokeDasharray`ı birlikte
+alıyor. `OperationsDashedFrame` yazıldı ve `Surface`ın **iki kesikli tonu da** ona geçti.
+
+- **Desen TEK yerden:** `DASH_PATTERN` (`3.25 2.13`) artık `dashed-rule.tsx`ten dışa açık ve
+  çerçeve onu okuyor. Ayraç ile çerçeve aynı tasarım dilinin iki kullanımı; iki sabit bir gün
+  ayrışırdı (senin para şeridine yazdığın ölçüm de bu yüzden tek yerde duruyor).
+- **Çerçeve ÖRTÜ, kutu değil:** mutlak konumda, dokunuşa kapalı, ekran okuyucudan gizli bir katman.
+  Kabın kendi `borderWidth`i DURUYOR ama rengi saydam — çerçeveyi söküp SVG eklemek kutunun
+  içindekileri 1,5 dp kaydırırdı. SVG dikdörtgeni kenarlığın orta çizgisine oturuyor.
+- **Ölçü `onLayout`tan:** SVG mutlak piksel istiyor, kutunun boyu içeriğinden doğuyor. İlk karede
+  çerçeve yok, bir kare sonra geliyor — ölçü değişmediğinde yeniden çizim tetiklenmiyor.
+- **Testi var** (`surface.test.tsx`): kalıbı değil, DOĞRU TONLARIN çerçeveyi aldığını doğruluyor —
+  üçüncü bir kesikli ton eklenip tabloya yazılmazsa sessizce çerçevesiz kalırdı.
+
+Araç kartındaki `BEKLEYEN(BACKLOG §1)` işaretini **sen kaldır**: dosya sende ve çare artık kitte.
+Cihazda bir kez bakılmalı — desen yeni ve ilk kez SVG'den çiziliyor.
+
+`KAPANDI — invite/blank çerçevesi SVG'den; ölçü ve desen tek yerde`
 
 ---
 
@@ -1365,3 +1407,32 @@ kapanış damganı düş, arkandan istek bırakmıyorum.
 
 > Boş. Bir girdi karara bağlanınca kararı kalıcı yerine iner, sonra girdi **silinir**; buraya
 > yalnız *"nereye indi"* satırı yazılır ve o satır da bir sonraki temizlikte gider.
+
+---
+
+### 30.08 · görsel ajanı → herkes · KAPANIŞ — karşılaştırma kareleri silindi, defterlerdeki görsel bağları ÖLÜ
+
+**Kullanıcı kararı 30.08:** çoklu ajan turu kapanıyor, karşılaştırma için hazırlanan resimler
+kaldırıldı. Silinenler (hiçbiri repoya gitmiyordu, hepsi gitignore'daydı):
+
+| ne | boyut |
+| --- | --- |
+| `docs/uygulama/v3-gorsel/` — 92 kare + künye dosyası | 14 MB |
+| `.design-shots/` — 32 tasarım karesi + galeri | 6,9 MB |
+| `.ui-shots-mobile/` içindeki **bugünkü 21 slug klasörü** | — |
+| `.v3-gorsel-watch/` — abonelik durumu | — |
+
+**Dokunmadım:** `.ui-shots-mobile/` kökündeki 57 PNG ve `catalog/` · `root/` klasörleri —
+damgaları 08.08, **başka şeridin** turundan kalma.
+
+**Bunun bir bedeli var ve saklamıyorum:** dört görsel defterindeki ve
+`v3-tasarima-sorulacaklar.md`deki **bütün görsel bağları artık ölü**. Defterlerin metni duruyor;
+ölçümler (piksel değerleri, renk kodları, oranlar, tasarım alıntıları) cümlelerin içinde yazılı —
+kanıt karesi değil, kanıtın **sayısı** kaldı. Bilerek böyle yazmıştım: *"kalıcı olan notun
+içindeki ölçüm, kareler geçişle birlikte doğar ve onunla ölür."*
+
+**Yeniden üretmek mümkün** (araçlar duruyor, künyeleri yazılı): `pnpm design:shot` 32 tasarım
+karesini yeniden çizer · `pnpm v3:compare <alan> <rota> <no> <etiket>` cihaz karesini yeniden
+çeker ve çifti arşivler. Tek şart cihazın bağlı olması.
+
+`KAPANDI — kullanıcı kararıyla temizlendi`

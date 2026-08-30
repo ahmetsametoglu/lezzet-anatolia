@@ -51,6 +51,8 @@ export async function seedBarcodes(db: Db, varyantlar: VaryantRef[], kisiler: Ki
 
   let unit = 0;
   let kasa = 0;
+  /** Kaç VARYANT koli kodu aldı — ilk çarpanın rotasyonu buna bağlı (satır sayısına değil). */
+  let koliliVaryant = 0;
   for (const [i, v] of kodlanacak.entries()) {
     const paketKodu = eanBenzeri(i);
     if (!REZERVE_KODLAR.has(paketKodu)) {
@@ -64,19 +66,38 @@ export async function seedBarcodes(db: Db, varyantlar: VaryantRef[], kisiler: Ki
       unit += 1;
     }
 
-    // Her üçüncü varyanta bir de KOLİ kodu: GTIN-14 görünümü (başa ambalaj hanesi), çarpan
-    // çeşitli (6 · 12 · 24) — tek çarpan, "çarpan kadar öner" davranışını tek sayıyla sınardı.
+    // Her üçüncü varyanta KOLİ kodu: GTIN-14 görünümü (başa ambalaj hanesi), çarpan çeşitli
+    // (6 · 12 · 24) — tek çarpan, "çarpan kadar öner" davranışını tek sayıyla sınardı.
+    //
+    // ── ÜRÜNÜN BİRDEN ÇOK KOLİ BOYU VAR (kullanıcı bulgusu 30.08) ───────────
+    // Eskiden varyant başına TEK boy yazılıyordu ve mal kabulün adet çekmecesi bu yüzden hiçbir
+    // koşuda gerçek hâlini göstermiyordu: tasarımın "KAÇ KOLİ GELDİ" listesi ürün kartında
+    // kayıtlı BÜTÜN boyları sayıyor (şablonun kendi örneği: KT-04 · KL-12 · KL-24) ve tek satırlık
+    // bir liste o ekranı sınamıyor. Gerçek dünyada da böyle: aynı ürün altılı kutuyla da gelir,
+    // yirmi dörtlü koliyle de — çarpan KODUN kendi alanıdır, varyantın değil (entity künyesi §1.2).
+    //
+    // İlk boy KODUYLA ve ÇARPANIYLA aynen korundu (`1` + paket kodu): okutma testleri onu okutuyor
+    // ve değiştirilseydi tohumdan gelen bir davranış sessizce kayardı. Ek boylar ayrı ambalaj
+    // hanesiyle (`2`/`3`) doğuyor — GTIN-14'te o hane zaten "hangi ambalaj kademesi" demek.
     const koliKodu = `1${paketKodu}`;
     if (i % 3 === 0 && !REZERVE_KODLAR.has(koliKodu)) {
-      await barcodes.insert({
-        variantId: v.id,
-        code: koliKodu,
-        kind: 'case',
-        qtyPerCode: [6, 12, 24][kasa % 3]!,
-      });
-      kasa += 1;
+      // Rotasyon VARYANT başına döner, satır başına değil: `kasa` artık varyant başına üç kez
+      // artıyor ve onunla dönseydi ilk çarpan hep aynı kalırdı.
+      const ilkCarpan = [6, 12, 24][koliliVaryant % 3]!;
+      koliliVaryant += 1;
+      // Ek boylar ilk çarpandan FARKLI olanlar: aynı çarpanı iki kez yazmak, çekmecede ayırt
+      // edilemeyen iki satır demekti.
+      const carpanlar = [ilkCarpan, ...[4, 12, 24].filter((n) => n !== ilkCarpan)];
+      for (const [k, carpan] of carpanlar.entries()) {
+        const kod = `${k + 1}${paketKodu}`;
+        if (REZERVE_KODLAR.has(kod)) continue;
+        await barcodes.insert({ variantId: v.id, code: kod, kind: 'case', qtyPerCode: carpan });
+        kasa += 1;
+      }
     }
   }
 
-  console.log(`✓ barkod: ${unit} paket + ${kasa} koli kodu · biri ÖĞRENİLMİŞ (depocu) · katalogun kalanı bilinçle kodsuz`);
+  console.log(
+    `✓ barkod: ${unit} paket + ${kasa} koli kodu (${koliliVaryant} varyant, çok boylu) · biri ÖĞRENİLMİŞ (depocu) · katalogun kalanı bilinçle kodsuz`,
+  );
 }

@@ -585,10 +585,25 @@ export async function seedWarehousePrinters(db: Db, depolar: Depolar): Promise<v
     { depo: depolar.kehl, name: 'Kehl · QL-1110', purpose: 'box' as const, address: '192.168.2.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' },
   ];
 
+  /*
+    GUARD TUR BAŞINDA ÖLÇÜLÜR, SATIR SATIR DEĞİL (kusur, ölçüldü 30.08).
+
+    Guard depo bazındaydı ve DOĞRU yerdeydi (kutu kataloğunun aynı gerekçesi: tablo dolu olabilir
+    ve bu, BU deponun yazıcılarının kurulduğu anlamına gelmez) — ama döngünün İÇİNDE ölçülüyordu.
+    Sonuç: STR'nin ilk yazıcısı yazılıyor, ikinci satıra gelindiğinde STR artık "dolu" görünüyor ve
+    KARGO YAZICISI HİÇ KURULMUYORDU. Ölçüm: tabloda 2 yazıcı vardı (STR box · KEHL box), planda 3.
+
+    Sessiz bir kusurdu ve tam olarak dosyanın kendi künyesinin vaat ettiği hâli bozuyordu: "STR →
+    İKİ yazıcı — cihaz seçicisinin normal hâli". İki yazıcılı depo hiç doğmadığı için seçicinin
+    normal hâli yerel veride HİÇ görülemiyordu (kullanıcı bulgusu: "yazıcılar gelmiyor").
+  */
+  const zatenKurulu = new Set<string>();
+  for (const depo of new Set(plan.map((satir) => satir.depo))) {
+    if ((await svc.listForWarehouse(depo)).length > 0) zatenKurulu.add(depo);
+  }
+
   for (const satir of plan) {
-    // Guard depo BAZINDA (kutu kataloğunun aynı gerekçesi): tablo dolu olabilir ve bu, BU deponun
-    // yazıcılarının kurulduğu anlamına gelmez.
-    if ((await svc.listForWarehouse(satir.depo)).length > 0) continue;
+    if (zatenKurulu.has(satir.depo)) continue;
     await svc.insert({
       warehouseId: satir.depo,
       name: satir.name,

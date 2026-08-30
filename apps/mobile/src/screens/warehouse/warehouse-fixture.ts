@@ -96,6 +96,9 @@ export function intakeRow(overrides: Partial<IntakeFormRowContract> = {}): Intak
     // kısa ömrü ve yakın tarihi kendisi verir, öteki testler gürültüsüz kalır.
     dateType: 'DDM',
     shelfLifeDays: 360,
+    // Koli boyu YOK varsayılanda: kayıtlı boyu olmayan ürün de meşrudur ve adet çekmecesi o hâlde
+    // yalnız tek paket sayar. Koli sayımını sınayan test boyları kendisi verir.
+    caseSizes: [],
     ...overrides,
   };
 }

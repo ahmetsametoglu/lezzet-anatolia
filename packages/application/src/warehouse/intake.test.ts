@@ -101,8 +101,25 @@ describe('PO’lu mal kabul', () => {
     expect(rows[0]).toMatchObject({ variantId, expectedQty: 20 });
     expect(rows[0]!.productName).toContain('Mantı');
     expect(rows[0]!.variantLabel).toBe('1 kg');
-    // "Fiyat yok" iddiası ALAN ADIYLA kurulur: rakam aramak UUID'ye takılır.
-    expect(Object.keys(rows[0]!).sort()).toEqual(['expectedQty', 'productName', 'variantId', 'variantLabel']);
+    /* "Fiyat yok" iddiası ALAN ADIYLA kurulur: rakam aramak UUID'ye takılır.
+
+       Liste 21.160'ta dörtten sekize çıktı ve dördü de tanıma/karar alanı: `sku` +
+       `supplierCode` (depocunun elindeki kâğıtla eşleştirme), `dateType` + `shelfLifeDays`
+       (satırın SKT alanı ve ömür uyarısı bunlarsız kurulamıyor). Test o turda güncellenmedi ve
+       paket kırmızıya döndü — düzeltildi 30.08. */
+    expect(Object.keys(rows[0]!).sort()).toEqual([
+      // Dokuzuncu alan `caseSizes` (30.08): adet çekmecesinin çarpan tablosu — depocu "3 koli
+      // geldi" der, paketi ekran çarpar. Para değil: koli boyu bir ÖLÇÜDÜR.
+      'caseSizes',
+      'dateType',
+      'expectedQty',
+      'productName',
+      'shelfLifeDays',
+      'sku',
+      'supplierCode',
+      'variantId',
+      'variantLabel',
+    ]);
   });
 
   /**
@@ -330,6 +347,10 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
       supplierName: `Kabul tedarikçisi ${stamp}`,
       // Kalem SAYISI, adet değil: sipariş tek kalemli (9 adet).
       lineCount: 1,
+      /* Sipariş DURUMU 21.160'ta eklendi: liste "gönderildi" ile "kısmen geldi"yi ayırt
+         edebilsin diye (ekran ikincisine ayrı bir rozet çiziyor). Alan o turda eklenip test
+         güncellenmedi — düzeltildi 30.08. */
+      status: 'sent',
     });
   });
 
@@ -370,7 +391,13 @@ describe('kabul künyesi ve bekleyen sevkiyatlar (D2 · 21.11d)', () => {
 
     const mine = (await listPendingIntakes(db, { limit: 100 })).find((row) => row.purchaseOrderId === purchaseOrderId);
 
-    expect(Object.keys(mine!).sort()).toEqual(['lineCount', 'purchaseOrderId', 'referenceNo', 'supplierName']);
+    expect(Object.keys(mine!).sort()).toEqual([
+      'lineCount',
+      'purchaseOrderId',
+      'referenceNo',
+      'status',
+      'supplierName',
+    ]);
     expect(JSON.stringify(mine)).not.toContain('1234');
   });
 });

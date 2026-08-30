@@ -54,10 +54,14 @@ function routeReplies(replies: {
   preparation?: () => Promise<Response>;
   transfers?: () => Promise<Response>;
   handover?: () => Promise<Response>;
+  printers?: () => Promise<Response>;
 }) {
   fetchMock.mockImplementation((url) => {
     const path = String(url);
     if (path.includes('/preparation')) return (replies.preparation ?? (() => Promise.resolve(ok({ date: null, orders: [] }))))();
+    // Yazıcı okuması hub'ın ALT ŞERİDİNİ besliyor (30.08): şerit "bu cihaz" diyor ve cihazın o
+    // anki kurulumunu yazıyor. Hata koşuluna katılmaz — ayar kapısıdır, günün işi değil.
+    if (path.includes('/printers')) return (replies.printers ?? (() => Promise.resolve(ok({ printers: [] }))))();
     // Devir sayacı KENDİ ucundan geliyor (07.12): bekleyen kutuları hiçbir liste taşımıyor,
     // çünkü duyurulmuş siparişin kutuları hazırlık kuyruğundan çoktan düşmüştür.
     if (path.includes('/handover/pending')) return (replies.handover ?? (() => Promise.resolve(ok({ boxes: 0 }))))();
@@ -488,5 +492,52 @@ describe('depo hub', () => {
 
     expect(screen.getByTestId('warehouse-scope-block')).toBeOnTheScreen();
     expect(screen.queryByTestId('warehouse-hub-list')).toBeNull();
+  });
+
+  /*
+    ── YAZICI ŞERİDİ CİHAZIN HÂLİNİ SÖYLER (görsel ajanı farkı #4, 30.08) ─────
+    Şerit "bu cihaz" diyor; tasarım oraya kurulumu yazıyor ("kutu etiketi QL-1110NWB · kargo
+    etiketi tanımsız"), bizde ne işe yaradığını anlatan bir cümle vardı — ayarı açmadan hiçbir
+    şey öğretmiyordu. Ölçülen üç hâl, üçü de tohumun kendi hâlleri (STR iki · KEHL tek · COLMAR
+    hiç) ve dördüncüsü ölçüm düşüşü.
+  */
+  it('yazıcı şeridi AMAÇ BAŞINA yazıyor — tanımsız olan yarım ayrıca söylenir', async () => {
+    routeReplies({
+      printers: () =>
+        Promise.resolve(
+          ok({
+            printers: [
+              // Kimlik GERÇEK bir uuid: şema `z.string().uuid()` istiyor ve "p1" gibi kısa bir
+              // damga sessizce ayrıştırmayı düşürüyor — cevap boş gelmiş gibi görünüyordu.
+              {
+                id: '00000000-0000-4000-8000-000000000001',
+                name: 'Masa · QL-1110',
+                purpose: 'box',
+                address: '10.0.0.1',
+                model: 'QL-1110NWB',
+                labelSize: 'DieCutW103H164',
+              },
+            ],
+          }),
+        ),
+    });
+
+    await renderHub();
+
+    // Kutu yazıcısı VAR, kargo YOK: sayı ("1 yazıcı") bu bilgiyi taşımazdı — depocunun sorusu
+    // "kaç tane" değil, "kargo etiketi basabilir miyim".
+    // Düzenli ifade: bu kurulumda `toHaveTextContent` dizgeyi TAM eşleştiriyor, alt dize aramıyor.
+    expect(screen.getByTestId('warehouse-hub-printers-state')).toHaveTextContent(/QL-1110NWB/);
+    expect(screen.getByTestId('warehouse-hub-printers-state')).toHaveTextContent(/tanımsız/);
+  });
+
+  it('yazıcı okuması DÜŞERSE açıklamaya düşer — "tanımsız" YAZMAZ', async () => {
+    routeReplies({ printers: () => Promise.resolve(fail('server_error', 500)) });
+
+    await renderHub();
+
+    /* Ölçülemeyen ile tanımsız AYRI (CLAUDE §1): okuma düştüğünde "tanımsız" yazmak, kurulmamış
+       bir yazıcıyı kurulmuş gibi değil, KURULUMU BİLİNMEYEN cihazı bilinir gibi gösterirdi. */
+    expect(screen.getByTestId('warehouse-hub-printers-state')).not.toHaveTextContent(/tanımsız/);
   });
 });

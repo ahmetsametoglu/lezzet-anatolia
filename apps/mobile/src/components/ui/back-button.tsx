@@ -15,9 +15,15 @@ import { PressableSurface } from './pressable-surface';
   `OperationsIconButton` olarak çıkarıldı ve buradaki ikizi kaldırıldı; aynı kutunun iki tarifi,
   bir gün ikiye ayrılacak demektir (CLAUDE §1).
 
-  Yan kazanç ölçülebilir: bu dosya artık `operationsTheme`i OKUMUYOR. Paylaşılan kitin operasyon
-  temasına uzanması bir dikiş kaçağıydı — `neutral-bg` yalnız o temada var ve müşteri yüzeyinin
-  komponenti onu tanımak zorunda değil.
+  Yan kazanç: **bu dosya** artık `operationsTheme`i okumuyor — müşteri yüzeyinin geri düğmesinin
+  operasyon temasına uzanması bir dikiş kaçağıydı (`neutral-bg` yalnız o temada var).
+
+  DÜZELTME (30.08, yönetim şeridinin ölçümü): kit commit'inde bunu *"`components/ui/` artık
+  `operationsTheme`i HİÇ okumuyor"* diye yazmıştım ve YANLIŞTI — `bottom-tab-bar.tsx` onu hâlâ
+  beş yerde okuyor. Orada okuması DOĞRU ve kendi künyesinde gerekçesi yazılı: sekme çubuğu iki
+  yüzeyi birden çiziyor ve `tab-inactive` · `tabIconOperations` yalnız operasyon temasında var,
+  yani Unistyles'ın tema birleşiminden okunamıyorlar. Bir dosyayı ölçüp klasör hakkında cümle
+  kurmuşum; düzeltilen tek dosya buydu.
 
   İşaret metin değil İKONdur (‹) — bu yüzden `label` prop'u yok; ekran okuyucuya giden ad
   `accessibilityLabel` ile gelir ve i18n'den beslenir (komponent metin gömmez).

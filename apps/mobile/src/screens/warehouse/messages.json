@@ -31,7 +31,7 @@
       "body": "Bağlantı ya da sunucu sorunu — kayıtlı işlerin güvende."
     },
     "offline": "Bağlantı yok — mal kabul, transfer ve sayım çevrimdışı yapılamaz (raf ↔ sistem çelişkisi yasak).",
-    "footnote": "Depo ekranları fiyat/tutar görmez. Parti kararı motorundur; mal kabulde kod okutulur.",
+    "footnote": "Depo ekranları fiyat/tutar görmez (tek istisna D7 kapı satışı). Parti kararı motorundur; mal kabulde kod okutulur.",
     "overview": {
       "label": "BUGÜN DEPODA",
       "orders": "sipariş\nbekliyor",
@@ -90,12 +90,14 @@
       "printers": {
         "code": "⚙",
         "title": "Bu cihaz · Yazıcılar",
-        "subtitle": "kutu ve kargo etiketi hangi yazıcıdan"
+        "subtitle": "kutu ve kargo etiketi hangi yazıcıdan",
+        "state": "kutu etiketi {box} · kargo etiketi {shipping}",
+        "unset": "tanımsız"
       },
       "sale": {
         "code": "D7",
         "title": "Yerinde satış",
-        "subtitle": "kapıya gelen müşteri · nakit / kart"
+        "subtitle": "kapıya gelen müşteri"
       }
     }
   },
@@ -309,7 +311,8 @@
       "title": "Henüz ürün eklenmedi",
       "body": "Gelen malın barkodunu okutun ya da arayarak ekleyin. Tedarik siparişi olmadığı için beklenen adet yoktur; ne geldiyse onu yazarsınız."
     },
-    "searchCta": "＋ Ürün ara ve ekle",
+    "searchCta": "+ Ürün ara ve ekle",
+    "searchStock": "stok {qty}",
     "searchTitle": "Hangi ürün geldi?",
     "searchPlaceholder": "Ürün adı, SKU ya da barkod",
     "searchEmpty": "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin.",
@@ -332,10 +335,43 @@
       "body": "Plansız kabul stok partisi açar — kod eşleşmesi ve parti oluşumu sunucuda olur. Bağlantı gelene kadar satır eklenemez."
     },
     "qtyLabel": "{name} için gelen adet",
+    "qtyCaption": "ADET",
+    "qtyHint": "Tuş takımını açar",
+    "qtySheet": {
+      "title": "Adet",
+      "subject": "{name} · {source}",
+      "reset": "sıfırla",
+      "unit": "paket · toplam",
+      "sumLoose": "{n} tek paket",
+      "sumTotal": "{parts}  =  {n} paket",
+      "sumEmpty": "henüz sayılmadı",
+      "casesTitle": "KAÇ KOLİ GELDİ",
+      "casesHint": "Boylar ürün kartındaki kutu tiplerinden gelir — kaç koli geldiyse o kadar ekle.",
+      "caseLabel": "Koli — {n} paket",
+      "caseTotal": "{n} paket",
+      "caseIdle": "kolideki paket sayısı",
+      "caseNew": "YENİ · ürüne kaydedilecek",
+      "addTitle": "Başka koli boyu",
+      "addHint": "altılı, onlu… listede yoksa ekle",
+      "looseTitle": "KOLİ DIŞI TEK PAKET",
+      "looseHint": "açık gelen, tek tek sayılanlar",
+      "confirm": "Tamam",
+      "extra": {
+        "title": "Kolide kaç paket var",
+        "hint": "Bu koli ürün kartında kayıtlı boylardan farklıysa seç — ürüne yeni kutu tipi olarak kaydedilir, sonraki kabullerde hazır çıkar.",
+        "footnote": "Bu listede de yoksa masada ürün kartına eklenir — sahada uydurulmuş çarpan stok sayımını bozar.",
+        "cancel": "Vazgeç"
+      }
+    },
     "countCta": "say →",
+    "source": {
+      "manual": "barkod okutulmadı",
+      "scanned": "barkod okutuldu"
+    },
     "expiry": {
       "missing": "SKT gir *",
       "set": "SKT {date} ✓",
+      "pick": "seç →",
       "placeholder": "gg.aa.yyyy",
       "sheet": {
         "title": "Son kullanma tarihi",
@@ -344,7 +380,7 @@
         "day": "GÜN",
         "month": "AY",
         "year": "YIL",
-        "confirm": "Bu tarihi yaz",
+        "confirm": "{date} · yaz",
         "cancel": "Vazgeç"
       },
       "field": "{name} için son kullanma tarihi",
@@ -353,6 +389,13 @@
     "lot": {
       "short": "lot: {lot}",
       "known": "lot: {lot}",
+      "pick": "lot seç",
+      "sheet": {
+        "title": "Lot / parti kodu",
+        "hint": "Kolinin üstündeki parti kodunu yaz — geri çağırma anahtarı budur. Kod yoksa boş bırakmak bilinçli bir karardır.",
+        "skip": "Lot yok",
+        "confirm": "Yaz"
+      },
       "empty": "lot yok — bilinçli boş",
       "field": "{name} için lot numarası"
     },
@@ -371,6 +414,8 @@
     "cta": {
       "ready": "Kabulü kaydet — partiler açılır",
       "partial": "Kısmen teslim alındı olarak kaydet",
+      "partialAction": "Kısmen teslim alındı olarak kaydet",
+      "partialNote": "Kısmi kayıtta kalan satırlar açık kalır; sevkiyat \"kısmen teslim alındı\"ya döner.",
       "pending": "Her satırda adet + SKT zorunlu",
       "sending": "Yazılıyor…"
     },
@@ -379,7 +424,16 @@
       "empty": "Satırsız istek — hiçbir şey yazılmadı."
     },
     "scan": {
-      "cta": "📷 Koli okut",
+      "cta": "Koli okut — satırı bul",
+      "kind": {
+        "unit": "tekil barkod",
+        "case": "koli barkodu"
+      },
+      "perCode": "bir okutma = {n} adet",
+      "learnedCard": {
+        "title": "Kod öğrenildi · {code} → {name}",
+        "body": "{kind} · çarpan {n} · ikinci gelişte tanınacak"
+      },
       "title": "Koli okut",
       "hint": "Kolinin ya da paketin barkodunu çerçeveye getirin — satır kendiliğinden bulunur.",
       "found": "{name} bulundu — {n} adet eklendi.",
@@ -439,7 +493,7 @@
     },
     "toNearExpiry": "Yakın-SKT turuna git →",
     "scan": {
-      "cta": "📷 Parti etiketini okut",
+      "cta": "Parti etiketini okut",
       "title": "Parti etiketini okut",
       "hint": "Kutunun üstündeki lot numarasını çerçeveye getirin — bu deponun açık partileri listelenir.",
       "unknown": "{code} ile bu depoda açık parti yok — kod başka deponun olabilir ya da parti tükenmiş olabilir.",
@@ -623,14 +677,19 @@
     },
     "purpose": {
       "box": "KUTU ETİKETİ · 4×6",
-      "shipping": "KARGO ETİKETİ · A6"
+      "shipping": "KARGO ETİKETİ"
     },
     "consequence": {
       "box": "Kutu kapanışında sistem diyaloğu olmadan kendiliğinden basar.",
       "shipping": "Gönderi alınmışsa basım düşse bile iptal olmaz — “yeniden bas” ile aynı etiket çıkar."
     },
-    "none": "Tanımlı değil — etiket alınsa da basılamaz. Yazıcı Depolar ekranından tanımlanır.",
-    "detail": "{model} · {address} · {size}",
+    "unset": {
+      "title": "Tanımlı değil",
+      "body": "etiket alınsa da basılamaz"
+    },
+    "define": "Bu iş için depoda hiç yazıcı yok — yazıcılar Depolar ekranından tanımlanır.",
+    "pick": "seç",
+    "picked": "seçili",
     "link": {
       "online": "bağlı · Wi-Fi",
       "offline": "ağda görünmüyor",
@@ -643,7 +702,6 @@
       "ok": "Örnek etiket {name} yazıcısına gönderildi — kâğıt çıktıysa kurulum tamam.",
       "failed": "Basılamadı: {error}"
     },
-    "only": "tek",
-    "footnote": "Seçim BU CİHAZDA kalır, sunucuya gitmez: aynı depodaki başka telefon başka yazıcıya basabilir. Bir iş için tek yazıcı varsa seçim sorulmaz."
+    "footnote": "Yazıcı seçimi cihaz başına saklanır; başka telefonla girdiğinde yeniden sorulur."
   }
 }

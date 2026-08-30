@@ -71,10 +71,21 @@ function staffInitials(name: string, email: string | null): string {
 }
 
 interface OperationsStaffMenuProps {
+  /**
+   * Kimlik karesinin dolgusu — **bölümün rengi** (görsel ajanı ölçümü 30.08, yönetim farkı #5).
+   *
+   * Tasarım dört hubta aynı KUTUYU çiziyor ama aynı rengi değil: depo ve kurye zeytin (v3:01, 14),
+   * yönetim MÜREKKEP (v3:2077). Rastgele değil — yönetim ekranının tek koyu yüzeyi acil şikâyet
+   * kartıdır ve kimlik karesi de koyuysa başlık şeridi o kartla aynı aileden konuşur.
+   *
+   * Varsayılan `olive`: dört hubun üçü o (depo · kurye · para) ve varsayılanı çoğunluktan seçmek,
+   * çağıranların çoğunu prop yazmaktan kurtarır.
+   */
+  tone?: 'olive' | 'ink';
   testID?: string;
 }
 
-export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
+export function OperationsStaffMenu({ tone = 'olive', testID }: OperationsStaffMenuProps) {
   const router = useRouter();
   const { name, email, sections } = useOperationsIdentity();
   const warehouseOptions = useWarehouseOptions();
@@ -112,7 +123,7 @@ export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
       <PressableSurface
         onPress={() => setOpen(true)}
         feedback="scale-small"
-        style={styles.button}
+        style={[styles.button, styles[tone]]}
         accessibilityLabel={`${t.menuLabel}: ${name}`}
         testID={testID}
       >
@@ -183,15 +194,26 @@ export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
 
 const styles = StyleSheet.create({
   button: {
-    // Zille AYNI çap: iki komşu dairenin farklı olması, hizasızlığı ölçü hatası gibi gösterirdi.
-    width: operationsTheme.size.iconButtonOnPhoto,
-    height: operationsTheme.size.iconButtonOnPhoto,
-    borderRadius: operationsTheme.size.iconButtonOnPhoto / 2,
+    /*
+      ZİLLE AYNI KUTU — ölçü DE biçim DE (görsel ajanı ölçümü 30.08, hub farkı #1).
+
+      Künye "zille aynı çap" diyordu ama değildi: zil 40 (`iconButton`), avatar 42
+      (`iconButtonOnPhoto`) çiziliyordu ve avatar TAM DAİREYDİ. Tasarım ikisini de
+      `40×40 · border-radius:14` çiziyor — yani yuvarlatılmış KARE. Cihazda yan yana duran iki
+      düğmeden biri daire biri kutucuktu; fark 2 dp'lik ölçüden değil, biçimden görünüyordu.
+
+      Ölçü artık zilin durağından okunuyor; ikisi ayrı yazılsaydı biri bir gün yine kayardı.
+    */
+    width: operationsTheme.size.iconButton,
+    height: operationsTheme.size.iconButton,
+    borderRadius: operationsTheme.radius.badge,
     alignItems: 'center',
     justifyContent: 'center',
-    // DOLU zeytin — zilin nötr zemininden ayrılan tek fark ve avatarın bulunma sebebi.
-    backgroundColor: operationsTheme.colors.olive,
   },
+  // DOLU zemin — zilin nötr kutusundan ayrılan tek fark ve avatarın bulunma sebebi. Rengi BÖLÜM
+  // verir (prop künyesi): üç hubta zeytin, yönetimde mürekkep.
+  olive: { backgroundColor: operationsTheme.colors.olive },
+  ink: { backgroundColor: operationsTheme.colors.ink },
   initials: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['card-title-sm--font-weight']],
     fontSize: operationsTheme.text['card-title-sm'],

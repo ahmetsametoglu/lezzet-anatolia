@@ -3,11 +3,13 @@ import { MLOR_PERCENT } from '@lezzet/domain-core';
 import type {
   BarcodeKind,
   IntakeFormRowContract,
+  IntakePurchaseOrderContract,
   PendingIntakeContract,
   ResolveCodeResponse,
   VariantSearchRowContract,
 } from '@lezzet/types';
 
+import { EMPTY_BREAKDOWN, setCaseCount, type QuantityBreakdown } from '@/components/operations/quantity-value';
 import { fetchIntakeForm, fetchPendingIntakes, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
@@ -58,15 +60,76 @@ interface IntakeNotice {
 export interface IntakeRowState {
   /** Gelen adet; `null` = henüz sayılmadı (sıfır DEĞİL — sıfır "hiç gelmedi" beyanıdır). */
   qty: number | null;
+  /**
+   * Adedin DÖKÜMÜ — hangi boydan kaç koli + koli dışı kaç tek paket (v3 · `sheetAdet`).
+   *
+   * `qty` bunun toplamıdır ve ikisi HER ZAMAN aynı yamada yazılır (çekmecenin `onChange`i,
+   * okutmanın `addScanned`i) — ayrı yazılsalardı biri bir gün ötekinden geride kalırdı. Toplamı
+   * ayrıca tutmanın sebebi: gönderim ve sapma hesabı toplamı ister, döküm ise ÇEKMECENİN belleği.
+   * Depocu çekmeceyi yeniden açtığında "27" değil "2 koli + 3 tek" görmeli — düzeltmek istediği
+   * şey toplam değil, bir koli sayısıdır.
+   */
+  breakdown: QuantityBreakdown;
   /** Ham metin: alan yazılırken geçersiz ara hâllerden geçer, ISO'ya ancak tamamlanınca döner. */
   expiryText: string;
   lotText: string;
   /** Lot BİLEREK boş bırakıldı mı — geri çağırma anahtarının yokluğu bilinçli olmalı (v2). */
   lotSkipped: boolean;
   damageNote: string;
+  /**
+   * Bu satırın adedi BARKOD OKUTULARAK mı yazıldı, ve okutulduysa NE ile (v3:05 — `kaynakNotu`
+   * künyesi ve `okutTuru`/`okutNotu` kutusu; ikisi de aynı bilgiden).
+   *
+   * Tasarım satırın künyesinde bunu söylüyor, varsayılanı *"barkod okutulmadı"*. Bilgi denetim
+   * içindir: elle sayılmış satırla okutularak sayılmış satır aynı görünmemeli — ikincisinde
+   * kutunun üstündeki kod ile kayıt eşleşmiştir, birincisinde yalnız depocunun beyanı vardır.
+   * Türetilemez, çünkü adet ikisinde de aynı sayıdır.
+   *
+   * Bayrak değil NESNE: tasarım yalnız "okutuldu" demiyor, NEYİN okutulduğunu da yazıyor
+   * ("koli barkodu · çarpan 12"). Boole tutsaydık o cümle için ikinci bir yerden veri aramak
+   * gerekirdi — oysa okutan çağıranların ikisi de (`confirmScanned`, `confirmLearn`) bu ikiliyi
+   * zaten elinde tutuyor.
+   */
+  scan: { kind: BarcodeKind; qtyPerCode: number } | null;
 }
 
-const EMPTY_ROW: IntakeRowState = { qty: null, expiryText: '', lotText: '', lotSkipped: false, damageNote: '' };
+const EMPTY_ROW: IntakeRowState = {
+  qty: null,
+  breakdown: EMPTY_BREAKDOWN,
+  expiryText: '',
+  lotText: '',
+  lotSkipped: false,
+  damageNote: '',
+  scan: null,
+};
+
+/**
+ * Okutulan adedi DÖKÜME yazar — sayı ile hesabın aynı yamada gitmesinin ikinci yarısı.
+ *
+ * **Koli kodu koli sayar, paket kodu tek paket sayar.** Okutulan koli barkodunun çarpanı biliniyor
+ * (`scan.qtyPerCode`) ve depocunun çekmecede söylediği adet paket cinsindendir; tam bölünen kısım
+ * koli olarak, artan kısım tek paket olarak yazılır — "26 paket" 12'lik koliden okutulduysa iki
+ * koli ve iki tek pakettir, artığı koliye yuvarlamak sayımı bozardı.
+ *
+ * Okutulan boy ürünün KAYITLI boylarıyla çarpanından eşleştirilir; eşleşme yoksa döküm satırı
+ * kodsuz açılır ve çekmecede "ürüne kaydedilecek" diye görünür. Eşleştirme olmasaydı kayıtlı bir
+ * boy çekmecede İKİ kez çizilirdi — biri sayılmamış kayıtlı satır, öteki kodsuz kopyası.
+ */
+function addToBreakdown(
+  current: QuantityBreakdown,
+  qty: number,
+  scan: { kind: BarcodeKind; qtyPerCode: number },
+  caseSizes: { code: string; qtyPerCode: number }[],
+): QuantityBreakdown {
+  if (scan.kind !== 'case' || scan.qtyPerCode <= 1) return { ...current, loose: current.loose + qty };
+  const registered = caseSizes.find((item) => item.qtyPerCode === scan.qtyPerCode);
+  const size = { code: registered?.code ?? null, qtyPerCode: scan.qtyPerCode };
+  const already = current.cases.find((item) => item.code === size.code && item.qtyPerCode === scan.qtyPerCode)?.count ?? 0;
+  const boxes = Math.floor(qty / scan.qtyPerCode);
+  const rest = qty - boxes * scan.qtyPerCode;
+  const withBoxes = boxes === 0 ? current : setCaseCount(current, size, already + boxes);
+  return rest === 0 ? withBoxes : { ...withBoxes, loose: withBoxes.loose + rest };
+}
 
 /**
  * Okutma çekmecesinin konusu: çözülen kod + depocunun seçtiği adet. `expectedQty` satırdan kopyalanır
@@ -81,6 +144,23 @@ export interface ScannedCode extends Omit<Extract<ResolveCodeResponse, { status:
  * Öğrenmenin iki adımı tek durumda: **hangi ürün** (`variantId`) ve **bu kod neyi sayıyor**
  * (`kind`/`qtyPerCode`). İkincisi olmadan öğretilen kod hep 1 adetlik kalırdı (23.12 künyesi).
  */
+/**
+ * **Öğrenilen kodun kalıcı künyesi** (v3:05 · kullanıcı bulgusu 30.08) — listenin üstünde duran
+ * kart: *"Kod öğrenildi · 8691234567890 → Fıstıklı Baklava 450 g"* + *"koli barkodu · çarpan 12 ·
+ * ikinci gelişte tanınacak"*.
+ *
+ * `LearnState`ten AYRI ve olmak zorunda: o, öğrenme AKIŞININ hâlidir (çekmece açık, ürün seçiliyor)
+ * ve bittiğinde `null`a döner. Bu ise akış bittikten SONRA doğar ve ekranda kalır — çünkü anlattığı
+ * şey bir adım değil bir SONUÇ: bir dahaki kabulde o kod tanınacak.
+ */
+export interface LearnedNote {
+  code: string;
+  /** Ürünün ekrandaki adı — kart onu kodun karşısına yazıyor. */
+  name: string;
+  kind: BarcodeKind;
+  qtyPerCode: number;
+}
+
 export interface LearnState {
   code: string;
   /** `null` = ürün henüz seçilmedi; ekran birinci adımı (satır listesi) çizer. */
@@ -96,6 +176,17 @@ interface UseIntakeResult {
   /** Konusuz açılışta bekleyen sevkiyatlar; konulu açılışta boş. */
   pending: PendingIntakeContract[];
   /**
+   * Açık sevkiyatın künyesi — **ekranın BAŞLIĞI budur** (v3:05, kullanıcı bulgusu 30.08).
+   *
+   * Uç 21.11d'de göndermeye başlamıştı ama hook onu düşürüyordu; ekran da başlığa sabit
+   * "Mal kabul" yazıyordu. Tasarım oraya SEVKİYATIN KODUNU koyuyor ve sebebi depocunun elindeki
+   * kâğıt: irsaliyede yazan şey `TS-26-4VXQEC`, "mal kabul" değil. Ekranın adını zaten oraya
+   * nasıl geldiğinden biliyor.
+   *
+   * `null` = konusuz açılış (bekleyen listesi) ya da plansız kabul.
+   */
+  purchaseOrder: IntakePurchaseOrderContract | null;
+  /**
    * MLOR eşiği (%) — SUNUCUDAN gelen ayar (`mlor_percent`), satır uyarısının ölçütü.
    *
    * Motorun sabiti (`MLOR_PERCENT`) burada varsayılan olarak duruyor ve YALNIZ form daha
@@ -109,13 +200,15 @@ interface UseIntakeResult {
   patch: (variantId: string, patch: Partial<IntakeRowState>) => void;
   /** Her satırda adet + geçerli SKT var mı — CTA'nın kapısı. */
   complete: boolean;
+  /** En az bir satır yazılabilir mi — KISMİ kaydın ölçütü (künyesi türetildiği yerde). */
+  hasAnyCounted: boolean;
   /** Beklenenden SAPAN satırlar — yalnız onlar gösterilir (v2'nin fark özeti). */
   differences: { name: string; expected: number; received: number }[];
   sending: boolean;
   notice: IntakeNotice | null;
   /** Kabulün sonucu: uyarılar ve farklar KAPIDAN gelir, ekran yeniden hesaplamaz. */
   warnings: { name: string; remainingPercent: number | null }[];
-  submit: () => void;
+  submit: (options?: { partial?: boolean }) => void;
   reload: () => void;
   /** Aşağı çekme — ekranı karartmadan tazeler (liste yerinde durur, halka döner). */
   refresh: () => void;
@@ -135,6 +228,8 @@ interface UseIntakeResult {
   cancelScanned: () => void;
   /** Tanınmayan kod — dolu ise ekran öğrenme çekmecesini çizer (iki adım, künye aşağıda). */
   learn: LearnState | null;
+  /** Öğrenilen kodun kalıcı künyesi — akış bitince doğar, ekranda kalır (künyesi tipin üstünde). */
+  learned: LearnedNote | null;
   /** 1. adım: kodun hangi ürüne bağlanacağı. */
   pickLearnVariant: (variantId: string) => void;
   /** 2. adım: bu kod tekil paketi mi koliyi mi sayıyor, koliyse kaç adet. */
@@ -156,6 +251,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   /** Konusuz açılışın listesi — "hangi sevkiyatı bekliyorum". Konulu açılışta boş kalır. */
   const [pending, setPending] = useState<PendingIntakeContract[]>([]);
   const [mlorPercent, setMlorPercent] = useState<number>(MLOR_PERCENT);
+  const [purchaseOrder, setPurchaseOrder] = useState<IntakePurchaseOrderContract | null>(null);
   const [states, setStates] = useState<Record<string, IntakeRowState>>({});
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<IntakeNotice>();
@@ -177,6 +273,9 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       setRows([]);
       setPending([]);
       setStates({});
+      // Künye de gider: siparişsiz kabulün başlığı bir sevkiyat kodu OLAMAZ ve bir öncekinin
+      // kodu orada kalırsa ekran olmayan bir siparişin adıyla açılır (aynı rota, aynı tuzak).
+      setPurchaseOrder(null);
       setStatus('ready');
       return;
     }
@@ -189,6 +288,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       if (run !== generation.current) return;
 
       setRows([]);
+      setPurchaseOrder(null);
       if (bekleyen.error !== null) {
         setStatus('error');
         return;
@@ -208,6 +308,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     }
 
     setRows(result.data.rows);
+    setPurchaseOrder(result.data.purchaseOrder);
     setMlorPercent(result.data.mlorPercent);
     setStatus('ready');
   }, [purchaseOrderId, unplanned]);
@@ -241,12 +342,22 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     setNotice(null);
   }, []);
 
-  const complete =
-    rows.length > 0 &&
-    rows.every((row) => {
-      const state = states[row.variantId];
-      return state !== undefined && state.qty !== null && state.qty > 0 && parseDate(state.expiryText) !== null;
-    });
+  /** Bir satır YAZILABİLİR mi: sayılmış, sıfırdan büyük ve SKT'si girilmiş. */
+  const writable = (variantId: string) => {
+    const state = states[variantId];
+    return state !== undefined && state.qty !== null && state.qty > 0 && parseDate(state.expiryText) !== null;
+  };
+
+  const complete = rows.length > 0 && rows.every((row) => writable(row.variantId));
+
+  /**
+   * KISMİ KAYDIN ölçütü — en az bir satır yazılabilir durumda.
+   *
+   * `complete`in gevşetilmiş hâli değil, AYRI bir soru: "hepsi hazır mı" ile "bir tanesi bile
+   * hazır mı" iki farklı kapıyı açıyor. Hiçbiri hazır değilken kısmi kayıt düğmesi çizilirse
+   * depocu boş bir kabul göndermeye çalışır ve kapı sessizce hiçbir şey yazmaz.
+   */
+  const hasAnyCounted = rows.some((row) => writable(row.variantId));
 
   const differences = rows
     .map((row) => ({
@@ -259,8 +370,26 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     // adet "beklenenden farklı" görünür ve fark özeti anlamsız bir listeye dönerdi.
     .filter((row) => row.expected > 0 && row.received !== row.expected);
 
-  const submit = useCallback(() => {
-    if (sending || !complete) return;
+  /**
+   * Kabulü yazar. `partial` **KAPIYI DEĞİL, KAPININ ÖNÜNDEKİ KİLİDİ** açar (v3:05 · `act.kismiKabul`).
+   *
+   * Tasarım yapışkan çubukta İKİ yol sunuyor ve ikisi ayrı karar: birincisi "her satırı saydım,
+   * kabulü kapat", ikincisi *"Kısmen teslim alındı olarak kaydet"* — künyesi de ne olacağını
+   * söylüyor: *"kalan satırlar açık kalır; sevkiyat 'kısmen teslim alındı'ya döner."*
+   *
+   * Gövde ZATEN doğruydu: `lines` sayılmamış satırı hep atlıyordu (aşağıda), yani kısmi kaydın
+   * isteği tam kaydınkiyle aynı. Eksik olan tek şey `complete` kilidiydi — ekran "her satırı say"
+   * diyerek depocuyu bekletiyordu, oysa rampada koli koli gelen bir sevkiyatta o bekleme
+   * gerçek dışı: mal geldiği kadarıyla stoğa girmeli, kalanı açık kalmalı.
+   *
+   * Kısmi kayıtta da EN AZ BİR sayılmış satır şart — hiçbir şey sayılmadan yazmak, kapıya boş bir
+   * kabul göndermek olurdu.
+   */
+  const submit = useCallback((options?: { partial?: boolean }) => {
+    const partial = options?.partial === true;
+    if (sending) return;
+    if (!partial && !complete) return;
+    if (partial && !hasAnyCounted) return;
     setSending(true);
     setNotice(null);
 
@@ -314,7 +443,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       );
       setNotice(noticeOf(result.data));
     })();
-  }, [complete, purchaseOrderId, rows, sending, states]);
+  }, [complete, hasAnyCounted, purchaseOrderId, rows, sending, states]);
 
   /*
     ── TARAMA (Modül 23 · etüt 2.1 · kullanıcı tasarımı 23.08) ───────────────
@@ -332,15 +461,32 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   const [scanOpen, setScanOpen] = useState(false);
   const [scanned, setScanned] = useState<ScannedCode | null>(null);
   const [learn, setLearn] = useState<LearnState | null>(null);
+  const [learned, setLearned] = useState<LearnedNote | null>(null);
 
   /** Bulunan satıra okumanın adedini ekler ve cümlesini kurar — tarama ile öğrenmenin ortak ucu. */
   const addScanned = useCallback(
-    (variantId: string, qty: number, text: (name: string) => string) => {
+    (
+      variantId: string,
+      qty: number,
+      text: (name: string) => string,
+      scan: { kind: BarcodeKind; qtyPerCode: number },
+    ) => {
       const row = rows.find((candidate) => candidate.variantId === variantId);
       if (row === undefined) return false;
       setStates((current) => {
         const state = current[variantId] ?? EMPTY_ROW;
-        return { ...current, [variantId]: { ...state, qty: (state.qty ?? 0) + qty } };
+        // Okutma izi bir kez YAZILINCA silinmez: satır okutularak açıldıysa, sonradan elle
+        // düzeltilmesi o gerçeği geri almaz — künye "bu satıra barkod değdi" diyor, "son dokunuş
+        // okutmaydı" değil.
+        return {
+          ...current,
+          [variantId]: {
+            ...state,
+            qty: (state.qty ?? 0) + qty,
+            breakdown: addToBreakdown(state.breakdown, qty, scan, row.caseSizes),
+            scan,
+          },
+        };
       });
       setNotice({ tone: 'ok', text: text(productLabel(row.productName, row.variantLabel)) });
       return true;
@@ -392,6 +538,10 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
             sku: found.sku,
             dateType: found.dateType,
             shelfLifeDays: found.shelfLifeDays,
+            // Koli boyları da aynı sebeple: okutmayla açılan satır adet çekmecesini açacak ve o
+            // çekmece "kaç koli geldi" diye soracak. PO'lu satırda liste zaten var; burada
+            // olmasaydı aynı formda bir satır koli sayar, ötekisi sayamazdı.
+            caseSizes: found.caseSizes,
           };
           setRows((current) => [...current, row!]);
         }
@@ -407,6 +557,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
           dateType: found.dateType,
           shelfLifeDays: found.shelfLifeDays,
           imageUrl: found.imageUrl,
+          caseSizes: found.caseSizes,
           qty: found.qtyPerCode,
           expectedQty: row.expectedQty,
         });
@@ -437,6 +588,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
                 sku: variant.sku,
                 dateType: variant.dateType,
                 shelfLifeDays: variant.shelfLifeDays,
+                caseSizes: variant.caseSizes,
               },
             ],
       );
@@ -456,7 +608,12 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
         : scanned.source === 'supplier_code'
           ? t.intake.scan.foundSupplier
           : t.intake.scan.found;
-    addScanned(scanned.variantId, scanned.qty, (name) => fillCopy(copy, { name, n: String(scanned.qty) }));
+    addScanned(scanned.variantId, scanned.qty, (name) => fillCopy(copy, { name, n: String(scanned.qty) }), {
+      // Çarpan OKUTULAN KODUN bilgisi, çekmecede yazılan adet değil: depocu 3 koli okuttuysa adet
+      // 36 olur ama satırın künyesi yine "koli barkodu · çarpan 12" demeli.
+      kind: scanned.kind,
+      qtyPerCode: scanned.qtyPerCode ?? 1,
+    });
     setScanned(null);
   }, [addScanned, scanned]);
 
@@ -496,14 +653,38 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       if (result.data.status === 'ok') {
         // Öğretilen kod ÇARPANI kadar sayılır: az önce "bu koli 12 adet" denmişken satıra 1 yazmak,
         // kendi söylediğimizi ilk kullanımda yok saymak olurdu.
-        addScanned(variantId, qtyPerCode, (name) => fillCopy(t.intake.scan.learned, { name, n: String(qtyPerCode) }));
+        addScanned(
+          variantId,
+          qtyPerCode,
+          (name) => fillCopy(t.intake.scan.learned, { name, n: String(qtyPerCode) }),
+          { kind, qtyPerCode },
+        );
+        /* ÖĞRENME EKRANDA KALIR (v3:05 · kullanıcı bulgusu 30.08): tasarım listenin üstüne kalıcı
+           bir kart koyuyor ("Kod öğrenildi · 869… → Fıstıklı Baklava 450 g · koli barkodu ·
+           çarpan 12 · ikinci gelişte tanınacak"). Bizde yalnız geçip giden bir bildirimdi ve
+           öğrenmenin ne öğrettiği hiçbir yerde okunamıyordu — oysa bu, bir dahaki kabulü
+           değiştiren kalıcı bir kayıt. */
+        const learnedRow = rows.find((candidate) => candidate.variantId === variantId);
+        if (learnedRow !== undefined) {
+          setLearned({
+            code,
+            name: productLabel(learnedRow.productName, learnedRow.variantLabel),
+            kind,
+            qtyPerCode,
+          });
+        }
         return;
       }
       // Bu arada BAŞKASI öğretmiş (iki depocu aynı koliyle): kod kime bağlıysa oradan sayılır —
       // sessiz bir çift kayıt yerine, formda varsa o satıra düşer, yoksa yalnız söylenir. Adet
       // 1'dir ve olmalı: çarpan artık ÖTEKİNİN yazdığı kaydın bilgisi, bizim tahminimiz değil.
       const bound = result.data;
-      const added = addScanned(bound.variantId, 1, (name) => fillCopy(t.intake.scan.alreadyBound, { name }));
+      const added = addScanned(bound.variantId, 1, (name) => fillCopy(t.intake.scan.alreadyBound, { name }), {
+        // ÖTEKİNİN yazdığı kayıt: çarpanı bilmiyoruz, tahmin de etmiyoruz — bu okutma 1 saydı ve
+        // künye de onu söyler.
+        kind: 'unit',
+        qtyPerCode: 1,
+      });
       if (!added) {
         setNotice({
           tone: 'warn',
@@ -517,11 +698,13 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     status,
     rows,
     pending,
+    purchaseOrder,
     mlorPercent,
     addManualRow,
     stateOf,
     patch,
     complete,
+    hasAnyCounted,
     differences,
     sending,
     notice,
@@ -539,6 +722,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     confirmScanned,
     cancelScanned: useCallback(() => setScanned(null), []),
     learn,
+    learned,
     pickLearnVariant,
     setLearnKind,
     setLearnQty,

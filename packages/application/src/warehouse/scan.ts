@@ -51,14 +51,28 @@ export type ScanResolution =
       shelfLifeDays: number | null;
       /** Ürün kapağı (public URL) — okutma çekmecesinin görseli; kapaksız üründe null. */
       imageUrl: string | null;
+      /**
+       * Ürünün KAYITLI koli boyları — adet çekmecesinin çarpan tablosu.
+       *
+       * `qtyPerCode` OKUTULAN kodun çarpanıdır (tek bir sayı); bu ise ürünün BÜTÜN koli boylarıdır.
+       * İkisi ayrı sorunun cevabı: biri "şimdi okuttuğum kutuda kaç var", öteki "bu üründe hangi
+       * boylar var" — plansız kabulde satırı okutma açıyor ve o satır ikincisini de soruyor.
+       */
+      caseSizes: { code: string; qtyPerCode: number }[];
     }
   | { status: 'unknown' };
 
 export async function resolveScannedCode(db: SupabaseClient, input: { code: string }): Promise<ScanResolution> {
-  const match = await new VariantBarcodeService(db).findByCode(input.code.trim());
+  const barcodes = new VariantBarcodeService(db);
+  const match = await barcodes.findByCode(input.code.trim());
   if (!match) return { status: 'unknown' };
 
-  const names = await variantNames(db, [match.variantId]);
+  // Ad zinciri ve varyantın kod listesi birbirini beklemez: ikisi de aynı ekranın aynı anındaki
+  // ihtiyacı, sıralı çağrı gereksiz bir gidiş-dönüş eklerdi.
+  const [names, codes] = await Promise.all([
+    variantNames(db, [match.variantId]),
+    barcodes.listByVariant(match.variantId),
+  ]);
   const name = names.get(match.variantId);
   return {
     status: 'found',
@@ -72,6 +86,12 @@ export async function resolveScannedCode(db: SupabaseClient, input: { code: stri
     dateType: name?.dateType ?? 'DDM',
     shelfLifeDays: name?.shelfLifeDays ?? null,
     imageUrl: name?.imageUrl ?? null,
+    // Paket kodları (`unit`, çarpan 1) elenir: çekmecede "1 paketlik koli" diye görünürlerdi.
+    // Sıra çarpana göre — depocunun elindeki koliyi listede aradığı ölçüt kaç paket olduğudur.
+    caseSizes: codes
+      .filter((code) => code.kind === 'case')
+      .map((code) => ({ code: code.code, qtyPerCode: code.qtyPerCode }))
+      .sort((a, b) => a.qtyPerCode - b.qtyPerCode),
   };
 }
 

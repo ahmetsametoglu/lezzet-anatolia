@@ -3,6 +3,7 @@ import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/
 import { ProductDateTypeEnum } from '../entities/product.schema';
 import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
 import { PurchaseOrderStatusEnum, ReceiveIntakeResultSchema } from '../entities/supply.schema';
+import { VariantBarcodeSchema } from '../entities/variant-barcode.schema';
 import { DispatchLineSchema, ReceiveLineSchema } from '../entities/warehouse.schema';
 import { PrinterPurposeEnum } from '../entities/warehouse-printer.schema';
 import {
@@ -586,6 +587,21 @@ export type MarkBoxPrintedResponse = z.infer<typeof MarkBoxPrintedResponseSchema
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────
 
 /** PO'dan dolu gelen form satırı — beklenen adet + ad. **Fiyat alanı YOK ve olamaz.** */
+/**
+ * **KAYITLI KOLİ BOYU** — "bu üründe koli deyince kaç paket anlaşılır" (v3 · `sheetAdet`,
+ * *"Boylar ürün kartındaki kutu tiplerinden gelir"*).
+ *
+ * Kaynak `variant_barcode`ın `kind='case'` satırlarıdır ve şema ondan TÜRETİLİR: çarpan kodun
+ * kendi alanıdır (`qtyPerCode`), varyantta ya da tedarikçide durmaz — iki tedarikçinin kolisi
+ * farklı boyda olabilir (entity künyesi §1.2).
+ *
+ * Adet çekmecesi bu listeyi ÇARPAN TABLOSU olarak kullanır: depocu "3 koli geldi" der, ekran
+ * paketi kendi çarpar. Liste BOŞSA çekmece yalnız tek paket sayar — uydurma bir varsayılan koli
+ * boyu (12'lik) stok sayımını sessizce bozardı (CLAUDE §1).
+ */
+export const CaseSizeSchema = VariantBarcodeSchema.pick({ code: true, qtyPerCode: true });
+export type CaseSizeContract = z.infer<typeof CaseSizeSchema>;
+
 export const IntakeFormRowSchema = z.object({
   variantId: z.string().uuid(),
   productName: z.string(),
@@ -629,6 +645,8 @@ export const IntakeFormRowSchema = z.object({
    * depocu SKT'yi girdiği anda, telefonda, `meetsMlor` ile hesaplanır.
    */
   shelfLifeDays: z.number().int().nullable(),
+  /** Ürünün kayıtlı koli boyları — adet çekmecesinin çarpan tablosu (`CaseSizeSchema` künyesi). */
+  caseSizes: z.array(CaseSizeSchema),
 });
 export type IntakeFormRowContract = z.infer<typeof IntakeFormRowSchema>;
 
@@ -1127,6 +1145,13 @@ export const ResolveCodeResponseSchema = z.discriminatedUnion('status', [
     shelfLifeDays: z.number().int().nullable(),
     /** Ürün görseli (public URL) — okutma çekmecesinin "doğru malı mı tuttum" bakışı; yoksa null. */
     imageUrl: z.string().nullable(),
+    /**
+     * Ürünün kayıtlı koli boyları — PO'lu formda satırla geliyor (`IntakeFormRowSchema`), plansız
+     * kabulde SATIRI OKUTMA AÇIYOR ve o satır da adet çekmecesini açacak. Okutmayla açılan satır
+     * bu listesiz kalsaydı aynı listede bir satır koli sayabilir, ötekisi sayamazdı — `sku`,
+     * `dateType` ve `shelfLifeDays` aynı gerekçeyle burada.
+     */
+    caseSizes: z.array(CaseSizeSchema),
   }),
   z.object({ status: z.literal('unknown') }),
 ]);
@@ -1203,8 +1228,27 @@ export const VariantSearchRowSchema = z.object({
   dateType: ProductDateTypeEnum,
   shelfLifeDays: z.number().int().nullable(),
   imageUrl: z.string().nullable(),
+  /**
+   * **PERSONELİN DEPOSUNDAKİ kullanılabilir adet** — tasarımın satır künyesi *"GAZ-7120 · stok 24"*.
+   *
+   * Depo-ÜSTÜ toplam DEĞİL: birleştirilmiş stok kimsenin stoğu değildir (`AvailableStockTotal`
+   * künyesi) ve depocunun "bu üründen bende var mı" sorusunun cevabı yalnız kendi deposudur.
+   * Rezervasyon düşülmüş `availableQty` okunuyor; rafta duran ama başkasına ayrılmış mal,
+   * depocunun serbestçe kullanabileceği mal değildir.
+   *
+   * `0` GERÇEK BİR CEVAPTIR ve bu alanda ölçüm düşmesi yoktur: kapı personelin deposunu zaten
+   * biliyor, satırı olmayan varyant gerçekten sıfırdır (`listAvailableAcross` sıfır satırları
+   * sorgudan düşürüyor, o yüzden yokluk = sıfır).
+   */
+  stockQty: z.number().int(),
   /** Kod eşleşmesiyle bulunduysa bir okutmanın kaç adet saydığı; ad aramasında `null`. */
   qtyPerCode: z.number().int().positive().nullable(),
+  /**
+   * Ürünün kayıtlı koli boyları — aramadan seçilen ürün SATIR oluyor ve o satır adet çekmecesini
+   * açıyor. Üstteki `qtyPerCode` okutulan KODUN çarpanıdır (tek sayı), bu ise ürünün bütün
+   * boylarıdır; ikisi ayrı sorunun cevabı (`CaseSizeSchema` künyesi).
+   */
+  caseSizes: z.array(CaseSizeSchema),
 });
 export type VariantSearchRowContract = z.infer<typeof VariantSearchRowSchema>;
 

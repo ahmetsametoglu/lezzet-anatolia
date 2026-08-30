@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { CategoryService, ProductService, VariantBarcodeService, serviceDb } from '@lezzet/database';
-import { purgeTestData } from '@lezzet/database/testing';
+import { CategoryService, ProductService, StockService, VariantBarcodeService, serviceDb } from '@lezzet/database';
+import { createTestWarehouse, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { searchVariantsForIntake } from './variant-search';
 
 /**
@@ -17,6 +17,10 @@ const stamp = Date.now();
 
 let categoryId: string;
 let productId: string;
+/* Arama satırı artık DEPONUN stoğunu taşıyor (`stockQty`), yani kapı deposuz çağrılamaz. Kendi
+   deposunu kuruyor: paylaşılan veritabanında var olan bir depoyu ödünç almak, o depoya yazan
+   başka bir şeridin sayısını bu testin beklentisi hâline getirirdi (CLAUDE §4b). */
+let warehouseId: string;
 /** Aranan ürünün iki boyu: ad araması İKİSİNİ birden döndürmeli (biri gizlenirse depocu şaşırır). */
 let variantId: string;
 let otherVariantId: string;
@@ -30,6 +34,7 @@ const UNIT_CODE = `9${String(stamp).slice(-12)}`;
 const CASE_CODE = `19${String(stamp).slice(-12)}`;
 
 beforeAll(async () => {
+  warehouseId = (await createTestWarehouse(db, { label: 'ARA' })).id;
   const category = await new CategoryService(db).create({ name: { tr: `Arama ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
     name: { tr: NAME },
@@ -47,20 +52,20 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId] });
+  await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds: [warehouseId] });
 });
 
 describe('plansız kabul · ürün araması', () => {
   it('KOD eşleşirse ada hiç bakılmaz — tek satır, kesin kimlik', async () => {
     // Kod kesin kimliktir, ad tahmindir: kodla arama yapan depocu tek bir cevap görmeli.
-    const rows = await searchVariantsForIntake(db, { query: UNIT_CODE });
+    const rows = await searchVariantsForIntake(db, { query: UNIT_CODE, warehouseId });
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.variantId).toBe(variantId);
   });
 
   it('KOLİ kodu çarpanını taşır — okutmanın kaç adet saydığı aramada da görünür', async () => {
-    const rows = await searchVariantsForIntake(db, { query: CASE_CODE });
+    const rows = await searchVariantsForIntake(db, { query: CASE_CODE, warehouseId });
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.variantId).toBe(otherVariantId);
@@ -69,7 +74,7 @@ describe('plansız kabul · ürün araması', () => {
   });
 
   it('AD araması ürünün TÜM boylarını döndürür — biri eksik kalırsa depocu listede bulamaz', async () => {
-    const rows = await searchVariantsForIntake(db, { query: NAME });
+    const rows = await searchVariantsForIntake(db, { query: NAME, warehouseId });
     const bulunan = rows.filter((row) => row.variantId === variantId || row.variantId === otherVariantId);
 
     expect(bulunan).toHaveLength(2);
@@ -80,26 +85,59 @@ describe('plansız kabul · ürün araması', () => {
   });
 
   it('adın PARÇASI da bulur — depocu tam adı yazmak zorunda değil', async () => {
-    const rows = await searchVariantsForIntake(db, { query: 'zzkatmerli' });
+    const rows = await searchVariantsForIntake(db, { query: 'zzkatmerli', warehouseId });
 
     expect(rows.some((row) => row.variantId === variantId)).toBe(true);
   });
 
   it('BOŞ sorgu boş liste döner — "henüz yazmadın" bir hata değil', async () => {
-    expect(await searchVariantsForIntake(db, { query: '' })).toEqual([]);
-    expect(await searchVariantsForIntake(db, { query: '   ' })).toEqual([]);
+    expect(await searchVariantsForIntake(db, { query: '', warehouseId })).toEqual([]);
+    expect(await searchVariantsForIntake(db, { query: '   ', warehouseId })).toEqual([]);
   });
 
   it('eşleşmeyen sorgu BOŞ döner — tahmin eden bir arama yanlış malı stoğa yazardı', async () => {
-    expect(await searchVariantsForIntake(db, { query: `yokboyleurun-${stamp}` })).toEqual([]);
+    expect(await searchVariantsForIntake(db, { query: `yokboyleurun-${stamp}`, warehouseId })).toEqual([]);
   });
 
   it('PARA taşımaz — depo yolu fiyat görmez (09.14)', async () => {
-    const rows = await searchVariantsForIntake(db, { query: NAME });
+    const rows = await searchVariantsForIntake(db, { query: NAME, warehouseId });
 
     // Alan adı sızıntısı da ölçülüyor: satıra bir gün "price" eklenirse burada yakalanır.
     for (const row of rows) {
       expect(Object.keys(row).join(',')).not.toMatch(/price|amount|cost|tutar|fiyat/i);
+    }
+  });
+
+  /*
+    ── STOK, ÇAĞIRANIN DEPOSUNUNKİDİR ────────────────────────────────────────
+    Satırın künyesi "GAZ-7120 · stok 24" diyor (v3 tasarımı) ve o sayının hangi depoyu anlattığı
+    kritik: depo-üstü toplam yazılsaydı, KEHL'de duran malı gören depocu STR'de mal var sanır ve
+    kabulü ona göre yazardı. Kural veride değil KODDA duruyor (kapı `warehouseId` alıyor), o yüzden
+    burada ölçülüyor — CLAUDE §1: "süzgeci unutulan sorgu tek depolu veride DOĞRU cevap verir".
+  */
+  it('stok SORULAN deponundur — başka deponun malı bu satırda görünmez', async () => {
+    const other = await createTestWarehouse(db, { label: 'ARA2' });
+    // Uzak bir SKT: parti "yakın-SKT" ya da "süresi geçmiş" kümesine düşerse sayı orada değil
+    // başka bir sütunda toplanır ve test ölçmek istediği şeyi ölçmez.
+    const expiryDate = new Date(Date.now() + 365 * 86_400_000).toISOString().slice(0, 10);
+    await new StockService(db).insert({ warehouseId: other.id, variantId, physicalQty: 7, expiryDate });
+
+    try {
+      const rows = await searchVariantsForIntake(db, { query: NAME, warehouseId });
+      const row = rows.find((candidate) => candidate.variantId === variantId);
+
+      // Satırı OLMAYAN varyant sıfırdır — `null` değil: kapı depoyu biliyor, ölçüm düşmesi yok.
+      expect(row?.stockQty).toBe(0);
+
+      // Sağlama: aynı sorgu ÖTEKİ depoyla sorulduğunda sayı gerçekten oradadır (yoksa üstteki
+      // sıfır, "stok hiç okunmuyor"un da cevabı olurdu ve test hiçbir şey ölçmezdi).
+      const there = await searchVariantsForIntake(db, { query: NAME, warehouseId: other.id });
+      expect(there.find((candidate) => candidate.variantId === variantId)?.stockQty).toBe(7);
+    } finally {
+      /* Parti ÖNCE gider: depo `restrict` ile korunuyor ve partisi duran depo silinemez. Sıra
+         `cleanup.ts`in bildiği sıradır, burada uydurulmuyor (CLAUDE §4b). */
+      await purgeVariantStock(db, [variantId]);
+      await purgeTestData(db, { warehouseIds: [other.id] });
     }
   });
 });

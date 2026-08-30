@@ -1,4 +1,4 @@
-import { ProductService, VariantBarcodeService } from '@lezzet/database';
+import { ProductService, StockService, VariantBarcodeService } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText, type ProductDateType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -36,8 +36,22 @@ export interface VariantSearchRow {
   dateType: ProductDateType;
   shelfLifeDays: number | null;
   imageUrl: string | null;
+  /**
+   * Çağıranın deposundaki kullanılabilir adet (rezervasyon düşülmüş). Depo-üstü toplam DEĞİL —
+   * gerekçe sözleşme şemasında (`VariantSearchRowSchema.stockQty`).
+   */
+  stockQty: number;
   /** Kod eşleşmesiyle bulunduysa okutmanın kaç adet saydığı; ad aramasında `null`. */
   qtyPerCode: number | null;
+  /**
+   * Ürünün KAYITLI koli boyları — aramadan seçilen ürün de satır oluyor ve o satır adet
+   * çekmecesini açıyor.
+   *
+   * `qtyPerCode` ile karıştırılmamalı: o OKUTULAN kodun çarpanıdır (tek sayı, ad aramasında yok),
+   * bu ise ürünün bütün boylarıdır. Üçüncü kez aynı gerekçe (`sku`, `dateType`, `shelfLifeDays`):
+   * aynı formda aramayla açılan satır ile okutmayla açılan satır aynı şeyi sorabilmeli.
+   */
+  caseSizes: { code: string; qtyPerCode: number }[];
 }
 
 /**
@@ -50,7 +64,7 @@ const DEFAULT_LIMIT = 12;
 
 export async function searchVariantsForIntake(
   db: SupabaseClient,
-  input: { query: string; limit?: number },
+  input: { query: string; warehouseId: string; limit?: number },
 ): Promise<VariantSearchRow[]> {
   const query = input.query.trim();
   if (query.length === 0) return [];
@@ -66,7 +80,7 @@ export async function searchVariantsForIntake(
     const names = await variantNames(db, [match.variantId]);
     const name = names.get(match.variantId);
     if (name !== undefined) {
-      return [
+      return withStock(db, input.warehouseId, [
         {
           variantId: match.variantId,
           productName: name.productName,
@@ -77,28 +91,72 @@ export async function searchVariantsForIntake(
           imageUrl: name.imageUrl,
           qtyPerCode: match.qtyPerCode,
         },
-      ];
+      ]);
     }
   }
 
   // 2) AD: üç dilde `ilike` (servisin kendi süzgeci). Aday ürünler de gelir — depoya girmiş bir
   // numunenin kabulü meşrudur; satılamaz olması ekranın söyleyeceği şeydir, saklayacağı değil.
   const page = await new ProductService(db).listStockRows({ filters: { query }, limit });
-  return page.rows.flatMap((product) =>
-    product.variants
-      .filter((variant) => variant.isActive)
-      .map((variant) => ({
-        variantId: variant.id,
-        productName: resolveLocalizedText(product.name, 'tr'),
-        variantLabel: resolveLocalizedText(variant.label, 'tr'),
-        sku: variant.sku ?? null,
-        // Dar satır (`listStockRows`) tarih rejimini zaten taşıyor — kod dalıyla aynı iki alan,
-        // ikinci bir okuma açılmadan.
-        dateType: product.dateType,
-        shelfLifeDays: product.shelfLifeDays,
-        imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
-        qtyPerCode: null,
-      })),
+  return withStock(
+    db,
+    input.warehouseId,
+    page.rows.flatMap((product) =>
+      product.variants
+        .filter((variant) => variant.isActive)
+        .map((variant) => ({
+          variantId: variant.id,
+          productName: resolveLocalizedText(product.name, 'tr'),
+          variantLabel: resolveLocalizedText(variant.label, 'tr'),
+          sku: variant.sku ?? null,
+          // Dar satır (`listStockRows`) tarih rejimini zaten taşıyor — kod dalıyla aynı iki alan,
+          // ikinci bir okuma açılmadan.
+          dateType: product.dateType,
+          shelfLifeDays: product.shelfLifeDays,
+          imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
+          qtyPerCode: null,
+        })),
+    ),
   );
+}
+
+/**
+ * Satırlara **personelin deposundaki** stoğu ekler — TEK sorguda, satır başına okuma yok.
+ *
+ * `listStockRows` stok taşımıyor (adı sayfanın adından geliyor, verinin değil) ve taşıması da
+ * gerekmiyor: stok depo-bağımlıdır, ürün satırı değildir. Birleştirme burada, iki dalın ORTAK
+ * çıkışında yapılıyor — kod dalıyla ad dalının aynı künyeyi göstermesi gerekiyor ve iki ayrı
+ * yerde yazılsaydı biri bir gün ötekinden ayrılırdı (CLAUDE §1).
+ *
+ * SATIRI OLMAYAN VARYANT SIFIRDIR, "ölçülemedi" değil: `listAvailableAcross` sıfır satırları
+ * sorgudan bilerek düşürüyor (kendi künyesi: çapraz birleşim PostgREST'in satır tavanına
+ * dayanıyordu). Yani burada `?? 0` bir varsayım değil, o sorgunun sözleşmesi.
+ */
+async function withStock(
+  db: SupabaseClient,
+  warehouseId: string,
+  rows: Omit<VariantSearchRow, 'stockQty' | 'caseSizes'>[],
+): Promise<VariantSearchRow[]> {
+  if (rows.length === 0) return [];
+  const variantIds = rows.map((row) => row.variantId);
+  // Stok ve koli boyları birbirini beklemez: ikisi de aynı listenin aynı anındaki künyesi.
+  const [stock, barcodes] = await Promise.all([
+    new StockService(db).listAvailableAcross([warehouseId], variantIds),
+    new VariantBarcodeService(db).listByVariants(variantIds),
+  ]);
+  const available = new Map(stock.map((row) => [row.variantId, row.availableQty]));
+  const casesOf = new Map<string, { code: string; qtyPerCode: number }[]>();
+  for (const barcode of barcodes) {
+    // Paket kodu (`unit`, çarpan 1) elenir: çekmecede "1 paketlik koli" diye görünürdü.
+    if (barcode.kind !== 'case') continue;
+    const list = casesOf.get(barcode.variantId) ?? [];
+    list.push({ code: barcode.code, qtyPerCode: barcode.qtyPerCode });
+    casesOf.set(barcode.variantId, list);
+  }
+  return rows.map((row) => ({
+    ...row,
+    stockQty: available.get(row.variantId) ?? 0,
+    caseSizes: (casesOf.get(row.variantId) ?? []).sort((a, b) => a.qtyPerCode - b.qtyPerCode),
+  }));
 }
 

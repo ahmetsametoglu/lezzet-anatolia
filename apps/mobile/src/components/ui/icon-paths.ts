@@ -105,15 +105,18 @@ export const ICON_PATHS = {
   /* OKUTMA ÇERÇEVESİ (v3 · 02, 05, 06, 08, 17) — dört köşe ayracı ve ortada tarama çizgisi.
      Emojinin (📷/📄) yerini aldı: emoji cihazdan cihaza başka çiziliyor, tasarımın çizgi
      kalınlığını taşımıyor ve renk alamıyor — düğmenin zeytin tonunu hiç almıyordu. */
-  scan: {
-    paths: [
-      'M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8',
-      'M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8',
-      'M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16',
-      'M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16',
-      'M4 12h16',
-    ],
-  },
+  /*
+    OKUTMA — gövde + mercek (v3:05, 06 · `tg.scanner`).
+
+    Geometri TASARIMDAN alındı ve önceki hâli benim uydurmamdı: dört köşe ayracı + orta çizgi
+    (klasik "QR çerçevesi") çizmiştim, oysa v3 iki ekranda da AYNI şeyi çiziyor —
+    `rect(3,5,18,14,r3)` + `circle(12,12,3.2)`. Fark anlamlı: ayraçlı çerçeve "hedefle" der,
+    gövde+mercek "kamerayı kullan" der ve düğmenin işi ikincisi.
+
+    Kitin `camera`sıyla karışmaz: o klasik fotoğraf makinesidir (üstünde vizör çıkıntısı), müşteri
+    yüzeyinin fotoğraf ekleme düğmesinde kullanılıyor. Bu, operasyonun okutucusu.
+  */
+  scan: { paths: [], rects: [[3, 5, 18, 14, 3]], circles: [[12, 12, 3.2]] },
   /* Tuş takımının silme tuşu (v3 · `00-ortak`) — ok ucu ve içindeki çarpı. */
   backspace: { paths: ['M21 5H9l-6 7 6 7h12z', 'M14 9l-4 6M10 9l4 6'] },
 

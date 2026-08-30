@@ -7,10 +7,18 @@ import {
   StorageAreaService,
   SupplierProductService,
   SupplierService,
+  VariantBarcodeService,
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { ProductDateType, ProductStorageType, PurchaseOrderStatus, ReceiveIntakeResult, StorageAreaKind } from '@lezzet/types';
+import type {
+  CaseSizeContract,
+  ProductDateType,
+  ProductStorageType,
+  PurchaseOrderStatus,
+  ReceiveIntakeResult,
+  StorageAreaKind,
+} from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
 
@@ -118,6 +126,15 @@ export interface IntakeFormRow {
    * yazıldıktan sonraki uyarı ayrı bir yerde duruyor (`IntakeWarning`) ve o da aynı motoru çağırır.
    */
   shelfLifeDays: number | null;
+  /**
+   * Ürünün KAYITLI koli boyları (`variant_barcode`, `kind='case'`) — adet çekmecesinin çarpan
+   * tablosu: depocu "3 koli geldi" der, paketi ekran çarpar.
+   *
+   * **Boş dizi bir eksiklik değil bir CEVAPTIR:** o ürüne henüz koli kodu öğretilmemiştir ve
+   * çekmece yalnız tek paket sayar. Varsayılan bir boy (12'lik) koymak, ölçülmemiş bir çarpanı
+   * ölçülmüş gibi gösterip stok sayımını sessizce bozardı (CLAUDE §1).
+   */
+  caseSizes: CaseSizeContract[];
 }
 
 /**
@@ -147,13 +164,24 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
   // İki okuma birbirini beklemez: ad+tarih rejimi tek zincirden (`names.ts`), tedarikçi kodu ayrı.
   // Kod eşlemesi KALEMİN işaret ettiği kimlikle çözülür (`supplierProductId`), varyantla değil —
   // gerekçe `SupplierProductService.listByIds` künyesinde.
-  const [names, mappings] = await Promise.all([
+  const [names, mappings, barcodes] = await Promise.all([
     variantNames(db, lines.map((line) => line.variantId)),
     new SupplierProductService(db).listByIds(
       lines.map((line) => line.supplierProductId).filter((id): id is string => id !== null),
     ),
+    // Koli boyları TEK sorguda, form açılışında: çekmece açıldığında ikinci bir tur atılsaydı
+    // depocu ± düğmelerine bir yükleme beklerken basardı. Paket kodları (`unit`) burada elenir —
+    // çarpanı 1 olan bir kod çekmecede "1 paketlik koli" diye görünürdü.
+    new VariantBarcodeService(db).listByVariants(lines.map((line) => line.variantId)),
   ]);
   const codeOf = new Map(mappings.map((mapping) => [mapping.id, mapping.supplierCode]));
+  const casesOf = new Map<string, CaseSizeContract[]>();
+  for (const barcode of barcodes) {
+    if (barcode.kind !== 'case') continue;
+    const list = casesOf.get(barcode.variantId) ?? [];
+    list.push({ code: barcode.code, qtyPerCode: barcode.qtyPerCode });
+    casesOf.set(barcode.variantId, list);
+  }
 
   return lines.map((line) => ({
     variantId: line.variantId,
@@ -165,6 +193,9 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
     // "bilinmiyorsa ne olur" kararı burada kurulmuyor (gerekçe orada, tek yerde).
     dateType: names.get(line.variantId)?.dateType ?? 'DDM',
     shelfLifeDays: names.get(line.variantId)?.shelfLifeDays ?? null,
+    // Sıralama ÇARPANA göre: küçük koli önce. Okunan sıra (`createdAt`) depocuya bir şey söylemiyor;
+    // elindeki koliyi listede ararken baktığı şey kaç paket olduğudur.
+    caseSizes: (casesOf.get(line.variantId) ?? []).sort((a, b) => a.qtyPerCode - b.qtyPerCode),
     // İlerleme satırı yoksa kalan = ısmarlanan; `?? 0` OLAMAZ: görünüm bir satırı bir gün taşımazsa
     // "0 bekleniyor" demek, depocuyu kendi kaydımıza karşı sessizce kör bırakırdı (`CLAUDE §1` —
     // ölçülemeyen değer sıfır değildir).

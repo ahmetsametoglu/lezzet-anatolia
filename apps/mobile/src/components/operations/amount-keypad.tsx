@@ -51,6 +51,20 @@ interface OperationsAmountKeypadProps {
   expected: string | null;
   /** Çipin etiketi — "beklenen {amount}" gibi; i18n çağıranın işidir. */
   expectedLabel?: string;
+  /**
+   * Değerin YANINDA yazan birim — para için `€`, sayım için `adet`.
+   *
+   * Tuş takımı para için doğdu (21.159) ve birimi gömülüydü. Mal kabulün ADET kutusu da onu
+   * açmalı (görsel ajanı ölçümü 30.08 · fark #1): tasarımın kendi cümlesi *"Cihaz klavyesi
+   * açılmaz — eldivenle de basılabilecek büyük tuşlar"* diyor ve bu bir para kararı değil, bir
+   * ELDİVEN kararı — depocunun eli de eldivenli.
+   */
+  unit: string;
+  /**
+   * Ondalık girilebilir mi. Para için EVET (`12,50`), ADET için HAYIR — yarım paket diye bir şey
+   * yok ve virgül tuşunu açık bırakmak, kabul edilemeyecek bir değeri yazılabilir gösterirdi.
+   */
+  allowDecimals?: boolean;
   confirmLabel: string;
   hint: string;
   footnote: string;
@@ -66,6 +80,8 @@ export function OperationsAmountKeypad({
   value,
   expected,
   expectedLabel,
+  unit,
+  allowDecimals = true,
   confirmLabel,
   hint,
   footnote,
@@ -86,9 +102,12 @@ export function OperationsAmountKeypad({
     <BottomSheet visible={visible} title={title} onClose={onClose} testID={testID}>
       <View style={styles.head}>
         <View style={styles.headText}>
-          <Text style={styles.eyebrow}>{title}</Text>
+          {/* ÜSTBAŞLIK KALDIRILDI (cihazda görüldü 30.08): `title` hem çekmecenin başlığına hem
+              buraya basılıyordu ve ekranda AYNI cümle iki kez, üst üste duruyordu. Çekmecenin
+              kendi başlığı zaten "hangi tutar/adet yazılıyor"u söylüyor; ikinci kopya bilgi
+              taşımıyor, yalnız değeri aşağı itiyordu. */}
           <Text style={styles.value} testID={testID === undefined ? undefined : `${testID}-value`}>
-            {`${keypadDisplay(draft)} €`}
+            {`${keypadDisplay(draft)} ${unit}`}
           </Text>
           <Text style={styles.hint}>{hint}</Text>
         </View>
@@ -106,8 +125,11 @@ export function OperationsAmountKeypad({
         )}
       </View>
 
+      {/* VİRGÜL TUŞU ONDALIKSIZ ALANDA HİÇ ÇİZİLMEZ, engelli çizilmez: engelli bir tuş "burada bir
+          şey var ama olmuyor" der; olmayan bir tuş "burada öyle bir şey yok" der. Yarım paket diye
+          bir şey olmadığı için doğrusu ikincisi. */}
       <View style={styles.grid}>
-        {KEYS.map((key) => (
+        {KEYS.filter((key) => allowDecimals || key !== ',').map((key) => (
           <PressableSurface
             key={key}
             onPress={() => setDraft((current) => keypadPress(current, key))}
@@ -192,11 +214,24 @@ const styles = StyleSheet.create({
   },
   /* Üç sütun: genişlik yüzdeyle değil, ARALIKTAN düşülerek hesaplanır — yüzde + boşluk üçüncü
      tuşu alt satıra atıyordu (`flexWrap` ile ölçüldü). */
+  /*
+    ÜÇ SÜTUNLUK IZGARA — `flexShrink` SIFIR olmak ZORUNDA (arıza, cihazda görüldü 30.08).
+
+    Eski hâl `width: 33.33% + flexBasis: 33.33% + flexShrink: 1`di ve tuşlar SARMIYOR, tek satıra
+    sıkışıyordu: on iki tuş ekran boyunca ince şeritler hâlinde diziliyordu. Sebep Yoga'nın
+    kuralı — sarmalı bir kapsayıcıda **küçülebilen öğe önce küçülür, sonra sarar**; `flexShrink: 1`
+    verildiği sürece satır hiçbir zaman taşmaz, dolayısıyla sarma hiç tetiklenmez.
+
+    `%33`ten `%30`a da inildi çünkü aradaki boşluk (gap) yüzdeye dahil değil: üç tuş %100'ü tam
+    doldurunca iki boşluk taşırıyordu. %30 üçlüyü sığdırır, `flexGrow` kalan payı bölüştürür —
+    yani ızgara ekran genişliğinden bağımsız olarak üç sütun kalır.
+
+    Arıza para ekranlarını da etkiliyordu (aynı komponent); orada kimse bakmamıştı.
+  */
   key: {
-    width: `${100 / 3}%`,
-    flexBasis: `${100 / 3}%`,
-    flexGrow: 0,
-    flexShrink: 1,
+    flexBasis: '30%',
+    flexGrow: 1,
+    flexShrink: 0,
     height: operationsTheme.size.controlLg,
     alignItems: 'center',
     justifyContent: 'center',

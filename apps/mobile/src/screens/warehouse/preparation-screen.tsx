@@ -7,11 +7,11 @@ import { PAYMENT_METHOD_LABELS, type BoxLabelContract, type PreparationLineContr
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PrintProbe } from '@/components/print/print-probe';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
-import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { fillCopy } from '@/screens/operations/copy';
@@ -46,6 +46,13 @@ import { useWarehouseStatus } from './warehouse-status';
 
 const t = warehouseCopy;
 
+/**
+ * İlk yükün yer tutucu satır yüksekliği (dp) — kuyruk satırının gerçek boyu.
+ * `skeleton-list.tsx` künyesinde v3'ten ölçülen değer ("kuyruk satırı 74"); yer tutucu yerini
+ * tuttuğu şeyin boyunda olmazsa veri gelince sayfa yine zıplar.
+ */
+const QUEUE_SKELETON_HEIGHT = 74;
+
 export function PreparationScreen() {
   const router = useRouter();
   const picking = usePreparation();
@@ -70,8 +77,15 @@ export function PreparationScreen() {
     return (
       <View style={styles.screen} testID="warehouse-picking">
         {header}
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.picking.loading} label={t.picking.loading} testID="warehouse-picking-loading" />
+        {/* İLK YÜK SKELETON (kullanıcı kararı 30.08): halka yerleşim tutmaz, söndüğü an sayfa
+            zıplar. Kutular kuyruk satırlarının yerini tutuyor — 74, `skeleton-list.tsx`
+            künyesinde toplama kuyruğu için ölçülen değer. */}
+        <View style={styles.loading}>
+          <OperationsSkeletonList
+            heights={[QUEUE_SKELETON_HEIGHT, QUEUE_SKELETON_HEIGHT, QUEUE_SKELETON_HEIGHT]}
+            label={t.picking.loading}
+            testID="warehouse-picking-loading"
+          />
         </View>
       </View>
     );
@@ -903,6 +917,12 @@ const styles = StyleSheet.create({
   centered: {
     flex: 1,
     justifyContent: 'center',
+  },
+  /* Skeleton ORTALANMAZ — yerini tuttuğu liste yukarıdan başlıyor; ortalanmış kutular veri
+     gelince yukarı sıçrar ve halkanın kusuru geri gelirdi. */
+  loading: {
+    paddingHorizontal: operationsTheme.space['5xl'],
+    paddingTop: operationsTheme.space['3xl'],
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],

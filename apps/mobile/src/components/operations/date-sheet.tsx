@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import {
   clampDay,
@@ -45,6 +46,7 @@ interface OperationsDateSheetProps {
   /** Ürünün raf ömrü — ilk hızlı çip bundan türer; `null` ise o çip çizilmez. */
   shelfLifeDays: number | null;
   columnLabels: { day: string; month: string; year: string };
+  /** Onay metni — `{date}` yer tutucusunu taşır ("{date} · yaz"); seçicinin o anki hâli basılır. */
   confirmLabel: string;
   cancelLabel: string;
   onConfirm: (iso: string) => void;
@@ -78,16 +80,44 @@ export function OperationsDateSheet({
   const years = yearRange(today);
   const days = dayRange(draft);
 
+  /*
+    ── SÜTUN SEÇİLİ DEĞERE KAYAR (arıza, ölçüldü 30.08 · görsel ajanı farkı #2) ──
+
+    Belirti: "+1 yıl" çipine basılıyor, YIL sütunu 2027'ye geçiyor ama GÜN ve AY sütunları 1'de
+    duruyor — depocu hiçbir şey olmamış sanıyor. Sebep kaydırma konumuydu: seçili hücre
+    işaretleniyordu ama sütun ONA KAYMIYORDU, yani seçim ekranın DIŞINDA kalıyordu. Değer
+    doğruydu, görünmüyordu — en kötü arıza türü: sessiz ve "çalışmıyor" gibi görünen.
+
+    Kaydırma hedefi hücrenin kendi ölçüsünden hesaplanır (`controlSm` + aralık), sabitten değil;
+    hücre boyu bir gün değişirse hesap onunla birlikte değişsin. Görünür pencerenin ortasına
+    değil ÜSTÜNE hizalanıyor: seçili değerin altındaki günler de görünsün, kullanıcı nereye
+    kaydığını anlasın.
+  */
+  const dayRef = useRef<ScrollView | null>(null);
+  const monthRef = useRef<ScrollView | null>(null);
+  const yearRef = useRef<ScrollView | null>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    const scrollTo = (ref: RefObject<ScrollView | null>, index: number) => {
+      ref.current?.scrollTo({ y: Math.max(0, index) * CELL_STRIDE, animated: true });
+    };
+    scrollTo(dayRef, days.indexOf(draft.day));
+    scrollTo(monthRef, MONTHS.indexOf(draft.month));
+    scrollTo(yearRef, years.indexOf(draft.year));
+  }, [visible, draft.day, draft.month, draft.year, days, years]);
+
   const column = (
     label: string,
     values: number[],
     selected: number,
     onPick: (n: number) => void,
     key: string,
+    ref: RefObject<ScrollView | null>,
   ) => (
     <View style={styles.column}>
       <Text style={styles.columnLabel}>{label}</Text>
-      <ScrollView style={styles.columnScroll} contentContainerStyle={styles.columnList}>
+      <ScrollView ref={ref} style={styles.columnScroll} contentContainerStyle={styles.columnList}>
         {values.map((n) => (
           <PressableSurface
             key={n}
@@ -127,9 +157,23 @@ export function OperationsDateSheet({
       )}
 
       <View style={styles.columns}>
-        {column(columnLabels.day, days, draft.day, (day) => setDraft((c) => ({ ...c, day })), 'day')}
-        {column(columnLabels.month, MONTHS, draft.month, (month) => setDraft((c) => clampDay({ ...c, month })), 'month')}
-        {column(columnLabels.year, years, draft.year, (year) => setDraft((c) => clampDay({ ...c, year })), 'year')}
+        {column(columnLabels.day, days, draft.day, (day) => setDraft((c) => ({ ...c, day })), 'day', dayRef)}
+        {column(
+          columnLabels.month,
+          MONTHS,
+          draft.month,
+          (month) => setDraft((c) => clampDay({ ...c, month })),
+          'month',
+          monthRef,
+        )}
+        {column(
+          columnLabels.year,
+          years,
+          draft.year,
+          (year) => setDraft((c) => clampDay({ ...c, year })),
+          'year',
+          yearRef,
+        )}
       </View>
 
       <View style={styles.actions}>
@@ -150,7 +194,13 @@ export function OperationsDateSheet({
           accessibilityLabel={confirmLabel}
           testID={testID === undefined ? undefined : `${testID}-confirm`}
         >
-          <Text style={styles.confirmLabel}>{confirmLabel}</Text>
+          {/* DÜĞME NE YAZACAĞINI SÖYLER (v3 · `{{ sktTam }} · yaz` — görsel ajanı farkı #3):
+              sabit "Bu tarihi yaz" hangi tarihin yazılacağını söylemiyordu ve seçici üç ayrı
+              sütundan kurulduğu için depocu ancak üçünü tek tek okuyarak doğrulayabiliyordu.
+              Tarih düğmenin üstünde yazınca onay tek bakışta yapılır. */}
+          <Text style={styles.confirmLabel}>
+            {fillCopy(confirmLabel, { date: formatDraft(draft) })}
+          </Text>
         </PressableSurface>
       </View>
     </BottomSheet>
@@ -158,6 +208,15 @@ export function OperationsDateSheet({
 }
 
 const MONTHS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+
+/** Bir hücrenin kapladığı dikey yer — kutu boyu + listenin aralığı. Kaydırma hedefi bundan çıkar. */
+const CELL_STRIDE = operationsTheme.size.controlSm + operationsTheme.space.sm;
+
+/** Seçicinin o anki hâli, okunur tarih olarak ("30.08.2027") — düğmenin ve künyenin yazdığı şey. */
+function formatDraft(value: DateWheelValue): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(value.day)}.${pad(value.month)}.${value.year}`;
+}
 
 /* Geçersiz ya da boş değerde BUGÜN: seçiciyi uydurma bir tarihle açmak, dokunulmadan onaylandığında
    yanlış bir SKT yazardı. Bugün en azından ölçülmüş bir gündür ve gözle yanlışlığı belli olur. */

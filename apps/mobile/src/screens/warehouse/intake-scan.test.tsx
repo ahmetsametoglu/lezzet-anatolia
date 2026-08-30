@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import type { ResolveCodeResponseSchema } from '@lezzet/types';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 import { IntakeScreen } from './intake-screen';
 import { intakeRow } from './warehouse-fixture';
@@ -86,9 +86,21 @@ async function scanOnce() {
   Yardımcı bu yüzden yokluğu boş dizeye çeviriyor: çağıranların hepsi "bu satıra yazıldı mı" diye
   soruyor, "alan var mı" diye değil.
 */
+/**
+ * Satırın ADET kutusundaki sayı.
+ *
+ * 30.08'de kutu GİRDİ olmaktan çıkıp DÜĞME oldu (tuş takımını açıyor — tasarımın kararı: *"Cihaz
+ * klavyesi açılmaz"*), yani değer artık `props.value`da değil ÇİZİLEN METİNDE. Yardımcı onu
+ * okuyor; kutunun içinde iki metin var (sayı + "ADET" başlığı) ve ilki sayının kendisi.
+ *
+ * Sayılmamış satırda kutu HİÇ ÇİZİLMEZ (yerinde "say →" durur) — o hâlde boş dize döner ve
+ * çağıran "henüz sayılmadı" ile "sıfır sayıldı"yı ayırt edebilir.
+ */
 function qtyOf(variantId: string): string {
-  const field = screen.queryByTestId(`warehouse-intake-qty-${variantId}`);
-  return field === null ? '' : String(field.props.value ?? '');
+  const box = screen.queryByTestId(`warehouse-intake-qty-${variantId}`);
+  if (box === null) return '';
+  const value = within(box).queryAllByText(/^(\d+|—)$/)[0];
+  return value === undefined ? '' : String(value.props.children ?? '');
 }
 
 beforeAll(() => {
@@ -105,7 +117,7 @@ beforeEach(() => {
 
 describe('D2 · tarama akışı', () => {
   it('koli kodu ÇEKMECE açar (varsayılan çarpan), onayla yazılır; ikinci okuma TOPLANIR', async () => {
-    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
+    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
     await renderIntake();
 
     await scanOnce();
@@ -126,7 +138,7 @@ describe('D2 · tarama akışı', () => {
   });
 
   it('SKU eşleşmesi kaynağını SÖYLER — barkod kadar kesin değil, cümle bunu taşır', async () => {
-    withScan({ status: 'found', variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel, kind: 'unit', qtyPerCode: 1, source: 'sku', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
+    withScan({ status: 'found', variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel, kind: 'unit', qtyPerCode: 1, source: 'sku', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
     await renderIntake();
 
     await scanOnce();
@@ -138,7 +150,7 @@ describe('D2 · tarama akışı', () => {
   });
 
   it('çekmeceden VAZGEÇİLİRSE hiçbir satıra yazılmaz', async () => {
-    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
+    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
     await renderIntake();
 
     await scanOnce();
@@ -151,7 +163,7 @@ describe('D2 · tarama akışı', () => {
   });
 
   it('PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ — çekmece de açılmaz, yalnız söyler', async () => {
-    withScan({ status: 'found', variantId: YABANCI_VARYANT, productName: 'Sahlep', variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
+    withScan({ status: 'found', variantId: YABANCI_VARYANT, productName: 'Sahlep', variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
     await renderIntake();
 
     await scanOnce();

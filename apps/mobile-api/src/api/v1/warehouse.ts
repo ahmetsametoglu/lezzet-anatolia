@@ -605,7 +605,13 @@ warehouse.get('/intake', async (c) => {
  * PARA ÇIKMAZ: satır şeması fiyat taşımıyor (09.14 — depo yolu fiyat görmez).
  */
 warehouse.get('/variants', async (c) => {
-  const variants = await searchVariantsForIntake(serviceDb(), { query: c.req.query('q') ?? '' });
+  /* Depo süzgeci satırın STOĞU için: künye "GAZ-7120 · stok 24" diyor ve o sayı personelin
+     KENDİ deposunun sayısıdır. Depo-üstü toplam yazılsaydı, başka deponun malı burada varmış
+     gibi görünürdü (CLAUDE §1 — depo bir boyut değil değişmezdir). */
+  const variants = await searchVariantsForIntake(serviceDb(), {
+    query: c.req.query('q') ?? '',
+    warehouseId: c.get('warehouseId'),
+  });
 
   const body: z.input<typeof VariantSearchResponseSchema> = { variants };
   return ok(c, VariantSearchResponseSchema.parse(body));

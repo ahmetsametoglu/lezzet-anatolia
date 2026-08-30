@@ -51,9 +51,24 @@ const MLOR = 75;
   SATIR KAPALI BAŞLAR (v3:05, 30.08): sayılmamış satırda adet alanı YOK, sağda kesikli "say →"
   var. Düğme satırı AÇAR, adedi yazmaz — otomatik doldurma "saydım" ile "dokundum"u eşitlerdi.
 */
+/**
+ * Bir satırı sayar: "say →" ile satırı açar, ADET kutusuna dokunur, çekmecenin TEK PAKET
+ * cetvelinden sayıyı seçer ve kapatır.
+ *
+ * Yardımcı 30.08'de İKİNCİ kez değişti çünkü etkileşim yine değişti. Önce cihaz klavyesinden tuş
+ * takımına geçmişti; oysa tuş takımı PARANIN çekmecesidir (`keypadAcik`) — adedin çekmecesi
+ * (`sheetAdet`) hiç tuş taşımaz, koli sayacı ve tek paket cetvelinden kurulur. Test kapıdaki
+ * GERÇEK yolu izlemeli: kullanıcının yapamadığı bir yoldan geçen test, yeşil kalırken hiçbir şey
+ * ölçmez.
+ *
+ * Cetvel 0–24 arası; daha büyük adetler koli sayacıyla girilir (`countCases`).
+ */
 async function countRow(variantId: string, qty: string) {
   await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${variantId}`));
-  await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${variantId}`), qty);
+  await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${variantId}`));
+  const sheet = `warehouse-intake-qty-sheet-${variantId}`;
+  await fireEvent.press(screen.getByTestId(`${sheet}-ruler-${qty}`));
+  await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
 }
 
 async function pickExpiry(variantId: string, day: number, month: number, year: number) {
@@ -379,12 +394,158 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
     await pickExpiry(ROW_A.variantId, 12, 8, 2026);
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
+
+    /* Lot artık ÇEKMECEDE (30.08): satırda tek bir alan var, kod da "bilinçli boş" kararı da
+       orada veriliyor. Eskiden satırın altında ayrıca ham bir metin kutusu duruyordu — tek değer
+       için iki kontrol; cihazda ikisi birden görüldü. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
+    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
+    // Yazdıktan SONRA "lot yok" demek, yazılanı da siler: karar kodun kendisini geçersiz kılar.
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-skip-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
     expect(lastPostBody().lines[0]?.lotNumber).toBeNull();
+  });
+
+  it('lot ÇEKMECEDEN yazılır ve isteğe o kod gider', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
+    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-confirm-${ROW_A.variantId}`));
+    await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
+    expect(lastPostBody().lines[0]?.lotNumber).toBe('GAZ-7120');
+  });
+
+  /*
+    ── SATIRIN KAYNAĞI (v3:05 · `kaynakNotu`) ────────────────────────────────
+    Elle sayılan satırla okutularak sayılan satır AYNI görünmemeli: ikincisinde kutunun üstündeki
+    kod ile kayıt eşleşmiştir, birincisinde yalnız depocunun beyanı vardır. Adet ikisinde de aynı
+    sayı olduğu için bu bilgi TÜRETİLEMEZ — satır durumunda taşınması gerekiyor.
+  */
+  it('elle sayılan satır "barkod okutulmadı" der — kaynak künyesi uydurulmaz', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '10');
+
+    expect(screen.getByTestId(`warehouse-intake-source-${ROW_A.variantId}`)).toHaveTextContent(
+      /barkod okutulmadı/,
+    );
+    // Okutma kutusu da ÇİZİLMEZ: söyleyecek bir şey yok.
+    expect(screen.queryByTestId(`warehouse-intake-scan-note-${ROW_A.variantId}`)).toBeNull();
+  });
+
+  /*
+    ── ADET ÇEKMECESİ: SORU "KAÇ KOLİ", ÇARPMA EKRANIN İŞİ (v3 · `sheetAdet`) ─
+    Depocu rampada 27'yi rakam rakam yazmaz, "iki koli, üç tek" der. Çarpanı ürünün kayıtlı koli
+    kodu taşıyor (`caseSizes`); zihinden çarpım sayımın en sık hata kaynağıdır.
+  */
+  it('koli sayacı ÇARPARAK sayar ve hesabın kendisini yazar', async () => {
+    const kolili = intakeRow({ expectedQty: 27, caseSizes: [{ code: '18691000023757', qtyPerCode: 12 }] });
+    withForm([kolili]);
+    const sheet = `warehouse-intake-qty-sheet-${kolili.variantId}`;
+
+    await renderIntake();
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${kolili.variantId}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${kolili.variantId}`));
+
+    // İki koli + üç tek paket.
+    await fireEvent.press(screen.getByTestId(`${sheet}-case-18691000023757-step-increase`));
+    await fireEvent.press(screen.getByTestId(`${sheet}-case-18691000023757-step-increase`));
+    await fireEvent.press(screen.getByTestId(`${sheet}-ruler-3`));
+
+    expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('27');
+    expect(screen.getByTestId(`${sheet}-sum`)).toHaveTextContent('2 × 12  +  3 tek paket  =  27 paket');
+
+    // Kapanınca satırın adedi TOPLAMDIR — döküm çekmecenin belleği, satırın sayısı toplam.
+    await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
+    // Kutu "27" + altında "ADET" başlığı taşıyor; kalıp sayının kendisini arıyor.
+    expect(screen.getByTestId(`warehouse-intake-qty-${kolili.variantId}`)).toHaveTextContent(/27/);
+  });
+
+  /* Sayılan koli çekmeceyi kapatıp AÇINCA da duruyor: depocunun düzeltmek istediği şey toplam
+     değil, bir koli sayısıdır — döküm kaybolsaydı 27'yi elle bozmak zorunda kalırdı. */
+  it('döküm çekmece yeniden açılınca DURUR', async () => {
+    const kolili = intakeRow({ caseSizes: [{ code: '18691000023757', qtyPerCode: 12 }] });
+    withForm([kolili]);
+    const sheet = `warehouse-intake-qty-sheet-${kolili.variantId}`;
+
+    await renderIntake();
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${kolili.variantId}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${kolili.variantId}`));
+    await fireEvent.press(screen.getByTestId(`${sheet}-case-18691000023757-step-increase`));
+    await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${kolili.variantId}`));
+    expect(screen.getByTestId(`${sheet}-case-18691000023757-step-value`)).toHaveTextContent('1');
+  });
+
+  /* "Başka koli boyu" AYRI bir katman değil, aynı çekmecenin ikinci adımı: seçilen çarpan
+     doğrudan bir koli sayılır ve satır "ürüne kaydedilecek" diye görünür — sahada uydurulmuş bir
+     çarpan ürüne sessizce yazılmaz. */
+  it('sahada eklenen koli boyu bir koli sayar ve KAYDEDİLECEK diye işaretlenir', async () => {
+    withForm([ROW_A]);
+    const sheet = `warehouse-intake-qty-sheet-${ROW_A.variantId}`;
+
+    await renderIntake();
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_A.variantId}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`));
+    // Kayıtlı boyu olmayan üründe bölüm hiç çizilmez — yalnız tek paket sayılır.
+    expect(screen.queryByTestId(`${sheet}-add-size`)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId(`${sheet}-ruler-2`));
+    expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('2');
+  });
+
+  /*
+    ── KISMİ KAYIT: İKİNCİ YOL (v3:05 · `act.kismiKabul`) ────────────────────
+    Rampada koli koli gelen bir sevkiyatta "her satırı say" beklemesi gerçek dışı: mal geldiği
+    kadarıyla stoğa girmeli, kalanı açık kalmalı. İstek gövdesi zaten sayılmamış satırı atlıyordu;
+    eksik olan tek şey `complete` kilidiydi.
+
+    Düğmenin KOŞULU bizim kararımız (tasarım hep çiziyor): hepsi sayılıyken ikinci düğme
+    birinciyle aynı şeyi daha kötü yapar, hiçbiri sayılmamışken kapıya boş bir kabul gönderir.
+  */
+  it('hiçbir satır sayılmamışken kısmi kayıt düğmesi ÇİZİLMEZ — boş kabul davetiye olurdu', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+
+    expect(screen.queryByTestId('warehouse-intake-partial-cta')).toBeNull();
+  });
+
+  it('bir satır sayılınca kısmi kayıt açılır ve YALNIZ sayılanı yazar', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+
+    await fireEvent.press(screen.getByTestId('warehouse-intake-partial-cta'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
+
+    const lines = lastPostBody().lines;
+    expect(lines).toHaveLength(1);
+    expect(lines[0]?.variantId).toBe(ROW_A.variantId);
+  });
+
+  it('hepsi sayılınca kısmi kayıt düğmesi KAYBOLUR — ana düğme zaten aynı işi yapıyor', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+
+    expect(screen.queryByTestId('warehouse-intake-partial-cta')).toBeNull();
+    expect(screen.getByTestId('warehouse-intake-cta')).toBeOnTheScreen();
   });
 
   it('hasar notu HANGİ satıra ait olduğu yazılarak isteğe taşınır (satır notu şemada yok)', async () => {
@@ -447,7 +608,13 @@ describe('D2 · plansız kabul', () => {
                 dateType: 'DDM',
                 shelfLifeDays: 360,
                 imageUrl: null,
+                // Satırın künyesi "SKU-1 · stok 24" olur (v3 tasarımı): depocunun ilk sorusu
+                // "bu üründen bende var mı" ve cevabı KENDİ deposunun sayısıdır.
+                stockQty: 24,
                 qtyPerCode: null,
+                // Koli boyu da aynı gerekçeyle arama satırında: aramadan eklenen satır adet
+                // çekmecesini açacak ve o çekmece "kaç koli geldi" diye soracak.
+                caseSizes: [],
               },
             ],
           }),
@@ -497,4 +664,5 @@ describe('D2 · plansız kabul', () => {
 
     expect(mockPush).toHaveBeenCalledWith('/intake?unplanned=1');
   });
+
 });

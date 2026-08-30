@@ -5,9 +5,9 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
-import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { captionOf } from '@/lib/operations/caption';
@@ -37,6 +37,12 @@ import { useWarehouseStatus } from './warehouse-status';
 */
 
 const t = warehouseCopy;
+
+/**
+ * İlk yükün yer tutucu panel yüksekliği (dp) — `skeleton-list.tsx` künyesinde bu ekran için
+ * ölçülen değer ("transfer paneli 140"). İki kutu: gelen ve giden transfer blokları.
+ */
+const PANEL_SKELETON_HEIGHT = 140;
 
 /**
  * Kartta gösterilen kalem sayısı (v3:1106'nın üç satırı). Kart bir LİSTE DEĞİL, "içeride ne var"
@@ -78,9 +84,12 @@ export function TransferScreen() {
     return (
       <View style={styles.screen} testID="warehouse-transfer">
         {header}
-        <View style={styles.centered}>
-          <LoadingState
-            accessibilityLabel={t.transfer.loading}
+        {/* İLK YÜK SKELETON (kullanıcı kararı 30.08): halka yerleşim tutmaz, söndüğü an sayfa
+            zıplar. Transfer paneli 140 — `skeleton-list.tsx` künyesinde bu ekran için ölçülen
+            değer; kutu, yerini tuttuğu panelin boyunda olmalı. */}
+        <View style={styles.loading}>
+          <OperationsSkeletonList
+            heights={[PANEL_SKELETON_HEIGHT, PANEL_SKELETON_HEIGHT]}
             label={t.transfer.loading}
             testID="warehouse-transfer-loading"
           />
@@ -390,6 +399,12 @@ const styles = StyleSheet.create({
   centered: {
     flex: 1,
     justifyContent: 'center',
+  },
+  /* Skeleton ORTALANMAZ — paneller yukarıdan başlıyor; ortalanmış kutular veri gelince yukarı
+     sıçrar ve halkanın kusuru geri gelirdi. */
+  loading: {
+    paddingHorizontal: operationsTheme.space['5xl'],
+    paddingTop: operationsTheme.space['3xl'],
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],

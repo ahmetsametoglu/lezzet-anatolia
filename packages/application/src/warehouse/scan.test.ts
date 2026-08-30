@@ -69,6 +69,25 @@ describe('tarama zinciri (findByCode)', () => {
     expect(resolved).toMatchObject({ status: 'found', variantId: otherVariantId, kind: 'case', qtyPerCode: 12 });
   });
 
+  /*
+    ── ÇÖZÜM VARYANTIN BÜTÜN KOLİ BOYLARINI DA TAŞIR (30.08) ─────────────────
+    `qtyPerCode` OKUTULAN kodun çarpanıdır (tek sayı); `caseSizes` ürünün BÜTÜN boylarıdır. İkisi
+    ayrı sorunun cevabı ve plansız kabulde ikisi de gerekiyor: satırı okutma açıyor, o satır adet
+    çekmecesini açıyor ve çekmece "kaç koli geldi" diye soruyor.
+  */
+  it('çözüm ürünün BÜTÜN koli boylarını taşır — paket kodları elenir, sıra çarpana göre', async () => {
+    await learnCode(db, { code: `2869${stamp}`, variantId: otherVariantId, kind: 'case', qtyPerCode: 4 });
+
+    const resolved = await resolveScannedCode(db, { code: `1869${stamp}` });
+    expect(resolved).toMatchObject({
+      status: 'found',
+      caseSizes: [
+        { code: `2869${stamp}`, qtyPerCode: 4 },
+        { code: `1869${stamp}`, qtyPerCode: 12 },
+      ],
+    });
+  });
+
   it('bağlı kod İKİNCİ varyanta öğretilemez — `already_bound` kime bağlı olduğunu söyler', async () => {
     const outcome = await learnCode(db, { code: `869${stamp}`, variantId: otherVariantId });
     expect(outcome).toMatchObject({ status: 'already_bound', variantId, variantLabel: '500 g' });

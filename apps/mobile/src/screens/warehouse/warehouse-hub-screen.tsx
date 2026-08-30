@@ -5,9 +5,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
+import { OperationsSurface } from '@/components/operations/surface';
 import { Icon } from '@/components/ui/icon';
-import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsSectionRoute } from '@/screens/login/post-login-route';
@@ -25,7 +26,7 @@ import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { NEAR_EXPIRY_FIXTURE } from './near-expiry-fixture';
 import { orderPickingQueue } from './warehouse-format';
-import type { PreparationOrderContract } from '@lezzet/types';
+import type { BoxPrinterContract, PreparationOrderContract } from '@lezzet/types';
 import { useWarehouseHub } from './use-warehouse-hub.hook';
 import { resetWarehouseStatus, useWarehouseStatus } from './warehouse-status';
 
@@ -77,6 +78,16 @@ import { resetWarehouseStatus, useWarehouseStatus } from './warehouse-status';
 */
 
 const t = warehouseCopy;
+
+/**
+ * İlk yükün yer tutucu blokları — hub üç bloktan oluşuyor ve üçü de farklı boyda.
+ *
+ * Ölçüler blokların KENDİ yüksekliklerinden: özet kartı üç sayı taşıyan koyu blok, D1 kartı iki
+ * önizleme satırıyla en yüksek olan, ızgara ise iki sıra `size.tile` (132) + aralarındaki
+ * boşluk. Tek bir ortalama yükseklik vermek, veri gelince sayfayı yine zıplatırdı — skeletonun
+ * tek işi bunu önlemek (`skeleton-list.tsx` künyesi).
+ */
+const HUB_SKELETON = { overview: 108, hero: 196, grid: 274 } as const;
 const shell = operationsCopy;
 
 /** Izgara kutucuğunun şekli — yedi iş de aynı iskeleti çiziyor (v3:105-161). */
@@ -90,6 +101,17 @@ interface HubTile {
   subtitle: string;
   /** Alt metin DİKKAT rengiyle mi yazılıyor (şablonun `d3Rengi`/`d6Rengi` kuralı). */
   alert: boolean;
+  /**
+   * Kutucuğun BEKLEYEN İŞİ var mı — yoksa çerçeve KESİKLİ çizilir (görsel ajanı ölçümü 30.08,
+   * hub farkı #3). Tasarımın kuralı: dolu kart düz, boş kart kesikli.
+   *
+   * "Boş" ile "okunamadı" AYRI: sayı `null` iken kesikli çizmek, ölçülemeyen bir şeyi "iş yok"
+   * diye göstermek olurdu (CLAUDE §1). O yüzden bayrak yalnız SAYI BİLİNİYOR ve SIFIR iken açılır.
+   *
+   * Sayısı olmayan kutucuklarda (mal kabul, sayım, yerinde satış) bayrak yok: onlar bir kuyruk
+   * değil bir KAPI — depocu iş olmasa da oraya girer.
+   */
+  empty?: boolean;
   onPress: () => void;
 }
 
@@ -155,11 +177,18 @@ export function WarehouseHubScreen() {
   );
 
   if (hub.status === 'loading') {
+    /* İLK YÜK SKELETON, HALKA DEĞİL (kullanıcı kararı 30.08) — halka yerleşim tutmaz ve söndüğü
+       an sayfa zıplar. Üç kutu hub'ın üç bloğunun yerini tutuyor: özet kartı, D1 büyük kartı ve
+       kutucuk ızgarası (ölçüler bloklarının kendi yüksekliklerinden). */
     return (
       <View style={styles.screen} testID="operations-section-warehouse">
         {header}
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.hub.loading} label={t.hub.loading} testID="warehouse-hub-loading" />
+        <View style={styles.loading}>
+          <OperationsSkeletonList
+            heights={[HUB_SKELETON.overview, HUB_SKELETON.hero, HUB_SKELETON.grid]}
+            label={t.hub.loading}
+            testID="warehouse-hub-loading"
+          />
         </View>
       </View>
     );
@@ -371,7 +400,7 @@ export function WarehouseHubScreen() {
               key={tile.key}
               onPress={tile.onPress}
               feedback="scale"
-              style={[styles.tile, { width: tileWidth }]}
+              style={[styles.tile, tile.empty === true ? styles.tileEmpty : null, { width: tileWidth }]}
               accessibilityLabel={`${tile.title} — ${tile.subtitle}`}
               testID={`warehouse-hub-${tile.key}`}
             >
@@ -394,21 +423,36 @@ export function WarehouseHubScreen() {
           ))}
         </View>
 
-        {/* ── Yazıcı şeridi — kurulum, günlük iş değil; ızgaranın DIŞINDA. */}
-        <PressableSurface
+        {/* ── Yazıcı şeridi — kurulum, günlük iş değil; ızgaranın DIŞINDA.
+
+            Kullanıcı bulgusu N6 (30.08): tasarımdaki düğmeden farklı görünüyordu. Ölçüm beş
+            ayrım gösterdi — zemin `neutral-bg` (belirgin kum) iken tasarım `cream`, kenar
+            `sand-300` iken tasarım `neutral-bg` (yani neredeyse görünmez), yarıçap bir kademe
+            küçük, alt metin `muted` iken tasarım `tab-inactive`, yön oku bir punto büyük.
+            Toplamı: sessiz olması gereken şerit, ızgaranın kutucuklarından DAHA yüksek sesle
+            çiziliyordu. Artık kitin `quiet` tonu — tasarımda 37 kullanımı olan yüzey. */}
+        <OperationsSurface
+          tone="quiet"
+          padding="md"
+          chevron
           onPress={() => router.navigate('/printers')}
-          feedback="scale-small"
-          style={styles.printers}
           accessibilityLabel={`${t.hub.rows.printers.title} — ${t.hub.rows.printers.subtitle}`}
           testID="warehouse-hub-printers"
         >
-          <Icon name="settings" size={operationsTheme.size.stripIcon} color={operationsTheme.colors.muted} />
-          <View style={styles.printersBody}>
-            <Text style={styles.printersTitle}>{t.hub.rows.printers.title}</Text>
-            <Text style={styles.printersSubtitle}>{t.hub.rows.printers.subtitle}</Text>
+          <View style={styles.printersRow}>
+            <Icon name="settings" size={operationsTheme.size.stripIcon} color={operationsTheme.colors.muted} />
+            <View style={styles.printersBody}>
+              <Text style={styles.printersTitle}>{t.hub.rows.printers.title}</Text>
+              {/* Şerit "bu cihaz" diyorsa CİHAZIN HÂLİNİ söylemeli (görsel ajanı ölçümü 30.08,
+                  hub farkı #4): tasarım "kutu etiketi QL-1110NWB · kargo etiketi tanımsız" yazıyor,
+                  bizde ne işe yaradığını anlatan bir cümle vardı — ayarı açmadan hiçbir şey
+                  öğretmiyordu. Okuma düşerse (`null`) o cümleye geri düşülür. */}
+              <Text style={styles.printersSubtitle} testID="warehouse-hub-printers-state">
+                {printerSummary(hub.printers)}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.chevron}>›</Text>
-        </PressableSurface>
+        </OperationsSurface>
 
         <Text style={styles.footnote}>{t.hub.footnote}</Text>
       </ScrollView>
@@ -480,6 +524,24 @@ function buildPicking(orders: readonly PreparationOrderContract[] | null): {
     });
 
   return { badge: String(orders.length), subtitle: copy.open, preview };
+}
+
+/**
+ * **Yazıcı şeridinin künyesi** — cihazın o anki kurulumu (v3:01 · görsel ajanı farkı #4).
+ *
+ * Tasarımın cümlesi iki yarımdan kurulu: *"kutu etiketi QL-1110NWB · kargo etiketi tanımsız"*.
+ * Her yarım bir AMACIN karşılığı ve ikisi ayrı ayrı tanımsız olabilir — KEHL'de kutu yazıcısı var,
+ * kargo yok (tohumun kendi üç hâli). Tek bir "2 yazıcı" sayısı bu bilgiyi taşımazdı: depocunun
+ * sorusu "kaç tane" değil, "kargo etiketi basabilir miyim".
+ *
+ * `null` (okunamadı) → açıklama metnine düşülür. Boş liste ("hiç yazıcı yok") ondan AYRI ve kendi
+ * cümlesini alır: biri ölçüm düşüşü, öteki gerçek bir kurulum hâli (CLAUDE §1).
+ */
+function printerSummary(printers: readonly BoxPrinterContract[] | null): string {
+  if (printers === null) return t.hub.rows.printers.subtitle;
+  const nameOf = (purpose: BoxPrinterContract['purpose']) =>
+    printers.find((printer) => printer.purpose === purpose)?.model ?? t.hub.rows.printers.unset;
+  return fillCopy(t.hub.rows.printers.state, { box: nameOf('box'), shipping: nameOf('shipping') });
 }
 
 /**
@@ -562,6 +624,9 @@ function buildTiles(
       title: transfer.title,
       subtitle: transferSubtitle,
       alert: false,
+      // Liste OKUNDU ve boşsa kesikli; `null` (okunamadı) kesikli DEĞİL — ölçülemeyeni "iş yok"
+      // diye göstermek olurdu.
+      empty: transfers !== null && transfers.length === 0,
       onPress: () => router.navigate('/inbound'),
     },
     {
@@ -601,6 +666,8 @@ function buildTiles(
       title: handover.title,
       subtitle: handoverSubtitle,
       alert: false,
+      // Sayaç ucundan geliyor; `null` "okunamadı" demek ve o hâlde kesikli çizilmez.
+      empty: pendingHandover === 0,
       onPress: () => router.navigate('/handover'),
     },
   ];
@@ -614,6 +681,12 @@ const styles = StyleSheet.create({
   centered: {
     flex: 1,
     justifyContent: 'center',
+  },
+  /* Skeleton ORTALANMAZ: yerini tuttuğu bloklar yukarıdan başlıyor ve ortalanmış kutular veri
+     gelince yukarı sıçrardı — halkanın kusurunu geri getirmek olurdu. */
+  loading: {
+    paddingHorizontal: operationsTheme.space['5xl'],
+    paddingTop: operationsTheme.space['3xl'],
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],
@@ -776,10 +849,18 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.card,
   },
+  /* "tüm kuyruğu aç →" — kullanıcı bulgusu N5 (30.08): tasarımdakinden farklı görünüyordu.
+     Ölçüldü, dördü birden ayrılmış: tasarım `700 12px · #5f7a2c · align-self:flex-end`,
+     kod `400 · micro · muted · sola yaslı`. Yani bir EYLEM cümlesi, gri bir dipnot gibi
+     çiziliyordu — kartın ne yaptığını söyleyen tek satır okunmuyordu.
+
+     Dokunulabilir DEĞİL ve tasarımda da değil: satırın kendi `onClick`i yok, kartın var.
+     Zeytin renk burada "bu bir bağlantı" demez, "bu kart seni oraya götürür" der. */
   heroFoot: {
-    fontFamily: operationsTheme.font.body['400'],
-    fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors.muted,
+    alignSelf: 'flex-end',
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.olive,
   },
   previewList: {
     gap: operationsTheme.space.md,
@@ -830,6 +911,15 @@ const styles = StyleSheet.create({
     padding: operationsTheme.space['2xl'],
     gap: operationsTheme.space.md,
   },
+  /* BOŞ KUTUCUK KESİKLİ (görsel ajanı ölçümü 30.08, hub farkı #3): tasarımın kuralı "dolu kart
+     düz, boş kart kesikli". Kesik çizgi "burada bir şey OLABİLİR ama bugün yok" der; düz çerçeve
+     boş bir kutuyu dolu kardeşleriyle aynı ağırlıkta gösteriyordu ve depocu ızgarayı tararken
+     hangisinde iş olduğunu ancak alt metni okuyarak anlıyordu. Kitin `blank` tonuyla aynı karar
+     (`surface.tsx`); kutucuk kendi yüzeyini çizdiği için ton oradan alınmıyor, kural tekrarlanıyor. */
+  tileEmpty: {
+    borderStyle: 'dashed',
+    borderColor: operationsTheme.colors['sand-500'],
+  },
   tileHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -859,16 +949,10 @@ const styles = StyleSheet.create({
   },
 
   /* ── Yazıcı şeridi ──────────────────────────────────────────────────────── */
-  printers: {
+  printersRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.lg,
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-    borderRadius: operationsTheme.radius.control,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    paddingVertical: operationsTheme.space.xl,
-    paddingHorizontal: operationsTheme.space['2xl'],
   },
   printersBody: {
     flex: 1,
@@ -878,10 +962,13 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.note,
     color: operationsTheme.colors.body,
   },
+  /* Alt metin `tab-inactive` (#a8a191): tasarımın en sessiz mürekkebi ve v3'te 91 kez geçiyor.
+     `muted` (#8a8270) buradaki başlıkla neredeyse aynı ağırlıkta okunuyordu — şerit tek satır
+     gibi görünüyor, hangisinin başlık olduğu ayırt edilemiyordu. */
   printersSubtitle: {
     fontFamily: operationsTheme.font.body['400'],
     fontSize: operationsTheme.text.tag,
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['tab-inactive'],
   },
   chevron: {
     fontFamily: operationsTheme.font.body['400'],

@@ -7802,10 +7802,15 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **v3 SERT GÖLGEYİ BIRAKMIŞ (ölçüm).** `box-shadow` sayımı: müşteri v3'te `3px 3px 0` **26**,
   operasyon **v2**'de **3**, operasyon **v3**'te **0**. Gölge rengi #b8b09a de v1/v2'de var, v3'te
-  yok. v3'ün tek gölge benzeri şeyi `0 4px 14px` zeytin ışıması ve **dördünün dördü de** yapışkan
-  okutma CTA'sında — o yüzden `OperationsStickyBar`ın `glow` bayrağında, düğmede değil (düğmeye
-  konsaydı akıştaki her zeytin düğme de ışır, işaret anlamını kaybederdi). `shadow['hard-on-ink']`
-  artık `@deprecated`; BEKLEYEN(21.161) son tüketici gidince silinecek.
+  yok. v3'ün tek gölge benzeri şeyi `0 4px 14px` zeytin ışıması ve **dördünün dördü de** zeytin
+  dolgulu OKUTMA düğmesinde. ~~O yüzden `OperationsStickyBar`ın `glow` bayrağında, düğmede
+  değil.~~ **Bu okuma YANLIŞTI ve düzeltildi (kurye şeridinin ölçümü, doğrulandı 30.08):** dört
+  düğmenin ebeveyni tarandı, dördü de sayfa AKIŞINDA ve o dosyalarda `position:sticky` hiç
+  geçmiyor — yani ışıma çubuğa bağlıyken **ulaşılamaz** bir yerdeydi ve kurye kite geçirdiği
+  okutma düğmesine veremedi. Ortak yan konum değil ROL: ışıma zeytin okutma düğmesinin kendi
+  imzası. Artık `PrimaryButton elevation="glow"`; çubuğun `glow` prop'u söküldü (hiçbir çağıran
+  vermiyordu). `shadow['hard-on-ink']` artık `@deprecated`; BEKLEYEN(21.161) son tüketici gidince
+  silinecek.
 
   **`OperationsSurface`in altı tonu tahminle değil SAYIMLA belirlendi** — `panel` (30+) ·
   **`quiet`** (krem zemin 37, sessiz kenarla 21) · `card` · `ink` · `invite` (kesikli zeytin) ·
@@ -7821,6 +7826,22 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   *"GAZ-7120 · stok 24"* diyor ve o sayı kayıtta yoktu. **Personelin kendi deposundan** okunuyor
   (`listAvailableAcross`, rezervasyon düşülmüş); depo-üstü toplam yazılsaydı başka deponun malı
   burada varmış gibi görünürdü. Uç artık `warehouseId` geçiriyor; testi de ölçüyor.
+
+  **İkinci tur (30.08 · şeritlerin ölçümleri kite döndü).** Kit yazıldıktan sonra öteki şeritler
+  onu kullanmayı deneyince üç eksik ve bir yanlış çıktı; dördü de kapandı:
+
+  · **`SecondaryButton grow`** — kurye kit turunda bu düğmeyi HİÇ kullanamamış ve sebebi tekti:
+    onu hak eden iki yer de yan yana esneyen satır, `PressableSurface`ın `grow`u dışarı açılmıyordu.
+  · **`PrimaryButton elevation="glow"`** — yukarıdaki ışıma düzeltmesi.
+  · **`OperationsDashedFrame`** — kesikli çerçeve cihazda **~1:10** çiziliyordu (tasarım ~1:1);
+    840 px'lik kenarda yalnız 9 kesik, yani çerçeve kesikli değil NOKTALI görünüyordu. RN'in
+    `borderStyle: 'dashed'`i desen parametresi almıyor. Çare ayraçla aynı (21.170): desen SVG'den
+    ve **tek yerden** — `DASH_PATTERN` artık `dashed-rule`dan dışa açık, `Surface`ın `invite`/
+    `blank` tonlarının ikisi de onu okuyor. Çerçeve mutlak konumda bir ÖRTÜ; kabın kenarlığı
+    saydam olarak duruyor ki yerleşim kaymasın.
+  · **`PrimaryButton badge` AÇILMADI** ve gerekçesi yazıldı: tek kullanımı var, düğmenin içine
+    üçüncü bir yuva açmak kitin "etiket + ikon" sözleşmesini genişletirdi. İkinci kullanım
+    çıktığı gün duplikasyon olur ve karar kendiliğinden verilir.
 
   **Kalan:** 27 operasyon ekranı kite bağlanacak — **tek turda değil**, her şerit kendi ekranını
   sırası geldikçe taşır (koordinasyon defteri, 30.08: 26 dosyalık tek tur, paylaşılan dosyada
@@ -8330,3 +8351,67 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** Kurye jest **101/101**, kit çubuğu **5/5**, `tsc` temiz, `eslint` temiz.
   Cihaz turu: 16 tam · 14 birebir · 15 dört düzeltme yerinde (görsel ajanı, 30.08).
+
+- [x] (21.173) **ADET ÇEKMECESİ — soru "kaç paket" değil "KAÇ KOLİ"** (kullanıcı bulgusu 30.08 · v3 `sheetAdet`)
+  `touches:` `apps/mobile/src/components/operations/{quantity-sheet,stepper-group,dashed-frame}.tsx` ·
+  `apps/mobile/src/components/operations/quantity-value.ts` ·
+  `apps/mobile/src/components/ui/bottom-sheet.tsx` ·
+  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,messages.json}` ·
+  `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/application/src/warehouse/{intake,scan,variant-search}.ts` · `scripts/seed/barcode.ts`
+
+  **Nereden çıktı.** Kullanıcı: *"Adet girmek için özel bir çekmece komponenti var ve bunu bire bir
+  kopyalamanı istiyorum. Kopyalarken neden problem yaşadığını anlamıyorum. Şu an alakasız bir
+  tasarım var."* Haklıydı ve sebep bir KARIŞTIRMAYDI: v3'te **iki ayrı çekmece** var — `keypadAcik`
+  PARANIN tuş takımı (€ işareti, 12 tuş, virgül, "beklenen" çipi), `sheetAdet` ise ADEDİN çekmecesi
+  ve **içinde hiç tuş yok**. Adet kutusuna para çekmecesi bağlanmıştı.
+
+  **Depocu 27'yi rakam rakam yazmaz, "iki koli, üç tek" der.** Çarpma işini ekran yapar; kolinin
+  kaç paket olduğu bir VERİDİR (`variant_barcode`ın koli kodu, çarpan kodun kendi alanı), depocunun
+  zihinden çarpması gereken bir sayı değil — ve zihinden çarpım sayımın en sık hata kaynağıdır.
+
+  **Çekmecenin beş bloğu tasarımdan birebir:** koyu (`ink`) toplam kartı + altında hesabın kendisi
+  (*"2 × 12 + 3 tek paket = 27 paket"* — depocu sonucu değil YOLU doğrular) · "KAÇ KOLİ GELDİ"
+  bölümü (kayıtlı boyların bağlı sayaçları) · "Başka koli boyu" adımı · "KOLİ DIŞI TEK PAKET"
+  sayacı + 0–24 cetveli · kapatan "Tamam". Değer CANLI yazılır: tasarımın "Tamam"ı bir onay değil
+  kapatmadır, satır her ± anında zaten güncellenmiştir.
+
+  **`BEKLEYEN` diye kaydedilmiş engel YANLIŞMIŞ (ölçüldü).** Not kuyruğu N2 *"ürünün kutu tipleri
+  veri modelinde yok"* diyordu. Yok değildi: `variant_barcode`ın `kind='case'` satırları tam olarak
+  bu (entity künyesi §1.2 — *"her kod kaç adet olduğunu kendisi taşır"*), yerelde ölçüldü (4 koli
+  kodu, çarpanlar 6–24). Eksik olan **sözleşmeydi**: kapılar bu alanı taşımıyordu. `caseSizes` üç
+  yere birden eklendi (`IntakeFormRow` · `ResolveCodeResponse` · `VariantSearchRow`) — üçü de
+  aynı gerekçeyle, `sku`/`dateType`/`shelfLifeDays` ile aynı: PO'lu, okutmayla açılan ve aramayla
+  açılan satır aynı formda aynı şeyi sorabilmeli. Hepsi TEK sorguda okunuyor (`listByVariants`),
+  çekmece açılınca ikinci tur atılmıyor.
+
+  **Döküm çekmecenin belleğidir, toplam satırın sayısı.** `IntakeRowState.breakdown` hangi boydan
+  kaç koli + kaç tek paket tutuyor; `qty` onun toplamı ve ikisi HER ZAMAN aynı yamada yazılıyor
+  (çekmecenin `onChange`i, okutmanın `addScanned`i). Tek sayı tutulsaydı çekmece ikinci açılışta
+  27'yi gösterir, depocu düzeltmek istediği koli sayısını göremezdi. Okutma da döküme yazıyor:
+  koli kodu koli sayar (tam bölünen kısım), artan kısım tek pakete düşer.
+
+  **Liste boşsa uydurulmaz:** koli boyu kayıtlı olmayan üründe bölüm hiç çizilmez, yalnız tek paket
+  sayılır. Varsayılan bir 12'lik koli, ölçülmemiş bir çarpanı ölçülmüş gibi gösterip stoğu sessizce
+  bozardı (CLAUDE §1).
+
+  **Yanında çıkan iki arıza — ikisi de kitte, ikisi de öteki şeritleri ilgilendiriyor:**
+  · **`BottomSheet` her çizimde yeniden açılıyordu** (kullanıcı cihazda: *"adedi her
+    değiştirdiğimde çekmece yeniden açılıp kapanıyor"*). Açılış etkisi `animateClose` →
+    `finishClose` → çağıranın `onClose`una bağlıydı ve çağıranlar onu ok fonksiyonu veriyor: her
+    çizimde yeni kimlik, her çizimde yeniden açılış. Bugüne kadar görünmemişti çünkü bütün
+    çekmeceler taslağını İÇERİDE tutuyordu; kontrollü olan ilk çekmece hatayı gösterdi. Açılış
+    artık bir GEÇİŞ (`opened` ref'i).
+  · **Tuş takımının ızgarası çökmüştü** — `flexShrink: 1`, Yoga'da sarmadan önce küçültüyor, yani
+    12 tuş tek satırda ince dilimlere dönüyordu. `flexBasis: '30%' + flexGrow: 1 + flexShrink: 0`.
+    Komponent PARA ekranlarında da kullanılıyor (gün sonu · tahsilat); not bırakıldı.
+
+  **Tohum düzeltildi:** varyant başına en fazla BİR koli boyu yazılıyordu, tasarımın örneğinde ÜÇ
+  var (KT-04 · KL-12 · KL-24) — tek satırlık liste bu ekranı sınamıyordu bile. Koli kodu alan her
+  varyant artık üç boy alıyor; mevcut kod ve çarpanı **aynen korundu** ki okutma testleri kaymasın.
+  Görmek için `db:refresh` gerekiyor (kullanıcının kararı).
+
+  **Doğrulama.** Depo + kit jest **433/433** (18 yeni: döküm hesabı 12, sayaç grubu 3, ekranda koli
+  sayarak sayma 3), `tsc` temiz, `eslint` temiz, `docs:check` temiz. Entegrasyon testleri yazıldı
+  (`scan.test.ts` koli boyu listesi, `intake.test.ts` alan listesi dokuza çıktı) — koşusu
+  denetmende (CLAUDE §4b).

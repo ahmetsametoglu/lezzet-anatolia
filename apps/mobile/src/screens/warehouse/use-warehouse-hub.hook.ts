@@ -1,8 +1,13 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import type { PreparationOrderContract, InboundTransferContract } from '@lezzet/types';
+import type { BoxPrinterContract, PreparationOrderContract, InboundTransferContract } from '@lezzet/types';
 
-import { fetchWarehouseTransfers, fetchPendingHandover, fetchPreparationQueue } from '@/lib/api/warehouse';
+import {
+  fetchWarehouseTransfers,
+  fetchPendingHandover,
+  fetchPreparationQueue,
+  fetchPrinters,
+} from '@/lib/api/warehouse';
 import { trackWarehouse } from './warehouse-status';
 
 /*
@@ -50,6 +55,19 @@ interface UseWarehouseHubResult {
    * Sıfıra düşürmek "rampa boş" derdi ve depocu kutuları orada bırakırdı.
    */
   pendingHandover: number | null;
+  /**
+   * **Bu cihazın yazıcı kurulumu** — hub'ın alt şeridi tasarımda bir AÇIKLAMA değil bir DURUM
+   * yazıyor: *"kutu etiketi QL-1110NWB · kargo etiketi tanımsız"* (görsel ajanı ölçümü 30.08,
+   * hub farkı #4). Şerit "bu cihaz" diyorsa cihazın o anki hâlini söylemeli; ne işe yaradığını
+   * anlatan bir cümle, ayarı açmadan hiçbir şey öğretmiyordu.
+   *
+   * `null` = OKUNAMADI ve şerit açıklama metnine düşer — boş liste ("hiç yazıcı yok") ile
+   * karıştırılmaz: biri bir ölçüm düşüşü, öteki gerçek bir kurulum hâli (CLAUDE §1).
+   *
+   * Hata koşuluna KATILMAZ: yazıcı okuması düşse de hub çalışır — şerit bir ayar kapısıdır,
+   * günün işi değil (devir sayacıyla aynı gerekçe).
+   */
+  printers: BoxPrinterContract[] | null;
   reload: () => void;
   /** Aşağı çekme — ekranı karartmadan tazeler. */
   refresh: () => void;
@@ -62,6 +80,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const [orders, setOrders] = useState<PreparationOrderContract[] | null>(null);
   const [transfers, setTransfers] = useState<InboundTransferContract[] | null>(null);
   const [pendingHandover, setPendingHandover] = useState<number | null>(null);
+  const [printers, setPrinters] = useState<BoxPrinterContract[] | null>(null);
 
   /** Kaçıncı yükün geçerli olduğu — geç gelen eski cevaplar yazılmaz (katalog/kurye emsali). */
   const generation = useRef(0);
@@ -69,16 +88,23 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const load = useCallback(async () => {
     const run = (generation.current += 1);
 
-    const [queue, inbound, handover] = await Promise.all([
+    const [queue, inbound, handover, printerList] = await Promise.all([
       trackWarehouse(fetchPreparationQueue()),
       trackWarehouse(fetchWarehouseTransfers()),
       trackWarehouse(fetchPendingHandover()),
+      /* YAZICI OKUMASI `trackWarehouse`TAN GEÇMEZ — ölçüldü 30.08: geçirince üç test birden
+         düştü. Sebep sinyalin kendisi: `trackWarehouse` her çağrının sonucunu PAYLAŞILAN depo
+         durumuna yazıyor (çevrimdışı · "hangi depo?") ve o durum ekranı kilitliyor. Yazıcı bir
+         AYAR kapısıdır; okuması düşünce hub'ın günlük işi kilitlenmemeli — künyede yazdığım
+         "hata koşuluna katılmaz" kuralının sinyal tarafındaki karşılığı budur. */
+      fetchPrinters(),
     ]);
     if (run !== generation.current) return;
 
     setOrders(queue.error === null ? queue.data.orders : null);
     setTransfers(inbound.error === null ? inbound.data.transfers : null);
     setPendingHandover(handover.error === null ? handover.data.boxes : null);
+    setPrinters(printerList.error === null ? printerList.data.printers : null);
     /*
       HATA HÂLİ İKİ ANA OKUMAYA BAĞLI KALDI — devir sayacı onu tetiklemiyor.
 
@@ -109,5 +135,5 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     void load().finally(() => setReloading(false));
   }, [load]);
 
-  return { status, orders, transfers, pendingHandover, reload, refresh, reloading };
+  return { status, orders, transfers, pendingHandover, printers, reload, refresh, reloading };
 }

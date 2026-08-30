@@ -518,7 +518,19 @@ describe('D2 · mal kabul', () => {
 
     expect(form.rows).toHaveLength(1);
     expect(form.rows[0]).toMatchObject({ variantId, expectedQty: 20, variantLabel: '1 kg' });
-    expect(Object.keys(form.rows[0]!).sort()).toEqual(['expectedQty', 'productName', 'variantId', 'variantLabel']);
+    /* Liste 21.160'ta dörtten sekize çıktı; dördü de tanıma/karar alanı (`sku` + `supplierCode`
+       depocunun kâğıdıyla eşleştirme, `dateType` + `shelfLifeDays` satırın SKT alanı ve ömür
+       uyarısı). "Fiyat yok" iddiası yine ALAN ADIYLA kuruluyor. Düzeltildi 30.08. */
+    expect(Object.keys(form.rows[0]!).sort()).toEqual([
+      'dateType',
+      'expectedQty',
+      'productName',
+      'shelfLifeDays',
+      'sku',
+      'supplierCode',
+      'variantId',
+      'variantLabel',
+    ]);
   });
 
   it('form KÜNYESİ referans + tedarikçi adı taşır — ekran başlığı yazılabilsin (21.11d)', async () => {
@@ -539,7 +551,10 @@ describe('D2 · mal kabul', () => {
       await asStaff('/api/v1/warehouse/intake/00000000-0000-0000-0000-000000000000'),
     );
 
-    expect(form).toEqual({ purchaseOrder: null, rows: [] });
+    /* `mlorPercent` OLMAYAN siparişte de gelir ve gelmeli: MLOR eşiği bir AYARDIR, siparişin
+       değil sistemin özelliği. Ekran satır yazılırken ömür uyarısını onunla hesaplıyor ve eşiği
+       koda gömmek, ekranın söylediği kuralı sistemin kuralı olmaktan çıkarırdı. */
+    expect(form).toEqual({ purchaseOrder: null, rows: [], mlorPercent: 75 });
   });
 
   it('BEKLEYEN SEVKİYAT listesi: gönderilmiş sipariş künyesi + kalem sayısıyla gelir', async () => {
@@ -555,6 +570,9 @@ describe('D2 · mal kabul', () => {
       referenceNo: `TS-API-BEKLEYEN-${stamp}`,
       supplierName: `Gaziantep Gıda ${stamp}`,
       lineCount: 1,
+      // Sipariş DURUMU 21.160'ta eklendi: ekran "gönderildi" ile "kısmen geldi"yi ayrı rozetle
+      // gösteriyor. Alan o turda eklenip test güncellenmedi — düzeltildi 30.08.
+      status: 'sent',
     });
     // Depo ekranına giden listede TUTAR yok — kapı fiyatı okur ama taşımaz. İddiayı üstteki
     // `toEqual` KURUYOR: tam nesne eşitliği fazladan bir anahtarı da reddeder, yani fiyat alanı
