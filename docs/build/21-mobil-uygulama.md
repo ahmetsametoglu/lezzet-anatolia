@@ -8574,6 +8574,20 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `adb exec-out screencap`): tasarımın 14. ekranıyla yan yana konuldu, yukarıdaki üç fark oradan
   çıktı ve düzeltildikten sonra tekrar ölçüldü.
 
+  **AÇIK SEFERİN DURAKLARI GERÇEKTEN YOLA ÇIKIYOR** (kullanıcı testi 30.08 — cihazda "Ulaşılamadı"ya
+  basınca yakalandı). Seed seferi ham insert'le kuruyor ve `departed_at` yazıyordu ama SİPARİŞLERİN
+  durumuna dokunmuyordu: ölçüldü, bugünün açık seferinde **tek bir `out_for_delivery` durak yoktu**,
+  üçü de `ready`ydi. Gerçekte doğamayacak bir gün — kurye yola çıkmış, hiçbir durağı yolda değil.
+  Belirtisi kapıda göründü: bekleyen durakta "Ulaşılamadı" `same_status` ile reddediliyordu
+  ("Sipariş zaten bu durumda"), çünkü `unreachable`ın hedefi `ready` ve sipariş zaten oradaydı.
+  **Ekran doğru davranıyordu, yalan söyleyen veriydi.** Çare gerçek kapı: `startCourierDay` (catch-up
+  claim) sefer kurulduktan sonra çağrılıyor; kutulu sipariş yola çıkmıyor ve o hâl korunuyor.
+
+  **Ulaşılamadı işareti de sefer seed'ine taşındı.** Sipariş seed'inde yazılıyordu ve ardından gelen
+  sefer başlatma onu GERİ ALIYORDU (ulaşılamayan durak `ready`e döner, claim `ready` durakları yola
+  çıkarır) — seed kendi kurduğu hâli bir adım sonra siliyordu. Sıra artık sahanın sırası: yola çık →
+  kapıyı çal → ulaşamadıysan işaretle.
+
   **Kalan tek fark KULLANICI KARARI:** üstbaşlıktaki zil (bildirim) ikonu tasarımda yok — 21.165'te
   de aynı yerde bırakılmıştı ve ortak kabuk zemininde (dört bölümün hepsinde var).
 
@@ -8621,6 +8635,33 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `simctl io screenshot`): iki ekranda da şerit güvenli alanı kapatıyor, dipnot ekranın en
   altında (boşluk yok), dibe hızlı fling sonrası **6 ardışık kare birebir aynı** (tek md5) —
   titreme yok.
+
+  **İKİNCİ TUR — İKİ ARIZA DAHA, İKİSİ DE İLK DÜZELTMENİN YAN ÜRÜNÜ (kullanıcı bulguları, aynı gün).**
+
+  **4 · Dip yaylanması çubuğu geri getiriyordu.** Native kaydırıcı dipte tavanı AŞAR: parmak
+  sayfayı yukarı çeker, bırakınca geri iner ve o geri inişte fark negatiftir — ham hâliyle
+  "yukarı kaydırılıyor" diye okunuyordu. **Tasarımda bu hâl YOK** (tarayıcıda `scrollTop` tavanı
+  hiç aşmaz), dolayısıyla betiğinde de karşılığı yok. Tavanın üstündeki bölge artık yalnız
+  referansı tazeliyor; karar, kullanıcı gerçekten tavanın ALTINA indiğinde alınıyor.
+
+  **5 · Hızlı kaydırmada titreme — ve tasarımla ASIL farkımız buydu.** Kullanıcı sordu:
+  *"orijinal tasarımdaki çözümlerden farklı ne uyguladın?"* Betik satır satır karşılaştırıldı:
+
+  | | Tasarım | Bizde (ilk hâl) |
+  |---|---|---|
+  | Animasyonlanan | `max-height` + `transform`, tek CSS motorunda | `marginBottom`, JS köprüsünde |
+  | Layout kaç kez değişiyor | tarayıcı tek reflow'da yürütür | **240 ms boyunca her karede** |
+  | Sonucu | — | her layout değişimi yeni bir `onScroll` üretiyor |
+
+  Yani çubuk kayarken kaydırıcının boyu her karede değişiyor, her değişim bir kaydırma olayı
+  doğuruyor ve o olaylar kararın üstüne biniyordu; mikro başlığın kendi animasyonuyla üst üste
+  gelince titreme çıkıyordu. **Çözüm: layout ANİ, kayma animasyonlu.** `marginBottom` tek karede
+  yeni değerine geçiyor, çubuk eski yerinden yenisine `translateY` ile kayıyor — yerel sürücüde,
+  JS köprüsüne hiç uğramadan, layout'a hiç dokunmadan.
+
+  **Doğrulama (ikinci tur).** iOS simülatöründe `cliclick` ile gerçek jest: dipte çekip bırakma
+  sonrası **8 ardışık kare aynı** (çubuk geri gelmiyor); dört tur hızlı aşağı-yukarı sonrası
+  **5 ardışık kare aynı** (salınım yok). Depo hub'ında ve para ekranında ayrı ayrı ölçüldü.
 
   **BEKLEYEN(21.178):** kalan 15 operasyon ekranı hâlâ kabuğa bağlı değil; her biri
   `OperationsScreenScroll`e çevrilecek.

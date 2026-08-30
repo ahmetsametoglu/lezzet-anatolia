@@ -29,22 +29,34 @@ import { useOperationsShellScroll } from '@/lib/operations/shell-scroll';
 
 export function OperationsTabBarSlide({ children }: { children: ReactNode }) {
   const { tabBarHidden } = useOperationsShellScroll();
-  const progress = useRef(new Animated.Value(0)).current;
+  /** Çubuğun eski yerinden yenisine kayması — yalnız ÇİZİM, yerel sürücüde. */
+  const offset = useRef(new Animated.Value(0)).current;
+  /** İlk ölçüm animasyon başlatmaz. */
+  const first = useRef(true);
   /* Yükseklik STATE, ref DEĞİL: `marginBottom` çizimde hesaplanıyor ve ölçüm gelince yeniden
      çizilmesi gerekiyor. Aynı değer tekrar yazılmaz — `marginBottom` yüksekliği değiştirmediği
      için ikinci bir ölçüm gelse de döngü doğmaz. */
   const [height, setHeight] = useState(0);
 
   useEffect(() => {
-    Animated.timing(progress, {
-      toValue: tabBarHidden ? 1 : 0,
-      duration: SLIDE_MS,
-      /* Yerel sürücü DEĞİL: kayan şey yalnız çizim değil, çubuğun kapladığı YER. `marginBottom`
-         bir layout özelliği ve yerel sürücüye inmez. Bedeli tek bir 240 ms'lik geçişte JS
-         köprüsünün çalışması; karşılığı ekranın altında boş krem bir şeridin kalmaması. */
-      useNativeDriver: false,
-    }).start();
-  }, [tabBarHidden, progress]);
+    /* İLK ÖLÇÜMDE ANİMASYON YOK: `height` bağımlılıkta çünkü kayma mesafesi ondan türüyor, ama
+       ölçüm ilk geldiğinde çubuk zaten yerinde — oynatmak açılışta sebepsiz bir hareket olurdu. */
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    /* LAYOUT ANİ, KAYMA ANİMASYONLU (kullanıcı bulgusu 30.08 — hızlı kaydırmada titreme).
+       `marginBottom` çizimde doğrudan yeni değerine geçer: kaydırıcının boyu TEK karede değişir.
+       Sonra çubuk eski yerinden yenisine `translateY` ile kayar — bu yerel sürücüye iner, JS
+       köprüsüne hiç uğramaz ve layout'a dokunmaz.
+
+       Öncesi şöyleydi ve titremenin sebebi oydu: `marginBottom`un KENDİSİ animasyonlanıyordu,
+       yani 240 ms boyunca her karede kaydırıcının boyu değişiyor ve her değişim yeni bir
+       `onScroll` üretiyordu. Tasarım bunu yaşamıyor çünkü orada `max-height` geçişini tarayıcı
+       tek reflow'da yürütüyor; JS'e her karede bir olay dönmüyor. */
+    offset.setValue(tabBarHidden ? -height : height);
+    Animated.timing(offset, { toValue: 0, duration: SLIDE_MS, useNativeDriver: true }).start();
+  }, [tabBarHidden, height, offset]);
 
   return (
     <Animated.View
@@ -55,8 +67,11 @@ export function OperationsTabBarSlide({ children }: { children: ReactNode }) {
              Eskiden yalnız `translateY` vardı: çubuk görsel olarak aşağı kayıyor ama layout'ta
              yerini KORUYORDU — ekranın altında çubuk boyunda boş bir krem alan kalıyordu ve
              içerik oraya uzamıyordu. Kabın alt sınırını yukarı çeken `marginBottom`, hem çubuğu
-             ekran dışına taşır hem de kardeşi olan sahneye o alanı bırakır. */
-          marginBottom: progress.interpolate({ inputRange: [0, 1], outputRange: [0, -height] }),
+             ekran dışına taşır hem de kardeşi olan sahneye o alanı bırakır.
+
+             DEĞER ANİ, ARA DEĞER YOK: animasyonu `translateY` taşıyor (yukarıdaki künye). */
+          marginBottom: tabBarHidden ? -height : 0,
+          transform: [{ translateY: offset }],
         },
       ]}
       onLayout={(event) => {

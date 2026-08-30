@@ -57,6 +57,8 @@ const TAB_BAR_HEIGHT = 86;
 const MIN_SCROLLABLE = 120;
 /** Karar değiştikten sonra yeni karar alınmayan pencere (tasarım: `Date.now() + 380`). */
 const LOCK_MS = 380;
+/** Tavana bu kadar yaklaşmış konum "dipte" sayılır — ölçüm ondalıklı gelir, tam eşitlik tutmaz. */
+const OVERSCROLL_EPSILON = 1;
 
 interface ShellScrollState {
   /** Mikro başlık inik mi (eşik geçildi). */
@@ -119,6 +121,18 @@ export function OperationsShellScrollProvider({ children }: { children: ReactNod
       return;
     }
 
+    /* DİP YAYLANMASI KARAR VERMEZ (kullanıcı bulgusu 30.08, iki ekranda ölçüldü).
+       Native kaydırıcı dipte tavanı AŞAR: parmak sayfayı yukarı çeker, bırakınca geri iner. O geri
+       inişte `delta` negatiftir ve ham hâliyle "yukarı kaydırılıyor" diye okunur — çubuk kullanıcı
+       hiçbir şey yapmadan geri gelirdi. Tasarımda bu hâl YOK: tarayıcıda `scrollTop` tavanı hiç
+       aşmaz, dolayısıyla betiğinde de bir karşılığı yok. Tavanın üstündeki bölge yalnız referansı
+       tazeler; karar, kullanıcı gerçekten yukarı kaydırıp tavanın ALTINA indiğinde alınır. */
+    const maxOffset = Math.max(0, contentSize.height - layoutMeasurement.height);
+    if (top >= maxOffset - OVERSCROLL_EPSILON) {
+      drift.current = 0;
+      return;
+    }
+
     if (delta === 0) return;
     // Yön değiştiyse birikim sıfırlanır: "aşağı 40, sonra yukarı 12" kararı hemen çevirmemeli.
     if (drift.current * delta < 0) drift.current = 0;
@@ -127,7 +141,7 @@ export function OperationsShellScrollProvider({ children }: { children: ReactNod
 
     /* Çubuk gizliyken kap 86px daha uzunmuş gibi ölçülür: kazanılacak alan yoksa gizleme
        kapalı kalır, yoksa kısa ekranlarda (Para, Karar kutusu) aç-kapa titremesi olur. */
-    const scrollable = contentSize.height - layoutMeasurement.height + (hidden.current ? TAB_BAR_HEIGHT : 0);
+    const scrollable = maxOffset + (hidden.current ? TAB_BAR_HEIGHT : 0);
     const tabBarHidden = scrollable >= MIN_SCROLLABLE ? drift.current > 0 : false;
     if (tabBarHidden === hidden.current) return;
 
