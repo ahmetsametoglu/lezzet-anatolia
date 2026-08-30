@@ -8,7 +8,25 @@ import {
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { withWarehouseChoice } from '../operations/warehouse-choice';
+import type { ApiFetchInit, ApiResult } from './client';
+
+/**
+ * **Bu dosyanın TEK çağrı kapısı** — depo istemcisiyle AYNI sarmalayıcı (`lib/api/warehouse.ts`
+ * künyesi): personelin seçtiği depo adrese yazılır, seçim yoksa adres aynen gider.
+ *
+ * Satış uçları da depo kapısının arkasında (`courierVehicleFirst` → `warehouseGuard`) ve seçimi
+ * ATLASAYDI iki ekran ayrışırdı: depo işleri seçilen tesiste, satış ise kapının kendi çözdüğü
+ * yerde (kuryede: araçta) yazılırdı. Aynı personelin aynı telefonda iki farklı depoda çalışması,
+ * stoğu iki yerden birden bozmanın en sessiz yoludur (DOMAIN §17).
+ */
+function saleFetch<TSchema extends z.ZodTypeAny>(
+  path: string,
+  schema: TSchema,
+  init: ApiFetchInit = {},
+): Promise<ApiResult<z.infer<TSchema>>> {
+  return authorizedFetch(withWarehouseChoice(path), schema, init);
+}
 
 /*
   YERİNDE SATIŞ UÇLARI — `/api/v1/sale/*` (21.119).
@@ -44,12 +62,12 @@ export function fetchSaleCatalog(params: {
   q?: string;
   cursor?: string;
 }): Promise<ApiResult<z.infer<typeof SaleCatalogPageSchema>>> {
-  return authorizedFetch(`/api/v1/sale/catalog${queryOf({ locale: 'tr', q: params.q, cursor: params.cursor })}`, SaleCatalogPageSchema);
+  return saleFetch(`/api/v1/sale/catalog${queryOf({ locale: 'tr', q: params.q, cursor: params.cursor })}`, SaleCatalogPageSchema);
 }
 
 /** **Boy çekmecesi** — çok boylu ürünün boyları, fiyat ve kalan adetle (boy seçimi satış anında). */
 export function fetchSaleVariants(slug: string): Promise<ApiResult<z.infer<typeof SaleVariantsResponseSchema>>> {
-  return authorizedFetch(`/api/v1/sale/catalog/${encodeURIComponent(slug)}/variants?locale=tr`, SaleVariantsResponseSchema);
+  return saleFetch(`/api/v1/sale/catalog/${encodeURIComponent(slug)}/variants?locale=tr`, SaleVariantsResponseSchema);
 }
 
 /**
@@ -58,10 +76,10 @@ export function fetchSaleVariants(slug: string): Promise<ApiResult<z.infer<typeo
  * sunucu çözer — siparişin parasını istemci yazmaz.
  */
 export function sellOnSite(body: OnSiteSaleRequest): Promise<ApiResult<z.infer<typeof OnSiteSaleResponseSchema>>> {
-  return authorizedFetch('/api/v1/sale/on-site', OnSiteSaleResponseSchema, { method: 'POST', body });
+  return saleFetch('/api/v1/sale/on-site', OnSiteSaleResponseSchema, { method: 'POST', body });
 }
 
 /** **Son satışlar** — bu deponun kapı satışları, kim yazdıysa adıyla (en yeni önce, sabit tavan). */
 export function fetchRecentSales(): Promise<ApiResult<z.infer<typeof RecentSalesResponseSchema>>> {
-  return authorizedFetch('/api/v1/sale/recent', RecentSalesResponseSchema);
+  return saleFetch('/api/v1/sale/recent', RecentSalesResponseSchema);
 }

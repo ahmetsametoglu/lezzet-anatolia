@@ -170,7 +170,12 @@ export const appMetrics = {
     /** D1 önizleme satırının sol işareti — boy (v3: 26). */
     previewMarkHeight: 26,
     /** Izgara kutucuğunun asgari yüksekliği (v3: 104). */
-    tile: 104,
+    /* HUB KUTUCUĞU — **SABİT** yükseklik, taban değil (kullanıcı bulgusu 30.08, iki kez).
+       `minHeight` iken alt metni iki satıra taşan kutucuk komşusundan uzun kalıyordu ve ızgara
+       kayıyordu; tasarım sekizini de eşit çiziyor. Değer en uzun hâle göre: baş satırı (ikon +
+       kod) + başlık + İKİ satır alt metin + iç boşluklar. Alt metin `numberOfLines={2}` ile
+       kırpılıyor — üçüncü satır artık kutucuğu değil, cümleyi kısaltır. */
+    tile: 132,
     /**
      * Liste satırının baş harf karesi — sosyal gelen kutusu (v3: 34×34).
      * `avatarSm`e (40) bağlanamaz: o KİŞİ avatarıdır ve satırın başında tek başına durur; bu kare

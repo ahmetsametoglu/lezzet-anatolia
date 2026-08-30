@@ -1,20 +1,25 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useCallback } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { WarehouseAdjustmentReasonEnum, type WarehouseAdjustmentReason } from '@lezzet/types';
+import { WarehouseAdjustmentReasonEnum, type ResolvedBatchContract, type WarehouseAdjustmentReason } from '@lezzet/types';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { ScanSheet } from '@/components/scan/scan-sheet';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { useAdjustment } from './use-adjustment.hook';
-import { parseQty, qtyToText } from './warehouse-format';
+import { useBatchScan } from './use-batch-scan.hook';
+import { parseQty, qtyToText, shortDate } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -45,6 +50,22 @@ export function AdjustmentScreen() {
   const adjustment = useAdjustment();
   const { offline } = useWarehouseStatus();
 
+  /**
+   * Okutulan parti EKRANIN KONUSU olur — rota parametreleri değişir, ekran kendini yeniden çizer.
+   * `setParams` DEĞİL `navigate`: yakın-SKT turundan gelen yol da aynı adresi kuruyor (aynı üç
+   * parametre) ve iki ayrı "konuyu nasıl taşırım" yolu, ikisinin bir gün ayrışması demekti.
+   */
+  const toStockCount = useCallback(
+    (batch: ResolvedBatchContract) => {
+      router.navigate({
+        pathname: '/stock-count',
+        params: { stockId: batch.stockId, code: batch.lotNumber, name: batch.name },
+      });
+    },
+    [router],
+  );
+  const scan = useBatchScan(toStockCount);
+
   const stockId = typeof params.stockId === 'string' && params.stockId.length > 0 ? params.stockId : null;
   const subject = [params.code, params.name].filter((part): part is string => typeof part === 'string' && part.length > 0);
 
@@ -69,10 +90,21 @@ export function AdjustmentScreen() {
             description={t.adjustment.noSubjectBlock.body}
             testID="warehouse-adjustment-no-subject"
           />
-          {/* ÇIKIŞ YOLU BLOĞUN İÇİNDE (v3:914) — "hangi parti" diye sorup cevabın nerede olduğunu
-              söylememek, depocuyu geri tuşuna mahkûm ederdi. Şablon iki yol gösteriyor; ikincisi
-              ("parti etiketini okut") bugün yazılamadı — parti etiketini çözen bir uç yok
-              (`codes/resolve` varyant çözüyor). Uyuşmazlık defterinde. */}
+          {/* İKİ ÇIKIŞ YOLU BLOĞUN İÇİNDE (v3:914) — "hangi parti" diye sorup cevabın nerede
+              olduğunu söylememek, depocuyu geri tuşuna mahkûm ederdi.
+              ~~İkincisi ("parti etiketini okut") yazılamadı~~ → 30.08'de AÇILDI: parti kodunu
+              çözen uç yoktu, artık var (`POST /warehouse/batches/resolve`). Kod, rafta okunan
+              TEDARİKÇİ lot numarasıdır (`stock.lot_number`) — kendi parti etiketimizi basmak hâlâ
+              ertelenmiş bir karar (23 §3) ve bu yol onu beklemiyor. */}
+          <PressableSurface
+            onPress={scan.openScan}
+            feedback="scale"
+            style={styles.toNearExpiry}
+            accessibilityLabel={t.adjustment.scan.cta}
+            testID="warehouse-adjustment-scan-cta"
+          >
+            <Text style={styles.toNearExpiryLabel}>{t.adjustment.scan.cta}</Text>
+          </PressableSurface>
           <PressableSurface
             onPress={() => router.navigate('/near-expiry')}
             feedback="scale"
@@ -82,7 +114,73 @@ export function AdjustmentScreen() {
           >
             <Text style={styles.toNearExpiryLabel}>{t.adjustment.toNearExpiry}</Text>
           </PressableSurface>
+
+          {scan.notice === null ? null : (
+            <Text style={styles.scanNotice} accessibilityRole="alert" testID="warehouse-adjustment-scan-notice">
+              {scan.notice.text}
+            </Text>
+          )}
         </View>
+
+        <ScanSheet
+          open={scan.open}
+          title={t.adjustment.scan.title}
+          hint={t.adjustment.scan.hint}
+          onClose={scan.closeScan}
+          onScan={scan.handleScan}
+          testID="warehouse-adjustment-scan"
+        />
+
+        {/* ÇOĞUL EŞLEŞME SORULUR, SEÇİLMEZ: lot numarası benzersiz değil ve ilkini kendiliğinden
+            almak, depocunun elinde tutmadığı bir partiden mal düşürmek olurdu. Satır künyesi
+            AYIRT EDİCİ olanı yazıyor — adet, tarih, raf: ikisi de aynı ürünün partisi olduğu için
+            ad tek başına seçtirmez. */}
+        <BottomSheet
+          visible={scan.picking !== null}
+          title={t.adjustment.scan.pickTitle}
+          onClose={scan.cancelPicking}
+          testID="warehouse-adjustment-batch-pick"
+        >
+          <Text style={styles.hint}>
+            {scan.picking === null
+              ? ''
+              : fillCopy(t.adjustment.scan.pickBody, {
+                  code: scan.picking.code,
+                  n: String(scan.picking.batches.length),
+                })}
+          </Text>
+          {(scan.picking?.batches ?? []).map((batch) => (
+            <PressableSurface
+              key={batch.stockId}
+              onPress={() => scan.pick(batch)}
+              feedback="tint"
+              style={styles.pickRow}
+              accessibilityLabel={batch.name}
+              testID={`warehouse-adjustment-batch-${batch.stockId}`}
+            >
+              <Text style={styles.pickRowLabel}>{batch.name}</Text>
+              <Text style={styles.pickRowMeta}>
+                {fillCopy(t.adjustment.scan.pickRow, {
+                  qty: String(batch.physicalQty),
+                  date: shortDate(batch.expiryDate) ?? batch.expiryDate,
+                })}
+              </Text>
+              <Text style={styles.pickRowMeta}>
+                {`${
+                  batch.storageAreaName === null
+                    ? t.adjustment.scan.pickNoArea
+                    : fillCopy(t.adjustment.scan.pickArea, { area: batch.storageAreaName })
+                } · ${
+                  /* ÖMÜR ÖLÇÜLEMEDİYSE "%0" YAZILMAZ (CLAUDE §1): ürünün toplam ömrü girilmemişse
+                     motor `null` döndürüyor ve sıfır yazmak sağlam bir partiyi imhalık gösterirdi. */
+                  batch.lifePercent === null
+                    ? t.adjustment.scan.pickLifeUnknown
+                    : fillCopy(t.adjustment.scan.pickLife, { pct: String(Math.round(batch.lifePercent)) })
+                }`}
+              </Text>
+            </PressableSurface>
+          ))}
+        </BottomSheet>
       </View>
     );
   }
@@ -222,6 +320,35 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors['olive-dark'],
+  },
+  /** Okutmanın cevabı — bulunamadı/çözülemedi; uyarı tonunda, blok değil (iş durmadı, tekrar denenir). */
+  scanNotice: {
+    marginTop: operationsTheme.space.md,
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.note,
+    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.terracotta,
+  },
+  /* Seçim satırı: üç künye alt alta (ad · adet+tarih · raf+ömür). Yan yana dizilseydi ayırt edici
+     olan iki sayı (tarih ve raf) telefonda kırpılırdı — seçimi mümkün kılan tam olarak onlar. */
+  pickRow: {
+    gap: operationsTheme.space['2xs'],
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.md,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-500'],
+    marginTop: operationsTheme.space.sm,
+  },
+  pickRowLabel: {
+    fontFamily: operationsTheme.font.body[600],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+  },
+  pickRowMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
   },
   /** Çevrimdışı sebebi — CTA'nın ÜSTÜNDE; düğme kalıyor, eksik olan sebepti. */
   locked: {

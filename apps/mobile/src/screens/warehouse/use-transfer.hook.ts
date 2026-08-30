@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import type { InboundTransferContract } from '@lezzet/types';
+import type { ClosedTransferContract, InboundTransferContract, OutboundTransferContract } from '@lezzet/types';
 
-import { fetchInboundTransfers, receiveTransfer } from '@/lib/api/warehouse';
+import { fetchWarehouseTransfers, receiveTransfer } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
@@ -22,8 +22,12 @@ import { trackWarehouse } from './warehouse-status';
   satırın sayılmadığı rampada aranacak bilginin ta kendisi. İstemci kendi kontrolünü de yapar
   (CTA kapalı kalır), ama kapının cevabı yine de gösterilir: araya biri girip satır eklemiş olabilir.
 
-  ── SEVK YOK, YALNIZ KABUL ──────────────────────────────────────────────────
-  Bu ekran "ver" yarısını çizmiyor (tasarımda yok) ve uçta da açılmadı; gerekçe uç künyesinde.
+  ── SEVK YOK, YALNIZ KABUL — AMA ÜÇ BÖLÜM VAR (30.08) ───────────────────────
+  Ekran hâlâ "ver" yarısını çizmiyor: sevk masaüstündeki Depolar ekranının işi. Şablonun (v3:11)
+  öteki iki bölümü ise OKUMA: **YOLDA** (bu depodan çıkmış, hâlâ yolda) ve **SON KAPANANLAR**.
+  İkisi de eylem taşımaz — biri "unuttuğum bir sevkiyat yolda mı", öteki "son ne kapandı" diye
+  sorar. Kabul kuyruğuyla aynı turdan geliyorlar (`fetchWarehouseTransfers`), çünkü aynı ekranın
+  aynı anda çizdiği şeyler.
 */
 
 const t = warehouseCopy;
@@ -41,6 +45,10 @@ interface TransferNotice {
 interface UseTransferResult {
   status: TransferStatus;
   transfers: InboundTransferContract[];
+  /** Bu depodan çıkmış, hâlâ yolda — okuma bölümü, eylemi yok. */
+  outbound: OutboundTransferContract[];
+  /** Son kapananlar (kabul edilmiş / geri alınmış), iki yön birden — sabit sınırlı pencere. */
+  closed: ClosedTransferContract[];
   transfer: InboundTransferContract | null;
   select: (transferId: string | null) => void;
   /** Satırın sayılan adedi; `null` = HENÜZ SAYILMADI (sıfır değil). */
@@ -59,6 +67,8 @@ interface UseTransferResult {
 export function useTransfer(): UseTransferResult {
   const [status, setStatus] = useState<TransferStatus>('loading');
   const [transfers, setTransfers] = useState<InboundTransferContract[]>([]);
+  const [outbound, setOutbound] = useState<OutboundTransferContract[]>([]);
+  const [closed, setClosed] = useState<ClosedTransferContract[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [counts, setCounts] = useState<Record<string, number | null>>({});
   const [missingLineIds, setMissingLineIds] = useState<string[]>([]);
@@ -69,7 +79,7 @@ export function useTransfer(): UseTransferResult {
 
   const load = useCallback(async () => {
     const run = (generation.current += 1);
-    const result = await trackWarehouse(fetchInboundTransfers());
+    const result = await trackWarehouse(fetchWarehouseTransfers());
     if (run !== generation.current) return;
 
     if (result.error !== null) {
@@ -78,6 +88,8 @@ export function useTransfer(): UseTransferResult {
     }
 
     setTransfers(result.data.transfers);
+    setOutbound(result.data.outbound);
+    setClosed(result.data.closed);
     setStatus('ready');
     setSelectedId((current) =>
       current !== null && result.data.transfers.some((row) => row.transferId === current)
@@ -152,6 +164,8 @@ export function useTransfer(): UseTransferResult {
   return {
     status,
     transfers,
+    outbound,
+    closed,
     transfer,
     select,
     countOf,

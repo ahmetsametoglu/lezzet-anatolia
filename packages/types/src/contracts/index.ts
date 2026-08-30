@@ -82,3 +82,5 @@ export * from './sale-api.schema';
 // Yönetim + Para bölümleri (21.12) — karar kuyruğu, gün özeti, tahsilat izleme, gün sonu mutabakatı.
 export * from './management-api.schema';
 export * from './money-api.schema';
+// Operasyon KABUĞU — bölümlerin değil, kabuğun kendi künyesi (personelin çalıştığı tesis).
+export * from './operations-api.schema';

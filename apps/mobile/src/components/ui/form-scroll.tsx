@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
+import { KeyboardAvoidingView, RefreshControl, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
@@ -45,15 +45,36 @@ interface FormScrollProps {
   contentContainerStyle?: StyleProp<ViewStyle>;
   /** Kaydırıcının kimliği — testler ve ekran görüntüsü araçları bunu arıyor, ekrandan gelir. */
   testID?: string;
+  /**
+   * **Aşağı çekince yenile** (kullanıcı isteği 30.08) — verilirse `RefreshControl` bağlanır.
+   *
+   * Ekranların çoğunda zaten bir `reload`/`retry` var ama yalnız HATA bloğunun içinde: liste
+   * DOLU geldiğinde tazelemenin bir yolu yoktu ve depocu ekrandan çıkıp geri giriyordu. Çekme
+   * hareketi bunun evrensel karşılığı.
+   *
+   * `refreshing` ayrı bir bayrak DEĞİL, ekranın kendi durumu: çekme sırasında dönen halka,
+   * isteğin bittiğini ekranın kendi `status`undan öğrenir — ikinci bir bayrak, bir gün ötekinden
+   * ayrılır ve halka isteği bitmiş bir ekranda dönmeye devam ederdi.
+   */
+  refresh?: { onRefresh: () => void; refreshing: boolean };
 }
 
-export function FormScroll({ children, contentContainerStyle, testID }: FormScrollProps) {
+export function FormScroll({ children, contentContainerStyle, testID, refresh }: FormScrollProps) {
   return (
     /* `behavior="padding"`: çekmecede ölçülmüş olan davranış. Android'de `height` de bir seçenek
        ama panelin yüksekliğini zorlar; `padding` yalnız altına boşluk ekler ve kaydırıcı o boşluğu
        kullanarak odaklanan alanı yukarı taşır. */
     <KeyboardAvoidingView behavior="padding" style={styles.layer}>
-      <ScrollView contentContainerStyle={contentContainerStyle} keyboardShouldPersistTaps="handled" testID={testID}>
+      <ScrollView
+        contentContainerStyle={contentContainerStyle}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          refresh === undefined ? undefined : (
+            <RefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} />
+          )
+        }
+        testID={testID}
+      >
         {children}
       </ScrollView>
     </KeyboardAvoidingView>

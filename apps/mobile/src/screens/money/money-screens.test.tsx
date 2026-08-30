@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react-native';
 
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
-import type { MoneyDayEnd, MoneyOverview } from '@lezzet/types';
+import type { MoneyDayEnd, MoneyOverview, StaffWarehouse } from '@lezzet/types';
 import { MoneyDayEndScreen } from './day-end-screen';
 import { MoneyTrackingScreen } from './money-screen';
 import { moneyCopy } from './copy';
@@ -90,9 +90,22 @@ function dayEndData(overrides: Partial<MoneyDayEnd> = {}): MoneyDayEnd {
   };
 }
 
-async function renderScreen(node: React.ReactElement, loadingTestId: string) {
+/**
+ * Oturum künyesi. Kapsam varsayılan olarak BOŞ ve bu bilinçli: muhasebecinin günlük hâli iki
+ * tesisli olabilir (`seed/people.ts` → `muhasebe`) ve o hâlde üstbaşlık tesis adı YAZMAZ. Adı
+ * ölçen test kendi tesisini verir.
+ */
+async function renderScreen(node: React.ReactElement, loadingTestId: string, warehouse: StaffWarehouse | null = null) {
   await render(
-    <OperationsSessionProvider value={{ sections: ['money'], userName: 'Meral T.', userEmail: 'meral@lezzetanatolia.fr' }}>
+    <OperationsSessionProvider
+      value={{
+        sections: ['money'],
+        userName: 'Meral T.',
+        userEmail: 'meral@lezzetanatolia.fr',
+        warehouses: warehouse === null ? [] : [warehouse],
+        resolvedWarehouseId: warehouse?.id ?? null,
+      }}
+    >
       {node}
     </OperationsSessionProvider>,
   );
@@ -106,6 +119,35 @@ beforeAll(() => {
 
 beforeEach(() => {
   fetchMock.mockReset();
+});
+
+/*
+  ÜSTBAŞLIĞIN KÜNYESİ (v3:23 · 30.08) — "Ayşe Demir · 28 Ağustos · Strasbourg Merkez".
+
+  Satır personelin BAĞLAMINI söyler, sayıların süzgecini değil: para okumaları depo boyutu taşımaz
+  (`money.ts`: *defter işletmenin*). Bu yüzden ikinci iddia birincisinden önemli — kapsamı tek bir
+  tesisi çözmeyen muhasebeciye (seed'in iki depolu `muhasebe` hâli) tesislerden birinin adını
+  yazmak, ekranın kendi künyesinde yalan söylemesi olurdu (CLAUDE §1).
+*/
+describe('tahsilat izleme · üstbaşlık künyesi', () => {
+  const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' };
+
+  it('kapsam tek tesisi çözüyorsa künye tesisin adıyla biter', async () => {
+    fetchMock.mockResolvedValue(ok(overviewData()));
+
+    await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading', STR);
+
+    expect(screen.getByTestId('operations-section-money')).toHaveTextContent(/Meral T\. · .+ · Strasbourg Merkez/);
+  });
+
+  it('tesis adı yoksa künye KUYRUKSUZ kalır — uydurma bir tesis yazılmaz', async () => {
+    fetchMock.mockResolvedValue(ok(overviewData()));
+
+    await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading');
+
+    expect(screen.getByTestId('operations-section-money')).toHaveTextContent(/Meral T\./);
+    expect(screen.getByTestId('operations-section-money')).not.toHaveTextContent(/Strasbourg/);
+  });
 });
 
 describe('M1 · tahsilat izleme', () => {

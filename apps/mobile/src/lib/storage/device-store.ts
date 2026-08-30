@@ -53,6 +53,15 @@ export const DEVICE_STORE_KEYS = {
    */
   printerChoice: 'lezzet.printer.choice',
   /**
+   * **Bu cihaz hangi DEPODA çalışıyor** (30.08) — çok depolu personelin kapsam seçimi.
+   *
+   * Kapsam SUNUCUDA (`user_profiles.warehouse_ids`), seçim burada: aynı kapsama sahip iki kişi
+   * (ya da aynı kişinin iki telefonu) farklı tesiste olabilir ve sunucuda tutulan tek bir
+   * "son seçilen depo", sabahleyin Kehl'e giden depocuyu Strasbourg'un kuyruğuna düşürürdü.
+   * Yazıcı seçimiyle aynı ayrım (`printerChoice`): envanter sunucunun, tercih cihazın.
+   */
+  warehouseChoice: 'lezzet.warehouse.choice',
+  /**
    * Uygulamanın dili — kullanıcının AÇIK seçimi (kayıt yoksa seçim de yok, cihaz dili geçerli).
    * Tek okuyanı/yazanı `lib/i18n/app-locale.ts` ve o da bu kapıdan geçer.
    */

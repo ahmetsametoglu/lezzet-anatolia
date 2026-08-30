@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { BarcodeKind, IntakeFormRowContract, PendingIntakeContract, ResolveCodeResponse } from '@lezzet/types';
+import { MLOR_PERCENT } from '@lezzet/domain-core';
+import type {
+  BarcodeKind,
+  IntakeFormRowContract,
+  PendingIntakeContract,
+  ResolveCodeResponse,
+  VariantSearchRowContract,
+} from '@lezzet/types';
 
 import { fetchIntakeForm, fetchPendingIntakes, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
@@ -88,8 +95,16 @@ interface UseIntakeResult {
   rows: IntakeFormRowContract[];
   /** Konusuz açılışta bekleyen sevkiyatlar; konulu açılışta boş. */
   pending: PendingIntakeContract[];
+  /**
+   * MLOR eşiği (%) — SUNUCUDAN gelen ayar (`mlor_percent`), satır uyarısının ölçütü.
+   *
+   * Motorun sabiti (`MLOR_PERCENT`) burada varsayılan olarak duruyor ve YALNIZ form daha
+   * okunmadan çizilen bir kare için: eşik okunamadığında uyarıyı büsbütün kapatmak, bilinen bir
+   * kuralı sessizce yok saymak olurdu. Yanıt gelince gerçek ayar bunun yerine geçer.
+   */
+  mlorPercent: number;
   /** Plansız kabulde aramadan seçilen ürünü satır yapar (23.13). */
-  addManualRow: (variant: { variantId: string; productName: string; variantLabel: string }) => void;
+  addManualRow: (variant: VariantSearchRowContract) => void;
   stateOf: (variantId: string) => IntakeRowState;
   patch: (variantId: string, patch: Partial<IntakeRowState>) => void;
   /** Her satırda adet + geçerli SKT var mı — CTA'nın kapısı. */
@@ -102,6 +117,10 @@ interface UseIntakeResult {
   warnings: { name: string; remainingPercent: number | null }[];
   submit: () => void;
   reload: () => void;
+  /** Aşağı çekme — ekranı karartmadan tazeler (liste yerinde durur, halka döner). */
+  refresh: () => void;
+  /** Çekme sürüyor mu — `status` DEĞİL: o listeyi söküp yükleme hâline geçirirdi. */
+  reloading: boolean;
   /** Tarama sayfası açık mı (Modül 23) — ekran ScanSheet'i bununla çizer. */
   scanOpen: boolean;
   openScan: () => void;
@@ -136,6 +155,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   const [rows, setRows] = useState<IntakeFormRowContract[]>([]);
   /** Konusuz açılışın listesi — "hangi sevkiyatı bekliyorum". Konulu açılışta boş kalır. */
   const [pending, setPending] = useState<PendingIntakeContract[]>([]);
+  const [mlorPercent, setMlorPercent] = useState<number>(MLOR_PERCENT);
   const [states, setStates] = useState<Record<string, IntakeRowState>>({});
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<IntakeNotice>();
@@ -178,6 +198,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     }
 
     setRows(result.data.rows);
+    setMlorPercent(result.data.mlorPercent);
     setStatus('ready');
   }, [purchaseOrderId, unplanned]);
 
@@ -187,9 +208,20 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     void load();
   }, [load]);
 
+  /* AŞAĞI ÇEKME KENDİ BAYRAĞINI İSTER (30.08): `status` çekme sırasında `loading`e döndüğü an
+     ekran listeyi söküp yükleme hâline geçiyordu — oysa çekme hareketinin sözü "liste dursun,
+     üstüne taze veri gelsin". Bayrak ayrı: liste ekranda kalır, halka döner. */
+  const [reloading, setReloading] = useState(false);
+
   const reload = useCallback(() => {
     setStatus('loading');
     void load();
+  }, [load]);
+
+  /** Aşağı çekme: ekranı KARARTMADAN tazeler — liste yerinde durur, yalnız halka döner. */
+  const refresh = useCallback(() => {
+    setReloading(true);
+    void load().finally(() => setReloading(false));
   }, [load]);
 
   const stateOf = useCallback((variantId: string): IntakeRowState => states[variantId] ?? EMPTY_ROW, [states]);
@@ -341,6 +373,15 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
             productName: found.productName,
             variantLabel: found.variantLabel,
             expectedQty: 0,
+            // Tedarikçi kodu YOKTUR ve bu doğrudur: plansız kabulde sipariş kalemi yok, yani
+            // hangi firmanın hangi kodu olduğu da yok. Uydurmak yerine görünür boşluk.
+            supplierCode: null,
+            // SKU ve tarih rejimi ise VARDIR ve çözüm ucundan geliyor — okutmayla açılan satır da
+            // aramayla açılan kadar kodunu, PO'lu satır kadar "SKT ZORUNLU · DLC"sini
+            // gösterebilmeli; yoksa aynı listede kural kaynağa göre değişirdi.
+            sku: found.sku,
+            dateType: found.dateType,
+            shelfLifeDays: found.shelfLifeDays,
           };
           setRows((current) => [...current, row!]);
         }
@@ -352,6 +393,9 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
           kind: found.kind,
           qtyPerCode: found.qtyPerCode,
           source: found.source,
+          sku: found.sku,
+          dateType: found.dateType,
+          shelfLifeDays: found.shelfLifeDays,
           imageUrl: found.imageUrl,
           qty: found.qtyPerCode,
           expectedQty: row.expectedQty,
@@ -366,11 +410,25 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
    * aynı ürünün iki satırı, kabulün toplamını iki yere bölerdi.
    */
   const addManualRow = useCallback(
-    (variant: { variantId: string; productName: string; variantLabel: string }) => {
+    (variant: VariantSearchRowContract) => {
       setRows((current) =>
         current.some((row) => row.variantId === variant.variantId)
           ? current
-          : [...current, { ...variant, expectedQty: 0 }],
+          : [
+              ...current,
+              {
+                variantId: variant.variantId,
+                productName: variant.productName,
+                variantLabel: variant.variantLabel,
+                expectedQty: 0,
+                // Okutmayla açılan satırla aynı ikili: kod yok (sipariş kalemi yok), tarih rejimi
+                // var (ürünün kendi alanı) — gerekçe `handleScan`in satır açan dalında.
+                supplierCode: null,
+                sku: variant.sku,
+                dateType: variant.dateType,
+                shelfLifeDays: variant.shelfLifeDays,
+              },
+            ],
       );
     },
     [],
@@ -449,6 +507,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     status,
     rows,
     pending,
+    mlorPercent,
     addManualRow,
     stateOf,
     patch,
@@ -459,6 +518,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     warnings,
     submit,
     reload,
+    refresh,
+    reloading,
     scanOpen,
     openScan: useCallback(() => setScanOpen(true), []),
     closeScan: useCallback(() => setScanOpen(false), []),

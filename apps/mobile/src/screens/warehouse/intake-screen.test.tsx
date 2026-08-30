@@ -33,6 +33,10 @@ const PO_ID = '00000000-0000-4000-8000-000000000091';
 const ROW_A = intakeRow();
 const ROW_B = intakeRow({ variantId: '00000000-0000-4000-8000-000000000042', productName: 'Mısır Unu', variantLabel: '25 kg', expectedQty: 4 });
 
+/* MLOR eşiği YANITIN alanıdır (ayardan gelir, satırın değil) — fikstür onu taşımazsa cevap
+   ayrıştırılamaz ve ekran "sevkiyatlar yüklenemedi" der. Değer ayarın varsayılanı. */
+const MLOR = 75;
+
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 function ok(data: unknown): Response {
@@ -69,7 +73,7 @@ function withForm(rows: unknown[], receive?: unknown) {
       );
     }
     // `purchaseOrder` 21.11d'de zorunlu anahtar oldu (IntakeFormResponseSchema) — null sözleşmece geçerli.
-    return Promise.resolve(ok({ purchaseOrder: null, rows }));
+    return Promise.resolve(ok({ purchaseOrder: null, rows, mlorPercent: MLOR }));
   });
 }
 
@@ -99,7 +103,7 @@ describe('D2 · mal kabul', () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(
         ok({
-          intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-ABC123', supplierName: 'Gaziantep', lineCount: 4 }],
+          intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-ABC123', supplierName: 'Gaziantep', lineCount: 4, status: 'sent' as const }],
         }),
       ),
     );
@@ -122,8 +126,8 @@ describe('D2 · mal kabul', () => {
       Promise.resolve(
         ok({
           intakes: [
-            { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'Gaziantep', lineCount: 5 },
-            { purchaseOrderId: '00000000-0000-4000-8000-0000000000c2', referenceNo: 'TS-26-B', supplierName: 'Gaziantep', lineCount: 6 },
+            { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'Gaziantep', lineCount: 5, status: 'sent' as const },
+            { purchaseOrderId: '00000000-0000-4000-8000-0000000000c2', referenceNo: 'TS-26-B', supplierName: 'Gaziantep', lineCount: 6, status: 'sent' as const },
           ],
         }),
       ),
@@ -151,7 +155,7 @@ describe('D2 · mal kabul', () => {
     delete mockParams.purchaseOrderId;
     fetchMock.mockImplementation(() =>
       Promise.resolve(
-        ok({ intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X', lineCount: 2 }] }),
+        ok({ intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X', lineCount: 2, status: 'sent' as const }] }),
       ),
     );
 
@@ -210,7 +214,7 @@ describe('D2 · mal kabul', () => {
     fetchMock.mockImplementation(() => {
       if (first) {
         first = false;
-        return Promise.resolve(ok({ purchaseOrder: { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X' }, rows: [ROW_A] }));
+        return Promise.resolve(ok({ purchaseOrder: { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X' }, rows: [ROW_A], mlorPercent: MLOR }));
       }
       return Promise.reject(new Error('network down'));
     });
@@ -248,7 +252,7 @@ describe('D2 · mal kabul', () => {
   it('PLANSIZ kabulde sıfır beklenen SESSİZDİR — kıyaslanacak sipariş yok', async () => {
     delete mockParams.purchaseOrderId;
     mockParams.unplanned = '1';
-    fetchMock.mockImplementation(() => Promise.resolve(ok({ purchaseOrder: null, rows: [] })));
+    fetchMock.mockImplementation(() => Promise.resolve(ok({ purchaseOrder: null, rows: [], mlorPercent: MLOR })));
 
     await renderIntake();
 
@@ -385,6 +389,10 @@ describe('D2 · plansız kabul', () => {
                 productName: ROW_A.productName,
                 variantLabel: ROW_A.variantLabel,
                 sku: 'SKU-1',
+                // Tarih rejimi ve raf ömrü ARAMA satırında da var (30.08): okutmayla açılan satırla
+                // aynı alanları taşımalı, yoksa aynı listede biri ömür uyarısı üretir öteki üretmez.
+                dateType: 'DDM',
+                shelfLifeDays: 360,
                 imageUrl: null,
                 qtyPerCode: null,
               },
@@ -415,7 +423,7 @@ describe('D2 · plansız kabul', () => {
   /* Plansız kabulün BAŞLIĞI ayrı (v3:756): "Mal Kabul" beklenen adetlerle çalışılan ekranın adı;
      siparişsiz mal onun bir kipi değil, başka bir iş. */
   it('plansız kabulün kendi başlığı var — "Mal Kabul" değil', async () => {
-    fetchMock.mockImplementation(() => Promise.resolve(ok({ purchaseOrder: null, rows: [] })));
+    fetchMock.mockImplementation(() => Promise.resolve(ok({ purchaseOrder: null, rows: [], mlorPercent: MLOR })));
 
     await render(<IntakeScreen />);
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-unplanned-empty')).toBeOnTheScreen());
@@ -427,7 +435,7 @@ describe('D2 · plansız kabul', () => {
     delete mockParams.unplanned;
     fetchMock.mockImplementation(() =>
       Promise.resolve(
-        ok({ intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X', lineCount: 2 }] }),
+        ok({ intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X', lineCount: 2, status: 'sent' as const }] }),
       ),
     );
 

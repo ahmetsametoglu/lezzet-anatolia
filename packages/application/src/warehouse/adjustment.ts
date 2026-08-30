@@ -1,7 +1,8 @@
 import { StockMovementService, StockService } from '@lezzet/database';
-import { documentPrefixFor } from '@lezzet/domain-core';
+import { documentPrefixFor, remainingShelfLifePercent } from '@lezzet/domain-core';
 import type { AdjustBatchResult, StockDirection, StockMovementKind, StockWriteOffReason } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { displayName, variantNames } from './names';
 import { rpcRejectionMessage } from './rpc-error';
 
 /**
@@ -120,4 +121,85 @@ export async function recordAdjustment(
     // örnek denetimiyle bakan eski süzgeç gerçek cümleyi atıyordu — gerekçe o dosyanın künyesinde.
     return { status: 'failed', message: rpcRejectionMessage(error, 'Kayıt yazılamadı') };
   }
+}
+
+/** Rafta okunan etiketin çözümü — sayımın KONUSU. **Para YOK**: partinin alışı depo yolundan geçmez. */
+export interface ResolvedBatch {
+  stockId: string;
+  variantId: string;
+  /** "Ürün (boy)" — operasyon dilinde; ekranın üstbaşlığı. */
+  name: string;
+  /** Eşleşmenin kurulduğu lot; bu yüzden daima dolu. */
+  lotNumber: string;
+  expiryDate: string;
+  physicalQty: number;
+  /** Partinin alanının ADI ("Derin dondurucu 2"); rafı seçilmemiş partide `null` (19.29). */
+  storageAreaName: string | null;
+  /** Kalan raf ömrü yüzdesi; **`null` = ölçülemedi** (ürünün toplam ömrü girilmemiş), sıfır DEĞİL. */
+  lifePercent: number | null;
+}
+
+export type ResolveBatchOutcome = { status: 'found'; batches: ResolvedBatch[] } | { status: 'unknown' };
+
+/**
+ * **RAFTAKİ ETİKETİ OKUT** — D4'ün ikinci çıkış yolu (v3 · 08), 30.08'de açıldı.
+ *
+ * ── NEDEN `resolveScannedCode` DEĞİL ────────────────────────────────────────
+ * O kapı bir kodu VARYANTA çevirir ("bu hangi mal") ve künyesi stok okumasını bilerek dışarıda
+ * bırakıyor. Sayımın sorusu başkadır: düzeltme daima bir PARTİYE yazılır ve aynı varyantın aynı
+ * depoda birden çok partisi olabilir — varyant cevabı, "hangi partiden düşeyim" sorusunu
+ * cevapsız bırakırdı. İki soru tek kapıya yüklenseydi cevabın tipi ikiye ayrılır ve çağıranların
+ * yarısı ötekinin dalını hiç kullanmazdı.
+ *
+ * ── PARTİ KODU = `stock.lot_number`, VE BU ÖLÇÜLDÜ ──────────────────────────
+ * Veride sistemin ürettiği bir parti kodu YOK (`stock` tablosunda böyle bir kolon yok; kendi lot
+ * etiketimizi basmak bilinçli olarak ertelendi — 23 §3). Rafta okunan şey TEDARİKÇİNİN kutuya
+ * yazdığı lot numarasıdır ve o alan zaten kayıtta: `stock.lot_number`. Yani bu kapı olmayan bir
+ * alanı uydurmuyor, var olan alanı okutuyor.
+ *
+ * ── KAPSAM VE STOK SÜZGECİ SORGUDA ──────────────────────────────────────────
+ * Yalnız çağıranın deposu (CLAUDE.md §1 — depo süzgeçsiz okuma yok) ve yalnız stoğu duran
+ * partiler: tükenmiş bir partiyi göstermek, `recordAdjustment`ın reddedeceği bir satır
+ * seçtirirdi. Süzgeçler servisin sorgusunda, elde değil — tavana dayanan bir listeyi sonradan
+ * süzmek kapsamdaki partiyi sessizce dışarıda bırakabilirdi.
+ *
+ * `now` DIŞARIDAN verilir: aynı okumanın bütün satırları aynı ana göre değerlendirilsin
+ * (`batch-view`in aynı kararı) — istek ortasında gün dönerse iki satır iki farklı güne bakardı.
+ */
+export async function resolveBatchCode(
+  db: SupabaseClient,
+  input: { code: string; warehouseId: string; now?: Date },
+): Promise<ResolveBatchOutcome> {
+  const code = input.code.trim();
+  if (code.length === 0) return { status: 'unknown' };
+
+  const batches = await new StockService(db).findByLot(code, { warehouseId: input.warehouseId, onlyInStock: true });
+  if (batches.length === 0) return { status: 'unknown' };
+
+  const now = input.now ?? new Date();
+  const names = await variantNames(db, batches.map((batch) => batch.variantId));
+
+  return {
+    status: 'found',
+    batches: batches.flatMap((batch) => {
+      // Lot şemada nullable (kabulde boş bırakmak meşru) ama eşleşme lot ÜZERİNDEN kuruldu: boş
+      // lotlu bir satır buraya düşemez. Yine de daraltma bir `as` ile değil yoklamayla — tipin
+      // söylediğini görmezden gelen bir dönüşüm, bir gün sorgu değişince sessizce yalan söylerdi.
+      if (batch.lotNumber === null) return [];
+      return [
+        {
+          stockId: batch.id,
+          variantId: batch.variantId,
+          name: displayName(names.get(batch.variantId)),
+          lotNumber: batch.lotNumber,
+          expiryDate: batch.expiryDate,
+          physicalQty: batch.physicalQty,
+          storageAreaName: batch.storageArea?.name ?? null,
+          // Ömür yüzdesi MOTORDAN (`domain-core`): uygulama katmanı kendi hesabını kurmaz. Ürünün
+          // toplam ömrü girilmemişse motor `null` döner ve ekran "bilinmiyor" gösterir.
+          lifePercent: remainingShelfLifePercent(batch.expiryDate, batch.variant.product.shelfLifeDays, now),
+        },
+      ];
+    }),
+  };
 }

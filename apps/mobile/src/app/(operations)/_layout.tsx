@@ -99,7 +99,13 @@ export default function OperationsLayout() {
 
   return (
     <OperationsSessionProvider
-      value={{ sections: access.sections, userName: access.userName, userEmail: access.userEmail }}
+      value={{
+        sections: access.sections,
+        userName: access.userName,
+        userEmail: access.userEmail,
+        warehouses: access.warehouses,
+        resolvedWarehouseId: access.resolvedWarehouseId,
+      }}
     >
       <Stack
         screenOptions={{

@@ -236,14 +236,23 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    *
    * Eşleşme PARÇA aramasıdır (`ilike`): operatör telefonda okunan numarayı eksik/parçalı girer.
    * Stoğu bitmiş partiler de gelir — geri çağırmada asıl aranan zaten satılıp gitmiş maldır.
+   *
+   * ── İKİ SORU, TEK OKUMA (30.08) ─────────────────────────────────────────────
+   * Sayım ekranının "raftaki etiketi okut" yolu aynı numarayı soruyor ama başka bir kümeyi
+   * istiyor: YALNIZ kendi deposunun, YALNIZ stoğu duran partileri (düşürülemeyecek bir satırı
+   * göstermek, depocuya kapının reddedeceği bir iş yaptırırdı). İkinci bir `findByLot` yazmak
+   * "lot nasıl aranır" sorusunun ikinci cevabı olurdu (`CLAUDE §1`) — süzgeç SORGUYA eklendi,
+   * çağırana değil: tavana (`LOT_SEARCH_LIMIT`) dayanan bir okumayı sonradan elde süzmek,
+   * kapsamdaki partiyi sessizce listenin dışında bırakabilirdi.
    */
-  async findByLot(lot: string): Promise<StockBatchDetail[]> {
+  async findByLot(lot: string, opts: { warehouseId?: string; onlyInStock?: boolean } = {}): Promise<StockBatchDetail[]> {
     // `%`, `,` ve parantez PostgREST'in `or=()` gramerinde ayraçtır — terim temizlenmezse sorgu bozulur.
     const term = lot.trim().replace(/[%,()*]/g, '');
     if (!term) return [];
-    return this.getAllAs(StockBatchDetailSchema, undefined, {
+    return this.getAllAs(StockBatchDetailSchema, opts.warehouseId ? { warehouseId: opts.warehouseId } : undefined, {
       select: BATCH_DETAIL_SELECT,
       orFilters: [`lot_number.ilike.*${term}*`],
+      rangeFilters: opts.onlyInStock ? [{ field: 'physical_qty', operator: 'gt', value: 0 }] : undefined,
       orderBy: 'expiryDate',
       orderDirection: 'desc',
       limit: LOT_SEARCH_LIMIT,

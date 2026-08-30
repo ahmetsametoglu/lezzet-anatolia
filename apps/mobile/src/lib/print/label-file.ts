@@ -59,3 +59,31 @@ export async function downloadShippingLabelPdf(boxId: string): Promise<string> {
   file.write(new Uint8Array(await pdf.arrayBuffer()));
   return file.uri;
 }
+
+/**
+ * **Örnek etiket** (v3:09 "test bas") — kutu etiketiyle AYNI şablon, sahte içerikle.
+ *
+ * `downloadLabelPng`in ikizi değil kardeşi ve fark kaynakta: o gerçek bir kutunun etiketini
+ * indiriyor (ve basımı bir OLAYDIR — `markBoxPrinted` damgası düşer), bu ise hiçbir kayda
+ * dokunmayan bir örneği. Gerçek bir kutunun etiketini "test" diye bastırmak, o kutunun basım
+ * damgasını yalan yere düşürürdü.
+ *
+ * Yazıcı kimliği YOLDA çünkü uç onu bu deponun açık envanterine karşı sınıyor — görsel yazıcıya
+ * göre değişmiyor, kapı değişiyor.
+ *
+ * Hata FIRLATIR (kardeşiyle aynı sözleşme): basım akışının tek `catch`i çağırandadır.
+ */
+export async function downloadSampleLabelPng(printerId: string): Promise<string> {
+  const { data } = await getSupabase().auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error('oturum yok');
+
+  const response = await fetch(`${env.apiUrl}/api/v1/warehouse/printers/${printerId}/sample-label.png`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error(`örnek etiket alınamadı (${response.status})`);
+
+  const file = new File(Paths.cache, `sample-label-${printerId}.png`);
+  file.write(new Uint8Array(await response.arrayBuffer()));
+  return file.uri;
+}

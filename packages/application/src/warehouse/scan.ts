@@ -1,5 +1,5 @@
 import { VariantBarcodeService } from '@lezzet/database';
-import type { BarcodeKind } from '@lezzet/types';
+import type { BarcodeKind, ProductDateType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
 
@@ -32,6 +32,23 @@ export type ScanResolution =
       /** Bu kod okutulunca kaç adet sayılır — yalnız gerçek koli barkodu 1'den büyük taşır. */
       qtyPerCode: number;
       source: 'barcode' | 'sku' | 'supplier_code';
+      /**
+       * Varyantın KENDİ kodu — okutulan kod değil (koli barkodu okutulmuş olabilir). Plansız
+       * kabulün arama yolu bunu taşıyordu, okutma yolu taşımıyordu: aynı listede bir satırda kod
+       * olup ötekinde olmaması, depocuya "bu ürünün kodu yok mu" diye sordururdu (23.13 eleştirisi).
+       */
+      sku: string | null;
+      /**
+       * Ürünün tarih rejimi + toplam raf ömrü — plansız kabulde OKUTMA SATIR AÇAR ve o satırın
+       * SKT alanı bu ikisini ister ("hangi tarih yazılacak", "kalan ömür yüzde kaç"). PO'lu formda
+       * aynı alanlar satırla birlikte geliyor; okutmayla açılan satır onlarsız kalsaydı aynı
+       * listede bir satır uyarı üretir ötekisi üretmezdi.
+       *
+       * Bu bir STOK okuması DEĞİL — dosyanın künyesindeki sınır duruyor: ürünün kendi alanları,
+       * ad/görsel ile aynı zincirden (`names.ts`) ve ek bir tur açmadan geliyor.
+       */
+      dateType: ProductDateType;
+      shelfLifeDays: number | null;
       /** Ürün kapağı (public URL) — okutma çekmecesinin görseli; kapaksız üründe null. */
       imageUrl: string | null;
     }
@@ -51,6 +68,9 @@ export async function resolveScannedCode(db: SupabaseClient, input: { code: stri
     kind: match.kind,
     qtyPerCode: match.qtyPerCode,
     source: match.source,
+    sku: name?.sku ?? null,
+    dateType: name?.dateType ?? 'DDM',
+    shelfLifeDays: name?.shelfLifeDays ?? null,
     imageUrl: name?.imageUrl ?? null,
   };
 }

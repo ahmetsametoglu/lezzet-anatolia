@@ -2,7 +2,6 @@ import type { z } from 'zod';
 import {
   BoxLabelResponseSchema,
   ConfirmPreparationResponseSchema,
-  InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
   LearnCodeResponseSchema,
   MarkBoxPrintedResponseSchema,
@@ -12,7 +11,9 @@ import {
   ReceiveGoodsResponseSchema,
   ReceiveTransferResponseSchema,
   RecordAdjustmentResponseSchema,
+  ResolveBatchResponseSchema,
   ResolveCodeResponseSchema,
+  WarehouseTransfersResponseSchema,
   AnnounceShipmentResponseSchema,
   DispatchOptionsResponseSchema,
   HandoverPendingResponseSchema,
@@ -33,7 +34,24 @@ import {
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { withWarehouseChoice } from '../operations/warehouse-choice';
+import type { ApiFetchInit, ApiResult } from './client';
+
+/**
+ * **Bu dosyanın TEK çağrı kapısı** — korunan çağrının üstüne deponun seçimini ekler.
+ *
+ * Sarmalayıcı olması bilinçli, her fonksiyona bir satır koymak DEĞİL: yirmi iki uç var ve biri
+ * unutulsaydı o istek personelin seçtiği depoya değil, kapının çözebildiği depoya (ya da hiçbirine
+ * — `400 warehouse_required`) giderdi. Sessiz olurdu: liste boş gelir, depocu "bugün iş yok" der.
+ * Tek kapı, unutulamayan kapıdır (`trackWarehouse` sarmalayıcısının aynı gerekçesi).
+ */
+function warehouseFetch<TSchema extends z.ZodTypeAny>(
+  path: string,
+  schema: TSchema,
+  init: ApiFetchInit = {},
+): Promise<ApiResult<z.infer<TSchema>>> {
+  return authorizedFetch(withWarehouseChoice(path), schema, init);
+}
 
 /*
   DEPO UÇLARI — `/api/v1/warehouse/*` (21.11).
@@ -45,17 +63,23 @@ import type { ApiResult } from './client';
   HEPSİ KORUNAN ÇAĞRI (`authorizedFetch`): uçlar Bearer'ın arkasında, ayrıca `warehouse|admin` rol
   kapısı ve bir de DEPO kapısı var (aşağıda).
 
-  ── DEPO KİMLİĞİ GÖVDEDE DE SORGUDA DA YOK, VE BU BİR KARAR ─────────────────
+  ── DEPO KİMLİĞİ GÖVDEDE YOK; SORGUDA ise YALNIZ PERSONEL SEÇTİYSE (30.08) ──
   Uç künyesi (`apps/mobile-api/src/api/v1/warehouse.ts`) kuralı tek cümleyle yazıyor: *"kapsamda tek
   depo varsa o, değilse söylenmeli."* Depocunun kapsamı veritabanı kısıtı gereği EN AZ bir depodur
-  (`0031_warehouse.sql:151`) ve günlük hâli TAM BİR depodur — yani bu istemci hiçbir isteğe
-  `?warehouseId=` yazmaz ve yazamaz da: parametreyi doldurabileceği bir kaynak YOK (`/me` sözleşmesi
-  `warehouseIds`i bilerek dışarıda bırakıyor — `me-api.schema.ts`).
+  (`0031_warehouse.sql:151`) ve günlük hâli TAM BİR depodur — o hâlde bu istemci hiçbir şey
+  göndermez, kimlik jetondan çözülür. **Değişen tek şey "söylenmeli" dalı:** kapsamı çok olan
+  personel artık seçebiliyor (`lib/operations/warehouse-choice.ts`) ve seçim varsa adrese
+  `?warehouseId=` olarak yazılıyor.
 
-  Kapsamı tek olmayan kullanıcı (yalnız `admin`) `400 warehouse_required` alır ve bu bir arıza DEĞİL,
-  ekranın göstereceği bir cevaptır — `screens/warehouse/warehouse-status.ts` onu okur. Buraya
-  uydurma bir parametre koymak ya da ilk depoyu seçmek, yetkilendirmeyi doğrulanmamış bir tahmine
-  dayandırmak olurdu (CLAUDE.md §1: varsayılan depo YOKTUR).
+  ~~"Parametreyi doldurabileceği bir kaynak YOK"~~ — vardı ve açıldı: `/operations/scope`
+  personelin depolarını veriyor. Kararın ÖZÜ değişmedi (CLAUDE §1 *varsayılan depo YOKTUR*):
+  seçim tahmin edilmiyor, personelin açık eylemi olarak alınıyor ve kapı onu her istekte kapsama
+  karşı sınıyor (`403 warehouse_out_of_scope`). Yasak olan şey ilk depoyu kendiliğinden seçmekti;
+  o hâlâ yasak.
+
+  Hiç seçim yapmamış ve kapsamı tek olmayan kullanıcı yine `400 warehouse_required` alır ve bu bir
+  arıza DEĞİL, ekranın göstereceği bir cevaptır — `screens/warehouse/warehouse-status.ts` onu okur
+  ve artık seçiciyi açar.
 
   ── OLUMSUZ SONUÇ BİR HATA DEĞİL, CEVABIN KENDİSİDİR ────────────────────────
   `pinned_violation` · `incomplete` · `stale` · `failed` · `forbidden` · `not_found` · `empty` uçtan
@@ -73,7 +97,7 @@ import type { ApiResult } from './client';
 
 /** **Hazırlama kuyruğu** (D1). Gün SÜZGEÇTİR: verilmezse deponun bekleyen HER siparişi gelir. */
 export function fetchPreparationQueue(): Promise<ApiResult<z.infer<typeof PreparationQueueResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/preparation', PreparationQueueResponseSchema);
+  return warehouseFetch('/api/v1/warehouse/preparation', PreparationQueueResponseSchema);
 }
 
 /**
@@ -84,7 +108,7 @@ export function confirmPreparation(
   orderId: string,
   body: ConfirmPreparationRequest,
 ): Promise<ApiResult<z.infer<typeof ConfirmPreparationResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/preparation/${orderId}/confirm`, ConfirmPreparationResponseSchema, {
+  return warehouseFetch(`/api/v1/warehouse/preparation/${orderId}/confirm`, ConfirmPreparationResponseSchema, {
     method: 'POST',
     body,
   });
@@ -98,7 +122,7 @@ export function confirmPreparation(
  * bekletirdi.
  */
 export function fetchShippingBoxes(): Promise<ApiResult<z.infer<typeof ShippingBoxesResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/shipping-boxes', ShippingBoxesResponseSchema);
+  return warehouseFetch('/api/v1/warehouse/shipping-boxes', ShippingBoxesResponseSchema);
 }
 
 /**
@@ -110,7 +134,7 @@ export function openOrderBox(
   orderId: string,
   shippingBoxId: string | null = null,
 ): Promise<ApiResult<z.infer<typeof OpenBoxResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/boxes`, OpenBoxResponseSchema, {
+  return warehouseFetch(`/api/v1/warehouse/orders/${orderId}/boxes`, OpenBoxResponseSchema, {
     method: 'POST',
     body: { shippingBoxId },
   });
@@ -125,17 +149,17 @@ export function sealOrderBox(
   boxId: string,
   body: SealBoxRequest,
 ): Promise<ApiResult<z.infer<typeof SealBoxResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/seal`, SealBoxResponseSchema, { method: 'POST', body });
+  return warehouseFetch(`/api/v1/warehouse/boxes/${boxId}/seal`, SealBoxResponseSchema, { method: 'POST', body });
 }
 
 /** **Etiket içeriği** (23.7) — önizleme + basım girdisi; yazıcı ayarı da bu cevapta gelir. */
 export function fetchBoxLabel(boxId: string): Promise<ApiResult<z.infer<typeof BoxLabelResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/label`, BoxLabelResponseSchema);
+  return warehouseFetch(`/api/v1/warehouse/boxes/${boxId}/label`, BoxLabelResponseSchema);
 }
 
 /** **Basım damgası** (23.7) — SDK "bastı" deyince çağrılır; damga başarının kaydıdır, niyetin değil. */
 export function markBoxPrinted(boxId: string): Promise<ApiResult<z.infer<typeof MarkBoxPrintedResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/boxes/${boxId}/printed`, MarkBoxPrintedResponseSchema, { method: 'POST' });
+  return warehouseFetch(`/api/v1/warehouse/boxes/${boxId}/printed`, MarkBoxPrintedResponseSchema, { method: 'POST' });
 }
 
 /**
@@ -145,7 +169,7 @@ export function markBoxPrinted(boxId: string): Promise<ApiResult<z.infer<typeof 
  * elimdeki kimlik öldü, form "açık kalemi yok" dedi ve sebebi kimliğin bayatlığıydı).
  */
 export function fetchPendingIntakes(): Promise<ApiResult<z.infer<typeof PendingIntakesResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/intake', PendingIntakesResponseSchema);
+  return warehouseFetch('/api/v1/warehouse/intake', PendingIntakesResponseSchema);
 }
 
 /**
@@ -153,14 +177,14 @@ export function fetchPendingIntakes(): Promise<ApiResult<z.infer<typeof PendingI
  * "henüz yazmadın" bir hata değil.
  */
 export function searchIntakeVariants(query: string): Promise<ApiResult<z.infer<typeof VariantSearchResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/variants?q=${encodeURIComponent(query)}`, VariantSearchResponseSchema);
+  return warehouseFetch(`/api/v1/warehouse/variants?q=${encodeURIComponent(query)}`, VariantSearchResponseSchema);
 }
 
 /** **Tedarik siparişinden dolu kabul formu** (D2). Boş dizi = plansız alım (form elle doldurulur). */
 export function fetchIntakeForm(
   purchaseOrderId: string,
 ): Promise<ApiResult<z.infer<typeof IntakeFormResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/intake/${purchaseOrderId}`, IntakeFormResponseSchema);
+  return warehouseFetch(`/api/v1/warehouse/intake/${purchaseOrderId}`, IntakeFormResponseSchema);
 }
 
 /**
@@ -177,7 +201,7 @@ export function receiveGoods(
     purchaseOrderId === null
       ? '/api/v1/warehouse/intake/receive'
       : `/api/v1/warehouse/intake/${purchaseOrderId}/receive`;
-  return authorizedFetch(path, ReceiveGoodsResponseSchema, { method: 'POST', body });
+  return warehouseFetch(path, ReceiveGoodsResponseSchema, { method: 'POST', body });
 }
 
 /**
@@ -187,12 +211,16 @@ export function receiveGoods(
 export function recordAdjustment(
   body: RecordAdjustmentRequest,
 ): Promise<ApiResult<z.infer<typeof RecordAdjustmentResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/adjustments', RecordAdjustmentResponseSchema, { method: 'POST', body });
+  return warehouseFetch('/api/v1/warehouse/adjustments', RecordAdjustmentResponseSchema, { method: 'POST', body });
 }
 
-/** **"Bana ne geliyor"** (D5) — bu depoya yolda olan transferler, satırlarıyla. Sayfalanmaz. */
-export function fetchInboundTransfers(): Promise<ApiResult<z.infer<typeof InboundTransfersResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/transfers', InboundTransfersResponseSchema);
+/**
+ * **Transfer ekranının üç bölümü tek turda** (D5 · v3:11) — gelen (satırlarıyla) · yolda çıkan ·
+ * son kapananlar. Üçü aynı ekranın aynı anda çizdiği şey; ayrı turlar olsaydı bölümlerden biri geç
+ * gelene kadar ekran yarım bir gerçeklik gösterirdi.
+ */
+export function fetchWarehouseTransfers(): Promise<ApiResult<z.infer<typeof WarehouseTransfersResponseSchema>>> {
+  return warehouseFetch('/api/v1/warehouse/transfers', WarehouseTransfersResponseSchema);
 }
 
 /**
@@ -203,7 +231,7 @@ export function receiveTransfer(
   transferId: string,
   body: ReceiveTransferRequest,
 ): Promise<ApiResult<z.infer<typeof ReceiveTransferResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/transfers/${transferId}/receive`, ReceiveTransferResponseSchema, {
+  return warehouseFetch(`/api/v1/warehouse/transfers/${transferId}/receive`, ReceiveTransferResponseSchema, {
     method: 'POST',
     body,
   });
@@ -215,7 +243,22 @@ export function receiveTransfer(
  * davetidir — ekran "bu kod hangi ürün?" diye sorar ve cevabı `learnScannedCode` ile yazar.
  */
 export function resolveScannedCode(code: string): Promise<ApiResult<z.infer<typeof ResolveCodeResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/codes/resolve', ResolveCodeResponseSchema, {
+  return warehouseFetch('/api/v1/warehouse/codes/resolve', ResolveCodeResponseSchema, {
+    method: 'POST',
+    body: { code },
+  });
+}
+
+/**
+ * **Raftaki PARTİ etiketinin çözümü** (D4'ün ikinci çıkış yolu · v3:08) — üsttekinin kardeşi:
+ * o kodu VARYANTA çevirir ("bu hangi mal"), bu PARTİYE ("bu raftaki hangi kutu"). Düzeltme daima
+ * bir partiye yazılır ve aynı varyantın aynı depoda birden çok partisi olabilir.
+ *
+ * Eşleşme ÇOĞULDUR: lot numarası benzersiz değil — tekile indirmek, depocunun görmediği bir
+ * partiden düşürmek olurdu. `unknown` bir hata değil cevaptır ("bu kodla bu depoda açık parti yok").
+ */
+export function resolveBatchCode(code: string): Promise<ApiResult<z.infer<typeof ResolveBatchResponseSchema>>> {
+  return warehouseFetch('/api/v1/warehouse/batches/resolve', ResolveBatchResponseSchema, {
     method: 'POST',
     body: { code },
   });
@@ -227,7 +270,7 @@ export function resolveScannedCode(code: string): Promise<ApiResult<z.infer<type
  * söyler; düzeltme web varyant editöründen (sil + yeniden öğret).
  */
 export function learnScannedCode(body: LearnCodeRequest): Promise<ApiResult<z.infer<typeof LearnCodeResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/codes', LearnCodeResponseSchema, { method: 'POST', body });
+  return warehouseFetch('/api/v1/warehouse/codes', LearnCodeResponseSchema, { method: 'POST', body });
 }
 
 /**
@@ -238,7 +281,7 @@ export function submitWarehouseReturn(
   orderId: string,
   body: WarehouseReturnRequest,
 ): Promise<ApiResult<z.infer<typeof WarehouseReturnResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/returns/${orderId}`, WarehouseReturnResponseSchema, {
+  return warehouseFetch(`/api/v1/warehouse/returns/${orderId}`, WarehouseReturnResponseSchema, {
     method: 'POST',
     body,
   });
@@ -251,7 +294,7 @@ export function submitWarehouseReturn(
  * görünen seçenek satın alma anında da geçerli.
  */
 export function fetchDispatchOptions(orderId: string): Promise<ApiResult<z.infer<typeof DispatchOptionsResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/dispatch-options`, DispatchOptionsResponseSchema);
+  return warehouseFetch(`/api/v1/warehouse/orders/${orderId}/dispatch-options`, DispatchOptionsResponseSchema);
 }
 
 /**
@@ -262,7 +305,7 @@ export function announceShipment(
   orderId: string,
   body: AnnounceShipmentRequest,
 ): Promise<ApiResult<z.infer<typeof AnnounceShipmentResponseSchema>>> {
-  return authorizedFetch(`/api/v1/warehouse/orders/${orderId}/announce`, AnnounceShipmentResponseSchema, {
+  return warehouseFetch(`/api/v1/warehouse/orders/${orderId}/announce`, AnnounceShipmentResponseSchema, {
     method: 'POST',
     body,
   });
@@ -275,7 +318,7 @@ export function announceShipment(
  * `already_handed` bir hata değil cevaptır — depocu rampada aynı kutuyu iki kez okutabilir.
  */
 export function handOverBox(code: string): Promise<ApiResult<z.infer<typeof HandoverResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/handover', HandoverResponseSchema, { method: 'POST', body: { code } });
+  return warehouseFetch('/api/v1/warehouse/handover', HandoverResponseSchema, { method: 'POST', body: { code } });
 }
 
 /**
@@ -285,7 +328,7 @@ export function handOverBox(code: string): Promise<ApiResult<z.infer<typeof Hand
  * bitişini ölçmek — sıfıra inince yığın boşalmıştır.
  */
 export function fetchPendingHandover(): Promise<ApiResult<z.infer<typeof HandoverPendingResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/handover/pending', HandoverPendingResponseSchema);
+  return warehouseFetch('/api/v1/warehouse/handover/pending', HandoverPendingResponseSchema);
 }
 
 /**
@@ -295,5 +338,5 @@ export function fetchPendingHandover(): Promise<ApiResult<z.infer<typeof Handove
  * kapatılmış olabilir) ve önbelleğe alınmış bayat bir liste, sökülmüş bir cihaza basmayı denerdi.
  */
 export function fetchPrinters(): Promise<ApiResult<z.infer<typeof WarehousePrintersResponseSchema>>> {
-  return authorizedFetch('/api/v1/warehouse/printers', WarehousePrintersResponseSchema);
+  return warehouseFetch('/api/v1/warehouse/printers', WarehousePrintersResponseSchema);
 }

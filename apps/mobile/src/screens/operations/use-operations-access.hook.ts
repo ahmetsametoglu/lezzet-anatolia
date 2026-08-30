@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { StaffWarehouse } from '@lezzet/types';
+
 import { fetchMe } from '@/lib/api/me';
+import { fetchStaffScope } from '@/lib/api/operations';
 import { getSupabase } from '@/lib/auth/supabase';
 import { operationsSectionsOf, type OperationsSection } from '@/lib/operations/sections';
+import { loadWarehouseChoice } from '@/lib/operations/warehouse-choice';
 
 /*
   OPERASYON KAPISI — `/me`yi okur, rolleri bölümlere çevirir, kabuğun hangi hâli çizeceğini söyler.
@@ -27,7 +31,28 @@ type OperationsAccess =
    * içinde. Ayrıca okunsaydı ekran başına bir uçuş ve iki cevap arasında ayrışma riski doğardı
    * (`sections-context.ts` künyesi: tek okuma, tek doğruluk).
    */
-  | { status: 'granted'; sections: OperationsSection[]; userName: string; userEmail: string | null }
+  /**
+   * **Depo kapsamı da kapıdan gelir** (30.08) ama `/me`den DEĞİL, kendi ucundan
+   * (`/operations/scope`): `/me` müşteriye bakan alanların kümesidir ve personel kapsamını bilerek
+   * taşımaz (`me-api.schema.ts` künyesi). İkinci uçuş yine de KAPIDA, ekranlarda değil — beş
+   * üstbaşlık aynı adı ister ve beş ayrı okuma, ayrışabilen beş cevap demekti.
+   *
+   * `warehouses` = personelin çalışabileceği tesisler (kapsam seçicisinin kaynağı),
+   * `resolvedId` = kapsamın TEK BAŞINA çözdüğü depo (`null` → seçim gerekiyor). İkisinin de
+   * anlamı sözleşmede (`operations-api.schema.ts`); kural sunucuda, burada yalnız taşınıyor.
+   *
+   * **Kapsam OKUNAMAZSA boş küme + `null` taşınır ve kapı yine açılır**: yetki kararı `/me`nin
+   * işidir, kapsam yalnız üstbaşlığın kuyruğunu ve seçiciyi besler. Bir ad okunamadı diye
+   * depocuyu vitrine düşürmek, `error` dalının bütün gerekçesine ters olurdu.
+   */
+  | {
+      status: 'granted';
+      sections: OperationsSection[];
+      userName: string;
+      userEmail: string | null;
+      warehouses: StaffWarehouse[];
+      resolvedWarehouseId: string | null;
+    }
   /** Oturum yok ya da yalnız müşteri — kabuk açılmaz, müşteri yüzeyine dönülür. */
   | { status: 'denied' }
   /** Rol bilgisi okunamadı; yetki hakkında hiçbir şey İDDİA EDİLMİYOR. */
@@ -62,11 +87,39 @@ export function useOperationsAccess(): OperationsAccess {
     }
 
     const sections = operationsSectionsOf(result.data.roles);
-    setState(
-      sections.length === 0
-        ? { status: 'denied' }
-        : { status: 'granted', sections, userName: result.data.name, userEmail: result.data.email },
-    );
+    if (sections.length === 0) {
+      setState({ status: 'denied' });
+      return;
+    }
+
+    /* DEPO KAPSAMI — `/me`den SONRA, ve yalnız kapı geçildiyse (30.08).
+       Paralel okunmadı, çünkü iki karar ayrı cinsten: erişim `/me`nin işi ve kapsam ucu personel
+       kapısının arkasında (müşteriye 403). Paralel çağrı, kabuğa hiç giremeyecek bir kullanıcı
+       için boşa bir istek ve — ikisi de 401'de oturum tazeleyip yeniden denediği için — aynı anda
+       iki tazeleme demekti.
+       KAPSAM OKUNAMAZSA KAPI KAPANMAZ: yetki kararı zaten verildi; eksik olan üstbaşlığın kuyruğu
+       ve seçici. Bir ad okunamadı diye depocuyu vitrine düşürmek, `error` dalının bütün
+       gerekçesine ters olurdu. */
+    const scope = await fetchStaffScope();
+    if (!alive.current) return;
+
+    const warehouses = scope.error === null ? scope.data.warehouses : [];
+
+    /* CİHAZDAKİ SEÇİM KAPSAMA KARŞI DOĞRULANIR — ve doğrulanacağı tek an burası, çünkü kapsam
+       ancak burada biliniyor. Yönetici personeli başka tesise aldığında cihazda kalan eski kimlik
+       her isteği `403`e çevirirdi; kapı onu sessizce değil, seçimi düşürerek karşılar (ekran
+       yeniden sorar). Seçim tele buradan sonra karışır — `warehouseFetch` onu senkron okur. */
+    await loadWarehouseChoice(warehouses.map((warehouse) => warehouse.id));
+    if (!alive.current) return;
+
+    setState({
+      status: 'granted',
+      sections,
+      userName: result.data.name,
+      userEmail: result.data.email,
+      warehouses,
+      resolvedWarehouseId: scope.error === null ? scope.data.resolvedId : null,
+    });
   }, []);
 
   useEffect(() => {

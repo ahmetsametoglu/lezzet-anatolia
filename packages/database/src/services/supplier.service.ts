@@ -123,6 +123,20 @@ export class SupplierProductService extends BaseDbService<SupplierProduct, Suppl
   }
 
   /**
+   * Eşlemeleri KİMLİKLE — mal kabul formunun tedarikçi kodu okuması (30.08).
+   *
+   * `listByVariants` bu iş için YANLIŞ anahtardır ve yanlışlığı sessiz olurdu: aynı varyantın
+   * birden çok tedarikçisi olabilir (`supplier_product_key` (tedarikçi, varyant) ikilisinde
+   * tekil, varyantta değil) ve varyanttan çözülen kod, siparişin verildiği firmanın değil
+   * bir başkasının kodu çıkabilirdi. Sipariş kalemi zaten doğru eşlemeyi işaret ediyor
+   * (`purchase_order_item.supplier_product_id`) — okuma o kimliği izler.
+   */
+  async listByIds(ids: readonly string[]): Promise<SupplierProduct[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: [...ids] });
+  }
+
+  /**
    * Eşleme yazar/günceller. Aynı (tedarikçi, varyant) ikilisi iki kez tanımlanmaz — kod değişirse
    * satır güncellenir, kopya satır doğmaz.
    */

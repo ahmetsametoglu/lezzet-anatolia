@@ -30,6 +30,7 @@ import { social } from './social';
 import { sale } from './sale';
 import { management } from './management';
 import { money } from './money';
+import { operations } from './operations';
 import { warehouse } from './warehouse';
 import { bearerAuth, type V1Env } from './auth';
 
@@ -254,3 +255,6 @@ v1.route('/social', social);
 // dosyalarının kendinde (yönetim: admin · para: accounting+admin).
 v1.route('/management', management);
 v1.route('/money', money);
+// Operasyon KABUĞU (30.08) — bölüm değil, bölümlerin üstü: kabuğun kapıda bir kez okuduğu künye
+// (personelin çalıştığı tesis). Kapısı da bölüm-üstü: operasyon bölümü doğuran HER rol girer.
+v1.route('/operations', operations);

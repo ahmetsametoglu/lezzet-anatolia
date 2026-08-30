@@ -7,8 +7,9 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { signOut } from '@/lib/auth/sign-out';
+import { clearWarehouseChoice } from '@/lib/operations/warehouse-choice';
 import { operationsCopy } from '@/screens/operations/copy';
-import { useOperationsIdentity } from '@/screens/operations/sections-context';
+import { useOperationsIdentity, useWarehouseOptions } from '@/screens/operations/sections-context';
 import { markStaffLandingDone } from '@/screens/operations/use-staff-landing.hook';
 import { operationsTheme } from '@/theme/unistyles';
 
@@ -76,6 +77,7 @@ interface OperationsStaffMenuProps {
 export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
   const router = useRouter();
   const { name, email, sections } = useOperationsIdentity();
+  const warehouseOptions = useWarehouseOptions();
   const [open, setOpen] = useState(false);
 
   const initials = staffInitials(name, email);
@@ -134,6 +136,27 @@ export function OperationsStaffMenu({ testID }: OperationsStaffMenuProps) {
         </View>
 
         <View style={styles.actions}>
+          {/*
+            DEPO DEĞİŞTİR (30.08) — yalnız seçebileceği BİRDEN ÇOK tesisi olan personelde.
+
+            Tek tesisli depocuda çizilmez: değiştirilecek bir şey yok ve düğme, olmayan bir seçim
+            varmış gibi gösterirdi. Menüde tesis LİSTESİ de yok — seçiciyi ikinci kez yazmak
+            olurdu (CLAUDE §1); burası seçimi bırakır, soruyu kapsam ekranı sorar.
+
+            Menüde, üstbaşlıkta değil: üstbaşlık dolu (zil + kimlik) ve "hangi depodayım" günde bir
+            kez sorulan bir sorudur — her ekranda duran bir kontrol, günün her saatinde
+            değiştirilebilir bir bağlam gibi görünürdü.
+          */}
+          {warehouseOptions.length > 1 ? (
+            <TextAction
+              label={t.changeWarehouse}
+              onPress={() => {
+                clearWarehouseChoice();
+                setOpen(false);
+              }}
+              testID="operations-staff-change-warehouse"
+            />
+          ) : null}
           <TextAction label={t.toCustomer} onPress={leaveToCustomer} testID="operations-staff-to-customer" />
           {/* Çıkış terracotta: kitin "dikkat isteyen eylem" tonu, hesap ekranındaki çıkışla aynı.
               Sonuç beklenmiyor ve YÖNLENDİRME DE BURADA DEĞİL: `signOut` cihaz deposunu her

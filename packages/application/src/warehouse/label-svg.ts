@@ -139,3 +139,41 @@ export function boxLabelSvg(label: BoxLabel): string {
     `</svg>`
   );
 }
+
+/**
+ * **ÖRNEK ETİKET** — "test bas" düğmesinin bastığı şey (v3:09 · 30.08).
+ *
+ * ── NEDEN GERÇEK ŞABLON, NEDEN AYRI BİR TEST DESENİ DEĞİL ───────────────────
+ * Basım hattında paketlenmiş bir test deseni zaten var (`printNeedleTest`) ama o başka bir soruyu
+ * cevaplıyor: "SDK bu yazıcıya bir görüntü basabiliyor mu" (23.5 iğne deneyi). Ayarlar ekranının
+ * sorusu daha dar ve daha günlük: *"seçtiğim yazıcıdan BİZİM etiketimiz doğru çıkıyor mu"* — kâğıt
+ * boyu tutuyor mu, QR okunuyor mu, yazı kesiliyor mu. Bunu ancak gerçek şablon gösterir; ayrı bir
+ * desen basmak, sınanmayan bir düzeni sınanmış sanmaktır.
+ *
+ * ── İÇERİK GÖRÜNÜR BİÇİMDE SAHTE ────────────────────────────────────────────
+ * Kod `KT-ORNEK`, ad "ÖRNEK ETİKET": rampada yere düşen bir kâğıdın gerçek bir koliye ait
+ * sanılmaması gerekir. Gerçek bir kutunun etiketini "test" diye bastırmak da seçenek değildi —
+ * o etiketin basımı bir OLAYDIR (`markBoxPrinted` damgası) ve test yüzünden damga düşerdi.
+ *
+ * Saf fonksiyon: veritabanına dokunmaz, tarih/rastgelelik taşımaz — aynı çıktı her seferinde.
+ */
+export function sampleBoxLabel(): BoxLabel {
+  return {
+    code: 'KT-ORNEK',
+    boxNo: 1,
+    boxCount: 1,
+    referenceNo: 'ÖRNEK ETİKET',
+    parcelName: 'Örnek Alıcı',
+    routeName: 'Örnek rota',
+    // `route` seçildi çünkü şablonun EN DOLU dalı bu: rota adı ve teslim günü yalnız burada
+    // çiziliyor. Test etiketi en çok satırı gösteren hâli basmalı — kesilen bir yazı, ancak
+    // yazının bulunduğu dalda görülür.
+    deliveryType: 'route',
+    deliveryDate: null,
+    paymentMethod: null,
+    items: [
+      { name: 'Örnek ürün · 500 g', qty: 2 },
+      { name: 'Örnek ürün · 1 kg', qty: 1 },
+    ],
+  };
+}

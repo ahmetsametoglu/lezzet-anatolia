@@ -54,7 +54,15 @@ export function NearExpiryScreen() {
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-near-expiry-list">
         {NEAR_EXPIRY_FIXTURE.map((batch) => (
-          <View key={batch.stockId} style={styles.row} testID={`warehouse-near-expiry-${batch.code}`}>
+          /* SATIR BİR KARTTIR VE TONU KARARINI SÖYLER (v3:07 · düzeltme 30.08). Önce kesik çizgiyle
+             ayrılmış düz satırlardı; tasarım her partiyi kendi zeminine oturtuyor ve karar renkten
+             de okunuyor: imhalık KIRMIZI zeminli, kararı olmayan KESİKLİ ve sessiz, ötekiler sakin
+             krem. Depocu listeyi okumadan önce ayıklıyor — kart bunu mümkün kılan şey. */
+          <View
+            key={batch.stockId}
+            style={[styles.row, styles[`row_${batch.decision}`]]}
+            testID={`warehouse-near-expiry-${batch.code}`}
+          >
             <View style={styles.rowHead}>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>{batch.name}</Text>
@@ -146,10 +154,28 @@ const styles = StyleSheet.create({
      çubuk künyenin yanına sıkışsaydı ne çubuk okunurdu ne ad. */
   row: {
     gap: operationsTheme.space.md,
-    paddingVertical: operationsTheme.space['2xl'],
-    borderBottomWidth: operationsTheme.border.base,
+    padding: operationsTheme.space['2xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+    backgroundColor: operationsTheme.colors.panel,
+  },
+  // Teklifi açık ve teklife girebilir partiler SAKİN krem kalır — kararları zaten rozette yazılı.
+  row_offer_open: {},
+  row_offer_candidate: {},
+  /* İMHALIK KIRMIZI ZEMİNLİ: listedeki tek "şimdi bir şey yap" satırı odur ve göz onu kartın
+     rengiyle bulur, rozeti okumadan. */
+  row_discard: {
+    borderColor: operationsTheme.colors['error-line'],
+    backgroundColor: operationsTheme.colors['error-bg'],
+  },
+  /* KARARI OLMAYAN KESİKLİ VE SESSİZ: eşik uygulanamadığı için burada bir iş YOK; dolu bir kart
+     onu ötekilerle aynı ağırlıkta gösterirdi. */
+  row_none: {
     borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    // Zemin SAYFANIN kendi kremi: kart "yok gibi" görünsün diye — şeffaf yazmak yerine sayfanın
+    // rengini vermek, panelin altındaki gölge/kenar hesabını da doğru bırakır.
+    backgroundColor: operationsTheme.colors.cream,
   },
   rowHead: {
     flexDirection: 'row',

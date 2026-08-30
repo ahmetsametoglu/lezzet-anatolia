@@ -1,6 +1,6 @@
-import { ProductService, ProductVariantService, VariantBarcodeService } from '@lezzet/database';
+import { ProductService, VariantBarcodeService } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
-import { resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type ProductDateType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
 
@@ -28,6 +28,13 @@ export interface VariantSearchRow {
   productName: string;
   variantLabel: string;
   sku: string | null;
+  /**
+   * Ürünün tarih rejimi + toplam raf ömrü. Plansız kabulde SEÇİLEN ÜRÜN SATIR OLUR ve o satırın
+   * SKT alanı bu ikisini ister; okutmayla açılan satır (`scan.ts`) da aynı iki alanı taşıyor —
+   * aynı listede bir satır uyarı üretip ötekinin üretmemesi, kaynağa göre değişen bir kural olurdu.
+   */
+  dateType: ProductDateType;
+  shelfLifeDays: number | null;
   imageUrl: string | null;
   /** Kod eşleşmesiyle bulunduysa okutmanın kaç adet saydığı; ad aramasında `null`. */
   qtyPerCode: number | null;
@@ -52,12 +59,11 @@ export async function searchVariantsForIntake(
   // 1) KOD: eşleşirse tek satır döner ve ada hiç bakılmaz.
   const match = await new VariantBarcodeService(db).findByCode(query);
   if (match) {
-    // Ad/görsel çözümü depo kapılarının ORTAK okumasından (`names.ts`) — ikinci bir "varyantın adı
-    // nasıl bulunur" yolu açılmıyor. SKU varyantın kendi alanı, tek turda yanından alınır.
-    const [names, variants] = await Promise.all([
-      variantNames(db, [match.variantId]),
-      new ProductVariantService(db).listByIds([match.variantId]),
-    ]);
+    // Ad/görsel/KOD çözümü depo kapılarının ORTAK okumasından (`names.ts`) — ikinci bir "varyantın
+    // adı nasıl bulunur" yolu açılmıyor. SKU için ayrıca `ProductVariantService.listByIds`
+    // çağrılıyordu (30.08'e kadar): o okuma varyant satırını zaten getiriyor, ikinci tur onun
+    // kopyasıydı ve okutma kapısı (`scan`) aynı alanı hiç göremiyordu.
+    const names = await variantNames(db, [match.variantId]);
     const name = names.get(match.variantId);
     if (name !== undefined) {
       return [
@@ -65,7 +71,9 @@ export async function searchVariantsForIntake(
           variantId: match.variantId,
           productName: name.productName,
           variantLabel: name.variantLabel,
-          sku: variants[0]?.sku ?? null,
+          sku: name.sku,
+          dateType: name.dateType,
+          shelfLifeDays: name.shelfLifeDays,
           imageUrl: name.imageUrl,
           qtyPerCode: match.qtyPerCode,
         },
@@ -84,6 +92,10 @@ export async function searchVariantsForIntake(
         productName: resolveLocalizedText(product.name, 'tr'),
         variantLabel: resolveLocalizedText(variant.label, 'tr'),
         sku: variant.sku ?? null,
+        // Dar satır (`listStockRows`) tarih rejimini zaten taşıyor — kod dalıyla aynı iki alan,
+        // ikinci bir okuma açılmadan.
+        dateType: product.dateType,
+        shelfLifeDays: product.shelfLifeDays,
         imageUrl: publicImageUrl(product.imageKey, product.imageUpdatedAt),
         qtyPerCode: null,
       })),

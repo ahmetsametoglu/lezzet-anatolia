@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { NotificationBell } from '@/components/operations/notification-bell';
@@ -11,7 +11,14 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsSectionRoute } from '@/screens/login/post-login-route';
-import { useOperationsIdentity, useOperationsSections } from '@/screens/operations/sections-context';
+import { chooseWarehouse } from '@/lib/operations/warehouse-choice';
+import { captionOf } from '@/lib/operations/caption';
+import {
+  useOperationsIdentity,
+  useOperationsSections,
+  useOperationsWorkplace,
+  useWarehouseOptions,
+} from '@/screens/operations/sections-context';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -20,7 +27,7 @@ import { NEAR_EXPIRY_FIXTURE } from './near-expiry-fixture';
 import { orderPickingQueue } from './warehouse-format';
 import type { PreparationOrderContract } from '@lezzet/types';
 import { useWarehouseHub } from './use-warehouse-hub.hook';
-import { useWarehouseStatus } from './warehouse-status';
+import { resetWarehouseStatus, useWarehouseStatus } from './warehouse-status';
 
 /*
   DEPO HUB (Operasyon Mobil v3:35-174) — bölümün kökü, sekiz işin kapısı.
@@ -93,7 +100,24 @@ export function WarehouseHubScreen() {
   const unread = useOperationsNotifications().unread;
   const identity = useOperationsIdentity();
   const sections = useOperationsSections();
+  const workplace = useOperationsWorkplace();
+  const warehouseOptions = useWarehouseOptions();
   const { width } = useWindowDimensions();
+
+  /**
+   * **Depoyu seç** — kapsam belirsizliğinin çıkış yolu (kullanıcı bulgusu 30.08).
+   *
+   * Üç adım ve üçü de gerekli: seçim yazılır (senkron — `chooseWarehouse` künyesi), bölümün
+   * kapsam ölçümü SIFIRLANIR (yoksa ekran "ambiguous" dalında kalır ve yeniden okuma hiç
+   * çizilmez), sonra hub yeniden okur. Ölçümü sıfırlamak bir varsayım değil: kapsam sorusunun
+   * cevabı ancak bir sonraki cevaptan öğrenilir (`warehouse-status.ts` künyesi) ve o cevap henüz
+   * gelmedi.
+   */
+  const pickWarehouse = (warehouseId: string) => {
+    chooseWarehouse(warehouseId);
+    resetWarehouseStatus();
+    hub.reload();
+  };
 
   /* IZGARANIN SÜTUN GENİŞLİĞİ HESAPLANIR, YÜZDEYLE VERİLMEZ (ölçüldü 30.08, OPPO CPH1907).
      Önce `flexBasis: '48%'` + `flexGrow` denendi: kutucuklar İÇERİĞE göre boyutlandı, uzun alt
@@ -106,7 +130,13 @@ export function WarehouseHubScreen() {
   const header = (
     <OperationsSectionHeader
       section="warehouse"
-      eyebrow={t.hub.eyebrow}
+      /* "DEPO · STRASBOURG MERKEZ" (v3:37) — üstbaşlık NEREDE olduğunu söyler, künye satırı KİM
+         olduğunu. Tesisin adı bu yüzden buraya geliyor, aşağıdaki bağlam satırına değil: depocu
+         ekrana bakıp önce doğru tesiste olduğunu görmeli.
+         Ad YOKSA üstbaşlık "DEPO" olarak kuyruksuz kalır (`captionOf`) — kapsamı tek tesis
+         olmayan personele tesislerden birinin adını yazmak, yanlış deponun ekranındaymış gibi
+         güvence vermek olurdu (CLAUDE §1). */
+      eyebrow={captionOf(t.hub.eyebrow, workplace) ?? t.hub.eyebrow}
       title={t.hub.title}
       context={`${identity.name} · ${shell.sections.warehouse.tab}`}
       right={
@@ -135,17 +165,63 @@ export function WarehouseHubScreen() {
     );
   }
 
-  if (scope === 'ambiguous') {
+  /*
+    KAPSAM SORUSU İKİ YOLDAN DOĞAR (30.08) ve ikisi de gerçek bir ölçüm:
+
+    1. `scope === 'ambiguous'` — kapı sordu (`400 warehouse_required`). Bugüne kadarki tek yol.
+    2. `workplace === null` + seçilebilecek tesis VAR — kapıya hiç gitmeden biliyoruz: kapsam tek
+       tesis değil (`resolvedWarehouseId === null`) ve personel henüz seçmedi.
+
+    İkincisi eklendi çünkü birincisi GEÇ: üç istek düşene kadar depocu boş bir hub'a bakıyordu, ve
+    "depo değiştir"den sonra soru ancak bir sonraki okumada geri gelirdi. Bu bir tahmin değil —
+    seçimin yokluğu istemcinin kendi bildiği bir gerçek; kimin hangi depoya yazabileceği kararı ise
+    hâlâ tamamen kapının (her istekte `?warehouseId=` kapsama karşı sınanıyor).
+  */
+  if (scope === 'ambiguous' || (workplace === null && warehouseOptions.length > 0)) {
     return (
       <View style={styles.screen} testID="operations-section-warehouse">
         {header}
         <View style={styles.block}>
+          {/*
+            İKİ AYRI CÜMLE, ÇÜNKÜ İKİ AYRI HÂL (kullanıcı bulgusu 30.08).
+
+            Eskiden tek cümle vardı — *"yönetici seni bir depoya atadığında bu bölüm kendiliğinden
+            açılır"* — ve çok depolu personel için YANLIŞTI: atama zaten yapılmıştı, hatta İKİ kez.
+            Ölçülen hâl `hepsi@lezzetanatolia.fr` (kapsam: bir tesis + bir araç): ekran doğru bir
+            şey söylüyor ama yanlış kişiye söylüyordu ve çıkış yolu yoktu.
+
+            Ayrım seçeneklerin VARLIĞINDAN geliyor, rolden değil: seçenek varsa soru "hangisi",
+            yoksa cevap "atama bekleniyor". Kapsam okunamadığında da ikinci cümle geçerlidir —
+            olmayan bir listeden seçim istemek, personeli boş bir ekrana bakmaya bırakırdı.
+          */}
           <OperationsNoticeBlock
             variant="empty"
-            title={t.common.scope.title}
-            description={t.common.scope.body}
+            title={warehouseOptions.length === 0 ? t.common.scope.title : t.common.scope.pickTitle}
+            description={warehouseOptions.length === 0 ? t.common.scope.body : t.common.scope.pickBody}
             testID="warehouse-scope-block"
           />
+
+          {/*
+            SEÇİCİ (v3 ekran 10) — kapsamdaki TESİSLER, araçlar süzülmüş (`useWarehouseOptions`).
+            Seçim sunucuya bir yetki olarak gitmiyor: adrese `?warehouseId=` yazılıyor ve kapı onu
+            her istekte kapsama karşı sınıyor (`403 warehouse_out_of_scope`). Yani ekran bir kapı
+            AÇMIYOR, var olan kapıya hangi anahtarla gireceğini söylüyor.
+          */}
+          {warehouseOptions.map((option) => (
+            <PressableSurface
+              key={option.id}
+              onPress={() => pickWarehouse(option.id)}
+              feedback="scale"
+              style={styles.scopePick}
+              accessibilityLabel={fillCopy(t.common.scope.pickAction, { name: option.name })}
+              testID={`warehouse-scope-pick-${option.id}`}
+            >
+              <Text style={styles.scopePickName}>{option.name}</Text>
+              {/* Kod da yazılıyor: iki tesisin adı benzediğinde ("Kehl Depo" · "Kehl Şube") adı
+                  görüp seçmek bir tahmindir; kod belgelerde de o tesisi işaret eder. */}
+              <Text style={styles.scopePickCode}>{option.code}</Text>
+            </PressableSurface>
+          ))}
 
           {/*
             ÇIKIŞ YOLLARI (v3:1057) — kapsam belirsizken depo bölümü kullanılamaz ama personelin
@@ -216,7 +292,13 @@ export function WarehouseHubScreen() {
     <View style={styles.screen} testID="operations-section-warehouse">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-hub-list">
+      {/* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08): hub günün sayılarını gösteriyor ve
+          depocu onları tazelemek için ekrandan çıkıp giriyordu. */}
+      <ScrollView
+        contentContainerStyle={styles.list}
+        refreshControl={<RefreshControl refreshing={hub.reloading} onRefresh={hub.refresh} />}
+        testID="warehouse-hub-list"
+      >
         {offlineBanner}
 
         {/* ── 1. ÖZET KARTI ─────────────────────────────────────────────────
@@ -297,8 +379,17 @@ export function WarehouseHubScreen() {
                 <Icon name={tile.icon} size={operationsTheme.size.tileIcon} color={tile.tone} />
                 <Text style={styles.tileCode}>{tile.code}</Text>
               </View>
-              <Text style={styles.tileTitle}>{tile.title}</Text>
-              <Text style={[styles.tileSubtitle, tile.alert ? styles.tileSubtitleAlert : null]}>{tile.subtitle}</Text>
+              {/* Başlık tek satır, alt metin en fazla iki: kutucuk sabit yükseklikte ve taşan
+                  metin kutuyu değil KENDİNİ kısaltmalı. */}
+              <Text style={styles.tileTitle} numberOfLines={1}>
+                {tile.title}
+              </Text>
+              <Text
+                style={[styles.tileSubtitle, tile.alert ? styles.tileSubtitleAlert : null]}
+                numberOfLines={2}
+              >
+                {tile.subtitle}
+              </Text>
             </PressableSurface>
           ))}
         </View>
@@ -542,6 +633,30 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.button,
     color: operationsTheme.colors['olive-dark'],
   },
+  /**
+   * Depo seçeneği — çıkış düğmesiyle AYNI iskelet ama DOLU zemin: bu satır bir kaçış değil,
+   * ekranın beklediği eylemdir. Aynı kutunun içinde iki kademe var (ad + kod), o yüzden hizalama
+   * ortadan sola alındı.
+   */
+  scopePick: {
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-dark'],
+    backgroundColor: operationsTheme.colors['olive-bg'],
+  },
+  scopePickName: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  scopePickCode: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
+  },
   scopeFootnote: {
     fontFamily: operationsTheme.font.body['400'],
     fontSize: operationsTheme.text.tag,
@@ -706,7 +821,8 @@ const styles = StyleSheet.create({
      Büyümeye de izin verilmiyor: yedi kutucuk iki sütuna sığmaz ve son hücre tek kalır; şablonun
      ızgarası `1fr 1fr` olduğu için o hücre tam genişliğe YAYILMAZ, bir sütun kalır. */
   tile: {
-    minHeight: operationsTheme.size.tile,
+    // Sabit yükseklik: sekiz kutucuk EŞİT olmalı (metrics künyesi). `minHeight` ızgarayı kaydırıyordu.
+    height: operationsTheme.size.tile,
     backgroundColor: operationsTheme.colors.panel,
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,

@@ -150,11 +150,13 @@ describe('açılışta rol kararı', () => {
   });
 
   it('ÇOK ROLLÜ personel bölüm SIRASINA iner — sunucunun rol sırasına değil', async () => {
-    // `operationsHomeRoute` tasarımın sırasını kullanıyor (Kurye → Depo → Yönetim → Para). Sunucu
-    // `roles`u başka sırayla döndürdüğü gün açılış bölümü değişmemeli.
-    mockUseMe.mockReturnValue(hazir(['warehouse', 'courier']));
+    /* `operationsHomeRoute` TASARIMIN sırasını kullanıyor — v3'te **Depo → Kurye → Yönetim → Para**
+       (30.08'de düzeltildi; kod v2'nin sırasını izliyordu). Sunucu `roles`u başka sırayla
+       döndürdüğü gün açılış bölümü DEĞİŞMEMELİ: burada roller kurye önce yazılıyor ama personel
+       yine depoya iniyor. */
+    mockUseMe.mockReturnValue(hazir(['courier', 'warehouse']));
     await acilis();
 
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/courier'));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/warehouse'));
   });
 });

@@ -20,7 +20,6 @@ import { deliverOrder, dispatchTransfer } from '@lezzet/application';
 // kırılır (katalog/kurye testlerinin kararı). Depo sözleşmelerinin ilk tüketicisi de budur.
 import type {
   ConfirmPreparationResponse,
-  InboundTransfersResponse,
   IntakeFormResponse,
   OrderStatus,
   PendingIntakesResponse,
@@ -30,6 +29,7 @@ import type {
   RecordAdjustmentResponse,
   WarehouseReturnQueueResponse,
   WarehouseReturnResponse,
+  WarehouseTransfersResponse,
 } from '@lezzet/types';
 import { app } from '../../app';
 
@@ -771,7 +771,7 @@ describe('D5 · transfer (gelen)', () => {
     const res = await asStaff('/api/v1/warehouse/transfers');
     expect(res.status).toBe(200);
 
-    const body = await dataOf<InboundTransfersResponse>(res);
+    const body = await dataOf<WarehouseTransfersResponse>(res);
     const mine = body.transfers.find((row) => row.transferId === transferId)!;
     expect(mine.fromWarehouseId).toBe(otherWarehouseId);
     expect(mine.referenceNo).toMatch(/^TRF-/);

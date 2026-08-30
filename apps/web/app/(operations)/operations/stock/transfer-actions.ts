@@ -13,7 +13,7 @@ import { serviceDb, SettingsService, WarehouseTransferService } from '@lezzet/da
 import type { DispatchLine, KeysetCursor, ReceiveLine } from '@lezzet/types';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { requireWarehouseScope } from '@/lib/guard';
-import { TRANSFER_TRANSIT_DAYS_KEY } from '@/lib/settings-keys';
+import { TRANSFER_TRANSIT_DAYS_DEFAULT, TRANSFER_TRANSIT_DAYS_KEY } from '@/lib/settings-keys';
 import { readWarehouseContext, readWorkWarehouse } from '@/lib/warehouse/context';
 import { readHistoryPage, readTransferDetailView } from './transfer-read';
 import type { HistoryPageView, TransferDetailView } from './transfer-types';
@@ -65,7 +65,7 @@ export async function suggestDispatchAction(input: {
     if (!source.ok) return { data: null, error: source.message };
 
     const db = serviceDb();
-    const transitDays = await new SettingsService(db).getNumber(TRANSFER_TRANSIT_DAYS_KEY, 1);
+    const transitDays = await new SettingsService(db).getNumber(TRANSFER_TRANSIT_DAYS_KEY, TRANSFER_TRANSIT_DAYS_DEFAULT);
     const data = await readDispatchCandidate(db, {
       warehouseId: source.warehouseId,
       variantId: input.variantId,

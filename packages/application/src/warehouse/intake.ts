@@ -5,11 +5,12 @@ import {
   PurchaseOrderService,
   StockIntakeService,
   StorageAreaService,
+  SupplierProductService,
   SupplierService,
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
-import type { ProductStorageType, ReceiveIntakeResult, StorageAreaKind } from '@lezzet/types';
+import type { ProductDateType, ProductStorageType, PurchaseOrderStatus, ReceiveIntakeResult, StorageAreaKind } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
 
@@ -86,6 +87,37 @@ export interface IntakeFormRow {
    * yazacak yeri ortadan kaldırırdı.
    */
   expectedQty: number;
+  /**
+   * **Tedarikçinin bu kaleme verdiği kod** (`supplier_product.supplier_code`) — kalemin
+   * `supplierProductId` bağından çözülür.
+   *
+   * Depocunun elindeki kâğıt bizim katalogumuz değil TEDARİKÇİNİN irsaliyesidir ve satırı o kâğıtla
+   * eşleştirmenin kesin anahtarı bu koddur; ürün adı çevrilmiş, boy etiketi bizim dilimizdedir.
+   *
+   * `null` = kalem bir eşlemeye bağlanmadan açılmış (`purchase_order_item.supplier_product_id`
+   * nullable — `createDraft` künyesi: eşlemesi olmayan kalem de listeye girer). Uydurma bir kod
+   * yerine görünür boşluk.
+   */
+  supplierCode: string | null;
+  /**
+   * Varyantın kendi kodu (`product_variant.sku`) — plansız kabulün satırında görünen kod.
+   *
+   * PO'lu satırın anahtarı tedarikçinin kodudur (elde onun irsaliyesi var); plansızda sipariş
+   * kalemi yoktur, yani tedarikçi kodu da yoktur ve satırı tanıtan tek kod budur. Aramayla ve
+   * okutmayla açılan satırlar aynı alanı göstermeli — biri kodlu öteki kodsuz bir liste,
+   * depocuya "bu ürünün kodu yok mu" diye sordururdu.
+   */
+  sku: string | null;
+  /** Tarih rejimi (DOMAIN §4) — depocu kutunun üstünde DLC mi DDM mi arayacağını bilmeli. */
+  dateType: ProductDateType;
+  /**
+   * Ürünün toplam raf ömrü (gün); girilmemişse `null` → kalan ömür HESAPLANAMAZ.
+   *
+   * Yüzdenin kendisi burada üretilemez ve bu bir eksiklik değil sıralamadır: girdisi olan SON TARİH
+   * henüz yazılmamıştır — depocu SKT'yi girdiği anda ekran `meetsMlor` ile hesaplar. Kabul
+   * yazıldıktan sonraki uyarı ayrı bir yerde duruyor (`IntakeWarning`) ve o da aynı motoru çağırır.
+   */
+  shelfLifeDays: number | null;
 }
 
 /**
@@ -112,11 +144,27 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
   const progress = new Map(
     (await new PurchaseOrderService(db).progressOf(purchaseOrderId)).map((row) => [row.purchaseOrderItemId, row.missingQty]),
   );
-  const names = await variantNames(db, lines.map((line) => line.variantId));
+  // İki okuma birbirini beklemez: ad+tarih rejimi tek zincirden (`names.ts`), tedarikçi kodu ayrı.
+  // Kod eşlemesi KALEMİN işaret ettiği kimlikle çözülür (`supplierProductId`), varyantla değil —
+  // gerekçe `SupplierProductService.listByIds` künyesinde.
+  const [names, mappings] = await Promise.all([
+    variantNames(db, lines.map((line) => line.variantId)),
+    new SupplierProductService(db).listByIds(
+      lines.map((line) => line.supplierProductId).filter((id): id is string => id !== null),
+    ),
+  ]);
+  const codeOf = new Map(mappings.map((mapping) => [mapping.id, mapping.supplierCode]));
+
   return lines.map((line) => ({
     variantId: line.variantId,
     productName: names.get(line.variantId)?.productName ?? '—',
     variantLabel: names.get(line.variantId)?.variantLabel ?? '',
+    supplierCode: line.supplierProductId === null ? null : (codeOf.get(line.supplierProductId) ?? null),
+    sku: names.get(line.variantId)?.sku ?? null,
+    // Satırı hiç çözülemeyen varyantta `names.ts`in verdiği aynı varsayılana düşülür — ikinci bir
+    // "bilinmiyorsa ne olur" kararı burada kurulmuyor (gerekçe orada, tek yerde).
+    dateType: names.get(line.variantId)?.dateType ?? 'DDM',
+    shelfLifeDays: names.get(line.variantId)?.shelfLifeDays ?? null,
     // İlerleme satırı yoksa kalan = ısmarlanan; `?? 0` OLAMAZ: görünüm bir satırı bir gün taşımazsa
     // "0 bekleniyor" demek, depocuyu kendi kaydımıza karşı sessizce kör bırakırdı (`CLAUDE §1` —
     // ölçülemeyen değer sıfır değildir).
@@ -161,6 +209,14 @@ export async function readIntakeHeader(db: SupabaseClient, purchaseOrderId: stri
 /** Bekleyen sevkiyat satırı — künye + ISMARLANAN KALEM sayısı (adet değil). */
 export interface PendingIntake extends IntakeHeader {
   lineCount: number;
+  /**
+   * Siparişin durumu — liste İKİ durumu birden taşıyor (aşağıdaki künye) ve ikisi depocu için ayrı
+   * cümledir: `sent`te koli hiç açılmadı, `partially_received`te bu ikinci turdur ve formdaki
+   * beklenen adetler ISMARLANAN değil KALANDIR (`IntakeFormRow.expectedQty` künyesi).
+   *
+   * Küme durum tipinden DARALTILIR: `draft` bu listeye hiç girmez, `received`/`cancelled` kapandı.
+   */
+  status: Extract<PurchaseOrderStatus, 'sent' | 'partially_received'>;
 }
 
 /**
@@ -192,16 +248,27 @@ export async function listPendingIntakes(db: SupabaseClient, opts: { limit?: num
     service.listRows({ status: 'partially_received', limit }),
   ]);
 
+  // Durum SATIRIN kendi alanından geliyor (`listRows` `status`u taşıyor) — süzgeçten türetilmiş bir
+  // sabit DEĞİL. İki kümeyi birleştirirken "bu satır `sent` sorgusundan geldi, demek ki `sent`"
+  // demek, doğruluğu iki ayrı yerin uyumuna bağlayan bir çıkarımdır; satır zaten durumunu söylüyor.
+  // Daraltma bir `as` ile değil, ayrımlı bir yoklamayla: beklenmedik bir durum gelirse satır
+  // sessizce yanlış etiketlenmez, LİSTEYE GİRMEZ ve bu görünür bir eksikliktir.
   return [...sent.rows, ...partial.rows]
     // En yeni sipariş önce — birleştirilen iki sayfanın sırası tek başına anlamlı değil.
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, limit)
-    .map((row) => ({
-      purchaseOrderId: row.id,
-      referenceNo: row.referenceNo,
-      supplierName: row.supplier?.name ?? null,
-      lineCount: row.items.length,
-    }));
+    .flatMap((row) => {
+      if (row.status !== 'sent' && row.status !== 'partially_received') return [];
+      return [
+        {
+          purchaseOrderId: row.id,
+          referenceNo: row.referenceNo,
+          supplierName: row.supplier?.name ?? null,
+          lineCount: row.items.length,
+          status: row.status,
+        },
+      ];
+    });
 }
 
 export interface IntakeWarning {
@@ -403,11 +470,11 @@ async function reprice(port: RepricePort | undefined, variantIds: readonly strin
 
 /** Raf ömrü uyarıları — ölçüt üründe (`shelfLifeDays`); ömür bilinmiyorsa uyarı üretilmez. */
 async function mlorWarnings(db: SupabaseClient, lines: readonly IntakeFormLine[]): Promise<IntakeWarning[]> {
-  const shelfLifeOf = await shelfLivesOf(db, lines.map((line) => line.variantId));
+  const names = await variantNames(db, lines.map((line) => line.variantId));
 
   const warnings: IntakeWarning[] = [];
   for (const line of lines) {
-    const verdict = meetsMlor(line.expiryDate, shelfLifeOf.get(line.variantId));
+    const verdict = meetsMlor(line.expiryDate, names.get(line.variantId)?.shelfLifeDays);
     if (!verdict.ok) warnings.push({ variantId: line.variantId, remainingPercent: verdict.remainingPercent });
   }
   return warnings;
@@ -443,16 +510,10 @@ async function storageMismatches(db: SupabaseClient, lines: readonly IntakeFormL
   return mismatches;
 }
 
-/**
- * Varyant → ürünün toplam raf ömrü (gün). MLOR'un tek girdisi bu; ad çözümü (`names.ts`) burada
- * kullanılmıyor çünkü ekranın sorusu farklı — o "ne yazacağım", bu "kaç gün".
- */
-async function shelfLivesOf(db: SupabaseClient, variantIds: readonly string[]): Promise<Map<string, number | null>> {
-  const variants = await new ProductVariantService(db).listByIds([...new Set(variantIds)]);
-  const products = await new ProductService(db).listByIds([...new Set(variants.map((variant) => variant.productId))]);
-  const shelfLifeOf = new Map(products.map((product) => [product.id, product.shelfLifeDays]));
-  return new Map(variants.map((variant) => [variant.id, shelfLifeOf.get(variant.productId) ?? null]));
-}
+// Varyant → ürünün tarih rejimi okuması BURADAN KALKTI (30.08): `shelfLivesOf`/`dateRulesOf`,
+// `names.ts`in yaptığı zinciri (varyant → ürün) ikinci kez kuruyordu. Ad çözümü ürün satırını zaten
+// elinde tutuyor; `VariantName` artık `dateType` ve `shelfLifeDays` de taşıyor ve iki soru tek
+// okumadan cevaplanıyor (`CLAUDE §1` — iki kopya, bir gün ayrışacak iki kopyadır).
 
 /**
  * Beklenen–gelen farkı. Yalnız SAPAN satırlar döner; eşit olan satır gürültüdür.

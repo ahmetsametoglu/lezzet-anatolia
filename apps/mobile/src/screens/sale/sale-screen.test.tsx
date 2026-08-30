@@ -1,11 +1,12 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import type { SaleCatalogProduct, SaleVariant } from '@lezzet/types';
+import type { SaleCatalogProduct, SaleVariant, StaffWarehouse } from '@lezzet/types';
 
 import { SaleScreen } from './sale-screen';
 import { SaleCartScreen } from './sale-cart-screen';
 import { SaleHistoryScreen } from './sale-history-screen';
 import { SaleReceiptScreen } from './sale-receipt-screen';
 import { SaleProvider } from './sale-context';
+import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { resetWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 
 /*
@@ -335,9 +336,33 @@ const SATISLAR = [
   },
 ];
 
+/** Kapsamı tek tesis olan personel — künyenin tesis adını yazdığı hâl (v3:21). */
+const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' };
+
+/**
+ * Geçmiş ekranı artık oturum künyesini okuyor (üstbaşlığın tesis kuyruğu), yani kabuk SAĞLAYICISI
+ * olmadan çizilemez — kapıyı geçmemiş bir ekranı yetkili gibi göstermemenin bedeli bu
+ * (`sections-context` künyesi: sağlayıcısız çağrı sessizce boş değer DÖNMEZ, fırlatır).
+ */
+async function renderHistory(warehouse: StaffWarehouse | null = null) {
+  await render(
+    <OperationsSessionProvider
+      value={{
+        sections: ['warehouse'],
+        userName: 'Deniz Arslan',
+        userEmail: 'depo@lezzetanatolia.fr',
+        warehouses: warehouse === null ? [] : [warehouse],
+        resolvedWarehouseId: warehouse?.id ?? null,
+      }}
+    >
+      <SaleHistoryScreen />
+    </OperationsSessionProvider>,
+  );
+}
+
 it('SON SATIŞLAR kim sattıysa onu söylüyor — iz yoksa uydurmuyor', async () => {
   withNetwork({ status: 'failed' });
-  await render(<SaleHistoryScreen />);
+  await renderHistory();
   await waitFor(() => expect(screen.getByTestId(`sale-history-${SATISLAR[0]!.orderId}`)).toBeTruthy());
 
   expect(screen.getByText('LA-26-TEST01')).toBeTruthy();
@@ -348,6 +373,27 @@ it('SON SATIŞLAR kim sattıysa onu söylüyor — iz yoksa uydurmuyor', async (
   expect(screen.getByText('referanssız')).toBeTruthy();
   // Listenin NE OLDUĞU dipnotta: "kim sattı"nın tek cevabı bu liste.
   expect(screen.getByTestId('sale-history-footnote')).toHaveTextContent(/tek cevabı bu liste/);
+});
+
+/*
+  KÜNYE TESİSİN ADIYLA (v3:21 · 30.08) — ve burada ad bir bağlam süsü DEĞİL, listenin SÜZGECİ:
+  uç `listRecentDoorSales(db, warehouseId)` ile okuyor. Çok depolu personele hangi tesisin
+  kasasına baktığını söylememek, iki tesisin satışlarını tek listeymiş gibi okutmaktı.
+*/
+it('SON SATIŞLAR künyesi hangi tesisin kasası olduğunu söyler', async () => {
+  withNetwork({ status: 'failed' });
+  await renderHistory(STR);
+  await waitFor(() => expect(screen.getByTestId(`sale-history-${SATISLAR[0]!.orderId}`)).toBeTruthy());
+
+  expect(screen.getByTestId('sale-history-header')).toHaveTextContent(/Strasbourg Merkez/);
+});
+
+it('tesis adı yoksa künye KUYRUKSUZ kalır — uydurma bir tesis yazılmaz', async () => {
+  withNetwork({ status: 'failed' });
+  await renderHistory();
+  await waitFor(() => expect(screen.getByTestId(`sale-history-${SATISLAR[0]!.orderId}`)).toBeTruthy());
+
+  expect(screen.getByTestId('sale-history-header')).not.toHaveTextContent(/Strasbourg/);
 });
 
 describe('çevrimdışı kilidi (v3:20)', () => {

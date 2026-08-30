@@ -1,6 +1,6 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { OrderBoxService, serviceDb, ShippingBoxService, WarehouseService } from '@lezzet/database';
+import { OrderBoxService, serviceDb, SettingsService, ShippingBoxService, WarehouseService } from '@lezzet/database';
 import {
   adjustFulfillment,
   announceOrderShipment,
@@ -12,21 +12,28 @@ import {
   printersFor,
   markBoxPrinted,
   learnCode,
+  listClosedTransfers,
   listInboundTransfers,
+  listOutboundTransfers,
   listPendingIntakes,
   listPreparationQueue,
   listWarehouseReturns,
   openBox,
   openIntakeForm,
   quoteOrderShipment,
+  readExpiryThresholds,
   readIntakeHeader,
   receiveGoods,
   receiveTransfer,
   recordAdjustment,
+  resolveBatchCode,
   resolveScannedCode,
+  sampleBoxLabel,
   sealBox,
   sendcloudProvider,
   shippingProviderConfigured,
+  TRANSFER_TRANSIT_DAYS_DEFAULT,
+  TRANSFER_TRANSIT_DAYS_KEY,
 } from '@lezzet/application';
 // Alt yol (paketin `./*` ihracı): arama kapısı bugün TEK yüzeyin işi — barrel'a ad eklemek, henüz
 // ortak olmayan bir şeyi paketin kamu sözleşmesine yazmak olurdu. İkinci çağıran doğduğunda terfi eder.
@@ -41,7 +48,6 @@ import {
   HandoverRequestSchema,
   HandoverPendingResponseSchema,
   HandoverResponseSchema,
-  InboundTransfersResponseSchema,
   IntakeFormResponseSchema,
   LearnCodeRequestSchema,
   LearnCodeResponseSchema,
@@ -57,6 +63,8 @@ import {
   ReceiveTransferResponseSchema,
   RecordAdjustmentRequestSchema,
   RecordAdjustmentResponseSchema,
+  ResolveBatchRequestSchema,
+  ResolveBatchResponseSchema,
   ResolveCodeRequestSchema,
   ResolveCodeResponseSchema,
   SealBoxRequestSchema,
@@ -64,6 +72,7 @@ import {
   ShippingBoxesResponseSchema,
   ShippingLabelResponseSchema,
   WarehousePrintersResponseSchema,
+  WarehouseTransfersResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
@@ -168,6 +177,25 @@ export interface WarehouseEnv {
   Variables: StaffEnv['Variables'] & { warehouseId: string };
 }
 
+/**
+ * **Kapsamın TEK BAŞINA çözdüğü depo** — guard'ın üç hâlinden birincisi, tek satırda.
+ *
+ * Guard'ın kuralı *"kapsamda tek depo varsa o, değilse söylenmeli"* ve `?warehouseId=` yokken bu
+ * cümlenin cevabını veren yer burasıdır. **İhraç edildi (30.08):** kabuğun künye ucu
+ * (`operations.ts` → `/operations/workplace`) personelin çalıştığı TESİSİN ADINI aynı soruya
+ * dayandırıyor — "kapsamın tek başına çözdüğü depo hangisi". İkinci kez yazılsaydı iki yer bir
+ * gün ayrışır ve üstbaşlıkta yazan ad, uçların gerçekte okuduğu depo OLMAYABİLİRDİ; bir depocuya
+ * yanlış tesisin adını göstermek, ekranın güvenilirliğini kökten kaybetmesidir.
+ *
+ * `null` = kapsam boş (admin — depo-üstü) ya da birden çok. İkisi de "söylenmeli" dalıdır ve
+ * guard orada 400 döner; ad ucu ise `null` döner. Cevaplar farklı çünkü sorular farklı: guard
+ * "hangi depoda çalışayım" diye sorar ve cevapsız kalamaz, künye "nerede çalışıyorsun" diye
+ * sorar ve cevapsız kalabilir.
+ */
+export function soleWarehouseIdOf(scope: readonly string[]): string | null {
+  return scope.length === 1 ? (scope[0] ?? null) : null;
+}
+
 export async function warehouseGuard(c: Context<WarehouseEnv>, next: Next): Promise<Response | void> {
   const profile = c.get('staff');
 
@@ -180,7 +208,7 @@ export async function warehouseGuard(c: Context<WarehouseEnv>, next: Next): Prom
     if (!(await new WarehouseService(serviceDb()).getById(asked))) return fail(c, 'warehouse_not_found', 404);
   }
 
-  const warehouseId = asked ?? (profile.warehouseIds.length === 1 ? profile.warehouseIds[0] : undefined);
+  const warehouseId = asked ?? soleWarehouseIdOf(profile.warehouseIds);
   if (!warehouseId) return fail(c, 'warehouse_required', 400);
 
   c.set('warehouseId', warehouseId);
@@ -274,6 +302,30 @@ warehouse.get('/printers', async (c) => {
   const printers = await printersFor(serviceDb(), c.get('warehouseId'));
   const body: z.input<typeof WarehousePrintersResponseSchema> = { printers };
   return ok(c, WarehousePrintersResponseSchema.parse(body));
+});
+
+/**
+ * **ÖRNEK ETİKET** (v3:09'un "test bas" eylemi, 30.08) — 4×6 PNG, 300 dpi. Zarfsız BİNARY cevap,
+ * kutu etiketiyle aynı gerekçe: tüketicisi `fetch` + dosya yazımı, base64 zarfı yükü %33 şişirirdi.
+ *
+ * ── NEDEN YAZICI KİMLİĞİ YOLDA ──────────────────────────────────────────────
+ * Görsel yazıcıya göre DEĞİŞMİYOR (tek şablon, 4×6) ama kimlik yine isteniyor ve bu bir kapı: uç,
+ * istenen yazıcının GERÇEKTEN bu deponun açık envanterinde olduğunu doğruluyor. Kimliksiz bir
+ * "örnek etiket ver" ucu, kapsam sorusu hiç sorulmayan bir üretim kapısı olurdu.
+ *
+ * ── BASIM DAMGASI YOK ───────────────────────────────────────────────────────
+ * Bu bir kutunun etiketi değil: `markBoxPrinted` çağrılmaz, hiçbir kayıt güncellenmez. Gerçek bir
+ * kutunun etiketini "test" diye bastırmak, o kutunun basım damgasını yalan yere düşürürdü.
+ */
+warehouse.get('/printers/:printerId/sample-label.png', async (c) => {
+  const printerId = UuidSchema.safeParse(c.req.param('printerId'));
+  if (!printerId.success) return fail(c, 'invalid_printer_id', 400);
+
+  const printers = await printersFor(serviceDb(), c.get('warehouseId'));
+  if (!printers.some((printer) => printer.id === printerId.data)) return fail(c, 'not_found', 404);
+
+  const png = renderLabelPng(boxLabelSvg(sampleBoxLabel()));
+  return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
 });
 
 /**
@@ -581,12 +633,17 @@ warehouse.get('/intake/:purchaseOrderId', async (c) => {
   if (!purchaseOrderId.success) return fail(c, 'invalid_purchase_order_id', 400);
 
   const db = serviceDb();
-  const [purchaseOrder, rows] = await Promise.all([
+  // MLOR eşiği AYARDIR ve ayarı okumak uç katmanının işi (motor da kapı da ayar okumaz). Cevaba
+  // konuyor çünkü yüzdeyi TELEFON hesaplıyor: girdisi olan son tarih henüz yazılmamıştır, depocu
+  // SKT'yi girdiği anda ekran `meetsMlor`u çağırır — eşiği koda gömseydi ekranın söylediği kural
+  // sistemin kuralı olmaktan çıkardı (`settings-keys` künyesindeki 29.07 dersi).
+  const [purchaseOrder, rows, thresholds] = await Promise.all([
     readIntakeHeader(db, purchaseOrderId.data),
     openIntakeForm(db, purchaseOrderId.data),
+    readExpiryThresholds(new SettingsService(db)),
   ]);
 
-  const body: z.input<typeof IntakeFormResponseSchema> = { purchaseOrder, rows };
+  const body: z.input<typeof IntakeFormResponseSchema> = { purchaseOrder, rows, mlorPercent: thresholds.mlorPercent };
   return ok(c, IntakeFormResponseSchema.parse(body));
 });
 
@@ -689,10 +746,22 @@ warehouse.post('/adjustments', async (c) => {
  * Bir sevkiyatı kaçırmak, iki depoda da görünmeyen mal demektir — bu listenin TAM olması gerekir.
  */
 warehouse.get('/transfers', async (c) => {
-  const transfers = await listInboundTransfers(serviceDb(), { warehouseId: c.get('warehouseId') });
+  const db = serviceDb();
+  const warehouseId = c.get('warehouseId');
+  // Ulaşım süresi AYARDIR ve ayarı okumak uç katmanının işi (`readDispatchCandidate` ile aynı
+  // kural: motor da kapı da saat/ayar okumaz). `SettingsService` süreç içinde önbellekli.
+  const transitDays = await new SettingsService(db).getNumber(TRANSFER_TRANSIT_DAYS_KEY, TRANSFER_TRANSIT_DAYS_DEFAULT);
 
-  const body: z.input<typeof InboundTransfersResponseSchema> = { transfers };
-  return ok(c, InboundTransfersResponseSchema.parse(body));
+  // Üç okuma birbirini beklemez: ekran üçünü aynı anda çiziyor ve sıralı koşsalardı rampadaki
+  // telefon üç turun toplamını beklerdi.
+  const [transfers, outbound, closed] = await Promise.all([
+    listInboundTransfers(db, { warehouseId }),
+    listOutboundTransfers(db, { warehouseId, transitDays }),
+    listClosedTransfers(db, { warehouseId }),
+  ]);
+
+  const body: z.input<typeof WarehouseTransfersResponseSchema> = { transfers, outbound, closed };
+  return ok(c, WarehouseTransfersResponseSchema.parse(body));
 });
 
 /**
@@ -801,6 +870,30 @@ warehouse.post('/codes/resolve', async (c) => {
   const outcome = await resolveScannedCode(serviceDb(), parsed.data);
   const body: z.input<typeof ResolveCodeResponseSchema> = outcome;
   return ok(c, ResolveCodeResponseSchema.parse(body));
+});
+
+/**
+ * **Raftaki PARTİ etiketinin çözümü** (D4'ün ikinci çıkış yolu, v3:08 — 30.08).
+ *
+ * ── ÜSTTEKİ UCUN İKİZİ DEĞİL, KARDEŞİ ───────────────────────────────────────
+ * `codes/resolve` kodu VARYANTA çevirir ("bu hangi mal") ve künyesi stok okumasını bilerek dışarıda
+ * bırakıyor. Sayımın sorusu başkadır: düzeltme daima bir PARTİYE yazılır ve aynı varyantın aynı
+ * depoda birden çok partisi olabilir — varyant cevabı "hangi partiden düşeyim"i cevapsız bırakırdı.
+ *
+ * ── DEPO SÜZGECİ ZORUNLU ────────────────────────────────────────────────────
+ * Kimlik jetondan (`warehouseId`), gövdeden değil — dosyanın değişmezi. Kapsam dışı partiyi
+ * göstermek, depocuya `recordAdjustment`ın reddedeceği bir satır seçtirirdi.
+ *
+ * Eşleşme yoksa `unknown` ve bu bir HATA DEĞİL cevaptır: ekran "bu kodla bu depoda açık parti yok"
+ * der. 404'e indirgenseydi ekran ağ arızası ile "böyle bir parti yok"u ayıramazdı.
+ */
+warehouse.post('/batches/resolve', async (c) => {
+  const parsed = ResolveBatchRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await resolveBatchCode(serviceDb(), { ...parsed.data, warehouseId: c.get('warehouseId') });
+  const body: z.input<typeof ResolveBatchResponseSchema> = outcome;
+  return ok(c, ResolveBatchResponseSchema.parse(body));
 });
 
 /**

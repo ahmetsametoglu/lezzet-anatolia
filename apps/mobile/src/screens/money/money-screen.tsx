@@ -6,10 +6,11 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { captionOf } from '@/lib/operations/caption';
 import { money } from '@/lib/operations/money';
 import { todayLabel } from '@/lib/operations/stamp';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
-import { useOperationsIdentity } from '@/screens/operations/sections-context';
+import { useOperationsIdentity, useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { operationsTheme } from '@/theme/unistyles';
 import type { MoneyOverview, PendingCollection } from '@lezzet/types';
 import { moneyCopy } from './copy';
@@ -45,6 +46,7 @@ export function MoneyTrackingScreen() {
   const router = useRouter();
   const { state, retry } = useMoneyOverview();
   const identity = useOperationsIdentity();
+  const workplace = useOperationsWorkplace();
 
   return (
     <View style={styles.screen} testID="operations-section-money">
@@ -52,10 +54,14 @@ export function MoneyTrackingScreen() {
         section="money"
         eyebrow={shell.sections.money.eyebrow}
         title={shell.sections.money.title}
-        /* KİM VE HANGİ GÜN (v3:23) — para ekranı bir günün fotoğrafıdır; hangi güne baktığı
-           yazılmazsa "bugün gerçekleşen" cümlesi hangi günü anlattığını söylemez. Deponun ADI
-           tasarımda var ama mobile hiç ulaşmıyor (uyuşmazlık 1) — uydurulmuyor. */
-        context={`${identity.name} · ${todayLabel()}`}
+        /* KİM · HANGİ GÜN · NEREDE (v3:23) — para ekranı bir günün fotoğrafıdır; hangi güne
+           baktığı yazılmazsa "bugün gerçekleşen" cümlesi hangi günü anlattığını söylemez.
+           TESİSİN ADI ARTIK GELİYOR (30.08, `/operations/scope`) ama **kuyruk şartlı**: satır
+           personelin BAĞLAMINI söyler ("nerede çalışıyorsun"), sayıların süzgecini değil — para
+           okumaları depo boyutu taşımaz (`money.ts` künyesi: *defter işletmenin*). Kapsamı iki
+           tesisli bir muhasebecide (seed'in `muhasebe` hâli) ad gelmez ve satır kuyruksuz kalır;
+           tesislerden birini yazmak, ekranın kendi künyesinde yalan söylemesi olurdu (CLAUDE §1). */
+        context={captionOf(identity.name, todayLabel(), workplace)}
         right={
           <PressableSurface
             onPress={() => router.navigate('/day-end')}

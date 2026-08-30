@@ -3,6 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+// Ömür kararı MOTORDAN: ekran kendi yüzdesini kurmaz — kabul kapısı da aynı motoru çağırıyor ve
+// ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı (`CLAUDE §1`).
+import { meetsMlor } from '@lezzet/domain-core';
 import type { IntakeFormRowContract, VariantSearchRowContract } from '@lezzet/types';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
@@ -152,7 +155,11 @@ export function IntakeScreen() {
               accessibilityLabel={t.intake.unplannedCta}
               testID="warehouse-intake-unplanned-empty-cta"
             >
-              <Text style={styles.unplannedPlus}>＋</Text>
+              {/* ARTI KENDİ BEYAZ KARESİNDE (v3:04) — zeytin kesikli zeminde çıplak bir artı
+                  kayboluyordu; kare onu "basılacak şey" yapıyor. */}
+              <View style={styles.unplannedPlusBox}>
+                <Text style={styles.unplannedPlus}>＋</Text>
+              </View>
               <View style={styles.pendingNames}>
                 <Text style={styles.pendingRef}>{t.intake.unplannedCta}</Text>
                 <Text style={styles.pendingMeta}>{t.intake.unplannedRow}</Text>
@@ -160,7 +167,15 @@ export function IntakeScreen() {
             </PressableSurface>
           </View>
         ) : (
-          <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-pending">
+          /* AŞAĞI ÇEKİNCE YENİLE — YALNIZ LİSTEDE (kullanıcı isteği 30.08). Rampada yeni bir
+             sevkiyat "kabul bekliyor"a düştüğünde depocu ekrandan çıkıp geri giriyordu.
+             **Kabul FORMUNDA çekme YOK ve olmamalı:** form bir kez okunuyor (hook künyesi) ve
+             tazeleme, depocunun yazdığı adetleri sessizce silerdi. */
+          <FormScroll
+            contentContainerStyle={styles.list}
+            refresh={{ onRefresh: intake.refresh, refreshing: intake.reloading }}
+            testID="warehouse-intake-pending"
+          >
             <Text style={styles.heading}>{t.intake.pendingHeading}</Text>
             {intake.pending.map((row) => (
               <PressableSurface
@@ -171,12 +186,36 @@ export function IntakeScreen() {
                 accessibilityLabel={row.referenceNo ?? row.supplierName ?? t.intake.title}
                 testID={`warehouse-intake-pending-${row.purchaseOrderId}`}
               >
-                <Icon name="intake" size={operationsTheme.size.rowIcon} color={operationsTheme.colors.olive} />
+                {/* İKON KENDİ KARE ZEMİNİNDE (v3:04) — çıplak ikon satırın metniyle aynı ağırlıkta
+                    duruyordu; zemin onu bir "tür işareti" hâline getiriyor ve göz satırları önce
+                    ondan tarıyor. */}
+                <View style={styles.pendingIcon}>
+                  <Icon name="intake" size={operationsTheme.size.rowIcon} color={operationsTheme.colors.olive} />
+                </View>
                 <View style={styles.pendingNames}>
                   <Text style={styles.pendingRef}>{row.referenceNo ?? '—'}</Text>
-                  <Text style={styles.pendingMeta}>{row.supplierName ?? '—'}</Text>
+                  {/* DURUM ALANDAN GELİR, sabit "gönderildi" DEĞİL (v3:531 · 30.08): liste hem
+                      `sent` hem `partially_received` taşıyor (uç künyesi) ve ikisi ayrı cümledir
+                      — birinde koli hiç açılmadı, ötekinde bu ikinci turdur ve formdaki beklenen
+                      adetler KALANDIR. Sabit yazsaydık listenin yarısı için yalan olurdu. */}
+                  <Text style={styles.pendingMeta}>
+                    {fillCopy(t.intake.pendingMeta, {
+                      supplier: row.supplierName ?? '—',
+                      status: t.intake.pendingStatus[row.status],
+                    })}
+                  </Text>
                 </View>
-                <Text style={styles.pendingMeta}>{fillCopy(t.intake.pendingLines, { n: String(row.lineCount) })}</Text>
+                <View style={styles.pendingTail}>
+                  <Text style={styles.pendingMeta}>{fillCopy(t.intake.pendingLines, { n: String(row.lineCount) })}</Text>
+                  {/* SABİT bir etiket ve öyle kalmalı: SKT her satırda zorunludur (sözleşme
+                      kuralı, `IntakeFormLineSchema.expiryDate`), siparişe göre değişmez. Alan gibi
+                      görünmesin diye vurgusuz — depocuya kabule başlamadan önce ne isteneceğini
+                      söylüyor, bir sipariş özelliği bildirmiyor. */}
+                  {/* TERRACOTTA (v3:04): sabit bir etiket ama SESSİZ değil — depocu kabule
+                      başlamadan önce elinde SKT okunacak mal olduğunu bilmeli, ve o bilgiyi
+                      formda değil BURADA, koliyi açmadan önce alıyor. */}
+                  <Text style={styles.pendingTag}>{t.intake.pendingSktTag}</Text>
+                </View>
               </PressableSurface>
             ))}
 
@@ -192,7 +231,11 @@ export function IntakeScreen() {
               accessibilityLabel={t.intake.unplannedCta}
               testID="warehouse-intake-unplanned-cta"
             >
-              <Text style={styles.unplannedPlus}>＋</Text>
+              {/* ARTI KENDİ BEYAZ KARESİNDE (v3:04) — zeytin kesikli zeminde çıplak bir artı
+                  kayboluyordu; kare onu "basılacak şey" yapıyor. */}
+              <View style={styles.unplannedPlusBox}>
+                <Text style={styles.unplannedPlus}>＋</Text>
+              </View>
               <View style={styles.pendingNames}>
                 <Text style={styles.pendingRef}>{t.intake.unplannedCta}</Text>
                 <Text style={styles.pendingMeta}>{t.intake.unplannedRow}</Text>
@@ -383,6 +426,7 @@ export function IntakeScreen() {
             row={row}
             state={intake.stateOf(row.variantId)}
             unplanned={unplanned}
+            mlorPercent={intake.mlorPercent}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
           />
         ))}
@@ -639,7 +683,12 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
 interface VariantSearchSheetProps {
   visible: boolean;
   onClose: () => void;
-  onPick: (variant: { variantId: string; productName: string; variantLabel: string }) => void;
+  /**
+   * Seçilen satır BÜTÜN olarak geçer, üç alana indirilmez (30.08): satır artık kodunu ve tarih
+   * rejimini de taşıyor ve kabul satırı bunların hepsini istiyor. Daraltılmış bir imza, yeni bir
+   * alan eklendiğinde onu SESSİZCE düşürürdü — tip hiçbir şey demezdi.
+   */
+  onPick: (variant: VariantSearchRowContract) => void;
 }
 
 /**
@@ -737,13 +786,19 @@ interface IntakeRowProps {
   state: IntakeRowState;
   /** Plansız kabulde beklenen YOKTUR; planlıda sıfır kalan "karşılandı" demektir (aşağıdaki künye). */
   unplanned: boolean;
+  /** MLOR eşiği (%) — SUNUCUDAN gelen ayar; satırın kendi değeri değil, formun kuralı. */
+  mlorPercent: number;
   onPatch: (patch: Partial<IntakeRowState>) => void;
 }
 
-function IntakeRow({ row, state, unplanned, onPatch }: IntakeRowProps) {
+function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowProps) {
   const name = productLabel(row.productName, row.variantLabel);
   const expiry = parseDate(state.expiryText);
   const damaged = state.damageNote.length > 0;
+  // Tarih girilmeden ölçüt YOKTUR — `meetsMlor`a boş bir tarih vermek, olmayan bir ölçümden karar
+  // üretmek olurdu. `null` = "henüz sorulmadı"; motorun kendi `null`ı ("ömür bilinmiyor") ondan ayrı
+  // ve o da uyarı üretmiyor (`ok: true` ile döner).
+  const life = expiry === null ? null : meetsMlor(expiry, row.shelfLifeDays, new Date(), mlorPercent);
 
   return (
     <View style={styles.lineRow} testID={`warehouse-intake-line-${row.variantId}`}>
@@ -763,10 +818,23 @@ function IntakeRow({ row, state, unplanned, onPatch }: IntakeRowProps) {
               depocu ikinci turda o kaleme dokunmayacağını bilmeli. Sessizlik ikisini eşitliyordu.
           */}
           {row.expectedQty > 0 ? (
-            <Text style={styles.rowSub}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
+            /* TEDARİKÇİ KODU BEKLENEN ADEDİN YANINDA (v3:604 · 30.08): depocunun elindeki kâğıt
+               bizim katalogumuz değil TEDARİKÇİNİN irsaliyesi ve satırı onunla eşleştirmenin kesin
+               anahtarı bu kod — ürün adı çevrilmiş, boy etiketi bizim dilimizde. Kodu olmayan
+               kalemde (eşlemesiz açılmış) yalnız beklenen yazılır; "—" koymak, olmayan bir kodu
+               boş bir kod gibi gösterirdi. */
+            <Text style={styles.rowSub} testID={`warehouse-intake-expected-${row.variantId}`}>
+              {row.supplierCode === null
+                ? fillCopy(t.intake.expected, { qty: String(row.expectedQty) })
+                : fillCopy(t.intake.expectedWithCode, { qty: String(row.expectedQty), code: row.supplierCode })}
+            </Text>
           ) : unplanned ? (
+            /* PLANSIZDA SATIRIN KODU SKU'DUR (v3:657 · 30.08): sipariş kalemi yok, yani tedarikçi
+               kodu da yok — satırı tanıtan tek kod bizimkisi. Satır aramadan da okutmadan da
+               açılabiliyor ve ikisi artık aynı alanı taşıyor (uç künyesi); SKU'suz varyantta
+               kelime hâli yazılır, "SKU —" değil. */
             <Text style={styles.rowSub} testID={`warehouse-intake-none-${row.variantId}`}>
-              {t.intake.expectedNone}
+              {row.sku === null ? t.intake.expectedNone : fillCopy(t.intake.expectedNoneWithSku, { sku: row.sku })}
             </Text>
           ) : (
             <Text style={styles.rowDone} testID={`warehouse-intake-done-${row.variantId}`}>
@@ -791,6 +859,13 @@ function IntakeRow({ row, state, unplanned, onPatch }: IntakeRowProps) {
           testID={`warehouse-intake-expiry-state-${row.variantId}`}
         >
           {expiry === null ? t.intake.expiry.missing : fillCopy(t.intake.expiry.set, { date: shortDate(expiry) ?? expiry })}
+        </Text>
+        {/* TARİH REJİMİ ÜRÜNDEN (v3:606 · 30.08). Etiketin iki yarısı iki ayrı şey: "SKT ZORUNLU"
+            her satırda aynı (sözleşme kuralı — `expiryDate` zorunlu), "DLC/DDM" ise ÜRÜNE göre
+            değişiyor ve depocunun kutunun üstünde arayacağı yazı bu. Çip değil ETİKET: dokunulacak
+            bir şey değil, satırın kuralını söylüyor. */}
+        <Text style={styles.dateTag} testID={`warehouse-intake-datetype-${row.variantId}`}>
+          {fillCopy(t.intake.dateTag, { type: row.dateType })}
         </Text>
         <PressableSurface
           onPress={() => onPatch({ lotSkipped: !state.lotSkipped })}
@@ -830,6 +905,27 @@ function IntakeRow({ row, state, unplanned, onPatch }: IntakeRowProps) {
         style={styles.textInput}
         testID={`warehouse-intake-expiry-${row.variantId}`}
       />
+
+      {/* KALAN ÖMÜR SATIRIN İÇİNDE, KAYITTAN SONRA DEĞİL (v3:610 · 30.08).
+          Uyarı zaten vardı ama yalnız kabul YAZILDIKTAN sonra, ekranın altında (`intake.warnings`)
+          — yani depocu kararı verdikten sonra. Şablonun istediği an başka: SKT girilir girilmez,
+          o satırın içinde. Karar "kabul edeyim mi" sorusudur ve cevabı yazmadan ÖNCE gerekir.
+
+          Hesap MOTORDAN (`meetsMlor`, `@lezzet/domain-core`): ekran kendi yüzdesini kurmaz — kapı
+          da aynı motoru çağırıyor ve ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı.
+          Eşik SUNUCUDAN (`mlorPercent`, ayar): koda gömülseydi operatör eşiği değiştirdiği gün
+          ekranın söylediği kural sistemin kuralı olmaktan çıkardı.
+
+          ENGELLEMEZ (DOMAIN §4) ve raf ömrü bilinmiyorsa hiç görünmez: ölçüt yokken uyarı üretmek
+          yanlış alarmdır (`remainingShelfLifePercent` `null` döner). */}
+      {life === null || life.ok ? null : (
+        <View style={styles.lifeBox} testID={`warehouse-intake-life-${row.variantId}`}>
+          <Text style={styles.lifeText}>
+            {fillCopy(t.intake.lifeInline, { pct: String(Math.round(life.remainingPercent ?? 0)) })}
+          </Text>
+          <Text style={styles.lifeHint}>{fillCopy(t.intake.lifeInlineHint, { mlor: String(Math.round(mlorPercent)) })}</Text>
+        </View>
+      )}
 
       {state.lotSkipped ? null : (
         <TextInput
@@ -975,6 +1071,35 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.terracotta,
   },
+  /* Tarih rejimi etiketi — çip DEĞİL: dokunulacak bir şey değil, satırın kuralı. Çerçevesiz ve
+     üstbaşlık ölçüsünde ki yanındaki SKT çipiyle karışmasın. */
+  dateTag: {
+    alignSelf: 'center',
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.muted,
+  },
+  /* Kalan ömür uyarısı — UYARI tonunda (terracotta ailesi, "SKT gir *" çipiyle aynı dil) ama
+     ENGEL görünümünde değil: dolgulu bir kutu, kabulü durduran bir hata gibi okunurdu. */
+  lifeBox: {
+    marginTop: operationsTheme.space.sm,
+    padding: operationsTheme.space.md,
+    borderRadius: operationsTheme.radius.badge,
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
+    gap: operationsTheme.space['2xs'],
+  },
+  lifeText: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.terracotta,
+  },
+  lifeHint: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.body,
+  },
   warning: {
     marginTop: operationsTheme.space.md,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -1070,6 +1195,9 @@ const styles = StyleSheet.create({
   },
   /* Plansız kabul satırı — listenin ISTISNASI olduğu için kesikli çerçeve: bekleyen sevkiyatların
      düz çerçevesiyle aynı ağırlıkta durursa normal yol gibi okunur. */
+  /* PLANSIZ KABUL ZEYTİN KESİKLİ (v3:04): kesik çizgi "bu satır bir kayıt değil, bir davet"
+     demek; zeytin de onu bir EYLEM yapıyor. Kum tonundayken listenin sonundaki sessiz bir
+     dipnot gibi duruyordu ve depocu siparişsiz malı nereye yazacağını arıyordu. */
   unplannedRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1077,8 +1205,9 @@ const styles = StyleSheet.create({
     padding: operationsTheme.space['2xl'],
     borderWidth: operationsTheme.border.base,
     borderStyle: 'dashed',
-    borderColor: operationsTheme.colors['sand-500'],
+    borderColor: operationsTheme.colors['olive-line'],
     borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors['olive-bg'],
   },
   /* Kabul kilidi — okutma düğmesinin YERİNE geçer (v3:610); gizlenen bir düğme sebebi olmayan
      bir eksiklik gibi görünür. Kuyruğun kilidiyle aynı desen. */
@@ -1106,6 +1235,16 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.olive,
   },
+  unplannedPlusBox: {
+    width: operationsTheme.size.avatarMd,
+    height: operationsTheme.size.avatarMd,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
   unplannedPlus: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['icon-sm'],
@@ -1127,6 +1266,26 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.muted,
+  },
+  /* Satırın sağ ucu: kalem sayısı + SKT etiketi alt alta. Yan yana dizilseydi satır üç sütuna
+     bölünür ve künye (referans + tedarikçi + durum) sıkışırdı. */
+  pendingTail: { alignItems: 'flex-end', gap: operationsTheme.space['2xs'] },
+  /* SKT etiketi bir DURUM değil bir kural hatırlatması — künyeden bile hafif dursun diye üstbaşlık
+     ölçüsünde ve aralıklı; rozet gibi çerçevelenirse siparişe özel bir işaret sanılır. */
+  /* İkonun kare zemini — satırın "tür işareti". */
+  pendingIcon: {
+    width: operationsTheme.size.avatarMd,
+    height: operationsTheme.size.avatarMd,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+  },
+  pendingTag: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.terracotta,
   },
   /* Fotoğraflı bant. Yükseklik `circleSm` (96) + künyenin nefesi: kart bir kahraman görsel değil,
      tanıma yetecek kadar fotoğraf + üç satır künye. Kırpılır (`overflow`), yoksa fotoğrafın köşeleri

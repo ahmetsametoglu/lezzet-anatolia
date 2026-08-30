@@ -54,7 +54,15 @@ async function renderScreen(sections: OperationsSection[], feed: OperationsNotif
   mockFeed = feed;
   mockLoading = loading;
   await render(
-    <OperationsSessionProvider value={{ sections, userName: 'Musa Kaya', userEmail: 'musa@lezzetanatolia.fr' }}>
+    <OperationsSessionProvider
+      value={{
+        sections,
+        userName: 'Musa Kaya',
+        userEmail: 'musa@lezzetanatolia.fr',
+        warehouses: [],
+        resolvedWarehouseId: null,
+      }}
+    >
       <OperationsNotificationsScreen />
     </OperationsSessionProvider>,
   );

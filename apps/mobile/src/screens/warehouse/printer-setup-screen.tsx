@@ -9,6 +9,9 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fetchPrinters } from '@/lib/api/warehouse';
+import { findNetworkPrinters, printLabel } from '@/lib/print/brother';
+import { downloadSampleLabelPng } from '@/lib/print/label-file';
+import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
 import { choosePrinter, readPrinterChoice, type PrinterChoice } from '@/lib/print/printer-choice';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
@@ -37,11 +40,62 @@ import { trackWarehouse } from './warehouse-status';
 const t = warehouseCopy;
 const PURPOSES: PrinterPurpose[] = ['box', 'shipping'];
 
+/**
+ * Yazıcının ağdaki hâli. **`unknown` sıfır değil "ölçemedim"dir** (CLAUDE §1): yazıcı modülü bu
+ * derlemede yoksa ya da keşif düşerse "bağlı değil" demek, çalışan bir yazıcıyı arızalı gösterir.
+ * Anahtarlar sözlükteki (`printers.link.*`) adlarla birebir — ekran kendi eşlemesini kurmuyor.
+ */
+type PrinterLink = 'online' | 'offline' | 'unknown';
+
 export function PrinterSetupScreen() {
   const router = useRouter();
   const [printers, setPrinters] = useState<BoxPrinterContract[] | null>(null);
   const [choice, setChoice] = useState<PrinterChoice>({});
   const [failed, setFailed] = useState(false);
+  /*
+    BAĞLANTI DURUMU ÖLÇÜLÜR, VARSAYILMAZ (v3:1022 "bağlı · Wi-Fi" · 30.08).
+
+    ── VERİDE YOK, CİHAZDA VAR ─────────────────────────────────────────────────
+    `warehouse_printer` bir ENVANTERDİR: adres, model, kâğıt boyu. "Şu an açık mı" bilgisi orada
+    YOK ve olmamalı — bir yazıcının ayakta olup olmadığını ancak onunla aynı ağdaki cihaz bilir;
+    sunucuya yazılmış bir "bağlı" bayrağı, kimsenin tazelemediği anda yalan söylemeye başlar.
+    Ölçüm SDK'nın ağ keşfiyle yapılıyor (`findNetworkPrinters`, mDNS/SNMP) ve eşleşme ADRESTEN.
+
+    ── ÜÇ HÂL, VE ÜÇÜNCÜSÜ SIFIR DEĞİL ─────────────────────────────────────────
+    `online` (keşifte görüldü) · `offline` (tarandı, yok) · **`unknown` (ölçülemedi)**. Üçüncüsü
+    CLAUDE §1'in kuralı: yazıcı modülü bu derlemede yoksa (dev-client, jest) ya da keşif düşerse
+    "bağlı değil" demek, çalışan bir yazıcıyı arızalı göstermek olurdu — depocu sorunu olmayan bir
+    kabloyu kontrol etmeye giderdi. Ölçemediğimizi söylüyoruz.
+  */
+  const [link, setLink] = useState<Record<string, PrinterLink>>({});
+  const [probing, setProbing] = useState(false);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
+
+  /**
+   * Ağ keşfi — listedeki her yazıcı için üç hâlden birini yazar. Modül yoksa HİÇ taranmaz ve
+   * hepsi `unknown` kalır: tarama yapamayan bir cihazın "yok" demesi, ölçmediğini ölçmüş gibi
+   * söylemesidir.
+   */
+  const probe = useCallback(async (rows: BoxPrinterContract[]) => {
+    if (rows.length === 0) return;
+    if (!hasPrinterNativeModule()) {
+      setLink(Object.fromEntries(rows.map((row) => [row.id, 'unknown' as const])));
+      return;
+    }
+    setProbing(true);
+    try {
+      const found = await findNetworkPrinters();
+      const addresses = new Set(found.map((channel) => channel.address));
+      setLink(Object.fromEntries(rows.map((row) => [row.id, addresses.has(row.address) ? 'online' : 'offline'])));
+    } catch {
+      // Keşfin kendisi düştü — bu "yazıcı yok" DEĞİL "ölçemedim"dir (CLAUDE §1). Sessiz değil:
+      // satırlar `unknown` yazıyor ve depocu ölçümün yapılamadığını görüyor.
+      setLink(Object.fromEntries(rows.map((row) => [row.id, 'unknown' as const])));
+    } finally {
+      setProbing(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setFailed(false);
@@ -53,7 +107,8 @@ export function PrinterSetupScreen() {
       return;
     }
     setPrinters(liste.data.printers);
-  }, []);
+    await probe(liste.data.printers);
+  }, [probe]);
 
   useEffect(() => {
     void load();
@@ -62,6 +117,36 @@ export function PrinterSetupScreen() {
   const pick = useCallback(async (purpose: PrinterPurpose, id: string) => {
     await choosePrinter(purpose, id);
     setChoice(await readPrinterChoice());
+  }, []);
+
+  /**
+   * **TEST BAS** (v3:1023) — sunucunun ürettiği ÖRNEK etiketi seçili yazıcıya basar.
+   *
+   * ── NEDEN GERÇEK ŞABLON ─────────────────────────────────────────────────────
+   * Basım hattında paketlenmiş bir test deseni var (`printNeedleTest`) ama o başka bir soruyu
+   * cevaplıyor: "SDK bu yazıcıya bir görüntü basabiliyor mu" (23.5 iğne deneyi). Ayarlar
+   * ekranının sorusu daha dar: *"seçtiğim yazıcıdan BİZİM etiketimiz doğru çıkıyor mu"* — kâğıt
+   * boyu tutuyor mu, QR okunuyor mu, yazı kesiliyor mu. Bunu ancak gerçek şablon gösterir.
+   *
+   * ── HATA YUTULMAZ, CÜMLEYE ÇEVRİLİR ─────────────────────────────────────────
+   * SDK reddi (yanlış kâğıt boyu, ulaşılamayan adres) testin VERİSİDİR: "basılamadı" demek
+   * yetmez, hangi sebep olduğu ekranda durmalı — kâğıt kararı fizikseldir ve kod onu çözemez.
+   */
+  const testPrint = useCallback(async (printer: BoxPrinterContract) => {
+    setNotice(null);
+    setTesting(printer.id);
+    try {
+      const fileUri = await downloadSampleLabelPng(printer.id);
+      await printLabel(fileUri, { address: printer.address, model: printer.model, labelSize: printer.labelSize });
+      setNotice({ tone: 'ok', text: fillCopy(t.printers.test.ok, { name: printer.name }) });
+    } catch (err) {
+      setNotice({
+        tone: 'error',
+        text: fillCopy(t.printers.test.failed, { error: err instanceof Error ? err.message : String(err) }),
+      });
+    } finally {
+      setTesting(null);
+    }
   }, []);
 
   const header = (
@@ -112,24 +197,50 @@ export function PrinterSetupScreen() {
                   // Tek yazıcıda "seçili" işareti bir seçimi DEĞİL bir olguyu anlatıyor:
                   // başka aday yok, o yüzden basım oradan çıkıyor.
                   const secili = tek || choice[purpose] === row.id;
+                  const durum: PrinterLink = link[row.id] ?? 'unknown';
                   return (
-                    <PressableSurface
-                      key={row.id}
-                      onPress={() => void pick(purpose, row.id)}
-                      feedback="scale"
-                      selected={secili}
-                      style={styles.row}
-                      accessibilityLabel={row.name}
-                      testID={`warehouse-printers-option-${row.id}`}
-                    >
-                      <View style={styles.rowBody}>
-                        <Text style={styles.rowTitle}>{row.name}</Text>
-                        <Text style={styles.rowSub}>
-                          {fillCopy(t.printers.detail, { model: row.model, address: row.address, size: row.labelSize })}
+                    <View key={row.id} style={styles.rowWrap}>
+                      <PressableSurface
+                        onPress={() => void pick(purpose, row.id)}
+                        feedback="scale"
+                        selected={secili}
+                        style={styles.row}
+                        accessibilityLabel={row.name}
+                        testID={`warehouse-printers-option-${row.id}`}
+                      >
+                        <View style={styles.rowBody}>
+                          <Text style={styles.rowTitle}>{row.name}</Text>
+                          <Text style={styles.rowSub}>
+                            {fillCopy(t.printers.detail, { model: row.model, address: row.address, size: row.labelSize })}
+                          </Text>
+                          {/* BAĞLANTI DURUMU — üç hâl, üçüncüsü "ölçemedim" (yukarıdaki künye).
+                              Tarama sürerken ayrı bir cümle: boş bırakmak "yok" gibi okunurdu. */}
+                          <Text
+                            style={[styles.link, styles[`link_${durum}`]]}
+                            testID={`warehouse-printers-link-${row.id}`}
+                          >
+                            {probing ? t.printers.link.probing : t.printers.link[durum]}
+                          </Text>
+                        </View>
+                        <Text style={styles.mark}>{secili ? (tek ? t.printers.only : '✓') : ''}</Text>
+                      </PressableSurface>
+                      {/* TEST AYRI BİR DÜĞME, satırın kendisi DEĞİL: satıra dokunmak SEÇER ve
+                          seçim ile basım aynı dokunuşa binseydi depocu yazıcıyı değiştirmek
+                          isterken kâğıt harcardı. */}
+                      <PressableSurface
+                        onPress={() => void testPrint(row)}
+                        disabled={testing !== null}
+                        feedback="scale"
+                        compact
+                        style={styles.testButton}
+                        accessibilityLabel={t.printers.test.cta}
+                        testID={`warehouse-printers-test-${row.id}`}
+                      >
+                        <Text style={styles.testLabel}>
+                          {testing === row.id ? t.printers.test.sending : t.printers.test.cta}
                         </Text>
-                      </View>
-                      <Text style={styles.mark}>{secili ? (tek ? t.printers.only : '✓') : ''}</Text>
-                    </PressableSurface>
+                      </PressableSurface>
+                    </View>
                   );
                 })
               )}
@@ -141,6 +252,16 @@ export function PrinterSetupScreen() {
             </View>
           );
         })}
+
+        {notice === null ? null : (
+          <Text
+            style={[styles.notice, notice.tone === 'ok' ? styles.noticeOk : styles.noticeError]}
+            accessibilityRole="alert"
+            testID="warehouse-printers-notice"
+          >
+            {notice.text}
+          </Text>
+        )}
 
         <Text style={styles.footnote}>{t.printers.footnote}</Text>
       </ScrollView>
@@ -187,6 +308,37 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors['olive-line'],
     backgroundColor: operationsTheme.colors.card,
   },
+  /** Satır + test düğmesi tek blok: düğme satırın ALTINDA, çünkü ikisi ayrı fiil (seç / bas). */
+  rowWrap: { gap: operationsTheme.space['2xs'] },
+  testButton: {
+    alignSelf: 'flex-end',
+    paddingVertical: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space.lg,
+    borderRadius: operationsTheme.radius.badge,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+  },
+  testLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  /** Bağlantı durumu — üç hâl üç renk; "ölçemedim" nötr (uyarı da değil, olumlu da). */
+  link: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+  },
+  link_online: { color: operationsTheme.colors['olive-dark'] },
+  link_offline: { color: operationsTheme.colors.terracotta },
+  link_unknown: { color: operationsTheme.colors.muted },
+  notice: {
+    marginTop: operationsTheme.space.lg,
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.note,
+    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
+  },
+  noticeOk: { color: operationsTheme.colors['olive-dark'] },
+  noticeError: { color: operationsTheme.colors.terracotta },
   rowBody: { flex: 1, gap: operationsTheme.space['2xs'] },
   rowTitle: {
     fontFamily: operationsTheme.font.body[600],

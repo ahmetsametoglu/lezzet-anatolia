@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react-native';
 
 import { money } from '@/lib/operations/money';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
-import type { ManagementHub } from '@lezzet/types';
+import type { ManagementHub, StaffWarehouse } from '@lezzet/types';
 import { DaySummaryScreen } from './day-summary-screen';
 import { managementCopy } from './copy';
 
@@ -13,7 +13,8 @@ import { managementCopy } from './copy';
   · Koyu kart günün cevabını TEK yerde verir: ciro + sipariş sayısı + kanal kırılımı.
   · Kutucuk ızgarasının "aday parti" sayısı zarfın KARAR KUTUSU tarafından gelir — ekran ikinci bir
     uç istemez, iki katman aynı okumadan beslenir (hub ile özet aynı sayıyı söyler).
-  · Künye satırı GÜNÜN adıdır; depo adı sözleşmede olmadığı için yazılmaz (uydurulmaz).
+  · Künye satırı GÜNÜN adıdır; tesisin adı ancak personelin kapsamı onu çözüyorsa eklenir (30.08)
+    — çözmüyorsa künye kuyruksuz kalır ve uydurma bir tesis adı yazılmaz.
 */
 
 jest.mock('expo-router', () => {
@@ -73,13 +74,23 @@ function hubData(): ManagementHub {
   };
 }
 
-async function renderSummary() {
+/**
+ * Kapsam varsayılan olarak BOŞ: yönetim okumaları depo boyutu taşımaz ve yöneticinin kapsamı
+ * çoğunlukla boştur (`seed/people.ts` → `yonetici`). Tesis adını ölçen test kendi tesisini verir.
+ */
+async function renderSummary(warehouse: StaffWarehouse | null = null) {
   fetchMock.mockImplementation((url) =>
     Promise.resolve(String(url).includes('/management/hub') ? ok(hubData()) : fail('not_in_this_test')),
   );
   await render(
     <OperationsSessionProvider
-      value={{ sections: ['management'], userName: 'Selim A.', userEmail: 'selim@lezzetanatolia.fr' }}
+      value={{
+        sections: ['management'],
+        userName: 'Selim A.',
+        userEmail: 'selim@lezzetanatolia.fr',
+        warehouses: warehouse === null ? [] : [warehouse],
+        resolvedWarehouseId: warehouse?.id ?? null,
+      }}
     >
       <DaySummaryScreen />
     </OperationsSessionProvider>,
@@ -123,9 +134,15 @@ describe('gün özeti · v3 yerleşimi', () => {
     expect(offers.getByText(t.summary.tiles.offerCandidates)).toBeOnTheScreen();
   });
 
-  it('künye GÜNÜN adını yazar — depo adı sözleşmede yok, uydurulmaz', async () => {
+  it('künye GÜNÜN adını yazar; tesis adı yoksa KUYRUKSUZ kalır (uydurulmaz)', async () => {
     await renderSummary();
 
     expect(within(screen.getByTestId('management-day-summary-header')).getByText('26 Ağustos')).toBeOnTheScreen();
+  });
+
+  it('kapsam tek tesisi çözüyorsa künye "gün · tesis" olur (v3:29)', async () => {
+    await renderSummary({ id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' });
+
+    expect(screen.getByTestId('management-day-summary-header')).toHaveTextContent(/26 Ağustos · Strasbourg Merkez/);
   });
 });

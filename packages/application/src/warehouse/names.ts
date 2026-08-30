@@ -1,6 +1,6 @@
 import { ProductService, ProductVariantService } from '@lezzet/database';
 import { publicImageUrl } from '@lezzet/storage';
-import { resolveLocalizedText } from '@lezzet/types';
+import { resolveLocalizedText, type ProductDateType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -26,6 +26,32 @@ interface VariantName {
   productName: string;
   /** "500 g" gibi boy etiketi; tek boylu üründe boş dize. */
   variantLabel: string;
+  /**
+   * Varyantın kendi kodu (`product_variant.sku`); girilmemişse `null`.
+   *
+   * Buraya EKLENDİ çünkü iki kapı aynı kodu ayrı yollardan çözüyordu: plansız kabulün araması
+   * (`variant-search`) varyantı ikinci kez `listByIds` ile okuyup SKU'yu alıyor, okutma kapısı
+   * (`scan`) hiç okumadığı için satırında kod göstermiyordu. Bu okuma varyant satırını ZATEN
+   * elinde tutuyor — kodu buradan vermek hem ikinci turu hem de "SKU nereden gelir" sorusunun
+   * ikinci cevabını kaldırıyor (`CLAUDE §1`).
+   */
+  sku: string | null;
+  /**
+   * Ürünün TARİH REJİMİ (`product.date_type`) — `DLC` güvenlik, `DDM` kalite tarihi (DOMAIN §4).
+   * Mal kabul ekranı "SKT ZORUNLU · DLC" derken bunu okuyor: SKT'nin zorunluluğu her satırda aynı,
+   * hangi TÜR tarih yazılacağı ürüne göre değişir ve depocu kutunun üstünde onu arıyor.
+   */
+  dateType: ProductDateType;
+  /**
+   * Ürünün toplam raf ömrü (gün); girilmemişse `null` → kalan ömür HESAPLANAMAZ (motorun kararı,
+   * `remainingShelfLifePercent`).
+   *
+   * Bu iki alan buraya 30.08'de geldi ve ikinci bir okumayı KAPATTI: `intake.ts` aynı zinciri
+   * (varyant → ürün) `dateRulesOf` adıyla ikinci kez kuruyordu. Bu okuma ürün satırını ZATEN
+   * elinde tutuyor — sorular ("ne yazacağım" / "hangi tarih, kaç gün") ayrı olsa da CEVABIN
+   * KAYNAĞI tek, ve iki kopya bir gün ayrışacak iki kopyadır (`CLAUDE §1`).
+   */
+  shelfLifeDays: number | null;
   /** Ürün kapağının public URL'i — okutma çekmecesinin görseli; kapaksız üründe null. */
   imageUrl: string | null;
 }
@@ -52,6 +78,12 @@ export async function variantNames(
         {
           productName: resolveLocalizedText(product?.name ?? {}, 'tr'),
           variantLabel: resolveLocalizedText(variant.label, 'tr'),
+          sku: variant.sku ?? null,
+          // Ürünü okunamayan varyantta `DDM`: kolon veride `not null` ve varsayılanı bu — uydurulmuş
+          // bir değer değil, satır okunamadığında şemanın söylediği şey. `DLC` demek daha "güvenli"
+          // görünürdü ama depocuya kutuda olmayan bir tarihi arattırırdı.
+          dateType: product?.dateType ?? 'DDM',
+          shelfLifeDays: product?.shelfLifeDays ?? null,
           imageUrl: publicImageUrl(product?.imageKey, product?.imageUpdatedAt),
         },
       ];

@@ -15,8 +15,11 @@
     "scope": {
       "title": "Hangi depoda çalıştığın belli değil",
       "body": "Depo işleri “benim depom” bağlamında yürür — sistem hangisi olduğunu bilmeden toplama, kabul ya da sayım açamaz. Yönetici seni bir depoya atadığında bu bölüm kendiliğinden açılır.",
+      "pickTitle": "Bugün hangi depodasın?",
+      "pickBody": "Birden fazla depoda çalışıyorsun; depo işleri “benim depom” bağlamında yürüdüğü için hangisinde olduğunu söylemen gerekiyor.",
+      "pickAction": "{name} deposunda çalış",
       "otherSection": "{section} bölümüne geç →",
-      "footnote": "Depo seçtirme bilinçli olarak yoktur — yanlış depoya yazılan sayım iki deponun stokunu birden bozar."
+      "footnote": "Depo kendiliğinden SEÇİLMEZ — yanlış depoya yazılan sayım iki deponun stokunu birden bozar. Seçimin yalnız bu cihazda saklanır; hesap menüsünden değiştirebilirsin."
     }
   },
   "hub": {
@@ -289,6 +292,12 @@
       "body": "Yönetim tedarik siparişi gönderdiğinde burada görünür ve bildirim gelir. Siparişsiz mal geldiyse plansız kabulü kullan."
     },
     "pendingHeading": "BEKLEYEN SEVKİYATLAR",
+    "pendingMeta": "{supplier} · {status}",
+    "pendingStatus": {
+      "sent": "gönderildi",
+      "partially_received": "kısmen teslim alındı"
+    },
+    "pendingSktTag": "SKT gerekli",
     "pendingLines": "{n} kalem",
     "pendingSummary": "{n} bekleyen sevkiyat · {lines} kalem",
     "pendingSummaryOne": "1 bekleyen sevkiyat · {lines} kalem",
@@ -310,8 +319,13 @@
       "body": "Sipariş ya kapanmış ya da satırları başka bir kabulde yazılmış."
     },
     "expected": "beklenen {qty}",
+    "expectedWithCode": "beklenen {qty} · {code}",
+    "dateTag": "SKT ZORUNLU · {type}",
+    "lifeInline": "Kalan ömür %{pct} — uyarı, engel değil",
+    "lifeInlineHint": "Ömrünün %{mlor}'inden azı kalmış parti işaretlenir; kabul edip etmemek operatörün kararı.",
     "expectedDone": "bu kalem tamamlandı — beklenen kalmadı",
     "expectedNone": "beklenen yok — ne geldiyse o yazılır",
+    "expectedNoneWithSku": "SKU {sku} · beklenen yok — ne geldiyse o yazılır",
     "unplannedTitle": "Siparişsiz Mal",
     "unplannedLocked": {
       "title": "Satır ekleme kapalı",
@@ -412,6 +426,20 @@
       "body": "Düzeltme her zaman bir partiye yazılır. Yakın-SKT turundan parti seçerek gelin — depo partilerini listeleyen bir okuma kapısı henüz yok."
     },
     "toNearExpiry": "Yakın-SKT turuna git →",
+    "scan": {
+      "cta": "📷 Parti etiketini okut",
+      "title": "Parti etiketini okut",
+      "hint": "Kutunun üstündeki lot numarasını çerçeveye getirin — bu deponun açık partileri listelenir.",
+      "unknown": "{code} ile bu depoda açık parti yok — kod başka deponun olabilir ya da parti tükenmiş olabilir.",
+      "error": "Parti çözülemedi — bağlantıyı kontrol edip yeniden okutun.",
+      "pickTitle": "Hangi parti?",
+      "pickBody": "{code} ile {n} parti eşleşti — lot numarası benzersiz değildir. Düzeltilecek olanı seçin.",
+      "pickRow": "{qty} adet · SKT {date}",
+      "pickArea": "{area}",
+      "pickNoArea": "rafı belirsiz",
+      "pickLife": "kalan ömür %{pct}",
+      "pickLifeUnknown": "kalan ömür bilinmiyor"
+    },
     "locked": {
       "title": "Düzeltme kaydı kapalı",
       "body": "Olay referansı sunucuda doğar — bağlantısız yazılan düzeltme kâğıt tutanakla eşleşemez."
@@ -481,6 +509,18 @@
     },
     "queueOpen": "kabule başla →",
     "queueMore": "+{n} kalem daha",
+    "outboundHeading": "YOLDA",
+    "outboundMeta": "{n} kalem yolda · tahmini {date}",
+    "outboundNote": "Bu depodan çıktı, henüz kabul edilmedi. Burada yapılacak bir iş yok — kabul hedef deponun.",
+    "closedHeading": "SON KAPANANLAR",
+    "closedMeta": "{direction} · {n} kalem · {date}",
+    "closedFull": "tam kabul",
+    "closedShort": "{n} eksik",
+    "closedCancelled": "geri alındı — mal hiç çıkmadı",
+    "direction": {
+      "in": "gelen",
+      "out": "giden"
+    },
     "queueFootnote": "Transfer kabulü mal kabulle aynı akıştır: SKT ve lot yeniden yazılmaz, gönderen partiler taşınır.",
     "rule": "Transferde SKT ve lot yeniden yazılmaz — gönderen depodaki partiler taşınır. Yalnız gelen adedi say.",
     "zero": "0 · hiç gelmedi",
@@ -579,6 +619,18 @@
     },
     "none": "Tanımlı değil — etiket alınsa da basılamaz. Yazıcı Depolar ekranından tanımlanır.",
     "detail": "{model} · {address} · {size}",
+    "link": {
+      "online": "bağlı · Wi-Fi",
+      "offline": "ağda görünmüyor",
+      "unknown": "bağlantı ölçülemedi",
+      "probing": "ağ taranıyor…"
+    },
+    "test": {
+      "cta": "test bas",
+      "sending": "basılıyor…",
+      "ok": "Örnek etiket {name} yazıcısına gönderildi — kâğıt çıktıysa kurulum tamam.",
+      "failed": "Basılamadı: {error}"
+    },
     "only": "tek",
     "footnote": "Seçim BU CİHAZDA kalır, sunucuya gitmez: aynı depodaki başka telefon başka yazıcıya basabilir. Bir iş için tek yazıcı varsa seçim sorulmaz."
   }

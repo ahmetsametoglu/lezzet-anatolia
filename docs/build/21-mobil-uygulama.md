@@ -7707,3 +7707,54 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** 8 birim testi; `__DEV__` kapısı kaldırılınca ilgili test kırmızıya döndü.
   `src/lib` jest paketi **119/119**, lint + typecheck temiz. Cihazda doğrulandı: ürünler geliyor.
+- [x] (21.159) **PARA TUŞ TAKIMI + KUTU KAPISININ KİLİDİ** (v3 · `00-ortak`, 17, 18)
+  `touches:` `apps/mobile/src/components/operations/{amount-keypad.tsx,keypad-value.ts}` ·
+  `apps/mobile/src/screens/courier/{delivery-screen.tsx,day-close-screen.tsx}` · `scripts/design-shot.mjs`
+
+  **Durum (30.08).** Kullanıcı cihazda ekranların tasarımdan farklı olduğunu söyledi. Sebep ölçüldü
+  ve YÖNTEMDİ: tasarım HTML'i DÜZ METNE indirgenip cümleler eşleştiriliyordu, o ayıklama da tam
+  ihtiyacımız olanı atıyordu — hangi alanın neye dokunduğunu. Gün sonu ekranının kasa alanlarında
+  `onClick="{{ kpOpen.nakit }}"` yazıyordu; metin eşleşti, dokunuş görülmedi.
+
+  **TUŞ TAKIMI** (`OperationsAmountKeypad`): tutar cihaz klavyesiyle yazılmaz. Tasarımın kendi
+  cümlesi: *"Cihaz klavyesi açılmaz — eldivenle de basılabilecek büyük tuşlar."* Kapıda telefon
+  eldivenle tutuluyor ve sistem klavyesi ekranın yarısını kaplayıp "beklenen"i görüş alanından
+  çıkarıyordu. "Beklenen" bir etiket değil, dokunulunca alana geçen bir TUŞ. Saf kural ayrı dosyada
+  ve testli (`keypad-value.ts`): ilk rakam mevcut tutarı EZER, ikinci virgül yok, kuruş iki hane.
+
+  **KİLİT KODA GERİ KONDU:** tasarım kanıt ve tahsilat adımlarını kutular okutulana kadar kilitliyor.
+  Kodu ölçüp kilidin yalnız teslim düğmesinde olduğunu görmüş ve CÜMLEYİ KODA UYDURMUŞTUM — tersi
+  doğruydu. Kilitli bölüm gizlenmiyor, SOLUYOR: gizlemek "bu durakta kanıt istenmiyor" dedirtirdi.
+
+  **`scripts/design-shot.mjs`:** tasarım ekranlarını Playwright ile resme çevirir. Karşılaştırma
+  artık hafızada değil, iki resim arasında.
+
+  **Doğrulama.** Kurye jest 89/89, tuş takımının saf kuralı 12/12; cihazda gözle doğrulandı.
+
+- [~] (21.160) **DEPO MODÜLÜ v3 DENETİMİ — tek elden, ekran ekran** (kullanıcı kararı 30.08)
+  `touches:` `apps/mobile/src/screens/warehouse/*` · `apps/mobile/src/lib/operations/sections.ts` ·
+  `apps/mobile/src/components/ui/form-scroll.tsx` · `apps/mobile/src/theme/metrics.ts`
+
+  **Durum (30.08).** Kullanıcı cihazda birçok ekranın tasarımdan farklı olduğunu söyledi; ölçtüm,
+  haklıydı. Yöntem değişti: tasarım artık düz metne indirgenmiyor, **resme** çevriliyor
+  (`scripts/design-shot.mjs`) ve cihaz görüntüsüyle YAN YANA okunuyor. Ajanlar durduruldu — bir
+  bölüm bitene kadar tek elden çalışılıyor.
+
+  **Kapatılanlar:** sekme sırası tasarıma çekildi (Depo başta) · hub kutucukları **eşit boyda**
+  (`minHeight` → sabit `height`, alt metin iki satıra kırpılıyor; kullanıcı iki kez söyledi) ·
+  yakın-SKT satırları **karta** döndü ve kararın tonunu taşıyor (imhalık kırmızı zeminli, kararsız
+  kesikli) · mal kabul listesinde ikon kare zeminine, "SKT gerekli" terracottaya, plansız kabul
+  satırı zeytin kesikliye geçti · **aşağı çekince yenile** hub'a ve bekleyen sevkiyat listesine
+  bağlandı.
+
+  **Yenileme FORMDA YOK ve olmamalı:** kabul formu bir kez okunuyor; tazeleme depocunun yazdığı
+  adetleri sessizce silerdi. Çekme kendi bayrağını kullanıyor (`reloading`), `status` DEĞİL — o
+  listeyi söküp yükleme hâline geçirirdi.
+
+  **Ajanların yarım bıraktığı 36 test kapatıldı:** sözleşmeye eklenen alanlar (`mlorPercent`,
+  `status`, `sku`, `dateType`, `shelfLifeDays`) fikstürlere işlendi ve testin yerel tip kopyası
+  **şemadan türetildi** — kopya bayatlayınca jest geçiyor, `tsc` kırılıyordu.
+
+  **Sırada:** 05 mal kabul formu (satır kartı: kapalı/açık, "say →", adet · SKT · lot sayfaları,
+  kalan ömür bloğu, hasar bloğu, fark özeti) ve 06 siparişsiz kabul.
+

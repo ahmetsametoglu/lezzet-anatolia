@@ -27,6 +27,20 @@ const mockFetchMe = jest.fn();
 jest.mock('@/lib/api/me', () => ({ fetchMe: () => mockFetchMe() }));
 
 /**
+ * Depo kapsamı ucu (30.08) — kapının İKİNCİ okuması. Taklit edilen yine yalnız TEL: hangi cevabın
+ * neye çevrildiği (liste, çözüm, seçim doğrulaması) gerçek kodda koşuyor.
+ */
+const mockFetchStaffScope = jest.fn();
+jest.mock('@/lib/api/operations', () => ({ fetchStaffScope: () => mockFetchStaffScope() }));
+
+/** Cihaz deposu (SecureStore) bu testin konusu değil; seçim doğrulaması kendi dosyasında ölçülüyor. */
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: () => Promise.resolve(null),
+  setItemAsync: () => Promise.resolve(),
+  deleteItemAsync: () => Promise.resolve(),
+}));
+
+/**
  * Oturum dinleyicisi — `onAuthStateChange`in geri çağrısı burada tutuluyor ki test onu ELLE
  * tetikleyebilsin. Gerçek Supabase istemcisi `EXPO_PUBLIC_SUPABASE_*` ister ve testin konusu
  * oturum tesisatı değil, KAPI (kabuk testinin aynı gerekçesi).
@@ -57,8 +71,20 @@ const ok = (roles: Parameters<typeof meFixture>[0], overrides = {}) => ({
 /** Uçtan gelen ret/arıza. `status: null` = istek hiç atılamadı (ağ yok) — 0 DEĞİL (CLAUDE §1). */
 const fail = (status: number | null, error = 'hata') => ({ data: null, error, status, retryAfterSec: null });
 
+/** Kapsam cevabı — varsayılan olarak TEK tesis (depocunun günlük hâli). */
+const STR = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' as const };
+const KEHL = { id: 'w-kehl', code: 'KEHL', name: 'Kehl Depo', kind: 'facility' as const };
+const scopeOk = (warehouses = [STR], resolvedId: string | null = STR.id) => ({
+  data: { warehouses, resolvedId },
+  error: null,
+  status: 200,
+  retryAfterSec: null,
+});
+
 beforeEach(() => {
   mockFetchMe.mockReset();
+  mockFetchStaffScope.mockReset();
+  mockFetchStaffScope.mockResolvedValue(scopeOk());
   mockUnsubscribe.mockClear();
   authListener = null;
 });
@@ -95,6 +121,45 @@ describe('operasyon kapısı', () => {
     if (result.current.status !== 'granted') throw new Error('kapı açılmadı');
     expect(result.current.userName).toBe('Musa K.');
     expect(result.current.userEmail).toBe('musa@ornek.test');
+  });
+
+  /*
+    DEPO KAPSAMI DA KAPIDAN GELİR (30.08) — beş üstbaşlık ve kapsam seçicisi aynı okumadan
+    besleniyor. Ekran başına okunsaydı beş uçuş ve ayrışabilen beş cevap olurdu.
+  */
+  it('KAPSAM kapıdan gelir — liste ve kapının çözdüğü depo birlikte taşınır', async () => {
+    mockFetchMe.mockResolvedValue(ok(['warehouse']));
+    mockFetchStaffScope.mockResolvedValue(scopeOk([STR, KEHL], null));
+
+    const result = await openGate();
+
+    if (result.current.status !== 'granted') throw new Error('kapı açılmadı');
+    expect(result.current.warehouses).toEqual([STR, KEHL]);
+    // `null` = kapsam tek bir tesis değil; ekran SEÇTİRİR (kural sunucuda, burada taşınıyor).
+    expect(result.current.resolvedWarehouseId).toBeNull();
+  });
+
+  it('KAPSAM OKUNAMAZSA kapı yine AÇILIR — yetki kararı `/me`nindir', async () => {
+    /* Bu ayrım maliyetli ama zorunlu: bir ad okunamadı diye depocuyu vitrine düşürmek, `error`
+       dalının bütün gerekçesine ters olurdu. Eksik olan yalnız üstbaşlığın kuyruğu ve seçici. */
+    mockFetchMe.mockResolvedValue(ok(['warehouse']));
+    mockFetchStaffScope.mockResolvedValue(fail(500, 'server_error'));
+
+    const result = await openGate();
+
+    expect(result.current.status).toBe('granted');
+    if (result.current.status !== 'granted') throw new Error('kapı açılmadı');
+    expect(result.current.warehouses).toEqual([]);
+    expect(result.current.resolvedWarehouseId).toBeNull();
+  });
+
+  it('kapsam ucu MÜŞTERİ için hiç ÇAĞRILMAZ — kapıyı geçmeyene boşa istek atılmaz', async () => {
+    mockFetchMe.mockResolvedValue(ok(['customer']));
+
+    const result = await openGate();
+
+    expect(result.current.status).toBe('denied');
+    expect(mockFetchStaffScope).not.toHaveBeenCalled();
   });
 
   it('OTURUM YOKSA (401) reddedilir — bu KESİN bir cevaptır, arıza değil', async () => {

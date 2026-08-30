@@ -88,6 +88,14 @@ export function intakeRow(overrides: Partial<IntakeFormRowContract> = {}): Intak
     productName: 'Antep Fıstığı',
     variantLabel: '5 kg',
     expectedQty: 10,
+    // Tedarikçi kodu DOLU, SKU boş: fikstürün varsayılanı PO'lu satırdır ve orada satırı tanıtan
+    // kod tedarikçinindir. Plansız satırı sınayan test tersini `overrides` ile verir.
+    supplierCode: 'GAZ-7120',
+    sku: null,
+    // Uzun ömürlü bir DDM ürünü: varsayılan satır ömür uyarısı ÜRETMEMELİ — uyarıyı sınayan test
+    // kısa ömrü ve yakın tarihi kendisi verir, öteki testler gürültüsüz kalır.
+    dateType: 'DDM',
+    shelfLifeDays: 360,
     ...overrides,
   };
 }

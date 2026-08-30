@@ -1,5 +1,9 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import type { StaffWarehouse } from '@lezzet/types';
+
+import { OperationsSessionProvider } from '@/screens/operations/sections-context';
+
 import { TransferScreen } from './transfer-screen';
 import { inboundTransfer, STOCK_A } from './warehouse-fixture';
 import { resetWarehouseStatus } from './warehouse-status';
@@ -45,17 +49,42 @@ function lastPostBody(): { lines: { lineId: string; receivedQty: number }[] } {
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
 }
 
-function withTransfers(transfers: unknown[], receive?: unknown) {
+/*
+  UÇ ÜÇ LİSTE DÖNDÜRÜYOR (v3:11 · 30.08): GELEN · YOLDA (bu depodan çıkmış) · SON KAPANANLAR.
+  Fikstür üçünü de taşımalı — eksik alan, ekranın "yolda hiçbir şey yok" demesine değil, cevabı
+  hiç ayrıştıramamasına yol açar.
+*/
+function withTransfers(transfers: unknown[], receive?: unknown, extra: { outbound?: unknown[]; closed?: unknown[] } = {}) {
   fetchMock.mockImplementation((_url, init) => {
     if (init?.method === 'POST') {
       return Promise.resolve(ok(receive ?? { status: 'ok', transferId: TRANSFER.transferId, createdBatches: 2 }));
     }
-    return Promise.resolve(ok({ transfers }));
+    return Promise.resolve(ok({ transfers, outbound: extra.outbound ?? [], closed: extra.closed ?? [] }));
   });
 }
 
-async function renderTransfer() {
-  await render(<TransferScreen />);
+/** Kabul eden tesis — künyenin sağ yarısı ("… · Strasbourg Merkez"). */
+const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' };
+
+/**
+ * Ekran artık oturum künyesini okuyor (üstbaşlığın tesis kuyruğu), yani kabuk SAĞLAYICISI olmadan
+ * çizilemez: sağlayıcısız çağrı sessizce boş değer DÖNMEZ, fırlatır (`sections-context` künyesi —
+ * kapıyı geçmemiş bir ekranı yetkili gibi göstermemek).
+ */
+async function renderTransfer(warehouse: StaffWarehouse | null = STR) {
+  await render(
+    <OperationsSessionProvider
+      value={{
+        sections: ['warehouse'],
+        userName: 'Deniz Arslan',
+        userEmail: 'depo@lezzetanatolia.fr',
+        warehouses: warehouse === null ? [] : [warehouse],
+        resolvedWarehouseId: warehouse?.id ?? null,
+      }}
+    >
+      <TransferScreen />
+    </OperationsSessionProvider>,
+  );
   await waitFor(() => expect(screen.queryByTestId('warehouse-transfer-loading')).toBeNull());
 }
 

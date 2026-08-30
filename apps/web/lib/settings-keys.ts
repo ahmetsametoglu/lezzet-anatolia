@@ -46,5 +46,11 @@ export {
 export const POINTS_REDEEM_MIN_KEY = 'points_redeem_min';
 export const POINTS_CENT_VALUE_KEY = 'points_cent_value';
 
-/** Depolar arası ulaşım süresi (gün) — sevk önerisinin ömür uyarısı ve "gecikmiş" rozeti bunu okur (19.6). */
-export const TRANSFER_TRANSIT_DAYS_KEY = 'transfer_transit_days';
+/**
+ * Depolar arası ulaşım süresi (gün) — sevk önerisinin ömür uyarısı ve "gecikmiş" rozeti bunu okur (19.6).
+ *
+ * Tanım 30.08'de `@lezzet/application`a TAŞINDI ve burası köprü (üstteki sepet anahtarlarının
+ * aynı deseni): mobil uç `apps/web`ten okuyamıyor ve aynı satırı okuması ŞART — iki nüsha,
+ * operatör süreyi değiştirdiği gün web'in rozetiyle telefonun tahmini varışını ayrıştırırdı.
+ */
+export { TRANSFER_TRANSIT_DAYS_DEFAULT, TRANSFER_TRANSIT_DAYS_KEY } from '@lezzet/application/warehouse/settings-keys';

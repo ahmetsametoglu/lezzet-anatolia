@@ -1,6 +1,9 @@
 import { createContext, useContext } from 'react';
 
+import type { StaffWarehouse } from '@lezzet/types';
+
 import type { OperationsSection } from '@/lib/operations/sections';
+import { useChosenWarehouse } from '@/lib/operations/warehouse-choice';
 
 /*
   Kullanıcının OTURUM KÜNYESİ, kabuğun ALTINDAKİ her ekrana. `/me` YALNIZ BİR KEZ okunur (kapı
@@ -39,6 +42,29 @@ interface OperationsSession {
    * boşluk gibi göstermek, CLAUDE §1'in yasakladığı şeyin ta kendisi. Menü o satırı hiç çizmez.
    */
   userEmail: string | null;
+  /**
+   * **Personelin çalışabileceği tesisler** (30.08) — kapsam seçicisinin ve üstbaşlık kuyruğunun
+   * ("DEPO · STRASBOURG MERKEZ") ortak kaynağı.
+   *
+   * Kapsam `/me`den DEĞİL kendi ucundan gelir (`/operations/scope`; `/me` operasyon alanı taşımaz
+   * — `me-api.schema.ts` künyesi) ama yine BU bağlamda durur, üçüncü bir sağlayıcıda değil:
+   * 21.10'un kararı aynen geçerli — *bağlamın DEĞERİ genişletilir, sayısı değil.* Beş ekran aynı
+   * adı istiyor; her biri kendi okumasını yapsaydı beş uçuş ve ayrışabilen beş cevap olurdu.
+   *
+   * Boş dizi = kapsam okunamadı ya da personelin seçebileceği tesis yok. İkisi de aynı sonucu
+   * doğurur (seçici çizilmez, kuyruk yazılmaz) ve ayrımı ekranda gösterilecek bir şey değil.
+   */
+  warehouses: StaffWarehouse[];
+  /**
+   * **Kapsamın TEK BAŞINA çözdüğü depo** — kuralı sunucudaki depo kapısı veriyor
+   * (`warehouseGuard`: *"kapsamda tek depo varsa o, değilse söylenmeli"*), istemci onu yeniden
+   * hesaplamaz. `null` = seçim gerekiyor.
+   *
+   * İstemcide "listede bir tane varsa odur" diye yazılsaydı kural iki yerde yaşardı ve ayrıştığı
+   * gün üstbaşlıkta yazan ad, uçların gerçekte okuduğu depo OLMAYABİLİRDİ — bir depocuya yanlış
+   * tesisin adını göstermek, ekranın güvenilirliğini kökten kaybetmesidir.
+   */
+  resolvedWarehouseId: string | null;
 }
 
 /** `null` = sağlayıcı yok; kapı geçilmeden bu bağlam okunmamalı. */
@@ -67,6 +93,43 @@ export function useOperationsSections(): OperationsSection[] {
 /** Personelin görünen adı — kurye üstbaşlığının kuyruğu (v2:38). */
 export function useOperationsUserName(): string {
   return useOperationsSession().userName;
+}
+
+/**
+ * **Personelin BU AN çalıştığı tesis** — kapsamın çözdüğü depo ya da personelin seçtiği depo.
+ *
+ * Sıra bilinçli: **seçim önce.** Kapsam tek bir tesisse zaten seçim yoktur (`chosen === null`) ve
+ * çözüm okunur; kapsam çoksa çözüm `null`dır ve seçim okunur. İkisinin aynı anda dolu olduğu tek
+ * hâl, seçim yaptıktan sonra kapsamı tek tesise düşürülen personeldir — orada da doğru cevap
+ * KAPININ çözdüğü depodur; ama o hâlde seçim `loadWarehouseChoice` tarafından zaten düşürülmüş
+ * olur (kapsamda değilse silinir), yani sıra pratikte çakışmaz.
+ *
+ * Dönen değer bir KİMLİK değil AD: çağıranların tamamı üstbaşlık kuyruğu yazıyor. `null` = tesis
+ * belli değil (seçim yok ve kapsam çözmüyor) ya da kapsam okunamadı → **kuyruk hiç yazılmaz**,
+ * uydurma bir ad yazılmaz (CLAUDE §1).
+ *
+ * `useOperationsIdentity`e KATILMADI ve bu bilinçli: kimlik "kim olduğun"u taşır (ad · e-posta ·
+ * açılabilen bölümler) ve kimlik menüsünün künyesidir; tesis "nerede çalıştığın"dır ve menüde
+ * değil BAŞLIKTA yazar.
+ */
+export function useOperationsWorkplace(): string | null {
+  const { warehouses, resolvedWarehouseId } = useOperationsSession();
+  const chosen = useChosenWarehouse();
+  const activeId = chosen ?? resolvedWarehouseId;
+  return warehouses.find((warehouse) => warehouse.id === activeId)?.name ?? null;
+}
+
+/**
+ * **Kapsam seçicisinin verisi** — hangi tesisler seçilebilir, hangisi seçili.
+ *
+ * ARAÇLAR SÜZÜLÜR: kuryenin kapsamında panelvanı da vardır (`seed/people.ts`) ve araç bir DEPO
+ * seçicisinde seçenek olamaz — araçtan satış yapılır, ama "bugün hangi depodayım" sorusunun
+ * cevabı bir araç değildir. Süzgeç burada, sunucuda değil: uç ayrımı `kind` ile bildiriyor ve
+ * aracını isteyen başka bir yüzey (yerinde satış) aynı listeyi okuyabilsin diye küme kırpılmıyor
+ * (`operations-api.schema.ts` künyesi).
+ */
+export function useWarehouseOptions(): StaffWarehouse[] {
+  return useOperationsSession().warehouses.filter((warehouse) => warehouse.kind === 'facility');
 }
 
 /**

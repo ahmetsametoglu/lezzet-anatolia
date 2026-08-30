@@ -1,3 +1,5 @@
+import type { z } from 'zod';
+import type { ResolveCodeResponseSchema } from '@lezzet/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { IntakeScreen } from './intake-screen';
@@ -41,15 +43,20 @@ const ROW_A = intakeRow();
 const ROW_B = intakeRow({ variantId: '00000000-0000-4000-8000-000000000042', productName: 'Mısır Unu', variantLabel: '25 kg', expectedQty: 4 });
 const YABANCI_VARYANT = '00000000-0000-4000-8000-000000000077';
 
+/* MLOR eşiği YANITIN alanıdır (ayardan gelir, satırın değil) — fikstür onu taşımazsa cevap
+   ayrıştırılamaz ve ekran "sevkiyatlar yüklenemedi" der. Değer ayarın varsayılanı. */
+const MLOR = 75;
+
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 function ok(data: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data, error: null }) } as unknown as Response;
 }
 
-type Resolved =
-  | { status: 'found'; variantId: string; productName: string; variantLabel: string; kind: 'unit' | 'case'; qtyPerCode: number; source: 'barcode' | 'sku' | 'supplier_code'; imageUrl: string | null }
-  | { status: 'unknown' };
+/* TİP SÖZLEŞMEDEN TÜRER, elle yazılmaz (CLAUDE §1). Burada bir kopyası duruyordu ve şema
+   büyüyünce (sku · dateType · shelfLifeDays) sessizce bayatladı: jest geçti, `tsc` kırıldı —
+   yani fikstür gerçek cevabın şeklini kaybetmişti. */
+type Resolved = z.infer<typeof ResolveCodeResponseSchema>;
 
 /** Ağın senaryosu: form satırları + çözüm cevabı + (öğretme cevabı). URL'e göre dallanır. */
 function withScan(resolved: Resolved, learn?: unknown) {
@@ -58,7 +65,7 @@ function withScan(resolved: Resolved, learn?: unknown) {
     if (path.includes('/codes/resolve')) return Promise.resolve(ok(resolved));
     if (path.endsWith('/codes')) return Promise.resolve(ok(learn ?? { status: 'ok' }));
     if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
-    return Promise.resolve(ok({ purchaseOrder: null, rows: [ROW_A, ROW_B] }));
+    return Promise.resolve(ok({ purchaseOrder: null, rows: [ROW_A, ROW_B], mlorPercent: MLOR }));
   });
 }
 
@@ -92,7 +99,7 @@ beforeEach(() => {
 
 describe('D2 · tarama akışı', () => {
   it('koli kodu ÇEKMECE açar (varsayılan çarpan), onayla yazılır; ikinci okuma TOPLANIR', async () => {
-    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', imageUrl: null });
+    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
     await renderIntake();
 
     await scanOnce();
@@ -113,7 +120,7 @@ describe('D2 · tarama akışı', () => {
   });
 
   it('SKU eşleşmesi kaynağını SÖYLER — barkod kadar kesin değil, cümle bunu taşır', async () => {
-    withScan({ status: 'found', variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel, kind: 'unit', qtyPerCode: 1, source: 'sku', imageUrl: null });
+    withScan({ status: 'found', variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel, kind: 'unit', qtyPerCode: 1, source: 'sku', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
     await renderIntake();
 
     await scanOnce();
@@ -125,7 +132,7 @@ describe('D2 · tarama akışı', () => {
   });
 
   it('çekmeceden VAZGEÇİLİRSE hiçbir satıra yazılmaz', async () => {
-    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', imageUrl: null });
+    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
     await renderIntake();
 
     await scanOnce();
@@ -138,7 +145,7 @@ describe('D2 · tarama akışı', () => {
   });
 
   it('PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ — çekmece de açılmaz, yalnız söyler', async () => {
-    withScan({ status: 'found', variantId: YABANCI_VARYANT, productName: 'Sahlep', variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', imageUrl: null });
+    withScan({ status: 'found', variantId: YABANCI_VARYANT, productName: 'Sahlep', variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null });
     await renderIntake();
 
     await scanOnce();
@@ -254,7 +261,7 @@ describe('D2 · plansız kabulün boş hâli', () => {
       const path = String(url);
       if (path.includes('/codes/resolve')) return Promise.resolve(ok({ status: 'unknown' }));
       if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
-      return Promise.resolve(ok({ purchaseOrder: null, rows: [] }));
+      return Promise.resolve(ok({ purchaseOrder: null, rows: [], mlorPercent: MLOR }));
     });
     await render(<IntakeScreen />);
     await waitFor(() => expect(screen.queryByTestId('warehouse-intake-loading')).toBeNull());
@@ -280,7 +287,7 @@ describe('D2 · plansız kabulün boş hâli', () => {
       const path = String(url);
       if (path.includes('/codes/resolve')) return Promise.resolve(ok({ status: 'unknown' }));
       if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
-      return Promise.resolve(ok({ purchaseOrder: null, rows: [] }));
+      return Promise.resolve(ok({ purchaseOrder: null, rows: [], mlorPercent: MLOR }));
     });
     await render(<IntakeScreen />);
     await waitFor(() => expect(screen.queryByTestId('warehouse-intake-loading')).toBeNull());

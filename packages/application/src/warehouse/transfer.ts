@@ -378,3 +378,128 @@ export async function cancelTransfer(
     return { status: 'failed', message: rpcRejectionMessage(error, 'Geri alınamadı') };
   }
 }
+
+/** Bu depodan çıkmış, hâlâ yolda olan sevkiyat — satırları YOK (aşağıdaki künye). */
+export interface OutboundTransfer {
+  transferId: string;
+  referenceNo: string;
+  toWarehouseId: string;
+  dispatchedAt: string;
+  lineCount: number;
+  /** Tahmini varış günü (`YYYY-MM-DD`) — sevk günü + ulaşım süresi AYARI; taşıyıcıdan gelen söz değil. */
+  etaDate: string;
+}
+
+/**
+ * **"Benden ne çıktı, hâlâ yolda mı"** (v3 · 11'in ikinci bölümü, 30.08).
+ *
+ * ── NEDEN SATIRSIZ ──────────────────────────────────────────────────────────
+ * Gelen transferin satırları rampada SAYILACAK şeydir; çıkanınki çoktan sayılıp yola çıkmıştır ve
+ * gönderen depoda yapılacak bir iş kalmamıştır. Bölüm bir kabul ekranı değil, bir hatırlatmadır:
+ * "unuttuğum bir sevkiyat yolda mı". Satırları taşımak telefona hiç açılmayacak bir ağaç
+ * indirtirdi (`listInboundTransfers` transfer başına bir tur atıyor — o turun bedeli orada kabul
+ * edildi çünkü ekran o satırları çiziyor). Tekil kaydın satırı gerekirse kapısı ayrı:
+ * `readTransferDetail`.
+ *
+ * `transitDays` DIŞARIDAN gelir (`readDispatchCandidate` ile aynı kural): süre bir AYARDIR
+ * (`transfer_transit_days`) ve ayarı okumak çağıranın katmanının işidir — bu kapı saat de okumaz,
+ * `today`i de dışarıdan alır ki aynı okumanın bütün satırları aynı güne göre hesaplansın.
+ */
+export async function listOutboundTransfers(
+  db: SupabaseClient,
+  input: { warehouseId: string; transitDays: number },
+): Promise<OutboundTransfer[]> {
+  const transfers = new WarehouseTransferService(db);
+  const rows = await transfers.listDispatchedFrom(input.warehouseId);
+  if (rows.length === 0) return [];
+
+  // Satır SAYISI için satırları okumak gerekiyor (kayıtta sayaç kolonu yok) ama künyeleri
+  // çözülmüyor: sayı bir uzunluk, ad çözümü ise iki tur daha demekti.
+  const lineSets = await Promise.all(rows.map((row) => transfers.listLines(row.id)));
+
+  return rows.map((row, index) => ({
+    transferId: row.id,
+    referenceNo: row.referenceNo,
+    toWarehouseId: row.toWarehouseId,
+    dispatchedAt: row.dispatchedAt,
+    lineCount: lineSets[index]?.length ?? 0,
+    etaDate: addDaysToDate(row.dispatchedAt, input.transitDays),
+  }));
+}
+
+/**
+ * Sevk damgasına ulaşım süresini ekler ve GÜNE indirir (`YYYY-MM-DD`).
+ *
+ * Saat DÜŞÜRÜLÜR ve bu bilinçli: tahmin bir gündür, bir an değil — "30.08 14:12'de varır" demek,
+ * elimizde olmayan bir kesinliği ima ederdi. Ayarın kendisi de gün cinsinden.
+ */
+function addDaysToDate(from: string, days: number): string {
+  const eta = new Date(from);
+  eta.setUTCDate(eta.getUTCDate() + days);
+  return eta.toISOString().slice(0, 10);
+}
+
+/** Kapanmış sevkiyat — kabul edilmiş ya da geri alınmış; iki yön de bu listede. */
+export interface ClosedTransfer {
+  transferId: string;
+  referenceNo: string;
+  fromWarehouseId: string;
+  toWarehouseId: string;
+  /** `in` = bu depo aldı, `out` = bu depo gönderdi. */
+  direction: 'in' | 'out';
+  status: Extract<TransferStatus, 'received' | 'cancelled'>;
+  /** Kabul ya da geri alma damgası — kaydın KAPANDIĞI an, sevk anı değil. */
+  closedAt: string;
+  lineCount: number;
+  /** Sevk edilenden AZ sayılan satır sayısı; `0` = tam kabul. **Geri alınmışta `null`** (aşağıda). */
+  shortLineCount: number | null;
+}
+
+/**
+ * **"Son ne kapandı"** (v3 · 11'in üçüncü bölümü, 30.08) — iki yön birden.
+ *
+ * ── NEDEN İKİ YÖN ───────────────────────────────────────────────────────────
+ * Gönderdiğinin kapanışı da alındığınki kadar depocunun işi: eksik kabul edilen bir sevkiyatın
+ * GÖNDEREN tarafı da farkı görmeli, yoksa "ben 8 yolladım" ile "bize 7 geldi" hiçbir ekranda
+ * buluşmaz. `direction` alan olarak dönüyor çünkü ekran kendi deposunun kimliğini BİLMEZ — kimlik
+ * jetonda, çözümü sunucuda.
+ *
+ * ── EKSİK SAYIMI YALNIZ KABULDE ANLAMLI ─────────────────────────────────────
+ * Geri alınmış transferde `shortLineCount` `null`: iptal bir kabul değildir ve "0 eksik" demek,
+ * hiç sayılmamış bir sevkiyatı sorunsuz kabul edilmiş gibi okuturdu (CLAUDE §1 — ölçülemeyen
+ * değer sıfır değildir). Kabulde ise ölçüt satır satır `receivedQty < qty`; sayılmamış satır
+ * (`null`) EKSİK SAYILIR çünkü kabul kapandığı hâlde o satırın karşılığı yazılmamıştır.
+ */
+export async function listClosedTransfers(
+  db: SupabaseClient,
+  input: { warehouseId: string },
+): Promise<ClosedTransfer[]> {
+  const transfers = new WarehouseTransferService(db);
+  const rows = await transfers.listClosedFor([input.warehouseId]);
+  if (rows.length === 0) return [];
+
+  const lineSets = await Promise.all(rows.map((row) => transfers.listLines(row.id)));
+
+  return rows.flatMap((row, index) => {
+    // Durum daraltması yoklamayla: sorgu ikisini süzüyor ama tipin söylediğini `as` ile ezmek,
+    // sorgu bir gün genişlediğinde sessizce yalan söylerdi (`listPendingIntakes` ile aynı karar).
+    if (row.status !== 'received' && row.status !== 'cancelled') return [];
+    const lines = lineSets[index] ?? [];
+    return [
+      {
+        transferId: row.id,
+        referenceNo: row.referenceNo,
+        fromWarehouseId: row.fromWarehouseId,
+        toWarehouseId: row.toWarehouseId,
+        direction: row.toWarehouseId === input.warehouseId ? ('in' as const) : ('out' as const),
+        status: row.status,
+        // Damga durumdan seçilir; ikisi de boşsa sevk anına düşülür — kaydın kapandığı kesin ama
+        // damgası okunamadıysa uydurma bir tarih yerine BİLİNEN en yakın an gösterilir.
+        closedAt: (row.status === 'received' ? row.receivedAt : row.cancelledAt) ?? row.dispatchedAt,
+        lineCount: lines.length,
+        shortLineCount:
+          row.status === 'cancelled' ? null : lines.filter((line) => (line.receivedQty ?? 0) < line.qty).length,
+      },
+    ];
+  });
+}

@@ -32,6 +32,7 @@
   "staff": {
     "menuLabel": "Hesap menüsü",
     "sheetTitle": "Hesabın",
+    "changeWarehouse": "Depo değiştir",
     "toCustomer": "Müşteri uygulamasına geç",
     "signOut": "Oturumu kapat"
   }

@@ -9,7 +9,7 @@ import {
 } from '@lezzet/database';
 import { daysBetween } from '@lezzet/helper';
 import type { KeysetCursor, WarehouseTransfer, WarehouseTransferLine } from '@lezzet/types';
-import { TRANSFER_TRANSIT_DAYS_KEY } from '@/lib/settings-keys';
+import { TRANSFER_TRANSIT_DAYS_DEFAULT, TRANSFER_TRANSIT_DAYS_KEY } from '@/lib/settings-keys';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
 import type {
   HistoryPageView,
@@ -53,7 +53,7 @@ export async function readTransfersPage(): Promise<TransfersPageView> {
   const [context, labels, transitDays] = await Promise.all([
     readWarehouseContext(),
     readWarehouseLabels(),
-    new SettingsService(db).getNumber(TRANSFER_TRANSIT_DAYS_KEY, 1),
+    new SettingsService(db).getNumber(TRANSFER_TRANSIT_DAYS_KEY, TRANSFER_TRANSIT_DAYS_DEFAULT),
   ]);
 
   const scopeIds = context.scope.kind === 'limited' ? new Set(context.scope.warehouseIds) : null;

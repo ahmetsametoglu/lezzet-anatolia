@@ -409,7 +409,7 @@ export type { DoorSaleRecord, OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
 export { boxLabelPayload, printersFor, markBoxPrinted, openBox, sealBox } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
-export { boxLabelSvg, LABEL_WIDTH_PX, LABEL_HEIGHT_PX } from './warehouse/label-svg';
+export { boxLabelSvg, sampleBoxLabel, LABEL_WIDTH_PX, LABEL_HEIGHT_PX } from './warehouse/label-svg';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 // Tarama kapısı (Modül 23): kod → kimlik + öğrenen eşleme. Kimlik bulur, stok/depo kararı VERMEZ.
 export { learnCode, resolveScannedCode } from './warehouse/scan';
@@ -425,22 +425,26 @@ export type {
   RepricePort,
   StorageMismatch,
 } from './warehouse/intake';
-export { recordAdjustment } from './warehouse/adjustment';
-export type { AdjustmentLine, AdjustmentOutcome, WarehouseReason } from './warehouse/adjustment';
+export { recordAdjustment, resolveBatchCode } from './warehouse/adjustment';
+export type { AdjustmentLine, AdjustmentOutcome, ResolvedBatch, ResolveBatchOutcome, WarehouseReason } from './warehouse/adjustment';
 export {
   cancelTransfer,
   dispatchTransfer,
+  listClosedTransfers,
   listInboundTransfers,
+  listOutboundTransfers,
   readDispatchCandidate,
   readTransferDetail,
   receiveTransfer,
 } from './warehouse/transfer';
 export type {
   CancelTransferOutcome,
+  ClosedTransfer,
   DispatchCandidate,
   DispatchTransferOutcome,
   InboundTransfer,
   InboundTransferLine,
+  OutboundTransfer,
   ReceiveTransferOutcome,
   TransferDetail,
 } from './warehouse/transfer';
@@ -457,6 +461,7 @@ export type { ReturnDrop, ReturnDropLine } from './warehouse/returns';
 // Ürün geçmişi (22.30) — seçili boyun parti/çıkış/fire geçmişi; okuma TIKLANDIĞINDA yapılır.
 export { readVariantStockHistory } from './warehouse/variant-history';
 export type { VariantBatchHistory, VariantStockHistory } from './warehouse/variant-history';
+export { TRANSFER_TRANSIT_DAYS_DEFAULT, TRANSFER_TRANSIT_DAYS_KEY } from './warehouse/settings-keys';
 export { readExpiryThresholds, toBatchViews } from './warehouse/batch-view';
 export type { BatchView } from './warehouse/batch-types';
 export * from './assistant/apply';

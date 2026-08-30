@@ -84,6 +84,9 @@ const KORUMALI: readonly string[] = [
   '/api/v1/management/exceptions/00000000-0000-4000-8000-000000000001/ask',
   '/api/v1/money/overview',
   '/api/v1/money/day-end',
+  // Operasyon kabuğunun künyesi (30.08) — personelin depo kapsamı. Kimliksiz erişim işletmenin
+  // tesis envanterini dışarıya sayardı; kapı bölüm uçlarıyla aynı çizgide.
+  '/api/v1/operations/scope',
 ];
 
 describe('kapı sınırı — varsayılan KAPALI', () => {

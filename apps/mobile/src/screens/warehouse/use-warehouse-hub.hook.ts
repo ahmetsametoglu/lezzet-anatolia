@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import type { PreparationOrderContract, InboundTransferContract } from '@lezzet/types';
 
-import { fetchInboundTransfers, fetchPendingHandover, fetchPreparationQueue } from '@/lib/api/warehouse';
+import { fetchWarehouseTransfers, fetchPendingHandover, fetchPreparationQueue } from '@/lib/api/warehouse';
 import { trackWarehouse } from './warehouse-status';
 
 /*
@@ -51,6 +51,10 @@ interface UseWarehouseHubResult {
    */
   pendingHandover: number | null;
   reload: () => void;
+  /** Aşağı çekme — ekranı karartmadan tazeler. */
+  refresh: () => void;
+  /** Çekme sürüyor mu (`status` DEĞİL: o ekranı söküp yükleme hâline geçirirdi). */
+  reloading: boolean;
 }
 
 export function useWarehouseHub(): UseWarehouseHubResult {
@@ -67,7 +71,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
 
     const [queue, inbound, handover] = await Promise.all([
       trackWarehouse(fetchPreparationQueue()),
-      trackWarehouse(fetchInboundTransfers()),
+      trackWarehouse(fetchWarehouseTransfers()),
       trackWarehouse(fetchPendingHandover()),
     ]);
     if (run !== generation.current) return;
@@ -96,5 +100,14 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     void load();
   }, [load]);
 
-  return { status, orders, transfers, pendingHandover, reload };
+  /* AŞAĞI ÇEKME KENDİ BAYRAĞINI İSTER (kullanıcı isteği 30.08): `status`u `loading`e çevirmek
+     hub'ı söküp yükleme hâline geçirirdi — oysa çekmenin sözü "ekran dursun, üstüne taze veri
+     gelsin". Bayrak ayrı; kutucuklar yerinde kalır, yalnız halka döner. */
+  const [reloading, setReloading] = useState(false);
+  const refresh = useCallback(() => {
+    setReloading(true);
+    void load().finally(() => setReloading(false));
+  }, [load]);
+
+  return { status, orders, transfers, pendingHandover, reload, refresh, reloading };
 }

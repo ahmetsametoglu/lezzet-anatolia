@@ -20,6 +20,12 @@ import { BaseDbService } from '../core/base.service';
 import { dbToApp } from '../utils/case-transformers';
 
 /**
+ * "Son kapananlar" penceresinin boyu — sayfa DEĞİL, seçki (bkz. `listClosedFor`). Rampadaki ekran
+ * "bu hafta ne kapandı" diye bakar; geçmişin tamamı sayfalı okumanın işidir (`listForWarehouses`).
+ */
+const CLOSED_WINDOW_SIZE = 10;
+
+/**
  * Depolar arası transfer servisi (19.1) — DOMAIN §17, K11/T4.
  *
  * İki fiziksel-gerçek an var ve ikisi de RPC: sevkte mal kaynaktan düşer, kabulde hedefte YENİ
@@ -124,6 +130,48 @@ export class WarehouseTransferService extends BaseDbService<WarehouseTransfer, n
     return this.getAll(
       toWarehouseId ? { status: 'in_transit', toWarehouseId } : { status: 'in_transit' },
       { orderBy: 'dispatchedAt', orderDirection: 'desc' },
+    );
+  }
+
+  /**
+   * **Bu depodan ÇIKMIŞ, hâlâ yolda** (30.08) — `listInTransit`in aynadaki hâli.
+   *
+   * Ayrı metot, çünkü süzgeç ayrı KOLONDUR (`from_warehouse_id`): tek metoda "yön" parametresi
+   * eklemek, çağıranın hangi kolonun süzüldüğünü bir bayraktan çıkarmasını isterdi ve yönü ters
+   * verilen bir çağrı sessizce BAŞKA deponun listesini döndürürdü.
+   *
+   * Sayfalanmaz, aynı gerekçeyle: küme fiziksel gerçekle sınırlı — aynı anda yolda olan sevkiyat
+   * kadar. Gönderen depo için de tam olması gerekir; kaçırılan bir sevkiyat, gönderenin defterinde
+   * düşmüş ama hiçbir yerde görünmeyen mal demektir.
+   */
+  listDispatchedFrom(fromWarehouseId: string): Promise<WarehouseTransfer[]> {
+    return this.getAll({ status: 'in_transit', fromWarehouseId }, { orderBy: 'dispatchedAt', orderDirection: 'desc' });
+  }
+
+  /**
+   * **Son kapananlar** — kabul edilmiş ya da geri alınmış sevkiyatlar, İKİ YÖN birden (30.08).
+   *
+   * ── NEDEN `listForWarehouses` DEĞİL ─────────────────────────────────────────
+   * O okuma geçmişin TAMAMIDIR ve keyset sayfalıdır (doğru olan da bu: transfer kaydı veriyle
+   * büyür). Buradaki soru başka: "son ne kapandı" — sabit sınırlı bir PENCERE, sayfalanacak bir
+   * liste değil (CLAUDE §1'in editoryal seçki dalı). Sayfalı okumayı çağırıp elde süzmek, yoldaki
+   * kayıtlar sayfayı doldurduğunda pencereyi sessizce boşaltırdı.
+   *
+   * Sıra `dispatchedAt` üzerinden: kapanış damgası iki ayrı kolonda duruyor (`received_at` /
+   * `cancelled_at`) ve tek sorguda ikisine birden göre sıralanamaz. Sevk sırası kapanış sırasıyla
+   * pratikte aynı yönde ilerler; damganın kendisi satırda taşınıyor, sıralama ölçütü değil.
+   */
+  listClosedFor(warehouseIds: readonly string[], opts: { limit?: number } = {}): Promise<WarehouseTransfer[]> {
+    if (warehouseIds.length === 0) return Promise.resolve([]);
+    const ids = warehouseIds.join(',');
+    return this.getAll(
+      { status: ['received', 'cancelled'] },
+      {
+        orFilters: [`from_warehouse_id.in.(${ids}),to_warehouse_id.in.(${ids})`],
+        orderBy: 'dispatchedAt',
+        orderDirection: 'desc',
+        limit: opts.limit ?? CLOSED_WINDOW_SIZE,
+      },
     );
   }
 

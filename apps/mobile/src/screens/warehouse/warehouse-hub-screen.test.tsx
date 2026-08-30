@@ -1,5 +1,8 @@
-import { render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import type { StaffWarehouse } from '@lezzet/types';
+
+import { resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { inboundTransfer, preparationOrder } from './warehouse-fixture';
 import { WarehouseHubScreen } from './warehouse-hub-screen';
@@ -58,14 +61,29 @@ function routeReplies(replies: {
     // Devir sayacı KENDİ ucundan geliyor (07.12): bekleyen kutuları hiçbir liste taşımıyor,
     // çünkü duyurulmuş siparişin kutuları hazırlık kuyruğundan çoktan düşmüştür.
     if (path.includes('/handover/pending')) return (replies.handover ?? (() => Promise.resolve(ok({ boxes: 0 }))))();
-    return (replies.transfers ?? (() => Promise.resolve(ok({ transfers: [] }))))();
+    /* Transfer yanıtı ÜÇ liste taşıyor (`WarehouseTransfersResponseSchema`); eksik gönderilen bir
+       cevap şema kapısından geçemez ve hub'ın İKİ okuması birden düşmüş gibi görünür. */
+    return (replies.transfers ?? (() => Promise.resolve(ok({ transfers: [], outbound: [], closed: [] }))))();
   });
 }
+
+/** Kapsamın çözdüğü tek tesis — depocunun günlük hâli (`seed/people.ts` → `depocu`). */
+const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez', kind: 'facility' };
+/** İkinci tesis — kapsam belirsizliğini ve seçiciyi doğuran hâl. */
+const KEHL: StaffWarehouse = { id: 'w-kehl', code: 'KEHL', name: 'Kehl Depo', kind: 'facility' };
+/** Kuryenin aracı — kapsamda VAR ama depo seçicisinde seçenek OLAMAZ. */
+const VAN: StaffWarehouse = { id: 'w-van', code: 'VAN', name: 'Panelvan', kind: 'vehicle' };
 
 async function renderHub() {
   await render(
     <OperationsSessionProvider
-      value={{ sections: ['warehouse'], userName: 'Ayşe K.', userEmail: 'ayse@lezzetanatolia.fr' }}
+      value={{
+        sections: ['warehouse'],
+        userName: 'Ayşe K.',
+        userEmail: 'ayse@lezzetanatolia.fr',
+        warehouses: [STR],
+        resolvedWarehouseId: STR.id,
+      }}
     >
       <WarehouseHubScreen />
     </OperationsSessionProvider>,
@@ -81,6 +99,9 @@ beforeAll(() => {
 beforeEach(() => {
   fetchMock.mockReset();
   resetWarehouseStatus();
+  /* Seçim de modül düzeyinde durur ve dosyalar arası sızar: bir testte seçilen depo, sonraki
+     testin isteğine sessizce bir `?warehouseId=` eklerdi (`warehouse-choice.ts` künyesi). */
+  resetWarehouseChoice();
 });
 
 describe('depo hub', () => {
@@ -183,7 +204,9 @@ describe('depo hub', () => {
   });
 
   it('transfer kutucuğu gelen transferi söyler', async () => {
-    routeReplies({ transfers: () => Promise.resolve(ok({ transfers: [inboundTransfer()] })) });
+    routeReplies({
+      transfers: () => Promise.resolve(ok({ transfers: [inboundTransfer()], outbound: [], closed: [] })),
+    });
 
     await renderHub();
 
@@ -284,11 +307,52 @@ describe('depo hub', () => {
   });
 
   it('bir okuma geçtiyse hat AÇIKTIR — kilit uyarısı çıkmaz (cevabın kendisi kanıt)', async () => {
-    routeReplies({ preparation: offline, transfers: () => Promise.resolve(ok({ transfers: [] })) });
+    routeReplies({
+      preparation: offline,
+      transfers: () => Promise.resolve(ok({ transfers: [], outbound: [], closed: [] })),
+    });
 
     await renderHub();
 
     expect(screen.queryByTestId('warehouse-hub-offline')).toBeNull();
+  });
+
+  /*
+    ÜSTBAŞLIĞIN KUYRUĞU (v3:37 · 30.08) — "DEPO · STRASBOURG MERKEZ".
+
+    İki iddia birden: ad GELDİĞİNDE yazılır, gelmediğinde ÜSTBAŞLIK KUYRUKSUZ KALIR. İkincisi
+    birincisinden önemli — uydurma bir tesis adı, depocuya yanlış deponun ekranındaymış gibi
+    güvence verir ve bu, ekranın güvenilirliğini kökten kaybetmesidir (CLAUDE §1).
+  */
+  it('üstbaşlık çalışılan tesisin adını yazar', async () => {
+    routeReplies({});
+
+    await renderHub();
+
+    expect(screen.getByTestId('warehouse-hub-header')).toHaveTextContent(/DEPO · STRASBOURG MERKEZ/);
+  });
+
+  it('tesis adı YOKSA üstbaşlık kuyruksuz kalır — uydurma bir şehir adı yazılmaz', async () => {
+    routeReplies({});
+
+    await render(
+      <OperationsSessionProvider
+        value={{
+          sections: ['warehouse'],
+          userName: 'Ayşe K.',
+          userEmail: 'ayse@lezzetanatolia.fr',
+          // Kapsam okunamadı: liste boş, çözüm yok.
+          warehouses: [],
+          resolvedWarehouseId: null,
+        }}
+      >
+        <WarehouseHubScreen />
+      </OperationsSessionProvider>,
+    );
+    await waitFor(() => expect(screen.queryByTestId('warehouse-hub-loading')).toBeNull());
+
+    expect(screen.getByTestId('warehouse-hub-header')).toHaveTextContent(/DEPO/);
+    expect(screen.getByTestId('warehouse-hub-header')).not.toHaveTextContent(/DEPO ·/);
   });
 
   /*
@@ -306,7 +370,13 @@ describe('depo hub', () => {
 
     await render(
       <OperationsSessionProvider
-        value={{ sections: ['warehouse', 'money'], userName: 'Ayşe D.', userEmail: 'ayse@lezzetanatolia.fr' }}
+        value={{
+          sections: ['warehouse', 'money'],
+          userName: 'Ayşe D.',
+          userEmail: 'ayse@lezzetanatolia.fr',
+          warehouses: [STR, KEHL],
+          resolvedWarehouseId: null,
+        }}
       >
         <WarehouseHubScreen />
       </OperationsSessionProvider>,
@@ -316,8 +386,80 @@ describe('depo hub', () => {
     expect(screen.getByTestId('warehouse-scope-to-money')).toHaveTextContent(/Para bölümüne geç/);
     // Kendi bölümüne çıkış verilmez: zaten oradayız ve kapalı.
     expect(screen.queryByTestId('warehouse-scope-to-warehouse')).toBeNull();
-    // Kararın kendisi yazılı: depo SEÇTİRİLMİYOR.
-    expect(screen.getByTestId('operations-section-warehouse')).toHaveTextContent(/Depo seçtirme bilinçli olarak yoktur/);
+    /* KARARIN YENİ HÂLİ YAZILI (30.08): depo artık SEÇİLEBİLİR ama kendiliğinden seçilmez.
+       Eski iddia ("Depo seçtirme bilinçli olarak yoktur") kullanıcı bulgusuyla düştü — seçenek
+       sunmayan ekran, iki depolu personeli çıkışsız bırakıyordu. */
+    expect(screen.getByTestId('operations-section-warehouse')).toHaveTextContent(
+      /Depo kendiliğinden SEÇİLMEZ/,
+    );
+  });
+
+  /*
+    KAPSAM SEÇİCİSİ (kullanıcı bulgusu 30.08) — arızanın kendisi ve kapanışı.
+
+    Ölçülen hâl: iki tesisli personel bloğa düşüyor ve çıkış yolu yok. Kapı doğruydu, ekran
+    dürüsttü; eksik olan CEVAPTI. Aşağıdaki üç test o cevabın üç yarısını çiviliyor: liste geliyor,
+    araç listeye girmiyor, seçim isteğe `?warehouseId=` olarak yazılıyor.
+  */
+  describe('kapsam seçicisi', () => {
+    /** Kapsamı iki tesis + bir araç olan personel — `hepsi@lezzetanatolia.fr` hâli. */
+    const renderAmbiguous = async () => {
+      routeReplies({
+        preparation: () => Promise.resolve(fail('warehouse_required', 400)),
+        transfers: () => Promise.resolve(fail('warehouse_required', 400)),
+        handover: () => Promise.resolve(fail('warehouse_required', 400)),
+      });
+
+      await render(
+        <OperationsSessionProvider
+          value={{
+            sections: ['warehouse'],
+            userName: 'Emre Yıldız',
+            userEmail: 'hepsi@lezzetanatolia.fr',
+            warehouses: [STR, KEHL, VAN],
+            resolvedWarehouseId: null,
+          }}
+        >
+          <WarehouseHubScreen />
+        </OperationsSessionProvider>,
+      );
+      await waitFor(() => expect(screen.getByTestId('warehouse-scope-block')).toBeOnTheScreen());
+    };
+
+    it('kapsamdaki TESİSLER seçenek olarak çizilir — araç ÇİZİLMEZ', async () => {
+      await renderAmbiguous();
+
+      // Kutu ad + KOD taşıyor ("Strasbourg MerkezSTR"), o yüzden içerik ARANIR, eşitlenmez: iki
+      // tesisin adı benzediğinde seçimi ayıran şey koddur.
+      expect(screen.getByTestId(`warehouse-scope-pick-${STR.id}`)).toHaveTextContent(new RegExp(STR.name));
+      expect(screen.getByTestId(`warehouse-scope-pick-${STR.id}`)).toHaveTextContent(new RegExp(STR.code));
+      expect(screen.getByTestId(`warehouse-scope-pick-${KEHL.id}`)).toHaveTextContent(new RegExp(KEHL.name));
+      // Araç bir DEPO değildir: "bugün hangi depodayım" sorusunun cevabı bir panelvan olamaz.
+      expect(screen.queryByTestId(`warehouse-scope-pick-${VAN.id}`)).toBeNull();
+    });
+
+    it('seçenek varken cümle ATAMA BEKLE değil SEÇ olur — soru doğru kişiye sorulur', async () => {
+      await renderAmbiguous();
+
+      expect(screen.getByTestId('operations-section-warehouse')).toHaveTextContent(/Bugün hangi depodasın/);
+      // Eski cümle ("yönetici seni bir depoya atadığında…") burada YANLIŞTI: atama zaten yapılmış.
+      expect(screen.getByTestId('operations-section-warehouse')).not.toHaveTextContent(/Yönetici seni bir depoya/);
+    });
+
+    it('seçilen depo isteğe `?warehouseId=` olarak yazılır — ve blok kalkar', async () => {
+      await renderAmbiguous();
+
+      // Seçimden SONRAKİ okumalar başarılı: kapı artık hangi depo olduğunu biliyor.
+      routeReplies({});
+      fireEvent.press(screen.getByTestId(`warehouse-scope-pick-${KEHL.id}`));
+
+      await waitFor(() => expect(screen.queryByTestId('warehouse-scope-block')).toBeNull());
+
+      const urls = fetchMock.mock.calls.map(([url]) => String(url));
+      expect(urls.some((url) => url.includes(`warehouseId=${KEHL.id}`))).toBe(true);
+      // Seçilmeyen tesis hiçbir isteğe yazılmaz — seçim bir tercih değil, KAYDIN bağlamıdır.
+      expect(urls.some((url) => url.includes(`warehouseId=${STR.id}`))).toBe(false);
+    });
   });
 
   it('tek bölümlü personelde çıkış yolu HİÇ doğmaz — gösterilecek kapı yok', async () => {

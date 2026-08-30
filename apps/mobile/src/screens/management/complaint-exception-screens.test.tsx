@@ -107,7 +107,15 @@ function exceptionsData(): ExceptionsResponse {
 
 async function renderScreen(node: React.ReactElement, loadingTestId: string) {
   await render(
-    <OperationsSessionProvider value={{ sections: ['management'], userName: 'Selim A.', userEmail: 'selim@lezzetanatolia.fr' }}>
+    <OperationsSessionProvider
+      value={{
+        sections: ['management'],
+        userName: 'Selim A.',
+        userEmail: 'selim@lezzetanatolia.fr',
+        warehouses: [],
+        resolvedWarehouseId: null,
+      }}
+    >
       {node}
     </OperationsSessionProvider>,
   );

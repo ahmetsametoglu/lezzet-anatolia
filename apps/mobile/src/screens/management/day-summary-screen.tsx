@@ -4,9 +4,11 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { captionOf } from '@/lib/operations/caption';
 import { money } from '@/lib/operations/money';
 import { dateLabelOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
+import { useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { ManagementHub, ManagementSummary } from '@lezzet/types';
@@ -49,11 +51,13 @@ import { useManagementHub } from './use-management-hub.hook';
   Kanal cirosu `null` gelirse hücre "— bilinmiyor (sıfır değil)" yazar. YZ içgörüsü de aynı
   disiplinde: motoru (modül 20/22) bağlanana dek uç BOŞ dizi döner ve blok bunu dürüstçe söyler.
 
-  ── KÜNYE SATIRI GÜNÜN ADI, DEPONUN ADI DEĞİL ───────────────────────────────
+  ── KÜNYE: GÜN + (VARSA) TESİSİN ADI ────────────────────────────────────────
   v3 "28 Ağustos · Strasbourg Merkez" diyor. Gün özetin kendi alanından (`summary.date`) gelir;
-  deponun adını verecek bir kapı YOK (aynı boşluk depo hub'ında da yazılı: `/me` `warehouseIds`
-  taşımıyor). Uydurma bir şehir adı, yöneticiye yanlış tesisin ekranındaymış gibi bir güvence
-  verirdi; künye günle yetinir.
+  ~~deponun adını verecek bir kapı YOK~~ → **açıldı (30.08, `/operations/scope`)**. Ama kuyruk
+  ŞARTLI: yönetim okumaları depo boyutu taşımaz (`management.ts` künyesi: *"yönetim işletmenin
+  tamamına bakar"*), yani satır sayıların süzgecini değil yöneticinin BAĞLAMINI söyler. Kapsam tek
+  bir tesisi çözmüyorsa (yöneticinin olağan hâli: kapsamı boş, depo-üstü) künye günle yetinir —
+  uydurma bir şehir adı, yanlış tesisin ekranındaymış gibi bir güvence verirdi (CLAUDE §1).
 */
 
 const t = managementCopy;
@@ -75,11 +79,13 @@ const CHANNEL_LABEL: Partial<Record<string, string>> = {
 export function DaySummaryScreen() {
   const router = useRouter();
   const { state, retry } = useManagementHub();
+  const workplace = useOperationsWorkplace();
 
-  /* Künye GÜN adıdır; gün okunamadıysa (bozuk biçim) ekranın kendi cümlesine düşer — başlık
-     altında boş bir satır bırakmak, künyeyi hiç yazmamaktan daha çok soru doğururdu. */
-  const caption =
-    state.status === 'ready' ? (dateLabelOf(state.hub.summary.date) ?? t.summary.caption) : t.summary.caption;
+  /* Künye GÜN adıdır (+ varsa tesis); gün okunamadıysa (bozuk biçim) ekranın kendi cümlesine
+     düşer — başlık altında boş bir satır bırakmak, künyeyi hiç yazmamaktan daha çok soru
+     doğururdu. Tesis adı yoksa kuyruk hiç doğmaz (`captionOf`). */
+  const day = state.status === 'ready' ? (dateLabelOf(state.hub.summary.date) ?? t.summary.caption) : t.summary.caption;
+  const caption = captionOf(day, workplace);
 
   return (
     <View style={styles.screen} testID="management-day-summary">

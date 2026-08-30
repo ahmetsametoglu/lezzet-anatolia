@@ -10,9 +10,11 @@ import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { TextAction } from '@/components/ui/text-action';
 import { fetchRecentSales } from '@/lib/api/sale';
+import { captionOf } from '@/lib/operations/caption';
 import { money } from '@/lib/operations/money';
 import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
+import { useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { operationsTheme } from '@/theme/unistyles';
 import { saleCopy } from './copy';
 
@@ -35,6 +37,7 @@ type HistoryState =
 
 export function SaleHistoryScreen() {
   const router = useRouter();
+  const workplace = useOperationsWorkplace();
   const [state, setState] = useState<HistoryState>({ status: 'loading' });
 
   const load = useCallback(() => {
@@ -52,7 +55,12 @@ export function SaleHistoryScreen() {
     <View style={styles.screen} testID="sale-history-screen">
       <OperationsStackHeader
         title={t.history.title}
-        subtitle={t.history.subtitle}
+        /* KÜNYE TESİSİN ADIYLA (v3:21 · 30.08) — "Strasbourg Merkez kapı satışları". Burada ad
+           bir bağlam süsü DEĞİL, listenin süzgecinin kendisi: uç `listRecentDoorSales(db,
+           warehouseId)` ile okuyor, yani liste GERÇEKTEN o tesisin satışları. Adı yazmamak,
+           çok depolu personele hangi tesisin kasasına baktığını söylememekti.
+           Ad yoksa künye kuyruksuz kalır (`captionOf`) — uydurulmaz (CLAUDE §1). */
+        subtitle={captionOf(t.history.subtitle, workplace)}
         onBack={() => router.back()}
         backLabel={t.back}
         testID="sale-history-header"
