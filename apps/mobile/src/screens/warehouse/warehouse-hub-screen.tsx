@@ -12,9 +12,11 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { useOperationsIdentity } from '@/screens/operations/sections-context';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { NEAR_EXPIRY_FIXTURE } from './near-expiry-fixture';
+import { orderPickingQueue } from './warehouse-format';
 import type { PreparationOrderContract } from '@lezzet/types';
 import { useWarehouseHub } from './use-warehouse-hub.hook';
 import { useWarehouseStatus } from './warehouse-status';
@@ -333,14 +335,26 @@ function buildPicking(orders: readonly PreparationOrderContract[] | null): {
   if (orders.length === 0) return { badge: null, subtitle: copy.emptyCta, preview: [] };
 
   /* İLK İKİSİ — şablonun sayısı. Önizleme bir LİSTE DEĞİL, kartın "içeride ne var" cümlesidir;
-     üçüncü satır kartı listeye çevirir ve altındaki ızgarayı ekrandan atardı. */
-  const preview = orders.slice(0, 2).map((order) => ({
-    key: order.orderId,
-    title: `${order.referenceNo ?? ''} · ${order.recipientName ?? order.customerName}`.replace(/^ · /, ''),
-    meta: hasOpenBox(order)
-      ? `${fillCopy(t.hub.preview.line, { picked: String(order.pickedLineCount), total: String(order.lineCount) })} · ${t.hub.preview.half}`
-      : `${fillCopy(t.hub.preview.line, { picked: String(order.pickedLineCount), total: String(order.lineCount) })} · ${order.channel.toUpperCase()}`,
-  }));
+     üçüncü satır kartı listeye çevirir ve altındaki ızgarayı ekrandan atardı.
+
+     SIRA KUYRUĞUN SIRASIDIR (`orderPickingQueue`), ucun sırası değil: kuyruk ekranı yarım kalanı
+     en üste alıyor ve hub burada başka bir "ilk ikisi" gösterseydi, aynı listenin iki ekranda iki
+     farklı başı olurdu — depocu kartta gördüğü siparişi listenin başında bulamazdı. */
+  const preview = orderPickingQueue(orders)
+    .slice(0, 2)
+    .map((order) => {
+      const progress = fillCopy(t.hub.preview.line, {
+        picked: String(order.pickedLineCount),
+        total: String(order.lineCount),
+      });
+      return {
+        key: order.orderId,
+        title: `${order.referenceNo ?? ''} · ${order.recipientName ?? order.customerName}`.replace(/^ · /, ''),
+        /* Açık kutu varsa onu söyle, yoksa kanalı: ikisi de "bu sipariş ne durumda" sorusuna
+           cevaptır ama açık kutu ACİL olandır — kapatılmayı bekleyen bir iş. */
+        meta: hasOpenBox(order) ? `${progress} · ${t.hub.preview.half}` : `${progress} · ${order.channel.toUpperCase()}`,
+      };
+    });
 
   return { badge: String(orders.length), subtitle: copy.open, preview };
 }
@@ -513,7 +527,12 @@ const styles = StyleSheet.create({
   overviewLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    letterSpacing: operationsTheme.text.eyebrow * 0.2,
+    /* Harf aralığı TOKEN'dan, ham çarpandan değil: token `em` (yazı boyuna göreli), RN mutlak dp
+       ister — çeviri `parse.ts`te, tek yerde. Şablon burada 0.2em, kod chip'lerinde 0.14em
+       yazıyor; ikisi de ölçeğin `eyebrow--letter-spacing` durağının (0.18em) etrafında ve o durak
+       kullanılıyor. Ara değer için yeni durak AÇILMADI — üstbaşlık aralığı tek bir karardır,
+       kullanıldığı yere göre değişmez (`section-header.tsx`in aynı yolu). */
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     textTransform: 'uppercase',
     color: operationsTheme.colors['on-ink-label'],
   },
@@ -570,7 +589,7 @@ const styles = StyleSheet.create({
   codeChipText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    letterSpacing: operationsTheme.text.eyebrow * 0.14,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
   heroTitle: {
@@ -651,7 +670,7 @@ const styles = StyleSheet.create({
   tileCode: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    letterSpacing: operationsTheme.text.eyebrow * 0.14,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors['sand-600'],
   },
   tileTitle: {

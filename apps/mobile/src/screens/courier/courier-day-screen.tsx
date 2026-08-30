@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRoute, CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
@@ -263,9 +264,9 @@ export function CourierDayScreen() {
                   {doneCount}
                   <Text style={styles.progressTotal}>{`/${stops.length}`}</Text>
                 </Text>
-                <View style={styles.progressTrack} testID="courier-day-progress">
-                  <View style={[styles.progressFill, { width: `${Math.round((doneCount / stops.length) * 100)}%` }]} />
-                </View>
+                {/* Çubuk PAYLAŞILAN (30.08): aynı geometri depo toplama kuyruğunun her satırında
+                    da var; iki kopya birinin bir gün ötekinden ayrılması demekti (CLAUDE §1). */}
+                <OperationsProgressBar value={doneCount / stops.length} testID="courier-day-progress" />
                 {/* Ölçülemeyen değer SIFIR DEĞİLDİR: taslak düştüyse "bilinmiyor" yazılır (CLAUDE §1). */}
                 <Text style={styles.pocket}>
                   {day.collectedCents === null
@@ -574,18 +575,6 @@ const styles = StyleSheet.create({
   progressTotal: {
     fontFamily: operationsTheme.font.body[400],
     color: operationsTheme.colors.muted,
-  },
-  progressTrack: {
-    flex: 1,
-    height: operationsTheme.space.sm,
-    borderRadius: operationsTheme.radius.tight,
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: operationsTheme.radius.tight,
-    backgroundColor: operationsTheme.colors.olive,
   },
   pocket: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

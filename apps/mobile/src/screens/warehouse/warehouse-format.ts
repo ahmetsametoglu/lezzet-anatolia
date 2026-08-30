@@ -122,3 +122,22 @@ export function boxSizeLine(
   const kg = (box.maxContentG / 1000).toFixed(1).replace(/\.0$/, '').replace('.', ',');
   return fillCopy(copy.typeSizeCapped, { ...slots, max: kg });
 }
+
+/**
+ * TOPLAMA KUYRUĞUNUN SIRASI (v3:320) — "teslim gününe göre sıralı; **yarım kalan kutu en üstte**".
+ *
+ * Uç teslim gününe göre sıralıyor; "yarım en üstte" kısmı YOKTU ve ekranda ölçüldü (30.08,
+ * fiziksel cihaz): dipnot bunu vaat ederken yarım sipariş dokuz satırın sekizincisindeydi. Sözünü
+ * tutmayan bir dipnot, olmayan bir kuraldan daha kötüdür — depocu listeyi ona güvenerek okur.
+ *
+ * SIRALAMA BURADA, UÇTA DEĞİL: "yarım" bir GÖRÜNÜM önceliğidir, verinin bir özelliği değil — aynı
+ * sipariş kümesi başka bir ekranda başka bir ölçüte göre sıralanabilir. Uca taşımak, her tüketiciyi
+ * depo ekranının tercihi ne yapıyorsa ona bağlardı.
+ *
+ * KARARLI (stable): grup içinde ucun teslim-günü sırası AYNEN korunur. `toSorted` yerine `slice`
+ * + `sort`: ikisi de kopya üzerinde çalışır, `sort` her sürümde kararlıdır.
+ */
+export function orderPickingQueue<T extends { lineCount: number; pickedLineCount: number }>(orders: readonly T[]): T[] {
+  const isHalf = (order: T): boolean => order.pickedLineCount > 0 && order.pickedLineCount < order.lineCount;
+  return orders.slice().sort((a, b) => Number(isHalf(b)) - Number(isHalf(a)));
+}

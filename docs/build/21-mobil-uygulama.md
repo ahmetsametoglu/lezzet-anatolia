@@ -7113,3 +7113,44 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Hub jest **15/15** (dördü yeni), başlık jest **9/9**, token jest **11/11**, mobil
   paket **930/930**; typecheck · lint · knip · boundaries yeşil; Maestro akışı gerçek cihazda
   yeşil; ekran **gözle doğrulandı** (9 sipariş · 1 yarım kutu · 3 bekleyen sevkiyat, canlı veri).
+
+- [x] (21.137) **TOPLAMA KUYRUĞU v3 — satır karta döndü, üç durum üç cümle** (v3:176-325)
+  `touches:` `apps/mobile/src/screens/warehouse/{preparation-screen.tsx,use-preparation.hook.ts,warehouse-format.ts,messages.json}` ·
+  `apps/mobile/src/components/operations/progress-bar.tsx` ·
+  `apps/mobile/src/screens/courier/courier-day-screen.tsx`
+
+  **Durum (30.08).** Kuyruk satırı kesikli çizgili bir satırdan **karta** döndü ve üç bilgi
+  katmanı taşıyor: referans · künye (müşteri · kanal · kulvar) · ilerleme (çubuk + cümle). Üç
+  durum üç ayrı cümle ve renk: yarım terracotta · hazır zeytin · başlanmamış gri. Taşıyıcı
+  kulvarındaki siparişte **KARGO rozeti** — kutu tipi sorulacağının önceden haberi (07.12).
+  Başlık künyesi artık kuyruğu anlatıyor ("9 sipariş bekliyor · 1 yarım").
+
+  **ŞABLON KENDİ İÇİNDE TUTARSIZDI ve seçim yazıldı:** beş örnek satırın sol durum işareti tek
+  kurala uymuyor (dördüncüsü hiç başlanmamışken terracotta, beşincisi tamamlanmışken gri) —
+  statik maket, işaretler elle boyanmış. Çoğunluğun kuralı alındı: işaret ile metin AYNI kuralı
+  izler. "Improvise etme"nin sınırı burası — tasarım tek şey söylemediğinde çoğunluğu alınır ve
+  seçim künyeye yazılır.
+
+  **İlerleme çubuğu PAYLAŞILANA çıkarıldı** (`OperationsProgressBar`): aynı çubuk kuryenin gün
+  başlığındaydı, iki kopyaydı (CLAUDE §1). Renk çağırandan — kuryede hep zeytin, depoda durum.
+
+  **CİHAZDA İKİ ARIZA BULUNDU, ikisi de koda döndü:**
+
+  1. **Dipnot yalan söylüyordu.** "yarım kalan kutu en üstte durur" diyor, uç teslim gününe göre
+     sıralıyor; ölçüldü: yarım sipariş dokuz satırın **sekizincisindeydi**. Kural ortak yardımcıya
+     yazıldı (`orderPickingQueue` — kararlı, grup içinde ucun sırasını korur, girdiyi değiştirmez)
+     ve hub'ın D1 önizlemesi de onu kullanıyor: aynı listenin iki ekranda iki farklı başı olamaz.
+     **Sıralama uçta DEĞİL ekranda:** "yarım" bir görünüm önceliğidir; uca taşımak her tüketiciyi
+     depo ekranının tercihine bağlardı.
+  2. **Çevrimdışı kilidi HİÇ ERİŞİLEMİYORDU** — yazdığım dal ölü koddu. Her okuma hatası `error`a
+     gidip eldeki listeyi gizliyordu; tasarımın kuralı ise "okumak serbest, YAZMAK kapalı". Hook
+     düzeltildi: **ağ** hatasında bir kez dolu okunmuş kuyruk korunur, **sunucu** hatasında
+     gizlenir (açıklanamayan bayatlık depocuyu olmayan bir işe gönderir). Koşul "elimizde liste var
+     mı", "durum neydi" değil — `reload` önce `loading`e alıyor ve duruma bakan kural elle yapılan
+     tekrar denemede hiç tutmazdı.
+
+  **Doğrulama.** Kuyruk jest **23/23** (dördü yeni) · sıralama **4/4** · çevrimdışı hook **3/3**
+  (ayrı dosya: kural iki yükleme istiyor, ekran testinde ikincisi tetiklenemiyor) · mobil paket
+  **941/941**; typecheck · lint · knip · boundaries yeşil; kilitli tam paket 3945/3945; **cihazda
+  gözle doğrulandı** — yarım sipariş başa çıktı, KARGO rozeti yerinde, tünel düşürülünce okutmanın
+  yerine kilit geldi ve liste kaldı.

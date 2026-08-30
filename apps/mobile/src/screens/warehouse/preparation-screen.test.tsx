@@ -105,6 +105,78 @@ describe('D1 · kuyruk', () => {
 });
 
 /*
+  KUYRUK SATIRI v3'e GEÇTİ (v3:256-320) — satır artık üç bilgi katmanı taşıyor: referans,
+  künye (müşteri · kanal · kulvar) ve İLERLEME (çubuk + cümle). v2'de tek satırlık bir alt metin
+  vardı ve "hangi işi açsam" sorusu ancak sipariş açılınca cevaplanıyordu.
+
+  DURUM RENGİ İLE CÜMLE AYNI KURALI İZLER (`queueStateOf` künyesi): yarım → terracotta,
+  tamam → zeytin, başlanmamış → gri. Şablonun beş örnek satırı kendi içinde tutarsızdı; çoğunluğun
+  kuralı alındı ve seçim yazıldı.
+*/
+describe('D1 · kuyruk satırı (v3)', () => {
+  const IKINCI = '00000000-0000-4000-8000-000000000002';
+
+  it('satır üç katmanı da söyler: referans, künye, ilerleme', async () => {
+    withQueue([
+      preparationOrder({ referenceNo: 'LZA-BIR', customerName: 'Restaurant Bosphore', lineCount: 2, pickedLineCount: 1 }),
+      preparationOrder({ orderId: IKINCI }),
+    ]);
+
+    await renderPicking();
+
+    const row = screen.getByTestId(`warehouse-picking-order-${ORDER_ID}`);
+    // Düzenli ifade, dizge DEĞİL: `toHaveTextContent` dizgeyi TAM eşleştiriyor ve satırın metni
+    // üç katmanın birleşimi ("LZA-BIRRestaurant Bosphore · B2B…").
+    expect(row).toHaveTextContent(/LZA-BIR/);
+    expect(row).toHaveTextContent(/Restaurant Bosphore · B2B · kurye rotası/);
+    // Yarım iş: "1/2 · yarım" — sayının yanında NE OLDUĞU da yazılı.
+    expect(row).toHaveTextContent(/1\/2 · yarım/);
+  });
+
+  it('üç durum ÜÇ AYRI cümle: yarım · hazır · başlanmamış', async () => {
+    withQueue([
+      preparationOrder({ referenceNo: 'YARIM', lineCount: 2, pickedLineCount: 1 }),
+      preparationOrder({ orderId: IKINCI, referenceNo: 'HAZIR', lineCount: 3, pickedLineCount: 3 }),
+      preparationOrder({ orderId: '00000000-0000-4000-8000-000000000003', referenceNo: 'YENI', lineCount: 1, pickedLineCount: 0 }),
+    ]);
+
+    await renderPicking();
+
+    expect(screen.getByTestId(`warehouse-picking-order-${ORDER_ID}`)).toHaveTextContent(/1\/2 · yarım/);
+    expect(screen.getByTestId(`warehouse-picking-order-${IKINCI}`)).toHaveTextContent(/3\/3 hazır/);
+    expect(screen.getByTestId('warehouse-picking-order-00000000-0000-4000-8000-000000000003')).toHaveTextContent(
+      /0\/1 kalem/,
+    );
+  });
+
+  /* KARGO rozeti bir SÜS DEĞİL: taşıyıcı kulvarında kutu TİPİ sorulacak (07.12) ve depocu bunu
+     listeyi açmadan bilmeli — yanlış kutuyla başlanan hazırlık geri alınmaz. */
+  it('KARGO rozeti YALNIZ taşıyıcı kulvarında çizilir', async () => {
+    withQueue([
+      preparationOrder({ deliveryType: 'shipping' }),
+      preparationOrder({ orderId: IKINCI, deliveryType: 'route' }),
+    ]);
+
+    await renderPicking();
+
+    expect(screen.getByTestId(`warehouse-picking-order-${ORDER_ID}-shipping`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`warehouse-picking-order-${IKINCI}-shipping`)).toBeNull();
+    expect(screen.getByTestId(`warehouse-picking-order-${ORDER_ID}`)).toHaveTextContent(/taşıyıcı/);
+  });
+
+  it('başlık KUYRUĞU anlatır: kaç iş, kaçı yarım', async () => {
+    withQueue([
+      preparationOrder({ lineCount: 2, pickedLineCount: 1 }),
+      preparationOrder({ orderId: IKINCI }),
+    ]);
+
+    await renderPicking();
+
+    expect(screen.getByTestId('warehouse-picking-header')).toHaveTextContent(/2 sipariş bekliyor · 1 yarım/);
+  });
+});
+
+/*
   HAZIRLIK KÂĞIDININ QR'I (10.1) — masada basılan kâğıt buradan telefona bağlanıyor.
 
   Kâğıdın rolü 25.08'de değişti: artık doldurulmuyor, OKUTULUYOR (`design/KARARLAR.md`). Depocu

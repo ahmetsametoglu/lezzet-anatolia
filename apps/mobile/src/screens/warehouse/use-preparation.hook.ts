@@ -25,6 +25,7 @@ import {
   resolveScannedCode,
   sealOrderBox,
 } from '@/lib/api/warehouse';
+import { CLIENT_ERROR } from '@/lib/api/client';
 import { printLabel, printLabelPdf } from '@/lib/print/brother';
 import { downloadLabelPng, downloadShippingLabelPdf } from '@/lib/print/label-file';
 import { readPrinterChoice, resolvePrinter } from '@/lib/print/printer-choice';
@@ -299,6 +300,8 @@ export function usePreparation(): UsePreparationResult {
   const [notice, setNotice] = useNotice<PreparationNotice>();
 
   const generation = useRef(0);
+  /** Bir kez dolu okundu mu — çevrimdışı tazelemede eldeki listeyi korumanın koşulu (aşağıda). */
+  const loadedOnce = useRef(false);
 
   const load = useCallback(async () => {
     const run = (generation.current += 1);
@@ -306,9 +309,28 @@ export function usePreparation(): UsePreparationResult {
     if (run !== generation.current) return;
 
     if (result.error !== null) {
-      setStatus('error');
+      /*
+        AĞ DÜŞTÜYSE ELDEKİ KUYRUK KORUNUR (v3:216, 30.08) — ekran kilidi çizer, hata bloğu değil.
+
+        Tasarımın kuralı "okumak serbest, YAZMAK kapalı": çevrimdışı depocu listeyi görmeye devam
+        eder, ama toplama işaretleyemez. Eskiden her düşüş `error`a gidiyordu ve ELDEKİ liste
+        gizleniyordu — ölçüldü 30.08: kilidin çizildiği dal bu yüzden HİÇ ERİŞİLEMİYORDU.
+
+        AYRIM AĞ HATASINA ÖZGÜ, "her hata"ya değil: sunucu 500 dönerse liste bayat olabilir ve
+        bayatlığı açıklayan bir kilit de çizilmez — o hâlde hata bloğu doğru cevaptır. Sessizce
+        eski listeyi göstermek, depocuyu olmayan bir işe gönderirdi.
+
+        KOŞUL "ELİMİZDE LİSTE VAR MI", "durum neydi" DEĞİL: `reload` önce `loading`e alıyor, yani
+        duruma bakan bir kural elle yapılan tekrar denemede hiç tutmazdı. Bir kez dolu okunmuş
+        olmak, gösterilecek bir şeyin varlığının kanıtıdır.
+
+        İLK yükleme ağ hatasıyla düşerse gösterilecek hiçbir şey yok → `error`.
+      */
+      setStatus(result.error === CLIENT_ERROR.network && loadedOnce.current ? 'ready' : 'error');
       return;
     }
+
+    loadedOnce.current = true;
 
     setOrders(result.data.orders);
     setStatus('ready');

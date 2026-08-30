@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { PAYMENT_METHOD_LABELS, type BoxLabelContract, type PreparationLineContract, type PreparationOrderContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PrintProbe } from '@/components/print/print-probe';
@@ -18,7 +19,7 @@ import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { usePreparation, type DispatchState, type PrintState } from './use-preparation.hook';
-import { batchLabel, boxSizeLine, parseQty, productLabel, qtyToText } from './warehouse-format';
+import { batchLabel, boxSizeLine, orderPickingQueue, parseQty, productLabel, qtyToText } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -54,7 +55,11 @@ export function PreparationScreen() {
   const header = (
     <OperationsStackHeader
       title={t.picking.title}
-      subtitle={order === null ? undefined : captionOf(order)}
+      /* KUYRUKTA künye KUYRUĞUN kendisini anlatır (v3:184 `ov.toplamaAlt`), siparişin değil:
+         depocu listeye bakarken "kaç iş var, kaçı yarım" sorusunun cevabını başlıkta okur.
+         Sipariş seçilince künye o siparişe döner — hangi işin içinde olduğunu söylemek, o an
+         kuyruğun uzunluğundan daha önemlidir. */
+      subtitle={order === null ? queueSummary(picking.orders) : captionOf(order)}
       onBack={() => (order !== null && picking.orders.length > 1 ? picking.select(null) : router.back())}
       backLabel={t.common.back}
       testID="warehouse-picking-header"
@@ -130,39 +135,79 @@ export function PreparationScreen() {
               Düğme listenin ÜSTÜNDE: kâğıdı eline almış depocu listeye hiç bakmadan okutur;
               altta olsaydı önce göz taraması yaptırırdı ve kâğıdın kazandırdığı adım geri
               alınırdı. Liste yine duruyor — kâğıtsız çalışan da elle seçebilir. */}
-          <PressableSurface
-            onPress={() => picking.setQueueScanOpen(true)}
-            feedback="scale"
-            style={styles.queueScanButton}
-            accessibilityLabel={t.picking.queueScan.cta}
-            testID="warehouse-picking-queue-scan"
-          >
-            <Text style={styles.queueScanLabel}>{t.picking.queueScan.cta}</Text>
-          </PressableSurface>
-
-          <Text style={styles.heading}>{t.picking.queueHeading}</Text>
-          {picking.orders.map((row) => (
+          {/* OKUTMA ÇEVRİMDIŞI KAPANIR (v3:210-221) — düğme yerine SEBEBİ çizilir. Kâğıdı okutup
+              "açılmadı" ile karşılaşmak, sebebi olmayan bir arıza gibi görünürdü; kilidin kendisi
+              bir cevaptır. Liste yine duruyor: okumak serbest, YAZMAK kapalı. */}
+          {offline ? (
+            <View style={styles.queueLocked} testID="warehouse-picking-queue-locked">
+              <Text style={styles.queueLockedTitle}>{t.picking.queueLocked.title}</Text>
+              <Text style={styles.queueLockedBody}>{t.picking.queueLocked.body}</Text>
+            </View>
+          ) : (
             <PressableSurface
-              key={row.orderId}
-              onPress={() => picking.select(row.orderId)}
+              onPress={() => picking.setQueueScanOpen(true)}
               feedback="scale"
-              style={styles.queueRow}
-              accessibilityLabel={captionOf(row)}
-              testID={`warehouse-picking-order-${row.orderId}`}
+              style={styles.queueScanButton}
+              accessibilityLabel={t.picking.queueScan.cta}
+              testID="warehouse-picking-queue-scan"
             >
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>{captionOf(row)}</Text>
-                <Text style={styles.rowSub}>
-                  {fillCopy(t.picking.queueLines, {
-                    picked: String(row.pickedLineCount),
-                    total: String(row.lineCount),
-                  })}
-                  {row.pickedLineCount > 0 && row.pickedLineCount < row.lineCount ? ` · ${t.picking.queueHalf}` : ''}
-                </Text>
-              </View>
-              <Text style={styles.chevron}>›</Text>
+              <Text style={styles.queueScanLabel}>{t.picking.queueScan.cta}</Text>
             </PressableSurface>
-          ))}
+          )}
+
+          <View style={styles.queueHeadingRow}>
+            <Text style={styles.heading}>{t.picking.queueHeading}</Text>
+            <Text style={styles.queueHeadingHint}>{t.picking.queueHeadingHint}</Text>
+          </View>
+
+          {orderPickingQueue(picking.orders).map((row) => {
+            const state = queueStateOf(row);
+            return (
+              <PressableSurface
+                key={row.orderId}
+                onPress={() => picking.select(row.orderId)}
+                feedback="scale"
+                style={styles.queueRow}
+                accessibilityLabel={`${captionOf(row)} — ${state.label}`}
+                testID={`warehouse-picking-order-${row.orderId}`}
+              >
+                {/* Sol işaret: satırın durumunu ekrana bakmadan, göz taramasıyla verir. */}
+                <View style={[styles.queueMark, { backgroundColor: state.tone }]} />
+
+                <View style={styles.rowBody}>
+                  <View style={styles.queueRefRow}>
+                    <Text style={styles.rowTitle} numberOfLines={1}>
+                      {row.referenceNo ?? t.picking.noReference}
+                    </Text>
+                    {/* KARGO rozeti YALNIZ taşıyıcı kulvarında: o siparişte kutu TİPİ sorulacak
+                        (07.12) ve depocu bunu listeyi açmadan bilmeli. */}
+                    {row.deliveryType === 'shipping' ? (
+                      <View style={styles.queueTag} testID={`warehouse-picking-order-${row.orderId}-shipping`}>
+                        <Text style={styles.queueTagText}>{t.picking.queueShippingTag}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  <Text style={styles.rowSub} numberOfLines={1}>
+                    {queueMetaOf(row)}
+                  </Text>
+
+                  <View style={styles.queueProgressRow}>
+                    <OperationsProgressBar
+                      value={state.ratio}
+                      tone={state.tone}
+                      testID={`warehouse-picking-order-${row.orderId}-progress`}
+                    />
+                    <Text style={[styles.queueState, { color: state.tone }]}>{state.label}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.chevron}>›</Text>
+              </PressableSurface>
+            );
+          })}
+
+          <Text style={styles.queueFootnote}>{t.picking.queueFootnote}</Text>
         </ScrollView>
 
         {/* Okutucu kuyruk dalında da çizilir — `ScanSheet` bir Modal ve listenin içinde değil.
@@ -364,6 +409,48 @@ export function PreparationScreen() {
       </LinearGradient>
     </View>
   );
+}
+
+/** Kuyruğun kendi künyesi (v3:184) — kaç iş var, kaçı yarım kalmış. */
+function queueSummary(orders: readonly PreparationOrderContract[]): string {
+  const half = orders.filter((row) => row.pickedLineCount > 0 && row.pickedLineCount < row.lineCount).length;
+  return half > 0
+    ? fillCopy(t.picking.queueSummary.someWithHalf, { n: String(orders.length), half: String(half) })
+    : fillCopy(t.picking.queueSummary.some, { n: String(orders.length) });
+}
+
+/**
+ * Kuyruk satırının DURUMU (v3:256-320) — ilerleme çubuğunun rengi, dolgusu ve yanındaki cümle.
+ *
+ * ŞABLON KENDİ İÇİNDE TUTARSIZ ve bu bilinçli bir seçim gerektirdi: beş örnek satırın sol
+ * işaret rengi tek bir kurala uymuyor (dördüncü satır hiç başlanmamışken terracotta, beşincisi
+ * tamamlanmışken gri). Statik bir maket olduğu için işaretler elle boyanmış. Çoğunluğun ifade
+ * ettiği kural alındı ve İŞARET İLE METİN AYNI kuralı izliyor:
+ *   · yarım (0 < toplanan < toplam) → terracotta: bitirilmeyi bekleyen iş
+ *   · tamam (toplanan = toplam)     → zeytin: kapanmaya hazır
+ *   · hiç başlanmamış               → gri: sırada
+ * "Improvise etme" kuralının sınırı burası: tasarım tek bir şey söylemediğinde, söylediklerinin
+ * ÇOĞUNLUĞU alınır ve seçim yazılır.
+ */
+function queueStateOf(order: PreparationOrderContract): { label: string; tone: string; ratio: number } {
+  const filled = { picked: String(order.pickedLineCount), total: String(order.lineCount) };
+  const ratio = order.lineCount === 0 ? 0 : order.pickedLineCount / order.lineCount;
+
+  if (order.pickedLineCount > 0 && order.pickedLineCount < order.lineCount) {
+    return { label: fillCopy(t.picking.queueState.half, filled), tone: operationsTheme.colors.terracotta, ratio };
+  }
+  if (order.pickedLineCount > 0 && order.pickedLineCount === order.lineCount) {
+    return { label: fillCopy(t.picking.queueState.ready, filled), tone: operationsTheme.colors.olive, ratio };
+  }
+  return { label: fillCopy(t.picking.queueState.open, filled), tone: operationsTheme.colors.muted, ratio };
+}
+
+/** Satırın ikinci satırı — müşteri · kanal (+ kulvar). Kulvar YALNIZ adrese giden siparişte yazılır. */
+function queueMetaOf(order: PreparationOrderContract): string {
+  const parts = [order.customerName, t.common.channel[order.channel]];
+  if (order.deliveryType === 'route') parts.push(t.picking.queueDelivery.route);
+  if (order.deliveryType === 'shipping') parts.push(t.picking.queueDelivery.shipping);
+  return parts.join(' · ');
 }
 
 /** Sipariş künyesi (v2:319) — referans · müşteri · kanal. Tutar ve adres YOK (sözleşme de vermiyor). */
@@ -769,14 +856,90 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space.sm,
   },
+  /* v3:258 — satır artık kesikli çizgiyle ayrılan bir SATIR değil, kendi çerçevesi olan bir KART.
+     Sebebi içeriğin büyümesi: üç bilgi katmanı (referans · künye · ilerleme) bir çizginin altında
+     birbirine karışırdı; kart onları bir arada tutuyor. */
   queueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.xl,
-    paddingVertical: operationsTheme.space['3xl'],
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+  },
+  /** Sol durum işareti — satırın hâlini göz taramasıyla verir; rengi `queueStateOf`tan gelir. */
+  queueMark: {
+    width: operationsTheme.size.previewMark,
+    alignSelf: 'stretch',
+    borderRadius: operationsTheme.radius.tight,
+  },
+  queueRefRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
+  },
+  /** KARGO rozeti — taşıyıcı kulvarında kutu TİPİ sorulacağının önceden haberi. */
+  queueTag: {
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
+    borderRadius: operationsTheme.radius.badge,
+    paddingVertical: operationsTheme.space['2xs'],
+    paddingHorizontal: operationsTheme.space.sm,
+  },
+  queueTagText: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.badge,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.badge),
+    color: operationsTheme.colors.terracotta,
+  },
+  queueProgressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
+    paddingTop: operationsTheme.space['2xs'],
+  },
+  queueState: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.meta,
+  },
+  queueHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  queueHeadingHint: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
+  },
+  queueFootnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space.lg,
+  },
+  /* Çevrimdışı kilidi okutma DÜĞMESİNİN yerine geçer — düğmeyi soluk bırakıp basılabilir
+     göstermek, sebebi olmayan bir arıza gibi görünürdü. */
+  queueLocked: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    gap: operationsTheme.space['2xs'],
+  },
+  queueLockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  queueLockedBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
   },
   parcelName: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

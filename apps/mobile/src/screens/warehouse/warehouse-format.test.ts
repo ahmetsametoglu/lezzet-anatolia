@@ -1,4 +1,13 @@
-import { batchLabel, boxSizeLine, parseDate, parseQty, productLabel, qtyToText, shortDate } from './warehouse-format';
+import {
+  batchLabel,
+  boxSizeLine,
+  orderPickingQueue,
+  parseDate,
+  parseQty,
+  productLabel,
+  qtyToText,
+  shortDate,
+} from './warehouse-format';
 import { warehouseCopy } from './copy';
 
 /*
@@ -104,5 +113,43 @@ describe('boxSizeLine · ölçü satırı', () => {
     expect(boxSizeLine({ lengthMm: 350, widthMm: 250, heightMm: 30, tareG: 0, maxContentG: null }, copy)).toBe(
       '35×25×3 cm · dara 0 g',
     );
+  });
+});
+
+/*
+  KUYRUK SIRASI (v3:320) — dipnot "yarım kalan kutu en üstte durur" diye SÖZ VERİYOR ve uç bunu
+  yapmıyor (teslim gününe göre sıralıyor). Ölçüldü 30.08, fiziksel cihazda: yarım sipariş dokuz
+  satırın sekizincisindeydi. Sözünü tutmayan bir dipnot, olmayan bir kuraldan kötüdür.
+
+  İkinci iddia daha önemli: sıralama KARARLI olmalı — grup içinde ucun teslim-günü sırası bozulursa
+  dipnotun İLK yarısı ("teslim gününe göre sıralı") bu kez yalan olur.
+*/
+describe('orderPickingQueue · yarım kalan en üstte', () => {
+  const order = (id: string, picked: number, total: number) => ({ id, pickedLineCount: picked, lineCount: total });
+
+  it('yarım kalan sipariş listenin başına çıkar', () => {
+    const sorted = orderPickingQueue([order('a', 0, 1), order('b', 1, 2), order('c', 3, 3)]);
+
+    expect(sorted.map((row) => row.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('grup İÇİNDE ucun sırası korunur (kararlı) — "teslim gününe göre" de bir sözdür', () => {
+    const sorted = orderPickingQueue([order('a', 0, 1), order('b', 0, 2), order('c', 1, 2), order('d', 2, 4)]);
+
+    // İki yarım (c, d) ucun sırasıyla başa; kalan ikisi (a, b) yine ucun sırasıyla arkada.
+    expect(sorted.map((row) => row.id)).toEqual(['c', 'd', 'a', 'b']);
+  });
+
+  it('hiç yarım yoksa sıra HİÇ değişmez', () => {
+    const input = [order('a', 0, 1), order('b', 2, 2), order('c', 0, 3)];
+
+    expect(orderPickingQueue(input).map((row) => row.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('girdiyi DEĞİŞTİRMEZ — kopya üzerinde çalışır', () => {
+    const input = [order('a', 0, 1), order('b', 1, 2)];
+    orderPickingQueue(input);
+
+    expect(input.map((row) => row.id)).toEqual(['a', 'b']);
   });
 });

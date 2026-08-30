@@ -98,14 +98,34 @@
     "title": "Toplama",
     "loading": "Toplama listesi yükleniyor…",
     "error": {
-      "title": "Toplama listesi yüklenemedi",
-      "body": "Bağlantı ya da sunucu sorunu — toplanan adetler güvende."
+      "title": "Liste yüklenemedi",
+      "body": "Sunucuya ulaşılamadı — toplanan adetler güvende. Toplamaya kör başlamak yerine yeniden dene: kuyruk sırası teslim gününe göre kurulur."
     },
     "empty": {
       "title": "Toplanacak sipariş yok",
-      "body": "Sipariş onaylandığında bildirim gelir — bu liste kendiliğinden dolar."
+      "body": "Onaylanan sipariş buraya kendiliğinden düşer ve bildirim gelir. Yeni sipariş beklemiyorsan yakın-SKT turu iyi bir sıradaki iş."
     },
-    "queueHeading": "BEKLEYEN SİPARİŞLER — BİRİNİ SEÇ",
+    "queueHeading": "BEKLEYEN SİPARİŞLER",
+    "queueHeadingHint": "birini seç",
+    "queueSummary": {
+      "some": "{n} sipariş bekliyor",
+      "someWithHalf": "{n} sipariş bekliyor · {half} yarım"
+    },
+    "queueState": {
+      "half": "{picked}/{total} · yarım",
+      "ready": "{picked}/{total} hazır",
+      "open": "{picked}/{total} kalem"
+    },
+    "queueDelivery": {
+      "route": "kurye rotası",
+      "shipping": "taşıyıcı"
+    },
+    "queueShippingTag": "KARGO",
+    "queueFootnote": "Kuyruk teslim gününe göre sıralı; yarım kalan kutu en üstte durur.",
+    "queueLocked": {
+      "title": "Okutma kapalı",
+      "body": "Bağlantı gelene kadar toplama işaretlenemez. Depo kayıtları kuyruğa alınmaz — mal rafta, sistem başka söylüyor olamaz."
+    },
     "queueScan": {
       "cta": "📄 Hazırlık kâğıdını okut",
       "title": "Hazırlık kâğıdını okut",

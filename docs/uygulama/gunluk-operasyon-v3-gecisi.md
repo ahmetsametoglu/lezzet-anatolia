@@ -6,6 +6,11 @@
 > Durumun sahibi bu dosya DEĞİL, `docs/build/21-mobil-uygulama.md` görev satırıdır (CLAUDE §5);
 > burası "nasıl gitti"yi tutar.
 
+**Nasıl okunur.** Sıra: yetki/kapsam → faz girdileri → ekran haritası → plan → **ekran girdileri**
+→ **uyuşmazlık defteri** → **açık maddeler**. Her ekran girdisi kısa tutulur: *ne değişti · ne
+ölçüldü · doğrulama*. Ayrıntı (künyeler, gerekçeler, test dökümü) görev satırındadır; burada iki
+kez yazılmaz. Ekran 01 girdisi bilerek uzun — deseni o kurdu.
+
 ## Yetki ve kapsam (kullanıcı kararı 30.08)
 
 Kullanıcı bu geçiş için kesintisiz çalışma yetkisi verdi: besleme dosyalarını değiştirmek,
@@ -169,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 1/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 2/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -222,6 +227,38 @@ kutu · 3 bekleyen sevkiyat, gerçek veriyle).
 
 ---
 
+## 30.08 gece — Faz 2 · Ekran 02: Toplama kuyruğu ✅
+
+**Ne değişti.** Kuyruk satırı kesikli çizgili bir satırdan **karta** dönüştü ve üç bilgi katmanı
+taşıyor: referans · künye (müşteri · kanal · kulvar) · **ilerleme** (çubuk + cümle). Üç durum üç
+ayrı cümle ve üç ayrı renk: *yarım* terracotta · *hazır* zeytin · *başlanmamış* gri. Taşıyıcı
+kulvarındaki siparişe **KARGO rozeti** — kutu tipi sorulacağının önceden haberi. Başlığın künyesi
+artık kuyruğu anlatıyor ("9 sipariş bekliyor · 1 yarım"). Boş ve hata metinleri v3'ün eyleme
+çağıran hâliyle değişti.
+
+**İlerleme çubuğu paylaşılana çıkarıldı** (`components/operations/progress-bar.tsx`): aynı çubuk
+kuryenin gün başlığında da vardı, iki kopyaydı (CLAUDE §1). Renk çağırandan geliyor — kuryede hep
+zeytin, depoda satırın durumu.
+
+**Cihazda iki arıza bulundu, ikisi de koda döndü:**
+
+1. **Dipnot yalan söylüyordu.** *"yarım kalan kutu en üstte durur"* diyor ama uç teslim gününe
+   göre sıralıyor; ölçüldü: yarım sipariş dokuz satırın **sekizincisindeydi**. Sıralama kuralı
+   ortak yardımcıya yazıldı (`orderPickingQueue` — kararlı, grup içinde ucun sırasını korur) ve
+   hub'ın D1 önizlemesi de aynı sırayı kullanıyor: aynı listenin iki ekranda iki farklı başı
+   olamaz.
+2. **Çevrimdışı kilidi HİÇ ERİŞİLEMİYORDU.** Yazdığım kilit dalı ölü koddu: her okuma hatası
+   `error`a gidip eldeki listeyi gizliyordu. Tasarımın kuralı "okumak serbest, **yazmak** kapalı"
+   — hook düzeltildi: **ağ** hatasında bir kez dolu okunmuş kuyruk korunur, **sunucu** hatasında
+   gizlenir (açıklanamayan bayatlık depocuyu olmayan bir işe gönderir). Cihazda tünel düşürülerek
+   doğrulandı: okutma düğmesinin yerine sebep geldi, liste yerinde kaldı.
+
+**Doğrulama.** Kuyruk jest 23/23 (dördü yeni) · sıralama 4/4 · çevrimdışı hook 3/3 · mobil paket
+**941/941** · statik kapılar yeşil · **cihazda gözle doğrulandı** (9 sipariş, yarım başta, KARGO
+rozeti, kilit).
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -232,3 +269,16 @@ Burada durulmaz — yazılır, geçilir.
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
 | 2 | 01 Depo Hub | Şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
+| 4 | 02 Toplama kuyruğu | Şablonun beş örnek satırının **sol durum işareti tek kurala uymuyor** (dördüncüsü hiç başlanmamışken terracotta, beşincisi tamamlanmışken gri). Statik maket, işaretler elle boyanmış. | Kapandı — çoğunluğun kuralı alındı ve yazıldı: işaret ile metin AYNI kuralı izler (yarım terracotta · tamam zeytin · başlanmamış gri). |
+
+---
+
+## Açık maddeler (kullanıcı kararı bekleyen)
+
+Geçiş sırasında ölçülen, ama bu turun işi olmayan konular. Sırası gelince ya da kullanıcı
+söyleyince ele alınır.
+
+| # | Konu | Ölçüm | Öneri |
+| --- | --- | --- | --- |
+| A1 | **Yazı boyutu ayarı operasyondan ayarlanamıyor** (kullanıcı sorusu 30.08) | Ayar (`lib/settings/font-scale.ts`, %90·%100·%115) `updateTheme`'i **iki temaya birden** uyguluyor — operasyon ekranları ölçekle birlikte büyüyor. Ama KONTROL yalnız müşteri yüzeyinde: onboarding adımı + Hesabım. Operasyonda giriş noktası yok; doğrudan operasyona düşen depocu ayarı hiç göremiyor. | Personel menüsüne (`OperationsStaffMenu` çekmecesi) bir yazı boyutu satırı. Küçük iş, ölçek zaten çalışıyor. |
+| A2 | **Harf aralığı token'ı 10 müşteri ekranında kopyalanmış** | `eyebrow--letter-spacing` (0.18em) token'ı var ve `emToDp` ile çevriliyor; ama `home` · `checkout` · `orders` · `packages-list` · `points-history` · `order-detail` ekranları `theme.text.eyebrow * 0.18` diye **değeri ham çarpanla kopyalıyor**. Token bir gün değişirse o on ekran eski değerde kalır (CLAUDE §1). | Müşteri şeridinin işi — not bırakılacak. Operasyon tarafındaki üç kopyayı 30.08'de token yoluna çevirdim. |
