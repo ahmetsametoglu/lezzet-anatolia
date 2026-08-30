@@ -27,6 +27,12 @@ interface IconGeometry {
   paths: readonly string[];
   /** `<circle cx cy r>` üçlüleri — şablonun daire öğeleri. */
   circles?: readonly (readonly [cx: number, cy: number, r: number])[];
+  /**
+   * `<rect x y width height rx>` beşlileri — dairenin gerekçesiyle AYNI sebeple ayrı: yuvarlak
+   * köşeli bir dikdörtgeni `d` yayına çevirmek, ölçü aynı kalsa bile geometriyi yeniden yazmak
+   * olurdu. Şablon kargo kutusunu (D8) `<rect>` ile çiziyor.
+   */
+  rects?: readonly (readonly [x: number, y: number, width: number, height: number, rx: number])[];
   /** Şablonun kendi `viewBox`u; kare olmayanlarda (süzgeç 19×17) `Icon` genişliği buradan türetir. */
   viewBox?: string;
   /** Şablonun bu ikon için verdiği çizgi kalınlığı, kitin duraklarına çekilmiş hâliyle. */
@@ -120,6 +126,31 @@ export const ICON_PATHS = {
   },
   /** "Kaydedildi" bandının onay halkası. */
   'check-circle': { paths: ['M22 11.08V12a10 10 0 1 1-5.93-9.14', 'M22 4 12 14.01l-3-3'] },
+
+  /* ── DEPO hub ızgarası (Operasyon Mobil v3:35-174) ───────────────────────────────────
+     v3'ün hub'ı D2…D8'i ikonlu kutucuklara aldı; v2'de düz satırlardı ve ikon yoktu. Yedisi de
+     şablondan BİREBİR — sadeleştirilmedi, hazır setten karşılık aranmadı (dosyanın kendi kuralı).
+     Adlar İŞİ söyler, çizimi değil: `intake` bir kutudur ama adı "box" olsaydı ikinci bir kutu
+     ikonu geldiğinde ad çakışırdı. */
+  /** D2 mal kabul — açılı kutu (gelen mal). */
+  intake: { paths: ['M3 8l9-5 9 5v8l-9 5-9-5z', 'M3 8l9 5 9-5', 'M12 13v8'] },
+  /** D3 yakın-SKT — saat; kadran `circle`, akrep `path` (şablonun kendi ayrımı). */
+  'near-expiry': { paths: ['M12 7v5l3 2'], circles: [[12, 12, 9]] },
+  /** D4 sayım / düzeltme — daralan üç satır (liste). */
+  'stock-count': { paths: ['M4 6h16M4 12h16M4 18h10'] },
+  /** D5 transfer — SAĞA giden ok, dikey çizgi hedef depodur. */
+  transfer: { paths: ['M3 12h13', 'M12 7l5 5-5 5', 'M21 5v14'] },
+  /** D6 kurye dönüşü — SOLA gelen ok; D5'in aynası, çünkü mal geri geliyor. */
+  'courier-return': { paths: ['M21 12H8', 'M12 17l-5-5 5-5', 'M3 5v14'] },
+  /** D7 yerinde satış — alışveriş çantası (kapıya gelen müşteri). */
+  sale: { paths: ['M6 2l1.5 4h9L18 2', 'M4 6h16l-1.5 14H5.5z'] },
+  /** D8 kargo devri — kutu gövdesi `rect`, mühür `circle`. */
+  handover: { paths: [], rects: [[3, 5, 18, 14, 3]], circles: [[12, 12, 3.2]] },
+  /** "Bu cihaz · yazıcılar" şeridi — dişli (kurulum, günlük iş değil). */
+  settings: {
+    paths: ['M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2'],
+    circles: [[12, 12, 3]],
+  },
 } as const satisfies Record<string, IconGeometry>;
 
 /** Kitin tanıdığı ikon adları — `Icon` bunun dışına çıkamaz (yanlış ad derlemede yakalanır). */

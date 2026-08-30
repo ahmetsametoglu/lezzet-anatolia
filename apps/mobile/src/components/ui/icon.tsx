@@ -1,4 +1,4 @@
-import Svg, { Circle, Path } from 'react-native-svg';
+import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useUnistyles } from 'react-native-unistyles';
 
 import { ICON_PATHS, type IconName } from './icon-paths';
@@ -83,6 +83,11 @@ export function Icon({ name, size, color, bold = false, testID }: IconProps) {
       ))}
       {'circles' in geometry
         ? geometry.circles.map(([cx, cy, r]) => <Circle key={`${cx}-${cy}-${r}`} cx={cx} cy={cy} r={r} />)
+        : null}
+      {'rects' in geometry
+        ? geometry.rects.map(([x, y, width, height, rx]) => (
+            <Rect key={`${x}-${y}-${width}-${height}`} x={x} y={y} width={width} height={height} rx={rx} />
+          ))
         : null}
     </Svg>
   );

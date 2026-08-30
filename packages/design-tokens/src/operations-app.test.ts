@@ -181,7 +181,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(fade).toContain(', 0)');
   });
 
-  it('fark/yeni dağılımı sabit: 2 fark + 10 yeni', () => {
+  it('fark/yeni dağılımı sabit: 2 fark + 14 yeni', () => {
     expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(2);
     expect(sharedKeys(baseText, operationsAppText)).toHaveLength(0);
     expect(sharedKeys(baseRadius, operationsAppRadius)).toHaveLength(0);
@@ -192,7 +192,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
       Object.keys(operationsAppRadius).length +
       Object.keys(operationsAppShadow).length +
       Object.keys(operationsAppGradient).length;
-    expect(total).toBe(12); // 2 fark + 10 operasyona-yeni
+    expect(total).toBe(16); // 2 fark + 14 operasyona-yeni (v3'ün koyu özet kartı dört ton ekledi)
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {

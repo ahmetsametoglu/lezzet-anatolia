@@ -24,12 +24,24 @@ import type { OperationsSection } from '@/lib/operations/sections';
   durum çubuğu yoktur; cihazda başlık onun altına girmemeli.
 */
 
-/** Bölümün üstbaşlık rengi — v2'den ölçüldü (kimlik rengi, durum rengi DEĞİL). */
+/*
+  ÜSTBAŞLIK RENGİ — v3'te DÖRT BÖLÜMDE DE ZEYTİN (ölçüldü 30.08).
+
+  v2'de her bölümün kendi kimlik rengi vardı (kurye zeytin · depo kahve · yönetim mürekkep · para
+  terracotta) ve bu bilinçli bir karardı: "üstbaşlık bölümün kimliğidir". v3 o kararı geri aldı —
+  şablonun dört üstbaşlığı da `#5f7a2c`, tek istisnasız (`grep` ile doğrulandı: dört bölüm, tek
+  renk). Renk artık "hangi bölümdeyim" demiyor; **"operasyondayım"** diyor. Bölümü söyleyen şey
+  üstbaşlığın METNİ zaten ("DEPO · STRASBOURG MERKEZ").
+
+  Eşleme yine de bir sözlük olarak DURUYOR, hepsi tek sabite indirgenmedi: bölüm→renk bağı
+  tasarımın bir kararıdır ve bir gün yeniden ayrışabilir; sözlüğü söküp tek renk yazmak, o kararın
+  nerede verildiğini kaybetmek olurdu.
+*/
 const EYEBROW_COLOR = {
   courier: operationsTheme.colors.olive,
-  warehouse: operationsTheme.colors.warehouse,
-  management: operationsTheme.colors.ink,
-  money: operationsTheme.colors.terracotta,
+  warehouse: operationsTheme.colors.olive,
+  management: operationsTheme.colors.olive,
+  money: operationsTheme.colors.olive,
 } as const satisfies Record<OperationsSection, string>;
 
 interface OperationsSectionHeaderProps {
@@ -38,6 +50,14 @@ interface OperationsSectionHeaderProps {
   eyebrow: string;
   /** Lora başlık ("Günün Rotası"). */
   title: string;
+  /**
+   * Başlığın ALTINDAKİ bağlam satırı — v3'le geldi (30.08). Dört bölümde de var ama içeriği
+   * BÖLÜMÜN kendi sorusudur: depoda "Deniz Arslan · depo", kuryede "Marc Lemoine · SF-26-YRNWV9",
+   * parada "Ayşe Demir · 28 Ağustos · Strasbourg Merkez". Ortak bir "personel adı" alanı
+   * OLMAMASININ sebebi bu: satırın taşıdığı şey kim olduğun değil, **hangi bağlamda çalıştığın**.
+   * `undefined` = satır hiç doğmaz (v3'te Yönetim böyle).
+   */
+  context?: string;
   /** Sağ yuva: bildirim düğmesi ya da ekrana özel metin eylemi. */
   right?: ReactNode;
   /**
@@ -57,6 +77,7 @@ export function OperationsSectionHeader({
   section,
   eyebrow,
   title,
+  context,
   right,
   identity,
   testID,
@@ -73,6 +94,11 @@ export function OperationsSectionHeader({
         <Text style={styles.title} accessibilityRole="header">
           {title}
         </Text>
+        {context === undefined ? null : (
+          <Text style={styles.context} testID={testID === undefined ? undefined : `${testID}-context`}>
+            {context}
+          </Text>
+        )}
       </View>
       {/* İkisi de yoksa satır hiç doğmaz; varsa kimlik EN SAĞDA durur — webin barında da avatar
           en dışta ve "bu benim oturumum" demek, ekranın eyleminden sonra gelir. */}
@@ -121,5 +147,11 @@ const styles = StyleSheet.create((_theme, rt) => ({
     fontFamily: operationsTheme.font.display[operationsTheme.text['card-title--font-weight']],
     fontSize: operationsTheme.text['card-title'],
     color: operationsTheme.colors.ink,
+  },
+  /* Bağlam satırı — v3: Karla 400 · 12px · #8a8270. Ölçeğin 12'si `helper`, gri `muted`. */
+  context: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
   },
 }));

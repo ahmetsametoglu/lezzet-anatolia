@@ -7076,3 +7076,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** typecheck · lint · knip · boundaries yeşil; mobil jest **920/920**; kilitli tam
   paket **3945/3945**; Maestro akışı gerçek cihazda yeşil.
+
+- [x] (21.136) **DEPO HUB v3 — düz liste üç katmana ayrıldı** (Operasyon Mobil v3:35-174)
+  `touches:` `apps/mobile/src/screens/warehouse/{warehouse-hub-screen.tsx,messages.json}` ·
+  `apps/mobile/src/components/operations/section-header.tsx` ·
+  `apps/mobile/src/components/ui/{icon.tsx,icon-paths.ts}` · `apps/mobile/src/theme/metrics.ts` ·
+  `packages/design-tokens/src/operations-app.ts`
+
+  **Durum (30.08).** v3 geçişinin ilk ekranı. v2 sekiz işi eşit ağırlıkta satırlara diziyordu;
+  v3 onları işin aciliyetine göre ayırdı: koyu **özet kartı** (üç sayı) → **D1 büyük kartı** (ilk
+  iki siparişin önizlemesiyle) → **D2–D8 ikili ızgarası** → **yazıcı şeridi**.
+
+  **YENİ UÇ İSTEMEDİ.** Özet kartının üç sayısı da bölümün zaten okuduğu veriden çıkıyor; "yarım
+  kutu" mühürlenmemiş kutusu olan sipariştir (`boxes[].sealedAt === null`, sözleşmede var). Hub'ın
+  "sayaç uçtan gelmez, listeden sayılır" kuralı korundu. Üçü de `null` olabilir ve o zaman **"—"**
+  yazılır, "0" değil — koyu kartta büyük bir sıfır "bugün iş yok" der (CLAUDE §1).
+
+  **Ortak zemine dört dokunuş** (bölüm-üstü, ama bu ekranın ihtiyacıydı): başlığa **bağlam satırı**
+  (`context`) — v3 dört bölümde de başlığın altına bir künye koyuyor; **üstbaşlık rengi dört
+  bölümde de zeytin oldu** (v2'nin "üstbaşlık bölümün kimliğidir" kararı v3'te geri alınmış,
+  şablonun dördü de `#5f7a2c`); ikon sözlüğüne **yedi geometri + `<rect>` desteği** (D8'in kutusu
+  dikdörtgen, `d` yayına çevirmek geometriyi yeniden yazmak olurdu); koyu kartın üstü için **dört
+  yeni renk token'ı** — krem zeminin hiçbir tonuyla karşılanamıyordu, ham hex yasak (CLAUDE §3).
+
+  **İki arıza YALNIZ CİHAZDA görüldü, jest ikisini de göremez** (yerleşim ölçülmez): `flexBasis:
+  '48%'` + `flexGrow` ile kutucuklar İÇERİĞE göre boyutlandı, uzun alt metinli "Mal kabul" tek
+  başına satırı kapladı; `width: '48%'` ile yüzde beklenmedik bir tabana çözüldü ve kutucuklar
+  ekranın beşte birine düştü. Sütun genişliği artık `useWindowDimensions`'dan hesaplanıyor
+  (`discover-screen`in kart yolu hesabıyla aynı yol).
+
+  **Üç uyuşmazlık kayda geçti** (günlüğün defteri): depo ADI mobile hiç ulaşmıyor (üstbaşlık
+  kuyruksuz yazıldı); kapsam belirsizliği şablonda ince şerit, bizde tam ekran blok (kapsam
+  çözülmeden uçlar veri döndürmüyor); D8 alt metni "verilen"i değil BEKLEYENİ sayıyor — bilinçli
+  sapma, 21.134'ün kararı.
+
+  **Doğrulama.** Hub jest **15/15** (dördü yeni), başlık jest **9/9**, token jest **11/11**, mobil
+  paket **930/930**; typecheck · lint · knip · boundaries yeşil; Maestro akışı gerçek cihazda
+  yeşil; ekran **gözle doğrulandı** (9 sipariş · 1 yarım kutu · 3 bekleyen sevkiyat, canlı veri).

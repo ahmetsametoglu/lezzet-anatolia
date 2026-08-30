@@ -84,17 +84,23 @@ beforeEach(() => {
 });
 
 describe('depo hub', () => {
-  it('altı iş satırı da çizilir — sayacı olmayanlar dahil', async () => {
+  it('sekiz işin hepsi çizilir — D1 kartı, altı ızgara kutucuğu, yazıcı şeridi', async () => {
     routeReplies({});
 
     await renderHub();
 
-    for (const key of ['picking', 'intake', 'near-expiry', 'adjustment', 'transfer', 'return']) {
+    for (const key of ['picking', 'intake', 'near-expiry', 'adjustment', 'transfer', 'return', 'sale', 'handover', 'printers']) {
       expect(screen.getByTestId(`warehouse-hub-${key}`)).toBeOnTheScreen();
     }
   });
 
-  it('sayaçlar LİSTEDEN sayılır — yarım sipariş ayrıca söylenir', async () => {
+  /*
+    ÖZET KARTI (v3, 30.08) — hub'ın tepesindeki üç sayı. Yeni bir uç İSTEMİYOR: üçü de bölümün
+    zaten okuduğu veriden çıkıyor. "Yarım kutu" mühürlenmemiş kutusu olan SİPARİŞTİR
+    (`sealedAt === null`) — kutuyu değil siparişi sayıyoruz, çünkü bitirilecek şey siparişin
+    kendisidir.
+  */
+  it('özet kartının üç sayısı zaten okunan veriden türer', async () => {
     routeReplies({
       preparation: () =>
         Promise.resolve(
@@ -106,14 +112,90 @@ describe('depo hub', () => {
             ],
           }),
         ),
-      transfers: () => Promise.resolve(ok({ transfers: [inboundTransfer()] })),
+      handover: () => Promise.resolve(ok({ boxes: 3 })),
     });
 
     await renderHub();
 
-    expect(screen.getByTestId('warehouse-hub-picking-badge')).toHaveTextContent('2');
-    expect(screen.getByTestId('warehouse-hub-picking')).toHaveTextContent(/2 sipariş bekliyor · 1 yarım/);
+    expect(screen.getByTestId('warehouse-hub-overview-orders')).toHaveTextContent('2');
+    expect(screen.getByTestId('warehouse-hub-overview-shipments')).toHaveTextContent('3');
+    // Fikstürün kutuları mühürlü — yarım kutu yok.
+    expect(screen.getByTestId('warehouse-hub-overview-half')).toHaveTextContent('0');
+  });
+
+  it('mühürlenmemiş kutusu olan sipariş YARIM sayılır ve önizlemede söylenir', async () => {
+    routeReplies({
+      preparation: () =>
+        Promise.resolve(
+          ok({
+            date: null,
+            orders: [
+              preparationOrder({
+                boxes: [
+                  {
+                    boxId: '00000000-0000-4000-8000-0000000000b1',
+                    boxNo: 1,
+                    code: 'KT-0001',
+                    sealedAt: null,
+                    items: [],
+                    shippingBoxId: null,
+                  },
+                ],
+              }),
+            ],
+          }),
+        ),
+    });
+
+    await renderHub();
+
+    expect(screen.getByTestId('warehouse-hub-overview-half')).toHaveTextContent('1');
+    expect(screen.getByTestId('warehouse-hub-picking-preview')).toHaveTextContent(/yarım kutu açık/);
+  });
+
+  /*
+    D1 ÖNİZLEMESİ — kart bir LİSTE DEĞİL, "içeride ne var" cümlesidir. İlk İKİ sipariş çizilir;
+    üçüncü satır kartı listeye çevirir ve altındaki ızgarayı ekrandan atardı.
+  */
+  it('D1 kartı ilk iki siparişi gösterir, üçüncüyü GÖSTERMEZ', async () => {
+    routeReplies({
+      preparation: () =>
+        Promise.resolve(
+          ok({
+            date: null,
+            orders: [
+              preparationOrder({ orderId: '00000000-0000-4000-8000-000000000001', referenceNo: 'LZA-BIR' }),
+              preparationOrder({ orderId: '00000000-0000-4000-8000-000000000002', referenceNo: 'LZA-IKI' }),
+              preparationOrder({ orderId: '00000000-0000-4000-8000-000000000003', referenceNo: 'LZA-UC' }),
+            ],
+          }),
+        ),
+    });
+
+    await renderHub();
+
+    const preview = screen.getByTestId('warehouse-hub-picking-preview');
+    expect(preview).toHaveTextContent(/LZA-BIR/);
+    expect(preview).toHaveTextContent(/LZA-IKI/);
+    expect(preview).not.toHaveTextContent(/LZA-UC/);
+    // Rozet TÜM kuyruğu sayar — önizlemenin kırptığı sayıyı değil.
+    expect(screen.getByTestId('warehouse-hub-picking-badge')).toHaveTextContent('3');
+  });
+
+  it('transfer kutucuğu gelen transferi söyler', async () => {
+    routeReplies({ transfers: () => Promise.resolve(ok({ transfers: [inboundTransfer()] })) });
+
+    await renderHub();
+
     expect(screen.getByTestId('warehouse-hub-transfer')).toHaveTextContent(/TRF-COL-26-0007 yolda/);
+  });
+
+  it('başlığın bağlam satırı personeli ve bölümü söyler', async () => {
+    routeReplies({});
+
+    await renderHub();
+
+    expect(screen.getByTestId('warehouse-hub-header-context')).toHaveTextContent('Ayşe K. · Depo');
   });
 
   /*
@@ -122,23 +204,22 @@ describe('depo hub', () => {
     Bekleyen kutuları hiçbir liste taşımıyor: duyurulmuş bir siparişin kutuları hazırlık
     kuyruğundan düşmüştür ve gelen transferlerle ilgisi yok. Sayaç bu yüzden kendi ucundan geliyor.
   */
-  it('devir satırı KENDİ ucundan sayıyor — rozet ve cümle birlikte', async () => {
+  it('devir kutucuğu KENDİ ucundan sayıyor — sayı hem kutucukta hem özet kartında', async () => {
     routeReplies({ handover: () => Promise.resolve(ok({ boxes: 4 })) });
 
     await renderHub();
 
-    expect(screen.getByTestId('warehouse-hub-handover-badge')).toHaveTextContent('4');
     expect(screen.getByTestId('warehouse-hub-handover')).toHaveTextContent(/4 kutu taşıyıcıyı bekliyor/);
+    expect(screen.getByTestId('warehouse-hub-overview-shipments')).toHaveTextContent('4');
   });
 
   it('devirde sıfır ile OKUNAMADI ayrı cümleler — "rampa boş" yanlış bir izdir', async () => {
     routeReplies({ handover: () => Promise.resolve(ok({ boxes: 0 })) });
     await renderHub();
 
-    // Sıfırda rozet YOK: rozet bir işe çağrıdır, olmayan işe çağırmaz.
-    expect(screen.queryByTestId('warehouse-hub-handover-badge')).toBeNull();
-    // Alt metin küçük harfle: hub satırlarının deseni ("yolda transfer yok"), cümle değil etiket.
+    // Alt metin küçük harfle: kutucukların deseni ("yolda transfer yok"), cümle değil etiket.
     expect(screen.getByTestId('warehouse-hub-handover')).toHaveTextContent(/rampa boş — bekleyen kutu yok/);
+    expect(screen.getByTestId('warehouse-hub-overview-shipments')).toHaveTextContent('0');
   });
 
   it('devir sayacı DÜŞERSE hub ayakta kalır — bir rozet, iki listeyi gizlemez', async () => {
@@ -146,21 +227,36 @@ describe('depo hub', () => {
 
     await renderHub();
 
-    // Sayaç bir rozettir: düşmesi hub'ı kullanılamaz yapmaz, yalnız o satırın rakamını söylemez.
+    // Sayaç bir kutucuğun alt metnidir: düşmesi hub'ı kullanılamaz yapmaz.
     expect(screen.queryByTestId('warehouse-hub-error')).toBeNull();
     expect(screen.getByTestId('warehouse-hub-handover')).toHaveTextContent(/okunamadı/);
     expect(screen.getByTestId('warehouse-hub-picking')).toBeOnTheScreen();
+    // Özet kartında da SIFIR yazılmaz — ölçülemeyen değer sıfır değildir (CLAUDE §1).
+    expect(screen.getByTestId('warehouse-hub-overview-shipments')).toHaveTextContent('—');
   });
 
-  it('boş liste "yok" der; OKUNAMAYAN liste "okunamadı" — ikisi ayrı şeydir', async () => {
+  it('boş liste "yok" der; OKUNAMAYAN liste "yüklenemedi" — ikisi ayrı şeydir', async () => {
     routeReplies({ preparation: () => Promise.resolve(fail('server_error')) });
 
     await renderHub();
 
-    expect(screen.getByTestId('warehouse-hub-picking')).toHaveTextContent(/okunamadı/);
+    expect(screen.getByTestId('warehouse-hub-picking')).toHaveTextContent(/yüklenemedi/);
     expect(screen.queryByTestId('warehouse-hub-picking-badge')).toBeNull();
+    // Okunamayan kuyruk özet kartında da "—": iki sayı birden bilinmiyor.
+    expect(screen.getByTestId('warehouse-hub-overview-orders')).toHaveTextContent('—');
+    expect(screen.getByTestId('warehouse-hub-overview-half')).toHaveTextContent('—');
     // Öteki okuma ayakta: "yolda transfer yok" bir GERÇEKTİR, okunamamış değil.
     expect(screen.getByTestId('warehouse-hub-transfer')).toHaveTextContent(/yolda transfer yok/);
+  });
+
+  it('kuyruk BOŞSA kart "kuyruk boş" der ve önizleme hiç doğmaz', async () => {
+    routeReplies({});
+
+    await renderHub();
+
+    expect(screen.getByTestId('warehouse-hub-picking')).toHaveTextContent(/kuyruk boş/);
+    expect(screen.queryByTestId('warehouse-hub-picking-preview')).toBeNull();
+    expect(screen.getByTestId('warehouse-hub-overview-orders')).toHaveTextContent('0');
   });
 
   it('İKİ okuma da düşerse hata bloğu çıkar — liste çizilmez', async () => {

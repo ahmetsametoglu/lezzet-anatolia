@@ -169,7 +169,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | — |
+| 2 | Depo bölümü (01–13, 19) | 🔶 1/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -181,6 +181,47 @@ commit.** Uyuşmazlık çıkarsa aşağıya yazılır, tur durmaz.
 
 ---
 
+## 30.08 gece — Faz 2 · Ekran 01: Depo Hub ✅
+
+**Tasarım hub'ı kökten değiştirdi.** v2 sekiz işi eşit ağırlıkta düz satırlara diziyordu; v3 onları
+üç katmana ayırdı: koyu **özet kartı** (üç sayı) → **D1 büyük kartı** (ilk iki siparişin
+önizlemesiyle) → **D2–D8 ikili ızgarası** (ikonlu kutucuklar) → **yazıcı şeridi**.
+
+**Yeni uç istemedi.** Özet kartının üç sayısı da bölümün zaten okuduğu veriden çıkıyor: bekleyen
+sipariş = kuyruğun uzunluğu, bekleyen sevkiyat = devir sayacı, **yarım kutu = mühürlenmemiş kutusu
+olan sipariş** (`boxes[].sealedAt === null`, sözleşmede zaten var). Hub'ın "sayaç uçtan gelmez,
+listeden sayılır" kuralı korundu.
+
+**Ortak zemine üç dokunuş** — dördü de bu ekranın ihtiyacıydı ama üçü de bölüm-üstü:
+1. `OperationsSectionHeader`'a **bağlam satırı** (`context`) eklendi — v3 dört bölümde de başlığın
+   altına bir künye koyuyor ("Deniz Arslan · depo" · "Marc Lemoine · SF-26-…" · "Ayşe Demir · 28
+   Ağustos · Strasbourg Merkez"). İçerik bölümün kendi sorusudur, ortak bir "personel adı" alanı
+   değil.
+2. **Üstbaşlık rengi dört bölümde de zeytin oldu.** v2'nin "üstbaşlık bölümün kimliğidir" kararı
+   (kurye zeytin · depo kahve · yönetim mürekkep · para terracotta) v3'te geri alınmış — şablonun
+   dört üstbaşlığı da `#5f7a2c`. Renk artık "operasyondayım" diyor; bölümü METİN söylüyor. Testi
+   ters yöne çevrildi: artık "ayrışmasınlar"ı koruyor.
+3. **İkon sözlüğüne yedi geometri** (D2…D8) + dişli; hepsi şablondan birebir. `<rect>` desteği
+   eklendi — D8'in kutusu dikdörtgen ve onu `d` yayına çevirmek geometriyi yeniden yazmak olurdu
+   (dairenin ayrı tutulmasıyla aynı gerekçe).
+4. **Dört yeni renk token'ı** (`on-ink-label` · `on-ink-muted` · `on-ink-line` · `on-ink-warn`):
+   koyu özet kartının ÜSTÜ krem zeminin hiçbir tonuyla karşılanamıyordu. Ham hex yasak (CLAUDE §3),
+   envantere gerekçeleriyle eklendi.
+
+**İki cihaz ölçümü — ikisi de yerleşimle ilgili ve ikisi de yalnız cihazda görüldü:**
+- `flexBasis: '48%'` + `flexGrow` ile kutucuklar **içeriğe göre** boyutlandı: uzun alt metinli
+  "Mal kabul" satırı tek başına satırı kapladı. Jest bunu göremez (yerleşim ölçülmez).
+- `width: '48%'` denendi, bu kez yüzde beklenmedik bir tabana çözüldü ve kutucuklar ekranın beşte
+  birine düştü, her kelime alt alta sardı. **Çözüm:** sütun genişliği `useWindowDimensions`'dan
+  hesaplanıyor — `discover-screen`in kart yolu hesabıyla aynı yol.
+
+**Doğrulama.** Hub jest **15/15** (dördü yeni: özet kartının üç sayısı, yarım kutu tanımı,
+önizlemenin ilk-iki kuralı, bağlam satırı) · başlık jest **9/9** · token jest **11/11** · mobil
+paket **930/930** · Maestro akışı gerçek cihazda yeşil · **gözle doğrulandı** (9 sipariş · 1 yarım
+kutu · 3 bekleyen sevkiyat, gerçek veriyle).
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -188,4 +229,6 @@ Burada durulmaz — yazılır, geçilir.
 
 | # | Ekran | Uyuşmazlık | Durum |
 | --- | --- | --- | --- |
-| — | — | (henüz yok) | — |
+| 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
+| 2 | 01 Depo Hub | Şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
+| 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |

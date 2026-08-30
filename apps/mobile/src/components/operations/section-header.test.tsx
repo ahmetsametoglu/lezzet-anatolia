@@ -1,4 +1,4 @@
-import { customerColors, customerAppText, operationsAppColors } from '@lezzet/design-tokens';
+import { customerColors, customerAppText } from '@lezzet/design-tokens';
 import { render, screen } from '@testing-library/react-native';
 import { Text } from 'react-native';
 
@@ -12,20 +12,59 @@ describe('OperationsSectionHeader', () => {
     expect(screen.getByText('KURYE')).toBeOnTheScreen();
   });
 
-  it('üstbaşlık rengi BÖLÜMÜN KİMLİĞİDİR — dördü de tasarımdan ölçülmüş ayrı değerler', async () => {
-    await render(<OperationsSectionHeader section="warehouse" eyebrow="DEPO" title="Depo İşleri" />);
+  /*
+    v2'de bu testler "üstbaşlık rengi BÖLÜMÜN KİMLİĞİDİR" diyordu ve dördünün AYRI olduğunu
+    savunuyordu. v3 o kararı geri aldı (30.08): şablonun dört üstbaşlığı da zeytin. Test o yüzden
+    ters yöne çevrildi — artık koruduğu şey "ayrı olsunlar" değil, "AYRIŞMASINLAR". Biri sessizce
+    eski kimlik rengine dönerse burada yakalanır.
+  */
+  /* Dördü AYRI test: tek testte döngüyle denendi ve üçüncü turda "element bulunamadı" verdi —
+     `render`/`unmount` aynı test içinde arka arkaya kurulunca ağaç güvenilir çözülmüyor. Her
+     bölümün kendi testi olması ayrıca düşüşü de adlandırıyor: hangi bölümün rengi kaydı, test
+     adından okunur. */
+  it.each([
+    ['courier', 'KURYE'],
+    ['warehouse', 'DEPO'],
+    ['management', 'YÖNETİM'],
+    ['money', 'PARA'],
+  ] as const)('%s üstbaşlığı zeytin — renk "operasyondayım" der, "hangi bölümdeyim" demez', async (section, eyebrow) => {
+    await render(<OperationsSectionHeader section={section} eyebrow={eyebrow} title="Başlık" />);
 
-    // Depo kahvesi kendi durağı (`warehouse`); `honey` DEĞİL — o "bekliyor" demek.
-    expect(screen.getByText('DEPO')).toHaveStyle({ color: operationsAppColors.warehouse });
+    expect(screen.getByText(eyebrow)).toHaveStyle({ color: customerColors.olive });
   });
 
-  it('yönetim mürekkep, para terracotta üstbaşlık taşır', async () => {
+  it('üstbaşlık ölçeğin `eyebrow` durağında yazılır', async () => {
     await render(<OperationsSectionHeader section="management" eyebrow="YÖNETİM" title="Karar Kutusu" />);
 
     expect(screen.getByText('YÖNETİM')).toHaveStyle({
-      color: customerColors.ink,
       fontSize: Number.parseFloat(customerAppText.eyebrow),
     });
+  });
+
+  /*
+    BAĞLAM SATIRI (v3, 30.08) — başlığın altındaki künye. İki iddia birden korunuyor: verilince
+    çizilir, VERİLMEYİNCE HİÇ DOĞMAZ. İkincisi önemli, çünkü boş bir satır çizmek Yönetim
+    bölümünde başlığın altında sebepsiz bir boşluk bırakırdı (şablonda orada satır yok).
+  */
+  it('bağlam satırı verilince çizilir', async () => {
+    await render(
+      <OperationsSectionHeader
+        section="warehouse"
+        eyebrow="DEPO"
+        title="Depo İşleri"
+        context="Deniz Arslan · depo"
+        testID="hdr"
+      />,
+    );
+
+    expect(screen.getByTestId('hdr-context')).toHaveTextContent('Deniz Arslan · depo');
+    expect(screen.getByTestId('hdr-context')).toHaveStyle({ color: customerColors.muted });
+  });
+
+  it('bağlam satırı VERİLMEZSE hiç doğmaz', async () => {
+    await render(<OperationsSectionHeader section="management" eyebrow="YÖNETİM" title="Karar Kutusu" testID="hdr" />);
+
+    expect(screen.queryByTestId('hdr-context')).toBeNull();
   });
 
   it('sağ yuva ÇAĞIRANIN: Para bölümünde zil yerine başka bir eylem durabilsin', async () => {
@@ -39,6 +78,8 @@ describe('OperationsSectionHeader', () => {
     );
 
     expect(screen.getByText('Gün sonu →')).toBeOnTheScreen();
-    expect(screen.getByText('PARA · SALT OKUMA')).toHaveStyle({ color: customerColors.terracotta });
+    /* Terracotta artık üstbaşlıkta DEĞİL; token hâlâ paletin parçası ve para bölümünün başka
+       yerlerinde yaşıyor — bu satır yalnız üstbaşlığın ona dönmediğini söylüyor. */
+    expect(screen.getByText('PARA · SALT OKUMA')).not.toHaveStyle({ color: customerColors.terracotta });
   });
 });

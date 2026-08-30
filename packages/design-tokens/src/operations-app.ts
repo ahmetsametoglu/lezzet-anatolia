@@ -132,9 +132,29 @@ export const operationsAppInk = {
      Δ26/25/21) ise seçili sekmeyle yarışacak kadar koyu. Tasarım ikisinin arasına bilerek bir
      durak koymuş. */
   'tab-inactive': '#a49b85',
+
+  /* ── KOYU ÖZET KARTININ ÜSTÜ (v3, 30.08) ───────────────────────────────────
+     v3 hub'ın tepesine `ink` zeminli bir özet kartı koydu ("BUGÜN DEPODA" + üç sayı). Kartın
+     ÜSTÜNDEKİ dört ton krem zeminin hiçbir tonuyla karşılanamıyor: `muted`/`body`/`sand-*` açık
+     zemin için ölçülmüş değerlerdir, koyu zeminde ya kaybolur ya bağırır. Dördü de tasarımdan
+     ölçüldü ve rolüyle adlandırıldı — "koyu üstü" ailesi. */
+  /* Kartın üstbaşlığı ("BUGÜN DEPODA"). Zeytinin koyu zemin için açılmış hâli: krem üstündeki
+     `olive` (#5f7a2c) burada okunmaz. `olive-line` (#cddbb0) ise fazla açık — üstbaşlık sayıların
+     önüne geçerdi; tasarım ikisinin arasına bilerek bir durak koymuş. */
+  'on-ink-label': '#a8b08f',
+  /* Sayının ALTINDAKİ açıklama ("sipariş bekliyor"). `muted` (#8a8270) koyu zeminde yeterince
+     ayrışmıyor, `sand-600` (#b3ab97) ise sayıyla aynı ağırlıkta okunuyor. */
+  'on-ink-muted': '#a49f8f',
+  /* Üç sayıyı ayıran dikey hat. Kartın kendi zemininden bir tık açık — ayraç olduğunu söyleyip
+     susan bir çizgi; `sand-*` ailesinin hiçbiri bu koyulukta değil. */
+  'on-ink-line': '#4a5157',
+  /* DİKKAT çeken sayı: "yarım kutu". Öteki iki sayı krem (`on-image`), bu amber — yarım kalmış
+     kutu bir DURUMDUR, bir sayı değil. `error` (#a44a3f) yanlış olurdu: yarım kutu bir hata değil,
+     bitirilmesi gereken bir iş. Krem ile kırmızı arasındaki bu ton tam olarak onu söylüyor. */
+  'on-ink-warn': '#e0b487',
 } as const satisfies Record<string, string>;
 
-/* Operasyon mobile özgü renklerin tam kümesi (7): 2 fark + 5 yeni. */
+/* Operasyon mobile özgü renklerin tam kümesi (11): 2 fark + 9 yeni. */
 export const operationsAppColors = {
   ...operationsAppOverrides,
   ...operationsAppSurface,

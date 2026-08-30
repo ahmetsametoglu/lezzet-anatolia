@@ -145,6 +145,21 @@ export const appMetrics = {
     dotButton: 30,
     /** Tahsilat tutarının ±/− düğmesi (v2:174 — 34×34). */
     stepButton: 34,
+    /* ── v3 depo hub'ı (v3:35-174) ─────────────────────────────────────────
+       Izgara kutucuğunun ikonu 32, alt şeritlerin ikonu 18, önizleme işareti 5×26, kutucuğun
+       asgari yüksekliği 104. Dördü de YAPISAL ölçüdür (dosyanın kendi kuralı: yapısal ölçüler
+       yuvarlanmaz) — kutucuk yüksekliği ızgaranın iki satırının hizasını tutar, işaretin eni bir
+       piksel oynarsa satır kayar. */
+    /** Izgara kutucuğunun ikonu (v3: 32×32). */
+    tileIcon: 32,
+    /** Alt şeritlerin satır içi ikonu — yazıcı dişlisi (v3: 18×18). */
+    stripIcon: 18,
+    /** D1 önizleme satırının sol işareti — en (v3: 5). */
+    previewMark: 5,
+    /** D1 önizleme satırının sol işareti — boy (v3: 26). */
+    previewMarkHeight: 26,
+    /** Izgara kutucuğunun asgari yüksekliği (v3: 104). */
+    tile: 104,
   },
 
   /**

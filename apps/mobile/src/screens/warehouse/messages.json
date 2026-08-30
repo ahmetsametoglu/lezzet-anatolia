@@ -27,14 +27,24 @@
     },
     "offline": "Bağlantı yok — mal kabul, transfer ve sayım çevrimdışı yapılamaz (raf ↔ sistem çelişkisi yasak).",
     "footnote": "Depo ekranları fiyat/tutar görmez. Parti kararı motorundur; mal kabulde kod okutulur.",
+    "overview": {
+      "label": "BUGÜN DEPODA",
+      "orders": "sipariş\nbekliyor",
+      "half": "yarım\nkutu",
+      "shipments": "bekleyen\nsevkiyat",
+      "unknown": "—"
+    },
+    "preview": {
+      "line": "{picked}/{total} kalem hazır",
+      "half": "yarım kutu açık"
+    },
     "rows": {
       "picking": {
         "code": "D1",
         "title": "Toplama listesi",
-        "some": "{n} sipariş bekliyor",
-        "someWithHalf": "{n} sipariş bekliyor · {half} yarım",
-        "none": "bekleyen sipariş yok",
-        "unknown": "okunamadı"
+        "open": "tüm kuyruğu aç →",
+        "emptyCta": "kuyruk boş",
+        "errorCta": "yüklenemedi — tekrar dene"
       },
       "intake": {
         "code": "D2",
