@@ -290,6 +290,24 @@ describe('K1 · günün seferi', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/day-close');
   });
 
+  /*
+    v3 ANATOMİSİ (30.08 · cihazda tasarımla yan yana konup ölçüldü).
+
+    Kapanan uyuşmazlıklar: özet kartı KOYU (açık çizilmişti, sayfadaki her kutuyla aynı
+    ağırlıktaydı) · tamamlanan sayı KAHRAMAN ("3" büyük, "/5 durak" küçük) · sefer ve satış
+    satırları İKONLU KART (satış başlık+düğme olarak EN ÜSTTEydi, akışın parçası görünmüyordu) ·
+    duraklar KENDİ KARTINDA.
+  */
+  it('sefer ve satış satırları tasarımın metniyle ve akışın İÇİNDE çizilir', async () => {
+    mockDay(courierDay([courierStop(1)]));
+
+    await renderDay();
+
+    expect(screen.getByTestId('courier-day-sale')).toHaveTextContent(/Yoldan gelen müşteri/);
+    // Alt metin satırın NE OLDUĞUNU söylüyor; eskiden yalnız düğme etiketi vardı.
+    expect(screen.getByTestId('courier-day-sale')).toHaveTextContent(/yerinde satış · anonim/);
+  });
+
   it('kapıda tahsilat rozeti ve "kaldı" satırı yalnız BEKLEYEN borçlu duraklardan sayılır', async () => {
     mockDay(
       courierDay([
@@ -522,7 +540,8 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
     /* OKUTMA ARTIK BURADA DEĞİL (v3, 30.08): kırılım kendi ekranına taşındı (`/trip` → `/load`).
        Günde kalan şey KAPI ve sayacı — kapıyı açmadan "işim var mı" sorusu cevaplanabilmeli.
        Okutmanın kendisi `load-screen.test.tsx`te sınanıyor. */
-    expect(screen.getByTestId('courier-day-trip')).toHaveTextContent(/1\/2 kutu araçta/);
+    // Metin v3'ün metni (30.08): satır artık "Sefer künyesi ve yükleme" + üç parçalı alt metin.
+    expect(screen.getByTestId('courier-day-trip')).toHaveTextContent(/araçtaki kutular 1\/2/);
     expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
   });
 

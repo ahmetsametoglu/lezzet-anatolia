@@ -7806,3 +7806,38 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** 5 entegrasyon (ad/plaka/araçsız/depo adı/başlatma cevabı) + 4 ekran testi.
   Kurye jest **92/92**.
+
+- [x] (21.165) **KURYE ANA EKRANI v3 ANATOMİSİNE OTURDU** (v3:14 · cihazda karşılaştırıldı)
+  `touches:` `apps/mobile/src/screens/courier/{courier-day-screen.tsx,messages.json}`
+
+  **Durum (30.08).** Kullanıcı cihazda *"bol miktarda uyuşmazlık"* bildirdi. Android cihazdan
+  `adb exec-out screencap` ile görüntü alındı ve tasarımın 14. ekranıyla **yan yana ölçüldü** —
+  dokuz fark çıktı, beşi bu turda kapandı.
+
+  **Özet kartı KOYU.** Açık kartla çizilmişti ve o hâlde sayfadaki her kutuyla aynı ağırlıktaydı:
+  günün ilerlemesi, sefer kapısı ve satış daveti eşit sesle konuşuyordu. Tasarım kuryenin ilk
+  bakışını oraya çekiyor. Çerçeve yok — koyu yüzey kendi kenarıdır. Tahsilat cümlesi kartın içinde
+  kendi şeridinde (`ink-inset`), düz metinken alt kenara yapışık bir dipnot gibi okunuyordu.
+
+  **Tamamlanan sayı KAHRAMAN:** "3" büyük, "/5 durak" küçük. Tek puntoda kuryenin gözü hangi
+  sayının kendi ilerlemesi olduğunu ayırt edemiyordu.
+
+  **Sefer ve satış satırları İKONLU KART ve AYNI anatomi** (`GateRow`): kare ikon · başlık · alt
+  metin · yön oku. Satış satırı **en üstteydi**, başlık + çerçeveli düğme olarak — akışın parçası
+  görünmüyordu; şimdi tasarımdaki yerinde, sefer satırının hemen altında. İkisini ayrı yazmak
+  birinin bir gün ötekinden ayrılmasıydı (CLAUDE §1). Rota seçimi gövdesinde de çiziliyor —
+  satışın şartı sefer değil ARAÇ (21.119 kuralı korundu).
+
+  **Duraklar KENDİ KARTINDA**, numara dairesi kartın dışında, yön oku kartın sağ kenarında.
+  Kesikli çizgiyle ayrılmış düz satırlar listeyi bir döküme çeviriyordu. Teslim edilen durakta
+  kart çizilmiyor: iş bitti, geriye kayıt kaldı.
+
+  **Ölçüm bir "uyuşmazlığı" ÇÜRÜTTÜ:** bağlam satırındaki "Strasbourg Merkez" fazladan bir depo
+  adı değil, tohumun ROTA adı (`runLabel` = rota · referans). Tasarım maketinde rota adı yok, o
+  kadar. **Yüzen ⚙ düğmesi de bizim değil** — depo ekranında da görünüyor, cihazın kendi katmanı.
+
+  **Kalan iki fark kullanıcı kararı bekliyor:** tasarımda olmayan zil (bildirim) ikonu, ve alt
+  navigasyondaki "Yönetim" ikonu (tasarım ☑, kod 💬) — ikisi de ortak zeminde.
+
+  **Doğrulama.** Kurye jest **93/93**; her adımdan sonra cihazdan görüntü alınıp tasarımla
+  karşılaştırıldı (üç tur).

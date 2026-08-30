@@ -11,6 +11,8 @@ import { OperationsSectionHeader } from '@/components/operations/section-header'
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { LoadingState } from '@/components/ui/loading-state';
+import { Icon } from '@/components/ui/icon';
+import type { IconName } from '@/components/ui/icon-paths';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
@@ -194,25 +196,19 @@ export function CourierDayScreen() {
     <View style={styles.screen} testID="operations-section-courier">
       {header}
 
-      {/* YERİNDE SATIŞ GİRİŞİ (21.119) — araçtan yoldan gelen müşteriye elden satış. İki gövdede de
-          (rota seçimi / açık sefer) görünür, çünkü satışın şartı sefer değil ARAÇTIR: depo kapsamı
-          sunucuda çözülür, açık sefer varsa parası sefer kapanışına motor tarafından bağlanır. */}
-      <View style={styles.saleRow} testID="courier-day-sale">
-        <Text style={styles.saleLabel}>{t.day.sale.label}</Text>
-        <PressableSurface
-          onPress={() => router.navigate('/sale')}
-          feedback="scale"
-          compact
-          style={styles.saleButton}
-          accessibilityLabel={t.day.sale.cta}
-          testID="courier-day-sale-cta"
-        >
-          <Text style={styles.saleButtonLabel}>{t.day.sale.cta}</Text>
-        </PressableSurface>
-      </View>
-
       {selecting ? (
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-routes">
+          {/* Satış kapısı BURADA DA var: şartı sefer değil ARAÇ. Sefer açılmadan da yoldan gelen
+              müşteriye satış yapılabilir (21.119) — eski satırın kuralı korundu, biçimi değişti. */}
+          <GateRow
+            icon="sale"
+            title={t.day.sale.label}
+            meta={t.day.sale.meta}
+            tone="invite"
+            onPress={() => router.navigate('/sale')}
+            testID="courier-day-sale"
+          />
+
           {/* Kapanan seferin künyesi: "neyi bitirdim" sorusu ekrandan silinmez. */}
           {run === null ? null : (
             <Text style={styles.runStrip} testID="courier-day-run">
@@ -282,8 +278,14 @@ export function CourierDayScreen() {
               */}
               <View style={styles.summary} testID="courier-day-summary">
                 <View style={styles.summaryHead}>
+                  {/* TAMAMLANAN SAYI KAHRAMAN (v3:14): tasarımda "3" büyük, "/5 durak" küçük.
+                      Tek puntoda yazıldığında kuryenin gözü hangi sayının kendi ilerlemesi
+                      olduğunu ayırt edemiyordu — ikisi de aynı ağırlıktaydı. */}
                   <Text style={styles.summaryCount}>
-                    {fillCopy(t.day.progress, { done: String(doneCount), total: String(stops.length) })}
+                    {fillCopy(t.day.progressDone, { done: String(doneCount) })}
+                    <Text style={styles.summaryCountRest}>
+                      {fillCopy(t.day.progressRest, { total: String(stops.length) })}
+                    </Text>
                   </Text>
                   <View style={styles.pocketBox}>
                     <Text style={styles.pocketLabel}>{t.day.pocketLabel}</Text>
@@ -299,9 +301,12 @@ export function CourierDayScreen() {
                 <OperationsProgressBar value={doneCount / stops.length} testID="courier-day-progress" />
 
                 {doorStops.length === 0 ? null : (
-                  <Text style={styles.doorLeft} testID="courier-day-door-left">
-                    {fillCopy(t.day.doorLeft, { n: String(doorStops.length), amount: money(doorTotal) })}
-                  </Text>
+                  <View style={styles.doorLeftBox} testID="courier-day-door-left">
+                    <Text style={styles.doorLeftDot}>●</Text>
+                    <Text style={styles.doorLeft}>
+                      {fillCopy(t.day.doorLeft, { n: String(doorStops.length), amount: money(doorTotal) })}
+                    </Text>
+                  </View>
                 )}
               </View>
 
@@ -318,25 +323,31 @@ export function CourierDayScreen() {
                 kapı olarak göstermek, kuryeyi boş bir ekrana gönderirdi.
               */}
               {day.boxCounter === null ? null : (
-                <PressableSurface
+                <GateRow
+                  icon="courier"
+                  title={t.day.tripRow.title}
+                  meta={fillCopy(t.day.tripRow.meta, {
+                    loaded: String(day.boxCounter.loaded),
+                    total: String(day.boxCounter.total),
+                  })}
+                  tone="plain"
                   onPress={() => router.navigate('/trip')}
-                  feedback="scale"
-                  style={styles.tripRow}
-                  accessibilityLabel={t.day.trip.title}
                   testID="courier-day-trip"
-                >
-                  <View style={styles.tripBody}>
-                    <Text style={styles.tripTitle}>{t.day.trip.title}</Text>
-                    <Text style={styles.tripMeta}>
-                      {fillCopy(t.day.boxes.counter, {
-                        loaded: String(day.boxCounter.loaded),
-                        total: String(day.boxCounter.total),
-                      })}
-                    </Text>
-                  </View>
-                  <Text style={styles.chevron}>›</Text>
-                </PressableSurface>
+                />
               )}
+
+              {/* YERİNDE SATIŞ (21.119) — araçtan yoldan gelen müşteriye elden satış. Tasarımda
+                  sefer satırının HEMEN ALTINDA ve onun eşi bir kart satırı (v3:14); eskiden
+                  başlığın altında başlık+düğme olarak duruyordu ve akışın parçası görünmüyordu.
+                  Şartı sefer değil ARAÇTIR — bu yüzden rota seçimi gövdesinde de çiziliyor. */}
+              <GateRow
+                icon="sale"
+                title={t.day.sale.label}
+                meta={t.day.sale.meta}
+                tone="invite"
+                onPress={() => router.navigate('/sale')}
+                testID="courier-day-sale"
+              />
 
               <Text style={styles.stopsHeading}>{t.day.stopsHeading}</Text>
 
@@ -531,6 +542,48 @@ interface StopRowProps {
   onPress: () => void;
 }
 
+/**
+ * **İKONLU KAPI SATIRI** (v3:14) — sefer künyesi ve yerinde satış aynı anatomiyi paylaşıyor:
+ * kare ikon kutusu · başlık · alt metin · yön oku. Tasarımda ikisi arka arkaya duruyor ve
+ * birbirinin eşi; ayrı yazsaydık biri bir gün ötekinden ayrılırdı (CLAUDE §1).
+ *
+ * `tone` yalnız ZEMİN ve İKON rengini değiştiriyor: satış satırı tasarımda zeytin zeminli
+ * (bir davet), sefer satırı krem (günün akışının bir adımı).
+ */
+interface GateRowProps {
+  icon: IconName;
+  title: string;
+  meta: string;
+  tone: 'plain' | 'invite';
+  onPress: () => void;
+  testID: string;
+}
+
+function GateRow({ icon, title, meta, tone, onPress, testID }: GateRowProps) {
+  return (
+    <PressableSurface
+      onPress={onPress}
+      feedback="scale"
+      style={[styles.gateRow, tone === 'invite' ? styles.gateRow_invite : styles.gateRow_plain]}
+      accessibilityLabel={title}
+      testID={testID}
+    >
+      <View style={[styles.gateIcon, tone === 'invite' ? styles.gateIcon_invite : styles.gateIcon_plain]}>
+        <Icon
+          name={icon}
+          size={operationsTheme.size.stripIcon}
+          color={tone === 'invite' ? operationsTheme.colors.olive : operationsTheme.colors.ink}
+        />
+      </View>
+      <View style={styles.gateBody}>
+        <Text style={[styles.gateTitle, tone === 'invite' ? styles.gateTitle_invite : null]}>{title}</Text>
+        <Text style={styles.gateMeta}>{meta}</Text>
+      </View>
+      <Text style={styles.chevron}>›</Text>
+    </PressableSurface>
+  );
+}
+
 function StopRow({ stop, order, tone, started, onPress }: StopRowProps) {
   const subtitle = stopSubtitle(stop);
   const address = stop.address ?? t.day.stop.noAddress;
@@ -559,7 +612,11 @@ function StopRow({ stop, order, tone, started, onPress }: StopRowProps) {
       <View style={[styles.circle, styles[`circle_${tone}`]]}>
         <Text style={[styles.circleText, styles[`circleText_${tone}`]]}>{tone === 'delivered' ? '✓' : order}</Text>
       </View>
-      <View style={styles.stopBody}>
+      {/* DURAK KENDİ KARTINDA (v3:14 · 30.08) — numara dairesi kartın DIŞINDA kalıyor.
+          Kesikli çizgiyle ayrılmış düz satırlar listeyi bir döküme çeviriyordu; kart her durağı
+          "dokunulacak bir iş" olarak çerçeveliyor. Teslim edilen durakta kart ÇİZİLMİYOR: iş
+          bitti, geriye bir kayıt kaldı — kartı sürdürmek onu hâlâ yapılacak gibi gösterirdi. */}
+      <View style={[styles.stopBody, tone === 'delivered' ? null : styles.stopCard]}>
         <Text style={[styles.stopAddress, stop.outcome === 'delivered' ? styles.stopAddressDone : undefined]}>
           {address}
         </Text>
@@ -570,7 +627,9 @@ function StopRow({ stop, order, tone, started, onPress }: StopRowProps) {
           </Text>
         )}
       </View>
-      <Text style={styles.chevron}>›</Text>
+      {/* Yön oku kartın SAĞ KENARINDA (tasarım) — kartın dışında dururken listenin kenarına
+          yapışıyor ve hangi karta ait olduğu belirsizleşiyordu. */}
+      <Text style={[styles.chevron, tone === 'delivered' ? null : styles.chevronInCard]}>›</Text>
     </PressableSurface>
   );
 }
@@ -599,11 +658,18 @@ const styles = StyleSheet.create({
   },
   /* GÜNÜN ÖZETİ TEK KART (v3:1310) — üç sayı bir arada; v2'de ayrı satırlardı ve kurye "günüm
      nasıl gidiyor" sorusunu ancak üç yere bakarak cevaplayabiliyordu. */
+  /*
+    ÖZET KARTI KOYU (v3:14 · 30.08) — ekranın tek koyu bloğu ve bu bir hiyerarşi kararı.
+
+    Açık kartla çizilmişti ve o hâlde sayfadaki her kutuyla aynı ağırlıktaydı: günün ilerlemesi,
+    sefer kapısı ve satış daveti eşit sesle konuşuyordu. Tasarım kuryenin ilk bakışını buraya
+    çekiyor — "kaç durak bitti, cebimde ne var" günün tek özeti.
+
+    Çerçeve YOK: koyu yüzey kendi kenarıdır (kitin `ink` tonunun da kuralı).
+  */
   summary: {
-    backgroundColor: operationsTheme.colors.panel,
+    backgroundColor: operationsTheme.colors.ink,
     borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
     paddingVertical: operationsTheme.space['2xl'],
     paddingHorizontal: operationsTheme.space['2xl'],
     gap: operationsTheme.space.lg,
@@ -619,7 +685,13 @@ const styles = StyleSheet.create({
     // Android'de çirkin durur; en yakın gerçek kesit 700.
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text['icon-sm'],
-    color: operationsTheme.colors.ink,
+    color: operationsTheme.colors.cream,
+  },
+  /** Sayının kuyruğu — "/5 durak": aynı satırda ama bir kademe küçük ve daha sessiz. */
+  summaryCountRest: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors['on-ink-label'],
   },
   /** "CEPTE" + tutar — kartın sağ ucunda, iki satır; para bir sayı değil bir DURUM. */
   pocketBox: {
@@ -630,12 +702,12 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['on-ink-label'],
   },
   pocketValue: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
-    color: operationsTheme.colors.ink,
+    color: operationsTheme.colors.cream,
   },
   stopsHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
@@ -651,63 +723,78 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space.md,
   },
+  /*
+    "Kapıda tahsilat kaldı" KOYU KARTIN İÇİNDE KENDİ ŞERİDİNDE (v3:14). Düz metin olarak
+    yazıldığında kartın alt kenarına yapışık bir dipnot gibi okunuyordu; oysa cümle bir BORÇ
+    bildiriyor. `ink-inset` (beyazın %14'ü) onu zeminden ayırıyor, nokta imi de listeye ait
+    olduğunu söylüyor.
+  */
+  doorLeftBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.sm,
+    backgroundColor: operationsTheme.colors['ink-inset'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.lg,
+  },
+  doorLeftDot: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors['on-ink-warn'],
+  },
   doorLeft: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors.terracotta,
-    paddingTop: operationsTheme.space.sm,
+    color: operationsTheme.colors['on-ink-warn'],
   },
   /** Sefer künyesi ve yüklemeye açılan kapı — sayacı da taşır (v3:1330). */
-  tripRow: {
+  /*
+    KAPI SATIRI (v3:14) — sefer künyesi ve yerinde satış aynı anatomi: kare ikon · gövde · yön oku.
+    Tasarım ikisini arka arkaya, aynı ölçülerde çiziyor; ayıran tek şey ZEMİN ve o bir anlam
+    taşıyor — krem "günün akışının bir adımı", zeytin "burada bir davet var".
+  */
+  gateRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.lg,
-    backgroundColor: operationsTheme.colors.panel,
     borderRadius: operationsTheme.radius.control,
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    paddingVertical: operationsTheme.space.xl,
-    paddingHorizontal: operationsTheme.space['2xl'],
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.lg,
   },
-  tripBody: {
+  gateRow_plain: {
+    backgroundColor: operationsTheme.colors.panel,
+    borderColor: operationsTheme.colors['sand-300'],
+  },
+  gateRow_invite: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderColor: operationsTheme.colors['olive-line'],
+  },
+  /** Kare ikon kutusu — tasarımda ikon serbest durmuyor, kendi zeminine oturuyor. */
+  gateIcon: {
+    width: operationsTheme.size.controlSm,
+    height: operationsTheme.size.controlSm,
+    borderRadius: operationsTheme.radius.badge,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gateIcon_plain: { backgroundColor: operationsTheme.colors['neutral-bg'] },
+  gateIcon_invite: { backgroundColor: operationsTheme.colors.cream },
+  gateBody: {
     flex: 1,
     gap: operationsTheme.space['2xs'],
   },
-  tripTitle: {
+  gateTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
     color: operationsTheme.colors.ink,
   },
-  tripMeta: {
+  gateTitle_invite: { color: operationsTheme.colors['olive-dark'] },
+  gateMeta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.muted,
-  },
-  /** Yerinde satış şeridi — kutu yükleme satırının görsel dili, gövdenin ÜSTÜNDE sabit. */
-  saleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: operationsTheme.space.lg,
-    paddingHorizontal: operationsTheme.space['6xl'],
-    paddingTop: operationsTheme.space.sm,
-  },
-  saleLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors['olive-dark'],
-  },
-  saleButton: {
-    paddingVertical: operationsTheme.space.lg,
-    paddingHorizontal: operationsTheme.space.lg,
-    borderWidth: operationsTheme.border.base,
-    borderRadius: operationsTheme.radius.badge,
-    borderColor: operationsTheme.colors['olive-line'],
-  },
-  saleButtonLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.tag,
-    color: operationsTheme.colors['olive-dark'],
   },
   boxLoadCounter: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -757,11 +844,19 @@ const styles = StyleSheet.create({
   stopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: operationsTheme.space.xl,
-    paddingVertical: operationsTheme.space['2xl'],
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    gap: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.sm,
+  },
+  /** Kart içindeki yön oku — kartın sağ kenarına yaslanır, listenin kenarına değil. */
+  chevronInCard: { marginLeft: -operationsTheme.space['4xl'] },
+  /** Durağın gövdesi — kendi kartı; numara dairesi dışarıda, yön oku kartın sağ kenarında. */
+  stopCard: {
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.lg,
   },
   /** v2:864 — teslim edilen durak soluk, yola çıkılmamış liste de bir tık soluk. */
   stopDone: { opacity: 0.55 },

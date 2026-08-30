@@ -117,6 +117,7 @@
     },
     "sale": {
       "label": "Yoldan gelen müşteri",
+      "meta": "yerinde satış · anonim",
       "cta": "Yerinde satış"
     },
     "boxes": {
@@ -148,7 +149,13 @@
       "doorWithMethod": "KAPIDA · {amount} {method}",
       "openLabel": "{address} — {sub}",
       "lockedHint": "Sefer kapandı — bu durakta artık işaret yazılamaz."
-    }
+    },
+    "tripRow": {
+      "title": "Sefer künyesi ve yükleme",
+      "meta": "rota · araç · araçtaki kutular {loaded}/{total}"
+    },
+    "progressDone": "{done}",
+    "progressRest": "/{total} durak"
   },
   "delivery": {
     "back": "Geri",
