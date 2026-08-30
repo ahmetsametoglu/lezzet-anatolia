@@ -761,3 +761,40 @@ gri rayın üstünde kayan bir hap olarak veriyor. Kullanıcı haklıydı iki y�
 kullanılıyorsa konu oraya girer, ve bu ekranda ayrı bir bandın bedeli var — iki sütun ekranı
 dolduruyor, bant o yüksekliği karar çerçevesinden çalıyor. Çizim uygulandı
 (`components/operation/ui/segmented-nav.tsx`); açık bir madde değil, kayıt olarak duruyor.
+
+### Yönetim v3 (native) — çoklu ajan turu kapanırken açık kalan üç madde (30.08, 21.164)
+
+v3 geçişinin defterleri (`docs/uygulama/v3-*.md`) geçiş bitince silinecek; bu üç madde orada
+kapanmadığı için buraya taşındı. Dördü de **tasarım ↔ kod** açığı, kod hatası değil.
+
+1. **Ekran ekran denetim yarım.** Dokuz ekranın yalnız **25**'i (karar kutusu) tasarım karesiyle
+   yan yana ölçüldü — altı fark çıktı, ikisi kodda düzeldi (göreli zaman · nabız kutucuğunun
+   `min-height:96` ölçüsü), üçü veri/bilinçli, biri ortak zemin. İkinci çekimi gelmedi. **26**
+   çekildi ve *kapsam farkı* çıktı (aşağıda). **30** cihazsız ölçülüp düzeltildi. **27 · 28 · 29 ·
+   31** tasarımla hiç yan yana görülmedi; ölçülmemiş fark "fark yok" demek değildir.
+
+2. **Talep bölümü tasarımı yok, brief yazıldı.** v3 yönetime yalnız TEK talebi gösteren bir karar
+   ekranı çizdi (26); taleplerin LİSTESİ tasarımda hiç yok, oysa webde var ve motorda hazır
+   (`TicketQueueFilter` · `TicketQueueItem`). Ayrıca 26'nın dört karar çipinin ("jest · iade ·
+   yeniden gönderim") arkasında **tek bir yazma kapısı yok** — talebin gerçek kararları durum ·
+   üstlenme · mod · iade tetikleme. Brief: `design/pages/app-yonetim-talep.md`. Tasarım gelince
+   mobil sözleşme işi var (kuyruk ucu + süzgeçler + durum/mod/iade uçları).
+
+3. **Yazı boyutu ayarı operasyon yüzeyinde HİÇ bağlanmamış.** Kullanıcı bildirdi: hesap ekranında
+   büyük yazı seçiliyken operasyon ekranları değişmiyor. Sebep ölçüldü: operasyon stilleri
+   `StyleSheet.create({…})` ile **statik** yazılıyor ve dosyanın tepesinden `operationsTheme` içe
+   aktarıyor; `UnistylesRuntime.updateTheme` runtime temasını değiştiriyor, statik kopya onu hiç
+   görmüyor. Müşteri yüzeyi fonksiyon kipinde (`create((theme) => …)`) ve orada ayar çalışıyor.
+   **48 dosya** (yönetimin payı 9). Basit çevirme kalıbı **derlenmiyor**: Unistyles geri çağrıya
+   kayıtlı temaların BİRLEŞİMİNİ veriyor, operasyona-özgü duraklar (`panel`, `meta`, `tag`, `tight`…)
+   birleşimden okunamıyor (kurye şeridi denedi: 8 tsc hatası). Tip daraltmasıyla derleniyor ama
+   çalışma zamanı davranışı doğrulanamadı — etkin tema müşteri temasıysa duraklar sessizce
+   `undefined` olabilir. **Karar tema sahibinde**: daraltmayı tek bir kapıya koymak mı, iki temanın
+   anahtar kümesini eşitlemek mi. Ölçüm doğrulanmadan 48 dosya çevrilmemeli.
+
+4. **Ortak başlıkta avatar biçimi.** Tasarım 40 dp kutuda `border-radius:14px` (köşesi yumuşatılmış
+   kare) veriyor, kod tam daire çiziyor (`staff-menu.tsx`, `borderRadius = size/2`). Dört menünün
+   dördünü birden ilgilendiriyor, tek satır. Zemin rengi de yönetim tasarımında koyu (`ink`),
+   depo/kurye tasarımlarında yeşil — bölüme göre değişip değişmediği tasarıma sorulacak.
+   (Aynı turda çıkan **zil** farkı — tasarım zili yalnız depo hub'ına koymuş, kod dördüne birden —
+   bilinçli tutuldu: ortak başlık ortak bir söz veriyor ve bildirim gerçek bir yetenek.)

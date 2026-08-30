@@ -7952,16 +7952,55 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     gösteriyordu ("… netleşir **(07.8)**"), gün özetinin boş içgörü bloğu "motor bağlandığında bu
     blok dolacak" diyordu.
 
-  **Doğrulama.** Yönetim jest **73/73** (üç yeni: dört kartın künyesi · künyesiz hâlde sayaca düşme ·
-  tavsiye tarihi geçmiş adayın imhalık gibi yazılmaması) · `pnpm typecheck` **tüm depoda yeşil** ·
-  `eslint` dokunduğum yollarda temiz. **Cihazda görüldü** (OPPO, yönetim + hepsi hesabı): üç kart
-  künyesiyle çizildi. **Eksik kalem kartı cihazda doğrulanamadı** — tur sırasında kuyruktaki tek
-  istisna "Müşteriye sor" ile tüketildi ve alan boşaldı (ekran da "karar bekleyen eksik yok" diyor);
-  kart birim testiyle örtülü.
+  **Sonraki turlar (30.08, aynı gün — sırayla).**
 
-  **Kalan (sırayla):** kit geçişi (`OperationsSurface` yönetimde 0 kullanım, 8 elle kart — kitin
-  commit'i bekleniyor) · N10 talep ekranının sosyal mesajlaşma diline taşınması · 26–31 ekran ekran
-  tasarım denetimi · yeni yetenekler (şikâyet kararı, taslağı reddetme).
+  · **Kit geçişi tamam** (`f9c404ac`): altı ekranın kart kabuğu `OperationsSurface`e geçti, elle
+    kart kalmadı. Görsel olarak tek gerçek değişiklik eksik kalem kartının kenarıydı
+    (`sand-500` → kitin `sand-300`'ü) — kart artık kuyruğun ötekileriyle aynı sesle konuşuyor.
+  · **N10 tamam** (`b52ef8d1` + `a248728e`): talep ekranı sosyal mesajlaşma dilini aldı. İki ekran
+    tek baloncuktan çiziliyor (`chat-bubble.tsx` → `ManagementChatBubble`: künye baloncuğun DIŞINDA,
+    bizim söz koyu, kuyruk köşesi sivri) ve **YZ taslağı yazışmanın içinden çıkıp cevap kutusunun
+    ÜSTÜNE taşındı** — taslak bir mesaj değil, bir tekliftir. `social-conversation-screen` 601 → 547
+    satıra indi (11 ölü stil silindi), "bölünmeli" listesinden düştü.
+  · **Talep bölümü brief'i yazıldı** (`22133968` — N12): kullanıcı *"sosyal gelen kutusu gibi bir
+    talep bölümü"* istedi; ölçüm v3'ün yalnız TEK talebi gösteren bir ekran çizdiğini, taleplerin
+    LİSTESİNİN tasarımda hiç olmadığını gösterdi. `design/pages/app-yonetim-talep.md` (kuyruk +
+    talep ekranı · yedi satır işareti · hangi aksiyon motorda hazır hangisi mobil uçta yok).
+  · **30 "Kampanya" bizim teklif onayı ekranımızın tasarımıymış** (`a3b85959`): görsel defterinin
+    haritasında iki satır birden yanlıştı ("karşılığı belirsiz" + "tasarımda yok") ve ekran bu
+    yüzden **hiç denetlenmemişti**. Denetlenince tek alanlık açık çıktı — tasarım "Kalan ömür
+    2 gün · **%18**" yazıyor, biz yalnız günü yazıyorduk; yüzde motorda hesaplıydı
+    (`BatchView.remainingPercent`), zarfa konmamıştı. Aynı satırdaki "süresi geçti" de "tavsiye
+    tarihi geçti" oldu (karar kutusunda düzeltilmişti, ekran geride kalmıştı).
+
+  **Doğrulama.** Yönetim jest **76/76** · `pnpm typecheck` **tüm depoda yeşil** · `pnpm test:unit`
+  **1860/1860** · `eslint` dokunduğum yollarda temiz. **Cihazda görüldü** (OPPO, yönetim + hepsi
+  hesabı): üç kart künyesiyle çizildi. **Eksik kalem kartı cihazda doğrulanamadı** — tur sırasında
+  kuyruktaki tek istisna "Müşteriye sor" ile tüketildi ve alan boşaldı (ekran da "karar bekleyen
+  eksik yok" diyor); kart birim testiyle örtülü.
+
+  **Bir commit'im kırıktı, kapatıldı** (`a248728e`): `b52ef8d1` iki ekranı yolla commit'ledi ama
+  ikisinin de import ettiği YENİ `chat-bubble.tsx` pathspec'te yoktu. Çalışma ağacında durduğu için
+  hiçbir doğrulama görmedi (typecheck de test de diskteki dosyayı okur); o commit'i çeken çözülemeyen
+  bir import alırdı. CLAUDE §0'ın yol-adı kuralının öteki yarısı: pathspec dosyayı korur ama listeye
+  yazılmayan dosyayı da dışarıda bırakır.
+
+  **Kalan — çoklu ajan turu kapanırken açık bırakılanlar, üçü de bir kayda bağlı:**
+  · **26–31 ekran ekran tasarım denetimi** yarım: yalnız **25** ölçülü bir turdan geçti (altı fark:
+    ikisi kodda düzeldi, üçü veri/bilinçli, biri ortak zemin) ve ikinci çekimi gelmedi; **26**
+    çekildi ve *kapsam farkı* çıktı (iş tasarımda); **30** cihazsız ölçüldü ve düzeltildi;
+    **27 · 28 · 29 · 31** hiç yan yana görülmedi. `BEKLEYEN(BACKLOG §5)`.
+  · **Talep bölümü** tasarım cevabını bekliyor; geldiğinde mobil sözleşme işi var (kuyruk ucu +
+    süzgeçler + durum/mod/iade uçları). `BEKLEYEN(BACKLOG §5)`.
+  · **Yazı boyutu ayarı** yönetimin 9 dosyasında da işlemiyor (statik `operationsTheme` içe aktarımı
+    `updateTheme`i görmez). Payımı ÇEVİRMEDİM: kurye şeridi kalıbı denedi, tsc 8 hata verdi ve
+    daraltmanın çalışma zamanı davranışı doğrulanamadı — kalıp kararı tema sahibinde.
+    `BEKLEYEN(BACKLOG §5)`.
+
+  **Yapılmayan iki yetenek — bilinçli, ikisi de sözleşme eksiği:** taslağı REDDETME (uç yok; ekran
+  düğmeyi çizmiyor ve bunu bir test koruyor — hiçbir şey yapmayan düğme operatöre "reddettim"
+  dedirtip taslağı yerinde bırakırdı) ve şikâyet KARARI ("jest · iade · yeniden gönderim" üç kapı
+  ister, üçü de yok). İkincisi talep tasarımıyla birlikte yeniden ele alınacak.
 
 - [x] (21.165) **KURYE ANA EKRANI v3 ANATOMİSİNE OTURDU** (v3:14 · cihazda karşılaştırıldı)
   `touches:` `apps/mobile/src/screens/courier/{courier-day-screen.tsx,messages.json}`
