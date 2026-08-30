@@ -298,6 +298,24 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_A.variantId}`)).toHaveTextContent('SKT gir *');
   });
 
+  /* CİHAZDA GÖRÜLDÜ 30.08: PO'lu kabulden siparişsize geçince ekran bir önceki siparişin
+     satırlarıyla açılıyordu ("beklenen 36 · GZT-1005" yazan bir SİPARİŞSİZ kabul). Ekran aynı
+     rota olduğu için yeniden kurulmuyor; plansız dal satırları temizlemek zorunda. Beklenen adet
+     plansızda YOKTUR ve o satırlar depocuya olmayan bir siparişi vaat ediyordu. */
+  it('PLANSIZA geçince önceki siparişin satırları TEMİZLENİR', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    const view = await render(<IntakeScreen />);
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeOnTheScreen());
+
+    delete mockParams.purchaseOrderId;
+    mockParams.unplanned = '1';
+    view.rerender(<IntakeScreen />);
+
+    await waitFor(() => expect(screen.queryByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeNull());
+    expect(screen.getByTestId('warehouse-intake-unplanned-empty')).toBeOnTheScreen();
+  });
+
   it('takvimde OLMAYAN gün seçicide HİÇ YOK — 31 Şubat yazılamıyor', async () => {
     withForm([ROW_A]);
 

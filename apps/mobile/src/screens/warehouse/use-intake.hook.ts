@@ -165,8 +165,18 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
 
   const load = useCallback(async () => {
     if (unplanned) {
-      // Plansızda okunacak bir form YOK: satırlar depocunun elinden doğar. Sunucuya sormak,
-      // cevabı baştan bilinen bir soruyu sormak olurdu.
+      /* Plansızda okunacak bir form YOK: satırlar depocunun elinden doğar. Sunucuya sormak,
+         cevabı baştan bilinen bir soruyu sormak olurdu.
+
+         ── SATIRLAR TEMİZLENİR (cihazda görüldü 30.08) ────────────────────────
+         Ekran PO'lu kabulden siparişsize geçerken YENİDEN KURULMUYOR (aynı rota, farklı parametre)
+         ve plansız hâl bir önceki siparişin satırlarıyla açılıyordu: "beklenen 36 · GZT-1005"
+         yazan bir siparişsiz kabul. Beklenen adet plansızda YOKTUR; o satırlar depocuya olmayan
+         bir siparişi vaat ediyordu. Satır durumları da gider — yarım kalmış bir SKT, başka bir
+         kalemin satırında görünürdü. */
+      setRows([]);
+      setPending([]);
+      setStates({});
       setStatus('ready');
       return;
     }
