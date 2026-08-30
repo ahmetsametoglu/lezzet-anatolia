@@ -549,12 +549,40 @@ uyacağını sordurur.
 **Sefer künyesinin testi de bu turda yazıldı** (15. ekran testsiz kalmıştı): üç sayının da durak
 listesinden türediği ve araç künyesinin yokluğunun *söylendiği* ölçülüyor.
 
-**Doğrulama.** Kurye jest **90/90** (yeni: 3 numaralandırma · 2 sıra cümlesi · 3 sefer künyesi) ·
+**Doğrulama.** Kurye jest **89/89** (yeni: 3 numaralandırma · 2 sıra cümlesi · 3 sefer künyesi) ·
 `tsc`/`lint`/`knip` yeşil · **cihazda gözle doğrulandı** — 1·KUTULAR → 2·KANIT → 3·MAL →
 4·TAHSİLAT sırasıyla ve iki durum cümlesiyle.
 `YEREL VERİ NOTU:` bugünün tek durağı kutusuzdu; kutulu dalı görebilmek için o siparişe **iki sahte
 kutu satırı** eklendi (`KT-26-V3TEST001/002`). 18. ekranın dönüş dökümü de kutuya bakıyor, o yüzden
 şimdilik duruyorlar; kurye fazı bitince silinecek.
+
+---
+
+## 30.08 sabah — Faz 3 · Ekran 18: Seferi kapat ✅ · **KURYE BÖLÜMÜ TAMAM**
+
+**Metin zaten v3'tü.** Kelime kelime karşılaştırıldı: başlık, uyarı, üç sayaç, sayaç notu, "PARA —
+SAYDIĞINI GİR", fark notu, "NOT — İSTEĞE BAĞLI", düğme — hepsi birebir aynı. Değişen iki şey
+**biçim**di:
+
+- **Üç kasa satırı tek kartın içine girdi** (kenarlı, kum çerçeveli, kesikli ayraçlı). Sayım bir
+  bütündür; kart onu "bir mutabakat" olarak çerçeveliyor. Son satırın ayracı çizilmiyor — kartın
+  kendi kenarı orada.
+- **Uyarı çerçeveyle değil DOLGUYLA ayrışıyor**, başında nokta imiyle. Çerçeveli kutu altındaki
+  sayaç karolarıyla aynı görsel ağırlıktaydı ve uyarı karoların arasında kayboluyordu.
+
+**Bilinçli sapma — FARK SÜTUNU KALDI.** v3'ün kasa satırında fark yok; ama v3'ün kendi notu
+*"Fark işaretlidir: eksi = eksik teslim, artı = fazla para"* diyor. Sütun sökülseydi ekranda
+**karşılığı olmayan bir cümle** kalırdı. Sütun duruyor ve bozuk girdide "—" yazıyor: ölçülemeyen
+fark sıfır değildir (CLAUDE §1).
+
+**Cihazda doğrulandı** (`/day-close`, dolu veriyle): kart, ayraçlar, nokta imi ve üç sayaç tonu
+tasarımdaki gibi.
+
+**Kurye fazının sahte kutu satırları SİLİNDİ** (`KT-26-V3TEST001/002`) — 17. ekranın kutulu dalını
+görmek için eklenmişlerdi, işleri bitti. Yerel veritabanı tohumun bıraktığı hâle döndü.
+
+**Faz 3 kapandı:** 14 · 15 · 16 · 17 · 18 — kurye bölümünün beş ekranı da v3'te. Sıradaki
+**Faz 4 · yerinde satış** (20 · 21 · 22).
 
 ---
 

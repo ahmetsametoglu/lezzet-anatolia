@@ -7509,7 +7509,30 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **15. ekranın testi de bu turda yazıldı** (`trip-screen.test.tsx`): üç sayının da durak listesinden
   türediği ve araç künyesinin YOKLUĞUNUN söylendiği ölçülüyor.
 
-  **Doğrulama.** Kurye jest **90/90** (yeni: 3 numaralandırma · 2 sıra cümlesi · 3 sefer künyesi);
+  **Doğrulama.** Kurye jest **89/89** (yeni: 3 numaralandırma · 2 sıra cümlesi · 3 sefer künyesi);
   numaralandırma ve tahsilat sayımı testlerinin YAKALADIĞI ayrıca doğrulandı (`stepNo` düzleştirilip,
   tahsilat süzgeci gevşetilip ikisi de kırmızıya döndü); typecheck · lint · knip yeşil; **cihazda
   gözle doğrulandı** — 1·KUTULAR → 2·KANIT → 3·MAL → 4·TAHSİLAT.
+
+- [x] (21.152) **SEFERİ KAPAT v3 — sayım tek kartta, uyarı dolguyla** (v3:1562-1672)
+  `touches:` `apps/mobile/src/screens/courier/day-close-screen.tsx`
+
+  **Durum (30.08).** Metin ZATEN v3'tü — başlık, uyarı, üç sayaç, sayaç notu, para başlığı, fark
+  notu, not başlığı ve düğme kelime kelime aynı çıktı (18.08'de yazılmıştı). Değişen iki şey biçim:
+
+  **Üç kasa satırı tek KARTIN içine girdi** (kum çerçeve, kesikli ayraç). Sayım bir bütündür; kart
+  onu "bir mutabakat" olarak çerçeveliyor. SON satırın ayracı çizilmiyor — kartın kendi kenarı 4 px
+  altında zaten duruyor, ikisi üst üste gelirse kart çift çizgili görünür.
+
+  **Uyarı çerçeveyle değil DOLGUYLA ayrışıyor** (`terracotta-bg`), başında nokta imiyle. Çerçeveli
+  kutu, altındaki sayaç karolarıyla AYNI görsel ağırlıktaydı ve uyarı karoların arasında kayboluyordu.
+
+  **BİLİNÇLİ SAPMA — fark sütunu KALDI.** v3'ün kasa satırında fark yok; ama v3'ün kendi notu "Fark
+  işaretlidir: eksi = eksik teslim, artı = fazla para" diyor. Sütun sökülseydi ekranda KARŞILIĞI
+  OLMAYAN bir cümle kalırdı. Sütun duruyor ve bozuk girdide "—" yazıyor (ölçülemeyen fark sıfır
+  değildir, CLAUDE §1).
+
+  **Doğrulama.** Kapanış jest **11/11** (davranış değişmedi, testler dokunulmadan geçti); typecheck ·
+  lint · knip yeşil; **cihazda gözle doğrulandı** (`/day-close`, dolu veriyle).
+
+  **Faz 3 kapandı** — kurye bölümünün beş ekranı (14–18) v3'te.

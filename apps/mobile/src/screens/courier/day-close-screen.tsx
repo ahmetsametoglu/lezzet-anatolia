@@ -117,6 +117,10 @@ export function CourierDayCloseScreen() {
         ) : null}
         {dayClose.openWarning === null ? null : (
           <View style={styles.warnBox} testID="courier-day-close-warning">
+            {/* NOKTA İMİ (v3:18) — uyarı artık çerçeveyle değil DOLGUYLA ayrışıyor; çerçeveli
+                kutu, altındaki sayaç karolarıyla aynı ağırlıkta duruyordu ve uyarı sayaçların
+                arasında kayboluyordu. */}
+            <View style={styles.warnDot} />
             <Text style={styles.warnBoxText}>{dayClose.openWarning}</Text>
           </View>
         )}
@@ -145,38 +149,46 @@ export function CourierDayCloseScreen() {
 
         <View style={styles.moneyBlock}>
           <Text style={styles.sectionHeading}>{t.dayClose.moneyHeading}</Text>
-          {dayClose.rows.map((row) => (
-            <View key={row.method} style={styles.moneyRow} testID={`courier-money-${row.method}`}>
-              <View style={styles.moneyLabels}>
-                <Text style={styles.moneyName}>{row.label}</Text>
-                <Text style={styles.moneyExpected}>{expectedLabel(row.expectedCents)}</Text>
-              </View>
-              <TextInput
-                value={row.countedText}
-                onChangeText={(value) => dayClose.setCounted(row.method, value)}
-                editable={!dayClose.closed}
-                keyboardType="decimal-pad"
-                accessibilityLabel={fillCopy(t.dayClose.countLabel, { method: row.label })}
-                style={[styles.moneyInput, dayClose.closed ? styles.moneyInputLocked : undefined]}
-                testID={`courier-money-input-${row.method}`}
-              />
-              <Text
-                style={[
-                  styles.difference,
-                  row.differenceCents === null
-                    ? styles.differenceUnknown
-                    : row.differenceCents === 0
-                      ? styles.differenceZero
-                      : row.differenceCents < 0
-                        ? styles.differenceShort
-                        : styles.differenceOver,
-                ]}
-                testID={`courier-money-diff-${row.method}`}
+          {/* ÜÇ SATIR TEK KARTTA (v3:18): sayım bir bütündür — kart, üç kasa satırını "bir mutabakat"
+              olarak çerçeveliyor. Ayraç SON satırda çizilmez; kartın kendi kenarı zaten orada. */}
+          <View style={styles.moneyCard}>
+            {dayClose.rows.map((row, index) => (
+              <View
+                key={row.method}
+                style={[styles.moneyRow, index === dayClose.rows.length - 1 ? styles.moneyRowLast : null]}
+                testID={`courier-money-${row.method}`}
               >
-                {row.differenceLabel}
-              </Text>
-            </View>
-          ))}
+                <View style={styles.moneyLabels}>
+                  <Text style={styles.moneyName}>{row.label}</Text>
+                  <Text style={styles.moneyExpected}>{expectedLabel(row.expectedCents)}</Text>
+                </View>
+                <TextInput
+                  value={row.countedText}
+                  onChangeText={(value) => dayClose.setCounted(row.method, value)}
+                  editable={!dayClose.closed}
+                  keyboardType="decimal-pad"
+                  accessibilityLabel={fillCopy(t.dayClose.countLabel, { method: row.label })}
+                  style={[styles.moneyInput, dayClose.closed ? styles.moneyInputLocked : undefined]}
+                  testID={`courier-money-input-${row.method}`}
+                />
+                <Text
+                  style={[
+                    styles.difference,
+                    row.differenceCents === null
+                      ? styles.differenceUnknown
+                      : row.differenceCents === 0
+                        ? styles.differenceZero
+                        : row.differenceCents < 0
+                          ? styles.differenceShort
+                          : styles.differenceOver,
+                  ]}
+                  testID={`courier-money-diff-${row.method}`}
+                >
+                  {row.differenceLabel}
+                </Text>
+              </View>
+            ))}
+          </View>
           <Text style={styles.hintText}>{t.dayClose.differenceNote}</Text>
         </View>
 
@@ -284,12 +296,20 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.body,
   },
   warnBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: operationsTheme.space.md,
     paddingVertical: operationsTheme.space.xl,
-    paddingHorizontal: operationsTheme.space['3xl'],
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors.terracotta,
     borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.panel,
+    paddingHorizontal: operationsTheme.space['3xl'],
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
+  },
+  warnDot: {
+    width: operationsTheme.size.previewMark,
+    height: operationsTheme.size.previewMark,
+    borderRadius: operationsTheme.radius.pill,
+    marginTop: operationsTheme.space.xs,
+    backgroundColor: operationsTheme.colors.terracotta,
   },
   warnBoxText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
@@ -318,7 +338,14 @@ const styles = StyleSheet.create({
   counterText_delivered: { color: operationsTheme.colors['olive-dark'] },
   counterText_pending: { color: operationsTheme.colors.muted },
   counterText_returned: { color: operationsTheme.colors.error },
-  moneyBlock: { gap: operationsTheme.space['2xs'] },
+  moneyBlock: { gap: operationsTheme.space.md },
+  moneyCard: {
+    paddingHorizontal: operationsTheme.space['3xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+    backgroundColor: operationsTheme.colors.panel,
+  },
   sectionHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
@@ -333,6 +360,9 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     borderBottomColor: operationsTheme.colors['sand-300'],
   },
+  // Son satırın ayracı YOK: kartın kendi kenarı 4 px altında zaten duruyor, ikisi üst üste gelirse
+  // kart "çift çizgili" görünür.
+  moneyRowLast: { borderBottomWidth: 0 },
   moneyLabels: { flex: 1 },
   moneyName: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
