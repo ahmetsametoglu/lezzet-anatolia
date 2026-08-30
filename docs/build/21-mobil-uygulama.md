@@ -7570,3 +7570,19 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Satış jest **12/12** (üçü yeni); mobil paket **980/980**; kilit testinin YAKALADIĞI
   doğrulandı (kilit kaldırılınca kırmızı); typecheck · lint · knip yeşil; **cihazda uçtan uca**
   yapıldı (ürün → çekmece → sepet → nakit → satış → fiş → yeni satış).
+
+- [x] (21.154) **SON SATIŞLAR v3 — satan kişi künyenin yanında, aralıksız** (v3:1902-1960)
+  `touches:` `apps/mobile/src/screens/sale/{sale-history-screen.tsx,messages.json}`
+
+  **Durum (30.08).** Üç fark: (1) satan kişi künyenin YANINA geçti ve "satan: " öneki düştü — alt
+  alta yazıldığında ayrı bir bölüm gibi duruyordu, oysa ikisi de "bu kayıt neydi" sorusunun parçası;
+  (2) **harf aralığı söküldü** — ad `eyebrow` aralığıyla yazılıyordu ve cihazda "D e n i z  A r s l a n"
+  diye okunuyordu, oysa aralık BAŞLIK imzasıdır ve bir insan adı başlık değil veridir; (3) dipnot
+  geldi ("Kim sattı" sorusunun tek cevabı bu liste).
+
+  PAZARLIK rozeti ve "tahsilat deftere geçmedi" uyarısı YAZILMADI — ikisi de `SaleRecordSchema`'da
+  yok (günlük defteri 13). Kasa uyarısı bilgi olarak kaybolmuyor: satışın FİŞİNDE duruyor (21.153).
+
+  **Doğrulama.** Satış jest **12/12**; typecheck · lint · knip yeşil; **cihazda gözle doğrulandı**.
+
+  **Faz 4 kapandı** — yerinde satışın üç ekranı (20 · 21 · 22) v3'te.

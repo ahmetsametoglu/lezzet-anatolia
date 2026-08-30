@@ -621,6 +621,29 @@ typecheck · lint · knip yeşil.
 
 ---
 
+## 30.08 sabah — Faz 4 · Ekran 21: Son satışlar ✅ · **YERİNDE SATIŞ TAMAM**
+
+Küçük ama okumayı değiştiren üç fark:
+
+- **Satan kişi künyenin YANINA geçti** ("30.08 · 05:42 · 1 kalem · Nakit **Deniz Arslan**"). Alt
+  alta yazıldığında ayrı bir bölüm gibi duruyordu; oysa ikisi de aynı sorunun parçası. "satan: "
+  öneki de düştü — aranan şey adın kendisi.
+- **Harf aralığı söküldü.** Ad `eyebrow` aralığıyla yazılıyordu ve cihazda *"D e n i z  A r s l a n"*
+  diye okunuyordu. Aralık **başlık imzasıdır** (küçük büyük harfli kısa etiket); bir insan adı
+  başlık değil, veridir.
+- **Dipnot geldi:** *"Kim sattı" sorusunun tek cevabı bu liste. Fiş yazdırma bu sürümde bağlı
+  değil.*
+
+PAZARLIK rozeti ve "tahsilat deftere geçmedi" uyarısı yazılmadı — ikisi de sözleşmede yok
+(uyuşmazlık 13). Kasa uyarısı bilgi olarak kaybolmuyor: satışın **fişinde** duruyor.
+
+**Doğrulama.** Satış jest **12/12** · typecheck · lint yeşil · **cihazda gözle doğrulandı** (kendi
+yazdığım satış listenin başında).
+
+**Faz 4 kapandı:** 20 · 21 · 22. Sıradaki **Faz 5 · para** (23 · 24).
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.

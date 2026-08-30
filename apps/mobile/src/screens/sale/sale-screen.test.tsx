@@ -341,10 +341,13 @@ it('SON SATIŞLAR kim sattıysa onu söylüyor — iz yoksa uydurmuyor', async (
   await waitFor(() => expect(screen.getByTestId(`sale-history-${SATISLAR[0]!.orderId}`)).toBeTruthy());
 
   expect(screen.getByText('LA-26-TEST01')).toBeTruthy();
-  expect(screen.getByText('satan: Marc Lemoine')).toBeTruthy();
+  // Ad künyenin YANINDA, önekiz (v3:21): aranan şey adın kendisidir.
+  expect(screen.getByText('Marc Lemoine')).toBeTruthy();
   // Aktörsüz kayıt "bilinmiyor" der — boş bırakmaz, ad da uydurmaz.
-  expect(screen.getByText('satan: bilinmiyor')).toBeTruthy();
+  expect(screen.getByText('satan bilinmiyor')).toBeTruthy();
   expect(screen.getByText('referanssız')).toBeTruthy();
+  // Listenin NE OLDUĞU dipnotta: "kim sattı"nın tek cevabı bu liste.
+  expect(screen.getByTestId('sale-history-footnote')).toHaveTextContent(/tek cevabı bu liste/);
 });
 
 describe('çevrimdışı kilidi (v3:20)', () => {

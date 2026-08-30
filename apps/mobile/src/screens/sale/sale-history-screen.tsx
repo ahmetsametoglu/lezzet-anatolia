@@ -13,7 +13,6 @@ import { fetchRecentSales } from '@/lib/api/sale';
 import { money } from '@/lib/operations/money';
 import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
-import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { saleCopy } from './copy';
 
@@ -90,23 +89,30 @@ export function SaleHistoryScreen() {
                 <Text style={styles.ref}>{sale.referenceNo ?? t.history.noRef}</Text>
                 <Text style={styles.total}>{money(sale.totalCents)}</Text>
               </View>
-              <Text style={styles.meta}>
-                {[
-                  stampOf(sale.createdAt),
-                  fillCopy(t.history.lines, { n: String(sale.lineCount) }),
-                  sale.paymentMethod === null ? null : t.history.method[sale.paymentMethod],
-                ]
-                  .filter((part): part is string => part !== null)
-                  .join(' · ')}
-              </Text>
-              {/* Satan kişi "bilinmiyor" da olabilir (aktörsüz iz) — uydurulmaz, söylenir. */}
-              <Text style={styles.seller}>
-                {sale.sellerName === null
-                  ? t.history.sellerUnknown
-                  : fillCopy(t.history.seller, { name: sale.sellerName })}
-              </Text>
+              {/* KÜNYE VE SATAN AYNI SATIRDA (v3:21): ikisi de "bu kayıt neydi" sorusunun parçası
+                  ve alt alta yazıldıklarında satan kişi ayrı bir bölüm gibi duruyordu. Ad zeytin
+                  ve kalın — gri künyenin içinde ARANAN şey odur ("kim sattı"). */}
+              <View style={styles.metaRow}>
+                <Text style={styles.meta}>
+                  {[
+                    stampOf(sale.createdAt),
+                    fillCopy(t.history.lines, { n: String(sale.lineCount) }),
+                    sale.paymentMethod === null ? null : t.history.method[sale.paymentMethod],
+                  ]
+                    .filter((part): part is string => part !== null)
+                    .join(' · ')}
+                </Text>
+                {/* Satan kişi "bilinmiyor" da olabilir (aktörsüz iz) — uydurulmaz, söylenir. */}
+                <Text style={styles.seller}>{sale.sellerName ?? t.history.sellerUnknown}</Text>
+              </View>
             </View>
           ))}
+
+          {/* DİPNOT (v3:21) — listenin ne OLDUĞUNU söylüyor: "kim sattı" sorusunun tek cevabı bu
+              liste, ve fişin kâğıda basılmadığı burada da bir kez daha yazılı. */}
+          <Text style={styles.footnote} testID="sale-history-footnote">
+            {t.history.footnote}
+          </Text>
         </FormScroll>
       )}
     </View>
@@ -156,15 +162,30 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.control,
     color: operationsTheme.colors.ink,
   },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: operationsTheme.space.md,
+  },
+  footnote: {
+    paddingTop: operationsTheme.space.md,
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
   meta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.muted,
   },
+  /* HARF ARALIĞI SÖKÜLDÜ (cihazda görüldü 30.08): ad `eyebrow` aralığıyla yazılıyordu ve
+     "D e n i z  A r s l a n" gibi okunuyordu. Aralık BAŞLIK imzasıdır (küçük büyük harfli kısa
+     etiket); bir insan adı başlık değil, veridir — v3 de burada aralıksız 700 yazıyor. */
   seller: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.micro,
-    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.micro),
     color: operationsTheme.colors['olive-dark'],
   },
 });

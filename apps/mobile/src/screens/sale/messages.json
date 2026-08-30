@@ -110,8 +110,8 @@
       "body": "Bu depodan yazılan ilk yerinde satış burada görünür."
     },
     "lines": "{n} kalem",
-    "seller": "satan: {name}",
-    "sellerUnknown": "satan: bilinmiyor",
+    "sellerUnknown": "satan bilinmiyor",
+    "footnote": "“Kim sattı” sorusunun tek cevabı bu liste. Fiş yazdırma bu sürümde bağlı değil.",
     "noRef": "referanssız",
     "method": {
       "cash": "Nakit",
