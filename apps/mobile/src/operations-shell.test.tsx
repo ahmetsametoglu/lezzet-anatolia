@@ -145,9 +145,11 @@ describe('operasyon kabuğu — rol sekmeleri', () => {
     await renderShell('/courier');
 
     expect(await screen.findByTestId('operations-tabs')).toBeOnTheScreen();
+    // SIRA v3'ün ortak zemininden (30.08): Depo · Kurye · Yönetim · Para. Çubuğun ilk sekmesi çok
+    // bölümlü personelin uygulamayı her açtığında düştüğü yerdir.
     expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual([
-      'Kurye',
       'Depo',
+      'Kurye',
       'Yönetim',
       'Para',
     ]);

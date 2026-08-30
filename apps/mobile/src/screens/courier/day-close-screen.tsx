@@ -1,7 +1,9 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
@@ -9,9 +11,10 @@ import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
+import { centsToAmountText, money } from '@/lib/operations/money';
 import { courierCopy } from './copy';
 import { runLabel } from './courier-format';
-import { expectedLabel, useDayClose } from './use-day-close.hook';
+import { expectedLabel, useDayClose, type CloseMethod } from './use-day-close.hook';
 
 /*
   KURYE · SEFER KAPANIŞI (v2:217-262) — sayaçlar · para sayımı · not · iki adımlı onay.
@@ -48,6 +51,10 @@ export function CourierDayCloseScreen() {
   const router = useRouter();
   const dayClose = useDayClose();
   const run = dayClose.draft?.run ?? null;
+  /* Hangi kasanın tuş takımı açık — kimlik tutulur, satırın kendisi değil: satırlar her okumada
+     yeniden kuruluyor ve nesneyi tutmak kapalı bir paneli bayat veriyle diriltirdi. */
+  const [keypadFor, setKeypadFor] = useState<CloseMethod | null>(null);
+  const keypadRow = dayClose.rows.find((row) => row.method === keypadFor) ?? null;
 
   const header = (
     <OperationsStackHeader
@@ -162,15 +169,22 @@ export function CourierDayCloseScreen() {
                   <Text style={styles.moneyName}>{row.label}</Text>
                   <Text style={styles.moneyExpected}>{expectedLabel(row.expectedCents)}</Text>
                 </View>
-                <TextInput
-                  value={row.countedText}
-                  onChangeText={(value) => dayClose.setCounted(row.method, value)}
-                  editable={!dayClose.closed}
-                  keyboardType="decimal-pad"
-                  accessibilityLabel={fillCopy(t.dayClose.countLabel, { method: row.label })}
+                {/* TUTAR TUŞ TAKIMIYLA YAZILIR (v3 · `00-ortak`, tasarımda `kpOpen.nakit/kart/cek`):
+                    alan bir GİRDİ değil, tuş takımını açan bir düğmedir. Cihaz klavyesi açılmaz —
+                    rampada telefon eldivenle tutuluyor ve sistem klavyesi ekranın yarısını kaplayıp
+                    "beklenen"i görüş alanından çıkarıyordu. */}
+                <PressableSurface
+                  onPress={() => setKeypadFor(row.method)}
+                  disabled={dayClose.closed}
+                  feedback="scale"
                   style={[styles.moneyInput, dayClose.closed ? styles.moneyInputLocked : undefined]}
+                  accessibilityLabel={fillCopy(t.dayClose.countLabel, { method: row.label })}
                   testID={`courier-money-input-${row.method}`}
-                />
+                >
+                  <Text style={dayClose.closed ? styles.moneyValueLocked : styles.moneyValue}>
+                    {row.countedText}
+                  </Text>
+                </PressableSurface>
                 <Text
                   style={[
                     styles.difference,
@@ -206,6 +220,26 @@ export function CourierDayCloseScreen() {
           />
         </View>
       </FormScroll>
+
+      {keypadRow === null ? null : (
+        <OperationsAmountKeypad
+          visible
+          title={fillCopy(t.dayClose.keypad.title, { method: keypadRow.label })}
+          value={keypadRow.countedText}
+          expected={centsToAmountText(keypadRow.expectedCents)}
+          expectedLabel={fillCopy(t.dayClose.keypad.expected, { amount: money(keypadRow.expectedCents) })}
+          confirmLabel={t.dayClose.keypad.confirm}
+          hint={t.dayClose.keypad.hint}
+          footnote={t.dayClose.keypad.footnote}
+          deleteLabel={t.dayClose.keypad.delete}
+          onConfirm={(text) => {
+            dayClose.setCounted(keypadRow.method, text);
+            setKeypadFor(null);
+          }}
+          onClose={() => setKeypadFor(null)}
+          testID="courier-money-keypad"
+        />
+      )}
 
       <View style={styles.footer}>
         {dayClose.notice === null ? null : (
@@ -373,6 +407,16 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
+  },
+  moneyValue: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+  },
+  moneyValueLocked: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors['disabled-text'],
   },
   moneyInput: {
     width: operationsTheme.size.circleSm,

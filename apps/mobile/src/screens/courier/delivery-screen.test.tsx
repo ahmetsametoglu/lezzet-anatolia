@@ -1,5 +1,27 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+/*
+  TAHSİLAT TUTARI ARTIK TUŞ TAKIMIYLA yazılıyor (v3 · `00-ortak`, 30.08): alan bir `TextInput`
+  değil, tuş takımını açan düğme. Testler kapıdaki gerçek yolu izliyor — alana dokun, rakamlara
+  bas, "Yaz". Doğrudan metin yazmak artık var olmayan bir yolu ölçmek olurdu.
+*/
+async function typeCollection(amount: string) {
+  await fireEvent.press(screen.getByTestId('courier-collection-amount'));
+  for (const key of amount) {
+    await fireEvent.press(screen.getByTestId(`courier-collection-keypad-key-${key}`));
+  }
+  await fireEvent.press(screen.getByTestId('courier-collection-keypad-confirm'));
+}
+
+/** Alanı boşaltır — "tutar yazılmadı" hâlinin gerçek yolu. */
+async function clearCollection() {
+  await fireEvent.press(screen.getByTestId('courier-collection-amount'));
+  for (let i = 0; i < 8; i += 1) {
+    await fireEvent.press(screen.getByTestId('courier-collection-keypad-delete'));
+  }
+  await fireEvent.press(screen.getByTestId('courier-collection-keypad-confirm'));
+}
+
 import { CourierDeliveryScreen } from './delivery-screen';
 import { courierDay, courierStop, DOOR_ACCOUNT_ID, stopItemId } from './courier-fixture';
 import messages from './messages.json';
@@ -380,7 +402,7 @@ describe('teslimat · tahsilat', () => {
 
     await renderDelivery();
 
-    expect(screen.getByTestId('courier-collection-amount').props.value).toBe('42,00');
+    expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent('42,00');
     expect(screen.getByRole('button', { name: 'nakit', selected: true })).toBeOnTheScreen();
   });
 
@@ -388,14 +410,14 @@ describe('teslimat · tahsilat', () => {
     mockRoutes({ day: courierDay([courierStop(1)]) });
 
     await renderDelivery();
-    await fireEvent.changeText(screen.getByTestId('courier-collection-amount'), '30,00');
+    await typeCollection('30,00');
     expect(screen.getByTestId('courier-delivery-cta')).toHaveTextContent(/30,00/);
 
     await fireEvent.press(screen.getByTestId('courier-collection-plus'));
-    expect(screen.getByTestId('courier-collection-amount').props.value).toBe('31,00');
+    expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent('31,00');
     await fireEvent.press(screen.getByTestId('courier-collection-minus'));
     await fireEvent.press(screen.getByTestId('courier-collection-minus'));
-    expect(screen.getByTestId('courier-collection-amount').props.value).toBe('29,00');
+    expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent('29,00');
   });
 
   it('eksik ödemede KISMİ rozeti çıkar; tam ödemede çıkmaz', async () => {
@@ -404,7 +426,7 @@ describe('teslimat · tahsilat', () => {
     await renderDelivery();
     expect(screen.queryByTestId('courier-collection-partial')).toBeNull();
 
-    await fireEvent.changeText(screen.getByTestId('courier-collection-amount'), '30,00');
+    await typeCollection('30,00');
     expect(screen.getByTestId('courier-collection-partial')).toHaveTextContent(t.delivery.collection.partial);
   });
 
@@ -471,7 +493,7 @@ describe('teslimat · tahsilat', () => {
     });
 
     await renderDelivery();
-    await fireEvent.changeText(screen.getByTestId('courier-collection-amount'), '');
+    await clearCollection();
     await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
 
     expect(screen.getByTestId('courier-delivery-cta')).toHaveTextContent(t.delivery.cta.deliverNoCollection);
@@ -632,7 +654,8 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     await renderDelivery();
 
     expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/0\/2 OKUTULDU/);
-    // Kalem işaretli olsa da kutu kapısı kapalı — kapı notu sebebini söyler.
+    /* KUTULAR OKUTULMADAN SONRAKİ ADIMLAR AÇILMAZ (v3:17 · 30.08). Kalem satırına dokunmak bile
+       geçmez: bölüm görünür ama dokunulmaz. Teslim düğmesi de kapalı. */
     await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
 
@@ -646,6 +669,8 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
     await fireEvent.press(screen.getByLabelText('Kutu 2'));
     await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/2\/2 OKUTULDU/));
+    // Kilit açıldı: kalem ARTIK işaretlenebiliyor ve teslim düğmesi de açık.
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     expect(screen.getByTestId('courier-delivery-cta')).not.toBeDisabled();
   });
 
@@ -653,11 +678,12 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     mockRoutes({ day: courierDay([boxedStop()]) });
     await renderDelivery();
 
-    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
+    // Sıra tasarımın sırası: ÖNCE kutular, sonra kalem — kilit tersini yaptırmıyor.
     for (const label of ['Kutu 1', 'Kutu 2']) {
       await fireEvent.press(screen.getByTestId('courier-box-scan'));
       await fireEvent.press(screen.getByLabelText(label));
     }
+    await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() => expect(deliverCalls()).toBe(1));

@@ -77,7 +77,13 @@ function mockDay(day: CourierDayResponse) {
 async function renderTrip() {
   await render(
     <OperationsSessionProvider
-      value={{ sections: ['courier'], userName: 'Musa Kaya', userEmail: 'musa@lezzetanatolia.fr' }}
+      value={{
+        sections: ['courier'],
+        userName: 'Musa Kaya',
+        userEmail: 'musa@lezzetanatolia.fr',
+        warehouses: [],
+        resolvedWarehouseId: null,
+      }}
     >
       <CourierTripScreen />
     </OperationsSessionProvider>,

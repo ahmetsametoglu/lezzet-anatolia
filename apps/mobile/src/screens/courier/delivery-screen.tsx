@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Linking, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -14,6 +16,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
+import { centsToAmountText } from '@/lib/operations/money';
 import { money } from './courier-format';
 import { SignaturePad } from './signature-pad';
 import { useDelivery } from './use-delivery.hook';
@@ -47,6 +50,10 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
   const router = useRouter();
   const delivery = useDelivery(orderId);
   const stop = delivery.stop;
+  /* HOOK ERKEN DÖNÜŞLERİN ÜSTÜNDE: aşağıda "yükleniyor" ve "bulunamadı" dalları var ve durum
+     onların altında kurulsaydı hook sırası render'dan render'a değişirdi (React bunu "Rendered
+     more hooks than during the previous render" diye kesiyor — 30.08'de yaşandı). */
+  const [keypadOpen, setKeypadOpen] = useState(false);
 
   if (delivery.status === 'loading') {
     return (
@@ -89,6 +96,15 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
      tahsilat 2/3/4'e kayar; kutusuz durakta eski 1/2/3 aynen kalır. Numara metne gömülü DEĞİL
      (`delivery.step` kalıbı) — gömülü olduğu sürece bu kayma yazılamıyordu. */
   const boxesLeft = delivery.boxes.length - delivery.scannedBoxCount;
+  /*
+    KUTU KAPISI SONRAKİ ADIMLARI DA KİLİTLER (v3:17 · düzeltme 30.08).
+    Tasarımın cümlesi açıktı: *"Kutular okutulmadan kanıt ve tahsilat adımları açılmaz."* 30.08'de
+    kodu ölçüp kilidin yalnız TESLİM DÜĞMESİNDE olduğunu görmüş ve **cümleyi koda uydurmuştum** —
+    tersi doğruydu. Sıra bir tercih değil: kutular kapıda müşteriye verilmeden imza almak, teslim
+    edilmemiş malın kanıtını toplamaktır; tahsilat da öyle.
+    Kutusuz durakta bu kilit YOKTUR (`boxesLeft` sıfır kalır) — eski akış aynen sürer.
+  */
+  const stepsLocked = boxesLeft > 0;
   const stepNo = (n: number): number => (delivery.boxes.length === 0 ? n : n + 1);
 
   return (
@@ -225,7 +241,9 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         )}
 
         {/* ── KANIT ─────────────────────────────────────────────────────── */}
-        <View style={styles.section}>
+        {/* KİLİTLİ BÖLÜM SOLUKTUR AMA ÇİZİLİR: gizlemek, kuryeye "bu durakta kanıt istenmiyor"
+            dedirtirdi. Görünür ama dokunulmaz — sebebi kutu bölümünün cümlesinde yazılı. */}
+        <View style={[styles.section, stepsLocked ? styles.sectionLocked : null]} pointerEvents={stepsLocked ? 'none' : 'auto'}>
           <Text style={styles.sectionHeading} testID="courier-proof-heading">
             {fillCopy(t.delivery.step, {
               n: String(stepNo(1)),
@@ -296,7 +314,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         </View>
 
         {/* ── MAL ───────────────────────────────────────────────────────── */}
-        <View style={styles.section}>
+        <View style={[styles.section, stepsLocked ? styles.sectionLocked : null]} pointerEvents={stepsLocked ? 'none' : 'auto'}>
           {/* Sayı ÇİZİLEN listeden gelir, `itemCount`tan değil: başlık dokunulabilir satırları
               tarif ediyor, ikisi ayrışırsa başlık ekranda olmayan bir kalemi vaat ederdi. */}
           <Text style={styles.sectionHeading}>
@@ -375,7 +393,11 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             <Text style={styles.settledNote}>{t.delivery.collection.settledNote}</Text>
           </View>
         ) : (
-          <View style={styles.collection} testID="courier-collection">
+          <View
+            style={[styles.collection, stepsLocked ? styles.sectionLocked : null]}
+            pointerEvents={stepsLocked ? 'none' : 'auto'}
+            testID="courier-collection"
+          >
             <Text style={styles.collectionHeading}>
               {fillCopy(t.delivery.step, {
                 n: String(stepNo(3)),
@@ -383,14 +405,20 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               })}
             </Text>
             <View style={styles.amountRow}>
-              <TextInput
-                value={delivery.amountText}
-                onChangeText={delivery.setAmountText}
-                keyboardType="decimal-pad"
-                accessibilityLabel={t.delivery.collection.amountLabel}
+              {/* TUTAR TUŞ TAKIMIYLA (v3 · `00-ortak`, tasarımda `kpOpen.tahsilat`): alan bir girdi
+                  değil, tuş takımını açan düğmedir. Kapıda telefon eldivenle tutuluyor ve sistem
+                  klavyesi ekranın yarısını kaplayıp motorun tutarını görüş alanından çıkarıyordu.
+                  Artı/eksi düğmeleri KALIYOR — yuvarlak tutarlarda tek dokunuş, tuş takımından
+                  hızlıdır. */}
+              <PressableSurface
+                onPress={() => setKeypadOpen(true)}
+                feedback="scale"
                 style={styles.amountInput}
+                accessibilityLabel={t.delivery.collection.amountLabel}
                 testID="courier-collection-amount"
-              />
+              >
+                <Text style={styles.amountValue}>{delivery.amountText}</Text>
+              </PressableSurface>
               <Text style={styles.currency}>€</Text>
               <OperationsStepperButton
                 direction="decrease"
@@ -436,6 +464,26 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           </View>
         )}
       </FormScroll>
+
+      {delivery.dueCents === null ? null : (
+        <OperationsAmountKeypad
+          visible={keypadOpen}
+          title={t.delivery.collection.keypad.title}
+          value={delivery.amountText}
+          expected={centsToAmountText(delivery.dueCents)}
+          expectedLabel={fillCopy(t.delivery.collection.keypad.expected, { amount: money(delivery.dueCents) })}
+          confirmLabel={t.delivery.collection.keypad.confirm}
+          hint={t.delivery.collection.keypad.hint}
+          footnote={t.delivery.collection.keypad.footnote}
+          deleteLabel={t.delivery.collection.keypad.delete}
+          onConfirm={(text) => {
+            delivery.setAmountText(text);
+            setKeypadOpen(false);
+          }}
+          onClose={() => setKeypadOpen(false)}
+          testID="courier-collection-keypad"
+        />
+      )}
 
       <ScanSheet
         open={delivery.boxScanOpen}
@@ -686,6 +734,8 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors['olive-dark'],
   },
+  /* Kilitli bölüm SOLUKTUR (yarı saydam), gizli değil — bkz. kanıt bölümünün künyesi. */
+  sectionLocked: { opacity: 0.4 },
   boxNote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
@@ -829,6 +879,8 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors.ink,
     borderRadius: operationsTheme.radius.badge,
     backgroundColor: operationsTheme.colors.card,
+  },
+  amountValue: {
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text['icon-sm'],
     color: operationsTheme.colors.ink,

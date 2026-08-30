@@ -102,6 +102,8 @@ export const ICON_PATHS = {
   /* Fişin onay imi (v3:22). Metin "✓" ile çizilemezdi: daire içinde ortalanan bir glif, yazı
      tipinin kendi çizgi yüksekliğine yaslanır ve dairenin merkezinden kayar. */
   check: { paths: ['M5 12.5l4.5 4.5L19 7'] },
+  /* Tuş takımının silme tuşu (v3 · `00-ortak`) — ok ucu ve içindeki çarpı. */
+  backspace: { paths: ['M21 5H9l-6 7 6 7h12z', 'M14 9l-4 6M10 9l4 6'] },
 
   /* ── KURYE bölümü (Operasyon Mobil v2:111-114 · 121-122 · 99 · 206) ──────────────────
      Altı ikon da v2'den BİREBİR; sadeleştirilmedi, yeniden çizilmedi (dosyanın kendi kuralı).

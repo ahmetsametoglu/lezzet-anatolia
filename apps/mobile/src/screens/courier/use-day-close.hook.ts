@@ -48,7 +48,9 @@ const t = courierCopy;
  * bilmek zorunda değil, hook zaten sıralı satırlar döndürüyor.
  */
 const CLOSE_METHODS = ['cash', 'card', 'cheque'] as const;
-type CloseMethod = (typeof CLOSE_METHODS)[number];
+/** Kapanışta sayılan üç kasa. İHRAÇ EDİLDİ (30.08): ekran hangi kasanın tuş takımının açık
+    olduğunu bu tiple tutuyor — kimlik tutulur, satırın kendisi değil. */
+export type CloseMethod = (typeof CLOSE_METHODS)[number];
 
 interface CloseMoneyRow {
   method: CloseMethod;

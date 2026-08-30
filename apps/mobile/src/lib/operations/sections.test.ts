@@ -15,9 +15,11 @@ import {
 
 describe('operationsSectionsOf', () => {
   it('rolleri tasarımın sırasına çevirir — `roles` dizisinin sırası sonucu OYNATMAZ', () => {
+    // v3'ün ortak zemini çubuğu DEPO ile başlatıyor (30.08); `roles` dizisi kuryeyi önce saysa da
+    // sonuç tasarımın sırasıdır — kullanıcının rolleri hangi sırayla gelirse gelsin çubuk kaymaz.
     expect(operationsSectionsOf(['accounting', 'courier', 'admin', 'warehouse'])).toEqual([
-      'courier',
       'warehouse',
+      'courier',
       'management',
       'money',
     ]);

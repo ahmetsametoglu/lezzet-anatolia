@@ -12,8 +12,15 @@ import type { UserRole } from '@lezzet/types';
   — süzme kuralı arayüzün değil, yüzeyin kuralıdır ve bir gün ekran değişse de aynı kalır.
 */
 
-/** Dört bölüm — SIRA tasarımın sırasıdır (Operasyon Mobil v2:1079), alfabetik değil. */
-export const OPERATIONS_SECTIONS = ['courier', 'warehouse', 'management', 'money'] as const;
+/**
+ * Dört bölüm — SIRA tasarımın sırasıdır, alfabetik değil.
+ *
+ * **DEPO BAŞA ALINDI (v3 · kullanıcı bulgusu 30.08).** v2 kuryeyi başa koyuyordu ve kod onu
+ * izliyordu; v3'ün ortak zemini (`00-ortak`) sekme çubuğunu **Depo · Kurye · Yönetim · Para**
+ * diye çiziyor. Sıra bir süs değil: çubuğun ilk sekmesi çok bölümlü personelin uygulamayı her
+ * açtığında düştüğü yerdir ve günün en çok açılan bölümü depodur.
+ */
+export const OPERATIONS_SECTIONS = ['warehouse', 'courier', 'management', 'money'] as const;
 
 export type OperationsSection = (typeof OPERATIONS_SECTIONS)[number];
 

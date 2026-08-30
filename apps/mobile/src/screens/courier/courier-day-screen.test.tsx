@@ -119,7 +119,15 @@ function mockDay(
 async function renderDay() {
   await render(
     <OperationsSessionProvider
-      value={{ sections: ['courier'], userName: 'Musa Kaya', userEmail: 'musa@lezzetanatolia.fr' }}
+      /* Depo kapsamı BOŞ: kurye üstbaşlığı tesisin adını yazmaz (sefer künyesini yazar), yani bu
+         ekranın ölçtüğü hiçbir şey kapsama bağlı değil. */
+      value={{
+        sections: ['courier'],
+        userName: 'Musa Kaya',
+        userEmail: 'musa@lezzetanatolia.fr',
+        warehouses: [],
+        resolvedWarehouseId: null,
+      }}
     >
       <CourierDayScreen />
     </OperationsSessionProvider>,

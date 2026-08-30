@@ -1,5 +1,18 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+/*
+  SAYIM ARTIK TUŞ TAKIMIYLA YAZILIYOR (v3 · `00-ortak`, 30.08). Alan bir `TextInput` değil, tuş
+  takımını açan bir düğme; testler de kapıdaki gerçek yolu izliyor: alana dokun → rakamlara bas →
+  "Yaz". Doğrudan metin yazmak, artık var olmayan bir yolu ölçmek olurdu.
+*/
+async function typeAmount(method: 'cash' | 'card' | 'cheque', amount: string) {
+  await fireEvent.press(screen.getByTestId(`courier-money-input-${method}`));
+  for (const key of amount) {
+    await fireEvent.press(screen.getByTestId(`courier-money-keypad-key-${key}`));
+  }
+  await fireEvent.press(screen.getByTestId('courier-money-keypad-confirm'));
+}
+
 import { CourierDayCloseScreen } from './day-close-screen';
 import { closedDayRecord, courierRunBrief, courierStop, dayCloseDraft } from './courier-fixture';
 import messages from './messages.json';
@@ -112,8 +125,8 @@ describe('K7 · sefer kapanışı', () => {
 
     await renderClose();
 
-    expect(screen.getByTestId('courier-money-input-cash').props.value).toBe('42,00');
-    expect(screen.getByTestId('courier-money-input-card').props.value).toBe('10,00');
+    expect(screen.getByTestId('courier-money-input-cash')).toHaveTextContent('42,00');
+    expect(screen.getByTestId('courier-money-input-card')).toHaveTextContent('10,00');
     expect(screen.getByTestId('courier-money-diff-cash')).toHaveTextContent(/0,00/);
   });
 
@@ -122,18 +135,24 @@ describe('K7 · sefer kapanışı', () => {
 
     await renderClose();
 
-    await fireEvent.changeText(screen.getByTestId('courier-money-input-cash'), '38,50');
+    await typeAmount('cash', '38,50');
     expect(screen.getByTestId('courier-money-diff-cash')).toHaveTextContent(/−3,50/);
 
-    await fireEvent.changeText(screen.getByTestId('courier-money-input-card'), '12,00');
+    await typeAmount('card', '12,00');
     expect(screen.getByTestId('courier-money-diff-card')).toHaveTextContent(/\+2,00/);
   });
 
-  it('bozuk sayım girdisinde fark SIFIR gösterilmez, "bilinmiyor" çizgisi çıkar', async () => {
+  it('SAYILMAMIŞ kasada fark SIFIR gösterilmez, "bilinmiyor" çizgisi çıkar', async () => {
     mockDraft(dayCloseDraft({ expected: { cashCents: 4200, cardCents: 0, chequeCents: 0 } }));
 
     await renderClose();
-    await fireEvent.changeText(screen.getByTestId('courier-money-input-cash'), 'kırk iki');
+    /* Tuş takımıyla "bozuk metin" yazılamaz ama alan BOŞALTILABİLİR — ve boş bir kasa
+       sayılmamıştır. Ölçülemeyen fark sıfır değildir (CLAUDE §1): ekran "—" der. */
+    await fireEvent.press(screen.getByTestId('courier-money-input-cash'));
+    for (let i = 0; i < 5; i += 1) {
+      await fireEvent.press(screen.getByTestId('courier-money-keypad-delete'));
+    }
+    await fireEvent.press(screen.getByTestId('courier-money-keypad-confirm'));
 
     expect(screen.getByTestId('courier-money-diff-cash')).toHaveTextContent('—');
   });
@@ -163,7 +182,7 @@ describe('K7 · sefer kapanışı', () => {
     });
 
     await renderClose();
-    await fireEvent.changeText(screen.getByTestId('courier-money-input-cash'), '40,00');
+    await typeAmount('cash', '40,00');
     await fireEvent.changeText(screen.getByTestId('courier-day-close-note'), 'Krutenau kolisi araçta kaldı');
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
     await fireEvent.press(screen.getByTestId('courier-day-close-confirm'));
@@ -191,7 +210,7 @@ describe('K7 · sefer kapanışı', () => {
     await renderClose();
 
     expect(screen.getByTestId('courier-day-close-readonly')).toBeOnTheScreen();
-    expect(screen.getByTestId('courier-money-input-cash').props.editable).toBe(false);
+    expect(screen.getByTestId('courier-money-input-cash')).toBeDisabled();
     expect(screen.getByTestId('courier-day-close-note').props.editable).toBe(false);
     expect(screen.getByText(t.dayClose.ctaClosed)).toBeOnTheScreen();
 
@@ -209,7 +228,7 @@ describe('K7 · sefer kapanışı', () => {
 
     await renderClose();
 
-    expect(screen.getByTestId('courier-money-input-cash').props.value).toBe('40,00');
+    expect(screen.getByTestId('courier-money-input-cash')).toHaveTextContent('40,00');
     expect(screen.getByTestId('courier-money-diff-cash')).toHaveTextContent(/−2,00/);
     expect(screen.getByTestId('courier-day-close-note').props.value).toBe('Krutenau kolisi araçta kaldı');
   });
