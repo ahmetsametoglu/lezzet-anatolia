@@ -30,12 +30,38 @@ describe('D3 · yakın-SKT turu', () => {
     expect(screen.getByTestId('warehouse-near-expiry-P-0641')).toHaveTextContent(/imha edilmeli/);
   });
 
-  it('raf ömrü BİLİNMEYEN parti "%0" demez — ölçülemeyen değer sıfır değildir', async () => {
+  /* Ömür ölçülemediğinde ÇUBUK DA çizilmez (v3, 30.08): boş bir çubuk "%0" gibi görünür ve o
+     partiyi imhalık gösterirdi. Metin eşiğin neden uygulanmadığını söylüyor. */
+  it('raf ömrü BİLİNMEYEN parti "%0" demez ve çubuk çizilmez', async () => {
     await render(<NearExpiryScreen />);
 
     const row = screen.getByTestId('warehouse-near-expiry-P-0688');
-    expect(row).toHaveTextContent(/raf ömrü bilinmiyor/);
+    expect(row).toHaveTextContent(/ömür bilinmiyor — eşik uygulanmaz/);
     expect(row).toHaveTextContent(/karar yok/);
+    expect(screen.queryByTestId('warehouse-near-expiry-P-0688-life')).toBeNull();
+  });
+
+  it('ölçülen ömür hem ÇUBUKLA hem yazıyla söylenir — tek kaynaktan', async () => {
+    await render(<NearExpiryScreen />);
+
+    expect(screen.getByTestId('warehouse-near-expiry-P-0698-life')).toBeOnTheScreen();
+    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toHaveTextContent(/ömür %18/);
+  });
+
+  /* İMHALIK SATIRIN KENDİ BAĞI (v3:849) — alttaki genel düğme "bir" partiyi taşır; imhalık birden
+     çoksa depocu hangisinin taşındığını bilemezdi. Bağ yalnız imhalık satırda doğar. */
+  it('imhalık satır kendi partisini D4\'e götürür; ötekilerde bağ yoktur', async () => {
+    await render(<NearExpiryScreen />);
+
+    expect(screen.getByTestId('warehouse-near-expiry-P-0641-to-count')).toBeOnTheScreen();
+    expect(screen.queryByTestId('warehouse-near-expiry-P-0698-to-count')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-P-0641-to-count'));
+
+    expect(mockNavigate).toHaveBeenCalledWith({
+      pathname: '/stock-count',
+      params: { stockId: '00000000-0000-4000-8000-000000000302', code: 'P-0641', name: 'Kaymaklı Baklava · 1 kg' },
+    });
   });
 
   it('işaretleme YOK: listede tek bir dokunulabilir satır bulunmaz', async () => {

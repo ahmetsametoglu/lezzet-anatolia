@@ -37,8 +37,15 @@ interface NearExpiryBatch {
   /** "2 gün" · "−1 gün (geçti)" — gün SAYISI değil, tasarımın yazdığı cümle (kapı gelene dek). */
   daysLabel: string;
   urgency: NearExpiryUrgency;
-  /** "kalan ömür %18" · "raf ömrü bilinmiyor" — ÖLÇÜLEMEYEN değer sıfır DEĞİLDİR (CLAUDE §1). */
-  lifeLabel: string;
+  /**
+   * Kalan ömür YÜZDESİ, 0–100. **`null` = ölçülemedi** (raf ömrü bilinmiyor) ve sıfır DEĞİLDİR
+   * (CLAUDE §1): "%0" yazmak o partiyi hemen imhalık gösterirdi.
+   *
+   * Metin DEĞİL SAYI tutuluyor (30.08): v3 bu değeri hem çubukla hem yazıyla gösteriyor ve ikisi
+   * tek kaynaktan çıkmalı — "kalan ömür %18" dizesi ile 18 sayısını yan yana tutmak, birinin bir
+   * gün ötekiyle çelişmesi demekti. Cümleyi sözlük kuruyor.
+   */
+  lifePercent: number | null;
   decision: NearExpiryDecision;
 }
 
@@ -50,7 +57,7 @@ export const NEAR_EXPIRY_FIXTURE: NearExpiryBatch[] = [
     qty: 6,
     daysLabel: '2 gün',
     urgency: 'soon',
-    lifeLabel: 'kalan ömür %18',
+    lifePercent: 18,
     decision: 'offer_open',
   },
   {
@@ -60,7 +67,7 @@ export const NEAR_EXPIRY_FIXTURE: NearExpiryBatch[] = [
     qty: 4,
     daysLabel: '−1 gün (geçti)',
     urgency: 'expired',
-    lifeLabel: '%0',
+    lifePercent: 0,
     decision: 'discard',
   },
   {
@@ -70,7 +77,7 @@ export const NEAR_EXPIRY_FIXTURE: NearExpiryBatch[] = [
     qty: 9,
     daysLabel: '5 gün',
     urgency: 'calm',
-    lifeLabel: 'kalan ömür %23',
+    lifePercent: 23,
     decision: 'offer_candidate',
   },
   {
@@ -82,7 +89,7 @@ export const NEAR_EXPIRY_FIXTURE: NearExpiryBatch[] = [
     urgency: 'calm',
     // Toplam ömrü bilinmeyen üründe yüzde HESAPLANMAZ; "%0" yazmak bozuk bir ölçümü sağlıklı gibi
     // okuturdu (CLAUDE §1) ve o parti hemen imhalık görünürdü.
-    lifeLabel: 'raf ömrü bilinmiyor',
+    lifePercent: null,
     decision: 'none',
   },
 ];

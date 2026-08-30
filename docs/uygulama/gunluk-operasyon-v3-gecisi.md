@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 6/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 7/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -336,6 +336,24 @@ birebir.
 
 **Doğrulama.** Mal kabul jest **31/31** (ikisi yeni) · mobil paket **954/954** · statik kapılar
 yeşil · **cihazda gözle doğrulandı**.
+
+---
+
+## 30.08 gece — Faz 2 · Ekran 07: Yakın-SKT turu ✅
+
+**Ne değişti.** Satır iki katman oldu: künye + karar rozeti üstte, **ömür çubuğu** altta. Çubuk
+göz taramasıyla okunur, yanındaki sayı kararı gerekçelendirir. Rengi **aciliyetten** türüyor,
+karardan değil — karar zaten rozette; ikisi aynı renkte olsaydı satırda aynı şey iki kez
+söylenirdi. İmhalık satır artık **kendi partisini** D4'e götüren bir bağ taşıyor: alttaki genel
+düğme "bir" partiyi taşır ve imhalık birden çoksa depocu hangisinin gittiğini bilemezdi.
+
+**Bir duplikasyon kapandı.** Fikstür ömrü metin olarak tutuyordu (`lifeLabel: 'kalan ömür %18'`);
+v3 aynı değeri hem çubukla hem yazıyla gösteriyor ve ikisi tek kaynaktan çıkmalı. Alan sayıya
+çevrildi (`lifePercent: number | null`), cümleyi sözlük kuruyor. **`null` = ölçülemedi** ve o
+zaman **çubuk hiç çizilmiyor**: boş bir çubuk "%0" gibi görünür ve o partiyi imhalık gösterirdi.
+
+**Doğrulama.** Yakın-SKT jest **6/6** (ikisi yeni) · mobil paket **956/956** · statik kapılar
+yeşil · **cihazda gözle doğrulandı** — üç çubuk üç renkte, ölçülemeyen partide çubuk yok.
 
 ---
 

@@ -7257,3 +7257,27 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** Mal kabul jest **31/31** (ikisi yeni) · mobil paket **954/954**; typecheck ·
   lint · knip yeşil; **cihazda gözle doğrulandı** — başlık ayrıştı, boş hâl ve iki kapı yerinde.
+
+- [x] (21.142) **YAKIN-SKT TURU v3 — ömür çubuğu, imhalık satırın kendi bağı** (v3:828-896)
+  `touches:` `apps/mobile/src/screens/warehouse/{near-expiry-screen.tsx,near-expiry-fixture.ts,messages.json,near-expiry-screen.test.tsx}`
+
+  **Durum (30.08).** Satır iki katman oldu: künye + karar rozeti üstte, **ömür çubuğu** altta.
+  Çubuğun rengi **ACİLİYETTEN** türüyor, karardan değil: karar sistemin türettiği eylemdir
+  (teklif · imha), aciliyet ise partinin kaç günü kaldığı. Çubuk zamanı çiziyor, o yüzden zamanın
+  rengini taşıyor — kararın rengi zaten rozettedir ve ikisi aynı olsaydı satırda aynı şey iki kez
+  söylenirdi.
+
+  **İmhalık satırın KENDİ bağı** (`sayım/düzeltmeye götür →`): alttaki genel düğme
+  `discardCandidate` ile TEK partiyi taşıyor ve imhalık birden çoksa depocu hangisinin gittiğini
+  bilemezdi. İki yol da tek bir çağrıdan geçiyor — ayrı yazılsalardı biri bir gün ötekinden başka
+  parametre gönderirdi.
+
+  **BİR DUPLİKASYON KAPANDI.** Fikstür ömrü METİN olarak tutuyordu (`lifeLabel: 'kalan ömür %18'`);
+  v3 aynı değeri hem çubukla hem yazıyla gösteriyor ve ikisi tek kaynaktan çıkmalı — dize ile sayıyı
+  yan yana tutmak, birinin bir gün ötekiyle çelişmesi demekti (CLAUDE §1). Alan `lifePercent:
+  number | null` oldu, cümleyi sözlük kuruyor. **`null` = ölçülemedi** ve o zaman **çubuk hiç
+  çizilmiyor**: boş bir çubuk "%0" gibi görünür ve o partiyi imhalık gösterirdi.
+
+  **Doğrulama.** Yakın-SKT jest **6/6** (ikisi yeni: çubuğun iki hâli, satır bağının hedefi) ·
+  mobil paket **956/956**; typecheck · lint · knip yeşil; **cihazda gözle doğrulandı** — üç çubuk
+  üç renkte (kırmızı/terracotta/zeytin), ölçülemeyen partide çubuk yok.

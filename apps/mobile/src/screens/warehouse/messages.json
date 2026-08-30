@@ -389,7 +389,10 @@
   "nearExpiry": {
     "title": "Yakın-SKT Turu",
     "caption": "eşikler: %25 yakın-SKT · %30 öneri indirimi",
-    "row": "{qty} adet · {days} · {life}",
+    "row": "{qty} adet · {days}",
+    "life": "ömür %{n}",
+    "lifeUnknown": "ömür bilinmiyor — eşik uygulanmaz",
+    "toBatchCount": "sayım/düzeltmeye götür →",
     "decision": {
       "offer_open": "teklif AÇIK",
       "offer_candidate": "teklife girebilir",
