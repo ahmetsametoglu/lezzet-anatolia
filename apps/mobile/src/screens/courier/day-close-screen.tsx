@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
+import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
@@ -171,13 +173,16 @@ export function CourierDayCloseScreen() {
           <Text style={styles.sectionHeading}>{t.dayClose.moneyHeading}</Text>
           {/* ÜÇ SATIR TEK KARTTA (v3:18): sayım bir bütündür — kart, üç kasa satırını "bir mutabakat"
               olarak çerçeveliyor. Ayraç SON satırda çizilmez; kartın kendi kenarı zaten orada. */}
-          <View style={styles.moneyCard}>
+          <OperationsSurface padding="none" style={styles.moneyCard}>
+            {/* AYRAÇ KİTTEN (`OperationsDashedRule`, 30.08): RN'in kendi `dashed`i cihazda 1:10
+                çıkıyor (ölçüldü — 2–3 px çizgi, 22–33 px boşluk) ve hat kesikli değil NOKTALI
+                görünüyor. Kit onu svg + `strokeDasharray` ile tasarımın oranında çiziyor.
+                Ayraç SATIRIN İÇİNDE değil ARASINDA: son satırdan sonra çizilmez, kartın kendi
+                kenarı zaten 4 px altında duruyor ve ikisi "çift çizgi" gibi okunurdu. */}
             {dayClose.rows.map((row, index) => (
-              <View
-                key={row.method}
-                style={[styles.moneyRow, index === dayClose.rows.length - 1 ? styles.moneyRowLast : null]}
-                testID={`courier-money-${row.method}`}
-              >
+              <Fragment key={row.method}>
+                {index === 0 ? null : <OperationsDashedRule color={operationsTheme.colors['sand-300']} />}
+              <View style={styles.moneyRow} testID={`courier-money-${row.method}`}>
                 <View style={styles.moneyLabels}>
                   <Text style={styles.moneyName}>{row.label}</Text>
                   <Text style={styles.moneyExpected}>{expectedLabel(row.expectedCents)}</Text>
@@ -214,8 +219,9 @@ export function CourierDayCloseScreen() {
                   {row.differenceLabel}
                 </Text>
               </View>
+              </Fragment>
             ))}
-          </View>
+          </OperationsSurface>
           <Text style={styles.hintText}>{t.dayClose.differenceNote}</Text>
         </View>
 
@@ -241,6 +247,8 @@ export function CourierDayCloseScreen() {
           value={keypadRow.countedText}
           expected={centsToAmountText(keypadRow.expectedCents)}
           expectedLabel={fillCopy(t.dayClose.keypad.expected, { amount: money(keypadRow.expectedCents) })}
+          // Birim artık PROP (30.08) — gerekçe `amount-keypad.tsx` künyesinde.
+          unit="€"
           confirmLabel={t.dayClose.keypad.confirm}
           hint={t.dayClose.keypad.hint}
           footnote={t.dayClose.keypad.footnote}
@@ -290,7 +298,7 @@ export function CourierDayCloseScreen() {
               </PressableSurface>
               <PressableSurface
                 onPress={dayClose.close}
-                feedback="shadow"
+                feedback="scale"
                 grow={1.3}
                 style={[styles.confirmButton, styles.confirmYes]}
                 accessibilityLabel={t.dayClose.confirm}
@@ -306,7 +314,7 @@ export function CourierDayCloseScreen() {
           <PressableSurface
             onPress={dayClose.askConfirm}
             disabled={dayClose.closed}
-            feedback="shadow"
+            feedback="scale"
             style={[styles.cta, dayClose.closed ? styles.ctaClosed : styles.ctaOpen]}
             accessibilityLabel={dayClose.closed ? t.dayClose.ctaClosed : t.dayClose.cta}
             testID="courier-day-close-cta"
@@ -390,12 +398,10 @@ const styles = StyleSheet.create({
   counterText_pending: { color: operationsTheme.colors.muted },
   counterText_returned: { color: operationsTheme.colors.error },
   moneyBlock: { gap: operationsTheme.space.md },
+  /* KİTİN `panel` TONU (30.08) — zemin, çerçeve ve yarıçap oradan. Dolgu `none`: dikey dolguyu
+     SATIRLAR taşıyor (ayraç kartın kenarına kadar uzansın diye), yatayı kart verir. */
   moneyCard: {
     paddingHorizontal: operationsTheme.space['3xl'],
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    borderRadius: operationsTheme.radius.card,
-    backgroundColor: operationsTheme.colors.panel,
   },
   sectionHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
@@ -407,13 +413,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: operationsTheme.space.lg,
     paddingVertical: operationsTheme.space.lg,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
   },
-  // Son satırın ayracı YOK: kartın kendi kenarı 4 px altında zaten duruyor, ikisi üst üste gelirse
-  // kart "çift çizgili" görünür.
-  moneyRowLast: { borderBottomWidth: 0 },
   moneyLabels: { flex: 1 },
   moneyName: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
@@ -538,7 +538,6 @@ const styles = StyleSheet.create({
   confirmYes: {
     backgroundColor: operationsTheme.colors.error,
     borderColor: operationsTheme.colors.error,
-    boxShadow: operationsTheme.shadow.hard,
   },
   confirmYesLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
@@ -553,7 +552,6 @@ const styles = StyleSheet.create({
   },
   ctaOpen: {
     backgroundColor: operationsTheme.colors.ink,
-    boxShadow: operationsTheme.shadow['hard-on-ink'],
   },
   ctaClosed: { backgroundColor: operationsTheme.colors['disabled-fill'] },
   ctaLabel: {

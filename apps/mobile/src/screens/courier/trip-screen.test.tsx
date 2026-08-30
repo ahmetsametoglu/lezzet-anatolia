@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react-native';
+import { customerColors, operationsAppColors } from '@lezzet/design-tokens';
 import type { CourierDayResponse } from '@lezzet/types';
 
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
@@ -159,6 +160,10 @@ describe('K · sefer künyesi', () => {
     await renderTrip();
 
     expect(screen.getByTestId('courier-trip-route')).toHaveTextContent(/Strasbourg Merkez → Krutenau/);
+    /* ZİNCİR NOKTAYLA BİTER (görsel ajanının cihaz bulgusu 30.08). Nokta düşünce iki cümle
+       birleşiyordu — "…→ Krutenau Rota yönetimde planlanır" okunuyor ve "Krutenau Rota" tek bir
+       ad gibi görünüyordu. Tek paragraf olması doğru; cümle sonu ayrı bir şey. */
+    expect(screen.getByTestId('courier-trip-route')).toHaveTextContent(/Krutenau\. Rota yönetimde/);
   });
 
   it('depo adı OKUNAMAZSA sebep yazılır — uydurma bir ad kuryeyi yanlış rampaya gönderir', async () => {
@@ -168,6 +173,31 @@ describe('K · sefer künyesi', () => {
 
     // "Bilinmiyor"u boş satıra düşürmek, kuryeye "depo yok" dedirtirdi (CLAUDE §1).
     expect(screen.getByTestId('courier-trip-route')).toHaveTextContent(/Çıkış deposu okunamadı/);
+    // Zincir okunamasa bile "buradan değiştiremezsin" cümlesi düşmez — ikisi tek paragraf (v3:1381).
+    expect(screen.getByTestId('courier-trip-route')).toHaveTextContent(/yönetimde planlanır/);
+  });
+
+  /*
+    BİRİNCİL DÜĞMENİN RENGİ BİR AYRIMDIR (v3:1391 · 30.08). Zeytin = akışı İLERLETEN eylem,
+    koyu = bir mutabakatı KAPATAN eylem (seferi kapat · günü kapat). İkisi de koyu çizilirse
+    kurye "başlat" ile "kapat"ı renkten ayırt edemez; test o ayrımı çiviliyor.
+  */
+  it('sefer başlat düğmesi ZEYTİN — koyu kapanış düğmesinden ayrılır', async () => {
+    mockDay(tripDay());
+
+    await renderTrip();
+
+    expect(screen.getByTestId('courier-trip-cta')).toHaveStyle({ backgroundColor: customerColors.olive });
+  });
+
+  /* "ATANMIŞ" bir DURUM etiketidir, künyenin kendisi değil — dolgusuz yazıldığında yanındaki
+     referansla aynı ağırlıkta duruyordu (v3:1375). */
+  it('ATANMIŞ rozeti DOLGULU hap — yanındaki referansla aynı ağırlıkta durmaz', async () => {
+    mockDay(tripDay());
+
+    await renderTrip();
+
+    expect(screen.getByText('ATANMIŞ')).toHaveStyle({ backgroundColor: operationsAppColors['olive-bg'] });
   });
 
   it('açık sefer yoksa künye çizilmez; ekran boş hâli gösterir', async () => {

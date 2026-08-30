@@ -1,5 +1,4 @@
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRoute, CourierStopContract } from '@lezzet/types';
@@ -11,6 +10,7 @@ import { OperationsSectionHeader } from '@/components/operations/section-header'
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon-paths';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -317,7 +317,10 @@ export function CourierDayScreen() {
 
                 {/* Çubuk PAYLAŞILAN (30.08): aynı geometri depo toplama kuyruğunun her satırında
                     da var; iki kopya birinin bir gün ötekinden ayrılması demekti (CLAUDE §1). */}
-                <OperationsProgressBar value={doneCount / stops.length} testID="courier-day-progress" />
+                {/* İZ KOYU (30.08): kart koyu ama çubuğun izi açık zeminin iziydi ve çubuk
+                    boşken bile DOLU görünüyordu — üç durağın biri bitmişken göz "neredeyse
+                    tamam" okuyordu. Kit prop'u, iki koyu çağıran da kuryede. */}
+                <OperationsProgressBar value={doneCount / stops.length} onInk testID="courier-day-progress" />
 
                 {doorStops.length === 0 ? null : (
                   <View style={styles.doorLeftBox} testID="courier-day-door-left">
@@ -394,7 +397,11 @@ export function CourierDayScreen() {
       {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (v2:89). Bildirim de
           buradadır: başlatma sonucu, düğme çizilmese bile (rota kalmadı) görünmek zorunda. */}
       {ctaMode === null && day.startNotice === null ? null : (
-        <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+        /* YAPIŞKAN ÇUBUK KİTTEN (`OperationsStickyBar`, 30.08): gradyan + mutlak konum + üç dolgu
+           burada elle yazılıydı ve kitin bloğuyla BİREBİR aynıydı — kit zaten bu ekranın
+           ölçüsünden çıkarılmıştı, ekran ona dönmemişti. `glow` VERİLMEDİ: ışıma bir OKUTMA
+           işaretidir (kitin künyesi), başlat/kapat düğmesinin değil. */
+        <OperationsStickyBar>
           {day.startNotice === null ? null : (
             <View style={styles.startNoticeBlock}>
               <Text
@@ -422,7 +429,11 @@ export function CourierDayScreen() {
               onPress={ctaMode === 'close' ? () => router.navigate('/day-close') : day.start}
               // Rota seçilmeden başlatma isteği gönderilmez: hangi rotanın açıldığı belirsiz kalırdı.
               disabled={day.starting || (ctaMode === 'start' && day.selectedZoneId === null)}
-              feedback="shadow"
+              /* KÜÇÜLME, KAYMA DEĞİL (v3:14:73 · `style-active="transform:scale(.98)"`). Kayma
+                 sert gölgenin geri bildirimidir — gölge gidince altında kaymayı açıklayan bir şey
+                 kalmaz ve hareket titreme gibi okunur (kitin `PrimaryButton` künyesindeki aynı
+                 kural). */
+              feedback="scale"
               style={[
                 styles.cta,
                 ctaMode === 'close' ? styles.ctaClose : day.selectedZoneId === null ? styles.ctaIdle : styles.ctaStart,
@@ -447,7 +458,7 @@ export function CourierDayScreen() {
               ) : null}
             </PressableSurface>
           )}
-        </LinearGradient>
+        </OperationsStickyBar>
       )}
 
       <ScanSheet
@@ -675,6 +686,19 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
+    /*
+      KARTLAR ARASI ARALIK (kullanıcı bulgusu 30.08 — "kartlar birbirine bitişik").
+
+      Burada `gap` HİÇ YOKTU: özet kartı ile kapı satırı, kapı satırı ile satış daveti sıfır
+      boşlukla yan yanaydı; yalnız durak satırlarının kendi `paddingVertical`ı dolaylı bir aralık
+      üretiyordu ve o da listenin geri kalanıyla tutmuyordu.
+
+      Değer TASARIMDAN ve tahmin değil: bu ekranda ardışık her kart `margin:10px 20px 0` ile
+      geliyor (v3:14 — özet → kapı satırı → satış daveti). Durak listesinin sarmalayıcısında
+      `gap` gerçekten yazılmamış ama o bir kural yokluğu değil, TEK DURAK çizilmiş olmasının
+      sonucu; aynı ekranın kendi ritmi 10 diyor.
+    */
+    gap: operationsTheme.space.lg,
     // Yapışkan CTA listenin ÜSTÜNDE duruyor; son satır onun altında kalmasın (52 + nefes).
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
   },
@@ -863,11 +887,12 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
   },
+  /* Dikey dolgu KALDIRILDI: aralık artık listenin `gap`i — iki kaynak olduğunda durak satırları
+     listenin geri kalanından farklı bir ritimde duruyordu (kullanıcı bulgusu 30.08). */
   stopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.lg,
-    paddingVertical: operationsTheme.space.sm,
   },
   /** Kart içindeki yön oku — kartın sağ kenarına yaslanır, listenin kenarına değil. */
   chevronInCard: { marginLeft: -operationsTheme.space['4xl'] },
@@ -951,15 +976,6 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['icon-sm'],
     color: operationsTheme.colors['sand-600'],
   },
-  sticky: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingTop: operationsTheme.space.xl,
-    paddingBottom: operationsTheme.space['3xl'],
-    paddingHorizontal: operationsTheme.space['5xl'],
-  },
   startNoticeBlock: {
     alignItems: 'flex-start',
     gap: operationsTheme.space.xs,
@@ -993,14 +1009,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: operationsTheme.space.lg,
   },
+  /*
+    SERT GÖLGE SÖKÜLDÜ (kullanıcı bulgusu 30.08). `3px 3px 0` müşteri evreninin imzası ve v2'den
+    kalmıştı; v3'te sert gölge YOK — tasarımın 6 gölgesinin altısı da yumuşak ve dördü yapışkan
+    çubuktaki OKUTMA düğmesinin zeytin ışıması (kitin `sticky-bar` künyesi). Kural kitte zaten
+    yazılıydı (`PrimaryButton elevation="flat"`); bu ekran kite hiç sormamıştı.
+  */
   ctaStart: {
     backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
   },
-  /** Koyu CTA'nın gölgesi mürekkep OLAMAZ (görünmez) — kum gölge (`hard-on-ink`). */
   ctaClose: {
     backgroundColor: operationsTheme.colors.ink,
-    boxShadow: operationsTheme.shadow['hard-on-ink'],
   },
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

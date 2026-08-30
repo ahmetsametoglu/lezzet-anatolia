@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { customerColors } from '@lezzet/design-tokens';
 import type { CourierDayResponse } from '@lezzet/types';
 
 import { CourierLoadScreen } from './load-screen';
@@ -86,6 +87,29 @@ beforeEach(() => {
 });
 
 describe('K · araca yükleme', () => {
+  /*
+    SAYAÇ KARTI KOYU (v3:1412 · 30.08). Krem çizilmişti ve altındaki okut düğmesiyle, durak
+    kartlarıyla EŞİT sesle konuşuyordu; oysa rampada kuryenin ilk bakışı buraya düşmeli. Renk
+    burada bir süs değil hiyerarşi — test onu çiviliyor.
+  */
+  it('sayaç kartı KOYU — rampadaki ilk bakış oraya düşer', async () => {
+    mockDay(loadingDay());
+
+    await renderLoad();
+
+    expect(screen.getByTestId('courier-load-counter')).toHaveStyle({ backgroundColor: customerColors.ink });
+  });
+
+  /* Dipnot bir KARARIN bedelini anlatıyor ("eksik kutuyla çıkarsan o durak açılmaz") ve karar
+     dipteki düğmeyle veriliyor — eksik yokken uyarının konusu da yok (v3:1465). */
+  it('eksik kutu dipnotu YALNIZ eksik varken çizilir', async () => {
+    mockDay(loadingDay());
+
+    await renderLoad();
+
+    expect(screen.getByText(/o durak/)).toBeOnTheScreen();
+  });
+
   /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08) — ayıran iz ROL: halka `progressbar`dır. */
   it('yüklenirken İSKELET gösterir, halka değil', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));

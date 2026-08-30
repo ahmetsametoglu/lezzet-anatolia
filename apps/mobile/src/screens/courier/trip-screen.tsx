@@ -5,7 +5,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { OperationsStickyBar } from '@/components/operations/sticky-bar';
+import { OperationsSurface } from '@/components/operations/surface';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { fillCopy } from '@/screens/operations/copy';
 import { useOperationsIdentity } from '@/screens/operations/sections-context';
 import { emToDp } from '@/theme/parse';
@@ -103,7 +105,7 @@ export function CourierTripScreen() {
       {header}
 
       <ScrollView contentContainerStyle={styles.list} testID="courier-trip-list">
-        <View style={styles.card} testID="courier-trip-card">
+        <OperationsSurface padding="lg" style={styles.card} testID="courier-trip-card">
           <View style={styles.cardHead}>
             <Text style={styles.assigned}>{t.day.trip.assigned}</Text>
             {/* BAŞLIKTA YALNIZ REFERANS — rota adı alttaki zincirde (30.08). `runLabel` ikisini
@@ -112,15 +114,6 @@ export function CourierTripScreen() {
                 doğru; değişen yalnız BU kartın ne söylediği. */}
             <Text style={styles.reference}>{day.run.referenceNo}</Text>
           </View>
-
-          {/* ROTA ZİNCİRİ — "nereden nereye" (30.08 · uyuşmazlık #12 kapandı).
-              Depo adı okunamazsa uydurma bir ad yerine SEBEP yazılır: yanlış rampaya gönderilen
-              kurye, boş bir satırdan daha pahalıdır (CLAUDE §1). */}
-          <Text style={styles.route} testID="courier-trip-route">
-            {day.run.warehouseName === null
-              ? t.day.trip.routeUnknown
-              : fillCopy(t.day.trip.route, { warehouse: day.run.warehouseName, zone: day.run.zoneName ?? '—' })}
-          </Text>
 
           {/* ÜÇ SAYI YAN YANA — kuryenin rampada sorduğu üç soru, tek bakışta. */}
           <View style={styles.counts}>
@@ -138,32 +131,67 @@ export function CourierTripScreen() {
             ))}
           </View>
 
-          <Text style={styles.routeNote}>{t.day.trip.routeNote}</Text>
-        </View>
+          {/*
+            ROTA ZİNCİRİ VE NOT TEK PARAGRAF, SAYILARDAN SONRA (v3:1381 · 30.08 ikinci tur).
+            Zinciri sayıların ÜSTÜNE koymuştum; tasarım onu sayıların ALTINA ve notla AYNI cümle
+            demetine koyuyor. Ayrım anlamlı: üstteki rozet+kod künyenin KİMLİĞİ, ortadaki üç sayı
+            günün ÖLÇÜSÜ, alttaki paragraf da bağlam — "şu yoldan gideceksin ve bunu buradan
+            değiştiremezsin". Zincir yukarıdayken kimlikle ölçünün arasına giriyordu.
 
-        {/* ARAÇ — 30.08'e kadar burada "künye bu ekrana ulaşmıyor" yazıyordu; alan geldi.
-            İki hâl AYRI cümle: adı olmayan araç ile araçsız sefer aynı şey değil — birincisi bir
-            eksik, ikincisi meşru bir kurulum (araç kaydı zorunlu değil). */}
-        <Text style={styles.vehicleNote} testID="courier-trip-vehicle">
-          {day.run.vehicleLabel === null
-            ? t.day.trip.vehicleNone
-            : fillCopy(t.day.trip.vehicle, { vehicle: day.run.vehicleLabel })}
-        </Text>
+            Depo adı okunamazsa uydurma bir ad yerine SEBEP yazılır ve not yine eklenir: yanlış
+            rampaya gönderilen kurye, boş bir satırdan pahalıdır (CLAUDE §1).
+          */}
+          <Text style={styles.routeNote} testID="courier-trip-route">
+            {fillCopy(t.day.trip.routeNote, {
+              route:
+                day.run.warehouseName === null
+                  ? t.day.trip.routeUnknown
+                  : fillCopy(t.day.trip.route, {
+                      warehouse: day.run.warehouseName,
+                      zone: day.run.zoneName ?? '—',
+                    }),
+            })}
+          </Text>
+        </OperationsSurface>
 
-        <Text style={styles.footnote}>{t.day.trip.footnote}</Text>
+        {/*
+          ARAÇ KENDİ KARTINDA, KESİKLİ ÇERÇEVEYLE (v3:1385 · 30.08 ikinci tur).
+
+          Düz gri bir cümleydi ve künye kartının dipnotu gibi okunuyordu. Tasarım onu ayrı bir
+          kutuya alıyor ve çerçevesini KESİKLİ çiziyor — kesik çerçeve v3'te "burası bilgi, senin
+          dokunacağın bir şey değil" demek (aynı dil mal kabulün "siparişsiz mal geldi" kutusunda).
+          Kart başlıklı: "Araç" satırı, cümleyi bir alana bağlıyor.
+
+          İki hâl AYRI cümle: adı olmayan araç ile araçsız sefer aynı şey değil — birincisi bir
+          eksik, ikincisi meşru bir kurulum (araç kaydı zorunlu değil). Kart İKİSİNDE DE çizilir;
+          "araç yok" da bir cevaptır ve kuryenin sorusu ("neyle gideceğim") ortada kalmamalı.
+        */}
+        <OperationsSurface tone="blank" padding="lg" style={styles.vehicleCard} testID="courier-trip-vehicle">
+          <Text style={styles.vehicleHeading}>{t.day.trip.vehicleHeading}</Text>
+          <Text style={styles.vehicleNote}>
+            {day.run.vehicleLabel === null
+              ? t.day.trip.vehicleNone
+              : fillCopy(t.day.trip.vehicle, { vehicle: day.run.vehicleLabel })}
+          </Text>
+        </OperationsSurface>
       </ScrollView>
 
-      <View style={styles.sticky}>
-        <PressableSurface
+      {/* YAPIŞKAN DİP: düğme ve onun DİPNOTU (v3:1390). Dipnot 30.08'e kadar kaydırma alanının
+          içinde ve düğmenin ÜSTÜNDEYDİ — yani uzun listede düğmeyle birlikte görünmüyordu ve
+          "sefer başlayınca ne olur" sorusu tam basmadan önce okunamıyordu. */}
+      {/* ÇUBUK VE DÜĞME KİTTEN (30.08): ikisi de elden çiziliyordu. Çubuk kite geçince tasarımın
+          GRADYANI da geldi — elle kurulmuş hâlde yoktu ve liste düğmenin altından keskin bir
+          kenarla kesiliyordu. Düğme `flat`: v3'te sert gölge yok (kitin kendi kuralı). */}
+      <OperationsStickyBar>
+        <PrimaryButton
+          label={t.day.trip.cta}
           onPress={() => router.navigate('/load')}
-          feedback="shadow"
-          style={styles.cta}
-          accessibilityLabel={t.day.trip.cta}
+          tone="olive"
+          elevation="flat"
           testID="courier-trip-cta"
-        >
-          <Text style={styles.ctaLabel}>{t.day.trip.cta}</Text>
-        </PressableSurface>
-      </View>
+        />
+        <Text style={styles.footnote}>{t.day.trip.footnote}</Text>
+      </OperationsStickyBar>
     </View>
   );
 }
@@ -187,14 +215,10 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space.xl,
   },
+  /* KÜNYE KARTI KİTİN `panel` TONU (30.08) — zemin, çerçeve, yarıçap ve dolgu oradan geliyor;
+     burada kalan yalnız listenin ilk kartına verilen üst nefes ve satır arası aralık. */
   card: {
     marginTop: operationsTheme.space.lg,
-    backgroundColor: operationsTheme.colors.panel,
-    borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    paddingVertical: operationsTheme.space['2xl'],
-    paddingHorizontal: operationsTheme.space['2xl'],
     gap: operationsTheme.space.xl,
   },
   cardHead: {
@@ -202,11 +226,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: operationsTheme.space.lg,
   },
+  /*
+    "ATANMIŞ" DOLGULU HAP, ÇIPLAK METİN DEĞİL (v3:1375 · 30.08 ikinci tur).
+
+    Dolgusuz zeytin bir yazıydı ve yanındaki gri referansla aynı ağırlıkta duruyordu; oysa bu bir
+    DURUM etiketi — "bu sefer sana atandı" der, künyenin kendisi değildir. Tasarım onu kendi
+    zeminine oturtuyor (`olive-bg` dolgu + `badge` yarıçapı), yani rozet ailesinden konuşuyor;
+    aynı aile mal kabulün lot rozetlerinde ve durak kartının KAPIDA rozetinde de var.
+  */
   assigned: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors['olive-dark'],
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderRadius: operationsTheme.radius.badge,
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.md,
   },
   reference: {
     flex: 1,
@@ -236,48 +272,64 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
   },
-  /** Rota zinciri — künyenin kimlik satırı: sayaçlardan önce "nereden nereye" okunur. */
-  route: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text['body-sm'],
-    color: operationsTheme.colors.ink,
-    marginTop: operationsTheme.space.xs,
-  },
+  /** Rota zinciri + "yönetimde planlanır" — tek paragraf, kartın son satırı (v3:1381). */
   routeNote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
     lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
+  /*
+    ARAÇ KARTI — KESİKLİ ÇERÇEVE (v3:1385). Zemin künye kartından bir ton sıcak (`neutral-bg`,
+    ölçülen `#f6f4ec`), yarıçap bir kademe küçük: kart burada "ikinci sınıf" bir bilgi taşıyor ve
+    hiyerarşi bunu ölçüyle de söylüyor.
+
+    KESİK ÇERÇEVE BİLEREK RN'in kendi `dashed`i: para şeridi 30.08'de ölçtü — RN'in deseni
+    tasarımınkinden %60 seyrek çıkıyor ve komponentleştirdiği çare (`OperationsDashedRule`) TEK
+    KENARLI ayraçlar için; TAM ÇERÇEVE için "ölçmeden çevirmeyin" dedi (ortak defter). Ölçüm
+    gelene kadar buranın çerçevesi RN'in kendi deseniyle kalıyor.
+  */
+  /*
+    ARAÇ KARTI ARTIK KİTİN `blank` TONU (30.08). Dün burada kesikli kum çerçeveyi ELDEN çizmiştim;
+    kitin `blank` tonu tam olarak o ve künyesi anlamını da söylüyor: *"henüz yapılmamış iş;
+    `invite`ten ayrı durur çünkü biri DAVET, öteki EKSİK."* Araç ataması da bir eksiktir — masada
+    yapılır, kuryenin dokunacağı bir şey değil.
+
+    Geriye kalan tek şey aralık: kit dolguyu ve çerçeveyi veriyor, iki satır arası boşluk çağıranın.
+
+    BEKLEYEN(BACKLOG §1) — kesik deseni: görsel ajanı 30.08'de ölçtü, RN'in `dashed`i cihazda
+    **1:10** (2–3 px çizgi · 22–33 px boşluk) çıkıyor; tasarımın CSS deseni 1:1. Uzaktan çerçeve
+    kesikli değil NOKTALI görünüyor. Sorun bu kartın değil, kitin `invite`/`blank` tonlarının
+    tamamının — ikisi de aynı `borderStyle: 'dashed'`i kullanıyor. Kit sahibine bildirildi.
+  */
+  vehicleCard: {
+    gap: operationsTheme.space.xs,
+  },
+  vehicleHeading: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.body,
+  },
   vehicleNote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
     lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['tab-inactive'],
   },
+  /** Düğmenin DİPNOTU — ortalı ve düğmenin altında (v3:1392). */
   footnote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
     lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['tab-inactive'],
+    textAlign: 'center',
   },
-  sticky: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingHorizontal: operationsTheme.space['6xl'],
-    paddingBottom: operationsTheme.space['6xl'],
-  },
-  cta: {
-    alignItems: 'center',
-    paddingVertical: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.ink,
-  },
-  ctaLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.button,
-    color: operationsTheme.colors['on-image'],
-  },
+  /*
+    BİRİNCİL DÜĞME ZEYTİN, KOYU DEĞİL (v3:1391 · 30.08 ikinci tur).
+
+    Koyu (`ink`) çizilmişti. v3'te ikisi de var ve ayrım anlamlı: KOYU düğme bir mutabakatı
+    KAPATIR (seferi kapat, günü kapat — geri dönüşü olmayan), ZEYTİN düğme akışı İLERLETİR (sefer
+    başlat, yüklemeye geç). Kurye bu iki eylemi renkten ayırt ediyor; ikisi de koyuysa ayrım
+    kayboluyor ve "başlat" ile "kapat" aynı ağırlıkta duruyordu.
+  */
 });

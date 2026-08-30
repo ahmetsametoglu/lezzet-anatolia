@@ -8266,3 +8266,67 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** Kurye jest **101/101** (4 yeni), kit çubuğu **5/5** (yeni dosya), `tsc` temiz,
   `eslint` temiz. Cihaz turu görsel ajanından istenecek.
+
+- [x] (21.172) **KURYE KİTE BAĞLANDI — beş ekran, altı komponent, sıfır sert gölge** (kullanıcı bulgusu 30.08)
+
+  **Nereden çıktı.** Kullanıcı sordu: *"Kuryede en aşağıda seferi kapat diye bir buton var,
+  orijinal tasarımda gölge yok ama sende var. Neden? Ortak buton komponentinde gölge var mı?"*
+  Ölçtüm ve cevap utandırıcıydı: **gölge ortak komponentte değil, benim ekranımdaydı** — çünkü o
+  düğme ortak komponenti hiç kullanmıyordu. Kullanıcı devam etti: *"kullanılmayan başka ortak
+  komponentler de var mı bak, hepsini kontrol et"*.
+
+  **Envanter — kuryede kullanılmayan altı komponent bulundu, dördü kullanıldı:**
+
+  | komponent | önce | sonra | kullanılamayanın sebebi |
+  |---|---|---|---|
+  | `OperationsStickyBar` | 0 | **3** | — |
+  | `OperationsSurface` | 0 | **3** | — |
+  | `OperationsDashedRule` | 0 | **2** | — |
+  | `PrimaryButton` | 0 | **2** | — |
+  | `SecondaryButton` | 0 | 0 | onu hak eden iki yer de YAN YANA ESNEYEN satır; `grow` prop'u yok (kite önerildi) |
+  | `OperationsIconButton` | 0 | 0 | kuryede karşılığı yok — doğru |
+
+  **Sert gölge: 7 → 0.** `3px 3px 0` müşteri evreninin imzasıydı ve v2'den kalmıştı; v3'te sert
+  gölge YOK. Kural kitte zaten yazılıydı (`PrimaryButton elevation="flat"` künyesi) — bu ekranlar
+  kite hiç sormamıştı. Basılı geri bildirim de `shadow`dan `scale`e döndü (6 yer): gölgesiz bir
+  yüzeyin kayması, altında kaymayı açıklayan bir şey olmadığı için titreme gibi okunur.
+
+  **Kartlar arası aralık — kullanıcının ikinci bulgusu.** *"Kurye ekranındaki kartlar birbirine
+  bitişik durumda."* Ölçtüm: günün rotasında `gap` **hiç yoktu**; özet kartı ile kapı satırı sıfır
+  boşlukla yan yanaydı. Görsel ajanı bunu "tasarımda karşılığı yok" diye kapatmıştı — durak
+  listesinde `gap` gerçekten yazılmamış (tek durak çizilmiş) ama **aynı ekranda kart↔kart ritmi
+  yazılı: 10 dp** (`margin:10px 20px 0`, üç kart birden). Değer oradan alındı, tahminden değil.
+  `stopRow`un dolaylı dikey dolgusu da kaldırıldı — iki kaynak varken duraklar listenin geri
+  kalanından farklı ritimde duruyordu.
+
+  **Yapışkan çubuk kite geçince tasarımın GRADYANI geldi:** künye ve yükleme ekranlarında elle
+  kurulmuş hâlde yoktu ve liste düğmenin altından keskin bir kenarla kesiliyordu.
+
+  **Kite bir prop: `OperationsProgressBar onInk`** — ölçülmüş bir arızaydı. Çubuğun izi açık zemin
+  içindi ve koyu kartların üstünde zeminden AÇIK kalıyordu: çubuk boşken bile DOLU görünüyordu.
+  Görsel ajanı cihazda doğruladı — dolgu tasarımla **birebir** (`95,122,44`), izin ayrışması
+  cihazda +22 luma, tasarımda +25.
+
+  **Kite üç öneri yazıldı** (ortak defter, kararı kit sahibinde): `glow` yükseltiye taşınsın
+  (ölçtüm — tasarımın 4 ışımalı düğmesinin 4'ü de AKIŞTA, hiçbiri yapışkan çubukta değil, yani
+  ışıma bugün ulaşılamaz), `PrimaryButton`a `badge`, `SecondaryButton`a `grow`.
+
+  **Bir cümle kusuru düzeldi** (görsel ajanının cihaz bulgusu): rota zincirini notla birleştirirken
+  cümle sonu düşmüştü — "…→ Krutenau **Rota** yönetimde planlanır" okunuyordu ve "Krutenau Rota"
+  tek bir ad gibi görünüyordu. Nokta zincirin kendi şablonuna kondu (`routeUnknown` zaten noktayla
+  bitiyor, ortak şablona konsa çift nokta olurdu).
+
+  **BEKLEYEN(BACKLOG §1) — kesikli TAM ÇERÇEVE.** Görsel ajanı ölçtü: RN'in `dashed`i cihazda
+  **1:10** (2–3 px çizgi · 22–33 px boşluk), tasarım 1:1; 840 px'lik kenarda 9 kesik, çerçeve
+  kesikli değil NOKTALI görünüyor. Tek-kenar ayraçlar kitin svg komponentine geçti; kalan iki tam
+  çerçeve (devre dışı "Fotoğraf" düğmesi · imza tuvali) `Surface`ın `blank` tonuna geçirilemedi —
+  tuval `onLayout` + `panHandlers` taşıyor ve `Surface` bu prop'ları iletmiyor. Çare kitte.
+
+  **BEKLEYEN(BACKLOG §1) — 17 ve 18'in kalan tasarım farkları:** durak ekranının üç eylem düğmesi
+  (tasarım: navigasyon etiketli, ötekiler etiketsiz daire), kanıt adımının doğrudan imza yüzeyi
+  olması, tahsilatın tuş takımı düğmesi; kapanışta fark sütununun kaldırılması ve sayım kutularının
+  BOŞ açılması. Sonuncusu bir DAVRANIŞ sorusu — ekran "SAYDIĞINI GİR" derken kutuları beklenen
+  tutarla dolduruyor ve kurye saymadan onaylarsa fark hep 0,00 çıkar; kullanıcıya sorulacak.
+
+  **Doğrulama.** Kurye jest **101/101**, kit çubuğu **5/5**, `tsc` temiz, `eslint` temiz.
+  Cihaz turu: 16 tam · 14 birebir · 15 dört düzeltme yerinde (görsel ajanı, 30.08).

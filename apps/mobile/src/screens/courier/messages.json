@@ -63,18 +63,18 @@
       "stops": "durak",
       "boxes": "kutu",
       "collections": "tahsilat",
-      "routeNote": "Rota yönetimde planlanır; buradan değiştirilmez.",
-      "vehicle": "🚚 {vehicle}",
-      "vehicleNone": "Bu sefere araç atanmamış.",
-      "route": "{warehouse} → {zone}",
+      "routeNote": "{route} Rota yönetimde planlanır; buradan değiştirilmez.",
+      "vehicle": "{vehicle} · araç seçimi masada yapılır",
+      "vehicleNone": "Bu sefere araç atanmamış · araç seçimi masada yapılır",
+      "route": "{warehouse} → {zone}.",
       "routeUnknown": "Çıkış deposu okunamadı.",
       "cta": "Seferi başlat — yüklemeye geç",
-      "footnote": "Sefer başladıktan sonra durak sırası kilitlenir; sonuçlanmayan durak kapanışta çözülür."
+      "footnote": "Sefer başladıktan sonra durak sırası kilitlenir; sonuçlanmayan durak kapanışta çözülür.",
+      "vehicleHeading": "Araç"
     },
     "load": {
       "title": "Araca Yükle",
       "context": "rampada · kutuları okut",
-      "counter": "{loaded}/{total} kutu",
       "counterLabel": "araçta",
       "remaining": "{n} kutu daha okutulmalı",
       "complete": "Tüm kutular araçta — yola çıkabilirsin",
@@ -88,7 +88,8 @@
       "stopPartial": "eksik",
       "stopNone": "binmedi",
       "footnote": "Eksik kutuyla yola çıkabilirsin ama o durak “kutu araçta değil” diye açılmaz.",
-      "back": "Günün rotasına dön"
+      "back": "Günün rotasına dön",
+      "counterRest": "/{total} kutu"
     },
     "stopsHeading": "DURAKLAR",
     "stopsFootnote": "Sonuçlanmayan durak kapanışı engellemez — takılı duraklar seferi kapatırken çözülür.",
@@ -122,7 +123,7 @@
     },
     "boxes": {
       "counter": "{loaded}/{total} kutu araçta",
-      "scanCta": "📷 Kutu yükle",
+      "scanCta": "Kutuyu okut",
       "scanTitle": "Kutuyu araca yükle",
       "scanHint": "Kutunun üstündeki QR — rotana ait değilse reddedilir.",
       "loaded": "Kutu {n} yüklendi — {ref} ({k}/{m}).",

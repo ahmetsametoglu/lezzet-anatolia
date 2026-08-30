@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Linking, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStepperButton } from '@/components/operations/stepper-button';
+import { OperationsSurface } from '@/components/operations/surface';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
@@ -158,7 +160,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.address ?? '')}`,
                 )
               }
-              feedback="shadow"
+              feedback="scale"
               style={[styles.contact, styles.contactPrimary]}
               accessibilityLabel={t.delivery.navigate}
               testID="courier-delivery-navigate"
@@ -362,12 +364,18 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               KULLANIM TALİMATI ("dokun · tekrar dokun"). Tek satıra sıkıştırıldığında başlık
               okunmaz uzunluğa çıkıyor ve talimat başlık gibi büyük harfle sessizleşiyordu. */}
           <Text style={styles.sectionHint}>{t.delivery.goods.hint}</Text>
-          {delivery.lines.map((line) => {
+          {/* AYRAÇ KİTTEN (`OperationsDashedRule`, 30.08) ve satırların ARASINDA: RN'in kendi
+              `dashed`i cihazda 1:10 çıkıyor (2–3 px çizgi · 22–33 px boşluk) ve hat kesikli değil
+              NOKTALI görünüyor; kit onu svg + `strokeDasharray` ile tasarımın oranında çiziyor.
+              İlkten önce ayraç yok — üstteki ipucu satırı zaten bir sınır. */}
+          {delivery.lines.map((line, index) => {
             const mark = delivery.markOf(line.orderItemId);
             return (
               /* ANAHTAR KALEMİN KİMLİĞİ: ekranda işaretlenen satır, uca `adjustments` olarak giden
                  satırın kendisidir — sıra numarası olsaydı liste tazelendiğinde işaret kayabilirdi. */
-              <View key={line.orderItemId} style={styles.lineRow}>
+              <Fragment key={line.orderItemId}>
+                {index === 0 ? null : <OperationsDashedRule color={operationsTheme.colors['sand-300']} />}
+              <View style={styles.lineRow}>
                 <PressableSurface
                   onPress={() => delivery.toggleLine(line.orderItemId)}
                   feedback="scale"
@@ -416,6 +424,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                   </View>
                 ) : null}
               </View>
+              </Fragment>
             );
           })}
           {delivery.partialReturn ? (
@@ -511,6 +520,9 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           value={delivery.amountText}
           expected={centsToAmountText(delivery.dueCents)}
           expectedLabel={fillCopy(t.delivery.collection.keypad.expected, { amount: money(delivery.dueCents) })}
+          // Birim artık PROP (30.08): tuş takımı mal kabulün ADET kutusunda da kullanılıyor ve
+          // `€` gömülü kalamazdı. Ondalık burada açık — para kuruş taşır.
+          unit="€"
           confirmLabel={t.delivery.collection.keypad.confirm}
           hint={t.delivery.collection.keypad.hint}
           footnote={t.delivery.collection.keypad.footnote}
@@ -550,7 +562,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         {delivery.finished ? (
           <PressableSurface
             onPress={() => router.back()}
-            feedback="shadow"
+            feedback="scale"
             style={[styles.primary, styles.primaryReady]}
             accessibilityLabel={t.delivery.back}
             testID="courier-delivery-done"
@@ -562,7 +574,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             <PressableSurface
               onPress={delivery.deliver}
               disabled={!delivery.gateOpen}
-              feedback="shadow"
+              feedback="scale"
               style={[styles.primary, delivery.gateOpen ? styles.primaryReady : styles.primaryBlocked]}
               accessibilityLabel={delivery.ctaLabel}
               testID="courier-delivery-cta"
@@ -598,7 +610,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             </View>
           </>
         ) : (
-          <View style={styles.outcomePanel} testID="courier-outcome-panel">
+          <OperationsSurface padding="lg" style={styles.outcomePanel} testID="courier-outcome-panel">
             <Text style={styles.outcomeTitle}>
               {delivery.outcome === 'refused'
                 ? t.delivery.outcome.refusedTitle
@@ -654,7 +666,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               </PressableSurface>
               <PressableSurface
                 onPress={delivery.confirmOutcome}
-                feedback="shadow"
+                feedback="scale"
                 grow={1.3}
                 style={[styles.outcomeButton, styles.outcomeConfirm]}
                 accessibilityLabel={t.delivery.outcome.confirm}
@@ -665,7 +677,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 </Text>
               </PressableSurface>
             </View>
-          </View>
+          </OperationsSurface>
         )}
       </View>
     </View>
@@ -725,7 +737,6 @@ const styles = StyleSheet.create({
     flexGrow: 1.4,
     backgroundColor: operationsTheme.colors.olive,
     borderColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
   },
   contactOutline: { borderColor: operationsTheme.colors['sand-500'] },
   contactDisabled: {
@@ -861,9 +872,6 @@ const styles = StyleSheet.create({
   lineRow: {
     gap: operationsTheme.space.sm,
     paddingVertical: operationsTheme.space.xl,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
   },
   lineHead: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.xl },
   mark: {
@@ -1027,7 +1035,6 @@ const styles = StyleSheet.create({
   },
   primaryReady: {
     backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
   },
   primaryBlocked: { backgroundColor: operationsTheme.colors['disabled-fill'] },
   primaryLabel: {
@@ -1067,21 +1074,16 @@ const styles = StyleSheet.create({
   outcomeConfirm: {
     backgroundColor: operationsTheme.colors.error,
     borderColor: operationsTheme.colors.error,
-    boxShadow: operationsTheme.shadow.hard,
   },
   outcomeConfirmLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
     color: operationsTheme.colors.card,
   },
+  /* KİTİN `panel` TONU (30.08): zemin + `sand-300` + kart yarıçapı + 14/16 dolgu birebir kitin
+     tarifiydi ve burada elden yazılıydı. Kalan yalnız satır arası aralık. */
   outcomePanel: {
     gap: operationsTheme.space.lg,
-    paddingVertical: operationsTheme.space['2xl'],
-    paddingHorizontal: operationsTheme.space['3xl'],
-    borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    backgroundColor: operationsTheme.colors.panel,
   },
   outcomeTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],

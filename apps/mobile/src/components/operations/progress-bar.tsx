@@ -26,14 +26,25 @@ interface OperationsProgressBarProps {
   value: number;
   /** Dolgunun rengi — tema token'ı; verilmezse zeytin. */
   tone?: string;
+  /**
+   * Çubuğun KOYU bir kartın içinde olup olmadığı (30.08).
+   *
+   * İz açık zemin için seçilmişti (`neutral-bg`) ve koyu kartın üstünde o iz zeminden AÇIK kalıyor
+   * — çubuk "dolu" görünüyordu, oysa boştu. Tasarım koyu kartlarda izi `#464e55` çiziyor
+   * (`on-ink-line`, Δ4/3/2). İki koyu çağıran var ve ikisi de kuryede: günün özet kartı (v3:14)
+   * ve araca yüklemenin sayaç kartı (v3:1412).
+   *
+   * PROP, ayrı bir komponent değil: değişen tek şey izin rengi — geometri, kırpma ve dolgu aynı.
+   */
+  onInk?: boolean;
   testID?: string;
 }
 
-export function OperationsProgressBar({ value, tone, testID }: OperationsProgressBarProps) {
+export function OperationsProgressBar({ value, tone, onInk = false, testID }: OperationsProgressBarProps) {
   const ratio = Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 0;
 
   return (
-    <View style={styles.track} testID={testID}>
+    <View style={[styles.track, onInk ? styles.trackOnInk : null]} testID={testID}>
       <View
         style={[
           styles.fill,
@@ -51,6 +62,10 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.tight,
     backgroundColor: operationsTheme.colors['neutral-bg'],
     overflow: 'hidden',
+  },
+  /** Koyu kartın izi — açık iz koyu zeminde çubuğu dolu gösteriyordu. */
+  trackOnInk: {
+    backgroundColor: operationsTheme.colors['on-ink-line'],
   },
   fill: {
     height: '100%',

@@ -7,8 +7,9 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
-import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -129,29 +130,55 @@ export function CourierLoadScreen() {
       {header}
 
       <ScrollView contentContainerStyle={styles.list} testID="courier-load-list">
+        {/*
+          SAYAÇ KARTI KOYU (v3:1412 · 30.08 ikinci tur) — günün rotasındaki özet kartıyla AYNI
+          aileden ve aynı sebeple: rampada kuryenin ilk bakışı buraya düşmeli. Krem çizilmişti ve
+          o hâlde altındaki okut düğmesiyle, durak kartlarıyla eşit sesle konuşuyordu.
+
+          "araçta" da rozete dönüyor: çıplak gri bir yazıyken sayının kuyruğu gibi okunuyordu,
+          oysa o bir ETİKET — hangi sayının neyi saydığını söyler.
+        */}
         <View style={styles.counterCard} testID="courier-load-counter">
           <View style={styles.counterHead}>
+            {/* SAYI KAHRAMAN, BİRİMİ SESSİZ — aynı bölme günün rotasında da var (21.165). */}
             <Text style={styles.counterValue}>
-              {fillCopy(t.day.load.counter, { loaded: String(loaded), total: String(total) })}
+              {String(loaded)}
+              <Text style={styles.counterRest}>
+                {fillCopy(t.day.load.counterRest, { total: String(total) })}
+              </Text>
             </Text>
-            <Text style={styles.counterLabel}>{t.day.load.counterLabel}</Text>
+            <Text style={styles.counterBadge}>{t.day.load.counterLabel}</Text>
           </View>
-          <OperationsProgressBar value={total === 0 ? 0 : loaded / total} testID="courier-load-progress" />
+          <OperationsProgressBar
+            value={total === 0 ? 0 : loaded / total}
+            /* İZ KOYU: açık iz bu kartın üstünde çubuğu dolu gösteriyordu (kit prop'u, 30.08). */
+            onInk
+            testID="courier-load-progress"
+          />
           <Text style={remaining === 0 ? styles.counterDone : styles.counterRemaining}>
             {remaining === 0 ? t.day.load.complete : fillCopy(t.day.load.remaining, { n: String(remaining) })}
           </Text>
         </View>
 
+        {/*
+          OKUT DÜĞMESİ KİTTEN (30.08). İkon + etiket + zeytin dolgu + `flat` yükselti — üçü de
+          `PrimaryButton`ın kendi işi; burada elden çiziliyordu. İkon emoji DEĞİL çizgi ikon:
+          emoji cihazdan cihaza başka çiziliyor ve paletin dışında duruyor.
+
+          IŞIMA VERİLEMİYOR ve sebebi kitte: tasarımın zeytin ışıması (`0 4px 14px`) bugün yalnız
+          `OperationsStickyBar`ın `glow` prop'unda yaşıyor, bu düğme ise AKIŞTA. Ölçtüm — tasarımın
+          dört ışımalı düğmesinin DÖRDÜ DE akışta, hiçbiri yapışkan çubukta değil; yani ışıma
+          bugün ulaşılamaz bir yerde duruyor. Kite bildirildi (ortak defter), karar kit sahibinde.
+        */}
         {remaining === 0 ? null : (
-          <PressableSurface
+          <PrimaryButton
+            label={t.day.boxes.scanCta}
             onPress={() => day.setBoxScanOpen(true)}
-            feedback="scale"
-            style={styles.scanButton}
-            accessibilityLabel={t.day.boxes.scanCta}
+            tone="olive"
+            elevation="flat"
+            icon="scan"
             testID="courier-load-scan"
-          >
-            <Text style={styles.scanLabel}>{t.day.boxes.scanCta}</Text>
-          </PressableSurface>
+          />
         )}
 
         <Text style={styles.stopsHeading}>{t.day.load.stopsHeading}</Text>
@@ -159,7 +186,10 @@ export function CourierLoadScreen() {
         {boxedStops.map((stop, index) => {
           const state = loadStateOf(stop);
           return (
-            <View key={stop.orderId} style={styles.stopRow} testID={`courier-load-stop-${stop.orderId}`}>
+            /* DURAK KENDİ KARTINDA (v3:1440 · 30.08): kesikli ayraçla bölünmüş düz satırlardı ve
+               liste "bir metin bloğu" gibi okunuyordu. Kart, her durağı kendi başına bir İŞ hâline
+               getiriyor — kurye rampada gözüyle tek tek tarıyor. */
+            <View key={stop.orderId} style={styles.stopCard} testID={`courier-load-stop-${stop.orderId}`}>
               <View style={styles.stopBody}>
                 <Text style={styles.stopTitle} numberOfLines={1}>
                   {`${index + 1} · ${stop.customerName}`}
@@ -176,8 +206,30 @@ export function CourierLoadScreen() {
           );
         })}
 
-        <Text style={styles.footnote}>{t.day.load.footnote}</Text>
       </ScrollView>
+
+      {/*
+        YAPIŞKAN DİP: "günün rotasına dön" + eksik kutu dipnotu (v3:1461).
+
+        Dipnot kaydırma alanının içinde, listenin en sonundaydı — yani ancak sonuna kadar inen
+        kurye görüyordu. Oysa cümle bir KARARIN bedelini anlatıyor ("eksik kutuyla çıkarsan o durak
+        açılmaz") ve karar dipteki düğmeyle veriliyor; ikisi yan yana durmalı.
+
+        Dipnot YALNIZ eksik varken çizilir: hepsi bindiğinde uyarının konusu yok ve her hâlde
+        yazılan bir uyarı, okunmayan bir uyarıdır.
+      */}
+      <OperationsStickyBar>
+        {/* KOYU: bu ekranın çıkışı bir İLERLEME değil DÖNÜŞ — zeytin olsaydı üstündeki
+            "Kutuyu okut"la aynı sesle konuşurdu ve rampadaki kurye asıl işi çıkıştan ayıramazdı. */}
+        <PrimaryButton
+          label={t.day.load.back}
+          onPress={() => router.back()}
+          tone="ink"
+          elevation="flat"
+          testID="courier-load-back-cta"
+        />
+        {remaining === 0 ? null : <Text style={styles.footnote}>{t.day.load.footnote}</Text>}
+      </OperationsStickyBar>
 
       <ScanSheet
         open={day.boxScanOpen}
@@ -215,52 +267,61 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.space['8xl'],
     gap: operationsTheme.space.xl,
   },
+  /* SAYAÇ KARTI KOYU (v3:1412) — çerçeve YOK: koyu yüzey kendi kenarıdır (kitin `ink` kuralı). */
   counterCard: {
     marginTop: operationsTheme.space.lg,
-    backgroundColor: operationsTheme.colors.panel,
+    backgroundColor: operationsTheme.colors.ink,
     borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
     paddingVertical: operationsTheme.space['2xl'],
     paddingHorizontal: operationsTheme.space['2xl'],
     gap: operationsTheme.space.lg,
   },
   counterHead: {
     flexDirection: 'row',
-    alignItems: 'baseline',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
   counterValue: {
-    fontFamily: operationsTheme.font.body[700],
-    fontSize: operationsTheme.text['icon-sm'],
-    color: operationsTheme.colors.ink,
+    /* v3: `600 30px Lora` — sayı SERİF, çünkü bu kartın kahramanı o. Gövde yazısıyla yazıldığında
+       sağdaki rozetle aynı ailedendi ve göz hangisinin ölçü olduğunu ayırmıyordu. */
+    fontFamily: operationsTheme.font.display[operationsTheme.text['h2--font-weight']],
+    fontSize: operationsTheme.text.h2,
+    color: operationsTheme.colors.cream,
   },
-  counterLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.eyebrow,
-    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
-    color: operationsTheme.colors.muted,
+  /** Sayının kuyruğu — "/7 kutu": aynı satırda, bir kademe küçük ve sessiz. */
+  counterRest: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text['card-title-sm'],
+    color: operationsTheme.colors['on-ink-label'],
   },
+  /*
+    "araçta" ROZET (v3:1414). Zemin `ink-inset` — tasarım `#3a4249` diyor, bizimki beyazın %14'ü
+    ve koyu zeminde ondan bir tık açık çıkıyor. Kendi durağını açmadım: fark ölçülebilir ama
+    ayırt edilebilir değil ve `ink-inset` "koyu kartın içindeki kabartma" anlamının TEK adı
+    (günün rotasındaki "kapıda kaldı" şeridi de o).
+  */
+  counterBadge: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    // Tasarım `#e8dcc9`; en yakın durak `sand-250` (#ece3c8, Δ4/7/1 — eşiğin altında, kendi durağı yok).
+    color: operationsTheme.colors['sand-250'],
+    backgroundColor: operationsTheme.colors['ink-inset'],
+    borderRadius: operationsTheme.radius.badge,
+    paddingVertical: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space.xl,
+    overflow: 'hidden',
+  },
+  /* KOYU ZEMİNİN İKİ CEVABI: uyarı sıcak (`on-ink-warn`), tamamlanma sakin yeşil-gri
+     (`on-ink-label`). Açık zeminin `terracotta`/`olive-dark` çifti koyu kartta okunmuyordu. */
   counterRemaining: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors.terracotta,
+    color: operationsTheme.colors['on-ink-warn'],
   },
   counterDone: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors['olive-dark'],
-  },
-  scanButton: {
-    alignItems: 'center',
-    paddingVertical: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.olive,
-  },
-  scanLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.button,
-    color: operationsTheme.colors['on-image'],
+    color: operationsTheme.colors['on-ink-label'],
   },
   stopsHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
@@ -268,14 +329,17 @@ const styles = StyleSheet.create({
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
-  stopRow: {
+  /** Durak KARTI (v3:1440) — kesikli ayraçlı düz satırın yerine geçti. */
+  stopCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.xl,
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
     paddingVertical: operationsTheme.space.xl,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    paddingHorizontal: operationsTheme.space['2xl'],
   },
   stopBody: {
     flex: 1,
@@ -295,10 +359,17 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.meta,
   },
+  /** Düğmenin DİPNOTU — ortalı, düğmenin altında (v3:1465). */
   footnote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
     lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['tab-inactive'],
+    textAlign: 'center',
   },
+  /*
+    DİP DÜĞMESİ KOYU (v3:1462) — bu ekranın çıkışı bir İLERLEME değil, bir DÖNÜŞ: yükleme bitti,
+    günün rotasına geri gidiliyor. Zeytin olsaydı üstündeki "Kutuyu okut"la aynı sesle konuşurdu
+    ve rampadaki kurye asıl işi (okutma) ile çıkışı ayırt edemezdi.
+  */
 });
