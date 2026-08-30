@@ -172,7 +172,8 @@ describe('operasyon kabuğu — rol sekmeleri', () => {
     await fireEvent.press(screen.getByRole('tab', { name: 'Yönetim' }));
 
     expect(app).toHavePathname('/management');
-    expect(screen.getByRole('header', { name: 'Karar Kutusu' })).toBeOnTheScreen();
+    // Başlık v3'te "Bugün Ne Bekliyor" oldu (30.08) — bölümün adı sekmede, ekranın SORUSU başlıkta.
+    expect(screen.getByRole('header', { name: 'Bugün Ne Bekliyor' })).toBeOnTheScreen();
   });
 });
 

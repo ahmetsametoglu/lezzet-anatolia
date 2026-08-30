@@ -1,3 +1,4 @@
+import { listOrderExceptions } from '@lezzet/application';
 import type { createServiceRoleClient } from '@lezzet/database';
 import { AssistantProposalKindEnum } from '@lezzet/types';
 
@@ -63,6 +64,9 @@ type PostgrestFilter = {
 
 /** N gün öncesinin ISO damgası — yaş kovalarının eşiği (eşiğin kendisi `domain-core`da). */
 const gunOnce = (n: number): string => new Date(Date.now() - n * 86_400_000).toISOString();
+
+/** Bugünün tarihi (`YYYY-MM-DD`) — GÜN ölçütlü kovalar için; seed'in `gun(0)`'ı ile aynı gün. */
+const bugun = (): string => new Date().toISOString().slice(0, 10);
 
 /** Bir tablodaki satır sayısı — gövde çekilmez (`head`), yalnız sayı. */
 async function say(db: Db, tablo: string, filtre?: KapsamKovasi['filtre']): Promise<number> {
@@ -548,6 +552,13 @@ const KAPSAM: KapsamAlani[] = [
         sayac: (db) => say(db, 'order_box', (q) => q.not('sealed_at', 'is', null).is('loaded_at', null)),
       },
       {
+        // ARAÇTA olan kutu (30.08): yükleme sayacının "kaç bindi" tarafı. Yüklenmemiş kova tek
+        // başına yarım bir ölçüm — sayaç `5/8` diyebiliyor mu sorusu ancak dolu tarafla sınanır.
+        ad: 'araçta (yüklenmiş) kutu',
+        zorunlu: true,
+        sayac: (db) => say(db, 'order_box', (q) => q.not('loaded_at', 'is', null)),
+      },
+      {
         ad: 'çok kutulu sipariş (2+)',
         zorunlu: true,
         sayac: async (db) => {
@@ -893,6 +904,43 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'mutabık kapanış', zorunlu: true, sayac: (db) => say(db, 'delivery_run_close', (q) => q.eq('reconciled', true)) },
       { ad: 'FARKLI kapanış', zorunlu: true, sayac: (db) => say(db, 'delivery_run_close', (q) => q.eq('reconciled', false)) },
       { ad: 'sayılmamış (açık) sefer', zorunlu: true, sayac: sayilmamisSefer },
+      // BUGÜNE ait iki hâl (30.08) — para ve kurye ekranlarının GÜN ölçütü buna bakıyor:
+      // gün sonu mutabakatı yalnız bugünün kapanışlarını okuyor (`readMoneyDayEnd`), kuryenin
+      // üstündeki para ise yalnız bugünün KAPANMAMIŞ seferlerinden türüyor (`readMoneyOverview`).
+      // İkisi aynı gün gerekiyor; biri boşsa o ekran sessizce "sorulmadı"/"sıfır" gösterir.
+      { ad: 'bugüne ait açık sefer', zorunlu: true, sayac: (db) => bugunSeferleri(db, false) },
+      { ad: 'bugüne ait kapanış', zorunlu: true, sayac: (db) => bugunSeferleri(db, true) },
+    ],
+  },
+  {
+    /*
+      EKSİK TOPLAMA (Y2 · 30.08) — yönetimin "sipariş istisnaları" ekranı ve hub'ın karar kutusu.
+
+      **KOVA MOTORU ÇAĞIRIR, KURALI KOPYALAMAZ.** İstisna saklanmıyor, TÜRETİLİYOR: raftaki gerçeğin
+      karşılayamadığı kalem (`shortfallQty > 0`) VE müşteriye henüz sorulmamış olan
+      (`!awaitingAnswer`). İkinci koşulu ham SQL'e kopyalamak kuralı ikinci bir yerde yaşatmak
+      olurdu — ve tam da o koşul yüzünden ekran bir kez sessizce boş kaldı: seed'in eksik kalemi,
+      seed'in TALEBİ ile çakışmış, kalem "soruldu" sayılıp kuyruktan düşmüştü. Sayı bu yüzden
+      ekranın okuduğu fonksiyonun kendisinden geliyor; çakışma tekrarlarsa kova kırmızı döner.
+    */
+    baslik: 'Sipariş istisnası (eksik toplama)',
+    kovalar: [{ ad: 'karar bekleyen istisna', zorunlu: true, sayac: eksikToplamaSay }],
+  },
+  {
+    /*
+      PARA — BUGÜNÜN DEFTERİ (30.08). Para bölümünün iki ekranı da "bugün" ölçütüyle okuyor ve
+      seed'in bütün tahsilatları dün tarihliydi: ekranlar boş değil YANLIŞ doluyordu ("bugün hiç
+      para girmedi"). Kovalar o günü savunuyor — yöntem kırılımı üç sütunlu olduğu için üç yöntem
+      ayrı ayrı sorulur, tek yöntemli bir gün kırılımı hiç göstermez.
+    */
+    baslik: 'Para — bugünün defteri',
+    tablo: 'money_movement',
+    kovalar: [
+      { ad: 'bugün sipariş tahsilatı', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('value_date', bugun()).eq('type', 'order_payment')) },
+      { ad: 'bugün NAKİT tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cash') },
+      { ad: 'bugün KART tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'card') },
+      { ad: 'bugün ÇEK tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cheque') },
+      { ad: 'eşleşmemiş hareket', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('reconciled', false)) },
     ],
   },
   {
@@ -970,6 +1018,59 @@ async function sayilmamisSefer(db: Db): Promise<number> {
   const { data: runs, error: runErr } = await db.from('delivery_run').select('id');
   if (runErr) throw runErr;
   return (runs ?? []).filter((row) => !closed.has(row.id as string)).length;
+}
+
+/**
+ * BUGÜNÜN seferleri, kapanış durumuna göre (30.08). Anti-join `sayilmamisSefer` ile aynı desende
+ * ama gün süzgeçli: para ekranlarının ölçütü GÜNDÜR, "hiç var mı" değil.
+ */
+async function bugunSeferleri(db: Db, kapali: boolean): Promise<number> {
+  const { data: runs, error: runErr } = await db.from('delivery_run').select('id').eq('delivery_date', bugun());
+  if (runErr) throw runErr;
+  const idler = (runs ?? []).map((row) => row.id as string);
+  if (idler.length === 0) return 0;
+  const { data, error } = await db.from('delivery_run_close').select('delivery_run_id');
+  if (error) throw error;
+  const closed = new Set((data ?? []).map((row) => row.delivery_run_id as string));
+  return idler.filter((id) => closed.has(id) === kapali).length;
+}
+/**
+ * Bugün deftere giren sipariş tahsilatı, YÖNTEME göre.
+ *
+ * Yöntem hareketin kendisinde YOK, siparişindedir (hareket hesabı taşır) — para ekranının okuması
+ * da tam olarak bu zinciri kuruyor (`readMoneyOverview`). Kova aynı zinciri sorar; başka türlü
+ * "kırılım dolu" iddiası ölçülemez.
+ */
+async function bugunYontemliTahsilat(db: Db, yontem: 'cash' | 'card' | 'cheque'): Promise<number> {
+  const { data, error } = await db
+    .from('money_movement')
+    .select('order_id')
+    .eq('value_date', bugun())
+    .eq('type', 'order_payment')
+    .not('order_id', 'is', null);
+  if (error) throw error;
+  const idler = [...new Set((data ?? []).map((row) => row.order_id as string))];
+  if (idler.length === 0) return 0;
+  const { data: siparisler, error: siparisHata } = await db
+    .from('order')
+    .select('id')
+    .in('id', idler)
+    .eq('payment_method', yontem);
+  if (siparisHata) throw siparisHata;
+  return (siparisler ?? []).length;
+}
+
+/**
+ * Karar bekleyen sipariş istisnası — ekranın OKUDUĞU motorun kendisiyle sayılır.
+ *
+ * Kapsam da ekranınkiyle aynı kurulur (aktif TESİSLER — `management.ts` `activeFacilityIds`):
+ * başka bir küme sorulsaydı kova yeşil, ekran boş olabilirdi.
+ */
+async function eksikToplamaSay(db: Db): Promise<number> {
+  const { data, error } = await db.from('warehouse').select('id').eq('is_active', true).eq('kind', 'facility');
+  if (error) throw new Error(`[kapsam] warehouse: ${error.message}`);
+  const warehouseIds = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+  return (await listOrderExceptions(db, { warehouseIds })).length;
 }
 
 /** Sipariş DURUMLARI ayrı: kova listesi enum'dan gelmeli, elle yazılan liste enum büyüyünce eskir. */

@@ -9,13 +9,38 @@ import { ChatLayout } from '@/components/ui/chat-layout';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { ComplaintDetail, ComplaintMessage } from '@lezzet/types';
 import { managementCopy } from './copy';
 import { useComplaint } from './use-complaint.hook';
 
 /*
-  Y1 · ŞİKÂYET / TALEP (v2:530-579) — sohbet + YZ önerisi + üstlenme; ARTIK GERÇEK UÇTAN (21.12).
+  Y1 · ŞİKÂYET / TALEP (Operasyon Mobil v3:2141-2177) — sohbet + YZ önerisi + üstlenme.
+
+  ── v3'ÜN ÜÇ DÜZEN KARARI (30.08) ───────────────────────────────────────────
+  1. **BAŞLIK KÜNYESİ "REFERANS · MÜŞTERİ" OLDU** (v3:2149). v2 oraya kaynağı ve damgayı
+     yazıyordu; v3 ekranın ilk satırında "hangi kayıt, kimin" sorusunu cevaplıyor. Kaynak ve damga
+     kaybolmadı, BAĞLI KAYITLAR bloğuna indi — orası zaten "bu talep neye asılı" bölümü.
+  2. **BAĞLI KAYITLAR BLOĞU GELDİ** (v3:2156). Talebin asılı olduğu kayıtlar tek gömülü blokta
+     durur; operatör siparişi aramak için başlığa geri bakmaz.
+  3. **EYLEM ALANI "KARAR" BAŞLIĞI ALTINDA TOPLANDI** (v3:2159). v3 orada bir karar listesi
+     çiziyor; bizim karar kapılarımız cevap ve üstlenmedir, ikisi de aynı başlığın altında.
+
+  ── TASARIMIN İSTEDİĞİ AMA SÖZLEŞMEDE OLMAYAN ŞEYLER (yazılmadı) ────────────
+  · **Karar seçenekleri** ("jest · iade · yeniden gönderim" — v3:2162'nin dört düğmesi) ve onları
+    onaylayan "Kararı uygula" kapısı: talep sözleşmesinde ne seçenek listesi, ne de böyle bir yazma
+    ucu var (`ComplaintDetail` + cevap/üstlen/taslak üçlüsü). Düğmeleri çizmek, basıldığında hiçbir
+    şey yazmayan bir karar ekranı olurdu.
+  · **Talep referansı** ("SK-26-8H2P"): sözleşme talebe kimlik (`ticketId`, uuid) veriyor, insan
+    okuyabilir bir referans NUMARASI vermiyor. Künyeye SİPARİŞ referansı yazıldı — o gerçek.
+  · **Bağlı kayıtların dökümü** ("kurye kabul etmedi kaydı · dönen 2 tepsi · parti SKT 30.08.26"):
+    talep ile teslimat/parti kayıtları arasında bir bağ alanı sözleşmede yok. Blok yalnız
+    gerçekten bilinen bağı (sipariş referansı) ve kaydın künyesini yazar.
+
+  Okuma web talepler sayfasıyla AYNI motordan (`getStaffTicketDetail` terfisi): çeviri yönü, yazar
+  adları ve top-bizde bayrağı sunucuda çözülür. Kimlik `?id=` ile gelir (hub'ın karar kartı);
+  parametresiz açılış cevap bekleyen EN TAZE talebi getirir.
 
   Okuma web talepler sayfasıyla AYNI motordan (`getStaffTicketDetail` terfisi): çeviri yönü, yazar
   adları ve top-bizde bayrağı sunucuda çözülür. Kimlik `?id=` ile gelir (hub'ın karar satırı);
@@ -52,8 +77,7 @@ export function ComplaintScreen() {
           state.status === 'ready' && state.complaint !== null
             ? fillCopy(t.complaint.caption, {
                 reference: state.complaint.orderReferenceNo ?? t.complaint.noRef,
-                source: t.complaint.source[state.complaint.source],
-                stamp: stampOf(state.complaint.lastMessageAt),
+                customer: state.complaint.customerName,
               })
             : ''
         }
@@ -118,6 +142,10 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
         style={styles.replyInput}
         testID="management-complaint-reply"
       />
+      {/* v3:2159 — eylemler "KARAR" başlığının altında toplanır: cevap ve üstlenme bu ekranın iki
+          gerçek karar kapısıdır ve başlıksız duruşları onları girdi alanının kuyruğu gibi
+          gösteriyordu. */}
+      <Text style={styles.decisionLabel}>{t.complaint.decision}</Text>
       <View style={styles.footerRow}>
         <PressableSurface
           onPress={complaint.sendReply}
@@ -176,6 +204,27 @@ function ComplaintBody({ detail, complaint }: ComplaintBodyProps) {
       platform sorusu orada). Kopya kaldı, kural tek yerde.
     */
     <ChatLayout above={tags} composer={composer} contentContainerStyle={styles.thread} testID="management-complaint-thread">
+        {/*
+          BAĞLI KAYITLAR (v3:2156) — yazışmanın ÜSTÜNDE, kaydırılan alanın içinde: talebin neye
+          asılı olduğu bir kere okunur, sonra yazışmaya bakılır. Yapışkan şeride konmadı; sabit
+          duran şey ekranın DURUMU olmalı (etiketler), geçmişi değil.
+        */}
+        <View style={styles.linked} testID="management-complaint-linked">
+          <Text style={styles.linkedEyebrow}>{t.complaint.linked.eyebrow}</Text>
+          <Text style={styles.linkedLine}>
+            {detail.orderReferenceNo === null
+              ? t.complaint.linked.orderNone
+              : fillCopy(t.complaint.linked.order, { reference: detail.orderReferenceNo })}
+          </Text>
+          {/* Kaynak ve son mesaj damgası başlıktan BURAYA indi (v3'ün künye kararı). */}
+          <Text style={styles.linkedLine}>
+            {fillCopy(t.complaint.linked.trace, {
+              source: t.complaint.source[detail.source],
+              stamp: stampOf(detail.lastMessageAt),
+            })}
+          </Text>
+        </View>
+
         {detail.messages.map((message) => (
           <MessageBubble key={message.id} message={message} />
         ))}
@@ -320,6 +369,26 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.space.xl,
     gap: operationsTheme.space.lg,
   },
+  /** Gömülü nötr blok (v3:2156) — kartın içinde değil, sayfanın üstünde duran bir künye kutusu. */
+  linked: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    gap: operationsTheme.space.sm,
+  },
+  linkedEyebrow: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.body,
+  },
+  linkedLine: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.ink,
+  },
   bubble: {
     // v2: `max-width:86%` — baloncuk satırı doldurmaz, kimin konuştuğu hizadan okunur.
     maxWidth: '86%',
@@ -417,6 +486,16 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.note,
     color: operationsTheme.colors.ink,
   },
+  /** "KARAR" — eylem alanının üstbaşlığı (v3:2159). */
+  decisionLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.muted,
+  },
+  /* İki karar düğmesi YAN YANA kaldı; v3 onları alt alta diziyor (v3:2161) ama o ekranda yazı
+     alanı YOK — bizde alanın altında klavye de açılıyor ve dikey dizilim küçük ekranda yazışmayı
+     tamamen kapatırdı. */
   footerRow: {
     flexDirection: 'row',
     gap: operationsTheme.space.md,

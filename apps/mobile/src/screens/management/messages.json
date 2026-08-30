@@ -10,18 +10,17 @@
     }
   },
   "hub": {
-    "summary": {
-      "eyebrow": "GÜN ÖZETİ",
-      "headline": "{orders} sipariş · {preparing} hazırlanıyor · {awaiting} tahsilat bekliyor",
-      "detail": "ciro {revenue} · açık şikâyet {complaints} · yarın {shipments} sevkiyat →",
-      "action": "Gün özetini aç"
-    },
+    "eyebrow": "YÖNETİM · KARAR KUTUSU",
+    "title": "Bugün Ne Bekliyor",
+    "context": "{n} karar bekliyor",
+    "contextEmpty": "Bekleyen karar yok",
+    "pulse": "GÜNÜN NABZI",
+    "unknown": "—",
     "empty": {
       "title": "Karar kutusu boş",
-      "body": "Bekleyen karar yok — gün özeti aşağıdan hâlâ açılır.",
-      "action": "Gün özeti →"
+      "body": "Bekleyen karar yok — günün nabzı aşağıda açık."
     },
-    "footnote": "Uzun iş masaya kalır — her ekran \"masada devam et\" der. Kurulum/ayar mobile taşınmaz.",
+    "footnote": "Kararlar burada verilir; depo ve kurye ekranları yalnız uygular.",
     "error": {
       "title": "Karar kutusu yüklenemedi",
       "body": "Bağlantıyı kontrol edip yeniden deneyin.",
@@ -29,35 +28,54 @@
     },
     "rows": {
       "complaint": {
-        "title": "Şikâyet / talep — {n} cevap bekliyor",
-        "subtitle": "{who}{ref}",
-        "refPart": " · {ref}"
+        "badge": "CEVAP BEKLİYOR",
+        "meta": "şikâyet · {n} açık",
+        "title": "{who}{ref}",
+        "titleNoHead": "{n} açık şikâyet",
+        "refPart": " · {ref}",
+        "stamp": "son mesaj {stamp}"
       },
       "exception": {
-        "title": "Sipariş istisnası — eksik toplama",
-        "subtitle": "{ref} · {lines} kalem · motor önerisi hazır",
-        "subtitleMore": "{ref} · {lines} kalem · +{more} sipariş daha",
-        "noRef": "referanssız"
+        "badge": "EKSİK KALEM",
+        "noRef": "referanssız",
+        "title": "{lines} kalem eksik toplandı",
+        "titleMore": "{lines} kalem eksik toplandı · +{more} sipariş daha",
+        "action": "motor önerisi hazır — kararı aç"
       },
       "offer": {
-        "title": "Yakın-SKT kampanya onayı",
-        "subtitle": "{n} aday parti · D3’ten"
+        "eyebrow": "YAKIN-SKT TEKLİFİ",
+        "title": "{n} aday parti",
+        "subtitle": "D3’ten · onay bekliyor"
       },
       "supply": {
-        "title": "Tedarik önerisi",
-        "subtitle": "{groups} grup",
-        "subtitleUnmapped": "{groups} grup · {unmapped} eşlenmemiş"
+        "eyebrow": "TEDARİK TASLAĞI",
+        "title": "{groups} grup",
+        "subtitle": "motor önerisi hazır",
+        "subtitleUnmapped": "{unmapped} eşlenmemiş varyant — masada eşleyin"
+      }
+    },
+    "tiles": {
+      "social": {
+        "title": "Sosyal gelen kutusu",
+        "subtitle": "cevap bekleyen konuşma"
       },
-      "intent": {
-        "title": "WhatsApp — cevap bekleyen",
-        "subtitle": "{n} konuşma · sipariş niyeti buradan çıkar"
+      "summary": {
+        "title": "Gün özeti",
+        "subtitle": "ciro · {orders} sipariş"
       }
     }
   },
   "complaint": {
     "title": "Şikâyet / Talep",
-    "caption": "{reference} · kaynak: {source} · {stamp}",
+    "caption": "{reference} · {customer}",
     "noRef": "siparişsiz",
+    "linked": {
+      "eyebrow": "BAĞLI KAYITLAR",
+      "order": "sipariş {reference}",
+      "orderNone": "bağlı sipariş yok",
+      "trace": "kaynak: {source} · son mesaj {stamp}"
+    },
+    "decision": "KARAR",
     "source": {
       "order": "sipariş",
       "form": "form",
@@ -138,13 +156,22 @@
   "offer": {
     "title": "Yakın-SKT Kampanya Onayı",
     "caption": "aday listesi motordan · satır çıkarılabilir, fiyat düzeltilebilir",
-    "row": "{batch} · {qty} adet · {days} gün · öneri {suggested}{warehouse}",
-    "noLot": "lotsuz",
+    "meta": "parti {batch}{warehouse}",
+    "noLot": "numarasız",
     "noSuggestion": "—",
     "warehousePart": " · {code}",
+    "rows": {
+      "qty": "Kalan adet",
+      "life": "Kalan ömür",
+      "lifeValue": "{days} gün",
+      "lifeValuePast": "süresi geçti",
+      "listPrice": "Liste fiyatı",
+      "suggested": "Önerilen (%{percent})"
+    },
     "priceLabel": "{name} teklif fiyatı",
-    "remove": "Listeden çıkar",
+    "remove": "Teklif verme — imhaya bırak",
     "restore": "Listeye geri al",
+    "publishNote": "Teklif onaylanınca müşteri uygulamasında yakın-SKT rafında görünür; parti tükenince kendi kapanır.",
     "footnote": "Çıkarılan parti aday listesinde kalır — yarınki turda yeniden önerilir.",
     "cta": "{n} partiyi teklife aç",
     "ctaEmpty": "Listede parti kalmadı",
@@ -164,10 +191,11 @@
     "title": "Tedarik Önerisi",
     "caption": "öneri listesi elle de açılır — bildirim tek kapı değil",
     "group": "{supplier} · {warehouse}",
-    "row": "mevcut {current} · eşik {threshold} · son alış {lastPurchase} · yoldaki düşülmüş, koli katına yuvarlı",
+    "row": "stok {current} · eşik {threshold} · yolda {incoming} · son alış {lastPurchase}",
     "noPurchase": "—",
-    "elsewhere": "başka depoda var: {where} — transfer seçeneğinin ham verisi",
-    "cta": "Grubu onayla — taslak TS",
+    "elsewhere": "başka depoda var: {where}",
+    "footnote": "Öneri eşiğin altındaki farktan türetilir: yoldaki miktar düşülür, kalan koli katına yuvarlanır.",
+    "cta": "Grubu onayla — taslak TS oluştur",
     "ctaSending": "Yazılıyor…",
     "ctaDone": "Taslak TS oluşturuldu ✓ · {n} kalem",
     "ctaStale": "Öneri güncel değilmiş — liste tazelendi",
@@ -185,19 +213,22 @@
   "summary": {
     "title": "Gün Özeti",
     "caption": "salt okuma · günün fotoğrafı",
-    "headline": "{orders} sipariş · {preparing} hazırlanıyor · {awaiting} tahsilat bekliyor",
+    "revenue": {
+      "eyebrow": "CİRO — TESLİM GÜNÜ",
+      "orders": "{n} sipariş"
+    },
     "channels": {
-      "eyebrow": "CİRO — KANAL KIRILIMI (TESLİM GÜNÜNE GÖRE)",
       "web": "Web",
       "door": "Kapıda satış",
       "whatsapp": "WhatsApp",
       "unknown": "— bilinmiyor (sıfır değil)"
     },
-    "doorPending": {
-      "label": "TAHSİLAT BEKLEYEN",
-      "value": "{n} · {amount}"
+    "tiles": {
+      "preparing": "hazırlanıyor",
+      "pendingPayment": "{n} sipariş tahsilat bekliyor",
+      "offerCandidates": "yakın-SKT aday parti",
+      "complaints": "açık şikâyet"
     },
-    "openComplaints": "AÇIK ŞİKÂYET",
     "tomorrow": {
       "eyebrow": "YARIN — SEVKİYAT",
       "line": "{orders} sipariş · {ready} hazır · kapıda ödeme yükü {amount}"
@@ -205,16 +236,12 @@
     "insights": {
       "eyebrow": "YZ İÇGÖRÜSÜ",
       "empty": "Bugün için üretilmiş içgörü yok — motor bağlandığında bu blok dolacak."
-    },
-    "stockRisk": "Stok riski bloğu ısınıyor — bekleyin (üç hâl: hazır · ısınıyor · yok)."
+    }
   },
   "social": {
-    "title": "Sosyal Mesajlar",
+    "title": "Gelen Kutusu",
     "caption": "{awaiting} cevap bekliyor · {ai} AI'da",
-    "hubEntry": {
-      "title": "Sosyal Mesajlar",
-      "subtitle": "WhatsApp · Messenger · Instagram — tek gelen kutusu"
-    },
+    "draftBadge": "TASLAK ONAY BEKLİYOR",
     "filter": {
       "all": "Tümü",
       "awaiting": "Cevap bekleyen"
@@ -251,7 +278,8 @@
       "you": "Siz",
       "ai": "AI ajanı",
       "template": "kalıp: {name}",
-      "draftCaption": "YZ TASLAĞI — operatör cevabı değildir",
+      "draftEyebrow": "ASİSTAN TASLAĞI · HİBRİT MOD",
+      "draftNote": "Hibrit modda asistan asla kendi başına göndermez.",
       "draftTake": "Cevap kutusuna al",
       "suggest": "Taslak öner",
       "mode": {

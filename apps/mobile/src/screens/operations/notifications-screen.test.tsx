@@ -1,3 +1,4 @@
+import { customerAppColors, operationsAppColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { OperationsSection } from '@/lib/operations/sections';
@@ -35,16 +36,23 @@ const FEED_ROWS: OperationsNotification[] = [
 ];
 
 let mockFeed: OperationsNotification[] = [];
+let mockLoading = false;
 const mockMarkAllSeen = jest.fn();
 jest.mock('./use-notifications.hook', () => ({
-  useOperationsNotifications: () => ({ rows: mockFeed, loading: false, unread: mockFeed.length, markAllSeen: mockMarkAllSeen }),
+  useOperationsNotifications: () => ({
+    rows: mockFeed,
+    loading: mockLoading,
+    unread: mockFeed.length,
+    markAllSeen: mockMarkAllSeen,
+  }),
 }));
 
 const t = messages;
 
 /** Ekran bölümlerini KAPIDAN alır; testte sağlayıcı doğrudan kurulur. */
-async function renderScreen(sections: OperationsSection[], feed: OperationsNotification[]) {
+async function renderScreen(sections: OperationsSection[], feed: OperationsNotification[], loading = false) {
   mockFeed = feed;
+  mockLoading = loading;
   await render(
     <OperationsSessionProvider value={{ sections, userName: 'Musa Kaya', userEmail: 'musa@lezzetanatolia.fr' }}>
       <OperationsNotificationsScreen />
@@ -54,6 +62,7 @@ async function renderScreen(sections: OperationsSection[], feed: OperationsNotif
 
 beforeEach(() => {
   mockPush.mockReset();
+  mockLoading = false;
 });
 
 describe('OperationsNotificationsScreen', () => {
@@ -109,6 +118,41 @@ describe('OperationsNotificationsScreen', () => {
     await fireEvent.press(screen.getByTestId('operations-notification-n5'));
 
     expect(mockPush).toHaveBeenCalledWith('/money');
+  });
+
+  /* ── v3: satır bir KART, tonu kenarından okunur ──────────────────────────── */
+  it('alarm satırı KIRMIZI kenarlı kart, ötekiler kum kenarlı — nokta yok', async () => {
+    await renderScreen(
+      ['courier', 'management'],
+      [FEED_ROWS[1] as OperationsNotification, FEED_ROWS[3] as OperationsNotification],
+    );
+
+    expect(screen.getByTestId('operations-notification-n4')).toHaveStyle({
+      borderColor: operationsAppColors['error-line'],
+      backgroundColor: operationsAppColors.panel,
+    });
+    /* Kurye satırı alarm DEĞİL: kenarı kum kalır. Tek varyant çizilseydi bu satır da kırmızıya
+       döner ve "hangi iş acil" bilgisi kaybolurdu. */
+    expect(screen.getByTestId('operations-notification-n2')).toHaveStyle({
+      borderColor: customerAppColors['sand-300'],
+    });
+    expect(screen.getByTestId('operations-notification-n2')).not.toHaveStyle({
+      borderColor: operationsAppColors['error-line'],
+    });
+  });
+
+  it('alarm satırının BAŞLIĞI da kırmızı — kart tek sesle konuşur', async () => {
+    await renderScreen(['management'], [FEED_ROWS[3] as OperationsNotification]);
+
+    expect(screen.getByText('Yeni şikâyet — Bozuk')).toHaveStyle({ color: customerAppColors.error });
+  });
+
+  it('ilk yükte İSKELET çizilir — boş bloğu ÇİZİLMEZ (yükleme ≠ yokluk)', async () => {
+    await renderScreen(['courier'], [], true);
+
+    expect(screen.getByTestId('operations-notifications-loading')).toBeOnTheScreen();
+    expect(screen.getByText(t.notifications.loading)).toBeOnTheScreen();
+    expect(screen.queryByTestId('operations-notifications-empty')).toBeNull();
   });
 
   it('geri düğmesi yığını kapatır', async () => {

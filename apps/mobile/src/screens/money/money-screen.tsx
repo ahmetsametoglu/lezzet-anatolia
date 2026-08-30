@@ -97,17 +97,16 @@ interface OverviewBodyProps {
 }
 
 function OverviewBody({ overview }: OverviewBodyProps) {
-  const floatValue =
-    overview.courierFloat.chequeCents > 0
-      ? fillCopy(t.track.float.valueWithCheque, {
-          cash: money(overview.courierFloat.cashCents),
-          card: money(overview.courierFloat.cardCents),
-          cheque: money(overview.courierFloat.chequeCents),
-        })
-      : fillCopy(t.track.float.value, {
-          cash: money(overview.courierFloat.cashCents),
-          card: money(overview.courierFloat.cardCents),
-        });
+  /* ÇEK HÜCRESİ YALNIZ VARSA çizilir: çek bu işletmede seyrek ve sürekli duran bir "0,00 € çek"
+     hücresi, olmayan bir kanalı her gün hatırlatırdı. Nakit ve kart hep durur — ikisi kapının
+     olağan yöntemleri ve sıfır olmaları da bir bilgidir ("bugün kimse elden ödemedi"). */
+  const floatCells = [
+    { method: 'cash' as const, cents: overview.courierFloat.cashCents },
+    { method: 'card' as const, cents: overview.courierFloat.cardCents },
+    ...(overview.courierFloat.chequeCents > 0
+      ? [{ method: 'cheque' as const, cents: overview.courierFloat.chequeCents }]
+      : []),
+  ];
 
   return (
     <ScrollView contentContainerStyle={styles.body} testID="money-tracking-body">
@@ -165,9 +164,20 @@ function OverviewBody({ overview }: OverviewBodyProps) {
         <Text style={styles.note}>{t.track.pending.note}</Text>
       </View>
 
+      {/* HÜCRE DİLİ GÜNÜN KARTIYLA AYNI (30.08, cihazda görüldü): üç tutar tek uzun cümleye
+          dizilince satır sarıyor ve hangi rakamın hangi yönteme ait olduğu ancak okunarak
+          çıkıyordu. v3 bu bloğu kurye kurye döküyor; sözleşme tek toplam taşıdığı için (uyuşmazlık
+          17) döküm yerine YÖNTEM kırılımı yazılıyor — aynı sayı, okunabilir hâlde. */}
       <View style={styles.floatCard} testID="money-courier-float">
         <Text style={styles.eyebrow}>{t.track.float.eyebrow}</Text>
-        <Text style={styles.floatValue}>{floatValue}</Text>
+        <View style={styles.todayCells}>
+          {floatCells.map((cell) => (
+            <View key={cell.method} style={styles.todayCell} testID={`money-float-${cell.method}`}>
+              <Text style={styles.todayCellValue}>{money(cell.cents)}</Text>
+              <Text style={styles.todayCellLabel}>{t.common.method[cell.method]}</Text>
+            </View>
+          ))}
+        </View>
         <Text style={styles.note}>{t.track.float.note}</Text>
       </View>
 
@@ -363,12 +373,6 @@ const styles = StyleSheet.create({
     borderWidth: operationsTheme.border.base,
     borderColor: operationsTheme.colors['sand-500'],
     borderRadius: operationsTheme.radius.card,
-  },
-  floatValue: {
-    // v2: `800 20px` — Karla'nın 800'ü yüklenmiyor; en yakın gerçek kesit 700 (`fonts.ts`).
-    fontFamily: operationsTheme.font.body[700],
-    fontSize: operationsTheme.text['icon-sm'],
-    color: operationsTheme.colors.ink,
   },
   note: {
     fontFamily: operationsTheme.font.body[400],

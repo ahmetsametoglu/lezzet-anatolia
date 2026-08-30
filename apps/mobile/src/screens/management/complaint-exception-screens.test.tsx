@@ -197,6 +197,26 @@ describe('Y1 · şikâyet', () => {
 
     expect(screen.getByTestId('management-complaint-empty')).toBeOnTheScreen();
   });
+
+  /* v3 (30.08): künye "referans · müşteri" oldu, kaynak ve damga BAĞLI KAYITLAR bloğuna indi.
+     Test bağın kendisini çiviliyor — sipariş referansı orada görünmeli ve siparişsiz talepte
+     blok boş bir referans uydurmamalı. */
+  it('v3 · künye "referans · müşteri"dir; bağlı kayıtlar bloğu siparişi söyler', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData()));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.getByTestId('management-complaint-linked')).toBeOnTheScreen();
+    expect(screen.getByText(t.complaint.linked.order.replace('{reference}', 'LA-26-TEST01'))).toBeOnTheScreen();
+    // Künye artık kaynağı değil müşteriyi yazıyor.
+    expect(screen.getByText('LA-26-TEST01 · Claire Muller')).toBeOnTheScreen();
+  });
+
+  it('v3 · siparişsiz talepte bağlı kayıt bloğu YOKLUĞU söyler, referans uydurmaz', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData({ orderReferenceNo: null })));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.getByText(t.complaint.linked.orderNone)).toBeOnTheScreen();
+  });
 });
 
 describe('Y2 · istisna', () => {

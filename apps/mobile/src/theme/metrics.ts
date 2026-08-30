@@ -121,11 +121,20 @@ export const appMetrics = {
      */
     errorIcon: 34,
     /**
-     * Sekme çubuğu ikonu (müşteri v3: 23 · operasyon v2: 22 — ±1 kuralıyla aynı durak).
-     * İki yüzey için ikinci bir durak açılmadı: 1 dp fark ekranda ölçülemez, ama iki ad bir gün
-     * "hangisi doğru?" sorusunu doğurur (aynı disiplin: `operations-app.ts` yeni durak eşiği).
+     * Sekme çubuğu ikonu — MÜŞTERİ yüzeyi (v3: 23).
+     *
+     * Eskiden iki yüzeyin tek durağıydı ve gerekçesi yazılıydı: "operasyon v2: 22 — ±1 kuralıyla
+     * aynı durak; 1 dp fark ekranda ölçülemez". Operasyon Mobil v3 o dayanağı kaldırdı: şablonun
+     * dört sekmesi de 20 çiziyor (ölçüldü 30.08), yani fark artık 3 dp ve ±1'in dışında. Durak
+     * bölündü — birleştiren argüman düştüğü an ad da ayrılır.
      */
     tabIcon: 23,
+    /**
+     * Sekme çubuğu ikonu — OPERASYON yüzeyi (v3: 20). Değeri `headerIcon` ile aynı ama durağı
+     * ayrı: biri kalıcı gezinmenin ikonu, öteki başlık satırındaki yuvarlak düğmenin içi. Ölçü
+     * değil ANLAM ayrı durak açtırır (dosyanın kendi kuralı) — biri kayarsa öteki kaymamalı.
+     */
+    tabIconOperations: 20,
     /** Başlık satırındaki yuvarlak düğmenin ikonu — operasyon zil düğmesi (v2: 20). */
     headerIcon: 20,
     /** Girdi/düğme içinde satıra giren ikon (tasarım: arama büyüteci 17 · süzgeç çizgileri 19×17). */
@@ -162,6 +171,14 @@ export const appMetrics = {
     previewMarkHeight: 26,
     /** Izgara kutucuğunun asgari yüksekliği (v3: 104). */
     tile: 104,
+    /**
+     * Liste satırının baş harf karesi — sosyal gelen kutusu (v3: 34×34).
+     * `avatarSm`e (40) bağlanamaz: o KİŞİ avatarıdır ve satırın başında tek başına durur; bu kare
+     * bir satırın içinde, ad ve önizlemeyle aynı bloğun solunda yaşıyor — 40 dp orada satırı
+     * ikinci bir kademeye zorluyor. `stepButton` (34) değeri tutuyor ama o bir ±  DÜĞMESİDİR;
+     * dosyanın kendi kuralı gereği ölçü değil ANLAM ayrı durak açtırır.
+     */
+    listAvatar: 34,
   },
 
   /**

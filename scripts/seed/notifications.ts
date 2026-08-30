@@ -212,10 +212,17 @@ export async function seedNotifications(db: Db, kisiler: Kisiler): Promise<void>
   }
 
   // ── Personel türleri (26.08 — "operasyon tarafında da her çeşitten örnek") ───────────────────
-  // Fan-out'un tam taklidi değil, HEDEF KİTLENİN örneği: yönetici (cihaz/web dev hesabı) her
-  // türü görür; canlı üreticiler (staff-events.ts) gerçek fan-out'u zaten rol×depo ile yazıyor.
-  const yonetici = kisiler.get('yonetici');
-  if (yonetici) {
+  // Fan-out'un tam taklidi değil, HEDEF KİTLENİN örneği: yönetici hesapları her türü görür; canlı
+  // üreticiler (staff-events.ts) gerçek fan-out'u zaten rol×depo ile yazıyor.
+  //
+  // **ALICI ARTIK ÇOĞUL** (30.08): satırlar yalnız `yonetici`ye yazılıyordu ve bildirim ekranı
+  // ALICIYA göre okuyor (`notification.profile_id`), role göre değil — yani başka bir personel
+  // hesabıyla girildiğinde ekran bomboş açılıyordu. Gerçek fan-out zaten aynı olayı bütün
+  // yetkililere düşürüyor; seed de o davranışı taklit ediyor.
+  for (const yonetici of ['yonetici', 'hepsi'].flatMap((anahtar) => {
+    const id = kisiler.get(anahtar);
+    return id ? [id] : [];
+  })) {
     // Belge: e-postasız müşterinin sipariş onayı insana düştü.
     const belgeKaynagi = satirlar.find((s) => s.kind === 'order_confirmed');
     if (belgeKaynagi) {

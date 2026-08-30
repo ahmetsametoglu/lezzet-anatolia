@@ -8,30 +8,47 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import type { SocialRow } from '@/lib/api/social';
 import { fillCopy } from '@/screens/operations/copy';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { managementCopy } from './copy';
-import { socialPreview, socialStamp, socialTitle } from './social-format';
+import { socialInitials, socialPreview, socialStamp, socialTitle } from './social-format';
 import { useSocialInbox, type ChannelFilter } from './use-social-inbox.hook';
 
 /*
-  SOSYAL GELEN KUTUSU — web `/operations/social` kuyruğunun mobil aynası (15.15): üç Meta kanalı
-  tek listede, son harekete göre sıralı, keyset sayfalı.
+  SOSYAL GELEN KUTUSU (Operasyon Mobil v3:2179-2227) — üç Meta kanalı tek listede, son harekete
+  göre sıralı, keyset sayfalı; web `/operations/social` kuyruğunun mobil aynası (15.15).
 
-  Liste kalıbı talep listesinden (`tickets-screen`), görünüm dili yönetim bölümünden
-  (`complaint-screen`): OperationsStackHeader + `operationsTheme` sabiti + OperationsNoticeBlock.
+  ── v3 SATIRI KART YAPTI (30.08) ────────────────────────────────────────────
+  v2 satırları alt çizgiyle ayrılmış düz bir listeydi; v3 her sohbeti kendi çerçevesine aldı ve
+  ayrımı ÇİZGİDEN değil BOŞLUKTAN kurdu. Kazanç görsel değil işlevsel: çerçeve artık bir durum
+  taşıyabiliyor — cevap bekleyen sohbetin çerçevesi ZEYTİN, ötekilerinki kum. Kuyrukta gözün
+  aradığı şey tam olarak budur ("kim cevap bekliyor").
+
+  ── BAŞ HARF KARESİ GELDİ, RENGİ KANALIN ───────────────────────────────────
+  v3 satırın soluna 34'lük bir baş harf karesi koyuyor ve onu duruma göre boyuyor. Bizde karenin
+  rengi KANALIN markasıdır (v2'nin sol kenar çubuğundan devralındı): v3'ün satırında kanal hiçbir
+  yerde görünmüyor ve üç kanalın birleştiği bir kuyrukta "nereden yazdı" sorusu kaybolurdu. Durum
+  ise zaten çerçevede. Böylece iki bilgi iki ayrı yerde durur, ikisi de kaybolmaz.
+
+  ── "TASLAK ONAY BEKLİYOR" ROZETİ ──────────────────────────────────────────
+  v3:2205'in rozeti sözleşmede KARŞILIĞI OLAN bir şeydir: kuyruk satırı hibrit modun bekleyen
+  taslağını taşıyor (`aiDraftReply`). Rozet o alan doluyken çizilir — operatör hangi sohbette
+  onayının beklendiğini listeyi açmadan görür.
+
+  ── İKİ SÜZGEÇ EKSENİ KALDI (tasarımdan bilinçli sapma) ────────────────────
+  v3 yalnız KANAL çiplerini çiziyor (v3:2189). "Cevap bekleyen" ekseni silinmedi: uç onu destekliyor
+  (`filter=awaiting`), ekranın sayacı onu sayıyor ve "cevap bekleyen Messenger sohbetleri" meşru bir
+  sorudur (bu ekranın kendi test künyesi). Çizilmeseydi çalışan bir kapı ve onu besleyen uç
+  parametresi ölü kod olarak kalırdı.
+
   Kuyruğun üç kuyruk hâli (yükleniyor · düştü · bitti) footer'da — `nextCursor` üretilip
   TÜKETİLİYOR (CLAUDE §1: sayfalayan okumanın tüketeni olmalı).
-
-  ── KANAL SATIRIN SOL KENARINDAN OKUNUR (web `SOURCE_EDGE` kararı) ──────────
-  Renk marka token'ından (`brand-whatsapp/messenger/instagram` — design-tokens, ham hex yok):
-  kuyruk artık üç kanalın kuyruğu ve satırın nereden geldiği ilk bakışta görünmeli. Rozet metni
-  çevrilmez — marka adları sözlükte de aynen durur.
 */
 
 const t = managementCopy.social;
 
-/** Kanal → sol kenar rengi. Token'dan (CLAUDE §3) — `operationsTheme` marka anahtarlarını yayar. */
-const CHANNEL_EDGE = {
+/** Kanal → baş harf karesinin zemini. Token'dan (CLAUDE §3) — `operationsTheme` markaları yayar. */
+const CHANNEL_TINT = {
   whatsapp: operationsTheme.colors['brand-whatsapp'],
   messenger: operationsTheme.colors['brand-messenger'],
   instagram: operationsTheme.colors['brand-instagram'],
@@ -73,21 +90,32 @@ export function SocialInboxScreen() {
     <PressableSurface
       onPress={() => router.navigate(`/social/${item.id}`)}
       feedback="opacity"
-      style={[styles.row, { borderLeftColor: CHANNEL_EDGE[item.source] }]}
-      accessibilityLabel={socialTitle(item)}
+      style={[styles.row, item.awaitingReply ? styles.rowAwaiting : styles.rowIdle]}
+      /* Çerçevenin rengi ekran okuyucuya ulaşmaz — "top bizde" o yüzden ada EKLENİR. Görünür
+         rozeti kaldırmak, sesli okumadan da kaldırmak anlamına gelmemeli. */
+      accessibilityLabel={
+        item.awaitingReply ? `${socialTitle(item)} — ${managementCopy.common.ourTurn}` : socialTitle(item)
+      }
       testID={`management-social-row-${item.id}`}
     >
+      <View style={[styles.avatar, { backgroundColor: CHANNEL_TINT[item.source] }]}>
+        <Text style={styles.avatarText}>{socialInitials(item)}</Text>
+      </View>
       <View style={styles.rowText}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
-          {socialTitle(item)}
-        </Text>
+        <View style={styles.rowHead}>
+          <Text style={styles.rowTitle} numberOfLines={1}>
+            {socialTitle(item)}
+          </Text>
+          <Text style={styles.rowStamp}>{socialStamp(item.lastMessageAt)}</Text>
+        </View>
         <Text style={styles.rowPreview} numberOfLines={1}>
           {socialPreview(item, t.kind)}
         </Text>
-      </View>
-      <View style={styles.rowSide}>
-        <Text style={styles.rowStamp}>{socialStamp(item.lastMessageAt)}</Text>
-        {item.awaitingReply ? <Text style={styles.ourTurn}>{managementCopy.common.ourTurn}</Text> : null}
+        {item.aiDraftReply === null ? null : (
+          <Text style={styles.draftBadge} testID={`management-social-draft-${item.id}`}>
+            {t.draftBadge}
+          </Text>
+        )}
       </View>
     </PressableSurface>
   );
@@ -200,9 +228,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space.md,
   },
+  /* v3:2189 — çip 38 dp yüksekliğinde bir KONTROL, satır içi bir etiket değil: dolgusu o yüzden
+     büyüdü. Dokunma hedefi `compact` payıyla zaten 44'e tamamlanıyordu; değişen görsel ağırlık. */
   chip: {
-    paddingVertical: operationsTheme.space.xs,
-    paddingHorizontal: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.badge,
     borderWidth: operationsTheme.border.base,
   },
@@ -233,51 +263,76 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space['8xl'],
+    /* Satırları AYIRAN şey artık çizgi değil boşluk (v3): her sohbet kendi kartında duruyor. */
+    gap: operationsTheme.space.md,
   },
-  /** Sol kenar KANALIN markası — kalınlık sabit, renk satırda (`CHANNEL_EDGE`). */
   row: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.lg,
+    alignItems: 'flex-start',
+    gap: operationsTheme.space.xl,
     paddingVertical: operationsTheme.space['2xl'],
-    paddingLeft: operationsTheme.space.lg,
-    borderLeftWidth: operationsTheme.space['2xs'],
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'solid',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    paddingHorizontal: operationsTheme.space['2xl'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+  },
+  /** Cevap bekleyen sohbetin çerçevesi ZEYTİN — kuyrukta gözün aradığı tek şey (v3:2192). */
+  rowAwaiting: {
+    borderColor: operationsTheme.colors.olive,
+  },
+  rowIdle: {
+    borderColor: operationsTheme.colors['sand-300'],
+  },
+  /** Baş harf karesi — zemini KANALIN markası, harfleri krem (`social-format` künyesi). */
+  avatar: {
+    width: operationsTheme.size.listAvatar,
+    height: operationsTheme.size.listAvatar,
+    borderRadius: operationsTheme.radius.badge,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors['on-image'],
   },
   rowText: {
     flex: 1,
     gap: operationsTheme.space['2xs'],
   },
+  rowHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
+  },
   rowTitle: {
+    flex: 1,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text['body-sm'],
+    fontSize: operationsTheme.text.control,
     color: operationsTheme.colors.ink,
   },
   rowPreview: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors.muted,
-  },
-  rowSide: {
-    alignItems: 'flex-end',
-    gap: operationsTheme.space['2xs'],
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.body,
   },
   rowStamp: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
   },
-  /** "top bizde" — yönetim hub'ının aynı rozeti (tek desen, iki ekran). */
-  ourTurn: {
+  /** "TASLAK ONAY BEKLİYOR" — yalnız bekleyen YZ taslağı olan satırda (v3:2205). */
+  draftBadge: {
+    alignSelf: 'flex-start',
+    marginTop: operationsTheme.space['2xs'],
     paddingVertical: operationsTheme.space.xs,
     paddingHorizontal: operationsTheme.space.md,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors.terracotta,
-    borderRadius: operationsTheme.radius.badge,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.meta,
+    borderRadius: operationsTheme.radius.tight,
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.terracotta,
   },
   footerNote: {

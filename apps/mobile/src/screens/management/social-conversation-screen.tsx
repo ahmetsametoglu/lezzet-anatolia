@@ -11,14 +11,47 @@ import { ChatLayout } from '@/components/ui/chat-layout';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import type { SocialMessage } from '@/lib/api/social';
 import { fillCopy } from '@/screens/operations/copy';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { managementCopy } from './copy';
 import { socialStamp, socialTitle, socialWindowOf } from './social-format';
 import { useSocialConversation } from './use-social-conversation.hook';
 
 /*
-  SOSYAL SOHBET — web sohbet panelinin mobil aynası; gövde deseni `complaint-screen`den (baloncuk
-  renkleri, kesikli YZ taslağı, footer), verisi gerçek uçtan (`use-social-conversation.hook`).
+  SOSYAL SOHBET (Operasyon Mobil v3:2229-2278) — web sohbet panelinin mobil aynası; verisi gerçek
+  uçtan (`use-social-conversation.hook`).
+
+  ── v3'ÜN ÜÇ DÜZEN KARARI (30.08) ───────────────────────────────────────────
+  1. **BİZİM BALONCUK KOYULAŞTI** (v3:2246). v2'de operatörün sözü açık yeşil bir baloncuktu;
+     v3'te mürekkep zeminde krem yazı. Kazanç okuma yönü: sohbette "kim konuşuyor" sorusu artık
+     hizadan DEĞİL, kontrasttan da okunuyor — tek bakışta bizim yazdıklarımız görünüyor.
+     Baloncukların KUYRUK KÖŞESİ küçüldü (v3: 5px): konuşanın tarafına bakan köşe sivri kalır ve
+     baloncuk konuşana "yapışır".
+  2. **DAMGA BALONCUĞUN DIŞINA ÇIKTI** (v3:2250). v2 künyeyi baloncuğun İÇİNE, metnin üstüne
+     yazıyordu; her mesaj iki satırla başlıyordu. v3'te künye baloncuğun ALTINDA, kendi tarafına
+     hizalı gri bir satır — mesajın kendisi baloncuğun tamamını kullanıyor.
+     v3 yalnız SON mesajın künyesini çiziyor; bizde HER mesajınki duruyor: sohbet defterinde
+     "hangi mesaj ne zaman" sorusu geriye doğru da sorulur ve tek damga onu cevaplamaz.
+  3. **BEKLEYEN TASLAK YAZIŞMADAN ÇIKIP ÇUBUĞUN ÜSTÜNE TAŞINDI** (v3:2262). Taslak bir MESAJ
+     değil, bir EYLEMdir: müşteriye gitmemiştir, operatörün onayını bekler. Yazışmanın içinde
+     dururken gönderilmiş bir söz gibi okunuyordu ve sohbet uzadıkça yukarı kayıp kayboluyordu.
+     Yeni yeri cevap kutusunun hemen üstü — kararın verildiği yer. "Taslak öner" düğmesi de aynı
+     yuvaya taşındı: ikisi tek slotun iki hâli (taslak var / yok).
+
+  ── TASARIMIN İSTEDİĞİ AMA YAZILMAYANLAR ────────────────────────────────────
+  · **"Reddet" düğmesi** (v3:2270): taslağı reddeden bir uç YOK — sözleşmede yalnız TÜKETME var
+    (`consumeSocialDraft`, metni döndürür). Basıldığında hiçbir şey yapmayan bir düğme, operatöre
+    "reddettim" dedirtip taslağı yerinde bırakırdı.
+  · **Künyedeki "B2B · Oberjaegerhof"** (v3:2237): sohbet satırında ne müşteri tipi (B2B) ne de
+    işletme adı var (`SocialConversationRowSchema`); künye kanalı ve — yalnız WhatsApp'ta —
+    okunabilir anahtarı yazar.
+  · **Mod çipleri BAŞLIK SATIRINA taşınmadı** (v3:2239). v3 orada İKİ çip çiziyor; bizde üç mod
+    var (`ConversationHandlerEnum` — `ai` 29.08'de gerçek bir motora bağlandı) ve üç çip, geri
+    düğmesi ve iki satırlık künyeyle aynı satıra sığmıyor. Çipler kendi şeritlerinde kaldı.
+  · **Kâğıt uçak düğmesi** (v3:2276): buradan mesaj GİTMEZ, deftere yazılır (uç künyesi). Uçak
+    ikonu "gönderildi" vaat ederdi; düğme adıyla ("Deftere işle") duruyor.
+  · **Cevap süresi bandı KALDI** (v3'te yok): WhatsApp'ın 24 saatlik penceresi bir ÜCRET kararıdır
+    ve kapalıyken serbest metin gitmez. Şablonun onu çizmemesi kuralın kalktığı anlamına gelmez.
 
   ── COMPLAINT'TEN BİLİNÇLİ SAPMALAR ─────────────────────────────────────────
   · Taslağın TEK çıkışı var ("Cevap kutusuna al"), iki değil: complaint'in "Cevaba çevir →"ü
@@ -41,10 +74,13 @@ const t = managementCopy.social;
 const td = managementCopy.social.detail;
 
 /*
-  Sohbette İKİ mod (15.13 · 22.08) — `ai` listede YOK ve bu bir kısıtlama değil, yalanın kaldırılması:
-  özerk sohbet motoru yazılmadı (15.8; gönderim kanalı 15.11'e bağlı), yani "AI" seçildiğinde arkada
-  hiçbir şey koşmuyordu — cron yalnız hibrit sohbetleri tarıyor. Sohbet, operatör AI'ın ilgilendiğini
-  sanarken cevapsız kalıyordu. Kaynak tek: `ConversationHandlerEnum` (API isteği de onunla doğrulanır).
+  YÜRÜTÜCÜ MODLARI ENUM'DAN TÜRER, ELLE SAYILMAZ — kaynak tek: `ConversationHandlerEnum` (API
+  isteği de onunla doğrulanır).
+
+  Tarihçe kararın neden türetildiğini anlatıyor: enum bir tur boyunca `ai`yi DIŞLIYORDU çünkü
+  arkasında koşan bir motor yoktu (cron yalnız hibrit sohbetleri tarıyordu) ve "AI" seçildiğinde
+  sohbet, operatör AI'ın ilgilendiğini sanarken cevapsız kalıyordu. Kısıt 29.08'de kalktı (motor +
+  cron + gönderim kanalı, üçü de ölçüldü); üçüncü çip bu ekranda TEK SATIR bile değişmeden doğdu.
 */
 const MODES = ConversationHandlerEnum.options;
 
@@ -85,15 +121,23 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     if (draft !== null) setReply(draft);
   };
 
+  /**
+   * Bir mesajın SATIRI — baloncuk + altındaki künye (v3:2246-2250).
+   *
+   * Künye baloncuğun DIŞINDA ve kendi tarafına hizalı; sarmalayıcı `View` yalnız o hizayı tutar.
+   * Gelen mesajın künyesi damgadır, giden mesajınki "kim yazdı · ne zaman · hangi kalıp".
+   */
   const bubbleOf = (message: SocialMessage) => {
     const body = message.body.text?.trim() || t.kind[message.kind];
     const stamp = socialStamp(message.createdAt);
 
     if (message.direction === 'inbound') {
       return (
-        <View key={message.id} style={[styles.bubble, styles.bubbleLeft, styles.bubbleCustomer]}>
+        <View key={message.id} style={[styles.line, styles.lineLeft]}>
+          <View style={[styles.bubble, styles.bubbleCustomer]}>
+            <Text style={styles.bubbleBody}>{body}</Text>
+          </View>
           <Text style={styles.bubbleCaption}>{stamp}</Text>
-          <Text style={styles.bubbleBody}>{body}</Text>
         </View>
       );
     }
@@ -102,9 +146,11 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     const caption = [fromAi ? td.ai : td.you, stamp];
     if (message.templateName) caption.push(fillCopy(td.template, { name: message.templateName }));
     return (
-      <View key={message.id} style={[styles.bubble, styles.bubbleRight, fromAi ? styles.bubbleAi : styles.bubbleOperator]}>
+      <View key={message.id} style={[styles.line, styles.lineRight]}>
+        <View style={[styles.bubble, fromAi ? styles.bubbleAi : styles.bubbleOperator]}>
+          <Text style={fromAi ? styles.bubbleBody : styles.bubbleBodyOnInk}>{body}</Text>
+        </View>
         <Text style={fromAi ? styles.bubbleCaption : styles.bubbleCaptionOperator}>{caption.join(' · ')}</Text>
-        <Text style={styles.bubbleBody}>{body}</Text>
       </View>
     );
   };
@@ -189,9 +235,47 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
     </>
   );
 
+  /*
+    BEKLEYEN TASLAK YUVASI (v3:2262) — cevap kutusunun hemen ÜSTÜ. Slotun iki hâli var ve ikisi
+    aynı yeri kaplar: taslak varsa kart, hibrit modda taslak yoksa "öner" düğmesi. Öteki modlarda
+    yuva hiç doğmaz — taslak yalnız hibritte üretilir (uç kuralı, `wrong_mode` reddi oradan gelir).
+  */
+  const draftSlot = conversation.aiDraftReply ? (
+    <View style={styles.draft} testID="management-social-draft">
+      <Text style={styles.draftEyebrow}>{td.draftEyebrow}</Text>
+      <Text style={styles.draftBody}>{conversation.aiDraftReply}</Text>
+      <PressableSurface
+        onPress={() => void takeDraft()}
+        disabled={chat.busy}
+        feedback="scale"
+        style={styles.draftButton}
+        accessibilityLabel={td.draftTake}
+        testID="management-social-draft-take"
+      >
+        <Text style={styles.draftButtonLabel}>{td.draftTake}</Text>
+      </PressableSurface>
+      {/* Kuralın kendisi yazılı: hibritte gönderen İNSANDIR. Kart bir onay kutusu olduğu için
+          cümle tam burada duruyor — kararın verildiği yerde. */}
+      <Text style={styles.draftNote}>{td.draftNote}</Text>
+    </View>
+  ) : conversation.handledBy === 'hybrid' ? (
+    <PressableSurface
+      onPress={() => void chat.suggestDraft()}
+      disabled={chat.busy}
+      feedback="opacity"
+      compact
+      style={styles.suggest}
+      accessibilityLabel={td.suggest}
+      testID="management-social-suggest"
+    >
+      <Text style={styles.suggestLabel}>{td.suggest}</Text>
+    </PressableSurface>
+  ) : null;
+
   /** Altta SABİT duran cevap çubuğu — kaydırılmaz, klavye açılınca onun üstünde kalır. */
   const composer = (
     <View style={styles.footer}>
+      {draftSlot}
       {chat.lastError === null ? null : (
         <Text style={styles.errorNote} testID="management-social-action-error">
           {failureText(chat.lastError)}
@@ -270,36 +354,6 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
         ) : null}
 
         {chat.messages.map(bubbleOf)}
-
-        {conversation.aiDraftReply ? (
-          <View style={[styles.bubble, styles.bubbleRight, styles.bubbleDraft]} testID="management-social-draft">
-            <Text style={styles.bubbleCaption}>{td.draftCaption}</Text>
-            <Text style={styles.bubbleBody}>{conversation.aiDraftReply}</Text>
-            <PressableSurface
-              onPress={() => void takeDraft()}
-              disabled={chat.busy}
-              feedback="scale"
-              compact
-              style={styles.draftChip}
-              accessibilityLabel={td.draftTake}
-              testID="management-social-draft-take"
-            >
-              <Text style={styles.draftChipLabel}>{td.draftTake}</Text>
-            </PressableSurface>
-          </View>
-        ) : conversation.handledBy === 'hybrid' ? (
-          <PressableSurface
-            onPress={() => void chat.suggestDraft()}
-            disabled={chat.busy}
-            feedback="opacity"
-            compact
-            style={styles.suggest}
-            accessibilityLabel={td.suggest}
-            testID="management-social-suggest"
-          >
-            <Text style={styles.suggestLabel}>{td.suggest}</Text>
-          </PressableSurface>
-        ) : null}
       </ChatLayout>
     </View>
   );
@@ -395,44 +449,46 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.olive,
   },
-  bubble: {
+  /** Mesaj SATIRI — baloncuk ve altındaki künye; hiza satırın kendisinde (v3:2246). */
+  line: {
     maxWidth: '86%',
     gap: operationsTheme.space['2xs'],
+  },
+  lineLeft: { alignSelf: 'flex-start', alignItems: 'flex-start' },
+  lineRight: { alignSelf: 'flex-end', alignItems: 'flex-end' },
+  bubble: {
     paddingVertical: operationsTheme.space.xl,
     paddingHorizontal: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.control,
   },
-  bubbleLeft: { alignSelf: 'flex-start' },
-  bubbleRight: { alignSelf: 'flex-end' },
+  /* KUYRUK KÖŞESİ (v3: 5px) — konuşanın tarafına bakan alt köşe sivrileşir, baloncuk ona
+     "yapışır". Ölçekte 5'lik bir yarıçap yok; `tight` (8) en yakın durak ve rol olarak da doğru:
+     küçük, kırpmayan bir kavis. */
   bubbleCustomer: {
-    backgroundColor: operationsTheme.colors.panel,
+    borderBottomLeftRadius: operationsTheme.radius.tight,
+    backgroundColor: operationsTheme.colors.card,
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-500'],
+    borderColor: operationsTheme.colors['sand-300'],
   },
+  /** BİZİM sözümüz koyu (v3:2249): kontrast "kim konuşuyor"u hizadan bağımsız söyler. */
   bubbleOperator: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderBottomRightRadius: operationsTheme.radius.tight,
+    backgroundColor: operationsTheme.colors.ink,
   },
-  /** AI'ın GÖNDERİLMİŞ mesajı — operatörden ayrı ton (varlık künyesi: ekran AI'ı ayrı gösterir), taslak DEĞİL: çerçeve düz. */
+  /** AI'ın GÖNDERİLMİŞ mesajı — operatörden ayrı ton (varlık künyesi: ekran AI'ı ayrı gösterir). */
   bubbleAi: {
+    borderBottomRightRadius: operationsTheme.radius.tight,
     backgroundColor: operationsTheme.colors['neutral-bg'],
-  },
-  /** Bekleyen taslak complaint'in kesikli dili: taslak olduğu şeklinden okunur. */
-  bubbleDraft: {
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-    borderWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderColor: operationsTheme.colors.muted,
-    gap: operationsTheme.space.sm,
   },
   bubbleCaption: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['sand-600'],
   },
   bubbleCaptionOperator: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors['olive-dark'],
+    color: operationsTheme.colors['sand-600'],
   },
   bubbleBody: {
     fontFamily: operationsTheme.font.body[400],
@@ -440,17 +496,50 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.ink,
   },
-  draftChip: {
-    alignSelf: 'flex-start',
-    paddingVertical: operationsTheme.space.md,
-    paddingHorizontal: operationsTheme.space.xl,
+  bubbleBodyOnInk: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.note,
+    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors['on-image'],
+  },
+
+  /* ── Bekleyen taslak kartı — çubuğun üstünde (v3:2262) ─────────────────── */
+  draft: {
+    gap: operationsTheme.space.md,
+    padding: operationsTheme.space['2xl'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['olive-line'],
+  },
+  draftEyebrow: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors['olive-dark'],
+  },
+  draftBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.note,
+    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.ink,
+  },
+  draftButton: {
+    alignItems: 'center',
+    paddingVertical: operationsTheme.space.xl,
     borderRadius: operationsTheme.radius.badge,
     backgroundColor: operationsTheme.colors.olive,
   },
-  draftChipLabel: {
+  draftButtonLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.micro,
+    fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.card,
+  },
+  draftNote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    lineHeight: operationsTheme.text.meta * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.body,
   },
   suggest: {
     alignSelf: 'flex-end',
@@ -460,11 +549,15 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.olive,
   },
+  /** Çubuk kendi ŞERİDİ (v3:2260): üstten çizgiyle ayrılır, zemini sayfanın kremi. */
   footer: {
     gap: operationsTheme.space.md,
     paddingHorizontal: operationsTheme.space['5xl'],
-    paddingTop: operationsTheme.space.lg,
+    paddingTop: operationsTheme.space.xl,
     paddingBottom: operationsTheme.space['3xl'],
+    backgroundColor: operationsTheme.colors.cream,
+    borderTopWidth: operationsTheme.border.base,
+    borderTopColor: operationsTheme.colors['neutral-bg'],
   },
   errorNote: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

@@ -128,20 +128,22 @@ beforeEach(() => {
 });
 
 describe('yönetim hub — karar kutusu', () => {
-  it('beş karar alanı da doluysa beş satır çizilir; "top bizde" rozeti başlıktan gelir', async () => {
+  it('dört karar kartı da çizilir; başlık kaç karar beklediğini söyler (v3)', async () => {
     routeHub(() => ok(hubData()));
 
     await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
 
-    for (const key of ['complaint', 'exception', 'offer', 'supply', 'intent']) {
+    // v3'ün üç ağırlığı: koyu (şikâyet) · çerçeveli (eksik kalem) · sessiz iki satır kartı.
+    for (const key of ['complaint', 'exception', 'offer', 'supply']) {
       expect(screen.getByTestId(`management-decision-${key}`)).toBeOnTheScreen();
     }
-    expect(screen.getByText(t.common.ourTurn)).toBeOnTheScreen();
-    // Özet kartı zarfın sayılarını okur — 12 sipariş · 5 hazırlanıyor · 4 tahsilat bekliyor.
-    expect(screen.getByText('12 sipariş · 5 hazırlanıyor · 4 tahsilat bekliyor')).toBeOnTheScreen();
+    // Bağlam satırı çizilen KART SAYISINI söyler — "2 tanesi gün içinde" yarısı sözleşmede yok.
+    expect(screen.getByText(t.hub.context.replace('{n}', '4'))).toBeOnTheScreen();
+    // Koyu kartın başlığı müşteri adı + sipariş referansı; şikâyetin metni sözleşmede yok.
+    expect(screen.getByText('Claire Muller · LA-26-TEST01')).toBeOnTheScreen();
   });
 
-  it('SIFIR sayılı alan HİÇ çizilmez — ölü satır yok', async () => {
+  it('SIFIR sayılı alan HİÇ çizilmez — ölü kart yok', async () => {
     routeHub(() =>
       ok(
         hubData({
@@ -158,24 +160,36 @@ describe('yönetim hub — karar kutusu', () => {
     await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
 
     expect(screen.getByTestId('management-decision-complaint')).toBeOnTheScreen();
-    for (const key of ['exception', 'offer', 'supply', 'intent']) {
+    for (const key of ['exception', 'offer', 'supply']) {
       expect(screen.queryByTestId(`management-decision-${key}`)).toBeNull();
     }
   });
 
-  it('şikâyet satırı başı KİMLİĞİYLE açar; niyet satırı SOSYAL kutuya gider (Y6 kararı)', async () => {
+  it('günün nabzı iki sayıyı da uçtan okur — sosyal kutu ve gün özeti kapıları', async () => {
+    routeHub(() => ok(hubData()));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    // Sosyal kutucuğun büyük sayısı cevap bekleyen konuşma sayısıdır (kuyruğun `intents`i).
+    expect(screen.getByTestId('management-pulse-social-value')).toHaveTextContent('2');
+    // Gün özeti kutucuğu ciroyu yazar; alt satırı sipariş sayısını.
+    expect(screen.getByTestId('management-pulse-summary-value')).toHaveTextContent('1.412,60 €');
+    expect(screen.getByText(t.hub.tiles.summary.subtitle.replace('{orders}', '12'))).toBeOnTheScreen();
+  });
+
+  it('şikâyet kartı başı KİMLİĞİYLE açar; sosyal kutucuk gelen kutusuna gider (Y6 kararı)', async () => {
     routeHub(() => ok(hubData()));
 
     await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
 
     await fireEvent.press(screen.getByTestId('management-decision-complaint'));
-    // Kutunun gösterdiği satır ile açılan talep AYNI olmalı — adres kimlik taşır.
+    // Kutunun gösterdiği kart ile açılan talep AYNI olmalı — adres kimlik taşır.
     expect(mockNavigate).toHaveBeenCalledWith({
       pathname: '/complaint',
       params: { id: '00000000-0000-4000-8000-000000000001' },
     });
 
-    await fireEvent.press(screen.getByTestId('management-decision-intent'));
+    await fireEvent.press(screen.getByTestId('management-pulse-social'));
     // Ayrı niyet ekranı YOK (bilinçli sapma): gerçek sosyal gelen kutusu açılır.
     expect(mockNavigate).toHaveBeenCalledWith('/social');
   });
@@ -193,6 +207,19 @@ describe('yönetim hub — karar kutusu', () => {
     await fireEvent.press(screen.getByTestId('management-hub-error-retry'));
     await waitFor(() => expect(screen.getByTestId('management-decision-complaint')).toBeOnTheScreen());
     expect(hubCalls).toBe(2);
+  });
+
+  it('kuyruk okunamasa da nabız KAPILARI durur; sayılar "—" yazar, 0 değil', async () => {
+    // Okuma düştüğünde sosyal kutu ve gün özeti hâlâ açılabilmeli — ikisi de kendi ucunu okuyor.
+    // Sayıyı 0 göstermek "bugün iş yok" demek olurdu (CLAUDE §1: ölçülemeyen değer sıfır değildir).
+    routeHub(() => fail('boom'));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByTestId('management-hub-error')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-pulse-social')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-pulse-social-value')).toHaveTextContent(t.hub.unknown);
+    expect(screen.getByTestId('management-pulse-summary-value')).toHaveTextContent(t.hub.unknown);
   });
 });
 

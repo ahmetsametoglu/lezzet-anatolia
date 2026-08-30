@@ -45,6 +45,7 @@ export {
   operationsAppOverrides,
   operationsAppSurface,
   operationsAppInk,
+  operationsAppLine,
   operationsAppColors,
   operationsAppText,
   operationsAppRadius,

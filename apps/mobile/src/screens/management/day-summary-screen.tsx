@@ -5,35 +5,60 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { money } from '@/lib/operations/money';
+import { dateLabelOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
-import type { ManagementSummary } from '@lezzet/types';
+import type { ManagementHub, ManagementSummary } from '@lezzet/types';
 import { managementCopy } from './copy';
 import { useManagementHub } from './use-management-hub.hook';
 
 /*
-  Y5 · GÜN ÖZETİ (v2:664-696) — yönetimin TEK salt-okunur ekranı: günün fotoğrafı.
+  Y5 · GÜN ÖZETİ (Operasyon Mobil v3:29) — yönetimin TEK salt-okunur ekranı: günün fotoğrafı.
 
   Hiçbir eylem YOK ve bu tasarımın kararı ("salt okuma · günün fotoğrafı"). Ekran bir karar
   vermiyor, kararların ZEMİNİNİ gösteriyor; bir düğme eklemek burada olmayan bir yetki vaat ederdi.
 
-  ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
-  Hub ile AYNI zarf (`/management/hub`) okunur — "kutu 3 diyor, özet 2" çelişkisi motor düzeyinde
-  imkânsız. Kanal kırılımı sipariş sayacının eksenindedir: gün = TESLİM günü (`order_counts`).
+  ── v3 DÜZ LİSTEYİ ÜÇ KATMANA ÇEVİRDİ (30.08) ───────────────────────────────
+  v2 her şeyi eşit ağırlıkta üstbaşlıklı bloklara diziyordu. v3 aynı sayıları ÖNEME göre ayırdı:
+    1. KOYU CİRO KARTI — günün tek cümlelik cevabı: ne kadar ciro, kaç sipariş, hangi kanaldan.
+    2. KUTUCUK IZGARASI — iki sütun; her kutucuk tek bir sayı ve onun adı.
+    3. İÇGÖRÜ KUTUSU — nötr zeminli, cümleyle konuşan blok.
+  Depo hub'ının koyu özet kartıyla aynı dil (`warehouse-hub-screen`); ton token'ları da oradan
+  ("koyu üstü" ailesi — `on-ink-*`), yeniden ölçülmedi.
+
+  ── AYNI ZARF, İKİ KATMAN ───────────────────────────────────────────────────
+  Hub ile AYNI okuma (`/management/hub`) — "kutu 3 diyor, özet 2" çelişkisi motor düzeyinde
+  imkânsız. Izgaranın "yakın-SKT aday parti" kutucuğu da o zarfın KARAR KUTUSU tarafından gelir
+  (`queue.offers.candidateCount`): ekran yeni bir uç istemiyor, zaten okuduğu zarfın öteki yarısını
+  okuyor. Kanal kırılımı sipariş sayacının eksenindedir: gün = TESLİM günü (`order_counts`).
+
+  ── TASARIMIN İSTEYİP SÖZLEŞMEDE OLMAYANLARI: UYDURULMADI ───────────────────
+  v3'ün koyu kartı ciroyu B2B/B2C diye ayırıyor, ızgarası da "zamanında teslim" (9/11) ve
+  "imha + iade" (148,00 €) kutucukları çiziyor. Üçünün de ölçümü sözleşmede YOK: `channels`
+  müşteri segmentini değil SİPARİŞ KAYNAĞINI taşır (web/kapı/WhatsApp), zamanında teslim oranı ve
+  imha/iade tutarı ise hiç sorulmuyor. Tasarımın YERLEŞİMİ birebir uygulandı, kutucukların içi
+  ölçülmüş veriyle dolduruldu — uydurma bir oran, yönetime olmayan bir gerçeği rapor ederdi.
+
+  ── "YARIN" ŞERİDİ KALDI (v3'ten bilinçli sapma) ────────────────────────────
+  v3 yarın satırını çizmiyor. Veri GERÇEK ve tüketicisi var (yöneticinin ilk sorusu "yarın ne
+  var"); v3'ün onu kaldırması bir ölçüm kararı değil, yeni yerleşimin dışında kalmasıdır. Aynı
+  kutucuk dilinde, tam genişlikte bir kart olarak duruyor — bilgi yerini korudu, dili değişti.
 
   ── ÖLÇÜLEMEYEN DEĞER SIFIR DEĞİLDİR ────────────────────────────────────────
-  Kanal cirosu `null` gelirse ekran "— bilinmiyor (sıfır değil)" yazar (v2:673 birebir). YZ
-  içgörüsü de aynı disiplinde: motoru (modül 20/22) bağlanana dek uç BOŞ dizi döner ve blok bunu
-  dürüstçe söyler — uydurma içgörü, yerel veriden iş çıkarımı olurdu (CLAUDE §0).
+  Kanal cirosu `null` gelirse hücre "— bilinmiyor (sıfır değil)" yazar. YZ içgörüsü de aynı
+  disiplinde: motoru (modül 20/22) bağlanana dek uç BOŞ dizi döner ve blok bunu dürüstçe söyler.
 
-  ── "ROTAYA ATANMAMIŞ" CÜMLEDEN ÇIKTI ───────────────────────────────────────
-  v2 yarın satırında "atanmamış" sayıyordu; sefer SABAH kurulur (`delivery_run.start`), bugünden
-  o sayıyı üretecek bir ölçüm yok. Ölçülemeyeni yazmamak, sıfır ya da uydurma yazmaktan iyidir.
+  ── KÜNYE SATIRI GÜNÜN ADI, DEPONUN ADI DEĞİL ───────────────────────────────
+  v3 "28 Ağustos · Strasbourg Merkez" diyor. Gün özetin kendi alanından (`summary.date`) gelir;
+  deponun adını verecek bir kapı YOK (aynı boşluk depo hub'ında da yazılı: `/me` `warehouseIds`
+  taşımıyor). Uydurma bir şehir adı, yöneticiye yanlış tesisin ekranındaymış gibi bir güvence
+  verirdi; künye günle yetinir.
 */
 
 const t = managementCopy;
 
-/** İçgörünün noktası — iyi (zeytin) · izle (terracotta) · kötü (kırmızı); v2:686-688. */
+/** İçgörünün noktası — iyi (zeytin) · izle (terracotta) · kötü (kırmızı). */
 const INSIGHT_COLOR = {
   good: operationsTheme.colors.olive,
   watch: operationsTheme.colors.terracotta,
@@ -51,11 +76,16 @@ export function DaySummaryScreen() {
   const router = useRouter();
   const { state, retry } = useManagementHub();
 
+  /* Künye GÜN adıdır; gün okunamadıysa (bozuk biçim) ekranın kendi cümlesine düşer — başlık
+     altında boş bir satır bırakmak, künyeyi hiç yazmamaktan daha çok soru doğururdu. */
+  const caption =
+    state.status === 'ready' ? (dateLabelOf(state.hub.summary.date) ?? t.summary.caption) : t.summary.caption;
+
   return (
     <View style={styles.screen} testID="management-day-summary">
       <OperationsStackHeader
         title={t.summary.title}
-        subtitle={t.summary.caption}
+        subtitle={caption}
         onBack={() => router.back()}
         backLabel={t.common.back}
         testID="management-day-summary-header"
@@ -76,58 +106,88 @@ export function DaySummaryScreen() {
           />
         </View>
       ) : (
-        <SummaryBody summary={state.hub.summary} />
+        <SummaryBody hub={state.hub} />
       )}
     </View>
   );
 }
 
-interface SummaryBodyProps {
-  summary: ManagementSummary;
+interface SummaryTileProps {
+  value: string;
+  caption: string;
+  /** İzlenmesi gereken sayı terracotta okunur — hata DEĞİL, takip gerektiren bir iş. */
+  watch?: boolean;
+  testID: string;
 }
 
-function SummaryBody({ summary }: SummaryBodyProps) {
+function SummaryTile({ value, caption, watch = false, testID }: SummaryTileProps) {
+  return (
+    <View style={styles.tile} testID={testID}>
+      <Text style={[styles.tileValue, watch ? styles.tileValueWatch : undefined]}>{value}</Text>
+      <Text style={styles.tileCaption}>{caption}</Text>
+    </View>
+  );
+}
+
+interface SummaryBodyProps {
+  hub: ManagementHub;
+}
+
+function SummaryBody({ hub }: SummaryBodyProps) {
+  const { summary, queue } = hub;
+
   return (
     <ScrollView contentContainerStyle={styles.body} testID="management-day-summary-body">
-      <Text style={styles.headline}>
-        {fillCopy(t.summary.headline, {
-          orders: String(summary.orderCount),
-          preparing: String(summary.preparingCount),
-          awaiting: String(summary.pendingPayment.count),
-        })}
-      </Text>
-
-      <View style={styles.block}>
-        <Text style={styles.eyebrow}>{t.summary.channels.eyebrow}</Text>
-        {summary.channels.map((channel) => (
-          <View key={channel.source} style={styles.dashedRow} testID={`management-channel-${channel.source}`}>
-            <Text style={styles.rowLabel}>{CHANNEL_LABEL[channel.source] ?? channel.source}</Text>
-            <Text style={channel.cents === null ? styles.rowValueUnknown : styles.rowValue}>
-              {channel.cents === null ? t.summary.channels.unknown : money(channel.cents)}
-            </Text>
+      <View style={styles.revenue} testID="management-summary-revenue">
+        <View style={styles.revenueHead}>
+          <View style={styles.revenueHeadText}>
+            <Text style={styles.revenueEyebrow}>{t.summary.revenue.eyebrow}</Text>
+            <Text style={styles.revenueValue}>{money(summary.revenueCents)}</Text>
           </View>
-        ))}
-      </View>
-
-      <View style={styles.cards}>
-        <View style={styles.card} testID="management-summary-door-pending">
-          <Text style={styles.cardLabel}>{t.summary.doorPending.label}</Text>
-          <Text style={styles.cardValue}>
-            {fillCopy(t.summary.doorPending.value, {
-              n: String(summary.pendingPayment.count),
-              amount: money(summary.pendingPayment.cents),
-            })}
-          </Text>
+          <Text style={styles.revenueBadge}>{fillCopy(t.summary.revenue.orders, { n: String(summary.orderCount) })}</Text>
         </View>
-        <View style={styles.card} testID="management-summary-complaints">
-          <Text style={styles.cardLabel}>{t.summary.openComplaints}</Text>
-          <Text style={styles.cardValue}>{String(summary.openComplaintCount)}</Text>
+
+        <View style={styles.channelGrid}>
+          {summary.channels.map((channel) => (
+            <View key={channel.source} style={styles.channelCell} testID={`management-channel-${channel.source}`}>
+              <Text style={channel.cents === null ? styles.channelValueUnknown : styles.channelValue}>
+                {channel.cents === null ? t.summary.channels.unknown : money(channel.cents)}
+              </Text>
+              <Text style={styles.channelLabel}>{CHANNEL_LABEL[channel.source] ?? channel.source}</Text>
+            </View>
+          ))}
         </View>
       </View>
 
-      <View style={styles.block}>
-        <Text style={styles.eyebrow}>{t.summary.tomorrow.eyebrow}</Text>
-        <Text style={styles.tomorrow}>
+      <View style={styles.tiles}>
+        {/* Kesir v3'ün ilk kutucuğunun biçimi ("9/11"); ölçtüğü şey ise elimizdeki gerçek oran:
+            günün siparişlerinin kaçı şu an hazırlıkta. */}
+        <SummaryTile
+          value={`${summary.preparingCount}/${summary.orderCount}`}
+          caption={t.summary.tiles.preparing}
+          testID="management-summary-preparing"
+        />
+        <SummaryTile
+          value={money(summary.pendingPayment.cents)}
+          caption={fillCopy(t.summary.tiles.pendingPayment, { n: String(summary.pendingPayment.count) })}
+          watch
+          testID="management-summary-door-pending"
+        />
+        <SummaryTile
+          value={String(queue.offers.candidateCount)}
+          caption={t.summary.tiles.offerCandidates}
+          testID="management-summary-offer-candidates"
+        />
+        <SummaryTile
+          value={String(summary.openComplaintCount)}
+          caption={t.summary.tiles.complaints}
+          testID="management-summary-complaints"
+        />
+      </View>
+
+      <View style={styles.tomorrow} testID="management-summary-tomorrow">
+        <Text style={styles.tomorrowEyebrow}>{t.summary.tomorrow.eyebrow}</Text>
+        <Text style={styles.tomorrowLine}>
           {fillCopy(t.summary.tomorrow.line, {
             orders: String(summary.tomorrow.orderCount),
             ready: String(summary.tomorrow.readyCount),
@@ -137,7 +197,6 @@ function SummaryBody({ summary }: SummaryBodyProps) {
       </View>
 
       <View style={styles.insights}>
-        <Text style={styles.eyebrow}>{t.summary.insights.eyebrow}</Text>
         {summary.insights.length === 0 ? (
           <Text style={styles.insightEmpty} testID="management-insights-empty">
             {t.summary.insights.empty}
@@ -150,10 +209,6 @@ function SummaryBody({ summary }: SummaryBodyProps) {
             </View>
           ))
         )}
-      </View>
-
-      <View style={styles.stockRisk}>
-        <Text style={styles.stockRiskText}>{t.summary.stockRisk}</Text>
       </View>
     </ScrollView>
   );
@@ -173,82 +228,146 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
   },
   body: {
-    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingHorizontal: operationsTheme.space['5xl'],
     paddingBottom: operationsTheme.space['8xl'],
-    gap: operationsTheme.space['2xl'],
+    gap: operationsTheme.space.xl,
   },
-  headline: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.body,
-    lineHeight: operationsTheme.text.body * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.ink,
+
+  /* ── Koyu ciro kartı (v3:29) ──────────────────────────────────────────────
+     Depo hub'ının özet kartıyla aynı yapı ve aynı ton ailesi; ikinci bir "koyu kart" dili
+     kurulmadı. */
+  revenue: {
+    backgroundColor: operationsTheme.colors.ink,
+    borderRadius: operationsTheme.radius.pill,
+    padding: operationsTheme.space['4xl'],
+    gap: operationsTheme.space.xl,
   },
-  block: {
-    gap: operationsTheme.space['2xs'],
-  },
-  eyebrow: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.eyebrow,
-    color: operationsTheme.colors.muted,
-  },
-  dashedRow: {
+  revenueHead: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: operationsTheme.space.lg,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
-  },
-  rowLabel: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.note,
-    color: operationsTheme.colors.ink,
-  },
-  rowValue: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.ink,
-  },
-  /** Bilinmeyen değer SESSİZ durur: kırmızı olsaydı bir arıza gibi okunurdu, gri "veri yok" der. */
-  rowValueUnknown: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.muted,
-  },
-  cards: {
-    flexDirection: 'row',
     gap: operationsTheme.space.lg,
   },
-  card: {
-    flex: 1,
+  revenueHeadText: {
+    flexShrink: 1,
     gap: operationsTheme.space['2xs'],
-    paddingVertical: operationsTheme.space.xl,
-    paddingHorizontal: operationsTheme.space['2xl'],
-    backgroundColor: operationsTheme.colors.panel,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-500'],
-    borderRadius: operationsTheme.radius.control,
   },
-  cardLabel: {
+  revenueEyebrow: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
-    color: operationsTheme.colors.muted,
+    // Harf aralığı token `em` taşır, RN mutlak dp ister — çeviri `parse.ts`te, tek yerde.
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors['on-ink-label'],
   },
-  cardValue: {
-    // v2: `800 16px` — Karla'nın 800'ü yüklenmiyor; en yakın gerçek kesit 700 (`fonts.ts`).
-    fontFamily: operationsTheme.font.body[700],
-    fontSize: operationsTheme.text.step,
+  revenueValue: {
+    fontFamily: operationsTheme.font.display[operationsTheme.text['h1-sm--font-weight']],
+    fontSize: operationsTheme.text['h1-sm'],
+    color: operationsTheme.colors['on-image'],
+  },
+  /** Sayaç rozeti koyu kartın İÇİNDEKİ açık blok — zemini `ink-inset` (o rolün token'ı). */
+  revenueBadge: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['on-ink-label'],
+    backgroundColor: operationsTheme.colors['ink-inset'],
+    borderRadius: operationsTheme.radius.badge,
+    paddingVertical: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space.xl,
+    overflow: 'hidden',
+  },
+  channelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: operationsTheme.space.lg,
+    paddingTop: operationsTheme.space.xl,
+    borderTopWidth: operationsTheme.border.hairline,
+    borderTopColor: operationsTheme.colors['on-ink-line'],
+  },
+  /* İki sütun: `flexBasis` yarıdan küçük seçilir ki üçüncü hücre alta insin, `flexGrow` da satırda
+     kalan boşluğu paylaştırsın — sabit yüzde, kanal sayısı değişince satırı kırardı. */
+  channelCell: {
+    flexBasis: '40%',
+    flexGrow: 1,
+    gap: operationsTheme.space['2xs'],
+  },
+  channelValue: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors['on-image'],
+  },
+  /** Bilinmeyen değer SESSİZ ve bir kademe küçük durur: cümledir, tutar değil. */
+  channelValueUnknown: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors['on-ink-muted'],
+  },
+  channelLabel: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors['on-ink-muted'],
+  },
+
+  /* ── Kutucuk ızgarası ─────────────────────────────────────────────────────── */
+  tiles: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: operationsTheme.space.lg,
+  },
+  tile: {
+    flexBasis: '40%',
+    flexGrow: 1,
+    gap: operationsTheme.space.xs,
+    padding: operationsTheme.space['2xl'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+  },
+  tileValue: {
+    fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
+    fontSize: operationsTheme.text['h2-sm'],
     color: operationsTheme.colors.ink,
   },
-  tomorrow: {
+  tileValueWatch: {
+    color: operationsTheme.colors.terracotta,
+  },
+  tileCaption: {
     fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
+
+  /* ── Yarın şeridi — kutucukla aynı kart, tam genişlikte ───────────────────── */
+  tomorrow: {
+    gap: operationsTheme.space.xs,
+    padding: operationsTheme.space['2xl'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+  },
+  tomorrowEyebrow: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.muted,
+  },
+  tomorrowLine: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
     lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.ink,
   },
+
+  /* ── İçgörü kutusu — nötr zemin, cümleyle konuşan blok (v3:29) ────────────── */
   insights: {
     gap: operationsTheme.space.sm,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderRadius: operationsTheme.radius.control,
   },
   insightRow: {
     flexDirection: 'row',
@@ -259,33 +378,21 @@ const styles = StyleSheet.create({
     width: operationsTheme.space.lg,
     height: operationsTheme.space.lg,
     borderRadius: operationsTheme.radius.pill,
-    // Nokta ilk satırın ortasına denk gelsin (v2: `margin-top:5px`).
+    // Nokta ilk satırın ortasına denk gelsin.
     marginTop: operationsTheme.space.sm,
   },
   insightText: {
     flex: 1,
     fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text['field-label'],
-    lineHeight: operationsTheme.text['field-label'] * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.ink,
-  },
-  /** Henüz gelmemiş blok, gizlenmiyor — "ısınıyor" da bir bilgidir (v2:692). */
-  stockRisk: {
-    paddingVertical: operationsTheme.space.xl,
-    paddingHorizontal: operationsTheme.space['2xl'],
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-    borderRadius: operationsTheme.radius.control,
-  },
-  stockRiskText: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.body,
   },
   /** İçgörü yokken blok susmaz, yokluğunu SÖYLER. */
   insightEmpty: {
     fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text['field-label'],
-    lineHeight: operationsTheme.text['field-label'] * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.muted,
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.body,
   },
 });

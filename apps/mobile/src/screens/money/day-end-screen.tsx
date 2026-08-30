@@ -95,7 +95,12 @@ function DayEndBody({ summary }: DayEndBodyProps) {
         </View>
         <View style={styles.dashedRow} testID="money-day-end-refunds">
           <Text style={styles.rowLabel}>{t.dayEnd.refunds}</Text>
-          <Text style={styles.rowRefund}>{signedMoney(summary.refundCents)}</Text>
+          {/* SIFIR İADE KIRMIZI DEĞİLDİR (cihazda görüldü 30.08): "0,00 €" kırmızı yazılınca satır
+              bir uyarı gibi okunuyordu — oysa iadesiz gün iyi bir gündür. Renk ancak gerçekten
+              para geri gittiyse uyarır. */}
+          <Text style={summary.refundCents === 0 ? styles.rowValue : styles.rowRefund}>
+            {signedMoney(summary.refundCents)}
+          </Text>
         </View>
         <View style={styles.dashedRow} testID="money-day-end-handover">
           <Text style={styles.rowLabel}>{t.dayEnd.courierHandover}</Text>
@@ -121,6 +126,10 @@ function DayEndBody({ summary }: DayEndBodyProps) {
             <Text style={styles.discrepancyValue}>{signedMoney(differenceCents)}</Text>
           </>
         )}
+        {/* ÖLÇÜM CÜMLESİ ARTIK YALNIZ İKİ SAYI. "Eksi = eksik" açıklaması ve "düzeltme masaüstünde"
+            buradan ÇIKARILDI (cihazda görüldü 30.08): yön zaten başlıkta yazılı ve fark ARTI
+            çıktığında "Eksi = eksik" cümlesi ekranda duran sayıyla çelişiyordu; çözüm satırı da
+            hemen altta bir kez daha söyleniyordu. */}
         <Text style={styles.discrepancyBody}>
           {discrepancy === null
             ? t.dayEnd.discrepancy.noRun

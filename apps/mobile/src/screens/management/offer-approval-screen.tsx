@@ -1,3 +1,4 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -14,22 +15,46 @@ import { managementCopy } from './copy';
 import { useOfferApproval } from './use-offer-approval.hook';
 
 /*
-  Y3 · YAKIN-SKT KAMPANYA ONAYI (v2:612-633) — aday partiler burada teklife dönüşür.
+  Y3 · YAKIN-SKT TEKLİFİ (Operasyon Mobil v3:30) — aday partiler burada teklife dönüşür.
 
-  ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
-  Aday listesi raf ömrü MOTORUNDAN gelir (`can_offer` — hub'ın saydığı kümenin ta kendisi), onay
-  teklif yazma ucuna gider ve DLC kapısı SUNUCUDADIR: web'in `setOfferPriceAction`ı ile aynı motor
-  (`openBatchOffer` terfisi). Akıbet satır satır döner — açılamayan parti listede İŞARETLİ kalır,
-  "bir şeyler ters gitti"ye indirgenmez.
+  ── v3 SATIRI KARTA ÇEVİRDİ, EKRANI DEĞİL ───────────────────────────────────
+  v3 bu ekranı TEK partinin künye kartı gibi çiziyor: dört ölçüm alt alta (kalan adet · kalan ömür ·
+  liste fiyatı · önerilen), altında iki karar düğmesi. Kart dili birebir uygulandı; ama ekran TEKİL
+  hâle GETİRİLMEDİ ve bu ölçülmüş bir karar: uç bir LİSTE döndürüyor (`/management/offers` →
+  `candidates[]`) ve hub da "N aday parti" diyerek buraya gönderiyor. Tek partiye indirseydik, N
+  parti için N kez aynı yolculuk gerekirdi — teklif kararı günde bir kez ve TOPLU verilen bir
+  karardır. Yani her aday kendi kartını alır, kararlar tek turda toplanır ve tek onayla yazılır.
 
-  ── İKİ DÜZENLEME, İKİSİ DE GERİ ALINABİLİR ─────────────────────────────────
-  · Satır listeden çıkarılır (✕) ve geri alınır (+). Çıkarılan parti SİLİNMEZ — aday listesinde
-    kalır, yarınki turda yeniden önerilir. Satır kaybolmaz, solar ve üstü çizilir.
-  · Fiyat düzeltilir. Motorun önerisi alt satırda AYNEN durur — operatör neyi değiştirdiğini görür.
+  ── SÖZLEŞMEDE OLMAYAN İKİ ŞEY YAZILMADI ────────────────────────────────────
+  · **"%18 kalan ömür"**: v3 kalan günün yanına raf ömrünün yüzdesini koyuyor. Oranı hesaplamak için
+    partinin ÜRETİM tarihi (ya da toplam raf ömrü) gerekir; `OfferCandidate` yalnız `daysLeft`
+    taşıyor. Yüzde uydurmak, operatöre ölçülmemiş bir kesinlik satmaktı — kalan gün yazılıyor.
+  · **Üç oranlı indirim çipi (%20/%30/%40)**: sözleşmede TEK oran var (`offerDiscountPercent`, ayardan
+    türeyen motor önerisi). Öteki iki çipin değerleri uydurma olurdu ve ayar değişince yalan
+    söylerlerdi. Yerinde v2'den beri çalışan şey duruyor: öneri fiyatı alana DOLU gelir, operatör
+    isterse üstüne yazar — fiyat zaten sözleşmenin son sözü (`offerPriceCents`).
+
+  ── İKİ KARAR, İKİSİ DE GERİ ALINABİLİR ─────────────────────────────────────
+  · "Teklif verme — imhaya bırak" (v3'ün ikinci düğmesi) partiyi bu turun DIŞINA çıkarır; kart
+    solar, üstü çizilir ama SİLİNMEZ — aday listesinde kalır, yarınki turda yeniden önerilir.
+    Sunucuya bir şey gitmez: "bugün teklif vermedim" bir yazma değil, bir yazmamadır.
+  · Fiyat düzeltilir; motorun önerdiği oran etiketin içinde AYNEN durur — operatör neyi
+    değiştirdiğini görür.
 
   ── BOŞ GİRDİ SIFIR DEĞİLDİR ────────────────────────────────────────────────
   Boş/bozuk fiyat `null` ayrıştırılır (CLAUDE §1) ve satır GÖNDERİLMEZ; CTA onu saymaz. Sıfıra
   düşürmek, bedava satılan bir parti demekti.
+
+  ── AKIBET SATIR SATIR ──────────────────────────────────────────────────────
+  DLC kapısı SUNUCUDADIR (web'in `setOfferPriceAction`ı ile aynı motor). Açılamayan parti kartında
+  İŞARETLİ kalır, "bir şeyler ters gitti"ye indirgenmez.
+
+  ── İKİNCİL DÜĞMENİN ÇERÇEVESİ `error-line` ─────────────────────────────────
+  v3 "imhaya bırak" düğmesini AÇIK kırmızı bir çerçeveyle çiziyor; dolu `error` tonu çerçevede bir
+  kademe yüksek sesli kalıyor ve ikincil düğme birincilden daha çok bağırıyordu. Token seti bu
+  durağı zaten taşıyor (`error-line`, kırmızı ailenin `olive-line` karşılığı) — yeni durak
+  açılmadı, var olan kullanıldı. YAZI rengi `error` kalır: okunması gereken şey çerçeve değil,
+  cümlenin kendisi.
 */
 
 const t = managementCopy;
@@ -76,7 +101,7 @@ export function OfferApprovalScreen() {
         <>
           <FormScroll contentContainerStyle={styles.body} testID="management-offer-approval-body">
             {state.candidates.map((candidate) => (
-              <CandidateRow key={candidate.stockId} candidate={candidate} approval={approval} />
+              <CandidateCard key={candidate.stockId} candidate={candidate} approval={approval} />
             ))}
             {approval.lastOpenedCount !== null && Object.keys(approval.failures).length > 0 ? (
               <Text style={styles.partialNote} testID="management-offer-partial">
@@ -86,10 +111,13 @@ export function OfferApprovalScreen() {
                 })}
               </Text>
             ) : null}
+            {/* v3'ün dipnotu (teklifin ömrü) + v2'den kalan "çıkarılan parti kaybolmaz" sözü:
+                ikisi de operatörün "bu düğmeye basarsam ne olur" sorusunun parçası. */}
+            <Text style={styles.footnote}>{t.offer.publishNote}</Text>
             <Text style={styles.footnote}>{t.offer.footnote}</Text>
           </FormScroll>
 
-          <View style={styles.footer}>
+          <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
             <PressableSurface
               onPress={approval.submit}
               disabled={approval.sending || approval.openableCount === 0}
@@ -100,7 +128,7 @@ export function OfferApprovalScreen() {
             >
               <Text style={styles.ctaLabel}>{ctaLabel(approval.sending, approval.openableCount)}</Text>
             </PressableSurface>
-          </View>
+          </LinearGradient>
         </>
       )}
     </View>
@@ -113,56 +141,98 @@ function ctaLabel(sending: boolean, openableCount: number): string {
   return fillCopy(t.offer.cta, { n: String(openableCount) });
 }
 
-interface CandidateRowProps {
+interface DetailRowProps {
+  label: string;
+  value: string;
+  /** Terracotta okunan değer — "izle" demektir; kırmızı bir HATA iddiası olurdu. */
+  watch?: boolean;
+}
+
+function DetailRow({ label, value, watch = false }: DetailRowProps) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={[styles.detailValue, watch ? styles.detailValueWatch : undefined]}>{value}</Text>
+    </View>
+  );
+}
+
+interface CandidateCardProps {
   candidate: OfferCandidate;
   approval: ReturnType<typeof useOfferApproval>;
 }
 
-function CandidateRow({ candidate, approval }: CandidateRowProps) {
+function CandidateCard({ candidate, approval }: CandidateCardProps) {
   const isRemoved = approval.removed[candidate.stockId] === true;
   const failure = approval.failures[candidate.stockId];
 
+  /* Kalan gün NEGATİF olabilir (motor "satılabilir pencerede" diyebilir ama tarih geçmiştir);
+     "-2 gün" diye yazmak yerine hâli söylenir. */
+  const lifeValue =
+    candidate.daysLeft < 0
+      ? t.offer.rows.lifeValuePast
+      : fillCopy(t.offer.rows.lifeValue, { days: String(candidate.daysLeft) });
+
   return (
-    <View style={[styles.row, isRemoved ? styles.rowRemoved : undefined]} testID={`management-offer-${candidate.stockId}`}>
-      <View style={styles.rowText}>
-        <Text style={[styles.rowTitle, isRemoved ? styles.rowTitleRemoved : undefined]}>{candidate.title}</Text>
-        <Text style={styles.rowMeta}>
-          {fillCopy(t.offer.row, {
+    <View
+      style={[styles.card, isRemoved ? styles.cardRemoved : undefined]}
+      testID={`management-offer-${candidate.stockId}`}
+    >
+      <View style={styles.cardHead}>
+        <Text style={[styles.cardTitle, isRemoved ? styles.cardTitleRemoved : undefined]}>{candidate.title}</Text>
+        <Text style={styles.cardMeta}>
+          {fillCopy(t.offer.meta, {
             batch: candidate.lotNumber ?? t.offer.noLot,
-            qty: String(candidate.qty),
-            days: String(candidate.daysLeft),
-            suggested: candidate.suggestedCents === null ? t.offer.noSuggestion : money(candidate.suggestedCents),
             warehouse:
               candidate.warehouse === null ? '' : fillCopy(t.offer.warehousePart, { code: candidate.warehouse.code }),
           })}
         </Text>
-        {failure === undefined ? null : (
-          <Text style={styles.rowFailure} testID={`management-offer-failed-${candidate.stockId}`}>
-            {t.offer.failed[failure === 'must_discard' ? 'must_discard' : 'not_found']}
-          </Text>
+      </View>
+
+      <DetailRow label={t.offer.rows.qty} value={String(candidate.qty)} />
+      <DetailRow label={t.offer.rows.life} value={lifeValue} watch />
+      <DetailRow
+        label={t.offer.rows.listPrice}
+        value={candidate.listPriceCents === null ? t.offer.noSuggestion : money(candidate.listPriceCents)}
+      />
+
+      <View style={styles.divider} />
+
+      <View style={styles.detailRow}>
+        <Text style={styles.suggestLabel}>
+          {fillCopy(t.offer.rows.suggested, { percent: String(candidate.offerDiscountPercent) })}
+        </Text>
+        {isRemoved ? null : (
+          <View style={styles.priceField}>
+            <TextInput
+              value={approval.prices[candidate.stockId] ?? ''}
+              onChangeText={(value) => approval.setPrice(candidate.stockId, value)}
+              keyboardType="decimal-pad"
+              accessibilityLabel={fillCopy(t.offer.priceLabel, { name: candidate.title })}
+              style={styles.priceInput}
+              testID={`management-offer-price-${candidate.stockId}`}
+            />
+            <Text style={styles.priceCurrency}>€</Text>
+          </View>
         )}
       </View>
 
-      {isRemoved ? null : (
-        <TextInput
-          value={approval.prices[candidate.stockId] ?? ''}
-          onChangeText={(value) => approval.setPrice(candidate.stockId, value)}
-          keyboardType="decimal-pad"
-          accessibilityLabel={fillCopy(t.offer.priceLabel, { name: candidate.title })}
-          style={styles.priceInput}
-          testID={`management-offer-price-${candidate.stockId}`}
-        />
+      {failure === undefined ? null : (
+        <Text style={styles.cardFailure} testID={`management-offer-failed-${candidate.stockId}`}>
+          {t.offer.failed[failure === 'must_discard' ? 'must_discard' : 'not_found']}
+        </Text>
       )}
 
       <PressableSurface
         onPress={() => approval.toggleRemoved(candidate.stockId)}
-        feedback="scale-small"
-        compact
-        style={styles.toggle}
+        feedback="scale"
+        style={[styles.secondary, isRemoved ? styles.secondaryRestore : styles.secondaryRemove]}
         accessibilityLabel={isRemoved ? t.offer.restore : t.offer.remove}
         testID={`management-offer-toggle-${candidate.stockId}`}
       >
-        <Text style={isRemoved ? styles.toggleRestore : styles.toggleRemove}>{isRemoved ? '+' : '✕'}</Text>
+        <Text style={isRemoved ? styles.secondaryLabelRestore : styles.secondaryLabelRemove}>
+          {isRemoved ? t.offer.restore : t.offer.remove}
+        </Text>
       </PressableSurface>
     </View>
   );
@@ -182,97 +252,143 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
   },
   body: {
-    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingHorizontal: operationsTheme.space['5xl'],
     paddingTop: operationsTheme.space.sm,
-    paddingBottom: operationsTheme.space['2xl'],
+    // Yapışkan CTA mutlak konumlu: listenin kuyruğu onun altında kalmasın.
+    paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
+    gap: operationsTheme.space.xl,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+
+  /* ── Aday kartı (v3:30) ───────────────────────────────────────────────────── */
+  card: {
     gap: operationsTheme.space.lg,
-    paddingVertical: operationsTheme.space.xl,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    padding: operationsTheme.space['3xl'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
   },
-  /** Çıkarılan satır SOLUR ama durur — "bugün değil" ile "bir daha asla" ayrı şeyler (v2:620). */
-  rowRemoved: {
+  /** Turun dışına çıkarılan kart SOLUR ama durur — "bugün değil" ile "bir daha asla" ayrı şeyler. */
+  cardRemoved: {
     opacity: operationsTheme.soldOutOpacity,
   },
-  rowText: {
-    flex: 1,
+  cardHead: {
     gap: operationsTheme.space['2xs'],
   },
-  rowTitle: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+  cardTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
     color: operationsTheme.colors.ink,
   },
-  rowTitleRemoved: {
+  cardTitleRemoved: {
     textDecorationLine: 'line-through',
   },
-  rowMeta: {
+  cardMeta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
   },
-  /** Açılamayan partinin sebebi SATIRINDA durur — toplu bir hataya indirgenmez (uç künyesi). */
-  rowFailure: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors.error,
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
   },
-  partialNote: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.micro,
+  detailLabel: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors.muted,
+  },
+  detailValue: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  detailValueWatch: {
     color: operationsTheme.colors.terracotta,
-    paddingTop: operationsTheme.space.lg,
   },
-  /** v2:622 — 72 dp genişlik. Ölçü `size`+`space`ten türer (adet kutusuyla aynı desen). */
+  divider: {
+    height: operationsTheme.border.base,
+    backgroundColor: operationsTheme.colors['sand-300'],
+  },
+  /** Motorun oranı etiketin İÇİNDE durur — operatör neyin üstüne yazdığını görsün. */
+  suggestLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  priceField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.sm,
+  },
+  /** v3: 72 dp'lik alan. Ölçü `size`+`space`ten türer (adet kutusuyla aynı desen). */
   priceInput: {
     width: operationsTheme.size.avatarLg + operationsTheme.space['3xl'],
     paddingVertical: operationsTheme.space.lg,
     paddingHorizontal: operationsTheme.space.md,
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors.ink,
+    borderColor: operationsTheme.colors['olive-line'],
     borderRadius: operationsTheme.radius.badge,
     backgroundColor: operationsTheme.colors.card,
     textAlign: 'right',
-    // v2: `800 14px` — Karla'nın 800'ü yüklenmiyor; en yakın gerçek kesit 700 (`fonts.ts`).
-    fontFamily: operationsTheme.font.body[700],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text['body-sm'],
-    color: operationsTheme.colors.ink,
+    color: operationsTheme.colors['olive-dark'],
   },
-  toggle: {
-    width: operationsTheme.size.stepButton,
-    height: operationsTheme.size.stepButton,
+  priceCurrency: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors['olive-dark'],
+  },
+  /** Açılamayan partinin sebebi KARTINDA durur — toplu bir hataya indirgenmez. */
+  cardFailure: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.error,
+  },
+  secondary: {
+    height: operationsTheme.size.controlSm,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-500'],
-    borderRadius: operationsTheme.radius.badge,
+    borderRadius: operationsTheme.radius.control,
   },
-  toggleRemove: {
+  secondaryRemove: {
+    borderColor: operationsTheme.colors['error-line'],
+  },
+  secondaryRestore: {
+    borderColor: operationsTheme.colors['olive-line'],
+  },
+  secondaryLabelRemove: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text['body-sm'],
+    fontSize: operationsTheme.text.control,
     color: operationsTheme.colors.error,
   },
-  toggleRestore: {
+  secondaryLabelRestore: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text['body-sm'],
+    fontSize: operationsTheme.text.control,
     color: operationsTheme.colors['olive-dark'],
+  },
+  partialNote: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.terracotta,
   },
   footnote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
-    paddingVertical: operationsTheme.space.xl,
   },
-  footer: {
-    paddingHorizontal: operationsTheme.space['5xl'],
-    paddingTop: operationsTheme.space.lg,
+  sticky: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: operationsTheme.space.xl,
     paddingBottom: operationsTheme.space['3xl'],
+    paddingHorizontal: operationsTheme.space['5xl'],
   },
   cta: {
     height: operationsTheme.size.controlLg,

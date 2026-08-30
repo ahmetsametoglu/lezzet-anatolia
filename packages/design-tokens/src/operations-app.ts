@@ -126,12 +126,30 @@ export const operationsAppInk = {
      yan yana durur (kurye zeytin · yönetim terracotta · hata kırmızı); depo noktası `honey` olsaydı
      bölüm adı değil DURUM okunurdu. Kimlik rengi ile durum rengi aynı ada bağlanmaz. */
   warehouse: '#8a6d3a',
-  /* Sekme çubuğunun SEÇİLİ OLMAYAN ikonu ve etiketi (aktif olan `ink`).
-     Kendi durağı çünkü iki komşusu da yanlış: `sand-600` (#b3ab97, Δ15/16/18) bu palette yön
+  /* Sekme çubuğunun SEÇİLİ OLMAYAN ikonu/etiketi VE dipnot yazısı — palette ÜÇÜNCÜ gri.
+     Kendi durağı çünkü iki komşusu da yanlış: `sand-600` (#b3ab97, Δ11/10/6) bu palette yön
      okunun tonudur — kalıcı gezinme etiketi süs okuyla aynı sesle konuşamaz; `muted` (#8a8270,
-     Δ26/25/21) ise seçili sekmeyle yarışacak kadar koyu. Tasarım ikisinin arasına bilerek bir
-     durak koymuş. */
-  'tab-inactive': '#a49b85',
+     Δ30/17/33) ise seçili sekmeyle yarışacak kadar koyu. Tasarım ikisinin arasına bilerek bir
+     durak koymuş.
+
+     ── DEĞER v3'TE ÖLÇÜLDÜ: #a49b85 → #a8a191 (30.08) ──────────────────────
+     v2 bu tonu TEK bir yerde kullanıyordu (seçilmeyen sekme, 1 kullanım) ve değeri #a49b85'ti.
+     v3'te #a49b85 ŞABLONDAN TAMAMEN KALKTI (grep: 0 kullanım); yerini alan #a8a191 ise 91 kez
+     geçiyor — hem seçilmeyen sekme (`c.tabDepo` vd.) hem de bloğun ALTINDAKİ dipnot satırı
+     ("Yalnız senin rollerine düşen olaylar listelenir…", "Cihaz klavyesi açılmaz…") ve iskelet
+     altındaki "yükleniyor…" künyesi. Yani v3 tonu korumadı, ROLÜ genişletti: bu artık "pasif
+     gezinme rengi" değil, `muted`in bir kademe altındaki DİPNOT grisidir — ekranın söylediği
+     şeyi değil, o şeyin kuralını yazan satır.
+
+     Ad DARALDI ama değişMEDİ: `tab-inactive` üç şeridin okuduğu bir anahtar ve yeniden
+     adlandırma tek şeridin kararı değildir (02-mimari §3.6 — küçük ayak izi). Rolün adıyla
+     örtüşmesi için önerilen ad `muted-soft`; kararı yönetici verir.
+
+     İKİNCİ AD AÇILMADI: `on-ink-muted` (#a49f8f) bu değere Δ4/2/2 uzaklıkta, yani eşiğin
+     ALTINDA — ama o durak KOYU zeminin grisidir (özet kartının içi) ve rolü bu satırınkiyle
+     karışmaz; ikisini tek ada indirmek, koyu kart tonu kaydığı gün bütün dipnotları da
+     kaydırırdı. Birleştirme adayı olarak rapor edildi, kendiliğinden yapılmadı. */
+  'tab-inactive': '#a8a191',
 
   /* ── KOYU ÖZET KARTININ ÜSTÜ (v3, 30.08) ───────────────────────────────────
      v3 hub'ın tepesine `ink` zeminli bir özet kartı koydu ("BUGÜN DEPODA" + üç sayı). Kartın
@@ -154,11 +172,32 @@ export const operationsAppInk = {
   'on-ink-warn': '#e0b487',
 } as const satisfies Record<string, string>;
 
-/* Operasyon mobile özgü renklerin tam kümesi (11): 2 fark + 9 yeni. */
+/* ── (4) ÇERÇEVE — renkli kartın KENARI (v3, 30.08) ──────────────────────────
+   v3'ün baskın kalıbı "tonlu kart": çok açık bir zemin + 1,5 px renkli kenarlık + aynı ailenin
+   koyu metni (ölçüldü: nötr #fbfaf4/#ddd6c4 63 kez, hata #fdf6f4/#e0b9b2 15, uyarı
+   #fdf8f3/#d9a97f 9, olumlu #f2f7e8/#c3d3a4 8). Kartı ailesine bağlayan şey ZEMİN DEĞİL
+   KENARLIKTIR: dört zeminin de üçü `panel`e (#fbfaf4) kanal başına ≤4 uzaklıkta, yani ekranda
+   ayırt edilemez — hata kutusunu hata yapan, kenarı ve metnidir.
+
+   Bu yüzden buraya yalnız KENAR tonu giriyor, zemin girmiyor: zeminler eşiğin altında kalıp
+   var olan duraklara bağlandı (#fdf6f4 → `panel` Δ2/4/0 · #fdf8f3 → `panel` Δ2/2/1 · #f6f4ec →
+   `cream` Δ4/4/4 · #f0ede3 iskelet dolgusu → `sand-50` Δ3/2/1 · #e2ddcc sessiz kenar →
+   `neutral-bg` Δ5/5/6). */
+export const operationsAppLine = {
+  /* HATA/ALARM kartının kenarı: "liste yüklenemedi" kutusu, bildirim akışındaki SKT satırı,
+     iade/uyuşmazlık kartları. Tabanda karşılığı YOK — en yakını `terracotta-line` (#e8c9b3,
+     Δ8/16/1) ve o eşiğin üstünde; üstelik rolü de başka (turuncu ailenin kenarı, kırmızının
+     değil). `error-bg` (#f4e3e0) ise ZEMİN tonudur ve kenar olarak kullanıldığında kutu
+     çerçevesiz görünür. Aile adlandırması tabandan devralındı: `error` · `error-bg` · `error-line`. */
+  'error-line': '#e0b9b2',
+} as const satisfies Record<string, string>;
+
+/* Operasyon mobile özgü renklerin tam kümesi (12): 2 fark + 10 yeni. */
 export const operationsAppColors = {
   ...operationsAppOverrides,
   ...operationsAppSurface,
   ...operationsAppInk,
+  ...operationsAppLine,
 } as const satisfies Record<string, string>;
 
 /* ── TİPOGRAFİ — ölçek ZATEN VAR, iki durak eksikti ──────────────────────────

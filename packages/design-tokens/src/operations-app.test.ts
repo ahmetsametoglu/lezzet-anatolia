@@ -32,6 +32,7 @@ import {
   operationsAppColors,
   operationsAppGradient,
   operationsAppInk,
+  operationsAppLine,
   operationsAppOverrides,
   operationsAppRadius,
   operationsAppShadow,
@@ -61,7 +62,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
   });
 
   it('operasyona-YENİ anahtarlar iki taban katmanında da yok, birleşimde var', () => {
-    for (const key of ['panel', 'neutral-bg', 'ink-inset', 'warehouse', 'tab-inactive']) {
+    for (const key of ['panel', 'neutral-bg', 'ink-inset', 'warehouse', 'tab-inactive', 'error-line']) {
       expect(baseColors, `${key} taban katmanlarında olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
@@ -84,6 +85,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     for (const [key, value] of Object.entries({
       ...operationsAppSurface,
       ...operationsAppInk,
+      ...operationsAppLine,
     })) {
       expect(baseColorValues.has(value), `${key} (${value}) tabanda zaten var — yeni ad açılmamalı`)
         .toBe(false);
@@ -157,6 +159,18 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(operationsAppColors).not.toHaveProperty('brand-whatsapp');
   });
 
+  it('v3 ölçümleri: üçüncü gri güncellendi, tonlu kartın kenarı açıldı', () => {
+    /* v2'nin #a49b85'i v3 şablonunda HİÇ geçmiyor; yerini alan ton 91 kullanımla hem seçilmeyen
+       sekmenin hem de dipnot satırının rengi. Değer korunsaydı ekranın en çok yazılan yardımcı
+       satırı tasarımdan bir kademe koyu çizilirdi. */
+    expect(composedColors['tab-inactive']).toBe('#a8a191');
+    /* Tonlu kartın kimliği ZEMİNDE değil KENARDA: hata zemini (#fdf6f4) `panel`e Δ2/4/0
+       uzaklıkta, yani ayrı bir durak açmaya değmez — ayıran şey bu kenarlıktır. */
+    expect(composedColors['error-line']).toBe('#e0b9b2');
+    expect(composedColors['error-line']).not.toBe(composedColors['terracotta-line']);
+    expect(Object.keys(operationsAppLine)).toEqual(['error-line']);
+  });
+
   it('YARIÇAP: resmî 4\'lü set devralınır, altına yalnız bir durak eklenir', () => {
     expect(composedRadius.badge).toBe('12px');
     expect(composedRadius.control).toBe('16px'); // tasarımın en sık yarıçapı (55 kullanım)
@@ -181,7 +195,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(fade).toContain(', 0)');
   });
 
-  it('fark/yeni dağılımı sabit: 2 fark + 14 yeni', () => {
+  it('fark/yeni dağılımı sabit: 2 fark + 15 yeni', () => {
     expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(2);
     expect(sharedKeys(baseText, operationsAppText)).toHaveLength(0);
     expect(sharedKeys(baseRadius, operationsAppRadius)).toHaveLength(0);
@@ -192,7 +206,8 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
       Object.keys(operationsAppRadius).length +
       Object.keys(operationsAppShadow).length +
       Object.keys(operationsAppGradient).length;
-    expect(total).toBe(16); // 2 fark + 14 operasyona-yeni (v3'ün koyu özet kartı dört ton ekledi)
+    // 2 fark + 15 operasyona-yeni (v3'ün koyu özet kartı dört ton, tonlu kart bir KENAR ekledi)
+    expect(total).toBe(17);
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {

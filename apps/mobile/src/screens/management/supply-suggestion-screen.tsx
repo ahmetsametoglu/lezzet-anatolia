@@ -7,13 +7,21 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { SupplyGroup } from '@lezzet/types';
 import { managementCopy } from './copy';
 import { supplyGroupKey, useSupply } from './use-supply.hook';
 
 /*
-  Y4 · TEDARİK ÖNERİSİ (v2:635-662) — azalan stok listesi ve TASLAK tedarik siparişi.
+  Y4 · TEDARİK TASLAĞI (Operasyon Mobil v3:31) — azalan stok listesi ve TASLAK tedarik siparişi.
+
+  ── v3 SATIRI KARTA ÇEVİRDİ; EKRAN YİNE GRUPLU ──────────────────────────────
+  v3 her kalemi kendi kartında çiziyor (ad + ölçüm satırı solda, önerilen adet sağda zeytin) ve
+  altta TEK koyu düğme koyuyor. Kart dili birebir uygulandı. Ama v3'ün ekranı TEK tedarikçinin
+  taslağıdır; uç ise gruplu döner (`groups[]` = depo + tedarikçi) ve onay da grup KİMLİĞİYLE gider.
+  Bu yüzden koyu düğme yapışkan bir alt çubuğa değil, HER GRUBUN sonuna konur: yapışkan tek düğme,
+  ekranda üç grup varken hangisini onayladığını söyleyemezdi.
 
   ── ARTIK GERÇEK UÇTAN (21.12) ──────────────────────────────────────────────
   Öneri `ReorderService`ten (eşik depo bazlı · yoldaki düşülmüş · koli katına yuvarlı); onay
@@ -24,6 +32,13 @@ import { supplyGroupKey, useSupply } from './use-supply.hook';
   Onay yalnız TASLAĞI kurar; gönderim (WhatsApp/PDF) insanın işidir ve referans (TS-26-…) gönderim
   anında doğar. Ekranda bir "gönder" düğmesi YOK — olmayan bir otomasyonu vaat etmemek tasarımın
   kendi kararı.
+
+  ── SÖZLEŞMEDE OLMAYAN ÜÇ ŞEY YAZILMADI ─────────────────────────────────────
+  v3'ün ölçüm satırı "stok 24 · günlük 3,1 · 8 gün" diyor, künyesi "12 gün kapak", bir kartı da
+  "imha oranı yüksek · öneri düşürüldü" diye terracotta çerçeveyle uyarıyor. GÜNLÜK SATIŞ HIZI,
+  GÜN KAPAĞI ve İMHA ORANI `SupplyLine`de YOK — hiçbiri sorulmuyor. Satır elimizdeki gerçek
+  ölçümlerle kuruldu (stok · eşik · yoldaki · son alış); uydurma bir hız, tedarik kararının
+  altındaki tek sayı olurdu.
 
   ── EŞLENMEMİŞ GRUP GİZLENMEZ ───────────────────────────────────────────────
   Tedarikçisi eşlenmemiş varyant listede DURUR ama sipariş açamaz: "göremediğin eksik, sipariş
@@ -83,17 +98,23 @@ export function SupplySuggestionScreen() {
             .map((group) => (
               <UnmappedGroup key={supplyGroupKey(group)} group={group} />
             ))}
+
+          {/* Dipnot listenin SONUNDA, bir kez: öneriyi neyin ürettiği ve sistemin tedarikçiye bir
+              şey göndermediği grup başına tekrarlanacak bir bilgi değil. */}
+          <Text style={styles.footnote}>{t.supply.footnote}</Text>
+          <Text style={styles.footnote}>{t.supply.note}</Text>
         </ScrollView>
       )}
     </View>
   );
 }
 
-/** Satırın orta cümlesi — son alış yoksa "—": bilinmeyen fiyat sıfır gibi okutulmaz. */
+/** Kartın ölçüm satırı — son alış yoksa "—": bilinmeyen fiyat sıfır gibi okutulmaz. */
 function lineMeta(line: SupplyGroup['lines'][number]): string {
   return fillCopy(t.supply.row, {
     current: String(line.availableQty),
     threshold: String(line.minStockQty),
+    incoming: String(line.incomingQty),
     lastPurchase: line.lastPurchaseCents === null ? t.supply.noPurchase : money(line.lastPurchaseCents),
   });
 }
@@ -114,6 +135,7 @@ function MappedGroup({ group, supply }: MappedGroupProps) {
         : draft.status === 'stale'
           ? t.supply.ctaStale
           : fillCopy(t.supply.ctaDone, { n: String(draft.itemCount) });
+  const ctaOpen = draft === undefined || draft.status === 'stale';
 
   return (
     <View style={styles.group} testID={`management-supply-group-${key}`}>
@@ -126,33 +148,36 @@ function MappedGroup({ group, supply }: MappedGroupProps) {
 
       {group.lines.map((line) => (
         <View key={line.variantId} style={styles.line} testID={`management-supply-${line.variantId}`}>
-          <View style={styles.lineHead}>
+          <View style={styles.lineText}>
             <Text style={styles.lineName}>{line.title}</Text>
-            <Text style={styles.lineSuggested}>{`+${line.suggestedQty}`}</Text>
+            <Text style={styles.lineMeta}>{lineMeta(line)}</Text>
+            {/* GEREKÇE EKRANDAN ÇIKTI (cihazda görüldü 30.08): satır "— transfer seçeneğinin ham
+                verisi" diye bitiyordu ve bu bir GELİŞTİRİCİ notudur; sekiz satırda tekrarlanınca
+                ekranı kendi kendini açıklayan bir belgeye çeviriyordu. Neden gösterildiği bu
+                künyede yazılı: elimizdeki tek "dikkat" sinyali bu ve bir uyarı değil BİLGİdir —
+                satın almadan önce transfer bakılabilir. */}
+            {line.elsewhere.length === 0 ? null : (
+              <Text style={styles.lineElsewhere}>
+                {fillCopy(t.supply.elsewhere, {
+                  where: line.elsewhere.map((spot) => `${spot.warehouseCode} ${spot.qty}`).join(' · '),
+                })}
+              </Text>
+            )}
           </View>
-          <Text style={styles.lineMeta}>{lineMeta(line)}</Text>
-          {line.elsewhere.length === 0 ? null : (
-            <Text style={styles.lineElsewhere}>
-              {fillCopy(t.supply.elsewhere, {
-                where: line.elsewhere.map((spot) => `${spot.warehouseCode} ${spot.qty}`).join(' · '),
-              })}
-            </Text>
-          )}
+          <Text style={styles.lineSuggested}>{`+${line.suggestedQty}`}</Text>
         </View>
       ))}
 
       <PressableSurface
         onPress={() => supply.approve(group)}
-        disabled={draft !== undefined && draft.status !== 'stale'}
+        disabled={!ctaOpen}
         feedback="shadow"
-        style={[styles.cta, draft === undefined || draft.status === 'stale' ? styles.ctaOpen : styles.ctaDone]}
+        style={[styles.cta, ctaOpen ? styles.ctaOpen : styles.ctaDone]}
         accessibilityLabel={label}
         testID={`management-supply-cta-${key}`}
       >
-        <Text style={styles.ctaLabel}>{label}</Text>
+        <Text style={ctaOpen ? styles.ctaLabel : styles.ctaLabelDone}>{label}</Text>
       </PressableSurface>
-
-      <Text style={styles.note}>{t.supply.note}</Text>
     </View>
   );
 }
@@ -193,80 +218,96 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
   },
   body: {
-    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingHorizontal: operationsTheme.space['5xl'],
     paddingTop: operationsTheme.space.sm,
     paddingBottom: operationsTheme.space['8xl'],
     gap: operationsTheme.space['3xl'],
   },
   group: {
-    gap: operationsTheme.space.xs,
-  },
-  groupTitle: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.note,
-    color: operationsTheme.colors.ink,
-  },
-  line: {
-    gap: operationsTheme.space['2xs'],
-    paddingVertical: operationsTheme.space.lg,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
-  },
-  lineHead: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     gap: operationsTheme.space.lg,
   },
-  lineName: {
+  /** Grubun künyesi üstbaşlık kademesinde: kartların KİMİN için olduğunu söyler, kart değildir. */
+  groupTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    textTransform: 'uppercase',
+    color: operationsTheme.colors.muted,
+  },
+
+  /* ── Kalem kartı (v3:31) ──────────────────────────────────────────────────── */
+  line: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.xl,
+    paddingVertical: operationsTheme.space['2xl'],
+    paddingHorizontal: operationsTheme.space['3xl'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+  },
+  lineText: {
     flex: 1,
+    minWidth: 0,
+    gap: operationsTheme.space['2xs'],
+  },
+  lineName: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.control,
     color: operationsTheme.colors.ink,
   },
-  /** Önerilen adet ZEYTİN: eklenen mal, eksilen değil (v2:645). */
-  lineSuggested: {
-    // v2: `800 13.5px` — Karla'nın 800'ü yüklenmiyor; en yakın gerçek kesit 700 (`fonts.ts`).
-    fontFamily: operationsTheme.font.body[700],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.olive,
-  },
   lineMeta: {
     fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.micro,
+    fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.muted,
   },
-  /** Başka depodaki mal DEPO tonunda: transferin ham verisi, kararı değil (v2:647). */
+  /** Başka depodaki mal DEPO tonunda: transferin ham verisi, kararı değil. */
   lineElsewhere: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.warehouse,
   },
+  /** Önerilen adet ZEYTİN: eklenen mal, eksilen değil. */
+  lineSuggested: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.olive,
+  },
+
   cta: {
-    height: operationsTheme.size.controlMd,
+    height: operationsTheme.size.controlLg,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: operationsTheme.space.md,
+    marginTop: operationsTheme.space.xs,
     borderRadius: operationsTheme.radius.control,
   },
+  /** Koyu CTA (v3:31). Gölgesi mürekkep OLAMAZ (görünmez) — kum gölge (`hard-on-ink`). */
   ctaOpen: {
-    backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
+    backgroundColor: operationsTheme.colors.ink,
+    boxShadow: operationsTheme.shadow['hard-on-ink'],
   },
   ctaDone: {
-    backgroundColor: operationsTheme.colors['disabled-fill'],
+    backgroundColor: operationsTheme.colors['neutral-bg'],
   },
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.card,
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors['on-image'],
     textAlign: 'center',
   },
-  note: {
+  /** Onaylanmış grubun düğmesi bir SONUÇ satırıdır: sönük zemin, okunur koyu yazı. */
+  ctaLabelDone: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors.body,
+    textAlign: 'center',
+  },
+
+  footnote: {
     fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.tag,
-    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
   unmapped: {
@@ -282,7 +323,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.muted,
   },
-  /** Kapalı kapı KIRMIZI ve GEREKÇELİ: ne olduğu değil, ne yapılacağı yazıyor (v2:659). */
+  /** Kapalı kapı KIRMIZI ve GEREKÇELİ: ne olduğu değil, ne yapılacağı yazıyor. */
   unmappedBlocked: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,

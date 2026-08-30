@@ -49,6 +49,7 @@ const WAREHOUSE = '00000000-0000-4000-8000-0000000000aa';
 const SUPPLIER = '00000000-0000-4000-8000-0000000000bb';
 const VARIANT_1 = '00000000-0000-4000-8000-0000000000c1';
 const VARIANT_2 = '00000000-0000-4000-8000-0000000000c2';
+const VARIANT_3 = '00000000-0000-4000-8000-0000000000c3';
 
 function candidates(): OfferCandidatesResponse {
   return {
@@ -97,6 +98,17 @@ function supplyGroups(): SupplyResponse {
             incomingQty: 0,
             lastPurchaseCents: 2140,
             elsewhere: [{ warehouseCode: 'KEHL', qty: 14 }],
+          },
+          {
+            // Son alışı bilinmeyen kalem — satırın "—" yolunu ölçmek için (sıfır gibi okutulmaz).
+            variantId: VARIANT_3,
+            title: 'Şöbiyet (500 g)',
+            availableQty: 3,
+            minStockQty: 10,
+            suggestedQty: 6,
+            incomingQty: 12,
+            lastPurchaseCents: null,
+            elsewhere: [],
           },
         ],
       },
@@ -197,6 +209,29 @@ describe('Y3 · teklif onayı', () => {
     expect(reads).toBeGreaterThanOrEqual(2);
   });
 
+  it('kart motorun ORANINI etiketinde yazar; süresi geçen partide gün değil hâl okunur (v3:30)', async () => {
+    fetchMock.mockImplementation((url, init) => {
+      if (init?.method === 'POST') return Promise.resolve(ok({ results: [] }));
+      return Promise.resolve(
+        ok({
+          candidates: [
+            // Motor "satılabilir pencerede" diyebilir ama tarih geçmiş olabilir: `-1 gün` diye bir
+            // ömür yoktur, hâl yazılır. Liste fiyatı da yok — uydurulmaz, çizgi konur.
+            { ...candidates().candidates[0]!, daysLeft: -1, listPriceCents: null },
+          ],
+        }),
+      );
+    });
+
+    await renderScreen(<OfferApprovalScreen />, 'management-offer-loading');
+
+    expect(screen.getByText(t.offer.rows.lifeValuePast)).toBeOnTheScreen();
+    expect(screen.queryByText(t.offer.rows.lifeValue.replace('{days}', '-1'))).toBeNull();
+    // Öneri oranı ayardan gelir ve etiketin İÇİNDE durur — operatör neyin üstüne yazdığını görür.
+    expect(screen.getByText(t.offer.rows.suggested.replace('{percent}', '30'))).toBeOnTheScreen();
+    expect(screen.getByText(t.offer.noSuggestion)).toBeOnTheScreen();
+  });
+
   it('aday yoksa boş hâl; CTA hiç çizilmez', async () => {
     fetchMock.mockResolvedValue(ok({ candidates: [] }));
 
@@ -229,6 +264,18 @@ describe('Y4 · tedarik önerisi', () => {
     await waitFor(() =>
       expect(screen.getByText(t.supply.ctaDone.replace('{n}', '1'))).toBeOnTheScreen(),
     );
+  });
+
+  it('ölçüm satırı dört GERÇEK sayıyı yazar: stok · eşik · yolda · son alış (v3:31)', async () => {
+    fetchMock.mockResolvedValue(ok(supplyGroups()));
+
+    await renderScreen(<SupplySuggestionScreen />, 'management-supply-loading');
+
+    // v3'ün "günlük 3,1 · 8 gün" satırı sözleşmede YOK; satır elimizdeki ölçümlerle kurulur.
+    expect(screen.getByText(/stok 6 · eşik 20 · yolda 0/u)).toBeOnTheScreen();
+    expect(screen.getByText(/son alış 21,40/u)).toBeOnTheScreen();
+    // Son alış bilinmeyen kalemde çizgi — sıfır gibi okutulmaz.
+    expect(screen.getByText(/son alış —/u)).toBeOnTheScreen();
   });
 
   it('eşlenmemiş grup CTA çizmez — kapalı kapı açık cümleyle söylenir', async () => {

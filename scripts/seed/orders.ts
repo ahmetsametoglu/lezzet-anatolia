@@ -1,8 +1,8 @@
-import { openBox, sealBox } from '@lezzet/application';
+import { loadBox, openBox, sealBox } from '@lezzet/application';
 import {
   AccountService, AddressService, CartService, DeliveryZoneService, DiscountService, MoneyMovementService,
   OrderBoxService, OrderService, ReservationService, ShipmentEventService, ShipmentService,
-  ShippingBoxService, StockService, UserProfileService,
+  ShippingBoxService, StockMovementService, StockService, UserProfileService,
 } from '@lezzet/database';
 import { derivePaymentStatusForOrder, generateReferenceNo, resolveVatTreatment } from '@lezzet/domain-core';
 import { distributeDiscount, toCents } from '@lezzet/helper';
@@ -182,6 +182,16 @@ export async function seedOrders(
   const stokluVaryant = new Set((stoklu ?? []).map((r) => (r as { variant_id: string }).variant_id));
   const satilabilir = varyantlar.filter((v) => v.status !== 'candidate' && stokluVaryant.has(v.id));
   const kurye = kisiler.get('kurye') ?? null;
+  /**
+   * **Cihaz turunun hesabı** (`hepsi@lezzetanatolia.fr` — dört bölümü de gören personel).
+   *
+   * Kurye ekranları KİMLİĞE bağlı okur (`listCourierDay(courierId)`), depoya değil: bu hesabın
+   * depo kapsamı doğru olsa bile, günün siparişleri BAŞKA bir kuryeye damgalıysa onun sefer ekranı
+   * bomboş açılır. O yüzden BUGÜNÜN Strasbourg rotası bu kimliğe yazılıyor; geçmiş günler ve
+   * ikinci rota Marc'ta (`kurye`) kalıyor — iki hesap da dolu, hiçbiri ötekinin verisini yemiyor.
+   * Araçtan satış da aynı kimliğin AÇIK seferine bağlanıyor (`quickSale` → `readCourierRun`).
+   */
+  const turKuryesi = kisiler.get('hepsi') ?? kurye;
   const depocu = kisiler.get('depocu') ?? null;
   // Pazarlığı YAZAN el: elle sipariş girişini de kapı önü satışını da personel yapar.
   const pazarlikciId = kisiler.get('yonetici') ?? depocu ?? null;
@@ -194,27 +204,47 @@ export async function seedOrders(
   const toplam = (kalemler: SiparisKalem[], kargo = 0) => euro(kalemler.reduce((s, k) => s + k.unitPrice * k.qty, 0) + kargo);
 
   /**
-   * İkinci deponun siparişleri YALNIZ orada stoğu olan varyantlardan kurulur.
+   * ANA DEPO DIŞINDAKİ siparişler YALNIZ o depoda stoğu olan varyantlardan kurulur.
    *
-   * Partilerin depoya dağılımı indise bağlı (`stock.ts`) ve hangi varyantın Kehl'de olduğu oradan
-   * okunmaz — okunsaydı iki dosya aynı formülü paylaşırdı ve biri değişince diğeri sessizce yanlış
-   * sipariş üretirdi. Bu yüzden GERÇEĞE sorulur: Kehl'de fiili stoğu olan varyantlar.
+   * Partilerin depoya dağılımı indise bağlı (`stock.ts`) ve hangi varyantın hangi depoda olduğu
+   * oradan okunmaz — okunsaydı iki dosya aynı formülü paylaşırdı ve biri değişince diğeri sessizce
+   * yanlış sipariş üretirdi. Bu yüzden GERÇEĞE sorulur: o depoda fiili stoğu olan varyantlar.
+   *
+   * Havuz TEK fonksiyondan çıkar (Kehl · Colmar): iki depo için iki ayrı sorgu yazmak aynı kuralı
+   * iki yere kopyalamak olurdu ve biri eşik değiştirdiğinde fark hiçbir yerde görünmezdi.
    */
-  const kehlStoklu = await (async () => {
+  async function depoStoklu(warehouseId: string, enAzAdet: number): Promise<VaryantRef[]> {
     const { data, error } = await db
       .from('stock')
       .select('variant_id,physical_qty')
-      .eq('warehouse_id', depolar.kehl)
-      .gt('physical_qty', 8);
+      .eq('warehouse_id', warehouseId)
+      .gt('physical_qty', enAzAdet);
     if (error) throw error;
     const idler = new Set(((data ?? []) as Array<{ variant_id: string }>).map((r) => r.variant_id));
     return satilabilir.filter((v) => idler.has(v.id));
-  })();
-  /** Kehl kalemi — dizide dönerek seçer; adet parti tavanının altında tutulur (rezervasyon geçsin). */
-  const kehlKalem = (i: number, qty: number): SiparisKalem => {
-    const v = kehlStoklu[i % kehlStoklu.length]!;
+  }
+  /** Depo havuzundan kalem — dizide dönerek seçer; adet parti tavanının altında tutulur (rezervasyon geçsin). */
+  const havuzKalem = (havuz: VaryantRef[], i: number, qty: number): SiparisKalem => {
+    const v = havuz[i % havuz.length]!;
     return { variantId: v.id, qty, unitPrice: euro(7 + (i % 9) * 1.6), vatRate: v.vatRate };
   };
+
+  /**
+   * ANA DEPODA BOL STOKLU varyantlar — adedi büyük ya da stoğu OYNATILACAK siparişlerin havuzu.
+   *
+   * `kalem()` havuzu "stoğu olan" varyantları alıyor ve orada bir adet de yeterli; 4-6 adetlik bir
+   * sipariş oradan seçilince rezervasyon sessizce yetmeyebilir ya da kutu kapanışı Σ denetimine
+   * takılır (`sealBox` "hazır değil" der ve seed durur). Bol havuz o kumarı kaldırıyor.
+   */
+  const strBolStoklu = await depoStoklu(depolar.str, 8);
+  const bolKalem = (i: number, qty: number): SiparisKalem => havuzKalem(strBolStoklu, i, qty);
+
+  const kehlStoklu = await depoStoklu(depolar.kehl, 8);
+  const kehlKalem = (i: number, qty: number): SiparisKalem => havuzKalem(kehlStoklu, i, qty);
+  // Colmar rotasının kalemleri: eşik DAHA DÜŞÜK, çünkü o depo bilinçli olarak küçük kuruldu (11 parti).
+  // 8'lik eşik orayı boş bir havuz yapar ve Colmar seferi hiç doğmazdı.
+  const colmarStoklu = await depoStoklu(depolar.colmar, 2);
+  const colmarKalem = (i: number, qty: number): SiparisKalem => havuzKalem(colmarStoklu, i, qty);
 
   /**
    * Kalemin karşılanabileceği partileri FEFO sırasıyla toplar (hazırlık onayının girdisi).
@@ -238,6 +268,24 @@ export async function seedOrders(
 
   const varsayilanAdres = async (customerId: string) => (await addresses.listByCustomer(customerId))[0] ?? null;
 
+  /**
+   * Siparişin adresi. Etiket verilmezse varsayılan kart — bugüne kadarki tek davranış.
+   *
+   * Etiketle seçim, BÖLGESİ farklı bir adres gerektiğinde şart: bölge posta kodundan türüyor
+   * (`zone` çözümü) ve müşterinin ikinci adresi başka bir rotada olabilir. Colmar rotasının
+   * siparişleri ancak böyle doğuyor — kimse Colmar'ı varsayılan adres yapmadığı için o rota
+   * bugüne dek hiç sipariş görmedi ve seferi de hiç kurulmadı.
+   */
+  async function siparisAdresi(customerId: string, etiket?: string) {
+    if (!etiket) return varsayilanAdres(customerId);
+    const kartlar = await addresses.listByCustomer(customerId);
+    const bulunan = kartlar.find((a) => a.label === etiket);
+    // Yazım hatası SESSİZ GEÇMEZ (aynı gerekçe: bilinmeyen müşteri anahtarı): adres bulunamazsa
+    // sipariş varsayılan bölgeye düşer ve kurulmak istenen rota hiç doğmaz.
+    if (!bulunan) throw new Error(`seed: "${etiket}" etiketli adres yok (müşteri ${customerId})`);
+    return bulunan;
+  }
+
   // Paranın gireceği hesap: kasa. Para bölümü siparişlerden ÖNCE koştuğu için hazırdır.
   const kasaId = (await new AccountService(db).list({ activeOnly: true })).find((h) => h.type === 'cash')?.id ?? null;
 
@@ -245,9 +293,23 @@ export async function seedOrders(
    * Tahsilat/iade bir HAREKETTİR (12.2): siparişteki `amount_*` ondan türer. Hareket + cache tek
    * transaction'da (`recordForOrder`), ödeme durumu ardından motordan.
    */
-  async function tahsilatYaz(orderId: string, tutarCents: number, tip: 'order_payment' | 'order_refund'): Promise<void> {
+  async function tahsilatYaz(
+    orderId: string,
+    tutarCents: number,
+    tip: 'order_payment' | 'order_refund',
+    /**
+     * Paranın DEFTERE girdiği gün, bugüne göre. Varsayılan dün, çünkü seed'in siparişlerinin
+     * çoğu geçmişin kaydı ve o para dün sayıldı.
+     *
+     * Parametrik olması BUGÜNÜN parasını görünür kılmak için şart (ölçüldü 30.08): sabit `-1`
+     * yüzünden `/money/overview` "bugün tahsil edilen" kırılımı ve `/money/day-end`in
+     * `collectedCents`i her `db:refresh` sonrası SIFIR açılıyordu — para ekranları boş değil,
+     * "bugün hiç para girmemiş" diye YANLIŞ doluyordu.
+     */
+    gunKaydirma = -1,
+  ): Promise<void> {
     if (!kasaId || tutarCents <= 0) return;
-    await movements.recordForOrder({ orderId, accountId: kasaId, amountCents: tutarCents, type: tip, valueDate: gun(-1) });
+    await movements.recordForOrder({ orderId, accountId: kasaId, amountCents: tutarCents, type: tip, valueDate: gun(gunKaydirma) });
   }
 
   /**
@@ -290,17 +352,30 @@ export async function seedOrders(
     kuponTutari?: number;
     /** Teslim gününü bugüne göre kaydır — kurye gün kapanışı ancak farklı günlerle denenebilir. */
     teslimGunu?: number;
+    /** Tahsilat hareketinin DEFTER günü, bugüne göre (varsayılan dün — `tahsilatYaz` künyesi). */
+    tahsilatGunu?: number;
+    /**
+     * Müşterinin HANGİ adres kartı — etiketiyle. Verilmezse varsayılan kart.
+     * Bölge adresten türediği için ikinci rotanın siparişi ancak bu seçimle doğar.
+     */
+    adresEtiketi?: string;
+    /**
+     * Siparişi taşıyan kuryenin kişi anahtarı (varsayılan `kurye` — Marc).
+     * Sefer kuryesi siparişlerin kuryesinden geliyor (`seedDeliveryRuns`), yani bu alan aynı
+     * zamanda "bu gün hangi hesabın sefer ekranı dolu olacak" sorusunun cevabı.
+     */
+    kuryeAnahtari?: string;
     /**
      * Kurye ATANMIŞ ama sipariş henüz yola çıkmamış. Sevkiyatçının sabah yaptığı işin sonucu budur
      * ve gün planı ekranı (09.15) tam bu aralıkta çalışır — hâl seed'de hiç doğmuyordu.
      */
     atanmis?: boolean;
     /**
-     * Siparişin ÇIKTIĞI depo. Varsayılan ana depo; `kehl` verildiğinde partiler de oradan seçilir.
-     * Tek depolu bir veri setinde depo süzgecini unutan sorgu DOĞRU cevap verir ve hata görünmez
-     * (CLAUDE.md §1) — ikinci deponun siparişi o kör noktayı açar.
+     * Siparişin ÇIKTIĞI depo. Varsayılan ana depo; `kehl`/`colmar` verildiğinde partiler de oradan
+     * seçilir. Tek depolu bir veri setinde depo süzgecini unutan sorgu DOĞRU cevap verir ve hata
+     * görünmez (CLAUDE.md §1) — ikinci deponun siparişi o kör noktayı açar.
      */
-    depo?: 'str' | 'kehl';
+    depo?: 'str' | 'kehl' | 'colmar';
     /** Müşteriye GERİ ÖDENEN tutar — `order_refund` hareketi; ödeme durumu `refunded`'a döner. */
     iade?: number;
     /**
@@ -328,7 +403,7 @@ export async function seedOrders(
     // orada da sebebi seed sanılmazdı. Yazım hatası gürültü çıkarmalı.
     if (!customerId) throw new Error(`seed: bilinmeyen müşteri anahtarı "${opts.musteri}" (${opts.etiket})`);
 
-    const adres = await varsayilanAdres(customerId);
+    const adres = await siparisAdresi(customerId, opts.adresEtiketi);
     // KAPI ÖNÜ satışının teslimat türü `pickup`tır ve SORULMAZ, kaynaktan TÜRETİLİR (26.08):
     // ikisi ayrı yazılsaydı bir gün ayrışırlardı. Kayıt `route` derken teslimatın öteki tüm izleri
     // (gün, bölge, kurye) zaten boş bırakılıyordu — yani satır kendi içinde çelişiyordu ve teslimat
@@ -349,7 +424,15 @@ export async function seedOrders(
     // KAPI ÖNÜ satışında teslimat YOKTUR: müşteri malı elden aldı. Teslim günü ve kurye yazmak,
     // o satışı bir SEFERE bağlar (`seedDeliveryRuns` kuryeli+günlü rota siparişlerini damgalar,
     // kapanış da seferin tahsilatını sayar) ve kuryeden hiç taşımadığı bir paranın hesabı sorulur.
-    const depoId = opts.depo === 'kehl' ? depolar.kehl : depolar.str;
+    const depoId = opts.depo === 'kehl' ? depolar.kehl : opts.depo === 'colmar' ? depolar.colmar : depolar.str;
+    // Siparişi taşıyan kurye — anahtar verilmezse Marc. Bilinmeyen anahtar SESSİZ GEÇMEZ: kurye
+    // `null` kalsaydı sipariş hiçbir sefere bağlanmaz ve eksiklik yalnız boş bir ekranla görünürdü.
+    const siparisKuryesi = opts.kuryeAnahtari
+      ? (kisiler.get(opts.kuryeAnahtari) ?? null)
+      : kurye;
+    if (opts.kuryeAnahtari && !siparisKuryesi) {
+      throw new Error(`seed: bilinmeyen kurye anahtarı "${opts.kuryeAnahtari}" (${opts.etiket})`);
+    }
     // TESLİMAT ÜLKESİ adresten gelir, varsayılandan değil: Almanya'ya giden bir siparişi `FR`
     // bırakmak hem OSS eşiği izlemini hem vergi modelini sessizce yanlışlar.
     const teslimUlkesi = adres?.country ?? 'FR';
@@ -421,7 +504,7 @@ export async function seedOrders(
         // "atandı ama henüz çıkmadı" seed'de hiç doğmuyordu, ekranın en kalabalık hâli görülemiyordu.
         courierId:
           !kapiOnu && (opts.atanmis || ['out_for_delivery', 'delivered', 'completed', 'returned'].includes(opts.hedef))
-            ? kurye
+            ? siparisKuryesi
             : null,
         onAccount: opts.onAccount ?? false,
         paymentMethod: opts.paymentMethod ?? null,
@@ -473,7 +556,7 @@ export async function seedOrders(
       // Tahsilat AYRI yazılır (12.2): kapı önü nakdi kasanın bakiyesine de düşsün. Durum da
       // hareketten türetilir — üretimde bunu kapı yapar (`lib/order/quick-sale`), seed onu taklit eder.
       if (sonuc.ok) {
-        await tahsilatYaz(order.id, toCents(opts.tahsilat ?? toplam(opts.kalemler)), 'order_payment');
+        await tahsilatYaz(order.id, toCents(opts.tahsilat ?? toplam(opts.kalemler)), 'order_payment', opts.tahsilatGunu);
         await odemeDurumuTazele(order.id);
       }
       console.log(`  ✓ ${opts.etiket} · ${sonuc.ok ? 'kapandı' : `atlandı (${sonuc.reason})`}`);
@@ -511,7 +594,7 @@ export async function seedOrders(
         continue;
       }
       if (hedef === 'delivered') {
-        await orders.deliver(order.id, { actorId: kurye, deliveryProof: { by: 'Kurye', at: an(0), method: 'imza' } });
+        await orders.deliver(order.id, { actorId: siparisKuryesi, deliveryProof: { by: 'Kurye', at: an(0), method: 'imza' } });
         onceki = 'delivered';
         continue;
       }
@@ -537,11 +620,11 @@ export async function seedOrders(
     }
 
     // Tahsilat bir HAREKETTİR (12.2): siparişteki `amount_*` ondan türer, doğrudan yazılmaz.
-    if (opts.tahsilat) await tahsilatYaz(order.id, toCents(opts.tahsilat), 'order_payment');
+    if (opts.tahsilat) await tahsilatYaz(order.id, toCents(opts.tahsilat), 'order_payment', opts.tahsilatGunu);
     // GERİ ÖDEME de bir harekettir, ters yönlü. Ayrı bir "iade edildi" bayrağı yok ve olmamalı:
     // `payment_status='refunded'` tahsil edilenle iade edilenin FARKINDAN türer. İade hareketi
     // olmadan o durumu elle yazmak, parası hâlâ kasada duran bir siparişi iade edilmiş göstermekti.
-    if (opts.iade) await tahsilatYaz(order.id, toCents(opts.iade), 'order_refund');
+    if (opts.iade) await tahsilatYaz(order.id, toCents(opts.iade), 'order_refund', opts.tahsilatGunu);
     // Ödeme durumu her hâlükârda tazelenir: tahsilatı olmayan sipariş de doğru durumda kalsın
     // (vadeli sipariş `pending`, iptal edilen `pending`…).
     await odemeDurumuTazele(order.id);
@@ -683,7 +766,8 @@ export async function seedOrders(
   });
   await siparis({
     musteri: 'b2bOnayli', kalemler: [kalem(41, 4)], hedef: 'ready', channel: 'b2b', paymentMethod: 'card',
-    tahsilat: 0, teslimGunu: 0, atanmis: true, etiket: 'Bugün — hazır ve ATANMIŞ, henüz yola çıkmadı',
+    tahsilat: 0, teslimGunu: 0, atanmis: true, kuryeAnahtari: 'hepsi',
+    etiket: 'Bugün — hazır ve ATANMIŞ, henüz yola çıkmadı',
   });
   // Hazırlığı SÜREN sipariş: gün planındaki "Hazırlanıyor" kademesi ancak böyle görünür.
   await siparis({
@@ -699,6 +783,82 @@ export async function seedOrders(
   await siparis({
     musteri: 'b2bBekleyen', kalemler: [kalem(43, 3)], hedef: 'confirmed', channel: 'b2b', paymentMethod: 'online',
     tahsilat: toplam([kalem(43, 3)]), teslimGunu: 0, etiket: 'Bugün — HAZIR DEĞİL ama ödenmiş (kapıda para konuşulmaz)',
+  });
+
+  /*
+    ── BUGÜN TAHSİL EDİLEN PARA (30.08) ────────────────────────────────────────────────────────
+    Para bölümünün iki ekranı da GÜNE bakıyor (`readMoneyOverview` / `readMoneyDayEnd` — ölçüt
+    `value_date = bugün`), oysa seed'in bütün tahsilatları dün tarihliydi. Ölçüldü: `db:refresh`
+    hemen ardından "bugün tahsil edilen" kırılımı BOŞ, gün sonu `collectedCents` SIFIR. Ekran
+    boş değil YANLIŞ doluyordu — "bugün hiç para girmedi" diyordu.
+
+    Üç yöntem birden, çünkü kırılım üç sütunlu (nakit · kart · çek) ve tek yöntemli bir gün o
+    kırılımı hiç göstermez. Siparişler TESLİM EDİLMİŞ ve BUGÜNÜN AÇIK seferine bağlı: aynı satırlar
+    "kuryenin üstündeki para"yı da dolduruyor (`delivery_run_collection` → kapanmamış sefer) —
+    iki ekran aynı gerçeğin iki yüzü, iki ayrı fikstür yazmak onları ayrıştırırdı.
+  */
+  const bugunNakit = [bolKalem(0, 2)];
+  const bugunKart = [bolKalem(1, 3)];
+  const bugunCek = [bolKalem(2, 2)];
+  await siparis({
+    musteri: 'b2cSadik', kalemler: bugunNakit, hedef: 'delivered', channel: 'b2c', paymentMethod: 'cash',
+    tahsilat: toplam(bugunNakit), teslimGunu: 0, tahsilatGunu: 0, kuryeAnahtari: 'hepsi',
+    etiket: 'Bugün — teslim edildi, kapıda NAKİT tahsil',
+  });
+  await siparis({
+    musteri: 'b2bOnayli', kalemler: bugunKart, hedef: 'delivered', channel: 'b2b', paymentMethod: 'card',
+    tahsilat: toplam(bugunKart), teslimGunu: 0, tahsilatGunu: 0, kuryeAnahtari: 'hepsi',
+    etiket: 'Bugün — teslim edildi, kapıda KART tahsil',
+  });
+  await siparis({
+    musteri: 'b2bBekleyen', kalemler: bugunCek, hedef: 'delivered', channel: 'b2b', paymentMethod: 'cheque',
+    tahsilat: toplam(bugunCek), teslimGunu: 0, tahsilatGunu: 0, kuryeAnahtari: 'hepsi',
+    etiket: 'Bugün — teslim edildi, kapıda ÇEK tahsil',
+  });
+
+  /*
+    ── BUGÜNÜN İKİNCİ ROTASI: DÖNMÜŞ VE KAPANMIŞ SEFER (30.08) ─────────────────────────────────
+    Gün sonu mutabakatı BUGÜNÜN kapanmış seferlerine bakıyor (`readMoneyDayEnd` → `listByDate`),
+    ama seed bugünün seferini bilerek AÇIK bırakıyordu (araçtan satış açık sefer ister). İkisi aynı
+    anda ancak iki rotayla mümkün: Strasbourg hâlâ yolda, Colmar döndü ve sayımı yapıldı.
+
+    **Uydurma bir rota değil, zaten duran rota:** Colmar bölgesi 19.25'te açıldı ve bugüne dek hiç
+    siparişi olmadı — çünkü tek Colmar adresi kimsenin VARSAYILAN adresi değil. `adresEtiketi` o
+    kapıyı açıyor. Kurye Marc: deposu kapsamında Colmar var (`seed/people.ts`), yani seferi sürmesi
+    veriyle tutarlı — ve bugünün Strasbourg rotasını sürmeyen kişi olması da gerçekçi.
+
+    İki durak, ikisi de NAKİT: kapanışın nakit farkı ancak sayılacak bir nakit varsa anlamlı
+    (`seedRunCloses` sayımı eksik yazacak — beklenen ↔ sayılan farkı oradan doğuyor).
+  */
+  if (colmarStoklu.length > 0) {
+    for (const [n, adet] of [2, 3].entries()) {
+      const kalemler = [colmarKalem(n, adet)];
+      await siparis({
+        musteri: 'b2cKapaliKapida', kalemler, hedef: 'delivered', channel: 'b2c', depo: 'colmar',
+        adresEtiketi: 'Colmar evi', paymentMethod: 'cash', tahsilat: toplam(kalemler),
+        teslimGunu: 0, tahsilatGunu: 0,
+        etiket: `Bugün — COLMAR rotası, teslim edildi (nakit) #${n + 1}`,
+      });
+    }
+  } else {
+    // Sessizce atlamak yok: Colmar deposunun stoksuz kalması gün sonu mutabakatını da susturur.
+    console.log('  ▸ COLMAR rotası atlandı: o depoda stoklu varyant yok — gün sonu farkı doğmayacak');
+  }
+
+  /*
+    ── YARININ RESMİ (30.08) ───────────────────────────────────────────────────────────────────
+    Gün özetinin `tomorrow` bloğu (sipariş · hazır · kapıda ödenecek) her koşuda SIFIR açılıyordu:
+    seed'in varsayılan teslim kaydırması `+2`, yani yarın hiç iş yoktu. "Yarın 0 sipariş" bir ölçüm
+    değil bir fikstür kazasıydı — ekran yarını boş gösteriyordu ve boşluğun sebebi görünmüyordu.
+  */
+  const yarinKapida = [bolKalem(3, 2)];
+  await siparis({
+    musteri: 'b2cSadik', kalemler: yarinKapida, hedef: 'ready', channel: 'b2c', paymentMethod: 'cash',
+    tahsilat: 0, teslimGunu: 1, etiket: 'Yarın — HAZIR, kapıda nakit ödenecek',
+  });
+  await siparis({
+    musteri: 'b2bOnayli', kalemler: [bolKalem(4, 4)], hedef: 'confirmed', channel: 'b2b', paymentMethod: 'card',
+    tahsilat: 0, teslimGunu: 1, etiket: 'Yarın — onaylı, henüz hazırlanmadı',
   });
 
   // — KARGO KUYRUĞU: taşıyıcıya verilmeyi bekleyenler ──────────────────────────────────────────
@@ -837,6 +997,53 @@ export async function seedOrders(
     }
 
     /*
+      ── BUGÜNÜN SEFERİNDE KUTULU DURAK (30.08) ────────────────────────────────────────────────
+      Kapıda kutu okutma ve rampada yükleme sayacı ("1/3 bindi") ancak BUGÜNÜN seferine bağlı,
+      kutuları olan bir durak varsa görülebiliyor. Ölçüldü: `order_box` satırlarının hiçbiri bugüne
+      teslim edilecek bir siparişe ait değildi ve tek bir kutu bile yüklenmemişti — kurye
+      ekranlarının kutu yolu yerelde hiç açılamıyordu.
+
+      ÜÇ KUTU, BİRİ ARAÇTA: yükleme sayacının aradaki hâli ("hepsi binmedi") ancak kısmi yükte
+      görünür. Son kutu binmediği için sipariş `ready` kalıyor — kutulu siparişte "yolda"nın tek
+      kapısı son okutmadır (`loadBox`), yani bu durak yükleme ekranının bekleyeni.
+    */
+    const yuklemeSiparisi = await siparis({
+      musteri: 'b2cSadik', kalemler: [bolKalem(5, 4), bolKalem(6, 2)], hedef: 'confirmed', channel: 'b2c',
+      paymentMethod: 'cash', tahsilat: 0, teslimGunu: 0, atanmis: true, kuryeAnahtari: 'hepsi',
+      etiket: 'KUTULU — bugünün seferinde, 1/3 kutu araçta',
+    });
+    if (yuklemeSiparisi && turKuryesi) {
+      const bulunan = await orders.getWithItems(yuklemeSiparisi);
+      if (!bulunan) throw new Error('seed kutu: yükleme siparişi okunamadı');
+      // Dağılım: 1. kutu ilk kalemin tamamı, 2. ve 3. kutu ikinci kalemi paylaşıyor. Son kutunun
+      // kapanışı siparişi `ready` yapar — sıra bilinçli, öncekiler `ready` DÖNMEMELİ.
+      const dagilim = [
+        [bulunan.items[0]?.qty ?? 0, 0],
+        [0, 1],
+        [0, (bulunan.items[1]?.qty ?? 0) - 1],
+      ];
+      const kodlar: string[] = [];
+      for (const [n, adetler] of dagilim.entries()) {
+        const acilan = await openBox(db, { orderId: yuklemeSiparisi, warehouseId: depolar.str });
+        if (acilan.status !== 'ok') throw new Error(`seed kutu: yükleme kutusu ${n + 1} açılamadı (${acilan.status})`);
+        kodlar.push(acilan.box.code);
+        const kapanis = await sealBox(db, {
+          boxId: acilan.box.boxId, warehouseId: depolar.str,
+          picks: await strPicks(bulunan.items, adetler), actorId: depocu,
+        });
+        const sonKutu = n === dagilim.length - 1;
+        if (kapanis.status !== 'ok' || kapanis.ready !== sonKutu) {
+          throw new Error(`seed kutu: yükleme kutusu ${n + 1} beklenen hâlde değil (${kapanis.status})`);
+        }
+      }
+      // Yalnız İLK kutu araca biner — okutmayı GERÇEK kapı yapıyor (`loadBox`), damga elle yazılmıyor:
+      // rota denetimi ve sayaç aynı yoldan geçsin, "yüklendi" iddiası kapının kendi cevabı olsun.
+      const okutma = await loadBox(db, { code: kodlar[0]!, courierId: turKuryesi });
+      if (okutma.status !== 'ok') throw new Error(`seed kutu: ilk kutu araca alınamadı (${okutma.status})`);
+      console.log(`  ✓ bugünün kutulu durağı: ${okutma.loadedBoxes}/${okutma.boxCount} kutu araçta`);
+    }
+
+    /*
       ── KARGOYA VERİLMİŞ GÖNDERİLER (07.12) ─────────────────────────────────────────────────────
       Üç ekran bu satırlar olmadan BOŞ kalıyordu: müşteri sipariş detayının takip bloğu, operasyon
       sipariş detayının gönderi künyesi ve "yolda" mailinin takip kutusu. Ölçüldü — `shipment`
@@ -947,7 +1154,60 @@ export async function seedOrders(
     await siparis({ musteri: 'yonetici', kalemler: [kalem(34, 1)], hedef: 'cancelled', channel: 'b2c', paymentMethod: 'online', etiket: 'Dev hesabı — iptal (bildirim turu)' });
   }
 
+  /*
+    ── EKSİK TOPLAMA: sipariş istisnası (Y2 · 30.08) ───────────────────────────────────────────
+    Yönetimin "sipariş istisnaları" ekranı ve hub'ın karar kutusundaki sayaç aynı motoru okuyor
+    (`listPreparationQueue` → `shortfallQty > 0`). Ölçüldü: sayaç 0, ekran boş — çünkü seed her
+    siparişi rafta karşılığı olan adetlerle kuruyordu, yani "eksik toplama" hâli hiç doğmuyordu.
+
+    Hâl UYDURULMAZ, YAŞATILIR: sipariş normal yoldan açılır ve stoğu ayrılır; ARDINDAN o partiden
+    bir imha (hasar) düşülür. Gerçek hikâye budur — mal söz verildikten sonra rafta kırılır ve
+    depocu sabah eksik bulur. Adedi doğrudan "stoktan fazla" yazmak, checkout'un asla üretemeyeceği
+    bir sipariş kurmak olurdu (`reserve_stock` kısmi ayırma yapmaz, reddeder).
+
+    **BLOK EN SONDA ve sebebi sıra:** imha o varyantın rafını boşaltıyor. Ortada dursaydı sonraki
+    siparişler aynı varyantı bulamaz, rezervasyon ya da kutu kapanışı sessizce yarım kalırdı.
+
+    ── MÜŞTERİ SEÇİMİ TESADÜF DEĞİL (ölçüldü 30.08) ────────────────────────────────────────────
+    İlk hâlde müşteri `b2cSadik`'ti ve istisna ekranı YİNE boş açıldı — ama bu kez sebep başkaydı:
+    `seedTickets` `source:'order'` taleplerini müşterinin EN YENİ siparişine bağlıyor
+    (`siparisler.find(customer_id === …)`, `created_at desc`). Bu blok seed'in son siparişi olduğu
+    için "Hasarlı geldi · Baklava" talebi tam da bu kalemin üstüne düştü; `listOrderExceptions`
+    cevabı BEKLEYEN kalemi eliyor (`!line.awaitingAnswer`) ve sayaç 0'da kaldı. Ölçüm:
+      ticket b633232f… · damaged · open · order_item_ids = {cd5ea6c8…}  → LA-26-QWUWL6'nın tek kalemi
+    Çare kalemi gizlemek değil ÇAKIŞMAYI kaldırmak: sipariş, kaleme talep bağlanan üç müşterinin
+    (`b2cSadik` · `b2bOnayli` · `b2bAlman`) hiçbirine yazılmıyor. `b2bBekleyen`in tek talebi
+    WhatsApp kaynaklı ve siparişsiz. Bağ kırılırsa sessiz kalmasın diye kapsam denetimine ZORUNLU
+    bir kova eklendi (`coverage.ts` → "eksik toplama (Y2)") ve o kova ekranın OKUDUĞU motoru çağırır.
+  */
+  {
+    const eksikKalem = bolKalem(7, 4);
+    const eksikSiparis = await siparis({
+      musteri: 'b2bBekleyen', kalemler: [eksikKalem], hedef: 'confirmed', channel: 'b2b',
+      paymentMethod: 'cash', tahsilat: 0, teslimGunu: 0,
+      etiket: 'Bugün — EKSİK TOPLAMA olacak (raftaki mal siparişten sonra hasar gördü)',
+    });
+    if (eksikSiparis) {
+      // Rafta KAÇ adet kalsın: sipariş 4, hedef 2 → iki adet eksik. Fark sabit değil hesaplanmış;
+      // parti dağılımı değişse de "iki adet eksik" iddiası doğru kalır.
+      const kalsin = eksikKalem.qty - 2;
+      const partiler = await stocks.listInStock(depolar.str, eksikKalem.variantId);
+      let elde = partiler.reduce((s, p) => s + p.physicalQty, 0);
+      for (const parti of partiler) {
+        if (elde <= kalsin) break;
+        const dus = Math.min(parti.physicalQty, elde - kalsin);
+        if (dus <= 0) continue;
+        await new StockMovementService(db).adjust({
+          stockId: parti.id, qty: dus, direction: 'out', kind: 'write_off', reason: 'damaged',
+          note: 'Rafta devrildi — kutular ezildi, satılamaz.', createdBy: depocu,
+        });
+        elde -= dus;
+      }
+      console.log(`  ✓ eksik toplama zemini: sipariş ${eksikKalem.qty} adet, rafta ${elde} adet kaldı`);
+    }
+  }
+
   const { count } = await db.from('order').select('*', { count: 'exact', head: true });
-  console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · kuponlu · kısmi iade · kurye günleri · kutulu hazırlık)`);
+  console.log(`✓ sipariş: ${count ?? 0} kayıt (9 durumun hepsi · 4 kaynak · kuponlu · kısmi iade · kurye günleri · kutulu hazırlık · eksik toplama)`);
 }
 

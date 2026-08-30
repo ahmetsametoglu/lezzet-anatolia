@@ -11,8 +11,9 @@ import messages from './messages.json';
   cevapsız kalan müşteriyi asla fark etmez — bu yüzden düğme "gönder" değil "Deftere işle" ve altında
   uyarı var. Bir gün biri "kullanıcı deneyimi" adına o cümleyi yumuşatırsa, kırılması gereken test bu.
 
-  İkinci karar: **yürütücü modu İKİ değerli** (insan · hibrit). Üçüncüsü (özerk AI) arkasında motoru
-  olmadığı için seçilemez (15.13); seçilebilir olsaydı ekran olmayan bir yeteneği vaat ederdi.
+  İkinci karar: **yürütücü çipleri ENUM'dan türer**, elle sayılmaz. Özerk AI bir tur boyunca enum'un
+  dışındaydı (arkasında motor yoktu, 15.13) ve 29.08'de geri döndü; ekran o gün tek satır bile
+  değişmedi. Türetmenin karşılığı budur.
 
   Desen kurye ekranlarıyla aynı: hook taklit EDİLMEZ, `fetch` taklit edilir — ekran ile sözleşme
   arasındaki yol gerçek kalsın diye.
@@ -143,10 +144,10 @@ describe('kutu bir DEFTER kutusudur — mesaj göndermez', () => {
   });
 });
 
-describe('yürütücü modu — İKİ değer, üçüncüsü YOK', () => {
-  it('insan ve hibrit çipleri var, "AI" çipi YOK', async () => {
-    // Özerk sohbet motoru yazılmadı (15.8). Seçilebilir bir "AI" çipi, arkasında hiçbir şey
-    // koşmayan bir modu vaat ederdi — sohbet operatör AI ilgileniyor sanarken cevapsız kalırdı.
+describe('yürütücü modu — çipler ENUM\'dan doğar', () => {
+  it('insan · hibrit · AI: üç çip de enum\'dan türer', async () => {
+    // Çip listesi elle sayılmıyor: `ConversationHandlerEnum.options`. Enum bir tur boyunca `ai`yi
+    // dışlıyordu (arkasında motor yoktu); 29.08'de geri aldı ve üçüncü çip kendiliğinden doğdu.
     mockDetay(detay());
     await ekranAc();
     expect(screen.getByTestId('management-social-mode-human')).toBeOnTheScreen();
@@ -182,6 +183,29 @@ describe('YZ taslağının tek çıkışı kutuya taşımaktır', () => {
     await ekranAc();
     expect(screen.getByTestId('management-social-suggest')).toBeOnTheScreen();
     expect(screen.queryByTestId('management-social-draft')).toBeNull();
+  });
+
+  /* v3 (30.08): taslak YAZIŞMADAN çıkıp cevap çubuğunun üstüne taşındı — bir mesaj değil, bekleyen
+     bir karar. Test yerini çiviliyor: yazışma kaydırıcısının İÇİNDE değil, çubuğun yanında. */
+  it('v3 · taslak yazışmanın içinde DEĞİL, cevap çubuğunun üstündedir', async () => {
+    mockDetay(detay({ handledBy: 'hybrid', aiDraftReply: 'Yarın 09:00 için ayırdık.' }));
+    await ekranAc();
+
+    const thread = screen.getByTestId('management-social-thread');
+    const draft = screen.getByTestId('management-social-draft');
+    expect(thread).not.toContainElement(draft);
+    // Kuralın cümlesi kartın üstünde: hibritte gönderen insandır.
+    expect(screen.getByText(t.draftNote)).toBeOnTheScreen();
+  });
+
+  it('v3 · "Reddet" düğmesi ÇİZİLMEZ — taslağı reddeden bir uç yok', async () => {
+    // Şablon iki düğme çiziyor; ikincisinin arkasında kapı olmadığı için yazılmadı. Basılınca
+    // hiçbir şey yapmayan düğme, operatöre "reddettim" dedirtip taslağı yerinde bırakırdı.
+    mockDetay(detay({ handledBy: 'hybrid', aiDraftReply: 'Yarın 09:00 için ayırdık.' }));
+    await ekranAc();
+
+    expect(screen.queryByText('Reddet')).toBeNull();
+    expect(screen.getAllByTestId('management-social-draft-take')).toHaveLength(1);
   });
 });
 

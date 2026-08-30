@@ -27,12 +27,24 @@ import { PressableSurface } from './pressable-surface';
   `BlurTargetView` açığı `AppBar` künyesinde, tek yerde yazılı — aynı yüzey, aynı karar.
 
   ── İKİ YÜZEY, TEK ÇUBUK (21.9) ─────────────────────────────────────────────
-  Operasyon yüzeyinin sekme çubuğu (Operasyon Mobil v2:808) İSKELET olarak bunun AYNISIDIR: krem
-  cam + üst çizgi + eşit dört yuva + ikon üstü etiket. Ayrıştığı yer yalnız TON: seçili renk,
-  seçilmeyen renk, üst çizgi, etiket kademesi, seçili ikonun vurgusu ve basılı geri bildirim.
+  Operasyon yüzeyinin sekme çubuğu İSKELET olarak bunun AYNISIDIR: krem cam + üst çizgi + eşit
+  dört yuva + ikon üstü etiket. Ayrıştığı yer yalnız TON: seçili renk, seçilmeyen renk, üst çizgi,
+  etiket kademesi, ikon ölçüsü, seçili ikonun vurgusu ve basılı geri bildirim.
   Bu yüzden ikinci bir çubuk YAZILMADI (CLAUDE §1 — komponent duplikasyonu da duplikasyondur);
   fark tek bir `tone` prop'una indi ve karar KİTİN İÇİNDE kaldı: çağıran renk geçirmez, hangi
   yüzeyde olduğunu söyler.
+
+  ── OPERASYON TONU v3'E ÇEKİLDİ (ölçüldü 30.08) ─────────────────────────────
+  Şablonun kendi mantığı (`c.tabDepo = tab === 'depo' ? vurgu : '#a8a191'`) üç şey söylüyor:
+  · SEÇİLİ SEKME ARTIK VURGU RENGİ, mürekkep değil — v2'de `#343b41`ti. Karar tek başına değil:
+    v3 bölüm üstbaşlıklarını da dört bölümde birden zeytine çevirdi (`section-header.tsx`
+    künyesi). Yani renk "hangi bölümdeyim" demeyi bıraktı, "operasyondayım" demeye başladı;
+    çubuk da aynı cümleyi kuruyor.
+  · Seçilmeyen ton `tab-inactive` durağının YENİ değeri (#a8a191) — token künyesinde ölçüldü.
+  · İkon 22 → 20 (`tabIconOperations`), etiket 10,5 → 10 (`badge-sm`), yatay dolgu 8 → 6 (`sm`).
+  Krem cam + bulanıklık KORUNDU: v3 çubuğu `#f6f4ec` opak çiziyor ama o değer `cream`e Δ4/4/4
+  uzaklıkta, yani `cream-glass`ın %96 opak hâliyle ekranda ayırt edilemez — ölçülemeyen bir fark
+  için paylaşılan kitin yapısını (BlurView) bölmek, kazanç olmadan risk almaktı.
 
   OPERASYON DEĞERLERİ `operationsTheme` SABİTİNDEN okunuyor, `theme` argümanından değil: Unistyles
   geri çağrısındaki tema KAYITLI TEMALARIN BİRLEŞİMİDİR ve TypeScript birleşimde yalnız ortak
@@ -70,8 +82,11 @@ export function BottomTabBar({ items, tone = 'customer', testID }: BottomTabBarP
      iki yerde yazılsaydı ikon ile etiketin rengi bir gün ayrışırdı. */
   const stateColors =
     tone === 'operations'
-      ? { selected: operationsTheme.colors.ink, idle: operationsTheme.colors['tab-inactive'] }
+      ? { selected: operationsTheme.colors.olive, idle: operationsTheme.colors['tab-inactive'] }
       : { selected: theme.colors.terracotta, idle: theme.colors.muted };
+
+  /* İkon ölçüsü de tondan: iki yüzeyin durağı v3'te ayrıldı (künye üstte, ölçüm `metrics.ts`te). */
+  const iconSize = tone === 'operations' ? operationsTheme.size.tabIconOperations : theme.size.tabIcon;
 
   return (
     <BlurView
@@ -109,7 +124,7 @@ export function BottomTabBar({ items, tone = 'customer', testID }: BottomTabBarP
             <View style={item.selected && tone === 'customer' ? styles.selectedIcon : undefined}>
               <Icon
                 name={item.icon}
-                size={theme.size.tabIcon}
+                size={iconSize}
                 color={item.selected ? stateColors.selected : stateColors.idle}
               />
             </View>
@@ -144,11 +159,13 @@ const styles = StyleSheet.create((theme, rt) => ({
        tasarımdan belirgin yükseltiyordu). Home indicator alanı zaten dolgu görevi görür. */
     paddingBottom: Math.max(rt.insets.bottom, theme.space.sm),
   },
-  /** Operasyon: kum ayracı (v2 `#ddd6c4` → `sand-300`) + 10 px alt dolgu (v2:809). */
+  /** Operasyon: kum ayracı (`#ddd6c4` → `sand-300`) + 10 px alt, 6 px yan dolgu (v3). */
   operationsBar: {
     borderTopColor: operationsTheme.colors['sand-300'],
     // Aynı kural: inset ile dolgunun büyüğü (gerekçe üstte).
     paddingBottom: Math.max(rt.insets.bottom, theme.space.lg),
+    // v3 `padding:8px 6px 10px` — yatay nefes müşterininkinden 2 dp dar (dört yuva daha geniş).
+    paddingHorizontal: theme.space.sm,
   },
   /** Bulanıklığın üstündeki krem katman — gerekçesi `AppBar`da, aynı yüzeyin ikizi. */
   glass: {
@@ -179,7 +196,7 @@ const styles = StyleSheet.create((theme, rt) => ({
      (11,5), ağırlık üstbaşlık kademesinden (700) — `eyebrow` (10) sayıca daha yakın ama harf
      aralığı .18em'dir ve büyük harf içindir; sekme etiketi cümle biçimlidir. */
   customerLabel: { fontSize: theme.text.micro },
-  /* Operasyonda o durak ARTIK VAR: `meta` (10,5) tam olarak bu ölçü için açıldı
-     (`operations-app.ts`) — yani burada yuvarlamaya gerek kalmıyor. */
-  operationsLabel: { fontSize: operationsTheme.text.meta },
+  /* Operasyon v3 etiketi TAM 10 px — yuvarlama gerekmiyor, `badge-sm` o ölçünün kendisi.
+     `meta` (10,5) durağı yerinde kalıyor: v3'te 42 kullanımı var, yalnız artık bu satır değil. */
+  operationsLabel: { fontSize: operationsTheme.text['badge-sm'] },
 }));

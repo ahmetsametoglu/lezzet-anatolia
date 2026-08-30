@@ -6,9 +6,18 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { operationsTheme } from '@/theme/unistyles';
 
 /*
-  BİLDİRİM DÜĞMESİ — üç bölüm kökünün sağ üst köşesi (v2:41 kurye · 272 depo · 491 yönetim).
-  42 dp nötr daire + zil ikonu + köşede sayaç rozeti. PARA bölümünde YOKTUR (orada metin eylemi
-  var), bu yüzden başlığın sabit parçası değil `right` yuvasına verilen bir öğedir.
+  BİLDİRİM DÜĞMESİ — bölüm köklerinin sağ üst köşesi. 40 dp nötr KUTUCUK + zil ikonu + köşede
+  sayaç rozeti. PARA bölümünde YOKTUR (orada metin eylemi var), bu yüzden başlığın sabit parçası
+  değil `right` yuvasına verilen bir öğedir.
+
+  ── ŞEKİL v3'TE DAİRE OLMAKTAN ÇIKTI (ölçüldü 30.08) ──────────────────────
+  v2 onu 42 dp tam daire çiziyordu; v3 `width:40px;height:40px;border-radius:14px` diyor — yani
+  geri düğmesiyle (38/13) aynı aileden bir kutucuk. İkisi aynı başlık satırında yan yana durduğu
+  için yarıçapları da TEK durağa (`badge`, 12) çekildi: tasarımın 13 ile 14'ü arasındaki bir
+  piksel, iki kardeş düğmenin farklı köşe yarıçapı taşıması pahasına korunacak bir şey değil.
+  İkon 20'de bırakıldı (şablon 18 diyor): `headerIcon` durağını beş ekran daha okuyor ve 2 dp'lik
+  fark için paylaşılan bir ölçüyü oynatmak, ölçülemeyen bir kazanç için ölçülebilir bir risktir
+  (rapor edildi).
 
   SAYAÇ SIFIRDA ÇİZİLMEZ (v2 `bilN: bil.length || null`): boş bir rozet "0 yeni" demez, "bir şey
   var" der. Sayı ROL SÜZMESİNDEN SONRAKİ sayıdır — kullanıcı açamayacağı bir işin sayısını taşımaz.
@@ -48,9 +57,9 @@ export function NotificationBell({ onPress, accessibilityLabel, count, testID }:
 
 const styles = StyleSheet.create({
   button: {
-    width: operationsTheme.size.iconButtonOnPhoto,
-    height: operationsTheme.size.iconButtonOnPhoto,
-    borderRadius: operationsTheme.size.iconButtonOnPhoto / 2,
+    width: operationsTheme.size.iconButton,
+    height: operationsTheme.size.iconButton,
+    borderRadius: operationsTheme.radius.badge,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: operationsTheme.colors['neutral-bg'],

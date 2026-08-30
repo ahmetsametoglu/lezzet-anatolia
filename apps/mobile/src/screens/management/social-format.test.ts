@@ -1,5 +1,5 @@
 import type { MessageKind } from '@lezzet/types';
-import { socialPreview, socialStamp, socialTitle, socialWindowOf } from './social-format';
+import { socialInitials, socialPreview, socialStamp, socialTitle, socialWindowOf } from './social-format';
 
 /*
   Sosyal ekranların metin türetmeleri (15.17 · test dalgası 15.18).
@@ -104,5 +104,35 @@ describe('socialWindowOf — `never` ile `closed` AYNI DEĞİL', () => {
   it('bozuk damga `closed` — geçerli sayılıp serbest metne izin VERİLMEZ', () => {
     // Şüphede kalınan yer pahalı taraf olmamalı: yanlışlıkla "açık" demek şablon ücretine düşürür.
     expect(socialWindowOf('bozuk', now).state).toBe('closed');
+  });
+});
+
+describe('socialInitials — avatarın harfleri', () => {
+  const row = (over: Partial<{ customerName: string | null; profileName: string | null; externalRef: string }> = {}) => ({
+    customerName: null,
+    profileName: null,
+    externalRef: '+33600000001',
+    ...over,
+  });
+
+  it('adın ilk iki kelimesinden en çok iki harf', () => {
+    expect(socialInitials(row({ customerName: 'Mehmet Aydın' }))).toBe('MA');
+    expect(socialInitials(row({ customerName: 'Claire' }))).toBe('C');
+    expect(socialInitials(row({ customerName: 'Anne Marie de Vries' }))).toBe('AM');
+  });
+
+  it('büyük harf TÜRKÇE kuralıyla — "ismail" İS olur, IS değil', () => {
+    expect(socialInitials(row({ customerName: 'ismail Yıldız' }))).toBe('İY');
+  });
+
+  it('ham anahtar kalan satırda harf UYDURULMAZ — boş döner', () => {
+    // Telefon ya da PSID'den harf çıkmaz; kare boş kalır ve kanalı rengiyle söyler.
+    expect(socialInitials(row())).toBe('');
+    expect(socialInitials(row({ externalRef: '17841400000000000' }))).toBe('');
+  });
+
+  it('zincir başlıkla AYNI kaynağa bakar: müşteri adı > profil adı', () => {
+    expect(socialInitials(row({ customerName: 'Sabine Krüger', profileName: 'Emre Y.' }))).toBe('SK');
+    expect(socialInitials(row({ profileName: 'Emre Yılmaz' }))).toBe('EY');
   });
 });

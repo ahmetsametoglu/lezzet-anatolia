@@ -15,10 +15,16 @@ import { tabloDolu, type Db, type Kisiler } from './shared';
 // Beklenen tutar UYDURULMAZ: `delivery_run_collection` görünümünden gelir ve kapanış RPC'si onu
 // kendisi okur. Seed'in tek söylediği "kurye ne saydı"dır — mutabakatın anlamı da zaten budur.
 //
-// Üç hâl kurulur, çünkü ekran üçünü ayrı gösterir:
-//   · MUTABIK sefer     → sayılan = beklenen; yeşil satır
-//   · FARKLI sefer      → nakit eksik çıkmış + kuryenin açıklaması; fark gizlenmez, AÇIKLANIR
-//   · KAPANMAMIŞ sefer  → teslimatı olan ama sayımı yapılmamış sefer; "açık sefer" uyarısı
+// Dört hâl kurulur, çünkü ekranlar dördünü ayrı gösterir:
+//   · MUTABIK sefer          → sayılan = beklenen; yeşil satır
+//   · FARKLI sefer (geçmiş)  → nakit EKSİK çıkmış + kuryenin açıklaması; fark gizlenmez, AÇIKLANIR
+//   · FARKLI sefer (BUGÜN)   → nakit FAZLA çıkmış; gün sonu mutabakatı yalnız BUGÜNÜN kapanışlarına
+//                              bakıyor (`readMoneyDayEnd`), yani bugüne ait bir kapanış olmadan
+//                              o ekranın uyuşmazlık satırı hiç doğmuyor (ölçüldü 30.08)
+//   · KAPANMAMIŞ sefer       → teslimatı olan ama sayımı yapılmamış sefer; "açık sefer" uyarısı
+//
+// KAPANMA ÖLÇÜTÜ TARİH DEĞİL, DURAKLARDIR: seferin bütün durakları sonuçlandıysa kurye dönmüştür.
+// Bugün iki rota koşuyor — dönen kapanır, yoldaki açık kalır (araçtan satış açık sefer ister).
 
 /**
  * Kuryeli rota siparişlerini (zone, gün) başına SEFERE bağlar. Sipariş seed'inden SONRA koşar:
@@ -37,27 +43,47 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
   }
 
   // Kuryeli, bölgeli, günlü rota siparişleri — seferin duraklarını bunlar tanımlar.
+  //
+  // **SÜZGEÇ TEK KURYEYE DARALTILMAZ** (30.08): seferin kuryesi SİPARİŞTEN gelir (0046'nın kendi
+  // kuralı), seed'in bildiği sabit bir isimden değil. Daraltılmış hâlde bugünün rotası başka bir
+  // hesaba yazıldığında o hesabın sefer ekranı sessizce boş kalıyordu — sipariş vardı, sefer yoktu.
   const { data, error } = await db
     .from('order')
-    .select('id,delivery_zone_id,delivery_date,warehouse_id')
-    .eq('courier_id', kurye)
+    .select('id,delivery_zone_id,delivery_date,warehouse_id,courier_id')
+    .not('courier_id', 'is', null)
     .eq('delivery_type', 'route')
     .not('delivery_zone_id', 'is', null)
     .not('delivery_date', 'is', null);
   if (error) throw error;
-  const rows = (data ?? []) as Array<{ id: string; delivery_zone_id: string; delivery_date: string; warehouse_id: string }>;
+  const rows = (data ?? []) as Array<{
+    id: string; delivery_zone_id: string; delivery_date: string; warehouse_id: string; courier_id: string;
+  }>;
   if (rows.length === 0) {
     console.log('  · kuryeli rota siparişi yok — sefer kurulmadı');
     return;
   }
 
   // (zone, gün) grupları — rota+gün başına TEK sefer (0046 kısıtının aynısı).
-  const gruplar = new Map<string, { zoneId: string; date: string; warehouseId: string; orderIds: string[] }>();
+  const gruplar = new Map<
+    string,
+    { zoneId: string; date: string; warehouseId: string; courierId: string; orderIds: string[] }
+  >();
   for (const row of rows) {
     const key = `${row.delivery_zone_id}·${row.delivery_date}`;
     const grup = gruplar.get(key);
-    if (grup) grup.orderIds.push(row.id);
-    else gruplar.set(key, { zoneId: row.delivery_zone_id, date: row.delivery_date, warehouseId: row.warehouse_id, orderIds: [row.id] });
+    if (!grup) {
+      gruplar.set(key, {
+        zoneId: row.delivery_zone_id, date: row.delivery_date, warehouseId: row.warehouse_id,
+        courierId: row.courier_id, orderIds: [row.id],
+      });
+      continue;
+    }
+    // Aynı rota+gün İKİ kuryeye yazılamaz: sefer tekil ve kuryesi tek. Seed'de böyle bir satır
+    // çıkarsa bu bir fikstür hatasıdır — sessizce birini seçmek, ötekinin ekranını boşaltırdı.
+    if (grup.courierId !== row.courier_id) {
+      throw new Error(`seed sefer: ${grup.date} · aynı rotada iki kurye (${grup.courierId} ↔ ${row.courier_id})`);
+    }
+    grup.orderIds.push(row.id);
   }
 
   const yil = new Date().getFullYear();
@@ -74,8 +100,16 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       atlanan += 1; // Sefer çıkışta doğar: yarının siparişi henüz bir sefere ait değil.
       continue;
     }
-    // Çıkış sabah 08:30, dönüş 16:45 — kapanış ekranındaki süre hesabı gerçekçi dursun.
-    const departed = `${grup.date}T08:30:00+02:00`;
+    /*
+      GEÇMİŞ gün: çıkış sabah 08:30, dönüş 16:45 — kapanış ekranındaki süre hesabı gerçekçi dursun.
+
+      BUGÜN: çıkış "iki saat önce" ve bu bir üslup tercihi değil KISIT (30.08). Sabit 08:30 yazmak
+      `db:refresh` sabahın erken saatinde koşulduğunda dönüş damgasını çıkıştan ÖNCEYE düşürüyordu
+      ve `delivery_run_times` kısıtı seed'i kesiyordu (`returned_at >= departed_at`) — bugünün
+      seferi artık kapanabildiği için o dal gerçek bir düşüş sebebi.
+    */
+    const departed =
+      grup.date < bugun ? `${grup.date}T08:30:00+02:00` : new Date(Date.now() - 2 * 3_600_000).toISOString();
     const returned = grup.date < bugun ? `${grup.date}T16:45:00+02:00` : null;
     const { data: run, error: runErr } = await db
       .from('delivery_run')
@@ -84,7 +118,7 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
         delivery_zone_id: grup.zoneId,
         delivery_date: grup.date,
         warehouse_id: grup.warehouseId,
-        courier_id: kurye,
+        courier_id: grup.courierId,
         created_at: departed,
         departed_at: departed,
         returned_at: returned,
@@ -122,20 +156,43 @@ export async function seedRunCloses(db: Db, kisiler: Kisiler): Promise<void> {
   const runs = new DeliveryRunService(db);
   const collections = new DeliveryRunCollectionService(db);
 
-  // Kapıda tahsilatı OLAN seferler — görünüm zaten "hangi sefer, ne kadar" diyor. Sıralama sefer
-  // gününe göre: en yeni mutabık kapanır, önceki farklı, kalanlar açık kalır.
-  // BUGÜNÜN SEFERİ KAPATILMAZ (26.08): kapanış bir günün SONUNDA yapılır ve kurye hâlâ yolda.
-  // Kural pratikte de gerekli — araçtan satış yalnız açık sefere bağlanıyor (`quick-sale` 4b), yani
-  // bugünün seferi kapatılırsa yerinde satışın denenebileceği tek zemin seed'de hiç doğmaz.
-  const bugun = new Date().toISOString().slice(0, 10);
-  const seferler = await runs.listByCourier(kurye, { limit: 30 });
-  const tahsilatli: Array<{ runId: string; date: string }> = [];
-  for (const sefer of seferler) {
-    if (sefer.deliveryDate >= bugun) continue;
-    if (await collections.getByRun(sefer.id)) tahsilatli.push({ runId: sefer.id, date: sefer.deliveryDate });
+  /**
+   * Seferin bütün durakları sonuçlandı mı — "kurye döndü" sorusunun veriye sorulmuş hâli.
+   *
+   * Ölçüt bunun için var: kapanış bir günün SONUNDA yapılır ve hâlâ yolda olan sefer kapatılmaz.
+   * Tarihe (ör. "bugünse kapatma") bakmak yerine DURAKLARA bakmak, bugün iki rota koştuğunda da
+   * doğru cevabı veriyor: biri dönmüşse o kapanır, öteki açık kalır.
+   */
+  async function seferiBitti(runId: string): Promise<boolean> {
+    const { data, error } = await db.from('order').select('status').eq('delivery_run_id', runId);
+    if (error) throw error;
+    const duraklar = (data ?? []) as Array<{ status: string }>;
+    return (
+      duraklar.length > 0 &&
+      duraklar.every((durak) => ['delivered', 'completed', 'returned', 'cancelled'].includes(durak.status))
+    );
   }
 
-  if (tahsilatli.length === 0) {
+  // Kapıda tahsilatı OLAN seferler — görünüm zaten "hangi sefer, ne kadar" diyor. Sıralama sefer
+  // gününe göre en yeniden eskiye; küme TÜM kuryelerin seferi (30.08): kapanış kuryeye değil
+  // SEFERE aittir ve bugün iki rota iki ayrı kimlikte koşuyor.
+  const bugun = new Date().toISOString().slice(0, 10);
+  const seferler = await runs.listRecent({ limit: 60 });
+  /** GEÇMİŞ günlerin tahsilatlı seferleri — mutabık/farklı kapanışların kaynağı. */
+  const tahsilatli: Array<{ runId: string; date: string }> = [];
+  /** BUGÜN dönmüş seferler — gün sonu mutabakatının bugüne ait tek kaynağı. */
+  const bugunDonen: Array<{ runId: string; date: string }> = [];
+  for (const sefer of seferler) {
+    if (!(await collections.getByRun(sefer.id))) continue;
+    if (sefer.deliveryDate < bugun) tahsilatli.push({ runId: sefer.id, date: sefer.deliveryDate });
+    // BUGÜNÜN seferi ancak DÖNMÜŞSE kapanır. En az biri açık kalmalı: araçtan satış yalnız açık
+    // sefere bağlanıyor (`quick-sale` 4b) ve kurye ekranı da bugünün açık seferini bekliyor.
+    else if (sefer.deliveryDate === bugun && (await seferiBitti(sefer.id))) {
+      bugunDonen.push({ runId: sefer.id, date: sefer.deliveryDate });
+    }
+  }
+
+  if (tahsilatli.length === 0 && bugunDonen.length === 0) {
     console.log('  · kapıda tahsilatlı sefer yok — kapanış kurulmadı');
     return;
   }
@@ -178,7 +235,37 @@ export async function seedRunCloses(db: Db, kisiler: Kisiler): Promise<void> {
     );
   }
 
-  // 3) Kalan seferler KAPATILMADAN bırakılır — "sayımı bekleyen sefer" uyarısının zemini.
+  /*
+    3) BUGÜN DÖNMÜŞ sefer: FARK VAR — gün sonu mutabakatının BUGÜNE ait tek kaynağı (30.08).
+
+    `readMoneyDayEnd` yalnız BUGÜNÜN kapanışlarına bakıyor: dünkü farklı kapanış oradan hiç
+    görünmüyor ve `discrepancy` her koşuda `null` dönüyordu — ekran "mutabakat sorusu henüz
+    sorulmadı" diyordu, oysa asıl sebep seed'in bugüne hiç kapanış yazmamasıydı.
+
+    Fark 8,40 € ve YÖNÜ ters (fazla çıkmış): dünkü kapanış eksik nakit örneği, bu fazla. İkisi
+    farklı sorular ve ekranın işareti (eksi/artı) ancak iki yönlü veriyle sınanır.
+  */
+  for (const bugunku of bugunDonen) {
+    const beklenen = await collections.getByRun(bugunku.runId);
+    const sonuc = await runs.close({
+      runId: bugunku.runId,
+      countedCashCents: (beklenen?.expectedCashCents ?? 0) + 840,
+      countedCardCents: beklenen?.expectedCardCents ?? 0,
+      countedChequeCents: beklenen?.expectedChequeCents ?? 0,
+      note: 'Kasada 8,40 € fazla çıktı — bir müşteri üstünü almadı, sabah ofise bırakılacak.',
+      actorId: admin,
+    });
+    console.log(
+      sonuc.ok
+        ? `  ✓ ${bugunku.date} (BUGÜN, dönen rota) · FARK VAR · nakit fark ${fromCents(sonuc.differenceCashCents ?? 0)} €`
+        : `  · ${bugunku.date} atlandı (${sonuc.reason})`,
+    );
+  }
+
+  // 4) Kalan seferler KAPATILMADAN bırakılır — "sayımı bekleyen sefer" uyarısının zemini.
+  const kapanan = Math.min(2, tahsilatli.length) + bugunDonen.length;
   const acik = tahsilatli.length - Math.min(2, tahsilatli.length);
-  console.log(`✓ sefer kapanışı: ${Math.min(2, tahsilatli.length)} sefer kapandı (1 mutabık · 1 FARKLI) · ${acik} sefer açık`);
+  console.log(
+    `✓ sefer kapanışı: ${kapanan} sefer kapandı (1 mutabık · ${1 + bugunDonen.length} FARKLI, biri BUGÜN) · ${acik} geçmiş sefer açık`,
+  );
 }

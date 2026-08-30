@@ -31,12 +31,15 @@ describe('BackButton', () => {
     expect(screen.getByTestId('back')).toHaveStyle({ backgroundColor: customerColors['sand-50'] });
   });
 
-  it('operasyon yerleşimi çubuğun ölçüsünü korur ama nötr dolgu alır', async () => {
+  it('operasyon yerleşimi çubuğun ölçüsünü korur, nötr dolgu ve KARE köşe alır (v3)', async () => {
     await render(<BackButton onPress={jest.fn()} accessibilityLabel="Geri" variant="operations" testID="back" />);
 
     expect(screen.getByTestId('back')).toHaveStyle({
       width: appMetrics.size.iconButton,
       backgroundColor: operationsAppColors['neutral-bg'],
     });
+    /* v3 daireyi bıraktı: yarıçap kutunun YARISI değil `badge` durağı. Yarım ölçü yazılsaydı
+       (20) düğme yine daire çizerdi ve fark testten kaçardı. */
+    expect(screen.getByTestId('back')).not.toHaveStyle({ borderRadius: appMetrics.size.iconButton / 2 });
   });
 });

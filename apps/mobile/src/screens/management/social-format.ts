@@ -1,3 +1,4 @@
+import { upperIn } from '@/lib/i18n/locale';
 import type { MessageKind } from '@lezzet/types';
 
 /*
@@ -63,4 +64,22 @@ export function socialWindowOf(windowExpiresAt: string | null, now: Date = new D
   const msLeft = new Date(windowExpiresAt).getTime() - now.getTime();
   if (!Number.isFinite(msLeft) || msLeft <= 0) return { state: 'closed', hoursLeft: 0 };
   return { state: 'open', hoursLeft: Math.ceil(msLeft / 3_600_000) };
+}
+
+/**
+ * Satır avatarının baş harfleri (v3:2197) — en çok İKİ harf, adın ilk iki kelimesinden.
+ *
+ * Kaynak `socialTitle` zinciridir: kimliği bağlanmış sohbette müşterinin adı, bağlanmamışta
+ * sağlayıcı profili. Zincirin ucu HAM ANAHTARSA (WhatsApp'ta telefon, Messenger/IG'de opak PSID)
+ * harf çıkmaz ve **boş dize** döner — rakamdan harf uydurmak, avatarda anlamsız bir "12" yazardı.
+ * O hâlde kare boş kalır ama rengiyle kanalı söylemeye devam eder (ekranın kararı).
+ *
+ * Büyük harf DİLE BAĞLI (`tr`): operasyon yüzeyi tek dillidir ve "ismail" burada "İS" olmalı, "IS"
+ * değil — `toUpperCase()` cihazın diline göre yanlış harf üretirdi (aynı gerekçe: `section-header`).
+ */
+export function socialInitials(row: { customerName: string | null; profileName: string | null; externalRef: string }): string {
+  const words = socialTitle(row)
+    .split(/\s+/u)
+    .filter((word) => /^\p{L}/u.test(word));
+  return upperIn(words.slice(0, 2).map((word) => word[0] ?? '').join(''), 'tr');
 }

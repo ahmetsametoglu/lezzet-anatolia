@@ -5,14 +5,16 @@ import { appMetrics } from '../../theme/metrics';
 import { NotificationBell } from './notification-bell';
 
 describe('NotificationBell', () => {
-  it('nötr daire ölçüsü ve dolgusu temadan gelir (ham değer yok)', async () => {
+  it('nötr KUTUCUK ölçüsü ve dolgusu temadan gelir (ham değer yok) — v3 daireyi bıraktı', async () => {
     await render(<NotificationBell onPress={jest.fn()} accessibilityLabel="Bildirimler" count={0} testID="bell" />);
 
     expect(screen.getByTestId('bell')).toHaveStyle({
-      width: appMetrics.size.iconButtonOnPhoto,
-      height: appMetrics.size.iconButtonOnPhoto,
+      width: appMetrics.size.iconButton,
+      height: appMetrics.size.iconButton,
       backgroundColor: operationsAppColors['neutral-bg'],
     });
+    /* Yarıçap kutunun YARISI değil `badge` durağı — geri düğmesiyle aynı köşe (00-ortak kalıbı). */
+    expect(screen.getByTestId('bell')).not.toHaveStyle({ borderRadius: appMetrics.size.iconButton / 2 });
   });
 
   it('sayaç SIFIRDA çizilmez — boş bir rozet "0 yeni" demez', async () => {

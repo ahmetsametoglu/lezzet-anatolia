@@ -1,10 +1,10 @@
-import { customerColors, operationsAppText } from '@lezzet/design-tokens';
+import { customerColors, customerText } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { OperationsStackHeader } from './stack-header';
 
 describe('OperationsStackHeader', () => {
-  it('başlık BAŞLIK rolüyle, künye satırı `meta` kademesinde soluk yazılır', async () => {
+  it('başlık BAŞLIK rolüyle, künye satırı `micro` kademesinde soluk yazılır (v3)', async () => {
     await render(
       <OperationsStackHeader
         title="Bildirimler"
@@ -15,8 +15,14 @@ describe('OperationsStackHeader', () => {
     );
 
     expect(screen.getByRole('header', { name: 'Bildirimler' })).toBeOnTheScreen();
+    /* v3: başlık `h2-sm` (Lora 20) — v2'nin `screen-title`ı (17) değil. Kademe testte SABİT
+       yazılmıyor, token'dan okunuyor: ölçek kayarsa test de onunla kayar. */
+    expect(screen.getByRole('header', { name: 'Bildirimler' })).toHaveStyle({
+      fontSize: Number.parseFloat(customerText['h2-sm']),
+    });
+    /* Künye v3'te İNCELDİ: 700/10,5 (`meta`) → 400/11,5 (`micro`). */
     expect(screen.getByText('yalnız Kurye — rol süzmesi')).toHaveStyle({
-      fontSize: Number.parseFloat(operationsAppText.meta),
+      fontSize: Number.parseFloat(customerText.micro),
       color: customerColors.muted,
     });
   });

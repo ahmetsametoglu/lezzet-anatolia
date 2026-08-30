@@ -7613,3 +7613,59 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   gün adı ve fark yönü testlerinin YAKALADIĞI doğrulandı; typecheck · lint yeşil; cihazda gözle
   doğrulandı. **Dolu hâl doğrulaması BEKLİYOR**: tohumda bugün kapanan sefer, iade ve kurye üstünde
   para yok — tohumu dolduran şerit bitince ekranlar yeniden çekilecek.
+
+- [x] (21.156) **TOHUM: OPERASYON EKRANLARININ DOLU HÂLİ** (kullanıcı isteği 30.08: "boş yerler görmek istemiyorum")
+  `touches:` `scripts/seed/{orders.ts,courier.ts,notifications.ts,coverage.ts,people.ts}`
+
+  **Durum (30.08).** Ekranlar boş değil, **YANLIŞ doluydu**: `tahsilatYaz` her tahsilatı sabit
+  `gun(-1)` ile düne yazıyordu, yani para ekranı temiz bir tohumdan sonra "bugün hiç para girmedi"
+  diyordu. Bugüne ait kapanmış sefer yoktu (uyuşmazlık hiç doğmuyordu), kuryenin üstünde para yoktu,
+  bugünün seferinde kutulu durak yoktu, tur hesabının hiç bildirimi yoktu, `exceptions` sıfırdı.
+
+  Tohum göreli tarihlerle düzeltildi: tahsilat günü parametrik + bugün nakit/kart/çek üç teslimat,
+  bugüne İKİNCİ rota (Colmar dönmüş+kapanmış → **+8,40 € uyuşmazlık**, Strasbourg açık kalıyor),
+  üç kutulu durak (biri `loadBox` ile araçta → `1/3`), hasar imhasıyla YAŞATILMIŞ eksik toplama,
+  yarın iki sipariş, personel bildirimleri çoğullaştı. Yeni ZORUNLU kapsam kovaları bu hâlleri
+  koruyor — **166 kovanın hepsi dolu**.
+
+  **İKİNCİ TUR GEREKTİ:** "eksik kalem" kartı hâlâ çıkmıyordu. Kalem VARDI; ekran `awaitingAnswer`
+  olanı bilerek eliyor ve tohum aynı siparişe bir talep bağlamıştı (talepler müşterinin EN YENİ
+  siparişine bağlanıyor, eksik toplama bloğu da en sona konmuştu). Filtreye DOKUNULMADI, çakışma
+  kaldırıldı; kova artık ekranın okuduğu motoru çağırıyor (`listOrderExceptions`), SQL'i kopyalamıyor
+  — kural ikinci bir yerde yaşasaydı tam da böyle kaybolurdu.
+
+  **Dört bölümü de gören hesap** (`hepsi@lezzetanatolia.fr` · Emre Yıldız) 21.155'te eklenmişti;
+  bugünün açık Strasbourg seferi ona verildi — kurye ekranları KİMLİĞE göre okuyor, tur hesabının
+  sefer ekranının dolu olmasının tek yolu buydu. **Bedeli yazılı:** Marc ile girildiğinde bugün
+  kapanmış Colmar seferi görünüyor.
+
+  **Doğrulama.** `db:refresh` iki kez koştu (kullanıcı yetkisi 30.08); kapsam **166/166**; cihazda
+  dolu veriyle gezildi.
+
+- [x] (21.157) **YÖNETİM + BİLDİRİMLER + ORTAK ZEMİN v3'e geçti** (v3:2122-2560, 00-ortak)
+  `touches:` `apps/mobile/src/screens/management/*` · `apps/mobile/src/screens/operations/notifications-screen.tsx` ·
+  `apps/mobile/src/components/{operations,ui}/*` · `apps/mobile/src/theme/metrics.ts` · `packages/design-tokens/src/operations-app.ts`
+
+  **Durum (30.08).** Dört alt şeritle paralel yürütüldü (kullanıcı isteği); orkestrasyon, tasarım
+  karşılaştırması ve cihaz turu ana şeritte.
+
+  **25 Karar kutusu** koyu acil kart + karar kartları + "GÜNÜN NABZI" ızgarası. **26 · 27 · 28**
+  v3 yerleşimine geçti; kararın KENDİSİ (seçenekler + "Kararı uygula") sözleşmede olmadığı için
+  yazılmadı — o ekranın v3 hâli yeni bir yetenek istiyor. **29 Gün özeti** koyu ciro kartı + iki
+  sütun kutucuk + içgörü kutusu. **30 Kampanya**: v3 TEKİL parti çiziyor, uç LİSTE döndürüyor —
+  ekran tekile indirilmedi (N parti için N yolculuk olurdu), kart anatomisi her adaya uygulandı.
+  **31 Tedarik**: kalemler karta, koyu CTA, ölçüm satırı dört gerçek sayı (`incomingQty` ilk kez
+  ekranda). **32 + ortak zemin**: yığın başlığı, geri/zil kutucuğu, boş/hata blokları, sekme çubuğu
+  tonu, yeni `OperationsSkeletonList`; `tab-inactive` v3 tonuna çekildi, `error-line` eklendi.
+
+  **Şeritlerin bıraktığı dört kusur ana şeritte düzeltildi:** (1) `error-line` zaten settteydi,
+  30'un ikincil düğmesi dolu `error` tonundaydı; (2) kuryenin üstündeki para tek uzun cümleydi ve
+  satır sarıyordu — günün kartıyla aynı hücre diline geçti; (3) gün sonundaki "Eksi = eksik" cümlesi
+  fark ARTI çıktığında ekrandaki sayıyla ÇELİŞİYORDU; (4) tedarik satırındaki "— transfer
+  seçeneğinin ham verisi" bir geliştirici notuydu ve sekiz satırda tekrarlanıyordu.
+
+  **Doğrulama.** Mobil jest **1004/1004** (127 paket) · vitest **3946/3946** · typecheck · lint ·
+  knip · boundaries yeşil; **cihazda dolu veriyle gezildi** (dört sekme, kurye günü, para, gün sonu,
+  karar kutusu, gün özeti, tedarik).
+
+  **Faz 6 ve 7 kapandı — v3'ün 32 ekranının tamamı geçti.**

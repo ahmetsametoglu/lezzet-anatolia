@@ -9,10 +9,15 @@ import { PressableSurface } from './pressable-surface';
   · `bar`        — zeminsiz 40 dp yuvarlak; basılıda zemin `sand-200`'e döner (tasarımın kendi
                    çözümü: çubuktaki hizanın kayması istenmiyor)
   · `photo`      — 42 dp, krem zeminli (fotoğraf üstünde okunabilirlik); basılıda küçülür
-  · `operations` — 40 dp, `neutral-bg` dolgulu (Operasyon Mobil v2:785); basılıda küçülür.
-                   Operasyon ekranlarında fotoğraf yok, ama düğmenin ZEMİNİ var: v2 onu sayfadan
-                   ayrı bir daire olarak çiziyor. `photo` varyantına bağlanMADI — orada zemin
-                   fotoğrafa karşı okunurluk içindir, burada yüzey hiyerarşisinin kendisi.
+  · `operations` — 40 dp, `neutral-bg` dolgulu YUVARLATILMIŞ KARE; basılıda küçülür.
+                   Operasyon ekranlarında fotoğraf yok, ama düğmenin ZEMİNİ var: şablon onu
+                   sayfadan ayrı bir kutu olarak çiziyor. `photo` varyantına bağlanMADI — orada
+                   zemin fotoğrafa karşı okunurluk içindir, burada yüzey hiyerarşisinin kendisi.
+                   ŞEKİL v3'TE DEĞİŞTİ (ölçüldü 30.08): v2 tam daireydi (`border-radius:50%`),
+                   Operasyon Mobil v3'ün 26 yığın başlığının hepsi `38×38 / border-radius:13px`
+                   diyor — yani daire değil, kum kutucuk. Yarıçap `badge` (12) durağına çekildi
+                   (Δ1); ölçü 40'ta bırakıldı çünkü o dokunma hedefinin kendisidir ve 2 dp'lik
+                   fark hizayı değil yalnız kutunun boyunu oynatır.
 
   İşaret metin değil İKONdur (‹) — bu yüzden `label` prop'u yok; ekran okuyucuya giden ad
   `accessibilityLabel` ile gelir ve i18n'den beslenir (komponent metin gömmez).
@@ -68,7 +73,7 @@ const styles = StyleSheet.create((theme) => ({
   operations: {
     width: theme.size.iconButton,
     height: theme.size.iconButton,
-    borderRadius: theme.size.iconButton / 2,
+    borderRadius: operationsTheme.radius.badge,
     backgroundColor: operationsTheme.colors['neutral-bg'],
   },
   glyph: {

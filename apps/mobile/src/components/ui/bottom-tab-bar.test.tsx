@@ -106,18 +106,25 @@ describe('BottomTabBar · operasyon tonu', () => {
     { key: 'warehouse', label: 'Depo', icon: 'warehouse', selected: false, onPress: jest.fn() },
   ];
 
-  it('seçili sekme MÜREKKEP, seçilmeyen `tab-inactive` — terracotta/muted çifti değil', async () => {
+  it('seçili sekme VURGU (zeytin), seçilmeyen `tab-inactive` — v3 mürekkebi bıraktı', async () => {
     await render(<BottomTabBar items={operationsItems} tone="operations" />);
 
-    expect(screen.getByText('Kurye')).toHaveStyle({ color: customerColors.ink });
+    expect(screen.getByText('Kurye')).toHaveStyle({ color: customerColors.olive });
     expect(screen.getByText('Depo')).toHaveStyle({ color: operationsAppColors['tab-inactive'] });
+    /* v2'nin seçili rengi mürekkepti; v3 onu vurguya çevirdi — eski değere düşerse test yakalar. */
+    expect(screen.getByText('Kurye')).not.toHaveStyle({ color: customerColors.ink });
     expect(screen.getByText('Kurye')).not.toHaveStyle({ color: customerColors.terracotta });
   });
 
-  it('etiket kademesi `meta` (10,5) — müşterinin `micro` yuvarlaması burada gerekmiyor', async () => {
+  it('etiket kademesi `badge-sm` (10) — v3 ölçümü, `meta` yuvarlaması değil', async () => {
     await render(<BottomTabBar items={operationsItems} tone="operations" />);
 
-    expect(screen.getByText('Kurye')).toHaveStyle({ fontSize: Number.parseFloat(operationsAppText.meta) });
+    expect(screen.getByText('Kurye')).toHaveStyle({
+      fontSize: Number.parseFloat(customerAppText['badge-sm']),
+    });
+    expect(screen.getByText('Kurye')).not.toHaveStyle({
+      fontSize: Number.parseFloat(operationsAppText.meta),
+    });
   });
 
   it('üst çizgi kum ayracıdır, mürekkep değil', async () => {

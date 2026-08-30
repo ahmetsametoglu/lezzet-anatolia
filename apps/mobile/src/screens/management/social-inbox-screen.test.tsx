@@ -123,6 +123,28 @@ describe('kuyruk — üç kanal tek listede', () => {
     await ekranAc();
     expect(screen.getByText('IGSID-9')).toBeOnTheScreen();
   });
+
+  /* v3 (30.08): satır kart oldu. Rozet SÖZLEŞMEYE bağlı — `aiDraftReply` dolu satırda çizilir,
+     boş satırda çizilmez; operatör hangi sohbette onayının beklendiğini listeden görür. */
+  it('v3 · bekleyen YZ taslağı olan satır rozet taşır, olmayan taşımaz', async () => {
+    mockInbox([
+      satir(ID.wa, { aiDraftReply: 'Yarın 09:00 için ayırdık.' }),
+      satir(ID.fb, { source: 'messenger', externalRef: 'PSID-2', aiDraftReply: null }),
+    ]);
+    await ekranAc();
+
+    expect(screen.getByTestId(`management-social-draft-${ID.wa}`)).toBeOnTheScreen();
+    expect(screen.getByText(t.draftBadge)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`management-social-draft-${ID.fb}`)).toBeNull();
+  });
+
+  it('v3 · "top bizde" görünür rozetten çerçeveye geçti ama SESLİ okumadan düşmedi', async () => {
+    // Çerçevenin rengi ekran okuyucuya ulaşmaz; bilgi satırın adına eklenmezse tamamen kaybolurdu.
+    mockInbox([satir(ID.wa, { customerName: 'Mehmet Aydın', awaitingReply: true })]);
+    await ekranAc();
+
+    expect(screen.getByLabelText(`Mehmet Aydın — ${messages.common.ourTurn}`)).toBeOnTheScreen();
+  });
 });
 
 describe('iki süzgeç ekseni BAĞIMSIZ', () => {

@@ -14,6 +14,7 @@
     "back": "Geri",
     "scopeAll": "tüm bölümler — çok rollü oturum",
     "scopeFiltered": "yalnız {sections} — rol süzmesi",
+    "loading": "Bildirimler yükleniyor…",
     "empty": {
       "title": "Bildirim yok",
       "body": "Yeni iş düştüğünde burada görünür — listeler elle de açılır."

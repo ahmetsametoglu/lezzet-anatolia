@@ -676,6 +676,55 @@ yeniden çekilecek.
 
 ---
 
+## 30.08 sabah — Faz 6 + 7: Yönetim · bildirimler · ortak zemin ✅ **(dört şeritle)**
+
+Kullanıcı geçişi hızlandırmak için **dört alt şerit** açtırdı ve "boş ekran görmek istemiyorum"
+dedi. Şeritler: tohum (verinin dolu hâli) · yönetim 25–28 · yönetim 29–31 · bildirimler + ortak
+zemin. Ben orkestra şefiyim: tasarımla karşılaştırma, cihaz turu ve commit bende.
+
+### Tohum — "boş" değil, YANLIŞ doluydu
+Şerit kök nedeni ölçtü: `seedOrders`in `tahsilatYaz`ı **her** tahsilatı sabit `gun(-1)` ile düne
+yazıyordu. Yani para ekranları "bugün hiç para girmedi" diyordu ve bu bir ekran hatası değil,
+tohumun yalanıydı. Ayrıca bugüne ait kapanmış sefer yoktu (uyuşmazlık hiç doğmuyordu), kuryenin
+üstünde para yoktu, bugünün seferinde kutulu durak yoktu, tur hesabının hiç bildirimi yoktu.
+Tohum göreli tarihlerle düzeltildi; **166 kapsam kovasının hepsi dolu**.
+
+**İkinci tur da gerekti:** karar kutusundaki "eksik kalem" kartı hâlâ çıkmıyordu. Şerit ölçtü —
+kalem vardı ama aynı siparişe bir talep bağlanmıştı ve ekran `awaitingAnswer` olanı bilerek eliyor.
+Çakışma tohumdan geliyordu (talepler müşterinin EN YENİ siparişine bağlanıyor, eksik toplama bloğu
+da en sona konmuştu). Filtreye dokunulmadı, **çakışma kaldırıldı**. Kova artık ekranın okuduğu
+motoru çağırıyor, SQL'i kopyalamıyor.
+
+### Ekranlar
+- **25 Karar kutusu**: koyu acil kart + üç karar kartı + "GÜNÜN NABZI" ızgarası. Cihazda dört kart
+  da yerinde ("4 karar bekliyor").
+- **26 Şikâyet · 27 Sosyal · 28 Konuşma**: v3 yerleşimi; kararın kendisi (seçenekler + "Kararı
+  uygula") sözleşmede olmadığı için yazılmadı — o ekranın v3 hâli yeni bir yetenek istiyor.
+- **29 Gün özeti**: koyu ciro kartı + iki sütun kutucuk + içgörü kutusu.
+- **30 Kampanya**: v3 tekil parti çiziyor, uç liste döndürüyor — ekran tekile indirilmedi, kart
+  anatomisi her adaya uygulandı (bilinçli sapma, gerekçesi dosyada).
+- **31 Tedarik**: kalemler karta, koyu CTA, ölçüm satırı dört gerçek sayı (`incomingQty` ilk kez
+  ekranda).
+- **32 Bildirimler + ortak zemin**: yığın başlığı, geri/zil kutucuğu, boş ve hata blokları, sekme
+  çubuğu tonu, yeni `OperationsSkeletonList` ilk-yük dili.
+
+### Benim düzelttiklerim (şeritlerin bıraktığı)
+- **`error-line` token'ı zaten sette vardı** — 30'un ikincil düğmesi dolu `error` tonundaydı,
+  doğru kademeye bağlandı.
+- **Kuryenin üstündeki para** tek uzun cümleydi ve satır sarıyordu; günün kartıyla aynı hücre
+  diline geçti.
+- **Gün sonunda çelişen açıklama**: "Eksi = eksik" cümlesi fark ARTI çıktığında ekrandaki sayıyla
+  çelişiyordu; yön zaten başlıkta, cümle ölçüme indirildi.
+- **Tedarik satırındaki geliştirici notu** ("— transfer seçeneğinin ham verisi") ekrandan çıkıp
+  koda taşındı; sekiz satırda tekrarlanıyordu.
+
+**Doğrulama.** Mobil jest **1004/1004** (127 paket) · vitest **3946/3946** · typecheck · lint ·
+knip · boundaries yeşil. **Cihazda dolu veriyle gezildi**: dört sekme (yeni "Hepsi" hesabı), kurye
+günü 5 durak + 1/3 kutu araçta, para üç yöntemli ve kuryenin üstünde para var, gün sonu +8,40 €
+uyuşmazlık, karar kutusu dört kart, tedarik ve gün özeti dolu.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -700,6 +749,12 @@ Burada durulmaz — yazılır, geçilir.
 | 18 | 24 Gün sonu | Şablon uyuşmazlık satırında **seferin künyesini** yazıyor ("SF-26-YRNWV9 · Marc Lemoine · 17:42"). `MoneyDayEnd` yalnız `expectedCents ↔ countedCents` taşıyor — hangi sefer, hangi kurye, hangi saat sözleşmede yok. | Açık — fark ve yönü yazıldı, künye yazılmadı. Çözümü: mutabakat nesnesine sefer kimliği + kurye adı + kapanış anı. |
 | 17 | 23 Tahsilat izleme | Şablon kuryenin üstündeki parayı **kurye kurye** döküyor ("Marc Lemoine · SF-26-… · sefer açık · nakit teslim edilmedi · 186,00 €"). `MoneyOverview.courierFloat` TEK toplam taşıyor (nakit/kart/çek). | Açık — toplam yazıldı. Çözümü: `courierFloat`ın sefer başına dizi olması. |
 | 16 | 23 Tahsilat izleme | Şablon günün toplamının altına **"14 tahsilat"** (adet) yazıyor; `todayByMethod` yalnız yöntem başına TUTAR taşıyor, adet yok. Ayrıca üstbaşlıkta **deponun adı** var (uyuşmazlık 1'in aynı ailesi). | Açık — toplam kırılımdan türetildi, adet yazılmadı; üstbaşlık ad + gün yazıyor, depo adı yok. |
+| 24 | 32 Bildirimler | Sözleşme beş `dot` tonu taşıyor, şablon iki kart varyantı veriyor; satır alt metnindeki "detay" alanı da sözleşmede yok. | Açık — ikisi de uydurulmadı. |
+| 23 | 31 Tedarik | Şablon satırda **"stok 24 · günlük 3,1 · 8 gün"** yazıyor: günlük satış hızı ve gün kapağı `SupplyLine`de YOK. Terracotta **"imha oranı yüksek"** uyarısı da yok. | Açık — ölçüm satırı elimizdeki dört gerçek sayıyla yazıldı (stok · eşik · yolda · son alış); `incomingQty` ilk kez ekranda görünüyor. |
+| 22 | 30 Kampanya | Şablon **tek partinin** detayını çiziyor (künye + dört ölçüm + iki düğme); uç aday LİSTESİ döndürüyor. Ayrıca "kalan ömür %18" (partinin toplam raf ömrü gerekir) ve **üç indirim çipi** (sözleşmede tek oran var) yok. | Açık — ekran tekile İNDİRİLMEDİ (N parti için N yolculuk olurdu; teklif kararı günde bir kez, toplu verilir). Kart anatomisi her adaya uygulandı. |
+| 21 | 29 Gün özeti | Şablon ciroyu **B2B/B2C** ayırıyor (`channels` müşteri segmentini değil sipariş KAYNAĞINI taşır), kutucuklarda **"9/11 zamanında teslim"** ve **"148 € imha + iade"** yazıyor — üçü de sözleşmede yok. Künyede depo adı (uyuşmazlık 1). | Açık — yerleşim korundu, hücreler ölçülmüş veriyle dolduruldu. |
+| 20 | 28 Konuşma | Şablonda **"Reddet"** düğmesi var (taslağı reddeden uç YOK) ve künyede "B2B · işletme adı". | Açık — ikisi de yazılmadı. |
+| 19 | 26 Şikâyet · 25 Karar | Şablonun şikâyet ekranı **karar seçenekleri** ve **"Kararı uygula"** kapısı istiyor (sözleşmede yok — bu ekranın v3 hâli yeni bir YETENEK istiyor), talep referansı (`SK-…`) da yok. Karar kutusunda "2 tanesi gün içinde", şikâyet özeti ve "jest · iade · yeniden gönderim" çipleri aynı aileden. | Açık — hiçbiri uydurulmadı. |
 | 4 | 02 Toplama kuyruğu | Şablonun beş örnek satırının **sol durum işareti tek kurala uymuyor** (dördüncüsü hiç başlanmamışken terracotta, beşincisi tamamlanmışken gri). Statik maket, işaretler elle boyanmış. | Kapandı — çoğunluğun kuralı alındı ve yazıldı: işaret ile metin AYNI kuralı izler (yarım terracotta · tamam zeytin · başlanmamış gri). |
 
 ---
