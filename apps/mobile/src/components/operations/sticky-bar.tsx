@@ -1,6 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { operationsTheme } from '@/theme/unistyles';
@@ -13,30 +12,26 @@ import { operationsTheme } from '@/theme/unistyles';
   dolgular; üç dosyada BİREBİR aynı stil bloğu ölçüldü). Gradyan zaten tek token'dı
   (`gradient.stickyFade`), eksik olan çerçeveydi.
 
-  ── IŞIMA ÇUBUĞUN İŞİ, DÜĞMENİN DEĞİL ───────────────────────────────────────
-  v3 tasarımında sert gölge YOK (ölçüldü: v2'de 3, v3'te 0). Tek gölge benzeri şey
-  `0 4px 14px rgba(95,122,44,.24)` ve dördünün dördü de yapışkan çubuktaki OKUTMA düğmesinde.
-  Yani ışıma bir düğme süsü değil, bir KONUM işareti: "bu düğme sayfanın üstünde yüzüyor".
-  Anlamı konumdan geldiği için burada duruyor — `PrimaryButton`a konsaydı, sayfa akışının
-  içindeki her zeytin düğme de ışırdı ve işaret anlamını kaybederdi.
+  ── IŞIMA BURADAN ALINDI (kurye şeridinin ölçümü, doğrulandı 30.08) ─────────
+  İlk turda çubuğa bir `glow` prop'u konmuş ve gerekçesi *"ışıma bir düğme süsü değil bir KONUM
+  işareti"* diye yazılmıştı. **İddia ölçülmemişti ve tersi çıktı:** dört ışımalı düğmenin
+  ebeveyni tarandı, dördü de sayfa AKIŞINDA (`margin:0 20px` · `margin:12px 20px 0` · …) ve o iki
+  dosyada `position:sticky` hiç geçmiyor. Işıma çubuğa bağlıyken ulaşılamaz bir yerdeydi —
+  kurye 16'nın okutma düğmesini kite geçirirken veremedi.
 
-  Işıma İSTEĞE BAĞLI (`glow`): tasarımda mürekkep dolgulu yapışkan CTA'lar ("Seferi kapat")
-  ışımıyor — zeytin ışıması zeytin dolgudan doğar, mürekkebin altında yabancı durur.
+  Işıma artık `PrimaryButton elevation="glow"`: zeytin dolgulu OKUTMA düğmesinin kendi imzası
+  (künyesi orada). Bu çubuk yalnız gradyanı, konumu ve dolguları garanti eder.
 */
 
 interface OperationsStickyBarProps {
   children: ReactNode;
-  /** Zeytin dolgulu okutma CTA'sının yumuşak ışıması; mürekkep dolguda VERİLMEZ. */
-  glow?: boolean;
   testID?: string;
 }
 
-export function OperationsStickyBar({ children, glow = false, testID }: OperationsStickyBarProps) {
+export function OperationsStickyBar({ children, testID }: OperationsStickyBarProps) {
   return (
     <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.bar} testID={testID}>
-      {/* Işıma sarmalayıcının kutusundan çizilir; yarıçapı düğmeninkiyle AYNI olmak zorunda,
-          yoksa yuvarlak düğmenin çevresinde köşeli bir hale görünür. */}
-      <View style={glow ? styles.glow : null}>{children}</View>
+      {children}
     </LinearGradient>
   );
 }
@@ -50,9 +45,5 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space.xl,
     paddingBottom: operationsTheme.space['3xl'],
     paddingHorizontal: operationsTheme.space['5xl'],
-  },
-  glow: {
-    borderRadius: operationsTheme.radius.control,
-    boxShadow: operationsTheme.shadow.glow,
   },
 });

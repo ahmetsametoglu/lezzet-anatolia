@@ -1,6 +1,7 @@
 import { Text } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { operationsTheme } from '@/theme/unistyles';
 import { Icon } from './icon';
 import type { IconName } from './icon-paths';
 import { PressableSurface } from './pressable-surface';
@@ -39,11 +40,26 @@ type ButtonTone = 'olive' | 'ink';
  * · `shadow` (varsayılan) — müşteri evreninin imzası: `3px 3px 0` sert gölge, basılıda kayar.
  * · `flat`   — operasyon mobil v3: **sert gölge yok** (ölçüldü — v2'de 3 kullanım, v3'te sıfır),
  *   basılıda küçülür. Varsayılan yapılmadı: 35 müşteri ekranı bugün gölgeli ve öyle kalmalı.
+ * · `glow`   — v3'ün tek yumuşak yükseltisi: `0 4px 14px` zeytin ışıma.
  *
- * Yapışkan çubuktaki okutma CTA'sının zeytin ışıması burada YOK — o ışıma düğmenin değil
- * ÇUBUĞUN işidir (`OperationsStickyBar`), çünkü anlamı "bu düğme sayfanın üstünde yüzüyor".
+ * ── IŞIMA BURAYA TAŞINDI (kurye şeridinin ölçümü, doğrulandı 30.08) ─────────
+ * Kitin ilk turunda ışıma `OperationsStickyBar`a konmuştu ve gerekçesi *"ışıma bir düğme süsü
+ * değil bir KONUM işareti — bu düğme sayfanın üstünde yüzüyor"* diye yazılmıştı. **İddia
+ * ölçülmemişti ve yanlıştı.** Türetilmiş şablonda dört ışımalı düğmenin ebeveyni tarandı:
+ *
+ *     02 · toplama kuyruğu   `margin:0 20px`        AKIŞTA
+ *     16 · araca yükleme     `margin:12px 20px 0`   AKIŞTA
+ *     19 · kargo devri       `margin:0 20px`        AKIŞTA
+ *     20 · yerinde satış     kapsayıcı `padding:0 20px`  AKIŞTA
+ *
+ * Dördünün dördü de sayfa akışında; iki dosyada `position:sticky` HİÇ geçmiyor. Yani ışıma
+ * çubuğa bağlıyken **ulaşılamaz** bir yerde duruyordu — kurye 16'nın okutma düğmesini kite
+ * geçirirken ışımayı veremedi.
+ *
+ * Doğru okuma: ışıma **zeytin dolgulu OKUTMA düğmesinin kendi imzası**. Dört kullanımın dördü de
+ * odur; ikisi bir kartın altında, ikisi listenin içinde — ortak yanları konum değil ROL.
  */
-type ButtonElevation = 'shadow' | 'flat';
+type ButtonElevation = 'shadow' | 'flat' | 'glow';
 
 interface PrimaryButtonProps {
   /** Düğme etiketi — i18n üstte çözülür. */
@@ -76,6 +92,10 @@ export function PrimaryButton({
      bildirim gölgeyi İZLER: gölgesiz bir yüzeyin `translate(2,2)` ile kayması, altında kaymayı
      açıklayan bir şey olmadığı için titreme gibi okunur. */
   const lifted = isBlock && !disabled && elevation === 'shadow';
+  /* Işıma da yalnız ETKİN düğmede: pasif bir düğmenin altındaki zeytin hâle, düğme basılabilirmiş
+     gibi okunurdu. Biçim koşulu YOK — v3'ün dört ışımalı düğmesi de blok, ama hap bir okutma
+     düğmesi çizilirse ışıması onunla gelmeli (ışıma role bağlı, geometriye değil). */
+  const glowing = !disabled && elevation === 'glow';
 
   return (
     <PressableSurface
@@ -88,6 +108,7 @@ export function PrimaryButton({
         isBlock ? styles.block : styles.pill,
         disabled ? styles.disabled : styles[tone],
         lifted ? styles.shadow : undefined,
+        glowing ? styles.glow : undefined,
       ]}
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
@@ -131,6 +152,16 @@ const styles = StyleSheet.create((theme) => ({
   },
   shadow: {
     boxShadow: theme.shadow.hard,
+  },
+  /* v3'ün TEK yumuşak yükseltisi — rengi zeytinin kendisi, yani ışıma düğmenin dolgusundan doğar
+     (token künyesi). Sert gölgeyle bir arada kullanılamaz ve gerekmiyor: v3'te sert gölge yok.
+
+     DEĞER `theme`DEN DEĞİL STATİK SABİTTEN: `glow` yalnız operasyon temasında var ve Unistyles'ın
+     `theme` parametresi kayıtlı TEMALARIN KESİŞİMİNİ verir — müşteri temasında olmayan bir durak
+     oradan okunamaz (kitin her yerinde aynı kural). Stil müşteri yüzeyinde hiç uygulanmıyor
+     zaten: `elevation="glow"` yalnız operasyon ekranlarından geliyor. */
+  glow: {
+    boxShadow: operationsTheme.shadow.glow,
   },
   olive: {
     backgroundColor: theme.colors.olive,

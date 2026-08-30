@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { operationsTheme } from '@/theme/unistyles';
+import { OperationsDashedFrame } from './dashed-frame';
 
 /*
   YÜZEY — operasyon mobil v3'ün taşıyıcı kutusu: hub kutucuğu, liste satırı, seçilebilir alan,
@@ -35,6 +36,16 @@ import { operationsTheme } from '@/theme/unistyles';
 */
 
 type SurfaceTone = 'panel' | 'quiet' | 'card' | 'ink' | 'invite' | 'blank';
+
+/**
+ * Kesikli çizilen tonların kenar rengi. Ayrı bir tablo, çünkü çerçeveyi stil sayfası değil SVG
+ * çiziyor ve SVG rengi PROP'tan alıyor; öteki tonlar burada YOK ve olmamalı — tablodaki varlık
+ * "bu ton kesiklidir" demenin kendisi.
+ */
+const DASHED_TONES: Partial<Record<SurfaceTone, string>> = {
+  invite: operationsTheme.colors['olive-line'],
+  blank: operationsTheme.colors['sand-500'],
+};
 
 interface SurfaceBaseProps {
   children: ReactNode;
@@ -71,13 +82,28 @@ export function OperationsSurface({
   disabled = false,
 }: OperationsSurfaceProps) {
   const box = [styles.base, styles[tone], padding === 'none' ? null : styles[padding], style];
-  const body = chevron ? (
-    <View style={styles.row}>
-      <View style={styles.grow}>{children}</View>
-      <Text style={styles.chevron}>›</Text>
-    </View>
-  ) : (
-    children
+  /* KESİKLİ TONLARIN ÇERÇEVESİ SVG'DEN ÇİZİLİR (ölçüldü 30.08 — künyesi `dashed-frame.tsx`):
+     RN'in `borderStyle: 'dashed'`i cihazda ~1:10 bir desen çiziyor (tasarım ~1:1) ve çerçeve
+     kesikli değil noktalı görünüyor. Kabın kenarlığı saydam olarak DURUYOR: yerleşim kaymasın. */
+  const dashed = DASHED_TONES[tone];
+  const body = (
+    <>
+      {dashed === undefined ? null : (
+        <OperationsDashedFrame
+          color={dashed}
+          radius={tone === 'invite' ? operationsTheme.radius.card : operationsTheme.radius.control}
+          testID={testID === undefined ? undefined : `${testID}-frame`}
+        />
+      )}
+      {chevron ? (
+        <View style={styles.row}>
+          <View style={styles.grow}>{children}</View>
+          <Text style={styles.chevron}>›</Text>
+        </View>
+      ) : (
+        children
+      )}
+    </>
   );
 
   if (onPress === undefined) {
@@ -141,17 +167,18 @@ const styles = StyleSheet.create({
   ink: {
     backgroundColor: operationsTheme.colors.ink,
   },
+  /* İki kesikli ton: kenarlık DURUYOR ama SAYDAM — kutunun ölçüsünü o veriyor, kesikleri
+     `OperationsDashedFrame` çiziyor (yukarıdaki künye). Renkleri `DASHED_TONES`ta, çünkü SVG
+     stil sayfasından değil prop'tan renk alıyor. */
   invite: {
     backgroundColor: operationsTheme.colors['olive-bg'],
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['olive-line'],
-    borderStyle: 'dashed',
+    borderColor: 'transparent',
   },
   blank: {
     backgroundColor: operationsTheme.colors.card,
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-500'],
-    borderStyle: 'dashed',
+    borderColor: 'transparent',
     borderRadius: operationsTheme.radius.control,
   },
   row: {

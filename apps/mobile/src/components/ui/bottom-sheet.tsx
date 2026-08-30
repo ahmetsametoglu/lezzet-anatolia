@@ -1,4 +1,4 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
@@ -141,14 +141,38 @@ export function BottomSheet({ visible, title, fill = false, onClose, onClosed, c
     });
   }, [finishClose, height, offset, scrimOpacity]);
 
+  /*
+    AÇILIŞ BİR GEÇİŞTİR, BİR DURUM DEĞİL (arıza, kullanıcı bulgusu 30.08 · cihazda).
+
+    Belirti: adet çekmecesinde her ± dokunuşunda panel aşağı kayıp yeniden açılıyordu. Sebep
+    aşağıdaki etkinin BAĞIMLILIKLARINDAYDI — `animateClose`, `finishClose` üzerinden çağıranın
+    `onClose`una bağlı ve çağıranlar onu JSX'te ok fonksiyonu olarak veriyor: her çizimde YENİ bir
+    kimlik, yani her çizimde etkinin yeniden koşması ve `visible` hâlâ `true` olduğu için açılışın
+    baştan oynaması.
+
+    Arıza bugüne kadar görünmemişti çünkü çekmecelerin hepsi kendi taslağını İÇERİDE tutuyordu:
+    panel açıkken ana ekran hiç yeniden çizilmiyordu. Adet çekmecesi KONTROLLÜ (değer çağıranda
+    durur, her dokunuş yukarı gider) ve gizli hatayı ilk o gösterdi — yani hata yeni değil, yeni
+    GÖRÜLDÜ; girdisini yukarı taşıyan her çekmece aynısını yaşardı.
+
+    Çözüm bayrağın kendisinde: açılış `visible` FALSE'TAN TRUE'YA geçtiğinde bir kez oynar, tekrar
+    çizimlerde değil. Bağımlılık listesini budamak (lint susturmak) aynı sonucu vermezdi — kapanış
+    yolunun güncel `onClose`u görmesi gerekiyor.
+  */
+  const opened = useRef(false);
+
   useEffect(() => {
     if (visible) {
       setMounted(true);
       /* Ölçü BİLİNİYORSA (ikinci ve sonraki açılışlar) açılış BURADAN başlar: `onLayout` aynı
-         ölçüyle yeniden anlamlı bir şey söylemez ve panel kapanışın bıraktığı yerde kalırdı. */
-      if (height.value > 0) animateOpen();
+         ölçüyle yeniden anlamlı bir şey söylemez ve panel kapanışın bıraktığı yerde kalırdı.
+         İlk açılışta ölçü yok; oradaki açılışı `onPanelLayout` başlatır ve bayrak yine burada
+         kalkar — iki yol tek bayrağı paylaşır. */
+      if (!opened.current && height.value > 0) animateOpen();
+      opened.current = true;
       return;
     }
+    opened.current = false;
     if (mounted) animateClose();
   }, [animateClose, animateOpen, height, mounted, visible]);
 

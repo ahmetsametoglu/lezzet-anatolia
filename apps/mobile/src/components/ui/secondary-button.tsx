@@ -39,6 +39,18 @@ interface SecondaryButtonProps {
   elevation?: 'shadow' | 'flat';
   /** Etiketin SOLUNDA çizilen ikon — okutma düğmelerinde tasarımın kendi öğesi. */
   icon?: IconName;
+  /**
+   * YAN YANA ESNEYEN satırda payını alır (`flex`). Varsayılan yok: tek başına duran blok düğme
+   * genişliğini ebeveynden zaten alıyor.
+   *
+   * **Niçin eklendi (kurye şeridinin bulgusu 30.08):** kit turunda `SecondaryButton` HİÇ
+   * kullanılamamıştı ve sebebi tekti — onu hak eden yerlerin ikisi de iki düğmenin yan yana
+   * paylaştığı satır. Esneme dışarıdan sarmalayıcıyla verilemiyor (`PressableSurface` kendi
+   * kutusudur) ve düğme daralınca etiket kırpılıyordu; ekranlar bu yüzden düğmeyi elden çiziyordu.
+   * `PressableSurface` bu kapıyı zaten taşıyor (`grow`), `PrimaryButton`da da var — eksik olan
+   * yalnız buradaki geçişti.
+   */
+  grow?: boolean;
   disabled?: boolean;
   accessibilityHint?: string;
   testID?: string;
@@ -51,6 +63,7 @@ export function SecondaryButton({
   shape = 'block',
   elevation = 'shadow',
   icon,
+  grow = false,
   disabled = false,
   accessibilityHint,
   testID,
@@ -65,6 +78,7 @@ export function SecondaryButton({
       disabled={disabled}
       feedback={lifted ? 'shadow' : 'scale'}
       compact={!isBlock}
+      grow={grow}
       style={[
         styles.base,
         isBlock ? styles.block : styles.pill,

@@ -78,4 +78,36 @@ describe('OperationsSurface', () => {
     expect(screen.getByText('Yakın-SKT turu')).toBeOnTheScreen();
     expect(screen.getByText('›')).toBeOnTheScreen();
   });
+
+  /*
+    ── KESİKLİ TONLAR ÇERÇEVEYİ SVG'DEN ÇİZER (30.08) ────────────────────────
+    RN'in `borderStyle: 'dashed'`i cihazda ~1:10 bir desen çiziyordu (tasarım ~1:1) ve çerçeve
+    kesikli değil NOKTALI görünüyordu. Ölçüm ve gerekçe `dashed-frame.tsx` künyesinde.
+    Test kalıbı doğrulamıyor (görsel), yalnız DOĞRU TONLARIN çerçeveyi aldığını: bir gün üçüncü
+    bir kesikli ton eklenir ve tabloya yazılmazsa, o ton sessizce çerçevesiz kalırdı.
+  */
+  it('yalnız kesikli tonlar SVG çerçeve alır', async () => {
+    /* Çerçeve ekran okuyucudan GİZLİ (dekoratif, dokunulmaz) — sorgunun bunu bilmesi gerek. */
+    const frame = () => screen.getByTestId('kutu-frame', { includeHiddenElements: true });
+    const { rerender } = await render(
+      <OperationsSurface tone="blank" testID="kutu">
+        <Text>say →</Text>
+      </OperationsSurface>,
+    );
+    expect(frame()).toBeOnTheScreen();
+
+    await rerender(
+      <OperationsSurface tone="invite" testID="kutu">
+        <Text>+ Siparişsiz mal geldi</Text>
+      </OperationsSurface>,
+    );
+    expect(frame()).toBeOnTheScreen();
+
+    await rerender(
+      <OperationsSurface tone="panel" testID="kutu">
+        <Text>Künye</Text>
+      </OperationsSurface>,
+    );
+    expect(screen.queryByTestId('kutu-frame', { includeHiddenElements: true })).toBeNull();
+  });
 });

@@ -36,8 +36,13 @@ import { operationsTheme } from '@/theme/unistyles';
   ayrışma teste düşmez, yalnız gözle görülür (CLAUDE §1).
 */
 
-/** Ölçülen desen (dp): kesik · boşluk. Tasarımın kendi hattı — yuvarlanmadı. */
-const DASH_PATTERN = '3.25 2.13';
+/**
+ * Ölçülen desen (dp): kesik · boşluk. Tasarımın kendi hattı — yuvarlanmadı.
+ *
+ * DIŞA AÇIK çünkü kesikli ÇERÇEVE de (`dashed-frame.tsx`) aynı deseni çiziyor: ayraç ile çerçeve
+ * aynı tasarım dilinin iki kullanımı ve iki sabit bir gün ayrışırdı (CLAUDE §1).
+ */
+export const DASH_PATTERN = '3.25 2.13';
 
 interface OperationsDashedRuleProps {
   /**
