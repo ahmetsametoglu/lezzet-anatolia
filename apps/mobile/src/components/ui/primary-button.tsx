@@ -31,8 +31,12 @@ import { PressableSurface } from './pressable-surface';
  * · `ink` — KARARLI ama nötr eylem: operasyonda "Tekrar dene", "Para bölümüne geç",
  *   "Seferi kapat". Tasarımda 11 kez geçiyor ve zeytinden ayrı bir şey söylüyor: bu düğme
  *   akışı ilerletmiyor, bir kararı uyguluyor.
+ * · `error` — GERİ ALINAMAYAN olumsuz kayıt: kuryenin "Onayla — kaydet"i (ulaşılamadı ve kabul
+ *   etmedi çekmecelerinde, `00-ortak:492` ve `:513`). Zeytin "ilerlet", mürekkep "uygula" der;
+ *   bu ton "bu durak olumsuz kapanıyor" der ve rengi kararın kendisidir. Kit turunda AÇILMAMIŞTI
+ *   ve sonucu görüldü: durak ekranı iki düğmeyi de elden çizdi (kurye şeridinin bulgusu 30.08).
  */
-type ButtonTone = 'olive' | 'ink';
+type ButtonTone = 'olive' | 'ink' | 'error';
 
 /**
  * YÜZEYİN YÜKSELTİSİ — hangi evrende olduğunun görsel karşılığı.
@@ -70,6 +74,15 @@ interface PrimaryButtonProps {
   elevation?: ButtonElevation;
   /** Etiketin SOLUNDA çizilen ikon; okutma düğmelerinde tasarımın kendi öğesi. */
   icon?: IconName;
+  /**
+   * YAN YANA ESNEYEN satırda payını alır — `SecondaryButton`ın aynı kapısı, aynı gerekçe
+   * (esneme dışarıdan sarmalayıcıyla verilemiyor, `PressableSurface` kendi kutusudur).
+   *
+   * SAYI DA ALIR ve bu gereklidir: tasarım iki düğmeyi EŞİT paylaştırmıyor — çekmecenin
+   * "Vazgeç"i `flex:1`, "Onayla — kaydet"i `flex:1.4` (`00-ortak:491-492`). Onaylayan düğme
+   * geniş olur; iki eşit düğme, hangisinin asıl eylem olduğunu söylemez.
+   */
+  grow?: boolean | number;
   disabled?: boolean;
   accessibilityHint?: string;
   testID?: string;
@@ -82,6 +95,7 @@ export function PrimaryButton({
   tone = 'olive',
   elevation = 'shadow',
   icon,
+  grow = false,
   disabled = false,
   accessibilityHint,
   testID,
@@ -103,6 +117,7 @@ export function PrimaryButton({
       disabled={disabled}
       feedback={lifted ? 'shadow' : 'scale'}
       compact={!isBlock}
+      grow={grow}
       style={[
         styles.base,
         isBlock ? styles.block : styles.pill,
@@ -170,6 +185,11 @@ const styles = StyleSheet.create((theme) => ({
      gölge mürekkep düğmenin altında görünmez — v3 de bu düğmelerin hiçbirine gölge çizmiyor. */
   ink: {
     backgroundColor: theme.colors.ink,
+  },
+  /* Olumsuz kaydın dolgusu — tasarımın `#a44a3f`i, yani `error` token'ının kendisi. Gölge yok:
+     v3'te sert gölge hiç yok ve bu düğmelerin ikisi de çekmecenin içinde duruyor. */
+  error: {
+    backgroundColor: theme.colors.error,
   },
   disabled: {
     backgroundColor: theme.colors['disabled-fill'],
