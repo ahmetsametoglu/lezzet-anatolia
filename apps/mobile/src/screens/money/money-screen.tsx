@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
-import { Fragment } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Fragment, type ReactNode } from 'react';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
@@ -65,12 +66,15 @@ export function MoneyTrackingScreen() {
   const identity = useOperationsIdentity();
   const workplace = useOperationsWorkplace();
 
-  return (
-    <View style={styles.screen} testID="operations-section-money">
-      <OperationsSectionHeader
-        section="money"
-        eyebrow={shell.sections.money.eyebrow}
-        title={shell.sections.money.title}
+  /* BAŞLIK KAYDIRICININ İÇİNE GİRİYOR (M1a → M1b devri, hub'la aynı gerekçe): tam başlık sayfayla
+     yukarı kayar, 44px'i geçince yerini mikro başlık alır. Kaydırıcının DIŞINDA kalsaydı ikisi üst
+     üste binerdi — hub'da tam olarak bu ölçülmüştü (mikro şerit indi, altında tam başlık asılı
+     kaldı). Yükleme ve hata hâllerinde kaydırıcı yok, başlık orada doğrudan çiziliyor. */
+  const header = (
+    <OperationsSectionHeader
+      section="money"
+      eyebrow={shell.sections.money.eyebrow}
+      title={shell.sections.money.title}
         /* KİM · HANGİ GÜN · NEREDE (v3:23) — para ekranı bir günün fotoğrafıdır; hangi güne
            baktığı yazılmazsa "bugün gerçekleşen" cümlesi hangi günü anlattığını söylemez.
            TESİSİN ADI ARTIK GELİYOR (30.08, `/operations/scope`) ama **kuyruk şartlı**: satır
@@ -78,33 +82,42 @@ export function MoneyTrackingScreen() {
            okumaları depo boyutu taşımaz (`money.ts` künyesi: *defter işletmenin*). Kapsamı iki
            tesisli bir muhasebecide (seed'in `muhasebe` hâli) ad gelmez ve satır kuyruksuz kalır;
            tesislerden birini yazmak, ekranın kendi künyesinde yalan söylemesi olurdu (CLAUDE §1). */
-        context={captionOf(identity.name, todayLabel(), workplace)}
-        identity={<OperationsStaffMenu testID="operations-staff-menu" />}
-      />
+      context={captionOf(identity.name, todayLabel(), workplace)}
+      identity={<OperationsStaffMenu testID="operations-staff-menu" />}
+    />
+  );
 
+  return (
+    <View style={styles.screen} testID="operations-section-money">
       {state.status === 'loading' ? (
         /* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz ve söndüğü an
            sayfa zıplar. Ölçüler ekranın kendi bloklarının: koyu günün kartı 146, bekleyen tahsilat
            kartı 60 (iki metin satırı + `md` dolgu). */
-        <View style={styles.skeleton}>
-          <OperationsSkeletonList
-            heights={[146, 60, 60]}
-            label={t.common.loading}
-            testID="money-tracking-loading"
-          />
-        </View>
+        <>
+          {header}
+          <View style={styles.skeleton}>
+            <OperationsSkeletonList
+              heights={[146, 60, 60]}
+              label={t.common.loading}
+              testID="money-tracking-loading"
+            />
+          </View>
+        </>
       ) : state.status === 'error' ? (
-        <View style={styles.errorBlock}>
-          <OperationsNoticeBlock
-            variant="error"
-            title={t.common.error.title}
-            description={t.common.error.body}
-            retry={{ label: t.common.error.retry, onPress: retry }}
-            testID="money-tracking-error"
-          />
-        </View>
+        <>
+          {header}
+          <View style={styles.errorBlock}>
+            <OperationsNoticeBlock
+              variant="error"
+              title={t.common.error.title}
+              description={t.common.error.body}
+              retry={{ label: t.common.error.retry, onPress: retry }}
+              testID="money-tracking-error"
+            />
+          </View>
+        </>
       ) : (
-        <OverviewBody overview={state.data} />
+        <OverviewBody overview={state.data} header={header} />
       )}
     </View>
   );
@@ -112,13 +125,23 @@ export function MoneyTrackingScreen() {
 
 interface OverviewBodyProps {
   overview: MoneyOverview;
+  /** Sayfayla birlikte kayan tam başlık — kaydırıcının ilk çocuğu. */
+  header: ReactNode;
 }
 
-function OverviewBody({ overview }: OverviewBodyProps) {
+function OverviewBody({ overview, header }: OverviewBodyProps) {
   const router = useRouter();
 
   return (
-    <ScrollView contentContainerStyle={styles.body} testID="money-tracking-body">
+    /* KABUK DAVRANIŞLARI TEK KAPIDAN (M1b · M1c): yapışkan mikro başlık ve sekme çubuğu gizlemesi
+       bu kaptan besleniyor — ekranın yazdığı tek şey ekran adı. */
+    <OperationsScreenScroll
+      title={shell.sections.money.title}
+      caption={shell.sections.money.tab}
+      contentContainerStyle={styles.body}
+      testID="money-tracking-body"
+    >
+      {header}
       {/* GÜNÜN PARASI EN ÜSTTE VE KOYU (v3:23) — muhasebenin ilk sorusu "bugün ne girdi". Toplam
           kırılımdan TÜRETİLİR: ayrı bir toplam alanı, bir gün kırılımla ayrışabilecek ikinci bir
           gerçek olurdu. Tasarımın rozeti ("14 tahsilat") ÇİZİLMEDİ — `todayByMethod` yöntem
@@ -275,7 +298,7 @@ function OverviewBody({ overview }: OverviewBodyProps) {
       <Text style={styles.footnote} testID="money-tracking-footnote">
         {t.track.footnote}
       </Text>
-    </ScrollView>
+    </OperationsScreenScroll>
   );
 }
 

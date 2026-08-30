@@ -64,9 +64,13 @@ export function OperationsMicroHeader({ title, caption, testID }: OperationsMicr
       style={[
         styles.wrapper,
         {
-          top: insetTop,
           opacity: progress,
-          transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [-STRIP_HEIGHT, 0] }) }],
+          /* Kayma mesafesi GÜVENLİ ALANI DA kapsar: şerit artık durum çubuğunun altından
+             başlamıyor, onu da boyuyor — eksik kayarsa gizliyken tepede bir krem şerit asılı
+             kalırdı. */
+          transform: [
+            { translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [-(STRIP_HEIGHT + insetTop), 0] }) },
+          ],
         },
       ]}
       /* Gizliyken dokunuşu geçirir: şerit tepede duruyor ve `pointerEvents="none"` olmasaydı
@@ -74,7 +78,16 @@ export function OperationsMicroHeader({ title, caption, testID }: OperationsMicr
       pointerEvents="none"
       testID={testID}
     >
-      <BlurView intensity={operationsTheme.glassBlurIntensity} tint="light" style={styles.strip}>
+      {/* ŞERİT GÜVENLİ ALANI DA KAPLAR (kullanıcı bulgusu 30.08, iki cihazda ölçüldü):
+          eskiden `top: insetTop` ile durum çubuğunun ALTINA konuyordu ve üstündeki alan
+          boyanmadan kalıyordu — sayfanın koyu özet kartı oradan geçip saatin/pilin arkasında
+          görünüyordu (iOS karesi `ios-02`, Android karesi `and-02`). Şerit artık tepeye çakılı,
+          güvenli alanı kendi zeminiyle kapatıyor ve metnini onun altına itiyor. */}
+      <BlurView
+        intensity={operationsTheme.glassBlurIntensity}
+        tint="light"
+        style={[styles.strip, { height: STRIP_HEIGHT + insetTop, paddingTop: insetTop }]}
+      >
         <View style={styles.glass} pointerEvents="none" />
         <Text style={styles.title} numberOfLines={1} accessibilityRole="header">
           {title}
@@ -115,12 +128,14 @@ const styles = StyleSheet.create<{
 }>({
   wrapper: {
     position: 'absolute',
+    top: 0,
     left: 0,
     right: 0,
     zIndex: STRIP_LAYER,
   },
   strip: {
-    height: STRIP_HEIGHT,
+    /* Yükseklik ÇİZİMDE veriliyor (`STRIP_HEIGHT + insetTop`): güvenli alan cihazdan geliyor
+       ve stil sayfası onu bilemez. */
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.lg,

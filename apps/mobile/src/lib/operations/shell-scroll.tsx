@@ -31,13 +31,20 @@ import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
   yapar ve `useNativeDriver` ile sürücüye iner — bağlamda `Animated.Value` paylaşsaydık her
   kaydırma karesi React ağacını yeniden çizerdi.
 
-  ── TASARIMIN İKİ WEB DÜZELTMESİ RN'DE GEREKSİZ ────────────────────────────
-  Betikte 380 ms'lik bir kilit ve `scrollTop` kırpma düzeltmesi var; gerekçesi künyesinde yazılı:
-  *"çubuk kapandığında kap 86px büyür, tarayıcı scrollTop'u kırpar."* RN'de çubuk kaydırıcının
-  DIŞINDA ve `translateY` ile gider — kap yüksekliği hiç değişmez, dolayısıyla kırpma da yoktur.
-  Envanterin RN notu bunu ayrıca şart koşuyor: *"çubuk gizlemede kap yüksekliğini değiştirme;
-  yalnız translateY + contentInset."* Kilit bu yüzden taşınmadı; taşınsaydı olmayan bir sorunun
-  makinesi olurdu (CLAUDE §0).
+  ── TASARIMIN KİLİDİ RN'DE DE GEREKLİ (yanlış teori, ölçümle çürütüldü 30.08) ──
+  İlk turda şöyle yazmıştım: *"betikteki 380 ms'lik kilit web'in `scrollTop` kırpma sorunu içindir;
+  RN'de çubuk `translateY` ile gider, kap yüksekliği değişmez, kilit taşınmazsa olmayan bir sorunun
+  makinesi kurulmuş olur."* İki yarısı da yanlış çıktı:
+
+  · Çubuk gizlenince kap yüksekliği **değişmek ZORUNDA** — değişmezse kazanılan alan boş krem bir
+    şerit olarak kalıyor (kullanıcı bulgusu, iki cihazda ölçüldü). Tasarımın kendi betiği de
+    `max-height`i daraltıyor (`v3.dc.html:3107`); "yüksekliğe dokunma" notu betikle çelişiyordu.
+  · Yükseklik değişince sistem kaydırma konumunu **RN'de de kırpıyor** ve kırpma ters yönlü sahte
+    bir fark üretiyor: kullanıcı dibe yaslandığında çubuk çıkıp yeniden gizleniyordu — tasarımın
+    künyesinde adı konmuş olan aç-kapa döngüsünün ta kendisi.
+
+  Kilit bu yüzden artık burada, tasarımdaki süresiyle (380 ms) ve aynı yerde: mikro başlık
+  kararından SONRA, çubuk kararından ÖNCE.
 */
 
 /** Mikro başlığın indiği eşik (px) — tasarım: `if (top <= 44)`. */
@@ -48,6 +55,8 @@ const DIRECTION_MIN = 10;
 const TAB_BAR_HEIGHT = 86;
 /** Kaydırma payı bundan kısaysa gizleme hiç yapılmaz (tasarım: `pay >= 120`). */
 const MIN_SCROLLABLE = 120;
+/** Karar değiştikten sonra yeni karar alınmayan pencere (tasarım: `Date.now() + 380`). */
+const LOCK_MS = 380;
 
 interface ShellScrollState {
   /** Mikro başlık inik mi (eşik geçildi). */
@@ -70,10 +79,16 @@ export function OperationsShellScrollProvider({ children }: { children: ReactNod
      listeyi 60 kez yeniden çizerdi. */
   const lastOffset = useRef(0);
   const drift = useRef(0);
+  /** Çubuk kararının ref kopyası — kilit ve pay hesabı `setState` dışında yapılıyor. */
+  const hidden = useRef(false);
+  /** Kilidin bittiği an (ms); 0 = kilit yok. */
+  const lockUntil = useRef(0);
 
   const reset = useCallback(() => {
     lastOffset.current = 0;
     drift.current = 0;
+    hidden.current = false;
+    lockUntil.current = 0;
     setState((prev) => (prev.microVisible || prev.tabBarHidden ? { microVisible: false, tabBarHidden: false } : prev));
   }, []);
 
@@ -83,11 +98,24 @@ export function OperationsShellScrollProvider({ children }: { children: ReactNod
     const delta = top - lastOffset.current;
     lastOffset.current = top;
 
-    /* TEPEYE DÖNÜŞ HER KOŞULDA SIFIRLAR — eşik de birikim de burada geçersiz (tasarım kuralı).
-       Aşırı kaydırmada (bounce) `top` negatife düşer; `<=` onu da kapsar. */
+    /* TEPEYE DÖNÜŞ HER KOŞULDA SIFIRLAR — eşik de birikim de KİLİT de burada geçersiz (tasarım
+       kuralı). Aşırı kaydırmada (bounce) `top` negatife düşer; `<=` onu da kapsar. */
     if (top <= MICRO_THRESHOLD) {
       drift.current = 0;
+      lockUntil.current = 0;
       setState((prev) => (prev.microVisible || prev.tabBarHidden ? { microVisible: false, tabBarHidden: false } : prev));
+      return;
+    }
+
+    // Eşik geçildiği ANDA açılır — birikim de kilit de beklemez (tasarımda da kilitten önce).
+    setState((prev) => (prev.microVisible ? prev : { ...prev, microVisible: true }));
+
+    /* GEÇİŞ KİLİDİ (tasarımın `_kilit`i, birebir) — çubuk kararı değiştiği anda kap yüksekliği
+       değişir, sistem kaydırma konumunu kırpar ve kırpma SAHTE bir ters yön farkı üretir: çubuk
+       geri gelir, kap küçülür, fark yine döner ve ortaya aç-kapa döngüsü çıkar. Kilit penceresinde
+       gelen olaylar yalnız referansı tazeler, karar vermez. */
+    if (Date.now() < lockUntil.current) {
+      drift.current = 0;
       return;
     }
 
@@ -95,20 +123,21 @@ export function OperationsShellScrollProvider({ children }: { children: ReactNod
     // Yön değiştiyse birikim sıfırlanır: "aşağı 40, sonra yukarı 12" kararı hemen çevirmemeli.
     if (drift.current * delta < 0) drift.current = 0;
     drift.current += delta;
+    if (Math.abs(drift.current) < DIRECTION_MIN) return;
 
-    setState((prev) => {
-      // Eşik geçildiği ANDA açılır — birikim beklemez (tasarım: mikro başlık ayrı kuralda).
-      const microVisible = true;
-      if (Math.abs(drift.current) < DIRECTION_MIN) {
-        return prev.microVisible === microVisible ? prev : { ...prev, microVisible };
-      }
-      /* Çubuk gizliyken kap 86px daha uzunmuş gibi ölçülür: kazanılacak alan yoksa gizleme
-         kapalı kalır, yoksa kısa ekranlarda (Para, Karar kutusu) aç-kapa titremesi olur. */
-      const scrollable = contentSize.height - layoutMeasurement.height + (prev.tabBarHidden ? TAB_BAR_HEIGHT : 0);
-      const tabBarHidden = scrollable >= MIN_SCROLLABLE ? drift.current > 0 : false;
-      if (prev.microVisible === microVisible && prev.tabBarHidden === tabBarHidden) return prev;
-      return { microVisible, tabBarHidden };
-    });
+    /* Çubuk gizliyken kap 86px daha uzunmuş gibi ölçülür: kazanılacak alan yoksa gizleme
+       kapalı kalır, yoksa kısa ekranlarda (Para, Karar kutusu) aç-kapa titremesi olur. */
+    const scrollable = contentSize.height - layoutMeasurement.height + (hidden.current ? TAB_BAR_HEIGHT : 0);
+    const tabBarHidden = scrollable >= MIN_SCROLLABLE ? drift.current > 0 : false;
+    if (tabBarHidden === hidden.current) return;
+
+    /* Karar REF'te de tutuluyor: kilidi ve payı `setState` güncelleyicisinin DIŞINDA hesaplamak
+       gerekiyor — güncelleyici saf olmalı, kilit yazmak orada bir yan etkidir ve React onu iki
+       kez çağırdığında pencere iki kez kurulurdu. */
+    hidden.current = tabBarHidden;
+    lockUntil.current = Date.now() + LOCK_MS;
+    drift.current = 0;
+    setState((prev) => ({ ...prev, tabBarHidden }));
   }, []);
 
   const value = useMemo<ShellScrollValue>(() => ({ ...state, onScroll, reset }), [state, onScroll, reset]);

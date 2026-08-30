@@ -8500,3 +8500,135 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   koymak yanlış olur: sipariş verildiğinde lot diye bir şey yoktur, lot MALLA doğar. Belge kaydı
   açılırsa adaylar oradan gelir; bugünkü çekmece şekli o güne hazır — kaynak değişse de arayüz
   aynı kalır.
+
+- [x] (21.176) **GÜNÜN ROTASI: DURAK KARTI v3'E OTURDU — sözleşme beş alan kazandı** (v3:14 · kullanıcı kararı 30.08)
+  `touches:` `packages/types/src/contracts/courier-api.schema.ts` · `packages/application/src/courier/day.ts` ·
+  `scripts/seed/{orders.ts,courier.ts}` · `apps/mobile/src/screens/courier/{courier-day-screen.tsx,messages.json,courier-fixture.ts}`
+
+  **Durum (30.08).** 21.165 dokuz farktan beşini kapatmıştı; kalanların hepsi aynı sebepten
+  açıktı ve o sebep ekranda değildi: **tasarımın istediği bilgi sözleşmede hiç taşınmıyordu.**
+  Ölçüldü — beş alanın beşi de veritabanında VARDI, hiçbiri uca çıkmıyordu.
+
+  **Sözleşme (`CourierStopSchema`) beş alan kazandı, ek sorgu SIFIR:**
+  `settledAt` ve `outcomeNote` `order_status_log`tan — o dizi `attempts` için ZATEN okunuyordu;
+  `hasProof` `order.delivery_proof`tan; `payment.collectedAtDoorCents` `amount_collected`tan;
+  `items[].fulfilledQty` zaten okunan kalem satırlarından.
+
+  **Saat ve sebep TEK kayıttan** (`settlementLog`): ikisini ayrı aramak, aynı diziyi iki kez
+  tarayıp bir gün farklı kayıtlara düşmekti. **Kapıda alınan paranın türetimi
+  `delivery_run_collection` görünümünün AYNISI** (yöntem `cash|card|cheque`) — iki hesap, gün
+  listesiyle kapanış ekranının bir gün ayrışması demekti.
+
+  **KISMİ TESLİM GERİ GELDİ ve `StopOutcome`a DOKUNULMADI.** v2 döneminde *"kısmi ayrı bir sonuç
+  değil"* diye kapatılmıştı; oysa veri onu zaten üretiyor (ölçüldü: `LA-26-AKWJEM`, 4 sipariş → 3
+  teslim, `restock`). Enum yine dörtlü — kısmi bir GEÇİŞ değil, `delivered` durağın niteliği
+  (`fulfilledQty < qty`); ayrım yalnız çizimde yaşıyor. Enum'a beşinci değer koymak onu durum
+  makinesinden ve `MarkUndeliveredRequest`ten ayırırdı.
+
+  **Ekran (v3:14):** durak kartının DÖRT zemini (teslim `cream`+`neutral-bg` · kısmi `warning-*` ·
+  takılı `error-*` · sıradaki beyaz + `ring` kalınlığında zeytin kenar) · sonuç etiketi ve SAAT
+  (`TESLİM EDİLDİ · 14:12`) · "SIRADAKİ DURAK" başlığı · daireleri bağlayan zaman çizgisi ·
+  `DURAKLAR · 5` + sağda `1 takılı` · CTA rozeti `2 açık · 1 takılı` · sorunlu daire DOLU kırmızı.
+  **Ham hex yok, yeni token da yok** — dördü de envanterdeki ailelerin üyesi; teslim kartının
+  zemini `cream`in kendisi çıktı (Δ2/2/2).
+
+  **Seed üç durak hâli kazandı, çünkü ikisi yerelde HİÇ doğmuyordu:** `returned` (kabul etmedi)
+  veritabanı genelinde **sıfır kayıttı**, tek `out_for_delivery → ready` dönüşü DÜNKÜ seferdeydi.
+  Üçü de gerçek kapıdan geçiyor (`markUndelivered` · `confirmDoorDelivery`) — kutu okutmasının
+  ilkesi. **Sonuç damgaları gün içine yayıldı** (`duraklariSaateYay`): bugünün beş durağının bütün
+  geçişleri aynı saniyedeydi (`13:04:32`) ve saat alanı gelseydi beşi de aynı dakikayı yazardı.
+
+  **Yol boyunca iki hata düzeldi.** (1) Seed'in yazdığı `delivery_proof` `DeliveryProofRecordSchema`nın
+  hiçbir alanını karşılamıyordu (`{by, at, method}` — `kind` yok): 18 siparişte kanıt kaydı vardı ve
+  hiçbiri tanınmıyordu, "imza var" satırı yerelde hiç doğamazdı. (2) Teslimat testlerinin fikstür
+  yardımcıları `overrides = {}` çıkarımlı tip taşıyordu, yani her şeyi kabul ediyordu — yeni alanın
+  eksikliğini derleme yakalamadı, cevabı ŞEMA reddetti ve 25 test "durak bulunamadı"ya düştü.
+  Tipler verildi; sıradaki alan artık derlemede durur.
+
+  **CİHAZ TURUNDA ÜÇ FARK DAHA ÇIKTI** (kullanıcı bulguları · tasarım HTML'i sayarak ölçüldü):
+
+  · **Üstü çizili metin SÖKÜLDÜ.** Teslim edilmiş durağın adresi `line-through` taşıyordu; tasarımın
+    14. ekranında `line-through` **sıfır kez** geçiyor. Çizgi "iptal edildi" der, oysa teslim
+    edilmiş durak TAMAMLANMIŞ bir iştir — ayrımı zaten kartın zemini ve sonuç etiketi taşıyor.
+
+  · **Yön oku yalnız SONUÇLANMAMIŞ durakta ve kartın İÇİNDE.** Ok her kartta, kartın dışında ve
+    dikey ortada duruyordu. Ölçüldü: tasarımın beş durak kartından yalnız ikisinde ok var (sıradaki
+    + bekleyen). Ok bir DAVETTİR ("burada yapılacak iş var"); sonuçlanmış durakta yapılacak iş
+    yoktur. Rozetle aynı alt şeride alındı (`space-between`, tasarımın kendi düzeni).
+
+  · **İlerleme çubuğu İKİ PAYLI oldu** — zeytin teslim, kırmızı takılı (v3:14). Tek paylı çubuk
+    günü olduğundan iyi gösteriyordu: ulaşılamayan durak çubukta hiç görünmüyor, kalan boşlukta
+    "sırası gelmemiş" gibi duruyordu. `OperationsProgressBar` paylaşılan kit — ikinci pay OPSİYONEL
+    `secondary` prop'u olarak eklendi, depo toplama kuyruğunun çağrısı değişmedi. Payların toplamı
+    çubuğu taşıramaz (kırpma), dolgunun kendi yarıçapı kaldırıldı (iki pay arasında çentik bırakırdı).
+
+  **Malın akıbeti iki sonuçta AYRIŞTI.** İlk hâlde `unreachable` ve `refused` aynı cümleyi
+  yazıyordu ("araçta kaldı") ve reddedilen durakta bu YANLIŞTI: sözleşmenin kuralı `unreachable`
+  malı araçta bırakır ve kapanışta karara düşürür, `refused` depoya döndürür — orada bekleyen bir
+  karar yok. Seed notları da sadeleşti: not SEBEPTİR, envanter değil (ekran malın akıbetini kendi
+  yazdığı için satır aynı cümleyi iki kez taşıyordu).
+
+  **Doğrulama.** `pnpm typecheck` · `lint` temiz · birim **1860/1860** · kurye jest **105/105** ·
+  mobil komponent+kurye **356/356**. Uç türetimi `listCourierDay` doğrudan çağrılarak ÖLÇÜLDÜ —
+  sekiz durak, beş hâl, saatler 16:53'ten 19:48'e yayılmış. **Cihaz turu yapıldı** (Android,
+  `adb exec-out screencap`): tasarımın 14. ekranıyla yan yana konuldu, yukarıdaki üç fark oradan
+  çıktı ve düzeltildikten sonra tekrar ölçüldü.
+
+  **Kalan tek fark KULLANICI KARARI:** üstbaşlıktaki zil (bildirim) ikonu tasarımda yok — 21.165'te
+  de aynı yerde bırakılmıştı ve ortak kabuk zemininde (dört bölümün hepsinde var).
+
+- [x] (21.177) **KABUK DAVRANIŞLARI GERÇEKTEN ÇALIŞIYOR — üç arıza ve bir TEK KAPI** (kullanıcı bulguları 30.08 · M1b · M1c)
+  `touches:` `apps/mobile/src/components/operations/{micro-header.tsx,tab-bar-slide.tsx,screen-scroll.tsx}` ·
+  `apps/mobile/src/lib/operations/shell-scroll.tsx` ·
+  `apps/mobile/src/screens/{warehouse/warehouse-hub-screen.tsx,money/money-screen.tsx}`
+
+  **Durum (30.08).** Kullanıcı iki cihazda (iOS simülatörü + Android) yapışkan başlık ve çubuk
+  gizlemesinde arıza bildirdi. Ölçüm üç ayrı kusur buldu; üçü de 21.16x'te yazılmış olan kabuk
+  işinin eksik kalan yarısıydı.
+
+  **1 · Şerit güvenli alanı kapatmıyordu.** `top: insets.top` ile durum çubuğunun ALTINA
+  konmuştu; üstündeki bant boyanmadan kalıyor, sayfanın koyu özet kartı oradan geçip saatin ve
+  pilin arkasında görünüyordu. Tasarımda o bant YOKTUR (`position:sticky; top:0`, tarayıcı
+  tuvalinde durum çubuğu diye bir alan yok) — fark web↔native farkıydı. Şerit artık tepeye
+  çakılı, yüksekliği `50 + insetTop` ve kayma mesafesi de güvenli alanı kapsıyor.
+
+  **2 · Çubuk kayıyor ama yerini KORUYORDU.** Ekranın altında çubuk boyunda boş krem bir alan
+  kalıyor, içerik oraya uzamıyordu. Sebep künyede yazılıydı: envanterin RN notu *"kap yüksekliğini
+  değiştirme; yalnız translateY + contentInset"* diyordu, `translateY` yapılmış `contentInset`
+  hiç yapılmamıştı. **Not tasarımın kendi betiğiyle çelişiyor** — betik `max-height`i daraltıyor
+  (`v3.dc.html:3107`). RN karşılığı `marginBottom`: çubuk kaydırıcının kardeşi, kazanılan alan
+  layout'a bırakılıyor.
+
+  **3 · Dipte aç-kapa titremesi** (2'nin düzeltilmesiyle DOĞDU, kullanıcı hemen gördü). Yükseklik
+  değişince sistem kaydırma konumunu kırpıyor, kırpma ters yönlü sahte bir fark üretiyor ve çubuk
+  çıkıp yeniden gizleniyordu. İlk turda *"bu web'in derdi, RN'de yok"* diye taşınmamış olan
+  tasarımın **380 ms'lik kilidi** eklendi (`_kilit`, birebir): karar değiştiği anda pencere
+  kurulur, o pencerede gelen olaylar yalnız referansı tazeler.
+
+  **TEK KAPI — `OperationsScreenScroll` (kullanıcı isteği).** Asıl arıza tekil değildi: kabuk
+  davranışı üç parça hâlinde elle kuruluyordu (bağlamı çağır · `onScroll`+`throttle` bağla · mikro
+  başlığı ayrıca çiz) ve **kendi kaydırıcısını kuran 17 operasyon ekranından yalnız 1'i
+  bağlanmıştı.** Kullanıcı "daha önce çalışıyordu" derken haklıydı — depo hub'ında çalışıyordu,
+  başka hiçbir yerde yoktu. Artık tek kap: ekranın yazdığı tek şey ekran adı. `FlatList`ler
+  sarılamadığı için onlara `useOperationsScrollBinding()` var; ikisi de aynı karardan besleniyor.
+
+  **Para ekranı bağlandı** (kullanıcı isteği): başlığı kaydırıcının DIŞINDAydı ve mikro başlık
+  inince altında asılı kalırdı — hub'ın deseniyle içeri alındı, yükleme/hata hâllerinde doğrudan
+  çiziliyor.
+
+  **Doğrulama.** `typecheck` · `lint` temiz · depo jest **183/183** · para **9/9** · mobil
+  komponent+depo **293/293**. **iOS simülatöründe ölçüldü** (`cliclick` ile gerçek sürükleme,
+  `simctl io screenshot`): iki ekranda da şerit güvenli alanı kapatıyor, dipnot ekranın en
+  altında (boşluk yok), dibe hızlı fling sonrası **6 ardışık kare birebir aynı** (tek md5) —
+  titreme yok.
+
+  **BEKLEYEN(21.178):** kalan 15 operasyon ekranı hâlâ kabuğa bağlı değil; her biri
+  `OperationsScreenScroll`e çevrilecek.
+
+- [ ] (21.178) **KALAN 15 EKRAN KABUĞA BAĞLANACAK** (30.08)
+  `touches:` `apps/mobile/src/screens/{warehouse,courier,management,money}/*-screen.tsx`
+
+  **Kapsam.** Kendi kaydırıcısını kuran 17 ekrandan ikisi bağlandı (depo hub · para kökü).
+  Kalanların her biri `OperationsScreenScroll`e (ya da `FlatList` ise
+  `useOperationsScrollBinding()`e) çevrilecek; başlığı kaydırıcının dışında olan ekranlarda
+  başlık İÇERİ alınacak — dışarıda kalırsa mikro başlık inince altında asılı kalıyor.

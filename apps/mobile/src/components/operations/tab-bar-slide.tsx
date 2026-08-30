@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, StyleSheet, type ViewStyle } from 'react-native';
 
 import { useOperationsShellScroll } from '@/lib/operations/shell-scroll';
@@ -12,11 +12,15 @@ import { useOperationsShellScroll } from '@/lib/operations/shell-scroll';
   hesaplansaydı çubuk ve başlık farklı anlarda tepki verir, kullanıcı da bunu "takılma" diye
   görürdü.
 
-  ── ENVANTERİN ŞART KOŞTUĞU BİÇİM ──────────────────────────────────────────
-  *"Çubuk gizlemede KAP YÜKSEKLİĞİNİ DEĞİŞTİRME: yalnız translateY + contentInset."* Sebebi
-  tasarımın kendi betiğinde ölçülü — web'de kap büyüyünce tarayıcı `scrollTop`u kırpıyor ve
-  aç-kapa titremesi doğuyor. Burada çubuk zaten kaydırıcının kardeşi (mutlak konumlu değil, ama
-  ölçüsü sabit): yalnız `translateY` ile aşağı kayar, layout'a dokunulmaz.
+  ── ENVANTERİN BİÇİMİ VE ONDAN SAPMA (ölçümle, 30.08) ──────────────────────
+  Envanter şunu diyordu: *"Çubuk gizlemede KAP YÜKSEKLİĞİNİ DEĞİŞTİRME: yalnız translateY +
+  contentInset."* Cümlenin ilk yarısı web'in derdinden geliyor — kap büyüyünce tarayıcı
+  `scrollTop`u kırpıyor ve aç-kapa titremesi doğuyor. **İkinci yarısı (`contentInset`) ilk turda
+  hiç yapılmadı** ve ortaya kullanıcının bulduğu arıza çıktı: çubuk kayıyor, yeri boş kalıyor.
+
+  RN'de `contentInset`in karşılığı burada `marginBottom`tur — çubuk kaydırıcının İÇİNDE değil
+  KARDEŞİ, dolayısıyla kazanılacak alan kaydırıcıya değil layout'a bırakılır. Kırpma sorunu
+  RN'de yok (kaydırma konumu içerik uzarken korunur), yani sakınılan şeyin bedeli de yok.
 
   Yükseklik ÖLÇÜLEREK alınıyor (`onLayout`), sabit yazılmıyor: çubuğun boyu cihazın alt güvenli
   alanına göre değişiyor ve 86px'lik tasarım değeri jestli telefonlarda eksik kalırdı — çubuk
@@ -25,22 +29,39 @@ import { useOperationsShellScroll } from '@/lib/operations/shell-scroll';
 
 export function OperationsTabBarSlide({ children }: { children: ReactNode }) {
   const { tabBarHidden } = useOperationsShellScroll();
-  const offset = useRef(new Animated.Value(0)).current;
-  const height = useRef(0);
+  const progress = useRef(new Animated.Value(0)).current;
+  /* Yükseklik STATE, ref DEĞİL: `marginBottom` çizimde hesaplanıyor ve ölçüm gelince yeniden
+     çizilmesi gerekiyor. Aynı değer tekrar yazılmaz — `marginBottom` yüksekliği değiştirmediği
+     için ikinci bir ölçüm gelse de döngü doğmaz. */
+  const [height, setHeight] = useState(0);
 
   useEffect(() => {
-    Animated.timing(offset, {
-      toValue: tabBarHidden ? height.current : 0,
+    Animated.timing(progress, {
+      toValue: tabBarHidden ? 1 : 0,
       duration: SLIDE_MS,
-      useNativeDriver: true,
+      /* Yerel sürücü DEĞİL: kayan şey yalnız çizim değil, çubuğun kapladığı YER. `marginBottom`
+         bir layout özelliği ve yerel sürücüye inmez. Bedeli tek bir 240 ms'lik geçişte JS
+         köprüsünün çalışması; karşılığı ekranın altında boş krem bir şeridin kalmaması. */
+      useNativeDriver: false,
     }).start();
-  }, [tabBarHidden, offset]);
+  }, [tabBarHidden, progress]);
 
   return (
     <Animated.View
-      style={[styles.bar, { transform: [{ translateY: offset }] }]}
+      style={[
+        styles.bar,
+        {
+          /* NEGATİF ALT KENAR = KAZANILAN ALAN (kullanıcı bulgusu 30.08, iki cihazda ölçüldü).
+             Eskiden yalnız `translateY` vardı: çubuk görsel olarak aşağı kayıyor ama layout'ta
+             yerini KORUYORDU — ekranın altında çubuk boyunda boş bir krem alan kalıyordu ve
+             içerik oraya uzamıyordu. Kabın alt sınırını yukarı çeken `marginBottom`, hem çubuğu
+             ekran dışına taşır hem de kardeşi olan sahneye o alanı bırakır. */
+          marginBottom: progress.interpolate({ inputRange: [0, 1], outputRange: [0, -height] }),
+        },
+      ]}
       onLayout={(event) => {
-        height.current = event.nativeEvent.layout.height;
+        const measured = event.nativeEvent.layout.height;
+        if (measured > 0 && measured !== height) setHeight(measured);
       }}
     >
       {children}

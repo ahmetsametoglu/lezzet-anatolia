@@ -1,10 +1,10 @@
 import { useRouter } from 'expo-router';
-import { RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { OperationsMicroHeader } from '@/components/operations/micro-header';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
@@ -13,7 +13,6 @@ import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsSectionRoute } from '@/screens/login/post-login-route';
-import { useOperationsShellScroll } from '@/lib/operations/shell-scroll';
 import { chooseWarehouse } from '@/lib/operations/warehouse-choice';
 import { captionOf } from '@/lib/operations/caption';
 import {
@@ -119,7 +118,6 @@ interface HubTile {
 
 export function WarehouseHubScreen() {
   const router = useRouter();
-  const shellScroll = useOperationsShellScroll();
   const hub = useWarehouseHub();
   const { scope, offline } = useWarehouseStatus();
   const unread = useOperationsNotifications().unread;
@@ -320,17 +318,13 @@ export function WarehouseHubScreen() {
     <View style={styles.screen} testID="operations-section-warehouse">
       {/* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08): hub günün sayılarını gösteriyor ve
           depocu onları tazelemek için ekrandan çıkıp giriyordu. */}
-      {/* YAPIŞKAN MİKRO BAŞLIK (M1b) — kaydırma 44px'i geçince iner. Şerit kaydırıcının DIŞINDA
-          (kendisi mutlak konumlu), kararı kabuğun kaydırma durumu veriyor. */}
-      <OperationsMicroHeader title={t.hub.title} caption={shell.sections.warehouse.tab} />
-
-      <ScrollView
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (M1b · M1c): kap hem yapışkan mikro başlığı çizer hem
+          kaydırma olayını kabuğa bağlar. Ekranın yazdığı tek şey ekran adı. */}
+      <OperationsScreenScroll
+        title={t.hub.title}
+        caption={shell.sections.warehouse.tab}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={hub.reloading} onRefresh={hub.refresh} />}
-        /* Kabuğun kaydırma durumunu besler: mikro başlık ve sekme çubuğu bu olaydan karar alır
-           (`lib/operations/shell-scroll`). Ekran başına tek satır — kural ekranda tekrar yazılmaz. */
-        onScroll={shellScroll.onScroll}
-        scrollEventThrottle={16}
         testID="warehouse-hub-list"
       >
         {/* BAŞLIK KAYDIRICININ İÇİNDE (M1a → M1b devri): tam başlık sayfayla birlikte yukarı
@@ -462,7 +456,7 @@ export function WarehouseHubScreen() {
         </OperationsSurface>
 
         <Text style={styles.footnote}>{t.hub.footnote}</Text>
-      </ScrollView>
+      </OperationsScreenScroll>
     </View>
   );
 }
