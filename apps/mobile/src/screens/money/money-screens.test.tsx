@@ -115,10 +115,16 @@ describe('M1 · tahsilat izleme', () => {
     await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading');
 
     expect(screen.getByText('LA-26-TEST01')).toBeOnTheScreen();
-    expect(screen.getByText('Kapıda 42,00 € · nakit')).toBeOnTheScreen();
+    /* TUTAR VE ETİKET AYRI (v3:23): satırın cevabı tutar, "kapıda mı" ve yöntem onun künyesi.
+       v2'de tek cümleydi ("Kapıda 42,00 € · nakit") ve tutar cümlenin içinde kayboluyordu. */
+    expect(screen.getByText('42,00 €')).toBeOnTheScreen();
+    expect(screen.getByText('KAPIDA · nakit')).toBeOnTheScreen();
     // Kısmi ödenmiş satır KALANI söyler ve referanssız hâli uydurmaz.
-    expect(screen.getByText('Kalan 12,90 € · kart')).toBeOnTheScreen();
+    expect(screen.getByText('12,90 €')).toBeOnTheScreen();
+    expect(screen.getByText('KALAN · kart')).toBeOnTheScreen();
     expect(screen.getByText(t.track.pending.noRef)).toBeOnTheScreen();
+    // Günün parası EN ÜSTTE ve toplamı kırılımdan TÜRÜYOR (42,00 + 12,90 değil; bugünkü tahsilat).
+    expect(screen.getByTestId('money-today-total')).toBeOnTheScreen();
     // Hesaplar adlarıyla — üçüncü hesap (Stripe) iki sabit satıra indirgenip yutulmuyor.
     for (const name of ['Kasa', 'Revolut', 'Stripe']) {
       expect(screen.getByText(name)).toBeOnTheScreen();
@@ -144,6 +150,13 @@ describe('M2 · gün sonu', () => {
     // 6800 − 7800 = −1000 → "−10,00 €" (işaret veriden).
     expect(screen.getByText(/\u221210,00\s?€/u)).toBeOnTheScreen();
     expect(screen.getByText(/Beklenen 78,00 €/u)).toBeOnTheScreen();
+    /* CÜMLE ÖNCE, SAYI SONRA (v3:24): "−10,00 €" tek başına eksiğin mi fazlanın mı olduğunu
+       söylemiyor. Başlık söylüyor — ve çözümün NEREDE olduğu da yazılı, yoksa muhasebeci bu
+       ekranda bir düğme arar. */
+    expect(screen.getByText(/Sefer kapanışında 10,00 € eksik/u)).toBeOnTheScreen();
+    expect(screen.getByText(/Çözüm masaüstünde/u)).toBeOnTheScreen();
+    // Gün SUNUCUNUN söylediği gündür (fikstür 26 Ağustos), cihazın takviminden tahmin edilmez.
+    expect(screen.getByText('26 Ağustos · salt okuma')).toBeOnTheScreen();
   });
 
   it('kapanan sefer yoksa fark 0 DEĞİL "soru sorulmadı"dır', async () => {

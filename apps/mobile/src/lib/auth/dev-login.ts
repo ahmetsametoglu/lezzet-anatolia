@@ -70,6 +70,9 @@ export const DEV_ACCOUNTS: readonly DevAccount[] = [
   { label: 'Depo', email: 'depo@lezzetanatolia.fr', operations: true },
   { label: 'Kurye', email: 'kurye@lezzetanatolia.fr', operations: true },
   { label: 'Muhasebe', email: 'muhasebe@lezzetanatolia.fr', operations: true },
+  /* DÖRT BÖLÜMÜ DE GÖREN hesap (kullanıcı isteği 30.08): sekme çubuğunun dolu hâli ve bölümler
+     arası geçiş ancak böyle bir kişiyle denenebilir — tek bölümlü kullanıcıda çubuk hiç çizilmez. */
+  { label: 'Hepsi', email: 'hepsi@lezzetanatolia.fr', operations: true },
 ];
 
 const DevSessionSchema = z.object({ tokenHash: z.string().min(1) });

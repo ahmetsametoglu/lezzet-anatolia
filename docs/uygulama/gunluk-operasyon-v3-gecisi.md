@@ -644,6 +644,38 @@ yazdığım satış listenin başında).
 
 ---
 
+## 30.08 sabah — Faz 5 · Ekranlar 23 + 24: Para ✅ (veri beslemesi ayrı şeritte)
+
+**23 · Tahsilat izleme.** v3 blokların SIRASINI değiştiriyor ve muhasebenin ilk sorusunu en üste
+alıyor: *"bugün ne girdi"*. Değişenler:
+
+- **Günün parası en üstte, kendi kartında**: büyük toplam + yöntem hücreleri. Toplam **kırılımdan
+  türüyor** — ayrı bir toplam alanı, bir gün kırılımla ayrışabilecek ikinci bir gerçek olurdu.
+- **Bekleyen satırda tutar büyük, etiket altında** ("60,00 €" / "KAPIDA · kart"). v2'de tek cümleydi
+  ve tutar cümlenin içinde kayboluyordu.
+- **Üstbaşlıkta kim ve hangi gün** ("Ayşe Demir · 30 Ağustos") — para ekranı bir günün fotoğrafıdır.
+- **Kapanış cümlesi**: bu ekran hiçbir şey yazmaz.
+
+**24 · Gün sonu.** **Cümle önce, sayı sonra**: "−4,50 €" tek başına eksiğin mi fazlanın mı olduğunu
+söylemiyordu; başlık söylüyor ("Sefer kapanışında 4,50 € eksik") ve **çözümün nerede** olduğu da
+yazılı — yoksa muhasebeci bu ekranda bir düğme arar. Gün artık başlıkta ve **sunucunun söylediği
+gün**; cihazın takviminden tahmin edilmiyor. Eşleşmemiş hareket sayısının **neyle** eşleşmediği de
+yazılı (banka ekstresi).
+
+**Bir duplikasyon kapandı.** Türkçe ay adları kurye sözlüğündeydi; para ekranı aynı listeyi düz
+yazımıyla isteyince ikinci bir kopya doğacaktı. Liste `lib/operations/stamp.ts`e taşındı, kuryenin
+`dayLabel`i oradan türüyor (büyük harfe kendi çeviriyor).
+
+**Üç uyuşmazlık yazıldı** (16 · 17 · 18): tahsilat ADEDİ, kurye kurye nakit dökümü, uyuşmazlığın
+sefer künyesi — üçü de sözleşmede yok.
+
+**Cihazda doğrulandı** ama **dolu hâliyle değil**: bugünün tohum verisinde kapanmış sefer, iade ve
+kurye üstünde para yok; "bugün gerçekleşen" yalnız benim test satışımı gösteriyor. Kullanıcı bunu
+sordu ve haklıydı — **tohumu dolduran ayrı bir şerit açıldı**; refresh sonrası ekranlar dolu hâlde
+yeniden çekilecek.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -665,6 +697,9 @@ Burada durulmaz — yazılır, geçilir.
 | 15 | 20 Yerinde satış | Şablon liste başlığını **"SIK SATILANLAR — DOKUN, SEPETE EKLE"** yapıyor. Uç bir katalog sayfası döndürüyor (`SaleCatalogPageSchema`), satış sıklığına göre sıralama YOK. Başlığı öyle yazmak, sıradan bir katalog listesine "bunlar sık satılanlar" dedirtmek olurdu. | Açık — başlık yazılmadı, liste katalog olarak duruyor. Çözümü: satış sayısına göre sıralayan bir uç kesiti. |
 | 14 | 20 Yerinde satış | Şablon aramanın yanına **"Barkod okut"** düğmesi koyuyor. Satış kataloğunda barkod alanı yok ve `codes/resolve` varyanta çözüyor ama satış ekranının çekmecesi ürün + boy bekliyor. | Açık — düğme çizilmedi. Çözümü: çözülen varyantı doğrudan sepete/çekmeceye bağlayan bir yol. |
 | 13 | 21 Son satışlar | Şablon satırda **PAZARLIK** rozeti ve *"satış yazıldı ama tahsilat deftere geçmedi"* uyarısı gösteriyor. `SaleRecordSchema` ikisini de taşımıyor — pazarlık izi siparişin kalemlerinde, `paymentRecorded` ise yalnız YAZMA anının cevabında. | Açık — ikisi de listeye yazılmadı; kasa uyarısı satışın FİŞİNDE duruyor (v3:22), yani bilgi kaybolmuyor. Çözümü: `SaleRecordSchema`'ya `negotiated` ve `paymentRecorded` alanları. |
+| 18 | 24 Gün sonu | Şablon uyuşmazlık satırında **seferin künyesini** yazıyor ("SF-26-YRNWV9 · Marc Lemoine · 17:42"). `MoneyDayEnd` yalnız `expectedCents ↔ countedCents` taşıyor — hangi sefer, hangi kurye, hangi saat sözleşmede yok. | Açık — fark ve yönü yazıldı, künye yazılmadı. Çözümü: mutabakat nesnesine sefer kimliği + kurye adı + kapanış anı. |
+| 17 | 23 Tahsilat izleme | Şablon kuryenin üstündeki parayı **kurye kurye** döküyor ("Marc Lemoine · SF-26-… · sefer açık · nakit teslim edilmedi · 186,00 €"). `MoneyOverview.courierFloat` TEK toplam taşıyor (nakit/kart/çek). | Açık — toplam yazıldı. Çözümü: `courierFloat`ın sefer başına dizi olması. |
+| 16 | 23 Tahsilat izleme | Şablon günün toplamının altına **"14 tahsilat"** (adet) yazıyor; `todayByMethod` yalnız yöntem başına TUTAR taşıyor, adet yok. Ayrıca üstbaşlıkta **deponun adı** var (uyuşmazlık 1'in aynı ailesi). | Açık — toplam kırılımdan türetildi, adet yazılmadı; üstbaşlık ad + gün yazıyor, depo adı yok. |
 | 4 | 02 Toplama kuyruğu | Şablonun beş örnek satırının **sol durum işareti tek kurala uymuyor** (dördüncüsü hiç başlanmamışken terracotta, beşincisi tamamlanmışken gri). Statik maket, işaretler elle boyanmış. | Kapandı — çoğunluğun kuralı alındı ve yazıldı: işaret ile metin AYNI kuralı izler (yarım terracotta · tamam zeytin · başlanmamış gri). |
 
 ---

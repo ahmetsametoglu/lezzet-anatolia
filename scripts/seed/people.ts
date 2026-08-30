@@ -250,6 +250,13 @@ const KISILER: SeedKisi[] = [
   //   kapsamı hiç uygulamayan bir sorgu da doğru cevap verir. Kehl'e ait kuyruğu, stoğu ve kabul
   //   bekleyen sevkiyatı bu kişi görmeli; Strasbourg'unkileri GÖRMEMELİ.
   { key: 'depocuKehl', name: 'Jonas Weber', email: 'depo.kehl@lezzetanatolia.fr', phone: '+4978519901', roles: ['warehouse'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
+  // — DÖRT BÖLÜMÜ DE GÖREN HESAP (kullanıcı isteği 30.08). Geliştirme ve tasarım denetimi içindir:
+  //   sekme çubuğunun DÖRT sekmeli hâli, bölümler arası geçiş ve "hepsini gören kullanıcı" ancak
+  //   böyle bir kişi varsa denenebilir — tek rollü hesaplarla çubuk hiç dolu görünmez (tek bölümlü
+  //   kullanıcıda çubuk zaten çizilmez). Gerçek işletmede olağandışıdır ama YASAK da değildir
+  //   (DOMAIN §2: çoklu operasyon rolü olağandır); burada bilinçli olarak abartılmış hâli duruyor.
+  //   Kapsamı kuryeninkiyle aynı (araç dahil): araçsız kapsamda yerinde satış ekranı açılamıyor.
+  { key: 'hepsi', name: 'Emre Yıldız', email: 'hepsi@lezzetanatolia.fr', phone: '+33600000106', roles: ['admin', 'warehouse', 'courier', 'accounting'], depolar: ['str', 'van'], preferredLanguage: 'tr' },
   // Sınır ötesi rotanın kuryesi — kapsamı da Kehl. Kurye kapsamsız olamaz (DB kısıtı).
   { key: 'kuryeKehl', name: 'Stefan Bauer', email: 'kurye.kehl@lezzetanatolia.fr', phone: '+4978519902', roles: ['courier'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
 ];

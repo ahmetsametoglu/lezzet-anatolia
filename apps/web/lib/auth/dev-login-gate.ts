@@ -35,6 +35,9 @@ export const DEV_LOGIN_ACCOUNTS = [
   { label: 'Depo', email: 'depo@lezzetanatolia.fr', operations: true },
   { label: 'Kurye', email: 'kurye@lezzetanatolia.fr', operations: true },
   { label: 'Muhasebe', email: 'muhasebe@lezzetanatolia.fr', operations: true },
+  /* Dört operasyon bölümünü de gören hesap (kullanıcı isteği 30.08) — liste mobille AYNI sırada ve
+     aynı adreslerde kalmalı; biri değişip öteki kalırsa aynı düğme iki yüzeyde başka hesap açar. */
+  { label: 'Hepsi', email: 'hepsi@lezzetanatolia.fr', operations: true },
 ] as const;
 
 /** Yerel sayılan host adları — port ayrılır, `[::1]` köşeli parantezle gelir. */

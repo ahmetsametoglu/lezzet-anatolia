@@ -7586,3 +7586,30 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Satış jest **12/12**; typecheck · lint · knip yeşil; **cihazda gözle doğrulandı**.
 
   **Faz 4 kapandı** — yerinde satışın üç ekranı (20 · 21 · 22) v3'te.
+
+- [x] (21.155) **PARA v3 — günün parası en üstte, uyuşmazlık cümleyle** (v3:1962-2120)
+  `touches:` `apps/mobile/src/screens/money/*` · `apps/mobile/src/lib/operations/stamp.ts` ·
+  `apps/mobile/src/screens/courier/courier-format.ts`
+
+  **Durum (30.08).** **23 · Tahsilat izleme**: v3 blokların SIRASINI değiştiriyor — muhasebenin ilk
+  sorusu ("bugün ne girdi") en üste, kendi kartına çıktı; toplam KIRILIMDAN türüyor (ayrı bir toplam
+  alanı, bir gün kırılımla ayrışabilecek ikinci bir gerçek olurdu). Bekleyen satırda tutar BÜYÜK,
+  "KAPIDA · kart" etiketi altında — v2'de tek cümleydi ve tutar cümlenin içinde kayboluyordu.
+  Üstbaşlığa "kim ve hangi gün" geldi. Kapanış cümlesi ekranın ne OLMADIĞINI söylüyor.
+
+  **24 · Gün sonu**: CÜMLE ÖNCE, SAYI SONRA — "−4,50 €" tek başına eksiğin mi fazlanın mı olduğunu
+  söylemiyordu; başlık söylüyor ve ÇÖZÜMÜN NEREDE olduğu yazılı (yoksa muhasebeci burada bir düğme
+  arar). Gün başlıkta ve SUNUCUNUN söylediği gün — cihazın takviminden tahmin edilmiyor. Eşleşmemiş
+  hareketin NEYLE eşleşmediği de yazılı.
+
+  **BİR DUPLİKASYON KAPANDI:** Türkçe ay adları kurye sözlüğündeydi; para ekranı aynı listeyi düz
+  yazımıyla isteyince ikinci kopya doğacaktı. Liste `lib/operations/stamp.ts`e taşındı
+  (`dateLabelOf` · `todayLabel`); kuryenin `dayLabel`i oradan türüyor, büyük harfe kendi çeviriyor.
+
+  **Üç uyuşmazlık** (günlük defteri 16 · 17 · 18): tahsilat ADEDİ, kurye kurye nakit dökümü,
+  uyuşmazlığın sefer künyesi — üçü de sözleşmede yok.
+
+  **Doğrulama.** Para jest **4/4** (v3 iddialarıyla güncellendi), kendi alanımın paketi **216/216**;
+  gün adı ve fark yönü testlerinin YAKALADIĞI doğrulandı; typecheck · lint yeşil; cihazda gözle
+  doğrulandı. **Dolu hâl doğrulaması BEKLİYOR**: tohumda bugün kapanan sefer, iade ve kurye üstünde
+  para yok — tohumu dolduran şerit bitince ekranlar yeniden çekilecek.

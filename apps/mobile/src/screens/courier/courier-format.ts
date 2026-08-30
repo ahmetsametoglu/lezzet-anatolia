@@ -1,3 +1,4 @@
+import { dateLabelOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 
@@ -35,16 +36,14 @@ export function turkishUpper(value: string): string {
  * `"2026-08-08"` → `"8 AĞUSTOS"` (v2:38'in üstbaşlığı).
  *
  * `Intl` KULLANILMADI: Hermes'in ICU kapsamı platforma göre değişiyor ve ay adının Android'de
- * İngilizce dönmesi sessiz bir arıza olurdu. Onikilik sözlük metindir, sözlükte durur.
- * Biçim tanınmazsa `null` döner — uydurma bir gün adı yazmaktansa üstbaşlık kuyruksuz kalır
- * (CLAUDE §1: ölçülemeyen değer sıfır/varsayılan değildir).
+ * İngilizce dönmesi sessiz bir arıza olurdu. Onikilik sözlük metindir ve **tek yerde durur**
+ * (`lib/operations/stamp.ts`) — para ekranı 30.08'de aynı listeyi düz yazımıyla istedi; ikinci bir
+ * kopya, bir gün iki ekranın aynı günü iki farklı ay adıyla yazması demekti (CLAUDE §1).
+ * Biçim tanınmazsa `null` döner — uydurma bir gün adı yazmaktansa üstbaşlık kuyruksuz kalır.
  */
 export function dayLabel(isoDate: string): string | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
-  if (!match) return null;
-  const month = t.months[Number(match[2]) - 1];
-  if (month === undefined) return null;
-  return `${Number(match[3])} ${month}`;
+  const label = dateLabelOf(isoDate);
+  return label === null ? null : turkishUpper(label);
 }
 
 /**

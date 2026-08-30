@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { money, signedMoney } from '@/lib/operations/money';
+import { dateLabelOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import type { MoneyDayEnd } from '@lezzet/types';
@@ -38,7 +39,9 @@ export function MoneyDayEndScreen() {
     <View style={styles.screen} testID="money-day-end">
       <OperationsStackHeader
         title={t.dayEnd.title}
-        subtitle={t.dayEnd.caption}
+        /* HANGİ GÜNÜN ÖZETİ (v3:24) — "salt okuma" tek başına hangi günü anlattığını söylemiyordu;
+           gün sunucudan geliyor (`summary.date`), cihazın takviminden tahmin edilmiyor. */
+        subtitle={captionOf(state)}
         onBack={() => router.back()}
         backLabel={t.common.back}
         testID="money-day-end-header"
@@ -63,6 +66,15 @@ export function MoneyDayEndScreen() {
       )}
     </View>
   );
+}
+
+/**
+ * Başlık altı — gün ADIYLA. Özet daha yüklenmediyse ya da düştüyse gün BİLİNMEZ ve kuyruksuz
+ * yazılır: cihazın bugününü yazmak, sunucunun başka bir günü özetlediği hâlde doğru görünürdü.
+ */
+function captionOf(state: { status: string; data?: MoneyDayEnd }): string {
+  const label = state.data === undefined ? null : dateLabelOf(state.data.date);
+  return label === null ? t.dayEnd.captionNoDate : fillCopy(t.dayEnd.caption, { date: label });
 }
 
 interface DayEndBodyProps {
@@ -96,7 +108,18 @@ function DayEndBody({ summary }: DayEndBodyProps) {
           {t.dayEnd.discrepancy.eyebrow}
         </Text>
         {differenceCents === null || differenceCents === 0 ? null : (
-          <Text style={styles.discrepancyValue}>{signedMoney(differenceCents)}</Text>
+          <>
+            {/* CÜMLE ÖNCE, SAYI SONRA (v3:24): "−4,50 €" tek başına ne olduğunu söylemiyor —
+                eksi işareti eksik parayı mı fazlayı mı gösteriyor, hangi adımda doğdu? Başlık
+                ikisini de söylüyor, sayı onun altında duruyor. */}
+            <Text style={styles.discrepancyHeadline}>
+              {fillCopy(t.dayEnd.discrepancy.headline, {
+                amount: money(Math.abs(differenceCents)),
+                direction: differenceCents < 0 ? t.dayEnd.discrepancy.short : t.dayEnd.discrepancy.over,
+              })}
+            </Text>
+            <Text style={styles.discrepancyValue}>{signedMoney(differenceCents)}</Text>
+          </>
         )}
         <Text style={styles.discrepancyBody}>
           {discrepancy === null
@@ -108,12 +131,25 @@ function DayEndBody({ summary }: DayEndBodyProps) {
                   delivered: money(discrepancy.countedCents),
                 })}
         </Text>
+        {/* ÇÖZÜM NEREDE (v3:24) — ekran düzeltmiyor; nerede düzeltildiğini söylemezse muhasebeci
+            burada bir düğme arar. */}
+        {calm ? null : <Text style={styles.discrepancyBody}>{t.dayEnd.discrepancy.resolution}</Text>}
       </View>
 
       <View style={styles.dashedRow} testID="money-day-end-unmatched">
-        <Text style={styles.rowLabel}>{t.dayEnd.unmatched.label}</Text>
+        {/* SAYININ NE OLDUĞU ALTINDA (v3:24): "Eşleşmemiş hareket · 3" tek başına neyle
+            eşleşmediğini söylemiyordu — banka ekstresi. */}
+        <View style={styles.rowText}>
+          <Text style={styles.rowLabel}>{t.dayEnd.unmatched.label}</Text>
+          <Text style={styles.rowHint}>{t.dayEnd.unmatched.hint}</Text>
+        </View>
         <Text style={styles.rowValue}>{String(summary.unmatchedMovementCount)}</Text>
       </View>
+
+      {/* KAPANIŞ CÜMLESİ (v3:24) — bu ekranın ne OLMADIĞI: kasa kapatmaz, sonucu gösterir. */}
+      <Text style={styles.footnote} testID="money-day-end-footnote">
+        {t.dayEnd.footnote}
+      </Text>
     </ScrollView>
   );
 }
@@ -193,6 +229,23 @@ const styles = StyleSheet.create({
   discrepancyEyebrowCalm: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors.muted,
+  },
+  discrepancyHeadline: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors.terracotta,
+  },
+  rowText: { flex: 1, gap: operationsTheme.space['2xs'] },
+  rowHint: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  footnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
   discrepancyValue: {
