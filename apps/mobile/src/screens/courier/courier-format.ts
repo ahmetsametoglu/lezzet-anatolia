@@ -60,14 +60,3 @@ export function runLabel(run: { zoneName: string | null; referenceNo: string }):
     : fillCopy(t.day.runStrip, { route: run.zoneName, ref: run.referenceNo });
 }
 
-/**
- * `"Musa Kaya"` → `"Musa K."` (v2:38). Kapıda kimin geldiğini söyleyen kısa ad; tam soyadı
- * üstbaşlığa sığmıyor ve orada bir kimlik değil bir selamdır.
- */
-export function shortName(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length < 2) return parts[0] ?? '';
-  const last = parts[parts.length - 1] ?? '';
-  return `${parts.slice(0, -1).join(' ')} ${last.slice(0, 1)}.`;
-}
-

@@ -146,16 +146,21 @@ describe('K1 · günün seferi', () => {
     expect(screen.queryByTestId('courier-day-list')).toBeNull();
   });
 
-  it('dolu sefer: üstbaşlığın kuyruğu UÇTAN gelen gün + personelin adı, şeritte seferin künyesi', async () => {
+  /*
+    ÜSTBAŞLIK ↔ BAĞLAM SATIRI AYRIMI (v3, 30.08): üstbaşlık "NEREDEYİM"i söyler (bölüm + gün),
+    bağlam satırı "KİM ve HANGİ SEFER"i. v2'de ad üstbaşlığın kuyruğundaydı ve sefer künyesi ayrı
+    bir şeride yazılıyordu; künye listenin başında olduğu için duraklara inince kayboluyordu.
+    Şimdi ikisi tek satırda ve BAŞLIKTA — her ekranda aynı yerde.
+  */
+  it('üstbaşlık bölüm + gün, bağlam satırı ad + sefer künyesi', async () => {
     mockDay(courierDay([courierStop(1)]));
 
     await renderDay();
 
     await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
-    expect(screen.getByText('KURYE · 8 AĞUSTOS · MUSA K.')).toBeOnTheScreen();
+    expect(screen.getByText('KURYE · 8 AĞUSTOS')).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: t.day.title })).toBeOnTheScreen();
-    // "Hangi seferi sürüyorum" listenin başında yazılı: rota adı + SF kodu.
-    expect(screen.getByTestId('courier-day-run')).toHaveTextContent('Kuzey rotası · SF-26-ABCDEF');
+    expect(screen.getByText('Musa Kaya · Kuzey rotası · SF-26-ABCDEF')).toBeOnTheScreen();
   });
 
   it('koşan rota yoksa boş blok çıkar, CTA ve ilerleme çizilmez', async () => {
@@ -199,7 +204,10 @@ describe('K1 · günün seferi', () => {
 
     await renderDay();
 
-    await waitFor(() => expect(screen.getByText('cepte 52,00 €')).toBeOnTheScreen());
+    /* v3'te tutar "CEPTE" etiketiyle iki satır (özet kartının sağ ucu): para bir sayı değil bir
+       DURUM ve etiketi olmadan cümlenin içinde kayboluyordu. */
+    await waitFor(() => expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/CEPTE/));
+    expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/52,00 €/);
   });
 
   it('KAPANMIŞ sefer: gövde yeniden ROTA SEÇİMİ, künye şeritte kalır, duraklar çizilmez', async () => {
@@ -306,7 +314,8 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByText('Müşteri 3 · kabul etmedi — iade akışında')).toBeOnTheScreen();
     // İlerleme sayacı yalnız TESLİM edilenleri sayar; ulaşılamayan/reddedilen "biten" değildir.
     expect(screen.getByTestId('courier-day-progress')).toBeOnTheScreen();
-    expect(screen.getByText('/3')).toBeOnTheScreen();
+    // v3: sayaç tek cümle ("1/3 durak") — v2'de sayı ile bölen ayrı iki metindi.
+    expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/1\/3 durak/);
   });
 
   it('teslim edilmiş ama borcu kalan durak bunu ALT SATIRDA söyler', async () => {
@@ -500,23 +509,19 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
     });
     await renderDay();
 
-    expect(screen.getByTestId('courier-day-boxes')).toHaveTextContent(/1\/2 kutu araçta/);
-
-    // Çipler günün YÜKLENMEMİŞ kutularından kurulur — yalnız Kutu 2 çip olur.
-    await fireEvent.press(screen.getByTestId('courier-day-box-scan'));
-    await fireEvent.press(screen.getByLabelText(`${kutulu(false).referenceNo} · K2`));
-
-    await waitFor(() => expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/YOLA ÇIKTI/));
-    await waitFor(() => expect(screen.getByTestId('courier-day-boxes')).toHaveTextContent(/2\/2 kutu araçta/));
-    // Hepsi binince okutma düğmesi çekilir — sayaç bilgi olarak kalır.
+    /* OKUTMA ARTIK BURADA DEĞİL (v3, 30.08): kırılım kendi ekranına taşındı (`/trip` → `/load`).
+       Günde kalan şey KAPI ve sayacı — kapıyı açmadan "işim var mı" sorusu cevaplanabilmeli.
+       Okutmanın kendisi `load-screen.test.tsx`te sınanıyor. */
+    expect(screen.getByTestId('courier-day-trip')).toHaveTextContent(/1\/2 kutu araçta/);
     expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
   });
 
-  it('kutusuz günde sayaç HİÇ çizilmez — eski akış aynen', async () => {
+  it('kutusuz günde sefer kapısı HİÇ çizilmez — eski akış aynen', async () => {
     mockDay(courierDay([courierStop(1)]));
     await renderDay();
     await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
 
-    expect(screen.queryByTestId('courier-day-boxes')).toBeNull();
+    // Sayaç `null` (kutusuz akış): olmayan bir adımı kapı olarak göstermek kuryeyi boş ekrana yollar.
+    expect(screen.queryByTestId('courier-day-trip')).toBeNull();
   });
 });

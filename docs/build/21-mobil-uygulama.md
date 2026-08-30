@@ -7442,3 +7442,41 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   04 mal kabul · 05 kabul formu · 06 siparişsiz kabul · 07 yakın-SKT · 08 sayım/düzeltme ·
   09 yazıcılar · 10 kapsam belirsiz · 11 transfer · 12 transfer kabulü · 13 kurye dönüşü ·
   19 kargo devri.
+
+- [x] (21.150) **KURYE GÜNÜ + SEFER KÜNYESİ + ARACA YÜKLEME v3'e geçti** (v3:1293-1464)
+  `touches:` `apps/mobile/src/screens/courier/{courier-day-screen.tsx,trip-screen.tsx,load-screen.tsx,messages.json,courier-format.ts}` ·
+  `apps/mobile/src/app/(operations)/{trip.tsx,load.tsx}`
+
+  **Durum (30.08).** v3 yüklemeyi günün rotasından ÇIKARIP kendi ekranına aldı ve sebebi ölçülebilir:
+  gündeki tek satırlık sayaç ("3/7 kutu araçta") KAÇ kutunun bindiğini söylüyordu ama kuryenin
+  rampada sorduğu asıl soruyu — **HANGİ durağın kutusu eksik** — hiç cevaplamıyordu. Veri ZATEN
+  VARDI: `stop.boxes[].loadedAt` sözleşmede duruyor ve hiçbir yerde çizilmiyordu (21.138'in
+  `areaName`iyle aynı hikâye).
+
+  **14 · Günün rotası.** Üstbaşlık "neredeyim"i söylüyor (bölüm + gün), BAĞLAM SATIRI "kim ve hangi
+  sefer"i: ad üstbaşlıktan çıktı, sefer künyesi listenin başındaki şeritten başlığa taşındı — şeritte
+  kalsaydı duraklara inince kaybolur, kurye "hangi seferdeyim"i ancak yukarı kaydırarak görürdü. Üç
+  sayı tek ÖZET KARTINDA (v2'de ayrı satırlardı). "DURAKLAR" başlığı + kapanış kuralı dipnotu.
+  Yükleme satırının yerini `/trip`e açılan kapı aldı ve sayacı hâlâ taşıyor: kapıyı açmadan "işim
+  var mı" sorusu cevaplanabilmeli. Kutusuz akışta (`boxCounter === null`) kapı HİÇ çizilmiyor.
+
+  **15 · Sefer künyesi** (yeni ekran, `/trip`): kaç durak · kaç kutu · kaç tahsilat, tek bakışta.
+  Üçü de duraklardan türüyor — dördüncü bir "özet" ucu, aynı gerçeği bir kez daha okumak olurdu.
+
+  **16 · Araca yükleme** (yeni ekran, `/load`): sayaç + DURAKLARA GÖRE kırılım; üç hâl üç ayrı cümle
+  (araçta · eksik · binmedi) — yarım binen durak ile hiç binmeyen aynı şey değil ve kurye ikisine
+  farklı davranır. Okutucunun çipleri yalnız BİNMEMİŞ kutulardır.
+
+  **CİHAZDA BİR KUSUR BULUNDU VE DÜZELTİLDİ.** Kutusuz seferde ekran `0/0 kutu` için "Tüm kutular
+  araçta — yola çıkabilirsin" diyordu: hiç kutu yokken "hepsi bindi" demek, BOŞ KÜMEYİ TAMAMLANMIŞ
+  SAYMAKTIR ve kurye "yükleme bitti" sanırdı. Artık konusu olmadığını söylüyor.
+
+  **Bir ölü kod söküldü:** `shortName` (ad kısaltma) — tek tüketicisi üstbaşlığın kuyruğuydu; ad tam
+  hâliyle bağlam satırına indiği için tüketicisiz kaldı. Testiyle birlikte kaldırıldı (CLAUDE §2).
+
+  **Bir uyuşmazlık:** şablon aracın künyesini ve rota zincirini yazıyor; `CourierRunBrief` yalnız
+  `vehicleId` taşıyor, ad yok. Ekran bunu SÖYLÜYOR — boş satır bırakmak "araç yok" dedirtirdi.
+
+  **Doğrulama.** Kurye jest **81/81** (beşi yeni yükleme ekranının) · mobil paket **971/971**;
+  typecheck · lint · knip · boundaries yeşil; **üç ekran da cihazda gözle doğrulandı** (gün dolu
+  veriyle; 15 ve 16 derin bağlantıyla — veritabanı tazelendi, tohum seferleri bugüne göre üretiyor).

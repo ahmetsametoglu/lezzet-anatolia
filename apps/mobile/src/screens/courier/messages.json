@@ -53,6 +53,42 @@
       "takenUnknown": "bugün başka bir kurye sürüyor · {ref}",
       "pickLabel": "{route} rotasını seç — {meta}"
     },
+    "trip": {
+      "title": "Sefer Başlat",
+      "context": "{courier} · atanmış rota var",
+      "assigned": "ATANMIŞ",
+      "stops": "durak",
+      "boxes": "kutu",
+      "collections": "tahsilat",
+      "routeNote": "Rota yönetimde planlanır; buradan değiştirilmez.",
+      "vehicleUnknown": "Araç künyesi bu ekrana ulaşmıyor — sefer yanıtında araç ADI yok.",
+      "cta": "Seferi başlat — yüklemeye geç",
+      "footnote": "Sefer başladıktan sonra durak sırası kilitlenir; sonuçlanmayan durak kapanışta çözülür."
+    },
+    "load": {
+      "title": "Araca Yükle",
+      "context": "rampada · kutuları okut",
+      "counter": "{loaded}/{total} kutu",
+      "counterLabel": "araçta",
+      "remaining": "{n} kutu daha okutulmalı",
+      "complete": "Tüm kutular araçta — yola çıkabilirsin",
+      "noBoxes": {
+        "title": "Bu seferde kutulu sipariş yok",
+        "body": "Yükleme adımı yalnız kutulu siparişlerde vardır — bu seferin durakları kutusuz akışla hazırlanmış. Doğrudan yola çıkabilirsin."
+      },
+      "stopsHeading": "DURAKLARA GÖRE KUTULAR",
+      "stopCounter": "{loaded}/{total}",
+      "stopReady": "araçta",
+      "stopPartial": "eksik",
+      "stopNone": "binmedi",
+      "footnote": "Eksik kutuyla yola çıkabilirsin ama o durak “kutu araçta değil” diye açılmaz.",
+      "back": "Günün rotasına dön"
+    },
+    "stopsHeading": "DURAKLAR",
+    "stopsFootnote": "Sonuçlanmayan durak kapanışı engellemez — takılı duraklar seferi kapatırken çözülür.",
+    "progress": "{done}/{total} durak",
+    "pocketLabel": "CEPTE",
+    "closeOpen": "{n} açık",
     "runClosedHint": "Bu sefer kapandı — durakları kapanış özetinde durur; sayım ve fark yazıldı.",
     "startCta": "Seferi başlat — {route}",
     "startCtaPick": "Seferi başlat — rota seç",

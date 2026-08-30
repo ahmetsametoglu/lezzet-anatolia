@@ -16,9 +16,10 @@ import { TextAction } from '@/components/ui/text-action';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { useOperationsUserName } from '@/screens/operations/sections-context';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
-import { dayLabel, money, runLabel, shortName, turkishUpper } from './courier-format';
+import { dayLabel, money, runLabel, turkishUpper } from './courier-format';
 import { isRouteFree, useCourierDay } from './use-courier-day.hook';
 
 /*
@@ -102,15 +103,25 @@ export function CourierDayScreen() {
       ? t.day.startCtaPick
       : fillCopy(t.day.startCta, { route: selectedRoute.zoneName });
 
-  const eyebrow = [t.day.eyebrow, day.date === null ? null : dayLabel(day.date), turkishUpper(shortName(userName))]
+  /* ÜSTBAŞLIK "KURYE · 28 AĞUSTOS" (v3:1298) — kuryenin ADI buradan ÇIKTI ve bağlam satırına
+     indi. Gerekçe: üstbaşlık "neredeyim"i söyler (bölüm + gün), bağlam satırı "kim ve hangi
+     sefer"i. İkisi tek satıra sıkışınca sefer referansına yer kalmıyordu. */
+  const eyebrow = [t.day.eyebrow, day.date === null ? null : dayLabel(day.date)]
     .filter((part): part is string => part !== null && part.length > 0)
     .join(' · ');
+
+  /* Bağlam satırı: ad + sefer künyesi. Sefer yoksa yalnız ad — olmayan bir referans uydurulmaz. */
+  const context = day.run === null ? userName : `${userName} · ${runLabel(day.run)}`;
 
   const header = (
     <OperationsSectionHeader
       section="courier"
       eyebrow={eyebrow}
       title={t.day.title}
+      /* BAĞLAM SATIRI (v3:1300) — "Marc Lemoine · SF-26-YRNWV9". Sefer referansı her ekranda
+         AYNI yerde durmalı: künye özet kartının içinde olsaydı durak listesine inince kaybolur ve
+         kurye "hangi seferdeyim" sorusunu ancak yukarı kaydırarak cevaplardı. */
+      context={context}
       right={
         <NotificationBell
           onPress={() => router.navigate('/notifications')}
@@ -245,66 +256,89 @@ export function CourierDayScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-list">
-          {/* Buraya yalnız AÇIK seferle gelinir; künye sade hâliyle yazılır. */}
-          <Text style={styles.runStrip} testID="courier-day-run">
-            {runLabel(run)}
-          </Text>
-
           {stops.length === 0 ? (
-            <OperationsNoticeBlock
-              variant="empty"
-              title={t.day.runEmpty.title}
-              description={t.day.runEmpty.body}
-              testID="courier-day-empty"
-            />
+            <>
+              {/* Künye burada AYRI kalıyor: özet kartı duraklardan doğuyor ve durak yokken kart
+                  da yok — sefer yine açık, kapatılabilir. */}
+              <Text style={styles.runStrip} testID="courier-day-run">
+                {runLabel(run)}
+              </Text>
+              <OperationsNoticeBlock
+                variant="empty"
+                title={t.day.runEmpty.title}
+                description={t.day.runEmpty.body}
+                testID="courier-day-empty"
+              />
+            </>
           ) : (
             <>
-              <View style={styles.progressRow}>
-                <Text style={styles.progressCount}>
-                  {doneCount}
-                  <Text style={styles.progressTotal}>{`/${stops.length}`}</Text>
-                </Text>
+              {/*
+                GÜNÜN ÖZETİ TEK KART (v3:1310) — üç sayı bir arada: kaç durak bitti, cepte ne var,
+                kapıda ne kaldı. v2'de üçü ayrı satırlardı ve kurye "günüm nasıl gidiyor"
+                sorusunu ancak üç yere bakarak cevaplayabiliyordu.
+
+                Künye kartın İÇİNDE değil BAŞLIKTA (aşağıdaki `context`): sefer referansı her
+                ekranda aynı yerde durmalı, kartın içinde olsaydı durak listesine inince kaybolurdu.
+              */}
+              <View style={styles.summary} testID="courier-day-summary">
+                <View style={styles.summaryHead}>
+                  <Text style={styles.summaryCount}>
+                    {fillCopy(t.day.progress, { done: String(doneCount), total: String(stops.length) })}
+                  </Text>
+                  <View style={styles.pocketBox}>
+                    <Text style={styles.pocketLabel}>{t.day.pocketLabel}</Text>
+                    {/* Ölçülemeyen değer SIFIR DEĞİLDİR: taslak düştüyse "bilinmiyor" (CLAUDE §1). */}
+                    <Text style={styles.pocketValue}>
+                      {day.collectedCents === null ? t.day.pocketUnknown : money(day.collectedCents)}
+                    </Text>
+                  </View>
+                </View>
+
                 {/* Çubuk PAYLAŞILAN (30.08): aynı geometri depo toplama kuyruğunun her satırında
                     da var; iki kopya birinin bir gün ötekinden ayrılması demekti (CLAUDE §1). */}
                 <OperationsProgressBar value={doneCount / stops.length} testID="courier-day-progress" />
-                {/* Ölçülemeyen değer SIFIR DEĞİLDİR: taslak düştüyse "bilinmiyor" yazılır (CLAUDE §1). */}
-                <Text style={styles.pocket}>
-                  {day.collectedCents === null
-                    ? t.day.pocketUnknown
-                    : fillCopy(t.day.pocket, { amount: money(day.collectedCents) })}
-                </Text>
+
+                {doorStops.length === 0 ? null : (
+                  <Text style={styles.doorLeft} testID="courier-day-door-left">
+                    {fillCopy(t.day.doorLeft, { n: String(doorStops.length), amount: money(doorTotal) })}
+                  </Text>
+                )}
               </View>
 
-              {doorStops.length === 0 ? null : (
-                <Text style={styles.doorLeft} testID="courier-day-door-left">
-                  {fillCopy(t.day.doorLeft, { n: String(doorStops.length), amount: money(doorTotal) })}
-                </Text>
+              {/*
+                SEFER KÜNYESİ VE YÜKLEME — KENDİ EKRANINDA (v3:1330, 30.08).
+
+                Yükleme burada tek satırlık bir sayaçtı ("3/7 kutu araçta" + okut düğmesi). O satır
+                "kaç kutu bindi"yi söylüyordu ama kuryenin rampada sorduğu asıl soruyu — HANGİ
+                durağın kutusu eksik — cevaplamıyordu. Kırılım kendi ekranına taşındı; buradaki
+                satır artık oraya açılan kapı ve sayacı da taşıyor: kapıyı açmadan "işim var mı"
+                sorusu cevaplanabilmeli.
+
+                Sayaç `null` ise (kutusuz akış — eski yol) satır HİÇ çizilmez: olmayan bir adımı
+                kapı olarak göstermek, kuryeyi boş bir ekrana gönderirdi.
+              */}
+              {day.boxCounter === null ? null : (
+                <PressableSurface
+                  onPress={() => router.navigate('/trip')}
+                  feedback="scale"
+                  style={styles.tripRow}
+                  accessibilityLabel={t.day.trip.title}
+                  testID="courier-day-trip"
+                >
+                  <View style={styles.tripBody}>
+                    <Text style={styles.tripTitle}>{t.day.trip.title}</Text>
+                    <Text style={styles.tripMeta}>
+                      {fillCopy(t.day.boxes.counter, {
+                        loaded: String(day.boxCounter.loaded),
+                        total: String(day.boxCounter.total),
+                      })}
+                    </Text>
+                  </View>
+                  <Text style={styles.chevron}>›</Text>
+                </PressableSurface>
               )}
 
-              {/* YÜKLEME SAYACI + OKUTMA (23.8) — yalnız kutulu sipariş varsa çizilir; sayaç
-                  duraklardaki damgalardan türer (karar §1.11). Son kutu siparişi yola çıkarır. */}
-              {day.boxCounter === null ? null : (
-                <View style={styles.boxLoadRow} testID="courier-day-boxes">
-                  <Text style={styles.boxLoadCounter}>
-                    {fillCopy(t.day.boxes.counter, {
-                      loaded: String(day.boxCounter.loaded),
-                      total: String(day.boxCounter.total),
-                    })}
-                  </Text>
-                  {day.boxCounter.loaded >= day.boxCounter.total ? null : (
-                    <PressableSurface
-                      onPress={() => day.setBoxScanOpen(true)}
-                      feedback="scale"
-                      compact
-                      style={styles.boxLoadButton}
-                      accessibilityLabel={t.day.boxes.scanCta}
-                      testID="courier-day-box-scan"
-                    >
-                      <Text style={styles.boxLoadButtonLabel}>{t.day.boxes.scanCta}</Text>
-                    </PressableSurface>
-                  )}
-                </View>
-              )}
+              <Text style={styles.stopsHeading}>{t.day.stopsHeading}</Text>
 
               {stops.map((stop, index) => (
                 <StopRow
@@ -318,6 +352,10 @@ export function CourierDayScreen() {
                   }
                 />
               ))}
+
+              {/* Kapanışın kuralı listenin SONUNDA (v3:1352): kurye "şu durak takıldı, günü
+                  kapatamam" diye beklemesin — takılı durak kapanışta çözülür, engel değildir. */}
+              <Text style={styles.stopsFootnote}>{t.day.stopsFootnote}</Text>
             </>
           )}
         </ScrollView>
@@ -559,27 +597,59 @@ const styles = StyleSheet.create({
     // Yapışkan CTA listenin ÜSTÜNDE duruyor; son satır onun altında kalmasın (52 + nefes).
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
   },
-  progressRow: {
+  /* GÜNÜN ÖZETİ TEK KART (v3:1310) — üç sayı bir arada; v2'de ayrı satırlardı ve kurye "günüm
+     nasıl gidiyor" sorusunu ancak üç yere bakarak cevaplayabiliyordu. */
+  summary: {
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space['2xl'],
+    paddingHorizontal: operationsTheme.space['2xl'],
+    gap: operationsTheme.space.lg,
+  },
+  summaryHead: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: operationsTheme.space.xl,
-    paddingTop: operationsTheme.space.md,
   },
-  progressCount: {
+  summaryCount: {
     // v2: `800 20px` — Karla'nın 800'ü YÜKLENMİYOR (fonts.ts üç ağırlık taşır) ve sahte kalın
     // Android'de çirkin durur; en yakın gerçek kesit 700.
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text['icon-sm'],
     color: operationsTheme.colors.ink,
   },
-  progressTotal: {
-    fontFamily: operationsTheme.font.body[400],
+  /** "CEPTE" + tutar — kartın sağ ucunda, iki satır; para bir sayı değil bir DURUM. */
+  pocketBox: {
+    alignItems: 'flex-end',
+    gap: operationsTheme.space['2xs'],
+  },
+  pocketLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
-  pocket: {
+  pocketValue: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.micro,
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  stopsHeading: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space.lg,
+  },
+  stopsFootnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space.md,
   },
   doorLeft: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -587,12 +657,31 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.terracotta,
     paddingTop: operationsTheme.space.sm,
   },
-  boxLoadRow: {
+  /** Sefer künyesi ve yüklemeye açılan kapı — sayacı da taşır (v3:1330). */
+  tripRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     gap: operationsTheme.space.lg,
-    paddingTop: operationsTheme.space.sm,
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+  },
+  tripBody: {
+    flex: 1,
+    gap: operationsTheme.space['2xs'],
+  },
+  tripTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  tripMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
   },
   /** Yerinde satış şeridi — kutu yükleme satırının görsel dili, gövdenin ÜSTÜNDE sabit. */
   saleRow: {

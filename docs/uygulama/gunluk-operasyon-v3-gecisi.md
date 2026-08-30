@@ -175,7 +175,7 @@ yüzeyler, ayrı içerik.
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
 | 2 | Depo bölümü (01–13, 19) | ✅ 14/14 |
-| 3 | Kurye bölümü (14–18) | — |
+| 3 | Kurye bölümü (14–18) | 🔶 3/5 |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
 | 6 | Yönetim (25–31) + Bildirimler (32) | — |
@@ -488,6 +488,41 @@ belirsiz bırakır.
 
 ---
 
+## 30.08 sabah — Faz 3 · Ekranlar 14–16: Kurye günü, sefer künyesi, araca yükleme ✅
+
+**Yapısal değişiklik.** v3 yüklemeyi günün rotasından ÇIKARIP kendi ekranına aldı. Sebep ölçülebilir:
+gündeki tek satırlık sayaç ("3/7 kutu araçta") *kaç* kutunun bindiğini söylüyordu ama kuryenin
+rampada sorduğu asıl soruyu — **hangi durağın kutusu eksik** — hiç cevaplamıyordu. Veri **zaten
+vardı**: `stop.boxes[].loadedAt` sözleşmede duruyor ve hiçbir yerde çizilmiyordu (deponun
+`areaName`iyle aynı hikâye).
+
+- **14 · Günün rotası**: üstbaşlık "neredeyim"i (bölüm + gün), **bağlam satırı** "kim ve hangi
+  sefer"i söylüyor — ad üstbaşlıktan çıktı, sefer künyesi listenin başındaki şeritten başlığa taşındı
+  (şeritte kalsaydı duraklara inince kaybolurdu). Üç sayı tek **özet kartında**. "DURAKLAR" başlığı
+  ve kapanış kuralı dipnotu geldi. Yükleme satırının yerini `/trip`e açılan kapı aldı — sayacı hâlâ
+  taşıyor, çünkü kapıyı açmadan "işim var mı" sorusu cevaplanabilmeli.
+- **15 · Sefer künyesi** (yeni ekran): kaç durak · kaç kutu · kaç tahsilat, tek bakışta. Üçü de
+  duraklardan türüyor, yeni uç istemiyor.
+- **16 · Araca yükleme** (yeni ekran): sayaç + **duraklara göre kırılım**; üç hâl üç ayrı cümle
+  (araçta · eksik · binmedi) — yarım binen durak ile hiç binmeyen aynı şey değil.
+
+**Cihazda bir kusur bulundu ve düzeltildi.** Kutusuz seferde ekran `0/0 kutu` için *"Tüm kutular
+araçta — yola çıkabilirsin"* diyordu: hiç kutu yokken "hepsi bindi" demek, **boş kümeyi tamamlanmış
+saymaktır** ve kurye "yükleme bitti" sanırdı. Artık konusu olmadığını söylüyor.
+
+**Bir ölü kod söküldü:** `shortName` (ad kısaltma) tek tüketicisi üstbaşlığın kuyruğuydu; ad tam
+hâliyle bağlam satırına indiği için tüketicisiz kaldı. Testiyle birlikte kaldırıldı — tüketicisi
+olmayan bir yardımcıyı testiyle ayakta tutmak, ölü kodu test kılıfına sokmaktır.
+
+**Veritabanı tazelendi** (yetki 30.08): tohum seferleri "bugüne göre" üretiyor ve son sefer düne
+aitti; tazeleme olmadan kurye ekranları dolu hâlde doğrulanamıyordu.
+
+**Doğrulama.** Kurye jest **81/81** (beşi yeni yükleme ekranının) · mobil paket **971/971** ·
+statik kapılar yeşil · **üç ekran da cihazda gözle doğrulandı** (gün dolu veriyle, 15 ve 16 derin
+bağlantıyla).
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -498,6 +533,7 @@ Burada durulmaz — yazılır, geçilir.
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
 | 2 | 01 Depo Hub · 10 Kapsam | **DARALDI (30.08).** Ekranın içeriği artık şablonunkiyle birebir (gerekçe, çıkış yolları, karar dipnotu). Kalan tek fark yerleşim: şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
+| 12 | 15 Sefer künyesi | Şablon aracın künyesini ("FR-482-BX · soğutmalı panelvan") ve rota zincirini (Strasbourg → Krutenau → …) yazıyor. Gün yanıtının `run`u yalnız `vehicleId` taşıyor, ADI yok; `warehouseName` de rota SEÇİM listesinde var, günün seferinde değil. | Açık — ekran aracın künyesinin ulaşmadığını SÖYLÜYOR (boş satır bırakmak "araç yok" dedirtirdi). Çözümü tek alan: `CourierRunBrief`e `vehicleLabel` + `warehouseName`. |
 | 11 | 13 Kurye dönüşü | Şablon "Stoğa dön" seçilince **hazır sebep çipleri** gösteriyor (`ch.donusSebep`, dört adet) — ama çiplerin metinlerini vermiyor (yer tutucu döngü). Dört sebebi uydurmak, alan sözlüğünü icat etmek olurdu. | Açık — serbest metin alanı korundu (yer tutucusu kanonik gerekçeyi yazıyor). Çözümü: çiplerin metinlerinin tasarımda adlandırılması. |
 | 10 | 11 Transfer | Şablon ÜÇ bölüm gösteriyor: **GELEN · YOLDA · SON KAPANANLAR**, ve satırlarda depo ADLARI ("Paris Depo → Strasbourg Merkez"). Uç yalnız GELEN transferleri döndürüyor; çıkan ve kapanan listesi yok, `InboundTransferSchema` da yalnız `fromWarehouseId` (uuid) taşıyor, ad yok — uyuşmazlık #1'in aynı ailesi. | Açık — yalnız GELEN yazıldı, boşluk metni bunu açıkça söylüyor. Çözümü: çıkan + kapanan uçları ve yanıtlara depo adı. |
 | 9 | 09 Yazıcılar | Şablon seçili yazıcının **bağlantı durumunu** ("bağlı · Wi-Fi") ve bir **"test bas"** eylemini gösteriyor. Yazıcı sözleşmesi yalnız `id · name · purpose · address · model · labelSize` taşıyor — durum alanı yok; test basımı da örnek bir etiket yükü gerektirir (basım hattı gerçek etiket PNG'siyle çalışıyor). | Açık — ikisi de yazılmadı. Çözümü: yazıcı yanıtına erişilebilirlik durumu + sunucuda bir örnek etiket ucu. |

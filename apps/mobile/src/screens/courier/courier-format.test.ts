@@ -1,4 +1,4 @@
-import { centsToAmountText, dayLabel, parseAmountToCents, shortName, signedMoney, turkishUpper } from './courier-format';
+import { centsToAmountText, dayLabel, parseAmountToCents, signedMoney, turkishUpper } from './courier-format';
 
 /*
   Biçimleme kuralları SAF olduğu için ayrı ve ucuz ölçülüyor: üç ekran testinin hepsinde aynı
@@ -27,16 +27,12 @@ describe('Türkçe büyük harf', () => {
   });
 });
 
-describe('kısa ad', () => {
-  it('soyadı baş harfe iner', () => {
-    expect(shortName('Musa Kaya')).toBe('Musa K.');
-    expect(shortName('  Ayşe Nur Demir ')).toBe('Ayşe Nur D.');
-  });
-
-  it('tek kelimelik ad olduğu gibi kalır', () => {
-    expect(shortName('Musa')).toBe('Musa');
-  });
-});
+/*
+  `shortName` 30.08'de SÖKÜLDÜ ve testi onunla birlikte gitti. Tek tüketicisi kurye üstbaşlığının
+  kuyruğuydu ("KURYE · 28 AĞUSTOS · MUSA K."); v3 adı üstbaşlıktan alıp bağlam satırına indirdi ve
+  orada TAM ad yazılıyor ("Marc Lemoine · SF-26-…"). Kısaltmaya ihtiyaç kalmadı — tüketicisi
+  olmayan bir yardımcıyı testiyle birlikte ayakta tutmak, ölü kodu test kılıfına sokmaktır.
+*/
 
 describe('tutar çevrimi', () => {
   it('virgülü de noktayı da kabul eder', () => {
