@@ -8043,3 +8043,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Açık kalan:** hesap bakiyesi satırının künyesi ("Kasa · **Strasbourg**", "CIC · **işletme**",
   "Stripe · **bekleyen**"). `account` tablosu `name` + `type` taşıyor; künyenin ikinci parçası üç
   ayrı eksende (yer · rol · durum) ve hiçbiri `type`tan türemiyor — kullanıcıya soruldu.
+
+- [x] (21.168) **DURAK EKRANI: KUTU KODU VE MAL İPUCU** (v3:17 · tasarım HTML'i koda karşı konuldu)
+  `touches:` `apps/mobile/src/screens/courier/{delivery-screen.tsx,messages.json}`
+
+  **Durum (30.08).** Kullanıcı 17. ekranın tasarım karesini paylaştı; tasarımın türetilmişi koda
+  karşı konup iki fark ölçüldü.
+
+  **Kutu satırı kutunun KODUNU yazıyor, sıra numarasını değil.** "Kutu 1" kuryenin elindeki
+  kartonla eşleşmiyordu — kartonun üstünde `KT-26-7741` yazıyor. Sıra numarası bizim iç sayacımız;
+  kod **fiziksel nesnenin kimliği** ve kurye yığından doğru kutuyu seçerken ona bakıyor. Anatomi
+  tasarımdaki üç sütun: kare numara rozeti · kod · sağda durum.
+
+  **Sağdaki durum `loadedAt`ten geliyor** (`araçta` / `araçta değil` / okutulunca `verildi`).
+  Veri sözleşmede zaten vardı ve çizilmiyordu: **araca binmemiş bir kutu kapıda hiç bulunamaz** ve
+  kurye onu boşuna arar — yükleme ekranındaki bilgiyi kapıda tekrar sormak yerine gösteriyor.
+
+  **Satırlar alt alta.** Rozet gibi yan yana sarmalanıyorlardı ve kutu kodu rozete sığmaz.
+
+  **`MAL` başlığındaki ipucu ayrı satıra indi.** Tasarım başlığı kısa tutuyor ("MAL — 1 KALEM") ve
+  talimatı altına yazıyor; tek satıra sıkıştırıldığında başlık okunmaz uzunluğa çıkıyor ve talimat
+  başlık gibi büyük harfle sessizleşiyordu.
+
+  **Doğrulama.** Kurye jest **93/93**; cihaz turu görsel ajanından istendi (`v3-gorsel-kurye.md`).

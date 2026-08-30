@@ -195,7 +195,8 @@
       }
     },
     "goods": {
-      "heading": "MAL · {n} KALEM — dokun: ✓ teslim · ✕ reddedildi",
+      "heading": "MAL — {n} KALEM",
+      "hint": "Dokun: ✓ teslim · tekrar dokun: ✕ reddedildi",
       "returnQty": "iade adedi",
       "decrease": "İade adedini azalt",
       "increase": "İade adedini artır",
@@ -274,6 +275,10 @@
       "scanHint": "Kutunun üstündeki QR — teslim, tüm kutular okutulunca açılır.",
       "row": "Kutu {n}",
       "rowScanned": "Kutu {n} ✓",
+      "rowCode": "{code}",
+      "rowLoaded": "araçta",
+      "rowNotLoaded": "araçta değil",
+      "rowDone": "verildi",
       "scanned": "Kutu {n} okundu ({k}/{total}).",
       "alreadyScanned": "Kutu {n} zaten okutuldu.",
       "notMine": "Bu QR bu durağın kutusu değil — araçtaki yığını kontrol edin.",

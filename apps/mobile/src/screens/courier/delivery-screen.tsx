@@ -204,18 +204,40 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 }),
               })}
             </Text>
+            {/*
+              KUTU SATIRI KODU YAZAR, SIRA NUMARASINI DEĞİL (v3:17 · 30.08).
+
+              "Kutu 1" kuryenin elindeki kartonla eşleşmiyor: kartonun üstünde `KT-26-7741` yazıyor.
+              Sıra numarası bizim iç sayacımız, kod ise **fiziksel nesnenin kimliği** — kurye yığından
+              doğru kutuyu seçerken ona bakıyor. Numara kare rozette duruyor (tasarım), kod gövdede.
+
+              Sağdaki durum da tasarımın: **araçta mı** (`loadedAt`) — okutulmuş kutuda "verildi"ye
+              döner. Yükleme ekranındaki bilgiyi kapıda tekrar sormak yerine burada gösteriyor:
+              araca binmemiş bir kutu kapıda hiç bulunamaz ve kurye onu boşuna arar.
+            */}
             <View style={styles.boxRows}>
-              {delivery.boxes.map((box) => (
-                <Text
-                  key={box.code}
-                  style={[styles.boxRow, delivery.isBoxScanned(box.code) ? styles.boxRowDone : null]}
-                  testID={`courier-box-${box.boxNo}`}
-                >
-                  {fillCopy(delivery.isBoxScanned(box.code) ? t.delivery.boxes.rowScanned : t.delivery.boxes.row, {
-                    n: String(box.boxNo),
-                  })}
-                </Text>
-              ))}
+              {delivery.boxes.map((box) => {
+                const scanned = delivery.isBoxScanned(box.code);
+                return (
+                  <View key={box.code} style={styles.boxRow} testID={`courier-box-${box.boxNo}`}>
+                    <View style={[styles.boxNo, scanned ? styles.boxNoDone : null]}>
+                      <Text style={[styles.boxNoText, scanned ? styles.boxNoTextDone : null]}>
+                        {scanned ? '✓' : String(box.boxNo)}
+                      </Text>
+                    </View>
+                    <Text style={[styles.boxCode, scanned ? styles.boxCodeDone : null]}>
+                      {fillCopy(t.delivery.boxes.rowCode, { code: box.code })}
+                    </Text>
+                    <Text style={styles.boxState}>
+                      {scanned
+                        ? t.delivery.boxes.rowDone
+                        : box.loadedAt === null
+                          ? t.delivery.boxes.rowNotLoaded
+                          : t.delivery.boxes.rowLoaded}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
             {delivery.finished || boxesLeft === 0 ? null : (
               <PressableSurface
@@ -323,6 +345,10 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               label: fillCopy(t.delivery.goods.heading, { n: String(delivery.lines.length) }),
             })}
           </Text>
+          {/* İPUCU BAŞLIKTAN AYRI (v3:17): başlık bölümün ADI ("MAL — 1 KALEM"), ipucu bir
+              KULLANIM TALİMATI ("dokun · tekrar dokun"). Tek satıra sıkıştırıldığında başlık
+              okunmaz uzunluğa çıkıyor ve talimat başlık gibi büyük harfle sessizleşiyordu. */}
+          <Text style={styles.sectionHint}>{t.delivery.goods.hint}</Text>
           {delivery.lines.map((line) => {
             const mark = delivery.markOf(line.orderItemId);
             return (
@@ -711,21 +737,50 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
   },
-  boxRows: { flexDirection: 'row', flexWrap: 'wrap', gap: operationsTheme.space.md },
-  /** Okutulmamış kutu — bekleyen iş; okutulunca zeytin dolguya döner (`boxRowDone`). */
+  /*
+    KUTULAR ALT ALTA, YAN YANA DEĞİL (v3:17 · 30.08). Rozet gibi sarmalanıyordu ve kutu kodu
+    (`KT-26-7741`) rozete sığmaz; tasarım her kutuyu kendi satırında, üç sütunlu çiziyor:
+    kare numara · kod · durum. Kurye yığından kutu seçerken satır satır okuyor.
+  */
+  boxRows: { gap: operationsTheme.space.sm },
   boxRow: {
-    paddingVertical: operationsTheme.space.xs,
-    paddingHorizontal: operationsTheme.space.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.lg,
+  },
+  /** Kare numara rozeti — tasarımda daire DEĞİL (daireler durak listesinin işareti). */
+  boxNo: {
+    width: operationsTheme.size.dotButton,
+    height: operationsTheme.size.dotButton,
     borderRadius: operationsTheme.radius.badge,
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['olive-line'],
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.tag,
-    color: operationsTheme.colors['olive-dark'],
+    borderColor: operationsTheme.colors['sand-300'],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  boxRowDone: {
+  boxNoDone: {
     backgroundColor: operationsTheme.colors['olive-bg'],
     borderColor: operationsTheme.colors['olive-bg'],
+  },
+  boxNoText: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
+  },
+  boxNoTextDone: { color: operationsTheme.colors['olive-dark'] },
+  /** Kutunun KODU — kartonun üstünde yazan şey; kurye eşleştirmeyi buradan yapıyor. */
+  boxCode: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  boxCodeDone: { color: operationsTheme.colors['olive-dark'] },
+  /** Sağdaki durum — "araçta" / "araçta değil" / "verildi"; sessiz, çünkü bir etiket. */
+  boxState: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
   },
   /* Tamamlanma cümlesi TON DEĞİŞTİRİR: "eksik" nötr bir dipnot, "hepsi verildi" bir izin —
      kurye kapıdan ayrılabileceğini renkten de okur. */
@@ -733,6 +788,13 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[600],
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors['olive-dark'],
+  },
+  /** Bölüm ipucu — başlığın altında, küçük ve sessiz: talimat, başlık değil. */
+  sectionHint: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
+    marginTop: -operationsTheme.space.xs,
   },
   /* Kilitli bölüm SOLUKTUR (yarı saydam), gizli değil — bkz. kanıt bölümünün künyesi. */
   sectionLocked: { opacity: 0.4 },

@@ -663,7 +663,10 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
     await fireEvent.press(screen.getByLabelText('Kutu 1'));
     await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/1\/2 OKUTULDU/));
-    expect(screen.getByTestId('courier-box-1')).toHaveTextContent('Kutu 1 ✓');
+    /* Satır artık kutunun KODUNU yazıyor (v3:17 · 30.08): "Kutu 1" kuryenin elindeki kartonla
+       eşleşmiyordu — kartonun üstünde `KT-26-…` yazıyor. Okutulan satır "verildi"ye dönüyor. */
+    expect(screen.getByTestId('courier-box-1')).toHaveTextContent(/KT-26-AAAAAAAAAA/);
+    expect(screen.getByTestId('courier-box-1')).toHaveTextContent(/verildi/);
     expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
 
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
