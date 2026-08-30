@@ -7675,3 +7675,35 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kelimeye düştüğünde ad iki kez basılıyordu. Aynı sözcüğü iki kez yazmak künyeyi bilgi değil
   gürültü yapar; iki ad çakışınca artık bir kez yazılıyor (`metaOf`), testi de fikstürdeki gerçek
   çakışma satırıyla (`label: 'Para'` · `section: 'money'`) ölçülüyor.
+
+- [x] (21.158) **YEREL ADRESİN HOST'U CİHAZA SORULUYOR — iOS fiziksel cihazda veri gelmiyordu**
+  `touches:` `apps/mobile/src/lib/env.ts` · `apps/mobile/src/lib/env.test.ts` ·
+  `apps/mobile/.env.example`
+
+  **Durum (30.08).** iOS fiziksel cihazda ürünler gelmiyor, "bağlantı yok" deniyordu — oysa API,
+  Supabase ve Metro üçü de ayaktaydı. Sebep: `localhost` TELEFONUN KENDİSİDİR.
+
+  **Gömülü değer TEK ama hedef ÜÇ** ve üçünün "yerel makine" tarifi ayrı: iOS simülatörü makinenin
+  ağ yığınını paylaşır · Android fiziksel `adb reverse` köprüsünü kullanır · **iOS fiziksel cihazın
+  köprüsü YOKTUR.** Üçüncüsü kapsanmıyordu.
+
+  **İki eski çare de yetmiyordu:** `localhost` iOS fiziksel cihazı dışarıda bırakıyor; LAN IP'yi
+  elle yazmak üçünü kapsıyor ama sabit bir sayıdır ve router değiştirdiği gün SESSİZCE kopuyor
+  (ölçüldü 27.08: `192.168.1.161` → `.130`). 27.08'de `localhost`a dönülmüştü — arıza takas
+  edilmişti, çözülmemişti.
+
+  **Çözüm host'u seçmemek:** cihaz Metro'ya zaten bir adresten bağlandı ve Expo onu `hostUri` ile
+  söylüyor (`expo-constants` 57.0.9). Her hedef kendi doğru host'unu kendisi getiriyor; sabit sayı
+  olmadığı için IP değişimi de bir şey kırmıyor. **`.env` DEĞİŞMEDİ**, `adb reverse` köprüsü
+  bozulmadı.
+
+  **İki savunma:** `__DEV__` kapısı (üretimde cihaz bilgisi hiç okunmaz — yoksa müşterinin telefonu
+  bizim geliştirme makinemizi arardı) ve yalnız `localhost`/`127.0.0.1` çevrilmesi (gerçek alan
+  adına bakan bir geliştirme derlemesi sessizce makineye yönlendirilmez).
+
+  **`URL` KULLANILMADI, ölçülerek:** React Native'in `URL`i eksik bir polyfill — `hostname` ataması
+  sessizce işlemiyor. Testte yakalandı; cihazda da işlemezdi ve düzeltme "yazıldı ama çalışmıyor"
+  hâlinde kalırdı.
+
+  **Doğrulama.** 8 birim testi; `__DEV__` kapısı kaldırılınca ilgili test kırmızıya döndü.
+  `src/lib` jest paketi **119/119**, lint + typecheck temiz. Cihazda doğrulandı: ürünler geliyor.
