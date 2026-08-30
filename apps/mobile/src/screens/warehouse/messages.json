@@ -332,14 +332,26 @@
       "body": "Plansız kabul stok partisi açar — kod eşleşmesi ve parti oluşumu sunucuda olur. Bağlantı gelene kadar satır eklenemez."
     },
     "qtyLabel": "{name} için gelen adet",
+    "countCta": "say →",
     "expiry": {
       "missing": "SKT gir *",
       "set": "SKT {date} ✓",
       "placeholder": "gg.aa.yyyy",
+      "sheet": {
+        "title": "Son kullanma tarihi",
+        "subject": "{name} · seçili: {selected}",
+        "none": "seçilmedi",
+        "day": "GÜN",
+        "month": "AY",
+        "year": "YIL",
+        "confirm": "Bu tarihi yaz",
+        "cancel": "Vazgeç"
+      },
       "field": "{name} için son kullanma tarihi",
       "done": "tamam"
     },
     "lot": {
+      "short": "lot: {lot}",
       "known": "lot: {lot}",
       "empty": "lot yok — bilinçli boş",
       "field": "{name} için lot numarası"

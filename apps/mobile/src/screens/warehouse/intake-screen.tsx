@@ -9,6 +9,7 @@ import { meetsMlor } from '@lezzet/domain-core';
 import type { IntakeFormRowContract, VariantSearchRowContract } from '@lezzet/types';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsDateSheet } from '@/components/operations/date-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsQtySlider } from '@/components/operations/qty-slider';
@@ -792,6 +793,12 @@ interface IntakeRowProps {
 }
 
 function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowProps) {
+  const [dateOpen, setDateOpen] = useState(false);
+  /* SATIR SAYILDIĞINDA AÇILIR. Ölçüt adedin GİRİLMİŞ olması (`qty !== null`), sıfırdan büyük
+     olması değil: "0 adet geldi" de bir sayımdır ve o satırın SKT'si sorulmaz ama sapma özetine
+     girer. Sıfırı kapalı saymak, depocunun bilinçli beyanını "hiç dokunmadım"la eşitlerdi. */
+  const [expanded, setExpanded] = useState(false);
+  const counted = state.qty !== null || expanded;
   const name = productLabel(row.productName, row.variantLabel);
   const expiry = parseDate(state.expiryText);
   const damaged = state.damageNote.length > 0;
@@ -842,16 +849,45 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
             </Text>
           )}
         </View>
-        <OperationsQtyField
-          value={qtyToText(state.qty)}
-          onChangeText={(text) => onPatch({ qty: parseQty(text) })}
-          accessibilityLabel={fillCopy(t.intake.qtyLabel, { name })}
-          // Sapma tonu da beklentinin VARLIĞINA bağlı: beklenen yokken her sayı "farklı" görünürdü.
-          tone={state.qty === null ? 'muted' : row.expectedQty === 0 || state.qty === row.expectedQty ? 'neutral' : 'diff'}
-          testID={`warehouse-intake-qty-${row.variantId}`}
-        />
+        {/* SAYILMAMIŞ SATIR KAPALI DURUR (v3:05): sağda kesikli "say →", altında hiçbir alan yok.
+            Altı kalemlik bir sipariş açıkken üç ekran sürüyordu ve depocu hangi satıra geldiğini
+            kaydırarak arıyordu; kapalı hâlde altısı da tek ekrana sığıyor. Sayı girilir girilmez
+            satır AÇILIR — çünkü o andan sonra SKT ve lot da sorulacak. */}
+        {counted ? (
+          <OperationsQtyField
+            value={qtyToText(state.qty)}
+            onChangeText={(text) => onPatch({ qty: parseQty(text) })}
+            accessibilityLabel={fillCopy(t.intake.qtyLabel, { name })}
+            // Sapma tonu da beklentinin VARLIĞINA bağlı: beklenen yokken her sayı "farklı" görünürdü.
+            tone={state.qty === null ? 'muted' : row.expectedQty === 0 || state.qty === row.expectedQty ? 'neutral' : 'diff'}
+            testID={`warehouse-intake-qty-${row.variantId}`}
+          />
+        ) : (
+          <PressableSurface
+            /* Düğme satırı AÇAR, adedi YAZMAZ. Bir an beklenen adedi otomatik doldurmayı yazmıştım
+               ve yanlıştı: o hâlde "saydım" ile "dokundum" aynı kayda düşerdi. Sayı depocunun
+               beyanıdır; ekran onu asla onun yerine söylemez (CLAUDE §1). */
+            onPress={() => setExpanded(true)}
+            feedback="scale"
+            style={styles.countCta}
+            accessibilityLabel={fillCopy(t.intake.qtyLabel, { name })}
+            testID={`warehouse-intake-count-${row.variantId}`}
+          >
+            <Text style={styles.countCtaLabel}>{t.intake.countCta}</Text>
+          </PressableSurface>
+        )}
       </View>
 
+      {/* Kapalı satırın tek künyesi: SKT kuralı ve lot durumu — açmadan da ne isteneceği görünür. */}
+      {counted ? null : (
+        <View style={styles.chipRow}>
+          <Text style={styles.dateTag}>{fillCopy(t.intake.dateTag, { type: row.dateType })}</Text>
+          <Text style={styles.chip}>{fillCopy(t.intake.lot.short, { lot: state.lotText.length === 0 ? '—' : state.lotText })}</Text>
+        </View>
+      )}
+
+      {counted ? (
+      <>
       <View style={styles.chipRow}>
         {/* SKT alanı: zorunlu olduğu ÇİPTE değil, kapıda — çip yalnız durumu söyler (v2:369). */}
         <Text
@@ -895,15 +931,45 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
         </PressableSurface>
       </View>
 
-      <TextInput
-        value={state.expiryText}
-        onChangeText={(text) => onPatch({ expiryText: text })}
-        keyboardType="numbers-and-punctuation"
-        placeholder={t.intake.expiry.placeholder}
-        placeholderTextColor={operationsTheme.colors.muted}
-        accessibilityLabel={fillCopy(t.intake.expiry.field, { name })}
+      {/* SKT SEÇİCİYLE GİRİLİR, KLAVYEYLE DEĞİL (v3 · `00-ortak` → `openSkt`).
+          Rampada koli tutulurken, eldivenle yazılan tarih iki yerden bozuluyordu: olmayan gün
+          ("31.02") ve belirsiz biçim ("2.6.26" mi 6.2.26 mı). Üç sütunlu seçicide ikisi de
+          imkânsız — gün listesi ayın gerçek uzunluğu kadar. Alan artık bir GİRDİ değil, seçiciyi
+          açan düğme. */}
+      <PressableSurface
+        onPress={() => setDateOpen(true)}
+        feedback="scale"
         style={styles.textInput}
+        accessibilityLabel={fillCopy(t.intake.expiry.field, { name })}
         testID={`warehouse-intake-expiry-${row.variantId}`}
+      >
+        <Text style={expiry === null ? styles.fieldPlaceholder : styles.fieldValue}>
+          {expiry === null ? t.intake.expiry.placeholder : (shortDate(expiry) ?? expiry)}
+        </Text>
+      </PressableSurface>
+
+      <OperationsDateSheet
+        visible={dateOpen}
+        title={t.intake.expiry.sheet.title}
+        subject={fillCopy(t.intake.expiry.sheet.subject, {
+          name,
+          selected: expiry === null ? t.intake.expiry.sheet.none : (shortDate(expiry) ?? expiry),
+        })}
+        value={expiry ?? ''}
+        shelfLifeDays={row.shelfLifeDays}
+        columnLabels={{
+          day: t.intake.expiry.sheet.day,
+          month: t.intake.expiry.sheet.month,
+          year: t.intake.expiry.sheet.year,
+        }}
+        confirmLabel={t.intake.expiry.sheet.confirm}
+        cancelLabel={t.intake.expiry.sheet.cancel}
+        onConfirm={(iso) => {
+          onPatch({ expiryText: iso });
+          setDateOpen(false);
+        }}
+        onClose={() => setDateOpen(false)}
+        testID={`warehouse-intake-expiry-sheet-${row.variantId}`}
       />
 
       {/* KALAN ÖMÜR SATIRIN İÇİNDE, KAYITTAN SONRA DEĞİL (v3:610 · 30.08).
@@ -951,6 +1017,8 @@ function IntakeRow({ row, state, unplanned, mlorPercent, onPatch }: IntakeRowPro
           testID={`warehouse-intake-damage-${row.variantId}`}
         />
       ) : null}
+      </>
+      ) : null}
     </View>
   );
 }
@@ -971,13 +1039,19 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
+    // Kartlar arası nefes: ayraç çizgisi kalktı, boşluk onun işini görüyor.
+    gap: operationsTheme.space.lg,
   },
+  /* SATIR BİR KART (v3:05). Kesik çizgiyle ayrılmış düz satırlardı ve altı kalem tek bir metin
+     bloğu gibi okunuyordu; kart her kalemi kendi işi yapıyor — depocu birini sayarken ötekiler
+     görsel olarak "bekleyen" kalıyor. */
   lineRow: {
     gap: operationsTheme.space.sm,
-    paddingVertical: operationsTheme.space['2xl'],
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    padding: operationsTheme.space['2xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+    backgroundColor: operationsTheme.colors.panel,
   },
   lineHead: {
     flexDirection: 'row',
@@ -1040,6 +1114,35 @@ const styles = StyleSheet.create({
   chipLabelIdle: { color: operationsTheme.colors.ink },
   chipLabelSkipped: { color: operationsTheme.colors.terracotta },
   chipLabelDamaged: { color: operationsTheme.colors.error },
+  /* Seçici düğmesinin içindeki iki hâl: değer varsa mürekkep, yoksa yer tutucu tonunda. */
+  fieldValue: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors.ink,
+  },
+  fieldPlaceholder: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors.muted,
+  },
+  /* KAPALI SATIRIN "say →" DÜĞMESİ — kesikli, çünkü bir kayıt değil bir DAVET: burada henüz
+     sayılmış bir şey yok. Dolu bir düğme, satırı sayılmış gibi gösterirdi. */
+  countCta: {
+    minWidth: operationsTheme.size.circleSm,
+    height: operationsTheme.size.controlSm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: operationsTheme.space.xl,
+    borderWidth: operationsTheme.border.base,
+    borderStyle: 'dashed',
+    borderColor: operationsTheme.colors['sand-500'],
+    borderRadius: operationsTheme.radius.control,
+  },
+  countCtaLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors.muted,
+  },
   textInput: {
     paddingVertical: operationsTheme.space.lg,
     paddingHorizontal: operationsTheme.space['2xl'],

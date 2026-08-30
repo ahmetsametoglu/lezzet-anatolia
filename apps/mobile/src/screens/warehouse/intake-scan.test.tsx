@@ -81,8 +81,14 @@ async function scanOnce() {
   await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/codes/resolve'))).toBe(true));
 }
 
+/*
+  SATIR KAPALIYSA ADET ALANI HİÇ ÇİZİLMEZ (v3:05, 30.08) — ve bu, "adet yok"un ta kendisidir.
+  Yardımcı bu yüzden yokluğu boş dizeye çeviriyor: çağıranların hepsi "bu satıra yazıldı mı" diye
+  soruyor, "alan var mı" diye değil.
+*/
 function qtyOf(variantId: string): string {
-  return String(screen.getByTestId(`warehouse-intake-qty-${variantId}`).props.value ?? '');
+  const field = screen.queryByTestId(`warehouse-intake-qty-${variantId}`);
+  return field === null ? '' : String(field.props.value ?? '');
 }
 
 beforeAll(() => {

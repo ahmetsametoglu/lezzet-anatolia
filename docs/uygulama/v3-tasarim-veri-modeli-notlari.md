@@ -83,9 +83,9 @@ gerekçesiyle duruyor. Burada yalnız **ekran → ne eksik** özeti var; ayrınt
 
 | Tasarımdaki dokunuş | Ne olmalı | Hangi ekranlarda | Bugün ne var |
 | --- | --- | --- | --- |
-| `kpOpen.*` | **Büyük tuş takımı** — tasarımın kendi cümlesi: *"Cihaz klavyesi açılmaz — eldivenle de basılabilecek büyük tuşlar"* | 17 tahsilat · 18 kasa sayımı (üç alan) | Cihaz klavyesi (`TextInput`) |
-| `openSkt` | **SKT seçici** — gün / ay / yıl tekerleği | 05 · 06 | `TextInput`, `numbers-and-punctuation` |
-| `openLot` | **Lot / parti sayfası** — okunan koliden gelen adaylar listelenir | 05 · 06 | Serbest metin alanı |
+| ~~`kpOpen.*`~~ ✅ | **Büyük tuş takımı** — tasarımın kendi cümlesi: *"Cihaz klavyesi açılmaz — eldivenle de basılabilecek büyük tuşlar"* | 17 tahsilat · 18 kasa sayımı (üç alan) | Cihaz klavyesi (`TextInput`) |
+| ~~`openSkt`~~ | **SKT seçici** — gün / ay / yıl | 05 · 06 | ✅ **YAZILDI** (30.08): üç sütun + hızlı çipler. "31 Şubat" artık yakalanmıyor, **doğmuyor** — listede yok. İlk çip ürünün raf ömründen türer; bilinmiyorsa çizilmez. |
+| `openLot` | **Lot / parti sayfası** — okunan koliden gelen adaylar listelenir | 05 · 06 | Serbest metin alanı — **YAZILAMADI:** sayfanın beslendiği şey "okunan koliden gelen adaylar"dır; `ResolveCodeResponse` lot taşımıyor. GS1-128 barkodunun parti alanını (AI 10) çözmek yeni bir yetenek. Adaysız bir seçim sayfası, serbest metinden kötüdür. |
 | `openAdet` | **Adet sayfası** — kaynak notu + sıfırla | 05 (×3) · 06 | Satır içi artı/eksi |
 | `openKutuTip` | **"Kolide kaç paket var"** — ürünün kutu tipleri, yenisi eklenebilir | 00-ortak · 05 | Yok |
 | `tg.navSheet` | **Navigasyon sayfası** — harita uygulaması seçimi | 17 (00-ortak'ta 4 kullanım) | Doğrudan Google Maps açılıyor |

@@ -80,6 +80,10 @@ export const appMetrics = {
     avatarLg: 56,
     avatarMd: 46,
     avatarSm: 40,
+    /* TARİH SEÇİCİNİN SÜTUN BOYU — dördüncü hücre YARIM görünsün diye (cihazda ölçüldü 30.08).
+       Tam üç hücrelik bir boy, listeyi kaydırılmaz gibi gösteriyordu: kullanıcı 4. günü aramak
+       yerine yok sanıyordu. Yarım hücre, kaydırmanın tek dürüst işaretidir. */
+    wheelColumn: 176,
     /** Yükleniyor halkası (tasarım: satır içi 18 · giriş 40 · ödeme 44). */
     spinnerLg: 44,
     spinnerMd: 40,

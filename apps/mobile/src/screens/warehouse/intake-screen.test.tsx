@@ -37,6 +37,34 @@ const ROW_B = intakeRow({ variantId: '00000000-0000-4000-8000-000000000042', pro
    ayrıştırılamaz ve ekran "sevkiyatlar yüklenemedi" der. Değer ayarın varsayılanı. */
 const MLOR = 75;
 
+
+/*
+  SKT ARTIK SEÇİCİYLE giriliyor (v3 · `00-ortak` → `openSkt`, 30.08): alan bir `TextInput` değil,
+  üç sütunlu seçiciyi açan düğme. Testler kapıdaki GERÇEK yolu izliyor — alana dokun, gün/ay/yıl
+  seç, "yaz". Metin yazmak artık var olmayan bir yolu ölçerdi.
+
+  **"31 Şubat" testi de bu yüzden değişti:** seçicide o gün LİSTEDE HİÇ YOK, yani yazılamıyor.
+  İddia korunuyor ama yeri değişti: kural artık `date-wheel-value.test.ts`te ("gün sütunu ayın
+  gerçek uzunluğu kadar").
+*/
+/*
+  SATIR KAPALI BAŞLAR (v3:05, 30.08): sayılmamış satırda adet alanı YOK, sağda kesikli "say →"
+  var. Düğme satırı AÇAR, adedi yazmaz — otomatik doldurma "saydım" ile "dokundum"u eşitlerdi.
+*/
+async function countRow(variantId: string, qty: string) {
+  await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${variantId}`));
+  await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${variantId}`), qty);
+}
+
+async function pickExpiry(variantId: string, day: number, month: number, year: number) {
+  await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${variantId}`));
+  const sheet = `warehouse-intake-expiry-sheet-${variantId}`;
+  await fireEvent.press(screen.getByTestId(`${sheet}-year-${year}`));
+  await fireEvent.press(screen.getByTestId(`${sheet}-month-${month}`));
+  await fireEvent.press(screen.getByTestId(`${sheet}-day-${day}`));
+  await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
+}
+
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 function ok(data: unknown): Response {
@@ -200,8 +228,8 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     expect(screen.getByTestId('warehouse-intake-header')).toHaveTextContent(/2 kalem · 0 tamam/);
 
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '01.12.2026');
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 1, 12, 2026);
 
     expect(screen.getByTestId('warehouse-intake-header')).toHaveTextContent(/2 kalem · 1 tamam/);
   });
@@ -223,8 +251,8 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId('warehouse-intake-scan-cta')).toBeOnTheScreen();
 
     // Yazma denemesi ağa çıkar ve düşer — çevrimdışı bayrağı böyle doğar.
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '01.12.2026');
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 1, 12, 2026);
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-locked')).toBeOnTheScreen());
@@ -264,29 +292,36 @@ describe('D2 · mal kabul', () => {
     withForm([ROW_A]);
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
+    await countRow(ROW_A.variantId, '10');
 
     expect(screen.getByTestId('warehouse-intake-cta')).toHaveTextContent(/adet \+ SKT zorunlu/);
     expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_A.variantId}`)).toHaveTextContent('SKT gir *');
   });
 
-  it('takvimde OLMAYAN tarih kabul edilmez — 31 Şubat sessizce kaymaz', async () => {
+  it('takvimde OLMAYAN gün seçicide HİÇ YOK — 31 Şubat yazılamıyor', async () => {
     withForm([ROW_A]);
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '31.02.2026');
+    await countRow(ROW_A.variantId, '10');
 
-    expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_A.variantId}`)).toHaveTextContent('SKT gir *');
-    expect(screen.getByTestId('warehouse-intake-cta')).toBeDisabled();
+    /* Eski hâlde "31.02.2026" YAZILABİLİYOR ve ekran onu reddediyordu. Seçicide o gün listeye hiç
+       girmiyor: hata yakalanmıyor, DOĞMUYOR. Şubat'a geçen seçici günü de kendiliğinden kırpıyor
+       (`date-wheel-value.test.ts` — "ay kısaldığında gün son güne iner"). */
+    const sheet = `warehouse-intake-expiry-sheet-${ROW_A.variantId}`;
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`));
+    await fireEvent.press(screen.getByTestId(`${sheet}-month-2`));
+
+    expect(screen.queryByTestId(`${sheet}-day-31`)).toBeNull();
+    expect(screen.queryByTestId(`${sheet}-day-29`)).toBeNull(); // 2026 artık yıl değil
+    expect(screen.getByTestId(`${sheet}-day-28`)).toBeOnTheScreen();
   });
 
   it('adet + geçerli SKT ile CTA açılır ve satır ISO tarihle gönderilir', async () => {
     withForm([ROW_A]);
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '12.08.2026');
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
 
     expect(screen.getByTestId('warehouse-intake-cta')).toHaveTextContent(/Kabulü kaydet/);
 
@@ -302,8 +337,8 @@ describe('D2 · mal kabul', () => {
     withForm([ROW_A, ROW_B]);
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_B.variantId}`), '3');
+    await countRow(ROW_A.variantId, '10');
+    await countRow(ROW_B.variantId, '3');
 
     const diff = screen.getByTestId('warehouse-intake-differences');
     expect(diff).toHaveTextContent(/Mısır Unu · 25 kg: beklenen 4, gelen 3/);
@@ -314,8 +349,8 @@ describe('D2 · mal kabul', () => {
     withForm([ROW_A]);
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '8');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '12.08.2026');
+    await countRow(ROW_A.variantId, '8');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
 
     expect(screen.getByTestId('warehouse-intake-cta')).toHaveTextContent(/Kısmen teslim alındı/);
   });
@@ -324,8 +359,8 @@ describe('D2 · mal kabul', () => {
     withForm([ROW_A]);
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '12.08.2026');
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
@@ -338,8 +373,8 @@ describe('D2 · mal kabul', () => {
     withForm([ROW_A]);
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '12.08.2026');
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}`), 'kutu ezik');
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
@@ -358,8 +393,8 @@ describe('D2 · mal kabul', () => {
     });
 
     await renderIntake();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '12.08.2026');
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-warning')).toHaveTextContent(/raf ömrü bilinmiyor/));
