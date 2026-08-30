@@ -115,6 +115,31 @@ describe('D5 · rampada sayım', () => {
     expect(screen.getByTestId(`warehouse-transfer-row-${TRANSFER.transferId}`)).not.toHaveTextContent(/kalem daha/);
   });
 
+  /*
+    "0 · HİÇ GELMEDİ" KISAYOLU (v3:1189) — sıfır bu ekranın en anlamlı ve en zor girilen değeri.
+    Klavye açıp "0" yazmak, boş bırakmakla aynı hızda değil; oysa ikisi taban tabana zıt beyanlar
+    ("koli geldi, mal yok" ↔ "saymadım"). Kısayol sıfırı bir TERCİH hâline getiriyor, bir zahmet
+    olmaktan çıkarıyor.
+  */
+  it('"0 · hiç gelmedi" tek dokunuşla sıfır yazar ve sonra KAYBOLUR', async () => {
+    withTransfers([TRANSFER]);
+
+    await renderTransfer();
+    await fireEvent.press(screen.getByTestId(`warehouse-transfer-zero-${LINE_A}`));
+
+    expect(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}`)).toHaveDisplayValue('0');
+    // Aynı şeyi ikinci kez söyleten kontrol, basıldığında hiçbir şey olmadığı için bozuk görünür.
+    expect(screen.queryByTestId(`warehouse-transfer-zero-${LINE_A}`)).toBeNull();
+  });
+
+  it('kural SAYIMDAN ÖNCE okunur — dipnotta değil', async () => {
+    withTransfers([TRANSFER]);
+
+    await renderTransfer();
+
+    expect(screen.getByTestId('warehouse-transfer-rule')).toHaveTextContent(/SKT ve lot yeniden yazılmaz/);
+  });
+
   it('BOŞ satır kabulü bloklar — CTA kapalı ve sebebini söyler', async () => {
     withTransfers([TRANSFER]);
 

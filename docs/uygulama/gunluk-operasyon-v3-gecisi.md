@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 11/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 12/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -429,6 +429,26 @@ Aynı düzeltme hub'ın D5 alt metnine de gitti.
 **Doğrulama.** Transfer jest **8/8** (ikisi yeni) · depo jest **161/161** · statik kapılar yeşil ·
 **cihazda boş hâl gözle doğrulandı** (dolu kart yerel veride yok — gelen transfer bulunmuyor;
 önizleme jest'le sınandı).
+
+---
+
+## 30.08 gece — Faz 2 · Ekran 12: Transfer kabulü ✅
+
+**Üç değişiklik, üçü de zamanlama ya da zahmetle ilgili:**
+
+1. **Kural sayımdan ÖNCE.** "SKT ve lot yeniden yazılmaz — gönderen partiler taşınır" bilgisi
+   dipnottaydı, yani depocu onu SAYDIKTAN sonra okuyordu. Kural sayımı değiştirmiyor ama
+   beklentiyi değiştiriyor: SKT alanı arayan biri onu bulamayınca ekranı eksik sanır.
+2. **"0 · hiç gelmedi" tek dokunuşla.** Sıfır bu ekranın en anlamlı ve en zor girilen değeri:
+   klavye açıp "0" yazmak, boş bırakmakla aynı hızda değil — oysa ikisi taban tabana zıt beyanlar
+   ("koli geldi, mal yok" ↔ "saymadım"). Kısayol sıfırı bir tercih hâline getiriyor. Zaten sıfır
+   yazılmışsa düğme kayboluyor.
+3. **Çevrimdışı sebebi bu ekranda daha ağır**: kabul İKİ deponun stokunu aynı anda oynatıyor.
+   Kuyruğa alınabilseydi kaynak depo malı düşmüş, hedef henüz almamış olurdu — arada mal hiçbir
+   yerde görünmezdi.
+
+**Doğrulama.** Transfer jest **10/10** (ikisi yeni) · mobil paket **964/964** · statik kapılar
+yeşil.
 
 ---
 

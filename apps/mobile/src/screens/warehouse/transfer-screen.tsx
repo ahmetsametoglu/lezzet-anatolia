@@ -9,6 +9,7 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { TextAction } from '@/components/ui/text-action';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -184,6 +185,13 @@ export function TransferScreen() {
       {header}
 
       <FormScroll contentContainerStyle={styles.list} testID="warehouse-transfer-lines">
+        {/* KURAL SAYIMDAN ÖNCE (v3:1166) — "SKT ve lot yeniden yazılmaz" bilgisi dipnottaydı,
+            yani depocu onu SAYDIKTAN sonra okuyordu. Kural sayımı değiştirmiyor ama beklentiyi
+            değiştiriyor: SKT alanı aramaya çıkan biri onu bulamayınca ekranı eksik sanır. */}
+        <View style={styles.rule} testID="warehouse-transfer-rule">
+          <Text style={styles.ruleText}>{t.transfer.rule}</Text>
+        </View>
+
         <Text style={styles.heading}>{t.transfer.heading}</Text>
 
         {transfer.lines.map((line) => {
@@ -191,24 +199,43 @@ export function TransferScreen() {
           const missing = transferState.missingLineIds.includes(line.lineId);
           return (
             <View key={line.lineId} style={styles.lineRow} testID={`warehouse-transfer-line-${line.lineId}`}>
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>{line.name}</Text>
-                <Text style={[styles.rowSub, missing ? styles.rowSubMissing : undefined]}>
-                  {missing
-                    ? t.transfer.missing
-                    : fillCopy(t.transfer.dispatched, { qty: String(line.dispatchedQty) })}
-                </Text>
+              <View style={styles.lineHead}>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>{line.name}</Text>
+                  <Text style={[styles.rowSub, missing ? styles.rowSubMissing : undefined]}>
+                    {missing
+                      ? t.transfer.missing
+                      : fillCopy(t.transfer.dispatched, { qty: String(line.dispatchedQty) })}
+                  </Text>
+                </View>
+                <OperationsQtyField
+                  value={qtyToText(counted)}
+                  onChangeText={(text) => transferState.setCount(line.lineId, parseQty(text))}
+                  /* Yer tutucu "—": alanın boş olması bir DEĞER değil, bir eksikliktir ve sıfırla
+                     karışmaması için görsel olarak da ayrı durur (v2:468). */
+                  placeholder="—"
+                  accessibilityLabel={fillCopy(t.transfer.qtyLabel, { name: line.name })}
+                  tone={counted === null ? 'muted' : counted === line.dispatchedQty ? 'neutral' : 'diff'}
+                  testID={`warehouse-transfer-qty-${line.lineId}`}
+                />
               </View>
-              <OperationsQtyField
-                value={qtyToText(counted)}
-                onChangeText={(text) => transferState.setCount(line.lineId, parseQty(text))}
-                /* Yer tutucu "—": alanın boş olması bir DEĞER değil, bir eksikliktir ve sıfırla
-                   karışmaması için görsel olarak da ayrı durur (v2:468). */
-                placeholder="—"
-                accessibilityLabel={fillCopy(t.transfer.qtyLabel, { name: line.name })}
-                tone={counted === null ? 'muted' : counted === line.dispatchedQty ? 'neutral' : 'diff'}
-                testID={`warehouse-transfer-qty-${line.lineId}`}
-              />
+
+              {/*
+                "0 · HİÇ GELMEDİ" TEK DOKUNUŞLA (v3:1189) — sıfır bu ekranın en anlamlı ve en zor
+                girilen değeri. Klavye açıp "0" yazmak, boş bırakmakla aynı hızda değil; oysa
+                ikisi taban tabana zıt beyanlar ("koli geldi, mal yok" ↔ "saymadım"). Kısayol
+                sıfırı bir tercih hâline getiriyor, bir zahmet olmaktan çıkarıyor.
+
+                Zaten sıfır yazılmışsa düğme çizilmez: aynı şeyi ikinci kez söyleten bir kontrol,
+                basıldığında hiçbir şey olmadığı için bozuk görünür.
+              */}
+              {counted === 0 ? null : (
+                <TextAction
+                  label={t.transfer.zero}
+                  onPress={() => transferState.setCount(line.lineId, 0)}
+                  testID={`warehouse-transfer-zero-${line.lineId}`}
+                />
+              )}
             </View>
           );
         })}
@@ -217,6 +244,15 @@ export function TransferScreen() {
       </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+        {/* ÇEVRİMDIŞI SEBEBİ (v3:1206) — bu ekranda sebep ötekilerden farklı ve daha ağır: kabul
+            İKİ deponun stokunu aynı anda oynatıyor. Kuyruğa alınabilseydi, kaynak depo malı
+            düşmüş, hedef depo henüz almamış olurdu — arada mal hiçbir yerde görünmezdi. */}
+        {!offline ? null : (
+          <View style={styles.locked} testID="warehouse-transfer-locked">
+            <Text style={styles.lockedTitle}>{t.transfer.locked.title}</Text>
+            <Text style={styles.lockedBody}>{t.transfer.locked.body}</Text>
+          </View>
+        )}
         {transferState.notice === null ? null : (
           <Text
             style={[styles.notice, styles[`notice_${transferState.notice.tone}`]]}
@@ -325,13 +361,48 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space.lg,
   },
   lineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.lg,
+    gap: operationsTheme.space.sm,
     paddingVertical: operationsTheme.space.xl,
     borderBottomWidth: operationsTheme.border.base,
     borderStyle: 'dashed',
     borderBottomColor: operationsTheme.colors['sand-300'],
+  },
+  lineHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.lg,
+  },
+  /** Kuralın bandı — sayımdan ÖNCE okunur, dipnotta değil. */
+  rule: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+  },
+  ruleText: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors['olive-dark'],
+  },
+  locked: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+    marginBottom: operationsTheme.space.lg,
+  },
+  lockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  lockedBody: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
   },
   rowBody: {
     flex: 1,

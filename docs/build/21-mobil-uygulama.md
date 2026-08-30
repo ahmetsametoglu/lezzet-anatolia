@@ -7373,3 +7373,27 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   yokken satırın hiç doğmaması) · depo jest **161/161**; typecheck · lint · knip yeşil; **cihazda
   boş hâl gözle doğrulandı** — dolu kart yerel veride yok (gelen transfer bulunmuyor), önizleme
   jest'le sınandı.
+
+- [x] (21.147) **TRANSFER KABULÜ v3 — kural sayımdan önce, sıfır tek dokunuşla** (v3:1154-1214)
+  `touches:` `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,messages.json,transfer-screen.test.tsx}`
+
+  **Durum (30.08).** Üç değişiklik, üçü de ZAMANLAMA ya da ZAHMET ile ilgili — akış değişmedi.
+
+  1. **KURAL SAYIMDAN ÖNCE.** "Transferde SKT ve lot yeniden yazılmaz — gönderen depodaki partiler
+     taşınır" bilgisi dipnottaydı; depocu onu SAYDIKTAN sonra okuyordu. Kural sayımı değiştirmiyor
+     ama BEKLENTİYİ değiştiriyor: SKT alanı aramaya çıkan biri onu bulamayınca ekranı eksik sanar.
+  2. **"0 · HİÇ GELMEDİ" TEK DOKUNUŞLA.** Sıfır bu ekranın en anlamlı ve en zor girilen değeri:
+     klavye açıp "0" yazmak, boş bırakmakla aynı hızda değil — oysa ikisi taban tabana ZIT
+     beyanlar ("koli geldi, mal yok" ↔ "saymadım", ekranın kendi kuralı). Kısayol sıfırı bir
+     tercih hâline getiriyor, bir zahmet olmaktan çıkarıyor. Zaten sıfır yazılmışsa düğme
+     çizilmiyor: aynı şeyi ikinci kez söyleten kontrol, basıldığında hiçbir şey olmadığı için
+     bozuk görünür.
+  3. **Çevrimdışı sebebi bu ekranda DAHA AĞIR**: kabul İKİ deponun stokunu aynı anda oynatıyor.
+     Kuyruğa alınabilseydi kaynak depo malı düşmüş, hedef henüz almamış olurdu — arada mal hiçbir
+     yerde görünmezdi.
+
+  Ayrıca "transfer artık yolda değil" cevabının metni, neden hiçbir şeyin yazılmadığını da söyler
+  hâle geldi (rampadaki mal ile sistem çelişmesin diye).
+
+  **Doğrulama.** Transfer jest **10/10** (ikisi yeni: sıfır kısayolu ve kaybolması, kuralın
+  yeri) · mobil paket **964/964**; typecheck · lint · knip yeşil.

@@ -462,7 +462,7 @@
     "dispatched": "sevk edilen {qty}",
     "qtyLabel": "{name} için gelen adet",
     "missing": "sayılmadı",
-    "footnote": "0 = geldi ama kayıp; boş = sayılmadı — boş satır kabulü bloklar, ikisi ayrı şeydir. Sevk anında mal kaynaktan düşer; ölçü kullanılabilir stoktur. Dönüş ters transferdir.",
+    "footnote": "Boş bırakmak ile 0 yazmak ayrı şeydir: boş “saymadım” demektir ve kabulü bloklar; 0 “koli geldi, mal yok” demektir ve fark kaydı doğurur. Sevk anında mal kaynaktan düşer; dönüş ters transferdir.",
     "cta": {
       "ready": "Kabulü kaydet",
       "pending": "Her satırı say — boş satır kabulü bloklar",
@@ -471,7 +471,7 @@
     "result": {
       "ok": "Kabul yazıldı — {n} parti açıldı.",
       "incomplete": "{n} satır sayılmamış — kabul yapılmadı.",
-      "stale": "Transfer artık yolda değil ({status}) — araya biri girdi."
+      "stale": "Bu transfer artık yolda değil ({status}) — sen sayarken biri kapattı ya da iptal etti. Girdiğin adetler YAZILMADI; rampadaki mal ile sistem çelişmesin diye."
     },
     "status": {
       "draft": "taslak",
@@ -481,7 +481,13 @@
     },
     "queueOpen": "kabule başla →",
     "queueMore": "+{n} kalem daha",
-    "queueFootnote": "Transfer kabulü mal kabulle aynı akıştır: SKT ve lot yeniden yazılmaz, gönderen partiler taşınır."
+    "queueFootnote": "Transfer kabulü mal kabulle aynı akıştır: SKT ve lot yeniden yazılmaz, gönderen partiler taşınır.",
+    "rule": "Transferde SKT ve lot yeniden yazılmaz — gönderen depodaki partiler taşınır. Yalnız gelen adedi say.",
+    "zero": "0 · hiç gelmedi",
+    "locked": {
+      "title": "Teslim alma kapalı",
+      "body": "İki deponun stoku aynı anda doğru kalmalı — transfer kabulü kuyruğa alınmaz."
+    }
   },
   "return": {
     "title": "Kurye Dönüşü Kabulü",
