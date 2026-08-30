@@ -7036,3 +7036,43 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** 3 entegrasyon (delta ile ölçüldü, mutlak sayıyla değil — `CLAUDE §4b`) + 1 uç
   testi + 6 ekran testi. Sabotajla doğrulandı: "okunamadı"yı sıfıra düşürünce ilgili test kırmızı.
   Depo jest paketi **124/124**, kilitli tam paket **3945/3945**.
+
+- [x] (21.135) **OPERASYON v3 GEÇİŞİNİN ZEMİNİ — tasarım repoda + Maestro e2e altyapısı**
+  (kullanıcı kararı 30.08: kapsam operasyon v3'ün TAMAMI, önce e2e altyapısı, ekran başına commit)
+  `touches:` `design/project/Operasyon Mobil v3.dc.html` · `design/derived/operasyon-mobil-v3/` ·
+  `scripts/design-split.mjs` · `apps/mobile/maestro/` · `apps/mobile/scripts/device.mjs` ·
+  `apps/mobile/src/app/_layout.tsx` · `docs/uygulama/gunluk-operasyon-v3-gecisi.md`
+
+  **Durum (30.08).** Geçişin kendisi başlamadan önceki iki hazırlık fazı. Ekranlar bundan sonra
+  tek tek gelecek; her birinin durumu kendi görev satırında olacak. Çalışma günlüğü
+  `docs/uygulama/gunluk-operasyon-v3-gecisi.md` — **ilerlemenin sahibi yine bu satırlardır**,
+  günlük "nasıl gitti"yi tutar.
+
+  **Faz 0 — tasarım repoda.** v3 repoda yoktu (yalnız v1/v2). 30.08 00:31 dışa aktarımı alındı,
+  32 ekrana bölündü. Bölme aracı v3'ü tanımıyordu: tasarım aracı ekran koşulunun adlandırmasını
+  değiştirmiş (`{{ vEkranAdi }}` → `{{ is.ekranAdi }}`). Araç iki adlandırmayı da tanıyor; eski
+  dosyalarda ateşlenemediği ölçüldü. Ölçüm: 32 `is.` koşulu ↔ 32 `data-screen-label`, kapsama
+  3475/3475 satır, boşluk ve çakışma yok.
+
+  **29.08 denetimimin üç bulgusu KAPANMIŞ** — çevrimdışı kilidi, boş/yükleniyor/hata hâlleri,
+  kargo devrinde kutu okutma. Bu dışa aktarım incelediğim paketten yenidir; ölçüldü ve günlüğe
+  yazıldı. `design/pages/app-depo.md` sonundaki "tasarımda DÜŞTÜ" bölümü geçersiz kaldı, geçiş
+  sırasında güncellenecek.
+
+  **Faz 1 — Maestro.** Native tarafta e2e altyapısı yoktu (repodaki Playwright'ın üç projesi de
+  web'dir). `maestro` 2.9.0 kuruldu, `apps/mobile/maestro/` açıldı, iki komut yazıldı:
+  `pnpm mobile:device` (adb reverse tünellerini kurar **ve cihazın içinden ölçer** — tünel
+  düştüğünde uygulama "sunucu yok" demez, boş ekran gösterir) ve `pnpm mobile:e2e`.
+
+  **İlk akış fiziksel cihazda yeşil** (`depo-kapi.yaml`): depo hesabıyla giriş → operasyon kapısı
+  → hub'ın dolu hâli → dokuz kartın hepsi. Veri uçtan gelir, gelmezse akış düşer.
+
+  **Üç cihaz gerçeği ölçüldü** (hepsi künyelere yazıldı): OPPO CPH1907 `pm clear`ı reddediyor
+  (`SecurityException`), oturum sıfırlama akıştan çıktı — yeni dev oturumu eskisinin üstüne
+  yazıyor. Dev-client'ın yüzen menü düğmesi "Hesap" sekmesinin üstüne düşüyor ve dokunuşu
+  **sessizce** yutuyor (akış "dokunuldu" diye COMPLETED yazıyor); giriş ekranına derin
+  bağlantıyla gidiliyor, sekmeye hiç dokunulmuyor. İki kabuğun ortak "ayaktayım" kancası yoktu —
+  kök düzene `app-root` eklendi.
+
+  **Doğrulama.** typecheck · lint · knip · boundaries yeşil; mobil jest **920/920**; kilitli tam
+  paket **3945/3945**; Maestro akışı gerçek cihazda yeşil.
