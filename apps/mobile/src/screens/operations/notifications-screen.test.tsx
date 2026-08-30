@@ -75,6 +75,9 @@ describe('OperationsNotificationsScreen', () => {
     // Tür şapkası başta (26.08): satır NE olduğunu bölümden önce söyler.
     expect(screen.getByText('Rota · Kurye · 9 dk')).toBeOnTheScreen();
     expect(screen.getByText('Sipariş · Depo · 2 dk')).toBeOnTheScreen();
+    /* TÜR VE BÖLÜM AYNI ADI TAŞIYINCA TEK YAZILIR (cihazda görüldü 30.08: "Para · Para · 25 dk").
+       Aynı sözcüğü iki kez yazmak künyeyi bilgi değil gürültü yapar. */
+    expect(screen.getByText('Para · 25 dk')).toBeOnTheScreen();
   });
 
   it('tek şapkada kapsam bölümün ADIYLA yazılır — "tüm bölümler" DENMEZ', async () => {

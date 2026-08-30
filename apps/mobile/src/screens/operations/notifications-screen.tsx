@@ -63,6 +63,13 @@ const SKELETON_ROW_HEIGHT =
   operationsTheme.text.micro * operationsTheme.text['lead--line-height'];
 
 /** Kapsam künyesi — kararı saf fonksiyon verir, cümleyi sözlük kurar. */
+/** Satırın künyesi: "tür · bölüm · ne kadar önce" — tür ile bölüm aynı adı taşıyorsa tek yazılır. */
+function metaOf(item: { label: string; section: OperationsSection; ago: string }): string {
+  const sectionName = t.sections[item.section].tab;
+  const parts = item.label === sectionName ? [sectionName] : [item.label, sectionName];
+  return [...parts, item.ago].join(' · ');
+}
+
 function scopeLabel(sections: OperationsSection[]): string {
   const scope = notificationScopeOf(sections);
   if (scope.kind === 'all') return t.notifications.scopeAll;
@@ -130,7 +137,10 @@ export function OperationsNotificationsScreen() {
                   {item.title}
                 </Text>
                 {/* Tür şapkası başta (26.08): operatör satırın NE olduğunu bölümden önce okur. */}
-                <Text style={styles.rowMeta}>{`${item.label} · ${t.sections[item.section].tab} · ${item.ago}`}</Text>
+                {/* TÜR VE BÖLÜM AYNI KELİMEYE DÜŞEBİLİR (cihazda görüldü 30.08: "Para · Para ·
+                    8 dk"). Aynı sözcüğü iki kez yazmak künyeyi bilgi değil gürültü yapar; iki ad
+                    çakışınca bir kez yazılır. */}
+                <Text style={styles.rowMeta}>{metaOf(item)}</Text>
               </PressableSurface>
             ))}
           </View>

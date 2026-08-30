@@ -723,6 +723,10 @@ knip · boundaries yeşil. **Cihazda dolu veriyle gezildi**: dört sekme (yeni "
 günü 5 durak + 1/3 kutu araçta, para üç yöntemli ve kuryenin üstünde para var, gün sonu +8,40 €
 uyuşmazlık, karar kutusu dört kart, tedarik ve gün özeti dolu.
 
+**Cihaz turunun kalanı** (27 gelen kutusu · 30 kampanya · 32 bildirimler) da geçildi ve bir kusur
+daha çıktı: bildirim künyesi **"Para · Para · 8 dk"** yazıyordu — satırın türü ile bölümü aynı
+kelimeye düştüğünde ad iki kez basılıyordu. Çakışınca artık bir kez yazılıyor.
+
 ---
 
 ## Uyuşmazlık defteri

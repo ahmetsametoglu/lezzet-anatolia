@@ -7669,3 +7669,9 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   karar kutusu, gün özeti, tedarik).
 
   **Faz 6 ve 7 kapandı — v3'ün 32 ekranının tamamı geçti.**
+
+  **Cihaz turunun kalanı (30.08, aynı gün):** 27 · 30 · 32 de dolu veriyle gezildi ve bir kusur
+  daha çıktı — bildirim künyesi **"Para · Para · 8 dk"** yazıyordu: satırın TÜRÜ ile BÖLÜMÜ aynı
+  kelimeye düştüğünde ad iki kez basılıyordu. Aynı sözcüğü iki kez yazmak künyeyi bilgi değil
+  gürültü yapar; iki ad çakışınca artık bir kez yazılıyor (`metaOf`), testi de fikstürdeki gerçek
+  çakışma satırıyla (`label: 'Para'` · `section: 'money'`) ölçülüyor.
