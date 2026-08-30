@@ -60,6 +60,8 @@ function candidates(): OfferCandidatesResponse {
         lotNumber: 'P-0698',
         qty: 6,
         daysLeft: 2,
+        /* Tasarımın kendi partisi (v3:30 — "Kalan ömür 2 gün · %18"). */
+        remainingPercent: 18,
         listPriceCents: 1400,
         suggestedCents: 990,
         offerDiscountPercent: 30,
@@ -71,6 +73,8 @@ function candidates(): OfferCandidatesResponse {
         lotNumber: null,
         qty: 9,
         daysLeft: 5,
+        /* Raf ömrü tanımsız ürün — yüzde ÖLÇÜLEMEZ, `null` gelir (sıfır değil). */
+        remainingPercent: null,
         listPriceCents: null,
         suggestedCents: null,
         offerDiscountPercent: 30,
@@ -217,7 +221,7 @@ describe('Y3 · teklif onayı', () => {
     expect(reads).toBeGreaterThanOrEqual(2);
   });
 
-  it('kart motorun ORANINI etiketinde yazar; süresi geçen partide gün değil hâl okunur (v3:30)', async () => {
+  it('kart motorun ORANINI etiketinde yazar; tarihi geçen partide gün değil hâl okunur (v3:30)', async () => {
     fetchMock.mockImplementation((url, init) => {
       if (init?.method === 'POST') return Promise.resolve(ok({ results: [] }));
       return Promise.resolve(
@@ -225,7 +229,8 @@ describe('Y3 · teklif onayı', () => {
           candidates: [
             // Motor "satılabilir pencerede" diyebilir ama tarih geçmiş olabilir: `-1 gün` diye bir
             // ömür yoktur, hâl yazılır. Liste fiyatı da yok — uydurulmaz, çizgi konur.
-            { ...candidates().candidates[0]!, daysLeft: -1, listPriceCents: null },
+            // Yüzde motorda böyle partide 0'a sabitlenir; 0 bir ÖLÇÜM değil, o yüzden yazılmaz.
+            { ...candidates().candidates[0]!, daysLeft: -1, remainingPercent: 0, listPriceCents: null },
           ],
         }),
       );
@@ -235,9 +240,24 @@ describe('Y3 · teklif onayı', () => {
 
     expect(screen.getByText(t.offer.rows.lifeValuePast)).toBeOnTheScreen();
     expect(screen.queryByText(t.offer.rows.lifeValue.replace('{days}', '-1'))).toBeNull();
+    expect(screen.queryByText(/%0/)).toBeNull();
     // Öneri oranı ayardan gelir ve etiketin İÇİNDE durur — operatör neyin üstüne yazdığını görür.
     expect(screen.getByText(t.offer.rows.suggested.replace('{percent}', '30'))).toBeOnTheScreen();
     expect(screen.getByText(t.offer.noSuggestion)).toBeOnTheScreen();
+  });
+
+  it('kalan ömür GÜN ve YÜZDE yazar; ölçülemeyen üründe yalnız gün (v3:30)', async () => {
+    /* Tasarımın satırı "2 gün · %18" — iki sayı iki ayrı şey söylüyor: gün ne kadar kaldığını,
+       yüzde ömrün ne kadarının tükendiğini. Motorun eşikleri de günle değil yüzdeyle veriliyor.
+       İkinci parti raf ömrü tanımsız ürün: yüzde `null` gelir ve satır yalnız günü yazar —
+       "%0" yazmak ölçemediğimizi ölçmüş gibi gösterirdi (CLAUDE §1). */
+    fetchMock.mockResolvedValue(ok(candidates()));
+
+    await renderScreen(<OfferApprovalScreen />, 'management-offer-loading');
+
+    expect(screen.getByText('2 gün · %18')).toBeOnTheScreen();
+    expect(screen.getByText('5 gün')).toBeOnTheScreen();
+    expect(screen.queryByText(/5 gün · %/)).toBeNull();
   });
 
   it('aday yoksa boş hâl; CTA hiç çizilmez', async () => {

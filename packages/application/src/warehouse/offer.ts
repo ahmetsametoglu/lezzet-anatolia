@@ -63,6 +63,7 @@ export async function listOfferCandidates(
       lotNumber: view.lotNumber ?? null,
       qty: view.physicalQty,
       daysLeft: view.daysLeft,
+      remainingPercent: view.remainingPercent,
       listPriceCents: view.listPriceCents,
       suggestedCents: view.suggestedOfferCents,
       offerDiscountPercent: view.offerDiscountPercent,

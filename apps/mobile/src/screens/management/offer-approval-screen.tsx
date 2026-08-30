@@ -187,6 +187,36 @@ function DetailRow({ label, value, watch = false }: DetailRowProps) {
   );
 }
 
+/**
+ * "Kalan ömür" satırının değeri — tasarım günü ve YÜZDEYİ yan yana yazıyor (v3:30 · *"2 gün · %18"*).
+ *
+ * İkisi ayrı şey söyler ve biri ötekinin yerine geçmez: gün ne kadar zaman kaldığını, yüzde partinin
+ * ömrünün ne kadarını tükettiğini. Bir haftalık börekte 2 gün normaldir, üç aylık konservede aynı
+ * 2 gün alarmdır — motorun eşikleri de bu yüzden günle değil yüzdeyle veriliyor (`shelf-life` künyesi).
+ *
+ * Yüzde İKİ hâlde yazılmaz:
+ * · **Raf ömrü tanımsızsa** motor `null` döner — ölçemedik. "%0" yazmak ölçemediğimizi ölçmüş gibi
+ *   gösterirdi (CLAUDE §1).
+ * · **Tarih geçmişse** motor yüzdeyi 0'a sabitliyor (`remainingShelfLifePercent` künyesi), yani
+ *   "%0" o partide bir ölçüm değil bir sabit; satır zaten hâli söylüyor.
+ *
+ * NEGATİF GÜN "SÜRESİ GEÇTİ" DEĞİLDİR: listeye yalnız `can_offer` partiler giriyor ve tarihi geçmiş
+ * olup da satılabilen tek küme DDM'si (tavsiye edilen tüketim tarihi) geçmiş partilerdir — DLC'si
+ * geçen parti imhalıktır ve aday bile sayılmaz (`offerDecisionOf`). Karar kutusundaki kardeş cümleyle
+ * aynı kural (`management-hub-screen` → `offerLifeOf`).
+ */
+function lifeValueOf(candidate: OfferCandidate): string {
+  const copy = t.offer.rows;
+  if (candidate.daysLeft < 0) return copy.lifeValuePast;
+
+  const days = String(candidate.daysLeft);
+  if (candidate.remainingPercent === null) return fillCopy(copy.lifeValue, { days });
+  return fillCopy(copy.lifeValueWithPercent, {
+    days,
+    percent: String(Math.round(candidate.remainingPercent)),
+  });
+}
+
 interface CandidateCardProps {
   candidate: OfferCandidate;
   approval: ReturnType<typeof useOfferApproval>;
@@ -196,12 +226,7 @@ function CandidateCard({ candidate, approval }: CandidateCardProps) {
   const isRemoved = approval.removed[candidate.stockId] === true;
   const failure = approval.failures[candidate.stockId];
 
-  /* Kalan gün NEGATİF olabilir (motor "satılabilir pencerede" diyebilir ama tarih geçmiştir);
-     "-2 gün" diye yazmak yerine hâli söylenir. */
-  const lifeValue =
-    candidate.daysLeft < 0
-      ? t.offer.rows.lifeValuePast
-      : fillCopy(t.offer.rows.lifeValue, { days: String(candidate.daysLeft) });
+  const lifeValue = lifeValueOf(candidate);
 
   return (
     /* Kabuk kitten (`panel`, `lg` dolgu); ekranda kalan yalnız iç aralık ve "turdan çıkarıldı"

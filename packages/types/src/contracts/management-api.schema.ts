@@ -179,6 +179,15 @@ export const OfferCandidateSchema = z.object({
   qty: z.number().int().nonnegative(),
   /** Son tarihe kalan gün — geçmişse negatif (satılabilir pencerede olabilir, motor bilir). */
   daysLeft: z.number().int(),
+  /**
+   * Raf ömrünün kalan YÜZDESİ (v3:30 — *"Kalan ömür 2 gün · %18"*). Günün yanında durur çünkü
+   * ikisi ayrı şey söyler: "2 gün" ne kadar zaman kaldığını, "%18" partinin ömrünün ne kadarını
+   * TÜKETTİĞİNİ. Bir haftalık peynirde 2 gün rahat, üç aylık konservede aynı 2 gün alarmdır.
+   *
+   * Ürünün raf ömrü tanımsızsa `null` — SIFIR DEĞİL (CLAUDE §1): sıfır "ömrü bitti" demektir ve
+   * ölçemediğimiz partiyi imhalık gibi okuturdu. Ekran `null`da yüzdeyi hiç yazmaz.
+   */
+  remainingPercent: z.number().nullable(),
   listPriceCents: z.number().int().nullable(),
   /** Liste fiyatı yoksa öneri de yok (`null`) — uydurulmaz; operatör fiyatı elle yazar. */
   suggestedCents: z.number().int().nullable(),

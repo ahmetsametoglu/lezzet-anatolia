@@ -180,7 +180,8 @@
       "qty": "Kalan adet",
       "life": "Kalan ömür",
       "lifeValue": "{days} gün",
-      "lifeValuePast": "süresi geçti",
+      "lifeValueWithPercent": "{days} gün · %{percent}",
+      "lifeValuePast": "tavsiye tarihi geçti",
       "listPrice": "Liste fiyatı",
       "suggested": "Önerilen (%{percent})"
     },
