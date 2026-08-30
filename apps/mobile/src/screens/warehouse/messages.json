@@ -309,6 +309,12 @@
     },
     "expected": "beklenen {qty}",
     "expectedDone": "bu kalem tamamlandı — beklenen kalmadı",
+    "expectedNone": "beklenen yok — ne geldiyse o yazılır",
+    "unplannedTitle": "Siparişsiz Mal",
+    "unplannedLocked": {
+      "title": "Satır ekleme kapalı",
+      "body": "Plansız kabul stok partisi açar — kod eşleşmesi ve parti oluşumu sunucuda olur. Bağlantı gelene kadar satır eklenemez."
+    },
     "qtyLabel": "{name} için gelen adet",
     "expiry": {
       "missing": "SKT gir *",

@@ -405,9 +405,22 @@ describe('D2 · plansız kabul', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-intake-search-${ROW_A.variantId}`));
 
     await waitFor(() => expect(screen.getByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeOnTheScreen());
-    // "beklenen 0" YAZILMAZ: olmayan bir beklentiyi sıfır diye göstermek, ölçülemeyeni sıfıra
-    // düşürmektir (CLAUDE §1).
-    expect(screen.queryByText(/beklenen/)).toBeNull();
+    /* "beklenen 0" YAZILMAZ: olmayan bir beklentiyi sıfır diye göstermek, ölçülemeyeni sıfıra
+       düşürmektir (CLAUDE §1). v3 ile satır artık SUSMUYOR, beklentinin YOKLUĞUNU söylüyor
+       (v3:770) — sayı değil kelime. İddia bu yüzden iki yönlü: cümle var, RAKAM yok. */
+    expect(screen.getByTestId(`warehouse-intake-none-${ROW_A.variantId}`)).toHaveTextContent(/beklenen yok/);
+    expect(screen.queryByText(/beklenen \d/)).toBeNull();
+  });
+
+  /* Plansız kabulün BAŞLIĞI ayrı (v3:756): "Mal Kabul" beklenen adetlerle çalışılan ekranın adı;
+     siparişsiz mal onun bir kipi değil, başka bir iş. */
+  it('plansız kabulün kendi başlığı var — "Mal Kabul" değil', async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(ok({ purchaseOrder: null, rows: [] })));
+
+    await render(<IntakeScreen />);
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-unplanned-empty')).toBeOnTheScreen());
+
+    expect(screen.getByTestId('warehouse-intake-header')).toHaveTextContent(/Siparişsiz Mal/);
   });
 
   it('bekleyen sevkiyat listesinden plansız kabule geçilir', async () => {

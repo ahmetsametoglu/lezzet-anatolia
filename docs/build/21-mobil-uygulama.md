@@ -7232,3 +7232,28 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Mal kabul jest **20/20** (yedisi yeni) · mobil paket **955/955**; typecheck ·
   lint · knip · boundaries yeşil; **cihazda gözle doğrulandı** — dört kalem "tamamlandı", biri
   "beklenen 30"; veritabanıyla birebir.
+
+- [x] (21.141) **SİPARİŞSİZ KABUL v3 — kendi başlığı, kendi cümlesi, kendi kilidi** (v3:748-826)
+  `touches:` `apps/mobile/src/screens/warehouse/{intake-screen.tsx,messages.json,intake-screen.test.tsx}`
+
+  **Durum (30.08).** Üç değişiklik, üçü de aynı şeyi söylüyor: plansız kabul, mal kabulün bir
+  KİPİ değil başka bir iştir.
+
+  1. **Kendi başlığı** ("Siparişsiz Mal"). "Mal Kabul" beklenen adetlerle çalışılan ekranın adıydı;
+     aynı başlık ikisini de taşıyınca depocu hangi ekranda olduğunu ancak künyeden anlıyordu.
+  2. **Satır SUSMUYOR**: "beklenen yok — ne geldiyse o yazılır". Sayı değil KELİME — "beklenen 0"
+     olmayan bir beklentiyi sıfır diye gösterirdi (CLAUDE §1); "yok" beklentinin kendisinin
+     bulunmadığını söyler. 21.140'ın "tamamlandı" cümlesiyle birlikte, sıfır beklenenin iki ayrı
+     anlamı artık iki ayrı cümle.
+  3. **Çevrimdışı kilidinin metni KİPE GÖRE**: planlıda sorun sayımın doğruluğu ("çevrimdışı
+     sayılan adet iki deponun stokunu bozabilir"), plansızda henüz sayılacak bir şey yok — sorun
+     satırın kendisinin doğamaması (kod eşleşmesi ve parti oluşumu sunucuda). Tek metin ikisini de
+     anlatsaydı, ikisinde de yarısı yanlış olurdu.
+
+  **SKU yazılamadı, uyuşmazlık defterine geçti:** şablon "SKU 601202" diyor; SKU **aramadan**
+  eklenen satırda var (`VariantSearchRowSchema.sku`) ama **okutmadan** eklenende yok
+  (`ResolveCodeResponseSchema` döndürmüyor). Bir kısmında kod olan, bir kısmında olmayan satır,
+  depocuya "bu ürünün kodu yok mu" diye sordururdu.
+
+  **Doğrulama.** Mal kabul jest **31/31** (ikisi yeni) · mobil paket **954/954**; typecheck ·
+  lint · knip yeşil; **cihazda gözle doğrulandı** — başlık ayrıştı, boş hâl ve iki kapı yerinde.

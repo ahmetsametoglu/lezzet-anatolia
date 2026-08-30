@@ -84,7 +84,10 @@ export function IntakeScreen() {
 
   const header = (
     <OperationsStackHeader
-      title={t.intake.title}
+      /* Plansız kabulün BAŞLIĞI ayrı (v3:756): "Mal Kabul" beklenen adetlerle çalışılan ekranın
+         adı; siparişsiz mal onun bir kipi değil, başka bir iş. Aynı başlık ikisini de taşıyınca
+         depocu hangi ekranda olduğunu ancak künyeden anlıyordu. */
+      title={unplanned ? t.intake.unplannedTitle : t.intake.title}
       /* Bekleyen listesinde künye LİSTEYİ anlatır (v3:517 `ov.maKabulAlt`), kategoriyi değil:
          "bekleyen sevkiyatlar" bir başlık tekrarıydı; "2 bekleyen sevkiyat · 11 kalem" depocunun
          işe başlamadan önce sorduğu şeyin cevabı. Liste okunamadıysa sayı da yok — künye
@@ -337,9 +340,17 @@ export function IntakeScreen() {
              çizilmiyordu ve depocu "düğme nerede" diye arıyordu; kilit bir yokluk değil, bir
              cevaptır. Metin neden yazılamayacağını da söylüyor: çevrimdışı sayılan adet iki
              deponun stokunu bozar. Okumak serbest — satırlar duruyor. */
+          /* KİLİDİN METNİ KİPE GÖRE (v3:610 vs 813): planlı kabulde sorun SAYIMIN doğruluğudur
+             ("çevrimdışı sayılan adet iki deponun stokunu bozabilir"); plansızda henüz sayılacak
+             bir şey yok, sorun SATIRIN kendisinin doğamamasıdır (kod eşleşmesi ve parti oluşumu
+             sunucuda). Tek metin ikisini de anlatsaydı, ikisinde de yarısı yanlış olurdu. */
           <View style={styles.formLocked} testID="warehouse-intake-locked">
-            <Text style={styles.formLockedTitle}>{t.intake.formLocked.title}</Text>
-            <Text style={styles.formLockedBody}>{t.intake.formLocked.body}</Text>
+            <Text style={styles.formLockedTitle}>
+              {unplanned ? t.intake.unplannedLocked.title : t.intake.formLocked.title}
+            </Text>
+            <Text style={styles.formLockedBody}>
+              {unplanned ? t.intake.unplannedLocked.body : t.intake.formLocked.body}
+            </Text>
           </View>
         ) : (
           <PressableSurface
@@ -745,14 +756,19 @@ function IntakeRow({ row, state, unplanned, onPatch }: IntakeRowProps) {
             Beş kalemlik bir siparişte dördü tamamen alınmıştı ve dördü de künyesiz çizilmişti —
             plansız kabuldeki "beklenti yok" hâliyle birebir aynı görünüyordu.
 
-            · PLANSIZDA (23.13) kıyaslanacak sipariş YOKTUR: satır künye taşımaz. "beklenen 0"
-              yazmak olmayan bir beklentiyi sıfır diye göstermek olurdu (CLAUDE §1).
+            · PLANSIZDA (23.13) kıyaslanacak sipariş YOKTUR ve v3 bunu SÖYLÜYOR: "beklenen yok".
+              Sayı değil KELİME — "beklenen 0" yazmak olmayan bir beklentiyi sıfır diye göstermek
+              olurdu (CLAUDE §1); "yok" demek beklentinin kendisinin bulunmadığını söyler.
             · PLANLI siparişte sıfır kalan "beklenti KARŞILANDI" demektir ve bu bir bilgidir —
               depocu ikinci turda o kaleme dokunmayacağını bilmeli. Sessizlik ikisini eşitliyordu.
           */}
           {row.expectedQty > 0 ? (
             <Text style={styles.rowSub}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
-          ) : unplanned ? null : (
+          ) : unplanned ? (
+            <Text style={styles.rowSub} testID={`warehouse-intake-none-${row.variantId}`}>
+              {t.intake.expectedNone}
+            </Text>
+          ) : (
             <Text style={styles.rowDone} testID={`warehouse-intake-done-${row.variantId}`}>
               {t.intake.expectedDone}
             </Text>
