@@ -38,13 +38,6 @@ uyguladığı denetimi bu şeride de uygular.
 
 ## Dosyalar
 
-- `koordinasyon-operasyon-v3.md` — **AJANLAR ARASI KARAR DEFTERİ** (kullanıcı kararı 30.08):
-  operasyon v3 geçişinde birden çok ajan aynı zemini paylaşıyor; öneri, itiraz ve **ortak
-  karar** buraya yazılır. Sohbette birbirine laf iletilmez. **Ortak alana** (`components/`,
-  `theme/`) dokunacak değişiklik önce burada açılır. Repoda durur (`docs/talep/` gitignore'da ve
-  oradaki metin yedeksizdir; ortak karar kaybolmaya açık bırakılamaz) ve geçiş bitince bütün
-  olarak silinir. Üç kardeşiyle karıştırılmaz: durum → görev satırı, "nasıl gitti" →
-  `gunluk-operasyon-v3-gecisi.md`, kullanıcının cihaz notları → `v3-not-kuyrugu.md`.
 - `01-teknoloji-secimi.md` — teknoloji etüdü: React Native/Expo vs Capacitor vs Flutter,
   birincil ölçüt test edilebilirlik; karşılaştırma + depo-uyum analizi + doğrulama kaydı +
   öneri. **Statü: etüt/öneri — karar kullanıcının.**
@@ -68,10 +61,6 @@ uyguladığı denetimi bu şeride de uygular.
   kilidi, kod öğretme, onay kutuları) dâhil; kaynağı sözlükler + ekran kodu. Yeni bir operasyon
   tasarımı geldiğinde **fonksiyonel eksik** bu listeyle aranır. `06` göründüğünü, `07` yapılabileni
   anlatır.
-- `gunluk-operasyon-v3-gecisi.md` — **GÜNLÜK** (30.08): `Operasyon Mobil v3` tasarımının koda
-  geçirilmesi — yetki/kapsam kararları, 32 ekranın tasarım ↔ kod haritası, faz planı ve
-  **uyuşmazlık defteri** (tasarımın mevcut ekranla çeliştiği, tur durdurulmadan kaydedilen
-  noktalar). İlerleme tutmaz; durumun sahibi `docs/build/21-mobil-uygulama.md` görev satırıdır.
 - `BACKLOG-musteri.md` — **KAPSAM** (11.08): native MÜŞTERİ yüzeyinin açık işleri tek listede —
   fiziksel cihaz turunda ölçülen bulgular + kullanıcı yönergeleri + `design/BACKLOG.md`'nin
   müşteriyi ilgilendiren maddeleri. Kimlikler `MB-nn`; **ilerleme tutmaz**, durumun sahibi
