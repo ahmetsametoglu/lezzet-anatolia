@@ -7149,8 +7149,34 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
      mı", "durum neydi" değil — `reload` önce `loading`e alıyor ve duruma bakan kural elle yapılan
      tekrar denemede hiç tutmazdı.
 
-  **Doğrulama.** Kuyruk jest **23/23** (dördü yeni) · sıralama **4/4** · çevrimdışı hook **3/3**
+  **Doğrulama (21.137).** Kuyruk jest **23/23** (dördü yeni) · sıralama **4/4** · çevrimdışı hook **3/3**
   (ayrı dosya: kural iki yükleme istiyor, ekran testinde ikincisi tetiklenemiyor) · mobil paket
   **941/941**; typecheck · lint · knip · boundaries yeşil; kilitli tam paket 3945/3945; **cihazda
   gözle doğrulandı** — yarım sipariş başa çıktı, KARGO rozeti yerinde, tünel düşürülünce okutmanın
   yerine kilit geldi ve liste kaldı.
+
+- [x] (21.138) **TOPLAMA DETAYI v3 — raf yeri, motor rozeti, sayım kilidi, kapanan kutu kaydı** (v3:327-507)
+  `touches:` `apps/mobile/src/screens/warehouse/{preparation-screen.tsx,messages.json,preparation-screen.test.tsx,picking-box.test.tsx}`
+
+  **Durum (30.08).** Dört ekleme, dördü de **zaten var olan veriyi** ekrana çıkarıyor — yeni uç,
+  yeni alan, yeni sözleşme yok:
+
+  1. **Adım satırı** ("1 · DERİN DONDURUCU 2") — sıra numarası + rafın adı. `suggestion[].areaName`
+     sözleşmede VARDI ve hiçbir ekranda çizilmiyordu (ölçüldü 30.08); depocu rafı listede değil
+     kafasında arıyordu. Raf `null` ise uydurulmaz, yalnız numara yazılır ("2. kalem") — uydurma
+     bir raf adı depocuyu olmayan bir dolabın önüne gönderir (CLAUDE §1).
+  2. **"MOTOR ÖNERİSİ" rozeti** — v2'de cümlenin kuyruğuydu ("… — motor önerisi"); artık ayrı bir
+     rozet. Sayının nereden geldiğini söyler ve depocunun kendi kararıyla karışmaz. Önerisiz
+     kalemde hiç doğmaz.
+  3. **Çevrimdışı sayım kilidi** — sayaç soluklaştırılmaz, YERİNE konan adet yazılır ("konan 2 ·
+     sayım kapalı"). Basılamayan bir sayaç "bozuk" görünür; konan adedi söyleyen satır "kilitli"
+     der.
+  4. **Kapanan kutular salt-okunur KART** — v2 tek satırlık özetti ("Kutu 1 kapalı · 8 ürün");
+     artık içeriği kalem ADIYLA ve QR'ıyla yazıyor. İkisi de sözleşmede vardı ve iki soruya cevap:
+     "yanlış kutuyu mu kapattım" ve "bu karton hangi etiketle gidecek". Ad siparişin kalemlerinden
+     çözülüyor — kutuda yalnız kimlik taşınıyor, adı iki kaynaktan taşımak biri ötekiyle çelişirdi.
+
+  **Doğrulama.** Depo jest **144/144** (beşi yeni: adım satırı, rafsız hâl, rozetin iki dalı,
+  çevrimdışı kilit, kapanan kutu kartı) · mobil paket **945/945**; typecheck · lint · knip ·
+  boundaries yeşil; kilitli tam paket 3945/3945; **cihazda gözle doğrulandı** — raf adı canlı
+  veriden geldi, önerisiz kalem rozetsiz çizildi, kapanan kutu kartı iki kalemi ve QR'ı gösterdi.

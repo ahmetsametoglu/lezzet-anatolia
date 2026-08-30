@@ -360,6 +360,70 @@ describe('D1 · gönderim', () => {
   });
 });
 
+/*
+  KALEM SATIRI v3'e GEÇTİ (v3:373-410) — üç ekleme, üçü de zaten VAR OLAN veriyi ekrana çıkarıyor:
+
+  · ADIM SATIRI: sıra numarası + rafın adı ("1 · A-1"). `suggestion[].areaName` sözleşmede vardı ve
+    hiçbir ekranda çizilmiyordu (ölçüldü 30.08) — depocu rafı listede değil kafasında arıyordu.
+  · MOTOR ÖNERİSİ rozeti: sayının nereden geldiğini söyler; önerisiz kalemde HİÇ doğmaz.
+  · ÇEVRİMDIŞI SAYIM KİLİDİ: sayaç soluklaştırılmaz, yerine konan adet yazılır.
+*/
+describe('D1 · kalem satırı (v3)', () => {
+  it('adım satırı sıra numarasını ve RAFI söyler', async () => {
+    withQueue([preparationOrder()]);
+
+    await renderPicking();
+
+    expect(screen.getByTestId(`warehouse-picking-step-${ITEM_A}`)).toHaveTextContent(/1 · A-1/);
+  });
+
+  it('raf BİLİNMİYORSA uydurulmaz — yalnız sıra numarası yazılır', async () => {
+    withQueue([
+      preparationOrder({
+        lines: [preparationLine({ suggestion: [{ stockId: STOCK_A, qty: 2, expiryDate: '2026-08-12', areaName: null }] })],
+      }),
+    ]);
+
+    await renderPicking();
+
+    const step = screen.getByTestId(`warehouse-picking-step-${ITEM_A}`);
+    expect(step).toHaveTextContent(/1\. kalem/);
+    expect(step).not.toHaveTextContent(/·/);
+  });
+
+  it('MOTOR ÖNERİSİ rozeti önerisi OLAN kalemde çizilir, olmayanda çizilmez', async () => {
+    withQueue([
+      preparationOrder({
+        lines: [preparationLine(), preparationLine({ itemId: ITEM_B, suggestion: [] })],
+      }),
+    ]);
+
+    await renderPicking();
+
+    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_A}`)).toHaveTextContent(/MOTOR ÖNERİSİ/);
+    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_B}`)).not.toHaveTextContent(/MOTOR ÖNERİSİ/);
+  });
+
+  /* Çevrimdışı bayrağı ancak ağa çıkan bir çağrı DÜŞÜNCE doğar; en doğal yol onay denemesidir —
+     ağ yoksa hiçbir şey yazılmaz ve ekran kilide geçer. */
+  it('ağ düşünce sayaç YERİNE konan adet yazılır — alan soluklaştırılmaz', async () => {
+    fetchMock.mockImplementation((_url, init) => {
+      if (init?.method === 'POST') return Promise.reject(new Error('network down'));
+      return Promise.resolve(ok({ date: null, orders: [preparationOrder()] }));
+    });
+
+    await renderPicking();
+    expect(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`)).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+
+    await waitFor(() => expect(screen.getByTestId(`warehouse-picking-locked-${ITEM_A}`)).toBeOnTheScreen());
+    expect(screen.queryByTestId(`warehouse-picking-qty-${ITEM_A}`)).toBeNull();
+    expect(screen.getByTestId(`warehouse-picking-locked-${ITEM_A}`)).toHaveTextContent(/sayım kapalı/);
+  });
+});
+
 describe('D1 · koliye yazılacak ad (23.3 — mobil şeridin işareti)', () => {
   it('alıcı hesabın sahibinden FARKLIYSA yazılır; aynıysa satır hiç çizilmez', async () => {
     withQueue([preparationOrder({ recipientName: 'Claire Weber' })]);

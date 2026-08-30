@@ -259,15 +259,41 @@ export function PreparationScreen() {
             Kutusuz başlanmış işte (boxMode false) şerit hiç çizilmez — eski akış aynen. */}
         {picking.boxMode && picking.boxes.length > 0 ? (
           <View style={styles.boxStrip} testID="warehouse-picking-boxes">
+            {/* KAPANAN KUTULAR — SALT OKUNUR (v3:349). v2'de tek satırlık bir özetti ("Kutu 1
+                kapalı · 8 ürün"); v3 kutunun İÇİNDEKİNİ ve QR'ını da yazıyor. İkisi de sözleşmede
+                zaten var (`items` · `code`) ve ikisi de bir soruya cevap: "yanlış kutuyu mu
+                kapattım" ve "bu karton hangi etiketle gidecek". Kapalı kutu geri açılamaz, yani
+                bu blok bir kayıttır — düzeltilecek bir şey değil, doğrulanacak bir şey. */}
+            {picking.boxes.some((box) => box.sealedAt !== null) ? (
+              <Text style={styles.boxSealedTitle}>{t.picking.box.sealedTitle}</Text>
+            ) : null}
             {picking.boxes
               .filter((box) => box.sealedAt !== null)
               .map((box) => (
-                <Text key={box.boxId} style={styles.boxSealed} testID={`warehouse-picking-box-${box.boxNo}`}>
-                  {fillCopy(t.picking.box.sealedRow, {
-                    n: String(box.boxNo),
-                    qty: String(box.items.reduce((sum, item) => sum + item.qty, 0)),
+                <View key={box.boxId} style={styles.boxSealedCard} testID={`warehouse-picking-box-${box.boxNo}`}>
+                  <Text style={styles.boxSealed}>
+                    {fillCopy(t.picking.box.sealedRow, {
+                      n: String(box.boxNo),
+                      qty: String(box.items.reduce((sum, item) => sum + item.qty, 0)),
+                    })}
+                  </Text>
+                  {/* İçerik kalem ADIYLA yazılıyor: adet tek başına "8 ürün" der ve depocu neyin
+                      kapandığını bilmez. Ad siparişin kalemlerinden çözülüyor — sözleşme kutuda
+                      yalnız kimlik taşıyor, adı iki kaynaktan taşımak biri ötekiyle çelişirdi. */}
+                  {box.items.map((item) => {
+                    const line = order.lines.find((candidate) => candidate.itemId === item.orderItemId);
+                    if (line === undefined) return null;
+                    return (
+                      <Text key={item.orderItemId} style={styles.boxSealedItem}>
+                        {fillCopy(t.picking.box.sealedItem, {
+                          qty: String(item.qty),
+                          name: productLabel(line.productName, line.variantLabel),
+                        })}
+                      </Text>
+                    );
                   })}
-                </Text>
+                  <Text style={styles.boxSealedQr}>{fillCopy(t.picking.box.sealedQr, { code: box.code })}</Text>
+                </View>
               ))}
             {picking.openBox === null ? null : (
               <Text style={styles.boxCurrent} testID="warehouse-picking-box-open">
@@ -307,11 +333,13 @@ export function PreparationScreen() {
           </PressableSurface>
         ) : null}
 
-        {order.lines.map((line) => (
+        {order.lines.map((line, index) => (
           <LineRow
             key={line.itemId}
             line={line}
+            index={index}
             boxMode={picking.boxMode}
+            offline={offline}
             qty={picking.lineState(line.itemId).qty}
             shortReported={picking.lineState(line.itemId).shortReported}
             capacity={picking.capacityOf(line)}
@@ -578,8 +606,12 @@ function LabelCard({
 
 interface LineRowProps {
   line: PreparationLineContract;
+  /** Kalemin kuyruktaki sırası (0 tabanlı) — adım satırındaki numara bundan türer. */
+  index: number;
   /** Kutu modunda alt cümle değişir: önceki kayıt "yerine geçmez", önceki KUTULARDADIR. */
   boxMode: boolean;
+  /** Bağlantı yoksa sayaç yerine konan adet yazılır — yazma kapalı, okuma açık. */
+  offline: boolean;
   qty: number;
   shortReported: boolean;
   capacity: number;
@@ -588,7 +620,7 @@ interface LineRowProps {
   onShort: () => void;
 }
 
-function LineRow({ line, boxMode, qty, shortReported, capacity, onQty, onComplete, onShort }: LineRowProps) {
+function LineRow({ line, index, boxMode, offline, qty, shortReported, capacity, onQty, onComplete, onShort }: LineRowProps) {
   const name = productLabel(line.productName, line.variantLabel);
   const first = line.suggestion[0];
   const wanted =
@@ -600,33 +632,66 @@ function LineRow({ line, boxMode, qty, shortReported, capacity, onQty, onComplet
         });
   const complete = qty >= Math.min(line.orderedQty, capacity) && capacity > 0;
 
+  /*
+    ADIM SATIRI (v3:376) — "1 · DERİN DONDURUCU 2". Sıra numarası depocunun yürüyeceği YOLDUR;
+    raf adı motorun önerdiği partinin durduğu yer (`suggestion[].areaName`). Alan sözleşmede
+    ZATEN VARDI ve hiçbir ekranda çizilmiyordu (ölçüldü 30.08) — depocu rafı listede değil,
+    kafasında arıyordu.
+
+    Raf BİLİNMİYORSA yalnız numara yazılır: uydurma bir raf adı, depocuyu olmayan bir dolabın
+    önüne gönderir. `null` = bilinmiyor, boş dize değil (CLAUDE §1).
+  */
+  const area = first?.areaName ?? null;
+  const step =
+    area === null
+      ? fillCopy(t.picking.line.stepNoArea, { n: String(index + 1) })
+      : fillCopy(t.picking.line.step, { n: String(index + 1), area });
+
   return (
     <View style={styles.lineRow} testID={`warehouse-picking-line-${line.itemId}`}>
+      <Text style={styles.lineStep} testID={`warehouse-picking-step-${line.itemId}`}>
+        {step}
+      </Text>
+
       <View style={styles.lineHead}>
         <View style={styles.rowBody}>
           <Text style={styles.rowTitle}>{name}</Text>
           <Text style={styles.rowSub}>{wanted}</Text>
+          {/* Motor önerisi bir ROZETTİR, cümlenin kuyruğu değil (v3:379): satırdaki sayının
+              nereden geldiğini söyler ve depocunun kendi kararıyla karışmasın diye ayrı durur. */}
+          {first === undefined ? null : <Text style={styles.engineTag}>{t.picking.line.engineTag}</Text>}
         </View>
-        <OperationsQtyField
-          value={qtyToText(qty)}
-          onChangeText={(text) => onQty(parseQty(text))}
-          accessibilityLabel={fillCopy(t.picking.line.qtyLabel, { name })}
-          tone={complete ? 'done' : 'neutral'}
-          size="sm"
-          testID={`warehouse-picking-qty-${line.itemId}`}
-        />
-        <PressableSurface
-          onPress={onComplete}
-          feedback="scale"
-          compact
-          style={[styles.completeChip, complete ? styles.completeChipOn : styles.completeChipOff]}
-          accessibilityLabel={t.picking.line.complete}
-          testID={`warehouse-picking-all-${line.itemId}`}
-        >
-          <Text style={[styles.completeLabel, complete ? styles.completeLabelOn : styles.completeLabelOff]}>
-            {t.picking.line.complete}
+
+        {/* ÇEVRİMDIŞI: SAYIM KAPALI (v3:404) — alan soluklaştırılmaz, YERİNE konan adet yazılır.
+            Basılamayan bir sayaç "bozuk" görünür; konan adedi söyleyen bir satır "kilitli" der. */}
+        {offline ? (
+          <Text style={styles.lockedQty} testID={`warehouse-picking-locked-${line.itemId}`}>
+            {fillCopy(t.picking.line.lockedQty, { qty: String(qty) })}
           </Text>
-        </PressableSurface>
+        ) : (
+          <>
+            <OperationsQtyField
+              value={qtyToText(qty)}
+              onChangeText={(text) => onQty(parseQty(text))}
+              accessibilityLabel={fillCopy(t.picking.line.qtyLabel, { name })}
+              tone={complete ? 'done' : 'neutral'}
+              size="sm"
+              testID={`warehouse-picking-qty-${line.itemId}`}
+            />
+            <PressableSurface
+              onPress={onComplete}
+              feedback="scale"
+              compact
+              style={[styles.completeChip, complete ? styles.completeChipOn : styles.completeChipOff]}
+              accessibilityLabel={t.picking.line.complete}
+              testID={`warehouse-picking-all-${line.itemId}`}
+            >
+              <Text style={[styles.completeLabel, complete ? styles.completeLabelOn : styles.completeLabelOff]}>
+                {t.picking.line.complete}
+              </Text>
+            </PressableSurface>
+          </>
+        )}
       </View>
 
       {line.pinnedStockId === null ? null : (
@@ -994,14 +1059,37 @@ const styles = StyleSheet.create({
     gap: operationsTheme.space.md,
   },
   boxStrip: {
-    gap: operationsTheme.space.xs,
+    gap: operationsTheme.space.md,
     paddingTop: operationsTheme.space.xl,
   },
-  /** Kapalı kutu satırı — salt-okunur özet; kutu artık değiştirilemez, rengi de bunu söyler. */
-  boxSealed: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.micro,
+  boxSealedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
+  },
+  /** Kapalı kutunun kartı — salt-okunur KAYIT; kutu geri açılamaz, çerçevesi de bunu söyler. */
+  boxSealedCard: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+  },
+  boxSealed: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.body,
+  },
+  boxSealedItem: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.muted,
+  },
+  boxSealedQr: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors['sand-600'],
   },
   boxCurrent: {
     alignSelf: 'flex-start',
@@ -1109,6 +1197,28 @@ const styles = StyleSheet.create({
     borderBottomWidth: operationsTheme.border.base,
     borderStyle: 'dashed',
     borderBottomColor: operationsTheme.colors['sand-300'],
+  },
+  /** Adım satırı — sıra numarası + rafın adı; depocunun yürüyeceği yol (v3:376). */
+  lineStep: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    textTransform: 'uppercase',
+    color: operationsTheme.colors.warehouse,
+  },
+  /** "MOTOR ÖNERİSİ" — sayının nereden geldiğini söyleyen rozet, cümlenin kuyruğu değil. */
+  engineTag: {
+    alignSelf: 'flex-start',
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.badge,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.badge),
+    color: operationsTheme.colors.olive,
+  },
+  /** Çevrimdışıyken sayacın YERİNE geçen satır — konan adet okunur, değiştirilemez. */
+  lockedQty: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.error,
   },
   lineHead: {
     flexDirection: 'row',

@@ -301,7 +301,15 @@ describe('D1 · kutu döngüsü', () => {
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/eksik kalan var/i));
-    expect(screen.getByTestId('warehouse-picking-box-1')).toHaveTextContent(/Kutu 1 kapalı · 2 ürün/);
+    /* KAPANAN KUTU KARTI (v3:349) — v2 tek satırlık özetti; v3 kutunun İÇİNDEKİNİ ve QR'ını da
+       yazıyor. İkisi de sözleşmede zaten var ve ikisi de bir soruya cevap: "yanlış kutuyu mu
+       kapattım" ve "bu karton hangi etiketle gidecek". Kapalı kutu geri açılamaz — blok bir
+       KAYITTIR, düzeltilecek bir şey değil. İçerik kalem ADIYLA yazılır: "2 ürün" neyin
+       kapandığını söylemez. */
+    const sealed = screen.getByTestId('warehouse-picking-box-1');
+    expect(sealed).toHaveTextContent(/Kutu 1 kapalı · 2 ürün/);
+    expect(sealed).toHaveTextContent(/2 × /);
+    expect(sealed).toHaveTextContent(/QR: KT-26-4K2M9P7HWX/);
     const cta = screen.getByTestId('warehouse-picking-cta');
     expect(cta).toHaveTextContent(/Yeni kutu aç \(Kutu 2\)/);
     // Kutulu siparişte yarım işin alt cümlesi "önceki kutularda" der — "yerine geçer" DEMEZ:

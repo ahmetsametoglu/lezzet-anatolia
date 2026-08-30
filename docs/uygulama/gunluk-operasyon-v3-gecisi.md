@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 2/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 3/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -256,6 +256,29 @@ zeytin, depoda satırın durumu.
 **Doğrulama.** Kuyruk jest 23/23 (dördü yeni) · sıralama 4/4 · çevrimdışı hook 3/3 · mobil paket
 **941/941** · statik kapılar yeşil · **cihazda gözle doğrulandı** (9 sipariş, yarım başta, KARGO
 rozeti, kilit).
+
+---
+
+## 30.08 gece — Faz 2 · Ekran 03: Toplama detay ✅
+
+**Dört ekleme, dördü de ZATEN VAR OLAN veriyi ekrana çıkarıyor** — yeni uç, yeni alan yok:
+
+1. **Adım satırı**: "1 · DERİN DONDURUCU 2" — sıra numarası + rafın adı. `suggestion[].areaName`
+   sözleşmede vardı ve **hiçbir ekranda çizilmiyordu**; depocu rafı listede değil kafasında
+   arıyordu. Raf bilinmiyorsa uydurulmuyor, yalnız numara yazılıyor ("2. kalem").
+2. **"MOTOR ÖNERİSİ" rozeti** — v2'de cümlenin kuyruğuydu ("… — motor önerisi"), artık ayrı bir
+   rozet: sayının nereden geldiğini söyler, depocunun kendi kararıyla karışmaz. Önerisiz kalemde
+   hiç doğmuyor.
+3. **Çevrimdışı sayım kilidi** — sayaç soluklaştırılmıyor, **yerine** konan adet yazılıyor
+   ("konan 2 · sayım kapalı"). Basılamayan bir sayaç "bozuk" görünür; konan adedi söyleyen satır
+   "kilitli" der.
+4. **Kapanan kutular salt-okunur KART** — v2 tek satırlık özetti ("Kutu 1 kapalı · 8 ürün"), artık
+   içeriği kalem adıyla ve QR'ıyla yazıyor. İki soruya cevap: *"yanlış kutuyu mu kapattım"* ve
+   *"bu karton hangi etiketle gidecek"*. Kapalı kutu geri açılamaz — blok bir kayıttır.
+
+**Doğrulama.** Depo jest **144/144** (beşi yeni) · mobil paket **945/945** · statik kapılar yeşil ·
+**cihazda gözle doğrulandı**: raf adı canlı veriden geldi ("DERİN DONDURUCU 2"), önerisiz kalem
+rozetsiz ve "2. KALEM" diye yazıldı, kapanan kutu kartı iki kalemi ve QR'ı gösterdi.
 
 ---
 
