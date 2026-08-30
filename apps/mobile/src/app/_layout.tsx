@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { ToastHost } from '@/components/ui/toast-host';
+import { useDevAutoLogin } from '@/lib/auth/use-dev-auto-login.hook';
 import { initAppLocale } from '@/lib/i18n/app-locale';
 import { useOnboardingGate } from '@/lib/onboarding/use-onboarding-gate.hook';
 import { PaymentProvider } from '@/lib/payment/payment-provider';
@@ -106,6 +107,11 @@ export default function RootLayout() {
   useEffect(() => {
     void initAppLocale().then(() => setLocaleReady(true));
   }, []);
+
+  /* OTOMATİK DEV GİRİŞİ (kullanıcı isteği 30.08) — yalnız `__DEV__`, yalnız OTURUMSUZ hâlde:
+     dört bölümü de gören personelle giriş kurulur, operasyona inişi var olan kural yapar
+     (`use-staff-landing`). Üretimde gövdesi hiç koşmaz; gerekçe ve kapatma anahtarı künyede. */
+  useDevAutoLogin();
 
   /* GÜNLÜK GİRİŞ PUANI (MB-50) — bir KAPI DEĞİL, sessiz bir yan etki: ilk karede ve uygulama her
      öne geldiğinde tetiklenir, sonucu beklenmez. Kökte olmasının gerekçesi hook'un künyesinde. */

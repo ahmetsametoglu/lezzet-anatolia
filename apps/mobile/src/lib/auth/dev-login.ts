@@ -64,6 +64,13 @@ interface DevAccount {
   operations: boolean;
 }
 
+/**
+ * Dört bölümü de gören personel — hem "Hepsi" düğmesinin hem OTOMATİK dev girişinin hesabı
+ * (`use-dev-auto-login.hook`). Tek sabit, iki tüketen: adres iki yere yazılsaydı biri değiştiği
+ * gün düğme bir hesabı, otomatik giriş başkasını açardı ve fark sessiz kalırdı (CLAUDE §1).
+ */
+export const DEV_ALL_SECTIONS_EMAIL = 'hepsi@lezzetanatolia.fr';
+
 export const DEV_ACCOUNTS: readonly DevAccount[] = [
   { label: 'Müşteri', email: 'claire.weber@example.fr', operations: false },
   { label: 'Yönetim', email: 'yonetim@lezzetanatolia.fr', operations: true },
@@ -72,7 +79,7 @@ export const DEV_ACCOUNTS: readonly DevAccount[] = [
   { label: 'Muhasebe', email: 'muhasebe@lezzetanatolia.fr', operations: true },
   /* DÖRT BÖLÜMÜ DE GÖREN hesap (kullanıcı isteği 30.08): sekme çubuğunun dolu hâli ve bölümler
      arası geçiş ancak böyle bir kişiyle denenebilir — tek bölümlü kullanıcıda çubuk hiç çizilmez. */
-  { label: 'Hepsi', email: 'hepsi@lezzetanatolia.fr', operations: true },
+  { label: 'Hepsi', email: DEV_ALL_SECTIONS_EMAIL, operations: true },
 ];
 
 const DevSessionSchema = z.object({ tokenHash: z.string().min(1) });
