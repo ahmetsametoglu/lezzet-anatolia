@@ -43,6 +43,7 @@
     "labels:test": "tsx scripts/labels-test.ts",
     "ui:shot": "node scripts/ui-shot.mjs",
     "ui:shot:mobile": "node scripts/ui-shot-mobile.mjs",
+    "v3:compare": "node scripts/v3-compare.mjs",
     "test:unit": "vitest run --project unit",
     "test:integration": "node scripts/with-test-lock.mjs pnpm exec vitest run --project integration",
     "test:purge": "node scripts/with-test-lock.mjs --kind=ddl tsx scripts/test-purge.ts",

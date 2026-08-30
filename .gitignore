@@ -39,3 +39,9 @@ docs/uygulama/07-operasyon-fonksiyonel-kontrol-listesi.md
 
 # Tasarım ekranlarının resmi — üretilir, depoya gitmez (scripts/design-shot.mjs)
 .design-shots/
+
+# v3 geçişinin karşılaştırma çiftleri (30.08): her uyuşmazlık girdisinin yanında duran cihaz +
+# tasarım karesi. `scripts/v3-compare.mjs` üretir; kalıcı olan notun içindeki ölçüm, kareler
+# geçişle birlikte doğar ve onunla ölür — `docs/uygulama/ekran-goruntuleri/` ile aynı gerekçe.
+# Dosya adı kalıbı `v3-gorsel-*.md` defterlerini YAKALAMAZ (onlar repoda kalır).
+docs/uygulama/v3-gorsel/
