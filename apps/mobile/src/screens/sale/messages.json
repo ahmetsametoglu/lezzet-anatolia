@@ -56,8 +56,6 @@
     "sending": "Yazılıyor…"
   },
   "result": {
-    "ok": "Satış yazıldı — {ref} · {total}",
-    "okNoRef": "Satış yazıldı · {total}",
     "paymentMissing": "Satış yazıldı ama tahsilat DEFTERE GEÇMEDİ (kasa hesabı ayarsız) — parayı elden takip edin, yöneticiye söyleyin.",
     "insufficientIntro": "Bu depoda yeterli yok — satış yazılmadı: {lines}",
     "insufficientLine": "{name} (kalan {n})",
@@ -65,6 +63,25 @@
     "failed": "Satış kapanmadı — bir daha deneyin; sürerse yöneticiye haber verin.",
     "network": "Bağlantı yok — satış yazılmadı."
   },
+  "receipt": {
+    "title": "Satış Tamam",
+    "empty": {
+      "title": "Gösterilecek fiş yok",
+      "body": "Bu sayfa az önce yazılan satışın fişidir — satış yazılınca kendiliğinden açılır."
+    },
+    "meta": "{method} · {ref} · {stamp}",
+    "metaNoRef": "{method} · referanssız · {stamp}",
+    "note": "Stok hareketi işlendi. Fiş yazdırma bu sürümde bağlı değil.",
+    "again": "Yeni satış",
+    "leave": "Depoya dön"
+  },
+  "offline": {
+    "addCta": "Sepete ekleme kapalı",
+    "addHint": "Fiyat ve kalan stok canlı okunur — çevrimdışı sepet yanlış fiyata satış demektir.",
+    "sellCta": "Satış yazma kapalı",
+    "sellHint": "Kesin toplam ve stok hareketi sunucudan gelir — kapıda çevrimdışı satış yazılmaz."
+  },
+  "footnote": "Anonim satış — müşteri kaydı istenmez. Ödeme alınınca hareket anında stoktan iner. Pazarlık fiyatı meşrudur, sapan satır işaretli kalır.",
   "recentLink": "Son satışlar ›",
   "cartBar": {
     "summary": "Sepet · {n} kalem · ~{total}",

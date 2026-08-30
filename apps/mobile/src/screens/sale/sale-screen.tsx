@@ -19,6 +19,7 @@ import { money, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { saleCopy } from './copy';
+import { useWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { useSaleContext } from './sale-context';
 import { selectionOf } from './use-sale.hook';
 
@@ -42,11 +43,21 @@ const t = saleCopy;
 export function SaleScreen() {
   const router = useRouter();
   const sale = useSaleContext();
+  /* ÇEVRİMDIŞI KİLİDİ (v3:20) — depo yazma ekranlarının kuralı burada da geçerli ve AYNI sinyalden
+     okunuyor: sepete atılan kalem, o anki fiyatı ve kalan stoğu taşır; hat kapalıyken ikisi de
+     bayattır ve bayat fiyatla yazılan satış, müşterinin gözünün önünde yanlış para demektir. */
+  const { offline } = useWarehouseStatus();
 
   const draftSelection = sale.draft === null ? null : selectionOf(sale.draft);
   const draftPriceCents = sale.draft === null ? null : parseAmountToCents(sale.draft.priceText);
   const overStock = draftSelection !== null && sale.draft !== null && sale.draft.qty > draftSelection.availableHere;
-  const draftReady = draftSelection !== null && sale.draft !== null && sale.draft.qty > 0 && draftPriceCents !== null && !overStock;
+  const draftReady =
+    !offline &&
+    draftSelection !== null &&
+    sale.draft !== null &&
+    sale.draft.qty > 0 &&
+    draftPriceCents !== null &&
+    !overStock;
 
   return (
     <View style={styles.screen} testID="sale-screen">
@@ -99,6 +110,13 @@ export function SaleScreen() {
             ))
           )}
           {sale.hasMore ? <TextAction label={t.loadMore} onPress={sale.loadMore} testID="sale-load-more" /> : null}
+
+          {/* DİPNOT (v3:20) — bu ekranın üç kuralı: müşteri kaydı istenmez, para alınınca stok
+              anında iner, pazarlık meşrudur ama iz bırakır. Üçü de ekranda görünmeyen ama satışı
+              yazan kişinin bilmesi gereken şeyler. */}
+          <Text style={styles.footnote} testID="sale-footnote">
+            {t.footnote}
+          </Text>
         </FormScroll>
       )}
 
@@ -217,11 +235,18 @@ export function SaleScreen() {
               disabled={!draftReady}
               feedback="shadow"
               style={[styles.cta, draftReady ? styles.ctaReady : styles.ctaIdle]}
-              accessibilityLabel={t.drawer.confirm}
+              accessibilityLabel={offline ? t.offline.addCta : t.drawer.confirm}
               testID="sale-drawer-confirm"
             >
-              <Text style={styles.ctaLabel}>{t.drawer.confirm}</Text>
+              <Text style={styles.ctaLabel}>{offline ? t.offline.addCta : t.drawer.confirm}</Text>
             </PressableSurface>
+            {/* SEBEP DÜĞMENİN ALTINDA: kapalı bir düğme, neden kapalı olduğunu söylemezse arıza
+                gibi okunur (depo ekranlarının aynı kararı). */}
+            {offline ? (
+              <Text style={styles.warnText} testID="sale-drawer-offline">
+                {t.offline.addHint}
+              </Text>
+            ) : null}
           </>
         )}
       </BottomSheet>
@@ -281,6 +306,12 @@ const ProductRow = memo(function ProductRow({ product, onOpen }: ProductRowProps
 });
 
 const styles = StyleSheet.create({
+  footnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,

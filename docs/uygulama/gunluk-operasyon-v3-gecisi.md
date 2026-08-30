@@ -586,6 +586,41 @@ görmek için eklenmişlerdi, işleri bitti. Yerel veritabanı tohumun bıraktı
 
 ---
 
+## 30.08 sabah — Faz 4 · Ekranlar 20 + 22: Yerinde satış ve fiş ✅
+
+**Tasarımla bir KARAR çelişmesi var ve karar kazandı.** v3 satışı TEK ekran çiziyor: liste, sepet,
+tahsilat ve düğme alt alta. Bizde bu ikiye ayrılmış durumda ve ayrılmasının sebebi kullanıcının
+26.08 kararıdır (*"ürün listesi ve sepet aynı yerde olması kötü"*). Tasarımın yerleşimi alınmadı;
+v3'ün getirdiği **içerik** alındı.
+
+- **Fiş kendi ekranı oldu** (v3:22 · yeni). Sonuç, sepet ekranında tek satırlık bir bildirimdi ve
+  satış kapanınca sepet boşalıyordu: cevabı okuyan göz **boş bir sayfanın** üstündeki cümleye
+  bakıyordu. Fiş artık tutarı, tahsilat türünü, referansı ve damgayı bir arada söylüyor; iki çıkışı
+  var (yeni satış · depoya dön). Kasa ayarsızsa uyarı fişin içinde — yeşil bir "tamam"ın altında
+  saklanmıyor.
+- **Çevrimdışı kilidi geldi** (v3:20). Hem "Sepete ekleme kapalı" hem "Satış yazma kapalı", ikisi
+  de sebebiyle. Sinyal **deponunkiyle aynı** (`trackWarehouse`) — yerinde satış zaten depo kapsamlı
+  bir yazma; ikinci bir ölçüm yazmak, bir gün iki ekranın aynı hat için iki farklı şey söylemesi
+  demekti.
+- **Dipnot geldi**: anonim satış, ödemede anında stok hareketi, pazarlığın meşru ama izli olduğu.
+
+**Zaman damgası cihazın**, sunucunun değil: `OnSiteSaleResponse` damga taşımıyor ve uydurma bir
+alan eklemek yerine cevabın geldiği an yazılıyor. Fiş bir belge değil, "az önce ne oldu" sayfası —
+yazdırma zaten bu sürümde bağlı değil.
+
+**Cihazda uçtan uca yapıldı**: ürün → çekmece → sepet → nakit → satış → fiş → yeni satış. Bir kusur
+görüldü ve düzeltildi: onay imi **daire değil kavisli kare** çıkıyordu (`radius.pill`, 46 dp'lik
+kutuda); yarıçap artık ölçüden türüyor.
+
+**Üç uyuşmazlık yazıldı** (13 · 14 · 15): son satışların PAZARLIK rozeti ve kasa uyarısı, barkod
+okutma, "sık satılanlar" başlığı — üçü de sözleşmede olmayan alan istiyor.
+
+**Doğrulama.** Satış jest **12/12** (üçü yeni: çevrimdışı kilidi, kasa ayarsız fiş, fişsiz açılış) ·
+mobil paket **980/980**; kilidin testinin YAKALADIĞI doğrulandı (kilit kaldırılınca kırmızı) ·
+typecheck · lint · knip yeşil.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -604,6 +639,9 @@ Burada durulmaz — yazılır, geçilir.
 | 7 | 06 Siparişsiz kabul | Şablon satırda **"SKU 601202"** yazıyor. SKU **aramadan** eklenen satırda var (`VariantSearchRowSchema.sku`) ama **okutmadan** eklenende YOK — `ResolveCodeResponseSchema` sku döndürmüyor. Bir kısmında kod olan, bir kısmında olmayan satır, depocuya "bu ürünün kodu yok mu" diye sordururdu. | Açık — hiç yazılmadı. Çözümü tek alan: okutma çözümünün yanıtına `sku`. |
 | 6 | 05 Mal kabul formu | Şablon satırda **"beklenen 10 · GAZ-7120"** (tedarikçi kodu), **"SKT ZORUNLU · DLC"** etiketi ve **"Kalan ömür %58 — uyarı, engel değil"** yazıyor. Üçü de `IntakeFormRowSchema`'da YOK — satır yalnız `variantId · productName · variantLabel · expectedQty` taşıyor. Kalan ömür ayrıca ürünün raf ömrü gününü gerektirir. | Açık — üçü de yazılmadı. Çözümü tek alan: kabul satırına tedarikçi kodu, "SKT gerektirir mi" bayrağı ve raf ömrü günü. |
 | 5 | 04 Mal kabul | Şablon satırda **"· gönderildi"** (sipariş durumu) ve **"SKT gerekli"** yazıyor; ikisi de `PendingIntakeSchema`'da YOK (`purchaseOrderId · referenceNo · supplierName · lineCount`). Üstelik durum sabit de değil: bekleyen liste hem `sent` hem `partially_received` siparişleri taşıyor, yani "gönderildi" yazmak yarısı için yanlış olurdu. | Açık — ikisi de yazılmadı. Çözümü tek alan: bekleyen listesine `status` ve "SKT gerektiren kalem var mı" bayrağı. |
+| 15 | 20 Yerinde satış | Şablon liste başlığını **"SIK SATILANLAR — DOKUN, SEPETE EKLE"** yapıyor. Uç bir katalog sayfası döndürüyor (`SaleCatalogPageSchema`), satış sıklığına göre sıralama YOK. Başlığı öyle yazmak, sıradan bir katalog listesine "bunlar sık satılanlar" dedirtmek olurdu. | Açık — başlık yazılmadı, liste katalog olarak duruyor. Çözümü: satış sayısına göre sıralayan bir uç kesiti. |
+| 14 | 20 Yerinde satış | Şablon aramanın yanına **"Barkod okut"** düğmesi koyuyor. Satış kataloğunda barkod alanı yok ve `codes/resolve` varyanta çözüyor ama satış ekranının çekmecesi ürün + boy bekliyor. | Açık — düğme çizilmedi. Çözümü: çözülen varyantı doğrudan sepete/çekmeceye bağlayan bir yol. |
+| 13 | 21 Son satışlar | Şablon satırda **PAZARLIK** rozeti ve *"satış yazıldı ama tahsilat deftere geçmedi"* uyarısı gösteriyor. `SaleRecordSchema` ikisini de taşımıyor — pazarlık izi siparişin kalemlerinde, `paymentRecorded` ise yalnız YAZMA anının cevabında. | Açık — ikisi de listeye yazılmadı; kasa uyarısı satışın FİŞİNDE duruyor (v3:22), yani bilgi kaybolmuyor. Çözümü: `SaleRecordSchema`'ya `negotiated` ve `paymentRecorded` alanları. |
 | 4 | 02 Toplama kuyruğu | Şablonun beş örnek satırının **sol durum işareti tek kurala uymuyor** (dördüncüsü hiç başlanmamışken terracotta, beşincisi tamamlanmışken gri). Statik maket, işaretler elle boyanmış. | Kapandı — çoğunluğun kuralı alındı ve yazıldı: işaret ile metin AYNI kuralı izler (yarım terracotta · tamam zeytin · başlanmamış gri). |
 
 ---

@@ -2,8 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SaleCatalogProduct, SaleVariant } from '@lezzet/types';
 
 import { fetchSaleCatalog, fetchSaleVariants, sellOnSite } from '@/lib/api/sale';
+/* ÇEVRİMDIŞI SİNYALİ DEPONUNKİYLE AYNI (v3:20 istiyor: "Sepete ekleme kapalı" / "Satış yazma
+   kapalı"). İkinci bir ölçüm yazılmadı — yerinde satış zaten depo kapsamlı bir yazmadır
+   (`warehouseGuard`), yani hattın açık olup olmadığı sorusu birebir aynı soru. İki ayrı sinyal,
+   bir gün birbirinden ayrılır ve iki ekran aynı hat için iki farklı şey söylerdi (CLAUDE §1). */
+import { trackWarehouse } from '@/screens/warehouse/warehouse-status';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
-import { centsToAmountText, money, parseAmountToCents } from '@/lib/operations/money';
+import { centsToAmountText, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
 import { saleCopy } from './copy';
 
@@ -101,8 +106,26 @@ export function selectionOf(draft: SaleDraft): DraftSelection | null {
   };
 }
 
+/**
+ * **FİŞ** (v3:22) — yazılmış satışın ekrana kalan izi.
+ *
+ * `at` SUNUCUDAN GELMİYOR: `OnSiteSaleResponse` bir zaman damgası taşımıyor ve uydurma bir alan
+ * eklemek yerine cevabın GELDİĞİ an yazılıyor — personelin yaşadığı satış anı budur, saniyeler
+ * farkıyla. Fiş bir belge olsaydı sunucu damgası şart olurdu; bu ekran ise "az önce ne oldu"yu
+ * anlatan bir onay sayfası ve yazdırma zaten bu sürümde bağlı değil.
+ */
+export interface SaleReceipt {
+  totalCents: number;
+  referenceNo: string | null;
+  method: 'cash' | 'card';
+  at: string;
+  /** Kasa ayarsızsa satış kapanır ama para deftere geçmez — fiş bunu SUSMAZ. */
+  paymentRecorded: boolean;
+}
+
 export function useSale() {
   const [status, setStatus] = useState<CatalogStatus>('loading');
+  const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
   const [products, setProducts] = useState<SaleCatalogProduct[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [search, setSearchState] = useState('');
@@ -129,7 +152,9 @@ export function useSale() {
   */
   const load = useCallback(async (term: string, cursor?: string) => {
     const seq = ++seqRef.current;
-    const result = await fetchSaleCatalog({ q: term.trim().length === 0 ? undefined : term.trim(), cursor });
+    const result = await trackWarehouse(
+      fetchSaleCatalog({ q: term.trim().length === 0 ? undefined : term.trim(), cursor }),
+    );
     if (seq !== seqRef.current) return; // geciken cevap — taze listeyi ezmesin
     if (result.error !== null) {
       setStatus('error');
@@ -249,14 +274,16 @@ export function useSale() {
     setNotice(null);
 
     void (async () => {
-      const result = await sellOnSite({
-        lines: lines.map((line) => ({
-          variantId: line.variantId,
-          qty: line.qty,
-          ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
-        })),
-        paymentMethod: payment,
-      });
+      const result = await trackWarehouse(
+        sellOnSite({
+          lines: lines.map((line) => ({
+            variantId: line.variantId,
+            qty: line.qty,
+            ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
+          })),
+          paymentMethod: payment,
+        }),
+      );
       setSending(false);
 
       if (result.error !== null) {
@@ -268,7 +295,16 @@ export function useSale() {
       if (outcome.status === 'ok') {
         setLines([]); // satış kapandı; sepet sıfırdan başlar
         setPayment(null); // tahsilat türü de: her satış kendi kararını ister, öncekinden miras almaz
-        setNotice(noticeOfOk(outcome));
+        /* SONUÇ ARTIK KENDİ EKRANINDA (v3:22). Sepet ekranındaki tek satırlık bildirim, sepet
+           boşaldığı an "boş sepet" ekranının üstünde asılı kalıyordu: satışı yazan göz, cevabı
+           BOŞ bir sayfada okuyordu. Fiş referansı ve tutarı da o satıra sığmıyordu. */
+        setReceipt({
+          totalCents: outcome.totalCents,
+          referenceNo: outcome.referenceNo,
+          method: payment,
+          at: new Date().toISOString(),
+          paymentRecorded: outcome.paymentRecorded,
+        });
         reload(); // stok değişti — kalan sayılar tazelensin
         return;
       }
@@ -276,6 +312,10 @@ export function useSale() {
       setNotice(noticeOfRefusal(outcome));
     })();
   }, [lines, payment, reload, sending, setNotice]);
+
+  /* Fişi KAPATMAK ekranın işi değil, akışın işi: "Yeni satış" dendiğinde iz silinir, yoksa aynı
+     fiş bir sonraki satışın sepetinde de asılı kalırdı. */
+  const clearReceipt = useCallback(() => setReceipt(null), []);
 
   return {
     status,
@@ -300,23 +340,16 @@ export function useSale() {
     sending,
     notice,
     submit,
+    receipt,
+    clearReceipt,
   };
 }
 
 type SaleOutcome = Extract<Awaited<ReturnType<typeof sellOnSite>>, { error: null }>['data'];
 
-function noticeOfOk(outcome: Extract<SaleOutcome, { status: 'ok' }>): SaleNotice {
-  const total = money(outcome.totalCents);
-  // Kasa ayarsızsa satış KAPANMIŞTIR ama para kayıtsızdır — bu bir başarı cümlesiyle geçiştirilmez.
-  if (!outcome.paymentRecorded) return { tone: 'warn', text: t.result.paymentMissing };
-  return {
-    tone: 'ok',
-    text:
-      outcome.referenceNo === null
-        ? fillCopy(t.result.okNoRef, { total })
-        : fillCopy(t.result.ok, { ref: outcome.referenceNo, total }),
-  };
-}
+/* `noticeOfOk` 30.08'de SÖKÜLDÜ: başarı artık tek satırlık bir bildirim değil, kendi ekranı
+   (v3:22 · `sale-receipt-screen.tsx`). Kasa ayarsız hâlin cümlesi de oraya taşındı — orada
+   kaybolmaz, çünkü ekranın kendisi o satışın sayfasıdır. */
 
 function noticeOfRefusal(outcome: Exclude<SaleOutcome, { status: 'ok' }>): SaleNotice {
   if (outcome.status === 'insufficient_here') {

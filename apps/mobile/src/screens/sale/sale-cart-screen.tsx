@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
@@ -15,6 +16,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { saleCopy } from './copy';
+import { useWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 import { useSaleContext } from './sale-context';
 
 /*
@@ -30,8 +32,22 @@ const t = saleCopy;
 export function SaleCartScreen() {
   const router = useRouter();
   const sale = useSaleContext();
+  const receipt = sale.receipt;
+  /* Kilit katalogla AYNI sinyalden (`sale-screen.tsx` künyesi): burada kapanan şey satışın
+     kendisidir — kesin toplam ve stok hareketi sunucudan gelir, kapıda çevrimdışı satış yazılmaz. */
+  const { offline } = useWarehouseStatus();
 
-  const cta = sale.sending
+  /* SATIŞ YAZILINCA FİŞE GEÇİLİR (v3:22). `replace` çünkü sepet artık YOK: satış kapandığında
+     kalemler sıfırlandı ve geriye basan personel boş bir sepete düşerdi. Geçiş bir etkiyle
+     yapılıyor, `submit`in içinden değil — yazma kararı hook'un, yönlendirme ekranın işidir ve
+     hook rota bilmez. */
+  useEffect(() => {
+    if (receipt !== null) router.replace('/sale/receipt');
+  }, [receipt, router]);
+
+  const cta = offline
+    ? { label: t.offline.sellCta, enabled: false }
+    : sale.sending
     ? { label: t.cta.sending, enabled: false }
     : sale.lines.length === 0
       ? { label: t.cta.idle, enabled: false }
@@ -114,6 +130,12 @@ export function SaleCartScreen() {
       </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+        {/* Kapalı düğmenin SEBEBİ düğmenin üstünde — depo yazma ekranlarının kararı (v3:20). */}
+        {offline ? (
+          <Text style={[styles.notice, styles.notice_warn]} testID="sale-offline-hint">
+            {t.offline.sellHint}
+          </Text>
+        ) : null}
         {sale.notice === null ? null : (
           <Text
             style={[styles.notice, styles[`notice_${sale.notice.tone}`]]}

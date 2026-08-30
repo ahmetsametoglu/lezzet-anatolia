@@ -99,6 +99,9 @@ export const ICON_PATHS = {
   'arrow-right': { paths: ['M5 12h14M13 6l6 6-6 6'] },
   /** Çarpı — "başka sefer" oy düğmesi. */
   close: { paths: ['M6 6l12 12M18 6 6 18'] },
+  /* Fişin onay imi (v3:22). Metin "✓" ile çizilemezdi: daire içinde ortalanan bir glif, yazı
+     tipinin kendi çizgi yüksekliğine yaslanır ve dairenin merkezinden kayar. */
+  check: { paths: ['M5 12.5l4.5 4.5L19 7'] },
 
   /* ── KURYE bölümü (Operasyon Mobil v2:111-114 · 121-122 · 99 · 206) ──────────────────
      Altı ikon da v2'den BİREBİR; sadeleştirilmedi, yeniden çizilmedi (dosyanın kendi kuralı).

@@ -4,7 +4,9 @@ import type { SaleCatalogProduct, SaleVariant } from '@lezzet/types';
 import { SaleScreen } from './sale-screen';
 import { SaleCartScreen } from './sale-cart-screen';
 import { SaleHistoryScreen } from './sale-history-screen';
+import { SaleReceiptScreen } from './sale-receipt-screen';
 import { SaleProvider } from './sale-context';
+import { resetWarehouseStatus } from '@/screens/warehouse/warehouse-status';
 
 /*
   YERİNDE SATIŞ EKRAN TESTİ (21.119) — bu ekranın EN KRİTİK iddiaları paranın yazımıyla ilgilidir:
@@ -20,8 +22,9 @@ import { SaleProvider } from './sale-context';
   Ağ fetch seviyesinde sahte (mal kabul emsali): URL'e göre dallanır, cevaplar sözleşme şeklinde.
 */
 
+const mockReplace = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ navigate: jest.fn(), back: jest.fn(), replace: mockReplace }),
 }));
 
 const mockSession = { access_token: 'test-token' };
@@ -145,6 +148,9 @@ async function renderSale() {
     <SaleProvider>
       <SaleScreen />
       <SaleCartScreen />
+      {/* Fiş de aynı sağlayıcının altında: satış yazılınca sepet ekranı `/sale/receipt`e geçiyor
+          (v3:22) ve sonucun okunacağı yer artık orası — geçişin KENDİSİ de burada ölçülüyor. */}
+      <SaleReceiptScreen />
     </SaleProvider>,
   );
   await waitFor(() => expect(screen.getByTestId(`sale-product-${TEK_ID}`)).toBeTruthy());
@@ -170,6 +176,10 @@ beforeAll(() => {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  mockReplace.mockReset();
+  // Çevrimdışı sinyali KÜRESELDİR (depo ekranlarıyla ortak); sıfırlanmazsa bir testin düşen isteği
+  // sonraki testin ekranını kilitli açardı.
+  resetWarehouseStatus();
 });
 
 it('kart kalan adedi yazıyor — personel satmayı denemeden okuyor', async () => {
@@ -188,12 +198,15 @@ it('dokunulmamış fiyat İSTEKTE YOK; satış yazılınca sepet sıfırlanır v
   await pickCash();
 
   await fireEvent.press(screen.getByTestId('sale-cta'));
-  await waitFor(() => expect(screen.getByTestId('sale-notice')).toBeTruthy());
+  await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
 
   const body = postBody();
   expect(body.paymentMethod).toBe('cash');
   expect(body.lines).toEqual([{ variantId: TEK_VARYANT, qty: 1 }]); // negotiated alanı HİÇ yok
-  expect(screen.getByTestId('sale-notice').props.children).toContain('SP-26-0009');
+  // Sonuç artık FİŞTE (v3:22): tutar, tahsilat türü ve referans bir arada okunuyor.
+  expect(mockReplace).toHaveBeenCalledWith('/sale/receipt');
+  expect(screen.getByTestId('sale-receipt-total')).toHaveTextContent(/4,50/);
+  expect(screen.getByTestId('sale-receipt-meta')).toHaveTextContent(/Nakit · SP-26-0009/);
   expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // satış kapandı, sepet boş
 });
 
@@ -262,8 +275,10 @@ it('tahsilat türü SEÇİLMEDEN satış yazılamaz — para yazan alanda varsay
   // Seçim gelince aynı düğme satışı yazar — ve başarıda seçim SIFIRLANIR (miras yok).
   await pickCash();
   await fireEvent.press(screen.getByTestId('sale-cta'));
-  await waitFor(() => expect(screen.getByTestId('sale-notice')).toBeTruthy());
+  await waitFor(() => expect(screen.getByTestId('sale-receipt-card')).toBeTruthy());
   expect(postBody().paymentMethod).toBe('cash');
+  // Referanssız satışta fiş SUSMAZ, "referanssız" der — boş bir alan bırakmak soru doğururdu.
+  expect(screen.getByTestId('sale-receipt-meta')).toHaveTextContent(/Nakit · referanssız/);
   expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // satış kapandı, sepet boşaldı
 });
 
@@ -330,4 +345,62 @@ it('SON SATIŞLAR kim sattıysa onu söylüyor — iz yoksa uydurmuyor', async (
   // Aktörsüz kayıt "bilinmiyor" der — boş bırakmaz, ad da uydurmaz.
   expect(screen.getByText('satan: bilinmiyor')).toBeTruthy();
   expect(screen.getByText('referanssız')).toBeTruthy();
+});
+
+describe('çevrimdışı kilidi (v3:20)', () => {
+  /*
+    Kilit DEPONUNKİYLE aynı sinyalden okunuyor: yerinde satış zaten depo kapsamlı bir yazmadır.
+    Ölçülen şey ikisinin AYNI ağ düşüşüne aynı anda tepki verdiği — sepete ekleme de, satış yazma
+    da kapanıyor ve ikisi de sebebini söylüyor.
+  */
+  it('ağ düşünce hem satış yazma hem sepete ekleme kapanır ve sebebini söyler', async () => {
+    withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: null, paymentRecorded: true });
+    await renderSale();
+    await addSimit();
+    await pickCash();
+
+    // Katalog yüklendi, sepet dolu — buraya kadar hat açık.
+    expect(screen.queryByTestId('sale-offline-hint')).toBeNull();
+
+    // Satış isteği AĞA HİÇ ÇIKAMIYOR: sinyal bunu ölçer, tahmin etmez.
+    fetchMock.mockImplementation(() => Promise.reject(new Error('network down')));
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+
+    await waitFor(() => expect(screen.getByTestId('sale-offline-hint')).toBeTruthy());
+    expect(screen.getByTestId('sale-cta')).toHaveTextContent('Satış yazma kapalı');
+    expect(screen.getByTestId('sale-cta')).toBeDisabled();
+    // Sepet BOZULMAZ: hat gelince aynı kalemlerle yeniden denenir.
+    expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy();
+
+    // Aynı düşüş katalog tarafını da kilitler — çekmecedeki "Sepete ekle" kapanır.
+    await fireEvent.press(screen.getByTestId(`sale-product-${TEK_ID}`));
+    await waitFor(() => expect(screen.getByTestId('sale-drawer-offline')).toBeTruthy());
+    expect(screen.getByTestId('sale-drawer-confirm')).toHaveTextContent('Sepete ekleme kapalı');
+    // Kapalı GÖRÜNMEK yetmez, kapalı OLMALI: etiketi değişip basılabilen bir düğme, en kötü hâl.
+    expect(screen.getByTestId('sale-drawer-confirm')).toBeDisabled();
+  });
+});
+
+describe('fiş (v3:22)', () => {
+  it('kasa ayarsızsa fiş SUSMAZ — satış yazıldı ama para deftere geçmedi', async () => {
+    withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: 'SP-26-0011', paymentRecorded: false });
+    await renderSale();
+    await addSimit();
+    await pickCash();
+
+    await fireEvent.press(screen.getByTestId('sale-cta'));
+
+    await waitFor(() => expect(screen.getByTestId('sale-receipt-payment-missing')).toBeTruthy());
+    expect(screen.getByTestId('sale-receipt-payment-missing')).toHaveTextContent(/DEFTERE GEÇMEDİ/);
+    // Satış yine de KAPANDI: tutar ve referans fişte duruyor, sepet boşaldı.
+    expect(screen.getByTestId('sale-receipt-meta')).toHaveTextContent(/SP-26-0011/);
+  });
+
+  it('fiş yokken sayfa uydurmaz — ne olduğunu söyler', async () => {
+    withNetwork({ status: 'failed' });
+    await renderSale();
+
+    expect(screen.getByTestId('sale-receipt-empty')).toBeTruthy();
+    expect(screen.queryByTestId('sale-receipt-card')).toBeNull();
+  });
 });

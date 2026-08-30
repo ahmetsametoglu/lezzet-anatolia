@@ -7536,3 +7536,37 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   lint · knip yeşil; **cihazda gözle doğrulandı** (`/day-close`, dolu veriyle).
 
   **Faz 3 kapandı** — kurye bölümünün beş ekranı (14–18) v3'te.
+
+- [x] (21.153) **YERİNDE SATIŞ + FİŞ v3 — sonuç kendi sayfasında, kapıda çevrimdışı satış yok** (v3:1752-1900, 22)
+  `touches:` `apps/mobile/src/screens/sale/*` · `apps/mobile/src/app/(operations)/sale/receipt.tsx` ·
+  `apps/mobile/src/lib/operations/stamp.ts` · `apps/mobile/src/components/ui/icon-paths.ts`
+
+  **Durum (30.08).** v3 satışı TEK ekran çiziyor (liste + sepet + tahsilat alt alta); bizde ikiye
+  ayrı ve ayrılmasının sebebi KULLANICI KARARIDIR (26.08: "ürün listesi ve sepet aynı yerde olması
+  kötü"). Tasarımın yerleşimi ALINMADI, içeriği alındı.
+
+  **FİŞ KENDİ EKRANI OLDU** (v3:22, yeni · `/sale/receipt`). Sonuç sepet ekranında tek satırlık bir
+  bildirimdi ve satış kapanınca sepet boşalıyordu: cevabı okuyan göz BOŞ bir sayfanın üstündeki
+  cümleye bakıyordu, referans ve tutar da o satıra sığmıyordu. Fiş dördünü bir arada söylüyor
+  (tutar · tahsilat türü · referans · damga) ve iki çıkışı var. Kasa ayarsızsa (`paymentRecorded ===
+  false`) uyarı fişin İÇİNDE — yeşil bir "tamam"ın altında saklanmıyor.
+
+  **Damga CİHAZIN saatinden**: `OnSiteSaleResponse` zaman taşımıyor; uydurma bir alan eklemek yerine
+  cevabın geldiği an yazılıyor (`stampFullOf`). Fiş bir belge değil, "az önce ne oldu" sayfası.
+
+  **ÇEVRİMDIŞI KİLİDİ** (v3:20): "Sepete ekleme kapalı" + "Satış yazma kapalı", ikisi de sebebiyle.
+  Sinyal DEPONUNKİYLE AYNI (`trackWarehouse`) — yerinde satış zaten depo kapsamlı bir yazmadır;
+  ikinci bir ölçüm, bir gün iki ekranın aynı hat için iki farklı şey söylemesi demekti (CLAUDE §1).
+
+  **Dipnot** geldi: anonim satış · ödemede anında stok hareketi · pazarlık meşru ama izli.
+
+  **Cihazda bir kusur bulundu ve düzeltildi:** onay imi daire değil KAVİSLİ KARE çıkıyordu
+  (`radius.pill`, 46 dp'lik kutuda); yarıçap artık ölçüden türüyor (`avatarMd / 2`).
+
+  **Üç uyuşmazlık yazıldı** (günlük defteri 13 · 14 · 15): son satışların PAZARLIK rozeti ve kasa
+  uyarısı (`SaleRecordSchema`'da yok), barkod okutma (satış kataloğunda barkod yok), "SIK SATILANLAR"
+  başlığı (uçta satış sıklığı sıralaması yok).
+
+  **Doğrulama.** Satış jest **12/12** (üçü yeni); mobil paket **980/980**; kilit testinin YAKALADIĞI
+  doğrulandı (kilit kaldırılınca kırmızı); typecheck · lint · knip yeşil; **cihazda uçtan uca**
+  yapıldı (ürün → çekmece → sepet → nakit → satış → fiş → yeni satış).
