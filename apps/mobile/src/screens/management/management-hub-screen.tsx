@@ -364,7 +364,10 @@ export function ManagementHubScreen() {
             testID="operations-bell"
           />
         }
-        identity={<OperationsStaffMenu testID="operations-staff-menu" />}
+        /* Avatarın BİÇİMİ tek duraktan (kitin squircle'ı), RENGİ bölümden — ortak defterin kararı
+           30.08. Yönetim tasarımında avatar koyu (v3:25), depo ve kuryede zeytin; ton verilmezse
+           zeytin gelir, yani yalnız bu hub kendi rengini söyler. */
+        identity={<OperationsStaffMenu tone="ink" testID="operations-staff-menu" />}
       />
 
       {/* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08, depo hub'ıyla aynı karar): karar kutusu

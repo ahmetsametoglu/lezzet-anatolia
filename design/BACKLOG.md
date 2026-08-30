@@ -792,9 +792,12 @@ kapanmadığı için buraya taşındı. Dördü de **tasarım ↔ kod** açığ�
    `undefined` olabilir. **Karar tema sahibinde**: daraltmayı tek bir kapıya koymak mı, iki temanın
    anahtar kümesini eşitlemek mi. Ölçüm doğrulanmadan 48 dosya çevrilmemeli.
 
-4. **Ortak başlıkta avatar biçimi.** Tasarım 40 dp kutuda `border-radius:14px` (köşesi yumuşatılmış
-   kare) veriyor, kod tam daire çiziyor (`staff-menu.tsx`, `borderRadius = size/2`). Dört menünün
-   dördünü birden ilgilendiriyor, tek satır. Zemin rengi de yönetim tasarımında koyu (`ink`),
-   depo/kurye tasarımlarında yeşil — bölüme göre değişip değişmediği tasarıma sorulacak.
-   (Aynı turda çıkan **zil** farkı — tasarım zili yalnız depo hub'ına koymuş, kod dördüne birden —
-   bilinçli tutuldu: ortak başlık ortak bir söz veriyor ve bildirim gerçek bir yetenek.)
+4. **Ortak başlıktaki ZİL dört hubta da var, tasarım yalnız depo hub'ına koymuş.** Ölçüldü
+   (`grep -ci bell` tasarım türetilmişlerinde: depo 1 · kurye 0 · para 0 · yönetim 0). Kod bilerek
+   dördüne birden koyuyor ve gerekçesi şu: ortak başlık ortak bir söz veriyor ("bildirimin varsa
+   buradan görürsün") ve o sözü ekrana göre değiştirmek kullanıcıyı zili aramaya gönderir; ayrıca
+   bildirim gerçek bir yetenek, üç ekrandan kaldırmak onu görünmez yapardı. Maketin tutarsızlığı da
+   olabilir — 32 karenin birinde çizilip ötekilerde unutulmak tasarım aracında sık görülür. **Karar
+   tasarımın:** zil dört hubta mı kalsın, yoksa bildirim tek kapıya mı toplansın.
+   *(Aynı turda çıkan avatar farkı KAPANDI: biçim tek duraktan — kitin squircle'ı —, renk bölümden;
+   yönetim kendi hub'ında `ink` veriyor.)*
