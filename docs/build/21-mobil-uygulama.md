@@ -8066,3 +8066,38 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   başlık gibi büyük harfle sessizleşiyordu.
 
   **Doğrulama.** Kurye jest **93/93**; cihaz turu görsel ajanından istendi (`v3-gorsel-kurye.md`).
+
+- [x] (21.169) **KURYE İLK YÜKÜ İSKELET — beş ekranın beşi de halkayı bıraktı** (kullanıcı notu N9)
+
+  **Sorun.** Notlar kuyruğundaki N9 kuralı şuydu: *"Projemizdeki loading mantığımız skeleton
+  göstermek üzerine."* Ölçüldü 30.08 — kurye ekranlarının **beşi de** `LoadingState` (dönen halka)
+  gösteriyordu, hiçbiri iskelet kullanmıyordu. Halka **yerleşim tutmaz**: ekranın ortasında döner,
+  söndüğü an gerçek bloklar yukarıdan gelir ve sayfa zıplar. Kurye rampada telefona bakarken
+  parmağını bir yere koymuş oluyor ve altındaki içerik kayıyor.
+
+  **Yapıldı.** Beş ekran da `OperationsSkeletonList`e geçti; ölçüler **her ekranın kendi
+  bloklarından** türetildi (kit ölçüyü çağırandan alır — komponentin kendi künyesinin kuralı):
+
+  | ekran | yer tutucular (dp) | neyin yerini tutuyor |
+  |---|---|---|
+  | Günün rotası | 120 · 66 · 58 | koyu özet kartı · kapı satırı · ilk durak kartı |
+  | Sefer künyesi | 160 · 18 · 18 | künye kartı · araç satırı · dipnot |
+  | Araca yükleme | 100 · 44 · 66 | sayaç kartı · okut düğmesi · ilk durak satırı |
+  | Durak | 46 · 44 · 110 | adres künyesi · iletişim şeridi · ilk adım bölümü |
+  | Sefer kapanışı | 66 · 18 · 180 | sayaç karoları · not satırı · para sayım kartı |
+
+  Yer tutucu **ortalanmıyor**: gerçek blokların başlayacağı yerde, gövdeyle aynı yatay dolguda
+  başlıyor. Ortalanmış bir iskelet, halkanın zıplamasını başka bir zıplamayla değiştirirdi.
+
+  **Koşullu bloklar yer tutmuyor** (kapanışın uyarı kutusu, durağın kanıt/tahsilat bölümleri):
+  olmayabilecek bir bloğun yerini tutmak, iskelet sönünce YUKARI zıplamaktır — çözdüğü sorunun
+  aynısı, ters yönde.
+
+  **Test — halkanın geri dönüşü yakalanıyor.** Beş ekranın dördüne yeni test, birine (günün
+  rotası) mevcut test genişletildi. Ayıran ölçülebilir iz **rol**: halka kendini `progressbar`
+  diye tanıtır, iskelet tanıtmaz — yer tutucu bir ilerleme bildirmez. Yalnız `testID`ye bakmak
+  yetmezdi: o kimlik iki bileşende de aynı kalıyor ve halka sessizce geri gelebilirdi.
+  **Yakaladığı doğrulandı:** rota ekranına halka geri konuldu, test kırmızıya döndü, sonra
+  geri alındı.
+
+  **Doğrulama.** Kurye jest **97/97** (4 yeni), `tsc` temiz, `eslint` temiz.

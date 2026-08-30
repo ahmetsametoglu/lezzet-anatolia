@@ -181,6 +181,16 @@ beforeEach(() => {
 });
 
 describe('teslimat · durak künyesi', () => {
+  /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08) — ayıran iz ROL: halka `progressbar`dır. */
+  it('yüklenirken İSKELET gösterir, halka değil', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+
+    await render(<CourierDeliveryScreen orderId={ORDER_ID} />);
+
+    expect(screen.getByTestId('courier-delivery-loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
   it('durak bugünkü rotada yoksa ekran bunu SÖYLER, boş bir form açmaz', async () => {
     mockRoutes({ day: courierDay([courierStop(9)]) });
 

@@ -147,12 +147,19 @@ beforeEach(() => {
 });
 
 describe('K1 · günün seferi', () => {
-  it('yüklenirken halka gösterir, liste çizilmez', async () => {
+  /*
+    İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08 · N9). İkisini ayıran ölçülebilir iz ROL:
+    halka (`LoadingState`) kendini `progressbar` diye tanıtır, iskelet tanıtmaz — yer tutucu bir
+    ilerleme bildirmez, gelecek bloğun ölçüsünü tutar. Testin halkanın GERİ DÖNMESİNİ yakalaması
+    lazım; yalnız testID'ye bakmak yetmezdi, o kimlik iki bileşende de aynı kalırdı.
+  */
+  it('yüklenirken İSKELET gösterir (halka değil), liste çizilmez', async () => {
     fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
 
     await renderDay();
 
     expect(screen.getByTestId('courier-day-loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
     expect(screen.queryByTestId('courier-day-list')).toBeNull();
   });
 

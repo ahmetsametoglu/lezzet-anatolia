@@ -91,6 +91,16 @@ beforeEach(() => {
 });
 
 describe('K7 · sefer kapanışı', () => {
+  /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08) — ayıran iz ROL: halka `progressbar`dır. */
+  it('yüklenirken İSKELET gösterir, halka değil', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+
+    await render(<CourierDayCloseScreen />);
+
+    expect(screen.getByTestId('courier-day-close-loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
   it('taslak okunamazsa hata bloğu çıkar, boş bir kapanış formu AÇILMAZ', async () => {
     mockDraft(null);
 

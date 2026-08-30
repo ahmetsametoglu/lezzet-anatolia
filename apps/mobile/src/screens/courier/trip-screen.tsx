@@ -4,7 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { LoadingState } from '@/components/ui/loading-state';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { useOperationsIdentity } from '@/screens/operations/sections-context';
@@ -36,6 +36,14 @@ import { useCourierDay } from './use-courier-day.hook';
 
 const t = courierCopy;
 
+/*
+  İLK YÜK İSKELETİ — ekranın kendi blokları: künye kartı (dolgu 14×2 + başlık + rota zinciri +
+  üç sayı hücresi + not, aralarında `xl`), sonra araç satırı ve dipnot — ikisi de tek satırlık
+  metin. İnce iki kutu bilerek: yer tutucu gelecek satırın KALINLIĞINI de söyler, hepsini kart
+  boyunda çizmek sayfayı olduğundan dolu gösterirdi.
+*/
+const TRIP_SKELETON = { card: 160, note: 18 } as const;
+
 export function CourierTripScreen() {
   const router = useRouter();
   const day = useCourierDay();
@@ -55,8 +63,13 @@ export function CourierTripScreen() {
     return (
       <View style={styles.screen} testID="courier-trip">
         {header}
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.day.loading} label={t.day.loading} testID="courier-trip-loading" />
+        {/* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz. */}
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[TRIP_SKELETON.card, TRIP_SKELETON.note, TRIP_SKELETON.note]}
+            label={t.day.loading}
+            testID="courier-trip-loading"
+          />
         </View>
       </View>
     );
@@ -160,9 +173,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
+  /** Yer tutucu gerçek blokların başlayacağı yerde başlar — ortalanmaz; dolgu `list` ile aynı. */
+  skeleton: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.lg,
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],

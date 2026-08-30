@@ -5,9 +5,9 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
-import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
@@ -29,6 +29,14 @@ import { expectedLabel, useDayClose, type CloseMethod } from './use-day-close.ho
 */
 
 const t = courierCopy;
+
+/*
+  İLK YÜK İSKELETİ — sayaç karoları (üçü yan yana, dolgu 12×2 + sayı + etiket), altındaki not
+  satırı ve para sayım kartı (üç kasa satırı, satır başına dolgu 10×2 + iki metin satırı).
+  Kapanış ekranının açılışı bu üç blok; uyarı/kapanmış kutusu koşullu olduğu için yer tutulmuyor —
+  olmayabilecek bir bloğun yerini tutmak, sönünce yukarı zıplamak demektir.
+*/
+const CLOSE_SKELETON = { counters: 66, note: 18, money: 180 } as const;
 
 interface CounterCardProps {
   value: number;
@@ -70,8 +78,13 @@ export function CourierDayCloseScreen() {
     return (
       <View style={styles.screen} testID="courier-day-close">
         {header}
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.dayClose.loading} label={t.dayClose.loading} />
+        {/* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz. */}
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[CLOSE_SKELETON.counters, CLOSE_SKELETON.note, CLOSE_SKELETON.money]}
+            label={t.dayClose.loading}
+            testID="courier-day-close-loading"
+          />
         </View>
       </View>
     );
@@ -311,7 +324,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  centered: { flex: 1, justifyContent: 'center' },
+  /** Yer tutucu gerçek blokların başlayacağı yerde başlar — ortalanmaz; dolgu `body` ile aynı. */
+  skeleton: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.lg,
+  },
   block: { paddingHorizontal: operationsTheme.space['6xl'] },
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],

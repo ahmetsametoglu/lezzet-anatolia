@@ -6,8 +6,8 @@ import type { CourierStopContract } from '@lezzet/types';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { ScanSheet } from '@/components/scan/scan-sheet';
-import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
@@ -41,6 +41,12 @@ import { useCourierDay } from './use-courier-day.hook';
 
 const t = courierCopy;
 
+/*
+  İLK YÜK İSKELETİ — sayaç kartı (dolgu 14×2 + sayaç başı + çubuk 6 + kalan satırı), okut düğmesi
+  (dolgu 12×2 + düğme metni) ve ilk durak satırı. Üçü, ekranın gerçekten çizdiği üç blok.
+*/
+const LOAD_SKELETON = { counter: 100, scan: 44, stop: 66 } as const;
+
 /** Durağın yükleme durumu — binen/toplam ve üç hâlden biri. */
 function loadStateOf(stop: CourierStopContract): { loaded: number; total: number; tone: string; label: string } {
   const loaded = stop.boxes.filter((box) => box.loadedAt !== null).length;
@@ -73,8 +79,13 @@ export function CourierLoadScreen() {
     return (
       <View style={styles.screen} testID="courier-load">
         {header}
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.day.loading} label={t.day.loading} testID="courier-load-loading" />
+        {/* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz. */}
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[LOAD_SKELETON.counter, LOAD_SKELETON.scan, LOAD_SKELETON.stop]}
+            label={t.day.loading}
+            testID="courier-load-loading"
+          />
         </View>
       </View>
     );
@@ -190,9 +201,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
+  /** Yer tutucu gerçek blokların başlayacağı yerde başlar — ortalanmaz; dolgu `list` ile aynı. */
+  skeleton: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.lg,
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],

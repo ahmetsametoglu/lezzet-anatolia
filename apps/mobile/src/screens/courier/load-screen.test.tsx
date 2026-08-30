@@ -86,6 +86,16 @@ beforeEach(() => {
 });
 
 describe('K · araca yükleme', () => {
+  /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08) — ayıran iz ROL: halka `progressbar`dır. */
+  it('yüklenirken İSKELET gösterir, halka değil', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+
+    await render(<CourierLoadScreen />);
+
+    expect(screen.getByTestId('courier-load-loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
   it('sayaç duraklardan türer — üç kutunun biri binmiş', async () => {
     mockDay(loadingDay());
 

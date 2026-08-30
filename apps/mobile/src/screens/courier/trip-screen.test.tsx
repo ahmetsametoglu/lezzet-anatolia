@@ -75,7 +75,8 @@ function mockDay(day: CourierDayResponse) {
   });
 }
 
-async function renderTrip() {
+/** Ekranı KURAR ve beklemez — ilk yük hâlini ölçen test buna ihtiyaç duyar. */
+async function mountTrip() {
   await render(
     <OperationsSessionProvider
       value={{
@@ -89,6 +90,10 @@ async function renderTrip() {
       <CourierTripScreen />
     </OperationsSessionProvider>,
   );
+}
+
+async function renderTrip() {
+  await mountTrip();
   await waitFor(() => expect(screen.queryByTestId('courier-trip-loading')).toBeNull());
 }
 
@@ -102,6 +107,17 @@ beforeEach(() => {
 });
 
 describe('K · sefer künyesi', () => {
+  /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08). Ayıran ölçülebilir iz ROL: halka kendini
+     `progressbar` diye tanıtır, yer tutucu tanıtmaz — iskelet bir ilerleme bildirmez. */
+  it('yüklenirken İSKELET gösterir, halka değil', async () => {
+    fetchMock.mockImplementation(() => new Promise<Response>(() => {}));
+
+    await mountTrip();
+
+    expect(screen.getByTestId('courier-trip-loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+  });
+
   it('üç sayı da durak listesinden türer: 3 durak · 3 kutu · 1 tahsilat', async () => {
     mockDay(tripDay());
 

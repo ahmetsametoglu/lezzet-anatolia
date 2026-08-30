@@ -7,11 +7,11 @@ import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStepperButton } from '@/components/operations/stepper-button';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
-import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
@@ -46,6 +46,14 @@ import { useDelivery } from './use-delivery.hook';
 
 const t = courierCopy;
 
+/*
+  İLK YÜK İSKELETİ — kapıdaki ekranın üç açılış bloğu: adres künyesi (iki satır), iletişim şeridi
+  (üç düğme, dolgu 12×2 + ikon) ve ilk adım bölümü (başlık + kutu satırları, satır başına 30).
+  Alt bölümler (kanıt · mal · tahsilat) yer tutucuya girmiyor: ekran zaten kaydırılıyor ve
+  görünmeyen bir bloğun yerini tutmak, zıplamayı önlemez — yalnız iskeleti uzatır.
+*/
+const DELIVERY_SKELETON = { address: 46, contacts: 44, section: 110 } as const;
+
 export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
   const router = useRouter();
   const delivery = useDelivery(orderId);
@@ -59,8 +67,13 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
     return (
       <View style={styles.screen} testID="courier-delivery">
         <OperationsStackHeader title={t.delivery.loading} onBack={() => router.back()} backLabel={t.delivery.back} />
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.delivery.loading} label={t.delivery.loading} />
+        {/* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz. */}
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[DELIVERY_SKELETON.address, DELIVERY_SKELETON.contacts, DELIVERY_SKELETON.section]}
+            label={t.delivery.loading}
+            testID="courier-delivery-loading"
+          />
         </View>
       </View>
     );
@@ -664,7 +677,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  centered: { flex: 1, justifyContent: 'center' },
+  /** Yer tutucu gerçek blokların başlayacağı yerde başlar — ortalanmaz; dolgu `body` ile aynı. */
+  skeleton: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.lg,
+  },
   block: { paddingHorizontal: operationsTheme.space['6xl'] },
   body: {
     paddingHorizontal: operationsTheme.space['6xl'],

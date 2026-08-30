@@ -10,7 +10,7 @@ import { ScanSheet } from '@/components/scan/scan-sheet';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { NotificationBell } from '@/components/operations/notification-bell';
-import { LoadingState } from '@/components/ui/loading-state';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { Icon } from '@/components/ui/icon';
 import type { IconName } from '@/components/ui/icon-paths';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -75,6 +75,19 @@ import { isRouteFree, useCourierDay } from './use-courier-day.hook';
 
 const t = courierCopy;
 const shell = operationsCopy;
+
+/*
+  İLK YÜK İSKELETİ — ölçüler bu ekranın KENDİ bloklarından (kit ölçüyü çağırandan alır,
+  `skeleton-list.tsx` künyesi).
+
+  Kutular sırayla: koyu özet kartı (dolgu 14×2 + baş 33 + çubuk 6 + kapı şeridi 34 + iki aralık),
+  kapı satırı (dolgu 10×2 + ikon kutusu 46) ve ilk durak kartı (dolgu 10×2 + iki metin satırı).
+
+  İKİ GÖVDE VAR, İSKELET BİR: sefer açıkken ekran özet kartıyla, seçim hâlindeyken satış kapısıyla
+  başlıyor. Yer tutucu AÇIK SEFERİ tutuyor çünkü zıplamayı yaratan blok odur — seçim hâli gelirse
+  yer tutucu bir tık cömert kalır, tersi olsaydı sayfa iskelet sönünce aşağı kayardı.
+*/
+const DAY_SKELETON = { summary: 120, gate: 66, stop: 58 } as const;
 
 /** Durak dairesinin dört hâli — v2:851-855'in renk üçlüleri, token karşılıklarıyla. */
 type CircleTone = 'delivered' | 'issue' | 'next' | 'idle';
@@ -142,8 +155,14 @@ export function CourierDayScreen() {
     return (
       <View style={styles.screen} testID="operations-section-courier">
         {header}
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.day.loading} label={t.day.loading} testID="courier-day-loading" />
+        {/* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08) — halka yerleşim tutmaz ve söndüğü
+            an sayfa zıplar; iskelet gelecek blokların ölçüsünü tutar. */}
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[DAY_SKELETON.summary, DAY_SKELETON.gate, DAY_SKELETON.stop]}
+            label={t.day.loading}
+            testID="courier-day-loading"
+          />
         </View>
       </View>
     );
@@ -639,9 +658,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
+  /* İskelet listenin İÇİNDE değil, listenin YERİNDE duruyor: yatay dolgu gövdeyle aynı (`list`),
+     üst nefes başlıktan sonra bir satır. Ortalanmıyor — yer tutucu sayfanın ortasında değil,
+     gerçek blokların başlayacağı yerde başlar. */
+  skeleton: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.lg,
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],
