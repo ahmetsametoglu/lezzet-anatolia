@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { OrderItemService, OrderService } from '@lezzet/database';
-import type { OrderException } from '@lezzet/types';
+import type { DecisionExceptionHead, OrderException } from '@lezzet/types';
 import { openTicket } from '../ticket/staff-write';
 import { adviseShortfalls, listPreparationQueue } from '../warehouse/preparation';
 import { shortfallQuestion } from '../warehouse/shortfall-question';
@@ -135,15 +135,32 @@ export async function askShortfall(
   return { status: 'ok', ticketId: result.data.id };
 }
 
-/** Hub'ın karar kutusu bu okumayı SAYAR — kutu ile ekran aynı motoru okur, ayrışamaz. */
+/**
+ * Hub'ın karar kutusu bu okumayı SAYAR — kutu ile ekran aynı motoru okur, ayrışamaz.
+ *
+ * Künye EN ÜSTTEKİ kalemi de taşır (21.164): kart "1 kalem eksik" derken hangi üründen söz
+ * ettiğini söylemiyordu ve yönetici kararı ürünü bilmeden veremiyordu (tasarım v3:2104 ürünü
+ * yazıyor). Kalemsiz bir istisna künye ÜRETMEZ — sayı ile künyenin ayrışması, kartın var olmayan
+ * bir kalemi göstermesi demekti.
+ */
 export async function countOrderExceptions(
   db: SupabaseClient,
   input: { warehouseIds: readonly string[] },
-): Promise<{ count: number; head: { orderId: string; referenceNo: string | null; shortLineCount: number } | null }> {
+): Promise<{ count: number; head: DecisionExceptionHead | null }> {
   const exceptions = await listOrderExceptions(db, input);
   const head = exceptions[0] ?? null;
+  const line = head?.lines[0] ?? null;
   return {
     count: exceptions.length,
-    head: head ? { orderId: head.orderId, referenceNo: head.referenceNo, shortLineCount: head.lines.length } : null,
+    head:
+      head && line
+        ? {
+            orderId: head.orderId,
+            referenceNo: head.referenceNo,
+            shortLineCount: head.lines.length,
+            lineTitle: line.title,
+            missingQty: line.missingQty,
+          }
+        : null,
   };
 }

@@ -1,9 +1,10 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -59,6 +60,18 @@ import { useOfferApproval } from './use-offer-approval.hook';
 
 const t = managementCopy;
 
+/**
+ * İskelet kutusu aday kartının KENDİ ölçüsünden türer (bildirimler emsali): iki dolgu + künye iki
+ * satır + üç ölçüm satırı + öneri satırı (kutu yüksekliğinde) + ikincil düğme + iç aralıklar.
+ */
+const SKELETON_CARD_HEIGHT =
+  operationsTheme.space['3xl'] * 2 +
+  operationsTheme.space.lg * 5 +
+  operationsTheme.text['body-sm'] * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.tag * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.note * operationsTheme.text['lead--line-height'] * 3 +
+  operationsTheme.size.controlMd * 2;
+
 export function OfferApprovalScreen() {
   const router = useRouter();
   const approval = useOfferApproval();
@@ -75,8 +88,15 @@ export function OfferApprovalScreen() {
       />
 
       {state.status === 'loading' ? (
-        <View style={styles.pending} testID="management-offer-loading">
-          <ActivityIndicator color={operationsTheme.colors.olive} />
+        /* İLK YÜK İSKELETLE (v3 dili). Bu ekranda fark en büyük: aday listesi 49 parti getiriyor
+           ve cihazda ölçüldü (30.08) — halka sekiz saniye boyunca BOŞ bir sayfanın ortasında
+           dönüyordu, yani ekran "veri yok" ile "veri geliyor"u aynı biçimde gösteriyordu. */
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[SKELETON_CARD_HEIGHT, SKELETON_CARD_HEIGHT, SKELETON_CARD_HEIGHT]}
+            label={t.offer.loading}
+            testID="management-offer-loading"
+          />
         </View>
       ) : state.status === 'error' ? (
         <View style={styles.errorBlock}>
@@ -99,7 +119,13 @@ export function OfferApprovalScreen() {
         </View>
       ) : (
         <>
-          <FormScroll contentContainerStyle={styles.body} testID="management-offer-approval-body">
+          {/* AŞAĞI ÇEKİNCE YENİLE: aday listesi partilerin SKT'sinden türüyor ve gün içinde
+              değişiyor; kabın kendi `refresh` desteği kullanıldı (`FormScroll` künyesi). */}
+          <FormScroll
+            contentContainerStyle={styles.body}
+            refresh={{ onRefresh: approval.refresh, refreshing: approval.reloading }}
+            testID="management-offer-approval-body"
+          >
             {state.candidates.map((candidate) => (
               <CandidateCard key={candidate.stockId} candidate={candidate} approval={approval} />
             ))}
@@ -243,9 +269,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  pending: {
-    paddingTop: operationsTheme.space['8xl'],
-    alignItems: 'center',
+  /* İskelet listenin kendi kenar boşluğunda durur — kutular kartların yerini tutuyor. */
+  skeleton: {
+    paddingTop: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space['5xl'],
   },
   errorBlock: {
     paddingTop: operationsTheme.space['7xl'],
@@ -396,9 +423,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: operationsTheme.radius.control,
   },
+  /* Gölgesiz (v3'te sert gölge yok, ölçüm 30.08). Yapışkan çubuğun kendi ışıması ayrı bir
+     karardır ve OKUTMA CTA'sınındır — teklif düğmesi sayfanın üstünde yüzmez, listenin sonudur. */
   ctaOpen: {
     backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
   },
   ctaClosed: {
     backgroundColor: operationsTheme.colors['disabled-fill'],

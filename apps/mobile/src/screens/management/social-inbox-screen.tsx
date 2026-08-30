@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, RefreshControl, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ConversationSourceEnum, type ConversationSource } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import type { SocialRow } from '@/lib/api/social';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
@@ -46,6 +48,12 @@ import { useSocialInbox, type ChannelFilter } from './use-social-inbox.hook';
 */
 
 const t = managementCopy.social;
+
+/** İskelet kutusu sohbet satırının KENDİ ölçüsünden: iki dolgu + ad satırı + ön izleme satırı. */
+const SKELETON_ROW_HEIGHT =
+  operationsTheme.space['2xl'] * 2 +
+  operationsTheme.text['body-sm'] * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.micro * operationsTheme.text['lead--line-height'];
 
 /** Kanal → baş harf karesinin zemini. Token'dan (CLAUDE §3) — `operationsTheme` markaları yayar. */
 const CHANNEL_TINT = {
@@ -160,8 +168,13 @@ export function SocialInboxScreen() {
       </View>
 
       {inbox.status === 'loading' ? (
-        <View style={styles.pending} testID="management-social-loading">
-          <ActivityIndicator color={operationsTheme.colors.olive} />
+        /* İLK YÜK İSKELETLE (v3 dili): üç kutu, sohbet satırının yüksekliğinde. */
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[SKELETON_ROW_HEIGHT, SKELETON_ROW_HEIGHT, SKELETON_ROW_HEIGHT]}
+            label={t.loading}
+            testID="management-social-loading"
+          />
         </View>
       ) : inbox.status === 'error' ? (
         <View style={styles.noticeWrap}>
@@ -186,10 +199,12 @@ export function SocialInboxScreen() {
           onEndReached={inbox.loadMore}
           onEndReachedThreshold={0.5}
           refreshControl={
+            /* Halkanın rengi İKİ platformda iki ayrı prop ister (`pullRefreshColors` künyesi):
+               yalnız `tintColor` verilirse Android sistemin SİYAHINI çiziyor ve bu sessiz. */
             <RefreshControl
               refreshing={inbox.refreshing}
               onRefresh={inbox.refresh}
-              tintColor={operationsTheme.colors.olive}
+              {...pullRefreshColors(operationsTheme.colors.olive)}
             />
           }
           ListFooterComponent={
@@ -253,8 +268,10 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.ink,
   },
-  pending: {
-    paddingTop: operationsTheme.space['7xl'],
+  /* İskelet listenin kenar boşluğunda durur; kartlar aynı yerde doğar. */
+  skeleton: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space['2xl'],
   },
   noticeWrap: {
     paddingHorizontal: operationsTheme.space['6xl'],

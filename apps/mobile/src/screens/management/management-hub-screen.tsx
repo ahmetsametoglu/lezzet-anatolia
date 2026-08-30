@@ -1,12 +1,14 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
 import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
@@ -72,6 +74,28 @@ import { useManagementHub } from './use-management-hub.hook';
 const t = managementCopy;
 const shell = operationsCopy;
 
+/**
+ * İskelet kutularının yüksekliği KARTLARIN KENDİ ÖLÇÜSÜNDEN türer, elle yazılmaz (bildirimler
+ * emsali): dolgu değişirse iskelet de değişir, yoksa yükleme→liste geçişinde sayfa zıplar — bu
+ * deseni halka yerine seçmenin tek sebebi zaten o zıplamaydı.
+ *
+ * Karar kartı: iki dikey dolgu + rozet satırı + iki iç aralık + iki satırlık başlık + künye satırı.
+ */
+const SKELETON_DECISION_HEIGHT =
+  operationsTheme.space['3xl'] * 2 +
+  operationsTheme.text.tag * operationsTheme.text['lead--line-height'] +
+  operationsTheme.space.xl * 2 +
+  operationsTheme.text.body * operationsTheme.text['lead--line-height'] * 2 +
+  operationsTheme.text.micro * operationsTheme.text['lead--line-height'];
+
+/** Sessiz satır kartı: iki dikey dolgu + üç satır (üstbaşlık · başlık · alt satır) + iki iç aralık. */
+const SKELETON_QUIET_HEIGHT =
+  operationsTheme.space['2xl'] * 2 +
+  operationsTheme.space['2xs'] * 2 +
+  operationsTheme.text.eyebrow * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text['body-sm'] * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.tag * operationsTheme.text['lead--line-height'];
+
 /*
   Kartın açtığı adres DAR bir birlik olarak yazılır, `string` olarak değil: expo-router'ın tip
   sözleşmesi rota adreslerini literal olarak doğruluyor ve `string`e genişletilen bir alan o kapıyı
@@ -112,59 +136,130 @@ function complaintCardOf(queue: ManagementQueue): { meta: string; title: string;
   const head = queue.complaints.head;
 
   return {
-    meta: fillCopy(copy.meta, { n: String(queue.complaints.count) }),
+    /* KÜNYE SATIRI TÜRÜ SÖYLER, "şikâyet" DEMEZ (ölçüldü 30.08, cihazda): kuyruk dört türü birden
+       taşıyor (`soru · bozuk · eksik · diğer`) ve üstteki kayıt çoğu gün bir SORU oluyordu — kart
+       ona "şikâyet" diyordu. Sayı ise türden bağımsız: cevap bekleyen bütün TALEPLER. */
+    meta:
+      head === null
+        ? fillCopy(copy.metaNoHead, { n: String(queue.complaints.count) })
+        : fillCopy(copy.meta, {
+            kind: t.complaint.kind[head.type].toLocaleLowerCase('tr'),
+            n: String(queue.complaints.count),
+          }),
+    /* BAŞLIK ŞİKÂYETİN KENDİ CÜMLESİ (21.164) — tasarımın koyu kartı (v3:2091) müşterinin adını
+       değil derdini yazıyor: yönetici kartın önünde "bu ne kadar acil" diye karar veriyor ve bir
+       ad bunu söylemez. Önizleme okunamadıysa eski satır (ad + sipariş referansı) kalır. */
     title:
       head === null
         ? fillCopy(copy.titleNoHead, { n: String(queue.complaints.count) })
-        : fillCopy(copy.title, {
-            who: head.customerName,
-            ref: head.orderReferenceNo === null ? '' : fillCopy(copy.refPart, { ref: head.orderReferenceNo }),
-          }),
+        : head.preview === null
+          ? fillCopy(copy.titleNoPreview, {
+              who: head.customerName,
+              ref: head.orderReferenceNo === null ? '' : fillCopy(copy.refPart, { ref: head.orderReferenceNo }),
+            })
+          : fillCopy(copy.title, { who: head.customerName, preview: head.preview }),
     stamp: head === null ? null : fillCopy(copy.stamp, { stamp: stampOf(head.lastMessageAt) }),
   };
 }
 
-/** Eksik toplama kartının iki satırı (v3:2098-2108). Sıfır sayılı alanda kart hiç doğmaz. */
+/**
+ * Eksik toplama kartının iki satırı (v3:2098-2108). Sıfır sayılı alanda kart hiç doğmaz.
+ *
+ * BAŞLIK ÜRÜNÜ SÖYLER (21.164): tasarımın cümlesi "Yoğurtlu Patlıcan 1000 g — depoda 1 adet eksik
+ * bildirildi"; bizimki "1 kalem eksik toplandı" diyordu ve yönetici kararı ürünü bilmeden veremez.
+ * Kalem künyesi kuyruk zarfına eklendi; künye YOKSA (okuma kalemsiz döndü) eski sayı cümlesi
+ * kalır — uydurma bir ürün adı yazılmaz.
+ */
 function exceptionCardOf(queue: ManagementQueue): { ref: string; title: string } | null {
   if (queue.exceptions.count === 0) return null;
   const copy = t.hub.rows.exception;
   const head = queue.exceptions.head;
-  const lines = String(head?.shortLineCount ?? 0);
+  /* Aynı sipariş içinde başka eksik kalemler ve kuyrukta başka siparişler ayrı iki sayıdır:
+     birincisi başlığın kuyruğuna, ikincisi künye satırına yazılır. Tek cümlede toplansalardı
+     "3 kalem" mi "3 sipariş" mi olduğu okunmazdı. */
+  const moreOrders = queue.exceptions.count - 1;
 
   return {
-    ref: head?.referenceNo ?? copy.noRef,
+    ref:
+      (head?.referenceNo ?? copy.noRef) +
+      (moreOrders > 0 ? fillCopy(copy.metaMoreOrders, { more: String(moreOrders) }) : ''),
     title:
-      queue.exceptions.count > 1
-        ? fillCopy(copy.titleMore, { lines, more: String(queue.exceptions.count - 1) })
-        : fillCopy(copy.title, { lines }),
+      head === null
+        ? fillCopy(copy.titleNoHead, { lines: '1' })
+        : head.shortLineCount > 1
+          ? fillCopy(copy.titleMoreLines, {
+              item: head.lineTitle,
+              qty: String(head.missingQty),
+              more: String(head.shortLineCount - 1),
+            })
+          : fillCopy(copy.title, { item: head.lineTitle, qty: String(head.missingQty) }),
   };
+}
+
+/**
+ * Yakın-SKT künyesinin ömür cümlesi — üç hâl, üç cümle.
+ *
+ * NEGATİF GÜN "SÜRESİ GEÇTİ" DEĞİLDİR: kuyruğa yalnız `can_offer` partiler giriyor ve motorun
+ * kuralında tarihi geçmiş ama SATILABİLİR olan tek küme DDM'si (tavsiye edilen tüketim tarihi)
+ * geçmiş partilerdir — DLC'si geçen parti imhalıktır ve zaten aday sayılmaz (`offerDecisionOf`).
+ * "Süresi geçti" demek, satılabilir malı yasak malla aynı cümleye koymak olurdu.
+ */
+function offerLifeOf(daysLeft: number): string {
+  const copy = t.hub.rows.offer;
+  if (daysLeft < 0) return copy.lifePast;
+  if (daysLeft === 0) return copy.lifeToday;
+  return fillCopy(copy.lifeDays, { n: String(daysLeft) });
 }
 
 /** Sessiz kartlar — sırası v3'ün sırası (teklif → tedarik), sayıdan bağımsız. */
 function quietCardsOf(queue: ManagementQueue): QuietCard[] {
   const cards: QuietCard[] = [];
 
+  /* KART ADEDİ DEĞİL İŞİ SÖYLER (21.164): "49 aday parti" bir sayaçtır, yönetici ona bakıp karar
+     veremez; tasarımın kartı (v3:2113) partinin adını, adedini ve önerilen oranı yazıyor. Künye
+     kuyruk zarfına eklendi — okunamadığı hâlde eski sayaç cümlesi kalır (uydurma yok). */
   if (queue.offers.candidateCount > 0) {
+    const head = queue.offers.head;
+    const more = queue.offers.candidateCount - 1;
     cards.push({
       key: 'offer',
       eyebrow: t.hub.rows.offer.eyebrow,
-      title: fillCopy(t.hub.rows.offer.title, { n: String(queue.offers.candidateCount) }),
-      subtitle: t.hub.rows.offer.subtitle,
+      title:
+        head === null
+          ? fillCopy(t.hub.rows.offer.titleNoHead, { n: String(queue.offers.candidateCount) })
+          : fillCopy(t.hub.rows.offer.title, {
+              item: head.title,
+              qty: String(head.qty),
+              percent: String(head.discountPercent),
+            }),
+      subtitle:
+        head === null
+          ? fillCopy(t.hub.rows.offer.subtitle, { life: '' }).trim()
+          : more > 0
+            ? fillCopy(t.hub.rows.offer.subtitleMore, { life: offerLifeOf(head.daysLeft), more: String(more) })
+            : fillCopy(t.hub.rows.offer.subtitle, { life: offerLifeOf(head.daysLeft) }),
       route: '/offer-approval',
     });
   }
 
   if (queue.supply.groupCount > 0 || queue.supply.unmappedVariantCount > 0) {
+    const head = queue.supply.head;
+    const more = queue.supply.groupCount - 1;
     cards.push({
       key: 'supply',
       eyebrow: t.hub.rows.supply.eyebrow,
-      title: fillCopy(t.hub.rows.supply.title, { groups: String(queue.supply.groupCount) }),
+      title:
+        head === null
+          ? fillCopy(t.hub.rows.supply.titleNoHead, { groups: String(queue.supply.groupCount) })
+          : fillCopy(t.hub.rows.supply.title, { supplier: head.supplierName, lines: String(head.lineCount) }),
       /* Eşlenmemiş varyant varsa ALT SATIR onu söyler: o gruptan sipariş açılamıyor ve sebebini
          ekranı açmadan bilmek, boşuna bir dokunuşu önler. */
       subtitle:
         queue.supply.unmappedVariantCount > 0
           ? fillCopy(t.hub.rows.supply.subtitleUnmapped, { unmapped: String(queue.supply.unmappedVariantCount) })
-          : t.hub.rows.supply.subtitle,
+          : more > 0
+            ? fillCopy(t.hub.rows.supply.subtitleMore, { more: String(more) })
+            : t.hub.rows.supply.subtitle,
       route: '/supply-suggestion',
     });
   }
@@ -207,7 +302,7 @@ function pulseTilesOf(hub: ManagementHub | null): PulseTile[] {
 export function ManagementHubScreen() {
   const router = useRouter();
   const unread = useOperationsNotifications().unread;
-  const { state, retry } = useManagementHub();
+  const { state, retry, refresh, reloading } = useManagementHub();
   const { width } = useWindowDimensions();
 
   /* IZGARANIN SÜTUN GENİŞLİĞİ HESAPLANIR, YÜZDEYLE VERİLMEZ — depo hub'ında cihazda ölçülmüş
@@ -251,10 +346,25 @@ export function ManagementHubScreen() {
         identity={<OperationsStaffMenu testID="operations-staff-menu" />}
       />
 
-      <ScrollView contentContainerStyle={styles.body} testID="management-hub-body">
+      {/* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08, depo hub'ıyla aynı karar): karar kutusu
+          günün kuyruğunu gösteriyor ve tazelemenin tek yolu ekrandan çıkıp girmekti. */}
+      <ScrollView
+        contentContainerStyle={styles.body}
+        refreshControl={
+          <RefreshControl refreshing={reloading} onRefresh={refresh} {...pullRefreshColors(operationsTheme.colors.olive)} />
+        }
+        testID="management-hub-body"
+      >
         {state.status === 'loading' ? (
-          <View style={styles.pending} testID="management-hub-loading">
-            <ActivityIndicator color={operationsTheme.colors.olive} />
+          /* İLK YÜK: HALKA DEĞİL İSKELET (v3'ün ilk-yük dili — `OperationsSkeletonList` künyesi).
+             Halka yerleşim tutmaz: söndüğü an kartlar birden doğar ve sayfa zıplar. Üç kutu
+             kuyruğun kendi sırasını tutuyor: iki karar kartı + bir sessiz satır. */
+          <View style={styles.skeleton}>
+            <OperationsSkeletonList
+              heights={[SKELETON_DECISION_HEIGHT, SKELETON_DECISION_HEIGHT, SKELETON_QUIET_HEIGHT]}
+              label={t.hub.loading}
+              testID="management-hub-loading"
+            />
           </View>
         ) : state.status === 'error' ? (
           <View style={styles.noticeBlock}>
@@ -294,7 +404,12 @@ export function ManagementHubScreen() {
                   <Text style={styles.urgentBadge}>{t.hub.rows.complaint.badge}</Text>
                   <Text style={styles.urgentMeta}>{complaint.meta}</Text>
                 </View>
-                <Text style={styles.urgentTitle}>{complaint.title}</Text>
+                {/* İKİ SATIRDA KIRPILIR: önizleme 120 karaktere kadar gelebiliyor (`previewOf`)
+                    ve tasarımın koyu kartı iki satırlık bir blok — uzun bir şikâyet kartı ekranın
+                    yarısına yayılsaydı altındaki üç karar görünmez olurdu. */}
+                <Text style={styles.urgentTitle} numberOfLines={2}>
+                  {complaint.title}
+                </Text>
                 <View style={styles.urgentFoot}>
                   {/* Damga AMBER: bekleyen bir cevap hata değil, bitirilmesi gereken bir iştir
                       (token künyesi `on-ink-warn`). Kırmızı olsaydı ekran her açık şikâyette
@@ -318,7 +433,10 @@ export function ManagementHubScreen() {
                   <Text style={styles.attentionBadge}>{t.hub.rows.exception.badge}</Text>
                   <Text style={styles.attentionRef}>{exception.ref}</Text>
                 </View>
-                <Text style={styles.attentionTitle}>{exception.title}</Text>
+                {/* Ürün adı + eksik adet iki satıra sığar; tasarımın kartı da iki satırlık. */}
+                <Text style={styles.attentionTitle} numberOfLines={2}>
+                  {exception.title}
+                </Text>
                 <View style={styles.attentionFoot}>
                   <Text style={styles.attentionAction}>{t.hub.rows.exception.action}</Text>
                   <Text style={styles.chevron}>›</Text>
@@ -383,9 +501,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.space['8xl'],
   },
-  pending: {
-    paddingTop: operationsTheme.space['8xl'],
-    alignItems: 'center',
+  /* İskelet kartların DURDUĞU YERDE durur (aynı üst boşluk): yükleme bitince liste yukarı
+     kaymaz, kutular yerini kartlara bırakır. */
+  skeleton: {
+    paddingTop: operationsTheme.space['3xl'],
   },
   noticeBlock: {
     paddingTop: operationsTheme.space['7xl'],

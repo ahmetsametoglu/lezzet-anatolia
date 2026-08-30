@@ -4,12 +4,13 @@ import {
   ReorderService,
   SettingsService,
   StockService,
+  SupplierService,
   TicketQueueService,
   TicketService,
   WarehouseService,
   type Db,
 } from '@lezzet/database';
-import { offerDecisionOf } from '@lezzet/domain-core';
+import { resolveUserText } from '@lezzet/domain-core';
 import type {
   ManagementHub,
   ManagementQueue,
@@ -17,7 +18,8 @@ import type {
   OrderSource,
   SummaryChannel,
 } from '@lezzet/types';
-import { readExpiryThresholds } from '../warehouse/batch-view';
+import { readExpiryThresholds, toBatchViews } from '../warehouse/batch-view';
+import { previewOf } from '../ticket/staff-read';
 import { countOrderExceptions } from './exceptions';
 
 /*
@@ -66,24 +68,46 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
       new ConversationInboxService(db).countAwaitingReply('whatsapp'),
     ]);
 
-  // Teklif adayı: raf ömrü motoru "teklife açılabilir" diyor ve parti HENÜZ teklifte değil.
+  /*
+    Teklif adayı: raf ömrü motoru "teklife açılabilir" diyor ve parti HENÜZ teklifte değil.
+
+    Karar `toBatchViews`ten okunuyor — teklif EKRANININ da (`listOfferCandidates`) okuduğu görünüm.
+    Kutu kararı kendi başına hesaplasaydı iki yerde iki kural olurdu ve bir gün ayrışırlardı; kutu
+    "3 aday" derken ekran 2 gösterirdi. Fiyat haritası verilmiyor: kartın künyesi adet ve gün
+    ister, öneri fiyatı değil — o teklif ekranının işi.
+  */
   const now = new Date();
-  const candidateCount = batches.filter(
-    (batch) =>
-      offerDecisionOf({
-        dateType: batch.variant.product.dateType,
-        expiryDate: batch.expiryDate,
-        shelfLifeDays: batch.variant.product.shelfLifeDays,
-        offerPriceCents: batch.offerPriceCents,
-        now,
-        nearExpiryPercent: thresholds.nearExpiryPercent,
-      }).decision === 'can_offer',
-  ).length;
+  const candidates = toBatchViews(batches, { now, thresholds }).filter((view) => view.decision === 'can_offer');
+  /* Künye EN ACİL aday: kalan ömrü en az olan. "İlk satır" demek, sıralaması stok okumasından
+     gelen rastgele bir partiyi kartın yüzü yapmak olurdu. */
+  const offerHead = candidates.reduce<(typeof candidates)[number] | null>(
+    (most, view) => (most === null || view.daysLeft < most.daysLeft ? view : most),
+    null,
+  );
 
   const groups = supplyGroups.flat();
   const unmappedVariantCount = groups
     .filter((group) => group.supplierId === null)
     .reduce((sum, group) => sum + group.lines.length, 0);
+  /* Tedarik künyesi EN KALABALIK eşlenmiş grup — kartın vaadi "onay bekliyor"dur ve yalnız
+     eşlenmiş grup onaylanabilir. Adı olmayan grup künye olmaz: kart adsız bir tedarikçiyi
+     gösteremez, gösterirse yönetici hangi siparişten söz edildiğini bilmez.
+
+     Tedarikçi ADI burada okunuyor çünkü öneri servisi yalnız kimlik taşıyor; küme operatör
+     kurulumudur (doğal tavan) ve tek turda çekilir — tedarik EKRANI da aynı yolu izliyor
+     (`listSupplyGroups`). Künye yoksa sorgu da atılmaz. */
+  const headGroup = groups
+    .filter((group) => group.supplierId !== null)
+    .reduce<(typeof groups)[number] | null>(
+      (most, group) => (most === null || group.lines.length > most.lines.length ? group : most),
+      null,
+    );
+  const supplierName =
+    headGroup === null
+      ? null
+      : ((await new SupplierService(db).list()).find((supplier) => supplier.id === headGroup.supplierId)?.name ?? null);
+  const supplyHead =
+    headGroup === null || supplierName === null ? null : { supplierName, lineCount: headGroup.lines.length };
 
   const head = complaintPage.rows[0] ?? null;
   return {
@@ -98,14 +122,39 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
             hasAttachment: head.hasAttachment,
             awaitingReply: head.awaitingReply,
             lastMessageAt: head.lastMessageAt,
+            /* Şikâyetin kendi cümlesi, kuyruk ekranıyla AYNI iki kuraldan geçerek: metin okuyanın
+               diline çözülür (`resolveUserText`), sonra ilk satıra kırpılır (`previewOf`).
+               Operasyon yüzeyi tek dilli Türkçedir — dil buradan gelir, cihazdan değil. */
+            preview: previewOf(
+              resolveUserText(
+                {
+                  text: head.lastMessageBody,
+                  language: head.lastMessageLanguage,
+                  translations: head.lastMessageTranslations,
+                },
+                'tr',
+              ).text ?? '',
+            ) || null,
           }
         : null,
     },
     exceptions,
-    offers: { candidateCount },
+    offers: {
+      candidateCount: candidates.length,
+      head:
+        offerHead === null
+          ? null
+          : {
+              title: offerHead.title,
+              qty: offerHead.physicalQty,
+              daysLeft: offerHead.daysLeft,
+              discountPercent: offerHead.offerDiscountPercent,
+            },
+    },
     supply: {
       groupCount: groups.filter((group) => group.supplierId !== null).length,
       unmappedVariantCount,
+      head: supplyHead,
     },
     intents: { count: intentCount },
   };

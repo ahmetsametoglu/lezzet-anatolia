@@ -52,8 +52,8 @@ function hubData(): ManagementHub {
     queue: {
       complaints: { count: 3, head: null },
       exceptions: { count: 0, head: null },
-      offers: { candidateCount: 4 },
-      supply: { groupCount: 2, unmappedVariantCount: 1 },
+      offers: { candidateCount: 4, head: null },
+      supply: { groupCount: 2, unmappedVariantCount: 1, head: null },
       intents: { count: 2 },
     },
     summary: {

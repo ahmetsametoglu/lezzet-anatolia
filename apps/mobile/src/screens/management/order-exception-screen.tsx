@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
@@ -34,6 +35,18 @@ import { useExceptions } from './use-exceptions.hook';
 
 const t = managementCopy;
 
+/**
+ * İskelet kutusu karar kartının KENDİ ölçüsünden: iki dolgu + künye + iki satırlık kalem cümlesi
+ * + ölçüm satırı + öneri satırı + düğme + iç aralıklar.
+ */
+const SKELETON_CARD_HEIGHT =
+  operationsTheme.space['2xl'] * 2 +
+  operationsTheme.space.lg * 4 +
+  operationsTheme.text.tag * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text['body-sm'] * operationsTheme.text['lead--line-height'] * 2 +
+  operationsTheme.text.micro * operationsTheme.text['lead--line-height'] * 2 +
+  operationsTheme.size.controlMd;
+
 export function OrderExceptionScreen() {
   const router = useRouter();
   const exceptions = useExceptions();
@@ -50,8 +63,13 @@ export function OrderExceptionScreen() {
       />
 
       {state.status === 'loading' ? (
-        <View style={styles.pending} testID="management-exception-loading">
-          <ActivityIndicator color={operationsTheme.colors.olive} />
+        /* İLK YÜK İSKELETLE (v3 dili) — iki karar kartı yüksekliğinde kutu. */
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[SKELETON_CARD_HEIGHT, SKELETON_CARD_HEIGHT]}
+            label={t.exception.loading}
+            testID="management-exception-loading"
+          />
         </View>
       ) : state.status === 'error' ? (
         <View style={styles.noticeBlock}>
@@ -166,9 +184,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  pending: {
-    paddingTop: operationsTheme.space['8xl'],
-    alignItems: 'center',
+  /* İskelet listenin kenar boşluğunda durur; kartlar aynı yerde doğar. */
+  skeleton: {
+    paddingTop: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space['6xl'],
   },
   noticeBlock: {
     paddingTop: operationsTheme.space['7xl'],
@@ -230,9 +249,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: operationsTheme.radius.control,
   },
+  /* Gölgesiz — v3'te sert gölge yok (ölçüm 30.08). */
   askOpen: {
     backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
   },
   askLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

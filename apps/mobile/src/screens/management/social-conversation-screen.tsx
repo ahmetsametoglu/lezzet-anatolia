@@ -164,6 +164,8 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
           backLabel={managementCopy.common.back}
           testID="management-social-chat-header"
         />
+        {/* Yazışmada iskelet YOK, halka var — gerekçe şikâyet ekranının künyesinde (baloncuğun
+            ne genişliği ne sayısı önceden bilinir; iskelet bir LİSTE kalıbıdır). */}
         <View style={styles.pending}>
           <ActivityIndicator color={operationsTheme.colors.olive} />
         </View>
@@ -579,9 +581,9 @@ const styles = StyleSheet.create({
     paddingVertical: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.control,
   },
+  /* Gölgesiz — v3'te sert gölge yok (ölçüm 30.08). */
   recordEnabled: {
     backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
   },
   recordDisabled: {
     backgroundColor: operationsTheme.colors['disabled-fill'],

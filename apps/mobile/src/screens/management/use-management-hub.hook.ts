@@ -16,13 +16,28 @@ import type { ManagementHub } from '@lezzet/types';
 
 type HubState = { status: 'loading' } | { status: 'error' } | { status: 'ready'; hub: ManagementHub };
 
-export function useManagementHub(): { state: HubState; retry: () => void } {
+interface UseManagementHubResult {
+  state: HubState;
+  retry: () => void;
+  /** Aşağı çekme — ekranı karartmadan tazeler. */
+  refresh: () => void;
+  /** Çekme sürüyor mu. `state` DEĞİL: onu `loading`e çevirmek kartları söküp iskelete geçirirdi. */
+  reloading: boolean;
+}
+
+export function useManagementHub(): UseManagementHubResult {
   const [state, setState] = useState<HubState>({ status: 'loading' });
+  const [reloading, setReloading] = useState(false);
   const generation = useRef(0);
 
-  const load = useCallback(async () => {
+  /*
+    `silent` AŞAĞI ÇEKMENİN ŞARTIDIR (depo hub'ıyla aynı desen): çekme "ekran dursun, üstüne taze
+    veri gelsin" der. Durumu `loading`e çevirmek kartları söker ve yerine iskelet koyar — yani
+    yöneticinin okumakta olduğu kuyruk gözünün önünde kaybolur.
+  */
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
     const run = ++generation.current;
-    setState({ status: 'loading' });
+    if (options.silent !== true) setState({ status: 'loading' });
     const result = await fetchManagementHub();
     if (run !== generation.current) return;
     setState(result.error !== null ? { status: 'error' } : { status: 'ready', hub: result.data });
@@ -32,5 +47,10 @@ export function useManagementHub(): { state: HubState; retry: () => void } {
     void load();
   }, [load]);
 
-  return { state, retry: () => void load() };
+  const refresh = useCallback(() => {
+    setReloading(true);
+    void load({ silent: true }).finally(() => setReloading(false));
+  }, [load]);
+
+  return { state, retry: () => void load(), refresh, reloading };
 }

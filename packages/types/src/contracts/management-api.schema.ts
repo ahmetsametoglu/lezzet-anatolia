@@ -36,6 +36,15 @@ export const DecisionComplaintHeadSchema = z.object({
   /** Son sözü müşteri söyledi — "top bizde" rozeti (`ticket_queue.awaiting_reply`). */
   awaitingReply: z.boolean(),
   lastMessageAt: z.string(),
+  /**
+   * Şikâyetin KENDİ cümlesi — son mesajın kırpılmış önizlemesi, operasyon dilinde çözülmüş
+   * (`previewOf` + `resolveUserText`, kuyruk ekranıyla AYNI kural).
+   *
+   * Tasarımın koyu kartı (v3:2091) müşterinin adını değil DERDİNİ yazıyor ve haklı: yönetici
+   * kartın önünde "bu ne kadar acil" diye karar veriyor, bir ad bunu söylemez. `null` = mesaj
+   * gövdesi okunamadı; kart o hâlde adla yetinir, uydurma bir özet yazmaz.
+   */
+  preview: z.string().nullable(),
 });
 export type DecisionComplaintHead = z.infer<typeof DecisionComplaintHeadSchema>;
 
@@ -44,8 +53,41 @@ export const DecisionExceptionHeadSchema = z.object({
   referenceNo: z.string().nullable(),
   /** Eksik toplanan kalem sayısı — başlık "N kalem eksik" diye kurulsun diye. */
   shortLineCount: z.number().int().positive(),
+  /**
+   * En üstteki eksik kalemin künyesi (v3:2104 "Yoğurtlu Patlıcan 1000 g — depoda 1 adet eksik").
+   * Kart "1 kalem eksik" derken hangi üründen söz ettiğini söylemiyordu; yönetici kararı ürünü
+   * bilmeden veremez. Kalem sayısı birden çoksa kart "+N kalem daha" diye devam eder.
+   */
+  lineTitle: z.string(),
+  missingQty: z.number().int().positive(),
 });
 export type DecisionExceptionHead = z.infer<typeof DecisionExceptionHeadSchema>;
+
+/**
+ * Yakın-SKT kartının künyesi (v3:2113 "Su Böreği · 6 adet · %30 öneri" · "2 gün kaldı").
+ *
+ * Aday listesinin **en acili** — kalan ömrü en az olan parti. Kuyruk bir liste değil yönlendirme
+ * kutusudur (üstteki künye): kart tek örnek gösterir, dökümün tamamı teklif ekranındadır.
+ */
+export const DecisionOfferHeadSchema = z.object({
+  title: z.string(),
+  qty: z.number().int().nonnegative(),
+  /** Son tarihe kalan gün; NEGATİF olabilir — DDM'si geçmiş parti hâlâ satılabilir (motor bilir). */
+  daysLeft: z.number().int(),
+  /** Ayardan gelen öneri oranı — kart "%30 öneri" diyebilsin diye (uydurma bir oran yazılmaz). */
+  discountPercent: z.number(),
+});
+export type DecisionOfferHead = z.infer<typeof DecisionOfferHeadSchema>;
+
+/**
+ * Tedarik kartının künyesi (v3:2121 "Gaziantep · 7 kalem"). Tedarikçisi EŞLENMEMİŞ grup künye
+ * olmaz: o gruptan sipariş açılamıyor ve kartın vaadi "onay bekliyor"du.
+ */
+export const DecisionSupplyHeadSchema = z.object({
+  supplierName: z.string(),
+  lineCount: z.number().int().positive(),
+});
+export type DecisionSupplyHead = z.infer<typeof DecisionSupplyHeadSchema>;
 
 export const ManagementQueueSchema = z.object({
   /** Cevap bekleyen açık talepler (Y1). `head` en taze bekleyen; `null` = alan boş. */
@@ -53,11 +95,17 @@ export const ManagementQueueSchema = z.object({
   /** Eksik toplamalı hazırlıktaki siparişler (Y2 — D1'den düşer, karar admin'in). */
   exceptions: z.object({ count: z.number().int().nonnegative(), head: DecisionExceptionHeadSchema.nullable() }),
   /** Yakın-SKT teklif adayı partiler (Y3). Aday = SKT eşiğin altında ve teklif fiyatı henüz yok. */
-  offers: z.object({ candidateCount: z.number().int().nonnegative() }),
+  offers: z.object({
+    candidateCount: z.number().int().nonnegative(),
+    /** En acil aday (kalan ömrü en az); `null` = alan boş. */
+    head: DecisionOfferHeadSchema.nullable(),
+  }),
   /** Eşik altı tedarik önerisi (Y4) — tedarikçiye gruplu; eşlenmemiş varyant ayrı sayılır. */
   supply: z.object({
     groupCount: z.number().int().nonnegative(),
     unmappedVariantCount: z.number().int().nonnegative(),
+    /** En kalabalık eşlenmiş grup; `null` = onaylanabilir grup yok (yalnız eşlenmemişler var). */
+    head: DecisionSupplyHeadSchema.nullable(),
   }),
   /** Cevap bekleyen WhatsApp konuşmaları (Y6'nın kaynağı — sipariş niyeti bunların içinden çıkar). */
   intents: z.object({ count: z.number().int().nonnegative() }),

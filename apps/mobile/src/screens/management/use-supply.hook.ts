@@ -25,16 +25,22 @@ interface UseSupplyResult {
   drafts: Record<string, DraftState>;
   approve: (group: SupplyGroup) => void;
   retry: () => void;
+  /** Aşağı çekme — listeyi karartmadan tazeler. */
+  refresh: () => void;
+  /** Çekme sürüyor mu (`state` DEĞİL: o listeyi söküp iskelete çevirirdi). */
+  reloading: boolean;
 }
 
 export function useSupply(): UseSupplyResult {
   const [state, setState] = useState<ListState>({ status: 'loading' });
   const [drafts, setDrafts] = useState<Record<string, DraftState>>({});
+  const [reloading, setReloading] = useState(false);
   const generation = useRef(0);
 
-  const load = useCallback(async () => {
+  /* `silent`: aşağı çekmede liste yerinde durur, üstüne taze veri gelir (depo hub'ı emsali). */
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
     const run = ++generation.current;
-    setState({ status: 'loading' });
+    if (options.silent !== true) setState({ status: 'loading' });
     const result = await fetchSupplyGroups();
     if (run !== generation.current) return;
     setState(
@@ -76,5 +82,10 @@ export function useSupply(): UseSupplyResult {
     })();
   };
 
-  return { state, drafts, approve, retry: () => void load() };
+  const refresh = useCallback(() => {
+    setReloading(true);
+    void load({ silent: true }).finally(() => setReloading(false));
+  }, [load]);
+
+  return { state, drafts, approve, retry: () => void load(), refresh, reloading };
 }

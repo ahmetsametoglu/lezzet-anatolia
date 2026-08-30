@@ -1,10 +1,12 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
@@ -48,6 +50,12 @@ import { supplyGroupKey, useSupply } from './use-supply.hook';
 
 const t = managementCopy;
 
+/** İskelet kutusu kalem kartının KENDİ ölçüsünden: iki dolgu + ad satırı + iki künye satırı. */
+const SKELETON_LINE_HEIGHT =
+  operationsTheme.space['2xl'] * 2 +
+  operationsTheme.text['body-sm'] * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.tag * operationsTheme.text['lead--line-height'] * 2;
+
 export function SupplySuggestionScreen() {
   const router = useRouter();
   const supply = useSupply();
@@ -64,8 +72,13 @@ export function SupplySuggestionScreen() {
       />
 
       {state.status === 'loading' ? (
-        <View style={styles.pending} testID="management-supply-loading">
-          <ActivityIndicator color={operationsTheme.colors.olive} />
+        /* İLK YÜK İSKELETLE (v3 dili) — üç kalem kartı yüksekliğinde kutu. */
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[SKELETON_LINE_HEIGHT, SKELETON_LINE_HEIGHT, SKELETON_LINE_HEIGHT]}
+            label={t.supply.loading}
+            testID="management-supply-loading"
+          />
         </View>
       ) : state.status === 'error' ? (
         <View style={styles.errorBlock}>
@@ -87,7 +100,18 @@ export function SupplySuggestionScreen() {
           />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.body} testID="management-supply-suggestion-body">
+        /* AŞAĞI ÇEKİNCE YENİLE: öneri eşik altı stoktan türüyor, kabul/satış oldukça değişiyor. */
+        <ScrollView
+          contentContainerStyle={styles.body}
+          refreshControl={
+            <RefreshControl
+              refreshing={supply.reloading}
+              onRefresh={supply.refresh}
+              {...pullRefreshColors(operationsTheme.colors.olive)}
+            />
+          }
+          testID="management-supply-suggestion-body"
+        >
           {state.groups
             .filter((group) => group.supplierId !== null)
             .map((group) => (
@@ -209,9 +233,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  pending: {
-    paddingTop: operationsTheme.space['8xl'],
-    alignItems: 'center',
+  /* İskelet listenin kenar boşluğunda durur; yükleme bitince kartlar aynı yerde doğar. */
+  skeleton: {
+    paddingTop: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space['5xl'],
   },
   errorBlock: {
     paddingTop: operationsTheme.space['7xl'],
@@ -282,10 +307,11 @@ const styles = StyleSheet.create({
     marginTop: operationsTheme.space.xs,
     borderRadius: operationsTheme.radius.control,
   },
-  /** Koyu CTA (v3:31). Gölgesi mürekkep OLAMAZ (görünmez) — kum gölge (`hard-on-ink`). */
+  /* Koyu CTA (v3:31) — GÖLGESİZ. Eski künye "mürekkebin altında kum gölge" diyordu; ölçüm bunu
+     geçersiz kıldı: v3 tasarımında sert gölge hiç yok (müşteri v3'te 26, operasyon v2'de 3,
+     operasyon v3'te 0) ve `hard-on-ink` durağı v2 kalıntısı olarak `@deprecated`. */
   ctaOpen: {
     backgroundColor: operationsTheme.colors.ink,
-    boxShadow: operationsTheme.shadow['hard-on-ink'],
   },
   ctaDone: {
     backgroundColor: operationsTheme.colors['neutral-bg'],

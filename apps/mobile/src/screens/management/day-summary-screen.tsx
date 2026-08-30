@@ -1,9 +1,11 @@
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { captionOf } from '@/lib/operations/caption';
 import { money } from '@/lib/operations/money';
 import { dateLabelOf } from '@/lib/operations/stamp';
@@ -62,6 +64,25 @@ import { useManagementHub } from './use-management-hub.hook';
 
 const t = managementCopy;
 
+/**
+ * İskelet yükseklikleri kartların KENDİ ölçüsünden türer (bildirimler emsali).
+ *
+ * Koyu ciro kartı: iki dolgu + üstbaşlık + büyük tutar + iç aralık + kırılım satırı.
+ */
+const SKELETON_REVENUE_HEIGHT =
+  operationsTheme.space['4xl'] * 2 +
+  operationsTheme.space.xl +
+  operationsTheme.text.eyebrow * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text['h1-sm'] * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.note * operationsTheme.text['lead--line-height'];
+
+/** Kutucuk sırası: iki dolgu + büyük sayı + iç aralık + künye satırı. */
+const SKELETON_TILE_HEIGHT =
+  operationsTheme.space['2xl'] * 2 +
+  operationsTheme.space.xs +
+  operationsTheme.text['h2-sm'] * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.micro * operationsTheme.text['lead--line-height'];
+
 /** İçgörünün noktası — iyi (zeytin) · izle (terracotta) · kötü (kırmızı). */
 const INSIGHT_COLOR = {
   good: operationsTheme.colors.olive,
@@ -78,7 +99,7 @@ const CHANNEL_LABEL: Partial<Record<string, string>> = {
 
 export function DaySummaryScreen() {
   const router = useRouter();
-  const { state, retry } = useManagementHub();
+  const { state, retry, refresh, reloading } = useManagementHub();
   const workplace = useOperationsWorkplace();
 
   /* Künye GÜN adıdır (+ varsa tesis); gün okunamadıysa (bozuk biçim) ekranın kendi cümlesine
@@ -98,8 +119,14 @@ export function DaySummaryScreen() {
       />
 
       {state.status === 'loading' ? (
-        <View style={styles.pending} testID="management-day-summary-loading">
-          <ActivityIndicator color={operationsTheme.colors.olive} />
+        /* İLK YÜK İSKELETLE (v3 dili): ekranın kendi sırası — koyu ciro kartı, sonra kutucuk
+           ızgarasının iki sırası. Halka bunu tutmaz ve söndüğünde sayfa zıplar. */
+        <View style={styles.skeleton}>
+          <OperationsSkeletonList
+            heights={[SKELETON_REVENUE_HEIGHT, SKELETON_TILE_HEIGHT, SKELETON_TILE_HEIGHT]}
+            label={t.summary.loading}
+            testID="management-day-summary-loading"
+          />
         </View>
       ) : state.status === 'error' ? (
         <View style={styles.errorBlock}>
@@ -112,7 +139,7 @@ export function DaySummaryScreen() {
           />
         </View>
       ) : (
-        <SummaryBody hub={state.hub} />
+        <SummaryBody hub={state.hub} refresh={refresh} reloading={reloading} />
       )}
     </View>
   );
@@ -137,13 +164,23 @@ function SummaryTile({ value, caption, watch = false, testID }: SummaryTileProps
 
 interface SummaryBodyProps {
   hub: ManagementHub;
+  refresh: () => void;
+  reloading: boolean;
 }
 
-function SummaryBody({ hub }: SummaryBodyProps) {
+function SummaryBody({ hub, refresh, reloading }: SummaryBodyProps) {
   const { summary, queue } = hub;
 
   return (
-    <ScrollView contentContainerStyle={styles.body} testID="management-day-summary-body">
+    /* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08): gün özeti GÜNÜN FOTOĞRAFI ve gün ilerledikçe
+       değişiyor; tazelemenin tek yolu ekrandan çıkıp girmekti. */
+    <ScrollView
+      contentContainerStyle={styles.body}
+      refreshControl={
+        <RefreshControl refreshing={reloading} onRefresh={refresh} {...pullRefreshColors(operationsTheme.colors.olive)} />
+      }
+      testID="management-day-summary-body"
+    >
       <View style={styles.revenue} testID="management-summary-revenue">
         <View style={styles.revenueHead}>
           <View style={styles.revenueHeadText}>
@@ -225,9 +262,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
   },
-  pending: {
-    paddingTop: operationsTheme.space['8xl'],
-    alignItems: 'center',
+  /* İskelet gövdeyle AYNI kenar boşluğunda durur; yükleme bitince kartlar yerinde doğar. */
+  skeleton: {
+    paddingTop: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['5xl'],
   },
   errorBlock: {
     paddingTop: operationsTheme.space['7xl'],

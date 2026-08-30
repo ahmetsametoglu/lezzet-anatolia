@@ -87,6 +87,11 @@ export function ComplaintScreen() {
       />
 
       {state.status === 'loading' ? (
+        /* BURADA İSKELET YOK, HALKA VAR — bilinçli. v3'ün ilk-yük dili (`OperationsSkeletonList`)
+           bir LİSTE kalıbıdır: eşit yükseklikte kutular gelecek satırların ölçüsünü tutar. Yazışma
+           öyle değil — baloncuklar en fazla %80 genişlikte, yönü konuşana göre değişiyor ve kaç
+           tane geleceği bilinmiyor. Tam genişlikte kutular çizmek, gelmeyecek bir biçimin sözünü
+           vermek olurdu (yönetimin liste ekranları iskelete geçti, 21.164). */
         <View style={styles.pending} testID="management-complaint-loading">
           <ActivityIndicator color={operationsTheme.colors.olive} />
         </View>
@@ -506,9 +511,10 @@ const styles = StyleSheet.create({
     paddingVertical: operationsTheme.space['2xl'],
     borderRadius: operationsTheme.radius.control,
   },
+  /* Gölgesiz: v3 sert gölgeyi bıraktı (ölçüldü 30.08 — müşteri v3'te 26, operasyon v2'de 3,
+     operasyon v3'te SIFIR). Düğmeyi yüzeyden ayıran şey artık dolgunun kendisi. */
   claimOpen: {
     backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
   },
   /** Üstlenilmiş iş SÖNER: aynı düğme ikinci kez basılacak bir kapı değildir (v2:429). */
   claimDone: {

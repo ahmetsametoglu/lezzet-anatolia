@@ -32,8 +32,14 @@ import type { StaffTicketDetail, TicketOrderRef, TicketQueueItem } from './ticke
   bilmez; web köprüsü kendi `Locale`ünü buraya geçirirken tip zaten aynı üç değeri taşıyor.
 */
 
-/** Kuyruk önizlemesi: ilk satır, kısaltılmış. Ekran taraması için — tam metin detayda okunur. */
-function previewOf(body: string): string {
+/**
+ * Kuyruk önizlemesi: ilk satır, kısaltılmış. Ekran taraması için — tam metin detayda okunur.
+ *
+ * DIŞA AÇIK çünkü ikinci bir tüketicisi var: yönetim hub'ının karar kutusu aynı önizlemeyi
+ * kartına yazıyor (21.164). İkinci bir kırpma kuralı yazmak, aynı kuyruğun iki ekranda iki farklı
+ * uzunlukta görünmesi demekti (CLAUDE §1).
+ */
+export function previewOf(body: string): string {
   const firstLine = body.split('\n')[0]?.trim() ?? '';
   return firstLine.length > 120 ? `${firstLine.slice(0, 119)}…` : firstLine;
 }

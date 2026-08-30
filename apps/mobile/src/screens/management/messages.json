@@ -16,6 +16,7 @@
     "contextEmpty": "Bekleyen karar yok",
     "pulse": "GÜNÜN NABZI",
     "unknown": "—",
+    "loading": "Karar kutusu yükleniyor…",
     "empty": {
       "title": "Karar kutusu boş",
       "body": "Bekleyen karar yok — günün nabzı aşağıda açık."
@@ -29,8 +30,10 @@
     "rows": {
       "complaint": {
         "badge": "CEVAP BEKLİYOR",
-        "meta": "şikâyet · {n} açık",
-        "title": "{who}{ref}",
+        "meta": "{kind} · {n} açık talep",
+        "metaNoHead": "{n} açık talep",
+        "title": "{who}: {preview}",
+        "titleNoPreview": "{who}{ref}",
         "titleNoHead": "{n} açık şikâyet",
         "refPart": " · {ref}",
         "stamp": "son mesaj {stamp}"
@@ -38,18 +41,27 @@
       "exception": {
         "badge": "EKSİK KALEM",
         "noRef": "referanssız",
-        "title": "{lines} kalem eksik toplandı",
-        "titleMore": "{lines} kalem eksik toplandı · +{more} sipariş daha",
+        "metaMoreOrders": " · +{more} sipariş",
+        "title": "{item} — depoda {qty} adet eksik",
+        "titleMoreLines": "{item} — depoda {qty} adet eksik · +{more} kalem daha",
+        "titleNoHead": "{lines} kalem eksik toplandı",
         "action": "motor önerisi hazır — kararı aç"
       },
       "offer": {
         "eyebrow": "YAKIN-SKT TEKLİFİ",
-        "title": "{n} aday parti",
-        "subtitle": "D3’ten · onay bekliyor"
+        "title": "{item} · {qty} adet · %{percent} öneri",
+        "titleNoHead": "{n} aday parti",
+        "subtitle": "{life} · onay bekliyor",
+        "subtitleMore": "{life} · +{more} aday daha",
+        "lifeDays": "{n} gün kaldı",
+        "lifeToday": "bugün son gün",
+        "lifePast": "tavsiye tarihi geçti"
       },
       "supply": {
         "eyebrow": "TEDARİK TASLAĞI",
-        "title": "{groups} grup",
+        "title": "{supplier} · {lines} kalem",
+        "titleNoHead": "{groups} grup",
+        "subtitleMore": "motor önerisi hazır · +{more} grup daha",
         "subtitle": "motor önerisi hazır",
         "subtitleUnmapped": "{unmapped} eşlenmemiş varyant — masada eşleyin"
       }
@@ -122,6 +134,7 @@
   "exception": {
     "title": "Eksik Toplama Kararı",
     "caption": "hazırlık kuyruğundan · karar insanın, öneri motorun",
+    "loading": "Eksik kararı yükleniyor…",
     "order": "{reference} · {customer} · {status}",
     "noRef": "referanssız",
     "status": {
@@ -147,7 +160,7 @@
     "asked": "Soruldu ✓ — talep operasyon kuyruğunda",
     "askedAlready": "Zaten açık bir soru var — operasyon takip ediyor",
     "askStale": "Eksik kapanmış — liste tazelendi",
-    "sendRestNote": "\"Kalanı gönder\" için ayrı bir kayıt yok: depo kısmi hazırlığı sürdürür, fark teslim tarafında netleşir (07.8).",
+    "sendRestNote": "\"Kalanı gönder\" diye ayrı bir kayıt açılmaz: depo kısmi hazırlığı sürdürür, eksik kalan kalem teslimde netleşir.",
     "empty": {
       "title": "Karar bekleyen eksik yok",
       "body": "Hazırlık kuyruğunda eksik toplamalı sipariş kalmadı."
@@ -156,6 +169,7 @@
   "offer": {
     "title": "Yakın-SKT Kampanya Onayı",
     "caption": "aday listesi motordan · satır çıkarılabilir, fiyat düzeltilebilir",
+    "loading": "Aday partiler yükleniyor…",
     "meta": "parti {batch}{warehouse}",
     "noLot": "numarasız",
     "noSuggestion": "—",
@@ -190,6 +204,7 @@
   "supply": {
     "title": "Tedarik Önerisi",
     "caption": "öneri listesi elle de açılır — bildirim tek kapı değil",
+    "loading": "Öneri listesi yükleniyor…",
     "group": "{supplier} · {warehouse}",
     "row": "stok {current} · eşik {threshold} · yolda {incoming} · son alış {lastPurchase}",
     "noPurchase": "—",
@@ -213,6 +228,7 @@
   "summary": {
     "title": "Gün Özeti",
     "caption": "salt okuma · günün fotoğrafı",
+    "loading": "Gün özeti yükleniyor…",
     "revenue": {
       "eyebrow": "CİRO — TESLİM GÜNÜ",
       "orders": "{n} sipariş"
@@ -235,12 +251,13 @@
     },
     "insights": {
       "eyebrow": "YZ İÇGÖRÜSÜ",
-      "empty": "Bugün için üretilmiş içgörü yok — motor bağlandığında bu blok dolacak."
+      "empty": "Günün notu henüz otomatik üretilmiyor."
     }
   },
   "social": {
     "title": "Gelen Kutusu",
     "caption": "{awaiting} cevap bekliyor · {ai} AI'da",
+    "loading": "Gelen kutusu yükleniyor…",
     "draftBadge": "TASLAK ONAY BEKLİYOR",
     "filter": {
       "all": "Tümü",

@@ -78,14 +78,24 @@ function hubData(overrides: {
           hasAttachment: true,
           awaitingReply: true,
           lastMessageAt: '2026-08-26T10:00:00Z',
+          preview: 'İki tepsi su böreği kokuyordu, kuryeye geri verdik.',
         },
       },
       exceptions: {
         count: 1,
-        head: { orderId: '00000000-0000-4000-8000-000000000002', referenceNo: 'LA-26-TEST02', shortLineCount: 2 },
+        head: {
+          orderId: '00000000-0000-4000-8000-000000000002',
+          referenceNo: 'LA-26-TEST02',
+          shortLineCount: 2,
+          lineTitle: 'Yoğurtlu Patlıcan · 1000 g',
+          missingQty: 1,
+        },
       },
-      offers: { candidateCount: 4 },
-      supply: { groupCount: 2, unmappedVariantCount: 1 },
+      offers: {
+        candidateCount: 4,
+        head: { title: 'Su Böreği · tepsi', qty: 6, daysLeft: 2, discountPercent: 30 },
+      },
+      supply: { groupCount: 2, unmappedVariantCount: 1, head: { supplierName: 'Gaziantep Baklava', lineCount: 7 } },
       intents: { count: 2 },
       ...overrides.queue,
     },
@@ -147,8 +157,80 @@ describe('yönetim hub — karar kutusu', () => {
     }
     // Bağlam satırı çizilen KART SAYISINI söyler — "2 tanesi gün içinde" yarısı sözleşmede yok.
     expect(screen.getByText(t.hub.context.replace('{n}', '4'))).toBeOnTheScreen();
-    // Koyu kartın başlığı müşteri adı + sipariş referansı; şikâyetin metni sözleşmede yok.
-    expect(screen.getByText('Claire Muller · LA-26-TEST01')).toBeOnTheScreen();
+  });
+
+  /*
+    KARTLAR SAYAÇ DEĞİL İŞ SÖYLER (21.163) — dördü de kendi künyesini yazıyor. Eskiden kartlar
+    "1 kalem eksik toplandı" / "4 aday parti" / "2 grup" diyordu; yönetici kararı ürünü, partiyi
+    ve tedarikçiyi bilmeden veremez (tasarım v3:2091-2126 üçünü de yazıyor).
+  */
+  it('dört kart da künyesini yazar: şikâyetin cümlesi · ürün · parti · tedarikçi', async () => {
+    routeHub(() => ok(hubData()));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(
+      screen.getByText('Claire Muller: İki tepsi su böreği kokuyordu, kuryeye geri verdik.'),
+    ).toBeOnTheScreen();
+    expect(screen.getByText('Yoğurtlu Patlıcan · 1000 g — depoda 1 adet eksik · +1 kalem daha')).toBeOnTheScreen();
+    expect(screen.getByText('Su Böreği · tepsi · 6 adet · %30 öneri')).toBeOnTheScreen();
+    expect(screen.getByText('2 gün kaldı · +3 aday daha')).toBeOnTheScreen();
+    expect(screen.getByText('Gaziantep Baklava · 7 kalem')).toBeOnTheScreen();
+  });
+
+  /*
+    KÜNYE OKUNAMAZSA SAYAÇ CÜMLESİ KALIR — uydurma ürün adı yazılmaz. Sözleşme künyeyi
+    `nullable` bıraktı (kalemsiz istisna, adsız tedarikçi, fiyatsız parti mümkün) ve ekranın o
+    hâlde susmaması gerekiyor: kapı yine açık, cümle yalnız daha az şey söylüyor.
+  */
+  it('künye yoksa kart eski sayaç cümlesine düşer', async () => {
+    routeHub(() =>
+      ok(
+        hubData({
+          queue: {
+            complaints: { count: 3, head: null },
+            exceptions: { count: 2, head: null },
+            offers: { candidateCount: 4, head: null },
+            supply: { groupCount: 2, unmappedVariantCount: 0, head: null },
+            intents: { count: 2 },
+          },
+        }),
+      ),
+    );
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByText('3 açık şikâyet')).toBeOnTheScreen();
+    expect(screen.getByText('4 aday parti')).toBeOnTheScreen();
+    expect(screen.getByText('2 grup')).toBeOnTheScreen();
+  });
+
+  /*
+    NEGATİF GÜN "SÜRESİ GEÇTİ" DEĞİL: kuyruğa yalnız satılabilir aday giriyor (`can_offer`), yani
+    tarihi geçmiş olan tek küme DDM'si geçmiş partilerdir. "Süresi geçti" demek, satılabilir malı
+    imhalık malla aynı cümleye koymak olurdu.
+  */
+  it('tavsiye tarihi geçmiş aday, imhalık gibi yazılmaz', async () => {
+    routeHub(() =>
+      ok(
+        hubData({
+          queue: {
+            complaints: { count: 0, head: null },
+            exceptions: { count: 0, head: null },
+            offers: {
+              candidateCount: 1,
+              head: { title: 'Fıstıklı Kek · 90 g', qty: 8, daysLeft: -2, discountPercent: 30 },
+            },
+            supply: { groupCount: 0, unmappedVariantCount: 0, head: null },
+            intents: { count: 0 },
+          },
+        }),
+      ),
+    );
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByText('tavsiye tarihi geçti · onay bekliyor')).toBeOnTheScreen();
   });
 
   it('SIFIR sayılı alan HİÇ çizilmez — ölü kart yok', async () => {
@@ -157,8 +239,8 @@ describe('yönetim hub — karar kutusu', () => {
         hubData({
           queue: {
             exceptions: { count: 0, head: null },
-            offers: { candidateCount: 0 },
-            supply: { groupCount: 0, unmappedVariantCount: 0 },
+            offers: { candidateCount: 0, head: null },
+            supply: { groupCount: 0, unmappedVariantCount: 0, head: null },
             intents: { count: 0 },
           },
         }),

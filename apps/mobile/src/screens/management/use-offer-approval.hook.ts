@@ -34,6 +34,10 @@ interface UseOfferApprovalResult {
   setPrice: (stockId: string, value: string) => void;
   submit: () => void;
   retry: () => void;
+  /** Aşağı çekme — listeyi karartmadan tazeler. */
+  refresh: () => void;
+  /** Çekme sürüyor mu (`state` DEĞİL: o listeyi söküp iskelete çevirirdi). */
+  reloading: boolean;
 }
 
 export function useOfferApproval(): UseOfferApprovalResult {
@@ -43,11 +47,14 @@ export function useOfferApproval(): UseOfferApprovalResult {
   const [failures, setFailures] = useState<Record<string, OfferOpenResult['status']>>({});
   const [sending, setSending] = useState(false);
   const [lastOpenedCount, setLastOpenedCount] = useState<number | null>(null);
+  const [reloading, setReloading] = useState(false);
   const generation = useRef(0);
 
-  const load = useCallback(async () => {
+  /* `silent`: aşağı çekmede liste yerinde durur (depo hub'ı emsali) — operatörün yazdığı fiyatlar
+     zaten korunuyor (alttaki `setPrices` künyesi), ekranı karartmak o korumayı görünmez kılardı. */
+  const load = useCallback(async (options: { silent?: boolean } = {}) => {
     const run = ++generation.current;
-    setState({ status: 'loading' });
+    if (options.silent !== true) setState({ status: 'loading' });
     const result = await fetchOfferCandidates();
     if (run !== generation.current) return;
     if (result.error !== null || result.data === null) {
@@ -116,5 +123,10 @@ export function useOfferApproval(): UseOfferApprovalResult {
     setPrice: (stockId, value) => setPrices((current) => ({ ...current, [stockId]: value })),
     submit,
     retry: () => void load(),
+    refresh: () => {
+      setReloading(true);
+      void load({ silent: true }).finally(() => setReloading(false));
+    },
+    reloading,
   };
 }
