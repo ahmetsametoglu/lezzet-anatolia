@@ -68,7 +68,7 @@
         "title": "Transfer",
         "some": "{ref} yolda",
         "someMany": "{ref} · {n} transfer yolda",
-        "none": "yolda transfer yok",
+        "none": "kabul bekleyen transfer yok",
         "unknown": "okunamadı"
       },
       "return": {
@@ -449,13 +449,13 @@
     "loading": "Gelen transferler yükleniyor…",
     "error": {
       "title": "Transfer listesi yüklenemedi",
-      "body": "Bağlantı ya da sunucu sorunu — sayım yazılmadı."
+      "body": "Hangi transferin yolda olduğu görünmeden rampada sayım yapılmaz — sayım yazılmadı."
     },
     "empty": {
-      "title": "Yolda transfer yok",
-      "body": "Başka depo sevk ettiğinde burada görünür."
+      "title": "Kabul bekleyen transfer yok",
+      "body": "Başka depo sana sevk ettiğinde burada görünür. Bu liste yalnız GELEN transferleri gösterir — bu depodan çıkan sevkiyatlar masaüstündeki Depolar ekranında izlenir."
     },
-    "queueHeading": "GELEN TRANSFERLER — BİRİNİ SEÇ",
+    "queueHeading": "GELEN — KABUL BEKLİYOR",
     "caption": "{ref} · yolda",
     "queueLines": "{n} kalem · {date}",
     "heading": "RAMPADA SAY — GELEN ADEDİ GİR",
@@ -478,7 +478,10 @@
       "in_transit": "yolda",
       "received": "kabul edildi",
       "cancelled": "iptal"
-    }
+    },
+    "queueOpen": "kabule başla →",
+    "queueMore": "+{n} kalem daha",
+    "queueFootnote": "Transfer kabulü mal kabulle aynı akıştır: SKT ve lot yeniden yazılmaz, gönderen partiler taşınır."
   },
   "return": {
     "title": "Kurye Dönüşü Kabulü",

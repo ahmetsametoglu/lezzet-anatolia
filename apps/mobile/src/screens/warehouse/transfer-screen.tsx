@@ -35,6 +35,13 @@ import { useWarehouseStatus } from './warehouse-status';
 
 const t = warehouseCopy;
 
+/**
+ * Kartta gösterilen kalem sayısı (v3:1106'nın üç satırı). Kart bir LİSTE DEĞİL, "içeride ne var"
+ * cümlesidir — dördüncü satır kartı listeye çevirir ve kuyruğun kendisi ekrandan taşar. Kırpılan
+ * kalem sayısı ayrıca yazılır: sessiz kırpma, eksik bir kabule hazırlanmak olurdu.
+ */
+const PREVIEW_LINES = 3;
+
 export function TransferScreen() {
   const router = useRouter();
   const transferState = useTransfer();
@@ -116,18 +123,49 @@ export function TransferScreen() {
               accessibilityLabel={row.referenceNo}
               testID={`warehouse-transfer-row-${row.transferId}`}
             >
-              <View style={styles.rowBody}>
-                <Text style={styles.rowTitle}>{row.referenceNo}</Text>
-                <Text style={styles.rowSub}>
-                  {fillCopy(t.transfer.queueLines, {
-                    n: String(row.lines.length),
-                    date: shortDate(row.dispatchedAt.slice(0, 10)) ?? row.dispatchedAt,
-                  })}
-                </Text>
+              <View style={styles.queueHead}>
+                <View style={styles.rowBody}>
+                  <Text style={styles.rowTitle}>{row.referenceNo}</Text>
+                  <Text style={styles.rowSub}>
+                    {fillCopy(t.transfer.queueLines, {
+                      n: String(row.lines.length),
+                      date: shortDate(row.dispatchedAt.slice(0, 10)) ?? row.dispatchedAt,
+                    })}
+                  </Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
               </View>
-              <Text style={styles.chevron}>›</Text>
+
+              {/*
+                KALEM ÖNİZLEMESİ (v3:1106) — kart artık ne geldiğini de söylüyor. Depocu rampaya
+                inmeden "bu transferde ne var" sorusunu cevaplayabilmeli; referans + kalem SAYISI
+                o soruyu cevaplamıyordu.
+
+                İLK ÜÇ: şablonun sayısı. Kart bir liste değil, "içeride ne var" cümlesi — dördüncü
+                satır kartı listeye çevirir ve kuyruğun kendisi ekrandan taşardı. Kalan varsa
+                söyleniyor: kırpmayı sessizce yapmak, eksik bir kabule hazırlanmak olurdu.
+              */}
+              <View style={styles.queuePreview}>
+                {row.lines.slice(0, PREVIEW_LINES).map((line) => (
+                  <View key={line.lineId} style={styles.previewRow}>
+                    <Text style={styles.previewName} numberOfLines={1}>
+                      {line.name}
+                    </Text>
+                    <Text style={styles.previewQty}>{line.dispatchedQty}</Text>
+                  </View>
+                ))}
+                {row.lines.length <= PREVIEW_LINES ? null : (
+                  <Text style={styles.previewMore}>
+                    {fillCopy(t.transfer.queueMore, { n: String(row.lines.length - PREVIEW_LINES) })}
+                  </Text>
+                )}
+              </View>
+
+              <Text style={styles.queueOpen}>{t.transfer.queueOpen}</Text>
             </PressableSurface>
           ))}
+
+          <Text style={styles.queueFootnote}>{t.transfer.queueFootnote}</Text>
         </ScrollView>
       </View>
     );
@@ -227,14 +265,64 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space.sm,
   },
+  /* Satır artık KART (v3:1097): kalem önizlemesi bir çizginin altında künyeye karışırdı. */
   queueRow: {
+    gap: operationsTheme.space.lg,
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space['2xl'],
+    paddingHorizontal: operationsTheme.space['2xl'],
+  },
+  queueHead: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.xl,
-    paddingVertical: operationsTheme.space['3xl'],
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+  },
+  /** Kalem önizlemesi — gömülü blok, kartın "içeride ne var" cümlesi. */
+  queuePreview: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+  },
+  previewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
+  },
+  previewName: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.body,
+  },
+  previewQty: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.ink,
+  },
+  /** Kırpma SESSİZ DEĞİL: kalan kalem sayısı yazılır — eksik bir kabule hazırlanılmasın. */
+  previewMore: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space['2xs'],
+  },
+  queueOpen: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  queueFootnote: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space.lg,
   },
   lineRow: {
     flexDirection: 'row',

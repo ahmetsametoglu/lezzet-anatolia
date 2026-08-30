@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { TransferScreen } from './transfer-screen';
-import { inboundTransfer } from './warehouse-fixture';
+import { inboundTransfer, STOCK_A } from './warehouse-fixture';
 import { resetWarehouseStatus } from './warehouse-status';
 
 /*
@@ -76,6 +76,43 @@ describe('D5 · rampada sayım', () => {
     await renderTransfer();
 
     expect(screen.getByTestId('warehouse-transfer-empty')).toBeOnTheScreen();
+  });
+
+  /*
+    KART ÖNİZLEMESİ (v3:1106) — referans + kalem SAYISI "bu transferde ne var" sorusunu
+    cevaplamıyordu; depocu rampaya inmeden görebilmeli. Kart bir LİSTE DEĞİL: ilk üç satır çizilir
+    ve KIRPILAN kalem sayısı ayrıca yazılır — sessiz kırpma, eksik bir kabule hazırlanmak olurdu.
+  */
+  it('kart ilk üç kalemi gösterir ve KIRPMAYI söyler', async () => {
+    withTransfers([
+      inboundTransfer({
+        lines: [1, 2, 3, 4, 5].map((n) => ({
+          lineId: `00000000-0000-4000-8000-00000000008${n}`,
+          sourceStockId: STOCK_A,
+          name: `Ürün ${n}`,
+          dispatchedQty: n,
+          receivedQty: null,
+        })),
+      }),
+      inboundTransfer({ transferId: '00000000-0000-4000-8000-000000000052', referenceNo: 'TRF-B' }),
+    ]);
+
+    await renderTransfer();
+
+    const kart = screen.getByTestId(`warehouse-transfer-row-${TRANSFER.transferId}`);
+    expect(kart).toHaveTextContent(/Ürün 1/);
+    expect(kart).toHaveTextContent(/Ürün 3/);
+    expect(kart).not.toHaveTextContent(/Ürün 4/);
+    expect(kart).toHaveTextContent(/\+2 kalem daha/);
+    expect(kart).toHaveTextContent(/kabule başla/);
+  });
+
+  it('üç ya da daha az kalemde KIRPMA satırı hiç doğmaz', async () => {
+    withTransfers([TRANSFER, inboundTransfer({ transferId: '00000000-0000-4000-8000-000000000052', referenceNo: 'TRF-B' })]);
+
+    await renderTransfer();
+
+    expect(screen.getByTestId(`warehouse-transfer-row-${TRANSFER.transferId}`)).not.toHaveTextContent(/kalem daha/);
   });
 
   it('BOŞ satır kabulü bloklar — CTA kapalı ve sebebini söyler', async () => {

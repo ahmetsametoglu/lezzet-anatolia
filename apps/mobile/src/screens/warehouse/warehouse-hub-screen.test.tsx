@@ -245,8 +245,11 @@ describe('depo hub', () => {
     // Okunamayan kuyruk özet kartında da "—": iki sayı birden bilinmiyor.
     expect(screen.getByTestId('warehouse-hub-overview-orders')).toHaveTextContent('—');
     expect(screen.getByTestId('warehouse-hub-overview-half')).toHaveTextContent('—');
-    // Öteki okuma ayakta: "yolda transfer yok" bir GERÇEKTİR, okunamamış değil.
-    expect(screen.getByTestId('warehouse-hub-transfer')).toHaveTextContent(/yolda transfer yok/);
+    /* Öteki okuma ayakta ve cümlesi ÖLÇTÜĞÜ ŞEYİ söylüyor (30.08): uç yalnız GELEN transferleri
+       döndürüyor, o yüzden boşluk "yolda transfer yok" değil "kabul bekleyen transfer yok".
+       Ölçüldü — yerel veride iki transfer yolda ama ikisi de bu depodan ÇIKIYOR; eski cümle
+       "hiçbir şey yolda değil" diye okunuyordu ve yanlıştı. */
+    expect(screen.getByTestId('warehouse-hub-transfer')).toHaveTextContent(/kabul bekleyen transfer yok/);
   });
 
   it('kuyruk BOŞSA kart "kuyruk boş" der ve önizleme hiç doğmaz', async () => {

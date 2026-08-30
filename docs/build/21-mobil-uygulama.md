@@ -7350,3 +7350,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Hub jest **17/17** (ikisi yeni: açık bölüme çıkış, tek bölümlüde çıkışsızlık) ·
   mobil paket **960/960**; typecheck · lint · knip yeşil; **cihazda gözle doğrulandı** — muhasebe
   rolüyle (depo + para) girildi, yalnız "Para bölümüne geç" çizildi.
+
+- [x] (21.146) **TRANSFER v3 — kart ne geldiğini söylüyor, boşluk ölçtüğünü söylüyor** (v3:1067-1152)
+  `touches:` `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,messages.json,transfer-screen.test.tsx,warehouse-hub-screen.test.tsx}`
+
+  **Durum (30.08).** Kuyruk satırı KART oldu ve **ne geldiğini** de söylüyor: ilk üç kalem +
+  adetleri, sonra "kabule başla →". Kart bir LİSTE DEĞİL, "içeride ne var" cümlesi — dördüncü satır
+  kartı listeye çevirir ve kuyruğun kendisi ekrandan taşardı. **Kırpma SESSİZ DEĞİL**: kalan kalem
+  sayısı yazılıyor, çünkü sessiz kırpma eksik bir kabule hazırlanmak olurdu.
+
+  **CİHAZ + VERİTABANI ÖLÇÜMÜ BİR YANLIŞ YAKALADI.** Ekran "Yolda transfer yok" diyordu. Veriye
+  baktım: **iki transfer yolda**, ama ikisi de bu depodan ÇIKIYOR (Strasbourg → Kehl) ve uç yalnız
+  GELENİ döndürüyor. Cümle "hiçbir şey yolda değil" diye okunuyordu ve yanlıştı — depocu çıkan
+  sevkiyatlarını yokmuş sanırdı. Metin artık ölçtüğü şeyi söylüyor: "Kabul bekleyen transfer yok",
+  ve hangi listenin gösterildiği açıkça yazılı. Aynı düzeltme hub'ın D5 alt metnine de gitti.
+
+  **İki bölüm yazılamadı, uyuşmazlık defterine geçti:** şablonun **YOLDA** (çıkan) ve **SON
+  KAPANANLAR** bölümleri; uç yalnız geleni döndürüyor. Satırlardaki depo ADLARI da yok
+  (`fromWarehouseId` uuid) — uyuşmazlık #1'in aynı ailesi.
+
+  **Doğrulama.** Transfer jest **8/8** (ikisi yeni: üç kalemlik önizleme + kırpma satırı, kırpma
+  yokken satırın hiç doğmaması) · depo jest **161/161**; typecheck · lint · knip yeşil; **cihazda
+  boş hâl gözle doğrulandı** — dolu kart yerel veride yok (gelen transfer bulunmuyor), önizleme
+  jest'le sınandı.

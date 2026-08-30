@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 10/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 11/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -413,6 +413,25 @@ içeriği artık şablonunkiyle bire bir.
 
 ---
 
+## 30.08 gece — Faz 2 · Ekran 11: Transfer ✅
+
+**Ne değişti.** Kuyruk satırı KART oldu ve artık **ne geldiğini** de söylüyor: ilk üç kalem +
+adetleri, sonra "kabule başla →". Kırpma **sessiz değil** — kalan kalem sayısı yazılıyor; sessiz
+kırpma, eksik bir kabule hazırlanmak olurdu. Bölüm başlığı "GELEN — KABUL BEKLİYOR", altında
+akışın kuralını anlatan dipnot.
+
+**Cihaz + veritabanı ölçümü bir YANLIŞ yakaladı.** Ekran "Yolda transfer yok" diyordu; veriye
+baktım: **iki transfer yolda**, ama ikisi de bu depodan **ÇIKIYOR** (Strasbourg → Kehl) ve uç
+yalnız GELENİ döndürüyor. Yani cümle "hiçbir şey yolda değil" diye okunuyordu ve yanlıştı. Metin
+artık ölçtüğü şeyi söylüyor: **"Kabul bekleyen transfer yok"** + hangi listenin gösterildiği açık.
+Aynı düzeltme hub'ın D5 alt metnine de gitti.
+
+**Doğrulama.** Transfer jest **8/8** (ikisi yeni) · depo jest **161/161** · statik kapılar yeşil ·
+**cihazda boş hâl gözle doğrulandı** (dolu kart yerel veride yok — gelen transfer bulunmuyor;
+önizleme jest'le sınandı).
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -423,6 +442,7 @@ Burada durulmaz — yazılır, geçilir.
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
 | 2 | 01 Depo Hub · 10 Kapsam | **DARALDI (30.08).** Ekranın içeriği artık şablonunkiyle birebir (gerekçe, çıkış yolları, karar dipnotu). Kalan tek fark yerleşim: şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
+| 10 | 11 Transfer | Şablon ÜÇ bölüm gösteriyor: **GELEN · YOLDA · SON KAPANANLAR**, ve satırlarda depo ADLARI ("Paris Depo → Strasbourg Merkez"). Uç yalnız GELEN transferleri döndürüyor; çıkan ve kapanan listesi yok, `InboundTransferSchema` da yalnız `fromWarehouseId` (uuid) taşıyor, ad yok — uyuşmazlık #1'in aynı ailesi. | Açık — yalnız GELEN yazıldı, boşluk metni bunu açıkça söylüyor. Çözümü: çıkan + kapanan uçları ve yanıtlara depo adı. |
 | 9 | 09 Yazıcılar | Şablon seçili yazıcının **bağlantı durumunu** ("bağlı · Wi-Fi") ve bir **"test bas"** eylemini gösteriyor. Yazıcı sözleşmesi yalnız `id · name · purpose · address · model · labelSize` taşıyor — durum alanı yok; test basımı da örnek bir etiket yükü gerektirir (basım hattı gerçek etiket PNG'siyle çalışıyor). | Açık — ikisi de yazılmadı. Çözümü: yazıcı yanıtına erişilebilirlik durumu + sunucuda bir örnek etiket ucu. |
 | 8 | 08 Sayım/düzeltme | Şablon boş hâlde İKİ çıkış yolu veriyor: "Yakın-SKT turuna git" ve **"Parti etiketini okut"**. İkincisi yazılamadı — parti etiketini çözen bir uç YOK; `codes/resolve` barkod/SKU/tedarikçi kodunu **varyanta** çeviriyor, partiye değil. | Açık — yalnız birinci yol yazıldı. Çözümü tek alan: parti kodunu (P-0698) çözen bir uç. |
 | 7 | 06 Siparişsiz kabul | Şablon satırda **"SKU 601202"** yazıyor. SKU **aramadan** eklenen satırda var (`VariantSearchRowSchema.sku`) ama **okutmadan** eklenende YOK — `ResolveCodeResponseSchema` sku döndürmüyor. Bir kısmında kod olan, bir kısmında olmayan satır, depocuya "bu ürünün kodu yok mu" diye sordururdu. | Açık — hiç yazılmadı. Çözümü tek alan: okutma çözümünün yanıtına `sku`. |
