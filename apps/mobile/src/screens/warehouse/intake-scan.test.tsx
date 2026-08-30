@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import type { ResolveCodeResponseSchema } from '@lezzet/types';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 import { IntakeScreen } from './intake-screen';
 import { intakeRow } from './warehouse-fixture';
@@ -149,6 +149,53 @@ describe('D2 · tarama akışı', () => {
     // İkinci koli aynı satıra TOPLANIR (6 + 6).
     await scanOnce();
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('12'));
+  });
+
+  /*
+    iOS'TA ADET ÇEKMECESİ OKUTMA PENCERESİ KAPANMADAN AÇILMAZ (arıza, kullanıcı bulgusu 30.08).
+
+    Belirti cihazda şuydu: koli okutulunca satır doğru sayıyor ama çekmece açılmıyor — ekran
+    griye dönüyor, panel ekranın altında asılı kalıyordu. Sebep iki `Modal`ın çakışması: iOS
+    birincinin kapanış animasyonu sürerken ikincisini sunmuyor, panelin yerleşimi hiç ölçülmüyor
+    ve `BottomSheet`in ölçüme bağlı açılışı hiç tetiklenmiyor.
+
+    Test kapıyı ölçüyor, animasyonu değil: sinyal geldiği hâlde çekmece açılmamalı; okutma
+    penceresi `onDismiss` ile kalktığını söyleyince açılmalı. Jest `Platform.OS`u 'ios' koşuyor,
+    yani bu dal testte gerçekten yürüyor.
+  */
+  it('iOS: çekmece okutma penceresi KALKMADAN açılmaz, kalkınca açılır', async () => {
+    withScan({
+      status: 'found',
+      variantId: ROW_A.variantId,
+      productName: ROW_A.productName,
+      variantLabel: ROW_A.variantLabel,
+      kind: 'case',
+      qtyPerCode: 6,
+      source: 'barcode',
+      sku: 'SKU-4120',
+      dateType: 'DDM' as const,
+      shelfLifeDays: 360,
+      imageUrl: null,
+      caseSizes: [],
+    });
+    await renderIntake();
+
+    /* Kapanış kancası pencere AÇIKKEN alınıyor: `Modal` kapalıyken hiç çizilmiyor ve prop'una
+       erişilemiyor. Kanca `useCallback` ile sabit, okutmadan sonra da aynı işi yapar. */
+    await fireEvent.press(screen.getByTestId('warehouse-intake-scan-cta'));
+    const dismissScanWindow = screen.getByTestId('warehouse-intake-scan').props.onDismiss;
+    await fireEvent.press(screen.getByLabelText('Paket'));
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/codes/resolve'))).toBe(true));
+
+    // Satır SAYDI — okutmanın kendisi beklemiyor, bekleyen yalnız çekmece.
+    await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('6'));
+    expect(screen.queryByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}`)).toBeNull();
+
+    // Pencere ekrandan kalktı: `Modal.onDismiss` çağıranın kapısını açar.
+    await act(async () => {
+      dismissScanWindow();
+    });
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}`)).toBeTruthy());
   });
 
   it('SKU eşleşmesi kaynağını SÖYLER — barkod kadar kesin değil, cümle bunu taşır', async () => {

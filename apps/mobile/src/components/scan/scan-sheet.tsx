@@ -88,6 +88,16 @@ interface ScanSheetProps {
   /** Vizörün altındaki kısa yönerge; verilmezse satır çizilmez. */
   hint?: string;
   onClose: () => void;
+  /**
+   * Pencere EKRANDAN TAMAMEN KALKTIĞINDA (iOS) — `Modal.onDismiss`.
+   *
+   * Okutmadan sonra ikinci bir `Modal` açan çağıranlar için var: iOS bir modal'ın kapanış
+   * animasyonu sürerken ikincisini SUNMAZ; ikincisi monte olur, örtüsü çizilir ama panelin
+   * yerleşimi hiç ölçülmez ve açılış animasyonu tetiklenmez (ölçüldü 30.08 — mal kabulde koli
+   * okutulunca adet çekmecesi ekranın altında asılı kalıyordu). Android'de bu sınırlama yok ve
+   * `onDismiss` de çağrılmaz; çağıran orada beklemeden açar.
+   */
+  onDismiss?: () => void;
   /** Ham kod — çözüm ve karar çağıranın. Teslimden sonra kilit kapanır (künye). */
   onScan: (code: string) => void;
   /**
@@ -100,7 +110,7 @@ interface ScanSheetProps {
   testID?: string;
 }
 
-export function ScanSheet({ open, title, hint, onClose, onScan, devCodes, testID }: ScanSheetProps) {
+export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCodes, testID }: ScanSheetProps) {
   // Modül ömür boyu ya hep var ya hep yok — memo bir kez yüklenir, render dalları sabit kalır.
   const camera = useMemo(loadCameraModule, []);
   const locked = useRef(false);
@@ -125,7 +135,7 @@ export function ScanSheet({ open, title, hint, onClose, onScan, devCodes, testID
   );
 
   return (
-    <Modal visible={open} animationType="slide" onRequestClose={onClose} testID={testID}>
+    <Modal visible={open} animationType="slide" onRequestClose={onClose} onDismiss={onDismiss} testID={testID}>
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>

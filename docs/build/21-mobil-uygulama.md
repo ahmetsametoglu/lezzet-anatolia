@@ -8673,3 +8673,94 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Kalanların her biri `OperationsScreenScroll`e (ya da `FlatList` ise
   `useOperationsScrollBinding()`e) çevrilecek; başlığı kaydırıcının dışında olan ekranlarda
   başlık İÇERİ alınacak — dışarıda kalırsa mikro başlık inince altında asılı kalıyor.
+
+- [x] (21.179) **iOS'TA ADET ÇEKMECESİ AÇILMIYORDU — iki `Modal` aynı pencerede** (kullanıcı bulgusu 30.08)
+  `touches:` `apps/mobile/src/components/scan/scan-sheet.tsx` ·
+  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,intake-scan.test.tsx}`
+
+  **Belirti (kullanıcının tarifi, simülatörde birebir üretildi).** Mal kabulde koli okutulunca
+  satır doğru sayıyor — "24 ADET", künye "barkod okutuldu", içinde "koli barkodu · bir okutma =
+  24 adet" kartı — ama adet çekmecesi AÇILMIYOR: ekran griye dönüyor, panel ekranın altında bir
+  şerit hâlinde asılı kalıyor. Yalnız iOS'ta.
+
+  **Sebep ÖLÇÜLDÜ, teori kurulmadı.** Okutma penceresi (`ScanSheet`) de adet çekmecesi
+  (`BottomSheet`) de birer `Modal` ve ikincisi birincinin kapanış animasyonu SÜRERKEN sunuluyor.
+  iOS bunu yapmaz: ikinci modal monte olur, örtüsü çizilir, ama panelin yerleşimi hiç ölçülmez —
+  `BottomSheet`in açılışı ölçüme bağlı olduğu için (`onPanelLayout` → `animateOpen`) animasyon
+  hiç başlamaz ve panel `offset = yükseklik` konumunda, yani ekranın altında kalır. Aynı arıza
+  sınıfı projede zaten kayıtlıydı (`staff-menu.tsx` künyesi: *"Modal'ın kapanış animasyonu
+  sürerken kök yığın değişince…"*), yalnız bu yolda görülmemişti.
+
+  **Çözüm bir KAPI, bir gecikme değil.** `ScanSheet` artık `Modal.onDismiss`i çağırana açıyor
+  (pencere ekrandan TAMAMEN kalktığında); mal kabul okutma sinyalini satıra ancak o andan sonra
+  geçiriyor. Sabit bir `setTimeout` yazılmadı — o bir tahmin olurdu ve yavaş cihazda yine
+  tutmazdı. Android'de sınırlama yok ve `onDismiss` de çağrılmaz: kapı orada en baştan açık
+  (`Platform.OS !== 'ios'`).
+
+  **Doğrulama.** iOS simülatöründe akış baştan yürütüldü (mal kabul → sevkiyat → koli okut →
+  Koli ×24): çekmece tam açıldı — "24 paket · toplam", "1 × 24 = 24 paket", koli satırı seçili.
+  **Testi yazıldı** (`intake-scan.test.tsx`): sinyal geldiği hâlde çekmece açılmamalı, pencere
+  kalktığını söyleyince açılmalı — jest `Platform.OS`u 'ios' koştuğu için dal gerçekten yürüyor.
+  Depo + komponent paketi **435/435**, lint temiz.
+
+- [x] (21.180) **DURAK EKRANI KİTE DÖNDÜ — çekmece, düğmeler, adım kartları** (v3:17 + `00-ortak:477` · kullanıcı bulguları 30.08)
+  `touches:` `apps/mobile/src/components/ui/{primary-button.tsx,secondary-button.tsx}` ·
+  `apps/mobile/src/theme/metrics.ts` · `apps/mobile/src/screens/courier/{delivery-screen.tsx,messages.json}`
+
+  **Durum (30.08).** Kullanıcı cihazda durak ekranını tasarımla yan yana koydu: *"buradaki
+  komponentlerin hiçbiri ortak komponent değil… butonların yüksekliği, inputun tipi, bunların
+  hiçbiri benzemiyor."* Ölçüldü ve haklıydı — aynı klasördeki `trip-screen` ve `load-screen`
+  `PrimaryButton` çağırırken bu ekran her düğmeyi elden çiziyordu.
+
+  **SONUÇ PANELİ ÇEKMECE OLDU.** Tasarımda "Ulaşılamadı"/"Kabul etmedi" bir ALT ÇEKMECEDİR
+  (`00-ortak:477`): karartma katmanı, 26 dp üst yarıçap, tutamak, alttan kayan panel. Kodda sayfaya
+  GÖMÜLÜ bir karttı — kurye onu görmek için kaydırmak zorundaydı. Kit (`BottomSheet`) zaten vardı ve
+  kardeş ekranlar onu kullanıyordu; bu ekran kite hiç sormamıştı.
+
+  **KİT İKİ DURAK KAZANDI ve ikisi de tasarımın kendi öğesiydi:**
+  · `PrimaryButton` → `tone="error"` (çekmecenin kırmızı "Onayla — kaydet"i) ve `grow` sayısal
+    (tasarım iki düğmeyi EŞİT paylaştırmıyor: `flex:1` / `flex:1.4` — onaylayan geniş olur).
+  · `SecondaryButton` → `tone="error"` (kapıdaki "Kabul etmedi": kırmızı çerçeve + açık kırmızı
+    zemin). Terracotta'dan ayrı ve ayrı olmalı — o bir UYARI tonu, bu bir RED. Değerler statik
+    sabitten okunuyor (`error-line` yalnız operasyon temasında var, bileşen iki temada birden).
+
+  **ÖLÇÜLER DOLGUDAN DEĞİL KADEMEDEN.** Not girdisi, kanıt düğmeleri, iletişim şeridi ve tutar alanı
+  yüksekliğini `paddingVertical`dan alıyordu — punto ya da satır aralığı değişince hizalar kayıyordu.
+  Hepsi tasarımın kendi değerine bağlandı (`controlMd` 50 · `controlLg` 52 · yeni `controlAmount` 56).
+
+  **ADIM BAŞLIĞI: NUMARA ROZETE ÇIKTI.** `"1 · KANIT — B2B'DE ZORUNLU"` diye metne gömülüydü;
+  tasarım numarayı 22 dp koyu daire içinde ayrı çiziyor. Daire adımı SAYILABİLİR kılıyor — kurye
+  "kaçıncı adımdayım"ı satırı okumadan görüyor. Dört bölüm tek bileşeni paylaşıyor (`StepHeading`);
+  para adımının rozeti terracotta, kartının çerçevesiyle aynı aileden.
+
+  **ADIM BÖLÜMLERİ KART OLDU.** Tasarımda her adım kendi kartında (krem panel · kum çerçeve · 20 dp
+  yarıçap); kodda düz bloklardı ve adımlar birbirine akıyordu. Tahsilat bölümü zaten kartlıydı ve
+  yanındaki iki bölüm ondan farklı bir dilde duruyordu.
+
+  **ARTI/EKSİ SÖKÜLDÜ** (kullanıcı kararı). Tahsilat tutarının yanındaki iki stepper tasarımda YOK.
+  Künyesi *"yuvarlak tutarlarda tek dokunuş"* diyordu ama kapıda tahsil edilen tutar MOTORUN
+  hesabıdır; adım adım artırma onu "pazarlık edilebilir" gibi gösteriyordu. Yerine tasarımın kendi
+  öğesi geldi: tutar solda, `tuş takımı` rozeti sağda — alanın dokunulabilir olduğunu söyleyen tek
+  işaret. Eksik ödeme yolu değişmedi (tuş takımı + "Kısmi" rozeti).
+
+  **ARA VE WHATSAPP YALNIZ İKON** (tasarım: 56×52 kare, metinsiz). Üçü de etiketliyken satır üç eşit
+  parçaya bölünüyordu ve asıl eylem — navigasyon — kayboluyordu. Metin `accessibilityLabel`a taşındı:
+  ekran okuyucu kullanan kurye adı duymaya devam ediyor.
+
+  **METNE GÖMÜLÜ EMOJİ GİTTİ.** `"📷 Kutuyu okut — {n} kaldı"` → kitin `icon` prop'u (`load-screen`in
+  aynı kararı: *"İkon emoji DEĞİL çizgi ikon"*). Okutma düğmesi de çerçeveliden zeytin dolguya döndü
+  (tasarımın `durakOkut`u); ışıma verilmedi — o v3'te yalnız ARACA YÜKLEME ekranının düğmesinde var.
+
+  **CTA ALTI CÜMLE TASARIMINKİ:** `sıra: kanıt → mal → teslim → para` → `Sıra: kanıt → mal → tahsilat`.
+  Eski cümle ekranın kendi başlıklarıyla çelişiyordu (başlık "MAL" ve "TAHSİLAT" derken cümle "teslim"
+  ve "para" diyordu). Eksik adımı söyleyen ekler korundu — tasarım statik bir maket, o hâli göstermiyor.
+
+  **ÇİPLER NÖTR OLDU.** Sebep çipleri `tone="error"` ile kırmızı çiziliyordu; tasarımda seçilmemiş çip
+  beyaz zeminli, koyu metinli bir ÖNERİDİR. Uyarı olan çekmecenin başlığı, çipler yalnız doldurucu.
+
+  **Doğrulama.** `pnpm typecheck` · `lint` · `knip` temiz · birim **1860/1860** · kurye jest
+  **105/105** · mobil kit+kurye **236/236**. Testler yeni davranışa göre güncellendi (çekmece testID'si,
+  stepper'ın YOKLUĞU, rozetli adım başlığı, tasarım metinleri).
+  **BEKLEYEN(21.180):** cihaz turu — `db:refresh` oturumu düşürdüğü için uygulama misafir olarak
+  açıldı; giriş yapıldıktan sonra kutulu bir durakta (bugün `3 kutu`lu durak var) görsel karşılaştırma
+  tekrarlanmalı.

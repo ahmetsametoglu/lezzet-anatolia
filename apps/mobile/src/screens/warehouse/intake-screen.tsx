@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Platform, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // Ömür kararı MOTORDAN: ekran kendi yüzdesini kurmaz — kabul kapısı da aynı motoru çağırıyor ve
 // ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı (`CLAUDE §1`).
@@ -100,6 +100,26 @@ export function IntakeScreen() {
   const intake = useIntake(purchaseOrderId, unplanned);
   const { offline } = useWarehouseStatus();
   const [searchOpen, setSearchOpen] = useState(false);
+
+  /*
+    OKUTMA PENCERESİ KAPANMADAN ADET ÇEKMECESİ AÇILMAZ (arıza, kullanıcı bulgusu 30.08 · iOS).
+
+    Belirti: koli okutulunca satır doğru sayıyor ("24 ADET", "barkod okutuldu") ama adet çekmecesi
+    açılmıyor — ekran griye dönüyor, panel ekranın altında bir şerit hâlinde asılı kalıyor.
+    Ölçüldü: okutma penceresi de (`ScanSheet`) adet çekmecesi de birer `Modal` ve ikincisi
+    birincinin kapanış animasyonu SÜRERKEN sunuluyor. iOS bunu yapmaz: ikinci modal monte olur,
+    örtüsü çizilir, ama panelin yerleşimi hiç ölçülmez — `BottomSheet`in açılışı ölçüme bağlı
+    olduğu için (`onPanelLayout` → `animateOpen`) animasyon hiç başlamaz. Aynı arıza sınıfı
+    projede zaten kayıtlı (`staff-menu.tsx` künyesi: "Modal'ın kapanış animasyonu sürerken…").
+
+    Kapı bu yüzden: okutma sinyali satıra ancak pencere EKRANDAN KALKTIKTAN sonra ulaşır.
+    Android'de bu sınırlama yok ve `Modal.onDismiss` de çağrılmaz — orada kapı en baştan açık.
+  */
+  const [scanReady, setScanReady] = useState(Platform.OS !== 'ios');
+  const releaseScan = useCallback(() => setScanReady(true), []);
+  useEffect(() => {
+    if (Platform.OS === 'ios' && intake.scanOpen) setScanReady(false);
+  }, [intake.scanOpen]);
 
   const header = (
     <OperationsStackHeader
@@ -351,6 +371,7 @@ export function IntakeScreen() {
           title={t.intake.scan.title}
           hint={t.intake.scan.hint}
           onClose={intake.closeScan}
+          onDismiss={releaseScan}
           onScan={intake.handleScan}
           testID="warehouse-intake-scan"
         />
@@ -493,7 +514,7 @@ export function IntakeScreen() {
             state={intake.stateOf(row.variantId)}
             unplanned={unplanned}
             mlorPercent={intake.mlorPercent}
-            justScanned={intake.justScanned === row.variantId}
+            justScanned={scanReady && intake.justScanned === row.variantId}
             onScanConsumed={intake.clearJustScanned}
             lotSuggestions={intake.lotsUsedBy(row.variantId)}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
@@ -578,6 +599,7 @@ export function IntakeScreen() {
         title={t.intake.scan.title}
         hint={t.intake.scan.hint}
         onClose={intake.closeScan}
+        onDismiss={releaseScan}
         onScan={intake.handleScan}
         testID="warehouse-intake-scan"
       />
