@@ -1,4 +1,4 @@
-import { customerColors, operationsAppColors } from '@lezzet/design-tokens';
+import { customerColors } from '@lezzet/design-tokens';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { appMetrics } from '../../theme/metrics';
@@ -31,15 +31,7 @@ describe('BackButton', () => {
     expect(screen.getByTestId('back')).toHaveStyle({ backgroundColor: customerColors['sand-50'] });
   });
 
-  it('operasyon yerleşimi çubuğun ölçüsünü korur, nötr dolgu ve KARE köşe alır (v3)', async () => {
-    await render(<BackButton onPress={jest.fn()} accessibilityLabel="Geri" variant="operations" testID="back" />);
-
-    expect(screen.getByTestId('back')).toHaveStyle({
-      width: appMetrics.size.iconButton,
-      backgroundColor: operationsAppColors['neutral-bg'],
-    });
-    /* v3 daireyi bıraktı: yarıçap kutunun YARISI değil `badge` durağı. Yarım ölçü yazılsaydı
-       (20) düğme yine daire çizerdi ve fark testten kaçardı. */
-    expect(screen.getByTestId('back')).not.toHaveStyle({ borderRadius: appMetrics.size.iconButton / 2 });
-  });
+  /* OPERASYON VARYANTI SÖKÜLDÜ (30.08) ve ölçümü `OperationsIconButton`a taşındı: aynı kutunun
+     iki tarifi vardı (kum kutucuk), biri kitte biri burada. Bu dosya artık YALNIZ müşteri
+     yüzeyinin iki yerleşimini ölçüyor — operasyon temasına hiç uzanmıyor. */
 });

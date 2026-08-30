@@ -168,7 +168,12 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
        uzaklıkta, yani ayrı bir durak açmaya değmez — ayıran şey bu kenarlıktır. */
     expect(composedColors['error-line']).toBe('#e0b9b2');
     expect(composedColors['error-line']).not.toBe(composedColors['terracotta-line']);
-    expect(Object.keys(operationsAppLine)).toEqual(['error-line']);
+    /* UYARI kenarı (30.08) — hata kenarından AYRI bir durak: ikisi farklı şey söylüyor ("bir
+       şey bozuk" ⟷ "bir şey eksik"). `terracotta-line`e bağlanamaz (Δ13/32/4, ikinci kanal
+       eşiğin çok üstünde) ve o zaten turuncu ailenin kenarıdır. */
+    expect(composedColors['warning-line']).toBe('#d9a97f');
+    expect(composedColors['warning-line']).not.toBe(composedColors['error-line']);
+    expect(Object.keys(operationsAppLine)).toEqual(['error-line', 'warning-line']);
   });
 
   it('YARIÇAP: resmî 4\'lü set devralınır, altına yalnız bir durak eklenir', () => {
@@ -195,7 +200,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(fade).toContain(', 0)');
   });
 
-  it('fark/yeni dağılımı sabit: 2 fark + 15 yeni', () => {
+  it('fark/yeni dağılımı sabit: 2 fark + 17 yeni', () => {
     expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(2);
     expect(sharedKeys(baseText, operationsAppText)).toHaveLength(0);
     expect(sharedKeys(baseRadius, operationsAppRadius)).toHaveLength(0);
@@ -206,8 +211,12 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
       Object.keys(operationsAppRadius).length +
       Object.keys(operationsAppShadow).length +
       Object.keys(operationsAppGradient).length;
-    // 2 fark + 15 operasyona-yeni (v3'ün koyu özet kartı dört ton, tonlu kart bir KENAR ekledi)
-    expect(total).toBe(17);
+    /* 2 fark + 17 operasyona-yeni. 30.08'de iki durak açıldı: `shadow.glow` (v3'ün TEK gölge
+       benzeri durağı — yapışkan okutma CTA'sının zeytin ışıması) ve `warning-line` (uyarı
+       kartının kenarı; §4 ölçümünde 9 kullanımı vardı ama durağı açılmamıştı). Sayı bilerek elle
+       yazılıyor — türetilseydi test "kaç durak var"ı ölçmez, kendini ölçerdi; yeni bir durak açan
+       buraya uğrayıp gerekçesini yazmak zorunda kalsın diye böyle. */
+    expect(total).toBe(19);
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {

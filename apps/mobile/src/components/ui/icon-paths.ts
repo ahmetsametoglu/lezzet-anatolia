@@ -102,6 +102,18 @@ export const ICON_PATHS = {
   /* Fişin onay imi (v3:22). Metin "✓" ile çizilemezdi: daire içinde ortalanan bir glif, yazı
      tipinin kendi çizgi yüksekliğine yaslanır ve dairenin merkezinden kayar. */
   check: { paths: ['M5 12.5l4.5 4.5L19 7'] },
+  /* OKUTMA ÇERÇEVESİ (v3 · 02, 05, 06, 08, 17) — dört köşe ayracı ve ortada tarama çizgisi.
+     Emojinin (📷/📄) yerini aldı: emoji cihazdan cihaza başka çiziliyor, tasarımın çizgi
+     kalınlığını taşımıyor ve renk alamıyor — düğmenin zeytin tonunu hiç almıyordu. */
+  scan: {
+    paths: [
+      'M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8',
+      'M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8',
+      'M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16',
+      'M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16',
+      'M4 12h16',
+    ],
+  },
   /* Tuş takımının silme tuşu (v3 · `00-ortak`) — ok ucu ve içindeki çarpı. */
   backspace: { paths: ['M21 5H9l-6 7 6 7h12z', 'M14 9l-4 6M10 9l4 6'] },
 
@@ -156,6 +168,18 @@ export const ICON_PATHS = {
     paths: ['M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2'],
     circles: [[12, 12, 3]],
   },
+
+  /* ── YAZICI KURULUMU (v3 · 09) ───────────────────────────────────────────────────
+     İkisi de 09 ekranından birebir alındı; yardımcı ajan o ekranı yazarken kitte
+     bulamayınca geçici olarak ekranın İÇİNE çizmişti — geometri kitte durmazsa ikinci
+     bir yazıcı ikonu doğar ve ikisi bir gün ayrışır (CLAUDE §1). */
+  /** Yazıcı — kâğıt çıkışı (üst), gövde (`rect`), basılan sayfa (alt). */
+  printer: { paths: ['M6 9V3h12v6', 'M6 16h12v5H6z'], rects: [[3, 9, 18, 7, 2]] },
+  /** SKT alanının takvimi (v3 · 05/06 `openSkt`). `near-expiry` bir SAAT'tir — o "az kaldı"
+      der, bu "bir tarih seçilecek" der; iki ayrı cümle, iki ayrı ikon. */
+  calendar: { paths: ['M8 3v4M16 3v4M3 11h18'], rects: [[3, 5, 18, 16, 3]] },
+  /** Uyarı — daire içinde ünlem. `near-expiry`den AYRI: o bir SAAT, bu bir uyarıdır. */
+  'alert-circle': { paths: ['M12 8v5M12 16.5v.5'], circles: [[12, 12, 9]] },
 } as const satisfies Record<string, IconGeometry>;
 
 /** Kitin tanıdığı ikon adları — `Icon` bunun dışına çıkamaz (yanlış ad derlemede yakalanır). */

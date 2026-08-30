@@ -7774,6 +7774,58 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   başına **hasarlı paket sayısı** (bugün yalnız siparişin tamamına serbest not), **lot adayları**
   (okutma yanıtı lot taşımıyor), **ürünün kutu tipleri** (elle "kaç koli geldi" sayımı için).
 
+
+- [~] (21.161) **OPERASYON KONTROL KİTİ — ölçüm tasarımdan, komponent tek yerden** (kullanıcı kararı 30.08)
+  `touches:` `apps/mobile/src/components/operations/{surface,icon-button,sticky-bar}.tsx` ·
+  `apps/mobile/src/components/ui/{primary-button,secondary-button,text-field}.tsx` ·
+  `packages/design-tokens/src/operations-app.ts` · `apps/mobile/src/theme/metrics.ts` ·
+  `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/application/src/warehouse/variant-search.ts` · `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{warehouse-hub,intake}-screen.tsx`
+
+  **Niçin.** Kullanıcı sordu: *"merkezi komponentler oluşturup onları kullanmadık mı? Her gördüğünüz
+  yerde yeniden input mu tasarladık?"* Ölçtüm — haklıydı. Kit VAR (`components/ui/`) ve müşteri
+  yüzeyi tutarlı tüketiyor (`TextField` 18 dosya · `PrimaryButton` 35 · `SecondaryButton` 11), ama
+  **operasyon yüzeyinin 28 ekranının 0'ı** düğme kitini kullanmıyordu. Sonuç: 5 ham `<TextInput>`
+  **dört ayrı reçeteyle** (kenarlık `ink` / `sand-500`, yazı 400 / **700**), **23** elle yazılmış
+  düğme stil bloğu, **41** elle çizilmiş kart yüzeyi, **34** ikon düğmesi yeri.
+
+  **Sebep yöntemdi, tembellik değil:** tasarım dosyasının kendisinde komponent katmanı YOK — 243
+  tıklanır öğenin hepsi satır içi stil, **89 farklı imza**. Ekranlar tek tek birebir çevrildi ve
+  tasarımdaki tekrar olduğu gibi koda geçti; ortak reçeteyi çıkarma turu hiç yapılmadı.
+
+  **İki yüzey AYNI DİLDE — ölçüldü, bu yüzden ikinci bir kit AÇILMADI.** Müşteri mobil v3 ile
+  operasyon mobil v3: aynı yazı çifti (Karla + Lora), aynı zeytin `#5f7a2c`, aynı `1.5px` çerçeve
+  dilbilgisi, aynı 52 dp düğme boyu; renk katmanında **51 ortak durağın yalnız 2'sinin** değeri
+  farklı (`cream`, `olive-bg`). Fark dil değil **yoğunluk**: girdi 48–50 dp / dolgu 14 / 12,5–13 px
+  (müşteri 54 / 22 / 15). O yüzden fark PROP oldu — `tone` · `elevation` · `icon` · `density`.
+
+  **v3 SERT GÖLGEYİ BIRAKMIŞ (ölçüm).** `box-shadow` sayımı: müşteri v3'te `3px 3px 0` **26**,
+  operasyon **v2**'de **3**, operasyon **v3**'te **0**. Gölge rengi #b8b09a de v1/v2'de var, v3'te
+  yok. v3'ün tek gölge benzeri şeyi `0 4px 14px` zeytin ışıması ve **dördünün dördü de** yapışkan
+  okutma CTA'sında — o yüzden `OperationsStickyBar`ın `glow` bayrağında, düğmede değil (düğmeye
+  konsaydı akıştaki her zeytin düğme de ışır, işaret anlamını kaybederdi). `shadow['hard-on-ink']`
+  artık `@deprecated`; BEKLEYEN(21.161) son tüketici gidince silinecek.
+
+  **`OperationsSurface`in altı tonu tahminle değil SAYIMLA belirlendi** — `panel` (30+) ·
+  **`quiet`** (krem zemin 37, sessiz kenarla 21) · `card` · `ink` · `invite` (kesikli zeytin) ·
+  `blank` (kesikli kum). `quiet`i kaçırmak pahalıydı: hub'ın yazıcı şeridi dolgulu kumla
+  çiziliyordu, yani ızgaranın kutucuklarından yüksek sesle (kullanıcı cihazda gördü).
+
+  **İlk tüketiciler — kullanıcının cihazda bıraktığı dört not:** hub'ın "tüm kuyruğu aç" satırı
+  (gri dipnottan zeytin eylem cümlesine) · yazıcı şeridi (`quiet`) · mal kabulün okutma/arama
+  düğmeleri (ayırt edilemiyorlardı; artık zeytin çerçeve + ikon ⟷ kum çerçeve) · arama çekmecesi
+  (sabit boy + tasarımın satırı).
+
+  **Sözleşme genişledi:** `VariantSearchRowSchema.stockQty` — tasarımın satır künyesi
+  *"GAZ-7120 · stok 24"* diyor ve o sayı kayıtta yoktu. **Personelin kendi deposundan** okunuyor
+  (`listAvailableAcross`, rezervasyon düşülmüş); depo-üstü toplam yazılsaydı başka deponun malı
+  burada varmış gibi görünürdü. Uç artık `warehouseId` geçiriyor; testi de ölçüyor.
+
+  **Kalan:** 27 operasyon ekranı kite bağlanacak — **tek turda değil**, her şerit kendi ekranını
+  sırası geldikçe taşır (koordinasyon defteri, 30.08: 26 dosyalık tek tur, paylaşılan dosyada
+  başkasının satırını commit'leme riskinin 26 katı).
+
 - [x] (21.162) **SEFER KÜNYESİNDE ARACIN ADI VE ROTA ZİNCİRİ** (v3 uyuşmazlık #12 kapandı)
   `touches:` `packages/types/src/contracts/courier-api.schema.ts` ·
   `packages/application/src/courier/{vehicle-label.ts,day.ts,routes.ts,day-close.ts}` ·
@@ -7806,6 +7858,110 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** 5 entegrasyon (ad/plaka/araçsız/depo adı/başlatma cevabı) + 4 ekran testi.
   Kurye jest **92/92**.
+
+- [x] (21.163) **PARA v3 — İKİNCİ TUR: metin geçmişti, ANATOMİ geçmemişti** (v3:1949-2067)
+  `touches:` `apps/mobile/src/screens/money/{money-screen.tsx,day-end-screen.tsx,messages.json,money-screens.test.tsx}` ·
+  `apps/mobile/src/app/(operations)/(sections)/money.tsx`
+
+  **Durum (30.08).** 21.155 para ekranlarını v3'e geçirdi ve metni doğru taşıdı; kullanıcı cihazda
+  baktı ve *"bayağı bir farklılık var"* dedi. Tasarım token düzeyinde yeniden ölçüldü — **13 yapısal
+  fark** çıktı. Kök sebep 21.155'in kendi kaydında zaten yazılıydı: karşılaştırma METİN üzerinden
+  yapılmış, kutular üzerinden değil.
+
+  **23 · Tahsilat izleme — 8 fark kapandı.**
+  · **Günün parası KOYU kart** (`ink` + `h1-sm` krem rakam) — açık `panel` çizilmişti. Ekranın ilk
+    sorusu ("bugün ne girdi") sayfanın öteki kutularıyla aynı sesle konuşamaz.
+  · Yöntem hücreleri koyu kartın İÇİNDE, `on-ink-line` ayracın altında; **çek amber**
+    (`on-ink-warn`) — çek bir durumdur, elde duran henüz tahsil edilmemiş kâğıt.
+  · **Bekleyen tahsilatlar KART** (`OperationsSurface` `panel`), kesikli liste satırı değil.
+  · Satır kimliği **referans · müşteri tek satırda**; ayrı satırlardayken kart iki başlıklı duruyordu.
+  · Bekleyen etiketi **terracotta** — o para henüz kasada değil.
+  · Kuryenin üstündeki para **uyarı tonlu** (`warning-line` kenar + terracotta tutar); nötr kartta
+    "gelmiş" gibi okunuyordu. Sözleşme tek toplam taşıdığı için (uyuşmazlık 17) künye satırı
+    **yöntem dökümüne** düştü: aynı sayı, uydurulan kurye adı yok.
+  · **Hesap bakiyeleri tek kartın içinde**, kesikli ayraçlarla — çıplak satırlar sayfaya dağılıyordu.
+  · **Dipnot TEK ve `tab-inactive`**: dört ayrı not vardı, üçü tasarımda hiç yok.
+  · Ayrıca **"gün sonu →" başlıktan çıktı**, BEKLEYEN TAHSİLATLAR başlığının yanına geçti — eylem
+    götürdüğü listenin yanında durur.
+
+  **24 · Gün sonu — 5 fark kapandı.**
+  · Üç özet satırı **tek kartın içinde**.
+  · Uyuşmazlık kenarı **`error-line`** (#e0b9b2), `terracotta` (#b05c2e) DEĞİL: dolu terracotta
+    kutuyu uyarı bandına çeviriyordu. v3'ün kalıbı açık zemin + açık renkli kenar + koyu aile metni.
+  · Fark tutarı **başlığın hizasında sağda** (`body-sm`); altta 22 punto ayrı satırdaydı ve cümleyle
+    sayı iki ayrı olay gibi okunuyordu.
+  · Çözüm cümlesi hata ailesinin renginde — gri yazıldığında kartın dipnotu gibi duruyordu.
+  · Eşleşmemiş hareket **`neutral-bg` dolgulu kutu**, sayısı `card-title` Lora.
+
+  **Sayfa kenarı 22 → 20 (`6xl` → `5xl`)** iki ekranda da; `stack-header`ın v3 ölçümü aynı yöne
+  bakıyordu, para ekranları o turda atlanmıştı.
+
+  **Ortak karara uyum:** ilk yük `ActivityIndicator`dan **`OperationsSkeletonList`e** çevrildi
+  (koordinasyon defteri, 30.08 — *"halka yerleşim tutmaz, söndüğü an sayfa zıplar"*). Ölçüler
+  ekranın kendi bloklarının: 146/60/60 ve 126/96/64.
+
+  **Kitin ilk para kullanımı:** `OperationsSurface` beş yerde çağrıldı; kart deseni üç yerde elle
+  çizilmişti (`todayCard` · `floatCard` · `discrepancy`), artık hiçbirinde yazılmıyor.
+
+  **Deftere üç girdi bırakıldı** (ortak alan, tek başıma girmedim): koyu yüzeyin ikinci grisi
+  `#8f9aa2` token'sız (12 kullanım, Δ21/5/19 — eşiğin üstünde) · bölüm kökü başlığı v3'te 27px,
+  `section-header` 24 yazıyor (altı ekranda birden) · `operations-shell.test.tsx:78` zaman aşımıyla
+  düşüyor ve para ekranlarına dokunmuyor.
+
+  **Doğrulama.** Para jest **8/8** (ikisi yeni: kurye float toplamı + dökümü, sıfır çekin dökümde
+  hiç geçmemesi) · `typecheck` kendi kapsamımda temiz · `eslint` temiz. **Cihaz turu YAPILAMADI** —
+  simülatör açık değil (`ui:shot:mobile` ön şartı ölçtü ve söyledi); açıldığında iki ekran çekilecek.
+
+
+- [~] (21.164) **YÖNETİM MODÜLÜ v3 DENETİMİ — kartlar sayaç değil İŞ söylüyor** (v3:2069-2386)
+  `touches:` `apps/mobile/src/screens/management/*` · `packages/types/src/contracts/management-api.schema.ts` ·
+  `packages/application/src/management/{hub,exceptions}.ts` · `packages/application/src/ticket/staff-read.ts`
+
+  **Durum (30.08).** Yönetim şeridi açıldı (koordinasyon defteri, alan tablosu). Yöntem depo
+  denetiminin yöntemi: tasarım `design:shot` ile resme çevrilip cihaz görüntüsüyle YAN YANA okunuyor.
+
+  **Kullanıcının cihazda gördüğü (N11):** karar kutusunun kartları tasarımla uyuşmuyordu. Ölçüm
+  sözleşmede çıktı — kuyruk yalnız SAYAÇ taşıyor: `shortLineCount` var ürün adı yok, tekliflerde ve
+  tedarikte tek sayı. Üçünün de verisi motorda vardı, zarfa taşınmamıştı.
+
+  · **Şikâyet kartı** artık şikâyetin KENDİ cümlesini yazıyor (`preview` — kuyruk ekranıyla aynı iki
+    kural: `resolveUserText` + `previewOf`, ikincisi bu iş için dışa açıldı, ikinci bir kırpma kuralı
+    yazılmadı). Künye satırı da düzeldi: kuyruk dört türü birden taşıyor ve üstteki kayıt çoğu gün bir
+    SORU'yken kart ona "şikâyet" diyordu — artık türü yazıyor ("soru · 5 açık talep").
+  · **Eksik kalem kartı** ürünü ve eksik adedi yazıyor (`lineTitle` · `missingQty`); aynı siparişteki
+    öteki kalemler başlığın kuyruğunda, öteki siparişler künye satırında ("+1 sipariş").
+  · **Yakın-SKT kartı** partinin adını, adedini ve oranı yazıyor; alt satırda kalan ömür. **Negatif
+    gün "süresi geçti" DEĞİL** — kuyruğa yalnız `can_offer` giriyor, yani tarihi geçmiş tek küme
+    DDM'si geçmiş SATILABİLİR partiler; imhalık parti zaten aday değil (`offerDecisionOf`).
+  · **Tedarik kartı** tedarikçinin adını ve kalem sayısını yazıyor (en kalabalık eşlenmiş grup).
+  · Kararın sayısı ve künyesi **aynı motordan**: aday sayımı artık `toBatchViews`ten okunuyor
+    (teklif ekranının okuduğu görünüm), kutu ile ekran ayrışamaz.
+
+  **Ayrıca bu turda (ölçüm → düzeltme):**
+  · **Sert gölge 5 yerde söküldü** (`shadow.hard` ×4 · `hard-on-ink` ×1) — v3'te sert gölge YOK
+    (depo şeridinin ölçümü); `BEKLEYEN(21.161)`in yönetim payı kapandı.
+  · **İlk yük iskelete geçti** (N9): beş liste ekranı `OperationsSkeletonList`. Kampanya ekranında
+    cihazda ölçüldü — 8 saniye BOŞ sayfa + minik halka; ekran "veri yok" ile "veri geliyor"u aynı
+    biçimde gösteriyordu. Yazışma ekranlarında (26 · 28) bilerek halka kaldı: iskelet bir LİSTE
+    kalıbıdır, baloncuğun ne genişliği ne sayısı önceden bilinir.
+  · **Aşağı çekince yenile** karar kutusu · gün özeti · kampanya · tedarikte; çekme kendi bayrağını
+    kullanıyor (`reloading`), `status` DEĞİL — o kartları söküp iskelete çevirirdi.
+  · **Halkanın rengi** gelen kutusunda `pullRefreshColors`a bağlandı: yalnız `tintColor` verilen
+    ekran Android'de sistemin SİYAHINI çiziyordu (helper künyesi, ölçüm 10.08).
+  · **Ekrandaki iki geliştirici cümlesi düzeldi:** eksik toplama dipnotu kullanıcıya doküman kimliği
+    gösteriyordu ("… netleşir **(07.8)**"), gün özetinin boş içgörü bloğu "motor bağlandığında bu
+    blok dolacak" diyordu.
+
+  **Doğrulama.** Yönetim jest **73/73** (üç yeni: dört kartın künyesi · künyesiz hâlde sayaca düşme ·
+  tavsiye tarihi geçmiş adayın imhalık gibi yazılmaması) · `pnpm typecheck` **tüm depoda yeşil** ·
+  `eslint` dokunduğum yollarda temiz. **Cihazda görüldü** (OPPO, yönetim + hepsi hesabı): üç kart
+  künyesiyle çizildi. **Eksik kalem kartı cihazda doğrulanamadı** — tur sırasında kuyruktaki tek
+  istisna "Müşteriye sor" ile tüketildi ve alan boşaldı (ekran da "karar bekleyen eksik yok" diyor);
+  kart birim testiyle örtülü.
+
+  **Kalan (sırayla):** kit geçişi (`OperationsSurface` yönetimde 0 kullanım, 8 elle kart — kitin
+  commit'i bekleniyor) · N10 talep ekranının sosyal mesajlaşma diline taşınması · 26–31 ekran ekran
+  tasarım denetimi · yeni yetenekler (şikâyet kararı, taslağı reddetme).
 
 - [x] (21.165) **KURYE ANA EKRANI v3 ANATOMİSİNE OTURDU** (v3:14 · cihazda karşılaştırıldı)
   `touches:` `apps/mobile/src/screens/courier/{courier-day-screen.tsx,messages.json}`
@@ -7841,3 +7997,49 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** Kurye jest **93/93**; her adımdan sonra cihazdan görüntü alınıp tasarımla
   karşılaştırıldı (üç tur).
+
+- [x] (21.166) **PARA SÖZLEŞMESİ GENİŞLEDİ — adet · para kimde · uyuşmazlığın künyesi** (v3 uyuşmazlık #16·17·18 kapandı)
+  `touches:` `packages/types/src/contracts/money-api.schema.ts` ·
+  `packages/application/src/accounting/money.ts` · `apps/mobile-api/src/api/v1/money.test.ts` ·
+  `apps/mobile/src/screens/money/*` · `apps/mobile/src/lib/operations/stamp.ts`
+
+  **Durum (30.08).** Kullanıcı 21.163'ün sonucuna cihazda baktı ve üç eksik saydı: siyah kartta
+  tahsilat sayısı yok · kuryenin üstündeki para kartı tasarımdaki gibi değil · hesap bakiyeleri
+  farklı. Üçü de **uyuşmazlık defterine "sözleşmede alan yok" diye yazılmıştı** — yani kayıt
+  doğruydu ama karar yanlıştı: alan yoksa açılır, ekran kırpılmaz.
+
+  **Ölçüm önce: veri zaten defterdeydi, eksik olan ZARFTI.**
+  · adet → `paymentMovements.length` (motor onu zaten okuyor, sayısını atıyordu)
+  · kurye künyesi → `delivery_run.referenceNo` + `courierId`, profil adı bekleyen satırların
+    okuduğu aynı kapıdan
+  · uyuşmazlığın künyesi → `delivery_run_close.closedAt` + seferin kendisi
+  Yani üç maddenin hiçbiri yeni bir tablo ya da migration istemedi.
+
+  **Sözleşme (3 alan).**
+  · `MoneyOverview.todayCount` — adet tutardan TÜREMEZ: aynı 1.286,50 € iki tahsilattan da kırktan
+    da gelebilir ve "gün yoğun muydu" sorusunun cevabı adettedir. Sayılan şey deftere düşen
+    HAREKETTİR (bir sipariş iki taksitle ödendiyse defterde iki kayıt vardır).
+  · `MoneyOverview.courierFloat` → **`CourierFloatRow[]`** (sefer + kurye adı + üç tutar). Tek
+    toplam, muhasebecinin asıl sorusunu cevapsız bırakıyordu: **kimde**. "186,00 € kuryelerde" ile
+    "186,00 € Marc'ta" aynı cümle değil. Sıfır tutarlı açık sefer listeye GİRMEZ — olmayan bir
+    emanet kovalatırdı. Kurye adı okunamazsa `null`, künye kuyruksuz yazılır.
+  · `MoneyDayEnd.discrepancy.runs` — yalnız FARKI OLAN kapanışlar; tutan sefer bir künye değil,
+    sessiz bir onaydır. Ekran tek sefer varsa künyeyi ("SF-26-… · Marc Lemoine · 17:42"), birden
+    çoksa sayıyı yazar (tek satıra üç künye sığmaz).
+
+  **Ekranda.** Koyu kartın sağına `ink-inset` zeminli sayaç rozeti · kuryenin üstündeki para artık
+  sefer başına uyarı tonlu kart · gün sonu uyuşmazlığının altında künye satırı (`muted` — alarm bir
+  kez verilir, kimlik onun altında sakin durur).
+
+  **Bir yardımcı doğdu:** `timeOf` (`lib/operations/stamp.ts`) — günü BAŞLIKTA yazılı bir olayın
+  damgası. `stampOf`tan ayrı çünkü soru farklı; testi ikisinin ayrışmadığını çiviliyor (aynı olay
+  iki ekranda iki saatle görünemez). `stamp.ts`in ilk testi bu turda yazıldı.
+
+  **Doğrulama.** Para jest **9/9** (üçü yeni: sefer başına künye · adsız kurye · adet rozeti) ·
+  damga jest **5/5** (yeni dosya) · `typecheck` types + application + mobile-api + mobile temiz ·
+  `eslint` temiz. Entegrasyon testi (`mobile-api/money.test.ts`) yeni şekle göre güncellendi ama
+  KOŞULMADI — DB'ye vuran koşu denetmenin işi (CLAUDE §4b).
+
+  **Açık kalan:** hesap bakiyesi satırının künyesi ("Kasa · **Strasbourg**", "CIC · **işletme**",
+  "Stripe · **bekleyen**"). `account` tablosu `name` + `type` taşıyor; künyenin ikinci parçası üç
+  ayrı eksende (yer · rol · durum) ve hiçbiri `type`tan türemiyor — kullanıcıya soruldu.

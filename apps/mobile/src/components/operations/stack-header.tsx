@@ -1,8 +1,8 @@
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { BackButton } from '@/components/ui/back-button';
 import { operationsTheme } from '@/theme/unistyles';
+import { OperationsIconButton } from './icon-button';
 
 /*
   YIĞIN BAŞLIĞI — bölüm kökünün ÜSTÜNE açılan her ekranın tepesi: geri düğmesi + Lora başlık +
@@ -46,10 +46,14 @@ interface OperationsStackHeaderProps {
 export function OperationsStackHeader({ title, subtitle, onBack, backLabel, testID }: OperationsStackHeaderProps) {
   return (
     <View style={styles.header} testID={testID}>
-      <BackButton
+      {/* Geri düğmesi operasyonun KUM KUTUCUĞUDUR ve o kutu artık kitte tek yerde
+          (`OperationsIconButton`) — müşteri kitindeki `BackButton`ın `operations` varyantı aynı
+          kutuyu ikinci kez tarif ediyordu ve o varyant söküldü. Yan kazanç: paylaşılan kit artık
+          `operationsTheme`i hiç okumuyor. */}
+      <OperationsIconButton
+        icon="arrow-left"
         onPress={onBack}
         accessibilityLabel={backLabel}
-        variant="operations"
         testID={testID === undefined ? undefined : `${testID}-back`}
       />
       <View style={styles.titles}>

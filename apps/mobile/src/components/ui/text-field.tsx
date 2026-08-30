@@ -76,6 +76,20 @@ interface TextFieldProps {
   /** Köşe kademesi: hap (22) ⟷ yumuşak/kontrol (16). */
   shape?: 'pill' | 'soft';
   /**
+   * BİLGİ YOĞUNLUĞU — alanın hangi yüzeyde durduğunun görsel karşılığı (ölçüldü 30.08).
+   *
+   * · `comfortable` (varsayılan) — müşteri vitrini: `body-sm` punto, `sand-400` çerçeve.
+   *   Alan sayfanın kendi zemininde tek başına durur, çerçevenin belirgin olması gerekir.
+   * · `compact` — operasyon mobil: `note` punto, `sand-300` çerçeve. Ölçüm ikisini birlikte
+   *   söylüyor (tasarımda 5 alanın 5'i `1.5px #ddd6c4` + 12,5–13 px) ve sebebi tek: operasyonun
+   *   alanı bir KARTIN İÇİNDE durur, kartın kendi çerçevesi de `sand-300`tür. Daha koyu bir
+   *   çerçeve, alanı taşıyan kartın önüne geçerdi.
+   *
+   * Tek prop, çünkü ölçümde ikisi hiç ayrışmıyor: yoğunlaşan alan aynı anda sessizleşiyor.
+   * Ayrı iki prop, olmayan bir kombinasyonu (küçük punto + kalın çerçeve) mümkün gösterirdi.
+   */
+  density?: 'comfortable' | 'compact';
+  /**
    * Alanın İÇERİK TÜRÜ — işletim sistemine otomatik doldurma/öneri için söylenir (kullanıcı
    * bulgusu 08.08: e-posta alanı klavye önerisi vermiyordu). Tek kavram, üç RN prop'una açılır
    * (`autoComplete` + iOS `textContentType` + uygun klavye/büyük harf) — çağıran üçünü ayrı
@@ -99,6 +113,7 @@ export function TextField({
   label,
   placeholder,
   shape = 'soft',
+  density = 'comfortable',
   content,
   numeric = false,
   multiline = false,
@@ -136,9 +151,12 @@ export function TextField({
           accessibilityState={{ disabled: !editable }}
           style={[
             styles.input,
+            density === 'compact' ? styles.compact : styles.comfortable,
             shape === 'pill' ? styles.pill : styles.soft,
             multiline ? styles.multiline : styles.singleLine,
-            hasError ? styles.errorBorder : styles.idleBorder,
+            /* Hata çerçevesi yoğunluğun çerçevesini EZER ve sırası bu yüzden sonda: sessiz alan
+               hata verdiğinde sessiz kalmamalı. */
+            hasError ? styles.errorBorder : undefined,
             editable ? undefined : styles.readOnly,
           ]}
         />
@@ -168,8 +186,15 @@ const styles = StyleSheet.create((theme) => ({
     borderWidth: theme.border.base,
     // Girdinin YAZDIĞI metin ağırlıksızdır (RN varsayılanı 400) — aile o ağırlıkla indekslenir.
     fontFamily: theme.font.body[400],
-    fontSize: theme.text['body-sm'],
     color: theme.colors.ink,
+  },
+  comfortable: {
+    fontSize: theme.text['body-sm'],
+    borderColor: theme.colors['sand-400'],
+  },
+  compact: {
+    fontSize: theme.text.note,
+    borderColor: theme.colors['sand-300'],
   },
   singleLine: {
     height: theme.size.controlMd,
@@ -181,7 +206,6 @@ const styles = StyleSheet.create((theme) => ({
   },
   pill: { borderRadius: theme.radius.pill },
   soft: { borderRadius: theme.radius.control },
-  idleBorder: { borderColor: theme.colors['sand-400'] },
   errorBorder: { borderColor: theme.colors['terracotta-line'] },
   readOnly: {
     backgroundColor: theme.colors['sand-50'],

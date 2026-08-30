@@ -1,33 +1,30 @@
 import { Text } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { operationsTheme } from '@/theme/unistyles';
 import { PressableSurface } from './pressable-surface';
 
 /*
-  GERİ DÜĞMESİ — 11 başlık çubuğunda + fotoğraf kahramanının üstünde + sepette. Üç yerleşim:
-  · `bar`        — zeminsiz 40 dp yuvarlak; basılıda zemin `sand-200`'e döner (tasarımın kendi
-                   çözümü: çubuktaki hizanın kayması istenmiyor)
-  · `photo`      — 42 dp, krem zeminli (fotoğraf üstünde okunabilirlik); basılıda küçülür
-  · `operations` — 40 dp, `neutral-bg` dolgulu YUVARLATILMIŞ KARE; basılıda küçülür.
-                   Operasyon ekranlarında fotoğraf yok, ama düğmenin ZEMİNİ var: şablon onu
-                   sayfadan ayrı bir kutu olarak çiziyor. `photo` varyantına bağlanMADI — orada
-                   zemin fotoğrafa karşı okunurluk içindir, burada yüzey hiyerarşisinin kendisi.
-                   ŞEKİL v3'TE DEĞİŞTİ (ölçüldü 30.08): v2 tam daireydi (`border-radius:50%`),
-                   Operasyon Mobil v3'ün 26 yığın başlığının hepsi `38×38 / border-radius:13px`
-                   diyor — yani daire değil, kum kutucuk. Yarıçap `badge` (12) durağına çekildi
-                   (Δ1); ölçü 40'ta bırakıldı çünkü o dokunma hedefinin kendisidir ve 2 dp'lik
-                   fark hizayı değil yalnız kutunun boyunu oynatır.
+  GERİ DÜĞMESİ — MÜŞTERİ yüzeyinin geri düğmesi. İki yerleşim:
+  · `bar`   — zeminsiz 40 dp yuvarlak; basılıda zemin `sand-200`'e döner (tasarımın kendi
+              çözümü: çubuktaki hizanın kayması istenmiyor)
+  · `photo` — 42 dp, krem zeminli (fotoğraf üstünde okunabilirlik); basılıda küçülür
+
+  ── ÜÇÜNCÜ VARYANT (`operations`) SÖKÜLDÜ (30.08) ──────────────────────────
+  Operasyonun geri düğmesi `neutral-bg` dolgulu bir KUM KUTUCUĞUDUR ve o kutu v3'te 26 yığın
+  başlığının hepsinde geçiyor — yani bir varyant değil, kendi başına bir kontrol. Kite
+  `OperationsIconButton` olarak çıkarıldı ve buradaki ikizi kaldırıldı; aynı kutunun iki tarifi,
+  bir gün ikiye ayrılacak demektir (CLAUDE §1).
+
+  Yan kazanç ölçülebilir: bu dosya artık `operationsTheme`i OKUMUYOR. Paylaşılan kitin operasyon
+  temasına uzanması bir dikiş kaçağıydı — `neutral-bg` yalnız o temada var ve müşteri yüzeyinin
+  komponenti onu tanımak zorunda değil.
 
   İşaret metin değil İKONdur (‹) — bu yüzden `label` prop'u yok; ekran okuyucuya giden ad
   `accessibilityLabel` ile gelir ve i18n'den beslenir (komponent metin gömmez).
-
-  Operasyon dolgusu `operationsTheme` sabitinden okunur (`neutral-bg` yalnız o temada var) —
-  gerekçe `theme/unistyles.ts` künyesinde.
 */
 
 /** Düğmenin durduğu yüzey — ölçü, dolgu ve basılı geri bildirim bundan türer. */
-type BackButtonVariant = 'bar' | 'photo' | 'operations';
+type BackButtonVariant = 'bar' | 'photo';
 
 interface BackButtonProps {
   onPress: () => void;
@@ -69,12 +66,6 @@ const styles = StyleSheet.create((theme) => ({
     // Tasarım burada yarı saydam krem kullanıyor (`rgba(243,239,226,.9)`); alfalı katmanın
     // token'ı YOK, o yüzden opak kum kademesi kullanıldı (rapor edildi).
     backgroundColor: theme.colors['sand-50'],
-  },
-  operations: {
-    width: theme.size.iconButton,
-    height: theme.size.iconButton,
-    borderRadius: operationsTheme.radius.badge,
-    backgroundColor: operationsTheme.colors['neutral-bg'],
   },
   glyph: {
     fontFamily: theme.font.body[400],

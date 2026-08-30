@@ -47,4 +47,44 @@ describe('operasyon adet kutusu', () => {
     expect(screen.getByLabelText('Mantı · 500 g için gelen adet')).toBeOnTheScreen();
     expect(screen.getByTestId('labelled').props.placeholder).toBe('—');
   });
+
+  /*
+    BİRİM BAŞLIĞI (v3 · 30.08) — kart üç sayı taşıyabiliyor (beklenen · sayılan · koli çarpanı) ve
+    çerçeveli kutudaki çıplak rakam hangisi olduğunu söylemiyordu. Ölçülen iki davranış: başlık
+    İSTENİRSE çizilir (v2 ekranlarının hiçbirinde yok, varsayılan çizerse dört ekran birden
+    değişirdi) ve girdinin ekran okuyucu adını EZMEZ.
+  */
+  /* Sorgular `includeHiddenElements` ile: başlık ekran okuyucudan BİLEREK gizli
+     (`accessibilityElementsHidden`) ve RNTL varsayılan olarak gizli öğeleri atlıyor. Yani bayrak
+     olmadan bu iki test "çizilmiyor" ile "gizli" arasındaki farkı göremez — ilki kusur, ikincisi
+     kararın kendisi. */
+  const hidden = { includeHiddenElements: true } as const;
+
+  it('birim başlığı istenmedikçe ÇİZİLMEZ', async () => {
+    await render(
+      <OperationsQtyField value="12" onChangeText={jest.fn()} accessibilityLabel="Gelen adet" />,
+    );
+
+    expect(screen.queryByText('ADET', hidden)).toBeNull();
+  });
+
+  it('birim başlığı verilince çizilir ama girdinin ADINI ezmez', async () => {
+    await render(
+      <OperationsQtyField
+        value="12"
+        onChangeText={jest.fn()}
+        accessibilityLabel="Karışık Baklava · 225 g için gelen adet"
+        caption="ADET"
+        testID="captioned"
+      />,
+    );
+
+    expect(screen.getByText('ADET', hidden)).toBeOnTheScreen();
+    // …ve ekran okuyucuya GÖRÜNMEZ: adı zaten girdinin üstünde, "ADET" ayrıca okunsaydı aynı
+    // bilgi iki kez söylenirdi.
+    expect(screen.queryByText('ADET')).toBeNull();
+    // Girdi hâlâ KENDİ adıyla bulunur: başlık kutunun içine girdi, adın önüne geçmedi.
+    expect(screen.getByLabelText('Karışık Baklava · 225 g için gelen adet')).toBeOnTheScreen();
+    expect(screen.getByTestId('captioned').props.value).toBe('12');
+  });
 });

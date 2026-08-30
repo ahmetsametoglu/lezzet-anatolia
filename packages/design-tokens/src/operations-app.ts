@@ -70,7 +70,7 @@
   işidir. Karanlık mod YOK: operasyonun karanlık teması masaüstü yüzeyinindir (`operations.ts`);
   mobil operasyon müşteri ailesinin krem zemininde kurulu ve tek temalıdır.
 */
-import { customerSand } from './customer';
+import { customerOlive, customerSand } from './customer';
 
 /* ── (1) FARK RENKLERİ — birleşimde tabanın aynı adlı anahtarını EZER ─────────
    İkisi de ROL olarak tabandakiyle birebir aynı işi yapar, yalnız değerleri operasyon mobilde
@@ -190,6 +190,15 @@ export const operationsAppLine = {
      değil). `error-bg` (#f4e3e0) ise ZEMİN tonudur ve kenar olarak kullanıldığında kutu
      çerçevesiz görünür. Aile adlandırması tabandan devralındı: `error` · `error-bg` · `error-line`. */
   'error-line': '#e0b9b2',
+  /* UYARI kartının kenarı: "yazıcı tanımlı değil", "kapsamında iki depo var", "yarım kutu".
+     §4 künyesi bu aileyi zaten ölçmüştü (#fdf8f3/#d9a97f, 9 kullanım) ama yalnız `error-line`
+     açılmıştı; yazıcı ekranı yazılırken açık görüldü ve uyarı kutusu geçici olarak
+     `terracotta-line` ile çizildi — o ton HONEY ailesinin değil turuncunun kenarı ve kutu
+     tasarımdan açık duruyordu. Tabanda karşılığı YOK: en yakını `terracotta-line` (#e8c9b3,
+     Δ13/32/4) ve ikinci kanalda eşiğin çok üstünde. Aile adlandırması tabandan devralındı:
+     `warning` · `warning-bg` · `warning-line`; zemin yine açılmadı (ölçülen #fdf8f3 `panel`e
+     Δ2/2/1, ekranda ayırt edilemez — kutuyu uyarı yapan KENARI ve metnidir). */
+  'warning-line': '#d9a97f',
 } as const satisfies Record<string, string>;
 
 /* Operasyon mobile özgü renklerin tam kümesi (12): 2 fark + 10 yeni. */
@@ -250,14 +259,39 @@ export const operationsAppRadius = {
   tight: '8px',
 } as const satisfies Record<string, string>;
 
-/* ── GÖLGE — v3 imzası aynen, bir varyantla ─────────────────────────────────
-   Tasarımın `3px 3px 0 #343b41` gölgesi (15 kullanım) `customerAppShadow.hard`ın ta kendisidir;
-   buraya kopyalanmadı, oradan gelir. */
+/* ── GÖLGE — v3 SERT GÖLGEYİ BIRAKTI (ölçüldü 30.08) ────────────────────────
+   Yukarıdaki iki durak v1/v2 ölçümüdür ve v3 onları KULLANMIYOR. Tasarım dosyalarında
+   `box-shadow` sayıldı:
+
+     · Mobil - Musteri v3      → `3px 3px 0` **26** kez (müşteri evreninin imzası, yerinde duruyor)
+     · Operasyon Mobil **v2**  → `3px 3px 0` **3** kez
+     · Operasyon Mobil **v3**  → **0** kez; yerine 4 kez yumuşak zeytin ışıma
+
+   Sert gölgenin rengi olarak ölçülen #b8b09a de v1/v2/"Tasarım Yönleri"nde geçiyor, **v3'te hiç
+   geçmiyor.** Yani operasyon mobil yüzeyi düz (gölgesiz) bir yüzeye geçti — operasyon WEB
+   envanterinin kendi kuralıyla da aynı yere geldi: *"Gölge yok, ince çizgi + boşluk ayırır."* */
 export const operationsAppShadow = {
-  /* KOYU (`ink`) CTA'nın gölgesi. `hard` burada işe yaramaz: mürekkep gölge mürekkep düğmenin
-     altında görünmez, düğme de basıldığında gölgeyi "yutma" hissini kaybeder. Tasarım ölçümü
-     #b8b09a; `sand-600`e (#b3ab97, Δ5/5/3) bağlandı ve ikinci kez YAZILMADI — kum skalası
-     kayarsa gölge de kaymalı. */
+  /**
+   * **YAPIŞKAN OKUTMA CTA'sının ışıması** — v3'ün gölge diye kullandığı TEK şey.
+   *
+   * Ölçüm: `0 4px 14px rgba(95,122,44,.24)`, dört kullanımın dördü de yapışkan çubuktaki okutma
+   * düğmesinde (`tg.scanner`, `yukOkut`). Rol nettir: düğme sayfanın üstünde YÜZER, listenin
+   * akışından ayrılır — ışıma o ayrımın kendisidir, süs değil. Sıradan CTA (mürekkep dolgulu
+   * "Tekrar dene", "Para bölümüne geç") gölgesizdir; ışıma ona verilirse "yüzen düğme" işareti
+   * anlamını kaybeder.
+   *
+   * Renk zeytinin kendisidir (95,122,44 = #5f7a2c): ışıma düğmenin dolgusundan doğar, bağımsız bir
+   * gri değildir. Rengin ikinci kez yazılmaması için `customerOlive`den okunur; opaklık (%24)
+   * ölçümün kendisidir ve sekizlik onaltılıkla (`3d`) yazılır — RN'in `boxShadow` ayrıştırıcısı
+   * CSS söz dizimini olduğu gibi alır.
+   */
+  glow: `0 4px 14px ${customerOlive.olive}3d`,
+  /**
+   * @deprecated v2 kalıntısı — v3'te karşılığı YOK (yukarıdaki ölçüm).
+   *
+   * Bugün 6 operasyon ekranı hâlâ okuyor; durak, son tüketici kite geçince silinecek.
+   * BEKLEYEN(21.161): kit geçişi bitince bu anahtar ve `hard`ın operasyon kullanımları kaldırılır.
+   */
   'hard-on-ink': `3px 3px 0 ${customerSand['sand-600']}`,
 } as const satisfies Record<string, string>;
 

@@ -188,6 +188,19 @@ export const appMetrics = {
      * dosyanın kendi kuralı gereği ölçü değil ANLAM ayrı durak açtırır.
      */
     listAvatar: 34,
+    /**
+     * Liste satırındaki KARE ÜRÜN ÖN İZLEMESİ — arama çekmecesi (kullanıcı isteği 30.08).
+     *
+     * Tasarımda yok: v3'ün arama satırı yalnız ad + künye. İstek cihazda doğdu — aynı ürünün
+     * 225 g ve 450 g boyları alt alta gelince metin ayırt etmeye yetmiyor, fotoğraf yetiyor.
+     *
+     * 44 seçildi: satırın iki metni (13,5 ad + 11 künye + 2 aralık ≈ 30) ile dolgusunun toplamına
+     * en yakın kare, yani görsel satırı BÜYÜTMÜYOR. `listAvatar` (34) küçük kalıyor — o bir baş
+     * harf karesidir, fotoğraf değil; `avatarSm` (40) ise kişi avatarının durağı ve dosyanın kendi
+     * kuralı ölçü değil ANLAM ayrı durak açtırır der. Kare kırpma: ürün fotoğrafları 3:2
+     * yükleniyor ve kareye ortadan oturuyor (`Komponent Envanteri` oran künyesi).
+     */
+    thumb: 44,
   },
 
   /**

@@ -62,13 +62,18 @@ interface BottomSheetProps {
   visible: boolean;
   /** Başlık — i18n üstte çözülür; ekran okuyucuda katmanın adıdır. */
   title: string;
-  /*
-   * Panelin boyu SEÇİLMEZ: yükseklik İÇERİKTEN gelir, tavanı `sheetMaxHeightRatio`.
-   * 10.08'de bir `tall` kademesi eklendi (taban = tavan) ve aynı gün geri alındı — kullanıcı
-   * cihazda görüp eledi: tek bir bağlantı için paneli tavana dayamak, altında kocaman boş bir
-   * alan bırakıyordu. Kademe tek çağıranıyla birlikte söküldü; ölü bir seçenek bırakmak, bir
-   * sonraki ekranın onu yeniden keşfetmesine kapı olurdu (CLAUDE §1).
+  /**
+   * **SABİT BOYLU PANEL** — yalnız içeriği SIFIRDAN büyüyen çekmecelerde (kullanıcı bulgusu 30.08).
+   *
+   * 10.08'de eklenip aynı gün geri alınan `tall` kademesiyle karıştırılmamalı: o, TEK bir bağlantı
+   * için paneli tavana dayıyordu ve altında kocaman bir boşluk bırakıyordu — haklı olarak elendi.
+   * Buradaki sorun başka: ürün arama çekmecesi boşken bir avuç kadar açılıyor, her harfte sonuç
+   * geldikçe zıplıyor ve depocunun parmağının altındaki satır yer değiştiriyor. Panelin boyu
+   * ARAMANIN kendisiyle belirlenemez; sabit olmalı ki liste onun İÇİNDE dolsun.
+   *
+   * Verilmezse davranış aynen eskisi: yükseklik içerikten gelir.
    */
+  fill?: boolean;
   onClose: () => void;
   /**
    * Kapanış animasyonu bitip `Modal` SÖKÜLDÜKTEN sonra, bir kare ertelemeyle çağrılır.
@@ -86,7 +91,7 @@ interface BottomSheetProps {
   testID?: string;
 }
 
-export function BottomSheet({ visible, title, onClose, onClosed, children, testID }: BottomSheetProps) {
+export function BottomSheet({ visible, title, fill = false, onClose, onClosed, children, testID }: BottomSheetProps) {
   /* `Modal` KAPANIŞ animasyonu bitene kadar ayakta kalmalı; bu yüzden görünürlüğün iki hâli var:
      çağıranın `visible`ı (niyet) ve buradaki `mounted` (ekranda mı). */
   const [mounted, setMounted] = useState(visible);
@@ -210,7 +215,7 @@ export function BottomSheet({ visible, title, onClose, onClosed, children, testI
           />
         </Animated.View>
         <Animated.View
-          style={[styles.panel, panelStyle]}
+          style={[styles.panel, fill ? styles.panelFill : null, panelStyle]}
           onLayout={(event) => onPanelLayout(event.nativeEvent.layout.height)}
         >
           {/* Panelin ALT KANAMASI — klavye kaçınması paneli kaldırınca panel ile ekran altı
@@ -312,6 +317,15 @@ const styles = StyleSheet.create((theme, rt) => ({
     /* Üstteki güvenli alan: panel tavana dayandığında durum çubuğunun/çentiğin altına girmesin.
        Alt taraf `paddingBottom`da zaten hesaplanıyordu, üst tarafın karşılığı yoktu. */
     marginTop: rt.insets.top,
+  },
+  /* SABİT BOY (`fill`): taban = tavan. Yalnız içeriği sıfırdan büyüyen çekmecelerde — künyesi
+     prop'ta. `flexShrink: 1` yukarıda duruyor ve burada da geçerli: klavye açılınca panel yine
+     kaçınma katmanının bıraktığı yere sığar, tavana yapışıp taşmaz. */
+  panelFill: {
+    height: Math.min(
+      rt.screen.height * theme.sheetMaxHeightRatio,
+      rt.screen.height - rt.insets.ime - rt.insets.top,
+    ),
   },
   /** Kayan bölge: panelin geri kalanı (tutamak + başlık) sabit kalsın, yalnız içerik kaysın. */
   scroll: {
