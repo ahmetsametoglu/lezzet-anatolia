@@ -38,6 +38,13 @@ uyguladığı denetimi bu şeride de uygular.
 
 ## Dosyalar
 
+- `koordinasyon-operasyon-v3.md` — **AJANLAR ARASI KARAR DEFTERİ** (kullanıcı kararı 30.08):
+  operasyon v3 geçişinde birden çok ajan aynı zemini paylaşıyor; öneri, itiraz ve **ortak
+  karar** buraya yazılır. Sohbette birbirine laf iletilmez. **Ortak alana** (`components/`,
+  `theme/`) dokunacak değişiklik önce burada açılır. Repoda durur (`docs/talep/` gitignore'da ve
+  oradaki metin yedeksizdir; ortak karar kaybolmaya açık bırakılamaz) ve geçiş bitince bütün
+  olarak silinir. Üç kardeşiyle karıştırılmaz: durum → görev satırı, "nasıl gitti" →
+  `gunluk-operasyon-v3-gecisi.md`, kullanıcının cihaz notları → `v3-not-kuyrugu.md`.
 - `01-teknoloji-secimi.md` — teknoloji etüdü: React Native/Expo vs Capacitor vs Flutter,
   birincil ölçüt test edilebilirlik; karşılaştırma + depo-uyum analizi + doğrulama kaydı +
   öneri. **Statü: etüt/öneri — karar kullanıcının.**

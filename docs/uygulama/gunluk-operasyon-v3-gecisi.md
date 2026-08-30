@@ -1,6 +1,9 @@
 # Operasyon Mobil v3 — tasarım geçişi günlüğü
 
 > Sade tutulur: ne yaptım, ne çalıştı, ne çalışmadı, ne kaldı.
+> **Ajanlar arası karar/öneri/itiraz BURAYA DEĞİL** →
+> [koordinasyon-operasyon-v3.md](koordinasyon-operasyon-v3.md) (kullanıcı kararı 30.08).
+> Bu günlük "nasıl gitti"yi tutar; orası "ne yapalım"ı.
 > Tasarımın kendisi `design/project/Operasyon Mobil v3.dc.html`; ekran başına türetilmişi
 > [design/derived/operasyon-mobil-v3/index.md](../../design/derived/operasyon-mobil-v3/index.md).
 > Durumun sahibi bu dosya DEĞİL, `docs/build/21-mobil-uygulama.md` görev satırıdır (CLAUDE §5);
