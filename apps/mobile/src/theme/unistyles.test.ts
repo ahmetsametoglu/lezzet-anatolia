@@ -158,11 +158,16 @@ describe('Operasyon teması ↔ üç katman kompozisyonu', () => {
   });
 
   it('ALT katmanlar sağlam kalır: müşteri uygulamasının kendi durakları da okunur', () => {
-    // Tasarımın kullandığı dört değer YALNIZ `customer-app.ts`te yaşıyor — alt evren kanıtı.
+    // Tasarımın kullandığı üç değer YALNIZ `customer-app.ts`te yaşıyor — alt evren kanıtı.
     expect(operationsTheme.colors.error).toBe(customerAppColors.error);
-    expect(operationsTheme.colors['error-bg']).toBe(customerAppColors['error-bg']);
     expect(operationsTheme.colors['disabled-fill']).toBe(customerAppColors['disabled-fill']);
     expect(operationsTheme.colors['sand-150']).toBe(customerAppColors['sand-150']);
+    /* `error-bg` bu listeden ÇIKTI (30.08): operasyon mobil onu kendi ölçtüğü değerle eziyor
+       (#fdf6f4) — v3'ün tonlu kartı çok açık bir zemin ister, müşteri setinin #f4e3e0'ı burada
+       dolu bir uyarı bandı gibi duruyordu. Alt evren iddiası bozulmadı, bir istisnası oldu ve
+       gerekçesi `operations-app.ts`in `error-bg` künyesinde. */
+    expect(operationsTheme.colors['error-bg']).not.toBe(customerAppColors['error-bg']);
+    expect(operationsTheme.colors['error-bg']).toBe('#fdf6f4');
     // Taban da yerinde: mürekkep, zeytin, kum skalası birebir müşteri evreninden.
     expect(operationsTheme.colors.ink).toBe(customerColors.ink);
     expect(operationsTheme.radius.card).toBe(Number.parseFloat(customerAppRadius.card));

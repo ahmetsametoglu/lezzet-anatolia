@@ -92,6 +92,21 @@ export const operationsAppOverrides = {
      ÜSTÜNDE, yani gerçek bir fark: operasyon ekranlarında olumlu blok ilk bakışta bulunmalı,
      müşteri vitrininin usul yeşili burada kayboluyordu. */
   'olive-bg': '#e3ecd2',
+  /* TONLU KARTIN HATA ZEMİNİ — uyuşmazlık kartı, iade satırı, "liste yüklenemedi" kutusu (18
+     kullanım). Taban #f4e3e0 (mobil müşteri seti) bu yüzeyde FAZLA koyu: v3'ün kalıbı "çok açık
+     zemin + renkli kenar", dolu bir pembe kutuyu uyarı bandına çevirirdi. Rol birebir aynı
+     olduğu için yeni ad açılmadı, değer ezildi (§1'in kuralı).
+
+     ── NİÇİN EŞİĞİN ALTINDA OLMASINA RAĞMEN AÇILDI (kullanıcı bulgusu 30.08) ──
+     §4 künyesi bu zemini iki kez `panel`e bağlamış ve gerekçesini *"Δ2/4/0, ekranda ayırt
+     edilemez"* diye yazmıştı. **Cihazda ayırt edildi** — varsayım ölçümle çürüdü ve sebebi
+     eşiğin ÖLÇMEDİĞİ eksende: Öklid mesafesi değil KANAL DENGESİ.
+         `panel` #fbfaf4 → R−G = +1   (nötr krem)
+         hata    #fdf6f4 → R−G = +7   (pembeye kayık)
+     Açık tonlarda göz mutlak parlaklığı değil kanalların SIRASINI okur; `panel`de R ile G
+     neredeyse eşitken burada ayrışıyorlar ve ayrışmanın yönü rengin kimliğidir. Eşik kuralı
+     yürürlükte kalıyor ama artık bir istisnası var ve istisna burada ilan edildi. */
+  'error-bg': '#fdf6f4',
 } as const satisfies Record<string, string>;
 
 /* ── (2) YÜZEYLER — tabanda karşılığı OLMAYAN üç durak ───────────────────────
@@ -201,12 +216,23 @@ export const operationsAppLine = {
   'warning-line': '#d9a97f',
 } as const satisfies Record<string, string>;
 
+/* ── (5) TONLU KARTIN UYARI ZEMİNİ (kullanıcı bulgusu 30.08) ─────────────────
+   Kenarı §4'te açılmıştı, zemini değil — aynı gerekçeyle ("eşiğin altında"). Kenar tek başına
+   yetmedi: kuryenin üstündeki para kartı cihazda NÖTR okunuyordu, oysa o para henüz kasada değil.
+   `error-bg`in yorumundaki kanal-dengesi ölçümü burada da geçerli (#fdf8f3 → R−G = +5, `panel`
+   +1). Tabanda karşılığı YOK — `terracotta-bg` (#f9ede2) bu değere Δ4/11/16, ikinci ve üçüncü
+   kanalda eşiğin üstünde ve rolü de başka (turuncu DOLGU, tonlu kartın zemini değil). */
+export const operationsAppWarnSurface = {
+  'warning-bg': '#fdf8f3',
+} as const satisfies Record<string, string>;
+
 /* Operasyon mobile özgü renklerin tam kümesi (12): 2 fark + 10 yeni. */
 export const operationsAppColors = {
   ...operationsAppOverrides,
   ...operationsAppSurface,
   ...operationsAppInk,
   ...operationsAppLine,
+  ...operationsAppWarnSurface,
 } as const satisfies Record<string, string>;
 
 /* ── TİPOGRAFİ — ölçek ZATEN VAR, iki durak eksikti ──────────────────────────

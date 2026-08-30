@@ -114,8 +114,15 @@ describe('GET /money/overview', () => {
     });
     // Yapı sözleşme şeklinde: kırılım ve float alanları var (sayıları küresel, değerleri iddia etmeyiz).
     expect(Array.isArray(data.todayByMethod)).toBe(true);
-    expect(data.courierFloat).toMatchObject({});
-    expect(typeof data.courierFloat.cashCents).toBe('number');
+    expect(typeof data.todayCount).toBe('number');
+    /* FLOAT SEFER BAŞINA (30.08) — önce tek toplamdı. Satır varsa künyesi TAM olmalı: para
+       kimdeyse o seferin referansı yazılı olmadan "kuryenin üstünde" cümlesi kimi işaret ettiğini
+       söyleyemez. Küresel veride satır olup olmadığını iddia etmeyiz, ŞEKLİNİ ederiz. */
+    expect(Array.isArray(data.courierFloat)).toBe(true);
+    for (const row of data.courierFloat) {
+      expect(typeof row.referenceNo).toBe('string');
+      expect(typeof row.cashCents).toBe('number');
+    }
   });
 
   it('KURYE 403 — para özeti rol kapısının arkasında', async () => {
@@ -136,6 +143,13 @@ describe('GET /money/day-end', () => {
     if (data.discrepancy !== null) {
       expect(typeof data.discrepancy.expectedCents).toBe('number');
       expect(typeof data.discrepancy.countedCents).toBe('number');
+      /* KÜNYE YALNIZ FARKI OLAN SEFERDEN (30.08) — tutan kapanış listeye girmez; girseydi
+         muhasebeci farkı olanı aramak zorunda kalırdı. Sıfır farklı bir satır bulunması bir
+         hata değil bir çelişki olurdu. */
+      for (const run of data.discrepancy.runs) {
+        expect(run.differenceCents).not.toBe(0);
+        expect(typeof run.referenceNo).toBe('string');
+      }
     }
   });
 

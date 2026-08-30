@@ -25,6 +25,8 @@ yolu (varsa).
 | --- | --- | --- | --- |
 | 01 Depo Hub · D8 | "2 kutu **verildi**" | "3 kutu taşıyıcıyı **bekliyor**" | **Bilinçli sapma.** Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur. |
 | 02 Toplama kuyruğu | Beş örnek satırın sol durum işareti tek kurala uymuyor (maket elle boyanmış) | Çoğunluğun kuralı yazıldı: işaret ile metin AYNI kuralı izler | **Kapandı** — şablonun kendi tutarsızlığıydı. |
+| 23 Tahsilat izleme | Tahsilat **adedi** ve kurye kurye nakit dökümü | `todayCount` + `courierFloat` sefer başına dizi | **Kapandı (30.08, kullanıcı bulgusu).** Veri defterde vardı, eksik olan sözleşmeydi — adet hareket sayısından, künye `delivery_run`dan. |
+| 24 Gün sonu | Uyuşmazlığın **sefer künyesi** (hangi sefer, kim, saat) | `discrepancy.runs` | **Kapandı (30.08, kullanıcı bulgusu).** Yalnız farkı olan kapanışlar; tek sefer varsa künye, çoksa sayı yazılır. |
 
 ### 1.2 Açık sapmalar (sözleşmede alan yok)
 
@@ -44,8 +46,6 @@ gerekçesiyle duruyor. Burada yalnız **ekran → ne eksik** özeti var; ayrınt
 | 15 Sefer künyesi | Aracın künyesi (plaka/tip) · rota zinciri |
 | 20 Yerinde satış | **Barkod okutma** · "sık satılanlar" sıralaması |
 | 21 Son satışlar | **PAZARLIK** rozeti · "tahsilat deftere geçmedi" uyarısı |
-| 23 Tahsilat izleme | Tahsilat **adedi** · kurye kurye nakit dökümü |
-| 24 Gün sonu | Uyuşmazlığın **sefer künyesi** (hangi sefer, kim, saat) |
 | 26 Şikâyet · 25 Karar | **Karar seçenekleri** ve "Kararı uygula" kapısı · talep referansı |
 | 28 Konuşma | Asistan taslağını **reddetme** · künyede işletme adı |
 | 29 Gün özeti | B2B/B2C kırılımı · "zamanında teslim" oranı · "imha + iade" tutarı |
@@ -128,6 +128,23 @@ yeni bir okuma ucu istiyor.
 | 7 | **Kabul fotoğrafı** (kamera) | 05 · 17 | Hasarlı mal kabulünde ve kapıda kanıt olarak; iki ekran birden bekliyor. `BEKLEYEN(21.13)` |
 
 ---
+
+## 2B. BİZDE GEREKLİ OLUP TASARIMDA OLMAYAN — brief yazıldı, tasarım bekleniyor
+
+§2'nin tersi: orada *tasarım bize bir şey öğretti*, burada **tasarım bir boşluk bıraktı**.
+
+| # | Ne | Ölçüm | Nerede duruyor |
+| --- | --- | --- | --- |
+| 1 | **Talep bölümü — KUYRUK + talep ekranı** (kullanıcı isteği 30.08) | v3 yönetime tek bir "Şikâyet" ekranı (26) çizdi ve o ekran karar kutusundan gelen **TEK** talebi açıyor (`/complaints/next`). Taleplerin LİSTESİ tasarımda hiç yok: ikinci talep, dünkü talep, AI'ın yürüttüğü talep ve kapanmış talep telefonda görünmüyor. Kuyruk webde var (`/operations/tickets`), mobilde yok. | Brief: [`design/pages/app-yonetim-talep.md`](../../design/pages/app-yonetim-talep.md) — Claude Design'a verilecek. Zemin brief'ine de bağlandı (`app-operasyon-zemin.md` §6). |
+
+**Kullanıcının cümlesi (30.08):** *"Sosyal gelen kutusu gibi bizim mesajları görebildiğimiz bir
+talep bölümümüz olması gerekiyor. Ve o talep bölümünde hem işlemler yapabildiğimiz gibi hem de
+yazışabilmemiz gerekiyor."*
+
+**Motor tarafı hazır, eksik olan sözleşme:** webde çalışan sekiz kapı (cevap · durum · üstlenme ·
+mod · taslak iste/tüket · **iade tetikleme** · elle talep) mobil uca taşınmamış; kuyruk süzgeçleri
+(`TicketQueueFilter`: durum · tür · cevap bekleyen · siparişli · yürütücü) ve sayfalama da
+serviste duruyor. Yani tasarım bölümü TAM çizebilir.
 
 ## 3. Bu dosyanın bakımı
 

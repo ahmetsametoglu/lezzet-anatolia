@@ -8044,6 +8044,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   "Stripe · **bekleyen**"). `account` tablosu `name` + `type` taşıyor; künyenin ikinci parçası üç
   ayrı eksende (yer · rol · durum) ve hiçbiri `type`tan türemiyor — kullanıcıya soruldu.
 
+- [x] (21.167) **TONLU KARTIN ZEMİNİ — eşik kuralının ölçmediği eksen** (kullanıcı bulgusu 30.08)
+  `touches:` `packages/design-tokens/src/{operations-app.ts,operations-app.test.ts}` ·
+  `apps/mobile/src/theme/unistyles.test.ts` · `apps/mobile/src/screens/money/*`
+
+  **Durum (30.08).** Kullanıcı cihazda: *"kartın arka tonunda biraz kırmızılık var, tasarımda…
+  kuryenin üstündeki kartın içinde kırmızı dolgu var gibi ama cihazda göremiyorum."*
+
+  **Dosyanın kendi künyesi tersini söylüyordu.** `operations-app.ts` §4 bu iki zemini iki kez
+  ölçmüş, iki kez `panel`e bağlamış ve gerekçesini yazmıştı: *"Δ2/4/0 · Δ2/2/1 — **ekranda ayırt
+  edilemez**; kutuyu hata yapan kenarı ve metnidir."* Varsayım cihazda çürüdü.
+
+  **Kök sebep eşiğin ölçmediği eksende: Öklid mesafesi değil KANAL DENGESİ.**
+  `panel` #fbfaf4 → R−G = **+1** (nötr krem) · hata #fdf6f4 → **+7** (pembe) · uyarı #fdf8f3 →
+  **+5** (şeftali) · olumlu #f2f7e8 → **−5** (yeşil). Açık tonlarda göz mutlak parlaklığı değil
+  kanalların SIRASINI okuyor; üç kanalı da 8'in altında tutan bir renk pekâlâ başka bir aileye
+  ait olabilir. Kural sökülmedi, **istisnası ilan edildi** ve gerekçesi token künyesine yazıldı.
+
+  **İki durak:** `error-bg` **fark** (taban #f4e3e0 → #fdf6f4; rol birebir aynı olduğu için yeni
+  ad açılmadı, değer ezildi) · `warning-bg` **yeni** (#fdf8f3; kenarı 30.08'de açılmıştı, zemini
+  aynı gerekçeyle atlanmıştı). Kullanım tasarımda ölçüldü: hata 18 · uyarı 10 — tek ekranın derdi
+  değil.
+
+  **Olumlu zemini (#f2f7e8, 22 kullanım) AÇILMADI:** benim ekranlarımda yok ve kullanılmayan bir
+  durak ölü token olurdu. Deftere ölçümüyle bırakıldı — yeşil tonlu kart çizen şerit açacak.
+
+  **Testler karara getirildi, susturulmadı:** `operations-app.test.ts` fark sayısı 2→3 ve toplam
+  durak 19→21 · `unistyles.test.ts`in "alt evren" iddiasından `error-bg` çıkarıldı, yerine
+  istisnayı çivileyen iki satır kondu. Dördü de doğru düşmüştü — token setinin ŞEKLİNİ çiviliyorlar
+  ve şekil değişti.
+
+  **Doğrulama.** design-tokens vitest **31/31** · mobil jest (tema + para + lib) **66/66** ·
+  typecheck beş pakette temiz · eslint temiz. Web'e etki YOK: bu dosya `globals.css` ikizinin
+  parçası değil (`render-theme-css.ts` onu basmaz), override yalnız operasyon temasında yaşıyor.
+
 - [x] (21.168) **DURAK EKRANI: KUTU KODU VE MAL İPUCU** (v3:17 · tasarım HTML'i koda karşı konuldu)
   `touches:` `apps/mobile/src/screens/courier/{delivery-screen.tsx,messages.json}`
 
@@ -8101,3 +8135,95 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   geri alındı.
 
   **Doğrulama.** Kurye jest **97/97** (4 yeni), `tsc` temiz, `eslint` temiz.
+- [x] (21.170) **KESİKLİ AYRAÇ KOMPONENTİ — RN'in `dashed`i tasarımın deseni değil** (kullanıcı bulgusu 30.08)
+  `touches:` `apps/mobile/src/components/operations/{dashed-rule.tsx,dashed-rule.test.tsx}` ·
+  `apps/mobile/src/screens/money/{money-screen.tsx,day-end-screen.tsx,money-screens.test.tsx}`
+
+  **Durum (30.08).** Kullanıcı kart içi ayraçlar için *"kesikli noktalar falan var, tasarım bariz
+  farklı"* dedi. Önce yanlış teşhis kurdum (*"kart eklenince göze battı"*) — **ölçünce başka çıktı.**
+
+  **Ölçüm — iki görüntü de 1080 px genişlikte, piksel piksel tarandı:**
+
+  | | kesik | boşluk | tekrar | doluluk |
+  | --- | --- | --- | --- | --- |
+  | tasarım (Chrome) | 9,0 px | 5,9 px | 14,9 px | %60 |
+  | cihaz (RN Android) | 11,9 px | 12,0 px | **23,9 px** | %51 |
+
+  Aynı `1.5px dashed` bildirimi Android'de **%60 daha seyrek** bir desene dönüşüyor: tasarımda sık
+  ve neredeyse sürekli okunan hat, cihazda ayrı noktalara ayrılıyor. RN'de dash desenini ayarlayan
+  API YOK (`borderStyle` parametre almaz).
+
+  **Ara çözüm REDDEDİLDİ ve bu kayda değer.** Önce düz çizgiye çevirdim — görsel ağırlık eşitti
+  (1,5 px × %60 ≈ 0,9 px mürekkep ⇒ `hairline` solid). Kullanıcı onu da gördü: *"cihazda düz
+  çizgiler ama tasarımda nokta nokta var."* Haklıydı: **ağırlık eşitlemek deseni geri getirmiyor**,
+  yalnız farkı başka bir yöne taşıyor.
+
+  **`OperationsDashedRule`** (`react-native-svg` — zaten kurulu, kitin çizim kapısı):
+  `strokeDasharray` deseni çiziyor ve değerler ÖLÇÜMDEN türüyor — tuval 390 CSS px → görüntü
+  1080 px, ölçek 2,769 ⇒ **3,25 dp kesik · 2,13 dp boşluk**. Testi deseni çiviliyor; biri "3,25
+  tuhaf, 3 yapayım" derse ayraç sessizce tasarımdan ayrılır ve ayrışma teste değil yalnız göze düşer.
+
+  **Ayraç artık satırın KENARLIĞI değil, aradaki öğe** — "sonuncu mu" sorusu her satıra sorulmuyor.
+
+  **Görsel ajanının ilk turundan bir fark daha kapandı:** ödeme etiketi tasarımda tamamı büyük
+  ("KAPIDA · KART"), kodda "KAPIDA · nakit"ti. Büyütme `upperIn(…, 'tr')` ile — stilin
+  `textTransform`u Android'de CİHAZIN diliyle uygular ve Fransızca arayüzde "NAKIT" (noktasız I)
+  olurdu (`section-header.tsx`in aynı gerekçesi).
+
+  **Deftere bırakıldı:** desen operasyonda 20+ dosyada geçiyor. Girdide **tek kenarlı ayraç** (bu
+  komponente geçmeli) ile **tam çerçeve** (`Surface`ın `invite`/`blank` tonları, imza tuvali —
+  ölçmedim, DOKUNULMASIN) ayrımı yazılı. Başkasının dosyasını ben çevirmedim.
+
+  **Doğrulama.** Ayraç jest **3/3** (yeni) · para jest **9/9** · typecheck temiz · eslint temiz.
+  Cihaz doğrulaması `v3-gorsel-para.md`ye **İSTEK** olarak yazıldı — cihaz görsel ajanında ve
+  protokolü geç okuduğum için bir kez sırasız dokunduğumu orada yazdım.
+
+- [x] (21.171) **SEFER KÜNYESİ VE ARACA YÜKLEME v3'E OTURDU** (v3:15 · v3:16 · görsel ajanının turu)
+
+  **Nereden geldi.** Görsel ajanı dört ekranı cihazda tasarımla yan yana koydu ve **20 fark**
+  yazdı (`v3-gorsel-kurye.md`). Bu satır ikisini kapatıyor: 15 · Sefer künyesi (6 fark) ve
+  16 · Araca yükleme (6 fark, dördün en çok ayrışanı).
+
+  **15 · Sefer künyesi — dördü düzeldi.**
+  · **Rota zinciri sayılardan SONRA ve notla tek paragraf.** Zinciri referansın altına koymuştum;
+    tasarım onu sayıların altına ve "yönetimde planlanır" cümlesiyle aynı demete koyuyor. Ayrım
+    anlamlı: üst satır künyenin KİMLİĞİ, orta blok günün ÖLÇÜSÜ, alt paragraf BAĞLAM. Zincir
+    yukarıdayken kimlikle ölçünün arasına giriyordu.
+  · **`ATANMIŞ` dolgulu hap oldu** (`olive-bg` + `badge` yarıçapı). Dolgusuz yazıldığında
+    yanındaki gri referansla aynı ağırlıktaydı; oysa o bir DURUM etiketi, künye değil.
+  · **Araç kendi kesikli kartında.** Düz gri bir cümleydi ve künye kartının dipnotu gibi
+    okunuyordu. Kart İKİ hâlde de çizilir — "araç yok" da bir cevaptır.
+  · **Birincil düğme ZEYTİN oldu, dipnotu altına ve ortaya indi.** v3'te renk bir ayrım taşıyor:
+    zeytin akışı İLERLETİR (başlat, yüklemeye geç), koyu bir mutabakatı KAPATIR (seferi kapat,
+    günü kapat). İkisi de koyuyken kurye bunu renkten ayırt edemiyordu.
+
+  **16 · Araca yükleme — beşi düzeldi.**
+  · **Sayaç kartı KOYU.** Krem çizilmişti ve okut düğmesiyle, durak kartlarıyla eşit sesle
+    konuşuyordu; rampada ilk bakış buraya düşmeli. Sayı serif ve kahraman, "/7 kutu" kuyruğu
+    sessiz, "araçta" da rozete döndü (`ink-inset`).
+  · **Okut düğmesi: emoji gitti, çizgi ikon geldi** (`scan` — tasarımın geometrisi zaten
+    ikonumuzda vardı) ve metin tasarımın metni oldu ("Kutuyu okut").
+  · **Durak satırı kendi kartında.** Kesikli ayraçla bölünmüş düz satırlardı; liste bir metin
+    bloğu gibi okunuyordu.
+  · **Yapışkan dip: "günün rotasına dön" + eksik kutu dipnotu.** Dipnot listenin en sonundaydı,
+    yani ancak sonuna kadar inen kurye görüyordu — oysa cümle dipteki düğmeyle verilen KARARIN
+    bedelini anlatıyor. Dipnot yalnız eksik varken çizilir.
+
+  **Kite bir prop: `OperationsProgressBar onInk`** — ve bu ölçülmüş bir ARIZAYDI. Çubuğun izi açık
+  zemin için seçilmişti (`neutral-bg`) ve KOYU kartların üstünde zeminden açık kalıyordu: çubuk
+  boşken bile DOLU görünüyordu. İki koyu çağıran da kuryede (günün özet kartı · yüklemenin sayaç
+  kartı) ve ikisi de düzeldi. Prop additive, öteki çağıranlar (depo toplama kuyruğu) etkilenmedi.
+
+  **Bilinçli sapmalar — üçü de gerekçeli:**
+  · **Sayfa başlığı ortak kalıyor** (`OperationsStackHeader`). Tasarım 15'i geri düğmesiz, tam boy
+    üstbaşlıklı çiziyor; ama o hâl 25 ekranın 2'sinde var ve 23'ü bizim komponentimizle birebir
+    aynı (ölçüm komponentin künyesinde). Üstelik `/trip` bizde günün rotasından İTİLEN bir rota —
+    geri düğmesini almak kuryeyi ekranda kilitlerdi.
+  · **"Yükleme okutması kuyruğa alınır" bilgi kartı yazılmadı**: tasarımın `yazmaKapali` dalı bizde
+    yok (çevrimdışı yazma kuyruğu henüz kurulmadı). Olmayan bir hâli anlatan bir kart, kuryeye
+    olmayan bir güvence verirdi. `BEKLEYEN(BACKLOG §1)`.
+  · **"Başka seferin kutusu" uyarı kartı ve "yanlış okuttum — geri al"** yazılmadı: ikincisi bir
+    GERİ ALMA ucu istiyor ve sözleşmede yok. Kayıt: `v3-tasarim-veri-modeli-notlari.md`.
+
+  **Doğrulama.** Kurye jest **101/101** (4 yeni), kit çubuğu **5/5** (yeni dosya), `tsc` temiz,
+  `eslint` temiz. Cihaz turu görsel ajanından istenecek.

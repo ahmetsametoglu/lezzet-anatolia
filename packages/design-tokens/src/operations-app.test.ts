@@ -58,7 +58,11 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
   it('fark anahtarları operasyon değerini verir (son katman TABANI EZER)', () => {
     expect(composedColors.cream).toBe('#f2f0e8'); // taban #faf6ec
     expect(composedColors['olive-bg']).toBe('#e3ecd2'); // taban #eef2e2
-    expect(sharedKeys(baseColors, operationsAppColors)).toEqual(['cream', 'olive-bg']);
+    /* TONLU KARTIN HATA ZEMİNİ (30.08) — taban #f4e3e0 bu yüzeyde fazla koyu: v3'ün kalıbı çok
+       açık zemin + renkli kenar, dolu bir pembe kutuyu uyarı bandına çevirirdi. Rol birebir aynı
+       olduğu için yeni ad AÇILMADI, değer ezildi. */
+    expect(composedColors['error-bg']).toBe('#fdf6f4');
+    expect(sharedKeys(baseColors, operationsAppColors)).toEqual(['cream', 'olive-bg', 'error-bg']);
   });
 
   it('operasyona-YENİ anahtarlar iki taban katmanında da yok, birleşimde var', () => {
@@ -147,7 +151,6 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(composedColors['olive-line']).toBe('#cddbb0'); // zeytin çip kenarı (#cdd8b6 buraya)
     expect(composedColors['disabled-fill']).toBe('#b9b29e'); // kapalı CTA
     expect(composedColors.error).toBe('#a44a3f');
-    expect(composedColors['error-bg']).toBe('#f4e3e0');
     expect(composedColors['terracotta-bg']).toBe('#f9ede2');
     expect(composedColors['olive-dark']).toBe('#4a6121');
     expect(composedColors.body).toBe('#6d7261');
@@ -200,8 +203,8 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(fade).toContain(', 0)');
   });
 
-  it('fark/yeni dağılımı sabit: 2 fark + 17 yeni', () => {
-    expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(2);
+  it('fark/yeni dağılımı sabit: 3 fark + 18 yeni', () => {
+    expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(3);
     expect(sharedKeys(baseText, operationsAppText)).toHaveLength(0);
     expect(sharedKeys(baseRadius, operationsAppRadius)).toHaveLength(0);
 
@@ -211,18 +214,20 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
       Object.keys(operationsAppRadius).length +
       Object.keys(operationsAppShadow).length +
       Object.keys(operationsAppGradient).length;
-    /* 2 fark + 17 operasyona-yeni. 30.08'de iki durak açıldı: `shadow.glow` (v3'ün TEK gölge
-       benzeri durağı — yapışkan okutma CTA'sının zeytin ışıması) ve `warning-line` (uyarı
-       kartının kenarı; §4 ölçümünde 9 kullanımı vardı ama durağı açılmamıştı). Sayı bilerek elle
-       yazılıyor — türetilseydi test "kaç durak var"ı ölçmez, kendini ölçerdi; yeni bir durak açan
-       buraya uğrayıp gerekçesini yazmak zorunda kalsın diye böyle. */
-    expect(total).toBe(19);
+    /* 3 fark + 18 operasyona-yeni. 30.08'de dört durak açıldı: `shadow.glow` (v3'ün TEK gölge
+       benzeri durağı — yapışkan okutma CTA'sının zeytin ışıması), `warning-line` (uyarı kartının
+       kenarı) ve TONLU KARTIN İKİ ZEMİNİ — `error-bg` (fark: tabanın #f4e3e0'ı ezildi) +
+       `warning-bg` (yeni). Son ikisi §4'ün eşiğine takılıp bilerek AÇILMAMIŞTI; kullanıcı cihazda
+       farkı gördü ve varsayım çürüdü — gerekçesi `operations-app.ts`te kanal dengesi ölçümüyle
+       yazılı. Sayı bilerek elle yazılıyor — türetilseydi test "kaç durak var"ı ölçmez, kendini
+       ölçerdi; yeni bir durak açan buraya uğrayıp gerekçesini yazmak zorunda kalsın diye böyle. */
+    expect(total).toBe(21);
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {
     for (const key of Object.keys(baseColors)) expect(composedColors).toHaveProperty(key);
     expect(Object.keys(composedColors)).toHaveLength(
-      Object.keys(baseColors).length + Object.keys(operationsAppColors).length - 2,
+      Object.keys(baseColors).length + Object.keys(operationsAppColors).length - 3,
     );
   });
 });

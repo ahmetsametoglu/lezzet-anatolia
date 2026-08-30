@@ -20,6 +20,19 @@ export function stampFullOf(iso: string): string {
   return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/**
+ * `2026-08-26T15:42:00Z` → `17:42` (cihaz saatiyle) — **günü zaten belli olan** bir olayın damgası.
+ *
+ * `stampOf`tan ayrı çünkü soru farklı: orada "hangi gün, hangi saat" sorulur (listede dünün kaydı
+ * da olabilir), burada gün BAŞLIKTA yazılı ve tekrarı gürültüdür — gün sonu özeti tanımı gereği
+ * tek bir günün fotoğrafıdır, uyuşmazlığın künyesinde ikinci kez tarih yazmak satırı uzatır.
+ */
+export function timeOf(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /* AY ADLARI TEK YERDE. Kurye üstbaşlığı BÜYÜK harf ister ("8 AĞUSTOS"), para ekranı düz yazar
    ("28 Ağustos"); ikisi de aynı listeden türer — liste iki dosyada olsaydı, biri bir gün
    ötekinden ayrılır ve iki ekran aynı günü iki farklı ay adıyla yazardı. */

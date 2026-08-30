@@ -48,6 +48,28 @@ export const AccountBalanceRowSchema = z.object({
 });
 export type AccountBalanceRow = z.infer<typeof AccountBalanceRowSchema>;
 
+/**
+ * Kuryenin üstündeki para — **SEFER BAŞINA** (v3:23, kullanıcı bulgusu 30.08).
+ *
+ * Önce tek toplam taşınıyordu ve ekran onu yöntem kırılımıyla yazıyordu; tasarım ise kartı kurye
+ * kurye çiziyor ("Marc Lemoine · SF-26-YRNWV9 · 186,00 €"). Toplam, muhasebecinin soramadığı
+ * soruyu cevapsız bırakıyordu: **kimde**. Para birinin cebindeyse o kişinin adı bilginin kendisidir;
+ * "186,00 € kuryelerde" ile "186,00 € Marc'ta" aynı cümle değildir.
+ *
+ * Veri zaten defterdeydi: `delivery_run` künyeyi (`referenceNo` · `courierId`), `delivery_run`ın
+ * tahsilat satırı da beklenen tutarları taşıyor — eksik olan yalnız zarftı.
+ */
+export const CourierFloatRowSchema = z.object({
+  runId: z.string().uuid(),
+  referenceNo: z.string(),
+  /** Seferi süren kurye; profili okunamazsa ad UYDURULMAZ (`null` → ekran kuyruksuz yazar). */
+  courierName: z.string().nullable(),
+  cashCents: z.number().int(),
+  cardCents: z.number().int(),
+  chequeCents: z.number().int(),
+});
+export type CourierFloatRow = z.infer<typeof CourierFloatRowSchema>;
+
 export const MoneyOverviewSchema = z.object({
   /**
    * Günün bekleyen tahsilatları — küme TESLİM GÜNÜYLE sınırlı olduğu için doğal tavanlı (tek tur).
@@ -56,14 +78,20 @@ export const MoneyOverviewSchema = z.object({
   pending: z.array(PendingCollectionSchema),
   todayByMethod: z.array(MethodTotalSchema),
   /**
-   * Kuryelerin üstündeki para: bugünün HENÜZ KAPANMAMIŞ seferlerinde kapıda toplanan tutarlar.
-   * Online/havale bu dökümde YOKTUR (v2:744) — o para hiç kuryenin eline değmez.
+   * Bugün deftere düşen tahsilat ADEDİ (v3:23 rozeti — "14 tahsilat").
+   *
+   * Tutarın yanında DURAN ama ondan türetilEMEYEN sayı: 1.286,50 € iki tahsilattan da gelebilir,
+   * kırktan da; muhasebecinin "gün yoğun muydu" sorusunun cevabı adettedir. `todayByMethod`
+   * yöntem başına yalnız tutar taşır, dolayısıyla adet oradan çıkarılamaz — kendi alanı olmak
+   * zorunda.
    */
-  courierFloat: z.object({
-    cashCents: z.number().int(),
-    cardCents: z.number().int(),
-    chequeCents: z.number().int(),
-  }),
+  todayCount: z.number().int().nonnegative(),
+  /**
+   * Kuryelerin üstündeki para: bugünün HENÜZ KAPANMAMIŞ seferlerinde kapıda toplanan tutarlar,
+   * **sefer başına**. Online/havale bu dökümde YOKTUR (v2:744) — o para hiç kuryenin eline değmez.
+   * Küme bugünün açık seferleriyle sınırlı olduğu için doğal tavanlı (tek tur, sayfalama yok).
+   */
+  courierFloat: z.array(CourierFloatRowSchema),
   accounts: z.array(AccountBalanceRowSchema),
 });
 export type MoneyOverview = z.infer<typeof MoneyOverviewSchema>;
@@ -82,9 +110,27 @@ export const MoneyDayEndSchema = z.object({
   /**
    * Beklenen ↔ sayılan nakit farkı, bugünün KAPANMIŞ seferleri üzerinden.
    * `null` = bugün kapanan sefer yok; mutabakat sorusu henüz sorulmadı (0 "fark yok" derdi — yalan).
+   *
+   * `runs` KÜNYEDİR, toplam değil (v3:24, kullanıcı bulgusu 30.08): şablon uyuşmazlığın altına
+   * "SF-26-YRNWV9 · Marc Lemoine · 17:42" yazıyor. Bir eksiğin peşine düşen muhasebeci **hangi
+   * seferi** arayacağını bilmeli; toplam tek başına "bir yerde 4,50 € eksik" demekten öteye
+   * gitmiyordu. Yalnız FARKI OLAN seferler girer — tutan sefer bir künye değil, sessiz bir onaydır.
    */
   discrepancy: z
-    .object({ expectedCents: z.number().int(), countedCents: z.number().int() })
+    .object({
+      expectedCents: z.number().int(),
+      countedCents: z.number().int(),
+      runs: z.array(
+        z.object({
+          referenceNo: z.string(),
+          /** Profili okunamazsa ad UYDURULMAZ — künye kuyruksuz yazılır. */
+          courierName: z.string().nullable(),
+          closedAt: z.string(),
+          /** sayılan − beklenen; eksi = eksik teslim, artı = fazla para. */
+          differenceCents: z.number().int(),
+        }),
+      ),
+    })
     .nullable(),
   /** Defterde eşleşmemiş (reconcile edilmemiş) hareket sayısı. */
   unmatchedMovementCount: z.number().int().nonnegative(),

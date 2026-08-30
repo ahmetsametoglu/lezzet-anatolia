@@ -68,7 +68,17 @@ function overviewData(overrides: Partial<MoneyOverview> = {}): MoneyOverview {
       { method: 'online', cents: 61_280 },
       { method: 'cash', cents: 8650 },
     ],
-    courierFloat: { cashCents: 7800, cardCents: 2250, chequeCents: 0 },
+    todayCount: 14,
+    courierFloat: [
+      {
+        runId: '00000000-0000-4000-8000-000000000101',
+        referenceNo: 'SF-26-TESTRUN',
+        courierName: 'Marc Lemoine',
+        cashCents: 7800,
+        cardCents: 2250,
+        chequeCents: 0,
+      },
+    ],
     accounts: [
       { name: 'Kasa', type: 'cash', cents: 41_230 },
       { name: 'Revolut', type: 'bank', cents: 821_477 },
@@ -84,7 +94,18 @@ function dayEndData(overrides: Partial<MoneyDayEnd> = {}): MoneyDayEnd {
     collectedCents: 73_980,
     refundCents: -1290,
     courierHandoverCents: 6800,
-    discrepancy: { expectedCents: 7800, countedCents: 6800 },
+    discrepancy: {
+      expectedCents: 7800,
+      countedCents: 6800,
+      runs: [
+        {
+          referenceNo: 'SF-26-TESTRUN',
+          courierName: 'Marc Lemoine',
+          closedAt: '2026-08-26T15:42:00.000Z',
+          differenceCents: -1000,
+        },
+      ],
+    },
     unmatchedMovementCount: 0,
     ...overrides,
   };
@@ -156,15 +177,19 @@ describe('M1 · tahsilat izleme', () => {
 
     await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading');
 
-    expect(screen.getByText('LA-26-TEST01')).toBeOnTheScreen();
+    /* REFERANS VE MÜŞTERİ TEK SATIRDA (v3:23) — satırın kimliği ikisinin birleşimidir; ayrı
+       satırlara bölündüğünde kart iki başlıklı görünüyordu. */
+    expect(screen.getByText('LA-26-TEST01 · Restaurant Bosphore')).toBeOnTheScreen();
     /* TUTAR VE ETİKET AYRI (v3:23): satırın cevabı tutar, "kapıda mı" ve yöntem onun künyesi.
        v2'de tek cümleydi ("Kapıda 42,00 € · nakit") ve tutar cümlenin içinde kayboluyordu. */
     expect(screen.getByText('42,00 €')).toBeOnTheScreen();
-    expect(screen.getByText('KAPIDA · nakit')).toBeOnTheScreen();
+    /* ETİKETİN TAMAMI BÜYÜK (v3:23) — "KAPIDA · nakit" tek satırda iki büyüklük demekti.
+       Büyütme dilin kuralıyla: Türkçe "nakit" → "NAKİT" (noktalı İ), `textTransform` değil. */
+    expect(screen.getByText('KAPIDA · NAKİT')).toBeOnTheScreen();
     // Kısmi ödenmiş satır KALANI söyler ve referanssız hâli uydurmaz.
     expect(screen.getByText('12,90 €')).toBeOnTheScreen();
-    expect(screen.getByText('KALAN · kart')).toBeOnTheScreen();
-    expect(screen.getByText(t.track.pending.noRef)).toBeOnTheScreen();
+    expect(screen.getByText('KALAN · KART')).toBeOnTheScreen();
+    expect(screen.getByText(`${t.track.pending.noRef} · L. Petit`)).toBeOnTheScreen();
     // Günün parası EN ÜSTTE ve toplamı kırılımdan TÜRÜYOR (42,00 + 12,90 değil; bugünkü tahsilat).
     expect(screen.getByTestId('money-today-total')).toBeOnTheScreen();
     // Hesaplar adlarıyla — üçüncü hesap (Stripe) iki sabit satıra indirgenip yutulmuyor.
@@ -180,6 +205,53 @@ describe('M1 · tahsilat izleme', () => {
 
     expect(screen.getByTestId('money-pending-empty')).toBeOnTheScreen();
     expect(screen.getByTestId('money-today-empty')).toBeOnTheScreen();
+  });
+
+  /* PARA KİMDE (v3:23, kullanıcı bulgusu 30.08) — kart SEFER BAŞINA: kurye adı + sefer künyesi +
+     o seferin toplamı. Önce tek toplam taşınıyordu ve muhasebecinin asıl sorusu ("kimde")
+     cevapsız kalıyordu. */
+  it('kuryenin üstündeki para kurye ve sefer künyesiyle, sefer başına yazılır', async () => {
+    fetchMock.mockResolvedValue(ok(overviewData()));
+
+    await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading');
+
+    expect(screen.getByText('Marc Lemoine · SF-26-TESTRUN')).toBeOnTheScreen();
+    // 7800 nakit + 2250 kart + 0 çek = 10050 → "100,50 €" (toplam satırdan TÜRER)
+    expect(screen.getByTestId('money-courier-float')).toHaveTextContent(/100,50\s?€/u);
+  });
+
+  /* KURYE ADI UYDURULMAZ: profili okunamayan seferde künye kuyruksuz kalır — uydurma bir ad,
+     parayı yanlış kişinin üstünde gösterirdi. */
+  it('kurye adı yoksa künye yalnız sefer referansıdır', async () => {
+    fetchMock.mockResolvedValue(
+      ok(
+        overviewData({
+          courierFloat: [
+            {
+              runId: '00000000-0000-4000-8000-000000000102',
+              referenceNo: 'SF-26-ADSIZ',
+              courierName: null,
+              cashCents: 5000,
+              cardCents: 0,
+              chequeCents: 0,
+            },
+          ],
+        }),
+      ),
+    );
+
+    await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading');
+
+    expect(screen.getByText('SF-26-ADSIZ')).toBeOnTheScreen();
+  });
+
+  /* ADET TUTARDAN TÜREMEZ (v3:23 rozeti) — aynı toplam iki tahsilattan da kırktan da gelebilir. */
+  it('günün rozeti tahsilat ADEDİNİ yazar', async () => {
+    fetchMock.mockResolvedValue(ok(overviewData()));
+
+    await renderScreen(<MoneyTrackingScreen />, 'money-tracking-loading');
+
+    expect(screen.getByTestId('money-today-count')).toHaveTextContent('14 tahsilat');
   });
 });
 
@@ -197,6 +269,11 @@ describe('M2 · gün sonu', () => {
        ekranda bir düğme arar. */
     expect(screen.getByText(/Sefer kapanışında 10,00 € eksik/u)).toBeOnTheScreen();
     expect(screen.getByText(/Çözüm masaüstünde/u)).toBeOnTheScreen();
+    /* HANGİ SEFER, KİM, NE ZAMAN (v3:24, kullanıcı bulgusu 30.08) — bir eksiğin peşine düşen
+       muhasebeci neyi arayacağını bilmeli; toplam tek başına "bir yerde 10,00 € eksik" diyordu. */
+    expect(screen.getByTestId('money-day-end-discrepancy-runs')).toHaveTextContent(
+      /SF-26-TESTRUN · Marc Lemoine · \d{2}:\d{2}/u,
+    );
     // Gün SUNUCUNUN söylediği gündür (fikstür 26 Ağustos), cihazın takviminden tahmin edilmez.
     expect(screen.getByText('26 Ağustos · salt okuma')).toBeOnTheScreen();
   });

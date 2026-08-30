@@ -80,20 +80,44 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
   // teslim edilmiştir — onu da saymak aynı parayı iki kez "kuryede" göstermek olurdu.
   const closes = await new DeliveryRunCloseService(db).listByRuns(todayRuns.map((run) => run.id));
   const closedRunIds = new Set(closes.map((close) => close.deliveryRunId));
-  const openRunIds = todayRuns.filter((run) => !closedRunIds.has(run.id)).map((run) => run.id);
-  const collections = await new DeliveryRunCollectionService(db).listByRuns(openRunIds);
-  const courierFloat = collections.reduce(
-    (sum, row) => ({
-      cashCents: sum.cashCents + row.expectedCashCents,
-      cardCents: sum.cardCents + row.expectedCardCents,
-      chequeCents: sum.chequeCents + row.expectedChequeCents,
-    }),
-    { cashCents: 0, cardCents: 0, chequeCents: 0 },
-  );
+  const openRuns = todayRuns.filter((run) => !closedRunIds.has(run.id));
+  const collections = await new DeliveryRunCollectionService(db).listByRuns(openRuns.map((run) => run.id));
+
+  /* PARA KİMDE — sefer başına künye (v3:23). Kurye adı ikinci bir profil turu ister; bekleyen
+     satırların adlarıyla AYNI kapıdan okunur ve **tek turda** (iki ayrı `listByIds` çağrısı aynı
+     tabloya iki kez gitmek olurdu). Profili okunamayan kurye `null` kalır — uydurulmaz. */
+  const courierNames = await new UserProfileService(db).listByIds([
+    ...new Set(openRuns.map((run) => run.courierId)),
+  ]);
+  const courierNameOf = new Map(courierNames.map((profile) => [profile.id, profile.name]));
+  const floatOf = new Map(collections.map((row) => [row.deliveryRunId, row]));
+
+  /* SIFIRLI SEFER LİSTEDE YOK: açık ama henüz hiç kapıda para toplamamış bir sefer, "kuryenin
+     üstünde" başlığının altında 0,00 € diye durursa muhasebeci olmayan bir emaneti kovalar. */
+  const courierFloat = openRuns.flatMap((run) => {
+    const row = floatOf.get(run.id);
+    if (row === undefined) return [];
+    const total = row.expectedCashCents + row.expectedCardCents + row.expectedChequeCents;
+    if (total === 0) return [];
+    return [
+      {
+        runId: run.id,
+        referenceNo: run.referenceNo,
+        courierName: courierNameOf.get(run.courierId) ?? null,
+        cashCents: row.expectedCashCents,
+        cardCents: row.expectedCardCents,
+        chequeCents: row.expectedChequeCents,
+      },
+    ];
+  });
 
   return {
     pending,
     todayByMethod,
+    /* ADET, TUTARDAN AYRI BİR GERÇEK: aynı toplam iki tahsilattan da kırktan da gelebilir.
+       Sayılan şey HAREKETTİR (deftere düşen tahsilat kaydı), sipariş değil — bir sipariş iki
+       taksitle ödendiyse defterde iki kayıt vardır ve muhasebecinin saydığı da odur. */
+    todayCount: paymentMovements.length,
     courierFloat,
     accounts: accounts.map((account) => ({
       name: account.name,
@@ -124,13 +148,41 @@ export async function readMoneyDayEnd(db: Db, input: { date?: string } = {}): Pr
   const counted = closes.reduce((sum, close) => sum + close.countedCashCents, 0);
   const expected = closes.reduce((sum, close) => sum + close.expectedCashCents, 0);
 
+  /* UYUŞMAZLIĞIN KÜNYESİ (v3:24) — hangi sefer, kim, ne zaman. Yalnız FARKI OLAN kapanışlar:
+     tutan sefer bir künye değil, sessiz bir onaydır ve listeye girseydi muhasebeci farkı olanı
+     aramak zorunda kalırdı. Kurye adı seferden gelir (kapanış yalnız `closedBy` taşır ve o
+     kapatan kişidir — çoğu zaman kurye ama kural değil; para KİMİN üstündeydi sorusunun cevabı
+     seferi süren kuryedir). */
+  const mismatched = closes.filter((close) => close.countedCashCents !== close.expectedCashCents);
+  const runOf = new Map(todayRuns.map((run) => [run.id, run]));
+  const mismatchNames = await new UserProfileService(db).listByIds([
+    ...new Set(mismatched.flatMap((close) => {
+      const run = runOf.get(close.deliveryRunId);
+      return run ? [run.courierId] : [];
+    })),
+  ]);
+  const mismatchNameOf = new Map(mismatchNames.map((profile) => [profile.id, profile.name]));
+
+  const runs = mismatched.flatMap((close) => {
+    const run = runOf.get(close.deliveryRunId);
+    if (run === undefined) return [];
+    return [
+      {
+        referenceNo: run.referenceNo,
+        courierName: mismatchNameOf.get(run.courierId) ?? null,
+        closedAt: close.closedAt,
+        differenceCents: close.countedCashCents - close.expectedCashCents,
+      },
+    ];
+  });
+
   return {
     date,
     collectedCents,
     refundCents,
     courierHandoverCents: counted,
     // Kapanan sefer yoksa mutabakat sorusu HENÜZ SORULMADI — 0 "fark yok" derdi, o bir yalan.
-    discrepancy: closes.length > 0 ? { expectedCents: expected, countedCents: counted } : null,
+    discrepancy: closes.length > 0 ? { expectedCents: expected, countedCents: counted, runs } : null,
     unmatchedMovementCount,
   };
 }

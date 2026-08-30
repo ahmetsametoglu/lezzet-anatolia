@@ -1,6 +1,7 @@
 {
   "common": {
     "back": "Geri",
+    "loading": "Para okunuyor…",
     "method": {
       "cash": "nakit",
       "card": "kart",
@@ -15,9 +16,9 @@
     }
   },
   "track": {
-    "dayEnd": "Gün sonu →",
+    "dayEnd": "gün sonu →",
     "pending": {
-      "eyebrow": "BEKLEYEN TAHSİLATLAR — GÜNÜN SİPARİŞLERİ",
+      "eyebrow": "BEKLEYEN TAHSİLATLAR",
       "doorTag": "KAPIDA",
       "partialTag": "KALAN",
       "tagWithMethod": "{kind} · {method}",
@@ -27,28 +28,28 @@
         "confirmed": "hazırlanacak",
         "preparing": "hazırlanıyor",
         "ready": "hazır",
-        "out_for_delivery": "rotada",
+        "out_for_delivery": "yolda",
         "delivered": "teslim edildi",
         "completed": "kapandı",
         "cancelled": "iptal",
         "returned": "iade"
       },
-      "empty": "Bekleyen tahsilat yok — kuryenin üstünde de para kalmadıysa gün sonu temizdir.",
-      "note": "Tutar yalnız tahsil edilecekse yazılır — ödenmişte rakam tekrarlanmaz."
+      "empty": "Bekleyen tahsilat yok — kuryenin üstünde de para kalmadıysa gün sonu temizdir."
     },
     "today": {
       "eyebrow": "BUGÜN GERÇEKLEŞEN",
+      "count": "{count} tahsilat",
       "empty": "Bugün deftere tahsilat düşmedi."
     },
     "float": {
-      "eyebrow": "KURYENİN ÜSTÜNDE (K7'YE DEK)",
-      "note": "yalnız nakit/kart/çek sayılır — online/havale bu dökümde yoktur"
+      "eyebrow": "KURYENİN ÜSTÜNDE — K7'YE DEK",
+      "state": "sefer açık · nakit teslim edilmedi",
+      "empty": "Kuryelerin üstünde para kalmadı."
     },
     "balances": {
-      "eyebrow": "HESAP BAKİYELERİ — DEFTERDEN TOPLANIR",
-      "note": "\"bakiye düzeltme\" diye bir kavram yok — hiçbir yazma aksiyonu çizilmez."
+      "eyebrow": "HESAP BAKİYELERİ"
     },
-    "footnote": "Bu ekran hiçbir şey yazmaz. Nakit sayımı kuryenin sefer kapanışında, düzeltme masaüstünde yapılır."
+    "footnote": "Bu ekran hiçbir şey yazmaz — \"bakiye düzeltme\" diye bir kavram yok. Nakit sayımı kuryenin sefer kapanışında, düzeltme masaüstünde yapılır."
   },
   "dayEnd": {
     "title": "Gün Sonu Özeti",
@@ -56,13 +57,14 @@
     "captionNoDate": "salt okuma · çözüm masaüstünde",
     "collected": "Tahsilat toplamı",
     "refunds": "İadeler",
-    "courierHandover": "Kurye nakit teslimi (K7)",
+    "courierHandover": "Kurye nakit teslimi",
     "discrepancy": {
       "eyebrow": "UYUŞMAZLIK — YALNIZ GÖRÜNÜR",
       "body": "Beklenen {expected} ↔ sayılan {delivered} nakit.",
       "none": "Uyuşmazlık yok — beklenen ile sayılan nakit tutuyor.",
       "noRun": "Bugün kapanan sefer yok — mutabakat, sefer kapanışıyla doğar.",
       "headline": "Sefer kapanışında {amount} {direction}",
+      "manyRuns": "{count} seferde fark var — dökümü masaüstünde",
       "short": "eksik",
       "over": "fazla",
       "resolution": "Çözüm masaüstünde: karşı kayıt ya da kurye ile mutabakat. Buradan düzeltilemez."

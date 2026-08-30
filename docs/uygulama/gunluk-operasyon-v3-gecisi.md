@@ -6,6 +6,9 @@
 > Bu günlük "nasıl gitti"yi tutar; orası "ne yapalım"ı.
 > Tasarımın kendisi `design/project/Operasyon Mobil v3.dc.html`; ekran başına türetilmişi
 > [design/derived/operasyon-mobil-v3/index.md](../../design/derived/operasyon-mobil-v3/index.md).
+> **Cihazdan görüntü BURADAN istenmez** → menü başına açılan görsel defterleri:
+> [depo](v3-gorsel-depo.md) · [kurye](v3-gorsel-kurye.md) · [yönetim](v3-gorsel-yonetim.md) ·
+> [para](v3-gorsel-para.md) (kullanıcı kararı 30.08: cihaz tek, çekim görsel ajanında).
 > Durumun sahibi bu dosya DEĞİL, `docs/build/21-mobil-uygulama.md` görev satırıdır (CLAUDE §5);
 > burası "nasıl gitti"yi tutar.
 
@@ -773,6 +776,27 @@ yüzey hiyerarşisidir; cümle zaten sözlükte duruyor.
 
 ---
 
+## 30.08 öğleden sonra — Para ÜÇÜNCÜ tur: "uyuşmazlık" bir karar değil, ertelemeymiş (21.166)
+
+Kullanıcı ikinci turun sonucuna baktı ve üç eksik saydı: siyah kartta tahsilat sayısı yok ·
+kuryenin üstündeki para kartı tasarımdaki gibi değil · hesap bakiyeleri farklı.
+
+**Üçü de defterde yazılıydı** — uyuşmazlık 16, 17, 18. Yani kaçırılmış değillerdi; *"sözleşmede
+alan yok"* diye **kayda geçirilip geçilmişlerdi**. Dersi burada:
+
+> **Alan yoksa alan açılır, ekran kırpılmaz.** "Uyuşmazlık" doğru bir kayıt türüdür ama yanlış bir
+> varsayılan: kararı başkasına bırakır. Oysa üçünün de verisi ZATEN DEFTERDEYDİ — adet motorun
+> okuduğu hareket listesinin uzunluğu, kurye künyesi `delivery_run`ın kendi alanları, kapanış anı
+> `delivery_run_close.closedAt`. Eksik olan veri değil **zarftı**; hiçbiri migration istemedi.
+
+Bir sözleşme genişletmesi (3 alan) ve motorun iki turu sonra üçü de ekranda. Ayrıntı 21.166'da.
+
+**Uyuşmazlık defterine bir kural:** bundan sonra bir satır "sözleşmede yok" diye kapatılmadan önce
+sorulacak soru şu — *veri defterde var mı?* Varsa o bir uyuşmazlık değil, yazılmamış bir zarftır.
+Gerçek uyuşmazlık, verinin KENDİSİNİN olmadığı yerdir (depo adı, parti kodu çözümü, kutu tipleri).
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -794,9 +818,9 @@ Burada durulmaz — yazılır, geçilir.
 | 15 | 20 Yerinde satış | Şablon liste başlığını **"SIK SATILANLAR — DOKUN, SEPETE EKLE"** yapıyor. Uç bir katalog sayfası döndürüyor (`SaleCatalogPageSchema`), satış sıklığına göre sıralama YOK. Başlığı öyle yazmak, sıradan bir katalog listesine "bunlar sık satılanlar" dedirtmek olurdu. | Açık — başlık yazılmadı, liste katalog olarak duruyor. Çözümü: satış sayısına göre sıralayan bir uç kesiti. |
 | 14 | 20 Yerinde satış | Şablon aramanın yanına **"Barkod okut"** düğmesi koyuyor. Satış kataloğunda barkod alanı yok ve `codes/resolve` varyanta çözüyor ama satış ekranının çekmecesi ürün + boy bekliyor. | Açık — düğme çizilmedi. Çözümü: çözülen varyantı doğrudan sepete/çekmeceye bağlayan bir yol. |
 | 13 | 21 Son satışlar | Şablon satırda **PAZARLIK** rozeti ve *"satış yazıldı ama tahsilat deftere geçmedi"* uyarısı gösteriyor. `SaleRecordSchema` ikisini de taşımıyor — pazarlık izi siparişin kalemlerinde, `paymentRecorded` ise yalnız YAZMA anının cevabında. | Açık — ikisi de listeye yazılmadı; kasa uyarısı satışın FİŞİNDE duruyor (v3:22), yani bilgi kaybolmuyor. Çözümü: `SaleRecordSchema`'ya `negotiated` ve `paymentRecorded` alanları. |
-| 18 | 24 Gün sonu | Şablon uyuşmazlık satırında **seferin künyesini** yazıyor ("SF-26-YRNWV9 · Marc Lemoine · 17:42"). `MoneyDayEnd` yalnız `expectedCents ↔ countedCents` taşıyor — hangi sefer, hangi kurye, hangi saat sözleşmede yok. | Açık — fark ve yönü yazıldı, künye yazılmadı. Çözümü: mutabakat nesnesine sefer kimliği + kurye adı + kapanış anı. |
-| 17 | 23 Tahsilat izleme | Şablon kuryenin üstündeki parayı **kurye kurye** döküyor ("Marc Lemoine · SF-26-… · sefer açık · nakit teslim edilmedi · 186,00 €"). `MoneyOverview.courierFloat` TEK toplam taşıyor (nakit/kart/çek). | Açık — toplam yazıldı. Çözümü: `courierFloat`ın sefer başına dizi olması. |
-| 16 | 23 Tahsilat izleme | Şablon günün toplamının altına **"14 tahsilat"** (adet) yazıyor; `todayByMethod` yalnız yöntem başına TUTAR taşıyor, adet yok. Ayrıca üstbaşlıkta **deponun adı** var (uyuşmazlık 1'in aynı ailesi). | Açık — toplam kırılımdan türetildi, adet yazılmadı; üstbaşlık ad + gün yazıyor, depo adı yok. |
+| 18 | 24 Gün sonu | Şablon uyuşmazlık satırında **seferin künyesini** yazıyor ("SF-26-YRNWV9 · Marc Lemoine · 17:42"). `MoneyDayEnd` yalnız `expectedCents ↔ countedCents` taşıyor — hangi sefer, hangi kurye, hangi saat sözleşmede yok. | **KAPANDI (30.08, kullanıcı bulgusu).** `discrepancy.runs` eklendi: sefer referansı + kurye adı + kapanış anı + o seferin farkı; ekran tek sefer varsa künyeyi, çoksa sayıyı yazar. Yalnız FARKI OLAN kapanışlar girer — tutan sefer bir künye değil, sessiz bir onaydır. |
+| 17 | 23 Tahsilat izleme | Şablon kuryenin üstündeki parayı **kurye kurye** döküyor ("Marc Lemoine · SF-26-… · sefer açık · nakit teslim edilmedi · 186,00 €"). `MoneyOverview.courierFloat` TEK toplam taşıyor (nakit/kart/çek). | **KAPANDI (30.08, kullanıcı bulgusu).** `courierFloat` sefer başına diziye çevrildi (`CourierFloatRow`: sefer + kurye adı + üç tutar). Veri zaten defterdeydi (`delivery_run.referenceNo/courierId`), eksik olan zarftı. Kurye adı okunamazsa `null` — künye kuyruksuz yazılır, ad uydurulmaz. |
+| 16 | 23 Tahsilat izleme | Şablon günün toplamının altına **"14 tahsilat"** (adet) yazıyor; `todayByMethod` yalnız yöntem başına TUTAR taşıyor, adet yok. Ayrıca üstbaşlıkta **deponun adı** var (uyuşmazlık 1'in aynı ailesi). | **ADET KAPANDI (30.08, kullanıcı bulgusu):** `todayCount` eklendi — adet tutardan TÜREMEZ, aynı toplam iki tahsilattan da kırktan da gelebilir. Sayılan şey deftere düşen HAREKETTİR. **Depo adı hâlâ açık** (uyuşmazlık 1'in ailesi): üstbaşlık ad + gün + tesis yazıyor, deponun adı değil — para okumaları depo boyutu taşımaz. |
 | 24 | 32 Bildirimler | Sözleşme beş `dot` tonu taşıyor, şablon iki kart varyantı veriyor; satır alt metnindeki "detay" alanı da sözleşmede yok. | Açık — ikisi de uydurulmadı. |
 | 23 | 31 Tedarik | Şablon satırda **"stok 24 · günlük 3,1 · 8 gün"** yazıyor: günlük satış hızı ve gün kapağı `SupplyLine`de YOK. Terracotta **"imha oranı yüksek"** uyarısı da yok. | Açık — ölçüm satırı elimizdeki dört gerçek sayıyla yazıldı (stok · eşik · yolda · son alış); `incomingQty` ilk kez ekranda görünüyor. |
 | 22 | 30 Kampanya | Şablon **tek partinin** detayını çiziyor (künye + dört ölçüm + iki düğme); uç aday LİSTESİ döndürüyor. Ayrıca "kalan ömür %18" (partinin toplam raf ömrü gerekir) ve **üç indirim çipi** (sözleşmede tek oran var) yok. | Açık — ekran tekile İNDİRİLMEDİ (N parti için N yolculuk olurdu; teklif kararı günde bir kez, toplu verilir). Kart anatomisi her adaya uygulandı. |
