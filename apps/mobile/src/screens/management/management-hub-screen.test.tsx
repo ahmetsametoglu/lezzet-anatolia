@@ -179,6 +179,44 @@ describe('yönetim hub — karar kutusu', () => {
   });
 
   /*
+    KÜNYE SATIRI: TÜR + GÖRELİ ZAMAN (v3:2089 "şikâyet · 40 dk önce"). Damga MUTLAKTI ("30.08 ·
+    06:45") ve okuyana çıkarma yaptırıyordu; kartın sorduğu şey "ne kadar bekledi".
+
+    Fikstürün damgası ŞİMDİYE GÖRE kuruluyor: sabit bir ISO yazsaydık test yarın "4 g önce" deyip
+    kırılırdı — ölçtüğümüz şey tarih değil, aradaki süre.
+  */
+  it('şikâyet künyesi türü ve GÖRELİ zamanı yazar; alt satır kuyruğun ağırlığını', async () => {
+    const fortyMinutesAgo = new Date(Date.now() - 40 * 60 * 1000).toISOString();
+    routeHub(() =>
+      ok(
+        hubData({
+          queue: {
+            ...hubData().queue,
+            complaints: {
+              count: 5,
+              head: {
+                ticketId: '00000000-0000-4000-8000-000000000001',
+                type: 'question',
+                customerName: 'Sabine Krüger',
+                orderReferenceNo: null,
+                hasAttachment: false,
+                awaitingReply: true,
+                lastMessageAt: fortyMinutesAgo,
+                preview: 'Teslimatımı Perşembe’ye erteleyebilir miyim?',
+              },
+            },
+          },
+        }),
+      ),
+    );
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    expect(screen.getByText('soru · 40 dk önce')).toBeOnTheScreen();
+    expect(screen.getByText('5 açık talep')).toBeOnTheScreen();
+  });
+
+  /*
     KÜNYE OKUNAMAZSA SAYAÇ CÜMLESİ KALIR — uydurma ürün adı yazılmaz. Sözleşme künyeyi
     `nullable` bıraktı (kalemsiz istisna, adsız tedarikçi, fiyatsız parti mümkün) ve ekranın o
     hâlde susmaması gerekiyor: kapı yine açık, cümle yalnız daha az şey söylüyor.

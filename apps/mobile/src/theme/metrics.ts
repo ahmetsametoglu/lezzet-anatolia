@@ -181,6 +181,15 @@ export const appMetrics = {
        kırpılıyor — üçüncü satır artık kutucuğu değil, cümleyi kısaltır. */
     tile: 132,
     /**
+     * YÖNETİMİN "GÜNÜN NABZI" KUTUCUĞU (v3:2130 — `min-height:96`). Depo hub'ının 132'sinden AYRI
+     * durak ve ölçü farkı değil ROL farkı: depo kutucuğu bir İŞ KAPISIDIR (ikon + kod + başlık +
+     * iki satır alt metin, sekizi eşit boyda), nabız kutucuğu bir SAYIDIR (tek satır rakam +
+     * başlık + künye). 132'yi ödünç almak, üç satırlık içeriği dört satırlık kutuya koyup ortada
+     * boşluk bırakıyordu (görsel ajanının 30.08 ölçümü: kart tasarımdakinden yüksek, sayı ile
+     * etiketin arası açık).
+     */
+    pulseTile: 96,
+    /**
      * Liste satırının baş harf karesi — sosyal gelen kutusu (v3: 34×34).
      * `avatarSm`e (40) bağlanamaz: o KİŞİ avatarıdır ve satırın başında tek başına durur; bu kare
      * bir satırın içinde, ad ve önizlemeyle aynı bloğun solunda yaşıyor — 40 dp orada satırı

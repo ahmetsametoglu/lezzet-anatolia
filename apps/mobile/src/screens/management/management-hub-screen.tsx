@@ -10,8 +10,8 @@ import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
-import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
+import { agoOf } from '@/screens/operations/notification-map';
 import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -130,7 +130,7 @@ interface PulseTile {
  * `head === null` ama sayı > 0 olabilir (sözleşme buna izin veriyor): o hâlde başlık yalnız sayıyı
  * söyler, damga satırı hiç doğmaz — olmayan bir müşteri adı uydurulmaz.
  */
-function complaintCardOf(queue: ManagementQueue): { meta: string; title: string; stamp: string | null } | null {
+function complaintCardOf(queue: ManagementQueue): { meta: string; title: string; footnote: string } | null {
   if (queue.complaints.count === 0) return null;
   const copy = t.hub.rows.complaint;
   const head = queue.complaints.head;
@@ -144,7 +144,10 @@ function complaintCardOf(queue: ManagementQueue): { meta: string; title: string;
         ? fillCopy(copy.metaNoHead, { n: String(queue.complaints.count) })
         : fillCopy(copy.meta, {
             kind: t.complaint.kind[head.type].toLocaleLowerCase('tr'),
-            n: String(queue.complaints.count),
+            /* ZAMAN GÖRELİ (v3:2089 "40 dk önce", görsel ajanının 30.08 ölçümü): "30.08 · 06:45"
+               okuyana çıkarma yaptırıyor, oysa kartın sorduğu şey "ne kadar bekledi". Kural
+               bildirimler ekranının kuralı — ikinci bir "kaç dakika oldu" hesabı yazılmadı. */
+            ago: agoLabelOf(head.lastMessageAt),
           }),
     /* BAŞLIK ŞİKÂYETİN KENDİ CÜMLESİ (21.164) — tasarımın koyu kartı (v3:2091) müşterinin adını
        değil derdini yazıyor: yönetici kartın önünde "bu ne kadar acil" diye karar veriyor ve bir
@@ -158,8 +161,25 @@ function complaintCardOf(queue: ManagementQueue): { meta: string; title: string;
               ref: head.orderReferenceNo === null ? '' : fillCopy(copy.refPart, { ref: head.orderReferenceNo }),
             })
           : fillCopy(copy.title, { who: head.customerName, preview: head.preview }),
-    stamp: head === null ? null : fillCopy(copy.stamp, { stamp: stampOf(head.lastMessageAt) }),
+    /* ALT SATIR SAYACI TAŞIYOR (v3:2094'ün yerinde). Tasarım oraya eylem ipuçlarını yazıyor
+       ("jest · iade · yeniden gönderim") ama o üç eylemin arkasında bizde kapı YOK — basılmayan
+       bir ipucu, kartı yalancı yapardı. Satırın yerini boş bırakmak yerine kuyruğun ağırlığını
+       yazıyor: "bu karttan sonra kaç talep daha bekliyor". */
+    footnote: fillCopy(copy.openCount, { n: String(queue.complaints.count) }),
   };
+}
+
+/**
+ * Şikâyet künyesinin göreli zamanı — "40 dk önce" (v3:2089).
+ *
+ * Hesap BİLDİRİMLER ekranının hesabı (`agoOf`); ikinci bir "kaç dakika oldu" kuralı yazmadım
+ * (CLAUDE §1). Cümleyi yüzey kuruyor: "şimdi" hâli "az önce" diye okunur — "şimdi önce" diye bir
+ * Türkçe yok.
+ */
+function agoLabelOf(iso: string): string {
+  const copy = t.hub.rows.complaint;
+  const ago = agoOf(iso, new Date());
+  return ago === 'şimdi' ? copy.agoNow : fillCopy(copy.ago, { ago });
 }
 
 /**
@@ -414,7 +434,7 @@ export function ManagementHubScreen() {
                   {/* Damga AMBER: bekleyen bir cevap hata değil, bitirilmesi gereken bir iştir
                       (token künyesi `on-ink-warn`). Kırmızı olsaydı ekran her açık şikâyette
                       "bir şey bozuldu" derdi. */}
-                  <Text style={styles.urgentStamp}>{complaint.stamp ?? ''}</Text>
+                  <Text style={styles.urgentStamp}>{complaint.footnote}</Text>
                   <Text style={styles.urgentChevron}>›</Text>
                 </View>
               </PressableSurface>
@@ -673,9 +693,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: operationsTheme.space.lg,
   },
+  /* Kutucuk TASARIMIN ölçüsünde (96), depo hub'ının 132'sinde değil — `pulseTile` künyesi.
+     `justifyContent: 'space-between'` de SÖKÜLDÜ: başlığın `marginTop:'auto'`u zaten onu dibe
+     itiyor, ikisi birlikte sayının altındaki boşluğu iki kez açıyordu (görsel ajanı ölçtü). */
   tile: {
-    minHeight: operationsTheme.size.tile,
-    justifyContent: 'space-between',
+    minHeight: operationsTheme.size.pulseTile,
     backgroundColor: operationsTheme.colors.panel,
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,

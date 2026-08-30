@@ -30,13 +30,15 @@
     "rows": {
       "complaint": {
         "badge": "CEVAP BEKLİYOR",
-        "meta": "{kind} · {n} açık talep",
+        "meta": "{kind} · {ago}",
         "metaNoHead": "{n} açık talep",
+        "ago": "{ago} önce",
+        "agoNow": "az önce",
+        "openCount": "{n} açık talep",
         "title": "{who}: {preview}",
         "titleNoPreview": "{who}{ref}",
         "titleNoHead": "{n} açık şikâyet",
-        "refPart": " · {ref}",
-        "stamp": "son mesaj {stamp}"
+        "refPart": " · {ref}"
       },
       "exception": {
         "badge": "EKSİK KALEM",
