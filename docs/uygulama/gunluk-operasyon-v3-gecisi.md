@@ -797,6 +797,42 @@ Gerçek uyuşmazlık, verinin KENDİSİNİN olmadığı yerdir (depo adı, parti
 
 ---
 
+## 30.08 akşam — Yönetim kapanışı: "tasarımda yok" bir ölçüm değil, bir VARSAYIMDI (21.164)
+
+Kapanış turunda ekranları tek tek gözden geçirirken bir satır dikkatimi çekti. Görsel defterinin
+ekran haritasında teklif onayı ekranımız için **"tasarımda yok"**, 30 numaralı "Kampanya" karesi
+için **"karşılığı belirsiz"** yazıyordu. İki ayrı satır, iki ayrı bilinmezlik.
+
+**İkisi aynı ekranmış.** 30'un metnini ekranın `messages.json`uyla yan yana koydum: "Kalan adet ·
+Kalan ömür · Liste fiyatı · Önerilen (%30) · Teklif verme — imhaya bırak" — hepsi aynı, ve şu cümle
+**birebir**: *"Teklif onaylanınca müşteri uygulamasında yakın-SKT rafında görünür; parti tükenince
+kendi kapanır."* Bir tasarımcının ve bir geliştiricinin aynı cümleyi bağımsız yazma ihtimali yok.
+
+**Bunun bedeli bir ekranın hiç denetlenmemesi oldu.** Ekran tasarımsız değildi; eşleşmediği için
+kimsenin karşılaştırma listesine girmedi. Denetleyince tek alanlık bir açık çıktı — tasarım
+*"Kalan ömür 2 gün · %18"* yazıyor, biz yalnız günü yazıyorduk. Yüzde motorda hesaplıydı
+(`BatchView.remainingPercent`), zarfa konmamıştı; yani **para şeridinin bir tur önce yazdığı dersin
+aynısı** (yukarıdaki kural): eksik olan veri değil zarftı.
+
+> **Ders, o kuralın bir basamak yukarısı:** "sözleşmede yok" gibi "tasarımda yok" da bir kayıt türü
+> değil bir **iddiadır** ve doğrulanması ucuzdur — iki metni yan yana koymak yeter. Doğrulanmadan
+> yazıldığında bir satır bir ekranı denetimin dışına çıkarır ve kimse fark etmez, çünkü haritada o
+> ekranın karşısında zaten bir açıklama vardır.
+
+**Aynı turda ikinci bir sessiz arıza:** `b52ef8d1` iki ekranı commit'lemiş ama ikisinin de import
+ettiği yeni `chat-bubble.tsx` dosyasını pathspec'e almamıştım. Beş kontrol de yeşildi — çünkü
+typecheck, test, lint, knip hepsi **diskteki** dosyayı okuyor; çalışma ağacında duran yeni dosya
+her şeyi doğru gösterir. Kırıklık yalnız `git show --stat` ile `git status`u yan yana koyunca
+görülüyor. `a248728e` ile kapatıldı.
+
+**Yazı boyutu payımı bilerek çevirmedim.** Yönetimin 9 dosyası da statik kipte ve ayar bizde de
+işlemiyor; ama kurye şeridi çevirme kalıbını ölçtü ve kalıp derlenmedi (birleşim tipinden
+operasyona-özgü durak okunamıyor), tip daraltmasının çalışma zamanı davranışı da doğrulanamadı.
+Dokuz dosyayı doğrulanmamış bir kalıpla çevirmek, düzeltilmemiş bir arızayı **düzeltilmiş gibi
+göstermek** olurdu. Kayıt: `design/BACKLOG.md §5`.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -823,10 +859,10 @@ Burada durulmaz — yazılır, geçilir.
 | 16 | 23 Tahsilat izleme | Şablon günün toplamının altına **"14 tahsilat"** (adet) yazıyor; `todayByMethod` yalnız yöntem başına TUTAR taşıyor, adet yok. Ayrıca üstbaşlıkta **deponun adı** var (uyuşmazlık 1'in aynı ailesi). | **ADET KAPANDI (30.08, kullanıcı bulgusu):** `todayCount` eklendi — adet tutardan TÜREMEZ, aynı toplam iki tahsilattan da kırktan da gelebilir. Sayılan şey deftere düşen HAREKETTİR. **Depo adı hâlâ açık** (uyuşmazlık 1'in ailesi): üstbaşlık ad + gün + tesis yazıyor, deponun adı değil — para okumaları depo boyutu taşımaz. |
 | 24 | 32 Bildirimler | Sözleşme beş `dot` tonu taşıyor, şablon iki kart varyantı veriyor; satır alt metnindeki "detay" alanı da sözleşmede yok. | Açık — ikisi de uydurulmadı. |
 | 23 | 31 Tedarik | Şablon satırda **"stok 24 · günlük 3,1 · 8 gün"** yazıyor: günlük satış hızı ve gün kapağı `SupplyLine`de YOK. Terracotta **"imha oranı yüksek"** uyarısı da yok. | Açık — ölçüm satırı elimizdeki dört gerçek sayıyla yazıldı (stok · eşik · yolda · son alış); `incomingQty` ilk kez ekranda görünüyor. |
-| 22 | 30 Kampanya | Şablon **tek partinin** detayını çiziyor (künye + dört ölçüm + iki düğme); uç aday LİSTESİ döndürüyor. Ayrıca "kalan ömür %18" (partinin toplam raf ömrü gerekir) ve **üç indirim çipi** (sözleşmede tek oran var) yok. | Açık — ekran tekile İNDİRİLMEDİ (N parti için N yolculuk olurdu; teklif kararı günde bir kez, toplu verilir). Kart anatomisi her adaya uygulandı. |
+| 22 | 30 Kampanya | Şablon **tek partinin** detayını çiziyor (künye + dört ölçüm + iki düğme); uç aday LİSTESİ döndürüyor. Ayrıca "kalan ömür %18" (partinin toplam raf ömrü gerekir) ve **üç indirim çipi** (sözleşmede tek oran var) yok. | **%18 KAPANDI (30.08 · 21.164):** yüzde motorda zaten hesaplıydı (`BatchView.remainingPercent`) — eksik olan raf ömrü değil zarftı, alan `OfferCandidateSchema`'ya eklendi. Ölçülemeyen üründe `null` gelir ve satır yalnız günü yazar; tarihi geçmiş partide motor yüzdeyi 0'a sabitlediği için de yazılmaz (0 bir ölçüm değil). **Açık kalan ikisi:** ekran tekile İNDİRİLMEDİ (N parti için N yolculuk olurdu; teklif kararı günde bir kez, toplu verilir — kart anatomisi her adaya uygulandı) ve üç indirim çipi (sözleşmede tek oran var). |
 | 21 | 29 Gün özeti | Şablon ciroyu **B2B/B2C** ayırıyor (`channels` müşteri segmentini değil sipariş KAYNAĞINI taşır), kutucuklarda **"9/11 zamanında teslim"** ve **"148 € imha + iade"** yazıyor — üçü de sözleşmede yok. Künyede depo adı (uyuşmazlık 1). | Açık — yerleşim korundu, hücreler ölçülmüş veriyle dolduruldu. |
 | 20 | 28 Konuşma | Şablonda **"Reddet"** düğmesi var (taslağı reddeden uç YOK) ve künyede "B2B · işletme adı". | Açık — ikisi de yazılmadı. |
-| 19 | 26 Şikâyet · 25 Karar | Şablonun şikâyet ekranı **karar seçenekleri** ve **"Kararı uygula"** kapısı istiyor (sözleşmede yok — bu ekranın v3 hâli yeni bir YETENEK istiyor), talep referansı (`SK-…`) da yok. Karar kutusunda "2 tanesi gün içinde", şikâyet özeti ve "jest · iade · yeniden gönderim" çipleri aynı aileden. | Açık — hiçbiri uydurulmadı. |
+| 19 | 26 Şikâyet · 25 Karar | Şablonun şikâyet ekranı **karar seçenekleri** ve **"Kararı uygula"** kapısı istiyor (sözleşmede yok — bu ekranın v3 hâli yeni bir YETENEK istiyor), talep referansı (`SK-…`) da yok. Karar kutusunda "2 tanesi gün içinde", şikâyet özeti ve "jest · iade · yeniden gönderim" çipleri aynı aileden. | **ŞİKÂYET ÖZETİ KAPANDI** (30.08 · 21.164 — kart artık şikâyetin kendi cümlesini yazıyor; veri motordaydı, zarfa taşındı). **Gerisi açık ve artık bir adrese bağlı:** dört karar çipinin arkasında tek bir yazma kapısı yok ve hiçbiri modelde tanımlı değil; talebin GERÇEK kararları durum · üstlenme · mod · iade tetikleme. Bu, tasarımın 26'yı tek yönlü bir karar ekranı sanmasından geliyor — kullanıcı ise yazışılan VE karar verilen bir bölüm istiyor. Brief yazıldı: `design/pages/app-yonetim-talep.md` (N12), tasarım bekleniyor. "2 tanesi gün içinde" ise veri olmadığı için kapanamaz — kuyrukta son tarih/öncelik alanı yok. |
 | 4 | 02 Toplama kuyruğu | Şablonun beş örnek satırının **sol durum işareti tek kurala uymuyor** (dördüncüsü hiç başlanmamışken terracotta, beşincisi tamamlanmışken gri). Statik maket, işaretler elle boyanmış. | Kapandı — çoğunluğun kuralı alındı ve yazıldı: işaret ile metin AYNI kuralı izler (yarım terracotta · tamam zeytin · başlanmamış gri). |
 
 ---
