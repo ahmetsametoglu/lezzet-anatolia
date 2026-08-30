@@ -631,7 +631,7 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     mockRoutes({ day: courierDay([boxedStop()]) });
     await renderDelivery();
 
-    expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/0\/2 okutuldu/);
+    expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/0\/2 OKUTULDU/);
     // Kalem işaretli olsa da kutu kapısı kapalı — kapı notu sebebini söyler.
     await fireEvent.press(screen.getByTestId(`courier-line-${MANTI}`));
     expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
@@ -639,13 +639,13 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     // Çipler durağın GERÇEK kodlarından kurulur (devCodes) — ikisi de okutulur.
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
     await fireEvent.press(screen.getByLabelText('Kutu 1'));
-    await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/1\/2 okutuldu/));
+    await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/1\/2 OKUTULDU/));
     expect(screen.getByTestId('courier-box-1')).toHaveTextContent('Kutu 1 ✓');
     expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
 
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
     await fireEvent.press(screen.getByLabelText('Kutu 2'));
-    await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/2\/2 okutuldu/));
+    await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/2\/2 OKUTULDU/));
     expect(screen.getByTestId('courier-delivery-cta')).not.toBeDisabled();
   });
 
@@ -674,5 +674,70 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
 
     await waitFor(() => expect(deliverCalls()).toBe(1));
     expect(deliverBody()).not.toHaveProperty('scannedBoxCodes');
+  });
+});
+
+describe('adım numarası (v3 · 30.08)', () => {
+  /*
+    Numaralar metne GÖMÜLÜ değil artık; kutulu durakta akış dört adım, kutusuzda üç. Ölçülen şey
+    numaranın kendisi: gömülü olduğu sürece kutular numarasız duruyordu ve kurye kapıdaki zorunlu
+    ilk kapıyı adımdan saymıyordu.
+  */
+  it('kutulu durakta kutular 1., kanıt 2., mal 3., tahsilat 4. adımdır', async () => {
+    mockRoutes({
+      day: courierDay([boxedStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash' } })]),
+    });
+    await renderDelivery();
+
+    expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/^1 · KUTULAR/);
+    expect(screen.getByTestId('courier-proof-heading')).toHaveTextContent(/^2 · KANIT/);
+    expect(screen.getByText(/^3 · MAL/)).toBeOnTheScreen();
+    expect(screen.getByText(/^4 · TAHSİLAT/)).toBeOnTheScreen();
+  });
+
+  it('kutusuz durakta eski numaralar korunur — kanıt 1., mal 2., tahsilat 3.', async () => {
+    mockRoutes({
+      day: courierDay([oneLineStop({ payment: { dueAmountCents: 4200, expectedMethod: 'cash' } })]),
+    });
+    await renderDelivery();
+
+    expect(screen.getByTestId('courier-proof-heading')).toHaveTextContent(/^1 · KANIT/);
+    expect(screen.getByText(/^2 · MAL/)).toBeOnTheScreen();
+    expect(screen.getByText(/^3 · TAHSİLAT/)).toBeOnTheScreen();
+  });
+
+  it('okutma düğmesi KALAN sayısını taşır ve durum cümlesi tamamlanınca değişir', async () => {
+    mockRoutes({ day: courierDay([boxedStop()]) });
+    await renderDelivery();
+
+    expect(screen.getByTestId('courier-box-scan')).toHaveTextContent(/2 kaldı/);
+    expect(screen.getByText(/dönüş dökümüne/)).toBeOnTheScreen();
+
+    for (const label of ['Kutu 1', 'Kutu 2']) {
+      await fireEvent.press(screen.getByTestId('courier-box-scan'));
+      await fireEvent.press(screen.getByLabelText(label));
+    }
+
+    // Hepsi okutulunca düğme HİÇ çizilmez: basılacak bir şey kalmadı.
+    await waitFor(() => expect(screen.queryByTestId('courier-box-scan')).toBeNull());
+    expect(screen.getByText(/Tüm kutular müşteriye verildi/)).toBeOnTheScreen();
+  });
+});
+
+describe('kapı notunun sırası (30.08)', () => {
+  /* Numaralar görünür olunca not ile başlık ayrışabilir hâle geldi: ekran "1 · KUTULAR" derken
+     not sırayı "kanıt"tan başlatırsa, kurye iki farklı sıra okur. */
+  it('kutulu durakta sıra cümlesi kutuları da sayar', async () => {
+    mockRoutes({ day: courierDay([boxedStop()]) });
+    await renderDelivery();
+
+    expect(screen.getByTestId('courier-delivery-gate')).toHaveTextContent(/sıra: kutular → kanıt/);
+  });
+
+  it('kutusuz durakta sıra cümlesi kanıttan başlar', async () => {
+    mockRoutes({ day: courierDay([oneLineStop()]) });
+    await renderDelivery();
+
+    expect(screen.getByTestId('courier-delivery-gate')).toHaveTextContent(/sıra: kanıt → mal/);
   });
 });

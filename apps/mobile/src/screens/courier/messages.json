@@ -146,6 +146,7 @@
   },
   "delivery": {
     "back": "Geri",
+    "step": "{n} · {label}",
     "title": "Durak {n}/{total}",
     "subtitle": "{ref} · {n}. deneme",
     "loading": "Durak yükleniyor…",
@@ -159,7 +160,7 @@
     "call": "Ara",
     "whatsApp": "WhatsApp",
     "proof": {
-      "heading": "1 · KANIT {scope}",
+      "heading": "KANIT {scope}",
       "required": "— B2B'DE ZORUNLU",
       "optional": "— İSTEĞE BAĞLI (AYAR)",
       "sign": "İmza al",
@@ -181,14 +182,14 @@
       }
     },
     "goods": {
-      "heading": "2 · MAL · {n} KALEM — dokun: ✓ teslim · ✕ reddedildi",
+      "heading": "MAL · {n} KALEM — dokun: ✓ teslim · ✕ reddedildi",
       "returnQty": "iade adedi",
       "decrease": "İade adedini azalt",
       "increase": "İade adedini artır",
       "partialNote": "Kısmi red — iade kalemleri depo kabulüne düşer; iade tutarını motor hesaplar."
     },
     "collection": {
-      "heading": "3 · TAHSİLAT — MOTOR TUTARI {amount}",
+      "heading": "TAHSİLAT — MOTOR TUTARI {amount}",
       "amountLabel": "Tahsil edilen tutar (€)",
       "decrease": "Tutarı azalt",
       "increase": "Tutarı artır",
@@ -207,6 +208,7 @@
       "allRefused": "tümü reddedildi — \"Kabul etmedi\"yi kullan",
       "sending": "Kaydediliyor…",
       "gate": "sıra: kanıt → mal → teslim → para",
+      "gateBoxed": "sıra: kutular → kanıt → mal → teslim → para",
       "gateProof": " — kanıt eksik",
       "gateGoods": " — her kalemi işaretle",
       "gateBoxes": " — kutuları okut",
@@ -237,8 +239,8 @@
       "refused": "Kabul etmedi olarak kaydedildi — koliler iade akışına düştü."
     },
     "boxes": {
-      "heading": "KUTULAR · {scanned}/{total} okutuldu",
-      "scanCta": "📷 Kutu okut",
+      "heading": "KUTULAR — {scanned}/{total} OKUTULDU",
+      "scanCta": "📷 Kutuyu okut — {n} kaldı",
       "scanTitle": "Kutuyu okut",
       "scanHint": "Kutunun üstündeki QR — teslim, tüm kutular okutulunca açılır.",
       "row": "Kutu {n}",
@@ -246,7 +248,9 @@
       "scanned": "Kutu {n} okundu ({k}/{total}).",
       "alreadyScanned": "Kutu {n} zaten okutuldu.",
       "notMine": "Bu QR bu durağın kutusu değil — araçtaki yığını kontrol edin.",
-      "note": "Kutu QR'ları okutulmadan teslim kapanmaz — yanlış kapıya inen kutu böyle yakalanır."
+      "note": "Kutu QR'ları okutulmadan teslim kapanmaz — yanlış kapıya inen kutu böyle yakalanır.",
+      "complete": "Tüm kutular müşteriye verildi — teslim adımı açıldı.",
+      "pending": "Okutulmayan kutu müşteriye verilmiş SAYILMAZ — dönüş dökümüne “araçta kaldı” diye düşer."
     },
     "refusal": {
       "boxesMissing": "Okutulmamış kutu var: {boxes}. Tüm kutular okutulmadan teslim yazılmaz — HİÇBİR kayıt yazılmadı.",

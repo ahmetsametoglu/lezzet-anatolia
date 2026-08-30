@@ -7480,3 +7480,36 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Kurye jest **81/81** (beşi yeni yükleme ekranının) · mobil paket **971/971**;
   typecheck · lint · knip · boundaries yeşil; **üç ekran da cihazda gözle doğrulandı** (gün dolu
   veriyle; 15 ve 16 derin bağlantıyla — veritabanı tazelendi, tohum seferleri bugüne göre üretiyor).
+
+- [x] (21.151) **DURAK v3 — adım numarası kutuya göre kayıyor** (v3:1466-1560)
+  `touches:` `apps/mobile/src/screens/courier/{delivery-screen.tsx,use-delivery.hook.ts,messages.json}`
+
+  **Durum (30.08).** Ölçüm önce: kapıdaki kutu adımı ZATEN VARDI ve çalışıyordu (`courier-box-scan`,
+  sayaç, `boxesSatisfied` kilidi — 23.8). v3'ün farkı ekranın SÖYLEDİĞİ şeydeydi.
+
+  **Numara artık gerçeği söylüyor.** Numaralar metne gömülüydü (`"1 · KANIT"`) ve kutular
+  numarasızdı: kanıtın önünde ZORUNLU ama sayılmayan bir kapı duruyordu. Numara `{n} · {label}`
+  kalıbına çıktı, kayma tek yerde (`stepNo`) — kutulu durakta akış DÖRT adım (kutular · kanıt · mal ·
+  tahsilat), kutusuzda eski ÜÇ adım aynen.
+
+  **İki hâl, iki cümle** (v3:1490): "Tüm kutular müşteriye verildi" bir izin, eksik hâl bedelini
+  söylüyor ("dönüş dökümüne *araçta kaldı* diye düşer"). **Kalan sayısı düğmede** (v3:1487) — kurye
+  kaç kutu kaldığını başlıktaki sayaçtan geri hesaplamasın.
+
+  **İLK YAZDIĞIM CÜMLE YALAN SÖYLÜYORDU.** Eksik hâl için "kanıt ve tahsilat adımları açılmaz"
+  yazmıştım; kodu ölçünce kilidin yalnız TESLİM DÜĞMESİNDE olduğu çıktı (`gateOpen`) — kanıt da
+  tahsilat da açık. Ekranda duran ama kodda karşılığı olmayan kural, en kötü belge türüdür; cümle
+  gerçekle değiştirildi.
+
+  **CİHAZDA BİR TUTARSIZLIK YAKALANDI.** Numaralar görünür olunca alt not ile başlıklar ayrıştı:
+  ekran "1 · KUTULAR" derken kapı notu sırayı "kanıt → mal → teslim → para" diye sayıyordu. Not artık
+  kutulu durakta kutuyu da sayıyor (`cta.gateBoxed`) — iki farklı sıra anlatan tek ekran, kuryeye
+  hangisine uyacağını sordurur.
+
+  **15. ekranın testi de bu turda yazıldı** (`trip-screen.test.tsx`): üç sayının da durak listesinden
+  türediği ve araç künyesinin YOKLUĞUNUN söylendiği ölçülüyor.
+
+  **Doğrulama.** Kurye jest **90/90** (yeni: 3 numaralandırma · 2 sıra cümlesi · 3 sefer künyesi);
+  numaralandırma ve tahsilat sayımı testlerinin YAKALADIĞI ayrıca doğrulandı (`stepNo` düzleştirilip,
+  tahsilat süzgeci gevşetilip ikisi de kırmızıya döndü); typecheck · lint · knip yeşil; **cihazda
+  gözle doğrulandı** — 1·KUTULAR → 2·KANIT → 3·MAL → 4·TAHSİLAT.

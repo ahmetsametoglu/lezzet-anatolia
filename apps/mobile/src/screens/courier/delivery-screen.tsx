@@ -85,6 +85,12 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
      soruyordu. İmza satırı ve imza ipucu da bu adı kullanıyor: kapıda imzalayan kişi odur. */
   const receiver = stop.recipient ?? stop.customerName;
 
+  /* ADIM NUMARASI KUTUYA GÖRE KAYAR (v3, 30.08). Kutulu durakta kutular 1. adımdır ve kanıt/mal/
+     tahsilat 2/3/4'e kayar; kutusuz durakta eski 1/2/3 aynen kalır. Numara metne gömülü DEĞİL
+     (`delivery.step` kalıbı) — gömülü olduğu sürece bu kayma yazılamıyordu. */
+  const boxesLeft = delivery.boxes.length - delivery.scannedBoxCount;
+  const stepNo = (n: number): number => (delivery.boxes.length === 0 ? n : n + 1);
+
   return (
     <View style={styles.screen} testID="courier-delivery">
       <OperationsStackHeader
@@ -163,13 +169,23 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           )}
         </View>
 
-        {/* ── KUTULAR (23.8) — kutulu durakta teslimin ÖN koşulu; kutusuz durakta çizilmez ── */}
+        {/*
+          ── KUTULAR (23.8 · v3:1478) — kutulu durakta teslimin ÖN koşulu ──────────────
+
+          NUMARA KOŞULLU (v3, 30.08): kutulu durakta akış DÖRT adımdır (kutular · kanıt · mal ·
+          tahsilat), kutusuzda ÜÇ. Numaralar metne gömülüydü ve kutular numarasızdı — "1 · KANIT"in
+          önünde zorunlu ama numarasız bir kapı duruyordu ve kurye onu adımdan saymıyordu. Sayı
+          artık gerçeği söylüyor; kutusuz durakta eski numaralar aynen kalıyor.
+        */}
         {delivery.boxes.length === 0 ? null : (
           <View style={styles.section}>
             <Text style={styles.sectionHeading} testID="courier-boxes-heading">
-              {fillCopy(t.delivery.boxes.heading, {
-                scanned: String(delivery.scannedBoxCount),
-                total: String(delivery.boxes.length),
+              {fillCopy(t.delivery.step, {
+                n: '1',
+                label: fillCopy(t.delivery.boxes.heading, {
+                  scanned: String(delivery.scannedBoxCount),
+                  total: String(delivery.boxes.length),
+                }),
               })}
             </Text>
             <View style={styles.boxRows}>
@@ -185,26 +201,37 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 </Text>
               ))}
             </View>
-            {delivery.finished ? null : (
+            {delivery.finished || boxesLeft === 0 ? null : (
               <PressableSurface
                 onPress={() => delivery.setBoxScanOpen(true)}
                 feedback="scale"
                 style={[styles.proofButton, styles.contactOutline]}
-                accessibilityLabel={t.delivery.boxes.scanCta}
+                accessibilityLabel={fillCopy(t.delivery.boxes.scanCta, { n: String(boxesLeft) })}
                 testID="courier-box-scan"
               >
-                <Text style={styles.contactLabel}>{t.delivery.boxes.scanCta}</Text>
+                {/* Kalan sayısı DÜĞMEDE (v3:1487): kurye kapıda kaç kutu daha vereceğini
+                    başlıktaki sayaçtan geri hesaplamak zorunda kalmasın. */}
+                <Text style={styles.contactLabel}>{fillCopy(t.delivery.boxes.scanCta, { n: String(boxesLeft) })}</Text>
               </PressableSurface>
             )}
+
+            {/* İKİ HÂL, İKİ CÜMLE (v3:1490) — "hepsi verildi" bir izin, "eksik" bir uyarı ve
+                bedelini söylüyor: okutulmayan kutu dönüş dökümüne "araçta kaldı" diye düşer. */}
+            <Text style={boxesLeft === 0 ? styles.boxComplete : styles.boxNote}>
+              {boxesLeft === 0 ? t.delivery.boxes.complete : t.delivery.boxes.pending}
+            </Text>
             <Text style={styles.boxNote}>{t.delivery.boxes.note}</Text>
           </View>
         )}
 
-        {/* ── 1 · KANIT ─────────────────────────────────────────────────────── */}
+        {/* ── KANIT ─────────────────────────────────────────────────────── */}
         <View style={styles.section}>
           <Text style={styles.sectionHeading} testID="courier-proof-heading">
-            {fillCopy(t.delivery.proof.heading, {
-              scope: delivery.proofRequired ? t.delivery.proof.required : t.delivery.proof.optional,
+            {fillCopy(t.delivery.step, {
+              n: String(stepNo(1)),
+              label: fillCopy(t.delivery.proof.heading, {
+                scope: delivery.proofRequired ? t.delivery.proof.required : t.delivery.proof.optional,
+              }),
             })}
           </Text>
 
@@ -268,12 +295,15 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           )}
         </View>
 
-        {/* ── 2 · MAL ───────────────────────────────────────────────────────── */}
+        {/* ── MAL ───────────────────────────────────────────────────────── */}
         <View style={styles.section}>
           {/* Sayı ÇİZİLEN listeden gelir, `itemCount`tan değil: başlık dokunulabilir satırları
               tarif ediyor, ikisi ayrışırsa başlık ekranda olmayan bir kalemi vaat ederdi. */}
           <Text style={styles.sectionHeading}>
-            {fillCopy(t.delivery.goods.heading, { n: String(delivery.lines.length) })}
+            {fillCopy(t.delivery.step, {
+              n: String(stepNo(2)),
+              label: fillCopy(t.delivery.goods.heading, { n: String(delivery.lines.length) }),
+            })}
           </Text>
           {delivery.lines.map((line) => {
             const mark = delivery.markOf(line.orderItemId);
@@ -338,7 +368,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           ) : null}
         </View>
 
-        {/* ── 3 · TAHSİLAT ──────────────────────────────────────────────────── */}
+        {/* ── TAHSİLAT ──────────────────────────────────────────────────── */}
         {delivery.dueCents === null ? (
           <View style={styles.settled} testID="courier-settled">
             <Text style={styles.settledLabel}>{t.delivery.collection.settled}</Text>
@@ -347,7 +377,10 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         ) : (
           <View style={styles.collection} testID="courier-collection">
             <Text style={styles.collectionHeading}>
-              {fillCopy(t.delivery.collection.heading, { amount: money(delivery.dueCents) })}
+              {fillCopy(t.delivery.step, {
+                n: String(stepNo(3)),
+                label: fillCopy(t.delivery.collection.heading, { amount: money(delivery.dueCents) }),
+              })}
             </Text>
             <View style={styles.amountRow}>
               <TextInput
@@ -645,6 +678,13 @@ const styles = StyleSheet.create({
   boxRowDone: {
     backgroundColor: operationsTheme.colors['olive-bg'],
     borderColor: operationsTheme.colors['olive-bg'],
+  },
+  /* Tamamlanma cümlesi TON DEĞİŞTİRİR: "eksik" nötr bir dipnot, "hepsi verildi" bir izin —
+     kurye kapıdan ayrılabileceğini renkten de okur. */
+  boxComplete: {
+    fontFamily: operationsTheme.font.body[600],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors['olive-dark'],
   },
   boxNote: {
     fontFamily: operationsTheme.font.body[400],

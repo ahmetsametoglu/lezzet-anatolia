@@ -523,6 +523,41 @@ bağlantıyla).
 
 ---
 
+## 30.08 sabah — Faz 3 · Ekran 17: Durak (kapıdaki teslim) ✅
+
+**Ölçüm önce.** Kapıdaki kutu adımı **zaten vardı ve çalışıyordu** (`courier-box-scan`, sayaç,
+kilit). v3'ün getirdiği fark üç şey: **adım numarasının kutuya göre kayması**, iki **durum cümlesi**
+ve okutma düğmesinde **kalan sayısı**. Yani ekran yeniden yazılmadı; söylediği şey düzeltildi.
+
+- **Numara artık gerçeği söylüyor.** Numaralar metne gömülüydü (`"1 · KANIT"`) ve kutular
+  numarasızdı — kanıtın önünde **zorunlu ama sayılmayan** bir kapı duruyordu. Numara `{n} · {label}`
+  kalıbına çıktı: kutulu durakta akış **4 adım** (kutular · kanıt · mal · tahsilat), kutusuzda eski
+  **3 adım** aynen.
+- **İki hâl, iki cümle.** "Tüm kutular müşteriye verildi" bir izin; eksik hâl ise bedelini söylüyor
+  ("dönüş dökümüne *araçta kaldı* diye düşer").
+- **Kalan sayısı düğmede** — kurye kaç kutu daha vereceğini başlıktaki sayaçtan geri hesaplamasın.
+
+**İlk yazdığım cümle YALAN söylüyordu ve düzeltildi.** Eksik hâl için "kanıt ve tahsilat adımları
+açılmaz" yazmıştım; kodu ölçünce kilidin yalnız **teslim düğmesinde** olduğu çıktı (`gateOpen`) —
+kanıt da tahsilat da açık. Ekranda duran ama kodda karşılığı olmayan bir kural, en kötü belge türü.
+
+**Cihazda bir tutarsızlık yakalandı.** Numaralar görünür olunca alt not ile başlıklar ayrıştı:
+ekran "1 · KUTULAR" derken kapı notu sırayı *"kanıt → mal → teslim → para"* diye sayıyordu. Not
+artık kutulu durakta kutuyu da sayıyor — **iki farklı sıra anlatan tek ekran**, kuryeye hangisine
+uyacağını sordurur.
+
+**Sefer künyesinin testi de bu turda yazıldı** (15. ekran testsiz kalmıştı): üç sayının da durak
+listesinden türediği ve araç künyesinin yokluğunun *söylendiği* ölçülüyor.
+
+**Doğrulama.** Kurye jest **90/90** (yeni: 3 numaralandırma · 2 sıra cümlesi · 3 sefer künyesi) ·
+`tsc`/`lint`/`knip` yeşil · **cihazda gözle doğrulandı** — 1·KUTULAR → 2·KANIT → 3·MAL →
+4·TAHSİLAT sırasıyla ve iki durum cümlesiyle.
+`YEREL VERİ NOTU:` bugünün tek durağı kutusuzdu; kutulu dalı görebilmek için o siparişe **iki sahte
+kutu satırı** eklendi (`KT-26-V3TEST001/002`). 18. ekranın dönüş dökümü de kutuya bakıyor, o yüzden
+şimdilik duruyorlar; kurye fazı bitince silinecek.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
