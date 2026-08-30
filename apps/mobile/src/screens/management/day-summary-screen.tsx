@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSurface } from '@/components/operations/surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { captionOf } from '@/lib/operations/caption';
 import { money } from '@/lib/operations/money';
@@ -155,10 +156,11 @@ interface SummaryTileProps {
 
 function SummaryTile({ value, caption, watch = false, testID }: SummaryTileProps) {
   return (
-    <View style={styles.tile} testID={testID}>
+    /* Kabuk kitten (`panel`, `md` dolgu) — kutucuk da kart ailesinin bir üyesi. */
+    <OperationsSurface tone="panel" padding="md" style={styles.tile} testID={testID}>
       <Text style={[styles.tileValue, watch ? styles.tileValueWatch : undefined]}>{value}</Text>
       <Text style={styles.tileCaption}>{caption}</Text>
-    </View>
+    </OperationsSurface>
   );
 }
 
@@ -228,7 +230,7 @@ function SummaryBody({ hub, refresh, reloading }: SummaryBodyProps) {
         />
       </View>
 
-      <View style={styles.tomorrow} testID="management-summary-tomorrow">
+      <OperationsSurface tone="panel" padding="md" style={styles.tomorrow} testID="management-summary-tomorrow">
         <Text style={styles.tomorrowEyebrow}>{t.summary.tomorrow.eyebrow}</Text>
         <Text style={styles.tomorrowLine}>
           {fillCopy(t.summary.tomorrow.line, {
@@ -237,7 +239,7 @@ function SummaryBody({ hub, refresh, reloading }: SummaryBodyProps) {
             amount: money(summary.tomorrow.doorPaymentCents),
           })}
         </Text>
-      </View>
+      </OperationsSurface>
 
       <View style={styles.insights}>
         {summary.insights.length === 0 ? (
@@ -358,15 +360,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: operationsTheme.space.lg,
   },
+  /* Kabuk kitte; kalan ızgara payı ve iç aralık. */
   tile: {
     flexBasis: '40%',
     flexGrow: 1,
     gap: operationsTheme.space.xs,
-    padding: operationsTheme.space['2xl'],
-    backgroundColor: operationsTheme.colors.panel,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    borderRadius: operationsTheme.radius.card,
   },
   tileValue: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
@@ -386,11 +384,6 @@ const styles = StyleSheet.create({
   /* ── Yarın şeridi — kutucukla aynı kart, tam genişlikte ───────────────────── */
   tomorrow: {
     gap: operationsTheme.space.xs,
-    padding: operationsTheme.space['2xl'],
-    backgroundColor: operationsTheme.colors.panel,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    borderRadius: operationsTheme.radius.card,
   },
   tomorrowEyebrow: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],

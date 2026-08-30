@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
@@ -171,7 +172,15 @@ function MappedGroup({ group, supply }: MappedGroupProps) {
       </Text>
 
       {group.lines.map((line) => (
-        <View key={line.variantId} style={styles.line} testID={`management-supply-${line.variantId}`}>
+        /* Kartın kabuğu kitten (`panel`): zemin · kenar · yarıçap · dolgu tek yerden. Satır
+           TIKLANIR DEĞİL — kalem bir bilgi, karar grubun sonundaki CTA'da. */
+        <OperationsSurface
+          key={line.variantId}
+          tone="panel"
+          padding="md"
+          style={styles.line}
+          testID={`management-supply-${line.variantId}`}
+        >
           <View style={styles.lineText}>
             <Text style={styles.lineName}>{line.title}</Text>
             <Text style={styles.lineMeta}>{lineMeta(line)}</Text>
@@ -189,7 +198,7 @@ function MappedGroup({ group, supply }: MappedGroupProps) {
             )}
           </View>
           <Text style={styles.lineSuggested}>{`+${line.suggestedQty}`}</Text>
-        </View>
+        </OperationsSurface>
       ))}
 
       <PressableSurface
@@ -261,16 +270,11 @@ const styles = StyleSheet.create({
   },
 
   /* ── Kalem kartı (v3:31) ──────────────────────────────────────────────────── */
+  /* Kabuk kitte; burada kalan yalnız satırın kendi dizilimi (ad bloğu + sağdaki öneri adedi). */
   line: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.xl,
-    paddingVertical: operationsTheme.space['2xl'],
-    paddingHorizontal: operationsTheme.space['3xl'],
-    backgroundColor: operationsTheme.colors.panel,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    borderRadius: operationsTheme.radius.card,
   },
   lineText: {
     flex: 1,

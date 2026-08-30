@@ -1,11 +1,12 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
@@ -143,7 +144,10 @@ export function OfferApprovalScreen() {
             <Text style={styles.footnote}>{t.offer.footnote}</Text>
           </FormScroll>
 
-          <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+          {/* Yapışkan çubuk KİTTEN (`OperationsStickyBar`): gradyan + mutlak konum + dolgular 11
+              ekranda elle yazılıyordu. `glow` VERİLMEDİ — ışıma bir OKUTMA işaretidir (kitin
+              künyesi), toplu onay düğmesinin değil. */}
+          <OperationsStickyBar>
             <PressableSurface
               onPress={approval.submit}
               disabled={approval.sending || approval.openableCount === 0}
@@ -154,7 +158,7 @@ export function OfferApprovalScreen() {
             >
               <Text style={styles.ctaLabel}>{ctaLabel(approval.sending, approval.openableCount)}</Text>
             </PressableSurface>
-          </LinearGradient>
+          </OperationsStickyBar>
         </>
       )}
     </View>
@@ -200,7 +204,10 @@ function CandidateCard({ candidate, approval }: CandidateCardProps) {
       : fillCopy(t.offer.rows.lifeValue, { days: String(candidate.daysLeft) });
 
   return (
-    <View
+    /* Kabuk kitten (`panel`, `lg` dolgu); ekranda kalan yalnız iç aralık ve "turdan çıkarıldı"
+       solgunluğu. */
+    <OperationsSurface
+      tone="panel"
       style={[styles.card, isRemoved ? styles.cardRemoved : undefined]}
       testID={`management-offer-${candidate.stockId}`}
     >
@@ -260,7 +267,7 @@ function CandidateCard({ candidate, approval }: CandidateCardProps) {
           {isRemoved ? t.offer.restore : t.offer.remove}
         </Text>
       </PressableSurface>
-    </View>
+    </OperationsSurface>
   );
 }
 
@@ -289,11 +296,6 @@ const styles = StyleSheet.create({
   /* ── Aday kartı (v3:30) ───────────────────────────────────────────────────── */
   card: {
     gap: operationsTheme.space.lg,
-    padding: operationsTheme.space['3xl'],
-    backgroundColor: operationsTheme.colors.panel,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    borderRadius: operationsTheme.radius.card,
   },
   /** Turun dışına çıkarılan kart SOLUR ama durur — "bugün değil" ile "bir daha asla" ayrı şeyler. */
   cardRemoved: {
@@ -407,15 +409,6 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
-  },
-  sticky: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    paddingTop: operationsTheme.space.xl,
-    paddingBottom: operationsTheme.space['3xl'],
-    paddingHorizontal: operationsTheme.space['5xl'],
   },
   cta: {
     height: operationsTheme.size.controlLg,

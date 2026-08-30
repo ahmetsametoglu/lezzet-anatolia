@@ -7,6 +7,7 @@ import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
+import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
@@ -465,12 +466,15 @@ export function ManagementHubScreen() {
             )}
 
             {/* ── 3. SESSİZ SATIR KARTLARI ────────────────────────────────── */}
+            {/* Kitin `panel` tonu + `chevron`: kart deseni (zemin · kenar · yarıçap · yön oku)
+                artık tek yerden geliyor, ekran yalnız içeriği yazıyor. */}
             {quiet.map((card) => (
-              <PressableSurface
+              <OperationsSurface
                 key={card.key}
+                tone="panel"
+                padding="md"
+                chevron
                 onPress={() => router.navigate(card.route)}
-                feedback="scale"
-                style={styles.quiet}
                 accessibilityLabel={`${card.eyebrow} — ${card.title}`}
                 testID={`management-decision-${card.key}`}
               >
@@ -479,8 +483,7 @@ export function ManagementHubScreen() {
                   <Text style={styles.quietTitle}>{card.title}</Text>
                   <Text style={styles.quietSubtitle}>{card.subtitle}</Text>
                 </View>
-                <Text style={styles.chevron}>›</Text>
-              </PressableSurface>
+              </OperationsSurface>
             ))}
           </View>
         )}
@@ -489,10 +492,11 @@ export function ManagementHubScreen() {
         <Text style={styles.pulseLabel}>{t.hub.pulse}</Text>
         <View style={styles.grid}>
           {pulseTilesOf(hub).map((tile) => (
-            <PressableSurface
+            <OperationsSurface
               key={tile.key}
+              tone="panel"
+              padding="md"
               onPress={() => router.navigate(tile.route)}
-              feedback="scale"
               style={[styles.tile, { width: tileWidth }]}
               accessibilityLabel={`${tile.title} — ${tile.subtitle}`}
               testID={`management-pulse-${tile.key}`}
@@ -502,7 +506,7 @@ export function ManagementHubScreen() {
               </Text>
               <Text style={styles.tileTitle}>{tile.title}</Text>
               <Text style={[styles.tileSubtitle, tile.alert ? styles.tileSubtitleAlert : null]}>{tile.subtitle}</Text>
-            </PressableSurface>
+            </OperationsSurface>
           ))}
         </View>
 
@@ -642,17 +646,8 @@ const styles = StyleSheet.create({
   },
 
   /* ── 3. Sessiz satır kartı (v3:2110) ────────────────────────────────────── */
-  quiet: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.xl,
-    backgroundColor: operationsTheme.colors.panel,
-    borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    paddingVertical: operationsTheme.space['2xl'],
-    paddingHorizontal: operationsTheme.space['3xl'],
-  },
+  /* Kartın kabuğu (zemin · kenar · yarıçap · dolgu · yön oku) KİTTEN geliyor — burada yalnız
+     içeriğin dizilimi kaldı. */
   quietText: {
     flex: 1,
     gap: operationsTheme.space['2xs'],
@@ -696,14 +691,10 @@ const styles = StyleSheet.create({
   /* Kutucuk TASARIMIN ölçüsünde (96), depo hub'ının 132'sinde değil — `pulseTile` künyesi.
      `justifyContent: 'space-between'` de SÖKÜLDÜ: başlığın `marginTop:'auto'`u zaten onu dibe
      itiyor, ikisi birlikte sayının altındaki boşluğu iki kez açıyordu (görsel ajanı ölçtü). */
+  /* Kutucuğun kabuğu kitten; ekranda kalan yalnız ÖLÇÜ ve iç aralık — genişlik hesaplanıyor
+     (yüzde beklenmedik bir tabana çözülüyordu), yükseklik tasarımın kendi durağı. */
   tile: {
     minHeight: operationsTheme.size.pulseTile,
-    backgroundColor: operationsTheme.colors.panel,
-    borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    paddingVertical: operationsTheme.space['2xl'],
-    paddingHorizontal: operationsTheme.space['2xl'],
     gap: operationsTheme.space.sm,
   },
   /** Büyük sayı Lora. Başlıktan (24) bir kademe küçük: kutucuk ekranın konusu değil, nabzı. */

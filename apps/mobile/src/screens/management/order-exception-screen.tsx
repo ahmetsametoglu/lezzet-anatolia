@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
@@ -114,7 +115,8 @@ function ExceptionCard({ exception, exceptions }: ExceptionCardProps) {
       : exception.status;
 
   return (
-    <View style={styles.card} testID={`management-exception-${exception.orderId}`}>
+    /* Kabuk kitten (`panel`, `md` dolgu); ekranda kalan iç aralık. */
+    <OperationsSurface tone="panel" padding="md" style={styles.card} testID={`management-exception-${exception.orderId}`}>
       <Text style={styles.cardTitle}>
         {fillCopy(t.exception.order, {
           reference: exception.referenceNo ?? t.exception.noRef,
@@ -126,7 +128,7 @@ function ExceptionCard({ exception, exceptions }: ExceptionCardProps) {
       {exception.lines.map((line) => (
         <ExceptionRow key={line.orderItemId} line={line} exceptions={exceptions} />
       ))}
-    </View>
+    </OperationsSurface>
   );
 }
 
@@ -199,14 +201,10 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.space['8xl'],
     gap: operationsTheme.space['2xl'],
   },
+  /* Kabuk kitte; kalan iç aralık. Kenar rengi de kite BIRAKILDI (`sand-300`): eski `sand-500`
+     iki kademe koyuydu ve kart kuyruğun ötekilerinden yüksek sesle konuşuyordu. */
   card: {
     gap: operationsTheme.space.lg,
-    paddingVertical: operationsTheme.space['2xl'],
-    paddingHorizontal: operationsTheme.space['3xl'],
-    backgroundColor: operationsTheme.colors.panel,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-500'],
-    borderRadius: operationsTheme.radius.card,
   },
   cardTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

@@ -6,6 +6,7 @@ import { ConversationSourceEnum, type ConversationSource } from '@lezzet/types';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import type { SocialRow } from '@/lib/api/social';
@@ -95,9 +96,12 @@ export function SocialInboxScreen() {
   ];
 
   const renderRow = ({ item }: { item: SocialRow }) => (
-    <PressableSurface
+    /* Kabuk kitten (`panel`); ekranın eklediği tek şey ÇERÇEVENİN RENGİ — cevap bekleyen sohbet
+       zeytin kenarla ayrılıyor ve o kuyruğun kendi kuralı, kitin değil. */
+    <OperationsSurface
+      tone="panel"
+      padding="md"
       onPress={() => router.navigate(`/social/${item.id}`)}
-      feedback="opacity"
       style={[styles.row, item.awaitingReply ? styles.rowAwaiting : styles.rowIdle]}
       /* Çerçevenin rengi ekran okuyucuya ulaşmaz — "top bizde" o yüzden ada EKLENİR. Görünür
          rozeti kaldırmak, sesli okumadan da kaldırmak anlamına gelmemeli. */
@@ -125,7 +129,7 @@ export function SocialInboxScreen() {
           </Text>
         )}
       </View>
-    </PressableSurface>
+    </OperationsSurface>
   );
 
   return (
@@ -283,15 +287,11 @@ const styles = StyleSheet.create({
     /* Satırları AYIRAN şey artık çizgi değil boşluk (v3): her sohbet kendi kartında duruyor. */
     gap: operationsTheme.space.md,
   },
+  /* Kabuk kitte; burada kalan satırın dizilimi (kare + metin bloğu). */
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: operationsTheme.space.xl,
-    paddingVertical: operationsTheme.space['2xl'],
-    paddingHorizontal: operationsTheme.space['2xl'],
-    backgroundColor: operationsTheme.colors.panel,
-    borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
   },
   /** Cevap bekleyen sohbetin çerçevesi ZEYTİN — kuyrukta gözün aradığı tek şey (v3:2192). */
   rowAwaiting: {
