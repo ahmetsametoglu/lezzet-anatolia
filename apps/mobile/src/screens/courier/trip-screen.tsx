@@ -11,7 +11,6 @@ import { useOperationsIdentity } from '@/screens/operations/sections-context';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
-import { runLabel } from './courier-format';
 import { useCourierDay } from './use-courier-day.hook';
 
 /*
@@ -94,8 +93,21 @@ export function CourierTripScreen() {
         <View style={styles.card} testID="courier-trip-card">
           <View style={styles.cardHead}>
             <Text style={styles.assigned}>{t.day.trip.assigned}</Text>
-            <Text style={styles.reference}>{runLabel(day.run)}</Text>
+            {/* BAŞLIKTA YALNIZ REFERANS — rota adı alttaki zincirde (30.08). `runLabel` ikisini
+                birleştiriyor ("Kuzey rotası · SF-26-…") ve zincir gelince aynı ad kartta İKİ KEZ
+                görünüyordu. `runLabel` paylaşılan bir yardımcı, öteki ekranlarda birleşik hâli
+                doğru; değişen yalnız BU kartın ne söylediği. */}
+            <Text style={styles.reference}>{day.run.referenceNo}</Text>
           </View>
+
+          {/* ROTA ZİNCİRİ — "nereden nereye" (30.08 · uyuşmazlık #12 kapandı).
+              Depo adı okunamazsa uydurma bir ad yerine SEBEP yazılır: yanlış rampaya gönderilen
+              kurye, boş bir satırdan daha pahalıdır (CLAUDE §1). */}
+          <Text style={styles.route} testID="courier-trip-route">
+            {day.run.warehouseName === null
+              ? t.day.trip.routeUnknown
+              : fillCopy(t.day.trip.route, { warehouse: day.run.warehouseName, zone: day.run.zoneName ?? '—' })}
+          </Text>
 
           {/* ÜÇ SAYI YAN YANA — kuryenin rampada sorduğu üç soru, tek bakışta. */}
           <View style={styles.counts}>
@@ -116,10 +128,13 @@ export function CourierTripScreen() {
           <Text style={styles.routeNote}>{t.day.trip.routeNote}</Text>
         </View>
 
-        {/* Aracın künyesi gelmiyor ve bu SÖYLENİYOR — boş bir satır bırakmak, kuryeye "araç yok"
-            dedirtirdi; alan eksikliği bir veri değil, bir boşluktur. */}
+        {/* ARAÇ — 30.08'e kadar burada "künye bu ekrana ulaşmıyor" yazıyordu; alan geldi.
+            İki hâl AYRI cümle: adı olmayan araç ile araçsız sefer aynı şey değil — birincisi bir
+            eksik, ikincisi meşru bir kurulum (araç kaydı zorunlu değil). */}
         <Text style={styles.vehicleNote} testID="courier-trip-vehicle">
-          {t.day.trip.vehicleUnknown}
+          {day.run.vehicleLabel === null
+            ? t.day.trip.vehicleNone
+            : fillCopy(t.day.trip.vehicle, { vehicle: day.run.vehicleLabel })}
         </Text>
 
         <Text style={styles.footnote}>{t.day.trip.footnote}</Text>
@@ -206,6 +221,13 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
+  },
+  /** Rota zinciri — künyenin kimlik satırı: sayaçlardan önce "nereden nereye" okunur. */
+  route: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+    marginTop: operationsTheme.space.xs,
   },
   routeNote: {
     fontFamily: operationsTheme.font.body[400],

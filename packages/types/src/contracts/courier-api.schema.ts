@@ -118,11 +118,42 @@ export const CourierRunBriefSchema = z.object({
   /** Rota adı — ekran "Kuzey rotası · SF-26-…" diye sefer kimliğini kurar. */
   zoneName: z.string().nullable(),
   vehicleId: z.string().uuid().nullable(),
+  /**
+   * Aracın OKUNUR adı — varsa `vehicle.label` ("soğutmalı panelvan"), yoksa plakası. `null` =
+   * araçsız sefer (araç kaydı zorunlu değil).
+   *
+   * **Kimliğin yanında AD durur, çünkü kimlik kimseye bir şey söylemez** (30.08): kurye rampada
+   * hangi aracın önüne gideceğini `vehicleId`nin uuid'sinden çıkaramaz. Rota SEÇİM listesi bunu
+   * zaten çözüyordu (`vehicleLabelsOf`); günün seferi çözmüyordu ve sefer künyesi ekranı aracın
+   * künyesinin *ulaşmadığını yazmak* zorunda kalıyordu (uyuşmazlık #12).
+   */
+  vehicleLabel: z.string().nullable(),
   departedAt: z.string().nullable(),
   returnedAt: z.string().nullable(),
   closed: z.boolean(),
 });
 export type CourierRunBrief = z.infer<typeof CourierRunBriefSchema>;
+
+/**
+ * **KURYENİN SEFERİ** — künye + seferin ÇIKIŞ deposunun adı (30.08 · uyuşmazlık #12).
+ *
+ * Rota zincirinin ilk halkası ("Strasbourg → Krutenau …"). `null` = ad okunamadı; uydurma bir
+ * depo adı kuryeyi yanlış rampaya gönderirdi (CLAUDE §1).
+ *
+ * ── NEDEN KÜNYENİN KENDİSİNDE DEĞİL ─────────────────────────────────────────
+ * Rota SEÇİM listesinde depo adı ROTA düzeyinde duruyor (`CourierRoute.warehouseName`) ve seferi
+ * OLMAYAN rotada da bulunması gerekiyor; künyeye konsaydı o yanıtta aynı değer iki kez taşınırdı.
+ *
+ * ── NEDEN İKİ CEVAP DA BUNU KULLANIYOR ──────────────────────────────────────
+ * Sefer başlatıldığı anda ekran günün seferini BAŞLATMA cevabının künyesiyle yazıyor
+ * (`use-courier-day.hook`: `setRun(openedRun)`). İki cevabın şekli ayrışsaydı kurye, seferi
+ * başlattıktan sonra bir sonraki okumaya kadar deposunu göremezdi — ve o boşluk hiçbir yerde
+ * hata vermezdi. Tek şema, tek şekil.
+ */
+export const CourierRunDetailSchema = CourierRunBriefSchema.extend({
+  warehouseName: z.string().nullable(),
+});
+export type CourierRunDetail = z.infer<typeof CourierRunDetailSchema>;
 
 /**
  * `GET /courier/routes` yanıtı (K1 rota seçimi · 18.08). O gün koşan aktif rotalar + varsa açık
@@ -140,8 +171,6 @@ export const CourierRouteSchema = z.object({
     courierId: z.string().uuid(),
     /** Seferi süren kuryenin adı — "bu rota bugün Musa'da" cümlesinin kaynağı. */
     courierName: z.string().nullable(),
-    /** Aracın okunur adı ya da plakası — künye tamamlansın diye; `null` = araçsız sefer. */
-    vehicleLabel: z.string().nullable(),
   }).nullable(),
 });
 export type CourierRoute = z.infer<typeof CourierRouteSchema>;
@@ -159,7 +188,7 @@ export const CourierDayResponseSchema = z.object({
    * Kuryenin o günkü SEFERİ — `null` = henüz rota almadı (18.08). Eski `started` yerel bayrağının
    * halefi: kilit artık kendini onaran bir tahmin değil, sunucudaki kaydın kendisi.
    */
-  run: CourierRunBriefSchema.nullable(),
+  run: CourierRunDetailSchema.nullable(),
   stops: z.array(CourierStopSchema),
   /**
    * **Kapıda tahsil edilen paranın gireceği hesap** (`door_cash_account_id` ayarı) — 21.10d.
@@ -214,8 +243,12 @@ export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('ok'),
     date: z.string(),
-    /** Açılan seferin künyesi — kilit artık sunucu verisi, yerel bayrak değil (18.08). */
-    run: CourierRunBriefSchema,
+    /**
+     * Açılan seferin künyesi — kilit artık sunucu verisi, yerel bayrak değil (18.08).
+     * Şekli GÜN yanıtıyla aynı (`CourierRunDetail`): ekran bu değeri doğrudan günün seferi olarak
+     * yazıyor, ayrışsalardı sefer başlar başlamaz depo adı boş kalırdı (30.08).
+     */
+    run: CourierRunDetailSchema,
     /** Bu çağrıda `ready → out_for_delivery` yazılan siparişler. */
     started: z.array(z.string().uuid()),
     /** Zaten yoldaydı — bir HATA değil, "yapılacak yeni bir şey yok" cevabıdır. */

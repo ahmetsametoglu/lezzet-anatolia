@@ -732,6 +732,47 @@ kelimeye düştüğünde ad iki kez basılıyordu. Çakışınca artık bir kez 
 
 ---
 
+## 30.08 öğle — Para İKİNCİ TUR: "metin geçti, kutular geçmedi" (21.163)
+
+Kullanıcı sabahki geçişe cihazda baktı: *"Bu sabah geçenler tasarım itibariyle düzgün geçmemiş…
+hatta bayağı bir farklılık var."* Haklıydı ve **kök sebep sabahki kaydın kendi içinde yazılıydı**:
+karşılaştırma metin üzerinden yapılmıştı. Aynı hata bu geçişte ikinci kez görülüyor — 1.4'teki
+"tasarımı düz metne indirgeyerek okumuştum" itirafının kardeşi. Orada kaçan **dokunuş izleriydi**
+(`onClick`), burada kaçan **kutu tarifleri** (zemin · kenar · yarıçap · kademe).
+
+**Yöntem değişti.** Ekranı okumak yerine tasarımın 23 ve 24'ü **token düzeyinde ayrıştırıldı**:
+her `font:` ve her `background/border/radius` üçlüsü ölçüldü, `operations-app.ts`in eşleme
+tablosuyla token'a çevrildi, sonra koddaki karşılığıyla yan yana kondu. **13 fark** çıktı — 8'i
+tahsilat izlemede, 5'i gün sonunda; hepsi 21.163 görev satırında tek tek yazılı.
+
+**En büyüğü tek cümleyle:** tasarımın günün parası KOYU bir karttı, kod onu açık `panel` çizmişti.
+Metin aynıydı, ekrandaki ağırlık bambaşka — muhasebecinin ilk baktığı yer sayfanın öteki
+kutularından ayrışmıyordu.
+
+**İkinci en büyüğü bir kalıp hatası:** v3'ün renkli kartları **açık zemin + AÇIK renkli kenar +
+koyu aile metni** diye kuruluyor (token künyesi bunu 30.08'de zaten ölçmüştü: hata 15 · uyarı 9 ·
+olumlu 8 kullanım). Kod uyuşmazlık kartını dolu `terracotta` kenarla çizince kutu bir uyarı
+bandına dönüyordu. Aynı kalıp hatası "kuryenin üstündeki para"da tersinden vardı: uyarı olması
+gereken kutu nötr çizilmişti.
+
+**Bir ölçüm, üç şeridi ilgilendiriyor** ve üçü de deftere yazıldı, tek başıma girmedim:
+- koyu yüzeyin **ikinci grisi** (`#8f9aa2`, 12 kullanım, 5 ekran) token'sız — mevcut
+  `on-ink-muted`a Δ21/5/19, yani `operations-app.ts`in kendi eşiğinin üstünde;
+- **bölüm kökü başlığı** v3'te 27px, `section-header` 24 yazıyor — altı ekranda birden sapıyor
+  ve ölçekte 27 diye bir durak yok;
+- `operations-shell.test.tsx:78` **zaman aşımıyla düşüyor** ve para ekranlarına dokunmuyor
+  (aynı dosyanın 10 testi geçiyor, para ekranını render eden komşu test dâhil).
+
+**Ders — ve bu sefer yazılı bir kural hâline geliyor:** bir ekranın "v3'e geçtiği", metninin
+eşleştiğiyle değil **kutularının eşleştiğiyle** ölçülür. Tasarımdan koda geçen şey cümle değil,
+yüzey hiyerarşisidir; cümle zaten sözlükte duruyor.
+
+**Doğrulama.** Para jest 8/8 (ikisi yeni) · typecheck kendi kapsamımda temiz · eslint temiz.
+**Cihaz turu yapılamadı:** simülatör açık değildi ve `ui:shot:mobile` ön şartı ölçüp söyledi —
+"çekemedim" diye kaydedildi, "çektim" diye değil.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -742,7 +783,7 @@ Burada durulmaz — yazılır, geçilir.
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
 | 2 | 01 Depo Hub · 10 Kapsam | **DARALDI (30.08).** Ekranın içeriği artık şablonunkiyle birebir (gerekçe, çıkış yolları, karar dipnotu). Kalan tek fark yerleşim: şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
-| 12 | 15 Sefer künyesi | Şablon aracın künyesini ("FR-482-BX · soğutmalı panelvan") ve rota zincirini (Strasbourg → Krutenau → …) yazıyor. Gün yanıtının `run`u yalnız `vehicleId` taşıyor, ADI yok; `warehouseName` de rota SEÇİM listesinde var, günün seferinde değil. | Açık — ekran aracın künyesinin ulaşmadığını SÖYLÜYOR (boş satır bırakmak "araç yok" dedirtirdi). Çözümü tek alan: `CourierRunBrief`e `vehicleLabel` + `warehouseName`. |
+| 12 | 15 Sefer künyesi | Şablon aracın künyesini ("FR-482-BX · soğutmalı panelvan") ve rota zincirini (Strasbourg → Krutenau → …) yazıyor. Gün yanıtının `run`u yalnız `vehicleId` taşıyor, ADI yok; `warehouseName` de rota SEÇİM listesinde var, günün seferinde değil. | **KAPANDI (30.08 · 21.162).** `vehicleLabel` künyeye, `warehouseName` günün seferine eklendi. Yeni kod yazılmadı — rota seçim listesinin kuralı (`vehicleLabelsOf`) `courier/vehicle-label.ts`e taşındı, iki kapı da oradan okuyor. Yolda bir boşluk çıktı: başlatma cevabının künyesi ekranın günü olarak yazılıyor, şekilleri ayrışsaydı sefer başlar başlamaz depo adı boş kalırdı → tek şema (`CourierRunDetail`). |
 | 11 | 13 Kurye dönüşü | Şablon "Stoğa dön" seçilince **hazır sebep çipleri** gösteriyor (`ch.donusSebep`, dört adet) — ama çiplerin metinlerini vermiyor (yer tutucu döngü). Dört sebebi uydurmak, alan sözlüğünü icat etmek olurdu. | Açık — serbest metin alanı korundu (yer tutucusu kanonik gerekçeyi yazıyor). Çözümü: çiplerin metinlerinin tasarımda adlandırılması. |
 | 10 | 11 Transfer | Şablon ÜÇ bölüm gösteriyor: **GELEN · YOLDA · SON KAPANANLAR**, ve satırlarda depo ADLARI ("Paris Depo → Strasbourg Merkez"). Uç yalnız GELEN transferleri döndürüyor; çıkan ve kapanan listesi yok, `InboundTransferSchema` da yalnız `fromWarehouseId` (uuid) taşıyor, ad yok — uyuşmazlık #1'in aynı ailesi. | Açık — yalnız GELEN yazıldı, boşluk metni bunu açıkça söylüyor. Çözümü: çıkan + kapanan uçları ve yanıtlara depo adı. |
 | 9 | 09 Yazıcılar | Şablon seçili yazıcının **bağlantı durumunu** ("bağlı · Wi-Fi") ve bir **"test bas"** eylemini gösteriyor. Yazıcı sözleşmesi yalnız `id · name · purpose · address · model · labelSize` taşıyor — durum alanı yok; test basımı da örnek bir etiket yükü gerektirir (basım hattı gerçek etiket PNG'siyle çalışıyor). | Açık — ikisi de yazılmadı. Çözümü: yazıcı yanıtına erişilebilirlik durumu + sunucuda bir örnek etiket ucu. |
@@ -790,6 +831,8 @@ Beşi de sunucuda mevcut veriyi taşımaktan ibaret; yeni kural, yeni tablo, yen
 | **Zamanında teslim** oranı | 21 | Söz verilen pencere + teslim damgası ikisi de yok |
 | **İmha + iade** tutarı | 21 | Para tarafında var, yönetim özetine taşınmıyor |
 | Kurye kurye **nakit dökümü** · uyuşmazlığın **sefer künyesi** | 17 · 18 | İkisi de aynı ailenin iki ucu: `courierFloat` dizi olmalı |
+
+*(Uyuşmazlık **#12** — sefer künyesinin aracı ve rota zinciri — 30.08'de kapandı, `21.162`.)*
 
 ### C. YENİ YETENEK — bunlar bir modül, bir alan değil
 | Ne | Nerede | Niçin ağır |

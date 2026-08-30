@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   AccountService, AddressService, CategoryService, DeliveryZoneService, OrderService, ProductService,
-  ReservationService, StockService, UserProfileService, serviceDb,
+  ReservationService, StockService, UserProfileService, VehicleService, WarehouseService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { warehouseScope } from '@lezzet/domain-core';
-import { listCourierDay, markUndelivered, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
+import { listCourierDay, markUndelivered, readCourierRun, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
 import { loadBox } from './load';
 import { openBox, sealBox } from '../warehouse/boxes';
 import { listCourierRoutes } from './routes';
@@ -126,6 +126,9 @@ beforeEach(async () => {
   stockId = (await stocks.insert({ warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePriceCents: 300 })).id;
 });
 
+/** Bu dosyanın kurduğu araçlar — `purgeTestData` onları `vehicleIds` ile siliyor (elle silme yok). */
+const vehicleIds: string[] = [];
+
 afterAll(async () => {
   // Sipariş, rezervasyon ve adres AYRICA silinmez: üçü de `purgeTestData`'nın bildiği bağlar
   // (sipariş `profileIds`ten, rezervasyon `productIds`ten, adres profil cascade'inden). Elle
@@ -136,6 +139,8 @@ afterAll(async () => {
     profileIds: createdProfiles,
     accountIds: [accountId],
     warehouseIds: [warehouseId, foreignWarehouseId],
+    // Araç `restrict` FK'lerle korunuyor ve sefer ona bağlı; purge sırayı biliyor (`cleanup.ts`).
+    vehicleIds,
   });
 });
 
@@ -304,6 +309,64 @@ function mustStart(result: CourierDayStart): Extract<CourierDayStart, { status: 
   if (result.status !== 'ok') throw new Error(`seferin başlaması bekleniyordu, gelen: ${result.status}`);
   return result;
 }
+
+describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık #12)', () => {
+  /*
+    KİMLİĞİN YANINDA AD DURUR.
+
+    Künye 30.08'e kadar yalnız `vehicleId` taşıyordu ve sefer künyesi ekranı aracın adının
+    *ulaşmadığını yazmak* zorunda kalıyordu — kurye rampada bir uuid'den hangi aracın önüne
+    gideceğini çıkaramaz. Aynı kural rota SEÇİM listesinde zaten uygulanıyordu; eksik olan
+    günün seferiydi.
+  */
+  it('araç ADI okunur ad varsa ondan, yoksa PLAKADAN gelir', async () => {
+    const adli = await new VehicleService(db).insert({
+      plate: `AD-${stamp}`,
+      label: 'Soğutmalı panelvan',
+      warehouseId,
+    });
+    vehicleIds.push(adli.id);
+    await startCourierDay(db, { courierId, zoneId, vehicleId: adli.id });
+
+    expect((await readCourierRun(db, { courierId }))?.vehicleLabel).toBe('Soğutmalı panelvan');
+  });
+
+  it('ADSIZ araçta plaka yazılır — plaka `not null`, yani yedek HER ZAMAN var', async () => {
+    const adsiz = await new VehicleService(db).insert({ plate: `PL-${stamp}`, warehouseId });
+    vehicleIds.push(adsiz.id);
+    await startCourierDay(db, { courierId, zoneId, vehicleId: adsiz.id });
+
+    expect((await readCourierRun(db, { courierId }))?.vehicleLabel).toBe(`PL-${stamp}`);
+  });
+
+  it('ARAÇSIZ seferde ad `null` — araç kaydı zorunlu değil, bu bir eksik değil', async () => {
+    await startCourierDay(db, { courierId, zoneId });
+
+    const run = await readCourierRun(db, { courierId });
+    expect(run?.vehicleId).toBeNull();
+    expect(run?.vehicleLabel).toBeNull();
+  });
+
+  it('ÇIKIŞ DEPOSUNUN adı seferin bölgesinden çözülür', async () => {
+    await startCourierDay(db, { courierId, zoneId });
+
+    // Depo adı rota zincirinin ilk halkası ("Strasbourg → Krutenau"); bölge → depo üzerinden gelir.
+    const depoAdi = (await new WarehouseService(db).getById(warehouseId))?.name;
+    expect((await readCourierRun(db, { courierId }))?.warehouseName).toBe(depoAdi);
+  });
+
+  it('BAŞLATMA cevabı da aynı künyeyi döner — ekran onu doğrudan günün seferi olarak yazıyor', async () => {
+    const arac = await new VehicleService(db).insert({ plate: `BS-${stamp}`, label: 'Kamyonet', warehouseId });
+    vehicleIds.push(arac.id);
+
+    const result = mustStart(await startCourierDay(db, { courierId, zoneId, vehicleId: arac.id }));
+
+    /* İki cevabın şekli ayrışsaydı kurye, seferi başlattıktan sonra bir sonraki okumaya kadar
+       aracını ve deposunu göremezdi — ve o boşluk hiçbir yerde hata vermezdi. */
+    expect(result.run.vehicleLabel).toBe('Kamyonet');
+    expect(result.run.warehouseName).toBe((await new WarehouseService(db).getById(warehouseId))?.name);
+  });
+});
 
 describe('seferi başlat (K1 · 18.08)', () => {
   it('HAZIR durak yola çıkar — sefer kaydı doğar, geçiş kuryenin adına düşer', async () => {

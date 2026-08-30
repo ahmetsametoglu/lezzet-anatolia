@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react-native';
 import type { CourierDayResponse } from '@lezzet/types';
 
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
-import { courierDay, courierStop, dayCloseDraft } from './courier-fixture';
+import { courierDay, courierDayRun, courierStop, dayCloseDraft } from './courier-fixture';
 import { CourierTripScreen } from './trip-screen';
 
 /*
@@ -14,7 +14,8 @@ import { CourierTripScreen } from './trip-screen';
   bir uçtan okumaya kalkarsa, iki ekran aynı seferi iki farklı sayıyla anlatır — test o ayrışmayı
   yakalar.
 
-  Araç künyesinin YOKLUĞU da ölçülüyor: boşluk sessizce bırakılmıyor, sebebi yazılıyor.
+  Aracın ADI ve rota zinciri de ölçülüyor (30.08): ad varsa ad, araç yoksa "atanmamış", depo adı
+  okunamazsa sebebi — üçü ayrı cümle, çünkü üçü ayrı şey.
 */
 
 jest.mock('expo-router', () => {
@@ -46,7 +47,7 @@ const STOP_B = '00000000-0000-4000-8000-000000000002';
 const STOP_C = '00000000-0000-4000-8000-000000000003';
 
 /** Üç duraklı sefer: üç kutu (2 + 1 + 0) ve kapıda parası kalan tek durak. */
-function tripDay(): CourierDayResponse {
+function tripDay(overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {}): CourierDayResponse {
   return courierDay([
     courierStop(1, {
       orderId: STOP_A,
@@ -62,7 +63,7 @@ function tripDay(): CourierDayResponse {
       payment: { dueAmountCents: null, expectedMethod: null },
     }),
     courierStop(3, { orderId: STOP_C, payment: { dueAmountCents: 0, expectedMethod: null } }),
-  ]);
+  ], overrides);
 }
 
 function mockDay(day: CourierDayResponse) {
@@ -112,14 +113,45 @@ describe('K · sefer künyesi', () => {
     expect(screen.getByTestId('courier-trip-collections')).toHaveTextContent('1');
   });
 
-  /* Alanın yokluğu bir veri değil, bir boşluktur (CLAUDE §1): plaka uydurmak yerine sebebi
-     yazılıyor. Bu satır silinirse ekran araç künyesi hiç yokmuş gibi görünür. */
-  it('araç künyesinin ulaşmadığını SÖYLER — boş bırakmaz', async () => {
-    mockDay(tripDay());
+  /*
+    ARAÇ VE ROTA ZİNCİRİ (30.08 · uyuşmazlık #12 kapandı).
+
+    30.08'e kadar ekran "araç künyesi bu ekrana ulaşmıyor" yazıyordu — alan sözleşmede yoktu.
+    Şimdi var (`vehicleLabel` künyede, `warehouseName` günün seferinde) ve testler ÜÇ hâli birden
+    tutuyor: ad varsa ad, araç yoksa "atanmamış", ad okunamazsa sebebi.
+  */
+  it('aracın ADI yazılır — kurye uuid’den hangi araca gideceğini çıkaramaz', async () => {
+    mockDay(tripDay({ run: courierDayRun({ vehicleId: '00000000-0000-4000-8000-000000000900', vehicleLabel: 'FR-482-BX · soğutmalı panelvan' }) }));
 
     await renderTrip();
 
-    expect(screen.getByTestId('courier-trip-vehicle')).toHaveTextContent(/araç ADI yok/);
+    expect(screen.getByTestId('courier-trip-vehicle')).toHaveTextContent(/FR-482-BX · soğutmalı panelvan/);
+  });
+
+  it('ARAÇSIZ sefer ile ADI OKUNAMAYAN araç ayrı cümleler', async () => {
+    // Araç kaydı zorunlu değil: araçsız sefer bir eksik değil, meşru bir kurulum.
+    mockDay(tripDay({ run: courierDayRun({ vehicleId: null, vehicleLabel: null }) }));
+
+    await renderTrip();
+
+    expect(screen.getByTestId('courier-trip-vehicle')).toHaveTextContent(/araç atanmamış/);
+  });
+
+  it('rota zinciri "nereden nereye" der — çıkış deposu + bölge', async () => {
+    mockDay(tripDay({ run: courierDayRun({ warehouseName: 'Strasbourg Merkez', zoneName: 'Krutenau' }) }));
+
+    await renderTrip();
+
+    expect(screen.getByTestId('courier-trip-route')).toHaveTextContent(/Strasbourg Merkez → Krutenau/);
+  });
+
+  it('depo adı OKUNAMAZSA sebep yazılır — uydurma bir ad kuryeyi yanlış rampaya gönderir', async () => {
+    mockDay(tripDay({ run: courierDayRun({ warehouseName: null }) }));
+
+    await renderTrip();
+
+    // "Bilinmiyor"u boş satıra düşürmek, kuryeye "depo yok" dedirtirdi (CLAUDE §1).
+    expect(screen.getByTestId('courier-trip-route')).toHaveTextContent(/Çıkış deposu okunamadı/);
   });
 
   it('açık sefer yoksa künye çizilmez; ekran boş hâli gösterir', async () => {

@@ -20,7 +20,10 @@
     "cheque": "çek",
     "bank_transfer": "havale"
   },
-  "channel": { "b2b": "B2B", "b2c": "B2C" },
+  "channel": {
+    "b2b": "B2B",
+    "b2c": "B2C"
+  },
   "day": {
     "eyebrow": "KURYE",
     "title": "Günün Rotası",
@@ -61,7 +64,10 @@
       "boxes": "kutu",
       "collections": "tahsilat",
       "routeNote": "Rota yönetimde planlanır; buradan değiştirilmez.",
-      "vehicleUnknown": "Araç künyesi bu ekrana ulaşmıyor — sefer yanıtında araç ADI yok.",
+      "vehicle": "🚚 {vehicle}",
+      "vehicleNone": "Bu sefere araç atanmamış.",
+      "route": "{warehouse} → {zone}",
+      "routeUnknown": "Çıkış deposu okunamadı.",
       "cta": "Seferi başlat — yüklemeye geç",
       "footnote": "Sefer başladıktan sonra durak sırası kilitlenir; sonuçlanmayan durak kapanışta çözülür."
     },
@@ -226,8 +232,16 @@
     "outcome": {
       "unreachableTitle": "Ulaşılamadı — kayıt (2/2: not + onay)",
       "refusedTitle": "Kabul etmedi — iade kaydı (2/2: not + onay)",
-      "unreachableChips": ["kapı açılmadı", "telefona yanıt yok", "adres bulunamadı"],
-      "refusedChips": ["koku / hasar şüphesi", "sipariş beklenmiyordu", "çok geç geldi"],
+      "unreachableChips": [
+        "kapı açılmadı",
+        "telefona yanıt yok",
+        "adres bulunamadı"
+      ],
+      "refusedChips": [
+        "koku / hasar şüphesi",
+        "sipariş beklenmiyordu",
+        "çok geç geldi"
+      ],
       "noteLabel": "Kısa not",
       "notePlaceholder": "ör. zil bozuk",
       "noteRequired": "Not zorunlu — kapıda ne olduğunu bir cümleyle yazın.",
@@ -288,7 +302,11 @@
     },
     "closed": "Sefer kapalı — salt okunur. İkinci kapanış kaydı ezmez.",
     "openWarning": "{n} durak sonuçlanmadı — kapanış engellenmez, takılı durakları çözer",
-    "counters": { "delivered": "TESLİM", "pending": "BEKLEYEN", "returned": "DÖNEN" },
+    "counters": {
+      "delivered": "TESLİM",
+      "pending": "BEKLEYEN",
+      "returned": "DÖNEN"
+    },
     "countersNote": "Bekleyenler kapanışla hazıra döner — yeni günlerini yönetim planlar. Dönen mallar depo kabulüne düşer.",
     "moneyHeading": "PARA — SAYDIĞINI GİR",
     "expected": "beklenen {amount}",

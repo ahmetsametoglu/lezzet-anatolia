@@ -7774,3 +7774,35 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   başına **hasarlı paket sayısı** (bugün yalnız siparişin tamamına serbest not), **lot adayları**
   (okutma yanıtı lot taşımıyor), **ürünün kutu tipleri** (elle "kaç koli geldi" sayımı için).
 
+- [x] (21.162) **SEFER KÜNYESİNDE ARACIN ADI VE ROTA ZİNCİRİ** (v3 uyuşmazlık #12 kapandı)
+  `touches:` `packages/types/src/contracts/courier-api.schema.ts` ·
+  `packages/application/src/courier/{vehicle-label.ts,day.ts,routes.ts,day-close.ts}` ·
+  `apps/mobile/src/screens/courier/{trip-screen.tsx,use-courier-day.hook.ts,courier-fixture.ts}`
+
+  **Durum (30.08).** Sefer künyesi ekranı aracın künyesinin **ulaşmadığını yazıyordu** — sözleşme
+  yalnız `vehicleId` taşıyordu. Kurye rampada bir uuid'den hangi aracın önüne gideceğini çıkaramaz;
+  kimliğin yanında AD durmalı.
+
+  **Yeni kod yazılmadı, kural PAYLAŞTIRILDI.** Aynı soruyu rota SEÇİM listesi zaten cevaplıyordu
+  (`vehicleLabelsOf` — ad varsa ad, yoksa plaka). Kopyalamak yerine `courier/vehicle-label.ts`e
+  taşındı; iki kapı da oradan okuyor. İki yere ayrı yazılsaydı bir gün birinde `label`, ötekinde
+  plaka tercih edilir ve **aynı araç iki ekranda iki isimle** görünürdü (CLAUDE §1).
+
+  **`vehicleLabel` künyenin kendisinde, `warehouseName` yalnız günün seferinde.** Rota seçim
+  listesinde depo adı ROTA düzeyinde zaten var ve seferi olmayan rotada da bulunması gerekiyor;
+  künyeye konsaydı o yanıtta aynı değer iki kez taşınırdı.
+
+  **Derleyici gerçek bir boşluk yakaladı:** ekran, sefer başlatıldığı anda günün seferini
+  BAŞLATMA cevabının künyesiyle yazıyor (`setRun(openedRun)`). İki cevabın şekli ayrışsaydı kurye,
+  seferi başlattıktan sonra bir sonraki okumaya kadar deposunu göremezdi — **ve o boşluk hiçbir
+  yerde hata vermezdi.** Çözüm tek şema: `CourierRunDetailSchema`, iki cevap da onu döner.
+
+  **Ekranda bir tekrar söküldü:** `runLabel` rota adı + referansı birleştiriyor ("Kuzey rotası ·
+  SF-26-…") ve zincir satırı gelince aynı ad kartta iki kez görünüyordu. Bu kartın başlığı
+  referansa indi; `runLabel` paylaşılan yardımcı olarak öteki ekranlarda aynen duruyor.
+
+  **Üç hâl üç cümle:** ad varsa ad · araç yoksa "atanmamış" (araç kaydı zorunlu değil, bu bir
+  eksik değil) · depo adı okunamazsa sebebi (uydurma bir ad kuryeyi yanlış rampaya gönderirdi).
+
+  **Doğrulama.** 5 entegrasyon (ad/plaka/araçsız/depo adı/başlatma cevabı) + 4 ekran testi.
+  Kurye jest **92/92**.

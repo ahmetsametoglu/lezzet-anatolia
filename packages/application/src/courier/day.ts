@@ -11,8 +11,11 @@ import {
   ProductVariantService,
   SettingsService,
   UserProfileService,
+  WarehouseService,
 } from '@lezzet/database';
 import { canAccessWarehouse, canTransition, deliveryRunReferenceNo, warehouseScope, whatsAppLink, type MessageLocale } from '@lezzet/domain-core';
+// Araç adının kuralı rota seçim listesiyle ORTAK — künyesi kendi dosyasında.
+import { vehicleLabelOf } from './vehicle-label';
 import { listCourierRoutes } from './routes';
 import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
@@ -248,7 +251,7 @@ export type CourierDayStart =
   | {
       status: 'ok';
       date: string;
-      run: CourierRunBriefView;
+      run: CourierDayRunView;
       /** `ready → out_for_delivery` yazılanlar. */
       started: string[];
       /** Zaten yoldaydı — ikinci çağrı hata değil, "yeni bir şey yok" cevabı. */
@@ -275,9 +278,22 @@ export interface CourierRunBriefView {
   zoneId: string;
   zoneName: string | null;
   vehicleId: string | null;
+  /** Aracın okunur adı ya da plakası; `null` = araçsız sefer. Kural `vehicle-label.ts`te tek yerde. */
+  vehicleLabel: string | null;
   departedAt: string | null;
   returnedAt: string | null;
   closed: boolean;
+}
+
+/**
+ * Günün seferi — künye + **çıkış deposunun adı** (30.08 · uyuşmazlık #12).
+ *
+ * Depo adı künyenin kendisinde DEĞİL: rota seçim listesinde o değer rota düzeyinde zaten var ve
+ * seferi olmayan rotada da bulunması gerekiyor; künyeye koysaydık o yanıtta iki kez taşınırdı
+ * (CLAUDE §1). Kurye günü tek bir seferi anlatıyor — orada tek yer seferin kendisidir.
+ */
+export interface CourierDayRunView extends CourierRunBriefView {
+  warehouseName: string | null;
 }
 
 /**
@@ -373,7 +389,13 @@ export async function startCourierDay(
     return { status: 'no_route' };
   }
 
-  const zoneName = (await new DeliveryZoneService(db).getById(zoneId))?.name ?? null;
+  // Başlatılan seferin künyesi de ARAÇ ADINI taşıyor: ekran başlatma anından itibaren "hangi
+  // aracı süreceğim" sorusunu cevaplayabilmeli (30.08 · uyuşmazlık #12).
+  const [startedZone, startedVehicleLabel] = await Promise.all([
+    new DeliveryZoneService(db).getById(zoneId),
+    vehicleLabelOf(db, input.vehicleId ?? null),
+  ]);
+  const startedWarehouseName = startedZone ? await warehouseNameOf(db, startedZone.warehouseId) : null;
   const result: CourierDayStart = {
     status: 'ok',
     date,
@@ -381,8 +403,10 @@ export async function startCourierDay(
       runId: start.runId!,
       referenceNo: start.referenceNo!,
       zoneId,
-      zoneName,
+      zoneName: startedZone?.name ?? null,
       vehicleId: input.vehicleId ?? null,
+      vehicleLabel: startedVehicleLabel,
+      warehouseName: startedWarehouseName,
       departedAt: start.departedAt ?? null,
       returnedAt: null,
       closed: false,
@@ -446,7 +470,7 @@ export async function startCourierDay(
 export async function readCourierRun(
   db: SupabaseClient,
   input: { courierId: string; date?: string },
-): Promise<CourierRunBriefView | null> {
+): Promise<CourierDayRunView | null> {
   const date = input.date ?? new Date().toISOString().slice(0, 10);
   const runs = await new DeliveryRunService(db).listByCourier(input.courierId, { date });
   if (runs.length === 0) return null;
@@ -454,18 +478,41 @@ export async function readCourierRun(
   const closes = await new DeliveryRunCloseService(db).listByRuns(runs.map((run) => run.id));
   const closedIds = new Set(closes.map((close) => close.deliveryRunId));
   const run = runs.find((candidate) => !closedIds.has(candidate.id)) ?? runs[0]!;
-  const zoneName = (await new DeliveryZoneService(db).getById(run.deliveryZoneId))?.name ?? null;
+  const zone = await new DeliveryZoneService(db).getById(run.deliveryZoneId);
+
+  /*
+    ARAÇ ADI VE ÇIKIŞ DEPOSU (30.08 · uyuşmazlık #12) — künye ADSIZ eksikti.
+
+    Ekran `vehicleId`nin uuid'sinden hangi aracın önüne gideceğini çıkaramaz; sefer künyesi bu
+    yüzden aracın *ulaşmadığını yazmak* zorunda kalıyordu. İkisi de PARALEL okunuyor: biri ötekini
+    beklemek zorunda değil ve ikisi de bu kapının cevabına eşit uzaklıkta.
+
+    Depo adı ZONE üzerinden geliyor (sefer bölgesine, bölge depoya bağlı). Zone okunamazsa ikisi de
+    `null` — "bilinmiyor"u boş dizeye ya da uydurma bir ada düşürmek, kuryeyi yanlış rampaya
+    gönderirdi (CLAUDE §1).
+  */
+  const [vehicleLabel, warehouseName] = await Promise.all([
+    vehicleLabelOf(db, run.vehicleId),
+    zone ? warehouseNameOf(db, zone.warehouseId) : Promise.resolve(null),
+  ]);
 
   return {
     runId: run.id,
     referenceNo: run.referenceNo,
     zoneId: run.deliveryZoneId,
-    zoneName,
+    zoneName: zone?.name ?? null,
     vehicleId: run.vehicleId,
+    vehicleLabel,
+    warehouseName,
     departedAt: run.departedAt,
     returnedAt: run.returnedAt,
     closed: closedIds.has(run.id),
   };
+}
+
+/** Deponun adı — `null` = kayıt okunamadı; ekran "bilinmiyor" der, uydurma bir ad yazmaz. */
+async function warehouseNameOf(db: SupabaseClient, warehouseId: string): Promise<string | null> {
+  return (await new WarehouseService(db).getById(warehouseId))?.name ?? null;
 }
 
 /**

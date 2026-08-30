@@ -3,7 +3,7 @@ import type { CourierDayResponse, CourierRoute, StartCourierDayResponse } from '
 
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { CourierDayScreen } from './courier-day-screen';
-import { courierDay, courierRoute, courierRunBrief, courierStop, dayCloseDraft, takenRouteRun } from './courier-fixture';
+import { courierDay, courierDayRun, courierRoute, courierStop, dayCloseDraft, takenRouteRun } from './courier-fixture';
 import messages from './messages.json';
 
 /*
@@ -78,7 +78,9 @@ function startResult(
   return {
     status: 'ok',
     date: '2026-08-08',
-    run: courierRunBrief(),
+    // Başlatma cevabının künyesi GÜN seferiyle aynı şekli taşıyor (30.08): ekran bu değeri
+    // doğrudan günün seferi olarak yazıyor, ayrışsalardı depo adı sefer başlar başlamaz boş kalırdı.
+    run: courierDayRun(),
     started: [],
     alreadyOut: [],
     stale: [],
@@ -221,7 +223,7 @@ describe('K1 · günün seferi', () => {
   it('KAPANMIŞ sefer: gövde yeniden ROTA SEÇİMİ, künye şeritte kalır, duraklar çizilmez', async () => {
     mockDay(
       courierDay([courierStop(1)], {
-        run: courierRunBrief({ returnedAt: '2026-08-08T18:00:00.000Z', closed: true }),
+        run: courierDayRun({ returnedAt: '2026-08-08T18:00:00.000Z', closed: true }),
       }),
       dayCloseDraft(),
       startResult(),

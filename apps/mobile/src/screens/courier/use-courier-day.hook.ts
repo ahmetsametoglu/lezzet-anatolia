@@ -4,7 +4,7 @@ import {
   ORDER_STATUS_LABELS,
   type CourierDayStopState,
   type CourierRoute,
-  type CourierRunBrief,
+  type CourierRunDetail,
   type CourierStopContract,
 } from '@lezzet/types';
 
@@ -100,7 +100,8 @@ interface UseCourierDayResult {
   /** Uçtan gelen gün (`YYYY-MM-DD`) — istemci kendi hesaplamaz. */
   date: string | null;
   /** Bugünkü sefer; `null` = rota alınmadı → ekran seçim hâlinde. */
-  run: CourierRunBrief | null;
+  /** Günün seferi — künye + çıkış deposunun adı; `null` = henüz rota alınmadı. */
+  run: CourierRunDetail | null;
   /** Seçilebilir + başkasında olan rotalar (yalnız sefer yokken okunur). */
   routes: CourierRoute[];
   /** Kuryenin seçtiği rota — tek aday varsa kendiliğinden seçilidir. */
@@ -141,7 +142,12 @@ export function isRouteFree(route: CourierRoute): boolean {
 export function useCourierDay(): UseCourierDayResult {
   const [status, setStatus] = useState<CourierDayStatus>('loading');
   const [date, setDate] = useState<string | null>(null);
-  const [run, setRun] = useState<CourierRunBrief | null>(null);
+  /*
+    Günün seferi künyeden GENİŞ: çıkış deposunun adını da taşıyor (30.08 · uyuşmazlık #12).
+    Başlatma cevabı da aynı şekli döndürüyor, yani `setRun(openedRun)` tip olarak da geçerli —
+    ikisi ayrışsaydı sefer başlar başlamaz depo adı boş kalırdı.
+  */
+  const [run, setRun] = useState<CourierRunDetail | null>(null);
   const [routes, setRoutes] = useState<CourierRoute[]>([]);
   const [pickedZoneId, setPickedZoneId] = useState<string | null>(null);
   const [stops, setStops] = useState<CourierStopContract[]>([]);

@@ -3,6 +3,7 @@ import { notifyRunCloseMismatch } from '../notification/staff-events';
 import type { CloseDeliveryRunResult, DeliveryRunClose } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { listCourierDay, readCourierRun, type CourierRunBriefView, type CourierStop } from './day';
+import { vehicleLabelOf } from './vehicle-label';
 
 /**
  * SEFER kapanışı (11.7 · 18.08 — kurye×gün kapanışının halefi, `docs/feature/sefer.md` K1 kararı).
@@ -127,9 +128,12 @@ export async function closeCourierDay(
 async function briefOf(db: SupabaseClient, runId: string, courierId: string): Promise<CourierRunBriefView | null> {
   const run = await new DeliveryRunService(db).getById(runId);
   if (!run || run.courierId !== courierId) return null;
-  const [zone, close] = await Promise.all([
+  // Araç adı künyenin parçası (30.08): sefer kapanışı da aynı künyeyi çiziyor ve kapanış
+  // ekranında "hangi araçla dönüldü" sorusu, kapanmış bir seferi ararken tek ayırt edici olabilir.
+  const [zone, close, vehicleLabel] = await Promise.all([
     new DeliveryZoneService(db).getById(run.deliveryZoneId),
     new DeliveryRunCloseService(db).getByRun(run.id),
+    vehicleLabelOf(db, run.vehicleId),
   ]);
   return {
     runId: run.id,
@@ -137,6 +141,7 @@ async function briefOf(db: SupabaseClient, runId: string, courierId: string): Pr
     zoneId: run.deliveryZoneId,
     zoneName: zone?.name ?? null,
     vehicleId: run.vehicleId,
+    vehicleLabel,
     departedAt: run.departedAt,
     returnedAt: run.returnedAt,
     closed: close !== null,

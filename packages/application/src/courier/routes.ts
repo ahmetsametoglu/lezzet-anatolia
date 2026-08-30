@@ -4,12 +4,13 @@ import {
   DeliveryZoneService,
   OrderService,
   UserProfileService,
-  VehicleService,
   WarehouseService,
 } from '@lezzet/database';
 import { canAccessWarehouse, type WarehouseScope } from '@lezzet/domain-core';
 import type { DeliveryRun, DeliveryZone } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+// Araç adının kuralı ("ad varsa ad, yoksa plaka") günün seferiyle ORTAK — künyesi kendi dosyasında.
+import { vehicleLabelsOf } from './vehicle-label';
 
 /**
  * Kuryenin ROTA SEÇİMİ (K1 · 18.08, `docs/feature/sefer.md`) — **uygulama katmanı orkestrasyonu**.
@@ -142,17 +143,6 @@ function toRouteView(
         }
       : null,
   };
-}
-
-/** Araç etiketi: okunur ad varsa o, yoksa plaka — "hangi araçla" sorusu şeritte cevaplanır. */
-async function vehicleLabelsOf(db: SupabaseClient, vehicleIds: readonly (string | null)[]): Promise<Map<string, string>> {
-  const vehicles = new VehicleService(db);
-  const map = new Map<string, string>();
-  for (const id of new Set(vehicleIds.filter((value): value is string => value !== null))) {
-    const vehicle = await vehicles.getById(id);
-    if (vehicle) map.set(id, vehicle.label ?? vehicle.plate);
-  }
-  return map;
 }
 
 /** Kurye adları — sefer künyesinin "bu rota bugün Musa'da" cümlesi. */

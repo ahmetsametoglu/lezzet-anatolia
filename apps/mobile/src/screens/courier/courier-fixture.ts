@@ -78,7 +78,11 @@ export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): Couri
     referenceNo: 'SF-26-ABCDEF',
     zoneId: uuid(801),
     zoneName: 'Kuzey rotası',
+    // Varsayılan ARAÇSIZ sefer: araç kaydı zorunlu değil ve testlerin çoğu aracı konuşmuyor.
+    // Adı ölçen test `courierRunBrief({ vehicleId, vehicleLabel })` ile ikisini birlikte verir —
+    // kimliksiz bir ad ya da adsız bir kimlik, üretimde doğamayacak bir hâl olurdu.
     vehicleId: null,
+    vehicleLabel: null,
     departedAt: '2026-08-08T07:30:00.000Z',
     returnedAt: null,
     closed: false,
@@ -118,11 +122,22 @@ export function takenRouteRun(overrides: Partial<CourierRoute['run']> = {}): Non
  * kapısını kapalı gösteriyor ve o hâl de ölçülüyor; tahsilat senaryosu kuran test
  * `{ doorAccountId: DOOR_ACCOUNT_ID }` geçirir.
  */
+/**
+ * **Günün seferi** = künye + ÇIKIŞ DEPOSUNUN adı (30.08 · uyuşmazlık #12).
+ *
+ * Depo adı yalnız gün yanıtında var: rota seçim listesinde o değer rota düzeyinde duruyor ve
+ * seferi olmayan rotada da bulunması gerekiyor. Ayrı fikstür, ayrı tip — künyeyi bekleyen bir
+ * yere gün seferini geçirmek derlemede durur.
+ */
+export function courierDayRun(overrides: Partial<NonNullable<CourierDayResponse['run']>> = {}): NonNullable<CourierDayResponse['run']> {
+  return { ...courierRunBrief(), warehouseName: 'Strasbourg Merkez', ...overrides };
+}
+
 export function courierDay(
   stops: CourierStopContract[],
   overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {},
 ): CourierDayResponse {
-  return { date: '2026-08-08', run: courierRunBrief(), doorAccountId: null, stops, ...overrides };
+  return { date: '2026-08-08', run: courierDayRun(), doorAccountId: null, stops, ...overrides };
 }
 
 export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): DayCloseDraftContract {
