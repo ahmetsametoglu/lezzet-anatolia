@@ -5,8 +5,8 @@ senkron çıktısıdır ve her senkronda EZİLİR; buradaki dosyalara yazılan d
 geri gitmez ve ilk yeniden üretimde silinir.
 
 - Kaynak: `design/project/Mobil - Musteri v3.dc.html`
-- Kaynak boyutu: 229658 bayt · 2067 satır
-- Ekran sayısı: 21
+- Kaynak boyutu: 246293 bayt · 2229 satır
+- Ekran sayısı: 23
 - Yeniden üretim: `pnpm design:split` (her senkrondan sonra koşulur)
 - Dizin: [index.md](index.md)
 

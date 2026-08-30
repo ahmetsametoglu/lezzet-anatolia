@@ -70,31 +70,31 @@
 <!-- kaynak: satır 529-529 · ortak -->
 
 
-<!-- kaynak: satır 580-580 · ortak -->
+<!-- kaynak: satır 581-581 · ortak -->
 
 
-<!-- kaynak: satır 611-611 · ortak -->
+<!-- kaynak: satır 612-612 · ortak -->
 
 
-<!-- kaynak: satır 634-634 · ortak -->
+<!-- kaynak: satır 635-635 · ortak -->
 
 
-<!-- kaynak: satır 663-663 · ortak -->
+<!-- kaynak: satır 664-664 · ortak -->
 
 
-<!-- kaynak: satır 697-697 · ortak -->
+<!-- kaynak: satır 698-698 · ortak -->
 
 
-<!-- kaynak: satır 715-715 · ortak -->
+<!-- kaynak: satır 752-752 · ortak -->
 
 
-<!-- kaynak: satır 757-757 · ortak -->
+<!-- kaynak: satır 794-794 · ortak -->
 
 
-<!-- kaynak: satır 780-780 · ortak -->
+<!-- kaynak: satır 817-817 · ortak -->
 
 
-<!-- kaynak: satır 805-820 · ortak -->
+<!-- kaynak: satır 842-857 · ortak -->
   </div>
 
   <!-- ================= SEKME ÇUBUĞU ================= -->
@@ -112,7 +112,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:460,&quot;height&quot;:900},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;hepsi&quot;,&quot;options&quot;:[&quot;hepsi&quot;,&quot;kurye&quot;,&quot;depo&quot;,&quot;yonetim&quot;,&quot;muhasebe&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;cevrimdisi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;veri&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;default&quot;:&quot;dolu&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;bos&quot;,&quot;hata&quot;],&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;}}">
 
-<!-- kaynak: satır 821-1143 · betik kalanı -->
+<!-- kaynak: satır 858-1185 · betik kalanı -->
 <script type="text/x-dc-fragment">
 class Component extends DCLogic {
   state = { tab:'kurye', view:null, key:0, sel:0, st:{}, basladi:false, evid:null, imzaPanel:false, imzaCiz:false, mal:{}, redQ:{}, yontem:'nakit', gercek:{}, sonuc:null, sonucNot:null, sonucFoto:false, sonTeslim:null, kapali:false, kapOnay:false, kapNot:'', sayilan:{}, topla:{}, eksik:{}, gelen:{}, skt:{ 0:'2026-11-02' }, sktEdit:null, lotYok:{}, hasar:{}, trfGelen:{}, sebep:'süresi geçti (imha)', sayAdet:-6, akibet:null, talep:'Açık', yz:false, ySktOut:{}, ySktF:{}, y4:false, ywa:false };
@@ -432,6 +432,11 @@ class Component extends DCLogic {
       yTedOnay: () => this.setState({ y4:true }),
       yWaCta: S.ywa ? { l:'Not düştü — masada kurulacak \u2713', bg:'#b9b29e', sh:'none' } : { l:'"Masada kur" notu düş', bg:'#5f7a2c', sh:'3px 3px 0 #343b41' },
       yWaNot: () => this.setState({ ywa:true }),
+      waModes: ['yz','hibrit','ben'].map(k => { const on = (S.waMode||'hibrit')===k; const L = { yz:'YZ', hibrit:'Hibrit', ben:'Ben' }; return { l:L[k], fg:on?'#fff':'#343b41', bg:on?'#5f7a2c':'transparent', bd:on?'#5f7a2c':'#c9c2ae', pick:()=>this.setState({ waMode:k }) }; }),
+      waModeAciklama: { yz:'YZ yürütüyor — cevaplar otomatik gider, istediğinizde devralırsınız.', hibrit:'Hibrit — cevabı YZ hazırlar, onaylayıp siz gönderirsiniz.', ben:'Ben — YZ karışmaz, cevaplar elle yazılır.' }[S.waMode||'hibrit'],
+      waYz:(S.waMode||'hibrit')==='yz', waHib:(S.waMode||'hibrit')==='hibrit', waYazilir:(S.waMode||'hibrit')!=='yz',
+      waTaslakBekliyor: !S.waSent, waGitti: !!S.waSent, waGonder: () => this.setState({ waSent:true }),
+      waDevral: () => this.setState({ waMode:'hibrit' }),
       mBek, bil, bilBos: bil.length === 0,
       bilKapsam: rol === 'hepsi' ? 'tüm bölümler — çok rollü oturum' : 'yalnız ' + labels[rol] + ' — rol süzmesi',
     };
@@ -439,7 +444,7 @@ class Component extends DCLogic {
 }
 </script>
 
-<!-- kaynak: satır 1144-1146 · ortak -->
+<!-- kaynak: satır 1186-1188 · ortak -->
 </script>
 </body>
 </html>

@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
 <!-- ekran: vPackage · Paket Detay -->
-<!-- kaynak satırlar: 318-349, 1254-1270, 1885-1890 -->
+<!-- kaynak satırlar: 337-368, 1382-1398, 2036-2041 -->
 
-<!-- kaynak: satır 318-349 · görünüm bloğu -->
+<!-- kaynak: satır 337-368 · görünüm bloğu -->
         <sc-if value="{{ vPackage }}">
           <div data-screen-label="Paket Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
             <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
@@ -37,7 +37,7 @@
           </div>
         </sc-if>
 
-<!-- kaynak: satır 1254-1270 · ekran dışı blok -->
+<!-- kaynak: satır 1382-1398 · ekran dışı blok -->
       <sc-if value="{{ vPackage }}">
         <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 22px">
           <sc-if value="{{ pk.ok }}">
@@ -56,7 +56,7 @@
         </div>
       </sc-if>
 
-<!-- kaynak: satır 1885-1890 · görünüm-modeli kurucusu -->
+<!-- kaynak: satır 2036-2041 · görünüm-modeli kurucusu -->
 <script type="text/x-dc-fragment">
     if(V.vPackage){ const k=this.K.find(x=>x.id===top.id); const so=!k.it.every(i=>this.prod(i[0]).stk);
       V.pk={n:k.n,d:k.d,prF:this.fmt(k.pr),img:'m-pkg-'+k.id,photo:this.PKPH[k.id]||'',so,ok:!so,noShip:!k.ship,

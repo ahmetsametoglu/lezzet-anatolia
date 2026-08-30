@@ -5,7 +5,7 @@ senkron çıktısıdır ve her senkronda EZİLİR; buradaki dosyalara yazılan d
 geri gitmez ve ilk yeniden üretimde silinir.
 
 - Kaynak: `design/project/Operasyon Mobil v2.dc.html`
-- Kaynak boyutu: 117501 bayt · 1146 satır
+- Kaynak boyutu: 121912 bayt · 1188 satır
 - Ekran sayısı: 20
 - Yeniden üretim: `pnpm design:split` (her senkrondan sonra koşulur)
 - Dizin: [index.md](index.md)

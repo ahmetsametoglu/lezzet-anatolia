@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
 <!-- ekran: vHome · Vitrin -->
-<!-- kaynak satırlar: 49-172 -->
+<!-- kaynak satırlar: 49-191 -->
 
-<!-- kaynak: satır 49-172 · görünüm bloğu -->
+<!-- kaynak: satır 49-191 · görünüm bloğu -->
         <sc-if value="{{ vHome }}" hint-placeholder-val="{{ true }}">
           <div data-screen-label="Vitrin" style="animation:tabIn .25s ease;display:flex;flex-direction:column">
             <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:24px 22px 0">
@@ -74,7 +74,7 @@
               </sc-for>
             </div>
             <div style="padding:28px 0 0;display:flex;flex-direction:column;gap:2px">
-              <div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 22px"><div style="display:flex;flex-direction:column;gap:3px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">VİTRİNDEKİLER</span><span style="font:600 20px 'Lora';color:#343b41">Bu haftanın seçkisi</span></div><span style="font:700 12.5px 'Karla';color:#b05c2e;transition:opacity .12s" style-active="opacity:.55" onClick="{{ goCatalog }}">Tüm katalog ›</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin:0 22px"><div style="display:flex;flex-direction:column;gap:3px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">VİTRİNDEKİLER</span><span style="font:600 20px 'Lora';color:#343b41">Bu haftanın seçkisi</span></div></div>
               <div style="display:flex;gap:18px;overflow-x:auto;padding:10px 22px 6px">
                 <sc-for list="{{ vitrin }}" as="p" hint-placeholder-count="4">
                   <div style="flex:none;width:150px;display:flex;flex-direction:column;align-items:center;gap:7px;transition:transform .12s" style-active="transform:scale(.95)" onClick="{{ p.open }}">
@@ -85,6 +85,15 @@
                     <span style="font:600 14px/1.2 'Lora';color:#343b41;text-align:center">{{ p.n }}</span>
                   </div>
                 </sc-for>
+                <div style="flex:none;width:150px;display:flex;flex-direction:column;align-items:center;gap:7px;transition:transform .12s" style-active="transform:scale(.95)" onClick="{{ goCatalog }}">
+                  <div style="position:relative;width:146px;height:146px">
+                    <div style="width:146px;height:146px;border-radius:50%;background:#ece3c8;display:flex;align-items:center;justify-content:center;color:#b3ab97">
+                      <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"></path></svg>
+                    </div>
+                    <span style="position:absolute;bottom:-2px;right:-2px;background:#b05c2e;color:#fff;font:700 12.5px 'Karla';padding:6px 12px;border-radius:14px;transform:rotate(4deg);box-shadow:0 3px 8px rgba(21,23,15,.22)">→</span>
+                  </div>
+                  <span style="font:600 14px/1.2 'Lora';color:#343b41;text-align:center">Tüm katalog</span>
+                </div>
               </div>
             </div>
             <div style="padding:28px 0 0;display:flex;flex-direction:column;gap:2px">
@@ -101,6 +110,16 @@
                     </div>
                   </div>
                 </sc-for>
+                <div style="flex:none;width:220px;height:280px;position:relative;border-radius:20px;overflow:hidden;background:#343b41;display:flex;flex-direction:column;justify-content:flex-end;padding:14px;transition:transform .12s" style-active="transform:scale(.97)" onClick="{{ rcpsMore.open }}">
+                  <div style="position:absolute;top:14px;left:14px;right:14px;display:flex;flex-direction:column;gap:6px">
+                    <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#a9c46b">SOFRADAN FİKİRLER</span>
+                    <span style="font:600 26px/1.1 'Lora';color:#f5f1e6">{{ rcpsMore.cnt }} tarif daha</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:9px">
+                    <span style="width:34px;height:34px;flex:none;border-radius:50%;border:1.5px solid #a9c46b;color:#a9c46b;display:flex;align-items:center;justify-content:center;font:400 17px 'Karla'">→</span>
+                    <span style="font:700 12.5px 'Karla';color:#f5f1e6">Tümünü gör</span>
+                  </div>
+                </div>
               </div>
             </div>
             <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e;margin:28px 22px 0">HAZIR PAKETLER</span>

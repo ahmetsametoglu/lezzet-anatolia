@@ -1,0 +1,28 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vRecipes · Tarifler -->
+<!-- kaynak satırlar: 903-924 -->
+
+<!-- kaynak: satır 903-924 · görünüm bloğu -->
+        <sc-if value="{{ vRecipes }}">
+          <div data-screen-label="Tarifler" style="animation:tabIn .25s ease;display:flex;flex-direction:column;gap:12px;padding:10px 18px 20px">
+            <div style="display:flex;align-items:center;gap:8px;padding-top:6px;margin-left:-8px">
+              <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              <h1 style="margin:0;font:600 17px 'Lora';color:#343b41;flex:1">Sofradan Fikirler</h1>
+            </div>
+            <p style="margin:-4px 0 0;font:400 13px/1.55 'Karla';color:#8a8270">Tarifi seçin, malzemelerini tek dokunuşla sepete atın. Evinizde olanları listeden çıkarabilirsiniz.</p>
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <sc-for list="{{ rcps }}" as="r" hint-placeholder-count="4">
+                <div style="position:relative;height:168px;border-radius:20px;overflow:hidden;transition:transform .12s" style-active="transform:scale(.98)" onClick="{{ r.open }}">
+                  <image-slot id="m-rcpl-{{ r.id }}" shape="rect" placeholder="{{ r.n }} — servis edilmiş"></image-slot>
+                  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 38%,rgba(21,23,15,.84));pointer-events:none"></div>
+                  <span style="position:absolute;top:12px;left:12px;background:rgba(243,239,226,.92);color:#343b41;font:700 10.5px 'Karla';padding:5px 10px;border-radius:10px;transform:rotate(-3deg)">{{ r.time }}</span>
+                  <div style="position:absolute;left:16px;right:16px;bottom:14px;display:flex;flex-direction:column;gap:3px">
+                    <span style="font:600 21px/1.1 'Lora';color:#f5f1e6">{{ r.n }}</span>
+                    <span style="font:700 12px 'Karla';color:#a9c46b">{{ r.cnt }} malzeme · Tarifi gör ›</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>

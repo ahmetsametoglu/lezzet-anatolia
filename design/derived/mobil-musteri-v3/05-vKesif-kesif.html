@@ -1,44 +1,80 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
 <!-- ekran: vKesif · Keşif -->
-<!-- kaynak satırlar: 351-392 -->
+<!-- kaynak satırlar: 370-447 -->
 
-<!-- kaynak: satır 351-392 · görünüm bloğu -->
+<!-- kaynak: satır 370-447 · görünüm bloğu -->
         <sc-if value="{{ vKesif }}">
           <div data-screen-label="Keşif" style="animation:pageIn .28s ease;display:flex;flex-direction:column;min-height:100%">
             <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
               <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
               <span style="font:600 17px 'Lora';color:#343b41;flex:1">Keşif</span>
-              <span style="font:700 12.5px 'Karla';color:#8a8270">{{ kv.prog }}</span>
+              <div style="display:flex;align-items:center;gap:6px;color:{{ kv.undoCol }};transition:transform .12s" style-active="transform:scale(.92)" onClick="{{ kv.undo }}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.5-5.8M4 3.5V7.5h4"></path></svg>
+                <span style="font:700 12px 'Karla'">Geri al</span>
+              </div>
             </div>
             <sc-if value="{{ kv.cur }}">
-              <div style="padding:14px 18px 0;display:flex;flex-direction:column;gap:14px">
-                <span style="font:400 13px/1.5 'Karla';color:#6d7261;text-align:center">Bunlar <strong style="color:#4a6121">yakında gelebilir</strong> — beğendikleriniz ne getireceğimize yön verir. Henüz satışta değiller.</span>
-                <div style="position:relative;height:470px">
-                  <sc-if value="{{ kv.hasNext }}">
-                    <div style="position:absolute;inset:0;transform:scale(.94) translateY(14px);opacity:.55;background:#fff;border-radius:24px;overflow:hidden">
-                      <div style="height:65%"><image-slot id="{{ kv.next.img }}" shape="rect" placeholder="Sıradaki aday"></image-slot></div>
+              <div style="padding:12px 18px 0;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="display:flex;gap:4px;flex:1">
+                    <sc-for list="{{ kv.segs }}" as="g" hint-placeholder-count="5">
+                      <span style="height:4px;width:{{ g.w }};border-radius:2px;background:{{ g.bg }};transition:width .25s,background .25s"></span>
+                    </sc-for>
+                  </div>
+                  <span style="font:700 11.5px 'Karla';color:#8a8270">{{ kv.prog }}</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+                  <span style="font:400 12px 'Karla';color:#8a8270">Bunlar henüz satışta değil — beğenileriniz ne getireceğimize yön verir</span>
+                  <div style="display:flex;align-items:stretch;gap:8px;width:100%">
+                    <div style="flex:1;display:flex;align-items:center;gap:8px;background:#f9ede2;border-radius:14px;padding:9px 12px">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M19 12H5M11 6l-6 6 6 6"></path></svg>
+                      <span style="font:700 12px/1.3 'Karla';color:#b05c2e">Sola kaydır<br><span style="font-weight:400;color:#a97a55">başka sefer</span></span>
                     </div>
-                  </sc-if>
-                  <div style="position:absolute;inset:0;background:#fff;border-radius:24px;overflow:hidden;box-shadow:0 12px 32px rgba(58,65,71,.14);display:flex;flex-direction:column;animation:{{ kv.anim }}">
-                    <div style="flex:1;min-height:0"><image-slot id="{{ kv.cur.img }}" shape="rect" placeholder="{{ kv.cur.n }} — iştah açan fotoğraf"></image-slot></div>
-                    <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:6px">
-                      <span style="font:600 20px 'Lora';color:#343b41">{{ kv.cur.n }}</span>
-                      <span style="font:400 13.5px/1.5 'Karla';color:#6d7261">{{ kv.cur.d }}</span>
+                    <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px;background:#eef2e2;border-radius:14px;padding:9px 12px">
+                      <span style="font:700 12px/1.3 'Karla';color:#4a6121;text-align:right">Sağa kaydır<br><span style="font-weight:400;color:#6f8a44">bunu isterim</span></span>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4a6121" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
                     </div>
                   </div>
                 </div>
-                <div style="display:flex;justify-content:center;gap:26px;padding:4px 0 20px">
-                  <div style="width:64px;height:64px;border-radius:50%;background:#fff;border:2px solid #d8cfb6;display:flex;align-items:center;justify-content:center;font:400 26px 'Karla';color:#8a8270;box-shadow:0 4px 14px rgba(58,65,71,.1);transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ kv.pass }}">✕</div>
-                  <div style="width:64px;height:64px;border-radius:50%;background:#5f7a2c;display:flex;align-items:center;justify-content:center;font-size:26px;color:#fff;box-shadow:0 6px 18px rgba(95,122,44,.4);transition:transform .12s" style-active="transform:scale(.9)" onClick="{{ kv.like }}"><svg width="26" height="26" viewBox="0 0 24 24"><path d="M12 20.5C6 15.5 3 12.3 3 8.8 3 6.2 5 4.5 7.3 4.5c1.8 0 3.4 1 4.7 2.7 1.3-1.7 2.9-2.7 4.7-2.7C19 4.5 21 6.2 21 8.8c0 3.5-3 6.7-9 11.7z" fill="#fff"></path></svg></div>
+
+                <div style="position:relative;height:486px;touch-action:none;user-select:none">
+                  <sc-if value="{{ kv.hasNext2 }}">
+                    <div style="position:absolute;left:0;right:0;top:0;bottom:34px;transform:translateY(56px) scale(.88);background:#efe9db;border:1.5px solid #e2d9c2;border-radius:28px"></div>
+                  </sc-if>
+                  <sc-if value="{{ kv.hasNext }}">
+                    <div style="position:absolute;left:0;right:0;top:0;bottom:34px;transform:translateY(30px) scale(.94);border-radius:28px;overflow:hidden;background:#efe9db;box-shadow:0 6px 18px rgba(58,65,71,.08)">
+                      <image-slot id="{{ kv.next.img }}" shape="rect" placeholder="Sıradaki aday" style="position:absolute;inset:0"></image-slot>
+                      <div style="position:absolute;inset:0;background:rgba(243,239,226,.55)"></div>
+                    </div>
+                  </sc-if>
+                  <div onPointerDown="{{ kv.down }}" onPointerMove="{{ kv.move }}" onPointerUp="{{ kv.up }}" onPointerCancel="{{ kv.up }}" style="position:absolute;left:0;right:0;top:0;bottom:34px;border-radius:28px;overflow:hidden;background:#efe9db;cursor:grab;animation:{{ kv.anim }};transform:{{ kv.tf }};transition:{{ kv.trans }};box-shadow:{{ kv.glow }}">
+                    <image-slot id="{{ kv.cur.img }}" shape="rect" placeholder="{{ kv.cur.n }} — iştah açan fotoğraf" style="position:absolute;inset:0"></image-slot>
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,.28) 0%,rgba(21,23,15,0) 30%,rgba(21,23,15,.35) 58%,rgba(21,23,15,.88) 100%);pointer-events:none"></div>
+                    <span style="position:absolute;top:16px;left:16px;background:rgba(243,239,226,.92);color:#5d6357;font:700 10.5px 'Karla';letter-spacing:.1em;text-transform:uppercase;padding:6px 11px;border-radius:12px;pointer-events:none">{{ kv.cur.c }}</span>
+                    <span style="position:absolute;top:22px;left:18px;border:3px solid #5f7a2c;color:#5f7a2c;background:rgba(243,239,226,.94);font:700 22px 'Karla';letter-spacing:.06em;padding:8px 16px;border-radius:12px;transform:rotate(-13deg);opacity:{{ kv.likeOp }};pointer-events:none">İSTERİM</span>
+                    <span style="position:absolute;top:22px;right:18px;border:3px solid #b05c2e;color:#b05c2e;background:rgba(243,239,226,.94);font:700 22px 'Karla';letter-spacing:.06em;padding:8px 16px;border-radius:12px;transform:rotate(13deg);opacity:{{ kv.passOp }};pointer-events:none">BAŞKA SEFER</span>
+                    <div style="position:absolute;left:20px;right:20px;bottom:20px;display:flex;flex-direction:column;gap:7px;pointer-events:none">
+                      <span style="font:600 27px/1.08 'Lora';color:#f5f1e6">{{ kv.cur.n }}</span>
+                      <span style="font:400 13.5px/1.5 'Karla';color:#ddd7c6">{{ kv.cur.d }}</span>
+                      <span style="align-self:flex-start;display:flex;align-items:center;gap:6px;background:rgba(243,239,226,.16);border:1px solid rgba(243,239,226,.3);border-radius:14px;padding:5px 11px;font:700 11.5px 'Karla';color:#a9c46b">♥ {{ kv.cur.votes }}</span>
+                    </div>
+                  </div>
                 </div>
+
+                <div style="display:flex;align-items:center;justify-content:center;gap:24px;padding:2px 0 6px">
+                  <div style="width:60px;height:60px;border-radius:50%;background:#fff;border:2px solid #e2d9c2;display:flex;align-items:center;justify-content:center;color:#b05c2e;box-shadow:0 4px 14px rgba(58,65,71,.09);transition:transform .12s" style-active="transform:scale(.88)" onClick="{{ kv.pass }}"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg></div>
+                  <div style="width:72px;height:72px;border-radius:50%;background:#5f7a2c;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 8px 22px rgba(95,122,44,.42);transition:transform .12s" style-active="transform:scale(.88)" onClick="{{ kv.like }}"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M12 20.5C6 15.5 3 12.3 3 8.8 3 6.2 5 4.5 7.3 4.5c1.8 0 3.4 1 4.7 2.7 1.3-1.7 2.9-2.7 4.7-2.7C19 4.5 21 6.2 21 8.8c0 3.5-3 6.7-9 11.7z" fill="#fff"></path></svg></div>
+                </div>
+                <span style="font:400 11.5px 'Karla';color:#a39a86;text-align:center;padding-bottom:18px">{{ kv.likesLabel }}</span>
               </div>
             </sc-if>
             <sc-if value="{{ kv.done }}">
               <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:80px 36px;text-align:center">
                 <div style="width:88px;height:88px;border-radius:50%;background:#eef2e2;display:flex;align-items:center;justify-content:center;font-size:38px;animation:pop .5s ease">✦</div>
                 <span style="font:600 22px 'Lora';color:#343b41">Hepsi bu kadardı — teşekkürler!</span>
-                <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Yeni adaylar geldikçe burası yeniden dolar.</span>
+                <span style="font:700 13px 'Karla';color:#4a6121">{{ kv.likesLabel }}</span>
+                <span style="font:400 13.5px/1.55 'Karla';color:#6d7261">Beğenileriniz hangi lezzetleri getireceğimize yön veriyor. Bir aday satışa çıktığında beğendiyseniz haber veriyoruz.</span>
                 <sc-if value="{{ kv.ptsShow }}"><span style="background:#f9ede2;color:#b05c2e;font:700 14px 'Karla';padding:9px 18px;border-radius:18px">{{ kv.award }}</span></sc-if>
                 <sc-if value="{{ kv.loginHint }}"><span style="font:400 12.5px 'Karla';color:#8a8270">Giriş yaparsanız keşif turları puan kazandırır.</span><span style="border:1.5px solid #cddbb0;color:#4a6121;font:700 13px 'Karla';padding:10px 20px;border-radius:20px" onClick="{{ kv.loginGo }}">Hızlı doğrulama</span></sc-if>
                 <span style="background:#5f7a2c;color:#fff;font:700 14px 'Karla';padding:13px 26px;border-radius:24px;margin-top:6px" onClick="{{ kv.goCat }}">Kataloğa dön</span>

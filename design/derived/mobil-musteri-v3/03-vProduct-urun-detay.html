@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
 <!-- ekran: vProduct · Ürün Detay -->
-<!-- kaynak satırlar: 238-316, 1228-1252, 1860-1883 -->
+<!-- kaynak satırlar: 257-335, 1356-1380, 2011-2034 -->
 
-<!-- kaynak: satır 238-316 · görünüm bloğu -->
+<!-- kaynak: satır 257-335 · görünüm bloğu -->
         <sc-if value="{{ vProduct }}">
           <div data-screen-label="Ürün Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
             <div style="position:relative;height:400px;flex:none">
@@ -84,7 +84,7 @@
           </div>
         </sc-if>
 
-<!-- kaynak: satır 1228-1252 · ekran dışı blok -->
+<!-- kaynak: satır 1356-1380 · ekran dışı blok -->
       <sc-if value="{{ vProduct }}">
         <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 22px">
           <sc-if value="{{ pd.ok }}">
@@ -111,7 +111,7 @@
         </div>
       </sc-if>
 
-<!-- kaynak: satır 1860-1883 · görünüm-modeli kurucusu -->
+<!-- kaynak: satır 2011-2034 · görünüm-modeli kurucusu -->
 <script type="text/x-dc-fragment">
     if(V.vProduct){ const p=this.prod(top.id); const selVid=s.pv[p.id]||p.vs[0].id; const v=this.vOf(p,selVid); const d=this.discOf(p,v);
       V.pd={n:p.n,c:p.c,d:p.d,img:'m-prd-'+p.id,photo:this.PHOTO[p.id]||'',rt:p.rt,rc:p.rc+' değerlendirme',

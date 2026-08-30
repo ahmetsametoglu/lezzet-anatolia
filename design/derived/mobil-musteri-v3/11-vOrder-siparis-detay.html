@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
 <!-- ekran: vOrder · Sipariş Detay -->
-<!-- kaynak satırlar: 693-755, 1968-1984 -->
+<!-- kaynak satırlar: 753-815, 2130-2146 -->
 
-<!-- kaynak: satır 693-755 · görünüm bloğu -->
+<!-- kaynak: satır 753-815 · görünüm bloğu -->
         <sc-if value="{{ vOrder }}">
           <div data-screen-label="Sipariş Detay" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
             <div style="position:sticky;top:0;z-index:10;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1.5px solid #343b41">
@@ -68,7 +68,7 @@
           </div>
         </sc-if>
 
-<!-- kaynak: satır 1968-1984 · görünüm-modeli kurucusu -->
+<!-- kaynak: satır 2130-2146 · görünüm-modeli kurucusu -->
 <script type="text/x-dc-fragment">
     if(V.vOrder){ const o=s.orders.find(x=>x.ref===top.ref);
       const si={'Alındı':0,'Hazırlanıyor':1,'Yolda':2,'Teslim edildi':3}[o.st];

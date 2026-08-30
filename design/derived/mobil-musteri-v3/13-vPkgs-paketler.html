@@ -1,0 +1,50 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
+<!-- ekran: vPkgs · Paketler -->
+<!-- kaynak satırlar: 858-901 -->
+
+<!-- kaynak: satır 858-901 · görünüm bloğu -->
+        <sc-if value="{{ vPkgs }}">
+          <div data-screen-label="Paketler" style="animation:tabIn .25s ease;display:flex;flex-direction:column;gap:12px;padding:10px 18px 20px">
+            <div style="display:flex;flex-direction:column;gap:4px;padding-top:6px">
+              <span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">HAZIR PAKETLER</span>
+              <h1 style="margin:0;font:600 26px/1.15 'Lora';color:#343b41">Sofrayı biz kuralım, siz buyur edin</h1>
+              <p style="margin:0;font:400 13px/1.55 'Karla';color:#8a8270">Bayram, kahvaltı ya da kalabalık bir akşam — hazırladığımız paketler tek fiyata gelir, içeriği bellidir.</p>
+            </div>
+            <sc-if value="{{ pv2.empty }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:60px 24px;text-align:center;border:1.5px dashed #d8cfb6;border-radius:20px;margin-top:8px">
+                <span style="font:600 18px 'Lora';color:#343b41">Şu an hazır paket yok</span>
+                <span style="font:400 13px/1.5 'Karla';color:#8a8270">Yeni paketler hazırlanıyor. O zamana dek katalogdan kendi sofranızı kurabilirsiniz.</span>
+                <span style="background:#5f7a2c;color:#fff;font:700 13.5px 'Karla';padding:12px 24px;border-radius:22px;margin-top:2px" onClick="{{ goCatalog }}">Kataloğa göz at</span>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:16px">
+              <sc-for list="{{ pv2.rows }}" as="k" hint-placeholder-count="3">
+                <div style="background:#fff;border:1.5px solid #ece5d2;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;opacity:{{ k.op }};box-shadow:0 4px 18px rgba(58,65,71,.07);transition:transform .12s" style-active="transform:scale(.985)" onClick="{{ k.open }}">
+                  <div style="height:198px;position:relative;background:#efe9db">
+                    <image-slot id="m-pkl-{{ k.id }}" shape="rect" src="{{ k.photo }}" placeholder="{{ k.n }} — kurulmuş sofra"></image-slot>
+                    <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(21,23,15,0) 42%,rgba(21,23,15,.8));pointer-events:none"></div>
+                    <span style="position:absolute;top:12px;right:12px;background:{{ k.badgeBg }};color:#fff;font:700 15px 'Karla';padding:8px 14px;border-radius:16px;transform:rotate(3deg);box-shadow:0 3px 10px rgba(21,23,15,.25)">{{ k.prF }}</span>
+                    <sc-if value="{{ k.out }}"><span style="position:absolute;top:14px;left:14px;background:rgba(243,239,226,.94);color:#6d7261;font:700 11px 'Karla';padding:5px 11px;border-radius:12px">Tükendi — yakında yeniden</span></sc-if>
+                    <div style="position:absolute;left:16px;right:16px;bottom:14px;display:flex;flex-direction:column;gap:3px">
+                      <span style="font:600 24px/1.1 'Lora';color:#f5f1e6">{{ k.n }}</span>
+                      <span style="font:700 10px 'Karla';letter-spacing:.16em;color:#a9c46b">{{ k.cnt }} · TEK FİYAT</span>
+                    </div>
+                  </div>
+                  <div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:11px">
+                    <span style="font:400 13px/1.55 'Karla';color:#6d7261">{{ k.d2 }}</span>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px">
+                      <sc-for list="{{ k.chips }}" as="c" hint-placeholder-count="4">
+                        <span style="font:600 11.5px 'Karla';color:#5d6357;background:#f3efe2;border-radius:11px;padding:5px 10px">{{ c }}</span>
+                      </sc-for>
+                    </div>
+                    <div style="border-top:1.5px dashed #ece5d2;padding-top:11px;display:flex;align-items:center;gap:10px">
+                      <span style="font:400 11.5px 'Karla';color:#8a8270;flex:1">{{ k.note }}</span>
+                      <span style="font:700 13px 'Karla';color:{{ k.ctaCol }};flex:none">Paketi incele ›</span>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>

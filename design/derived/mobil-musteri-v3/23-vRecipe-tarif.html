@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
 <!-- ekran: vRecipe · Tarif -->
-<!-- kaynak satırlar: 1182-1223, 1272-1276, 1892-1899 -->
+<!-- kaynak satırlar: 1310-1351, 1400-1404, 2043-2050 -->
 
-<!-- kaynak: satır 1182-1223 · görünüm bloğu -->
+<!-- kaynak: satır 1310-1351 · görünüm bloğu -->
         <sc-if value="{{ vRecipe }}">
           <div data-screen-label="Tarif" key="{{ pageKey }}" style="animation:pageIn .28s ease;display:flex;flex-direction:column">
             <div style="position:relative;height:300px;flex:none">
@@ -47,14 +47,14 @@
           </div>
         </sc-if>
 
-<!-- kaynak: satır 1272-1276 · ekran dışı blok -->
+<!-- kaynak: satır 1400-1404 · ekran dışı blok -->
       <sc-if value="{{ vRecipe }}">
         <div style="position:absolute;left:0;right:0;bottom:0;z-index:44;background:rgba(243,239,226,.96);backdrop-filter:blur(8px);border-top:1.5px solid #343b41;padding:12px 18px 24px">
           <div style="background:#5f7a2c;color:#fff;font:700 14.5px 'Karla';border-radius:16px;height:52px;display:flex;align-items:center;justify-content:center;box-shadow:3px 3px 0 #343b41;transition:transform .12s" style-active="transform:translate(2px,2px)" onClick="{{ rc.addAll }}">{{ rc.addAllF }}</div>
         </div>
       </sc-if>
 
-<!-- kaynak: satır 1892-1899 · görünüm-modeli kurucusu -->
+<!-- kaynak: satır 2043-2050 · görünüm-modeli kurucusu -->
 <script type="text/x-dc-fragment">
     if(V.vRecipe){ const r=this.RCP.find(x=>x.id===top.id);
       const rows=r.it.map(([pid,vid])=>{ const p=this.prod(pid); const v=this.vOf(p,vid);

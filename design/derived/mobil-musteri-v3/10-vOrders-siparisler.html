@@ -1,12 +1,17 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Mobil - Musteri v3.dc.html -->
 <!-- ekran: vOrders · Siparişler -->
-<!-- kaynak satırlar: 631-691 -->
+<!-- kaynak satırlar: 686-751 -->
 
-<!-- kaynak: satır 631-691 · görünüm bloğu -->
+<!-- kaynak: satır 686-751 · görünüm bloğu -->
         <sc-if value="{{ vOrders }}">
           <div data-screen-label="Siparişler" style="animation:tabIn .25s ease;display:flex;flex-direction:column;gap:12px;padding:10px 18px 20px">
-            <div style="display:flex;flex-direction:column;gap:3px;padding-top:6px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">HESABIM</span><h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Siparişlerim</h1></div>
+            <sc-if value="{{ ordersPushed }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;padding-top:6px;margin-left:-8px">
+                <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 24px 'Karla';color:#343b41;transition:background .15s" style-active="background:#ece5d2" onClick="{{ goBack }}">‹</div>
+              </div>
+            </sc-if>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font:700 10px 'Karla';letter-spacing:.18em;color:#b05c2e">HESABIM</span><h1 style="margin:0;font:600 26px 'Lora';color:#343b41">Siparişlerim</h1></div>
             <sc-if value="{{ ov.guest }}">
               <div style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 30px;text-align:center">
                 <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3h11v18l-1.9-1.5L13.7 21l-1.8-1.5L10 21l-1.8-1.5L6.5 21zM9.5 8h5M9.5 12h4"></path></svg>
