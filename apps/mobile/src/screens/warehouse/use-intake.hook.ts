@@ -239,11 +239,10 @@ interface UseIntakeResult {
   /** Ham kodun işlenmesi — çözüm, satır bulma ve adet çekmecesi (künye aşağıda). */
   handleScan: (code: string) => void;
   /** Çözülen kodun çekmecesi — dolu ise ekran ürün kartı + adet seçiciyi çizer. */
-  scanned: ScannedCode | null;
-  setScannedQty: (qty: number) => void;
+  /** Okutmayla sayılan satırın kimliği — ekran onu açar ve adet çekmecesini getirir. */
+  justScanned: string | null;
+  clearJustScanned: () => void;
   /** Seçilen adedi satıra yazar ve çekmeceyi kapatır. */
-  confirmScanned: () => void;
-  cancelScanned: () => void;
   /** Tanınmayan kod — dolu ise ekran öğrenme çekmecesini çizer (iki adım, künye aşağıda). */
   learn: LearnState | null;
   /** Öğrenilen kodun kalıcı künyesi — akış bitince doğar, ekranda kalır (künyesi tipin üstünde). */
@@ -516,13 +515,19 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     "beklenmedik mal" hâlini fark raporunun göremeyeceği bir yere yazmak olurdu.
   */
   const [scanOpen, setScanOpen] = useState(false);
-  const [scanned, setScanned] = useState<ScannedCode | null>(null);
+  /**
+   * SON OKUTULAN SATIR — ekranın açacağı satırın kimliği (kullanıcı kararı 30.08).
+   *
+   * Okutma artık adedi kendisi yazıyor; geriye tek şey kalıyor: depocuyu o satıra götürmek.
+   * Sinyal BİR KEZ tüketilir (`clearJustScanned`), yoksa çekmece her çizimde yeniden açılırdı.
+   */
+  const [justScanned, setJustScanned] = useState<string | null>(null);
   const [learn, setLearn] = useState<LearnState | null>(null);
   const [learned, setLearned] = useState<LearnedNote | null>(null);
 
   /** Bulunan satıra okumanın adedini ekler ve cümlesini kurar — tarama ile öğrenmenin ortak ucu. */
   const addScanned = useCallback(
-    (variantId: string, qty: number, text: (name: string) => string, scan: { kind: BarcodeKind; qtyPerCode: number }) => {
+    (variantId: string, qty: number, scan: { kind: BarcodeKind; qtyPerCode: number }) => {
       const row = rows.find((candidate) => candidate.variantId === variantId);
       if (row === undefined) return false;
       setStates((current) => {
@@ -540,10 +545,14 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
           },
         };
       });
-      setNotice({ tone: 'ok', text: text(productLabel(row.productName, row.variantLabel)) });
+      /* BAŞARILI OKUTMA ARTIK BİLDİRİM BASMIYOR (kullanıcı bulgusu 30.08). "Fıstıklı Baklava ·
+         2500 g bulundu — 1 adet eklendi" şeridi aynı şeyi ÜÇÜNCÜ kez söylüyordu: satır zaten
+         açılmış, adedi yazılmış, künyesi "barkod okutuldu" demiş ve içinde "bir okutma = 24 adet"
+         kartı belirmiştir. Bildirim, sonucun görünmediği hâller için: yabancı ürün, formda
+         olmayan kod, okuma hatası — onlar yerinde duruyor. */
       return true;
     },
-    [rows, setNotice],
+    [rows],
   );
 
   const handleScan = useCallback(
@@ -597,25 +606,22 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
           };
           setRows((current) => [...current, row!]);
         }
-        // Satıra henüz yazılmaz: adet kararı çekmecenin işi — varsayılan, okutulan birimin miktarı.
-        setScanned({
-          variantId: found.variantId,
-          productName: found.productName,
-          variantLabel: found.variantLabel,
-          kind: found.kind,
-          qtyPerCode: found.qtyPerCode,
-          source: found.source,
-          sku: found.sku,
-          dateType: found.dateType,
-          shelfLifeDays: found.shelfLifeDays,
-          imageUrl: found.imageUrl,
-          caseSizes: found.caseSizes,
-          qty: found.qtyPerCode,
-          expectedQty: row.expectedQty,
-        });
+        /* OKUTMA BİR SAYMA EYLEMİDİR, ARAMA DEĞİL (tasarım deseni · kullanıcı kararı 30.08).
+           Tasarımın betiği okutulan kodu ANINDA sayıya yazıyor ve adet çekmecesini açıyor
+           (`v3.dc.html:4005-4010`): paket barkodu tek pakete +1, koli barkodu o boydan +1 koli;
+           künye "koli barkodu okundu · KL-24" olur. Depocunun yapacağı tek şey devam etmektir.
+
+           Eskiden araya "Okutulan ürün" diye bir çekmece giriyordu (fotoğraf + kaydırıcı +
+           "Satıra ekle") ve depocuya kaç adet olduğunu SORUYORDU — oysa koli barkodu kaç adet
+           olduğunu kendisi söylüyor (`qtyPerCode`). İki adım, bir soru ve v3'te hiç geçmeyen bir
+           kaydırıcı; üçü de eski desenin kalıntısıydı. */
+        const scannedQty = found.qtyPerCode;
+        addScanned(found.variantId, scannedQty, { kind: found.kind, qtyPerCode: found.qtyPerCode });
+        // Ekran bu sinyali görüp satırı açar ve adet çekmecesini getirir; bir kez tüketilir.
+        setJustScanned(found.variantId);
       })();
     },
-    [rows, setNotice, unplanned],
+    [addScanned, rows, setNotice],
   );
 
   /**
@@ -644,27 +650,6 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
           ],
     );
   }, []);
-
-  const setScannedQty = useCallback((qty: number) => {
-    setScanned((current) => (current === null ? null : { ...current, qty }));
-  }, []);
-
-  const confirmScanned = useCallback(() => {
-    if (scanned === null || scanned.qty <= 0) return;
-    const copy =
-      scanned.source === 'sku'
-        ? t.intake.scan.foundSku
-        : scanned.source === 'supplier_code'
-          ? t.intake.scan.foundSupplier
-          : t.intake.scan.found;
-    addScanned(scanned.variantId, scanned.qty, (name) => fillCopy(copy, { name, n: String(scanned.qty) }), {
-      // Çarpan OKUTULAN KODUN bilgisi, çekmecede yazılan adet değil: depocu 3 koli okuttuysa adet
-      // 36 olur ama satırın künyesi yine "koli barkodu · çarpan 12" demeli.
-      kind: scanned.kind,
-      qtyPerCode: scanned.qtyPerCode ?? 1,
-    });
-    setScanned(null);
-  }, [addScanned, scanned]);
 
   /*
     ── ÖĞRENMENİN İKİNCİ ADIMI: BU KOD NEYİ SAYIYOR? (23.12) ─────────────────
@@ -702,7 +687,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       if (result.data.status === 'ok') {
         // Öğretilen kod ÇARPANI kadar sayılır: az önce "bu koli 12 adet" denmişken satıra 1 yazmak,
         // kendi söylediğimizi ilk kullanımda yok saymak olurdu.
-        addScanned(variantId, qtyPerCode, (name) => fillCopy(t.intake.scan.learned, { name, n: String(qtyPerCode) }), { kind, qtyPerCode });
+        addScanned(variantId, qtyPerCode, { kind, qtyPerCode });
         /* ÖĞRENME EKRANDA KALIR (v3:05 · kullanıcı bulgusu 30.08): tasarım listenin üstüne kalıcı
            bir kart koyuyor ("Kod öğrenildi · 869… → Fıstıklı Baklava 450 g · koli barkodu ·
            çarpan 12 · ikinci gelişte tanınacak"). Bizde yalnız geçip giden bir bildirimdi ve
@@ -723,12 +708,18 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       // sessiz bir çift kayıt yerine, formda varsa o satıra düşer, yoksa yalnız söylenir. Adet
       // 1'dir ve olmalı: çarpan artık ÖTEKİNİN yazdığı kaydın bilgisi, bizim tahminimiz değil.
       const bound = result.data;
-      const added = addScanned(bound.variantId, 1, (name) => fillCopy(t.intake.scan.alreadyBound, { name }), {
+      const added = addScanned(bound.variantId, 1, {
         // ÖTEKİNİN yazdığı kayıt: çarpanı bilmiyoruz, tahmin de etmiyoruz — bu okutma 1 saydı ve
         // künye de onu söyler.
         kind: 'unit',
         qtyPerCode: 1,
       });
+      /* BU BİLDİRİM KALIYOR — başarılı okutmanınki kalktı ama bu başka bir şey: depocu B'yi seçti,
+         adet A'ya düştü. Sonuç GÖRÜNMEZ (seçtiği satır boş kalır, başka satır artar) ve ekranda
+         bunu söyleyen tek şey bu cümledir. */
+      if (added) {
+        setNotice({ tone: 'warn', text: fillCopy(t.intake.scan.alreadyBound, { name: productLabel(bound.productName, bound.variantLabel) }) });
+      }
       if (!added) {
         setNotice({
           tone: 'warn',
@@ -763,10 +754,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     openScan: useCallback(() => setScanOpen(true), []),
     closeScan: useCallback(() => setScanOpen(false), []),
     handleScan,
-    scanned,
-    setScannedQty,
-    confirmScanned,
-    cancelScanned: useCallback(() => setScanned(null), []),
+    justScanned,
+    clearJustScanned: useCallback(() => setJustScanned(null), []),
     learn,
     learned,
     pickLearnVariant,

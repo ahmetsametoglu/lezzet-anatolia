@@ -31,7 +31,7 @@ import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { searchIntakeVariants } from '@/lib/api/warehouse';
 import { warehouseCopy } from './copy';
-import { useIntake, type IntakeRowState, type ScannedCode } from './use-intake.hook';
+import { useIntake, type IntakeRowState } from './use-intake.hook';
 import { parseDate, productLabel, shortDate } from './warehouse-format';
 import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
 
@@ -493,6 +493,8 @@ export function IntakeScreen() {
             state={intake.stateOf(row.variantId)}
             unplanned={unplanned}
             mlorPercent={intake.mlorPercent}
+            justScanned={intake.justScanned === row.variantId}
+            onScanConsumed={intake.clearJustScanned}
             lotSuggestions={intake.lotsUsedBy(row.variantId)}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
           />
@@ -580,66 +582,13 @@ export function IntakeScreen() {
         testID="warehouse-intake-scan"
       />
 
-      {/* Okutma çekmecesi (kullanıcı tasarımı 23.08): okutma bir SAYIM değil TANITIMDIR — kod bir
-          kez okutulur, "kaç geldi" burada söylenir. Varsayılan adet okutulan birimin miktarı
-          (koli → çarpan, tekil → 1); satıra ancak onayla yazılır. `key` her okutmada seçicinin
-          eksenini tazeler: önceki okutmanın büyütülmüş penceresi yenisine miras kalmaz. */}
-      <BottomSheet
-        visible={intake.scanned !== null}
-        title={t.intake.scan.drawerTitle}
-        onClose={intake.cancelScanned}
-        testID="warehouse-intake-scanned"
-      >
-        {intake.scanned === null ? null : (
-          <>
-            {/* ÜRÜN KARTI — fotoğraf ARKA PLAN, künye onun üstünde (kullanıcı isteği 24.08).
-                Önce yan yana duruyordu (kare fotoğraf + sağda metin) ve dar kalıyordu: çekmecenin
-                işi "doğru malı mı tuttum" bakışı, o bakışa en çok yardım eden şey fotoğrafın
-                KENDİSİ. Şablonun kendi deseni de bu (`ProductPhotoCard`: ad fotoğrafın İÇİNDE);
-                o komponent kullanılmadı çünkü kare ve rozet/fiyat yuvaları taşıyor — burada
-                geniş bir bant ve üç satır künye var. Gradyan yazının okunması için, tokenlardan. */}
-            {/* AD FOTOĞRAFIN ÜSTÜNE DEĞİL, ALTINA (cihazda görüldü 30.08). Kart bir "kahraman
-                görsel"di: ad ve künye fotoğrafın üstüne, karartma gradyanıyla yazılıyordu. Ürün
-                fotoğrafları BEYAZ zeminli stüdyo çekimleri ve alttan karartma beyazın üstünde
-                açık gri kalıyor — "1 koli = 24 adet" okunmuyordu. Tasarım da burada kahraman
-                görsel istemiyor; fotoğraf bir DOĞRULAMA ("doğru malı mı tuttum"), bir başlık
-                değil. */}
-            <View style={styles.scannedCard}>
-              {intake.scanned.imageUrl === null ? null : (
-                <Image
-                  source={{ uri: intake.scanned.imageUrl }}
-                  style={styles.scannedPhoto}
-                  accessibilityIgnoresInvertColors
-                  testID="warehouse-intake-scanned-photo"
-                />
-              )}
-            </View>
-            <View style={styles.scannedNames}>
-              <Text style={styles.scannedName}>{productLabel(intake.scanned.productName, intake.scanned.variantLabel)}</Text>
-              <Text style={styles.scannedMeta}>{scanMeta(intake.scanned)}</Text>
-              <Text style={styles.scannedMeta}>{fillCopy(t.intake.expected, { qty: String(intake.scanned.expectedQty) })}</Text>
-            </View>
-            <OperationsQtySlider
-              key={intake.scanned.variantId}
-              value={intake.scanned.qty}
-              onChange={intake.setScannedQty}
-              step={intake.scanned.qtyPerCode}
-              expected={intake.scanned.expectedQty}
-              accessibilityLabel={t.intake.scan.drawerQty}
-              fineLabels={{ increase: t.intake.scan.drawerQtyIncrease, decrease: t.intake.scan.drawerQtyDecrease }}
-              caption={qtyCaption(intake.scanned)}
-              testID="warehouse-intake-scanned-qty"
-            />
-            <PrimaryButton
-              label={t.intake.scan.drawerConfirm}
-              onPress={intake.confirmScanned}
-              disabled={intake.scanned.qty <= 0}
-              elevation="flat"
-              testID="warehouse-intake-scanned-confirm"
-            />
-          </>
-        )}
-      </BottomSheet>
+      {/* OKUTMA ÇEKMECESİ SÖKÜLDÜ (kullanıcı kararı 30.08 · tasarım deseni). Burada bir
+          "Okutulan ürün" paneli vardı: fotoğraf + kaydırıcı + "Satıra ekle". Tasarımda böyle bir
+          çekmece HİÇ YOK — okutulan kod ANINDA sayılır ve adet çekmecesi açılır
+          (`v3.dc.html:4005-4010`): paket barkodu tek pakete +1, koli barkodu o boydan +1 koli.
+          Panel iki adım ve fazladan bir soru getiriyordu ("kaç tane?"), oysa koli barkodu kaç adet
+          olduğunu KENDİSİ söylüyor (`qtyPerCode`); kaydırıcı da v3'te hiç geçmiyor. Satırın
+          açılması artık `justScanned` sinyaliyle. */}
 
       <LearnSheet intake={intake} onLearnSearch={() => setSearchOpen(true)} />
     </View>
@@ -692,18 +641,31 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
         ) : (
           <>
             <Text style={styles.learnBody}>{fillCopy(t.intake.scan.learnBody, { code: intake.learn.code })}</Text>
+            {/* SATIRLAR KART, AYRAÇ DEĞİL (tasarım karesi `02f-Bilinmeyen-Kod-Esleme`): her aday
+                kendi kartında durur, künyesinde TEDARİKÇİ KODU da vardır ("beklenen 10 · GAZ-7120")
+                ve sağında yön oku. Ayraçlı düz satırlar bir liste gibi okunuyordu; oysa burada
+                yapılan şey seçmek — kartlar dokunulabilir olduğunu söylüyor. */}
             {intake.rows.map((row) => (
               <PressableSurface
                 key={row.variantId}
                 onPress={() => intake.pickLearnVariant(row.variantId)}
-                feedback="tint"
-                style={styles.learnRow}
+                feedback="scale"
+                style={styles.learnCard}
                 accessibilityLabel={productLabel(row.productName, row.variantLabel)}
               >
-                <Text style={styles.learnRowLabel}>{productLabel(row.productName, row.variantLabel)}</Text>
-                <Text style={styles.learnRowMeta}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
+                <View style={styles.learnCardBody}>
+                  <Text style={styles.learnRowLabel}>{productLabel(row.productName, row.variantLabel)}</Text>
+                  <Text style={styles.learnRowMeta}>
+                    {row.supplierCode === null
+                      ? fillCopy(t.intake.expected, { qty: String(row.expectedQty) })
+                      : `${fillCopy(t.intake.expected, { qty: String(row.expectedQty) })} · ${row.supplierCode}`}
+                  </Text>
+                </View>
+                <Text style={styles.learnChevron}>›</Text>
               </PressableSurface>
             ))}
+            {/* DİPNOT (tasarım): eşlemenin ne olduğunu ve yanlışının nasıl geri alınacağını söyler. */}
+            <Text style={styles.learnFootnote}>{t.intake.scan.learnFootnote}</Text>
           </>
         )
       ) : (
@@ -870,22 +832,10 @@ function nameOfRow(rows: readonly IntakeFormRowContract[], variantId: string): s
   return row === undefined ? '—' : productLabel(row.productName, row.variantLabel);
 }
 
-/** Çekmecenin künye satırı: kodun TÜRÜ ve kesinlik derecesi — SKU/tedarikçi eşleşmesi barkod kadar kesin değildir, ekran bunu söyler. */
-function scanMeta(scanned: ScannedCode): string {
-  if (scanned.source === 'sku') return t.intake.scan.drawerSku;
-  if (scanned.source === 'supplier_code') return t.intake.scan.drawerSupplier;
-  return scanned.kind === 'case' ? fillCopy(t.intake.scan.drawerCase, { n: String(scanned.qtyPerCode) }) : t.intake.scan.drawerUnit;
-}
-
-/** Koli dökümü ("10 koli + 3 adet") — yalnız gerçek koli kodunda; tekilde sayının kendisi yeter. */
-function qtyCaption(scanned: ScannedCode): string | undefined {
-  if (scanned.kind !== 'case' || scanned.qtyPerCode <= 1) return undefined;
-  const cases = Math.floor(scanned.qty / scanned.qtyPerCode);
-  const loose = scanned.qty % scanned.qtyPerCode;
-  return loose === 0
-    ? fillCopy(t.intake.scan.drawerCases, { k: String(cases) })
-    : fillCopy(t.intake.scan.drawerCasesPlus, { k: String(cases), m: String(loose) });
-}
+/* `scanMeta` ve `qtyCaption` SİLİNDİ (kullanıcı kararı 30.08): ikisi de sökülen "Okutulan ürün"
+   çekmecesinin künye satırlarıydı. Kodun türü ve kesinlik derecesi artık satırın kendi künyesinde
+   duruyor (`IntakeRowState.scan` → "koli barkodu · çarpan 12"), koli dökümünü de adet çekmecesi
+   canlı yazıyor ("2 × 12 + 3 tek paket = 27 paket"). */
 
 interface IntakeRowProps {
   row: IntakeFormRowContract;
@@ -902,15 +852,31 @@ interface IntakeRowProps {
    * yazdığı şeyi önermek gürültüdür.
    */
   lotSuggestions: string[];
+  /**
+   * Bu satır AZ ÖNCE OKUTULDU mu (kullanıcı kararı 30.08). Okutma adedi kendisi yazıyor; geriye
+   * depocuyu o satıra götürmek kalıyor — satır açılır ve adet çekmecesi gelir, tıpkı tasarımın
+   * `sheet:'adet'` adımı gibi. Sinyal bir kez tüketilir, yoksa çekmece her çizimde açılırdı.
+   */
+  justScanned: boolean;
+  onScanConsumed: () => void;
   onPatch: (patch: Partial<IntakeRowState>) => void;
 }
 
-function IntakeRow({ row, state, unplanned, mlorPercent, lotSuggestions, onPatch }: IntakeRowProps) {
+function IntakeRow({ row, state, unplanned, mlorPercent, justScanned, onScanConsumed, lotSuggestions, onPatch }: IntakeRowProps) {
   const [dateOpen, setDateOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
   const [lotOpen, setLotOpen] = useState(false);
   /** Hasar SEBEBİ çekmecesi (kullanıcı kararı 30.08) — kartın içinde çip yok, liste burada. */
   const [reasonOpen, setReasonOpen] = useState(false);
+
+  /* OKUTULAN SATIR KENDİLİĞİNDEN AÇILIR ve adet çekmecesini getirir (tasarım: okutma → `sheet:
+     'adet'`). Sinyal hemen tüketiliyor: ikinci bir çizimde çekmece yeniden açılmasın. */
+  useEffect(() => {
+    if (!justScanned) return;
+    setExpanded(true);
+    setQtyOpen(true);
+    onScanConsumed();
+  }, [justScanned, onScanConsumed]);
   /* SATIR SAYILDIĞINDA AÇILIR. Ölçüt adedin GİRİLMİŞ olması (`qty !== null`), sıfırdan büyük
      olması değil: "0 adet geldi" de bir sayımdır ve o satırın SKT'si sorulmaz ama sapma özetine
      girer. Sıfırı kapalı saymak, depocunun bilinçli beyanını "hiç dokunmadım"la eşitlerdi. */
@@ -2079,6 +2045,29 @@ const styles = StyleSheet.create({
     paddingVertical: operationsTheme.space.xl,
     borderTopWidth: operationsTheme.border.base,
     borderTopColor: operationsTheme.colors['sand-300'],
+  },
+  /** Aday KARTI (tasarım `02f`) — ad + künye solda, yön oku sağda. */
+  learnCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['3xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
+  learnCardBody: { flex: 1, gap: operationsTheme.space['2xs'] },
+  learnChevron: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors['tab-inactive'],
+  },
+  learnFootnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
   },
   learnRowLabel: {
     flexShrink: 1,

@@ -466,6 +466,7 @@
       "learnBody": "{code} sistemde kayıtlı değil. Satırı seçin — kod o ürüne öğretilir, bir daha sorulmaz.",
       "learnEmptyBody": "{code} sistemde kayıtlı değil ve bu kabulde henüz ürün yok. Ürünü arayıp seçin — satır açılır ve kod ona öğretilir.",
       "learnEmptyCta": "🔍 Ürünü ara ve kodu öğret",
+      "learnFootnote": "Barkodsuz koli yok — henüz tanımadığımız koli var. Yanlış eşleme masadan geri alınır.",
       "learnCancel": "Şimdi değil",
       "learnUnitTitle": "Bu kod neyi sayıyor?",
       "learnUnitBody": "{name} seçildi. Bu barkod tek bir paketin üstünde mi, yoksa kolinin üstünde mi? Koliyse bir okutmanın kaç adet sayılacağını söyleyin — sonraki kabullerde sormayacağız.",

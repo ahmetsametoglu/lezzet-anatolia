@@ -40,7 +40,12 @@ jest.mock('@/lib/auth/supabase', () => ({
 
 const PO_ID = '00000000-0000-4000-8000-000000000091';
 const ROW_A = intakeRow();
-const ROW_B = intakeRow({ variantId: '00000000-0000-4000-8000-000000000042', productName: 'Mısır Unu', variantLabel: '25 kg', expectedQty: 4 });
+const ROW_B = intakeRow({
+  variantId: '00000000-0000-4000-8000-000000000042',
+  productName: 'Mısır Unu',
+  variantLabel: '25 kg',
+  expectedQty: 4,
+});
 const YABANCI_VARYANT = '00000000-0000-4000-8000-000000000077';
 
 /* MLOR eşiği YANITIN alanıdır (ayardan gelir, satırın değil) — fikstür onu taşımazsa cevap
@@ -117,53 +122,79 @@ beforeEach(() => {
 
 describe('D2 · tarama akışı', () => {
   it('koli kodu ÇEKMECE açar (varsayılan çarpan), onayla yazılır; ikinci okuma TOPLANIR', async () => {
-    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
+    withScan({
+      status: 'found',
+      variantId: ROW_A.variantId,
+      productName: ROW_A.productName,
+      variantLabel: ROW_A.variantLabel,
+      kind: 'case',
+      qtyPerCode: 6,
+      source: 'barcode',
+      sku: 'SKU-4120',
+      dateType: 'DDM' as const,
+      shelfLifeDays: 360,
+      imageUrl: null,
+      caseSizes: [],
+    });
     await renderIntake();
 
+    /* OKUTMA ANINDA SAYAR (tasarım deseni · kullanıcı kararı 30.08): araya "kaç tane?" diye soran
+       bir çekmece girmiyor — koli barkodu kaç adet olduğunu kendisi söylüyor (`qtyPerCode`). */
     await scanOnce();
-    // Satıra HENÜZ yazılmadı: adet kararı çekmecenin — varsayılan, kolinin çarpanı.
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('6'));
-    expect(qtyOf(ROW_A.variantId)).toBe('');
-
-    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-confirm'));
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('6'));
-    expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/6 adet eklendi/);
+    /* BAŞARILI OKUTMA BİLDİRİM BASMAZ (kullanıcı bulgusu 30.08): satır zaten açıldı, adedi
+       yazıldı ve künyesi "barkod okutuldu" dedi — şerit aynı şeyi üçüncü kez söylüyordu. */
+    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
 
-    // İkinci koli: depocu ince ayarla 7'ye çıkarır — onayda TOPLANIR (6 + 7).
+    // İkinci koli aynı satıra TOPLANIR (6 + 6).
     await scanOnce();
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('6'));
-    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-qty-increase'));
-    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-confirm'));
-    await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('13'));
+    await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('12'));
   });
 
   it('SKU eşleşmesi kaynağını SÖYLER — barkod kadar kesin değil, cümle bunu taşır', async () => {
-    withScan({ status: 'found', variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel, kind: 'unit', qtyPerCode: 1, source: 'sku', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
+    withScan({
+      status: 'found',
+      variantId: ROW_B.variantId,
+      productName: ROW_B.productName,
+      variantLabel: ROW_B.variantLabel,
+      kind: 'unit',
+      qtyPerCode: 1,
+      source: 'sku',
+      sku: 'SKU-4120',
+      dateType: 'DDM' as const,
+      shelfLifeDays: 360,
+      imageUrl: null,
+      caseSizes: [],
+    });
     await renderIntake();
 
     await scanOnce();
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('1'));
-    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-confirm'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/SKU eşleşmesi/));
-    expect(qtyOf(ROW_B.variantId)).toBe('1');
+    /* SKU eşleşmesi de bildirim basmaz; kaynağın kesinliği SATIRIN künyesinde duruyor
+       (`IntakeRowState.scan` → "tekil barkod · bir okutma = 1 adet"). */
+    await waitFor(() => expect(qtyOf(ROW_B.variantId)).toBe('1'));
   });
 
-  it('çekmeceden VAZGEÇİLİRSE hiçbir satıra yazılmaz', async () => {
-    withScan({ status: 'found', variantId: ROW_A.variantId, productName: ROW_A.productName, variantLabel: ROW_A.variantLabel, kind: 'case', qtyPerCode: 6, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
-    await renderIntake();
-
-    await scanOnce();
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-scanned-qty-value')).toHaveTextContent('6'));
-    // Örtü erişilebilirlik ağacından gizli (yalnız işaretçi kısayolu) — sorguya bunu söylemek gerek.
-    await fireEvent.press(screen.getByTestId('warehouse-intake-scanned-scrim', { includeHiddenElements: true }));
-
-    expect(qtyOf(ROW_A.variantId)).toBe('');
-    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
-  });
+  /* "ÇEKMECEDEN VAZGEÇME" TESTİ DÜŞTÜ (kullanıcı kararı 30.08): okutma ile satır arasında artık
+     bir onay penceresi yok — okutulan kod anında sayılıyor (tasarım deseni). Vazgeçmenin karşılığı
+     düzeltmedir: depocu adet çekmecesinden sayıyı değiştirir ya da satırı sıfırlar. O yol
+     `intake-screen.test.tsx`te ölçülü. */
 
   it('PO kaleminde OLMAYAN ürünün kodu satır AÇMAZ — çekmece de açılmaz, yalnız söyler', async () => {
-    withScan({ status: 'found', variantId: YABANCI_VARYANT, productName: 'Sahlep', variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM' as const, shelfLifeDays: 360, imageUrl: null, caseSizes: [] });
+    withScan({
+      status: 'found',
+      variantId: YABANCI_VARYANT,
+      productName: 'Sahlep',
+      variantLabel: '250 g',
+      kind: 'unit',
+      qtyPerCode: 1,
+      source: 'barcode',
+      sku: 'SKU-4120',
+      dateType: 'DDM' as const,
+      shelfLifeDays: 360,
+      imageUrl: null,
+      caseSizes: [],
+    });
     await renderIntake();
 
     await scanOnce();
@@ -188,7 +219,9 @@ describe('D2 · tarama akışı', () => {
     await fireEvent.press(screen.getByTestId('warehouse-intake-learn-confirm'));
 
     await waitFor(() => expect(qtyOf(ROW_B.variantId)).toBe('1'));
-    expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/öğrenildi/);
+    /* Öğrenme de bildirim basmaz: sonucu listenin üstündeki KALICI kart söylüyor ("Kod öğrenildi ·
+       <kod> → <ürün>"), satırın künyesi de "koli barkodu · bir okutma = N adet" diyor. */
+    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
     const learnCall = fetchMock.mock.calls.findLast((c) => String(c[0]).endsWith('/codes'));
     expect(JSON.parse(String(learnCall?.[1]?.body ?? '{}'))).toMatchObject({
       variantId: ROW_B.variantId,
