@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
 
+import { OperationsTabBarSlide } from '@/components/operations/tab-bar-slide';
 import { BottomTabBar } from '@/components/ui/bottom-tab-bar';
 import type { IconName } from '@/components/ui/icon-paths';
 import { OPERATIONS_SECTIONS, showsSectionTabs, type OperationsSection } from '@/lib/operations/sections';
@@ -45,40 +46,44 @@ export default function OperationsSectionsLayout() {
       screenOptions={{ headerShown: false }}
       tabBar={({ state, navigation }) =>
         tabsVisible ? (
-          <BottomTabBar
-            tone="operations"
-            testID="operations-tabs"
-            /* Liste TASARIMIN sırasından yürür, navigatörünkinden değil: `flatMap` her bölüm için
+          /* Çubuk aşağı kaydırmada kayar (M1c); kararı kabuğun kaydırma durumu verir. Sarmalayıcı
+             yalnız çizimi taşır — görünürlük kuralı (`tabsVisible`) olduğu gibi duruyor. */
+          <OperationsTabBarSlide>
+            <BottomTabBar
+              tone="operations"
+              testID="operations-tabs"
+              /* Liste TASARIMIN sırasından yürür, navigatörünkinden değil: `flatMap` her bölüm için
                rotayı arar, `redirect` ile çıkarılmış olanı BULAMAZ ve o sekme hiç doğmaz. Ters
                yönde (rotaları gezip bölüme çevirerek) yazılsaydı, her rota adı için bir daraltma
                iddiası (`as`) gerekirdi — burada tip zaten bölümden geliyor. */
-            items={OPERATIONS_SECTIONS.flatMap((section) => {
-              const route = state.routes.find((candidate) => candidate.name === section);
-              if (route === undefined) return [];
-              return [
-                {
-                  key: section,
-                  label: operationsCopy.sections[section].tab,
-                  icon: SECTION_ICONS[section],
-                  /* Seçililik ROTA ADI üstünden okunur, dizin üstünden değil: süzülmüş listede
+              items={OPERATIONS_SECTIONS.flatMap((section) => {
+                const route = state.routes.find((candidate) => candidate.name === section);
+                if (route === undefined) return [];
+                return [
+                  {
+                    key: section,
+                    label: operationsCopy.sections[section].tab,
+                    icon: SECTION_ICONS[section],
+                    /* Seçililik ROTA ADI üstünden okunur, dizin üstünden değil: süzülmüş listede
                      `state.index` bizim sıramızla aynı yeri göstermez. */
-                  selected: state.routes[state.index]?.name === section,
-                  onPress: () => {
-                    /* React Navigation sözleşmesi: dokunuş önce OLAY olarak duyurulur, bir
+                    selected: state.routes[state.index]?.name === section,
+                    onPress: () => {
+                      /* React Navigation sözleşmesi: dokunuş önce OLAY olarak duyurulur, bir
                        dinleyici onu iptal edebilir (müşteri kabuğuyla aynı gerekçe). */
-                    const event = navigation.emit({
-                      type: 'tabPress',
-                      target: route.key,
-                      canPreventDefault: true,
-                    });
-                    if (state.routes[state.index]?.name !== section && !event.defaultPrevented) {
-                      navigation.navigate(section);
-                    }
+                      const event = navigation.emit({
+                        type: 'tabPress',
+                        target: route.key,
+                        canPreventDefault: true,
+                      });
+                      if (state.routes[state.index]?.name !== section && !event.defaultPrevented) {
+                        navigation.navigate(section);
+                      }
+                    },
                   },
-                },
-              ];
-            })}
-          />
+                ];
+              })}
+            />
+          </OperationsTabBarSlide>
         ) : null
       }
     >

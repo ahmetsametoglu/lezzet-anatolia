@@ -5,6 +5,7 @@ import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { LoadingState } from '@/components/ui/loading-state';
+import { OperationsShellScrollProvider } from '@/lib/operations/shell-scroll';
 import { operationsCopy } from '@/screens/operations/copy';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { useOperationsAccess } from '@/screens/operations/use-operations-access.hook';
@@ -107,13 +108,18 @@ export default function OperationsLayout() {
         resolvedWarehouseId: access.resolvedWarehouseId,
       }}
     >
-      <Stack
-        screenOptions={{
-          // Başlıkları ekranlar kendi çiziyor (v2: zeminle aynı renkte, çizgisiz, sayfayla kayan).
-          headerShown: false,
-          contentStyle: { backgroundColor: operationsTheme.colors.cream },
-        }}
-      />
+      {/* KAYDIRMA DURUMU KABUĞUN TAMAMINI SARAR (Komponent Envanteri M1): yapışkan mikro başlık
+          ve sekme çubuğu gizlemesi aynı karardan beslenir. Sağlayıcı burada, çünkü tüketenler iki
+          ayrı ağaçta duruyor — şerit ekranın içinde, çubuk bölüm kabuğunda. */}
+      <OperationsShellScrollProvider>
+        <Stack
+          screenOptions={{
+            // Başlıkları ekranlar kendi çiziyor (v2: zeminle aynı renkte, çizgisiz, sayfayla kayan).
+            headerShown: false,
+            contentStyle: { backgroundColor: operationsTheme.colors.cream },
+          }}
+        />
+      </OperationsShellScrollProvider>
     </OperationsSessionProvider>
   );
 }

@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsMicroHeader } from '@/components/operations/micro-header';
 import { NotificationBell } from '@/components/operations/notification-bell';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
@@ -12,6 +13,7 @@ import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsSectionRoute } from '@/screens/login/post-login-route';
+import { useOperationsShellScroll } from '@/lib/operations/shell-scroll';
 import { chooseWarehouse } from '@/lib/operations/warehouse-choice';
 import { captionOf } from '@/lib/operations/caption';
 import {
@@ -117,6 +119,7 @@ interface HubTile {
 
 export function WarehouseHubScreen() {
   const router = useRouter();
+  const shellScroll = useOperationsShellScroll();
   const hub = useWarehouseHub();
   const { scope, offline } = useWarehouseStatus();
   const unread = useOperationsNotifications().unread;
@@ -164,9 +167,7 @@ export function WarehouseHubScreen() {
       right={
         <NotificationBell
           onPress={() => router.navigate('/notifications')}
-          accessibilityLabel={
-            unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })
-          }
+          accessibilityLabel={unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })}
           count={unread}
           testID="operations-bell"
         />
@@ -272,9 +273,7 @@ export function WarehouseHubScreen() {
                 accessibilityLabel={fillCopy(t.common.scope.otherSection, { section: shell.sections[section].tab })}
                 testID={`warehouse-scope-to-${section}`}
               >
-                <Text style={styles.scopeExitLabel}>
-                  {fillCopy(t.common.scope.otherSection, { section: shell.sections[section].tab })}
-                </Text>
+                <Text style={styles.scopeExitLabel}>{fillCopy(t.common.scope.otherSection, { section: shell.sections[section].tab })}</Text>
               </PressableSurface>
             ))}
 
@@ -319,15 +318,26 @@ export function WarehouseHubScreen() {
 
   return (
     <View style={styles.screen} testID="operations-section-warehouse">
-      {header}
-
       {/* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08): hub günün sayılarını gösteriyor ve
           depocu onları tazelemek için ekrandan çıkıp giriyordu. */}
+      {/* YAPIŞKAN MİKRO BAŞLIK (M1b) — kaydırma 44px'i geçince iner. Şerit kaydırıcının DIŞINDA
+          (kendisi mutlak konumlu), kararı kabuğun kaydırma durumu veriyor. */}
+      <OperationsMicroHeader title={t.hub.title} caption={shell.sections.warehouse.tab} />
+
       <ScrollView
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={hub.reloading} onRefresh={hub.refresh} />}
+        /* Kabuğun kaydırma durumunu besler: mikro başlık ve sekme çubuğu bu olaydan karar alır
+           (`lib/operations/shell-scroll`). Ekran başına tek satır — kural ekranda tekrar yazılmaz. */
+        onScroll={shellScroll.onScroll}
+        scrollEventThrottle={16}
         testID="warehouse-hub-list"
       >
+        {/* BAŞLIK KAYDIRICININ İÇİNDE (M1a → M1b devri): tam başlık sayfayla birlikte yukarı
+            kayar, 44px'i geçince yerini mikro başlık alır. Dışarıda kalsaydı ikisi üst üste
+            binerdi — cihazda ölçüldü 30.08: mikro şerit indi, altında tam başlık asılı kaldı. */}
+        {header}
+
         {offlineBanner}
 
         {/* ── 1. ÖZET KARTI ─────────────────────────────────────────────────
@@ -413,10 +423,7 @@ export function WarehouseHubScreen() {
               <Text style={styles.tileTitle} numberOfLines={1}>
                 {tile.title}
               </Text>
-              <Text
-                style={[styles.tileSubtitle, tile.alert ? styles.tileSubtitleAlert : null]}
-                numberOfLines={2}
-              >
+              <Text style={[styles.tileSubtitle, tile.alert ? styles.tileSubtitleAlert : null]} numberOfLines={2}>
                 {tile.subtitle}
               </Text>
             </PressableSurface>
