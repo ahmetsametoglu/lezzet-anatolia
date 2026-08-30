@@ -407,7 +407,12 @@
     "noSubject": "parti seçilmedi",
     "noSubjectBlock": {
       "title": "Hangi parti düzeltilecek?",
-      "body": "Depo partilerini listeleyen bir okuma kapısı henüz yok; ekran Yakın-SKT turundan seçilen partiyle açılır."
+      "body": "Düzeltme her zaman bir partiye yazılır. Yakın-SKT turundan parti seçerek gelin — depo partilerini listeleyen bir okuma kapısı henüz yok."
+    },
+    "toNearExpiry": "Yakın-SKT turuna git →",
+    "locked": {
+      "title": "Düzeltme kaydı kapalı",
+      "body": "Olay referansı sunucuda doğar — bağlantısız yazılan düzeltme kâğıt tutanakla eşleşemez."
     },
     "reasonHeading": "SEBEP — DÖRT TİP",
     "reason": {
@@ -530,17 +535,21 @@
   },
   "printers": {
     "title": "Bu cihaz · Yazıcılar",
-    "subtitle": "hangi işi hangi yazıcıdan bastığın",
+    "subtitle": "ayar bu telefona özeldir",
     "loading": "Yazıcılar yükleniyor…",
     "error": {
       "title": "Yazıcı listesi alınamadı",
       "body": "Bağlantı ya da sunucu sorunu — seçimin cihazda duruyor, değişmedi."
     },
     "purpose": {
-      "box": "Kutu etiketi (bizim 4×6 QR’lı)",
-      "shipping": "Kargo etiketi (taşıyıcının A6’sı)"
+      "box": "KUTU ETİKETİ · 4×6",
+      "shipping": "KARGO ETİKETİ · A6"
     },
-    "none": "Bu iş için tanımlı yazıcı yok — Depolar ekranından tanımlanır. Bu cihaz o etiketi basamaz.",
+    "consequence": {
+      "box": "Kutu kapanışında sistem diyaloğu olmadan kendiliğinden basar.",
+      "shipping": "Gönderi alınmışsa basım düşse bile iptal olmaz — “yeniden bas” ile aynı etiket çıkar."
+    },
+    "none": "Tanımlı değil — etiket alınsa da basılamaz. Yazıcı Depolar ekranından tanımlanır.",
     "detail": "{model} · {address} · {size}",
     "only": "tek",
     "footnote": "Seçim BU CİHAZDA kalır, sunucuya gitmez: aynı depodaki başka telefon başka yazıcıya basabilir. Bir iş için tek yazıcı varsa seçim sorulmaz."

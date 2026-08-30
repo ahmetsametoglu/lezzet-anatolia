@@ -97,8 +97,21 @@ describe('bu cihaz · yazıcılar', () => {
     net.printers = [KUTU_A];
     await ekran();
 
-    expect(screen.getByTestId('warehouse-printers-shipping')).toHaveTextContent(/tanımlı yazıcı yok/);
-    expect(screen.getByTestId('warehouse-printers-box')).not.toHaveTextContent(/tanımlı yazıcı yok/);
+    /* v3 eksikliği SONUCUYLA söylüyor (30.08): "tanımlı değil" tek başına bir durum bildirimiydi,
+       "etiket alınsa da basılamaz" ise bedelini yazıyor — depocu kargo etiketini alıp elinde
+       kalmasın diye. */
+    expect(screen.getByTestId('warehouse-printers-shipping')).toHaveTextContent(/Tanımlı değil — etiket alınsa da basılamaz/);
+    expect(screen.getByTestId('warehouse-printers-box')).not.toHaveTextContent(/Tanımlı değil/);
+  });
+
+  /* HER İŞİN KENDİ SONUCU (v3:1017, 1035): seçim bir tercih değil, bir DAVRANIŞ belirliyor ve
+     ikisinin bedeli ayrı — ortak bir dipnot ikisini de yarım anlatırdı. */
+  it('her grup kendi sonucunu yazar — kutu kendiliğinden basar, kargo iptal olmaz', async () => {
+    net.printers = [KUTU_A];
+    await ekran();
+
+    expect(screen.getByTestId('warehouse-printers-box')).toHaveTextContent(/kendiliğinden basar/);
+    expect(screen.getByTestId('warehouse-printers-shipping')).toHaveTextContent(/basım düşse bile iptal olmaz/);
   });
 
   it('liste alınamazsa seçim SİLİNMEZ — cihazda ne varsa duruyor', async () => {

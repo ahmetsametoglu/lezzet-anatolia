@@ -24,8 +24,9 @@ import { resetWarehouseStatus } from './warehouse-status';
 */
 
 const mockParams: Record<string, string> = { stockId: STOCK_A, code: 'P-0641', name: 'Kaymaklı Baklava · 1 kg' };
+const mockNavigate = jest.fn();
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ navigate: (href: unknown) => mockNavigate(href), back: jest.fn() }),
   useLocalSearchParams: () => mockParams,
 }));
 
@@ -108,6 +109,19 @@ describe('D4 · sayım / düzeltme', () => {
 
     expect(screen.getByTestId('warehouse-adjustment-no-subject')).toBeOnTheScreen();
     expect(screen.queryByTestId('warehouse-adjustment-cta')).toBeNull();
+  });
+
+  /* ÇIKIŞ YOLU BLOĞUN İÇİNDE (v3:914): "hangi parti" diye sorup cevabın nerede olduğunu
+     söylememek, depocuyu geri tuşuna mahkûm ederdi. Şablonun ikinci yolu ("parti etiketini okut")
+     bugün yazılamadı — parti etiketini çözen bir uç yok; uyuşmazlık defterinde. */
+  it('partisiz açılışta ÇIKIŞ YOLU verilir — cevabın bulunduğu ekrana', async () => {
+    mockParams.stockId = '';
+    withResult();
+
+    await render(<AdjustmentScreen />);
+    await fireEvent.press(screen.getByTestId('warehouse-adjustment-to-near-expiry'));
+
+    expect(mockNavigate).toHaveBeenCalledWith('/near-expiry');
   });
 
   it('DÖRT sebep çizilir; "iade stoğa döndü" depocuya AÇILMAZ', async () => {

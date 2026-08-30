@@ -69,6 +69,19 @@ export function AdjustmentScreen() {
             description={t.adjustment.noSubjectBlock.body}
             testID="warehouse-adjustment-no-subject"
           />
+          {/* ÇIKIŞ YOLU BLOĞUN İÇİNDE (v3:914) — "hangi parti" diye sorup cevabın nerede olduğunu
+              söylememek, depocuyu geri tuşuna mahkûm ederdi. Şablon iki yol gösteriyor; ikincisi
+              ("parti etiketini okut") bugün yazılamadı — parti etiketini çözen bir uç yok
+              (`codes/resolve` varyant çözüyor). Uyuşmazlık defterinde. */}
+          <PressableSurface
+            onPress={() => router.navigate('/near-expiry')}
+            feedback="scale"
+            style={styles.toNearExpiry}
+            accessibilityLabel={t.adjustment.toNearExpiry}
+            testID="warehouse-adjustment-to-near-expiry"
+          >
+            <Text style={styles.toNearExpiryLabel}>{t.adjustment.toNearExpiry}</Text>
+          </PressableSurface>
         </View>
       </View>
     );
@@ -162,6 +175,16 @@ export function AdjustmentScreen() {
             {adjustment.notice.text}
           </Text>
         )}
+        {/* ÇEVRİMDIŞI: SEBEP YAZILIR (v3:983) — düğmenin üstünde, düğmenin yerine değil. Burada
+            düğme KALIYOR (kabul ekranlarının aksine): CTA zaten kapalı ve "kaydet" fiilinin
+            görünür kalması, işin bittiğinde ne olacağını söylüyor. Eksik olan sebepti — depocu
+            neden kaydedemediğini bilmeden bekliyordu. */}
+        {!offline ? null : (
+          <View style={styles.locked} testID="warehouse-adjustment-locked">
+            <Text style={styles.lockedTitle}>{t.adjustment.locked.title}</Text>
+            <Text style={styles.lockedBody}>{t.adjustment.locked.body}</Text>
+          </View>
+        )}
         <PressableSurface
           onPress={() => adjustment.submit(stockId)}
           disabled={!cta.enabled}
@@ -185,6 +208,40 @@ const styles = StyleSheet.create({
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space['7xl'],
+    gap: operationsTheme.space['2xl'],
+  },
+  /** Boş hâlin çıkış yolu — "hangi parti" sorusunun cevabının bulunduğu yere götürür. */
+  toNearExpiry: {
+    alignItems: 'center',
+    paddingVertical: operationsTheme.space.xl,
+    borderRadius: operationsTheme.radius.control,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-500'],
+  },
+  toNearExpiryLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  /** Çevrimdışı sebebi — CTA'nın ÜSTÜNDE; düğme kalıyor, eksik olan sebepti. */
+  locked: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+    marginBottom: operationsTheme.space.lg,
+  },
+  lockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  lockedBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
   },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],

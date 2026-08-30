@@ -7281,3 +7281,47 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Yakın-SKT jest **6/6** (ikisi yeni: çubuğun iki hâli, satır bağının hedefi) ·
   mobil paket **956/956**; typecheck · lint · knip yeşil; **cihazda gözle doğrulandı** — üç çubuk
   üç renkte (kırmızı/terracotta/zeytin), ölçülemeyen partide çubuk yok.
+
+- [x] (21.143) **SAYIM / DÜZELTME v3 — boş hâlin çıkış yolu, çevrimdışının sebebi** (v3:898-993)
+  `touches:` `apps/mobile/src/screens/warehouse/{adjustment-screen.tsx,messages.json,adjustment-screen.test.tsx}`
+
+  **Durum (30.08).** İki eksik kapandı, ikisi de aynı kusurun iki hâli: ekran sorusunu soruyor ama
+  cevabı söylemiyordu.
+
+  1. **Boş hâlin ÇIKIŞ YOLU.** "Hangi parti düzeltilecek?" diye sorup cevabın nerede olduğunu
+     söylememek depocuyu geri tuşuna mahkûm ediyordu. Bloğun içine "Yakın-SKT turuna git →" girdi.
+  2. **Çevrimdışının SEBEBİ.** Düğme kapalıydı ama neden kapalı olduğu yazmıyordu. Artık CTA'nın
+     ÜSTÜNDE: "Olay referansı sunucuda doğar — bağlantısız yazılan düzeltme kâğıt tutanakla
+     eşleşemez." Düğme **kalıyor** (kabul ekranlarının aksine, orada okutma düğmesinin YERİNE
+     geçmişti): CTA zaten kapalı ve "kaydet" fiilinin görünür kalması işin bittiğinde ne olacağını
+     söylüyor — eksik olan sebepti.
+
+  **Bir yol yazılamadı, uyuşmazlık defterine geçti:** şablonun ikinci çıkışı "Parti etiketini
+  okut". Parti etiketini çözen bir uç YOK — `codes/resolve` barkod/SKU/tedarikçi kodunu VARYANTA
+  çeviriyor, partiye değil.
+
+  **Doğrulama.** Düzeltme jest **11/11** (biri yeni) · mobil paket **957/957**; typecheck · lint ·
+  knip yeşil; **cihazda gözle doğrulandı**.
+
+- [x] (21.144) **BU CİHAZ · YAZICILAR v3 — künye kapsamı, grup başına sonuç** (v3:995-1041)
+  `touches:` `apps/mobile/src/screens/warehouse/{printer-setup-screen.tsx,messages.json,printer-setup-screen.test.tsx}`
+
+  **Durum (30.08).** Künye ayarın KAPSAMINI söylüyor ("ayar bu telefona özeldir"); eskisi ne
+  yaptığını söylüyordu ("hangi işi hangi yazıcıdan bastığın") ve asıl soru o değildi — bu ayarın
+  nereye kadar geçerli olduğuydu. Grup başlıkları Lora başlıktan ÜSTBAŞLIĞA indi ("KUTU ETİKETİ ·
+  4×6"): iki grup aynı işin iki kipi, ayrı bölüm değil; Lora onları iki ayrı ekran gibi
+  gösteriyordu.
+
+  **Eksiklik SONUCUYLA yazılıyor:** "Tanımlı değil — etiket alınsa da basılamaz". Eskisi bir durum
+  bildirimiydi; bu, bedelini söylüyor — depocu kargo etiketini alıp elinde kalmasın diye.
+
+  **HER GRUP KENDİ SONUCUNU taşıyor** (v3:1017, 1035): kutu etiketi kapanışta sistem diyaloğu
+  olmadan kendiliğinden basar; kargo etiketi alınmışsa basım düşse bile gönderi iptal olmaz. İkisi
+  ayrı cümle, çünkü ikisinin bedeli ayrı — ortak bir dipnot ikisini de yarım anlatırdı.
+
+  **İki öğe yazılamadı, uyuşmazlık defterine geçti:** seçili yazıcının BAĞLANTI DURUMU ("bağlı ·
+  Wi-Fi") ve "test bas" eylemi. Sözleşme durum alanı taşımıyor; test basımı da örnek bir etiket
+  yükü ister (hat gerçek etiket PNG'siyle çalışıyor).
+
+  **Doğrulama.** Yazıcı jest **5/5** (biri yeni) · mobil paket **958/958**; typecheck · lint ·
+  knip yeşil; **cihazda gözle doğrulandı**.

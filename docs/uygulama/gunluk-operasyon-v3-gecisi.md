@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 7/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 9/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -357,6 +357,36 @@ yeşil · **cihazda gözle doğrulandı** — üç çubuk üç renkte, ölçüle
 
 ---
 
+## 30.08 gece — Faz 2 · Ekran 08: Sayım / düzeltme ✅
+
+**Ne değişti.** İki eksik kapandı, ikisi de "ekran sorusunu sorup cevabı söylemiyordu":
+
+1. **Boş hâlin çıkış yolu.** "Hangi parti düzeltilecek?" diye sorup cevabın nerede olduğunu
+   söylememek depocuyu geri tuşuna mahkûm ediyordu. Artık bloğun içinde "Yakın-SKT turuna git →".
+2. **Çevrimdışı sebebi.** Düğme kapalıydı ama neden kapalı olduğunu söylemiyordu. Artık CTA'nın
+   üstünde: *"Olay referansı sunucuda doğar — bağlantısız yazılan düzeltme kâğıt tutanakla
+   eşleşemez."* Düğme **kalıyor** (kabul ekranlarının aksine): "kaydet" fiilinin görünür kalması,
+   iş bittiğinde ne olacağını söylüyor; eksik olan sebepti.
+
+**Doğrulama.** Düzeltme jest **11/11** (biri yeni) · mobil paket **957/957** · statik kapılar
+yeşil · **cihazda gözle doğrulandı**.
+
+---
+
+## 30.08 gece — Faz 2 · Ekran 09: Bu cihaz · Yazıcılar ✅
+
+**Ne değişti.** Künye ayarın KAPSAMINI söylüyor ("ayar bu telefona özeldir") — eskisi ne yaptığını
+söylüyordu, oysa asıl soru "bu ayar nereye kadar geçerli". Grup başlıkları Lora başlıktan
+üstbaşlığa indi ("KUTU ETİKETİ · 4×6"): iki grup aynı işin iki kipi, ayrı bölüm değil. Eksiklik
+artık **sonucuyla** yazılıyor ("Tanımlı değil — etiket alınsa da basılamaz"), ve **her grup kendi
+sonucunu** taşıyor: kutu kapanışta kendiliğinden basar · kargo etiketi alınmışsa basım düşse bile
+iptal olmaz. İkisinin bedeli ayrı, ortak dipnot ikisini de yarım anlatırdı.
+
+**Doğrulama.** Yazıcı jest **5/5** (biri yeni) · mobil paket **958/958** · statik kapılar yeşil ·
+**cihazda gözle doğrulandı**.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -367,6 +397,8 @@ Burada durulmaz — yazılır, geçilir.
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
 | 2 | 01 Depo Hub | Şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
+| 9 | 09 Yazıcılar | Şablon seçili yazıcının **bağlantı durumunu** ("bağlı · Wi-Fi") ve bir **"test bas"** eylemini gösteriyor. Yazıcı sözleşmesi yalnız `id · name · purpose · address · model · labelSize` taşıyor — durum alanı yok; test basımı da örnek bir etiket yükü gerektirir (basım hattı gerçek etiket PNG'siyle çalışıyor). | Açık — ikisi de yazılmadı. Çözümü: yazıcı yanıtına erişilebilirlik durumu + sunucuda bir örnek etiket ucu. |
+| 8 | 08 Sayım/düzeltme | Şablon boş hâlde İKİ çıkış yolu veriyor: "Yakın-SKT turuna git" ve **"Parti etiketini okut"**. İkincisi yazılamadı — parti etiketini çözen bir uç YOK; `codes/resolve` barkod/SKU/tedarikçi kodunu **varyanta** çeviriyor, partiye değil. | Açık — yalnız birinci yol yazıldı. Çözümü tek alan: parti kodunu (P-0698) çözen bir uç. |
 | 7 | 06 Siparişsiz kabul | Şablon satırda **"SKU 601202"** yazıyor. SKU **aramadan** eklenen satırda var (`VariantSearchRowSchema.sku`) ama **okutmadan** eklenende YOK — `ResolveCodeResponseSchema` sku döndürmüyor. Bir kısmında kod olan, bir kısmında olmayan satır, depocuya "bu ürünün kodu yok mu" diye sordururdu. | Açık — hiç yazılmadı. Çözümü tek alan: okutma çözümünün yanıtına `sku`. |
 | 6 | 05 Mal kabul formu | Şablon satırda **"beklenen 10 · GAZ-7120"** (tedarikçi kodu), **"SKT ZORUNLU · DLC"** etiketi ve **"Kalan ömür %58 — uyarı, engel değil"** yazıyor. Üçü de `IntakeFormRowSchema`'da YOK — satır yalnız `variantId · productName · variantLabel · expectedQty` taşıyor. Kalan ömür ayrıca ürünün raf ömrü gününü gerektirir. | Açık — üçü de yazılmadı. Çözümü tek alan: kabul satırına tedarikçi kodu, "SKT gerektirir mi" bayrağı ve raf ömrü günü. |
 | 5 | 04 Mal kabul | Şablon satırda **"· gönderildi"** (sipariş durumu) ve **"SKT gerekli"** yazıyor; ikisi de `PendingIntakeSchema`'da YOK (`purchaseOrderId · referenceNo · supplierName · lineCount`). Üstelik durum sabit de değil: bekleyen liste hem `sent` hem `partially_received` siparişleri taşıyor, yani "gönderildi" yazmak yarısı için yanlış olurdu. | Açık — ikisi de yazılmadı. Çözümü tek alan: bekleyen listesine `status` ve "SKT gerektiren kalem var mı" bayrağı. |

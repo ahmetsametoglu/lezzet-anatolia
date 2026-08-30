@@ -11,6 +11,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fetchPrinters } from '@/lib/api/warehouse';
 import { choosePrinter, readPrinterChoice, type PrinterChoice } from '@/lib/print/printer-choice';
 import { fillCopy } from '@/screens/operations/copy';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { trackWarehouse } from './warehouse-status';
@@ -132,6 +133,11 @@ export function PrinterSetupScreen() {
                   );
                 })
               )}
+              {/* HER İŞİN KENDİ SONUCU (v3:1017, 1035) — seçim bir tercih değil, bir DAVRANIŞ
+                  belirliyor: kutu etiketi kapanışta kendiliğinden basar; kargo etiketi alınmışsa
+                  basım düşse bile gönderi iptal olmaz. İkisi ayrı cümle, çünkü ikisinin bedeli
+                  ayrı — ortak bir dipnot ikisini de yarım anlatırdı. */}
+              <Text style={styles.consequence}>{t.printers.consequence[purpose]}</Text>
             </View>
           );
         })}
@@ -151,10 +157,20 @@ const styles = StyleSheet.create({
     gap: operationsTheme.space.lg,
   },
   group: { gap: operationsTheme.space.sm, marginTop: operationsTheme.space.lg },
+  /* v3'te grup başlığı bir BAŞLIK değil ÜSTBAŞLIK ("KUTU ETİKETİ · 4×6"): ekranda iki grup var ve
+     ikisi de aynı işin iki kipi — Lora başlıklar onları iki ayrı bölüm gibi gösteriyordu. */
   groupTitle: {
-    fontFamily: operationsTheme.font.display[operationsTheme.text['card-title-sm--font-weight']],
-    fontSize: operationsTheme.text['card-title-sm'],
-    color: operationsTheme.colors.ink,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.muted,
+  },
+  /** İşin sonucu — seçim bir tercih değil, bir davranış belirliyor. */
+  consequence: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
   },
   empty: {
     fontFamily: operationsTheme.font.body[400],
