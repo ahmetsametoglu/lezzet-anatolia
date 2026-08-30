@@ -1348,7 +1348,7 @@ const styles = StyleSheet.create({
   },
   ctaReady: {
     backgroundColor: operationsTheme.colors.olive,
-    boxShadow: operationsTheme.shadow.hard,
+    // Gölge YOK: v3'te sert gölge sıfır kez geçiyor (ölçüldü — v2'de 3, v3'te 0).
   },
   /** v2'nin kapalı CTA'sı: gölgesiz, soluk dolgu — basılamaz olduğunu RENGİYLE de söyler. */
   ctaIdle: { backgroundColor: operationsTheme.colors['disabled-fill'] },

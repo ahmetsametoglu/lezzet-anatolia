@@ -7810,7 +7810,9 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   okutma düğmesine veremedi. Ortak yan konum değil ROL: ışıma zeytin okutma düğmesinin kendi
   imzası. Artık `PrimaryButton elevation="glow"`; çubuğun `glow` prop'u söküldü (hiçbir çağıran
   vermiyordu). `shadow['hard-on-ink']` artık `@deprecated`; BEKLEYEN(21.161) son tüketici gidince
-  silinecek.
+  silinecek. **Depo alanında sert gölge SIFIRLANDI** (kapanış turu 30.08 — altı yer: dört ekranın
+  `ctaReady`si + kitin `amount-keypad`/`date-sheet` onay düğmeleri); token'ın kalan dört tüketicisi
+  `screens/sale/*` ve `screens/management/supply-suggestion-screen.tsx`, o şeritlerde.
 
   **`OperationsSurface`in altı tonu tahminle değil SAYIMLA belirlendi** — `panel` (30+) ·
   **`quiet`** (krem zemin 37, sessiz kenarla 21) · `card` · `ink` · `invite` (kesikli zeytin) ·

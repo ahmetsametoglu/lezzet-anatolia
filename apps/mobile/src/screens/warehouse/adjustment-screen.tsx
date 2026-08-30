@@ -480,7 +480,7 @@ const styles = StyleSheet.create({
   },
   ctaReady: {
     backgroundColor: operationsTheme.colors.ink,
-    boxShadow: operationsTheme.shadow['hard-on-ink'],
+    // Gölge YOK: v3'te sert gölge sıfır kez geçiyor (ölçüldü — v2'de 3, v3'te 0).
   },
   ctaIdle: { backgroundColor: operationsTheme.colors['disabled-fill'] },
   ctaLabel: {

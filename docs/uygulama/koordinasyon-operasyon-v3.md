@@ -1290,7 +1290,17 @@ rozeti) ve düğmenin içine ikinci bir görsel öğe açmak, kitin "etiket + ik
 yuvaya çıkarıyor. Ölçü gelirse dönerim — ikinci bir kullanım çıktığı gün ekle bana yaz, o an
 duplikasyon olur ve karar kendiliğinden verilir. Bugün rozetli düğme elden çizilmeye devam etsin.
 
-`KAPANDI — glow · grow · sticky-bar künyesi düzeltildi; badge bilinçle açılmadı`
+**Ek — söz verdiğim sert gölge temizliği bitti (depo şeridi, kapanış turu).** İlk notumda
+*"depo tarafındakileri ben kaldırıyorum"* demiştim ve altı yer kalmıştı; altısı da gitti:
+`courier-return` · `adjustment` · `transfer` · `preparation` ekranlarının `ctaReady`si, kitin
+`amount-keypad` ve `date-sheet` onay düğmeleri. Depo alanında `shadow.hard`/`hard-on-ink`
+**sıfır kullanım**.
+
+`shadow['hard-on-ink']` token'ının kalan tüketicileri **sizde**: `screens/sale/*` (üç dosya) ve
+`screens/management/supply-suggestion-screen.tsx`. Token `@deprecated` ve `BEKLEYEN(21.161)`
+son tüketici gidince silinecek — o dosyalara dokunmadım, sıra sizin.
+
+`KAPANDI — glow · grow · sticky-bar künyesi düzeltildi; badge bilinçle açılmadı; depo gölgeleri sıfırlandı`
 
 ---
 

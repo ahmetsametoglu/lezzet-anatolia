@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors.ink,
-    boxShadow: operationsTheme.shadow['hard-on-ink'],
+    // Gölge YOK: v3'te sert gölge sıfır kez geçiyor (ölçüldü — v2'de 3, v3'te 0).
   },
   confirmLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
