@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 12/14 |
+| 2 | Depo bölümü (01–13, 19) | ✅ 14/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -452,6 +452,42 @@ yeşil.
 
 ---
 
+## 30.08 gece — Faz 2 · Ekran 13: Kurye dönüşü ✅
+
+**Ne değişti.** Üç akıbetin (stoğa dön · imha · jest) **bedeli düğmelerin altında, her zaman**
+yazılı. Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve **"İmha: parti düşer" hiç
+yazmıyordu** — depocu partinin düşeceğini öğrenmeden imhayı seçebiliyordu. Bu üç düğme geri
+alınamayan bir kaydı hazırlıyor; bedeli önce okunmalı (12. ekranın "kural karardan önce"
+ilkesinin aynısı).
+
+Çevrimdışı kilidinin gerekçesi de akıbetin kendisinden geliyor: dönen mal stoğa **girer** ya da
+**imha olur**, ikisi de bir stok hareketidir ve bağlantı ister — genel "kayıt kilitli" cümlesi
+bunu söylemiyordu.
+
+**Doğrulama.** Dönüş jest **9/9** (biri yeni) · mobil paket **965/965** · statik kapılar yeşil ·
+**cihazda gözle doğrulandı**.
+
+---
+
+## 30.08 gece — Faz 2 · Ekran 19: Kargo devri ✅ · **DEPO BÖLÜMÜ TAMAM**
+
+**Ne değişti.** Ekranın kuralı — *"hangi siparişi vereceğini seçmiyorsun; eldeki kutuyu okut,
+hangi gönderi olduğunu sistem çözer"* — artık düğmenin altında **her zaman** duruyor. Eskiden
+yalnız geçmiş boşken görünüyordu: ilk okutmadan sonra kaybolan bir kural, ikinci kutuda
+unutulur. Bu cümle ekranın tasarım kararıdır (liste değil **okutucu**), süs değil.
+
+**"OKUTMA GEÇMİŞİ" başlığı** ve boş hâl artık bir **blok**: *"Bugün kutu verilmedi — ilk kutuyu
+okuttuğunda geçmiş burada birikir."* Tek satırlık gri bir ipucu, listenin başlığıyla karışıyordu.
+
+**Çevrimdışı sebebi bu ekranda en keskin:** kutu devri **anında** yazılır, kuyruğa alınamaz —
+taşıyıcıya fiziksel olarak verilmiş bir kutunun sistemde "sırada" beklemesi, malın kimde olduğunu
+belirsiz bırakır.
+
+**Doğrulama.** Devir jest **8/8** (biri yeni) · mobil paket **966/966** · statik kapılar yeşil ·
+**cihazda gözle doğrulandı**.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -462,6 +498,7 @@ Burada durulmaz — yazılır, geçilir.
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
 | 2 | 01 Depo Hub · 10 Kapsam | **DARALDI (30.08).** Ekranın içeriği artık şablonunkiyle birebir (gerekçe, çıkış yolları, karar dipnotu). Kalan tek fark yerleşim: şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
+| 11 | 13 Kurye dönüşü | Şablon "Stoğa dön" seçilince **hazır sebep çipleri** gösteriyor (`ch.donusSebep`, dört adet) — ama çiplerin metinlerini vermiyor (yer tutucu döngü). Dört sebebi uydurmak, alan sözlüğünü icat etmek olurdu. | Açık — serbest metin alanı korundu (yer tutucusu kanonik gerekçeyi yazıyor). Çözümü: çiplerin metinlerinin tasarımda adlandırılması. |
 | 10 | 11 Transfer | Şablon ÜÇ bölüm gösteriyor: **GELEN · YOLDA · SON KAPANANLAR**, ve satırlarda depo ADLARI ("Paris Depo → Strasbourg Merkez"). Uç yalnız GELEN transferleri döndürüyor; çıkan ve kapanan listesi yok, `InboundTransferSchema` da yalnız `fromWarehouseId` (uuid) taşıyor, ad yok — uyuşmazlık #1'in aynı ailesi. | Açık — yalnız GELEN yazıldı, boşluk metni bunu açıkça söylüyor. Çözümü: çıkan + kapanan uçları ve yanıtlara depo adı. |
 | 9 | 09 Yazıcılar | Şablon seçili yazıcının **bağlantı durumunu** ("bağlı · Wi-Fi") ve bir **"test bas"** eylemini gösteriyor. Yazıcı sözleşmesi yalnız `id · name · purpose · address · model · labelSize` taşıyor — durum alanı yok; test basımı da örnek bir etiket yükü gerektirir (basım hattı gerçek etiket PNG'siyle çalışıyor). | Açık — ikisi de yazılmadı. Çözümü: yazıcı yanıtına erişilebilirlik durumu + sunucuda bir örnek etiket ucu. |
 | 8 | 08 Sayım/düzeltme | Şablon boş hâlde İKİ çıkış yolu veriyor: "Yakın-SKT turuna git" ve **"Parti etiketini okut"**. İkincisi yazılamadı — parti etiketini çözen bir uç YOK; `codes/resolve` barkod/SKU/tedarikçi kodunu **varyanta** çeviriyor, partiye değil. | Açık — yalnız birinci yol yazıldı. Çözümü tek alan: parti kodunu (P-0698) çözen bir uç. |

@@ -501,7 +501,6 @@
       "goodwill": "Jest"
     },
     "restockNote": "\"Stoğa dön\"de sebep notu zorunlu: soğuk zincir kesintisiz — ambalaj sağlam",
-    "goodwillNote": "Jest: mal ve stok değişmez — yalnız kayıt düşülür.",
     "noteField": "{name} için sebep notu",
     "notePlaceholder": "soğuk zincir kesintisiz — ambalaj sağlam",
     "unreachedHeading": "ULAŞILAMAYANLAR — ARAÇTA KALIR, KABUL EDİLMEZ",
@@ -521,11 +520,19 @@
       "provider_ref_missing": "İade borcu YAZILAMADI: ödeme referansı yok.",
       "provider_unavailable": "İade borcu YAZILAMADI: ödeme sağlayıcısı bağlı değil.",
       "provider_failed": "İade borcu YAZILAMADI: sağlayıcı reddetti."
+    },
+    "dispositionHint": {
+      "rules": "Stoğa dön: sebep notu zorunlu · İmha: parti düşer",
+      "goodwill": "Jest: mal müşteride kaldı — stok ve mal değişmez, yalnız kayıt düşülür."
+    },
+    "locked": {
+      "title": "Döküm kaydı kapalı",
+      "body": "Dönen mal stoğa girer ya da imha olur; ikisi de bağlantı ister."
     }
   },
   "handover": {
     "title": "Kargo devri",
-    "subtitle": "kutuları taşıyıcıya ver",
+    "subtitle": "taşıyıcı rampada · kutuyu okut",
     "cta": "📷 Kutuyu okut",
     "busy": "Okutuluyor…",
     "pending": "Rampada {n} kutu taşıyıcıyı bekliyor.",
@@ -542,7 +549,17 @@
     "notSealed": "Kutu {n} mühürlü değil — açık kutu taşıyıcıya verilemez.",
     "notAnnounced": "Kutu {n} için etiket alınmamış — önce hazırlık ekranından kargoya ver.",
     "unknownCode": "{code} tanınmıyor — taşıyıcı etiketinin barkodunu okutun.",
-    "footnote": "Sayım GÖNDERİYİ sayar: son kutu okutulunca sipariş kendiliğinden yola çıkar."
+    "footnote": "Sayım GÖNDERİYİ sayar: son kutu okutulunca sipariş kendiliğinden yola çıkar.",
+    "scanRule": "Hangi siparişi vereceğini seçmiyorsun — eldeki kutuyu okut, hangi gönderi olduğunu sistem çözer.",
+    "logHeading": "OKUTMA GEÇMİŞİ",
+    "empty": {
+      "title": "Bugün kutu verilmedi",
+      "body": "İlk kutuyu okuttuğunda geçmiş burada birikir. Kaç kutu verildiği bu listeden okunur."
+    },
+    "locked": {
+      "title": "Okutucu kapalı",
+      "body": "Kutu devri ANINDA yazılır, kuyruğa alınmaz — taşıyıcıya verilen kutunun sistemde beklemesi kabul edilemez."
+    }
   },
   "printers": {
     "title": "Bu cihaz · Yazıcılar",

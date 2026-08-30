@@ -68,6 +68,22 @@ async function okut(label: string) {
 }
 
 describe('kargo devri', () => {
+  /*
+    EKRANIN KURALI DÜĞMENİN ALTINDA, HER ZAMAN (v3:1686). "Hangi siparişi vereceğini seçmiyorsun"
+    bu ekranın tasarım kararıdır — ekran bir LİSTE değil bir OKUTUCUDUR. Eskiden bu cümle yalnız
+    geçmiş boşken görünüyordu; ilk okutmadan sonra kaybolan bir kural, ikinci kutuda unutulur.
+
+    Boş geçmiş de artık bir BLOK: "Bugün kutu verilmedi" + kaç kutu verildiğinin bu listeden
+    okunduğu. Tek satırlık gri bir ipucu, listenin başlığı ile karışıyordu.
+  */
+  it('ekranın kuralı ve OKUTMA GEÇMİŞİ başlığı boşken de durur', async () => {
+    await render(<HandoverScreen />);
+
+    expect(screen.getByTestId('warehouse-handover-list')).toHaveTextContent(/Hangi siparişi vereceğini seçmiyorsun/);
+    expect(screen.getByTestId('warehouse-handover-list')).toHaveTextContent(/OKUTMA GEÇMİŞİ/);
+    expect(screen.getByTestId('warehouse-handover-empty')).toHaveTextContent(/Bugün kutu verilmedi/);
+  });
+
   it('okutulan kutu sunucuya gider ve SAYAÇ cümlesi yazılır', async () => {
     net.handover = { status: 'ok', boxNo: 2, referenceNo: 'LZA-26-3M8C', handedBoxes: 2, boxCount: 3, shipmentHandedOver: false };
     await render(<HandoverScreen />);

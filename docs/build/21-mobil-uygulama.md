@@ -7397,3 +7397,48 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama.** Transfer jest **10/10** (ikisi yeni: sıfır kısayolu ve kaybolması, kuralın
   yeri) · mobil paket **964/964**; typecheck · lint · knip yeşil.
+
+- [x] (21.148) **KURYE DÖNÜŞÜ v3 — akıbetin bedeli seçimden önce** (v3:1216-1291)
+  `touches:` `apps/mobile/src/screens/warehouse/{courier-return-screen.tsx,messages.json,courier-return-screen.test.tsx}`
+
+  **Durum (30.08).** Üç akıbetin (stoğa dön · imha · jest) bedeli düğmelerin ALTINDA, HER ZAMAN
+  yazılı. Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve **"İmha: parti düşer" HİÇ
+  yazmıyordu** — depocu partinin düşeceğini öğrenmeden imhayı seçebiliyordu. Üç düğme geri
+  alınamayan bir kaydı hazırlıyor; bedeli önce okunmalı. 21.147'nin "kural karardan önce"
+  ilkesinin aynısı.
+
+  Çevrimdışı kilidinin gerekçesi akıbetin kendisinden geliyor: dönen mal stoğa GİRER ya da İMHA
+  olur, ikisi de bir stok hareketidir ve bağlantı ister — genel "kayıt kilitli" bunu söylemiyordu.
+
+  **Bir öğe yazılamadı, uyuşmazlık defterine geçti:** şablon "Stoğa dön" seçilince dört adet HAZIR
+  SEBEP ÇİPİ gösteriyor ama çiplerin metinlerini vermiyor (yer tutucu döngü). Dört sebebi
+  uydurmak, alan sözlüğünü icat etmek olurdu; serbest metin alanı korundu (yer tutucusu kanonik
+  gerekçeyi yazıyor).
+
+  **Doğrulama.** Dönüş jest **9/9** (biri yeni) · mobil paket **965/965**; typecheck · lint · knip
+  yeşil; **cihazda gözle doğrulandı**.
+
+- [x] (21.149) **KARGO DEVRİ v3 — kural kalıcı, geçmiş başlıklı** (v3:1673-1750)
+  `touches:` `apps/mobile/src/screens/warehouse/{handover-screen.tsx,messages.json,handover-screen.test.tsx}`
+
+  **Durum (30.08).** Ekranın kuralı — "hangi siparişi vereceğini seçmiyorsun; eldeki kutuyu okut,
+  hangi gönderi olduğunu sistem çözer" — artık düğmenin ALTINDA HER ZAMAN duruyor. Eskiden yalnız
+  geçmiş boşken görünüyordu: ilk okutmadan sonra kaybolan bir kural, ikinci kutuda unutulur. Bu
+  cümle ekranın TASARIM KARARIDIR (liste değil OKUTUCU — 21.134'ün "sayı seçim davet etmiyor"
+  gerekçesiyle aynı aile), süs değil.
+
+  **"OKUTMA GEÇMİŞİ" başlığı** geldi ve boş hâl bir BLOK oldu: "Bugün kutu verilmedi — ilk kutuyu
+  okuttuğunda geçmiş burada birikir. Kaç kutu verildiği bu listeden okunur." Tek satırlık gri bir
+  ipucu, listenin başlığıyla karışıyordu.
+
+  **Çevrimdışı sebebi bu ekranda EN KESKİN**: kutu devri ANINDA yazılır ve kuyruğa alınamaz —
+  taşıyıcıya fiziksel olarak verilmiş bir kutunun sistemde "sırada" beklemesi, malın kimde
+  olduğunu belirsiz bırakır. Genel "yazma kapalı" cümlesi bunu söylemiyordu.
+
+  **Doğrulama.** Devir jest **8/8** (biri yeni) · mobil paket **966/966**; typecheck · lint · knip
+  · boundaries yeşil; **cihazda gözle doğrulandı**.
+
+  **DEPO BÖLÜMÜ TAMAM (14/14).** Ekranlar: 01 hub · 02 toplama kuyruğu · 03 toplama detay ·
+  04 mal kabul · 05 kabul formu · 06 siparişsiz kabul · 07 yakın-SKT · 08 sayım/düzeltme ·
+  09 yazıcılar · 10 kapsam belirsiz · 11 transfer · 12 transfer kabulü · 13 kurye dönüşü ·
+  19 kargo devri.

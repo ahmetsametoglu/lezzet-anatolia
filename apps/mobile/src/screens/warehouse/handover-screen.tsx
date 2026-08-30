@@ -8,6 +8,7 @@ import { ScanSheet } from '@/components/scan/scan-sheet';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fetchPendingHandover, handOverBox } from '@/lib/api/warehouse';
 import { fillCopy } from '@/screens/operations/copy';
+import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
@@ -148,24 +149,40 @@ export function HandoverScreen() {
         </Text>
 
         {offline ? (
-          <Text style={[styles.notice, styles.notice_error]} accessibilityRole="alert">
-            {t.common.offlineHint}
-          </Text>
+          /* ÇEVRİMDIŞI SEBEBİ BU EKRANDA EN KESKİN (v3:1692): kutu devri ANINDA yazılır ve
+             kuyruğa alınamaz — taşıyıcıya fiziksel olarak verilmiş bir kutunun sistemde "sırada"
+             beklemesi, malın kimde olduğunu belirsiz bırakır. Genel "yazma kapalı" cümlesi bunu
+             söylemiyordu. */
+          <View style={styles.locked} testID="warehouse-handover-locked">
+            <Text style={styles.lockedTitle}>{t.handover.locked.title}</Text>
+            <Text style={styles.lockedBody}>{t.handover.locked.body}</Text>
+          </View>
         ) : (
-          <PressableSurface
-            onPress={() => setScanOpen(true)}
-            feedback="scale"
-            disabled={busy}
-            style={styles.scanButton}
-            accessibilityLabel={t.handover.cta}
-            testID="warehouse-handover-scan"
-          >
-            <Text style={styles.scanLabel}>{busy ? t.handover.busy : t.handover.cta}</Text>
-          </PressableSurface>
+          <>
+            <PressableSurface
+              onPress={() => setScanOpen(true)}
+              feedback="scale"
+              disabled={busy}
+              style={styles.scanButton}
+              accessibilityLabel={t.handover.cta}
+              testID="warehouse-handover-scan"
+            >
+              <Text style={styles.scanLabel}>{busy ? t.handover.busy : t.handover.cta}</Text>
+            </PressableSurface>
+            {/* EKRANIN KURALI DÜĞMENİN ALTINDA (v3:1686) — "hangi siparişi vereceğini seçmiyorsun"
+                bu ekranın tasarım kararıdır (liste değil OKUTUCU). Eskiden yalnız geçmiş boşken
+                görünüyordu; ilk okutmadan sonra kaybolan bir kural, ikinci kutuda unutulur. */}
+            <Text style={styles.scanRule}>{t.handover.scanRule}</Text>
+          </>
         )}
 
+        <Text style={styles.logHeading}>{t.handover.logHeading}</Text>
+
         {rows.length === 0 ? (
-          <Text style={styles.hint}>{t.handover.hint}</Text>
+          <View style={styles.emptyBlock} testID="warehouse-handover-empty">
+            <Text style={styles.emptyTitle}>{t.handover.empty.title}</Text>
+            <Text style={styles.emptyBody}>{t.handover.empty.body}</Text>
+          </View>
         ) : (
           rows.map((row) => (
             <Text key={row.key} style={[styles.notice, styles[`notice_${row.tone}`]]} testID={`warehouse-handover-row-${row.key}`}>
@@ -216,10 +233,57 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.ink,
     marginTop: operationsTheme.space.lg,
   },
-  hint: {
+  /** Ekranın kuralı — düğmenin altında, HER ZAMAN (ilk okutmadan sonra da). */
+  scanRule: {
     fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text['body-sm'],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
+  },
+  logHeading: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space.lg,
+  },
+  emptyBlock: {
+    borderWidth: operationsTheme.border.base,
+    borderStyle: 'dashed',
+    borderColor: operationsTheme.colors['sand-500'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    gap: operationsTheme.space['2xs'],
+  },
+  emptyTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  emptyBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
+  locked: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+  },
+  lockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  lockedBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
   },
   notice: {
     fontFamily: operationsTheme.font.body[400],

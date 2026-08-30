@@ -78,6 +78,22 @@ describe('D6 · hedef değer kuralı', () => {
 });
 
 describe('D6 · kurye dönüşü kabulü', () => {
+  /*
+    SONUÇLAR SEÇİMDEN ÖNCE (v3:1244) — üç akıbetin bedeli düğmelerin altında, HER ZAMAN yazılı.
+    Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve "İmha: parti düşer" HİÇ yazmıyordu: depocu
+    partinin düşeceğini öğrenmeden imhayı seçebiliyordu. Üç düğme geri alınamayan bir kaydı
+    hazırlıyor; bedeli önce okunmalı.
+  */
+  it('üç akıbetin bedeli SEÇİMDEN ÖNCE yazılı — imhanın partiyi düşürdüğü dahil', async () => {
+    await render(<CourierReturnScreen />);
+
+    const line = COURIER_RETURN_FIXTURE.lines[0]!;
+    const hint = screen.getByTestId(`warehouse-return-hint-${line.orderItemId}`);
+    expect(hint).toHaveTextContent(/Stoğa dön: sebep notu zorunlu/);
+    expect(hint).toHaveTextContent(/İmha: parti düşer/);
+    expect(hint).toHaveTextContent(/Jest: mal müşteride kaldı/);
+  });
+
   it('akıbet işaretlenmeden CTA kapalıdır', async () => {
     withResult();
 

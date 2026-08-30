@@ -89,6 +89,17 @@ export function CourierReturnScreen() {
                 ))}
               </View>
 
+              {/*
+                SONUÇLAR SEÇİMDEN ÖNCE (v3:1244) — üç akıbetin bedeli düğmelerin ALTINDA, her
+                zaman yazılı. Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve "İmha: parti
+                düşer" hiç yazmıyordu: depocu partinin düşeceğini öğrenmeden imhayı seçebiliyordu.
+                Bu üç düğme geri alınamayan bir kaydı hazırlıyor; bedeli önce okunmalı.
+              */}
+              <View style={styles.hintBlock} testID={`warehouse-return-hint-${line.orderItemId}`}>
+                <Text style={styles.rowSub}>{t.return.dispositionHint.rules}</Text>
+                <Text style={styles.rowSub}>{t.return.dispositionHint.goodwill}</Text>
+              </View>
+
               {disposition === 'restock' ? (
                 <View style={styles.noteBlock} testID={`warehouse-return-note-block-${line.orderItemId}`}>
                   <Text style={styles.noteHint}>{t.return.restockNote}</Text>
@@ -104,7 +115,6 @@ export function CourierReturnScreen() {
                 </View>
               ) : null}
 
-              {disposition === 'goodwill' ? <Text style={styles.rowSub}>{t.return.goodwillNote}</Text> : null}
             </View>
           );
         })}
@@ -120,6 +130,15 @@ export function CourierReturnScreen() {
       </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+        {/* ÇEVRİMDIŞI SEBEBİ (v3:1284) — kilidin gerekçesi akıbetin kendisinde: dönen mal stoğa
+            GİRER ya da İMHA olur, ikisi de bir stok hareketidir ve bağlantı ister. Genel "kayıt
+            kilitli" cümlesi bunu söylemiyordu. */}
+        {!offline ? null : (
+          <View style={styles.locked} testID="warehouse-return-locked">
+            <Text style={styles.lockedTitle}>{t.return.locked.title}</Text>
+            <Text style={styles.lockedBody}>{t.return.locked.body}</Text>
+          </View>
+        )}
         {returnState.notice === null ? null : (
           <Text
             style={[styles.notice, styles[`notice_${returnState.notice.tone}`]]}
@@ -183,8 +202,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: operationsTheme.space.md,
   },
+  /** Üç akıbetin bedeli — düğmelerin altında, HER ZAMAN görünür (seçimden önce okunmalı). */
+  hintBlock: {
+    gap: operationsTheme.space['2xs'],
+  },
   noteBlock: {
     gap: operationsTheme.space.sm,
+  },
+  locked: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+    marginBottom: operationsTheme.space.lg,
+  },
+  lockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  lockedBody: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
   },
   noteHint: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
