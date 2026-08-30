@@ -272,17 +272,26 @@
     "title": "Mal Kabul",
     "loading": "Kabul formu yükleniyor…",
     "captionPlanned": "tedarik siparişi · gönderildi",
+    "formSummary": "tedarik siparişi · {n} kalem · {done} tamam",
+    "formLocked": {
+      "title": "Kabul kapalı",
+      "body": "Mal kabul bağlantı ister — çevrimdışı sayılan adet iki deponun stokunu bozabilir. Satırları okuyabilirsin, yazamazsın."
+    },
     "captionPending": "bekleyen sevkiyatlar",
     "error": {
-      "title": "Kabul formu yüklenemedi",
-      "body": "Bağlantı ya da sunucu sorunu — hiçbir satır yazılmadı."
+      "title": "Sevkiyatlar yüklenemedi",
+      "body": "Beklenen adetleri göremeden kabule başlamak sayımı bozar — hiçbir satır yazılmadı. Bağlantı gelince liste kendiliğinden dolar."
     },
     "noPending": {
       "title": "Bekleyen sevkiyat yok",
-      "body": "Gönderilmiş ya da yarım kabul edilmiş bir tedarik siparişi olduğunda bu liste kendiliğinden dolar."
+      "body": "Yönetim tedarik siparişi gönderdiğinde burada görünür ve bildirim gelir. Siparişsiz mal geldiyse plansız kabulü kullan."
     },
     "pendingHeading": "BEKLEYEN SEVKİYATLAR",
     "pendingLines": "{n} kalem",
+    "pendingSummary": "{n} bekleyen sevkiyat · {lines} kalem",
+    "pendingSummaryOne": "1 bekleyen sevkiyat · {lines} kalem",
+    "unplannedRow": "plansız kabul · beklenen adet yok",
+    "pendingFootnote": "Parçalı kabul mümkün; sevkiyat kapanmadan kalanı ikinci turda yazarsınız.",
     "captionUnplanned": "plansız kabul · siparişsiz mal",
     "unplannedCta": "Siparişsiz mal geldi",
     "unplannedEmpty": {
@@ -299,6 +308,7 @@
       "body": "Sipariş ya kapanmış ya da satırları başka bir kabulde yazılmış."
     },
     "expected": "beklenen {qty}",
+    "expectedDone": "bu kalem tamamlandı — beklenen kalmadı",
     "qtyLabel": "{name} için gelen adet",
     "expiry": {
       "missing": "SKT gir *",

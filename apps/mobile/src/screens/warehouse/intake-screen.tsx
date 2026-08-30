@@ -13,6 +13,7 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
+import { Icon } from '@/components/ui/icon';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
@@ -44,6 +45,32 @@ import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
 
 const t = warehouseCopy;
 
+/**
+ * Bekleyen listesinin künyesi (v3:517) — kaç sevkiyat, toplam kaç kalem.
+ *
+ * `lineCount` "kaç KALEM ısmarlandı"dır, kaç adet değil (sözleşme künyesi): depocu kaç satır
+ * sayacağını bilir, kaç kutu taşıyacağını değil. Toplamı burada kuruyoruz çünkü uç yalnız satır
+ * başına sayı veriyor — ikinci bir "özet" ucu, iki kez okunan aynı gerçeği bir kez daha okumak
+ * olurdu (hub'ın aynı kuralı).
+ */
+function pendingSummary(pending: readonly { lineCount: number }[]): string {
+  const lines = String(pending.reduce((sum, row) => sum + row.lineCount, 0));
+  return pending.length === 1
+    ? fillCopy(t.intake.pendingSummaryOne, { lines })
+    : fillCopy(t.intake.pendingSummary, { n: String(pending.length), lines });
+}
+
+/**
+ * Satır TAMAM mı — adet girilmiş VE SKT çözülmüş.
+ *
+ * Kural `use-intake.hook`un `complete` hesabının satır başına hâlidir ve oradan kopyalanmadı,
+ * aynı iki koşulu okur: adet `null` değil ve sıfırdan büyük, tarih ayrıştırılabiliyor. İkisi
+ * ayrışırsa künye "3 tamam" derken CTA "her satırda adet + SKT zorunlu" demeye devam ederdi.
+ */
+function isRowDone(state: { qty: number | null; expiryText: string }): boolean {
+  return state.qty !== null && state.qty > 0 && parseDate(state.expiryText) !== null;
+}
+
 export function IntakeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ purchaseOrderId?: string; unplanned?: string }>();
@@ -58,8 +85,26 @@ export function IntakeScreen() {
   const header = (
     <OperationsStackHeader
       title={t.intake.title}
+      /* Bekleyen listesinde künye LİSTEYİ anlatır (v3:517 `ov.maKabulAlt`), kategoriyi değil:
+         "bekleyen sevkiyatlar" bir başlık tekrarıydı; "2 bekleyen sevkiyat · 11 kalem" depocunun
+         işe başlamadan önce sorduğu şeyin cevabı. Liste okunamadıysa sayı da yok — künye
+         kategoriye düşer, uydurulmaz. */
       subtitle={
-        unplanned ? t.intake.captionUnplanned : purchaseOrderId === null ? t.intake.captionPending : t.intake.captionPlanned
+        unplanned
+          ? t.intake.captionUnplanned
+          : purchaseOrderId === null
+            ? (intake.status === 'ready' ? pendingSummary(intake.pending) : t.intake.captionPending)
+            : /* FORMDA künye İLERLEMEYİ söyler (v3:598 `maDetayAlt`): "tedarik siparişi · 5 kalem ·
+                 1 tamam". "gönderildi" bir kategoriydi ve depocu zaten oraya gönderildiği için
+                 girmişti; kaçının bittiği ise her satırdan sonra değişen tek sayı. Satır henüz
+                 yüklenmediyse kategoriye düşer — sıfır yazmak "hiçbiri bitmedi" der ve o an
+                 doğru değildir. */
+              intake.rows.length === 0
+              ? t.intake.captionPlanned
+              : fillCopy(t.intake.formSummary, {
+                  n: String(intake.rows.length),
+                  done: String(intake.rows.filter((row) => isRowDone(intake.stateOf(row.variantId))).length),
+                })
       }
       onBack={() => router.back()}
       backLabel={t.common.back}
@@ -94,21 +139,25 @@ export function IntakeScreen() {
               description={t.intake.noPending.body}
               testID="warehouse-intake-no-subject"
             />
-          </View>
-        ) : (
-          <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-pending">
-            {/* PLANSIZ KABULÜN KAPISI (23.13) — listenin ÜSTÜNDE değil altında olurdu ama kabul
-                bekleyen sevkiyat sayısı değişken; sabit yer sabit alışkanlık demek. Siparişi
-                girilmemiş mal da bir kabuldür ve tek dokunuşluk uzakta olmalı. */}
+            {/* Boş hâlde plansız kabul TEK yoldur (v3:551): bekleyen sevkiyat yokken gelen mal
+                ancak buradan yazılır. Listeli hâlde satırın sonuna iner — orada bir istisna,
+                burada tek çıkış. */}
             <PressableSurface
               onPress={() => router.push('/intake?unplanned=1')}
               feedback="shadow"
-              style={styles.scanCta}
+              style={styles.unplannedRow}
               accessibilityLabel={t.intake.unplannedCta}
-              testID="warehouse-intake-unplanned-cta"
+              testID="warehouse-intake-unplanned-empty-cta"
             >
-              <Text style={styles.scanCtaLabel}>{t.intake.unplannedCta}</Text>
+              <Text style={styles.unplannedPlus}>＋</Text>
+              <View style={styles.pendingNames}>
+                <Text style={styles.pendingRef}>{t.intake.unplannedCta}</Text>
+                <Text style={styles.pendingMeta}>{t.intake.unplannedRow}</Text>
+              </View>
             </PressableSurface>
+          </View>
+        ) : (
+          <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-pending">
             <Text style={styles.heading}>{t.intake.pendingHeading}</Text>
             {intake.pending.map((row) => (
               <PressableSurface
@@ -119,6 +168,7 @@ export function IntakeScreen() {
                 accessibilityLabel={row.referenceNo ?? row.supplierName ?? t.intake.title}
                 testID={`warehouse-intake-pending-${row.purchaseOrderId}`}
               >
+                <Icon name="intake" size={operationsTheme.size.rowIcon} color={operationsTheme.colors.olive} />
                 <View style={styles.pendingNames}>
                   <Text style={styles.pendingRef}>{row.referenceNo ?? '—'}</Text>
                   <Text style={styles.pendingMeta}>{row.supplierName ?? '—'}</Text>
@@ -126,6 +176,27 @@ export function IntakeScreen() {
                 <Text style={styles.pendingMeta}>{fillCopy(t.intake.pendingLines, { n: String(row.lineCount) })}</Text>
               </PressableSurface>
             ))}
+
+            {/* PLANSIZ KABUL LİSTENİN SONUNDA (v3:574). 23.13'te listenin ÜSTÜNDEYDİ ve gerekçesi
+                "bekleyen sevkiyat sayısı değişken, sabit yer sabit alışkanlık" idi. v3 onu listenin
+                sonuna, kendi satırı olarak koyuyor ve gerekçe değişiyor: plansız kabul ISTISNADIR
+                — beklenen adet yoktur, sayım onunla doğrulanamaz. Kuyruğun üstünde durması onu
+                normal yol gibi gösteriyordu. Boş hâlde ise TEK yol olduğu için orada kalıyor. */}
+            <PressableSurface
+              onPress={() => router.push('/intake?unplanned=1')}
+              feedback="shadow"
+              style={styles.unplannedRow}
+              accessibilityLabel={t.intake.unplannedCta}
+              testID="warehouse-intake-unplanned-cta"
+            >
+              <Text style={styles.unplannedPlus}>＋</Text>
+              <View style={styles.pendingNames}>
+                <Text style={styles.pendingRef}>{t.intake.unplannedCta}</Text>
+                <Text style={styles.pendingMeta}>{t.intake.unplannedRow}</Text>
+              </View>
+            </PressableSurface>
+
+            <Text style={styles.pendingFootnote}>{t.intake.pendingFootnote}</Text>
           </FormScroll>
         )}
       </View>
@@ -261,7 +332,16 @@ export function IntakeScreen() {
         {/* Tarama (Modül 23 · 23.4): barkodun buradaki TEK işi satırı bulmak — koli kodunda adet
             çarpan kadar önerilir, depocu düzeltebilir. Çevrimdışıyken çizilmez: çözüm sunucuda ve
             "sonra dene" diyecek bir kuyruğu yok. */}
-        {offline ? null : (
+        {offline ? (
+          /* ÇEVRİMDIŞI: SEBEP YAZILIR, DÜĞME GİZLENMEZ (v3:610). Eskiden okutma düğmesi sessizce
+             çizilmiyordu ve depocu "düğme nerede" diye arıyordu; kilit bir yokluk değil, bir
+             cevaptır. Metin neden yazılamayacağını da söylüyor: çevrimdışı sayılan adet iki
+             deponun stokunu bozar. Okumak serbest — satırlar duruyor. */
+          <View style={styles.formLocked} testID="warehouse-intake-locked">
+            <Text style={styles.formLockedTitle}>{t.intake.formLocked.title}</Text>
+            <Text style={styles.formLockedBody}>{t.intake.formLocked.body}</Text>
+          </View>
+        ) : (
           <PressableSurface
             onPress={intake.openScan}
             feedback="shadow"
@@ -291,6 +371,7 @@ export function IntakeScreen() {
             key={row.variantId}
             row={row}
             state={intake.stateOf(row.variantId)}
+            unplanned={unplanned}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
           />
         ))}
@@ -643,10 +724,12 @@ function qtyCaption(scanned: ScannedCode): string | undefined {
 interface IntakeRowProps {
   row: IntakeFormRowContract;
   state: IntakeRowState;
+  /** Plansız kabulde beklenen YOKTUR; planlıda sıfır kalan "karşılandı" demektir (aşağıdaki künye). */
+  unplanned: boolean;
   onPatch: (patch: Partial<IntakeRowState>) => void;
 }
 
-function IntakeRow({ row, state, onPatch }: IntakeRowProps) {
+function IntakeRow({ row, state, unplanned, onPatch }: IntakeRowProps) {
   const name = productLabel(row.productName, row.variantLabel);
   const expiry = parseDate(state.expiryText);
   const damaged = state.damageNote.length > 0;
@@ -656,11 +739,23 @@ function IntakeRow({ row, state, onPatch }: IntakeRowProps) {
       <View style={styles.lineHead}>
         <View style={styles.rowBody}>
           <Text style={styles.rowTitle}>{name}</Text>
-          {/* Plansızda BEKLENEN YOKTUR (23.13) — kıyaslanacak sipariş yok. "beklenen 0" yazmak,
-              olmayan bir beklentiyi sıfır diye göstermek olurdu (CLAUDE §1: ölçülemeyen değer
-              sıfır değildir); satır bunun yerine hiç künye taşımaz. */}
-          {row.expectedQty === 0 ? null : (
+          {/*
+            SIFIR BEKLENEN İKİ AYRI ŞEY DEMEK (ölçüldü 30.08, yerel veritabanından):
+            `expectedQty` KALANDIR (`purchase_order_progress.missing_qty`), ısmarlanan değil.
+            Beş kalemlik bir siparişte dördü tamamen alınmıştı ve dördü de künyesiz çizilmişti —
+            plansız kabuldeki "beklenti yok" hâliyle birebir aynı görünüyordu.
+
+            · PLANSIZDA (23.13) kıyaslanacak sipariş YOKTUR: satır künye taşımaz. "beklenen 0"
+              yazmak olmayan bir beklentiyi sıfır diye göstermek olurdu (CLAUDE §1).
+            · PLANLI siparişte sıfır kalan "beklenti KARŞILANDI" demektir ve bu bir bilgidir —
+              depocu ikinci turda o kaleme dokunmayacağını bilmeli. Sessizlik ikisini eşitliyordu.
+          */}
+          {row.expectedQty > 0 ? (
             <Text style={styles.rowSub}>{fillCopy(t.intake.expected, { qty: String(row.expectedQty) })}</Text>
+          ) : unplanned ? null : (
+            <Text style={styles.rowDone} testID={`warehouse-intake-done-${row.variantId}`}>
+              {t.intake.expectedDone}
+            </Text>
           )}
         </View>
         <OperationsQtyField
@@ -952,8 +1047,60 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.card,
   },
   pendingNames: {
-    flexShrink: 1,
+    /* `flex: 1`, `flexShrink` DEĞİL: satıra ikon girdi ve künye kalan boşluğu ALMALI — yalnız
+       shrink ile kısa referanslar sola yapışıp sağdaki kalem sayısıyla arasında boşluk kalırdı. */
+    flex: 1,
     gap: operationsTheme.space['2xs'],
+  },
+  /* Plansız kabul satırı — listenin ISTISNASI olduğu için kesikli çerçeve: bekleyen sevkiyatların
+     düz çerçevesiyle aynı ağırlıkta durursa normal yol gibi okunur. */
+  unplannedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.lg,
+    padding: operationsTheme.space['2xl'],
+    borderWidth: operationsTheme.border.base,
+    borderStyle: 'dashed',
+    borderColor: operationsTheme.colors['sand-500'],
+    borderRadius: operationsTheme.radius.control,
+  },
+  /* Kabul kilidi — okutma düğmesinin YERİNE geçer (v3:610); gizlenen bir düğme sebebi olmayan
+     bir eksiklik gibi görünür. Kuyruğun kilidiyle aynı desen. */
+  formLocked: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    gap: operationsTheme.space['2xs'],
+  },
+  formLockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  formLockedBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
+  },
+  /** "Bu kalem tamamlandı" — sıfır kalanın PLANLI siparişteki anlamı; sessizlik değil, bilgi. */
+  rowDone: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.olive,
+  },
+  unplannedPlus: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['icon-sm'],
+    color: operationsTheme.colors.olive,
+  },
+  pendingFootnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space.md,
   },
   pendingRef: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

@@ -174,7 +174,7 @@ yüzeyler, ayrı içerik.
 | --- | --- | --- |
 | 0 | Tasarımı repoya al, 32 ekrana böl, haritayı çıkar | ✅ |
 | 1 | Maestro e2e altyapısı — kurulum + ilk akış testi | ✅ |
-| 2 | Depo bölümü (01–13, 19) | 🔶 3/14 |
+| 2 | Depo bölümü (01–13, 19) | 🔶 5/14 |
 | 3 | Kurye bölümü (14–18) | — |
 | 4 | Yerinde satış (20–22) | — |
 | 5 | Para (23–24) | — |
@@ -282,6 +282,45 @@ rozetsiz ve "2. KALEM" diye yazıldı, kapanan kutu kartı iki kalemi ve QR'ı g
 
 ---
 
+## 30.08 gece — Faz 2 · Ekran 04: Mal kabul (bekleyen listesi) ✅
+
+**Ne değişti.** Başlık künyesi listeyi anlatıyor ("2 bekleyen sevkiyat · 11 kalem"; okunamadıysa
+sayı uydurulmuyor, kategoriye düşüyor). Satırlara **kutu ikonu** geldi ve künye kalan boşluğu
+alıyor. **Plansız kabul listenin ÜSTÜNDEN SONUNA taşındı** ve kesikli çerçeveli kendi satırı oldu:
+23.13'ün gerekçesi *"sabit yer sabit alışkanlık"*tı, v3'ün gerekçesi daha güçlü — plansız kabul bir
+**istisnadır** (beklenen adet yok, sayım onunla doğrulanamaz) ve kuyruğun üstünde durması onu
+normal yol gibi gösteriyordu. Boş hâlde ise TEK yol olduğu için orada kalıyor. Dipnot ve daha
+eyleme çağıran boş/hata metinleri eklendi.
+
+**Yol boyunca bir test yanlış sebeple geçiyormuş:** `fetchMock.mockImplementation(() =>
+Promise.resolve(fail('server_error')))` — `fail` yerel bir yardımcı değil, Jest'in eski globali.
+Çağrı fırlatıyor, istemci onu ağ hatası sayıyor ve test yine yeşil kalıyordu. Gerçek bir 500
+cevabı döndüren `serverError()` yardımcısıyla değiştirildi.
+
+**Doğrulama.** Mal kabul jest **16/16** (dördü yeni) · mobil paket **949/949** · statik kapılar
+yeşil · **cihazda gözle doğrulandı** (künye 5+6=11 kalem, ikonlar, kesikli plansız satırı, dipnot).
+
+---
+
+## 30.08 gece — Faz 2 · Ekran 05: Mal kabul formu ✅
+
+**Ne değişti.** Form künyesi **ilerlemeyi** söylüyor ("tedarik siparişi · 5 kalem · 0 tamam";
+"tamam" ölçüsü CTA'nınkiyle aynı iki koşul — adet + SKT, ayrışırlarsa künye "1 tamam" derken CTA
+"zorunlu" demeye devam ederdi). Çevrimdışıyken okutma düğmesi **gizlenmiyor**, yerine sebep
+yazılıyor ("Kabul kapalı — çevrimdışı sayılan adet iki deponun stokunu bozabilir").
+
+**Veritabanından bir ayrım çıktı.** Ekranda dört kalem künyesiz duruyordu; `expectedQty`'nin
+ısmarlanan mı kalan mı olduğunu ölçtüm (`purchase_order_progress`): **kalan**. Dördü tamamen
+alınmış (kalan 0), biri 30 kalmış. Yani sıfır beklenen İKİ ayrı şey demek — plansızda "beklenti
+yok", planlıda "beklenti **karşılandı**" — ve ikisi ekranda birebir aynı görünüyordu. Planlı
+siparişte artık "bu kalem tamamlandı — beklenen kalmadı" yazılıyor; plansızda sessizlik korundu.
+
+**Doğrulama.** Mal kabul jest **20/20** (yedisi yeni) · mobil paket **955/955** · statik kapılar
+yeşil · **cihazda gözle doğrulandı**: dört kalem "tamamlandı", biri "beklenen 30" — veritabanıyla
+birebir.
+
+---
+
 ## Uyuşmazlık defteri
 
 Tasarımın mevcut ekranla çeliştiği, kararı kullanıcıya ya da başka bir şeride bakan noktalar.
@@ -292,6 +331,8 @@ Burada durulmaz — yazılır, geçilir.
 | 1 | 01 Depo Hub | Üstbaşlık **"DEPO · STRASBOURG MERKEZ"** diyor; deponun ADI mobile hiç ulaşmıyor. Kurye sözleşmesinde var (`courier-api` → `warehouseName`), depo sözleşmesinde yok; `/me` de `warehouseIds` taşımıyor. Uydurma bir şehir adı depocuya yanlış deponun ekranındaymış gibi güvence verirdi. | Açık — üstbaşlık kuyruksuz yazıldı. Çözümü tek alan: depo uçlarının yanıtına deponun adı. |
 | 2 | 01 Depo Hub | Şablon **kapsam belirsizliğini** hub'ın üstünde ince bir şerit yapıp ALTINDA dolu bir hub çiziyor. Bizde mümkün değil: kapsam çözülmeden uçların hiçbiri veri döndürmüyor (`warehouse_required`). Şeridi çizip altını boş bırakmak "okunamadı"yı "iş yok" diye göstermek olurdu. | Açık — tam ekran blok korundu. Ekran 10 (`kapsam`) geldiğinde blok ona bağlanacak. |
 | 3 | 01 Depo Hub | Şablonun D8 alt metni **"2 kutu verildi"** diyor, kod **bekleyeni** sayıyor ("3 kutu taşıyıcıyı bekliyor"). | Kapandı — bilinçli sapma. Verilen kutu geçmiştir; depocunun sorusu "bitti mi", yani bekleyen kutudur (21.134'ün kararı). |
+| 6 | 05 Mal kabul formu | Şablon satırda **"beklenen 10 · GAZ-7120"** (tedarikçi kodu), **"SKT ZORUNLU · DLC"** etiketi ve **"Kalan ömür %58 — uyarı, engel değil"** yazıyor. Üçü de `IntakeFormRowSchema`'da YOK — satır yalnız `variantId · productName · variantLabel · expectedQty` taşıyor. Kalan ömür ayrıca ürünün raf ömrü gününü gerektirir. | Açık — üçü de yazılmadı. Çözümü tek alan: kabul satırına tedarikçi kodu, "SKT gerektirir mi" bayrağı ve raf ömrü günü. |
+| 5 | 04 Mal kabul | Şablon satırda **"· gönderildi"** (sipariş durumu) ve **"SKT gerekli"** yazıyor; ikisi de `PendingIntakeSchema`'da YOK (`purchaseOrderId · referenceNo · supplierName · lineCount`). Üstelik durum sabit de değil: bekleyen liste hem `sent` hem `partially_received` siparişleri taşıyor, yani "gönderildi" yazmak yarısı için yanlış olurdu. | Açık — ikisi de yazılmadı. Çözümü tek alan: bekleyen listesine `status` ve "SKT gerektiren kalem var mı" bayrağı. |
 | 4 | 02 Toplama kuyruğu | Şablonun beş örnek satırının **sol durum işareti tek kurala uymuyor** (dördüncüsü hiç başlanmamışken terracotta, beşincisi tamamlanmışken gri). Statik maket, işaretler elle boyanmış. | Kapandı — çoğunluğun kuralı alındı ve yazıldı: işaret ile metin AYNI kuralı izler (yarım terracotta · tamam zeytin · başlanmamış gri). |
 
 ---

@@ -39,6 +39,15 @@ function ok(data: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data, error: null }) } as unknown as Response;
 }
 
+/** Sunucu ADLI hata döndürdü — ağ ayakta, cevap olumsuz. */
+function serverError(): Response {
+  return {
+    status: 500,
+    headers: { get: () => null },
+    json: async () => ({ data: null, error: 'server_error' }),
+  } as unknown as Response;
+}
+
 function lastPostBody(): { lines: { variantId: string; qty: number; expiryDate: string; lotNumber: string | null }[]; note: string | null } {
   const call = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
@@ -102,6 +111,70 @@ describe('D2 · mal kabul', () => {
     expect(screen.queryByTestId('warehouse-intake-cta')).toBeNull();
   });
 
+  /*
+    v3 KÜNYESİ LİSTEYİ ANLATIR (v3:517) — "bekleyen sevkiyatlar" bir başlık tekrarıydı; depocunun
+    işe başlamadan sorduğu şey "kaç sevkiyat, toplam kaç kalem". Sayı listeden çıkıyor, ikinci bir
+    özet ucu istemiyor (hub'ın aynı kuralı).
+  */
+  it('başlık künyesi kaç sevkiyat ve toplam kaç kalem olduğunu söyler', async () => {
+    delete mockParams.purchaseOrderId;
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        ok({
+          intakes: [
+            { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'Gaziantep', lineCount: 5 },
+            { purchaseOrderId: '00000000-0000-4000-8000-0000000000c2', referenceNo: 'TS-26-B', supplierName: 'Gaziantep', lineCount: 6 },
+          ],
+        }),
+      ),
+    );
+
+    await renderIntake();
+
+    expect(screen.getByTestId('warehouse-intake-header')).toHaveTextContent(/2 bekleyen sevkiyat · 11 kalem/);
+  });
+
+  it('liste OKUNAMADIYSA künye sayı uydurmaz — kategoriye düşer', async () => {
+    delete mockParams.purchaseOrderId;
+    fetchMock.mockImplementation(() => Promise.resolve(serverError()));
+
+    await renderIntake();
+
+    const header = screen.getByTestId('warehouse-intake-header');
+    expect(header).toHaveTextContent(/bekleyen sevkiyatlar/);
+    expect(header).not.toHaveTextContent(/kalem/);
+  });
+
+  /* PLANSIZ KABUL LİSTENİN SONUNDA (v3:574): beklenen adet yoktur, sayım onunla doğrulanamaz —
+     kuyruğun üstünde durması onu normal yol gibi gösteriyordu. Boş hâlde ise TEK yoldur. */
+  it('plansız kabul listenin SONUNDA durur — bekleyen sevkiyatların üstünde değil', async () => {
+    delete mockParams.purchaseOrderId;
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(
+        ok({ intakes: [{ purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X', lineCount: 2 }] }),
+      ),
+    );
+
+    await renderIntake();
+
+    const list = screen.getByTestId('warehouse-intake-pending');
+    expect(screen.getByTestId('warehouse-intake-unplanned-cta')).toBeOnTheScreen();
+    // Sıra metinden okunuyor: bekleyen sevkiyatın referansı, plansız kabulün etiketinden ÖNCE.
+    expect(list).toHaveTextContent(/TS-26-A[\s\S]*Siparişsiz mal geldi/);
+    // Dipnot listenin sonunda: parçalı kabulün mümkün olduğu burada söyleniyor.
+    expect(list).toHaveTextContent(/Parçalı kabul mümkün/);
+  });
+
+  it('bekleyen sevkiyat yokken plansız kabul boş hâlin İÇİNDE durur', async () => {
+    delete mockParams.purchaseOrderId;
+    fetchMock.mockImplementation(() => Promise.resolve(ok({ intakes: [] })));
+
+    await renderIntake();
+
+    expect(screen.getByTestId('warehouse-intake-no-subject')).toBeOnTheScreen();
+    expect(screen.getByTestId('warehouse-intake-unplanned-empty-cta')).toBeOnTheScreen();
+  });
+
   it('bekleyen sevkiyat YOKSA uydurma liste çizilmez, boşluk söylenir', async () => {
     delete mockParams.purchaseOrderId;
     fetchMock.mockImplementation(() => Promise.resolve(ok({ intakes: [] })));
@@ -109,6 +182,78 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
 
     expect(screen.getByTestId('warehouse-intake-no-subject')).toBeOnTheScreen();
+  });
+
+  /*
+    FORM KÜNYESİ İLERLEMEYİ SÖYLER (v3:598) — "tedarik siparişi · 2 kalem · 1 tamam".
+    "gönderildi" bir kategoriydi ve depocu zaten oraya gönderildiği için girmişti; kaçının bittiği
+    ise her satırdan sonra değişen tek sayı. "Tamam" ölçüsü CTA'nınkiyle AYNI iki koşuldur (adet +
+    SKT) — ayrışsalardı künye "1 tamam" derken CTA "adet + SKT zorunlu" demeye devam ederdi.
+  */
+  it('form künyesi kaç kalem ve kaçının TAMAM olduğunu söyler', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+    expect(screen.getByTestId('warehouse-intake-header')).toHaveTextContent(/2 kalem · 0 tamam/);
+
+    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
+    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '01.12.2026');
+
+    expect(screen.getByTestId('warehouse-intake-header')).toHaveTextContent(/2 kalem · 1 tamam/);
+  });
+
+  /* ÇEVRİMDIŞI: SEBEP YAZILIR, DÜĞME GİZLENMEZ (v3:610). Eskiden okutma düğmesi sessizce
+     çizilmiyordu; depocu "düğme nerede" diye arıyordu. Kilit bir yokluk değil, bir cevaptır —
+     ve neden yazılamayacağını da söylüyor. Satırlar duruyor: okumak serbest. */
+  it('ağ düşünce okutma düğmesinin YERİNE sebep yazılır, satırlar kalır', async () => {
+    let first = true;
+    fetchMock.mockImplementation(() => {
+      if (first) {
+        first = false;
+        return Promise.resolve(ok({ purchaseOrder: { purchaseOrderId: PO_ID, referenceNo: 'TS-26-A', supplierName: 'X' }, rows: [ROW_A] }));
+      }
+      return Promise.reject(new Error('network down'));
+    });
+
+    await renderIntake();
+    expect(screen.getByTestId('warehouse-intake-scan-cta')).toBeOnTheScreen();
+
+    // Yazma denemesi ağa çıkar ve düşer — çevrimdışı bayrağı böyle doğar.
+    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`), '10');
+    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`), '01.12.2026');
+    await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-intake-locked')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-intake-scan-cta')).toBeNull();
+    expect(screen.getByTestId('warehouse-intake-locked')).toHaveTextContent(/iki deponun stokunu bozabilir/);
+    // Satırlar YERİNDE: okumak serbest.
+    expect(screen.getByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeOnTheScreen();
+  });
+
+  /*
+    SIFIR BEKLENEN İKİ AYRI ŞEY DEMEK (ölçüldü 30.08, yerel veritabanından). `expectedQty`
+    KALANDIR (`purchase_order_progress.missing_qty`), ısmarlanan değil: beş kalemlik bir siparişte
+    dördü tamamen alınmıştı ve dördü de künyesiz çizilmişti — plansız kabuldeki "beklenti yok"
+    hâliyle birebir aynı görünüyordu. Planlı siparişte sıfır kalan "beklenti KARŞILANDI" demektir
+    ve depocu ikinci turda o kaleme dokunmayacağını bilmeli.
+  */
+  it('PLANLI siparişte sıfır kalan "tamamlandı" der — sessiz kalmaz', async () => {
+    withForm([intakeRow({ variantId: ROW_A.variantId, expectedQty: 0 })]);
+
+    await renderIntake();
+
+    expect(screen.getByTestId(`warehouse-intake-done-${ROW_A.variantId}`)).toHaveTextContent(/tamamlandı/);
+  });
+
+  it('PLANSIZ kabulde sıfır beklenen SESSİZDİR — kıyaslanacak sipariş yok', async () => {
+    delete mockParams.purchaseOrderId;
+    mockParams.unplanned = '1';
+    fetchMock.mockImplementation(() => Promise.resolve(ok({ purchaseOrder: null, rows: [] })));
+
+    await renderIntake();
+
+    expect(screen.queryByTestId(`warehouse-intake-done-${ROW_A.variantId}`)).toBeNull();
+    delete mockParams.unplanned;
   });
 
   it('SKT girilmeden CTA açılmaz — kural şemada, ekran kapıyı boşuna zorlamaz', async () => {

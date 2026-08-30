@@ -152,6 +152,8 @@ export const appMetrics = {
        piksel oynarsa satır kayar. */
     /** Izgara kutucuğunun ikonu (v3: 32×32). */
     tileIcon: 32,
+    /** Liste satırının solundaki ikon — mal kabul sevkiyatı (v3: 25×25). */
+    rowIcon: 25,
     /** Alt şeritlerin satır içi ikonu — yazıcı dişlisi (v3: 18×18). */
     stripIcon: 18,
     /** D1 önizleme satırının sol işareti — en (v3: 5). */

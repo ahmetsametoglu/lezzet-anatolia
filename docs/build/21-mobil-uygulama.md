@@ -7180,3 +7180,55 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   çevrimdışı kilit, kapanan kutu kartı) · mobil paket **945/945**; typecheck · lint · knip ·
   boundaries yeşil; kilitli tam paket 3945/3945; **cihazda gözle doğrulandı** — raf adı canlı
   veriden geldi, önerisiz kalem rozetsiz çizildi, kapanan kutu kartı iki kalemi ve QR'ı gösterdi.
+
+- [x] (21.139) **MAL KABUL BEKLEYEN LİSTESİ v3 — künye listeyi anlatıyor, plansız kabul sona indi** (v3:509-587)
+  `touches:` `apps/mobile/src/screens/warehouse/{intake-screen.tsx,messages.json,intake-screen.test.tsx}` ·
+  `apps/mobile/src/theme/metrics.ts`
+
+  **Durum (30.08).** Başlık künyesi kategoriyi değil LİSTEYİ anlatıyor ("2 bekleyen sevkiyat ·
+  11 kalem"); sayı listeden çıkıyor, ikinci bir özet ucu istemiyor (hub'ın aynı kuralı). Liste
+  okunamadıysa sayı **uydurulmuyor**, künye kategoriye düşüyor. Satırlara kutu ikonu geldi.
+
+  **PLANSIZ KABUL LİSTENİN ÜSTÜNDEN SONUNA TAŞINDI.** 23.13'ün gerekçesi *"bekleyen sevkiyat
+  sayısı değişken, sabit yer sabit alışkanlık"*tı; v3'ün gerekçesi daha güçlü: plansız kabul bir
+  **istisnadır** — beklenen adet yoktur ve sayım onunla doğrulanamaz. Kuyruğun üstünde durması onu
+  normal yol gibi gösteriyordu. Kesikli çerçeve de bunu söylüyor. **Boş hâlde ise TEK yol** olduğu
+  için orada kalıyor ve boş bloğun içine giriyor.
+
+  **Bir test YANLIŞ SEBEPLE geçiyormuş** (yol boyunca bulundu): `Promise.resolve(fail('server_error'))`
+  — `fail` yerel bir yardımcı değil, Jest'in eski globali; çağrı fırlatıyor, istemci onu AĞ hatası
+  sayıyor ve iddia yine yeşil kalıyordu. Gerçek bir 500 cevabı döndüren `serverError()` ile
+  değiştirildi.
+
+  **İki alan yazılamadı, uyuşmazlık defterine geçti:** şablon satırda "· gönderildi" (sipariş
+  durumu) ve "SKT gerekli" yazıyor; ikisi de `PendingIntakeSchema`'da yok. Üstelik durum sabit de
+  değil — bekleyen liste hem `sent` hem `partially_received` taşıyor, yani "gönderildi" yazmak
+  yarısı için yanlış olurdu.
+
+  **Doğrulama.** Mal kabul jest **16/16** (dördü yeni: künye toplamı, okunamayan liste, plansız
+  kabulün sırası, boş hâldeki kapı) · mobil paket **949/949**; typecheck · lint · knip · boundaries
+  yeşil; **cihazda gözle doğrulandı** — künye 5+6=11 kalem, ikonlar, kesikli plansız satırı, dipnot.
+
+- [x] (21.140) **MAL KABUL FORMU v3 — künye ilerlemeyi söylüyor, sıfır beklenen iki ayrı şey** (v3:589-746)
+  `touches:` `apps/mobile/src/screens/warehouse/{intake-screen.tsx,messages.json,intake-screen.test.tsx}`
+
+  **Durum (30.08).** Form künyesi kategoriyi değil İLERLEMEYİ söylüyor ("tedarik siparişi · 5
+  kalem · 0 tamam"). "Tamam" ölçüsü CTA'nınkiyle **aynı iki koşuldur** (adet + SKT) ve kural
+  kopyalanmadı, tek yerden okunuyor — ayrışsalardı künye "1 tamam" derken CTA "her satırda adet +
+  SKT zorunlu" demeye devam ederdi. Çevrimdışıyken okutma düğmesi **gizlenmiyor**, yerine sebep
+  yazılıyor: gizlenen bir düğme sebebi olmayan bir eksiklik gibi görünür.
+
+  **VERİTABANINDAN BİR AYRIM ÇIKTI.** Ekranda beş kalemin dördü künyesiz duruyordu. `expectedQty`
+  ısmarlanan mı kalan mı diye ölçtüm (`purchase_order_progress`): **kalan** (`missing_qty`).
+  Dördü tamamen alınmış (kalan 0), biri 30 kalmış. Yani sıfır beklenen İKİ ayrı şey demek:
+  plansızda "kıyaslanacak beklenti yok", planlıda "beklenti **karşılandı**" — ve ikisi ekranda
+  birebir aynı görünüyordu. Planlı siparişte artık "bu kalem tamamlandı — beklenen kalmadı"
+  yazılıyor; plansızda sessizlik korundu (23.13'ün gerekçesi orada aynen geçerli).
+
+  **Üç öğe yazılamadı, uyuşmazlık defterine geçti:** tedarikçi kodu ("GAZ-7120"), "SKT ZORUNLU"
+  etiketi ve "Kalan ömür %58" uyarısı — üçü de `IntakeFormRowSchema`'da yok; kalan ömür ayrıca
+  ürünün raf ömrü gününü gerektiriyor.
+
+  **Doğrulama.** Mal kabul jest **20/20** (yedisi yeni) · mobil paket **955/955**; typecheck ·
+  lint · knip · boundaries yeşil; **cihazda gözle doğrulandı** — dört kalem "tamamlandı", biri
+  "beklenen 30"; veritabanıyla birebir.
