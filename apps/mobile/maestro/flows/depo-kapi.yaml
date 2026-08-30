@@ -1,0 +1,53 @@
+# DEPO · kapı açılır ve hub çizilir.
+#
+# Bu akışın sınadığı şey jest'in söyleyemediğidir: depo hesabı gerçekten operasyon kabuğuna
+# taşınıyor mu, kapı (`(operations)/_layout.tsx`) yetkiyi cihazda okuyabiliyor mu, ve hub
+# YÜKLENİYOR hâlinden DOLU hâle geçiyor mu. Komponent testi hub'ı hazır veriyle çizer;
+# burada veri uçtan (`/api/v1`) gelir ve gerçekten gelmezse akış düşer.
+appId: com.lezzetanatolia.app
+name: Depo · kapı ve hub
+tags:
+  - depo
+---
+- runFlow:
+    file: ../common/dev-login.yaml
+    env:
+      ROLE: depo
+
+# Kapı üç hâl gösterebilir (yükleniyor · hata · yetkili). Bekleme YETKİLİ hâlin kendisine
+# kurulur; "yükleniyor göründü" bir kanıt değildir, orada takılı da kalabilir.
+- extendedWaitUntil:
+    visible:
+      id: "operations-section-warehouse"
+    timeout: 40000
+
+# Hub'ın DOLU hâli: liste çizildi. `warehouse-hub-loading` ya da `warehouse-hub-error`
+# ekrandaysa bu kanca hiç doğmaz ve akış düşer — istediğimiz de bu.
+- extendedWaitUntil:
+    visible:
+      id: "warehouse-hub-list"
+    timeout: 30000
+
+# Dokuz kart da yerinde mi. Kartlar `buildRows`tan gelir; biri düşerse depo o işi cihazdan
+# hiç açamaz — sessizce eksilen bir kart, ekrana bakmadan fark edilmez.
+- assertVisible:
+    id: "warehouse-hub-picking"
+- assertVisible:
+    id: "warehouse-hub-intake"
+- assertVisible:
+    id: "warehouse-hub-near-expiry"
+- assertVisible:
+    id: "warehouse-hub-adjustment"
+- scrollUntilVisible:
+    element:
+      id: "warehouse-hub-sale"
+    direction: DOWN
+    timeout: 15000
+- assertVisible:
+    id: "warehouse-hub-transfer"
+- assertVisible:
+    id: "warehouse-hub-return"
+- assertVisible:
+    id: "warehouse-hub-handover"
+- assertVisible:
+    id: "warehouse-hub-printers"

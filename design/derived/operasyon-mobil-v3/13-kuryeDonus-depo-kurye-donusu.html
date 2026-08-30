@@ -1,0 +1,82 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: kuryeDonus · Depo · Kurye dönüşü -->
+<!-- kaynak satırlar: 1216-1291 -->
+
+<!-- kaynak: satır 1216-1291 · görünüm bloğu -->
+    <sc-if value="{{ is.kuryeDonus }}">
+      <div data-screen-label="Depo · Kurye dönüşü" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Kurye Dönüşü</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">Musa K. · rota kapandı · 1 döküm</span>
+          </div>
+        </div>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px">
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">DÖNEN MALLAR — AKIBET İŞARETLE</span>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font:700 14.5px 'Karla'">LZA-26-9Q2B · 2 × Su Böreği</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">kurye notu: "kapıda reddetti — koku şüphesi" · hasar fotoğrafı var</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span onClick="{{ pick.akibet_stok }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.akibet_stok.bd }};background:{{ c.akibet_stok.bg }};color:{{ c.akibet_stok.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Stoğa dön</span>
+              <span onClick="{{ pick.akibet_imha }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.akibet_imha.bd }};background:{{ c.akibet_imha.bg }};color:{{ c.akibet_imha.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">İmha</span>
+              <span onClick="{{ pick.akibet_jest }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.akibet_jest.bd }};background:{{ c.akibet_jest.bg }};color:{{ c.akibet_jest.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Jest</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;background:#f2f0e8;border-radius:14px;padding:11px 13px">
+              <span style="font:700 11px 'Karla';color:#6d7261">Stoğa dön: sebep notu zorunlu · İmha: parti düşer</span>
+              <span style="font:400 11px/1.45 'Karla';color:#8a8270">Jest: mal müşteride kaldı — stok ve mal değişmez, yalnız kayıt düşülür.</span>
+            </div>
+            <sc-if value="{{ akibetSecili }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:700 11.5px 'Karla';color:#b05c2e">Sebep zorunlu — dokunarak seç</span>
+                <div style="display:flex;flex-wrap:wrap;gap:7px">
+                  <sc-for list="{{ ch.donusSebep }}" as="ds" hint-placeholder-count="4">
+                    <span onClick="{{ ds.sec }}" style="font:700 12px 'Karla';color:{{ ds.c.fg }};background:{{ ds.c.bg }};border:1.5px solid {{ ds.c.bd }};border-radius:12px;padding:10px 12px;cursor:pointer">{{ ds.v }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">ULAŞILAMAYANLAR — ARAÇTA KALIR</span>
+          <div style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 13.5px 'Karla';color:#6d7261">LZA-26-7T4D · 2 koli</span>
+            <span style="font:400 11.5px 'Karla';color:#a8a191">yeniden planlanacak — kabul edilmez</span>
+          </div>
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">İADE BORCU YAZILAMADI</span>
+          <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px">
+            <span style="font:700 13px 'Karla';color:#a44a3f">LZA-26-9Q2B · 44,00 € iade alacağı işlenemedi</span>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <span style="font:400 11.5px/1.45 'Karla';color:#a44a3f">· müşterinin hesabı yok — alacak bir yere yazılamıyor</span>
+              <span style="font:400 11.5px/1.45 'Karla';color:#a44a3f">· ödeme referansı yok — hangi tahsilata iade edileceği belirsiz</span>
+              <span style="font:400 11.5px/1.45 'Karla';color:#a44a3f">· ödeme sağlayıcısı bağlı değil</span>
+              <span style="font:400 11.5px/1.45 'Karla';color:#a44a3f">· sağlayıcı iadeyi reddetti</span>
+            </div>
+            <span style="font:400 11px/1.5 'Karla';color:#8a8270">Mal kaydı yazılır, para kaydı bekler — dördü ayrı sonuçtur, çözüm muhasebe masasında.</span>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Miktar hedef değer olarak girilir; fark sistemde hesaplanır.</span>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%)">
+          <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:14px 15px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 13px 'Karla';color:#6d7261">Döküm kaydı kapalı</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Dönen mal stoğa girer ya da imha olur; ikisi de bağlantı ister.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+            <div style="background:{{ c.donusCta.bg }};color:{{ c.donusCta.fg }};font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center">
+              <sc-if value="{{ akibetSecili }}"><span>Dökümü kaydet</span></sc-if>
+              <sc-if value="{{ akibetYok }}" hint-placeholder-val="{{ true }}"><span>Her kalemde akıbet işaretle</span></sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>

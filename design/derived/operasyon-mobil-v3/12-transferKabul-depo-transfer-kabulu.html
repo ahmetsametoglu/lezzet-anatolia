@@ -1,0 +1,67 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: transferKabul · Depo · Transfer kabulü -->
+<!-- kaynak satırlar: 1154-1214 -->
+
+<!-- kaynak: satır 1154-1214 · görünüm bloğu -->
+    <sc-if value="{{ is.transferKabul }}">
+      <div data-screen-label="Depo · Transfer kabulü" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.transfer }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">TR-26-K8M4QD</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">Paris Depo → Strasbourg · rampada say</span>
+          </div>
+        </div>
+
+        <div style="margin:0 20px 12px;background:#e7e2d2;border-radius:16px;padding:12px 14px">
+          <span style="font:400 11.5px/1.6 'Karla';color:#6d7261">Transferde <b>SKT ve lot yeniden yazılmaz</b> — gönderen depodaki partiler taşınır. Yalnız gelen adedi say.</span>
+        </div>
+
+        <sc-if value="{{ liste.hata }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 20px 12px;background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:8px">
+            <span style="font:700 13.5px 'Karla';color:#a44a3f">Bu transfer artık yolda değil</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#a44a3f">Sen sayarken biri transferi kapattı ya da iptal etti — girdiğin adetler yazılmadı. Rampadaki mal ile sistem çeliştiği için kabul burada durur.</span>
+            <div onClick="{{ go.transfer }}" style="height:46px;border-radius:14px;background:#a44a3f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';cursor:pointer">Transfer listesine dön</div>
+          </div>
+        </sc-if>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ trSatirlar }}" as="tr" hint-placeholder-count="2">
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:flex-start;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                  <span style="font:700 14.5px 'Karla'">{{ tr.ad }}</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">{{ tr.bek }}</span>
+                </div>
+                <div style="display:flex;align-items:center;background:{{ tr.c.bg }};border:1.5px solid {{ tr.c.bd }};border-radius:15px;overflow:hidden;flex:none">
+                  <span onClick="{{ tr.eksi }}" style="width:42px;height:48px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+                  <span style="min-width:48px;text-align:center;font:700 16px 'Karla';color:{{ tr.c.fg }}">{{ tr.metin }}</span>
+                  <span onClick="{{ tr.arti }}" style="width:42px;height:48px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none">+</span>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:9px">
+                <span onClick="{{ tr.sifir }}" style="font:700 12px 'Karla';color:#a44a3f;background:#fff;border:1.5px solid #e0b9b2;border-radius:12px;padding:9px 12px;cursor:pointer;flex:none">0 · hiç gelmedi</span>
+                <span style="font:400 11px/1.4 'Karla';color:#8a8270;flex:1">{{ tr.not }}</span>
+              </div>
+            </div>
+          </sc-for>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:2px">Boş bırakmak ile 0 yazmak ayrı şeydir: boş "saymadım" demektir ve kabulü bloklar; 0 "koli geldi, mal yok" demektir ve fark kaydı açar.</span>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%)">
+          <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:14px 15px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 13px 'Karla';color:#6d7261">Teslim alma kapalı</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">İki deponun stoku aynı anda doğru kalmalı — transfer kabulü kuyruğa alınmaz.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+            <div style="background:{{ c.trCta.bg }};color:{{ c.trCta.fg }};font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center">
+              <span>{{ trCtaLabel }}</span>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>

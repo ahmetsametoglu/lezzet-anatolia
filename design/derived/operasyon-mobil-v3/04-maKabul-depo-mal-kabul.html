@@ -1,0 +1,85 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: maKabul · Depo · Mal kabul -->
+<!-- kaynak satırlar: 509-587 -->
+
+<!-- kaynak: satır 509-587 · görünüm bloğu -->
+    <sc-if value="{{ is.maKabul }}">
+      <div data-screen-label="Depo · Mal kabul" style="animation:pageIn .26s ease;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Mal Kabul</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">{{ ov.maKabulAlt }}</span>
+          </div>
+        </div>
+        <sc-if value="{{ liste.yukleniyor }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:10px">
+            <div style="height:80px;border-radius:20px;background:#f0ede3;border:1.5px solid #e7e2d2"></div>
+            <div style="height:80px;border-radius:20px;background:#f0ede3;border:1.5px solid #e7e2d2;opacity:.6"></div>
+            <span style="font:700 11.5px 'Karla';color:#a8a191;text-align:center">Sevkiyatlar yükleniyor…</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ liste.hata }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:12px">
+            <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:7px;align-items:center">
+              <span style="font:600 18px 'Lora';color:#a44a3f;text-align:center">Sevkiyatlar yüklenemedi</span>
+              <span style="font:400 12px/1.55 'Karla';color:#a44a3f;text-align:center">Beklenen adetleri göremeden kabule başlamak sayımı bozar. Bağlantı gelince liste kendiliğinden dolar.</span>
+            </div>
+            <div onClick="{{ liste.tekrar }}" style="height:52px;border-radius:16px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer">Tekrar dene</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ liste.bos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:12px">
+            <div style="border:1.5px dashed #ddd6c4;background:#fbfaf4;border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;gap:8px;align-items:center">
+              <span style="font:600 18px 'Lora';text-align:center">Bekleyen sevkiyat yok</span>
+              <span style="font:400 12px/1.55 'Karla';color:#8a8270;text-align:center">Yönetim tedarik siparişi gönderdiğinde burada görünür. Siparişsiz mal geldiyse plansız kabulü kullan.</span>
+            </div>
+            <div onClick="{{ go.maPlansiz }}" style="border:1.5px dashed #c3d3a4;background:#f2f7e8;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+              <span style="width:34px;height:34px;border-radius:11px;background:#fff;border:1.4px solid #c3d3a4;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#5f7a2c;flex:none">+</span>
+              <span style="font:700 14px 'Karla';color:#46601f">Siparişsiz mal geldi</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ liste.dolu }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:0 20px 8px;display:flex;flex-direction:column;gap:10px">
+          <div onClick="{{ go.maDetay }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <div style="width:40px;height:40px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;flex:none">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:700 14px 'Karla'">TS-26-4VXQEC</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Gaziantep Baklava Fabrikası · gönderildi</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              <span style="font:700 13px 'Karla';color:#2f353a">5 kalem</span>
+              <span style="font:700 10.5px 'Karla';color:#b05c2e">SKT gerekli</span>
+            </div>
+          </div>
+          <div onClick="{{ go.maDetay }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <div style="width:40px;height:40px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;flex:none">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:700 14px 'Karla'">TS-26-PEEQ3Q</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Gaziantep Baklava Fabrikası · gönderildi</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+              <span style="font:700 13px 'Karla';color:#2f353a">6 kalem</span>
+              <span style="font:700 10.5px 'Karla';color:#b05c2e">SKT gerekli</span>
+            </div>
+          </div>
+          <div onClick="{{ go.maPlansiz }}" style="border:1.5px dashed #c3d3a4;background:#f2f7e8;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:34px;height:34px;border-radius:11px;background:#fff;border:1.4px solid #c3d3a4;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#5f7a2c;flex:none">+</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 14px 'Karla';color:#46601f">Siparişsiz mal geldi</span>
+              <span style="font:400 11px 'Karla';color:#6d7261">plansız kabul · beklenen adet yok</span>
+            </div>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:4px">Parçalı kabul mümkün; sevkiyat kapanmadan kalanı ikinci turda yazarsınız.</span>
+        </div>
+        </sc-if>
+      </div>
+    </sc-if>

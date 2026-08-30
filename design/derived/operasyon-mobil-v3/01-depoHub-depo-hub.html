@@ -1,0 +1,146 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: depoHub · Depo · Hub -->
+<!-- kaynak satırlar: 35-174 -->
+
+<!-- kaynak: satır 35-174 · görünüm bloğu -->
+    <sc-if value="{{ is.depoHub }}" hint-placeholder-val="{{ true }}">
+      <div data-screen-label="Depo · Hub" style="animation:pageIn .26s ease;padding:22px 20px 28px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#5f7a2c">DEPO · STRASBOURG MERKEZ</span>
+            <span style="font:600 27px/1.1 'Lora';color:#2f353a">Depo İşleri</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">Deniz Arslan · depo</span>
+          </div>
+          <div style="display:flex;gap:8px;flex:none">
+            <div onClick="{{ go.bildirim }}" style="width:40px;height:40px;border-radius:14px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;transition:transform .12s" style-active="transform:scale(.94)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="1.9" stroke-linecap="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+              <span style="position:absolute;top:-3px;right:-3px;background:#b05c2e;color:#fff;font:800 9.5px 'Karla';border-radius:8px;padding:2px 5px">2</span>
+            </div>
+            <div onClick="{{ tg.kimlikSheet }}" style="width:40px;height:40px;border-radius:14px;background:#5f7a2c;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:800 13px 'Karla';cursor:pointer;transition:transform .12s" style-active="transform:scale(.94)">DA</div>
+          </div>
+        </div>
+
+        <sc-if value="{{ kapsamBelirsiz }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ go.kapsam }}" style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer">
+            <span style="font:700 12.5px/1.45 'Karla';color:#b05c2e;flex:1">Kapsamında iki depo var — hangi depoda çalıştığın belli değil</span>
+            <span style="font:400 17px 'Karla';color:#d9a97f">›</span>
+          </div>
+        </sc-if>
+
+        <div style="background:#2f353a;border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+          <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#a8b08f">BUGÜN DEPODA</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:600 24px 'Lora';color:#f5f1e6">{{ ov.siparis }}</span>
+              <span style="font:400 10.5px/1.35 'Karla';color:#a49f8f">sipariş<br>bekliyor</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;border-left:1px solid #4a5157;padding-left:12px">
+              <span style="font:600 24px 'Lora';color:#e0b487">{{ ov.yarim }}</span>
+              <span style="font:400 10.5px/1.35 'Karla';color:#a49f8f">yarım<br>kutu</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:2px;border-left:1px solid #4a5157;padding-left:12px">
+              <span style="font:600 24px 'Lora';color:#f5f1e6">{{ ov.sevkiyat }}</span>
+              <span style="font:400 10.5px/1.35 'Karla';color:#a49f8f">bekleyen<br>sevkiyat</span>
+            </div>
+          </div>
+        </div>
+
+        <div onClick="{{ go.toplama }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:22px;padding:16px 18px 14px;display:flex;flex-direction:column;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.14em;color:#8a8270;border:1.2px solid #ddd6c4;border-radius:7px;padding:3px 6px">D1</span>
+            <span style="font:700 16px 'Karla';flex:1">Toplama listesi</span>
+            <span style="background:#b05c2e;color:#fff;font:800 12px 'Karla';border-radius:11px;padding:3px 10px">{{ ov.d1Rozet }}</span>
+          </div>
+          <sc-if value="{{ liste.dolu }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:5px;height:26px;border-radius:3px;background:#b05c2e;flex:none"></span>
+              <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+                <span style="font:700 12.5px 'Karla'">LA-26-9ERUNH · Restaurant Oberjaegerhof</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">1/2 kalem hazır · yarım kutu açık</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:5px;height:26px;border-radius:3px;background:#5f7a2c;flex:none"></span>
+              <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+                <span style="font:700 12.5px 'Karla'">LA-26-QRPRRV · Claire Weber</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">0/1 kalem hazır · B2C</span>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+          <span style="font:700 12px 'Karla';color:#5f7a2c;align-self:flex-end">{{ ov.d1Alt }}</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div onClick="{{ go.maKabul }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D2</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Mal kabul</span>
+            <span style="font:400 11px/1.35 'Karla';color:#8a8270">{{ ov.d2Alt }}</span>
+          </div>
+          <div onClick="{{ go.skt }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D3</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Yakın-SKT turu</span>
+            <span style="font:400 11px/1.35 'Karla';color:{{ ov.d3Rengi }}">{{ ov.d3Alt }}</span>
+          </div>
+          <div onClick="{{ act.sayimHub }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D4</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Sayım / düzeltme</span>
+            <span style="font:400 11px/1.35 'Karla';color:#8a8270">{{ ov.d4Alt }}</span>
+          </div>
+          <div onClick="{{ go.transfer }}" style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#b3ab97" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h13"/><path d="M12 7l5 5-5 5"/><path d="M21 5v14"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D5</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Transfer</span>
+            <span style="font:400 11px/1.35 'Karla';color:#8a8270">{{ ov.d5Alt }}</span>
+          </div>
+          <div onClick="{{ go.kuryeDonus }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12H8"/><path d="M12 17l-5-5 5-5"/><path d="M3 5v14"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D6</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Kurye dönüşü</span>
+            <span style="font:400 11px/1.35 'Karla';color:{{ ov.d6Rengi }}">{{ ov.d6Alt }}</span>
+          </div>
+          <div onClick="{{ go.satis }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2l1.5 4h9L18 2"/><path d="M4 6h16l-1.5 14H5.5z"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D7</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Yerinde satış</span>
+            <span style="font:400 11px/1.35 'Karla';color:#8a8270">kapıya gelen müşteri</span>
+          </div>
+          <div onClick="{{ go.kargoDevri }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D8</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Kargo devri</span>
+            <span style="font:400 11px/1.35 'Karla';color:#8a8270">{{ ov.d8Alt }}</span>
+          </div>
+        </div>
+
+        <div onClick="{{ go.yazicilar }}" style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+          <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+            <span style="font:700 13px 'Karla';color:#6d7261">Bu cihaz · yazıcılar</span>
+            <span style="font:400 11px 'Karla';color:#a8a191">kutu etiketi QL-1110NWB · kargo etiketi tanımsız</span>
+          </div>
+          <span style="font:400 17px 'Karla';color:#b3ab97">›</span>
+        </div>
+
+        <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Depo ekranları fiyat/tutar görmez (tek istisna D7 kapı satışı). Parti kararı motorundur; mal kabulde kod okutulur.</span>
+      </div>
+    </sc-if>

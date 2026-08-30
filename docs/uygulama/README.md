@@ -61,6 +61,10 @@ uyguladığı denetimi bu şeride de uygular.
   kilidi, kod öğretme, onay kutuları) dâhil; kaynağı sözlükler + ekran kodu. Yeni bir operasyon
   tasarımı geldiğinde **fonksiyonel eksik** bu listeyle aranır. `06` göründüğünü, `07` yapılabileni
   anlatır.
+- `gunluk-operasyon-v3-gecisi.md` — **GÜNLÜK** (30.08): `Operasyon Mobil v3` tasarımının koda
+  geçirilmesi — yetki/kapsam kararları, 32 ekranın tasarım ↔ kod haritası, faz planı ve
+  **uyuşmazlık defteri** (tasarımın mevcut ekranla çeliştiği, tur durdurulmadan kaydedilen
+  noktalar). İlerleme tutmaz; durumun sahibi `docs/build/21-mobil-uygulama.md` görev satırıdır.
 - `BACKLOG-musteri.md` — **KAPSAM** (11.08): native MÜŞTERİ yüzeyinin açık işleri tek listede —
   fiziksel cihaz turunda ölçülen bulgular + kullanıcı yönergeleri + `design/BACKLOG.md`'nin
   müşteriyi ilgilendiren maddeleri. Kimlikler `MB-nn`; **ilerleme tutmaz**, durumun sahibi

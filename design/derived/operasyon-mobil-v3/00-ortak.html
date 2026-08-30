@@ -1,0 +1,1197 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekrana bağlanamayan kalan parçalar: sayfa iskeleti, stil, sekme çubuğu, sheet'ler, betik kalanı -->
+<!-- parça sayısı: 35 -->
+
+<!-- kaynak: satır 1-34 · ortak -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@400..700&family=Karla:wght@400..800&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; display:flex; justify-content:center; padding:36px 16px; }
+  a { color:#5f7a2c; text-decoration:none; } a:hover { color:#46601f; }
+  input, textarea { font-family:'Karla',sans-serif; }
+  @keyframes pageIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  @keyframes sheetIn { from { transform:translateY(100%); } to { transform:none; } }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  ::-webkit-scrollbar { width:0; }
+</style>
+</helmet>
+
+<div style="width:390px;height:844px;background:#f2f0e8;border-radius:30px;overflow:hidden;box-shadow:0 10px 46px rgba(47,53,58,.18);color:#2f353a;display:flex;flex-direction:column;position:relative">
+
+  <sc-if value="{{ cevrimdisi }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none;background:#a44a3f;padding:9px 16px;display:flex;align-items:center;gap:9px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M3 3l18 18"/><path d="M5 12.5a10 10 0 0 1 4-2.8M12 5a12 12 0 0 1 7 2.9"/><circle cx="12" cy="19" r="1.2"/></svg>
+      <span style="font:700 11.5px 'Karla';color:#fff;flex:1">Bağlantı yok — depo yazma işleri kapalı</span>
+      <span onClick="{{ tgCevrimdisi }}" style="font:700 11px 'Karla';color:#f7d9d2;cursor:pointer">kapat</span>
+    </div>
+  </sc-if>
+
+  <div style="flex:1;overflow-y:auto;overflow-x:hidden;position:relative">
+
+
+<!-- kaynak: satır 175-175 · ortak -->
+
+
+<!-- kaynak: satır 326-326 · ortak -->
+
+
+<!-- kaynak: satır 508-508 · ortak -->
+
+
+<!-- kaynak: satır 588-588 · ortak -->
+
+
+<!-- kaynak: satır 747-747 · ortak -->
+
+
+<!-- kaynak: satır 827-827 · ortak -->
+
+
+<!-- kaynak: satır 897-897 · ortak -->
+
+
+<!-- kaynak: satır 994-994 · ortak -->
+
+
+<!-- kaynak: satır 1042-1042 · ortak -->
+
+
+<!-- kaynak: satır 1066-1066 · ortak -->
+
+
+<!-- kaynak: satır 1153-1153 · ortak -->
+
+
+<!-- kaynak: satır 1215-1215 · ortak -->
+
+
+<!-- kaynak: satır 1292-1292 · ortak -->
+
+
+<!-- kaynak: satır 1366-1366 · ortak -->
+
+
+<!-- kaynak: satır 1400-1400 · ortak -->
+
+
+<!-- kaynak: satır 1465-1465 · ortak -->
+
+
+<!-- kaynak: satır 1607-1607 · ortak -->
+
+
+<!-- kaynak: satır 1672-1672 · ortak -->
+
+
+<!-- kaynak: satır 1751-1751 · ortak -->
+
+
+<!-- kaynak: satır 1872-1872 · ortak -->
+
+
+<!-- kaynak: satır 1925-1925 · ortak -->
+
+
+<!-- kaynak: satır 1948-1948 · ortak -->
+
+
+<!-- kaynak: satır 2028-2028 · ortak -->
+
+
+<!-- kaynak: satır 2068-2068 · ortak -->
+
+
+<!-- kaynak: satır 2140-2140 · ortak -->
+
+
+<!-- kaynak: satır 2178-2178 · ortak -->
+
+
+<!-- kaynak: satır 2228-2228 · ortak -->
+
+
+<!-- kaynak: satır 2279-2279 · ortak -->
+
+
+<!-- kaynak: satır 2315-2315 · ortak -->
+
+
+<!-- kaynak: satır 2347-2347 · ortak -->
+
+
+<!-- kaynak: satır 2387-2387 · ortak -->
+
+
+<!-- kaynak: satır 2420-2875 · ortak -->
+
+  </div>
+
+  <sc-if value="{{ keypadAcik }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:70">
+      <div onClick="{{ kpKapat }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 22px;display:flex;flex-direction:column;gap:12px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center"></span>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8a8270">{{ keypad.baslik }}</span>
+            <span style="font:600 34px 'Lora';line-height:1.05">{{ keypad.deger }} €</span>
+            <span style="font:400 10.5px 'Karla';color:#a8a191">ilk rakam mevcut tutarın yerine yazılır</span>
+          </div>
+          <span onClick="{{ kpBeklenen }}" style="font:700 12px 'Karla';color:#46601f;background:#f2f7e8;border:1.5px solid #c3d3a4;border-radius:13px;padding:10px 12px;cursor:pointer;flex:none">beklenen {{ keypad.beklenen }}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <sc-for list="{{ tuslar }}" as="k" hint-placeholder-count="12">
+            <span onClick="{{ k.bas }}" style="height:56px;border-radius:16px;background:{{ k.c.bg }};border:1.5px solid {{ k.c.bd }};color:{{ k.c.fg }};display:flex;align-items:center;justify-content:center;font:700 20px 'Karla';cursor:pointer;user-select:none;transition:transform .1s" style-active="transform:scale(.95)">{{ k.d }}</span>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span onClick="{{ kpSil }}" style="width:88px;height:54px;border-radius:16px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 5H9l-6 7 6 7h12z"/><path d="M14 9l-4 6M10 9l4 6"/></svg>
+          </span>
+          <span onClick="{{ kpOnayla }}" style="flex:1;height:54px;border-radius:16px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer">Yaz</span>
+        </div>
+        <span style="font:400 11px 'Karla';color:#a8a191">Cihaz klavyesi açılmaz — eldivenle de basılabilecek büyük tuşlar.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetAdet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:60">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 0 22px;display:flex;flex-direction:column;gap:14px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center"></span>
+        <div style="padding:0 20px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <span style="font:600 19px 'Lora'">Adet</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">Fıstıklı Baklava · 450 g · {{ kaynakNotu }}</span>
+          </div>
+          <span onClick="{{ adetSifirla }}" style="font:700 12px 'Karla';color:#8a8270;cursor:pointer;padding:4px 0">sıfırla</span>
+        </div>
+
+        <div style="margin:0 20px;background:#2f353a;border-radius:20px;padding:15px 18px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;align-items:flex-end;gap:8px">
+            <span style="font:600 38px 'Lora';color:#f5f1e6;line-height:1">{{ satir.adet }}</span>
+            <span style="font:700 11px 'Karla';color:#a8b08f;padding-bottom:6px">paket · toplam</span>
+          </div>
+          <span style="font:700 12px 'Karla';color:#e8dcc9">{{ hesapMetni }}</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:1px">
+            <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8a8270">KAÇ KOLİ GELDİ</span>
+            <span style="font:400 11px 'Karla';color:#a8a191">Boylar ürün kartındaki kutu tiplerinden gelir — kaç koli geldiyse o kadar ekle.</span>
+          </div>
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ kolilar }}" as="k" hint-placeholder-count="3">
+              <div style="border-radius:17px;border:1.5px solid {{ k.c.bd }};background:{{ k.c.bg }};padding:11px 12px 11px 15px;display:flex;align-items:center;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font:700 13.5px 'Karla';color:{{ k.c.fg }}">{{ k.etiket }}</span>
+                  <span style="font:400 10.5px 'Karla';color:#8a8270">{{ k.kod }} · {{ k.toplam }}</span>
+                </div>
+                <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:14px;overflow:hidden;flex:none">
+                  <span onClick="{{ k.eksi }}" style="width:42px;height:46px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+                  <span style="width:34px;text-align:center;font:700 16px 'Karla'">{{ k.sayiMetni }}</span>
+                  <span onClick="{{ k.arti }}" style="width:42px;height:46px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none">+</span>
+                </div>
+              </div>
+            </sc-for>
+            <div onClick="{{ openKutuTip }}" style="border-radius:17px;border:1.5px dashed #c3d3a4;background:#f2f7e8;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer">
+              <span style="width:30px;height:30px;border-radius:10px;background:#fff;border:1.4px solid #c3d3a4;display:flex;align-items:center;justify-content:center;font:400 19px 'Karla';color:#5f7a2c;flex:none">+</span>
+              <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+                <span style="font:700 13.5px 'Karla';color:#46601f">Başka koli boyu</span>
+                <span style="font:400 10.5px 'Karla';color:#6d7261">altılı, onlu… listede yoksa ekle</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="padding:0 20px;display:flex;align-items:center;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+              <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8a8270">KOLİ DIŞI TEK PAKET</span>
+              <span style="font:400 11px 'Karla';color:#a8a191">açık gelen, tek tek sayılanlar</span>
+            </div>
+            <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:14px;overflow:hidden;flex:none">
+              <span onClick="{{ adetEksi }}" style="width:42px;height:46px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+              <span style="width:34px;text-align:center;font:700 16px 'Karla'">{{ satir.elle }}</span>
+              <span onClick="{{ adetArti }}" style="width:42px;height:46px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none">+</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:7px;overflow-x:auto;scroll-snap-type:x proximity;padding:2px 20px 6px">
+            <sc-for list="{{ cetvel }}" as="n" hint-placeholder-count="10">
+              <span onClick="{{ n.set }}" style="scroll-snap-align:center;min-width:50px;height:54px;border-radius:16px;border:1.5px solid {{ n.c.bd }};background:{{ n.c.bg }};color:{{ n.c.fg }};display:flex;align-items:center;justify-content:center;font:700 16px 'Karla';cursor:pointer;flex:none">{{ n.v }}</span>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="padding:2px 20px 0">
+          <div onClick="{{ closeSheet }}" style="height:54px;border-radius:17px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer">Tamam</div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetKarton }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:62">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:10px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font:600 19px 'Lora'">Elindeki kartonu seç</span>
+          <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Gönderinin ağırlığı ve ölçüsü buradan hesaplanır. Bu, mal kabuldeki "kolide kaç paket var" sorusundan farklı — burası fiziksel karton.</span>
+        </div>
+        <sc-for list="{{ kartonlar }}" as="kt" hint-placeholder-count="3">
+          <div onClick="{{ kt.sec }}" style="border-radius:16px;border:1.5px solid {{ kt.c.bd }};background:{{ kt.c.bg }};padding:13px 15px;display:flex;flex-direction:column;gap:2px;cursor:pointer">
+            <span style="font:700 14px 'Karla';color:{{ kt.c.fg }}">{{ kt.ad }}</span>
+            <span style="font:400 11px 'Karla';color:#8a8270">{{ kt.olcu }}</span>
+          </div>
+        </sc-for>
+        <div onClick="{{ kartonAtla }}" style="height:52px;border-radius:16px;border:1.5px dashed #c4bda9;display:flex;align-items:center;justify-content:center;font:700 13.5px 'Karla';color:#6d7261;cursor:pointer;margin-top:2px">Tip seçmeden aç</div>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191">Listede olmayan bir karton kullanıyor olabilirsin — yanlış tip seçmek ölçüsüzlükten beterdir, çünkü yanlış ölçü kendini söylemez. Atlarsan ölçü etiket alınırken sorulur.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetKargo }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:62">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:10px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font:600 19px 'Lora'">Kargoya ver</span>
+          <span style="font:400 11.5px 'Karla';color:#8a8270">2 koli · toplam 4,8 kg · LA-26-VPUD6F</span>
+        </div>
+        <div style="background:#f6e6d6;border-radius:14px;padding:11px 13px">
+          <span style="font:700 11.5px/1.45 'Karla';color:#b05c2e">Seçtiğin an etiket SATIN ALINIR — seçmek satın almaktır.</span>
+        </div>
+        <sc-for list="{{ servisler }}" as="sv" hint-placeholder-count="3">
+          <div onClick="{{ kargoAl }}" style="border-radius:16px;border:1.5px solid #ddd6c4;background:#fff;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+              <span style="font:700 13.5px 'Karla'">{{ sv.ad }}</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">{{ sv.sure }}</span>
+            </div>
+            <span style="font:700 14px 'Karla';flex:none">{{ sv.fiyat }}</span>
+          </div>
+        </sc-for>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191">Basım düşse bile gönderi alınmış olur — o hâlde "yeniden bas" teklif edilir. Uygun servis çıkmazsa elle taşıyıcı girişi hazırlık masasında yapılır.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetBoy }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:62">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:10px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <span style="font:600 19px 'Lora'">Fıstıklı Baklava</span>
+          <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8a8270">BOY SEÇ</span>
+        </div>
+        <sc-for list="{{ boylar }}" as="b" hint-placeholder-count="4">
+          <div onClick="{{ b.sec }}" style="border-radius:16px;border:1.5px solid {{ b.c.bd }};background:{{ b.c.bg }};padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+              <span style="font:700 14px 'Karla';color:{{ b.c.fg }}">{{ b.ad }}</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">{{ b.stok }}</span>
+            </div>
+            <span style="font:700 14px 'Karla';color:{{ b.c.fg }};flex:none">{{ b.fiyat }}</span>
+          </div>
+        </sc-for>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191">"Satışa kapalı" ile "tükendi" ayrı hâllerdir — kapalı boy stokta olsa da satılmaz.</span>
+        <div onClick="{{ boyOnayla }}" style="height:54px;border-radius:17px;background:{{ c.boyCta.bg }};color:{{ c.boyCta.fg }};display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer;margin-top:2px">Sepete ekle</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetEsleme }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:62">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:11px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font:600 19px 'Lora'">Bu kod hangi ürün?</span>
+          <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Okunan kod <b>8691234567890</b> sistemde yok. Bu sevkiyatın satırlarından birini seç — kod o varyanta kaydedilir, ikinci gelişte tanınır.</span>
+        </div>
+        <div onClick="{{ act.eslemeSec }}" style="background:#fff;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font:700 13.5px 'Karla'">Fıstıklı Baklava · 450 g</span><span style="font:400 11px 'Karla';color:#8a8270">beklenen 10 · GAZ-7120</span></div>
+          <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+        </div>
+        <div onClick="{{ act.eslemeSec }}" style="background:#fff;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font:700 13.5px 'Karla'">Fıstıklı Baklava · 1250 g</span><span style="font:400 11px 'Karla';color:#8a8270">beklenen 12 · GAZ-7120</span></div>
+          <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+        </div>
+        <div onClick="{{ act.eslemeSec }}" style="background:#fff;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0"><span style="font:700 13.5px 'Karla'">Fıstıklı Baklava · 2500 g</span><span style="font:400 11px 'Karla';color:#8a8270">beklenen 30 · GAZ-7120</span></div>
+          <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+        </div>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191">Barkodsuz koli yok — henüz tanımadığımız koli var. Yanlış eşleme masadan geri alınır.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetKutuTip }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:62">
+      <div onClick="{{ geriAdet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font:600 19px 'Lora'">Kolide kaç paket var</span>
+          <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Ürün kartında KT-04, KL-12, KL-24 kayıtlı. Bu koli farklı boydaysa seç — ürüne yeni kutu tipi olarak kaydedilir, sonraki kabullerde hazır çıkar.</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px">
+          <sc-for list="{{ yeniCarpanlar }}" as="y" hint-placeholder-count="8">
+            <span onClick="{{ y.ekle }}" style="height:58px;border-radius:17px;background:#fff;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 18px 'Karla';cursor:pointer;transition:transform .1s" style-active="transform:scale(.95)">{{ y.v }}</span>
+          </sc-for>
+        </div>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191">Bu listede de yoksa masada ürün kartına eklenir — sahada uydurulmuş çarpan stok sayımını bozar.</span>
+        <div onClick="{{ geriAdet }}" style="height:52px;border-radius:16px;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer;margin-top:2px">Vazgeç</div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetSkt }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:60">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 0 22px;display:flex;flex-direction:column;gap:13px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center"></span>
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:2px">
+          <span style="font:600 19px 'Lora'">Son kullanma tarihi</span>
+          <span style="font:400 11.5px 'Karla';color:#8a8270">Fıstıklı Baklava · 450 g · seçili: {{ sktTam }}</span>
+        </div>
+
+        <div style="display:flex;gap:8px;overflow-x:auto;padding:0 20px 4px">
+          <sc-for list="{{ hizli }}" as="h" hint-placeholder-count="4">
+            <span onClick="{{ h.set }}" style="font:700 12.5px 'Karla';color:#46601f;background:#f2f7e8;border:1.5px solid #c3d3a4;border-radius:14px;padding:11px 14px;cursor:pointer;flex:none">{{ h.etiket }}</span>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;gap:10px;padding:0 20px">
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+            <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">GÜN</span>
+            <div ref="{{ kolonRef.gun }}" style="height:168px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;scroll-snap-type:y proximity;scroll-behavior:smooth">
+              <sc-for list="{{ gunler }}" as="g" hint-placeholder-count="6">
+                <span onClick="{{ g.set }}" style="scroll-snap-align:center;height:48px;border-radius:14px;border:1.5px solid {{ g.c.bd }};background:{{ g.c.bg }};color:{{ g.c.fg }};display:flex;align-items:center;justify-content:center;font:700 16px 'Karla';cursor:pointer;flex:none">{{ g.v }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+            <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">AY</span>
+            <div ref="{{ kolonRef.ay }}" style="height:168px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;scroll-snap-type:y proximity;scroll-behavior:smooth">
+              <sc-for list="{{ aylar }}" as="a" hint-placeholder-count="6">
+                <span onClick="{{ a.set }}" style="scroll-snap-align:center;height:48px;border-radius:14px;border:1.5px solid {{ a.c.bd }};background:{{ a.c.bg }};color:{{ a.c.fg }};display:flex;align-items:center;justify-content:center;font:700 16px 'Karla';cursor:pointer;flex:none">{{ a.v }}</span>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px;min-width:0">
+            <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">YIL</span>
+            <div ref="{{ kolonRef.yil }}" style="height:168px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;scroll-snap-type:y proximity;scroll-behavior:smooth">
+              <sc-for list="{{ yillar }}" as="y" hint-placeholder-count="4">
+                <span onClick="{{ y.set }}" style="scroll-snap-align:center;height:48px;border-radius:14px;border:1.5px solid {{ y.c.bd }};background:{{ y.c.bg }};color:{{ y.c.fg }};display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer;flex:none">{{ y.v }}</span>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="padding:2px 20px 0;display:flex;gap:8px">
+          <span onClick="{{ closeSheet }}" style="flex:1;height:54px;border-radius:17px;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer">Vazgeç</span>
+          <span onClick="{{ sktOnayla }}" style="flex:1.6;height:54px;border-radius:17px;background:#5f7a2c;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 14.5px 'Karla';cursor:pointer">{{ sktTam }} · yaz</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetLot }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:60">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:10px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:4px"></span>
+        <span style="font:600 19px 'Lora'">Lot / parti kodu</span>
+        <span style="font:400 11.5px 'Karla';color:#8a8270">Okunan koliden gelen adaylar — biri geri çağırma anahtarı olur.</span>
+        <sc-for list="{{ lotlar }}" as="l" hint-placeholder-count="4">
+          <div onClick="{{ l.set }}" style="height:52px;border-radius:15px;border:1.5px solid {{ l.c.bd }};background:{{ l.c.bg }};padding:0 15px;display:flex;align-items:center;cursor:pointer">
+            <span style="font:700 14px 'Karla';color:{{ l.c.fg }}">{{ l.v }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ t.urunAraSheet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:50">
+      <div onClick="{{ tg.urunAraSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:10px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:4px"></span>
+        <span style="font:600 19px 'Lora'">Ürün ara</span>
+        <input placeholder="isim, SKU ya da barkod" style="height:50px;border:1.5px solid #ddd6c4;border-radius:15px;background:#fff;padding:0 14px;font:400 13px 'Karla';outline:none" />
+        <div onClick="{{ act.urunSec }}" style="background:#fff;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font:700 13.5px 'Karla'">Fıstıklı Baklava · 450 g</span><span style="font:400 11px 'Karla';color:#8a8270">GAZ-7120 · stok 24</span></div>
+          <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+        </div>
+        <div onClick="{{ act.urunSec }}" style="background:#fff;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer">
+          <div style="display:flex;flex-direction:column;gap:2px;flex:1"><span style="font:700 13.5px 'Karla'">Karışık Baklava · 225 g</span><span style="font:400 11px 'Karla';color:#8a8270">601202 · stok 9</span></div>
+          <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+        </div>
+        <span style="font:400 11.5px 'Karla';color:#a8a191">Bulunamayan ürün depocu tarafından oluşturulamaz — yönetime bildir.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ t.ulasilamadi }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:50">
+      <div onClick="{{ tg.ulasilamadi }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:6px"></span>
+        <span style="font:700 15px 'Karla';color:#a44a3f">Ulaşılamadı — kayıt (2/2: not + onay)</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ ch.ulasSebep }}" as="us" hint-placeholder-count="3">
+            <span onClick="{{ us.sec }}" style="font:700 12.5px 'Karla';color:{{ us.c.fg }};background:{{ us.c.bg }};border:1.5px solid {{ us.c.bd }};border-radius:14px;padding:11px 14px;cursor:pointer">{{ us.v }}</span>
+          </sc-for>
+        </div>
+        <input placeholder="ör. zil bozuk" style="height:48px;border:1.5px solid #ddd6c4;border-radius:15px;background:#fff;padding:0 14px;font:400 12.5px 'Karla';outline:none" />
+        <span style="font:400 11.5px 'Karla';color:#a8a191">Fotoğraf çekimi bu sürümde bağlı değil.</span>
+        <div style="display:flex;gap:8px;margin-top:2px">
+          <span onClick="{{ tg.ulasilamadi }}" style="flex:1;height:50px;border-radius:15px;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';cursor:pointer">Vazgeç</span>
+          <span onClick="{{ tg.ulasilamadi }}" style="flex:1.4;height:50px;border-radius:15px;background:#a44a3f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';cursor:pointer">Onayla — kaydet</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ t.kabulEtmedi }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:50">
+      <div onClick="{{ tg.kabulEtmedi }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:6px"></span>
+        <span style="font:700 15px 'Karla';color:#a44a3f">Kabul etmedi — iade kaydı (2/2: not + onay)</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <sc-for list="{{ ch.redSebep }}" as="rs" hint-placeholder-count="3">
+            <span onClick="{{ rs.sec }}" style="font:700 12.5px 'Karla';color:{{ rs.c.fg }};background:{{ rs.c.bg }};border:1.5px solid {{ rs.c.bd }};border-radius:14px;padding:11px 14px;cursor:pointer">{{ rs.v }}</span>
+          </sc-for>
+        </div>
+        <input placeholder="ör. müşteri kapıda kokudan şüphelendi" style="height:48px;border:1.5px solid #ddd6c4;border-radius:15px;background:#fff;padding:0 14px;font:400 12.5px 'Karla';outline:none" />
+        <span style="font:400 11.5px/1.55 'Karla';color:#a8a191">Koliler iade akışına düşer — akıbet kararı depo kabulünde verilir.</span>
+        <div style="display:flex;gap:8px;margin-top:2px">
+          <span onClick="{{ tg.kabulEtmedi }}" style="flex:1;height:50px;border-radius:15px;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';cursor:pointer">Vazgeç</span>
+          <span onClick="{{ tg.kabulEtmedi }}" style="flex:1.4;height:50px;border-radius:15px;background:#a44a3f;color:#fff;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';cursor:pointer">Onayla — kaydet</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ cubukVar }}" hint-placeholder-val="{{ true }}">
+  <div style="flex:none;background:#f6f4ec;border-top:1.5px solid #ddd6c4;display:flex;padding:8px 6px 10px">
+    <sc-if value="{{ sekmeDepo }}" hint-placeholder-val="{{ true }}">
+    <div onClick="{{ go.depoHub }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ c.tabDepo }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l8-6 8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/></svg>
+      <span style="font:700 10px 'Karla';color:{{ c.tabDepo }}">Depo</span>
+    </div>
+    </sc-if>
+    <sc-if value="{{ sekmeKurye }}" hint-placeholder-val="{{ true }}">
+    <div onClick="{{ go.kuryeGun }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ c.tabKurye }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg>
+      <span style="font:700 10px 'Karla';color:{{ c.tabKurye }}">Kurye</span>
+    </div>
+    </sc-if>
+    <sc-if value="{{ sekmeYon }}" hint-placeholder-val="{{ true }}">
+    <div onClick="{{ go.karar }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ c.tabYon }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H4z"/><path d="M9 20h6"/><path d="M8 10l2.5 2.5L16 7"/></svg>
+      <span style="font:700 10px 'Karla';color:{{ c.tabYon }}">Yönetim</span>
+    </div>
+    </sc-if>
+    <sc-if value="{{ sekmePara }}" hint-placeholder-val="{{ true }}">
+    <div onClick="{{ go.para }}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="{{ c.tabPara }}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6.5A6 6 0 1 0 17 17"/><path d="M4 10h8M4 13.5h8"/></svg>
+      <span style="font:700 10px 'Karla';color:{{ c.tabPara }}">Para</span>
+    </div>
+    </sc-if>
+  </div>
+  </sc-if>
+
+  <sc-if value="{{ t.scanner }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#12161a;display:flex;flex-direction:column;animation:fadeIn .2s ease;z-index:40">
+      <div style="padding:18px 20px;display:flex;align-items:center;justify-content:space-between;background:#2f353a">
+        <span style="font:600 17px 'Lora';color:#f5f1e6">Kalemi kutuya okut</span>
+        <span onClick="{{ tg.scanner }}" style="font:700 13px 'Karla';color:#e0b487;cursor:pointer">Vazgeç</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center">
+        <div style="width:260px;height:150px;border:2px solid rgba(245,241,230,.85);border-radius:18px;position:relative">
+          <div style="position:absolute;left:14px;right:14px;top:50%;height:2px;background:#b05c2e"></div>
+        </div>
+      </div>
+      <div style="background:#1b2024;padding:16px 20px 22px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#7d8a93">SİMÜLASYON · YALNIZ GELİŞTİRME</span>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span onClick="{{ act.okutPaket }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Paket</span>
+          <span onClick="{{ act.okutKoli }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Koli ×24</span>
+          <span onClick="{{ act.okutYabanci }}" style="font:700 12.5px 'Karla';color:#e0b487;border:1.4px solid #6b4f38;border-radius:13px;padding:9px 14px;cursor:pointer">Yabancı ürün</span>
+          <span onClick="{{ act.okutTanimsiz }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Tanınmayan</span>
+        </div>
+        <span style="font:400 11.5px 'Karla';color:#7d8a93">Paket ya da koli barkodu — koli, çarpanı kadar sayılır.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ t.yabanci }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;left:16px;right:16px;bottom:92px;background:#f4e3e0;border-radius:16px;padding:13px 15px;display:flex;align-items:flex-start;gap:10px;z-index:30;animation:pageIn .2s ease;box-shadow:0 6px 20px rgba(47,53,58,.14)">
+      <span style="font:400 12px/1.5 'Karla';color:#a44a3f;flex:1">Bu kod <b>Yoğurtlu Patlıcan · 1000 g</b> ürününe bağlı — bu siparişte yok, kutuya girmez.</span>
+      <span onClick="{{ tg.yabanci }}" style="font:700 12px 'Karla';color:#a44a3f;cursor:pointer">tamam</span>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ t.navSheet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:55">
+      <div onClick="{{ tg.navSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:10px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <span style="font:600 19px 'Lora'">Navigasyonu aç</span>
+        <span style="font:400 11.5px 'Karla';color:#8a8270">12 rue du Faubourg de Pierre, 67000 Strasbourg</span>
+        <div onClick="{{ tg.navSheet }}" style="height:52px;border-radius:16px;background:#fff;border:1.5px solid #ddd6c4;display:flex;align-items:center;padding:0 15px;font:700 13.5px 'Karla';cursor:pointer">Google Maps</div>
+        <div onClick="{{ tg.navSheet }}" style="height:52px;border-radius:16px;background:#fff;border:1.5px solid #ddd6c4;display:flex;align-items:center;padding:0 15px;font:700 13.5px 'Karla';cursor:pointer">Apple Haritalar</div>
+        <div onClick="{{ tg.navSheet }}" style="height:52px;border-radius:16px;background:#fff;border:1.5px solid #ddd6c4;display:flex;align-items:center;padding:0 15px;font:700 13.5px 'Karla';cursor:pointer">Adresi kopyala</div>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191">Canlı harita bu sürümde yok — navigasyon telefonun harita uygulamasına köprüdür.</span>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ t.kimlikSheet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:50">
+      <div onClick="{{ tg.kimlikSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 22px 26px;display:flex;flex-direction:column;gap:6px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:10px"></span>
+        <span style="font:600 20px 'Lora'">Hesabın</span>
+        <span style="font:700 17px 'Karla';margin-top:8px">Deniz Arslan</span>
+        <span style="font:400 12.5px 'Karla';color:#8a8270">depo@lezzetanatolia.fr</span>
+        <span style="font:700 12.5px 'Karla';color:#5f7a2c">Depo · Strasbourg Merkez</span>
+        <span onClick="{{ go.yazicilar }}" style="font:700 14px 'Karla';color:#2f353a;margin-top:16px;cursor:pointer">Bu cihaz · yazıcılar</span>
+        <span onClick="{{ tgCevrimdisi }}" style="font:700 14px 'Karla';color:#2f353a;margin-top:10px;cursor:pointer">Bağlantı yok hâlini dene</span>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:16px;padding-top:14px;border-top:1.5px solid #e2ddcc">
+          <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8a8270">LİSTE HÂLİ — PROTOTİP</span>
+          <div style="display:flex;gap:7px;flex-wrap:wrap">
+            <sc-for list="{{ halSecenek }}" as="hs2" hint-placeholder-count="4">
+              <span onClick="{{ hs2.sec }}" style="font:700 12px 'Karla';color:{{ hs2.c.fg }};background:{{ hs2.c.bg }};border:1.5px solid {{ hs2.c.bd }};border-radius:12px;padding:9px 12px;cursor:pointer">{{ hs2.v }}</span>
+            </sc-for>
+          </div>
+        </div>
+        <span onClick="{{ tg.kimlikSheet }}" style="font:700 14px 'Karla';color:#a44a3f;margin-top:10px;cursor:pointer">Oturumu kapat</span>
+      </div>
+    </div>
+  </sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
+
+<!-- kaynak: satır 2876-3472 · betik kalanı -->
+<script type="text/x-dc-fragment">
+const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','seferBaslat','aracaYukle','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar'];
+const TOGGLES = ['kutuAcik','eksik','scanner','yabanci','etiket','kimlikSheet','boySheet','urunAraSheet','imzaOpen','imzaCizildi','ulasilamadi','kabulEtmedi','hasarNotu','sepetVar','maSatir','imzaAlindi','navSheet'];
+const GROUPS = {
+  sebep: ['imha','hasar','kayip','fark'],
+  yontem: ['nakit','kart','cek'],
+  tahsilat: ['nakit','kart'],
+  kanal: ['tum','wa','ms','ig'],
+  durum: ['tumu','bekleyen'],
+  mod: ['insan','hibrit'],
+  boy: ['tek','dokuz'],
+  akibet: ['stok','imha','jest']
+};
+const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','seferBaslat','aracaYukle','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','gunOzeti','kampanya','tedarik','eksikKarar'], para:['para','gunSonu'] };
+
+class Component extends DCLogic {
+  state = {
+    screen: null,
+    t: { kutuAcik:false, eksik:false, scanner:false, yabanci:false, etiket:false, kimlikSheet:false, boySheet:false, urunAraSheet:false, imzaOpen:false, imzaCizildi:false, ulasilamadi:false, kabulEtmedi:false, hasarNotu:false, sepetVar:true, maSatir:true },
+    sel: { sebep:null, yontem:'kart', tahsilat:null, kanal:'tum', durum:'tumu', mod:'hibrit', boy:null, akibet:null },
+    adet: { k1:0, k2:0, ma1:0, sayim:0 },
+    kapananKutular: [{ no:1, icerik:'2 × Fıstıklı Baklava 450 g', qr:'KT-26-PLN7WAQN3L' }],
+    malDurum: null,
+    partiSecili: true,
+    kutuTipSheet: false,
+    cikarilan: false,
+    sheet: null,
+    satir: { elle: 0, kutular: {}, skt: null, lot: null, kaynak: null },
+    sktD: { g: 5, a: 9, y: 2027 },
+    keypad: { acik: false, baslik: '', beklenen: '', deger: '0' },
+    tahsilatTutar: '60,00',
+    gunSonuSayim: '408,00',
+    hasarAdet: 0,
+    ekTipler: [],
+    satis: { boy: null, adet: 1, fiyat: '18,50', pazarlik: false },
+    eslemeOgrenildi: false,
+    karton: null,
+    trAdet: { a: null, b: null },
+    cevrimdisi: false,
+    kulvar: 'kurye',
+    yuklenen: 0,
+    durakOkunan: 0,
+    halOverride: null,
+    chips: {},
+    basimSayisi: 1,
+    kargoVerildi: false,
+    kasa: { nakit: '0,00', kart: '0,00', cek: '0,00' },
+    taslakAlindi: false
+  };
+
+  kolonlar = {};
+
+  kaydirKolonlar() {
+    const s = this.state.sktD;
+    const yerlestir = (el, idx) => {
+      if (!el) return;
+      const top = Math.max(0, idx * 54 - 60);
+      if (el.scrollTo) el.scrollTo({ top, behavior: 'smooth' }); else el.scrollTop = top;
+    };
+    yerlestir(this.kolonlar.gun, s.g - 1);
+    yerlestir(this.kolonlar.ay, s.a - 1);
+    yerlestir(this.kolonlar.yil, [2026, 2027, 2028, 2029].indexOf(s.y));
+  }
+
+  componentDidUpdate() {
+    if (this.state.sheet !== 'skt') { this._sktImza = null; return; }
+    const s = this.state.sktD;
+    const imza = 'skt:' + s.g + '.' + s.a + '.' + s.y;
+    if (imza !== this._sktImza) {
+      this._sktImza = imza;
+      requestAnimationFrame(() => this.kaydirKolonlar());
+    }
+  }
+
+  setT(k, v) { this.setState(s => ({ t: Object.assign({}, s.t, { [k]: (v === undefined ? !s.t[k] : v) }) })); }
+  setSel(g, o) { this.setState(s => ({ sel: Object.assign({}, s.sel, { [g]: o }) })); }
+
+  renderVals() {
+    const st = this.state, t = st.t, sel = st.sel;
+    const cur = st.screen || this.props.baslangicEkran || 'depoHub';
+    const is = {}, go = {};
+    SCREENS.forEach(n => { is[n] = cur === n; go[n] = () => this.setState({ screen:n }); });
+    const tg = {};
+    TOGGLES.forEach(k => { tg[k] = () => this.setT(k); });
+    tg.malOk = () => this.setState(s => ({ malDurum: s.malDurum === null ? 'ok' : s.malDurum === 'ok' ? 'red' : null }));
+
+    const AY = ['01','02','03','04','05','06','07','08','09','10','11','12'];
+    const chip = (aktif) => aktif
+      ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' }
+      : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' };
+    const satir = st.satir, sktD = st.sktD;
+    const openSheet = (n) => this.setState({ sheet:n });
+    const closeSheet = () => this.setState({ sheet:null });
+
+    const TIPLER = [
+      { key:'kutu4', ad:'Kutu', carpan:4, kod:'KT-04' },
+      { key:'koli12', ad:'Koli', carpan:12, kod:'KL-12' },
+      { key:'koli24', ad:'Koli', carpan:24, kod:'KL-24' }
+    ].concat(st.ekTipler);
+    const kutular = satir.kutular || {};
+    const kutuToplam = TIPLER.reduce((t, k) => t + (kutular[k.key] || 0) * k.carpan, 0);
+    const adetToplam = satir.elle + kutuToplam;
+    const setElle = (n) => this.setState(s => kirp(s, Object.assign({}, s.satir, { elle: Math.max(0, n) })));
+    const kirp = (s, yeniSatir) => {
+      const kk = yeniSatir.kutular || {};
+      const top = yeniSatir.elle + TIPLER.reduce((t, k) => t + (kk[k.key] || 0) * k.carpan, 0);
+      return { satir: yeniSatir, hasarAdet: Math.min(s.hasarAdet, top) };
+    };
+    const kutuDegis = (key, d) => this.setState(s => {
+      const kk = Object.assign({}, s.satir.kutular);
+      kk[key] = Math.max(0, (kk[key] || 0) + d);
+      return kirp(s, Object.assign({}, s.satir, { kutular: kk }));
+    });
+
+    const cetvel = [];
+    for (let i = 0; i <= 24; i++) {
+      cetvel.push({ v: i, sel: satir.elle === i, c: chip(satir.elle === i), set: ((n) => () => setElle(n))(i) });
+    }
+    const kolilar = TIPLER.map(k => {
+      const say = kutular[k.key] || 0;
+      return {
+        ad: k.ad, carpan: k.carpan, kod: k.kod, say,
+        etiket: k.ad + ' — ' + k.carpan + ' paket',
+        toplam: say > 0 ? say * k.carpan + ' paket' : 'kolideki paket sayısı',
+        yeniMi: !!k.yeni,
+        eskiMi: !k.yeni,
+        sayiMetni: String(say),
+        c: say > 0 ? { bg:'#f2f7e8', fg:'#46601f', bd:'#5f7a2c' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' },
+        arti: () => kutuDegis(k.key, 1),
+        eksi: () => kutuDegis(k.key, -1)
+      };
+    });
+    const parcalar = TIPLER.filter(k => (kutular[k.key] || 0) > 0).map(k => (kutular[k.key] || 0) + ' × ' + k.carpan);
+    if (satir.elle > 0) parcalar.push(satir.elle + ' tek paket');
+    const hesapMetni = parcalar.length ? parcalar.join('  +  ') + '  =  ' + adetToplam + ' paket' : 'henüz sayılmadı';
+
+    const yeniCarpanlar = [2, 3, 6, 8, 10, 16, 20, 36].map(n => ({
+      v: String(n),
+      ekle: () => this.setState(s => {
+        const key = 'ek' + n;
+        const varmi = s.ekTipler.some(t => t.key === key);
+        const kk = Object.assign({}, s.satir.kutular);
+        kk[key] = (kk[key] || 0) + 1;
+        return {
+          ekTipler: varmi ? s.ekTipler : s.ekTipler.concat([{ key, ad:'Koli', carpan:n, kod:'YENİ · ürüne kaydedilecek', yeni:true }]),
+          satir: Object.assign({}, s.satir, { kutular: kk }),
+          sheet: 'adet'
+        };
+      })
+    }));
+
+    const hasarAdet = Math.min(st.hasarAdet, adetToplam);
+    const saglamAdet = Math.max(0, adetToplam - hasarAdet);
+
+    const gunler = [];
+    for (let g = 1; g <= 31; g++) {
+      gunler.push({ v: g < 10 ? '0' + g : String(g), sel: sktD.g === g, c: chip(sktD.g === g), set: ((n) => () => this.setState(s => ({ sktD: Object.assign({}, s.sktD, { g:n }) })))(g) });
+    }
+    const aylar = AY.map((a, i) => ({ v: a, sel: sktD.a === i + 1, c: chip(sktD.a === i + 1), set: () => this.setState(s => ({ sktD: Object.assign({}, s.sktD, { a: i + 1 }) })) }));
+    const yillar = [2026, 2027, 2028, 2029].map(y => ({ v: String(y), sel: sktD.y === y, c: chip(sktD.y === y), set: () => this.setState(s => ({ sktD: Object.assign({}, s.sktD, { y }) })) }));
+    const hizli = [
+      { etiket: '+7 gün', gun: 7 }, { etiket: '+30 gün', gun: 30 },
+      { etiket: '+90 gün', gun: 90 }, { etiket: '+6 ay', gun: 182 }
+    ].map(h => ({ etiket: h.etiket, set: () => {
+      const d = new Date(2026, 7, 28); d.setDate(d.getDate() + h.gun);
+      this.setState({ sktD: { g: d.getDate(), a: d.getMonth() + 1, y: d.getFullYear() } });
+    } }));
+    const lotlar = ['GAZ-2608-A', 'GAZ-2608-B', 'GAZ-2607-C', 'lot yok'].map(l => ({
+      v: l, c: chip(satir.lot === l), set: () => this.setState(s => ({ satir: Object.assign({}, s.satir, { lot: l }), sheet: null }))
+    }));
+
+    const sktMetni = sktD.g < 10 ? '0' + sktD.g : String(sktD.g);
+    const sktTam = sktMetni + '.' + AY[sktD.a - 1] + '.' + sktD.y;
+
+    const kp = st.keypad;
+    const kpDolu = (v, d) => {
+      if (d === ',' && v.indexOf(',') >= 0) return true;
+      const basamak = v.replace(/[^0-9]/g, '').length + (d === '00' ? 2 : d === ',' ? 0 : 1);
+      return basamak > 7;
+    };
+    const kpBas = (d) => this.setState(s => {
+      const k = s.keypad;
+      const cur = k.temiz ? '' : (k.deger === '0' ? '' : k.deger);
+      if (!k.temiz && kpDolu(k.deger, d)) return null;
+      if (d === ',' && cur === '') return { keypad: Object.assign({}, k, { deger: '0,', temiz: false }) };
+      return { keypad: Object.assign({}, k, { deger: (cur + d) || '0', temiz: false }) };
+    });
+    const tuslar = ['1','2','3','4','5','6','7','8','9','00','0',','].map(d => ({
+      d,
+      pasif: !kp.temiz && kpDolu(kp.deger, d),
+      c: (!kp.temiz && kpDolu(kp.deger, d)) ? { bg:'#f0ede3', fg:'#c4bda9', bd:'#e7e2d2' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' },
+      bas: () => kpBas(d)
+    }));
+    const pick = {};
+    Object.keys(GROUPS).forEach(g => GROUPS[g].forEach(o => { pick[g + '_' + o] = () => this.setSel(g, o); }));
+
+    const c = {};
+    const on = { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' };
+    const off = { bg:'transparent', fg:'#2f353a', bd:'#ddd6c4' };
+    Object.keys(GROUPS).forEach(g => GROUPS[g].forEach(o => { c[g + '_' + o] = sel[g] === o ? on : off; }));
+
+    const vurgu = this.props.vurguRengi || '#5f7a2c';
+    const tab = Object.keys(TABS).find(k => TABS[k].indexOf(cur) >= 0) || 'depo';
+    c.tabDepo = tab === 'depo' ? vurgu : '#a8a191';
+    c.tabKurye = tab === 'kurye' ? vurgu : '#a8a191';
+    c.tabYon = tab === 'yon' ? vurgu : '#a8a191';
+    c.tabPara = tab === 'para' ? vurgu : '#a8a191';
+    const hal = st.halOverride || this.props.listeHali || 'dolu';
+    const kapali = st.cevrimdisi || this.props.cevrimdisiMi === true;
+    const rol = this.props.roller || 'dort rol';
+    const gorunen = rol === 'yalniz depo' ? ['depo'] : rol === 'depo + para' ? ['depo', 'para'] : ['depo', 'kurye', 'yon', 'para'];
+
+    const k1Full = st.adet.k1 >= 3;
+    c.k1full = k1Full ? { bg:'#5f7a2c', fg:'#f5f1e6', bd:'#5f7a2c' } : { bg:'#f2f7e8', fg:'#46601f', bd:'#c3d3a4' };
+    const kapanan = st.kapananKutular;
+    const kutuNo = kapanan.length + 1;
+    const kutuHazir = st.adet.k1 > 0 || st.adet.k2 > 0 || t.eksik;
+    c.kutuCta = (t.kutuAcik || kutuHazir) ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    c.hasar = t.hasarNotu ? { bg:'#f4e3e0', fg:'#a44a3f', bd:'#e0b9b2' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' };
+    const sayimHazir = !!sel.sebep && st.adet.sayim > 0;
+    c.sayimCta = sayimHazir ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    c.donusCta = sel.akibet ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    c.boyCta = sel.boy ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    c.kabulCta = (adetToplam > 0 && satir.skt) ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    c.yukCta = st.yuklenen >= 7 ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#2f353a', fg:'#f5f1e6' };
+    c.kutuAdim = st.durakOkunan >= 3
+      ? { bg:'#f2f7e8', bd:'#c3d3a4', fg:'#46601f' }
+      : { bg:'#fdf8f3', bd:'#d9a97f', fg:'#b05c2e' };
+    const trTam = st.trAdet.a !== null && st.trAdet.b !== null;
+    c.trCta = trTam ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    c.tahsilatCta = (sel.tahsilat && st.satis.boy) ? { bg:'#2f353a', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    c.imzaOnay = t.imzaCizildi ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+    const mal = st.malDurum;
+    c.malOk = mal === 'ok' ? { bg:'#5f7a2c', fg:'#f5f1e6', bd:'#5f7a2c' } : mal === 'red' ? { bg:'#f4e3e0', fg:'#a44a3f', bd:'#d3a49c' } : { bg:'#fff', fg:'#c4bda9', bd:'#ddd6c4' };
+    const kanitZorunlu = this.props.kanitZorunlu !== false;
+    const teslimHazir = st.durakOkunan >= 3 && (kanitZorunlu ? t.imzaAlindi : true) && mal === 'ok' && !!sel.yontem;
+    c.teslimCta = teslimHazir ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+
+    return {
+      is, go, tg, pick, c, t,
+      adet: st.adet,
+      sel,
+      taslakAlindi: st.taslakAlindi,
+      eksikYok: !t.eksik,
+      hasarYok: !t.hasarNotu,
+      maBos: !t.maSatir,
+      sayimHazir, sayimEksik: !sayimHazir,
+      sayimUyari: st.adet.sayim > 0 && !!sel.sebep && sel.sebep !== 'fark',
+      akibetSecili: !!sel.akibet, akibetYok: !sel.akibet,
+      imzaCizilmedi: !t.imzaCizildi,
+      imzaKapali: !t.imzaOpen,
+      malIsaret: mal === 'ok' ? '✓' : mal === 'red' ? '✕' : '',
+      teslimHazir, teslimEksik: !teslimHazir,
+      sepetBos: !t.sepetVar,
+      taslakYok: !st.taslakAlindi,
+      insanModu: sel.mod === 'insan', hibritModu: sel.mod === 'hibrit',
+      tahsilatYok: !sel.tahsilat,
+      partiSecili: st.partiSecili, partiYok: !st.partiSecili,
+      sayimKunye: st.partiSecili ? 'P-0641 · Kaymaklı Baklava · 1 kg' : 'parti seçilmedi',
+      olayOnek: sel.sebep === 'imha' ? 'IMH-STR-26' : sel.sebep === 'fark' ? 'SAY-STR-26' : sel.sebep === 'hasar' ? 'HSR-STR-26' : sel.sebep === 'kayip' ? 'KYP-STR-26' : 'önek sebepten',
+      geriEkleme: sel.sebep === 'fark' && st.adet.sayim > 0,
+      kutuTipSheet: st.kutuTipSheet,
+      cikarilan: st.cikarilan, cikarilmadi: !st.cikarilan,
+      boySecili: !!sel.boy, boyYok: !sel.boy,
+      cevapBekleyen: sel.durum === 'bekleyen',
+      cetvel, kolilar, gunler, aylar, yillar, hizli, lotlar,
+      satir: { adet: adetToplam, elle: satir.elle, skt: satir.skt, lot: satir.lot },
+      hesapMetni,
+      yeniCarpanlar,
+      kolonRef: {
+        gun: (el) => { this.kolonlar.gun = el; },
+        ay: (el) => { this.kolonlar.ay = el; },
+        yil: (el) => { this.kolonlar.yil = el; }
+      },
+      sheetKutuTip: st.sheet === 'kutuTip',
+      sheetEsleme: st.sheet === 'esleme',
+      sheetBoy: st.sheet === 'boy',
+      sheetKarton: st.sheet === 'karton',
+      sheetKargo: st.sheet === 'kargo',
+      openKarton: () => this.setState({ sheet:'karton' }),
+      openKargo: () => this.setState({ sheet:'kargo' }),
+      kartonlar: [
+        { ad:'Küçük karton', olcu:'30 × 20 × 15 cm · dara 240 g', c: chip(st.karton === 'k'), sec: () => this.setState({ karton:'k', sheet:null }) },
+        { ad:'Orta karton', olcu:'40 × 30 × 25 cm · dara 420 g', c: chip(st.karton === 'o'), sec: () => this.setState({ karton:'o', sheet:null }) },
+        { ad:'Büyük karton', olcu:'60 × 40 × 40 cm · dara 780 g · tavan 20 kg', c: chip(st.karton === 'b'), sec: () => this.setState({ karton:'b', sheet:null }) }
+      ],
+      kartonAtla: () => this.setState({ karton:'atlandi', sheet:null }),
+      kartonMetni: st.karton === 'k' ? 'Küçük karton' : st.karton === 'o' ? 'Orta karton' : st.karton === 'b' ? 'Büyük karton' : st.karton === 'atlandi' ? 'tip seçilmedi — ölçü etiketle sorulacak' : 'karton seç',
+      servisler: [
+        { ad:'Colissimo · noktaya', fiyat:'7,90 €', sure:'2 gün' },
+        { ad:'Chronopost · adrese', fiyat:'14,50 €', sure:'ertesi gün 13:00' },
+        { ad:'Mondial Relay · noktaya', fiyat:'5,60 €', sure:'bildirilmiyor' }
+      ],
+      kargoVerildi: st.kargoVerildi,
+      kargoAlinmadi: !st.kargoVerildi && !kapali,
+      kargoKapali: !st.kargoVerildi && kapali,
+      kargoKulvari: st.kulvar === 'kargo',
+      siparisKunye: st.kulvar === 'kargo' ? 'LA-26-VPUD6F · Épicerie Madame · kargo' : 'LA-26-QRPRRV · Claire Weber · B2C',
+      acSiparis: {
+        kurye: () => this.setState({ screen:'toplamaDetay', kulvar:'kurye' }),
+        kargo: () => this.setState({ screen:'toplamaDetay', kulvar:'kargo' })
+      },
+      kargoAl: () => this.setState({ kargoVerildi:true, sheet:null }),
+      trSatirlar: [
+        { ad:'Fıstıklı Baklava · 450 g', bek:'gönderilen 6', deger: st.trAdet.a, bos: st.trAdet.a === null,
+          metin: st.trAdet.a === null ? 'boş' : String(st.trAdet.a),
+          c: st.trAdet.a === null ? { bg:'#fff', bd:'#d9a97f', fg:'#b05c2e' } : st.trAdet.a === 0 ? { bg:'#fdf6f4', bd:'#e0b9b2', fg:'#a44a3f' } : { bg:'#f2f7e8', bd:'#c3d3a4', fg:'#46601f' },
+          not: st.trAdet.a === null ? 'boş bırakılamaz — kabul bloklanır' : st.trAdet.a === 0 ? '0 = geldi ama kayıp (fark kaydı açılır)' : 'sayıldı',
+          arti: () => this.setState(s => ({ trAdet: Object.assign({}, s.trAdet, { a: (s.trAdet.a === null ? 0 : s.trAdet.a) + 1 }) })),
+          eksi: () => this.setState(s => ({ trAdet: Object.assign({}, s.trAdet, { a: s.trAdet.a === null ? 0 : Math.max(0, s.trAdet.a - 1) }) })),
+          sifir: () => this.setState(s => ({ trAdet: Object.assign({}, s.trAdet, { a: 0 }) })) },
+        { ad:'Şöbiyet · 500 g', bek:'gönderilen 4', deger: st.trAdet.b, bos: st.trAdet.b === null,
+          metin: st.trAdet.b === null ? 'boş' : String(st.trAdet.b),
+          c: st.trAdet.b === null ? { bg:'#fff', bd:'#d9a97f', fg:'#b05c2e' } : st.trAdet.b === 0 ? { bg:'#fdf6f4', bd:'#e0b9b2', fg:'#a44a3f' } : { bg:'#f2f7e8', bd:'#c3d3a4', fg:'#46601f' },
+          not: st.trAdet.b === null ? 'boş bırakılamaz — kabul bloklanır' : st.trAdet.b === 0 ? '0 = geldi ama kayıp (fark kaydı açılır)' : 'sayıldı',
+          arti: () => this.setState(s => ({ trAdet: Object.assign({}, s.trAdet, { b: (s.trAdet.b === null ? 0 : s.trAdet.b) + 1 }) })),
+          eksi: () => this.setState(s => ({ trAdet: Object.assign({}, s.trAdet, { b: s.trAdet.b === null ? 0 : Math.max(0, s.trAdet.b - 1) }) })),
+          sifir: () => this.setState(s => ({ trAdet: Object.assign({}, s.trAdet, { b: 0 }) })) }
+      ],
+      trCtaLabel: trTam ? 'Transferi teslim al' : 'Her satırda gelen adet gerekli',
+      trHazir: st.trAdet.a !== null && st.trAdet.b !== null,
+      trEksik: st.trAdet.a === null || st.trAdet.b === null,
+      cevrimdisi: kapali,
+      cevrimici: !kapali,
+      yazmaAcik: !kapali,
+      yazmaKapali: kapali,
+      kutuOkutVar: t.kutuAcik && !kapali,
+      eksikBildirVar: !t.eksik && !kapali,
+      okutOK: kapali ? (() => {}) : (() => this.setT('scanner')),
+      noop: () => {},
+      tgCevrimdisi: () => this.setState(s => ({ cevrimdisi: !s.cevrimdisi })),
+      ch: (function (self) {
+        const SPEC = {
+          hasarSebep: { multi:true, list:['ıslak koli','ezik / kırık','soğuk zincir şüphesi','ambalaj açık'], ton:'kirmizi' },
+          geriSebep: { list:['yanlış rafta bulundu','önceki sayım eksik girilmiş','kabulde eksik yazılmış'] },
+          donusSebep: { multi:true, list:['soğuk zincir kesintisiz','ambalaj sağlam','koku şüphesi doğrulandı','yeniden satılamaz'] },
+          ulasSebep: { list:['kapı açılmadı','telefona yanıt yok','adres bulunamadı'] },
+          redSebep: { list:['koku / hasar şüphesi','sipariş beklenmiyordu','çok geç geldi'] },
+          oran: { list:['%20','%30','%40'], varsayilan:'%30' },
+          sikayet: { list:['Jest — bedelsiz yeniden gönderim','Kısmi iade','Tam iade','Kapat — işlem yok'] },
+          yaziciKargo: { list:['Brother QL-1110NWB','Zebra ZD421 · rampa'] }
+        };
+        const res = {};
+        Object.keys(SPEC).forEach(g => {
+          const sp = SPEC[g];
+          const secili = st.chips[g] !== undefined ? st.chips[g] : (sp.varsayilan ? [sp.varsayilan] : []);
+          res[g] = sp.list.map(v => {
+            const aktif = secili.indexOf(v) >= 0;
+            const ton = sp.ton === 'kirmizi'
+              ? (aktif ? { bg:'#a44a3f', fg:'#fff', bd:'#a44a3f' } : { bg:'#fff', fg:'#a44a3f', bd:'#e0b9b2' })
+              : (aktif ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' });
+            return { v, aktif, c: ton, sec: () => self.setState(s => {
+              const cur = s.chips[g] !== undefined ? s.chips[g] : (sp.varsayilan ? [sp.varsayilan] : []);
+              let yeni;
+              if (sp.multi) yeni = cur.indexOf(v) >= 0 ? cur.filter(x => x !== v) : cur.concat([v]);
+              else yeni = cur.indexOf(v) >= 0 ? [] : [v];
+              return { chips: Object.assign({}, s.chips, { [g]: yeni }) };
+            }) };
+          });
+        });
+        res.secili = (g) => (st.chips[g] || []).join(' · ');
+        return res;
+      })(this),
+      sikayetSecili: (st.chips.sikayet || []).length > 0,
+      sikayetKarar: (st.chips.sikayet || [])[0] || '',
+      oranSecili: (st.chips.oran || ['%30'])[0],
+      basimSayisi: st.basimSayisi,
+      yenidenBas: () => this.setState(s => ({ basimSayisi: s.basimSayisi + 1 })),
+      liste: {
+        dolu: hal === 'dolu', bos: hal === 'boş', yukleniyor: hal === 'yükleniyor', hata: hal === 'hata',
+        bosDegil: hal !== 'boş', tekrar: () => this.setState({ halOverride: 'dolu' })
+      },
+      ov: (function () {
+        const d = hal === 'dolu';
+        const bos = hal === 'boş';
+        const yuk = hal === 'yükleniyor';
+        const im = yuk ? '·' : '—';
+        return {
+          siparis: d ? '9' : bos ? '0' : im,
+          yarim: d ? '1' : bos ? '0' : im,
+          sevkiyat: d ? '2' : bos ? '0' : im,
+          toplamaAlt: d ? '9 sipariş bekliyor · 1 yarım' : bos ? 'bekleyen sipariş yok' : yuk ? 'kuyruk yükleniyor…' : 'kuyruk yüklenemedi',
+          maKabulAlt: d ? '2 bekleyen sevkiyat · 11 kalem' : bos ? 'bekleyen sevkiyat yok' : yuk ? 'sevkiyatlar yükleniyor…' : 'sevkiyatlar yüklenemedi',
+          d1Rozet: d ? '9' : bos ? '0' : im,
+          d1Alt: d ? 'tüm kuyruğu aç →' : bos ? 'kuyruk boş' : yuk ? 'yükleniyor…' : 'yüklenemedi — tekrar dene',
+          d2Alt: d ? '2 sevkiyat · barkodla satır bul' : bos ? 'bekleyen sevkiyat yok' : yuk ? 'yükleniyor…' : 'yüklenemedi',
+          d3Alt: d ? '4 parti · 1 imhalık' : bos ? 'yakın-SKT partisi yok' : yuk ? 'yükleniyor…' : 'yüklenemedi',
+          d4Alt: d ? 'dört sebep · işaretli adet' : 'dört sebep · parti seç',
+          d5Alt: d ? '1 gelen · 1 yolda' : bos ? 'yolda transfer yok' : yuk ? 'yükleniyor…' : 'yüklenemedi',
+          d6Alt: d ? '1 döküm bekliyor' : bos ? 'bekleyen döküm yok' : yuk ? 'yükleniyor…' : 'yüklenemedi',
+          d8Alt: d ? '2 kutu verildi · okut, devret' : bos ? 'bugün kutu verilmedi' : yuk ? 'yükleniyor…' : 'yüklenemedi',
+          d6Rengi: d ? '#a44a3f' : '#8a8270',
+          d3Rengi: d ? '#a44a3f' : '#8a8270'
+        };
+      })(),
+      maDetayAlt: 'tedarik siparişi · 5 kalem · ' + ((adetToplam > 0 && satir.skt) ? '1' : '0') + ' tamam',
+      halSecenek: ['dolu', 'boş', 'yükleniyor', 'hata'].map(v => ({
+        v,
+        c: hal === v ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' },
+        sec: () => this.setState({ halOverride: v })
+      })),
+      yuklenen: st.yuklenen,
+      yukKalan: 7 - st.yuklenen,
+      yukTam: st.yuklenen >= 7,
+      yukEksik: st.yuklenen < 7,
+      yukYuzde: Math.round(st.yuklenen / 7 * 100) + '%',
+      yukCtaLabel: st.yuklenen >= 7 ? 'Yola çık — 7 kutu araçta' : 'Yola çık — ' + (7 - st.yuklenen) + ' kutu eksik',
+      yukDuraklar: [
+        { no:'1', ad:'Restaurant Oberjaegerhof', ref:'LA-26-CQQ93Y', gerek:3, biten:Math.min(3, st.yuklenen) },
+        { no:'2', ad:'Claire Weber', ref:'LA-26-QRPRRV', gerek:1, biten:Math.max(0, Math.min(1, st.yuklenen - 3)) },
+        { no:'3', ad:'Épicerie Madame', ref:'LA-26-VPUD6F', gerek:2, biten:Math.max(0, Math.min(2, st.yuklenen - 4)) },
+        { no:'4', ad:'Sabine Krüger', ref:'LA-26-3CNUE3', gerek:1, biten:Math.max(0, Math.min(1, st.yuklenen - 6)) }
+      ].map(d => {
+        const tam = d.biten >= d.gerek;
+        return Object.assign({}, d, {
+          sayac: d.biten + '/' + d.gerek + ' kutu',
+          durum: tam ? 'araçta' : d.biten > 0 ? 'yarım' : 'bekliyor',
+          durumRengi: tam ? '#5f7a2c' : d.biten > 0 ? '#b05c2e' : '#a8a191'
+        });
+      }),
+      yukOkut: () => this.setState(s => ({ yuklenen: Math.min(7, s.yuklenen + 1) })),
+      yukGeri: () => this.setState(s => ({ yuklenen: Math.max(0, s.yuklenen - 1) })),
+      durakOkunan: st.durakOkunan,
+      durakKutu: 3,
+      durakTam: st.durakOkunan >= 3,
+      durakEksik: st.durakOkunan < 3,
+      durakKalan: 3 - st.durakOkunan,
+      durakOkut: () => this.setState(s => ({ durakOkunan: Math.min(3, s.durakOkunan + 1) })),
+      durakOkutVar: st.durakOkunan < 3 && !kapali,
+      durakKutular: ['KT-26-7741','KT-26-7742','KT-26-7743'].map((kod, i) => {
+        const ok = i < st.durakOkunan;
+        return {
+          kod, im: ok ? '✓' : String(i + 1),
+          not: ok ? 'verildi' : 'araçta',
+          metinRengi: ok ? '#2f353a' : '#a8a191',
+          c: ok ? { bg:'#5f7a2c', fg:'#f5f1e6', bd:'#5f7a2c' } : { bg:'#fff', fg:'#c4bda9', bd:'#ddd6c4' }
+        };
+      }),
+      cubukVar: gorunen.length > 1,
+      sekmeDepo: gorunen.indexOf('depo') >= 0,
+      sekmeKurye: gorunen.indexOf('kurye') >= 0,
+      sekmeYon: gorunen.indexOf('yon') >= 0,
+      sekmePara: gorunen.indexOf('para') >= 0,
+      kapsamBelirsiz: rol === 'depo + para',
+      bildirimKunye: 'süzme: ' + gorunen.map(g => g === 'yon' ? 'yönetim' : g).join(' · '),
+      openBoy: () => this.setState({ sheet:'boy' }),
+      boylar: [
+        { ad:'450 g', fiyat:'18,50 €', stok:'kalan 24', key:'450', c: chip(st.satis.boy === '450'), sec: () => this.setState(s => ({ satis: Object.assign({}, s.satis, { boy:'450', fiyat:'18,50' }) })) },
+        { ad:'1250 g', fiyat:'42,00 €', stok:'kalan 3', key:'1250', c: chip(st.satis.boy === '1250'), sec: () => this.setState(s => ({ satis: Object.assign({}, s.satis, { boy:'1250', fiyat:'42,00' }) })) },
+        { ad:'2500 g', fiyat:'—', stok:'satışa kapalı', key:'2500', kapali:true, c: { bg:'#f0ede3', fg:'#c4bda9', bd:'#e7e2d2' }, sec: () => {} },
+        { ad:'800 g', fiyat:'28,00 €', stok:'tükendi', key:'800', kapali:true, c: { bg:'#f0ede3', fg:'#c4bda9', bd:'#e7e2d2' }, sec: () => {} }
+      ],
+      satisAdet: st.satis.adet,
+      satisBoy: st.satis.boy === '1250' ? '1250 g' : st.satis.boy === '450' ? '450 g' : 'boy seç',
+      satisBoyVar: !!st.satis.boy, satisBoyYok: !st.satis.boy,
+      satisFiyat: st.satis.fiyat,
+      araToplam: (function () {
+        const b = parseFloat(st.satis.fiyat.replace(',', '.')) * st.satis.adet;
+        return b.toFixed(2).replace('.', ',');
+      })(),
+      pazarlikli: st.satis.pazarlik,
+      stokSinir: st.satis.boy === '1250' && st.satis.adet >= 3,
+      stokKalan: st.satis.boy === '1250' ? 3 : 24,
+      satisArti: () => this.setState(s => {
+        const max = s.satis.boy === '1250' ? 3 : 24;
+        return { satis: Object.assign({}, s.satis, { adet: Math.min(max, s.satis.adet + 1) }) };
+      }),
+      satisEksi: () => this.setState(s => ({ satis: Object.assign({}, s.satis, { adet: Math.max(1, s.satis.adet - 1) }) })),
+      pazarlikAc: () => this.setState(s => ({ satis: Object.assign({}, s.satis, { pazarlik: !s.satis.pazarlik, fiyat: s.satis.pazarlik ? (s.satis.boy === '1250' ? '42,00' : '18,50') : '16,00' }) })),
+      boyOnayla: () => this.setState(s => ({ sheet: null, t: Object.assign({}, s.t, { sepetVar: !!s.satis.boy }) })),
+      satisCtaLabel: !st.satis.boy ? 'Önce boy seç' : !sel.tahsilat ? 'Ödeme yöntemi seç' : 'Satışı yaz — ~' + (parseFloat(st.satis.fiyat.replace(',', '.')) * st.satis.adet).toFixed(2).replace('.', ',') + ' €',
+      eslemeOgrenildi: st.eslemeOgrenildi,
+      openKutuTip: () => this.setState({ sheet:'kutuTip' }),
+      geriAdet: () => this.setState({ sheet:'adet' }),
+      hesapVar: parcalar.length > 0,
+      kutuToplam,
+      hasarAdet, saglamAdet,
+      farkMetni: (adetToplam - 10 >= 0 ? '+' : '') + (adetToplam - 10) + ' fark',
+      kabulDurum: (adetToplam > 0 && satir.skt) ? 'Satır 1 tamam · 4 satır bekliyor — kısmi kayıt yapabilirsin' : 'Her satırda adet + SKT zorunlu — 0/5 satır dolu',
+      kabulCtaLabel: (adetToplam > 0 && satir.skt) ? 'Kabulü kapat — 4 satır boş kalacak' : 'Kabulü kapat — teslim alındı',
+      hasarVar: hasarAdet > 0, hasarSifir: hasarAdet === 0,
+      hasarArti: () => this.setState(s => ({ hasarAdet: Math.min(adetToplam, s.hasarAdet + 1) })),
+      hasarEksi: () => this.setState(s => ({ hasarAdet: Math.max(0, s.hasarAdet - 1) })),
+      hasarEtiketi: hasarAdet > 0 ? hasarAdet + ' hasarlı' : 'hasar bildir',
+      sktTam,
+      sktSecili: satir.skt || 'SKT gir',
+      lotSecili: satir.lot || 'lot seç',
+      sktVar: !!satir.skt, sktBos: !satir.skt,
+      lotVar: !!satir.lot, lotBos: !satir.lot,
+      adetVar: adetToplam > 0, adetBos: adetToplam === 0,
+      kaynakNotu: satir.kaynak || 'barkod okutulmadı',
+      okutTuru: satir.kaynak
+        ? (satir.kaynak.indexOf('yeni kod') >= 0 ? 'Tedarikçi kodu — bu ürüne kaydedildi'
+          : satir.kaynak.indexOf('KL-24') >= 0 ? 'Koli barkodu eşleşti (GTIN-14)'
+          : 'Paket barkodu eşleşti (EAN-13)')
+        : null,
+      okutNotu: satir.kaynak
+        ? (satir.kaynak.indexOf('KL-24') >= 0 ? 'çarpan koddan geldi · 24 paket eklendi — adedi düzeltebilirsin'
+          : satir.kaynak.indexOf('yeni kod') >= 0 ? 'ikinci gelişte kendiliğinden tanınacak'
+          : 'SKU eşleşmesi · Fıstıklı Baklava 450 g')
+        : '',
+      sheetAdet: st.sheet === 'adet', sheetSkt: st.sheet === 'skt', sheetLot: st.sheet === 'lot',
+      sheetAcik: !!st.sheet,
+      openAdet: () => openSheet('adet'), openSkt: () => openSheet('skt'), openLot: () => openSheet('lot'),
+      closeSheet,
+      adetArti: () => setElle(satir.elle + 1), adetEksi: () => setElle(satir.elle - 1),
+      adetSifirla: () => this.setState(s => ({ satir: Object.assign({}, s.satir, { elle:0, kutular:{}, kaynak:null }), hasarAdet: 0 })),
+      sktOnayla: () => this.setState(s => ({ satir: Object.assign({}, s.satir, { skt: sktTam }), sheet: null })),
+      tuslar,
+      keypad: kp,
+      keypadAcik: kp.acik,
+      tahsilatTutar: st.tahsilatTutar,
+      gunSonuSayim: st.gunSonuSayim,
+      kasa: st.kasa,
+      kpOpen: {
+        tahsilat: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Tahsil edilen', beklenen:'60,00', deger: st.tahsilatTutar, hedef:'tahsilat' } }),
+        nakit: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan nakit', beklenen:'0,00', deger: st.kasa.nakit, hedef:'nakit' } }),
+        kart: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan kart', beklenen:'60,00', deger: st.kasa.kart, hedef:'kart' } }),
+        cek: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan çek', beklenen:'0,00', deger: st.kasa.cek, hedef:'cek' } }),
+        gunSonu: () => this.setState({ keypad: { acik:true, temiz:true, baslik:'Sayılan nakit — gün sonu', beklenen:'412,50', deger: st.gunSonuSayim, hedef:'gunSonu' } })
+      },
+      kpSil: () => this.setState(s => ({ keypad: Object.assign({}, s.keypad, { deger: s.keypad.deger.length > 1 ? s.keypad.deger.slice(0, -1) : '0', temiz: false }) })),
+      kpBeklenen: () => this.setState(s => ({ keypad: Object.assign({}, s.keypad, { deger: s.keypad.beklenen, temiz: false }) })),
+      kpKapat: () => this.setState(s => ({ keypad: Object.assign({}, s.keypad, { acik:false }) })),
+      kpOnayla: () => this.setState(s => {
+        const h = s.keypad.hedef, v = s.keypad.deger;
+        if (h === 'tahsilat') return { tahsilatTutar: v, keypad: Object.assign({}, s.keypad, { acik:false }) };
+        if (h === 'gunSonu') return { gunSonuSayim: v, keypad: Object.assign({}, s.keypad, { acik:false }) };
+        return { kasa: Object.assign({}, s.kasa, { [h]: v }), keypad: Object.assign({}, s.keypad, { acik:false }) };
+      }),
+      c2: {
+        adetAlan: adetToplam > 0 ? { bg:'#f2f7e8', bd:'#c3d3a4', fg:'#46601f' } : { bg:'#fff', bd:'#ddd6c4', fg:'#a8a191' },
+        sktAlan: satir.skt ? { bg:'#f2f7e8', bd:'#c3d3a4', fg:'#46601f' } : { bg:'#fff', bd:'#d9a97f', fg:'#b05c2e' },
+        lotAlan: satir.lot ? { bg:'#f2f7e8', bd:'#c3d3a4', fg:'#46601f' } : { bg:'#fff', bd:'#ddd6c4', fg:'#8a8270' }
+      },
+      ctaPasif: !(t.kutuAcik || kutuHazir),
+      kutuKapali: !t.kutuAcik,
+      kutuCtaLabel: t.kutuAcik ? 'Kutuyu kapat — etiketi bas' : 'Yeni kutu aç · Kutu ' + kutuNo,
+      kutuNo,
+      kutuBasligi: 'KUTU ' + kutuNo + ' · AÇIK',
+      kapanan,
+      kapananVar: kapanan.length > 0,
+      oncekiNot: kapanan.length > 0 ? 'Önceki kutularda 2 paket · üstüne yazılmaz' : '',
+      inc2: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { k2: s.adet.k2 + 1 }) })),
+      dec2: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { k2: Math.max(0, s.adet.k2 - 1) }) })),
+      adet2: st.adet.k2,
+      k2Uyari: st.adet.k2 > 0 && st.adet.k2 < 4,
+      kapanisSonucu: (function () {
+        const kalan1 = 3 - (2 + st.adet.k1);
+        const kalan2 = 4 - st.adet.k2;
+        if (t.eksik) return 'Bildirildi — sipariş "Hazırlanıyor"da kalır';
+        if (kalan1 > 0 || kalan2 > 0) return 'Kalan var (' + Math.max(0, kalan1) + '+' + Math.max(0, kalan2) + ' paket) — yeni kutu gerekir, sipariş hazıra geçmez';
+        return 'Tüm kalemler kondu — sipariş HAZIR olur';
+      })(),
+      kapanisEksik: t.eksik || (3 - (2 + st.adet.k1)) > 0 || (4 - st.adet.k2) > 0,
+      inc: { k1: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { k1: s.adet.k1 + 1 }) })), ma1: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { ma1: s.adet.ma1 + 1 }) })), sayim: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { sayim: s.adet.sayim + 1 }) })) },
+      dec: { k1: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { k1: Math.max(0, s.adet.k1 - 1) }) })), ma1: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { ma1: Math.max(0, s.adet.ma1 - 1) }) })), sayim: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { sayim: Math.max(0, s.adet.sayim - 1) }) })) },
+      set: { k1full: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { k1: s.adet.k1 >= 3 ? 0 : 3 }) })) },
+      act: {
+        kutu: () => {
+          if (!t.kutuAcik) { this.setT('kutuAcik', true); return; }
+          if (!(st.adet.k1 > 0 || st.adet.k2 > 0 || t.eksik)) return;
+          this.setState(s => ({
+            t: Object.assign({}, s.t, { kutuAcik:false, etiket:true }),
+            adet: Object.assign({}, s.adet, { k1:0, k2:0 }),
+            kapananKutular: s.kapananKutular.concat([{ no: s.kapananKutular.length + 1, icerik: (s.adet.k1 + s.adet.k2) + ' paket', qr:'KT-26-' + (7000 + s.kapananKutular.length) }])
+          }));
+        },
+        yeniKutu: () => this.setT('kutuAcik', true),
+        okutPaket: () => this.setState(s => ({ t: Object.assign({}, s.t, { scanner:false, yabanci:false, kutuAcik:true }), adet: Object.assign({}, s.adet, { k1: 3 }), satir: Object.assign({}, s.satir, { elle: s.satir.elle + 1, kaynak: 'paket barkodu okundu' }), sheet: 'adet' })),
+        okutKoli: () => this.setState(s => {
+          const kk = Object.assign({}, s.satir.kutular);
+          kk.koli24 = (kk.koli24 || 0) + 1;
+          return { t: Object.assign({}, s.t, { scanner:false, yabanci:false, kutuAcik:true }), adet: Object.assign({}, s.adet, { k1: 3 }), satir: Object.assign({}, s.satir, { kutular: kk, kaynak: 'KL-24 koli barkodu okundu' }), sheet: 'adet' };
+        }),
+        okutYabanci: () => this.setState(s => ({ t: Object.assign({}, s.t, { scanner:false, yabanci:true }) })),
+        okutTanimsiz: () => this.setState(s => ({ t: Object.assign({}, s.t, { scanner:false, yabanci:false }), sheet:'esleme' })),
+        eslemeSec: () => this.setState(s => {
+          const kk = Object.assign({}, s.satir.kutular);
+          kk.koli12 = (kk.koli12 || 0) + 1;
+          return { sheet:'adet', eslemeOgrenildi:true, satir: Object.assign({}, s.satir, { kutular: kk, kaynak:'yeni kod ürüne kaydedildi · KL-12' }) };
+        }),
+        taslakAl: () => this.setState({ taslakAlindi:true }),
+        imzaTemizle: () => this.setT('imzaCizildi', false),
+        sayimHub: () => this.setState({ screen:'sayim', partiSecili:false }),
+        sayimParti: () => this.setState({ screen:'sayim', partiSecili:true }),
+        kutuTip: () => this.setState(s => ({ kutuTipSheet: !s.kutuTipSheet })),
+        satirCikar: () => this.setState(s => ({ cikarilan: !s.cikarilan })),
+        kismiKabul: () => this.setState({ screen:'maKabul' }),
+        boyEkle: () => this.setState(s => ({ t: Object.assign({}, s.t, { boySheet:false, sepetVar:true }) })),
+        urunSec: () => this.setState(s => ({ t: Object.assign({}, s.t, { urunAraSheet:false, sepetVar:true, maSatir:true }) })),
+        satisTamam: () => { if (sel.tahsilat) this.setState({ screen:'sonSatis' }); },
+        yeniSatis: () => this.setState(s => ({ screen:'satis', t: Object.assign({}, s.t, { sepetVar:false }), sel: Object.assign({}, s.sel, { tahsilat:null }) })),
+        imzaOnayla: () => { if (t.imzaCizildi) this.setState(s => ({ t: Object.assign({}, s.t, { imzaOpen:false, imzaAlindi:true }) })); }
+      }
+    };
+  }
+}
+</script>
+
+<!-- kaynak: satır 3473-3475 · ortak -->
+</script>
+</body>
+</html>

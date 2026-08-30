@@ -1,0 +1,41 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: gunOzeti · Yönetim · Gün özeti -->
+<!-- kaynak satırlar: 2280-2314 -->
+
+<!-- kaynak: satır 2280-2314 · görünüm bloğu -->
+    <sc-if value="{{ is.gunOzeti }}">
+      <div data-screen-label="Yönetim · Gün özeti" style="animation:pageIn .26s ease;display:flex;flex-direction:column;padding-bottom:24px">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Gün Özeti</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">28 Ağustos · Strasbourg Merkez</span>
+          </div>
+        </div>
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:11px">
+          <div style="background:#2f353a;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8f9aa2">CİRO</span>
+                <span style="font:600 30px 'Lora';color:#f5f1e6">1.418,00 €</span>
+              </div>
+              <span style="background:#3a4249;color:#a8b08f;font:700 11px 'Karla';border-radius:11px;padding:6px 11px">11 sipariş</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding-top:12px;border-top:1px solid #464e55">
+              <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#f5f1e6">986,00 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">B2B · 4 sipariş</span></div>
+              <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#f5f1e6">432,00 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">B2C · 7 sipariş</span></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:3px"><span style="font:600 20px 'Lora'">9/11</span><span style="font:400 11px 'Karla';color:#8a8270">zamanında teslim</span></div>
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:3px"><span style="font:600 20px 'Lora';color:#a44a3f">148,00 €</span><span style="font:400 11px 'Karla';color:#8a8270">imha + iade</span></div>
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:3px"><span style="font:600 20px 'Lora'">4</span><span style="font:400 11px 'Karla';color:#8a8270">yakın-SKT parti</span></div>
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:3px"><span style="font:600 20px 'Lora'">2</span><span style="font:400 11px 'Karla';color:#8a8270">açık şikâyet</span></div>
+          </div>
+          <div style="background:#e7e2d2;border-radius:16px;padding:13px 15px">
+            <span style="font:400 11.5px/1.6 'Karla';color:#6d7261">En çok kayıp su böreğinde: üç gündür üretim tahmini talebin üzerinde. Teklif eşiğini bir gün öne almak imhayı düşürebilir.</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>

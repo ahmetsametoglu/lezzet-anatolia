@@ -10,6 +10,8 @@
     "rebuild:ios": "expo prebuild --clean && expo run:ios",
     "rebuild:android": "expo prebuild --clean && expo run:android",
     "test": "jest",
+    "device": "node scripts/device.mjs",
+    "e2e": "node scripts/device.mjs && maestro test maestro/flows",
     "design:diff": "node scripts/design-diff.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

@@ -1,0 +1,55 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: sosyal · Yönetim · Sosyal -->
+<!-- kaynak satırlar: 2179-2227 -->
+
+<!-- kaynak: satır 2179-2227 · görünüm bloğu -->
+    <sc-if value="{{ is.sosyal }}">
+      <div data-screen-label="Yönetim · Sosyal" style="animation:pageIn .26s ease;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column;flex:1">
+            <span style="font:600 20px 'Lora'">Gelen Kutusu</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">WhatsApp · Messenger · Instagram</span>
+          </div>
+        </div>
+        <div style="padding:0 20px 12px;display:flex;gap:7px">
+          <span onClick="{{ pick.kanal_tum }}" style="height:38px;padding:0 14px;border-radius:13px;border:1.5px solid {{ c.kanal_tum.bd }};background:{{ c.kanal_tum.bg }};color:{{ c.kanal_tum.fg }};display:flex;align-items:center;font:700 12px 'Karla';cursor:pointer">tümü</span>
+          <span onClick="{{ pick.kanal_wa }}" style="height:38px;padding:0 14px;border-radius:13px;border:1.5px solid {{ c.kanal_wa.bd }};background:{{ c.kanal_wa.bg }};color:{{ c.kanal_wa.fg }};display:flex;align-items:center;font:700 12px 'Karla';cursor:pointer">WhatsApp</span>
+          <span onClick="{{ pick.kanal_ms }}" style="height:38px;padding:0 14px;border-radius:13px;border:1.5px solid {{ c.kanal_ms.bd }};background:{{ c.kanal_ms.bg }};color:{{ c.kanal_ms.fg }};display:flex;align-items:center;font:700 12px 'Karla';cursor:pointer">Messenger</span>
+        </div>
+        <div style="padding:0 20px 24px;display:flex;flex-direction:column;gap:8px">
+          <div onClick="{{ go.konusma }}" style="background:#fbfaf4;border:1.5px solid #5f7a2c;border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:11px;cursor:pointer">
+            <span style="width:34px;height:34px;border-radius:11px;background:#e3ecd2;color:#46601f;font:800 12px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">MA</span>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:700 13.5px 'Karla';flex:1">Mehmet Aydın</span>
+                <span style="font:400 10.5px 'Karla';color:#8a8270">13:22</span>
+              </div>
+              <span style="font:400 11.5px/1.45 'Karla';color:#6d7261">Bu sabah gelen iki tepsi su böreği kokuyordu…</span>
+              <span style="background:#f6e6d6;color:#b05c2e;font:800 9px 'Karla';letter-spacing:.1em;border-radius:8px;padding:4px 7px;align-self:flex-start;margin-top:3px">TASLAK ONAY BEKLİYOR</span>
+            </div>
+          </div>
+          <div onClick="{{ go.konusma }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:11px;cursor:pointer">
+            <span style="width:34px;height:34px;border-radius:11px;background:#e7e2d2;color:#6d7261;font:800 12px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">CW</span>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:700 13.5px 'Karla';flex:1">Claire Weber</span>
+                <span style="font:400 10.5px 'Karla';color:#8a8270">11:48</span>
+              </div>
+              <span style="font:400 11.5px/1.45 'Karla';color:#6d7261">Cumartesi teslimi mümkün mü?</span>
+            </div>
+          </div>
+          <div onClick="{{ go.konusma }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:11px;cursor:pointer">
+            <span style="width:34px;height:34px;border-radius:11px;background:#e7e2d2;color:#6d7261;font:800 12px 'Karla';display:flex;align-items:center;justify-content:center;flex:none">SK</span>
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font:700 13.5px 'Karla';flex:1">Sabine Krüger</span>
+                <span style="font:400 10.5px 'Karla';color:#8a8270">dün</span>
+              </div>
+              <span style="font:400 11.5px/1.45 'Karla';color:#6d7261">Teşekkürler, her şey yolunda geldi.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </sc-if>

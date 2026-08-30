@@ -19,9 +19,13 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT_ROOT = join(REPO_ROOT, 'design', 'derived');
 
-// Ekran koşulu: <sc-if value="{{ vEkranAdi }}"> — "v" + büyük harf ile başlayanlar ekrandır.
-// (İç koşullar `pd.so`, `cv.empty`, `tabsVisible` gibi adlar taşır, bu kalıba uymaz.)
-const SCREEN_OPEN = /^\s*<sc-if\s+value="\{\{\s*(v[A-Z][A-Za-z0-9_]*)\s*\}\}"/;
+// Ekran koşulu — İKİ adlandırma tanınır, çünkü tasarım aracı sürüm atlarken değiştirdi:
+//   ESKİ (v1/v2, `Mobil - Musteri v3`):  <sc-if value="{{ vEkranAdi }}">  → "v" + büyük harf
+//   YENİ (`Operasyon Mobil v3`):         <sc-if value="{{ is.ekranAdi }}"> → tek `is` nesnesi
+// Yeni biçimde ekran adları betikte `SCREENS` dizisinde toplanıyor ve `is[n] = cur === n` ile
+// kuruluyor; yani "is." ÖNEKİ ekranın kendisini işaretler, iç koşullar (`liste.bos`, `t.kutuAcik`,
+// `cevrimdisi`) bu öneki taşımaz. Ölçüldü 30.08: v3'te 32 `is.` koşulu ↔ 32 `data-screen-label`.
+const SCREEN_OPEN = /^\s*<sc-if\s+value="\{\{\s*(?:(v[A-Z][A-Za-z0-9_]*)|is\.([A-Za-z][A-Za-z0-9_]*))\s*\}\}"/;
 // Görünüm-modeli kurucusu: `if(V.vEkranAdi){ … }` — betiğin içinde, satır başında.
 const CTOR_OPEN = /^\s*if\s*\(\s*V\.(v[A-Z][A-Za-z0-9_]*)\s*\)\s*\{/;
 const SCREEN_LABEL = /data-screen-label="([^"]*)"/;
@@ -157,7 +161,8 @@ function findScreenBlocks(lines) {
     const body = lines.slice(i, end + 1).join('\n');
     const labelMatch = body.match(SCREEN_LABEL);
     blocks.push({
-      variable: match[1],
+      // 1. grup eski `vEkranAdi`, 2. grup yeni `is.ekranAdi` — hangisi eşleştiyse o.
+      variable: match[1] ?? match[2],
       startLine: start + 1,
       endLine: end + 1,
       label: labelMatch ? decodeEntities(labelMatch[1]) : null,

@@ -150,7 +150,12 @@ export default function RootLayout() {
       {/* HAREKET KÖKÜ (09.08) — `react-native-gesture-handler`ın hareketleri yalnız bu kökün
           ALTINDA çalışır; Android'de dokunuşları buradan dağıtır. Tek kopya, kökte: her ekranın
           kendi kökünü kurması, iki ayrı hareket ağacı demek olurdu. */}
-      <GestureHandlerRootView style={styles.root}>
+      {/* `app-root`: uygulamanın ÇİZİLDİĞİNİ söyleyen tek kanca (30.08). Uçtan uca akışlar
+          (`maestro/common/launch.yaml`) açılışı burada bekler — iki kabuğun (müşteri sekmeleri
+          ↔ operasyon sekmeleri) ortak hiçbir kancası yoktu ve akış "hangisini bekleyeyim"
+          sorusunu çözemiyordu. Personel oturumu açılışta doğrudan operasyona taşındığı için
+          müşteri sekme çubuğunu beklemek de yanlış cevaptı. */}
+      <GestureHandlerRootView style={styles.root} testID="app-root">
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
         {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
             basan taraf `toastSuccess`/`toastError`/`toastInfo` (lib/toast), gerekçeler host'un

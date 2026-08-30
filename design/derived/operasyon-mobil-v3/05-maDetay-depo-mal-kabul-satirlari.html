@@ -1,0 +1,164 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: maDetay · Depo · Mal kabul satırları -->
+<!-- kaynak satırlar: 589-746 -->
+
+<!-- kaynak: satır 589-746 · görünüm bloğu -->
+    <sc-if value="{{ is.maDetay }}">
+      <div data-screen-label="Depo · Mal kabul satırları" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.maKabul }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">TS-26-4VXQEC</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">{{ maDetayAlt }}</span>
+          </div>
+        </div>
+
+        <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ tg.scanner }}" style="margin:0 20px 12px;border:1.5px solid #5f7a2c;border-radius:18px;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+            <span style="font:700 14px 'Karla';color:#46601f">Koli okut — satırı bul</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 20px 12px;background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:18px;padding:15px 16px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 13px 'Karla';color:#6d7261">Kabul kapalı</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Mal kabul bağlantı ister — çevrimdışı sayılan adet iki deponun stokunu bozabilir. Satırları okuyabilirsin, yazamazsın.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ eslemeOgrenildi }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 20px 12px;background:#f2f7e8;border:1.5px solid #c3d3a4;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:2px">
+            <span style="font:700 12px 'Karla';color:#46601f">Kod öğrenildi · 8691234567890 → Fıstıklı Baklava 450 g</span>
+            <span style="font:400 11px 'Karla';color:#6d7261">koli barkodu · çarpan 12 · ikinci gelişte tanınacak</span>
+          </div>
+        </sc-if>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14.5px 'Karla'">Fıstıklı Baklava · 450 g</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">beklenen 10 · GAZ-7120</span>
+              </div>
+              <div onClick="{{ openAdet }}" style="min-width:74px;height:52px;border-radius:15px;border:1.5px solid {{ c2.adetAlan.bd }};background:{{ c2.adetAlan.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.96)">
+                <span style="font:700 19px 'Karla';color:{{ c2.adetAlan.fg }};line-height:1">{{ satir.adet }}</span>
+                <span style="font:700 8.5px 'Karla';letter-spacing:.12em;color:#a8a191;margin-top:2px">ADET</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font:800 9.5px 'Karla';letter-spacing:.12em;color:#b05c2e;background:#f6e6d6;border-radius:8px;padding:5px 8px">SKT ZORUNLU · DLC</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">{{ kaynakNotu }}</span>
+              </div>
+              <sc-if value="{{ okutTuru }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#f2f7e8;border:1.5px solid #c3d3a4;border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;gap:2px">
+                  <span style="font:700 12px 'Karla';color:#46601f">{{ okutTuru }}</span>
+                  <span style="font:400 11px/1.45 'Karla';color:#6d7261">{{ okutNotu }}</span>
+                </div>
+              </sc-if>
+              <sc-if value="{{ sktVar }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#f6e6d6;border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;gap:2px">
+                  <span style="font:700 12px 'Karla';color:#b05c2e">Kalan ömür %58 — uyarı, engel değil</span>
+                  <span style="font:400 11px/1.45 'Karla';color:#8a8270">Ömrünün %75'inden azı kalmış parti işaretlenir; kabul edip etmemek operatörün kararı.</span>
+                </div>
+              </sc-if>
+              <div onClick="{{ openSkt }}" style="height:52px;border:1.5px solid {{ c2.sktAlan.bd }};border-radius:15px;background:{{ c2.sktAlan.bg }};padding:0 15px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="{{ c2.sktAlan.fg }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+                <span style="font:700 15px 'Karla';color:{{ c2.sktAlan.fg }};flex:1">{{ sktSecili }}</span>
+                <span style="font:700 11px 'Karla';color:#a8a191">seç →</span>
+              </div>
+              <div style="display:flex;gap:8px">
+                <div onClick="{{ openLot }}" style="flex:1;height:48px;border:1.5px solid {{ c2.lotAlan.bd }};border-radius:14px;background:{{ c2.lotAlan.bg }};padding:0 14px;display:flex;align-items:center;cursor:pointer">
+                  <span style="font:700 13px 'Karla';color:{{ c2.lotAlan.fg }}">{{ lotSecili }}</span>
+                </div>
+                <span onClick="{{ tg.hasarNotu }}" style="height:48px;display:flex;align-items:center;justify-content:center;padding:0 14px;border-radius:14px;border:1.5px solid {{ c.hasar.bd }};background:{{ c.hasar.bg }};color:{{ c.hasar.fg }};font:700 12.5px 'Karla';cursor:pointer;flex:none">{{ hasarEtiketi }}</span>
+              </div>
+              <sc-if value="{{ t.hasarNotu }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;flex-direction:column;gap:10px;background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:16px;padding:13px 14px">
+                  <div style="display:flex;flex-direction:column;gap:1px">
+                    <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#a44a3f">HASARLI PAKET SAYISI</span>
+                    <span style="font:400 11px/1.45 'Karla';color:#8a8270">Kabul ettiğin {{ satir.adet }} paketin kaçı hasarlı? Toplam değişmez, içinden işaretlenir.</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #e0b9b2;border-radius:14px;overflow:hidden;flex:none">
+                      <span onClick="{{ hasarEksi }}" style="width:42px;height:46px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+                      <span style="width:36px;text-align:center;font:700 17px 'Karla';color:#a44a3f">{{ hasarAdet }}</span>
+                      <span onClick="{{ hasarArti }}" style="width:42px;height:46px;display:flex;align-items:center;justify-content:center;font:400 20px 'Karla';color:#a44a3f;cursor:pointer;user-select:none">+</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+                      <span style="font:700 12.5px 'Karla';color:#46601f">sağlam {{ saglamAdet }}</span>
+                      <span style="font:700 12.5px 'Karla';color:#a44a3f">hasarlı {{ hasarAdet }}</span>
+                    </div>
+                  </div>
+                  <div style="display:flex;flex-wrap:wrap;gap:7px">
+                    <sc-for list="{{ ch.hasarSebep }}" as="hs" hint-placeholder-count="4">
+                      <span onClick="{{ hs.sec }}" style="font:700 12px 'Karla';color:{{ hs.c.fg }};background:{{ hs.c.bg }};border:1.4px solid {{ hs.c.bd }};border-radius:12px;padding:9px 12px;cursor:pointer">{{ hs.v }}</span>
+                    </sc-for>
+                  </div>
+                  <span style="font:400 11px/1.5 'Karla';color:#a44a3f">Hasarlı paketler stoğa "hasarlı" olarak girer; iade mi imha mı olacağı yönetimde karara bağlanır.</span>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:10px;opacity:.7">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14.5px 'Karla'">Fıstıklı Baklava · 1250 g</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">beklenen 12 · GAZ-7120</span>
+              </div>
+              <span onClick="{{ openAdet }}" style="min-width:74px;height:52px;border:1.5px dashed #c4bda9;border-radius:15px;background:#fff;display:flex;align-items:center;justify-content:center;font:700 11.5px 'Karla';color:#8a8270;flex:none;cursor:pointer">say →</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.12em;color:#b05c2e;background:#f6e6d6;border-radius:8px;padding:5px 8px">SKT ZORUNLU</span>
+              <span style="font:700 10.5px 'Karla';color:#a8a191;background:#f2f0e8;border-radius:8px;padding:5px 8px">lot: —</span>
+            </div>
+          </div>
+
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:10px;opacity:.7">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14.5px 'Karla'">Fıstıklı Baklava · 2500 g</span>
+                <span style="font:400 11px 'Karla';color:#8a8270">beklenen 30 · GAZ-7120</span>
+              </div>
+              <span onClick="{{ openAdet }}" style="min-width:74px;height:52px;border:1.5px dashed #c4bda9;border-radius:15px;background:#fff;display:flex;align-items:center;justify-content:center;font:700 11.5px 'Karla';color:#8a8270;flex:none;cursor:pointer">say →</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.12em;color:#b05c2e;background:#f6e6d6;border-radius:8px;padding:5px 8px">SKT ZORUNLU</span>
+              <span style="font:700 10.5px 'Karla';color:#a8a191;background:#f2f0e8;border-radius:8px;padding:5px 8px">lot: —</span>
+            </div>
+          </div>
+
+          <sc-if value="{{ adetVar }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#8a8270">FARK ÖZETİ — YALNIZ SAPAN SATIRLAR</span>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                  <span style="font:700 13px 'Karla'">Fıstıklı Baklava · 450 g</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">beklenen 10 · gelen {{ satir.adet }}</span>
+                </div>
+                <span style="font:700 13.5px 'Karla';color:#b05c2e;flex:none">{{ farkMetni }}</span>
+              </div>
+              <span style="font:400 11px/1.5 'Karla';color:#a8a191">Uyuşan satırlar listelenmez — bakılacak yalnız bunlar.</span>
+            </div>
+          </sc-if>
+
+          <div style="background:#e7e2d2;border-radius:16px;padding:12px 14px;margin-top:2px">
+            <span style="font:400 11.5px/1.6 'Karla';color:#6d7261">SKT her satırda zorunlu — girilmeden kabul kapanmaz. Lot geri çağırma anahtarıdır; boş bırakmak bilinçli olmalı. Hasar fotoğrafı bu sürümde eklenemiyor.</span>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%);display:flex;flex-direction:column;gap:8px">
+          <span style="font:700 11.5px 'Karla';color:#a8a191;text-align:center">{{ kabulDurum }}</span>
+          <div style="background:{{ c.kabulCta.bg }};color:{{ c.kabulCta.fg }};font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center">{{ kabulCtaLabel }}</div>
+          <div onClick="{{ act.kismiKabul }}" style="border:1.5px solid #ddd6c4;background:#fbfaf4;color:#2f353a;font:700 13.5px 'Karla';border-radius:16px;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer">Kısmen teslim alındı olarak kaydet</div>
+          <span style="font:400 11px/1.5 'Karla';color:#a8a191;text-align:center">Kısmi kayıtta kalan satırlar açık kalır; sevkiyat "kısmen teslim alındı"ya döner.</span>
+        </div>
+        </sc-if>
+      </div>
+    </sc-if>

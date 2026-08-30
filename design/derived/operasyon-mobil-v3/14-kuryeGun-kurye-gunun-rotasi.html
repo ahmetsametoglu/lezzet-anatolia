@@ -1,0 +1,79 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: kuryeGun · Kurye · Günün rotası -->
+<!-- kaynak satırlar: 1293-1365 -->
+
+<!-- kaynak: satır 1293-1365 · görünüm bloğu -->
+    <sc-if value="{{ is.kuryeGun }}">
+      <div data-screen-label="Kurye · Günün rotası" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="padding:22px 20px 6px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#5f7a2c">KURYE · 28 AĞUSTOS</span>
+            <span style="font:600 27px/1.1 'Lora'">Günün Rotası</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">Marc Lemoine · SF-26-YRNWV9</span>
+          </div>
+          <div style="display:flex;gap:8px;flex:none">
+            <div onClick="{{ tg.kimlikSheet }}" style="width:40px;height:40px;border-radius:14px;background:#5f7a2c;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:800 13px 'Karla';cursor:pointer">ML</div>
+          </div>
+        </div>
+
+        <div style="margin:14px 20px 0;background:#2f353a;border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between">
+            <span style="font:600 26px 'Lora';color:#f5f1e6">0<span style="font:400 16px 'Karla';color:#8f9aa2">/1 durak</span></span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px">
+              <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8f9aa2">CEPTE</span>
+              <span style="font:700 15px 'Karla';color:#f5f1e6">0,00 €</span>
+            </div>
+          </div>
+          <div style="height:6px;border-radius:4px;background:#464e55;overflow:hidden"><div style="width:4%;height:100%;background:#5f7a2c"></div></div>
+          <div style="background:#3a4249;border-radius:14px;padding:10px 13px;display:flex;align-items:center;gap:9px">
+            <span style="width:7px;height:7px;border-radius:50%;background:#e0b487;flex:none"></span>
+            <span style="font:700 11.5px 'Karla';color:#e8dcc9">1 kapıda tahsilat kaldı · 60,00 €</span>
+          </div>
+        </div>
+
+        <div onClick="{{ go.seferBaslat }}" style="margin:12px 20px 0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+          <span style="width:34px;height:34px;border-radius:11px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.8"/><circle cx="17" cy="18" r="1.8"/></svg></span>
+          <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+            <span style="font:700 13.5px 'Karla'">Sefer künyesi ve yükleme</span>
+            <span style="font:400 11px 'Karla';color:#8a8270">rota · araç · araçtaki kutular {{ yuklenen }}/7</span>
+          </div>
+          <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+        </div>
+
+        <div onClick="{{ go.satis }}" style="margin:10px 20px 0;border:1.5px solid #c3d3a4;background:#f2f7e8;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2l1.5 4h9L18 2"/><path d="M4 6h16l-1.5 14H5.5z"/></svg>
+          <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+            <span style="font:700 13.5px 'Karla';color:#46601f">Yoldan gelen müşteri</span>
+            <span style="font:400 11px 'Karla';color:#6d7261">yerinde satış · anonim</span>
+          </div>
+          <span style="font:400 18px 'Karla';color:#8fa365">›</span>
+        </div>
+
+        <div style="padding:18px 20px 8px"><span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">DURAKLAR</span></div>
+        <div style="padding:0 20px;display:flex;flex-direction:column">
+          <div onClick="{{ go.kuryeDurak }}" style="display:flex;gap:12px;cursor:pointer">
+            <div style="display:flex;flex-direction:column;align-items:center;flex:none">
+              <span style="width:32px;height:32px;border-radius:50%;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla'">1</span>
+            </div>
+            <div style="flex:1;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 15px;display:flex;flex-direction:column;gap:7px;transition:transform .12s" style-active="transform:scale(.985)">
+              <span style="font:700 14px/1.4 'Karla'">12 rue du Faubourg de Pierre, 67000 Strasbourg</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Restaurant Oberjaegerhof · B2B · 1 kalem</span>
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-top:2px">
+                <span style="background:#b05c2e;color:#fff;font:800 10px 'Karla';letter-spacing:.06em;border-radius:11px;padding:5px 10px">KAPIDA · 60,00 € KART</span>
+                <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+              </div>
+            </div>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:14px">Sonuçlanmayan durak kapanışı engellemez — takılı duraklar seferi kapatırken çözülür.</span>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%)">
+          <div onClick="{{ go.seferKapat }}" style="background:#2f353a;color:#f5f1e6;font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+            <span>Seferi kapat</span>
+            <span style="background:#4a5157;font:700 11.5px 'Karla';border-radius:10px;padding:3px 9px">1 açık</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>

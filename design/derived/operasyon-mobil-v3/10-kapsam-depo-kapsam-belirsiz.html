@@ -1,0 +1,29 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: kapsam · Depo · Kapsam belirsiz -->
+<!-- kaynak satırlar: 1043-1065 -->
+
+<!-- kaynak: satır 1043-1065 · görünüm bloğu -->
+    <sc-if value="{{ is.kapsam }}">
+      <div data-screen-label="Depo · Kapsam belirsiz" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="padding:22px 20px 0;display:flex;flex-direction:column;gap:4px">
+          <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#5f7a2c">DEPO</span>
+          <span style="font:600 27px/1.1 'Lora'">Depo İşleri</span>
+          <span style="font:400 12px 'Karla';color:#8a8270">Ayşe Demir · depo + para</span>
+        </div>
+        <div style="margin:18px 20px 0;background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:22px;padding:20px;display:flex;flex-direction:column;gap:10px">
+          <span style="width:40px;height:40px;border-radius:14px;background:#f6e6d6;display:flex;align-items:center;justify-content:center">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.9" stroke-linecap="round"><path d="M12 8v5M12 16.5v.5"/><circle cx="12" cy="12" r="9"/></svg>
+          </span>
+          <span style="font:600 19px/1.3 'Lora'">Hangi depoda çalıştığın belli değil</span>
+          <span style="font:400 12.5px/1.6 'Karla';color:#6d7261">Kapsamında iki depo var: Strasbourg Merkez ve Kehl. Depo işleri "benim depom" bağlamında yürür — sistem hangisi olduğunu bilmeden toplama, kabul ve sayım açılmaz.</span>
+          <div style="height:1.5px;background:#e8d6c4;margin:4px 0"></div>
+          <span style="font:400 12px/1.6 'Karla';color:#8a8270">Yönetici seni bir depoya atadığında bu bölüm kendiliğinden açılır. Para bölümü etkilenmez — o depo bağlamı istemez.</span>
+        </div>
+        <div style="margin:12px 20px 0;display:flex;flex-direction:column;gap:8px">
+          <div onClick="{{ go.para }}" style="height:52px;border-radius:16px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer">Para bölümüne geç</div>
+          <div onClick="{{ tg.kimlikSheet }}" style="height:50px;border-radius:16px;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 13.5px 'Karla';cursor:pointer">Hesabım</div>
+        </div>
+        <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;padding:14px 20px 24px">Depo seçtirme bilinçli olarak yoktur — yanlış depoya yazılan sayım iki deponun stokunu birden bozar.</span>
+      </div>
+    </sc-if>

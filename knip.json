@@ -2,7 +2,8 @@
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "ignoreBinaries": [
     "supabase",
-    "stripe"
+    "stripe",
+    "maestro"
   ],
   "ignore": [
     "design/**"

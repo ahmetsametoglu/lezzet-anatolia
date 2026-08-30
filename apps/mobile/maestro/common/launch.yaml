@@ -1,0 +1,28 @@
+# Uygulamayı sıfırdan açar ve JS paketinin gerçekten çizildiğini doğrular.
+#
+# Neden `openLink`, neden düz `launchApp` değil: uygulama bir Expo dev-client'tır. `launchApp`
+# onu açtığında DevLauncher gelir — paket listesi ekranı — ve akış "ekran bulunamadı" diye
+# düşer, sebebi de görünmez. Derin bağlantı Metro'nun adresini doğrudan verir.
+#
+# Şema `app.config.ts`ten (`scheme: 'lezzetanatolia'`); değişirse burası da değişmeli.
+# `localhost` cihazda `adb reverse` tüneliyle çözülür (`pnpm mobile:device`).
+#
+# NEDEN `clearState` YOK (ölçüldü 30.08, OPPO CPH1907): cihaz `adb shell pm clear`ı reddediyor —
+# `SecurityException: PID … does not have permission android.permission.CLEAR_APP_USER_DATA`.
+# Üretici kısıtı; emülatörde çalışır, bu cihazda çalışmaz. Oturumu sıfırlamak akışın işi olarak
+# kalıyor ve uygulamanın KENDİ çıkışıyla yapılıyor (`dev-login.yaml`) — hem her cihazda çalışır
+# hem de sınadığımız yolu (gerçek çıkış) fazladan bir kez geçer.
+appId: com.lezzetanatolia.app
+---
+- stopApp
+- openLink: lezzetanatolia://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081
+
+# Paket indirilip çalışana kadar bekle. İlk açılışta Metro derlemesi uzun sürebilir, bu yüzden
+# cömert bir süre: kısa tutmak, yavaş derlemeyi "uygulama açılmadı" diye yanlış raporlar.
+#
+# `app-root` iki kabukta da vardır (kök düzen). Müşteri sekme çubuğunu beklemek yanlış olurdu:
+# personel oturumu açıkken uygulama doğrudan operasyona düşer ve o çubuk hiç doğmaz.
+- extendedWaitUntil:
+    visible:
+      id: "app-root"
+    timeout: 120000

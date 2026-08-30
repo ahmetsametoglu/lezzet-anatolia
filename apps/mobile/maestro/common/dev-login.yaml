@@ -1,0 +1,28 @@
+# Oturum açar — parametre: ROLE (depo · kurye · yönetim · muhasebe · müşteri).
+#
+# Giriş ekranına DERİN BAĞLANTIYLA gidilir, sekmelere dokunarak değil. İki sebep:
+#
+# 1. ÖLÇÜLDÜ 30.08 (OPPO CPH1907): dev-client'ın YÜZEN menü düğmesi ekranın sağ altında duruyor
+#    ve tam olarak "Hesap" sekmesinin üstüne düşüyor. Sekmeye dokunmak dev menüsünü açıyor,
+#    uygulama hiç ilerlemiyor — üstelik akış "dokunuldu" diye COMPLETED yazıyor, yani arıza
+#    sessiz. Düğme uygulamanın parçası değil, geliştirme kabuğunun; testin ona bağlanması yanlış.
+# 2. Derin bağlantı zaten sınamak istediğimiz bir yol (`+native-intent.tsx`) ve ekranların
+#    yerleşiminden bağımsız: tasarım geçişi sekme çubuğunu değiştirse bile bu akış ayakta kalır.
+#
+# Düğmeler `__DEV__` arkasındadır ve mail turunu atlayan GERÇEK oturum kurar (`lib/auth/dev-login`):
+# uçtan magic-link jetonu alınır, Supabase'te tüketilir. Web e2e'sinin kurulumuyla aynı içgüdü,
+# aynı hesap listesi. Yeni oturum eskisinin üstüne yazılır — ayrıca çıkış adımı gerekmez
+# (cihaz `pm clear`ı reddediyor, gerekçe `launch.yaml`da).
+appId: com.lezzetanatolia.app
+---
+- runFlow: launch.yaml
+
+- openLink: lezzetanatolia://login
+
+# Düğme kimliği etiketin Türkçe küçük harfidir (`login-screen.tsx`): Depo → depo, Yönetim → yönetim.
+- extendedWaitUntil:
+    visible:
+      id: "login-dev-${ROLE}"
+    timeout: 30000
+- tapOn:
+    id: "login-dev-${ROLE}"

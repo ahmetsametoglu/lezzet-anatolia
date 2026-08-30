@@ -1,0 +1,147 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: kuryeDurak · Kurye · Durak -->
+<!-- kaynak satırlar: 1466-1606 -->
+
+<!-- kaynak: satır 1466-1606 · görünüm bloğu -->
+    <sc-if value="{{ is.kuryeDurak }}">
+      <div data-screen-label="Kurye · Durak" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 10px">
+          <div onClick="{{ go.kuryeGun }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column;flex:1">
+            <span style="font:600 20px 'Lora'">Durak 1/1</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">LA-26-CQQ93Y · 1. deneme</span>
+          </div>
+          <span style="font:800 10px 'Karla';letter-spacing:.08em;color:#2f353a;border:1.5px solid #2f353a;border-radius:11px;padding:5px 10px">B2B</span>
+        </div>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 15px/1.4 'Karla'">12 rue du Faubourg de Pierre, 67000 Strasbourg</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">Mehmet Aydın · B2B</span>
+          </div>
+          <div style="display:flex;gap:8px">
+            <div onClick="{{ tg.navSheet }}" style="flex:1;height:52px;border-radius:16px;background:#5f7a2c;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8z"/></svg>
+              <span style="font:700 13px 'Karla';color:#f5f1e6">Navigasyon</span>
+            </div>
+            <div style="width:56px;height:52px;border-radius:16px;border:1.5px solid #ddd6c4;background:#fbfaf4;display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z"/></svg>
+            </div>
+            <div style="width:56px;height:52px;border-radius:16px;border:1.5px solid #ddd6c4;background:#fbfaf4;display:flex;align-items:center;justify-content:center;cursor:pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8.5 8.5 0 1 1-3.5-6.9L21 4l-1 3.4A8.4 8.4 0 0 1 21 12z"/></svg>
+            </div>
+          </div>
+
+          <div style="background:{{ c.kutuAdim.bg }};border:1.5px solid {{ c.kutuAdim.bd }};border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:22px;height:22px;border-radius:50%;background:#2f353a;color:#f5f1e6;font:700 11px 'Karla';display:flex;align-items:center;justify-content:center">1</span>
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:{{ c.kutuAdim.fg }}">KUTULAR — {{ durakOkunan }}/{{ durakKutu }} OKUTULDU</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <sc-for list="{{ durakKutular }}" as="dk" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="width:26px;height:26px;border-radius:9px;background:{{ dk.c.bg }};border:1.5px solid {{ dk.c.bd }};display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';color:{{ dk.c.fg }};flex:none">{{ dk.im }}</span>
+                  <span style="font:700 12.5px 'Karla';color:{{ dk.metinRengi }};flex:1">{{ dk.kod }}</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">{{ dk.not }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <sc-if value="{{ durakOkutVar }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ durakOkut }}" style="height:50px;border-radius:15px;background:#5f7a2c;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+                <span style="font:700 13.5px 'Karla';color:#f5f1e6">Kutuyu okut — {{ durakKalan }} kaldı</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ durakTam }}" hint-placeholder-val="{{ false }}">
+              <span style="font:700 12px 'Karla';color:#46601f">Tüm kutular müşteriye verildi — teslim adımı açıldı</span>
+            </sc-if>
+            <sc-if value="{{ durakEksik }}" hint-placeholder-val="{{ true }}">
+              <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Kutular okutulmadan kanıt ve tahsilat adımları açılmaz — eksik kutu "araçta kaldı" olarak dönüş dökümüne düşer.</span>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ durakTam }}" hint-placeholder-val="{{ false }}">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:22px;height:22px;border-radius:50%;background:#2f353a;color:#f5f1e6;font:700 11px 'Karla';display:flex;align-items:center;justify-content:center">2</span>
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#8a8270">KANIT — B2B'DE ZORUNLU</span>
+            </div>
+            <sc-if value="{{ t.imzaOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div onClick="{{ tg.imzaCizildi }}" style="height:110px;border:1.5px dashed #c4bda9;border-radius:16px;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;overflow:hidden">
+                  <sc-if value="{{ t.imzaCizildi }}">
+                    <svg width="240" height="80" viewBox="0 0 240 80" fill="none" stroke="#2f353a" stroke-width="3" stroke-linecap="round"><path d="M12 18l38 44 32-30 34 26 30-40 32 34 38-34"/></svg>
+                  </sc-if>
+                  <sc-if value="{{ imzaCizilmedi }}" hint-placeholder-val="{{ true }}">
+                    <span style="font:400 12.5px 'Karla';color:#a8a191">buraya imzalayın — Mehmet Aydın</span>
+                  </sc-if>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <span onClick="{{ act.imzaTemizle }}" style="flex:1;height:44px;border-radius:14px;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Temizle</span>
+                  <span onClick="{{ act.imzaOnayla }}" style="flex:1;height:44px;border-radius:14px;background:{{ c.imzaOnay.bg }};color:{{ c.imzaOnay.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Onayla</span>
+                  <span onClick="{{ tg.imzaOpen }}" style="flex:1;height:44px;border-radius:14px;border:1.5px solid #ddd6c4;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Vazgeç</span>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ imzaKapali }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;gap:8px">
+                <span onClick="{{ tg.imzaOpen }}" style="flex:1;height:50px;border-radius:15px;border:1.5px solid #ddd6c4;background:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font:700 13px 'Karla';cursor:pointer">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3l5 5L8 21H3v-5z"/></svg>
+                  İmza al
+                </span>
+                <span style="flex:1;height:50px;border-radius:15px;border:1.5px dashed #ddd6c4;display:flex;align-items:center;justify-content:center;gap:8px;font:700 13px 'Karla';color:#a8a191">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a8a191" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="3"/><circle cx="12" cy="13" r="3.2"/></svg>
+                  Fotoğraf
+                </span>
+              </div>
+              <span style="font:400 11.5px/1.55 'Karla';color:#a8a191">Fotoğraf çekimi bu sürümde bağlı değil — kanıt olarak imza alın.</span>
+            </sc-if>
+          </div>
+
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:22px;height:22px;border-radius:50%;background:#2f353a;color:#f5f1e6;font:700 11px 'Karla';display:flex;align-items:center;justify-content:center">3</span>
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#8a8270">MAL — 1 KALEM</span>
+            </div>
+            <div onClick="{{ tg.malOk }}" style="display:flex;align-items:center;gap:12px;cursor:pointer">
+              <span style="width:30px;height:30px;border-radius:10px;border:1.5px solid {{ c.malOk.bd }};background:{{ c.malOk.bg }};display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';color:{{ c.malOk.fg }};flex:none">{{ malIsaret }}</span>
+              <span style="font:700 13.5px 'Karla';flex:1">4 × Bitter Çikolatalı Pasta (1600 g)</span>
+            </div>
+            <span style="font:400 11.5px 'Karla';color:#a8a191">Dokun: ✓ teslim · tekrar dokun: ✕ reddedildi</span>
+          </div>
+
+          <div style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:22px;height:22px;border-radius:50%;background:#b05c2e;color:#fff;font:700 11px 'Karla';display:flex;align-items:center;justify-content:center">4</span>
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#b05c2e">TAHSİLAT — MOTOR TUTARI 60,00 €</span>
+            </div>
+            <div onClick="{{ kpOpen.tahsilat }}" style="height:56px;border:1.5px solid #2f353a;border-radius:15px;background:#fff;padding:0 15px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+              <span style="font:700 22px 'Karla';color:#2f353a;flex:1">{{ tahsilatTutar }} €</span>
+              <span style="font:700 11px 'Karla';color:#8a8270;background:#f2f0e8;border-radius:10px;padding:6px 10px">tuş takımı</span>
+            </div>
+            <div style="display:flex;gap:8px">
+              <span onClick="{{ pick.yontem_nakit }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.yontem_nakit.bd }};background:{{ c.yontem_nakit.bg }};color:{{ c.yontem_nakit.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">nakit</span>
+              <span onClick="{{ pick.yontem_kart }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.yontem_kart.bd }};background:{{ c.yontem_kart.bg }};color:{{ c.yontem_kart.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">kart</span>
+              <span onClick="{{ pick.yontem_cek }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid {{ c.yontem_cek.bd }};background:{{ c.yontem_cek.bg }};color:{{ c.yontem_cek.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">çek</span>
+            </div>
+            <span style="font:400 11.5px/1.55 'Karla';color:#8a8270">Ödeme durumu tahsilattan türetilir; "tekrar dene" güvenlidir, para iki kez yazılmaz.</span>
+          </div>
+          </sc-if>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:12px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 40%);display:flex;flex-direction:column;gap:9px">
+          <div style="background:{{ c.teslimCta.bg }};color:{{ c.teslimCta.fg }};font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center">
+            <sc-if value="{{ teslimHazir }}" hint-placeholder-val="{{ false }}"><span>Teslim edildi — 60,00 € alındı</span></sc-if>
+            <sc-if value="{{ teslimEksik }}" hint-placeholder-val="{{ true }}"><span>Sıra: kutular → kanıt → mal → tahsilat</span></sc-if>
+          </div>
+          <div style="display:flex;gap:8px">
+            <span onClick="{{ tg.ulasilamadi }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid #ddd6c4;background:#fbfaf4;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Ulaşılamadı</span>
+            <span onClick="{{ tg.kabulEtmedi }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid #d3a49c;background:#fdf6f4;color:#a44a3f;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Kabul etmedi</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>

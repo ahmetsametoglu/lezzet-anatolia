@@ -1,0 +1,156 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: toplama · Depo · Toplama kuyruğu -->
+<!-- kaynak satırlar: 176-325 -->
+
+<!-- kaynak: satır 176-325 · görünüm bloğu -->
+    <sc-if value="{{ is.toplama }}">
+      <div data-screen-label="Depo · Toplama kuyruğu" style="animation:pageIn .26s ease;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Toplama</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">{{ ov.toplamaAlt }}</span>
+          </div>
+        </div>
+
+        <sc-if value="{{ t.etiket }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 20px 14px;background:#fff;border:1.5px solid #5f7a2c;border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:4px;animation:fadeIn .25s ease">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#5f7a2c">ETİKET · KUTU 1/1</span>
+              <span onClick="{{ tg.etiket }}" style="font:700 12px 'Karla';color:#8a8270;cursor:pointer">kapat</span>
+            </div>
+            <span style="font:700 14.5px 'Karla'">LA-26-QRPRRV · Ayşe Yılmaz</span>
+            <span style="font:400 12.5px 'Karla';color:#6d7261">Strasbourg Merkez · 30.08.2026 · tahsilat: nakit</span>
+            <span style="font:400 12.5px 'Karla';color:#6d7261">3 × Mangolu Artisan Kek · 90 g</span>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+              <div style="width:52px;height:52px;border-radius:10px;background:#2f353a;display:flex;align-items:center;justify-content:center;flex:none">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="2"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM15 15h2v2h-2zM19 19h1v1h-1z"/></svg>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1">
+                <span style="font:400 11.5px 'Karla';color:#8a8270">QR: KT-26-PLN7WAQN3L</span>
+                <span style="font:700 11.5px 'Karla';color:#5f7a2c">Etiket basıldı ({{ basimSayisi }}) · QL-1110NWB</span>
+              </div>
+              <span onClick="{{ yenidenBas }}" style="font:700 11.5px 'Karla';color:#2f353a;border:1.4px solid #ddd6c4;border-radius:12px;padding:8px 12px;cursor:pointer">yeniden bas</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+          <div onClick="{{ tg.scanner }}" style="margin:0 20px;background:#5f7a2c;border-radius:18px;height:54px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 4px 14px rgba(95,122,44,.24);transition:transform .12s" style-active="transform:scale(.98)">
+            <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round"><path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2M4 12h16"/></svg>
+            <span style="font:700 14.5px 'Karla';color:#f5f1e6">Hazırlık kâğıdını okut</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:0 20px;background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:18px;padding:15px 16px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 13px 'Karla';color:#6d7261">Okutma kapalı</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Bağlantı gelene kadar toplama işaretlenemez. Depo kayıtları kuyruğa alınmaz — mal rafta, sistem başka söylüyor olamaz.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ liste.dolu }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:18px 20px 8px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">BEKLEYEN SİPARİŞLER</span>
+            <span style="font:700 11px 'Karla';color:#b3ab97">birini seç</span>
+          </div>
+        </sc-if>
+        <div style="height:18px"></div>
+
+        <sc-if value="{{ liste.yukleniyor }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px 24px;display:flex;flex-direction:column;gap:9px">
+            <div style="height:74px;border-radius:18px;background:#f0ede3;border:1.5px solid #e7e2d2"></div>
+            <div style="height:74px;border-radius:18px;background:#f0ede3;border:1.5px solid #e7e2d2;opacity:.7"></div>
+            <div style="height:74px;border-radius:18px;background:#f0ede3;border:1.5px solid #e7e2d2;opacity:.4"></div>
+            <span style="font:700 11.5px 'Karla';color:#a8a191;text-align:center;margin-top:4px">Kuyruk yükleniyor…</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ liste.hata }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px 24px;display:flex;flex-direction:column;gap:12px">
+            <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:20px;padding:22px 20px;display:flex;flex-direction:column;gap:7px;align-items:center">
+              <span style="font:600 18px 'Lora';color:#a44a3f;text-align:center">Liste yüklenemedi</span>
+              <span style="font:400 12px/1.55 'Karla';color:#a44a3f;text-align:center">Sunucuya ulaşılamadı. Toplamaya kör başlamak yerine yeniden dene — kuyruk sırası teslim gününe göre kurulur.</span>
+            </div>
+            <div onClick="{{ liste.tekrar }}" style="height:52px;border-radius:16px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer">Tekrar dene</div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ liste.bos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px 24px">
+            <div style="border:1.5px dashed #ddd6c4;background:#fbfaf4;border-radius:20px;padding:28px 22px;display:flex;flex-direction:column;gap:8px;align-items:center">
+              <span style="font:600 18px 'Lora';text-align:center">Toplanacak sipariş yok</span>
+              <span style="font:400 12px/1.55 'Karla';color:#8a8270;text-align:center">Onaylanan sipariş buraya kendiliğinden düşer ve bildirim gelir. Yeni sipariş beklemiyorsan yakın-SKT turu iyi bir sıradaki iş.</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ liste.dolu }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:0 20px 24px;display:flex;flex-direction:column;gap:9px">
+          <div onClick="{{ go.toplamaDetay }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:5px;align-self:stretch;border-radius:3px;background:#b05c2e;flex:none"></span>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+              <span style="font:700 13.5px 'Karla'">LA-26-9ERUNH</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Restaurant Oberjaegerhof · B2B</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:5px;border-radius:3px;background:#e7e2d2;overflow:hidden"><div style="width:50%;height:100%;background:#b05c2e"></div></div>
+                <span style="font:700 10.5px 'Karla';color:#b05c2e">1/2 · yarım</span>
+              </div>
+            </div>
+            <span style="font:400 19px 'Karla';color:#b3ab97">›</span>
+          </div>
+          <div onClick="{{ acSiparis.kurye }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:5px;align-self:stretch;border-radius:3px;background:#8a8270;flex:none"></span>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+              <span style="font:700 13.5px 'Karla'">LA-26-QRPRRV</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Claire Weber · B2C · kurye rotası</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:5px;border-radius:3px;background:#e7e2d2;overflow:hidden"><div style="width:0%;height:100%;background:#5f7a2c"></div></div>
+                <span style="font:700 10.5px 'Karla';color:#8a8270">0/1 kalem</span>
+              </div>
+            </div>
+            <span style="font:400 19px 'Karla';color:#b3ab97">›</span>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:5px;align-self:stretch;border-radius:3px;background:#5f7a2c;flex:none"></span>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+              <span style="font:700 13.5px 'Karla'">LA-26-HJ46JE</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Restaurant Oberjaegerhof · B2B</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:5px;border-radius:3px;background:#e7e2d2;overflow:hidden"><div style="width:100%;height:100%;background:#5f7a2c"></div></div>
+                <span style="font:700 10.5px 'Karla';color:#5f7a2c">3/3 hazır</span>
+              </div>
+            </div>
+            <span style="font:400 19px 'Karla';color:#b3ab97">›</span>
+          </div>
+          <div onClick="{{ acSiparis.kargo }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:5px;align-self:stretch;border-radius:3px;background:#b05c2e;flex:none"></span>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:7px">
+                <span style="font:700 13.5px 'Karla'">LA-26-VPUD6F</span>
+                <span style="background:#f6e6d6;color:#b05c2e;font:800 8.5px 'Karla';letter-spacing:.1em;border-radius:7px;padding:3px 6px">KARGO</span>
+              </div>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Épicerie Madame · B2C · taşıyıcı</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:5px;border-radius:3px;background:#e7e2d2;overflow:hidden"><div style="width:0%;height:100%;background:#5f7a2c"></div></div>
+                <span style="font:700 10.5px 'Karla';color:#8a8270">0/1 kalem</span>
+              </div>
+            </div>
+            <span style="font:400 19px 'Karla';color:#b3ab97">›</span>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:5px;align-self:stretch;border-radius:3px;background:#8a8270;flex:none"></span>
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:0">
+              <span style="font:700 13.5px 'Karla'">LA-26-3CNUE3</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">Sabine Krüger · B2C</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="flex:1;height:5px;border-radius:3px;background:#e7e2d2;overflow:hidden"><div style="width:100%;height:100%;background:#5f7a2c"></div></div>
+                <span style="font:700 10.5px 'Karla';color:#5f7a2c">1/1 hazır</span>
+              </div>
+            </div>
+            <span style="font:400 19px 'Karla';color:#b3ab97">›</span>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:6px">Kuyruk teslim gününe göre sıralı; yarım kalan kutu en üstte durur.</span>
+        </div>
+        </sc-if>
+      </div>
+    </sc-if>

@@ -1,0 +1,75 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: skt · Depo · Yakın-SKT turu -->
+<!-- kaynak satırlar: 828-896 -->
+
+<!-- kaynak: satır 828-896 · görünüm bloğu -->
+    <sc-if value="{{ is.skt }}">
+      <div data-screen-label="Depo · Yakın-SKT turu" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Yakın-SKT Turu</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">eşikler: %25 yakın-SKT · %30 öneri indirimi</span>
+          </div>
+        </div>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:9px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 15px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14.5px 'Karla'">Su Böreği · tepsi</span>
+                <span style="font:400 11.5px 'Karla';color:#b05c2e">6 adet · 2 gün kaldı</span>
+              </div>
+              <span style="background:#e3ecd2;color:#46601f;font:800 10px 'Karla';letter-spacing:.08em;border-radius:10px;padding:6px 10px;flex:none">TEKLİF AÇIK</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="flex:1;height:6px;border-radius:4px;background:#e7e2d2;overflow:hidden"><div style="width:18%;height:100%;background:#b05c2e"></div></div>
+              <span style="font:700 10.5px 'Karla';color:#8a8270">ömür %18</span>
+            </div>
+          </div>
+          <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:18px;padding:14px 15px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14.5px 'Karla'">Kaymaklı Baklava · 1 kg</span>
+                <span style="font:400 11.5px 'Karla';color:#a44a3f">4 adet · −1 gün (geçti)</span>
+              </div>
+              <span style="background:#f4d7d2;color:#a44a3f;font:800 10px 'Karla';letter-spacing:.08em;border-radius:10px;padding:6px 10px;flex:none">İMHA EDİLMELİ</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="flex:1;height:6px;border-radius:4px;background:#f0dcd8;overflow:hidden"><div style="width:2%;height:100%;background:#a44a3f"></div></div>
+              <span style="font:700 10.5px 'Karla';color:#a44a3f">ömür %0</span>
+            </div>
+            <span onClick="{{ act.sayimParti }}" style="font:700 12.5px 'Karla';color:#a44a3f;cursor:pointer;align-self:flex-start">sayım/düzeltmeye götür →</span>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 15px;display:flex;flex-direction:column;gap:9px">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 14.5px 'Karla'">Şöbiyet · 500 g</span>
+                <span style="font:400 11.5px 'Karla';color:#8a8270">9 adet · 5 gün kaldı</span>
+              </div>
+              <span style="background:#f6e6d6;color:#b05c2e;font:800 10px 'Karla';letter-spacing:.08em;border-radius:10px;padding:6px 10px;flex:none">TEKLİFE GİREBİLİR</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px">
+              <div style="flex:1;height:6px;border-radius:4px;background:#e7e2d2;overflow:hidden"><div style="width:23%;height:100%;background:#b05c2e"></div></div>
+              <span style="font:700 10.5px 'Karla';color:#8a8270">ömür %23</span>
+            </div>
+          </div>
+          <div style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:18px;padding:14px 15px;display:flex;align-items:flex-start;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:700 14.5px 'Karla';color:#6d7261">Acılı Ezme · 250 g</span>
+              <span style="font:400 11.5px 'Karla';color:#a8a191">12 adet · 9 gün · ömür bilinmiyor — eşik uygulanmaz</span>
+            </div>
+            <span style="background:#e7e2d2;color:#8a8270;font:800 10px 'Karla';letter-spacing:.08em;border-radius:10px;padding:6px 10px;flex:none">KARAR YOK</span>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:4px">Karar sistemce türetilir — bu liste fiziksel ayıklama rehberidir, işaretleme yok. Teklif oranı yönetimde onaylanır.</span>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%)">
+          <div onClick="{{ act.sayimParti }}" style="border:1.5px solid #2f353a;color:#2f353a;font:700 14.5px 'Karla';border-radius:17px;height:52px;display:flex;align-items:center;justify-content:center;cursor:pointer">Sayım / Düzeltme →</div>
+        </div>
+      </div>
+    </sc-if>
