@@ -7755,6 +7755,22 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `status`, `sku`, `dateType`, `shelfLifeDays`) fikstürlere işlendi ve testin yerel tip kopyası
   **şemadan türetildi** — kopya bayatlayınca jest geçiyor, `tsc` kırılıyordu.
 
-  **Sırada:** 05 mal kabul formu (satır kartı: kapalı/açık, "say →", adet · SKT · lot sayfaları,
-  kalan ömür bloğu, hasar bloğu, fark özeti) ve 06 siparişsiz kabul.
+  **MAL KABUL BİTTİ (30.08).** 04 liste · 05 form · 06 siparişsiz ve alt akışları (koli okutma,
+  ürün arama, kod eşleme, fark özeti, kısmi kabul) cihazda uçtan uca geçildi.
+
+  · **Satır kartı ve kapalı hâl:** sayılmamış satırda alan yok, sağda kesikli "say →". Altı kalemlik
+    sipariş üç ekrandan bir ekrana indi. Düğme satırı AÇAR, adedi YAZMAZ — otomatik doldurma
+    "saydım" ile "dokundum"u aynı kayda düşürürdü.
+  · **SKT seçici** (`OperationsDateSheet`): üç sütun + hızlı çipler. "31 Şubat" artık yakalanmıyor,
+    DOĞMUYOR. İlk çip ürünün raf ömründen türer; bilinmiyorsa çizilmez.
+  · **İki cihaz arızası kapandı:** (1) siparişsiz kabul bir önceki siparişin satırlarıyla açılıyordu
+    (ekran aynı rota olduğu için yeniden kurulmuyor; plansız dal artık temizliyor); (2) okutma
+    çekmecesinde ad ve künye FOTOĞRAFIN ÜSTÜNE yazılıyordu ve ürün fotoğrafları beyaz stüdyo
+    çekimi olduğu için "1 koli = 24 adet" okunmuyordu — metin fotoğrafın altına indi.
+  · **Aşağı çekince yenile** bekleyen sevkiyat listesinde; FORMDA bilerek YOK (yazılan adetleri
+    silerdi).
+
+  **Sözleşme istediği için yazılamayanlar** (`v3-tasarim-veri-modeli-notlari.md` bölüm 2): satır
+  başına **hasarlı paket sayısı** (bugün yalnız siparişin tamamına serbest not), **lot adayları**
+  (okutma yanıtı lot taşımıyor), **ürünün kutu tipleri** (elle "kaç koli geldi" sayımı için).
 

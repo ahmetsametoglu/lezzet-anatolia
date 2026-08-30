@@ -86,8 +86,8 @@ gerekçesiyle duruyor. Burada yalnız **ekran → ne eksik** özeti var; ayrınt
 | ~~`kpOpen.*`~~ ✅ | **Büyük tuş takımı** — tasarımın kendi cümlesi: *"Cihaz klavyesi açılmaz — eldivenle de basılabilecek büyük tuşlar"* | 17 tahsilat · 18 kasa sayımı (üç alan) | Cihaz klavyesi (`TextInput`) |
 | ~~`openSkt`~~ | **SKT seçici** — gün / ay / yıl | 05 · 06 | ✅ **YAZILDI** (30.08): üç sütun + hızlı çipler. "31 Şubat" artık yakalanmıyor, **doğmuyor** — listede yok. İlk çip ürünün raf ömründen türer; bilinmiyorsa çizilmez. |
 | `openLot` | **Lot / parti sayfası** — okunan koliden gelen adaylar listelenir | 05 · 06 | Serbest metin alanı — **YAZILAMADI:** sayfanın beslendiği şey "okunan koliden gelen adaylar"dır; `ResolveCodeResponse` lot taşımıyor. GS1-128 barkodunun parti alanını (AI 10) çözmek yeni bir yetenek. Adaysız bir seçim sayfası, serbest metinden kötüdür. |
-| `openAdet` | **Adet sayfası** — kaynak notu + sıfırla | 05 (×3) · 06 | Satır içi artı/eksi |
-| `openKutuTip` | **"Kolide kaç paket var"** — ürünün kutu tipleri, yenisi eklenebilir | 00-ortak · 05 | Yok |
+| `openAdet` | **Adet sayfası** — "KAÇ KOLİ GELDİ" (koli boyları × çarpan) + "KOLİ DIŞI TEK PAKET" | 05 (×3) · 06 | Satır içi alan + okutma çekmecesi. **Kısmen karşılandı:** koli OKUTULDUĞUNDA çarpan uygulanıyor (`qtyPerCode`). Elle sayım yolu için ürünün KAYITLI KUTU TİPLERİ gerekiyor (tasarım "KT-04, KL-12, KL-24 kayıtlı" diyor); kabul satırı onları taşımıyor. |
+| `openKutuTip` | **"Kolide kaç paket var"** — ürünün kutu tipleri, yenisi eklenebilir | 00-ortak · 05 | Yok — aynı eksik: kabul satırı ürünün kutu tiplerini taşımıyor |
 | `tg.navSheet` | **Navigasyon sayfası** — harita uygulaması seçimi | 17 (00-ortak'ta 4 kullanım) | Doğrudan Google Maps açılıyor |
 | `tg.etiket` | **Etiket sayfası** | 02 | Yok |
 | `sk.sec` | **Şikâyet karar seçenekleri** | 26 | Yok (sözleşmede de yok — bölüm 2, madde 1) |
@@ -123,6 +123,8 @@ yeni bir okuma ucu istiyor.
 | 4 | **Yazıcı erişilebilirliği + test basımı** | 09 | "Yazıcı bağlı mı" sorusu bugün ancak gerçek bir etiket basarak öğreniliyor. |
 | 5 | **Barkodla sepete ekleme** | 20 | Kapıdaki satışta ürünü adıyla aramak, elinde ürün olan personel için yavaş yol. |
 | 6 | **Transferin ÇIKAN ve KAPANAN listeleri** | 11 | Bugün yalnız GELEN görünüyor; "yolladığım mal nerede" sorusunun mobilde cevabı yok. |
+| 8 | **Hasarlı paket sayısı** (kabulde satır başına) | 05 · 06 | Tasarım satırda kırmızı bir blok istiyor: −/+ ile "sağlam X · hasarlı Y" ve altında kuralı: *"Hasarlı paketler stoğa 'hasarlı' olarak girer; iade mi imha mı olacağı yönetimde karara bağlanır."* Bugün yalnız SERBEST METİN notu var ve o not siparişin tamamına yazılıyor — hangi kalemin kaç paketi hasarlı, kayıtta YOK. Bu bir ekran işi değil: `IntakeFormLineSchema`'ya hasarlı adet, stoğa da "hasarlı" hâli gerekiyor. |
+| 9 | **Ürünün kutu tipleri** (kabul satırında) | 05 · 06 | Elle sayımın "kaç koli geldi" yolu bunu istiyor (KT-04 · KL-12 · KL-24). Okutmada çarpan zaten geliyor (`qtyPerCode`); elle girişte depocu çarpanı kafadan yapıyor ve **kafadan yapılan çarpan stok sayımını bozar** (tasarımın kendi cümlesi: "sahada uydurulmuş çarpan stok sayımını bozar"). |
 | 7 | **Kabul fotoğrafı** (kamera) | 05 · 17 | Hasarlı mal kabulünde ve kapıda kanıt olarak; iki ekran birden bekliyor. `BEKLEYEN(21.13)` |
 
 ---

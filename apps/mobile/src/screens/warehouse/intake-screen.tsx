@@ -510,6 +510,12 @@ export function IntakeScreen() {
                 KENDİSİ. Şablonun kendi deseni de bu (`ProductPhotoCard`: ad fotoğrafın İÇİNDE);
                 o komponent kullanılmadı çünkü kare ve rozet/fiyat yuvaları taşıyor — burada
                 geniş bir bant ve üç satır künye var. Gradyan yazının okunması için, tokenlardan. */}
+            {/* AD FOTOĞRAFIN ÜSTÜNE DEĞİL, ALTINA (cihazda görüldü 30.08). Kart bir "kahraman
+                görsel"di: ad ve künye fotoğrafın üstüne, karartma gradyanıyla yazılıyordu. Ürün
+                fotoğrafları BEYAZ zeminli stüdyo çekimleri ve alttan karartma beyazın üstünde
+                açık gri kalıyor — "1 koli = 24 adet" okunmuyordu. Tasarım da burada kahraman
+                görsel istemiyor; fotoğraf bir DOĞRULAMA ("doğru malı mı tuttum"), bir başlık
+                değil. */}
             <View style={styles.scannedCard}>
               {intake.scanned.imageUrl === null ? null : (
                 <Image
@@ -519,16 +525,15 @@ export function IntakeScreen() {
                   testID="warehouse-intake-scanned-photo"
                 />
               )}
-              <LinearGradient {...operationsTheme.gradient.photoBottom} style={styles.scannedScrim} pointerEvents="none" />
-              <View style={styles.scannedNames}>
-                <Text style={styles.scannedName}>
-                  {productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
-                </Text>
-                <Text style={styles.scannedMeta}>{scanMeta(intake.scanned)}</Text>
-                <Text style={styles.scannedMeta}>
-                  {fillCopy(t.intake.expected, { qty: String(intake.scanned.expectedQty) })}
-                </Text>
-              </View>
+            </View>
+            <View style={styles.scannedNames}>
+              <Text style={styles.scannedName}>
+                {productLabel(intake.scanned.productName, intake.scanned.variantLabel)}
+              </Text>
+              <Text style={styles.scannedMeta}>{scanMeta(intake.scanned)}</Text>
+              <Text style={styles.scannedMeta}>
+                {fillCopy(t.intake.expected, { qty: String(intake.scanned.expectedQty) })}
+              </Text>
             </View>
             <OperationsQtySlider
               key={intake.scanned.variantId}
@@ -1404,23 +1409,19 @@ const styles = StyleSheet.create({
   scannedPhoto: {
     ...StyleSheet.absoluteFillObject,
   },
-  /** Yazının okunması için alt karartma — token'dan (katalog kartının aynı gradyanı). */
-  scannedScrim: {
-    ...StyleSheet.absoluteFillObject,
-  },
   scannedNames: {
     gap: operationsTheme.space['2xs'],
-    padding: operationsTheme.space['2xl'],
+    paddingTop: operationsTheme.space.lg,
   },
   scannedName: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['card-title--font-weight']],
     fontSize: operationsTheme.text['card-title'],
-    color: operationsTheme.colors['on-image'],
+    color: operationsTheme.colors.ink,
   },
   scannedMeta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors['on-image-soft'],
+    color: operationsTheme.colors.muted,
   },
   learnBody: {
     fontFamily: operationsTheme.font.body[400],
