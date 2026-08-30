@@ -72,6 +72,10 @@ hızlandırıcıdır, tek kapı değil).
   kargo halkası (kutu tipi → "kargoya ver"/etiket satın alma) ve cihaz yazıcı ayarı.
 - **Yönetim** (`app-yonetim.md`): bildirim + hızlı aksiyon ekranları — şikâyet cevabı · sipariş
   istisnası kararı · SKT kampanya onayı · tedarik önerisi onayı · gün özeti · WhatsApp.
+  - **Talep bölümü** (`app-yonetim-talep.md`, kullanıcı isteği 30.08): Y1'in KUYRUĞU — v3 yalnız
+    tek talebi gösteren bir ekran çizdi, taleplerin LİSTESİ tasarımda hiç yok. Sosyal gelen
+    kutusunun kardeşi ama ayrı iş: talep bir kayıttır (tür · durum · yürütücü · iade bağı), sohbet
+    bir akış. Hem yazışılan hem karar verilen bölüm.
 - **Para** (`app-para.md`): tahsilat izleme · gün sonu özeti (salt okuma).
 
 ## 7. Yapmaması gerekenler (tüm bölümler)
