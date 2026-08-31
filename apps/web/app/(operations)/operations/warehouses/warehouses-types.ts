@@ -45,6 +45,16 @@ export const WarehouseFormSchema = WarehouseInsertSchema.pick({ code: true, name
   countryCode: CountryEnum,
   shipsOnline: z.boolean(),
   address: WarehouseAddressSchema,
+  /**
+   * Deponun coğrafi noktası (11.9) — **rotanın çıpası**: kapalı tur hesabı buradan başlar ve buraya
+   * döner. Nokta yoksa o deponun rotaları hiç sıralanamaz (motor `no_start` der).
+   *
+   * METİN olarak alınıyor, sayı olarak değil — boş bırakılabilmesi gerek ve boş bir sayı alanı
+   * `NaN` üretir (`storage_area` hedef aralığının aynı gerekçesi). Boşsa kapı adresten ÇÖZER;
+   * doluysa **operatörün değeri kazanır** — otomatik çözüm bir başlangıçtır, son söz değil.
+   */
+  lat: z.string().trim(),
+  lng: z.string().trim(),
 });
 export type WarehouseFormInput = z.infer<typeof WarehouseFormSchema>;
 

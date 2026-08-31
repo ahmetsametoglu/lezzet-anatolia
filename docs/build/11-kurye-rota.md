@@ -244,7 +244,12 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - **BEKLEYEN(11.9):** ① öneri noktasının yazma yollarına bağlanması (koordinat `AddressSuggestion`
       içinde zaten geliyor; form + `addCustomerAddress` dokunuşu — web ve mobil ayrı şerit)
       ② mobil ekranın `stopSeq`e bağlanması (`docs/talep/mobil-durak-sirasi-alani.md`)
-      ③ depo noktasının ops formundan elle girilmesi (bugün yalnız beslemeden geliyor)
+      ~~③ depo noktasının ops formundan girilmesi~~ **KAPANDI (31.08):** depo formunda enlem/boylam
+      alanları var ve **boş bırakılırsa kapı adresten çözüyor** (BAN); doluysa operatörün değeri
+      kazanır — otomatik çözüm bir başlangıç, son söz değil. Kaydı ENGELLEMİYOR: çözülemezse nokta
+      `null` kalır ve tesis yine açılır (bir koordinat yüzünden depo açılamaması, koordinatsız bir
+      depodan pahalı). Harita üstünde görsel onay Aşama 3'e (`route-map` üçlüsü) bırakıldı — aynı
+      altyapıyı istiyorlar.
       ~~④ `geocode.testkit.ts` tüketicisiz~~ **KAPANDI (31.08):** `fakeGeocoder`, taramanın servise
       DÖRT alan gönderdiğini — müşteri adı ve telefonunu GÖNDERMEDİĞİNİ — çalışma anında çivileyen
       testte kullanılıyor. Kova sayımı bilerek ölçülmüyor: yazmaya bağlı, o yarı entegrasyonun işi.

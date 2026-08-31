@@ -66,6 +66,9 @@ export function WarehouseDialog({
         postalCode: editing?.address?.postalCode ?? '',
         city: editing?.address?.city ?? '',
       },
+      // Kayıtlı nokta varsa gösterilir; boşsa kapı adresten çözer (11.9).
+      lat: editing?.lat == null ? '' : String(editing.lat),
+      lng: editing?.lng == null ? '' : String(editing.lng),
     },
     mode: 'onChange',
   });
@@ -149,6 +152,15 @@ export function WarehouseDialog({
         <div className="grid grid-cols-[130px_minmax(0,1fr)] gap-3">
           <FormInput control={form.control} name="address.postalCode" label="Posta kodu" required mono placeholder="67000" />
           <FormInput control={form.control} name="address.city" label="Şehir" required placeholder="Strasbourg" />
+        </div>
+        {/* ── DEPONUN NOKTASI (11.9) — rotanın çıpası ────────────────────────────
+            Kurye rotasının sırası bu noktadan başlayıp buraya döner; nokta yoksa o deponun
+            rotaları HİÇ sıralanamaz. Boş bırakılırsa kaydederken adresten çözülür — dolduysa
+            operatörün değeri kazanır, çünkü yanlış bir çıpa HER rotayı bozar ve "genelde doğru"
+            burada yetmez. */}
+        <div className="grid grid-cols-2 gap-3">
+          <FormInput control={form.control} name="lat" label="Enlem" mono placeholder="boş bırak — adresten çözülür" />
+          <FormInput control={form.control} name="lng" label="Boylam" mono placeholder="boş bırak — adresten çözülür" />
         </div>
 
         <div className="flex flex-col gap-2">

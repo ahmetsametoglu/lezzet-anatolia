@@ -3,6 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { StorageAreaService, TemperatureLogService, VehicleService, WarehousePrinterService, WarehouseService, serviceDb, ShippingBoxService } from '@lezzet/database';
+import { geocoder } from '@lezzet/application';
+import { logger } from '@lezzet/observability';
+import type { Country } from '@lezzet/types';
 import { requireAdmin } from '@/lib/guard';
 import { constraintMessage } from '@/lib/constraint-message';
 import type { ActionResult } from '@/lib/error';
@@ -46,11 +49,13 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
   try {
     await requireAdmin();
     const parsed = WarehouseFormSchema.extend({ id: z.string().uuid().optional() }).parse(input);
-    const { id, address, ...fields } = parsed;
+    const { id, address, lat: latText, lng: lngText, ...fields } = parsed;
 
     const svc = new WarehouseService(serviceDb());
+    const point = await resolveWarehousePoint({ latText, lngText, address, country: fields.countryCode });
+
     if (id) {
-      const row = await svc.update({ id, ...fields, address });
+      const row = await svc.update({ id, ...fields, address, ...point });
       revalidatePath(WAREHOUSES_PATH);
       return { data: { id: row.id, code: row.code }, error: null };
     }
@@ -61,6 +66,7 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
     const row = await svc.insert({
       ...fields,
       address,
+      ...point,
       sortOrder: existing.reduce((max, w) => Math.max(max, w.sortOrder), 0) + 1,
     });
     revalidatePath(WAREHOUSES_PATH);
@@ -68,6 +74,47 @@ export async function saveWarehouseAction(input: unknown): Promise<ActionResult<
   } catch (error) {
     return { data: null, error: readable(error) };
   }
+}
+
+/**
+ * Deponun noktası (11.9) — **rotanın çıpası**: kapalı tur hesabı buradan başlar ve buraya döner.
+ * Nokta yoksa o deponun rotaları hiç sıralanamaz (motor `no_start` der ve sebebini söyler).
+ *
+ * **Operatörün yazdığı değer KAZANIR.** Otomatik çözüm bir başlangıçtır, son söz değil: depo tek
+ * haneli sayıda satırdır, ömür boyu bir kez girilir ve yanlışlığı HER rotayı bozar — burada
+ * "genelde doğru" yetmez. Alan boşsa adresten çözülür (BAN), yani operatör hiçbir şey yapmadan da
+ * doğru noktaya kavuşur.
+ *
+ * **Kaydı ENGELLEMEZ:** çözülemezse nokta `null` kalır ve depo yine kaydedilir. Bir koordinat
+ * yüzünden tesis açılamaması, koordinatsız bir tesisten pahalıdır; eksiklik zaten görünür (o deponun
+ * rotaları "sırasız" der).
+ */
+async function resolveWarehousePoint(input: {
+  latText: string;
+  lngText: string;
+  address: { line1: string; postalCode: string; city: string };
+  /** Tesisin ülkesi — depo sınır ötesi OLAMAZ (`0031` künyesi), yani adresin ülkesiyle aynıdır. */
+  country: Country;
+}): Promise<{ lat: number | null; lng: number | null }> {
+  const lat = Number(input.latText);
+  const lng = Number(input.lngText);
+  if (input.latText && input.lngText && Number.isFinite(lat) && Number.isFinite(lng)) {
+    return { lat, lng };
+  }
+  // Yarım girdi (yalnız enlem) bir nokta DEĞİLDİR ve kolon kısıtı da onu reddeder; adresten çözmeye
+  // düşülüyor — operatörün yarım bıraktığı bir alan yüzünden nokta hiç yazılmasın diye.
+  if (input.latText || input.lngText) {
+    logger.warn({ flow: 'warehouse_geo' }, 'yarım koordinat girildi — adresten çözülüyor');
+  }
+
+  const outcome = await geocoder().locate({
+    line1: input.address.line1,
+    postalCode: input.address.postalCode,
+    city: input.address.city,
+    country: input.country,
+  });
+
+  return outcome.status === 'ok' ? { lat: outcome.point.lat, lng: outcome.point.lng } : { lat: null, lng: null };
 }
 
 /**
