@@ -142,6 +142,7 @@ async function briefOf(db: SupabaseClient, runId: string, courierId: string): Pr
     zoneName: zone?.name ?? null,
     vehicleId: run.vehicleId,
     vehicleLabel,
+    deliveryDate: run.deliveryDate,
     departedAt: run.departedAt,
     returnedAt: run.returnedAt,
     closed: close !== null,

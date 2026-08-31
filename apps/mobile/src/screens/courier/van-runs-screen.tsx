@@ -6,6 +6,7 @@ import type { CourierRunDetail } from '@lezzet/types';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSurface } from '@/components/operations/surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
@@ -40,6 +41,23 @@ const t = courierCopy;
 /** İlk yük iskeleti — künye satırı ve iki sefer kartı; ekranın gerçekten çizdiği bloklar. */
 const VAN_SKELETON = { hint: 40, run: 108 } as const;
 
+/**
+ * Seferin GÜNÜ okunur hâlde — "bugün" · "yarın" · "2 Eylül".
+ *
+ * Tarih sunucudan geliyor (`deliveryDate`), "bugün"ün kendisi cihazdan: kurye rampada saat 23:50'de
+ * bakıyorsa yarının seferi ona "yarın" demeli. İkisini de sunucuya sormak, cihazın saatiyle
+ * sunucunun saatinin ayrıştığı bir gece yarısı üretirdi — ve o gece kurye yanlış seferi başlatırdı.
+ */
+function dayTag(date: string): string {
+  const today = new Date();
+  const iso = (d: Date): string => d.toISOString().slice(0, 10);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  if (date === iso(today)) return t.day.vanRuns.today;
+  if (date === iso(tomorrow)) return t.day.vanRuns.tomorrow;
+  return new Date(`${date}T12:00:00`).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
+}
+
 /** Seferin hâli üç sözcükte: sürülüyor · araçta bekliyor. Kapanmış sefer bu listede hiç yok. */
 function stateOf(run: CourierRunDetail): { label: string; driving: boolean } {
   return run.departedAt === null
@@ -58,12 +76,15 @@ export function CourierVanRunsScreen() {
     return { stops: own.length, boxes: own.reduce((sum, stop) => sum + stop.boxes.length, 0) };
   };
 
+  /* Aracın adı YOKSA cümle de kurulmaz (31.08 · ölçüldü): şablon "— · araç bir ara depodur" diye
+     çiziyordu ve o tire hiçbir şey söylemiyordu. Araçsız sefer meşru; eksik olanı tire ile
+     doldurmak, bilgiyi tamamlamak değil uydurmaktır (CLAUDE §1). */
+  const plate = day.runs.find((run) => run.vehicleLabel !== null)?.vehicleLabel ?? null;
+
   const header = (
     <OperationsStackHeader
       title={t.day.vanRuns.title}
-      subtitle={fillCopy(t.day.vanRuns.context, {
-        plate: day.run?.vehicleLabel ?? day.runs.find((run) => run.vehicleLabel !== null)?.vehicleLabel ?? '—',
-      })}
+      subtitle={plate === null ? t.day.vanRuns.contextNoVehicle : fillCopy(t.day.vanRuns.context, { plate })}
       onBack={() => router.back()}
       backLabel={t.day.load.back}
       testID="courier-van-header"
@@ -84,7 +105,16 @@ export function CourierVanRunsScreen() {
       {header}
 
       <ScrollView contentContainerStyle={styles.list}>
-        <OperationsSurface tone="quiet" style={styles.hint}>
+        {/* ÜST BLOK KOYU (v3:16 `#2f353a`) — kitin `ink` tonu. Açık bir yüzeyle çizilmişti ve
+            ekranın ağırlık merkezi kayboluyordu: bu blok "araçta ne var" özetini taşıyor ve
+            tasarımda sayfanın tek koyu alanı. */}
+        <OperationsSurface tone="ink" style={styles.hint}>
+          <Text style={styles.hintCount}>
+            {fillCopy(t.day.vanRuns.loadMeta, {
+              loaded: String(day.boxCounter?.loaded ?? 0),
+              total: String(day.boxCounter?.total ?? 0),
+            })}
+          </Text>
           <Text style={styles.hintText}>{t.day.vanRuns.hint}</Text>
         </OperationsSurface>
 
@@ -108,41 +138,70 @@ export function CourierVanRunsScreen() {
               return (
                 <View key={run.runId} style={styles.card} testID={`courier-van-run-${run.runId}`}>
                   <View style={styles.cardHead}>
-                    <Text style={styles.cardTitle}>{run.zoneName ?? run.referenceNo}</Text>
-                    <Text style={[styles.state, state.driving ? styles.stateDriving : styles.stateWaiting]}>
-                      {state.label}
-                    </Text>
+                    <View style={styles.cardText}>
+                      <Text style={styles.cardTitle}>{run.zoneName ?? run.referenceNo}</Text>
+                      {/* GÜN ETİKETİ (v3:16) — araç iki-üç günün seferini taşıyor; hangisinin
+                          bugün olduğu kartın kendisinde yazmalı. */}
+                      <Text style={styles.cardMeta}>{`${dayTag(run.deliveryDate)} · ${run.referenceNo}`}</Text>
+                      <Text style={styles.cardSummary}>
+                        {fillCopy(t.day.vanRuns.summary, { stops: String(load.stops), boxes: String(load.boxes) })}
+                      </Text>
+                    </View>
+                    {/* Durum ROZET (v3:16) — dolgulu ve sağ üstte; düz metin olarak çizilmişti ve
+                        kartın kendi başlığıyla aynı ağırlıkta duruyordu. */}
+                    <OperationsStatusBadge
+                      label={state.label}
+                      tone={state.driving ? 'active' : 'idle'}
+                      testID={`courier-van-state-${run.runId}`}
+                    />
                   </View>
-                  <Text style={styles.cardMeta}>{run.referenceNo}</Text>
-                  <Text style={styles.cardMeta}>
-                    {fillCopy(t.day.vanRuns.summary, { stops: String(load.stops), boxes: String(load.boxes) })}
-                  </Text>
 
                   {/* SÜRÜLEN sefer başlatılmaz, duraklarına GİDİLİR — iki eylem aynı yerde durursa
                       kurye hangisinin ne yaptığını ayırt edemez. */}
                   {state.driving ? (
                     <SecondaryButton
                       label={t.day.vanRuns.toStops}
+                      tone="olive"
                       onPress={() => router.back()}
                       testID={`courier-van-stops-${run.runId}`}
                     />
                   ) : (
-                    <>
-                      <PrimaryButton
-                        label={t.day.vanRuns.depart}
-                        onPress={() => day.departRun(run.runId)}
-                        disabled={day.starting}
-                        tone="olive"
-                        elevation="flat"
-                        testID={`courier-van-depart-${run.runId}`}
-                      />
-                      {/* Başlatmanın BEDELİ düğmenin altında: geri alınamaz ve müşteriye gider. */}
-                      <Text style={styles.departHint}>{t.day.vanRuns.departHint}</Text>
-                    </>
+                    /* BEDEL DÜĞMENİN İÇİNDE (v3:16) — dışına yazılmıştı ve düğmeden kopuk bir not
+                       gibi duruyordu. Tasarımda iki satır TEK dokunma alanının içinde: basmanın ne
+                       yaptığı, basılan şeyin üstünde yazılı. */
+                    <PrimaryButton
+                      label={t.day.vanRuns.depart}
+                      hint={t.day.vanRuns.departHint}
+                      onPress={() => day.departRun(run.runId)}
+                      disabled={day.starting}
+                      tone="olive"
+                      testID={`courier-van-depart-${run.runId}`}
+                    />
                   )}
                 </View>
               );
             })}
+
+            {/*
+              YÜKLEME KAPISI BURADA (31.08 · cihazda ölçüldü) — ve gerekçesi bir arıza.
+
+              Kapı önce yalnız "araçta yük var, sürülen sefer yok" gövdesindeydi. Cihazda görüldü:
+              kurye ikinci seferi başlattığı anda o gövde kapanıyor ve ekran durak listesine
+              dönüyor — ama yeni seferin dört kutusu HÂLÂ rampada. Yani başlatma, yüklemenin yolunu
+              kapatıyordu. Araç bir ara depo olduğu için yükleme sefer boyunca sürebilir; kapının
+              yeri de bu yüzden araçtaki seferlerin yanı.
+            */}
+            <SecondaryButton
+              label={t.day.vanRuns.load}
+              onPress={() => router.navigate('/load')}
+              testID="courier-van-load"
+            />
+            <Text style={styles.loadMeta}>
+              {fillCopy(t.day.vanRuns.loadMeta, {
+                loaded: String(day.boxCounter?.loaded ?? 0),
+                total: String(day.boxCounter?.total ?? 0),
+              })}
+            </Text>
 
             <Text style={styles.note}>{t.day.vanRuns.note}</Text>
           </>
@@ -171,12 +230,25 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.space['4xl'],
     gap: operationsTheme.space.lg,
   },
-  hint: { padding: operationsTheme.space.xl },
+  hint: { padding: operationsTheme.space.xl, gap: operationsTheme.space.sm },
+  /** Araçtaki yükün SAYISI — koyu bloğun kahramanı (v3:16 `600 26px 'Lora'`). */
+  hintCount: {
+    fontFamily: operationsTheme.font.display[operationsTheme.text['h1--font-weight']],
+    fontSize: operationsTheme.text.h2,
+    color: operationsTheme.colors.cream,
+  },
+  cardText: { flex: 1, gap: 3, minWidth: 0 },
+  cardSummary: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
+  },
   hintText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.helper,
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.body,
+    /* Koyu blok üstünde gövde rengi okunmaz — `on-ink-label` bu zeminin kendi metin tonu. */
+    color: operationsTheme.colors['on-ink-label'],
   },
   heading: {
     paddingTop: operationsTheme.space.md,
@@ -192,9 +264,11 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.panel,
     gap: operationsTheme.space.md,
   },
+  /* Rozet ÜST hizada (v3:16 `align-items:flex-start`) — ortalanınca kartın iki alt satırıyla
+     birlikte kayıyor ve başlığın rozeti olmaktan çıkıyordu. */
   cardHead: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: operationsTheme.space.lg,
   },
@@ -209,13 +283,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
   },
-  state: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.eyebrow,
-  },
-  stateDriving: { color: operationsTheme.colors.olive },
-  stateWaiting: { color: operationsTheme.colors.muted },
-  departHint: {
+  loadMeta: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,

@@ -557,11 +557,13 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
     });
     await renderDay();
 
-    /* OKUTMA ARTIK BURADA DEĞİL (v3, 30.08): kırılım kendi ekranına taşındı (`/trip` → `/load`).
-       Günde kalan şey KAPI ve sayacı — kapıyı açmadan "işim var mı" sorusu cevaplanabilmeli.
-       Okutmanın kendisi `load-screen.test.tsx`te sınanıyor. */
-    // Metin v3'ün metni (30.08): satır artık "Sefer künyesi ve yükleme" + üç parçalı alt metin.
-    expect(screen.getByTestId('courier-day-trip')).toHaveTextContent(/araçtaki kutular 1\/2/);
+    /* OKUTMA ARTIK BURADA DEĞİL (30.08): kırılım kendi ekranına taşındı. Günde kalan şey KAPI ve
+       sayacı — kapıyı açmadan "işim var mı" sorusu cevaplanabilmeli.
+
+       KAPININ HEDEFİ DE DEĞİŞTİ (31.08): satır "Sefer künyesi ve yükleme" diyip `/trip`e
+       gidiyordu; o ekran tasarımda artık yok. Araç bir ara depo olunca kuryenin sorusu da
+       değişti — "ne taşıyorum" değil "araçta hangi seferler var, hangisini süreceğim". */
+    expect(screen.getByTestId('courier-day-trip')).toHaveTextContent(/1 sefer · 1\/2 kutu araçta/);
     expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
   });
 

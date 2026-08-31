@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { operationsTheme } from '@/theme/unistyles';
@@ -83,6 +83,15 @@ interface PrimaryButtonProps {
    * geniş olur; iki eşit düğme, hangisinin asıl eylem olduğunu söylemez.
    */
   grow?: boolean | number;
+  /**
+   * Etiketin ALTINDA, düğmenin İÇİNDE çizilen ikinci satır — eylemin BEDELİNİ söyler (31.08).
+   *
+   * v3:16'nın "Seferi başlat" düğmesi iki satırlı: *"durakları açar · müşterilerine bildirim
+   * gider"*. Bu cümle düğmenin dışına yazıldığında ondan kopuk bir nota dönüşüyor; oysa geri
+   * alınamaz bir eylemin bedeli, basılan şeyin ÜSTÜNDE durmalı. Metin şeffaflaştırılmaz —
+   * kendi kademesinde (`on-ink-label`) ve etiketten bir punto küçük.
+   */
+  hint?: string;
   disabled?: boolean;
   accessibilityHint?: string;
   testID?: string;
@@ -96,6 +105,7 @@ export function PrimaryButton({
   elevation = 'shadow',
   icon,
   grow = false,
+  hint,
   disabled = false,
   accessibilityHint,
   testID,
@@ -137,7 +147,16 @@ export function PrimaryButton({
           bold
         />
       )}
-      <Text style={[styles.label, disabled ? styles.disabledLabel : styles.enabledLabel]}>{label}</Text>
+      {hint === undefined ? (
+        <Text style={[styles.label, disabled ? styles.disabledLabel : styles.enabledLabel]}>{label}</Text>
+      ) : (
+        /* İki satır DİKEY bir yığın: `PressableSurface` kendi kutusunu yatay diziyor, o yüzden
+           satırlar kendi kabında toplanıyor — yoksa ipucu etiketin yanına düşerdi. */
+        <View style={styles.stack}>
+          <Text style={[styles.label, disabled ? styles.disabledLabel : styles.enabledLabel]}>{label}</Text>
+          <Text style={[styles.hint, disabled ? styles.disabledLabel : styles.enabledHint]}>{hint}</Text>
+        </View>
+      )}
     </PressableSurface>
   );
 }
@@ -210,6 +229,19 @@ const styles = StyleSheet.create((theme) => ({
     fontFamily: theme.font.body[theme.text['button--font-weight']],
     fontSize: theme.text.button,
   },
+  /** İki satırlı düğmenin kabı — satırlar ortalı, aralarında en dar boşluk (v3:16 `gap:2px`). */
+  stack: { alignItems: 'center', gap: 2 },
+  hint: {
+    /* Ağırlık DÜZ (400): tasarımda ipucu etiketin altında sakin bir satır. Ölçü kademesi
+       `helper` — ikisi de iki temada da var, çünkü bu düğme paylaşılan kitin parçası. */
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.helper,
+    textAlign: 'center',
+  },
+  /* Dolgunun üstündeki İKİNCİL satır: `on-image-soft` — etiketin `on-image` beyazıyla ÇİFT olan
+     altyazı tonu (token künyesi: "ad ile altyazı aynı zeminde yan yana durur"). Şeffaflık
+     kullanılmadı; koyu zemin üstünde alfa öngörülemez bir gri üretir. */
+  enabledHint: { color: theme.colors['on-image-soft'] },
   // Zeytin dolgunun üstündeki metin paletin saf beyazıdır; ayrı bir "zeytin-üstü" token'ı yok
   // (envantere önerildi — bugün `card` ile aynı değer).
   enabledLabel: { color: theme.colors.card },

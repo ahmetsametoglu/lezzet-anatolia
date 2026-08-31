@@ -9274,3 +9274,42 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `verdictOf` ve bağımsız olarak `ScannedCode` ölü kaldı, söküldü) · depo+komponent **448/448**.
   İki yeni test ayrımın KANITI: *"teklif rozeti çizilmez"* ve *"ömür yüzdesi çizilmez — aciliyeti
   kalan gün söylüyor"*; biri geri koyarsa kırılırlar.
+
+- [~] (21.193) **KURYE ROTASI CİHAZDA: BESLEME ÜÇ HÂLİ ÜRETİYOR · TASARIM ÖLÇÜLERİNE OTURDU** (kullanıcı isteği 31.08)
+  `touches: scripts/seed/courier.ts · apps/mobile/src/screens/courier/* · apps/mobile/src/components/{operations/status-badge,ui/primary-button}.tsx`
+
+  **BESLEME EKRANI KAPSAMIYORDU — ölçüldü.** Sefer/başlat ayrımı yazıldı ama seed yalnız
+  "başlatılmış" hâli üretiyordu: ileri günün seferi TAMAMEN atlanıyordu (`grup.date > bugun →
+  continue`) ve bugünün rotalarının hepsi sürülüyordu. Yani "araçta bekleyen sefer" ve onun
+  "Seferi başlat" düğmesi hiçbir hesapta denenemiyordu. Şimdi ileri günün seferi KURULUYOR ama
+  başlatılmıyor, ve bugünün rotalarından biri de öyle.
+
+  **HOLDBACK KURYE BAŞINA, ve bunu da cihaz söyledi.** İlk yazımda bugünün ikinci rotası küresel
+  olarak bekletiliyordu; cihazda bakınca o rota BAŞKA kuryeye çıktı ve giriş yapılan hesabın
+  aracındaki iki sefer de sürülüyordu. Kural artık kuryeye bağlı. Sonuç: `hepsi@` hesabı bugünün
+  bekleyen seferini, `kurye@` ise ileri günlü çoklu seferi gösteriyor.
+
+  Ayrıca sefere ARAÇ atanıyor — künye araçsızdı ve ekran "araç atanmamış" yazmak zorundaydı.
+
+  **CİHAZDA YAKALANAN İKİ ARIZA.** (1) Sefer başlatınca ekran durak listesine dönüyor ve yeni
+  seferin kutuları rampada kalıyordu: yükleme kapısı yalnız "araçta yük var" gövdesindeydi, yani
+  BAŞLATMA yüklemenin yolunu kapatıyordu. Kapı araçtaki seferler ekranına taşındı — araç bir ara
+  depo olduğu için yükleme sefer boyunca sürebilir. (2) Başlatma bildirimi hâlâ *"son kutuyla yola
+  çıkar"* diyordu; yükleme 31.08'de yola çıkarmayı bıraktı, metin eski modeli anlatıyordu.
+
+  **TASARIM ÖLÇÜLERİ (v3:16 · v3:18).** Araçtaki seferler ekranının üst bloğu koyu oldu (kitin
+  `ink` tonu), durum düz metinden DOLGULU rozete döndü, "Seferi başlat"ın bedeli düğmenin İÇİNE
+  girdi (dışına yazılınca ondan kopuk bir not gibi duruyordu), "Duraklara git" zeytin tonuna
+  geçti. Yükleme ekranının grup başlığı sayacını kazandı ve başlığı çoklu seferde tasarımın
+  metnini (*"SEFERE GÖRE KUTULAR"*) yazıyor.
+
+  **İKİ ORTAK KOMPONENT.** `OperationsStatusBadge` — düz dolgulu durum rozeti; tasarımda aynı
+  geometri iki ekranda geçiyor (sefer hâli · grup sayacı) ve ayrı çizilseydi biri bir gün
+  ötekinden ayrılırdı. `PrimaryButton` iki satırlı oldu (`hint`): geri alınamaz bir eylemin bedeli
+  basılan şeyin üstünde durmalı.
+
+  `/trip` ekranı SÖKÜLDÜ: tasarımda 15 numara "Rota ve araç seçimi" oldu ve onun gövdesi gün
+  ekranının kendi seçim hâli — ekranın karşılığı kalmadı.
+
+  **BEKLEYEN(21.193):** araca serbest ürün (v3:19) ve kurye dönüşünde sayım/kutu inişi (v3:14)
+  yazılmadı — tasarımları geldi, kodu yok.

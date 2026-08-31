@@ -321,6 +321,21 @@ export function CourierDayScreen() {
             })}
             testID="courier-day-van-empty"
           />
+          {/* Sıra tasarımın 1-2-3'ü: seçtin → YÜKLE → başlat. Yükleme kapısı önce geliyor çünkü
+              kurulan seferin kutuları okutulmadan başlatmak, durakları "kutu araçta değil" diye
+              açılmayan bir sefer üretir. */}
+          <GateRow
+            icon="packages"
+            title={t.day.vanEmpty.step2}
+            meta={fillCopy(t.day.vanRow.meta, {
+              n: String(onVan.length),
+              loaded: String(day.boxCounter?.loaded ?? 0),
+              total: String(day.boxCounter?.total ?? 0),
+            })}
+            tone="invite"
+            onPress={() => router.navigate('/load')}
+            testID="courier-day-load"
+          />
           <GateRow
             icon="courier"
             title={t.day.vanLoaded.cta}
@@ -328,7 +343,7 @@ export function CourierDayScreen() {
               stops: String(stops.length),
               boxes: String(day.boxCounter?.total ?? 0),
             })}
-            tone="invite"
+            tone="plain"
             onPress={() => router.navigate('/van-runs')}
             testID="courier-day-van-runs"
           />
@@ -413,27 +428,28 @@ export function CourierDayScreen() {
               </View>
 
               {/*
-                SEFER KÜNYESİ VE YÜKLEME — KENDİ EKRANINDA (v3:1330, 30.08).
+                ARAÇTAKİ SEFERLER (31.08 · v3:14) — sürülen sefer hâlinin kapısı.
 
-                Yükleme burada tek satırlık bir sayaçtı ("3/7 kutu araçta" + okut düğmesi). O satır
-                "kaç kutu bindi"yi söylüyordu ama kuryenin rampada sorduğu asıl soruyu — HANGİ
-                durağın kutusu eksik — cevaplamıyordu. Kırılım kendi ekranına taşındı; buradaki
-                satır artık oraya açılan kapı ve sayacı da taşıyor: kapıyı açmadan "işim var mı"
-                sorusu cevaplanabilmeli.
+                Buradaki satır 30.08'e kadar "Sefer künyesi ve yükleme" diyordu ve `/trip`e
+                gidiyordu; o ekran tasarımda artık YOK — 15 numara "Rota ve araç seçimi" oldu ve
+                onun gövdesi bu ekranın kendi seçim hâli. Araç bir ara depo olunca kuryenin
+                sorduğu soru da değişti: "ne taşıyorum" değil, **"araçta hangi seferler var ve
+                hangisini süreceğim"**.
 
-                Sayaç `null` ise (kutusuz akış — eski yol) satır HİÇ çizilmez: olmayan bir adımı
-                kapı olarak göstermek, kuryeyi boş bir ekrana gönderirdi.
+                Sayaç `null` ise (kutu okunamadı) satır HİÇ çizilmez: olmayan bir adımı kapı
+                olarak göstermek, kuryeyi boş bir ekrana gönderirdi.
               */}
               {day.boxCounter === null ? null : (
                 <GateRow
                   icon="courier"
-                  title={t.day.tripRow.title}
-                  meta={fillCopy(t.day.tripRow.meta, {
+                  title={t.day.vanRow.title}
+                  meta={fillCopy(t.day.vanRow.meta, {
+                    n: String(day.runs.length),
                     loaded: String(day.boxCounter.loaded),
                     total: String(day.boxCounter.total),
                   })}
                   tone="plain"
-                  onPress={() => router.navigate('/trip')}
+                  onPress={() => router.navigate('/van-runs')}
                   testID="courier-day-trip"
                 />
               )}

@@ -235,6 +235,13 @@ export const CourierRunBriefSchema = z.object({
    * künyesinin *ulaşmadığını yazmak* zorunda kalıyordu (uyuşmazlık #12).
    */
   vehicleLabel: z.string().nullable(),
+  /**
+   * **SEFERİN GÜNÜ** (`YYYY-MM-DD` · 31.08) — araç birden çok günün seferini taşıyabildiği için
+   * künyeye girdi. Alan yoktu ve eksikliği ölçüldü: "Araçtaki Seferler" ekranı iki kartı yan yana
+   * koyuyor ama hangisinin bugün hangisinin yarın olduğunu SÖYLEYEMİYORDU — kurye iki-üç günlük
+   * yolculukta yanlış seferi başlatabilirdi.
+   */
+  deliveryDate: z.string(),
   departedAt: z.string().nullable(),
   returnedAt: z.string().nullable(),
   closed: z.boolean(),

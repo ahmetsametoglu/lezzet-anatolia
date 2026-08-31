@@ -433,6 +433,8 @@ export interface CourierRunBriefView {
   vehicleId: string | null;
   /** Aracın okunur adı ya da plakası; `null` = araçsız sefer. Kural `vehicle-label.ts`te tek yerde. */
   vehicleLabel: string | null;
+  /** Seferin GÜNÜ (`YYYY-MM-DD`) — araç birden çok günün seferini taşıyabiliyor (31.08). */
+  deliveryDate: string;
   departedAt: string | null;
   returnedAt: string | null;
   closed: boolean;
@@ -576,6 +578,7 @@ export async function startCourierDay(
       vehicleId: input.vehicleId ?? null,
       vehicleLabel: startedVehicleLabel,
       warehouseName: startedWarehouseName,
+      deliveryDate: date,
       departedAt: departed?.departedAt ?? null,
       returnedAt: null,
       closed: false,
@@ -715,7 +718,15 @@ export async function readCourierRun(
  */
 async function detailOf(
   db: SupabaseClient,
-  run: { id: string; referenceNo: string; deliveryZoneId: string; vehicleId: string | null; departedAt: string | null; returnedAt: string | null },
+  run: {
+    id: string;
+    referenceNo: string;
+    deliveryZoneId: string;
+    deliveryDate: string;
+    vehicleId: string | null;
+    departedAt: string | null;
+    returnedAt: string | null;
+  },
   closed: boolean,
 ): Promise<CourierDayRunView> {
   const zone = await new DeliveryZoneService(db).getById(run.deliveryZoneId);
@@ -732,6 +743,7 @@ async function detailOf(
     vehicleId: run.vehicleId,
     vehicleLabel,
     warehouseName,
+    deliveryDate: run.deliveryDate,
     departedAt: run.departedAt,
     returnedAt: run.returnedAt,
     closed,

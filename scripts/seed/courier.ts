@@ -89,7 +89,48 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
 
   const yil = new Date().getFullYear();
   const bugun = new Date().toISOString().slice(0, 10);
-  let atlanan = 0;
+
+  /*
+    ── ARAÇ: SEFERİN KÜNYESİNDE (31.08) ──────────────────────────────────────────────────────────
+    Kurye artık aracını kendisi seçiyor (v3:16) ve künye o adı taşıyor. Seed araçsız sefer
+    kuruyordu; ekran "araç atanmamış" yazmak zorunda kalıyor ve araç adının çizildiği hiçbir hâl
+    denenemiyordu. Depoya künyeli ilk araç yeter — filo seçimi bu seed'in konusu değil.
+  */
+  const { data: aracRows } = await db.from('vehicle').select('id').eq('is_active', true).limit(1);
+  const aracId = (aracRows?.[0] as { id: string } | undefined)?.id ?? null;
+
+  /*
+    ── ARAÇ BİR ARA DEPO: ÜÇ HÂL DE KURULUR (kullanıcı kararı 31.08) ─────────────────────────────
+    Sefer artık iki ayrı andan geçiyor — KURULUR (`departed_at` null, siparişler damgalanır,
+    kutular okutulabilir) ve BAŞLATILIR (damga vurulur, duraklar açılır, müşteriye haber gider).
+    Seed 31.08'e kadar yalnız "başlatılmış" hâli üretiyordu ve ikisi de denenemiyordu:
+
+      · İLERİ GÜNÜN SEFERİ tamamen ATLANIYORDU (`grup.date > bugun → continue`). Oysa kullanıcının
+        senaryosu tam bu: *"araç iki-üç günlük yolculuğa çıkıyor ve rotalar tek günlük olduğu için
+        yarının seferleri de bugünden araca yükleniyor."* Atlanınca "Araçtaki Seferler" ekranında
+        gün etiketi (bugün · yarın) hiç görünemiyordu.
+      · BUGÜNÜN İKİ ROTASININ İKİSİ DE sürülüyor görünüyordu; "araçta bekleyen sefer" ve onun
+        "Seferi başlat" düğmesi hiçbir ekranda doğmuyordu.
+
+    Artık: ileri günün seferi KURULUR ama başlatılmaz; bugünün İKİNCİ rotası da öyle. Birinci rota
+    sürülüyor kalır — üç hâl de aynı anda ekranda.
+  */
+  /*
+    HOLDBACK KURYE BAŞINA (ölçüldü 31.08 · cihazda yakalandı). İlk yazımda bugünün İKİNCİ rotası
+    bekletiliyordu — küresel olarak. Cihazda bakınca o rota BAŞKA kuryeye çıktı: giriş yapılan
+    hesabın aracında iki sefer vardı ve ikisi de sürülüyordu, yani "araçta bekleyen sefer" hâli
+    hiçbir hesapta denenemiyordu. Seed'in ürettiği veri ekranı kapsamıyordu.
+
+    Kural artık kuryeye bağlı: iki ya da daha çok rotası olan HER kurye birini bekleyen bulur.
+    Tek rotalı kurye hiçbirini bekletmez — o gün sürecek seferi kalmazdı ve ekranı boş bir araca
+    düşerdi (durak listesi, özet kartı, kapanış düğmesi hiç görülemezdi).
+  */
+  const bugunGruplari = [...gruplar.values()].filter((grup) => grup.date === bugun);
+  const bekletilen = new Set<string>();
+  for (const courierId of new Set(bugunGruplari.map((grup) => grup.courierId))) {
+    const kendi = bugunGruplari.filter((grup) => grup.courierId === courierId);
+    if (kendi.length > 1) bekletilen.add(`${kendi[kendi.length - 1]!.zoneId}·${kendi[kendi.length - 1]!.date}`);
+  }
   for (const grup of gruplar.values()) {
     // ── DAMGA BİR PLAN DEĞİL, OLAYDIR (mobil şeridin ölçümü, 26.08) ────────────────────────────
     // İlk hâlde her sefere çıkış VE dönüş yazılıyordu — yarınki sefer bile "dönmüş" görünüyordu.
@@ -97,10 +138,9 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
     // bilerek "kapanmamış sefer" bırakıyor ama satır "kurye 16:45'te döndü" diyordu; (2) motorun
     // araç satışını sefere bağlayan adımı bu yüzden hiç tetiklenemiyordu (`quick-sale` 4b).
     // Gerçek akışta dönüş damgasını YALNIZ kapanış yazar (0046) — seed de artık aynısını söylüyor.
-    if (grup.date > bugun) {
-      atlanan += 1; // Sefer çıkışta doğar: yarının siparişi henüz bir sefere ait değil.
-      continue;
-    }
+    /* İleri günün seferi ve bugün bekletilen rota: KURULUR ama BAŞLATILMAZ. Damga yok, duraklar
+       `ready` kalır, kutular okutulabilir — "araçta bekleyen sefer"in tam tanımı. */
+    const kurulacak = grup.date > bugun || bekletilen.has(`${grup.zoneId}·${grup.date}`);
     /*
       GEÇMİŞ gün: çıkış sabah 08:30, dönüş 16:45 — kapanış ekranındaki süre hesabı gerçekçi dursun.
 
@@ -109,9 +149,12 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       ve `delivery_run_times` kısıtı seed'i kesiyordu (`returned_at >= departed_at`) — bugünün
       seferi artık kapanabildiği için o dal gerçek bir düşüş sebebi.
     */
-    const departed =
-      grup.date < bugun ? `${grup.date}T08:30:00+02:00` : new Date(Date.now() - 2 * 3_600_000).toISOString();
-    const returned = grup.date < bugun ? `${grup.date}T16:45:00+02:00` : null;
+    const departed = kurulacak
+      ? null
+      : grup.date < bugun
+        ? `${grup.date}T08:30:00+02:00`
+        : new Date(Date.now() - 2 * 3_600_000).toISOString();
+    const returned = kurulacak || grup.date >= bugun ? null : `${grup.date}T16:45:00+02:00`;
     const { data: run, error: runErr } = await db
       .from('delivery_run')
       .insert({
@@ -120,9 +163,12 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
         delivery_date: grup.date,
         warehouse_id: grup.warehouseId,
         courier_id: grup.courierId,
-        created_at: departed,
+        /* `created_at` DAMGADAN bağımsız: kurulmuş sefer henüz çıkmamıştır ama satırı bugün
+           doğdu. İkisini eşitlemek, kurulmuş seferi "hiç yaratılmamış" gibi gösterirdi. */
+        created_at: departed ?? new Date(Date.now() - 3 * 3_600_000).toISOString(),
         departed_at: departed,
         returned_at: returned,
+        vehicle_id: aracId,
       })
       .select('id,reference_no')
       .single();
@@ -133,7 +179,9 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       .update({ delivery_run_id: (run as { id: string }).id })
       .in('id', grup.orderIds);
     if (stampErr) throw stampErr;
-    await duraklariSaateYay(db, grup.orderIds, departed);
+    /* Sonuçlanma saatleri yalnız SÜRÜLMÜŞ seferde anlamlı: kurulmuş seferin hiçbir durağı
+       sonuçlanmamıştır, saat yaymak olmayan bir geçmişi uydurmak olurdu. */
+    if (departed !== null) await duraklariSaateYay(db, grup.orderIds, departed);
     /*
       ── AÇIK SEFERİN DURAKLARI GERÇEKTEN YOLA ÇIKAR (30.08 · cihaz turunda yakalandı) ──────────
       Sefer ham insert'le kuruluyor (yukarıdaki künye) ve o insert `departed_at` yazıyor — ama
@@ -150,7 +198,7 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       kutuları binene kadar `ready` kalır (23.8) ve kapı onu `awaitingBoxes` diye ayırır; o hâl
       gerçektir, korunuyor.
     */
-    if (returned === null) {
+    if (returned === null && !kurulacak) {
       const acilis = await startCourierDay(db, {
         courierId: grup.courierId,
         zoneId: grup.zoneId,
@@ -193,7 +241,9 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       `  ✓ ${(run as { reference_no: string }).reference_no} · ${grup.date} · ${grup.orderIds.length} durak${returned ? '' : ' · AÇIK (yolda)'}`,
     );
   }
-  console.log(`✓ sefer: ${gruplar.size - atlanan} sefer kuruldu (rota+gün başına tek) · ${atlanan} gelecek gün seferi kurulmadı`);
+  console.log(
+    `✓ sefer: ${gruplar.size} sefer kuruldu (rota+gün başına tek) · ${bekletilen.size} tanesi ARAÇTA BEKLİYOR (başlatılmadı)`,
+  );
 }
 
 /**

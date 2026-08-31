@@ -6,6 +6,7 @@ import type { CourierStopContract } from '@lezzet/types';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
@@ -181,15 +182,42 @@ export function CourierLoadScreen() {
           />
         )}
 
-        <Text style={styles.stopsHeading}>{t.day.load.stopsHeading}</Text>
+        <Text style={styles.stopsHeading}>
+          {day.runs.length > 1 ? t.day.load.stopsBySefer : t.day.load.stopsHeading}
+        </Text>
 
         {boxedStops.map((stop, index) => {
           const state = loadStateOf(stop);
+          /* SEFERE GÖRE GRUPLU (31.08 · v3:17 "SEFERE GÖRE KUTULAR") — araçta birden çok seferin
+             kutusu olabiliyor ve kurye rampada "hangi seferin kutusu eksik" diye soruyor. Başlık
+             yalnız birden çok sefer varken çizilir: tek seferde başlık, olmayan bir ayrımı
+             duyurmak olurdu. */
+          /* Grup başlığı SAYACINI da taşır (v3:18 `{{ yd.grupSayac }}`) — kurye rampada "hangi
+             seferin kutusu eksik" diye soruyor ve cevabı başlığın kendisinde olmalı; her satırı
+             tek tek saymak o soruyu ekrana bırakmaktı. */
+          const group = boxedStops.filter((row) => row.runId === stop.runId);
+          const groupLoaded = group.reduce(
+            (sum, row) => sum + row.boxes.filter((box) => box.loadedAt !== null).length,
+            0,
+          );
+          const groupTotal = group.reduce((sum, row) => sum + row.boxes.length, 0);
+          const groupHead =
+            day.runs.length > 1 && stop.runId !== boxedStops[index - 1]?.runId ? (
+              <View style={styles.runGroupRow} testID={`courier-load-group-${stop.runId}`}>
+                <Text style={styles.runGroupHeading}>{stop.runLabel ?? ''}</Text>
+                <OperationsStatusBadge
+                  label={fillCopy(t.day.load.stopCounter, { loaded: String(groupLoaded), total: String(groupTotal) })}
+                  tone={groupLoaded === groupTotal ? 'active' : groupLoaded === 0 ? 'idle' : 'warn'}
+                />
+              </View>
+            ) : null;
           return (
             /* DURAK KENDİ KARTINDA (v3:1440 · 30.08): kesikli ayraçla bölünmüş düz satırlardı ve
                liste "bir metin bloğu" gibi okunuyordu. Kart, her durağı kendi başına bir İŞ hâline
                getiriyor — kurye rampada gözüyle tek tek tarıyor. */
-            <View key={stop.orderId} style={styles.stopCard} testID={`courier-load-stop-${stop.orderId}`}>
+            <View key={stop.orderId}>
+              {groupHead}
+              <View style={styles.stopCard} testID={`courier-load-stop-${stop.orderId}`}>
               <View style={styles.stopBody}>
                 <Text style={styles.stopTitle} numberOfLines={1}>
                   {`${index + 1} · ${stop.customerName}`}
@@ -201,7 +229,8 @@ export function CourierLoadScreen() {
                   })}`.replace(/^ · /, '')}
                 </Text>
               </View>
-              <Text style={[styles.stopState, { color: state.tone }]}>{state.label}</Text>
+                <Text style={[styles.stopState, { color: state.tone }]}>{state.label}</Text>
+              </View>
             </View>
           );
         })}
@@ -322,6 +351,22 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors['on-ink-label'],
+  },
+  /* Sefer grup başlığı — gün ekranındakiyle aynı kesit; iki ekran aynı ayracı aynı ağırlıkta
+     çiziyor (kurye ikisi arasında gidip geliyor). */
+  runGroupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.md,
+    paddingTop: operationsTheme.space.lg,
+    paddingBottom: operationsTheme.space.xs,
+  },
+  runGroupHeading: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors.muted,
   },
   stopsHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],

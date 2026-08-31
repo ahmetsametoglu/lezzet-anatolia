@@ -130,6 +130,9 @@ export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): Couri
     // kimliksiz bir ad ya da adsız bir kimlik, üretimde doğamayacak bir hâl olurdu.
     vehicleId: null,
     vehicleLabel: null,
+    /* Seferin GÜNÜ (31.08) — fikstürün gününün kendisi; araç birden çok günün seferini
+       taşıyabildiği için künyede duruyor. */
+    deliveryDate: '2026-08-08',
     departedAt: '2026-08-08T07:30:00.000Z',
     returnedAt: null,
     closed: false,

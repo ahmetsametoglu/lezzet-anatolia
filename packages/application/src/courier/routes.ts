@@ -48,6 +48,8 @@ export interface CourierRouteView {
     vehicleId: string | null;
     /** Aracın ekranda okunan adı ("Küçük kamyonet") ya da plakası — sefer şeridinin künyesi. */
     vehicleLabel: string | null;
+    /** Seferin günü — künyenin ortak alanı (31.08). */
+    deliveryDate: string;
     departedAt: string | null;
     returnedAt: string | null;
     closed: boolean;
@@ -136,6 +138,7 @@ function toRouteView(
           zoneName: zone.name,
           vehicleId: run.vehicleId,
           vehicleLabel: run.vehicleId ? (ctx.vehicleLabels.get(run.vehicleId) ?? null) : null,
+          deliveryDate: run.deliveryDate,
           departedAt: run.departedAt,
           returnedAt: run.returnedAt,
           closed: ctx.closedRuns.has(run.id),

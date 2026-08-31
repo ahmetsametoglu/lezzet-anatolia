@@ -56,22 +56,6 @@
       "takenUnknown": "bugün başka bir kurye sürüyor · {ref}",
       "pickLabel": "{route} rotasını seç — {meta}"
     },
-    "trip": {
-      "title": "Sefer Başlat",
-      "context": "{courier} · atanmış rota var",
-      "assigned": "ATANMIŞ",
-      "stops": "durak",
-      "boxes": "kutu",
-      "collections": "tahsilat",
-      "routeNote": "{route} Rota yönetimde planlanır; buradan değiştirilmez.",
-      "vehicle": "{vehicle} · araç seçimi masada yapılır",
-      "vehicleNone": "Bu sefere araç atanmamış · araç seçimi masada yapılır",
-      "route": "{warehouse} → {zone}.",
-      "routeUnknown": "Çıkış deposu okunamadı.",
-      "cta": "Seferi başlat — yüklemeye geç",
-      "footnote": "Sefer başladıktan sonra durak sırası kilitlenir; sonuçlanmayan durak kapanışta çözülür.",
-      "vehicleHeading": "Araç"
-    },
     "load": {
       "title": "Araca Yükle",
       "context": "rampada · kutuları okut",
@@ -83,6 +67,7 @@
         "body": "Yükleme adımı yalnız kutulu siparişlerde vardır — bu seferin durakları kutusuz akışla hazırlanmış. Doğrudan yola çıkabilirsin."
       },
       "stopsHeading": "DURAKLARA GÖRE KUTULAR",
+      "stopsBySefer": "SEFERE GÖRE KUTULAR",
       "stopCounter": "{loaded}/{total}",
       "stopReady": "araçta",
       "stopPartial": "eksik",
@@ -106,7 +91,7 @@
       "started": "{n} durak yola çıktı.",
       "alreadyOut": "{n} durak zaten yoldaydı.",
       "skipped": "{n} durak hazırlanmayı bekliyor ({statuses}) — hazırlık bitince tekrar dene.",
-      "awaitingBoxes": "{n} kutulu sipariş okutulmayı bekliyor ({k}/{m} kutu bindi) — kutuları okut, son kutuyla yola çıkar.",
+      "awaitingBoxes": "{n} kutulu sipariş okutulmayı bekliyor ({k}/{m} kutu bindi) — kutuları okut, sonra seferi yeniden başlat.",
       "stale": "{n} durağın durumu tam o sırada değişti — liste tazelendi, gerekirse tekrar dene.",
       "none": "Sefer açıldı ama hiçbir durak yola çıkmadı — hazırlanan durak yok.",
       "opened": "Sefer açıldı: {route} · {ref}.",
@@ -177,6 +162,9 @@
     "vanRuns": {
       "title": "Araçtaki Seferler",
       "context": "{plate} · araç bir ara depodur",
+      "contextNoVehicle": "araç bir ara depodur",
+      "today": "bugün",
+      "tomorrow": "yarın",
       "heading": "SEFERLER · İSTEDİĞİNİ BAŞLAT",
       "hint": "Yükleme malı araca geçirir. Sefer başlatmak ayrı eylemdir: durakları açar ve müşterilere bildirim gönderir.",
       "note": "Seferler birbirine bağlı değil; sıra, zincir ya da devam ilişkisi yok. Tek ortak yanları aynı araçta olmaları.",
@@ -185,6 +173,8 @@
       "depart": "Seferi başlat",
       "departHint": "durakları açar · müşterilerine bildirim gider",
       "toStops": "Duraklara git",
+      "load": "Kutuları araca yükle",
+      "loadMeta": "{loaded}/{total} kutu araçta",
       "emptyTitle": "Araçta sefer yok",
       "emptyBody": "Sefer ve araç seçip yüklemeyi yaptığında seferler burada birikir. Bir sefer araçta olmakla başlamış sayılmaz.",
       "pick": "Sefer ve araç seç",
