@@ -150,7 +150,7 @@ function addToBreakdown(
  * Okutma çekmecesinin konusu: çözülen kod + depocunun seçtiği adet. `expectedQty` satırdan kopyalanır
  * ki ekran ikinci bir arama yapmasın; `qty` çekmecede oynar, satıra ancak onayla yazılır.
  */
-export interface ScannedCode extends Omit<Extract<ResolveCodeResponse, { status: 'found' }>, 'status'> {
+interface ScannedCode extends Omit<Extract<ResolveCodeResponse, { status: 'found' }>, 'status'> {
   qty: number;
   expectedQty: number;
 }

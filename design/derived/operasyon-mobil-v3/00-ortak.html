@@ -1,7 +1,7 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
 <!-- ekrana bağlanamayan kalan parçalar: sayfa iskeleti, stil, sekme çubuğu, sheet'ler, betik kalanı -->
-<!-- parça sayısı: 38 -->
+<!-- parça sayısı: 39 -->
 
 <!-- kaynak: satır 1-60 · ortak -->
 <!DOCTYPE html>
@@ -65,109 +65,112 @@
 
 
 
-<!-- kaynak: satır 201-201 · ortak -->
+<!-- kaynak: satır 209-209 · ortak -->
 
 
-<!-- kaynak: satır 352-352 · ortak -->
+<!-- kaynak: satır 360-360 · ortak -->
 
 
-<!-- kaynak: satır 534-534 · ortak -->
+<!-- kaynak: satır 542-542 · ortak -->
 
 
-<!-- kaynak: satır 614-614 · ortak -->
+<!-- kaynak: satır 622-622 · ortak -->
 
 
-<!-- kaynak: satır 773-773 · ortak -->
+<!-- kaynak: satır 781-781 · ortak -->
 
 
-<!-- kaynak: satır 853-853 · ortak -->
+<!-- kaynak: satır 861-861 · ortak -->
 
 
-<!-- kaynak: satır 923-923 · ortak -->
+<!-- kaynak: satır 906-906 · ortak -->
 
 
-<!-- kaynak: satır 1020-1020 · ortak -->
+<!-- kaynak: satır 1045-1045 · ortak -->
 
 
-<!-- kaynak: satır 1068-1068 · ortak -->
+<!-- kaynak: satır 1181-1181 · ortak -->
 
 
-<!-- kaynak: satır 1092-1092 · ortak -->
+<!-- kaynak: satır 1229-1229 · ortak -->
 
 
-<!-- kaynak: satır 1179-1179 · ortak -->
+<!-- kaynak: satır 1253-1253 · ortak -->
 
 
-<!-- kaynak: satır 1241-1241 · ortak -->
+<!-- kaynak: satır 1340-1340 · ortak -->
 
 
-<!-- kaynak: satır 1373-1373 · ortak -->
+<!-- kaynak: satır 1402-1402 · ortak -->
 
 
-<!-- kaynak: satır 1511-1511 · ortak -->
+<!-- kaynak: satır 1534-1534 · ortak -->
 
 
-<!-- kaynak: satır 1566-1566 · ortak -->
+<!-- kaynak: satır 1672-1672 · ortak -->
 
 
-<!-- kaynak: satır 1639-1639 · ortak -->
+<!-- kaynak: satır 1727-1727 · ortak -->
 
 
-<!-- kaynak: satır 1728-1728 · ortak -->
+<!-- kaynak: satır 1800-1800 · ortak -->
 
 
-<!-- kaynak: satır 1816-1816 · ortak -->
+<!-- kaynak: satır 1889-1889 · ortak -->
 
 
-<!-- kaynak: satır 1958-1958 · ortak -->
+<!-- kaynak: satır 1977-1977 · ortak -->
 
 
-<!-- kaynak: satır 2023-2023 · ortak -->
+<!-- kaynak: satır 2119-2119 · ortak -->
 
 
-<!-- kaynak: satır 2102-2102 · ortak -->
+<!-- kaynak: satır 2184-2184 · ortak -->
 
 
-<!-- kaynak: satır 2223-2223 · ortak -->
+<!-- kaynak: satır 2263-2263 · ortak -->
 
 
-<!-- kaynak: satır 2276-2276 · ortak -->
+<!-- kaynak: satır 2384-2384 · ortak -->
 
 
-<!-- kaynak: satır 2299-2299 · ortak -->
+<!-- kaynak: satır 2437-2437 · ortak -->
 
 
-<!-- kaynak: satır 2379-2379 · ortak -->
+<!-- kaynak: satır 2460-2460 · ortak -->
 
 
-<!-- kaynak: satır 2419-2419 · ortak -->
+<!-- kaynak: satır 2540-2540 · ortak -->
 
 
-<!-- kaynak: satır 2502-2502 · ortak -->
+<!-- kaynak: satır 2580-2580 · ortak -->
 
 
-<!-- kaynak: satır 2595-2595 · ortak -->
+<!-- kaynak: satır 2663-2663 · ortak -->
 
 
-<!-- kaynak: satır 2705-2705 · ortak -->
+<!-- kaynak: satır 2756-2756 · ortak -->
 
 
-<!-- kaynak: satır 2755-2755 · ortak -->
+<!-- kaynak: satır 2866-2866 · ortak -->
 
 
-<!-- kaynak: satır 2823-2823 · ortak -->
+<!-- kaynak: satır 2916-2916 · ortak -->
 
 
-<!-- kaynak: satır 2859-2859 · ortak -->
+<!-- kaynak: satır 2984-2984 · ortak -->
 
 
-<!-- kaynak: satır 2891-2891 · ortak -->
+<!-- kaynak: satır 3020-3020 · ortak -->
 
 
-<!-- kaynak: satır 2931-2931 · ortak -->
+<!-- kaynak: satır 3052-3052 · ortak -->
 
 
-<!-- kaynak: satır 3001-3520 · ortak -->
+<!-- kaynak: satır 3092-3092 · ortak -->
+
+
+<!-- kaynak: satır 3162-3719 · ortak -->
 
   </div>
 
@@ -272,6 +275,34 @@
         <div style="padding:2px 20px 0">
           <div onClick="{{ closeSheet }}" style="height:54px;border-radius:17px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer">Tamam</div>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetImha }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:62">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px;animation:sheetIn .26s cubic-bezier(.2,.9,.3,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font:600 19px 'Lora'">İmha — {{ imhaBaglam.ad }}</span>
+          <span style="font:400 11.5px 'Karla';color:#8a8270">{{ imhaBaglam.kod }} · raf {{ imhaBaglam.raf }} · {{ imhaBaglam.rejim }} {{ imhaBaglam.tarih }}</span>
+        </div>
+        <div style="background:#fdf6f4;border-radius:14px;padding:12px 13px">
+          <span style="font:700 11.5px/1.5 'Karla';color:#a44a3f">Sebep sorulmaz: {{ imhaSebep }}</span>
+        </div>
+        <div style="background:#fff;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+            <span style="font:600 34px 'Lora';color:#a44a3f;line-height:1">{{ imhaAdet }}</span>
+            <span style="font:400 10.5px 'Karla';color:#8a8270">partide {{ imhaBaglam.kalan }} adet · toplam stok {{ imhaBaglam.stok }}</span>
+          </div>
+          <div style="display:flex;align-items:center;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
+            <span onClick="{{ imhaEksi }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+            <span onClick="{{ imhaArti }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none;border-left:1.5px solid #ddd6c4">+</span>
+          </div>
+        </div>
+        <div onClick="{{ imhaOnayla }}" style="height:54px;border-radius:17px;background:{{ imhaCtaBg }};color:#fff;display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer">{{ imhaCtaLabel }}</div>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191;text-align:center">Parti düşer, olay referansı kayıttan sonra verilir.</span>
       </div>
     </div>
   </sc-if>
@@ -576,7 +607,7 @@
   <sc-if value="{{ t.scanner }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;inset:0;background:#12161a;display:flex;flex-direction:column;animation:fadeIn .2s ease;z-index:40">
       <div style="padding:18px 20px;display:flex;align-items:center;justify-content:space-between;background:#2f353a">
-        <span style="font:600 17px 'Lora';color:#f5f1e6">Kalemi kutuya okut</span>
+        <span style="font:600 17px 'Lora';color:#f5f1e6">{{ tarayiciBaslik }}</span>
         <span onClick="{{ tg.scanner }}" style="font:700 13px 'Karla';color:#e0b487;cursor:pointer">Vazgeç</span>
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center">
@@ -586,13 +617,23 @@
       </div>
       <div style="background:#1b2024;padding:16px 20px 22px;display:flex;flex-direction:column;gap:10px">
         <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#7d8a93">SİMÜLASYON · YALNIZ GELİŞTİRME</span>
-        <div style="display:flex;flex-wrap:wrap;gap:8px">
-          <span onClick="{{ act.okutPaket }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Paket</span>
-          <span onClick="{{ act.okutKoli }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Koli ×24</span>
-          <span onClick="{{ act.okutYabanci }}" style="font:700 12.5px 'Karla';color:#e0b487;border:1.4px solid #6b4f38;border-radius:13px;padding:9px 14px;cursor:pointer">Yabancı ürün</span>
-          <span onClick="{{ act.okutTanimsiz }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Tanınmayan</span>
-        </div>
-        <span style="font:400 11.5px 'Karla';color:#7d8a93">Paket ya da koli barkodu — koli, çarpanı kadar sayılır.</span>
+        <sc-if value="{{ tarayiciKalem }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <span onClick="{{ act.okutPaket }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Paket</span>
+            <span onClick="{{ act.okutKoli }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Koli ×24</span>
+            <span onClick="{{ act.okutYabanci }}" style="font:700 12.5px 'Karla';color:#e0b487;border:1.4px solid #6b4f38;border-radius:13px;padding:9px 14px;cursor:pointer">Yabancı ürün</span>
+            <span onClick="{{ act.okutTanimsiz }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">Tanınmayan</span>
+          </div>
+          <span style="font:400 11.5px 'Karla';color:#7d8a93">Paket ya da koli barkodu — koli, çarpanı kadar sayılır.</span>
+        </sc-if>
+        <sc-if value="{{ tarayiciParti }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ tarayiciPartiler }}" as="tp" hint-placeholder-count="5">
+              <span onClick="{{ tp.oku }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">{{ tp.et }}</span>
+            </sc-for>
+          </div>
+          <span style="font:400 11.5px 'Karla';color:#7d8a93">Parti etiketi okunur; tek eşleşmede parti doğrudan seçilir.</span>
+        </sc-if>
       </div>
     </div>
   </sc-if>
@@ -689,9 +730,9 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;serbestUrun&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
 
-<!-- kaynak: satır 3521-4679 · betik kalanı -->
+<!-- kaynak: satır 3720-5107 · betik kalanı -->
 <script type="text/x-dc-fragment">
-const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar'];
+const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar'];
 const TOGGLES = ['kutuAcik','eksik','scanner','yabanci','etiket','kimlikSheet','boySheet','urunAraSheet','imzaOpen','imzaCizildi','ulasilamadi','kabulEtmedi','hasarNotu','sepetVar','maSatir','imzaAlindi','navSheet'];
 const GROUPS = {
   sebep: ['imha','hasar','kayip','fark'],
@@ -708,9 +749,9 @@ const GROUPS = {
 const CUBUK_EKRAN = ['depoHub','toplama','maKabul','skt','transfer','sonSatislar','yazicilar','kapsam','kuryeGun','para','karar','talepler','sosyal','gunOzeti','bildirim'];
 // Ekran numarası tek yerde durur; yeni ekran araya girerse harfle eklenir, sonrakiler kaymaz.
 // Serbest ürün 16'nın devamı olduğu için 16b — Durak 17, Seferi kapat 18, Yerinde satış 20 yerinde kalır.
-const NUMARA = { kuryeDonus:'13', kuryeGun:'14', aracSeferler:'14b', seferBaslat:'15', aracaYukle:'16', serbestUrun:'17', kuryeDurak:'18', seferKapat:'19', satis:'20' };
-const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım düzeltme', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
-const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar'], para:['para','gunSonu'] };
+const NUMARA = { skt:'D3', sayim:'D4', dusum:'D4b', kuryeDonus:'13', kuryeGun:'14', aracSeferler:'14b', seferBaslat:'15', aracaYukle:'16', serbestUrun:'17', kuryeDurak:'18', seferKapat:'19', satis:'20' };
+const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım', dusum:'Stok düşümü', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
+const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar'], para:['para','gunSonu'] };
 
 // Kurye kendi deposunun dışını görmez: rota, araç ve serbest ürün listeleri depo künyesine göre süzülür.
 // Araç bir ara depodur: aynı anda birden çok seferin kutusunu taşır.
@@ -773,6 +814,25 @@ SEFERLER.forEach(s => {
 });
 const SEFER_BUL = (k) => SEFERLER.filter(s => s.key === k)[0] || null;
 const SATILAN = { fistikli450:3, karisik225:1, sobiyet500:2, suboregi:0 };
+
+// Parti = stok kararının birimi. Tarih rejimi sonucu belirler:
+// DLC (son tüketim) geçtiyse mal satılamaz, imha edilir. DDM (tavsiye edilen tüketim)
+// geçtiyse mal yasal olarak satılabilir — depocu bu ayrımı görmeden imha etmemeli.
+const PARTILER = [
+  { key:'p0641', kod:'P-0641', ad:'Kaymaklı Baklava', boy:'1 kg', adet:4, gun:-1, rejim:'DLC', omur:0, stok:26, raf:'A3-02' },
+  { key:'p0705', kod:'P-0705', ad:'Antep Fıstığı Ezmesi', boy:'400 g', adet:7, gun:-6, rejim:'DDM', omur:0, stok:19, raf:'B1-14' },
+  { key:'p0712', kod:'P-0712', ad:'Su Böreği', boy:'tepsi', adet:6, gun:2, rejim:'DLC', omur:18, stok:14, raf:'A1-07' },
+  { key:'p0688', kod:'P-0688', ad:'Şöbiyet', boy:'500 g', adet:9, gun:5, rejim:'DDM', omur:23, stok:31, raf:'C2-03' },
+  { key:'p0730', kod:'P-0730', ad:'Acılı Ezme', boy:'250 g', adet:12, gun:9, rejim:'yok', omur:null, stok:22, raf:'B2-09' }
+];
+const PARTI_BUL = (k) => PARTILER.filter(p => p.key === k)[0] || null;
+const PARTI_KARAR = (p) => {
+  if (p.rejim === 'yok') return 'yok';
+  if (p.gun < 0) return p.rejim === 'DLC' ? 'imha' : 'satilabilir';
+  if (p.omur <= 20) return 'teklif';
+  if (p.omur <= 25) return 'aday';
+  return 'normal';
+};
 const ARACLAR = [
   { key:'fr482', plaka:'FR-482-BX', etiket:'Frigo kamyonet' },
   { key:'fr119', plaka:'FR-119-KM', etiket:'Panelvan' },
@@ -817,6 +877,18 @@ class Component extends DCLogic {
     kapatilan: [],
     yuk: {},
     donen: {},
+    imhaEdilen: {},
+    partiOv: {},
+    imhaParti: null,
+    imhaAdet: 0,
+    sayimParti: null,
+    sayilan: null,
+    sayimNot: null,
+    sayimSonuc: null,
+    dusumParti: null,
+    dusumAdet: 0,
+    dusumSebep: null,
+    dusumSonuc: null,
     arac: null,
     serbest: {},
     durakOkunan: 0,
@@ -1083,6 +1155,78 @@ class Component extends DCLogic {
     c.tabYon = tab === 'yon' ? vurgu : '#a8a191';
     c.tabPara = tab === 'para' ? vurgu : '#a8a191';
     const hal = st.halOverride || this.props.listeHali || 'dolu';
+
+    // D3 · YAKIN-SKT TURU — karar sistemce türetilir, eylem satırda durur
+    const imhaEdilen = st.imhaEdilen || {};
+    // yazılan her hareket parti adedini ve ürün stoğunu düşürür — ekranlar aynı sayıyı görür
+    const partiOv = st.partiOv || {};
+    const PLIST = PARTILER.map(p => Object.assign({}, p, partiOv[p.key] || {}));
+    const PBUL = (k) => PLIST.filter(p => p.key === k)[0] || null;
+    const sktSatirlar = PLIST.map(p => {
+      const karar = PARTI_KARAR(p);
+      const bitti = !!imhaEdilen[p.key];
+      const gecti = p.gun < 0;
+      const rejimTon = p.rejim === 'DLC'
+        ? { bg:'#f4d7d2', fg:'#a44a3f' }
+        : p.rejim === 'DDM' ? { bg:'#e3ecd2', fg:'#46601f' } : { bg:'#e7e2d2', fg:'#8a8270' };
+      const sonuc = !gecti
+        ? (p.gun + ' gün kaldı')
+        : (p.rejim === 'DLC' ? 'geçti — satılamaz' : 'geçti — satılabilir');
+      const kartTon = bitti
+        ? { bg:'#f2f0e8', bd:'#e2ddcc' }
+        : karar === 'imha' ? { bg:'#fdf6f4', bd:'#e0b9b2' }
+        : karar === 'yok' ? { bg:'#f6f4ec', bd:'#ddd6c4' }
+        : { bg:'#fbfaf4', bd:'#ddd6c4' };
+      // rozet ağırlığı: yalnız imha eyleme çağırır, gerisi bilgi tonunda kalır
+      const rozet = bitti
+        ? { yazi:'İMHA EDİLDİ', bg:'#e7e2d2', fg:'#8a8270', kalin:'800' }
+        : karar === 'imha' ? { yazi:'İMHA EDİLMELİ', bg:'#a44a3f', fg:'#ffffff', kalin:'800' }
+        : karar === 'satilabilir' ? { yazi:'indirimli satılır', bg:'transparent', fg:'#46601f', kalin:'700' }
+        : karar === 'teklif' ? { yazi:'teklif açık', bg:'transparent', fg:'#8a8270', kalin:'700' }
+        : karar === 'aday' ? { yazi:'teklife girebilir', bg:'transparent', fg:'#8a8270', kalin:'700' }
+        : { yazi:'karar yok', bg:'transparent', fg:'#a8a191', kalin:'700' };
+      return {
+        kod: p.kod, ad: p.ad, boy: p.boy, adet: p.adet, raf: p.raf,
+        rejim: p.rejim === 'yok' ? 'ÖMÜR YOK' : p.rejim,
+        rejimNot: p.rejim === 'DLC' ? 'son tüketim tarihi' : p.rejim === 'DDM' ? 'tavsiye edilen tüketim' : 'eşik uygulanmaz',
+        rejimBg: rejimTon.bg, rejimFg: rejimTon.fg,
+        sonuc: sonuc,
+        sonucFg: (gecti && p.rejim === 'DLC') ? '#a44a3f' : gecti ? '#46601f' : '#8a8270',
+        kartBg: kartTon.bg, kartBd: kartTon.bd,
+        rozet: rozet.yazi, rozetBg: rozet.bg, rozetFg: rozet.fg, rozetKalin: rozet.kalin,
+        rozetPad: rozet.bg === 'transparent' ? '0' : '6px 10px',
+        imhaGoster: (karar === 'imha' && !bitti) ? 'flex' : 'none',
+        refGoster: bitti ? 'block' : 'none',
+        ref: imhaEdilen[p.key] || '',
+        imhaAc: () => this.setState({ sheet:'imha', imhaParti: p.key, imhaAdet: p.adet })
+      };
+    });
+    const imhaP = PBUL(st.imhaParti);
+    const imhaAdet = st.imhaAdet || 0;
+
+    // Parti bağlamı — sayım ve düşüm aynı kartı kullanır
+    const baglam = (p) => p ? {
+      kod: p.kod, ad: p.ad, boy: p.boy, kalan: p.adet, stok: p.stok, raf: p.raf,
+      rejim: p.rejim === 'yok' ? 'ömür yok' : p.rejim,
+      tarih: p.gun < 0 ? (Math.abs(p.gun) + ' gün geçti') : (p.gun + ' gün kaldı')
+    } : { kod:'—', ad:'—', boy:'', kalan:0, stok:0, raf:'—', rejim:'—', tarih:'—' };
+
+    // B · SAYIM — girilen raftaki gerçek adet; farkı sistem hesaplar
+    const sayP = PBUL(st.sayimParti);
+    const sayilan = st.sayilan;
+    const sayFark = (sayP && sayilan !== null && sayilan !== undefined) ? (sayilan - sayP.adet) : null;
+    const sayimSonuc = st.sayimSonuc;
+
+    // C · STOK DÜŞÜMÜ — hasar / soğuk zincir / kayıp
+    const dusP = PBUL(st.dusumParti);
+    const dusAdet = st.dusumAdet || 0;
+    const dusSebep = st.dusumSebep;
+    const dusumSonuc = st.dusumSonuc;
+    const partiSecenek = PLIST.map(p => ({
+      kod: p.kod, ad: p.ad, boy: p.boy, kalan: p.adet, raf: p.raf,
+      sayimSec: () => this.setState({ sayimParti: p.key, sayilan: null, sayimNot: null }),
+      dusumSec: () => this.setState({ dusumParti: p.key, dusumAdet: 0, dusumSebep: null })
+    }));
 
     // SEFER SEÇİMİ — araç ara depodur: aynı anda birden çok seferin, birden çok günün kutusu yüklenir
     const bosHal = hal === 'boş';
@@ -1390,6 +1534,133 @@ class Component extends DCLogic {
         c: hal === v ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' },
         sec: () => this.setState({ halOverride: v })
       })),
+      // D3 · Yakın-SKT
+      // tarayıcı bağlamı — kodda ekran başına ayrı, prototipte tek kutu bağlamına göre konuşur
+      tarayiciBaslik: cur === 'sayim' ? 'Parti etiketini okut'
+        : cur === 'dusum' ? 'Parti etiketini okut'
+        : cur === 'maDetay' ? 'Koli okut — satırı bul'
+        : cur === 'kargoDevri' ? 'Kutuyu okut — gönderiyi bul'
+        : cur === 'satis' ? 'Ürün barkodunu okut'
+        : cur === 'serbestUrun' ? 'Ürün barkodunu okut'
+        : cur === 'aracaYukle' ? 'Kutuyu okut — araca al'
+        : 'Kalemi kutuya okut',
+      tarayiciParti: cur === 'sayim' || cur === 'dusum',
+      tarayiciKalem: !(cur === 'sayim' || cur === 'dusum'),
+      tarayiciPartiler: PLIST.map(p => ({
+        et: p.kod + ' · ' + p.ad,
+        oku: () => this.setState(s => ({
+          t: Object.assign({}, s.t, { scanner:false }),
+          sayimParti: s.screen === 'sayim' ? p.key : s.sayimParti,
+          sayilan: s.screen === 'sayim' ? null : s.sayilan,
+          dusumParti: s.screen === 'dusum' ? p.key : s.dusumParti,
+          dusumAdet: s.screen === 'dusum' ? 0 : s.dusumAdet,
+          dusumSebep: s.screen === 'dusum' ? null : s.dusumSebep
+        }))
+      })),
+      sktSatirlar: sktSatirlar,
+      sheetImha: st.sheet === 'imha',
+      imhaBaglam: baglam(imhaP),
+      imhaAdet: imhaAdet,
+      imhaArti: () => this.setState(s => ({ imhaAdet: Math.min(imhaP ? imhaP.adet : 0, (s.imhaAdet || 0) + 1) })),
+      imhaEksi: () => this.setState(s => ({ imhaAdet: Math.max(0, (s.imhaAdet || 0) - 1) })),
+      imhaSebep: imhaP ? (imhaP.rejim + ' geçti — sistem yazar') : '',
+      imhaCtaLabel: imhaAdet > 0 ? (imhaAdet + ' adet imha et') : 'Adet seç',
+      imhaCtaBg: imhaAdet > 0 ? '#a44a3f' : '#c4bda9',
+      imhaOnayla: () => {
+        if (!imhaP || imhaAdet <= 0) return;
+        const ref = 'IMH-STR-26-0' + (148 + Object.keys(imhaEdilen).length);
+        this.setState(s => ({
+          sheet: null,
+          imhaEdilen: Object.assign({}, s.imhaEdilen, { [imhaP.key]: ref + ' · ' + imhaAdet + ' adet' }),
+          partiOv: Object.assign({}, s.partiOv, {
+            [imhaP.key]: { adet: imhaP.adet - imhaAdet, stok: imhaP.stok - imhaAdet }
+          })
+        }));
+      },
+
+      // B · Sayım
+      sayimPartiVar: !!sayP && !sayimSonuc,
+      sayimPartiYok: !sayP && !sayimSonuc,
+      sayimBaglam: baglam(sayP),
+      sayilanVar: sayilan !== null && sayilan !== undefined,
+      sayilanYok: sayilan === null || sayilan === undefined,
+      sayilanDeger: (sayilan === null || sayilan === undefined) ? '—' : sayilan,
+      sayArti: () => this.setState(s => ({ sayilan: (s.sayilan === null || s.sayilan === undefined ? 0 : s.sayilan) + 1 })),
+      sayEksi: () => this.setState(s => ({ sayilan: Math.max(0, (s.sayilan === null || s.sayilan === undefined ? 0 : s.sayilan) - 1) })),
+      sayBasla: () => this.setState({ sayilan: 0 }),
+      sayFarkYazi: sayFark === null ? 'Saydığın adedi gir — farkı sistem hesaplar'
+        : sayFark === 0 ? 'Fark yok — sistemle birebir'
+        : (sayFark > 0 ? ('+' + sayFark + ' fazla') : (sayFark + ' eksik')) + ' · sistem ' + (sayP ? sayP.adet : 0) + ' diyor',
+      sayFarkFg: sayFark === null ? '#a8a191' : sayFark === 0 ? '#46601f' : '#b05c2e',
+      sayFarkBg: sayFark === null ? '#f6f4ec' : sayFark === 0 ? '#f2f7e8' : '#f6e6d6',
+      sayFarkVar: sayFark !== null && sayFark !== 0,
+      sayimNot: st.sayimNot,
+      sayimNotlar: ['fire — dökülme', 'raf yanlış yerleşmiş', 'kayıt hatası', 'sebebini bilmiyorum'].map(v => ({
+        v: v,
+        c: st.sayimNot === v ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' },
+        sec: () => this.setState({ sayimNot: v })
+      })),
+      sayimHazirCta: (sayilan !== null && sayilan !== undefined && (sayFark === 0 || st.sayimNot))
+        ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' },
+      sayimCtaLabel: (sayilan === null || sayilan === undefined) ? 'Önce saydığın adedi gir'
+        : (sayFark !== 0 && !st.sayimNot) ? 'Fark için sebep seç' : 'Sayımı kaydet',
+      sayimKaydet: () => {
+        if (!sayP || sayilan === null || sayilan === undefined) return;
+        if (sayFark !== 0 && !st.sayimNot) return;
+        this.setState(s => ({
+          sayimSonuc: {
+            ref: 'SAY-STR-26-0312', kod: sayP.kod, ad: sayP.ad,
+            eski: sayP.adet, yeni: sayilan,
+            fark: (sayFark > 0 ? '+' : '') + sayFark,
+            stokEski: sayP.stok, stokYeni: sayP.stok + sayFark
+          },
+          partiOv: Object.assign({}, s.partiOv, {
+            [sayP.key]: { adet: sayilan, stok: sayP.stok + sayFark }
+          })
+        }));
+      },
+      sayimSonucVar: !!sayimSonuc,
+      sayimSonuc: sayimSonuc || { ref:'', kod:'', ad:'', eski:0, yeni:0, fark:'0', stokEski:0, stokYeni:0 },
+      sayimYeniden: () => this.setState({ sayimSonuc: null, sayimParti: null, sayilan: null, sayimNot: null }),
+
+      // C · Stok düşümü
+      dusumPartiVar: !!dusP && !dusumSonuc,
+      dusumPartiYok: !dusP && !dusumSonuc,
+      dusumBaglam: baglam(dusP),
+      dusumAdet: dusAdet,
+      dusArti: () => this.setState(s => ({ dusumAdet: Math.min(dusP ? dusP.adet : 0, (s.dusumAdet || 0) + 1) })),
+      dusEksi: () => this.setState(s => ({ dusumAdet: Math.max(0, (s.dusumAdet || 0) - 1) })),
+      dusumSinir: dusP && dusAdet >= dusP.adet,
+      dusumSebepler: [
+        { v:'hasar', et:'hasar' }, { v:'soguk', et:'soğuk zincir' }, { v:'kayip', et:'kayıp' }
+      ].map(o => ({
+        et: o.et,
+        c: dusSebep === o.v ? { bg:'#2f353a', fg:'#f5f1e6', bd:'#2f353a' } : { bg:'#fff', fg:'#2f353a', bd:'#ddd6c4' },
+        sec: () => this.setState({ dusumSebep: o.v })
+      })),
+      dusumOnek: dusSebep === 'kayip' ? 'KYP-STR-26' : dusSebep === 'soguk' ? 'SOG-STR-26' : dusSebep === 'hasar' ? 'HSR-STR-26' : 'önek sebepten',
+      dusumCtaBg: (dusAdet > 0 && dusSebep) ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' },
+      dusumCtaLabel: dusAdet === 0 ? 'Önce adet gir' : !dusSebep ? 'Sebep seç' : ('Düşümü kaydet — ' + dusAdet + ' adet'),
+      dusumKaydet: () => {
+        if (!dusP || dusAdet <= 0 || !dusSebep) return;
+        const onek = dusSebep === 'kayip' ? 'KYP-STR-26-0077' : dusSebep === 'soguk' ? 'SOG-STR-26-0031' : 'HSR-STR-26-0094';
+        this.setState(s => ({
+          dusumSonuc: {
+            ref: onek, kod: dusP.kod, ad: dusP.ad, adet: dusAdet,
+            sebep: dusSebep === 'kayip' ? 'kayıp' : dusSebep === 'soguk' ? 'soğuk zincir' : 'hasar',
+            eski: dusP.adet, yeni: dusP.adet - dusAdet,
+            stokEski: dusP.stok, stokYeni: dusP.stok - dusAdet
+          },
+          partiOv: Object.assign({}, s.partiOv, {
+            [dusP.key]: { adet: dusP.adet - dusAdet, stok: dusP.stok - dusAdet }
+          })
+        }));
+      },
+      dusumSonucVar: !!dusumSonuc,
+      dusumSonuc: dusumSonuc || { ref:'', kod:'', ad:'', adet:0, sebep:'', eski:0, yeni:0, stokEski:0, stokYeni:0 },
+      dusumYeniden: () => this.setState({ dusumSonuc: null, dusumParti: null, dusumAdet: 0, dusumSebep: null }),
+      partiSecenek: partiSecenek,
+
       seferListesi: seferListesi,
       secimSefer: secilenler.length,
       secimDurak: secimDurak,
@@ -1836,8 +2107,7 @@ class Component extends DCLogic {
         }),
         taslakAl: () => this.setState({ taslakAlindi:true }),
         imzaTemizle: () => this.setT('imzaCizildi', false),
-        sayimHub: () => this.setState({ screen:'sayim', partiSecili:false }),
-        sayimParti: () => this.setState({ screen:'sayim', partiSecili:true }),
+        sayimHub: () => this.setState({ screen:'sayim', sayimParti:null, sayilan:null, sayimNot:null, sayimSonuc:null }),
         kutuTip: () => this.setState(s => ({ kutuTipSheet: !s.kutuTipSheet })),
         satirCikar: () => this.setState(s => ({ cikarilan: !s.cikarilan })),
         kismiKabul: () => this.setState({ screen:'maKabul' }),
@@ -1852,7 +2122,7 @@ class Component extends DCLogic {
 }
 </script>
 
-<!-- kaynak: satır 4680-4682 · ortak -->
+<!-- kaynak: satır 5108-5110 · ortak -->
 </script>
 </body>
 </html>

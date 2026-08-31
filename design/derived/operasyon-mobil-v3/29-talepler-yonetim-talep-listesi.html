@@ -1,0 +1,98 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: talepler · Yönetim · Talep listesi -->
+<!-- kaynak satırlar: 2664-2755 -->
+
+<!-- kaynak: satır 2664-2755 · görünüm bloğu -->
+    <sc-if value="{{ is.talepler }}">
+      <div data-screen-label="Yönetim · Talep listesi" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column;flex:1">
+            <span style="font:600 20px 'Lora'">Talep ve şikâyetler</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">6 açık · 2'si top bizde</span>
+          </div>
+        </div>
+
+        <div style="padding:0 20px 12px;display:flex;gap:6px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none">
+          <span style="height:30px;padding:0 12px;border-radius:11px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;font:700 11px 'Karla';cursor:pointer;flex:none;white-space:nowrap">tümü · 6</span>
+          <span style="height:30px;padding:0 12px;border-radius:11px;border:1.5px solid #e7e2d2;background:#fff;color:#6d7261;display:flex;align-items:center;font:700 11px 'Karla';cursor:pointer;flex:none;white-space:nowrap">şikâyet · 3</span>
+          <span style="height:30px;padding:0 12px;border-radius:11px;border:1.5px solid #e7e2d2;background:#fff;color:#6d7261;display:flex;align-items:center;font:700 11px 'Karla';cursor:pointer;flex:none;white-space:nowrap">talep · 2</span>
+          <span style="height:30px;padding:0 12px;border-radius:11px;border:1.5px solid #e7e2d2;background:#fff;color:#6d7261;display:flex;align-items:center;font:700 11px 'Karla';cursor:pointer;flex:none;white-space:nowrap">soru · 1</span>
+          <span style="height:30px;padding:0 12px;border-radius:11px;border:1.5px solid #e0b9b2;background:#f4e3e0;color:#a44a3f;display:flex;align-items:center;font:700 11px 'Karla';cursor:pointer;flex:none;white-space:nowrap">top bizde · 2</span>
+        </div>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:10px">
+
+          <div onClick="{{ go.sikayet }}" style="background:#fff;border:2px solid #a44a3f;border-radius:20px;padding:14px 15px;display:flex;flex-direction:column;gap:7px;cursor:pointer;box-shadow:0 6px 18px rgba(47,53,58,.06);transition:transform .12s" style-active="transform:scale(.985)">
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+              <span style="background:#f4e3e0;color:#a44a3f;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 8px">ŞİKÂYET</span>
+              <span style="background:#a44a3f;color:#fff;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 8px">TOP BİZDE</span>
+              <span style="font:400 10.5px 'Karla';color:#8a8270;margin-left:auto">22 sa kaldı</span>
+            </div>
+            <span style="font:700 14px/1.4 'Karla'">Mehmet Aydın · Restaurant Oberjaegerhof</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#6d7261">"Yarın akşam servisi için iki tepsi lazım, yoksa iptal etmemiz gerekecek."</span>
+            <div style="display:flex;align-items:center;gap:9px;margin-top:2px">
+              <span style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="3.2"/></svg><span style="font:700 10.5px 'Karla';color:#8a8270">2 görsel</span></span>
+              <span style="font:400 10.5px 'Karla';color:#8a8270">DE · çeviri var</span>
+              <span style="font:400 16px 'Karla';color:#b3ab97;margin-left:auto">›</span>
+            </div>
+          </div>
+
+          <div onClick="{{ go.sikayet }}" style="background:#fff;border:1.5px solid #e0b9b2;border-radius:20px;padding:14px 15px;display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+              <span style="background:#f4e3e0;color:#a44a3f;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 8px">ŞİKÂYET</span>
+              <span style="background:#a44a3f;color:#fff;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 8px">TOP BİZDE</span>
+              <span style="font:400 10.5px 'Karla';color:#a44a3f;margin-left:auto">4 sa kaldı</span>
+            </div>
+            <span style="font:700 14px/1.4 'Karla'">Sabine Krieger · Feinkost Krieger</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#6d7261">"Kolinin dışı ıslanmış gelmiş, alt sıradaki üç kavanoz etiketsiz."</span>
+            <div style="display:flex;align-items:center;gap:9px;margin-top:2px">
+              <span style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="3.2"/></svg><span style="font:700 10.5px 'Karla';color:#8a8270">3 görsel</span></span>
+              <span style="font:400 10.5px 'Karla';color:#8a8270">DE · çeviri var</span>
+              <span style="font:400 16px 'Karla';color:#b3ab97;margin-left:auto">›</span>
+            </div>
+          </div>
+
+          <div onClick="{{ go.sikayet }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 15px;display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+              <span style="background:#e3ecd2;color:#46601f;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 8px">TALEP</span>
+              <span style="border:1.5px solid #ddd6c4;color:#8a8270;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:3px 7px">TOP ONLARDA</span>
+              <span style="font:400 10.5px 'Karla';color:#8a8270;margin-left:auto">cevap bekleniyor</span>
+            </div>
+            <span style="font:700 14px/1.4 'Karla'">Ayşe Demir · Anadolu Market</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#6d7261">"Cuma teslimatına 4 kasa zeytin ekleyebilir miyiz?" — fiyat listesi gönderildi</span>
+            <div style="display:flex;align-items:center;gap:9px;margin-top:2px">
+              <span style="font:400 10.5px 'Karla';color:#8a8270">görsel yok</span>
+              <span style="font:400 16px 'Karla';color:#b3ab97;margin-left:auto">›</span>
+            </div>
+          </div>
+
+          <div onClick="{{ go.sikayet }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 15px;display:flex;flex-direction:column;gap:7px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+              <span style="background:#e3ecd2;color:#46601f;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 8px">TALEP</span>
+              <span style="border:1.5px solid #ddd6c4;color:#8a8270;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:3px 7px">TOP ONLARDA</span>
+              <span style="font:400 10.5px 'Karla';color:#8a8270;margin-left:auto">dün 17:40</span>
+            </div>
+            <span style="font:700 14px/1.4 'Karla'">Nicolas Baumann · Bistrot Lentz</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#6d7261">"Fatura adresimizi değiştirmek istiyoruz." — muhasebeye iletildi</span>
+            <div style="display:flex;align-items:center;gap:9px;margin-top:2px">
+              <span style="display:flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8a8270" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h4l2-2h6l2 2h4v12H3z"/><circle cx="12" cy="13" r="3.2"/></svg><span style="font:700 10.5px 'Karla';color:#8a8270">1 görsel</span></span>
+              <span style="font:400 16px 'Karla';color:#b3ab97;margin-left:auto">›</span>
+            </div>
+          </div>
+
+          <div onClick="{{ go.sikayet }}" style="background:#f4f2ea;border:1.5px solid #e7e2d2;border-radius:20px;padding:13px 15px;display:flex;flex-direction:column;gap:6px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+              <span style="background:#e7e2d2;color:#6d7261;font:800 9px 'Karla';letter-spacing:.12em;border-radius:8px;padding:4px 8px">SORU</span>
+              <span style="font:800 9px 'Karla';letter-spacing:.12em;color:#46601f;margin-left:auto">KAPANDI · 12:05</span>
+            </div>
+            <span style="font:700 13px/1.4 'Karla';color:#6d7261">Lena Hoffmann · özel müşteri</span>
+            <span style="font:400 11px/1.5 'Karla';color:#8a8270">"Baklava fındıklı mı?" — asistan cevapladı, insan onayı verildi</span>
+          </div>
+
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:2px">Top bizde olan talepler listede üstte durur; kapanan kayıtlar solar ama silinmez.</span>
+        </div>
+        <div style="min-height:20px"></div>
+      </div>
+    </sc-if>

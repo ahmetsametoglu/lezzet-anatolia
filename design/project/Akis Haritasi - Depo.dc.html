@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;700;800&family=Lora:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#f2f0e8; }
+  a { color:#5f7a2c; }
+  a:hover { color:#46601f; }
+</style>
+</helmet>
+
+<div style="width:1680px;padding:56px 60px 72px;font-family:'Karla',sans-serif;color:#2f353a;background:#f2f0e8;box-sizing:border-box">
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px;margin-bottom:12px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <span style="font:800 10px 'Karla';letter-spacing:.24em;color:#5f7a2c">OPERASYON MOBİL V3 · DEPO MODÜLÜ</span>
+      <span style="font:600 42px/1.05 'Lora'">Akış Haritası</span>
+      <span style="font:400 14px/1.6 'Karla';color:#8a8270;max-width:640px">Hangi kart hangi koşulda nereye gidiyor, hangi ekran konusuz açılabiliyor, geri dönüş nereye düşüyor. Kutuların rengi ekranın ne yaptığını söyler: okur, yazar ya da kapıdır.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:9px;flex:none;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:18px 20px;min-width:300px">
+      <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">LEJANT</span>
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:14px;border-radius:5px;background:#2f353a;flex:none"></span><span style="font:400 12px 'Karla';color:#6d7261">hub · giriş noktası</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:14px;border-radius:5px;background:#fbfaf4;border:1.5px solid #ddd6c4;flex:none"></span><span style="font:400 12px 'Karla';color:#6d7261">liste · okur, yazmaz</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:14px;border-radius:5px;background:#f2f7e8;border:1.5px solid #5f7a2c;flex:none"></span><span style="font:400 12px 'Karla';color:#6d7261">iş ekranı · stok yazar</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:14px;border-radius:5px;background:#f6f4ec;border:1.5px dashed #d9a97f;flex:none"></span><span style="font:400 12px 'Karla';color:#6d7261">kapı · konu seçilmeden iş yok</span></div>
+      <div style="display:flex;align-items:center;gap:10px"><span style="width:20px;height:14px;border-radius:5px;background:#fdf6f4;border:1.5px solid #e0b9b2;flex:none"></span><span style="font:400 12px 'Karla';color:#6d7261">sonuç · olay referansı doğar</span></div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:14px;margin-top:34px">
+
+    <div style="display:flex;align-items:stretch;gap:0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:24px;padding:20px 22px">
+      <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding-right:20px;border-right:1.5px solid #e2ddcc">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#5f7a2c">D1</span>
+        <span style="font:700 15px 'Karla'">Toplama</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">konu: sipariş</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:14px;padding-left:22px;flex-wrap:wrap">
+        <div style="background:#2f353a;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:150px">
+          <span style="font:700 13.5px 'Karla';color:#f5f1e6">Depo İşleri</span>
+          <span style="font:400 10.5px 'Karla';color:#a49f8f">hub kartı D1</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">her zaman</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:170px">
+          <span style="font:700 13.5px 'Karla'">Toplama kuyruğu</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">konusuz açılır · liste</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">sipariş seç</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:190px">
+          <span style="font:700 13.5px 'Karla'">Sipariş toplama</span>
+          <span style="font:400 10.5px 'Karla';color:#6d7261">kutu açar · etiket basar</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">kutu kapanır</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:210px">
+          <span style="font:700 13.5px 'Karla';color:#6d7261">Kargo devri (D8) ya da Araca yükleme (16)</span>
+          <span style="font:400 10.5px 'Karla';color:#a8a191">kutu artık depoda değil</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:stretch;gap:0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:24px;padding:20px 22px">
+      <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding-right:20px;border-right:1.5px solid #e2ddcc">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#5f7a2c">D2</span>
+        <span style="font:700 15px 'Karla'">Mal kabul</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">konu: sevkiyat</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:14px;padding-left:22px;flex-wrap:wrap">
+        <div style="background:#2f353a;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:150px">
+          <span style="font:700 13.5px 'Karla';color:#f5f1e6">Depo İşleri</span>
+          <span style="font:400 10.5px 'Karla';color:#a49f8f">hub kartı D2</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">her zaman</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:180px">
+          <span style="font:700 13.5px 'Karla'">Bekleyen sevkiyatlar</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">konusuz açılır · liste</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font:400 11px 'Karla';color:#8a8270">sevkiyat seç</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+            <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:220px">
+              <span style="font:700 13.5px 'Karla'">Kabul satırları · purchaseOrderId</span>
+              <span style="font:400 10.5px 'Karla';color:#6d7261">SKT + lot yazılır · parti doğar</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:3px"><span style="font:400 11px 'Karla';color:#8a8270">sipariş yok</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+            <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:220px">
+              <span style="font:700 13.5px 'Karla'">Siparişsiz kabul</span>
+              <span style="font:400 10.5px 'Karla';color:#6d7261">beklenen adet yok · parti doğar</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:stretch;gap:0;background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:24px;padding:20px 22px">
+      <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding-right:20px;border-right:1.5px solid #efd6d0">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#a44a3f">D3</span>
+        <span style="font:700 15px 'Karla'">Yakın-SKT</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#c08e85">konu: yok · rehber</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:14px;padding-left:22px;flex-wrap:wrap">
+        <div style="background:#2f353a;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:150px">
+          <span style="font:700 13.5px 'Karla';color:#f5f1e6">Depo İşleri</span>
+          <span style="font:400 10.5px 'Karla';color:#a49f8f">hub kartı D3</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">her zaman</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:230px">
+          <span style="font:700 13.5px 'Karla'">Yakın-SKT turu</span>
+          <span style="font:400 10.5px/1.45 'Karla';color:#8a8270">satır rejimi söyler: DLC geçti = satılamaz,<br>DDM geçti = satılabilir</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#a44a3f">yalnız DLC geçmişte</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fff;border:1.5px solid #e0b9b2;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:180px">
+          <span style="font:700 13.5px 'Karla';color:#a44a3f">İmha çekmecesi</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">yalnız adet sorar · sebep bellidir</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">onayla</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:180px">
+          <span style="font:700 13.5px 'Karla';color:#a44a3f">IMH-STR-26-…</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">satır "imha edildi"ye döner · aynı ekranda kalır</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:stretch;gap:0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:24px;padding:20px 22px">
+      <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding-right:20px;border-right:1.5px solid #e2ddcc">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#5f7a2c">D4</span>
+        <span style="font:700 15px 'Karla'">Sayım</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">konu: parti · zorunlu</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:14px;padding-left:22px;flex-wrap:wrap">
+        <div style="background:#2f353a;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:150px">
+          <span style="font:700 13.5px 'Karla';color:#f5f1e6">Depo İşleri</span>
+          <span style="font:400 10.5px 'Karla';color:#a49f8f">hub kartı D4</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">konu yok</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#f6f4ec;border:1.5px dashed #d9a97f;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:190px">
+          <span style="font:700 13.5px 'Karla';color:#b05c2e">Kapı: hangi parti?</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">etiket okut · ya da raf listesi</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">parti çözüldü</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:230px">
+          <span style="font:700 13.5px 'Karla'">Sayım · raftaki gerçek adet</span>
+          <span style="font:400 10.5px/1.45 'Karla';color:#6d7261">bağlam: partide kalan + ürün toplam stoğu<br>farkı sistem hesaplar · fark varsa sebep</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">kaydet</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:190px">
+          <span style="font:700 13.5px 'Karla';color:#a44a3f">SAY-STR-26-…</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">dönüş: başka parti say · ya da hub</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:stretch;gap:0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:24px;padding:20px 22px">
+      <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding-right:20px;border-right:1.5px solid #e2ddcc">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#5f7a2c">D4b</span>
+        <span style="font:700 15px 'Karla'">Stok düşümü</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">konu: parti · zorunlu</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:14px;padding-left:22px;flex-wrap:wrap">
+        <div style="background:#2f353a;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:150px">
+          <span style="font:700 13.5px 'Karla';color:#f5f1e6">Depo İşleri</span>
+          <span style="font:400 10.5px 'Karla';color:#a49f8f">hub kartı D4b</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">konu yok</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#f6f4ec;border:1.5px dashed #d9a97f;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:190px">
+          <span style="font:700 13.5px 'Karla';color:#b05c2e">Kapı: hangi parti?</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">etiket okut · ya da raf listesi</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">parti çözüldü</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:230px">
+          <span style="font:700 13.5px 'Karla'">Düşüm · kaç adet, hangi sebep</span>
+          <span style="font:400 10.5px/1.45 'Karla';color:#6d7261">hasar · soğuk zincir · kayıp<br>süresi geçen mal buraya girmez</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">kaydet</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:190px">
+          <span style="font:700 13.5px 'Karla';color:#a44a3f">HSR / SOG / KYP-STR-26-…</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">dönüş: başka parti düş · ya da hub</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:stretch;gap:0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:24px;padding:20px 22px">
+      <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding-right:20px;border-right:1.5px solid #e2ddcc">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#5f7a2c">D5</span>
+        <span style="font:700 15px 'Karla'">Transfer</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">konu: transfer</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:center;gap:14px;padding-left:22px;flex-wrap:wrap">
+        <div style="background:#2f353a;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:150px">
+          <span style="font:700 13.5px 'Karla';color:#f5f1e6">Depo İşleri</span>
+          <span style="font:400 10.5px 'Karla';color:#a49f8f">hub kartı D5</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">her zaman</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:190px">
+          <span style="font:700 13.5px 'Karla'">Gelen · yolda · kapananlar</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">sevk etme yok — masaüstünde</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#8a8270">gelen seç</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:220px">
+          <span style="font:700 13.5px 'Karla'">Transfer kabulü · rampada say</span>
+          <span style="font:400 10.5px 'Karla';color:#6d7261">SKT/lot yazılmaz — partiler taşınır</span>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:3px;flex:none"><span style="font:400 11px 'Karla';color:#b05c2e">fark çıkarsa</span><span style="font:400 20px 'Karla';color:#c4bda9">→</span></div>
+        <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:200px">
+          <span style="font:700 13.5px 'Karla';color:#a44a3f">Sayım kaydı otomatik açılır</span>
+          <span style="font:400 10.5px 'Karla';color:#8a8270">depocu D4'e gitmez · kayıt sistemde doğar</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;align-items:stretch;gap:0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:24px;padding:20px 22px">
+      <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:4px;padding-right:20px;border-right:1.5px solid #e2ddcc">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#5f7a2c">D6 · D7 · D8</span>
+        <span style="font:700 15px 'Karla'">Rampa işleri</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">konu: sefer · yok · kutu</span>
+      </div>
+      <div style="flex:1;display:flex;align-items:flex-start;gap:14px;padding-left:22px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:170px">
+            <span style="font:700 13.5px 'Karla'">D6 · Kurye dönüşü</span>
+            <span style="font:400 10.5px 'Karla';color:#8a8270">konu: kapanan sefer</span>
+          </div>
+          <span style="font:400 20px 'Karla';color:#c4bda9">→</span>
+          <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:210px">
+            <span style="font:700 13.5px 'Karla'">Dönen mal + serbest ürün sayımı</span>
+            <span style="font:400 10.5px 'Karla';color:#6d7261">araçta kalan / depoya inen ayrımı</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:170px">
+            <span style="font:700 13.5px 'Karla'">D7 · Yerinde satış</span>
+            <span style="font:400 10.5px 'Karla';color:#8a8270">konu yok · anonim</span>
+          </div>
+          <span style="font:400 20px 'Karla';color:#c4bda9">→</span>
+          <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:200px">
+            <span style="font:700 13.5px 'Karla'">Sepet → fiş</span>
+            <span style="font:400 10.5px 'Karla';color:#6d7261">geri: geldiğin yer (depo ya da kurye)</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:170px">
+            <span style="font:700 13.5px 'Karla'">D8 · Kargo devri</span>
+            <span style="font:400 10.5px 'Karla';color:#8a8270">konu: kutu · okutma seçer</span>
+          </div>
+          <span style="font:400 20px 'Karla';color:#c4bda9">→</span>
+          <div style="background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:16px;padding:13px 16px;display:flex;flex-direction:column;gap:2px;min-width:200px">
+            <span style="font:700 13.5px 'Karla'">Taşıyıcıya devredildi</span>
+            <span style="font:400 10.5px 'Karla';color:#6d7261">kuyruğa alınmaz · anında yazılır</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:34px">
+    <div style="background:#2f353a;border-radius:24px;padding:24px 26px;display:flex;flex-direction:column;gap:14px">
+      <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#a8b08f">AKIŞ KURALLARI</span>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;gap:12px">
+          <span style="font:600 15px 'Lora';color:#8f9aa2;flex:none;width:16px">1</span>
+          <span style="font:400 13px/1.6 'Karla';color:#e8dcc9">Konu gerektiren ekran hub'dan açılınca kapı gösterir, boş form değil. Kapının tek işi konuyu çözmek: okut ya da listeden seç.</span>
+        </div>
+        <div style="display:flex;gap:12px">
+          <span style="font:600 15px 'Lora';color:#8f9aa2;flex:none;width:16px">2</span>
+          <span style="font:400 13px/1.6 'Karla';color:#e8dcc9">İki ekran birbirinin ana CTA'sı olamaz. Eylem, kararın doğduğu ekranda durur — imha Yakın-SKT'de, çünkü sebebi orada bellidir.</span>
+        </div>
+        <div style="display:flex;gap:12px">
+          <span style="font:600 15px 'Lora';color:#8f9aa2;flex:none;width:16px">3</span>
+          <span style="font:400 13px/1.6 'Karla';color:#e8dcc9">Sistem bildiği hiçbir şeyi yeniden sormaz. Tarih geçmişse sebep sorulmaz; fark hesaplanabiliyorsa depocuya hesaplatılmaz.</span>
+        </div>
+        <div style="display:flex;gap:12px">
+          <span style="font:600 15px 'Lora';color:#8f9aa2;flex:none;width:16px">4</span>
+          <span style="font:400 13px/1.6 'Karla';color:#e8dcc9">Stok yazan her ekran sonuç hâliyle biter: ne değişti, olay referansı ne, buradan nereye. Kaydet düğmesi ekranı sessizce kapatmaz.</span>
+        </div>
+        <div style="display:flex;gap:12px">
+          <span style="font:600 15px 'Lora';color:#8f9aa2;flex:none;width:16px">5</span>
+          <span style="font:400 13px/1.6 'Karla';color:#e8dcc9">Geri tuşu geldiğin yere döner. Yerinde satış kuryeden açıldıysa kuryeye, depodan açıldıysa depoya.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:24px;padding:22px 24px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">STOK NEREDE YAZILIR</span>
+        <div style="display:flex;flex-direction:column;gap:9px">
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 12.5px 'Karla';flex:1">Parti doğar</span><span style="font:400 12px 'Karla';color:#8a8270">D2 mal kabul · siparişsiz kabul</span></div>
+          <div style="height:1px;background:#e7e2d2"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 12.5px 'Karla';flex:1">Parti taşınır</span><span style="font:400 12px 'Karla';color:#8a8270">D5 transfer kabulü</span></div>
+          <div style="height:1px;background:#e7e2d2"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 12.5px 'Karla';flex:1">Parti düzeltilir</span><span style="font:400 12px 'Karla';color:#8a8270">D4 sayım — hedef değer</span></div>
+          <div style="height:1px;background:#e7e2d2"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 12.5px 'Karla';flex:1">Parti eksilir</span><span style="font:400 12px 'Karla';color:#8a8270">D4b düşüm · D3 imha</span></div>
+          <div style="height:1px;background:#e7e2d2"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 12.5px 'Karla';flex:1">Parti çıkar</span><span style="font:400 12px 'Karla';color:#8a8270">D1 toplama · D7 satış · D8 kargo</span></div>
+          <div style="height:1px;background:#e7e2d2"></div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="font:700 12.5px 'Karla';flex:1">Parti geri gelir</span><span style="font:400 12px 'Karla';color:#8a8270">D6 kurye dönüşü</span></div>
+        </div>
+      </div>
+
+      <div style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:24px;padding:22px 24px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#b05c2e">HÂLÂ AÇIK</span>
+        <span style="font:400 12.5px/1.6 'Karla';color:#6d7261">Transfer kabulünde açılan otomatik sayım kaydı depocuya nerede görünüyor? Bildirimde mi, D4'ün geçmişinde mi — bugün hiçbir yerde. Bir de: D6 kurye dönüşü artık araçta birden çok sefer olduğu için hangi seferin dönüşü olduğunu sormuyor.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

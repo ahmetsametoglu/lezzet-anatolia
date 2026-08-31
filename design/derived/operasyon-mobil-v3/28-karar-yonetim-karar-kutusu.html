@@ -1,0 +1,88 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: karar · Yönetim · Karar kutusu -->
+<!-- kaynak satırlar: 2581-2662 -->
+
+<!-- kaynak: satır 2581-2662 · görünüm bloğu -->
+    <sc-if value="{{ is.karar }}">
+      <div data-screen-label="Yönetim · Karar kutusu" style="animation:pageIn .26s ease;display:flex;flex-direction:column;padding-bottom:24px">
+        <div style="padding:22px 20px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#5f7a2c">YÖNETİM · KARAR KUTUSU</span>
+            <span style="font:600 27px/1.1 'Lora'">Bugün Ne Bekliyor</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">4 karar · 2 tanesi gün içinde</span>
+          </div>
+          <div onClick="{{ tg.kimlikSheet }}" style="width:40px;height:40px;border-radius:14px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:800 13px 'Karla';cursor:pointer;flex:none">SÖ</div>
+        </div>
+
+        <div style="padding:16px 20px 0;display:flex;flex-direction:column;gap:10px">
+          <div onClick="{{ go.sikayet }}" style="background:#2f353a;border-radius:22px;padding:16px 18px;display:flex;flex-direction:column;gap:11px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="background:#b05c2e;color:#fff;font:800 9px 'Karla';letter-spacing:.14em;border-radius:8px;padding:4px 8px">ACİL</span>
+              <span style="font:400 11px 'Karla';color:#8f9aa2">şikâyet · 40 dk önce</span>
+            </div>
+            <span style="font:700 15px/1.45 'Karla';color:#f5f1e6">Restaurant Oberjaegerhof: iki tepsi su böreği koku şüphesiyle reddedildi</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font:700 11.5px 'Karla';color:#e0b487">jest · iade · yeniden gönderim</span>
+              <span style="font:400 16px 'Karla';color:#8f9aa2;margin-left:auto">›</span>
+            </div>
+          </div>
+
+          <div style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="background:#f6e6d6;color:#b05c2e;font:800 9px 'Karla';letter-spacing:.14em;border-radius:8px;padding:4px 8px">EKSİK KALEM</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">LA-26-9ERUNH</span>
+            </div>
+            <span style="font:700 14.5px/1.45 'Karla'">Yoğurtlu Patlıcan 1000 g — depoda 1 adet eksik bildirildi</span>
+            <div style="display:flex;gap:8px;margin-top:2px">
+              <span style="flex:1;height:44px;border-radius:14px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla'">eksik gönder</span>
+              <span style="flex:1;height:44px;border-radius:14px;border:1.5px solid #ddd6c4;background:#fff;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla'">ikame öner</span>
+            </div>
+          </div>
+
+          <div onClick="{{ go.kampanya }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">YAKIN-SKT TEKLİFİ</span>
+              <span style="font:700 14px 'Karla'">Su Böreği · 6 adet · %30 öneri</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">2 gün kaldı · onay bekliyor</span>
+            </div>
+            <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+          </div>
+
+          <div onClick="{{ go.tedarik }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">TEDARİK TASLAĞI</span>
+              <span style="font:700 14px 'Karla'">Gaziantep · 7 kalem · 12 gün kapak</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">motor önerisi hazır</span>
+            </div>
+            <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+          </div>
+        </div>
+
+        <div style="padding:10px 20px 0">
+          <div onClick="{{ go.talepler }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">TALEP VE ŞİKÂYETLER</span>
+              <span style="font:700 14px 'Karla'">6 açık · 2'si top bizde</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">3 şikâyet · 2 talep · 1 soru</span>
+            </div>
+            <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+          </div>
+        </div>
+
+        <div style="padding:20px 20px 8px"><span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">GÜNÜN NABZI</span></div>
+        <div style="padding:0 20px;display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div onClick="{{ go.sosyal }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-height:96px">
+            <span style="font:600 22px 'Lora'">3</span>
+            <span style="font:700 13px 'Karla';margin-top:auto">Sosyal gelen kutusu</span>
+            <span style="font:400 10.5px 'Karla';color:#b05c2e">1 taslak onay bekliyor</span>
+          </div>
+          <div onClick="{{ go.gunOzeti }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-height:96px">
+            <span style="font:600 22px 'Lora'">1.418 €</span>
+            <span style="font:700 13px 'Karla';margin-top:auto">Gün özeti</span>
+            <span style="font:400 10.5px 'Karla';color:#8a8270">ciro · 11 sipariş</span>
+          </div>
+        </div>
+        <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;padding:14px 20px 0">Kararlar burada verilir; depo ve kurye ekranları yalnız uygular.</span>
+      </div>
+    </sc-if>

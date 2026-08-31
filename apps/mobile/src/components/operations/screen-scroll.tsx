@@ -19,10 +19,11 @@ import { OperationsMicroHeader } from './micro-header';
   Bir davranışın üç parçalı elle kurulumu, kurulmayacağı anlamına gelir. Burada tek bir kap var:
   başlığı da çizer, olayı da bağlar. Ekranın yazması gereken tek şey ekran adı.
 
-  ── FLATLIST İÇİN AYRI KAPI ────────────────────────────────────────────────
-  Sanallaştırılmış listeler bu kaba SARILAMAZ (iç içe kaydırıcı sanallaştırmayı öldürür). Onlar
-  `useOperationsScrollBinding()`i kullanır — aynı bağlamdan aynı olayı alır, yalnız kabı kendi
-  kurar. İki yol da tek karardan besleniyor; ikinci bir eşik ya da ikinci bir sayaç yok.
+  ── FLATLIST İÇİN KAPI HENÜZ YOK, BİLEREK ─────────────────────────────────
+  Sanallaştırılmış listeler bu kaba SARILAMAZ (iç içe kaydırıcı sanallaştırmayı öldürür) ve onlar
+  için bir bağlama kancası yazılmıştı — ama tüketicisi olmadığı için SÖKÜLDÜ (`knip`, 31.08).
+  Tüketicisi olmayan yardımcı, ilk günden ölü koddur (CLAUDE §0). Kabuğa bağlanacak ilk `FlatList`
+  ekranı onu yeniden açar: `useOperationsShellScroll().onScroll` zaten kamuya açık.
 */
 
 interface OperationsScreenScrollProps extends Omit<ScrollViewProps, 'onScroll' | 'scrollEventThrottle'> {
@@ -50,13 +51,3 @@ export function OperationsScreenScroll({ title, caption, children, ...scrollProp
 
 /** Olay sıklığı (ms) — 16 ≈ 60 kare/sn; kararın histerezi zaten titremeyi kesiyor. */
 const SCROLL_THROTTLE_MS = 16;
-
-/**
- * `FlatList`/`SectionList` gibi kendi kabını kurmak zorunda olan kaydırıcılar için bağlantı.
- * Mikro başlığı ekran ayrıca çizer (`OperationsMicroHeader`) — sarmalayıcı yok, çünkü liste
- * sarılamaz.
- */
-export function useOperationsScrollBinding() {
-  const { onScroll } = useOperationsShellScroll();
-  return { onScroll, scrollEventThrottle: SCROLL_THROTTLE_MS } as const;
-}

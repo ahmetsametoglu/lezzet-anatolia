@@ -1,0 +1,141 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: dusum · Depo · Stok düşümü -->
+<!-- kaynak satırlar: 1046-1180 -->
+
+<!-- kaynak: satır 1046-1180 · görünüm bloğu -->
+    <sc-if value="{{ is.dusum }}">
+      <div data-screen-label="Depo · Stok düşümü" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Stok Düşümü</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">elindeki mal eksildi · sebebini yaz</span>
+          </div>
+        </div>
+
+        <sc-if value="{{ dusumPartiYok }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px">
+            <div style="border:1.5px dashed #ddd6c4;background:#fbfaf4;border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;gap:7px;align-items:center">
+              <span style="font:600 19px 'Lora';text-align:center">Hangi partiden düşülecek?</span>
+              <span style="font:400 12px/1.55 'Karla';color:#8a8270;text-align:center">Düşüm her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.</span>
+            </div>
+            <div onClick="{{ tg.scanner }}" style="height:54px;border-radius:16px;background:#5f7a2c;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;box-shadow:0 4px 14px rgba(95,122,44,.24)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+              <span style="font:700 14px 'Karla';color:#f5f1e6">Parti etiketini okut</span>
+            </div>
+            <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">YA DA RAF LİSTESİNDEN SEÇ</span>
+            <sc-for list="{{ partiSecenek }}" as="pd" hint-placeholder-count="5">
+              <div onClick="{{ pd.dusumSec }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font:700 13.5px 'Karla'">{{ pd.ad }} · {{ pd.boy }}</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">{{ pd.kod }} · raf {{ pd.raf }} · sistemde {{ pd.kalan }}</span>
+                </div>
+                <span style="font:400 18px 'Karla';color:#b3ab97;flex:none">›</span>
+              </div>
+            </sc-for>
+            <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Süresi geçmiş mal buraya girmez — onun imhası Yakın-SKT turunda, sebebi zaten bellidir.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ dusumPartiVar }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:22px;padding:16px 17px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;align-items:flex-start;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                  <span style="font:700 15.5px 'Karla'">{{ dusumBaglam.ad }} · {{ dusumBaglam.boy }}</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">{{ dusumBaglam.kod }} · raf {{ dusumBaglam.raf }} · {{ dusumBaglam.rejim }} {{ dusumBaglam.tarih }}</span>
+                </div>
+                <span onClick="{{ dusumYeniden }}" style="font:700 11.5px 'Karla';color:#8a8270;border:1.4px solid #ddd6c4;border-radius:12px;padding:8px 11px;cursor:pointer;flex:none">değiştir</span>
+              </div>
+              <div style="height:1.5px;background:#e2ddcc"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:600 22px 'Lora'">{{ dusumBaglam.kalan }}</span>
+                  <span style="font:400 10.5px/1.35 'Karla';color:#8a8270">bu partide<br>sistemde kayıtlı</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:1px;border-left:1px solid #e2ddcc;padding-left:12px">
+                  <span style="font:600 22px 'Lora'">{{ dusumBaglam.stok }}</span>
+                  <span style="font:400 10.5px/1.35 'Karla';color:#8a8270">ürünün depodaki<br>toplam stoğu</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">KAÇ ADET DÜŞÜYOR</span>
+              <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:14px">
+                <span style="font:600 40px 'Lora';color:#a44a3f;flex:1;line-height:1">−{{ dusumAdet }}</span>
+                <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
+                  <span onClick="{{ dusEksi }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+                  <span onClick="{{ dusArti }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none;border-left:1.5px solid #ddd6c4">+</span>
+                </div>
+              </div>
+              <sc-if value="{{ dusumSinir }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#f6e6d6;border-radius:14px;padding:11px 13px">
+                  <span style="font:700 11.5px/1.45 'Karla';color:#b05c2e">Partinin tamamı — bundan fazlası düşülemez.</span>
+                </div>
+              </sc-if>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">SEBEP</span>
+              <div style="display:flex;flex-wrap:wrap;gap:8px">
+                <sc-for list="{{ dusumSebepler }}" as="dsb" hint-placeholder-count="3">
+                  <span onClick="{{ dsb.sec }}" style="height:50px;border-radius:15px;border:1.5px solid {{ dsb.c.bd }};background:{{ dsb.c.bg }};color:{{ dsb.c.fg }};display:flex;align-items:center;justify-content:center;padding:0 18px;font:700 13px 'Karla';cursor:pointer">{{ dsb.et }}</span>
+                </sc-for>
+              </div>
+              <span style="font:400 11.5px/1.55 'Karla';color:#a8a191">Olay öneki sebepten doğar: {{ dusumOnek }}. "İade stoğa döndü" depocuya açılmaz — yönetim istisnasıdır.</span>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ dusumSonucVar }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px">
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:22px;padding:20px 18px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:38px;height:38px;border-radius:50%;background:#a44a3f;display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:700 15px 'Karla';color:#2f353a">Düşüm kaydedildi · {{ dusumSonuc.sebep }}</span>
+                  <span style="font:400 11.5px 'Karla';color:#6d7261">{{ dusumSonuc.kod }} · {{ dusumSonuc.ad }}</span>
+                </div>
+              </div>
+              <div style="height:1.5px;background:#e2ddcc"></div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font:400 12px 'Karla';color:#6d7261">partide</span>
+                  <span style="font:700 13px 'Karla'">{{ dusumSonuc.eski }} → {{ dusumSonuc.yeni }} (−{{ dusumSonuc.adet }})</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font:400 12px 'Karla';color:#6d7261">ürünün toplam stoğu</span>
+                  <span style="font:700 13px 'Karla'">{{ dusumSonuc.stokEski }} → {{ dusumSonuc.stokYeni }}</span>
+                </div>
+              </div>
+              <div style="background:#f6f4ec;border-radius:14px;padding:12px 13px;display:flex;flex-direction:column;gap:2px">
+                <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">OLAY REFERANSI</span>
+                <span style="font:700 15px 'Karla'">{{ dusumSonuc.ref }}</span>
+                <span style="font:400 11px/1.5 'Karla';color:#8a8270">Kâğıt tutanakla eşleşir. Kayıt atomiktir — bir satır düşerse hiçbiri yazılmaz.</span>
+              </div>
+            </div>
+            <div onClick="{{ dusumYeniden }}" style="height:54px;border-radius:17px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 14.5px 'Karla';cursor:pointer">Başka parti düş</div>
+            <div onClick="{{ go.depoHub }}" style="height:52px;border-radius:16px;border:1.5px solid #ddd6c4;background:#fbfaf4;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer">Depo İşleri'ne dön</div>
+          </div>
+        </sc-if>
+
+        <div style="flex:1;min-height:14px"></div>
+        <sc-if value="{{ dusumPartiVar }}" hint-placeholder-val="{{ true }}">
+          <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%)">
+            <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:14px 15px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:700 13px 'Karla';color:#6d7261">Düşüm kaydı kapalı</span>
+                <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Olay referansı sunucuda doğar — bağlantısız yazılan düşüm kâğıt tutanakla eşleşemez.</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ dusumKaydet }}" style="background:{{ dusumCtaBg.bg }};color:{{ dusumCtaBg.fg }};font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center;cursor:pointer">{{ dusumCtaLabel }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>

@@ -1,0 +1,144 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: sayim · Depo · Sayım -->
+<!-- kaynak satırlar: 907-1044 -->
+
+<!-- kaynak: satır 907-1044 · görünüm bloğu -->
+    <sc-if value="{{ is.sayim }}">
+      <div data-screen-label="Depo · Sayım" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Sayım</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">raftaki gerçek adedi yaz · farkı sistem hesaplar</span>
+          </div>
+        </div>
+
+        <sc-if value="{{ sayimPartiYok }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px">
+            <div style="border:1.5px dashed #ddd6c4;background:#fbfaf4;border-radius:20px;padding:24px 20px;display:flex;flex-direction:column;gap:7px;align-items:center">
+              <span style="font:600 19px 'Lora';text-align:center">Hangi parti sayılacak?</span>
+              <span style="font:400 12px/1.55 'Karla';color:#8a8270;text-align:center">Sayım her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.</span>
+            </div>
+            <div onClick="{{ tg.scanner }}" style="height:54px;border-radius:16px;background:#5f7a2c;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;box-shadow:0 4px 14px rgba(95,122,44,.24)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+              <span style="font:700 14px 'Karla';color:#f5f1e6">Parti etiketini okut</span>
+            </div>
+            <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">YA DA RAF LİSTESİNDEN SEÇ</span>
+            <sc-for list="{{ partiSecenek }}" as="ps" hint-placeholder-count="5">
+              <div onClick="{{ ps.sayimSec }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font:700 13.5px 'Karla'">{{ ps.ad }} · {{ ps.boy }}</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">{{ ps.kod }} · raf {{ ps.raf }} · sistemde {{ ps.kalan }}</span>
+                </div>
+                <span style="font:400 18px 'Karla';color:#b3ab97;flex:none">›</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sayimPartiVar }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:14px">
+            <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:22px;padding:16px 17px;display:flex;flex-direction:column;gap:13px">
+              <div style="display:flex;align-items:flex-start;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                  <span style="font:700 15.5px 'Karla'">{{ sayimBaglam.ad }} · {{ sayimBaglam.boy }}</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">{{ sayimBaglam.kod }} · raf {{ sayimBaglam.raf }} · {{ sayimBaglam.rejim }} {{ sayimBaglam.tarih }}</span>
+                </div>
+                <span onClick="{{ sayimYeniden }}" style="font:700 11.5px 'Karla';color:#8a8270;border:1.4px solid #ddd6c4;border-radius:12px;padding:8px 11px;cursor:pointer;flex:none">değiştir</span>
+              </div>
+              <div style="height:1.5px;background:#e2ddcc"></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:600 22px 'Lora'">{{ sayimBaglam.kalan }}</span>
+                  <span style="font:400 10.5px/1.35 'Karla';color:#8a8270">bu partide<br>sistemde kayıtlı</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:1px;border-left:1px solid #e2ddcc;padding-left:12px">
+                  <span style="font:600 22px 'Lora'">{{ sayimBaglam.stok }}</span>
+                  <span style="font:400 10.5px/1.35 'Karla';color:#8a8270">ürünün depodaki<br>toplam stoğu</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">RAFTA SAYDIĞIN ADET</span>
+              <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:14px">
+                <span onClick="{{ sayBasla }}" style="font:600 40px 'Lora';color:#2f353a;flex:1;cursor:pointer;line-height:1">{{ sayilanDeger }}</span>
+                <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
+                  <span onClick="{{ sayEksi }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+                  <span onClick="{{ sayArti }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none;border-left:1.5px solid #ddd6c4">+</span>
+                </div>
+              </div>
+              <div style="background:{{ sayFarkBg }};border-radius:14px;padding:12px 14px">
+                <span style="font:700 12px/1.5 'Karla';color:{{ sayFarkFg }}">{{ sayFarkYazi }}</span>
+              </div>
+            </div>
+
+            <sc-if value="{{ sayFarkVar }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b05c2e">FARK VAR — SEBEP GEREKLİ</span>
+                  <span style="font:400 11px/1.45 'Karla';color:#8a8270">Stok sayımla değişiyor; niçin değiştiği yazılmadan kaydedilmez.</span>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:7px">
+                  <sc-for list="{{ sayimNotlar }}" as="sn" hint-placeholder-count="4">
+                    <span onClick="{{ sn.sec }}" style="font:700 12px 'Karla';color:{{ sn.c.fg }};background:{{ sn.c.bg }};border:1.5px solid {{ sn.c.bd }};border-radius:12px;padding:10px 12px;cursor:pointer">{{ sn.v }}</span>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+
+            <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Bu ekran yalnız sayar. Hasar, soğuk zincir ve kayıp Stok düşümü ekranında; süresi geçen mal Yakın-SKT turunda imha edilir.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ sayimSonucVar }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px">
+            <div style="background:#f2f7e8;border:1.5px solid #c3d3a4;border-radius:22px;padding:20px 18px;display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;align-items:center;gap:11px">
+                <span style="width:38px;height:38px;border-radius:50%;background:#5f7a2c;display:flex;align-items:center;justify-content:center;flex:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></span>
+                <div style="display:flex;flex-direction:column;gap:1px">
+                  <span style="font:700 15px 'Karla';color:#2f353a">Sayım kaydedildi</span>
+                  <span style="font:400 11.5px 'Karla';color:#6d7261">{{ sayimSonuc.kod }} · {{ sayimSonuc.ad }}</span>
+                </div>
+              </div>
+              <div style="height:1.5px;background:#cddcb2"></div>
+              <div style="display:flex;flex-direction:column;gap:7px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font:400 12px 'Karla';color:#6d7261">partide</span>
+                  <span style="font:700 13px 'Karla'">{{ sayimSonuc.eski }} → {{ sayimSonuc.yeni }} ({{ sayimSonuc.fark }})</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font:400 12px 'Karla';color:#6d7261">ürünün toplam stoğu</span>
+                  <span style="font:700 13px 'Karla'">{{ sayimSonuc.stokEski }} → {{ sayimSonuc.stokYeni }}</span>
+                </div>
+              </div>
+              <div style="background:#fbfaf4;border-radius:14px;padding:12px 13px;display:flex;flex-direction:column;gap:2px">
+                <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">OLAY REFERANSI</span>
+                <span style="font:700 15px 'Karla'">{{ sayimSonuc.ref }}</span>
+                <span style="font:400 11px/1.5 'Karla';color:#8a8270">Kâğıt tutanakla eşleşir. Kayıt atomiktir — bir satır düşerse hiçbiri yazılmaz.</span>
+              </div>
+            </div>
+            <div onClick="{{ sayimYeniden }}" style="height:54px;border-radius:17px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 14.5px 'Karla';cursor:pointer">Başka parti say</div>
+            <div onClick="{{ go.depoHub }}" style="height:52px;border-radius:16px;border:1.5px solid #ddd6c4;background:#fbfaf4;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer">Depo İşleri'ne dön</div>
+          </div>
+        </sc-if>
+
+        <div style="flex:1;min-height:14px"></div>
+        <sc-if value="{{ sayimPartiVar }}" hint-placeholder-val="{{ true }}">
+          <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%)">
+            <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:14px 15px;display:flex;flex-direction:column;gap:3px">
+                <span style="font:700 13px 'Karla';color:#6d7261">Sayım kaydı kapalı</span>
+                <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Olay referansı sunucuda doğar — bağlantısız yazılan sayım kâğıt tutanakla eşleşemez.</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+              <div onClick="{{ sayimKaydet }}" style="background:{{ sayimHazirCta.bg }};color:{{ sayimHazirCta.fg }};font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center;cursor:pointer">{{ sayimCtaLabel }}</div>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>

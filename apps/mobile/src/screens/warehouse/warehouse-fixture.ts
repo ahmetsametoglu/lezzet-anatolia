@@ -127,6 +127,9 @@ export function nearExpiryBatch(overrides: Partial<NearExpiryBatchContract> = {}
     remainingPercent: 18,
     decision: 'can_offer',
     belowMlor: true,
+    dateType: 'DDM',
+    shelfLabel: 'A-12',
+    productStockQty: 24,
     ...overrides,
   };
 }

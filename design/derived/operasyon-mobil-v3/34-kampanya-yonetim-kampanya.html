@@ -1,0 +1,37 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: kampanya · Yönetim · Kampanya -->
+<!-- kaynak satırlar: 3021-3051 -->
+
+<!-- kaynak: satır 3021-3051 · görünüm bloğu -->
+    <sc-if value="{{ is.kampanya }}">
+      <div data-screen-label="Yönetim · Kampanya" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Yakın-SKT Teklifi</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">Su Böreği · tepsi · parti P-0702</span>
+          </div>
+        </div>
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:13px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:11px">
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px 'Karla';color:#8a8270">Kalan adet</span><span style="font:700 14px 'Karla'">6</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px 'Karla';color:#8a8270">Kalan ömür</span><span style="font:700 14px 'Karla';color:#b05c2e">2 gün · %18</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:400 12.5px 'Karla';color:#8a8270">Liste fiyatı</span><span style="font:700 14px 'Karla'">22,00 €</span></div>
+            <div style="height:1.5px;background:#e2ddcc"></div>
+            <div style="display:flex;align-items:center;justify-content:space-between"><span style="font:700 13px 'Karla';color:#46601f">Önerilen (%30)</span><span style="font:600 20px 'Lora';color:#46601f">15,40 €</span></div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <sc-for list="{{ ch.oran }}" as="or" hint-placeholder-count="3">
+              <span onClick="{{ or.sec }}" style="flex:1;height:48px;border-radius:15px;border:1.5px solid {{ or.c.bd }};background:{{ or.c.bg }};color:{{ or.c.fg }};display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">{{ or.v }}</span>
+            </sc-for>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Teklif onaylanınca müşteri uygulamasında yakın-SKT rafında görünür; parti tükenince kendi kapanır.</span>
+        </div>
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%);display:flex;flex-direction:column;gap:8px">
+          <div onClick="{{ go.karar }}" style="background:#5f7a2c;color:#f5f1e6;font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center;cursor:pointer">Teklifi yayınla — {{ oranSecili }}</div>
+          <div onClick="{{ go.karar }}" style="border:1.5px solid #d3a49c;color:#a44a3f;font:700 13.5px 'Karla';border-radius:16px;height:48px;display:flex;align-items:center;justify-content:center;cursor:pointer">Teklif verme — imhaya bırak</div>
+        </div>
+      </div>
+    </sc-if>

@@ -1,0 +1,75 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: bildirim · Bildirimler -->
+<!-- kaynak satırlar: 3093-3161 -->
+
+<!-- kaynak: satır 3093-3161 · görünüm bloğu -->
+    <sc-if value="{{ is.bildirim }}">
+      <div data-screen-label="Bildirimler" style="animation:pageIn .26s ease;display:flex;flex-direction:column">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.depoHub }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Bildirimler</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">{{ bildirimKunye }}</span>
+          </div>
+        </div>
+        <sc-if value="{{ liste.bos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:0 20px 24px">
+            <div style="border:1.5px dashed #ddd6c4;background:#fbfaf4;border-radius:20px;padding:28px 22px;display:flex;flex-direction:column;gap:8px;align-items:center">
+              <span style="font:600 18px 'Lora';text-align:center">Bildirim yok</span>
+              <span style="font:400 12px/1.55 'Karla';color:#8a8270;text-align:center">Bildirimler hızlandırıcıdır, tek kapı değil — her listeye alt sekmelerden de girebilirsin.</span>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ liste.bosDegil }}" hint-placeholder-val="{{ true }}">
+        <div style="padding:0 20px 8px;display:flex;gap:7px;overflow-x:auto">
+          <sc-for list="{{ bldSuzgec }}" as="bs" hint-placeholder-count="5">
+            <span onClick="{{ bs.sec }}" style="font:700 12px 'Karla';color:{{ bs.c.fg }};background:{{ bs.c.bg }};border:1.5px solid {{ bs.c.bd }};border-radius:12px;padding:8px 12px;cursor:pointer;white-space:nowrap;flex:none">{{ bs.ad }}</span>
+          </sc-for>
+        </div>
+
+        <div style="padding:10px 20px 24px;display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ bldGruplar }}" as="bg" hint-placeholder-count="2">
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:6px">{{ bg.baslik }}</span>
+              <sc-for list="{{ bg.satirlar }}" as="bn" hint-placeholder-count="3">
+                <div onClick="{{ bn.ac }}" style="background:{{ bn.c.bg }};border:1.5px solid {{ bn.c.bd }};border-radius:18px;padding:13px 15px;display:flex;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+                  <span style="width:5px;align-self:stretch;border-radius:3px;background:{{ bn.c.rail }};flex:none"></span>
+                  <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:7px">
+                      <span style="font:800 8.5px 'Karla';letter-spacing:.12em;color:{{ bn.c.rail }};background:{{ bn.c.rozet }};border-radius:7px;padding:3px 6px;flex:none">{{ bn.bolum }}</span>
+                      <span style="font:400 10.5px 'Karla';color:#a8a191;flex:1;text-align:right">{{ bn.saat }}</span>
+                      <sc-if value="{{ bn.yeni }}" hint-placeholder-val="{{ true }}">
+                        <span style="width:8px;height:8px;border-radius:50%;background:{{ bn.c.rail }};flex:none"></span>
+                      </sc-if>
+                    </div>
+                    <span style="font:700 13.5px/1.3 'Karla';color:{{ bn.c.fg }}">{{ bn.baslik }}</span>
+                    <span style="font:400 11.5px/1.45 'Karla';color:#8a8270">{{ bn.alt }}</span>
+                    <sc-if value="{{ bn.hedef }}" hint-placeholder-val="{{ true }}">
+                      <span style="font:700 11.5px 'Karla';color:{{ bn.c.rail }};margin-top:2px">{{ bn.hedef }}</span>
+                    </sc-if>
+                    <sc-if value="{{ bn.yakinda }}" hint-placeholder-val="{{ false }}">
+                      <span style="font:700 10.5px 'Karla';color:#a8a191;background:#f0ede3;border-radius:8px;padding:4px 7px;align-self:flex-start;margin-top:3px">tetik yakında — bugün elle bakılır</span>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+
+          <sc-if value="{{ bldSuzgecBos }}" hint-placeholder-val="{{ false }}">
+            <div style="border:1.5px dashed #ddd6c4;background:#fbfaf4;border-radius:20px;padding:26px 22px;display:flex;flex-direction:column;gap:9px;align-items:center">
+              <span style="font:600 18px 'Lora';text-align:center">Bu bölümde bildirim yok</span>
+              <span style="font:400 12px/1.55 'Karla';color:#8a8270;text-align:center">Süzgeç açık — başka bölümlerde bekleyen olaylar olabilir.</span>
+              <span onClick="{{ bldSuzgecSifirla }}" style="font:700 13px 'Karla';color:#f5f1e6;background:#2f353a;border-radius:14px;padding:11px 16px;cursor:pointer;margin-top:2px">Süzgeci temizle</span>
+            </div>
+          </sc-if>
+
+          <div style="background:#e7e2d2;border-radius:16px;padding:12px 14px;margin-top:10px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 12px 'Karla';color:#6d7261">Bildirim tek kapı değil</span>
+            <span style="font:400 11.5px/1.6 'Karla';color:#6d7261">Push altyapısı henüz kurulmadı; her liste alt sekmelerden elle de açılır. Yalnız senin rollerine düşen olaylar listelenir — satırın rengi ve rozeti bölümü söyler.</span>
+          </div>
+        </div>
+        </sc-if>
+      </div>
+    </sc-if>

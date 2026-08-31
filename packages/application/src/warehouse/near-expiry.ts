@@ -51,6 +51,14 @@ export async function listNearExpiry(
      bir tur, elli partilik bir turda elli uçuş demekti — şema bu N+1'i zaten kapatmış. */
   const views = toBatchViews(rows, { now, thresholds });
 
+  /* ÜRÜNÜN DEPODAKİ TOPLAMI — imha çekmecesinin bağlamı (tasarım 31.08). Ayrı bir okuma İSTEMİYOR:
+     `rows` zaten bu deponun bütün partileri, yani toplam onların içinde. İkinci bir sorgu, elde
+     duran veriyi yeniden sormaktı. */
+  const stockOfVariant = new Map<string, number>();
+  for (const row of rows) {
+    stockOfVariant.set(row.variantId, (stockOfVariant.get(row.variantId) ?? 0) + row.physicalQty);
+  }
+
   return views
     .filter((view) => view.decision !== 'none')
     .sort((a, b) => a.daysLeft - b.daysLeft)
@@ -65,5 +73,9 @@ export async function listNearExpiry(
       remainingPercent: view.remainingPercent,
       decision: view.decision,
       belowMlor: view.belowMlor,
+      /* Rejim ürünün alanı, partinin değil — parti tarihi taşır, "o tarih ne demek" ürünün kuralı. */
+      dateType: view.variant.product.dateType,
+      shelfLabel: view.storageArea?.name ?? null,
+      productStockQty: stockOfVariant.get(view.variantId) ?? 0,
     }));
 }

@@ -1280,6 +1280,31 @@ export const NearExpiryBatchSchema = z.object({
   decision: z.enum(['none', 'can_offer', 'offer_open', 'must_discard']),
   /** Kalan ömür işletmenin MLOR eşiğinin altında mı — satılabilirliğin ayrı sorusu. */
   belowMlor: z.boolean(),
+  /**
+   * **TARİH REJİMİ — kararın sebebi** (tasarım güncellemesi 31.08).
+   *
+   * Bu alan olmadan ekran doğru kararı gösteriyor ama SEBEBİNİ söyleyemiyordu: "6 gün (geçti)"
+   * yazan bir satırın kararı "teklife girebilir" olabiliyor ve depocu bunu görünce satılabilir malı
+   * imha etmeye kalkabiliyordu. Tasarımın kuralı artık başlıkta yazılı: *"DLC geçti = satılamaz ·
+   * DDM geçti = satılabilir."*
+   */
+  dateType: ProductDateTypeEnum,
+  /**
+   * Partinin rafı — depocu malı orada arayacak. Alan atanmamışsa `null`; uydurma bir raf adı,
+   * depocuyu olmayan bir rafa gönderirdi.
+   */
+  shelfLabel: z.string().nullable(),
+  /**
+   * **ÜRÜNÜN BU DEPODAKİ TOPLAM STOĞU** — imha çekmecesinin bağlamı (tasarım: *"partide {kalan}
+   * adet · toplam stok {stok}"*).
+   *
+   * Partinin adedi tek başına "kaç düşüyorum" sorusunu cevaplıyor ama "bu ürün bitiyor mu"
+   * sorusunu cevaplamıyor. Depocu 12 adetlik partiyi imha ederken depoda 200 adet daha olduğunu
+   * bilmeli — kararı değiştirmez ama telaşı değiştirir.
+   *
+   * PARA DEĞİL STOK: fiyat yasağı para kararı içindi (CLAUDE §2), stok depocunun işinin kendisi.
+   */
+  productStockQty: z.number().int(),
 });
 export type NearExpiryBatchContract = z.infer<typeof NearExpiryBatchSchema>;
 

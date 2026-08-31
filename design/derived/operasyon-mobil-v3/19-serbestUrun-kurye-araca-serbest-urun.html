@@ -1,0 +1,93 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: serbestUrun · Kurye · Araca serbest ürün -->
+<!-- kaynak satırlar: 1890-1976 -->
+
+<!-- kaynak: satır 1890-1976 · görünüm bloğu -->
+    <sc-if value="{{ is.serbestUrun }}">
+      <div data-screen-label="Kurye · Araca serbest ürün" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.aracaYukle }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column">
+            <span style="font:600 20px 'Lora'">Serbest Ürün</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">durak kutularının dışında · isteğe bağlı</span>
+          </div>
+        </div>
+
+        <div style="padding:0 20px;display:flex;flex-direction:column;gap:12px">
+          <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ tg.scanner }}" style="background:#5f7a2c;border-radius:18px;height:54px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;box-shadow:0 4px 14px rgba(95,122,44,.24);transition:transform .12s" style-active="transform:scale(.98)">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+              <span style="font:700 14.5px 'Karla';color:#f5f1e6">Barkod okut</span>
+            </div>
+            <div onClick="{{ tg.urunAraSheet }}" style="border:1.5px solid #ddd6c4;background:#fbfaf4;border-radius:18px;height:52px;display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer">
+              <span style="font:400 19px 'Karla';color:#5f7a2c">+</span>
+              <span style="font:700 14px 'Karla'">Ürün ara</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:18px;padding:15px 16px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 13px 'Karla';color:#6d7261">Araca ürün alma kuyruğa alınır</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Saha kartları çevrimdışı çalışır; depodan araca geçen mal bağlantı gelince düşer. Depoda kalan sayısı o ana kadar tahminidir.</span>
+            </div>
+          </sc-if>
+
+          <div style="display:flex;flex-direction:column;gap:9px;margin-top:2px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">SIK KOYULANLAR — DOKUN, ARACA AL</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+              <sc-for list="{{ serbestHizli }}" as="h" hint-placeholder-count="4">
+                <div onClick="{{ h.ekle }}" style="background:#fbfaf4;border:1.5px solid {{ h.bd }};border-radius:18px;padding:13px 14px;display:flex;flex-direction:column;gap:4px;cursor:pointer;min-height:88px;transition:transform .12s" style-active="transform:scale(.97)">
+                  <span style="font:700 13px/1.35 'Karla'">{{ h.ad }}</span>
+                  <span style="font:400 10.5px 'Karla';color:#8a8270">{{ h.boy }} · depoda {{ h.kalan }}</span>
+                  <span style="font:700 12px 'Karla';color:{{ h.rozetFg }};margin-top:3px">{{ h.rozet }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex;align-items:baseline;justify-content:space-between;margin-top:6px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">ARAÇTA NE VAR</span>
+            <span style="font:700 11.5px 'Karla';color:#8a8270">{{ serbestSayac }}</span>
+          </div>
+          <sc-if value="{{ serbestBos }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:4px">
+              <span style="font:700 14px 'Karla';color:#6d7261">Araç şimdilik yalnız durak kutularını taşıyor</span>
+              <span style="font:400 11.5px/1.55 'Karla';color:#a8a191">Kapıda müşteri fazladan isterse satabileceğin mal buraya girer. Almadan da yola çıkabilirsin.</span>
+            </div>
+          </sc-if>
+          <sc-if value="{{ serbestVar }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <sc-for list="{{ serbestSatirlar }}" as="sr" hint-placeholder-count="2">
+                <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 15px;display:flex;flex-direction:column;gap:11px">
+                  <div style="display:flex;align-items:flex-start;gap:10px">
+                    <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                      <span style="font:700 14.5px 'Karla'">{{ sr.ad }}</span>
+                      <span style="font:400 11px 'Karla';color:#8a8270">{{ sr.boy }} · depoda kalan {{ sr.kalan }}</span>
+                    </div>
+                    <span onClick="{{ sr.sil }}" style="font:400 17px 'Karla';color:#b3ab97;cursor:pointer;padding:0 4px">✕</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
+                      <span onClick="{{ sr.eksi }}" style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+                      <span style="width:44px;text-align:center;font:700 17px 'Karla'">{{ sr.adet }}</span>
+                      <span onClick="{{ sr.arti }}" style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:{{ sr.artiFg }};cursor:pointer;user-select:none">+</span>
+                    </div>
+                    <span style="font:700 11.5px/1.45 'Karla';color:{{ sr.notFg }};flex:1">{{ sr.not }}</span>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Bu mal depodan araca geçer, siparişe bağlanmaz. Kapıda satılan Yerinde Satış'tan yazılır; kalanı akşam Kurye Dönüşü'nde sayılıp depoya devredilir.</span>
+        </div>
+
+        <div style="flex:1;min-height:14px"></div>
+        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%)">
+          <div onClick="{{ go.aracaYukle }}" style="background:#2f353a;color:#f5f1e6;font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+            <span>{{ serbestCtaLabel }}</span>
+          </div>
+        </div>
+      </div>
+    </sc-if>

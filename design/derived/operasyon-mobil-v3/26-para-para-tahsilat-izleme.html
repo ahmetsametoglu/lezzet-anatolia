@@ -1,0 +1,85 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: para · Para · Tahsilat İzleme -->
+<!-- kaynak satırlar: 2461-2539 -->
+
+<!-- kaynak: satır 2461-2539 · görünüm bloğu -->
+    <sc-if value="{{ is.para }}">
+      <div data-screen-label="Para · Tahsilat İzleme" style="animation:pageIn .26s ease;display:flex;flex-direction:column">
+        <div style="padding:22px 20px 0;display:flex;flex-direction:column;gap:4px">
+          <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#5f7a2c">PARA · SALT OKUMA</span>
+          <span style="font:600 27px/1.1 'Lora'">Tahsilat İzleme</span>
+          <span style="font:400 12px 'Karla';color:#8a8270">Ayşe Demir · 28 Ağustos · Strasbourg Merkez</span>
+        </div>
+
+        <div style="margin:16px 20px 0;background:#2f353a;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;align-items:flex-end;justify-content:space-between">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8f9aa2">BUGÜN GERÇEKLEŞEN</span>
+              <span style="font:600 30px 'Lora';color:#f5f1e6">1.286,50 €</span>
+            </div>
+            <span style="background:#3a4249;color:#e8dcc9;font:700 11px 'Karla';border-radius:11px;padding:6px 11px">14 tahsilat</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding-top:12px;border-top:1px solid #464e55">
+            <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#f5f1e6">276,00 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">nakit</span></div>
+            <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#f5f1e6">1.010,50 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">kart</span></div>
+            <div style="display:flex;flex-direction:column;gap:1px"><span style="font:700 15px 'Karla';color:#e0b487">0,00 €</span><span style="font:400 10px 'Karla';color:#8f9aa2">çek</span></div>
+          </div>
+        </div>
+
+        <div data-om-keep="para" style="padding:18px 20px 8px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">BEKLEYEN TAHSİLATLAR</span>
+          <span onClick="{{ go.gunSonu }}" style="font:700 11.5px 'Karla';color:#5f7a2c;cursor:pointer">gün sonu →</span>
+        </div>
+
+        <div style="padding:0 20px 24px;display:flex;flex-direction:column;gap:8px">
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:700 13px 'Karla'">LA-26-CQQ93Y · Restaurant Oberjaegerhof</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">yolda · kurye Marc Lemoine</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none">
+              <span style="font:700 13.5px 'Karla'">60,00 €</span>
+              <span style="font:700 9.5px 'Karla';letter-spacing:.06em;color:#b05c2e">KAPIDA · KART</span>
+            </div>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:700 13px 'Karla'">LA-26-VPUD6F · Épicerie Madame</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">hazır · yarın sevkiyat</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none">
+              <span style="font:700 13.5px 'Karla'">128,40 €</span>
+              <span style="font:700 9.5px 'Karla';letter-spacing:.06em;color:#b05c2e">KAPIDA · NAKİT</span>
+            </div>
+          </div>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:13px 15px;display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:700 13px 'Karla'">LA-26-HJ46JE · Restaurant Oberjaegerhof</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">teslim · vadeli · 14 gün</span>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:1px;flex:none">
+              <span style="font:700 13.5px 'Karla'">486,00 €</span>
+              <span style="font:700 9.5px 'Karla';letter-spacing:.06em;color:#8a8270">FATURA</span>
+            </div>
+          </div>
+
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:10px">KURYENİN ÜSTÜNDE — K7'YE DEK</span>
+          <div style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:18px;padding:14px 15px;display:flex;align-items:center;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+              <span style="font:700 13.5px 'Karla'">Marc Lemoine · SF-26-YRNWV9</span>
+              <span style="font:400 11px 'Karla';color:#8a8270">sefer açık · nakit teslim edilmedi</span>
+            </div>
+            <span style="font:700 15px 'Karla';color:#b05c2e;flex:none">186,00 €</span>
+          </div>
+
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:10px">HESAP BAKİYELERİ</span>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:18px;padding:6px 15px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1.5px dashed #e2ddcc"><span style="font:400 12.5px 'Karla';color:#6d7261">Kasa · Strasbourg</span><span style="font:700 13.5px 'Karla'">412,50 €</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1.5px dashed #e2ddcc"><span style="font:400 12.5px 'Karla';color:#6d7261">CIC · işletme</span><span style="font:700 13.5px 'Karla'">18.204,10 €</span></div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0"><span style="font:400 12.5px 'Karla';color:#6d7261">Stripe · bekleyen</span><span style="font:700 13.5px 'Karla'">1.010,50 €</span></div>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191;margin-top:4px">Bu ekran hiçbir şey yazmaz — "bakiye düzeltme" diye bir kavram yok. Nakit sayımı kuryenin sefer kapanışında, düzeltme masaüstünde yapılır.</span>
+        </div>
+      </div>
+    </sc-if>

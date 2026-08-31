@@ -9147,3 +9147,52 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **BEKLEYEN(21.190):** `loadBox` hâlâ `order.courierId` okuyor, sefere değil — aynı kuryeye damgalı
   BAŞKA rotanın kutusu sessizce biniyor ve o durak gün listesinde hiç görünmüyor (bölge süzgeci).
   Ölçüt `delivery_run_id` olacak; kolon zaten var ve `open_delivery_run` onu da yazıyor.
+
+- [x] (21.191) **D3'E İMHA EYLEMİ · DLC/DDM AYRIMI · SKELETON YAPISI** (tasarım güncellemesi 31.08 · A maddesi)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/application/src/warehouse/near-expiry.ts` ·
+  `apps/mobile/src/screens/warehouse/{near-expiry-screen.tsx,use-near-expiry.hook.ts,messages.json}`
+
+  **Tasarım güncellendi ve üç ekran geldi** (D3 güncelleme · D4 sayım baştan · D4b stok düşümü) +
+  **ayrı bir akış haritası sayfası** (`Akis Haritasi - Depo.dc.html`). Bu satır A maddesini kapatıyor.
+
+  ### 1 · DLC / DDM ayrımı — eksiğin en tehlikelisi
+  Ekran doğru kararı gösteriyordu ama SEBEBİNİ söylemiyordu: *"6 gün (geçti)"* yazan bir satırın
+  kararı "teklife girebilir" olabiliyor ve depocu bunu görünce **satılabilir malı imha edebilirdi**.
+  Sözleşme `dateType` taşımıyordu. Artık taşıyor ve satır üç şeyi birden söylüyor: rejim rozeti
+  (`DLC`/`DDM`/`ÖMÜR YOK`), rejimin ne demek olduğu, ve sonucu — *"geçti — satılamaz"* /
+  *"geçti — satılabilir"*. Kural listenin başında da yazılı.
+
+  ### 2 · İmha artık D3'ün kendi eylemi (akış kuralı 2)
+  Satır depocuyu D4'e gönderiyor, orada sebebi ELLE "süresi geçti" diye seçtiriyordu — sistemin
+  zaten bildiğini yeniden sormak. Artık düğme satırda, çekmece **yalnız adet** soruyor
+  (*"Sebep sorulmaz: süresi geçti"*), bağlam iki sayı: partide kalan + ürünün depodaki toplamı.
+  **Yeni uç açılmadı:** yazılan şey aynı (bir partiden adet düşmek), kapı D4'ünkiyle aynı
+  (`POST /warehouse/adjustments`, `reason: 'expired'`). Değişen tek şey sebebin NEREDE belirlendiği.
+
+  Kayıttan sonra **ekran kapanmıyor**: satır "İMHA EDİLDİ"ye dönüp referansı taşıyor, tur devam
+  ediyor. D3 → D4 bağı kalktı.
+
+  ### 3 · Rozet ağırlığı
+  Yalnız imha DOLU kırmızı zeminle eyleme çağırıyor; teklif hâlleri sessiz — depocuya iş
+  vermiyorlar (oran yönetimde onaylanır). DDM'si geçmiş satılabilir parti artık "teklife girebilir"
+  değil **"indirimli satılır"** diyor: tarihi geçmiş ama satılabilir mal, bekleyen bir aday değil
+  bugün rafta duran bir gerçektir.
+
+  ### 4 · SKELETON YAPISI (kullanıcı isteği)
+  Ekran fikstürle çalışırken tek hâli vardı: dolu liste. Gerçek kapıya bağlanınca üç hâl doğdu ve
+  hiçbiri çizilmiyordu. Üçü de eklendi ve üçü ayrı şey söylüyor: **skeleton** (halka değil — ölçü
+  satırın kendi yüksekliği, veri gelince sayfa zıplamasın), **hata** (tekrar dene ile), **boş liste**
+  (*"karar bekleyen parti yok"* — iyi haber, hata bloğuyla karışmamalı).
+
+  **ÖLÜ KOD SÖKÜLDÜ:** `useOperationsScrollBinding` tüketicisiz kalmıştı (`knip`) — kabuğa
+  bağlanacak ilk `FlatList` ekranı onu yeniden açar.
+
+  **Doğrulama.** Tip · lint · **knip temiz** · mobil **968/968** (D3 ekranı 12 test: üç hâl, rejim
+  ayrımı, imha akışı). **Cihazda uçtan uca ölçüldü:** DDM satırı "indirimli satılır", DLC satırı
+  "İMHA EDİLMELİ" + kırmızı düğme; imha yazıldı → `IMH-STR-26-0001`, parti 5 → 0, hareket
+  `write_off`/`out`/`expired`, **aktör Deniz Arslan** (21.183 burada da çalışıyor). Satır
+  "İMHA EDİLDİ"ye döndü, ekran kapanmadı; liste tazelenince o parti düştü.
+
+  **BEKLEYEN(21.192):** tasarımın B ve C maddeleri — D4 sayım baştan (hedef değer + bağlam + sonuç
+  hâli) ve D4b stok düşümü (yeni ekran, hasar · soğuk zincir · kayıp).

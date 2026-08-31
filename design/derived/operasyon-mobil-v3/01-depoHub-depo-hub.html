@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
 <!-- ekran: depoHub · Depo · Hub -->
-<!-- kaynak satırlar: 61-200 -->
+<!-- kaynak satırlar: 61-208 -->
 
-<!-- kaynak: satır 61-200 · görünüm bloğu -->
+<!-- kaynak: satır 61-208 · görünüm bloğu -->
     <sc-if value="{{ is.depoHub }}" hint-placeholder-val="{{ true }}">
       <div data-screen-label="Depo · Hub" style="animation:pageIn .26s ease;padding:22px 20px 28px;display:flex;flex-direction:column;gap:16px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
@@ -95,8 +95,16 @@
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
               <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D4</span>
             </div>
-            <span style="font:700 14px 'Karla';margin-top:auto">Sayım / düzeltme</span>
-            <span style="font:400 11px/1.35 'Karla';color:#8a8270">{{ ov.d4Alt }}</span>
+            <span style="font:700 14px 'Karla';margin-top:auto">Sayım</span>
+            <span style="font:400 11px/1.35 'Karla';color:#8a8270">raftakini say · farkı sistem bulur</span>
+          </div>
+          <div onClick="{{ go.dusum }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V8"/><path d="M7 15l5 5 5-5"/><path d="M5 4h14"/></svg>
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#b3ab97">D4b</span>
+            </div>
+            <span style="font:700 14px 'Karla';margin-top:auto">Stok düşümü</span>
+            <span style="font:400 11px/1.35 'Karla';color:#8a8270">hasar · soğuk zincir · kayıp</span>
           </div>
           <div onClick="{{ go.transfer }}" style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;min-height:104px;transition:transform .12s" style-active="transform:scale(.97)">
             <div style="display:flex;align-items:center;justify-content:space-between">

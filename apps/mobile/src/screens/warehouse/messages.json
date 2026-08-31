@@ -489,16 +489,50 @@
     "lifeUnknown": "ömür bilinmiyor — eşik uygulanmaz",
     "toBatchCount": "sayım/düzeltmeye götür →",
     "noLot": "—",
+    "loading": "Partiler okunuyor…",
+    "error": {
+      "title": "Liste getirilemedi",
+      "body": "Ömrü azalan partiler okunamadı. Bağlantıyı kontrol edip yeniden deneyin — hiçbir parti düşürülmedi."
+    },
+    "empty": {
+      "title": "Karar bekleyen parti yok",
+      "body": "Bu depoda eşiğin altına inmiş ya da tarihi geçmiş parti bulunmuyor. Tur bugün boş — raf gezmeye gerek yok."
+    },
+    "regimeRule": {
+      "title": "DLC geçti = satılamaz · DDM geçti = satılabilir",
+      "body": "Tarih rejimi her satırda yazar. Ömür tarihi geçmiş her mal imhalık değildir — kararı satırdaki rejim belirler."
+    },
+    "regime": { "DLC": "DLC", "DDM": "DDM", "none": "ÖMÜR YOK" },
+    "regimeNote": { "DLC": "son tüketim tarihi", "DDM": "tavsiye edilen tüketim", "none": "eşik uygulanmaz" },
+    "outcome": {
+      "left": "{n} gün kaldı",
+      "expiredBlocked": "geçti — satılamaz",
+      "expiredSellable": "geçti — satılabilir"
+    },
+    "discard": {
+      "cta": "İmha et — {n} adet",
+      "title": "İmha — {name}",
+      "caption": "{code} · raf {shelf} · {regime} {date}",
+      "reasonFixed": "Sebep sorulmaz: süresi geçti",
+      "qtyHeading": "KAÇ ADET İMHA EDİLİYOR",
+      "context": "partide {left} adet · toplam stok {stock}",
+      "confirm": "İmha et — {n} adet",
+      "footnote": "Parti düşer, olay referansı kayıttan sonra verilir.",
+      "done": "İMHA EDİLDİ",
+      "noShelf": "—",
+      "failed": "İmha yazılamadı — {error}"
+    },
     "daysLeft": "{n} gün",
     "daysToday": "bugün son gün",
     "daysPast": "{n} gün (geçti)",
     "decision": {
-      "offer_open": "teklif AÇIK",
+      "offer_open": "teklif açık",
       "can_offer": "teklife girebilir",
-      "must_discard": "imha edilmeli",
+      "sellable": "indirimli satılır",
+      "must_discard": "İMHA EDİLMELİ",
       "none": "karar yok"
     },
-    "footnote": "Karar sistemce türetilir — bu liste fiziksel ayıklama rehberidir; işaretleme yok. \"İmha edilmeli\" → Sayım/Düzeltme; teklif oranı yönetimde onaylanır.",
+    "footnote": "Karar sistemce türetilir; imha sebebi tarihten bellidir, yeniden sorulmaz. Teklif oranı yönetimde onaylanır — bu ekranda yalnız imha yazılır.",
     "toAdjustment": "Sayım/Düzeltme →"
   },
   "adjustment": {

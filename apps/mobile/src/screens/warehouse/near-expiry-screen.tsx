@@ -1,11 +1,16 @@
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
+import { OperationsStepperGroup } from '@/components/operations/stepper-group';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableSurface } from '@/components/ui/pressable-surface';
-import { TextAction } from '@/components/ui/text-action';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
@@ -39,27 +44,18 @@ const t = warehouseCopy;
 export function NearExpiryScreen() {
   const router = useRouter();
   const nearExpiry = useNearExpiry();
-  const candidate = nearExpiry.discardCandidate;
+  /** Çekmecenin konusu — `null` = kapalı. Adet ayrı tutuluyor: depocu kısmi imha yazabilir. */
+  const [discardTarget, setDiscardTargetState] = useState<NearExpiryBatchContract | null>(null);
+  const [discardQty, setDiscardQty] = useState(0);
+  /* Çekmece açılırken adet partinin TAMAMI ile başlar: imha edilen mal çoğunlukla partinin
+     hepsidir ve depocuya sayı yazdırmak, bildiği bir şeyi tekrarlatmak olurdu. Azaltabilir. */
+  const setDiscardTarget = (batch: NearExpiryBatchContract | null) => {
+    setDiscardTargetState(batch);
+    setDiscardQty(batch?.qty ?? 0);
+  };
 
   /* Partiyi D4'e taşıyan tek yol — hem satırdaki bağ hem alttaki düğme buradan geçiyor.
      İki ayrı çağrı yazsaydık biri bir gün ötekinden başka parametre gönderirdi. */
-  const toStockCount = (batch: NearExpiryBatchContract | null) =>
-    router.navigate({
-      pathname: '/stock-count',
-      // Parti D4'e TAŞINIR: ekranın kendi partisi yok ve olmayan bir konuyu uydurmak yerine
-      // buradaki seçim geçiriliyor. İmhalık yoksa konu da yok — D4 bunu söyler.
-      params:
-        batch === null
-          ? {}
-          : {
-              stockId: batch.stockId,
-              // Kodsuz parti de meşru: lot yazılmamış olabilir ve D4'e boş dize göndermektense
-              // ekranın gösterdiği tireyi göndermek, oradaki künyeyi de tutarlı tutar.
-              code: batch.lotNumber ?? t.nearExpiry.noLot,
-              name: productLabel(batch.productName, batch.variantLabel),
-            },
-    });
-
   return (
     <View style={styles.screen} testID="warehouse-near-expiry">
       <OperationsStackHeader
@@ -70,12 +66,62 @@ export function NearExpiryScreen() {
         testID="warehouse-near-expiry-header"
       />
 
+      {/*
+        ÜÇ HÂL, ÜÇ CEVAP (skeleton yapısı 31.08).
+
+        Ekran bugüne kadar yalnız DOLU listeyi çiziyordu: fikstürle çalışırken veri her zaman
+        oradaydı ve yükleme diye bir an yoktu. Gerçek kapıya bağlanınca üç hâl birden doğdu ve
+        üçü de ayrı şey söylüyor — okunuyor · okunamadı · okundu ve boş.
+      */}
+      {nearExpiry.status === 'loading' ? (
+        /* İLK YÜK SKELETON, HALKA DEĞİL (hub ve mal kabulle aynı karar): halka yerleşim tutmaz ve
+           söndüğü an sayfa zıplar. Ölçü satırın KENDİ yüksekliği — künye + rejim satırı + çubuk. */
+        <View style={styles.block}>
+          <OperationsSkeletonList
+            heights={[ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT]}
+            label={t.nearExpiry.loading}
+            testID="warehouse-near-expiry-loading"
+          />
+        </View>
+      ) : nearExpiry.status === 'error' ? (
+        <View style={styles.block}>
+          <OperationsNoticeBlock
+            variant="error"
+            title={t.nearExpiry.error.title}
+            description={t.nearExpiry.error.body}
+            retry={{ label: t.common.retry, onPress: nearExpiry.reload }}
+            testID="warehouse-near-expiry-error"
+          />
+        </View>
+      ) : nearExpiry.batches.length === 0 ? (
+        /* BOŞ LİSTE BİR ARIZA DEĞİL, İYİ HABER: bu depoda bugün karar bekleyen parti yok. Hata
+           bloğuyla aynı görünmemeli — "okunamadı" ile "okundu ve boş" iki ayrı cevaptır. */
+        <View style={styles.block}>
+          <OperationsNoticeBlock
+            variant="empty"
+            title={t.nearExpiry.empty.title}
+            description={t.nearExpiry.empty.body}
+            testID="warehouse-near-expiry-empty"
+          />
+        </View>
+      ) : (
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-near-expiry-list">
+        {/* REJİM KURALI EN ÜSTTE (tasarım 31.08) — listeyi okumadan önce okunacak tek cümle.
+            Bu blok olmadan ekran doğru kararı gösteriyor ama SEBEBİNİ söylemiyordu: "geçti" yazan
+            her satır imhalık sanılıyordu ve depocu satılabilir malı çöpe atabilirdi. */}
+        <View style={styles.rule} testID="warehouse-near-expiry-rule">
+          <Text style={styles.ruleTitle}>{t.nearExpiry.regimeRule.title}</Text>
+          <Text style={styles.ruleBody}>{t.nearExpiry.regimeRule.body}</Text>
+        </View>
         {nearExpiry.batches.map((batch) => {
           /* Aciliyet ve künye SATIRDA türetiliyor (hook'un künyesi): kapı günü sayı olarak veriyor,
              rengin eşiği ve "2 gün" cümlesi ekranın kararı. */
           const urgency = urgencyOf(batch.daysLeft);
           const code = batch.lotNumber ?? t.nearExpiry.noLot;
+          /* Bu parti imha edildi mi — referans hook'ta duruyor (liste yeniden okunmuyor). */
+          const discardRef = nearExpiry.discarded[batch.stockId];
+          const done = discardRef !== undefined;
+          const regime = regimeOf(batch);
           return (
           /* SATIR BİR KARTTIR VE TONU KARARINI SÖYLER (v3:07 · düzeltme 30.08). Önce kesik çizgiyle
              ayrılmış düz satırlardı; tasarım her partiyi kendi zeminine oturtuyor ve karar renkten
@@ -83,19 +129,38 @@ export function NearExpiryScreen() {
              krem. Depocu listeyi okumadan önce ayıklıyor — kart bunu mümkün kılan şey. */
           <View
             key={batch.stockId}
-            style={[styles.row, styles[`row_${batch.decision}`]]}
+            style={[styles.row, done ? styles.row_done : styles[`row_${batch.decision}`]]}
             testID={`warehouse-near-expiry-${code}`}
           >
             <View style={styles.rowHead}>
               <View style={styles.rowBody}>
                 <Text style={styles.rowTitle}>{productLabel(batch.productName, batch.variantLabel)}</Text>
+                {/* KÜNYE RAFI DA SÖYLER (tasarım 31.08): depocu malı rafta arayacak. Alan
+                    atanmamışsa yazılmaz — uydurma bir raf adı, olmayan bir rafa gönderirdi. */}
                 <Text style={[styles.rowSub, styles[`urgency_${urgency}`]]}>
                   {fillCopy(t.nearExpiry.row, { qty: String(batch.qty), days: daysLabelOf(batch.daysLeft) })}
+                  {batch.shelfLabel === null ? '' : ` · raf ${batch.shelfLabel}`}
                 </Text>
               </View>
-              <Text style={[styles.decision, styles[`decision_${batch.decision}`]]}>
-                {t.nearExpiry.decision[batch.decision]}
+              {/* ROZET AĞIRLIĞI KARARA GÖRE (tasarım 31.08): yalnız imha DOLU zeminle eyleme
+                  çağırır; teklif hâlleri sessiz kalır — depocuya iş vermiyorlar (oran yönetimde
+                  onaylanır). Eskiden hepsi aynı sesle konuşuyordu. */}
+              <Text
+                style={[styles.decision, done ? styles.decision_done : styles[`decision_${verdictOf(batch)}`]]}
+                testID={`warehouse-near-expiry-${code}-verdict`}
+              >
+                {done ? t.nearExpiry.discard.done : t.nearExpiry.decision[verdictOf(batch)]}
               </Text>
+            </View>
+
+            {/* TARİH REJİMİ VE SONUCU (tasarım 31.08) — kararın SEBEBİ. "6 gün geçti" tek başına
+                imhalık mı satılabilir mi söylemiyordu; rejim onu söylüyor. */}
+            <View style={styles.regimeRow}>
+              <Text style={[styles.regimeTag, styles[`regime_${regime}`]]} testID={`warehouse-near-expiry-${code}-regime`}>
+                {t.nearExpiry.regime[regime]}
+              </Text>
+              <Text style={styles.regimeNote}>{t.nearExpiry.regimeNote[regime]}</Text>
+              <Text style={[styles.outcome, outcomeToneOf(batch)]}>{outcomeOf(batch)}</Text>
             </View>
 
             {/*
@@ -124,15 +189,34 @@ export function NearExpiryScreen() {
               </View>
             )}
 
-            {/* İMHALIK SATIRIN KENDİ BAĞI (v3:849) — alttaki genel düğme "bir" partiyi taşır
-                (`discardCandidate`); imhalık birden çoksa depocu hangisinin taşındığını bilemezdi.
-                Satırdaki bağ o satırın partisini götürüyor. */}
-            {batch.decision !== 'must_discard' ? null : (
-              <TextAction
-                label={t.nearExpiry.toBatchCount}
-                onPress={() => toStockCount(batch)}
-                testID={`warehouse-near-expiry-${code}-to-count`}
-              />
+            {/*
+              İMHA EYLEMİ ARTIK BU EKRANDA (tasarım 31.08 · akış kuralı 2: *"eylem, kararın doğduğu
+              ekranda durur"*).
+
+              Eskiden satır depocuyu D4'e (sayım/düzeltme) gönderiyor, orada sebebi ELLE "süresi
+              geçti" diye seçtiriyordu — sistemin zaten bildiği şeyi yeniden sormak. Düğme yalnız
+              imhalık ve henüz imha edilmemiş satırda çizilir.
+            */}
+            {batch.decision !== 'must_discard' || done ? null : (
+              <PressableSurface
+                onPress={() => setDiscardTarget(batch)}
+                feedback="scale"
+                style={styles.discardCta}
+                accessibilityLabel={fillCopy(t.nearExpiry.discard.cta, { n: String(batch.qty) })}
+                testID={`warehouse-near-expiry-${code}-discard`}
+              >
+                <Text style={styles.discardCtaLabel}>
+                  {fillCopy(t.nearExpiry.discard.cta, { n: String(batch.qty) })}
+                </Text>
+              </PressableSurface>
+            )}
+
+            {/* OLAY REFERANSI SATIRDA KALIR: depocu ne yazdığını görüyor ve tur devam ediyor —
+                ekran kapanmıyor (tasarım: *"satır 'imha edildi'ye döner · aynı ekranda kalır"*). */}
+            {!done ? null : (
+              <Text style={styles.discardRef} testID={`warehouse-near-expiry-${code}-ref`}>
+                {discardRef}
+              </Text>
             )}
           </View>
           );
@@ -140,16 +224,78 @@ export function NearExpiryScreen() {
 
         <Text style={styles.footnote}>{t.nearExpiry.footnote}</Text>
 
-        <PressableSurface
-          onPress={() => toStockCount(candidate)}
-          feedback="scale"
-          style={styles.toAdjustment}
-          accessibilityLabel={t.nearExpiry.toAdjustment}
-          testID="warehouse-near-expiry-to-count"
-        >
-          <Text style={styles.toAdjustmentLabel}>{t.nearExpiry.toAdjustment}</Text>
-        </PressableSurface>
+        {nearExpiry.discardError === null ? null : (
+          <Text style={styles.discardError} accessibilityRole="alert" testID="warehouse-near-expiry-discard-error">
+            {nearExpiry.discardError}
+          </Text>
+        )}
       </ScrollView>
+      )}
+
+      {/*
+        İMHA ÇEKMECESİ (tasarım `00-ortak`) — SEBEP SORULMAZ, yalnız adet.
+
+        Tarih geçmişse sebep bellidir; sormak, sistemin bildiği bir şeyi depocuya yeniden
+        yazdırmaktır (akış kuralı 3). Bağlam iki sayı: partide kalan ve ürünün depodaki toplamı —
+        depocu 12 adeti imha ederken depoda 200 adet daha olduğunu bilmeli.
+      */}
+      <BottomSheet
+        visible={discardTarget !== null}
+        title={
+          discardTarget === null
+            ? ''
+            : fillCopy(t.nearExpiry.discard.title, {
+                name: productLabel(discardTarget.productName, discardTarget.variantLabel),
+              })
+        }
+        onClose={() => setDiscardTarget(null)}
+        testID="warehouse-near-expiry-discard-sheet"
+      >
+        {discardTarget === null ? null : (
+          <View style={styles.sheetBody}>
+            <Text style={styles.sheetCaption}>
+              {fillCopy(t.nearExpiry.discard.caption, {
+                code: discardTarget.lotNumber ?? t.nearExpiry.noLot,
+                shelf: discardTarget.shelfLabel ?? t.nearExpiry.discard.noShelf,
+                regime: t.nearExpiry.regime[regimeOf(discardTarget)],
+                date: daysLabelOf(discardTarget.daysLeft),
+              })}
+            </Text>
+            <Text style={styles.sheetReason}>{t.nearExpiry.discard.reasonFixed}</Text>
+
+            {/* ± SAYACI, metin alanı DEĞİL (tasarım): depocu partinin tamamını imha ediyor ve
+                azaltıyorsa bir iki adet azaltıyor — klavye açtırmak o işi yavaşlatırdı. Üst sınır
+                partinin kendisi: olmayan malı düşürmek fiziksel gerçeğin ihlalidir. */}
+            <OperationsStepperGroup
+              value={discardQty}
+              onChange={(next) => setDiscardQty(Math.min(next, discardTarget.qty))}
+              min={0}
+              label={t.nearExpiry.discard.qtyHeading}
+              tone="error"
+              testID="warehouse-near-expiry-discard-qty"
+            />
+            <Text style={styles.sheetContext}>
+              {fillCopy(t.nearExpiry.discard.context, {
+                left: String(discardTarget.qty),
+                stock: String(discardTarget.productStockQty),
+              })}
+            </Text>
+
+            <PrimaryButton
+              label={fillCopy(t.nearExpiry.discard.confirm, { n: String(discardQty) })}
+              tone="error"
+              elevation="flat"
+              disabled={nearExpiry.discarding || discardQty <= 0}
+              onPress={() => {
+                nearExpiry.discard(discardTarget.stockId, discardQty);
+                setDiscardTarget(null);
+              }}
+              testID="warehouse-near-expiry-discard-confirm"
+            />
+            <Text style={styles.sheetFootnote}>{t.nearExpiry.discard.footnote}</Text>
+          </View>
+        )}
+      </BottomSheet>
     </View>
   );
 }
@@ -173,6 +319,51 @@ function daysLabelOf(daysLeft: number): string {
   if (daysLeft === 0) return t.nearExpiry.daysToday;
   return fillCopy(t.nearExpiry.daysLeft, { n: String(daysLeft) });
 }
+
+/**
+ * Partinin tarih rejimi — sözlük anahtarı.
+ *
+ * Raf ömrü BİLİNMİYORSA rejim de anlamsızdır (`ÖMÜR YOK`): eşik uygulanamıyor demektir, ürünün
+ * DLC mi DDM mi olduğu o partide bir sonuç doğurmuyor.
+ */
+function regimeOf(batch: NearExpiryBatchContract): 'DLC' | 'DDM' | 'none' {
+  return batch.remainingPercent === null ? 'none' : batch.dateType;
+}
+
+/**
+ * Satırın SONUÇ cümlesi — tarih geçmemişse kalan gün, geçmişse rejimin sonucu.
+ *
+ * "geçti" tek başına bir şey söylemiyordu: DLC geçmiş mal satılamaz, DDM geçmiş mal satılabilir ve
+ * ikisi aynı ekranda yan yana duruyor (tasarım 31.08).
+ */
+function outcomeOf(batch: NearExpiryBatchContract): string {
+  if (batch.daysLeft >= 0) return fillCopy(t.nearExpiry.outcome.left, { n: String(batch.daysLeft) });
+  return batch.dateType === 'DLC' ? t.nearExpiry.outcome.expiredBlocked : t.nearExpiry.outcome.expiredSellable;
+}
+
+/** Sonucun rengi: satılamaz KIRMIZI, satılabilir ZEYTİN, henüz geçmemiş sessiz. */
+function outcomeToneOf(batch: NearExpiryBatchContract): { color: string } {
+  if (batch.daysLeft >= 0) return { color: operationsTheme.colors.muted };
+  return { color: batch.dateType === 'DLC' ? operationsTheme.colors.error : operationsTheme.colors['olive-dark'] };
+}
+
+/**
+ * Rozetin metni — motorun kararı, bir istisnayla.
+ *
+ * DDM'si GEÇMİŞ ve teklife açılabilir bir parti "teklife girebilir" demiyor, **"indirimli satılır"**
+ * diyor (tasarım 31.08): tarihi geçmiş ama satılabilir mal, depocunun gözünde bekleyen bir aday
+ * değil, bugün rafta duran bir gerçektir.
+ */
+function verdictOf(batch: NearExpiryBatchContract): 'none' | 'can_offer' | 'offer_open' | 'must_discard' | 'sellable' {
+  if (batch.decision === 'can_offer' && batch.daysLeft < 0 && batch.dateType === 'DDM') return 'sellable';
+  return batch.decision;
+}
+
+/**
+ * Satırın yükleme yer tutucusu (px) — kartın KENDİ yüksekliği: künye iki satır + rejim şeridi +
+ * ömür çubuğu + dolgular. Ortalama bir sayı vermek, veri gelince sayfayı yine zıplatırdı.
+ */
+const ROW_SKELETON_HEIGHT = 118;
 
 const LIFE_TONE = {
   expired: operationsTheme.colors.error,
@@ -219,6 +410,74 @@ const styles = StyleSheet.create({
     // Zemin SAYFANIN kendi kremi: kart "yok gibi" görünsün diye — şeffaf yazmak yerine sayfanın
     // rengini vermek, panelin altındaki gölge/kenar hesabını da doğru bırakır.
     backgroundColor: operationsTheme.colors.cream,
+  },
+  /* İMHA EDİLMİŞ SATIR SÖNER: iş bitti, listede duruyor çünkü depocu ne yaptığını görmeli — ama
+     artık eyleme çağırmıyor. */
+  row_done: {
+    backgroundColor: operationsTheme.colors.cream,
+    borderColor: operationsTheme.colors['neutral-bg'],
+  },
+  /** Üç hâlin ortak kabı — liste dolgusuyla aynı hizada dursun diye (hub emsali). */
+  block: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.lg,
+  },
+  /* REJİM KURALI — listenin üstündeki tek cümle; kart değil, bilgi şeridi. */
+  rule: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderRadius: operationsTheme.radius.control,
+    padding: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+  },
+  ruleTitle: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors['tab-inactive'],
+  },
+  ruleBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
+  /* REJİM SATIRI: etiket + açıklaması solda, sonuç sağda. */
+  regimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
+  },
+  regimeTag: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.micro,
+    letterSpacing: 1,
+    borderRadius: operationsTheme.radius.badge,
+    paddingHorizontal: operationsTheme.space.md,
+    paddingVertical: operationsTheme.space['2xs'],
+    overflow: 'hidden',
+  },
+  /* DLC uyarı tonunda (satılamaz sonucu doğurabilir), DDM sakin zeytin, ölçülemeyen nötr. */
+  regime_DLC: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    color: operationsTheme.colors.error,
+  },
+  regime_DDM: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    color: operationsTheme.colors['olive-dark'],
+  },
+  regime_none: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    color: operationsTheme.colors.muted,
+  },
+  regimeNote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors['tab-inactive'],
+  },
+  outcome: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text['body-sm'],
   },
   rowHead: {
     flexDirection: 'row',
@@ -275,10 +534,72 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors['error-bg'],
     color: operationsTheme.colors.error,
   },
+  /* "İndirimli satılır" — DDM'si geçmiş ama satılabilir mal. Zeytin ve SESSİZ: bir haber, bir iş
+     değil. */
+  decision_sellable: {
+    backgroundColor: 'transparent',
+    color: operationsTheme.colors['olive-dark'],
+  },
+  decision_done: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    color: operationsTheme.colors.muted,
+  },
   /** "Karar yok" nötr durur — bilinmeyen bir ömür, kötü bir haber değildir (CLAUDE §1). */
   decision_none: {
     backgroundColor: operationsTheme.colors['neutral-bg'],
     color: operationsTheme.colors.muted,
+  },
+  /* İMHA DÜĞMESİ: tasarımın tek dolu kırmızı yüzeyi — geri alınamayan kaydın imzası. */
+  discardCta: {
+    height: operationsTheme.size.controlLg,
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  discardCtaLabel: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors['on-image'],
+  },
+  discardRef: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  discardError: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.error,
+    paddingBottom: operationsTheme.space.xl,
+  },
+  sheetBody: { gap: operationsTheme.space.lg },
+  sheetCaption: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  sheetReason: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors['tab-inactive'],
+  },
+  sheetHeading: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.micro,
+    letterSpacing: 1,
+    color: operationsTheme.colors['tab-inactive'],
+  },
+  sheetContext: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  sheetFootnote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors['tab-inactive'],
   },
   footnote: {
     fontFamily: operationsTheme.font.body[400],
