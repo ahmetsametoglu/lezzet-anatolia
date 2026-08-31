@@ -392,12 +392,20 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   const filledCount = rows.filter((row) => writable(row.variantId)).length;
 
   /**
-   * LOT ÖNERİLERİ — bu kabulde BAŞKA satırlara girilmiş kodlar (kullanıcı kararı 30.08).
+   * LOT ÖNERİLERİ — İKİ KAYNAK, BU SIRAYLA (21.175 · kullanıcı kararı 30.08).
    *
-   * Bir sevkiyatın satırları çoğunlukla aynı lottan ya da iki üç lottan gelir; depocu kodu bir kez
-   * yazar, ötekilerde listeden seçer. Kaynak formun kendi durumudur — hiçbir uç sorulmuyor.
+   * 1. **Bu kabulde başka satırlara girilmiş kodlar.** Bir sevkiyatın satırları çoğunlukla aynı
+   *    lottan ya da iki üç lottan gelir; depocu kodu bir kez yazar, ötekilerde listeden seçer.
+   *    Kaynak formun kendi durumudur — hiçbir uç sorulmaz.
+   * 2. **Varyantın depoda duran partilerinin kodları** (`row.lotCandidates`, kapıdan gelir).
+   *    Birinci kaynak İLK SATIRDA BOŞTUR ve o satırı yazan depocu hiçbir öneri görmüyordu; ikinci
+   *    kaynak tam olarak o boşluğu dolduruyor.
    *
-   * Satırın KENDİ kodu listede olmaz: depocuya zaten yazdığı şeyi önermek gürültüdür.
+   * SIRA TESADÜF DEĞİL: aynı kabulde az önce yazılmış bir kod, elindeki koliyle depodaki eski bir
+   * partiden daha büyük ihtimalle aynıdır. Yakınlık sırası, isabet sırasıdır.
+   *
+   * Satırın KENDİ kodu listede olmaz: depocuya zaten yazdığı şeyi önermek gürültüdür. Tekrarlar da
+   * elenir — aynı kod iki kaynakta birden geçebilir ve listede iki kez görünmesi bir bilgi taşımaz.
    */
   const lotsUsedBy = (variantId: string): string[] => {
     const seen = new Set<string>();
@@ -405,6 +413,10 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
       if (row.variantId === variantId) continue;
       const code = states[row.variantId]?.lotText.trim() ?? '';
       if (code.length > 0) seen.add(code);
+    }
+    for (const code of rows.find((row) => row.variantId === variantId)?.lotCandidates ?? []) {
+      const trimmed = code.trim();
+      if (trimmed.length > 0) seen.add(trimmed);
     }
     return [...seen];
   };
@@ -638,6 +650,10 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
             // çekmece "kaç koli geldi" diye soracak. PO'lu satırda liste zaten var; burada
             // olmasaydı aynı formda bir satır koli sayar, ötekisi sayamazdı.
             caseSizes: found.caseSizes,
+            /* LOT ADAYI YOK ve olamaz: adaylar form açılışında depodan okunuyor (21.175), bu satır
+               ise okutma anında doğdu. Kapıya ikinci bir tur attırmak depocuyu koli elinde
+               bekletirdi — çekmece zaten aynı kabuldeki öteki satırların kodlarını öneriyor. */
+            lotCandidates: [],
           };
           setRows((current) => [...current, row!]);
         }
@@ -686,6 +702,9 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
               dateType: variant.dateType,
               shelfLifeDays: variant.shelfLifeDays,
               caseSizes: variant.caseSizes,
+              /* Aramadan gelen satırın da adayı yok: `VariantSearchRow` lot taşımıyor ve taşısaydı
+                 arama ucu her sonuç için parti okumak zorunda kalırdı (aynı gerekçe okutmada). */
+              lotCandidates: [],
             },
           ],
     );

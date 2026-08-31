@@ -511,6 +511,48 @@ describe('D2 · mal kabul', () => {
     expect(lastPostBody().lines[0]?.lotNumber).toBeNull();
   });
 
+  /*
+    LOT ÖNERİLERİNİN İKİNCİ KAYNAĞI: DEPODAKİ PARTİLER (21.175 · kullanıcı kararı 30.08).
+
+    Birinci kaynak (aynı kabuldeki öteki satırların kodları) İLK SATIRDA boştur — o satırı yazan
+    depocu hiçbir öneri görmüyordu. Kapı artık varyantın depoda duran partilerinin kodlarını da
+    taşıyor (`lotCandidates`) ve çekmece ikisini birleştiriyor.
+
+    SIRA ÖLÇÜLÜYOR, çünkü tesadüf değil: aynı kabulde az önce yazılmış bir kod, elindeki koliyle
+    depodaki eski bir partiden daha büyük ihtimalle aynıdır.
+  */
+  it('lot önerileri İKİ kaynaktan gelir — aynı kabuldekiler ÖNCE, depodakiler sonra', async () => {
+    withForm([
+      intakeRow({ variantId: ROW_A.variantId, lotCandidates: ['DEPO-1', 'DEPO-2'] }),
+      intakeRow({ variantId: ROW_B.variantId, productName: ROW_B.productName, variantLabel: ROW_B.variantLabel }),
+    ]);
+
+    await renderIntake();
+
+    // Önce ÖTEKİ satıra bir kod yazılıyor: birinci kaynak ancak böyle dolar.
+    await countRow(ROW_B.variantId, '4');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_B.variantId}`));
+    await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_B.variantId}`), 'AYNI-KABUL');
+
+    await countRow(ROW_A.variantId, '10');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
+
+    // Üçü de öneriliyor: biri aynı kabulden, ikisi depodan.
+    expect(screen.getByTestId(`warehouse-intake-lot-suggestion-${ROW_A.variantId}-AYNI-KABUL`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`warehouse-intake-lot-suggestion-${ROW_A.variantId}-DEPO-1`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`warehouse-intake-lot-suggestion-${ROW_A.variantId}-DEPO-2`)).toBeOnTheScreen();
+  });
+
+  it('depoda kodlu parti yoksa öneri listesi SESSİZ kalır — boş bir kutu çizilmez', async () => {
+    withForm([intakeRow({ variantId: ROW_A.variantId, lotCandidates: [] })]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '10');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
+
+    expect(screen.queryByTestId(`warehouse-intake-lot-suggestion-${ROW_A.variantId}-DEPO-1`)).toBeNull();
+  });
+
   it('lot ÇEKMECEDEN yazılır ve isteğe o kod gider', async () => {
     withForm([ROW_A]);
 

@@ -4,6 +4,7 @@ import {
   PurchaseOrderItemService,
   PurchaseOrderService,
   StockIntakeService,
+  StockService,
   StorageAreaService,
   SupplierProductService,
   SupplierService,
@@ -135,6 +136,14 @@ export interface IntakeFormRow {
    * ölçülmüş gibi gösterip stok sayımını sessizce bozardı (CLAUDE §1).
    */
   caseSizes: CaseSizeContract[];
+  /**
+   * **Bu varyantın depoda duran lot kodları** — çekmecenin öneri listesi (21.175).
+   *
+   * BOŞ DİZİ İKİ ŞEY DEMEK OLABİLİR ve ikisi de aynı davranışa çıkar: ya varyantın depoda kodlu
+   * partisi yok, ya form deposuz açıldı (`openIntakeForm`in üçüncü parametresi verilmedi). Ekran
+   * ikisini de "önerecek bir şey yok" diye okur — öneri zaten bir kolaylık, bir kapı değil.
+   */
+  lotCandidates: string[];
 }
 
 /**
@@ -147,7 +156,18 @@ export interface IntakeFormRow {
  *
  * @param db service-role istemci — çağıran enjekte eder (`serviceDb()`), `auth/otp` deseni.
  */
-export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string): Promise<IntakeFormRow[]> {
+export async function openIntakeForm(
+  db: SupabaseClient,
+  purchaseOrderId: string,
+  /**
+   * **Lot önerileri BU deponun partilerinden okunur** (21.175) — isteğe bağlı.
+   *
+   * Form kendisi depo-üstüdür (satın alma depo-üstü, künye yukarıda) ama lot önerisi değil: başka
+   * bir depoda duran partinin kodu, buradaki koliyle aynı olmak zorunda değil. Depo verilmezse
+   * öneri listesi BOŞ döner — yanlış deponun kodlarını önermektense hiç önermemek doğru.
+   */
+  warehouseId?: string | null,
+): Promise<IntakeFormRow[]> {
   const lines = await new PurchaseOrderItemService(db).listByOrder(purchaseOrderId);
   if (lines.length === 0) return [];
 
@@ -164,7 +184,7 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
   // İki okuma birbirini beklemez: ad+tarih rejimi tek zincirden (`names.ts`), tedarikçi kodu ayrı.
   // Kod eşlemesi KALEMİN işaret ettiği kimlikle çözülür (`supplierProductId`), varyantla değil —
   // gerekçe `SupplierProductService.listByIds` künyesinde.
-  const [names, mappings, barcodes] = await Promise.all([
+  const [names, mappings, barcodes, lotsOf] = await Promise.all([
     variantNames(db, lines.map((line) => line.variantId)),
     new SupplierProductService(db).listByIds(
       lines.map((line) => line.supplierProductId).filter((id): id is string => id !== null),
@@ -173,6 +193,11 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
     // depocu ± düğmelerine bir yükleme beklerken basardı. Paket kodları (`unit`) burada elenir —
     // çarpanı 1 olan bir kod çekmecede "1 paketlik koli" diye görünürdü.
     new VariantBarcodeService(db).listByVariants(lines.map((line) => line.variantId)),
+    // LOT ADAYLARI da aynı turda: çekmece açıldığında ayrı bir uçuş, depocuyu öneri listesi
+    // dolarken bekletirdi. Deposuz çağrıda okuma hiç yapılmaz (künye imzada).
+    warehouseId == null
+      ? Promise.resolve(new Map<string, string[]>())
+      : new StockService(db).recentLotsByVariants(warehouseId, lines.map((line) => line.variantId), LOT_CANDIDATE_LIMIT),
   ]);
   const codeOf = new Map(mappings.map((mapping) => [mapping.id, mapping.supplierCode]));
   const casesOf = new Map<string, CaseSizeContract[]>();
@@ -200,8 +225,18 @@ export async function openIntakeForm(db: SupabaseClient, purchaseOrderId: string
     // "0 bekleniyor" demek, depocuyu kendi kaydımıza karşı sessizce kör bırakırdı (`CLAUDE §1` —
     // ölçülemeyen değer sıfır değildir).
     expectedQty: progress.get(line.id) ?? line.qty,
+    lotCandidates: lotsOf.get(line.variantId) ?? [],
   }));
 }
+
+/**
+ * Varyant başına kaç lot önerisi taşınır (21.175).
+ *
+ * ÜÇ, çünkü liste bir HATIRLATMADIR, bir arşiv değil: depocu elindeki etiketi okuyup benzerini
+ * seçiyor ve gözle taranacak bir liste uzun olamaz. Daha fazlası çekmeceyi kaydırılır yapar ve
+ * elle yazmaktan yavaşlatır — ki o zaman önerinin varlık sebebi kalmaz.
+ */
+const LOT_CANDIDATE_LIMIT = 3;
 
 /**
  * Tedarik siparişinin KÜNYESİ (21.11d) — ekranın başlığı: *"TS-26-0114 · Gaziantep Gıda"*.

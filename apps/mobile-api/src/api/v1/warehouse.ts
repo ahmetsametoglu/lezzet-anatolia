@@ -645,7 +645,8 @@ warehouse.get('/intake/:purchaseOrderId', async (c) => {
   // sistemin kuralı olmaktan çıkardı (`settings-keys` künyesindeki 29.07 dersi).
   const [purchaseOrder, rows, thresholds] = await Promise.all([
     readIntakeHeader(db, purchaseOrderId.data),
-    openIntakeForm(db, purchaseOrderId.data),
+    // Depo VERİLİYOR: lot önerileri o deponun partilerinden okunuyor (21.175 · motorun künyesi).
+    openIntakeForm(db, purchaseOrderId.data, c.get('warehouseId')),
     readExpiryThresholds(new SettingsService(db)),
   ]);
 

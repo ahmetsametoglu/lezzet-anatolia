@@ -8477,7 +8477,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **BEKLEYEN(21.175):** lot önerilerinin İKİNCİ kaynağı — depodaki partilerin lot kodları.
 
-- [ ] (21.175) **LOT ÖNERİLERİ: DEPODAKİ PARTİLERDEN** (kullanıcı kararı 30.08 · ertelendi)
+- [x] (21.175) **LOT ÖNERİLERİ: DEPODAKİ PARTİLERDEN** (kullanıcı kararı 30.08 · tamamlandı 31.08)
 
   Lot çekmecesinin öneri listesi bugün TEK kaynaktan besleniyor: aynı kabulde başka satırlara
   girilen kodlar (`use-intake.hook.ts` → `lotsUsedBy`). Bu kaynak sözleşme istemiyor ve bir
@@ -8493,6 +8493,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   diyor, yani kolinin üstündeki lot etiketinden. Okutma cevabı (`ResolveCodeResponse`) lot
   taşımıyor ve kolinin lot kodunu okuyacak bir alan yok. Kaynağın farklı olduğu ekranda saklanmıyor
   — listeye olmayan bir kesinlik atfetmemek için künyeye yazıldı.
+
+  **DURUM (31.08 · tamamlandı).** Üç dosyada iş yapıldı, tasarlandığı gibi:
+  · sözleşme `lotCandidates: string[]` kazandı (`IntakeFormRowSchema`);
+  · `StockService.recentLotsByVariants` — TEK sorgu, N varyant, yeniden eskiye, varyant başına
+    sınırlı (`LOT_CANDIDATE_LIMIT = 3`), kodsuz partiler elenir ve tekrarlar teke iner;
+  · `openIntakeForm` **isteğe bağlı** üçüncü parametre aldı (`warehouseId`) ve okumayı aynı
+    `Promise.all` turuna kattı — çekmece açılışında ikinci bir uçuş olmasın diye;
+  · ekranda iki kaynak birleşiyor (`lotsUsedBy`): **aynı kabuldekiler ÖNCE**, depodakiler sonra.
+    Sıra tesadüf değil — az önce yazılmış bir kod, elindeki koliyle eski bir partiden daha büyük
+    ihtimalle aynıdır.
+
+  **NİÇİN İSTEĞE BAĞLI PARAMETRE:** form kendisi depo-üstü (satın alma depo-üstü), lot önerisi
+  değil — başka depodaki partinin kodu buradaki koliyle aynı olmak zorunda değil. Depo verilmezse
+  liste boş döner: yanlış deponun kodlarını önermektense hiç önermemek doğru.
+
+  **WEB YÜZEYİ BAĞLANMADI** ve gerekçesi alan sınırı: `openIntakeFormAction` depo almıyor, web
+  diyaloğunda depo bir FORM DEĞERİ ve form açılışında henüz seçilmemiş olabiliyor. Depoyu açılışa
+  taşımak web yüzeyinin tasarım kararı — `docs/talep/not-web-lot-onerileri-kabul-formunda.md`.
+
+  **Doğrulama.** Tip beş pakette temiz · lint temiz · mobil depo+komponent **440/440** (iki yeni
+  test: iki kaynağın birleşmesi ve boş listenin sessizliği). **Gerçek uçtan ölçüldü:** bekleyen bir
+  sevkiyatın formunda bir satır `['CO2603-1']` döndü — o varyantın depoda duran partisinin kodu;
+  kodlu partisi olmayan satırlar boş geldi.
 
   **Kullanıcının işaret ettiği üçüncü yol (30.08):** lot çoğu zaman FATURADA/irsaliyede yazar ve
   mal kabulde oradan okunur. Fatura kaydı bugün sistemde hiç yok (`purchase_order_item` alanları:

@@ -99,6 +99,10 @@ export function intakeRow(overrides: Partial<IntakeFormRowContract> = {}): Intak
     // Koli boyu YOK varsayılanda: kayıtlı boyu olmayan ürün de meşrudur ve adet çekmecesi o hâlde
     // yalnız tek paket sayar. Koli sayımını sınayan test boyları kendisi verir.
     caseSizes: [],
+    // Lot ADAYI YOK varsayılanda (21.175): depoda o varyanttan kodlu parti bulunmayan hâl de
+    // meşrudur ve çekmece o zaman yalnız aynı kabuldeki kodları önerir. Öneriyi sınayan test
+    // adayları kendisi verir.
+    lotCandidates: [],
     ...overrides,
   };
 }

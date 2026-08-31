@@ -632,6 +632,27 @@ export const IntakeFormRowSchema = z.object({
    */
   sku: z.string().nullable(),
   /**
+   * **BU VARYANTIN DEPODA DURAN LOT KODLARI** — lot çekmecesinin ikinci öneri kaynağı (21.175).
+   *
+   * Depocu lot kodunu elle yazıyor ve aynı tedarikçiden gelen mal çoğunlukla ya aynı lottan ya da
+   * bir öncekine çok benzeyen bir lottan geliyor. Öneri listesinin İLK kaynağı aynı kabuldeki
+   * öteki satırlar (`lotsUsedBy`), ama o liste ilk satırda boştur — ilk satırı yazan depocu hiçbir
+   * öneri görmez. Bu alan o boşluğu dolduruyor: varyantın halihazırda depoda duran partilerinin
+   * kodları.
+   *
+   * ÖNERİ, DOĞRULAMA DEĞİL: listede olmayan bir kod da yazılabilir ve yazılmalıdır — yeni lot her
+   * zaman mümkün. Kapalı bir liste yapmak, sahayı var olmayan bir kodu seçmeye zorlardı.
+   *
+   * SIRA YENİDEN ESKİYE ve sayı SINIRLI (motorun künyesi): en son giren parti, elindeki koliyle
+   * en çok benzeşme ihtimali olan koddur.
+   *
+   * TASARIMIN KAYNAĞI BAŞKA ve bugün kurulamıyor: şablon *"okunan koliden gelen adaylar"* diyor,
+   * yani kolinin üstündeki lot etiketinden. Okutma cevabı lot taşımıyor ve kolinin lot kodunu
+   * okuyacak bir alan yok. Kaynağın farklı olduğu ekranda SAKLANMIYOR — listeye olmayan bir
+   * kesinlik atfetmemek için künyeye yazılı.
+   */
+  lotCandidates: z.array(z.string()),
+  /**
    * Tarih rejimi (DOMAIN §4): `DLC` güvenlik tarihi, `DDM` kalite tarihi. Şablonun "SKT ZORUNLU ·
    * DLC" etiketinin ikinci yarısı — SKT'nin zorunluluğu her satırda aynı (sözleşme kuralı), hangi
    * TÜR tarih yazılacağı ise ÜRÜNE göre değişir ve depocu kutunun üstünde hangisini arayacağını

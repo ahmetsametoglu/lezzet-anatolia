@@ -85,6 +85,42 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
    * listede görünürse depocu onu seçer — DB kısıtı reddeder ama bu kötü bir yol. Depo-ÜSTÜ okuma
    * gereken tek yer geri çağırmadır ve onun kendi yolu var (`findByLot` / `listByIds`).
    */
+  /**
+   * **VARYANT BAŞINA SON LOT KODLARI** — mal kabulde lot çekmecesinin öneri kaynağı (21.175).
+   *
+   * Tek sorgu, N varyant: form açılışında varyant başına ayrı tur atmak, on kalemlik bir sevkiyatta
+   * on uçuş demekti (`listByVariants` ile aynı gerekçe).
+   *
+   * YENİDEN ESKİYE ve varyant başına SINIRLI: depocunun elindeki koliyle en çok benzeşme ihtimali
+   * olan kod en son gireni. Sınır çağırandan gelir — kaç öneri gösterileceği EKRANIN kararı, bu
+   * okumanın değil.
+   *
+   * KODSUZ PARTİLER ELENİR ve tekrarlar teke iner: aynı lottan üç parti girmişse depocu listede
+   * onu bir kez görmeli. Sıra korunur (`Map` ekleme sırasını tutar), yani "en yeni önce" bozulmaz.
+   */
+  async recentLotsByVariants(
+    warehouseId: string,
+    variantIds: readonly string[],
+    perVariant: number,
+  ): Promise<Map<string, string[]>> {
+    const out = new Map<string, string[]>();
+    if (variantIds.length === 0) return out;
+
+    const rows = await this.getAll(
+      { warehouseId, variantId: [...variantIds] },
+      { orderBy: 'createdAt', orderDirection: 'desc' },
+    );
+    for (const row of rows) {
+      const lot = row.lotNumber?.trim();
+      if (lot === undefined || lot === '') continue;
+      const list = out.get(row.variantId) ?? [];
+      if (list.length >= perVariant || list.includes(lot)) continue;
+      list.push(lot);
+      out.set(row.variantId, list);
+    }
+    return out;
+  }
+
   async listByVariant(warehouseId: string, variantId: string): Promise<Stock[]> {
     return this.getAll({ warehouseId, variantId }, { orderBy: 'expiryDate', orderDirection: 'asc' });
   }
