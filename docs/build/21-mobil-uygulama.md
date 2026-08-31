@@ -9603,7 +9603,23 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **BEKLEYEN(BACKLOG §1):** hiçbir bugünkü grup tamamen sonuçlanmamışsa bugüne ait kapanış da
   doğmaz ve Para → Gün Sonu ekranının uyuşmazlık satırı boş kalır. Bu bir arıza değil bir veri
-  ihtimali; kullanıcı akışı yürüdüğünde satır kendiliğinden doğuyor.
+  ihtimali; kullanıcı akışı yürüdüğünde satır kendiliğinden doğuyor. (Tazelemede ölçüldü: kapanış
+  DOĞUYOR — Güney hattı bugünün dönmüş günü.)
+
+  **İLERİ GÜN KAÇAĞI (tazelemeden sonra ölçüldü):** ilk yazımda "hepsi sonuçlandı" ölçütü ileri
+  günlere de uygulanıyordu ve grup yalnız KURYELİ siparişlerden kurulduğu için 2 Eylül'ün Batı
+  hattı "bitmiş gün" sayıldı — üstelik damgası "iki saat önce" olduğundan ileri tarihli bir sefer
+  BUGÜN yola çıkmış göründü ve kuryenin aracında belirdi. Gelecek bir gün bitmiş olamaz; ölçüt
+  artık yalnız BUGÜNE uygulanıyor, ileri gün koşulsuz atlanıyor.
+
+  **KAPSAM KOVASI GEREKÇESİYLE ZORUNLUDAN ÇIKTI** (`scripts/seed/coverage.ts`): "bugüne ait açık
+  sefer" artık `zorunlu: false`. Boş kalması bir eksik DEĞİL — açık sefer yoksa kuryenin üstünde
+  para da yoktur ve `readMoneyOverview`ın o satırı sıfır gösterir; sıfır burada DOĞRUDUR
+  ("ölçülemedi" değil, "kurye henüz yola çıkmadı"). Kova raporlanmaya devam ediyor: dolduğunda
+  görünsün, boşken de hangi hâlin sınanmadığı yazılı kalsın. "Bugüne ait kapanış" ZORUNLU kaldı.
+
+  Ölçüldü: `db:refresh` başarılı — 166 kovanın hepsinde örnek var, bugün tek sefer var ve o
+  KAPANMIŞ (araç boş). Cihazda kurye ekranı v3:15'in "Araçta sefer yok" rehberiyle açılıyor.
 
   **KAPANMIŞ ROTA "SÜRÜYOR" DEMEZ:** seçim listesinde alınmış rotanın notu geçmiş zamana geçti
   ("bugün X sürdü · kapandı") — kapanmış bir sefer için "sürüyor" yazmak, kuryeye o rotanın hâlâ

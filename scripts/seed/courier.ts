@@ -127,9 +127,18 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
     // bilerek "kapanmamış sefer" bırakıyor ama satır "kurye 16:45'te döndü" diyordu; (2) motorun
     // araç satışını sefere bağlayan adımı bu yüzden hiç tetiklenemiyordu (`quick-sale` 4b).
     // Gerçek akışta dönüş damgasını YALNIZ kapanış yazar (0046) — seed de artık aynısını söylüyor.
-    /* BUGÜN ve İLERİSİ: yalnız DÖNMÜŞ gün kurulur (üstteki künye). Yapılacak işi olan hiçbir
-       rota sahiplenilmez — kurye günü sıfırdan kurar. */
-    if (grup.date >= bugun && !grup.settled) {
+    /*
+      BUGÜN ve İLERİSİ: yalnız BUGÜNÜN dönmüş günü kurulur (üstteki künye). Yapılacak işi olan
+      hiçbir rota sahiplenilmez — kurye günü sıfırdan kurar.
+
+      İLERİ GÜN KOŞULSUZ ATLANIR ve gerekçe ölçülmüş bir kaçak (31.08 · tazelemeden sonra
+      görüldü): grup yalnız KURYELİ siparişlerden kuruluyor, yani "hepsi sonuçlandı" ölçütü o
+      alt kümeye bakıyor. 2 Eylül'ün Batı hattında kuryesi olan tek sipariş teslim edilmiş
+      görünüyordu ve grup "bitmiş gün" sayılıp sefer kuruldu — üstelik `departed` damgası "iki
+      saat önce" olduğu için ileri tarihli bir sefer BUGÜN yola çıkmış göründü ve kuryenin
+      aracında belirdi. Gelecek bir gün bitmiş olamaz; ölçüt oraya hiç uygulanmamalı.
+    */
+    if (grup.date > bugun || (grup.date === bugun && !grup.settled)) {
       console.log(`  · ${grup.date} · ${grup.orderIds.length} durak SERBEST (sefer kurulmadı)`);
       continue;
     }
@@ -236,7 +245,9 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       `  ✓ ${(run as { reference_no: string }).reference_no} · ${grup.date} · ${grup.orderIds.length} durak${returned ? '' : ' · AÇIK (yolda)'}`,
     );
   }
-  const serbest = [...gruplar.values()].filter((grup) => grup.date >= bugun && !grup.settled).length;
+  const serbest = [...gruplar.values()].filter(
+    (grup) => grup.date > bugun || (grup.date === bugun && !grup.settled),
+  ).length;
   console.log(
     `✓ sefer: ${gruplar.size - serbest} sefer kuruldu (geçmiş + dönmüş gün) · ${serbest} bugünkü/ileri rota SERBEST — kurye günü kendisi kurar`,
   );

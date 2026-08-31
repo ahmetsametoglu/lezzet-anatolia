@@ -904,11 +904,28 @@ const KAPSAM: KapsamAlani[] = [
       { ad: 'mutabık kapanış', zorunlu: true, sayac: (db) => say(db, 'delivery_run_close', (q) => q.eq('reconciled', true)) },
       { ad: 'FARKLI kapanış', zorunlu: true, sayac: (db) => say(db, 'delivery_run_close', (q) => q.eq('reconciled', false)) },
       { ad: 'sayılmamış (açık) sefer', zorunlu: true, sayac: sayilmamisSefer },
-      // BUGÜNE ait iki hâl (30.08) — para ve kurye ekranlarının GÜN ölçütü buna bakıyor:
-      // gün sonu mutabakatı yalnız bugünün kapanışlarını okuyor (`readMoneyDayEnd`), kuryenin
-      // üstündeki para ise yalnız bugünün KAPANMAMIŞ seferlerinden türüyor (`readMoneyOverview`).
-      // İkisi aynı gün gerekiyor; biri boşsa o ekran sessizce "sorulmadı"/"sıfır" gösterir.
-      { ad: 'bugüne ait açık sefer', zorunlu: true, sayac: (db) => bugunSeferleri(db, false) },
+      /*
+        BUGÜNE ait iki hâl (30.08) — para ekranlarının GÜN ölçütü buna bakıyor: gün sonu
+        mutabakatı yalnız bugünün kapanışlarını okuyor (`readMoneyDayEnd`), kuryenin üstündeki
+        para ise yalnız bugünün KAPANMAMIŞ seferlerinden türüyor (`readMoneyOverview`).
+
+        ── AÇIK SEFER ZORUNLUDAN ÇIKTI (kullanıcı kararı 31.08) ─────────────────────────────
+        Kullanıcı seed'in bugünü SIFIRDAN bırakmasını istedi: *"kurye ekranı açıldığı zaman
+        sahiplenilmiş bir rota ortaya çıkmasın."* Seed bugünün rotasını kurup sürüyordu ve kurye
+        ekranı açılır açılmaz durak listesine düşüyordu — akışın ilk dört adımı (rehber · sefer
+        ve araç seçimi · yükleme · sefer başlatma) hiç denenemiyordu.
+
+        Kova bu yüzden boş kalıyor ve boş kalması BİR EKSİK DEĞİL: açık sefer yoksa kuryenin
+        üstünde para da yoktur. `readMoneyOverview`ın o satırı sıfır gösterir ve sıfır burada
+        DOĞRUDUR — "ölçülemedi" değil, "kurye henüz yola çıkmadı". Hâl yine üretilebiliyor,
+        yalnız seed'in değil AKIŞIN eliyle: kurye seferi başlattığı anda doğuyor.
+
+        `zorunlu` KALDIRILMADI, `false`a çekildi: kova hâlâ RAPORLANIYOR — dolduğunda görünsün,
+        boşken de ekranın hangi hâlinin sınanmadığı yazılı kalsın.
+      */
+      { ad: 'bugüne ait açık sefer', zorunlu: false, sayac: (db) => bugunSeferleri(db, false) },
+      /* Kapanış ZORUNLU KALIYOR: seed bugünün BİTMİŞ gününü (bütün durakları sonuçlanmış grup)
+         yine kuruyor ve kapatıyor — gün sonu mutabakatının bugüne ait tek kaynağı o. */
       { ad: 'bugüne ait kapanış', zorunlu: true, sayac: (db) => bugunSeferleri(db, true) },
     ],
   },
