@@ -245,8 +245,13 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       içinde zaten geliyor; form + `addCustomerAddress` dokunuşu — web ve mobil ayrı şerit)
       ② mobil ekranın `stopSeq`e bağlanması (`docs/talep/mobil-durak-sirasi-alani.md`)
       ③ depo noktasının ops formundan elle girilmesi (bugün yalnız beslemeden geliyor)
-      ④ `geocode.testkit.ts` (`fakeGeocoder`) henüz tüketicisiz — tarama işinin entegrasyon testi
-      yazıldığında kullanılacak.
+      ~~④ `geocode.testkit.ts` tüketicisiz~~ **KAPANDI (31.08):** `fakeGeocoder`, taramanın servise
+      DÖRT alan gönderdiğini — müşteri adı ve telefonunu GÖNDERMEDİĞİNİ — çalışma anında çivileyen
+      testte kullanılıyor. Kova sayımı bilerek ölçülmüyor: yazmaya bağlı, o yarı entegrasyonun işi.
+  - **Durum (31.08d) — DOKÜMAN BORCU KAPANDI:** `BACKLOG §(a)` üstü çizildi (hâlâ *"sıra ölçütü yok"*
+    diyordu — kodu yalanlıyordu), `DOMAIN §6`ya durak sırasının iş kuralı, `INTEGRATIONS`a coğrafi
+    kodlama bölümü, `design/pages/{kurye-gun,app-kurye}.md`ye sırasız gün hâli ve YOKLAR ayrımı
+    yazıldı.
 
 ## Netleşecekler
 
