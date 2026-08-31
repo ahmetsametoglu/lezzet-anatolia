@@ -178,7 +178,9 @@ describe('K · araca yükleme', () => {
     "yükleme bitti" sanırdı. Oysa yükleme diye bir adım hiç yok.
   */
   it('kutusuz seferde ekran "hepsi bindi" DEMEZ — konusu olmadığını söyler', async () => {
-    mockDay(courierDay([courierStop(1, { orderId: STOP_A })]));
+    /* Kutusuz durak 30.08'den beri bir VERİ HATASI; fikstürün varsayılanı da kutulu. Bu ekran
+       yine de o hâle karşı savunmalı — boş `boxes` bilerek veriliyor. */
+    mockDay(courierDay([courierStop(1, { orderId: STOP_A, boxes: [] })]));
 
     await renderLoad();
 

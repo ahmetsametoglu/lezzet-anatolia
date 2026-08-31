@@ -6,6 +6,8 @@ import {
   ConfirmDoorDeliveryResponseSchema,
   CourierDayResponseSchema,
   CourierRoutesResponseSchema,
+  CourierVehiclesResponseSchema,
+  DepartCourierRunResponseSchema,
   DayCloseDraftSchema,
   type LoadBoxRequest,
   LoadBoxResponseSchema,
@@ -92,6 +94,26 @@ export function startCourierDay(
   body: StartCourierDayRequest = {},
 ): Promise<ApiResult<z.infer<typeof StartCourierDayResponseSchema>>> {
   return authorizedFetch('/api/v1/courier/day/start', StartCourierDayResponseSchema, { method: 'POST', body });
+}
+
+/**
+ * **Kuryenin seçebileceği araçlar** (31.08 · v3:16) — kendi deposuna künyeli olanlar. Gün
+ * parametresi yok: filo güne göre değişmiyor.
+ */
+export function fetchCourierVehicles(): Promise<ApiResult<z.infer<typeof CourierVehiclesResponseSchema>>> {
+  return authorizedFetch('/api/v1/courier/vehicles', CourierVehiclesResponseSchema);
+}
+
+/**
+ * **Seferi yola çıkar** (31.08 · v3:15) — kurulmuş seferin damgası; durakları açan ve müşteriye
+ * "yoldayım" haberini gönderen an.
+ *
+ * `startCourierDay({ depart: false })` ile ikiz: o sefer KURAR (mal araca geçebilsin diye), bu
+ * BAŞLATIR. Araçta birden çok sefer durabildiği için hangisi olduğu URL'de — kurye istediğini
+ * başlatıyor ve bu bir liste eylemi değil, o seferin üstündeki bir eylem.
+ */
+export function departCourierRun(runId: string): Promise<ApiResult<z.infer<typeof DepartCourierRunResponseSchema>>> {
+  return authorizedFetch(`/api/v1/courier/runs/${runId}/depart`, DepartCourierRunResponseSchema, { method: 'POST' });
 }
 
 /**

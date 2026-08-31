@@ -1,12 +1,13 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { serviceDb } from '@lezzet/database';
+import { DeliveryRunService, serviceDb } from '@lezzet/database';
 import { warehouseScope } from '@lezzet/domain-core';
 import {
   closeCourierDay,
   confirmDoorDelivery,
   listCourierDay,
   listCourierRoutes,
+  listCourierVehicles,
   loadBox,
   markUndelivered,
   openDayClose,
@@ -22,6 +23,8 @@ import {
   ConfirmDoorDeliveryResponseSchema,
   CourierDayResponseSchema,
   CourierRoutesResponseSchema,
+  CourierVehiclesResponseSchema,
+  DepartCourierRunResponseSchema,
   DayCloseDraftSchema,
   DeliveryProofUploadRequestSchema,
   DeliveryProofUploadResponseSchema,
@@ -186,6 +189,19 @@ courier.get('/routes', async (c) => {
 });
 
 /**
+ * **Kuryenin seçebileceği araçlar** (31.08 · v3:16) — kendi deposuna künyeli, aktif olanlar.
+ * Kapsam rota listesiyle AYNI kapıdan çözülüyor: başka deponun rotasını göremeyen kurye başka
+ * deponun aracını da görmemeli. Gün parametresi YOK — filo güne göre değişmiyor.
+ */
+courier.get('/vehicles', async (c) => {
+  const staff = c.get('staff');
+  const vehicles = await listCourierVehicles(serviceDb(), { scope: warehouseScope(staff.roles, staff.warehouseIds) });
+
+  const body: z.input<typeof CourierVehiclesResponseSchema> = { vehicles };
+  return ok(c, CourierVehiclesResponseSchema.parse(body));
+});
+
+/**
  * **"Seferi başlat"** (K1 · 18.08 — eski "yola çıktım — günü başlat"ın halefi). Seçilen rotanın
  * seferini açar ve o seferin HAZIR siparişlerini yola çıkarır.
  *
@@ -225,6 +241,8 @@ courier.post('/day/start', async (c) => {
     date: parsed.data.date,
     zoneId: parsed.data.zoneId,
     vehicleId: parsed.data.vehicleId,
+    // `depart:false` = seferi KUR, yola çıkarma (31.08). Ekran önce kurar, yükler, sonra başlatır.
+    depart: parsed.data.depart,
   });
 
   const body: z.input<typeof StartCourierDayResponseSchema> = result;
@@ -250,6 +268,38 @@ courier.post('/day/start', async (c) => {
  * geçirir, siparişi yola çıkarmaz — o iş sefer başlatmanındır. `allBoxesLoaded` yalnız "siparişin
  * tamamı araçta" der.
  */
+/**
+ * **Seferi yola çıkar** (31.08 · v3:15) — kurulmuş seferin damgası, durakların açılması ve
+ * müşteri bildiriminin gittiği an.
+ *
+ * Hangi sefer olduğu URL'de: araçta birden çok sefer duruyor ve kurye *istediğini* başlatıyor.
+ * Kapı `startCourierDay`ın kendisi — rota ve gün seferin kaydından okunuyor, istemciden değil:
+ * seferin bölgesini gövdeden almak, başka rotanın seferini bu kimlikle başlatmanın kapısı olurdu.
+ */
+courier.post('/runs/:runId/depart', async (c) => {
+  const runId = UuidSchema.safeParse(c.req.param('runId'));
+  if (!runId.success) return fail(c, 'invalid_run_id', 400);
+
+  const courierId = c.get('staff').id;
+  const db = serviceDb();
+  const run = await new DeliveryRunService(db).getById(runId.data);
+  // "Yok" ile "senin değil" AYNI cevap: sefer kimlikleri haritalanamaz (kapanış kapısının kuralı).
+  if (!run || run.courierId !== courierId) {
+    return ok(c, DepartCourierRunResponseSchema.parse({ status: 'not_found' }));
+  }
+
+  const result = await startCourierDay(db, {
+    courierId,
+    date: run.deliveryDate,
+    zoneId: run.deliveryZoneId,
+    vehicleId: run.vehicleId,
+  });
+  if (result.status !== 'ok') return ok(c, DepartCourierRunResponseSchema.parse({ status: 'not_found' }));
+
+  const body: z.input<typeof DepartCourierRunResponseSchema> = result;
+  return ok(c, DepartCourierRunResponseSchema.parse(body));
+});
+
 courier.post('/boxes/load', async (c) => {
   const parsed = LoadBoxRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);

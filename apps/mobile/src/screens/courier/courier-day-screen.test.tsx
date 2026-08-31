@@ -61,7 +61,9 @@ const STOP_3 = '00000000-0000-4000-8000-000000000003';
 /** Fixture rotasının bölgesi — başlatma isteğinin gövdesinde bu kimlik gider. */
 const ZONE_ID = courierRoute().zoneId;
 /** Seçili rotanın CTA'da okunan hâli. */
-const START_CTA = `Seferi başlat — ${courierRoute().zoneName}`;
+/* Seçim gövdesinin düğmesi SEFER KURAR (31.08 · v3:16); rota adını da taşımıyor artık —
+   çoklu seçimde tek bir ad yazmak, seçilenlerin geri kalanını gizlemek olurdu. */
+const START_CTA = 'Seferleri kur — yüklemeye geç';
 
 /** Sefer ALINMAMIŞ gün — rota seçim hâli; başlatma testlerinin başlangıç noktası. */
 function unstartedDay(stops: Parameters<typeof courierDay>[0]): CourierDayResponse {
@@ -118,13 +120,17 @@ function mockDay(
     if (address.includes('/day/start')) {
       if (start === null) return Promise.resolve(failResponse());
       // Sunucunun kendisi gibi: sefer açıldıysa sonraki gün okuması artık o seferi taşır.
-      if (start.status === 'ok' && current !== null) current = { ...current, run: start.run };
+      // Sunucu gibi: açılan sefer hem SÜRÜLEN sefer hem ARAÇTAKİ seferlerden biri olur (31.08).
+      if (start.status === 'ok' && current !== null) current = { ...current, run: start.run, runs: [start.run] };
       return Promise.resolve(okResponse(start));
     }
     if (address.includes('/day-close')) return Promise.resolve(draft === null ? failResponse() : okResponse(draft));
     if (address.includes('/courier/routes')) {
       return Promise.resolve(routes === null ? failResponse() : okResponse({ date: '2026-08-08', routes }));
     }
+    /* ARAÇ LİSTESİ (31.08) — ekran araç seçimini de çiziyor. Varsayılan BOŞ ve bu bilinçli:
+       araçsız sefer kurulabiliyor, yani araç listesi hiçbir testin ön koşulu değil. */
+    if (address.includes('/courier/vehicles')) return Promise.resolve(okResponse({ vehicles: [] }));
     return Promise.resolve(current === null ? failResponse() : okResponse(current));
   });
 }
@@ -238,11 +244,14 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/52,00 €/);
   });
 
-  it('KAPANMIŞ sefer: gövde yeniden ROTA SEÇİMİ, künye şeritte kalır, duraklar çizilmez', async () => {
+  it('KAPANMIŞ sefer ARAÇTA DEĞİLDİR: gövde yeniden rota seçimi, duraklar çizilmez', async () => {
+    /*
+      31.08: kapanmış sefer artık `/courier/day`den HİÇ dönmüyor — ne `run` olarak ne `runs`
+      içinde. Kapanan seferin işi bitmiştir ve kutuları da inmiştir (v3:13'ün kuralı). Ekran o
+      yüzden doğrudan seçim gövdesine düşer; "neyi bitirdim" sorusunun yeri gün özeti ekranı.
+    */
     mockDay(
-      courierDay([courierStop(1)], {
-        run: courierDayRun({ returnedAt: '2026-08-08T18:00:00.000Z', closed: true }),
-      }),
+      courierDay([], { run: null, runs: [] }),
       dayCloseDraft(),
       startResult(),
       [
@@ -255,12 +264,10 @@ describe('K1 · günün seferi', () => {
     await renderDay();
     await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
 
-    // "Neyi bitirdim" ekrandan silinmez; ama kapanan seferin durakları artık burada değil (K7'de).
-    expect(screen.getByTestId('courier-day-run')).toHaveTextContent(/KAPANDI/);
-    expect(screen.getByTestId('courier-day-hint')).toHaveTextContent(/Bu sefer kapandı/);
     expect(screen.queryByTestId(`courier-stop-${STOP_1}`)).toBeNull();
-    // Günün ikinci ROTASI serbest: tek aday olduğu için kendiliğinden seçili.
-    expect(screen.getByText('Seferi başlat — Güney rotası')).toBeOnTheScreen();
+    /* Günün ikinci ROTASI serbest ve düğme onu KURAR, başlatmaz (31.08): başlatma artık araçtaki
+       seferler ekranının eylemi. */
+    expect(screen.getByTestId('courier-day-cta')).toHaveTextContent(START_CTA);
   });
 
   it('rota seçimi: tek aday kendiliğinden seçili, başlatılmış rota PASİF; sefer açılınca liste gelir', async () => {
@@ -495,133 +502,26 @@ describe('K1 · "Seferi başlat" — gerçek yazım', () => {
 
     // Gün, cevabın kendi `date`idir — ikinci bir hesap değil; gece yarısı geçişinde ekranla kapı
     // ayrışmasın. Rota da ekranda seçili olandır: ucun kendi çözümüne bırakılmaz.
-    expect(await pressStart()).toEqual({ zoneId: ZONE_ID, date: '2026-08-08' });
-    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/1 durak yola çıktı\./);
+    /* İstek artık `depart:false` taşıyor: düğme seferi KURUYOR, yola çıkarmıyor (31.08). Yola
+       çıkarma ayrı bir eylem ve ayrı bir ekranda (v3:15) — bedeli müşteri bildirimi. */
+    expect(await pressStart()).toEqual({ zoneId: ZONE_ID, date: '2026-08-08', depart: false });
+    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/1 sefer araca alındı/);
     // Cevap "durum değişti" dedi: liste yeniden okundu.
     await waitFor(() =>
       expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/courier/day')).length).toBeGreaterThan(before),
     );
   });
 
-  it('ATLANAN duraklar gizlenmez: kaç tane ve HANGİ durumda bekledikleri yazılır', async () => {
-    mockDay(
-      unstartedDay([courierStop(1), courierStop(2)]),
-      dayCloseDraft(),
-      startResult({
-        started: [STOP_1],
-        skipped: [{ orderId: '00000000-0000-4000-8000-000000000002', currentStatus: 'preparing' }],
-      }),
-    );
+  /*
+    DÖRT LİSTENİN CÜMLESİ EKRAN DEĞİŞTİRDİ (31.08). Burada altı test vardı — atlanan duraklar,
+    ikinci başlatma yolu, `stale`, "hiçbiri yola çıkmasa da sefer açılır", "zaten yoldaydı" ve
+    başlatma hatası. Altısı da SEFERİ BAŞLATMANIN cevabını ölçüyordu; bu ekranın düğmesi ise artık
+    seferi KURUYOR (`depart:false`) ve o cevap dört listeyi hiç doldurmuyor — kurulan seferde
+    hiçbir durak yola çıkmaz, tanım gereği.
 
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    await pressStart();
-
-    const notice = screen.getByTestId('courier-day-start-notice');
-    expect(notice).toHaveTextContent(/Sefer açıldı: Kuzey rotası · SF-26-ABCDEF\./);
-    expect(notice).toHaveTextContent(/1 durak yola çıktı\./);
-    expect(notice).toHaveTextContent(/1 durak hazırlanmayı bekliyor \(Hazırlanıyor\)/);
-    // Sefer açık: kilit açık, atlanan durak da listede duruyor (reddi kapıda görünür).
-    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
-  });
-
-  it('ATLANAN kalınca İKİNCİ bir başlatma yolu açılır; sefer açıkken uç "zaten açık" der', async () => {
-    const STOP_2 = '00000000-0000-4000-8000-000000000002';
-    mockDay(
-      unstartedDay([courierStop(1), courierStop(2)]),
-      dayCloseDraft(),
-      startResult({ started: [STOP_1], skipped: [{ orderId: STOP_2, currentStatus: 'preparing' }] }),
-    );
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    await pressStart();
-
-    // Birincil düğme artık "Seferi kapat"; hazırlığı geciken durağı yola çıkarmanın tek yolu bu
-    // ikincil eylem. Açık sefere ikinci basış uçta CATCH-UP CLAIM'e dönüşüyor (18.08): geç kalan
-    // durak aynı sefere bağlanır ve `started` listesinde döner.
-    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
-    mockDay(courierDay([courierStop(1), courierStop(2)]), dayCloseDraft(), startResult({ started: [STOP_2] }));
-    await fireEvent.press(screen.getByTestId('courier-day-start-retry'));
-
-    await waitFor(() => expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/1 durak yola çıktı/));
-    // İş bitti: ikincil eylem kendiliğinden kayboldu.
-    expect(screen.queryByTestId('courier-day-start-retry')).toBeNull();
-  });
-
-  it('atlanan/bayat durak yoksa İKİNCİL eylem çizilmez — yapılacak bir şey kalmadı', async () => {
-    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), startResult({ started: [STOP_1] }));
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    await pressStart();
-
-    expect(screen.queryByTestId('courier-day-start-retry')).toBeNull();
-    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
-  });
-
-  it('`stale` yutulmaz: araya girildiğini söyler ve tazelemeye çağırır', async () => {
-    mockDay(
-      unstartedDay([courierStop(1), courierStop(2)]),
-      dayCloseDraft(),
-      startResult({
-        started: [STOP_1],
-        stale: [{ orderId: '00000000-0000-4000-8000-000000000002', currentStatus: 'cancelled' }],
-      }),
-    );
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    await pressStart();
-
-    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/durumu tam o sırada değişti/);
-  });
-
-  it('HİÇBİRİ yola çıkmasa da SEFER açılır: kayıt var, ekran onu yok sayamaz', async () => {
-    mockDay(
-      unstartedDay([courierStop(1)]),
-      dayCloseDraft(),
-      startResult({ skipped: [{ orderId: STOP_1, currentStatus: 'confirmed' }] }),
-    );
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    await pressStart();
-
-    const notice = screen.getByTestId('courier-day-start-notice');
-    expect(notice).toHaveTextContent(/hiçbir durak yola çıkmadı/);
-    expect(notice).toHaveTextContent(/1 durak hazırlanmayı bekliyor \(Onaylandı\)/);
-    // Sefer açıldı: birincil düğme kapanışa döndü ve durak açılabilir (reddi kapıda görünür).
-    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId(`courier-stop-${STOP_1}`));
-    expect(mockNavigate).toHaveBeenCalledWith({
-      pathname: '/delivery/[orderId]',
-      params: { orderId: STOP_1 },
-    });
-  });
-
-  it('İKİNCİ basış bir hata DEĞİL: "zaten yoldaydı" da seferi açık sayar', async () => {
-    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), startResult({ alreadyOut: [STOP_1] }));
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    await pressStart();
-
-    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/1 durak zaten yoldaydı\./);
-    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
-  });
-
-  it('başlatma düşerse sefer açılmış SAYILMAZ ve sebebi yazılır', async () => {
-    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), null);
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    await pressStart();
-
-    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/Sefer başlatılamadı/);
-    // Ekran seçim hâlinde kaldı: düğme hâlâ seçili rotanın adını taşıyor.
-    expect(screen.getByText(START_CTA)).toBeOnTheScreen();
-  });
+    Başlatma v3:15'in eylemi oldu ve ölçümü de oraya taşındı: `van-runs-screen.test.tsx`. Cümleyi
+    kuran kod da ortak (`noticeOfStart`), yani iki kapı bir gün ayrışamaz.
+  */
 });
 
 describe('yükleme okutması (23.8 · karar §1.11)', () => {
@@ -665,12 +565,61 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
     expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
   });
 
-  it('kutusuz günde sefer kapısı HİÇ çizilmez — eski akış aynen', async () => {
-    mockDay(courierDay([courierStop(1)]));
+  it('kutusu OKUNAMAYAN günde sefer kapısı HİÇ çizilmez', async () => {
+    /* Kutusuz sipariş 30.08'de bir VERİ HATASI oldu; bu hâl artık "eski akış" değil, kutuların
+       hiç okunamadığı bir gün. Kapı yine çizilmiyor: olmayan bir adımı göstermek kuryeyi boş
+       ekrana yollar. */
+    mockDay(courierDay([courierStop(1, { boxes: [] })]));
     await renderDay();
     await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
 
-    // Sayaç `null` (kutusuz akış): olmayan bir adımı kapı olarak göstermek kuryeyi boş ekrana yollar.
     expect(screen.queryByTestId('courier-day-trip')).toBeNull();
+  });
+});
+
+/*
+  ARAÇ BİR ARA DEPO — EKRANIN ÜÇ HÂLİ (31.08 · v3:14).
+
+  Ekran 31.08'e kadar iki hâlliydi: sefer ya vardı ya yoktu. Araçta kurulmuş ama başlatılmamış
+  sefer olabildiği an üçüncü bir hâl doğdu ve o hâl ölçülmeden ekranda kutular görünmez kalırdı.
+*/
+describe('araçtaki seferler (31.08)', () => {
+  it('ARAÇ BOŞ: seçim gövdesi çizilir — rota ve araç seçilir, düğme SEFER KURAR', async () => {
+    mockDay(courierDay([], { run: null, runs: [] }));
+    await renderDay();
+
+    // Düğme "başlat" DEĞİL "kur" diyor: başlatma artık başka bir eylemin adı (v3:15).
+    expect(screen.getByTestId('courier-day-cta')).toHaveTextContent('Seferleri kur — yüklemeye geç');
+    expect(screen.queryByTestId('courier-day-van-runs')).toBeNull();
+  });
+
+  it('ARAÇTA YÜK VAR AMA SÜRÜLEN SEFER YOK: duraklar açılmaz, "birini başlat" kapısı çizilir', async () => {
+    /* Kurulmuş sefer `departedAt: null` taşır — araçta bekliyor. Bu hâl eskiden hiç çizilemiyordu:
+       ekran seferi olmayan bir gün sanıp boş seçim gövdesini gösterirdi ve araçtaki mal kaybolurdu. */
+    const waiting = courierDayRun({ departedAt: null });
+    mockDay(courierDay([courierStop(1)], { run: null, runs: [waiting] }));
+    await renderDay();
+
+    expect(screen.getByTestId('courier-day-van-runs')).toBeTruthy();
+    // Durak listesi YOK: sefer başlamadan durak açılmaz ve müşteriye haber gitmez.
+    expect(screen.queryByTestId('courier-day-list')).toBeNull();
+  });
+
+  it('İKİ SEFER SÜRÜLÜRKEN duraklar SEFERE GÖRE gruplanır — başlık rota adını yazar', async () => {
+    const ikinci = courierDayRun({ runId: '00000000-0000-4000-8000-000000000802', zoneName: 'Dağ rotası' });
+    mockDay(
+      courierDay(
+        [
+          courierStop(1),
+          courierStop(2, { runId: ikinci.runId, runLabel: 'Dağ rotası' }),
+        ],
+        { runs: [courierDayRun(), ikinci] },
+      ),
+    );
+    await renderDay();
+
+    /* Grup başlığı YALNIZ birden çok sefer varken çizilir — tek seferde başlık, olmayan bir
+       ayrımı duyurmak olurdu. */
+    expect(screen.getByTestId(`courier-day-group-${ikinci.runId}`)).toHaveTextContent('Dağ rotası');
   });
 });

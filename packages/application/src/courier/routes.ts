@@ -4,6 +4,7 @@ import {
   DeliveryZoneService,
   OrderService,
   UserProfileService,
+  VehicleService,
   WarehouseService,
 } from '@lezzet/database';
 import { canAccessWarehouse, type WarehouseScope } from '@lezzet/domain-core';
@@ -154,4 +155,38 @@ async function namesOf(db: SupabaseClient, courierIds: readonly string[]): Promi
     if (profile) map.set(id, profile.name);
   }
   return map;
+}
+
+/**
+ * **KURYENİN SEÇEBİLECEĞİ ARAÇLAR** (31.08 · v3:16) — kendi deposuna künyeli, aktif olanlar.
+ *
+ * Kullanıcı kararı: *"kurye ait olduğu deponun ait olan araçlarını görüp seçebilsin. Şu an burayı
+ * kompleksleştirmeyelim."* Tasarımın eski notu (*"araç seçimi masada yapılır"*) bununla düştü.
+ *
+ * ── KAPSAM ROTA LİSTESİYLE AYNI KAPIDAN ─────────────────────────────────────
+ * Süzgeç `scope`, rota seçimininkiyle birebir aynı: kurye başka deponun rotasını göremiyorsa başka
+ * deponun aracını da görmemeli — ikisi aynı sabahın iki sorusu. Depo-üstü kapsam (`all`) araçların
+ * hepsini görür; kapsamsız profil (`none`) hiçbirini (fail-closed).
+ *
+ * `warehouseId` araçta NULLABLE ve künyesi *"aidiyet değil adres"* diyor: deposu yazılmamış araç
+ * hiçbir kuryenin listesinde çıkmaz. Bu bilinçli — sahipsiz aracı herkese göstermek, kuryeyi
+ * başka şehirdeki bir kamyonetin önüne gönderebilirdi (CLAUDE §1).
+ *
+ * Doğal tavanlı küme (filo operatörün elinde) → tek turda, sayfalama yok.
+ */
+export interface CourierVehicleView {
+  vehicleId: string;
+  plate: string;
+  label: string | null;
+}
+
+export async function listCourierVehicles(
+  db: SupabaseClient,
+  input: { scope: WarehouseScope },
+): Promise<CourierVehicleView[]> {
+  if (input.scope.kind === 'none') return [];
+  const vehicles = await new VehicleService(db).list({ activeOnly: true });
+  return vehicles
+    .filter((vehicle) => vehicle.warehouseId !== null && canAccessWarehouse(input.scope, vehicle.warehouseId))
+    .map((vehicle) => ({ vehicleId: vehicle.id, plate: vehicle.plate, label: vehicle.label }));
 }

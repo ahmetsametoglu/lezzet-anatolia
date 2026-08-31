@@ -122,13 +122,15 @@ describe('K · sefer künyesi', () => {
     expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
-  it('üç sayı da durak listesinden türer: 3 durak · 3 kutu · 1 tahsilat', async () => {
+  it('üç sayı da durak listesinden türer: 3 durak · 4 kutu · 1 tahsilat', async () => {
     mockDay(tripDay());
 
     await renderTrip();
 
     expect(screen.getByTestId('courier-trip-stops')).toHaveTextContent('3');
-    expect(screen.getByTestId('courier-trip-boxes')).toHaveTextContent('3');
+    /* Dört: iki + bir + fikstürün varsayılan tek kutusu. Kutu 30.08'den beri ZORUNLU, yani
+       kutusuz bir durak kurmak üretimde doğamayacak bir satır olurdu. */
+    expect(screen.getByTestId('courier-trip-boxes')).toHaveTextContent('4');
     // Borcu `null` olan da, `0` olan da tahsilat DEĞİLDİR — kapıda para istenmez.
     expect(screen.getByTestId('courier-trip-collections')).toHaveTextContent('1');
   });

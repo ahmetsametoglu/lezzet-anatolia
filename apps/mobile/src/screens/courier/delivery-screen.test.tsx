@@ -131,6 +131,11 @@ const oneLineStop = (overrides: Partial<CourierStopContract> = {}) =>
     itemCount: 1,
     contentSummary: '1 × Mantı',
     items: [{ orderItemId: MANTI, name: 'Mantı', qty: 1, fulfilledQty: 0, unitPriceCents: 1400, lineDiscountAmountCents: 0 }],
+    /* KUTUSUZ ve bu bilerek: bu ekranın testlerinin çoğu kutuyu KONU ETMİYOR ve kutulu hâli
+       `boxedStop` kuruyor. Ortak fikstür 31.08'de varsayılan bir kutu kazandı (kutusuz sipariş
+       artık veri hatası); buradaki boş dizi o varsayılanı bilinçle geri alıyor — kutunun kapıyı
+       nasıl kapattığını ölçen testlerin zemini tam olarak bu. */
+    boxes: [],
     ...overrides,
   });
 
@@ -340,7 +345,10 @@ describe('teslimat · tahsilat', () => {
     takımından yazılır ve ekranda "Kısmi" diye işaretlenir — o yol testte aşağıda ayrıca ölçülüyor.
   */
   it('tutar TUŞ TAKIMINDAN yazılır; CTA yazılan tutarı taşır', async () => {
-    mockRoutes({ day: courierDay([courierStop(1)]) });
+    /* KUTU OKUTULMADAN PARA ADIMI KİLİTLİ (kapı sırası: kutu → mal → para). Fikstürün varsayılanı
+       31.08'de kutulu oldu; bu blok tahsilatı ölçüyor, kutuyu değil — o yüzden okutma adımı
+       zeminden çıkarılıyor. Kilidin KENDİSİ "kutu okutması" başlığı altında ayrıca ölçülüyor. */
+    mockRoutes({ day: courierDay([courierStop(1, { boxes: [] })]) });
 
     await renderDelivery();
     await typeCollection('30,00');
@@ -353,7 +361,10 @@ describe('teslimat · tahsilat', () => {
   });
 
   it('eksik ödemede KISMİ rozeti çıkar; tam ödemede çıkmaz', async () => {
-    mockRoutes({ day: courierDay([courierStop(1)]) });
+    /* KUTU OKUTULMADAN PARA ADIMI KİLİTLİ (kapı sırası: kutu → mal → para). Fikstürün varsayılanı
+       31.08'de kutulu oldu; bu blok tahsilatı ölçüyor, kutuyu değil — o yüzden okutma adımı
+       zeminden çıkarılıyor. Kilidin KENDİSİ "kutu okutması" başlığı altında ayrıca ölçülüyor. */
+    mockRoutes({ day: courierDay([courierStop(1, { boxes: [] })]) });
 
     await renderDelivery();
     expect(screen.queryByTestId('courier-collection-partial')).toBeNull();
@@ -365,7 +376,7 @@ describe('teslimat · tahsilat', () => {
   it('nakit yasal sınırın üstünde UYARI çıkar; kart seçilince kaybolur (uyarı nakde özgüdür)', async () => {
     mockRoutes({
       day: courierDay([
-        courierStop(1, { payment: { dueAmountCents: 124_000, expectedMethod: 'cash', collectedAtDoorCents: null } }),
+        courierStop(1, { boxes: [], payment: { dueAmountCents: 124_000, expectedMethod: 'cash', collectedAtDoorCents: null } }),
       ]),
     });
 

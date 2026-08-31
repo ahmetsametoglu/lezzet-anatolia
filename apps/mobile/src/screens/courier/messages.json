@@ -102,6 +102,7 @@
     "startCtaPick": "Seferi başlat — rota seç",
     "starting": "Başlatılıyor…",
     "start": {
+      "departFailed": "Sefer başlatılamadı — sayfayı tazeleyip yeniden dene.",
       "started": "{n} durak yola çıktı.",
       "alreadyOut": "{n} durak zaten yoldaydı.",
       "skipped": "{n} durak hazırlanmayı bekliyor ({statuses}) — hazırlık bitince tekrar dene.",
@@ -166,6 +167,53 @@
       "openLabel": "{address} — {sub}",
       "lockedHint": "Sefer kapandı — bu durakta artık işaret yazılamaz."
     },
+    "openRuns": {
+      "cta": "Seferleri kur — yüklemeye geç",
+      "ctaIdle": "Önce sefer seç",
+      "footnote": "Kurulan sefer henüz başlamamıştır: durakları açılmaz, müşteriye haber gitmez.",
+      "done": "{n} sefer araca alındı — şimdi kutuları okut.",
+      "partial": "{n} sefer araca alındı, {k} tanesi alınamadı."
+    },
+    "vanRuns": {
+      "title": "Araçtaki Seferler",
+      "context": "{plate} · araç bir ara depodur",
+      "heading": "SEFERLER · İSTEDİĞİNİ BAŞLAT",
+      "hint": "Yükleme malı araca geçirir. Sefer başlatmak ayrı eylemdir: durakları açar ve müşterilere bildirim gönderir.",
+      "note": "Seferler birbirine bağlı değil; sıra, zincir ya da devam ilişkisi yok. Tek ortak yanları aynı araçta olmaları.",
+      "waiting": "araçta bekliyor",
+      "driving": "sürülüyor",
+      "depart": "Seferi başlat",
+      "departHint": "durakları açar · müşterilerine bildirim gider",
+      "toStops": "Duraklara git",
+      "emptyTitle": "Araçta sefer yok",
+      "emptyBody": "Sefer ve araç seçip yüklemeyi yaptığında seferler burada birikir. Bir sefer araçta olmakla başlamış sayılmaz.",
+      "pick": "Sefer ve araç seç",
+      "summary": "{stops} durak · {boxes} kutu"
+    },
+    "vehicle": {
+      "heading": "ARAÇ",
+      "none": "Araç seçilmedi",
+      "empty": "Deponda kayıtlı araç yok — araçsız da sefer kurabilirsin.",
+      "pick": "Araç seç"
+    },
+    "vanEmpty": {
+      "title": "Araçta sefer yok",
+      "body": "Duraklar bir seferi başlattığında açılır. O ana kadar müşteriye bildirim gitmez.",
+      "step1": "Seferleri ve aracı seç",
+      "step2": "Kutuları araca yükle",
+      "step3": "Sürmek istediğin seferi başlat"
+    },
+    "vanLoaded": {
+      "title": "Araçta yük var, sürülen sefer yok",
+      "body": "{summary} Bir seferi başlatana kadar durak açılmaz ve müşteriye haber gitmez.",
+      "cta": "Araçtaki seferler — birini başlat"
+    },
+    "vanRow": {
+      "title": "Araçtaki seferler",
+      "meta": "{n} sefer · {loaded}/{total} kutu araçta"
+    },
+    "runGroup": "{name} · {day}",
+    "stopsBySefer": "DURAKLAR · SEFERE GÖRE",
     "tripRow": {
       "title": "Sefer künyesi ve yükleme",
       "meta": "rota · araç · araçtaki kutular {loaded}/{total}"

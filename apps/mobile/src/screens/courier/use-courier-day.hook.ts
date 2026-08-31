@@ -6,9 +6,18 @@ import {
   type CourierRoute,
   type CourierRunDetail,
   type CourierStopContract,
+  type CourierVehicle,
 } from '@lezzet/types';
 
-import { fetchCourierDay, fetchCourierRoutes, fetchDayCloseDraft, loadCourierBox, startCourierDay } from '@/lib/api/courier';
+import {
+  departCourierRun,
+  fetchCourierDay,
+  fetchCourierRoutes,
+  fetchCourierVehicles,
+  fetchDayCloseDraft,
+  loadCourierBox,
+  startCourierDay,
+} from '@/lib/api/courier';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
@@ -99,14 +108,32 @@ interface UseCourierDayResult {
   status: CourierDayStatus;
   /** Uçtan gelen gün (`YYYY-MM-DD`) — istemci kendi hesaplamaz. */
   date: string | null;
-  /** Bugünkü sefer; `null` = rota alınmadı → ekran seçim hâlinde. */
-  /** Günün seferi — künye + çıkış deposunun adı; `null` = henüz rota alınmadı. */
+  /**
+   * **SÜRÜLEN sefer** — yola çıkmış ve kapanmamış olan; `null` = araçta yük olsa da sürülen sefer
+   * yok. Ekranın üç hâlinden hangisinin çizileceğini `runs` ile birlikte söyler (v3:14).
+   */
   run: CourierRunDetail | null;
-  /** Seçilebilir + başkasında olan rotalar (yalnız sefer yokken okunur). */
+  /**
+   * **ARAÇTAKİ SEFERLER** (31.08) — kurulmuş ve kapanmamış olanların hepsi, gün sırasıyla.
+   * `departedAt: null` olanı araçta bekliyor: kutuları okutulabilir ama durakları açılmamış.
+   */
+  runs: CourierRunDetail[];
+  /** Seçilebilir + başkasında olan rotalar (araca sefer eklerken okunur). */
   routes: CourierRoute[];
-  /** Kuryenin seçtiği rota — tek aday varsa kendiliğinden seçilidir. */
-  selectedZoneId: string | null;
-  selectRoute: (zoneId: string) => void;
+  /** Kuryenin deposunun araçları — biri seçilir, kurulan seferlere yazılır. */
+  vehicles: CourierVehicle[];
+  /**
+   * Araca ALINACAK olarak işaretlenen rotalar (31.08 · v3:16 çoklu seçim). Tek aday varsa
+   * kendiliğinden işaretlidir — "tek adayda soru sorulmaz".
+   */
+  selectedZoneIds: string[];
+  toggleRoute: (zoneId: string) => void;
+  selectedVehicleId: string | null;
+  selectVehicle: (vehicleId: string | null) => void;
+  /** Seçilen rotalar için seferleri KURAR (yola çıkarmaz) ve yükleme ekranına hazırlar. */
+  openRuns: () => void;
+  /** Kurulmuş bir seferi YOLA ÇIKARIR: durakları açar, müşteriye haber gider. */
+  departRun: (runId: string) => void;
   stops: CourierStopContract[];
   /** Bugün tahsil edilmiş toplam (cent). `null` = ÖLÇÜLEMEDİ, sıfır değil. */
   collectedCents: number | null;
@@ -139,6 +166,51 @@ export function isRouteFree(route: CourierRoute): boolean {
   return route.run === null;
 }
 
+/**
+ * **Dört listenin cümlesi** — "seferi başlat"ın kısmi başarısı okunur hâle gelir (18.08).
+ *
+ * ORTAK, çünkü iki kapı da aynı şekli döndürüyor: `startCourierDay` ve `departCourierRun`. İkisi
+ * ayrı kurulsaydı biri bir gün `awaitingBoxes`ı yazmayı unuturdu ve kurye kutuların beklediğini
+ * ancak teslim yazmayı deneyip başarısız olunca öğrenirdi.
+ */
+function noticeOfStart(data: {
+  run: CourierRunDetail;
+  started: readonly string[];
+  alreadyOut: readonly string[];
+  stale: readonly CourierDayStopState[];
+  skipped: readonly CourierDayStopState[];
+  awaitingBoxes: readonly { loadedBoxes: number; boxCount: number }[];
+}): StartNotice {
+  const { run: openedRun, started: startedIds, alreadyOut, stale, skipped, awaitingBoxes } = data;
+  const onTheRoad = startedIds.length + alreadyOut.length;
+  const parts = [
+    fillCopy(t.day.start.opened, { route: openedRun.zoneName ?? '', ref: openedRun.referenceNo }),
+    startedIds.length > 0 ? fillCopy(t.day.start.started, { n: String(startedIds.length) }) : '',
+    alreadyOut.length > 0 ? fillCopy(t.day.start.alreadyOut, { n: String(alreadyOut.length) }) : '',
+    skipped.length > 0
+      ? fillCopy(t.day.start.skipped, { n: String(skipped.length), statuses: statusList(skipped) })
+      : '',
+    stale.length > 0 ? fillCopy(t.day.start.stale, { n: String(stale.length) }) : '',
+    // Kutulu sipariş okutulmayı bekliyor (23.8) — çaresi tekrar basmak değil KUTU OKUTMAK;
+    // cümle onu söyler, `canRetry` bu yüzden bu listeden etkilenmez.
+    awaitingBoxes.length > 0
+      ? fillCopy(t.day.start.awaitingBoxes, {
+          n: String(awaitingBoxes.length),
+          k: String(awaitingBoxes.reduce((sum, row) => sum + row.loadedBoxes, 0)),
+          m: String(awaitingBoxes.reduce((sum, row) => sum + row.boxCount, 0)),
+        })
+      : '',
+    onTheRoad === 0 && awaitingBoxes.length === 0 ? t.day.start.none : '',
+  ].filter((part) => part.length > 0);
+
+  const pending = skipped.length > 0 || stale.length > 0;
+  return {
+    tone: onTheRoad === 0 ? 'warn' : pending || awaitingBoxes.length > 0 ? 'warn' : 'ok',
+    text: parts.join(' '),
+    canRetry: pending,
+  };
+}
+
 export function useCourierDay(): UseCourierDayResult {
   const [status, setStatus] = useState<CourierDayStatus>('loading');
   const [date, setDate] = useState<string | null>(null);
@@ -148,8 +220,11 @@ export function useCourierDay(): UseCourierDayResult {
     ikisi ayrışsaydı sefer başlar başlamaz depo adı boş kalırdı.
   */
   const [run, setRun] = useState<CourierRunDetail | null>(null);
+  const [runs, setRuns] = useState<CourierRunDetail[]>([]);
   const [routes, setRoutes] = useState<CourierRoute[]>([]);
-  const [pickedZoneId, setPickedZoneId] = useState<string | null>(null);
+  const [vehicles, setVehicles] = useState<CourierVehicle[]>([]);
+  const [pickedZoneIds, setPickedZoneIds] = useState<string[]>([]);
+  const [pickedVehicleId, setPickedVehicleId] = useState<string | null>(null);
   const [stops, setStops] = useState<CourierStopContract[]>([]);
   const [collectedCents, setCollectedCents] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
@@ -173,13 +248,19 @@ export function useCourierDay(): UseCourierDayResult {
     const day = dayResult.data;
     setDate(day.date);
     setRun(day.run);
+    setRuns(day.runs);
     setStops(day.stops);
 
-    // Sefer AÇIK DEĞİLSE (hiç yok ya da kapandı) seçilecek rotalar, AÇIKSA seferin parası. İkinci
-    // okuma neyin sorulacağını birincisinden öğrenir; ikisini birden istemek her hâlde birini boşa
-    // çekmek olurdu.
-    if (day.run === null || day.run.closed) {
-      const routeResult = await fetchCourierRoutes(day.date);
+    /*
+      İKİNCİ OKUMA NEYİN SORULACAĞINI BİRİNCİSİNDEN ÖĞRENİR. Sürülen sefer YOKSA ekran seçim ve
+      yükleme aşamasındadır → rotalar + araçlar. Sürülüyorsa seferin parası (özet kartı).
+      İkisini birden istemek her hâlde birini boşa çekmek olurdu.
+
+      Rotalar araçta yük VARKEN de okunuyor (31.08): kurye ikinci bir seferi araca ekleyebiliyor
+      ve v3:16 o listeyi gösteriyor — "araçta sefer var" artık "seçim bitti" demek değil.
+    */
+    if (day.run === null) {
+      const [routeResult, vehicleResult] = await Promise.all([fetchCourierRoutes(day.date), fetchCourierVehicles()]);
       if (round !== generation.current) return;
       if (routeResult.error !== null) {
         // Rota listesi olmadan seçim yapılamaz — boş listeyle "bugün rota yok" demek yalan olurdu.
@@ -187,12 +268,16 @@ export function useCourierDay(): UseCourierDayResult {
         return;
       }
       setRoutes(routeResult.data.routes);
+      /* Araç listesi düşerse ekran kilitlenmez: araç kaydı zaten ZORUNLU değil ve araçsız sefer
+         açılabiliyor (kapının kendi kuralı). Boş liste "araç yok" der, "hata var" demez. */
+      setVehicles(vehicleResult.error === null ? vehicleResult.data.vehicles : []);
       setCollectedCents(null);
       setStatus('ready');
       return;
     }
 
     setRoutes([]);
+    setVehicles([]);
     const draftResult = await fetchDayCloseDraft({ runId: day.run.runId });
     if (round !== generation.current) return;
     setCollectedCents(
@@ -217,14 +302,98 @@ export function useCourierDay(): UseCourierDayResult {
   }, [load]);
 
   /**
-   * Seçili rota — kurye elle seçmediyse TEK aday kendiliğinden seçilidir ("tek adayda soru
-   * sorulmaz", dispatch'in aynı ilkesi). Elle seçim bayatlarsa (o rota bu arada başlatıldıysa)
-   * seçim yok sayılır: ekranda pasif görünen bir rotayla başlatma isteği gönderilmez.
+   * **ÇOKLU SEÇİM** (31.08 · v3:16) — kurye araca birden çok sefer alabiliyor: bugünün, yarının,
+   * sonraki günün. Seçim bayatlarsa (o rota bu arada başkasınca açıldıysa) o kimlik sessizce
+   * düşer: ekranda pasif görünen bir rotayla kurma isteği gönderilmez.
+   *
+   * Elle hiç seçilmediyse ve TEK aday varsa o kendiliğinden işaretlidir — "tek adayda soru
+   * sorulmaz" (dispatch'in aynı ilkesi).
    */
   const free = routes.filter(isRouteFree);
-  const picked = free.find((route) => route.zoneId === pickedZoneId) ?? null;
-  const selected = picked ?? (free.length === 1 ? free[0]! : null);
-  const selectedZoneId = selected?.zoneId ?? null;
+  const freeIds = new Set(free.map((route) => route.zoneId));
+  const explicit = pickedZoneIds.filter((id) => freeIds.has(id));
+  const selectedZoneIds = explicit.length > 0 ? explicit : free.length === 1 ? [free[0]!.zoneId] : [];
+
+  const toggleRoute = useCallback(
+    (zoneId: string) => {
+      setPickedZoneIds((current) =>
+        current.includes(zoneId) ? current.filter((id) => id !== zoneId) : [...current, zoneId],
+      );
+    },
+    [],
+  );
+
+  /**
+   * **SEFERLERİ KUR** — seçilen her rota için ayrı bir sefer doğar (`depart:false`). Sefer başına
+   * ayrı istek gitmesi bilinçli: seferler birbirine BAĞLI DEĞİL (kullanıcı kararı 31.08) ve biri
+   * açılamazsa ötekiler açılmalı. Toplu bir istek "hepsi ya da hiçbiri" vaat ederdi; oysa burada
+   * yarım başarı meşru ve görünür olmalı.
+   */
+  const openRuns = useCallback(() => {
+    if (starting || selectedZoneIds.length === 0) return;
+    setStarting(true);
+    setStartNotice(null);
+
+    void (async () => {
+      const results = await Promise.all(
+        selectedZoneIds.map((zoneId) =>
+          startCourierDay({
+            zoneId,
+            depart: false,
+            ...(date === null ? {} : { date }),
+            ...(pickedVehicleId === null ? {} : { vehicleId: pickedVehicleId }),
+          }),
+        ),
+      );
+      setStarting(false);
+
+      const opened = results.filter((row) => row.error === null && row.data.status === 'ok').length;
+      const failed = results.length - opened;
+      setStartNotice({
+        tone: failed === 0 ? 'ok' : opened === 0 ? 'error' : 'warn',
+        text:
+          failed === 0
+            ? fillCopy(t.day.openRuns.done, { n: String(opened) })
+            : fillCopy(t.day.openRuns.partial, { n: String(opened), k: String(failed) }),
+        canRetry: false,
+      });
+      setPickedZoneIds([]);
+      await load();
+    })();
+  }, [date, load, pickedVehicleId, selectedZoneIds, setStartNotice, starting]);
+
+  /**
+   * **SEFERİ YOLA ÇIKAR** — araçtaki seferlerden biri. Bu, müşteriye haberin gittiği andır ve
+   * geri alınamaz; ekran düğmenin altında bunu yazıyor (v3:15).
+   */
+  const departRun = useCallback(
+    (runId: string) => {
+      if (starting) return;
+      setStarting(true);
+      setStartNotice(null);
+
+      void (async () => {
+        const result = await departCourierRun(runId);
+        setStarting(false);
+
+        if (result.error !== null || result.data.status !== 'ok') {
+          setStartNotice({
+            tone: 'error',
+            text: result.error === 'network_error' ? t.day.start.network : t.day.start.departFailed,
+            canRetry: true,
+          });
+          await load();
+          return;
+        }
+        setStartNotice(noticeOfStart(result.data));
+        await load();
+      })();
+    },
+    [load, setStartNotice, starting],
+  );
+
+  /** Eski tek-rota seçiminin halefi — başlatma isteği hâlâ tek rota gönderiyor. */
+  const selectedZoneId = selectedZoneIds[0] ?? null;
 
   /**
    * Başlatma isteğinin rotası. SEFER AÇIKKEN seferin kendi rotası — çünkü o hâlde tek başlatma
@@ -288,42 +457,11 @@ export function useCourierDay(): UseCourierDayResult {
         return;
       }
 
-      const { run: openedRun, started: startedIds, alreadyOut, stale, skipped, awaitingBoxes } = result.data;
       // Kilit sunucunun kaydından gelir: sefer açıldıysa duraklar açılır — hiçbir durak yola
       // çıkmasa da. "Açılmamış say" demek, var olan bir seferi ekranda yok saymak olurdu.
-      setRun(openedRun);
-      setPickedZoneId(null);
-
-      const onTheRoad = startedIds.length + alreadyOut.length;
-      const parts = [
-        fillCopy(t.day.start.opened, {
-          route: openedRun.zoneName ?? '',
-          ref: openedRun.referenceNo,
-        }),
-        startedIds.length > 0 ? fillCopy(t.day.start.started, { n: String(startedIds.length) }) : '',
-        alreadyOut.length > 0 ? fillCopy(t.day.start.alreadyOut, { n: String(alreadyOut.length) }) : '',
-        skipped.length > 0
-          ? fillCopy(t.day.start.skipped, { n: String(skipped.length), statuses: statusList(skipped) })
-          : '',
-        stale.length > 0 ? fillCopy(t.day.start.stale, { n: String(stale.length) }) : '',
-        // Kutulu sipariş okutulmayı bekliyor (23.8) — çaresi tekrar basmak değil KUTU OKUTMAK;
-        // cümle onu söyler, `canRetry` bu yüzden bu listeden etkilenmez.
-        awaitingBoxes.length > 0
-          ? fillCopy(t.day.start.awaitingBoxes, {
-              n: String(awaitingBoxes.length),
-              k: String(awaitingBoxes.reduce((sum, row) => sum + row.loadedBoxes, 0)),
-              m: String(awaitingBoxes.reduce((sum, row) => sum + row.boxCount, 0)),
-            })
-          : '',
-        onTheRoad === 0 && awaitingBoxes.length === 0 ? t.day.start.none : '',
-      ].filter((part) => part.length > 0);
-
-      const pending = skipped.length > 0 || stale.length > 0;
-      setStartNotice({
-        tone: onTheRoad === 0 ? 'warn' : pending || awaitingBoxes.length > 0 ? 'warn' : 'ok',
-        text: parts.join(' '),
-        canRetry: pending,
-      });
+      setRun(result.data.run);
+      setPickedZoneIds([]);
+      setStartNotice(noticeOfStart(result.data));
 
       // Cevap "durum değişti" diyor; listenin de aynı gerçeği göstermesi gerekir (iskelet YOK —
       // liste yerinde kalır, sessizce tazelenir).
@@ -408,12 +546,19 @@ export function useCourierDay(): UseCourierDayResult {
     status,
     date,
     run,
+    runs,
     routes,
-    selectedZoneId,
-    selectRoute: setPickedZoneId,
+    vehicles,
+    selectedZoneIds,
+    toggleRoute,
+    selectedVehicleId: pickedVehicleId,
+    selectVehicle: setPickedVehicleId,
+    openRuns,
+    departRun,
     stops,
     collectedCents,
-    // Sefer açıkken duraklara yazılabilir; kapanmış seferde yazılamaz (mutabakat fotoğrafı çekildi).
+    /* Duraklara yazılabilir mi — SÜRÜLEN sefer varsa evet. Kurulmuş ama başlamamış sefer araçta
+       bekliyordur ve durakları açılmamıştır (31.08). */
     started: run !== null && !run.closed,
     starting,
     startNotice,

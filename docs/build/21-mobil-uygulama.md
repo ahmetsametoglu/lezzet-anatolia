@@ -9114,7 +9114,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `runId` yok, "sefer kur" ile "sefer başlat" ayrımı arayüzde yok. Tasarımı geldi (v3:15 Araçtaki
   Seferler, 16 Sefer ve Araç, 17 Araca Yükleme, 13 Kurye Dönüşü); iş 21.190'da.
 
-- [~] (21.190) **KURYE ANA EKRANI: ÇOKLU SEFER · SEFER KUR ↔ SEFER BAŞLAT** (v3:13-18 · kullanıcı kararı 31.08)
+- [x] (21.190) **KURYE ANA EKRANI: ÇOKLU SEFER · SEFER KUR ↔ SEFER BAŞLAT** (v3:13-18 · kullanıcı kararı 31.08)
   `touches: packages/application/src/courier/* · packages/types/src/contracts/courier-api.schema.ts · apps/mobile-api/src/api/v1/courier.ts · apps/mobile/src/screens/courier/*`
 
   Tasarım hazır ve modeli birebir taşıyor. Yapılacaklar sırasıyla: (1) `start_delivery_run` RPC'sini
@@ -9154,8 +9154,38 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Künye kurulumu tek yere indi (`detailOf`): tekil ve çoğul okuma ayrı kurulsaydı biri bir gün
   araç ya da depo adını eksik döndürür, ekran hangisinden geldiğine göre farklı davranırdı.
 
-  **BEKLEYEN(21.190):** kalan adım — ekranlar (14'ün üç hâli · 15 Araçtaki Seferler · 16 çoklu
-  seçim + araç · 17 sefere göre gruplu yükleme).
+  **Durum (31.08) — ADIM 4 BİTTİ: ekranlar modeli taşıyor.**
+
+  **Gün ekranının ÜÇ hâli var artık** (v3:14). Eskiden ikiydi — sefer ya vardı ya yoktu — ve
+  "kurulmuş ama başlamamış sefer" diye bir şey de yoktu. Kutular yüklenmiş ama hiçbir sefer
+  başlatılmamışken ekran boş seçim gövdesini gösteriyordu: **araçtaki mal hiçbir yerde
+  görünmüyordu.** Üçüncü hâl bunu kapattı.
+
+  **`/van-runs` yeni ekran** (v3:15 · `van-runs-screen.tsx`): araçtaki seferler, her biri kendi
+  hâliyle (bekliyor · sürülüyor) ve kendi "Seferi başlat" düğmesiyle. Düğmenin altında bedeli
+  yazılı — durakları açar VE müşteriye bildirim gider. Sürülen seferde o düğme HİÇ çizilmiyor;
+  basılamayacak bir düğme kuryeye olmayan bir yol vaat etmektir.
+
+  **Seçim gövdesi çoklu oldu** (v3:16): kurye bugünün, yarının ve sonraki günün seferlerini
+  birlikte işaretliyor, araç da buradan seçiliyor (`GET /courier/vehicles` — kendi deposuna
+  künyeli, aktif olanlar). Düğme artık **kurar**, başlatmaz: `depart:false`. Sefer başına ayrı
+  istek gidiyor ve bu bilinçli — seferler birbirine bağlı değil, biri açılamazsa ötekiler açılmalı.
+
+  **Duraklar sefere göre gruplu** (v3:14 "DURAKLAR · SEFERE GÖRE"). Grup başlığı yalnız birden
+  çok sefer varken çiziliyor: tek seferde başlık, olmayan bir ayrımı duyurmak olurdu.
+
+  **MOBİL TESTLER `pnpm test`'İN DIŞINDA — ölçüldü ve önemli.** Jest ayrı koşuyor
+  (`apps/mobile` · `npx jest`) ve vitest paketi 4007/4007 yeşilken mobil tarafta **11 gerileme**
+  duruyordu. Kurye ekran testleri artık 94/94; fikstürün varsayılanı kutulu olduğu için kutuyu
+  KONU ETMEYEN testlere `boxes: []` bilinçle geri kondu.
+
+  **Dört listenin cümlesi ekran değiştirdi.** Kısmi başarı (atlanan · bayat · kutu bekleyen)
+  eskiden gün ekranının düğmesinde ölçülüyordu; o düğme artık sefer kuruyor ve kurulan seferde
+  hiçbir durak yola çıkmıyor — dört liste tanım gereği boş. Ölçüm `van-runs-screen.test.tsx`e
+  taşındı; cümleyi kuran kod da ortak (`noticeOfStart`), yani iki kapı bir gün ayrışamaz.
+
+  **Kapanmış sefer artık `/courier/day`den HİÇ dönmüyor** — ne `run` ne `runs` içinde. İşi
+  bitmiştir, kutuları da inmiştir (v3:13'ün kuralı). "Neyi bitirdim" sorusunun yeri gün özeti.
 
   **BEKLEYEN(21.190):** `loadBox` hâlâ `order.courierId` okuyor, sefere değil — aynı kuryeye damgalı
   BAŞKA rotanın kutusu sessizce biniyor ve o durak gün listesinde hiç görünmüyor (bölge süzgeci).

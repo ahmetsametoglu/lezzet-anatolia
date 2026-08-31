@@ -184,13 +184,19 @@ export function courierDay(
   stops: CourierStopContract[],
   overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {},
 ): CourierDayResponse {
-  /* `runs` VARSAYILAN OLARAK sürülen seferi taşır (31.08): araçtaki seferlerin listesi ve sürülen
-     sefer o listenin İÇİNDEDİR, kopyası değil. Çoklu sefer ölçen test `runs` override'ı geçirir. */
+  /*
+    `runs` VARSAYILAN OLARAK sürülen seferi taşır (31.08) — araçtaki seferlerin listesi ve sürülen
+    sefer o listenin İÇİNDEDİR, kopyası değil.
+
+    KAPANMIŞ SEFER ARAÇTA DEĞİLDİR ve bu bir ayrıntı değil kuralın kendisi: `readCourierRuns`
+    kapanmışları süzüyor (işi bitmiştir, kutuları da inmiştir). Fikstür bunu taklit etmezse kapanmış
+    seferli gün "araçta yük var" hâline düşer ve ekran yanlış gövdeyi çizer.
+  */
   const run = overrides.run === undefined ? courierDayRun() : overrides.run;
   return {
     date: '2026-08-08',
     run,
-    runs: run ? [run] : [],
+    runs: run && !run.closed ? [run] : [],
     doorAccountId: null,
     stops,
     ...overrides,
