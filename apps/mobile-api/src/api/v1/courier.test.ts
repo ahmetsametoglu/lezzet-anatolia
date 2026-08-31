@@ -68,6 +68,10 @@ let customerId = '';
 let warehouseId = '';
 /** Testin kendi ROTASI — sefer (`delivery_run`) rota+gün ikilisiyle doğar, rotasız başlatılamaz. */
 let zoneId = '';
+/* İKİNCİ ROTA (31.08) — "başka kuryenin durağı" artık AYNI rotada duramaz: sefer başlatan kurye
+   o rotanın o günkü BÜTÜN siparişlerini claim eder (`open_delivery_run`), yani aynı bölgedeki bir
+   sipariş kaçınılmaz olarak bizim olur. Üretimde de böyle: iki kurye = iki rota. */
+let otherZoneId = '';
 let addressId = '';
 let accountId = '';
 let categoryId = '';
@@ -159,6 +163,7 @@ async function dispatched(
     date?: string;
     channel?: 'b2b' | 'b2c';
     upTo?: 'confirmed' | 'ready';
+    zone?: string;
   } = {},
 ): Promise<string> {
   const qty = opts.qty ?? 2;
@@ -171,7 +176,7 @@ async function dispatched(
       deliveryDate: opts.date ?? today,
       // Sipariş ROTAYA yazılıyor: `start_delivery_run` durakları `(rota, gün, route)` üçlüsüyle
       // claim ediyor — rotası olmayan sipariş sefere hiç bağlanmaz ve kapanışta görünmez.
-      deliveryZoneId: zoneId,
+      deliveryZoneId: opts.zone ?? zoneId,
       courierId: opts.courier ?? courierId,
       addressId,
       addressSnapshot: { line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg' },
@@ -236,6 +241,13 @@ beforeAll(async () => {
   zoneId = (
     await new DeliveryZoneService(db).insert({
       name: `Kurye API rotası ${stamp}`,
+      warehouseId,
+      weekdays: [1, 2, 3, 4, 5, 6, 7],
+    })
+  ).id;
+  otherZoneId = (
+    await new DeliveryZoneService(db).insert({
+      name: `Kurye API öteki rota ${stamp}`,
       warehouseId,
       weekdays: [1, 2, 3, 4, 5, 6, 7],
     })
@@ -394,7 +406,11 @@ describe('kapı: Bearer + rol süzgeci', () => {
 describe('GET /api/v1/courier/day', () => {
   it('kuryenin kendi durakları + gün; başka kuryenin durağı yok', async () => {
     const benim = await dispatched({ qty: 3, totalCents: 3000 });
-    const baskasinin = await dispatched({ courier: otherCourierId });
+    // Başka rotada, başka kuryede: bizim seferimiz onu claim edemez (RPC bölge+gün süzüyor).
+    const baskasinin = await dispatched({ courier: otherCourierId, zone: otherZoneId });
+    /* DURAKLAR SEFERE BAĞLI (31.08): araç bir ara depo ve gün cevabı ona bakıyor. Sefer
+       kurulmadan durak yoktur — ekran o hâlde rota seçimi gösterir (v3:14 "Araçta sefer yok"). */
+    await startRun();
 
     const res = await asCourier('/api/v1/courier/day');
     expect(res.status).toBe(200);
@@ -415,16 +431,22 @@ describe('GET /api/v1/courier/day', () => {
     expect(JSON.stringify(stop)).not.toContain('purchasePrice');
   });
 
-  it('`date` verilince o günün rotası gelir', async () => {
-    const yarin = await dispatched({ date: dayOffset(3) });
+  it('ARAÇTAKİ seferlerin durakları güne bakılmaksızın gelir — ileri günün seferi de araçta (31.08)', async () => {
+    const bugunku = await dispatched();
+    const ilerideki = await dispatched({ date: dayOffset(3) });
+    const bugunSefer = await startRun();
+    const ileriSefer = await startRun({ date: dayOffset(3) });
 
-    const bugun = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
-    expect(bugun.stops.map((s) => s.orderId)).not.toContain(yarin);
+    const gun = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
 
-    const res = await asCourier(`/api/v1/courier/day?date=${dayOffset(3)}`);
-    const gun = await dataOf<CourierDayResponse>(res);
-    expect(gun.date).toBe(dayOffset(3));
-    expect(gun.stops.map((s) => s.orderId)).toContain(yarin);
+    /* Kullanıcının senaryosu: araç iki-üç günlük yola çıkıyor, rotalar tek günlük olduğu için
+       yarının seferi de bugünden yükleniyor. Güne süzülseydi o kutular hiçbir ekranda görünmezdi. */
+    expect(gun.runs.map((run) => run.runId).sort()).toEqual([bugunSefer.run.runId, ileriSefer.run.runId].sort());
+    const ids = gun.stops.map((s) => s.orderId);
+    expect(ids).toContain(bugunku);
+    expect(ids).toContain(ilerideki);
+    // Ve her durak hangi seferin olduğunu SÖYLÜYOR — liste sefere göre gruplanabiliyor.
+    expect(gun.stops.find((s) => s.orderId === ilerideki)!.runId).toBe(ileriSefer.run.runId);
   });
 
   it('bozuk gün anahtarı 400 — SQL\'e inip 500 üretmez', async () => {
@@ -461,6 +483,7 @@ describe('GET /api/v1/courier/day', () => {
 
   it('durak kalem satırlarını kimlik ve adetle taşır (21.10d)', async () => {
     const orderId = await dispatched({ qty: 3, totalCents: 3000 });
+    await startRun(); // durak sefere bağlı (31.08)
 
     const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
     const stop = day.stops.find((s) => s.orderId === orderId)!;
@@ -478,6 +501,7 @@ describe('GET /api/v1/courier/day', () => {
     // gönderemiyordu, çünkü `adjustments[].orderItemId`nin geleceği bir yer yoktu. Test iki ucu
     // birbirine bağlıyor — okunan kimlik, yazan uca aynen gidiyor.
     const orderId = await dispatched({ qty: 2, totalCents: 2000 });
+    await startRun(); // durak sefere bağlı (31.08)
     const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
     const item = day.stops.find((s) => s.orderId === orderId)!.items[0]!;
 
@@ -693,6 +717,7 @@ describe('POST /api/v1/courier/stops/:orderId/undelivered', () => {
 
   it('ulaşılamadı: sipariş `ready`e döner ve NOT durum kaydına düşer', async () => {
     const orderId = await dispatched();
+    await startRun(); // durak sefere bağlı (31.08) — aşağıda gün listesinde aranıyor
 
     const res = await post(`/api/v1/courier/stops/${orderId}/undelivered`, { outcome: 'unreachable', note: 'zil bozuk' });
 

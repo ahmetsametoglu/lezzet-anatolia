@@ -122,6 +122,10 @@ export interface CourierStop {
    * indeksini rota sırasıymış gibi gösteriyordu ve o sıra aslında SİPARİŞİN VERİLME sırasıydı.
    */
   stopSeq: number | null;
+  /** Durak hangi seferin — liste sefere göre gruplanıyor (31.08 · v3:14). */
+  runId: string;
+  /** Grubun okunur başlığı: rota adı. `null` = bölge kaydı okunamadı. */
+  runLabel: string | null;
 }
 
 /** Durağın tek kalemi — kapıda işaretlenebilmesi için KİMLİĞİYLE. */
@@ -174,13 +178,23 @@ export async function listCourierDay(
      * dünkü seferin kapanışı bugünden açılabilmeli, duraklar güne değil sefere bağlı.
      */
     runId?: string;
+    /**
+     * SEFER KÜMESİ (31.08) — araçtaki bütün seferlerin durakları tek listede. Gün ekranı artık
+     * güne değil ARACA bakıyor: iki-üç günlük yolculukta yarının seferi de araçta duruyor ve
+     * güne süzülseydi hiçbir ekranda görünmezdi. Verilirse gün ve rota süzgeçleri uygulanmaz.
+     */
+    runIds?: readonly string[];
     locale?: MessageLocale;
   },
 ): Promise<CourierStop[]> {
   const date = input.date ?? new Date().toISOString().slice(0, 10);
   const orders = await new OrderService(db).listByCourier(
     input.courierId,
-    input.runId ? { deliveryRunId: input.runId } : { deliveryDate: date, deliveryZoneId: input.zoneId },
+    input.runIds
+      ? { deliveryRunIds: input.runIds }
+      : input.runId
+        ? { deliveryRunId: input.runId }
+        : { deliveryDate: date, deliveryZoneId: input.zoneId },
   );
   if (orders.length === 0) return [];
 
@@ -195,10 +209,21 @@ export async function listCourierDay(
   ]);
   const names = await variantNames(db, items);
 
-  // Seferin kayıtlı sırası (11.9). Siparişler zaten tek bir sefere ait (hepsi aynı `deliveryRunId`
-  // ile damgalandı); ilk dolu kimlik yeter ve ikinci bir sorgu doğmaz.
-  const runId = input.runId ?? orders.find((order) => order.deliveryRunId)?.deliveryRunId ?? null;
-  const run = runId ? await new DeliveryRunService(db).getById(runId) : null;
+  /*
+    SEFERLER ARTIK ÇOĞUL (31.08). Eskiden "siparişler zaten tek bir sefere ait" varsayılıyordu ve
+    ilk dolu kimlik yetiyordu; araç bir ara depo olunca bu varsayım düştü — listede iki, üç seferin
+    durağı olabiliyor. Sıra da rota adı da SEFER BAŞINA çözülüyor, tek turda.
+  */
+  const runIdsInList = [...new Set(orders.map((order) => order.deliveryRunId).filter((id): id is string => id !== null))];
+  const runService = new DeliveryRunService(db);
+  const runRows = await Promise.all(runIdsInList.map((id) => runService.getById(id)));
+  const runById = new Map(runRows.filter((row): row is NonNullable<typeof row> => row !== null).map((row) => [row.id, row]));
+  const zoneNames = await zoneNamesOf(db, [...new Set([...runById.values()].map((row) => row.deliveryZoneId))]);
+  /* Sıra okuması TEK seferin işi kalıyor: `stopOrderOf` bir turun sırasını getiriyor ve tur
+     kimliğini süzgeçten ya da listedeki tek seferden alıyor. Çok seferli listede her seferin
+     kendi sırası ayrı okunuyor — sıralar birbirine karışamaz. */
+  const runId = input.runId ?? runIdsInList[0] ?? null;
+  const run = runId ? (runById.get(runId) ?? null) : null;
 
   const stops: CourierStop[] = orders.map((order) => {
     const lines = items.filter((item) => item.orderId === order.id);
@@ -271,10 +296,22 @@ export async function listCourierDay(
       // Sıra aşağıda, tüm duraklar kurulduktan SONRA yazılıyor: numara dizideki yerden değil,
       // sıralanmış listedeki yerden gelir.
       stopSeq: null,
+      runId: order.deliveryRunId ?? runId ?? '',
+      runLabel: order.deliveryRunId
+        ? (zoneNames.get(runById.get(order.deliveryRunId)?.deliveryZoneId ?? '') ?? null)
+        : (run ? (zoneNames.get(run.deliveryZoneId) ?? null) : null),
     };
   });
 
-  return applyStopOrder(stops, run?.stopOrder ?? []);
+  return applyStopOrder(stops, runById);
+}
+
+/** Bölge adları — grup başlıkları için, tek turda (doğal tavanlı küme, CLAUDE §1). */
+async function zoneNamesOf(db: SupabaseClient, zoneIds: readonly string[]): Promise<Map<string, string>> {
+  if (zoneIds.length === 0) return new Map();
+  const service = new DeliveryZoneService(db);
+  const rows = await Promise.all(zoneIds.map((id) => service.getById(id)));
+  return new Map(rows.filter((row): row is NonNullable<typeof row> => row !== null).map((row) => [row.id, row.name]));
 }
 
 /**
@@ -285,13 +322,38 @@ export async function listCourierDay(
  * (`CLAUDE §1`). Ekran bu hâlde rayı çizmez ve "sırasız" der — kısmen numaralanmış bir liste,
  * numarasızdan kötüdür: kurye "3" görünce onu günün üçüncü durağı sanar.
  */
-function applyStopOrder(stops: readonly CourierStop[], stopOrder: readonly string[]): CourierStop[] {
-  if (stopOrder.length === 0) return [...stops];
+function applyStopOrder(
+  stops: readonly CourierStop[],
+  runById: ReadonlyMap<string, { deliveryZoneId: string; deliveryDate: string; stopOrder: readonly string[] | null }>,
+): CourierStop[] {
+  /*
+    SIRA SEFER BAŞINA (31.08) — araçta birden çok sefer olabiliyor ve her birinin KENDİ sırası var.
+    Eskiden tek bir `stopOrder` bütün listeye uygulanıyordu; iki seferli araçta bu, ikinci seferin
+    duraklarını "sırasız" (numarasız) bırakır ve birincinin numaralarını onların üstüne taşırdı.
 
-  return sortBySequence(stops, (stop) => stop.orderId, stopOrder).map(({ item, seq }) => ({
-    ...item,
-    stopSeq: seq,
-  }));
+    Gruplar arası sıra SEFERİN GÜNÜ: bugünün seferi önce, yarınınki sonra. Aynı günün iki seferi
+    arasında listedeki mevcut sıra korunur — uydurma bir öncelik kurmak, kuryenin hangi rotayı
+    önce süreceğine burada karar vermek olurdu (o karar onun).
+  */
+  const groups = new Map<string, CourierStop[]>();
+  for (const stop of stops) {
+    const bucket = groups.get(stop.runId);
+    if (bucket) bucket.push(stop);
+    else groups.set(stop.runId, [stop]);
+  }
+
+  const ordered = [...groups.keys()].sort((a, b) => {
+    const dateA = runById.get(a)?.deliveryDate ?? '';
+    const dateB = runById.get(b)?.deliveryDate ?? '';
+    return dateA === dateB ? 0 : dateA < dateB ? -1 : 1;
+  });
+
+  return ordered.flatMap((id) => {
+    const bucket = groups.get(id)!;
+    const stopOrder = runById.get(id)?.stopOrder ?? [];
+    if (stopOrder.length === 0) return bucket;
+    return sortBySequence(bucket, (stop) => stop.orderId, stopOrder).map(({ item, seq }) => ({ ...item, stopSeq: seq }));
+  });
 }
 
 /**
@@ -595,6 +657,37 @@ export async function startCourierDay(
  * sürülmüş günde KAPANMAMIŞ olan önceliklidir (akış sıralı: kapat → yeni sefer); hepsi kapalıysa
  * en yenisi döner (salt-okunur gösterim).
  */
+/**
+ * **ARAÇTAKİ SEFERLER** (31.08 · v3:15) — kurulmuş ve henüz KAPANMAMIŞ olanların hepsi.
+ *
+ * Kullanıcının modeli: *"bir çeşit araba ara depo gibi oluyor ve içinde birden fazla sefere ait
+ * sipariş taşıyor. Ve kurye istediği bir seferi başlatabiliyor."* İki senaryo besliyor bunu — dağ
+ * bölümünün ayrı rota olması (aynı gün, iki sefer) ve iki-üç günlük yolculuk (rotalar tek günlük).
+ *
+ * ── KÜME GÜNE DEĞİL ARACA BAKAR ─────────────────────────────────────────────
+ * Süzgeç `date` DEĞİL "kapanmamış": yarının seferi bugünden yüklenebiliyor ve güne süzülseydi o
+ * kutular hiçbir ekranda görünmezdi. Kapanan sefer listeden düşer — işi bitmiştir, kutuları da
+ * inmiştir (v3:13'ün kuralı: *"yalnız kapanan seferin dönenleri iner"*).
+ *
+ * Sıra SEFERİN GÜNÜ: bugünün seferi üstte, yarınınki altta — kurye rampada ne taşıdığını okurken
+ * zaman sırasını bekler.
+ */
+export async function readCourierRuns(
+  db: SupabaseClient,
+  input: { courierId: string },
+): Promise<CourierDayRunView[]> {
+  const runs = await new DeliveryRunService(db).listByCourier(input.courierId, {});
+  if (runs.length === 0) return [];
+
+  const closes = await new DeliveryRunCloseService(db).listByRuns(runs.map((run) => run.id));
+  const closedIds = new Set(closes.map((close) => close.deliveryRunId));
+  const onVan = runs
+    .filter((run) => !closedIds.has(run.id))
+    .sort((a, b) => (a.deliveryDate === b.deliveryDate ? 0 : a.deliveryDate < b.deliveryDate ? -1 : 1));
+
+  return Promise.all(onVan.map((run) => detailOf(db, run, false)));
+}
+
 export async function readCourierRun(
   db: SupabaseClient,
   input: { courierId: string; date?: string },
@@ -606,19 +699,26 @@ export async function readCourierRun(
   const closes = await new DeliveryRunCloseService(db).listByRuns(runs.map((run) => run.id));
   const closedIds = new Set(closes.map((close) => close.deliveryRunId));
   const run = runs.find((candidate) => !closedIds.has(candidate.id)) ?? runs[0]!;
+  return detailOf(db, run, closedIds.has(run.id));
+}
+
+/**
+ * Sefer satırından KÜNYE — iki okuma da (tekil `readCourierRun`, çoğul `readCourierRuns`) buradan
+ * geçer. Ortak olması bilinçli: ikisi ayrı kurulsaydı biri bir gün araç adını ya da depo adını
+ * eksik döndürürdü ve ekran hangisinden geldiğine göre farklı davranırdı (CLAUDE §1).
+ *
+ * ARAÇ ADI VE ÇIKIŞ DEPOSU (30.08 · uyuşmazlık #12) — künye ADSIZ eksikti. Ekran `vehicleId`nin
+ * uuid'sinden hangi aracın önüne gideceğini çıkaramaz. İkisi de PARALEL okunuyor: biri ötekini
+ * beklemek zorunda değil. Depo adı ZONE üzerinden geliyor (sefer bölgesine, bölge depoya bağlı);
+ * zone okunamazsa ikisi de `null` — "bilinmiyor"u uydurma bir ada düşürmek, kuryeyi yanlış rampaya
+ * gönderirdi (CLAUDE §1).
+ */
+async function detailOf(
+  db: SupabaseClient,
+  run: { id: string; referenceNo: string; deliveryZoneId: string; vehicleId: string | null; departedAt: string | null; returnedAt: string | null },
+  closed: boolean,
+): Promise<CourierDayRunView> {
   const zone = await new DeliveryZoneService(db).getById(run.deliveryZoneId);
-
-  /*
-    ARAÇ ADI VE ÇIKIŞ DEPOSU (30.08 · uyuşmazlık #12) — künye ADSIZ eksikti.
-
-    Ekran `vehicleId`nin uuid'sinden hangi aracın önüne gideceğini çıkaramaz; sefer künyesi bu
-    yüzden aracın *ulaşmadığını yazmak* zorunda kalıyordu. İkisi de PARALEL okunuyor: biri ötekini
-    beklemek zorunda değil ve ikisi de bu kapının cevabına eşit uzaklıkta.
-
-    Depo adı ZONE üzerinden geliyor (sefer bölgesine, bölge depoya bağlı). Zone okunamazsa ikisi de
-    `null` — "bilinmiyor"u boş dizeye ya da uydurma bir ada düşürmek, kuryeyi yanlış rampaya
-    gönderirdi (CLAUDE §1).
-  */
   const [vehicleLabel, warehouseName] = await Promise.all([
     vehicleLabelOf(db, run.vehicleId),
     zone ? warehouseNameOf(db, zone.warehouseId) : Promise.resolve(null),
@@ -634,7 +734,7 @@ export async function readCourierRun(
     warehouseName,
     departedAt: run.departedAt,
     returnedAt: run.returnedAt,
-    closed: closedIds.has(run.id),
+    closed,
   };
 }
 

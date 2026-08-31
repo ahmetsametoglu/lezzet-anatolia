@@ -834,13 +834,32 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
    *
    * `deliveryRunId` süzgeci (18.08): sefer kapanışı SEFERİN duraklarını sayar, günün değil — iki
    * rotalı günde ikinci rotanın durakları birinci seferin mutabakatına karışmamalı.
+   *
+   * `deliveryRunIds` (31.08): **araç bir ara depodur** ve içinde birden çok seferin — bugünün de
+   * yarının da — durakları durabilir. Gün ekranı artık GÜNE değil ARACA bakıyor; süzgeç bu yüzden
+   * sefer KÜMESİ alıyor. Kurye süzgeci yine imzada: `listByRuns` de var ama o sahiplik sormuyor
+   * (geçmiş sefer sayacı), buradaki okuma kuryenin kendi ekranıdır.
    */
   listByCourier(
     courierId: string,
-    opts: { deliveryDate?: string; deliveryZoneId?: string; deliveryRunId?: string; limit?: number } = {},
+    opts: {
+      deliveryDate?: string;
+      deliveryZoneId?: string;
+      deliveryRunId?: string;
+      deliveryRunIds?: readonly string[];
+      limit?: number;
+    } = {},
   ): Promise<Order[]> {
+    /* Boş küme = "araçta sefer yok" ve cevabı boş listedir. Süzgeci HİÇ uygulamamak, kuryenin
+       bütün geçmişini döndürürdü — sessiz ve en kötü türden bir kapsam kaçağı. */
+    if (opts.deliveryRunIds && opts.deliveryRunIds.length === 0) return Promise.resolve([]);
     return this.getAll(
-      { courierId, deliveryDate: opts.deliveryDate, deliveryZoneId: opts.deliveryZoneId, deliveryRunId: opts.deliveryRunId },
+      {
+        courierId,
+        deliveryDate: opts.deliveryDate,
+        deliveryZoneId: opts.deliveryZoneId,
+        deliveryRunId: opts.deliveryRunIds ? [...opts.deliveryRunIds] : opts.deliveryRunId,
+      },
       { orderBy: 'createdAt', limit: opts.limit },
     );
   }

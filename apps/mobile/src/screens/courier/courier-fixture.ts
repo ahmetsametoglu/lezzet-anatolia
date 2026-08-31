@@ -97,8 +97,14 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     outcomeNote: null,
     hasProof: false,
     attempts: 0,
-    // 23.8: durak kutuları da taşıyor — varsayılan "kutusuz akış" (eski yol).
-    boxes: [],
+    /* Kutu ARTIK ZORUNLU (30.08): kutusuz rota siparişi bir VERİ HATASI, "eski yol" değil.
+       Varsayılan tek kutu ve ARAÇTA — fikstürün kurduğu hâl yoldaki duraktır, o da yüklenmiş
+       kutuyla olur (31.08: yükleme ayrı bir an ama yola çıkmış durağın kutusu binmiştir). */
+    boxes: [{ boxNo: 1, code: `KT-26-${String(index).padStart(4, '0')}`, loadedAt: '2026-08-08T07:10:00.000Z' }],
+    /* DURAK HANGİ SEFERİN (31.08) — araçta birden çok sefer olabiliyor ve liste sefere göre
+       gruplanıyor. Varsayılan, fikstürün tek seferi (`courierRunBrief`in kimliği). */
+    runId: uuid(800),
+    runLabel: 'Kuzey rotası',
     /* Varsayılan `null` = SIRA BİLİNMİYOR (11.9). Bilerek sırasız: bugüne dek ekran dizi indeksini
        rota sırasıymış gibi gösteriyordu ve o sıra siparişin verilme sırasıydı. Sıralı günü sınayan
        test `stopSeq`i kendi verir. */
@@ -178,7 +184,17 @@ export function courierDay(
   stops: CourierStopContract[],
   overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {},
 ): CourierDayResponse {
-  return { date: '2026-08-08', run: courierDayRun(), doorAccountId: null, stops, ...overrides };
+  /* `runs` VARSAYILAN OLARAK sürülen seferi taşır (31.08): araçtaki seferlerin listesi ve sürülen
+     sefer o listenin İÇİNDEDİR, kopyası değil. Çoklu sefer ölçen test `runs` override'ı geçirir. */
+  const run = overrides.run === undefined ? courierDayRun() : overrides.run;
+  return {
+    date: '2026-08-08',
+    run,
+    runs: run ? [run] : [],
+    doorAccountId: null,
+    stops,
+    ...overrides,
+  };
 }
 
 export function dayCloseDraft(overrides: Partial<DayCloseDraftContract> = {}): DayCloseDraftContract {

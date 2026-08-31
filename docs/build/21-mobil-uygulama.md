@@ -9140,8 +9140,21 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Ölçüldü: **4006/4007** — kalan tek düşük adres/geo şeridinin `address_city_mismatch` işinden,
   dokunulmayan dosyalarda.
 
-  **BEKLEYEN(21.190):** kalan üç adım — (2) `/courier/day` sefer LİSTESİ dönsün, (3) durak
-  sözleşmesine `runId` + rota adı, (4) ekranlar (14'ün üç hâli · 15 Araçtaki Seferler · 16 çoklu
+  **Durum (31.08) — ADIM 2+3 BİTTİ: gün cevabı GÜNE değil ARACA bakıyor.** `/courier/day` artık
+  `runs` taşıyor (kurulmuş + kapanmamış seferlerin hepsi, gün sırasıyla) ve duraklar o KÜMEDEN
+  geliyor. `run` alanı kaldı ama daraldı: *"şu an hangisini sürüyorum"* — yola çıkmış ve kapanmamış
+  olan. Durak sözleşmesi `runId` + `runLabel` kazandı; liste sefere göre gruplanabiliyor.
+
+  **Ölçülen üç sonuç.** (a) Yarının seferi bugünden yüklenip görünebiliyor — güne süzülseydi o
+  kutular hiçbir ekranda çıkmazdı. (b) Durak sırası artık SEFER BAŞINA uygulanıyor: tek `stopOrder`
+  bütün listeye uygulanınca ikinci seferin durakları numarasız kalıyor ve birincinin numaraları
+  onların üstüne taşınıyordu. (c) Sefersiz sipariş gün listesinde GÖRÜNMÜYOR — doğru davranış:
+  kurye rotasını seçene dek ekran rota seçimi gösterir (v3:14 "Araçta sefer yok").
+
+  Künye kurulumu tek yere indi (`detailOf`): tekil ve çoğul okuma ayrı kurulsaydı biri bir gün
+  araç ya da depo adını eksik döndürür, ekran hangisinden geldiğine göre farklı davranırdı.
+
+  **BEKLEYEN(21.190):** kalan adım — ekranlar (14'ün üç hâli · 15 Araçtaki Seferler · 16 çoklu
   seçim + araç · 17 sefere göre gruplu yükleme).
 
   **BEKLEYEN(21.190):** `loadBox` hâlâ `order.courierId` okuyor, sefere değil — aynı kuryeye damgalı

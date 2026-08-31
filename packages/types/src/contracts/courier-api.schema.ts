@@ -198,6 +198,17 @@ export const CourierStopSchema = z.object({
    * yapsaydı aynı gün için iki farklı rota gösterirlerdi.
    */
   stopSeq: z.number().int().positive().nullable(),
+  /**
+   * **DURAK HANGİ SEFERİN** (31.08) — araç bir ara depodur ve içinde birden çok seferin durağı
+   * durabilir; liste artık sefere göre gruplanıyor (v3:14 "DURAKLAR · SEFERE GÖRE").
+   *
+   * Alan yoktu ve yokluğu sessizdi: `/courier/day` iki seferin durağını KARIŞIK tek listede
+   * döndürüyordu ve hangi durağın hangi rotaya ait olduğu söylenemiyordu bile. Ekran grubu
+   * kuramaz, kurye de "bu durak hangi rotamın" sorusunu cevaplayamazdı.
+   */
+  runId: z.string().uuid(),
+  /** Grubun okunur başlığı — rota adı ("Kuzey rotası"). `null` = bölge kaydı okunamadı. */
+  runLabel: z.string().nullable(),
 });
 export type CourierStopContract = z.infer<typeof CourierStopSchema>;
 
@@ -281,10 +292,27 @@ export type CourierRoutesResponse = z.infer<typeof CourierRoutesResponseSchema>;
 export const CourierDayResponseSchema = z.object({
   date: z.string(),
   /**
-   * Kuryenin o günkü SEFERİ — `null` = henüz rota almadı (18.08). Eski `started` yerel bayrağının
-   * halefi: kilit artık kendini onaran bir tahmin değil, sunucudaki kaydın kendisi.
+   * **SÜRÜLEN sefer** — yola çıkmış ve henüz kapanmamış olan (`null` = sürülen sefer yok).
+   *
+   * 31.08'e kadar bu alan "kuryenin o günkü seferi"ydi ve TEK sefer varsayıyordu. Model değişti:
+   * araçta birden çok sefer durabiliyor ve kurye istediğini başlatıyor. Alan kaldı ama daraldı —
+   * artık *"şu an hangisini sürüyorum"*un cevabı. Gün ekranının özet kartı bu kapsamı gösteriyor
+   * (v3:14: *"Bu sayım yalnız sürülen sefere aittir"*).
    */
   run: CourierRunDetailSchema.nullable(),
+  /**
+   * **ARAÇTAKİ SEFERLER** (31.08 · v3:15) — kurulmuş ve henüz kapanmamış olanların hepsi, gün
+   * sırasıyla. Kurulmuş sefer `departedAt: null` taşır: araçta bekliyor, kutuları okutulabilir,
+   * ama durakları açılmamış ve müşteriye haber gitmemiştir.
+   *
+   * **Küme GÜNE değil ARACA bakar** ve gerekçe kullanıcının senaryosudur: iki-üç günlük yolculukta
+   * yarının ve öbür günün seferleri de bugünden yüklenir. Güne süzülseydi o kutular hiçbir ekranda
+   * görünmezdi.
+   *
+   * Doğal tavanlı küme (bir araca elle yüklenen sefer sayısı) → tek turda çekilir, sayfalama yok
+   * (CLAUDE §1). `run` bu listenin İÇİNDEDİR, kopyası değil — ekran onu `runId` ile bulur.
+   */
+  runs: z.array(CourierRunDetailSchema),
   stops: z.array(CourierStopSchema),
   /**
    * **Kapıda tahsil edilen paranın gireceği hesap** (`door_cash_account_id` ayarı) — 21.10d.

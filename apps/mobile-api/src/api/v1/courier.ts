@@ -10,7 +10,7 @@ import {
   loadBox,
   markUndelivered,
   openDayClose,
-  readCourierRun,
+  readCourierRuns,
   readDoorCashAccountId,
   requestDeliveryProofUploadUrl,
   startCourierDay,
@@ -133,15 +133,28 @@ courier.get('/day', async (c) => {
   // Kapı kasası hesabı gün başına TEKİL ve duraklardan bağımsız; sefer künyesi de öyle — üç okuma
   // paralel gidiyor, hiçbiri ötekini beklemiyor. Ayarın anahtarı ve kullanılamaz değerin akıbeti
   // (null → tahsilat kapısı kapalı) KAPIDA yaşıyor; burada yalnız cevaba konuyor.
-  const [stops, doorAccountId, run] = await Promise.all([
-    listCourierDay(db, { courierId, date }),
+  /*
+    ARAÇ BİR ARA DEPO (31.08) — gün cevabı artık GÜNE değil ARACA bakıyor.
+
+    Önce araçtaki seferler okunuyor (kurulmuş + kapanmamış olanların hepsi; yarınınki de araçta
+    olabilir), duraklar da o KÜMEDEN geliyor. Eskiden `listCourierDay` yalnız `date` süzgeciyle
+    çağrılıyordu ve iki sefer sürüldüğünde ikisinin durakları KARIŞIK tek listede dönüyordu —
+    hangi durağın hangi rotaya ait olduğu söylenemiyordu bile (durakta `runId` yoktu).
+
+    `run` = SÜRÜLEN sefer: yola çıkmış (`departedAt` dolu) ve kapanmamış olan. Kurulmuş ama
+    başlamamış sefer araçta bekler ve bu alana düşmez — özet kartı yalnız sürülenin sayımıdır
+    (v3:14: *"Bu sayım yalnız sürülen sefere aittir"*).
+  */
+  const runs = await readCourierRuns(db, { courierId });
+  const run = runs.find((candidate) => candidate.departedAt !== null) ?? null;
+  const [stops, doorAccountId] = await Promise.all([
+    listCourierDay(db, { courierId, date, runIds: runs.map((candidate) => candidate.runId) }),
     readDoorCashAccountId(db),
-    readCourierRun(db, { courierId, date }),
   ]);
 
   // Gövde `z.input<…>` ile TİPLENİR: kapının döndürdüğü `CourierStop` sözleşmeye alan alan uymak
   // zorunda ve uymadığı gün burası DERLENMEZ (katalogdaki compile-lock deseni).
-  const body: z.input<typeof CourierDayResponseSchema> = { date, run, stops, doorAccountId };
+  const body: z.input<typeof CourierDayResponseSchema> = { date, run, runs, stops, doorAccountId };
   return ok(c, CourierDayResponseSchema.parse(body));
 });
 
