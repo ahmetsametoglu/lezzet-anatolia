@@ -12,7 +12,9 @@ import {
   ZoneNoticeService,
   serviceDb,
 } from '@lezzet/database';
-import { distanceKm, routeFitOf } from '@lezzet/domain-core';
+// `warehousePostalCode`/`warehousePoint` burada DOĞMUŞTU; 11.9'da motora terfi ettiler (ikinci
+// tüketici doğdu — sıra hesabı da deponun noktasını soruyor) ve kopya söküldü (`CLAUDE §1`).
+import { distanceKm, routeFitOf, warehousePoint, warehousePostalCode } from '@lezzet/domain-core';
 import { resolveLocalizedText } from '@lezzet/types';
 
 /**
@@ -91,7 +93,7 @@ export async function deliveryMap(demandLimit: number) {
   // fazla satır — kod kod sorgu atmak bu aracı yavaşlatırdı).
   // DEPO kodları da listede: hattın başlangıcı deponun konumudur, o çözülmezse güzergâh uyumu
   // hiç hesaplanamaz (ilk yazımda unutulmuştu — araç sessizce boş aday listesi dönüyordu).
-  const warehouseCodes = warehouses.flatMap((w) => { const c = postalOf(w.address); return c ? [c] : []; });
+  const warehouseCodes = warehouses.flatMap((w) => { const c = warehousePostalCode(w.address); return c ? [c] : []; });
   const wantedCodes = [...new Set([...covered, ...demand.map((d) => d.postalCode), ...warehouseCodes])];
   const places = new PostalCodePlaceService(db);
   const pointByCode = new Map<string, { lat: number; lng: number } | null>();
@@ -112,7 +114,7 @@ export async function deliveryMap(demandLimit: number) {
       warehouseCode: warehouse?.code ?? '?',
       warehouseName: warehouse?.name ?? null,
       /** Deponun konumu — hattın BAŞLANGICI. Adresin posta kodundan çözülür; yoksa uyum hesaplanamaz. */
-      warehousePoint: pointOfWarehouse(warehouse?.address, pointByCode),
+      warehousePoint: warehousePoint({ ...warehouse, centroidOf: (code) => pointByCode.get(code) }),
       /** Haftanın günleri — 1 = Pazartesi (ISO). Boş dizi "gün atanmamış" demek, "her gün" değil. */
       weekdays: z.weekdays,
       postalCodes: z.postalCodes.map((c) => c.postalCode),
@@ -124,7 +126,7 @@ export async function deliveryMap(demandLimit: number) {
       code: w.code,
       name: w.name,
       city: w.address?.city ?? null,
-      postalCode: postalOf(w.address),
+      postalCode: warehousePostalCode(w.address),
       isActive: w.isActive,
     })),
     zones: zoneRows,
@@ -187,24 +189,6 @@ export async function deliveryMap(demandLimit: number) {
         };
       }),
   };
-}
-
-/**
- * Deponun posta kodu — `address` serbest bir jsonb (`z.record(z.unknown())`), yani tip güvencesi
- * YOK. Boş/eksik hâlde `null` döner ve güzergâh uyumu o depo için hiç hesaplanmaz; uydurma bir
- * başlangıç noktası, bütün yön hesabını sessizce yanlış yapardı.
- */
-function postalOf(address: Record<string, unknown> | null | undefined): string | null {
-  const raw = address?.postalCode ?? address?.postal_code;
-  return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
-}
-
-function pointOfWarehouse(
-  address: Record<string, unknown> | null | undefined,
-  points: Map<string, { lat: number; lng: number } | null>,
-) {
-  const code = postalOf(address);
-  return code ? (points.get(code) ?? null) : null;
 }
 
 /** Bir kümedeki, kaynağa EN UZAK nokta — hattın istikametini veren uç. */

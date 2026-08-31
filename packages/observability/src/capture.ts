@@ -120,6 +120,14 @@ export const SOURCES = {
    * görünmeli.
    */
   applicationNotification: 'application-notification',
+  /**
+   * Kurye akışının paylaşılan kararları (`packages/application/src/courier`, 11.9) — bugün durak
+   * sırası. Aynı ayrım: hesap hem sefer başlarken hem gün okunurken tetikleniyor ve iki yüzeyden
+   * (mobil uç, web operasyon) geçiyor; sıralamanın düşmesi hangi yoldan gelirse gelsin tek adla
+   * görünmeli. Bu kova SESSİZ arızanın tek izidir: hesap düşse de kurye günü görmeye devam eder,
+   * yalnız duraklar numarasız kalır — kimse şikâyet etmez, log söyler.
+   */
+  applicationCourier: 'application-courier',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {

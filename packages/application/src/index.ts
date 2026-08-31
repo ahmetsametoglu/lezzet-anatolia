@@ -339,7 +339,7 @@ export { geocoder, geocoderConfigured } from './delivery/geocode-provider';
 export { resolveAddressPoint, type AddressPointCandidate } from './delivery/geo-address';
 export type { Geocoder, GeocodeOutcome, GeocodeQuery } from './delivery/geocode-port';
 export type { CourierDayStart, CourierRunBriefView, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
-export { listCourierRoutes } from './courier/routes';
+export { listCourierRoutes, listCourierVehicles } from './courier/routes';
 export type { CourierRouteView } from './courier/routes';
 export { confirmDoorDelivery } from './courier/delivery';
 export type { DeliveryProofInput, DoorCollectionInput, DoorDeliveryOutcome } from './courier/delivery';

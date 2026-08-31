@@ -19,6 +19,8 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | `kind` | warehouse_kind |  | `'facility'` |
 | `country_code` | country_code |  | `'FR'` |
 | `address` | jsonb | • |  |
+| `lat` | numeric(9, 6) | • |  |
+| `lng` | numeric(9, 6) | • |  |
 | `ships_online` | boolean |  | `false` |
 | `is_active` | boolean |  | `true` |
 | `sort_order` | int |  | `0` |
@@ -34,6 +36,17 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 - **`ships_online`** — kargo çıkış deposu — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
 - **`is_active`** — depo **kapatılır, silinmez**: geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorunda (FK'ler `restrict`)
 - **`sort_order`** — operatörün seçici sırası
+- **`lat`/`lng`** (11.9) — deponun coğrafi noktası: **rotanın çıpası**, kapalı turun başlangıcı ve
+  bitişi. `address` jsonb'sinin içine gömülmedi ve gerekçe yapısal: **gömülü sayı kısıt taşıyamaz** —
+  tek başına enlem yazan bir yolu hiçbir şey engelleyemezdi. Kolon hâlinde `warehouse_geo_point`
+  kısıtı (`postal_code_place`/`address` ile aynı) devrede.
+  `address`ten ayrılan tek yer: **kademe/kaynak alanı YOK.** Depo noktası bir taramanın çıktısı
+  değil, operatörün onayladığı noktadır — kademesi her zaman aynıdır ve hiç değişmeyecek bir değeri
+  her satıra yazmak olurdu. Depo tek haneli sayıda satırdır, ömür boyu bir kez girilir, yanlışlığı
+  HER rotayı bozar; "genelde doğru" burada yetmez.
+  `null` = girilmemiş → sıralama motoru o depo için çalışmayı **reddeder** (`no_start`) ve sebebini
+  söyler; varsayılan bir merkez uydurmaz. (Geri düşüş olarak deponun posta kodu merkezi okunabilir —
+  `warehousePoint`, ama o da bulunamazsa cevap "bilinmiyor"dur.)
 
 **Ülke başına EN FAZLA bir aktif kargo deposu** — kural kayıt kapısında değil veritabanında: `unique (country_code) where ships_online and is_active`. Anahtarın ülke olması K9'un "ileride ülke başına bir" hedefini bugünden karşılar; DE deposu açıldığında kendi kargo deposunu alır, kod değişmez.
 

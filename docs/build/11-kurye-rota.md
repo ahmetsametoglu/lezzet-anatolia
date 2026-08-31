@@ -33,6 +33,12 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
   - **"Yalnız kendi teslimatları" İMZADA durur:** `courierId` zorunlu parametredir, seçenek değil — çağıranın süzmeyi hatırlamasına bağlı bırakılmadı. `OrderService.listByCourier` de aynı imzayı taşır.
   - **Kurye tek bir para görür: tahsil edeceği tutar.** Maliyet, kâr, marj, alış fiyatı, vade/limit/borç dönen görünüm modelinde YOK (depo kuyruğuyla aynı yapısal sınır) — test serileştirilmiş çıktıda arıyor.
   - **"Ulaşılamadı" ile "henüz sıra gelmedi" TÜRETİLİR:** ikisi de `ready`'dir; ayrım `out_for_delivery → ready` geçiş sayısından çıkar, ayrı kolon açılmadı.
+  - ⚠ **Durum (31.08) — "rota sırasıyla" vaadi HENÜZ KARŞILANMADI.** Bu satır `[x]` ama listenin sırası
+    coğrafi değil: `OrderService.listByCourier` sabit `orderBy: 'createdAt'` kullanıyor, yani gösterilen
+    sıra **siparişin verilme sırası**dır ve ekranda `index + 1` olarak rota sırasıymış gibi çiziliyor.
+    Sevkiyat masası aynı sayıyı yazmayı bilerek reddediyordu (`dispatch-read.ts` künyesi: *"sistem
+    sırayı bilmiyor"*) — yani kod kendiyle çelişiyordu. Gerçek hesap **11.9**'un işi; o kapanana dek
+    buradaki "rota sırasıyla" ifadesi bir niyet, teslim edilmiş bir yetenek değil.
 - [~] (11.2) **Teslimat ekranı — onay:** kalem listesi + eksik/reddedilen işaretleme (tutar kendiliğinden düşer); B2B'de imza/foto zorunlu (parametrik) → `Order.delivery_proof`
   - *Bitti:* B2B teslimatı imzasız kapanmıyor; eksik işareti tutarı düşürüyor
   - **Durum (28.07) — arka uç hazır.** Kapı `apps/web/lib/courier/delivery.ts` (`confirmDoorDelivery`).
@@ -148,6 +154,99 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     **İki test çiviliyor** (`quick-sale.test.ts`, ikisi de sabotajla sınandı): damgalı-ama-kapanmamış
     sefer hâlâ açıktır (ölçüt damgaya çevrilirse kırmızı) · kapanmış sefere bağlanmaz (kapanış
     denetimi kalkarsa kırmızı — mutabakat fotoğrafı geçmişe dönük değişmez).
+
+- [~] (11.8) **Navigasyon devri:** durak kartından cihazın navigasyon uygulamasına geçiş — rota kurar, yer kartı açmaz
+  `touches: packages/domain-core/src/delivery/navigation.ts, apps/web/app/(operations)/operations/deliveries/deliveries-sections.tsx, apps/mobile/src/screens/courier/delivery-screen.tsx`
+  - **Durum (31.08) — MOTOR + WEB YAZILDI, mobil şeritte bekliyor** (`docs/talep/mobil-navigasyon-koprusu.md`).
+  - **Arıza neydi:** iki yüzeyde de URL elle yazılıydı ve ikisi de `maps/search/?api=1&query=` idi — o
+    adres bir **yer kartı** açar, yolculuğu BAŞLATMAZ. Kurye ekranda ikinci kez "Yol tarifi"ne basmak
+    zorundaydı; her durakta tekrarlanan bir dokunuş. Doğrusu `maps/dir/?api=1&destination=…`.
+  - **Motor `domain-core`'da, sözleşmede DEĞİL** (`navigation.ts`): kardeşi `whatsAppLink` sunucuda
+    hesaplanıp `CourierStop`a konuyor çünkü sunucunun BİLDİĞİ bir şeye dayanıyor (müşterinin dili,
+    normalize numara). Navigasyon hedefi ise **cihazın** kararı — hangi harita uygulaması kurulu,
+    iOS mu Android mi. Sunucu bilmediği bir şeye karar verseydi ekran onu düzeltmek zorunda kalırdı.
+    `CourierStopSchema` bu yüzden hiç değişmedi.
+  - **Yalnız `https` (+ Android'de `geo:`), `canOpenURL` YOK:** özel şemalar (`comgooglemaps://`)
+    kurulu değilse sessizce başarısız olur ve doğrulaması `canOpenURL` ister; Android 11+ paket
+    görünürlüğü yüzünden o da bildirilmemiş şemalarda yanlışlıkla `false` döner — doğru cevap
+    `app.json`'a `android.queries` + prebuild turu isterdi. `https` her cihazda çözülür: kazanç aynı,
+    bedel sıfır.
+  - **Yeni bağımlılık yok** (`STACK §2` beyanı gerekmedi); dokuz birim testi, merkezinde "rota kurar,
+    yer kartı açmaz" iddiası.
+  - **BEKLEYEN(11.8):** mobil `delivery-screen.tsx` hâlâ elle URL yazıyor ve `openURL` reddini yutuyor.
+
+- [~] (11.9) **Durak sırası — coğrafi, `createdAt` değil:** kapalı tur hesabı (2-opt + Or-opt), sıra `delivery_run.stop_order`'da; adres koordinatı (BAN) + posta kodu merkezi geri düşüşü, hangisi olduğu adlandırılır
+  `touches: supabase/migrations/0011_customer_fields.sql, supabase/migrations/0031_warehouse.sql, supabase/migrations/0046_delivery_run.sql, packages/domain-core/src/delivery/route-order.ts, packages/application/src/courier/stop-order.ts, packages/application/src/delivery/geocode-port.ts, packages/types/src/contracts/courier-api.schema.ts, apps/web/app/(operations)/operations/deliveries/deliveries-sections.tsx`
+  - **Etüt:** `docs/feature/durak-sirasi.md` (kardeşleri `sefer.md`, `cok-gunluk-sefer.md`) — üç
+    kullanıcı kararı (31.08) ve kuş uçuşunun yazılı sınırı orada.
+  - **`db:refresh` penceresi gerektirir** (üç migration) — **kullanıcının kararıdır**.
+  - Kapsam dışı ve bilinçli: elle sıra düzeltme (önce motor izlenir; `stop_order_source` kapıyı açık
+    tutar), mobil harita, zaman penceresi/soğuk zincir kısıtları.
+  - **Durum (31.08) — ZİNCİR ÇALIŞIYOR, adres koordinatı henüz yok.** Şema + motor + kapı + sözleşme
+    + web yüzeyi yazıldı; sıra bugün **posta kodu merkezinden** hesaplanıyor (`precision`
+    `postal_centroid`). Aynı kodda birden çok durak varsa aralarındaki sıra keyfîdir ve ekran bunu
+    söyleyebilir — bu, `createdAt`e göre devrim, gerçek yola göre yaklaşımdır.
+    - **Motor** `packages/domain-core/src/delivery/route-order.ts`: NN tohum + **2-opt + Or-opt**,
+      amaç fonksiyonu KAPALI TURUN toplamı (dönüş bacağı dahil). Kullanıcının U senaryosu bir kural
+      olarak yazılmadı, doğru amaç fonksiyonundan çıkıyor. 22 birim testi; merkezinde iki paralel
+      hat geometrisi ve *"depoya en yakın duraklardan biri en son teslim edilir"* iddiası.
+      **Sabotajla sınandı:** dönüş bacağı toplamdan çıkarılınca iki test kırmızıya döndü.
+    - **Determinizm yazılı:** süre bütçesi yok (adım tavanı var), tarama sırası sabit, yön kuralı
+      adlandırıldı, ve **girdi dizisinin sırası sonucu etkilemiyor** — etkileseydi `createdAt` gizli
+      bir eşitlik bozucu olarak arka kapıdan geri sızardı.
+    - **Sıra `delivery_run.stop_order uuid[]`de**, `order.stop_seq` kolonunda değil: sıra turun
+      özelliğidir, siparişin değil. Yazım RPC'den (`set_run_stop_order`) — `DeliveryRunService`in
+      "yazım RPC'dendir" değişmezi korundu; `manual` kaynak motor yazımını kilitliyor.
+    - **Hesap sefer başlatmayı BLOKE ETMİYOR:** `ensureStopOrder` hiçbir hâlde fırlatmıyor, düşerse
+      sıra `null` kalıyor. Bir rota iyileştirici aracın yola çıkmasını durduramaz.
+    - **Bayatlık zamana değil KÜMEYE bakıyor:** seferin bugünkü sipariş kümesi kayıtlı sırayı aşıyorsa
+      bayat. Damga ikinci rolde (60 sn bekleme) — düşmüş sağlayıcı her tazelemede dövülmesin.
+    - `postalOf`/`pointOfWarehouse` MCP aracından motora **terfi etti** (ikinci tüketici doğdu); kopya
+      söküldü.
+  - **Durum (31.08b) — ÖLÇÜLDÜ: posta kodu merkezi Strasbourg'da SIFIR bilgi taşıyor.** `db:refresh`
+    sonrası bugünün seferi sıralandı ama kodlar blok hâlinde çıkmadı; sebep ölçüldü: GeoNames
+    dökümünde **67000/67100/67200 kodlarının üçü de aynı noktayı** taşıyor (`0034:4298-4315`,
+    şehrin merkezi). Yani o rotadaki 12 durağın hepsi tek noktada, aralarındaki mesafe sıfır ve
+    üretilen sıra **keyfî**.
+    - **Motor artık bunu adlandırıyor:** `indistinguishable` reti (`orderStops`) — duraklar birbirinden
+      ayırt edilemiyorsa sıra YAZILMAZ. Keyfî bir sıra, sıra yokluğundan kötüdür: numaralanmış liste
+      kuryeye "bu hesaplandı" der ve kurye ona güvenir (`CLAUDE §1`). Kısmi çakışma sıralanmaya
+      devam ediyor — kaba sıra da bir sıradır, yeter ki kaba olduğu söylensin.
+    - **Sonuç: adres koordinatı opsiyonel DEĞİL.** Kullanıcının "karışık" cevabı (31.08) doğruydu ama
+      gerçek daha keskin — tek şehirli bir rotada posta kodu ekseni hiç ayırt etmiyor.
+    - **Adres koordinatı zemini yazıldı:** geocoding portu (`geocode-port`/`geocode-provider`, mevcut
+      `packages/address-fr` üstünde — **yeni npm bağımlılığı yok**), makullük süzgeci
+      (`plausiblePoint`, istemcinin noktası bir BEYANDIR), tarama cron'u
+      (`apps/backend/src/jobs/geocode-addresses.ts`, 10 dakikada bir, taramalı + idempotent),
+      ve adres düzenlenince noktanın düşmesi (`resolveAddressPoint` → `updateCustomerAddress`) —
+      yazılmasaydı müşteri adresini düzelttiğinde kurye ESKİ kapıya sıralanırdı.
+  - **Durum (31.08c) — BESLEME DÖRT HATTA AÇILDI** (kullanıcı kararı; 16.08'in *"rota sayısını bire
+    indirelim"* kararı yürürlükten kalktı). Gerekçe ölçümdü: tek rotanın üç kodu da aynı noktadaydı,
+    yani sıralama hiç sınanamıyordu.
+    - **Kuzey — Frankfurt** (STR, pzt+prş): 67000 · 67500 · 67160 · DE 76829 · DE 60311 → 183 km'ye
+    - **Batı — Metz** (STR, salı+cuma): 67100 · 67200 · 67700 · 57400 · 57000 → 130 km'ye
+    - **Güney — Mulhouse** (COLMAR, çrş+cts): 67600 · 68000 · 68100 → 98 km'ye
+    - **Doğu — Stuttgart** (KEHL, salı+cuma): DE 77694 · 77652 · 70173 → 107 km'ye
+    - Kodlar ve mesafeler `postal_code_place`ten **ölçüldü**, uydurulmadı. Hatların uçlarına on
+      adres ve bugünün kuzey hattına üç sipariş eklendi (22/48/71 km) — kapalı turun şekli ancak
+      yayılmış bir günde okunabilir.
+    - Yan kazanç: KEHL deposu ilk kez bir rotaya sahip; Batı ve Doğu **aynı gün** koşuyor, yani
+      kuryenin rota SEÇİMİ (K1) gerçekten sınanıyor. Rota dışı hâli Lyon (69007) taşımaya devam
+      ediyor. Sınır ötesi hat ADR-002'nin meşru saydığı şey.
+    - **Beslemede koordinat SABİT yazılıyor** (kullanıcı itirazı 31.08 — ilk hâlinde yazılmıyordu ve
+      her `db:refresh` sonrası elle bir komut gerekiyordu; unutulduğu gün sıra sessizce posta kodu
+      merkezine düşerdi). "Ağa çıkma" ilkesinin doğru sonucu *koordinat yazmamak* değil, **bir kez
+      çekip sabitlemek** — `postal_code_place` verisi de aynı yolla üretiliyor. FR değerleri BAN'dan
+      (`housenumber`, skorlarıyla doğrulandı), DE değerleri kod merkezi (`municipality` — kapı değil
+      ve öyle söyleniyor). **19 adresin 19'u noktalı.**
+    - `pnpm geo:backfill` duruyor ama artık refresh'in parçası değil: beslemenin bilmediği adresler
+      (uygulamadan girilen, operasyon panelinden açılan) için — cron aynı işi zaten yapıyor.
+    - **BEKLEYEN(11.9):** ① öneri noktasının yazma yollarına bağlanması (koordinat `AddressSuggestion`
+      içinde zaten geliyor; form + `addCustomerAddress` dokunuşu — web ve mobil ayrı şerit)
+      ② mobil ekranın `stopSeq`e bağlanması (`docs/talep/mobil-durak-sirasi-alani.md`)
+      ③ depo noktasının ops formundan elle girilmesi (bugün yalnız beslemeden geliyor)
+      ④ `geocode.testkit.ts` (`fakeGeocoder`) henüz tüketicisiz — tarama işinin entegrasyon testi
+      yazıldığında kullanılacak.
 
 ## Netleşecekler
 

@@ -373,6 +373,23 @@ create index user_profiles_b2b_pending_idx on public.user_profiles (b2b_applied_
 -- Taslak listesi (birleştirme ekranı).
 create index user_profiles_draft_idx on public.user_profiles (created_at desc) where is_draft = true;
 
+-- ── ADRESİN COĞRAFİ NOKTASI — İKİ ENUM (11.9) ───────────────────────────────────────────────────
+-- Rota sıralaması için gereken şey adresin nerede olduğudur; bugüne dek sistem bunu ancak POSTA KODU
+-- düzeyinde biliyordu (`postal_code_place.lat/lng`) ve bir kodda 20 durak varsa hepsi tek noktaya
+-- çöküyordu — yani sıralanamıyordu.
+--
+-- **İNCELİK SAKLANIR, ÇÜNKÜ ÖLÇÜM HER ZAMAN AYNI DEĞİL** (`CLAUDE §1`): BAN'ın `housenumber`
+-- eşleşmesi kapıyı gösterir, `municipality` eşleşmesi BELEDİYE MERKEZİNİ — kilometrelerce sapabilir.
+-- İkisini tek `lat/lng` çiftinde eşitlemek kaba bir ölçümü kesinmiş gibi okuturdu ve hata GÖRÜNMEZ
+-- kalırdı: liste dolu ve makul görünür, yalnız kurye yanlış sıraya dizilir.
+--
+-- Kademeler BAN'ın kendi dört değerinin AYNASI (`packages/address-fr` `BanResultTypeSchema`):
+-- yeniden adlandırmak bir eşleme tablosu ve o tablonun bir gün ayrışması demekti.
+create type public.address_geo_precision as enum ('housenumber', 'street', 'locality', 'municipality');
+-- Bugün iki kaynak: servis çözdü ya da insan koydu. Almanya sağlayıcısı takıldığı gün buraya bir
+-- değer eklenir — çağıran hiç değişmez.
+create type public.address_geo_source as enum ('ban', 'manual');
+
 -- `customer_id` = "müşteri rolüyle davranan profil". Kolon adı ticari bağlamda okunur kalsın diye
 -- domain dilinde tutulur; işaret ettiği yer tek kimlik tablosudur.
 create table public.address (
@@ -416,9 +433,39 @@ create table public.address (
   country country_code not null default 'FR',
   -- Checkout'un önceden seçtiği adres; TEKİLDİR (yenisi seçilince eskisi düşer).
   is_default boolean not null default false,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+
+  -- ── COĞRAFİ NOKTA (11.9) ──────────────────────────────────────────────────
+  -- Nullable ve öyle kalacak: adres defteri hiçbir hâlde reddetmez (kullanıcı kararı 10.08) ve
+  -- koordinat çözümü ağın öbür ucunda. Noktasız adres "sıralanamadı" der, sıfıra düşmez.
+  lat numeric(9, 6),
+  lng numeric(9, 6),
+  geo_precision address_geo_precision,
+  geo_source address_geo_source,
+  -- ÖLÇÜMÜN anı (nokta yazıldığı an) ile son DENEME anı ayrı sorular: ikincisi taramanın frenidir.
+  geo_at timestamptz,
+  geo_checked_at timestamptz,
+  -- Servisin kaç kez "eşleşme yok" dediği. Yalnız CEVAPLI ret sayılır — geçici arıza
+  -- (`unavailable`/`rate_limited`) sayacı tüketmez, yoksa servisin düştüğü bir öğleden sonra
+  -- yüzlerce adres kalıcı olarak "çözülemez" damgası yerdi. Böylece "adres yanlış yazılmış" ile
+  -- "servis o gün düşüktü" ayrı kalır ve ayrı bir `geo_status` kolonuna gerek kalmaz.
+  geo_attempts int not null default 0,
+
+  -- İkisi birlikte var ya da birlikte yok (`postal_code_place_point` emsali): tek başına enlem bir
+  -- nokta değildir.
+  constraint address_geo_point check ((lat is null) = (lng is null)),
+  -- Kaynağı olan ama noktası olmayan satır YASAK. Böyle bir satır, yazma yolunun yarım kalması
+  -- demektir ve sessizce "ölçüldü" gibi okunurdu.
+  constraint address_geo_meta check (
+    lat is not null or (geo_precision is null and geo_source is null and geo_at is null)
+  )
 );
 -- `in_route` SAKLANMAZ: posta kodunun aktif bir DeliveryZone'a düşmesinden türetilir (modül 07).
+
+-- Taramanın kuyruğu — çözülmüş satırlar indekse hiç girmez (çoğunluk oradadır).
+-- Eşik (`geo_attempts < N`) yükleme YAZILMAZ: indeks yüklemi değişmez olmalı ve eşik parametrik
+-- kalmalı; süzgeç sorgunun kendisinde.
+create index address_geo_pending_idx on public.address (geo_checked_at nulls first) where lat is null;
 
 create index address_customer_idx on public.address (customer_id);
 

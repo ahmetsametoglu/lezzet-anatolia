@@ -39,4 +39,27 @@ export class AddressService extends BaseDbService<Address, AddressInsert, Addres
     const existing = await this.listByCustomer(input.customerId);
     return this.insert({ ...input, isDefault: input.isDefault ?? existing.length === 0 });
   }
+
+  /** Kimlik kümesiyle okuma — sipariş snapshot'ında koordinat yoksa adres kaydından çözmek için. */
+  async listByIds(ids: readonly string[]): Promise<Address[]> {
+    if (ids.length === 0) return [];
+    return this.getAll({ id: [...ids] });
+  }
+
+  /**
+   * **Koordinatı çözülmemiş adresler** — tarama işinin kuyruğu (11.9). Karar vermez, satır getirir.
+   *
+   * Sıra `geoCheckedAt` artan — PostgREST varsayılanında **boşlar önce** gelir ve istenen tam bu:
+   * hiç denenmemiş satır, bir kez denenip başarısız olandan önce sıralanır (`address_geo_pending_idx`
+   * de bu sıraya göre kurulu). Deneme eşiği burada SÜZGEÇ olarak veriliyor, indeks yükleminde
+   * değil — indeks yüklemi değişmez olmak zorunda ve eşik parametrik kalmalı.
+   */
+  listMissingGeo(input: { limit: number; maxAttempts: number }): Promise<Address[]> {
+    return this.getAll(undefined, {
+      isNullFields: ['lat'],
+      rangeFilters: [{ field: 'geoAttempts', operator: 'lt', value: input.maxAttempts }],
+      orderBy: 'geoCheckedAt',
+      limit: input.limit,
+    });
+  }
 }

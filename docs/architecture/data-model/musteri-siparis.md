@@ -165,6 +165,13 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `country` | country_code |  | `'FR'` |
 | `is_default` | boolean |  | `false` |
 | `created_at` | timestamptz |  | `now()` |
+| `lat` | numeric(9, 6) | • |  |
+| `lng` | numeric(9, 6) | • |  |
+| `geo_precision` | address_geo_precision | • |  |
+| `geo_source` | address_geo_source | • |  |
+| `geo_at` | timestamptz | • |  |
+| `geo_checked_at` | timestamptz | • |  |
+| `geo_attempts` | int |  | `0` |
 <!-- /alanlar -->
 
 **Kararlar**
@@ -173,6 +180,23 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 - **`recipient`** — adrese **giden** kişi — hesap sahibiyle aynı olmak zorunda değil (hediye, iş adresi, aile büyüğü). Kurye kapıda kimi soracağını buradan bilir. **ZORUNLU** (kullanıcı kararı 22.08): adres kaydı *"burada kim teslim alır"* sorusunun cevabıdır; nullable kaldığı sürece cevap okuma anına erteleniyor ve okuyan her uç kendi yedeğini uyduruyordu — ölçüldü, iki yüzey aynı veride zıt karar verdi. Kolaylık formda: yeni adres hesabın künyesiyle **dolu** açılır
 - **`phone`** — **teslimat** telefonu; `user_profiles.phone` hesabın numarasıdır, bu adresin. Kapıya teslimde kurye zili çalmadan önce arar — hediye adresinde aranacak numara alıcınınkidir. **ZORUNLU** (22.08, gerekçe `recipient` ile aynı). Biçim E.164 ve **istemcide** indirgenir (`normalizePhone`); kolonda biçim kısıtı YOK — dayatan bir check, numarası olan müşteriyi adres ekleyemez hâle getirirdi (adres defteri reddetmez, 10.08)
 - **`is_default`** — müşterinin varsayılan adresi — checkout onu önceden seçer; **tekildir** (yenisi seçilince eskisi düşer). İlk adres otomatik varsayılan olur
+
+- **`lat`/`lng` + `geo_*`** (11.9) — adresin coğrafi noktası, rota sıralamasının girdisi. `null` =
+  **ölçülemedi**, sıfır değil: koordinatsız durak sıralamadan düşmez, "sırasız" görünür. İki kısıt
+  veride: `address_geo_point` (ikisi birlikte var ya da yok) ve `address_geo_meta` (kaynağı olan ama
+  noktası olmayan satır yasak — yarım kalmış bir yazma yolu sessizce "ölçüldü" gibi okunurdu).
+- **`geo_precision`** — **incelik SAKLANIR çünkü ölçüm her zaman aynı değil.** BAN'ın `housenumber`
+  eşleşmesi kapıyı gösterir, `municipality` eşleşmesi belediye merkezini — kilometrelerce sapar.
+  İkisini tek `lat/lng` çiftinde eşitlemek kaba bir ölçümü kesinmiş gibi okuturdu ve hata görünmez
+  kalırdı: liste dolu ve makul görünür, yalnız kurye yanlış sıraya dizilir. Kademeler BAN'ın kendi
+  dört değerinin aynası — yeniden adlandırmak bir eşleme tablosu ve onun bir gün ayrışması demekti.
+- **`geo_attempts`** — yalnız servis **cevaplı** ret verdiğinde ("eşleşme yok") artar. Geçici arıza
+  sayacı tüketmez, yalnız `geo_checked_at`i iter; yoksa servisin düştüğü bir öğleden sonra yüzlerce
+  adres kalıcı "çözülemez" damgası yerdi. Sayacın kendisi durumdur — ayrı bir `geo_status` yok.
+- **Posta kodu merkezi bu satıra KOPYALANMAZ.** Merkez zaten `postal_code_place.lat/lng`de duruyor;
+  kopyalamak türetilmiş bir değeri kalıcılaştırmak olurdu (`postal:build` yenilendiğinde bayatlar) ve
+  daha kötüsü `lat is null` süzgeci yalan söylerdi — satır "çözülmüş" görünür, bir daha hiç denenmez.
+  Geri düşüş **okuma anında ve görünür**: sonucun inceliği `delivery_run.stop_order_precision`da yazar.
 
 **`in_route` bir KOLON DEĞİL, türetilir:** posta kodu aktif bir `DeliveryZone`'a düşüyor mu — **saklanmaz**.
 
@@ -565,6 +589,12 @@ hazırlanırken doğar. Kararlar ve gerekçeler: `docs/feature/sefer.md`.
 | `departed_at` | timestamptz | • |  |
 | `returned_at` | timestamptz | • |  |
 | `note` | text | • |  |
+| `stop_order` | uuid[] |  | `'{}'` |
+| `stop_order_source` | text | • |  |
+| `stop_order_metric` | text | • |  |
+| `stop_order_precision` | text | • |  |
+| `stop_order_generated_at` | timestamptz | • |  |
+| `stop_order_by` | uuid | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
@@ -575,15 +605,36 @@ hazırlanırken doğar. Kararlar ve gerekçeler: `docs/feature/sefer.md`.
 - **`courier_id`** — `restrict` — kim sürdü; siparişin `courier_id`si start'ta BURADAN senkronlanır
 - **`vehicle_id`** — `restrict`; zorunluluk parametrik (Setting) — soğuk zincir izi araç üstünden
 - **`created_at`** / **`departed_at`** / **`returned_at`** — üç damga; durum makinesi YOK, hâl türetilir
+- **`stop_order`** (11.9) — durak sırası **turun özelliğidir, siparişin değil**: `order.stop_seq`
+  kolonu paydasız bir sayı olurdu ve sipariş başka güne taşındığı an sessizce yalana dönerdi. Emsal
+  aynı tabloda: `delivery_run_close.delivered_orders uuid[]`.
+  **Dizi SIRALAMADIR, ÜYELİK DEĞİL** — üyelik `order.delivery_run_id`de kalır; okuma dizideki yere
+  göre dizer ve dizide olmayan durak DÜŞMEZ, sırasız olarak sona gider. Bayat bir dizi bu yüzden
+  hiçbir durağı gizleyemez; `uuid[]`in FK taşımaması kabul edilmiş bedeldir.
+- **`stop_order_source`** — `manual` bir KİLİTTİR: `set_run_stop_order` motor yazımını `p_force`
+  olmadan reddeder. Elle sıra YÜZEYİ bugün yok (kullanıcı kararı 31.08: önce motor izlenir); alan
+  kapıyı açık tutuyor.
+- **`stop_order_metric`** / **`stop_order_precision`** — ölçü ve incelik **veriye yazılır**, yalnız
+  log'a değil: log'a bakan yok, ekrandaki sıraya bakan var. Kuş uçuşu turun makro şeklini doğru
+  kurar ama bariyerin (nehir, tek yön) iki yakasını "200 m" sayar. `postal_centroid` = sıra sokak
+  düzeyinde DEĞİL, aynı koddaki duraklar arasında keyfî.
+- **`stop_order_generated_at`** — KARARIN anı; sonuç boş olsa da damgalanır ("hesaplandı,
+  sıralanamadı"), yoksa düşmüş bir sağlayıcı her ekran yoklamasında yeniden dövülürdü.
 
 **`order.delivery_run_id`** (`set null`): sipariş hangi gerçekleşen seferle gitti — yalnız
 `start_delivery_run` yazar, teslimle donar. `courier_id` sonradan oynasa da "kim götürdü"nün
 kanıtlı cevabı seferdir.
 
-**Üç RPC:** `start_delivery_run` (satır + siparişlerin claim'i tek transaction; aynı kuryenin açık
+**Dört RPC:** `start_delivery_run` (satır + siparişlerin claim'i tek transaction; aynı kuryenin açık
 sefere ikinci basışı catch-up claim — sonradan hazırlanan duraklar da bağlanır; durum geçişi RPC'de
 DEĞİL, motor izniyle uygulama katmanında) · `close_delivery_run` (aşağıda) · `reassign_delivery_run`
-(K2 devri: run + açık siparişlerin kuryesi birlikte; sonuçlanmış duraklara dokunulmaz).
+(K2 devri: run + açık siparişlerin kuryesi birlikte; sonuçlanmış duraklara dokunulmaz) ·
+`set_run_stop_order` (11.9 — sıra yazımı; `manual` kaynağı ve kapanmış seferi korur).
+
+**Sıra hesabı RPC'de DEĞİL:** sıralama bir karardır (`domain-core/delivery/route-order` — kapalı tur,
+2-opt + Or-opt) ve uygulama katmanının kapısından geçer (`ensureStopOrder`); `start_delivery_run`
+claim'in atomikliğini taşır. Aynı ayrım migration künyesinde zaten yazılı ("durum geçişi burada
+yapılmaz"). Hesap sefer başlatmayı **bloke etmez**: düşerse sıra `null` kalır, ekran "sırasız" der.
 
 ## DeliveryRunClose (sefer kapanışı — kurye×gün kapanışının halefi, 18.08)
 

@@ -62,6 +62,7 @@
     "db:refresh:base": "node scripts/with-test-lock.mjs --kind=ddl sh -c \"supabase db reset && tsx scripts/seed.ts --tier=base && tsx scripts/seed-coverage.ts --tier=base\"",
     "db:refresh:extend": "node scripts/with-test-lock.mjs --kind=ddl sh -c \"supabase db reset && tsx scripts/seed.ts --tier=extend && tsx scripts/seed-coverage.ts --tier=extend\"",
     "set-role": "tsx scripts/set-role.ts",
+    "geo:backfill": "tsx scripts/geocode-backfill.ts",
     "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
     "stripe:smoke": "tsx scripts/stripe-smoke.ts",
     "ai:smoke": "tsx scripts/ai-smoke.ts",

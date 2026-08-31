@@ -78,6 +78,10 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       name: 'Strasbourg — ana depo',
       countryCode: 'FR',
       address: { line1: '12 rue du Marché', postalCode: '67000', city: 'Strasbourg', country: 'FR' },
+      // Deponun noktası (11.9) — rotanın çıpası; onsuz sıra hesabı `no_start` der. Sabit değer,
+      // ağa çıkılmaz: besleme çevrimdışı ve belirlenimci olmalı.
+      lat: 48.5839,
+      lng: 7.7455,
       shipsOnline: true,
       sortOrder: 1,
     });
@@ -90,6 +94,8 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       name: 'Kehl — sınır deposu',
       countryCode: 'DE',
       address: { line1: 'Hauptstraße 8', postalCode: '77694', city: 'Kehl', country: 'DE' },
+      lat: 48.5735,
+      lng: 7.8148,
       // Almanya'da HENÜZ kargo yok: DE deposundan DE müşterisine satış "yerel satış"tır ve vergi
       // modelini değiştirir (DOMAIN §5/§17). Mali danışmana sorulmadan açılmaz.
       shipsOnline: false,

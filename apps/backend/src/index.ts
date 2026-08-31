@@ -30,6 +30,7 @@ import { NOTIFICATION_RETENTION, notificationRetentionJob } from './jobs/notific
 import { PURGE_OBSERVABILITY, purgeObservabilityJob } from './jobs/purge-observability';
 import { ANALYTICS_INSIGHT, analyticsInsightJob } from './jobs/analytics-insight';
 import { ANALYTICS_ROLLUP, analyticsRollupJob } from './jobs/analytics-rollup';
+import { GEOCODE_ADDRESSES, geocodeAddressesJob } from './jobs/geocode-addresses';
 import { ZONE_AVAILABLE, zoneAvailableJob } from './jobs/zone-available';
 import { runJob } from './jobs/runner';
 import { PUSH_RECEIPTS, pushReceiptsJob } from './jobs/push-receipts';
@@ -207,6 +208,15 @@ cron.schedule('35 3 * * *', () => {
 cron.schedule('40 3 * * *', () => {
   void runJob(ANALYTICS_ROLLUP, analyticsRollupJob);
 }, { timezone: 'Europe/Paris' });
+
+// Adres koordinatı taraması (11.9) — rota sıralamasının besleyicisi; on dakikada bir.
+//
+// Gece penceresine konmadı ve saat dilimi verilmedi BİLEREK: işin gün/saat eşiği yok, sıklık eşiği
+// var. Yeni bir adres kurye rotasına en erken ertesi gün girer, yani onlarca dakikalık gecikme
+// hiçbir yerde görünmez; kuyruk boşken tur tek sorguyla no-op.
+cron.schedule('*/10 * * * *', () => {
+  void runJob(GEOCODE_ADDRESSES, geocodeAddressesJob);
+});
 
 // Bölge açıldı → bekleyenlere haber (14.10 · 19.21) — saatte bir.
 //

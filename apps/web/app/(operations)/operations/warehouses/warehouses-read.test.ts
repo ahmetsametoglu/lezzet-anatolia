@@ -16,6 +16,8 @@ const WAREHOUSE = {
   kind: 'facility' as const,
   countryCode: 'FR' as const,
   address: null,
+  lat: null,
+  lng: null,
   shipsOnline: false,
   isActive: true,
   sortOrder: 1,

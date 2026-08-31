@@ -343,8 +343,50 @@ export const StartCourierDayRequestSchema = z.object({
   date: z.string().optional(),
   zoneId: z.string().uuid().optional(),
   vehicleId: z.string().uuid().optional(),
+  /**
+   * **Yola ÇIKARMADAN kur** (31.08). `false` = sefer kurulur (satır doğar, siparişler damgalanır,
+   * kutular okutulabilir) ama başlamaz: durakları açılmaz ve müşteriye haber gitmez.
+   * Varsayılan `true` — tek düğmeli eski akış bozulmasın.
+   */
+  depart: z.boolean().optional(),
 });
 export type StartCourierDayRequest = z.infer<typeof StartCourierDayRequestSchema>;
+
+/**
+ * **Kuryenin seçebileceği araçlar** (31.08 · v3:16) — yalnız kendi deposuna künyeli olanlar.
+ *
+ * Kullanıcı kararı: *"kurye aracını seçebilsin… ait olduğu deponun ait olan araçlarını görüp
+ * seçebilsin. Şu an burayı kompleksleştirmeyelim."* Tasarım 15'in eski notu (*"araç seçimi masada
+ * yapılır"*) bu kararla düştü.
+ *
+ * Ad KİMLİĞİN yanında: kurye rampada `vehicleId`nin uuid'sinden hangi aracın önüne gideceğini
+ * çıkaramaz (künyenin `vehicleLabel`ıyla aynı gerekçe). `label` boşsa plaka ADIN kendisidir.
+ */
+export const CourierVehicleSchema = z.object({
+  vehicleId: z.string().uuid(),
+  plate: z.string(),
+  /** Okunur ad ("Frigo kamyonet"); `null` = adı yok, ekran plakayı yazar. */
+  label: z.string().nullable(),
+});
+export type CourierVehicle = z.infer<typeof CourierVehicleSchema>;
+
+export const CourierVehiclesResponseSchema = z.object({ vehicles: z.array(CourierVehicleSchema) });
+export type CourierVehiclesResponse = z.infer<typeof CourierVehiclesResponseSchema>;
+
+
+/**
+ * KUTULU sipariş — tüm kutuları binene kadar "yolda" YAZILMAZ (23.8, etüt 2.4: *"araca binmeyen
+ * kutu 'yolda' görünmez"*). `skipped`ten AYRI bir liste, çünkü çare farklı: bunlar hazırlanmayı
+ * değil OKUTULMAYI bekliyor ve ekran sayacı buradan kurar.
+ *
+ * Adlı bir şema oldu (31.08) çünkü artık iki cevap taşıyor: sefer kurma ve sefer başlatma.
+ */
+export const AwaitingBoxesStopSchema = z.object({
+  orderId: z.string().uuid(),
+  loadedBoxes: z.number().int(),
+  boxCount: z.number().int(),
+});
+export type AwaitingBoxesStop = z.infer<typeof AwaitingBoxesStopSchema>;
 
 /** Yola çıkarılamayan durak — kimliği ve O ANDAKİ durumu. Durum, sebebin kendisidir. */
 export const CourierDayStopStateSchema = z.object({
@@ -381,15 +423,8 @@ export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
     stale: z.array(CourierDayStopStateSchema),
     /** Yola çıkarılmadı — durumu uygun değil (henüz hazırlanmadı ya da gün içinde kapandı). */
     skipped: z.array(CourierDayStopStateSchema),
-    /**
-     * KUTULU sipariş — tüm kutuları binene kadar "yolda" YAZILMAZ (23.8, etüt 2.4: *"araca
-     * binmeyen kutu 'yolda' görünmez"*). Yola çıkışı `loadBox` tamamlar: son kutu okutulunca
-     * geçiş oradan yazılır. `skipped`ten ayrı bir liste, çünkü çare farklı — bunlar hazırlanmayı
-     * değil OKUTULMAYI bekliyor ve ekran sayacı buradan kurar.
-     */
-    awaitingBoxes: z.array(
-      z.object({ orderId: z.string().uuid(), loadedBoxes: z.number().int(), boxCount: z.number().int() }),
-    ),
+    /** Kutuları binmemiş duraklar — künyesi `AwaitingBoxesStopSchema`da. */
+    awaitingBoxes: z.array(AwaitingBoxesStopSchema),
   }),
   /**
    * Rota+gün başına TEK sefer (18.08): bu rota bugün zaten açılmış. `mine` = başlatan bu kurye —
@@ -408,6 +443,28 @@ export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('no_route') }),
 ]);
 export type StartCourierDayResponse = z.infer<typeof StartCourierDayResponseSchema>;
+
+/**
+ * **Seferi yola çıkar** (31.08 · v3:15 "Seferi başlat") — kurulmuş seferin damgası.
+ *
+ * Ayrı bir uç olmasının sebebi modelin kendisi: araçta birden çok sefer duruyor ve kurye
+ * *istediğini* başlatıyor. Hangisi olduğu URL'de, çünkü eylem o seferin üstünde.
+ */
+export const DepartCourierRunResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    date: z.string(),
+    run: CourierRunDetailSchema,
+    started: z.array(z.string().uuid()),
+    alreadyOut: z.array(z.string().uuid()),
+    stale: z.array(CourierDayStopStateSchema),
+    skipped: z.array(CourierDayStopStateSchema),
+    awaitingBoxes: z.array(AwaitingBoxesStopSchema),
+  }),
+  /** Sefer yok ya da senin değil — ikisi AYNI cevap: sefer kimlikleri haritalanamaz. */
+  z.object({ status: z.literal('not_found') }),
+]);
+export type DepartCourierRunResponse = z.infer<typeof DepartCourierRunResponseSchema>;
 
 /**
  * **Araca yükleme okutması** (23.8 · karar §1.11). Kod gövdede gider (URL'de kod, erişim

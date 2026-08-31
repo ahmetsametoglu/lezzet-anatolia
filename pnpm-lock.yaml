@@ -521,6 +521,9 @@ importers:
 
   packages/application:
     dependencies:
+      '@lezzet/address-fr':
+        specifier: workspace:*
+        version: link:../address-fr
       '@lezzet/ai':
         specifier: workspace:*
         version: link:../ai

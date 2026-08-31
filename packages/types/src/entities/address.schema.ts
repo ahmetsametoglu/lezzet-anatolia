@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { CountryEnum } from '../primitives/enums.schema';
+import { AddressGeoPrecisionEnum, AddressGeoSourceEnum, CountryEnum } from '../primitives/enums.schema';
+import { dbNumericNullable } from '../primitives/db-numeric';
 
 // Address — müşteri adresi. `customerId` = "müşteri rolüyle davranan profil" (`user_profiles.id`);
 // ayrı bir müşteri tablosu yoktur (bkz. user-profile.schema).
@@ -41,8 +42,49 @@ export const AddressSchema = z.object({
   /** Checkout'un önceden seçtiği adres — tekildir (yenisi seçilince eskisi düşer). */
   isDefault: z.boolean(),
   createdAt: z.string(),
+
+  /**
+   * Adresin coğrafi noktası (11.9) — rota sıralamasının girdisi.
+   *
+   * `null` = **ölçülemedi**, sıfır değil (`CLAUDE §1`): koordinatsız durak sıralamadan düşmez,
+   * "sırasız" olarak görünür. (0, 0) Gine Körfezi'dir ve kuryeyi oraya dizmek sessiz bir arızadır.
+   * İkisi birlikte var ya da birlikte yok — kolon kısıtı bunu zorluyor (`address_geo_point`).
+   */
+  lat: dbNumericNullable,
+  lng: dbNumericNullable,
+  /** Ölçümün inceliği — `municipality` bir kapıyı değil belediye merkezini gösterir. */
+  geoPrecision: AddressGeoPrecisionEnum.nullable(),
+  geoSource: AddressGeoSourceEnum.nullable(),
+  /** Noktanın YAZILDIĞI an. */
+  geoAt: z.string().nullable(),
+  /** Son DENEME anı (başarısız da olsa) — taramanın freni; `geoAt` ile ayrı sorulardır. */
+  geoCheckedAt: z.string().nullable(),
+  /**
+   * Servisin kaç kez "eşleşme yok" dediği. Yalnız CEVAPLI ret sayılır: geçici arıza sayacı
+   * tüketmez, yoksa servisin düştüğü bir öğleden sonra yüzlerce adres kalıcı "çözülemez" damgası
+   * yerdi. Sayacın kendisi durumdur — ayrı bir `geoStatus` alanına gerek yok.
+   */
+  geoAttempts: z.number().int(),
 });
 export type Address = z.infer<typeof AddressSchema>;
+
+/**
+ * Yazılabilir koordinat künyesi — beş alan tek parça hâlinde taşınır.
+ *
+ * Tek tek yazılmıyor çünkü **bölünemezler**: nokta olmadan kademe yazmak `address_geo_meta`
+ * kısıtını ihlal eder, kademe olmadan nokta yazmak ölçümün inceliğini kaybeder. Tek tip, tek kapı
+ * (`resolveAddressPoint`) — her yazma yolunun kendi kuralını yazmasının önü böyle kapanıyor.
+ */
+export const AddressGeoWriteSchema = z.object({
+  lat: z.number().nullable(),
+  lng: z.number().nullable(),
+  geoPrecision: AddressGeoPrecisionEnum.nullable(),
+  geoSource: AddressGeoSourceEnum.nullable(),
+  geoAt: z.string().nullable(),
+  geoCheckedAt: z.string().nullable(),
+  geoAttempts: z.number().int(),
+});
+export type AddressGeoWrite = z.infer<typeof AddressGeoWriteSchema>;
 
 export const AddressInsertSchema = z.object({
   customerId: z.string().uuid(),
@@ -57,6 +99,17 @@ export const AddressInsertSchema = z.object({
   phone: z.string().min(1),
   country: CountryEnum.optional(),
   isDefault: z.boolean().optional(),
+  /**
+   * Koordinat künyesi — kapıdan (`resolveAddressPoint`) gelir, formdan DEĞİL. Beş alanın beşi de
+   * opsiyonel: nokta çözülemeyen adres yine kaydedilir ve tarama kuyruğuna düşer.
+   */
+  lat: z.number().nullish(),
+  lng: z.number().nullish(),
+  geoPrecision: AddressGeoPrecisionEnum.nullish(),
+  geoSource: AddressGeoSourceEnum.nullish(),
+  geoAt: z.string().nullish(),
+  geoCheckedAt: z.string().nullish(),
+  geoAttempts: z.number().int().optional(),
 });
 export type AddressInsert = z.infer<typeof AddressInsertSchema>;
 

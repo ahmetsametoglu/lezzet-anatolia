@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { dbNumeric } from '../primitives/db-numeric';
+import { dbNumeric, dbNumericNullable } from '../primitives/db-numeric';
 import { CountryEnum, TransferStatusEnum, WarehouseKindEnum } from '../primitives/enums.schema';
 
 // Depo ağı şemaları (DOMAIN §17, data-model/depo.md). Sistem tek depo varsayımıyla kuruldu;
@@ -30,6 +30,16 @@ export const WarehouseSchema = z.object({
    */
   countryCode: CountryEnum,
   address: z.record(z.unknown()).nullable(),
+  /**
+   * Deponun coğrafi noktası (11.9) — kapalı turun başlangıcı ve bitişi. `address` jsonb'sinin içine
+   * gömülmedi: gömülü sayı kısıt taşıyamaz ve rotanın çıpası için bu kabul edilemez.
+   *
+   * `null` = nokta girilmemiş. Sıralama motoru o depo için çalışmayı **reddeder** (`no_start`) —
+   * varsayılan bir merkez uydurmaz. Nokta operatörün haritada onayladığı noktadır, o yüzden
+   * `address`teki gibi kademe/kaynak alanı yok: kademesi her zaman "insan onayladı".
+   */
+  lat: dbNumericNullable,
+  lng: dbNumericNullable,
   /** Kargo çıkış deposu. Ülke başına en fazla bir aktif tane — kural veritabanında (0042). */
   shipsOnline: z.boolean(),
   isActive: z.boolean(),
@@ -45,6 +55,8 @@ export const WarehouseInsertSchema = z.object({
   kind: WarehouseKindEnum.optional(),
   countryCode: CountryEnum.optional(),
   address: z.record(z.unknown()).nullish(),
+  lat: z.number().nullish(),
+  lng: z.number().nullish(),
   shipsOnline: z.boolean().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().int().optional(),

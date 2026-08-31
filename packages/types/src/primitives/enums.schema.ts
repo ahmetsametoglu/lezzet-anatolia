@@ -611,3 +611,50 @@ export type MessageKind = z.infer<typeof MessageKindEnum>;
  */
 export const TemplateCategoryEnum = z.enum(['marketing', 'utility', 'authentication']);
 export type TemplateCategory = z.infer<typeof TemplateCategoryEnum>;
+
+/**
+ * Adresin koordinatı ne KADAR ince ölçüldü (11.9). Kademeler BAN'ın kendi dört değerinin aynası —
+ * yeniden adlandırmak bir eşleme tablosu ve o tablonun bir gün ayrışması demekti.
+ *
+ *   · `housenumber`  — kapı numarası eşleşti. Rota sıralamasının istediği incelik budur.
+ *   · `street`       — sokak eşleşti, kapı numarası değil. Şehir içinde birkaç yüz metre sapar.
+ *   · `locality`     — mahalle/semt.
+ *   · `municipality` — BELEDİYE MERKEZİ. Bir kapıyı değil, bir yerleşimin ortalamasını gösterir.
+ *
+ * Kademe SAKLANIYOR çünkü ölçüm her zaman aynı değil ve farkı gizlemek kaba bir ölçümü kesinmiş gibi
+ * okuturdu (`CLAUDE §1`): liste dolu ve makul görünür, yalnız kurye yanlış sıraya dizilir.
+ */
+export const AddressGeoPrecisionEnum = z.enum(['housenumber', 'street', 'locality', 'municipality']);
+export type AddressGeoPrecision = z.infer<typeof AddressGeoPrecisionEnum>;
+
+/** Koordinatı kim koydu: adres servisi mi, insan mı. Yeni sağlayıcı takıldığında buraya bir değer eklenir. */
+export const AddressGeoSourceEnum = z.enum(['ban', 'manual']);
+export type AddressGeoSource = z.infer<typeof AddressGeoSourceEnum>;
+
+/**
+ * Durak sırasını kim koydu (11.9). `manual` bir KİLİTTİR: `set_run_stop_order` motor yazımını
+ * zorlanmadıkça reddeder — kuryenin/operatörün dizdiği sıra, uçuşta olan bir yeniden hesapla
+ * sessizce ezilmesin. (Elle sıra yüzeyi bugün yok — kullanıcı kararı 31.08: önce motor izlenir.)
+ */
+export const StopOrderSourceEnum = z.enum(['engine', 'manual']);
+export type StopOrderSource = z.infer<typeof StopOrderSourceEnum>;
+
+/**
+ * Sıra hangi ÖLÇÜYLE dizildi. Kuş uçuşu turun makro şeklini (git-dön) doğru kurar ama bariyerin iki
+ * yakasını — nehir, demiryolu, tek yön — "200 m" sayar; araç 4 km sürer. Ölçü veriye yazılır, yalnız
+ * log'a değil: log'a bakan yok, ekrandaki sıraya bakan var.
+ */
+export const StopOrderMetricEnum = z.enum(['haversine', 'matrix']);
+export type StopOrderMetric = z.infer<typeof StopOrderMetricEnum>;
+
+/**
+ * Sıra hangi İNCELİKTE hesaplandı. Bir rotanın posta kodlarının bir kısmı yoğun, bir kısmı tek
+ * duraklı (kullanıcı ölçümü 31.08) — yani aynı seferde iki çözünürlük bir arada olabilir:
+ *
+ *   · `address`         — her durak kendi kapısından dizildi.
+ *   · `postal_centroid` — duraklar posta kodu merkezinden dizildi; aynı koddaki duraklar arasında
+ *     sıra KEYFİDİR ve ekran bunu söylemeli.
+ *   · `mixed`           — ikisi bir arada.
+ */
+export const StopOrderPrecisionEnum = z.enum(['address', 'postal_centroid', 'mixed']);
+export type StopOrderPrecision = z.infer<typeof StopOrderPrecisionEnum>;

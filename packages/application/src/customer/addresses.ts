@@ -3,6 +3,7 @@ import type { Address, AddressInsert } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { resolveAddressCountry } from '../delivery/place';
+import { resolveAddressPoint } from '../delivery/geo-address';
 
 /*
   MÜŞTERİ ADRES KAPISI — web hesap sayfasının `lib/account/addresses.ts` kurallarının paket hâli
@@ -123,6 +124,33 @@ export async function updateCustomerAddress(
       ? await resolveAddressCountry(db, { postalCode: postalCode ?? current.postalCode, country: clean.country })
       : null;
 
+  /* NOKTA DA KODUN PEŞİNDEN GİDER (11.9) — ve bu, ülke kuralının kardeşi.
+     Adres satırı/kodu/şehri değiştiyse eski koordinat artık BU adresin cevabı değildir. Yazılmazsa
+     en sinsi arıza doğar: müşteri adresini düzeltir, kurye ESKİ kapıya sıralanır ve hiçbir ekran
+     bunu söylemez. Düşen satır tarama kuyruğuna girer (`geocodeAddressesScan`) ve yeniden çözülür. */
+  const geo = await resolveAddressPoint(db, {
+    postalCode: postalCode ?? current.postalCode,
+    current: {
+      line1: current.line1,
+      postalCode: current.postalCode,
+      city: current.city,
+      geo: {
+        lat: current.lat,
+        lng: current.lng,
+        geoPrecision: current.geoPrecision,
+        geoSource: current.geoSource,
+        geoAt: current.geoAt,
+        geoCheckedAt: current.geoCheckedAt,
+        geoAttempts: current.geoAttempts,
+      },
+    },
+    next: {
+      line1: line1 ?? current.line1,
+      postalCode: postalCode ?? current.postalCode,
+      city: city ?? current.city,
+    },
+  });
+
   await service.update({
     id: input.addressId,
     label,
@@ -133,6 +161,7 @@ export async function updateCustomerAddress(
     city,
     phone,
     ...(country === null ? {} : { country }),
+    ...geo,
   });
   return { status: 'ok', addresses: await listCustomerAddresses(db, input.customerId) };
 }

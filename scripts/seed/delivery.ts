@@ -17,37 +17,50 @@ const BOLGELER: Array<{
   weekdays: number[];
   isActive?: boolean;
 }> = [
-  // ── TEK BÖLGE (kullanıcı kararı 16.08: "rota sayısını bire indirelim") ──────────────────────────
+  // ── DÖRT HAT, DÖRT YÖN (kullanıcı kararı 31.08) ─────────────────────────────────────────────
   //
-  // Önce dört bölge vardı (üç aktif + bir pasif Kehl). Kullanıcı test verisinin "olabildiğince az"
-  // olmasını istedi ve rotayı tek satıra indirdi. **Bedeli kayda geçsin:**
-  //   · Farklı teslim günü çeşitliliği kalktı (salı+cuma / perşembe / çarşamba+cumartesi → yalnız salı+cuma).
-  //   · KEHL deposu artık bölgesiz — yalnız kargo ve transfer üzerinden çalışıyor. Gerçekçi bir hâl
-  //     (yeni açılan depo henüz rota kurmamıştır) ama "iki depoya bağlı iki rota" kurgusu denenmiyor.
-  //   · `seed:coverage`'ın "bölge pasif" kovası ZORUNLULUKTAN ÇIKARILDI (gerekçesi orada yazılı).
+  // **Önceki karar (16.08: "rota sayısını bire indirelim") YÜRÜRLÜKTEN KALKTI** ve gerekçesi
+  // ölçülmüş bir arıza: tek rotanın üç kodu da (67000/67100/67200) GeoNames dökümünde **aynı
+  // noktayı** taşıyor (`0034:4298-4315` — şehrin merkezi). Yani rota sıralaması (11.9) o veride
+  // hiç sınanamıyordu: bütün duraklar tek noktaya çöküyor, her sıralama aynı maliyeti veriyor ve
+  // motor haklı olarak "sıralayamadım" diyor (`indistinguishable`).
   //
-  // Kapsamı ayakta tutan şey değişmedi: **rota dışı adres hâli hâlâ doğuyor** — Lyon (69007) ve
-  // Offenburg (77652) adresleri hiçbir bölgeye düşmüyor, kargo yolu onlarla sınanıyor.
-  { name: 'Strasbourg Merkez', depo: 'str', codes: [fr('67000'), fr('67100'), fr('67200')], weekdays: [2, 5] }, // salı + cuma
-  // ── İKİNCİ ROTA: KARMA SEPETİN ÖN KOŞULU (19.25) ────────────────────────────────────────────
+  // Dört hat DÖRT AYRI YÖNE uzanıyor ve uçları birbirinden 100+ km ayrı — motorun kapalı tur
+  // hesabı ancak böyle bir yayılımda görünür hâle geliyor. Uzunluklar gerçek bir günlük rotadan
+  // FAZLA (Frankfurt 183 km) ve bu bilinçli: besleme, hesabın çalıştığını gösterebilmeli.
   //
-  // Yukarıdaki "tek rota" kararına bilinçli bir istisna ve gerekçesi tek cümle: **rota deposu ile
-  // kargo çıkışı aynı depo olduğu sürece sepet ikiye bölünemiyor.** Colmar'lı müşterinin rota
-  // deposu COLMAR (`shipsOnline=false`), kargo çıkışı STR — iki havuz ilk kez gerçekten ayrı ve
-  // `decideCartAgainstWarehouse`ın `shipping` dalı rota İÇİ bir adres için doğabiliyor
-  // (`seed/warehouse.ts` künyesindeki ölçüm).
+  // Her hatta bir "şehir içi" kod + gittikçe uzaklaşan duraklar var; mesafeler depoya kuş uçuşu
+  // (ölçüldü 31.08, `postal_code_place`ten).
   //
-  // **Kod 68000 seçildi çünkü talep zaten oradaydı:** `POSTA_TALEPLERI` 18 istekle Colmar'ı
-  // listeliyordu; bölge açılınca o satır "talep birikti → rota açıldı" hâline geçiyor ve Depolar
-  // ekranının "kapsanıyorsa hangi bölge tutuyor" sütunu gerçek bir örnek kazanıyor.
-  //
-  // Gün seti STR'den FARKLI (çarşamba + cumartesi): iki rotanın aynı gün koşması, "bugün hangi
-  // rotalar var" sorusunu tek cevaplı bırakır ve kurye rota seçimi (K1) hiç sınanmazdı.
-  { name: 'Colmar Hattı', depo: 'colmar', codes: [fr('68000')], weekdays: [3, 6] }, // çarşamba + cumartesi
+  // ── KUZEY: Strasbourg → Haguenau → Wissembourg → Landau → Frankfurt ────────
+  { name: 'Kuzey Hattı — Frankfurt', depo: 'str', weekdays: [1, 4], // pazartesi + perşembe
+    codes: [fr('67000'), fr('67500'), fr('67160'), de('76829'), de('60311')] }, // 0 · 22 · 48 · 71 · 183 km
+  // ── BATI: Strasbourg → Saverne → Sarrebourg → Metz ─────────────────────────
+  // İki şehir içi kod (67100 + 67200) BİLEREK aynı hatta: ikisi de aynı merkezde ve bu, kısmi
+  // çakışma hâlini (`precision: mixed` yolu) besleyen tek yer — hepsi çakışık olsaydı motor
+  // sıralamayı reddederdi, hiçbiri çakışık olmasaydı o dal hiç denenmezdi.
+  { name: 'Batı Hattı — Metz', depo: 'str', weekdays: [2, 5], // salı + cuma
+    codes: [fr('67100'), fr('67200'), fr('67700'), fr('57400'), fr('57000')] }, // 0 · 0 · 30 · 54 · 130 km
+  // ── GÜNEY: Sélestat → Colmar → Mulhouse ────────────────────────────────────
+  // Deposu COLMAR ve bu 19.25'ten devralınan bir değişmez: **rota deposu ile kargo çıkışı aynı
+  // depo olduğu sürece sepet ikiye bölünemiyor.** Colmar `shipsOnline=false`, kargo çıkışı STR —
+  // karma sepet ancak bu ayrımla doğuyor.
+  { name: 'Güney Hattı — Mulhouse', depo: 'colmar', weekdays: [3, 6], // çarşamba + cumartesi
+    codes: [fr('67600'), fr('68000'), fr('68100')] }, // 39 · 63 · 98 km
+  // ── DOĞU: Kehl → Offenburg → Stuttgart ─────────────────────────────────────
+  // KEHL deposu ilk kez bir rotaya sahip. Gün seti Batı ile AYNI (salı+cuma) ve bu bilinçli: aynı
+  // gün iki rota koşmazsa kuryenin rota SEÇİMİ (K1) hiç sınanmaz — tek adayda ekran soru sormuyor.
+  // Sınır ötesi hat ADR-002'nin meşru saydığı şey; sınır rotanın değil devletin çizgisidir.
+  { name: 'Doğu Hattı — Stuttgart', depo: 'kehl', weekdays: [2, 5], // salı + cuma
+    codes: [de('77694'), de('77652'), de('70173')] }, // 5 · 19 · 107 km
 ];
 
 function fr(postalCode: string) {
   return { country: 'FR' as const, postalCode };
+}
+
+function de(postalCode: string) {
+  return { country: 'DE' as const, postalCode };
 }
 
 export async function seedDeliveryZones(db: Db, depolar: Depolar): Promise<void> {
@@ -68,7 +81,7 @@ export async function seedDeliveryZones(db: Db, depolar: Depolar): Promise<void>
     const kodlar = b.codes.map((c) => `${c.country}-${c.postalCode}`).join(', ');
     console.log(`  ✓ ${b.name} · ${kodlar} · gün ${b.weekdays.join(',')}${b.isActive === false ? ' · PASİF' : ''}`);
   }
-  console.log(`✓ bölge: ${BOLGELER.length} kayıt (tek aktif rota — künyedeki gerekçe)`);
+  console.log(`✓ bölge: ${BOLGELER.length} kayıt (dört yön — künyedeki gerekçe)`);
 }
 
 export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
@@ -96,42 +109,93 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
     phone: string;
     country?: 'FR' | 'DE';
     isDefault?: boolean;
+    /* ── KOORDİNAT SABİT YAZILIR (11.9 · 31.08) ─────────────────────────────
+       Besleme ağa çıkmaz ve belirlenimci olmalı — ama bunun sonucu "koordinat yazma" DEĞİL,
+       "koordinatı bir kez çek ve SABİTLE"dir. `postal_code_place` verisi de aynı yolla üretiliyor
+       (`postal:build` → dosyaya yazılıyor).
+       Aksi hâlde her `db:refresh` sonrası elle bir komut daha gerekirdi ve unutulduğu gün rota
+       sıralaması sessizce posta kodu merkezine düşerdi — yani özellik "çalışmıyor" görünürdü.
+
+       FR değerleri BAN'dan bir kez çekildi (31.08, skorlarıyla birlikte doğrulandı) ve
+       `housenumber` kademesinde. DE değerleri kod MERKEZİDİR (`postal_code_place`, GeoNames):
+       BAN yalnız Fransa'ya bakıyor ve uydurma bir kapı noktası yazmak yerine kademesi dürüstçe
+       `municipality` deniyor — kapı değil, yerleşimin ortası. */
+    lat?: number;
+    lng?: number;
+    geoPrecision?: 'housenumber' | 'street' | 'locality' | 'municipality';
+    geoSource?: 'ban' | 'manual';
   }> = [
     // Rota içi (aktif bölge posta kodları)
-    { kisi: 'b2bOnayli', label: 'Dükkân', recipient: 'Mehmet Aydın', line1: '12 rue du Faubourg de Pierre', postalCode: '67000', city: 'Strasbourg', phone: '+33388123456', isDefault: true },
-    { kisi: 'b2bOnayli', label: 'Depo', recipient: 'Depo görevlisi', line1: '4 quai Kléber', line2: 'Dépôt arrière', postalCode: '67000', city: 'Strasbourg', phone: '+33388123457' }, // ikinci adres
+    { kisi: 'b2bOnayli', label: 'Dükkân', recipient: 'Mehmet Aydın', line1: '12 rue du Faubourg de Pierre', lat: 48.587548, lng: 7.746365, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67000', city: 'Strasbourg', phone: '+33388123456', isDefault: true },
+    { kisi: 'b2bOnayli', label: 'Depo', recipient: 'Depo görevlisi', line1: '4 quai Kléber', lat: 48.586183, lng: 7.74191, geoPrecision: 'housenumber', geoSource: 'ban', line2: 'Dépôt arrière', postalCode: '67000', city: 'Strasbourg', phone: '+33388123457' }, // ikinci adres
     // **Kodlar 67300/67400'den 67100/67200'e TAŞINDI (16.08, rota tek bölgeye inince).** İkisi de
     // artık rota dışında kalırdı ve bu iki müşteri seed'in en çok sipariş veren kişileri: siparişleri
     // `route` olarak yazılıyor, adresleri kargoya düşseydi veri kendi içinde çelişirdi.
-    { kisi: 'b2cSadik', label: 'Ev', recipient: 'Ayşe Yılmaz', line1: '8 rue de Bischwiller', line2: '3. kat, zil: Yılmaz', postalCode: '67100', city: 'Strasbourg', phone: '+33612345678', isDefault: true },
-    { kisi: 'b2cKapaliKapida', label: 'Ev', recipient: 'Fatma Demir', line1: '31 route de Lyon', postalCode: '67200', city: 'Strasbourg', phone: '+33698765432', isDefault: true },
+    { kisi: 'b2cSadik', label: 'Ev', recipient: 'Ayşe Yılmaz', line1: '8 rue de Bischwiller', lat: 48.568726, lng: 7.763366, geoPrecision: 'housenumber', geoSource: 'ban', line2: '3. kat, zil: Yılmaz', postalCode: '67100', city: 'Strasbourg', phone: '+33612345678', isDefault: true },
+    { kisi: 'b2cKapaliKapida', label: 'Ev', recipient: 'Fatma Demir', line1: '31 route de Lyon', lat: 48.56184, lng: 7.704935, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67200', city: 'Strasbourg', phone: '+33698765432', isDefault: true },
     // Rota DIŞI — hiçbir aktif bölgeye düşmez → kargo yolu
     // ALICI hesabın sahibi DEĞİL — hediye/iş adresi hâli (kurye kapıda bu adı sorar).
-    { kisi: 'b2cSadik', label: 'İş', recipient: 'Zeynep Kaya', line1: '17 avenue Jean Jaurès', postalCode: '69007', city: 'Lyon', phone: '+33745221109' },
+    { kisi: 'b2cSadik', label: 'İş', recipient: 'Zeynep Kaya', line1: '17 avenue Jean Jaurès', lat: 45.75259, lng: 4.846418, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '69007', city: 'Lyon', phone: '+33745221109' },
     /* ETİKETSİZ adres — ekranın "etiket yoksa şehri başlık yap" hâli hâlâ buradan deneniyor.
        ALICISIZ/TELEFONSUZ hâli 22.08'de KALKTI: kolonlar `not null` oldu, yani o hâl artık
        veritabanında var olamıyor ve onu beslemede tutmak, üretilemeyecek bir ekranı denemek
        olurdu. Alıcı hesabın sahibiyle AYNI (varsayılanın kaydedildiği yaygın hâl) — hediye
        adresinin ayrı hâli bir üstteki Lyon satırında duruyor. */
-    { kisi: 'b2cAlman', recipient: 'Klaus Müller', line1: 'Hauptstraße 45', postalCode: '77652', city: 'Offenburg', country: 'DE', phone: '+49781223344', isDefault: true },
-    // Kehl (DE) — bölgesi YOK (rota tek satıra indi), yani bu adres de kargo yolundan gidiyor.
-    // Talep sinyali orada birikmeye devam ediyor: "bölge açma adayı" hâlini `POSTA_TALEBI` taşıyor.
-    { kisi: 'b2bAlman', label: 'Marktplatz', recipient: 'Stefan Weber', line1: 'Marktplatz 3', postalCode: '77694', city: 'Kehl', country: 'DE', phone: '+497851445566', isDefault: true },
-    { kisi: 'b2bBekleyen', label: 'Ev', recipient: 'Ali Şahin', line1: '22 rue de la Krutenau', postalCode: '67000', city: 'Strasbourg', phone: '+33655443322', isDefault: true },
+    { kisi: 'b2cAlman', recipient: 'Klaus Müller', line1: 'Hauptstraße 45', lat: 48.4765, lng: 7.9438, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '77652', city: 'Offenburg', country: 'DE', phone: '+49781223344', isDefault: true },
+    // Kehl (DE) — 31.08'e kadar bölgesizdi, artık DOĞU HATTININ ilk durağı. Rota dışı hâli Lyon
+    // (69007) taşımaya devam ediyor: kargo yolu tek bir adresle de sınanabiliyor.
+    { kisi: 'b2bAlman', label: 'Marktplatz', recipient: 'Stefan Weber', line1: 'Marktplatz 3', lat: 48.573, lng: 7.8152, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '77694', city: 'Kehl', country: 'DE', phone: '+497851445566', isDefault: true },
+    { kisi: 'b2bBekleyen', label: 'Ev', recipient: 'Ali Şahin', line1: '22 rue de la Krutenau', lat: 48.581303, lng: 7.757079, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67000', city: 'Strasbourg', phone: '+33655443322', isDefault: true },
     // COLMAR rotası (19.25) — karma sepetin YAŞADIĞI adres. Buraya bir adres düşmezse ikinci rota
     // yalnız kâğıt üstünde kalır: sepet ekranı yeri çerezden çözebilir ama CHECKOUT teslimatı
     // ADRESTEN çözüyor, yani iki gruplu bir siparişin gerçekten açılabilmesi bu satıra bağlı.
-    { kisi: 'b2cKapaliKapida', label: 'Colmar evi', recipient: 'Julien Fischer', line1: '5 rue des Marchands', postalCode: '68000', city: 'Colmar', phone: '+33698765432' },
+    { kisi: 'b2cKapaliKapida', label: 'Colmar evi', recipient: 'Julien Fischer', line1: '5 rue des Marchands', lat: 48.077328, lng: 7.356656, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '68000', city: 'Colmar', phone: '+33698765432' },
+
+    /* ── HATLARIN UÇLARI (31.08) ───────────────────────────────────────────────
+       Dört hat açıldı ama her hat tek duraklı kalsaydı rota sıralaması (11.9) yine sınanamazdı:
+       tek durakta sıralanacak bir şey yok. Bu satırlar hatları GERÇEKTEN uzatıyor — her birinin
+       posta kodu farklı bir noktada ve uçlar depoya 100+ km.
+
+       Şehir adları `postal_code_place`in kendi kayıtlarıyla birebir: uydurma bir şehir adı, "yazılan
+       şehir bu koda ait mi" doğrulamasını sessizce düşürürdü.
+
+       KOORDİNAT YAZILMIYOR ve bu bilinçli: besleme ağa çıkmaz, uydurma bir kapı koordinatı da
+       gerçek bir ölçüm gibi okunurdu. Adresler tarama işiyle (`geocode_addresses`) ya da elle
+       (`pnpm geo:backfill`) çözülür; o ana kadar sıra posta kodu merkezinden hesaplanır ve
+       `precision` bunu söyler. */
+
+    // Kuzey Hattı — Frankfurt'a kadar
+    { kisi: 'b2cSadik', label: 'Haguenau şubesi', recipient: 'Nathalie Roux', line1: '3 rue de la Gare', lat: 48.780466, lng: 7.710003, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67500', city: 'Batzendorf', phone: '+33388937711' },
+    { kisi: 'b2bOnayli', label: 'Wissembourg bayi', recipient: 'Pierre Muller', line1: '9 rue de la République', lat: 49.035657, lng: 7.944338, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67160', city: 'Cleebourg', phone: '+33388947722' },
+    { kisi: 'b2bAlman', label: 'Landau deposu', recipient: 'Sabine Braun', line1: 'Königstraße 12', lat: 49.1925, lng: 8.0549, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '76829', city: 'Landau in der Pfalz', country: 'DE', phone: '+496341556677' },
+    { kisi: 'b2bAlman', label: 'Frankfurt şube', recipient: 'Thomas Vogel', line1: 'Zeil 88', lat: 50.1112, lng: 8.6831, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '60311', city: 'Frankfurt am Main', country: 'DE', phone: '+496921998877' },
+
+    // Batı Hattı — Metz'e kadar
+    { kisi: 'b2cKapaliKapida', label: 'Saverne', recipient: 'Camille Petit', line1: '14 Grand Rue', lat: 48.757771, lng: 7.35096, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67700', city: 'Eckartswiller', phone: '+33388917733' },
+    { kisi: 'b2cSadik', label: 'Sarrebourg', recipient: 'Lucas Bernard', line1: '6 rue de France', lat: 48.722241, lng: 7.08398, geoPrecision: 'street', geoSource: 'ban', postalCode: '57400', city: 'Buhl-Lorraine', phone: '+33387037744' },
+    { kisi: 'b2bOnayli', label: 'Metz market', recipient: 'Émilie Girard', line1: '21 rue Serpenoise', lat: 49.116925, lng: 6.17513, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '57000', city: 'Metz', phone: '+33387757755' },
+
+    // Güney Hattı — Mulhouse'a kadar
+    { kisi: 'b2cSadik', label: 'Sélestat', recipient: 'Marc Leroy', line1: '2 place du Marché', lat: 48.259514, lng: 7.455437, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67600', city: 'Baldenheim', phone: '+33388587766' },
+    { kisi: 'b2bBekleyen', label: 'Mulhouse dükkân', recipient: 'Hakan Çelik', line1: '18 rue du Sauvage', lat: 47.746875, lng: 7.340736, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '68100', city: 'Mulhouse', phone: '+33389457788' },
+
+    // Doğu Hattı — Stuttgart'a kadar
+    { kisi: 'b2cAlman', label: 'Stuttgart', recipient: 'Anna Schmidt', line1: 'Königstraße 40', lat: 48.77265, lng: 9.18, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '70173', city: 'Stuttgart', country: 'DE', phone: '+497112239900' },
   ];
 
   let sayi = 0;
+  // Ölçümün ANI besleme anıdır: nokta sabit yazılıyor ama "ne zaman ölçüldü" sorusu boş kalmasın —
+  // tarama işi bu damgaya bakarak satırın çözülmüş olduğunu görüyor.
+  const olcumAni = new Date().toISOString();
   for (const { kisi, ...alanlar } of tanimlar) {
     const customerId = kisiler.get(kisi);
     if (!customerId) continue;
-    await addresses.addForCustomer({ ...alanlar, customerId });
+    const geoAt = alanlar.lat === undefined ? undefined : olcumAni;
+    await addresses.addForCustomer({ ...alanlar, geoAt, geoCheckedAt: geoAt, customerId });
     sayi += 1;
   }
-  console.log(`✓ adres: ${sayi} kayıt (rota içi · rota dışı · pasif bölgede)`);
+  const noktali = tanimlar.filter((t) => t.lat !== undefined).length;
+  console.log(`✓ adres: ${sayi} kayıt (${noktali} koordinatlı · rota içi · rota dışı)`);
 }
 
 // ── Bölge dışı talep sayacı (0029) ───────────────────────────────────────────────────────────────

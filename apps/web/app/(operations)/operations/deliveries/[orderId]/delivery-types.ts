@@ -40,8 +40,14 @@ export interface ProofDraft {
 export interface DeliveryStopView {
   /** Gün listesindeki durağın kendisi — adres, telefon, "yoldayım", kanal. İkinci kez okunmaz. */
   stop: CourierStop;
-  /** Rota sırası (0 tabanlı) — kurye "kaçıncı duraktayım" diye düşünür, sipariş numarasıyla değil. */
-  index: number;
+  /**
+   * Rota sırası — 1'den; `null` = SIRA BİLİNMİYOR (11.9).
+   *
+   * Kaynağı `stop.stopSeq` (sunucu hesabı), dizi indeksi DEĞİL. Eskiden `findIndex` sonucu
+   * gösteriliyordu ve o sayı rota sırası değil siparişin verilme sırasıydı. `findIndex` yerinde
+   * kalıyor ama işi artık yalnız SAHİPLİK: durak bu kuryenin gününde var mı.
+   */
+  sequence: number | null;
   referenceNo: string | null;
   /**
    * Motorun türetim için istediği sipariş alanları — fazlası YOK. Maliyet, kâr, marj ve müşterinin

@@ -31,7 +31,12 @@ export function DeliveryStopDesktop(props: DeliveryViewProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-ops-card">
       <PageHeader
-        title={`${num(view.index + 1)}. durak · ${view.stop.customerName}`}
+        // Sıra bilinmiyorsa numara UYDURULMAZ — başlık müşteriyle yetinir (11.9).
+        title={
+          view.sequence === null
+            ? view.stop.customerName
+            : `${num(view.sequence)}. durak · ${view.stop.customerName}`
+        }
         subtitle={`${view.stop.address ?? 'Adres yok'}${view.referenceNo ? ` · ${view.referenceNo}` : ''}`}
         status={<Badge tone={outcome.tone}>{outcome.label}</Badge>}
       >

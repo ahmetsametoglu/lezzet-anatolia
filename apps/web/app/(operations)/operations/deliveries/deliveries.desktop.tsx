@@ -44,8 +44,10 @@ export function CourierDayDesktop({ stops }: { stops: CourierStop[] }) {
             </p>
           ) : null}
           <ul className="min-h-0 flex-1 overflow-y-auto">
-            {stops.map((stop, index) => (
-              <StopCard key={stop.orderId} stop={stop} index={index} />
+            {/* Sıralamayı SUNUCU yapıyor (`listCourierDay`) — ekran hiç sıralamaz; iki yüzey kendi
+                sıralamasını yapsaydı aynı gün için iki farklı rota gösterirlerdi. */}
+            {stops.map((stop) => (
+              <StopCard key={stop.orderId} stop={stop} />
             ))}
           </ul>
           <p className="border-t border-ops-line-soft px-4 py-2 font-ops-body text-ops-micro text-ops-faint">

@@ -66,6 +66,10 @@ const PAKET_DBSIZ = [
  */
 const UYGULAMA_DBSIZ = [
   'packages/application/src/analytics/availability.test.ts',
+  // Coğrafi kodlama taramasının KARARI (11.9) — servis ne dediyse satıra ne yazılacağı. Saf:
+  // sayaç muhasebesi ve "yarım nokta yazılmaz" kuralı DB'siz sınanabiliyor; yazma tarafı
+  // (`geocodeAddressesScan`) entegrasyonda kalıyor.
+  'packages/application/src/delivery/geocode-scan.test.ts',
   // Hızlı giriş kapısının ret KARARI (27.08) — saf ve zorunlu olarak saf: sınadığı hâl "hiç
   // yönetici yok" ve o hâl kurulu bir veritabanında üretilemez (dosya künyesi).
   'packages/application/src/auth/dev-login.test.ts',

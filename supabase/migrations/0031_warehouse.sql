@@ -42,6 +42,20 @@ create table public.warehouse (
   -- ⚠ DE'de depo açmak "uzaktan satış"ı "yerel satış"a çevirir (DOMAIN §5/§17) — mali danışman şart.
   country_code country_code not null default 'FR',
   address jsonb,
+  -- ── DEPONUN NOKTASI — KOLON, jsonb'nin İÇİ DEĞİL (11.9) ───────────────────
+  -- Rotanın başlangıç ve bitiş noktası burasıdır: kapalı turun her hesabı bu iki sayıya dayanır.
+  -- `address` jsonb'sinin içine gömülseydi KISIT TAŞIYAMAZDI — tek başına enlem yazan bir yolu
+  -- hiçbir şey engelleyemezdi. Rotanın çıpası için bu kabul edilemez.
+  --
+  -- `geo_precision`/`geo_source` YOK ve bilerek (`address`ten ayrılan tek yer): depo noktası bir
+  -- taramanın çıktısı değil, operatörün haritada ONAYLADIĞI noktadır — kademesi her zaman aynıdır.
+  -- Kolon açmak, hiç değişmeyecek bir değeri her satıra yazmak olurdu. Depo tek haneli sayıda
+  -- satırdır, ömür boyu bir kez girilir ve yanlışlığı HER rotayı bozar; "genelde doğru" yetmez.
+  --
+  -- Nullable: depo noktası girilmeden açılabilir. Ama sessiz kalmaz — nokta yoksa sıralama motoru
+  -- o depo için çalışmayı REDDEDER ve sebebini söyler (`no_start`), varsayılan bir merkez uydurmaz.
+  lat numeric(9, 6),
+  lng numeric(9, 6),
   -- Kargo çıkış deposu: bölge dışı müşteriler ve rota müşterilerinin kargo dolgusu buradan gider.
   ships_online boolean not null default false,
   is_active boolean not null default true,
@@ -49,7 +63,9 @@ create table public.warehouse (
   created_at timestamptz not null default now(),
   -- Araçtan kargo çıkmaz: kargo çıkış deposu bir adrestir, taşıyıcı oraya gelir. Kısıt aynı
   -- tabloda durabildiği için tetikleyiciye gerek yok — en ucuz yerde.
-  constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online)
+  constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online),
+  -- `postal_code_place_point` / `address_geo_point` ile aynı kural, aynı gerekçe.
+  constraint warehouse_geo_point check ((lat is null) = (lng is null))
 );
 
 -- **ÜLKE BAŞINA EN FAZLA BİR AKTİF KARGO DEPOSU** — kural kayıt kapısında değil BURADA duruyor.

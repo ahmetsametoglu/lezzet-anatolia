@@ -38,7 +38,8 @@ export async function readDeliveryStop(input: { courierId: string; orderId: stri
 
   return {
     stop,
-    index,
+    // Sıra sunucunun hesabından; `findIndex` yalnız SAHİPLİK kapısı olarak yukarıda kaldı (11.9).
+    sequence: stop.stopSeq,
     referenceNo: order.referenceNo,
     order: { shippingFeeCents: order.shippingFeeCents, status: order.status, totalCents: order.totalCents },
     amounts: { collectedCents: order.amountCollectedCents, refundedCents: order.amountRefundedCents },
