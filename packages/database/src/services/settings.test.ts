@@ -152,7 +152,9 @@ describe('seed varsayılanları (02.7)', () => {
   });
 
   it('teslim onayı kapsamı kanal bazında: B2B zorunlu, B2C kapalı', async () => {
-    expect(await settings.get('delivery_proof_required', {})).toEqual({ b2b: true, b2c: false });
+    /* İMZA KALKTI (kullanıcı kararı 30.08) — fabrika değeri iki kanalda da kapalı. Kanıt artık
+       kutu okutmasının kendisi (`box_scan`); ayar duruyor çünkü kapsam yine açılabilir. */
+    expect(await settings.get('delivery_proof_required', {})).toEqual({ b2b: false, b2c: false });
   });
 });
 

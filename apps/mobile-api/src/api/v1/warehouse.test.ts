@@ -426,65 +426,28 @@ describe('D1 · GET /api/v1/warehouse/preparation', () => {
 });
 
 describe('D1 · POST /api/v1/warehouse/preparation/:orderId/confirm', () => {
-  it('mutlu yol: tamamı toplandı → sipariş `ready`, parti kaydı yazıldı', async () => {
+  /*
+    KUTUSUZ ONAY KAPANDI (kullanıcı kararı 30.08) — bu ucun eski üç testi (mutlu yol · eksik
+    toplama · parti dağılımı) artık üretilemeyen bir hâli ölçüyordu: `confirmPreparation` `pickup`
+    dışında her siparişe `box_required` diyor, hazırlık da yalnız kutu döngüsünden geçiyor.
+
+    ÖLÇÜM KAYBOLMADI, YER DEĞİŞTİRDİ — üçünün konusu da `warehouse/boxes.test.ts`te duruyor:
+    içerik + parti izi + HAZIR geçişi, çok kutulu birleşimde parti izinin korunması, ve eksik
+    beyanının tavsiye üretmesi. Buraya kalan tek şey KAPININ kendisi.
+  */
+  it('rota siparişi de kutusuz onaylanmaz — `box_required`, ve HİÇBİR yazım yapılmaz', async () => {
     const order = await pendingOrder({ qty: 2 });
 
     const res = await post(`/api/v1/warehouse/preparation/${order.orderId}/confirm`, {
       picks: [{ orderItemId: order.itemId, batches: [{ stockId, qty: 2 }] }],
     });
+
+    // Ret bir HTTP kodu değil, ekranın göstereceği CEVAP — kapsam kararının aynı deseni.
     expect(res.status).toBe(200);
-
-    expect(await dataOf<ConfirmPreparationResponse>(res)).toEqual({
-      status: 'ok',
-      items: 1,
-      ready: true,
-      shortfalls: [],
-    });
-    // Uç "oldu" demiyor, gerçek değişti: sipariş sevkiyata hazır ve karşılanan adet kayıtta.
-    expect((await orders.getById(order.orderId))?.status).toBe('ready');
-    expect((await orders.getWithItems(order.orderId))!.items[0]!.fulfilledQty).toBe(2);
-  });
-
-  it('EKSİK toplama YUTULMAZ: `ready:false` + motorun tavsiyesi döner, iş `preparing`te sürer', async () => {
-    const order = await pendingOrder({ qty: 4 });
-
-    const res = await post(`/api/v1/warehouse/preparation/${order.orderId}/confirm`, {
-      picks: [{ orderItemId: order.itemId, batches: [{ stockId, qty: 1 }] }],
-    });
-
-    expect(res.status).toBe(200);
-    const outcome = await dataOf<ConfirmPreparationResponse>(res);
-    if (outcome.status !== 'ok') throw new Error(`beklenmedik sonuç: ${outcome.status}`);
-
-    // Yarım iş bir HATA değil: toplanan adet kayıtta kalır, depocu kaldığı yerden devam eder.
-    expect(outcome.ready).toBe(false);
-    // Tavsiye TAŞINIYOR — karar yönetim ekranında (D1 → Y2). Eylemin kendisi ayarlardan gelen
-    // eşiklere bağlı olduğu için sınanmıyor; sınanan şey tavsiyenin GÖRÜNÜR olması.
-    expect(outcome.shortfalls).toHaveLength(1);
-    expect(outcome.shortfalls[0]!.itemId).toBe(order.itemId);
-    expect(outcome.shortfalls[0]!.suggestion.missingQty).toBe(3);
+    expect(await dataOf<ConfirmPreparationResponse>(res)).toEqual({ status: 'box_required' });
+    // Duvar yazımdan ÖNCE: sipariş hâlâ toplamada, hiçbir adet karşılanmış görünmüyor.
     expect((await orders.getById(order.orderId))?.status).toBe('confirmed');
-  });
-
-  it('yarım işten sonra kuyruk PARTİ DAĞILIMINI geri verir — döngü kapanır (21.11d)', async () => {
-    const order = await pendingOrder({ qty: 4 });
-    await post(`/api/v1/warehouse/preparation/${order.orderId}/confirm`, {
-      picks: [{ orderItemId: order.itemId, batches: [{ stockId, qty: 1 }] }],
-    });
-
-    const queue = await dataOf<PreparationQueueResponse>(await asStaff('/api/v1/warehouse/preparation'));
-    const line = queue.orders.find((row) => row.orderId === order.orderId)!.lines[0]!;
-
-    // Ekran artık "önceden 1 yazılmış" demek zorunda değil: hangi partiden olduğunu da biliyor ve
-    // alanı kümülatif kurabiliyor — eksiği bir partiye TAHMİNEN eklemesi gerekmiyor.
-    expect(line.pickedQty).toBe(1);
-    expect(line.pickedBatches).toEqual([{ stockId, qty: 1 }]);
-
-    // Ve dönen dizi doğrudan geri gönderilebiliyor: okuma ile yazma AYNI şekli konuşuyor.
-    const replay = await post(`/api/v1/warehouse/preparation/${order.orderId}/confirm`, {
-      picks: [{ orderItemId: order.itemId, batches: [...line.pickedBatches, { stockId, qty: 3 }] }],
-    });
-    expect(await dataOf<ConfirmPreparationResponse>(replay)).toMatchObject({ status: 'ok', ready: true });
+    expect((await orders.getWithItems(order.orderId))!.items[0]!.fulfilledQty).toBe(0);
   });
 
   it('BAŞKA DEPONUN siparişi 200 + `out_of_scope` ile döner — ve hiçbir yazım yapılmaz', async () => {
@@ -522,8 +485,12 @@ describe('D2 · mal kabul', () => {
        depocunun kâğıdıyla eşleştirme, `dateType` + `shelfLifeDays` satırın SKT alanı ve ömür
        uyarısı). "Fiyat yok" iddiası yine ALAN ADIYLA kuruluyor. Düzeltildi 30.08. */
     expect(Object.keys(form.rows[0]!).sort()).toEqual([
+      // `caseSizes` (30.08) koli çarpanı, `lotCandidates` (21.175) depodaki parti kodları —
+      // ikisi de tanıma/karar alanı, para değil. Liste onlarla birlikte ona çıktı.
+      'caseSizes',
       'dateType',
       'expectedQty',
+      'lotCandidates',
       'productName',
       'shelfLifeDays',
       'sku',

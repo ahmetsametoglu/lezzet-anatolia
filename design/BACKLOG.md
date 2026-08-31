@@ -801,3 +801,25 @@ kapanmadığı için buraya taşındı. Dördü de **tasarım ↔ kod** açığ�
    tasarımın:** zil dört hubta mı kalsın, yoksa bildirim tek kapıya mı toplansın.
    *(Aynı turda çıkan avatar farkı KAPANDI: biçim tek duraktan — kitin squircle'ı —, renk bölümden;
    yönetim kendi hub'ında `ink` veriyor.)*
+
+### Kapıda kimlik: WhatsApp OTP — imzanın yerine (30.08, kullanıcı kararı)
+
+**İmza adımı SÖKÜLDÜ** (21.181). Gerekçe kullanıcının sorusuydu ve cevabı yoktu: *"kullanıcı kendi
+orijinal imzasını atıp atmadığını bile bilmiyoruz — bu sistemde imza hukuki olarak bir anlam ifade
+ediyor mu?"* Ekrana parmakla çizilen şekil nitelikli elektronik imza değil ve imzalayanın kimliğini
+kanıtlamıyor. Yerine kutu okutması geçti (`box_scan`): kod benzersiz, kutu fiziksel bir nesne,
+okutma o kapıda ve o saniyede — uydurulması imzadan zor.
+
+**Ama kutu okutması "kim teslim aldı"yı söylemiyor.** Kimliği gerçekten doğrulayan yol kullanıcının
+kendi önerisi: kapıda **WhatsApp OTP** — müşterinin numarasına altı haneli kod gider, kurye kodu
+ekrana girer. Kod müşterinin telefonuna düştüğü için "o kişi oradaydı ve teslim aldı" iddiası
+gerçekten desteklenir.
+
+**Bugün yapılamamasının sebebi:** kapıda çevrimdışı çalışmak zorunda olan bir akış (kurye
+merdiven altında, bodrumda) senkron bir OTP turuna bağlanamaz; kodun gönderimi, bekleme süresi ve
+yeniden gönderme yolu ayrı bir tasarım ister. WhatsApp şablon onayı da gerekiyor (15-whatsapp).
+
+**Dokunacağı yerler:** `delivery_proof_required` ayarı (bugün iki kanalda da kapalı) ·
+`DeliveryProofRecordSchema`ya yeni bir `kind` (`otp`) · kapıda kod doğrulama ucu · kurye ekranında
+kod alanı · WhatsApp şablonu. Kanıt yükleme altyapısı (`/courier/stops/:id/proof-upload`) DURUYOR ve
+yeniden kullanılabilir.

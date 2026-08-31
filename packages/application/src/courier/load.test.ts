@@ -149,28 +149,31 @@ describe('araca yükleme (loadBox · karar §1.11)', () => {
     expect(await loadBox(db, { code, courierId })).toMatchObject({ status: 'not_sealed', boxNo: 1 });
   });
 
-  it('tek kutu: okutma damgayı yazar ve sipariş YOLA ÇIKAR — kutulu siparişin tek kapısı', async () => {
+  it('tek kutu: okutma damgayı yazar ama sipariş YOLA ÇIKMAZ — yükleme emanet değişimidir (31.08)', async () => {
     const { orderId, codes } = await boxedReady();
 
     const outcome = await loadBox(db, { code: codes[0]!, courierId });
 
-    expect(outcome).toMatchObject({ status: 'ok', boxNo: 1, loadedBoxes: 1, boxCount: 1, orderStarted: true });
-    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+    expect(outcome).toMatchObject({ status: 'ok', boxNo: 1, loadedBoxes: 1, boxCount: 1, allBoxesLoaded: true });
+    /* İDDİANIN KALBİ: mal araçta ama sipariş HÂLÂ HAZIR. Araç bir ara depodur ve içinde yarının
+       seferinin kutusu da durabilir; yükleme müşteriye haber göndermez. */
+    expect((await orders.getById(orderId))?.status).toBe('ready');
     const box = await boxService.getByCode(codes[0]!);
     expect(box?.loadedAt).not.toBeNull();
     expect(box?.loadedBy).toBe(courierId);
   });
 
-  it('çok kutulu: TÜM kutular binmeden sipariş yolda sayılmaz (etüt 2.4)', async () => {
+  it('çok kutulu: `allBoxesLoaded` ancak SON kutuda doğrudur (etüt 2.4)', async () => {
     const { orderId, codes } = await boxedReady({ boxQtys: [2, 3] });
 
     const first = await loadBox(db, { code: codes[0]!, courierId });
-    expect(first).toMatchObject({ status: 'ok', loadedBoxes: 1, boxCount: 2, orderStarted: false });
+    expect(first).toMatchObject({ status: 'ok', loadedBoxes: 1, boxCount: 2, allBoxesLoaded: false });
     expect((await orders.getById(orderId))?.status).toBe('ready');
 
     const second = await loadBox(db, { code: codes[1]!, courierId });
-    expect(second).toMatchObject({ status: 'ok', loadedBoxes: 2, boxCount: 2, orderStarted: true });
-    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+    expect(second).toMatchObject({ status: 'ok', loadedBoxes: 2, boxCount: 2, allBoxesLoaded: true });
+    // Tamamı araçta — ama yola çıkaran yine sefer başlatma (31.08).
+    expect((await orders.getById(orderId))?.status).toBe('ready');
   });
 
   it('ikinci okutma "zaten araçta" der — sayaç değişmez, damga ezilmez', async () => {
@@ -189,6 +192,8 @@ describe('kapıda kutu okutması (teslim ön koşulu · etüt 2.5)', () => {
   it('kutulu teslim kodsuz KAPANMAZ — kalan kutular numarasıyla döner, hiçbir yazım yok', async () => {
     const { orderId, codes } = await boxedReady({ boxQtys: [2, 2] });
     for (const code of codes) await loadBox(db, { code, courierId });
+    // Yükleme yola ÇIKARMIYOR (31.08); kapıdaki testin ön koşulu geçişi ayrıca ister.
+    await advanceOrder(db, orderId, ['out_for_delivery']);
 
     const outcome = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [codes[0]!] });
 
@@ -199,6 +204,7 @@ describe('kapıda kutu okutması (teslim ön koşulu · etüt 2.5)', () => {
   it('tüm kutular okutulunca teslim kapanır ve kodlar KANITA yazılır (bedava B2C kanıtı)', async () => {
     const { orderId, codes } = await boxedReady({ boxQtys: [1, 2] });
     for (const code of codes) await loadBox(db, { code, courierId });
+    await advanceOrder(db, orderId, ['out_for_delivery']);
 
     const outcome = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: codes });
 

@@ -66,7 +66,9 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
   });
 
   it('operasyona-YENİ anahtarlar iki taban katmanında da yok, birleşimde var', () => {
-    for (const key of ['panel', 'neutral-bg', 'ink-inset', 'warehouse', 'tab-inactive', 'error-line']) {
+    /* `error-line` bu listeden ÇIKTI (30.08): tabana taşındı (`customerAppError`) çünkü paylaşılan
+       kitin `error` tonu iki yüzeyde birden yaşıyor. Artık operasyona-yeni değil, MİRAS. */
+    for (const key of ['panel', 'neutral-bg', 'ink-inset', 'warehouse', 'tab-inactive']) {
       expect(baseColors, `${key} taban katmanlarında olmamalı`).not.toHaveProperty(key);
       expect(composedColors, `${key} birleşimde olmalı`).toHaveProperty(key);
     }
@@ -126,7 +128,10 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(composedText.note).toBe('13px');
     expect(composedText.control).toBe('13.5px');
     expect(composedText['body-sm']).toBe('14px');
-    expect(composedText.button).toBe('14.5px'); // birincil CTA
+    /* `button` operasyonda EZİLDİ (30.08): 14,5 → 13,5. Değer `control` ile aynı çıkıyor ve bu
+       bir kopya DEĞİL — ikisi ayrı rol (biri girdi/kontrol ölçüsü, öteki düğme etiketi) ve eşik
+       kuralı yeni ANAHTAR açmayı yönetir, farkı değil (dosyanın kendi künyesi). */
+    expect(composedText.button).toBe('13.5px'); // düğme etiketi — operasyon farkı
     expect(composedText.body).toBe('15px');
     expect(composedText.step).toBe('16px');
     expect(composedText['screen-title']).toBe('17px'); // Lora 600 ekran başlığı
@@ -176,7 +181,7 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
        eşiğin çok üstünde) ve o zaten turuncu ailenin kenarıdır. */
     expect(composedColors['warning-line']).toBe('#d9a97f');
     expect(composedColors['warning-line']).not.toBe(composedColors['error-line']);
-    expect(Object.keys(operationsAppLine)).toEqual(['error-line', 'warning-line']);
+    expect(Object.keys(operationsAppLine)).toEqual(['warning-line']);
   });
 
   it('YARIÇAP: resmî 4\'lü set devralınır, altına yalnız bir durak eklenir', () => {
@@ -203,9 +208,10 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
     expect(fade).toContain(', 0)');
   });
 
-  it('fark/yeni dağılımı sabit: 3 fark + 18 yeni', () => {
+  it('fark/yeni dağılımı sabit: 4 fark + 17 yeni', () => {
     expect(sharedKeys(baseColors, operationsAppColors)).toHaveLength(3);
-    expect(sharedKeys(baseText, operationsAppText)).toHaveLength(0);
+    // `button` 30.08'de farka döndü: operasyon düğmeleri müşterininkinden bir punto küçük.
+    expect(sharedKeys(baseText, operationsAppText)).toHaveLength(1);
     expect(sharedKeys(baseRadius, operationsAppRadius)).toHaveLength(0);
 
     const total =
@@ -214,7 +220,10 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
       Object.keys(operationsAppRadius).length +
       Object.keys(operationsAppShadow).length +
       Object.keys(operationsAppGradient).length;
-    /* 3 fark + 18 operasyona-yeni. 30.08'de dört durak açıldı: `shadow.glow` (v3'ün TEK gölge
+    /* 3 fark + 17 operasyona-yeni. `error-line` 30.08'de TABANA taşındı (paylaşılan kitin `error`
+       tonu iki yüzeyde birden yaşıyor) — sayı bir azaldı ve azalması gerekiyordu: aynı değeri iki
+       katmanda tanımlamak "ikinci ad" olurdu, anti-kopya testi onu zaten reddediyor.
+       30.08'de dört durak açıldı: `shadow.glow` (v3'ün TEK gölge
        benzeri durağı — yapışkan okutma CTA'sının zeytin ışıması), `warning-line` (uyarı kartının
        kenarı) ve TONLU KARTIN İKİ ZEMİNİ — `error-bg` (fark: tabanın #f4e3e0'ı ezildi) +
        `warning-bg` (yeni). Son ikisi §4'ün eşiğine takılıp bilerek AÇILMAMIŞTI; kullanıcı cihazda

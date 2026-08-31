@@ -22,6 +22,7 @@ import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
 import { dayLabel, money, runLabel, turkishUpper } from './courier-format';
+import { timeOf } from '@/lib/operations/stamp';
 import { isRouteFree, useCourierDay } from './use-courier-day.hook';
 
 /*
@@ -89,8 +90,15 @@ const shell = operationsCopy;
 */
 const DAY_SKELETON = { summary: 120, gate: 66, stop: 58 } as const;
 
-/** Durak dairesinin dört hâli — v2:851-855'in renk üçlüleri, token karşılıklarıyla. */
-type CircleTone = 'delivered' | 'issue' | 'next' | 'idle';
+/**
+ * Durak dairesinin BEŞ hâli — v3:14'ün renk üçlüleri, token karşılıklarıyla.
+ *
+ * `partial` 30.08'de AÇILDI ve bu bir karar dönüşüdür: v2 döneminde "kısmi ayrı bir sonuç değil"
+ * diye kapatılmıştı, oysa veri onu zaten üretiyor (`fulfilledQty < qty`) ve v3 ayrı bir kartla
+ * çiziyor. Sözleşmedeki `StopOutcome` yine DÖRTLÜ — kısmi bir geçiş değil, teslim edilmiş durağın
+ * niteliği; ayrım yalnız BURADA, çizimde yaşıyor.
+ */
+type CircleTone = 'delivered' | 'partial' | 'issue' | 'next' | 'idle';
 
 export function CourierDayScreen() {
   const router = useRouter();
@@ -320,7 +328,15 @@ export function CourierDayScreen() {
                 {/* İZ KOYU (30.08): kart koyu ama çubuğun izi açık zeminin iziydi ve çubuk
                     boşken bile DOLU görünüyordu — üç durağın biri bitmişken göz "neredeyse
                     tamam" okuyordu. Kit prop'u, iki koyu çağıran da kuryede. */}
-                <OperationsProgressBar value={doneCount / stops.length} onInk testID="courier-day-progress" />
+                {/* İKİNCİ PAY TAKILI DURAKLAR (v3:14 · 30.08): tek paylı çubuk günü olduğundan
+                    iyi gösteriyordu — ulaşılamayan durak çubukta hiç görünmüyor, kalan boşlukta
+                    "sırası gelmemiş" gibi duruyordu. */}
+                <OperationsProgressBar
+                  value={doneCount / stops.length}
+                  secondary={{ value: issueCount / stops.length, tone: operationsTheme.colors.error }}
+                  onInk
+                  testID="courier-day-progress"
+                />
 
                 {doorStops.length === 0 ? null : (
                   <View style={styles.doorLeftBox} testID="courier-day-door-left">
@@ -371,7 +387,20 @@ export function CourierDayScreen() {
                 testID="courier-day-sale"
               />
 
-              <Text style={styles.stopsHeading}>{t.day.stopsHeading}</Text>
+              {/* BAŞLIK SAYIYI VE TAKILIYI TAŞIR (v3:14) — "DURAKLAR · 5" solda, "1 takılı" sağda.
+                  Eskiden yalnız "DURAKLAR" yazıyordu: kaç durak olduğu ancak sayılarak, takılı
+                  olup olmadığı ancak listeyi tarayarak bulunuyordu. Takılı YOKSA sağ taraf hiç
+                  çizilmez — sıfırı yazmak, olmayan bir sorunu duyurmaktır. */}
+              <View style={styles.stopsHeadingRow}>
+                <Text style={styles.stopsHeading}>
+                  {fillCopy(t.day.stopsHeading, { n: String(stops.length) })}
+                </Text>
+                {issueCount === 0 ? null : (
+                  <Text style={styles.stuckCount} testID="courier-day-stuck">
+                    {fillCopy(t.day.stuckCount, { n: String(issueCount) })}
+                  </Text>
+                )}
+              </View>
 
               {stops.map((stop, index) => (
                 <StopRow
@@ -380,6 +409,7 @@ export function CourierDayScreen() {
                   order={index + 1}
                   tone={circleTone(stop, stop.orderId === nextOrderId, day.started)}
                   started={day.started}
+                  last={index === stops.length - 1}
                   onPress={() =>
                     router.navigate({ pathname: '/delivery/[orderId]', params: { orderId: stop.orderId } })
                   }
@@ -453,8 +483,15 @@ export function CourierDayScreen() {
               >
                 {ctaMode === 'close' ? t.day.close : ctaStartLabel}
               </Text>
-              {ctaMode === 'close' && openCount > 0 ? (
-                <Text style={styles.ctaBadge}>{fillCopy(t.day.openBadge, { n: String(openCount) })}</Text>
+              {/* ROZET TAKILIYI DA SÖYLER (v3:14 — "2 açık · 1 takılı"). Kurye kapatmadan önce
+                  neyin çözülmemiş olduğunu düğmenin üstünde görmeli; yalnız "açık" sayısı,
+                  sonuçlanmayan durakları kapanışın sürprizine bırakıyordu. */}
+              {ctaMode === 'close' && openCount + issueCount > 0 ? (
+                <Text style={styles.ctaBadge}>
+                  {issueCount === 0
+                    ? fillCopy(t.day.openBadge, { n: String(openCount) })
+                    : fillCopy(t.day.openBadgeStuck, { n: String(openCount), m: String(issueCount) })}
+                </Text>
               ) : null}
             </PressableSurface>
           )}
@@ -535,27 +572,114 @@ function RouteCard({ route, selected, onPress }: RouteCardProps) {
   );
 }
 
-/** v2:851-855 — sonuç dairesinin tonu. "Sıradaki" yalnız YOLA ÇIKILMIŞSA koyulur. */
+/**
+ * **KISMİ TESLİM** — teslim edilmiş ama bir adedi eksik durak.
+ *
+ * Sözleşmede ayrı bir `outcome` YOK ve olmayacak: sipariş `delivered`, kalemin `fulfilledQty`si
+ * `qty`den küçük. Kural tek yerde çünkü üç yer soruyor — daire tonu, etiket ve alt satır.
+ */
+function isPartial(stop: CourierStopContract): boolean {
+  return stop.outcome === 'delivered' && stop.items.some((line) => line.fulfilledQty < line.qty);
+}
+
+/** Kısmi durağın adet dökümü — sipariş edilen ve fiilen bırakılan toplam. */
+function partialCounts(stop: CourierStopContract): { total: number; done: number } {
+  return stop.items.reduce(
+    (sum, line) => ({ total: sum.total + line.qty, done: sum.done + line.fulfilledQty }),
+    { total: 0, done: 0 },
+  );
+}
+
+/** v3:14 — sonuç dairesinin tonu. "Sıradaki" yalnız YOLA ÇIKILMIŞSA koyulur. */
 function circleTone(stop: CourierStopContract, isNext: boolean, started: boolean): CircleTone {
-  if (stop.outcome === 'delivered') return 'delivered';
+  if (stop.outcome === 'delivered') return isPartial(stop) ? 'partial' : 'delivered';
   if (stop.outcome === 'unreachable' || stop.outcome === 'refused') return 'issue';
   return isNext && started ? 'next' : 'idle';
 }
 
-/** Durağın alt satırı (v2:856-861) — sonuç ne söylüyorsa o; iç durum adı ekrana sızmaz. */
+/**
+ * **SONUÇLANMIŞ DURAĞIN ETİKETİ** — "TESLİM EDİLDİ · 14:12" (v3:14, 30.08).
+ *
+ * Sonuç eskiden alt satıra gömülüydü ("Ahmet · teslim edildi") ve SAAT hiç yazılmıyordu: kurye
+ * hangi durağın ne zaman kapandığını okuyamıyordu. Rota bir sıradır; saat o sıranın tek işareti.
+ *
+ * Damga YOKSA etiket saatsiz yazılır — uydurma bir saat, en tehlikeli yalandır (CLAUDE §1).
+ * Sonuçlanmamış durakta `null`: etiketi olan şey bitmiş iştir.
+ */
+function stopTag(stop: CourierStopContract): string | null {
+  const tag =
+    stop.outcome === 'delivered'
+      ? isPartial(stop)
+        ? t.day.stop.tagPartial
+        : t.day.stop.tagDelivered
+      : stop.outcome === 'unreachable'
+        ? t.day.stop.tagUnreachable
+        : stop.outcome === 'refused'
+          ? t.day.stop.tagRefused
+          : null;
+  if (tag === null) return null;
+  return stop.settledAt === null ? tag : fillCopy(t.day.stop.tagAt, { tag, time: timeOf(stop.settledAt) });
+}
+
+/**
+ * Durağın alt satırı (v3:14) — sonuç ne söylüyorsa o; iç durum adı ekrana sızmaz.
+ *
+ * Sonuç ETİKETE çıktığı için burası artık sonucu TEKRAR ETMİYOR: teslim edilmiş durakta cümle
+ * "ne oldu"yu değil "ne bıraktım, ne aldım"ı anlatıyor — kuryenin listeye dönüp sorduğu soru bu.
+ */
 function stopSubtitle(stop: CourierStopContract): { text: string; tone: 'muted' | 'error' | 'terracotta' } {
   const channel = t.channel[stop.channel];
   if (stop.outcome === 'delivered') {
+    /* KISMİ: adet dökümü + araçta kalan. Kalan borç burada YAZILMAZ — kısmi durağın borcu zaten
+       düzeltmeyle düşmüştür (07.8) ve iki sayı yan yana kuryeye hangisinin geçerli olduğunu
+       sordururdu. */
+    if (isPartial(stop)) {
+      const { total, done } = partialCounts(stop);
+      return {
+        text: [
+          fillCopy(t.day.stop.partialLine, { total: String(total), done: String(done) }),
+          fillCopy(t.day.stop.leftInVanQty, { n: String(total - done) }),
+        ].join(' · '),
+        tone: 'terracotta',
+      };
+    }
+    const parts = [fillCopy(t.day.stop.items, { n: String(stop.itemCount) })];
+    /* KAPIDA ALINAN PARA (30.08): yöntem ve tutar birlikte — "nakit 85,00 € alındı". İkisi de
+       gerekiyor, çünkü kurye akşam kasayı yöntem yöntem sayacak. Yöntem okunamadıysa satır hiç
+       yazılmaz: tutarı yöntemsiz yazmak, o parayı hangi kasaya koyacağını söylemez. */
+    const collected = stop.payment.collectedAtDoorCents;
+    const method = stop.payment.expectedMethod;
+    if (collected !== null && method !== null) {
+      parts.push(fillCopy(t.day.stop.collected, { method: t.method[method], amount: money(collected) }));
+    }
+    if (stop.hasProof) parts.push(t.day.stop.proof);
     const due = stop.payment.dueAmountCents;
-    return due === null
-      ? { text: `${stop.customerName} · ${t.day.stop.delivered}`, tone: 'muted' }
-      : {
-          text: `${stop.customerName} · ${t.day.stop.delivered} · ${fillCopy(t.day.stop.deliveredDebt, { amount: money(due) })}`,
-          tone: 'terracotta',
-        };
+    if (due !== null) {
+      parts.push(fillCopy(t.day.stop.deliveredDebt, { amount: money(due) }));
+      return { text: parts.join(' · '), tone: 'terracotta' };
+    }
+    return { text: parts.join(' · '), tone: 'muted' };
   }
-  if (stop.outcome === 'unreachable') return { text: `${stop.customerName} · ${t.day.stop.unreachable}`, tone: 'error' };
-  if (stop.outcome === 'refused') return { text: `${stop.customerName} · ${t.day.stop.refused}`, tone: 'error' };
+  if (stop.outcome === 'unreachable' || stop.outcome === 'refused') {
+    /* KURYENİN KENDİ NOTU ÖNCE (30.08): "zil bozuk — kimse yok". Not `MarkUndeliveredRequest`le
+       gönderiliyordu ama hiçbir okuma geri getirmiyordu — kurye kendi yazdığını okuyamıyordu.
+       Not yoksa cümle sonucun kendi metniyle başlar; boş bir satır bırakmak sebebi soru işareti
+       yapardı. */
+    const note = stop.outcomeNote;
+    /* MALIN AKIBETİ İKİ SONUÇTA FARKLI ve cümle de öyle olmalı (cihaz turu 30.08 — ilk hâlde
+       ikisine de "araçta kaldı" yazılıyordu, reddedilen durakta bu YANLIŞTI). Sözleşmenin kendi
+       kuralı: `unreachable` malı araçta bırakır (`ready`) ve kapanışta karara düşer; `refused`
+       depoya döndürür (`returned`) — orada bekleyen bir karar yok, iade akışı başlamıştır. */
+    const parts =
+      stop.outcome === 'unreachable'
+        ? [
+            note ?? t.day.stop.unreachable,
+            fillCopy(t.day.stop.leftInVanItems, { n: String(stop.itemCount) }),
+            t.day.stop.closeDecides,
+          ]
+        : [note ?? t.day.stop.refused, fillCopy(t.day.stop.backToWarehouse, { n: String(stop.itemCount) })];
+    return { text: parts.join(' · '), tone: 'error' };
+  }
 
   const parts = [stop.customerName, channel, fillCopy(t.day.stop.items, { n: String(stop.itemCount) })];
   if (stop.attempts > 0) parts.push(fillCopy(t.day.stop.attempt, { n: String(stop.attempts + 1) }));
@@ -569,6 +693,8 @@ interface StopRowProps {
   order: number;
   tone: CircleTone;
   started: boolean;
+  /** Listenin SON durağı mı — zaman çizgisi burada bitirilir, bağlanacak bir sonraki yok. */
+  last: boolean;
   onPress: () => void;
 }
 
@@ -614,8 +740,11 @@ function GateRow({ icon, title, meta, tone, onPress, testID }: GateRowProps) {
   );
 }
 
-function StopRow({ stop, order, tone, started, onPress }: StopRowProps) {
+function StopRow({ stop, order, tone, started, last, onPress }: StopRowProps) {
   const subtitle = stopSubtitle(stop);
+  const tag = stopTag(stop);
+  /** Durak hâlâ AÇIK mı — yön oku ve "yapılacak iş" görüntüsü yalnız buna bağlı. */
+  const open = stop.outcome === 'pending';
   const address = stop.address ?? t.day.stop.noAddress;
   const due = stop.payment.dueAmountCents;
   const method = stop.payment.expectedMethod;
@@ -634,32 +763,73 @@ function StopRow({ stop, order, tone, started, onPress }: StopRowProps) {
          duysun ve dokunuş görünürde işe yaramamış gibi durmasın. */
       disabled={!started}
       feedback="scale"
-      style={[styles.stopRow, stop.outcome === 'delivered' ? styles.stopDone : started ? undefined : styles.stopLocked]}
+      style={[
+        styles.stopRow,
+        styles.stopRowRail,
+        stop.outcome === 'delivered' ? styles.stopDone : started ? undefined : styles.stopLocked,
+      ]}
       accessibilityLabel={fillCopy(t.day.stop.openLabel, { address, sub: subtitle.text })}
       accessibilityHint={started ? undefined : t.day.stop.lockedHint}
       testID={`courier-stop-${stop.orderId}`}
     >
-      <View style={[styles.circle, styles[`circle_${tone}`]]}>
-        <Text style={[styles.circleText, styles[`circleText_${tone}`]]}>{tone === 'delivered' ? '✓' : order}</Text>
+      {/* ZAMAN ÇİZGİSİ (v3:14 · 30.08) — daireler dikey bir çizgiyle bağlanıyor.
+          Daireler bağsız dururken liste bir "kartlar yığını" gibi okunuyordu; rota ise bir
+          SIRADIR ve çizgi o sırayı görünür kılan tek öğe. Son durakta çizilmez: bağlanacak bir
+          sonraki durak yok, oraya çizgi koymak yolun devam ettiğini söylerdi. */}
+      <View style={styles.rail}>
+        <View style={[styles.circle, styles[`circle_${tone}`]]}>
+          <Text style={[styles.circleText, styles[`circleText_${tone}`]]}>
+            {tone === 'delivered' ? '✓' : tone === 'partial' ? '½' : tone === 'issue' ? '!' : order}
+          </Text>
+        </View>
+        {last ? null : <View style={styles.railLine} />}
       </View>
       {/* DURAK KENDİ KARTINDA (v3:14 · 30.08) — numara dairesi kartın DIŞINDA kalıyor.
           Kesikli çizgiyle ayrılmış düz satırlar listeyi bir döküme çeviriyordu; kart her durağı
-          "dokunulacak bir iş" olarak çerçeveliyor. Teslim edilen durakta kart ÇİZİLMİYOR: iş
-          bitti, geriye bir kayıt kaldı — kartı sürdürmek onu hâlâ yapılacak gibi gösterirdi. */}
-      <View style={[styles.stopBody, tone === 'delivered' ? null : styles.stopCard]}>
+          "dokunulacak bir iş" olarak çerçeveliyor.
+
+          ── SONUÇ KARTIN ZEMİNİNDE (30.08) ────────────────────────────────────────────────
+          Kart eskiden TEK zeminliydi (`panel` + `sand-300`) ve sonuç yalnız daire renginden
+          okunuyordu; teslim edilen durakta ise kart hiç çizilmiyordu. v3 dört zemin veriyor ve
+          gerekçesi listenin kendisinde: kurye ekrana bakıp "hangileri kaldı"yı kartların RENGİNDEN
+          tarıyor, 32 piksellik bir daireden değil. Teslim edilmiş kart da çizilir — soluk, ama
+          çizilir: iş bitti, kayıt duruyor. */}
+      <View style={[styles.stopBody, styles.stopCard, styles[`stopCard_${tone}`]]}>
+        {/* SIRADAKİ DURAĞIN BAŞLIĞI (v3:14) — kart zaten ayrışıyor ama "sıradaki" bir SÖZ, renk
+            değil: kurye listeye döndüğünde nereden devam edeceğini okumalı. */}
+        {tone === 'next' ? <Text style={styles.stopNextLabel}>{t.day.stop.nextLabel}</Text> : null}
+        {tag === null ? null : (
+          <Text style={[styles.stopTag, styles[`stopTag_${tone}`]]} testID={`courier-stop-tag-${stop.orderId}`}>
+            {tag}
+          </Text>
+        )}
         <Text style={[styles.stopAddress, stop.outcome === 'delivered' ? styles.stopAddressDone : undefined]}>
           {address}
         </Text>
         <Text style={[styles.stopSub, styles[`stopSub_${subtitle.tone}`]]}>{subtitle.text}</Text>
-        {badge === null ? null : (
-          <Text style={styles.stopBadge} testID={`courier-stop-door-${stop.orderId}`}>
-            {badge}
-          </Text>
+        {/*
+          ALT ŞERİT: rozet solda, yön oku sağda (v3:14 — `justify-content:space-between`).
+
+          ── OK YALNIZ SONUÇLANMAMIŞ DURAKTA (kullanıcı bulgusu 30.08) ──────────────────────
+          Ölçüldü: tasarımın beş durak kartından yalnız İKİSİNDE ok var — sıradaki ve bekleyen.
+          Teslim, kısmi ve ulaşılamadı kartlarında YOK, çünkü ok bir DAVETTİR ("burada yapılacak
+          iş var") ve sonuçlanmış durakta yapılacak iş kalmamıştır. Kart hâlâ dokunulabilir
+          (kayda bakılabilir) ama kendini iş gibi sunmaz.
+
+          Ok kartın İÇİNDE ve alt şeritte: eskiden kartın dışında, dikey ortada duruyordu ve
+          hangi karta ait olduğu — özellikle iki satırlık adreslerde — belirsizdi.
+        */}
+        {badge === null && !open ? null : (
+          <View style={styles.stopFoot}>
+            {badge === null ? null : (
+              <Text style={styles.stopBadge} testID={`courier-stop-door-${stop.orderId}`}>
+                {badge}
+              </Text>
+            )}
+            {open ? <Text style={styles.chevron}>›</Text> : null}
+          </View>
         )}
       </View>
-      {/* Yön oku kartın SAĞ KENARINDA (tasarım) — kartın dışında dururken listenin kenarına
-          yapışıyor ve hangi karta ait olduğu belirsizleşiyordu. */}
-      <Text style={[styles.chevron, tone === 'delivered' ? null : styles.chevronInCard]}>›</Text>
     </PressableSurface>
   );
 }
@@ -755,12 +925,24 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['body-sm'],
     color: operationsTheme.colors.cream,
   },
+  /** Başlık satırı — sayaç solda, "takılı" sağda (v3:14). */
+  stopsHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    paddingTop: operationsTheme.space.lg,
+  },
   stopsHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
-    paddingTop: operationsTheme.space.lg,
+  },
+  /** "1 takılı" — başlığın sağ ucu; sayı değil UYARI olduğu için hata tonunda. */
+  stuckCount: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.error,
   },
   stopsFootnote: {
     fontFamily: operationsTheme.font.body[400],
@@ -894,20 +1076,97 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: operationsTheme.space.lg,
   },
-  /** Kart içindeki yön oku — kartın sağ kenarına yaslanır, listenin kenarına değil. */
-  chevronInCard: { marginLeft: -operationsTheme.space['4xl'] },
+  /* DURAK SATIRI GERİLİR (`stretch`), rota kartı ORTALANIR. Ayrı stil çünkü ikisi aynı iskeleti
+     paylaşıyor ama farklı şey çiziyor: durakta zaman çizgisi kartın boyunca uzamalı, rota
+     seçiminde çizgi YOK (bir sıra değil, bir liste) ve daire dikey ortada durmalı. */
+  stopRowRail: { alignItems: 'stretch' },
+  /** Daire + zaman çizgisi sütunu — genişliği daireden, uzunluğu karttan gelir. */
+  rail: {
+    alignItems: 'center',
+    gap: operationsTheme.space['2xs'],
+  },
+  /** Durakları bağlayan dikey çizgi — kartın alt kenarına kadar iner. */
+  railLine: {
+    flex: 1,
+    width: operationsTheme.border.ring,
+    borderRadius: operationsTheme.radius.pill,
+    backgroundColor: operationsTheme.colors['sand-300'],
+  },
+  /** Kartın alt şeridi — rozet solda, yön oku sağda; ikisi de yoksa şerit hiç çizilmez. */
+  stopFoot: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: operationsTheme.space['2xs'],
+  },
   /** Durağın gövdesi — kendi kartı; numara dairesi dışarıda, yön oku kartın sağ kenarında. */
   stopCard: {
-    backgroundColor: operationsTheme.colors.panel,
     borderRadius: operationsTheme.radius.control,
     borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
     paddingVertical: operationsTheme.space.lg,
     paddingHorizontal: operationsTheme.space.lg,
   },
-  /** v2:864 — teslim edilen durak soluk, yola çıkılmamış liste de bir tık soluk. */
-  stopDone: { opacity: 0.55 },
+  /*
+    KARTIN DÖRT ZEMİNİ (v3:14 · 30.08) — sonuç kartın rengidir, dairenin değil.
+
+    Değerler tasarımdan token karşılıklarıyla: teslim `#f4f2ea/#e7e2d2` → sayfa kremi + nötr kenar
+    (kart sayfayla aynı zemindedir, onu yalnız kenarı ayırır — "bitmiş iş" tam olarak budur);
+    kısmi `#fbf3e8/#e6cfae` → uyarı ailesi; ulaşılamadı `#f4e3e0/#e0b9b2` → hata ailesi (`error-line`
+    tasarımın değeriyle BİREBİR); sıradaki `#fff/#5f7a2c` → girdi beyazı + zeytin.
+
+    HAM HEX YOK, hiçbiri yeni token istemedi (CLAUDE §3): dördü de envanterde duran ailelerin
+    üyeleri. Bulunmayan tek şey teslim kartının zemini gibi görünüyordu — o da `cream`in kendisi
+    çıktı (Δ2/2/2, gözle aynı).
+  */
+  stopCard_delivered: {
+    backgroundColor: operationsTheme.colors.cream,
+    borderColor: operationsTheme.colors['neutral-bg'],
+  },
+  stopCard_partial: {
+    backgroundColor: operationsTheme.colors['warning-bg'],
+    borderColor: operationsTheme.colors['warning-line'],
+  },
+  stopCard_issue: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderColor: operationsTheme.colors['error-line'],
+  },
+  /* SIRADAKİ KART BEYAZ VE KALIN ZEYTİN KENARLI — listenin tek "şimdi" öğesi. Gölge YOK: sert
+     gölge v3'te bırakıldı (21.161) ve ayrımı zaten kenarın kalınlığı taşıyor. */
+  stopCard_next: {
+    backgroundColor: operationsTheme.colors.card,
+    borderColor: operationsTheme.colors.olive,
+    /* Tasarım 2px diyor; operasyon setinin o basamağı `ring` (2,5). `base`in (1,5) üstünde bir
+       kademe gerekiyor çünkü ayrımı taşıyan tek şey bu kenar — gölge v3'te bırakıldı (21.161). */
+    borderWidth: operationsTheme.border.ring,
+  },
+  stopCard_idle: {
+    backgroundColor: operationsTheme.colors.panel,
+    borderColor: operationsTheme.colors['sand-300'],
+  },
+  /* Teslim edilen durak SOLUK ama artık kartlı: zemin ayrımı yapılmışken opaklık da düşürülünce
+     kart görünmez oluyordu — ölçü 0,55'ten 0,8'e çekildi, ayrımı zemin taşıyor. */
+  stopDone: { opacity: 0.8 },
   stopLocked: { opacity: 0.75 },
+  /** "SIRADAKİ DURAK" — kartın içindeki küçük zeytin başlık (v3:14). */
+  stopNextLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    /* `emToDp` ŞART: token em cinsinden, RN `letterSpacing`i dp bekler — ham değer yazılsaydı
+       harfler arası boşluk 9,5 kat açılırdı (ekranın kendi kuralı, `stopsHeading` emsali). */
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.olive,
+  },
+  /** Sonuç etiketi — "TESLİM EDİLDİ · 14:12"; tonu kartın ailesinden gelir. */
+  stopTag: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+  },
+  stopTag_delivered: { color: operationsTheme.colors['olive-dark'] },
+  stopTag_partial: { color: operationsTheme.colors.warehouse },
+  stopTag_issue: { color: operationsTheme.colors.error },
+  stopTag_next: { color: operationsTheme.colors.olive },
+  stopTag_idle: { color: operationsTheme.colors.muted },
   circle: {
     width: operationsTheme.size.dotButton,
     height: operationsTheme.size.dotButton,
@@ -920,9 +1179,16 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors['olive-bg'],
     borderColor: operationsTheme.colors['olive-bg'],
   },
+  /* SORUNLU DAİRE DOLU KIRMIZI (v3:14) — içinde beyaz "!". Açık `error-bg` zeminiyle çizilince
+     daire kartın kendi zeminine karışıyordu; listeyi tararken takılı durak görünmüyordu. */
   circle_issue: {
-    backgroundColor: operationsTheme.colors['error-bg'],
-    borderColor: operationsTheme.colors['error-bg'],
+    backgroundColor: operationsTheme.colors.error,
+    borderColor: operationsTheme.colors.error,
+  },
+  /** Kısmi teslim — "½" işaretli amber daire (v3:14). */
+  circle_partial: {
+    backgroundColor: operationsTheme.colors['warning-line'],
+    borderColor: operationsTheme.colors['warning-line'],
   },
   circle_next: {
     backgroundColor: operationsTheme.colors.ink,
@@ -937,7 +1203,8 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.note,
   },
   circleText_delivered: { color: operationsTheme.colors['olive-dark'] },
-  circleText_issue: { color: operationsTheme.colors.error },
+  circleText_issue: { color: operationsTheme.colors['on-image'] },
+  circleText_partial: { color: operationsTheme.colors.warehouse },
   circleText_next: { color: operationsTheme.colors['on-image'] },
   circleText_idle: { color: operationsTheme.colors.muted },
   stopBody: {
@@ -949,9 +1216,12 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.body,
     color: operationsTheme.colors.ink,
   },
+  /* ÜSTÜ ÇİZİLİ METİN YOK (kullanıcı bulgusu 30.08 · tasarımda `line-through` HİÇ geçmiyor —
+     ölçüldü, 14. ekranda sıfır kullanım). Çizgi "iptal edildi" der; teslim edilmiş durak iptal
+     değil TAMAMLANMIŞ bir iştir. Ayrımı zaten kartın zemini ve sonuç etiketi taşıyor; adresin
+     rengi sessizleşir, üstü çizilmez. */
   stopAddressDone: {
     color: operationsTheme.colors.muted,
-    textDecorationLine: 'line-through',
   },
   stopSub: {
     fontFamily: operationsTheme.font.body[400],
@@ -960,9 +1230,9 @@ const styles = StyleSheet.create({
   stopSub_muted: { color: operationsTheme.colors.muted },
   stopSub_error: { color: operationsTheme.colors.error },
   stopSub_terracotta: { color: operationsTheme.colors.terracotta },
+  /* Rozet artık alt şeridin İÇİNDE: kendi `alignSelf`i ve üst boşluğu şeride devredildi, yoksa
+     ok ile aynı satırda dururken iki kez boşluk alıyordu. */
   stopBadge: {
-    alignSelf: 'flex-start',
-    marginTop: operationsTheme.space['2xs'],
     paddingVertical: operationsTheme.space.xs,
     paddingHorizontal: operationsTheme.space.lg,
     borderRadius: operationsTheme.radius.badge,

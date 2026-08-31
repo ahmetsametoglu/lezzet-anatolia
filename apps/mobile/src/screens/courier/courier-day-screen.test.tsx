@@ -3,7 +3,15 @@ import type { CourierDayResponse, CourierRoute, StartCourierDayResponse } from '
 
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { CourierDayScreen } from './courier-day-screen';
-import { courierDay, courierDayRun, courierRoute, courierStop, dayCloseDraft, takenRouteRun } from './courier-fixture';
+import {
+  courierDay,
+  courierDayRun,
+  courierRoute,
+  courierStop,
+  dayCloseDraft,
+  stopItemId,
+  takenRouteRun,
+} from './courier-fixture';
 import messages from './messages.json';
 
 /*
@@ -47,6 +55,9 @@ jest.mock('@/lib/auth/supabase', () => ({
 const t = messages;
 /** Fixture'ın birinci durağı — kilit ve başlatma testleri hep bu kimliği konuşuyor. */
 const STOP_1 = '00000000-0000-4000-8000-000000000001';
+/** İkinci ve üçüncü durak — sonuç etiketlerini ayrı ayrı okuyan testin adresleri. */
+const STOP_2 = '00000000-0000-4000-8000-000000000002';
+const STOP_3 = '00000000-0000-4000-8000-000000000003';
 /** Fixture rotasının bölgesi — başlatma isteğinin gövdesinde bu kimlik gider. */
 const ZONE_ID = courierRoute().zoneId;
 /** Seçili rotanın CTA'da okunan hâli. */
@@ -287,7 +298,7 @@ describe('K1 · günün seferi', () => {
 
   it('sefer kapatma CTA\'sı kapanış ekranına gider', async () => {
     mockDay(
-      courierDay([courierStop(1, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null } })]),
+      courierDay([courierStop(1, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null } })]),
     );
 
     await renderDay();
@@ -319,8 +330,8 @@ describe('K1 · günün seferi', () => {
     mockDay(
       courierDay([
         courierStop(1),
-        courierStop(2, { payment: { dueAmountCents: 1000, expectedMethod: 'card' } }),
-        courierStop(3, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null } }),
+        courierStop(2, { payment: { dueAmountCents: 1000, expectedMethod: 'card', collectedAtDoorCents: null } }),
+        courierStop(3, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null } }),
       ]),
     );
 
@@ -332,35 +343,137 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByText('KAPIDA · 10,00 € KART')).toBeOnTheScreen();
   });
 
-  it('sonuçlanmış durakların alt satırı sonucu söyler; iç durum adı sızmaz', async () => {
+  /*
+    SONUÇ ETİKETE ÇIKTI (v3:14 · 30.08). Eskiden alt satır sonucu da söylüyordu ("Müşteri 1 ·
+    teslim edildi") ve SAAT hiçbir yerde yazmıyordu. Artık etiket "ne oldu ve ne zaman"ı, alt satır
+    "ne bıraktım, ne aldım"ı taşıyor — kuryenin listeye dönüp sorduğu iki ayrı soru.
+  */
+  it('sonuçlanmış durak ETİKETİNDE sonucu ve SAATİ yazar; iç durum adı sızmaz', async () => {
     mockDay(
       courierDay([
-        courierStop(1, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null } }),
-        courierStop(2, { outcome: 'unreachable', attempts: 1 }),
-        courierStop(3, { outcome: 'refused' }),
+        courierStop(1, {
+          outcome: 'delivered',
+          settledAt: '2026-08-08T14:12:00.000Z',
+          payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null },
+        }),
+        courierStop(2, { outcome: 'unreachable', attempts: 1, settledAt: '2026-08-08T15:05:00.000Z' }),
+        courierStop(3, { outcome: 'refused', settledAt: '2026-08-08T15:40:00.000Z' }),
       ]),
     );
 
     await renderDay();
 
     await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
-    expect(screen.getByText('Müşteri 1 · teslim edildi')).toBeOnTheScreen();
-    expect(screen.getByText('Müşteri 2 · ulaşılamadı — tekrar denenecek')).toBeOnTheScreen();
-    expect(screen.getByText('Müşteri 3 · kabul etmedi — iade akışında')).toBeOnTheScreen();
+    /* Saat CİHAZIN yerel saatiyle yazılıyor (`timeOf`), yani test makinesinin kuşağına göre
+       değişir — sınanan şey ETİKETİN ŞEKLİ: sonuç adı + ayraç + "SS:DD". Sabit bir saat beklemek
+       testi kuşağa bağlar ve CI'da yalancı kırmızı üretirdi. */
+    expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).toHaveTextContent(/^TESLİM EDİLDİ · \d{2}:\d{2}$/);
+    expect(screen.getByTestId('courier-stop-tag-' + STOP_2)).toHaveTextContent(/^ULAŞILAMADI · \d{2}:\d{2}$/);
+    expect(screen.getByTestId('courier-stop-tag-' + STOP_3)).toHaveTextContent(/^KABUL ETMEDİ · \d{2}:\d{2}$/);
     // İlerleme sayacı yalnız TESLİM edilenleri sayar; ulaşılamayan/reddedilen "biten" değildir.
     expect(screen.getByTestId('courier-day-progress')).toBeOnTheScreen();
     // v3: sayaç tek cümle ("1/3 durak") — v2'de sayı ile bölen ayrı iki metindi.
     expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/1\/3 durak/);
+    // Başlık sayıyı, sağ uç TAKILI durak sayısını taşır (ulaşılamadı + kabul etmedi = 2).
+    expect(screen.getByText('DURAKLAR · 3')).toBeOnTheScreen();
+    expect(screen.getByTestId('courier-day-stuck')).toHaveTextContent('2 takılı');
   });
 
-  it('teslim edilmiş ama borcu kalan durak bunu ALT SATIRDA söyler', async () => {
-    mockDay(courierDay([courierStop(1, { outcome: 'delivered' })]));
+  it('damgası olmayan sonuç etiketi SAATSİZ yazılır — uydurma saat yok', async () => {
+    mockDay(courierDay([courierStop(1, { outcome: 'delivered', settledAt: null })]));
+
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).toHaveTextContent('TESLİM EDİLDİ'));
+    expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).not.toHaveTextContent(':');
+  });
+
+  it('teslim edilmiş durağın alt satırı ALINAN PARAYI, kanıdı ve kalan borcu söyler', async () => {
+    mockDay(
+      courierDay([
+        courierStop(1, {
+          outcome: 'delivered',
+          hasProof: true,
+          payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: 8500 },
+        }),
+      ]),
+    );
 
     await renderDay();
 
     await waitFor(() =>
-      expect(screen.getByText('Müşteri 1 · teslim edildi · kalan borç 42,00 €')).toBeOnTheScreen(),
+      expect(screen.getByText('2 kalem · nakit 85,00 € alındı · imza var · kalan borç 42,00 €')).toBeOnTheScreen(),
     );
+  });
+
+  /*
+    KISMİ TESLİM (30.08) — v2 döneminde "kısmi diye bir sonuç yok" diye kapatılmıştı, oysa veri onu
+    zaten üretiyor: kapıda eksik kalem işaretlenince `adjustFulfillment` `fulfilledQty`yi düşürüyor.
+    Sözleşmenin `StopOutcome`u yine dörtlü; ayrım yalnız çizimde.
+  */
+  it('kısmi teslim edilmiş durak KENDİ etiketini ve adet dökümünü çizer', async () => {
+    mockDay(
+      courierDay([
+        courierStop(1, {
+          outcome: 'delivered',
+          items: [
+            {
+              orderItemId: stopItemId(1, 0),
+              name: 'Fıstıklı Baklava',
+              qty: 3,
+              fulfilledQty: 2,
+              unitPriceCents: 1400,
+              lineDiscountAmountCents: 0,
+            },
+          ],
+          payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null },
+        }),
+      ]),
+    );
+
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).toHaveTextContent('KISMİ TESLİM'));
+    /* Metin İYELİK EKİ TAŞIMIYOR ("2'si" / "3'ü" sayıya göre değişir ve şablon bunu yapamaz) —
+       v3'ün cümlesi ekliydi, buradaki hâli ekten kaçınıyor ve aynı şeyi söylüyor. */
+    expect(screen.getByText('3 adetten 2 adet bırakıldı · 1 adet araçta — iade depoya')).toBeOnTheScreen();
+  });
+
+  it('ulaşılamayan durak KURYENİN KENDİ NOTUNU yazar', async () => {
+    mockDay(
+      courierDay([
+        courierStop(1, {
+          outcome: 'unreachable',
+          attempts: 1,
+          outcomeNote: 'Zil bozuk — kimse yok',
+        }),
+      ]),
+    );
+
+    await renderDay();
+
+    await waitFor(() =>
+      expect(screen.getByText('Zil bozuk — kimse yok · 2 kalem araçta kaldı · kapanışta karara düşer')).toBeOnTheScreen(),
+    );
+  });
+
+  /*
+    MALIN AKIBETİ İKİ SONUÇTA FARKLI (cihaz turu 30.08). İlk hâlde ikisine de "araçta kaldı"
+    yazılıyordu; sözleşmenin kuralı ise net: `unreachable` malı araçta bırakır ve kapanışta karara
+    düşer, `refused` depoya döndürür — orada bekleyen bir karar yok.
+  */
+  it('kabul etmeyen durakta mal DEPOYA döner, araçta kalmaz', async () => {
+    mockDay(
+      courierDay([courierStop(1, { outcome: 'refused', outcomeNote: 'Restoran kapalıydı' })]),
+    );
+
+    await renderDay();
+
+    await waitFor(() =>
+      expect(screen.getByText('Restoran kapalıydı · 2 kalem depoya dönüyor')).toBeOnTheScreen(),
+    );
+    expect(screen.queryByText(/araçta kaldı/)).toBeNull();
+    expect(screen.queryByText(/kapanışta karara düşer/)).toBeNull();
   });
 });
 

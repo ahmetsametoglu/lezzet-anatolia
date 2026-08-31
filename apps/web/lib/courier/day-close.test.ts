@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, DeliveryZoneService, OrderService, ProductService, ReservationService,
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
-import { startCourierDay } from '@lezzet/application';
+import { loadBox, openBox, sealBox, startCourierDay } from '@lezzet/application';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
@@ -110,8 +110,18 @@ async function atTheDoor(qty: number) {
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  await transitionOrder({ orderId: order.id, to: 'ready' });
+  /* HAZIRLIK KUTUYLA (30.08): kutusuz sipariş `ready` olamaz — mühür siparişi HAZIR yapar. */
+  const box = await openBox(db, { orderId: order.id, warehouseId });
+  if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const sealed = await sealBox(db, {
+    boxId: box.box.boxId,
+    warehouseId,
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+  });
+  if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+  /* Kutu rampada araca biner; yola çıkaran şey `depart()`taki sefer başlatmadır (31.08). */
+  const loaded = await loadBox(db, { code: box.box.code, courierId });
+  if (loaded.status !== 'ok') throw new Error(`fikstür: kutu araca alınamadı (${loaded.status})`);
   return { orderId: order.id, itemId: items[0]!.id, qty };
 }
 

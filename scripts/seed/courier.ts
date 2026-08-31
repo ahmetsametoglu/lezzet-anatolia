@@ -1,3 +1,4 @@
+import { markUndelivered, startCourierDay } from '@lezzet/application';
 import { DeliveryRunCollectionService, DeliveryRunService } from '@lezzet/database';
 import { deliveryRunReferenceNo } from '@lezzet/domain-core';
 import { fromCents } from '@lezzet/helper';
@@ -132,11 +133,107 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       .update({ delivery_run_id: (run as { id: string }).id })
       .in('id', grup.orderIds);
     if (stampErr) throw stampErr;
+    await duraklariSaateYay(db, grup.orderIds, departed);
+    /*
+      ── AÇIK SEFERİN DURAKLARI GERÇEKTEN YOLA ÇIKAR (30.08 · cihaz turunda yakalandı) ──────────
+      Sefer ham insert'le kuruluyor (yukarıdaki künye) ve o insert `departed_at` yazıyor — ama
+      SİPARİŞLERİN durumuna dokunmuyordu. Ortaya gerçekte doğamayacak bir gün çıkıyordu: sefer
+      çıkmış görünüyor, durakların hepsi hâlâ `ready`. Ölçüldü: bugünün açık seferinde tek bir
+      `out_for_delivery` durak yoktu.
+
+      Belirtisi kuryenin ekranında görüldü — bekleyen bir durakta "Ulaşılamadı"ya basmak
+      `same_status` ile reddediliyordu ("Sipariş zaten bu durumda"), çünkü `unreachable`ın hedefi
+      `ready` ve sipariş zaten oradaydı. Ekran doğru davranıyordu; yalan söyleyen VERİYDİ.
+
+      Çare GERÇEK KAPI: `startCourierDay` açık sefere geç kalan durakları bağlar (catch-up claim)
+      ve `ready → out_for_delivery` geçişini kendisi yazar. Kutulu sipariş yola ÇIKMAZ — tüm
+      kutuları binene kadar `ready` kalır (23.8) ve kapı onu `awaitingBoxes` diye ayırır; o hâl
+      gerçektir, korunuyor.
+    */
+    if (returned === null) {
+      const acilis = await startCourierDay(db, {
+        courierId: grup.courierId,
+        zoneId: grup.zoneId,
+        date: grup.date,
+      });
+      if (acilis.status === 'ok') {
+        const yolda = [...acilis.started, ...acilis.alreadyOut];
+        console.log(
+          `    · ${yolda.length} durak yolda${acilis.awaitingBoxes.length > 0 ? ` · ${acilis.awaitingBoxes.length} kutu bekliyor` : ''}`,
+        );
+        /*
+          ── ULAŞILAMADI DURAĞI: YOLA ÇIKTIKTAN SONRA ─────────────────────────────────────────
+          İşaret sipariş seed'inde yazılıyordu ve buradaki catch-up claim onu geri alıyordu
+          (ulaşılamayan durak `ready`e döner, claim `ready` durakları yola çıkarır). Sıra artık
+          sahanın sırası: yola çık → kapıyı çal → ulaşamadıysan işaretle.
+
+          BİR TANE, İLK YOLDAKİ DURAK: kurye ekranı takılı durağı bir SAYIYLA da gösteriyor
+          ("2 takılı") ve o sayının sınanabilmesi için takılı durak yanında en az bir açık durak
+          kalmalı — hepsini işaretlemek "sefer bitti" demek olurdu.
+        */
+        const hedef = yolda[0];
+        if (hedef !== undefined && yolda.length > 1) {
+          const isaret = await markUndelivered(db, {
+            orderId: hedef,
+            courierId: grup.courierId,
+            outcome: 'unreachable',
+            /* Not YALNIZ SEBEPTİR, envanter değil: ekran malın akıbetini kendisi yazıyor
+               ("1 kalem araçta kaldı"), notun onu tekrarlaması satırı iki kez konuşturuyordu. */
+            note: 'Zil bozuk — kimse yok',
+          });
+          if (isaret.status !== 'ok') throw new Error(`seed sefer: ulaşılamadı yazılamadı (${isaret.status})`);
+          console.log('    · 1 durak ULAŞILAMADI (mal araçta, yarına devrolur)');
+        }
+      } else {
+        // Sessiz geçilmez: yola çıkmayan bir açık sefer kurye ekranını yanlış doldurur.
+        console.log(`    · duraklar yola çıkarılamadı (${acilis.status})`);
+      }
+    }
     console.log(
       `  ✓ ${(run as { reference_no: string }).reference_no} · ${grup.date} · ${grup.orderIds.length} durak${returned ? '' : ' · AÇIK (yolda)'}`,
     );
   }
   console.log(`✓ sefer: ${gruplar.size - atlanan} sefer kuruldu (rota+gün başına tek) · ${atlanan} gelecek gün seferi kurulmadı`);
+}
+
+/**
+ * **DURAKLARIN SONUÇ SAATLERİNİ GÜN İÇİNE YAYAR** (30.08).
+ *
+ * Kurye gün listesi durağın sonucunu SAATİYLE yazıyor ("TESLİM EDİLDİ · 14:12") — sabah çıkılan
+ * rotada saat, hangi durağın ne zaman kapandığını söyleyen tek işaret. Seed ise günü tek nefeste
+ * kuruyor: ölçüldü, bugünün beş durağının bütün geçişleri aynı saniyedeydi (`13:04:32`) ve ekran
+ * beş durağa da aynı dakikayı yazardı. Rota bir SIRA'dır; aynı dakika o sırayı görünmez kılar.
+ *
+ * **YALNIZ SEED'İN DERDİ:** damgayı geriye kurmanın serviste karşılığı yok ve olmamalı (bu
+ * dosyanın kendi künyesi — seferler de aynı sebeple ham insert'le kuruluyor). Üretimde saat, işin
+ * gerçekten yapıldığı andır.
+ *
+ * Yayılım çıkıştan itibaren durak başına 35 dakika: gerçek bir rotanın temposu ve beş duraklık bir
+ * gün öğleden sonraya taşmadan bitiyor. Yalnız SONUÇ geçişleri kaydırılır (`delivered` · `returned`
+ * · ulaşılamayanın `ready` dönüşü) — hazırlık ve yola çıkış damgaları olduğu gibi kalır, onlar
+ * kuryenin sorusunun cevabı değil.
+ */
+async function duraklariSaateYay(db: Db, orderIds: readonly string[], departedAt: string): Promise<void> {
+  const cikis = new Date(departedAt).getTime();
+  for (const [sira, orderId] of orderIds.entries()) {
+    const { data, error } = await db
+      .from('order_status_log')
+      .select('id,from_status,to_status')
+      .eq('order_id', orderId);
+    if (error) throw error;
+    const kayitlar = (data ?? []) as Array<{ id: string; from_status: string | null; to_status: string }>;
+    const sonuc = kayitlar.find(
+      (kayit) =>
+        kayit.to_status === 'delivered' ||
+        kayit.to_status === 'returned' ||
+        (kayit.from_status === 'out_for_delivery' && kayit.to_status === 'ready'),
+    );
+    // Sonuçlanmamış durağın kaydırılacak damgası da yoktur — bekleyen durak saat yazmaz.
+    if (!sonuc) continue;
+    const an = new Date(cikis + (sira + 1) * 35 * 60_000).toISOString();
+    const { error: yazErr } = await db.from('order_status_log').update({ created_at: an }).eq('id', sonuc.id);
+    if (yazErr) throw yazErr;
+  }
 }
 
 /** Sefer kapanışları — kapanış RPC'den geçer (yazım tek yol), yalnız sayılan tutarlar seed'indir. */

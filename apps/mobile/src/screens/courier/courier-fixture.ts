@@ -38,6 +38,17 @@ export function stopItemId(stopIndex: number, lineIndex: number): string {
 
 /** Kapıda nakit tahsilatlı, iki kalemli, bekleyen B2C durağı — testlerin "normal" satırı. */
 export function courierStop(index: number, overrides: Partial<CourierStopContract> = {}): CourierStopContract {
+  /*
+    TESLİM EDİLMİŞ DURAK TAM TESLİMDİR (30.08). `fulfilledQty` varsayılanı 0 ve bekleyen durakta bu
+    doğru — mal kapıya gitmedi. Ama `{ outcome: 'delivered' }` override'ı kalemlere DOKUNMUYORDU ve
+    ortaya üretimde doğamayacak bir satır çıkıyordu: teslim edilmiş, ama hiçbir adedi bırakılmamış
+    durak. Ekran onu haklı olarak KISMİ okuyordu (kısmi ölçütü tam olarak `fulfilledQty < qty`) ve
+    "teslim edildi" bekleyen testler kırmızıya döndü — fikstür yanlış bir gerçeklik kuruyordu.
+
+    Kısmi teslimi ölçen test kalemleri KENDİ veriyor (`items` override'ı); burada kurulan yalnız
+    varsayılanın tutarlılığı.
+  */
+  const delivered = overrides.outcome === 'delivered';
   return {
     orderId: uuid(index),
     referenceNo: `LZA-26-000${index}`,
@@ -49,19 +60,49 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     address: `Grand Rue ${index}`,
     phone: '+33600000001',
     whatsAppLink: 'https://wa.me/33600000001',
-    payment: { dueAmountCents: 4200, expectedMethod: 'cash' },
+    /* `collectedAtDoorCents` varsayılanı `null`: bekleyen durakta kapıda para HENÜZ alınmadı.
+       Sonuçlanmış durağı kuran test onu `overrides` ile verir — bekleyen bir durağa tahsil edilmiş
+       para yazmak, üretimde doğamayacak bir hâl olurdu. */
+    payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
     itemCount: 2,
     contentSummary: '2 × Fıstıklı Baklava, 1 × Mantı',
     // Kalem satırları KİMLİKLİ (21.10d): kısmi iade `orderItemId` ile gönderilir; fixture'ın
     // kimliği durak kimliğinden türetilir ki iki durağın kalemleri çakışmasın.
+    // `fulfilledQty` bekleyen durakta 0 — mal daha kapıya gitmedi (kolonun kendi varsayılanı).
     items: [
-      { orderItemId: stopItemId(index, 0), name: 'Fıstıklı Baklava', qty: 2 },
-      { orderItemId: stopItemId(index, 1), name: 'Mantı', qty: 1 },
+      /* Fiyatlar durağın borcuyla (4200) TUTARLI: 2×1400 + 1×1400 = 4200. Kısmi iade testinin
+         beklediği düşüş bu sayılardan doğuyor — uydurma bir fiyat, ekranın hesabını ölçülemez
+         yapardı. */
+      {
+        orderItemId: stopItemId(index, 0),
+        name: 'Fıstıklı Baklava',
+        qty: 2,
+        fulfilledQty: delivered ? 2 : 0,
+        unitPriceCents: 1400,
+        lineDiscountAmountCents: 0,
+      },
+      {
+        orderItemId: stopItemId(index, 1),
+        name: 'Mantı',
+        qty: 1,
+        fulfilledQty: delivered ? 1 : 0,
+        unitPriceCents: 1400,
+        lineDiscountAmountCents: 0,
+      },
     ],
     outcome: 'pending',
+    /* Sonuçlanmamış durağın sonuçlanma anı, sebebi ve kanıtı da yoktur — üçü birlikte `pending`
+       hâlin tanımı. Sonuçlanmış durağı kuran test üçünü `outcome` ile birlikte verir. */
+    settledAt: null,
+    outcomeNote: null,
+    hasProof: false,
     attempts: 0,
     // 23.8: durak kutuları da taşıyor — varsayılan "kutusuz akış" (eski yol).
     boxes: [],
+    /* Varsayılan `null` = SIRA BİLİNMİYOR (11.9). Bilerek sırasız: bugüne dek ekran dizi indeksini
+       rota sırasıymış gibi gösteriyordu ve o sıra siparişin verilme sırasıydı. Sıralı günü sınayan
+       test `stopSeq`i kendi verir. */
+    stopSeq: null,
     ...overrides,
   };
 }

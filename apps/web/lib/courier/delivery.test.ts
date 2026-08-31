@@ -4,6 +4,7 @@ import {
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
+import { openBox, sealBox } from '@lezzet/application';
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { transitionOrder } from '../order/transition';
@@ -104,35 +105,57 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  for (const status of ['ready', 'out_for_delivery'] as const) await transitionOrder({ orderId: order.id, to: status });
-  return { orderId: order.id, itemId: items[0]!.id };
+  /* HAZIRLIK KUTUYLA (30.08): kutusuz sipariş `ready` olamaz, kapıdan da geçemez. */
+  const box = await openBox(db, { orderId: order.id, warehouseId });
+  if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const sealed = await sealBox(db, {
+    boxId: box.box.boxId,
+    warehouseId,
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+  });
+  if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+  await transitionOrder({ orderId: order.id, to: 'out_for_delivery' });
+  return { orderId: order.id, itemId: items[0]!.id, boxCode: box.box.code };
 }
 
 describe('teslim onayı (11.2)', () => {
-  it('B2B teslimatı imzasız KAPANMAZ ve hiçbir yazım yapılmaz', async () => {
-    const { orderId } = await atTheDoor({ channel: 'b2b' });
+  it('kanıt kapsamı AÇIKKEN B2B teslimatı imzasız KAPANMAZ ve hiçbir yazım yapılmaz', async () => {
+    /* Fabrika değeri 30.08'de İKİ KANAL İÇİN DE kapatıldı (imza adımı söküldü); kapıyı ölçen test
+       artık kapsamı kendisi açar ve `finally`'de geri koyar — `settings` küresel tekil satırdır. */
+    const settings = settingsSnapshot(db);
+    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
+    try {
+      const { orderId } = await atTheDoor({ channel: 'b2b' });
 
-    const outcome = await confirmDoorDelivery({ orderId, courierId });
+      const outcome = await confirmDoorDelivery({ orderId, courierId });
 
-    expect(outcome).toEqual({ status: 'proof_required', channel: 'b2b' });
-    // Kanıt kapısı yazımdan ÖNCE: sipariş hâlâ yolda, stok el değmemiş.
-    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
-    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(30);
+      expect(outcome).toEqual({ status: 'proof_required', channel: 'b2b' });
+      // Kanıt kapısı yazımdan ÖNCE: sipariş hâlâ yolda, stok el değmemiş.
+      expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+      expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(30);
+    } finally {
+      await settings.restore();
+    }
   });
 
-  it('imzayla B2B teslimatı kapanır, kanıt siparişe yazılır', async () => {
-    const { orderId } = await atTheDoor({ channel: 'b2b' });
-    // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat üç yöntemle sınırlıdır.
-    const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
-    const collection: DoorCollectionInput = { method: 'cash', amountCents: 4000, accountId };
+  it('kanıt kapsamı AÇIKKEN kanıtla B2B teslimatı kapanır ve kanıt siparişe yazılır', async () => {
+    const settings = settingsSnapshot(db);
+    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
+    try {
+      const { orderId } = await atTheDoor({ channel: 'b2b' });
+      // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat üç yöntemle sınırlıdır.
+      const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
+      const collection: DoorCollectionInput = { method: 'cash', amountCents: 4000, accountId };
 
-    const outcome = await confirmDoorDelivery({ orderId, courierId, proof, collection });
+      const outcome = await confirmDoorDelivery({ orderId, courierId, proof, collection });
 
-    expect(outcome.status).toBe('ok');
-    const order = await orders.getById(orderId);
-    expect(order?.status).toBe('delivered');
-    expect(order?.deliveryProof).toMatchObject({ kind: 'signature', receivedBy: 'Şef Murat', courierId });
+      expect(outcome.status).toBe('ok');
+      const order = await orders.getById(orderId);
+      expect(order?.status).toBe('delivered');
+      expect(order?.deliveryProof).toMatchObject({ kind: 'signature', receivedBy: 'Şef Murat', courierId });
+    } finally {
+      await settings.restore();
+    }
   });
 
   it('B2C kanıtsız teslim edilebilir — kapsam parametrik, varsayılan kapalı', async () => {

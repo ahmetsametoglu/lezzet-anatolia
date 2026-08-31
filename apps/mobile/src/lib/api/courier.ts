@@ -7,8 +7,6 @@ import {
   CourierDayResponseSchema,
   CourierRoutesResponseSchema,
   DayCloseDraftSchema,
-  type DeliveryProofUploadRequest,
-  DeliveryProofUploadResponseSchema,
   type LoadBoxRequest,
   LoadBoxResponseSchema,
   type MarkUndeliveredRequest,
@@ -18,7 +16,7 @@ import {
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
-import { CLIENT_ERROR, type ApiResult } from './client';
+import type { ApiResult } from './client';
 
 /*
   KURYE UÇLARI — `/api/v1/courier/*` (21.10).
@@ -98,7 +96,7 @@ export function startCourierDay(
 
 /**
  * **Araca yükleme okutması** (23.8 · karar §1.11). Kutulu siparişin `ready → out_for_delivery`
- * geçişi son kutunun okutmasıyla bu uçtan yazılır (`orderStarted`); yanlış rota `wrong_route`
+ * durum geçişi burada YAZILMAZ (31.08 · `allBoxesLoaded` yalnız "tamamı araçta" der); yanlış rota `wrong_route`
  * ile GÖRÜNÜR reddedilir.
  */
 export function loadCourierBox(body: LoadBoxRequest): Promise<ApiResult<z.infer<typeof LoadBoxResponseSchema>>> {
@@ -135,20 +133,15 @@ export function submitUndelivered(
   });
 }
 
-/**
- * **Kanıt yükleme izni** (K3). Dosya sunucudan GEÇMEZ: cihaz doğrudan kovaya yükler
- * (`uploadProofImage`), sunucu yalnız yetkiyi doğrulayıp kısa ömürlü bir izin yazar ve anahtarı
- * KENDİ seçer.
- */
-export function requestProofUpload(
-  orderId: string,
-  body: DeliveryProofUploadRequest,
-): Promise<ApiResult<z.infer<typeof DeliveryProofUploadResponseSchema>>> {
-  return authorizedFetch(`/api/v1/courier/stops/${orderId}/proof-upload`, DeliveryProofUploadResponseSchema, {
-    method: 'POST',
-    body,
-  });
-}
+/*
+  KANIT YÜKLEME İSTEMCİSİ KALKTI (kullanıcı kararı 30.08) — imza adımı ekrandan söküldü, kapıda
+  yüklenecek bir görsel kalmadı. Kanıt artık kutu okutmasının kendisi (`box_scan`) ve o kaydı
+  sunucu kuruyor.
+
+  SUNUCU UCU DURUYOR (`/courier/stops/:id/proof-upload`): kanıt kapsamı ayarla yine açılabilir ve
+  backlog'daki WhatsApp OTP yolu da bu altyapıyı kullanabilir. Silinen yalnız çağrısı kalmayan
+  istemci sarmalayıcıları (`requestProofUpload`, `uploadProofImage`).
+*/
 
 /**
  * **Sefer kapanışı taslağı** (K7 · 18.08) — seferin resmi + beklenen tahsilat; `closed` doluysa
@@ -180,36 +173,3 @@ export function submitDayClose(
   return authorizedFetch('/api/v1/courier/day-close', CloseDeliveryRunResultSchema, { method: 'POST', body });
 }
 
-/**
- * **Kanıt görselini DOĞRUDAN kovaya yükler.**
- *
- * `authorizedFetch` KULLANILMAZ ve kullanılamaz: adres bizim ucumuz değil, R2'nin imzalı adresidir
- * — oraya Bearer jetonu göndermek, kendi oturum anahtarımızı üçüncü bir alan adına yollamak olurdu.
- * Zarf da yok: kova `{data, error}` döndürmez, çıplak HTTP durumu döndürür.
- *
- * İçerik türü İMZAYA BAĞLIDIR (kapı `filename` uzantısından türetip imzaya gömüyor); uyuşmayan
- * bir `Content-Type` ile yükleme R2 tarafında reddedilir, o yüzden çağıran ikisini TEK yerden
- * türetir (`proofFileName`).
- */
-export async function uploadProofImage(
-  uploadUrl: string,
-  contentType: string,
-  bytes: Uint8Array,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  let response: Response;
-  try {
-    response = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': contentType },
-      // RN'in `fetch`i tipli diziyi taşır: `convertRequestBody` onu base64'e çevirip yerel
-      // katmana verir (ölçüldü — react-native/Libraries/Network/convertRequestBody.js).
-      body: bytes as unknown as BodyInit,
-    });
-  } catch {
-    return { ok: false, error: CLIENT_ERROR.network };
-  }
-
-  // Kova "yüklendi" demediyse SESSİZ kalınmaz: kanıtsız kapanan bir teslimat, ihtilafın tek
-  // sigortasının boş çıkması demektir (`courier/proof.ts` künyesi, aynı gerekçe).
-  return response.ok ? { ok: true } : { ok: false, error: `upload_failed_${response.status}` };
-}

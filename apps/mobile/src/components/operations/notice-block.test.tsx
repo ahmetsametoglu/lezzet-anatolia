@@ -22,7 +22,7 @@ describe('OperationsNoticeBlock', () => {
     );
 
     expect(screen.getByTestId('block')).not.toHaveStyle({ borderStyle: 'dashed' });
-    expect(screen.getByTestId('block')).toHaveStyle({ borderColor: operationsAppColors['error-line'] });
+    expect(screen.getByTestId('block')).toHaveStyle({ borderColor: customerAppColors['error-line'] });
     /* v3'te başlık DA gövde DE kırmızı: gri bir açıklama kutunun sesini yumuşatıyordu. */
     expect(screen.getByRole('header', { name: 'Yüklenemedi' })).toHaveStyle({ color: customerAppColors.error });
     expect(screen.getByTestId('block-description')).toHaveStyle({ color: customerAppColors.error });
@@ -69,7 +69,7 @@ describe('OperationsNoticeBlock', () => {
 
     /* Sarmalayıcı adsız: `block` yine kutunun kendisidir (kenarlığı ondan okunur). Sarmalayıcıya
        testID verilseydi bloğu yoklayan çağıranlar sessizce boş bir kabı ölçmeye başlardı. */
-    expect(screen.getByTestId('block')).toHaveStyle({ borderColor: operationsAppColors['error-line'] });
+    expect(screen.getByTestId('block')).toHaveStyle({ borderColor: customerAppColors['error-line'] });
     expect(screen.getByTestId('block-retry')).toHaveStyle({ backgroundColor: customerColors.ink });
   });
 

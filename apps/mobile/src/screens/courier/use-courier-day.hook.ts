@@ -358,8 +358,10 @@ export function useCourierDay(): UseCourierDayResult {
           const ref = data.referenceNo ?? '—';
           setStartNotice({
             tone: 'ok',
-            text: data.orderStarted
-              ? fillCopy(t.day.boxes.loadedStarted, { n: String(data.boxNo), ref, m: String(data.boxCount) })
+            /* "YOLA ÇIKTI" DEĞİL "TAMAMI ARAÇTA" (31.08): yükleme siparişi yola çıkarmıyor artık;
+               o iş sefer başlatmanın. Eski metin kuryeye olmayan bir şeyi haber veriyordu. */
+            text: data.allBoxesLoaded
+              ? fillCopy(t.day.boxes.loadedComplete, { n: String(data.boxNo), ref, m: String(data.boxCount) })
               : fillCopy(t.day.boxes.loaded, {
                   n: String(data.boxNo),
                   ref,

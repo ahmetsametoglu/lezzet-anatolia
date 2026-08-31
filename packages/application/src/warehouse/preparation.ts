@@ -324,12 +324,24 @@ type ConfirmOutcome =
    */
   | { status: 'forbidden'; reason: 'out_of_scope' }
   /**
-   * **Kargo siparişi kutusuz onaylanamaz** (kullanıcı kararı 28.08).
+   * **HAZIRLANAN SİPARİŞ KUTUSUZ ONAYLANAMAZ** (kullanıcı kararı 28.08 → 30.08'de rotaya genişledi).
    *
-   * Kutusuz akış rota kulvarında meşru ve öyle kalıyor (23.6'nın bilinçli çift akışı). Kargoda
-   * DEĞİL: kutusuz kapanan siparişin ölçüsü de ağırlığı da yoktur — ikisi de kutu tipinden geliyor
-   * (`dispatch.ts`) — ve etiket satın alma o yüzden HİÇ yapılamaz. Sipariş "hazır" görünüp sevk
-   * edilemez hâlde kalırdı; en kötü arıza türü, çünkü hiçbir yerde hata vermez.
+   * Kural önce yalnız KARGO kulvarındaydı ve gerekçesi oradaki somut arızaydı: kutusuz kapanan
+   * siparişin ölçüsü de ağırlığı da yoktur (ikisi de kutu tipinden gelir, `dispatch.ts`), etiket
+   * satın alma hiç yapılamaz, sipariş "hazır" görünüp sevk edilemez hâlde kalırdı.
+   *
+   * ── ROTA DA AYNI DUVARIN ARKASINA GEÇTİ (kullanıcı kararı 30.08) ────────────
+   * 23.6'nın "kutusuz akış rota kulvarında meşru" kararı bir İŞ kuralı değil, kutulu akış yeni
+   * yazılırken kendi kodumuzu kırmamak için bırakılmış bir GEÇİŞ kapısıydı (22.08). Kullanıcı
+   * ölçtü ve kapattı: *"kutusuz sipariş diye bir kavram var mı? kutusuz sipariş arabaya nasıl
+   * bindiriliyor?"* — cevabı yoktu. Kutusuz sipariş rampada okutulmuyor, `startCourierDay` onu
+   * doğrudan "yolda" yazıyordu; kapıda da okutma istenmiyordu. Yani sistemin en güçlü doğrulama
+   * zinciri (mal → kutu → araç → kapı) siparişlerin %93'ünde devre dışıydı ve bunu hiçbir yer
+   * söylemiyordu.
+   *
+   * **KAPI SATIŞI HARİÇ** (`pickup`): orada hazırlık diye bir adım yok — mal tezgâhtan elden
+   * gider (`quickSale`, fiiliden anında düşer). Kutu, HAZIRLANAN malın kabıdır; hazırlık yoksa
+   * kutu da yoktur.
    *
    * Duvar burada, duyuruda değil: orada çarpmak kutuların çoktan mühürlenmiş ve kartonun kapanmış
    * olması demekti — depocu malı geri açardı.
@@ -363,9 +375,11 @@ export async function confirmPreparation(
   if (!found) return { status: 'not_found' };
   if (found.order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
 
-  // Kargo kulvarında kutusuz onay YOK (künye yukarıda). Sıra bilinçli: yazımdan ÖNCE, çünkü
-  // reddedilen bir onay hiçbir satır bırakmamalı.
-  if (found.order.deliveryType === 'shipping') return { status: 'box_required' };
+  /* HAZIRLANAN SİPARİŞTE KUTUSUZ ONAY YOK (künye yukarıda) — rota da kargo da. Ayrım teslim
+     türünde değil HAZIRLIĞIN kendisinde: kapı satışında (`pickup`) toplama adımı hiç yok, mal
+     tezgâhtan gider. Sıra bilinçli: yazımdan ÖNCE, çünkü reddedilen bir onay hiçbir satır
+     bırakmamalı. */
+  if (found.order.deliveryType !== 'pickup') return { status: 'box_required' };
 
   const violation = await findPinnedViolation(db, input.orderId, found.items, input.picks);
   if (violation) return { status: 'pinned_violation', ...violation };

@@ -113,6 +113,9 @@ describe('PO’lu mal kabul', () => {
       'caseSizes',
       'dateType',
       'expectedQty',
+      // Onuncu alan `lotCandidates` (21.175): depodaki partilerin kodları — lot önerisinin ikinci
+      // kaynağı. Kod, para değil; iddia bozulmuyor.
+      'lotCandidates',
       'productName',
       'shelfLifeDays',
       'sku',

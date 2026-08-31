@@ -142,6 +142,15 @@ export function PrimaryButton({
   );
 }
 
+/*
+  TEMAYA BAĞLI OLMAYAN DURAKLAR — ayrı sayfa, düz nesne (künye `glow`da).
+  Fabrikalı sayfa yalnız `theme` parametresini görüyor; modül kapsamındaki sabitler ancak burada
+  okunabiliyor.
+*/
+const staticStyles = StyleSheet.create({
+  glow: { boxShadow: operationsTheme.shadow.glow },
+});
+
 const styles = StyleSheet.create((theme) => ({
   base: {
     flexDirection: 'row',
@@ -171,13 +180,16 @@ const styles = StyleSheet.create((theme) => ({
   /* v3'ün TEK yumuşak yükseltisi — rengi zeytinin kendisi, yani ışıma düğmenin dolgusundan doğar
      (token künyesi). Sert gölgeyle bir arada kullanılamaz ve gerekmiyor: v3'te sert gölge yok.
 
-     DEĞER `theme`DEN DEĞİL STATİK SABİTTEN: `glow` yalnız operasyon temasında var ve Unistyles'ın
-     `theme` parametresi kayıtlı TEMALARIN KESİŞİMİNİ verir — müşteri temasında olmayan bir durak
-     oradan okunamaz (kitin her yerinde aynı kural). Stil müşteri yüzeyinde hiç uygulanmıyor
-     zaten: `elevation="glow"` yalnız operasyon ekranlarından geliyor. */
-  glow: {
-    boxShadow: operationsTheme.shadow.glow,
-  },
+     ── DEĞER FABRİKANIN DIŞINDA (30.08 · cihazda ölçüldü) ────────────────────
+     `glow` yalnız operasyon temasında var, yani `theme` parametresinden okunamıyor. İlk çözüm onu
+     doğrudan `operationsTheme`den okumaktı ve o ÇALIŞMIYOR: Unistyles'ın stil fabrikası modül
+     kapsamındaki değişkeni görmüyor, cihaz `Property 'operationsTheme' doesn't exist` diye düşüyor.
+     Kardeş bileşende (`SecondaryButton`) aynı desen aynı gün cihazda patladı; burada henüz
+     patlamamıştı çünkü `elevation="glow"` hiçbir ekrandan gelmiyordu — bekleyen bir arızaydı.
+
+     Çözüm: temaya bağlı OLMAYAN durak, temaya bağlı olmayan bir sayfada. Düz nesneli
+     `StyleSheet.create` modül kapsamını görüyor (ekranların her yerinde böyle kullanılıyor). */
+  glow: staticStyles.glow,
   olive: {
     backgroundColor: theme.colors.olive,
   },

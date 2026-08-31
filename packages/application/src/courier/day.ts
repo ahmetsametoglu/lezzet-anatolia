@@ -13,10 +13,19 @@ import {
   UserProfileService,
   WarehouseService,
 } from '@lezzet/database';
-import { canAccessWarehouse, canTransition, deliveryRunReferenceNo, warehouseScope, whatsAppLink, type MessageLocale } from '@lezzet/domain-core';
+import {
+  canAccessWarehouse,
+  canTransition,
+  deliveryRunReferenceNo,
+  sortBySequence,
+  warehouseScope,
+  whatsAppLink,
+  type MessageLocale,
+} from '@lezzet/domain-core';
 // Araç adının kuralı rota seçim listesiyle ORTAK — künyesi kendi dosyasında.
 import { vehicleLabelOf } from './vehicle-label';
 import { listCourierRoutes } from './routes';
+import { ensureStopOrder } from './stop-order';
 import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
 import type { Order, OrderItem, OrderStatusLog } from '@lezzet/types';
@@ -62,6 +71,14 @@ export interface CourierStop {
     /** `null` = önceden ödenmiş; para konuşulmaz. Birim **cent** (02.9). */
     dueAmountCents: number | null;
     expectedMethod: Order['paymentMethod'];
+    /**
+     * Kapıda FİİLEN alınan para (**cent**) — `null` = kurye bu durakta para almadı.
+     *
+     * `dueAmountCents`in zıddı: o alınacak olanı, bu alınmış olanı söyler. Türetimi
+     * `delivery_run_collection` görünümüyle AYNI kuralı izler (yöntem `cash|card|cheque`), yoksa
+     * gün listesiyle kapanış ekranı aynı parayı iki farklı hesapla söylerdi.
+     */
+    collectedAtDoorCents: number | null;
   };
   /** Araçtan doğru koliyi almak için: kaç kalem, ne var. */
   itemCount: number;
@@ -77,6 +94,20 @@ export interface CourierStop {
   items: CourierStopItem[];
   /** Kapıdaki sonuç — sistemin iç durumu değil, kuryenin gördüğü hâl. */
   outcome: StopOutcome;
+  /**
+   * Durağın SONUÇLANDIĞI an (ISO) — `null` = daha sonuçlanmadı.
+   *
+   * Geçiş geçmişinden okunur (`attempts` ile AYNI dizi, ikinci sorgu yok): teslimde/iadede o
+   * geçişin damgası, ulaşılamayanda son `out_for_delivery → ready` dönüşününki.
+   */
+  settledAt: string | null;
+  /** Kuryenin sonuca yazdığı serbest sebep ("zil bozuk") — aynı geçişin notu; yoksa `null`. */
+  outcomeNote: string | null;
+  /**
+   * Kapıda GÖRSELLİ kanıt (imza/fotoğraf) alındı mı. Kutu okutması (`box_scan`) SAYILMAZ — o
+   * sunucunun kendi kurduğu kayıttır, kapıda kimsenin imzaladığı bir şey değil.
+   */
+  hasProof: boolean;
   /** Ulaşılamadıysa kaçıncı denemede olduğu; listede kaybolmaz, tekrar denenir. */
   attempts: number;
   /**
@@ -85,6 +116,12 @@ export interface CourierStop {
    * eşler, son doğrulama sunucuda (`confirmDoorDelivery` kutu kapısı).
    */
   boxes: Array<{ boxNo: number; code: string; loadedAt: string | null }>;
+  /**
+   * **Rota sırası** (11.9) — 1'den başlar. `null` = SIRA BİLİNMİYOR: sefer henüz hesaplanmadı,
+   * koordinat çözülemedi ya da hesap düştü. Uydurulmaz (`CLAUDE §1`) — bugüne dek ekranlar dizi
+   * indeksini rota sırasıymış gibi gösteriyordu ve o sıra aslında SİPARİŞİN VERİLME sırasıydı.
+   */
+  stopSeq: number | null;
 }
 
 /** Durağın tek kalemi — kapıda işaretlenebilmesi için KİMLİĞİYLE. */
@@ -94,6 +131,22 @@ export interface CourierStopItem {
   name: string;
   /** SİPARİŞ EDİLEN adet; kapıda eksik çıkan miktar bundan indirilerek gönderilir. */
   qty: number;
+  /**
+   * Birim fiyat ve indirim payı (**cent**) — kapıda geri verilen malın tahsilattan ne kadar
+   * düşeceğini EKRAN hesaplayabilsin diye (sözleşme künyesi). İkisi birlikte, çünkü hesap
+   * (`lineAmountCents`) ikisini birden ister.
+   */
+  unitPriceCents: number;
+  lineDiscountAmountCents: number;
+  /**
+   * FİİLEN teslim edilen adet (`adjustFulfillment`in yazdığı hedef değer). Teslim edilmemiş
+   * durakta 0 — kolonun kendisi `not null default 0` ve mal daha kapıya gitmemiştir.
+   *
+   * KISMİ TESLİM BURADAN OKUNUR: `outcome` `delivered` ama `fulfilledQty < qty` ise bir kalem
+   * araçta kalmıştır. Ayrı bir `StopOutcome` değeri açılmadı — kısmi bir geçiş değil, teslim
+   * edilmiş durağın niteliğidir.
+   */
+  fulfilledQty: number;
 }
 
 /**
@@ -142,10 +195,17 @@ export async function listCourierDay(
   ]);
   const names = await variantNames(db, items);
 
-  return orders.map((order) => {
+  // Seferin kayıtlı sırası (11.9). Siparişler zaten tek bir sefere ait (hepsi aynı `deliveryRunId`
+  // ile damgalandı); ilk dolu kimlik yeter ve ikinci bir sorgu doğmaz.
+  const runId = input.runId ?? orders.find((order) => order.deliveryRunId)?.deliveryRunId ?? null;
+  const run = runId ? await new DeliveryRunService(db).getById(runId) : null;
+
+  const stops: CourierStop[] = orders.map((order) => {
     const lines = items.filter((item) => item.orderId === order.id);
     const customer = customers.get(order.customerId);
     const attempts = failedAttempts(logs, order.id);
+    const outcome = outcomeOf(order.status, attempts);
+    const settled = settlementLog(logs, order.id, outcome);
     const place = addresses.get(order.id) ?? null;
     /* ADRESİN NUMARASI ÖNCE — AMA YEDEK KOŞULLU (22.08'de düzeltildi).
        Dün (21.08) yedek koşulsuzdu (`adres.phone ?? hesap.phone`) ve ölçünce yanlış çıktı: adreste
@@ -186,6 +246,7 @@ export async function listCourierDay(
       payment: {
         dueAmountCents: amountDueCents(order),
         expectedMethod: order.paymentMethod,
+        collectedAtDoorCents: collectedAtDoorCents(order),
       },
       itemCount: lines.length,
       contentSummary: summarize(lines, names),
@@ -193,14 +254,44 @@ export async function listCourierDay(
         orderItemId: line.id,
         name: names.get(line.variantId) ?? '—',
         qty: line.qty,
+        fulfilledQty: line.fulfilledQty,
+        unitPriceCents: line.unitPriceCents,
+        lineDiscountAmountCents: line.lineDiscountAmountCents,
       })),
-      outcome: outcomeOf(order.status, attempts),
+      outcome,
+      /* Saat ve sebep TEK kayıttan (`settlementLog`) — ikisi aynı olayın iki yüzü. Dizi zaten
+         `attempts` için okunuyor, ikinci sorgu doğmuyor. */
+      settledAt: settled?.createdAt ?? null,
+      outcomeNote: settled?.note ?? null,
+      hasProof: hasVisualProof(order),
       attempts,
       boxes: allBoxes
         .filter((box) => box.orderId === order.id)
         .map((box) => ({ boxNo: box.boxNo, code: box.code, loadedAt: box.loadedAt })),
+      // Sıra aşağıda, tüm duraklar kurulduktan SONRA yazılıyor: numara dizideki yerden değil,
+      // sıralanmış listedeki yerden gelir.
+      stopSeq: null,
     };
   });
+
+  return applyStopOrder(stops, run?.stopOrder ?? []);
+}
+
+/**
+ * Kayıtlı sırayı uygular — **sıralamayı SUNUCU yapar, ekran yalnız çizer.** İki yüzey kendi
+ * sıralamasını yapsaydı bir gün ayrışırlardı ve aynı gün iki farklı rota gösterirlerdi.
+ *
+ * Sıra yoksa dizi olduğu gibi kalır ve her durağın `stopSeq`i `null`dur: **numara UYDURULMAZ**
+ * (`CLAUDE §1`). Ekran bu hâlde rayı çizmez ve "sırasız" der — kısmen numaralanmış bir liste,
+ * numarasızdan kötüdür: kurye "3" görünce onu günün üçüncü durağı sanar.
+ */
+function applyStopOrder(stops: readonly CourierStop[], stopOrder: readonly string[]): CourierStop[] {
+  if (stopOrder.length === 0) return [...stops];
+
+  return sortBySequence(stops, (stop) => stop.orderId, stopOrder).map(({ item, seq }) => ({
+    ...item,
+    stopSeq: seq,
+  }));
 }
 
 /**
@@ -440,11 +531,24 @@ export async function startCourierDay(
       continue;
     }
 
-    // Kutulu sipariş: geçişi son kutunun okutması yazar (`loadBox`) — hepsi zaten yüklüyse
-    // (sefer yeniden başlatıldı, kutular dünden araçta) beklemeye gerek yok, geçiş burada.
+    /*
+      ── ARACA KUTUSUYLA BİNER (kullanıcı kararı 30.08) ────────────────────────────────────────
+      Geçişi son kutunun okutması yazar (`loadBox`); hepsi zaten yüklüyse (sefer yeniden
+      başlatıldı, kutular dünden araçta) beklemeye gerek yok, geçiş burada.
+
+      **KUTUSUZ SİPARİŞ ARTIK YOLA ÇIKMAZ.** Eskiden `boxState` yoksa koşul atlanıyordu ve sipariş
+      hiç okutulmadan "yolda" yazılıyordu — araçta olup olmadığını hiçbir kayıt söylemiyordu.
+      Kutusuz kalan bir rota siparişi bugün bir VERİ HATASIDIR (hazırlık kapısı onu `ready`
+      yapmıyor, `box_required` diyor); buraya düşerse `awaitingBoxes`ta görünür ve kurye "kutuları
+      okut" cevabını alır — sessizce yola çıkmaz.
+    */
     const boxState = boxesByOrder.get(claim.orderId);
-    if (boxState && boxState.loaded < boxState.total) {
-      result.awaitingBoxes.push({ orderId: claim.orderId, loadedBoxes: boxState.loaded, boxCount: boxState.total });
+    if (boxState === undefined || boxState.loaded < boxState.total) {
+      result.awaitingBoxes.push({
+        orderId: claim.orderId,
+        loadedBoxes: boxState?.loaded ?? 0,
+        boxCount: boxState?.total ?? 0,
+      });
       continue;
     }
 
@@ -457,6 +561,11 @@ export async function startCourierDay(
     if (transitioned.ok) result.started.push(claim.orderId);
     else result.stale.push({ orderId: claim.orderId, currentStatus: transitioned.currentStatus });
   }
+
+  /* Sıra hesabı BURADA, claim'den sonra — ve sefer başlatmayı BLOKE ETMEZ (11.9): kapı hiçbir hâlde
+     fırlatmıyor, düşerse sıra `null` kalır ve ekran "sırasız" der. Bir rota iyileştirici, aracın
+     yola çıkmasını durduramaz. */
+  await ensureStopOrder(db, { runId: result.run.runId, actorId: input.courierId });
 
   return result;
 }
@@ -547,6 +656,72 @@ function failedAttempts(logs: readonly OrderStatusLog[], orderId: string): numbe
   return logs.filter(
     (log) => log.orderId === orderId && log.fromStatus === 'out_for_delivery' && log.toStatus === 'ready',
   ).length;
+}
+
+/**
+ * **Durağı SONUÇLANDIRAN geçiş** — saatin ve sebep notunun ortak kaynağı.
+ *
+ * İkisini ayrı ayrı aramak, aynı diziyi iki kez tarayıp bir gün FARKLI kayıtlara düşmek demekti:
+ * "14:12'de teslim edildi" ile "zil bozuk" aynı durakta yazılırsa kurye iki ayrı olayı tek olay
+ * sanırdı. Tek kayıt döner, iki alan ondan okunur.
+ *
+ * `pending` durakta `null`: sonuçlanmamış durağın sonuçlanma anı da yoktur (CLAUDE §1 — ölçülemeyen
+ * değer sıfır/şimdi değildir).
+ *
+ * **SON kayıt seçilir, ilk değil:** ulaşılamayan durak ertesi gün tekrar denenip yine dönebilir ve
+ * kurye en son ne olduğunu okumalıdır.
+ */
+function settlementLog(
+  logs: readonly OrderStatusLog[],
+  orderId: string,
+  outcome: StopOutcome,
+): OrderStatusLog | null {
+  if (outcome === 'pending') return null;
+  const mine = logs.filter((log) => log.orderId === orderId);
+  const matches =
+    outcome === 'delivered'
+      ? mine.filter((log) => log.toStatus === 'delivered')
+      : outcome === 'refused'
+        ? mine.filter((log) => log.toStatus === 'returned')
+        : mine.filter((log) => log.fromStatus === 'out_for_delivery' && log.toStatus === 'ready');
+  /* Sıralama BURADA yapılıyor ve servisin sırasına güvenilmiyor: `listByOrders` sırayı sözleşmesinde
+     söylemiyor, yani bugün doğru gelen sıra yarın bir index değişikliğiyle sessizce bozulabilir. */
+  return matches.reduce<OrderStatusLog | null>(
+    (latest, log) => (latest === null || log.createdAt > latest.createdAt ? log : latest),
+    null,
+  );
+}
+
+/**
+ * Kapıda GÖRSELLİ kanıt alındı mı — `signature` ya da `photo`.
+ *
+ * **`box_scan` SAYILMAZ** (23.8): o kanıdı sunucu okutulan kutu kodlarından kendisi kuruyor, kapıda
+ * kimse bir şey imzalamıyor. Gün listesi "imza var" derken kuryeye ihtilafta arkasında duracak bir
+ * kanıt vaat ediyor; kutu okutmasını oraya saymak o vaadi boşa çıkarırdı.
+ *
+ * Kayıt `jsonb` ve ŞEMASIZ okunuyor (`Record<string, unknown>`): eski kayıtlarda `kind` hiç
+ * olmayabilir. Tanınmayan şekil `false` döner — "kanıt var" demek, olmayan bir kanıdı vaat etmekten
+ * daha pahalıdır.
+ */
+function hasVisualProof(order: Order): boolean {
+  const kind = order.deliveryProof?.['kind'];
+  return kind === 'signature' || kind === 'photo';
+}
+
+/**
+ * **Kapıda FİİLEN alınan para** (cent) — `null` = kurye bu durakta para almadı.
+ *
+ * Kural `delivery_run_collection` görünümünün AYNISI: kapıda alınan para, yöntemi `cash|card|cheque`
+ * olan siparişin tahsilatıdır. `online`/`transfer` kuryenin eline hiç girmez ve burada `null`
+ * görünür — gün listesi o durağa "ödendi · online" der, "kurye aldı" demez.
+ *
+ * Net alınır (tahsil − iade): kapıda alınıp sonra iade edilen para kuryenin cebinde değildir.
+ */
+function collectedAtDoorCents(order: Order): number | null {
+  const method = order.paymentMethod;
+  if (method !== 'cash' && method !== 'card' && method !== 'cheque') return null;
+  const netCents = order.amountCollectedCents - order.amountRefundedCents;
+  return netCents > 0 ? netCents : null;
 }
 
 export type UndeliveredOutcome =

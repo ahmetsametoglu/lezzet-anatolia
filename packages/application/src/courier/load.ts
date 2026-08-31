@@ -1,5 +1,4 @@
 import { OrderBoxService, OrderService } from '@lezzet/database';
-import { canTransition } from '@lezzet/domain-core';
 import type { Order } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -11,11 +10,19 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * garanti KUTU kontrolüdür — yanlış kutu araca hiç binmez. Sayaç ("5/8 bindi") damgalardan türer,
  * ayrı tablo yok.
  *
- * ── "YOLDA"NIN TEK KAPISI (kutulu siparişte) ────────────────────────────────
- * Etüt 2.4: *"araca binmeyen kutu 'yolda' görünmez; çok kutulu siparişte tüm kutular binmeden
- * sipariş yolda sayılmaz."* `startCourierDay` kutulu siparişi ATLAR (`awaitingBoxes`); geçişi
- * son kutunun okutması BURADAN yazar. Kenarın izni yine motorda (`canTransition`) — kapı kendi
- * kural icat etmez.
+ * ── YÜKLEME "YOLDA" DEMEK DEĞİLDİR (kullanıcı kararı 31.08) ─────────────────
+ * Bu kapı 30.08'e kadar son kutuda `ready → out_for_delivery` de yazıyordu; yükleme ile sefer
+ * başlatma tek ele bağlıydı. Kullanıcı modeli ayırdı: **araç bir ara depodur** ve içinde birden
+ * çok seferin — bugünün de yarının da — kutuları durabilir. Yükleme malın depodan araca geçmesi,
+ * yani bir EMANET değişimidir; müşteri bundan haberdar olmaz. Siparişi "yolda" yapan ve müşteriye
+ * haber gönderen şey seferin BAŞLATILMASIDIR (`startCourierDay`).
+ *
+ * Kaynaşmanın somut bedeli ölçüldü: yarının seferinin kutusunu bugün okutmak, o siparişleri bugün
+ * yola çıkarırdı. Ayrıca `startCourierDay`ın `started` listesi ULAŞILAMAZ hâle gelmişti — kutu
+ * yüklenen sipariş buradan çoktan çıkmış oluyordu, sefer başlatmaya iş kalmıyordu.
+ *
+ * Geçişin tek sahibi artık `startCourierDay`: kutuları tam olan durağı o yola çıkarır, olmayanı
+ * `awaitingBoxes`ta gösterir.
  *
  * ── ROTA KONTROLÜNÜN KAYNAĞI SİPARİŞİN DAMGASIDIR ───────────────────────────
  * `start_delivery_run` seferi açarken siparişlere `courier_id` yazar ("siparişin kuryesi seferin
@@ -31,8 +38,11 @@ export type LoadBoxOutcome =
       boxNo: number;
       loadedBoxes: number;
       boxCount: number;
-      /** Bu okutma siparişin SON kutusuydu ve sipariş yola çıktı. */
-      orderStarted: boolean;
+      /**
+       * Bu okutma siparişin SON kutusuydu — siparişin tamamı artık araçta. **Yola çıktı demek
+       * DEĞİL** (31.08): durumu değiştiren tek kapı sefer başlatmadır.
+       */
+      allBoxesLoaded: boolean;
     }
   | { status: 'already_loaded'; orderId: string; boxNo: number; loadedBoxes: number; boxCount: number }
   | { status: 'wrong_route'; referenceNo: string | null }
@@ -81,17 +91,6 @@ export async function loadBox(
   await boxes.update({ id: box.id, loadedAt: new Date().toISOString(), loadedBy: input.courierId });
   const loadedBoxes = loadedOthers + 1;
 
-  let orderStarted = false;
-  if (loadedBoxes >= siblings.length && order.status === 'ready' && canTransition('ready', 'out_for_delivery').allowed) {
-    const transitioned = await new OrderService(db).transition({
-      orderId: order.id,
-      from: 'ready',
-      to: 'out_for_delivery',
-      actorId: input.courierId,
-    });
-    orderStarted = transitioned.ok;
-  }
-
   return {
     status: 'ok',
     orderId: order.id,
@@ -99,6 +98,6 @@ export async function loadBox(
     boxNo: box.boxNo,
     loadedBoxes,
     boxCount: siblings.length,
-    orderStarted,
+    allBoxesLoaded: loadedBoxes >= siblings.length,
   };
 }

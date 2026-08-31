@@ -126,7 +126,7 @@ describe('customer-app ↔ customer kompozisyonu', () => {
     expect(composedText).not.toHaveProperty('badge-sm--letter-spacing');
   });
 
-  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 41 yeni', () => {
+  it('fark/yeni dağılımı sabit: 8 fark (6 renk + 2 yarıçap), 42 yeni', () => {
     expect(sharedKeys(customerColors, customerAppColors)).toHaveLength(6);
     expect(sharedKeys(customerRadius, customerAppRadius)).toHaveLength(2);
     // Tipografide tek çakışma üstbaşlığın üç alt-anahtarıdır; dördüncü bir çakışma bilinçsizdir.
@@ -143,7 +143,11 @@ describe('customer-app ↔ customer kompozisyonu', () => {
       Object.keys(customerAppShadow).length +
       Object.keys(customerAppBlur).length +
       Object.keys(customerAppGradient).length;
-    expect(appTotal).toBe(49); // 8 fark + 41 uygulamaya-yeni
+    /* 42 → `error-line` 30.08'de eklendi: HATA ailesinin üçüncü katmanı. Künye onu "gerçek bir
+       ihtiyaç doğunca" diye ertelemişti; ihtiyaç paylaşılan kitte doğdu (`SecondaryButton`ın
+       `error` tonu iki yüzeyde birden yaşıyor ve yalnız operasyonda var olan bir durak stil
+       fabrikasında çözülemiyordu — cihazda ölçüldü). */
+    expect(appTotal).toBe(50); // 8 fark + 42 uygulamaya-yeni
   });
 
   it('birleşim tabanı BÜYÜTÜR, küçültmez — hiçbir taban anahtarı kaybolmaz', () => {

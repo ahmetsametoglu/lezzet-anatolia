@@ -90,7 +90,12 @@ insert into public.settings (key, value, description) values
   ('transfer_transit_days',        '1',      'Depolar arası ulaşım süresi (gün). FEFO önerisi yolda ömrü yanacak partiyi uyarır; gecikme rozeti bu eşiği okur.'),
   ('near_expiry_discount_percent', '30',     'Yaklaşan son tarih için ÖNERİLEN indirim %. Karar insanın.'),
   ('mlor_percent',                 '75',     'Mal kabulde asgari kalan raf ömrü %. Altında uyarır, kabulü engellemez.'),
-  ('delivery_proof_required',      '{"b2b": true, "b2c": false}', 'Teslim onayı (imza/foto) kapsamı — kanal bazında.'),
+  -- İMZA KALKTI (kullanıcı kararı 30.08): ekrana parmakla çizilen şekil imzalayanın kimliğini
+  -- kanıtlamıyor ve kutu okutması (`box_scan`) ondan güçlü bir kayıt üretiyor — kod benzersiz,
+  -- kutu fiziksel, okutma o kapıda ve o saniyede. Ayar DURUYOR çünkü kapsam yine kanal bazında
+  -- açılabilir; fabrika değeri artık ikisinde de kapalı. Yerine gelecek yol backlog'da: kapıda
+  -- WhatsApp OTP (müşteriye altı haneli kod, kurye kodu girer).
+  ('delivery_proof_required',      '{"b2b": false, "b2c": false}', 'Teslim onayı (imza/foto) kapsamı — kanal bazında; ikisi de kapalı (kanıt kutu okutmasıdır).'),
   ('delivery_summary_email',       'true',   'Teslimde teslimat özeti e-postası otomatik gönderilsin mi.'),
   ('route_delivery_unit_cost_cents','250',   'Rota teslimat birim maliyeti (cent) — kâr hesabı.'),
   ('packaging_unit_cost_cents',    '120',    'Paketleme (soğuk zincir) birim maliyeti (cent) — kâr hesabı.'),

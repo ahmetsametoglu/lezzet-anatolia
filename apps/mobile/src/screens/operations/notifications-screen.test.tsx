@@ -139,7 +139,7 @@ describe('OperationsNotificationsScreen', () => {
     );
 
     expect(screen.getByTestId('operations-notification-n4')).toHaveStyle({
-      borderColor: operationsAppColors['error-line'],
+      borderColor: customerAppColors['error-line'],
       backgroundColor: operationsAppColors.panel,
     });
     /* Kurye satırı alarm DEĞİL: kenarı kum kalır. Tek varyant çizilseydi bu satır da kırmızıya
@@ -148,7 +148,7 @@ describe('OperationsNotificationsScreen', () => {
       borderColor: customerAppColors['sand-300'],
     });
     expect(screen.getByTestId('operations-notification-n2')).not.toHaveStyle({
-      borderColor: operationsAppColors['error-line'],
+      borderColor: customerAppColors['error-line'],
     });
   });
 

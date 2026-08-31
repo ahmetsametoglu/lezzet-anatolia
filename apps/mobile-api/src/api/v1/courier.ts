@@ -233,8 +233,9 @@ courier.post('/day/start', async (c) => {
  * **Araca yükleme okutması** (23.8 · karar §1.11). Kod gövdede gider (URL'de dolaşmasın —
  * `codes/resolve` gerekçesi). Olumsuz dalların hepsi 200 + gövde: `wrong_route` kutunun HANGİ
  * siparişin malı olduğunu söyler (kurye rampada doğru yığını bulur), `not_sealed` açık kutuyu,
- * `not_loadable` siparişin durumunu. Kutulu siparişin `ready → out_for_delivery` geçişi son
- * kutunun okutmasıyla BURADAN yazılır (`orderStarted`).
+ * `not_loadable` siparişin durumunu. **Durum geçişi burada YAZILMAZ** (31.08): yükleme malı araca
+ * geçirir, siparişi yola çıkarmaz — o iş sefer başlatmanındır. `allBoxesLoaded` yalnız "siparişin
+ * tamamı araçta" der.
  */
 courier.post('/boxes/load', async (c) => {
   const parsed = LoadBoxRequestSchema.safeParse(await readJsonBody(c));

@@ -18,10 +18,21 @@ import { vatBaseOf } from '../pricing/resolve-price';
 export type AccountingLine = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents' | 'vatRate'>;
 
 /**
+ * `lineAmountCents`in GERÇEKTEN istediği alanlar — KDV oranı yok, çünkü tutar kanalın kendi
+ * tabanındadır ve o hesap KDV'ye hiç dokunmaz (fonksiyonun gövdesi bunu zaten söylüyor).
+ *
+ * Ayrı tip AÇILDI (30.08) çünkü çağıranı çoğaldı: kurye kapıda geri verilen malın tutardan ne
+ * düşeceğini bu fonksiyonla hesaplıyor ve kurye sözleşmesi KDV oranı TAŞIMAZ (tasarım §6 — kurye
+ * yalnız tahsil edeceği tutarı görür). `AccountingLine` istemek, taşınmaması gereken bir alanı
+ * sözleşmeye sokmak olurdu.
+ */
+export type LineAmountInput = Pick<OrderItem, 'qty' | 'fulfilledQty' | 'unitPriceCents' | 'lineDiscountAmountCents'>;
+
+/**
  * Kalemin faturalanacak tutarı **kanalın kendi tabanında** (cent) — **teslim edilen** miktar
  * üzerinden. Sipariş edilen değil: gitmeyen mal ne faturalanır ne ciro sayılır.
  */
-export function lineAmountCents(item: AccountingLine): number {
+export function lineAmountCents(item: LineAmountInput): number {
   const beforeDiscount = item.unitPriceCents * item.fulfilledQty;
   // İndirim payı tüm miktar için yazılmıştır; eksik karşılanan kalemde (07.8) oransal düşer —
   // yoksa yarısı gitmiş bir kalem indirimin tamamını taşır ve satır olduğundan ucuz görünürdü.

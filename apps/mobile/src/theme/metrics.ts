@@ -59,6 +59,19 @@ export const appMetrics = {
     controlMultiline: 110,
     /** Başlık çubuğundaki yuvarlak ikon düğmesi (tasarım: 40). */
     iconButton: 40,
+    /**
+     * Metinsiz ikon düğmesinin GENİŞLİĞİ — kuryenin kapıdaki "Ara" ve "WhatsApp" kareleri.
+     *
+     * Tasarımda 56 × 52 (hafif yatay dikdörtgen); burada TAM KARE (52 × 52, yükseklik
+     * `controlLg`den). Fark kullanıcı isteği (30.08): asıl eylem NAVİGASYONDUR ve kareler ondan
+     * çaldığı her dp'de o baskınlığı azaltıyor. Kare hem 8 dp kazandırıyor hem de iki ikonun
+     * kutusunu tek ölçüye indiriyor — 56×52 ekranda "biraz ezilmiş kare" gibi okunuyordu.
+     */
+    contactIcon: 52,
+    /** Kapıdaki tahsilat tutarı alanı — büyük rakam + tuş takımı rozeti (tasarım: 56). */
+    controlAmount: 56,
+    /** Adım numarasının daire rozeti — kuryenin durak ekranında dört adım (tasarım: 22). */
+    stepBadge: 22,
     /** Fotoğraf üstündeki geri düğmesi (tasarım: 42). */
     iconButtonOnPhoto: 42,
     /**

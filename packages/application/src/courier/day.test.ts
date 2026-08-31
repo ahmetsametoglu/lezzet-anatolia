@@ -179,10 +179,26 @@ async function dispatched(
     return { orderId: order.id, itemId: items[0]!.id };
   }
 
+  /*
+    HAZIRLIK KUTUYLA (kullanıcı kararı 30.08) — kutusuz sipariş ne `ready` olur ne yola çıkar.
+    Mühür siparişi HAZIR yapar. Kutu HER HÂLDE araca bindirilir (`loadBox`): 31.08'den beri
+    yükleme siparişi yola ÇIKARMIYOR, yalnız malı araca geçiriyor — yani `ready` durak da
+    yüklenmiş olabilir ve gerçekte de öyledir (kurye rampada yükler, sonra seferi başlatır).
+    `out_for_delivery` istendiğinde geçiş AYRICA yazılır.
+  */
   await advanceOrder(db, order.id, ['confirmed', 'preparing']);
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  await advanceOrder(db, order.id, opts.upTo === 'ready' ? ['ready'] : ['ready', 'out_for_delivery']);
-  return { orderId: order.id, itemId: items[0]!.id };
+  const box = await openBox(db, { orderId: order.id, warehouseId });
+  if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const sealed = await sealBox(db, {
+    boxId: box.box.boxId,
+    warehouseId,
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+  });
+  if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+  const loaded = await loadBox(db, { code: box.box.code, courierId: opts.courier ?? courierId });
+  if (loaded.status !== 'ok') throw new Error(`fikstür: kutu araca alınamadı (${loaded.status})`);
+  if (opts.upTo !== 'ready') await advanceOrder(db, order.id, ['out_for_delivery']);
+  return { orderId: order.id, itemId: items[0]!.id, boxCode: box.box.code };
 }
 
 const mine = (stops: CourierStop[], orderId: string) => stops.find((stop) => stop.orderId === orderId)!;
@@ -194,7 +210,9 @@ describe('gün listesi (11.1)', () => {
     const stop = mine(await listCourierDay(db, { courierId }), orderId);
 
     expect(stop.address).toBe('12 rue des Fleurs, 67000, Strasbourg');
-    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash' });
+    /* `collectedAtDoorCents` 30.08'de eklendi: kapıda FİİLEN alınan para. Bekleyen durakta `null` —
+       henüz alınmadı; sonuçlanmış durakta gün listesi "nakit 85,00 € alındı" cümlesini onunla kuruyor. */
+    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash', collectedAtDoorCents: null });
     expect(stop.contentSummary).toMatch(/^3 × Kayısılı Reçel .*\(250 g\)$/);
     expect(stop.outcome).toBe('pending');
   });
@@ -229,10 +247,18 @@ describe('gün listesi (11.1)', () => {
 
     const stop = mine(await listCourierDay(db, { courierId }), orderId);
 
+    /*
+      YASAK LİSTESİNDEN `unitPrice` ÇIKTI (kullanıcı kararı 30.08) ve sınır DARALMADI, netleşti:
+      yasak olan İŞLETMENİN defteridir — alış fiyatı, maliyet, marj, müşterinin kredi limiti.
+      Kalemin SATIŞ fiyatı ise kuryenin gördüğü tek paranın bileşenidir: kapıda bir kalem geri
+      verildiğinde tahsilattan ne düşeceğini ekran onunla hesaplıyor (`lineAmountCents`). Olmadığı
+      hâlde kurye "1/2 geri verildi" yazıp altında hâlâ tam tutarı görüyordu.
+    */
     const serialized = JSON.stringify(stop);
-    for (const forbidden of ['purchasePrice', 'cogs', 'margin', 'creditLimit', 'unitPrice']) {
+    for (const forbidden of ['purchasePrice', 'cogs', 'margin', 'creditLimit']) {
       expect(serialized).not.toContain(forbidden);
     }
+    expect(stop.items[0]?.unitPriceCents).toBe(1000); // satış fiyatı: tahsilatın bileşeni
     expect(stop.payment.dueAmountCents).toBe(2000); // gördüğü tek para
   });
 
@@ -382,7 +408,7 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect((await orders.getById(orderId))?.deliveryRunId).toBe(result.run.runId);
   });
 
-  it('KUTULU sipariş tüm kutuları binmeden yola çıkmaz — geçişi son kutunun okutması yazar (23.8)', async () => {
+  it('KUTULU sipariş tüm kutuları binmeden yola çıkmaz — geçişi SEFER BAŞLATMA yazar (23.8 · 31.08)', async () => {
     // Kutulu hazırlık: kutu mühürlenince sipariş kendiliğinden `ready` olur (sealBox geçişi).
     const { orderId, itemId } = await dispatched({ upTo: 'confirmed' });
     const opened = await openBox(db, { orderId, warehouseId });
@@ -401,9 +427,15 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect(result.awaitingBoxes).toEqual([{ orderId, loadedBoxes: 0, boxCount: 1 }]);
     expect((await orders.getById(orderId))?.status).toBe('ready');
 
-    // Son (tek) kutunun okutması geçişi yazar — kutulu siparişin "yolda"ya tek kapısı.
+    /* Kutu araca biner ama sipariş HÂLÂ HAZIR: yükleme emanet değişimidir (31.08). Araç bir ara
+       depodur ve içinde yarının seferinin kutusu da durabilir — okutma müşteriye haber göndermez. */
     const loaded = await loadBox(db, { code: opened.box.code, courierId });
-    expect(loaded).toMatchObject({ status: 'ok', orderStarted: true });
+    expect(loaded).toMatchObject({ status: 'ok', allBoxesLoaded: true });
+    expect((await orders.getById(orderId))?.status).toBe('ready');
+
+    // Geçişi yazan İKİNCİ başlatmadır (catch-up claim): kutular tamam, durak artık yola çıkar.
+    const again = mustStart(await startCourierDay(db, { courierId, zoneId }));
+    expect(again.started).toContain(orderId);
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
 
     const { data } = await db.from('order_status_log').select('from_status,to_status,actor_id').eq('order_id', orderId);

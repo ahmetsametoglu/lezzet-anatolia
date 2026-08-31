@@ -12,6 +12,7 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
+import type { PreparationPick } from '@lezzet/types';
 import { advanceOrder } from '../order/advance.testkit';
 import { confirmPreparation, listPreparationQueue, type PreparationLine, type PreparationOrder } from './preparation';
 
@@ -190,9 +191,14 @@ describe('hazırlık kuyruğu (D1 · 10.1)', () => {
     expect([...line.pickedBatches].sort((a, b) => a.stockId.localeCompare(b.stockId))).toEqual(
       [{ stockId: nearBatch, qty: 4 }, { stockId: farBatch, qty: 2 }].sort((a, b) => a.stockId.localeCompare(b.stockId)),
     );
-    // Şekil yazımınkiyle AYNI: dönen dizi doğrudan `confirmPreparation`a geri verilebilmeli.
-    const replay = await confirmPreparation(db, { orderId, warehouseId, picks: [{ orderItemId: itemId, batches: line.pickedBatches }] });
-    expect(replay).toMatchObject({ status: 'ok', ready: false });
+    /* ŞEKİL YAZIMINKİYLE AYNI — iddia DERLEMEDE kuruluyor: okunan dizi, yazım kapısının
+       beklediği tipe atanabiliyor. Eskiden bu, diziyi `confirmPreparation`a geri göndererek
+       ölçülüyordu; o kapı 30.08'de kutusuz onayı reddetmeye başladı ve yerine geçen `sealBox`
+       ABSOLÜT yazıyor (0015) — yani bu fikstürün zaten yazılmış 6 adedinin üstüne aynı partileri
+       ikinci kez koymak gerçek bir senaryo değil, testin kendi kurgusunun artığı olurdu.
+       Yazım yolunun kendisi `boxes.test.ts`te ölçülüyor (çok kutulu birleşim, parti izi). */
+    const geriGonderilebilir: PreparationPick['batches'] = line.pickedBatches;
+    expect(geriGonderilebilir).toHaveLength(2);
   });
 
   it('hiç toplanmamış kalemde dağılım BOŞ DİZİ — eksik alan değil, boş gerçek', async () => {
@@ -285,73 +291,31 @@ describe('partiye kilitli kalem (10.2)', () => {
     expect(line.suggestion).toEqual([{ stockId: farBatch, qty: 2, expiryDate: dayOffset(90), areaName: 'Dolap B' }]);
   });
 
-  it('kilitli kalem başka partiden verilemez — yazım HİÇ yapılmaz', async () => {
-    const { orderId, itemId } = await confirmedOrder(2, { pinTo: farBatch });
-
-    const outcome = await confirmPreparation(db, {
-      orderId,
-      warehouseId,
-      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }],
-    });
-
-    expect(outcome).toMatchObject({ status: 'pinned_violation', itemId, requiredStockId: farBatch });
-    expect(await itemBatches.listByOrder(orderId)).toHaveLength(0);
-  });
+  /* KİLİTLİ KALEM İHLALİ ARTIK KUTU KAPISINDA ÖLÇÜLÜYOR (30.08): `confirmPreparation` kutusuz
+     onayı reddettiği için bu kapıdan `pinned_violation`a hiç ulaşılamıyor. Aynı iddia —
+     "kilitli kalem başka partiden konamaz, kutu açık kalır, HİÇBİR yazım yok" — `boxes.test.ts`te
+     duruyor ve orada gerçek yoldan ölçülüyor. */
 });
 
 describe('hazırlık onayı ve eksik kararı (10.3)', () => {
-  it('tamamı toplanınca sipariş HAZIR olur', async () => {
-    const { orderId, itemId } = await confirmedOrder(3);
+  /*
+    HAZIRLIĞIN KENDİSİ ARTIK KUTU DÖNGÜSÜNÜN İÇİNDE (kullanıcı kararı 30.08).
 
-    const outcome = await confirmPreparation(db, {
-      orderId,
-      warehouseId,
-      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 3 }] }],
-    });
+    Bu blokta dört test vardı — "tamamı toplanınca HAZIR", "eksik varsa `preparing`te kalır",
+    "büyük eksikte müşteriye sor", "küçük eksikte kalanı gönder". Dördü de `confirmPreparation`
+    üzerinden ölçüyordu ve o kapı artık `pickup` dışında her siparişe `box_required` diyor; yani
+    ölçtükleri hâl bu kapıdan ÜRETİLEMEZ.
 
-    expect(outcome).toMatchObject({ status: 'ok', items: 1, ready: true, shortfalls: [] });
-    expect((await orders.getById(orderId))?.status).toBe('ready');
-  });
+    ÖLÇÜM KAYBOLMADI, İKİYE AYRILDI:
+      · geçiş ve parti yazımı → `boxes.test.ts` ("içerik + parti izi yazılır, kutu mühürlenir,
+        sipariş HAZIR olur" ve çok kutulu birleşim)
+      · eksik tavsiyesinin İÇERİĞİ (`ask_customer` / `send_rest`, eşikler, tutar taşımaması) →
+        `domain-core/stock/shortfall.test.ts`, yani motorun kendi birim testi — DB'siz ve orada
+        çok daha ayrıntılı
+      · tavsiyenin kutu yolunda GÖRÜNÜR olması → `boxes.test.ts` (`declareShort`)
 
-  it('eksik varsa sipariş `preparing`te KALIR — karar yönetim ekranında (D1 → Y2)', async () => {
-    const { orderId, itemId } = await confirmedOrder(4);
-
-    const outcome = await confirmPreparation(db, {
-      orderId,
-      warehouseId,
-      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 1 }] }],
-    });
-
-    expect(outcome).toMatchObject({ status: 'ok', ready: false });
-    expect((await orders.getById(orderId))?.status).not.toBe('ready');
-  });
-
-  it('büyük eksikte "müşteriye sor" önerilir, tavsiye TUTAR taşımaz', async () => {
-    const { orderId, itemId } = await confirmedOrder(4);
-
-    const outcome = await confirmPreparation(db, {
-      orderId,
-      warehouseId,
-      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 1 }] }],
-    });
-
-    const shortfall = outcome.status === 'ok' ? outcome.shortfalls[0] : null;
-    expect(shortfall?.suggestion).toEqual({ action: 'ask_customer', reason: 'large_share', missingQty: 3 });
-  });
-
-  it('küçük eksikte "kalanı gönder" önerilir', async () => {
-    const { orderId, itemId } = await confirmedOrder(10);
-
-    const outcome = await confirmPreparation(db, {
-      orderId,
-      warehouseId,
-      picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 4 }, { stockId: farBatch, qty: 5 }] }],
-    });
-
-    const shortfall = outcome.status === 'ok' ? outcome.shortfalls[0] : null;
-    expect(shortfall?.suggestion).toMatchObject({ action: 'send_rest', missingQty: 1 });
-  });
-
+    Kapıya kalan tek şey kapsam kararı ve bilinmeyen sipariş; ikisi aşağıda.
+  */
   it('BAŞKA DEPONUN siparişine onay YAZILMAZ — görünür ret döner', async () => {
     const { orderId, itemId } = await confirmedOrder(2);
 
@@ -388,7 +352,7 @@ describe('hazırlık onayı ve eksik kararı (10.3)', () => {
   Kargoda duvarın burada olmasının sebebi zamanlama: duyuruda çarpmak kutuların çoktan mühürlenmiş
   olması demekti ve depocu kartonu geri açardı.
 */
-describe('kargoda kutusuz onay reddi (28.08)', () => {
+describe('kutusuz onay reddi (28.08 → 30.08 rotaya genişledi)', () => {
   it('KARGO siparişi reddedilir ve HİÇBİR satır yazılmaz', async () => {
     const { orderId, itemId } = await confirmedOrder(2, { deliveryType: 'shipping' });
 
@@ -406,7 +370,7 @@ describe('kargoda kutusuz onay reddi (28.08)', () => {
     expect((await new OrderService(db).getById(orderId))!.status).toBe('confirmed');
   });
 
-  it('ROTA siparişi ETKİLENMEDİ — kutusuz akış orada meşru ve sürüyor', async () => {
+  it('ROTA siparişi de reddedilir — "kutusuz akış" 30.08\'de kapandı', async () => {
     const { orderId, itemId } = await confirmedOrder(2);
 
     const sonuc = await confirmPreparation(db, {
@@ -415,6 +379,10 @@ describe('kargoda kutusuz onay reddi (28.08)', () => {
       picks: [{ orderItemId: itemId, batches: [{ stockId: nearBatch, qty: 2 }] }],
     });
 
-    expect(sonuc).toMatchObject({ status: 'ok', ready: true });
+    /* 23.6'nın "rotada kutusuz akış meşru" kararı bir İŞ kuralı değil, kutulu akış yazılırken
+       bırakılmış bir GEÇİŞ kapısıydı. Kullanıcı ölçtü ve kapattı: kutusuz sipariş rampada
+       okutulmuyor, araca binmiyor, kapıda doğrulanmıyor. */
+    expect(sonuc).toEqual({ status: 'box_required' });
+    expect((await new OrderService(db).getById(orderId))!.status).toBe('confirmed');
   });
 });

@@ -3,24 +3,22 @@ import {
   ORDER_STATUS_LABELS,
   type ConfirmDoorDeliveryResponse,
   type CourierStopContract,
-  type DeliveryProofInputContract,
   type DoorCollectionInputContract,
   type FulfillmentAdjustment,
   type MarkUndeliveredResponse,
 } from '@lezzet/types';
 
-import { base64ToBytes } from '@/lib/base64';
 import {
   fetchCourierDay,
-  requestProofUpload,
   submitDoorDelivery,
   submitUndelivered,
-  uploadProofImage,
 } from '@/lib/api/courier';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { newRequestKey } from '@/lib/request-key';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
+import { lineAmountCents } from '@lezzet/domain-core';
 import { centsToAmountText, money, parseAmountToCents } from './courier-format';
 
 /*
@@ -76,7 +74,6 @@ const CASH_LIMIT_CENTS = 100_000;
 const AMOUNT_STEP_CENTS = 100;
 
 /** Kalemin üç hâli (v2:917): işaretsiz → teslim → reddedildi → işaretsiz. */
-type LineMark = 'delivered' | 'refused' | undefined;
 
 /** Kapıdaki kalem satırı — tip SÖZLEŞMEDEN türer, elle yazılmaz (CLAUDE §1). */
 type StopLine = CourierStopContract['items'][number];
@@ -100,17 +97,6 @@ interface UseDeliveryResult {
   total: number;
   reload: () => void;
 
-  /** Kanal ayarının istemci karşılığı: B2B'de kanıt zorunlu (uç aynı soruyu YENİDEN sorar). */
-  proofRequired: boolean;
-  proof: DeliveryProofInputContract | null;
-  signing: boolean;
-  uploading: boolean;
-  proofError: string | null;
-  openSignature: () => void;
-  cancelSignature: () => void;
-  confirmSignature: (pngBase64: string) => void;
-  clearProof: () => void;
-
   /**
    * KUTU OKUTMASI (23.8) — kutulu durakta teslimin ön koşulu. `boxes` boşsa bölüm hiç çizilmez
    * (kutusuz akış); doluysa tüm kodlar okutulmadan teslim kapısı açılmaz — son doğrulama yine
@@ -125,10 +111,9 @@ interface UseDeliveryResult {
 
   /** Durağın kalem satırları — sözleşmeden, anahtarı `orderItemId`. */
   lines: StopLine[];
-  markOf: (orderItemId: string) => LineMark;
-  toggleLine: (orderItemId: string) => void;
-  returnQtyOf: (line: StopLine) => number;
-  changeReturnQty: (line: StopLine, delta: number) => void;
+  /** Kalemin kapıda geri verilen adedi; 0 = teslim edildi (varsayılan). */
+  refusedQtyOf: (line: StopLine) => number;
+  setRefusedQty: (line: StopLine, qty: number) => void;
   hasRefused: boolean;
   allRefused: boolean;
   /** Bir kısmı reddedildi — düzeltme uca GİDER; not iade akışının nereye düştüğünü söyler. */
@@ -205,13 +190,20 @@ export function useDelivery(orderId: string): UseDeliveryResult {
    */
   const [doorAccountId, setDoorAccountId] = useState<string | null>(null);
 
-  const [proof, setProof] = useState<DeliveryProofInputContract | null>(null);
-  const [signing, setSigning] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [proofError, setProofError] = useState<string | null>(null);
 
-  const [marks, setMarks] = useState<Record<string, LineMark>>({});
-  const [returnQty, setReturnQty] = useState<Record<string, number>>({});
+  /*
+    ── TESLİM VARSAYILAN, RED İSTİSNA (kullanıcı kararı 30.08) ────────────────────────────────
+    Eskiden iki durum vardı (`marks`: işaretsiz · teslim · red) ve teslim kapısı HER kalemin
+    işaretlenmesini şart koşuyordu (`allMarked`). Kutulu akış zorunlu olunca o şart anlamını
+    yitirdi: kutu mühürlenirken içeriği sabitlendi, kapıda okutuldu, müşteriye verildi — "mal
+    verildi mi" sorusu ikinci kez sorulmuş oluyordu. Kurye hiçbir şey reddedilmeyen normal bir
+    teslimde de kalem sayısı kadar gereksiz dokunuş yapıyordu, hem de elinde kutuyla.
+
+    Model artık TEK sayı: kalem başına REDDEDİLEN adet. Kayıt yoksa ya da 0 ise kalem teslim
+    edilmiştir; >0 ise o kadarı geri verilmiştir. İki durumlu işaret (`marks`) kalktı — "işaretsiz"
+    diye bir hâl yok, çünkü varsayılanın kendisi bir cevap.
+  */
+  const [refusedQty, setRefusedQtyState] = useState<Record<string, number>>({});
 
   /** Kapıda okutulan kutu KODLARI (23.8) — teslim isteğiyle gider, kanıt kaydına yazılır. */
   const [scannedBoxCodes, setScannedBoxCodes] = useState<string[]>([]);
@@ -226,6 +218,16 @@ export function useDelivery(orderId: string): UseDeliveryResult {
 
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<DeliveryNotice>();
+
+  /**
+   * BAŞARILI SONUÇ: mesaj toast'a gider, ekran kapanır (kullanıcı kararı 30.08).
+   *
+   * `notice` ekranın İÇİNDE duran bir şerittir ve olumsuz cevaplar için doğru yer — kurye orada
+   * kalıp düzeltecek. Olumlu cevapta kalınacak bir şey yok: iş bitti, sıradaki durak listede.
+   */
+  const setDoneToast = useCallback((next: DeliveryNotice) => {
+    toastSuccess(next.text);
+  }, []);
   const [finished, setFinished] = useState(false);
 
   /* TAHSİLAT İSTEĞİNİN KİMLİĞİ — bir kez doğar, ekran yaşadığı sürece AYNI kalır: "tekrar dene"
@@ -272,7 +274,25 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     kapı önünde tur atılmaz), son doğrulama sunucuda (`boxes_missing` — bayat listeye karşı).
   */
   const boxes = stop?.boxes ?? [];
-  const boxesSatisfied = boxes.length === 0 || boxes.every((box) => scannedBoxCodes.includes(box.code));
+  /* KUTUSUZ DURAK DA KAPIYI AÇMAZ (kullanıcı kararı 30.08): mal kutusuyla hazırlanır, kutusuyla
+     araca biner, kutusuyla kapıdan çıkar. Kutusuz bir durak bugün bir VERİ HATASIDIR ve sunucu da
+     onu reddediyor (`boxes_missing`) — ekranın kapıyı açık göstermesi, kuryeyi reddedilecek bir
+     isteğe göndermek olurdu. Eskiden `boxes.length === 0` "kutu kapısı yok" diye okunuyordu. */
+  const boxesSatisfied = boxes.length > 0 && boxes.every((box) => scannedBoxCodes.includes(box.code));
+
+  /**
+   * **DURAK YOLA ÇIKTI MI** (kullanıcı bulgusu 30.08 · cihazda yakalandı).
+   *
+   * Kutuları rampada okutulmamış sipariş `ready` kalır — yani araçta değildir ve kapıda teslim
+   * EDİLEMEZ. Ekran bunu bilmiyordu: durağı açıyor, kutuyu "kapıda okutturuyor" ve teslim
+   * düğmesini etkin gösteriyordu; kurye basınca uç `stale` diyordu ve ekran o reddi olduğu gibi
+   * yazıyordu — *"bu durak başkası tarafından kapatılmış olabilir"*. Cümle teknik olarak doğru
+   * ama kapıdaki kuryeye YANLIŞ bir hikâye anlatıyor: durağı kimse kapatmadı, mal araçta değil.
+   *
+   * Cevap zaten sözleşmede duruyordu (`boxes[].loadedAt`): bir kutu bile binmemişse sipariş yola
+   * çıkmamıştır. Kapı burada kapanır ve sebebi kuryenin dilinde yazılır.
+   */
+  const loadedOnVan = boxes.length > 0 && boxes.every((box) => box.loadedAt !== null);
 
   const handleBoxScan = useCallback(
     (code: string) => {
@@ -289,22 +309,21 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       }
       const next = [...scannedBoxCodes, trimmed];
       setScannedBoxCodes(next);
-      setNotice({
-        tone: 'ok',
-        text: fillCopy(t.delivery.boxes.scanned, {
-          n: String(box.boxNo),
-          k: String(next.length),
-          total: String(boxes.length),
-        }),
-      });
+      /* BAŞARILI OKUTMA BİLDİRİM YAZMAZ (kullanıcı bulgusu 30.08): kutu kartı aynı şeyi zaten üç
+         yerde söylüyor — sayaç ("1/1 OKUTULDU"), satırın ✓ işareti ve "tüm kutular verildi"
+         cümlesi. Dördüncü kez, hem de ekranın en dibinde CTA'nın üstünde bir yeşil şerit olarak
+         söylemek gürültüydü. Bildirim OLUMSUZ cevaplarda kalıyor (yanlış kutu · zaten okutulmuş):
+         onlar kartta görünmez ve söylenmezse kurye neden ilerlemediğini bilemez. */
     },
     [boxes, scannedBoxCodes],
   );
 
   const lines = stop?.items ?? [];
-  const allMarked = lines.length > 0 && lines.every((line) => marks[line.orderItemId] !== undefined);
-  const hasRefused = lines.some((line) => marks[line.orderItemId] === 'refused');
-  const allRefused = lines.length > 0 && lines.every((line) => marks[line.orderItemId] === 'refused');
+  /** Kalemin kapıda geri verilen adedi — kayıt yoksa 0, yani teslim edilmiştir. */
+  const refusedOf = (line: StopLine): number => Math.min(line.qty, Math.max(0, refusedQty[line.orderItemId] ?? 0));
+  const hasRefused = lines.some((line) => refusedOf(line) > 0);
+  /** HEPSİ geri verildi — teslim değil bir REDDİR, kurye "Kabul etmedi"yi kullanmalı. */
+  const allRefused = lines.length > 0 && lines.every((line) => refusedOf(line) === line.qty);
   const partialReturn = hasRefused && !allRefused;
 
   /**
@@ -317,10 +336,61 @@ export function useDelivery(orderId: string): UseDeliveryResult {
    * ne olacağını söylemez.
    */
   const adjustments: FulfillmentAdjustment[] = lines
-    .filter((line) => marks[line.orderItemId] === 'refused')
-    .map((line) => ({ orderItemId: line.orderItemId, fulfilledQty: line.qty - (returnQty[line.orderItemId] ?? line.qty) }));
+    .filter((line) => refusedOf(line) > 0)
+    .map((line) => ({ orderItemId: line.orderItemId, fulfilledQty: line.qty - refusedOf(line) }));
 
-  const dueCents = stop?.payment.dueAmountCents ?? null;
+  /*
+    ── KAPIDA ALINACAK TUTAR, GERİ VERİLEN MAL DÜŞÜLMÜŞ (kullanıcı bulgusu 30.08) ────────────────
+    `dueAmountCents` siparişin TAM tutarıdır ve kapıda bir kalem geri verilince değişmez — sunucu
+    düzeltmeyi teslim ANINDA yapıyor. Ekran onu olduğu gibi gösterirken kurye "1/2 geri verildi"
+    yazıp altında hâlâ tam tutarı görüyordu: kapıda ne tahsil edeceğini bilmiyordu ve kapıda geç
+    kalan bir doğruluk, doğruluk değildir.
+
+    Hesap MOTORUN kendisi (`lineAmountCents`, domain-core): ekran ikinci bir formül yazmıyor,
+    muhasebe export'u ve kârlılık hangi hesabı yapıyorsa onu çağırıyor. Fark satır başına alınır —
+    tam hâl eksi kalan hâl — çünkü indirim payı oransal düşüyor ve bunu ikinci kez türetmek iki
+    ayrı doğru üretirdi.
+  */
+  const refundedCents = lines.reduce((sum, line) => {
+    const refused = refusedOf(line);
+    if (refused === 0) return sum;
+    const full = lineAmountCents({ ...line, fulfilledQty: line.qty });
+    const kept = lineAmountCents({ ...line, fulfilledQty: line.qty - refused });
+    return sum + (full - kept);
+  }, 0);
+  const fullDueCents = stop?.payment.dueAmountCents ?? null;
+  const dueCents = fullDueCents === null ? null : Math.max(0, fullDueCents - refundedCents);
+
+  /**
+   * Reddedilen adedi yazar VE tahsilat alanını yeni tutara çeker.
+   *
+   * İki iş bilerek TEK yerde: kurye kapıda bir kalemi geri aldığında alacağı para da o anda
+   * değişiyor ve alan eski rakamda kalırsa ekran kendi kendisiyle çelişir — üstte "1/2 geri
+   * verildi", altta hâlâ tam tutar. Alan kuryenin ELLE yazabildiği bir yer, ama burada yazan
+   * kurye değil MOTOR: geri verilen mal bir pazarlık değil, hesabın kendisi.
+   */
+  const setRefusedQty = useCallback(
+    (line: StopLine, qty: number) => {
+      const next = Math.min(line.qty, Math.max(0, qty));
+      setRefusedQtyState((current) => {
+        const updated = { ...current, [line.orderItemId]: next };
+        if (fullDueCents !== null) {
+          const drop = lines.reduce((sum, row) => {
+            const refused = Math.min(row.qty, Math.max(0, updated[row.orderItemId] ?? 0));
+            if (refused === 0) return sum;
+            return (
+              sum +
+              (lineAmountCents({ ...row, fulfilledQty: row.qty }) -
+                lineAmountCents({ ...row, fulfilledQty: row.qty - refused }))
+            );
+          }, 0);
+          setAmountText(centsToAmountText(Math.max(0, fullDueCents - drop)));
+        }
+        return updated;
+      });
+    },
+    [fullDueCents, lines],
+  );
   const amountCents = parseAmountToCents(amountText);
   const partialPayment = dueCents !== null && amountCents !== null && amountCents < dueCents;
   const cashLimitWarning = dueCents !== null && method === 'cash' && (amountCents ?? 0) > CASH_LIMIT_CENTS;
@@ -347,9 +417,10 @@ export function useDelivery(orderId: string): UseDeliveryResult {
    */
   const collectionBlocked = dueCents !== null && doorAccountId === null;
 
-  const proofRequired = stop?.channel === 'b2b';
-  const proofSatisfied = !proofRequired || proof !== null;
-  const gateOpen = boxesSatisfied && proofSatisfied && allMarked && !allRefused && !collectionBlocked && !finished;
+  /* `allMarked` KAPIDAN ÇIKTI (30.08): teslim varsayılan olduğuna göre işaretlenecek bir şey yok.
+     Kapı hâlâ üç şeyi soruyor — kutular okutuldu mu, kanıt alındı mı, para yazılabilir mi — ve bir
+     şeyi reddediyor: HEPSİ geri verilmişse o teslim değildir, "Kabul etmedi"dir. */
+  const gateOpen = loadedOnVan && boxesSatisfied && !allRefused && !collectionBlocked && !finished;
 
   const gateNote = gateOpen
     ? null
@@ -357,10 +428,12 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       ? null
       : collectionBlocked
         ? t.delivery.collection.blocked
-        : /* SIRA CÜMLESİ KUTULU DURAKTA KUTUYU DA SAYAR (30.08): adımlar numaralanınca cümlenin
+        : !loadedOnVan
+          ? t.delivery.cta.notLoaded
+          : /* SIRA CÜMLESİ KUTULU DURAKTA KUTUYU DA SAYAR (30.08): adımlar numaralanınca cümlenin
              kutuları atladığı görünür oldu — ekran "1 · KUTULAR" derken alt not sırayı "kanıt"tan
              başlatıyordu. İki farklı sıra anlatan tek ekran, kuryeye hangisine uyacağını sordurur. */
-          `${boxes.length === 0 ? t.delivery.cta.gate : t.delivery.cta.gateBoxed}${boxesSatisfied ? '' : t.delivery.cta.gateBoxes}${proofSatisfied ? '' : t.delivery.cta.gateProof}${allMarked ? '' : t.delivery.cta.gateGoods}`;
+          `${boxes.length === 0 ? t.delivery.cta.gate : t.delivery.cta.gateBoxed}${boxesSatisfied ? '' : t.delivery.cta.gateBoxes}`;
 
   const ctaLabel = allRefused
     ? t.delivery.cta.allRefused
@@ -375,40 +448,6 @@ export function useDelivery(orderId: string): UseDeliveryResult {
             ? fillCopy(t.delivery.cta.deliverWithAmount, { amount: money(amountCents) })
             : t.delivery.cta.deliverNoCollection;
 
-  const confirmSignature = useCallback(
-    (pngBase64: string) => {
-      setProofError(null);
-      setUploading(true);
-      void (async () => {
-        /* İzin → cihaz DOĞRUDAN kovaya yükler → anahtar saklanır. `signature.png`: kabul edilen
-           uzantılar motorda sayılı (SVG yok) ve içerik türü imzaya gömülü, o yüzden ad ile
-           `image/png` tek yerden çıkar. */
-        const permission = await requestProofUpload(orderId, { filename: 'signature.png', alreadyRequested: 0 });
-        if (permission.error !== null) {
-          setUploading(false);
-          setProofError(t.delivery.proof.uploadFailed);
-          return;
-        }
-        if (!permission.data.ok) {
-          setUploading(false);
-          setProofError(t.delivery.proof.refusal[permission.data.reason]);
-          return;
-        }
-
-        const uploaded = await uploadProofImage(permission.data.uploadUrl, 'image/png', base64ToBytes(pngBase64));
-        setUploading(false);
-        if (!uploaded.ok) {
-          setProofError(t.delivery.proof.uploadFailed);
-          return;
-        }
-
-        setProof({ kind: 'signature', imageKey: permission.data.key, receivedBy: stop?.customerName ?? null });
-        setSigning(false);
-      })();
-    },
-    [orderId, stop],
-  );
-
   const deliver = useCallback(() => {
     if (!gateOpen || sending) return;
     setSending(true);
@@ -421,7 +460,6 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       const collection = buildCollection();
       const result = await submitDoorDelivery(orderId, {
         ...(adjustments.length === 0 ? {} : { adjustments }),
-        ...(proof === null ? {} : { proof }),
         ...(collection === null ? {} : { collection }),
         // Kutulu durakta okutulan kodlar teslimin ön koşulu (23.8) — kutusuz durakta alan gitmez.
         ...(scannedBoxCodes.length === 0 ? {} : { scannedBoxCodes }),
@@ -437,7 +475,14 @@ export function useDelivery(orderId: string): UseDeliveryResult {
         return;
       }
 
-      setNotice({
+      /* SONUÇ TOAST'A, EKRAN LİSTEYE DÖNER (kullanıcı kararı 30.08) ─────────────────────────
+         Eskiden ekran "sonuç ekranı"na dönüp KALIYORDU (v2:882'nin bilinçli sapması: "kurye
+         yazıldı mı sorusunun cevabını okur, sonra listeye döner"). Cihazda ölçüldü: kurye
+         okuyacak bir şey olduğunu anlamıyor, durakta takılı kalıyor ve geri tuşunu arıyor —
+         üstelik en sık yaptığı iş bu ve her seferinde iki dokunuş fazladan.
+         Cevap kayboluyor DEĞİL: toast onu listenin üstünde taşıyor ve liste zaten tazeleniyor
+         (`useFocusEffect`), yani kurye sonucu durağın kendi satırında da görüyor. */
+      setDoneToast({
         tone: 'ok',
         text: [
           result.data.collectedCents > 0
@@ -452,7 +497,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       });
       setFinished(true);
     })();
-  }, [adjustments, buildCollection, gateOpen, orderId, proof, scannedBoxCodes, sending]);
+  }, [adjustments, buildCollection, gateOpen, orderId, scannedBoxCodes, sending]);
 
   const confirmOutcome = useCallback(() => {
     if (outcome === null || sending) return;
@@ -483,7 +528,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
         return;
       }
 
-      setNotice({
+      setDoneToast({
         tone: 'ok',
         text: result.data.outcome === 'refused' ? t.delivery.result.refused : t.delivery.result.unreachable,
       });
@@ -501,21 +546,6 @@ export function useDelivery(orderId: string): UseDeliveryResult {
       void load();
     }, [load]),
 
-    proofRequired,
-    proof,
-    signing,
-    uploading,
-    proofError,
-    openSignature: useCallback(() => {
-      setSigning(true);
-      setProofError(null);
-    }, []),
-    cancelSignature: useCallback(() => setSigning(false), []),
-    confirmSignature,
-    clearProof: useCallback(() => {
-      setProof(null);
-      setProofError(null);
-    }, []),
 
     boxes,
     scannedBoxCount: scannedBoxCodes.length,
@@ -525,19 +555,9 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     handleBoxScan,
 
     lines,
-    markOf: (orderItemId) => marks[orderItemId],
-    toggleLine: (orderItemId) =>
-      setMarks((current) => ({
-        ...current,
-        [orderItemId]:
-          current[orderItemId] === undefined ? 'delivered' : current[orderItemId] === 'delivered' ? 'refused' : undefined,
-      })),
-    returnQtyOf: (line) => returnQty[line.orderItemId] ?? line.qty,
-    changeReturnQty: (line, delta) =>
-      setReturnQty((current) => ({
-        ...current,
-        [line.orderItemId]: Math.min(line.qty, Math.max(1, (current[line.orderItemId] ?? line.qty) + delta)),
-      })),
+    refusedQtyOf: refusedOf,
+    /** Çekmeceden gelen adet — 0 yazmak "geri verilmedi" demektir, kayıt silinmez. */
+    setRefusedQty,
     hasRefused,
     allRefused,
     partialReturn,

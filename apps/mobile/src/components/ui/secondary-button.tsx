@@ -6,10 +6,14 @@ import type { IconName } from './icon-paths';
 import { PressableSurface } from './pressable-surface';
 
 /*
-  İKİNCİL DÜĞME — çerçeveli, dolgusuz. Üç ton:
+  İKİNCİL DÜĞME — çerçeveli, dolgusuz. Dört ton:
   · `sand`  — nötr ikinci yol ("Alışverişe dön"): kum çerçeve, mürekkep metin
   · `olive` — olumlu ama ikincil ("Stok haberi ver"): zeytin çerçeve, koyu zeytin metin
   · `terracotta` — YIKICI onay ("Hesabımı sil"): terracotta çerçeve ve metin
+  · `error` — OLUMSUZ KAYIT ("Kabul etmedi"): kırmızı çerçeve + açık kırmızı zemin, kırmızı metin.
+    Terracotta'dan ayrı ve ayrı olmalı — o bir UYARI tonudur (fırsat, kısmi, dikkat), bu bir RED.
+    Tasarım bu düğmeyi tek başına çerçeveyle bırakmıyor, zemine oturtuyor (v3:17): yanındaki nötr
+    "Ulaşılamadı" ile aynı ağırlıkta durmasın diye.
 
   ── ÜÇÜNCÜ TON NEDEN AÇILDI (14.08, cihazda görülerek) ──────────────────────
   Kitte yıkıcı bir onayın karşılığı YOKTU ve hesap silme çekmecesi ilk sürümünde onayı
@@ -25,11 +29,13 @@ import { PressableSurface } from './pressable-surface';
   gölge + `translate(2,2)`, hap gölgesiz + `scale(.97)`.
 */
 
+type SecondaryTone = 'sand' | 'olive' | 'terracotta' | 'error';
+
 interface SecondaryButtonProps {
   /** Düğme etiketi — i18n üstte çözülür. */
   label: string;
   onPress: () => void;
-  tone?: 'sand' | 'olive' | 'terracotta';
+  tone?: SecondaryTone;
   shape?: 'block' | 'pill';
   /**
    * Yüzeyin yükseltisi — `PrimaryButton`la AYNI kural, aynı gerekçe: operasyon mobil v3'te sert
@@ -105,9 +111,10 @@ export function SecondaryButton({
 /* İkonun rengi ETİKETİN rengidir: çerçeveli düğmede ikon ile metin tek bir işarettir, ikisi
    ayrı renkte olsaydı düğme iki parçaya bölünmüş görünürdü. Stil sayfasında değil burada, çünkü
    `Icon` rengi PROP olarak alıyor (RN'de `currentColor` yok — `icon.tsx` künyesi). */
-function toneInk(theme: UnistylesThemes[keyof UnistylesThemes], tone: 'sand' | 'olive' | 'terracotta'): string {
+function toneInk(theme: UnistylesThemes[keyof UnistylesThemes], tone: SecondaryTone): string {
   if (tone === 'olive') return theme.colors['olive-dark'];
   if (tone === 'terracotta') return theme.colors.terracotta;
+  if (tone === 'error') return theme.colors.error;
   return theme.colors.ink;
 }
 
@@ -138,6 +145,19 @@ const styles = StyleSheet.create((theme) => ({
   oliveLabel: { color: theme.colors['olive-dark'] },
   terracotta: { borderColor: theme.colors['terracotta-line'] },
   terracottaLabel: { color: theme.colors.terracotta },
+  /* OLUMSUZ İKİNCİL — kuryenin "Kabul etmedi"si (v3:17). Terracotta'dan ayrı: o bir UYARI tonu
+     (fırsat, kısmi, dikkat), bu bir RED. Tek tonun taşıdığı zemin de burada: tasarım bu düğmeyi
+     çerçeveyle bırakmıyor, açık kırmızı bir zemine oturtuyor (`#fdf6f4` = `error-bg`) — kardeşi
+     "Ulaşılamadı"nın yanında nötr durmasın diye. */
+  /* DEĞERLER TEMADAN — `error-line` 30.08'de müşteri setine de eklendi (aile künyesi). İlk hâlde
+     statik sabitten okunuyordu ve CİHAZDA DÜŞTÜ: Unistyles'ın stil fabrikası modül kapsamındaki
+     değişkeni göremiyor (`Property 'operationsTheme' doesn't exist`). Jest ve `tsc` bunu yakalamadı
+     — fabrika orada çağrılmıyor; hatayı yalnız cihaz gösterdi. */
+  error: {
+    borderColor: theme.colors['error-line'],
+    backgroundColor: theme.colors['error-bg'],
+  },
+  errorLabel: { color: theme.colors.error },
   disabled: { borderColor: theme.colors['disabled-line'] },
   disabledLabel: { color: theme.colors['disabled-text'] },
   label: {

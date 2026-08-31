@@ -199,12 +199,11 @@ export const operationsAppInk = {
    `cream` Δ4/4/4 · #f0ede3 iskelet dolgusu → `sand-50` Δ3/2/1 · #e2ddcc sessiz kenar →
    `neutral-bg` Δ5/5/6). */
 export const operationsAppLine = {
-  /* HATA/ALARM kartının kenarı: "liste yüklenemedi" kutusu, bildirim akışındaki SKT satırı,
-     iade/uyuşmazlık kartları. Tabanda karşılığı YOK — en yakını `terracotta-line` (#e8c9b3,
-     Δ8/16/1) ve o eşiğin üstünde; üstelik rolü de başka (turuncu ailenin kenarı, kırmızının
-     değil). `error-bg` (#f4e3e0) ise ZEMİN tonudur ve kenar olarak kullanıldığında kutu
-     çerçevesiz görünür. Aile adlandırması tabandan devralındı: `error` · `error-bg` · `error-line`. */
-  'error-line': '#e0b9b2',
+  /* `error-line` BURADAN KALKTI (30.08) ve TABANA taşındı (`customerAppError`). Sebep paylaşılan
+     kit: `SecondaryButton`ın `error` tonu iki yüzeyde birden yaşıyor ve yalnız operasyonda var olan
+     bir durak stil fabrikasında çözülemiyordu (cihazda ölçüldü). Değer değişmedi (#e0b9b2), yalnız
+     katmanı değişti — ikinci kez tanımlamak "aynı değerin ikinci adı" olurdu ve anti-kopya testi
+     bunu haklı olarak reddediyor. */
   /* UYARI kartının kenarı: "yazıcı tanımlı değil", "kapsamında iki depo var", "yarım kutu".
      §4 künyesi bu aileyi zaten ölçmüştü (#fdf8f3/#d9a97f, 9 kullanım) ama yalnız `error-line`
      açılmıştı; yazıcı ekranı yazılırken açık görüldü ve uyarı kutusu geçici olarak
@@ -254,6 +253,14 @@ export const operationsAppColors = {
 
    Eklenen İKİ durak, ikisi de ölçülmüş boşluk: */
 export const operationsAppText = {
+  /* OPERASYONUN DÜĞME ETİKETİ — tabanın 14,5'inden KÜÇÜK (kullanıcı bulgusu 30.08, cihazda
+     ölçüldü). Müşteri yüzeyinde düğme sayfanın tek çağrısıdır ve 14,5 orada doğru; operasyon
+     ekranında bir kartın içinde üç dört düğme yan yana duruyor ve o punto onları iri gösteriyor.
+     v3'ün kendi ölçüleri role göre 12,5 (ikincil: "Ulaşılamadı" · "Kabul etmedi") · 13
+     (navigasyon) · 13,5 (okutma) · 15 (birincil CTA) — ortası 13,5 ve dördünün de en yakın tek
+     kademesi o. Rol başına dört durak açmak kitin sözlüğünü, kazandırdığı yarım pikseller kadar
+     büyütmezdi (CLAUDE §1). */
+  button: '13.5px',
   /* Ekran başlığının ALTINDAKİ künye satırı (referans · müşteri · durum), sohbet baloncuğunun
      konuşan satırı ve sekme çubuğunun etiketi — 24 kullanım.
      Birleşimde 10,5 diye bir değer YOK; en yakınları 10 ve 11. Yuvarlanmadı çünkü kural bu:

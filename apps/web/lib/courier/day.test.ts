@@ -4,6 +4,7 @@ import {
   StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
+import { openBox, sealBox } from '@lezzet/application';
 import { listCourierDay, markUndelivered, type CourierStop } from './day';
 import { recordOrderPayment } from '../money/order-payment';
 import { transitionOrder } from '../order/transition';
@@ -114,9 +115,17 @@ async function dispatched(opts: { courier?: string; qty?: number; totalCents?: n
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   for (const status of ['confirmed', 'preparing'] as const) await transitionOrder({ orderId: order.id, to: status });
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  for (const status of ['ready', 'out_for_delivery'] as const) await transitionOrder({ orderId: order.id, to: status });
-  return { orderId: order.id, itemId: items[0]!.id };
+  /* HAZIRLIK KUTUYLA (30.08): kutusuz sipariş `ready` olamaz. Mühür siparişi HAZIR yapar. */
+  const box = await openBox(db, { orderId: order.id, warehouseId });
+  if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const sealed = await sealBox(db, {
+    boxId: box.box.boxId,
+    warehouseId,
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+  });
+  if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+  await transitionOrder({ orderId: order.id, to: 'out_for_delivery' });
+  return { orderId: order.id, itemId: items[0]!.id, boxCode: box.box.code };
 }
 
 const mine = (stops: CourierStop[], orderId: string) => stops.find((stop) => stop.orderId === orderId)!;
@@ -128,7 +137,8 @@ describe('gün listesi (11.1)', () => {
     const stop = mine(await listCourierDay({ courierId }), orderId);
 
     expect(stop.address).toBe('12 rue des Fleurs, 67000, Strasbourg');
-    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash' });
+    /* `collectedAtDoorCents` 30.08'de eklendi — bekleyen durakta `null`. */
+    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash', collectedAtDoorCents: null });
     expect(stop.contentSummary).toMatch(/^3 × Kayısılı Reçel .*\(250 g\)$/);
     expect(stop.outcome).toBe('pending');
   });
@@ -149,7 +159,9 @@ describe('gün listesi (11.1)', () => {
     const stop = mine(await listCourierDay({ courierId }), orderId);
 
     const serialized = JSON.stringify(stop);
-    for (const forbidden of ['purchasePrice', 'cogs', 'margin', 'creditLimit', 'unitPrice']) {
+    /* `unitPrice` yasak listesinden çıktı (30.08): yasak olan İŞLETMENİN defteri; kalemin SATIŞ
+       fiyatı kuryenin gördüğü tek paranın bileşenidir (kısmi iadede tutar ondan düşüyor). */
+    for (const forbidden of ['purchasePrice', 'cogs', 'margin', 'creditLimit']) {
       expect(serialized).not.toContain(forbidden);
     }
     expect(stop.payment.dueAmountCents).toBe(2000); // gördüğü tek para

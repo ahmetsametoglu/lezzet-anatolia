@@ -99,6 +99,14 @@ export const ICON_PATHS = {
   'arrow-right': { paths: ['M5 12h14M13 6l6 6-6 6'] },
   /** Çarpı — "başka sefer" oy düğmesi. */
   close: { paths: ['M6 6l12 12M18 6 6 18'] },
+  /**
+   * Artı — bir bölüme SATIR EKLEYEN eylem (kuryenin "reddedilen kalem ekle"si, 30.08).
+   *
+   * `OperationsStepperButton`ın `+` glifiyle karışmaz: o bir SAYIYI artırır ve metin karakteridir;
+   * bu bir çizgi ikondur ve "yeni bir şey ekle" der. İkisi aynı ekranda yan yana durabiliyor
+   * (mal bölümünün başlığı ile çekmecedeki adet düğmeleri) — ayrı olmaları gerekiyor.
+   */
+  plus: { paths: ['M12 5v14M5 12h14'] },
   /* Fişin onay imi (v3:22). Metin "✓" ile çizilemezdi: daire içinde ortalanan bir glif, yazı
      tipinin kendi çizgi yüksekliğine yaslanır ve dairenin merkezinden kayar. */
   check: { paths: ['M5 12.5l4.5 4.5L19 7'] },

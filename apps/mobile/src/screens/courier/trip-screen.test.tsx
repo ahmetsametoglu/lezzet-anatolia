@@ -56,14 +56,17 @@ function tripDay(overrides: Partial<Omit<CourierDayResponse, 'stops'>> = {}): Co
         { boxNo: 1, code: 'KT-26-AAAAAAAAAA', loadedAt: null },
         { boxNo: 2, code: 'KT-26-BBBBBBBBBB', loadedAt: null },
       ],
-      payment: { dueAmountCents: 4200, expectedMethod: 'cash' },
+      payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
     }),
     courierStop(2, {
       orderId: STOP_B,
       boxes: [{ boxNo: 1, code: 'KT-26-CCCCCCCCCC', loadedAt: null }],
-      payment: { dueAmountCents: null, expectedMethod: null },
+      payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null },
     }),
-    courierStop(3, { orderId: STOP_C, payment: { dueAmountCents: 0, expectedMethod: null } }),
+    courierStop(3, {
+      orderId: STOP_C,
+      payment: { dueAmountCents: 0, expectedMethod: null, collectedAtDoorCents: null },
+    }),
   ], overrides);
 }
 

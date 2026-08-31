@@ -69,12 +69,22 @@ export const customerAppSand = {
 
 /* ── HATA ailesi — Token Kararlari #3 ────────────────────────────────────────
    Terracotta'ya KATILMADI: terracotta fırsat/indirim demek ve aynı ailede iki zıt anlam
-   taşımak (kampanya + hata) rozet renginin bilgi değerini sıfırlar. İki katman yeter: metin +
-   zemin; kenarlık hâlâ tabandaki `terracotta-line` ile çiziliyor, üçüncü katman gerçek bir
-   ihtiyaç doğunca eklenir (bugün olmayanı token'lamıyoruz). */
+   taşımak (kampanya + hata) rozet renginin bilgi değerini sıfırlar.
+
+   ── ÜÇÜNCÜ KATMAN AÇILDI (30.08) ─────────────────────────────────────────
+   Künye *"kenarlık hâlâ tabandaki `terracotta-line` ile çiziliyor, üçüncü katman gerçek bir ihtiyaç
+   doğunca eklenir"* diyordu. İhtiyaç doğdu ve PAYLAŞILAN kitte doğdu: `SecondaryButton`ın `error`
+   tonu (kuryenin kapıdaki "Kabul etmedi"si, v3:17) kırmızı bir çerçeve istiyor ve bileşen iki
+   yüzeyde birden yaşıyor. Token yalnız operasyon setinde olsaydı stil fabrikası müşteri temasında
+   çözülemeyen bir anahtar okurdu — cihazda `Property 'operationsTheme' doesn't exist` diye düştü
+   (ölçüldü 30.08). Kenarlık için terracotta kullanmak da olmazdı: o amber bir çizgi, bu pembe bir
+   çizgi ve ikisi ayrı şey söylüyor.
+
+   Değer operasyon setinin `error-line`ıyla AYNI: aile iki yüzeyde tek renkte konuşur. */
 export const customerAppError = {
   error: '#a44a3f', // hata metni, iptal/başarısız etiketi
   'error-bg': '#f4e3e0', // hata kutusu, başarısız ödeme zemini
+  'error-line': '#e0b9b2', // hata kutusu/düğmesi çerçevesi (kurye "Kabul etmedi")
 } as const satisfies Record<string, string>;
 
 /* ── ÖRTÜ (scrim) — Token Kararlari #5 ───────────────────────────────────────

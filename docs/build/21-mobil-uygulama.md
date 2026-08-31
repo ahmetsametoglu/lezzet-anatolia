@@ -9079,5 +9079,51 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   yeni test). **Cihazda ölçüldü:** 10 parti gerçek veriden geldi, aciliyet sırası doğru (en çok
   geçmiş üstte), imhalık satır kırmızı zeminde ve kendi bağıyla, ömür çubukları üç tonda.
 
-  **BEKLEYEN(21.189):** DLC/DDM ayrımı hiçbir ekranda görünmüyor — "geçti" yazan satırın imhalık mı
+  **BEKLEYEN(21.188):** DLC/DDM ayrımı hiçbir ekranda görünmüyor — "geçti" yazan satırın imhalık mı
   satılabilir mi olduğu okunmuyor. Sözleşme `dateType` taşımıyor.
+
+- [x] (21.189) **YÜKLEME "YOLDA" DEMEK DEĞİL — araç bir ara depo oldu** (kullanıcı kararı 31.08)
+  `touches: packages/application/src/courier/load.ts · packages/types/src/contracts/courier-api.schema.ts · apps/mobile/src/screens/courier/use-courier-day.hook.ts`
+
+  **Durum: kapının yarısı yazıldı, ekranlar sırada.** Kullanıcı modeli kurdu: *"bir çeşit araba ara
+  depo gibi oluyor ve içinde birden fazla sefere ait sipariş taşıyor. Ve kurye istediği bir seferi
+  başlatabiliyor."* İki senaryo: (a) rota hesaplayıcı dağ bölümünü ayrı rota veriyor, ikisi birlikte
+  yükleniyor; (b) araç iki-üç günlük yola çıkıyor, rotalar tek günlük olduğu için ileri günlerin
+  seferleri de bugünden araca giriyor.
+
+  **Sökülen kaynaşma.** `loadBox` son kutuda `ready → out_for_delivery` yazıyordu; yükleme ile sefer
+  başlatma tek ele bağlıydı. Bedeli ölçüldü ve İKİ TANEYDİ: (1) yarının seferinin kutusunu bugün
+  okutmak o siparişleri bugün yola çıkarır ve müşteriye "yoldayım" der; (2) kutu zorunluluğu
+  (21.184) gelince `startCourierDay`ın `started` listesi ULAŞILAMAZ hâle geldi — kutusu yüklenen
+  sipariş bu kapıdan çoktan çıkmış oluyordu, sefer başlatmaya iş kalmıyordu. Testler bunu yakaladı.
+
+  Geçişin tek sahibi artık `startCourierDay`. Sözleşmedeki `orderStarted` alanı **`allBoxesLoaded`**
+  oldu — adı da artık doğru olanı söylüyor: "siparişin tamamı araçta", "yola çıktı" değil. Ekran
+  metni de düzeldi (`loadedStarted` → `loadedComplete`): kuryeye olmayan bir şey haber verilmiyor.
+
+  **Kutu duvarı kararı (a) alındı.** `confirmPreparation` `pickup` dışında her siparişe `box_required`
+  diyor ve öyle kalıyor — bu modelde kutu merkezî. Web hazırlık masasının kutu adımı eksiği o şeride
+  `docs/talep/not-web-hazirlik-kutu-adimi.md` ile bildirildi.
+
+  **Test kapsamı yer değiştirdi, kaybolmadı.** `confirmPreparation` üzerinden ölçülen altı davranış
+  (HAZIR geçişi, yarım iş, kilitli kalem ihlali, eksik tavsiyesinin iki dalı) artık gerçek kapıda:
+  `warehouse/boxes.test.ts` + `domain-core/stock/shortfall.test.ts`. Kapıya kapsam kararı, bilinmeyen
+  sipariş ve duvarın kendisi kaldı. **Tam paket: 4004/4004 yeşil.**
+
+  **BEKLEYEN(21.190):** ekranlar hâlâ tek sefer varsayıyor — `/day` sefer LİSTESİ dönmüyor, durakta
+  `runId` yok, "sefer kur" ile "sefer başlat" ayrımı arayüzde yok. Tasarımı geldi (v3:15 Araçtaki
+  Seferler, 16 Sefer ve Araç, 17 Araca Yükleme, 13 Kurye Dönüşü); iş 21.190'da.
+
+- [ ] (21.190) **KURYE ANA EKRANI: ÇOKLU SEFER · SEFER KUR ↔ SEFER BAŞLAT** (v3:13-18 · kullanıcı kararı 31.08)
+  `touches: packages/application/src/courier/* · packages/types/src/contracts/courier-api.schema.ts · apps/mobile-api/src/api/v1/courier.ts · apps/mobile/src/screens/courier/*`
+
+  Tasarım hazır ve modeli birebir taşıyor. Yapılacaklar sırasıyla: (1) `start_delivery_run` RPC'sini
+  ikiye böl — sefer KUR (`departed_at` null, claim yapar ki kutu okutulabilsin) ve sefer BAŞLAT
+  (`departed_at` + `out_for_delivery` + müşteri bildirimi); kolon zaten nullable. (2) `/courier/day`
+  tek `run` yerine araçtaki seferlerin LİSTESİNİ dönsün. (3) `CourierStopSchema`ya `runId` + rota adı
+  (durakta bugün rota kimliği YOK, iki seferin durağı karışık tek listede geliyor). (4) Ekranlar:
+  14'ün üç hâli, 15 Araçtaki Seferler, 16 çoklu seçim + araç, 17 sefere göre gruplu yükleme.
+
+  **BEKLEYEN(21.190):** `loadBox` hâlâ `order.courierId` okuyor, sefere değil — aynı kuryeye damgalı
+  BAŞKA rotanın kutusu sessizce biniyor ve o durak gün listesinde hiç görünmüyor (bölge süzgeci).
+  Ölçüt `delivery_run_id` olacak; kolon zaten var ve `start_delivery_run` onu da yazıyor.

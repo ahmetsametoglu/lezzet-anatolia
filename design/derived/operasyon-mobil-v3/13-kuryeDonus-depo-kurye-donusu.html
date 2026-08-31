@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
 <!-- ekran: kuryeDonus · Depo · Kurye dönüşü -->
-<!-- kaynak satırlar: 1216-1291 -->
+<!-- kaynak satırlar: 1242-1372 -->
 
-<!-- kaynak: satır 1216-1291 · görünüm bloğu -->
+<!-- kaynak: satır 1242-1372 · görünüm bloğu -->
     <sc-if value="{{ is.kuryeDonus }}">
       <div data-screen-label="Depo · Kurye dönüşü" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
         <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
@@ -44,11 +44,66 @@
             </sc-if>
           </div>
 
-          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">ULAŞILAMAYANLAR — ARAÇTA KALIR</span>
-          <div style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:3px">
-            <span style="font:700 13.5px 'Karla';color:#6d7261">LZA-26-7T4D · 2 koli</span>
-            <span style="font:400 11.5px 'Karla';color:#a8a191">yeniden planlanacak — kabul edilmez</span>
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">SERBEST ÜRÜN — SAY VE DEVRET</span>
+          <sc-if value="{{ donusVar }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:9px">
+              <sc-for list="{{ donusSatirlar }}" as="ds" hint-placeholder-count="2">
+                <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 15px;display:flex;flex-direction:column;gap:11px">
+                  <div style="display:flex;flex-direction:column;gap:2px">
+                    <span style="font:700 14.5px 'Karla'">{{ ds.ad }}</span>
+                    <span style="font:400 11px 'Karla';color:#8a8270">{{ ds.boy }} · araca alınan {{ ds.alinan }} · kapıda satılan {{ ds.satilan }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:11px">
+                    <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
+                      <span onClick="{{ ds.eksi }}" style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+                      <span style="width:44px;text-align:center;font:700 17px 'Karla'">{{ ds.donen }}</span>
+                      <span onClick="{{ ds.arti }}" style="width:44px;height:48px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none">+</span>
+                    </div>
+                    <span style="font:700 11.5px/1.45 'Karla';color:#8a8270;flex:1">sayılan dönen adet · beklenen {{ ds.beklenen }}</span>
+                  </div>
+                  <div style="display:{{ ds.farkGoster }};background:#f6e6d6;border-radius:13px;padding:10px 12px">
+                    <span style="font:700 11.5px/1.45 'Karla';color:#b05c2e">{{ ds.farkYazi }}</span>
+                  </div>
+                </div>
+              </sc-for>
+              <div style="background:#f2f0e8;border-radius:16px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between">
+                <span style="font:700 12px 'Karla';color:#6d7261">alınan {{ donusOzet.alinan }} · satılan {{ donusOzet.satilan }} · dönen {{ donusOzet.donen }}</span>
+                <span style="font:700 11.5px 'Karla';color:#46601f">depoya devredilir</span>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ donusBos }}" hint-placeholder-val="{{ true }}">
+            <div style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 13.5px 'Karla';color:#6d7261">Bu seferde serbest ürün alınmadı</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Sipariş dışı mal çıkmadıysa devredilecek de bir şey yoktur.</span>
+            </div>
+          </sc-if>
+
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">KUTULAR — ARAÇTA KALAN</span>
+          <div style="background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 13.5px 'Karla';color:#6d7261">Colmar–Mulhouse · SF-26-CM4417 · 9 kutu</span>
+              <span style="font:400 11.5px 'Karla';color:#a8a191">yarının seferi — inmez, araçta kalır</span>
+            </div>
+            <div style="height:1.5px;background:#e2ddcc"></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 13.5px 'Karla';color:#6d7261">LZA-26-7T4D · 2 koli</span>
+              <span style="font:400 11.5px 'Karla';color:#a8a191">ulaşılamadı, yeniden planlanacak — kabul edilmez</span>
+            </div>
           </div>
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">KUTULAR — DEPOYA İNEN</span>
+          <div style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 13.5px 'Karla'">Épicerie Ravanelli · LA-26-QRPRRV · 1 kalem</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">kısmi teslim iadesi — akıbeti yukarıda işaretlenir</span>
+            </div>
+            <div style="height:1.5px;background:#e2ddcc"></div>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font:700 13.5px 'Karla'">Bistrot Lentz · LA-26-9Q2BXX · 1 kutu</span>
+              <span style="font:400 11.5px 'Karla';color:#8a8270">sefer kapandı — kutu depoya iner</span>
+            </div>
+          </div>
+          <span style="font:400 11.5px/1.6 'Karla';color:#a8a191">Kurye rampadan ayrılmadan araçta ne bıraktığını görür: kapanmamış ve ileri günlü seferlerin kutuları araçta kalır, yalnız kapanan seferin dönenleri iner.</span>
           <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270;margin-top:4px">İADE BORCU YAZILAMADI</span>
           <div style="background:#fdf6f4;border:1.5px solid #e0b9b2;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px">
             <span style="font:700 13px 'Karla';color:#a44a3f">LZA-26-9Q2B · 44,00 € iade alacağı işlenemedi</span>

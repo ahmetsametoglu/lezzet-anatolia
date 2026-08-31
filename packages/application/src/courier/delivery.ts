@@ -114,16 +114,25 @@ export async function confirmDoorDelivery(
   if (!order) return { status: 'not_found' };
   if (order.courierId !== input.courierId) return { status: 'forbidden', reason: 'not_assigned' };
 
-  // ── Kutu kapısı: yazımdan önce (23.8, etüt 2.5) ───────────────────────────
-  // "Tüm kutular okutulmadan teslim tamamlanmaz." Ekran kalan kutuyu numarasıyla söyler — kurye
-  // araçta hangi kutuyu unuttuğunu numaradan bulur. Kutusuz sipariş bu kapıyı hiç görmez.
+  /*
+    ── Kutu kapısı: yazımdan önce (23.8, etüt 2.5) ─────────────────────────────────────────────
+    "Tüm kutular okutulmadan teslim tamamlanmaz." Ekran kalan kutuyu numarasıyla söyler — kurye
+    araçta hangi kutuyu unuttuğunu numaradan bulur.
+
+    **KUTUSUZ SİPARİŞ DE BU KAPIDAN GEÇEMEZ** (kullanıcı kararı 30.08). Eskiden `boxes.length > 0`
+    koşulu kutusuz siparişi kapının DIŞINDA bırakıyordu ve teslim hiç okutma istenmeden yazılıyordu.
+    Kural artık tek: mal kutusuyla hazırlanır, kutusuyla araca biner, kutusuyla kapıdan çıkar.
+
+    Buraya kutusuz bir sipariş DÜŞMEMELİ — hazırlık kapısı onu `ready` yapmıyor (`box_required`),
+    yani yola da çıkamaz. Yine de savunma yazılı ve SESSİZ DEĞİL: değişmez bir gün ihlal edilirse
+    teslim yazılmaz, ekran "kutu kaydı yok" der ve arıza görünür olur (CLAUDE §1 — belirtiyi
+    susturan düzeltme, arızayı gözden saklamaktır).
+  */
   const boxes = await new OrderBoxService(db).listByOrder(input.orderId);
-  if (boxes.length > 0) {
-    const scanned = new Set((input.scannedBoxCodes ?? []).map((code) => code.trim()));
-    const remaining = boxes.filter((box) => !scanned.has(box.code));
-    if (remaining.length > 0) {
-      return { status: 'boxes_missing', remainingBoxNos: remaining.map((box) => box.boxNo) };
-    }
+  const scanned = new Set((input.scannedBoxCodes ?? []).map((code) => code.trim()));
+  const remaining = boxes.filter((box) => !scanned.has(box.code));
+  if (boxes.length === 0 || remaining.length > 0) {
+    return { status: 'boxes_missing', remainingBoxNos: remaining.map((box) => box.boxNo) };
   }
 
   // ── Kanıt kapısı: yazımdan önce ────────────────────────────────────────────

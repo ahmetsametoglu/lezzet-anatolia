@@ -8,6 +8,8 @@ import { closeCourierDay, openDayClose, type DayCloseDraft } from './day-close';
 import { confirmDoorDelivery } from './delivery';
 import { markUndelivered, startCourierDay } from './day';
 import { advanceOrder } from '../order/advance.testkit';
+import { openBox, sealBox } from '../warehouse/boxes';
+import { loadBox } from './load';
 
 /**
  * SEFER kapanışı ve kasa mutabakatı (11.7 · 18.08 — kurye×gün kapanışının halefi).
@@ -111,10 +113,24 @@ async function atTheDoor(qty: number) {
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
+  /*
+    HAZIRLIK KUTUYLA (kullanıcı kararı 30.08): kutusuz sipariş `ready` olamaz, yola çıkamaz ve
+    kapıdan geçemez. Mühür siparişi HAZIR yapar; kutu araca da bindirilir, çünkü `startCourierDay`
+    kutuları binmemiş durağı yola çıkarmıyor (kutulu siparişte "yolda"nın tek kapısı son okutma).
+    Kutu KODU dönüyor — teslim çağrısı onu istiyor.
+  */
   await advanceOrder(db, order.id, ['confirmed', 'preparing']);
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  await advanceOrder(db, order.id, ['ready']);
-  return { orderId: order.id, itemId: items[0]!.id, qty };
+  const box = await openBox(db, { orderId: order.id, warehouseId });
+  if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const sealed = await sealBox(db, {
+    boxId: box.box.boxId,
+    warehouseId,
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+  });
+  if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+  const loaded = await loadBox(db, { code: box.box.code, courierId });
+  if (loaded.status !== 'ok') throw new Error(`fikstür: kutu araca alınamadı (${loaded.status})`);
+  return { orderId: order.id, itemId: items[0]!.id, qty, boxCode: box.box.code };
 }
 
 /** Seferi başlat — günün hazır durakları claim edilir ve yola çıkar; seferin kimliği döner. */
@@ -124,9 +140,19 @@ async function depart(): Promise<string> {
   return result.run.runId;
 }
 
-/** Kapıda tahsilat — kapanışın beklenen toplamını besleyen tek yol. */
-async function collect(orderId: string, qty: number, method: 'cash' | 'card' | 'cheque') {
-  await confirmDoorDelivery(db, { orderId, courierId, collection: { method, amountCents: qty * 1000, accountId } });
+/**
+ * Kapıda tahsilat — kapanışın beklenen toplamını besleyen tek yol.
+ *
+ * KUTU KODU ŞART (30.08): teslim kapısı kutusuz teslimi reddediyor; fikstürün kutusu da gerçek
+ * yoldan geçtiği için kod elde.
+ */
+async function collect(orderId: string, qty: number, method: 'cash' | 'card' | 'cheque', boxCode: string) {
+  await confirmDoorDelivery(db, {
+    orderId,
+    courierId,
+    scannedBoxCodes: [boxCode],
+    collection: { method, amountCents: qty * 1000, accountId },
+  });
 }
 
 describe('kapanış taslağı', () => {
@@ -135,9 +161,9 @@ describe('kapanış taslağı', () => {
     const b = await atTheDoor(2); // 20 €
     const c = await atTheDoor(4); // 40 €
     const runId = await depart();
-    await collect(a.orderId, a.qty, 'cash');
-    await collect(b.orderId, b.qty, 'cash');
-    await collect(c.orderId, c.qty, 'card');
+    await collect(a.orderId, a.qty, 'cash', a.boxCode);
+    await collect(b.orderId, b.qty, 'cash', b.boxCode);
+    await collect(c.orderId, c.qty, 'card', c.boxCode);
 
     const draft: DayCloseDraft = await openDayClose(db, { courierId, runId });
 
@@ -152,7 +178,7 @@ describe('kapanış taslağı', () => {
     const { orderId: ulasilamayan } = await atTheDoor(1);
     const { orderId: reddedilen } = await atTheDoor(1);
     await depart();
-    await collect(teslim.orderId, teslim.qty, 'cash');
+    await collect(teslim.orderId, teslim.qty, 'cash', teslim.boxCode);
     await markUndelivered(db, { orderId: ulasilamayan, courierId, outcome: 'unreachable' });
     await markUndelivered(db, { orderId: reddedilen, courierId, outcome: 'refused' });
 
@@ -177,7 +203,7 @@ describe('seferi kapat', () => {
   it('sayılan beklenene eşitse sefer MUTABIK kapanır ve dönüş damgalanır', async () => {
     const a = await atTheDoor(3);
     const runId = await depart();
-    await collect(a.orderId, a.qty, 'cash');
+    await collect(a.orderId, a.qty, 'cash', a.boxCode);
 
     const result = await closeCourierDay(db, { courierId, runId, countedCashCents: 3000 });
 
@@ -188,7 +214,7 @@ describe('seferi kapat', () => {
   it('fark AYNI GÜN görünür ve işareti anlamlıdır', async () => {
     const a = await atTheDoor(5); // beklenen 50 €
     const runId = await depart();
-    await collect(a.orderId, a.qty, 'cash');
+    await collect(a.orderId, a.qty, 'cash', a.boxCode);
 
     const eksik = await closeCourierDay(db, { courierId, runId, countedCashCents: 4500, note: 'müşteri bozuk para veremedi' });
 
@@ -200,7 +226,7 @@ describe('seferi kapat', () => {
   it('fazla para da fark sayılır', async () => {
     const a = await atTheDoor(2); // beklenen 20 €
     const runId = await depart();
-    await collect(a.orderId, a.qty, 'cash');
+    await collect(a.orderId, a.qty, 'cash', a.boxCode);
 
     const fazla = await closeCourierDay(db, { courierId, runId, countedCashCents: 2500 });
 
@@ -211,7 +237,7 @@ describe('seferi kapat', () => {
     const teslim = await atTheDoor(2);
     const { orderId: takili } = await atTheDoor(1);
     const runId = await depart();
-    await collect(teslim.orderId, teslim.qty, 'cash');
+    await collect(teslim.orderId, teslim.qty, 'cash', teslim.boxCode);
     // `takili` kapıda hiç işaretlenmedi — eskiden kimsenin ulaşamadığı kilitte kalırdı.
 
     const result = await closeCourierDay(db, { courierId, runId, countedCashCents: 2000 });
@@ -231,7 +257,7 @@ describe('seferi kapat', () => {
     const teslim = await atTheDoor(2);
     const { orderId: ulasilamayan } = await atTheDoor(1);
     const runId = await depart();
-    await collect(teslim.orderId, teslim.qty, 'cash');
+    await collect(teslim.orderId, teslim.qty, 'cash', teslim.boxCode);
     await markUndelivered(db, { orderId: ulasilamayan, courierId, outcome: 'unreachable' });
 
     const result = await closeCourierDay(db, { courierId, runId, countedCashCents: 2000 });
@@ -243,7 +269,7 @@ describe('seferi kapat', () => {
   it('kapanmış sefer İKİNCİ kez kapatılamaz — kayıt ezilmez', async () => {
     const a = await atTheDoor(2);
     const runId = await depart();
-    await collect(a.orderId, a.qty, 'cash');
+    await collect(a.orderId, a.qty, 'cash', a.boxCode);
     const first = await closeCourierDay(db, { courierId, runId, countedCashCents: 2000 });
 
     const second = await closeCourierDay(db, { courierId, runId, countedCashCents: 99900 });
@@ -256,7 +282,7 @@ describe('seferi kapat', () => {
   it('başkasının seferi bu kapıdan kapatılamaz — "yok" ile "senin değil" aynı cevap', async () => {
     const a = await atTheDoor(2);
     const runId = await depart();
-    await collect(a.orderId, a.qty, 'cash');
+    await collect(a.orderId, a.qty, 'cash', a.boxCode);
     const digerKurye = await new UserProfileService(db).insert({ name: 'Kurye Yabancı', email: `yabanci-${stamp}-${dayCounter}@example.test` });
     createdProfiles.push(digerKurye.id);
 
@@ -268,7 +294,7 @@ describe('seferi kapat', () => {
   it('kapanış sonrası hareket düzeltilse bile BEKLENEN donmuş kalır', async () => {
     const a = await atTheDoor(3); // beklenen 30 €
     const runId = await depart();
-    await collect(a.orderId, a.qty, 'cash');
+    await collect(a.orderId, a.qty, 'cash', a.boxCode);
     await closeCourierDay(db, { courierId, runId, countedCashCents: 3000 });
 
     // Ertesi gün biri hareketi düzeltiyor — o gün ne konuşulduğu değişmemeli.

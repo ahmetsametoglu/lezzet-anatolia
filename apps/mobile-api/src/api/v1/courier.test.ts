@@ -7,6 +7,7 @@ import {
   CategoryService,
   DeliveryZoneService,
   MoneyMovementService,
+  OrderBoxService,
   OrderService,
   ProductService,
   ReservationService,
@@ -15,7 +16,7 @@ import {
   UserProfileService,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, settingsSnapshot } from '@lezzet/database/testing';
-import { recordOrderPayment } from '@lezzet/application';
+import { loadBox, openBox, recordOrderPayment, sealBox } from '@lezzet/application';
 // Beklenen şekiller ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME
 // kırılır (katalog testinin kararı). Kurye sözleşmelerinin ilk tüketicisi de budur.
 import type {
@@ -187,10 +188,36 @@ async function dispatched(
     return order.id;
   }
 
+  /*
+    HAZIRLIK KUTUYLA (kullanıcı kararı 30.08) — kutusuz sipariş ne `ready` olur ne yola çıkar.
+    Mühür siparişi HAZIR yapar. Kutu HER HÂLDE araca bindirilir: 31.08'den beri yükleme siparişi
+    yola ÇIKARMIYOR, yalnız malı araca geçiriyor — `ready` durak da yüklenmiş olabilir ve gerçekte
+    de öyledir. `out_for_delivery` istendiğinde geçiş AYRICA yazılır.
+  */
   await advance(order.id, ['confirmed', 'preparing']);
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  await advance(order.id, opts.upTo === 'ready' ? ['ready'] : ['ready', 'out_for_delivery']);
+  const box = await openBox(db, { orderId: order.id, warehouseId });
+  if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const sealed = await sealBox(db, {
+    boxId: box.box.boxId,
+    warehouseId,
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+  });
+  if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+  const loaded = await loadBox(db, { code: box.box.code, courierId: opts.courier ?? courierId });
+  if (loaded.status !== 'ok') throw new Error(`fikstür: kutu araca alınamadı (${loaded.status})`);
+  if (opts.upTo !== 'ready') await advance(order.id, ['out_for_delivery']);
   return order.id;
+}
+
+/**
+ * Durağın kutu kodu — kapıda okutma 30.08'den beri ZORUNLU. Kod fikstürden taşınmıyor, KAYITTAN
+ * okunuyor: `dispatched` tek kimlik döndürüyor ve yirmi çağrı yerini imza değiştirmek için
+ * dolaşmak, testin konusuyla ilgisi olmayan bir gürültü olurdu.
+ */
+async function boxCodeOf(orderId: string): Promise<string> {
+  const [box] = await new OrderBoxService(db).listByOrder(orderId);
+  if (!box) throw new Error('fikstür: siparişin kutusu yok');
+  return box.code;
 }
 
 beforeAll(async () => {
@@ -381,7 +408,8 @@ describe('GET /api/v1/courier/day', () => {
 
     const stop = day.stops.find((s) => s.orderId === benim)!;
     expect(stop.address).toBe('12 rue des Fleurs, 67000, Strasbourg');
-    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash' });
+    /* `collectedAtDoorCents` 30.08'de eklendi — bekleyen durakta `null`. */
+    expect(stop.payment).toEqual({ dueAmountCents: 3000, expectedMethod: 'cash', collectedAtDoorCents: null });
     expect(stop.outcome).toBe('pending');
     // Kuryenin gördüğü tek para tahsil edeceği tutardır — maliyet/kâr sözleşmede YOK (tasarım §6).
     expect(JSON.stringify(stop)).not.toContain('purchasePrice');
@@ -455,6 +483,7 @@ describe('GET /api/v1/courier/day', () => {
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
       adjustments: [{ orderItemId: item.orderItemId, fulfilledQty: 1 }],
+      scannedBoxCodes: [await boxCodeOf(orderId)],
     });
 
     expect(res.status).toBe(200);
@@ -546,6 +575,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
       collection: { method: 'cash', amountCents: 2000, accountId },
+      scannedBoxCodes: [await boxCodeOf(orderId)],
     });
     expect(res.status).toBe(200);
 
@@ -568,9 +598,13 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
 
   it('AYNI istek tekrar gelirse `stale` — ve bu bir HATA değil, 200 ile GÖRÜNÜR cevap', async () => {
     const orderId = await dispatched();
-    await post(`/api/v1/courier/stops/${orderId}/deliver`, {});
+    /* Kutu kapısı `stale`den ÖNCE (30.08): okutma olmadan ikinci istek de `boxes_missing` alırdı
+       ve testin konusu olan bayat geçiş hiç ölçülemezdi. Çevrimdışı kuyruk zaten aynı gövdeyi
+       tekrar gönderir — kodlar da o gövdededir. */
+    const codes = [await boxCodeOf(orderId)];
+    await post(`/api/v1/courier/stops/${orderId}/deliver`, { scannedBoxCodes: codes });
 
-    const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {});
+    const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, { scannedBoxCodes: codes });
     // Doc 04 omurgası: "bayat geçiş reddi GÖRÜNÜR olmalı — app bu reddi YUTMAZ". Bir HTTP koduna
     // indirgenseydi `currentStatus` kaybolurdu ve ekran "neden olmadı"yı söyleyemezdi.
     expect(res.status).toBe(200);
@@ -587,11 +621,17 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
   });
 
-  it('B2B kanalında kanıt yoksa `proof_required` — ve HİÇBİR yazım yapılmaz', async () => {
+  it('kanıt kapsamı AÇIKKEN B2B kanalında kanıt yoksa `proof_required` — ve HİÇBİR yazım yapılmaz', async () => {
+    /* Fabrika değeri 30.08'de iki kanal için de kapatıldı (imza adımı söküldü); kapıyı ölçen test
+       kapsamı kendisi açar ve `finally`'de geri koyar — `settings` küresel tekil satırdır. */
+    const settings = settingsSnapshot(db);
+    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
+    try {
     const orderId = await dispatched({ channel: 'b2b' });
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
       collection: { method: 'cash', amountCents: 2000, accountId },
+      scannedBoxCodes: [await boxCodeOf(orderId)],
     });
 
     expect(res.status).toBe(200);
@@ -599,6 +639,9 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     // Kapı SIRAsının sözü: kanıt kapısı yazımdan önce. Sipariş hâlâ yolda, para yazılmadı.
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
     expect(await new MoneyMovementService(db).listByOrder(orderId)).toHaveLength(0);
+    } finally {
+      await settings.restore();
+    }
   });
 
   it('`idempotencyKey` aynıysa para İKİNCİ kez yazılmaz — `collectionDeduped`', async () => {
@@ -612,6 +655,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
       collection: { method: 'cash', amountCents: 2000, accountId, idempotencyKey: key },
+      scannedBoxCodes: [await boxCodeOf(orderId)],
     });
 
     expect(res.status).toBe(200);
@@ -739,7 +783,10 @@ describe('sefer kapanışı (K7)', () => {
     // Üç durak da zaten yolda: sefer onları `alreadyOut` diye claim eder — araçtaki mal o seferindir.
     const run = await startRun();
 
-    await post(`/api/v1/courier/stops/${teslim}/deliver`, { collection: { method: 'cash', amountCents: 2000, accountId } });
+    await post(`/api/v1/courier/stops/${teslim}/deliver`, {
+      collection: { method: 'cash', amountCents: 2000, accountId },
+      scannedBoxCodes: [await boxCodeOf(teslim)],
+    });
     await post(`/api/v1/courier/stops/${bekleyen}/undelivered`, { outcome: 'unreachable', note: 'kimse yok' });
     await post(`/api/v1/courier/stops/${donen}/undelivered`, { outcome: 'refused', note: 'kabul etmedi' });
 
@@ -759,7 +806,10 @@ describe('sefer kapanışı (K7)', () => {
   it('seferi kapat: fark TÜRER ve işareti anlamlıdır', async () => {
     const teslim = await dispatched({ totalCents: 2000 });
     const run = await startRun();
-    await post(`/api/v1/courier/stops/${teslim}/deliver`, { collection: { method: 'cash', amountCents: 2000, accountId } });
+    await post(`/api/v1/courier/stops/${teslim}/deliver`, {
+      collection: { method: 'cash', amountCents: 2000, accountId },
+      scannedBoxCodes: [await boxCodeOf(teslim)],
+    });
 
     const res = await post('/api/v1/courier/day-close', {
       runId: run.run.runId,

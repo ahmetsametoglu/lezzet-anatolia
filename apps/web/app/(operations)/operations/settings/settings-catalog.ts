@@ -227,11 +227,16 @@ export const SETTING_CATALOG: readonly SettingDef[] = [
   {
     key: 'delivery_proof_required',
     label: 'Teslim onayı kapsamı',
-    help: 'İmza/fotoğraf hangi kanaldan istenir. Kurye teslimde bu kanallarda onay almadan kapatamaz.',
+    /* İMZA ADIMI KURYE EKRANINDAN SÖKÜLDÜ (kullanıcı kararı 30.08): ekrana çizilen şekil
+       imzalayanın kimliğini kanıtlamıyordu, yerine kutu okutması geçti (`box_scan`). Ayar
+       DURUYOR çünkü kapsam gerekirse yine açılabilir — ama açıldığında kurye ekranında
+       alınacak bir kanıt bugün YOK; yardım metni bunu söylüyor ki ayarı açan boşa beklemesin.
+       Gelecek yol backlog'da: kapıda WhatsApp OTP. */
+    help: 'Kanıt hangi kanalda zorunlu olsun. Bugün ikisi de kapalı: kanıt kutu okutmasının kendisidir (imza adımı kaldırıldı).',
     group: 'order',
     kind: 'channelFlags',
     exceptionScopes: NONE,
-    fallback: { b2b: true, b2c: false },
+    fallback: { b2b: false, b2c: false },
   },
   {
     key: 'delivery_summary_email',

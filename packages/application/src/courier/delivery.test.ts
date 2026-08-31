@@ -7,6 +7,7 @@ import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { advanceOrder } from '../order/advance.testkit';
+import { openBox, sealBox } from '../warehouse/boxes';
 
 /**
  * Kapıda teslim, eksik kalem ve tahsilat (11.2/11.3) — terfi 21.10 ile taşındı (kaynağı
@@ -112,59 +113,96 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
   );
   await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty });
   await advanceOrder(db, order.id, ['confirmed', 'preparing']);
-  await orders.recordPreparation(order.id, [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }]);
-  await advanceOrder(db, order.id, ['ready', 'out_for_delivery']);
-  return { orderId: order.id, itemId: items[0]!.id };
+  /*
+    HAZIRLIK KUTUYLA YAPILIR (kullanıcı kararı 30.08) — kutusuz sipariş artık ne `ready` olur ne
+    kapıdan çıkar. Fikstür de gerçek yolu izliyor: kutu açılır, mühürlenir (mühür siparişi HAZIR
+    yapar), sonra yola çıkarılır. Kutu KODU geri dönüyor çünkü teslim çağrısı onu istiyor —
+    kapıda okutulmayan kutu teslimi durdurur (`boxes_missing`).
+  */
+  const box = await openBox(db, { orderId: order.id, warehouseId });
+  if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+  const sealed = await sealBox(db, {
+    boxId: box.box.boxId,
+    warehouseId,
+    picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
+  });
+  if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+  await advanceOrder(db, order.id, ['out_for_delivery']);
+  return { orderId: order.id, itemId: items[0]!.id, boxCode: box.box.code };
 }
 
 describe('teslim onayı (11.2)', () => {
-  it('B2B teslimatı imzasız KAPANMAZ ve hiçbir yazım yapılmaz', async () => {
-    const { orderId } = await atTheDoor({ channel: 'b2b' });
+  /*
+    KANIT KAPISI AYARA BAĞLI VE FABRİKA DEĞERİ ARTIK KAPALI (kullanıcı kararı 30.08): imza adımı
+    kuryenin ekranından söküldü, kanıt kutu okutmasının kendisi oldu. Kapının KENDİSİ duruyor ve
+    kapsam yine açılabilir — test onu kendi içinde açıyor, çünkü ölçülen şey ayarın değeri değil
+    kapının çalışıp çalışmadığı.
+  */
+  it('kanıt kapsamı AÇIKKEN B2B teslimatı imzasız KAPANMAZ ve hiçbir yazım yapılmaz', async () => {
+    const settings = settingsSnapshot(db);
+    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
+    try {
+      const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
 
-    const outcome = await confirmDoorDelivery(db, { orderId, courierId });
+      const outcome = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode] });
 
-    expect(outcome).toEqual({ status: 'proof_required', channel: 'b2b' });
-    // Kanıt kapısı yazımdan ÖNCE: sipariş hâlâ yolda, stok el değmemiş.
-    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
-    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(30);
+      expect(outcome).toEqual({ status: 'proof_required', channel: 'b2b' });
+      // Kanıt kapısı yazımdan ÖNCE: sipariş hâlâ yolda, stok el değmemiş.
+      expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+      expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(30);
+    } finally {
+      await settings.restore();
+    }
   });
 
   it('imzayla B2B teslimatı kapanır, kanıt siparişe yazılır', async () => {
-    const { orderId } = await atTheDoor({ channel: 'b2b' });
-    // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat üç yöntemle sınırlıdır.
-    const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
-    const collection: DoorCollectionInput = { method: 'cash', amountCents: 4000, accountId };
+    const settings = settingsSnapshot(db);
+    await settings.override('delivery_proof_required', { b2b: true, b2c: false });
+    try {
+      const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
+      // Ekranın göndereceği şekiller — kanıt görsel anahtarı taşır, tahsilat üç yöntemle sınırlıdır.
+      const proof: DeliveryProofInput = { kind: 'signature', imageKey: 'proofs/abc.png', receivedBy: 'Şef Murat' };
+      const collection: DoorCollectionInput = { method: 'cash', amountCents: 4000, accountId };
 
-    const outcome = await confirmDoorDelivery(db, { orderId, courierId, proof, collection });
+      const outcome = await confirmDoorDelivery(db, {
+        orderId,
+        courierId,
+        scannedBoxCodes: [boxCode],
+        proof,
+        collection,
+      });
 
-    expect(outcome.status).toBe('ok');
-    const order = await orders.getById(orderId);
-    expect(order?.status).toBe('delivered');
-    expect(order?.deliveryProof).toMatchObject({ kind: 'signature', receivedBy: 'Şef Murat', courierId });
+      expect(outcome.status).toBe('ok');
+      const order = await orders.getById(orderId);
+      expect(order?.status).toBe('delivered');
+      expect(order?.deliveryProof).toMatchObject({ kind: 'signature', receivedBy: 'Şef Murat', courierId });
+    } finally {
+      await settings.restore();
+    }
   });
 
   it('B2C kanıtsız teslim edilebilir — kapsam parametrik, varsayılan kapalı', async () => {
-    const { orderId } = await atTheDoor();
+    const { orderId, boxCode } = await atTheDoor();
 
-    expect((await confirmDoorDelivery(db, { orderId, courierId })).status).toBe('ok');
+    expect((await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode] })).status).toBe('ok');
     expect((await orders.getById(orderId))?.status).toBe('delivered');
   });
 
   it('başka kuryenin siparişi bu ekrandan teslim edilemez', async () => {
-    const { orderId } = await atTheDoor();
+    const { orderId, boxCode } = await atTheDoor();
     await orders.update({ id: orderId, courierId: null });
 
-    expect(await confirmDoorDelivery(db, { orderId, courierId })).toEqual({ status: 'forbidden', reason: 'not_assigned' });
+    expect(await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode] })).toEqual({ status: 'forbidden', reason: 'not_assigned' });
   });
 });
 
 describe('eksik/reddedilen kalem (11.2)', () => {
   it('eksik işareti tutarı KENDİLİĞİNDEN düşürür — kurye hesap yapmaz', async () => {
-    const { orderId, itemId } = await atTheDoor({ qty: 4 }); // 40 €
+    const { orderId, itemId, boxCode } = await atTheDoor({ qty: 4 }); // 40 €
 
     // Müşteri 1 adedi kabul etmedi → 3 adet teslim.
     const outcome = await confirmDoorDelivery(db, {
-      orderId, courierId,
+      orderId, courierId, scannedBoxCodes: [boxCode],
       adjustments: [{ orderItemId: itemId, fulfilledQty: 3 }],
       collection: { method: 'cash', amountCents: 3000, accountId },
     });
@@ -175,10 +213,10 @@ describe('eksik/reddedilen kalem (11.2)', () => {
   });
 
   it('kalem düzeltmesi teslimden ÖNCE yazılır — mal iki kez oynatılmaz', async () => {
-    const { orderId, itemId } = await atTheDoor({ qty: 4 });
+    const { orderId, itemId, boxCode } = await atTheDoor({ qty: 4 });
 
     await confirmDoorDelivery(db, {
-      orderId, courierId,
+      orderId, courierId, scannedBoxCodes: [boxCode],
       adjustments: [{ orderItemId: itemId, fulfilledQty: 2 }],
       collection: { method: 'cash', amountCents: 2000, accountId },
     });
@@ -192,10 +230,10 @@ describe('eksik/reddedilen kalem (11.2)', () => {
 
 describe('tahsilat ve nakit sınırı (11.3)', () => {
   it('nakit yasal sınır aşımında UYARI çıkar ama tahsilat tamamlanır', async () => {
-    const { orderId } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 }); // 2.000 € — sınır 1.000 €
+    const { orderId, boxCode } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 }); // 2.000 € — sınır 1.000 €
 
     const outcome = await confirmDoorDelivery(db, {
-      orderId, courierId,
+      orderId, courierId, scannedBoxCodes: [boxCode],
       collection: { method: 'cash', amountCents: 200_000, accountId },
     });
 
@@ -204,10 +242,10 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
   });
 
   it('aynı tutar KARTLA alınırsa uyarı yok — sınır yalnız nakde ait', async () => {
-    const { orderId } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 });
+    const { orderId, boxCode } = await atTheDoor({ qty: 4, unitPriceCents: 50_000 });
 
     const outcome = await confirmDoorDelivery(db, {
-      orderId, courierId,
+      orderId, courierId, scannedBoxCodes: [boxCode],
       collection: { method: 'card', amountCents: 200_000, accountId },
     });
 
@@ -219,11 +257,11 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
   it('sınır ayardan gelir — kodda sabit yok', async () => {
     const settings = settingsSnapshot(db);
     await settings.override('cash_legal_limit_cents', 1_000); // 10 €
-    const { orderId } = await atTheDoor({ qty: 4 });
+    const { orderId, boxCode } = await atTheDoor({ qty: 4 });
 
     try {
       const outcome = await confirmDoorDelivery(db, {
-        orderId, courierId,
+        orderId, courierId, scannedBoxCodes: [boxCode],
         collection: { method: 'cash', amountCents: 4000, accountId },
       });
       expect(outcome).toMatchObject({ cashLimitExceeded: true });
@@ -233,9 +271,9 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
   });
 
   it('tahsilatsız teslim: kalan borç görünür kalır', async () => {
-    const { orderId } = await atTheDoor({ qty: 4 });
+    const { orderId, boxCode } = await atTheDoor({ qty: 4 });
 
-    const outcome = await confirmDoorDelivery(db, { orderId, courierId });
+    const outcome = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode] });
 
     expect(outcome).toMatchObject({ status: 'ok', collectedCents: 0, amountDueCents: 4000, paymentStatus: 'pending' });
   });
@@ -243,11 +281,11 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
   it('K4: kapı anahtarı HAREKETE yazılır — kuyruk tekrarının yakalanacağı tek yer orası', async () => {
     // Anahtar sözleşmede duruyor ama harekete geçmiyorsa hiçbir şeyi engellemez: tekrarı yakalayan
     // kontrol `meta.idempotencyKey` üzerinden okuyor (`order/payment.ts`).
-    const { orderId } = await atTheDoor({ qty: 2 });
+    const { orderId, boxCode } = await atTheDoor({ qty: 2 });
     const key = `door-${stamp}-${orderId}`;
 
     await confirmDoorDelivery(db, {
-      orderId, courierId,
+      orderId, courierId, scannedBoxCodes: [boxCode],
       collection: { method: 'cash', amountCents: 2000, accountId, idempotencyKey: key },
     });
 
@@ -260,11 +298,11 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
     // Mükerrer yazımın BİRİNCİ kilidi durum makinesidir (`deliver_order` yalnız `out_for_delivery`
     // durumundan teslim eder); anahtar ikinci kilittir. İkisi birden ölçülmezse "anahtar var,
     // koruma var" sanılır — oysa bu yoldan zaten geçilemiyor.
-    const { orderId } = await atTheDoor({ qty: 2 });
+    const { orderId, boxCode } = await atTheDoor({ qty: 2 });
     const collection: DoorCollectionInput = { method: 'cash', amountCents: 2000, accountId, idempotencyKey: `retry-${stamp}` };
 
-    const first = await confirmDoorDelivery(db, { orderId, courierId, collection });
-    const second = await confirmDoorDelivery(db, { orderId, courierId, collection });
+    const first = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], collection });
+    const second = await confirmDoorDelivery(db, { orderId, courierId, scannedBoxCodes: [boxCode], collection });
 
     expect(first.status).toBe('ok');
     expect(second).toEqual({ status: 'stale', currentStatus: 'delivered' });
@@ -330,7 +368,7 @@ describe('teslim kanıtı yükleme kapısı (11.2)', () => {
   it('yazılan kanıt OKUNABİLİYOR — yazılıp hiç açılmayan sigorta, olmayan sigortadır', async () => {
     // Sözleşmenin iki ucu bir kez ayrışmıştı: yazan `imageKey` koyuyordu, ekran `photos[]`
     // arıyordu. Bu test o turu kapatıyor — yazılan kayıt aynı şemadan geri okunuyor.
-    const { orderId } = await atTheDoor({ channel: 'b2b' });
+    const { orderId, boxCode } = await atTheDoor({ channel: 'b2b' });
     const upload = await requestDeliveryProofUploadUrl(db, { orderId, courierId, filename: 'imza.png' });
     expect(upload.ok).toBe(true);
     if (!upload.ok) return;
@@ -338,6 +376,7 @@ describe('teslim kanıtı yükleme kapısı (11.2)', () => {
     await confirmDoorDelivery(db, {
       orderId,
       courierId,
+      scannedBoxCodes: [boxCode],
       proof: { kind: 'signature', imageKey: upload.key, receivedBy: 'Mehmet Yılmaz' },
     });
 

@@ -64,6 +64,20 @@ export const CourierStopSchema = z.object({
     /** `null` = önceden ödenmiş; kapıda para konuşulmaz. **Cent**. */
     dueAmountCents: z.number().int().nullable(),
     expectedMethod: PaymentMethodEnum.nullable(),
+    /**
+     * **Kapıda FİİLEN alınan para** (cent) — `null` = kurye bu durakta para almadı (önceden
+     * ödenmiş, vadeli ya da henüz tahsil edilmemiş).
+     *
+     * `dueAmountCents`in aynası DEĞİL, ZIDDI: o kapıda alınacak olanı, bu alınmış olanı söyler.
+     * Sonuçlanmış durak yalnız kalan borcunu taşıyordu ve gün listesi "nakit 85,00 € alındı"
+     * cümlesini kuramıyordu — tahsil edilen para ekranda hiçbir yerde yazmıyordu (ölçüldü 30.08).
+     *
+     * TÜRETİMİ `delivery_run_collection` GÖRÜNÜMÜYLE AYNI: kapıda alınan para, yöntemi
+     * `cash|card|cheque` olan siparişin tahsilatıdır — online ve havale kuryenin eline hiç girmez
+     * ve bu alanda `null` görünür. İki yerde iki farklı hesap, kapanış ekranıyla gün listesinin
+     * bir gün ayrışması demekti (CLAUDE §1).
+     */
+    collectedAtDoorCents: z.number().int().nullable(),
   }),
   itemCount: z.number().int(),
   contentSummary: z.string(),
@@ -84,16 +98,86 @@ export const CourierStopSchema = z.object({
       name: z.string(),
       /** SİPARİŞ EDİLEN adet. Kapıda eksik çıkan miktar bu sayıdan İNDİRİLEREK gönderilir. */
       qty: z.number().int(),
+      /**
+       * **FİİLEN teslim edilen adet** — kapıda eksik çıkan kalem `qty`den indirilerek yazılır
+       * (`adjustFulfillment`). Teslim edilmemiş durakta 0'dır ve bu bir eksiklik DEĞİL: kolonun
+       * kendisi `not null default 0` ve mal daha kapıya gitmemiştir.
+       *
+       * KISMİ TESLİM BU ALANDAN OKUNUR ve ayrı bir `outcome` değeri AÇILMADI (30.08). Kısmi bir
+       * geçiş değil, `delivered` durağın niteliğidir: sipariş teslim edilmiştir, bir kalemi araçta
+       * kalmıştır. `StopOutcomeEnum`e beşinci bir değer koymak onu durum makinesinden ayırırdı —
+       * enum aynı zamanda `MarkUndeliveredRequest.outcome`un dili.
+       */
+      fulfilledQty: z.number().int(),
+      /**
+       * Kalemin BİRİM fiyatı ve indirim payı (**cent**) — kapıda geri verilen mal tahsilattan
+       * ne kadar düşeceğini EKRANIN hesaplayabilmesi için (kullanıcı bulgusu 30.08).
+       *
+       * Olmadığı hâlde ekran kısmi iadede tutarı olduğu gibi bırakıyordu: kurye "1/2 geri verildi"
+       * yazıp altında hâlâ tam tutarı görüyor, kapıda ne tahsil edeceğini bilemiyordu. Sunucu
+       * düzeltmeyi teslim ANINDA yapıyor — yani doğru rakam ancak iş bittikten sonra ortaya
+       * çıkıyordu; kapıda geç kalan bir doğruluk, doğruluk değildir.
+       *
+       * İkisi birlikte taşınır çünkü hesap ikisini birden ister (`lineAmountCents`, domain-core):
+       * indirim payı TÜM miktar için yazılıdır ve eksik karşılanan kalemde oransal düşer. Yalnız
+       * birim fiyat gitseydi indirimli satır kapıda olduğundan pahalı görünürdü.
+       *
+       * **Maliyet/kâr/marj DEĞİL** — şemanın kendi kuralı (tasarım §6): bunlar tahsil edilecek
+       * tutarın bileşenleri, işletmenin kasa defteri değil.
+       */
+      unitPriceCents: z.number().int(),
+      lineDiscountAmountCents: z.number().int(),
     }),
   ),
   outcome: StopOutcomeEnum,
+  /**
+   * Durağın SONUÇLANDIĞI an (ISO) — `null` = henüz sonuçlanmadı (`pending`).
+   *
+   * Kaynak `order_status_log`: `delivered`/`returned` geçişinin damgası, ulaşılamayanda son
+   * `out_for_delivery → ready` dönüşününki. Gün listesi "TESLİM EDİLDİ · 14:12" diyebilsin diye —
+   * kuryenin sabah çıktığı rotada saat, hangi durağın ne zaman kapandığını söyleyen tek işaret.
+   *
+   * **Siparişin `created_at`i DEĞİL:** o siparişin doğduğu an, durağın kapandığı an değil.
+   */
+  settledAt: z.string().nullable(),
+  /**
+   * Sonucun kuryenin kendi yazdığı sebebi — "zil bozuk, kimse yok". `null` = not yazılmamış.
+   *
+   * `MarkUndeliveredRequest.note` GÖNDERİLİYOR ve `order_status_log.note`a yazılıyordu ama hiçbir
+   * okuma onu geri getirmiyordu (ölçüldü 30.08): kurye sebebi yazıyor, ertesi durakta kendi
+   * yazdığını okuyamıyordu. Serbest metindir ve öyle kalır — sebebi standartlaştırmak sahada
+   * "yanlış ama düzgün" veri üretir (`MarkUndeliveredRequestSchema` künyesi).
+   */
+  outcomeNote: z.string().nullable(),
+  /**
+   * Kapıda GÖRSELLİ kanıt alındı mı — imza ya da fotoğraf.
+   *
+   * **Kutu okutması (`box_scan`) kanıt SAYILMAZ** ve bu bilinçli: o kanıt sunucunun okutulan
+   * kodlardan kendi kurduğu kayıttır (23.8), kapıda kimsenin imzaladığı bir şey değildir. Gün
+   * listesi "imza var" derken kuryeye ihtilafta arkasında duracak bir kanıt vaat ediyor; kutu
+   * okutmasını oraya saymak o vaadi boşa çıkarırdı.
+   *
+   * Görselin kendisi TAŞINMAZ (private kovada, kısa ömürlü izinle okunur) — liste satırının
+   * sorusu "kanıt var mı", "kanıt ne" değil.
+   */
+  hasProof: z.boolean(),
   /** Kaç kez yola çıkılıp dönüldü — ulaşılamayan durak listede kaybolmaz. */
   attempts: z.number().int(),
   /**
-   * Siparişin KUTULARI (23.8) — boş dizi = kutusuz akış (eski yol). İki tüketicisi var: yükleme
-   * sayacı ("5/8 kutu bindi" `loadedAt` damgalarından türer — ayrı tablo yok, karar §1.11) ve
-   * kapıda okutma eşleşmesi (ekran okutulan kodu bu listeyle yerelde eşler; son doğrulama yine
-   * sunucuda — `scannedBoxCodes`). `code` kurye kanalında taşınır ve müşteriye HİÇ gösterilmez.
+   * Siparişin KUTULARI (23.8). İki tüketicisi var: yükleme sayacı ("5/8 kutu bindi" `loadedAt`
+   * damgalarından türer — ayrı tablo yok, karar §1.11) ve kapıda okutma eşleşmesi (ekran okutulan
+   * kodu bu listeyle yerelde eşler; son doğrulama yine sunucuda — `scannedBoxCodes`). `code` kurye
+   * kanalında taşınır ve müşteriye HİÇ gösterilmez.
+   *
+   * ── BOŞ DİZİ ARTIK "ESKİ YOL" DEĞİL, VERİ HATASIDIR (kullanıcı kararı 30.08) ──
+   * Kutusuz akış 22.08'de bilinçli bir çift yol olarak bırakılmıştı (23.6) — kutulu akış yeni
+   * yazılırken kendi kodumuzu kırmamak için. Kullanıcı ölçtü ve kapattı: mal kutuya konur, kutu
+   * okutularak araca biner, kapıda okutularak müşteriye verilir; "kutusuz sipariş"in operasyonda
+   * karşılığı yok. Hazırlık kapısı artık kutusuz `ready` yazmıyor (`box_required`), yükleme kapısı
+   * kutusuzu yola çıkarmıyor, teslim kapısı kutusuz teslimi reddediyor.
+   *
+   * Dizi yine de boş GELEBİLİR (eski bir satır, yarım kalmış bir kayıt) — ekran o hâli normal
+   * saymaz, "bu durağın kutusu yok" diye söyler.
    */
   boxes: z.array(
     z.object({
@@ -102,6 +186,18 @@ export const CourierStopSchema = z.object({
       loadedAt: z.string().nullable(),
     }),
   ),
+  /**
+   * **Rota sırası** (11.9) — 1'den başlar; `null` = sıra BİLİNMİYOR.
+   *
+   * Zorunlu-ama-nullable, `.optional()` DEĞİL: uçtaki gövde tipi (`z.input<…>`) sayesinde alanı
+   * doldurmayan bir üretici DERLENMEZ. Eski istemciler için tehlike yok — şemaların hiçbirinde
+   * `.strict()` yok, Zod bilinmeyen anahtarı soyar ve eski binary yeni alanı görmezden gelir;
+   * kırılma ters yönde olurdu (yeni istemci + eski sunucu), o yüzden kural: **sunucu önce**.
+   *
+   * Sıralamayı SUNUCU yapar (`listCourierDay`), istemci yalnız çizer — iki yüzey kendi sıralamasını
+   * yapsaydı aynı gün için iki farklı rota gösterirlerdi.
+   */
+  stopSeq: z.number().int().positive().nullable(),
 });
 export type CourierStopContract = z.infer<typeof CourierStopSchema>;
 
@@ -295,9 +391,13 @@ export type LoadBoxRequest = z.infer<typeof LoadBoxRequestSchema>;
 /**
  * Yüklemenin cevabı. Karar §1.11'in iki yarısı burada: onay NİYET doğrulamasıdır, garanti KUTU
  * kontrolüdür — rotaya ait olmayan kutu `wrong_route` ile GÖRÜNÜR reddedilir (hangi siparişin
- * kutusu olduğu söylenir ki kurye rampada doğru yığını bulsun). `orderStarted` = bu okutma
- * siparişin SON kutusuydu ve sipariş yola çıktı (`ready → out_for_delivery` buradan yazılır —
- * kutulu siparişte "yolda"nın tek kapısı).
+ * kutusu olduğu söylenir ki kurye rampada doğru yığını bulsun). `allBoxesLoaded` = bu okutma
+ * siparişin SON kutusuydu, yani siparişin tamamı artık araçta.
+ *
+ * **Yükleme siparişi YOLA ÇIKARMAZ** (kullanıcı kararı 31.08). Alan 30.08'e kadar `orderStarted`
+ * adını taşıyordu ve okutma `ready → out_for_delivery` yazıyordu; model ayrıldı: araç bir ara
+ * depodur, içinde birden çok seferin kutusu durabilir ve yükleme yalnız bir EMANET değişimidir.
+ * Siparişi yola çıkaran ve müşteriye haber gönderen tek kapı sefer başlatmadır.
  */
 export const LoadBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -308,7 +408,7 @@ export const LoadBoxResponseSchema = z.discriminatedUnion('status', [
     /** Siparişin sayacı: kaç kutusu bindi / toplam. Sefer sayacını ekran duraklardan toplar. */
     loadedBoxes: z.number().int(),
     boxCount: z.number().int(),
-    orderStarted: z.boolean(),
+    allBoxesLoaded: z.boolean(),
   }),
   /** Aynı kutu ikinci kez okutuldu — hata değil, "zaten araçta" cevabı; sayaç değişmedi. */
   z.object({

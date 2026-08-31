@@ -1,4 +1,4 @@
-import { loadBox, openBox, sealBox } from '@lezzet/application';
+import { confirmDoorDelivery, loadBox, markUndelivered, openBox, sealBox } from '@lezzet/application';
 import {
   AccountService, AddressService, CartService, DeliveryZoneService, DiscountService, MoneyMovementService,
   OrderBoxService, OrderService, ReservationService, ShipmentEventService, ShipmentService,
@@ -497,6 +497,16 @@ export async function seedOrders(
               city: adres.city,
               phone: adres.phone,
               country: adres.country,
+              /* KOORDİNAT DA KOPYAYA GİRER (11.9 · 31.08) — ve bu, yukarıdaki künyenin ikinci kez
+                 yaşanmış hâli: `checkout-draft` adresin TAMAMINI yayıyor (`{ ...address }`), yani
+                 gerçek sipariş noktayı taşıyor; seed dört alan daha eksik yazınca rota sıralaması
+                 snapshot'ta nokta bulamayıp posta kodu MERKEZİNE düşüyordu (ölçüldü: 9 duraklı
+                 kuzey hattı `precision: postal_centroid` yazdı, oysa 20 adresin 20'si noktalıydı).
+                 Fark yine sessizdi — sıra üretildi, yalnız yanlış çözünürlükte. */
+              lat: adres.lat,
+              lng: adres.lng,
+              geoPrecision: adres.geoPrecision,
+              geoSource: adres.geoSource,
             }
           : null,
         // Kurye YOLA ÇIKMIŞ siparişte kendiliğinden yazılır; `atanmis` ise sevkiyatçının SABAH yaptığı
@@ -584,17 +594,66 @@ export async function seedOrders(
 
     let onceki: OrderStatus = 'draft';
     for (const hedef of durak) {
+      /* Mühür siparişi zaten HAZIR yaptıysa `ready` adımı atlanır (kutu kapısının künyesi). */
+      if (hedef === onceki) continue;
       if (hedef === 'preparing') {
-        // Hazırlık onayı: fiilen çıkan partiler yazılır (geri çağırma + gerçek COGS bunun üstünde).
+        /*
+          ── HAZIRLIK KUTUYLA YAPILIR (kullanıcı kararı 30.08) ──────────────────────────────────
+          Eskiden `recordPreparation` doğrudan çağrılıyordu ve sipariş KUTUSUZ hazırlanmış oluyordu.
+          Ölçüldü: 44 rota siparişinin 41'i kutusuzdu — yani seed, sistemin kapattığı bir yolu her
+          koşuda yeniden üretiyordu. Mal kutuya konur, kutu mühürlenir; hazırlığın kaydı da o
+          mühürdür (`sealBox` = kutu + picks TEK transaction).
+
+          TEK KUTU, TÜM KALEMLER: seed'in işi kutu ÇEŞİTLİLİĞİ değil, kutulu olmanın kendisi. Çok
+          kutulu ve yarım kutulu hâller aşağıda kendi bloklarında kuruluyor (`yuklemeSiparisi`,
+          kutu döngüsü) ve onlar bilinçli fikstürlerdir.
+
+          KAPI SATIŞI BU YOLDAN GEÇMEZ (`pickup`): orada hazırlık adımı yok, mal tezgâhtan gider.
+        */
         const picks = [];
         for (const item of items) picks.push({ orderItemId: item.id, batches: await partiSec(item.variantId, item.qty, depoId) });
         await orders.transition({ orderId: order.id, from: onceki, to: 'preparing', actorId: depocu });
-        await orders.recordPreparation(order.id, picks);
-        onceki = 'preparing';
+        const kutu = await openBox(db, { orderId: order.id, warehouseId: depoId });
+        if (kutu.status !== 'ok') throw new Error(`seed: kutu açılamadı (${opts.etiket} · ${kutu.status})`);
+        /*
+          YARIM KALMIŞ HAZIRLIK = AÇIK KUTU (30.08). Hedefin kendisi `preparing` ise depocu
+          toplamaya başlamış ama bitirmemiştir — kutu açık kalır, mühür vurulmaz ve sipariş
+          `preparing`te bekler. Kutulu akıştan ÖNCE bu hâl "picks yazıldı ama ready olmadı"
+          demekti; artık fiziksel karşılığı var ve seed onu üretiyor (kova: `Sipariş — durum
+          → preparing`).
+        */
+        if (opts.hedef === 'preparing') {
+          onceki = 'preparing';
+          continue;
+        }
+        const muhur = await sealBox(db, { boxId: kutu.box.boxId, warehouseId: depoId, picks, actorId: depocu });
+        if (muhur.status !== 'ok') throw new Error(`seed: kutu mühürlenemedi (${opts.etiket} · ${muhur.status})`);
+        /* Mühür siparişi HAZIR yapar (tek kutuda Σ = karşılanan). Sonraki `ready` adımı artık
+           yazılmamalı — `from` uyuşmazdı ve geçiş sessizce düşerdi. */
+        onceki = muhur.ready ? 'ready' : 'preparing';
         continue;
       }
       if (hedef === 'delivered') {
-        await orders.deliver(order.id, { actorId: siparisKuryesi, deliveryProof: { by: 'Kurye', at: an(0), method: 'imza' } });
+        /*
+          KANIT ŞEMAYA UYGUN YAZILIR (30.08). Eskiden `{ by, at, method: 'imza' }` yazılıyordu ve o
+          şekil `DeliveryProofRecordSchema`nın HİÇBİR alanını karşılamıyordu — `kind` yok, yani
+          kanıdı okuyan her yer "kanıt yok" görüyordu. Gün listesinin "imza var" satırı bu yüzden
+          yerelde hiç doğmuyordu (ölçüldü: 18 siparişte kanıt kaydı vardı, hiçbiri tanınmıyordu).
+
+          **Görsel KOVADA YOK:** seed dosya yüklemiyor, yalnız üretimin yazacağı anahtar biçimini
+          yazıyor. Liste satırı yalnız "kanıt var mı" diye soruyor; görseli açan ekran o anahtarla
+          boş döner ve bu, sahte bir görsel uydurmaktan dürüsttür.
+        */
+        await orders.deliver(order.id, {
+          actorId: siparisKuryesi,
+          deliveryProof: {
+            kind: 'signature',
+            imageKey: `delivery/proofs/${order.id}/signature.png`,
+            receivedBy: null,
+            courierId: siparisKuryesi,
+            at: an(0),
+          },
+        });
         onceki = 'delivered';
         continue;
       }
@@ -785,6 +844,33 @@ export async function seedOrders(
     tahsilat: toplam([kalem(43, 3)]), teslimGunu: 0, etiket: 'Bugün — HAZIR DEĞİL ama ödenmiş (kapıda para konuşulmaz)',
   });
 
+  /* ── HATTIN UÇLARI: ROTA SIRASININ SINANABİLDİĞİ TEK VERİ (11.9 · 31.08) ────────────────────
+     Yukarıdaki satırların hepsi Strasbourg merkez kodlarına düşüyor ve o üç kod GeoNames'te AYNI
+     noktayı taşıyor (`0034:4298-4315`) — yani bütün duraklar tek noktaya çöküyor, motor haklı
+     olarak "sıralayamadım" diyor (`indistinguishable`) ve hesap hiç sınanmıyordu.
+
+     Bu üç satır günü gerçekten YAYIYOR: Haguenau (22 km) · Wissembourg (48 km) · Landau (71 km).
+     Merkez duraklarla birlikte hat artık kuzeye doğru uzanıyor ve kapalı turun şekli görünür
+     oluyor — depoya en yakın durağın en sona düşüp düşmediği ancak böyle okunabilir.
+
+     Adres ETİKETLE seçiliyor: varsayılan kart hep merkez adresidir ve etiket verilmezse bu üç
+     sipariş de merkeze düşerdi. */
+  await siparis({
+    musteri: 'b2cSadik', kalemler: [kalem(40, 1)], hedef: 'ready', channel: 'b2c', paymentMethod: 'cash',
+    tahsilat: 0, teslimGunu: 0, adresEtiketi: 'Haguenau şubesi',
+    etiket: 'Bugün — kuzey hattı, Haguenau (22 km)',
+  });
+  await siparis({
+    musteri: 'b2bOnayli', kalemler: [kalem(41, 2)], hedef: 'ready', channel: 'b2b', onAccount: true,
+    tahsilat: 0, teslimGunu: 0, adresEtiketi: 'Wissembourg bayi',
+    etiket: 'Bugün — kuzey hattı, Wissembourg (48 km)',
+  });
+  await siparis({
+    musteri: 'b2bAlman', kalemler: [kalem(42, 2)], hedef: 'ready', channel: 'b2b', onAccount: true,
+    tahsilat: 0, teslimGunu: 0, adresEtiketi: 'Landau deposu',
+    etiket: 'Bugün — kuzey hattı, Landau DE (71 km · sınır ötesi)',
+  });
+
   /*
     ── BUGÜN TAHSİL EDİLEN PARA (30.08) ────────────────────────────────────────────────────────
     Para bölümünün iki ekranı da GÜNE bakıyor (`readMoneyOverview` / `readMoneyDayEnd` — ölçüt
@@ -815,6 +901,91 @@ export async function seedOrders(
     tahsilat: toplam(bugunCek), teslimGunu: 0, tahsilatGunu: 0, kuryeAnahtari: 'hepsi',
     etiket: 'Bugün — teslim edildi, kapıda ÇEK tahsil',
   });
+
+  /*
+    ── BUGÜNÜN SEFERİNDE SONUÇLANMAMIŞ VE KISMİ DURAKLAR (30.08) ───────────────────────────────
+    Kurye gün listesi durağı BEŞ ayrı kartla çiziyor (v3:14): teslim · kısmi · sıradaki · bekleyen ·
+    ulaşılamadı. Yerelde yalnız ikisi doğuyordu. Ölçüldü: `returned` durumunda sipariş
+    veritabanında HİÇ yoktu (21 rota siparişinin dağılımı `completed` 11 · `delivered` 7 ·
+    `ready` 3) ve tek `out_for_delivery → ready` dönüşü DÜNKÜ seferde kalmıştı — yani "kabul
+    etmedi" ve "ulaşılamadı" kartları bugünün ekranında hiç görülemiyordu.
+
+    ÜÇÜ DE GERÇEK KAPIDAN geçiyor (`markUndelivered` · `confirmDoorDelivery`), durum elle
+    yazılmıyor: kutu okutmasının aynı ilkesi — sonucun iddiası kapının kendi cevabı olsun. Elle
+    yazılan bir durum, kapının reddedeceği bir hâli seed'de "olur" gösterirdi.
+
+    NOTLAR SERBEST METİN çünkü sözleşme öyle istiyor (`MarkUndeliveredRequest.note`): sebebi
+    standartlaştırmak sahada "yanlış ama düzgün" veri üretir. Ekran bu notu durak kartında yazıyor.
+  */
+  /*
+    ULAŞILAMADI İŞARETİ BURADA DEĞİL, SEFER SEED'İNDE (30.08 · cihaz turunda yakalandı).
+
+    İlk hâlde işaret burada yazılıyordu ve ARDINDAN gelen `seedDeliveryRuns` onu geri alıyordu:
+    ulaşılamayan durak `ready`e döner, sefer başlatmanın catch-up claim'i de tam olarak `ready`
+    durakları yola çıkarır — yani seed kendi kurduğu hâli bir adım sonra siliyordu. Ölçüldü:
+    işaret yazılmış görünüyor ama gün sonunda o durak `out_for_delivery` kalıyordu.
+
+    Sıra artık doğru: sefer kurulur → duraklar yola çıkar → biri ulaşılamadı olur (`courier.ts`).
+    Bu, sahanın kendi sırası da: kurye önce yola çıkar, sonra kapıyı çalar.
+  */
+
+  const kabulEtmedi = await siparis({
+    musteri: 'b2bOnayli', kalemler: [bolKalem(8, 2)], hedef: 'out_for_delivery', channel: 'b2b',
+    onAccount: true, teslimGunu: 0, kuryeAnahtari: 'hepsi',
+    etiket: 'Bugün — KABUL ETMEDİ işaretlenecek durak',
+  });
+  if (kabulEtmedi && turKuryesi) {
+    const sonuc = await markUndelivered(db, {
+      orderId: kabulEtmedi,
+      courierId: turKuryesi,
+      outcome: 'refused',
+      note: 'Restoran kapalıydı, sorumlu teslim almadı',
+    });
+    if (sonuc.status !== 'ok') throw new Error(`seed: kabul etmedi işareti yazılamadı (${sonuc.status})`);
+    console.log('  ✓ bugünün seferi: KABUL ETMEDİ durağı (mal depoya dönüyor)');
+  }
+
+  /*
+    KISMİ TESLİM — teslim edilmiş ama bir kalemi eksik durak. `StopOutcome`de ayrı bir değer YOK ve
+    olmayacak: kısmi bir geçiş değil, `delivered` durağın niteliğidir (`fulfilledQty < qty`). Ekran
+    ½ kartını bu farktan çiziyor.
+
+    B2C seçildi çünkü kanıt kapısı orada kapalı (`delivery_proof_required` → b2c: false) ve seed
+    kovaya görsel yüklemiyor; B2B olsaydı kapı `proof_required` döner, seed dururdu.
+
+    Tahsilat GÖNDERİLMİYOR: kapıda para alınmamış bir kısmi teslim de gerçek bir hâl ve borcu ekranda
+    görünür kılıyor. Tutarı düşüren zaten düzeltmenin kendisi (07.8) — kurye ayrıca hesap görmez.
+  */
+  const kismi = await siparis({
+    musteri: 'b2cKapaliKapida', kalemler: [bolKalem(9, 3)], hedef: 'out_for_delivery', channel: 'b2c',
+    paymentMethod: 'cash', tahsilat: 0, teslimGunu: 0, kuryeAnahtari: 'hepsi',
+    etiket: 'Bugün — KISMİ teslim (3 adedin 2\'si bırakıldı)',
+  });
+  if (kismi && turKuryesi) {
+    const satirlar = await orders.getWithItems(kismi);
+    const satir = satirlar?.items[0];
+    if (!satir) throw new Error('seed: kısmi teslim siparişinin kalemi okunamadı');
+    /* KAPIDA KUTULAR OKUTULUR (kullanıcı kararı 30.08): teslim kapısı artık kutusuz teslimi
+       reddediyor ve seed de gerçek yolu izliyor — kodlar siparişin kendi kutularından. */
+    const kutular = await new OrderBoxService(db).listByOrder(kismi);
+    const sonuc = await confirmDoorDelivery(db, {
+      orderId: kismi,
+      courierId: turKuryesi,
+      scannedBoxCodes: kutular.map((kutu) => kutu.code),
+      // Hedef değer (fark değil): 3 sipariş edildi, 2'si bırakıldı. Kalan 1 adet araçta ve depoya
+      // dönüyor — `restock`, çünkü mal hiç kapıdan girmedi ve satılabilir hâlde.
+      adjustments: [
+        {
+          orderItemId: satir.id,
+          fulfilledQty: satir.qty - 1,
+          returnDisposition: 'restock',
+          note: 'Müşteri bir adedi fazla buldu — araçta kaldı',
+        },
+      ],
+    });
+    if (sonuc.status !== 'ok') throw new Error(`seed: kısmi teslim yazılamadı (${sonuc.status})`);
+    console.log(`  ✓ bugünün seferi: KISMİ teslim durağı (${satir.qty - 1}/${satir.qty} adet bırakıldı)`);
+  }
 
   /*
     ── BUGÜNÜN İKİNCİ ROTASI: DÖNMÜŞ VE KAPANMIŞ SEFER (30.08) ─────────────────────────────────
@@ -1044,6 +1215,45 @@ export async function seedOrders(
     }
 
     /*
+      ── KAPIYA HAZIR DURAK: KUTUSU TAM BİNMİŞ VE YOLDA (kullanıcı bulgusu 30.08) ──────────────
+      Yukarıdaki durak YARIM yüklü ve öyle kalmalı — yükleme ekranının "hepsi binmedi" hâli onunla
+      görülüyor. Ama kutu zorunlu olunca (21.184) o durak kapıda AÇILAMAZ hâle geldi ve ölçüldü:
+      bugünün seferinde teslim edilebilir TEK durak kalmamıştı. Kurye uygulamayı açıp hiçbir işi
+      bitiremiyordu — seed'in ürettiği gün, kuryenin yapamayacağı bir gündü.
+
+      Bu durak o boşluğu kapatıyor: tek kutu, kutu araca BİNMİŞ, sipariş son okutmayla yola çıkmış.
+      Kapıda okutulup teslim edilebilir — teslim · kısmi iade · ulaşılamadı · kabul etmedi
+      akışlarının hepsi bu durak üzerinden denenir.
+    */
+    const kapiyaHazir = await siparis({
+      musteri: 'b2cSadik', kalemler: [bolKalem(7, 2)], hedef: 'confirmed', channel: 'b2c',
+      paymentMethod: 'cash', tahsilat: 0, teslimGunu: 0, atanmis: true, kuryeAnahtari: 'hepsi',
+      etiket: 'KUTULU — kapıya hazır (kutu araçta, yolda)',
+    });
+    if (kapiyaHazir && turKuryesi) {
+      const satirlar = await orders.getWithItems(kapiyaHazir);
+      if (!satirlar) throw new Error('seed kutu: kapıya hazır durağın kalemleri okunamadı');
+      const acilan = await openBox(db, { orderId: kapiyaHazir, warehouseId: depolar.str });
+      if (acilan.status !== 'ok') throw new Error(`seed kutu: kapı kutusu açılamadı (${acilan.status})`);
+      const kapanis = await sealBox(db, {
+        boxId: acilan.box.boxId,
+        warehouseId: depolar.str,
+        picks: await strPicks(satirlar.items, [satirlar.items[0]?.qty ?? 0]),
+        actorId: depocu,
+      });
+      if (kapanis.status !== 'ok') throw new Error(`seed kutu: kapı kutusu mühürlenemedi (${kapanis.status})`);
+      /* Son kutunun okutması siparişin TAMAMINI araca alır (`allBoxesLoaded`). **Yola ÇIKARMAZ**
+         (kullanıcı kararı 31.08): araç bir ara depodur, içinde birden çok seferin kutusu durabilir
+         ve yükleme yalnız bir emanet değişimidir. Siparişi yola çıkaran tek kapı sefer başlatmadır.
+         Damga elle yazılmıyor; iddia kapının kendi cevabı. */
+      const bindi = await loadBox(db, { code: acilan.box.code, courierId: turKuryesi });
+      if (bindi.status !== 'ok' || !bindi.allBoxesLoaded) {
+        throw new Error(`seed kutu: kapı kutusu araca alınamadı (${bindi.status})`);
+      }
+      console.log('  ✓ bugünün seferi: KAPIYA HAZIR durak (siparişin tüm kutuları araçta)');
+    }
+
+    /*
       ── KARGOYA VERİLMİŞ GÖNDERİLER (07.12) ─────────────────────────────────────────────────────
       Üç ekran bu satırlar olmadan BOŞ kalıyordu: müşteri sipariş detayının takip bloğu, operasyon
       sipariş detayının gönderi künyesi ve "yolda" mailinin takip kutusu. Ölçüldü — `shipment`
@@ -1101,8 +1311,17 @@ export async function seedOrders(
           quotedCents: 499 * opts.kutuSayisi,
         });
 
+        /*
+          HAZIRLIK KUTUSU ZATEN VAR (30.08): kutulu hazırlık zorunlu olunca `siparis()` bu siparişe
+          bir kutu açıp mühürlüyor. Kargo bloğu eskiden 1'den başlayarak KENDİ kutularını ekliyordu
+          ve `order_box_no_uq` ihlaline düşüyordu. Kargo kolisi ile hazırlık kutusu AYNI nesnedir:
+          mevcut olan güncellenir, eksik kalan (çok koli senaryosu) numarası devam ederek eklenir.
+        */
+        const hazirKutular = await new OrderBoxService(db).listByOrder(orderId);
         for (let n = 1; n <= opts.kutuSayisi; n++) {
-          const kutu = await kutular.insert({ orderId, warehouseId: depolar.str, boxNo: n, code: `KG-${opts.kod}-${n}` });
+          const kutu =
+            hazirKutular[n - 1] ??
+            (await kutular.insert({ orderId, warehouseId: depolar.str, boxNo: n, code: `KG-${opts.kod}-${n}` }));
           await db
             .from('order_box')
             .update({
