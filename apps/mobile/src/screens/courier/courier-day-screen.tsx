@@ -1,4 +1,5 @@
 import { useRouter } from 'expo-router';
+import { Fragment } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRoute, CourierStopContract, CourierVehicle } from '@lezzet/types';
@@ -492,7 +493,21 @@ export function CourierDayScreen() {
                 burada yalnız komşu satırlar gruplanıyor, yeniden dizilmiyor.
               */}
               {stops.map((stop, index) => (
-                <View key={stop.orderId}>
+                /*
+                  SARMALAYICI `Fragment`, `View` DEĞİL (ölçüldü 31.08 · cihazda çöktü).
+
+                  Grup başlığı eklenirken her durak bir `<View>` içine alınmıştı ve Android'de
+                  ekrandan çıkarken çökme geldi: `addViewAt: failed to insert view … The specified
+                  child already has a parent` (`ReactClippingViewManager`). Kaydırma alanı görünmeyen
+                  çocukları KIRPIYOR (`removeClippedSubviews`) ve araya giren yeni bir görünüm
+                  katmanı, kırpma ile yeniden bağlamayı çakıştırıyor.
+
+                  `Fragment` yeni bir yerel görünüm doğurmuyor — başlık ve satır kaydırma alanının
+                  DOĞRUDAN çocukları kalıyor, yani kırpma da onları tek tek yönetiyor. Anahtar
+                  Fragment'ın kendisinde: liste yeniden sıralandığında React satırı kimliğinden
+                  tanıyor.
+                */
+                <Fragment key={stop.orderId}>
                   {stops.length > 0 && stop.runId !== stops[index - 1]?.runId && day.runs.length > 1 ? (
                     <Text style={styles.runGroupHeading} testID={`courier-day-group-${stop.runId}`}>
                       {stop.runLabel ?? ''}
@@ -508,7 +523,7 @@ export function CourierDayScreen() {
                       router.navigate({ pathname: '/delivery/[orderId]', params: { orderId: stop.orderId } })
                     }
                   />
-                </View>
+                </Fragment>
               ))}
 
               {/* Kapanışın kuralı listenin SONUNDA (v3:1352): kurye "şu durak takıldı, günü

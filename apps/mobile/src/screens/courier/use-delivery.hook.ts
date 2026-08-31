@@ -134,6 +134,15 @@ interface UseDeliveryResult {
   amountStepCents: number;
 
   gateOpen: boolean;
+  /**
+   * Olumsuz sonuç (ulaşılamadı · kabul etmedi) yazılabilir mi — durak YOLA ÇIKMIŞ olmalı.
+   *
+   * Ölçüldü 31.08 (cihazda): kutuları binmemiş bir durakta "Ulaşılamadı" basılıyor, uç
+   * `same_status` diyor ("sipariş zaten bu durumda") çünkü `unreachable`ın hedefi `ready` ve
+   * sipariş zaten orada. Ekran doğru davranıyordu ama kuryeye YAPILAMAYACAK bir yol vaat
+   * ediyordu — kapıya hiç gitmediğin bir durağa "ulaşılamadı" yazılmaz.
+   */
+  outcomeOpen: boolean;
   gateNote: string | null;
   ctaLabel: string;
 
@@ -421,6 +430,9 @@ export function useDelivery(orderId: string): UseDeliveryResult {
      Kapı hâlâ üç şeyi soruyor — kutular okutuldu mu, kanıt alındı mı, para yazılabilir mi — ve bir
      şeyi reddediyor: HEPSİ geri verilmişse o teslim değildir, "Kabul etmedi"dir. */
   const gateOpen = loadedOnVan && boxesSatisfied && !allRefused && !collectionBlocked && !finished;
+  /* Olumsuz sonucun kapısı DAHA DAR değil daha GENİŞ: kutuların kapıda okutulması gerekmiyor
+     (mal verilmedi ki), ama durak yola çıkmış olmalı — yoksa yazılacak bir geçiş yok. */
+  const outcomeOpen = loadedOnVan && !finished;
 
   const gateNote = gateOpen
     ? null
@@ -520,10 +532,15 @@ export function useDelivery(orderId: string): UseDeliveryResult {
           setNoteError(t.delivery.outcome.noteRequired);
           return;
         }
+        /* ÇEKMECE KAPANIR (ölçüldü 31.08 · cihazda): bildirim ekranın gövdesinde çiziliyor ve
+           çekmece AÇIK kalınca onun altında kalıyordu — kurye "Onayla"ya basıyor, hiçbir şey
+           olmadığını görüyor, tekrar basıyordu. Yutulan bir hata yoktu; GÖRÜNMEYEN bir hata vardı. */
+        setOutcome(null);
         setNotice({ tone: 'error', text: wireErrorText(result.error) });
         return;
       }
       if (result.data.status !== 'ok') {
+        setOutcome(null);
         setNotice({ tone: 'error', text: refusalText(result.data) });
         return;
       }
@@ -575,6 +592,7 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     amountStepCents: AMOUNT_STEP_CENTS,
 
     gateOpen,
+    outcomeOpen,
     gateNote,
     ctaLabel,
 

@@ -590,9 +590,15 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
                 nötr kum, "Kabul etmedi" kırmızı. Elden çiziliyorlardı ve ölçüleri kitin
                 kademesine uymuyordu (dolgudan türeyen yükseklik). */}
             <View style={styles.outcomeRow}>
+              {/* YOLA ÇIKMAMIŞ DURAKTA İKİSİ DE PASİF (ölçüldü 31.08 · cihazda). Kutuları
+                  binmemiş bir durakta "Ulaşılamadı" basılıyor, uç `same_status` diyordu —
+                  `unreachable`ın hedefi `ready` ve sipariş zaten oradaydı. Kurye ise hiçbir şey
+                  olmadığını görüyordu: bildirim açık çekmecenin ALTINDA çiziliyordu. Kapıya hiç
+                  gitmediğin bir durağa "ulaşılamadı" yazılmaz; sebebi zaten üstteki satırda. */}
               <SecondaryButton
                 label={t.delivery.cta.unreachable}
                 onPress={() => delivery.openOutcome('unreachable')}
+                disabled={!delivery.outcomeOpen}
                 elevation="flat"
                 grow
                 testID="courier-outcome-unreachable"
@@ -600,6 +606,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
               <SecondaryButton
                 label={t.delivery.cta.refused}
                 onPress={() => delivery.openOutcome('refused')}
+                disabled={!delivery.outcomeOpen}
                 tone="error"
                 elevation="flat"
                 grow

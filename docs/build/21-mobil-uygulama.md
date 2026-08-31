@@ -9343,3 +9343,32 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Ekranın kapısı yükleme listesinin sonunda (v3:18'in kendi satırı) ve dip dolgusu yapışkan
   çubuğun boyuna çıkarıldı — `8xl` yetmiyordu, son öğe çubuğun arkasında kalıyor ve hiç
   görülmüyordu.
+
+- [x] (21.195) **KURYE ROTASI UÇTAN UCA CİHAZDA — ÜÇ ARIZA YAKALANDI, BİR TEORİ ÇÜRÜTÜLDÜ** (kullanıcı isteği 31.08)
+  `touches: apps/mobile/src/screens/courier/{use-delivery.hook,delivery-screen,van-runs-screen,load-screen}.tsx`
+
+  Tur: giriş → gün ekranı → araçtaki seferler → seferi başlat → araca yükle → kutu okut →
+  serbest ürün (al + devret) → durak → kutu okut → teslim → liste → ulaşılamadı. Barkod engeli
+  projenin kendi **simülasyon havuzuyla** aşıldı (`dev-scan-pool`, gerçek kutu kodları); oturum
+  engeli **dev girişiyle** (`hepsi@`).
+
+  **YAKALANAN ÜÇ ARIZA.**
+  1. *Sefer başlatınca yükleme kapısı kayboluyordu.* Kapı yalnız "araçta yük var" gövdesindeydi;
+     başlatma, yüklemenin yolunu kapatıyordu. Kapı araçtaki seferler ekranına taşındı.
+  2. *Olumsuz sonuç yazılamıyordu ve sebebi GÖRÜNMÜYORDU.* Yola çıkmamış durakta "Ulaşılamadı"
+     basılıyor, uç `same_status` diyordu (`unreachable`ın hedefi `ready`, sipariş zaten orada) —
+     ama bildirim AÇIK çekmecenin altında çiziliyordu: kurye hiçbir şey olmadığını görüyordu.
+     İki düzeltme: hata dalında çekmece kapanıyor, ve iki sonuç düğmesi de durak yola çıkmadıkça
+     PASİF (kapıya hiç gitmediğin durağa "ulaşılamadı" yazılmaz).
+  3. *Geç yüklenen kutuların yolu yoktu.* Sefer sürülürken rampada kalan kutu okutulunca durak
+     `ready` kalıyor ve yola çıkaran düğme sürülen seferde çizilmiyordu. Araçtaki seferler
+     ekranına ikincil eylem eklendi; tekrarı zararsız (`alreadyOut` döner, ikinci bildirim yok).
+
+  **ÇÜRÜTÜLEN TEORİ — ve bu kayıt bilerek duruyor.** Durak ekranından geri dönüşte Android'de
+  `addViewAt … child already has a parent` çökmesi tekrar üretildi. İlk teori sefer gruplamasıydı
+  (durakları `Fragment` içine alan sarmalayıcı). Gruplama TAMAMEN söküldü ve aynı tur aynı çökmeyi
+  verdi — teori yanlıştı, gruplama geri alındı. Şüphe durak ekranının üç örtüsüne daraldı ama
+  DOĞRULANMADI; ölçmeden düzeltmeye girilmedi (CLAUDE §0). Kayıt:
+  `docs/talep/not-mobil-durak-ekrani-geri-donuste-cokuyor.md`.
+
+  **BEKLEYEN(21.195):** o çökme açık — kabuk/gezinme katmanının işi, kurye ekranlarının değil.

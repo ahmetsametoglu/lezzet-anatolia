@@ -10,6 +10,7 @@ import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSurface } from '@/components/operations/surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
+import { TextAction } from '@/components/ui/text-action';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
@@ -159,12 +160,30 @@ export function CourierVanRunsScreen() {
                   {/* SÜRÜLEN sefer başlatılmaz, duraklarına GİDİLİR — iki eylem aynı yerde durursa
                       kurye hangisinin ne yaptığını ayırt edemez. */}
                   {state.driving ? (
-                    <SecondaryButton
-                      label={t.day.vanRuns.toStops}
-                      tone="olive"
-                      onPress={() => router.back()}
-                      testID={`courier-van-stops-${run.runId}`}
-                    />
+                    <>
+                      <SecondaryButton
+                        label={t.day.vanRuns.toStops}
+                        tone="olive"
+                        onPress={() => router.back()}
+                        testID={`courier-van-stops-${run.runId}`}
+                      />
+                      {/*
+                        GEÇ YÜKLENEN KUTULARIN YOLU (ölçüldü 31.08 · cihazda). Sefer sürülürken
+                        rampada kalan bir kutu okutulunca o durak `ready` kalıyor — yola çıkaran
+                        tek kapı sefer başlatma ve o düğme sürülen seferde çizilmiyordu. Sonuç:
+                        kurye kutuyu okutuyor, durak hâlâ açılmıyor ve yapacak bir şey kalmıyordu.
+
+                        Eylem AYNI kapıya gidiyor (`departCourierRun` → catch-up claim) ve
+                        tekrarı ZARARSIZ: yola çıkmış durak `alreadyOut` diye döner, ikinci kez
+                        bildirim gitmez ("geçiş başına tek mail" kuralı durum kaydından türüyor).
+                      */}
+                      <TextAction
+                        label={t.day.vanRuns.catchUp}
+                        onPress={() => day.departRun(run.runId)}
+                        disabled={day.starting}
+                        testID={`courier-van-catchup-${run.runId}`}
+                      />
+                    </>
                   ) : (
                     /* BEDEL DÜĞMENİN İÇİNDE (v3:16) — dışına yazılmıştı ve düğmeden kopuk bir not
                        gibi duruyordu. Tasarımda iki satır TEK dokunma alanının içinde: basmanın ne

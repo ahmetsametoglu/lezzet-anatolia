@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -216,7 +217,10 @@ export function CourierLoadScreen() {
             /* DURAK KENDİ KARTINDA (v3:1440 · 30.08): kesikli ayraçla bölünmüş düz satırlardı ve
                liste "bir metin bloğu" gibi okunuyordu. Kart, her durağı kendi başına bir İŞ hâline
                getiriyor — kurye rampada gözüyle tek tek tarıyor. */
-            <View key={stop.orderId}>
+            /* `Fragment`, `View` DEĞİL — gün ekranının aynı gerekçesi (orada künyesi yazılı):
+               kaydırma alanı çocuklarını kırpıyor ve araya giren bir görünüm katmanı Android'de
+               `addViewAt` çökmesi üretiyor. */
+            <Fragment key={stop.orderId}>
               {groupHead}
               <View style={styles.stopCard} testID={`courier-load-stop-${stop.orderId}`}>
               <View style={styles.stopBody}>
@@ -232,7 +236,7 @@ export function CourierLoadScreen() {
               </View>
                 <Text style={[styles.stopState, { color: state.tone }]}>{state.label}</Text>
               </View>
-            </View>
+            </Fragment>
           );
         })}
 

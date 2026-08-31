@@ -180,7 +180,8 @@
       "emptyTitle": "Araçta sefer yok",
       "emptyBody": "Sefer ve araç seçip yüklemeyi yaptığında seferler burada birikir. Bir sefer araçta olmakla başlamış sayılmaz.",
       "pick": "Sefer ve araç seç",
-      "summary": "{stops} durak · {boxes} kutu"
+      "summary": "{stops} durak · {boxes} kutu",
+      "catchUp": "Geç yüklenen kutuları yola çıkar"
     },
     "vehicle": {
       "heading": "ARAÇ",
