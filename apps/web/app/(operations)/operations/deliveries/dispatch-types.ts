@@ -118,6 +118,19 @@ export interface DispatchRunView {
     returnedAt: string | null;
     /** Kapanış (mutabakat) yapıldı mı — dönüşten ayrı soru. */
     closed: boolean;
+    /**
+     * **Turun ÖNİZLEMESİ** (11.9) — motorun dizdiği sıra, araç çıkmadan önce.
+     *
+     * Sıra bir hesaptır ve hesabın yanıldığı yer normalde sahada anlaşılır: araç çıktıktan sonra.
+     * Sevkiyatçının bu ekranda turun şeklini görmesi bir süs değil DENETİM — bariyer atlayan bir
+     * bacak varsa burada görünür. `null` = sıra hesaplanmadı; harita çizilmez.
+     */
+    stopOrder: {
+      metric: 'haversine' | 'matrix';
+      precision: 'address' | 'postal_centroid' | 'mixed';
+      origin: { lat: number; lng: number; label: string } | null;
+      stops: { orderId: string; sequence: number | null; lat: number; lng: number; label: string }[];
+    } | null;
   } | null;
 }
 

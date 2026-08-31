@@ -68,6 +68,12 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
     );
   }
 
+  /** Kimlik kümesiyle okuma — sevkiyat masasının rota önizlemesi seferleri toplu istiyor (11.9). */
+  listByIds(ids: readonly string[]): Promise<DeliveryRun[]> {
+    if (ids.length === 0) return Promise.resolve([]);
+    return this.getAll({ id: [...ids] });
+  }
+
   /** Günün seferleri — sevkiyat ekranının "araç çıktı mı, döndü mü" şeridi. */
   listByDate(date: string): Promise<DeliveryRun[]> {
     return this.getAll({ deliveryDate: date }, { orderBy: 'createdAt', limit: 100 });

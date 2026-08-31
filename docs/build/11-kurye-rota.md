@@ -175,7 +175,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     yer kartı açmaz" iddiası.
   - **BEKLEYEN(11.8):** mobil `delivery-screen.tsx` hâlâ elle URL yazıyor ve `openURL` reddini yutuyor.
 
-- [~] (11.9) **Durak sırası — coğrafi, `createdAt` değil:** kapalı tur hesabı (2-opt + Or-opt), sıra `delivery_run.stop_order`'da; adres koordinatı (BAN) + posta kodu merkezi geri düşüşü, hangisi olduğu adlandırılır
+- [x] (11.9) **Durak sırası — coğrafi, `createdAt` değil:** kapalı tur hesabı (2-opt + Or-opt), sıra `delivery_run.stop_order`'da; adres koordinatı (BAN) + posta kodu merkezi geri düşüşü, hangisi olduğu adlandırılır
   `touches: supabase/migrations/0011_customer_fields.sql, supabase/migrations/0031_warehouse.sql, supabase/migrations/0046_delivery_run.sql, packages/domain-core/src/delivery/route-order.ts, packages/application/src/courier/stop-order.ts, packages/application/src/delivery/geocode-port.ts, packages/types/src/contracts/courier-api.schema.ts, apps/web/app/(operations)/operations/deliveries/deliveries-sections.tsx`
   - **Etüt:** `docs/feature/durak-sirasi.md` (kardeşleri `sefer.md`, `cok-gunluk-sefer.md`) — üç
     kullanıcı kararı (31.08) ve kuş uçuşunun yazılı sınırı orada.
@@ -253,6 +253,26 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       Ölçüm de bunu söylüyordu: cron kuyruğu **0 satır**. Künyesi düzeltildi, iş artık TELAFİ olarak
       duruyor (elle yazılan adres · ops paneli · süzgeçten düşen aday · servis kesintisi · ileride
       DE sağlayıcısı). **Mobil yarısı native şeritte.**
+    - **Durum (01.09) — PLANIN KALAN ALTI MADDESİ KAPANDI.**
+      - **Sıranın künyesi sözleşmede** (`StopOrderInfoSchema`): ölçü · incelik · sıralı/sırasız
+        sayısı. `DOMAIN §6` *"ekran bunu söyleyebilmeli"* diyordu ama söyleyemiyordu — doküman kodu
+        yalanlıyordu, kapandı. Sefer başına (durak başına değil): sefer başına tekil bir değeri her
+        durağa kopyalamak "bu durakta başka ölçüt olabilir" beklentisi kurardı.
+      - **Bayatlık kapısı** `listCourierDay`de: gün ortasında sefere katılan durak sırasız kalıyordu
+        (kurye "kalanları yola çıkar"a basmazsa düzelmiyordu). Ölçüt zaman değil KÜME.
+      - **`RouteMatrixProvider` portu** + `costOfMatrix`: motor artık `cost`u porttan alıyor ve
+        sağlayıcı yoksa kuş uçuşuna **adlı** düşüyor. İki kural testli — tek `null` hücre tüm matrisi
+        reddeder, asimetrik matris simetrikleştirilir (2-opt tersleme yapar, asimetride geçersizdir
+        ve bunu hiçbir test yakalamaz). OSRM adaptörü ölçüm bekliyor: **BEKLEYEN(11.9)**.
+      - **Rota önizleme haritası** (`route-map` üçlüsü + `leaflet-base` ortaklaştırması): sevkiyat
+        şeridinde katlanır harita. `ZoneMap` genişletilmedi — çizgi kavramı yok, işaretçi numara
+        taşımıyor, anahtarı `country:postalCode` (aynı koddaki iki durak tek noktaya düşerdi).
+        `design/pages/admin-teslimat.md`in "sıra gösterilmez" yasağı gerekçesiyle kaldırıldı.
+      - **Kısıtlar veride ÖLÇÜLDÜ** (yerel DB, transaction + rollback): yarım nokta · kaynağı olup
+        noktası olmayan satır · depo yarım noktası · geçersiz ölçü değeri → dördü de reddedildi;
+        motor yazımı elle dizilmiş sıraya çarptı (`manual_order_kept`) ve `force` ile ezildi.
+      - Mobil fikstür `stopOrder: null` taşıyor — "sırasız gün" ekranını besleyen hâl.
+
     - **BEKLEYEN(11.9):**
       ~~② mobil ekranın `stopSeq`e bağlanması~~ **KAPANDI (31.08 — kullanıcı isteğiyle mobil şerit
       adına yapıldı, o şerit yoğun):** gün ekranı artık saymıyor, `stop.stopSeq`i çiziyor; sıra

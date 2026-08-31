@@ -338,6 +338,9 @@ export { geocodeAddressesScan, type GeocodeScanResult } from './delivery/geocode
 export { geocoder, geocoderConfigured } from './delivery/geocode-provider';
 export { resolveAddressPoint, type AddressPointCandidate } from './delivery/geo-address';
 export type { Geocoder, GeocodeOutcome, GeocodeQuery } from './delivery/geocode-port';
+export { costOfMatrix } from './delivery/route-matrix-port';
+export { routeMatrixConfigured, routeMatrixProvider } from './delivery/route-matrix-provider';
+export type { RouteMatrix, RouteMatrixOutcome, RouteMatrixProvider } from './delivery/route-matrix-port';
 export type { CourierDayStart, CourierRunBriefView, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
 export { listCourierRoutes, listCourierVehicles } from './courier/routes';
 export { listVanCandidates, readVanStock, returnFromVan, takeToVan, vehicleWarehouseOf } from './courier/van-stock';
@@ -413,7 +416,7 @@ export type { QuickSaleInput, QuickSaleOutcome } from './order/quick-sale';
 export { sellOnSite, listRecentDoorSales, ANONYMOUS_BUYER_ID } from './order/on-site-sale';
 export type { DoorSaleRecord, OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome } from './order/on-site-sale';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
-export { boxLabelPayload, printersFor, markBoxPrinted, openBox, sealBox } from './warehouse/boxes';
+export { boxLabelPayload, declareOrderShort, printersFor, markBoxPrinted, openBox, sealBox } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
 export { boxLabelSvg, sampleBoxLabel, LABEL_WIDTH_PX, LABEL_HEIGHT_PX } from './warehouse/label-svg';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';

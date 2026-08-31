@@ -70,6 +70,9 @@ const UYGULAMA_DBSIZ = [
   // sayaç muhasebesi ve "yarım nokta yazılmaz" kuralı DB'siz sınanabiliyor; yazma tarafı
   // (`geocodeAddressesScan`) entegrasyonda kalıyor.
   'packages/application/src/delivery/geocode-scan.test.ts',
+  // Matris → maliyet çevirisi (11.9): simetrikleştirme ve "tek null tüm matrisi reddeder" kuralı
+  // saf; sağlayıcının kendisi ağa çıkar ve o elle provadır.
+  'packages/application/src/delivery/route-matrix-port.test.ts',
   // Hızlı giriş kapısının ret KARARI (27.08) — saf ve zorunlu olarak saf: sınadığı hâl "hiç
   // yönetici yok" ve o hâl kurulu bir veritabanında üretilemez (dosya künyesi).
   'packages/application/src/auth/dev-login.test.ts',

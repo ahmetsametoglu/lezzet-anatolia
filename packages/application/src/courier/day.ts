@@ -28,7 +28,15 @@ import { listCourierRoutes } from './routes';
 import { ensureStopOrder } from './stop-order';
 import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { DiscardDeliveryRunResult, Order, OrderItem, OrderStatusLog } from '@lezzet/types';
+import type {
+  DiscardDeliveryRunResult,
+  Order,
+  OrderItem,
+  OrderStatusLog,
+  StopOrderMetric,
+  StopOrderPrecision,
+  StopOrderSource,
+} from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -218,6 +226,27 @@ export async function listCourierDay(
   const runService = new DeliveryRunService(db);
   const runRows = await Promise.all(runIdsInList.map((id) => runService.getById(id)));
   const runById = new Map(runRows.filter((row): row is NonNullable<typeof row> => row !== null).map((row) => [row.id, row]));
+
+  /*
+    ── BAYATLIK KAPISI (11.9) ────────────────────────────────────────────────
+    Sıra sefer BAŞLARKEN hesaplanıyor, ama gün ortasında hazırlanan sipariş sonradan sefere
+    katılıyor (`open_delivery_run`un catch-up claim'i) ve o durak sırasız kalıyordu — listede
+    numarasız, sonda. Kurye "kalanları yola çıkar"a basarsa düzeliyordu; basmazsa düzelmiyordu.
+
+    Ölçüt ZAMAN DEĞİL KÜME: seferin bugünkü sipariş kimlikleri kayıtlı sırayı aşıyorsa sıra bayattır.
+    `ensureStopOrder` kendi içinde hem bu kıyası hem bekleme süresini uyguluyor (düşmüş bir sağlayıcı
+    her ekran tazelemesinde dövülmesin) ve hiçbir hâlde fırlatmıyor — okuma yolu bu yüzden ondan
+    etkilenmiyor: hesap düşse de gün listesi çizilir.
+  */
+  const refreshed = await Promise.all(
+    [...runById.values()]
+      .filter((run) => run.returnedAt === null)
+      .map(async (run) => {
+        const outcome = await ensureStopOrder(db, { runId: run.id, actorId: input.courierId });
+        return outcome.status === 'written' ? runService.getById(run.id) : null;
+      }),
+  );
+  for (const row of refreshed) if (row) runById.set(row.id, row);
   const zoneNames = await zoneNamesOf(db, [...new Set([...runById.values()].map((row) => row.deliveryZoneId))]);
   /* Sıra okuması TEK seferin işi kalıyor: `stopOrderOf` bir turun sırasını getiriyor ve tur
      kimliğini süzgeçten ya da listedeki tek seferden alıyor. Çok seferli listede her seferin
@@ -477,6 +506,15 @@ export interface CourierRunBriefView {
  */
 export interface CourierDayRunView extends CourierRunBriefView {
   warehouseName: string | null;
+  /** Sıranın künyesi (11.9) — ölçü ve incelik; `null` = sıra hiç hesaplanmadı. */
+  stopOrder: {
+    source: StopOrderSource;
+    metric: StopOrderMetric;
+    precision: StopOrderPrecision;
+    generatedAt: string;
+    sequenced: number;
+    unsequenced: number;
+  } | null;
 }
 
 /**
@@ -616,6 +654,10 @@ export async function startCourierDay(
       departedAt: departed?.departedAt ?? null,
       returnedAt: null,
       closed: false,
+      /* Sıra bu cevabın KURULDUĞU anda henüz hesaplanmamıştır (`ensureStopOrder` hemen aşağıda
+         çağrılıyor) — ekran künyeyi bir sonraki gün okumasında alır. Buraya uydurma bir künye
+         yazmak, hesaplanmamış bir sırayı hesaplanmış göstermek olurdu. */
+      stopOrder: null,
     },
     started: [],
     alreadyOut: [],
@@ -722,7 +764,18 @@ export async function readCourierRuns(
     .filter((run) => !closedIds.has(run.id))
     .sort((a, b) => (a.deliveryDate === b.deliveryDate ? 0 : a.deliveryDate < b.deliveryDate ? -1 : 1));
 
-  return Promise.all(onVan.map((run) => detailOf(db, run, false)));
+  /* SIRASIZ DURAK SAYISI (11.9) — künyenin `unsequenced` alanı. Sefer başına tek sorgu değil, tek
+     turda hepsi: `listByRuns` zaten küme okuyor. Sırasız durak "koordinatı çözülemedi" demektir ve
+     ekran onu söyleyebilmeli — sessizce sona atılan bir durak, kuryenin atladığı duraktır. */
+  const stopsOfRuns = await new OrderService(db).listByRuns(onVan.map((run) => run.id));
+  const unsequencedPerRun = new Map<string, number>();
+  for (const order of stopsOfRuns) {
+    const run = onVan.find((candidate) => candidate.id === order.deliveryRunId);
+    if (!run || run.stopOrder.includes(order.id)) continue;
+    unsequencedPerRun.set(run.id, (unsequencedPerRun.get(run.id) ?? 0) + 1);
+  }
+
+  return Promise.all(onVan.map((run) => detailOf(db, run, false, unsequencedPerRun.get(run.id) ?? 0)));
 }
 
 export async function readCourierRun(
@@ -760,8 +813,15 @@ async function detailOf(
     vehicleId: string | null;
     departedAt: string | null;
     returnedAt: string | null;
+    stopOrder?: readonly string[] | null;
+    stopOrderSource?: StopOrderSource | null;
+    stopOrderMetric?: StopOrderMetric | null;
+    stopOrderPrecision?: StopOrderPrecision | null;
+    stopOrderGeneratedAt?: string | null;
   },
   closed: boolean,
+  /** Seferin duraklarından KAÇI sırasız — künyenin `unsequenced` alanı (aşağıdaki gerekçe). */
+  unsequenced = 0,
 ): Promise<CourierDayRunView> {
   const zone = await new DeliveryZoneService(db).getById(run.deliveryZoneId);
   const [vehicleLabel, warehouseName] = await Promise.all([
@@ -781,6 +841,20 @@ async function detailOf(
     departedAt: run.departedAt,
     returnedAt: run.returnedAt,
     closed,
+    /* SIRANIN KÜNYESİ (11.9) — nasıl hesaplandığı, sonucun yanında. Kuş uçuşuyla dizilmiş bir sıra
+       ile yol süresiyle dizilmiş bir sıra ekranda aynı görünür; farkı yalnız bu alan söyler.
+       Kaynak/ölçü/incelik üçü birden yoksa sıra hiç hesaplanmamıştır → `null`. */
+    stopOrder:
+      run.stopOrderSource && run.stopOrderMetric && run.stopOrderPrecision && run.stopOrderGeneratedAt
+        ? {
+            source: run.stopOrderSource,
+            metric: run.stopOrderMetric,
+            precision: run.stopOrderPrecision,
+            generatedAt: run.stopOrderGeneratedAt,
+            sequenced: run.stopOrder?.length ?? 0,
+            unsequenced,
+          }
+        : null,
   };
 }
 

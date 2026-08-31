@@ -187,7 +187,10 @@ export function takenRouteRun(overrides: Partial<CourierRoute['run']> = {}): Non
  * yere gün seferini geçirmek derlemede durur.
  */
 export function courierDayRun(overrides: Partial<NonNullable<CourierDayResponse['run']>> = {}): NonNullable<CourierDayResponse['run']> {
-  return { ...courierRunBrief(), warehouseName: 'Strasbourg Merkez', ...overrides };
+  /* SIRANIN KÜNYESİ (11.9) — varsayılan `null` = sıra hesaplanmadı. Bilerek: fikstürün kurduğu hâl
+     "sırasız gün" ekranını da beslemeli (ray çizilmez, numara yok). Ölçü/inceliği gösteren test onu
+     `overrides` ile kendi verir. */
+  return { ...courierRunBrief(), warehouseName: 'Strasbourg Merkez', stopOrder: null, ...overrides };
 }
 
 export function courierDay(

@@ -25,7 +25,9 @@ import {
   WarehouseService,
 } from '@lezzet/database';
 import { orderStops, warehousePoint, type GeoPoint, type RouteStop } from '@lezzet/domain-core';
-import type { Order, StopOrderPrecision } from '@lezzet/types';
+import type { Order, StopOrderMetric, StopOrderPrecision } from '@lezzet/types';
+import { costOfMatrix } from '../delivery/route-matrix-port';
+import { routeMatrixProvider } from '../delivery/route-matrix-provider';
 import { captureError, SOURCES } from '@lezzet/observability';
 
 /** Aynı seferin sırası bu süre içinde yeniden hesaplanmaz — düşmüş sağlayıcı dövülmesin. */
@@ -81,7 +83,11 @@ export async function ensureStopOrder(
     const { origin, stops, precision } = await resolvePoints(db, { warehouseId: run.warehouseId, orders });
     if (!origin) return { status: 'unavailable', reason: 'no_origin' };
 
-    const plan = orderStops({ start: origin, stops });
+    /* ÖLÇÜ SEÇİMİ (11.9) — sağlayıcı yapılandırılmışsa yol süresi, değilse kuş uçuşu.
+       Düşüş ADLIDIR: hangi ölçünün kullanıldığı `stop_order_metric`e yazılıyor ve ekrana çıkıyor.
+       Sessizce düşseydi kaba bir sıra kesin sanılırdı. */
+    const { cost, metric } = await costOf(stops, origin);
+    const plan = orderStops({ start: origin, stops, cost });
     if (!plan.ok) {
       return {
         status: 'unavailable',
@@ -93,8 +99,7 @@ export async function ensureStopOrder(
       runId: run.id,
       orderIds: plan.plan.ordered.map((stop) => stop.id),
       source: 'engine',
-      // Bugün tek ölçü var; port takıldığı gün burası `matrix` diyecek ve motor hiç değişmeyecek.
-      metric: 'haversine',
+      metric,
       precision,
       actorId: input.actorId ?? null,
       force: input.force,
@@ -192,6 +197,27 @@ async function resolvePoints(
   });
 
   return { origin, stops, precision: precisionOf(exact, approximate) };
+}
+
+/**
+ * Maliyet fonksiyonu ve ADI. Sağlayıcı yoksa `undefined` döner — motor kendi haversine'ini kullanır.
+ *
+ * Sağlayıcı VAR ama çağrı düşerse yine kuş uçuşuna dönülür ve `metric` bunu söyler: yarım bir
+ * matrisle dizilmiş bir sıra, kuş uçuşuyla dizilmişten kötüdür (karışık birim sessiz saçmalıktır).
+ */
+async function costOf(
+  stops: readonly RouteStop[],
+  origin: GeoPoint,
+): Promise<{ cost?: (from: number, to: number) => number | null; metric: StopOrderMetric }> {
+  const provider = routeMatrixProvider();
+  if (!provider) return { metric: 'haversine' };
+
+  const points = [origin, ...stops.flatMap((stop) => (stop.point ? [stop.point] : [])), origin];
+  const outcome = await provider.matrix({ points });
+  if (outcome.status !== 'ok') return { metric: 'haversine' };
+
+  const cost = costOfMatrix(outcome.matrix);
+  return cost ? { cost, metric: 'matrix' } : { metric: 'haversine' };
 }
 
 function precisionOf(exact: number, approximate: number): StopOrderPrecision {

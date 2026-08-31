@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { AnchoredMenu } from '@/components/operation/ui/anchored-menu';
+import { RouteMap } from '@/components/operation/ui/route-map';
 import { Badge } from '@/components/operation/ui/badge';
 import { Chip } from '@/components/operation/ui/chip';
 import { DateFilterChip } from '@/components/operation/ui/date-filter-chip';
@@ -260,7 +261,8 @@ function RunRow({
   const run = route.run;
 
   return (
-    <div className="flex items-center gap-2.5 py-1.5">
+    <div className="flex flex-col">
+      <div className="flex items-center gap-2.5 py-1.5">
       <span className="min-w-0 truncate font-ops-display text-ops-sm font-semibold text-ops-ink">{route.zoneName}</span>
       {route.warehouseName ? <span className="font-ops-body text-ops-xs text-ops-faint">{route.warehouseName}</span> : null}
       <span className="font-ops-mono text-ops-xs text-ops-muted">{num(route.stopCount)} durak</span>
@@ -312,6 +314,30 @@ function RunRow({
         // çıkış saati yaklaşırken bir engel (engel şeridi sayıyor).
         <span className="ml-auto font-ops-body text-ops-xs text-ops-amber-dark">{RUN_NOTES.waiting}</span>
       )}
+      </div>
+      {/* ── TURUN ÖNİZLEMESİ (11.9) — motorun DENETİM gözü ─────────────────────
+          Sıra bir hesaptır ve yanıldığı yer normalde sahada anlaşılır: araç çıktıktan sonra. Harita
+          onu ÖNCE gösteriyor — kuş uçuşuyla dizilmiş bir tur kâğıt üstünde kusursuz görünüp bariyer
+          (nehir, tek yön) atlayabilir ve o hatayı burada bir insan gözü yakalar.
+
+          Katlanır: şerit bir DURUM satırıdır, harita ise incelenen bir şey. Her seferin haritasını
+          açık tutmak, sevkiyatçının asıl işini (kim çıktı, kim döndü) aşağı iterdi. */}
+      {run?.stopOrder ? (
+        <details className="px-1 pb-2">
+          <summary className="cursor-pointer font-ops-body text-ops-xs text-ops-muted transition-colors hover:text-ops-olive">
+            Turu haritada gör
+          </summary>
+          <div className="mt-2 h-72">
+            <RouteMap
+              origin={run.stopOrder.origin}
+              stops={run.stopOrder.stops}
+              metric={run.stopOrder.metric}
+              precision={run.stopOrder.precision}
+              className="h-full"
+            />
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }

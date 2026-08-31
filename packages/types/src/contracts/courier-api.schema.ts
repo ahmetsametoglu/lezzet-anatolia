@@ -1,7 +1,15 @@
 import { z } from 'zod';
 import { DeliveryRunCloseSchema } from '../entities/delivery-run.schema';
 import { FulfillmentAdjustmentSchema } from '../entities/order.schema';
-import { ChannelEnum, OrderStatusEnum, PaymentMethodEnum, PaymentStatusEnum } from '../primitives/enums.schema';
+import {
+  ChannelEnum,
+  OrderStatusEnum,
+  PaymentMethodEnum,
+  PaymentStatusEnum,
+  StopOrderMetricEnum,
+  StopOrderPrecisionEnum,
+  StopOrderSourceEnum,
+} from '../primitives/enums.schema';
 
 /**
  * Kurye SÖZLEŞME şemaları (21.10) — mobil `/api/v1/courier/*` uçlarının ve onları tüketen "Yol"
@@ -264,8 +272,32 @@ export type CourierRunBrief = z.infer<typeof CourierRunBriefSchema>;
  * başlattıktan sonra bir sonraki okumaya kadar deposunu göremezdi — ve o boşluk hiçbir yerde
  * hata vermezdi. Tek şema, tek şekil.
  */
+/**
+ * **SIRANIN KÜNYESİ** (11.9) — nasıl hesaplandığı, sonucun yanında.
+ *
+ * Durak başına DEĞİL sefer başına, `doorAccountId`in aynı gerekçesiyle: sefer başına tekil bir
+ * değeri her durağa kopyalamak "bu durakta başka ölçüt olabilir" diye yanlış bir beklenti kurardı.
+ *
+ * **Neden ekrana çıkıyor:** kuş uçuşu turun makro şeklini doğru kurar ama bariyerin iki yakasını —
+ * nehir, demiryolu, tek yön — yakın sayar; posta kodu merkezinden dizilen bir sıra da sokak
+ * düzeyinde DEĞİLDİR. Sonucun ne kadar güvenilir olduğu sonucun yanında durmazsa, kurye kaba bir
+ * sırayı kesin sanır. `null` = sıra hiç hesaplanmadı.
+ */
+export const StopOrderInfoSchema = z.object({
+  source: StopOrderSourceEnum,
+  metric: StopOrderMetricEnum,
+  precision: StopOrderPrecisionEnum,
+  generatedAt: z.string(),
+  /** Numarası olan durak sayısı. */
+  sequenced: z.number().int(),
+  /** Sırasız kalan durak sayısı — koordinatı çözülemeyenler. Sıfır değilse ekran onu söylemeli. */
+  unsequenced: z.number().int(),
+});
+export type StopOrderInfo = z.infer<typeof StopOrderInfoSchema>;
+
 export const CourierRunDetailSchema = CourierRunBriefSchema.extend({
   warehouseName: z.string().nullable(),
+  stopOrder: StopOrderInfoSchema.nullable(),
 });
 export type CourierRunDetail = z.infer<typeof CourierRunDetailSchema>;
 

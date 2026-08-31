@@ -66,7 +66,7 @@ Teslim günü geçtiği hâlde sonuçlanmamış rota siparişleri, bugünün pla
 - **Tahsilat ÜÇ hâl, iki değil** *(16.08)*: `X € kapıda` · **`X € borç kaldı`** (amber) · `Ödendi`. Ortadaki eksikti ve ekran onun yerine "Ödendi" yazıyordu — teslim edilmiş ama hiç tahsil edilmemiş sipariş "ödenmiş" görünüyordu. Kapıda toplanmayacak olması ödendiği anlamına gelmez; kalan borcun tahsilatı müşteri kartının işidir
 - ⚠ **Geçmiş gün listesi TAM olmalı.** Bir süre `completed` siparişler hiç okunmuyordu ve kapanan her durak listeden sessizce düşüyordu — dünün ekranı 5 duraktan 2'sini gösteriyordu. "Dün ne gönderdik" sorusunun cevabı eksik olamaz
 - **O gün servis edilen bölgeler** — hangi bölgelerin günü olduğu görünür; hiçbirinin günü değilse liste sakin biçimde boştur ve sebebini söyler
-- ⚠ **Duraklar arası SIRA gösterilmez** — sistem sırayı bilmiyor (rota optimizasyonu ileriki faz, §6). Olmayan bir yeteneği ima eden bir düzen kurulmaz
+- ~~⚠ **Duraklar arası SIRA gösterilmez** — sistem sırayı bilmiyor~~ **DEĞİŞTİ (01.09 · `11.9`):** sistem sırayı artık BİLİYOR (kapalı tur hesabı, `delivery_run.stop_order`). Kural tersine döndü: sıra gösterilir — ama **yalnız hesaplanmışsa**. Hesaplanmamış seferde numara uydurulmaz ve liste bugünkü gibi sırasız kalır. Sevkiyat masasının bu ekranda sırayı görmesi bir süs değil DENETİM: motorun dizdiği rota, araç çıkmadan önce bir insan gözüyle doğrulanabilmeli
 
 ### Kargo teslimatları — taşıyıcıya verilen
 
@@ -105,7 +105,7 @@ Gidilen: sipariş detayı, müşteri detayı (adres sorunu), **Depolar** (bölge
 ## 6. Yapmaması gerekenler
 
 - **Bölge TANIMLANMAZ** — posta kodları, teslim günleri ve bölge↔depo bağı Depolar'ın nesnesidir. Burada tanım okunur, değiştirilmez: aynı bağ iki yerden yönetilmez
-- **Rota optimizasyonu, kapasite planı, zaman penceresi yoktur** (ileriki faz) — duraklar arası sıra gösterilmez, çünkü sistem sırayı bilmiyor. Bu ekran basit bir günlük liste aracıdır
+- **Kapasite planı ve zaman penceresi yoktur** (ileriki faz). Rota SIRASI 01.09'da geldi (`11.9`) ve gösterilir — hesaplanmışsa. Kapasite/pencere kısıtları hâlâ yok: ölçümsüz optimizasyon, olmayan bir soruna makine kurmaktır
 - **"DeliveryZone", "delivery_date", "cut-off" gibi iç terimler ham kullanılmaz** — "bölge", "teslim günü", "sipariş kesim saati" denir
 - Kurye burada tahsilat/teslim işlemi yapmaz — teslim işaretleme ve tahsilat kurye ekranının işidir; admin planlar ve izler
 - Kesim saati burada değiştirilmez (ayarların işi) — yalnız etkisi görünür

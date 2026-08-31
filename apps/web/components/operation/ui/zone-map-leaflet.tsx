@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { placesLabel } from './labels';
+import { mapToken, TILE_ATTRIBUTION, TILE_MAX_ZOOM, TILE_URL } from './leaflet-base';
 import {
   FREE_CODE_MIN_ZOOM,
   type ZoneCodeState,
@@ -44,21 +45,10 @@ import {
 /** Etiketin (kod + yerleşim adı) kalıcı olduğu yakınlık — tasarımın kendi eşiği. */
 const LABEL_MIN_ZOOM = 13;
 
-/**
- * Karo kaynağı — tasarımın kullandığının aynısı.
- *
- * ⚠ `tile.openstreetmap.org` KAMUSAL bir sunucudur ve ağır kullanım için değildir. Bir avuç
- * operatörün rota kurduğu iç ekran için uygun; yayına çıkarken kendi sağlayıcımıza geçilmeli.
- * BEKLEYEN(19.20)
- */
-const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const TILE_ATTRIBUTION = '&copy; OpenStreetMap';
+// Karo kaynağı ve künyesi ORTAK (`leaflet-base`): kopyalansaydı iki harita bir gün iki farklı
+// sunucudan çizerdi — biri CSP'de açık olmayan bir hosttan.
 
-/** Token değerini gerçek renge çevirir — canvas bir CSS sınıfı alamaz, ham hex de yazılamaz (§3). */
-function token(name: string, fallback: string): string {
-  if (typeof window === 'undefined') return fallback;
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
-}
+
 
 /**
  * Üç kod hâlinin biçimi — tasarımın `STYLE` bloğunun token karşılığı.
@@ -74,7 +64,7 @@ function token(name: string, fallback: string): string {
  */
 function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
   if (state === 'mine') {
-    const olive = token('--color-ops-olive', '#5f7a2c');
+    const olive = mapToken('--color-ops-olive', '#5f7a2c');
     return { radius: 8, color: olive, weight: 2.5, fillColor: olive, fillOpacity: 1 };
   }
   // ÖNERİ mor ailesindedir ve bu bir tercih değil, envanterin kendi tanımı: `--color-ops-violet-bg`
@@ -83,9 +73,9 @@ function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
   if (state === 'suggested') {
     return {
       radius: 8,
-      color: token('--color-ops-violet', '#5a4a8a'),
+      color: mapToken('--color-ops-violet', '#5a4a8a'),
       weight: 2.5,
-      fillColor: token('--color-ops-violet-dot', '#6a5acd'),
+      fillColor: mapToken('--color-ops-violet-dot', '#6a5acd'),
       fillOpacity: 1,
     };
   }
@@ -100,26 +90,26 @@ function styleOf(state: ZoneCodeState): L.CircleMarkerOptions {
   if (state === 'adding') {
     return {
       radius: 9,
-      color: token('--color-ops-violet', '#5a4a8a'),
+      color: mapToken('--color-ops-violet', '#5a4a8a'),
       weight: 3,
-      fillColor: token('--color-ops-olive', '#5f7a2c'),
+      fillColor: mapToken('--color-ops-olive', '#5f7a2c'),
       fillOpacity: 1,
     };
   }
   if (state === 'taken') {
     return {
       radius: 7,
-      color: token('--color-ops-blue', '#3a6b8a'),
+      color: mapToken('--color-ops-blue', '#3a6b8a'),
       weight: 2,
-      fillColor: token('--color-ops-blue-line', '#bcd0e0'),
+      fillColor: mapToken('--color-ops-blue-line', '#bcd0e0'),
       fillOpacity: 1,
     };
   }
   return {
     radius: 6.5,
-    color: token('--color-ops-gray-700', '#b3b7ac'),
+    color: mapToken('--color-ops-gray-700', '#b3b7ac'),
     weight: 2,
-    fillColor: token('--color-ops-card', '#fbfbf9'),
+    fillColor: mapToken('--color-ops-card', '#fbfbf9'),
     fillOpacity: 1,
   };
 }
@@ -277,7 +267,7 @@ export function ZoneMapLeaflet({
     L.control.zoom({ position: 'bottomleft' }).addTo(map);
     // `className` tasarımın soluklaştırmasını taşıyor (`globals.css` → `.ops-map-tiles`): zemin
     // sönükleşir, noktalar öne çıkar. Raster olduğu için tek CSS filtresi yetiyor.
-    L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: 18, className: 'ops-map-tiles' }).addTo(map);
+    L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION, maxZoom: TILE_MAX_ZOOM, className: 'ops-map-tiles' }).addTo(map);
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
 

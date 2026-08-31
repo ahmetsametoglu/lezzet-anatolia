@@ -1,4 +1,5 @@
 import {
+  DeliveryRunService,
   DeliveryZoneService,
   OrderItemService,
   OrderService,
@@ -17,6 +18,7 @@ import {
   upcomingDeliveryDates,
 } from '@lezzet/domain-core';
 import type { Country, DeliveryZoneWithCodes, Order, OrderStatus } from '@lezzet/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { readDayHours, type ZoneHours } from '@/lib/settings/day-hours';
 import { shiftDay, toIsoDate } from './deliveries-url';
 import type { DispatchDayView, DispatchRunView, DispatchStopView, PrepStage } from './dispatch-types';
@@ -231,6 +233,13 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
 
   // Görünüm modeli sözleşmenin aynası: kapının döndürdüğü satır alan alan eşlenir — fazlası
   // (zoneId'nin run içindeki kopyası gibi) taşınmaz.
+  /* TURUN ÖNİZLEMESİ (11.9) — motorun dizdiği sıra, araç çıkmadan önce görülebilsin diye.
+     Tek turda: seferlerin durakları ve koordinatları `readRunPreviews` içinde toplu okunuyor. */
+  const previews = await readRunPreviews(
+    db,
+    dayRoutes.flatMap((route) => (route.run ? [route.run.runId] : [])),
+  );
+
   const runs: DispatchRunView[] = dayRoutes.map((route) => ({
     zoneId: route.zoneId,
     zoneName: route.zoneName,
@@ -246,6 +255,7 @@ export async function readDispatchDay(date: string): Promise<DispatchDayView> {
           departedAt: route.run.departedAt,
           returnedAt: route.run.returnedAt,
           closed: route.run.closed,
+          stopOrder: previews.get(route.run.runId) ?? null,
         }
       : null,
   }));
@@ -394,3 +404,68 @@ function zoneIdOf(snapshot: Record<string, unknown>, zones: readonly DeliveryZon
 // kuryenin ekranında yaşıyor (`lib/courier/day.ts`, orada navigasyon/arama bağıyla birlikte) ve tam
 // hâli sipariş detayında; burada okunması bir karar üretmiyordu. Snapshot yine okunuyor, ama yalnız
 // BÖLGE çözmek için (`zoneIdOf`).
+
+/**
+ * **Turun önizlemesi** (11.9) — sefer başına: depo noktası, durakların koordinatı ve sırası.
+ *
+ * Sevkiyatçının haritada gördüğü şey bu ve amacı DENETİM: motorun dizdiği tur, araç çıkmadan önce
+ * bir insan gözünden geçsin. Kuş uçuşuyla dizilmiş bir rota kâğıt üstünde kusursuz görünüp bariyer
+ * (nehir, tek yön) atlayabilir; o hatayı sahadan önce yakalayabilecek tek yer burası.
+ *
+ * Sırası HESAPLANMAMIŞ sefer `null` döner — harita çizilmez. Boş bir harita çizip "sıra yok" demek,
+ * operatöre bakacak bir şey vaat edip vermemek olurdu.
+ */
+async function readRunPreviews(
+  db: SupabaseClient,
+  runIds: readonly string[],
+): Promise<Map<string, NonNullable<NonNullable<DispatchRunView['run']>['stopOrder']>>> {
+  const out = new Map<string, NonNullable<NonNullable<DispatchRunView['run']>['stopOrder']>>();
+  if (runIds.length === 0) return out;
+
+  const runRows = await new DeliveryRunService(db).listByIds(runIds);
+  const sequenced = runRows.filter((run) => run.stopOrderMetric !== null && run.stopOrderPrecision !== null);
+  if (sequenced.length === 0) return out;
+
+  const [orders, warehouses] = await Promise.all([
+    new OrderService(db).listByRuns(sequenced.map((run) => run.id)),
+    new WarehouseService(db).list({}),
+  ]);
+  const warehouseById = new Map(warehouses.map((row) => [row.id, row]));
+
+  for (const run of sequenced) {
+    const depot = warehouseById.get(run.warehouseId);
+    const rank = new Map(run.stopOrder.map((id, index) => [id, index + 1]));
+
+    const stops = orders
+      .filter((order) => order.deliveryRunId === run.id)
+      .flatMap((order) => {
+        const snapshot = (order.addressSnapshot ?? null) as Record<string, unknown> | null;
+        const lat = Number(snapshot?.['lat']);
+        const lng = Number(snapshot?.['lng']);
+        // Koordinatsız durak haritaya GİRMEZ — (0, 0)'a düşen bir işaret, eksik ölçümü sağlıklı
+        // gibi okuturdu (`CLAUDE §1`). Sıradaki yeri yine de sayılıyor: liste onu gösteriyor.
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
+        return [{
+          orderId: order.id,
+          sequence: rank.get(order.id) ?? null,
+          lat,
+          lng,
+          label: [snapshot?.['line1'], snapshot?.['city']].filter((part) => typeof part === 'string').join(', ') || order.referenceNo || '—',
+        }];
+      });
+
+    if (stops.length === 0) continue;
+
+    out.set(run.id, {
+      metric: run.stopOrderMetric as 'haversine' | 'matrix',
+      precision: run.stopOrderPrecision as 'address' | 'postal_centroid' | 'mixed',
+      origin:
+        depot?.lat != null && depot.lng != null
+          ? { lat: Number(depot.lat), lng: Number(depot.lng), label: depot.name }
+          : null,
+      stops,
+    });
+  }
+
+  return out;
+}
