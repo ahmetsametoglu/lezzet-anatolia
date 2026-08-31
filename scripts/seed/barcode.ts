@@ -8,9 +8,21 @@ import { TEST_LABELS } from './test-labels';
 // varken sınanır. Bir kod da ÖĞRENİLMİŞTİR (`created_by` dolu): öğrenen eşlemenin izi (kim öğretti)
 // ile sistem kaydının (seed/içe aktarım — iz yok) ekrandaki ayrımı ancak böyle görünür.
 //
-// **Katalogun tamamına kod YAZILMAZ ve bu bilinçli:** gerçek dünyada kod tablosu kabulde kendini
-// doldurur (karar §1.3) — "tanınmayan kod" hâli seed'de kodsuz kalan varyantlarla yaşar. Hepsine
-// kod verseydik öğrenen eşleme ekranı hiçbir koşuda açılmazdı.
+// ── HER VARYANTIN PAKET KODU VAR (kullanıcı kararı 31.08) ────────────────────────────────────────
+// Eskiden yalnız satılabilir varyantların İLK SEKİZİ kodlanıyordu ve künyesi "sipariş kalemleri de
+// bu aralıktan seçiliyor" diyordu. ÖLÇÜLDÜ, doğru değil: sipariş kalemleri STOĞU OLAN varyant
+// havuzundan seçiliyor (`orders.ts` — havuz DB'den ölçülüyor) ve stok bu dosyadan SONRA
+// tohumlanıyor; iki küme birbirini hiç görmüyor. Sonuç 182 varyantın 10'unda kod, hazırlanmayı
+// bekleyen 10 siparişin 7'sinde okutulabilir TEK kalem yoktu — barkodla toplama akışı seed
+// verisinde hiç koşturulamıyordu (kullanıcı bulgusu: toplama ekranında simülasyon çipi çıkmıyor).
+//
+// **"Tanınmayan kod" hâli kodsuz varyanta MUHTAÇ DEĞİL** ve eski gerekçe buydu: `TEST_LABELS`
+// içinde hiçbir ürüne bağlanmayan kendi etiketi var (`8691000050007` · rol `taninmayan`), öğrenen
+// eşleme ekranı onunla açılıyor. Kapsamı kısmak o senaryoyu korumuyor, yalnız toplamayı kırıyordu.
+//
+// Koli kodu yine yalnız ilk SEKİZ varyantta: çarpan davranışı ("koli okutunca çarpan kadar öner")
+// orada sınanıyor ve kademeyi katalog geneline yaymak yüzlerce satır doğururdu — kabul
+// çekmecesinin ölçtüğü şey kapsam değil, çarpanın kendisi.
 
 /**
  * Sentetik EAN-13 benzeri kod — GERÇEK GS1 kodu değil ve olmamalı: gerçek bir EAN yazmak, günün
@@ -44,9 +56,11 @@ export async function seedBarcodes(db: Db, varyantlar: VaryantRef[], kisiler: Ki
   console.log('▸ BARKOD seed');
   const barcodes = new VariantBarcodeService(db);
 
-  // Satılabilir varyantların İLK sekizi: sipariş kalemleri de bu aralıktan seçiliyor, yani kodlu
-  // varyantlar mal kabul ve toplama akışlarında gerçekten karşımıza çıkacak olanlar.
-  const kodlanacak = varyantlar.filter((v) => v.status !== 'candidate').slice(0, 8);
+  // KATALOĞUN TAMAMI — aday (taslak) varyantlar dahil: paket barkodu ürünün fiziksel gerçeği,
+  // satışa açılmasını beklemez. Kodsuz kalan tek şey `REZERVE_KODLAR`a denk gelen varyanttır.
+  const kodlanacak = varyantlar;
+  /** Koli kademesinin sınandığı aralık — çarpan davranışı için sekiz varyant yeter. */
+  const KOLI_ARALIGI = 8;
   const depocu = kisiler.get('depocu') ?? null;
 
   let unit = 0;
@@ -61,7 +75,9 @@ export async function seedBarcodes(db: Db, varyantlar: VaryantRef[], kisiler: Ki
         code: paketKodu,
         // Sondaki paket kodu depocunun ÖĞRETTİĞİ kayıt: `created_by` dolu — ekran "kim öğretti"
         // izini ancak böyle bir satırla gösterebilir.
-        createdBy: i === kodlanacak.length - 1 ? depocu : null,
+        // ÖĞRENİLMİŞ kayıt sabit sırada (`7`): kapsam büyüdüğünde "sondaki" varyant kaymasın —
+        // izli kaydın hangi üründe durduğu, ekranı elle sınayan için tekrarlanabilir olmalı.
+        createdBy: i === KOLI_ARALIGI - 1 ? depocu : null,
       });
       unit += 1;
     }
@@ -80,7 +96,7 @@ export async function seedBarcodes(db: Db, varyantlar: VaryantRef[], kisiler: Ki
     // ve değiştirilseydi tohumdan gelen bir davranış sessizce kayardı. Ek boylar ayrı ambalaj
     // hanesiyle (`2`/`3`) doğuyor — GTIN-14'te o hane zaten "hangi ambalaj kademesi" demek.
     const koliKodu = `1${paketKodu}`;
-    if (i % 3 === 0 && !REZERVE_KODLAR.has(koliKodu)) {
+    if (i < KOLI_ARALIGI && i % 3 === 0 && !REZERVE_KODLAR.has(koliKodu)) {
       // Rotasyon VARYANT başına döner, satır başına değil: `kasa` artık varyant başına üç kez
       // artıyor ve onunla dönseydi ilk çarpan hep aynı kalırdı.
       const ilkCarpan = [6, 12, 24][koliliVaryant % 3]!;
@@ -98,6 +114,6 @@ export async function seedBarcodes(db: Db, varyantlar: VaryantRef[], kisiler: Ki
   }
 
   console.log(
-    `✓ barkod: ${unit} paket + ${kasa} koli kodu (${koliliVaryant} varyant, çok boylu) · biri ÖĞRENİLMİŞ (depocu) · katalogun kalanı bilinçle kodsuz`,
+    `✓ barkod: ${unit} paket + ${kasa} koli kodu (${koliliVaryant} varyant, çok boylu) · biri ÖĞRENİLMİŞ (depocu) · ${kodlanacak.length} varyantın tamamı kodlu`,
   );
 }
