@@ -340,6 +340,7 @@ export { resolveAddressPoint, type AddressPointCandidate } from './delivery/geo-
 export type { Geocoder, GeocodeOutcome, GeocodeQuery } from './delivery/geocode-port';
 export type { CourierDayStart, CourierRunBriefView, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
 export { listCourierRoutes, listCourierVehicles } from './courier/routes';
+export { listVanCandidates, readVanStock, returnFromVan, takeToVan, vehicleWarehouseOf } from './courier/van-stock';
 export type { CourierRouteView } from './courier/routes';
 export { confirmDoorDelivery } from './courier/delivery';
 export type { DeliveryProofInput, DoorCollectionInput, DoorDeliveryOutcome } from './courier/delivery';

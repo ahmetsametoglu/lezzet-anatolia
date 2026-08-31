@@ -74,7 +74,9 @@
       "stopNone": "binmedi",
       "footnote": "Eksik kutuyla yola çıkabilirsin ama o durak “kutu araçta değil” diye açılmaz.",
       "back": "Günün rotasına dön",
-      "counterRest": "/{total} kutu"
+      "counterRest": "/{total} kutu",
+      "freeHeading": "SERBEST ÜRÜN — İSTEĞE BAĞLI",
+      "freeMeta": "Kapıda müşteri fazladan isterse satabileceğin mal"
     },
     "stopsHeading": "DURAKLAR · {n}",
     "stuckCount": "{n} takılı",
@@ -413,5 +415,29 @@
     "done": "Sefer kapandı — fark: nakit {cash} · kart {card} · çek {cheque}.",
     "released": " {n} takılı durak çözüldü — yeniden planlama sevkiyatın.",
     "failed": "Kapanış gönderilemedi ({error})."
+  },
+  "vanStock": {
+    "title": "Serbest Ürün",
+    "context": "durak kutularının dışında · isteğe bağlı",
+    "quickHeading": "SIK KOYULANLAR — DOKUN, ARACA AL",
+    "noCandidates": "Deponda araca alınabilecek mal yok.",
+    "inStore": "depoda {n}",
+    "tapToTake": "dokun, araca al",
+    "onVanHeading": "ARAÇTA NE VAR",
+    "count": "{n} adet",
+    "empty": {
+      "title": "Araç şimdilik yalnız durak kutularını taşıyor",
+      "body": "Kapıda müşteri fazladan isterse satabileceğin mal buraya girer. Almadan da yola çıkabilirsin."
+    },
+    "noVehicle": {
+      "title": "Araç deposu tanımlı değil",
+      "body": "Serbest ürün aracın stoğuna girer; araç deposu olmadan alınacak bir yer de yok. Kapsamına araç eklenmesi gerekiyor."
+    },
+    "footnote": "Bu mal depodan araca geçer, siparişe bağlanmaz. Kapıda satılan Yerinde Satış'tan yazılır; kalanı akşam Kurye Dönüşü'nde sayılıp depoya devredilir.",
+    "took": "{n} adet araca alındı.",
+    "returned": "{n} adet depoya devredildi.",
+    "notEnough": "Depoda o kadar yok — kullanılabilir {n} adet.",
+    "stuck": "Mal sevk edildi ama araca yazılamadı; transfer askıda kaldı. Depo ekranından çözülmeli.",
+    "failed": "Hareket yazılamadı — bağlantıyı kontrol edip yeniden dene."
   }
 }

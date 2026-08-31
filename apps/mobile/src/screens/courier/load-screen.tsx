@@ -9,6 +9,7 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
+import { PressableSurface } from '@/components/ui/pressable-surface';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { fillCopy } from '@/screens/operations/copy';
@@ -235,6 +236,24 @@ export function CourierLoadScreen() {
           );
         })}
 
+        {/* SERBEST ÜRÜN — İSTEĞE BAĞLI (v3:18'in kendi satırı). Kapı burada çünkü kurye rampada
+            önce kutuları okutuyor, sonra "bir de şunlardan alayım" diyor; ayrı bir menüye
+            koymak o anı ikiye bölerdi. */}
+        <PressableSurface
+          onPress={() => router.navigate('/van-stock')}
+          feedback="scale"
+          style={styles.freeGate}
+          accessibilityLabel={t.vanStock.title}
+          testID="courier-load-free"
+        >
+          <View style={styles.freeText}>
+            <Text style={styles.freeTitle}>{t.day.load.freeHeading}</Text>
+            <Text style={styles.freeMeta}>{t.day.load.freeMeta}</Text>
+          </View>
+          <Text style={styles.freeChevron}>›</Text>
+        </PressableSurface>
+
+
       </ScrollView>
 
       {/*
@@ -293,7 +312,13 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
-    paddingBottom: operationsTheme.space['8xl'],
+    /*
+      DİP BOŞLUĞU YAPIŞKAN ÇUBUĞUN BOYUNDA (ölçüldü 31.08 · cihazda). `8xl` (30) çubuğun altında
+      kalıyordu ve listenin SON öğesi — serbest ürün kapısı — hiç görünmüyordu: kaydırma bitiyor,
+      kapı çubuğun arkasında duruyordu. Çubuk mutlak konumlu ve içeriğin üstüne biniyor, yani
+      boşluk onun boyunu KARŞILAMAK zorunda (düğme + iki dolgu + dipnot ≈ `9xl`).
+    */
+    paddingBottom: operationsTheme.space['9xl'],
     gap: operationsTheme.space.xl,
   },
   /* SAYAÇ KARTI KOYU (v3:1412) — çerçeve YOK: koyu yüzey kendi kenarıdır (kitin `ink` kuralı). */
@@ -354,6 +379,39 @@ const styles = StyleSheet.create({
   },
   /* Sefer grup başlığı — gün ekranındakiyle aynı kesit; iki ekran aynı ayracı aynı ağırlıkta
      çiziyor (kurye ikisi arasında gidip geliyor). */
+  /* Serbest ürün kapısı — kutuların ALTINDA ve daha sessiz: isteğe bağlı bir iş, listenin
+     kendisiyle aynı ağırlıkta durmamalı. */
+  freeGate: {
+    marginTop: operationsTheme.space.lg,
+    /* ÇUBUĞUN ALTINDAN ÇIKAR (ölçüldü 31.08 · cihazda): listenin dip dolgusu tek başına yetmedi —
+       yapışkan çubuk mutlak konumlu ve düğme + iki dolgu + dipnot taşıyor. Son öğe çubuğun
+       arkasında kalırsa hiç görülmez; kaydırma biter ve kurye kapının varlığını bilmez. */
+    marginBottom: operationsTheme.space['9xl'],
+    padding: operationsTheme.space.lg,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: 1,
+    borderColor: operationsTheme.colors['olive-line'],
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
+  },
+  freeText: { flex: 1, gap: 2 },
+  freeTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  freeMeta: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.body,
+  },
+  freeChevron: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors['olive-dark'],
+  },
   runGroupRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -7,6 +7,9 @@ import {
   CourierDayResponseSchema,
   CourierRoutesResponseSchema,
   CourierVehiclesResponseSchema,
+  CourierVanStockMoveResponseSchema,
+  CourierVanStockResponseSchema,
+  type CourierVanStockMoveRequest,
   DepartCourierRunResponseSchema,
   DayCloseDraftSchema,
   type LoadBoxRequest,
@@ -114,6 +117,29 @@ export function fetchCourierVehicles(): Promise<ApiResult<z.infer<typeof Courier
  */
 export function departCourierRun(runId: string): Promise<ApiResult<z.infer<typeof DepartCourierRunResponseSchema>>> {
   return authorizedFetch(`/api/v1/courier/runs/${runId}/depart`, DepartCourierRunResponseSchema, { method: 'POST' });
+}
+
+/**
+ * **Araçtaki serbest ürün** (31.08 · v3:19) — araçta ne var + depodan ne alınabilir, TEK okumada.
+ * İki liste ayrı uçlara bölünmedi: ekran ikisini yan yana çiziyor ve biri olmadan öteki bir karar
+ * kurmuyor ("üç tane var, dört daha alabilirim").
+ */
+export function fetchVanStock(): Promise<ApiResult<z.infer<typeof CourierVanStockResponseSchema>>> {
+  return authorizedFetch('/api/v1/courier/van-stock', CourierVanStockResponseSchema);
+}
+
+/**
+ * **Araca al / depoya devret** — yön UÇTADIR, gövde ikisinde de aynı. Tek sarmalayıcı, çünkü
+ * ikisi aynı mekanizmanın iki yönü; ayrı yazılsaydı biri cevabın bir dalını işlemeyi unuturdu.
+ */
+export function moveVanStock(
+  direction: 'take' | 'return',
+  body: CourierVanStockMoveRequest,
+): Promise<ApiResult<z.infer<typeof CourierVanStockMoveResponseSchema>>> {
+  return authorizedFetch(`/api/v1/courier/van-stock/${direction}`, CourierVanStockMoveResponseSchema, {
+    method: 'POST',
+    body,
+  });
 }
 
 /**

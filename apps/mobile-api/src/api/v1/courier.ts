@@ -8,6 +8,11 @@ import {
   listCourierDay,
   listCourierRoutes,
   listCourierVehicles,
+  listVanCandidates,
+  readVanStock,
+  returnFromVan,
+  takeToVan,
+  vehicleWarehouseOf,
   loadBox,
   markUndelivered,
   openDayClose,
@@ -24,6 +29,9 @@ import {
   CourierDayResponseSchema,
   CourierRoutesResponseSchema,
   CourierVehiclesResponseSchema,
+  CourierVanStockMoveRequestSchema,
+  CourierVanStockMoveResponseSchema,
+  CourierVanStockResponseSchema,
   DepartCourierRunResponseSchema,
   DayCloseDraftSchema,
   DeliveryProofUploadRequestSchema,
@@ -268,6 +276,82 @@ courier.post('/day/start', async (c) => {
  * geçirir, siparişi yola çıkarmaz — o iş sefer başlatmanındır. `allBoxesLoaded` yalnız "siparişin
  * tamamı araçta" der.
  */
+/**
+ * **Araçtaki serbest ürün** (31.08 · v3:19) — araçta ne var + depodan ne alınabilir, TEK okumada.
+ *
+ * İki liste ayrı uçlara bölünmedi: ekran ikisini yan yana çiziyor ve biri olmadan öteki bir karar
+ * kurmuyor ("üç tane var, dört daha alabilirim"). Ayrı uçlar iki ağ turu ve iki yükleme hâli
+ * demekti; rampada bekleyen kurye için o iki hâl tek bir gecikmedir.
+ *
+ * ÇIKIŞ DEPOSU personelin kendi deposu, ARAÇ DEPOSU kapsamındaki `kind='vehicle'` depo — ikisi de
+ * profilden çözülüyor, istemciden değil (yerinde satış ucunun aynı kararı).
+ */
+courier.get('/van-stock', async (c) => {
+  const staff = c.get('staff');
+  const db = serviceDb();
+  const vehicleWarehouseId = await vehicleWarehouseOf(db, staff.warehouseIds);
+  const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
+
+  const [onVan, candidates] = await Promise.all([
+    vehicleWarehouseId === null ? Promise.resolve([]) : readVanStock(db, { vehicleWarehouseId }),
+    facilityId === null ? Promise.resolve([]) : listVanCandidates(db, { warehouseId: facilityId }),
+  ]);
+
+  const body: z.input<typeof CourierVanStockResponseSchema> = { vehicleWarehouseId, onVan, candidates };
+  return ok(c, CourierVanStockResponseSchema.parse(body));
+});
+
+/**
+ * **Araca al** — depodan araca. Sevk + kabul TEK çağrıda: rampada malı eline alıp araca koyan
+ * kişi hem veren hem alandır; ayrı bir kabul adımı, kuryeye kendi koyduğu malı ikinci kez
+ * onaylatmak olurdu (kapının künyesi).
+ */
+courier.post('/van-stock/take', async (c) => {
+  const parsed = CourierVanStockMoveRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const staff = c.get('staff');
+  const db = serviceDb();
+  const vehicleWarehouseId = await vehicleWarehouseOf(db, staff.warehouseIds);
+  const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
+  if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
+
+  const result = await takeToVan(db, {
+    warehouseId: facilityId,
+    vehicleWarehouseId,
+    variantId: parsed.data.variantId,
+    qty: parsed.data.qty,
+    actorId: staff.id,
+  });
+  const body: z.input<typeof CourierVanStockMoveResponseSchema> = result;
+  return ok(c, CourierVanStockMoveResponseSchema.parse(body));
+});
+
+/**
+ * **Depoya devret** — araçtan depoya (v3:14 "SAY VE DEVRET"). Aynı kapının aynası: kaynak ile
+ * hedef yer değiştiriyor, mekanizma bir.
+ */
+courier.post('/van-stock/return', async (c) => {
+  const parsed = CourierVanStockMoveRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const staff = c.get('staff');
+  const db = serviceDb();
+  const vehicleWarehouseId = await vehicleWarehouseOf(db, staff.warehouseIds);
+  const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
+  if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
+
+  const result = await returnFromVan(db, {
+    warehouseId: facilityId,
+    vehicleWarehouseId,
+    variantId: parsed.data.variantId,
+    qty: parsed.data.qty,
+    actorId: staff.id,
+  });
+  const body: z.input<typeof CourierVanStockMoveResponseSchema> = result;
+  return ok(c, CourierVanStockMoveResponseSchema.parse(body));
+});
+
 /**
  * **Seferi yola çıkar** (31.08 · v3:15) — kurulmuş seferin damgası, durakların açılması ve
  * müşteri bildiriminin gittiği an.

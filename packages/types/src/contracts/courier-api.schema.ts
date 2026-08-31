@@ -380,6 +380,65 @@ export type CourierVehicle = z.infer<typeof CourierVehicleSchema>;
 export const CourierVehiclesResponseSchema = z.object({ vehicles: z.array(CourierVehicleSchema) });
 export type CourierVehiclesResponse = z.infer<typeof CourierVehiclesResponseSchema>;
 
+/**
+ * **ARACA SERBEST ÜRÜN** (31.08 · v3:19) — sipariş dışı, kapıda satılabilecek mal.
+ *
+ * Sipariş kutusundan mekanizması AYRI: kutu bir emanet değişimi (stok oynamaz), serbest ürün ise
+ * GERÇEK stok hareketi — depodan çıkıp aracın stoğuna girer, kapıda oradan satılır (`quickSale`
+ * araç deposundan düşüyor) ve akşam sayılıp geri devredilir.
+ *
+ * Kalem VARYANT düzeyinde: kurye "üç Şöbiyet" diye düşünüyor, "iki partiden üç Şöbiyet" diye
+ * değil. Parti seçimi kapının işi (FEFO) — rampada SKT sormak, kapıda satılacak bir paket için
+ * anlamsız bir karar.
+ */
+export const CourierVanStockLineSchema = z.object({
+  variantId: z.string().uuid(),
+  name: z.string(),
+  qty: z.number().int(),
+});
+export type CourierVanStockLine = z.infer<typeof CourierVanStockLineSchema>;
+
+/** Depoda alınabilir kalem — "SIK KOYULANLAR" şeridinin satırı; `available` rezerveler DÜŞÜLMÜŞ. */
+export const CourierVanCandidateSchema = z.object({
+  variantId: z.string().uuid(),
+  name: z.string(),
+  available: z.number().int(),
+});
+export type CourierVanCandidate = z.infer<typeof CourierVanCandidateSchema>;
+
+export const CourierVanStockResponseSchema = z.object({
+  /** `null` = kuryenin araç deposu yok → ekran sebebini söyler, boş liste göstermez. */
+  vehicleWarehouseId: z.string().uuid().nullable(),
+  onVan: z.array(CourierVanStockLineSchema),
+  candidates: z.array(CourierVanCandidateSchema),
+});
+export type CourierVanStockResponse = z.infer<typeof CourierVanStockResponseSchema>;
+
+/** Araca al / depoya devret — yön uçtadır, gövde ikisinde de aynı. */
+export const CourierVanStockMoveRequestSchema = z.object({
+  variantId: z.string().uuid(),
+  qty: z.number().int().positive(),
+});
+export type CourierVanStockMoveRequest = z.infer<typeof CourierVanStockMoveRequestSchema>;
+
+export const CourierVanStockMoveResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    variantId: z.string().uuid(),
+    movedQty: z.number().int(),
+    /** Hareketten SONRA araçta kalan — ekran kendi hesabını yapmaz. */
+    vanQty: z.number().int(),
+  }),
+  /** Depoda o kadar KULLANILABİLİR yok; sayı dönüyor ki ekran "şu kadar var" diyebilsin. */
+  z.object({ status: z.literal('not_enough'), available: z.number().int() }),
+  z.object({ status: z.literal('no_vehicle') }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  /** Sevk yazıldı, kabul düştü — mal transferde asılı. Kimlik dönüyor ki depodan çözülebilsin. */
+  z.object({ status: z.literal('stuck'), transferId: z.string().uuid() }),
+  z.object({ status: z.literal('failed'), message: z.string() }),
+]);
+export type CourierVanStockMoveResponse = z.infer<typeof CourierVanStockMoveResponseSchema>;
+
 
 /**
  * KUTULU sipariş — tüm kutuları binene kadar "yolda" YAZILMAZ (23.8, etüt 2.4: *"araca binmeyen

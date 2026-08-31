@@ -9311,5 +9311,35 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `/trip` ekranı SÖKÜLDÜ: tasarımda 15 numara "Rota ve araç seçimi" oldu ve onun gövdesi gün
   ekranının kendi seçim hâli — ekranın karşılığı kalmadı.
 
-  **BEKLEYEN(21.193):** araca serbest ürün (v3:19) ve kurye dönüşünde sayım/kutu inişi (v3:14)
-  yazılmadı — tasarımları geldi, kodu yok.
+  **BEKLEYEN(21.194):** kurye dönüşünde sayım ve kutu inişi (v3:14) yazılmadı — o ekran DEPO
+  yüzeyinin (`courier-return`), tasarımı geldi, kodu yok.
+
+- [x] (21.194) **ARACA SERBEST ÜRÜN: DEPODAN ARACA GERÇEK STOK HAREKETİ** (v3:19 · kullanıcı kararı 31.08)
+  `touches: packages/application/src/courier/van-stock.ts · apps/mobile-api/src/api/v1/courier.ts · apps/mobile/src/screens/courier/van-stock-screen.tsx`
+
+  **İKİ TÜR MAL, İKİ AYRI MEKANİZMA.** Araca sipariş kutusu da biniyor serbest ürün de, ama
+  aynı şey değiller: kutu bir EMANET değişimi (stok oynamaz, `loadBox` yalnız damga yazar),
+  serbest ürün GERÇEK stok hareketi — mal depodan çıkıp aracın stoğuna giriyor, çünkü kapıda o
+  stoktan satılacak (`quickSale` araç deposundan düşüyor) ve akşam sayılıp geri devredilecek.
+  İkisini tek mekanizmaya indirmek, satılan malın hangi depodan düştüğünü belirsiz bırakırdı.
+
+  **YENİ RPC YAZILMADI.** Depo→araç bir transferdir ve mekanizması hazırdı: `dispatch_transfer`
+  malı kaynaktan o an düşürüyor (sanal transit depo yok — 0031'in T4 kararı), `receive_transfer`
+  hedefe yazıyor. İkinci bir stok taşıma yolu açmak, aynı gerçeği iki yerden oynatmak olurdu.
+  İki adım TEK çağrıda kapanıyor ve bu kestirme değil sahanın kendisi: rampada malı eline alıp
+  araca koyan kişi hem veren hem alandır. Kabul düşerse mal transferde asılı kalır ve cevap bunu
+  SÖYLER (`stuck` + transfer kimliği) — sessiz bir `ok`, kaybolmuş malı "araçta" gösterirdi.
+
+  **ÖLÇÜ FİİLİ DEĞİL KULLANILABİLİR.** Müşteriye söz verilmiş mal araca alınmaz; fiiliye
+  bakılsaydı mal gider, sipariş depoda karşılıksız kalır ve aynı mal araçta "serbest" görünüp
+  ikinci kez satılırdı. Ölçü `available_stock` görünümünden geliyor, partiden hesaplanmıyor —
+  rezerve partide durmuyor, ayrı bir kayıt.
+
+  **DEVİR AYNI KAPININ AYNASI:** araçtan depoya geri koyma ayrı bir yol değil, kaynak ile hedefin
+  yer değiştirmesi. Ekranda ayrı bir "geri ver" düğmesi de yok — kurye zaten sayıyı düşünüyor,
+  adedi düşürmek malı depoya geri koyuyor.
+
+  **Cihazda ölçüldü:** bir dokunuşla depoda 87→86, araçta 24→25; adet düşürülünce 86→87, 25→24.
+  Ekranın kapısı yükleme listesinin sonunda (v3:18'in kendi satırı) ve dip dolgusu yapışkan
+  çubuğun boyuna çıkarıldı — `8xl` yetmiyordu, son öğe çubuğun arkasında kalıyor ve hiç
+  görülmüyordu.
