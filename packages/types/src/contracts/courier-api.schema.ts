@@ -419,6 +419,14 @@ export const CourierVanStockLineSchema = z.object({
   name: z.string(),
   /** Boy etiketi ("450 g") — addan AYRI, çünkü ekran ikisini farklı ağırlıkta yazıyor (v3:19). */
   variantLabel: z.string(),
+  /**
+   * Ürün kapağının public URL'i; `null` = kapaksız ürün, satır monogram çizer.
+   *
+   * TASARIMDA YOK ve bilinçli bir EKLEME (kullanıcı kararı 31.08): *"sol tarafa resim koy,
+   * ekranı daha verimli kullan."* Rampada kurye kutunun üstündeki ürünü adından değil
+   * GÖRÜNÜŞÜNDEN tanıyor; dört "Cevizli Baklava" satırını ayıran şey boy etiketi değil kapak.
+   */
+  imageUrl: z.string().nullable(),
   qty: z.number().int(),
   /** Çıkış deposunda kalan kullanılabilir adet — "Alındıktan sonra depoda N kalır." cümlesi. */
   available: z.number().int(),
@@ -431,6 +439,8 @@ export const CourierVanCandidateSchema = z.object({
   name: z.string(),
   /** Boy etiketi ("450 g") — kartın ince yarısı. */
   variantLabel: z.string(),
+  /** Ürün kapağı; `null` = monogram (aynı gerekçe: rampada ürün görünüşünden tanınır). */
+  imageUrl: z.string().nullable(),
   available: z.number().int(),
   /** Bu varyanttan ARAÇTA kaç tane var — kart "araçta 3" diyebilsin diye (v3:19 `h.rozet`). */
   onVan: z.number().int(),

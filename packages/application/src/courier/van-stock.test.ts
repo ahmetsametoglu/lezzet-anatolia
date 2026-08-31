@@ -175,6 +175,15 @@ describe('alınabilecekler listesi', () => {
     expect(bulunmayan.some((row) => row.variantId === variantId)).toBe(false);
   });
 
+  it('ARAMA AKSANI YUTAR — telefonda "sobiyet" yazan da bulur', async () => {
+    /* Cihazda ölçüldü (31.08): "pogaca" yazınca "Patatesli Poğaça" bulunmuyordu. Rampada
+       ğ/ç/ş/ı için klavye değiştirmek fazladan basış demek ve kimse onu yapmıyor. Katlama iki
+       yönlü çalışır: aksanlı yazan da bulur (üstteki test), aksansız yazan da. */
+    const aksansiz = await listVanCandidates(db, { warehouseId: facilityId, query: 'sobiyet' });
+
+    expect(aksansiz.some((row) => row.variantId === variantId)).toBe(true);
+  });
+
   it('ARAÇTAKİ SATIR depoda kalanı taşır — "alındıktan sonra N kalır" cümlesinin kaynağı', async () => {
     await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 2 });
 

@@ -9508,3 +9508,36 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ve sürülen bir seferi BIRAKMANIN yolu tasarımda yok — 14/15/16 numaralı ekranlarda "iptal",
   "vazgeç", "araçtan çıkar" diye bir eylem hiç geçmiyor (ölçüldü). Sefer kurulduktan sonra rehber
   hâline dönüş yalnız kapanışla oluyor.
+
+- [x] (21.199) **SERBEST ÜRÜN YENİDEN KURGULANDI · ÜRÜN SATIRI TEK KOMPONENT** (kullanıcı kararları 31.08)
+  `touches: apps/mobile/src/screens/courier/van-stock-screen.tsx, apps/mobile/src/screens/sale/sale-screen.tsx,
+  packages/{types,application}/src/**/courier*`
+
+  **ŞERİT SAYFADAN ÇEKMECEYE.** Kullanıcı ölçtü: *"sık koyulan dokun-araca-al kısmı çok fazla
+  kırışık ve karmaşık."* Tasarımın kendi karesinde (v3:19) o şerit DÖRT kart; gerçek depoda aday
+  sayısı 12 (ucun tavanı) ve iki sütunlu ızgara cihazda okunmuyordu. Ayrım şuraya oturdu: sayfanın
+  taşıdığı bilgi **"araçta ne var"**, çekmecenin sorduğu soru **"ne alayım"**. Sık koyulanlar ile
+  arama TEK çekmecede — boş sorguda şerit, yazdıkça aynı liste aramaya dönüşüyor. Çekmece
+  dokunmayla kapanmıyor (rampada arka arkaya alım normal) ve satır hâlini ("araçta N") yerinde
+  güncelliyor; sayı SAYFANIN listesinden okunuyor, satırın kendi alanından değil.
+  Not: tasarımın SATIŞ ekranı (v3:23) zaten tam bu deseni kullanıyor — "Barkod okut · Ürün ara"
+  ve liste çekmecede; yani yeni düzen evin kendi kalıbı.
+
+  **SATIRIN DİZİLİMİ:** solda KAPAK (`imageUrl` sözleşmeye eklendi — rampada kurye ürünü adından
+  değil görünüşünden tanıyor; dört "Cevizli Baklava" satırını ayıran şey boy etiketi değil kapak),
+  ortada ad + depoda kalan, SAĞDA adet düğmeleri, ALTTA notun kendi satırı. Tasarım adet
+  düğmelerini sola koyuyor ve notu yanına; not orada iki satıra kırılıp satırı büyütüyordu.
+
+  **ÜRÜN SATIRI TEK KOMPONENT** (kullanıcı sorusu: *"burada bir code duplication durumu var mı?"*).
+  Ölçüldü — VARDI ve üç kopyaydı: hazırlık ekranı kitin `OperationsProductRow`unu kullanıyor,
+  serbest ürün kendi satırını yazmıştı, YERİNDE SATIŞ da kendi satırını. Kopyalar ayrışmıştı bile:
+  satışta ürün resmi DAİRE, ötekilerde yuvarlatılmış kare — aynı ürün iki ekranda iki kimlikle
+  görünüyordu. Üçü de kite bağlandı; kare kitin kararı ("ürün kutudur, kişi değil").
+
+  **ARAMA AKSANI YUTUYOR:** cihazda ölçüldü — `"pogaca"` yazan kurye `"Patatesli Poğaça"`yı
+  bulamıyordu. Telefon klavyesinde ğ/ç/ş/ı için basış harcamak rampada yapılmıyor; katlama iki
+  yönlü (aksanlı yazan da bulur).
+
+  **ARALIKLAR SIKILDI** (kullanıcı bulgusu): satır arası `md`(8) → `sm`(6), kartın iç dolgusu
+  dikeyde `lg`(10) → `md`(8). Satırlar kapaklı ve iki katlı olunca kendi kenarlarıyla zaten
+  ayrılıyor; aradaki boşluğun ayırma işi kalmamıştı.

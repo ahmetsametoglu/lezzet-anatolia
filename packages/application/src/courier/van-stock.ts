@@ -43,6 +43,8 @@ export interface VanStockLine {
    * birleştirip bilgiyi kaybediyordu.
    */
   variantLabel: string;
+  /** Ürün kapağının public URL'i; `null` = kapaksız ürün (satır monogram çizer). */
+  imageUrl: string | null;
   /** Araçta kalan adet — partiler toplanmış hâlde. */
   qty: number;
   /**
@@ -59,6 +61,8 @@ export interface VanCandidate {
   name: string;
   /** Boy etiketi ("450 g") — adın ince yarısı; birleştirilmiş dize ağırlık farkını yutuyordu. */
   variantLabel: string;
+  /** Ürün kapağı; `null` = monogram. */
+  imageUrl: string | null;
   /** Depoda KULLANILABİLİR adet (rezerveler düşülmüş) — söz verilmiş mal araca alınamaz. */
   available: number;
   /** Bu varyanttan araçta kaç tane var — şerit kartı "araçta 3" diyebilsin diye (v3:19 `h.rozet`). */
@@ -74,6 +78,25 @@ export type TakeToVanOutcome =
   /** Sevk yazıldı ama kabul düşdü — mal transferde asılı; kimliği dönüyor ki çözülebilsin. */
   | { status: 'stuck'; transferId: string }
   | { status: 'failed'; message: string };
+
+/**
+ * **ARAMA AKSANI YUTAR** — `"pogaca"` yazan kurye `"Patatesli Poğaça"`yı bulur.
+ *
+ * Ölçüldü (cihazda, 31.08): telefon klavyesinde ğ/ç/ş/ı/ö/ü yazmak fazladan basış istiyor ve
+ * rampada kimse onu yapmıyor; katlanmamış karşılaştırma "aramaya uyan mal yok" diyordu. Katlama
+ * TEK YÖNLÜ: hem aranan hem aranılan aynı süzgeçten geçiyor, yani "poğaça" yazan da bulur.
+ *
+ * `İ` ve `ı` ayrımı önce Türkçe kurallarıyla küçültülür (`toLocaleLowerCase('tr')`), sonra
+ * harfler ASCII karşılıklarına indirilir. Sıra önemli: JS'in dil-bağımsız küçültmesi `I`yı `i`
+ * yapar ve Türkçede o YANLIŞTIR (`courier-format.turkishUpper`in aynası).
+ */
+const FOLD: Record<string, string> = { ç: 'c', ğ: 'g', ı: 'i', ö: 'o', ş: 's', ü: 'u', â: 'a', î: 'i', û: 'u' };
+function foldTurkish(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase('tr')
+    .replace(/[çğıöşüâîû]/g, (ch) => FOLD[ch] ?? ch);
+}
 
 /** Kuryenin araç deposu — kapsamındaki `kind='vehicle'` ilk depo; yoksa `null`. */
 export async function vehicleWarehouseOf(db: SupabaseClient, warehouseIds: readonly string[]): Promise<string | null> {
@@ -117,6 +140,7 @@ export async function readVanStock(
       variantId,
       name: names.get(variantId)?.productName ?? displayName(names.get(variantId)),
       variantLabel: names.get(variantId)?.variantLabel ?? '',
+      imageUrl: names.get(variantId)?.imageUrl ?? null,
       qty,
       available: availableBy.get(variantId) ?? 0,
     }))
@@ -165,17 +189,18 @@ export async function listVanCandidates(
   /* Arama ADIN İÇİNDE geçiyor mu — SQL'e inmiyor ve inmemeli: ad iki tabloyu birleştiren bir
      TÜRETİMDİR (ürün adı + boy etiketi) ve `ilike` yalnız birine bakabilirdi. Küme zaten depoda
      stoğu olan varyantlar kadar; rampada aranan şey de tam olarak o. */
-  const needle = input.query?.toLocaleLowerCase('tr').trim() ?? '';
+  const needle = foldTurkish(input.query ?? '');
   return available
     .filter((row) => row.availableQty > 0)
     .map((row) => ({
       variantId: row.variantId,
       name: names.get(row.variantId)?.productName ?? displayName(names.get(row.variantId)),
       variantLabel: names.get(row.variantId)?.variantLabel ?? '',
+      imageUrl: names.get(row.variantId)?.imageUrl ?? null,
       available: row.availableQty,
       onVan: onVan.get(row.variantId) ?? 0,
     }))
-    .filter((row) => needle.length === 0 || `${row.name} ${row.variantLabel}`.toLocaleLowerCase('tr').includes(needle))
+    .filter((row) => needle.length === 0 || foldTurkish(`${row.name} ${row.variantLabel}`).includes(needle))
     .sort((a, b) => b.available - a.available)
     .slice(0, input.limit ?? 12);
 }

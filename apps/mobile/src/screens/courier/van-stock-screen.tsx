@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { CourierVanCandidate, CourierVanStockLine } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsProductRow } from '@/components/operations/product-row';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
@@ -28,15 +29,23 @@ import { courierCopy } from './copy';
   depodan çıkıp aracın stoğuna girer, kapıda oradan satılır, akşam sayılıp geri devredilir.
   İkisini tek listede toplamak, kuryeye aynı görünen iki farklı sorumluluğu karıştırırdı.
 
-  ── EKRANIN TAŞIDIĞI TEK KARAR ──────────────────────────────────────────────
-  "Ne alayım." Bu yüzden iki liste yan yana: depoda ne var (dokun, al) ve araçta ne var (adedi
-  değiştir, geri koy). İkisi ayrı ekranlarda olsaydı kurye kararı zihninde kurmak zorunda kalırdı.
+  ── SAYFA "NE VAR"I GÖSTERİR, ÇEKMECE "NE ALAYIM"I SORAR (kullanıcı kararı 31.08) ──
+  Tasarım (v3:19) alma şeridini SAYFAYA seriyor: "SIK KOYULANLAR" başlığı altında iki sütunlu
+  kartlar. Tasarımın kendi karesinde o şerit DÖRT karttı; gerçek depoda aday sayısı 12 (ucun
+  tavanı) ve ekran cihazda kalabalıklaştı — kullanıcı ölçtü: *"çok fazla kırışık ve karmaşık."*
 
-  ── ÜÇ GİRİŞ YOLU, ÜÇÜ DE TASARIMDA (31.08 · tur) ───────────────────────────
-  Şerit tek başına yetmiyor ve tasarım bunu baştan söylüyordu: **barkod okutma** (rampada kurye
-  ürünü listeden aramaz, kutunun üstündeki kodu okutur), **ürün arama** (şerit tavanlı bir seçki,
-  aranan mal onun dışında olabilir) ve şeridin kendisi. İlk ikisi hiç çizilmemişti — şeritte
-  olmayan bir ürünü araca almanın YOLU YOKTU.
+  Ayrım şu: sayfanın taşıdığı bilgi **"araçta ne var"**dır — kurye kapıda ona bakar, gün boyunca
+  ona döner. **"Ne alayım"** ise rampada bir kez sorulan bir SEÇİM anıdır; seçim anları bu yüzeyde
+  çekmeceye gider (araç seçimi, adet klavyesi, parti seçimi — hepsi öyle). Şerit çekmecenin içine
+  alındı: çekmece boş sorguyla sık koyulanları gösteriyor, yazdıkça aynı liste aramaya dönüşüyor.
+  Sayfa tek işe indi, şeridin kalabalığı da seçim anında kaldı.
+
+  ── SATIRIN DİZİLİMİ (kullanıcı kararı 31.08) ───────────────────────────────
+  Solda KAPAK, ortada ad + boy/depo, sağda adet düğmeleri, altta sonucun notu. Tasarımda kapak
+  yok ve adet düğmeleri solda; ikisi de değişti çünkü rampada kurye ürünü adından değil
+  GÖRÜNÜŞÜNDEN tanıyor (dört "Cevizli Baklava" satırını ayıran şey boy etiketi değil kapaktır) ve
+  parmağın düştüğü yer satırın sağıdır. Not artık kendi satırında: sağda sıkışınca iki satıra
+  kırılıyor ve adet düğmesinin yüksekliğini büyütüyordu.
 
   ── İSTEĞE BAĞLI, VE BUNU SÖYLÜYOR ──────────────────────────────────────────
   Boş hâl bir eksiklik gibi değil bir DAVET gibi çiziliyor (v3:19'un kendi cümlesi: *"Almadan da
@@ -46,8 +55,8 @@ import { courierCopy } from './copy';
 
 const t = courierCopy;
 
-/** İlk yük iskeleti — okutma düğmesi, şerit ve iki satır; ekranın gerçekten çizdiği bloklar. */
-const VAN_STOCK_SKELETON = { scan: 54, quick: 96, row: 108 } as const;
+/** İlk yük iskeleti — okutma düğmesi, arama düğmesi ve iki satır; ekranın çizdiği bloklar. */
+const VAN_STOCK_SKELETON = { scan: 54, search: 52, row: 108 } as const;
 
 export function CourierVanStockScreen() {
   const router = useRouter();
@@ -80,9 +89,8 @@ export function CourierVanStockScreen() {
 
   /*
     ARAMA HER TUŞTA UCA SORAR ve bu bilinçli: süzgeç deponun stoğunun üstünde çalışıyor (küme
-    kuryenin deposunda malı olan varyantlar kadar), yerel bir kopyada süzülemez — şerit yalnız 12
-    satır taşıyor ve aranan mal tam olarak o 12'nin dışındakiler. Boş sorgu boş liste döner:
-    "henüz yazmadın" bir hata değil (plansız kabulün aramasının aynı kararı).
+    kuryenin deposunda malı olan varyantlar kadar), yerel bir kopyada süzülemez — çekmecenin boş
+    hâli yalnız 12 satır taşıyor ve aranan mal tam olarak o 12'nin dışındakiler.
   */
   useEffect(() => {
     if (!searchOpen) return;
@@ -106,7 +114,7 @@ export function CourierVanStockScreen() {
     cevabın bir dalını (`not_enough`, `stuck`, `unknown_code`) işlemeyi unuturdu; burada dokuz dal
     tek yerde okunuyor ve ekran her hâlde SEBEBİ söylüyor.
 
-    Kimlik iki dallı: varyant (şerit/arama/adet) ya da KOD (okutma). Uç kodu `variant_barcode`
+    Kimlik iki dallı: varyant (çekmece/adet) ya da KOD (okutma). Uç kodu `variant_barcode`
     üzerinden çözüyor; tanınmayan kod kendi dalıyla geliyor ve sessizce yutulmuyor.
   */
   const move = useCallback(
@@ -161,7 +169,7 @@ export function CourierVanStockScreen() {
       <View style={styles.screen} testID="courier-van-stock">
         {header}
         <OperationsSkeletonList
-          heights={[VAN_STOCK_SKELETON.scan, VAN_STOCK_SKELETON.quick, VAN_STOCK_SKELETON.row]}
+          heights={[VAN_STOCK_SKELETON.scan, VAN_STOCK_SKELETON.search, VAN_STOCK_SKELETON.row]}
           label={t.day.loading}
         />
       </View>
@@ -169,6 +177,12 @@ export function CourierVanStockScreen() {
   }
 
   const totalQty = onVan.reduce((sum, line) => sum + line.qty, 0);
+  /* Çekmecenin satırı "araçta N"i SAYFANIN listesinden okuyor, kendi alanından değil: hareket
+     yazıldıktan sonra sayfa tazeleniyor ama çekmecedeki arama sonucu tazelenmiyor — kurye aldığı
+     ürünün satırında hâlâ "dokun, araca al" görürdü. Tek gerçek, tek kaynak. */
+  const vanQtyOf = (variantId: string): number => onVan.find((line) => line.variantId === variantId)?.qty ?? 0;
+  /** Çekmecenin listesi: yazılmamışken SIK KOYULANLAR, yazdıkça arama sonucu. */
+  const sheetRows = query.trim().length === 0 ? candidates : results;
 
   return (
     <View style={styles.screen} testID="courier-van-stock">
@@ -186,8 +200,9 @@ export function CourierVanStockScreen() {
           />
         ) : (
           <>
-            {/* OKUTMA VE ARAMA ŞERİDİN ÜSTÜNDE (v3:19) — şerit bir kolaylık, bu ikisi ise malın
-                araca girmesinin ASIL yolları: rampada kurye elindeki kutunun kodunu okutur. */}
+            {/* ALMANIN İKİ YOLU, İKİSİ DE SAYFANIN BAŞINDA: rampada kurye ya elindeki kutunun
+                kodunu okutur ya listeden seçer. Liste artık çekmecede — sayfa "araçta ne var"a
+                ayrıldı (dosya künyesi). */}
             <PrimaryButton
               label={t.vanStock.scan}
               onPress={() => setScanOpen(true)}
@@ -202,19 +217,6 @@ export function CourierVanStockScreen() {
               elevation="flat"
               testID="courier-van-search"
             />
-
-            <Text style={styles.heading}>{t.vanStock.quickHeading}</Text>
-            {candidates.length === 0 ? (
-              <Text style={styles.note}>{t.vanStock.noCandidates}</Text>
-            ) : (
-              /* İKİ SÜTUN (v3:19 `grid-template-columns:1fr 1fr`) — şerit tek dokunuşla alınacak
-                 kısa bir seçki; tek sütun onu bir katalog listesine çevirirdi. */
-              <View style={styles.grid}>
-                {candidates.map((row) => (
-                  <CandidateCard key={row.variantId} row={row} busy={busy} onPress={() => move('take', { variantId: row.variantId }, 1)} />
-                ))}
-              </View>
-            )}
 
             <View style={styles.onVanHead}>
               <Text style={styles.heading}>{t.vanStock.onVanHeading}</Text>
@@ -261,8 +263,7 @@ export function CourierVanStockScreen() {
       </ScrollView>
 
       {/* DÖNÜŞ DÜĞMESİ YÜKÜ TAŞIR (v3:19 `serbestCtaLabel`) — kurye ekrandan çıkarken araca ne
-          koyduğunu son bir kez görür. Düğme hiç çizilmiyordu ve dönüş yalnız geri tuşuyla
-          yapılabiliyordu; o da bir onay anı değil bir kaçış. */}
+          koyduğunu son bir kez görür. */}
       {!hasVehicle ? null : (
         <OperationsStickyBar>
           <PrimaryButton
@@ -283,14 +284,9 @@ export function CourierVanStockScreen() {
       <ScanSheet
         open={scanOpen}
         title={t.vanStock.scanTitle}
-        /*
-          SONUÇ ÇEKMECENİN İÇİNDE (cihazda ölçüldü 31.08 · delivery-screen'in aynı arızası).
-
-          Okutma sayfadaki bildirim satırını yazıyordu ama çekmece AÇIK kaldığı için o satır
-          katmanın ALTINDA kalıyordu: kurye kodu okutuyor, hiçbir şey olmamış gibi görünüyor ve
-          ikinci kez okutuyordu. Çekmece kapanmıyor çünkü rampada arka arkaya okutma normal —
-          kapatmak her paket için bir açma dokunuşu daha demekti. Cevap ipucu satırında.
-        */
+        /* SONUÇ ÇEKMECENİN İÇİNDE (cihazda ölçüldü 31.08): okutma sayfadaki bildirim satırını
+           yazıyordu ama çekmece açık kaldığı için o satır katmanın ALTINDA kalıyordu — kurye
+           kodu okutuyor, hiçbir şey olmamış gibi görünüyor ve ikinci kez okutuyordu. */
         hint={notice === null ? t.vanStock.scanHint : notice.text}
         onClose={() => {
           setScanOpen(false);
@@ -300,6 +296,15 @@ export function CourierVanStockScreen() {
         testID="courier-van-scan-sheet"
       />
 
+      {/*
+        ARACA ÜRÜN AL — sık koyulanlar VE arama, TEK çekmecede (kullanıcı kararı 31.08).
+
+        Boş sorguda sık koyulanlar, yazdıkça aynı liste aramaya dönüşüyor: ikisi ayrı yerlerde
+        dursaydı kurye "listede yoksa nereye bakacağım" sorusunu kendi çözerdi. Çekmece
+        dokunmayla KAPANMIYOR — rampada arka arkaya birkaç ürün alınıyor ve her biri için
+        çekmeceyi yeniden açmak aynı işi üç kez yaptırırdı; satır hâlini ("araçta N") yerinde
+        güncelliyor, sonuç cümlesi de başlığın sağında.
+      */}
       <BottomSheet
         visible={searchOpen}
         title={t.vanStock.searchTitle}
@@ -309,6 +314,7 @@ export function CourierVanStockScreen() {
         onClose={() => {
           setSearchOpen(false);
           setQuery('');
+          setNotice(null);
         }}
         testID="courier-van-search-sheet"
       >
@@ -318,92 +324,93 @@ export function CourierVanStockScreen() {
           onChangeText={setQuery}
           placeholder={t.vanStock.searchPlaceholder}
           placeholderTextColor={operationsTheme.colors.muted}
-          autoFocus
           testID="courier-van-search-input"
         />
-        {query.trim().length > 0 && results.length === 0 ? (
-          <Text style={styles.note}>{t.vanStock.searchEmpty}</Text>
-        ) : null}
-        {results.map((row) => (
-          <CandidateCard
-            key={row.variantId}
-            row={row}
-            busy={busy}
-            wide
-            onPress={() => {
-              move('take', { variantId: row.variantId }, 1);
-              setSearchOpen(false);
-              setQuery('');
-            }}
-          />
-        ))}
+        <View style={styles.sheetHead}>
+          <Text style={styles.heading}>{query.trim().length === 0 ? t.vanStock.quickHeading : ''}</Text>
+          {notice === null ? null : (
+            <Text
+              style={[styles.sheetNotice, notice.tone === 'error' ? styles.noticeError : styles.noticeOk]}
+              testID="courier-van-sheet-notice"
+            >
+              {notice.text}
+            </Text>
+          )}
+        </View>
+        {sheetRows.length === 0 ? (
+          <Text style={styles.note}>
+            {query.trim().length === 0 ? t.vanStock.noCandidates : t.vanStock.searchEmpty}
+          </Text>
+        ) : (
+          sheetRows.map((row) => (
+            <CandidateRow
+              key={row.variantId}
+              row={row}
+              onVan={vanQtyOf(row.variantId)}
+              busy={busy}
+              onPress={() => move('take', { variantId: row.variantId }, 1)}
+            />
+          ))
+        )}
+        <Text style={styles.note}>{t.vanStock.sheetHint}</Text>
       </BottomSheet>
     </View>
   );
 }
 
 /**
- * **ŞERİT KARTI** (v3:19 `serbestHizli`) — ad kalın, boy + depoda kalan ince, altta HÂL.
+ * **ÇEKMECENİN ALMA SATIRI** — kapak · ad + boy/depo · hâl.
  *
- * Hâl satırı 31.08'de doğdu ve bir arızayı kapattı: kart araçta olan üründe de "dokun, araca al"
- * diyordu, yani kurye aynı üründen ikinci kez alıp almadığını karttan okuyamıyordu. Tasarımın
- * kendi çözümü aynı yerde iki cümle: alınmışsa "araçta N" (yeşil, kart da yeşil), alınmamışsa
- * davet.
+ * Sayfadaki iki sütunlu kart ızgarasının yerini aldı (kullanıcı kararı 31.08): on iki kart yan
+ * yana dizilince ekran "kırışık" okunuyordu ve kartların hiçbiri ürünün ne olduğunu
+ * göstermiyordu. Satır biçimi hem kapağa yer açıyor hem de listenin uzunluğunu zararsız kılıyor —
+ * çekmece kaydırılır, sayfa kaydırılmaz.
  */
-function CandidateCard({
+function CandidateRow({
   row,
+  onVan,
   busy,
-  wide = false,
   onPress,
 }: {
   row: CourierVanCandidate;
+  /** Araçtaki adet — SAYFANIN listesinden okunuyor, satırın kendi alanından değil (canlı kalsın). */
+  onVan: number;
   busy: boolean;
-  /** Çekmecede kart tam genişlik alır: orada iki sütun yok, arama sonucu bir liste. */
-  wide?: boolean;
   onPress: () => void;
 }) {
-  const taken = row.onVan > 0;
+  const taken = onVan > 0;
   return (
-    /*
-      SÜTUN GENİŞLİĞİ SARMALAYICIDA, KARTIN KENDİSİNDE DEĞİL (cihazda ölçüldü 31.08).
-
-      `PressableSurface`in kendi künyesi söylüyor: verilen `style` İÇ yüzeye gider, dış `Pressable`
-      stilsiz kalır ve içeriği kadar daralır. Yani karta yazılan `flexBasis:'47%'` ızgarayı hiç
-      etkilemiyordu — şerit uzun adlarla iki sütun görünüyor, ad ile boy ayrılıp metin kısalınca
-      üç sütuna düşüyordu. Ölçü ızgaranın gerçek çocuğuna, yani sarmalayıcıya yazılır.
-    */
-    <View style={wide ? styles.cellWide : styles.cell}>
-      <PressableSurface
-        onPress={onPress}
-        disabled={busy}
-        feedback="scale"
-        style={[styles.quickCard, taken ? styles.quickCardTaken : null]}
-        accessibilityLabel={row.name}
-        testID={`courier-van-take-${row.variantId}`}
-      >
-        <Text style={styles.quickName} numberOfLines={2}>
-          {row.name}
+    <OperationsProductRow
+      name={row.name}
+      variantLabel={row.variantLabel}
+      photoUri={row.imageUrl}
+      size="md"
+      tone={taken ? 'olive' : 'neutral'}
+      meta={<Text style={styles.rowMeta}>{fillCopy(t.vanStock.inStore, { n: String(row.available) })}</Text>}
+      right={
+        <Text style={[styles.pickAction, taken ? styles.pickActionTaken : null]}>
+          {taken ? fillCopy(t.vanStock.onVanBadge, { n: String(onVan) }) : t.vanStock.tapToTake}
         </Text>
-        <Text style={styles.quickMeta}>
-          {row.variantLabel.length === 0
-            ? fillCopy(t.vanStock.inStoreNoSize, { n: String(row.available) })
-            : fillCopy(t.vanStock.inStore, { size: row.variantLabel, n: String(row.available) })}
-        </Text>
-        <Text style={[styles.quickAction, taken ? styles.quickActionTaken : null]}>
-          {taken ? fillCopy(t.vanStock.onVanBadge, { n: String(row.onVan) }) : t.vanStock.tapToTake}
-        </Text>
-      </PressableSurface>
-    </View>
+      }
+      onPress={busy ? undefined : onPress}
+      accessibilityLabel={row.name}
+      style={[styles.pick, taken ? styles.pickTaken : styles.pickIdle]}
+      testID={`courier-van-take-${row.variantId}`}
+    />
   );
 }
 
 /**
- * **ARAÇTAKİ SATIR** (v3:19 `serbestSatirlar`) — başlık + boy/kalan, sağ üstte ✕, altta adet
- * düğmeleri ve YANINDA sonucun cümlesi.
+ * **ARAÇTAKİ SATIR** — kapak solda · ad + boy/depoda kalan ortada · adet düğmeleri SAĞDA ·
+ * sonucun notu ALTTA (kullanıcı kararı 31.08).
  *
- * Satır önce yalnız ad + adet düğmesiydi. İki şey eksikti ve ikisi de kararın kendisi: "depoda
- * kalan" (kurye artırırken depoyu boşaltıp boşaltmadığını görmeli) ve ✕ (adedi tek tek sıfıra
- * indirmek, geri koymanın adı değil).
+ * Tasarım (v3:19) adet düğmelerini sola, notu onların sağına koyuyordu; not orada iki satıra
+ * kırılıp satırın yüksekliğini büyütüyor, kapağa da yer kalmıyordu. Yeni dizilim üç şeyi birden
+ * çözüyor: ürün görünüşünden tanınıyor, parmağın düştüğü yer satırın sağı oluyor ve not kendi
+ * satırında tek satıra sığıyor.
+ *
+ * "Araçtan çıkar" ayrı duruyor çünkü ayrı bir karar: adedi tek tek sıfıra indirmek "geri koymak"ın
+ * adı değil.
  */
 function VanLine({
   line,
@@ -422,15 +429,27 @@ function VanLine({
       : fillCopy(t.vanStock.lineNote, { n: String(line.available - 1) });
   return (
     <View style={styles.row} testID={`courier-van-line-${line.variantId}`}>
-      <View style={styles.rowHead}>
-        <View style={styles.rowText}>
-          <Text style={styles.rowName}>{line.name}</Text>
-          <Text style={styles.rowMeta}>
-            {line.variantLabel.length === 0
-              ? fillCopy(t.vanStock.lineMetaNoSize, { n: String(line.available) })
-              : fillCopy(t.vanStock.lineMeta, { size: line.variantLabel, n: String(line.available) })}
-          </Text>
-        </View>
+      <OperationsProductRow
+        name={line.name}
+        variantLabel={line.variantLabel}
+        photoUri={line.imageUrl}
+        size="md"
+        tone="olive"
+        meta={<Text style={styles.rowMeta}>{fillCopy(t.vanStock.lineMeta, { n: String(line.available) })}</Text>}
+        /* Adedi DÜŞÜRMEK malı depoya geri koymaktır — ayrı bir "geri ver" düğmesi yazılmadı:
+           kurye zaten sayıyı düşünüyor, ikinci bir eylem adı öğretmek aynı işi iki kez anlatmak
+           olurdu. Toptan çıkarma alttaki bağlantıyla, adet adet oynama buradan. */
+        right={
+          <OperationsStepperGroup
+            value={line.qty}
+            onChange={onChange}
+            label={line.name}
+            testID={`courier-van-qty-${line.variantId}`}
+          />
+        }
+      />
+      <View style={styles.rowFoot}>
+        <Text style={styles.rowNote}>{note}</Text>
         <PressableSurface
           onPress={onRemove}
           feedback="scale"
@@ -438,20 +457,8 @@ function VanLine({
           accessibilityLabel={t.vanStock.remove}
           testID={`courier-van-remove-${line.variantId}`}
         >
-          <Text style={styles.remove}>✕</Text>
+          <Text style={styles.remove}>{t.vanStock.remove}</Text>
         </PressableSurface>
-      </View>
-      <View style={styles.rowFoot}>
-        {/* Adedi DÜŞÜRMEK malı depoya geri koymaktır — ayrı bir "geri ver" düğmesi yazılmadı:
-            kurye zaten sayıyı düşünüyor, ikinci bir eylem adı öğretmek aynı işi iki kez
-            anlatmak olurdu. Toptan çıkarma ✕ ile, adet adet oynama buradan. */}
-        <OperationsStepperGroup
-          value={line.qty}
-          onChange={onChange}
-          label={line.name}
-          testID={`courier-van-qty-${line.variantId}`}
-        />
-        <Text style={styles.rowNote}>{note}</Text>
       </View>
     </View>
   );
@@ -463,102 +470,97 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['2xl'],
     // Yapışkan çubuk listenin ÜSTÜNDE duruyor; son satır onun altında kalmasın.
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
-    gap: operationsTheme.space.md,
+    /* SATIR ARASI SIKI (kullanıcı bulgusu 31.08 — "kartlar arasında biraz fazla boş var").
+       Satırlar artık kapaklı ve iki katlı; her biri zaten kendi kenarıyla ayrılıyor, aradaki
+       boşluğun ayırma işi yok. `md`(8) → `sm`(6): kart yüksekliği büyüdükçe aralığın azalması
+       listeyi bir yığın değil bir DİZİ gibi okutuyor. */
+    gap: operationsTheme.space.sm,
   },
   heading: {
-    paddingTop: operationsTheme.space.md,
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
   },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: operationsTheme.space.md },
-  /** İKİ SÜTUN (v3:19 `grid-template-columns:1fr 1fr`) — satırın yarısı, aradaki boşluğun payı düşülü. */
-  cell: { flexBasis: '47%', flexGrow: 1, flexShrink: 0 },
-  /** Çekmecede tek sütun: arama sonucu bir ızgara değil bir liste. */
-  cellWide: { flexBasis: '100%' },
-  quickCard: {
-    minHeight: 88,
-    padding: operationsTheme.space.lg,
-    borderRadius: operationsTheme.radius.card,
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    backgroundColor: operationsTheme.colors.panel,
-    gap: operationsTheme.space.xs,
-  },
-  /** Araçta olan ürün YEŞİL (v3:19 `h.bd`) — kart kendi hâlini söylüyor. */
-  quickCardTaken: {
-    borderColor: operationsTheme.colors['success-line'],
-    backgroundColor: operationsTheme.colors['success-bg'],
-  },
-  quickName: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['screen-title--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors.ink,
-  },
-  quickMeta: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors.muted,
-  },
-  quickAction: {
-    paddingTop: operationsTheme.space.xs,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors.body,
-  },
-  quickActionTaken: { color: operationsTheme.colors['olive-dark'] },
   onVanHead: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
     gap: operationsTheme.space.md,
+    paddingTop: operationsTheme.space.xl,
   },
   onVanCount: {
-    paddingTop: operationsTheme.space.md,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
   },
+  /* ── ARAÇTAKİ SATIR ─────────────────────────────────────────────────────── */
   row: {
-    padding: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.md,
+    paddingHorizontal: operationsTheme.space.lg,
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,
     borderColor: operationsTheme.colors['sand-300'],
     backgroundColor: operationsTheme.colors.panel,
-    gap: operationsTheme.space.md,
-  },
-  rowHead: { flexDirection: 'row', alignItems: 'flex-start', gap: operationsTheme.space.md },
-  rowText: { flex: 1, gap: 2, minWidth: 0 },
-  rowName: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['screen-title--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors.ink,
+    /* Ürün satırı ile not satırı arası: `md`(8) → `sm`(6). Not satırı kartın İKİNCİ katı, ayrı
+       bir blok değil — geniş aralık onu bağımsız bir öğe gibi gösteriyordu. */
+    gap: operationsTheme.space.sm,
   },
   rowMeta: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
   },
-  /** ✕ küçük görünür ama dokunma alanı kademenin tamamı — eldivenli parmak için. */
-  removeHit: {
-    width: operationsTheme.space['7xl'],
-    height: operationsTheme.space['7xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  remove: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text['screen-title'],
-    color: operationsTheme.colors['sand-600'],
-  },
-  /** Adet düğmeleri SOLDA, sonucun cümlesi YANINDA (v3:19) — alt alta değil. */
-  rowFoot: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.lg },
+  /** Not ve "araçtan çıkar" aynı satırda: biri sonucu söyler, öteki onu geri alır. */
+  rowFoot: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.md },
   rowNote: {
     flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  removeHit: { paddingVertical: operationsTheme.space.xs, paddingHorizontal: operationsTheme.space.sm },
+  /* "✕" YERİNE SÖZCÜK (31.08): tek başına bir çarpı, adedin sıfırlanması mı satırın silinmesi mi
+     olduğunu söylemiyor — eylemin adı yazılırsa soru da doğmuyor. */
+  remove: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.meta,
-    lineHeight: operationsTheme.text.meta * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors.terracotta,
+  },
+  /* ── ÇEKMECENİN ALMA SATIRI ─────────────────────────────────────────────── */
+  /* KABUK yalnız: dizilim (kare · metin · sağ blok) kitin `OperationsProductRow`undan geliyor —
+     komponentin kendi künyesi "kabuk çağıranın işi" diyor. */
+  pick: {
+    minHeight: operationsTheme.size.controlLg,
+    padding: operationsTheme.space.lg,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+  },
+  pickIdle: {
+    borderColor: operationsTheme.colors['sand-300'],
+    backgroundColor: operationsTheme.colors.panel,
+  },
+  /** Araçta olan ürün YEŞİL (v3:19 `h.bd`) — satır kendi hâlini söylüyor. */
+  pickTaken: {
+    borderColor: operationsTheme.colors['success-line'],
+    backgroundColor: operationsTheme.colors['success-bg'],
+  },
+  pickAction: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.body,
+  },
+  pickActionTaken: { color: operationsTheme.colors['olive-dark'] },
+  sheetHead: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.md,
+  },
+  sheetNotice: {
+    flex: 1,
+    textAlign: 'right',
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.meta,
   },
   searchInput: {
     height: operationsTheme.size.controlLg,

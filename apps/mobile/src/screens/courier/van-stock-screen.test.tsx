@@ -44,6 +44,8 @@ const candidate = (overrides: Partial<CourierVanCandidate> = {}): CourierVanCand
   variantId: SOBIYET,
   name: 'Şöbiyet',
   variantLabel: '500 g',
+  /* Kapaksız ürün: satır monogram çizer. Kapaklı hâl kitin kendi testinde (`product-thumb`). */
+  imageUrl: null,
   available: 12,
   onVan: 0,
   ...overrides,
@@ -53,6 +55,7 @@ const vanLine = (overrides: Partial<CourierVanStockLine> = {}): CourierVanStockL
   variantId: SOBIYET,
   name: 'Şöbiyet',
   variantLabel: '500 g',
+  imageUrl: null,
   qty: 3,
   available: 9,
   ...overrides,
@@ -91,7 +94,7 @@ beforeEach(() => {
 });
 
 describe('K · araca serbest ürün', () => {
-  it('OKUTMA ve ARAMA kapıları çizilir — şerit tek yol değil', async () => {
+  it('OKUTMA ve ARACA ÜRÜN AL kapıları sayfanın başında çizilir', async () => {
     mockVanStock();
 
     await render(<CourierVanStockScreen />);
@@ -102,14 +105,25 @@ describe('K · araca serbest ürün', () => {
     expect(screen.getByTestId('courier-van-search')).toBeOnTheScreen();
   });
 
-  it('şerit kartı ADI ve BOYU ayrı yazar, araçta olan ürün HÂLİNİ söyler', async () => {
-    mockVanStock({ candidates: [candidate({ onVan: 3, available: 9 })] });
+  it('ÇEKMECE boş sorguda SIK KOYULANLARI gösterir; satır adı, boyu ve hâlini yazar', async () => {
+    /* Şerit 31.08'de sayfadan ÇEKMECEYE taşındı (kullanıcı kararı): on iki kart yan yana
+       dizilince ekran "kırışık" okunuyordu ve sayfanın taşıması gereken bilgi "araçta ne var"dı.
+       Sık koyulanlar ile arama TEK çekmecede — ikisi ayrı yerde dursaydı kurye "listede yoksa
+       nereye bakacağım" sorusunu kendi çözerdi. */
+    mockVanStock({ candidates: [candidate({ available: 9 })], onVan: [vanLine({ qty: 3, available: 9 })] });
 
     await render(<CourierVanStockScreen />);
-    await waitFor(() => expect(screen.getByTestId(`courier-van-take-${SOBIYET}`)).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('courier-van-search')).toBeOnTheScreen());
+    // Sayfada alma satırı YOK: sayfa artık yalnız "araçta ne var"ı taşıyor.
+    expect(screen.queryByTestId(`courier-van-take-${SOBIYET}`)).toBeNull();
+    await fireEvent.press(screen.getByTestId('courier-van-search'));
 
     const card = screen.getByTestId(`courier-van-take-${SOBIYET}`);
-    expect(card).toHaveTextContent(/500 g · depoda 9/);
+    /* Boy artık BAŞLIĞIN ince yarısında (kitin `OperationsProductRow` deseni), meta satırı
+       yalnız stok sayısını taşıyor — iki ekranın aynı satırı iki farklı biçimde yazmasın. */
+    expect(card).toHaveTextContent(/Şöbiyet/);
+    expect(card).toHaveTextContent(/500 g/);
+    expect(card).toHaveTextContent(/depoda 9/);
     /* Kart araçta olan üründe de "dokun, araca al" diyordu — kurye ikinci kez alıp almadığını
        hiçbir yerde göremiyordu (tur 31.08). */
     expect(card).toHaveTextContent(/araçta 3/);
@@ -122,7 +136,8 @@ describe('K · araca serbest ürün', () => {
     await waitFor(() => expect(screen.getByTestId(`courier-van-line-${SOBIYET}`)).toBeOnTheScreen());
 
     const line = screen.getByTestId(`courier-van-line-${SOBIYET}`);
-    expect(line).toHaveTextContent(/500 g · depoda kalan 9/);
+    expect(line).toHaveTextContent(/500 g/);
+    expect(line).toHaveTextContent(/depoda kalan 9/);
     expect(line).toHaveTextContent(/Alındıktan sonra depoda 8 kalır/);
 
     /* ✕ ADEDİ SIFIRA İNDİRMEK DEĞİL, satırı toptan geri koymaktır: adedi tek tek düşürmek

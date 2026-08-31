@@ -10,6 +10,7 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtySlider } from '@/components/operations/qty-slider';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { OperationsProductRow } from '@/components/operations/product-row';
 import { CirclePhoto } from '@/components/ui/circle-photo';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
@@ -282,26 +283,34 @@ const ProductRow = memo(function ProductRow({ product, onOpen }: ProductRowProps
           ? t.card.soldOut
           : fillCopy(t.card.remaining, { n: String(product.availableHere ?? 0) });
 
+  /*
+    SATIR KİTTEN (`OperationsProductRow` · 31.08) — burada elden çiziliyordu ve kitin satırıyla
+    BİREBİR aynı anatomiydi: solda kare, ortada ad + alt bilgi, sağda rozet. Üçüncü kopyaydı
+    (hazırlık ekranı ve serbest ürün onu zaten kullanıyor) ve kopyaların ayrışması ölçüldü:
+    burada resim DAİREYDİ, ötekilerde yuvarlatılmış kare — aynı ürün iki ekranda iki farklı
+    kimlikle görünüyordu. Kit kareyi seçiyor (komponentin kendi künyesi: "ürün kutudur, kişi
+    değil") ve karar tek yerde duruyor (CLAUDE §1).
+
+    `memo` YERİNDE KALIYOR — gerekçesi aşağıdaki künyede ve kitle ilgisi yok.
+  */
   return (
-    <PressableSurface
-      onPress={() => onOpen(product)}
-      disabled={!sellable}
-      feedback="scale"
-      style={[styles.productRow, sellable ? null : styles.productRowClosed]}
-      accessibilityLabel={product.name}
-      testID={`sale-product-${product.id}`}
-    >
-      <CirclePhoto size={44} initial={product.name.slice(0, 1)} initialFontSize={18} photoUri={product.image.url} />
-      <View style={styles.productInfo}>
-        <Text style={styles.productName}>{product.name}</Text>
+    <OperationsProductRow
+      name={product.name}
+      photoUri={product.image.url}
+      size="md"
+      meta={
         <Text style={styles.productMeta}>
           {[product.unitLabel, product.priceCents === null ? null : money(product.priceCents)]
             .filter((part): part is string => part !== null && part.length > 0)
             .join(' · ')}
         </Text>
-      </View>
-      <Text style={[styles.productBadge, sellable ? null : styles.productBadgeClosed]}>{badge}</Text>
-    </PressableSurface>
+      }
+      right={<Text style={[styles.productBadge, sellable ? null : styles.productBadgeClosed]}>{badge}</Text>}
+      onPress={sellable ? () => onOpen(product) : undefined}
+      accessibilityLabel={product.name}
+      style={[styles.productRow, sellable ? null : styles.productRowClosed]}
+      testID={`sale-product-${product.id}`}
+    />
   );
 });
 
@@ -374,10 +383,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: operationsTheme.space.md,
   },
+  /** KABUK yalnız: dizilim kitin `OperationsProductRow`undan geliyor. */
   productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.lg,
     padding: operationsTheme.space['2xl'],
     borderWidth: operationsTheme.border.base,
     borderColor: operationsTheme.colors['sand-500'],
@@ -386,15 +393,6 @@ const styles = StyleSheet.create({
   },
   productRowClosed: {
     backgroundColor: operationsTheme.colors.panel,
-  },
-  productInfo: {
-    flex: 1,
-    gap: operationsTheme.space['2xs'],
-  },
-  productName: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.ink,
   },
   productMeta: {
     fontFamily: operationsTheme.font.body[400],
