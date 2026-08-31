@@ -47,7 +47,7 @@
         "title": "{item} — depoda {qty} adet eksik",
         "titleMoreLines": "{item} — depoda {qty} adet eksik · +{more} kalem daha",
         "titleNoHead": "{lines} kalem eksik toplandı",
-        "action": "motor önerisi hazır — kararı aç"
+        "action": "sistem önerisi hazır — kararı aç"
       },
       "offer": {
         "eyebrow": "YAKIN-SKT TEKLİFİ",
@@ -63,8 +63,8 @@
         "eyebrow": "TEDARİK TASLAĞI",
         "title": "{supplier} · {lines} kalem",
         "titleNoHead": "{groups} grup",
-        "subtitleMore": "motor önerisi hazır · +{more} grup daha",
-        "subtitle": "motor önerisi hazır",
+        "subtitleMore": "sistem önerisi hazır · +{more} grup daha",
+        "subtitle": "sistem önerisi hazır",
         "subtitleUnmapped": "{unmapped} eşlenmemiş varyant — masada eşleyin"
       }
     },
@@ -146,8 +146,8 @@
     "line": "{title} — {ordered} istendi · yalnız {picked} toplanabiliyor",
     "lineValue": "eksik {missing} adet · {value}",
     "advice": {
-      "ask_customer": "motor önerisi: MÜŞTERİYE SOR",
-      "send_rest": "motor önerisi: kalanı gönder — eksik küçük"
+      "ask_customer": "sistem önerisi: MÜŞTERİYE SOR",
+      "send_rest": "sistem önerisi: kalanı gönder — eksik küçük"
     },
     "adviceReason": {
       "line_fully_missing": "kalem tamamen eksik",

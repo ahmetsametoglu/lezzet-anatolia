@@ -21,6 +21,22 @@ import { resetWarehouseStatus } from './warehouse-status';
   geçtiğini ölçüyor); ağ fetch seviyesinde sahte, URL'e göre dallanır.
 */
 
+/*
+  BİLDİRİM KANALI TOAST (31.08) — ekrana yapıştırılan bant söküldü, cümle kökteki tek `ToastHost`a
+  gidiyor (ekran künyesi). Test o yüzden artık bir testID değil, basılan METNİ ölçüyor.
+*/
+const mockToast = jest.fn<void, [string]>();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
+/** Toast'a basılmış cümlelerden biri kalıba uyuyor mu. */
+async function expectToast(pattern: RegExp): Promise<void> {
+  await waitFor(() => expect(mockToast.mock.calls.some(([message]) => pattern.test(message))).toBe(true));
+}
+
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
@@ -69,6 +85,8 @@ interface Net {
   orders: unknown[];
   open?: unknown;
   seal?: unknown;
+  /** Sipariş düzeyindeki eksik beyanı (31.08) — kutu ucundan AYRI. */
+  declareShort?: unknown;
   resolve?: unknown;
   label?: unknown;
   /** Deponun kargo kutusu tipleri (07.12) — varsayılan BOŞ: rota testleri bu okumayı hiç görmez. */
@@ -90,6 +108,7 @@ fetchMock.mockImplementation((url, init) => {
   if (path.endsWith('/dispatch-options')) return Promise.resolve(ok(net.dispatchOptions));
   if (path.endsWith('/announce')) return Promise.resolve(ok(net.announce));
   if (path.includes('/codes/resolve')) return Promise.resolve(ok(net.resolve));
+  if (path.endsWith('/declare-short')) return Promise.resolve(ok(net.declareShort ?? { status: 'ok', shortfalls: [] }));
   if (path.endsWith('/seal')) return Promise.resolve(ok(net.seal));
   if (path.endsWith('/label')) return Promise.resolve(ok(net.label ?? { status: 'not_found' }));
   if (path.endsWith('/printed')) return Promise.resolve(ok({ status: 'ok', printedAt: '2026-08-22T20:00:00Z' }));
@@ -110,9 +129,19 @@ async function renderPicking() {
 }
 
 async function scanChip(label: string) {
-  await fireEvent.press(screen.getByTestId('warehouse-picking-scan'));
+  await fireEvent.press(screen.getByTestId('warehouse-picking-fab'));
   await fireEvent.press(screen.getByLabelText(label));
   await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/codes/resolve'))).toBe(true));
+}
+
+/**
+ * Kontrol listesinden kalemi açıp KALANIN TAMAMINI kutuya koyar — eski "tamamı ✓" düğmesinin
+ * yerine geçen yol (satıra dokunmak elle düzeltmedir ve çekmece kalanla dolu gelir).
+ */
+async function putAll(itemId: string) {
+  await fireEvent.press(screen.getByTestId(`warehouse-picking-pending-${itemId}`));
+  await waitFor(() => expect(screen.getByTestId('warehouse-picking-qty-sheet-confirm')).toBeOnTheScreen());
+  await fireEvent.press(screen.getByTestId('warehouse-picking-qty-sheet-confirm'));
 }
 
 beforeAll(() => {
@@ -126,6 +155,7 @@ beforeEach(() => {
   net.orders = [];
   net.open = undefined;
   net.seal = undefined;
+  net.declareShort = undefined;
   net.resolve = undefined;
   net.label = undefined;
   net.shippingBoxes = undefined;
@@ -143,18 +173,22 @@ describe('D1 · kutu döngüsü', () => {
     net.open = { status: 'ok', box: preparationBox() };
     await renderPicking();
 
-    const cta = screen.getByTestId('warehouse-picking-cta');
-    expect(cta).toHaveTextContent(/Kutu aç/);
-    expect(cta).not.toBeDisabled();
+    // Kutu YOKKEN yüzen düğmenin işi okutmak değil KUTU AÇMAK (v3 · 31.08): elin gittiği yer
+    // sabit, oradaki eylem ekranın hâline göre değişiyor.
+    const fab = screen.getByTestId('warehouse-picking-fab');
+    expect(screen.getByRole('button', { name: 'Kutu aç' })).toBeOnTheScreen();
+    expect(screen.getByTestId('warehouse-picking-box-empty')).toHaveTextContent(/Kutu açılmadı/);
 
     // Açılış cevabından SONRA kuyruk yeniden okunacak — o okuma kutulu hâli getirsin.
     net.orders = [preparationOrder({ boxes: [preparationBox()] })];
-    await fireEvent.press(cta);
+    await fireEvent.press(fab);
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-open')).toHaveTextContent(/KUTU 1/));
-    expect(screen.getByTestId('warehouse-picking-scan')).toBeOnTheScreen();
-    // Boş kutu kapanmaz: içerik girilene dek CTA kilitli.
-    expect(screen.getByTestId('warehouse-picking-cta')).toBeDisabled();
+    // Kutu açıldı: aynı düğme artık OKUTUYOR, boş hâl bloğu düştü.
+    expect(screen.getByRole('button', { name: 'Ürün barkodunu okut' })).toBeOnTheScreen();
+    expect(screen.queryByTestId('warehouse-picking-box-empty')).toBeNull();
+    // Boş kutu kapanmaz: içerik girilene dek kapatma kilitli.
+    expect(screen.getByTestId('warehouse-picking-seal')).toBeDisabled();
   });
 
   it('okutulan koli ÇARPAN kadar ekler ama tavan motorun kapasitesidir; yabancı ürün kutuya girmez', async () => {
@@ -167,18 +201,33 @@ describe('D1 · kutu döngüsü', () => {
     };
     await renderPicking();
 
-    await scanChip('Toplama');
-    await waitFor(() => expect(String(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`).props.value)).toBe('2'));
-    expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/\+2 adet kutuda/);
+    /* Çipler artık BU SİPARİŞİN kalemleri (31.08): etiket ürünün adı, kod da onun gerçek paket
+       barkodu. Havuzun rol adları ("Toplama", "Yabancı ürün") toplama ekranında artık yok. */
+    await scanChip('Fıstıklı Baklava · 1 kg');
+    /* OKUTMA DOĞRUDAN YAZMAZ, ÇEKMECEYİ AÇAR ve adet KALANLA dolu gelir (v3 · 31.08). Koli 6'lık
+       ama motor 2 ayırabilmiş: çekmece 2 ile açılır — rafta olmayan mal okutmayla da yazılamaz.
+       Koli çarpanı burada bilerek kullanılmıyor (hook künyesi): sayıyı bir insan onaylayacaksa
+       doğru varsayılan "daha ne kadar lazım"dır. */
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-qty-sheet-qty-value')).toHaveTextContent('2'));
+    /* BARKOD EŞLEŞMESİ SESSİZ (kullanıcı kararı 31.08): çekmece ürünün adıyla açılıyor ve satır
+       zaten sayıyor — "bulundu" cümlesi aynı haberi üçüncü kez vermekti. Cümle YALNIZ SKU/tedarikçi
+       kodu eşleşmesinde kalıyor (hook künyesi: orada söylenen şey eşleşmenin kesinlik derecesi). */
+    expect(mockToast).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByTestId('warehouse-picking-qty-sheet-confirm'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-open')).toHaveTextContent(/2\/2/));
 
     // Siparişte olmayan ürün: ANINDA durdurulur, hiçbir satıra düşmez (tasarım: "bu siparişte yok").
     net.resolve = {
       status: 'found', variantId: '00000000-0000-4000-8000-000000000077', productName: 'Sahlep',
       variantLabel: '250 g', kind: 'unit', qtyPerCode: 1, source: 'barcode', sku: 'SKU-4120', dateType: 'DDM', shelfLifeDays: 360, imageUrl: null, caseSizes: [],
     };
-    await scanChip('Yabancı ürün');
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/bu siparişte yok/));
-    expect(String(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`).props.value)).toBe('2');
+    /* Yabancı ürün için AYRI bir çip yok — çip yalnız tetikleyici, cevabı `net.resolve` veriyor:
+       aynı çip başka bir varyant döndürdüğünde ret dalı aynen koşuyor. */
+    await scanChip('Fıstıklı Baklava · 1 kg');
+    await expectToast(/bu siparişte yok/);
+    // Çekmece HİÇ açılmadı ve kutunun içi değişmedi.
+    expect(screen.queryByTestId('warehouse-picking-qty-sheet-confirm')).toBeNull();
+    expect(screen.getByTestId('warehouse-picking-box-open')).toHaveTextContent(/2\/2/);
   });
 
   it('kapanış BU kutunun dağılımını gönderir, `ready` cümlesini ve ETİKET önizlemesini yazar', async () => {
@@ -199,12 +248,12 @@ describe('D1 · kutu döngüsü', () => {
     net.printers = [];
     await renderPicking();
 
-    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
-    const cta = screen.getByTestId('warehouse-picking-cta');
-    expect(cta).toHaveTextContent(/Kutuyu KAPAT/);
-    await fireEvent.press(cta);
+    await putAll(ITEM_A);
+    const seal = screen.getByTestId('warehouse-picking-seal');
+    expect(seal).toHaveTextContent(/Kutuyu kapat/);
+    await fireEvent.press(seal);
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/sipariş HAZIR/));
+    await expectToast(/sipariş HAZIR/);
     // Gönderilen dağılım BU kutunun (kümülatif değil) ve motorun önerdiği partiden.
     expect(lastBodyOf('/seal')).toMatchObject({
       picks: [{ orderItemId: ITEM_A, batches: [{ stockId: STOCK_A, qty: 2 }] }],
@@ -236,8 +285,8 @@ describe('D1 · kutu döngüsü', () => {
     net.printers = [printer];
     await renderPicking();
 
-    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await putAll(ITEM_A);
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Etiket basıldı \(QL-1110NWB\)/));
     // PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef ENVANTERDEN geldi.
@@ -267,11 +316,11 @@ describe('D1 · kutu döngüsü', () => {
     net.printers = [{ id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa', purpose: 'box', address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'RollW62' }];
     await renderPicking();
 
-    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await putAll(ITEM_A);
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
 
     // Kapanış yazıldı (sipariş HAZIR cümlesi), basım düştü — ikisi AYRI gerçek.
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/sipariş HAZIR/));
+    await expectToast(/sipariş HAZIR/);
     await waitFor(() =>
       expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Basım düştü: Print failed: SetLabelSizeError/),
     );
@@ -290,7 +339,7 @@ describe('D1 · kutu döngüsü', () => {
     net.seal = { status: 'ok', boxNo: 1, ready: false, missing: [{ itemId: ITEM_A, missingQty: 3 }], shortfalls: [] };
     await renderPicking();
 
-    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
+    await putAll(ITEM_A);
     // Kapanış cevabından sonra kuyruk yeniden okunur: kutu artık KAPALI, sipariş yarım.
     net.orders = [
       preparationOrder({
@@ -298,23 +347,104 @@ describe('D1 · kutu döngüsü', () => {
         boxes: [preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] })],
       }),
     ];
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    /* Eksik kalsa da "Kutuyu kapat" HİÇ SORMAZ (kullanıcı kararı 31.08): beyansız kapanış, sipariş
+       `preparing`de kalır ve depocu ikinci kutuyu açar — yaygın hâl bu ve sorusuz olmalı. */
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/eksik kalan var/i));
+    await expectToast(/eksik kalan var/i);
     /* KAPANAN KUTU KARTI (v3:349) — v2 tek satırlık özetti; v3 kutunun İÇİNDEKİNİ ve QR'ını da
        yazıyor. İkisi de sözleşmede zaten var ve ikisi de bir soruya cevap: "yanlış kutuyu mu
        kapattım" ve "bu karton hangi etiketle gidecek". Kapalı kutu geri açılamaz — blok bir
        KAYITTIR, düzeltilecek bir şey değil. İçerik kalem ADIYLA yazılır: "2 ürün" neyin
        kapandığını söylemez. */
     const sealed = screen.getByTestId('warehouse-picking-box-1');
-    expect(sealed).toHaveTextContent(/Kutu 1 kapalı · 2 ürün/);
-    expect(sealed).toHaveTextContent(/2 × /);
-    expect(sealed).toHaveTextContent(/QR: KT-26-4K2M9P7HWX/);
-    const cta = screen.getByTestId('warehouse-picking-cta');
-    expect(cta).toHaveTextContent(/Yeni kutu aç \(Kutu 2\)/);
-    // Kutulu siparişte yarım işin alt cümlesi "önceki kutularda" der — "yerine geçer" DEMEZ:
-    // birleşimi sunucu kurar, önceki kutuların kaydı üstüne yazılmaz.
-    expect(screen.getByTestId(`warehouse-picking-previous-${ITEM_A}`)).toHaveTextContent(/önceki kutularda 2/);
+    expect(sealed).toHaveTextContent(/Kutu 1/);
+    expect(sealed).toHaveTextContent(/KT-26-4K2M9P7HWX · 2 adet/);
+    // İçerik kalem ADIYLA (ve artık kendi satırında, adet sağda).
+    expect(sealed).toHaveTextContent(/Fıstıklı Baklava/);
+    // Kutu kapandı: yüzen düğme yine "kutu aç"a döndü ve boş hâl bloğu geri geldi.
+    expect(screen.getByRole('button', { name: 'Kutu aç' })).toBeOnTheScreen();
+    expect(screen.getByTestId('warehouse-picking-box-empty')).toBeOnTheScreen();
+    /* KAPALI kutudan gelen adet satırda söylenir — bunu söyleyen başka bir yer yok. Kalem AÇIK
+       kutuda olsaydı yazılmazdı: o blok zaten "2/5" diyor ve aynı sayıyı iki kez yazmak, ekrandaki
+       rakam kalabalığını artırmaktan başka bir şey yapmıyor (kullanıcı bulgusu 31.08). */
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toHaveTextContent(/kapalı kutuda 2/);
+    // Sağda kalan ve istenen AYRI okunur — bölü işareti yok: 5 istenen − 2 kutulanan = 3 kalan.
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toHaveTextContent(/3\s*kalan/);
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toHaveTextContent(/5 istenen/);
+  });
+
+  /*
+    EKSİK BEYANI AYRI BİR EYLEM (kullanıcı kararı 31.08) — ne satırda bir bağlantı, ne de her
+    kapanışta çıkan bir soru.
+
+    İki tur sürdü. Önce satırdaki "eksik bildir" bağlantısı söküldü: kalem adının hemen altındaydı,
+    yanlışlıkla tıklanıyordu ve tek başına hiçbir şey yapmadığı için ne işe yaradığı okunmuyordu.
+    Yerine kapanışın önüne bir onay kondu — ama o da yanlış yere düştü: depocu ikinci kutuyu açmak
+    için o ekrandan günde onlarca kez geçiyor ve "Eksikleri bildir" düğmesi normal yolun üstünde
+    kalıyordu (*"bu ekran yanlışlıkla eksik bildir kapata müsait"*).
+
+    Bugünkü bölüşüm niyete göre: **Kutuyu kapat** sormaz, **Eksikleri bildirerek kapat** ayrı bir
+    eylemdir ve onayı o ister. Eksik yine konan adetten TÜRÜYOR — beyan edilen şey miktar değil,
+    "rafta yok" kararı.
+  */
+  it('eksikleri bildirme ayrı eylemdir, ÖNCE sorar; beyan `declareShort` ile gider', async () => {
+    net.orders = [preparationOrder({ boxes: [preparationBox()], lines: [preparationLine({ orderedQty: 5 })] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    await renderPicking();
+
+    // Öneri 2 taşıyor, sipariş 5 — kalanın tamamı konsa bile 3 adet eksik kalıyor.
+    await putAll(ITEM_A);
+    expect(screen.queryByTestId(`warehouse-picking-short-${ITEM_A}`)).toBeNull();
+
+    // "Kutuyu kapat" hiçbir şey SORMAZ; soru yalnız bildirme eyleminin önünde.
+    await fireEvent.press(screen.getByTestId('warehouse-picking-declare-short'));
+
+    // Soru eksikleri TEK TEK sayar: "3 kalem eksik" hangileri olduğunu söylemez.
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-seal-confirm')).toBeOnTheScreen());
+    const sheet = screen.getByTestId('warehouse-picking-seal-confirm');
+    expect(sheet).toHaveTextContent(/3 adet eksik/);
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal-confirm-confirm'));
+
+    /* Beyan artık KUTU ucuna değil, SİPARİŞ ucuna gidiyor (`/orders/:id/declare-short`) — son kutu
+       kapandıktan sonra mühürlenecek kutu kalmıyor ve eski yol sessizce hiçbir şey yapmıyordu
+       (cihazda ölçüldü 31.08). */
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/declare-short'))).toBe(true),
+    );
+  });
+
+  /*
+    ONAYDAN VAZGEÇMEK HİÇBİR ŞEY KAPATMAZ (kullanıcı kararı 31.08).
+
+    Çekmece "Kutuyu kapat"ın önünde dururken iptalin anlamı "beyansız kapat"tı — iki ayrı eylem tek
+    dokunuşta gizleniyordu. Çekmece artık kendi düğmesiyle açılıyor ve iptalin karşılığı yalnız
+    vazgeçmek: hiçbir istek gitmez, kutu açık kalır.
+  */
+  it('beyan onayından VAZGEÇMEK hiçbir şey göndermez — kutu açık kalır', async () => {
+    net.orders = [preparationOrder({ boxes: [preparationBox()], lines: [preparationLine({ orderedQty: 5 })] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: false, missing: [{ itemId: ITEM_A, missingQty: 3 }], shortfalls: [] };
+    await renderPicking();
+
+    await putAll(ITEM_A);
+    await fireEvent.press(screen.getByTestId('warehouse-picking-declare-short'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-seal-confirm-cancel')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal-confirm-cancel'));
+
+    expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/seal'))).toBe(false);
+    expect(screen.getByTestId('warehouse-picking-box-open')).toBeOnTheScreen();
+  });
+
+  it('eksik YOKKEN kapanış hiç sormaz — her kapanışta onay, onayı refleks yapar', async () => {
+    net.orders = [preparationOrder({ boxes: [preparationBox()] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    await renderPicking();
+
+    await putAll(ITEM_A);
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
+
+    expect(screen.queryByTestId('warehouse-picking-seal-confirm-confirm')).toBeNull();
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/seal'))).toBe(true));
   });
 
   it('kutusuz BAŞLANMIŞ iş kutu moduna girmez — şerit yok, eski CTA duruyor', async () => {
@@ -322,7 +452,8 @@ describe('D1 · kutu döngüsü', () => {
     await renderPicking();
 
     expect(screen.queryByTestId('warehouse-picking-boxes')).toBeNull();
-    expect(screen.queryByTestId('warehouse-picking-scan')).toBeNull();
+    // Yüzen okutma düğmesi de yok: kutusuz akışta okutmanın gideceği kutu yok.
+    expect(screen.queryByTestId('warehouse-picking-fab')).toBeNull();
     expect(screen.getByTestId('warehouse-picking-cta')).toHaveTextContent(/Kalem kalem say/);
   });
 });
@@ -353,7 +484,7 @@ describe('D1 · kargo kutusu tipi', () => {
     net.open = { status: 'ok', box: preparationBox() };
     await renderPicking();
 
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-fab'));
 
     await waitFor(() => expect(lastBodyOf('/boxes')).toEqual({ shippingBoxId: null }));
     expect(screen.queryByTestId('warehouse-picking-box-type-sheet')).toBeNull();
@@ -367,7 +498,7 @@ describe('D1 · kargo kutusu tipi', () => {
     await renderPicking();
 
     await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/shipping-boxes'))).toBe(true));
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-fab'));
 
     // Ölçü satırı SANTİMDİR: veri mm ama depocu kartonu "40×30×25" diye tanıyor.
     expect(screen.getByTestId(`warehouse-picking-box-type-${ORTA.id}`)).toHaveTextContent(/40×30×25 cm/);
@@ -389,7 +520,7 @@ describe('D1 · kargo kutusu tipi', () => {
     await renderPicking();
 
     await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/shipping-boxes'))).toBe(true));
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-fab'));
     await fireEvent.press(screen.getByTestId('warehouse-picking-box-type-skip'));
 
     await waitFor(() => expect(lastBodyOf('/boxes')).toEqual({ shippingBoxId: null }));
@@ -402,7 +533,7 @@ describe('D1 · kargo kutusu tipi', () => {
     await renderPicking();
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-type-missing')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-fab'));
 
     // Çekmece hiç açılmaz: cevabı olmayan bir soru sormak, depocuyu boş bir listeye bakmaya zorlar.
     expect(screen.queryByTestId('warehouse-picking-box-type-skip')).toBeNull();
@@ -428,10 +559,10 @@ describe('D1 · sevk (kargoya ver)', () => {
     net.orders = [preparationOrder({ deliveryType, boxes: [preparationBox()] })];
     net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
     await renderPicking();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`), '2');
+    await putAll(ITEM_A);
     // Kapanıştan sonra kuyruk yeniden okunuyor: `ready` sipariş listeden DÜŞÜYOR.
     net.orders = [];
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
     await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/seal'))).toBe(true));
   }
 

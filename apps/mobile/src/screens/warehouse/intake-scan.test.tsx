@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import type { ResolveCodeResponseSchema } from '@lezzet/types';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
 import { IntakeScreen } from './intake-screen';
 import { intakeRow } from './warehouse-fixture';
@@ -82,6 +82,9 @@ async function renderIntake() {
 /** Tarama sayfasını açıp bir havuz çipine basar — kodun kendisi önemsiz, cevabı mock belirliyor. */
 async function scanOnce() {
   await fireEvent.press(screen.getByTestId('warehouse-intake-scan-cta'));
+  /* Çekmece bir kare sonra çizilir: `visible` prop'u kütüphanenin `present()`ine çevriliyor ve o
+       bir durum değişimi. Cihazda görünmez, testte `fireEvent`ler aynı karede koştuğu için görünür. */
+  await waitFor(() => expect(screen.getByLabelText('Paket')).toBeOnTheScreen());
   await fireEvent.press(screen.getByLabelText('Paket'));
   await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/codes/resolve'))).toBe(true));
 }
@@ -152,18 +155,18 @@ describe('D2 · tarama akışı', () => {
   });
 
   /*
-    iOS'TA ADET ÇEKMECESİ OKUTMA PENCERESİ KAPANMADAN AÇILMAZ (arıza, kullanıcı bulgusu 30.08).
+    OKUTMADAN SONRA ÇEKMECE AÇILIR — ARADA BİR KAPI YOK (01.09).
 
-    Belirti cihazda şuydu: koli okutulunca satır doğru sayıyor ama çekmece açılmıyor — ekran
-    griye dönüyor, panel ekranın altında asılı kalıyordu. Sebep iki `Modal`ın çakışması: iOS
-    birincinin kapanış animasyonu sürerken ikincisini sunmuyor, panelin yerleşimi hiç ölçülmüyor
-    ve `BottomSheet`in ölçüme bağlı açılışı hiç tetiklenmiyor.
+    Bu testin bir önceki hâli TAM TERSİNİ ölçüyordu: "sinyal geldiği hâlde çekmece açılmamalı,
+    okutma penceresi kalktığını söyleyince açılmalı". O kapı 30.08'de bir arızanın çaresiydi —
+    iOS kapanmakta olan modal'ın üstüne yenisini sunmuyor, panel monte oluyor ama hiç yerleşmiyor
+    ve `BottomSheet`in ölçüme bağlı açılışı hiç tetiklenmiyordu.
 
-    Test kapıyı ölçüyor, animasyonu değil: sinyal geldiği hâlde çekmece açılmamalı; okutma
-    penceresi `onDismiss` ile kalktığını söyleyince açılmalı. Jest `Platform.OS`u 'ios' koşuyor,
-    yani bu dal testte gerçekten yürüyor.
+    01.09'da çekmece `@gorhom/bottom-sheet`e geçti ve RN `Modal`ı kullanmıyor: portal'a asılıyor.
+    Sınırlama ortadan kalktı, kapı da söküldü. Ölçülen şey artık sözleşmenin kendisi — okutma
+    satırı sayar VE çekmeceyi açar; ikisi arasında beklenecek bir şey yok.
   */
-  it('iOS: çekmece okutma penceresi KALKMADAN açılmaz, kalkınca açılır', async () => {
+  it('okutma satırı sayar ve adet çekmecesini AÇAR — arada el sıkışma yok', async () => {
     withScan({
       status: 'found',
       variantId: ROW_A.variantId,
@@ -180,21 +183,9 @@ describe('D2 · tarama akışı', () => {
     });
     await renderIntake();
 
-    /* Kapanış kancası pencere AÇIKKEN alınıyor: `Modal` kapalıyken hiç çizilmiyor ve prop'una
-       erişilemiyor. Kanca `useCallback` ile sabit, okutmadan sonra da aynı işi yapar. */
-    await fireEvent.press(screen.getByTestId('warehouse-intake-scan-cta'));
-    const dismissScanWindow = screen.getByTestId('warehouse-intake-scan').props.onDismiss;
-    await fireEvent.press(screen.getByLabelText('Paket'));
-    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).includes('/codes/resolve'))).toBe(true));
+    await scanOnce();
 
-    // Satır SAYDI — okutmanın kendisi beklemiyor, bekleyen yalnız çekmece.
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('6'));
-    expect(screen.queryByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}`)).toBeNull();
-
-    // Pencere ekrandan kalktı: `Modal.onDismiss` çağıranın kapısını açar.
-    await act(async () => {
-      dismissScanWindow();
-    });
     await waitFor(() => expect(screen.getByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}`)).toBeTruthy());
   });
 

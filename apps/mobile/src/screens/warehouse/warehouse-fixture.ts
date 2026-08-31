@@ -37,6 +37,9 @@ export function preparationLine(overrides: Partial<PreparationLineContract> = {}
     variantId: uuid(31),
     productName: 'Fıstıklı Baklava',
     variantLabel: '1 kg',
+    // Kapaksız ürün varsayılan: ekranın monogram düşüşü de böylece her testte sınanıyor (31.08).
+    imageUrl: null,
+    barcode: '8691000030009',
     // 21.11d: kuyruk artık mevcut parti dağılımını taşıyor — varsayılan "hiç kayıt yok".
     pickedBatches: [],
     orderedQty: 2,

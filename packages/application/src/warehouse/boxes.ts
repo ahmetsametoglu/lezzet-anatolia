@@ -7,7 +7,7 @@ import {
   UserProfileService,
   WarehousePrinterService,
 } from '@lezzet/database';
-import { boxCompletion, orderBoxCode } from '@lezzet/domain-core';
+import { boxCompletion, orderBoxCode, type ShortfallSuggestion } from '@lezzet/domain-core';
 import type { Order, PreparationPick, PrinterPurpose, TransitionResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
@@ -191,9 +191,27 @@ export async function sealBox(
     found.items.map((item) => ({ itemId: item.id, orderedQty: item.qty, boxedQty: boxedQty(item) })),
   );
 
-  // Tamamı kutulandıysa sipariş sevkiyata hazırdır — `confirmPreparation` ile aynı geçiş.
+  /*
+    SEVKİYATA HAZIR — tamamı kutulandıysa **ya da** depocu eksiği BEYAN ettiyse (kullanıcı kararı
+    31.08).
+
+    ── NİÇİN BEYAN DA HAZIR YAPAR ──────────────────────────────────────────────
+    Eskiden yalnız `completion.complete` geçişi açıyordu ve eksik beyan edilen sipariş
+    `preparing`de kilitleniyordu. Bu bir tercih değil, **çıkışsız bir durumdu**: yüklemeye yalnız
+    `ready` sipariş girebiliyor (`startCourierDay` — *"yalnız `ready` olanlar yola çıkar"*), yani
+    rafta bulunamayan tek bir adet siparişin tamamını depoda tutuyordu. Depocunun "bitirdim"
+    diyebileceği bir yol da yoktu (cihazda görüldü 31.08).
+
+    Karar modeli buna izin veriyor: **depocunun yazdığı adet kararın kendisidir** (kullanıcı
+    kararı 31.08 — "Model A"). `fulfilled_qty` "şu kadarı gidiyor" demektir ve para zaten o
+    sayıdan türüyor; eksiğin NE YAPILACAĞI (eksik gitsin · iptal · ikame · iade) ayrı bir karar ve
+    o karar siparişi depoda tutmamalı.
+
+    `declareShort` bunun beyanıdır — *"bu kutu son, kalanı bulamadım"*. Beyansız kapanışta geçiş
+    YOK ve olmamalı: o hâlde depocu yeni kutu açacaktır, sipariş yarım kalmıştır.
+  */
   let ready = false;
-  if (completion.complete) {
+  if (completion.complete || input.declareShort === true) {
     const transition: TransitionResult = await new OrderService(db).transition({
       orderId: box.orderId,
       from: found.order.status,
@@ -378,4 +396,70 @@ function mergeBatches(
 /** Postgres benzersizlik ihlali — supabase-js reddi düz nesnedir (`rpc-error.ts` ölçümü). */
 function isUniqueViolation(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'code' in error && (error as { code: unknown }).code === '23505';
+}
+
+/*
+  ── SİPARİŞİ EKSİK KAPAT (kullanıcı bulgusu 31.08, cihazda ölçüldü) ───────────────────────────────
+
+  Beyan `sealBox`ın içinde doğmuştu ve orada KALAMAZDI: kapanış bir KUTU işlemi, beyan ise bir
+  SİPARİŞ kararı. Depocunun gerçek hareketi şu — son kutuyu kapatır, sonra rafta kalanı bulamadığını
+  anlar. O anda açık kutu YOKTUR ve `sealBox` boş/eksik kutuda `empty` dönüp hiçbir şey yapmaz:
+  cihazda ölçüldü (31.08 · `LA-26-PAWX6L`) — iki kutu mühürlü, sipariş `preparing`de asılı, kırmızı
+  düğme basılıyor ve hiçbir şey olmuyor. Düğmenin sessizce ölü olması, olmamasından kötüdür.
+
+  Bu yüzden ayrı bir kapı: kutuya HİÇ dokunmaz, yalnız siparişi `ready`ye taşır ve eksik tavsiyesini
+  üretir. Gerekçesi `sealBox`ın beyan dalıyla birebir aynı ("Model A" — depocunun yazdığı adet
+  kararın kendisidir; künyesi orada) ve o dal yerinde duruyor: kutu doluyken tek dokunuşla hem
+  kapatıp hem beyan etmek hâlâ meşru.
+
+  AÇIK KUTU BOŞSA SİLİNİR (kullanıcı kararı 31.08 — *"içerisinde ürün yoksa o kutu da silinsin"*):
+  içi boş bir kutu kaydı hiçbir şeyin kanıtı değil, yalnız sayacı şişirir ve etiketi yalan söyler.
+  Dolu bir açık kutu varsa beyan REDDEDİLİR: içindekiler kayda geçmeden sipariş kapanamaz — depocu
+  önce o kutuyu kapatmalı, cevabı ona söylüyoruz.
+*/
+export type DeclareShortOutcome =
+  | { status: 'ok'; shortfalls: Array<{ itemId: string; suggestion: ShortfallSuggestion }> }
+  /** Açık kutunun içinde ürün var: önce o kutu kapanmalı, yoksa içindekiler kayda geçmez. */
+  | { status: 'open_box_not_empty'; boxNo: number }
+  | { status: 'failed'; message: string }
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  | { status: 'not_found' };
+
+export async function declareOrderShort(
+  db: SupabaseClient,
+  input: { orderId: string; warehouseId: string; actorId: string | null },
+): Promise<DeclareShortOutcome> {
+  const found = await new OrderService(db).getWithItems(input.orderId);
+  if (!found) return { status: 'not_found' };
+  if (found.order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+
+  const boxes = new OrderBoxService(db);
+  const open = (await boxes.listByOrders([input.orderId])).find((box) => box.sealedAt === null);
+  if (open) {
+    const contents = await new OrderBoxItemService(db).listByBoxes([open.id]);
+    if (contents.length > 0) return { status: 'open_box_not_empty', boxNo: open.boxNo };
+    // Boş kutu bir kayıt değil, bir niyet artığı — beyanla birlikte kaldırılır.
+    await boxes.delete(open.id);
+  }
+
+  const transition: TransitionResult = await new OrderService(db).transition({
+    orderId: input.orderId,
+    from: found.order.status,
+    to: 'ready',
+    actorId: input.actorId,
+  });
+  if (!transition.ok) {
+    // Tek başarısızlık sebebi yarış: araya biri girmiş ve sipariş artık başka durumda.
+    return { status: 'failed', message: `Sipariş artık ${transition.currentStatus} — beyan yazılmadı.` };
+  }
+
+  const picked = await pickedBatches(db, [input.orderId]);
+  const shortfalls = await adviseShortfalls(
+    db,
+    found.items.map((item) => ({
+      item,
+      pickedQty: (picked.get(item.id) ?? []).reduce((sum, batch) => sum + batch.qty, 0),
+    })),
+  );
+  return { status: 'ok', shortfalls };
 }

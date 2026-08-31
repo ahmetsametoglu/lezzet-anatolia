@@ -72,6 +72,27 @@ export const PreparationLineSchema = z.object({
   productName: z.string(),
   /** "500 g" gibi boy etiketi; tek boylu üründe boş dize. */
   variantLabel: z.string(),
+  /**
+   * **Ürün kapağının public URL'i** (kullanıcı isteği 31.08) — `null` = kapaksız ürün, ekran iki
+   * harflik monograma düşer.
+   *
+   * EK OKUMA İSTEMİYOR: kuyruk zaten `variantNames`i çağırıyor ve o fonksiyon `imageUrl`i çoktan
+   * çözüyor (mal kabulün okutma çekmecesi için yazılmıştı, `names.ts`). Alan yalnız taşınmıyordu.
+   *
+   * Niçin gerekli: toplama artık OKUTMA eksenli — depocu satırı listede aramıyor, okutuyor. Ama
+   * kontrol listesinde "ne kaldı" sorusuna bakarken aynı ürünün iki boyu (225 g / 450 g) yan yana
+   * duruyor ve metin ayırt etmeye yetmiyor; arama çekmecesinde ölçülen ihtiyacın aynısı (30.08).
+   */
+  imageUrl: z.string().nullable(),
+  /**
+   * Kalemin PAKET barkodu; `null` = barkodu girilmemiş ürün.
+   *
+   * Kamerasız turun simülasyon çiplerini bu siparişin ÜRÜNLERİNE bağlar (kullanıcı isteği 31.08):
+   * okutucu açıldığında çipler ürün adıyla ve GERÇEK kodla çiziliyor. Kısa devre yok — çipe basmak
+   * `/codes/resolve`'un aynı yolundan geçiyor, yani simülasyonla bulunan arıza cihazda da tekrar
+   * eder (`dev-scan-pool.ts` künyesinin kuralı).
+   */
+  barcode: z.string().nullable(),
   orderedQty: z.number().int(),
   /** Daha önce toplanmış adet — **yarım iş sürer**, ekran kaldığı yerden devam eder. */
   pickedQty: z.number().int(),
@@ -506,6 +527,28 @@ export const SealBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('not_found') }),
 ]);
 export type SealBoxResponse = z.infer<typeof SealBoxResponseSchema>;
+
+/**
+ * **Siparişi eksik kapat** (kullanıcı bulgusu 31.08) — kutuya HİÇ dokunmayan sipariş kararı.
+ *
+ * Beyan `sealBox`ın dalı olarak doğmuştu ve orada kalamazdı: kapanış bir KUTU işlemi, beyan bir
+ * SİPARİŞ kararı. Depocunun gerçek hareketi son kutuyu kapatıp SONRA "kalanı bulamadım" demektir
+ * ve o anda açık kutu yoktur — `sealBox` orada `empty` döner, yani düğme sessizce ölüdür (cihazda
+ * ölçüldü). Gövde YOK: karar siparişin kimliğinden ve depodan türüyor.
+ */
+export const DeclareShortResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    /** Eksik kalemlerin tavsiyesi — karar yine YÖNETİM ekranında (D1 → Y2). */
+    shortfalls: z.array(z.object({ itemId: z.string().uuid(), suggestion: ShortfallSuggestionSchema })),
+  }),
+  /** Açık kutuda ürün var: önce o kutu kapanmalı, yoksa içindekiler kayda geçmez. */
+  z.object({ status: z.literal('open_box_not_empty'), boxNo: z.number().int().positive() }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  z.object({ status: z.literal('failed'), message: z.string() }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type DeclareShortResponse = z.infer<typeof DeclareShortResponseSchema>;
 
 /**
  * 4×6 etiketin içeriği (23.7 · karar §1.5/§1.9) — İÇERİK SUNUCUDAN, telefon gösterir/basar.

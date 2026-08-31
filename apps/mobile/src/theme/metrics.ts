@@ -60,6 +60,31 @@ export const appMetrics = {
     /** Başlık çubuğundaki yuvarlak ikon düğmesi (tasarım: 40). */
     iconButton: 40,
     /**
+     * **YÜZEN OKUTMA DÜĞMESİ (FAB)** — sayfanın üstünde duran daire (v3:03 · `topFab`, 66×66).
+     *
+     * `iconButton`dan (40) ayrı bir durak ve fark ROL: o başlık çubuğunun içinde, hizaya giren
+     * bir kontroldür; bu ekranın her yerinden erişilmesi gereken TEK eylemdir ve elin altında,
+     * bakmadan basılabilecek kadar büyük olmalı. Ölçü yuvarlanmadı — daire küçüldükçe "bakmadan
+     * bas" özelliği ölçülemez şekilde kaybolur, ve 66 tasarımın kendi ölçümü.
+     */
+    fab: 66,
+    /**
+     * FAB'ın içindeki ikon (v3:03 — 28×28). `text.icon` (22) ödünç ALINMADI: 66'lık dairede 22
+     * optik olarak kaybolur ve daire boş görünür. Yapısal ölçü — `tileIcon`/`rowIcon`/`stripIcon`
+     * ile aynı aile (dosyanın kuralı: yapısal ölçüler yuvarlanmaz).
+     */
+    fabIcon: 28,
+    /**
+     * **Kutu içeriği satırının ürün karesi** (v3:03 — 28 kapanan kutuda, 30 açık kutuda → 30).
+     *
+     * `thumb`ın (44) küçük kardeşi ve ondan AYRI durak: fark ölçü değil ROL. 44'lük kare bir
+     * SEÇİM satırındadır (arama çekmecesi — depocu fotoğrafa bakarak 225 g ile 450 g'ı ayırır),
+     * bu ise bir KAYIT satırındadır ("kutuya 2 kondu") ve orada kare tanıtmaz, yalnız hangi ürün
+     * olduğunu hatırlatır. 44'ü ödünç almak kayıt satırlarını iki kademe uzatırdı.
+     * Tasarımın 48'i ise `thumb`a (44) bağlandı — Δ4, dosyanın "yakın ölçü ayrı ad almaz" kuralı.
+     */
+    thumbSm: 30,
+    /**
      * Metinsiz ikon düğmesinin GENİŞLİĞİ — kuryenin kapıdaki "Ara" ve "WhatsApp" kareleri.
      *
      * Tasarımda 56 × 52 (hafif yatay dikdörtgen); burada TAM KARE (52 × 52, yükseklik

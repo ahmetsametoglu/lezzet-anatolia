@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Platform, Text, View } from 'react-native';
+import { Image, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // Ömür kararı MOTORDAN: ekran kendi yüzdesini kurmaz — kabul kapısı da aynı motoru çağırıyor ve
 // ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı (`CLAUDE §1`).
@@ -102,32 +102,14 @@ export function IntakeScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
 
   /*
-    OKUTMA PENCERESİ KAPANMADAN ADET ÇEKMECESİ AÇILMAZ (arıza, kullanıcı bulgusu 30.08 · iOS).
+    OKUTMA PENCERESİ KAPANMADAN ADET ÇEKMECESİ AÇILMAZ — ARTIK BÖYLE BİR KURAL YOK.
 
-    Belirti: koli okutulunca satır doğru sayıyor ("24 ADET", "barkod okutuldu") ama adet çekmecesi
-    açılmıyor — ekran griye dönüyor, panel ekranın altında bir şerit hâlinde asılı kalıyor.
-    Ölçüldü: okutma penceresi de (`ScanSheet`) adet çekmecesi de birer `Modal` ve ikincisi
-    birincinin kapanış animasyonu SÜRERKEN sunuluyor. iOS bunu yapmaz: ikinci modal monte olur,
-    örtüsü çizilir, ama panelin yerleşimi hiç ölçülmez — `BottomSheet`in açılışı ölçüme bağlı
-    olduğu için (`onPanelLayout` → `animateOpen`) animasyon hiç başlamaz. Aynı arıza sınıfı
-    projede zaten kayıtlı (`staff-menu.tsx` künyesi: "Modal'ın kapanış animasyonu sürerken…").
-
-    Kapı bu yüzden: sayım sinyali satıra ancak önündeki pencere EKRANDAN KALKTIKTAN sonra ulaşır.
-    Android'de bu sınırlama yok ve `Modal.onDismiss` de çağrılmaz — orada kapı en baştan açık.
-
-    İKİ PENCERE DE AYNI KAPIYI KULLANIR: okutma penceresi (`Modal.onDismiss`) ve ürün arama
-    çekmecesi (`BottomSheet.onDismissed` → aynı `Modal.onDismiss`). İkisi de kalktıktan SONRA
-    adet çekmecesi açılır; ayrı
-    kapılar yazılsaydı biri bir gün ötekinden farklı davranırdı.
+    Arıza 30.08'de burada bulunmuştu (iOS: koli okutulunca satır sayıyor ama çekmece ekranın altında
+    asılı kalıyor) ve çaresi bu ekranın içine elle yazılmıştı: bir bayrak, iki `onDismiss` teli.
+    31.08'de kural kitin içine alındı; 01.09'da ise KÖK kaldırıldı — çekmece `@gorhom/bottom-sheet`e
+    geçti ve RN `Modal`ı kullanmıyor. "iOS kapanmakta olanın üstüne sunmaz" sınırlaması ortadan
+    kalkınca kapıya da gerek kalmadı (künyesi `components/ui/bottom-sheet.tsx`).
   */
-  /* Kapı NORMALDE AÇIK: yalnız okutma penceresi açıkken kapanır, pencere kalkınca yeniden açılır.
-     Başlangıcı `false` yazmak, okutma hiç kullanılmadan elle eklenen satırda kapıyı sonsuza dek
-     kapalı bırakıyordu — `onDismiss` yalnız okutma penceresinden gelir. */
-  const [countReady, setCountReady] = useState(true);
-  const releaseCount = useCallback(() => setCountReady(true), []);
-  useEffect(() => {
-    if (Platform.OS === 'ios' && intake.scanOpen) setCountReady(false);
-  }, [intake.scanOpen]);
 
   /* ARAMADAN SEÇİLEN ÜRÜN, ÇEKMECE KAPANANA KADAR BEKLER (künyesi `onPick`te). İki kanca da aynı
      yere bağlı — `onClosed` her platformda, `onDismiss` yalnız iOS'ta gelir; ikinci çağrı zararsız,
@@ -435,7 +417,6 @@ export function IntakeScreen() {
           title={t.intake.scan.title}
           hint={t.intake.scan.hint}
           onClose={intake.closeScan}
-          onDismiss={releaseCount}
           onScan={intake.handleScan}
           testID="warehouse-intake-scan"
         />
@@ -560,7 +541,7 @@ export function IntakeScreen() {
             state={intake.stateOf(row.variantId)}
             unplanned={unplanned}
             mlorPercent={intake.mlorPercent}
-            pendingCount={countReady && intake.pendingCount === row.variantId}
+            pendingCount={intake.pendingCount === row.variantId}
             onCountConsumed={intake.clearPendingCount}
             lotSuggestions={intake.lotsUsedBy(row.variantId)}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
@@ -649,7 +630,6 @@ export function IntakeScreen() {
         title={t.intake.scan.title}
         hint={t.intake.scan.hint}
         onClose={intake.closeScan}
-        onDismiss={releaseCount}
         onScan={intake.handleScan}
         testID="warehouse-intake-scan"
       />

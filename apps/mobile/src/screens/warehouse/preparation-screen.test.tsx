@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { PreparationScreen } from './preparation-screen';
-import { ITEM_A, ITEM_B, ORDER_ID, STOCK_A, STOCK_B, preparationLine, preparationOrder } from './warehouse-fixture';
+import { ITEM_A, ITEM_B, ORDER_ID, STOCK_A, STOCK_B, preparationBox, preparationLine, preparationOrder } from './warehouse-fixture';
 import { resetWarehouseStatus } from './warehouse-status';
 
 /*
@@ -18,6 +18,22 @@ import { resetWarehouseStatus } from './warehouse-status';
   testlerinin fikstürleri `pickedQty > 0` taşır (web masasından yarım gelmiş iş). Satır-düzeyi
   testler (tavan, çıpa) iki modda da aynı bileşeni kullandığından fikstürleri değişmedi.
 */
+
+/*
+  BİLDİRİM KANALI TOAST (31.08) — ekrana yapıştırılan bant söküldü, cümle kökteki tek `ToastHost`a
+  gidiyor (ekran künyesi). Test o yüzden artık bir testID değil, basılan METNİ ölçüyor.
+*/
+const mockToast = jest.fn<void, [string]>();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
+/** Toast'a basılmış cümlelerden biri kalıba uyuyor mu. */
+async function expectToast(pattern: RegExp): Promise<void> {
+  await waitFor(() => expect(mockToast.mock.calls.some(([message]) => pattern.test(message))).toBe(true));
+}
 
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
@@ -88,7 +104,7 @@ describe('D1 · kuyruk', () => {
 
     await renderPicking();
 
-    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_A}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toBeOnTheScreen();
   });
 
   it('İKİ sipariş varsa önce SEÇİM sorulur — hangi koli olduğu uydurulmaz', async () => {
@@ -97,10 +113,10 @@ describe('D1 · kuyruk', () => {
     await renderPicking();
 
     expect(screen.getByTestId('warehouse-picking-queue')).toBeOnTheScreen();
-    expect(screen.queryByTestId(`warehouse-picking-line-${ITEM_A}`)).toBeNull();
+    expect(screen.queryByTestId(`warehouse-picking-pending-${ITEM_A}`)).toBeNull();
 
     await fireEvent.press(screen.getByTestId(`warehouse-picking-order-${ORDER_ID}`));
-    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_A}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toBeOnTheScreen();
   });
 });
 
@@ -207,7 +223,7 @@ describe('D1 · kuyruk okutması (hazırlık kâğıdı)', () => {
     // Simülasyon çipi kuyruğun kendi referansını taşıyor (`devCodes`) — kâğıdı okutmanın aynısı.
     await fireEvent.press(screen.getByLabelText('LZA-26-3M8C'));
 
-    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_A}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toBeOnTheScreen();
   });
 
   it('İKİNCİ referans İKİNCİ siparişi açar — kod hangi kâğıtsa o', async () => {
@@ -217,9 +233,9 @@ describe('D1 · kuyruk okutması (hazırlık kâğıdı)', () => {
     await fireEvent.press(screen.getByTestId('warehouse-picking-queue-scan'));
     await fireEvent.press(screen.getByLabelText('LZA-26-9XQ2'));
 
-    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_B}`)).toBeOnTheScreen();
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_B}`)).toBeOnTheScreen();
     // Asıl iddia: ÖTEKİ siparişin kalemi ekranda YOK. "Bir şey açıldı" yeterli değil.
-    expect(screen.queryByTestId(`warehouse-picking-line-${ITEM_A}`)).toBeNull();
+    expect(screen.queryByTestId(`warehouse-picking-pending-${ITEM_A}`)).toBeNull();
   });
 
   it('okutma listeyi GİZLEMEZ — kâğıtsız çalışan elle seçebilir', async () => {
@@ -252,15 +268,17 @@ describe('D1 · sayım', () => {
     expect(screen.getByTestId('warehouse-picking-cta')).toHaveTextContent(/Sipariş HAZIR/);
   });
 
-  it('adet MOTORUN kapasitesini aşamaz — rafta olmayan mal yazılamaz', async () => {
-    withQueue([preparationOrder({ lines: [preparationLine({ orderedQty: 5, shortfallQty: 3 })] })]);
+  it('adet çekmecesi MOTORUN kapasitesini aşamaz — rafta olmayan mal yazılamaz', async () => {
+    withQueue([preparationOrder({ boxes: [preparationBox()], lines: [preparationLine({ orderedQty: 5, shortfallQty: 3 })] })]);
 
     await renderPicking();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`), '5');
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`));
 
-    // Öneri 2 adet taşıyor; 5 yazılsa da tavan 2'dir.
-    expect(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`).props.value).toBe('2');
-    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_A}`)).toHaveTextContent(/raf eksiği: 3/);
+    /* 5 isteniyor ama öneri 2 taşıyor. Çekmece İKİ SINIRIN KÜÇÜĞÜYLE açılır (hook künyesi) ve
+       artırma o tavanda durur — sert duvar fiziksel gerçektir, yumuşak sınır değil. */
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-qty-sheet-qty-value')).toHaveTextContent('2'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-qty-sheet-qty-increase'));
+    expect(screen.getByTestId('warehouse-picking-qty-sheet-qty-value')).toHaveTextContent('2');
   });
 
   it('"eksik bildir" CTA kapısını açar ama cümlesini DEĞİŞTİRİR — sipariş hazır olmaz', async () => {
@@ -277,7 +295,11 @@ describe('D1 · sayım', () => {
 
     await renderPicking();
 
-    expect(screen.getByTestId(`warehouse-picking-pinned-${ITEM_A}`)).toBeOnTheScreen();
+    // Rozet kontrol listesinde ve MOTOR ÖNERİSİ'nin ÖNÜNE geçer: çıpa bir öneri değil zorunluluk.
+    // Çıpa rozeti rafı da taşır ama ⚓ ile: aynı yerde, farklı ton — "burası öneri değil, zorunluluk".
+    const row = screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`);
+    expect(row).toHaveTextContent(/⚓/);
+    expect(row).toHaveTextContent(/A-1/);
   });
 
   it('daha önce yazılmış adet SÖYLENİR — yeni kayıt onun yerine geçer', async () => {
@@ -310,7 +332,7 @@ describe('D1 · gönderim', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
     expect(lastPostBody().picks).toEqual([
       { orderItemId: ITEM_A, batches: [{ stockId: STOCK_A, qty: 2 }, { stockId: STOCK_B, qty: 1 }] },
     ]);
@@ -329,10 +351,8 @@ describe('D1 · gönderim', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_B}`));
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-notice')).toBeOnTheScreen());
-    const notice = screen.getByTestId('warehouse-picking-notice');
-    expect(notice).toHaveTextContent(/Hazırlanıyor.*sürüyor/);
-    expect(notice).toHaveTextContent(/1 adet eksik — değerli kalem; öneri: müşteriye sorulsun/);
+    await expectToast(/Hazırlanıyor.*sürüyor/);
+    await expectToast(/1 adet eksik — değerli kalem; öneri: müşteriye sorulsun/);
   });
 
   it('`pinned_violation` GÖSTERİLİR — hiçbir satır yazılmadı', async () => {
@@ -343,7 +363,7 @@ describe('D1 · gönderim', () => {
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/çıpalı partiden verilmeli/),
+      expect(mockToast.mock.calls.some(([m]) => /çıpalı partiden verilmeli/.test(m))).toBe(true),
     );
   });
 
@@ -355,7 +375,7 @@ describe('D1 · gönderim', () => {
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/başka deponun/),
+      expect(mockToast.mock.calls.some(([m]) => /başka deponun/.test(m))).toBe(true),
     );
   });
 });
@@ -369,15 +389,22 @@ describe('D1 · gönderim', () => {
   · ÇEVRİMDIŞI SAYIM KİLİDİ: sayaç soluklaştırılmaz, yerine konan adet yazılır.
 */
 describe('D1 · kalem satırı (v3)', () => {
-  it('adım satırı sıra numarasını ve RAFI söyler', async () => {
+  /*
+    SIRA NUMARASI KALKTI (v3 · 31.08) — satır artık "1 · A-1" demiyor, yalnız RAFI söylüyor.
+    Sebep eksen değişikliği: liste bir yürüyüş talimatı olmaktan çıkıp KONTROL TABLOSUNA döndü
+    (depocu rafları kâğıtla dolaşıp geliyor, ekranda kalanı işaretliyor). Sıra numarası artık
+    hiçbir şeyi numaralamıyordu — tamamlanan kalem listeden düştüğü için "3. kalem" bir gün
+    ikinci sırada görünürdü.
+  */
+  it('satır RAFI söyler — depocunun aradığı tek konum bilgisi', async () => {
     withQueue([preparationOrder()]);
 
     await renderPicking();
 
-    expect(screen.getByTestId(`warehouse-picking-step-${ITEM_A}`)).toHaveTextContent(/1 · A-1/);
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toHaveTextContent(/A-1/);
   });
 
-  it('raf BİLİNMİYORSA uydurulmaz — yalnız sıra numarası yazılır', async () => {
+  it('raf BİLİNMİYORSA uydurulmaz — bilinmediği yazılır', async () => {
     withQueue([
       preparationOrder({
         lines: [preparationLine({ suggestion: [{ stockId: STOCK_A, qty: 2, expiryDate: '2026-08-12', areaName: null }] })],
@@ -386,12 +413,17 @@ describe('D1 · kalem satırı (v3)', () => {
 
     await renderPicking();
 
-    const step = screen.getByTestId(`warehouse-picking-step-${ITEM_A}`);
-    expect(step).toHaveTextContent(/1\. kalem/);
-    expect(step).not.toHaveTextContent(/·/);
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toHaveTextContent(/RAF YAZILMAMIŞ/);
   });
 
-  it('MOTOR ÖNERİSİ rozeti önerisi OLAN kalemde çizilir, olmayanda çizilmez', async () => {
+  /*
+    ROZET ÖNERİNİN KENDİSİNİ TAŞIR (kullanıcı kararı 31.08) — "MOTOR ÖNERİSİ" yazan etiket gitti.
+
+    Kullanıcının cümlesi: *"rozet çok büyük, onun önerisi ise çok küçük"* — ekranda en çok yer
+    kaplayan şey bilgi taşımıyordu, taşıyan (raf) okunmuyordu. Rozet artık RAFIN ADINI yazıyor;
+    "bu bir öneri mi zorunluluk mu" sorusunu TONU yanıtlıyor.
+  */
+  it('rozet RAFIN ADINI taşır; önerisiz kalemde bilinmediğini söyler', async () => {
     withQueue([
       preparationOrder({
         lines: [preparationLine(), preparationLine({ itemId: ITEM_B, suggestion: [] })],
@@ -400,27 +432,46 @@ describe('D1 · kalem satırı (v3)', () => {
 
     await renderPicking();
 
-    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_A}`)).toHaveTextContent(/MOTOR ÖNERİSİ/);
-    expect(screen.getByTestId(`warehouse-picking-line-${ITEM_B}`)).not.toHaveTextContent(/MOTOR ÖNERİSİ/);
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`)).toHaveTextContent(/A-1/);
+    // Önerisiz kalemde rozet YİNE çizilir ama bilinmediğini söyler — rozeti hiç çizmemek,
+    // depocuya rafı aramak için hiçbir işaret bırakmazdı.
+    expect(screen.getByTestId(`warehouse-picking-pending-${ITEM_B}`)).toHaveTextContent(/RAF YAZILMAMIŞ/);
   });
 
   /* Çevrimdışı bayrağı ancak ağa çıkan bir çağrı DÜŞÜNCE doğar; en doğal yol onay denemesidir —
      ağ yoksa hiçbir şey yazılmaz ve ekran kilide geçer. */
-  it('ağ düşünce sayaç YERİNE konan adet yazılır — alan soluklaştırılmaz', async () => {
+  /*
+    ÇEVRİMDIŞI KİLİDİ KUTU AKIŞINDA (31.08) — yazma kapalı, okuma açık.
+
+    Kilit iki yerde birden görünmeli ve ikisi de "yokluk" değil "sönüklük": satıra dokunulamaz
+    (adet yazmak bir YAZMADIR ve depo kartlarında kuyruğa alınmaz) ve yüzen okutma düğmesi söner
+    ama EKRANDA KALIR — kaybolan bir düğme "burada okutma yok" der, oysa doğru cümle "şimdi olmaz".
+  */
+  it('ağ düşünce satır dokunulamaz olur ve okutma düğmesi SÖNER — ama ekranda kalır', async () => {
     fetchMock.mockImplementation((_url, init) => {
       if (init?.method === 'POST') return Promise.reject(new Error('network down'));
-      return Promise.resolve(ok({ date: null, orders: [preparationOrder()] }));
+      return Promise.resolve(ok({ date: null, orders: [preparationOrder({ boxes: [preparationBox()] })] }));
     });
 
     await renderPicking();
-    expect(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`));
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-qty-sheet-confirm')).toBeOnTheScreen());
+    /* Kalanın TAMAMI değil bir eksiği konuyor (2 → 1): kalem kontrol listesinde KALSIN ki
+       kilidin satıra düştüğü ölçülebilsin. Tamamı konsaydı satır listeden düşerdi. */
+    await fireEvent.press(screen.getByTestId('warehouse-picking-qty-sheet-qty-decrease'));
+    await fireEvent.press(screen.getByTestId('warehouse-picking-qty-sheet-confirm'));
+    /* Kapatma artık ÖNCE SORUYOR (eksik kalan kalem var): çevrimdışı bayrağı ancak ağa çıkan
+       istek düşünce doğduğu için beyanlı yolu seçip kapanışı gerçekten deniyoruz. */
+    /* Onay "Eksikleri bildirerek kapat"ın önünde: sık geçilen yol sormaz, geri dönüşü olmayan
+       karar sorar (kullanıcı kararı 31.08). */
+    await fireEvent.press(screen.getByTestId('warehouse-picking-declare-short'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-seal-confirm-confirm')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal-confirm-confirm'));
 
-    await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
-    await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
-
-    await waitFor(() => expect(screen.getByTestId(`warehouse-picking-locked-${ITEM_A}`)).toBeOnTheScreen());
-    expect(screen.queryByTestId(`warehouse-picking-qty-${ITEM_A}`)).toBeNull();
-    expect(screen.getByTestId(`warehouse-picking-locked-${ITEM_A}`)).toHaveTextContent(/sayım kapalı/);
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-fab')).toBeDisabled());
+    // Satır artık düğme değil: dokunuş çekmeceyi açmaz.
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-pending-${ITEM_A}`));
+    expect(screen.queryByTestId('warehouse-picking-qty-sheet-confirm')).toBeNull();
   });
 });
 
@@ -460,9 +511,9 @@ describe('D1 · kargoda kutusuz onay', () => {
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/kutusuz kapatılamaz/),
+      expect(mockToast.mock.calls.some(([m]) => /kutusuz kapatılamaz/.test(m))).toBe(true),
     );
     // Çare de yazılıyor: "kutu aç, doldur, kapat" — ret bir çıkmaz değil bir yönlendirme.
-    expect(screen.getByTestId('warehouse-picking-notice')).toHaveTextContent(/kutu aç/i);
+    await expectToast(/kutu aç/i);
   });
 });

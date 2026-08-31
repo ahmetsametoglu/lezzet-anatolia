@@ -20,6 +20,7 @@ import { deliverOrder, dispatchTransfer } from '@lezzet/application';
 // kırılır (katalog/kurye testlerinin kararı). Depo sözleşmelerinin ilk tüketicisi de budur.
 import type {
   ConfirmPreparationResponse,
+  DeclareShortResponse,
   IntakeFormResponse,
   OrderStatus,
   PendingIntakesResponse,
@@ -468,6 +469,35 @@ describe('D1 · POST /api/v1/warehouse/preparation/:orderId/confirm', () => {
     expect(await dataOf<ConfirmPreparationResponse>(yok)).toEqual({ status: 'not_found' });
 
     const bozuk = await post('/api/v1/warehouse/preparation/siparis-1/confirm', { picks: [] });
+    expect(bozuk.status).toBe(400);
+    expect(await bozuk.json()).toEqual({ data: null, error: 'invalid_order_id' });
+  });
+});
+
+describe('D1 · POST /api/v1/warehouse/orders/:orderId/declare-short', () => {
+  /*
+    SİPARİŞİ EKSİK KAPAT (kullanıcı bulgusu 31.08) — kutuya HİÇ dokunmayan sipariş kararı.
+
+    Beyan önce `sealBox`ın bir bayrağıydı ve depocunun gerçek anını karşılamıyordu: son kutu
+    kapandıktan sonra mühürlenecek kutu YOKTUR, o yol `empty` döner ve düğme sessizce ölüdür
+    (cihazda ölçüldü: iki kutu mühürlü, sipariş `preparing`de asılı). Burada ölçülen şey kapının
+    kendisi — kapsam kararı, `ready` geçişi ve olmayan sipariş.
+  */
+  it('BAŞKA DEPONUN siparişi 200 + `out_of_scope` ile döner ve durum DEĞİŞMEZ', async () => {
+    const order = await pendingOrder({ warehouse: otherWarehouseId });
+
+    const res = await post(`/api/v1/warehouse/orders/${order.orderId}/declare-short`, {});
+
+    expect(res.status).toBe(200);
+    expect(await dataOf<DeclareShortResponse>(res)).toEqual({ status: 'forbidden', reason: 'out_of_scope' });
+    expect((await orders.getById(order.orderId))?.status).toBe('confirmed');
+  });
+
+  it('olmayan sipariş `not_found`; uuid olmayan kimlik 400', async () => {
+    const yok = await post('/api/v1/warehouse/orders/00000000-0000-0000-0000-000000000000/declare-short', {});
+    expect(await dataOf<DeclareShortResponse>(yok)).toEqual({ status: 'not_found' });
+
+    const bozuk = await post('/api/v1/warehouse/orders/siparis-1/declare-short', {});
     expect(bozuk.status).toBe(400);
     expect(await bozuk.json()).toEqual({ data: null, error: 'invalid_order_id' });
   });

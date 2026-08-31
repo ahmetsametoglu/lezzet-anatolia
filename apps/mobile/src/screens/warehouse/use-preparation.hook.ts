@@ -15,6 +15,7 @@ import type {
 import {
   announceShipment,
   confirmPreparation,
+  declareOrderShort as declareOrderShortApi,
   fetchBoxLabel,
   fetchDispatchOptions,
   fetchPreparationQueue,
@@ -61,11 +62,21 @@ import { trackWarehouse } from './warehouse-status';
   (`shortfallQty`) ve satırın altında gösteriliyor. Çıpalı kalemde (`pinnedStockId`) öneri TEK
   partiye sabittir — indirimli teklife söz verilen stok başka partiyle karşılanamaz (DOMAIN §4).
 
-  ── "EKSİK BİLDİR" BİR ALAN DEĞİL, BİR KABULLENİŞ ───────────────────────────
+  ── EKSİK BİR ALAN DEĞİL, BİR KABULLENİŞ ────────────────────────────────────
   Sözleşmede "eksik" diye bir istek alanı YOK ve olmamalı: eksik, gönderilen adet ile sipariş adedi
-  arasındaki farktan TÜRER ve tavsiyesini (`shortfalls`) kapı üretir. Ekrandaki bağlantı yalnız
-  "bu kalemi aramayı bıraktım" demektir — CTA'yı açar, isteğe bir şey eklemez. Kararın kendisi
-  YÖNETİM ekranındadır (v2: *"Eksik bildirildi — karar yönetim ekranında"*).
+  arasındaki farktan TÜRER ve tavsiyesini (`shortfalls`) kapı üretir.
+
+  ── KARARI DEPOCU VERİR (düzeltildi 31.08) ──────────────────────────────────
+  Burada ve ekranda *"karar yönetim ekranında verilir — depocu karar vermez"* yazıyordu. **Bu
+  DOMAIN §8'e aykırıydı** ve v2 tasarımından kopyalanmıştı; kural şöyle:
+
+    *"Hazırlıkta (depo): hazırlayan eksik/karşılanamayan kalemi işaretler (`fulfilled_qty` düşer).
+     **Kararı hazırlayan verir** … Sistem akıllı bir öneri sunar ama **son karar hazırlayanda**."*
+
+  Kullanıcı 31.08'de bunu doğruladı: depocunun yazdığı adet KARARIN KENDİSİDİR ve para o sayıdan
+  türüyor. Yönetimin kısmi karşılama penceresi bir onay değil, SONRADAN gelen bir düzeltmedir
+  ("müşteri aradı, dört çıktı"). Beyanla kapanan kutu bu yüzden siparişi `ready` yapıyor
+  (`boxes.ts` künyesi) — eksiğin ne yapılacağı ayrı bir karar ve siparişi depoda tutmamalı.
 */
 
 const t = warehouseCopy;
@@ -96,6 +107,25 @@ interface UsePreparationResult {
   lineState: (itemId: string) => LineState;
   /** Satıra girilebilecek en büyük adet — motorun ayırdığı parti toplamı. */
   capacityOf: (line: PreparationLineContract) => number;
+  /** AÇIK kutunun içindeki kalemler — bu kutuya adet girilmiş olanlar. */
+  boxItems: PreparationLineContract[];
+  /** Kontrol listesi: kâğıtta kalan kalemler — tamamı kutulanan satır düşer. */
+  pendingLines: PreparationLineContract[];
+  /** Kutulanan ADET toplamı (kalem değil) — sayacın payı. */
+  boxedQty: number;
+  /** İstenen ADET toplamı — sayacın paydası. */
+  orderedQty: number;
+  /** Adet çekmecesinin konusu; `null` = çekmece kapalı. */
+  qtyTarget: PreparationLineContract | null;
+  qtyValue: number;
+  setQtyValue: (next: number) => void;
+  /** Çekmecedeki adedi kutuya YAZAR (üstüne eklemez) ve çekmeceyi kapatır. */
+  confirmQty: () => void;
+  closeQtySheet: () => void;
+  /** Kontrol listesinden elle açma — okutmayla aynı çekmece, aynı varsayılan. */
+  openQtyFor: (itemId: string) => void;
+  /** Kalemi açık kutudan çıkarır (✕) — yanlış okutmanın geri alma yolu. */
+  removeFromBox: (itemId: string) => void;
   setQty: (itemId: string, qty: number | null, capacity: number) => void;
   reportShort: (itemId: string) => void;
   /** Bütün satırlar ya sayıldı ya eksik bildirildi mi (v2'nin `topDone`u). */
@@ -139,7 +169,20 @@ interface UsePreparationResult {
   setBoxTypeOpen: (open: boolean) => void;
   /** `shippingBoxId` = seçilen tip; `null` = tipsiz aç (rota kulvarı ya da bilinçli atlama). */
   openNewBox: (shippingBoxId?: string | null) => void;
-  sealCurrentBox: () => void;
+  /**
+   * Kutuyu kapatır. `declareShort` = *"bu kutu son, eksikleri bildiriyorum"* — kapanış çekmecesi
+   * sorar, satırda bir işaret yoktur.
+   */
+  sealCurrentBox: (options?: { declareShort?: boolean }) => void;
+  /** Siparişi EKSİK kapatır — kutuya dokunmaz (künyesi kancada). */
+  declareShort: () => void;
+  /**
+   * Bu kutu kapanınca EKSİK KALACAK kalemler — kapanış çekmecesinin listesi.
+   *
+   * Türetilir, işaretlenmez: eksik "istenen − kutulanan"ın kendisidir ve depocunun ayrıca
+   * söylemesine gerek yok (eski "eksik bildir" bağlantısının kaldırılma gerekçesi).
+   */
+  shortLines: Array<{ line: PreparationLineContract; missingQty: number }>;
   scanOpen: boolean;
   setScanOpen: (open: boolean) => void;
   handleScan: (code: string) => void;
@@ -296,6 +339,14 @@ export function usePreparation(): UsePreparationResult {
   const [orders, setOrders] = useState<PreparationOrderContract[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [lines, setLines] = useState<Record<string, LineState>>({});
+  /*
+    ADET ÇEKMECESİNİN HEDEFİ (31.08) — okutulan ya da elle dokunulan kalem; `null` = çekmece kapalı.
+
+    KİMLİK saklanıyor, SATIRIN KENDİSİ değil: kuyruk yenilendiğinde satır nesnesi değişir ve
+    saklanan kopya bayatlardı (kalan adet eski kalır, depocu yanlış sayıyı onaylardı).
+  */
+  const [qtyTargetId, setQtyTargetId] = useState<string | null>(null);
+  const [qtyValue, setQtyValue] = useState(0);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<PreparationNotice>();
 
@@ -670,23 +721,144 @@ export function usePreparation(): UsePreparationResult {
           setNotice({ tone: 'warn', text: fillCopy(t.picking.box.scanCapacity, { name }) });
           return;
         }
-        // Koli kodu çarpanı kadar sayılır (karar §1.2); tavan motorun ayırdığı parti toplamı —
-        // rafta olmayan mal okutmayla da "konmuş" yazılamaz.
-        const added = Math.min(res.qtyPerCode, max - current);
-        setQty(line.itemId, current + added, max);
-        const sentence =
-          res.source === 'sku'
-            ? t.picking.box.scanFoundSku
-            : res.source === 'supplier_code'
-              ? t.picking.box.scanFoundSupplier
-              : t.picking.box.scanFound;
-        setNotice({ tone: 'ok', text: fillCopy(sentence, { name, n: String(added) }) });
+
+        /*
+          OKUTMA ARTIK DOĞRUDAN YAZMAZ, ÇEKMECEYİ AÇAR (v3 · 31.08).
+
+          Eskiden okutma `+1` (koli barkodunda çarpanı kadar) ekleyip kapanıyordu ve 6 adetlik bir
+          kalem 6 okutma + 6 kamera açılışı demekti. Kullanıcının anlattığı hareket başka:
+          *"barkod okutuyor, adet giriyor"* — tek okutma, tek onay.
+
+          ADET **KALANLA** DOLU GELİR, koli çarpanıyla değil (tasarım: *"adet kalanla hazır gelir,
+          onaylaman yeter"*). `qtyPerCode` burada bilerek kullanılmıyor: çarpan, insan onayı
+          OLMADIĞI dünyanın kolaylığıydı — sayıyı bir insan doğrulayacaksa doğru varsayılan
+          "bu kalemden daha ne kadar lazım"dır. Yanlışsa ± ile düzeltilir; koli 12'lik ve kalan
+          20 ise depocu 12 yazar, ekran onun yerine tahmin etmez.
+        */
+        setQtyTargetId(line.itemId);
+        setQtyValue(max - current);
+
+        /*
+          BARKOD EŞLEŞMESİNDE CÜMLE YOK (kullanıcı kararı 31.08): *"taradığımız şey ekleniyor
+          zaten."* Adet çekmecesi ürünün ADIYLA açılıyor ve satır listede sayıyor — "bulundu"
+          demek aynı haberi üçüncü kez vermekti.
+
+          SKU ve TEDARİKÇİ KODU eşleşmesi AYRI ve cümlesi duruyor: orada söylenen şey "bulundu"
+          değil, EŞLEŞMENİN KESİNLİK DERECESİ — okutulan şey ürünün paket barkodu değildi, iç
+          kimliğimiz ya da tedarikçinin kodu. İkisi de benzersiz DEĞİL (`variant-barcode.service`
+          künyesi §"tekillik garantisi yalnız barkodda"); depocunun elindeki paketin gerçekten o
+          ürün olduğunu bir kez daha bakması gereken tek hâl budur.
+        */
+        if (res.source === 'sku' || res.source === 'supplier_code') {
+          const sentence = res.source === 'sku' ? t.picking.box.scanFoundSku : t.picking.box.scanFoundSupplier;
+          setNotice({ tone: 'ok', text: fillCopy(sentence, { name }) });
+        }
       })();
     },
-    [lines, order, setQty],
+    [lines, order, setNotice],
   );
 
-  const sealCurrentBox = useCallback(() => {
+  /**
+   * Kalemi ELLE açar — kontrol listesinde satıra dokunmak (tasarım: *"satıra dokunmak elle
+   * düzeltme içindir"*). Okutmayla aynı çekmece, aynı varsayılan.
+   */
+  const openQtyFor = useCallback(
+    (itemId: string) => {
+      if (order === null) return;
+      const line = order.lines.find((row) => row.itemId === itemId);
+      if (!line) return;
+      setQtyTargetId(itemId);
+      /* VARSAYILAN İKİ SINIRIN KÜÇÜĞÜ: "daha ne kadar lazım" (istenen − kutulanan) ve "raftan ne
+         kadar verilebilir" (motorun kapasitesi − bu kutuya konan). Yalnız ilkine bakılsaydı
+         çekmece raf eksiği olan kalemde tavanın ÜSTÜNDE bir sayıyla açılırdı; alan onu kabul
+         etmez, depocu da neden azaldığını göremezdi. Okutma yolu da aynı ifadeyi kullanıyor. */
+      setQtyValue(Math.max(0, capacity(line) - (lines[itemId]?.qty ?? 0)));
+    },
+    [lines, order],
+  );
+
+  const closeQtySheet = useCallback(() => setQtyTargetId(null), []);
+
+  /**
+   * Çekmecedeki adedi kutuya **EKLER** — üstüne yazmaz.
+   *
+   * İlk turda "yerine koyar" diye yazılmıştı ve gerekçesi *"ikinci okutma sessizce iki katına
+   * çıkarırdı"* idi. **İkisi de yanlıştı** (kullanıcı bulgusu + tasarımın kendi mantığı, 31.08):
+   * `topAdetOnay` şunu yapıyor — `n[kalem] = (n[kalem] ?? 0) + girilenAdet`.
+   *
+   * Sebebi masadaki hareket: depocu kutuya 1 koyup okutuyor, sonra bir tane daha koyup yine
+   * okutuyor. İkincisinde söylediği şey "toplam 1" değil "bir tane daha". Yerine yazan bir alan,
+   * ikinci okutmada birincisini sessizce siler — ve kutuda iki paket varken kayıtta bir tane
+   * kalır. Çift sayma korkusu ise varsayılanın kendisiyle zaten kapalı: çekmece KALANLA açılıyor,
+   * yani bir kalemi tamamlayan tek onay ondan sonrasını listeden düşürüyor.
+   */
+  const confirmQty = useCallback(() => {
+    if (qtyTargetId === null || order === null) return;
+    const line = order.lines.find((row) => row.itemId === qtyTargetId);
+    if (line) setQty(qtyTargetId, (lines[qtyTargetId]?.qty ?? 0) + qtyValue, capacity(line));
+    setQtyTargetId(null);
+  }, [lines, order, qtyTargetId, qtyValue, setQty]);
+
+  /** Kalemi açık kutudan çıkarır (tasarımın ✕'i) — yanlış okutmanın geri alma yolu. */
+  const removeFromBox = useCallback(
+    (itemId: string) => {
+      setQty(itemId, 0, 0);
+    },
+    [setQty],
+  );
+
+  /*
+    SİPARİŞİ EKSİK KAPAT — KUTUDAN AYRI YOL (kullanıcı bulgusu 31.08, cihazda ölçüldü).
+
+    Beyan `sealCurrentBox`ın bir bayrağıydı ve o yol depocunun gerçek anını KARŞILAMIYORDU: son
+    kutu kapandıktan sonra açık kutu kalmıyor, `sealCurrentBox` daha ilk satırda `currentBox === null`
+    diye sessizce dönüyordu. Ölçüldü (`LA-26-PAWX6L`): iki kutu mühürlü, kırmızı düğmeye basılıyor,
+    sipariş `preparing`de duruyor ve hiçbir cümle yazılmıyor. Sessizce ölü bir düğme, olmayan
+    düğmeden kötüdür.
+
+    Kapı artık kutuya HİÇ dokunmuyor (`/orders/:id/declare-short`): siparişi `ready`ye taşıyor ve
+    açık kutu boşsa onu siliyor (kullanıcı kararı: *"içerisinde ürün yoksa o kutu da silinsin"*).
+    Dolu açık kutu varsa REDDEDİYOR — içindekiler kayda geçmeden sipariş kapanamaz; cevabı depocuya
+    aynen yazıyoruz.
+  */
+  const declareShort = useCallback(() => {
+    if (order === null || sending) return;
+    setSending(true);
+    setNotice(null);
+
+    void (async () => {
+      const result = await trackWarehouse(declareOrderShortApi(order.orderId));
+      setSending(false);
+
+      if (result.error !== null) {
+        setNotice({
+          tone: 'error',
+          text: result.error === 'network_error' ? t.common.networkError : fillCopy(t.common.serverError, { error: result.error }),
+        });
+        return;
+      }
+
+      const data = result.data;
+      if (data.status === 'ok') {
+        const shortfalls = shortfallSentences(data.shortfalls, order);
+        setNotice({ tone: 'warn', text: [t.picking.box.declaredShort, ...shortfalls].join(' ') });
+        setLines({});
+        await load();
+        return;
+      }
+      if (data.status === 'open_box_not_empty') {
+        setNotice({ tone: 'warn', text: fillCopy(t.picking.box.declareOpenBox, { n: String(data.boxNo) }) });
+        return;
+      }
+      if (data.status === 'failed') {
+        setNotice({ tone: 'error', text: data.message });
+        return;
+      }
+      setNotice({ tone: 'error', text: data.status === 'forbidden' ? t.common.outOfScope : t.common.notFound });
+    })();
+  }, [load, order, sending, setNotice]);
+
+  const sealCurrentBox = useCallback((options: { declareShort?: boolean } = {}) => {
     if (order === null || currentBox === null || sending) return;
 
     // `picks` BU kutunun dağılımı (kümülatif değil): boş satır kutu içeriği değildir, süzülür.
@@ -702,10 +874,16 @@ export function usePreparation(): UsePreparationResult {
     setNotice(null);
 
     void (async () => {
-      // Eksik beyanı satırlardaki "eksik bildir" işaretinden gelir — ayrı bir soru sorulmaz;
-      // beyansız kapanışta eksik "devam ediyor"dur ve yönetime soru gitmez (sözleşme künyesi).
+      /*
+        EKSİK BEYANI KAPANIŞTA SORULUR (kullanıcı kararı 31.08) — satırdaki işaretten değil.
+
+        Beyansız kapanışta eksik "devam ediyor"dur ve yönetime soru GİTMEZ (sözleşme künyesi):
+        ara kutunun doğal eksiği bir karar konusu değildir, depocu yeni kutu açacaktır. Beyan
+        yalnız "bu kutu son, kalanı bulamadım" dendiğinde verilir ve o cümleyi artık kapanış
+        çekmecesi soruyor — eskiden satırdaki bir bağlantı taşıyordu ve yanlışlıkla tıklanıyordu.
+      */
       const result = await trackWarehouse(
-        sealOrderBox(currentBox.boxId, { picks, declareShort: anyShort || undefined }),
+        sealOrderBox(currentBox.boxId, { picks, declareShort: options.declareShort || undefined }),
       );
       setSending(false);
 
@@ -805,6 +983,31 @@ export function usePreparation(): UsePreparationResult {
     })();
   }, [lines, load, order, sending]);
 
+  /*
+    KUTU EKSENİNİN TÜRETİMLERİ (v3 · 31.08) — dördü de `order` + `lines`ten ÇIKAR, ayrı bir durum
+    tutulmaz. Ayrı tutulsaydı ikinci bir kaynak doğardı ve kutuya bir şey konduğunda ikisini birden
+    güncellemeyi unutan ilk değişiklik, ekranı sessizce yalan söyletirdi (CLAUDE §1).
+
+    Ekran artık İKİ listeyi yan yana çiziyor ve ikisi aynı veriden türüyor:
+    · `boxItems`    — AÇIK kutunun içi ("bu kutuya ne kondu")
+    · `pendingLines` — kontrol listesi ("kâğıtta ne kaldı"); tamamlanan kalem düşer
+  */
+  const boxedOf = (line: PreparationLineContract): number => line.pickedQty + (lines[line.itemId]?.qty ?? 0);
+  const boxItems = order === null ? [] : order.lines.filter((line) => (lines[line.itemId]?.qty ?? 0) > 0);
+  const pendingLines = order === null ? [] : order.lines.filter((line) => boxedOf(line) < line.orderedQty);
+  /* Sayaç kalem değil ADET sayar (tasarım: "12/29 adet"): dört kalemin üçü bitmişken sayfada
+     "3/4" yazmak, kalan tek kalemin 12 adet olduğunu saklardı. `min` fazlaya karşı savunma —
+     bugün ulaşılamaz (tavan zaten istenen), ama sayaç bir gün tavan gevşerse de doğru kalır. */
+  const boxedQty = order === null ? 0 : order.lines.reduce((sum, line) => sum + Math.min(line.orderedQty, boxedOf(line)), 0);
+  /* Kapanış çekmecesinin listesi — istenenin altında kalan her kalem, farkıyla. */
+  const shortLines =
+    order === null
+      ? []
+      : order.lines
+          .map((line) => ({ line, missingQty: line.orderedQty - boxedOf(line) }))
+          .filter((row) => row.missingQty > 0);
+  const orderedQty = order === null ? 0 : order.lines.reduce((sum, line) => sum + line.orderedQty, 0);
+
   return {
     status,
     orders,
@@ -812,6 +1015,18 @@ export function usePreparation(): UsePreparationResult {
     select,
     lineState,
     capacityOf: capacity,
+    boxItems,
+    pendingLines,
+    boxedQty,
+    orderedQty,
+    shortLines,
+    qtyTarget: order === null || qtyTargetId === null ? null : (order.lines.find((row) => row.itemId === qtyTargetId) ?? null),
+    qtyValue,
+    setQtyValue,
+    confirmQty,
+    closeQtySheet,
+    openQtyFor,
+    removeFromBox,
     setQty,
     reportShort,
     resolved,
@@ -831,6 +1046,7 @@ export function usePreparation(): UsePreparationResult {
     setBoxTypeOpen,
     openNewBox,
     sealCurrentBox,
+    declareShort,
     scanOpen,
     setScanOpen,
     handleScan,

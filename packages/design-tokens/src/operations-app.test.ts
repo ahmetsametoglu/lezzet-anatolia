@@ -181,7 +181,11 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
        eşiğin çok üstünde) ve o zaten turuncu ailenin kenarıdır. */
     expect(composedColors['warning-line']).toBe('#d9a97f');
     expect(composedColors['warning-line']).not.toBe(composedColors['error-line']);
-    expect(Object.keys(operationsAppLine)).toEqual(['warning-line']);
+    /* OLUMLU kenarı (31.08) — üçüncü aile. `olive-line`a bağlanamaz (Δ11/4/12): o ZEYTİN ÇERÇEVELİ
+       DÜĞMENİN kenarıdır, bu tonlu kartın. D1'in "kutu açık" ve "hepsi kutulandı" kartları. */
+    expect(composedColors['success-line']).toBe('#c3d3a4');
+    expect(composedColors['success-line']).not.toBe(composedColors['olive-line']);
+    expect(Object.keys(operationsAppLine)).toEqual(['warning-line', 'success-line']);
   });
 
   it('YARIÇAP: resmî 4\'lü set devralınır, altına yalnız bir durak eklenir', () => {
@@ -229,8 +233,11 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
        `warning-bg` (yeni). Son ikisi §4'ün eşiğine takılıp bilerek AÇILMAMIŞTI; kullanıcı cihazda
        farkı gördü ve varsayım çürüdü — gerekçesi `operations-app.ts`te kanal dengesi ölçümüyle
        yazılı. Sayı bilerek elle yazılıyor — türetilseydi test "kaç durak var"ı ölçmez, kendini
-       ölçerdi; yeni bir durak açan buraya uğrayıp gerekçesini yazmak zorunda kalsın diye böyle. */
-    expect(total).toBe(21);
+       ölçerdi; yeni bir durak açan buraya uğrayıp gerekçesini yazmak zorunda kalsın diye böyle.
+       31.08'de üç durak daha açıldı ve üçü de D1'in kutu eksenli akışından doğdu: `shadow.fab`
+       (yüzen okutma düğmesinin gölgesi — `glow`dan ayrı, gerekçesi orada) + TONLU KARTIN ÜÇÜNCÜ
+       AİLESİ `success-bg`/`success-line` (tasarımda 8 kullanımla ölçülmüştü, tüketicisi yoktu). */
+    expect(total).toBe(24);
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {

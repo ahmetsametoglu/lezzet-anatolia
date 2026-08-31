@@ -125,6 +125,20 @@ export const ICON_PATHS = {
     yüzeyinin fotoğraf ekleme düğmesinde kullanılıyor. Bu, operasyonun okutucusu.
   */
   scan: { paths: [], rects: [[3, 5, 18, 14, 3]], circles: [[12, 12, 3.2]] },
+  /*
+    KÂĞIT OKUTMA — dört köşe ayracı + orta çizgi (v3:02 · hazırlık kâğıdının karekodu).
+
+    Yukarıdaki künye "ayraçlı çerçeve benim uydurmamdı" diyordu; **ölçüm bunu düzeltti (31.08)**:
+    şablonda İKİ ayrı okutma ikonu var ve ikisi iki ayrı şey söylüyor —
+      · gövde+mercek (`scan`)  → 11 ekran, hepsinde ÜRÜN/PARTİ barkodu okutuluyor
+      · ayraç+çizgi (bu)       → 1 ekran, yalnız toplama kuyruğu: okutulan şey bir KÂĞIT
+    O künyedeki hata ikonun kendisi değil, TEK bir okutma ikonu olduğu varsayımıydı. Ayrım işe
+    ait: depocu bir kutuya değil, elindeki hazırlık kâğıdına nişan alıyor ve ayraçlı çerçeve tam
+    olarak "şunu hedefle" der.
+  */
+  'scan-paper': {
+    paths: ['M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2M4 12h16'],
+  },
   /* Tuş takımının silme tuşu (v3 · `00-ortak`) — ok ucu ve içindeki çarpı. */
   backspace: { paths: ['M21 5H9l-6 7 6 7h12z', 'M14 9l-4 6M10 9l4 6'] },
 

@@ -267,9 +267,33 @@ describe('kutu kapanışı (sealBox)', () => {
       picks: [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 1 }] }],
       declareShort: true,
     });
-    expect(declared).toMatchObject({ status: 'ok', ready: false });
+    /*
+      BEYAN SİPARİŞİ HAZIR YAPAR (kullanıcı kararı 31.08) — eksik olsa bile.
+
+      Eskiden burada `ready: false` bekleniyordu ve o beklenti bir ÇIKMAZI kayda geçiriyordu:
+      yüklemeye yalnız `ready` sipariş girebildiği için (`startCourierDay`), rafta bulunamayan tek
+      bir adet siparişin tamamını depoda kilitliyordu. Karar modeli — depocunun yazdığı adet
+      kararın kendisidir — eksiğin NE YAPILACAĞINI ayrı bir akışa bırakıyor; o akış siparişi
+      depoda tutmamalı.
+    */
+    expect(declared).toMatchObject({ status: 'ok', ready: true });
     const shortfall = declared.status === 'ok' ? declared.shortfalls[0] : null;
     expect(shortfall?.suggestion).toMatchObject({ action: 'ask_customer', missingQty: 2 });
+  });
+
+  it('BEYANSIZ kapanışta eksik sipariş HAZIR OLMAZ — yarım iş yeni kutu bekler', async () => {
+    const { orderId, itemIds } = await confirmedOrder([4]);
+    const opened = await openBox(db, { orderId, warehouseId });
+
+    const sealed = await sealBox(db, {
+      boxId: opened.status === 'ok' ? opened.box.boxId : '',
+      warehouseId,
+      picks: [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 1 }] }],
+    });
+
+    // Ayrım BEYANDA: aynı eksik, beyansız "devam ediyor" demektir.
+    expect(sealed).toMatchObject({ status: 'ok', ready: false, shortfalls: [] });
+    expect((await orders.getById(orderId))?.status).toBe('preparing');
   });
 
   it('kapalı kutu ikinci kez kapanmaz (`already_sealed`) ve içerik değişmez', async () => {

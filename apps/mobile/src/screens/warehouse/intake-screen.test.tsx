@@ -80,10 +80,19 @@ const MLOR = 75;
  *
  * Cetvel 0–24 arası; daha büyük adetler koli sayacıyla girilir (`countCases`).
  */
+/*
+  ÇEKMECE BİR KARE SONRA ÇİZİLİR (01.09) — `visible` prop'u kütüphanenin `present()`ine çevriliyor
+  ve o bir durum değişimi. Cihazda görünmez; testte `fireEvent`ler aynı karede koştuğu için görünür.
+*/
+async function openSheet(firstTestID: string): Promise<void> {
+  await waitFor(() => expect(screen.getByTestId(firstTestID)).toBeOnTheScreen());
+}
+
 async function countRow(variantId: string, qty: string) {
   await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${variantId}`));
   await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${variantId}`));
   const sheet = `warehouse-intake-qty-sheet-${variantId}`;
+  await openSheet(`${sheet}-ruler-${qty}`);
   await fireEvent.press(screen.getByTestId(`${sheet}-ruler-${qty}`));
   await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
 }
@@ -91,6 +100,7 @@ async function countRow(variantId: string, qty: string) {
 async function pickExpiry(variantId: string, day: number, month: number, year: number) {
   await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${variantId}`));
   const sheet = `warehouse-intake-expiry-sheet-${variantId}`;
+  await openSheet(`${sheet}-year-${year}`);
   await fireEvent.press(screen.getByTestId(`${sheet}-year-${year}`));
   await fireEvent.press(screen.getByTestId(`${sheet}-month-${month}`));
   await fireEvent.press(screen.getByTestId(`${sheet}-day-${day}`));
@@ -449,6 +459,7 @@ describe('D2 · mal kabul', () => {
        (`date-wheel-value.test.ts` — "ay kısaldığında gün son güne iner"). */
     const sheet = `warehouse-intake-expiry-sheet-${ROW_A.variantId}`;
     await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`));
+    await openSheet(`${sheet}-month-2`);
     await fireEvent.press(screen.getByTestId(`${sheet}-month-2`));
 
     expect(screen.queryByTestId(`${sheet}-day-31`)).toBeNull();
@@ -503,6 +514,7 @@ describe('D2 · mal kabul', () => {
     /* KUTU BOŞSA LOT YOKTUR (kullanıcı kararı 30.08): "Lot yok" diye ayrı bir düğme kalmadı —
        yazılanı TEMİZLE düğmesi siler ve boş kutu zaten `lotNumber: null` demektir. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
+    await openSheet(`warehouse-intake-lot-${ROW_A.variantId}`);
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-clear-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
@@ -532,10 +544,12 @@ describe('D2 · mal kabul', () => {
     // Önce ÖTEKİ satıra bir kod yazılıyor: birinci kaynak ancak böyle dolar.
     await countRow(ROW_B.variantId, '4');
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_B.variantId}`));
+    await openSheet(`warehouse-intake-lot-${ROW_B.variantId}`);
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_B.variantId}`), 'AYNI-KABUL');
 
     await countRow(ROW_A.variantId, '10');
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
+    await openSheet(`warehouse-intake-lot-suggestion-${ROW_A.variantId}-AYNI-KABUL`);
 
     // Üçü de öneriliyor: biri aynı kabulden, ikisi depodan.
     expect(screen.getByTestId(`warehouse-intake-lot-suggestion-${ROW_A.variantId}-AYNI-KABUL`)).toBeOnTheScreen();
@@ -562,6 +576,7 @@ describe('D2 · mal kabul', () => {
 
     /* ONAY DÜĞMESİ YOK: kutuya yazılan kod satıra CANLI işleniyor, çekmece yalnız kapanıyor. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
+    await openSheet(`warehouse-intake-lot-${ROW_A.variantId}`);
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
@@ -624,10 +639,12 @@ describe('D2 · mal kabul', () => {
     await renderIntake();
     await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${kolili.variantId}`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${kolili.variantId}`));
+    await openSheet(`${sheet}-case-18691000023757-step-increase`);
     await fireEvent.press(screen.getByTestId(`${sheet}-case-18691000023757-step-increase`));
     await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
 
     await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${kolili.variantId}`));
+    await openSheet(`${sheet}-case-18691000023757-step-value`);
     expect(screen.getByTestId(`${sheet}-case-18691000023757-step-value`)).toHaveTextContent('1');
   });
 
@@ -747,6 +764,7 @@ describe('D2 · mal kabul', () => {
     /* Sebep artık çekmeceden ve TEK seçim (kullanıcı kararı 30.08): kartta çip yok, sayacın
        sağındaki düğme listeyi açıyor. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-reason-${ROW_A.variantId}`));
+    await openSheet(`warehouse-intake-damage-reason-option-${ROW_A.variantId}-ezik / kırık`);
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-reason-option-${ROW_A.variantId}-ezik / kırık`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 

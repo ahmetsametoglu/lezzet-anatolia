@@ -30,6 +30,7 @@ import {
   resolveBatchCode,
   resolveScannedCode,
   sampleBoxLabel,
+  declareOrderShort,
   sealBox,
   sendcloudProvider,
   shippingProviderConfigured,
@@ -70,6 +71,7 @@ import {
   ResolveCodeRequestSchema,
   ResolveCodeResponseSchema,
   SealBoxRequestSchema,
+  DeclareShortResponseSchema,
   SealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   ShippingLabelResponseSchema,
@@ -198,7 +200,13 @@ export function soleWarehouseIdOf(scope: readonly string[]): string | null {
   return scope.length === 1 ? (scope[0] ?? null) : null;
 }
 
-export async function warehouseGuard(c: Context<WarehouseEnv>, next: Next): Promise<Response | void> {
+/*
+   Bağlam GENERİK (01.09): satış yönlendiricisi aynı guard'ı kendi bağlamıyla çağırıyor
+   (`SaleEnv` = depo değişkenleri + satış yeri) ve Hono'nun `Context.set`i değişken (invariant) —
+   `Context<SaleEnv>` `Context<WarehouseEnv>` yerine geçmiyor. Cast yerine kısıt yazıldı: guard
+   yalnız "warehouseId taşıyan bir bağlam" istiyor, tam olarak o bağlamı istemiyor.
+*/
+export async function warehouseGuard<E extends WarehouseEnv>(c: Context<E>, next: Next): Promise<Response | void> {
   const profile = c.get('staff');
 
   const query = WarehouseQuerySchema.safeParse(c.req.query());
@@ -396,6 +404,27 @@ warehouse.post('/boxes/:boxId/seal', async (c) => {
 
   const body: z.input<typeof SealBoxResponseSchema> = outcome;
   return ok(c, SealBoxResponseSchema.parse(body));
+});
+
+/**
+ * **Siparişi eksik kapat** (kullanıcı bulgusu 31.08) — kutu kapatmadan verilen SİPARİŞ kararı.
+ *
+ * Ayrı uç, çünkü ayrı bir eylem: `/boxes/:id/seal` bir kutuyu mühürler ve beyan orada yalnız bir
+ * yan bayraktı; son kutu kapandıktan sonra ("kalanı bulamadım" anı) mühürlenecek kutu YOKTUR.
+ * Gövde almaz — hangi kalemlerin eksik olduğu zaten kayıtta, sunucu onu yeniden hesaplar.
+ */
+warehouse.post('/orders/:orderId/declare-short', async (c) => {
+  const orderId = UuidSchema.safeParse(c.req.param('orderId'));
+  if (!orderId.success) return fail(c, 'invalid_order_id', 400);
+
+  const outcome = await declareOrderShort(serviceDb(), {
+    orderId: orderId.data,
+    warehouseId: c.get('warehouseId'),
+    actorId: c.get('staff').id,
+  });
+
+  const body: z.input<typeof DeclareShortResponseSchema> = outcome;
+  return ok(c, DeclareShortResponseSchema.parse(body));
 });
 
 /**

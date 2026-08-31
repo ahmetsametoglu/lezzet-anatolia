@@ -1,19 +1,28 @@
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { PAYMENT_METHOD_LABELS, type BoxLabelContract, type PreparationLineContract, type PreparationOrderContract } from '@lezzet/types';
 
+import { OperationsIconButton } from '@/components/operations/icon-button';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
+import { OperationsProductRow } from '@/components/operations/product-row';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsScanFab } from '@/components/operations/scan-fab';
+import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PrintProbe } from '@/components/print/print-probe';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
+import { toastInfo } from '@/lib/toast/toast-store';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -54,8 +63,27 @@ const t = warehouseCopy;
 const QUEUE_SKELETON_HEIGHT = 74;
 
 export function PreparationScreen() {
+  /** Kapanış onayı açık mı — yalnız eksik kalan kalem varken doğar. */
+  const [sealAsk, setSealAsk] = useState(false);
   const router = useRouter();
   const picking = usePreparation();
+
+  /*
+    BİLDİRİM KANALI TOAST (kullanıcı kararı 31.08) — ekrana yapıştırılan bant KALKTI.
+
+    Uygulamanın zaten tek bir bildirim dili var (`ToastHost`, kökte) ve kurye ekranları onu
+    kullanıyordu; toplama ekranı kendi bandını çizerek aynı işi ikinci bir görsel dille yapıyordu.
+    Kullanıcının cümlesi: *"biz zaten mesajları bu şekilde göstermiyoruz ki, bizim toast mesajımız
+    var."* Başarılı okutmanın cümlesi ise büsbütün kalktı — okutulan şey listeye ZATEN ekleniyor
+    ve adet çekmecesi ürünün adıyla açılıyor; üstüne bir de "bulundu" demek aynı haberi üç kez
+    vermekti.
+
+    `toastInfo` SESSİZ olan ve bu bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında
+    veriyor (künyesi orada). `toastSuccess`/`toastError` seçilseydi her bildirim iki kez titrerdi.
+  */
+  useEffect(() => {
+    if (picking.notice !== null) toastInfo(picking.notice.text);
+  }, [picking.notice]);
   const { offline } = useWarehouseStatus();
 
   const order = picking.order;
@@ -139,7 +167,7 @@ export function PreparationScreen() {
     return (
       <View style={styles.screen} testID="warehouse-picking">
         {header}
-        <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-queue">
+        <ScrollView contentContainerStyle={styles.queueList} testID="warehouse-picking-queue">
           {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
               burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
           {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
@@ -158,15 +186,17 @@ export function PreparationScreen() {
               <Text style={styles.queueLockedBody}>{t.picking.queueLocked.body}</Text>
             </View>
           ) : (
-            <PressableSurface
+            /* KİTİN DÜĞMESİ, ELLE ÇİZİM DEĞİL (31.08): tasarımın ölçüleri (zeytin dolgu · 54
+               yükseklik · zeytin ışıma · solda çizgi ikon) `PrimaryButton`ın kendisi. Elle
+               çizildiğinde ışıma hiç konmamış, ikon da metne gömülü bir 📄 emojisi olmuştu —
+               emoji renk almaz, kalınlık taşımaz ve cihazdan cihaza değişir. */
+            <PrimaryButton
+              label={t.picking.queueScan.cta}
+              icon="scan-paper"
+              elevation="glow"
               onPress={() => picking.setQueueScanOpen(true)}
-              feedback="scale"
-              style={styles.queueScanButton}
-              accessibilityLabel={t.picking.queueScan.cta}
               testID="warehouse-picking-queue-scan"
-            >
-              <Text style={styles.queueScanLabel}>{t.picking.queueScan.cta}</Text>
-            </PressableSurface>
+            />
           )}
 
           <View style={styles.queueHeadingRow}>
@@ -174,6 +204,7 @@ export function PreparationScreen() {
             <Text style={styles.queueHeadingHint}>{t.picking.queueHeadingHint}</Text>
           </View>
 
+          <View style={styles.queueCards}>
           {orderPickingQueue(picking.orders).map((row) => {
             const state = queueStateOf(row);
             return (
@@ -220,6 +251,7 @@ export function PreparationScreen() {
               </PressableSurface>
             );
           })}
+          </View>
 
           <Text style={styles.queueFootnote}>{t.picking.queueFootnote}</Text>
         </ScrollView>
@@ -243,15 +275,38 @@ export function PreparationScreen() {
     );
   }
 
-  const cta = picking.boxMode
-    ? boxCtaOf(picking.openBox !== null, picking.boxes.length, picking.anyQty, picking.anyShort, picking.sending, offline)
-    : ctaOf(picking.resolved, picking.anyShort, picking.sending, offline);
+  /* Yapışkan çubuk artık yalnız ESKİ akışta çiziliyor (aşağıdaki künye), yani tek hâl kaldı. */
+  const cta = ctaOf(picking.resolved, picking.anyShort, picking.sending, offline);
   /*
     KUTU AÇMA İKİ ADIMLI OLABİLİR (07.12): kargo kulvarında önce TİP sorulur, sonra kutu açılır.
-    Rota siparişinde ve tipsiz depoda soru hiç doğmaz — CTA doğrudan kutuyu açar (23.6 akışı).
+    Rota siparişinde ve tipsiz depoda soru hiç doğmaz — FAB doğrudan kutuyu açar (23.6 akışı).
   */
   const onOpenBox = () => (picking.askBoxType ? picking.setBoxTypeOpen(true) : picking.openNewBox(null));
-  const onCta = picking.boxMode ? (picking.openBox === null ? onOpenBox : picking.sealCurrentBox) : picking.submit;
+  /*
+    KAPANIŞ ÖNCE SORAR (kullanıcı kararı 31.08) — eksik kalan kalem varsa.
+
+    Eksik BEYANI eskiden satırdaki bir bağlantıydı ("eksik bildir") ve iki kusuru vardı: kalem
+    adının hemen altında olduğu için yanlışlıkla tıklanıyordu, ve tek başına hiçbir şey
+    yapmadığı için ne işe yaradığı okunmuyordu. Doğru an kapanıştır ve soru orada bir KARARDIR:
+    "yeni kutu açacağım" ile "rafta yok, bildir" farklı iki cevap ve ikisi de kapanışı yazar —
+    farkı yalnız yönetime soru gidip gitmemesi.
+
+    Eksik yoksa soru HİÇ sorulmaz: her kapanışta onay istemek, onayı bir refleks hâline getirir.
+  */
+  /*
+    KAPATMA SORMAZ, EKSİK BİLDİRME SORAR (kullanıcı kararı 31.08).
+
+    Bir tur önce her eksikli kapanış bir onay ekranı açıyordu ve o ekranın "Eksikleri bildir"
+    düğmesi, kutu kapatmaya giden NORMAL yolun üstündeydi: depocu ikinci kutuyu açmak için günde
+    onlarca kez oradan geçiyor ve yanlışlıkla siparişi eksik ilan etmesi bir dokunuş uzaklıktaydı.
+    Kullanıcının cümlesi: *"bu ekran yanlışlıkla eksik bildir kapata müsait."*
+
+    Yeni bölüşüm niyete göre: **Kutuyu kapat** hiçbir şey sormaz (kalan başka kutuya girecek —
+    yaygın hâl), **Eksikleri bildirerek kapat** ayrı ve kasıtlı bir eylemdir, onayı da o ister.
+    Onay ekranı böylece sık geçilen yoldan çıkıp yalnız geri dönüşü olmayan kararın önüne kondu.
+  */
+  const onSealRequest = () => picking.sealCurrentBox();
+  const onDeclareRequest = () => setSealAsk(true);
 
   return (
     <View style={styles.screen} testID="warehouse-picking">
@@ -264,10 +319,20 @@ export function PreparationScreen() {
         {/* KOLİYE YAZILACAK AD (23.3, mobil şeridin işareti) — yalnız alıcı hesabın sahibinden
             FARKLIYSA çizilir (web `parcelName` kuralı birebir): ikisi aynıyken satır, hiçbir şey
             söylemeyen bir tekrar olurdu. Adres/telefon yine YOK (tasarım §6). */}
-        {parcelName(order) === null ? null : (
-          <Text style={styles.parcelName} testID="warehouse-picking-parcel">
-            {fillCopy(t.picking.parcelName, { name: parcelName(order)! })}
-          </Text>
+        {/* KOLİ ADI + AÇIK KUTU ÇİPİ AYNI SATIRDA (v3:03) — ikisi de "şu an ne üstünde
+            çalışıyorum"un yarısı: hangi koli ve kaçıncı kutu. Çip AYRICA kutu kartında da var ve
+            tekrar değil: kart kaydırılıp gözden çıkabilir, bu satır künyenin yanında sabit kalır. */}
+        {parcelName(order) === null && picking.openBox === null ? null : (
+          <View style={styles.parcelRow}>
+            {parcelName(order) === null ? null : (
+              <Text style={styles.parcelName} testID="warehouse-picking-parcel">
+                {fillCopy(t.picking.parcelName, { name: parcelName(order)! })}
+              </Text>
+            )}
+            {/* AÇIK KUTU ÇİPİ BURADAN KALKTI (kullanıcı bulgusu 31.08). Tasarımda vardı ve gerekçesi
+                "kart kaydırılıp gözden çıkabilir, künye sabit kalır" idi — ama cihazda ikisi AYNI
+                ekranda, bir santim arayla duruyor ve "KUTU 1 · AÇIK" iki kez okunuyor. */}
+          </View>
         )}
         {/* KUTU ŞERİDİ (23.6): kapalı kutular salt-okunur özet, açık kutu başlık çipi + tarama.
             Kutusuz başlanmış işte (boxMode false) şerit hiç çizilmez — eski akış aynen. */}
@@ -285,12 +350,19 @@ export function PreparationScreen() {
               .filter((box) => box.sealedAt !== null)
               .map((box) => (
                 <View key={box.boxId} style={styles.boxSealedCard} testID={`warehouse-picking-box-${box.boxNo}`}>
-                  <Text style={styles.boxSealed}>
-                    {fillCopy(t.picking.box.sealedRow, {
-                      n: String(box.boxNo),
-                      qty: String(box.items.reduce((sum, item) => sum + item.qty, 0)),
-                    })}
-                  </Text>
+                  {/* BAŞLIK TEK SATIR (v3:03 · ölçüldü 31.08): ✓ + "Kutu N" solda, künye SAĞA
+                      yaslı. Kapanan kutu bir KAYITTIR; üç kademeye yayılan bir başlık onu
+                      okunacak bir belgeye çevirir. Onay imi kutunun kapandığını söyleyen tek
+                      görsel işaret — metin "kapalı" demiyor artık. */}
+                  <View style={styles.boxSealedHead}>
+                    <Icon name="check" size={operationsTheme.text.tag} color={operationsTheme.colors.olive} bold />
+                    <Text style={styles.boxSealed}>{fillCopy(t.picking.box.sealedBox, { n: String(box.boxNo) })}</Text>
+                    <Text style={styles.boxSealedQr} numberOfLines={1}>
+                      {`${box.code} · ${fillCopy(t.picking.box.contentCaptionShort, {
+                        n: String(box.items.reduce((sum, item) => sum + item.qty, 0)),
+                      })}`}
+                    </Text>
+                  </View>
                   {/* İçerik kalem ADIYLA yazılıyor: adet tek başına "8 ürün" der ve depocu neyin
                       kapandığını bilmez. Ad siparişin kalemlerinden çözülüyor — sözleşme kutuda
                       yalnız kimlik taşıyor, adı iki kaynaktan taşımak biri ötekiyle çelişirdi. */}
@@ -298,30 +370,18 @@ export function PreparationScreen() {
                     const line = order.lines.find((candidate) => candidate.itemId === item.orderItemId);
                     if (line === undefined) return null;
                     return (
-                      <Text key={item.orderItemId} style={styles.boxSealedItem}>
-                        {fillCopy(t.picking.box.sealedItem, {
-                          qty: String(item.qty),
-                          name: productLabel(line.productName, line.variantLabel),
-                        })}
-                      </Text>
+                      <OperationsProductRow
+                        key={item.orderItemId}
+                        name={line.productName}
+                        variantLabel={line.variantLabel}
+                        photoUri={line.imageUrl}
+                        style={styles.boxSealedItem}
+                        right={<Text style={styles.boxSealedQty}>{item.qty}</Text>}
+                      />
                     );
                   })}
-                  <Text style={styles.boxSealedQr}>{fillCopy(t.picking.box.sealedQr, { code: box.code })}</Text>
                 </View>
               ))}
-            {picking.openBox === null ? null : (
-              <Text style={styles.boxCurrent} testID="warehouse-picking-box-open">
-                {/* Tip SEÇİLDİYSE adı da yazılır: kutu açıldıktan sonra seçimi düzeltmenin yolu
-                    yok, dolayısıyla depocu yanlış kartona doldurmaya başlamadan görmeli. Adı
-                    listeden çözüyoruz — sözleşme yalnız kimlik taşıyor (künyesi orada). */}
-                {((name) =>
-                  name === null
-                    ? fillCopy(t.picking.box.current, { n: String(picking.openBox!.boxNo) })
-                    : fillCopy(t.picking.box.currentTyped, { n: String(picking.openBox!.boxNo), name }))(
-                  picking.shippingBoxes.find((box) => box.id === picking.openBox?.shippingBoxId)?.name ?? null,
-                )}
-              </Text>
-            )}
           </View>
         ) : null}
 
@@ -333,39 +393,111 @@ export function PreparationScreen() {
             {t.picking.box.typeEmpty}
           </Text>
         ) : null}
-        {/* Çevrimdışıyken okutma düğmesi ÇİZİLMEZ (kabul ekranı deseni): kod çözümü sunucuda,
-            kuyruğu yok — basılamayan düğme yerine yokluk, kilidin kendisini anlatır. */}
-        {picking.boxMode && picking.openBox !== null && !offline ? (
-          <PressableSurface
-            onPress={() => picking.setScanOpen(true)}
-            feedback="scale"
-            style={styles.scanButton}
-            accessibilityLabel={t.picking.box.scanCta}
-            testID="warehouse-picking-scan"
-          >
-            <Text style={styles.scanButtonLabel}>{t.picking.box.scanCta}</Text>
-          </PressableSurface>
-        ) : null}
 
-        {order.lines.map((line, index) => (
-          <LineRow
-            key={line.itemId}
-            line={line}
-            index={index}
-            boxMode={picking.boxMode}
-            offline={offline}
-            qty={picking.lineState(line.itemId).qty}
-            shortReported={picking.lineState(line.itemId).shortReported}
-            capacity={picking.capacityOf(line)}
-            onQty={(value) => picking.setQty(line.itemId, value, picking.capacityOf(line))}
-            onComplete={() =>
-              picking.setQty(line.itemId, Math.min(line.orderedQty, picking.capacityOf(line)), picking.capacityOf(line))
-            }
-            onShort={() => picking.reportShort(line.itemId)}
-          />
-        ))}
-        <Text style={styles.footnote}>{picking.boxMode ? t.picking.box.footnote : t.picking.footnote}</Text>
+        {/*
+          EKSEN DÖNÜŞÜ (v3 · 31.08) — kutu bir ETİKET değil ÇALIŞMA ALANI.
+
+          Eski akışta liste giriş yoluydu: bütün kalemler artı/eksi sayaçlarıyla ekranda dururdu,
+          depocu satırı gözüyle bulup sayardı. Yeni akış kullanıcının anlattığı harekettir: masaya
+          gelinir, kutu açılır, ürün OKUTULUR, adet onaylanır — satırı sistem bulur. Liste bu
+          yüzden aşağı indi ve bir KONTROL TABLOSUNA döndü ("ne kaldı"), giriş yolu olmaktan çıktı.
+
+          Ayrım `boxMode`da: kutusuz başlanmış iş (web masasından yarım) ESKİ akışla biter —
+          kalem düzeyinde kutulu/kutusuz karışımını RPC reddediyor (0048) ve o siparişte kutu hiç
+          açılmayacak, dolayısıyla yeni akışın dayandığı zemin de yok.
+        */}
+        {picking.boxMode ? (
+          <>
+            {picking.openBox === null ? (
+              <View style={styles.boxEmpty} testID="warehouse-picking-box-empty">
+                <Text style={styles.boxEmptyTitle}>{t.picking.box.emptyTitle}</Text>
+                <Text style={styles.boxEmptyBody}>{t.picking.box.emptyBody}</Text>
+              </View>
+            ) : (
+              <OpenBoxCard picking={picking} offline={offline} onSeal={onSealRequest} />
+            )}
+            <PendingList picking={picking} offline={offline} />
+            <Text style={styles.footnote}>{t.picking.box.footnote}</Text>
+            {/* Çubuk mutlak konumlu ve listenin son satırını örterdi; pay onun yüksekliğince. */}
+            {picking.shortLines.length > 0 && picking.boxedQty > 0 ? <View style={styles.declareBarSpacer} /> : null}
+
+          </>
+        ) : (
+          <>
+            {order.lines.map((line, index) => (
+              <LineRow
+                key={line.itemId}
+                line={line}
+                index={index}
+                boxMode={false}
+                offline={offline}
+                qty={picking.lineState(line.itemId).qty}
+                shortReported={picking.lineState(line.itemId).shortReported}
+                capacity={picking.capacityOf(line)}
+                onQty={(value) => picking.setQty(line.itemId, value, picking.capacityOf(line))}
+                onComplete={() =>
+                  picking.setQty(line.itemId, Math.min(line.orderedQty, picking.capacityOf(line)), picking.capacityOf(line))
+                }
+                onShort={() => picking.reportShort(line.itemId)}
+              />
+            ))}
+            <Text style={styles.footnote}>{t.picking.footnote}</Text>
+          </>
+        )}
       </ScrollView>
+
+      {/*
+        OKUTMA HER ZAMAN ELİN ALTINDA (kullanıcı kararı 31.08) — kaydırmayla kaybolmaz.
+
+        İki işlevli: kutu yoksa onu AÇAR (mürekkep), varsa OKUTUR (zeytin). Elin gittiği yer sabit
+        kalıyor, değişen tek şey oradaki eylem. Çevrimdışıyken gizlenmiyor SÖNÜYOR — "burada
+        okutma yok" ile "şimdi olmaz" ayrı cümleler ve depocuya doğru olan ikincisi.
+      */}
+      {picking.boxMode ? (
+        <OperationsScanFab
+          icon={picking.openBox === null ? 'packages' : 'scan'}
+          tone={picking.openBox === null ? 'action' : 'scan'}
+          accessibilityLabel={picking.openBox === null ? t.picking.box.fabOpen : t.picking.box.fabScan}
+          disabled={offline || picking.sending}
+          onPress={picking.openBox === null ? onOpenBox : () => picking.setScanOpen(true)}
+          /* Eksik bildirme çubuğu varken daire onun ÜSTÜNE çıkar — yoksa çubuğun cümlesini
+             örtüyor (kullanıcı bulgusu 31.08). Yükseklik çubuğun payıyla aynı sabitten. */
+          lift={picking.shortLines.length > 0 && picking.boxedQty > 0 ? operationsTheme.space['9xl'] : 0}
+          testID="warehouse-picking-fab"
+        />
+      ) : null}
+
+      {/*
+        EKSİK BİLDİRİMİ EKRANIN DİBİNE YAPIŞIK (kullanıcı kararı 31.08).
+
+        ── SİPARİŞİN, KUTUNUN DEĞİL ────────────────────────────────────────────
+        Bir tur kutu kartının içindeydi ve yanlış yerdi: beyan edilen şey "bu kutuya sığmadı"
+        değil, *"bu siparişten şu kadarı rafta yok"*. Kutunun içinde durduğu sürece her yeni
+        kutuda bir kez daha karşına çıkıyordu.
+
+        ── AKIŞIN İÇİNDE DEĞİL, ÇUBUKTA ────────────────────────────────────────
+        İçeriğin peşine takılan bir bölüm listenin uzunluğuna göre bazen görünüyor bazen
+        kayboluyordu; oysa bu karar sipariş açık olduğu SÜRECE alınabilir olmalı. Çubuk bu yüzden
+        listeden bağımsız ve en altta — FAB'ın altında kalıyor, okutma hâlâ elin gittiği yerde.
+
+        ── KIRMIZI VE DOLU ─────────────────────────────────────────────────────
+        Ton `error`: geri dönüşü olmayan tek karar bu ve rengi öyle demeli. Basmak tek başına bir
+        şey YAPMIYOR — onay çekmecesi açılıyor; kırmızı burada "dikkat et" diyor, "oldu" demiyor.
+      */}
+      {picking.boxMode && picking.shortLines.length > 0 && picking.boxedQty > 0 ? (
+        <View style={styles.declareBar}>
+          <Text style={styles.declareBarBody}>
+            {fillCopy(t.picking.box.declare.body, { n: String(picking.shortLines.length) })}
+          </Text>
+          <PrimaryButton
+            label={t.picking.box.sealShort}
+            tone="error"
+            disabled={offline || picking.sending}
+            onPress={onDeclareRequest}
+            testID="warehouse-picking-declare-short"
+          />
+        </View>
+      ) : null}
 
       <ScanSheet
         open={picking.scanOpen}
@@ -373,6 +505,23 @@ export function PreparationScreen() {
         hint={t.picking.box.scanHint}
         onClose={() => picking.setScanOpen(false)}
         onScan={picking.handleScan}
+        /*
+          SİMÜLASYON ÇİPLERİ BU SİPARİŞİN ÜRÜNLERİ (kullanıcı isteği 31.08).
+
+          Varsayılan havuz (`DEV_SCAN_POOL`) ROLE göre kurulu — "Paket", "Koli ×24", "Yabancı
+          ürün" — ve hangi ürüne bağlandığı seed'in kararı. Toplama ekranında bu işe yaramıyordu:
+          depocu bu SİPARİŞİN kalemlerini okutmak istiyor, rastgele bir paketi değil.
+
+          Çipler kalemin GERÇEK paket barkodunu taşıyor, yani kısa devre yok: çipe basmak
+          `/codes/resolve`ün aynı yolundan geçiyor ve "bu siparişte yok" dalı da dahil bütün
+          cevaplar aynen doğuyor. Barkodu girilmemiş kalem çip üretmez — uydurma bir kod,
+          simülasyonu yalancı yapardı.
+        */
+        devCodes={order.lines.flatMap((line) =>
+          line.barcode === null
+            ? []
+            : [{ label: productLabel(line.productName, line.variantLabel), code: line.barcode }],
+        )}
         testID="warehouse-picking-scan-sheet"
       />
 
@@ -427,28 +576,98 @@ export function PreparationScreen() {
         />
       </BottomSheet>
 
-      {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (kurye emsali). */}
-      <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
-        {picking.notice === null ? null : (
-          <Text
-            style={[styles.notice, styles[`notice_${picking.notice.tone}`]]}
-            accessibilityRole="alert"
-            testID="warehouse-picking-notice"
+      {/*
+        YAPIŞKAN ÇUBUK — artık YALNIZ eski akışın CTA'sını taşıyor (kullanıcı kararı 31.08:
+        *"iki tane kutu kapata gerek yok, alttaki olmasa daha iyi"*). Kutu akışında kapatma düğmesi
+        kutunun KENDİ kartında duruyor; aynı eylemi iki yerden sunmak, hangisinin "asıl" olduğunu
+        belirsiz bırakırdı.
+
+        Sonuç cümlesi buradan da KALKTI (kullanıcı kararı 31.08): bildirim kanalı uygulamanın
+        kendi toast'ı, ekranın içine yapıştırılan bir bant değil — künyesi aşağıda, köprüde.
+      */}
+      {picking.boxMode ? null : (
+        <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
+          <PressableSurface
+            onPress={picking.submit}
+            disabled={!cta.enabled}
+            feedback="shadow"
+            style={[styles.cta, cta.enabled ? styles.ctaReady : styles.ctaIdle]}
+            accessibilityLabel={cta.label}
+            testID="warehouse-picking-cta"
           >
-            {picking.notice.text}
+            <Text style={[styles.ctaLabel, cta.enabled ? styles.ctaLabelReady : styles.ctaLabelIdle]}>{cta.label}</Text>
+          </PressableSurface>
+        </LinearGradient>
+      )}
+
+      {/*
+        KAPANIŞ ONAYI — eksik kalan kalem varken. İki cevap da kutuyu kapatır; farkı YÖNETİME
+        soru gidip gitmemesi (`declareShort`). "Vazgeç" yerine "Yeni kutu açacağım" yazıyor
+        çünkü depocunun oradaki gerçek seçeneği bu — vazgeçmek kapanışı iptal etmek değil,
+        kalanı başka kutuya koymaktır.
+      */}
+      <OperationsConfirmSheet
+        visible={sealAsk}
+        title={fillCopy(t.picking.box.shortConfirm.title, { n: String(picking.shortLines.length) })}
+        message={t.picking.box.shortConfirm.message}
+        confirmLabel={t.picking.box.shortConfirm.declare}
+        cancelLabel={t.picking.box.shortConfirm.keep}
+        /* İPTAL ARTIK HİÇBİR ŞEY YAPMIYOR (31.08): çekmece "kutuyu kapat"ın önünde dururken iptal
+           "beyansız kapat" demekti; şimdi kendi düğmesiyle açılıyor ve iptalin karşılığı yalnız
+           vazgeçmek. Kapatmayı iptal düğmesine bindirmek, iki eylemi tek dokunuşta gizlerdi. */
+        tone="error"
+        busy={picking.sending}
+        busyLabel={t.picking.box.shortConfirm.busy}
+        onConfirm={() => {
+          setSealAsk(false);
+          picking.declareShort();
+        }}
+        onCancel={() => setSealAsk(false)}
+        testID="warehouse-picking-seal-confirm"
+      >
+        {/* Eksik kalemler TEK TEK yazılır: "3 kalem eksik" hangi kalemler olduğunu söylemez ve
+            depocu son kez rafa dönüp bakabilmeli. */}
+        {picking.shortLines.map(({ line, missingQty }) => (
+          <Text key={line.itemId} style={styles.sealShortLine}>
+            {fillCopy(t.picking.box.shortConfirm.line, {
+              name: productLabel(line.productName, line.variantLabel),
+              qty: String(missingQty),
+            })}
           </Text>
-        )}
-        <PressableSurface
-          onPress={onCta}
-          disabled={!cta.enabled}
-          feedback="shadow"
-          style={[styles.cta, cta.enabled ? styles.ctaReady : styles.ctaIdle]}
-          accessibilityLabel={cta.label}
-          testID="warehouse-picking-cta"
-        >
-          <Text style={[styles.ctaLabel, cta.enabled ? styles.ctaLabelReady : styles.ctaLabelIdle]}>{cta.label}</Text>
-        </PressableSurface>
-      </LinearGradient>
+        ))}
+      </OperationsConfirmSheet>
+
+      {/* ADET ÇEKMECESİ — okutmanın ikinci yarısı; kalanla dolu gelir, depocu onaylar. */}
+      {picking.qtyTarget === null ? null : (
+        <OperationsScanQtySheet
+          visible
+          name={picking.qtyTarget.productName}
+          variantLabel={picking.qtyTarget.variantLabel}
+          caption={qtySheetCaption(picking.qtyTarget)}
+          stats={[
+            { value: String(picking.qtyTarget.orderedQty), label: t.picking.qtySheet.wanted },
+            {
+              value: String(remainingOf(picking.qtyTarget, picking.lineState(picking.qtyTarget.itemId).qty)),
+              label: t.picking.qtySheet.left,
+              tone: 'warn',
+            },
+          ]}
+          value={picking.qtyValue}
+          onChange={picking.setQtyValue}
+          qtyCaption={t.picking.qtySheet.qtyCaption}
+          /* SERT DUVAR motorun ayırdığı parti toplamıdır: rafta olmayan mal okutmayla da
+             "konmuş" yazılamaz. Bugün bu tavan istenen adede EŞİT (öneri kalan için üretiliyor),
+             yani "istenenden fazla" hâli ulaşılamaz — tasarımın kırmızı "fazla" satırı bu yüzden
+             çizilmiyor (ölçüldü 31.08, `suggestFefoPicks(requestedQty…)`). */
+          max={picking.capacityOf(picking.qtyTarget)}
+          confirmLabel={t.picking.qtySheet.confirm}
+          confirmDisabled={picking.qtyValue <= 0}
+          onConfirm={picking.confirmQty}
+          footnote={t.picking.qtySheet.footnote}
+          onClose={picking.closeQtySheet}
+          testID="warehouse-picking-qty-sheet"
+        />
+      )}
     </View>
   );
 }
@@ -511,28 +730,274 @@ function parcelName(order: PreparationOrderContract): string | null {
 }
 
 /**
- * Kutu modunun CTA'sı (23.6): açık kutu yoksa "kutu aç" (ilk kutu tek dokunuş — tasarım brief'i),
- * varsa "kutuyu kapat" — boş kutu kapanmadığı için içerik girilene dek kilitli. Eksik bildirilmiş
- * satır varsa kapanış beyanla gider (cümle onu söyler).
+ * **AÇIK KUTU KARTI** (v3:03 · 31.08) — kutunun İÇİ, artık görünür.
+ *
+ * Eskiden açık kutu tek satırlık bir çipti (`KUTU 2 · AÇIK`) ve içine ne konduğu hiçbir yerde
+ * yazmıyordu; konan adet kalemin kendi sayacında duruyordu, yani "bu kutuda ne var" sorusunun
+ * cevabı ekranda YOKTU. Kutu kapanınca içerik kesinleştiği için bu, geri alınamayan bir kararın
+ * körlemesine verilmesi demekti.
+ *
+ * Kapatma düğmesi de burada: kartın konusu kutu, eylemi de kutunun kendi eylemi.
  */
-function boxCtaOf(
-  hasOpenBox: boolean,
-  boxCount: number,
-  anyQty: boolean,
-  anyShort: boolean,
-  sending: boolean,
-  offline: boolean,
-): { label: string; enabled: boolean } {
-  if (offline) return { label: t.common.offlineCta, enabled: false };
-  if (sending) return { label: hasOpenBox ? t.picking.cta.sending : t.picking.box.opening, enabled: false };
-  if (!hasOpenBox) {
-    return {
-      label: boxCount === 0 ? t.picking.box.open : fillCopy(t.picking.box.openNext, { n: String(boxCount + 1) }),
-      enabled: true,
-    };
+function OpenBoxCard({
+  picking,
+  offline,
+  onSeal,
+}: {
+  picking: ReturnType<typeof usePreparation>;
+  offline: boolean;
+  /** Kutuyu OLDUĞU GİBİ kapatır — soru yok; kalan başka kutuya girecek demektir. */
+  onSeal: () => void;
+}) {
+  const box = picking.openBox;
+  if (box === null) return null;
+
+  const seal = sealCtaOf(picking.anyQty, picking.sending, offline);
+  const boxedQty = picking.boxItems.reduce((sum, line) => sum + picking.lineState(line.itemId).qty, 0);
+  /* Tip SEÇİLDİYSE adı da yazılır: kutu açıldıktan sonra seçimi düzeltmenin yolu yok, dolayısıyla
+     depocu yanlış kartona doldurmaya başlamadan görmeli. Adı listeden çözüyoruz — sözleşme yalnız
+     kimlik taşıyor (künyesi orada). */
+  const typeName = picking.shippingBoxes.find((row) => row.id === box.shippingBoxId)?.name ?? null;
+
+  return (
+    <View style={styles.openBox} testID="warehouse-picking-box-open">
+      <View style={styles.openBoxHead}>
+        <View style={styles.openBoxHeadText}>
+          <Text style={styles.openBoxTitle}>
+            {typeName === null
+              ? fillCopy(t.picking.box.current, { n: String(box.boxNo) })
+              : fillCopy(t.picking.box.currentTyped, { n: String(box.boxNo), name: typeName })}
+          </Text>
+          <Text style={styles.openBoxCaption}>{fillCopy(t.picking.box.contentCaption, { n: String(boxedQty) })}</Text>
+        </View>
+        <PressableSurface
+          onPress={onSeal}
+          disabled={!seal.enabled}
+          feedback="scale-small"
+          compact
+          style={[styles.sealButton, seal.enabled ? styles.sealButton_ready : styles.sealButton_idle]}
+          accessibilityLabel={seal.label}
+          testID="warehouse-picking-seal"
+        >
+          <Text style={[styles.sealLabel, seal.enabled ? styles.sealLabel_ready : styles.sealLabel_idle]}>
+            {seal.label}
+          </Text>
+        </PressableSurface>
+      </View>
+
+      {picking.boxItems.length === 0 ? (
+        <Text style={styles.openBoxEmpty}>{t.picking.box.contentEmpty}</Text>
+      ) : (
+        picking.boxItems.map((line) => {
+          const inBox = picking.lineState(line.itemId).qty;
+          const total = line.pickedQty + inBox;
+          return (
+            <OperationsProductRow
+              key={line.itemId}
+              name={line.productName}
+              variantLabel={line.variantLabel}
+              photoUri={line.imageUrl}
+              tone="olive"
+              style={styles.openBoxRow}
+              /* "bu kutuda N" YALNIZ önceki kutular varken yazılır: tek kutulu siparişte sağdaki
+                 `N/M` zaten aynı sayıyı söylüyor ve satır kendini tekrar ederdi. */
+              meta={
+                total === inBox ? undefined : (
+                  <Text style={styles.openBoxMeta}>{fillCopy(t.picking.box.inThisBox, { n: String(inBox) })}</Text>
+                )
+              }
+              right={
+                <View style={styles.openBoxRight}>
+                  <Text style={styles.openBoxCount}>
+                    {fillCopy(t.picking.box.itemTotal, { boxed: String(total), ordered: String(line.orderedQty) })}
+                  </Text>
+                  <OperationsIconButton
+                    icon="close"
+                    tone="plain"
+                    onPress={() => picking.removeFromBox(line.itemId)}
+                    accessibilityLabel={fillCopy(t.picking.box.removeItem, {
+                      name: productLabel(line.productName, line.variantLabel),
+                    })}
+                    testID={`warehouse-picking-box-remove-${line.itemId}`}
+                  />
+                </View>
+              }
+            />
+          );
+        })
+      )}
+
+    </View>
+  );
+}
+
+/**
+ * **KONTROL LİSTESİ** (v3:03 · 31.08) — "kâğıtta ne kaldı".
+ *
+ * Liste artık GİRİŞ YOLU DEĞİL: tamamı kutulanan kalem düşer, kalan satır ne kadar kaldığını
+ * söyler ve dokunulunca elle düzeltme çekmecesini açar. Sayaç kalem değil ADET sayıyor —
+ * "3/4 kalem" son kalemin 12 adet olduğunu saklardı.
+ */
+function PendingList({ picking, offline }: { picking: ReturnType<typeof usePreparation>; offline: boolean }) {
+  const counter = fillCopy(t.picking.pending.counter, {
+    boxed: String(picking.boxedQty),
+    ordered: String(picking.orderedQty),
+  });
+
+  if (picking.pendingLines.length === 0) {
+    return (
+      <View style={styles.pendingDone} testID="warehouse-picking-pending-done">
+        <Text style={styles.pendingDoneTitle}>{t.picking.pending.doneTitle}</Text>
+        <Text style={styles.pendingDoneBody}>{t.picking.pending.doneBody}</Text>
+      </View>
+    );
   }
-  if (!anyQty) return { label: t.picking.box.sealPending, enabled: false };
-  return { label: anyShort ? t.picking.box.sealShort : t.picking.box.seal, enabled: true };
+
+  return (
+    <View style={styles.pending} testID="warehouse-picking-pending">
+      <View style={styles.pendingHead}>
+        <Text style={styles.pendingHeading}>{t.picking.pending.heading}</Text>
+        <Text style={styles.pendingCounter}>{counter}</Text>
+      </View>
+
+      {picking.pendingLines.map((line) => {
+        const boxed = line.pickedQty + picking.lineState(line.itemId).qty;
+        const remaining = remainingOf(line, picking.lineState(line.itemId).qty);
+        const inOpenBox = picking.lineState(line.itemId).qty > 0;
+        return (
+          <OperationsProductRow
+            key={line.itemId}
+            name={line.productName}
+            variantLabel={line.variantLabel}
+            photoUri={line.imageUrl}
+            size="md"
+            style={[styles.pendingRow, boxed > 0 ? styles.pendingRow_started : null]}
+            /*
+              SATIR YALNIZ AÇIK KUTU VARKEN DOKUNULABİLİR (kullanıcı bulgusu 31.08).
+
+              Kutu yokken çekmece açılıyor ve adet giriliyordu — konacak yeri olmayan bir adet.
+              Kaydın gideceği kutu yoksa girilen sayı hiçbir şeye bağlanmıyor; depocu "koydum"
+              sanıyor, kapatacak kutu bulamıyor. Yüzen düğme o hâlde zaten "Kutu aç" diyor: sıra
+              önce onda.
+
+              Çevrimdışıyken de dokunulamaz — adet yazmak bir YAZMADIR ve depo kartlarında yazma
+              kuyruğa alınmaz ("mal rafta, sistem başka söylüyor" olamaz).
+            */
+            onPress={offline || picking.openBox === null ? undefined : () => picking.openQtyFor(line.itemId)}
+            accessibilityLabel={fillCopy(t.picking.pending.openLine, {
+              name: productLabel(line.productName, line.variantLabel),
+            })}
+            /*
+              SATIRDA "EKSİK BİLDİR" YOK (kullanıcı kararı 31.08).
+
+              Bağlantı satırın içindeydi ve iki sorunu vardı: **çok kolay tıklanıyordu** (kalem
+              adının hemen altında, kaydırırken bile) ve **ne işe yaradığı okunmuyordu** — hiçbir
+              şeyi değiştirmeyen, yalnız kapanışın cümlesini oynatan bir bağlantı.
+
+              Doğru an KAPANIŞTIR: eksik zaten konan adetten TÜRÜYOR (istenen − kutulanan), yani
+              depocunun ayrıca işaretlemesine gerek yok. Kutu kapanırken sistem eksikleri sayıp
+              "bunları bildireyim mi" diye soruyor; beyan o onayla veriliyor.
+            */
+            meta={
+              <>
+                {shelfTagOf(line)}
+                {/*
+                  "KUTULARA GİREN N" YALNIZ AÇIK KUTUDA GÖRÜNMEYEN KALEMDE (kullanıcı bulgusu 31.08).
+
+                  Kalem açık kutudaysa o blok zaten "2/4" diyor — *"siparişin dördünden ikisi
+                  bende"*. Aynı sayıyı bir de burada tekrar etmek, ekrandaki "2"lerin sayısını
+                  artırmaktan başka bir şey yapmıyordu. Cümle yalnız KAPALI kutudan gelen adette
+                  anlamlı: onu söyleyen başka bir satır yok.
+                */}
+                {boxed > 0 && !inOpenBox ? (
+                  <Text style={styles.pendingBoxed}>{fillCopy(t.picking.pending.boxedSoFar, { n: String(boxed) })}</Text>
+                ) : null}
+              </>
+            }
+            right={
+              /*
+                SAĞ BLOK KESİR GİBİ OKUNUYORDU (kullanıcı bulgusu 31.08): büyük "2"nin altında
+                "/ 4 kalan" yazıyordu ve ekranda "2/4 kalan" diye birleşiyordu — anlamsız.
+                Bölü işareti kalktı: büyük rakamın YANINDA ne olduğu ("kalan"), altında da neyin
+                içinden olduğu ("4 istenen") yazıyor.
+              */
+              <View style={styles.pendingRight}>
+                <View style={styles.pendingRemainingRow}>
+                  <Text style={styles.pendingRemaining}>{remaining}</Text>
+                  <Text style={styles.pendingRemainingLabel}>{t.picking.pending.remainingLabel}</Text>
+                </View>
+                <Text style={styles.pendingOrdered}>
+                  {fillCopy(t.picking.pending.ordered, { ordered: String(line.orderedQty) })}
+                </Text>
+              </View>
+            }
+            testID={`warehouse-picking-pending-${line.itemId}`}
+          />
+        );
+      })}
+    </View>
+  );
+}
+
+/**
+ * **ROZET ÖNERİNİN KENDİSİNİ TAŞIR** (kullanıcı kararı 31.08) — rafın adını.
+ *
+ * Eskiden rozette "MOTOR ÖNERİSİ" yazıyordu ve altında rafın adı küçücük bir satırdaydı.
+ * Kullanıcının cümlesi: *"rozet çok büyük, onun önerisi ise çok küçük"* — yani ekranda en çok
+ * yer kaplayan şey BİLGİ TAŞIMIYORDU ("bu bir öneri"), taşıyan şey ise okunmuyordu (raf).
+ * "Motor" kelimesi de gitti: depocuya sistemin iç adını söylemenin bir karşılığı yok.
+ *
+ * Rozetin TONU artık tek soruyu yanıtlıyor: bu raf bir öneri mi, zorunluluk mu.
+ * · zeytin  → öneri; depocu başka partiden alabilir (kaydı bugün düzeltemiyor — `BEKLEYEN(21.193)`)
+ * · koyu ⚓  → çıpalı parti; indirimli teklife söz verilen stok başka partiyle karşılanamaz (DOMAIN §4)
+ */
+function shelfTagOf(line: PreparationLineContract) {
+  const shelf = line.suggestion[0]?.areaName ?? undefined;
+  if (line.pinnedStockId !== null) {
+    return (
+      <Text style={[styles.pendingFlag, styles.pendingFlag_pinned]}>
+        {fillCopy(t.picking.line.shelfTagPinned, { shelf: shelf ?? t.picking.line.shelfTagUnknown })}
+      </Text>
+    );
+  }
+  /* Önerisiz kalemde rozet YİNE çizilir ama sönük: "raf yazılmamış" bir bilgidir, yokluğu değil —
+     rozeti hiç çizmemek, depocuya rafın nerede olduğunu aramak için hiçbir işaret bırakmazdı. */
+  if (shelf === undefined) {
+    return <Text style={[styles.pendingFlag, styles.pendingFlag_unknown]}>{t.picking.line.shelfTagUnknown}</Text>;
+  }
+  return (
+    <Text style={[styles.pendingFlag, styles.pendingFlag_engine]}>{fillCopy(t.picking.line.shelfTag, { shelf })}</Text>
+  );
+}
+
+/** Kalemin BU KUTUYA daha kaç adet girebileceği — çekmecenin varsayılanı. */
+function remainingOf(line: PreparationLineContract, inBox: number): number {
+  return Math.max(0, line.orderedQty - line.pickedQty - inBox);
+}
+
+/** Çekmecenin künyesi: raf ve parti — depocunun rafta arayacağı iki şey. */
+function qtySheetCaption(line: PreparationLineContract): string {
+  const shelf = line.suggestion[0]?.areaName ?? t.picking.pending.noShelf;
+  const batch = line.suggestion[0];
+  return batch === undefined
+    ? fillCopy(t.picking.qtySheet.captionNoBatch, { shelf })
+    : fillCopy(t.picking.qtySheet.caption, {
+        shelf,
+        batch: fillCopy(t.picking.line.batch, { code: batch.stockId.slice(0, 8), date: batch.expiryDate }),
+      });
+}
+
+/**
+ * Kutu kapatma düğmesinin hâlleri — `boxCtaOf`un kutu-açma dalı FAB'a taşındı.
+ *
+ * ETİKET ARTIK EKSİĞE GÖRE DEĞİŞMİYOR (31.08): düğme her hâlde "Kutuyu kapat" der ve hiçbir şey
+ * sormaz. Eksik bildirmek ayrı bir eylem oldu (kartın altındaki metin düğmesi) — aynı düğmenin
+ * bazen bir şey, bazen başka bir şey yapması tam da yanlışlıkla eksik bildirmeyi kolaylaştırıyordu.
+ */
+function sealCtaOf(anyQty: boolean, sending: boolean, offline: boolean): { label: string; enabled: boolean } {
+  if (offline) return { label: t.picking.box.sealOffline, enabled: false };
+  if (sending) return { label: t.picking.cta.sending, enabled: false };
+  return { label: t.picking.box.sealShortcut, enabled: anyQty };
 }
 
 /** CTA'nın üç hâli (v2'nin `dTopCta`sı) + çevrimdışı kilidi. */
@@ -671,9 +1136,10 @@ function LineRow({ line, index, boxMode, offline, qty, shortReported, capacity, 
         <View style={styles.rowBody}>
           <Text style={styles.rowTitle}>{name}</Text>
           <Text style={styles.rowSub}>{wanted}</Text>
-          {/* Motor önerisi bir ROZETTİR, cümlenin kuyruğu değil (v3:379): satırdaki sayının
-              nereden geldiğini söyler ve depocunun kendi kararıyla karışmasın diye ayrı durur. */}
-          {first === undefined ? null : <Text style={styles.engineTag}>{t.picking.line.engineTag}</Text>}
+          {/* ESKİ AKIŞTA ROZET YOK (31.08): bu satır rafı zaten `step`te ("1 · A-1"), partiyi de
+              `wanted`ta yazıyor — üstüne "bu bir öneri" diyen üçüncü bir rozet, aynı şeyi üçüncü
+              kez söylemekti. Kutu akışında rozet KALDI ama içeriği değişti: artık rafın kendisi
+              (`shelfTagOf` künyesi). */}
         </View>
 
         {/* ÇEVRİMDIŞI: SAYIM KAPALI (v3:404) — alan soluklaştırılmaz, YERİNE konan adet yazılır.
@@ -928,9 +1394,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingTop: operationsTheme.space['7xl'],
   },
+  /* Ekranın yatay dolgusu 20 (tasarımın her bloğu `margin:… 20px`). 22 yazılıydı ve cihazda
+     ölçüldü (31.08): kart kenarı 22 dp'de duruyordu, tasarımda 20. */
   list: {
-    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingHorizontal: operationsTheme.space['5xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
+  },
+  /*
+    KUYRUĞUN KENDİ KABI — kartlar arası boşluk BURADA (tasarım: `padding:0 20px 24px; gap:12px`).
+
+    Ayrı bir durak, çünkü detay kabıyla karışamaz: orada blokların kendi `marginTop`ları var ve
+    kaba bir `gap` eklemek onları ikiye katlardı. Ölçüldü (31.08, cihaz): kartlar arasında HİÇ
+    boşluk yoktu — komşu kartların kenarlıkları birbirine değiyordu ve liste tek bir gri örgü
+    gibi okunuyordu.
+  */
+  queueList: {
+    paddingHorizontal: operationsTheme.space['5xl'],
+    paddingBottom: operationsTheme.space['7xl'],
+  },
+  /* Kartların kabı — boşluk BURADA, kaba değil: kabın `gap`i düğme/başlık/dipnot aralarına da
+     düşer ve tasarımın o üç aralığı birbirinden farklı (18 · 8 · 10). */
+  queueCards: {
+    /* Tasarımın kabı `gap:9px` (satır 88 — ilk okumada 12'lik başka bir kap ile karıştırılmıştı,
+       cihazda ölçüp düzeltildi 31.08). Ölçekte 9 durağı yok; `lg` (10) alındı — Δ1, ve yukarı
+       yuvarlamak kartların birbirine değme riskini de kapatıyor. */
+    gap: operationsTheme.space.lg,
   },
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
@@ -939,7 +1427,6 @@ const styles = StyleSheet.create({
     // `emToDp` ile, tek yerden (`theme/parse.ts` künyesi).
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
-    paddingTop: operationsTheme.space.sm,
   },
   /* v3:258 — satır artık kesikli çizgiyle ayrılan bir SATIR değil, kendi çerçevesi olan bir KART.
      Sebebi içeriğin büyümesi: üç bilgi katmanı (referans · künye · ilerleme) bir çizginin altında
@@ -969,21 +1456,25 @@ const styles = StyleSheet.create({
   /** KARGO rozeti — taşıyıcı kulvarında kutu TİPİ sorulacağının önceden haberi. */
   queueTag: {
     backgroundColor: operationsTheme.colors['terracotta-bg'],
-    borderRadius: operationsTheme.radius.badge,
+    borderRadius: operationsTheme.radius.tight,
     paddingVertical: operationsTheme.space['2xs'],
     paddingHorizontal: operationsTheme.space.sm,
   },
+  /* Rozet ÜSTBAŞLIK kademesindedir, etiket değil (ölçüldü 31.08): tasarım `800 8.5px / .1em`
+     yazıyor — yani `eyebrow-sm`. Buraya `badge` (12,5) + `eyebrow` aralığı (.18em) konmuştu ve
+     ikisi birden büyüttüğü için rozet cihazda "K A R G O" diye açılıyordu. */
   queueTagText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.badge,
-    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.badge),
+    fontSize: operationsTheme.text['eyebrow-sm'],
+    letterSpacing: emToDp(operationsTheme.text['eyebrow-sm--letter-spacing'], operationsTheme.text['eyebrow-sm']),
     color: operationsTheme.colors.terracotta,
   },
   queueProgressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: operationsTheme.space.md,
-    paddingTop: operationsTheme.space['2xs'],
+    /* Ek üst dolgu YOK: aralığı artık `rowBody`nin `gap`i veriyor (tasarımda üç katman EŞİT
+       aralıklı). İkisi birlikte uygulanınca ilerleme satırı komşularından uzak düşüyordu. */
   },
   queueState: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
@@ -993,11 +1484,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
+    paddingTop: operationsTheme.space['4xl'],
+    paddingBottom: operationsTheme.space.md,
   },
   queueHeadingHint: {
-    fontFamily: operationsTheme.font.body[400],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
-    color: operationsTheme.colors.muted,
+    // Başlıktan bir kademe AÇIK: ipucu, başlığın kendisiyle aynı ağırlıkta okunmamalı.
+    color: operationsTheme.colors['sand-600'],
   },
   queueFootnote: {
     fontFamily: operationsTheme.font.body[400],
@@ -1025,6 +1519,35 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.error,
+  },
+  /* Koli adı ve açık kutu çipi tek satırda (v3:03) — çip adın SAĞINDA, satır taşarsa alta sarar. */
+  sealShortLine: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.error,
+  },
+  parcelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: operationsTheme.space.lg,
+  },
+  openBoxChip: {
+    overflow: 'hidden',
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    color: operationsTheme.colors['olive-dark'],
+    borderRadius: operationsTheme.radius.badge,
+    paddingVertical: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space.lg,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text['eyebrow-sm'],
+    letterSpacing: emToDp(operationsTheme.text['eyebrow-sm--letter-spacing'], operationsTheme.text['eyebrow-sm']),
+  },
+  /* Kapanan kutunun başlığı: onay imi + "Kutu N" solda, künye SAĞA yaslı (tasarımın tek satırı). */
+  boxSealedHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.sm,
   },
   parcelName: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -1101,15 +1624,289 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.body,
   },
+  /* Kapanan kutunun kalem satırı: üstten ince çizgi (tasarım) — kart içinde ayrı bir kutu
+     değil, aynı kaydın kademesi. */
   boxSealedItem: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.tag,
+    borderTopWidth: operationsTheme.border.hairline,
+    borderTopColor: operationsTheme.colors['sand-300'],
+    paddingTop: operationsTheme.space.sm,
+    marginTop: operationsTheme.space['2xs'],
+  },
+  boxSealedQty: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
   },
   boxSealedQr: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors['sand-600'],
+  },
+  /* KUTU AÇILMADI — kesikli çerçeve (tasarım): kutu henüz YOK, dolayısıyla kutu gibi görünen
+     dolu bir kart yanlış olurdu. Kesik çizgi "burası boş bir yer" demenin görsel hâli. */
+  boxEmpty: {
+    marginTop: operationsTheme.space['2xl'],
+    backgroundColor: operationsTheme.colors.cream,
+    borderWidth: operationsTheme.border.base,
+    borderStyle: 'dashed',
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+    paddingVertical: operationsTheme.space['4xl'],
+    paddingHorizontal: operationsTheme.space['3xl'],
+    gap: operationsTheme.space.xs,
+  },
+  boxEmptyTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.body,
+  },
+  boxEmptyBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * 1.5,
+    color: operationsTheme.colors['tab-inactive'],
+  },
+
+  /* AÇIK KUTU — tonlu kartın OLUMLU ailesi (zemin `success-bg`, kenar zeytin). Kenar `success-line`
+     değil `olive` çünkü tasarım burada kalın zeytin çiziyor: bu kart bir DURUM bildirimi değil,
+     üstünde çalışılan yüzey — kenarın kendisi "şu an burası açık" diyor. */
+  openBox: {
+    marginTop: operationsTheme.space['2xl'],
+    backgroundColor: operationsTheme.colors['success-bg'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors.olive,
+    borderRadius: operationsTheme.radius.card,
+    overflow: 'hidden',
+  },
+  openBoxHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+  },
+  openBoxHeadText: {
+    flex: 1,
+    gap: operationsTheme.space['2xs'],
+  },
+  openBoxTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text['eyebrow-sm'],
+    letterSpacing: emToDp(operationsTheme.text['eyebrow-sm--letter-spacing'], operationsTheme.text['eyebrow-sm']),
+    color: operationsTheme.colors['olive-dark'],
+  },
+  openBoxCaption: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.body,
+  },
+  sealButton: {
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    borderRadius: operationsTheme.radius.badge,
+  },
+  sealButton_ready: {
+    backgroundColor: operationsTheme.colors.olive,
+  },
+  sealButton_idle: {
+    backgroundColor: operationsTheme.colors['disabled-fill'],
+  },
+  sealLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+  },
+  sealLabel_ready: {
+    color: operationsTheme.colors['on-image'],
+  },
+  sealLabel_idle: {
+    color: operationsTheme.colors['on-image'],
+  },
+  openBoxEmpty: {
+    borderTopWidth: operationsTheme.border.hairline,
+    borderTopColor: operationsTheme.colors['success-line'],
+    paddingVertical: operationsTheme.space['3xl'],
+    paddingHorizontal: operationsTheme.space['3xl'],
+    textAlign: 'center',
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * 1.5,
+    color: operationsTheme.colors.body,
+  },
+  /* Listeden BAĞIMSIZ çubuk: içerik ne kadar uzarsa uzasın ekranın dibinde durur (künyesi
+     çizim tarafında). Örtü `stickyFade` — altındaki liste çubuğun arkasında kesilmez, solar. */
+  /*
+    ÇUBUK OPAK, YARI SAYDAM DEĞİL (cihazda ölçüldü 31.08).
+
+    Önce `stickyFade` gradyanıyla çizilmişti ve altındaki satırlar çubuğun cümlesinin İÇİNDEN
+    okunuyordu: "3 kalemin tamamını bulamadın" yazısı ürün satırının üstüne biniyor, satırın kendi
+    sayısı yarı görünür kalıyordu. Yapışkan CTA çubuğunda gradyan çalışıyor çünkü orada altta
+    yalnız boşluk kalıyor; burada liste çubuğun dibine kadar geliyor. Zemin bu yüzden düz `cream`
+    ve üstünde bir çizgi — nerede bittiği belli olsun.
+  */
+  declareBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    gap: operationsTheme.space.md,
+    paddingTop: operationsTheme.space.xl,
+    paddingBottom: operationsTheme.space['3xl'],
+    paddingHorizontal: operationsTheme.space['5xl'],
+    backgroundColor: operationsTheme.colors.cream,
+    borderTopWidth: operationsTheme.border.base,
+    borderTopColor: operationsTheme.colors['sand-300'],
+  },
+  declareBarSpacer: { height: operationsTheme.space['9xl'] },
+  declareBarBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    lineHeight: operationsTheme.text.meta * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+    textAlign: 'center',
+  },
+  openBoxRow: {
+    borderTopWidth: operationsTheme.border.hairline,
+    borderTopColor: operationsTheme.colors['success-line'],
+    paddingVertical: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space['3xl'],
+  },
+  openBoxMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text['badge-sm'],
+    color: operationsTheme.colors.muted,
+  },
+  openBoxRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.xs,
+  },
+  openBoxCount: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors['olive-dark'],
+  },
+
+  /* KONTROL LİSTESİ — "kâğıtta ne kaldı". */
+  pending: {
+    marginTop: operationsTheme.space['3xl'],
+    gap: operationsTheme.space.sm,
+  },
+  pendingHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: operationsTheme.space.xs,
+  },
+  pendingHeading: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.muted,
+  },
+  pendingCounter: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  pendingRow: {
+    backgroundColor: operationsTheme.colors.panel,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+  },
+  /* BAŞLANMIŞ kalem uyarı ailesine geçer: yarım iş "bitmiş" ile "hiç başlanmamış" arasında kendi
+     hâlidir ve depocunun listede en çok aradığı satır odur (tasarım da onu ayrı boyuyor). */
+  pendingRow_started: {
+    backgroundColor: operationsTheme.colors['warning-bg'],
+    borderColor: operationsTheme.colors['warning-line'],
+  },
+  pendingShelf: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  /* Kendi satırında duruyor (raf rozete taşındı) — o yüzden artık kalın DEĞİL: kalın terracotta
+     bir satır, ekrandaki en dikkat çekici şey oluyordu ve söylediği şey ikincil bir bilgi. */
+  pendingBoxed: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.terracotta,
+  },
+  pendingShort: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['badge-sm'],
+    color: operationsTheme.colors.terracotta,
+  },
+  /* Rozet artık RAFIN ADINI taşıyor, bir etiket değil bir ADRES: `eyebrow-sm` (8,5) okunmuyordu.
+     `tag` (11) kademesine çıktı ve harf aralığı normale döndü — geniş aralık kısa etiketleri
+     ayırır, çok kelimeli bir raf adını ("DERİN DONDURUCU 2") dağıtır. */
+  pendingFlag: {
+    alignSelf: 'flex-start',
+    overflow: 'hidden',
+    borderRadius: operationsTheme.radius.tight,
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.md,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+  },
+  pendingFlag_unknown: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    color: operationsTheme.colors.muted,
+  },
+  pendingFlag_engine: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    color: operationsTheme.colors['olive-dark'],
+  },
+  pendingFlag_pinned: {
+    backgroundColor: operationsTheme.colors.ink,
+    color: operationsTheme.colors['on-image'],
+  },
+  pendingRight: {
+    alignItems: 'flex-end',
+  },
+  /* Rakam ile "kalan" YAN YANA: alt alta yazıldığında araya giren bölü işaretiyle birlikte
+     "2/4 kalan" diye tek bir kesir gibi okunuyordu. */
+  pendingRemainingRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: operationsTheme.space.xs,
+  },
+  pendingRemainingLabel: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  pendingRemaining: {
+    fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
+    fontSize: operationsTheme.text['h2-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  pendingOrdered: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text['badge-sm'],
+    color: operationsTheme.colors.muted,
+  },
+  pendingDone: {
+    marginTop: operationsTheme.space['3xl'],
+    backgroundColor: operationsTheme.colors['success-bg'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['success-line'],
+    borderRadius: operationsTheme.radius.control,
+    padding: operationsTheme.space['3xl'],
+    gap: operationsTheme.space.xs,
+  },
+  pendingDoneTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  pendingDoneBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * 1.5,
+    color: operationsTheme.colors.body,
   },
   boxCurrent: {
     alignSelf: 'flex-start',
@@ -1126,19 +1923,6 @@ const styles = StyleSheet.create({
    * ayrı. Gerekçe hiyerarşi: kuyrukta bu birincil eylemdir (kâğıdı eline almış depocunun ilk
    * hareketi), kutu içindeyse okutma akışın ortasında bir adımdır.
    */
-  queueScanButton: {
-    // `controlLg`: eldivenli parmakla, soğuk depoda basılacak birincil düğme (tasarım §7).
-    height: operationsTheme.size.controlLg,
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.olive,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  queueScanLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.button,
-    color: operationsTheme.colors.cream,
-  },
   /** Sevk kartı — etiket kartının iskeleti, ayrı tonda: bu kart PARA harcayan bir eylem taşıyor. */
   dispatchCard: {
     marginTop: operationsTheme.space.xl,
@@ -1247,7 +2031,10 @@ const styles = StyleSheet.create({
   },
   rowBody: {
     flex: 1,
-    gap: operationsTheme.space['2xs'],
+    /* Satırın üç katmanı arasındaki nefes: tasarım `gap:5px` (kuyruk kartı ve kutu tipi satırı
+       aynı iskelet). `2xs` (2) yazılıydı ve kart cihazda tasarımdan ~4 dp kısa çıkıyordu
+       (ölçüldü 31.08: 75 dp ↔ 79,5 dp). Ölçekte 5 yok; `sm` (6) — Δ1. */
+    gap: operationsTheme.space.sm,
   },
   rowTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -1327,6 +2114,12 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+  },
+  /* Liste İÇİNDEKİ cümle: yapışkan çubuktaki kardeşi ALTINA boşluk bırakıyor (çubuğun düğmesinden
+     ayrılmak için), burada ÜSTE gerekiyor — cümle kendinden önceki bloğa yapışmamalı. */
+  notice_inline: {
+    marginTop: operationsTheme.space['2xl'],
+    marginBottom: 0,
   },
   notice_ok: {
     backgroundColor: operationsTheme.colors['olive-bg'],

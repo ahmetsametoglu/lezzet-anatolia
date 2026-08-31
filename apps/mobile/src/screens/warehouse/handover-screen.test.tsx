@@ -64,6 +64,9 @@ beforeEach(() => {
 /** Okutucuyu açıp simülasyon çipiyle bir kod gönderir — cihazsız ortamın tek yolu. */
 async function okut(label: string) {
   await fireEvent.press(screen.getByTestId('warehouse-handover-scan'));
+  /* Çekmece bir kare sonra çizilir: `visible` prop'u kütüphanenin `present()`ine çevriliyor ve o
+       bir durum değişimi. Cihazda görünmez, testte `fireEvent`ler aynı karede koştuğu için görünür. */
+  await waitFor(() => expect(screen.getByLabelText(label)).toBeOnTheScreen());
   await fireEvent.press(screen.getByLabelText(label));
 }
 

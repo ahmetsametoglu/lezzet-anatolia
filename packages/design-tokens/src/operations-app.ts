@@ -70,7 +70,7 @@
   işidir. Karanlık mod YOK: operasyonun karanlık teması masaüstü yüzeyinindir (`operations.ts`);
   mobil operasyon müşteri ailesinin krem zemininde kurulu ve tek temalıdır.
 */
-import { customerOlive, customerSand } from './customer';
+import { customerOlive, customerSand, customerSurface } from './customer';
 
 /* ── (1) FARK RENKLERİ — birleşimde tabanın aynı adlı anahtarını EZER ─────────
    İkisi de ROL olarak tabandakiyle birebir aynı işi yapar, yalnız değerleri operasyon mobilde
@@ -213,6 +213,12 @@ export const operationsAppLine = {
      `warning` · `warning-bg` · `warning-line`; zemin yine açılmadı (ölçülen #fdf8f3 `panel`e
      Δ2/2/1, ekranda ayırt edilemez — kutuyu uyarı yapan KENARI ve metnidir). */
   'warning-line': '#d9a97f',
+  /* OLUMLU kartın kenarı: "kâğıttaki her kalem kutulara girdi", "araçtaki seferlerin tüm kutuları
+     yüklendi". §4 künyesi bu aileyi de ölçmüştü (#f2f7e8/#c3d3a4, 8 kullanım) ama `warning` gibi
+     o gün açılmadı — tüketicisi yoktu. D1'in kutu kartı (31.08) ilk tüketici oldu.
+     Tabanda karşılığı YOK: en yakını `olive-line` (#cddbb0, Δ11/4/12) ve o ZEYTİN ÇERÇEVELİ
+     DÜĞMENİN kenarıdır — bu ise tonlu kartın kenarı; ikisi aynı ailede değil. */
+  'success-line': '#c3d3a4',
 } as const satisfies Record<string, string>;
 
 /* ── (5) TONLU KARTIN UYARI ZEMİNİ (kullanıcı bulgusu 30.08) ─────────────────
@@ -223,6 +229,12 @@ export const operationsAppLine = {
    kanalda eşiğin üstünde ve rolü de başka (turuncu DOLGU, tonlu kartın zemini değil). */
 export const operationsAppWarnSurface = {
   'warning-bg': '#fdf8f3',
+  /* OLUMLU kartın zemini — `warning-bg`in kardeşi ve aynı gerekçe. `panel`e (#fbfaf4) uzaklığı
+     Δ9/4/12, yani İKİ kanalda eşiğin üstünde: bağlanamıyor. `olive-bg`den (#e3ecd2) de ayrı ve
+     rolü başka — o DOLU bir zeytin yüzeydir (rozet, ürün karesi), bu ise tonlu kartın çok açık
+     zemini. Ailenin metni ayrı bir durak istemiyor: `olive-dark` (#4a6121) tasarımın kendi
+     kullandığı renk. */
+  'success-bg': '#f2f7e8',
 } as const satisfies Record<string, string>;
 
 /* Operasyon mobile özgü renklerin tam kümesi (12): 2 fark + 10 yeni. */
@@ -319,6 +331,20 @@ export const operationsAppShadow = {
    * CSS söz dizimini olduğu gibi alır.
    */
   glow: `0 4px 14px ${customerOlive.olive}3d`,
+  /**
+   * **YÜZEN OKUTMA DÜĞMESİNİN (FAB) GÖLGESİ** — v3'ün 31.08 turunda gelen ikinci yükselti.
+   *
+   * Ölçüm: `0 8px 22px rgba(47,53,58,.26)` (D1 toplama detayı, `topFab`). `glow`dan AYRI bir
+   * durak ve ayrım rolde: ışıma sayfanın AKIŞINDAKİ zeytin düğmenin imzasıdır, bu ise sayfanın
+   * ÜSTÜNDE duran dairenin — akıştan koptuğunu söyleyen şey gölgenin kendisi. İkisini tek
+   * anahtara indirmek, iki farklı "yüzüyor" ifadesini tek renge bağlamak olurdu (FAB koyu da
+   * olabiliyor, zeytin de).
+   *
+   * Renk `ink`ten okunur: tasarımın #2f353a'sı paletin ayrı bir durağı DEĞİL — dosyanın kendi
+   * kuralı zaten "#3c4448 · #454d54 → hepsi `ink`" diyor, bu da o ailenin bir tonu. Opaklık %26
+   * ölçümün kendisidir (`42` = 66/255).
+   */
+  fab: `0 8px 22px ${customerSurface.ink}42`,
   /**
    * @deprecated v2 kalıntısı — v3'te karşılığı YOK (yukarıdaki ölçüm).
    *

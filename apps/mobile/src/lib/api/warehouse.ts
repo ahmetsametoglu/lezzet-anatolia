@@ -20,6 +20,7 @@ import {
   HandoverPendingResponseSchema,
   HandoverResponseSchema,
   WarehousePrintersResponseSchema,
+  DeclareShortResponseSchema,
   SealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
@@ -151,6 +152,19 @@ export function sealOrderBox(
   body: SealBoxRequest,
 ): Promise<ApiResult<z.infer<typeof SealBoxResponseSchema>>> {
   return warehouseFetch(`/api/v1/warehouse/boxes/${boxId}/seal`, SealBoxResponseSchema, { method: 'POST', body });
+}
+
+/**
+ * **Siparişi eksik kapat** (31.08) — kutu kapatmadan verilen SİPARİŞ kararı.
+ *
+ * `sealOrderBox(declareShort)`tan AYRI ve gerekçesi cihazda ölçüldü: son kutu kapandıktan sonra
+ * mühürlenecek kutu kalmıyor ve o yol `empty` dönüp sessizce hiçbir şey yapmıyordu. Gövde yok —
+ * hangi kalemin ne kadar eksik olduğunu sunucu kayıttan hesaplıyor, telefon iddia taşımıyor.
+ */
+export function declareOrderShort(orderId: string): Promise<ApiResult<z.infer<typeof DeclareShortResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/orders/${orderId}/declare-short`, DeclareShortResponseSchema, {
+    method: 'POST',
+  });
 }
 
 /** **Etiket içeriği** (23.7) — önizleme + basım girdisi; yazıcı ayarı da bu cevapta gelir. */

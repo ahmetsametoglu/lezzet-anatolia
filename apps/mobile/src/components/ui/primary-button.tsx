@@ -143,17 +143,19 @@ export function PrimaryButton({
         <Icon
           name={icon}
           size={theme.text['icon-sm']}
-          color={disabled ? theme.colors['disabled-text'] : theme.colors.card}
+          /* İkon etiketle AYNI aileden: ikisi tek satırda yan yana duruyor ve iki farklı beyaz,
+             ikon "sonradan yapıştırılmış" gibi okunur. */
+          color={disabled ? theme.colors['disabled-text'] : theme.colors[tone === 'error' ? 'card' : 'on-image']}
           bold
         />
       )}
       {hint === undefined ? (
-        <Text style={[styles.label, disabled ? styles.disabledLabel : styles.enabledLabel]}>{label}</Text>
+        <Text style={[styles.label, disabled ? styles.disabledLabel : labelToneStyle(tone)]}>{label}</Text>
       ) : (
         /* İki satır DİKEY bir yığın: `PressableSurface` kendi kutusunu yatay diziyor, o yüzden
            satırlar kendi kabında toplanıyor — yoksa ipucu etiketin yanına düşerdi. */
         <View style={styles.stack}>
-          <Text style={[styles.label, disabled ? styles.disabledLabel : styles.enabledLabel]}>{label}</Text>
+          <Text style={[styles.label, disabled ? styles.disabledLabel : labelToneStyle(tone)]}>{label}</Text>
           <Text style={[styles.hint, disabled ? styles.disabledLabel : styles.enabledHint]}>{hint}</Text>
         </View>
       )}
@@ -169,6 +171,14 @@ export function PrimaryButton({
 const staticStyles = StyleSheet.create({
   glow: { boxShadow: operationsTheme.shadow.glow },
 });
+
+/**
+ * Etiketin dolguya göre tonu — künyesi `enabledLabel_*`ta, ölçümüyle birlikte.
+ * Sıcak (hata) dolgu saf beyaz ister, soğuk (zeytin/mürekkep) dolgu krem.
+ */
+function labelToneStyle(tone: ButtonTone) {
+  return tone === 'error' ? styles.enabledLabel_hard : styles.enabledLabel_soft;
+}
 
 const styles = StyleSheet.create((theme) => ({
   base: {
@@ -242,8 +252,21 @@ const styles = StyleSheet.create((theme) => ({
      altyazı tonu (token künyesi: "ad ile altyazı aynı zeminde yan yana durur"). Şeffaflık
      kullanılmadı; koyu zemin üstünde alfa öngörülemez bir gri üretir. */
   enabledHint: { color: theme.colors['on-image-soft'] },
-  // Zeytin dolgunun üstündeki metin paletin saf beyazıdır; ayrı bir "zeytin-üstü" token'ı yok
-  // (envantere önerildi — bugün `card` ile aynı değer).
-  enabledLabel: { color: theme.colors.card },
+  /*
+    DOLGUNUN ÜSTÜNDEKİ METİN DOLGUYA GÖRE DEĞİŞİR (ölçüldü 31.08, v3 şablonunun tamamı).
+
+    Buraya "paletin saf beyazı, ayrı bir zeytin-üstü token'ı yok" diye yazılmıştı ve **ölçüm bunu
+    çürüttü**: v3'te koyu zemin üstünde `#f5f1e6` **67 kez**, `#fff` **12 kez** geçiyor — ve
+    ikisi rastgele dağılmıyor. Beyazın on ikisinin hepsi TERRACOTTA/HATA dolgusunun üstünde
+    (imha CTA'sı #a44a3f, hub rozeti #b05c2e, "Onayla — kaydet"); zeytin ve mürekkep dolgunun
+    üstünde istisnasız krem duruyor. Sıcak kırmızının üstünde krem kirli sarıya kayıyor, soğuk
+    zeytinin üstünde saf beyaz ise sert bir kontrast yapıyor — ayrım optik, keyfî değil.
+
+    `on-image`in kendi künyesi de bunu söylüyordu: *"koyu zemin üstünde krem metin (… koyu CTA
+    etiketi …)"*. Aynı düğmenin ALT SATIRI (`enabledHint`) zaten `on-image-soft` okuyor, yani
+    etiketle altyazı bugüne kadar iki ayrı ailedeydi.
+  */
+  enabledLabel_soft: { color: theme.colors['on-image'] },
+  enabledLabel_hard: { color: theme.colors.card },
   disabledLabel: { color: theme.colors['disabled-text'] },
 }));

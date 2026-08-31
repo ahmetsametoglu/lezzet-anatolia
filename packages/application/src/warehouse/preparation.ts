@@ -9,6 +9,7 @@ import {
   StockService,
   TicketService,
   UserProfileService,
+  VariantBarcodeService,
 } from '@lezzet/database';
 import { isSellableBatch, suggestFefoPicks, suggestShortfallAction, type ShortfallSuggestion } from '@lezzet/domain-core';
 import type { Order, OrderItem, PreparationPick, PreparationResult, TransitionResult } from '@lezzet/types';
@@ -56,6 +57,21 @@ export interface PreparationLine {
   productName: string;
   /** "500 g" gibi boy etiketi; tek boylu üründe boş. */
   variantLabel: string;
+  /**
+   * Ürün kapağının public URL'i; `null` = kapaksız (ekran monograma düşer).
+   *
+   * Ek okuma YOK: `variantNames` bu alanı zaten çözüyordu (`names.ts` — mal kabulün okutma
+   * çekmecesi için), yalnız buraya taşınmıyordu.
+   */
+  imageUrl: string | null;
+  /**
+   * Kalemin PAKET barkodu; `null` = barkodu girilmemiş ürün.
+   *
+   * Bugünkü tüketicisi kamerasız turun simülasyon çipleri: toplama ekranı okutucuyu açtığında
+   * çipler bu siparişin ürünlerinin ADIYLA ve GERÇEK koduyla çiziliyor — çip `/codes/resolve`'un
+   * aynı yolundan geçiyor, kısa devre yapmıyor (kullanıcı isteği 31.08).
+   */
+  barcode: string | null;
   orderedQty: number;
   /** Daha önce hazırlanmış adet — **yarım kalan iş kaldığı yerden sürer** (mobil v2: "Yarım iş sürer"). */
   pickedQty: number;
@@ -188,7 +204,7 @@ export async function listPreparationQueue(
   const items = await new OrderItemService(db).listByOrders(orders.map((order) => order.id));
   // Beşi AYNI dalgada: parti dağılımı ve kutu okumaları mevcut turların yanına giriyor,
   // arkalarına DEĞİL — ikinci bir uçuş açsaydı kuyruğun gecikmesi iki katına çıkardı (21.11d ölçümü).
-  const [names, customers, pinned, picked, boxes, awaiting] = await Promise.all([
+  const [names, customers, pinned, picked, boxes, awaiting, barcodes] = await Promise.all([
     variantNames(db, items.map((item) => item.variantId)),
     customerNames(db, orders),
     pinnedStockIds(db, orders.map((order) => order.id)),
@@ -197,7 +213,19 @@ export async function listPreparationQueue(
     // Cevap bekleyen kalemler (10.3) — AYNI dalgada, arkasında değil: soru sorulduktan sonra
     // ekranda iz kalmazsa depocu o kalemi unutur ya da ikinci kez sordurur.
     new TicketService(db).awaitingItemIds(orders.map((order) => order.id)),
+    /* KALEMİN PAKET BARKODU (31.08) — aynı dalgada, arkasında değil. Tek toplu okuma; kalem
+       başına ikinci bir uçuş açsaydı elli kalemlik bir kuyruk elli sorgu demekti. */
+    new VariantBarcodeService(db).listByVariants([...new Set(items.map((item) => item.variantId))]),
   ]);
+
+  /* Varyantın PAKET kodu — koli kodu değil. Bir varyantın birden çok kodu olabilir (paket + koli
+     boyları); satırın taşıdığı, tek bir paketi tanımlayan olandır. Kod yoksa `null` ve bu meşru
+     bir hâl: barkodu girilmemiş ürün var. */
+  const unitBarcode = new Map<string, string>();
+  for (const row of barcodes) {
+    if (row.kind !== 'unit' || unitBarcode.has(row.variantId)) continue;
+    unitBarcode.set(row.variantId, row.code);
+  }
 
   const queue: PreparationOrder[] = [];
   for (const order of orders) {
@@ -214,6 +242,7 @@ export async function listPreparationQueue(
           names.get(item.variantId),
           pinned.get(`${order.id}:${item.variantId}`) ?? item.stockId,
           picked.get(item.id) ?? [],
+          unitBarcode.get(item.variantId) ?? null,
         ),
       ),
     );
@@ -261,9 +290,10 @@ async function buildLine(
   db: SupabaseClient,
   warehouseId: string,
   item: OrderItem,
-  variant: { productName: string; variantLabel: string } | undefined,
+  variant: { productName: string; variantLabel: string; imageUrl: string | null } | undefined,
   pinnedStockId: string | null,
   picked: PreparationPick['batches'],
+  barcode: string | null,
   // `awaitingAnswer` dışarıda ekleniyor (çağıran künyesi): bu fonksiyon kalemin FİZİKSEL gerçeğini
   // kuruyor, siparişin çevresindeki hâlleri değil. `Omit` niyeti tipe yazıyor — alan unutulmadı.
 ): Promise<{ line: Omit<PreparationLine, 'awaitingAnswer'>; areaSort: number | null }> {
@@ -273,6 +303,8 @@ async function buildLine(
     variantId: item.variantId,
     productName: variant?.productName ?? '—',
     variantLabel: variant?.variantLabel ?? '',
+    imageUrl: variant?.imageUrl ?? null,
+    barcode,
     orderedQty: item.qty,
     pickedQty: item.fulfilledQty,
     pickedBatches: picked,
