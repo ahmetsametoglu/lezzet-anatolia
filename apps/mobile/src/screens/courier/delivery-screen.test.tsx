@@ -473,7 +473,7 @@ describe('teslimat · sonuç akışı (K5)', () => {
 
     await renderDelivery();
     await fireEvent.press(screen.getByTestId('courier-outcome-refused'));
-    await fireEvent.press(screen.getByTestId('courier-outcome-confirm'));
+    await fireEvent.press(screen.getByTestId('courier-outcome-sheet-confirm'));
 
     expect(screen.getByTestId('courier-outcome-note-error')).toHaveTextContent(t.delivery.outcome.noteRequired);
     expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/undelivered'))).toHaveLength(0);
@@ -485,7 +485,7 @@ describe('teslimat · sonuç akışı (K5)', () => {
     });
     await fireEvent.press(screen.getByTestId('courier-outcome-refused'));
     await fireEvent.press(screen.getByTestId('courier-outcome-chip-çok geç geldi'));
-    await fireEvent.press(screen.getByTestId('courier-outcome-confirm'));
+    await fireEvent.press(screen.getByTestId('courier-outcome-sheet-confirm'));
 
     await waitFor(() => expect(lastToast.at(-1)).toBe(t.delivery.result.refused));
     expect(mockBack).toHaveBeenCalled();
@@ -502,7 +502,7 @@ describe('teslimat · sonuç akışı (K5)', () => {
     await renderDelivery();
     await fireEvent.press(screen.getByTestId('courier-outcome-unreachable'));
     await fireEvent.changeText(screen.getByTestId('courier-outcome-note'), 'zil bozuk');
-    await fireEvent.press(screen.getByTestId('courier-outcome-confirm'));
+    await fireEvent.press(screen.getByTestId('courier-outcome-sheet-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('courier-outcome-note-error')).toBeOnTheScreen());
     expect(screen.queryByTestId('courier-delivery-notice')).toBeNull();

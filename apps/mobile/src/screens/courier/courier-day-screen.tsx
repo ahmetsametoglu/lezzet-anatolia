@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Fragment } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { CourierRoute, CourierStopContract, CourierVehicle } from '@lezzet/types';
+import type { CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
@@ -24,7 +24,7 @@ import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
 import { dayLabel, money, runLabel, turkishUpper } from './courier-format';
 import { timeOf } from '@/lib/operations/stamp';
-import { isRouteFree, useCourierDay } from './use-courier-day.hook';
+import { useCourierDay } from './use-courier-day.hook';
 
 /*
   K1 · GÜNÜN SEFERİ (v2:33-94) — kurye bölümünün kökü.
@@ -116,13 +116,9 @@ export function CourierDayScreen() {
   /** Sıradaki durak — v2:848: ilk sonuçlanmamış durak, koyu daireyle işaretlenir. */
   const nextOrderId = stops.find((stop) => stop.outcome === 'pending')?.orderId ?? null;
 
-  /** Kaç sefer araca alınacak — CTA'nın hâli bundan geliyor (31.08: seçim artık ÇOKLU). */
-  const pickedCount = day.selectedZoneIds.length;
-  /** Bugün açılabilecek rota var mı — hepsi başlatılmışsa seçilecek bir şey de yok (K3). */
-  const anyFreeRoute = day.routes.some(isRouteFree);
-  /* Düğme SEFER KURAR, başlatmaz (31.08 · v3:16 "Seferleri kur — yüklemeye geç"). Eski adı
-     "Seferi başlat"tı ve o ad artık başka bir eylemin (v3:15) — kurye ikisini karıştırmamalı. */
-  const ctaStartLabel = day.starting ? t.day.starting : pickedCount === 0 ? t.day.openRuns.ctaIdle : t.day.openRuns.cta;
+  /* Boş hâlin düğmesi SEÇİME GÖTÜRÜR, kurmaz (v3:15 "Sefer ve araç seç"). Kurma eylemi seçim
+     ekranının kendi düğmesi — burada verilecek bir seçim yok, verilecek bir YÖN var. */
+  const ctaStartLabel = t.day.vanEmpty.cta;
 
   /* ÜSTBAŞLIK "KURYE · 28 AĞUSTOS" (v3:1298) — kuryenin ADI buradan ÇIKTI ve bağlam satırına
      indi. Gerekçe: üstbaşlık "neredeyim"i söyler (bölüm + gün), bağlam satırı "kim ve hangi
@@ -212,29 +208,46 @@ export function CourierDayScreen() {
      kalmamışsa (hepsi başlatılmış) düğme hiç çizilmez — basılamayacak bir düğme, kuryeye olmayan
      bir yol vaat etmektir. Rota VAR ama seçilmemişse düğme çizilir ve PASİF durur: "önce seç"
      görünen bir adımdır, gizlenen bir düğmeden anlaşılmaz. */
-  const ctaMode: 'start' | 'close' | null = driving ? 'close' : selecting && anyFreeRoute ? 'start' : null;
+  /* Boş hâlde düğme HER ZAMAN çizilir: rota olmasa da seçim ekranı sebebini söylüyor ("deponda
+     planlanmış sefer yok"). Gizlenen bir düğme, kuryeye o cümleyi hiç okutmazdı. */
+  const ctaMode: 'start' | 'close' | null = driving ? 'close' : selecting ? 'start' : null;
 
-  /* Seçim gövdesinin TEK açıklama satırı — hangi cümlenin hak edildiği burada, tek yerde
-     kararlaşır. İki kutuyu üst üste koymak (hem "sefer kapandı" hem "rotanı seç") aynı anda iki
-     şey söylemek olurdu; kapanmış seferde ne olduğunu söylemek önceliklidir, ne yapılacağını
-     zaten "ROTANI SEÇ" başlığı ve kartlar söylüyor. Rota hiç yoksa cümle boş blokta yazılı. */
-  const selectionHint =
-    run !== null
-      ? t.day.runClosedHint
-      : day.routes.length === 0
-        ? null
-        : anyFreeRoute
-          ? t.day.routes.hint
-          : t.day.routes.allTaken;
+  /* SEÇİM GÖVDESİNİN AÇIKLAMA SATIRI SÖKÜLDÜ (31.08): rota listesi bu ekranda değil artık
+     (v3:17 kendi ekranı) ve "rotanı seç / hepsi alınmış" cümlelerinin okuyanı da orada. Boş hâlin
+     tek cümlesi rehberin kendisi. */
 
   return (
     <View style={styles.screen} testID="operations-section-courier">
       {header}
 
       {selecting ? (
+        /*
+          ARAÇ BOŞ — REHBER, LİSTE DEĞİL (v3:15 · kullanıcı bulgusu 31.08).
+
+          Burada önce rota kartları ve araç listesi doğrudan çiziliyordu. Kullanıcı tasarımı
+          gösterip sordu: *"giriş ekranı bu olması gerekmiyor mu?"* — ve haklıydı. Boş hâl bir
+          SEÇİM DEĞİL bir REHBERDİR: kurye günün nasıl kurulduğunu (seç → yükle → başlat) burada
+          öğrenir ve seçime düğmeyle geçer. İkisi tek ekrana sığdırıldığında "ne yapacağım"
+          sorusunun cevabı hiç görünmüyor, doğrudan bir listeyle karşılaşılıyordu.
+
+          Seçimin kendi ekranı olması işlevsel de: sefer AÇIKKEN de gerekiyor (araca ikinci sefer
+          eklemek), yani gün ekranının boş hâline bağlı olamaz.
+        */
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-routes">
+          <View style={styles.guide} testID="courier-day-guide">
+            <Text style={styles.guideTitle}>{t.day.vanEmpty.title}</Text>
+            <Text style={styles.guideBody}>{t.day.vanEmpty.body}</Text>
+            <View style={styles.guideRule} />
+            {[t.day.vanEmpty.step1, t.day.vanEmpty.step2, t.day.vanEmpty.step3].map((step, index) => (
+              <View key={step} style={styles.guideStep}>
+                <Text style={styles.guideNo}>{index + 1}</Text>
+                <Text style={styles.guideLabel}>{step}</Text>
+              </View>
+            ))}
+          </View>
+
           {/* Satış kapısı BURADA DA var: şartı sefer değil ARAÇ. Sefer açılmadan da yoldan gelen
-              müşteriye satış yapılabilir (21.119) — eski satırın kuralı korundu, biçimi değişti. */}
+              müşteriye satış yapılabilir (21.119). */}
           <GateRow
             icon="sale"
             title={t.day.sale.label}
@@ -243,65 +256,6 @@ export function CourierDayScreen() {
             onPress={() => router.navigate('/sale')}
             testID="courier-day-sale"
           />
-
-          {/* Kapanan seferin künyesi: "neyi bitirdim" sorusu ekrandan silinmez. */}
-          {run === null ? null : (
-            <Text style={styles.runStrip} testID="courier-day-run">
-              {fillCopy(t.day.runStripClosed, { label: runLabel(run) })}
-            </Text>
-          )}
-          {selectionHint === null ? null : (
-            <View style={styles.hintBox} testID="courier-day-hint">
-              <Text style={styles.hintText}>{selectionHint}</Text>
-            </View>
-          )}
-
-          {/* ARAÇ SEÇİMİ (31.08 · v3:16) — kuryenin deposuna künyeli araçlar. Araçsız sefer de
-              kurulabiliyor (kapının kendi kuralı), o yüzden burası bir KAPI değil bir seçim. */}
-          <Text style={styles.routesHeading}>{t.day.vehicle.heading}</Text>
-          {day.vehicles.length === 0 ? (
-            <Text style={styles.stopsFootnote}>{t.day.vehicle.empty}</Text>
-          ) : (
-            day.vehicles.map((vehicle) => (
-              <VehicleRow
-                key={vehicle.vehicleId}
-                vehicle={vehicle}
-                selected={vehicle.vehicleId === day.selectedVehicleId}
-                onPress={() =>
-                  day.selectVehicle(vehicle.vehicleId === day.selectedVehicleId ? null : vehicle.vehicleId)
-                }
-              />
-            ))
-          )}
-
-          {day.routes.length === 0 ? (
-            // Kapanan seferden sonra açılacak rota kalmamış olabilir: gün bitti, bu bir arıza değil.
-            // Boş listenin İKİ sebebi var ve uç ikisini ayırmıyor (21.08 depo kapsamı süzgeci —
-            // `listCourierRoutes(scope)` fail-closed): ya o gün rota yazılmamıştır, ya kuryenin
-            // depo kapsamı boştur. Bu yüzden cümle tek sebep SÖYLEMEZ — "sevkiyat yazmadı" demek,
-            // kapsamı unutulmuş kuryeye yanlış sebep okutup arızayı görünmez kılardı.
-            <View style={styles.emptyInline}>
-              <OperationsNoticeBlock
-                variant="empty"
-                title={t.day.empty.title}
-                description={t.day.empty.body}
-                testID="courier-day-empty"
-              />
-            </View>
-          ) : (
-            <>
-              <Text style={styles.routesHeading}>{t.day.routes.heading}</Text>
-
-              {day.routes.map((route) => (
-                <RouteCard
-                  key={route.zoneId}
-                  route={route}
-                  selected={day.selectedZoneIds.includes(route.zoneId)}
-                  onPress={() => day.toggleRoute(route.zoneId)}
-                />
-              ))}
-            </>
-          )}
         </ScrollView>
       ) : vanLoaded ? (
         /*
@@ -566,9 +520,10 @@ export function CourierDayScreen() {
           )}
           {ctaMode === null ? null : (
             <PressableSurface
-              onPress={ctaMode === 'close' ? () => router.navigate('/day-close') : day.openRuns}
-              // Rota seçilmeden kurma isteği gönderilmez: hangi seferin açıldığı belirsiz kalırdı.
-              disabled={day.starting || (ctaMode === 'start' && pickedCount === 0)}
+              onPress={
+                ctaMode === 'close' ? () => router.navigate('/day-close') : () => router.navigate('/route-pick')
+              }
+              disabled={day.starting}
               /* KÜÇÜLME, KAYMA DEĞİL (v3:14:73 · `style-active="transform:scale(.98)"`). Kayma
                  sert gölgenin geri bildirimidir — gölge gidince altında kaymayı açıklayan bir şey
                  kalmaz ve hareket titreme gibi okunur (kitin `PrimaryButton` künyesindeki aynı
@@ -576,7 +531,7 @@ export function CourierDayScreen() {
               feedback="scale"
               style={[
                 styles.cta,
-                ctaMode === 'close' ? styles.ctaClose : pickedCount === 0 ? styles.ctaIdle : styles.ctaStart,
+                ctaMode === 'close' ? styles.ctaClose : styles.ctaStart,
               ]}
               accessibilityLabel={ctaMode === 'close' ? t.day.close : ctaStartLabel}
               testID="courier-day-cta"
@@ -586,9 +541,7 @@ export function CourierDayScreen() {
                   styles.ctaLabel,
                   ctaMode === 'close'
                     ? styles.ctaLabelClose
-                    : pickedCount === 0
-                      ? styles.ctaLabelIdle
-                      : styles.ctaLabelStart,
+                    : styles.ctaLabelStart,
                 ]}
               >
                 {ctaMode === 'close' ? t.day.close : ctaStartLabel}
@@ -626,61 +579,8 @@ export function CourierDayScreen() {
   );
 }
 
-interface RouteCardProps {
-  route: CourierRoute;
-  selected: boolean;
-  onPress: () => void;
-}
-
-/**
- * ROTA KARTI — durak satırının sadeleşmiş hâli: aynı daire + iki satır + kesikli ayraç, yalnız
- * kapıya ait alanlar (tahsilat rozeti, sonuç tonu) yok.
- *
- * Seferi açılmış rota PASİFTİR ve sebebini kendi satırında söyler ("bugün Musa sürüyor · SF-…") —
- * dokunulabilir bırakıp reddi başlatma cevabında göstermek, kuryeyi bilerek boş bir yola sokardı.
- */
-function RouteCard({ route, selected, onPress }: RouteCardProps) {
-  const free = isRouteFree(route);
-  const meta =
-    route.warehouseName === null
-      ? fillCopy(t.day.routes.metaNoWarehouse, { n: String(route.stopCount) })
-      : fillCopy(t.day.routes.meta, { warehouse: route.warehouseName, n: String(route.stopCount) });
-  const taken =
-    route.run === null
-      ? null
-      : route.run.courierName === null
-        ? fillCopy(t.day.routes.takenUnknown, { ref: route.run.referenceNo })
-        : fillCopy(t.day.routes.taken, { courier: route.run.courierName, ref: route.run.referenceNo });
-
-  return (
-    <PressableSurface
-      onPress={onPress}
-      disabled={!free}
-      feedback="scale"
-      style={[styles.stopRow, free ? undefined : styles.stopLocked]}
-      /* Pasif kartın adı "seç" DEMEZ: ekran okuyucu kullanan kurye, dokunamayacağı bir karta
-         davet edilmemeli — sebebi (kimin sürdüğü) adın kendisidir. */
-      accessibilityLabel={
-        free ? fillCopy(t.day.routes.pickLabel, { route: route.zoneName, meta }) : `${route.zoneName} — ${taken ?? meta}`
-      }
-      selected={selected}
-      testID={`courier-route-${route.zoneId}`}
-    >
-      <View style={[styles.circle, selected ? styles.circle_next : styles.circle_idle]}>
-        <Text style={[styles.circleText, selected ? styles.circleText_next : styles.circleText_idle]}>
-          {selected ? '✓' : '·'}
-        </Text>
-      </View>
-      <View style={styles.stopBody}>
-        <Text style={styles.stopAddress}>{route.zoneName}</Text>
-        <Text style={[styles.stopSub, taken === null ? styles.stopSub_muted : styles.stopSub_terracotta]}>
-          {taken ?? meta}
-        </Text>
-      </View>
-      {free ? <Text style={styles.chevron}>›</Text> : null}
-    </PressableSurface>
-  );
-}
+/* ROTA KARTI VE ARAÇ SATIRI SEÇİM EKRANINA TAŞINDI (31.08 · v3:17): rota listesi bu ekranda
+   değil artık, bu yüzden onları çizen iki bileşen de burada durmuyor — `route-pick-screen`. */
 
 /**
  * **KISMİ TESLİM** — teslim edilmiş ama bir adedi eksik durak.
@@ -816,36 +716,6 @@ interface StopRowProps {
  * `tone` yalnız ZEMİN ve İKON rengini değiştiriyor: satış satırı tasarımda zeytin zeminli
  * (bir davet), sefer satırı krem (günün akışının bir adımı).
  */
-/**
- * **ARAÇ SATIRI** (31.08 · v3:16) — plaka + okunur ad, seçili hâli işaretli.
- *
- * Ad KİMLİĞİN yanında duruyor: kurye rampada uuid'den hangi aracın önüne gideceğini çıkaramaz
- * (künyenin `vehicleLabel`ıyla aynı gerekçe). Adı olmayan araçta plaka ADIN kendisidir — boş bir
- * satır yazmak yerine plakayı öne almak, olmayan bir bilgiyi uydurmadan eksiği kapatır.
- */
-interface VehicleRowProps {
-  vehicle: CourierVehicle;
-  selected: boolean;
-  onPress: () => void;
-}
-
-function VehicleRow({ vehicle, selected, onPress }: VehicleRowProps) {
-  return (
-    <PressableSurface
-      onPress={onPress}
-      feedback="scale"
-      style={[styles.vehicleRow, selected ? styles.vehicleRowOn : styles.vehicleRowOff]}
-      accessibilityLabel={vehicle.label ?? vehicle.plate}
-      testID={`courier-vehicle-${vehicle.vehicleId}`}
-    >
-      <View style={styles.vehicleText}>
-        <Text style={styles.vehicleName}>{vehicle.label ?? vehicle.plate}</Text>
-        {vehicle.label === null ? null : <Text style={styles.vehicleMeta}>{vehicle.plate}</Text>}
-      </View>
-      {selected ? <Text style={styles.vehicleTick}>✓</Text> : null}
-    </PressableSurface>
-  );
-}
 
 interface GateRowProps {
   icon: IconName;
@@ -1241,6 +1111,48 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
+  },
+  /* ARAÇ BOŞ REHBERİ (v3:15) — kart + ayraç + üç numaralı adım. Numaralar YUVARLAK: adımlar bir
+     liste değil bir SIRA, ve sıra numarası kendi kabında durur. */
+  guide: {
+    marginTop: operationsTheme.space['2xl'],
+    padding: operationsTheme.space['3xl'],
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: 1,
+    borderColor: operationsTheme.colors['neutral-bg'],
+    backgroundColor: operationsTheme.colors.panel,
+    gap: operationsTheme.space.lg,
+  },
+  guideTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['screen-title--font-weight']],
+    fontSize: operationsTheme.text['screen-title'],
+    color: operationsTheme.colors.ink,
+  },
+  guideBody: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
+  guideRule: { height: 1, backgroundColor: operationsTheme.colors['neutral-bg'] },
+  guideStep: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.lg },
+  guideNo: {
+    width: operationsTheme.space['7xl'],
+    height: operationsTheme.space['7xl'],
+    borderRadius: operationsTheme.space['7xl'] / 2,
+    overflow: 'hidden',
+    textAlign: 'center',
+    lineHeight: operationsTheme.space['7xl'],
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.body,
+  },
+  guideLabel: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['screen-title--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.body,
   },
   routesHeading: {
     paddingTop: operationsTheme.space.md,

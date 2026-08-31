@@ -181,7 +181,8 @@
       "emptyBody": "Sefer ve araç seçip yüklemeyi yaptığında seferler burada birikir. Bir sefer araçta olmakla başlamış sayılmaz.",
       "pick": "Sefer ve araç seç",
       "summary": "{stops} durak · {boxes} kutu",
-      "catchUp": "Geç yüklenen kutuları yola çıkar"
+      "catchUp": "Geç yüklenen kutuları yola çıkar",
+      "addRun": "Araca sefer ekle"
     },
     "vehicle": {
       "heading": "ARAÇ",
@@ -194,7 +195,8 @@
       "body": "Duraklar bir seferi başlattığında açılır. O ana kadar müşteriye bildirim gitmez.",
       "step1": "Seferleri ve aracı seç",
       "step2": "Kutuları araca yükle",
-      "step3": "Sürmek istediğin seferi başlat"
+      "step3": "Sürmek istediğin seferi başlat",
+      "cta": "Sefer ve araç seç"
     },
     "vanLoaded": {
       "title": "Araçta yük var, sürülen sefer yok",
@@ -440,5 +442,23 @@
     "notEnough": "Depoda o kadar yok — kullanılabilir {n} adet.",
     "stuck": "Mal sevk edildi ama araca yazılamadı; transfer askıda kaldı. Depo ekranından çözülmeli.",
     "failed": "Hareket yazılamadı — bağlantıyı kontrol edip yeniden dene."
+  },
+  "routePick": {
+    "title": "Sefer ve Araç",
+    "context": "araca ne alacağını seç",
+    "routesHeading": "ARACA ALINACAK SEFERLER",
+    "routesHint": "Birden çok sefer seçebilirsin — bugünün, yarının, sonraki günün. Araç hepsini birden taşır.",
+    "routeMeta": "{warehouse} · {stops} durak",
+    "warehouseUnknown": "Çıkış deposu okunamadı",
+    "taken": "bugün {courier} sürüyor",
+    "someone": "başka bir kurye",
+    "summaryHeading": "ARACA ALINACAKLAR",
+    "summary": "{runs} sefer · {stops} durak",
+    "summaryIdle": "Ne yükleneceği sefer seçilince görünür",
+    "summaryIdleBody": "Kaç sefer, kaç durak — toplamı buraya gelir.",
+    "empty": {
+      "title": "Deponda planlanmış sefer yok",
+      "body": "Rotalar yönetimde günlük planlanır. Planlanmadan sefer kurulmaz; planlandığı anda burada görünür. Kendi deponun dışındaki rotalar sana kapalıdır."
+    }
   }
 }

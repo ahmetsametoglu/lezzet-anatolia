@@ -146,6 +146,9 @@ export function courierRunBrief(overrides: Partial<CourierRunBrief> = {}): Couri
  */
 export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRoute {
   return {
+    /* Rotanın GÜNÜ (31.08) — liste birden çok gün taşıyor ve seçim ekranı ona göre grupluyor.
+       Fikstürün günü, gün cevabının günüyle aynı. */
+    day: '2026-08-08',
     zoneId: uuid(801),
     zoneName: 'Kuzey rotası',
     warehouseId: uuid(810),

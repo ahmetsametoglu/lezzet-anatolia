@@ -34,6 +34,8 @@ import { vehicleLabelsOf } from './vehicle-label';
 
 /** Seçim ekranındaki bir rota satırı — sözleşmedeki `CourierRouteSchema`nın aynası. */
 export interface CourierRouteView {
+  /** Rotanın günü (`YYYY-MM-DD`) — liste birden çok gün taşıyor (31.08). */
+  day: string;
   zoneId: string;
   zoneName: string;
   warehouseId: string;
@@ -58,6 +60,13 @@ export interface CourierRouteView {
   } | null;
 }
 
+/** Gün kaydırma — pencere hesabının tek yeri; tarih aritmetiği iki yerde yazılırsa biri kayar. */
+function addDays(date: string, offset: number): string {
+  const base = new Date(`${date}T12:00:00`);
+  base.setDate(base.getDate() + offset);
+  return base.toISOString().slice(0, 10);
+}
+
 /** `getDay()`: 0=Pazar → ISO'da 7 (motorun `upcomingDeliveryDates` hesabıyla birebir). */
 function isoWeekdayOf(date: string): number {
   const day = new Date(`${date}T12:00:00`).getDay();
@@ -71,8 +80,29 @@ function isoWeekdayOf(date: string): number {
  */
 export async function listCourierRoutes(
   db: SupabaseClient,
-  input: { date: string; scope: WarehouseScope },
+  input: { date: string; scope: WarehouseScope; days?: number },
 ): Promise<CourierRouteView[]> {
+  /*
+    ── LİSTE BİRDEN ÇOK GÜN TAŞIR (31.08) ────────────────────────────────────────────────────
+    Kullanıcının senaryosu: *"araç iki-üç günlük yolculuğa çıkıyor ve rotalar tek günlük olduğu
+    için yarının seferleri de bugünden yükleniyor."* Seçim ekranı (v3:17) rotaları güne göre
+    grupluyor — tek günlük bir liste o ekranı hiç kuramazdı.
+
+    Pencere VARSAYILAN OLARAK ÜÇ GÜN ve bu tasarımın kendi cümlesi: *"bugünün, yarının, sonraki
+    günün"*. Sınırsız değil, çünkü bu bir katalog değil bir SEÇİM: kurye bugün yükleyeceği malı
+    seçiyor, gelecek haftanın rotalarını değil.
+
+    Günler AYRI turlarda okunuyor (`Promise.all`) ve bu bilinçli: her günün kendi sefer kayıtları,
+    kendi durak sayacı ve kendi kapanışları var. Tek sorguya indirmek üç ayrı gerçeği tek haritada
+    toplamak olurdu ve "hangi günün seferi" sorusu ancak satırdan geri türetilebilirdi.
+  */
+  const window = Math.max(1, input.days ?? 3);
+  if (window > 1) {
+    const dates = Array.from({ length: window }, (_, offset) => addDays(input.date, offset));
+    const perDay = await Promise.all(dates.map((date) => listCourierRoutes(db, { date, scope: input.scope, days: 1 })));
+    return perDay.flat();
+  }
+
   const weekday = isoWeekdayOf(input.date);
   const [zones, runs, orders, warehouses] = await Promise.all([
     new DeliveryZoneService(db).list({ activeOnly: true }),
@@ -105,6 +135,7 @@ export async function listCourierRoutes(
   const vehicleLabels = await vehicleLabelsOf(db, dayRuns.map((run) => run.vehicleId));
 
   return today.map((zone) => toRouteView(zone, runByZone.get(zone.id) ?? null, {
+    day: input.date,
     stopCount: stopCount.get(zone.id) ?? 0,
     warehouseName: warehouseName.get(zone.warehouseId) ?? null,
     closedRuns,
@@ -117,6 +148,7 @@ function toRouteView(
   zone: DeliveryZone,
   run: DeliveryRun | null,
   ctx: {
+    day: string;
     stopCount: number;
     warehouseName: string | null;
     closedRuns: ReadonlySet<string>;
@@ -125,6 +157,7 @@ function toRouteView(
   },
 ): CourierRouteView {
   return {
+    day: ctx.day,
     zoneId: zone.id,
     zoneName: zone.name,
     warehouseId: zone.warehouseId,

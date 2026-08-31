@@ -275,6 +275,14 @@ export type CourierRunDetail = z.infer<typeof CourierRunDetailSchema>;
  * sürer"); rota bugün başka kuryedeyse `run.courierId` onu söyler, ekran "bu rota bugün X'te" der.
  */
 export const CourierRouteSchema = z.object({
+  /**
+   * **ROTANIN GÜNÜ** (`YYYY-MM-DD` · 31.08) — liste artık birden çok gün taşıyor.
+   *
+   * Kullanıcının senaryosu: *"araç iki-üç günlük yolculuğa çıkıyor ve rotalar tek günlük olduğu
+   * için yarının seferleri de bugünden yükleniyor."* Seçim ekranı (v3:17) rotaları güne göre
+   * grupluyor; tek günlük bir liste o ekranı kuramazdı.
+   */
+  day: z.string(),
   zoneId: z.string().uuid(),
   zoneName: z.string(),
   warehouseId: z.string().uuid(),

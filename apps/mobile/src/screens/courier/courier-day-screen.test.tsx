@@ -53,26 +53,18 @@ jest.mock('@/lib/auth/supabase', () => ({
 }));
 
 const t = messages;
-/** Fixture'ın birinci durağı — kilit ve başlatma testleri hep bu kimliği konuşuyor. */
-const STOP_1 = '00000000-0000-4000-8000-000000000001';
-/** İkinci ve üçüncü durak — sonuç etiketlerini ayrı ayrı okuyan testin adresleri. */
-const STOP_2 = '00000000-0000-4000-8000-000000000002';
-const STOP_3 = '00000000-0000-4000-8000-000000000003';
-/** Fixture rotasının bölgesi — başlatma isteğinin gövdesinde bu kimlik gider. */
-const ZONE_ID = courierRoute().zoneId;
-/** Seçili rotanın CTA'da okunan hâli. */
-/* Seçim gövdesinin düğmesi SEFER KURAR (31.08 · v3:16); rota adını da taşımıyor artık —
-   çoklu seçimde tek bir ad yazmak, seçilenlerin geri kalanını gizlemek olurdu. */
-const START_CTA = 'Seferleri kur — yüklemeye geç';
-
-/** Sefer ALINMAMIŞ gün — rota seçim hâli; başlatma testlerinin başlangıç noktası. */
-function unstartedDay(stops: Parameters<typeof courierDay>[0]): CourierDayResponse {
-  return courierDay(stops, { run: null });
-}
 
 function okResponse(data: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data, error: null }) } as unknown as Response;
 }
+
+/** Fixture'ın birinci durağı — kilit ve durak testleri hep bu kimliği konuşuyor. */
+const STOP_1 = '00000000-0000-4000-8000-000000000001';
+/** İkinci ve üçüncü durak — sonuç etiketlerini ayrı ayrı okuyan testin adresleri. */
+const STOP_2 = '00000000-0000-4000-8000-000000000002';
+const STOP_3 = '00000000-0000-4000-8000-000000000003';
+/** Boş hâlin düğmesi — seçime GÖTÜRÜR, kurmaz (31.08 · v3:15). */
+const START_CTA = 'Sefer ve araç seç';
 
 function failResponse(): Response {
   return {
@@ -197,14 +189,19 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByText('Musa Kaya · Kuzey rotası · SF-26-ABCDEF')).toBeOnTheScreen();
   });
 
-  it('koşan rota yoksa boş blok çıkar, CTA ve ilerleme çizilmez', async () => {
-    mockDay(unstartedDay([]), dayCloseDraft(), startResult(), []);
+  it('ARAÇ BOŞSA rehber çizilir ve düğme HER HÂLDE durur — rota olmasa bile', async () => {
+    /* Rota listesi 31.08'de kendi ekranına taşındı (v3:17). Bu ekranın boş hâli artık bir SEÇİM
+       değil bir REHBER: üç adım (seç → yükle → başlat) ve seçime götüren tek düğme.
+
+       Düğme rota YOKKEN de çiziliyor ve bu bilinçli: sebebi ("deponda planlanmış sefer yok")
+       seçim ekranı söylüyor. Gizlenen bir düğme, kuryeye o cümleyi hiç okutmazdı. */
+    mockDay(courierDay([], { run: null, runs: [] }), dayCloseDraft(), startResult(), []);
 
     await renderDay();
 
-    await waitFor(() => expect(screen.getByTestId('courier-day-empty')).toBeOnTheScreen());
-    expect(screen.getByText(t.day.empty.title)).toBeOnTheScreen();
-    expect(screen.queryByTestId('courier-day-cta')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('courier-day-guide')).toBeOnTheScreen());
+    expect(screen.getByText(t.day.vanEmpty.step1)).toBeOnTheScreen();
+    expect(screen.getByTestId('courier-day-cta')).toHaveTextContent(t.day.vanEmpty.cta);
   });
 
   it('rota okunamazsa hata bloğu + tekrar dene; basılınca liste gelir', async () => {
@@ -244,7 +241,7 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/52,00 €/);
   });
 
-  it('KAPANMIŞ sefer ARAÇTA DEĞİLDİR: gövde yeniden rota seçimi, duraklar çizilmez', async () => {
+  it('KAPANMIŞ sefer ARAÇTA DEĞİLDİR: gövde yeniden REHBER, duraklar çizilmez', async () => {
     /*
       31.08: kapanmış sefer artık `/courier/day`den HİÇ dönmüyor — ne `run` olarak ne `runs`
       içinde. Kapanan seferin işi bitmiştir ve kutuları da inmiştir (v3:13'ün kuralı). Ekran o
@@ -265,43 +262,13 @@ describe('K1 · günün seferi', () => {
     await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
 
     expect(screen.queryByTestId(`courier-stop-${STOP_1}`)).toBeNull();
-    /* Günün ikinci ROTASI serbest ve düğme onu KURAR, başlatmaz (31.08): başlatma artık araçtaki
-       seferler ekranının eylemi. */
+    // Düğme SEÇİME götürür; kurma da başlatma da başka ekranların eylemi (31.08).
     expect(screen.getByTestId('courier-day-cta')).toHaveTextContent(START_CTA);
   });
 
-  it('rota seçimi: tek aday kendiliğinden seçili, başlatılmış rota PASİF; sefer açılınca liste gelir', async () => {
-    mockDay(
-      unstartedDay([courierStop(1), courierStop(2)]),
-      dayCloseDraft(),
-      startResult({ started: [STOP_1, '00000000-0000-4000-8000-000000000002'] }),
-      [
-        courierRoute(),
-        // Başkasının açtığı rota: kart kimin sürdüğünü söyler ve seçilemez (K3 — rota+gün tek sefer).
-        courierRoute({ zoneId: '00000000-0000-4000-8000-000000000802', zoneName: 'Güney rotası', run: takenRouteRun() }),
-      ],
-    );
-
-    await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    expect(screen.getByText('Strasbourg deposu · 3 durak')).toBeOnTheScreen();
-    expect(screen.getByText('bugün Musa Kaya sürüyor · SF-26-ABCDEF')).toBeOnTheScreen();
-    // Tek SEÇİLEBİLİR rota var: soru sorulmadı, CTA adını taşıyor.
-    expect(screen.getByText(START_CTA)).toBeOnTheScreen();
-
-    await fireEvent.press(screen.getByTestId('courier-day-cta'));
-
-    await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
-    // Açık durak sayısı rozet olarak CTA'nın içinde.
-    expect(screen.getByText('2 açık')).toBeOnTheScreen();
-    expect(screen.queryByTestId('courier-day-routes')).toBeNull();
-
-    await fireEvent.press(screen.getByTestId(`courier-stop-${STOP_1}`));
-    expect(mockNavigate).toHaveBeenCalledWith({
-      pathname: '/delivery/[orderId]',
-      params: { orderId: STOP_1 },
-    });
-  });
+  /* ROTA SEÇİMİ ARTIK BU EKRANDA DEĞİL (31.08 · v3:17). "Tek aday kendiliğinden seçili",
+     "başlatılmış rota pasif" ve çoklu seçim `route-pick-screen.test.tsx`te ölçülüyor; buraya
+     kalan tek şey seçimden DÖNÜNCE listenin gelmesi ve o da aşağıdaki testlerde zaten var. */
 
   it('sefer kapatma CTA\'sı kapanış ekranına gider', async () => {
     mockDay(
@@ -485,31 +452,18 @@ describe('K1 · günün seferi', () => {
 });
 
 describe('K1 · "Seferi başlat" — gerçek yazım', () => {
-  /** CTA'ya basıp cevabın işlenmesini bekler; başlatma isteğinin gövdesini geri verir. */
-  async function pressStart(): Promise<Record<string, unknown>> {
-    await fireEvent.press(screen.getByTestId('courier-day-cta'));
-    await waitFor(() => expect(screen.getByTestId('courier-day-start-notice')).toBeOnTheScreen());
-    const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/day/start'));
-    return JSON.parse(String(call?.[1]?.body)) as Record<string, unknown>;
-  }
 
-  it('düğme uca GİDER: seçilen rota + ekranın gösterdiği gün gider, sonra liste tazelenir', async () => {
-    mockDay(unstartedDay([courierStop(1)]), dayCloseDraft(), startResult({ started: [STOP_1] }));
+  it('boş hâlin düğmesi SEÇİM EKRANINA götürür — uca istek göndermez', async () => {
+    /* 31.08'e kadar bu düğme doğrudan `/day/start`e gidiyordu. Artık kurma eylemi seçim ekranının
+       kendi düğmesi; buradaki düğmenin tek işi YÖN vermek — gönderilecek bir seçim yok. */
+    mockDay(courierDay([], { run: null, runs: [] }));
 
     await renderDay();
-    await waitFor(() => expect(screen.getByTestId('courier-day-routes')).toBeOnTheScreen());
-    const before = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/courier/day')).length;
+    await waitFor(() => expect(screen.getByTestId('courier-day-cta')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('courier-day-cta'));
 
-    // Gün, cevabın kendi `date`idir — ikinci bir hesap değil; gece yarısı geçişinde ekranla kapı
-    // ayrışmasın. Rota da ekranda seçili olandır: ucun kendi çözümüne bırakılmaz.
-    /* İstek artık `depart:false` taşıyor: düğme seferi KURUYOR, yola çıkarmıyor (31.08). Yola
-       çıkarma ayrı bir eylem ve ayrı bir ekranda (v3:15) — bedeli müşteri bildirimi. */
-    expect(await pressStart()).toEqual({ zoneId: ZONE_ID, date: '2026-08-08', depart: false });
-    expect(screen.getByTestId('courier-day-start-notice')).toHaveTextContent(/1 sefer araca alındı/);
-    // Cevap "durum değişti" dedi: liste yeniden okundu.
-    await waitFor(() =>
-      expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/courier/day')).length).toBeGreaterThan(before),
-    );
+    expect(mockNavigate).toHaveBeenCalledWith('/route-pick');
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/day/start'))).toBe(false);
   });
 
   /*
@@ -586,12 +540,12 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
   sefer olabildiği an üçüncü bir hâl doğdu ve o hâl ölçülmeden ekranda kutular görünmez kalırdı.
 */
 describe('araçtaki seferler (31.08)', () => {
-  it('ARAÇ BOŞ: seçim gövdesi çizilir — rota ve araç seçilir, düğme SEFER KURAR', async () => {
+  it('ARAÇ BOŞ: rehber çizilir, araçtaki seferler kapısı çizilmez', async () => {
     mockDay(courierDay([], { run: null, runs: [] }));
     await renderDay();
 
-    // Düğme "başlat" DEĞİL "kur" diyor: başlatma artık başka bir eylemin adı (v3:15).
-    expect(screen.getByTestId('courier-day-cta')).toHaveTextContent('Seferleri kur — yüklemeye geç');
+    await waitFor(() => expect(screen.getByTestId('courier-day-guide')).toBeOnTheScreen());
+    // Araçta sefer yokken "araçtaki seferler" kapısı da yok: boş bir ekrana götürürdü.
     expect(screen.queryByTestId('courier-day-van-runs')).toBeNull();
   });
 

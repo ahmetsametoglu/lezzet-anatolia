@@ -173,12 +173,12 @@ describe('K7 · sefer kapanışı', () => {
     await renderClose();
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
 
-    expect(screen.getByTestId('courier-day-close-confirm-box')).toHaveTextContent(/geri alınamaz/);
+    expect(screen.getByTestId('courier-day-close-sheet')).toHaveTextContent(/geri alınamaz/);
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
 
     // Vazgeç ilk adıma döner.
-    await fireEvent.press(screen.getByTestId('courier-day-close-cancel'));
-    expect(screen.queryByTestId('courier-day-close-confirm-box')).toBeNull();
+    await fireEvent.press(screen.getByTestId('courier-day-close-sheet-cancel'));
+    expect(screen.queryByTestId('courier-day-close-sheet')).toBeNull();
     expect(fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(0);
   });
 
@@ -195,7 +195,7 @@ describe('K7 · sefer kapanışı', () => {
     await typeAmount('cash', '40,00');
     await fireEvent.changeText(screen.getByTestId('courier-day-close-note'), 'Krutenau kolisi araçta kaldı');
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
-    await fireEvent.press(screen.getByTestId('courier-day-close-confirm'));
+    await fireEvent.press(screen.getByTestId('courier-day-close-sheet-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('courier-day-close-notice')).toBeOnTheScreen());
     const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
@@ -225,7 +225,7 @@ describe('K7 · sefer kapanışı', () => {
     expect(screen.getByText(t.dayClose.ctaClosed)).toBeOnTheScreen();
 
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
-    expect(screen.queryByTestId('courier-day-close-confirm-box')).toBeNull();
+    expect(screen.queryByTestId('courier-day-close-sheet')).toBeNull();
   });
 
   it('kapanmış seferin sayıları KAPANIŞ KAYDINDAN okunur (anın fotoğrafı), taslaktan değil', async () => {
@@ -248,7 +248,7 @@ describe('K7 · sefer kapanışı', () => {
 
     await renderClose();
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
-    await fireEvent.press(screen.getByTestId('courier-day-close-confirm'));
+    await fireEvent.press(screen.getByTestId('courier-day-close-sheet-confirm'));
 
     await waitFor(() =>
       expect(screen.getByTestId('courier-day-close-notice')).toHaveTextContent(t.dayClose.alreadyClosed),

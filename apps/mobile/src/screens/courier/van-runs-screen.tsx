@@ -14,6 +14,7 @@ import { TextAction } from '@/components/ui/text-action';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
+import { dayTagOf } from './day-tag';
 import { useCourierDay } from './use-courier-day.hook';
 
 /*
@@ -41,23 +42,6 @@ const t = courierCopy;
 
 /** İlk yük iskeleti — künye satırı ve iki sefer kartı; ekranın gerçekten çizdiği bloklar. */
 const VAN_SKELETON = { hint: 40, run: 108 } as const;
-
-/**
- * Seferin GÜNÜ okunur hâlde — "bugün" · "yarın" · "2 Eylül".
- *
- * Tarih sunucudan geliyor (`deliveryDate`), "bugün"ün kendisi cihazdan: kurye rampada saat 23:50'de
- * bakıyorsa yarının seferi ona "yarın" demeli. İkisini de sunucuya sormak, cihazın saatiyle
- * sunucunun saatinin ayrıştığı bir gece yarısı üretirdi — ve o gece kurye yanlış seferi başlatırdı.
- */
-function dayTag(date: string): string {
-  const today = new Date();
-  const iso = (d: Date): string => d.toISOString().slice(0, 10);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  if (date === iso(today)) return t.day.vanRuns.today;
-  if (date === iso(tomorrow)) return t.day.vanRuns.tomorrow;
-  return new Date(`${date}T12:00:00`).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' });
-}
 
 /** Seferin hâli üç sözcükte: sürülüyor · araçta bekliyor. Kapanmış sefer bu listede hiç yok. */
 function stateOf(run: CourierRunDetail): { label: string; driving: boolean } {
@@ -143,7 +127,7 @@ export function CourierVanRunsScreen() {
                       <Text style={styles.cardTitle}>{run.zoneName ?? run.referenceNo}</Text>
                       {/* GÜN ETİKETİ (v3:16) — araç iki-üç günün seferini taşıyor; hangisinin
                           bugün olduğu kartın kendisinde yazmalı. */}
-                      <Text style={styles.cardMeta}>{`${dayTag(run.deliveryDate)} · ${run.referenceNo}`}</Text>
+                      <Text style={styles.cardMeta}>{`${dayTagOf(run.deliveryDate, t)} · ${run.referenceNo}`}</Text>
                       <Text style={styles.cardSummary}>
                         {fillCopy(t.day.vanRuns.summary, { stops: String(load.stops), boxes: String(load.boxes) })}
                       </Text>
@@ -214,6 +198,14 @@ export function CourierVanRunsScreen() {
               label={t.day.vanRuns.load}
               onPress={() => router.navigate('/load')}
               testID="courier-van-load"
+            />
+            {/* ARACA SEFER EKLEME (31.08) — model "araç bir ara depo" dediği anda bu yol zorunlu
+                oldu: kurye gün içinde ikinci bir seferi de araca alabilmeli. Seçim ekranına giden
+                tek kapı gün ekranının BOŞ hâliydi; araçta yük varken oraya hiç düşülmüyordu. */}
+            <TextAction
+              label={t.day.vanRuns.addRun}
+              onPress={() => router.navigate('/route-pick')}
+              testID="courier-van-add-run"
             />
             <Text style={styles.loadMeta}>
               {fillCopy(t.day.vanRuns.loadMeta, {

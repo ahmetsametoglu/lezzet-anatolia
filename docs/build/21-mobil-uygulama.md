@@ -9372,3 +9372,36 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `docs/talep/not-mobil-durak-ekrani-geri-donuste-cokuyor.md`.
 
   **BEKLEYEN(21.195):** o çökme açık — kabuk/gezinme katmanının işi, kurye ekranlarının değil.
+
+- [x] (21.196) **SEÇİM KENDİ EKRANINA AYRILDI · GERİ ALINAMAZ EYLEMİN ONAYI ORTAK KOMPONENT** (kullanıcı bulguları 31.08)
+  `touches: apps/mobile/src/screens/courier/{route-pick-screen,courier-day-screen,day-close-screen,delivery-screen}.tsx · apps/mobile/src/components/operations/confirm-sheet.tsx`
+
+  **GİRİŞ EKRANI REHBER OLMALIYDI, LİSTE DEĞİL.** Kullanıcı tasarımı gösterip sordu: *"giriş
+  ekranı bu olması gerekmiyor mu?"* — v3:15'in boş hâli bir SEÇİM değil bir REHBERDİR (üç adım:
+  seç → yükle → başlat) ve seçime ancak düğmeyle geçilir. Seçim gün ekranının gövdesine gömülüydü;
+  kurye "ne yapacağım" sorusunun cevabını hiç görmüyor, doğrudan bir listeyle karşılaşıyordu.
+
+  Seçim `/route-pick` oldu (v3:17): araç bloğu · güne göre gruplu ÇOKLU rota seçimi · "ARACA
+  ALINACAKLAR" özeti. Ayrım işlevsel de — bu ekran sefer AÇIKKEN de gerekiyor (araca ikinci sefer
+  eklemek), yani gün ekranının boş hâline bağlı olamazdı. Araçtaki seferler ekranına da "araca
+  sefer ekle" kapısı kondu; o yol yoktu ve model onu zorunlu kılıyordu.
+
+  **ROTA LİSTESİ ÜÇ GÜNE ÇIKTI.** Seçim ekranı güne göre grupluyor ama `listCourierRoutes` tek gün
+  döndürüyordu — o ekran kurulamıyordu. Pencere varsayılan üç gün (tasarımın kendi cümlesi:
+  *"bugünün, yarının, sonraki günün"*), sınırsız değil çünkü bu bir katalog değil bir SEÇİM.
+  Sözleşmede rota satırı artık `day` taşıyor.
+
+  **ONAY ÇEKMECESİ ORTAK OLDU.** Kullanıcı kapanış ekranındaki onayı gördü: *"bu onay çekme JS
+  mesajı gibi… geri alınamaz bir şeyde onaylamasını sağlayacak bir komponente ihtiyacımız var."*
+  Haklıydı ve dahası: aynı desen İKİ yerde ayrı ayrı kurulmuştu — kapanışta sayfaya gömülü bir
+  uyarı kutusu + elden çizilmiş iki düğme, teslimde `BottomSheet` + elden kurulmuş düğme çifti.
+
+  `OperationsConfirmSheet` v3'ün kendi "kayıt (2/2)" deseni: ekranın geri kalanı kararır, karar tek
+  başına kalır. Yerel `Alert` DEĞİL — işletim sisteminin yazı tipini, düğme sırasını ve dokunma
+  hedeflerini getirirdi; operasyon yüzeyi kapıda eldivenle kullanılıyor. Düğmeler eşit değil
+  (onaylayan `grow={1.4}`) ama onay da varsayılan değil: vazgeç solda ve nötr, parmağın refleksle
+  düştüğü yer yıkıcı olan değil. Ton kararın NİTELİĞİNİ söylüyor — kapanış `olive` (geri alınamaz
+  ama yıkıcı değil), iade/red `error`.
+
+  Ölçüldü: vitest 4015/4015 · mobil jest 141/141 suite, 1143 test. Cihazda: çekmece alttan geliyor,
+  arka plan kararıyor, kapanış sayfası tek düğmeye indi.

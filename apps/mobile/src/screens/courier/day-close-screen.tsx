@@ -4,6 +4,7 @@ import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
+import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -280,49 +281,42 @@ export function CourierDayCloseScreen() {
           </Text>
         )}
 
-        {dayClose.confirming ? (
-          <>
-            <View style={styles.confirmBox} testID="courier-day-close-confirm-box">
-              <Text style={styles.confirmText}>{t.dayClose.confirmBox}</Text>
-            </View>
-            <View style={styles.confirmRow}>
-              <PressableSurface
-                onPress={dayClose.cancelConfirm}
-                feedback="scale"
-                grow
-                style={[styles.confirmButton, styles.confirmCancel]}
-                accessibilityLabel={t.dayClose.cancel}
-                testID="courier-day-close-cancel"
-              >
-                <Text style={styles.confirmCancelLabel}>{t.dayClose.cancel}</Text>
-              </PressableSurface>
-              <PressableSurface
-                onPress={dayClose.close}
-                feedback="scale"
-                grow={1.3}
-                style={[styles.confirmButton, styles.confirmYes]}
-                accessibilityLabel={t.dayClose.confirm}
-                testID="courier-day-close-confirm"
-              >
-                <Text style={styles.confirmYesLabel}>
-                  {dayClose.sending ? t.dayClose.sending : t.dayClose.confirm}
-                </Text>
-              </PressableSurface>
-            </View>
-          </>
-        ) : (
-          <PressableSurface
-            onPress={dayClose.askConfirm}
-            disabled={dayClose.closed}
-            feedback="scale"
-            style={[styles.cta, dayClose.closed ? styles.ctaClosed : styles.ctaOpen]}
-            accessibilityLabel={dayClose.closed ? t.dayClose.ctaClosed : t.dayClose.cta}
-            testID="courier-day-close-cta"
-          >
-            <Text style={styles.ctaLabel}>{dayClose.closed ? t.dayClose.ctaClosed : t.dayClose.cta}</Text>
-          </PressableSurface>
-        )}
+        {/*
+          ONAY ARTIK ÇEKMECEDE (kullanıcı bulgusu 31.08 · ortak komponent).
+
+          Burada sayfaya gömülü bir uyarı kutusu ve altında iki elden çizilmiş düğme vardı.
+          Kullanıcı ölçtü: *"bu onay çekme JS mesajı gibi"* — ve haklıydı. Sayfaya gömülü bir onay
+          bir KARAR anı gibi değil bir uyarı satırı gibi okunuyor; üstelik aynı desen teslim
+          ekranında ayrıca kurulmuştu (iki kopya, tek karar).
+
+          `OperationsConfirmSheet` v3'ün kendi "kayıt (2/2)" çekmecesi: ekranın geri kalanı kararır,
+          karar tek başına kalır. Tonu `olive` — kapanış geri alınamaz ama YIKICI değil.
+        */}
+        <PressableSurface
+          onPress={dayClose.askConfirm}
+          disabled={dayClose.closed}
+          feedback="scale"
+          style={[styles.cta, dayClose.closed ? styles.ctaClosed : styles.ctaOpen]}
+          accessibilityLabel={dayClose.closed ? t.dayClose.ctaClosed : t.dayClose.cta}
+          testID="courier-day-close-cta"
+        >
+          <Text style={styles.ctaLabel}>{dayClose.closed ? t.dayClose.ctaClosed : t.dayClose.cta}</Text>
+        </PressableSurface>
       </View>
+
+      <OperationsConfirmSheet
+        visible={dayClose.confirming}
+        title={t.dayClose.cta}
+        message={t.dayClose.confirmBox}
+        confirmLabel={t.dayClose.confirm}
+        cancelLabel={t.dayClose.cancel}
+        onConfirm={dayClose.close}
+        onCancel={dayClose.cancelConfirm}
+        tone="olive"
+        busy={dayClose.sending}
+        busyLabel={t.dayClose.sending}
+        testID="courier-day-close-sheet"
+      />
     </View>
   );
 }

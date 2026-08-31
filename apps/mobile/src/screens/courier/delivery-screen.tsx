@@ -7,6 +7,7 @@ import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsIconButton } from '@/components/operations/icon-button';
+import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -713,12 +714,23 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         Kit ZATEN VARDI (`BottomSheet`) ve aynı klasörün kardeş ekranları onu kullanıyordu; bu
         ekran kite hiç sormamıştı (kullanıcı bulgusu 30.08).
       */}
-      <BottomSheet
+      <OperationsConfirmSheet
         visible={delivery.outcome !== null && !delivery.finished}
         title={
           delivery.outcome === 'refused' ? t.delivery.outcome.refusedTitle : t.delivery.outcome.unreachableTitle
         }
-        onClose={delivery.cancelOutcome}
+        /* Dipnot SONUCA GÖRE: ulaşılamayanda fotoğrafın bağlı olmadığı, reddedilende kolilerin
+           iade akışına düştüğü yazılı — iki çekmece, iki ayrı cümle. Bedel BAŞLIĞIN ALTINDA,
+           düğmelerden önce: okunmadan basılmasın. */
+        message={
+          delivery.outcome === 'refused' ? t.delivery.outcome.refusedHint : t.delivery.outcome.photoUnavailable
+        }
+        confirmLabel={t.delivery.outcome.confirm}
+        cancelLabel={t.delivery.outcome.cancel}
+        onConfirm={delivery.confirmOutcome}
+        onCancel={delivery.cancelOutcome}
+        busy={delivery.sending}
+        busyLabel={t.delivery.cta.sending}
         testID="courier-outcome-sheet"
       >
         {/* İnceleme kararı (doc 21, 21.8): ÇİP + SERBEST METİN birlikte — model serbest metin
@@ -754,33 +766,7 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             {delivery.noteError}
           </Text>
         )}
-        {/* Dipnot SONUCA GÖRE (tasarım): ulaşılamayanda fotoğrafın bağlı olmadığı, reddedilende
-            kolilerin iade akışına düştüğü yazılı — iki çekmece, iki ayrı cümle. */}
-        <Text style={styles.hintText} testID="courier-outcome-photo-unavailable">
-          {delivery.outcome === 'refused'
-            ? t.delivery.outcome.refusedHint
-            : t.delivery.outcome.photoUnavailable}
-        </Text>
-        <View style={styles.outcomeRow}>
-          <SecondaryButton
-            label={t.delivery.outcome.cancel}
-            onPress={delivery.cancelOutcome}
-            elevation="flat"
-            grow
-            testID="courier-outcome-cancel"
-          />
-          {/* ONAYLAYAN DÜĞME GENİŞ (tasarım `flex:1.4`): iki eşit düğme, hangisinin asıl eylem
-              olduğunu söylemez. Tonu `error` — bu bir olumsuz kaydın onayı. */}
-          <PrimaryButton
-            label={delivery.sending ? t.delivery.cta.sending : t.delivery.outcome.confirm}
-            onPress={delivery.confirmOutcome}
-            tone="error"
-            elevation="flat"
-            grow={1.4}
-            testID="courier-outcome-confirm"
-          />
-        </View>
-      </BottomSheet>
+      </OperationsConfirmSheet>
     </View>
   );
 }
