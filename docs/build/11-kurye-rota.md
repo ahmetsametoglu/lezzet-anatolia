@@ -254,7 +254,11 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       duruyor (elle yazılan adres · ops paneli · süzgeçten düşen aday · servis kesintisi · ileride
       DE sağlayıcısı). **Mobil yarısı native şeritte.**
     - **BEKLEYEN(11.9):**
-      ② mobil ekranın `stopSeq`e bağlanması (`docs/talep/mobil-durak-sirasi-alani.md`)
+      ~~② mobil ekranın `stopSeq`e bağlanması~~ **KAPANDI (31.08 — kullanıcı isteğiyle mobil şerit
+      adına yapıldı, o şerit yoğun):** gün ekranı artık saymıyor, `stop.stopSeq`i çiziyor; sıra
+      bilinmiyorsa nötr işaret ve **ray çizilmiyor** (çizgi "bu bir sıradır" der, sıra yoksa o cümle
+      yalan olur). Durak ekranının navigasyonu motora bağlandı (`maps/dir`) ve `openURL` reddi artık
+      YUTULMUYOR — sebebi yazılıyor. Talep dosyaları kapatılabilir.
       ~~③ depo noktasının ops formundan girilmesi~~ **KAPANDI (31.08):** depo formunda enlem/boylam
       alanları var ve **boş bırakılırsa kapı adresten çözüyor** (BAN); doluysa operatörün değeri
       kazanır — otomatik çözüm bir başlangıç, son söz değil. Kaydı ENGELLEMİYOR: çözülemezse nokta

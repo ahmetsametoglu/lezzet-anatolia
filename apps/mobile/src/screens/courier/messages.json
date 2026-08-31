@@ -404,7 +404,8 @@
       "notAllowed": "Bu adım şu an yapılamaz — durak yolda değil (sefer açılmamış ya da durak hazırlanmayı bekliyor).",
       "network": "Bağlantı yok — kayıt gönderilemedi. Bağlantı gelince tekrar deneyin (kuyruk YOK, işaret yalnız gönderilince yazılır).",
       "unknown": "Kayıt gönderilemedi ({error})."
-    }
+    },
+    "navigateFailed": "Harita uygulaması açılamadı"
   },
   "dayClose": {
     "back": "Geri",

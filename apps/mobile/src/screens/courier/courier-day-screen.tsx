@@ -155,19 +155,16 @@ export function CourierDayScreen() {
   const nextOrderId = stops.find((stop) => stop.outcome === 'pending')?.orderId ?? null;
 
   /*
-    ── DURAK NUMARASI SEFERİN İÇİNDE SAYILIR (v3:14 · kullanıcı bulgusu 31.08) ───────────────
-    Tasarımın kendi satırı: `ikon: t.ikon || String(i + 1)` — `i`, seferin KENDİ durak dizisindeki
-    indekstir, listenin değil. Bende sayaç liste boyunca akıyordu ve iki başlatılmış sefer varken
-    ekran kendi kendisiyle çelişiyordu: özet kartı "3/6 durak" derken listede 15 numaralı bir
-    durak duruyordu. Aynı ekranda iki ölçek, kuryeye hangisinin kendi seferi olduğunu sordurur.
+    ── DURAK NUMARASI SUNUCUDAN GELİR (11.9 · 31.08) ─────────────────────────────────────────
+    Bir tur boyunca ekran kendi sayıyordu — önce liste boyunca (iki seferli günde "3/6 durak"
+    derken 15 numaralı durak görünüyordu), sonra sefer içinde. İkisi de bir SAYAÇTI; oysa numara
+    bir HESAPTIR: sunucu kapalı tur maliyetiyle diziyor ve `stopSeq` alanında taşıyor
+    (`applyStopOrder`, sefer başına). Sayaç yalnız "kaçıncı satır" der, hesap "kaçıncı DURAK".
+
+    Ekran artık saymıyor: `stop.stopSeq` doğrudan çiziliyor ve `null` ise numara UYDURULMUYOR.
+    İki yüzeyin (mobil + web operasyon) kendi sayacını tutması, aynı gün için iki farklı rota
+    göstermenin en kısa yoluydu.
   */
-  const orderInRun = new Map<string, number>();
-  const seenPerRun = new Map<string, number>();
-  for (const stop of stops) {
-    const next = (seenPerRun.get(stop.runId) ?? 0) + 1;
-    seenPerRun.set(stop.runId, next);
-    orderInRun.set(stop.orderId, next);
-  }
   /** Sefer başına takılı durak — grup başlığının meta'sı bunu taşıyor (aşağıdaki künye). */
   const issuesPerRun = new Map<string, number>();
   for (const stop of stops) {
@@ -572,7 +569,7 @@ export function CourierDayScreen() {
                   ) : null}
                   <StopRow
                     stop={stop}
-                    order={orderInRun.get(stop.orderId) ?? index + 1}
+                    order={stop.stopSeq}
                     tone={circleTone(stop, stop.orderId === nextOrderId, day.started)}
                     started={day.started}
                     last={index === stops.length - 1}
@@ -819,7 +816,11 @@ function stopSubtitle(stop: CourierStopContract): { text: string; tone: 'muted' 
 interface StopRowProps {
   stop: CourierStopContract;
   /** Rota sırası (1'den) — daire boş hâlde bu sayıyı taşır. */
-  order: number;
+  /**
+   * Rota sırası — **sunucunun hesabı** (11.9), listenin indeksi DEĞİL. `null` = sıra bilinmiyor:
+   * koordinat çözülemedi, duraklar ayırt edilemedi ya da hesap düştü. Numara UYDURULMAZ.
+   */
+  order: number | null;
   tone: CircleTone;
   started: boolean;
   /** Listenin SON durağı mı — zaman çizgisi burada bitirilir, bağlanacak bir sonraki yok. */
@@ -909,10 +910,14 @@ function StopRow({ stop, order, tone, started, last, onPress }: StopRowProps) {
       <View style={styles.rail}>
         <View style={[styles.circle, styles[`circle_${tone}`]]}>
           <Text style={[styles.circleText, styles[`circleText_${tone}`]]}>
-            {tone === 'delivered' ? '✓' : tone === 'partial' ? '½' : tone === 'issue' ? '!' : order}
+            {/* Sıra bilinmiyorsa nötr bir işaret — uydurma numara, kuryeye olmayan bir yetenek
+                iddia eder (`kurye-gun.md` "sırasız gün hâli"). */}
+            {tone === 'delivered' ? '✓' : tone === 'partial' ? '½' : tone === 'issue' ? '!' : (order ?? '·')}
           </Text>
         </View>
-        {last ? null : <View style={styles.railLine} />}
+        {/* SIRA YOKSA RAY DA YOK (11.9): çizgi "bu bir sıradır" der ve sıra hesaplanamamışsa o
+            cümle yalan olur — ekran olmayan bir yeteneği iddia eder. */}
+        {last || order === null ? null : <View style={styles.railLine} />}
       </View>
       {/* DURAK KENDİ KARTINDA (v3:14 · 30.08) — numara dairesi kartın DIŞINDA kalıyor.
           Kesikli çizgiyle ayrılmış düz satırlar listeyi bir döküme çeviriyordu; kart her durağı

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { useRouter } from 'expo-router';
 import { Linking, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { navigationLink } from '@lezzet/domain-core';
 
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
@@ -106,6 +107,8 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
      onların altında kurulsaydı hook sırası render'dan render'a değişirdi (React bunu "Rendered
      more hooks than during the previous render" diye kesiyor — 30.08'de yaşandı). */
   const [keypadOpen, setKeypadOpen] = useState(false);
+  /* Navigasyon açılamadı mı (11.8) — reddi YUTMAK, kuryeye çalışmayan bir düğme bırakmaktı. */
+  const [navFailed, setNavFailed] = useState(false);
   /** Reddedilen kalem çekmecesi — istisna girilirken açılır, ekranı sürekli doldurmaz. */
   const [refuseOpen, setRefuseOpen] = useState(false);
 
@@ -218,11 +221,19 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             </View>
           ) : (
             <PressableSurface
-              onPress={() =>
-                void Linking.openURL(
-                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(stop.address ?? '')}`,
-                )
-              }
+              /* HEDEF MOTORDAN (11.8) — elle yazılmış URL değil. İki yüzey (mobil + web operasyon)
+                 kendi adresini yazdığı sürece ikisi de aynı yanlışı taşıyordu: `maps/search` bir YER
+                 KARTI açar, yolculuğu başlatmaz — kurye ekranda ikinci kez "Yol tarifi"ne basmak
+                 zorunda kalıyordu. `navigationLink` `maps/dir` üretiyor: uygulama doğrudan rota kurar.
+
+                 REDDİ YUTMUYORUZ: `openURL` başarısız olursa (hiçbir uygulama açamıyorsa) kuryenin
+                 elinde sessizce hiçbir şey yapmayan bir düğme kalırdı — sahada en kötü şey odur. */
+              onPress={() => {
+                const url = navigationLink({ address: stop.address });
+                if (!url) return;
+                setNavFailed(false);
+                void Linking.openURL(url).catch(() => setNavFailed(true));
+              }}
               feedback="scale"
               /* ESNEME `grow`DAN, STİLDEN DEĞİL (kit künyesi · kullanıcı bulgusu 30.08):
                  `styles.contact` içindeki `flex: 1` DIŞ Pressable'a hiç ulaşmıyordu — stil İÇ
@@ -273,6 +284,13 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
             </PressableSurface>
           )}
         </View>
+        {/* Navigasyon açılamadıysa SEBEBİ yazılır (11.8): `openURL` reddini yutmak, kuryenin elinde
+            sessizce hiçbir şey yapmayan bir düğme bırakmaktı. */}
+        {navFailed ? (
+          <Text style={styles.errorText} accessibilityRole="alert" testID="courier-navigate-failed">
+            {t.delivery.navigateFailed}
+          </Text>
+        ) : null}
 
         {/*
           ── KUTULAR (23.8 · v3:1478) — kutulu durakta teslimin ÖN koşulu ──────────────
