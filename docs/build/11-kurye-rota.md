@@ -241,8 +241,19 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       ve öyle söyleniyor). **19 adresin 19'u noktalı.**
     - `pnpm geo:backfill` duruyor ama artık refresh'in parçası değil: beslemenin bilmediği adresler
       (uygulamadan girilen, operasyon panelinden açılan) için — cron aynı işi zaten yapıyor.
-    - **BEKLEYEN(11.9):** ① öneri noktasının yazma yollarına bağlanması (koordinat `AddressSuggestion`
-      içinde zaten geliyor; form + `addCustomerAddress` dokunuşu — web ve mobil ayrı şerit)
+    - ~~① öneri noktasının yazma yollarına bağlanması~~ **WEB YARISI KAPANDI (31.08 · kullanıcı
+      düzeltmesi):** müşteri bir adres önerisine tıkladığında BAN'ın o cevapta gönderdiği koordinat
+      artık kayıtla birlikte yazılıyor — `address-fields` → `address-form` → action → kapı zinciri.
+      Kod ELLE değiştirilince nokta düşer (`country`nin aynı kuralı). Ham `lat`/`lng` yazma
+      yolundan GİRMİYOR: ayrı bir `point` parametresi, çünkü istemcinin sayısı bir BEYAN değil ADAY
+      ve süzgeci atlayan ikinci bir yol olmamalı.
+      **Sıra ilk sürümde TERSTİ ve kullanıcı yakaladı:** cron birincil çözüm gibi yazılmış, asıl yol
+      (öneri) `BEKLEYEN` bırakılmıştı. Cron'un "senkron çağrı kotayı tüketir" gerekçesi de
+      abartılıydı — o kural otomatik tamamlama içindir (her tuş vuruşu), kaydetme için değil.
+      Ölçüm de bunu söylüyordu: cron kuyruğu **0 satır**. Künyesi düzeltildi, iş artık TELAFİ olarak
+      duruyor (elle yazılan adres · ops paneli · süzgeçten düşen aday · servis kesintisi · ileride
+      DE sağlayıcısı). **Mobil yarısı native şeritte.**
+    - **BEKLEYEN(11.9):**
       ② mobil ekranın `stopSeq`e bağlanması (`docs/talep/mobil-durak-sirasi-alani.md`)
       ~~③ depo noktasının ops formundan girilmesi~~ **KAPANDI (31.08):** depo formunda enlem/boylam
       alanları var ve **boş bırakılırsa kapı adresten çözüyor** (BAN); doluysa operatörün değeri

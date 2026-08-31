@@ -302,7 +302,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     onSelectPayment: (method, onAccount) => setState((prev) => ({ ...prev, paymentMethod: method, onAccount })),
     onToggleConsent: (value) => setState((prev) => ({ ...prev, marketingConsent: value })),
     onAddAddress: async (input: NewAddressInput) => {
-      const { data } = await addCheckoutAddressAction(toAddressFields(input), input.makeDefault ?? false);
+      const { data } = await addCheckoutAddressAction(toAddressFields(input), input.makeDefault ?? false, input.point);
       if (data) await refresh(data.id);
     },
     /**
@@ -311,7 +311,7 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
      * yeniden çözülmeli. `refresh` zaten bileti (`seq`) yönetiyor, yarış açılmıyor.
      */
     onUpdateAddress: async (addressId: string, input: NewAddressInput) => {
-      const { data } = await updateCheckoutAddressAction(addressId, toAddressFields(input), input.makeDefault ?? false);
+      const { data } = await updateCheckoutAddressAction(addressId, toAddressFields(input), input.makeDefault ?? false, input.point);
       if (data) await refresh(addressId);
     },
     onConfirm: () => void confirm(),

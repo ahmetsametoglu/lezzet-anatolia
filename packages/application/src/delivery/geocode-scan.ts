@@ -6,11 +6,19 @@
  * sorgusunu, aynı parti frenini ve aynı sayaç mantığını **ikinci kez** yazmak olurdu (`CLAUDE §1`)
  * ve ikisi bir gün ayrışırdı. Elle tetikleme aynı fonksiyonu daha büyük partiyle çağırır.
  *
- * ── NEDEN SENKRON DEĞİL ─────────────────────────────────────────────────────
- * Nokta, adres kaydedilirken çözülmüyor: kaydetme yoluna ağ turu binerdi ve BAN'ın IP başına
- * saniyelik kotasını tüm müşterilere ORTAK yapardı — `use-address-search.hook` künyesinin tam
- * olarak kaçındığı şey. Akşam saatinde bir 429 herkese birden çarpardı, hem de adres kaydederken.
- * Adres defteri hiçbir hâlde reddetmez (kullanıcı kararı 10.08).
+ * ── BU İŞ TELAFİDİR, BİRİNCİL YOL DEĞİL (kullanıcı düzeltmesi 31.08) ────────
+ * Asıl yol öneriye tıklamaktır: BAN koordinatı zaten o cevapta gönderiyor ve `resolveAddressPoint`
+ * onu kayıtla birlikte yazıyor — ikinci bir ağ çağrısı yok, gecikme yok.
+ *
+ * İlk sürümde sıra TERS kurulmuştu (bu iş birincil, öneri bağlantısı `BEKLEYEN`) ve gerekçesi de
+ * abartılıydı: "senkron çağrı BAN kotasını tüketir" denmişti, oysa o kural OTOMATİK TAMAMLAMA için
+ * geçerli (her tuş vuruşunda çağrı) — adres KAYDETME müşteri başına yılda birkaç kez olan bir
+ * işlemdir ve IP başına saniyelik bir sınırı zorlayamaz.
+ *
+ * Geriye kalan ve gerçek olan iş: öneriye tıklamadan ELLE yazılan adres · operasyon panelinden
+ * girilen sipariş adresi (orada öneri kutusu yok) · makullük süzgecinden düşen aday · servis o an
+ * düştüyse yeniden deneme · ve ileride Almanya sağlayıcısı eklendiğinde birikmiş DE satırlarının
+ * toplu çözümü. Hepsi azınlık; iş bu yüzden seyrek koşuyor ve kuyruk boşken tek sorguyla no-op.
  *
  * ── SAYAÇ YALNIZ CEVAPLI RET'TE ARTAR ───────────────────────────────────────
  * `no_match` = servis cevapladı, adres muhtemelen hatalı → sayaç artar, satır seyrekleşir ve

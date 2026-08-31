@@ -7,6 +7,7 @@ import type { AddressInsert } from '@lezzet/types';
 import { revalidatePath } from 'next/cache';
 import { currentCustomerId } from '@/lib/guard';
 import { addAddress, deleteAddress, setDefaultAddress, updateAddress } from '@/lib/account/addresses';
+import type { AddressPointCandidate } from '@lezzet/application';
 import { redeemPoints } from '@/lib/feedback/points';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 
@@ -147,12 +148,21 @@ export async function setConsentAction(channel: 'email' | 'whatsapp', granted: b
  * Action'ın işi kimliği çözmek ve sonucu sözleşmeye sokmak; "varsayılan silinirse en yeni adres
  * varsayılan olur" gibi kurallar oturum gerektirmeyen bir yerde yaşamak zorunda, yoksa sınanamaz.
  */
-export async function addAddressAction(input: Omit<AddressInsert, 'customerId'>): Promise<CustomerResult<true>> {
-  return guarded((customerId) => addAddress(customerId, input));
+export async function addAddressAction(
+  input: Omit<AddressInsert, 'customerId'>,
+  /* Seçilen önerinin koordinatı (11.9) — bir ADAY, beyan değil; kapı süzgeçten geçirir. Ayrı
+     parametre çünkü `input` üzerinden ham `lat`/`lng` gelmesi süzgeci atlayan ikinci bir yol olurdu. */
+  point?: AddressPointCandidate | null,
+): Promise<CustomerResult<true>> {
+  return guarded((customerId) => addAddress(customerId, input, point));
 }
 
-export async function updateAddressAction(addressId: string, patch: Omit<AddressInsert, 'customerId'>): Promise<CustomerResult<true>> {
-  return guarded((customerId) => updateAddress(customerId, addressId, patch));
+export async function updateAddressAction(
+  addressId: string,
+  patch: Omit<AddressInsert, 'customerId'>,
+  point?: AddressPointCandidate | null,
+): Promise<CustomerResult<true>> {
+  return guarded((customerId) => updateAddress(customerId, addressId, patch, point));
 }
 
 export async function setDefaultAddressAction(addressId: string): Promise<CustomerResult<true>> {

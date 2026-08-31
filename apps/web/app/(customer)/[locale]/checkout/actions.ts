@@ -7,6 +7,7 @@ import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { updateAddress } from '@/lib/account/addresses';
+import { resolveAddressPoint, type AddressPointCandidate } from '@lezzet/application';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CartEntry } from '@/lib/cart/cart-types';
@@ -124,11 +125,14 @@ export async function updateCheckoutAddressAction(
   addressId: string,
   patch: Omit<AddressInsert, 'customerId'>,
   makeDefault: boolean,
+  /* Seçilen önerinin koordinatı (11.9) — bir aday; kapı süzgeçten geçirir ve adres alanları
+     değişmişse eski noktayı düşürür. */
+  point?: AddressPointCandidate | null,
 ): Promise<CustomerResult<true>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    await updateAddress(customerId, addressId, patch);
+    await updateAddress(customerId, addressId, patch, point);
     // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
     if (makeDefault) await new AddressService(serviceDb()).setDefault(addressId);
     return { data: true, errorKey: null };
@@ -154,12 +158,18 @@ export async function updateCheckoutAddressAction(
 export async function addCheckoutAddressAction(
   fields: Omit<AddressInsert, 'customerId'>,
   makeDefault: boolean,
+  /* Seçilen önerinin koordinatı (11.9) — aday; kapı süzgeçten geçirir. */
+  point?: AddressPointCandidate | null,
 ): Promise<CustomerResult<Address>> {
   try {
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
-    const addresses = new AddressService(serviceDb());
-    const created = await addresses.addForCustomer({ ...fields, customerId });
+    const db = serviceDb();
+    // Nokta TEK KAPIDAN geçer (`resolveAddressPoint`): istemcinin sayısı bir aday, makullük süzgeci
+    // onu posta kodu merkeziyle kıyaslar ve uzaksa yazmaz (11.9).
+    const geo = await resolveAddressPoint(db, { candidate: point, postalCode: fields.postalCode });
+    const addresses = new AddressService(db);
+    const created = await addresses.addForCustomer({ ...fields, ...geo, customerId });
     // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
     if (makeDefault) await addresses.setDefault(created.id);
     return { data: created, errorKey: null };

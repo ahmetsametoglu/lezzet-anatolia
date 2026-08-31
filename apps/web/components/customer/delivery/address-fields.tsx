@@ -1,6 +1,6 @@
 'use client';
 
-import { addressLineOf } from '@lezzet/address-fr';
+import { addressLineOf, type AddressKind } from '@lezzet/address-fr';
 import type { Country, PlaceOption } from '@lezzet/types';
 import { useState } from 'react';
 
@@ -70,6 +70,14 @@ interface AddressFieldsProps {
   /** Posta kodundan çözülen ülke; kod elle değişince `null`. Kullanmayan çağıran geçmez. */
   onCountryChange?: (country: Country | null) => void;
   /**
+   * Seçilen önerinin KOORDİNATI (11.9) — `onCountryChange`in kardeşi ve aynı kuralı izler.
+   *
+   * BAN önerisi noktayı zaten taşıyor; bugüne dek atılıyordu ve adres sonradan bir tarama işiyle
+   * yeniden çözülüyordu — yani aynı soru iki kez soruluyordu. Öneri seçildiğinde nokta yukarı
+   * verilir, kod ELLE değiştirildiğinde `null`a düşer: nokta seçilen SATIRA aittir.
+   */
+  onPointChange?: (point: { lat: number; lng: number; precision: AddressKind } | null) => void;
+  /**
    * BAN sokak önerisi çizilsin mi (varsayılan: evet).
    *
    * **Kapatılabilir olması şart, çünkü BAN YALNIZ FRANSIZ adreslerini bilir.** Profesyonel
@@ -131,6 +139,7 @@ export function AddressFields({
   copy,
   active = true,
   onCountryChange,
+  onPointChange,
   onPostalBlur,
   postalError,
   postalInvalid,
@@ -191,6 +200,9 @@ export function AddressFields({
     // Şehir öneriden geldi; kodun yerleşim listesine ihtiyaç yok.
     setPlace(null);
     onCountryChange?.('FR');
+    // Koordinat SEÇİLEN satırdan geliyor — müşterinin gözüyle onayladığı nokta, sonradan bir
+    // taramanın tahmin edeceğinden iyi kaynaktır ve ikinci bir çağrı gerektirmez.
+    onPointChange?.({ lat: picked.latitude, lng: picked.longitude, precision: picked.kind });
     onChange({ line1: addressLineOf(picked), postalCode: picked.postalCode, city: picked.city });
     // Teslimat cevabı kodun kendi yolundan verilir — öneriden gelen kod da bir koddur.
     onPostalBlur?.(picked.postalCode);
@@ -277,6 +289,9 @@ export function AddressFields({
               setZipOpen(true);
               setCityOpen(false);
               onCountryChange?.(null);
+              // Nokta da kodun peşinden gider: elle değiştirilen bir kodda önerinin koordinatı
+              // artık bu adresin cevabı değildir (`geo-address` künyesindeki aynı kural).
+              onPointChange?.(null);
               setPlace(null);
               onChange({ postalCode: e.target.value.replace(/\D/g, '').slice(0, 5) });
             }}

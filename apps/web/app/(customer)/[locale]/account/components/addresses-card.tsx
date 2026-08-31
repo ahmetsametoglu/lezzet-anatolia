@@ -90,7 +90,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact }: Addre
             onCancel={() => setEditing(null)}
             onSave={async (input) => {
               await run(async () => {
-                const result = await updateAddressAction(address.id, toAddressFields(input));
+                const result = await updateAddressAction(address.id, toAddressFields(input), input.point);
                 // Varsayılan işareti AYRI eylemdir: tek satırı güncellemek yetmiyor, öbürlerinin
                 // bayrağı düşmek zorunda (tek varsayılan kuralı).
                 if (!result.errorKey && input.makeDefault && !address.isDefault) await setDefaultAddressAction(address.id);
@@ -162,7 +162,7 @@ export function AddressesCard({ t, locale, addresses, defaults, compact }: Addre
           defaults={defaults}
           onCancel={() => setEditing(null)}
           onSave={async (input) => {
-            await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault }));
+            await run(() => addAddressAction({ ...toAddressFields(input), isDefault: input.makeDefault }, input.point));
           }}
         />
       )}

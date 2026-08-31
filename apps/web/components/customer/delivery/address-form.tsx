@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import type { Address, Country } from '@lezzet/types';
+import type { Address, AddressGeoPrecision, Country } from '@lezzet/types';
 import { DIAL_CODE, nationalPhone, normalizePhone } from '@lezzet/helper';
 import type { Locale } from '@lezzet/i18n';
 import { Button } from '@/components/customer/ui/button';
@@ -57,6 +57,18 @@ export interface NewAddressInput {
    * yer kodun ÇÖZÜMÜDÜR, müşterinin beyanı değil.
    */
   country?: Country;
+  /**
+   * Seçilen ÖNERİNİN koordinatı (11.9) — müşteri bir adres önerisine tıkladığında BAN o satırla
+   * birlikte noktayı da gönderiyor ve bu alan onu taşıyor. **Yeni bir ağ çağrısı yok:** veri zaten
+   * cevapta, bugüne dek çöpe atılıyordu.
+   *
+   * Kod ELLE değiştirilince `undefined`a düşer — `country`nin aynı kuralı: nokta seçilen SATIRA
+   * aittir, müşteri satırı bozduğunda o nokta artık bu adresin cevabı değildir.
+   *
+   * Bir BEYAN değil bir ADAYDIR: sunucu onu makullük süzgecinden geçirir (`resolveAddressPoint`) ve
+   * posta kodu merkezinden çok uzaksa yazmaz. Süzgeçten düşerse satır tarama kuyruğuna girer.
+   */
+  point?: { lat: number; lng: number; precision: AddressGeoPrecision };
   makeDefault?: boolean;
 }
 
@@ -406,6 +418,7 @@ export function AddressForm({ copy, locale, initial, defaults, onSave, onCancel,
         copy={copy}
         onPostalBlur={(code) => void checkPostal(code)}
         onCountryChange={(country) => setForm((prev) => ({ ...prev, country: country ?? undefined }))}
+        onPointChange={(point) => setForm((prev) => ({ ...prev, point: point ?? undefined }))}
         postalError={postalError ?? undefined}
         afterLine1={field('line2', copy.line2, true)}
         compact={compact}
