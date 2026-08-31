@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Text, View } from 'react-native';
+import { Modal, Platform, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // YALNIZ TİP: değer importu değil — native modülün kendisi tembel yüklenir (aşağıdaki künye).
 import type * as ExpoCamera from 'expo-camera';
@@ -135,7 +135,7 @@ export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCo
   );
 
   return (
-    <Modal visible={open} animationType="slide" onRequestClose={onClose} onDismiss={onDismiss} testID={testID}>
+    <Modal visible={open} animationType="slide" onRequestClose={onClose} onDismiss={Platform.OS === 'ios' ? onDismiss : undefined} testID={testID}>
       <View style={styles.screen}>
         <View style={styles.header}>
           <Text style={styles.title}>{title}</Text>

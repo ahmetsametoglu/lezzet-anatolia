@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { Platform } from 'react-native';
 
 import { IntakeScreen } from './intake-screen';
 import { intakeRow } from './warehouse-fixture';
@@ -14,8 +15,20 @@ import { resetWarehouseStatus } from './warehouse-status';
 
 const mockParams: { purchaseOrderId?: string; unplanned?: string } = {};
 const mockPush = jest.fn();
+/* SONUÇ ARTIK TOAST'TA (30.08): başarı bildirimi ekrandan kabuğa taşındı — ekran kapandığı için
+   şeritte kalamıyordu. Testler bu yüzden toast deposunu dinliyor; hata bildirimi hâlâ ekranda ve
+   `warehouse-intake-notice` ile ölçülüyor. */
+const mockToast = jest.fn();
+/** Başarılı kabul ekranı KAPATIR — geri dönüşü ölçmek için ayrı casus. */
+const mockBack = jest.fn();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ navigate: jest.fn(), back: jest.fn(), push: mockPush }),
+  useRouter: () => ({ navigate: jest.fn(), back: mockBack, push: mockPush }),
   useLocalSearchParams: () => mockParams,
 }));
 
@@ -138,6 +151,8 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  mockToast.mockClear();
+  mockBack.mockClear();
   fetchMock.mockReset();
   mockPush.mockReset();
   resetWarehouseStatus();
@@ -320,6 +335,65 @@ describe('D2 · mal kabul', () => {
     delete mockParams.unplanned;
   });
 
+  /*
+    ELLE EKLENEN SATIR DA SAYIM ÇEKMECESİNİ AÇAR (kullanıcı bulgusu 30.08).
+
+    Okutmada çekmece zaten açılıyordu; aramadan seçilen üründe açılmıyordu ve bu, aynı sonuca
+    varan iki yoldan birini yarım bırakmaktı. Üstelik burada çekmece DAHA gerekli: okutulan satırın
+    adedi kodun kendisinden yazılıyor, elle eklenenin adedi SIFIR.
+
+    Test kapıyı da ölçüyor: iOS'ta arama çekmecesi ekrandan kalkmadan adet çekmecesi açılmaz
+    (iki `Modal` aynı pencerede sunulamıyor — `intake-scan.test.tsx`teki aynı kapı).
+  */
+  it('PLANSIZ kabulde aramadan eklenen ürün adet çekmecesini AÇAR', async () => {
+    /* ANDROID DALI: iOS'ta çekmece arama penceresi ekrandan kalkana kadar bekliyor ve o kapı
+       Reanimated'ın kapanış geri çağrısına bağlı — jest'te koşmuyor. Kapının KENDİSİ
+       `intake-scan.test.tsx`te ölçülüyor; burada ölçülen şey davranışın özü: elle eklenen satır
+       adet çekmecesini açar. */
+    const realPlatform = Platform.OS;
+    Object.defineProperty(Platform, 'OS', { value: 'android', configurable: true });
+    delete mockParams.purchaseOrderId;
+    mockParams.unplanned = '1';
+    /* İki uç, iki cevap: form BOŞ (plansız kabul), arama tek ürün döndürüyor. Tek cevaplı bir
+       mock aramaya da formun gövdesini verirdi ve liste hiç dolmazdı. */
+    fetchMock.mockImplementation((url: unknown) =>
+      String(url).includes('/warehouse/variants')
+        ? Promise.resolve(
+            ok({
+              variants: [
+                {
+                  variantId: ROW_A.variantId,
+                  productName: ROW_A.productName,
+                  variantLabel: ROW_A.variantLabel,
+                  sku: 'SKU-4120',
+                  dateType: 'DDM',
+                  shelfLifeDays: 360,
+                  imageUrl: null,
+                  stockQty: 12,
+                  qtyPerCode: null,
+                  caseSizes: [],
+                },
+              ],
+            }),
+          )
+        : Promise.resolve(ok({ purchaseOrder: null, rows: [], mlorPercent: MLOR })),
+    );
+
+    await renderIntake();
+    await fireEvent.press(screen.getByTestId('warehouse-intake-search-cta'));
+    await fireEvent.changeText(screen.getByTestId('warehouse-intake-search-input'), 'baklava');
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-search-${ROW_A.variantId}`)).toBeTruthy());
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-search-${ROW_A.variantId}`));
+
+    // Satır DOĞDU…
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-line-${ROW_A.variantId}`)).toBeTruthy());
+    // …ve arama penceresi kapanınca adet çekmecesi AÇILDI (kapının kendisi `intake-scan`te ölçülü).
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}`)).toBeTruthy());
+    delete mockParams.unplanned;
+    Object.defineProperty(Platform, 'OS', { value: realPlatform, configurable: true });
+  });
+
   it('SKT girilmeden CTA açılmaz — kural şemada, ekran kapıyı boşuna zorlamaz', async () => {
     withForm([ROW_A]);
 
@@ -392,7 +466,7 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId('warehouse-intake-cta')).toHaveTextContent(/Kabulü kaydet/);
 
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
 
     expect(lastPostBody().lines).toEqual([{ variantId: ROW_A.variantId, qty: 10, expiryDate: '2026-08-12', lotNumber: null }]);
   });
@@ -433,7 +507,7 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-clear-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
     expect(lastPostBody().lines[0]?.lotNumber).toBeNull();
   });
 
@@ -449,7 +523,7 @@ describe('D2 · mal kabul', () => {
     await fireEvent.changeText(screen.getByTestId(`warehouse-intake-lot-${ROW_A.variantId}`), 'GAZ-7120');
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
     expect(lastPostBody().lines[0]?.lotNumber).toBe('GAZ-7120');
   });
 
@@ -561,11 +635,47 @@ describe('D2 · mal kabul', () => {
     await pickExpiry(ROW_A.variantId, 12, 8, 2026);
 
     await fireEvent.press(screen.getByTestId('warehouse-intake-partial-cta'));
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
 
     const lines = lastPostBody().lines;
     expect(lines).toHaveLength(1);
     expect(lines[0]?.variantId).toBe(ROW_A.variantId);
+  });
+
+  /*
+    SONUÇ TOAST'TA, EKRAN KAPANIR (kullanıcı bulgusu 30.08).
+
+    Eskiden başarı ekrandaki yeşil şeritte yazıyordu ve ekran açık kalıyordu: kullanıcının
+    gördüğü şey "hiçbir şey olmadı" idi. Şimdi tam kabulde ekran kapanıyor — kapanan ekrandaki
+    şeridi kimse okuyamayacağı için bildirim kabuğun toast katmanına taşındı.
+
+    KISMİ KAYIT AYRI: orada iş bitmedi, ekran KAPANMAZ; sunucu kalanları yeniden hesapladığı için
+    form yenilenir.
+  */
+  it('TAM kabul: toast basılır ve ekran KAPANIR', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
+
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('parti'));
+    // Şerit ARTIK BAŞARI için çizilmiyor — hata dalının kendi testi var.
+    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
+  });
+
+  it('KISMİ kayıt: ekran kapanMAZ — kalan satırlar depocuyu bekliyor', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await fireEvent.press(screen.getByTestId('warehouse-intake-partial-cta'));
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it('hepsi sayılınca kısmi kayıt düğmesi KAYBOLUR — ana düğme zaten aynı işi yapıyor', async () => {
@@ -598,7 +708,7 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-reason-option-${ROW_A.variantId}-ezik / kırık`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
     expect(lastPostBody().note).toBe('Antep Fıstığı · 5 kg: hasarlı 2 · ezik / kırık');
   });
 

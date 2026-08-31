@@ -112,14 +112,78 @@ export function IntakeScreen() {
     olduğu için (`onPanelLayout` → `animateOpen`) animasyon hiç başlamaz. Aynı arıza sınıfı
     projede zaten kayıtlı (`staff-menu.tsx` künyesi: "Modal'ın kapanış animasyonu sürerken…").
 
-    Kapı bu yüzden: okutma sinyali satıra ancak pencere EKRANDAN KALKTIKTAN sonra ulaşır.
+    Kapı bu yüzden: sayım sinyali satıra ancak önündeki pencere EKRANDAN KALKTIKTAN sonra ulaşır.
     Android'de bu sınırlama yok ve `Modal.onDismiss` de çağrılmaz — orada kapı en baştan açık.
+
+    İKİ PENCERE DE AYNI KAPIYI KULLANIR: okutma penceresi (`Modal.onDismiss`) ve ürün arama
+    çekmecesi (`BottomSheet.onDismissed` → aynı `Modal.onDismiss`). İkisi de kalktıktan SONRA
+    adet çekmecesi açılır; ayrı
+    kapılar yazılsaydı biri bir gün ötekinden farklı davranırdı.
   */
-  const [scanReady, setScanReady] = useState(Platform.OS !== 'ios');
-  const releaseScan = useCallback(() => setScanReady(true), []);
+  /* Kapı NORMALDE AÇIK: yalnız okutma penceresi açıkken kapanır, pencere kalkınca yeniden açılır.
+     Başlangıcı `false` yazmak, okutma hiç kullanılmadan elle eklenen satırda kapıyı sonsuza dek
+     kapalı bırakıyordu — `onDismiss` yalnız okutma penceresinden gelir. */
+  const [countReady, setCountReady] = useState(true);
+  const releaseCount = useCallback(() => setCountReady(true), []);
   useEffect(() => {
-    if (Platform.OS === 'ios' && intake.scanOpen) setScanReady(false);
+    if (Platform.OS === 'ios' && intake.scanOpen) setCountReady(false);
   }, [intake.scanOpen]);
+
+  /* ARAMADAN SEÇİLEN ÜRÜN, ÇEKMECE KAPANANA KADAR BEKLER (künyesi `onPick`te). İki kanca da aynı
+     yere bağlı — `onClosed` her platformda, `onDismiss` yalnız iOS'ta gelir; ikinci çağrı zararsız,
+     çünkü bekleyen seçim ilk çağrıda tüketiliyor. */
+  const [pickedVariant, setPickedVariant] = useState<VariantSearchRowContract | null>(null);
+  const addPickedRow = useCallback(() => {
+    if (pickedVariant === null) return;
+    intake.addManualRow(pickedVariant);
+    setPickedVariant(null);
+  }, [intake, pickedVariant]);
+
+  /*
+    ARAMA ÇEKMECESİ TEK TANIM, İKİ KULLANIM (kullanıcı bulgusu 30.08).
+
+    Ekran plansız kabulde İKİ ayrı blok döndürüyor (liste boş / liste dolu) ve çekmece yalnız
+    boş bloktaydı. Sonucu: ilk ürün eklendikten sonra "Ürün ara ve ekle" düğmesi duruyor ama
+    bastığında hiçbir şey açılmıyordu — ikinci ürün hiç eklenemiyordu. Çekmece bu yüzden bir
+    kez tanımlanıp iki blokta da çiziliyor; ikinci bir kopya yazmak aynı davranışı iki yerde
+    bakmak olurdu (CLAUDE §1).
+  */
+  const renderSearchSheet = () => (
+    <VariantSearchSheet
+      visible={searchOpen}
+      onClose={() => setSearchOpen(false)}
+      onClosed={addPickedRow}
+      onDismissed={addPickedRow}
+      onPick={(variant) => {
+        /* SATIR ÇEKMECE KAPANDIKTAN SONRA EKLENİR (kullanıcı bulgusu 30.08, iki platformda).
+           Sebebi bu ekranın kendi yapısı: plansız kabulde liste BOŞKEN ayrı bir dönüş bloğu
+           çiziliyor (yukarıdaki `rows.length === 0 && unplanned` dalı) ve arama çekmecesi o
+           bloğun içinde. Satır hemen eklenseydi liste dolar, ekran öteki bloğa geçer ve blok
+           SÖKÜLÜRDÜ — çekmece React tarafından kaldırıldığı için ne `onClosed` ne `onDismiss`
+           gelir, yani "kapandı" sinyali hiç doğmazdı. Adet çekmecesi de o sinyali beklediği
+           için hiç açılmıyordu.
+
+           Sıra bu yüzden ters: seçim yalnız BEKLETİLİR, çekmece kapanır, satır ondan sonra
+           eklenir. Böylece blok değişimi kapanışın ardına düşer ve iki `Modal` aynı pencerede
+           çakışmaz. */
+        setPickedVariant(variant);
+        setSearchOpen(false);
+        /*
+          ARAMA ÖĞRENMEDEN AÇILDIYSA KOD DA BU ÜRÜNE GİDER (kullanıcı kararı 25.08).
+
+          Depocu tanınmayan bir kod okuttu, ürünü aradı ve buldu — kodu ikinci kez okutmasını
+          istemek, zaten yaptığı işi tekrarlatmak olurdu. `learn.variantId === null` koşulu
+          şart: arama öğrenmeden BAĞIMSIZ da açılabiliyor (boş hâlin kendi düğmesi) ve o
+          turda ortada öğretilecek bir kod yok.
+        */
+        if (intake.learn !== null && intake.learn.variantId === null) {
+          intake.pickLearnVariant(variant.variantId);
+        }
+        setSearchOpen(false);
+      }}
+    />
+  );
+
 
   const header = (
     <OperationsStackHeader
@@ -371,29 +435,11 @@ export function IntakeScreen() {
           title={t.intake.scan.title}
           hint={t.intake.scan.hint}
           onClose={intake.closeScan}
-          onDismiss={releaseScan}
+          onDismiss={releaseCount}
           onScan={intake.handleScan}
           testID="warehouse-intake-scan"
         />
-        <VariantSearchSheet
-          visible={searchOpen}
-          onClose={() => setSearchOpen(false)}
-          onPick={(variant) => {
-            intake.addManualRow(variant);
-            /*
-              ARAMA ÖĞRENMEDEN AÇILDIYSA KOD DA BU ÜRÜNE GİDER (kullanıcı kararı 25.08).
-
-              Depocu tanınmayan bir kod okuttu, ürünü aradı ve buldu — kodu ikinci kez okutmasını
-              istemek, zaten yaptığı işi tekrarlatmak olurdu. `learn.variantId === null` koşulu
-              şart: arama öğrenmeden BAĞIMSIZ da açılabiliyor (boş hâlin kendi düğmesi) ve o
-              turda ortada öğretilecek bir kod yok.
-            */
-            if (intake.learn !== null && intake.learn.variantId === null) {
-              intake.pickLearnVariant(variant.variantId);
-            }
-            setSearchOpen(false);
-          }}
-        />
+        {renderSearchSheet()}
         {/* Boş hâlde de ÇİZİLİR: plansız kabulün ilk okutması tanınmayan bir kod olabilir ve
             çekmece yoksa ekran hiç kıpırdamaz (cihaz turu 25.08 — künyesi `LearnSheet`te). */}
         <LearnSheet intake={intake} onLearnSearch={() => setSearchOpen(true)} />
@@ -514,8 +560,8 @@ export function IntakeScreen() {
             state={intake.stateOf(row.variantId)}
             unplanned={unplanned}
             mlorPercent={intake.mlorPercent}
-            justScanned={scanReady && intake.justScanned === row.variantId}
-            onScanConsumed={intake.clearJustScanned}
+            pendingCount={countReady && intake.pendingCount === row.variantId}
+            onCountConsumed={intake.clearPendingCount}
             lotSuggestions={intake.lotsUsedBy(row.variantId)}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
           />
@@ -563,7 +609,11 @@ export function IntakeScreen() {
         )}
         <PrimaryButton
           label={cta.label}
-          onPress={() => intake.submit()}
+          /* BAŞARIDA EKRAN KAPANIR (kullanıcı bulgusu 30.08): kabul yazıldıysa bu ekranda
+             yapılacak iş kalmadı — depocu sevkiyat listesine döner ve siparişin listeden
+             düştüğünü görür. Sonucu toast söylüyor (`use-intake` künyesi), yani kapanan
+             ekranda okunmayacak bir şerit beklemiyor. */
+          onPress={() => intake.submit({ onDone: () => router.back() })}
           disabled={!cta.enabled}
           elevation="flat"
           testID="warehouse-intake-cta"
@@ -599,10 +649,12 @@ export function IntakeScreen() {
         title={t.intake.scan.title}
         hint={t.intake.scan.hint}
         onClose={intake.closeScan}
-        onDismiss={releaseScan}
+        onDismiss={releaseCount}
         onScan={intake.handleScan}
         testID="warehouse-intake-scan"
       />
+
+      {renderSearchSheet()}
 
       {/* OKUTMA ÇEKMECESİ SÖKÜLDÜ (kullanıcı kararı 30.08 · tasarım deseni). Burada bir
           "Okutulan ürün" paneli vardı: fotoğraf + kaydırıcı + "Satıra ekle". Tasarımda böyle bir
@@ -610,7 +662,7 @@ export function IntakeScreen() {
           (`v3.dc.html:4005-4010`): paket barkodu tek pakete +1, koli barkodu o boydan +1 koli.
           Panel iki adım ve fazladan bir soru getiriyordu ("kaç tane?"), oysa koli barkodu kaç adet
           olduğunu KENDİSİ söylüyor (`qtyPerCode`); kaydırıcı da v3'te hiç geçmiyor. Satırın
-          açılması artık `justScanned` sinyaliyle. */}
+          açılması artık `pendingCount` sinyaliyle. */}
 
       <LearnSheet intake={intake} onLearnSearch={() => setSearchOpen(true)} />
     </View>
@@ -750,6 +802,10 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
 interface VariantSearchSheetProps {
   visible: boolean;
   onClose: () => void;
+  /** Çekmece SÖKÜLDÜĞÜNDE (her platform) — bekleyen seçimin satıra dönüştüğü an. */
+  onClosed?: () => void;
+  /** Çekmece EKRANDAN GERÇEKTEN KALKTIĞINDA (iOS `Modal.onDismiss`) — aynı işi yapar. */
+  onDismissed?: () => void;
   /**
    * Seçilen satır BÜTÜN olarak geçer, üç alana indirilmez (30.08): satır artık kodunu ve tarih
    * rejimini de taşıyor ve kabul satırı bunların hepsini istiyor. Daraltılmış bir imza, yeni bir
@@ -766,7 +822,7 @@ interface VariantSearchSheetProps {
  * Arama SUNUCUDA (`GET /warehouse/variants`): katalog istemciye indirilip filtrelenmez (STACK §6).
  * Her tuşta çağrılır ama yarış korumalı — geç dönen eski cevap yenisini ezmez.
  */
-function VariantSearchSheet({ visible, onClose, onPick }: VariantSearchSheetProps) {
+function VariantSearchSheet({ visible, onClose, onClosed, onDismissed, onPick }: VariantSearchSheetProps) {
   const [query, setQuery] = useState('');
   const [rows, setRows] = useState<VariantSearchRowContract[]>([]);
   const generation = useRef(0);
@@ -795,7 +851,15 @@ function VariantSearchSheet({ visible, onClose, onPick }: VariantSearchSheetProp
        yani arama kutusu ekranın dibinde bir şerit gibi. Yazmaya başlayınca satırlar geldikçe
        çekmece BÜYÜYORDU ve altındaki liste her tuşta zıplıyordu. `fill` boyu baştan sabitler;
        arama bir çekmece değil bir SAYFA gibi açılır. */
-    <BottomSheet visible={visible} title={t.intake.searchTitle} fill onClose={onClose} testID="warehouse-intake-search">
+    <BottomSheet
+      visible={visible}
+      title={t.intake.searchTitle}
+      fill
+      onClose={onClose}
+      onClosed={onClosed}
+      onDismissed={onDismissed}
+      testID="warehouse-intake-search"
+    >
       <TextField
         value={query}
         onChangeText={search}
@@ -879,12 +943,12 @@ interface IntakeRowProps {
    * depocuyu o satıra götürmek kalıyor — satır açılır ve adet çekmecesi gelir, tıpkı tasarımın
    * `sheet:'adet'` adımı gibi. Sinyal bir kez tüketilir, yoksa çekmece her çizimde açılırdı.
    */
-  justScanned: boolean;
-  onScanConsumed: () => void;
+  pendingCount: boolean;
+  onCountConsumed: () => void;
   onPatch: (patch: Partial<IntakeRowState>) => void;
 }
 
-function IntakeRow({ row, state, unplanned, mlorPercent, justScanned, onScanConsumed, lotSuggestions, onPatch }: IntakeRowProps) {
+function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountConsumed, lotSuggestions, onPatch }: IntakeRowProps) {
   const [dateOpen, setDateOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
   const [lotOpen, setLotOpen] = useState(false);
@@ -894,11 +958,11 @@ function IntakeRow({ row, state, unplanned, mlorPercent, justScanned, onScanCons
   /* OKUTULAN SATIR KENDİLİĞİNDEN AÇILIR ve adet çekmecesini getirir (tasarım: okutma → `sheet:
      'adet'`). Sinyal hemen tüketiliyor: ikinci bir çizimde çekmece yeniden açılmasın. */
   useEffect(() => {
-    if (!justScanned) return;
+    if (!pendingCount) return;
     setExpanded(true);
     setQtyOpen(true);
-    onScanConsumed();
-  }, [justScanned, onScanConsumed]);
+    onCountConsumed();
+  }, [pendingCount, onCountConsumed]);
   /* SATIR SAYILDIĞINDA AÇILIR. Ölçüt adedin GİRİLMİŞ olması (`qty !== null`), sıfırdan büyük
      olması değil: "0 adet geldi" de bir sayımdır ve o satırın SKT'si sorulmaz ama sapma özetine
      girer. Sıfırı kapalı saymak, depocunun bilinçli beyanını "hiç dokunmadım"la eşitlerdi. */

@@ -12,6 +12,7 @@ import type {
 import { EMPTY_BREAKDOWN, setCaseCount, type QuantityBreakdown } from '@/components/operations/quantity-value';
 import { fetchIntakeForm, fetchPendingIntakes, learnScannedCode, receiveGoods, resolveScannedCode } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
+import { toastSuccess } from '@/lib/toast/toast-store';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
 import { parseDate, productLabel } from './warehouse-format';
@@ -226,7 +227,12 @@ interface UseIntakeResult {
   notice: IntakeNotice | null;
   /** Kabulün sonucu: uyarılar ve farklar KAPIDAN gelir, ekran yeniden hesaplamaz. */
   warnings: { name: string; remainingPercent: number | null }[];
-  submit: (options?: { partial?: boolean }) => void;
+  /**
+   * Kabulü yazar. `onDone` YALNIZ başarıda çağrılır — gezinme kararı ÇAĞIRANIN (ekranın) işi;
+   * hook bir rota bilmez. Kısmi kayıtta çağrılmaz: orada iş bitmedi, depocu kalan satırlara
+   * devam edecek.
+   */
+  submit: (options?: { partial?: boolean; onDone?: () => void }) => void;
   reload: () => void;
   /** Aşağı çekme — ekranı karartmadan tazeler (liste yerinde durur, halka döner). */
   refresh: () => void;
@@ -240,8 +246,8 @@ interface UseIntakeResult {
   handleScan: (code: string) => void;
   /** Çözülen kodun çekmecesi — dolu ise ekran ürün kartı + adet seçiciyi çizer. */
   /** Okutmayla sayılan satırın kimliği — ekran onu açar ve adet çekmecesini getirir. */
-  justScanned: string | null;
-  clearJustScanned: () => void;
+  pendingCount: string | null;
+  clearPendingCount: () => void;
   /** Seçilen adedi satıra yazar ve çekmeceyi kapatır. */
   /** Tanınmayan kod — dolu ise ekran öğrenme çekmecesini çizer (iki adım, künye aşağıda). */
   learn: LearnState | null;
@@ -430,7 +436,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
    * kabul göndermek olurdu.
    */
   const submit = useCallback(
-    (options?: { partial?: boolean }) => {
+    (options?: { partial?: boolean; onDone?: () => void }) => {
       const partial = options?.partial === true;
       if (sending) return;
       if (!partial && !complete) return;
@@ -495,10 +501,33 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
               }))
             : [],
         );
-        setNotice(noticeOf(result.data));
+
+        const outcome = noticeOf(result.data);
+
+        /* SONUÇ TOAST'LA SÖYLENİR, EKRANDAKİ ŞERİTLE DEĞİL (kullanıcı bulgusu 30.08).
+           Sebebi başarının ARDINDAN olan şey: ekran kapanıyor ve kapanan ekrandaki şeridi kimse
+           okuyamaz. Toast kabuğun katmanında duruyor (`app/_layout` `ToastHost`), yani depocu
+           listeye döndükten sonra da görüyor. Uygulamada zaten tek toast deposu var; ikinci bir
+           bildirim düzeni açmak aynı işi iki yerde yapmak olurdu (CLAUDE §1).
+
+           HATA ŞERİTTE KALIR: orada ekran kapanmıyor ve mesajın kalıcı olması gerekiyor —
+           depocu tekrar deneyecek, geçip giden bir toast onu okuyamadan söner. */
+        if (outcome.tone === 'ok') {
+          toastSuccess(outcome.text);
+          if (partial) {
+            /* KISMİ KAYITTA EKRANDA KALINIR ama form YENİLENİR: sunucu kalan adetleri yeniden
+               hesapladı ve ekrandaki "beklenen"ler artık bayat. Yenilemeden devam etmek,
+               depocuya kapanmış bir kalemi tekrar saydırırdı. */
+            reload();
+          } else {
+            options?.onDone?.();
+          }
+          return;
+        }
+        setNotice(outcome);
       })();
     },
-    [complete, hasAnyCounted, purchaseOrderId, rows, sending, states],
+    [complete, hasAnyCounted, purchaseOrderId, reload, rows, sending, states],
   );
 
   /*
@@ -516,12 +545,18 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
   */
   const [scanOpen, setScanOpen] = useState(false);
   /**
-   * SON OKUTULAN SATIR — ekranın açacağı satırın kimliği (kullanıcı kararı 30.08).
+   * SAYILACAK SATIR — ekranın açıp adet çekmecesini göstereceği satırın kimliği.
    *
-   * Okutma artık adedi kendisi yazıyor; geriye tek şey kalıyor: depocuyu o satıra götürmek.
-   * Sinyal BİR KEZ tüketilir (`clearJustScanned`), yoksa çekmece her çizimde yeniden açılırdı.
+   * İKİ KAYNAĞI VAR ve ikisi de aynı cümleyi kuruyor (kullanıcı bulgusu 30.08):
+   * · **okutma** — kod çözüldü, adet zaten yazıldı; çekmece düzeltme için açılır.
+   * · **elle ekleme** — aramadan seçilen ürün satır oldu ve adedi SIFIR; çekmece burada
+   *   düzeltme değil, işin kendisidir. Okutmada açılıp elle eklemede açılmaması, aynı sonucu
+   *   veren iki yoldan birini yarım bırakmaktı.
+   *
+   * Adı bu yüzden "okutulan" değil: sinyal kaynağını değil SONUCU söyler. Bir kez tüketilir
+   * (`clearPendingCount`), yoksa çekmece her çizimde yeniden açılırdı.
    */
-  const [justScanned, setJustScanned] = useState<string | null>(null);
+  const [pendingCount, setPendingCount] = useState<string | null>(null);
   const [learn, setLearn] = useState<LearnState | null>(null);
   const [learned, setLearned] = useState<LearnedNote | null>(null);
 
@@ -618,7 +653,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
         const scannedQty = found.qtyPerCode;
         addScanned(found.variantId, scannedQty, { kind: found.kind, qtyPerCode: found.qtyPerCode });
         // Ekran bu sinyali görüp satırı açar ve adet çekmecesini getirir; bir kez tüketilir.
-        setJustScanned(found.variantId);
+        setPendingCount(found.variantId);
       })();
     },
     [addScanned, rows, setNotice],
@@ -629,6 +664,11 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
    * aynı ürünün iki satırı, kabulün toplamını iki yere bölerdi.
    */
   const addManualRow = useCallback((variant: VariantSearchRowContract) => {
+    /* SAYIM ÇEKMECESİ BURADA DA AÇILIR (kullanıcı bulgusu 30.08): elle eklenen satırın adedi
+       SIFIR — okutmadakinin aksine çekmece bir düzeltme değil, işin kendisi. Zaten var olan
+       satırda da sinyal verilir: depocu aynı ürünü ikinci kez seçtiyse istediği şey onu saymaktır,
+       sessiz bir "zaten ekliydi" değil. */
+    setPendingCount(variant.variantId);
     setRows((current) =>
       current.some((row) => row.variantId === variant.variantId)
         ? current
@@ -754,8 +794,8 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     openScan: useCallback(() => setScanOpen(true), []),
     closeScan: useCallback(() => setScanOpen(false), []),
     handleScan,
-    justScanned,
-    clearJustScanned: useCallback(() => setJustScanned(null), []),
+    pendingCount,
+    clearPendingCount: useCallback(() => setPendingCount(null), []),
     learn,
     learned,
     pickLearnVariant,

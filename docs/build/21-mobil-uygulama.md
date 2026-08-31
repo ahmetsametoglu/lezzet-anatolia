@@ -8764,3 +8764,228 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **BEKLEYEN(21.180):** cihaz turu — `db:refresh` oturumu düşürdüğü için uygulama misafir olarak
   açıldı; giriş yapıldıktan sonra kutulu bir durakta (bugün `3 kutu`lu durak var) görsel karşılaştırma
   tekrarlanmalı.
+
+- [x] (21.181) **ELLE EKLENEN SATIR DA ADET ÇEKMECESİNİ AÇIYOR — sinyal artık iki kaynaklı** (kullanıcı bulgusu 30.08)
+  `touches:` `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-screen.test.tsx}`
+
+  **Bulgu.** Okutmada çekmece kendiliğinden açılıyordu, aramadan seçilen üründe açılmıyordu.
+  Kullanıcının sorusu haklıydı ve eksiklik simetriden fazlası: **okutulan satırın adedi kodun
+  kendisinden yazılıyor** (koli barkodu kaç adet olduğunu söyler), **elle eklenenin adedi SIFIR**.
+  Yani çekmece burada bir düzeltme değil, işin ta kendisi — açılmaması, depocuyu her seferinde
+  satırı açıp adet kutusunu aramaya bırakıyordu.
+
+  **Sinyal yeniden adlandırıldı** (`justScanned` → `pendingCount`): artık iki kaynağı var ve adı
+  kaynağı değil SONUCU söylüyor — "sayılacak satır". Aynı ürün ikinci kez seçilirse de sinyal
+  verilir: satır zaten var ama depocunun istediği şey onu saymaktır, sessiz bir "zaten ekliydi"
+  değil.
+
+  **KAPI GENELLEŞTİ.** 21.179'un iOS kapısı yalnız okutma penceresini bekliyordu; arama çekmecesi
+  de bir `Modal` ve aynı çakışmayı üretir. Kapı artık iki pencereyi de tanıyor: okutma
+  `Modal.onDismiss`, arama `BottomSheet.onClosed`. Ayrı kapılar yazılsaydı biri bir gün ötekinden
+  farklı davranırdı.
+
+  **Doğrulama.** `typecheck` · `lint` temiz · depo **185/185**; testi yazıldı (aramadan seçilen
+  ürün çekmeceyi açar — kapının Reanimated'a bağlı yarısı jest'te koşmadığı için test Android
+  dalında, kapının kendisi `intake-scan.test.tsx`te ölçülü). **Cihaz turu YAPILAMADI:** iOS
+  simülatörüne klavye girişi geçmiyor (donanım klavyesi bağlanmadı), arama alanına yazılamadı —
+  okutma yolu cihazda doğrulandı, elle ekleme yolu yalnız kod ve testle.
+
+- [x] (21.182) **MAL KABUL UÇTAN UCA CANLI TEST — beş tur, DB doğrulaması, üç bulgu** (kullanıcı isteği 30.08)
+  `touches:` — (yalnız ölçüm; kod değişmedi)
+
+  **Ne koşturuldu.** Gerçek uç (`mobile-api:3002`) + gerçek oturum (`dev-session` → Supabase JWT) +
+  yerel DB. Cihaz UI turu YAPILAMADI (simülatör penceresine dokunuş/klavye geçmiyor); zincirin
+  uç → uygulama katmanı → veritabanı kısmı ölçüldü.
+
+  | # | Tur | Sonuç |
+  |---|---|---|
+  | 1 | Siparişli **kısmi** kabul (6 kalemden 4'ü; biri eksik 40/48, biri fazla 66/60, biri lotlu) | 4 parti · uyarı 2 · fark 4 · sipariş `partially_received` |
+  | 2 | Aynı siparişin **kalan** turu | 3 parti · sipariş `received` · bekleyen listeden çıktı |
+  | 3 | **Siparişsiz** (plansız) kabul, biri lotlu | 2 parti · `purchase_order_id` null · tedarikçi bağlı |
+  | 4 | Sınır: boş liste · sıfır adet | `empty` · `invalid_body` — ikisi de doğru reddedildi |
+  | 5 | Sınır: geçmiş SKT (DDM ve DLC) · kapanmış siparişe tekrar kabul | **kabul edildi** — bulgu 2 ve 3 |
+
+  **İKİNCİ TUR FORMU KALANI VERİYOR — doğrulandı.** Birinci turdan sonra beklenen adetler
+  ısmarlanan değil KALAN oldu (fazla gelen satır 0'a indi). Sözleşmenin künyesinde yazan davranış
+  ölçümle tuttu.
+
+  **BÜTÜNLÜK TEMİZ.** 16 parti ↔ 16 `intake` hareketi (birebir) · partisiz hareket 0 · hareketsiz
+  parti 0 · `initial_qty <> physical_qty` 0 · deposuz parti 0 · SKT'siz DLC partisi 0.
+  Toplamlar: `stock_intake` 5→11 · `stock_movement` 80→92 · `stock` 210→222.
+
+  ### Bulgu 1 — kabulü KİM yaptı kayıtlı değil
+  `stock_movement.actor_id` mal kabulde **hiç yazılmıyor**: `intake` türünün 29/29'unda boş.
+  Oysa alan çalışıyor — `sale` 32/32, `write_off` 5/5, `count_diff` 2/2, `counter_sale` 3/3,
+  `return_restock` 2/2 dolu. (Transferlerde de boş: `transfer_in/out/cancel` 0/19.)
+  Sonucu: "bu malı depoya kim aldı" sorusunun cevabı yok; sayım düzeltmesinde var, kabulde yok.
+
+  ### Bulgu 2 — kapanmış siparişe sessizce ek kabul
+  `received` durumundaki siparişe yeni kabul POST'landı ve **kabul edildi**: yeni `stock_intake`
+  ve parti oluştu, sipariş `received` kaldı, dönen `differences` boş. Yani sipariş kapandıktan
+  sonra gelen mal ne siparişin durumunu değiştiriyor ne de fark raporunda görünüyor. Gerçek
+  hayatta ek sevkiyat olur; sorulması gereken, bunun sessiz mi olması gerektiği.
+
+  ### Bulgu 3 — süresi geçmiş DLC "satılabilir" sayılıyor
+  Ayrı dosyaya yazıldı (`docs/talep/not-web-satilabilir-stok-gecmis-dlc.md`) çünkü web/katalog
+  alanı: `available_stock.available_qty` süresi geçmiş DLC'yi düşmüyor (ayrı sütunda sayıyor) ve
+  `catalog/map.ts` yalnız `availableQty` okuyor. Zincirin üçüncü halkası (parti seçimi) ölçülmedi.
+
+  **ANDROID CİHAZDA UI TURU DA YAPILDI (kullanıcı isteği, aynı gün).** iOS simülatöründe dokunuş
+  ve klavye geçmiyordu; Android'de `adb` ikisini de güvenilir taşıyor. İki tam kabul yürütüldü:
+
+  · **Siparişsiz:** ürün arandı → seçildi → **adet çekmecesi kendiliğinden açıldı** (21.181'in
+    cihazda ilk doğrulaması) → 5 tek paket → SKT "raf ömrü · 365 gün" kısayolundan → lot elle
+    yazıldı → kaydedildi. DB: 1 parti, 5 adet, `2027-08-30`, `LOT-ANDROID-UI`, PO bağı yok.
+  · **Siparişli (TS-26-EQF7WK):** "say →" **tek dokunuşta** çekmeceyi açtı → "Başka koli boyu"ndan
+    **12'lik** seçildi (sahada eklenen boy "YENİ · ürüne kaydedilecek" diye işaretlendi) → 2 koli
+    + 6 tek = **"2 × 12 + 6 tek paket = 30 paket"**, beklenenle birebir → SKT "+6 ay" → **hasar
+    3 · ezik/kırık** → kaydedildi. DB: 30 adet, `2027-02-28`, kalem bağlı, ve **hasar kabul
+    notuna yazılmış**: *"Fıstıklı Baklava · 2500 g: hasarlı 3 · ezik / kırık"* — ekranın vaadi
+    tuttu. Kalan kalem olmadığı için sipariş `received` oldu (doğru).
+
+  Ayrıca cihazda görüldü: MLOR uyarısı ("Kalan ömür %50 — uyarı, engel değil"), hasar sayaçlarının
+  soru cümlesinin sonunda duruşu (*"sağlam 27 · hasarlı 3"*), sebep çekmecesinin tek seçimi, ve
+  API turunun sonucunun listeye yansıması (kapanan sipariş listeden düşmüştü).
+
+  **BULGU 1 UI YOLUNDA DA DOĞRULANDI:** UI'den yazılan iki kabulün ikisinde de `actor_id` boş.
+
+  **BEKLEYEN(21.183):** bulgu 1 ve 2 kararı kullanıcının — aktör kaydı eklenecek mi, kapanmış
+  siparişe ek kabul nasıl karşılanacak.
+
+  **BEKLEYEN(21.185):** UI turunda BİR KEZ Fabric çökmesi görüldü, tekrar üretilemedi.
+
+- [ ] (21.183) **KABULDE AKTÖR KAYDI VE KAPANMIŞ SİPARİŞE EK KABUL** (30.08 · karar bekliyor)
+  `touches:` `packages/application/src/warehouse/intake.ts` · `packages/database/src/services/stock.service.ts`
+
+  21.182'nin bulguları. İkisi de kullanıcı kararı bekliyor: (1) `intake` hareketlerine `actor_id`
+  yazılsın mı — öteki hareket türlerinde zaten yazılıyor, tutarsızlık burada; (2) `received`
+  siparişe gelen ek mal sessizce mi girsin, yoksa siparişi yeniden açıp farkta mı görünsün.
+
+- [x] (21.184) **KUTUSUZ AKIŞ KAPANDI · İMZA SÖKÜLDÜ · MAL ADIMI İSTİSNA OLDU** (kullanıcı kararları 30.08)
+  `touches:` `supabase/migrations/0013_settings.sql` · `packages/application/src/{warehouse/preparation.ts,courier/{day.ts,delivery.ts}}` ·
+  `packages/types/src/contracts/courier-api.schema.ts` · `scripts/seed/{orders.ts,courier.ts}` ·
+  `apps/mobile/src/screens/courier/{delivery-screen.tsx,use-delivery.hook.ts,messages.json}` ·
+  `apps/web/app/(operations)/operations/settings/settings-catalog.ts`
+
+  Üç karar, tek zincir — hepsi kullanıcının sorularından çıktı ve hiçbirinin savunulacak cevabı yoktu.
+
+  **1 · KUTUSUZ SİPARİŞ DİYE BİR KAVRAM YOK.** *"Kutusuz sipariş arabaya nasıl bindiriliyor?"*
+  Ölçüldü: binmiyordu, "bindi" sayılıyordu — `startCourierDay` kutusuz siparişi hiç okutmadan
+  `out_for_delivery` yazıyor, teslim kapısı da okutma istemiyordu. Yani mal → kutu → araç → kapı
+  zinciri siparişlerin **%93'ünde** devre dışıydı (44 rota siparişinin 41'i kutusuz). 23.6'nın
+  *"bilinçli çift akış"* kararı bir iş kuralı değil, kutulu akış yazılırken kendi kodumuzu kırmamak
+  için bırakılmış sekiz günlük bir geçiş kapısıydı — ve greenfield'de korunacak bir geçmiş yok.
+  **Üç kapı da sıkılaştı:** hazırlık kutusuz `ready` yazmıyor (`box_required`, kural kargodan rotaya
+  genişledi; ayrım teslim türünde değil HAZIRLIĞIN kendisinde — kapı satışında toplama adımı yok),
+  yükleme kutusuzu yola çıkarmıyor, teslim kutusuz teslimi reddediyor. Seed'in hazırlık adımı artık
+  gerçek kutu açıp mühürlüyor; **yarım kalmış hazırlık = açık kutu** oldu (`preparing` kovası böyle
+  doluyor). Ölçüm: rota 36/36 kutulu · kargo 10/10 kutulu · kapı satışı kutusuz (doğru).
+
+  **2 · İMZA KALKTI.** *"Kullanıcının kendi orijinal imzasını atıp atmadığını bile bilmiyoruz — bu
+  hukuki olarak bir anlam ifade ediyor mu?"* Ekrana parmakla çizilen şekil nitelikli elektronik imza
+  değil ve imzalayanın kimliğini kanıtlamıyor. Yerine zaten daha güçlü bir kayıt vardı: kutu
+  okutması (`box_scan`) — kod benzersiz, kutu fiziksel, okutma o kapıda ve o saniyede. Kanıt adımı
+  ekrandan söküldü (`signature-pad.tsx` · `signature-capture.ts` silindi, istemcinin yükleme
+  sarmalayıcıları da), ayarın fabrika değeri iki kanalda da kapatıldı. **Sunucu ucu ve kayıt şeması
+  DURUYOR** — kapsam yine açılabilir ve backlog'daki WhatsApp OTP yolu aynı altyapıyı kullanır.
+
+  **3 · MAL ADIMI KAPI OLMAKTAN ÇIKTI.** *"Bu mal kalem adımı neden var? Böyle bir şeye ihtiyacımız
+  var mı?"* Vardı ama yanlış kurulmuştu: teslim kapısı HER kalemin tek tek işaretlenmesini şart
+  koşuyordu (`allMarked`), yani hiçbir şey reddedilmeyen normal bir teslimde kurye kalem sayısı
+  kadar gereksiz dokunuş yapıyordu — elinde kutuyla, kapının önünde. Kutu okutması zorunlu olunca
+  "mal verildi mi" sorusu zaten cevaplanıyor. Model artık tek sayı: **kalem başına reddedilen adet**
+  (kayıt yoksa teslim edilmiştir). İstisna kullanıcının tarif ettiği çekmeceden giriliyor —
+  kutulardaki ürünler listelenir, hangisinden kaç adet geri verildiği seçilir. Mal kartı bir ÖZET:
+  "Hepsi teslim edildi" ya da geri verilenlerin listesi. Sıra cümlesi de kısaldı:
+  `Sıra: kutular → mal → tahsilat`.
+
+  **Doğrulama.** `pnpm typecheck` · `lint` · `knip` temiz · birim **1860/1860** · kurye jest
+  **96/96** · mobil kurye+kit **347/347** · `db:refresh` kutulu akışla yeniden kuruldu ve 166
+  kovanın hepsi doldu. Web ayar sözlüğü de fabrika değeriyle hizalandı (o testi kırmıştı).
+  **BEKLEYEN(21.184):** cihaz turu — kutulu durakta reddedilen kalem çekmecesi ve imzasız akış
+  görsel olarak doğrulanacak.
+
+- [ ] (21.185) **FABRIC ÇÖKMESİ — plansız ekrandan geri dönüşte, BİR KEZ** (gözlem 30.08)
+  `touches:` `apps/mobile/src/screens/warehouse/intake-screen.tsx` · `apps/mobile/src/components/ui/bottom-sheet.tsx`
+
+  **Gözlem.** Android UI turunda (21.182) şu yolda uygulama çöktü: plansız kabulde ürün eklendi →
+  geri → mal kabul listesi → siparişli sevkiyata girildi. Hata:
+
+      java.lang.IllegalStateException: addViewAt: failed to insert view [156] into parent
+      Caused by: The specified child already has a parent
+        at ReactClippingViewManager.addView
+
+  **Tekrar üretilemedi:** yeniden yükleyip aynı yol iki kez yürütüldü, çökme gelmedi ve tur
+  sonuna kadar tamamlandı. Bu yüzden sebep KANITLANMADI ve müdahale de edilmedi (CLAUDE §0).
+
+  **Şüpheliler (hiçbiri ölçülmedi):** (a) 21.181'de arama çekmecesi tek tanımlanıp iki blokta
+  çizilir oldu — aynı element iki JSX ağacında; (b) plansız kabulün liste boş/dolu blokları
+  arasındaki geçiş bir `Modal` sökümüyle aynı pencereye düşüyor — projede kayıtlı arıza sınıfı
+  (`staff-menu.tsx` künyesi). Tekrar görülürse önce (a) elemesi yapılmalı: çekmeceyi iki blokta
+  ayrı ayrı tanımlayıp fark ölçülür.
+
+- [x] (21.186) **KABUL SONUCU TOAST'A TAŞINDI VE EKRAN KAPANIYOR** (kullanıcı bulgusu 30.08)
+  `touches:` `apps/mobile/src/screens/warehouse/{use-intake.hook.ts,intake-screen.tsx,intake-screen.test.tsx}`
+
+  **Bulgu.** Kabul kaydedilince ekranda kalıyor, yalnız yeşil bir şerit çıkıyordu ("Kabul yazıldı
+  — 3 parti açıldı"). Kullanıcının gördüğü şey *"hiçbir şey olmadı"* idi: iş bitti ama ekran
+  bitmedi. Üstelik uygulamanın **zaten bir toast katmanı var** (`app/_layout` `ToastHost`,
+  `lib/toast/toast-store`) ve mal kabul onu hiç kullanmıyordu.
+
+  **İkisi birbirine bağlı, o yüzden birlikte düzeltildi:** ekran kapanacaksa bildirim ekranda
+  duramaz — kapanan ekrandaki şeridi kimse okuyamaz. Sonuç artık kabuğun toast katmanında; depocu
+  sevkiyat listesine döndükten sonra da görüyor ve siparişin listeden düştüğünü aynı anda
+  görüyor.
+
+  **ÜÇ DAL, ÜÇ DAVRANIŞ:**
+  · **tam kabul** → toast + `router.back()` (ekran kapanır; bu ekranda yapılacak iş kalmadı)
+  · **kısmi kayıt** → toast + `reload()` (ekran KAPANMAZ: kalan satırlar depocuyu bekliyor, ama
+    sunucu kalanları yeniden hesapladı ve ekrandaki "beklenen"ler bayat kaldı)
+  · **hata** → şeritte kalır (ekran kapanmıyor ve mesaj KALICI olmalı; geçip giden bir toast'ı
+    depocu tekrar denemeden önce okuyamaz)
+
+  Gezinme kararı EKRANDA, hook'ta değil: `submit` bir `onDone` geri çağrısı alıyor — bir hook
+  rota bilmez, bilseydi aynı akış ikinci bir ekrandan çağrıldığında yanlış yere giderdi.
+
+  **Doğrulama.** `typecheck` · `lint` temiz · depo **187/187**; iki yeni test: *"TAM kabul: toast
+  basılır ve ekran KAPANIR"* ve *"KISMİ kayıt: ekran kapanMAZ"*. Cihaz turu YAPILMADI — cihazda
+  başka bir ekran açıktı.
+
+- [x] (21.187) **KAPIDA AKIŞ: İŞ BİTİNCE LİSTEYE DÖNÜŞ · YOLA ÇIKMAMIŞ DURAK · NAVİGASYON ESNEMESİ** (kullanıcı bulguları 30.08 · cihazda ölçüldü)
+  `touches:` `apps/mobile/src/screens/courier/{delivery-screen.tsx,use-delivery.hook.ts,messages.json}` ·
+  `scripts/seed/orders.ts`
+
+  **1 · SONUÇ TOAST'A, EKRAN LİSTEYE DÖNÜYOR.** Teslim/ulaşılamadı/kabul etmedi yazıldıktan sonra
+  ekran "sonuç ekranı"na dönüp KALIYORDU (v2:882'nin bilinçli sapması: *"kurye 'yazıldı mı?'
+  sorusunun cevabını okur, sonra listeye döner"*). Kullanıcı cihazda denedi: *"durak sayfasından
+  geri çıkmıyoruz"* — kurye okuyacak bir şey olduğunu anlamıyor, geri tuşunu arıyor ve bunu günde
+  onlarca kez yapıyor. Cevap kaybolmuyor: toast (`toastSuccess`) mesajı listenin üstünde taşıyor ve
+  liste odakta zaten tazeleniyor, yani sonuç durağın kendi satırında da okunuyor.
+
+  **2 · YOLA ÇIKMAMIŞ DURAK KAPIDA AÇILMIYOR** — asıl arıza buydu. Kutuları rampada okutulmamış
+  sipariş `ready` kalır, yani araçta değildir. Ekran bunu bilmiyordu: durağı açıyor, kutuyu "kapıda
+  okutturuyor", teslim düğmesini ETKİN gösteriyordu; kurye basınca uç `stale` diyor ve ekran o reddi
+  olduğu gibi yazıyordu — *"bu durak başkası tarafından kapatılmış olabilir"*. Cümle teknik olarak
+  doğru ama kapıdaki kuryeye YANLIŞ hikâye anlatıyor: durağı kimse kapatmadı, mal araçta değil.
+  Cevap zaten sözleşmede duruyordu (`boxes[].loadedAt`); kapı artık orada kapanıyor ve sebebi
+  kuryenin dilinde yazıyor: *"Bu durağın kutuları araca binmemiş — rampada okutulmadan teslim
+  edilemez."*
+
+  **3 · NAVİGASYON ESNEMESİ — `grow`, stil değil.** Düğme `styles.contact` içinde `flex: 1`
+  taşıyordu ve o stil DIŞ Pressable'a hiç ulaşmıyor (kitin kendi künyesi: *"esneyecek düğme `grow`
+  verir, stiline flex yazmaz"*). Ölçüldü (uiautomator, cihaz yoğunluğu 408 dpi): iletişim satırı
+  içerik genişliğinin yarısında kalıyordu — Navigasyon **76 dp**, satır 178/380. Düzeltmeden sonra
+  Navigasyon **260 dp**, kareler tam **52 dp**, satır tam genişlik.
+
+  **4 · SEED'DE KAPIYA HAZIR DURAK.** Kutu zorunluluğu (21.184) gelince ölçüldü: bugünün seferinde
+  teslim edilebilir TEK durak kalmamıştı — hiçbirinin kutuları tam binmemişti, yani seed'in ürettiği
+  gün kuryenin hiçbir işi bitiremeyeceği bir gündü. Yarım yüklü durak yerinde KALDI (yükleme
+  ekranının "hepsi binmedi" hâli onunla görülüyor); yanına kutusu araca binmiş ve son okutmayla yola
+  çıkmış bir durak eklendi. Teslim · kısmi iade · ulaşılamadı · kabul etmedi akışlarının hepsi artık
+  denenebiliyor.
+
+  **Doğrulama.** `pnpm typecheck` · `lint` temiz · birim **1869/1869** · kurye jest **98/98** (iki
+  yeni test: araca binmemiş durakta kapı kapalı; sonuç toast'a gidip ekran listeye dönüyor —
+  `mockBack` ile ölçüldü). `db:refresh` yeniden koşuldu, 166 kova dolu.
+  **BEKLEYEN(21.187):** cihaz turu — `db:refresh` oturumu düşürdüğü için akış uçtan uca yeniden
+  denenmeli (giriş kullanıcıda).

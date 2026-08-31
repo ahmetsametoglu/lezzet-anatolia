@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withTiming, type WithTimingConfig } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -89,11 +89,33 @@ interface BottomSheetProps {
    * state'ini düşürür), bu ise sökümün — ikisi bilerek ayrı.
    */
   onClosed?: () => void;
+  /**
+   * Çekmece EKRANDAN GERÇEKTEN KALKTIĞINDA (iOS) — `Modal.onDismiss`.
+   *
+   * `onClosed`tan AYRI ve ondan sonra gelir: `onClosed` React sökümünün bir kare sonrasıdır
+   * (`setMounted(false)` ile aynı commit), iOS'un modal'ı kaldırması ise o anda henüz bitmemiştir.
+   * Fark, ardından İKİNCİ bir `Modal` açacak çağıranlar için belirleyici: iOS bir modal kalkarken
+   * ötekini sunmaz — panel monte olur, örtüsü çizilir, yerleşimi hiç ölçülmez ve açılış hiç
+   * başlamaz (ölçüldü 30.08: mal kabulde aramadan ürün eklenince adet çekmecesi açılmıyordu).
+   *
+   * Android'de çağrılmaz ve gerekmez; orada böyle bir sınırlama yok.
+   */
+  onDismissed?: () => void;
   children: ReactNode;
   testID?: string;
 }
 
-export function BottomSheet({ visible, title, titleAction, fill = false, onClose, onClosed, children, testID }: BottomSheetProps) {
+export function BottomSheet({
+  visible,
+  title,
+  titleAction,
+  fill = false,
+  onClose,
+  onClosed,
+  onDismissed,
+  children,
+  testID,
+}: BottomSheetProps) {
   /* `Modal` KAPANIŞ animasyonu bitene kadar ayakta kalmalı; bu yüzden görünürlüğün iki hâli var:
      çağıranın `visible`ı (niyet) ve buradaki `mounted` (ekranda mı). */
   const [mounted, setMounted] = useState(visible);
@@ -216,7 +238,16 @@ export function BottomSheet({ visible, title, titleAction, fill = false, onClose
   });
 
   return (
-    <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent testID={testID}>
+    <Modal
+      visible={mounted}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      /* `onDismiss` RN'de İOS'A ÖZGÜ; Android'e geçirilmez (eleme 30.08, `21.185`). */
+      onDismiss={Platform.OS === 'ios' ? onDismissed : undefined}
+      statusBarTranslucent
+      testID={testID}
+    >
       {/* JEST KÖKÜ MODAL İÇİNDE AYRICA GEREKİR (24.08). `Modal` kendi pencere hiyerarşisini kurar ve
           uygulama kökündeki `GestureHandlerRootView` (`app/_layout.tsx`) oraya UZANMAZ — RNGH'nin
           kendi kuralı: bir jestin çalışması için aynı köke bağlı olması gerekir. Panelin tutamağı
