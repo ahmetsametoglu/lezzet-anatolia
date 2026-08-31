@@ -5,6 +5,7 @@ import { loadAsync } from 'expo-font';
 import { Stack, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
@@ -162,7 +163,20 @@ export default function RootLayout() {
           sorusunu çözemiyordu. Personel oturumu açılışta doğrudan operasyona taşındığı için
           müşteri sekme çubuğunu beklemek de yanlış cevaptı. */}
       <GestureHandlerRootView style={styles.root} testID="app-root">
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
+        {/* ÇEKMECE PORTALI (01.09) — `BottomSheetModal` kendi katmanını buraya asar.
+
+            RN `Modal`ının YERİNE geçen şey bu portal ve göçün asıl sebebi de o: iOS kapanmakta
+            olan bir modal'ın üstüne yenisini SUNMUYOR ve çekmecelerimiz o yüzden bazen ekranın
+            altında asılı kalıyordu (30.08 mal kabul · 31.08 toplama, ikisi de kullanıcı bulgusu).
+            Native modal ortadan kalkınca arıza sınıfı da kalkıyor — dünkü `modal-traffic` kuralı,
+            `onDismissed` teli ve emniyet sayacı bu yüzden söküldü.
+
+            Hareket kökünün İÇİNDE: çekmecenin tutamağı ve içine konan her jest (adet rayı) aynı
+            köke bağlı olmak zorunda (RNGH kuralı — eski kopyada bu kök Modal'ın içine ayrıca
+            konuyordu, portal ağacın kendisinde yaşadığı için artık gerekmiyor). */}
+        <BottomSheetModalProvider>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors['sand-50'] } }} />
+        </BottomSheetModalProvider>
         {/* Toast KÖKTE tek kopya (v3 toast katmanı): her ekranın üstünde, dokunuş yutmaz —
             basan taraf `toastSuccess`/`toastError`/`toastInfo` (lib/toast), gerekçeler host'un
             künyesinde. */}

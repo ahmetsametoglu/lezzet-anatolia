@@ -38,6 +38,10 @@ jest.mock('react-native-reanimated', () => require('react-native-reanimated/mock
    DOĞRU DOSYA `jest/mock.js`, `jest/setup.js` DEĞİL: setup yalnız Onramp modülünü sahteliyor,
    `StripeSdk`'ya hiç dokunmuyor — `setupFiles`a eklemek denendi ve çözmedi. Paketin kendi mock'u;
    elle taklit yazılmadı. */
+/* ÇEKMECE (01.09) — paketin KENDİ mock'u kullanılmıyor, gerekçesi ikizin künyesinde: resmî mock
+   çocukları her zaman çiziyor ve "kapalıyken görünmez" güvencesini sessizce yok ediyor. */
+jest.mock('@gorhom/bottom-sheet', () => require('@/testing/gorhom-bottom-sheet.mock'));
+
 jest.mock('@stripe/stripe-react-native', () => require('@stripe/stripe-react-native/jest/mock.js'));
 /* eslint-enable @typescript-eslint/no-require-imports */
 

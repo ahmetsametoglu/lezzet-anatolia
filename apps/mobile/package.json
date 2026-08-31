@@ -21,6 +21,7 @@
     "@babel/runtime": "^7.28.4",
     "@expo-google-fonts/karla": "^0.4.2",
     "@expo-google-fonts/lora": "^0.4.2",
+    "@gorhom/bottom-sheet": "^5.2.14",
     "@lezzet/address-fr": "workspace:*",
     "@lezzet/brand": "workspace:*",
     "@lezzet/design-tokens": "workspace:*",

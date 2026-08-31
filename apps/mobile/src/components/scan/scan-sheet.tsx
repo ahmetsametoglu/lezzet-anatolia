@@ -56,6 +56,9 @@ const MESSAGES = {
   missingDev: 'Kamera bu derlemede yok — dev-client yeniden derlenince açılır. Alttaki simülasyon havuzu aynı akışı koşturur.',
   missingProd: 'Kamera modülü yüklenemedi — uygulamayı güncelleyin.',
   devPool: 'SİMÜLASYON · havuzdan okut (yalnız geliştirme)',
+  // Çağıran çip listesi verdi ama BOŞ çıktı: sessiz boş panel "araç bozuk" diye okunuyordu
+  // (kullanıcı bulgusu 31.08 — toplama ekranında kalemlerin kayıtlı barkodu yoktu).
+  devPoolEmpty: 'Bu ekranın kayıtlı kodu yok — çip üretilemedi.',
   close: 'Vazgeç',
 } as const;
 
@@ -113,6 +116,7 @@ interface ScanSheetProps {
 export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCodes, testID }: ScanSheetProps) {
   // Modül ömür boyu ya hep var ya hep yok — memo bir kez yüklenir, render dalları sabit kalır.
   const camera = useMemo(loadCameraModule, []);
+
   const locked = useRef(false);
 
   // Sayfa her açılışta temiz başlar: önceki turun kilidi yeni turu sağır bırakmasın.
@@ -156,6 +160,7 @@ export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCo
         {__DEV__ ? (
           <View style={styles.devPool} testID="scan-dev-pool">
             <Text style={styles.devPoolTitle}>{MESSAGES.devPool}</Text>
+            {(devCodes ?? DEV_SCAN_POOL).length === 0 ? <Text style={styles.devPoolEmpty}>{MESSAGES.devPoolEmpty}</Text> : null}
             <View style={styles.devPoolChips}>
               {(devCodes ?? DEV_SCAN_POOL).map((entry) => (
                 <PressableSurface
@@ -332,6 +337,12 @@ const styles = StyleSheet.create((_theme, rt) => ({
     color: operationsTheme.colors.cream,
     opacity: 0.7,
     letterSpacing: 0.5,
+  },
+  devPoolEmpty: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.cream,
+    opacity: 0.6,
   },
   devPoolChips: { flexDirection: 'row', flexWrap: 'wrap', gap: operationsTheme.space.lg },
   devChip: {

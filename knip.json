@@ -22,6 +22,11 @@
     },
     "packages/domain-core": {
       "includeEntryExports": true
+    },
+    "apps/mobile": {
+      "entry": [
+        "src/testing/gorhom-bottom-sheet.mock.tsx"
+      ]
     }
   },
   "ignoreExportsUsedInFile": true

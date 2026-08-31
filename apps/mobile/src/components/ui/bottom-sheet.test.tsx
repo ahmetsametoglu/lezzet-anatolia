@@ -1,6 +1,6 @@
 import { customerAppColors, customerAppText } from '@lezzet/design-tokens';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { Text } from 'react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { BackHandler, Text } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
 import { customerStops } from '../../theme/unistyles';
@@ -68,13 +68,21 @@ describe('BottomSheet', () => {
 
   it("Android'in geri hareketi de kapatır — çizili değil ama platformun sözü", async () => {
     const onClose = jest.fn();
+    const onBack = jest.spyOn(BackHandler, 'addEventListener');
     await render(
       <BottomSheet visible title="Sırala" onClose={onClose} testID="sheet">
         <Text>içerik</Text>
       </BottomSheet>,
     );
 
-    await fireEvent(screen.getByTestId('sheet'), 'requestClose');
+    /* Kanca artık `Modal.onRequestClose` DEĞİL, `BackHandler` — kütüphane geri tuşunu dinlemiyor
+       (kaynağı okundu 01.09) ve söz KİTTE tutuluyor. RN'in jest sahtesi `mockPressBack` sunmuyor,
+       o yüzden kaydı yakalayıp elle tetikliyoruz: ölçülen şey "geri basılınca kapanır mı". */
+    const back = onBack.mock.calls.at(-1)?.[1] as (() => boolean) | undefined;
+    expect(back).toBeDefined();
+    await act(async () => {
+      back?.();
+    });
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

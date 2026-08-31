@@ -241,9 +241,21 @@ RN'de expo-benzeri her native modül mock'u el işidir). Asıl ayrışma E2E bui
 
 ## 11. Ek etüt (06.08): stil katmanı — komponent kütüphanesi YOK
 
-**Hüküm: komponent kütüphanesi kullanılmaz** (kullanıcı tercihi + tasarım disiplini zaten bunu
+**Hüküm: GÖRÜNÜŞ DAYATAN TAM KİT kullanılmaz** (kullanıcı tercihi + tasarım disiplini zaten bunu
 söylüyor: görsel karar `.dc.html`'de verili ve birebir uygulanır — Material görünüşlü hazır kit
-bununla çatışır). **Stil motoru: Unistyles 3** + kendi form kitimiz; form kitinin davranış/a11y
+bununla çatışır). Kastedilen Material/NativeBase/Paper sınıfıdır: düğmesinden kartına her şeyi
+kendi görünüşüyle getiren kitler.
+
+> **AYRIM NETLEŞTİRİLDİ (kullanıcı 01.09).** Cümle eskiden yalnız "komponent kütüphanesi
+> kullanılmaz" diyordu ve okuyan ajan bunu *"hiçbir UI kütüphanesi olmaz"* diye alıyordu — 31.08'de
+> ben aldım ve `@gorhom/bottom-sheet`i hiç değerlendirmeden elenmiş saydım. **Yasak yalnız tam
+> kittedir. TEK BİR İŞİ çözen odaklı kütüphane serbesttir** ve zaten öyle çalışıyoruz:
+> `react-native-reanimated` · `react-native-gesture-handler` · `react-native-svg` · `expo-camera` ·
+> `leaflet` · Brother SDK. Ölçüt görünüş değil UYUM: New Architecture uyumluluğu + Expo SDK'nın
+> sabitlediği sürüm aralığı (§9 eleme ölçütü), ve getirdiği şeyin DAVRANIŞ olması — görünüşü biz
+> veriyoruz.
+
+**Stil motoru: Unistyles 3** + kendi form kitimiz; form kitinin davranış/a11y
 iskeleti için @rn-primitives'ten **kopyala-sahiplen** (shadcn modeli — kod repoya girer, bizim
 olur; "kütüphane istemem" tercihiyle çelişmez, onu destekler).
 
