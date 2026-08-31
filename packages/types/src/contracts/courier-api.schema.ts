@@ -568,6 +568,15 @@ export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
   }),
   /** `zoneId` verilmedi ve o gün birden çok rota koşuyor — ekran `/courier/routes`tan seçtirir. */
   z.object({ status: z.literal('route_required') }),
+  /**
+   * **BAŞKA SEFER SÜRÜLÜYOR** (31.08 · kullanıcı kararı) — araç birden çok seferi TAŞIR ama kurye
+   * birini SÜRER. İki sefer aynı anda yoldayken ekranın üç sorusu birden cevapsız kalıyor: durak
+   * sırası hangi seferin sırası, "3/6 durak" hangisinin ilerlemesi, kapanışta hangi kasa.
+   *
+   * Sefer KURULDU ve öyle kalıyor (kutuları okutulabilir); yalnız yola çıkmadı. Künye SÜRÜLEN
+   * seferi söylüyor — çıplak bir ret kuryeye ne yapacağını söylemez.
+   */
+  z.object({ status: z.literal('another_running'), runId: z.string().uuid(), referenceNo: z.string() }),
   /** O gün koşan rota yok (ya da verilen `zoneId` bugün koşmuyor/yok). */
   z.object({ status: z.literal('no_route') }),
 ]);
@@ -590,10 +599,32 @@ export const DepartCourierRunResponseSchema = z.discriminatedUnion('status', [
     skipped: z.array(CourierDayStopStateSchema),
     awaitingBoxes: z.array(AwaitingBoxesStopSchema),
   }),
+  /** Başka sefer sürülüyor — künyesiyle (aynı ada üstteki `StartCourierDayResponse` künyesi). */
+  z.object({ status: z.literal('another_running'), runId: z.string().uuid(), referenceNo: z.string() }),
   /** Sefer yok ya da senin değil — ikisi AYNI cevap: sefer kimlikleri haritalanamaz. */
   z.object({ status: z.literal('not_found') }),
 ]);
 export type DepartCourierRunResponse = z.infer<typeof DepartCourierRunResponseSchema>;
+
+/**
+ * **Seferi ARAÇTAN ÇIKAR** (31.08 · kullanıcı kararı) — kurulmuş ama başlamamış seferin geri
+ * alınması. Tasarımda karşılığı YOK ve boşluk cihazda görüldü: yanlış rotayı araca alan kuryenin
+ * tek çıkışı onu BAŞLATIP kapatmaktı, yani hatanın bedeli müşteriye bildirim olarak yansıyordu.
+ *
+ * Sayılar döner çünkü ekran ne olduğunu SÖYLEMELİ: kaç sipariş serbest kaldı, kaç kutu rampaya
+ * geri indi. "Oldu" demek, malı nereye gittiğini söylemeden bırakmaktır.
+ */
+export const DiscardCourierRunResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    releasedOrders: z.number().int(),
+    unloadedBoxes: z.number().int(),
+  }),
+  /** Sefer yola çıkmış — geri alınacak niyet kalmadı; dürüst çıkış kapanıştır. */
+  z.object({ status: z.literal('already_departed') }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type DiscardCourierRunResponse = z.infer<typeof DiscardCourierRunResponseSchema>;
 
 /**
  * **Araca yükleme okutması** (23.8 · karar §1.11). Kod gövdede gider (URL'de kod, erişim

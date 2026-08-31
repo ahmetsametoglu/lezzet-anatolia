@@ -299,6 +299,7 @@ set search_path = public
 as $$
 declare
   v_run public.delivery_run;
+  v_other public.delivery_run;
 begin
   select * into v_run from public.delivery_run where id = p_run_id for update;
   if not found then
@@ -314,12 +315,110 @@ begin
     return jsonb_build_object('ok', true, 'reason', 'already_departed', 'departed_at', v_run.departed_at);
   end if;
 
+  -- ── AYNI ANDA TEK SEFER SÜRÜLÜR (kullanıcı kararı 31.08) ────────────────────
+  -- Araç birden çok seferi TAŞIR ama kurye birini SÜRER. İki sefer aynı anda "yolda" olduğunda
+  -- ekranın üç sorusu birden cevapsız kalıyor: durak sırası hangi seferin sırası, "3/6 durak"
+  -- hangisinin ilerlemesi, kapanışta hangi kasa sayılacak. Tasarımın kendi hâli de hiçbir karede
+  -- iki sürülen sefer göstermiyor (v3:15'in kapsam cümlesi: *"araçta bekleyen N sefer bu sayıma
+  -- girmez"* — bekleyen, sürülen değil).
+  --
+  -- Kapı BURADA, ekranda değil: ekran düğmeyi gizleyebilir ama iki cihazdan/iki sekmeden gelen
+  -- iki isteği ancak satır kilidi ayırır. `for update` yukarıda alındı; ikinci istek sırasını
+  -- bekler ve bu dala düşer.
+  select * into v_other from public.delivery_run r
+   where r.courier_id = p_courier_id
+     and r.id <> p_run_id
+     and r.departed_at is not null
+     and not exists (select 1 from public.delivery_run_close c where c.delivery_run_id = r.id)
+   order by r.departed_at
+   limit 1;
+  if found then
+    return jsonb_build_object(
+      'ok', false, 'reason', 'another_running',
+      'run_id', v_other.id, 'reference_no', v_other.reference_no
+    );
+  end if;
+
   update public.delivery_run set departed_at = now() where id = p_run_id returning * into v_run;
   return jsonb_build_object('ok', true, 'departed_at', v_run.departed_at);
 end;
 $$;
 
 revoke execute on function public.depart_delivery_run(uuid, uuid) from public, anon, authenticated;
+
+-- ── Seferi ARAÇTAN ÇIKAR (kullanıcı kararı 31.08) ────────────────────────────
+-- `open_delivery_run`ın TERSİ ve tasarımda karşılığı YOK: 14/15/16 numaralı ekranlarda "iptal",
+-- "vazgeç", "araçtan çıkar" diye bir eylem hiç geçmiyor (ölçüldü). Boşluk cihazda görüldü —
+-- kurye yanlış rotayı araca aldıysa tek çıkışı onu BAŞLATIP kapatmaktı, yani yanlış seçimin
+-- bedeli müşteriye bildirim olarak yansıyordu.
+--
+-- ── NİÇİN SİLİYOR, "iptal" DİYE İŞARETLEMİYOR ───────────────────────────────
+-- Kurulmuş sefer bir NİYETTİR: durakları açılmadı, müşteriye haber gitmedi, para hareket etmedi,
+-- stok oynamadı (kutu yüklemesi yalnız emanet damgasıdır). Geriye saklanacak bir olay yok —
+-- saklansaydı rota+gün başına tek sefer kuralı (`delivery_run_key`) o rotayı sonsuza dek kilitler
+-- ve kurye kendi hatasını düzelttiği için bir daha o rotayı alamazdı.
+--
+-- ── KUTULAR RAMPAYA GERİ İNER ───────────────────────────────────────────────
+-- Yüklenmiş kutu bir engel DEĞİL: `loadBox` yalnız damga yazıyor, stok hareketi yok ve kutu
+-- fiziksel olarak rampada. Damgayı silmek malı hiçbir yerden eksiltmez; bırakılsaydı kutu "araçta"
+-- görünürken hiçbir sefere ait olmayan bir emanet olurdu — kaybolan mal tam olarak böyle doğar.
+create or replace function public.discard_delivery_run(
+  p_run_id uuid,
+  p_courier_id uuid
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_run public.delivery_run;
+  v_orders uuid[];
+  v_boxes int;
+begin
+  select * into v_run from public.delivery_run where id = p_run_id for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'not_found');
+  end if;
+
+  if v_run.courier_id <> p_courier_id then
+    return jsonb_build_object('ok', false, 'reason', 'not_mine');
+  end if;
+
+  -- BAŞLAMIŞ SEFER ÇIKARILMAZ: durakları açıldı ve müşterilere haber gitti — geri alınacak bir
+  -- niyet kalmadı, dürüst çıkış kapanıştır (`close_delivery_run`).
+  if v_run.departed_at is not null then
+    return jsonb_build_object('ok', false, 'reason', 'already_departed');
+  end if;
+
+  -- Siparişler serbest kalır: kurye ataması da düşer, çünkü atama SEFERDEN geliyordu.
+  with released as (
+    update public.order o
+       set delivery_run_id = null, courier_id = null
+     where o.delivery_run_id = p_run_id
+     returning o.id
+  )
+  select coalesce(array_agg(id), '{}') into v_orders from released;
+
+  -- Kutuların araç damgası silinir (mal zaten rampada; damga bir emanet kaydıydı).
+  with unloaded as (
+    update public.order_box b
+       set loaded_at = null, loaded_by = null
+     where b.order_id = any(v_orders) and b.loaded_at is not null
+     returning b.id
+  )
+  select count(*) into v_boxes from unloaded;
+
+  delete from public.delivery_run where id = p_run_id;
+
+  return jsonb_build_object(
+    'ok', true,
+    'released_orders', coalesce(array_length(v_orders, 1), 0),
+    'unloaded_boxes', v_boxes
+  );
+end;
+$$;
+
+revoke execute on function public.discard_delivery_run(uuid, uuid) from public, anon, authenticated;
 
 -- ── Seferi kapat ─────────────────────────────────────────────────────────────
 -- NEDEN RPC: dönüş damgası + kapanış fotoğrafı + takılı durakların çözümü TEK anın işi olmalı —

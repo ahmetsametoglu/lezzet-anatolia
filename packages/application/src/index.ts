@@ -332,7 +332,7 @@ export type {
 // 21.10d: gün başlatma (`startCourierDay`) ve kapı kasası ayarı (`readDoorCashAccountId`) aynı
 // kapının yanına eklendi — paketin `exports` haritası yalnız `"."` açıyor, yani alt-yol import'u
 // paket sınırında kapalı ve dışa açılmayan bir kapı çağrılamaz.
-export { listCourierDay, markUndelivered, readCourierRun, readCourierRuns, readDoorCashAccountId, startCourierDay } from './courier/day';
+export { discardCourierRun, listCourierDay, markUndelivered, readCourierRun, readCourierRuns, readDoorCashAccountId, startCourierDay } from './courier/day';
 export { ensureStopOrder, type StopOrderOutcome } from './courier/stop-order';
 export { geocodeAddressesScan, type GeocodeScanResult } from './delivery/geocode-scan';
 export { geocoder, geocoderConfigured } from './delivery/geocode-provider';

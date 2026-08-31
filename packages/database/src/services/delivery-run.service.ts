@@ -7,6 +7,7 @@ import {
   SetStopOrderResultSchema,
   OpenDeliveryRunResultSchema,
   DepartDeliveryRunResultSchema,
+  DiscardDeliveryRunResultSchema,
   type CloseDeliveryRunResult,
   type DeliveryRun,
   type DeliveryRunClose,
@@ -14,6 +15,7 @@ import {
   type SetStopOrderResult,
   type OpenDeliveryRunResult,
   type DepartDeliveryRunResult,
+  type DiscardDeliveryRunResult,
   type StopOrderMetric,
   type StopOrderPrecision,
   type StopOrderSource,
@@ -124,6 +126,19 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
       p_courier_id: input.courierId,
     });
     return DepartDeliveryRunResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **Seferi ARAÇTAN ÇIKAR** — `open`ın tersi (31.08). Siparişleri serbest bırakır, kutuların
+   * araç damgasını siler ve satırı SİLER; rota+gün kilidi böylece açılır ve kurye kendi hatasını
+   * düzeltebilir. Başlamış sefer `already_departed` alır — onun çıkışı kapanıştır.
+   */
+  async discard(input: { runId: string; courierId: string }): Promise<DiscardDeliveryRunResult> {
+    const raw = await this.executeRpc('discard_delivery_run', {
+      p_run_id: input.runId,
+      p_courier_id: input.courierId,
+    });
+    return DiscardDeliveryRunResultSchema.parse(dbToApp(raw));
   }
 
   /**

@@ -379,7 +379,11 @@ function RouteCard({
      karttan okunamıyordu. */
   const note = !usable
     ? [
-        fillCopy(t.routePick.taken, { courier: route.run?.courierName ?? t.routePick.someone }),
+        /* KAPANMIŞ SEFER "sürüyor" DEMEZ (31.08): rota alınmış ama iş BİTMİŞ — geçmiş zaman
+           kipiyle yazılmazsa kurye o rotanın hâlâ yolda olduğunu sanır. */
+        fillCopy(route.run?.closed === true ? t.routePick.takenClosed : t.routePick.taken, {
+          courier: route.run?.courierName ?? t.routePick.someone,
+        }),
         route.run?.departedAt == null ? null : fillCopy(t.routePick.takenAt, { time: timeOf(route.run.departedAt) }),
       ]
         .filter((part): part is string => part !== null)

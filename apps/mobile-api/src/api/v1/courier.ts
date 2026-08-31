@@ -19,6 +19,7 @@ import {
   readCourierRuns,
   readDoorCashAccountId,
   requestDeliveryProofUploadUrl,
+  discardCourierRun,
   startCourierDay,
 } from '@lezzet/application';
 import {
@@ -33,6 +34,7 @@ import {
   CourierVanStockMoveResponseSchema,
   CourierVanStockResponseSchema,
   DepartCourierRunResponseSchema,
+  DiscardCourierRunResponseSchema,
   DayCloseDraftSchema,
   DeliveryProofUploadRequestSchema,
   DeliveryProofUploadResponseSchema,
@@ -410,10 +412,43 @@ courier.post('/runs/:runId/depart', async (c) => {
     zoneId: run.deliveryZoneId,
     vehicleId: run.vehicleId,
   });
+  /* "Başka sefer sürülüyor" bir HATA DEĞİL cevabın kendisidir ve künyesiyle iner: kurye önce
+     hangisini kapatacağını bilmeli. `not_found`a yıkılsaydı ekran "sefer kayboldu" derdi. */
+  if (result.status === 'another_running') {
+    const running: z.input<typeof DepartCourierRunResponseSchema> = {
+      status: 'another_running',
+      runId: result.runId,
+      referenceNo: result.referenceNo,
+    };
+    return ok(c, DepartCourierRunResponseSchema.parse(running));
+  }
   if (result.status !== 'ok') return ok(c, DepartCourierRunResponseSchema.parse({ status: 'not_found' }));
 
   const body: z.input<typeof DepartCourierRunResponseSchema> = result;
   return ok(c, DepartCourierRunResponseSchema.parse(body));
+});
+
+/**
+ * **Seferi araçtan çıkar** (31.08 · kullanıcı kararı) — `POST /runs/:runId/discard`.
+ *
+ * `depart`in kardeşi ve aynı kapıyı kullanıyor: hangi sefer olduğu URL'de, kimlik jetondan.
+ * "Yok" ile "senin değil" yine AYNI cevap — sefer kimlikleri haritalanamaz.
+ */
+courier.post('/runs/:runId/discard', async (c) => {
+  const runId = UuidSchema.safeParse(c.req.param('runId'));
+  if (!runId.success) return fail(c, 'invalid_run_id', 400);
+
+  const outcome = await discardCourierRun(serviceDb(), { runId: runId.data, courierId: c.get('staff').id });
+  if (outcome.ok) {
+    const body: z.input<typeof DiscardCourierRunResponseSchema> = {
+      status: 'ok',
+      releasedOrders: outcome.releasedOrders ?? 0,
+      unloadedBoxes: outcome.unloadedBoxes ?? 0,
+    };
+    return ok(c, DiscardCourierRunResponseSchema.parse(body));
+  }
+  const reason = outcome.reason === 'already_departed' ? 'already_departed' : 'not_found';
+  return ok(c, DiscardCourierRunResponseSchema.parse({ status: reason }));
 });
 
 courier.post('/boxes/load', async (c) => {

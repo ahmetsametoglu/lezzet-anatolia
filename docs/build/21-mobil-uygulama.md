@@ -9541,3 +9541,88 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **ARALIKLAR SIKILDI** (kullanıcı bulgusu): satır arası `md`(8) → `sm`(6), kartın iç dolgusu
   dikeyde `lg`(10) → `md`(8). Satırlar kapaklı ve iki katlı olunca kendi kenarlarıyla zaten
   ayrılıyor; aradaki boşluğun ayırma işi kalmamıştı.
+
+- [x] (21.200) **AYNI ANDA TEK SEFER · SEFERİ ARAÇTAN ÇIKAR** (kullanıcı kararları 31.08)
+  `touches: supabase/migrations/0046_delivery_run.sql, packages/{types,database,application}/src/**,
+  apps/mobile-api/src/api/v1/courier.ts, apps/mobile/src/{lib/api,screens/courier}/**`
+
+  **AYNI ANDA TEK SEFER SÜRÜLÜR.** Kullanıcı: *"Seferi başlat dediğim zaman bir seferin başlaması
+  gerekiyor, diğer seferin orada görünmemesi gerekiyor."* Tasarımı ölçtüm ve cevap ikili:
+  16 numaralı ekranın kendi mantığı (`baslatGoster: (!surur && !kapandi)`) ikinci seferi
+  başlatmaya İZİN VERİYOR — ekran görüntüsü `02-Biri-Suruluyor` da bunu gösteriyor. **Ama tasarım
+  hiçbir karede iki seferi birden SÜRÜLÜR göstermiyor**; 15 numaranın kapsam cümlesi de
+  *"araçta bekleyen N sefer bu sayıma girmez"* diyor — bekleyen, sürülen değil. Ben iki sürülen
+  seferi destekleyecek şekilde yazmıştım (gruplu durak listesi); yanlış olan bendi.
+
+  Gerekçe kuralın kendisinde: iki sefer aynı anda yoldayken ekranın üç sorusu birden cevapsız
+  kalıyor — durak sırası hangi seferin sırası, "3/6 durak" hangisinin ilerlemesi, kapanışta hangi
+  kasa sayılacak.
+
+  Kapı VERİDE (`depart_delivery_run` → `another_running`), çünkü ekran iki cihazdan gelen iki
+  isteği ayıramaz; ekran ayrıca düğmeyi PASİF çiziyor ve sebebini yazıyor (*"Önce SF-… kapatılmalı ·
+  aynı anda tek sefer sürülür"*) — gizlenseydi kurye "bu sefer neden başlamıyor" sorusunu ekranda
+  hiç cevaplayamazdı. Kurma geri sarılmıyor: sefer araçta kalıyor, kutuları okutulabiliyor.
+  Kural GÜNE de bakmıyor — bugünkü sefer sürülürken yarınınki de yola çıkmaz.
+
+  **SEFERİ ARAÇTAN ÇIKAR** (`discard_delivery_run`) — tasarımda karşılığı YOK ve ölçüldü:
+  14/15/16 numaralı ekranlarda "iptal", "vazgeç", "araçtan çıkar" diye bir eylem hiç geçmiyor.
+  Boşluk cihazda görüldü: yanlış rotayı araca alan kuryenin tek çıkışı onu BAŞLATIP kapatmaktı,
+  yani hatanın bedeli müşteriye bildirim olarak yansıyordu.
+
+  · Kurulmuş sefer bir NİYETTİR: durak açılmadı, haber gitmedi, para ve stok oynamadı.
+  · Satır SİLİNİR, "iptal" diye işaretlenmez — saklansaydı rota+gün kilidi (`delivery_run_key`)
+    o rotayı sonsuza dek tutar ve kurye kendi hatasını düzelttiği için bir daha alamazdı.
+  · Kutuların araç damgası SİLİNİR: `loadBox` yalnız emanet damgası yazıyor, kutu fiziksel olarak
+    rampada. Bırakılsaydı kutu "araçta" görünürken hiçbir sefere ait olmayan bir emanet olurdu —
+    kaybolan mal tam olarak böyle doğar.
+  · Onay ÇEKMECEDE (`OperationsConfirmSheet`) ve bedeli yazıyor: kaç sipariş serbest kalıyor, kaç
+    kutu rampada kalıyor. Ton `olive` — eylem yıkıcı değil DÜZELTİCİ.
+  · BAŞLAMIŞ sefer çıkarılamaz (`already_departed`): geri alınacak niyet kalmadı, çıkışı kapanış.
+
+  **MİGRATION DOSYASI DEĞİŞTİ (0046).** İki fonksiyon `create or replace` olduğu için yerel
+  veritabanına doğrudan uygulandı (veri silinmedi); şema kaynağı yine dosyadır ve sıradaki
+  `db:refresh` onu taşır.
+
+  Ölçüldü: kurye jest 8 paket / 108 test; `day.test.ts` 37/37 (üç yeni entegrasyon testi: tek
+  sefer kuralı, çıkarmanın üç etkisi, başlamış seferin reddi). Cihazda kurma → engelli başlatma →
+  çıkarma turu yapıldı.
+
+- [x] (21.201) **BESLEME: BUGÜN SIFIRDAN BAŞLAR — sahiplenilmiş rota yok** (kullanıcı isteği 31.08)
+  `touches: scripts/seed/courier.ts, apps/mobile/src/screens/courier/route-pick-screen.tsx`
+
+  Kullanıcı akışı baştan yürüyebilmek istedi: *"kurye ekranı açıldığı zaman sahiplenilmiş bir rota
+  ortaya çıkmasın."* Seed bugünün rotalarını kurup birini de sürüyordu; kurye ekranı açılır açılmaz
+  durak listesine düşüyor ve **rehber hâli, sefer/araç seçimi, yükleme ve sefer başlatma hiç
+  görülemiyordu** — akışın ilk dört adımı denenemez durumdaydı.
+
+  Artık BUGÜN ve İLERİSİ için sefer HİÇ kurulmuyor: rotalar boşta, araç boş, kurye günü kendisi
+  kuruyor (seç → yükle → başlat). Tek istisna **bütün durakları sonuçlanmış** bugünkü grup — o bir
+  "yapılacak iş" değil bitmiş bir gündür; kuryenin aracında görünmez (kapanmış sefer okunmuyor) ama
+  para ekranının gün sonu mutabakatı ona bağlı (`readMoneyDayEnd` yalnız bugünün kapanışlarına
+  bakıyor). Geçmiş günler değişmedi.
+
+  **BEKLEYEN(BACKLOG §1):** hiçbir bugünkü grup tamamen sonuçlanmamışsa bugüne ait kapanış da
+  doğmaz ve Para → Gün Sonu ekranının uyuşmazlık satırı boş kalır. Bu bir arıza değil bir veri
+  ihtimali; kullanıcı akışı yürüdüğünde satır kendiliğinden doğuyor.
+
+  **KAPANMIŞ ROTA "SÜRÜYOR" DEMEZ:** seçim listesinde alınmış rotanın notu geçmiş zamana geçti
+  ("bugün X sürdü · kapandı") — kapanmış bir sefer için "sürüyor" yazmak, kuryeye o rotanın hâlâ
+  yolda olduğunu söylüyordu.
+
+  **"DURAKLARA GİT" DÜĞMESİNİN ZEMİNİ** (kullanıcı bulgusu 31.08 · ölçüldü): kullanıcı tasarımın
+  16 numaralı karesiyle bizimkini karşılaştırmamı istedi. Piksel ölçümü tek fark verdi —
+  düğmenin İÇİ tasarımda `#fbfaf4`, bizde `#f2f7e8` (yani kartın kendi yeşili). Kartın zemini,
+  rozetin dolgusu ve bekleyen kartın zemini birebir tutuyordu.
+
+  Sebep kitte: çerçeveli ikincil düğme tasarımda HER YERDE açık bir zemin taşıyor (v3:16
+  "Duraklara git", v3:19/23 "Ürün ara") ama `SecondaryButton` onu tonun içine yazamıyor — o değer
+  (`panel`) yalnız operasyon temasında var ve paylaşılan kitin gördüğü tema birleşimi onu göremiyor
+  (`product-thumb` künyesindeki aynı duvar). Kite `style` **kabuğu** eklendi (yalnız zemin ve
+  kenar; `PressableSurface`/`OperationsProductRow`un aynı ayrımı) ve iki çağıran onu kullanıyor.
+  Kenar da düzeldi: `olive-line` (#d7e3bd) yeşil kartın üstünde neredeyse görünmüyordu, tasarımın
+  `#c3d3a4`si (`success-line`) kondu.
+
+  **BEKLEYEN(BACKLOG §1):** tasarımın "Seferi başlat" düğmesindeki yumuşak zeytin ışıması
+  (`box-shadow:0 4px 14px rgba(95,122,44,.22)`) hâlâ çizilmiyor — kitte o ışıma bugün yalnız
+  `OperationsStickyBar`ın `glow` prop'unda yaşıyor ve akıştaki düğmeler ona ulaşamıyor (aynı
+  boşluk yükleme ekranının okutma düğmesinde de var, künyesi orada).

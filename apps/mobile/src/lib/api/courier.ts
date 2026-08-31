@@ -11,6 +11,7 @@ import {
   CourierVanStockResponseSchema,
   type CourierVanStockMoveRequest,
   DepartCourierRunResponseSchema,
+  DiscardCourierRunResponseSchema,
   DayCloseDraftSchema,
   type LoadBoxRequest,
   LoadBoxResponseSchema,
@@ -115,6 +116,18 @@ export function fetchCourierVehicles(): Promise<ApiResult<z.infer<typeof Courier
  * BAŞLATIR. Araçta birden çok sefer durabildiği için hangisi olduğu URL'de — kurye istediğini
  * başlatıyor ve bu bir liste eylemi değil, o seferin üstündeki bir eylem.
  */
+/**
+ * **Seferi ARAÇTAN ÇIKAR** (31.08) — `depart`in kardeşi ve aynı adres deseni. Kurulmuş ama
+ * başlamamış seferi geri alır: siparişler serbest kalır, kutuların araç damgası silinir.
+ */
+export function discardCourierRun(
+  runId: string,
+): Promise<ApiResult<z.infer<typeof DiscardCourierRunResponseSchema>>> {
+  return authorizedFetch(`/api/v1/courier/runs/${runId}/discard`, DiscardCourierRunResponseSchema, {
+    method: 'POST',
+  });
+}
+
 export function departCourierRun(runId: string): Promise<ApiResult<z.infer<typeof DepartCourierRunResponseSchema>>> {
   return authorizedFetch(`/api/v1/courier/runs/${runId}/depart`, DepartCourierRunResponseSchema, { method: 'POST' });
 }

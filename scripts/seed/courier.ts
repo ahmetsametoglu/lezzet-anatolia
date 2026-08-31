@@ -50,14 +50,14 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
   // hesaba yazıldığında o hesabın sefer ekranı sessizce boş kalıyordu — sipariş vardı, sefer yoktu.
   const { data, error } = await db
     .from('order')
-    .select('id,delivery_zone_id,delivery_date,warehouse_id,courier_id')
+    .select('id,delivery_zone_id,delivery_date,warehouse_id,courier_id,status')
     .not('courier_id', 'is', null)
     .eq('delivery_type', 'route')
     .not('delivery_zone_id', 'is', null)
     .not('delivery_date', 'is', null);
   if (error) throw error;
   const rows = (data ?? []) as Array<{
-    id: string; delivery_zone_id: string; delivery_date: string; warehouse_id: string; courier_id: string;
+    id: string; delivery_zone_id: string; delivery_date: string; warehouse_id: string; courier_id: string; status: string;
   }>;
   if (rows.length === 0) {
     console.log('  · kuryeli rota siparişi yok — sefer kurulmadı');
@@ -67,15 +67,17 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
   // (zone, gün) grupları — rota+gün başına TEK sefer (0046 kısıtının aynısı).
   const gruplar = new Map<
     string,
-    { zoneId: string; date: string; warehouseId: string; courierId: string; orderIds: string[] }
+    { zoneId: string; date: string; warehouseId: string; courierId: string; orderIds: string[]; settled: boolean }
   >();
+  /** Durak "sonuçlanmış" mı — kapanışın "kurye döndü" ölçütünün aynısı (`seferiBitti`). */
+  const sonuclandi = (status: string) => ['delivered', 'completed', 'returned', 'cancelled'].includes(status);
   for (const row of rows) {
     const key = `${row.delivery_zone_id}·${row.delivery_date}`;
     const grup = gruplar.get(key);
     if (!grup) {
       gruplar.set(key, {
         zoneId: row.delivery_zone_id, date: row.delivery_date, warehouseId: row.warehouse_id,
-        courierId: row.courier_id, orderIds: [row.id],
+        courierId: row.courier_id, orderIds: [row.id], settled: sonuclandi(row.status),
       });
       continue;
     }
@@ -85,6 +87,7 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       throw new Error(`seed sefer: ${grup.date} · aynı rotada iki kurye (${grup.courierId} ↔ ${row.courier_id})`);
     }
     grup.orderIds.push(row.id);
+    grup.settled = grup.settled && sonuclandi(row.status);
   }
 
   const yil = new Date().getFullYear();
@@ -100,37 +103,23 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
   const aracId = (aracRows?.[0] as { id: string } | undefined)?.id ?? null;
 
   /*
-    ── ARAÇ BİR ARA DEPO: ÜÇ HÂL DE KURULUR (kullanıcı kararı 31.08) ─────────────────────────────
-    Sefer artık iki ayrı andan geçiyor — KURULUR (`departed_at` null, siparişler damgalanır,
-    kutular okutulabilir) ve BAŞLATILIR (damga vurulur, duraklar açılır, müşteriye haber gider).
-    Seed 31.08'e kadar yalnız "başlatılmış" hâli üretiyordu ve ikisi de denenemiyordu:
+    ── BUGÜN SIFIRDAN BAŞLAR: SEFER KURULMAZ (kullanıcı kararı 31.08) ────────────────────────────
+    Kullanıcı akışı baştan yürüyebilmek istedi: *"kurye ekranı açıldığı zaman sahiplenilmiş bir
+    rota ortaya çıkmasın."* Seed daha önce bugünün rotalarını kurup birini de sürüyordu; kurye
+    ekranı açılır açılmaz durak listesine düşüyor ve **rehber hâli, seçim ekranı, yükleme, sefer
+    başlatma hiç görülemiyordu** — akışın ilk dört adımı denenemez durumdaydı.
 
-      · İLERİ GÜNÜN SEFERİ tamamen ATLANIYORDU (`grup.date > bugun → continue`). Oysa kullanıcının
-        senaryosu tam bu: *"araç iki-üç günlük yolculuğa çıkıyor ve rotalar tek günlük olduğu için
-        yarının seferleri de bugünden araca yükleniyor."* Atlanınca "Araçtaki Seferler" ekranında
-        gün etiketi (bugün · yarın) hiç görünemiyordu.
-      · BUGÜNÜN İKİ ROTASININ İKİSİ DE sürülüyor görünüyordu; "araçta bekleyen sefer" ve onun
-        "Seferi başlat" düğmesi hiçbir ekranda doğmuyordu.
+    Artık: BUGÜN ve İLERİSİ için sefer HİÇ kurulmaz. Rotalar boşta, araç boş, kurye günü kendisi
+    kuruyor (seç → yükle → başlat) — yani seed'in ürettiği hâl, gerçek bir sabahın hâli.
 
-    Artık: ileri günün seferi KURULUR ama başlatılmaz; bugünün İKİNCİ rotası da öyle. Birinci rota
-    sürülüyor kalır — üç hâl de aynı anda ekranda.
+    ── TEK İSTİSNA: DÖNMÜŞ SEFER ───────────────────────────────────────────────────────────────
+    Bütün durakları SONUÇLANMIŞ bugünkü grup yine kurulur ve kapanır. O bir "yapılacak iş" değil
+    bitmiş bir gündür — kuryenin aracında görünmez (kapanmış sefer okunmuyor) ama PARA ekranının
+    gün sonu mutabakatı ona bağlı: `readMoneyDayEnd` yalnız BUGÜNÜN kapanışlarına bakıyor ve
+    bugüne ait kapanış olmadan o ekranın uyuşmazlık satırı hiç doğmuyor (ölçüldü 30.08).
+
+    GEÇMİŞ günler değişmedi: kapanmış seferler kapanış ekranının ve para defterinin geçmişi.
   */
-  /*
-    HOLDBACK KURYE BAŞINA (ölçüldü 31.08 · cihazda yakalandı). İlk yazımda bugünün İKİNCİ rotası
-    bekletiliyordu — küresel olarak. Cihazda bakınca o rota BAŞKA kuryeye çıktı: giriş yapılan
-    hesabın aracında iki sefer vardı ve ikisi de sürülüyordu, yani "araçta bekleyen sefer" hâli
-    hiçbir hesapta denenemiyordu. Seed'in ürettiği veri ekranı kapsamıyordu.
-
-    Kural artık kuryeye bağlı: iki ya da daha çok rotası olan HER kurye birini bekleyen bulur.
-    Tek rotalı kurye hiçbirini bekletmez — o gün sürecek seferi kalmazdı ve ekranı boş bir araca
-    düşerdi (durak listesi, özet kartı, kapanış düğmesi hiç görülemezdi).
-  */
-  const bugunGruplari = [...gruplar.values()].filter((grup) => grup.date === bugun);
-  const bekletilen = new Set<string>();
-  for (const courierId of new Set(bugunGruplari.map((grup) => grup.courierId))) {
-    const kendi = bugunGruplari.filter((grup) => grup.courierId === courierId);
-    if (kendi.length > 1) bekletilen.add(`${kendi[kendi.length - 1]!.zoneId}·${kendi[kendi.length - 1]!.date}`);
-  }
   for (const grup of gruplar.values()) {
     // ── DAMGA BİR PLAN DEĞİL, OLAYDIR (mobil şeridin ölçümü, 26.08) ────────────────────────────
     // İlk hâlde her sefere çıkış VE dönüş yazılıyordu — yarınki sefer bile "dönmüş" görünüyordu.
@@ -138,9 +127,15 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
     // bilerek "kapanmamış sefer" bırakıyor ama satır "kurye 16:45'te döndü" diyordu; (2) motorun
     // araç satışını sefere bağlayan adımı bu yüzden hiç tetiklenemiyordu (`quick-sale` 4b).
     // Gerçek akışta dönüş damgasını YALNIZ kapanış yazar (0046) — seed de artık aynısını söylüyor.
-    /* İleri günün seferi ve bugün bekletilen rota: KURULUR ama BAŞLATILMAZ. Damga yok, duraklar
-       `ready` kalır, kutular okutulabilir — "araçta bekleyen sefer"in tam tanımı. */
-    const kurulacak = grup.date > bugun || bekletilen.has(`${grup.zoneId}·${grup.date}`);
+    /* BUGÜN ve İLERİSİ: yalnız DÖNMÜŞ gün kurulur (üstteki künye). Yapılacak işi olan hiçbir
+       rota sahiplenilmez — kurye günü sıfırdan kurar. */
+    if (grup.date >= bugun && !grup.settled) {
+      console.log(`  · ${grup.date} · ${grup.orderIds.length} durak SERBEST (sefer kurulmadı)`);
+      continue;
+    }
+    /* Kurulmuş-ama-başlamamış hâli seed'de artık DOĞMUYOR: onu kurye kendisi üretiyor (seçim
+       ekranından "Seferleri kur"). Değişken kalıyor ki damga mantığı tek yerde okunsun. */
+    const kurulacak = false;
     /*
       GEÇMİŞ gün: çıkış sabah 08:30, dönüş 16:45 — kapanış ekranındaki süre hesabı gerçekçi dursun.
 
@@ -241,8 +236,9 @@ export async function seedDeliveryRuns(db: Db, kisiler: Kisiler): Promise<void> 
       `  ✓ ${(run as { reference_no: string }).reference_no} · ${grup.date} · ${grup.orderIds.length} durak${returned ? '' : ' · AÇIK (yolda)'}`,
     );
   }
+  const serbest = [...gruplar.values()].filter((grup) => grup.date >= bugun && !grup.settled).length;
   console.log(
-    `✓ sefer: ${gruplar.size} sefer kuruldu (rota+gün başına tek) · ${bekletilen.size} tanesi ARAÇTA BEKLİYOR (başlatılmadı)`,
+    `✓ sefer: ${gruplar.size - serbest} sefer kuruldu (geçmiş + dönmüş gün) · ${serbest} bugünkü/ileri rota SERBEST — kurye günü kendisi kurar`,
   );
 }
 

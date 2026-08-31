@@ -65,10 +65,13 @@ function departResult(overrides: Partial<Extract<StartCourierDayResponse, { stat
   };
 }
 
-function mockVan(day: CourierDayResponse, depart: unknown = departResult()) {
+function mockVan(day: CourierDayResponse, depart: unknown = departResult(), discard: unknown = null) {
   let current = day;
   fetchMock.mockImplementation((url) => {
     const address = String(url);
+    if (address.includes('/discard')) {
+      return Promise.resolve(okResponse(discard ?? { status: 'ok', releasedOrders: 2, unloadedBoxes: 3 }));
+    }
     if (address.includes('/depart')) {
       // Sunucu gibi: başlatılan sefer artık SÜRÜLEN sefer olur ve damgasını taşır.
       const started = courierDayRun();
@@ -146,6 +149,59 @@ describe('K · araçtaki seferler', () => {
     expect(notice).toHaveTextContent(/1 durak hazırlanmayı bekliyor \(Hazırlanıyor\)/);
     // İstek gerçekten O SEFERİN üstüne gitti — araçta birden çok sefer varken kimlik şart.
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes(`/runs/${bekleyen.runId}/depart`))).toBe(true);
+  });
+
+  it('AYNI ANDA TEK SEFER: sürülen varken ötekinin başlatma düğmesi PASİF ve sebebini yazar', async () => {
+    /*
+      Kullanıcı kararı 31.08: araç birden çok seferi TAŞIR ama kurye birini SÜRER. Düğme
+      GİZLENMİYOR — gizlenseydi kurye "bu sefer neden başlamıyor" sorusunu ekranda hiç
+      cevaplayamazdı; pasif ve neden pasif olduğu üstünde yazılı.
+    */
+    const surulen = courierDayRun();
+    const bekleyen = waitingRun({ runId: RUN_B, zoneName: 'Dağ rotası' });
+    mockVan(courierDay([courierStop(1)], { run: surulen, runs: [surulen, bekleyen] }));
+
+    await renderVan();
+    await waitFor(() => expect(screen.getByTestId(`courier-van-depart-${RUN_B}`)).toBeOnTheScreen());
+
+    const depart = screen.getByTestId(`courier-van-depart-${RUN_B}`);
+    expect(depart).toHaveTextContent(new RegExp(`Önce ${surulen.referenceNo} kapatılmalı`));
+    await fireEvent.press(depart);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes(`/runs/${RUN_B}/depart`))).toBe(false);
+  });
+
+  it('ARAÇTAN ÇIKAR: onay çekmecesi bedeli yazar, onaylanınca uca gider ve sonucu söyler', async () => {
+    /*
+      Tasarımda karşılığı YOK (ölçüldü: 14/15/16'da "iptal/vazgeç/araçtan çıkar" hiç geçmiyor) ve
+      boşluk cihazda görüldü: yanlış rotayı araca alan kuryenin tek çıkışı onu BAŞLATIP kapatmaktı,
+      yani hatanın bedeli müşteriye bildirim olarak yansıyordu.
+    */
+    const bekleyen = waitingRun();
+    mockVan(courierDay([courierStop(1)], { run: null, runs: [bekleyen] }));
+
+    await renderVan();
+    await waitFor(() => expect(screen.getByTestId(`courier-van-discard-${bekleyen.runId}`)).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId(`courier-van-discard-${bekleyen.runId}`));
+
+    // Onay ÇEKMECEDE: sayfaya gömülü bir onay bir karar anı gibi değil bir uyarı satırı gibi okunur.
+    expect(screen.getByTestId('courier-van-discard-sheet')).toHaveTextContent(/hiç başlamadı/);
+    await fireEvent.press(screen.getByTestId('courier-van-discard-sheet-confirm'));
+
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes(`/runs/${bekleyen.runId}/discard`))).toBe(true),
+    );
+    /* Sonuç SAYILARLA yazılır: "oldu" demek, malın nereye gittiğini söylemeden bırakmaktır. */
+    await waitFor(() => expect(screen.getByTestId('courier-van-notice')).toHaveTextContent(/2 sipariş serbest/));
+  });
+
+  it('SÜRÜLEN seferde "araçtan çıkar" HİÇ çizilmez — onun çıkışı kapanıştır', async () => {
+    const surulen = courierDayRun();
+    mockVan(courierDay([courierStop(1)], { run: surulen, runs: [surulen] }));
+
+    await renderVan();
+    await waitFor(() => expect(screen.getByTestId(`courier-van-stops-${surulen.runId}`)).toBeOnTheScreen());
+
+    expect(screen.queryByTestId(`courier-van-discard-${surulen.runId}`)).toBeNull();
   });
 
   it('ARAÇ BOŞSA seçime çağırır — "sefer araçta olmakla başlamış sayılmaz" yazılı', async () => {

@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRunDetail } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge } from '@/components/operations/status-badge';
@@ -53,6 +55,15 @@ function stateOf(run: CourierRunDetail): { label: string; driving: boolean } {
 export function CourierVanRunsScreen() {
   const router = useRouter();
   const day = useCourierDay();
+  /*
+    ÇIKARMA ONAYI ÇEKMECEDE (`OperationsConfirmSheet`, 31.08) — kurulmuş seferi araçtan çıkarmak
+    geri alınamaz: kayıt düşer, kutuların damgası silinir. Sayfaya gömülü bir onay bir KARAR anı
+    gibi değil bir uyarı satırı gibi okunuyor (kullanıcı ölçümü, kapanış ekranı).
+  */
+  const [discarding, setDiscarding] = useState<CourierRunDetail | null>(null);
+  /* SÜRÜLEN sefer — "aynı anda tek sefer" kuralının ekrandaki yüzü. Kapanmış sefer bu listede
+     hiç yok (okuma onları süzüyor), yani `departedAt` tek başına yeterli ölçüt. */
+  const drivenRun = day.runs.find((run) => run.departedAt !== null) ?? null;
 
   /* Seferin yükü duraklardan TÜRER — ikinci bir uç istenmiyor (sefer künyesi ekranının aynı
      kuralı). Durak zaten `runId` taşıyor (31.08), yani gruplama tek geçişte kuruluyor. */
@@ -179,6 +190,14 @@ export function CourierVanRunsScreen() {
                            kitin varsayılanı müşteri yüzeyinin gölgesi ve cihazda kartın altında
                            ikinci bir kenar gibi görünüyordu (tur 31.08). */
                         elevation="flat"
+                        /* ZEMİN VE KENAR KABUKTAN (kullanıcı bulgusu 31.08 · ölçüldü): düğme
+                           SÜRÜLEN seferin yeşil kartının üstünde duruyor ve zeminsiz kaldığında
+                           kartın rengini alıyordu (#f2f7e8); tasarım #fbfaf4 diyor, yani düğme
+                           karttan AÇIK olmalı — yoksa yalnız kenarından ibaret kalıyor. Kenar da
+                           `success-line` (#c3d3a4): kitin `olive-line`ı (#d7e3bd) bir kademe açık
+                           ve yeşil kartın üstünde neredeyse görünmüyor. İkisi de yalnız operasyon
+                           temasında var, o yüzden tondan değil kabuktan geliyor. */
+                        style={styles.toStops}
                         onPress={() => router.back()}
                         testID={`courier-van-stops-${run.runId}`}
                       />
@@ -203,14 +222,35 @@ export function CourierVanRunsScreen() {
                     /* BEDEL DÜĞMENİN İÇİNDE (v3:16) — dışına yazılmıştı ve düğmeden kopuk bir not
                        gibi duruyordu. Tasarımda iki satır TEK dokunma alanının içinde: basmanın ne
                        yaptığı, basılan şeyin üstünde yazılı. */
-                    <PrimaryButton
-                      label={t.day.vanRuns.depart}
-                      hint={t.day.vanRuns.departHint}
-                      onPress={() => day.departRun(run.runId)}
-                      disabled={day.starting}
-                      tone="olive"
-                      testID={`courier-van-depart-${run.runId}`}
-                    />
+                    <>
+                      {/* AYNI ANDA TEK SEFER (kullanıcı kararı 31.08): başka sefer sürülürken
+                          düğme PASİF ve NEDEN pasif olduğunu yazıyor. Gizlenseydi kurye "bu sefer
+                          neden başlamıyor" sorusunu ekranda hiç cevaplayamazdı; kapı ayrıca
+                          veride de duruyor (`depart_delivery_run` → `another_running`), çünkü
+                          ekran iki cihazdan gelen iki isteği ayıramaz. */}
+                      <PrimaryButton
+                        label={
+                          drivenRun === null
+                            ? t.day.vanRuns.depart
+                            : fillCopy(t.day.vanRuns.departBlocked, { ref: drivenRun.referenceNo })
+                        }
+                        hint={drivenRun === null ? t.day.vanRuns.departHint : t.day.vanRuns.departBlockedHint}
+                        onPress={() => day.departRun(run.runId)}
+                        disabled={day.starting || drivenRun !== null}
+                        tone="olive"
+                        testID={`courier-van-depart-${run.runId}`}
+                      />
+                      {/* ARAÇTAN ÇIKAR (31.08 · tasarımda YOK, boşluk cihazda görüldü): yanlış
+                          rotayı araca alan kuryenin tek çıkışı onu BAŞLATIP kapatmaktı — yani
+                          hatanın bedeli müşteriye bildirim olarak yansıyordu. Yalnız BAŞLAMAMIŞ
+                          seferde çizilir: başlamış seferin çıkışı kapanıştır. */}
+                      <TextAction
+                        label={t.day.vanRuns.discard}
+                        onPress={() => setDiscarding(run)}
+                        disabled={day.starting}
+                        testID={`courier-van-discard-${run.runId}`}
+                      />
+                    </>
                   )}
                 </View>
               );
@@ -259,6 +299,43 @@ export function CourierVanRunsScreen() {
           </Text>
         )}
       </ScrollView>
+
+      {/*
+        ÇIKARMANIN BEDELİ ÇEKMECEDE YAZILI — kaç sipariş serbest kalıyor, kaç kutu rampada.
+        Ton `error` DEĞİL: eylem yıkıcı değil, DÜZELTİCİ; kurye kendi hatasını geri alıyor ve
+        müşteri hiçbir şey görmedi. `olive` tonu tam bunun için var (kitin künyesi: "geri
+        alınamaz ama olumlu").
+      */}
+      <OperationsConfirmSheet
+        visible={discarding !== null}
+        title={t.day.vanRuns.discardTitle}
+        message={
+          discarding === null
+            ? ''
+            : fillCopy(
+                loadOf(discarding.runId).loaded > 0
+                  ? t.day.vanRuns.discardBody
+                  : t.day.vanRuns.discardBodyNoBoxes,
+                {
+                  route: discarding.zoneName ?? discarding.referenceNo,
+                  orders: String(loadOf(discarding.runId).stops),
+                  boxes: String(loadOf(discarding.runId).loaded),
+                },
+              )
+        }
+        confirmLabel={t.day.vanRuns.discardConfirm}
+        cancelLabel={t.day.vanRuns.discardCancel}
+        tone="olive"
+        busy={day.starting}
+        busyLabel={t.day.vanRuns.discardBusy}
+        onConfirm={() => {
+          if (discarding === null) return;
+          day.discardRun(discarding.runId, discarding.zoneName ?? discarding.referenceNo);
+          setDiscarding(null);
+        }}
+        onCancel={() => setDiscarding(null)}
+        testID="courier-van-discard-sheet"
+      />
     </View>
   );
 }
@@ -306,6 +383,11 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors['neutral-bg'],
     backgroundColor: operationsTheme.colors.panel,
     gap: operationsTheme.space.md,
+  },
+  /** "Duraklara git" — yeşil kartın üstünde AÇIK zemin (v3:16 `background:#fbfaf4`). */
+  toStops: {
+    backgroundColor: operationsTheme.colors.panel,
+    borderColor: operationsTheme.colors['success-line'],
   },
   /** Sürülen sefer (v3:16) — açık zeytin zemin + zeytin kenar; listenin tek "şimdi" kartı. */
   cardDriving: {

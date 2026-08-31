@@ -5,7 +5,7 @@ import {
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { warehouseScope } from '@lezzet/domain-core';
-import { listCourierDay, markUndelivered, readCourierRun, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
+import { discardCourierRun, listCourierDay, markUndelivered, readCourierRun, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
 import { loadBox } from './load';
 import { openBox, sealBox } from '../warehouse/boxes';
 import { listCourierRoutes } from './routes';
@@ -48,6 +48,9 @@ let zoneId: string;
 /** İkinci deponun rotası (11.7): kapsam süzgecinin "görmemesi gereken" tarafı — negatif kanıt. */
 let foreignWarehouseId: string;
 let foreignZoneId: string;
+/** Kuryenin KENDİ deposundaki ikinci rota — "aynı anda tek sefer" ve "araçtan çıkar" ölçümleri
+    ancak iki gerçek rotayla kurulabilir (tek rotayla ikinci sefer diye bir şey yok). */
+let secondZoneId: string;
 const createdProfiles: string[] = [];
 
 const today = new Date().toISOString().slice(0, 10);
@@ -94,6 +97,9 @@ beforeAll(async () => {
   zoneId = (await new DeliveryZoneService(db).insert({
     name: `Kurye testi rotası ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
   })).id;
+  secondZoneId = (await new DeliveryZoneService(db).insert({
+    name: `Kurye testi ikinci rota ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
+  })).id;
   // İkinci depo + rotası (11.7): kuryenin kapsamı DIŞINDA — süzgecin negatif tarafı ancak
   // gerçekten var olan ama görünmemesi gereken bir rotayla sınanabilir.
   foreignWarehouseId = (await createTestWarehouse(db)).id;
@@ -105,7 +111,10 @@ beforeAll(async () => {
 beforeEach(async () => {
   // Sefer temizliği ÖNCE: rota+gün başına TEK sefer (0046) — önceki testin açtığı run kalırsa
   // sonraki start `already_started` alır. Kapanış seferi `restrict` ile tutar, sıra sabit.
-  const { data: runRows } = await db.from('delivery_run').select('id').eq('delivery_zone_id', zoneId);
+  const { data: runRows } = await db
+    .from('delivery_run')
+    .select('id')
+    .in('delivery_zone_id', [zoneId, secondZoneId]);
   const runIds = (runRows ?? []).map((row) => row.id as string);
   if (runIds.length > 0) {
     await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
@@ -435,6 +444,96 @@ describe('sefer KUR ↔ sefer BAŞLAT (31.08)', () => {
     // Kurye düğmeye iki kez basabilir; cevabı "olmadı" değil "zaten olmuştu"dur.
     expect(ikinci.run.departedAt).toBe(ilk.run.departedAt);
   });
+
+  it('AYNI ANDA TEK SEFER SÜRÜLÜR — ikinci sefer KURULUR ama yola çıkmaz', async () => {
+    /*
+      Kullanıcı kararı 31.08: araç birden çok seferi TAŞIR ama kurye birini SÜRER. İki sefer aynı
+      anda yoldayken ekranın üç sorusu birden cevapsız kalıyor — durak sırası hangi seferin sırası,
+      "3/6 durak" hangisinin ilerlemesi, kapanışta hangi kasa sayılacak. Tasarımın hiçbir karesi de
+      iki sürülen sefer göstermiyor.
+    */
+    await dispatched({ upTo: 'ready' });
+    const surulen = mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    const ikinci = await startCourierDay(db, { courierId, zoneId: secondZoneId });
+
+    expect(ikinci).toMatchObject({ status: 'another_running', referenceNo: surulen.run.referenceNo });
+    /* KURMA GERİ SARILMIYOR: sefer satırı doğdu ve öyle kalıyor — kutuları okutulabilir, yalnız
+       damgası yok. Kurma zaten istenen şeydi; reddedilen tek şey yola çıkmak. */
+    const { data: ikinciRun } = await db
+      .from('delivery_run')
+      .select('departed_at')
+      .eq('delivery_zone_id', secondZoneId)
+      .maybeSingle();
+    expect(ikinciRun).not.toBeNull();
+    expect((ikinciRun as { departed_at: string | null } | null)?.departed_at).toBeNull();
+  });
+});
+
+describe('seferi ARAÇTAN ÇIKAR (31.08 · kullanıcı kararı)', () => {
+  /*
+    Tasarımda karşılığı YOK ve boşluk cihazda görüldü: yanlış rotayı araca alan kuryenin tek çıkışı
+    onu BAŞLATIP kapatmaktı — yani hatanın bedeli müşteriye bildirim olarak yansıyordu. Kurulmuş
+    sefer bir NİYETTİR: durak açılmadı, haber gitmedi, para ve stok oynamadı.
+  */
+  it('siparişler serbest kalır, kutuların araç damgası silinir, rota yeniden seçilebilir', async () => {
+    /* KUTU HAZIRLIKTA AÇILIR: `openBox` `preparing` bekliyor ve mühür siparişi HAZIR yapıyor
+       (30.08 · kutusuz sipariş `ready` olamaz). Fikstür bu yüzden `confirmed`de duruyor ve
+       kalanını elle yürüyor. */
+    const { orderId, itemId } = await dispatched({ upTo: 'confirmed' });
+    await advanceOrder(db, orderId, ['preparing']);
+    const kurulan = mustStart(await startCourierDay(db, { courierId, zoneId, depart: false }));
+    const box = await openBox(db, { orderId, warehouseId });
+    if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+    const sealed = await sealBox(db, {
+      boxId: box.box.boxId,
+      warehouseId,
+      picks: [{ orderItemId: itemId, batches: [{ stockId, qty: 2 }] }],
+    });
+    if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+    const loaded = await loadBox(db, { code: box.box.code, courierId });
+    if (loaded.status !== 'ok') throw new Error(`fikstür: kutu araca alınamadı (${loaded.status})`);
+
+    const result = await discardCourierRun(db, { runId: kurulan.run.runId, courierId });
+
+    expect(result).toMatchObject({ ok: true, releasedOrders: 1, unloadedBoxes: 1 });
+    /* Sipariş serbest: kurye ataması da düştü, çünkü atama SEFERDEN geliyordu. Durum DEĞİŞMEDİ —
+       sefere bağlanmak bir geçiş değildi, çözülmek de değil. */
+    const order = await orders.getById(orderId);
+    expect(order?.deliveryRunId).toBeNull();
+    expect(order?.courierId).toBeNull();
+    expect(order?.status).toBe('ready');
+    /* Kutunun araç damgası silindi: mal zaten rampada ve `loadBox` stok oynatmıyordu. Bırakılsaydı
+       kutu "araçta" görünürken hiçbir sefere ait olmayan bir emanet olurdu. */
+    const { data: boxRow } = await db.from('order_box').select('loaded_at').eq('id', box.box.boxId).maybeSingle();
+    expect((boxRow as { loaded_at: string | null } | null)?.loaded_at).toBeNull();
+    /* Satır DÜŞTÜ: rota+gün kilidi açıldı, yani kurye kendi hatasını düzeltip aynı rotayı yeniden
+       alabiliyor. Saklansaydı o rota sonsuza dek kilitli kalırdı. */
+    const { data: runRow } = await db.from('delivery_run').select('id').eq('id', kurulan.run.runId).maybeSingle();
+    expect(runRow).toBeNull();
+    const yeniden = await startCourierDay(db, { courierId, zoneId, depart: false });
+    expect(yeniden.status).toBe('ok');
+  });
+
+  it('BAŞLAMIŞ sefer çıkarılamaz — geri alınacak niyet kalmadı, çıkışı kapanıştır', async () => {
+    await dispatched({ upTo: 'ready' });
+    const surulen = mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    const result = await discardCourierRun(db, { runId: surulen.run.runId, courierId });
+
+    expect(result).toMatchObject({ ok: false, reason: 'already_departed' });
+    // Hiçbir iz bırakmadı: sefer duruyor, durakları açık.
+    expect((await readCourierRun(db, { courierId }))?.runId).toBe(surulen.run.runId);
+  });
+
+  it('BAŞKASININ seferi çıkarılamaz — "yok" ile "senin değil" aynı duvarın iki yüzü', async () => {
+    await dispatched({ upTo: 'ready' });
+    const kurulan = mustStart(await startCourierDay(db, { courierId, zoneId, depart: false }));
+
+    const result = await discardCourierRun(db, { runId: kurulan.run.runId, courierId: customerId });
+
+    expect(result).toMatchObject({ ok: false, reason: 'not_mine' });
+  });
 });
 
 describe('seferi başlat (K1 · 18.08)', () => {
@@ -541,13 +640,18 @@ describe('seferi başlat (K1 · 18.08)', () => {
   it('BAŞKA günün hazır durağı başlatılmaz — gün imzada durur, iki gün iki AYRI seferdir', async () => {
     const { orderId } = await dispatched({ date: dayOffset(3), upTo: 'ready' });
 
-    const bugun = mustStart(await startCourierDay(db, { courierId, zoneId }));
-    expect(bugun.started).not.toContain(orderId);
+    /* İKİSİ DE `depart:false` (31.08): "aynı anda tek sefer sürülür" kuralı GÜNE de bakmıyor —
+       kurye ileri günün seferini bugünkünü kapatmadan yola çıkaramaz. Ölçülen şey burada
+       başlatma değil GÜN SÜZGECİ: hangi durak hangi sefere claim ediliyor. */
+    const bugun = mustStart(await startCourierDay(db, { courierId, zoneId, depart: false }));
+    const { data: bugunOrders } = await db.from('order').select('id').eq('delivery_run_id', bugun.run.runId);
+    expect((bugunOrders ?? []).map((row) => row.id as string)).not.toContain(orderId);
 
-    const oGun = mustStart(await startCourierDay(db, { courierId, zoneId, date: dayOffset(3) }));
+    const oGun = mustStart(await startCourierDay(db, { courierId, zoneId, date: dayOffset(3), depart: false }));
     expect(oGun.date).toBe(dayOffset(3));
-    expect(oGun.started).toContain(orderId);
     expect(oGun.run.runId).not.toBe(bugun.run.runId);
+    const { data: oGunOrders } = await db.from('order').select('id').eq('delivery_run_id', oGun.run.runId);
+    expect((oGunOrders ?? []).map((row) => row.id as string)).toContain(orderId);
   });
 
   it('eşzamanlı iki çağrıda sefer TAM BİR KEZ açılır; başkasının açık seferi `already_started` alır', async () => {

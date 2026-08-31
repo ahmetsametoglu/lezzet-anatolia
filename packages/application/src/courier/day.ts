@@ -28,7 +28,7 @@ import { listCourierRoutes } from './routes';
 import { ensureStopOrder } from './stop-order';
 import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
-import type { Order, OrderItem, OrderStatusLog } from '@lezzet/types';
+import type { DiscardDeliveryRunResult, Order, OrderItem, OrderStatusLog } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
@@ -421,8 +421,36 @@ export type CourierDayStart =
       awaitingBoxes: { orderId: string; loadedBoxes: number; boxCount: number }[];
     }
   | { status: 'already_started'; runId: string; referenceNo: string; courierId: string; mine: boolean }
+  /**
+   * **BAŞKA SEFER SÜRÜLÜYOR** (31.08 · kullanıcı kararı) — araç birden çok seferi taşır ama kurye
+   * birini sürer. Sefer KURULDU (kutuları okutulabilir), yalnız yola çıkarılmadı; künye sürülen
+   * seferi söylüyor ki ekran "önce şunu kapat" diyebilsin.
+   */
+  | { status: 'another_running'; runId: string; referenceNo: string }
   | { status: 'route_required' }
   | { status: 'no_route' };
+
+/**
+ * **SEFERİ ARAÇTAN ÇIKAR** (31.08 · kullanıcı kararı) — `startCourierDay`ın `depart:false`
+ * hâlinin tersi.
+ *
+ * ── NEDEN VAR ───────────────────────────────────────────────────────────────
+ * Tasarımda karşılığı YOK ve boşluk cihazda görüldü: kurye yanlış rotayı araca aldıysa tek çıkışı
+ * onu BAŞLATIP kapatmaktı — yani yanlış seçimin bedeli müşteriye bildirim olarak yansıyordu.
+ * Kurulmuş sefer bir NİYETTİR: durak açılmadı, haber gitmedi, para ve stok oynamadı.
+ *
+ * ── UYGULAMADA HİÇBİR KARAR YOK ─────────────────────────────────────────────
+ * Sarmalayıcı ince ve bu bilinçli: siparişin serbest kalması, kutu damgasının silinmesi ve satırın
+ * düşmesi TEK anın işi (araya bir okutma girerse yarım resim kalır) ve o atomiklik RPC'de duruyor.
+ * Durum GEÇİŞİ yok — sipariş zaten `ready`/`preparing`; sefere bağlanmak bir geçiş değildi,
+ * çözülmek de değil.
+ */
+export async function discardCourierRun(
+  db: SupabaseClient,
+  input: { runId: string; courierId: string },
+): Promise<DiscardDeliveryRunResult> {
+  return new DeliveryRunService(db).discard(input);
+}
 
 /** Seferin ekranlara giden künyesi — sözleşmedeki `CourierRunBriefSchema`nın aynası. */
 export interface CourierRunBriefView {
@@ -559,6 +587,12 @@ export async function startCourierDay(
   /* YOLA ÇIKMA DAMGASI — yalnız `depart` istendiğinde. Kurulmuş sefer araçta bekler ve
      `departedAt` NULL kalır; ekran onu "araçta, başlamadı" diye gösterir (v3:15). */
   const departed = depart ? await runs.depart({ runId: start.runId!, courierId: input.courierId }) : null;
+  /* AYNI ANDA TEK SEFER (31.08): kapı veride (`depart_delivery_run`), cevabı burada okunuyor.
+     Sefer KURULDU ve öyle kalıyor — kutuları okutulabilir, yalnız yola çıkmadı; kurye önce
+     sürdüğü seferi kapatır. Geri sarma YOK: kurma zaten istenen şeydi. */
+  if (departed !== null && departed.ok === false && departed.reason === 'another_running') {
+    return { status: 'another_running', runId: departed.runId!, referenceNo: departed.referenceNo! };
+  }
 
   // Başlatılan seferin künyesi de ARAÇ ADINI taşıyor: ekran başlatma anından itibaren "hangi
   // aracı süreceğim" sorusunu cevaplayabilmeli (30.08 · uyuşmazlık #12).

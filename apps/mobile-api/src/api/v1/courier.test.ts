@@ -379,6 +379,21 @@ async function startRun(body: Record<string, unknown> = {}): Promise<Extract<Sta
   return result;
 }
 
+/**
+ * Seferi KURAR, yola çıkarmaz (`depart:false`).
+ *
+ * 31.08'den beri gerekli: "aynı anda tek sefer sürülür" kuralı (kullanıcı kararı) ikinci seferin
+ * yola çıkmasını reddediyor ve kural GÜNE de bakmıyor — ileri günün seferi de bugünkü sürülürken
+ * başlatılamaz. Araçta birden çok sefer olması hâlâ meşru; **taşımak** ile **sürmek** ayrı.
+ */
+async function openRun(body: Record<string, unknown> = {}): Promise<Extract<StartCourierDayResponse, { status: 'ok' }>> {
+  const result = await dataOf<StartCourierDayResponse>(
+    await post('/api/v1/courier/day/start', { zoneId, depart: false, ...body }),
+  );
+  if (result.status !== 'ok') throw new Error(`sefer kurulamadı: ${result.status}`);
+  return result;
+}
+
 describe('kapı: Bearer + rol süzgeci', () => {
   it('Bearer olmadan 401 — kurye uçları oturumsuz gezilmez (katalogun tersi)', async () => {
     const res = await app.request('/api/v1/courier/day');
@@ -434,8 +449,9 @@ describe('GET /api/v1/courier/day', () => {
   it('ARAÇTAKİ seferlerin durakları güne bakılmaksızın gelir — ileri günün seferi de araçta (31.08)', async () => {
     const bugunku = await dispatched();
     const ilerideki = await dispatched({ date: dayOffset(3) });
+    /* İKİSİ DE KURULUR, biri sürülür: araç iki seferi TAŞIR ama kurye birini SÜRER (31.08). */
     const bugunSefer = await startRun();
-    const ileriSefer = await startRun({ date: dayOffset(3) });
+    const ileriSefer = await openRun({ date: dayOffset(3) });
 
     const gun = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
 
@@ -565,10 +581,13 @@ describe('POST /api/v1/courier/day/start — seferi başlat', () => {
     const bugun = await startRun();
     expect(bugun.started).not.toContain(yarin);
 
-    // Aynı rota, BAŞKA gün: kısıt gün bazlı olduğu için ikinci sefer açılabilir.
-    const result = await startRun({ date: dayOffset(3) });
+    /* Aynı rota, BAŞKA gün: kısıt gün bazlı olduğu için ikinci sefer AÇILABİLİR. Yola ÇIKMAZ —
+       "aynı anda tek sefer sürülür" güne bakmıyor (31.08); ölçülen şey burada da gün süzgeci:
+       hangi durak hangi sefere claim ediliyor. */
+    const result = await openRun({ date: dayOffset(3) });
     expect(result.date).toBe(dayOffset(3));
-    expect(result.started).toContain(yarin);
+    const { data: claimed } = await db.from('order').select('id').eq('delivery_run_id', result.run.runId);
+    expect((claimed ?? []).map((row) => row.id as string)).toContain(yarin);
   });
 
   it('KURYE DEĞİL → 403; başkasının rotası bu uçtan başlatılamaz', async () => {

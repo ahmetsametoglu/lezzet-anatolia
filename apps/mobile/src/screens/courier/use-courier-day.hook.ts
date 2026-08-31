@@ -11,6 +11,7 @@ import {
 
 import {
   departCourierRun,
+  discardCourierRun,
   fetchCourierDay,
   fetchCourierRoutes,
   fetchCourierVehicles,
@@ -134,6 +135,12 @@ interface UseCourierDayResult {
   openRuns: () => void;
   /** Kurulmuş bir seferi YOLA ÇIKARIR: durakları açar, müşteriye haber gider. */
   departRun: (runId: string) => void;
+  /**
+   * Kurulmuş ama BAŞLAMAMIŞ seferi araçtan çıkarır: siparişler serbest kalır, kutuların araç
+   * damgası silinir, sefer kaydı düşer. `routeLabel` yalnız sonuç cümlesi için — kanca ekranın
+   * elindeki adı ikinci kez okumaz.
+   */
+  discardRun: (runId: string, routeLabel: string) => void;
   stops: CourierStopContract[];
   /** Bugün tahsil edilmiş toplam (cent). `null` = ÖLÇÜLEMEDİ, sıfır değil. */
   collectedCents: number | null;
@@ -376,6 +383,18 @@ export function useCourierDay(): UseCourierDayResult {
         const result = await departCourierRun(runId);
         setStarting(false);
 
+        /* "Başka sefer sürülüyor" bir ARIZA DEĞİL, kuralın kendisi (31.08): araç birden çok
+           seferi taşır ama kurye birini sürer. Cümle hangisini kapatacağını söylüyor ve `canRetry`
+           KAPALI — tekrar basmak hiçbir şeyi değiştirmez, yapılacak iş başka bir ekranda. */
+        if (result.error === null && result.data.status === 'another_running') {
+          setStartNotice({
+            tone: 'error',
+            text: fillCopy(t.day.vanRuns.departBlocked, { ref: result.data.referenceNo }),
+            canRetry: false,
+          });
+          await load();
+          return;
+        }
         if (result.error !== null || result.data.status !== 'ok') {
           setStartNotice({
             tone: 'error',
@@ -386,6 +405,51 @@ export function useCourierDay(): UseCourierDayResult {
           return;
         }
         setStartNotice(noticeOfStart(result.data));
+        await load();
+      })();
+    },
+    [load, setStartNotice, starting],
+  );
+
+  /**
+   * **SEFERİ ARAÇTAN ÇIKAR** (31.08) — `departRun`ın tersi ve onun aksine GERİ ALINABİLİR bir
+   * anın kapanışı: sefer hiç başlamadı, müşteriye haber gitmedi. Onayı ekranın işi (çekmece);
+   * kanca yalnız isteği ve cevabın üç dalını taşıyor.
+   */
+  const discardRun = useCallback(
+    (runId: string, routeLabel: string) => {
+      if (starting) return;
+      setStarting(true);
+      setStartNotice(null);
+
+      void (async () => {
+        const result = await discardCourierRun(runId);
+        setStarting(false);
+        if (result.error !== null) {
+          setStartNotice({ tone: 'error', text: t.day.vanRuns.discardFailed, canRetry: false });
+          return;
+        }
+        if (result.data.status === 'already_departed') {
+          setStartNotice({ tone: 'error', text: t.day.vanRuns.discardDeparted, canRetry: false });
+          await load();
+          return;
+        }
+        if (result.data.status !== 'ok') {
+          setStartNotice({ tone: 'error', text: t.day.vanRuns.discardFailed, canRetry: false });
+          await load();
+          return;
+        }
+        /* Cevap SAYILARLA geliyor ve cümle onları yazıyor: "oldu" demek, malın nereye gittiğini
+           söylemeden bırakmaktır (kutular rampada, siparişler serbest). */
+        setStartNotice({
+          tone: 'ok',
+          text: fillCopy(t.day.vanRuns.discarded, {
+            route: routeLabel,
+            orders: String(result.data.releasedOrders),
+            boxes: String(result.data.unloadedBoxes),
+          }),
+          canRetry: false,
+        });
         await load();
       })();
     },
@@ -555,6 +619,7 @@ export function useCourierDay(): UseCourierDayResult {
     selectVehicle: setPickedVehicleId,
     openRuns,
     departRun,
+    discardRun,
     stops,
     collectedCents,
     /* Duraklara yazılabilir mi — SÜRÜLEN sefer varsa evet. Kurulmuş ama başlamamış sefer araçta

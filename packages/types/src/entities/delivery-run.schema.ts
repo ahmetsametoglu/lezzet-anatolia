@@ -146,10 +146,32 @@ export type OpenDeliveryRunResult = z.infer<typeof OpenDeliveryRunResultSchema>;
  */
 export const DepartDeliveryRunResultSchema = z.object({
   ok: z.boolean(),
-  reason: z.enum(['not_found', 'not_mine', 'already_departed']).optional(),
+  /**
+   * `another_running` (31.08 · kullanıcı kararı): araç birden çok seferi TAŞIR ama kurye birini
+   * SÜRER. İkincisi reddedilir ve künyesiyle birlikte HANGİSİNİN sürüldüğü döner — ekran
+   * "önce şunu kapat" diyebilsin diye; çıplak bir ret, kuryeye ne yapacağını söylemez.
+   */
+  reason: z.enum(['not_found', 'not_mine', 'already_departed', 'another_running']).optional(),
   departedAt: z.string().optional(),
+  /** `another_running` dalında SÜRÜLEN seferin kimliği ve kodu. */
+  runId: z.string().uuid().optional(),
+  referenceNo: z.string().optional(),
 });
 export type DepartDeliveryRunResult = z.infer<typeof DepartDeliveryRunResultSchema>;
+
+/**
+ * **Seferi ARAÇTAN ÇIKAR** (`discard_delivery_run` · 31.08) — kurulmuş ama başlamamış seferin
+ * geri alınması. Sayılar döner çünkü ekran onayında ne olduğunu SÖYLEMELİ: kaç sipariş serbest
+ * kaldı, kaç kutu rampaya geri indi.
+ */
+export const DiscardDeliveryRunResultSchema = z.object({
+  ok: z.boolean(),
+  /** `already_departed` = sefer yola çıkmış; geri alınacak niyet kalmadı, dürüst çıkış kapanıştır. */
+  reason: z.enum(['not_found', 'not_mine', 'already_departed']).optional(),
+  releasedOrders: z.number().int().optional(),
+  unloadedBoxes: z.number().int().optional(),
+});
+export type DiscardDeliveryRunResult = z.infer<typeof DiscardDeliveryRunResultSchema>;
 
 /**
  * `close_delivery_run` dönüşü — 0025'teki `CourierDayCloseResult`ın halefi. Alanlar `optional`:

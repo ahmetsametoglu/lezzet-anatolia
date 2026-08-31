@@ -215,6 +215,10 @@ export function CourierVanStockScreen() {
               label={t.vanStock.search}
               onPress={() => setSearchOpen(true)}
               elevation="flat"
+              /* Çerçeveli ikincil düğme tasarımda HER YERDE açık zemin taşıyor (v3:19/23
+                 `background:#fbfaf4`) — sayfa kremi üstünde zeminsiz kalınca düğme yalnız bir
+                 çizgiye iniyor. Değer operasyona özgü (`panel`), o yüzden tondan değil kabuktan. */
+              style={styles.searchButton}
               testID="courier-van-search"
             />
 
@@ -476,6 +480,7 @@ const styles = StyleSheet.create({
        listeyi bir yığın değil bir DİZİ gibi okutuyor. */
     gap: operationsTheme.space.sm,
   },
+  searchButton: { backgroundColor: operationsTheme.colors.panel },
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,

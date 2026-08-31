@@ -1,4 +1,4 @@
-import { Text } from 'react-native';
+import { type StyleProp, Text, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles, type UnistylesThemes } from 'react-native-unistyles';
 
 import { Icon } from './icon';
@@ -59,6 +59,21 @@ interface SecondaryButtonProps {
   grow?: boolean;
   disabled?: boolean;
   accessibilityHint?: string;
+  /**
+   * **KABUK — çağıranın işi** (`PressableSurface` ve `OperationsProductRow`un aynı ayrımı, 31.08).
+   *
+   * Yalnız ZEMİN ve KENAR içindir; ölçü, yarıçap ve dizilim komponentin kararı ve bu prop'la
+   * ezilmez (en sona konuyor ama çağıran onları yazmaz).
+   *
+   * Niçin gerekti: tasarımın çerçeveli ikincil düğmesi HER YERDE açık bir zemin taşıyor
+   * (`background:#fbfaf4` — v3:16 "Duraklara git", v3:19/23 "Ürün ara"). Kit onu tonun içine
+   * yazamıyor çünkü o değer (`panel`) YALNIZ operasyon temasında var ve paylaşılan kitin gördüğü
+   * tema birleşimi onu göremiyor (`product-thumb` künyesindeki aynı duvar). Zemin bırakıldığında
+   * düğme TONLU bir kartın üstünde kartın rengini alıyor ve kenarından başka bir şeyi kalmıyordu
+   * — cihazda ölçüldü: sürülen seferin yeşil kartında "Duraklara git" #f2f7e8 çıkıyordu, tasarım
+   * #fbfaf4 diyor.
+   */
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }
 
@@ -72,6 +87,7 @@ export function SecondaryButton({
   grow = false,
   disabled = false,
   accessibilityHint,
+  style,
   testID,
 }: SecondaryButtonProps) {
   const { theme } = useUnistyles();
@@ -90,6 +106,8 @@ export function SecondaryButton({
         isBlock ? styles.block : styles.pill,
         disabled ? styles.disabled : styles[tone],
         lifted ? styles.shadow : undefined,
+        // Kabuk EN SONDA: çağıranın zemini tonun üstüne biner (pasif hâl hariç — o bir DURUMDUR).
+        disabled ? undefined : style,
       ]}
       accessibilityLabel={label}
       accessibilityHint={accessibilityHint}
