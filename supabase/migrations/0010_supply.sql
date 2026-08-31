@@ -305,4 +305,7 @@ begin
 end;
 $$;
 
-revoke execute on function public.receive_intake(uuid, uuid, jsonb, uuid, date, text) from public, anon, authenticated;
+-- İMZA `p_actor_id` ile büyüdü (31.08): `revoke` fonksiyonu TAM imzasıyla arar ve eski liste
+-- "böyle bir fonksiyon yok" diye migration'ı durdurur (ölçüldü — kullanıcının `db:refresh`i
+-- 19. ifadede kesildi). Parametre eklendiğinde burası da güncellenmek zorunda.
+revoke execute on function public.receive_intake(uuid, uuid, jsonb, uuid, date, text, uuid) from public, anon, authenticated;
