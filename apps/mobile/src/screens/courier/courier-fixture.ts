@@ -154,6 +154,10 @@ export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRout
     warehouseId: uuid(810),
     warehouseName: 'Strasbourg deposu',
     stopCount: 3,
+    /* Seçim kartının üç sayısı (v3:17): durak · kutu · tahsilat. Kutu sayısı durak sayısından
+       BÜYÜK — gerçek veride de öyle ve eşit yazılırsa "kutu" sütunu hiç sınanmamış olurdu. */
+    boxCount: 5,
+    collectionCount: 2,
     run: null,
     ...overrides,
   };

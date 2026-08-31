@@ -98,8 +98,14 @@ describe('K · sefer ve araç seçimi', () => {
     await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
     await fireEvent.press(screen.getByTestId(`courier-route-${ZONE_B}`));
 
-    // Özet bir gösterge değil ONAY: kurye basmadan önce ne yüklediğini görür.
-    expect(screen.getByTestId('courier-route-pick-summary')).toHaveTextContent('2 sefer · 7 durak');
+    /* Özet bir gösterge değil ONAY: kurye basmadan önce ne yüklediğini görür — ve v3:17'den beri
+       ÜÇ sayıda: sefer · durak · KUTU. Hacim en somut olanı ve tek satırlık cümlede hiç yoktu. */
+    const summary = screen.getByTestId('courier-route-pick-summary');
+    expect(summary).toHaveTextContent(/2/);
+    expect(summary).toHaveTextContent(/7/);
+    // Fikstürün her rotası 5 kutu taşıyor: iki rota = 10.
+    expect(summary).toHaveTextContent(/10/);
+    expect(summary).toHaveTextContent(/kutu/);
   });
 
   it('seferi AÇILMIŞ rota seçilemez ve kimin sürdüğünü söyler (K3)', async () => {
@@ -108,10 +114,41 @@ describe('K · sefer ve araç seçimi', () => {
     await renderPick();
     await waitFor(() => expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toBeOnTheScreen());
 
-    expect(screen.getByText('bugün Musa Kaya sürüyor')).toBeOnTheScreen();
+    expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toHaveTextContent(/bugün Musa Kaya sürüyor/);
     await fireEvent.press(screen.getByTestId(`courier-route-${ZONE_B}`));
     // Basıldı ama seçilmedi: rota+gün başına tek sefer, ikinci kez açılamaz.
     expect(screen.getByTestId('courier-route-pick-summary')).not.toHaveTextContent('1 sefer');
+  });
+
+  it('ARAÇ KARARI VERİLMEDEN sefer kurulmaz — düğme eksiği söyler (v3:17)', async () => {
+    mockPick([courierRoute({ stopCount: 3 })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId('courier-route-pick-cta')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
+
+    /* Rota seçili ama araç kararı yok: düğme pasif ve NEDEN pasif olduğunu yazıyor. Tek bir
+       "önce sefer seç" etiketi, kuryeye hangi adımın eksik olduğunu söylemiyordu. */
+    expect(screen.getByTestId('courier-route-pick-cta')).toHaveTextContent(/Önce araç seç/);
+    await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
+    expect(fetchMock.mock.calls.find(([url]) => String(url).includes('/day/start'))).toBeUndefined();
+  });
+
+  it('ARAÇSIZ DEVAM açık bir seçimdir — çekmeceden işaretlenince düğme açılır', async () => {
+    mockPick([courierRoute({ stopCount: 3 })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId('courier-vehicle-gate')).toBeOnTheScreen());
+    /* Kapı seçilmemişken EKSİĞİ söylüyor (v3:17 `"Seçilmedi — sefer için gerekli"`), sessiz bir
+       boşluk değil. */
+    expect(screen.getByTestId('courier-vehicle-gate')).toHaveTextContent(/Seçilmedi/);
+
+    await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
+    await fireEvent.press(screen.getByTestId('courier-vehicle-none'));
+    await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
+
+    expect(screen.getByTestId('courier-vehicle-gate')).toHaveTextContent(/Araçsız/);
+    expect(screen.getByTestId('courier-route-pick-cta')).toHaveTextContent(/Seferleri kur — 1 sefer/);
   });
 
   it('düğme SEFER KURAR, başlatmaz — istek `depart:false` taşır', async () => {
@@ -119,6 +156,10 @@ describe('K · sefer ve araç seçimi', () => {
 
     await renderPick();
     await waitFor(() => expect(screen.getByTestId('courier-route-pick-cta')).toBeOnTheScreen());
+    /* Araç ÇEKMECEDEN seçiliyor (v3:17): kapı → radyo satırı. Plaka başlıkta, adı altında —
+       kurye rampada aracı plakasından buluyor. */
+    await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
+    await fireEvent.press(screen.getByTestId(`courier-vehicle-${VEHICLE}`));
     await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
     await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
 

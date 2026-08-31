@@ -29,7 +29,7 @@ import { operationsTheme } from '../../theme/unistyles';
 */
 
 /** Ton = rozetin SÖYLEDİĞİ şey; renk oradan türer, çağıran renk seçmez. */
-export type OperationsStatusTone = 'active' | 'idle' | 'warn' | 'error';
+export type OperationsStatusTone = 'live' | 'active' | 'idle' | 'pending' | 'warn' | 'error';
 
 interface OperationsStatusBadgeProps {
   /** Rozet metni — i18n üstte çözülür, komponent metin gömmez. */
@@ -56,7 +56,18 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.eyebrow,
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
   },
-  /** Sürülen sefer, tamamlanmış grup — işin AKTİF ya da bitmiş hâli. */
+  /*
+    ŞU AN OLAN ŞEY — DOLU zeytin, krem yazı (v3:16 `rozetBg:#5f7a2c · rozetFg:#f5f1e6`).
+
+    `active`ten AYRI bir ton ve ayrım tasarımın kendi ayrımı: "sürülüyor" bir DURUM değil bir
+    AN'dır — listedeki tek kartı ötekilerden koparması gerekir. Yumuşak `active` ile çizilmişti ve
+    cihazda üç kart aynı ağırlıkta duruyordu (tur 31.08).
+  */
+  live: {
+    color: operationsTheme.colors['on-image'],
+    backgroundColor: operationsTheme.colors.olive,
+  },
+  /** Tamamlanmış grup, olumlu ama sakin hâl — yumuşak zeytin (v3:18 `#46601f` / `#e3ecd2`). */
   active: {
     color: operationsTheme.colors['olive-dark'],
     backgroundColor: operationsTheme.colors['olive-bg'],
@@ -65,6 +76,17 @@ const styles = StyleSheet.create({
   idle: {
     color: operationsTheme.colors.muted,
     backgroundColor: operationsTheme.colors['neutral-bg'],
+  },
+  /*
+    EKSİK AMA ENGEL DEĞİL — terracotta (v3:18 `grupFg:#b05c2e · grupBg:#f6e6d6`).
+
+    `warn`dan ayrı: `warn` UYARIDIR (amber, "dikkat et"), bu ise henüz BİTMEMİŞ bir sayaçtır ve
+    tasarım onu operasyonun terracotta ailesiyle yazıyor. Nötr griyle çizilmişti; yükleme
+    listesinde biten grupla bitmeyen grup ayırt edilemiyordu (tur 31.08).
+  */
+  pending: {
+    color: operationsTheme.colors.terracotta,
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
   },
   /** Eksik yükleme gibi "dikkat ama engel değil" hâller. */
   warn: {

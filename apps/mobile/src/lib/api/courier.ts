@@ -129,6 +129,22 @@ export function fetchVanStock(): Promise<ApiResult<z.infer<typeof CourierVanStoc
 }
 
 /**
+ * **Serbest ürün araması** (31.08 · v3:19 "+ Ürün ara") — AYNI uç, yalnız süzgeçli.
+ *
+ * İkinci bir uç açılmadı: soru aynı ("depodan ne alabilirim") ve ayrı bir kapı, aynı listeyi iki
+ * farklı sıralama ve iki farklı tavanla döndürmeye açık kapı bırakırdı. Şerit tavanlı bir seçki
+ * (12 satır); aranan mal tam olarak onun dışında kalanlar.
+ */
+export function searchVanCandidates(
+  query: string,
+): Promise<ApiResult<z.infer<typeof CourierVanStockResponseSchema>>> {
+  return authorizedFetch(
+    `/api/v1/courier/van-stock?q=${encodeURIComponent(query)}`,
+    CourierVanStockResponseSchema,
+  );
+}
+
+/**
  * **Araca al / depoya devret** — yön UÇTADIR, gövde ikisinde de aynı. Tek sarmalayıcı, çünkü
  * ikisi aynı mekanizmanın iki yönü; ayrı yazılsaydı biri cevabın bir dalını işlemeyi unuturdu.
  */

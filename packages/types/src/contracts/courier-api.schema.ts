@@ -289,6 +289,21 @@ export const CourierRouteSchema = z.object({
   warehouseName: z.string().nullable(),
   /** O güne yazılmış rota siparişi sayısı — kurye seçerken yükü görsün. */
   stopCount: z.number().int(),
+  /**
+   * **KAÇ KUTU** — seçim kartının ikinci sayısı (v3:17 `"5 durak · 7 kutu · 2 tahsilat"`).
+   *
+   * Durak sayısı yükü SÖYLEMİYOR: üç duraklık bir rota on bir kutu taşıyabiliyor ve kurye aracı
+   * doldurmadan önce hacmi bilmek zorunda. Sayı `order_box` satırlarından gelir — mühürlenmemiş
+   * kutu da sayılır, çünkü soru "rampada beni ne bekliyor".
+   */
+  boxCount: z.number().int(),
+  /**
+   * **KAÇINDA KAPIDA TAHSİLAT VAR** — üçüncü sayı. Kurye günün nakit yükünü seçerken görür;
+   * "üç tahsilat" bir rotayı ötekinden daha ağır yapar (üstü, imza, kasa).
+   *
+   * Türetim borç motorunun kendi kuralı (`amountDueCents`): ödenmiş sipariş sayılmaz.
+   */
+  collectionCount: z.number().int(),
   run: CourierRunBriefSchema.extend({
     courierId: z.string().uuid(),
     /** Seferi süren kuryenin adı — "bu rota bugün Musa'da" cümlesinin kaynağı. */
@@ -402,7 +417,11 @@ export type CourierVehiclesResponse = z.infer<typeof CourierVehiclesResponseSche
 export const CourierVanStockLineSchema = z.object({
   variantId: z.string().uuid(),
   name: z.string(),
+  /** Boy etiketi ("450 g") — addan AYRI, çünkü ekran ikisini farklı ağırlıkta yazıyor (v3:19). */
+  variantLabel: z.string(),
   qty: z.number().int(),
+  /** Çıkış deposunda kalan kullanılabilir adet — "Alındıktan sonra depoda N kalır." cümlesi. */
+  available: z.number().int(),
 });
 export type CourierVanStockLine = z.infer<typeof CourierVanStockLineSchema>;
 
@@ -410,7 +429,11 @@ export type CourierVanStockLine = z.infer<typeof CourierVanStockLineSchema>;
 export const CourierVanCandidateSchema = z.object({
   variantId: z.string().uuid(),
   name: z.string(),
+  /** Boy etiketi ("450 g") — kartın ince yarısı. */
+  variantLabel: z.string(),
   available: z.number().int(),
+  /** Bu varyanttan ARAÇTA kaç tane var — kart "araçta 3" diyebilsin diye (v3:19 `h.rozet`). */
+  onVan: z.number().int(),
 });
 export type CourierVanCandidate = z.infer<typeof CourierVanCandidateSchema>;
 
@@ -422,11 +445,28 @@ export const CourierVanStockResponseSchema = z.object({
 });
 export type CourierVanStockResponse = z.infer<typeof CourierVanStockResponseSchema>;
 
-/** Araca al / depoya devret — yön uçtadır, gövde ikisinde de aynı. */
-export const CourierVanStockMoveRequestSchema = z.object({
-  variantId: z.string().uuid(),
-  qty: z.number().int().positive(),
-});
+/**
+ * Araca al / depoya devret — yön uçtadır, gövde ikisinde de aynı.
+ *
+ * **KİMLİK YA UUID YA BARKOD** (31.08 · v3:19 "Barkod okut"): rampada kurye ürünü listeden
+ * bulmuyor, kutunun üstündeki kodu okutuyor. Kodu varyant kimliğine ÇEVİRMEK İSTEMCİNİN İŞİ
+ * DEĞİL — eşleme veritabanında (`variant_barcode`) ve istemcinin oraya erişimi yok; çevirisi
+ * uçta yapılır ve tanınmayan kod cevabın kendi dalı olarak döner.
+ *
+ * İkisi birden GÖNDERİLEMEZ ve hiçbiri gönderilmeden de çağrılamaz: hangisinin kazanacağı
+ * sorusunu doğurmayan tek şekil budur.
+ */
+export const CourierVanStockMoveRequestSchema = z
+  .object({
+    variantId: z.string().uuid().optional(),
+    /** Okutulan barkod / SKU / tedarikçi kodu — uç `variant_barcode` üzerinden çözer. */
+    code: z.string().trim().min(1).max(64).optional(),
+    qty: z.number().int().positive(),
+  })
+  .refine(
+    (body) => (body.variantId === undefined) !== (body.code === undefined),
+    'variantId ya da code — biri, yalnız biri',
+  );
 export type CourierVanStockMoveRequest = z.infer<typeof CourierVanStockMoveRequestSchema>;
 
 export const CourierVanStockMoveResponseSchema = z.discriminatedUnion('status', [
@@ -439,6 +479,11 @@ export const CourierVanStockMoveResponseSchema = z.discriminatedUnion('status', 
   }),
   /** Depoda o kadar KULLANILABİLİR yok; sayı dönüyor ki ekran "şu kadar var" diyebilsin. */
   z.object({ status: z.literal('not_enough'), available: z.number().int() }),
+  /**
+   * Okutulan kod HİÇBİR varyanta bağlı değil (v3:19'un okutma dalı). Sessiz bir "olmadı" burada
+   * en kötü cevaptır: kurye kodu okuttuğunu sanır, mal araca hiç binmez ve akşam sayım tutmaz.
+   */
+  z.object({ status: z.literal('unknown_code') }),
   z.object({ status: z.literal('no_vehicle') }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   /** Sevk yazıldı, kabul düştü — mal transferde asılı. Kimlik dönüyor ki depodan çözülebilsin. */

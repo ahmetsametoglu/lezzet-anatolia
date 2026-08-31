@@ -119,7 +119,12 @@ export function CourierVanRunsScreen() {
               description={t.day.vanRuns.emptyBody}
               testID="courier-van-empty"
             />
-            <SecondaryButton label={t.day.vanRuns.pick} onPress={() => router.back()} testID="courier-van-pick" />
+            <SecondaryButton
+              label={t.day.vanRuns.pick}
+              elevation="flat"
+              onPress={() => router.back()}
+              testID="courier-van-pick"
+            />
           </>
         ) : (
           <>
@@ -129,7 +134,15 @@ export function CourierVanRunsScreen() {
               const state = stateOf(run);
               const load = loadOf(run.runId);
               return (
-                <View key={run.runId} style={styles.card} testID={`courier-van-run-${run.runId}`}>
+                <View
+                  key={run.runId}
+                  /* SÜRÜLEN KART YEŞİL ZEMİNLİ VE ZEYTİN KENARLI (v3:16 `bg:#f2f7e8 · bd:#5f7a2c`
+                     · tur 31.08). Bütün kartlar krem çizilmişti; hangisinin sürüldüğü yalnız
+                     rozetten okunuyordu ve rozet de yumuşaktı — üç kart aynı ağırlıktaydı. Kartın
+                     kendisi renk değiştirince "şu an bu" sorusu bir bakışta cevaplanıyor. */
+                  style={[styles.card, state.driving ? styles.cardDriving : null]}
+                  testID={`courier-van-run-${run.runId}`}
+                >
                   <View style={styles.cardHead}>
                     <View style={styles.cardText}>
                       <Text style={styles.cardTitle}>{run.zoneName ?? run.referenceNo}</Text>
@@ -150,7 +163,7 @@ export function CourierVanRunsScreen() {
                         kartın kendi başlığıyla aynı ağırlıkta duruyordu. */}
                     <OperationsStatusBadge
                       label={state.label}
-                      tone={state.driving ? 'active' : 'idle'}
+                      tone={state.driving ? 'live' : 'idle'}
                       testID={`courier-van-state-${run.runId}`}
                     />
                   </View>
@@ -162,6 +175,10 @@ export function CourierVanRunsScreen() {
                       <SecondaryButton
                         label={t.day.vanRuns.toStops}
                         tone="olive"
+                        /* SERT GÖLGE YOK (v3:16 — düğmenin kendi kuralı, `elevation` künyesi):
+                           kitin varsayılanı müşteri yüzeyinin gölgesi ve cihazda kartın altında
+                           ikinci bir kenar gibi görünüyordu (tur 31.08). */
+                        elevation="flat"
                         onPress={() => router.back()}
                         testID={`courier-van-stops-${run.runId}`}
                       />
@@ -210,6 +227,7 @@ export function CourierVanRunsScreen() {
             */}
             <SecondaryButton
               label={t.day.vanRuns.load}
+              elevation="flat"
               onPress={() => router.navigate('/load')}
               testID="courier-van-load"
             />
@@ -288,6 +306,11 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors['neutral-bg'],
     backgroundColor: operationsTheme.colors.panel,
     gap: operationsTheme.space.md,
+  },
+  /** Sürülen sefer (v3:16) — açık zeytin zemin + zeytin kenar; listenin tek "şimdi" kartı. */
+  cardDriving: {
+    backgroundColor: operationsTheme.colors['success-bg'],
+    borderColor: operationsTheme.colors.olive,
   },
   /* Rozet ÜST hizada (v3:16 `align-items:flex-start`) — ortalanınca kartın iki alt satırıyla
      birlikte kayıyor ve başlığın rozeti olmaktan çıkıyordu. */

@@ -9438,3 +9438,73 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Ölçüldü: mobil jest 146/146 suite, 1168 test. Vitest 4014/4015 — kalan tek düşük depo şeridinin
   `operations-app` token eklemesinden (testi güncellenmemiş), dokunulmayan dosyada.
+- [x] (21.198) **TASARIM SADAKATİ İKİNCİ TUR: ON DÖRT FARK VE İKİ ARIZA** (kullanıcı isteği 31.08)
+  `touches: apps/mobile/src/screens/courier/*, apps/mobile/src/components/operations/{status-badge,stack-header}.tsx,
+  packages/{types,application}/src/**/courier*, apps/mobile-api/src/api/v1/courier.ts`
+
+  Kullanıcı tasarımın ekran görüntülerini yeniden aldırdı (bu sefer `pageIn` animasyonu bitmiş
+  hâlde — önceki paketin 19 kurye görüntüsünün 11'i boştu, ölçüldü) ve *"tespit ettiğin tüm
+  eksikleri kapat, en küçük detayı bile kaçmasın"* dedi. Tasarımın kaynağı (`design/derived/
+  operasyon-mobil-v3/15..20`) görüntülerle birebir aynı sürüm; ölçüm kaynaktan yapıldı, görüntüden
+  değil.
+
+  **İKİ ARIZA (ikisi de cihazda ölçüldü, ikisi de sessizdi):**
+  · **Sefer sürülürken rota ve araç listesi HİÇ OKUNMUYORDU.** `use-courier-day.hook` "sürülen
+    sefer varsa rota gerekmez" diye dallanıyor ve `routes`/`vehicles`i boş bırakıyordu. Seçim
+    ekranına araçtaki seferlerden girilebildiği için (v3:16 "Araca sefer ekle") o ekran sefer
+    boyunca HER ZAMAN boş açılıyordu — "deponda planlanmış sefer yok" ve "deponda kayıtlı araç
+    yok" yazıyordu, oysa depoda beş rota ve bir araç vardı. Kullanıcının şikâyeti tam buydu:
+    *"bir sefer seçtikten sonra sürekli o sefer içerisinde kalmamalıyım."*
+  · **Rota kartının onay kutusu HEPSİNDE işaretli görünüyordu**: seçilmemiş hâlde `color:
+    'transparent'` bir ✓ çiziliyordu ve cihazda saydam olmadı. Görünmemesi gereken şey
+    renklendirilmez, çizilmez.
+
+  **GÜNÜN ROTASI (v3:14):** durak numarası SEFERİN İÇİNDE sayılıyor (`ikon: t.ikon ||
+  String(i + 1)` — küresel sayaç "3/6 durak" derken listede 15 numara gösteriyordu) · grup başlığı
+  tek satır + zeytin nokta ve TEK SEFERDE DE çiziliyor (`grupGoster: i === 0`) · grup metası kendi
+  takılı sayısını taşıyor (başlıktaki "1 takılı" ile düğmedeki "0 takılı" arasındaki fark artık
+  izlenebilir) · çubuğun yeşili yalnız SORUNSUZ teslim (kısmi tasarımda kırmızı payda) · teslim
+  dairesi dolu zeytin + krem ✓, bekleyen dairesi dolu nötr (saydam daire zemin değişince
+  kayboluyordu) · teslim kartındaki `opacity` söküldü (tasarımda hiç yok; solgunluk RENKTEN gelir
+  ve opaklık üstüne binince satır cihazda okunmuyordu).
+
+  **ARAÇTAKİ SEFERLER (v3:16):** sürülen kart yeşil zeminli + zeytin kenarlı, rozeti DOLU zeytin
+  (`live` tonu kite eklendi — `active` yumuşak kalıyor, ikisi tasarımın kendi ayrımı) · gün
+  etiketi tarihi de yazıyor ("BUGÜN · 31 AĞUSTOS") · ikincil düğmelerde sert gölge yok.
+
+  **SEFER VE ARAÇ (v3:17):** araç seçimi düz listeden ÇEKMECEYE taşındı — sayfada tek satırlık bir
+  KAPI (üç hâl: seçilmedi/amber · araç/yeşil · araçsız/nötr), çekmecede radyo satırları ve
+  "Araçsız devam et" · "araçsız" artık AÇIK bir seçim (`selectedVehicleId === null` iki ayrı şeyi
+  birden anlatıyordu) ve düğme eksiği söylüyor ("Önce araç seç") · rota kartı üç sayı taşıyor
+  (durak · kutu · tahsilat — sözleşmeye `boxCount`/`collectionCount` eklendi), hâlini yazıyor
+  (boşta / araca alınacak / kimin sürdüğü + saati) ve sefer künyesini sağ uçta gösteriyor ·
+  "ARACA ALINACAKLAR" üç sütunlu ayraçlı sayı kartı oldu.
+
+  **ARACA YÜKLE (v3:18):** koyu karttaki fazladan "araçta" çipi söküldü (tasarımda yalnız sefer
+  çipi var, ve o KOŞULSUZ) · kutu sayacında birim yazılıyor ("0/3 kutu") · durum sözcükleri
+  tasarımın kendi sözcükleri (bekliyor · yarım · araçta) · grup sayacı iki tonlu (tam → zeytin,
+  eksik → terracotta; nötr griyle "hiç yüklenmedi" ile "bitti" ayırt edilemiyordu) · yardımcı satır
+  düğmenin İÇİNDE · serbest ürün kapısı bölüm başlığı + ikonlu kart oldu ve araçtaki kalem sayısını
+  yazıyor.
+
+  **SERBEST ÜRÜN (v3:19) — en çok eksik olan ekran:** "Barkod okut" ve "Ürün ara" HİÇ YOKTU, yani
+  şeritte olmayan bir ürünü araca almanın yolu da yoktu (şerit 12 satırla tavanlı). İkisi de
+  yazıldı: arama AYNI uçtan `?q=` ile, okutma `variant_barcode` çözümüyle (`code` kimliği
+  sözleşmeye girdi, tanınmayan kod `unknown_code` dalıyla dönüyor ve çekmecenin ipucu satırında
+  görünüyor — sayfadaki bildirim açık katmanın altında kalıyordu). Ayrıca: ad ile boy AYRI alan
+  (`variantLabel`), şerit kartı "araçta N" diyor (`onVan`), araçtaki satır "depoda kalan"ı
+  (`available`) ve "alındıktan sonra N kalır" cümlesini taşıyor, ✕ ile toptan geri koyma, sayaç
+  "N kalem · M adet", dipte "Yüklemeye dön — N adet araçta".
+
+  **DURAK (v3:20):** kanal rozeti başlık satırına taşındı (`OperationsStackHeader.right` yuvası
+  açıldı) · "Durak N/M" SEFERİN içinde sayılıyor ("Durak 3/15" derken gün ekranı "3/6 durak"
+  diyordu).
+
+  **ARAÇ ADI ARTIK PLAKAYI DA TAŞIYOR** (`vehicleLabelsOf`): kural "ad varsa ad, yoksa plaka" idi
+  ve yarımdı — depoda üç frigo kamyonet varsa ad kuryeyi doğru aracın önüne götürmez. Tasarım
+  ikisini de yazıyor (v3:17 "FR-482-BX · Frigo kamyonet").
+
+  **TASARIMIN AÇIĞI (kullanıcıya soruldu, kapatılmadı):** kurulmuş bir seferi araçtan ÇIKARMANIN
+  ve sürülen bir seferi BIRAKMANIN yolu tasarımda yok — 14/15/16 numaralı ekranlarda "iptal",
+  "vazgeç", "araçtan çıkar" diye bir eylem hiç geçmiyor (ölçüldü). Sefer kurulduktan sonra rehber
+  hâline dönüş yalnız kapanışla oluyor.

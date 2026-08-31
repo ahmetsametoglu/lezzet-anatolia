@@ -345,7 +345,7 @@ describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık
     gideceğini çıkaramaz. Aynı kural rota SEÇİM listesinde zaten uygulanıyordu; eksik olan
     günün seferiydi.
   */
-  it('araç ADI okunur ad varsa ondan, yoksa PLAKADAN gelir', async () => {
+  it('araç adı PLAKA + okunur ad — plaka aracın sahadaki tek tekil işareti', async () => {
     const adli = await new VehicleService(db).insert({
       plate: `AD-${stamp}`,
       label: 'Soğutmalı panelvan',
@@ -354,7 +354,10 @@ describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık
     vehicleIds.push(adli.id);
     await startCourierDay(db, { courierId, zoneId, vehicleId: adli.id });
 
-    expect((await readCourierRun(db, { courierId }))?.vehicleLabel).toBe('Soğutmalı panelvan');
+    /* Ad plakanın YERİNE değil YANINA geçer (v3:17 `"FR-482-BX · Frigo kamyonet"`): ad "hangi
+       tür araç", plaka "hangi araç" sorusunun cevabı. Depoda iki soğutmalı panelvan varsa ad tek
+       başına kuryeyi doğru aracın önüne götürmez. */
+    expect((await readCourierRun(db, { courierId }))?.vehicleLabel).toBe(`AD-${stamp} · Soğutmalı panelvan`);
   });
 
   it('ADSIZ araçta plaka yazılır — plaka `not null`, yani yedek HER ZAMAN var', async () => {
@@ -389,7 +392,7 @@ describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık
 
     /* İki cevabın şekli ayrışsaydı kurye, seferi başlattıktan sonra bir sonraki okumaya kadar
        aracını ve deposunu göremezdi — ve o boşluk hiçbir yerde hata vermezdi. */
-    expect(result.run.vehicleLabel).toBe('Kamyonet');
+    expect(result.run.vehicleLabel).toBe(`BS-${stamp} · Kamyonet`);
     expect(result.run.warehouseName).toBe((await new WarehouseService(db).getById(warehouseId))?.name);
   });
 });
@@ -657,5 +660,45 @@ describe('depo kapsamı (11.7 · kullanıcı kuralı 21.08)', () => {
 
     // Boş kapsam = hiçbir rota (fail-closed): atanmamış kurye "hepsini görür"e düşmez.
     expect(await listCourierRoutes(db, { date: today, scope: warehouseScope(['courier'], []) })).toHaveLength(0);
+  });
+});
+
+describe('seçim kartının üç sayısı (v3:17 · 31.08)', () => {
+  it('rota DURAK, KUTU ve TAHSİLAT sayılarını birlikte taşır', async () => {
+    /*
+      Kart yalnız durak sayısını yazıyordu ve durak sayısı YÜKÜ SÖYLEMİYOR: üç duraklık bir rota
+      on bir kutu taşıyabiliyor. Kurye aracı doldurmadan önce hem hacmi (kutu) hem nakit yükünü
+      (tahsilat) bilmek zorunda — tasarımın kendi satırı "5 durak · 7 kutu · 2 tahsilat".
+
+      Fikstür kutulu ve borçlu bir durak kuruyor; sayılar oradan doğrulanıyor.
+    */
+    const { order, items } = await orders.create(
+      {
+        warehouseId, customerId, channel: 'b2c', deliveryType: 'route',
+        deliveryZoneId: zoneId, deliveryDate: today, totalCents: 4000,
+      },
+      [{ variantId, qty: 2, unitPriceCents: 2000, vatRate: 5.5 }],
+    );
+    const stockId = (await stocks.insert({
+      warehouseId, variantId, physicalQty: 20, expiryDate: dayOffset(45), purchasePriceCents: 200,
+    })).id;
+    await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 2 });
+    await advanceOrder(db, order.id, ['confirmed', 'preparing']);
+    const box = await openBox(db, { orderId: order.id, warehouseId });
+    if (box.status !== 'ok') throw new Error(`fikstür: kutu açılamadı (${box.status})`);
+    const sealed = await sealBox(db, {
+      boxId: box.box.boxId,
+      warehouseId,
+      picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty: 2 }] }],
+    });
+    if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
+
+    const route = (await listCourierRoutes(db, { date: today, scope: warehouseScope(['courier'], [warehouseId]) }))
+      .find((row) => row.zoneId === zoneId);
+
+    expect(route?.boxCount).toBeGreaterThanOrEqual(1);
+    /* Borç motorun kuralından türer (toplam − tahsil + iade > 0): ödenmiş sipariş sayılmaz,
+       çünkü kuryenin kapıda yapacağı iş yok. */
+    expect(route?.collectionCount).toBeGreaterThanOrEqual(1);
   });
 });

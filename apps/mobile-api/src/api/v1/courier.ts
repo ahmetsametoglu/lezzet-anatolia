@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { DeliveryRunService, serviceDb } from '@lezzet/database';
+import { DeliveryRunService, VariantBarcodeService, serviceDb } from '@lezzet/database';
 import { warehouseScope } from '@lezzet/domain-core';
 import {
   closeCourierDay,
@@ -291,10 +291,29 @@ courier.get('/van-stock', async (c) => {
   const db = serviceDb();
   const vehicleWarehouseId = await vehicleWarehouseOf(db, staff.warehouseIds);
   const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
+  /* ARAMA AYNI UÇTAN (v3:19 "+ Ürün ara") — ikinci bir uç açılmadı: soru aynı ("depodan ne
+     alabilirim"), yalnız süzgeci var. Ayrı bir uç, aynı listeyi iki farklı sıralama ve iki farklı
+     tavanla döndürmeye açık kapı bırakırdı. Boş sorgu = süzgeçsiz şerit. */
+  const query = c.req.query('q')?.trim() ?? '';
 
   const [onVan, candidates] = await Promise.all([
-    vehicleWarehouseId === null ? Promise.resolve([]) : readVanStock(db, { vehicleWarehouseId }),
-    facilityId === null ? Promise.resolve([]) : listVanCandidates(db, { warehouseId: facilityId }),
+    /* İki okuma da ÇIKIŞ DEPOSUNU ve ARAÇ DEPOSUNU birlikte istiyor (v3:19): araçtaki satır
+       "depoda kalan"ı, şerit kartı da "araçta kaç tane var"ı yazıyor. İkisi ayrı okunsaydı ekran
+       eşleştirmeyi kendi yapardı ve şerit tavanlı olduğu için (12 satır) eşleşme yarım kalırdı. */
+    vehicleWarehouseId === null
+      ? Promise.resolve([])
+      : readVanStock(db, { vehicleWarehouseId, sourceWarehouseId: facilityId }),
+    facilityId === null
+      ? Promise.resolve([])
+      : listVanCandidates(db, {
+          warehouseId: facilityId,
+          vehicleWarehouseId,
+          query: query.length > 0 ? query : undefined,
+          /* Arama TAVANI daha geniş: şerit bir seçki (12), arama ise kuryenin aradığını bulması
+             gereken bir liste. Yine de sınırsız değil — sınırsız büyüyen bir küme sayfalama
+             isterdi (CLAUDE §1) ve rampada kaydırılacak liste bu değil. */
+          limit: query.length > 0 ? 40 : undefined,
+        }),
   ]);
 
   const body: z.input<typeof CourierVanStockResponseSchema> = { vehicleWarehouseId, onVan, candidates };
@@ -316,10 +335,17 @@ courier.post('/van-stock/take', async (c) => {
   const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
   if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
 
+  /* KOD → VARYANT ÇEVİRİSİ UÇTA (v3:19 "Barkod okut"): eşleme `variant_barcode`ta duruyor ve
+     istemcinin oraya erişimi yok. Tanınmayan kod SESSİZ GEÇMEZ — kendi dalıyla döner, yoksa
+     kurye okuttuğunu sanır ve mal araca hiç binmez. */
+  const variantId =
+    parsed.data.variantId ?? (await new VariantBarcodeService(db).findByCode(parsed.data.code ?? ''))?.variantId ?? null;
+  if (variantId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'unknown_code' }));
+
   const result = await takeToVan(db, {
     warehouseId: facilityId,
     vehicleWarehouseId,
-    variantId: parsed.data.variantId,
+    variantId,
     qty: parsed.data.qty,
     actorId: staff.id,
   });
@@ -341,10 +367,16 @@ courier.post('/van-stock/return', async (c) => {
   const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
   if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
 
+  /* Devret yolunda kod OKUTULMUYOR (v3:19'da yalnız alma tarafında "Barkod okut" var) — ama
+     sözleşme ortak olduğu için kimlik yine iki dallı gelebiliyor; çözüm de aynı kapıdan geçer. */
+  const variantId =
+    parsed.data.variantId ?? (await new VariantBarcodeService(db).findByCode(parsed.data.code ?? ''))?.variantId ?? null;
+  if (variantId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'unknown_code' }));
+
   const result = await returnFromVan(db, {
     warehouseId: facilityId,
     vehicleWarehouseId,
-    variantId: parsed.data.variantId,
+    variantId,
     qty: parsed.data.qty,
     actorId: staff.id,
   });

@@ -262,8 +262,18 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     }
 
     setStop(found);
-    setOrder(index + 1);
-    setTotal(result.data.stops.length);
+    /*
+      ── "DURAK 3/6" SEFERİN İÇİNDE SAYILIR (v3:20 "Durak 1/1" · kullanıcı bulgusu 31.08) ────────
+      Sayaç günün BÜTÜN duraklarından geliyordu ve araçta iki sefer varken "Durak 3/15" yazıyordu —
+      oysa gün ekranının özet kartı aynı anda "3/6 durak" diyor. İki ekran aynı durağı iki farklı
+      sırada gösterince kurye hangisinin kendi seferi olduğunu okuyamıyor.
+
+      Sefersiz durakta (runId eşleşmezse) küme yine günün tamamıdır: bölünecek bir sefer yok.
+    */
+    const ownRun = result.data.stops.filter((candidate) => candidate.runId === found.runId);
+    const inRun = ownRun.findIndex((candidate) => candidate.orderId === orderId);
+    setOrder(inRun >= 0 ? inRun + 1 : index + 1);
+    setTotal(ownRun.length > 0 ? ownRun.length : result.data.stops.length);
     setDoorAccountId(result.data.doorAccountId);
     setStatus('ready');
     // Tutar alanı MOTORUN tutarıyla açılır (K4: "alan onunla açılır"); kurye gerçekleşeni düzeltir.

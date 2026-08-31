@@ -128,6 +128,14 @@ export function CourierDayScreen() {
   const stops = day.stops.filter((stop) => departedRunIds.has(stop.runId));
   const drivenStops = run === null ? [] : stops.filter((stop) => stop.runId === run.runId);
   const doneCount = drivenStops.filter((stop) => stop.outcome !== 'pending').length;
+  /*
+    ÇUBUĞUN YEŞİLİ "SORUNSUZ TESLİM" (v3:14 `surulenYesil` = teslim/durak, `surulenKirmizi` =
+    (ulasilamadi + kismi)/durak · ölçüldü 31.08). Yeşil pay `doneCount`tan çiziliyordu ve KISMİ
+    teslim de tam teslim gibi yeşile giriyordu — oysa kısmi durakta araçta mal kalmıştır ve
+    tasarım onu kırmızı payda sayıyor. Sayaç ("3/6 durak") sonuçlanan her durağı saymaya devam
+    ediyor: o soru "kaçı bitti", çubuğunki "kaçı temiz bitti".
+  */
+  const cleanCount = drivenStops.filter((stop) => stop.outcome === 'delivered' && !isPartial(stop)).length;
   const issueCount = stops.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused').length;
   /* KAPANIŞ ROZETİ SEFER BAZINDA: "Seferi kapat" SÜRÜLEN seferi kapatıyor (`openDayClose({runId})`),
      yani rozetin saydığı da o seferin durakları olmalı. Liste başlığındaki "N takılı" ise LİSTENİN
@@ -145,6 +153,27 @@ export function CourierDayScreen() {
   const doorTotal = doorStops.reduce((total, stop) => total + (stop.payment.dueAmountCents ?? 0), 0);
   /** Sıradaki durak — v2:848: ilk sonuçlanmamış durak, koyu daireyle işaretlenir. */
   const nextOrderId = stops.find((stop) => stop.outcome === 'pending')?.orderId ?? null;
+
+  /*
+    ── DURAK NUMARASI SEFERİN İÇİNDE SAYILIR (v3:14 · kullanıcı bulgusu 31.08) ───────────────
+    Tasarımın kendi satırı: `ikon: t.ikon || String(i + 1)` — `i`, seferin KENDİ durak dizisindeki
+    indekstir, listenin değil. Bende sayaç liste boyunca akıyordu ve iki başlatılmış sefer varken
+    ekran kendi kendisiyle çelişiyordu: özet kartı "3/6 durak" derken listede 15 numaralı bir
+    durak duruyordu. Aynı ekranda iki ölçek, kuryeye hangisinin kendi seferi olduğunu sordurur.
+  */
+  const orderInRun = new Map<string, number>();
+  const seenPerRun = new Map<string, number>();
+  for (const stop of stops) {
+    const next = (seenPerRun.get(stop.runId) ?? 0) + 1;
+    seenPerRun.set(stop.runId, next);
+    orderInRun.set(stop.orderId, next);
+  }
+  /** Sefer başına takılı durak — grup başlığının meta'sı bunu taşıyor (aşağıdaki künye). */
+  const issuesPerRun = new Map<string, number>();
+  for (const stop of stops) {
+    if (stop.outcome !== 'unreachable' && stop.outcome !== 'refused') continue;
+    issuesPerRun.set(stop.runId, (issuesPerRun.get(stop.runId) ?? 0) + 1);
+  }
 
   /* Boş hâlin düğmesi SEÇİME GÖTÜRÜR, kurmaz (v3:15 "Sefer ve araç seç"). Kurma eylemi seçim
      ekranının kendi düğmesi — burada verilecek bir seçim yok, verilecek bir YÖN var. */
@@ -404,13 +433,9 @@ export function CourierDayScreen() {
                     iyi gösteriyordu — ulaşılamayan durak çubukta hiç görünmüyor, kalan boşlukta
                     "sırası gelmemiş" gibi duruyordu. */}
                 <OperationsProgressBar
-                  value={drivenStops.length === 0 ? 0 : doneCount / drivenStops.length}
+                  value={drivenStops.length === 0 ? 0 : cleanCount / drivenStops.length}
                   secondary={{
-                    value:
-                      drivenStops.length === 0
-                        ? 0
-                        : drivenStops.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused')
-                            .length / drivenStops.length,
+                    value: drivenStops.length === 0 ? 0 : (doneCount - cleanCount) / drivenStops.length,
                     tone: operationsTheme.colors.error,
                   }}
                   onInk
@@ -486,9 +511,10 @@ export function CourierDayScreen() {
                   olup olmadığı ancak listeyi tarayarak bulunuyordu. Takılı YOKSA sağ taraf hiç
                   çizilmez — sıfırı yazmak, olmayan bir sorunu duyurmaktır. */}
               <View style={styles.stopsHeadingRow}>
-                <Text style={styles.stopsHeading}>
-                  {day.runs.length > 1 ? t.day.stopsBySefer : fillCopy(t.day.stopsHeading, { n: String(stops.length) })}
-                </Text>
+                {/* BAŞLIK HER ZAMAN "SEFERE GÖRE" (v3:14 — düz metin, koşulsuz). Tek seferde
+                    "DURAKLAR · 6" yazılıyordu; grup başlığı artık tek seferde de çizildiği için
+                    iki başlık aynı sayıyı iki kez söylüyordu. */}
+                <Text style={styles.stopsHeading}>{t.day.stopsBySefer}</Text>
                 {issueCount === 0 ? null : (
                   <Text style={styles.stuckCount} testID="courier-day-stuck">
                     {fillCopy(t.day.stuckCount, { n: String(issueCount) })}
@@ -521,19 +547,32 @@ export function CourierDayScreen() {
                   tanıyor.
                 */
                 <Fragment key={stop.orderId}>
-                  {stops.length > 0 && stop.runId !== stops[index - 1]?.runId && day.runs.length > 1 ? (
+                  {stop.runId !== stops[index - 1]?.runId ? (
+                    /* BAŞLIK TEK SATIR + NOKTA (v3:14 `● {grupAd} …… {grupMeta}`) ve TEK SEFERDE
+                       DE ÇİZİLİR (`grupGoster: i === 0`, sefer sayısına bakmıyor). İki satıra
+                       kırılmış, noktasız bir başlık listeyi bölmüyor; nokta ile künye aynı satırda
+                       durunca grup gerçekten bir başlangıç gibi okunuyor. */
                     <View style={styles.runGroupRow} testID={`courier-day-group-${stop.runId}`}>
-                      <Text style={styles.runGroupHeading}>{stop.runLabel ?? ''}</Text>
-                      {/* GRUBUN META'SI (v3:15 `grupMeta`): künye + hâl. Yalnız ad yazılıydı ve
-                          iki grup arasındaki fark "hangisi sürülüyor" görünmüyordu. */}
+                      <View style={styles.runGroupDot} />
+                      <Text style={styles.runGroupHeading} numberOfLines={1}>
+                        {stop.runLabel ?? ''}
+                      </Text>
+                      {/* GRUBUN META'SI (v3:15 `grupMeta`): künye + hâl + o seferin takılı sayısı.
+                          Takılı sayısı 31.08'de eklendi: başlıktaki "N takılı" LİSTENİN toplamı,
+                          düğmedeki ise SÜRÜLEN seferin — iki başlatılmış sefer varken ikisi
+                          farklı çıkıyor ve hangi seferin takıldığı hiçbir yerde yazmıyordu. */}
                       <Text style={styles.runGroupMeta}>
-                        {groupMetaOf(day.runs.find((candidate) => candidate.runId === stop.runId), t)}
+                        {groupMetaOf(
+                          day.runs.find((candidate) => candidate.runId === stop.runId),
+                          issuesPerRun.get(stop.runId) ?? 0,
+                          t,
+                        )}
                       </Text>
                     </View>
                   ) : null}
                   <StopRow
                     stop={stop}
-                    order={index + 1}
+                    order={orderInRun.get(stop.orderId) ?? index + 1}
                     tone={circleTone(stop, stop.orderId === nextOrderId, day.started)}
                     started={day.started}
                     last={index === stops.length - 1}
@@ -670,10 +709,14 @@ function partialCounts(stop: CourierStopContract): { total: number; done: number
  */
 function groupMetaOf(
   run: { referenceNo: string; closed: boolean } | undefined,
+  issues: number,
   copy: typeof courierCopy,
 ): string {
   if (run === undefined) return '';
-  return `${run.referenceNo} · ${run.closed ? copy.day.groupClosed : copy.day.groupDriving}`;
+  const parts = [run.referenceNo, run.closed ? copy.day.groupClosed : copy.day.groupDriving];
+  /* Sıfır YAZILMAZ: olmayan bir sorunu duyurmak, listedeki her grubu bir uyarıya çevirirdi. */
+  if (issues > 0) parts.push(fillCopy(copy.day.stuckCount, { n: String(issues) }));
+  return parts.join(' · ');
 }
 
 /** v3:14 — sonuç dairesinin tonu. "Sıradaki" yalnız YOLA ÇIKILMIŞSA koyulur. */
@@ -853,7 +896,7 @@ function StopRow({ stop, order, tone, started, last, onPress }: StopRowProps) {
       style={[
         styles.stopRow,
         styles.stopRowRail,
-        stop.outcome === 'delivered' ? styles.stopDone : started ? undefined : styles.stopLocked,
+        started ? undefined : styles.stopLocked,
       ]}
       accessibilityLabel={fillCopy(t.day.stop.openLabel, { address, sub: subtitle.text })}
       accessibilityHint={started ? undefined : t.day.stop.lockedHint}
@@ -1182,14 +1225,27 @@ const styles = StyleSheet.create({
   /* SEFER GRUP BAŞLIĞI (31.08 · v3:15) — durak listesinin içinde, sessiz bir ayraç. Kartların
      kendi ağırlığını bastırmasın diye üstbaşlık kesitinde. */
   runGroupRow: {
-    paddingTop: operationsTheme.space.xl,
-    paddingBottom: operationsTheme.space.sm,
-    gap: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
+    paddingTop: operationsTheme.space.md,
+    paddingHorizontal: operationsTheme.space['2xs'],
   },
+  /** v3:14 — 7px zeytin nokta; grubun "burada yeni bir sefer başlıyor" işareti. */
+  runGroupDot: {
+    width: operationsTheme.space.md,
+    height: operationsTheme.space.md,
+    borderRadius: operationsTheme.radius.pill,
+    backgroundColor: operationsTheme.colors.olive,
+  },
+  /* Grup ADI üstbaşlık değil BAŞLIK (v3:14 `font:700 13px 'Karla'`, harf aralığı yok): küçük
+     puntolu, harfleri açılmış bir üstbaşlıkla yazılıydı ve satır bir bölüm etiketi gibi
+     okunuyordu — oysa burada yazan şey seferin ADI. */
   runGroupHeading: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.eyebrow,
-    color: operationsTheme.colors.muted,
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.ink,
   },
   /* ARAÇ BOŞ REHBERİ (v3:15) — kart + ayraç + üç numaralı adım. Numaralar YUVARLAK: adımlar bir
      liste değil bir SIRA, ve sıra numarası kendi kabında durur. */
@@ -1351,9 +1407,14 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.panel,
     borderColor: operationsTheme.colors['sand-300'],
   },
-  /* Teslim edilen durak SOLUK ama artık kartlı: zemin ayrımı yapılmışken opaklık da düşürülünce
-     kart görünmez oluyordu — ölçü 0,55'ten 0,8'e çekildi, ayrımı zemin taşıyor. */
-  stopDone: { opacity: 0.8 },
+  /*
+    TESLİM EDİLEN DURAKTA OPAKLIK YOK (v3:14 · ölçüldü 31.08).
+
+    Kart 0,55'ten 0,8'e çekilmişti ama tasarımda `opacity` HİÇ YOK: teslim kartının solgunluğu
+    RENKTEN gelir — zemin `#f4f2ea`, başlık `#6d7261`, alt satır `#8a8270`. Opaklık üstüne
+    binince zaten sessiz olan renkler bir kez daha soluyor ve kart cihazda okunmuyordu (turda
+    görüldü: "1 kalem · nakit 36,40 € alındı" satırı zemine karışmıştı). Ayrımı renk taşır.
+  */
   stopLocked: { opacity: 0.75 },
   /** "SIRADAKİ DURAK" — kartın içindeki küçük zeytin başlık (v3:14). */
   stopNextLabel: {
@@ -1383,9 +1444,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  /* TESLİM DAİRESİ DOLU ZEYTİN (v3:14 `teslim.ikonBg:#5f7a2c` · ölçüldü 31.08) — içinde krem "✓".
+     Açık `olive-bg` zeminiyle çizilmişti ve kartın kendi kremi üstünde neredeyse görünmüyordu:
+     tasarımın beş dairesinden dördü DOLU, yalnız "bekleyen" nötr. Bitmiş durağın işareti listeyi
+     tararken ilk okunan şeydir; soluk bir daire onu okunmaz yapıyordu. */
   circle_delivered: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    borderColor: operationsTheme.colors['olive-bg'],
+    backgroundColor: operationsTheme.colors.olive,
+    borderColor: operationsTheme.colors.olive,
   },
   /* SORUNLU DAİRE DOLU KIRMIZI (v3:14) — içinde beyaz "!". Açık `error-bg` zeminiyle çizilince
      daire kartın kendi zeminine karışıyordu; listeyi tararken takılı durak görünmüyordu. */
@@ -1402,15 +1467,18 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.ink,
     borderColor: operationsTheme.colors.ink,
   },
+  /* BEKLEYEN DAİRE DE DOLU, ama NÖTR (v3:14 `bekleyen.ikonBg:#e7e2d2`) — çerçeveli boş daire
+     tasarımda hiç yok. Saydam daire zemin değiştiğinde (kart kremi ↔ sayfa kremi) kayboluyordu;
+     dolu nötr her zemin üstünde aynı ağırlıkta durur. */
   circle_idle: {
-    backgroundColor: 'transparent',
-    borderColor: operationsTheme.colors['sand-500'],
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderColor: operationsTheme.colors['neutral-bg'],
   },
   circleText: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.note,
   },
-  circleText_delivered: { color: operationsTheme.colors['olive-dark'] },
+  circleText_delivered: { color: operationsTheme.colors['on-image'] },
   circleText_issue: { color: operationsTheme.colors['on-image'] },
   circleText_partial: { color: operationsTheme.colors.warehouse },
   circleText_next: { color: operationsTheme.colors['on-image'] },
@@ -1429,7 +1497,9 @@ const styles = StyleSheet.create({
      değil TAMAMLANMIŞ bir iştir. Ayrımı zaten kartın zemini ve sonuç etiketi taşıyor; adresin
      rengi sessizleşir, üstü çizilmez. */
   stopAddressDone: {
-    color: operationsTheme.colors.muted,
+    /* v3:14 `teslim.baslikFg:#6d7261` = `body`. `muted` (#8a8270) yazılıydı ve o TASARIMIN ALT
+       SATIR rengidir — başlık ile alt satır aynı tona düşünce kartın kendi hiyerarşisi siliniyordu. */
+    color: operationsTheme.colors.body,
   },
   stopSub: {
     fontFamily: operationsTheme.font.body[400],

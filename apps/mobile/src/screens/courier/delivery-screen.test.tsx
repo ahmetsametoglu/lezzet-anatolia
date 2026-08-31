@@ -226,6 +226,27 @@ describe('teslimat · durak künyesi', () => {
     expect(screen.getByText(t.delivery.noNavigate)).toBeOnTheScreen();
     expect(screen.queryByTestId('courier-delivery-whatsapp')).toBeNull();
   });
+
+  it('sıra SEFERİN İÇİNDE sayılır — araçtaki öteki seferin durakları paydaya girmez', async () => {
+    /*
+      Sayaç günün BÜTÜN duraklarından geliyordu ve iki sefer sürülürken "Durak 3/15" yazıyordu;
+      gün ekranının özet kartı ise aynı anda "3/6 durak" diyordu (kullanıcı bulgusu 31.08). İki
+      ekran aynı durağı iki ayrı sırada gösterince kurye hangisinin kendi seferi olduğunu okuyamaz.
+    */
+    const otekiSefer = '00000000-0000-4000-8000-000000000802';
+    mockRoutes({
+      day: courierDay([
+        // Açılan durak (ORDER_ID) SÜRÜLEN seferin tek durağı; öteki ikisi araçtaki başka seferin.
+        settledStop(),
+        courierStop(2, { runId: otekiSefer }),
+        courierStop(3, { runId: otekiSefer }),
+      ]),
+    });
+
+    await renderDelivery();
+
+    expect(screen.getByText('Durak 1/1')).toBeOnTheScreen();
+  });
 });
 
 /*

@@ -252,36 +252,36 @@ export function useCourierDay(): UseCourierDayResult {
     setStops(day.stops);
 
     /*
-      İKİNCİ OKUMA NEYİN SORULACAĞINI BİRİNCİSİNDEN ÖĞRENİR. Sürülen sefer YOKSA ekran seçim ve
-      yükleme aşamasındadır → rotalar + araçlar. Sürülüyorsa seferin parası (özet kartı).
-      İkisini birden istemek her hâlde birini boşa çekmek olurdu.
+      ── ROTALAR VE ARAÇLAR HER HÂLDE OKUNUR (arıza · cihazda ölçüldü 31.08) ────────────────────
+      Buradaki dallanma "sürülen sefer varsa rota listesi gerekmez" varsayımına dayanıyordu ve o
+      varsayım 31.08'de ÇÜRÜDÜ: araç bir ara depo oldu, kurye sefer sürerken araca ikinci bir
+      sefer ekleyebiliyor ve seçim ekranına "Araca sefer ekle" ile giriliyor. Dallanma kaldığı
+      için o ekran sürülen seferde HER ZAMAN boş açılıyordu — cihazda görüldü: "Deponda
+      planlanmış sefer yok" ve "Deponda kayıtlı araç yok" yazıyordu, oysa depoda beş rota ve bir
+      araç kayıtlıydı. Yani ekran veriyi bulamadığı için değil, HİÇ SORMADIĞI için boştu.
 
-      Rotalar araçta yük VARKEN de okunuyor (31.08): kurye ikinci bir seferi araca ekleyebiliyor
-      ve v3:16 o listeyi gösteriyor — "araçta sefer var" artık "seçim bitti" demek değil.
+      Kullanıcının şikâyeti tam olarak buydu: *"bir sefer seçtikten sonra sürekli o sefer
+      içerisinde kalmamalıyım."* Sefere girmek, seçimin kapısını kapatıyordu.
+
+      Kapanış taslağı yine yalnız sürülen seferde çekiliyor — onun konusu gerçekten sefer.
     */
-    if (day.run === null) {
-      const [routeResult, vehicleResult] = await Promise.all([fetchCourierRoutes(day.date), fetchCourierVehicles()]);
-      if (round !== generation.current) return;
-      if (routeResult.error !== null) {
-        // Rota listesi olmadan seçim yapılamaz — boş listeyle "bugün rota yok" demek yalan olurdu.
-        setStatus('error');
-        return;
-      }
-      setRoutes(routeResult.data.routes);
-      /* Araç listesi düşerse ekran kilitlenmez: araç kaydı zaten ZORUNLU değil ve araçsız sefer
-         açılabiliyor (kapının kendi kuralı). Boş liste "araç yok" der, "hata var" demez. */
-      setVehicles(vehicleResult.error === null ? vehicleResult.data.vehicles : []);
-      setCollectedCents(null);
-      setStatus('ready');
+    const [routeResult, vehicleResult, draftResult] = await Promise.all([
+      fetchCourierRoutes(day.date),
+      fetchCourierVehicles(),
+      day.run === null ? Promise.resolve(null) : fetchDayCloseDraft({ runId: day.run.runId }),
+    ]);
+    if (round !== generation.current) return;
+    if (routeResult.error !== null) {
+      // Rota listesi olmadan seçim yapılamaz — boş listeyle "bugün rota yok" demek yalan olurdu.
+      setStatus('error');
       return;
     }
-
-    setRoutes([]);
-    setVehicles([]);
-    const draftResult = await fetchDayCloseDraft({ runId: day.run.runId });
-    if (round !== generation.current) return;
+    setRoutes(routeResult.data.routes);
+    /* Araç listesi düşerse ekran kilitlenmez: araç kaydı zaten ZORUNLU değil ve araçsız sefer
+       açılabiliyor (kapının kendi kuralı). Boş liste "araç yok" der, "hata var" demez. */
+    setVehicles(vehicleResult.error === null ? vehicleResult.data.vehicles : []);
     setCollectedCents(
-      draftResult.error !== null
+      draftResult === null || draftResult.error !== null
         ? null
         : draftResult.data.expected.cashCents +
             draftResult.data.expected.cardCents +

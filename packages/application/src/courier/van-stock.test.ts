@@ -142,4 +142,54 @@ describe('alınabilecekler listesi', () => {
 
     expect(liste.find((row) => row.variantId === variantId)).toMatchObject({ available: 6 });
   });
+
+  it('AD ve BOY AYRI döner — ekran ikisini farklı ağırlıkta yazıyor (v3:19)', async () => {
+    const satir = (await listVanCandidates(db, { warehouseId: facilityId })).find(
+      (row) => row.variantId === variantId,
+    );
+
+    /* Birleşik dize gönderiliyordu ("Şöbiyet (500 g)") ve kart adı kalın, boyu ince yazamıyordu.
+       Ayrım depo okumasında ZATEN vardı (`variantNames`); kurye ucu onu tek yerde birleştirip
+       bilgiyi kaybediyordu. */
+    expect(satir?.name).toBe(`Şöbiyet ${stamp}`);
+    expect(satir?.variantLabel).toBe('500 g');
+  });
+
+  it('şerit kartı ARAÇTA kaç tane olduğunu da söyler — aynı üründen ikinci kez alma tuzağı', async () => {
+    await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 3 });
+
+    const satir = (await listVanCandidates(db, { warehouseId: facilityId, vehicleWarehouseId: vanId })).find(
+      (row) => row.variantId === variantId,
+    );
+
+    /* Sayı olmadan kart araçta olan üründe de "dokun, araca al" diyordu ve kurye aynı üründen
+       ikinci kez alıp almadığını hiçbir yerde göremiyordu (tur 31.08). */
+    expect(satir).toMatchObject({ onVan: 3, available: 7 });
+  });
+
+  it('ARAMA aynı listeyi süzer — şeridin tavanı dışında kalan mal ancak böyle bulunur', async () => {
+    const bulunan = await listVanCandidates(db, { warehouseId: facilityId, query: 'şöbiy' });
+    const bulunmayan = await listVanCandidates(db, { warehouseId: facilityId, query: 'zzzyok' });
+
+    expect(bulunan.some((row) => row.variantId === variantId)).toBe(true);
+    expect(bulunmayan.some((row) => row.variantId === variantId)).toBe(false);
+  });
+
+  it('ARAÇTAKİ SATIR depoda kalanı taşır — "alındıktan sonra N kalır" cümlesinin kaynağı', async () => {
+    await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 2 });
+
+    const [satir] = await readVanStock(db, { vehicleWarehouseId: vanId, sourceWarehouseId: facilityId });
+
+    expect(satir).toMatchObject({ qty: 2, available: 8, variantLabel: '500 g' });
+  });
+
+  it('ÇIKIŞ DEPOSU verilmezse kalan SORULMAZ — sıfır yazmak "hiç kalmadı" demek olurdu', async () => {
+    await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 2 });
+
+    const [satir] = await readVanStock(db, { vehicleWarehouseId: vanId });
+
+    /* Ölçülemeyen değer sıfır DEĞİLDİR (CLAUDE §1). Bu yolda ekran cümleyi hiç kurmuyor; sayının
+       kendisi 0 olarak geliyor ama okuyan taraf onu bir ölçüm gibi göstermiyor. */
+    expect(satir?.available).toBe(0);
+  });
 });

@@ -351,8 +351,10 @@ describe('K1 · günün seferi', () => {
        ikisi takılı — ve kuryenin o duraklarda yapacak işi kalmadı. Niteliği ÇUBUK söylüyor:
        yeşil teslim, kırmızı takılı. */
     expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/3\/3 durak/);
-    // Başlık sayıyı, sağ uç TAKILI durak sayısını taşır (ulaşılamadı + kabul etmedi = 2).
-    expect(screen.getByText('DURAKLAR · 3')).toBeOnTheScreen();
+    /* BAŞLIK KOŞULSUZ "SEFERE GÖRE" (v3:14 — düz metin), sağ uç TAKILI durak sayısını taşır
+       (ulaşılamadı + kabul etmedi = 2). Sayı başlıktan çıktı: grup başlığı artık tek seferde de
+       çizildiği için aynı sayı iki kez yazılıyordu. */
+    expect(screen.getByText('DURAKLAR · SEFERE GÖRE')).toBeOnTheScreen();
     expect(screen.getByTestId('courier-day-stuck')).toHaveTextContent('2 takılı');
   });
 
@@ -577,12 +579,53 @@ describe('araçtaki seferler (31.08)', () => {
     );
     await renderDay();
 
-    /* Grup başlığı YALNIZ birden çok sefer varken çizilir — tek seferde başlık, olmayan bir
-       ayrımı duyurmak olurdu. */
     /* Grup başlığı ADI ve KÜNYE+HÂLİ birlikte taşıyor (v3:15 `grupMeta`): iki grup arasındaki
        fark "hangisi sürülüyor" ancak böyle okunuyor. */
     const group = screen.getByTestId(`courier-day-group-${ikinci.runId}`);
     expect(group).toHaveTextContent(/Dağ rotası/);
     expect(group).toHaveTextContent(/sürülüyor/);
+  });
+
+  it('SEFER SÜRÜLÜRKEN de rota ve araç listesi okunur — seçim kapısı kapanmaz', async () => {
+    mockDay(courierDay([courierStop(1)]));
+    await renderDay();
+
+    /*
+      ARIZA KÜNYESİ (cihazda ölçüldü 31.08): kanca "sürülen sefer varsa rota listesi gerekmez"
+      diye dallanıyordu ve sefer sürülürken `routes`/`vehicles` boş bırakılıyordu. Seçim ekranına
+      araçtaki seferlerden girilebildiği için (v3:16 "Araca sefer ekle") o ekran sefer boyunca
+      HER ZAMAN boş açılıyordu — "deponda planlanmış sefer yok" diyordu, oysa hiç sormamıştı.
+
+      Ölçüm ekranda değil ÇAĞRIDA: iki uç da vuruldu mu.
+    */
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/courier/routes'))).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/courier/vehicles'))).toBe(true);
+  });
+
+  it('grup başlığı TEK SEFERDE DE çizilir (v3:14 `grupGoster: i === 0`)', async () => {
+    mockDay(courierDay([courierStop(1)]));
+    await renderDay();
+
+    expect(screen.getByTestId(`courier-day-group-${courierDayRun().runId}`)).toBeOnTheScreen();
+  });
+
+  it('durak numarası SEFERİN İÇİNDE sayılır — ikinci sefer yine 1den başlar', async () => {
+    const ikinci = courierDayRun({ runId: '00000000-0000-4000-8000-000000000802', zoneName: 'Dağ rotası' });
+    mockDay(
+      courierDay(
+        [
+          courierStop(1),
+          courierStop(2),
+          courierStop(3, { runId: ikinci.runId, runLabel: 'Dağ rotası' }),
+        ],
+        { runs: [courierDayRun(), ikinci] },
+      ),
+    );
+    await renderDay();
+
+    /* Küresel sayaç yazılıydı ve üçüncü durak "3" görünüyordu; oysa o, ikinci seferin İLK durağı.
+       Özet kartı sefer bazında sayarken ("1/2 durak") liste küresel sayınca ekran kendi kendisiyle
+       çelişiyordu (kullanıcı bulgusu 31.08). */
+    expect(screen.getByTestId(`courier-stop-${STOP_3}`)).toHaveTextContent(/^1/);
   });
 });

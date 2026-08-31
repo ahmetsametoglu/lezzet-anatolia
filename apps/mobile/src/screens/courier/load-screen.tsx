@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -10,9 +10,11 @@ import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
+import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { fetchVanStock } from '@/lib/api/courier';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -72,12 +74,44 @@ function loadStateOf(stop: CourierStopContract): { loaded: number; total: number
   if (loaded > 0) {
     return { loaded, total, tone: operationsTheme.colors.terracotta, label: t.day.load.stopPartial };
   }
-  return { loaded, total, tone: operationsTheme.colors.muted, label: t.day.load.stopNone };
+  /* v3:18 `durumRengi: '#a8a191'` = `sand-600`, `muted` DEĞİL: bekleyen satır listenin en sessiz
+     öğesi ve `muted` onu alt metinle aynı ağırlığa çıkarıyordu. */
+  return { loaded, total, tone: operationsTheme.colors['sand-600'], label: t.day.load.stopNone };
 }
 
 export function CourierLoadScreen() {
   const router = useRouter();
   const day = useCourierDay();
+
+  /*
+    ARAÇTAKİ SERBEST MAL — kapının cümlesini besleyen tek sayı çifti (v3:18 `serbestBaslik`).
+
+    Gün cevabında YOK ve olmaması doğru: serbest ürün siparişe bağlanmayan bir stok hareketidir,
+    günün seferiyle hiçbir bağı yok. Ama kapının "Araçta 2 kalem serbest ürün" diyebilmesi için
+    sayı burada gerekiyor — kurye rampada "daha önce ne aldım" sorusunu bu satırda soruyor ve
+    cevabı görmeden ikinci kez alıyordu.
+
+    Düşerse SIFIR DEĞİL, boş hâl gösterilir: kapı yine çalışır, yalnız sayı söylemez (CLAUDE §1'in
+    "ölçülemeyen değer sıfır değildir" kuralı — burada zararsız tarafa düşüyor çünkü kapının işi
+    saymak değil götürmek).
+  */
+  const [vanFree, setVanFree] = useState<{ lines: number; qty: number }>({ lines: 0, qty: 0 });
+  useEffect(() => {
+    let alive = true;
+    void (async () => {
+      const result = await fetchVanStock();
+      if (!alive || result.error !== null) return;
+      setVanFree({
+        lines: result.data.onVan.length,
+        qty: result.data.onVan.reduce((sum, line) => sum + line.qty, 0),
+      });
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const freeLines = vanFree.lines;
+  const freeQty = vanFree.qty;
 
   const header = (
     <OperationsStackHeader
@@ -160,15 +194,20 @@ export function CourierLoadScreen() {
                 {fillCopy(t.day.load.counterRest, { total: String(total) })}
               </Text>
             </Text>
-            <Text style={styles.counterBadge}>{t.day.load.counterLabel}</Text>
-            {/* SEFER SAYISI (v3:18 `{{ yukSeferSayisi }} sefer`) — araçta birden çok seferin
-                kutusu varken sayacın NEYİ topladığını söyler; olmadan "15 kutu" kimin kutusu
-                belli değildi. Tek seferde çizilmez: olmayan bir ayrımı duyurmak olurdu. */}
-            {day.runs.length > 1 ? (
-              <Text style={styles.counterRuns}>
-                {fillCopy(t.day.load.runCount, { n: String(day.runs.length) })}
-              </Text>
-            ) : null}
+            {/*
+              SAĞDA TEK ÇİP, "ARAÇTA" ROZETİ YOK (v3:18 · tur 31.08).
+
+              Koyu kartta iki çip yan yana duruyordu — "araçta" ve "N sefer" — ve tasarımda
+              yalnız İKİNCİSİ var. "araçta" sayının birimini tekrar ediyordu (`/15 kutu` zaten
+              sayının kuyruğunda yazılı) ve iki çip arasında hangisinin bilgi taşıdığı
+              okunmuyordu.
+
+              Çip KOŞULSUZ (`{{ yukSeferSayisi }} sefer`): tek seferde de yazılır, çünkü soru
+              "kaç sefer var" değil "bu sayaç neyi topluyor" — cevabı bir olsa da yazılmalı.
+            */}
+            <Text style={styles.counterRuns}>
+              {fillCopy(t.day.load.runCount, { n: String(day.runs.length) })}
+            </Text>
           </View>
           <OperationsProgressBar
             value={total === 0 ? 0 : loaded / total}
@@ -202,9 +241,9 @@ export function CourierLoadScreen() {
           />
         )}
 
-        <Text style={styles.stopsHeading}>
-          {day.runs.length > 1 ? t.day.load.stopsBySefer : t.day.load.stopsHeading}
-        </Text>
+        {/* BAŞLIK KOŞULSUZ (v3:18 — düz metin): grup başlığı artık tek seferde de çizildiği
+            için "DURAKLARA GÖRE" varyantının okuyanı kalmadı. */}
+        <Text style={styles.stopsHeading}>{t.day.load.stopsBySefer}</Text>
 
         {boxedStops.map((stop, index) => {
           const state = loadStateOf(stop);
@@ -221,8 +260,10 @@ export function CourierLoadScreen() {
             0,
           );
           const groupTotal = group.reduce((sum, row) => sum + row.boxes.length, 0);
+          /* Grup başlığı TEK SEFERDE DE çizilir (v3:18 `grupGoster: i === 0` — sefer sayısına
+             bakmıyor): sayacı ve gününü taşıyan tek satır o. */
           const groupHead =
-            day.runs.length > 1 && stop.runId !== boxedStops[index - 1]?.runId ? (
+            stop.runId !== boxedStops[index - 1]?.runId ? (
               <View style={styles.runGroupRow} testID={`courier-load-group-${stop.runId}`}>
                 <View style={styles.runGroupText}>
                   <Text style={styles.runGroupHeading}>{stop.runLabel ?? ''}</Text>
@@ -232,7 +273,10 @@ export function CourierLoadScreen() {
                 </View>
                 <OperationsStatusBadge
                   label={fillCopy(t.day.load.stopCounter, { loaded: String(groupLoaded), total: String(groupTotal) })}
-                  tone={groupLoaded === groupTotal ? 'active' : groupLoaded === 0 ? 'idle' : 'warn'}
+                  /* İKİ TON, ÜÇ DEĞİL (v3:18 `grupFg/grupBg`): tam → zeytin, EKSİK → terracotta.
+                     Hiç okunmamış grup nötr griyle çiziliyordu ve rampada "bu sefer daha hiç
+                     yüklenmedi" ile "bitti" ayırt edilemiyordu (tur 31.08). */
+                  tone={groupLoaded === groupTotal ? 'active' : 'pending'}
                 />
               </View>
             ) : null;
@@ -253,7 +297,9 @@ export function CourierLoadScreen() {
                   {`${group.indexOf(stop) + 1} · ${stop.customerName}`}
                 </Text>
                 <Text style={styles.stopMeta} numberOfLines={1}>
-                  {`${stop.referenceNo ?? ''} · ${fillCopy(t.day.load.stopCounter, {
+                  {/* BİRİMİ YAZILIR (v3:18 `{{ yd.sayac }}` = "0/3 kutu"): çıplak "0/3" neyi
+                      saydığını söylemiyordu — aynı satırda kalem, koli ve kutu geçebiliyor. */}
+                  {`${stop.referenceNo ?? ''} · ${fillCopy(t.day.load.stopBoxCounter, {
                     loaded: String(state.loaded),
                     total: String(state.total),
                   })}`.replace(/^ · /, '')}
@@ -265,19 +311,41 @@ export function CourierLoadScreen() {
           );
         })}
 
-        {/* SERBEST ÜRÜN — İSTEĞE BAĞLI (v3:18'in kendi satırı). Kapı burada çünkü kurye rampada
-            önce kutuları okutuyor, sonra "bir de şunlardan alayım" diyor; ayrı bir menüye
-            koymak o anı ikiye bölerdi. */}
+        {/*
+          SERBEST ÜRÜN — BÖLÜM BAŞLIĞI + KART (v3:18 · tur 31.08).
+
+          Kapı burada çünkü kurye rampada önce kutuları okutuyor, sonra "bir de şunlardan alayım"
+          diyor; ayrı bir menüye koymak o anı ikiye bölerdi.
+
+          Başlık kartın İÇİNE gömülüydü ve kart onu bir satır etiketi gibi okutuyordu. Tasarımda
+          ikisi ayrı: "SERBEST ÜRÜN — İSTEĞE BAĞLI" bir BÖLÜM başlığıdır (yükleme listesinin
+          bittiğini söyler), kart ise o bölümün tek öğesi ve kendi cümlesini taşır.
+
+          Kart İKİ HÂLLİ (`c.serbest`): boşken KESİKLİ ve nötr — bir eksik değil bir davet; mal
+          alınmışsa YEŞİL ve dolu, çünkü artık araçta taşınan bir şey var ve kurye onu görmeli.
+        */}
+        <Text style={styles.stopsHeading}>{t.day.load.freeHeading}</Text>
         <PressableSurface
           onPress={() => router.navigate('/van-stock')}
           feedback="scale"
-          style={styles.freeGate}
+          style={[styles.freeGate, freeLines === 0 ? styles.freeGateEmpty : styles.freeGateFull]}
           accessibilityLabel={t.vanStock.title}
           testID="courier-load-free"
         >
+          <View style={[styles.freeIcon, freeLines === 0 ? styles.freeIconEmpty : styles.freeIconFull]}>
+            <Icon
+              name="packages"
+              size={operationsTheme.size.stripIcon}
+              color={freeLines === 0 ? operationsTheme.colors.muted : operationsTheme.colors['olive-dark']}
+            />
+          </View>
           <View style={styles.freeText}>
-            <Text style={styles.freeTitle}>{t.day.load.freeHeading}</Text>
-            <Text style={styles.freeMeta}>{t.day.load.freeMeta}</Text>
+            <Text style={styles.freeTitle}>
+              {freeLines === 0 ? t.day.load.freeEmptyTitle : fillCopy(t.day.load.freeTitle, { n: String(freeLines) })}
+            </Text>
+            <Text style={styles.freeMeta}>
+              {freeLines === 0 ? t.day.load.freeEmptyMeta : fillCopy(t.day.load.freeMeta, { n: String(freeQty) })}
+            </Text>
           </View>
           <Text style={styles.freeChevron}>›</Text>
         </PressableSurface>
@@ -306,18 +374,21 @@ export function CourierLoadScreen() {
           sıradaki karar "hangisini süreceğim" ve o karar orada veriliyor. Düğme yola ÇIKARMIYOR —
           dipnot bunu söylüyor.
         */}
+        {/* YARDIMCI SATIR DÜĞMENİN İÇİNDE (v3:18 — `min-height:64px`, iki satır tek dokunma
+            alanında). Düğmenin ALTINA yazılıydı ve ondan kopuk bir not gibi duruyordu: basmanın
+            ne yaptığı, basılan şeyin üstünde yazmalı (araçtaki seferler ekranının aynı kuralı). */}
         <PrimaryButton
           label={
             remaining === 0
               ? fillCopy(t.day.load.ctaDone, { n: String(total) })
               : fillCopy(t.day.load.ctaPartial, { n: String(remaining) })
           }
+          hint={t.day.load.ctaHint}
           onPress={() => router.navigate('/van-runs')}
           tone="ink"
           elevation="flat"
           testID="courier-load-back-cta"
         />
-        <Text style={styles.footnote}>{t.day.load.ctaHint}</Text>
         {remaining === 0 ? null : <Text style={styles.footnote}>{t.day.load.footnote}</Text>}
       </OperationsStickyBar>
 
@@ -424,35 +495,56 @@ const styles = StyleSheet.create({
   /* Serbest ürün kapısı — kutuların ALTINDA ve daha sessiz: isteğe bağlı bir iş, listenin
      kendisiyle aynı ağırlıkta durmamalı. */
   freeGate: {
-    marginTop: operationsTheme.space.lg,
     /* ÇUBUĞUN ALTINDAN ÇIKAR (ölçüldü 31.08 · cihazda): listenin dip dolgusu tek başına yetmedi —
        yapışkan çubuk mutlak konumlu ve düğme + iki dolgu + dipnot taşıyor. Son öğe çubuğun
        arkasında kalırsa hiç görülmez; kaydırma biter ve kurye kapının varlığını bilmez. */
     marginBottom: operationsTheme.space['9xl'],
     padding: operationsTheme.space.lg,
     borderRadius: operationsTheme.radius.card,
-    borderWidth: 1,
-    borderColor: operationsTheme.colors['olive-line'],
-    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderWidth: operationsTheme.border.base,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: operationsTheme.space.md,
+    gap: operationsTheme.space.lg,
   },
+  /** Boş hâl KESİKLİ ve nötr (v3:18 `c.serbest` `stil:'dashed'`) — bir eksik değil, bir davet. */
+  freeGateEmpty: {
+    borderStyle: 'dashed',
+    borderColor: operationsTheme.colors['sand-500'],
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+  },
+  /** Mal alınmışsa DOLU ve yeşil: araçta taşınan bir şey var ve kurye onu görmeli. */
+  freeGateFull: {
+    borderStyle: 'solid',
+    borderColor: operationsTheme.colors['success-line'],
+    backgroundColor: operationsTheme.colors['success-bg'],
+  },
+  freeIcon: {
+    width: operationsTheme.space['8xl'],
+    height: operationsTheme.space['8xl'],
+    borderRadius: operationsTheme.radius.tight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  freeIconEmpty: { backgroundColor: operationsTheme.colors.panel },
+  freeIconFull: { backgroundColor: operationsTheme.colors['olive-bg'] },
   freeText: { flex: 1, gap: 2 },
+  /* Kartın başlığı artık bir CÜMLE, üstbaşlık değil (v3:18 `serbestBaslik`): bölüm başlığı
+     kartın dışına çıktı, kart kendi hâlini söylüyor. */
   freeTitle: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.eyebrow,
-    color: operationsTheme.colors['olive-dark'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['screen-title--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.ink,
   },
   freeMeta: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors.body,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
   },
   freeChevron: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors['olive-dark'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text['screen-title'],
+    color: operationsTheme.colors['sand-600'],
   },
   runGroupRow: {
     flexDirection: 'row',

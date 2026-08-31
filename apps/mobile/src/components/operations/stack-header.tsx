@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -40,10 +41,19 @@ interface OperationsStackHeaderProps {
   onBack: () => void;
   /** Geri düğmesinin ekran okuyucu adı. */
   backLabel: string;
+  /**
+   * Başlık satırının SAĞ yuvası — ekranın konusuna ait tek bir işaret (v3:20'nin kanal rozeti
+   * "B2B", başlıkla aynı satırda ve sağa yaslı).
+   *
+   * Yuva 31.08'de açıldı: rozet durak ekranında ADRESİN yanına çizilmişti ve orada adresin bir
+   * niteliği gibi okunuyordu — oysa kanal DURAĞIN kimliği, adresin değil. Başlıkta durması aynı
+   * zamanda kaydırma sırasında görünür kalmasını sağlıyor.
+   */
+  right?: ReactNode;
   testID?: string;
 }
 
-export function OperationsStackHeader({ title, subtitle, onBack, backLabel, testID }: OperationsStackHeaderProps) {
+export function OperationsStackHeader({ title, subtitle, onBack, backLabel, right, testID }: OperationsStackHeaderProps) {
   return (
     <View style={styles.header} testID={testID}>
       {/* Geri düğmesi operasyonun KUM KUTUCUĞUDUR ve o kutu artık kitte tek yerde
@@ -62,6 +72,7 @@ export function OperationsStackHeader({ title, subtitle, onBack, backLabel, test
         </Text>
         {subtitle === undefined ? null : <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
+      {right === undefined ? null : <View style={styles.right}>{right}</View>}
     </View>
   );
 }
@@ -77,7 +88,11 @@ const styles = StyleSheet.create((_theme, rt) => ({
   },
   titles: {
     flexShrink: 1,
+    /* Sağ yuva varken başlık ARTAN alanı alır, yoksa içeriği kadar kalır — `flex:1` koşulsuz
+       verilseydi yuvasız başlıklarda geri düğmesiyle arasındaki boşluk açılırdı. */
+    flexGrow: 1,
   },
+  right: { flexShrink: 0 },
   title: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
     fontSize: operationsTheme.text['h2-sm'],

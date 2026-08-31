@@ -34,16 +34,35 @@ import { displayName, variantNames } from '../warehouse/names';
 export interface VanStockLine {
   variantId: string;
   name: string;
+  /**
+   * Boy etiketi ("450 g"); tek boylu üründe boş dize.
+   *
+   * ADDAN AYRI (v3:19 `sr.ad` kalın · `sr.boy` ince) — birleşik dize gönderiliyordu ("Cevizli
+   * Baklava (450 g)") ve ekran ikisini farklı ağırlıkta yazamıyordu. Depo ekranlarının hepsi bu
+   * ayrımı zaten yapıyor (`variantNames` ikisini ayrı döndürüyor); kurye ucu tek yerde
+   * birleştirip bilgiyi kaybediyordu.
+   */
+  variantLabel: string;
   /** Araçta kalan adet — partiler toplanmış hâlde. */
   qty: number;
+  /**
+   * ÇIKIŞ DEPOSUNDA kalan kullanılabilir adet — "Alındıktan sonra depoda N kalır." cümlesinin
+   * kaynağı (v3:19 `sr.not`). Kurye adedi artırırken depoyu boşaltıp boşaltmadığını görmeli;
+   * sayı olmadan artırma sınırsız bir düğme gibi duruyordu.
+   */
+  available: number;
 }
 
 /** Depoda alınabilir bir kalem — "sık koyulanlar" şeridinin satırı. */
 export interface VanCandidate {
   variantId: string;
   name: string;
+  /** Boy etiketi ("450 g") — adın ince yarısı; birleştirilmiş dize ağırlık farkını yutuyordu. */
+  variantLabel: string;
   /** Depoda KULLANILABİLİR adet (rezerveler düşülmüş) — söz verilmiş mal araca alınamaz. */
   available: number;
+  /** Bu varyanttan araçta kaç tane var — şerit kartı "araçta 3" diyebilsin diye (v3:19 `h.rozet`). */
+  onVan: number;
 }
 
 export type TakeToVanOutcome =
@@ -68,8 +87,12 @@ export async function vehicleWarehouseOf(db: SupabaseClient, warehouseIds: reado
  * **Araçta ne var** — varyant düzeyinde toplanmış. Parti kırılımı BİLEREK yok: kurye "üç Şöbiyet
  * var" diye düşünüyor, "iki farklı SKT'den üç Şöbiyet" diye değil. Kırılım depo ekranlarının işi.
  */
-export async function readVanStock(db: SupabaseClient, input: { vehicleWarehouseId: string }): Promise<VanStockLine[]> {
-  const batches = await new StockService(db).listInStockDetailed(undefined, [input.vehicleWarehouseId]);
+export async function readVanStock(
+  db: SupabaseClient,
+  input: { vehicleWarehouseId: string; sourceWarehouseId?: string | null },
+): Promise<VanStockLine[]> {
+  const stocks = new StockService(db);
+  const batches = await stocks.listInStockDetailed(undefined, [input.vehicleWarehouseId]);
   const toplam = new Map<string, number>();
   for (const batch of batches) {
     if (batch.physicalQty <= 0) continue;
@@ -77,9 +100,26 @@ export async function readVanStock(db: SupabaseClient, input: { vehicleWarehouse
   }
   if (toplam.size === 0) return [];
 
-  const names = await variantNames(db, [...toplam.keys()]);
+  const variantIds = [...toplam.keys()];
+  /* Çıkış deposu verilmediyse kalan SORULMAZ ve sıfır da yazılmaz (CLAUDE §1: ölçülemeyen değer
+     sıfır değildir) — 0 dönerse ekran "depoda hiç kalmadı" derdi, oysa bilmiyoruz. Bu yolda
+     ekran cümleyi hiç kurmuyor. */
+  const [names, available] = await Promise.all([
+    variantNames(db, variantIds),
+    input.sourceWarehouseId
+      ? stocks.listAvailableAcross([input.sourceWarehouseId], variantIds)
+      : Promise.resolve([]),
+  ]);
+  const availableBy = new Map(available.map((row) => [row.variantId, row.availableQty]));
+
   return [...toplam.entries()]
-    .map(([variantId, qty]) => ({ variantId, name: displayName(names.get(variantId)), qty }))
+    .map(([variantId, qty]) => ({
+      variantId,
+      name: names.get(variantId)?.productName ?? displayName(names.get(variantId)),
+      variantLabel: names.get(variantId)?.variantLabel ?? '',
+      qty,
+      available: availableBy.get(variantId) ?? 0,
+    }))
     .sort((a, b) => a.name.localeCompare(b.name, 'tr'));
 }
 
@@ -96,7 +136,7 @@ export async function readVanStock(db: SupabaseClient, input: { vehicleWarehouse
  */
 export async function listVanCandidates(
   db: SupabaseClient,
-  input: { warehouseId: string; limit?: number },
+  input: { warehouseId: string; vehicleWarehouseId?: string | null; query?: string; limit?: number },
 ): Promise<VanCandidate[]> {
   const stocks = new StockService(db);
   const batches = await stocks.listInStockDetailed(undefined, [input.warehouseId]);
@@ -106,14 +146,36 @@ export async function listVanCandidates(
   /* KULLANILABİLİR ÖLÇÜSÜ GÖRÜNÜMDEN gelir (`available_stock`), partiden çıkarılmaz: rezerve
      PARTİDE durmuyor, ayrı bir kayıt — parti satırından "fiili − rezerve" hesaplamak mümkün
      değil ve denenirse rezerveleri sıfır saymış olurduk. */
-  const [available, names] = await Promise.all([
+  const [available, names, vanBatches] = await Promise.all([
     stocks.listAvailableAcross([input.warehouseId], variantIds),
     variantNames(db, variantIds),
+    /* ARAÇTA KAÇ TANE VAR (v3:19 `h.rozet` = "araçta 3") — şerit kartı kendi hâlini söylüyor.
+       Sayı olmadan kurye aynı üründen ikinci kez alıp almadığını bilmiyordu; kart hepsinde aynı
+       "dokun, araca al" cümlesini yazıyordu (tur 31.08). */
+    input.vehicleWarehouseId
+      ? stocks.listInStockDetailed(undefined, [input.vehicleWarehouseId])
+      : Promise.resolve([]),
   ]);
+  const onVan = new Map<string, number>();
+  for (const batch of vanBatches) {
+    if (batch.physicalQty <= 0) continue;
+    onVan.set(batch.variantId, (onVan.get(batch.variantId) ?? 0) + batch.physicalQty);
+  }
 
+  /* Arama ADIN İÇİNDE geçiyor mu — SQL'e inmiyor ve inmemeli: ad iki tabloyu birleştiren bir
+     TÜRETİMDİR (ürün adı + boy etiketi) ve `ilike` yalnız birine bakabilirdi. Küme zaten depoda
+     stoğu olan varyantlar kadar; rampada aranan şey de tam olarak o. */
+  const needle = input.query?.toLocaleLowerCase('tr').trim() ?? '';
   return available
     .filter((row) => row.availableQty > 0)
-    .map((row) => ({ variantId: row.variantId, name: displayName(names.get(row.variantId)), available: row.availableQty }))
+    .map((row) => ({
+      variantId: row.variantId,
+      name: names.get(row.variantId)?.productName ?? displayName(names.get(row.variantId)),
+      variantLabel: names.get(row.variantId)?.variantLabel ?? '',
+      available: row.availableQty,
+      onVan: onVan.get(row.variantId) ?? 0,
+    }))
+    .filter((row) => needle.length === 0 || `${row.name} ${row.variantLabel}`.toLocaleLowerCase('tr').includes(needle))
     .sort((a, b) => b.available - a.available)
     .slice(0, input.limit ?? 12);
 }

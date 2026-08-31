@@ -190,21 +190,24 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         })}
         onBack={() => router.back()}
         backLabel={t.delivery.back}
+        /* KANAL ROZETİ BAŞLIK SATIRINDA (v3:20 — "Durak 1/1" ile aynı hizada, sağa yaslı).
+           Adresin yanına çizilmişti ve orada adresin bir niteliği gibi okunuyordu; oysa kanal
+           DURAĞIN kimliği ve kurye ona kapıya varmadan önce bakıyor. */
+        right={
+          <Text style={styles.channelTag} testID={`courier-delivery-${stop.channel}`}>
+            {t.channel[stop.channel]}
+          </Text>
+        }
         testID="courier-delivery-header"
       />
 
       <FormScroll contentContainerStyle={styles.body} testID="courier-delivery-body">
+        {/* ROZET HER KANALDA (kullanıcı bulgusu 30.08 · tasarımda başlığın sabit öğesi): eskiden
+            yalnız B2B'de çiziliyordu ve B2C durakta başlığın sağı boş kalıyordu. Kanal kapıda ne
+            beklendiğini söyler (fatura, teslim alan kişi, tahsilat âdeti) — "yok" demek "B2C"
+            demek değil, kuryeye hiçbir şey söylememektir. Yeri artık BAŞLIK satırı (yukarıda). */}
         <View style={styles.addressBlock}>
-          <View style={styles.addressRow}>
-            <Text style={styles.address}>{stop.address ?? t.day.stop.noAddress}</Text>
-            {/* ROZET HER KANALDA (kullanıcı bulgusu 30.08 · tasarımda başlığın sabit öğesi):
-                eskiden yalnız B2B'de çiziliyordu ve B2C durakta başlığın sağı boş kalıyordu.
-                Kanal kapıda ne beklendiğini söyler (fatura, teslim alan kişi, tahsilat âdeti) —
-                "yok" demek "B2C" demek değil, kuryeye hiçbir şey söylememektir. */}
-            <Text style={styles.channelTag} testID={`courier-delivery-${stop.channel}`}>
-              {t.channel[stop.channel]}
-            </Text>
-          </View>
+          <Text style={styles.address}>{stop.address ?? t.day.stop.noAddress}</Text>
           <Text style={styles.addressDetail}>{`${receiver} · ${t.channel[stop.channel]}`}</Text>
         </View>
 
@@ -788,7 +791,6 @@ const styles = StyleSheet.create({
     gap: operationsTheme.space['2xl'],
   },
   addressBlock: { gap: operationsTheme.space['2xs'] },
-  addressRow: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.lg },
   /*
     ADRES GÖVDE FONTUYLA, BAŞLIK FONTUYLA DEĞİL (kullanıcı bulgusu 30.08 · tasarım ölçüldü).
 

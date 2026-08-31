@@ -2,6 +2,7 @@ import {
   DeliveryRunCloseService,
   DeliveryRunService,
   DeliveryZoneService,
+  OrderBoxService,
   OrderService,
   UserProfileService,
   VehicleService,
@@ -42,6 +43,10 @@ export interface CourierRouteView {
   warehouseName: string | null;
   /** O güne yazılmış rota siparişi — kurye seçerken yükü görsün. */
   stopCount: number;
+  /** Rotanın kutu sayısı (v3:17) — durak sayısı hacmi söylemez, üç durak on bir kutu olabilir. */
+  boxCount: number;
+  /** Kapıda tahsilat bekleyen durak sayısı (v3:17) — günün nakit yükü. */
+  collectionCount: number;
   run: {
     runId: string;
     referenceNo: string;
@@ -120,11 +125,35 @@ export async function listCourierRoutes(
   const runByZone = new Map(runs.map((run) => [run.deliveryZoneId, run]));
   const warehouseName = new Map(warehouses.map((w) => [w.id, w.name]));
 
-  // Yük sayacı: günün rota siparişleri zone'a göre gruplanır (tek sorgu, N+1 yok).
+  /*
+    YÜK SAYACI ÜÇ SAYI (v3:17 `"5 durak · 7 kutu · 2 tahsilat"`) — hepsi zone'a göre gruplanır ve
+    hepsi TEK geçişte kurulur (N+1 yok). Durak sayısı tek başına yükü söylemiyordu: üç duraklık bir
+    rota on bir kutu taşıyabiliyor ve kurye aracı doldurmadan önce hem hacmi hem nakit yükünü
+    bilmek zorunda.
+
+    Kutular AYRI bir sorgu (`listByOrders`) — sipariş satırında kutu sayısı yok ve olmamalı: kutu
+    hazırlıkta doğar, sipariş yazılırken değil.
+  */
   const stopCount = new Map<string, number>();
+  const collectionCount = new Map<string, number>();
+  const zoneOfOrder = new Map<string, string>();
   for (const order of orders) {
     if (!order.deliveryZoneId) continue;
+    zoneOfOrder.set(order.id, order.deliveryZoneId);
     stopCount.set(order.deliveryZoneId, (stopCount.get(order.deliveryZoneId) ?? 0) + 1);
+    /* Borcun kuralı motorun kendi kuralı: toplam − (tahsil − iade) > 0. Ödenmiş sipariş
+       sayılmaz — kuryenin kapıda yapacağı iş yok. */
+    if (order.totalCents - (order.amountCollectedCents - order.amountRefundedCents) > 0) {
+      collectionCount.set(order.deliveryZoneId, (collectionCount.get(order.deliveryZoneId) ?? 0) + 1);
+    }
+  }
+  const boxCount = new Map<string, number>();
+  if (zoneOfOrder.size > 0) {
+    for (const box of await new OrderBoxService(db).listByOrders([...zoneOfOrder.keys()])) {
+      const zoneId = zoneOfOrder.get(box.orderId);
+      if (zoneId === undefined) continue;
+      boxCount.set(zoneId, (boxCount.get(zoneId) ?? 0) + 1);
+    }
   }
 
   // Kapanış bayrağı + kurye adı + araç etiketi: yalnız seferi OLAN rotalar için.
@@ -137,6 +166,8 @@ export async function listCourierRoutes(
   return today.map((zone) => toRouteView(zone, runByZone.get(zone.id) ?? null, {
     day: input.date,
     stopCount: stopCount.get(zone.id) ?? 0,
+    boxCount: boxCount.get(zone.id) ?? 0,
+    collectionCount: collectionCount.get(zone.id) ?? 0,
     warehouseName: warehouseName.get(zone.warehouseId) ?? null,
     closedRuns,
     courierNames,
@@ -150,6 +181,8 @@ function toRouteView(
   ctx: {
     day: string;
     stopCount: number;
+    boxCount: number;
+    collectionCount: number;
     warehouseName: string | null;
     closedRuns: ReadonlySet<string>;
     courierNames: ReadonlyMap<string, string>;
@@ -163,6 +196,8 @@ function toRouteView(
     warehouseId: zone.warehouseId,
     warehouseName: ctx.warehouseName,
     stopCount: ctx.stopCount,
+    boxCount: ctx.boxCount,
+    collectionCount: ctx.collectionCount,
     run: run
       ? {
           runId: run.id,

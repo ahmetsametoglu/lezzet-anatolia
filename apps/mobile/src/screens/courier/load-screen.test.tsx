@@ -137,12 +137,12 @@ describe('K · araca yükleme', () => {
     await renderLoad();
 
     expect(screen.getByTestId(`courier-load-stop-${STOP_A}`)).toHaveTextContent(/1\/2/);
-    expect(screen.getByTestId(`courier-load-stop-${STOP_A}`)).toHaveTextContent(/eksik/);
+    expect(screen.getByTestId(`courier-load-stop-${STOP_A}`)).toHaveTextContent(/yarım/);
     expect(screen.getByTestId(`courier-load-stop-${STOP_B}`)).toHaveTextContent(/0\/1/);
-    expect(screen.getByTestId(`courier-load-stop-${STOP_B}`)).toHaveTextContent(/binmedi/);
+    expect(screen.getByTestId(`courier-load-stop-${STOP_B}`)).toHaveTextContent(/bekliyor/);
   });
 
-  it('hepsi binince ekran "yola çıkabilirsin" der ve okutma düğmesi çekilir', async () => {
+  it('hepsi binince ekran "tüm kutuları yüklendi" der ve okutma düğmesi çekilir', async () => {
     mockDay(
       courierDay([
         courierStop(1, {
@@ -154,7 +154,7 @@ describe('K · araca yükleme', () => {
 
     await renderLoad();
 
-    expect(screen.getByTestId('courier-load-counter')).toHaveTextContent(/Tüm kutular araçta/);
+    expect(screen.getByTestId('courier-load-counter')).toHaveTextContent(/tüm kutuları yüklendi/);
     expect(screen.queryByTestId('courier-load-scan')).toBeNull();
   });
 
