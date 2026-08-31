@@ -275,6 +275,29 @@ Son tarihi yaklaşan bir stok partisi indirimli satışa çıkarılabilir. Bu, �
 - **Kapsam parametrik:** B2B'de **zorunlu** (varsayılan), B2C'de **kapalı** (varsayılan) — `Setting`'ten değiştirilir.
 - **Teslimat özeti (PDF):** teslimde, e-postası olan **tüm müşterilere otomatik** gönderilir (parametrik, varsayılan açık). Kurye isterse aynı PDF'in **çıktısını alıp elden de verebilir**. İçerik: kalemler + karşılanan miktarlar + `reference_no`; "resmî fatura değildir" ibaresi.
 
+### Durak sırası (11.9)
+
+Kuryenin gördüğü numara **coğrafi bir hesaptır**, listenin indeksi değil. 31.08'e kadar öyleydi ve
+gösterilen sıra aslında **siparişin verilme sırasıydı** — ekran olmayan bir yeteneği ima ediyordu.
+
+- **Amaç fonksiyonu turun TAMAMI:** depodan çık, hepsini uğra, depoya dön. "Sıradaki durak en yakın
+  olan" kuralı (açgözlü) yasak — dönüş bacağını hiç görmez ve turun sonunda uzun bir dönüş ödetir.
+  **Depoya en yakın durağın en sona düşmesi bir anomali değil, optimal turun sonucudur:** dönüş
+  yolunun üzerindeki durak dönüşte uğranır, başta uğranırsa tur uzar.
+- **Sıra turun özelliğidir, siparişin değil** — `delivery_run.stop_order`da durur. Sipariş başka güne
+  taşınırsa siparişe yazılmış bir sıra numarası sessizce yalana dönerdi.
+- **Hangi ölçüyle ve hangi incelikte hesaplandığı VERİDE yazar** (`stop_order_metric` /
+  `stop_order_precision`) ve ekran bunu söyleyebilmelidir: kuş uçuşu turun makro şeklini doğru kurar
+  ama bariyerin (nehir, tek yön) iki yakasını yakın sayar; posta kodu merkezinden dizilen sıra
+  sokak düzeyinde değildir.
+- **Ölçülemeyen sıra UYDURULMAZ.** Duraklar birbirinden ayırt edilemiyorsa (hepsi tek noktada) hesap
+  reddedilir ve `stopSeq` `null` kalır — keyfî bir sıra numaralandığı an kurye ona güvenir. Ekran o
+  günü "sırasız" gösterir; kısmen numaralanmış liste, numarasızdan kötüdür.
+- **Sıra hesabı aracı yolda BEKLETMEZ:** sefer başlatma hiçbir hâlde bu hesaba bağlı değildir. Hesap
+  düşerse sıra boş kalır, gün yine görünür.
+- Elle sıra düzeltme **bugün yok** (kullanıcı kararı 31.08: önce motor izlenir); alan kapıyı açık
+  tutuyor ve elle dizilmiş bir sıra motor tarafından ezilmez.
+
 ---
 
 ## 7. Ödeme ve kasa mutabakatı

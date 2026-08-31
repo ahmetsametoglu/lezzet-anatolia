@@ -6,12 +6,15 @@ Kuryenin o gün yapacağı teslimatları rota sırasıyla gördüğü ve günün
 
 ## 2. İçerik envanteri — ne var, neden
 
-- **Teslimat listesi (rota sırasıyla)** — günün duraklarının sıralı listesi; kurye sıradaki işini düşünmeden görür. Her durakta:
-  - **Adres** — teslimatın yapılacağı yer; navigasyona geçiş bu adres üzerinden olur
-  - **Müşteri adı** + B2B/B2C ayrımı — kapıda kimi arayacağını bilir; B2B'de teslim onayı zorunlu olduğu için beklenti baştan kurulur
-  - **Ödeme beklentisi** — bu duraklarda en kritik bilgi: **kapıda ödenecek** (tutar + beklenen yöntem) mi, **ödendi** mi. Kurye tahsilat yapacağı kapıyı önceden bilmeli; "ödendi" kapısında para konuşulmaz
-  - **Sipariş içeriği özeti** — kalem/koli sayısı ve kısa içerik; araçtan doğru koliyi almak ve eksik yüklemeyi rampada fark etmek için
-  - **Durum** — bekliyor / teslim edildi / ulaşılamadı / reddedildi; günün resmi tek bakışta
+- **Teslimat listesi (rota sırasıyla)** — günün duraklarının sıralı listesi; kurye sıradaki işini düşünmeden görür.
+  - ⚠ **Sıra bir HESAPTIR ve olmayabilir** (31.08 · `11.9`): numara sunucudan gelir (kapalı tur hesabı), listenin indeksinden DEĞİL — 31.08'e kadar öyleydi ve gösterilen sıra aslında siparişin verilme sırasıydı.
+  - **Sırasız gün hâli:** bir tek durakta bile sıra bilinmiyorsa (koordinat çözülemedi, duraklar ayırt edilemedi, hesap düştü) numara UYDURULMAZ — daire nötr bir işaret taşır, dikey ray çizilmez ve "sıradaki durak" başlığı zayıflar. Gerekçe: kısmen numaralanmış liste numarasızdan **kötüdür**; kurye "3" görünce onu günün üçüncü durağı sanar, oysa üç durak hiç numaralanmamıştır. Ray sıra yokken çizilirse ekran olmayan bir yeteneği iddia eder.
+  - Her durakta:
+    - **Adres** — teslimatın yapılacağı yer; navigasyona geçiş bu adres üzerinden olur
+    - **Müşteri adı** + B2B/B2C ayrımı — kapıda kimi arayacağını bilir; B2B'de teslim onayı zorunlu olduğu için beklenti baştan kurulur
+    - **Ödeme beklentisi** — bu duraklarda en kritik bilgi: **kapıda ödenecek** (tutar + beklenen yöntem) mi, **ödendi** mi. Kurye tahsilat yapacağı kapıyı önceden bilmeli; "ödendi" kapısında para konuşulmaz
+    - **Sipariş içeriği özeti** — kalem/koli sayısı ve kısa içerik; araçtan doğru koliyi almak ve eksik yüklemeyi rampada fark etmek için
+    - **Durum** — bekliyor / teslim edildi / ulaşılamadı / reddedildi; günün resmi tek bakışta
 - **Gün ilerlemesi** — kaç durak bitti, kaç durak kaldı; kapıda ödemeli duraklardan biriken tahsilat bilgisi güne eşlik eder (kapanışta sürpriz olmaz)
 - **Ulaşılamayan duraklar** — tekrar denenecekler listede kaybolmaz; kurye gün içinde geri dönebilir
 

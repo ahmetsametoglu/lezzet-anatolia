@@ -20,6 +20,28 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 - **Faz 1.** Rota dışı teslimat için kargo şirketi: etiket üretimi, takip numarası, durum güncellemesi.
 - Sağlayıcı FR/DE'de çalışan bir kargo olacak; agnostik arayüz.
 
+## Adres ve coğrafi kodlama
+
+- **Adres arama (FR): BAN / Géoplateforme** — `packages/address-fr`. Anahtarsız, ücretsiz, açık veri
+  (Etalab 2.0). İki kullanım: müşterinin adres önerisi kutusu (istemciden) ve **koordinat çözümü**
+  (sunucudan, 11.9). İkincisi 31.08'de eklendi ve kapsamı genişletti — eskiden yalnız müşterinin
+  yazdığı harfler giderdi, şimdi kaydedilen her adres bir kez soruluyor.
+- **Giden veri yalnız ADRES METNİDİR:** kimlik yok, oturum yok, çerez yok. Müşteri adı/telefonu
+  sorguya **eklenmez** ve bu bir kısıt — port `GeocodeQuery` olarak dört alan alır (`line1`,
+  `postalCode`, `city`, `country`), fazlasını taşıyamaz.
+- **Kota IP başına saniyeliktir** ve bu yüzden koordinat, adres kaydedilirken SENKRON çözülmez:
+  kaydetme yoluna binen bir çağrı kotayı tüm müşterilere ortak yapardı ve akşam saatinde bir 429
+  herkese birden çarpardı. Çözüm taramalı bir cron (`geocode_addresses`, on dakikada bir) + müşteri
+  öneriyi seçtiğinde zaten cevapta gelen koordinatın taşınması.
+- **Almanya için sağlayıcı YOK ve uydurulmuyor** (BAN yalnız Fransa'ya bakar). Port
+  `unsupported_country` döner, nokta `null` kalır ve o satırlar tarama kuyruğunda sayaç TÜKETMEZ —
+  ikinci bir kaynak takıldığı gün çözülsünler diye. Bugün DE adreslerinin noktası beslemede kod
+  merkezi olarak duruyor ve kademesi dürüstçe `municipality` yazıyor: kapı değil, yerleşimin ortası.
+- **Anahtarsızlık ADLI:** `geocoderConfigured(country)` — ekran "Almanya adresleri için konum çözümü
+  kapalı" diyebilir; sessiz bir eksik olmaz.
+- Port `packages/application/src/delivery/geocode-port.ts`, fabrika `geocode-provider.ts` (env'i
+  yalnız orada okur). Hiçbir yol fırlatmaz; her başarısızlık adlandırılmış bir sonuçtur.
+
 ## Muhasebe export
 
 - Sistem ön muhasebe verisini dış muhasebe yazılımına **export** eder; resmî fatura orada kesilir.

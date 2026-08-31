@@ -156,14 +156,23 @@ Bunlar arkadaşa sorulan sorulara bağlı (bkz. WhatsApp soru listesi). Cevaplar
 - Kurye gün kapanışı + kasa mutabakatı
 - `wa.me` deep-link "yola çıktık" mesajı
 - **Kuryenin telefonunda harita + akıllı rota** *(kullanıcı notu 17.08 — barkod/kutu konuşmasının yan
-  kararı)*: üç ayrı iş, birbirine bağlanmasın. **(a) Durak SIRASI — bugünün önceliği:** kurye
-  duraklarını doğru sırayla görmeli; sıralama ölçütü (coğrafi yakınlık · teslim penceresi · soğuk
-  zincir süresi) o gün konuşulacak, farklı optimizasyonlar gerekebilir. Bugün liste var, sıra
-  ölçütü yok. **(b) Harita gösterimi:** rotanın çizilmesi ve yol boyu takibi — mobilde harita
-  bağımlılığı HİÇ yok (ölçüldü 17.08: `apps/mobile/package.json`'da harita paketi yok), web'in
-  Leaflet kararı (19.20) mobile geçmez, ayrı seçim + STACK beyanı ister. **(c) Akıllı rota:**
-  sıra önerisini motorun üretmesi — (a) ve (b) olmadan anlamsız, en son. Kutu/barkod akışı bu üçünün
-  hiçbirini beklemez: harita gecikirse teslim garantisi gecikmez.
+  kararı)*: üç ayrı iş, birbirine bağlanmasın.
+  ~~**(a) Durak SIRASI — bugünün önceliği**~~ **KAPANDI (31.08 · `11.9`):** sıra kuş uçuşu kapalı tur
+  hesabından geliyor (`domain-core/delivery/route-order` — 2-opt + Or-opt), `delivery_run.stop_order`da
+  duruyor ve hangi ölçü/incelikle hesaplandığı veride yazıyor. Ayırt edilemeyen küme reddediliyor
+  (`indistinguishable`) — keyfî sıra numaralanmıyor. Etüt: `docs/feature/durak-sirasi.md`.
+  Sıralama ölçütünün ikinci ekseni (teslim penceresi · soğuk zincir · kapasite) hâlâ AÇIK ve (c)'ye
+  bağlı; ölçümsüz optimizasyon olmayan bir soruna makine kurmaktır.
+  **(b) Harita gösterimi:** rotanın çizilmesi ve yol boyu takibi. **Web yarısı** — sevkiyat masasında
+  rota önizlemesi (`route-map*`, mevcut Leaflet altyapısı üstünde; `09.x`) motorun denetim gözü ve
+  önce o gelmeli. **Mobil yarısı ERTELENDİ** (31.08): kuryenin haritadan beklediği navigasyondur ve
+  o artık cihazın kendi uygulamasına devrediliyor (`11.8` — `maps/dir` deep-link, sıfır maliyet).
+  Mobilde harita bağımlılığı HÂLÂ YOK ve paket seçilmedi; ayrı seçim + `STACK §2` beyanı ister.
+  **(c) Akıllı rota:** gerçek yol süresi matrisi (`RouteMatrixProvider` portu — self-host OSRM ya da
+  ticari API) ve kısıtlar. Kuş uçuşu turun makro şeklini doğru kurar ama bariyerin iki yakasını
+  (nehir, demiryolu, tek yön) "200 m" sayar — mikro sıra orada yanılabilir. Motor ve saklama hiç
+  değişmeden takılır: `stop_order_metric` alanı zaten `matrix` demeyi bekliyor.
+  Kutu/barkod akışı bu üçünün hiçbirini beklemez: harita gecikirse teslim garantisi gecikmez.
 - **Posta kodu talebi ÜLKESİZ** (ölçüldü 11.08): `postal_code_demand` anahtarı yalnız `postal_code`,
   oysa `delivery_zone_postal_code` anahtarı `(country, postal_code)` — posta kodu sınır ötesi
   benzersiz değil (67000 hem Fransa'da hem Almanya'da var). Yani "şu koda talep geldi" sinyali hangi

@@ -80,9 +80,18 @@
 
 ## YOKLAR (v1'de çizilmeyecek)
 
-- Canlı harita / koordinat / ETA (v2 — navigasyon adres metniyle köprü), rota sırasını değiştirme
-  (plan operatörün), müşteri sipariş geçmişi/hesap detayı, teslim-edilemedi sebep LİSTESİ
-  (bilinçli — serbest kısa not var).
+- Canlı harita / ETA (v2), rota sırasını DEĞİŞTİRME, müşteri sipariş geçmişi/hesap detayı,
+  teslim-edilemedi sebep LİSTESİ (bilinçli — serbest kısa not var).
+- **Güncelleme (31.08 · `11.8`/`11.9`) — üç satır ayrıştı:**
+  - **Sıra artık VAR ve gösterilir** — sunucu hesaplıyor (kapalı tur), ekran çiziyor. "YOKLAR"da
+    kalan yalnız sırayı **değiştirmek**; kullanıcı kararı: önce motor izlenir, elle düzeltme kimseye
+    (kuryeye de operatöre de) açılmadı. Sıra bilinmiyorsa numara uydurulmaz — `kurye-gun.md`
+    "sırasız gün hâli".
+  - **Koordinat artık var** ama ekranda GÖSTERİLMİYOR: adresin noktası sıralamanın girdisidir,
+    kuryenin okuyacağı bir bilgi değil.
+  - **Navigasyon köprüsü adres metniyle DEĞİL, koordinatla açılıyor** (varsa) ve artık gerçekten
+    rota kuruyor (`maps/dir`); eskiden yer kartı açıyordu. Hangi harita uygulamasının açılacağı
+    cihazın kararı — sunucu karışmaz.
 
 
 ## Sefer güncellemesi (18.08 — `docs/feature/sefer.md`)
