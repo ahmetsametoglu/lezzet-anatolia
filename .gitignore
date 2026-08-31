@@ -45,3 +45,9 @@ docs/uygulama/07-operasyon-fonksiyonel-kontrol-listesi.md
 # geçişle birlikte doğar ve onunla ölür — `docs/uygulama/ekran-goruntuleri/` ile aynı gerekçe.
 # Dosya adı kalıbı `v3-gorsel-*.md` defterlerini YAKALAMAZ (onlar repoda kalır).
 docs/uygulama/v3-gorsel/
+
+# Claude Design'ın çalışma klasörü (kullanıcı kararı 31.08) — dışa aktarılmış HTML'ler, yüklenen
+# ürün görselleri ve ekran görüntüsü setleri. KAYNAK Claude Design'da duruyor; buradaki kopya her
+# tasarım turunda baştan doğuyor ve depoya megabaytlarca üretilmiş dosya taşıyordu.
+# `design/derived/` ve `design/*.md` REPODA KALIR — implementin okuduğu karar metinleri onlar.
+design/project/
