@@ -412,9 +412,21 @@ export interface CourierDayRunView extends CourierRunBriefView {
  */
 export async function startCourierDay(
   db: SupabaseClient,
-  input: { courierId: string; date?: string; zoneId?: string; vehicleId?: string | null },
+  input: { courierId: string; date?: string; zoneId?: string; vehicleId?: string | null; depart?: boolean },
 ): Promise<CourierDayStart> {
   const date = input.date ?? new Date().toISOString().slice(0, 10);
+  /*
+    YOLA ÇIKMA AYRI BİR EYLEM (kullanıcı kararı 31.08) — ama bu kapı İKİSİNİ de taşıyor.
+
+    Model: sefer KURULUR (satır doğar, siparişler damgalanır, kutular okutulabilir) ve ayrıca
+    BAŞLATILIR (damga vurulur, duraklar açılır, müşteriye haber gider). `depart` bayrağı bu ikisini
+    ayırıyor. Varsayılanı `true` çünkü bugünkü tek çağıran (`/day/start`) tek düğmeye bağlı; ekranlar
+    ikiye ayrıldığında (21.190) `depart:false` ile kurma, sonra `depart:true` ile başlatma çağrılır.
+
+    Bayrak geçici bir köprü DEĞİL: "kur" ile "başlat" aynı rota çözümünü, aynı claim'i ve aynı
+    kapsam kararını paylaşıyor. İki ayrı kapı yazmak o üç kararı kopyalamak olurdu (CLAUDE §1).
+  */
+  const depart = input.depart ?? true;
 
   /**
    * Kuryenin DEPO KAPSAMI sunucuda, kendi profilinden çözülür (11.7 · kullanıcı kuralı 21.08:
@@ -446,7 +458,7 @@ export async function startCourierDay(
   const year = Number(date.slice(0, 4));
 
   // Referans çakışması (26^6 içinde nadir) yeni kodla denenir — sipariş referansının deseni.
-  let start = await runs.start({
+  let start = await runs.open({
     zoneId,
     date,
     courierId: input.courierId,
@@ -455,7 +467,7 @@ export async function startCourierDay(
     actorId: input.courierId,
   });
   for (let attempt = 0; !start.ok && start.reason === 'reference_collision' && attempt < 3; attempt += 1) {
-    start = await runs.start({
+    start = await runs.open({
       zoneId,
       date,
       courierId: input.courierId,
@@ -480,6 +492,10 @@ export async function startCourierDay(
     return { status: 'no_route' };
   }
 
+  /* YOLA ÇIKMA DAMGASI — yalnız `depart` istendiğinde. Kurulmuş sefer araçta bekler ve
+     `departedAt` NULL kalır; ekran onu "araçta, başlamadı" diye gösterir (v3:15). */
+  const departed = depart ? await runs.depart({ runId: start.runId!, courierId: input.courierId }) : null;
+
   // Başlatılan seferin künyesi de ARAÇ ADINI taşıyor: ekran başlatma anından itibaren "hangi
   // aracı süreceğim" sorusunu cevaplayabilmeli (30.08 · uyuşmazlık #12).
   const [startedZone, startedVehicleLabel] = await Promise.all([
@@ -498,7 +514,7 @@ export async function startCourierDay(
       vehicleId: input.vehicleId ?? null,
       vehicleLabel: startedVehicleLabel,
       warehouseName: startedWarehouseName,
-      departedAt: start.departedAt ?? null,
+      departedAt: departed?.departedAt ?? null,
       returnedAt: null,
       closed: false,
     },
@@ -520,8 +536,11 @@ export async function startCourierDay(
     boxesByOrder.set(box.orderId, entry);
   }
 
+  /* GEÇİŞLER YALNIZ YOLA ÇIKARKEN (31.08). Sefer kurulurken siparişler damgalanır ama `ready`
+     kalır: araçtaki mal henüz "yolda" değildir ve müşteriye haber gitmemiştir. Dört liste bu dalda
+     boş döner ve bu bir eksiklik değil — kurma anının doğru fotoğrafı budur. */
   const orders = new OrderService(db);
-  for (const claim of start.claimed ?? []) {
+  for (const claim of depart ? (start.claimed ?? []) : []) {
     if (claim.status === 'out_for_delivery') {
       result.alreadyOut.push(claim.orderId);
       continue;

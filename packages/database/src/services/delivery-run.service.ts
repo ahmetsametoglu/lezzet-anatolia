@@ -4,12 +4,19 @@ import {
   DeliveryRunCloseSchema,
   DeliveryRunCollectionSchema,
   DeliveryRunSchema,
-  StartDeliveryRunResultSchema,
+  SetStopOrderResultSchema,
+  OpenDeliveryRunResultSchema,
+  DepartDeliveryRunResultSchema,
   type CloseDeliveryRunResult,
   type DeliveryRun,
   type DeliveryRunClose,
   type DeliveryRunCollection,
-  type StartDeliveryRunResult,
+  type SetStopOrderResult,
+  type OpenDeliveryRunResult,
+  type DepartDeliveryRunResult,
+  type StopOrderMetric,
+  type StopOrderPrecision,
+  type StopOrderSource,
 } from '@lezzet/types';
 import { fromCents } from '@lezzet/helper';
 import { BaseDbService } from '../core/base.service';
@@ -79,20 +86,22 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
   }
 
   /**
-   * **Seferi başlat** — satır + siparişlerin damgalanması TEK transaction (`start_delivery_run`).
+   * **Seferi KUR** — satır + siparişlerin damgalanması TEK transaction (`open_delivery_run`).
    * `already_started` bir hata değil: rota+gün başına tek sefer, ikinci çağrı mevcut künyeyi alır.
-   * Durum GEÇİŞİ burada yapılmaz — `ready → out_for_delivery` iznini motor verir, uygulama katmanı
-   * yazar (dört-liste sözleşmesi orada kurulur).
+   *
+   * Sefer `departed_at` NULL doğar (31.08): kurulmuş sefer araçta bekler, kutuları okutulabilir,
+   * ama yola çıkmamıştır. Durum GEÇİŞİ de burada yapılmaz — `ready → out_for_delivery` iznini
+   * motor verir, uygulama katmanı yazar (dört-liste sözleşmesi orada kurulur).
    */
-  async start(input: {
+  async open(input: {
     zoneId: string;
     date: string;
     courierId: string;
     referenceNo: string;
     vehicleId?: string | null;
     actorId?: string | null;
-  }): Promise<StartDeliveryRunResult> {
-    const raw = await this.executeRpc('start_delivery_run', {
+  }): Promise<OpenDeliveryRunResult> {
+    const raw = await this.executeRpc('open_delivery_run', {
       p_zone_id: input.zoneId,
       p_date: input.date,
       p_courier_id: input.courierId,
@@ -101,7 +110,47 @@ export class DeliveryRunService extends BaseDbService<DeliveryRun, never, never>
       p_actor_id: input.actorId ?? null,
     });
     // `claimed` gömülü dizi — `embeds` ile alt ağaç da çevrilir (order_id → orderId).
-    return StartDeliveryRunResultSchema.parse(dbToApp(raw, new Set(['claimed'])));
+    return OpenDeliveryRunResultSchema.parse(dbToApp(raw, new Set(['claimed'])));
+  }
+
+  /**
+   * **Seferi BAŞLAT** (yola çık) — kurulmuş seferin `departed_at` damgası (31.08).
+   * Durum geçişleri yine uygulama katmanında; RPC damganın atomikliğini ve tekrar basılamazlığını
+   * taşır. Başkasının seferi `not_mine` alır.
+   */
+  async depart(input: { runId: string; courierId: string }): Promise<DepartDeliveryRunResult> {
+    const raw = await this.executeRpc('depart_delivery_run', {
+      p_run_id: input.runId,
+      p_courier_id: input.courierId,
+    });
+    return DepartDeliveryRunResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **Durak sırasını yaz** (11.9) — `set_run_stop_order`. Yine RPC, çünkü kural VERİDE duruyor:
+   * elle dizilmiş sıra motor yazımıyla ezilmez ve kapanmış seferin sırası donar. Uygulamada
+   * oku-sonra-yaz olsaydı, biri sırayı düzeltirken uçuşta olan bir yeniden hesap onu sessizce
+   * ezebilirdi.
+   */
+  async saveStopOrder(input: {
+    runId: string;
+    orderIds: readonly string[];
+    source: StopOrderSource;
+    metric: StopOrderMetric;
+    precision: StopOrderPrecision;
+    actorId?: string | null;
+    force?: boolean;
+  }): Promise<SetStopOrderResult> {
+    const raw = await this.executeRpc('set_run_stop_order', {
+      p_run_id: input.runId,
+      p_order_ids: [...input.orderIds],
+      p_source: input.source,
+      p_metric: input.metric,
+      p_precision: input.precision,
+      p_actor_id: input.actorId ?? null,
+      p_force: input.force ?? false,
+    });
+    return SetStopOrderResultSchema.parse(dbToApp(raw));
   }
 
   /**

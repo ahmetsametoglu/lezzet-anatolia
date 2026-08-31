@@ -289,13 +289,17 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
     const zoneSvc = new DeliveryZoneService(db);
     yerel.zoneId = (await zoneSvc.insert({ name: `Sefer bölgesi ${stamp}`, warehouseId: yerel.tesisId, weekdays: [1, 2, 3, 4, 5, 6, 7] })).id;
 
-    const run = await new DeliveryRunService(db).start({
+    const run = await new DeliveryRunService(db).open({
       zoneId: yerel.zoneId,
       date: gun,
       courierId: kurye.id,
       referenceNo: `SF-TEST-${String(stamp).slice(-6)}`,
     });
     yerel.runId = run.runId;
+    /* Sefer YOLA ÇIKARILIYOR (31.08): kurma artık damga vurmuyor ve başlamamış sefer kapatılamaz
+       (`not_departed`). Bu blok "araçtan satış açık sefere bağlanır"ı ölçüyor — açık sefer, yola
+       çıkmış seferdir. */
+    await new DeliveryRunService(db).depart({ runId: run.runId!, courierId: kurye.id });
 
     const arac = await new ProductService(db).create({ name: { tr: `Araç ürünü ${stamp}` }, categoryId });
     yerel.productId = arac.product.id; // teardown'a bildirilmezse hiçbir cascade toplamaz

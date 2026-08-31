@@ -394,6 +394,46 @@ describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık
   });
 });
 
+describe('sefer KUR ↔ sefer BAŞLAT (31.08)', () => {
+  it('kurulan sefer YOLA ÇIKMAZ: damga yok, siparişler HAZIR, dört liste boş', async () => {
+    const { orderId } = await dispatched({ upTo: 'ready' });
+
+    const kurulan = mustStart(await startCourierDay(db, { courierId, zoneId, depart: false }));
+
+    /* Sefer satırı DOĞDU ve sipariş damgalandı — kutu okutulabilir hâle geldi. Ama araçtaki mal
+       henüz "yolda" değil ve müşteriye haber gitmedi: araç bir ara depodur. */
+    expect(kurulan.run.departedAt).toBeNull();
+    expect((await orders.getById(orderId))?.deliveryRunId).toBe(kurulan.run.runId);
+    expect((await orders.getById(orderId))?.status).toBe('ready');
+    expect(kurulan.started).toEqual([]);
+    expect(kurulan.alreadyOut).toEqual([]);
+    expect(kurulan.awaitingBoxes).toEqual([]);
+  });
+
+  it('BAŞLATMA aynı seferi yola çıkarır — damga vurulur, durak açılır', async () => {
+    const { orderId } = await dispatched({ upTo: 'ready' });
+    const kurulan = mustStart(await startCourierDay(db, { courierId, zoneId, depart: false }));
+
+    const baslayan = mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    // AYNI sefer: kurma ikinci bir satır doğurmuyor, rota+gün başına tek sefer (K3).
+    expect(baslayan.run.runId).toBe(kurulan.run.runId);
+    expect(baslayan.run.departedAt).not.toBeNull();
+    expect(baslayan.started).toContain(orderId);
+    expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+  });
+
+  it('İKİNCİ başlatma damgayı EZMEZ — "zaten yolda" bir hata değil', async () => {
+    await dispatched({ upTo: 'ready' });
+    const ilk = mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    const ikinci = mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    // Kurye düğmeye iki kez basabilir; cevabı "olmadı" değil "zaten olmuştu"dur.
+    expect(ikinci.run.departedAt).toBe(ilk.run.departedAt);
+  });
+});
+
 describe('seferi başlat (K1 · 18.08)', () => {
   it('HAZIR durak yola çıkar — sefer kaydı doğar, geçiş kuryenin adına düşer', async () => {
     const { orderId } = await dispatched({ upTo: 'ready' });

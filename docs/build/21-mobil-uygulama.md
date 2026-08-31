@@ -9114,7 +9114,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `runId` yok, "sefer kur" ile "sefer başlat" ayrımı arayüzde yok. Tasarımı geldi (v3:15 Araçtaki
   Seferler, 16 Sefer ve Araç, 17 Araca Yükleme, 13 Kurye Dönüşü); iş 21.190'da.
 
-- [ ] (21.190) **KURYE ANA EKRANI: ÇOKLU SEFER · SEFER KUR ↔ SEFER BAŞLAT** (v3:13-18 · kullanıcı kararı 31.08)
+- [~] (21.190) **KURYE ANA EKRANI: ÇOKLU SEFER · SEFER KUR ↔ SEFER BAŞLAT** (v3:13-18 · kullanıcı kararı 31.08)
   `touches: packages/application/src/courier/* · packages/types/src/contracts/courier-api.schema.ts · apps/mobile-api/src/api/v1/courier.ts · apps/mobile/src/screens/courier/*`
 
   Tasarım hazır ve modeli birebir taşıyor. Yapılacaklar sırasıyla: (1) `start_delivery_run` RPC'sini
@@ -9124,6 +9124,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (durakta bugün rota kimliği YOK, iki seferin durağı karışık tek listede geliyor). (4) Ekranlar:
   14'ün üç hâli, 15 Araçtaki Seferler, 16 çoklu seçim + araç, 17 sefere göre gruplu yükleme.
 
+  **Durum (31.08) — ADIM 1 BİTTİ: veri ve kapı ayrıldı.** `start_delivery_run` ikiye bölündü ve
+  üçlü tamamlandı: **`open_delivery_run`** (sefer KURULUR — satır doğar, siparişler damgalanır,
+  `departed_at` NULL kalır, kutular okutulabilir) → **`depart_delivery_run`** (yola çıkar, damga
+  vurulur) → `close_delivery_run` (kapanır). Kolon zaten nullable'dı; migration'ın kendi notu bunu
+  öngörmüştü: *"V1'de start tek harekettir; yükleme ayrı bir an olursa ayrışır."*
+
+  Uygulama kapısı `startCourierDay` **tek kapı olarak korundu**, `depart` bayrağıyla: rota çözümü,
+  claim ve kapsam kararı ikisinde de aynı — iki ayrı kapı yazmak o üç kararı kopyalamak olurdu
+  (CLAUDE §1). `depart:false` kurar (dört liste boş döner, geçiş yok), varsayılan `true` yola çıkarır.
+
+  **Yan bulgu, düzeltildi:** başlamamış sefer kapatılınca `delivery_run_times` kısıtı ham bir
+  veritabanı hatası fırlatıyordu. `close_delivery_run` artık kendi cevabını veriyor: `not_departed`.
+
+  Ölçüldü: **4006/4007** — kalan tek düşük adres/geo şeridinin `address_city_mismatch` işinden,
+  dokunulmayan dosyalarda.
+
+  **BEKLEYEN(21.190):** kalan üç adım — (2) `/courier/day` sefer LİSTESİ dönsün, (3) durak
+  sözleşmesine `runId` + rota adı, (4) ekranlar (14'ün üç hâli · 15 Araçtaki Seferler · 16 çoklu
+  seçim + araç · 17 sefere göre gruplu yükleme).
+
   **BEKLEYEN(21.190):** `loadBox` hâlâ `order.courierId` okuyor, sefere değil — aynı kuryeye damgalı
   BAŞKA rotanın kutusu sessizce biniyor ve o durak gün listesinde hiç görünmüyor (bölge süzgeci).
-  Ölçüt `delivery_run_id` olacak; kolon zaten var ve `start_delivery_run` onu da yazıyor.
+  Ölçüt `delivery_run_id` olacak; kolon zaten var ve `open_delivery_run` onu da yazıyor.

@@ -42,12 +42,48 @@ create table public.delivery_run (
 
   -- Yaşam çizgisi ÜÇ DAMGA, durum makinesi DEĞİL (18.08): hâl damgalardan türetilir (satır var +
   -- departed null = yükleniyor · departed dolu = yolda · returned dolu = döndü). Projenin yerleşik
-  -- deseni bu ("durum saklama, andan türet": teslim anı loglardan, `reconciled` generated). V1'de
-  -- start tek harekettir — created ve departed aynı anda yazılır; yükleme ayrı bir an olursa ayrışır.
+  -- deseni bu ("durum saklama, andan türet": teslim anı loglardan, `reconciled` generated).
+  --
+  -- ── VE 31.08'DE AYRIŞTI ───────────────────────────────────────────────────
+  -- Bu satırın kendi notu "V1'de start tek harekettir; YÜKLEME AYRI BİR AN OLURSA AYRIŞIR" diyordu.
+  -- O an geldi (kullanıcı kararı 31.08): **araç bir ara depodur** ve içinde birden çok seferin —
+  -- bugünün de yarının da — kutusu durabilir. Sefer KURULUR (satır doğar, siparişler damgalanır,
+  -- kutular okutulabilir) ama BAŞLAMAZ; başlatan ayrı bir eylemdir ve müşteriye haber o an gider.
+  -- Üç kapı, üç damga: `open_delivery_run` → `depart_delivery_run` → `close_delivery_run`.
   created_at timestamptz not null default now(),
   departed_at timestamptz,
   returned_at timestamptz,
   note text,
+
+  -- ── DURAK SIRASI — TURUN ÖZELLİĞİ, SİPARİŞİN DEĞİL (11.9) ─────────────────
+  -- Sıra `order.stop_seq int` olarak siparişe YAZILMADI ve gerekçe yapısal: `stop_seq = 3` paydasız
+  -- bir sayıdır — neyin üçüncüsü? Sipariş başka güne ya da başka rotaya taşındığı an o sayı sessizce
+  -- yalana döner ve hiçbir yerde hata vermez. Sıra bir TURUN özelliğidir; turun kimliği de bu satır.
+  -- Emsal aynı dosyada: `delivery_run_close.delivered_orders uuid[]` — kimlik dizisi seferde durur.
+  --
+  -- **DİZİ SIRALAMADIR, ÜYELİK DEĞİL.** Üyelik bugünkü yerinde kalıyor (`order.delivery_run_id`);
+  -- okuma dizideki yere göre dizer ve **dizide olmayan durak DÜŞMEZ**, sırasız olarak sona gider.
+  -- Bayat bir dizi bu yüzden hiçbir durağı gizleyemez — `uuid[]`in FK taşımaması kabul edilmiş
+  -- bedeldir ve zararı yapısal olarak sınırlıdır.
+  stop_order uuid[] not null default '{}',
+
+  -- Sırayı KİM koydu. `manual` bir kilittir: `set_run_stop_order` motor yazımını `p_force` olmadan
+  -- reddeder (aşağıda). Bugün elle sıra düzeltme YÜZEYİ yok (kullanıcı kararı 31.08 — önce motor
+  -- izlenir); alan kapıyı açık tutuyor, etkileşim yazılmadı.
+  stop_order_source text check (stop_order_source in ('engine', 'manual')),
+  -- Hangi ÖLÇÜYLE dizildi. Kuş uçuşu turun makro şeklini (git-dön) doğru kurar ama bariyerin iki
+  -- yakasını (nehir, demiryolu, tek yön) "200 m" sayar — araç 4 km sürer. Yol matrisi bağlandığında
+  -- burası `matrix` der. **Veriye yazılıyor, yalnız log'a değil:** log'a bakan yok, ekrandaki sıraya
+  -- bakan var.
+  stop_order_metric text check (stop_order_metric in ('haversine', 'matrix')),
+  -- Hangi İNCELİKTE. Rotanın posta kodlarının bir kısmı yoğun, bir kısmı tek duraklı (kullanıcı
+  -- ölçümü 31.08) — yani aynı seferde iki çözünürlük bir arada olabilir ve ekran bunu söylemeli:
+  -- `postal_centroid` yazıyorsa sıra sokak düzeyinde DEĞİLDİR.
+  stop_order_precision text check (stop_order_precision in ('address', 'postal_centroid', 'mixed')),
+  -- KARARIN anı — sonucu boş olsa bile damgalanır ("hesaplandı, sıralanamadı"). Yoksa düşmüş bir
+  -- sağlayıcı her gün ekranı yoklamasında yeniden dövülürdü.
+  stop_order_generated_at timestamptz,
+  stop_order_by uuid references public.user_profiles (id) on delete set null,
 
   constraint delivery_run_times check (
     (departed_at is null or departed_at >= created_at)
@@ -137,7 +173,7 @@ create index delivery_run_close_open_idx on public.delivery_run_close (closed_at
 
 alter table public.delivery_run_close enable row level security;
 
--- ── Seferi başlat ────────────────────────────────────────────────────────────
+-- ── Seferi KUR ───────────────────────────────────────────────────────────────
 -- NEDEN RPC (STACK §13): (a) eşzamanlılık — iki kurye aynı rotayı aynı anda başlatırsa ikincisi
 -- sessizce ezmek yerine `already_started` + mevcut künyeyi alır; (b) bölünemez çok-tablolu yazım —
 -- sefer satırı + siparişlerin damgalanması yarım kalırsa "sefer var ama durakları yok" doğar.
@@ -147,7 +183,12 @@ alter table public.delivery_run_close enable row level security;
 -- katmanında kurulur. RPC yalnız CLAIM'in atomikliğini taşır: hangi siparişler bu sefere ait,
 -- kuryesi kim. `out_for_delivery` de claim edilir (web'in tekil "yola çıktım"ıyla çıkmış olabilir —
 -- araçtaki mal o seferindir); `delivered`/`completed`/`returned`/`cancelled` dokunulmaz.
-create or replace function public.start_delivery_run(
+--
+-- **SEFER KURULUR, BAŞLAMAZ** (31.08): `departed_at` NULL doğar. Kurulmuş sefer "araçta bekleyen"
+-- seferdir — kutuları okutulabilir (`loadBox` siparişin damgasını okuyor ve damga burada yazılıyor),
+-- ama durakları açılmaz ve müşteriye haber gitmez. Yola çıkaran `depart_delivery_run`.
+-- Eski adı `start_delivery_run`'dı ve iki işi birden yapıyordu; ad da artık yaptığı işi söylüyor.
+create or replace function public.open_delivery_run(
   p_zone_id uuid,
   p_date date,
   p_courier_id uuid,
@@ -184,9 +225,9 @@ begin
   if not found then
     begin
       insert into public.delivery_run
-        (reference_no, delivery_zone_id, delivery_date, warehouse_id, courier_id, vehicle_id, departed_at)
+        (reference_no, delivery_zone_id, delivery_date, warehouse_id, courier_id, vehicle_id)
       values
-        (p_reference_no, p_zone_id, p_date, v_zone.warehouse_id, p_courier_id, p_vehicle_id, now())
+        (p_reference_no, p_zone_id, p_date, v_zone.warehouse_id, p_courier_id, p_vehicle_id)
       returning * into v_run;
     exception when unique_violation then
       -- Yarışın kaybedeni: kazananın satırını kilitleyip ortak dala taşı. Satır yine yoksa çakışan
@@ -237,8 +278,48 @@ begin
 end;
 $$;
 
-revoke execute on function public.start_delivery_run(uuid, date, uuid, text, uuid, uuid)
+revoke execute on function public.open_delivery_run(uuid, date, uuid, text, uuid, uuid)
   from public, anon, authenticated;
+
+-- ── Seferi BAŞLAT (yola çık) ─────────────────────────────────────────────────
+-- Kurulmuş seferin `departed_at` damgası. Durum geçişleri BURADA DEĞİL uygulama katmanındadır —
+-- `open_delivery_run`ın aynı gerekçesi: kenarın izni motorundur (`canTransition`) ve dört-liste
+-- sözleşmesi orada kurulur. RPC'nin taşıdığı tek şey damganın ATOMİKLİĞİ ve tekrar basılamazlığı.
+--
+-- İkinci basış hata DEĞİL: damga zaten varsa aynı künye `already_departed` ile döner. Kurye
+-- "yola çık"a iki kez basabilir; müşteriye ikinci kez haber gitmemesi uygulama katmanının işi
+-- (`notifyOrderStatus`ın "geçiş başına tek mail" kuralı zaten durum kaydından türüyor).
+create or replace function public.depart_delivery_run(
+  p_run_id uuid,
+  p_courier_id uuid
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_run public.delivery_run;
+begin
+  select * into v_run from public.delivery_run where id = p_run_id for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'not_found');
+  end if;
+
+  -- Başkasının seferi başlatılamaz: sefer kimin kurduğunun üstünde durur.
+  if v_run.courier_id <> p_courier_id then
+    return jsonb_build_object('ok', false, 'reason', 'not_mine');
+  end if;
+
+  if v_run.departed_at is not null then
+    return jsonb_build_object('ok', true, 'reason', 'already_departed', 'departed_at', v_run.departed_at);
+  end if;
+
+  update public.delivery_run set departed_at = now() where id = p_run_id returning * into v_run;
+  return jsonb_build_object('ok', true, 'departed_at', v_run.departed_at);
+end;
+$$;
+
+revoke execute on function public.depart_delivery_run(uuid, uuid) from public, anon, authenticated;
 
 -- ── Seferi kapat ─────────────────────────────────────────────────────────────
 -- NEDEN RPC: dönüş damgası + kapanış fotoğrafı + takılı durakların çözümü TEK anın işi olmalı —
@@ -278,6 +359,13 @@ begin
   select * into v_run from public.delivery_run where id = p_run_id for update;
   if not found then
     return jsonb_build_object('ok', false, 'reason', 'not_found');
+  end if;
+
+  -- BAŞLAMAMIŞ SEFER KAPATILMAZ (31.08): kurulmuş ama yola çıkmamış sefer araçta bekliyordur —
+  -- yarının seferi olabilir. `delivery_run_times` kısıtı zaten reddediyordu ama ham bir veritabanı
+  -- hatasıyla; kapı kendi cevabını verir ki ekran "bu sefer daha başlamadı" diyebilsin.
+  if v_run.departed_at is null then
+    return jsonb_build_object('ok', false, 'reason', 'not_departed');
   end if;
 
   -- Kapanmış sefer salt-okunur: ikinci çağrı ezmez, mevcut kaydı bildirir.
@@ -413,4 +501,67 @@ end;
 $$;
 
 revoke execute on function public.reassign_delivery_run(uuid, uuid, uuid)
+  from public, anon, authenticated;
+
+-- ── Durak sırasını yaz (11.9) ────────────────────────────────────────────────
+-- NEDEN RPC: `DeliveryRunService` bilinçli olarak yazımsız (`BaseDbService<DeliveryRun, never, never>`
+-- — künyesi: *"Elle insert/update açık değil — ikinci bir yazım yolu…"*). O değişmez korunuyor:
+-- sıra da tek kapıdan yazılır.
+--
+-- **KİLİT BURADA, UYGULAMADA DEĞİL.** `manual` kaynağı motor yazımını reddeder. Kural uygulamada
+-- oku-sonra-yaz olarak dursaydı, biri sırayı elle dizerken uçuşta olan bir yeniden hesap onu
+-- ezebilirdi — ve bu hiçbir yerde hata vermezdi, yalnız kuryenin dizdiği sıra kaybolurdu.
+-- (Elle sıra yüzeyi bugün YOK; kilit alanla birlikte doğuyor ki yüzey geldiği gün eksik olmasın.)
+--
+-- Sıranın İÇERİĞİ doğrulanmaz — hangi siparişin bu sefere ait olduğu okuma tarafının sorusudur ve
+-- orada zaten çözülüyor: dizide olmayan durak düşmez, dizideki yabancı kimlik hiçbir şeye denk
+-- gelmez. Burada `not null` bir diziyi yazmak yeterli; ikinci bir doğruluk kapısı, aynı kuralı iki
+-- yerde tutmak olurdu.
+create or replace function public.set_run_stop_order(
+  p_run_id uuid,
+  p_order_ids uuid[],
+  p_source text,
+  p_metric text,
+  p_precision text,
+  p_actor_id uuid default null,
+  p_force boolean default false
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_run public.delivery_run;
+begin
+  select * into v_run from public.delivery_run where id = p_run_id for update;
+  if not found then
+    return jsonb_build_object('ok', false, 'reason', 'run_not_found');
+  end if;
+
+  -- Kapanmış seferin sırası DONAR: "o gün hangi sırayla gidildi" sorusu geçmişe dönük değişmemeli
+  -- (kapanış fotoğrafının `delivered_orders`la aynı gerekçesi).
+  if v_run.returned_at is not null then
+    return jsonb_build_object('ok', false, 'reason', 'run_closed');
+  end if;
+
+  if v_run.stop_order_source = 'manual' and p_source = 'engine' and not p_force then
+    return jsonb_build_object('ok', false, 'reason', 'manual_order_kept');
+  end if;
+
+  update public.delivery_run
+     set stop_order = p_order_ids,
+         stop_order_source = p_source,
+         stop_order_metric = p_metric,
+         stop_order_precision = p_precision,
+         -- Damga sonuç BOŞ olsa da vurulur: "hesaplandı, sıralanamadı" da bir cevaptır ve düşmüş
+         -- bir sağlayıcının her okumada yeniden dövülmesini bu engelliyor.
+         stop_order_generated_at = now(),
+         stop_order_by = p_actor_id
+   where id = p_run_id;
+
+  return jsonb_build_object('ok', true, 'run_id', p_run_id, 'stops', coalesce(array_length(p_order_ids, 1), 0));
+end;
+$$;
+
+revoke execute on function public.set_run_stop_order(uuid, uuid[], text, text, text, uuid, boolean)
   from public, anon, authenticated;
