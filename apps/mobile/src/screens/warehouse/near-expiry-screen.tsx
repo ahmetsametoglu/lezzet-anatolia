@@ -4,7 +4,6 @@ import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
-import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -142,15 +141,25 @@ export function NearExpiryScreen() {
                   {batch.shelfLabel === null ? '' : ` · raf ${batch.shelfLabel}`}
                 </Text>
               </View>
-              {/* ROZET AĞIRLIĞI KARARA GÖRE (tasarım 31.08): yalnız imha DOLU zeminle eyleme
-                  çağırır; teklif hâlleri sessiz kalır — depocuya iş vermiyorlar (oran yönetimde
-                  onaylanır). Eskiden hepsi aynı sesle konuşuyordu. */}
-              <Text
-                style={[styles.decision, done ? styles.decision_done : styles[`decision_${verdictOf(batch)}`]]}
-                testID={`warehouse-near-expiry-${code}-verdict`}
-              >
-                {done ? t.nearExpiry.discard.done : t.nearExpiry.decision[verdictOf(batch)]}
-              </Text>
+              {/*
+                ROZET YALNIZ İMHA HÂLLERİNDE (kullanıcı kararı 31.08 — D3 SAF DEPOCU EKRANI).
+
+                Ekran iki kitleye birden konuşuyordu: fiziksel tura çıkan depocu ve fiyat kararı
+                veren yönetici. Teklif rozetleri ("teklif açık", "teklife girebilir") depocuya HİÇ
+                iş vermiyor — teklif kararı günde bir kez ve toplu, yönetimin Y3 ekranında veriliyor
+                (`management/offer-approval-screen`). Bir ekranın kime konuştuğu belirsizse ikisine
+                de yarım hizmet eder.
+
+                Kalan tek rozet imhanın kendisi: depocunun bu ekrandaki tek eylemi.
+              */}
+              {!done && batch.decision !== 'must_discard' ? null : (
+                <Text
+                  style={[styles.decision, done ? styles.decision_done : styles.decision_must_discard]}
+                  testID={`warehouse-near-expiry-${code}-verdict`}
+                >
+                  {done ? t.nearExpiry.discard.done : t.nearExpiry.decision.must_discard}
+                </Text>
+              )}
             </View>
 
             {/* TARİH REJİMİ VE SONUCU (tasarım 31.08) — kararın SEBEBİ. "6 gün geçti" tek başına
@@ -162,32 +171,6 @@ export function NearExpiryScreen() {
               <Text style={styles.regimeNote}>{t.nearExpiry.regimeNote[regime]}</Text>
               <Text style={[styles.outcome, outcomeToneOf(batch)]}>{outcomeOf(batch)}</Text>
             </View>
-
-            {/*
-              ÖMÜR ÇUBUĞU (v3:840) — yüzdeyi hem çizerek hem yazarak söyler. Çubuk göz taramasıyla
-              okunur, sayı kararı gerekçelendirir.
-
-              ÖLÇÜLEMEYEN ÖMÜRDE ÇUBUK HİÇ ÇİZİLMEZ (CLAUDE §1): boş bir çubuk "%0" gibi görünür ve
-              o partiyi imhalık gösterirdi. Onun yerine eşiğin neden uygulanmadığı yazılır.
-            */}
-            {batch.remainingPercent === null ? (
-              <Text style={styles.lifeUnknown} testID={`warehouse-near-expiry-${code}-life-unknown`}>
-                {t.nearExpiry.lifeUnknown}
-              </Text>
-            ) : (
-              <View style={styles.lifeRow}>
-                <OperationsProgressBar
-                  value={batch.remainingPercent / 100}
-                  tone={LIFE_TONE[urgency]}
-                  testID={`warehouse-near-expiry-${code}-life`}
-                />
-                <Text style={[styles.lifeLabel, { color: LIFE_TONE[urgency] }]}>
-                  {/* Yüzde TAM SAYIYA yuvarlanır: motor kesirli hesaplıyor (17.26027…) ve depocuya
-                      ondalık göstermek kararı değiştirmeyen bir gürültüdür. */}
-                  {fillCopy(t.nearExpiry.life, { n: String(Math.round(batch.remainingPercent)) })}
-                </Text>
-              </View>
-            )}
 
             {/*
               İMHA EYLEMİ ARTIK BU EKRANDA (tasarım 31.08 · akış kuralı 2: *"eylem, kararın doğduğu
@@ -347,29 +330,12 @@ function outcomeToneOf(batch: NearExpiryBatchContract): { color: string } {
   return { color: batch.dateType === 'DLC' ? operationsTheme.colors.error : operationsTheme.colors['olive-dark'] };
 }
 
-/**
- * Rozetin metni — motorun kararı, bir istisnayla.
- *
- * DDM'si GEÇMİŞ ve teklife açılabilir bir parti "teklife girebilir" demiyor, **"indirimli satılır"**
- * diyor (tasarım 31.08): tarihi geçmiş ama satılabilir mal, depocunun gözünde bekleyen bir aday
- * değil, bugün rafta duran bir gerçektir.
- */
-function verdictOf(batch: NearExpiryBatchContract): 'none' | 'can_offer' | 'offer_open' | 'must_discard' | 'sellable' {
-  if (batch.decision === 'can_offer' && batch.daysLeft < 0 && batch.dateType === 'DDM') return 'sellable';
-  return batch.decision;
-}
 
 /**
  * Satırın yükleme yer tutucusu (px) — kartın KENDİ yüksekliği: künye iki satır + rejim şeridi +
- * ömür çubuğu + dolgular. Ortalama bir sayı vermek, veri gelince sayfayı yine zıplatırdı.
+ * dolgular. Ömür çubuğu kalktığı için ölçü de düştü (31.08).
  */
-const ROW_SKELETON_HEIGHT = 118;
-
-const LIFE_TONE = {
-  expired: operationsTheme.colors.error,
-  soon: operationsTheme.colors.terracotta,
-  calm: operationsTheme.colors.olive,
-} as const;
+const ROW_SKELETON_HEIGHT = 96;
 
 const styles = StyleSheet.create({
   screen: {
@@ -484,21 +450,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: operationsTheme.space.xl,
   },
-  lifeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.md,
-  },
-  lifeLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.meta,
-  },
   /** Ömür ölçülemediğinde çubuk YOK — eşiğin neden uygulanmadığı yazılır (CLAUDE §1). */
-  lifeUnknown: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.tag,
-    color: operationsTheme.colors.muted,
-  },
   rowBody: {
     flex: 1,
     gap: operationsTheme.space['2xs'],

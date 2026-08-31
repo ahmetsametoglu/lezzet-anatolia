@@ -121,24 +121,33 @@ describe('D3 · yakın-SKT turu', () => {
     // Rejim satırı sebebi söylüyor: DLC geçmiş = satılamaz.
     expect(screen.getByTestId('warehouse-near-expiry-P-0641')).toHaveTextContent(/geçti — satılamaz/);
     // Rozet ağırlığı düştü (tasarım 31.08): teklif hâlleri artık SESSİZ — depocuya iş vermiyorlar.
-    expect(screen.getByTestId('warehouse-near-expiry-P-0688')).toHaveTextContent(/teklif açık/);
+    // Teklif rozeti YOK; satır yine de listede — depocu ömrü azalan malı görmeli.
+    expect(screen.getByTestId('warehouse-near-expiry-P-0688')).toBeOnTheScreen();
   });
 
-  /* Ömür ölçülemediğinde ÇUBUK DA çizilmez (v3, 30.08): boş bir çubuk "%0" gibi görünür ve o
-     partiyi imhalık gösterirdi. Metin eşiğin neden uygulanmadığını söylüyor. */
-  it('raf ömrü BİLİNMEYEN parti "%0" demez ve çubuk çizilmez', async () => {
+  /*
+    D3 SAF DEPOCU EKRANI (kullanıcı kararı 31.08).
+
+    Ekran iki kitleye birden konuşuyordu: fiziksel tura çıkan depocu ve fiyat kararı veren
+    yönetici. Teklif rozetleri ve ömür yüzdesi depocuya iş vermiyor — teklif kararı yönetimin Y3
+    ekranında, toplu veriliyor. Bu test o ayrımın KANITI: bir gün biri geri koyarsa kırılır.
+  */
+  it('teklif rozeti ÇİZİLMEZ — karar depocunun değil', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0688')).toBeOnTheScreen());
-    expect(screen.getByTestId('warehouse-near-expiry-P-0688')).toHaveTextContent(/ömür bilinmiyor — eşik uygulanmaz/);
-    expect(screen.queryByTestId('warehouse-near-expiry-P-0688-life')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).not.toHaveTextContent(/teklif/);
+    expect(screen.queryByTestId('warehouse-near-expiry-P-0698-verdict')).toBeNull();
   });
 
-  it('ölçülen ömür hem ÇUBUKLA hem yazıyla söylenir — tek kaynaktan', async () => {
+  it('ömür YÜZDESİ ve çubuğu çizilmez — aciliyeti kalan gün söylüyor', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0698-life')).toBeOnTheScreen());
-    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toHaveTextContent(/ömür %18/);
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-near-expiry-P-0698-life')).toBeNull();
+    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).not.toHaveTextContent(/ömür %/);
+    // Kalan gün DURUYOR: depocunun aciliyet ölçüsü o.
+    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toHaveTextContent(/2 gün/);
   });
 
   /*

@@ -5,7 +5,6 @@ import type {
   IntakeFormRowContract,
   IntakePurchaseOrderContract,
   PendingIntakeContract,
-  ResolveCodeResponse,
   VariantSearchRowContract,
 } from '@lezzet/types';
 
@@ -144,15 +143,6 @@ function addToBreakdown(
   const rest = qty - boxes * scan.qtyPerCode;
   const withBoxes = boxes === 0 ? current : setCaseCount(current, size, already + boxes);
   return rest === 0 ? withBoxes : { ...withBoxes, loose: withBoxes.loose + rest };
-}
-
-/**
- * Okutma çekmecesinin konusu: çözülen kod + depocunun seçtiği adet. `expectedQty` satırdan kopyalanır
- * ki ekran ikinci bir arama yapmasın; `qty` çekmecede oynar, satıra ancak onayla yazılır.
- */
-interface ScannedCode extends Omit<Extract<ResolveCodeResponse, { status: 'found' }>, 'status'> {
-  qty: number;
-  expectedQty: number;
 }
 
 /**

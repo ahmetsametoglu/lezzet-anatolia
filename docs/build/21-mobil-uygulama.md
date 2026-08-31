@@ -9209,3 +9209,38 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **BEKLEYEN(21.192):** tasarımın B ve C maddeleri — D4 sayım baştan (hedef değer + bağlam + sonuç
   hâli) ve D4b stok düşümü (yeni ekran, hasar · soğuk zincir · kayıp).
+
+- [x] (21.192) **D3 SAF DEPOCU EKRANI OLDU — teklif bilgisi ve ömür yüzdesi söküldü** (kullanıcı kararı 31.08)
+  `touches:` `apps/mobile/src/screens/warehouse/{near-expiry-screen.tsx,near-expiry-screen.test.tsx,messages.json}`
+
+  **Kullanıcının sorusu:** *"Bu sayfa kim için? İndirim bilgisi depocu için önemli mi? Yönetici
+  depo ekranına girip teklif aç diyebilmeli mi?"*
+
+  **ÖLÇÜM.** Uç `warehouse` ve `admin` rollerine açık, yani bugün ikisi de giriyor. Ama teklif
+  kararının kendi yolu ZATEN VAR ve yönetimde: **Y3 · Yakın-SKT Teklifi**
+  (`management/offer-approval-screen`, `/management/offers`) — indirim çipleri, toplu onay, günde
+  bir kez verilen karar. Web'de de aynısı (`stock-client.tsx` → `onOpenOffer`). D3'e "teklif aç"
+  koymak, aynı kararı ikinci bir yerden verdirmek olurdu.
+
+  **KARAR (kullanıcı, 1. seçenek): D3 saf depocu ekranı.** Ekran iki kitleye birden konuşuyordu —
+  fiziksel tura çıkan depocu ve fiyat kararı veren yönetici. Bir ekranın kime konuştuğu belirsizse
+  ikisine de yarım hizmet eder.
+
+  **SÖKÜLENLER** (depocuya iş vermiyorlardı):
+  · teklif rozetleri (*"teklif açık"*, *"teklife girebilir"*, *"indirimli satılır"*) — rozet artık
+    yalnız imha hâllerinde çiziliyor: **İMHA EDİLMELİ** ve **İMHA EDİLDİ**;
+  · **ömür yüzdesi ve çubuğu** — aciliyeti zaten *"4 gün kaldı"* söylüyor, yüzde bir fiyat/teklif
+    ölçütü;
+  · başlıktaki **"%30 öneri indirimi"** — fiyat parametresi. Alt metin artık işi anlatıyor:
+    *"ömrü azalan partiler · imhalık olanı buradan düş."*
+
+  **KALANLAR** (hepsi depocunun işi): ad · adet · **raf** · tarih rejimi (DLC/DDM) ve ne demek
+  olduğu · sonucu (*"geçti — satılamaz/satılabilir"*) · kalan gün · imha düğmesi ve referansı.
+
+  Liste SÜZGECİ değişmedi: ömrü azalan partilerin hepsi görünüyor — depocu onları rafta öne
+  almalı, yalnız imhalık olanı düşürüyor.
+
+  **Doğrulama.** Tip · lint · **knip temiz** (ömür çubuğuyla birlikte üç stil, `LIFE_TONE`,
+  `verdictOf` ve bağımsız olarak `ScannedCode` ölü kaldı, söküldü) · depo+komponent **448/448**.
+  İki yeni test ayrımın KANITI: *"teklif rozeti çizilmez"* ve *"ömür yüzdesi çizilmez — aciliyeti
+  kalan gün söylüyor"*; biri geri koyarsa kırılırlar.

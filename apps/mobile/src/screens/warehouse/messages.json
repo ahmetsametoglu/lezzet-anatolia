@@ -483,7 +483,7 @@
   },
   "nearExpiry": {
     "title": "Yakın-SKT Turu",
-    "caption": "eşikler: %25 yakın-SKT · %30 öneri indirimi",
+    "caption": "ömrü azalan partiler · imhalık olanı buradan düş",
     "row": "{qty} adet · {days}",
     "life": "ömür %{n}",
     "lifeUnknown": "ömür bilinmiyor — eşik uygulanmaz",
@@ -532,7 +532,7 @@
       "must_discard": "İMHA EDİLMELİ",
       "none": "karar yok"
     },
-    "footnote": "Karar sistemce türetilir; imha sebebi tarihten bellidir, yeniden sorulmaz. Teklif oranı yönetimde onaylanır — bu ekranda yalnız imha yazılır.",
+    "footnote": "Bu tur fiziksel ayıklama içindir: imhalık malı raftan indir ve buradan düş. İndirim ve teklif kararları yönetimde verilir — bu ekranda yalnız imha yazılır.",
     "toAdjustment": "Sayım/Düzeltme →"
   },
   "adjustment": {
