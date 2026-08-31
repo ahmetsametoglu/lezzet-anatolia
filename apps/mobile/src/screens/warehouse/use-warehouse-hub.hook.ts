@@ -1,8 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
-import type { BoxPrinterContract, PreparationOrderContract, InboundTransferContract } from '@lezzet/types';
+import type {
+  BoxPrinterContract,
+  InboundTransferContract,
+  NearExpiryBatchContract,
+  PreparationOrderContract,
+} from '@lezzet/types';
 
 import {
+  fetchNearExpiry,
   fetchWarehouseTransfers,
   fetchPendingHandover,
   fetchPreparationQueue,
@@ -72,6 +78,8 @@ interface UseWarehouseHubResult {
   /** Aşağı çekme — ekranı karartmadan tazeler. */
   refresh: () => void;
   /** Çekme sürüyor mu (`status` DEĞİL: o ekranı söküp yükleme hâline geçirirdi). */
+  /** D3 kartının kaynağı — `null` = okunamadı (kart o zaman sayı yazmaz). */
+  nearExpiry: NearExpiryBatchContract[] | null;
   reloading: boolean;
 }
 
@@ -81,6 +89,8 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const [transfers, setTransfers] = useState<InboundTransferContract[] | null>(null);
   const [pendingHandover, setPendingHandover] = useState<number | null>(null);
   const [printers, setPrinters] = useState<BoxPrinterContract[] | null>(null);
+  /** D3 kartının iki sayısı — okunamadıysa `null` ve kart "okunamadı" der (CLAUDE §1). */
+  const [nearExpiry, setNearExpiry] = useState<NearExpiryBatchContract[] | null>(null);
 
   /** Kaçıncı yükün geçerli olduğu — geç gelen eski cevaplar yazılmaz (katalog/kurye emsali). */
   const generation = useRef(0);
@@ -88,7 +98,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const load = useCallback(async () => {
     const run = (generation.current += 1);
 
-    const [queue, inbound, handover, printerList] = await Promise.all([
+    const [queue, inbound, handover, printerList, expiring] = await Promise.all([
       trackWarehouse(fetchPreparationQueue()),
       trackWarehouse(fetchWarehouseTransfers()),
       trackWarehouse(fetchPendingHandover()),
@@ -98,6 +108,15 @@ export function useWarehouseHub(): UseWarehouseHubResult {
          AYAR kapısıdır; okuması düşünce hub'ın günlük işi kilitlenmemeli — künyede yazdığım
          "hata koşuluna katılmaz" kuralının sinyal tarafındaki karşılığı budur. */
       fetchPrinters(),
+      /* D3 SAYAÇLARI (21.187): kart "kaç parti listede, kaçı imhalık" diyor ve o sayı bugüne kadar
+         fikstürden geliyordu.
+
+         `trackWarehouse`TAN GEÇMEZ ve sebebi ölçüldü (31.08): geçirince üç hub testi birden düştü
+         — çevrimdışı ve "hangi depo" uyarıları kayboldu. Sebep sinyalin kendisi: `trackWarehouse`
+         HER çağrının sonucunu paylaşılan depo durumuna yazıyor ve BAŞARILI bir D3 okuması,
+         hazırlık kuyruğunun çevrimdışı sinyalini eziyordu. Sayaç bir ROZETTİR (devir sayacıyla
+         aynı gerekçe): düşmesi hub'ı kullanılamaz yapmaz, yalnız bir satırın rakamını söylemez. */
+      fetchNearExpiry(),
     ]);
     if (run !== generation.current) return;
 
@@ -105,6 +124,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     setTransfers(inbound.error === null ? inbound.data.transfers : null);
     setPendingHandover(handover.error === null ? handover.data.boxes : null);
     setPrinters(printerList.error === null ? printerList.data.printers : null);
+    setNearExpiry(expiring.error === null ? expiring.data.batches : null);
     /*
       HATA HÂLİ İKİ ANA OKUMAYA BAĞLI KALDI — devir sayacı onu tetiklemiyor.
 
@@ -135,5 +155,5 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     void load().finally(() => setReloading(false));
   }, [load]);
 
-  return { status, orders, transfers, pendingHandover, printers, reload, refresh, reloading };
+  return { status, orders, transfers, pendingHandover, printers, nearExpiry, reload, refresh, reloading };
 }

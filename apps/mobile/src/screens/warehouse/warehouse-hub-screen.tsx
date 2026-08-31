@@ -25,7 +25,6 @@ import { useOperationsNotifications } from '@/screens/operations/use-notificatio
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
-import { NEAR_EXPIRY_FIXTURE } from './near-expiry-fixture';
 import { orderPickingQueue } from './warehouse-format';
 import type { BoxPrinterContract, PreparationOrderContract } from '@lezzet/types';
 import { useWarehouseHub } from './use-warehouse-hub.hook';
@@ -312,7 +311,7 @@ export function WarehouseHubScreen() {
 
   const overview = buildOverview(hub.orders, hub.pendingHandover);
   const picking = buildPicking(hub.orders);
-  const tiles = buildTiles(hub.orders, hub.transfers, hub.pendingHandover, router);
+  const tiles = buildTiles(hub.orders, hub.transfers, hub.pendingHandover, hub.nearExpiry, router);
 
   return (
     <View style={styles.screen} testID="operations-section-warehouse">
@@ -555,6 +554,8 @@ function buildTiles(
   orders: readonly PreparationOrderContract[] | null,
   transfers: readonly { referenceNo: string }[] | null,
   pendingHandover: number | null,
+  /** D3'ün kaynağı — `null` = okunamadı (kart sayı yazmaz, "okunamadı" der). */
+  nearExpiry: readonly { decision: string }[] | null,
   router: ReturnType<typeof useRouter>,
 ): HubTile[] {
   const transfer = t.hub.rows.transfer;
@@ -579,7 +580,10 @@ function buildTiles(
           ? fillCopy(transfer.some, { ref: firstTransfer.referenceNo })
           : fillCopy(transfer.someMany, { ref: firstTransfer.referenceNo, n: String(transfers.length) });
 
-  const discardCount = NEAR_EXPIRY_FIXTURE.filter((batch) => batch.decision === 'discard').length;
+  /* D3 SAYAÇLARI ARTIK GERÇEK (21.187): fikstür söküldü, sayı kapıdan geliyor. Okunamadıysa
+     `null` gelir ve alt metin sayı YAZMAZ — "0 parti" demek, listeyi okuyamadığımız hâlde "iş yok"
+     demekti (CLAUDE §1). */
+  const discardCount = nearExpiry === null ? null : nearExpiry.filter((batch) => batch.decision === 'must_discard').length;
 
   return [
     {
@@ -598,13 +602,18 @@ function buildTiles(
       icon: 'near-expiry',
       tone: operationsTheme.colors.terracotta,
       title: t.hub.rows.nearExpiry.title,
-      subtitle: fillCopy(t.hub.rows.nearExpiry.subtitle, {
-        n: String(NEAR_EXPIRY_FIXTURE.length),
-        discard: String(discardCount),
-      }),
+      subtitle:
+        nearExpiry === null || discardCount === null
+          ? t.hub.rows.nearExpiry.unknown
+          : fillCopy(t.hub.rows.nearExpiry.subtitle, {
+              n: String(nearExpiry.length),
+              discard: String(discardCount),
+            }),
       /* Şablonun `d3Rengi` kuralı: liste DOLUYKEN alt metin dikkat rengine geçer. İmhalık parti
          bekleyen bir karardır; gri yazılsaydı öteki altı kutucukla aynı sesle konuşurdu. */
-      alert: discardCount > 0,
+      /* OKUNAMAYAN SAYI DİKKAT ÇEKMEZ: `null` iken kart sakin kalır. Kırmızıya boyamak, ölçemediğimiz
+         bir şeyi "acil" diye göstermek olurdu — ve kart zaten "okunamadı" diyor. */
+      alert: discardCount !== null && discardCount > 0,
       onPress: () => router.navigate('/near-expiry'),
     },
     {

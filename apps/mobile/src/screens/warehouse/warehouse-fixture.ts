@@ -1,4 +1,5 @@
 import type {
+  NearExpiryBatchContract,
   InboundTransferContract,
   IntakeFormRowContract,
   PreparationBoxContract,
@@ -18,7 +19,8 @@ import type {
   öyle istiyor.
 
   **Bu dosya YALNIZ testlerindir** — ekranların ürün fixture'ları ayrı yaşıyor
-  (`near-expiry-fixture.ts`, `courier-return-fixture.ts`) ve gerekçeleri kendi künyelerinde.
+  (`courier-return-fixture.ts`) ve gerekçeleri kendi künyelerinde. **D3'ünki 31.08'de SÖKÜLDÜ** —
+  uç açıldı (`/api/v1/warehouse/near-expiry`) ve liste gerçek partileri taşıyor (21.187).
 */
 
 const uuid = (n: number): string => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -103,6 +105,28 @@ export function intakeRow(overrides: Partial<IntakeFormRowContract> = {}): Intak
     // meşrudur ve çekmece o zaman yalnız aynı kabuldeki kodları önerir. Öneriyi sınayan test
     // adayları kendisi verir.
     lotCandidates: [],
+    ...overrides,
+  };
+}
+
+/**
+ * D3 · yakın-SKT satırı (21.187) — kapı cevabının şekli.
+ *
+ * Varsayılan: kararı olan, ömrü ölçülmüş, kodu yazılmış bir parti. Testler istisnayı kendileri
+ * verir (kodsuz parti, ölçülemeyen ömür, imhalık karar).
+ */
+export function nearExpiryBatch(overrides: Partial<NearExpiryBatchContract> = {}): NearExpiryBatchContract {
+  return {
+    stockId: '00000000-0000-4000-8000-000000000401',
+    lotNumber: 'P-0401',
+    productName: 'Su Böreği',
+    variantLabel: 'tepsi',
+    qty: 6,
+    expiryDate: '2026-09-02',
+    daysLeft: 2,
+    remainingPercent: 18,
+    decision: 'can_offer',
+    belowMlor: true,
     ...overrides,
   };
 }

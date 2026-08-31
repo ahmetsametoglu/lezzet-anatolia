@@ -333,6 +333,11 @@ export type {
 // kapının yanına eklendi — paketin `exports` haritası yalnız `"."` açıyor, yani alt-yol import'u
 // paket sınırında kapalı ve dışa açılmayan bir kapı çağrılamaz.
 export { listCourierDay, markUndelivered, readCourierRun, readDoorCashAccountId, startCourierDay } from './courier/day';
+export { ensureStopOrder, type StopOrderOutcome } from './courier/stop-order';
+export { geocodeAddressesScan, type GeocodeScanResult } from './delivery/geocode-scan';
+export { geocoder, geocoderConfigured } from './delivery/geocode-provider';
+export { resolveAddressPoint, type AddressPointCandidate } from './delivery/geo-address';
+export type { Geocoder, GeocodeOutcome, GeocodeQuery } from './delivery/geocode-port';
 export type { CourierDayStart, CourierRunBriefView, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
 export { listCourierRoutes } from './courier/routes';
 export type { CourierRouteView } from './courier/routes';
@@ -463,6 +468,7 @@ export { readVariantStockHistory } from './warehouse/variant-history';
 export type { VariantBatchHistory, VariantStockHistory } from './warehouse/variant-history';
 export { TRANSFER_TRANSIT_DAYS_DEFAULT, TRANSFER_TRANSIT_DAYS_KEY } from './warehouse/settings-keys';
 export { readExpiryThresholds, toBatchViews } from './warehouse/batch-view';
+export { listNearExpiry } from './warehouse/near-expiry';
 export type { BatchView } from './warehouse/batch-types';
 export * from './assistant/apply';
 export * from './assistant/kind-meta';

@@ -15,6 +15,7 @@ import {
   listClosedTransfers,
   listInboundTransfers,
   listOutboundTransfers,
+  listNearExpiry,
   listPendingIntakes,
   listPreparationQueue,
   listWarehouseReturns,
@@ -54,6 +55,7 @@ import {
   MarkBoxPrintedResponseSchema,
   OpenBoxRequestSchema,
   OpenBoxResponseSchema,
+  NearExpiryResponseSchema,
   PendingIntakesResponseSchema,
   VariantSearchResponseSchema,
   PreparationQueueResponseSchema,
@@ -574,6 +576,27 @@ warehouse.post('/boxes/:boxId/printed', async (c) => {
   const outcome = await markBoxPrinted(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
   const body: z.input<typeof MarkBoxPrintedResponseSchema> = outcome;
   return ok(c, MarkBoxPrintedResponseSchema.parse(body));
+});
+
+// ── D3 · Yakın-SKT turu ─────────────────────────────────────────────────────
+
+/**
+ * **Karar bekleyen partiler** (D3) — ömrü azalan mal, en acil önce.
+ *
+ * KAPI BUGÜN AÇILDI ve gerekçesi bu dosyanın üst künyesinde yazılıydı: motor (`batch-view`) vardı,
+ * uç yoktu ve ekran fikstürle çalışıyordu. Künyedeki *"tüketicisi olmayan uç ölü koddur"* kuralı
+ * artık tersine dönüyor — tüketici hazır, kapı geldi.
+ *
+ * DEPO ZORUNLU (kapının kendi süzgeci, `withWarehouse`): parti tek depodadır ve başka deponun
+ * ömrü azalan malını burada göstermek, depocuya kendi rafında olmayan bir işi verirdi.
+ *
+ * PARA ÇIKMAZ: motor fiyat üretiyor, dönen tip taşımıyor (`listNearExpiry` künyesi).
+ */
+warehouse.get('/near-expiry', async (c) => {
+  const batches = await listNearExpiry(serviceDb(), c.get('warehouseId'));
+
+  const body: z.input<typeof NearExpiryResponseSchema> = { batches };
+  return ok(c, NearExpiryResponseSchema.parse(body));
 });
 
 // ── D2 · Mal kabul ──────────────────────────────────────────────────────────

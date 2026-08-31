@@ -6,6 +6,7 @@ import {
   LearnCodeResponseSchema,
   MarkBoxPrintedResponseSchema,
   OpenBoxResponseSchema,
+  NearExpiryResponseSchema,
   PendingIntakesResponseSchema,
   PreparationQueueResponseSchema,
   ReceiveGoodsResponseSchema,
@@ -170,6 +171,16 @@ export function markBoxPrinted(boxId: string): Promise<ApiResult<z.infer<typeof 
  */
 export function fetchPendingIntakes(): Promise<ApiResult<z.infer<typeof PendingIntakesResponseSchema>>> {
   return warehouseFetch('/api/v1/warehouse/intake', PendingIntakesResponseSchema);
+}
+
+/**
+ * **Karar bekleyen partiler** (D3 · yakın-SKT turu).
+ *
+ * Kapı depoyu KENDİ süzgecinden alıyor (oturumun deposu), yani burada parametre yok: parti tek
+ * depodadır ve başka deponun malını göstermek depocuya kendi rafında olmayan bir iş verirdi.
+ */
+export function fetchNearExpiry(): Promise<ApiResult<z.infer<typeof NearExpiryResponseSchema>>> {
+  return warehouseFetch('/api/v1/warehouse/near-expiry', NearExpiryResponseSchema);
 }
 
 /**

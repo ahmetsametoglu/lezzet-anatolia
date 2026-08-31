@@ -1236,6 +1236,60 @@ export type ResolveBatchResponse = z.infer<typeof ResolveBatchResponseSchema>;
  *
  * **Para taşımaz:** satırda fiyat alanı yok — depo yolu fiyat görmez (09.14).
  */
+/*
+  ══ D3 · YAKIN-SKT TURU ═════════════════════════════════════════════════════
+  Depocunun ömrü azalan partileri gezip karar verdiği liste. Ekran BUGÜNE KADAR FİKSTÜRLE
+  çalışıyordu (`near-expiry-fixture.ts`) ve gerekçesi uç künyesinde yazılıydı: motor vardı
+  (`batch-view.ts`) ama kapı yoktu.
+*/
+
+/**
+ * Yakın-SKT listesinin bir satırı — **bir PARTİ**, bir ürün değil.
+ *
+ * Ayrım işin kendisi: aynı ürünün iki partisi iki ayrı karar bekler ve depocu rafta partiyi
+ * etiketinden bulur. Ürün bazında toplamak, "hangi kutuyu indireceğim" sorusunu cevapsız bırakırdı.
+ */
+export const NearExpiryBatchSchema = z.object({
+  stockId: z.string().uuid(),
+  /** Parti kodu — kâğıt etiketle eşleşen künye; yazılmamış olabilir. */
+  lotNumber: z.string().nullable(),
+  productName: z.string(),
+  variantLabel: z.string(),
+  qty: z.number().int(),
+  expiryDate: z.string(),
+  /**
+   * Bugünden son kullanma tarihine kalan GÜN; geçmiş partide NEGATİF.
+   *
+   * Aciliyet rengi bundan TÜRETİLİR ve sözleşmede taşınmaz: renk ekranın kararıdır, kapının değil.
+   * Taşısaydık aynı eşik iki yerde yaşar ve biri bir gün ötekiyle çelişirdi (CLAUDE §1).
+   */
+  daysLeft: z.number().int(),
+  /**
+   * Kalan ömür yüzdesi (0–100) — **`null` = ÖLÇÜLEMEDİ**, sıfır değil (CLAUDE §1).
+   *
+   * Ürünün toplam raf ömrü girilmemişse yüzde hesaplanamaz; "%0" yazmak o partiyi imhalık
+   * gösterirdi. Ekran `null` gelince çubuğu HİÇ çizmiyor.
+   */
+  remainingPercent: z.number().nullable(),
+  /**
+   * Partinin bugün beklediği karar — motorun dili (`OfferDecision`), ekranın değil.
+   *
+   * Ekran kendi sözlüğüyle çevirir; sözleşmede ikinci bir adlandırma açmak (fikstürün
+   * `offer_candidate`/`discard` çifti gibi) aynı kavramı iki dilde yaşatmak olurdu.
+   */
+  decision: z.enum(['none', 'can_offer', 'offer_open', 'must_discard']),
+  /** Kalan ömür işletmenin MLOR eşiğinin altında mı — satılabilirliğin ayrı sorusu. */
+  belowMlor: z.boolean(),
+});
+export type NearExpiryBatchContract = z.infer<typeof NearExpiryBatchSchema>;
+
+/**
+ * **PARA YOK ve bu şemanın değil KAPININ kararı** (CLAUDE §2 · depo yüzeyi): motor fiyat da
+ * üretiyor (`listPriceCents`, `suggestedOfferCents`) ama depo ekranı tutar görmez. Alanı
+ * taşımamak, ekranın onu bir gün "sadece bilgi olsun" diye çizmesinin önünü kapatıyor.
+ */
+export const NearExpiryResponseSchema = z.object({ batches: z.array(NearExpiryBatchSchema) });
+
 export const VariantSearchRowSchema = z.object({
   variantId: z.string().uuid(),
   productName: z.string(),

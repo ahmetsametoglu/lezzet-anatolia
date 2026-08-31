@@ -59,7 +59,8 @@
       "nearExpiry": {
         "code": "D3",
         "title": "Yakın-SKT turu",
-        "subtitle": "{n} parti listede · {discard} imhalık"
+        "subtitle": "{n} parti listede · {discard} imhalık",
+        "unknown": "okunamadı"
       },
       "adjustment": {
         "code": "D4",
@@ -487,10 +488,14 @@
     "life": "ömür %{n}",
     "lifeUnknown": "ömür bilinmiyor — eşik uygulanmaz",
     "toBatchCount": "sayım/düzeltmeye götür →",
+    "noLot": "—",
+    "daysLeft": "{n} gün",
+    "daysToday": "bugün son gün",
+    "daysPast": "{n} gün (geçti)",
     "decision": {
       "offer_open": "teklif AÇIK",
-      "offer_candidate": "teklife girebilir",
-      "discard": "imha edilmeli",
+      "can_offer": "teklife girebilir",
+      "must_discard": "imha edilmeli",
       "none": "karar yok"
     },
     "footnote": "Karar sistemce türetilir — bu liste fiziksel ayıklama rehberidir; işaretleme yok. \"İmha edilmeli\" → Sayım/Düzeltme; teklif oranı yönetimde onaylanır.",

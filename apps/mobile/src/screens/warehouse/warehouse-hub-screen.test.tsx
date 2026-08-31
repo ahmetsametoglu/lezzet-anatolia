@@ -4,7 +4,7 @@ import type { StaffWarehouse } from '@lezzet/types';
 
 import { resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
-import { inboundTransfer, preparationOrder } from './warehouse-fixture';
+import { inboundTransfer, nearExpiryBatch, preparationOrder } from './warehouse-fixture';
 import { WarehouseHubScreen } from './warehouse-hub-screen';
 import { resetWarehouseStatus } from './warehouse-status';
 
@@ -55,6 +55,7 @@ function routeReplies(replies: {
   transfers?: () => Promise<Response>;
   handover?: () => Promise<Response>;
   printers?: () => Promise<Response>;
+  nearExpiry?: () => Promise<Response>;
 }) {
   fetchMock.mockImplementation((url) => {
     const path = String(url);
@@ -64,6 +65,8 @@ function routeReplies(replies: {
     if (path.includes('/printers')) return (replies.printers ?? (() => Promise.resolve(ok({ printers: [] }))))();
     // Devir sayacı KENDİ ucundan geliyor (07.12): bekleyen kutuları hiçbir liste taşımıyor,
     // çünkü duyurulmuş siparişin kutuları hazırlık kuyruğundan çoktan düşmüştür.
+    // D3 SAYAÇLARI (21.187): kart "kaç parti listede, kaçı imhalık" diyor ve sayı bu uçtan geliyor.
+    if (path.includes('/near-expiry')) return (replies.nearExpiry ?? (() => Promise.resolve(ok({ batches: [] }))))();
     if (path.includes('/handover/pending')) return (replies.handover ?? (() => Promise.resolve(ok({ boxes: 0 }))))();
     /* Transfer yanıtı ÜÇ liste taşıyor (`WarehouseTransfersResponseSchema`); eksik gönderilen bir
        cevap şema kapısından geçemez ve hub'ın İKİ okuması birden düşmüş gibi görünür. */
@@ -117,6 +120,40 @@ describe('depo hub', () => {
     for (const key of ['picking', 'intake', 'near-expiry', 'adjustment', 'transfer', 'return', 'sale', 'handover', 'printers']) {
       expect(screen.getByTestId(`warehouse-hub-${key}`)).toBeOnTheScreen();
     }
+  });
+
+  /*
+    D3 KARTI GERÇEK SAYIYI YAZAR (21.187) — fikstür söküldü.
+
+    İki hâl ayrı ölçülüyor çünkü ikisi ayrı şey söylüyor: sayı GELDİYSE kaç parti ve kaçı imhalık
+    yazılır; OKUNAMADIYSA "okunamadı" der ve kart dikkat rengine geçmez. "0 parti" demek,
+    listeyi okuyamadığımız hâlde "iş yok" demekti (CLAUDE §1).
+  */
+  it('D3 kartı parti ve imhalık sayısını yazar', async () => {
+    routeReplies({
+      nearExpiry: () =>
+        Promise.resolve(
+          ok({
+            batches: [
+              nearExpiryBatch({ decision: 'can_offer' }),
+              nearExpiryBatch({ stockId: '00000000-0000-4000-8000-000000000402', decision: 'must_discard' }),
+            ],
+          }),
+        ),
+    });
+
+    await renderHub();
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-hub-near-expiry')).toHaveTextContent(/2 parti listede/));
+    expect(screen.getByTestId('warehouse-hub-near-expiry')).toHaveTextContent(/1 imhalık/);
+  });
+
+  it('D3 sayacı OKUNAMAZSA kart sayı uydurmaz', async () => {
+    routeReplies({ nearExpiry: () => Promise.resolve(fail('server_error')) });
+
+    await renderHub();
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-hub-near-expiry')).toHaveTextContent(/okunamadı/));
   });
 
   /*

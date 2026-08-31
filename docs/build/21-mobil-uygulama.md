@@ -8954,7 +8954,16 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **BEKLEYEN(21.184):** cihaz turu — kutulu durakta reddedilen kalem çekmecesi ve imzasız akış
   görsel olarak doğrulanacak.
 
-- [ ] (21.185) **FABRIC ÇÖKMESİ — plansız ekrandan geri dönüşte, BİR KEZ** (gözlem 30.08)
+- [ ] (21.185) **FABRIC ÇÖKMESİ — İNCELEME DURDURULDU (kullanıcı kararı 31.08)**
+
+  **Kullanıcı kararı:** ağaçta paralel çalışan BAŞKA bir ajan var ve çökme onun değişikliklerinden
+  geliyor olabilir; şimdilik incelenmeyecek, yalnız kayıt tutulacak.
+
+  **31.08 gözlemi — arıza mal kabule ÖZGÜ DEĞİL:** aynı çökme D3'ten (yakın-SKT) hub'a dönerken de
+  geldi. Yani tetikleyici bir ekranın kendisi değil, EKRAN GEÇİŞİ. Önceki eleme sonuçları geçerli:
+  benim commit'siz değişikliklerimden değil (dört dosya HEAD'e döndürüldü, çökme sürdü).
+
+  ### Eski kayıt — plansız ekrandan geri dönüşte, BİR KEZ (gözlem 30.08)
   `touches:` `apps/mobile/src/screens/warehouse/intake-screen.tsx` · `apps/mobile/src/components/ui/bottom-sheet.tsx`
 
   **Gözlem.** Android UI turunda (21.182) şu yolda uygulama çöktü: plansız kabulde ürün eklendi →
@@ -9038,3 +9047,37 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `mockBack` ile ölçüldü). `db:refresh` yeniden koşuldu, 166 kova dolu.
   **BEKLEYEN(21.187):** cihaz turu — `db:refresh` oturumu düşürdüğü için akış uçtan uca yeniden
   denenmeli (giriş kullanıcıda).
+
+- [x] (21.188) **D3 YAKIN-SKT GERÇEK VERİYE BAĞLANDI — fikstür söküldü, uç açıldı** (kullanıcı isteği 31.08)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/application/src/warehouse/near-expiry.ts` · `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{near-expiry-screen.tsx,use-near-expiry.hook.ts,warehouse-hub-screen.tsx,use-warehouse-hub.hook.ts}`
+
+  **Durum.** Ekran `NEAR_EXPIRY_FIXTURE` ile çiziliyordu ve gerekçesi kendi künyesinde yazılıydı:
+  *"kapısı yok — ekranın kendisi TAM yazıldı, o gün yalnız veri kaynağı değişir."* O gün geldi.
+
+  · **Sözleşme:** `NearExpiryBatchSchema` — parti başına satır (ürün değil: aynı ürünün iki partisi
+    iki ayrı karar bekler). **Para YOK** ve bu şemanın değil kapının kararı: motor fiyat üretiyor,
+    dönen tip taşımıyor (depo yüzeyi tutar görmez).
+  · **Motor:** `listNearExpiry` — partileri ve eşikleri okur, `toBatchViews`e verir, `decision`
+    süzgecini SUNUCUDA uygular (ekran binlerce parti indirip elemesin) ve aciliyete göre sıralar.
+  · **Uç:** `GET /api/v1/warehouse/near-expiry`, depo zorunlu.
+  · **Ekran:** fikstür söküldü, yapı değişmedi. **Kapının dili ekranın dili oldu** — ekranın kendi
+    eş anlamlıları (`offer_candidate`, `discard`) silindi; ikinci bir adlandırma aynı kavramı iki
+    dilde yaşatmaktı.
+  · **Hub kartı** da gerçek sayıyı yazıyor; okunamazsa "okunamadı" der, sayı uydurmaz.
+
+  **BİR ÖLÇÜM, BİR DÜZELTME:** D3 okuması önce `trackWarehouse`tan geçiriliyordu; üç hub testi
+  birden düştü. Sebep: `trackWarehouse` HER çağrının sonucunu paylaşılan depo durumuna yazıyor ve
+  başarılı bir D3 okuması, hazırlık kuyruğunun çevrimdışı sinyalini eziyordu. Sayaç bir ROZETTİR
+  (devir sayacıyla aynı gerekçe) — durum sinyaline karışmaz.
+
+  **KART ARALIĞI (kullanıcı bulgusu):** satır v3'te karta dönüşmüştü ama listede `gap` hiç yoktu —
+  kartlar bitişik çiziliyordu. Kart bir yüzeydir; yüzeyi yüzeyden ayıran şey aradaki boşluktur.
+
+  **Doğrulama.** Tip beş pakette temiz · lint temiz · mobil **964/964** (D3 ekranı 8, hub kartı 2
+  yeni test). **Cihazda ölçüldü:** 10 parti gerçek veriden geldi, aciliyet sırası doğru (en çok
+  geçmiş üstte), imhalık satır kırmızı zeminde ve kendi bağıyla, ömür çubukları üç tonda.
+
+  **BEKLEYEN(21.189):** DLC/DDM ayrımı hiçbir ekranda görünmüyor — "geçti" yazan satırın imhalık mı
+  satılabilir mi olduğu okunmuyor. Sözleşme `dateType` taşımıyor.
