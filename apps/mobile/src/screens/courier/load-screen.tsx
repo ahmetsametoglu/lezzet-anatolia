@@ -17,6 +17,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
+import { dayTagOf } from './day-tag';
 import { useCourierDay } from './use-courier-day.hook';
 
 /*
@@ -44,6 +45,15 @@ import { useCourierDay } from './use-courier-day.hook';
 */
 
 const t = courierCopy;
+
+/**
+ * Grubun meta satırı — gün + künye (v3:18 `grupMeta`). Araçta yarının seferi de durabildiği için
+ * gün ZORUNLU: iki grup arasındaki fark başka türlü okunmuyor.
+ */
+function groupMetaOf(runs: readonly { runId: string; deliveryDate: string; referenceNo: string }[], runId: string): string {
+  const run = runs.find((candidate) => candidate.runId === runId);
+  return run === undefined ? '' : `${dayTagOf(run.deliveryDate, t)} · ${run.referenceNo}`;
+}
 
 /*
   İLK YÜK İSKELETİ — sayaç kartı (dolgu 14×2 + sayaç başı + çubuk 6 + kalan satırı), okut düğmesi
@@ -151,6 +161,14 @@ export function CourierLoadScreen() {
               </Text>
             </Text>
             <Text style={styles.counterBadge}>{t.day.load.counterLabel}</Text>
+            {/* SEFER SAYISI (v3:18 `{{ yukSeferSayisi }} sefer`) — araçta birden çok seferin
+                kutusu varken sayacın NEYİ topladığını söyler; olmadan "15 kutu" kimin kutusu
+                belli değildi. Tek seferde çizilmez: olmayan bir ayrımı duyurmak olurdu. */}
+            {day.runs.length > 1 ? (
+              <Text style={styles.counterRuns}>
+                {fillCopy(t.day.load.runCount, { n: String(day.runs.length) })}
+              </Text>
+            ) : null}
           </View>
           <OperationsProgressBar
             value={total === 0 ? 0 : loaded / total}
@@ -206,7 +224,12 @@ export function CourierLoadScreen() {
           const groupHead =
             day.runs.length > 1 && stop.runId !== boxedStops[index - 1]?.runId ? (
               <View style={styles.runGroupRow} testID={`courier-load-group-${stop.runId}`}>
-                <Text style={styles.runGroupHeading}>{stop.runLabel ?? ''}</Text>
+                <View style={styles.runGroupText}>
+                  <Text style={styles.runGroupHeading}>{stop.runLabel ?? ''}</Text>
+                  {/* GRUBUN META'SI (v3:18 `grupMeta`): gün + künye. Yalnız ad yazılıydı ve
+                      yarının seferi ile bugünkü ayırt edilemiyordu. */}
+                  <Text style={styles.runGroupMeta}>{groupMetaOf(day.runs, stop.runId)}</Text>
+                </View>
                 <OperationsStatusBadge
                   label={fillCopy(t.day.load.stopCounter, { loaded: String(groupLoaded), total: String(groupTotal) })}
                   tone={groupLoaded === groupTotal ? 'active' : groupLoaded === 0 ? 'idle' : 'warn'}
@@ -225,7 +248,9 @@ export function CourierLoadScreen() {
               <View style={styles.stopCard} testID={`courier-load-stop-${stop.orderId}`}>
               <View style={styles.stopBody}>
                 <Text style={styles.stopTitle} numberOfLines={1}>
-                  {`${index + 1} · ${stop.customerName}`}
+                  {/* Numara GRUP İÇİNDE (v3:18 `yd.no`): global sıra yazılıydı ve ikinci seferin
+                      ilk durağı "8" diye başlıyordu — o seferin kaçıncı kutusu olduğu okunmuyordu. */}
+                  {`${group.indexOf(stop) + 1} · ${stop.customerName}`}
                 </Text>
                 <Text style={styles.stopMeta} numberOfLines={1}>
                   {`${stop.referenceNo ?? ''} · ${fillCopy(t.day.load.stopCounter, {
@@ -271,15 +296,28 @@ export function CourierLoadScreen() {
         yazılan bir uyarı, okunmayan bir uyarıdır.
       */}
       <OperationsStickyBar>
-        {/* KOYU: bu ekranın çıkışı bir İLERLEME değil DÖNÜŞ — zeytin olsaydı üstündeki
-            "Kutuyu okut"la aynı sesle konuşurdu ve rampadaki kurye asıl işi çıkıştan ayıramazdı. */}
+        {/*
+          ÇIKIŞ DÜĞMESİ TASARIMIN KENDİ ETİKETİYLE (v3:18 `yukCtaLabel`): tam yüklendiyse "Yola
+          çık — N kutu araçta", eksikse "Yüklemeyi bitir — N kutu eksik". "Günün rotasına dön"
+          yazılıydı ve rampadaki kuryeye yüklemenin BİTTİĞİNİ söylemiyordu — bir geri düğmesi
+          gibi okunuyordu.
+
+          Hedef ARAÇTAKİ SEFERLER (tasarımın `yuklemeBitir`i de oraya gidiyor): yükleme bitince
+          sıradaki karar "hangisini süreceğim" ve o karar orada veriliyor. Düğme yola ÇIKARMIYOR —
+          dipnot bunu söylüyor.
+        */}
         <PrimaryButton
-          label={t.day.load.back}
-          onPress={() => router.back()}
+          label={
+            remaining === 0
+              ? fillCopy(t.day.load.ctaDone, { n: String(total) })
+              : fillCopy(t.day.load.ctaPartial, { n: String(remaining) })
+          }
+          onPress={() => router.navigate('/van-runs')}
           tone="ink"
           elevation="flat"
           testID="courier-load-back-cta"
         />
+        <Text style={styles.footnote}>{t.day.load.ctaHint}</Text>
         {remaining === 0 ? null : <Text style={styles.footnote}>{t.day.load.footnote}</Text>}
       </OperationsStickyBar>
 
@@ -424,8 +462,23 @@ const styles = StyleSheet.create({
     paddingTop: operationsTheme.space.lg,
     paddingBottom: operationsTheme.space.xs,
   },
+  runGroupText: { flex: 1, gap: 2 },
+  runGroupMeta: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  counterRuns: {
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.md,
+    borderRadius: operationsTheme.radius.badge,
+    overflow: 'hidden',
+    backgroundColor: operationsTheme.colors['ink-inset'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors['on-ink-label'],
+  },
   runGroupHeading: {
-    flex: 1,
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,

@@ -346,8 +346,11 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByTestId('courier-stop-tag-' + STOP_3)).toHaveTextContent(/^KABUL ETMEDİ · \d{2}:\d{2}$/);
     // İlerleme sayacı yalnız TESLİM edilenleri sayar; ulaşılamayan/reddedilen "biten" değildir.
     expect(screen.getByTestId('courier-day-progress')).toBeOnTheScreen();
-    // v3: sayaç tek cümle ("1/3 durak") — v2'de sayı ile bölen ayrı iki metindi.
-    expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/1\/3 durak/);
+    /* SAYAÇ SONUÇLANMIŞ DURAĞI SAYAR, teslim edileni değil (v3:15 `surulenBiten`:
+       `hal !== 'siradaki' && hal !== 'bekleyen'`). Üç durağın üçü de sonuçlanmış — biri teslim,
+       ikisi takılı — ve kuryenin o duraklarda yapacak işi kalmadı. Niteliği ÇUBUK söylüyor:
+       yeşil teslim, kırmızı takılı. */
+    expect(screen.getByTestId('courier-day-summary')).toHaveTextContent(/3\/3 durak/);
     // Başlık sayıyı, sağ uç TAKILI durak sayısını taşır (ulaşılamadı + kabul etmedi = 2).
     expect(screen.getByText('DURAKLAR · 3')).toBeOnTheScreen();
     expect(screen.getByTestId('courier-day-stuck')).toHaveTextContent('2 takılı');
@@ -517,7 +520,7 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
        KAPININ HEDEFİ DE DEĞİŞTİ (31.08): satır "Sefer künyesi ve yükleme" diyip `/trip`e
        gidiyordu; o ekran tasarımda artık yok. Araç bir ara depo olunca kuryenin sorusu da
        değişti — "ne taşıyorum" değil "araçta hangi seferler var, hangisini süreceğim". */
-    expect(screen.getByTestId('courier-day-trip')).toHaveTextContent(/1 sefer · 1\/2 kutu araçta/);
+    expect(screen.getByTestId('courier-day-trip')).toHaveTextContent(/1 sefer araçta · 1 sürülüyor/);
     expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
   });
 
@@ -576,6 +579,10 @@ describe('araçtaki seferler (31.08)', () => {
 
     /* Grup başlığı YALNIZ birden çok sefer varken çizilir — tek seferde başlık, olmayan bir
        ayrımı duyurmak olurdu. */
-    expect(screen.getByTestId(`courier-day-group-${ikinci.runId}`)).toHaveTextContent('Dağ rotası');
+    /* Grup başlığı ADI ve KÜNYE+HÂLİ birlikte taşıyor (v3:15 `grupMeta`): iki grup arasındaki
+       fark "hangisi sürülüyor" ancak böyle okunuyor. */
+    const group = screen.getByTestId(`courier-day-group-${ikinci.runId}`);
+    expect(group).toHaveTextContent(/Dağ rotası/);
+    expect(group).toHaveTextContent(/sürülüyor/);
   });
 });

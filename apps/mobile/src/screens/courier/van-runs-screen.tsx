@@ -56,9 +56,13 @@ export function CourierVanRunsScreen() {
 
   /* Seferin yükü duraklardan TÜRER — ikinci bir uç istenmiyor (sefer künyesi ekranının aynı
      kuralı). Durak zaten `runId` taşıyor (31.08), yani gruplama tek geçişte kuruluyor. */
-  const loadOf = (runId: string): { stops: number; boxes: number } => {
+  const loadOf = (runId: string): { stops: number; boxes: number; loaded: number } => {
     const own = day.stops.filter((stop) => stop.runId === runId);
-    return { stops: own.length, boxes: own.reduce((sum, stop) => sum + stop.boxes.length, 0) };
+    return {
+      stops: own.length,
+      boxes: own.reduce((sum, stop) => sum + stop.boxes.length, 0),
+      loaded: own.reduce((sum, stop) => sum + stop.boxes.filter((box) => box.loadedAt !== null).length, 0),
+    };
   };
 
   /* Aracın adı YOKSA cümle de kurulmaz (31.08 · ölçüldü): şablon "— · araç bir ara depodur" diye
@@ -94,8 +98,12 @@ export function CourierVanRunsScreen() {
             ekranın ağırlık merkezi kayboluyordu: bu blok "araçta ne var" özetini taşıyor ve
             tasarımda sayfanın tek koyu alanı. */}
         <OperationsSurface tone="ink" style={styles.hint}>
+          {/* ÜÇ SAYI (v3:16 `aracYukOzet`): "N sefer · M durak · X/Y kutu". Yalnız kutu sayacı
+              yazılıydı ve o YÜKLEME ekranının sorusu; buranın sorusu "araçta ne var". */}
           <Text style={styles.hintCount}>
-            {fillCopy(t.day.vanRuns.loadMeta, {
+            {fillCopy(t.day.vanRuns.vanSummary, {
+              runs: String(day.runs.length),
+              stops: String(day.stops.length),
               loaded: String(day.boxCounter?.loaded ?? 0),
               total: String(day.boxCounter?.total ?? 0),
             })}
@@ -128,8 +136,14 @@ export function CourierVanRunsScreen() {
                       {/* GÜN ETİKETİ (v3:16) — araç iki-üç günün seferini taşıyor; hangisinin
                           bugün olduğu kartın kendisinde yazmalı. */}
                       <Text style={styles.cardMeta}>{`${dayTagOf(run.deliveryDate, t)} · ${run.referenceNo}`}</Text>
+                      {/* KART ÖZETİ OKUNAN/TOPLAM (v3:16 `s.ozet`): "N durak · X/Y kutu araçta".
+                          Yalnız toplam yazılıydı ve o seferin YÜKLEMESİ bitmiş mi görünmüyordu. */}
                       <Text style={styles.cardSummary}>
-                        {fillCopy(t.day.vanRuns.summary, { stops: String(load.stops), boxes: String(load.boxes) })}
+                        {fillCopy(t.day.vanRuns.summary, {
+                          stops: String(load.stops),
+                          loaded: String(load.loaded),
+                          total: String(load.boxes),
+                        })}
                       </Text>
                     </View>
                     {/* Durum ROZET (v3:16) — dolgulu ve sağ üstte; düz metin olarak çizilmişti ve

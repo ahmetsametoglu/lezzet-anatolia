@@ -76,7 +76,11 @@
       "back": "Günün rotasına dön",
       "counterRest": "/{total} kutu",
       "freeHeading": "SERBEST ÜRÜN — İSTEĞE BAĞLI",
-      "freeMeta": "Kapıda müşteri fazladan isterse satabileceğin mal"
+      "freeMeta": "Kapıda müşteri fazladan isterse satabileceğin mal",
+      "runCount": "{n} sefer",
+      "ctaDone": "Yola çık — {n} kutu araçta",
+      "ctaPartial": "Yüklemeyi bitir — {n} kutu eksik",
+      "ctaHint": "emanet araca geçer · müşteriye haber gitmez"
     },
     "stopsHeading": "DURAKLAR · {n}",
     "stuckCount": "{n} takılı",
@@ -180,9 +184,10 @@
       "emptyTitle": "Araçta sefer yok",
       "emptyBody": "Sefer ve araç seçip yüklemeyi yaptığında seferler burada birikir. Bir sefer araçta olmakla başlamış sayılmaz.",
       "pick": "Sefer ve araç seç",
-      "summary": "{stops} durak · {boxes} kutu",
+      "summary": "{stops} durak · {loaded}/{total} kutu araçta",
       "catchUp": "Geç yüklenen kutuları yola çıkar",
-      "addRun": "Araca sefer ekle"
+      "addRun": "Araca sefer ekle",
+      "vanSummary": "{runs} sefer · {stops} durak · {loaded}/{total} kutu"
     },
     "vehicle": {
       "heading": "ARAÇ",
@@ -205,7 +210,7 @@
     },
     "vanRow": {
       "title": "Araçtaki seferler",
-      "meta": "{n} sefer · {loaded}/{total} kutu araçta"
+      "meta": "{n} sefer araçta · {driving} sürülüyor"
     },
     "runGroup": "{name} · {day}",
     "stopsBySefer": "DURAKLAR · SEFERE GÖRE",
@@ -214,7 +219,13 @@
       "meta": "rota · araç · araçtaki kutular {loaded}/{total}"
     },
     "progressDone": "{done}",
-    "progressRest": "/{total} durak"
+    "progressRest": "/{total} durak",
+    "drivenBadge": "SÜRÜLEN SEFER",
+    "scope": "Bu sayım yalnız sürülen sefere aittir — {waiting}.",
+    "scopeWaiting": "araçta bekleyen {n} sefer bu sayıma girmez",
+    "scopeNone": "araçta bekleyen başka sefer yok",
+    "groupDriving": "sürülüyor",
+    "groupClosed": "kapandı"
   },
   "delivery": {
     "back": "Geri",

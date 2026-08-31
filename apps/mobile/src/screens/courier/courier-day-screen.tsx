@@ -107,11 +107,41 @@ export function CourierDayScreen() {
   const userName = useOperationsUserName();
   const unread = useOperationsNotifications().unread;
 
-  const stops = day.stops;
-  const doneCount = stops.filter((stop) => stop.outcome === 'delivered').length;
+  const run = day.run;
+
+  /*
+    ── LİSTE BAŞLATILMIŞ SEFERLERİN, SAYIM SÜRÜLENİN (v3:15 · kullanıcı bulgusu 31.08) ──────────
+    Tasarımın kendi kaynağı açık: `SEFERLER.filter(s => baslatilan.indexOf(s.key) >= 0)` — durak
+    listesi yalnız BAŞLATILMIŞ seferlerden doğuyor. Kurulmuş ama başlamamış seferin durağı burada
+    HİÇ YOK ve olmamalı: o durak açılmadı, müşterisine haber gitmedi, kurye ona gidemez.
+
+    Bende liste araçtaki BÜTÜN seferlerden geliyordu ve ekranda 15 durak sayılıyordu — oysa
+    kuryenin o an yapabileceği iş yalnız başlatılmış seferlerin durakları. Yükleme ekranı ise
+    hepsini görmeye devam ediyor (`day.stops`): rampada okutulacak kutu, seferi başlamamış
+    siparişin de kutusudur.
+
+    SAYIM DAHA DA DAR: özet kartı yalnız SÜRÜLEN seferin sayısıdır ve tasarım bunu yazıyor da
+    ("Bu sayım yalnız sürülen sefere aittir"). İki başlatılmış sefer varken tek bir ilerleme
+    çubuğu ikisini toplasaydı, kurye hangi seferi bitirdiğini okuyamazdı.
+  */
+  const departedRunIds = new Set(day.runs.filter((run) => run.departedAt !== null).map((run) => run.runId));
+  const stops = day.stops.filter((stop) => departedRunIds.has(stop.runId));
+  const drivenStops = run === null ? [] : stops.filter((stop) => stop.runId === run.runId);
+  const doneCount = drivenStops.filter((stop) => stop.outcome !== 'pending').length;
   const issueCount = stops.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused').length;
-  const openCount = stops.length - doneCount - issueCount;
-  const doorStops = stops.filter((stop) => stop.outcome === 'pending' && stop.payment.dueAmountCents !== null);
+  /* KAPANIŞ ROZETİ SEFER BAZINDA: "Seferi kapat" SÜRÜLEN seferi kapatıyor (`openDayClose({runId})`),
+     yani rozetin saydığı da o seferin durakları olmalı. Liste başlığındaki "N takılı" ise LİSTENİN
+     kapsamında kalır (başlatılmış seferlerin hepsi) — iki sayı, iki ayrı soru. */
+  const drivenIssues = drivenStops.filter(
+    (stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused',
+  ).length;
+  const openCount = drivenStops.length - doneCount;
+  /** Araçta BEKLEYEN sefer sayısı — özet kartının kapsam cümlesini besliyor (v3:15). */
+  const waitingCount = day.runs.filter((candidate) => candidate.departedAt === null).length;
+  /* KAPIDA KALAN TAHSİLAT ÖZET KARTININ İÇİNDE ve kart "yalnız sürülen sefere aittir" diyor —
+     sayı da oradan gelmeli (v3:15 `surulenKapida`). Bütün başlatılmış seferlerden sayılıyordu ve
+     kartın kendi cümlesiyle çelişiyordu (ölçüldü 31.08). */
+  const doorStops = drivenStops.filter((stop) => stop.outcome === 'pending' && stop.payment.dueAmountCents !== null);
   const doorTotal = doorStops.reduce((total, stop) => total + (stop.payment.dueAmountCents ?? 0), 0);
   /** Sıradaki durak — v2:848: ilk sonuçlanmamış durak, koyu daireyle işaretlenir. */
   const nextOrderId = stops.find((stop) => stop.outcome === 'pending')?.orderId ?? null;
@@ -187,7 +217,6 @@ export function CourierDayScreen() {
     );
   }
 
-  const run = day.run;
   /*
     ── EKRANIN ÜÇ HÂLİ (31.08 · v3:14) ──────────────────────────────────────────
     Araç bir ara depo oldu ve ekranın hâli artık iki değil ÜÇ:
@@ -338,6 +367,15 @@ export function CourierDayScreen() {
                 ekranda aynı yerde durmalı, kartın içinde olsaydı durak listesine inince kaybolurdu.
               */}
               <View style={styles.summary} testID="courier-day-summary">
+                {/* SÜRÜLEN SEFER ROZETİ + ADI (v3:15) — kartın hangi seferin sayımı olduğunu
+                    kartın KENDİSİ söylemeli. Yalnız başlıkta yazılıydı ve iki başlatılmış sefer
+                    varken kart "hangisinin ilerlemesi" sorusunu cevaplayamıyordu. */}
+                <View style={styles.summaryRun}>
+                  <Text style={styles.summaryRunBadge}>{t.day.drivenBadge}</Text>
+                  <Text style={styles.summaryRunName} numberOfLines={1}>
+                    {run?.zoneName ?? run?.referenceNo ?? ''}
+                  </Text>
+                </View>
                 <View style={styles.summaryHead}>
                   {/* TAMAMLANAN SAYI KAHRAMAN (v3:14): tasarımda "3" büyük, "/5 durak" küçük.
                       Tek puntoda yazıldığında kuryenin gözü hangi sayının kendi ilerlemesi
@@ -345,7 +383,7 @@ export function CourierDayScreen() {
                   <Text style={styles.summaryCount}>
                     {fillCopy(t.day.progressDone, { done: String(doneCount) })}
                     <Text style={styles.summaryCountRest}>
-                      {fillCopy(t.day.progressRest, { total: String(stops.length) })}
+                      {fillCopy(t.day.progressRest, { total: String(drivenStops.length) })}
                     </Text>
                   </Text>
                   <View style={styles.pocketBox}>
@@ -366,8 +404,15 @@ export function CourierDayScreen() {
                     iyi gösteriyordu — ulaşılamayan durak çubukta hiç görünmüyor, kalan boşlukta
                     "sırası gelmemiş" gibi duruyordu. */}
                 <OperationsProgressBar
-                  value={doneCount / stops.length}
-                  secondary={{ value: issueCount / stops.length, tone: operationsTheme.colors.error }}
+                  value={drivenStops.length === 0 ? 0 : doneCount / drivenStops.length}
+                  secondary={{
+                    value:
+                      drivenStops.length === 0
+                        ? 0
+                        : drivenStops.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused')
+                            .length / drivenStops.length,
+                    tone: operationsTheme.colors.error,
+                  }}
                   onInk
                   testID="courier-day-progress"
                 />
@@ -380,6 +425,18 @@ export function CourierDayScreen() {
                     </Text>
                   </View>
                 )}
+
+                {/* KAPSAM CÜMLESİ (v3:15) — kartın neyi saymadığını SÖYLER. Araçta bekleyen sefer
+                    varken bu satır olmadan kurye "günüm 3/5" diye okuyor ve araçtaki öteki
+                    seferin duraklarını hiç saymadığını fark etmiyordu. */}
+                <Text style={styles.summaryScope} testID="courier-day-scope">
+                  {fillCopy(t.day.scope, {
+                    waiting:
+                      waitingCount === 0
+                        ? t.day.scopeNone
+                        : fillCopy(t.day.scopeWaiting, { n: String(waitingCount) }),
+                  })}
+                </Text>
               </View>
 
               {/*
@@ -398,10 +455,12 @@ export function CourierDayScreen() {
                 <GateRow
                   icon="courier"
                   title={t.day.vanRow.title}
+                  /* ÖZET TASARIMIN CÜMLESİ (v3:15 `aracSatirOzet`): "N sefer araçta · M
+                     sürülüyor". Kutu sayacı yazılıydı ve o YÜKLEME ekranının sorusu; bu satırın
+                     sorusu "araçta ne var ve kaçını sürüyorum". */
                   meta={fillCopy(t.day.vanRow.meta, {
                     n: String(day.runs.length),
-                    loaded: String(day.boxCounter.loaded),
-                    total: String(day.boxCounter.total),
+                    driving: String(day.runs.length - waitingCount),
                   })}
                   tone="plain"
                   onPress={() => router.navigate('/van-runs')}
@@ -463,9 +522,14 @@ export function CourierDayScreen() {
                 */
                 <Fragment key={stop.orderId}>
                   {stops.length > 0 && stop.runId !== stops[index - 1]?.runId && day.runs.length > 1 ? (
-                    <Text style={styles.runGroupHeading} testID={`courier-day-group-${stop.runId}`}>
-                      {stop.runLabel ?? ''}
-                    </Text>
+                    <View style={styles.runGroupRow} testID={`courier-day-group-${stop.runId}`}>
+                      <Text style={styles.runGroupHeading}>{stop.runLabel ?? ''}</Text>
+                      {/* GRUBUN META'SI (v3:15 `grupMeta`): künye + hâl. Yalnız ad yazılıydı ve
+                          iki grup arasındaki fark "hangisi sürülüyor" görünmüyordu. */}
+                      <Text style={styles.runGroupMeta}>
+                        {groupMetaOf(day.runs.find((candidate) => candidate.runId === stop.runId), t)}
+                      </Text>
+                    </View>
                   ) : null}
                   <StopRow
                     stop={stop}
@@ -549,11 +613,11 @@ export function CourierDayScreen() {
               {/* ROZET TAKILIYI DA SÖYLER (v3:14 — "2 açık · 1 takılı"). Kurye kapatmadan önce
                   neyin çözülmemiş olduğunu düğmenin üstünde görmeli; yalnız "açık" sayısı,
                   sonuçlanmayan durakları kapanışın sürprizine bırakıyordu. */}
-              {ctaMode === 'close' && openCount + issueCount > 0 ? (
+              {ctaMode === 'close' && openCount + drivenIssues > 0 ? (
                 <Text style={styles.ctaBadge}>
                   {issueCount === 0
                     ? fillCopy(t.day.openBadge, { n: String(openCount) })
-                    : fillCopy(t.day.openBadgeStuck, { n: String(openCount), m: String(issueCount) })}
+                    : fillCopy(t.day.openBadgeStuck, { n: String(openCount), m: String(drivenIssues) })}
                 </Text>
               ) : null}
             </PressableSurface>
@@ -598,6 +662,18 @@ function partialCounts(stop: CourierStopContract): { total: number; done: number
     (sum, line) => ({ total: sum.total + line.qty, done: sum.done + line.fulfilledQty }),
     { total: 0, done: 0 },
   );
+}
+
+/**
+ * Grubun meta satırı — künye + hâl (v3:15 `grupMeta`). Kapanmış sefer de listede kalabiliyor
+ * (durakları sonuçlanmış), o yüzden hâl iki değer taşıyor.
+ */
+function groupMetaOf(
+  run: { referenceNo: string; closed: boolean } | undefined,
+  copy: typeof courierCopy,
+): string {
+  if (run === undefined) return '';
+  return `${run.referenceNo} · ${run.closed ? copy.day.groupClosed : copy.day.groupDriving}`;
 }
 
 /** v3:14 — sonuç dairesinin tonu. "Sıradaki" yalnız YOLA ÇIKILMIŞSA koyulur. */
@@ -1103,11 +1179,14 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.olive,
   },
-  /* SEFER GRUP BAŞLIĞI (31.08 · v3:14) — durak listesinin içinde, sessiz bir ayraç. Kartların
+  /* SEFER GRUP BAŞLIĞI (31.08 · v3:15) — durak listesinin içinde, sessiz bir ayraç. Kartların
      kendi ağırlığını bastırmasın diye üstbaşlık kesitinde. */
-  runGroupHeading: {
+  runGroupRow: {
     paddingTop: operationsTheme.space.xl,
     paddingBottom: operationsTheme.space.sm,
+    gap: 2,
+  },
+  runGroupHeading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
@@ -1153,6 +1232,37 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['screen-title--font-weight']],
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.body,
+  },
+  runGroupMeta: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  /** Özet kartının başındaki sefer künyesi — rozet + ad, koyu zemin üstünde. */
+  summaryRun: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.md },
+  summaryRunBadge: {
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.sm,
+    borderRadius: operationsTheme.radius.tight,
+    overflow: 'hidden',
+    backgroundColor: operationsTheme.colors['ink-inset'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors['on-ink-label'],
+  },
+  summaryRunName: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors['on-ink-label'],
+  },
+  /** Kapsam cümlesi — kartın neyi SAYMADIĞINI söyler; koyu zeminin sessiz tonunda. */
+  summaryScope: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    lineHeight: operationsTheme.text.meta * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors['on-ink-label'],
   },
   routesHeading: {
     paddingTop: operationsTheme.space.md,

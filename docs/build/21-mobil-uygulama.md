@@ -9405,3 +9405,36 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Ölçüldü: vitest 4015/4015 · mobil jest 141/141 suite, 1143 test. Cihazda: çekmece alttan geliyor,
   arka plan kararıyor, kapanış sayfası tek düğmeye indi.
+
+- [x] (21.197) **TASARIM SADAKATİ: DURAK LİSTESİNİN KAPSAMI VE DOKUZ FARK** (kullanıcı bulgusu 31.08)
+  `touches: apps/mobile/src/screens/courier/{courier-day-screen,load-screen,van-runs-screen}.tsx`
+
+  **KRİTİK FARK — LİSTE BAŞLATILMIŞ SEFERLERİN.** Kullanıcı *"tasarım iki seferi aynı anda
+  göstermiyor"* dedi ve ölçünce haklı çıktı. Tasarımın kendi kaynağı:
+  `SEFERLER.filter(s => baslatilan.indexOf(s.key) >= 0)` — durak listesi yalnız BAŞLATILMIŞ
+  seferlerden doğuyor. Bende araçtaki BÜTÜN seferlerden geliyordu ve ekranda 15 durak sayılıyordu;
+  oysa kurulmuş ama başlamamış seferin durağı açılmadı, müşterisine haber gitmedi, kurye ona
+  gidemez. Yükleme ekranı hepsini görmeye devam ediyor — rampada okutulacak kutu, seferi
+  başlamamış siparişin de kutusudur.
+
+  **SAYIM DAHA DA DAR:** özet kartı yalnız SÜRÜLEN seferin sayısı ve tasarım bunu yazıyor da.
+  Sekiz düzeltme daha:
+  · Özet kartına `SÜRÜLEN SEFER` rozeti + sefer adı (kart hangi seferin sayımı olduğunu söylemeli)
+  · Kapsam cümlesi: *"Bu sayım yalnız sürülen sefere aittir — araçta bekleyen N sefer bu sayıma girmez"*
+  · Kapıda kalan tahsilat SÜRÜLEN seferden (kartın kendi cümlesiyle çelişiyordu: 8 → 3)
+  · Kapanış rozeti sürülen seferden (kapanış sefer bazlı — `openDayClose({runId})`)
+  · Sayaç SONUÇLANMIŞ durağı sayar, teslim edileni değil (`surulenBiten`in kuralı)
+  · Araçtaki seferler satırı: *"N sefer araçta · M sürülüyor"* (kutu sayacı yükleme ekranının sorusu)
+  · Durak grubu başlığına künye + hâl (`grupMeta`)
+  · Araçtaki seferler ekranı: üst blokta üç sayı, kartta okunan/toplam kutu
+  · Yükleme ekranı: sefer sayısı rozeti, grup metası (gün · künye), durak numarası GRUP İÇİNDE,
+    çıkış düğmesi tasarımın kendi etiketiyle (*"Yola çık — N kutu araçta"* / *"Yüklemeyi bitir — N
+    kutu eksik"*) ve dipnotuyla (*"emanet araca geçer · müşteriye haber gitmez"*)
+
+  **BİLİNÇLİ SAPMALAR (tasarımda yok, akış gerektirdi ve ölçüldü):** araçtaki seferler ekranındaki
+  "Kutuları araca yükle", "Araca sefer ekle" ve "Geç yüklenen kutuları yola çıkar". Tasarımın akışı
+  yüklemeye YALNIZ seçim ekranından geçiyor ve sefer sürülürken geç kutunun yolu yok; üçü de
+  cihazda ölçülmüş boşlukları kapatıyor (21.195/21.196'nın künyeleri).
+
+  Ölçüldü: mobil jest 146/146 suite, 1168 test. Vitest 4014/4015 — kalan tek düşük depo şeridinin
+  `operations-app` token eklemesinden (testi güncellenmemiş), dokunulmayan dosyada.
