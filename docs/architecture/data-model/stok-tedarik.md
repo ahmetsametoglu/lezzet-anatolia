@@ -273,6 +273,7 @@ Mal alımının envanter tarafı; oluşturduğu partiler buna bağlanır (`Stock
 | `date` | date |  | `current_date` |
 | `total_amount` | numeric(10, 2) |  | `0` |
 | `note` | text | • |  |
+| `received_by` | uuid | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 

@@ -31,6 +31,14 @@ export interface ReceiveIntakeInput {
   lines: IntakeLine[];
   date?: string;
   note?: string | null;
+  /**
+   * **Kabulü yapan personel** (`user_profiles.id`) — belgeye ve doğan her harekete yazılır.
+   *
+   * İSTEĞE BAĞLI, çünkü her çağıranın bir kişisi yok: seed ve bakım yolları aktörsüz yazar ve
+   * defter orada "bilinmiyor" der. Uydurma bir kimlik yazmak, bilinmeyeni biliniyormuş gibi
+   * göstermek olurdu (CLAUDE §1).
+   */
+  actorId?: string | null;
 }
 
 /**
@@ -69,6 +77,7 @@ export class StockIntakeService extends BaseDbService<StockIntake, StockIntakeIn
       p_purchase_order_id: input.purchaseOrderId ?? null,
       p_date: input.date ?? new Date().toISOString().slice(0, 10),
       p_note: input.note ?? null,
+      p_actor_id: input.actorId ?? null,
     });
     // RPC dönüşü bir TABLO SATIRI değil (jsonb) — `moneyFields` yolundan geçmez; dönüşüm bu sınırda
     // ve ortak yardımcıyla (`rpcMoneyToCents`), her serviste yeniden yazılmasın diye.

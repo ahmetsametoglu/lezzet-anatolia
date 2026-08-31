@@ -202,6 +202,17 @@ export const StockIntakeSchema = z.object({
   /** Kalemlerden hesaplanır (Σ birim maliyet × adet) — **cent**; kolon `total_amount` (euro). */
   totalAmountCents: z.number().int(),
   note: z.string().nullable(),
+  /**
+   * **Kabulü yapan personel** (`user_profiles.id`) — kullanıcı kararı 31.08.
+   *
+   * NULLABLE ve öyle kalmalı: seed ve bakım yolları aktörsüz yazar, orada gerçek bir kişi yok.
+   * Boş olması "bilinmiyor" demektir — sıfır ya da bir varsayılan kimlik yazmak, defterin
+   * bilmediğini biliyormuş gibi göstermesi olurdu (CLAUDE §1).
+   *
+   * Aynı kimlik doğan HER harekete de yazılıyor (`stock_movement.actor_id`); belgede durması
+   * "kim aldı" sorusunu hareketlerden türetmeyi gereksiz kılıyor.
+   */
+  receivedBy: z.string().uuid().nullable(),
   createdAt: z.string(),
 });
 export type StockIntake = z.infer<typeof StockIntakeSchema>;
@@ -213,6 +224,7 @@ export const StockIntakeInsertSchema = z.object({
   date: z.string().optional(),
   totalAmountCents: z.number().int().optional(),
   note: z.string().nullish(),
+  receivedBy: z.string().uuid().nullish(),
 });
 export type StockIntakeInsert = z.infer<typeof StockIntakeInsertSchema>;
 

@@ -73,6 +73,8 @@ Junction/ara tablolar ilgili dosyada anlatılır (ör. `product_collections` →
 > durur ve buraya girmez: bu bölüm VERİ modelini anlatıyor.
 
 - `account_type`: cash, bank, provider
+- `address_geo_precision`: housenumber, street, locality, municipality *(adres koordinatı hangi hassasiyette çözüldü)*
+- `address_geo_source`: ban, manual *(koordinat BAN'dan mı geldi, elle mi girildi)*
 - `analytics_availability`: sellable, sold_out, closed, not_here *(ölçüm anında ürün alınabilir miydi)*
 - `analytics_blocked_reason`: min_basket, split, place_change, coupon_invalid, out_of_stock, payment_failed, not_shippable, date_unavailable *(sepet/checkout neden kapandı)*
 - `analytics_device`: mobile, desktop

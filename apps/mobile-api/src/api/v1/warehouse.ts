@@ -677,6 +677,10 @@ async function receiveIntake(c: Context<WarehouseEnv>, purchaseOrderId: string |
   const outcome = await receiveGoods(serviceDb(), {
     warehouseId: c.get('warehouseId'),
     purchaseOrderId,
+    // **KABULÜ KİM YAPTI** (kullanıcı kararı 31.08): oturumdaki personel belgeye ve doğan her
+    // harekete yazılır. Gövdeden GELMEZ — istemcinin söylediği bir kimlik, kimliğin kendisi değil
+    // bir iddiadır; kapı zaten oturumu doğruladı ve gerçeği o biliyor.
+    actorId: c.get('staff').id,
     ...parsed.data,
     // `reprice` BİLEREK geçirilmiyor: otomatik fiyat modülü fiyat şeridinin işi ve terfi etmedi
     // (`intake.ts` künyesi). Port kayıtsız olduğu için `repricedCount` **null** döner — sıfır DEĞİL,

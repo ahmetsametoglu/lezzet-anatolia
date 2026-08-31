@@ -388,6 +388,12 @@ export async function receiveGoods(
     supplierId?: string | null;
     date?: string;
     note?: string | null;
+    /**
+     * **Kabulü yapan personel** — belgeye (`stock_intake.received_by`) ve doğan her harekete
+     * (`stock_movement.actor_id`) yazılır. Kim aldığı defterin sorusudur, kabulün değil: kabul
+     * aktörsüz de yazılabilir (seed, bakım) ve o hâlde defter "bilinmiyor" der.
+     */
+    actorId?: string | null;
     reprice?: RepricePort;
   },
 ): Promise<IntakeOutcome> {
@@ -415,6 +421,8 @@ export async function receivePurchase(
     supplierId?: string | null;
     date?: string;
     note?: string | null;
+    /** Kabulü yapan personel — depocu yoluyla aynı alan (`receiveGoods` künyesi). */
+    actorId?: string | null;
     reprice?: RepricePort;
   },
 ): Promise<IntakeOutcome> {
@@ -430,6 +438,8 @@ async function intake(
     supplierId?: string | null;
     date?: string;
     note?: string | null;
+    /** Kabulü yapan personel — iki kamu kapısı da (depocu · admin) buraya taşır. */
+    actorId?: string | null;
     reprice?: RepricePort;
   },
 ): Promise<IntakeOutcome> {
@@ -444,6 +454,7 @@ async function intake(
     purchaseOrderId: input.purchaseOrderId,
     date: input.date,
     note: input.note,
+    actorId: input.actorId,
     // ── MALİYETİN ÖNCELİĞİ: SATIR > PO > null ──────────────────────────────
     // Elle girilen fiyat siparişteki beklentiyi EZER, çünkü fatura gerçeği söyler: tedarikçi zamla
     // gönderdiyse "son alış fiyatı" o zamlı fiyattır ve `auto_price` da onu görmelidir. Tersi sıra

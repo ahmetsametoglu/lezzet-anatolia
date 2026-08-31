@@ -8854,12 +8854,38 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **BEKLEYEN(21.185):** UI turunda BİR KEZ Fabric çökmesi görüldü, tekrar üretilemedi.
 
-- [ ] (21.183) **KABULDE AKTÖR KAYDI VE KAPANMIŞ SİPARİŞE EK KABUL** (30.08 · karar bekliyor)
-  `touches:` `packages/application/src/warehouse/intake.ts` · `packages/database/src/services/stock.service.ts`
+- [x] (21.183) **KABULÜ KİM YAPTI ARTIK YAZILIYOR — `BEKLEYEN(06.14)` kapandı** (kullanıcı kararı 31.08)
+  `touches:` `supabase/migrations/0010_supply.sql` · `packages/types/src/entities/supply.schema.ts` ·
+  `packages/database/src/services/stock-intake.service.ts` · `packages/application/src/warehouse/intake.ts` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts` · `apps/web/lib/warehouse/intake-actions.ts`
 
-  21.182'nin bulguları. İkisi de kullanıcı kararı bekliyor: (1) `intake` hareketlerine `actor_id`
-  yazılsın mı — öteki hareket türlerinde zaten yazılıyor, tutarsızlık burada; (2) `received`
-  siparişe gelen ek mal sessizce mi girsin, yoksa siparişi yeniden açıp farkta mı görünsün.
+  **Bulgu (21.182).** `stock_movement.actor_id` mal kabulde HİÇ yazılmıyordu — `intake` türünün
+  29/29'unda boş. Oysa alan çalışıyordu: satış 32/32, imha 5/5, sayım 2/2, kapı satışı 3/3, iade
+  2/2 dolu. Sebep RPC'nin kendi künyesinde zaten yazılıydı ve `BEKLEYEN(06.14)` diye
+  işaretlenmişti: *"bu RPC aktör parametresi almıyor, `stock_intake` tablosu da kim kabul etti'yi
+  hiç tutmuyor."*
+
+  **KİMLİK İKİ YERDE: belgede ve harekette.** `stock_intake.received_by` eklendi
+  (`user_profiles`e FK, `on delete set null`) ve `receive_intake` RPC'si `p_actor_id` alıyor; doğan
+  her `stock_movement` satırı da aynı kimliği taşıyor. Yalnız harekete yazmak, bir kabulün
+  doğurduğu her parti için aynı gerçeği tekrarlamak ve belgeye "kim" diye sorulduğunda
+  hareketlerden türetmek olurdu.
+
+  **AKTÖRSÜZ ÇAĞRI HÂLÂ MEŞRU:** parametre varsayılanı `null` ve seed/bakım yolları öyle yazıyor —
+  orada gerçek bir kişi yok. Uydurma bir kimlik, defterin bilmediğini biliyormuş gibi göstermesi
+  olurdu (CLAUDE §1); boş kalması "bilinmiyor" der.
+
+  **İKİ YÜZEY DE BESLİYOR:** native kapısı `c.get('staff').id`, web eylemi `user.id`. Kimlik
+  GÖVDEDEN gelmiyor — istemcinin söylediği bir kimlik, kimliğin kendisi değil bir iddiadır; kapı
+  oturumu zaten doğruladı ve gerçeği o biliyor.
+
+  **Doğrulama.** Tip denetimi beş pakette temiz (`types`, `database`, `application`, `mobile-api`,
+  `web`) · `docs:check` temiz. **ŞEMA DEĞİŞTİ:** `db:refresh` gerekiyor ve o kullanıcının kararı —
+  tazelenene kadar yeni kabullerde alan hâlâ boş kalır.
+
+  **KAPANMIŞ SİPARİŞE EK KABUL AÇIK BIRAKILDI** (kullanıcı kararı 31.08): 21.182'nin ikinci
+  bulgusu — `received` siparişe yeni kabul sessizce yazılabiliyor. Kullanıcı bu konuyu şimdilik
+  gündeme almadı; kayıt burada duruyor.
 
 - [x] (21.184) **KUTUSUZ AKIŞ KAPANDI · İMZA SÖKÜLDÜ · MAL ADIMI İSTİSNA OLDU** (kullanıcı kararları 30.08)
   `touches:` `supabase/migrations/0013_settings.sql` · `packages/application/src/{warehouse/preparation.ts,courier/{day.ts,delivery.ts}}` ·

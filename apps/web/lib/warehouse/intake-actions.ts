@@ -74,7 +74,7 @@ export async function receiveIntakeAction(input: {
 }): Promise<ActionResult<ReceiveOutcome>> {
   try {
     // Depo kapsamı BU depo için doğrulanıyor: sekmeden gelmek yetkiyi atlatmaz.
-    const { scope } = await requireWarehouseScope(input.warehouseId);
+    const { user, scope } = await requireWarehouseScope(input.warehouseId);
     if (input.lines.length === 0) throw new Error('Kabul edilecek satır yok — en az bir kaleme adet girin.');
 
     const base = input.lines.map((line) => ({
@@ -93,6 +93,10 @@ export async function receiveIntakeAction(input: {
       purchaseOrderId: input.purchaseOrderId,
       supplierId: input.supplierId,
       note: input.note,
+      // **KABULÜ KİM YAPTI** (kullanıcı kararı 31.08): kapının doğruladığı kullanıcı, belgeye ve
+      // doğan her harekete yazılır. Native kapısı da aynı alanı besliyor — iki yüzeyden giren mal
+      // defterde aynı soruyu aynı yerde cevaplasın diye.
+      actorId: user.id,
       ...(input.date ? { date: input.date } : {}),
     };
 

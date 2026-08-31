@@ -107,6 +107,19 @@ create table public.stock_intake (
   date date not null default current_date,
   total_amount numeric(10, 2) not null default 0,
   note text,
+  -- **KABULÜ KİM YAPTI** (kullanıcı kararı 31.08, `BEKLEYEN(06.14)` kapandı).
+  --
+  -- Ölçümle geldi: `stock_movement.actor_id` mal kabulde HİÇ yazılmıyordu (29/29 boş), oysa
+  -- satış (32/32), imha (5/5), sayım (2/2) ve iade (2/2) hepsinde doluydu. Yani alan çalışıyordu,
+  -- yalnız kabul onu beslemiyordu — "bu malı depoya kim aldı" sorusunun cevabı defterde yoktu.
+  --
+  -- KİMLİK BELGEDE DE DURUR, yalnız harekette değil: bir kabul birden çok parti doğurur ve
+  -- hareketlerin hepsi aynı kişiye aittir. Yalnız harekete yazmak, aynı gerçeği satır sayısı
+  -- kadar tekrarlamak ve belgeye "kim" diye sorulduğunda hareketlerden türetmek olurdu.
+  --
+  -- `on delete set null`: personel kaydı silinse de kabul belgesi durur — geçmiş bir olayın
+  -- kaydı, kişinin bugünkü varlığına bağlı değildir.
+  received_by uuid references public.user_profiles (id) on delete set null,
   created_at timestamptz not null default now()
 );
 create index stock_intake_supplier_idx on public.stock_intake (supplier_id, date desc);
@@ -140,7 +153,10 @@ create or replace function public.receive_intake(
   p_lines jsonb,
   p_purchase_order_id uuid default null,
   p_date date default current_date,
-  p_note text default null
+  p_note text default null,
+  -- Kabulü yapan personel (`user_profiles.id`). Varsayılan NULL: seed ve bakım çağrıları aktörsüz
+  -- yazar ve o hâlde defter "bilinmiyor" der — uydurma bir kimlik yazmaktansa boş kalır.
+  p_actor_id uuid default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -166,8 +182,9 @@ begin
     raise exception 'receive_intake: depo zorunlu — mal bir kapıdan girer (DOMAIN §17)';
   end if;
 
-  insert into public.stock_intake (supplier_id, warehouse_id, purchase_order_id, date, total_amount, note)
-  values (p_supplier_id, p_warehouse_id, p_purchase_order_id, p_date, 0, p_note)
+  insert into public.stock_intake
+    (supplier_id, warehouse_id, purchase_order_id, date, total_amount, note, received_by)
+  values (p_supplier_id, p_warehouse_id, p_purchase_order_id, p_date, 0, p_note, p_actor_id)
   returning id into v_intake_id;
 
   for v_line in select * from jsonb_array_elements(p_lines)
@@ -244,13 +261,17 @@ begin
     -- physical_qty` ve `initial_qty`'den kurulmuyor — parti doğuşu deftere yazılmasaydı denklem her
     -- partide giriş miktarı kadar sapardı ve mutabakat testi hiç yeşile dönmezdi.
     --
-    -- `actor_id` NULL ve sebebi ölçüldü (27.08): bu RPC aktör parametresi almıyor, `stock_intake`
-    -- tablosu da "kim kabul etti"yi hiç tutmuyor. Uydurmak yerine boş bırakılıyor — defter
-    -- bilmediğini bilmiyor diye yazar (`CLAUDE §1`). Açık: `BEKLEYEN(06.14)`.
+    -- **AKTÖR ARTIK YAZILIYOR** (kullanıcı kararı 31.08 — `BEKLEYEN(06.14)` kapandı). Eskiden
+    -- burada `actor_id` boş kalıyordu ve künyesi *"bu RPC aktör parametresi almıyor"* diyordu;
+    -- ölçüm bunun bir kural değil bir eksik olduğunu gösterdi (öteki hareket türlerinin hepsinde
+    -- alan doluydu). Artık parametre var ve belge de aynı kimliği taşıyor (`received_by`).
+    --
+    -- Aktör VERİLMEZSE hâlâ NULL: seed ve bakım çağrılarında gerçek bir kişi yok ve uydurmak,
+    -- defterin bilmediği bir şeyi biliyormuş gibi yazması olurdu (CLAUDE §1).
     insert into public.stock_movement
-      (stock_id, direction, qty, kind, unit_cost, intake_id)
+      (stock_id, direction, qty, kind, unit_cost, intake_id, actor_id)
     values
-      (v_stock_id, 'in', v_qty, 'intake', v_cost, v_intake_id);
+      (v_stock_id, 'in', v_qty, 'intake', v_cost, v_intake_id, p_actor_id);
 
     v_total := v_total + coalesce(v_cost, 0) * v_qty;
 
