@@ -21,6 +21,7 @@ import type { Country, DeliveryZoneWithCodes, Order, OrderStatus } from '@lezzet
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { readDayHours, type ZoneHours } from '@/lib/settings/day-hours';
 import { shiftDay, toIsoDate } from './deliveries-url';
+import { runPreviewOf, type StopOrderPreview } from './dispatch-preview';
 import type { DispatchDayView, DispatchRunView, DispatchStopView, PrepStage } from './dispatch-types';
 
 /**
@@ -415,11 +416,8 @@ function zoneIdOf(snapshot: Record<string, unknown>, zones: readonly DeliveryZon
  * Sırası HESAPLANMAMIŞ sefer `null` döner — harita çizilmez. Boş bir harita çizip "sıra yok" demek,
  * operatöre bakacak bir şey vaat edip vermemek olurdu.
  */
-async function readRunPreviews(
-  db: SupabaseClient,
-  runIds: readonly string[],
-): Promise<Map<string, NonNullable<NonNullable<DispatchRunView['run']>['stopOrder']>>> {
-  const out = new Map<string, NonNullable<NonNullable<DispatchRunView['run']>['stopOrder']>>();
+async function readRunPreviews(db: SupabaseClient, runIds: readonly string[]): Promise<Map<string, StopOrderPreview>> {
+  const out = new Map<string, StopOrderPreview>();
   if (runIds.length === 0) return out;
 
   const runRows = await new DeliveryRunService(db).listByIds(runIds);
@@ -432,39 +430,21 @@ async function readRunPreviews(
   ]);
   const warehouseById = new Map(warehouses.map((row) => [row.id, row]));
 
+  /* EŞLEME AYRI BİR DOSYADA VE SAF (`dispatch-preview.ts`): burada kalan iş yalnız OKUMA. Ayrımın
+     bedeli bir dosya, kazancı üç kararın DB'siz sınanabilmesi — sıradaki yerin kimlikten türemesi,
+     koordinatsız durağın haritaya girmemesi ve çıpasız deponun uydurulmaması. */
   for (const run of sequenced) {
-    const depot = warehouseById.get(run.warehouseId);
-    const rank = new Map(run.stopOrder.map((id, index) => [id, index + 1]));
-
-    const stops = orders
-      .filter((order) => order.deliveryRunId === run.id)
-      .flatMap((order) => {
-        const snapshot = (order.addressSnapshot ?? null) as Record<string, unknown> | null;
-        const lat = Number(snapshot?.['lat']);
-        const lng = Number(snapshot?.['lng']);
-        // Koordinatsız durak haritaya GİRMEZ — (0, 0)'a düşen bir işaret, eksik ölçümü sağlıklı
-        // gibi okuturdu (`CLAUDE §1`). Sıradaki yeri yine de sayılıyor: liste onu gösteriyor.
-        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
-        return [{
-          orderId: order.id,
-          sequence: rank.get(order.id) ?? null,
-          lat,
-          lng,
-          label: [snapshot?.['line1'], snapshot?.['city']].filter((part) => typeof part === 'string').join(', ') || order.referenceNo || '—',
-        }];
-      });
-
-    if (stops.length === 0) continue;
-
-    out.set(run.id, {
-      metric: run.stopOrderMetric as 'haversine' | 'matrix',
-      precision: run.stopOrderPrecision as 'address' | 'postal_centroid' | 'mixed',
-      origin:
-        depot?.lat != null && depot.lng != null
-          ? { lat: Number(depot.lat), lng: Number(depot.lng), label: depot.name }
-          : null,
-      stops,
+    const preview = runPreviewOf({
+      run,
+      orders: orders.map((order) => ({
+        id: order.id,
+        deliveryRunId: order.deliveryRunId,
+        referenceNo: order.referenceNo,
+        addressSnapshot: (order.addressSnapshot ?? null) as Record<string, unknown> | null,
+      })),
+      depot: warehouseById.get(run.warehouseId) ?? null,
     });
+    if (preview) out.set(run.id, preview);
   }
 
   return out;

@@ -44,7 +44,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 53/57 (+4 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 14/28 (+14 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | tamam | 9/9 |
-| 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 6/9 (+2 kısmi) |
+| 11 | `11-kurye-rota.md` | Kurye ve Rota Teslimat | sürüyor | 6/10 (+2 kısmi) |
 | 12 | `12-para-muhasebe.md` | Para, Ön Muhasebe ve Kârlılık | sürüyor | 7/11 (+2 kısmi) |
 | 13 | `13-analitik.md` | Analitik | sürüyor | 6/8 (+2 kısmi) |
 | 14 | `14-bildirim-email.md` | Bildirim ve E-posta: `packages/email` + `packages/notify` | sürüyor | 12/16 |
@@ -54,7 +54,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/13 (+2 kısmi) |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 27/31 (+4 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 |
-| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 192/201 (+5 kısmi) |
+| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 193/202 (+5 kısmi) |
 | 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 32/41 (+9 kısmi) |
 | 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | tamam | 14/14 |
 <!-- durum:son -->

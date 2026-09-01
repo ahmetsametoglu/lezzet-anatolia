@@ -189,8 +189,8 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - **Motor** `packages/domain-core/src/delivery/route-order.ts`: NN tohum + **2-opt + Or-opt**,
       amaç fonksiyonu KAPALI TURUN toplamı (dönüş bacağı dahil). Kullanıcının U senaryosu bir kural
       olarak yazılmadı, doğru amaç fonksiyonundan çıkıyor. 22 birim testi; merkezinde iki paralel
-      hat geometrisi ve *"depoya en yakın duraklardan biri en son teslim edilir"* iddiası.
-      **Sabotajla sınandı:** dönüş bacağı toplamdan çıkarılınca iki test kırmızıya döndü.
+      hat geometrisi ve *"depoya en yakın duraklardan biri en son teslim edilir"* iddiası. 25 birim
+      testi. **Sabotajla sınandı:** dönüş bacağı toplamdan çıkarılınca iki test kırmızıya döndü.
     - **Determinizm yazılı:** süre bütçesi yok (adım tavanı var), tarama sırası sabit, yön kuralı
       adlandırıldı, ve **girdi dizisinin sırası sonucu etkilemiyor** — etkileseydi `createdAt` gizli
       bir eşitlik bozucu olarak arka kapıdan geri sızardı.
@@ -272,6 +272,40 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
         noktası olmayan satır · depo yarım noktası · geçersiz ölçü değeri → dördü de reddedildi;
         motor yazımı elle dizilmiş sıraya çarptı (`manual_order_kept`) ve `force` ile ezildi.
       - Mobil fikstür `stopOrder: null` taşıyor — "sırasız gün" ekranını besleyen hâl.
+  - **Durum (01.09b) — HER HÜCRENİN TESTİ YAZILDI.** Motor 25 testliydi ama **motoru veriye
+    bağlayan hiçbir hücrenin testi yoktu**: kusursuz çalışan bir motor yanlış noktalarla
+    beslenirse ortaya kusursuz hesaplanmış bir saçmalık çıkar ve hiçbir birim testi bunu göremez.
+    Toplam **75 birim · 38 entegrasyon · 2 uçtan uca**.
+    - **`stop-order.test.ts` (16, yeni)** — orkestrasyonun kendisi. U senaryosu artık GERÇEK
+      satırlarla ölçülüyor: sekiz durak iki paralel hatta, iddia *hat değişim sayısı tam 1* ve
+      *depoya en yakın iki durak turun iki ucunda*. Ayrıca: noktanın kaynağı (snapshot → adres
+      kaydı → posta kodu) ve inceliğin `address`/`mixed`/`postal_centroid` olarak yazılması,
+      `unplaced` durağın diziye GİRMEMESİ, `indistinguishable`, `no_origin`, `fresh`/`cooling_down`,
+      `manual` kilidi + `force`, kapanmış seferin donması, ve girdi sırasının sonucu değiştirmemesi.
+    - **`address-geo.test.ts` (9, yeni)** — kısıtlar 31.08'de elle ölçülmüştü ama **testi yoktu**;
+      elle ölçüm bir kez doğrular, test her koşuda. Yarım nokta (iki yön), noktasız künye, noktasız
+      damga reddediliyor; tam künye ve "denedik olmadı" hâli kabul ediliyor.
+    - **`geocode-scan.write.test.ts` (7, yeni)** — kardeş birim dosyası künyesinde *"yazma tarafı
+      entegrasyonun işi"* diyordu; o boşluk kapandı. Sayaç muhasebesi satırda doğrulanıyor ve
+      idempotentlik bir sayaç hilesiyle değil kuyruk yükleminin kendisiyle kanıtlanıyor.
+    - **`geo-address.test.ts` (6, yeni)** — makullük süzgeci GERÇEK referans veriyle (67000 merkezi):
+      uzak aday düşüyor, merkezi bilinmeyen kodda süzgeç kabul edici, adres değişince nokta düşüyor.
+    - **`dispatch-preview.ts` + testi (10, yeni)** — eşleme `dispatch-read` içinde gömülüydü ve
+      DB'siz sınanamıyordu; saf kısmı ayrıldı (kopya bırakılmadı). Üç kararı da ölçülüyor: numara
+      dizideki YERDEN gelir, koordinatsız durak haritaya girmez, çıpasız depo uydurulmaz.
+    - **`e2e/operations/route-order.smoke.ts` (2, yeni)** — zincirin bütünlüğü. Web'de render eden
+      test altyapısı YOK (jsdom da testing-library da bilinçli olarak kurulu değil), yani `RouteMap`in
+      gerçekten çizildiğini yalnız gerçek bir tarayıcı söyleyebilir. Fikstür durakları ÇAPRAZ yazıyor;
+      ekranda 1..8 numaraları eksiksiz çıkıyor ve "8." işaretçinin ipucu kartı depoya en yakın iki
+      duraktan birini gösteriyor — U senaryosu ekranda.
+    - **İlk koşu gerçek bir ayrışma yakaladı** (kod değil, ölçüt): sevkiyat masası "bugün"ü YEREL
+      takvimden (`deliveries-url.ts:55`), kurye günü UTC'den (`day.ts:198`) türetiyor. Yerel
+      00:00–02:00 arasında iki yüzey ayrı güne bakıyor. 11.9'un konusu değil, üretim koduna
+      dokunulmadı → `docs/talep/not-operasyon-gun-olcutu.md`.
+    - **Mobil yüzeyin testleri native şeritte ve yazılı:** gün ekranının iki iddiası
+      (`courier-day-screen.test.tsx`) — numara SUNUCUDAN gelir, sıra bilinmiyorsa UYDURULMAZ.
+      Navigasyon köprüsünün üretimi 9 birim testiyle `navigation.test.ts`te; ekran düzeyinde
+      "açılamadı" hâlinin testi native şeridin dosyasında ve o dosya şu an onların elinde.
 
     - **BEKLEYEN(11.9):**
       ~~② mobil ekranın `stopSeq`e bağlanması~~ **KAPANDI (31.08 — kullanıcı isteğiyle mobil şerit
@@ -292,6 +326,24 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     diyordu — kodu yalanlıyordu), `DOMAIN §6`ya durak sırasının iş kuralı, `INTEGRATIONS`a coğrafi
     kodlama bölümü, `design/pages/{kurye-gun,app-kurye}.md`ye sırasız gün hâli ve YOKLAR ayrımı
     yazıldı.
+
+- [ ] (11.10) **Gerçek yol matrisi — OSRM adaptörü:** `RouteMatrixProvider` portunun HTTP tarafı; sıra kuş uçuşu yerine yol süresiyle dizilir
+  `touches: packages/application/src/delivery/route-matrix-provider.ts`
+  - **Port ve çeviri HAZIR** (11.9, 01.09): `route-matrix-port.ts` (`costOfMatrix` — tek `null` hücre
+    tüm matrisi reddeder, asimetrik matris simetrikleştirilir) ve `routeMatrixProvider()` fabrikası
+    duruyor; `stop_order_metric` zaten `matrix` demeyi bekliyor. Eksik olan tek şey `/table` çağrısı.
+  - **BİLEREK ERTELENDİ ve ölçüme bağlı** (kullanıcı kararı 31.08 — *"kuş uçuşu, ama OSRM ikinci
+    fazda kesin planlansın"*). Kuş uçuşu turun MAKRO şeklini (git-dön) doğru kuruyor; yanılabileceği
+    yer mikro sıra — bariyerin iki yakası (nehir, demiryolu, tek yön) "200 m" sayılır, araç 4 km
+    sürer. Bu hatanın sahada gerçekten olup olmadığı henüz **ölçülmedi**; ölçmeden adaptör yazmak,
+    olmayan bir soruna makine kurmak olurdu (`CLAUDE §0`).
+  - **Ölçüm aracı zaten yazıldı:** sevkiyat masasındaki rota önizlemesi (`route-map`) tam olarak bu
+    soruyu cevaplamak için var — bariyer atlayan bir bacak orada görünür.
+  - **Asimetri uyarısı adaptörün künyesine yazılmalı:** A→B ≠ B→A olan bir matriste 2-opt geçersizdir
+    (segment tersleme kenarın yönünü değiştirir) ve bunu hiçbir test yakalamaz — tur yalnız sessizce
+    yanlış olur. `costOfMatrix` simetrikleştiriyor; adaptör bunu bozmamalı.
+  - Kapsam: self-host OSRM (hücre ücretsiz). Ticari API'de 60 durak = 3.721 hücre — orada önbellek
+    bir hız işi değil PARA işidir. Gerekçe ve maliyet kıyası: `BACKLOG` §8 (c).
 
 ## Netleşecekler
 

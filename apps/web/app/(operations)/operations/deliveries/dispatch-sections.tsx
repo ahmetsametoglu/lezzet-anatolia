@@ -323,7 +323,9 @@ function RunRow({
           Katlanır: şerit bir DURUM satırıdır, harita ise incelenen bir şey. Her seferin haritasını
           açık tutmak, sevkiyatçının asıl işini (kim çıktı, kim döndü) aşağı iterdi. */}
       {run?.stopOrder ? (
-        <details className="px-1 pb-2">
+        // Kimlikli kanca: şeritte birden çok sefer var ve duman senaryosu KENDİ kurduğu seferin
+        // haritasını açmalı. Metinle seçmek ("Turu haritada gör") ilk eşleşene basardı.
+        <details data-testid={`run-map-${run.runId}`} className="px-1 pb-2">
           <summary className="cursor-pointer font-ops-body text-ops-xs text-ops-muted transition-colors hover:text-ops-olive">
             Turu haritada gör
           </summary>

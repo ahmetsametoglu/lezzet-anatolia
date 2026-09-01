@@ -31,7 +31,7 @@ export function routeMatrixProvider(): RouteMatrixProvider | null {
   const base = process.env['OSRM_BASE_URL']?.trim();
   if (!base) return null;
 
-  // BEKLEYEN(11.9): OSRM adaptörü — `/table?annotations=duration` çağrısı, zaman aşımı ve Zod
+  // BEKLEYEN(11.10): OSRM adaptörü — `/table?annotations=duration` çağrısı, zaman aşımı ve Zod
   // doğrulaması. Port ve `costOfMatrix` hazır; eksik olan yalnız HTTP tarafı.
   return null;
 }
