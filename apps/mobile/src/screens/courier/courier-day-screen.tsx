@@ -140,9 +140,7 @@ export function CourierDayScreen() {
   /* KAPANIŞ ROZETİ SEFER BAZINDA: "Seferi kapat" SÜRÜLEN seferi kapatıyor (`openDayClose({runId})`),
      yani rozetin saydığı da o seferin durakları olmalı. Liste başlığındaki "N takılı" ise LİSTENİN
      kapsamında kalır (başlatılmış seferlerin hepsi) — iki sayı, iki ayrı soru. */
-  const drivenIssues = drivenStops.filter(
-    (stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused',
-  ).length;
+  const drivenIssues = drivenStops.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused').length;
   const openCount = drivenStops.length - doneCount;
   /** Araçta BEKLEYEN sefer sayısı — özet kartının kapsam cümlesini besliyor (v3:15). */
   const waitingCount = day.runs.filter((candidate) => candidate.departedAt === null).length;
@@ -183,8 +181,13 @@ export function CourierDayScreen() {
     .filter((part): part is string => part !== null && part.length > 0)
     .join(' · ');
 
-  /* Bağlam satırı: ad + sefer künyesi. Sefer yoksa yalnız ad — olmayan bir referans uydurulmaz. */
-  const context = day.run === null ? userName : `${userName} · ${runLabel(day.run)}`;
+  /*
+    Bağlam satırı: ad + sefer künyesi. Olmayan bir referans UYDURULMAZ, ama sessiz de kalmaz —
+    tasarımın boş hâli "Marc Lemoine · **sürülen sefer yok**" diyor (`01-Aracta-Sefer-Yok`).
+    Yalnız ad yazılıydı ve satır "sefer künyesi henüz yüklenmedi" gibi de okunabiliyordu; cümle
+    kurulunca boşluk bir HÂL oluyor (01.09).
+  */
+  const context = day.run === null ? `${userName} · ${t.day.contextNoRun}` : `${userName} · ${runLabel(day.run)}`;
 
   const header = (
     <OperationsSectionHeader
@@ -198,9 +201,7 @@ export function CourierDayScreen() {
       right={
         <NotificationBell
           onPress={() => router.navigate('/notifications')}
-          accessibilityLabel={
-            unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })
-          }
+          accessibilityLabel={unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })}
           count={unread}
           testID="operations-bell"
         />
@@ -301,16 +302,20 @@ export function CourierDayScreen() {
             ))}
           </View>
 
-          {/* Satış kapısı BURADA DA var: şartı sefer değil ARAÇ. Sefer açılmadan da yoldan gelen
-              müşteriye satış yapılabilir (21.119). */}
-          <GateRow
-            icon="sale"
-            title={t.day.sale.label}
-            meta={t.day.sale.meta}
-            tone="invite"
-            onPress={() => router.navigate('/sale')}
-            testID="courier-day-sale"
-          />
+          {/*
+            YERİNDE SATIŞ KAPISI BURADA YOK — ve bu bilinçli (kullanıcı bulgusu 01.09).
+
+            Bir tur boyunca üç hâlin üçünde de çiziliyordu; gerekçesi *"şartı sefer değil ARAÇ"*
+            diye yazılmıştı ve o cümle bize ait, tasarıma değil: v3:15'te satır TEK yerde, sürülen
+            seferin gövdesinde (`sürülenVar`). Kullanıcı sefersiz açılışta görüp sordu — *"henüz
+            bir sefer bile seçili değil"*.
+
+            Tasarım haklı, çünkü kapının adı da onu söylüyor: **"YOLDAN gelen müşteri."** Yoldan
+            gelen müşteri yolda olunca gelir; kurye henüz hiçbir sefer kurmamışken depodadır ve
+            oradaki satış depo kapısının işidir (`Depo → Yerinde satış`, tesis stoğundan —
+            `DOMAIN §17`: satan kişi malın yanında duran personeldir). Sefersiz kuryeye araçtan
+            satış açmak, çoğu zaman boş bir aracın kataloğunu açmaktı.
+          */}
         </ScrollView>
       ) : vanLoaded ? (
         /*
@@ -322,11 +327,13 @@ export function CourierDayScreen() {
           <OperationsNoticeBlock
             variant="empty"
             title={t.day.vanLoaded.title}
+            /* ANAHTARLAR YERİNE OTURDU (01.09 · cihazda ölçüldü): cümle `vanRow.meta`yı dolduruyor
+               ("{n} sefer araçta · {driving} sürülüyor") ama `loaded`/`total` geçiliyordu — ekranda
+               ham `{driving}` yazıyordu. Bu gövdenin testi yoktu, o yüzden sessizce yaşadı. */
             description={fillCopy(t.day.vanLoaded.body, {
               summary: fillCopy(t.day.vanRow.meta, {
                 n: String(onVan.length),
-                loaded: String(day.boxCounter?.loaded ?? 0),
-                total: String(day.boxCounter?.total ?? 0),
+                driving: String(onVan.length - waitingCount),
               }),
             })}
             testID="courier-day-van-empty"
@@ -334,11 +341,14 @@ export function CourierDayScreen() {
           {/* Sıra tasarımın 1-2-3'ü: seçtin → YÜKLE → başlat. Yükleme kapısı önce geliyor çünkü
               kurulan seferin kutuları okutulmadan başlatmak, durakları "kutu araçta değil" diye
               açılmayan bir sefer üretir. */}
+          {/* YÜKLEME KAPISININ CÜMLESİ KUTULARI SAYAR — sefer sayısını değil (01.09). İki metin
+              yer değiştirmişti: yükleme satırı "N sefer araçta" diyordu, sefer satırı ise kutuları.
+              Sayaç `null` ise kutu bilinmiyor demektir ve sıfır YAZILMAZ (CLAUDE §1). */}
           <GateRow
             icon="packages"
             title={t.day.vanEmpty.step2}
-            meta={fillCopy(t.day.vanRow.meta, {
-              n: String(onVan.length),
+            meta={fillCopy(t.day.vanRuns.summary, {
+              stops: String(stops.length),
               loaded: String(day.boxCounter?.loaded ?? 0),
               total: String(day.boxCounter?.total ?? 0),
             })}
@@ -349,25 +359,32 @@ export function CourierDayScreen() {
           <GateRow
             icon="courier"
             title={t.day.vanLoaded.cta}
-            meta={fillCopy(t.day.vanRuns.summary, {
-              stops: String(stops.length),
-              boxes: String(day.boxCounter?.total ?? 0),
+            /* Sürülen gövdedeki kardeşiyle AYNI cümle (`vanRow.meta`): satırın sorusu "araçta kaç
+               sefer var ve kaçını sürüyorum" — iki gövde aynı soruya iki farklı cümle kurmasın. */
+            meta={fillCopy(t.day.vanRow.meta, {
+              n: String(onVan.length),
+              driving: String(onVan.length - waitingCount),
             })}
             tone="plain"
             onPress={() => router.navigate('/van-runs')}
             testID="courier-day-van-runs"
           />
-          <GateRow
-            icon="sale"
-            title={t.day.sale.label}
-            meta={t.day.sale.meta}
-            tone="plain"
-            onPress={() => router.navigate('/sale')}
-            testID="courier-day-sale"
-          />
+          {/* Satış kapısı BURADA DA yok: kutular araçta ama araç henüz yola çıkmadı — üstteki
+              künyenin aynı gerekçesi. Ekranın tek yolu "birini başlat" (v3:15). */}
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-list">
+          {/*
+            ÜST GÖVDE — durak VARSA özet kartı, YOKSA künye şeridi + boş bloğu.
+
+            Kapılar bu ayrımın DIŞINDA kaldı (01.09, kullanıcı bulgusu): eskiden ikisi de
+            `else` dalının içindeydi, yani sürülen seferin durağı yoksa ekran künye + "durak
+            yok" + "Seferi kapat"tan ibaret kalıyordu — araçta bekleyen ikinci sefere GİDECEK
+            YOL YOKTU. Kullanıcı tam bunu gördü: *"ikinci sefer yok ortalıkta, ikinci sefere
+            geçemiyorum."* Duraksız sefer gerçek bir hâl (rotaya bugün sipariş yazılmamış) ve
+            araç yine dolu olabilir; tasarım da kapıları `sürülenVar` gövdesine koyuyor,
+            durak listesine değil (v3:15).
+          */}
           {stops.length === 0 || run === null ? (
             <>
               {/* Künye burada AYRI kalıyor: özet kartı duraklardan doğuyor ve durak yokken kart
@@ -408,16 +425,12 @@ export function CourierDayScreen() {
                       olduğunu ayırt edemiyordu — ikisi de aynı ağırlıktaydı. */}
                   <Text style={styles.summaryCount}>
                     {fillCopy(t.day.progressDone, { done: String(doneCount) })}
-                    <Text style={styles.summaryCountRest}>
-                      {fillCopy(t.day.progressRest, { total: String(drivenStops.length) })}
-                    </Text>
+                    <Text style={styles.summaryCountRest}>{fillCopy(t.day.progressRest, { total: String(drivenStops.length) })}</Text>
                   </Text>
                   <View style={styles.pocketBox}>
                     <Text style={styles.pocketLabel}>{t.day.pocketLabel}</Text>
                     {/* Ölçülemeyen değer SIFIR DEĞİLDİR: taslak düştüyse "bilinmiyor" (CLAUDE §1). */}
-                    <Text style={styles.pocketValue}>
-                      {day.collectedCents === null ? t.day.pocketUnknown : money(day.collectedCents)}
-                    </Text>
+                    <Text style={styles.pocketValue}>{day.collectedCents === null ? t.day.pocketUnknown : money(day.collectedCents)}</Text>
                   </View>
                 </View>
 
@@ -453,56 +466,64 @@ export function CourierDayScreen() {
                     seferin duraklarını hiç saymadığını fark etmiyordu. */}
                 <Text style={styles.summaryScope} testID="courier-day-scope">
                   {fillCopy(t.day.scope, {
-                    waiting:
-                      waitingCount === 0
-                        ? t.day.scopeNone
-                        : fillCopy(t.day.scopeWaiting, { n: String(waitingCount) }),
+                    waiting: waitingCount === 0 ? t.day.scopeNone : fillCopy(t.day.scopeWaiting, { n: String(waitingCount) }),
                   })}
                 </Text>
               </View>
+            </>
+          )}
 
-              {/*
-                ARAÇTAKİ SEFERLER (31.08 · v3:14) — sürülen sefer hâlinin kapısı.
+          {/*
+              ARAÇTAKİ SEFERLER (31.08 · v3:14) — sürülen sefer hâlinin kapısı.
 
-                Buradaki satır 30.08'e kadar "Sefer künyesi ve yükleme" diyordu ve `/trip`e
-                gidiyordu; o ekran tasarımda artık YOK — 15 numara "Rota ve araç seçimi" oldu ve
-                onun gövdesi bu ekranın kendi seçim hâli. Araç bir ara depo olunca kuryenin
-                sorduğu soru da değişti: "ne taşıyorum" değil, **"araçta hangi seferler var ve
-                hangisini süreceğim"**.
+              Buradaki satır 30.08'e kadar "Sefer künyesi ve yükleme" diyordu ve `/trip`e
+              gidiyordu; o ekran tasarımda artık YOK — 15 numara "Rota ve araç seçimi" oldu ve
+              onun gövdesi bu ekranın kendi seçim hâli. Araç bir ara depo olunca kuryenin
+              sorduğu soru da değişti: "ne taşıyorum" değil, **"araçta hangi seferler var ve
+              hangisini süreceğim"**.
 
-                Sayaç `null` ise (kutu okunamadı) satır HİÇ çizilmez: olmayan bir adımı kapı
-                olarak göstermek, kuryeyi boş bir ekrana gönderirdi.
-              */}
-              {day.boxCounter === null ? null : (
-                <GateRow
-                  icon="courier"
-                  title={t.day.vanRow.title}
-                  /* ÖZET TASARIMIN CÜMLESİ (v3:15 `aracSatirOzet`): "N sefer araçta · M
-                     sürülüyor". Kutu sayacı yazılıydı ve o YÜKLEME ekranının sorusu; bu satırın
-                     sorusu "araçta ne var ve kaçını sürüyorum". */
-                  meta={fillCopy(t.day.vanRow.meta, {
-                    n: String(day.runs.length),
-                    driving: String(day.runs.length - waitingCount),
-                  })}
-                  tone="plain"
-                  onPress={() => router.navigate('/van-runs')}
-                  testID="courier-day-trip"
-                />
-              )}
+              KUTU SAYACINA BAĞLI DEĞİL (01.09) — bir tur boyunca `boxCounter === null` iken satır
+              hiç çizilmiyordu. Gerekçe eskimişti: sayaç bu satırın meta'sında artık YOK (cümle
+              "N sefer araçta · M sürülüyor", kutu sayısı değil), ve `boxCounter` KUTUSUZ günde de
+              `null` oluyor — yani kapı tam ihtiyaç duyulan hâlde kayboluyordu. Satırın taşıdığı
+              bilgi `day.runs`tan geliyor, o da her zaman var.
+            */}
+          <GateRow
+            icon="courier"
+            title={t.day.vanRow.title}
+            /* ÖZET TASARIMIN CÜMLESİ (v3:15 `aracSatirOzet`): "N sefer araçta · M
+                   sürülüyor". Kutu sayacı yazılıydı ve o YÜKLEME ekranının sorusu; bu satırın
+                   sorusu "araçta ne var ve kaçını sürüyorum". */
+            meta={fillCopy(t.day.vanRow.meta, {
+              n: String(day.runs.length),
+              driving: String(day.runs.length - waitingCount),
+            })}
+            tone="plain"
+            onPress={() => router.navigate('/van-runs')}
+            testID="courier-day-trip"
+          />
 
-              {/* YERİNDE SATIŞ (21.119) — araçtan yoldan gelen müşteriye elden satış. Tasarımda
-                  sefer satırının HEMEN ALTINDA ve onun eşi bir kart satırı (v3:14); eskiden
-                  başlığın altında başlık+düğme olarak duruyordu ve akışın parçası görünmüyordu.
-                  Şartı sefer değil ARAÇTIR — bu yüzden rota seçimi gövdesinde de çiziliyor. */}
-              <GateRow
-                icon="sale"
-                title={t.day.sale.label}
-                meta={t.day.sale.meta}
-                tone="invite"
-                onPress={() => router.navigate('/sale')}
-                testID="courier-day-sale"
-              />
+          {/* YERİNDE SATIŞ (21.119) — araçtan yoldan gelen müşteriye elden satış. Tasarımda
+                "Araçtaki seferler" satırının HEMEN ALTINDA ve onun eşi bir kart satırı (v3:15);
+                eskiden başlığın altında başlık+düğme olarak duruyordu ve akışın parçası
+                görünmüyordu.
 
+                **EKRANIN TEK SATIŞ KAPISI BURASI** ve şartı SÜRÜLEN SEFERDİR: tasarımda satır
+                yalnız `sürülenVar` gövdesinde geçiyor. `place=van` adreste (01.09) — satış
+                aracın kendi stoğundan yazılır, cihazdaki depo seçimi (kuryenin ROTA deposu) o
+                isteğe karışmaz. */}
+          <GateRow
+            icon="sale"
+            title={t.day.sale.label}
+            meta={t.day.sale.meta}
+            tone="invite"
+            onPress={() => router.navigate('/sale?place=van')}
+            testID="courier-day-sale"
+          />
+
+          {/* DURAK LİSTESİ — yalnız sürülen seferin durağı varken. */}
+          {stops.length === 0 || run === null ? null : (
+            <>
               {/* BAŞLIK SAYIYI VE TAKILIYI TAŞIR (v3:14) — "DURAKLAR · 5" solda, "1 takılı" sağda.
                   Eskiden yalnız "DURAKLAR" yazıyordu: kaç durak olduğu ancak sayılarak, takılı
                   olup olmadığı ancak listeyi tarayarak bulunuyordu. Takılı YOKSA sağ taraf hiç
@@ -573,9 +594,7 @@ export function CourierDayScreen() {
                     tone={circleTone(stop, stop.orderId === nextOrderId, day.started)}
                     started={day.started}
                     last={index === stops.length - 1}
-                    onPress={() =>
-                      router.navigate({ pathname: '/delivery/[orderId]', params: { orderId: stop.orderId } })
-                    }
+                    onPress={() => router.navigate({ pathname: '/delivery/[orderId]', params: { orderId: stop.orderId } })}
                   />
                 </Fragment>
               ))}
@@ -588,40 +607,33 @@ export function CourierDayScreen() {
         </ScrollView>
       )}
 
-      {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (v2:89). Bildirim de
-          buradadır: başlatma sonucu, düğme çizilmese bile (rota kalmadı) görünmek zorunda. */}
-      {ctaMode === null && day.startNotice === null ? null : (
+      {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (v2:89).
+
+          BİLDİRİM ARTIK BURADA DEĞİL (01.09): başlatmanın sonucu toast'a taşındı, çubuk yalnız
+          EYLEM taşıyor. Görünürlük koşulu da onunla birlikte sadeleşti — eskiden çubuk "düğme
+          yoksa bile mesaj için" çiziliyordu; mesaj gidince o gerekçe de gitti. */}
+      {ctaMode === null && !day.canRetryStart ? null : (
         /* YAPIŞKAN ÇUBUK KİTTEN (`OperationsStickyBar`, 30.08): gradyan + mutlak konum + üç dolgu
            burada elle yazılıydı ve kitin bloğuyla BİREBİR aynıydı — kit zaten bu ekranın
            ölçüsünden çıkarılmıştı, ekran ona dönmemişti. `glow` VERİLMEDİ: ışıma bir OKUTMA
            işaretidir (kitin künyesi), başlat/kapat düğmesinin değil. */
         <OperationsStickyBar>
-          {day.startNotice === null ? null : (
-            <View style={styles.startNoticeBlock}>
-              <Text
-                style={[styles.startNotice, styles[`startNotice_${day.startNotice.tone}`]]}
-                accessibilityRole="alert"
-                testID="courier-day-start-notice"
-              >
-                {day.startNotice.text}
-              </Text>
-              {/* Sefer açıldıktan sonra birincil düğme "Seferi kapat"a döner; hazırlığı geciken
-                  durak için İKİNCİ bir başlatma yolu olmasaydı o durak uygulamadan yola
-                  çıkarılamazdı. Uç bu ikinci basışta catch-up claim yapıyor (18.08). */}
-              {day.startNotice.canRetry ? (
-                <TextAction
-                  label={t.day.start.retry}
-                  onPress={day.start}
-                  disabled={day.starting}
-                  testID="courier-day-start-retry"
-                />
-              ) : null}
-            </View>
-          )}
+          {/* Sefer açıldıktan sonra birincil düğme "Seferi kapat"a döner; hazırlığı geciken
+              durak için İKİNCİ bir başlatma yolu olmasaydı o durak uygulamadan yola
+              çıkarılamazdı. Uç bu ikinci basışta catch-up claim yapıyor (18.08). Sebebini
+              toast söyledi; burada kalan yalnız yolun kendisi. */}
+          {day.canRetryStart ? (
+            <TextAction label={t.day.start.retry} onPress={day.start} disabled={day.starting} testID="courier-day-start-retry" />
+          ) : null}
           {ctaMode === null ? null : (
             <PressableSurface
               onPress={
-                ctaMode === 'close' ? () => router.navigate('/day-close') : () => router.navigate('/route-pick')
+                ctaMode === 'close'
+                  ? /* KAPATILACAK SEFERİN KİMLİĞİ ADRESTE (01.09): ekranın künyesinde yazan sefer
+                       ile mutabakatı açılan kaydın aynı olduğunu ancak kimlik garanti eder. İki
+                       seferli günde kimliksiz istek yanlış kaydı açıyordu (cihazda ölçüldü). */
+                    () => router.navigate({ pathname: '/day-close', params: run === null ? {} : { runId: run.runId } })
+                  : () => router.navigate('/route-pick')
               }
               disabled={day.starting}
               /* KÜÇÜLME, KAYMA DEĞİL (v3:14:73 · `style-active="transform:scale(.98)"`). Kayma
@@ -629,21 +641,11 @@ export function CourierDayScreen() {
                  kalmaz ve hareket titreme gibi okunur (kitin `PrimaryButton` künyesindeki aynı
                  kural). */
               feedback="scale"
-              style={[
-                styles.cta,
-                ctaMode === 'close' ? styles.ctaClose : styles.ctaStart,
-              ]}
+              style={[styles.cta, ctaMode === 'close' ? styles.ctaClose : styles.ctaStart]}
               accessibilityLabel={ctaMode === 'close' ? t.day.close : ctaStartLabel}
               testID="courier-day-cta"
             >
-              <Text
-                style={[
-                  styles.ctaLabel,
-                  ctaMode === 'close'
-                    ? styles.ctaLabelClose
-                    : styles.ctaLabelStart,
-                ]}
-              >
+              <Text style={[styles.ctaLabel, ctaMode === 'close' ? styles.ctaLabelClose : styles.ctaLabelStart]}>
                 {ctaMode === 'close' ? t.day.close : ctaStartLabel}
               </Text>
               {/* ROZET TAKILIYI DA SÖYLER (v3:14 — "2 açık · 1 takılı"). Kurye kapatmadan önce
@@ -694,21 +696,14 @@ function isPartial(stop: CourierStopContract): boolean {
 
 /** Kısmi durağın adet dökümü — sipariş edilen ve fiilen bırakılan toplam. */
 function partialCounts(stop: CourierStopContract): { total: number; done: number } {
-  return stop.items.reduce(
-    (sum, line) => ({ total: sum.total + line.qty, done: sum.done + line.fulfilledQty }),
-    { total: 0, done: 0 },
-  );
+  return stop.items.reduce((sum, line) => ({ total: sum.total + line.qty, done: sum.done + line.fulfilledQty }), { total: 0, done: 0 });
 }
 
 /**
  * Grubun meta satırı — künye + hâl (v3:15 `grupMeta`). Kapanmış sefer de listede kalabiliyor
  * (durakları sonuçlanmış), o yüzden hâl iki değer taşıyor.
  */
-function groupMetaOf(
-  run: { referenceNo: string; closed: boolean } | undefined,
-  issues: number,
-  copy: typeof courierCopy,
-): string {
+function groupMetaOf(run: { referenceNo: string; closed: boolean } | undefined, issues: number, copy: typeof courierCopy): string {
   if (run === undefined) return '';
   const parts = [run.referenceNo, run.closed ? copy.day.groupClosed : copy.day.groupDriving];
   /* Sıfır YAZILMAZ: olmayan bir sorunu duyurmak, listedeki her grubu bir uyarıya çevirirdi. */
@@ -798,11 +793,7 @@ function stopSubtitle(stop: CourierStopContract): { text: string; tone: 'muted' 
        depoya döndürür (`returned`) — orada bekleyen bir karar yok, iade akışı başlamıştır. */
     const parts =
       stop.outcome === 'unreachable'
-        ? [
-            note ?? t.day.stop.unreachable,
-            fillCopy(t.day.stop.leftInVanItems, { n: String(stop.itemCount) }),
-            t.day.stop.closeDecides,
-          ]
+        ? [note ?? t.day.stop.unreachable, fillCopy(t.day.stop.leftInVanItems, { n: String(stop.itemCount) }), t.day.stop.closeDecides]
         : [note ?? t.day.stop.refused, fillCopy(t.day.stop.backToWarehouse, { n: String(stop.itemCount) })];
     return { text: parts.join(' · '), tone: 'error' };
   }
@@ -894,11 +885,7 @@ function StopRow({ stop, order, tone, started, last, onPress }: StopRowProps) {
          duysun ve dokunuş görünürde işe yaramamış gibi durmasın. */
       disabled={!started}
       feedback="scale"
-      style={[
-        styles.stopRow,
-        styles.stopRowRail,
-        started ? undefined : styles.stopLocked,
-      ]}
+      style={[styles.stopRow, styles.stopRowRail, started ? undefined : styles.stopLocked]}
       accessibilityLabel={fillCopy(t.day.stop.openLabel, { address, sub: subtitle.text })}
       accessibilityHint={started ? undefined : t.day.stop.lockedHint}
       testID={`courier-stop-${stop.orderId}`}
@@ -938,9 +925,7 @@ function StopRow({ stop, order, tone, started, last, onPress }: StopRowProps) {
             {tag}
           </Text>
         )}
-        <Text style={[styles.stopAddress, stop.outcome === 'delivered' ? styles.stopAddressDone : undefined]}>
-          {address}
-        </Text>
+        <Text style={[styles.stopAddress, stop.outcome === 'delivered' ? styles.stopAddressDone : undefined]}>{address}</Text>
         <Text style={[styles.stopSub, styles[`stopSub_${subtitle.tone}`]]}>{subtitle.text}</Text>
         {/*
           ALT ŞERİT: rozet solda, yön oku sağda (v3:14 — `justify-content:space-between`).
@@ -1528,31 +1513,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text['icon-sm'],
     color: operationsTheme.colors['sand-600'],
-  },
-  startNoticeBlock: {
-    alignItems: 'flex-start',
-    gap: operationsTheme.space.xs,
-    marginBottom: operationsTheme.space.md,
-  },
-  startNotice: {
-    alignSelf: 'stretch',
-    padding: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.control,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-  },
-  startNotice_ok: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    color: operationsTheme.colors['olive-dark'],
-  },
-  startNotice_warn: {
-    backgroundColor: operationsTheme.colors['terracotta-bg'],
-    color: operationsTheme.colors.terracotta,
-  },
-  startNotice_error: {
-    backgroundColor: operationsTheme.colors['error-bg'],
-    color: operationsTheme.colors.error,
   },
   cta: {
     height: operationsTheme.size.controlLg,

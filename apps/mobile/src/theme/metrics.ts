@@ -194,6 +194,15 @@ export const appMetrics = {
     markBox: 26,
     /** Durak sırası dairesi ve iade adedi ±/− düğmesi (v2:78, 158 — 30×30). */
     dotButton: 30,
+    /**
+     * **Çekmece radyo işareti** — tek seçimli listenin dairesi (v3 `03-Sefer-ve-Arac/02`; tasarım
+     * görüntüsünden piksel ölçüldü 01.09: 56 cihaz px @2× → 28).
+     *
+     * `markBox`(26) ve `dotButton`(30) ile Δ2 ama AYRI durak, çünkü rolü ayrı: kare = kalem
+     * işareti, daire = durak sırası, bu = SEÇİM. Aynı ekranda ikisi yan yana gelirse aynı ölçüde
+     * olmaları "aynı şey" der; dosyanın kendi kuralı da yapısal ölçülerin yuvarlanmamasını istiyor.
+     */
+    radioMark: 28,
     /** Tahsilat tutarının ±/− düğmesi (v2:174 — 34×34). */
     stepButton: 34,
     /* ── v3 depo hub'ı (v3:35-174) ─────────────────────────────────────────

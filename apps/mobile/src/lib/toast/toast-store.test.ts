@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react-native';
 
-import { toastSuccess, useToastMessage } from './toast-store';
+import { toastError, toastInfo, toastSuccess, toastWarning, useToastMessage } from './toast-store';
 
 /*
   TOAST DEPOSU — v3 `toastM` sözleşmesinin kanıtı: mesaj 2400 ms görünür, art arda basımda
@@ -53,5 +53,24 @@ describe('toast-store', () => {
       jest.advanceTimersByTime(1);
     });
     expect(result.current).toBeNull();
+  });
+
+  it('DÖRT FİİL de aynı kanaldan basar; ayrışan tek şey ELE giden sinyal', async () => {
+    /*
+      Görünüş tek (şablonda tek toast var), niyet dört. Titreşim `toastInfo` dışında hepsinde
+      var ve `toastWarning` 01.09'da tam bunun için açıldı: kısmi başarı sessiz kalırsa kurye
+      "oldu" sanır, hata gibi titrerse "olmadı" sanır.
+    */
+    const { result } = await renderHook(() => useToastMessage());
+
+    for (const [fiil, metin] of [
+      [toastSuccess, 'oldu'],
+      [toastWarning, 'kısmen oldu'],
+      [toastError, 'olmadı'],
+      [toastInfo, 'bilgi'],
+    ] as const) {
+      await act(async () => fiil(metin));
+      expect(result.current).toBe(metin);
+    }
   });
 });

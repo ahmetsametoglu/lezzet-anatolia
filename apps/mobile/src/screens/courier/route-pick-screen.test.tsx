@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import type { CourierDayResponse, CourierRoute } from '@lezzet/types';
 
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
-import { courierDay, courierRoute, takenRouteRun } from './courier-fixture';
+import { courierDay, courierRoute, startResult, takenRouteRun } from './courier-fixture';
 import { CourierRoutePickScreen } from './route-pick-screen';
 
 /*
@@ -17,10 +17,11 @@ import { CourierRoutePickScreen } from './route-pick-screen';
 */
 
 const mockNavigate = jest.fn();
+const mockDismissTo = jest.fn();
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
-    useRouter: () => ({ navigate: mockNavigate, back: jest.fn() }),
+    useRouter: () => ({ navigate: mockNavigate, back: jest.fn(), dismissTo: mockDismissTo }),
     useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
   };
 });
@@ -44,10 +45,16 @@ function okResponse(data: unknown): Response {
 const ZONE_B = '00000000-0000-4000-8000-000000000802';
 const VEHICLE = '00000000-0000-4000-8000-000000000900';
 
-function mockPick(routes: CourierRoute[], day: CourierDayResponse = courierDay([], { run: null, runs: [] })) {
+function mockPick(
+  routes: CourierRoute[],
+  day: CourierDayResponse = courierDay([], { run: null, runs: [] }),
+  /* Kurma cevabı VARSAYILAN OLARAK olumsuz: dosyanın çoğu testi "istek ne gönderdi"yi ölçüyor ve
+     başarılı bir cevap ekranı yerinden oynatırdı. Gezinmeyi ölçen test kendi cevabını verir. */
+  startOutcome: unknown = { status: 'no_route' },
+) {
   fetchMock.mockImplementation((url) => {
     const address = String(url);
-    if (address.includes('/day/start')) return Promise.resolve(okResponse({ status: 'no_route' }));
+    if (address.includes('/day/start')) return Promise.resolve(okResponse(startOutcome));
     if (address.includes('/day-close')) return Promise.resolve(okResponse(null));
     if (address.includes('/courier/routes')) return Promise.resolve(okResponse({ date: '2026-08-08', routes }));
     if (address.includes('/courier/vehicles')) {
@@ -81,6 +88,7 @@ beforeAll(() => {
 beforeEach(() => {
   fetchMock.mockReset();
   mockNavigate.mockReset();
+  mockDismissTo.mockReset();
 });
 
 describe('K · sefer ve araç seçimi', () => {
@@ -167,6 +175,32 @@ describe('K · sefer ve araç seçimi', () => {
       const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/day/start'));
       expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ depart: false });
     });
+  });
+
+  it('SEFER KURULUNCA YÜKLEMEYE GEÇİLİR — düğmenin verdiği söz tutulur', async () => {
+    /*
+      ── KULLANICI BULGUSU 01.09 ──────────────────────────────────────────────
+      *"Rotanın sorumluluğunu alıyor ama hâlâ rota sayfasında kalıyor. Ne olduğunu anlayamıyor
+      bile kullanıcı."* Kurma başarılıydı, seçim listesi boşalıyor, düğme pasifleşiyordu — yani
+      ekran "bir şey oldu" demiyordu bile; kurye geri gidip bakmadan işin olup olmadığını
+      bilemiyordu.
+
+      Gidilecek yeri DÜĞMENİN KENDİSİ söylüyor: *"Seferleri kur — N sefer **yüklemeye geçer**"*
+      (v3 `03-Sefer-ve-Arac/03`). Bir tur boyunca araçtaki seferlere gidiyordu; oysa o ekran
+      tasarımın akışında yüklemeden SONRA geliyor (`02-Aractaki-Seferler` karelerinde bütün
+      seferler tam yüklü). `dismissTo` çünkü bu ekrana iki yoldan gelinir; `navigate` araçtaki
+      seferlerden gelindiğinde yığında iki kopya bırakırdı.
+    */
+    mockPick([courierRoute({ stopCount: 3 })], undefined, startResult());
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId('courier-route-pick-cta')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
+    await fireEvent.press(screen.getByTestId(`courier-vehicle-${VEHICLE}`));
+    await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
+    await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
+
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/load'));
   });
 
   it('rota YOKSA sebep yazılır — boş bir liste değil', async () => {

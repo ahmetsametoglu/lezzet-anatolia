@@ -16,6 +16,7 @@ import { stampOf } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
 import { useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { operationsTheme } from '@/theme/unistyles';
+import { useSalePlace } from './sale-context';
 import { saleCopy } from './copy';
 
 /*
@@ -26,6 +27,10 @@ import { saleCopy } from './copy';
   yazmış". Satan kişi ayrı bir kolondan değil, zaten tutulan izden gelir (`order_status_log`un
   `completed` aktörü — uç künyesi). Sepet bağlamına GİRMEZ: kendi okuması var, satışla durum
   paylaşmaz. Tavan uç tarafında bilinçli (son 30); geçmiş dökümü muhasebe/web'in işidir.
+
+  SATIŞ YERİNİ yine de okuyor (01.09): "az önce ne sattım" sorusunun cevabı satışın yazıldığı
+  depodan gelir — kurye kendi aracının satışlarını görmeli, seçtiği rota deposununkileri değil.
+  Yer sepet DEĞİL, isteğin adresi; o yüzden ayrı bağlamdan (`useSalePlace`).
 */
 
 const t = saleCopy;
@@ -38,14 +43,15 @@ type HistoryState =
 export function SaleHistoryScreen() {
   const router = useRouter();
   const workplace = useOperationsWorkplace();
+  const place = useSalePlace();
   const [state, setState] = useState<HistoryState>({ status: 'loading' });
 
   const load = useCallback(() => {
     setState({ status: 'loading' });
-    void fetchRecentSales().then((result) => {
+    void fetchRecentSales(place).then((result) => {
       setState(result.error === null ? { status: 'ready', sales: result.data.sales } : { status: 'error' });
     });
-  }, []);
+  }, [place]);
 
   useEffect(() => {
     load();

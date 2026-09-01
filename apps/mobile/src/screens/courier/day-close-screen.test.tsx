@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { ToastHost } from '@/components/ui/toast-host';
+import { resetToast } from '@/lib/toast/toast-store';
 
 /*
   SAYIM ARTIK TUŞ TAKIMIYLA YAZILIYOR (v3 · `00-ortak`, 30.08). Alan bir `TextInput` değil, tuş
@@ -76,7 +78,14 @@ function mockDraft(draft: unknown, closeResult?: unknown) {
 }
 
 async function renderClose() {
-  await render(<CourierDayCloseScreen />);
+  /* TOAST HOST TESTTE DE ÇİZİLİR (01.09): kapanışın sonucu artık ekranda değil toast'ta ve
+     iddiaların okuduğu yer orası — sahte bir gözcü değil, gerçek kanal. */
+  await render(
+    <>
+      <CourierDayCloseScreen />
+      <ToastHost />
+    </>,
+  );
   await waitFor(() => expect(screen.getByTestId('courier-day-close-body')).toBeOnTheScreen());
 }
 
@@ -88,6 +97,8 @@ beforeAll(() => {
 beforeEach(() => {
   fetchMock.mockReset();
   mockBack.mockReset();
+  // Toast MODÜL düzeyinde: sayacı düşmezse mesaj sonraki teste sızar, süreç de kapanmaz.
+  resetToast();
 });
 
 describe('K7 · sefer kapanışı', () => {
@@ -197,7 +208,7 @@ describe('K7 · sefer kapanışı', () => {
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
     await fireEvent.press(screen.getByTestId('courier-day-close-sheet-confirm'));
 
-    await waitFor(() => expect(screen.getByTestId('courier-day-close-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('toast-message')).toBeOnTheScreen());
     const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
     expect(JSON.parse(String(call?.[1]?.body))).toEqual({
       runId: courierRunBrief().runId,
@@ -206,12 +217,14 @@ describe('K7 · sefer kapanışı', () => {
       countedChequeCents: 0,
       note: 'Krutenau kolisi araçta kaldı',
     });
-    const notice = screen.getByTestId('courier-day-close-notice');
+    const notice = screen.getByTestId('toast-message');
     expect(notice).toHaveTextContent(/nakit −2,00/);
     // Kapanışın çözdüğü takılı durak sessiz geçmez (K4).
     expect(notice).toHaveTextContent(/1 takılı durak çözüldü/);
-    // Kapanış sonrası ekran kilitlenir: ikinci bir kapanış denemesi başlatılamaz.
-    expect(screen.getByTestId('courier-day-close-readonly')).toBeOnTheScreen();
+    /* KAPANAN SEFER GERİDE BIRAKILIR (01.09 · kullanıcı bulgusu): ekran kilitlenip yerinde
+       kalıyordu ve kurye kapattığı seferi karşısında görmeye devam ediyordu. Ekran artık kendini
+       kapatıyor; kilit hâlâ var ama onu görecek olan yalnız kapalı bir kaydı yeniden AÇAN kurye. */
+    expect(mockBack).toHaveBeenCalled();
   });
 
   it('KAPANMIŞ sefer salt-okunur açılır: alanlar kilitli, CTA "zaten kapalı"', async () => {
@@ -250,9 +263,10 @@ describe('K7 · sefer kapanışı', () => {
     await fireEvent.press(screen.getByTestId('courier-day-close-cta'));
     await fireEvent.press(screen.getByTestId('courier-day-close-sheet-confirm'));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('courier-day-close-notice')).toHaveTextContent(t.dayClose.alreadyClosed),
-    );
+    await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(t.dayClose.alreadyClosed));
+    /* `already_closed`ta ekran KAPANMAZ: yeni bir kapanış olmadı, kurye zaten kapalı bir kaydı
+       açtı ve salt-okunur hâli görmeli — geri atmak "kapattım" izlenimi verirdi. */
+    expect(mockBack).not.toHaveBeenCalled();
     expect(screen.getByTestId('courier-day-close-readonly')).toBeOnTheScreen();
   });
 

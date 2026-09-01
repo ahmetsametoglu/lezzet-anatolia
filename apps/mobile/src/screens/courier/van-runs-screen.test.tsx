@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import type { CourierDayResponse, CourierRunDetail, StartCourierDayResponse } from '@lezzet/types';
 
+import { ToastHost } from '@/components/ui/toast-host';
+import { resetToast } from '@/lib/toast/toast-store';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { courierDay, courierDayRun, courierStop } from './courier-fixture';
 import { CourierVanRunsScreen } from './van-runs-screen';
@@ -20,10 +22,11 @@ import { CourierVanRunsScreen } from './van-runs-screen';
 */
 
 const mockBack = jest.fn();
+const mockNavigate = jest.fn();
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
-    useRouter: () => ({ navigate: jest.fn(), back: mockBack }),
+    useRouter: () => ({ navigate: mockNavigate, back: mockBack }),
     useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
   };
 });
@@ -97,6 +100,10 @@ async function renderVan() {
       }}
     >
       <CourierVanRunsScreen />
+      {/* TOAST HOST TESTTE DE KÖKTE (01.09): sonuç artık ekranda değil toast'ta ve iddiaların
+          okuduğu yer orası. Sahte bir gözcü yerine GERÇEK kanal çiziliyor — depo, titreşim ve
+          süre dahil yolun tamamı koşuyor. */}
+      <ToastHost />
     </OperationsSessionProvider>,
   );
 }
@@ -107,8 +114,11 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  // Toast MODÜL düzeyinde: sayacı düşmezse mesaj sonraki teste sızar, süreç de kapanmaz.
+  resetToast();
   fetchMock.mockReset();
   mockBack.mockReset();
+  mockNavigate.mockReset();
 });
 
 describe('K · araçtaki seferler', () => {
@@ -127,6 +137,95 @@ describe('K · araçtaki seferler', () => {
     expect(screen.getByTestId(`courier-van-depart-${RUN_B}`)).toBeOnTheScreen();
   });
 
+  it('EKSİK KUTU ENGEL DEĞİL, ONAYLI BİR KARAR — bedeli düğmede ve çekmecede yazılı', async () => {
+    /*
+      ── KARAR 01.09 (kullanıcı, iki turda) ───────────────────────────────────
+      Önce *"kutularını yüklemeden o seferleri başlatamaz"* dendi ve başlatma düğmesi eksik kutu
+      varken hiç çizilmedi. Sonra düzeltildi: *"eksik kutuyu net şekilde ifade edelim, gerekirse
+      bir onay çekmecesi açılsın; kabul ediyorsa eksik kutuyla da kurye yola çıkabilmeli."*
+
+      Sahada haklı olan bu — rampada kalan tek kutu için bütün seferi rehin tutmak kuryeyi
+      bekletir. Kural artık ENGEL değil BEYAN: bedel basmadan önce iki yerde yazılı (düğmenin
+      ipucu + çekmecenin gövdesi), karar kuryenin.
+    */
+    const bekleyen = waitingRun();
+    const binmemis = courierStop(1, {
+      runId: bekleyen.runId,
+      boxes: [{ boxNo: 1, code: 'KT-26-0001', loadedAt: null }],
+    });
+    mockVan(courierDay([binmemis], { run: null, runs: [bekleyen] }));
+
+    await renderVan();
+    await waitFor(() => expect(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`)).toBeOnTheScreen());
+
+    // Bedel DÜĞMEDE: "N kutu binmedi · o duraklar açılmaz".
+    expect(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`)).toHaveTextContent(/1 kutu binmedi/);
+    // Rampaya dönüş yolu kapanmadı, ikincil oldu.
+    expect(screen.getByTestId(`courier-van-load-${bekleyen.runId}`)).toBeOnTheScreen();
+
+    // Basmak seferi BAŞLATMAZ, ÖNCE onay çekmecesini açar.
+    await fireEvent.press(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`));
+    await waitFor(() => expect(screen.getByTestId('courier-van-depart-short-sheet')).toBeOnTheScreen());
+    expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/depart'))).toBe(false);
+
+    // Onaylayan kurye yola çıkar ve ekran duraklara döner.
+    await fireEvent.press(screen.getByTestId('courier-van-depart-short-sheet-confirm'));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/depart'))).toBe(true));
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it('KUTULARI TAM sefer doğrudan başlar — onay çekmecesi hiç açılmaz', async () => {
+    const bekleyen = waitingRun();
+    mockVan(courierDay([courierStop(1, { runId: bekleyen.runId })], { run: null, runs: [bekleyen] }));
+
+    await renderVan();
+    await waitFor(() => expect(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`)).toBeOnTheScreen());
+    // Eksik yokken ne uyarı ipucu ne de rampaya dönüş satırı var — olmayan bir sorunu duyurmak.
+    expect(screen.queryByTestId(`courier-van-load-${bekleyen.runId}`)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`));
+    expect(screen.queryByTestId('courier-van-depart-short-sheet')).toBeNull();
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it('SEFER BAŞLAYINCA EKRAN DURAKLARA DÖNER — ama kutu bekliyorsa KALIR', async () => {
+    /*
+      ── KULLANICI KARARI 01.09 ───────────────────────────────────────────────
+      *"Bir aksiyonun olduğu yerde ekranın değişmesi gerekiyorsa değişmesi lazım."* Başlatma bu
+      akışın en büyük durum değişimi: duraklar açılır ve müşteriye bildirim gider. Kurye bu
+      ekranda kalırsa "oldu mu" sorusunu kartın rengine bakarak çözmek zorunda kalıyordu; oysa
+      bakması gereken yer durak listesi.
+
+      AMA yalnız TEMİZ başlangıçta: kutusu okutulmamış sipariş varsa yapılacak iş hâlâ burada
+      (okut, sonra yeniden başlat) ve kuryeyi duraklara göndermek onu o kutudan uzaklaştırmak
+      olurdu.
+    */
+    const bekleyen = waitingRun();
+    mockVan(courierDay([courierStop(1)], { run: null, runs: [bekleyen] }), departResult());
+
+    await renderVan();
+    await waitFor(() => expect(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`)).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`));
+
+    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+  });
+
+  it('KUTUSU OKUTULMAMIŞ sipariş varsa ekran KALIR — yapılacak iş burada', async () => {
+    const bekleyen = waitingRun();
+    mockVan(
+      courierDay([courierStop(1)], { run: null, runs: [bekleyen] }),
+      departResult({ awaitingBoxes: [{ orderId: STOP_1, loadedBoxes: 0, boxCount: 1 }] }),
+    );
+
+    await renderVan();
+    await waitFor(() => expect(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`)).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`));
+
+    // Sonuç toast'ta göründü ama ekran YERİNDE: sıradaki iş bu ekranın kutu okutması.
+    await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/kutu/));
+    expect(mockBack).not.toHaveBeenCalled();
+  });
+
   it('BAŞLATMA uca gider ve dört listenin cümlesi yazılır — kısmi başarı görünür', async () => {
     const bekleyen = waitingRun();
     mockVan(
@@ -141,8 +240,8 @@ describe('K · araçtaki seferler', () => {
     await waitFor(() => expect(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`)).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`));
 
-    await waitFor(() => expect(screen.getByTestId('courier-van-notice')).toBeOnTheScreen());
-    const notice = screen.getByTestId('courier-van-notice');
+    await waitFor(() => expect(screen.getByTestId('toast-message')).toBeOnTheScreen());
+    const notice = screen.getByTestId('toast-message');
     /* Kısmi başarı GİZLENMEZ (18.08'in kuralı, ekran değişti kural değişmedi): kurye atlanan
        durakta teslim yazamadığında sebebini ancak deneyerek öğrenirdi. */
     expect(notice).toHaveTextContent(/1 durak yola çıktı/);
@@ -191,7 +290,7 @@ describe('K · araçtaki seferler', () => {
       expect(fetchMock.mock.calls.some(([url]) => String(url).includes(`/runs/${bekleyen.runId}/discard`))).toBe(true),
     );
     /* Sonuç SAYILARLA yazılır: "oldu" demek, malın nereye gittiğini söylemeden bırakmaktır. */
-    await waitFor(() => expect(screen.getByTestId('courier-van-notice')).toHaveTextContent(/2 sipariş serbest/));
+    await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/2 sipariş serbest/));
   });
 
   it('SÜRÜLEN seferde "araçtan çıkar" HİÇ çizilmez — onun çıkışı kapanıştır', async () => {

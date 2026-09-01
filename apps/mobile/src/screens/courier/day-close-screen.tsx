@@ -58,9 +58,17 @@ function CounterCard({ value, label, tone, testID }: CounterCardProps) {
   );
 }
 
-export function CourierDayCloseScreen() {
+interface CourierDayCloseScreenProps {
+  /** Kapatılacak seferin kimliği — adresten gelir; yoksa sunucu sürülen seferi çözer (rota künyesi). */
+  runId?: string;
+}
+
+export function CourierDayCloseScreen({ runId }: CourierDayCloseScreenProps) {
   const router = useRouter();
-  const dayClose = useDayClose();
+  /* Kapanış YAZILINCA ekran kendini kapatır (01.09 · kullanıcı bulgusu): sonuç toast'ta görünür,
+     kurye de kapattığı seferi arkasında bırakıp gün ekranına döner. Gün ekranı odağa gelince
+     kendini tazeliyor, yani araçta bekleyen öteki sefer oradan görünür. */
+  const dayClose = useDayClose(() => router.back(), runId);
   const run = dayClose.draft?.run ?? null;
   /* Hangi kasanın tuş takımı açık — kimlik tutulur, satırın kendisi değil: satırlar her okumada
      yeniden kuruluyor ve nesneyi tutmak kapalı bir paneli bayat veriyle diriltirdi. */
@@ -264,23 +272,6 @@ export function CourierDayCloseScreen() {
       )}
 
       <View style={styles.footer}>
-        {dayClose.notice === null ? null : (
-          <Text
-            style={[
-              styles.notice,
-              dayClose.notice.tone === 'ok'
-                ? styles.noticeOk
-                : dayClose.notice.tone === 'info'
-                  ? styles.noticeInfo
-                  : styles.noticeError,
-            ]}
-            accessibilityRole="alert"
-            testID="courier-day-close-notice"
-          >
-            {dayClose.notice.text}
-          </Text>
-        )}
-
         {/*
           ONAY ARTIK ÇEKMECEDE (kullanıcı bulgusu 31.08 · ortak komponent).
 
@@ -480,25 +471,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['5xl'],
     paddingTop: operationsTheme.space.lg,
     paddingBottom: operationsTheme.space['3xl'],
-  },
-  notice: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-    padding: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.control,
-  },
-  noticeOk: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    color: operationsTheme.colors['olive-dark'],
-  },
-  noticeInfo: {
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-    color: operationsTheme.colors.body,
-  },
-  noticeError: {
-    backgroundColor: operationsTheme.colors['error-bg'],
-    color: operationsTheme.colors.error,
   },
   confirmBox: {
     paddingVertical: operationsTheme.space.xl,

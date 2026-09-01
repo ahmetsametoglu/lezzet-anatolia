@@ -788,7 +788,18 @@ export async function readCourierRun(
 
   const closes = await new DeliveryRunCloseService(db).listByRuns(runs.map((run) => run.id));
   const closedIds = new Set(closes.map((close) => close.deliveryRunId));
-  const run = runs.find((candidate) => !closedIds.has(candidate.id)) ?? runs[0]!;
+  /*
+    SÜRÜLEN SEFER ÖNCE (01.09 · cihazda ölçüldü) — "kapanmamış ilk sefer" yazılıydı ve iki seferli
+    günde YANLIŞ kaydı seçiyordu: kurye Doğu Hattı'nı sürerken "Seferi kapat" dediğinde ekran
+    hiç yola çıkmamış Batı Hattı'nın mutabakatını açıyordu. Sonucu para ve durak: kurye sürmediği
+    bir seferi kapatır, onun siparişleri serbest kalırdı.
+
+    Ölçüt artık `/day` ucunun `run` alanıyla BİREBİR aynı: yola çıkmış ve kapanmamış olan. İki
+    okuma "hangi seferi sürüyorum" sorusuna iki farklı cevap veremez (CLAUDE §1). Sürülen yoksa
+    eski kural yedek kalıyor — kurulmuş ama başlamamış seferin de künyesi sorulabilir.
+  */
+  const open = runs.filter((candidate) => !closedIds.has(candidate.id));
+  const run = open.find((candidate) => candidate.departedAt !== null) ?? open[0] ?? runs[0]!;
   return detailOf(db, run, closedIds.has(run.id));
 }
 

@@ -47,9 +47,7 @@ const VAN_SKELETON = { hint: 40, run: 108 } as const;
 
 /** Seferin hâli üç sözcükte: sürülüyor · araçta bekliyor. Kapanmış sefer bu listede hiç yok. */
 function stateOf(run: CourierRunDetail): { label: string; driving: boolean } {
-  return run.departedAt === null
-    ? { label: t.day.vanRuns.waiting, driving: false }
-    : { label: t.day.vanRuns.driving, driving: true };
+  return run.departedAt === null ? { label: t.day.vanRuns.waiting, driving: false } : { label: t.day.vanRuns.driving, driving: true };
 }
 
 export function CourierVanRunsScreen() {
@@ -61,6 +59,9 @@ export function CourierVanRunsScreen() {
     gibi değil bir uyarı satırı gibi okunuyor (kullanıcı ölçümü, kapanış ekranı).
   */
   const [discarding, setDiscarding] = useState<CourierRunDetail | null>(null);
+  /* EKSİK KUTUYLA BAŞLATMA ONAYI (01.09) — `discarding` ile aynı gerekçe: geri alınamaz bir karar
+     sayfaya gömülü bir uyarı satırıyla değil, KARAR ANI gibi görünen bir çekmeceyle alınır. */
+  const [departingShort, setDepartingShort] = useState<CourierRunDetail | null>(null);
   /* SÜRÜLEN sefer — "aynı anda tek sefer" kuralının ekrandaki yüzü. Kapanmış sefer bu listede
      hiç yok (okuma onları süzüyor), yani `departedAt` tek başına yeterli ölçüt. */
   const drivenRun = day.runs.find((run) => run.departedAt !== null) ?? null;
@@ -130,12 +131,7 @@ export function CourierVanRunsScreen() {
               description={t.day.vanRuns.emptyBody}
               testID="courier-van-empty"
             />
-            <SecondaryButton
-              label={t.day.vanRuns.pick}
-              elevation="flat"
-              onPress={() => router.back()}
-              testID="courier-van-pick"
-            />
+            <SecondaryButton label={t.day.vanRuns.pick} elevation="flat" onPress={() => router.back()} testID="courier-van-pick" />
           </>
         ) : (
           <>
@@ -145,13 +141,19 @@ export function CourierVanRunsScreen() {
               const state = stateOf(run);
               const load = loadOf(run.runId);
               return (
-                <View
+                <OperationsSurface
                   key={run.runId}
                   /* SÜRÜLEN KART YEŞİL ZEMİNLİ VE ZEYTİN KENARLI (v3:16 `bg:#f2f7e8 · bd:#5f7a2c`
                      · tur 31.08). Bütün kartlar krem çizilmişti; hangisinin sürüldüğü yalnız
                      rozetten okunuyordu ve rozet de yumuşaktı — üç kart aynı ağırlıktaydı. Kartın
                      kendisi renk değiştirince "şu an bu" sorusu bir bakışta cevaplanıyor. */
-                  style={[styles.card, state.driving ? styles.cardDriving : null]}
+                  /* KART KİTİN YÜZEYİ (01.09 · kullanıcı bulgusu: "ortak komponent kullanma
+                     kuralını ihlal ettiğini bile görebiliyorum"). Burada dolgu · yarıçap · kenar ·
+                     zemin ELLE yazılıydı ve `OperationsSurface`ın `panel` tonunun kopyasıydı —
+                     yüzeyin kendi künyesi bu hatayı zaten sayıyor: *"kodda 41 yerde elle
+                     çizilmişti."* Kartın kendine ait kalan tek şey SÜRÜLEN hâli: zeytin kenar +
+                     açık zeytin zemin (v3:16), o da tonun üstüne kabuk olarak biniyor. */
+                  style={[styles.cardBody, state.driving ? styles.cardDriving : null]}
                   testID={`courier-van-run-${run.runId}`}
                 >
                   <View style={styles.cardHead}>
@@ -213,7 +215,10 @@ export function CourierVanRunsScreen() {
                       */}
                       <TextAction
                         label={t.day.vanRuns.catchUp}
-                        onPress={() => day.departRun(run.runId)}
+                        /* Burada EKRAN DEĞİŞMEZ ve bu bilinçli: catch-up geç kalmış kutuların
+                           işi ve kurye aynı düğmeye bir kez daha basacak olabilir. Sonucu toast
+                           söylüyor. */
+                        onPress={() => void day.departRun(run.runId)}
                         disabled={day.starting}
                         testID={`courier-van-catchup-${run.runId}`}
                       />
@@ -223,23 +228,66 @@ export function CourierVanRunsScreen() {
                        gibi duruyordu. Tasarımda iki satır TEK dokunma alanının içinde: basmanın ne
                        yaptığı, basılan şeyin üstünde yazılı. */
                     <>
-                      {/* AYNI ANDA TEK SEFER (kullanıcı kararı 31.08): başka sefer sürülürken
-                          düğme PASİF ve NEDEN pasif olduğunu yazıyor. Gizlenseydi kurye "bu sefer
-                          neden başlamıyor" sorusunu ekranda hiç cevaplayamazdı; kapı ayrıca
-                          veride de duruyor (`depart_delivery_run` → `another_running`), çünkü
-                          ekran iki cihazdan gelen iki isteği ayıramaz. */}
+                      {/*
+                        EKSİK KUTU: ENGEL DEĞİL, BEYAN EDİLMİŞ BİR KARAR (kullanıcı kararı 01.09).
+
+                        Bir tur boyunca kutu eksikken başlatma düğmesi HİÇ çizilmiyordu ("önce
+                        yükle"). Kullanıcı düzeltti: *"eksik kutuyu net şekilde ifade edelim, gerekirse
+                        bir onay çekmecesi açılsın; kabul ediyorsa eksik kutuyla da kurye yola
+                        çıkabilmeli."* Sahada haklı olan bu — rampada kalan tek kutu için bütün seferi
+                        rehin tutmak, kuryeyi bekletir.
+
+                        Bedel ARTIK İKİ YERDE YAZILI ve ikisi de basmadan önce:
+                          · düğmenin kendi ipucunda ("N kutu binmedi · o duraklar açılmaz"),
+                          · onay çekmecesinde, geri alınamazlığıyla birlikte.
+                        Tasarımın tek düğmesine (v3 `02-Aractaki-Seferler`) böylece dönülmüş oldu;
+                        yükleme ekranına giden yol kartın altında ikincil eylem olarak duruyor.
+
+                        AYNI ANDA TEK SEFER (31.08) kilidi değişmedi: başka sefer sürülürken düğme
+                        PASİF ve NEDEN pasif olduğunu yazıyor. Kapı ayrıca veride
+                        (`depart_delivery_run` → `another_running`) — ekran iki cihazdan gelen iki
+                        isteği ayıramaz.
+                      */}
                       <PrimaryButton
                         label={
-                          drivenRun === null
-                            ? t.day.vanRuns.depart
-                            : fillCopy(t.day.vanRuns.departBlocked, { ref: drivenRun.referenceNo })
+                          drivenRun === null ? t.day.vanRuns.depart : fillCopy(t.day.vanRuns.departBlocked, { ref: drivenRun.referenceNo })
                         }
-                        hint={drivenRun === null ? t.day.vanRuns.departHint : t.day.vanRuns.departBlockedHint}
-                        onPress={() => day.departRun(run.runId)}
+                        hint={
+                          drivenRun !== null
+                            ? t.day.vanRuns.departBlockedHint
+                            : load.boxes > load.loaded
+                              ? fillCopy(t.day.vanRuns.departShortHint, { n: String(load.boxes - load.loaded) })
+                              : t.day.vanRuns.departHint
+                        }
+                        /*
+                          SEFER BAŞLADI → DURAKLARA DÖN (01.09): başlatma bu akışın en büyük durum
+                          değişimi (duraklar açılır, müşteriye bildirim gider) ve kuryenin bakması
+                          gereken yer durak listesi. Eksik kutu varken ÖNCE onay çekmecesi açılır —
+                          karar orada verilir, istek oradan gider.
+                        */
+                        onPress={() => {
+                          if (load.boxes > load.loaded) {
+                            setDepartingShort(run);
+                            return;
+                          }
+                          void day.departRun(run.runId).then((outcome) => {
+                            if (outcome === 'ok') router.back();
+                          });
+                        }}
                         disabled={day.starting || drivenRun !== null}
                         tone="olive"
                         testID={`courier-van-depart-${run.runId}`}
                       />
+                      {/* Yükleme yolu KAPANMADI, ikincil oldu: eksik kutu varken kuryenin ilk
+                          seçeneği hâlâ rampaya dönmek. Kutular tamsa satırın konusu da yok. */}
+                      {load.boxes > load.loaded ? (
+                        <TextAction
+                          label={t.day.vanRuns.loadFirst}
+                          onPress={() => router.navigate('/load')}
+                          disabled={day.starting}
+                          testID={`courier-van-load-${run.runId}`}
+                        />
+                      ) : null}
                       {/* ARAÇTAN ÇIKAR (31.08 · tasarımda YOK, boşluk cihazda görüldü): yanlış
                           rotayı araca alan kuryenin tek çıkışı onu BAŞLATIP kapatmaktı — yani
                           hatanın bedeli müşteriye bildirim olarak yansıyordu. Yalnız BAŞLAMAMIŞ
@@ -252,7 +300,7 @@ export function CourierVanRunsScreen() {
                       />
                     </>
                   )}
-                </View>
+                </OperationsSurface>
               );
             })}
 
@@ -265,39 +313,36 @@ export function CourierVanRunsScreen() {
               kapatıyordu. Araç bir ara depo olduğu için yükleme sefer boyunca sürebilir; kapının
               yeri de bu yüzden araçtaki seferlerin yanı.
             */}
-            <SecondaryButton
-              label={t.day.vanRuns.load}
-              elevation="flat"
-              onPress={() => router.navigate('/load')}
-              testID="courier-van-load"
-            />
+            {/* AYNI KAPI İKİ KEZ ÇİZİLMEZ (01.09): kutusu eksik seferin kartı zaten "Kutuları araca
+                yükle" düğmesini taşıyor ve ekran düzeyindeki bu satır onun hemen altında AYNI
+                etiketle duruyordu (cihazda ölçüldü). Kart daha iyisini söylüyor — hangi seferin
+                kaç kutusu bekliyor. Satır yalnız hiçbir kartın yükleme kapısı olmadığında kalıyor:
+                o zaman da işi var, çünkü araç bir ara depo ve yükleme sefer boyunca sürebilir. */}
+            {day.runs.some((run) => {
+              const own = loadOf(run.runId);
+              return run.departedAt === null && own.boxes > own.loaded;
+            }) ? null : (
+              <SecondaryButton
+                label={t.day.vanRuns.load}
+                elevation="flat"
+                onPress={() => router.navigate('/load')}
+                testID="courier-van-load"
+              />
+            )}
             {/* ARACA SEFER EKLEME (31.08) — model "araç bir ara depo" dediği anda bu yol zorunlu
                 oldu: kurye gün içinde ikinci bir seferi de araca alabilmeli. Seçim ekranına giden
                 tek kapı gün ekranının BOŞ hâliydi; araçta yük varken oraya hiç düşülmüyordu. */}
-            <TextAction
-              label={t.day.vanRuns.addRun}
-              onPress={() => router.navigate('/route-pick')}
-              testID="courier-van-add-run"
-            />
-            <Text style={styles.loadMeta}>
-              {fillCopy(t.day.vanRuns.loadMeta, {
-                loaded: String(day.boxCounter?.loaded ?? 0),
-                total: String(day.boxCounter?.total ?? 0),
-              })}
-            </Text>
+            <TextAction label={t.day.vanRuns.addRun} onPress={() => router.navigate('/route-pick')} testID="courier-van-add-run" />
+            {/* "X/Y kutu araçta" ÜÇÜNCÜ kez yazılıyordu (01.09 · tasarımla karşılaştırıldı):
+                aynı sayı üstteki koyu künyede ve her kartın özetinde zaten var. v3:16'nın ekran
+                dibinde yalnız dipnot duruyor. */}
 
             <Text style={styles.note}>{t.day.vanRuns.note}</Text>
           </>
         )}
 
-        {day.startNotice === null ? null : (
-          <Text
-            style={[styles.notice, day.startNotice.tone === 'error' ? styles.noticeError : styles.noticeOk]}
-            testID="courier-van-notice"
-          >
-            {day.startNotice.text}
-          </Text>
-        )}
+        {/* Yola çıkarma/araçtan çıkarma sonucu TOAST'ta (kullanıcı kararı 01.09) — listenin
+            SONUNA yazılıyordu, yani kurye kartlara bakarken sonucu görmüyordu bile. */}
       </ScrollView>
 
       {/*
@@ -306,22 +351,51 @@ export function CourierVanRunsScreen() {
         müşteri hiçbir şey görmedi. `olive` tonu tam bunun için var (kitin künyesi: "geri
         alınamaz ama olumlu").
       */}
+      {/*
+        EKSİK KUTUYLA BAŞLATMA (kullanıcı kararı 01.09) — bedeli çekmece SAYIYLA yazıyor: kaç kutu
+        binmedi, o durakların ne olacağı, ve geri alınamazlığı. Onaylayan kurye yola çıkar.
+      */}
+      <OperationsConfirmSheet
+        visible={departingShort !== null}
+        title={t.day.vanRuns.departShortTitle}
+        message={
+          departingShort === null
+            ? ''
+            : fillCopy(t.day.vanRuns.departShortBody, {
+                route: departingShort.zoneName ?? departingShort.referenceNo,
+                n: String(loadOf(departingShort.runId).boxes - loadOf(departingShort.runId).loaded),
+              })
+        }
+        confirmLabel={t.day.vanRuns.departShortConfirm}
+        cancelLabel={t.day.vanRuns.departShortCancel}
+        tone="olive"
+        busy={day.starting}
+        busyLabel={t.day.vanRuns.departShortConfirm}
+        onConfirm={() => {
+          if (departingShort === null) return;
+          const runId = departingShort.runId;
+          setDepartingShort(null);
+          void day.departRun(runId).then((outcome) => {
+            /* `awaiting` BURADA BEKLENEN cevap: kurye eksiği zaten onayladı. Ekran yine duraklara
+               gider — sefer başladı ve bakılacak yer orası. */
+            if (outcome === 'ok' || outcome === 'awaiting') router.back();
+          });
+        }}
+        onCancel={() => setDepartingShort(null)}
+        testID="courier-van-depart-short-sheet"
+      />
+
       <OperationsConfirmSheet
         visible={discarding !== null}
         title={t.day.vanRuns.discardTitle}
         message={
           discarding === null
             ? ''
-            : fillCopy(
-                loadOf(discarding.runId).loaded > 0
-                  ? t.day.vanRuns.discardBody
-                  : t.day.vanRuns.discardBodyNoBoxes,
-                {
-                  route: discarding.zoneName ?? discarding.referenceNo,
-                  orders: String(loadOf(discarding.runId).stops),
-                  boxes: String(loadOf(discarding.runId).loaded),
-                },
-              )
+            : fillCopy(loadOf(discarding.runId).loaded > 0 ? t.day.vanRuns.discardBody : t.day.vanRuns.discardBodyNoBoxes, {
+                route: discarding.zoneName ?? discarding.referenceNo,
+                orders: String(loadOf(discarding.runId).stops),
+                boxes: String(loadOf(discarding.runId).loaded),
+              })
         }
         confirmLabel={t.day.vanRuns.discardConfirm}
         cancelLabel={t.day.vanRuns.discardCancel}
@@ -376,14 +450,8 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
   },
-  card: {
-    padding: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.card,
-    borderWidth: 1,
-    borderColor: operationsTheme.colors['neutral-bg'],
-    backgroundColor: operationsTheme.colors.panel,
-    gap: operationsTheme.space.md,
-  },
+  /** Kartın kite EKLEDİĞİ tek şey satır arası — dolgu, yarıçap, kenar ve zemin `panel` tonundan. */
+  cardBody: { gap: operationsTheme.space.md },
   /** "Duraklara git" — yeşil kartın üstünde AÇIK zemin (v3:16 `background:#fbfaf4`). */
   toStops: {
     backgroundColor: operationsTheme.colors.panel,
@@ -413,12 +481,6 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.meta,
     color: operationsTheme.colors.muted,
   },
-  loadMeta: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.meta,
-    color: operationsTheme.colors.muted,
-    textAlign: 'center',
-  },
   note: {
     paddingTop: operationsTheme.space.md,
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
@@ -426,11 +488,4 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.meta * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
-  notice: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-  },
-  noticeOk: { color: operationsTheme.colors.muted },
-  noticeError: { color: operationsTheme.colors.error },
 });

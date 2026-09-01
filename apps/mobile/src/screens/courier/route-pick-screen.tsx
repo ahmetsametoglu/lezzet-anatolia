@@ -191,7 +191,32 @@ export function CourierRoutePickScreen() {
                   ? t.day.openRuns.ctaNoVehicle
                   : fillCopy(t.day.openRuns.cta, { n: String(picked.length) })
           }
-          onPress={day.openRuns}
+          /*
+            SEFER KURULDU → EKRAN DEĞİŞİR (01.09 · kullanıcı bulgusu).
+
+            Kurma başarılı olduğunda ekran yerinde kalıyordu: *"rotanın sorumluluğunu alıyor ama
+            hâlâ rota sayfasında kalıyor, ne olduğunu anlayamıyor bile."* Seçim listesi boşalmış,
+            düğme pasifleşmiş bir sayfada bırakılan kurye, işin olup olmadığını ancak geri gidip
+            bakarak anlıyordu.
+
+            Gidilecek yer DÜĞMENİN KENDİ SÖZÜ: *"Seferleri kur — N sefer **yüklemeye geçer**"*
+            (v3 `03-Sefer-ve-Arac/03`). Bir tur boyunca araçtaki seferlere gidiyordu ve o ekran
+            tasarımın akışında yüklemeden SONRA geliyor (`02-Aractaki-Seferler` karelerinde bütün
+            seferler 7/7 · 4/4 · 9/9 yüklü). Kutular rampada dururken kuryeyi başlatma ekranına
+            götürmek, düğmenin verdiği sözü tutmamaktı.
+
+            `dismissTo` bilinçli — bu ekrana ya gün ekranından ya ARAÇTAKİ SEFERLER'den gelinir;
+            `navigate` ikinci yolda yığında iki kopya bırakırdı, `dismissTo` varsa geri döner,
+            yoksa yerine geçer.
+
+            YARIM başarıda da gidiyoruz: en az bir sefer kurulduysa araç değişti ve yüklenecek kutu
+            doğdu. Hiçbiri kurulmadıysa kalınır — yapılacak iş bu ekranda.
+          */
+          onPress={() => {
+            void day.openRuns().then((outcome) => {
+              if (outcome !== 'failed') router.dismissTo('/load');
+            });
+          }}
           disabled={day.starting || !ready}
           tone="olive"
           elevation="flat"
@@ -200,14 +225,9 @@ export function CourierRoutePickScreen() {
         {/* Kurulan seferin BAŞLAMADIĞINI düğmenin altında söylüyoruz: bu ekran müşteriye haber
             göndermiyor ve kurye onu bilmeli (v3:17'nin kendi dipnotu). */}
         <Text style={styles.footnote}>{t.day.openRuns.footnote}</Text>
-        {day.startNotice === null ? null : (
-          <Text
-            style={[styles.footnote, day.startNotice.tone === 'error' ? styles.footnoteError : null]}
-            testID="courier-route-pick-notice"
-          >
-            {day.startNotice.text}
-          </Text>
-        )}
+        {/* Sefer kurmanın SONUCU burada değil TOAST'ta (kullanıcı kararı 01.09): düğmenin altına
+            asılan cümle bir sonraki eyleme kadar duruyordu ve dipnotla karışıyordu — ikisi de aynı
+            puntoda, alt alta iki gri satır. Dipnot bir KURAL (her zaman doğru), sonuç bir OLAY. */}
       </OperationsStickyBar>
 
       {/*
@@ -424,7 +444,10 @@ function RouteCard({
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: operationsTheme.colors.cream },
   list: {
-    paddingHorizontal: operationsTheme.space['2xl'],
+    /* EKRANIN YAN NEFESİ 20 (v3:17 — hem araç satırı `margin:0 20px` hem rota listesi
+       `padding:0 20px`). 14 yazılıydı ve kartlar tasarımdan 6 px geniş çiziliyordu; fark tek
+       başına küçük ama ekranın tamamını sıkışık gösteriyor (kullanıcı bulgusu 01.09). */
+    paddingHorizontal: operationsTheme.space['5xl'],
     paddingBottom: operationsTheme.space['9xl'],
     gap: operationsTheme.space.md,
   },
@@ -453,13 +476,17 @@ const styles = StyleSheet.create({
      hak etmez (CLAUDE §3'ün envanter kuralı), o yüzden kare nötr kalıyor ve amber kimliği kartın
      zemininden, kenarından, metninden ve ikonun çizgi renginden geliyor — dördü aynı aileden. */
   gate: {
-    paddingVertical: operationsTheme.space.lg,
-    paddingHorizontal: operationsTheme.space.lg,
+    /* ÖLÇÜLER v3:17'NİN KENDİ SAYILARI (kullanıcı bulgusu 01.09 — "yükseklik tasarımdan az"):
+       `padding:13px 15px` · `gap:12px`. Üçü de `lg`(10) yazılıydı, yani satır her eksende
+       birkaç piksel eziliyordu ve toplamda 49 px yüksekliğinde çiziliyordu (tasarım ≈65).
+       13 ve 15 ölçeğin arasına düşüyor, en yakın basamaklara yuvarlandı (`metrics.ts`in kuralı). */
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['3xl'],
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: operationsTheme.space.lg,
+    gap: operationsTheme.space.xl,
   },
   gate_picked: {
     borderColor: operationsTheme.colors['success-line'],
@@ -474,9 +501,13 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors['warning-bg'],
   },
   gateIcon: {
-    width: operationsTheme.space['8xl'],
-    height: operationsTheme.space['8xl'],
-    borderRadius: operationsTheme.radius.tight,
+    /* Tasarım 36×36 · köşe 12. Kare `space` ölçeğinden (30) okunuyordu ve hem küçüktü hem yanlış
+       aileden: bu bir BOŞLUK değil, satırın baş karesi. `listAvatar` (34) aynı rolün resmî durağı
+       ve Δ2 — dosyanın "yakın ölçü ayrı ad almaz" kuralı. Köşe `tight`(8) değil `badge`(12):
+       resmî mobil sette rozet kademesi zaten 12. */
+    width: operationsTheme.size.listAvatar,
+    height: operationsTheme.size.listAvatar,
+    borderRadius: operationsTheme.radius.badge,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -490,14 +521,17 @@ const styles = StyleSheet.create({
   },
   gateValue: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
+    /* Tasarım 13,5/700 — `button` kademesinin ta kendisi. `helper`(12) yazılıydı: satırın taşıdığı
+       KARAR (hangi araç) ekranın en küçük yazısıyla söyleniyordu. */
+    fontSize: operationsTheme.text.button,
   },
   gateValue_picked: { color: operationsTheme.colors.ink },
   gateValue_none: { color: operationsTheme.colors.body },
   gateValue_unset: { color: operationsTheme.colors.warehouse },
   gateAction: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.meta,
+    /* Tasarım 11,5/700 → `tag`(11); `meta`(10,5) künye ölçüsüdür, dokunulacak bir eylemin değil. */
+    fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.muted,
   },
   /* ── ARAÇ ÇEKMECESİ ─────────────────────────────────────────────────────── */
@@ -507,15 +541,23 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
+  /*
+    ÖLÇÜLER TASARIM GÖRÜNTÜSÜNDEN (kullanıcı bulgusu 01.09: *"araç seçme çekmecesi ile tasarım
+    arası ölçü farkları var"*). `03-Sefer-ve-Arac/02` karesinden piksel ölçüldü (@2×, tasarım px):
+    satır YÜKSEKLİĞİ 94 · yan dolgu 17 · radyo 28 · radyo–metin arası 12.
+
+    Bizde satır ~52 idi: aynı satır tasarımdan kırk piksel kısaydı ve çekmece sıkışık okunuyordu.
+    Yükseklik dolgudan geliyor (sabit bir sayı yazılmadı): 30+30 dolgu + iki satır metin ≈ 96.
+  */
   option: {
     minHeight: operationsTheme.size.controlLg,
-    paddingVertical: operationsTheme.space.lg,
-    paddingHorizontal: operationsTheme.space.xl,
+    paddingVertical: operationsTheme.space['8xl'],
+    paddingHorizontal: operationsTheme.space['4xl'],
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: operationsTheme.space.lg,
+    gap: operationsTheme.space.xl,
   },
   optionSolid: {
     borderStyle: 'solid',
@@ -539,8 +581,9 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.ink,
   },
   radio: {
-    width: operationsTheme.space['6xl'],
-    height: operationsTheme.space['6xl'],
+    /* Boşluk ölçeğinden (22) alınıyordu; bu bir aralık değil ÖĞENİN kendi ölçüsü ve tasarımda 28. */
+    width: operationsTheme.size.radioMark,
+    height: operationsTheme.size.radioMark,
     borderRadius: operationsTheme.radius.pill,
     borderWidth: 2,
     alignItems: 'center',
@@ -554,7 +597,7 @@ const styles = StyleSheet.create({
     borderRadius: operationsTheme.radius.pill,
     backgroundColor: operationsTheme.colors['olive-dark'],
   },
-  rowText: { flex: 1, gap: 2, minWidth: 0 },
+  rowText: { flex: 1, gap: operationsTheme.space['2xs'], minWidth: 0 },
   rowMeta: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.meta,
@@ -682,5 +725,4 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     textAlign: 'center',
   },
-  footnoteError: { color: operationsTheme.colors.error },
 });

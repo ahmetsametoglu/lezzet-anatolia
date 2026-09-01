@@ -3,7 +3,7 @@ import { DEFAULT_PAGE_SIZE, resolveLocalizedText } from '@lezzet/types';
 import type { CatalogSort, KeysetCursor, PreferredLanguage } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { campaignsByProduct, readScopeCampaigns, type ScopeCampaign, type ScopeCampaigns } from './campaign';
-import { listOfferProductIds, loadProductContext } from './product-context';
+import { listOfferProductIds, listStockedProductIds, loadProductContext } from './product-context';
 import type { PricingViewer } from './pricing-viewer';
 import { EMPTY_PRODUCT_CONTEXT, imageOf, toCategory, toProduct, type CatalogCategoryRow } from './map';
 import type { PlaceWarehouses, StorefrontCatalog, StorefrontCollectionHead } from './storefront-types';
@@ -36,6 +36,14 @@ export interface CatalogQuery {
   sort?: CatalogSort;
   /** "Yalnız indirimliler" — açık teklifi olan ürünlere daraltır (DOMAIN §5). */
   onlyOffers?: boolean;
+  /**
+   * **Yalnız BURADA fiilen duran mal** — `place.warehouseId` deposunda partisi olan ürünlere
+   * daraltır (01.09). Varsayılan KAPALI: vitrinin kuralı süzmek değil işaretlemektir.
+   *
+   * Açan tek yüzey kuryenin yerinde satışı: araç bir vitrin değil, bir yüktür. Gerekçenin tamamı
+   * `listStockedProductIds` künyesinde.
+   */
+  onlyStockedHere?: boolean;
   /**
    * Yalnız kargolanabilenler — "adresime gönderilebilir" çipi. Çip VARSAYILAN KAPALIDIR (tasarım):
    * bölge dışı bir posta kodunda soğuk zincir ürünleri gizlenmez, kartta etiketiyle durur. Katalogu
@@ -158,7 +166,23 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
   // "Yalnız indirimliler" ürün kimliklerine çözülüp SORGUYA girer — sayfa çekildikten sonra elemek
   // keyset sayfalamayı ve toplam sayıyı bozardı. Boş küme erken döner: `ids: []` PostgREST'e
   // "hiçbiri" diye gitmez, süzgeç düşer ve TÜM katalog gelirdi.
-  const ids = q.onlyOffers ? await listOfferProductIds(db, place.warehouseId) : undefined;
+  /* İKİ DARALTMA da kimliğe çözülür ve birlikte verilebilirler — kesişim burada alınır. Sıra
+     önemsiz, ama "hiçbiri" hâli önemli: boş dizi süzgeci düşürmez, aşağıdaki erken çıkışa gider.
+     `onlyStockedHere` depo-ÜSTÜ okumada (yer bilinmiyor) boş küme demektir: "burada duran mal"
+     sorusunun deposuz bir cevabı yok ve sessizce tüm katalogu döndürmek yanlış cevap olurdu. */
+  const idSets = await Promise.all([
+    q.onlyOffers ? listOfferProductIds(db, place.warehouseId) : Promise.resolve(null),
+    q.onlyStockedHere
+      ? place.warehouseId === null
+        ? Promise.resolve<string[]>([])
+        : listStockedProductIds(db, place.warehouseId)
+      : Promise.resolve(null),
+  ]);
+  const applied = idSets.filter((set): set is string[] => set !== null);
+  const ids =
+    applied.length === 0
+      ? undefined
+      : applied.reduce((left, right) => left.filter((id) => right.includes(id)));
   /* Ürünsüz erken çıkışın kampanyası — kesit seçiliyken "hiç ürün yok" da bir cevaptır ve
      kampanyayı yine söyler. Ana yolun okuması aşağıda, sayfa kimlikleriyle BİRLİKTE yapılıyor
      (23.08): iki çağrı yeri var ama her istekte yalnız biri koşuyor ve kural tek kapıda. */

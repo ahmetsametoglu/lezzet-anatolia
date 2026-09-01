@@ -26,6 +26,7 @@
   },
   "day": {
     "eyebrow": "KURYE",
+    "contextNoRun": "sürülen sefer yok",
     "title": "Günün Rotası",
     "loading": "Rota yükleniyor…",
     "error": {
@@ -72,7 +73,7 @@
       "stopReady": "araçta",
       "stopPartial": "yarım",
       "stopNone": "bekliyor",
-      "footnote": "Eksik kutuyla yola çıkabilirsin ama o durak “kutu araçta değil” diye açılmaz.",
+      "footnote": "Eksik kutuyla yüklemeyi bitirebilirsin: sefer yine başlatılır ama kutusu binmemiş duraklar AÇILMAZ. Başlatırken onayın sorulur.",
       "back": "Günün rotasına dön",
       "counterRest": "/{total} kutu",
       "freeHeading": "SERBEST ÜRÜN — İSTEĞE BAĞLI",
@@ -179,13 +180,18 @@
       "note": "Seferler birbirine bağlı değil; sıra, zincir ya da devam ilişkisi yok. Tek ortak yanları aynı araçta olmaları.",
       "waiting": "araçta bekliyor",
       "driving": "sürülüyor",
-      "depart": "Seferi başlat",
+      "loadFirst": "Kutuları araca yükle",
+    "departShortHint": "{n} kutu binmedi · o duraklar açılmaz",
+    "departShortTitle": "Eksik kutuyla yola çık",
+    "departShortBody": "{route} seferinin {n} kutusu araca binmedi. Sefer yine başlar ve müşterilere bildirim gider — ama kutusu binmemiş {n} durak AÇILMAZ; onlara teslim yazamazsın.\n\nGeri alınamaz: bildirim gönderilmiş olur. Kutuları rampada okutup öyle başlatmak istersen “Kutuları araca yükle”ye dön.",
+    "departShortConfirm": "Eksik kutuyla başlat",
+    "departShortCancel": "Vazgeç",
+    "depart": "Seferi başlat",
       "departHint": "durakları açar · müşterilerine bildirim gider",
       "departBlocked": "Önce {ref} kapatılmalı",
       "departBlockedHint": "aynı anda tek sefer sürülür",
       "toStops": "Duraklara git",
       "load": "Kutuları araca yükle",
-      "loadMeta": "{loaded}/{total} kutu araçta",
       "emptyTitle": "Araçta sefer yok",
       "emptyBody": "Sefer ve araç seçip yüklemeyi yaptığında seferler burada birikir. Bir sefer araçta olmakla başlamış sayılmaz.",
       "pick": "Sefer ve araç seç",
@@ -228,7 +234,7 @@
     },
     "vanLoaded": {
       "title": "Araçta yük var, sürülen sefer yok",
-      "body": "{summary} Bir seferi başlatana kadar durak açılmaz ve müşteriye haber gitmez.",
+      "body": "{summary}. Bir seferi başlatana kadar durak açılmaz ve müşteriye haber gitmez.",
       "cta": "Araçtaki seferler — birini başlat"
     },
     "vanRow": {

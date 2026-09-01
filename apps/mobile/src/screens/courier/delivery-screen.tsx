@@ -581,15 +581,9 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
 
       {/* ── SONUÇ ALANI ───────────────────────────────────────────────────── */}
       <View style={styles.footer}>
-        {delivery.notice === null ? null : (
-          <Text
-            style={[styles.notice, delivery.notice.tone === 'ok' ? styles.noticeOk : styles.noticeError]}
-            accessibilityRole="alert"
-            testID="courier-delivery-notice"
-          >
-            {delivery.notice.text}
-          </Text>
-        )}
+        {/* Sonuç TOAST'ta (kullanıcı kararı 01.09): şerit sayfanın altında, kapanış düğmesinin
+            üstünde duruyordu ve kurye kutu okuturken oraya bakmıyordu — reddin sebebi çoğu zaman
+            hiç görülmüyordu. */}
 
         {delivery.outcome === null ? (
           <>
@@ -1290,21 +1284,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: operationsTheme.space['5xl'],
     paddingTop: operationsTheme.space.lg,
     paddingBottom: operationsTheme.space['3xl'],
-  },
-  notice: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-    padding: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.control,
-  },
-  noticeOk: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    color: operationsTheme.colors['olive-dark'],
-  },
-  noticeError: {
-    backgroundColor: operationsTheme.colors['error-bg'],
-    color: operationsTheme.colors.error,
   },
   primary: {
     height: operationsTheme.size.controlLg,

@@ -9011,7 +9011,9 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
 - [x] (21.187) **KAPIDA AKIŞ: İŞ BİTİNCE LİSTEYE DÖNÜŞ · YOLA ÇIKMAMIŞ DURAK · NAVİGASYON ESNEMESİ** (kullanıcı bulguları 30.08 · cihazda ölçüldü)
   `touches:` `apps/mobile/src/screens/courier/{delivery-screen.tsx,use-delivery.hook.ts,messages.json}` ·
-  `scripts/seed/orders.ts`
+  ~~`scripts/seed/orders.ts`~~ — dosya 01.09'da SİLİNDİ: besleme artık hiç sipariş yazmıyor
+  (kullanıcı kararı; künye `scripts/seed.ts` → §SİPARİŞ). O turda seed'e yazılan fikstür de
+  onunla birlikte kalktı; ekran tarafındaki iş yerinde duruyor.
 
   **1 · SONUÇ TOAST'A, EKRAN LİSTEYE DÖNÜYOR.** Teslim/ulaşılamadı/kabul etmedi yazıldıktan sonra
   ekran "sonuç ekranı"na dönüp KALIYORDU (v2:882'nin bilinçli sapması: *"kurye 'yazıldı mı?'
@@ -9642,3 +9644,343 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (`box-shadow:0 4px 14px rgba(95,122,44,.22)`) hâlâ çizilmiyor — kitte o ışıma bugün yalnız
   `OperationsStickyBar`ın `glow` prop'unda yaşıyor ve akıştaki düğmeler ona ulaşamıyor (aynı
   boşluk yükleme ekranının okutma düğmesinde de var, künyesi orada).
+
+- [x] (21.202) **KURYE ARACININ İÇİNDEKİNİ SATAR — ana deponun katalogunu değil** (kullanıcı bulgusu 01.09)
+
+  Kullanıcı kurye ekranından "Yoldan gelen müşteri"ye dokundu ve ana deponun katalogunu gördü:
+  *"burası kurye ekranı, araç üstünde ne varsa onun görünmesi lazım. Daha da garibi bir araç seçili
+  değil."* Ölçüm doğruladı — ekrandaki "Kara Orman Pastası · kalan 23" birebir Strasbourg'un
+  stoğuydu; araçta ise dört kalem vardı (Patatesli/Sade Poğaça, Karamelli Kek Bardağı, Simit ·
+  6'şar).
+
+  **İKİ SEBEP ÜST ÜSTE BİNMİŞTİ.**
+
+  (a) **Kural sunucuda yazılıydı, istemci onu sessizce iptal ediyordu.** `courierVehicleFirst`
+  *"kurye PARAMETRESİZ geldiyse satış yeri aracıdır"* diyordu — sinyali YOKLUKTU. 30.08'de mobil
+  istemci cihazdaki depo seçimini her satış isteğine yazmaya başlayınca (`withWarehouseChoice`)
+  yokluk doldu ve kural o günden beri hiç çalışmıyordu. Belirtisi yoktu: uç yine bir liste
+  döndürüyordu, yanlış deponunkini.
+
+  Yerine **açık beyan** kondu: yüzey `?place=van` diyerek nereden sattığını SÖYLER
+  (`SalePlaceEnum`, `packages/types`). Beyan yetki değil, soru: aracı sunucu kapsamdan çözüyor
+  (`vehicleWarehouseOf`), istemci hangi aracı istediğini seçemiyor — `van` diyen depocuya `403`,
+  aracı olmayan kuryeye `400 no_vehicle`. Beyansız istek eski davranışı korur, yani depo kapısından
+  satış ve `?warehouseId=` ile tesisini söyleyen kurye aynen çalışır.
+
+  Yer YIĞINA GİRERKEN okunuyor (`sale/_layout`) ve yığın boyunca değişmiyor: sepet/fiş/son satışlar
+  adreslerinde parametre yok ve her birine elle taşınsaydı taşımayı unutan tek ekran satışı yanlış
+  depoya yazardı — düzelttiğimiz arızanın ta kendisi.
+
+  (b) **Vitrin kuralı araca da uygulanıyordu.** *"Katalog süzülmez, işaretlenir"* müşteri için
+  doğru; araç için değil — **araç bir vitrin değil, bir yüktür.** Kurye elinde ne varsa onu satar;
+  olmayanı "tükendi" diye göstermenin karşılığı yok. `CatalogQuery.onlyStockedHere` eklendi
+  (`listStockedProductIds`, `listOfferProductIds`in kardeşi ve aynı yuvada) ve yalnız `place=van`
+  açıyor. Sipariş için yüklenen kutu listeye KENDİLİĞİNDEN girmiyor: o mal hâlâ tesisin stoğu
+  (`DOMAIN §17` — "araçta iki tür mal yan yana durur, evleri ayrıdır").
+
+  Ekranın cümlesi de yere göre: üstbaşlık "araçtan satış · anonim satış", boş araç ise bir arama
+  sonucu değil bir DURUM — "Araçta satılacak mal yok" + çıkışı (v3:19 serbest ürün).
+
+  Cihazda ölçüldü: liste tam olarak aracın dört kalemi, "kalan 6" DB ile birebir.
+
+  **Yol üstünde kapanan borç:** `courier-day-screen.test`in "durak numarası SEFERİN İÇİNDE sayılır"
+  testi kırmızıydı — `11.9` yerel sayacı söküp `stopSeq`i çizmeye geçmişti ama test eski iddiada
+  kalmıştı (mobil Jest `pnpm test`in içinde değil, o yüzden görülmemişti). Test yeni kurala
+  yazıldı, üstüne "sıra bilinmiyorsa numara UYDURULMAZ" hâli de çivilendi.
+
+  **BEKLEYEN(BACKLOG §1):** tasarımın satış ekranı girişi "Barkod okut · Ürün ara" + tavanlı bir
+  SIK SATILANLAR şeridi (v3:23); bizde arama kutusu + akan liste. Araç tarafında liste zaten
+  tavanlı (aracın içeriği kadar), depo kapısında değil.
+
+  **ARAÇ KAPISI TASARIMIN ÖLÇÜSÜNE GELDİ** (v3:17 · kullanıcı bulgusu 01.09: *"yükseklik olarak
+  tasarımdan az, padding'ler, fontların büyüklüğü"*). Cihazda ölçüldü: satır **53 dp** çiziliyordu,
+  tasarımda **≈65**. Sekiz değer birden küçüktü ve hepsinin sebebi aynıydı — `space.lg`(10) bir
+  varsayılan gibi kullanılmış, tasarımın kendi sayıları okunmamıştı.
+
+  | | tasarım | önce | sonra |
+  |---|---|---|---|
+  | ekranın yan nefesi | 20 | 14 | 20 (`5xl`) |
+  | dikey dolgu | 13 | 10 | 12 (`xl`) |
+  | yatay dolgu | 15 | 10 | 16 (`3xl`) |
+  | satır aralığı | 12 | 10 | 12 (`xl`) |
+  | ikon karesi | 36 | 30 | 34 (`size.listAvatar`) |
+  | ikon köşesi | 12 | 8 | 12 (`radius.badge`) |
+  | araç adı | 13,5 | 12 | 13,5 (`text.button`) |
+  | "seç ›" | 11,5 | 10,5 | 11 (`text.tag`) |
+
+  İkon karesi `space` ölçeğinden okunuyordu ve bu yalnız ölçü değil AİLE hatasıydı: bir boşluk
+  değil, satırın baş karesi — `size.listAvatar` (34) o rolün resmî durağı. Yan nefes değişikliği
+  rota kartlarını da düzeltiyor: tasarımda ikisi de 20.
+
+  **SATIŞ KAPISI ARTIK YALNIZ SÜRÜLEN SEFERDE** (kullanıcı bulgusu 01.09: *"kurye ana sayfasına
+  girdiğim zaman yoldan gelen diye bir kart var, henüz bir sefer bile seçili değil"*). Satır üç
+  hâlin üçünde de çiziliyordu ve gerekçesi kodda *"şartı sefer değil ARAÇ"* diye yazılıydı — o
+  cümle BİZE aitti, tasarıma değil: v3:15'te `Yoldan gelen müşteri` tek yerde geçiyor, `sürülenVar`
+  gövdesinde (`sc-if` zinciri okundu). Kapının adı da kuralı söylüyor: **yoldan gelen müşteri yolda
+  olunca gelir.** Sefer kurmamış kurye depodadır ve oradaki satış depo kapısının işidir (tesis
+  stoğundan — `DOMAIN §17`); sefersiz kuryeye araçtan satış açmak, çoğu zaman BOŞ bir aracın
+  kataloğunu açmaktı. İki hâlden söküldü, üçüncüde künyesi düzeltildi.
+
+  Test üç hâli birden çiviliyor ve yakaladığı doğrulandı (eski ekranla koşturulunca düşüyor).
+
+- [x] (21.203) **SONUÇ TOAST'TA · KAPANAN SEFER GERİDE KALIR · KAPANIŞ DOĞRU SEFERİ AÇAR** (kullanıcı kararları 01.09)
+
+  Kullanıcı iki şey istedi: *"mesajlar sadece toast mesajı olarak gösterilecek"* ve *"seferi kapat
+  diyorum, kapanan sefer ekranda durmaya devam ediyor… ikinci sefer yok ortalıkta, ikinci sefere
+  geçemiyorum."* İkincisini cihazda kovalarken **üç ayrı arıza** çıktı; ikisi ölçülmeden görünmezdi.
+
+  ── **1 · SONUÇ TEK KANALDAN** ──────────────────────────────────────────────
+
+  Altı ekran sonucu kendi köşesinde çiziyordu: biri yapışkan çubuğun içinde, biri listenin altında,
+  biri kartın yanında, biri düğmenin üstünde. Aynı cümle dört farklı biçimde ve hiçbiri
+  KAYBOLMUYORDU — bir sonraki eyleme kadar asılı kalıyordu. Hepsi `toast-store`a bağlandı.
+
+  - **Kite `toastWarning` eklendi.** Operasyonun ton sözlüğü dört tonlu ve kısmi başarı gerçek bir
+    hâl ("sefer açıldı ama iki durak atlandı"); `toastInfo` sessizdir, `toastError` ise kısmen
+    başarılı bir işlemi hata gibi titreştirirdi. Görünüş aynı (şablonda tek toast var), ayrışan tek
+    şey ELE giden sinyal — operasyonda ekrana bakmadan alınan tek sinyal odur.
+  - **`resetToast()`** açıldı: toast modül düzeyinde ve 2400 ms'lik sayacı Jest süreçlerini açık
+    tutuyordu (`resetWarehouseChoice` deseninin aynısı).
+  - **TEK İSTİSNA açık çekmece:** toast kökte çiziliyor, çekmeceler yerel `Modal`; Android'de
+    kökteki katman modalın ALTINDA kalır ve kullanıcı hiçbir şey görmez (31.08'de ölçülmüştü).
+    Çekmece açıkken sonucu çekmece söyler. **Kural: mesaj kullanıcının baktığı katmanda görünür.**
+  - Ekran DURUMLARI toast olmadı (boş liste, "okunamadı + tekrar dene", kapalı düğmenin sebebi):
+    onlar bir olayın duyurusu değil, ekranın kendi içeriği.
+
+  Ekranda kalan tek "mesaj" artık bir EYLEM: kısmi başarıdan sonraki "kalanları yola çıkar" ikinci
+  basışı (`canRetryStart`). Toast bir düğme taşıyamaz.
+
+  ── **2 · DURAKSIZ SEFER BİR ÇIKMAZDI** ─────────────────────────────────────
+
+  "Araçtaki seferler" ve "Yoldan gelen müşteri" kapıları durak listesiyle AYNI dalın içindeydi.
+  Sürülen seferin o gün durağı yoksa (rotaya sipariş yazılmamış — gerçek bir hâl) ekran künye +
+  "Seferde durak yok" + "Seferi kapat"tan ibaret kalıyor, araçta bekleyen ikinci sefere gidecek yol
+  HİÇ çizilmiyordu. Üstüne ikinci bir kapı daha vardı: `boxCounter === null` iken sefer satırı
+  gizleniyordu ve o sayaç kutusuz günde zaten `null` — kapı tam ihtiyaç duyulan hâlde kayboluyordu.
+  Gerekçesi de eskimişti: satırın cümlesi ("N sefer araçta · M sürülüyor") kutu saymıyor.
+
+  Kapılar dalın dışına alındı, sayaç kapısı kaldırıldı. Tasarım da onları `sürülenVar` gövdesine
+  koyuyor, listeye değil (v3:15).
+
+  ── **3 · KAPANIŞ YANLIŞ SEFERİ AÇIYORDU** (en ağırı) ───────────────────────
+
+  Cihazda ölçüldü: kurye **Doğu Hattı**'nı sürerken "Seferi kapat" dedi, ekran hiç yola çıkmamış
+  **Batı Hattı**'nın mutabakatını açtı. `readCourierRun` "kapanmamış İLK sefer"i seçiyordu; `/day`
+  ucu ise `run` alanını "yola çıkmış ve kapanmamış" diye çözüyor. Aynı soruya iki okuma iki farklı
+  cevap veriyordu (CLAUDE §1) ve bedeli para: sürülmemiş bir seferi kapatmak onun siparişlerini
+  serbest bırakır, gerçekten sürülen sefer açık kalırdı.
+
+  İki taraf da düzeldi: **sunucu** ölçütü `/day` ile birebir aynı yaptı, **istemci** de kapatacağı
+  seferin kimliğini adrese yazıyor (`/day-close?runId=…`) — yazma ucunun (`POST /day-close`) zaten
+  uyguladığı kural. Sunucunun çözümü yedek kalıyor: derin bağlantı kimliksiz gelebilir.
+
+  Kapanış YAZILINCA ekran kendini kapatıyor (`onClosed`): sonuç toast'ta görünür, kurye kapattığı
+  seferi arkasında bırakır. `already_closed`ta kapanmaz — orada yeni bir kapanış yok, kurye zaten
+  kapalı bir kaydı açtı ve salt-okunur hâli görmeli.
+
+  ── **YOL ÜSTÜNDE: DOLMAYAN YER TUTUCULAR** ─────────────────────────────────
+
+  "Araçta yük var" gövdesinde ekranda ham `{driving}` ve `{loaded}/{total}` yazıyordu — iki cümlenin
+  anahtarları yer değiştirmişti (yükleme satırı sefer sayıyordu, sefer satırı kutu). O gövdenin hiç
+  testi yoktu, o yüzden sessizce yaşadı. Anahtarlar yerine oturdu, gövdenin testi yazıldı ve
+  `fillCopy` artık geliştirmede BAĞIRIYOR: dolmayan yuva bir sözdür, ilk gören kişi kurye olmamalı.
+
+  Cihazda doğrulandı: duraksız seferde kapılar duruyor · kapanış Doğu Hattı'nı açtı · kapanınca
+  ekran geri döndü ve araçta bekleyen Batı Hattı göründü · sefer başlatınca toast çıktı.
+
+  **BEKLEYEN(BACKLOG §1):** depo yüzeyinin altı kancası hâlâ `useNotice` ile satır içi bildirim
+  çiziyor (`use-intake` · `use-preparation` · `use-transfer` · `use-adjustment` · `use-batch-scan` ·
+  `use-courier-return`). Kullanıcının kuralı yüzey ayırmıyor; dosyalar o şeridin elinde açık olduğu
+  için desen `docs/talep/not-depo-…` ile bırakıldı.
+
+- [x] (21.204) **AKSİYON EKRANI DEĞİŞTİRİR — "sefer kuruldu" artık görünüyor** (kullanıcı kararı 01.09)
+
+  *"Bir aksiyonun olduğu yerde ekranın değişmesi gerekiyorsa değişmesi lazım. En bariz örneği:
+  rotanın sorumluluğunu alıyor ama hâlâ rota sayfasında kalıyor, ne olduğunu anlayamıyor bile."*
+
+  Kurma başarılıydı ama ekran yerinde kalıyordu: seçim listesi boşalıyor, düğme pasifleşiyordu —
+  yani ekran "bir şey oldu" bile demiyordu. Kurye geri gidip bakmadan işin olup olmadığını
+  bilemiyordu.
+
+  **Yönlendirmeyi KANCA YAPMAZ** (router'ı bilmez — `useDayClose(onClosed)` ile aynı kural). Eylemler
+  artık SONUÇ döndürüyor, nereye gidileceğine ekran karar veriyor:
+
+  | eylem | sonuç | ekran |
+  |---|---|---|
+  | Seferleri kur | en az biri kuruldu | **Araçtaki Seferler** (`dismissTo`) |
+  | Seferleri kur | hiçbiri kurulmadı | kalır — yapılacak iş burada |
+  | Seferi başlat | temiz | **Duraklar** (`back`) |
+  | Seferi başlat | kutu bekliyor / başka sefer sürülüyor | kalır — iş bu ekranda |
+  | Geç kutuları yola çıkar | her hâlde | kalır — kurye aynı düğmeye yeniden basabilir |
+
+  `dismissTo` bilinçli: rota seçimine iki yoldan gelinir (gün ekranı · Araçtaki Seferler) ve
+  `navigate` ikinci yolda yığında iki kopya bırakırdı; `dismissTo` varsa geri döner, yoksa yerine
+  geçer. Gidilecek yer tasarımın kendi cümlesi: *"Başlatma araçtaki seferler ekranında, sefer sefer
+  yapılır"* (v3:17 dipnotu).
+
+  **Zaten doğru olanlara dokunulmadı** — kural "her eylemde git" değil, "gitmesi gerekiyorsa git":
+  teslimat yazılınca durak listesine dönüyordu (30.08), satış fişe gidiyordu (v3:22), kapanış
+  21.203'te bağlandı. Araçtan çıkarma ve araca ürün alma YERİNDE kalıyor: ikisinde de konu listenin
+  kendisi ve liste tazeleniyor.
+
+  `startResult` fikstürü `courier-day-screen.test`ten `courier-fixture`a taşındı — üçüncü çağıranı
+  doğdu (rota seçimi ve araçtaki seferler de kurma/başlatma sonrasını ölçüyor).
+
+  Cihazda doğrulandı (kablosuz): kur → **Araçtaki Seferler** açıldı, yeni sefer `SF-26-QF7L3Y`
+  "araçta bekliyor" olarak listede; başlat → kart "sürülüyor"a döndü ve ekran KALDI, çünkü 2/6 kutu
+  okutulmuştu (nüans doğru çalışıyor).
+
+  **AKIŞIN SIRASI DÜĞMENİN KENDİSİNDE** (aynı turda, kullanıcı kararı): *"Bir kurye seferlerini
+  seçebilir, fakat o seferlerin kutularını yüklemeden o seferleri başlatamaz. Dolayısıyla 'Seferi
+  başlat' yerine 'Kutuları araca yükle' demeliyiz."*
+
+  Kural zaten UÇTA vardı (`awaitingBoxes`) ama ekran onu ancak kurye düğmeye BASTIKTAN sonra
+  söylüyordu: *"sefer açıldı ama bir sipariş okutulmayı bekliyor — kutuları okut, sonra yeniden
+  başlat."* Yani akışın sırası kuryeye bir HATA olarak öğretiliyordu; üstelik sefer açılmış oluyordu.
+
+  Kart artık hangi adımda olduğunu söylüyor: kutu eksikken **"Kutuları araca yükle · N kutu bekliyor
+  · yüklenmeden sefer başlamaz"**, yükleme bitince **"Seferi başlat"**. Aynı yer, aynı ağırlık, tek
+  dokunma alanı. "Aynı anda tek sefer" kilidi YALNIZ başlat düğmesinde: yükleme rampa işidir, başka
+  sefer sürülürken de yapılabilir.
+
+  Bunun bir yan etkisi de kapandı: ekran düzeyindeki "Kutuları araca yükle" satırı kartın hemen
+  altında AYNI etiketle duruyordu (cihazda görüldü). Artık yalnız hiçbir kartın yükleme kapısı
+  olmadığında çiziliyor — kart daha iyisini söylüyor, hangi seferin kaç kutusu bekliyor.
+
+  Cihazda doğrulandı: sefer beklemeye alınınca kart "Kutuları araca yükle · 4 kutu bekliyor"a döndü,
+  başlatma düğmesi hiç çizilmedi ve yinelenen satır kalktı.
+
+- [x] (21.205) **KURYE AKIŞI TASARIM KARELERİNDEN OKUNDU — iki sapma kapandı** (kullanıcı isteği 01.09)
+
+  Kullanıcı `design/project/screenshots/Kurye/` altındaki karelerin **hepsinin** tek tek okunmasını
+  ve akışın oradan çıkarılmasını istedi. Onbir kare okundu; tasarımın kendi sırası şu:
+
+  ```
+  Günün Rotası "Araçta sefer yok"   → [Sefer ve araç seç]
+  Sefer ve Araç                     → [Seferleri kur — N sefer YÜKLEMEYE GEÇER]
+  Araca Yükle  (yan yol: Serbest Ürün → [Yüklemeye dön — N adet araçta])
+                                    → [Yüklemeyi bitir — N kutu araçta]
+  Araçtaki Seferler (hepsi yüklü)   → [Seferi başlat]  (kart kart)
+  Günün Rotası "sürülen sefer"      → durak → teslim → [Seferi kapat]
+  ```
+
+  **SAPMA 1 — kurma sonrası yanlış ekran.** 21.204'te "Seferleri kur" araçtaki seferlere
+  gidiyordu; oysa düğmenin kendi etiketi *"N sefer **yüklemeye geçer**"* diyor ve tasarımın
+  `02-Aractaki-Seferler` karelerinde bütün seferler ZATEN yüklü (7/7 · 4/4 · 9/9) — yani o ekran
+  akışta yüklemeden SONRA geliyor. Kutular rampada dururken kuryeyi başlatma ekranına götürmek,
+  düğmenin verdiği sözü tutmamaktı. Artık `dismissTo('/load')`.
+
+  **SAPMA 2 — yükleme düğmesinin tonu sabitti.** Tasarımın iki karesi tonla konuşuyor: eksik kutu
+  varken MÜREKKEP ("bitirebilirsin ama eksik"), hepsi bindiğinde ZEYTİN ("tamam"). Bizde sabit
+  mürekkepti ve iki hâl aynı görünüyordu.
+
+  **KİT İHLALİ (kullanıcı bulgusu):** araçtaki seferler kartı dolgu · yarıçap · kenar · zemini ELLE
+  çiziyordu — `OperationsSurface`ın `panel` tonunun kopyası. Yüzeyin kendi künyesi bu hatayı zaten
+  sayıyor: *"kodda 41 yerde elle çizilmişti."* Karta ait kalan tek şey sürülen hâlinin zeytin
+  kabuğu. Aynı turda "X/Y kutu araçta" satırı da kalktı: aynı sayı üstteki koyu künyede ve her
+  kartın özetinde zaten vardı, ekran dibinde ÜÇÜNCÜ kez yazıyordu (tasarımda orada yalnız dipnot
+  var).
+
+  **EKSİK KUTU: ÖNCE YASAK KONDU, SONRA UYARIYA DÖNDÜ — ikisi de kullanıcı kararı (01.09).** Önce
+  *"kutuları yüklemeden o seferleri başlatamaz"* dendi ve başlatma düğmesi kapatıldı. Kullanıcı aynı
+  gün geri aldı: *"eksik kutuyu net şekilde ifade edelim, gerekirse onay çekmecesi açılsın; kabul
+  ediyorsa eksik kutuyla da tabii ki kurye yola çıkabilmeli."* Yürürlükteki kural budur ve tasarımın
+  kendi dipnotuyla da aynı hizada (*"o durak 'kutu araçta değil' diye açılmaz"*) — engel değil BEDEL.
+  Bedeli iki yerde yazıyoruz: yükleme dipnotu ("kutusu binmemiş duraklar AÇILMAZ") ve başlatmadan
+  önce açılan onay çekmecesi (`departShort*` — kaç kutu, hangi duraklar, geri alınamaz). Yasağın
+  kaldığı tek iz kartın yardımcı bağlantısı: eksik varken "Kutuları araca yükle" yolu açık kalır.
+
+  **BİLİNÇLİ SAPMALAR (tasarımda YOK, gerekçeleri kendi görev satırlarında):** "Araçtan çıkar"
+  (21.200) · "Araca sefer ekle" (31.08) · sık koyulanların çekmeceye taşınması (21.199) · kartın
+  yükleme kapısı (21.204).
+
+  **YÜKLEME EKRANI YENİDEN DİZİLDİ** (kullanıcı kararı 01.09, akışı adım adım anlattı):
+
+  - **Okutma YÜZEN düğmeye taşındı** (`OperationsScanFab`). Kitin kendi künyesi bu kararı 31.08'de
+    zaten yazmıştı — *"barkod okutma yukarılarda bir yerde kalmamalı, her zaman elinin altında
+    olmalı"* — ve yedi ekrandan yalnız toplama onu kullanıyordu. Akıştaki düğme kaydırınca
+    kayboluyordu; rampada eli koli dolu kuryenin kaybolan bir düğmeyi araması işin kendisini
+    yavaşlatır. Kutular bitince daire kalkar: okutacak şey yoksa elin altındaki eylem de yok.
+  - **"Yüklemeyi bitir" yapışkan çubuktan çıkıp KOYU BLOĞUN ALTINA geldi.** Okutma akıştan
+    çıkınca boşalan yer sayfanın en okunur noktasıydı. Düğme dipteyken oraya inen göz zaten
+    "bitirdim mi" diye bakıyordu; cevabı ise sayacın kendisi veriyor. Soru ve cevap artık yan yana.
+    Yapışkan çubuk bu ekrandan tamamen kalktı.
+
+  **FAB'IN DOKUNMA ALANI HİÇ YOKMUŞ** (kullanıcı bulgusu 01.09: *"FAB butonu bazen çalışmıyor"* ·
+  cihazda ölçüldü). `uiautomator` dökümünde yükleme ekranının tıklanabilir düğümleri şunlardı: geri
+  · "Yüklemeyi bitir" · "Serbest Ürün". **Daire listede yoktu** — çiziliyor ama basılamıyordu.
+
+  Sebep kitte ve künyesi zaten yazılıydı: `PressableSurface` çağıranın `style`ini **İÇ** görünüme
+  koyuyor. `OperationsScanFab` konumu (`position:'absolute'` + `right`/`bottom`) o stile veriyordu;
+  dolayısıyla dış `Pressable` akışta kalıyor, tek çocuğu mutlak konumlandığı için **0×0** ölçülüyor
+  ve dokunacak alan doğmuyordu. Aynı sınıf hata kitte bir kez daha çözülmüştü — satırda esneyen
+  düğmenin `flex`i de `style`e yazılamıyor, `grow` prop'undan dış Pressable'a veriliyor.
+
+  Konum şeffaf bir dış kaba alındı (`pointerEvents="box-none"` — altındaki listeyi yutmasın);
+  `PressableSurface`a yalnız dairenin kendisi kaldı ve Pressable ona göre ölçülüyor. Ölçüldü:
+  daire artık `168×169` cihaz px'lik tıklanabilir bir düğüm (66 dp) ve okuyucu açılıyor.
+
+  **Düzeltme toplamada da geçerli:** aynı FAB'ı kullanan tek öteki ekran orasıydı ve orada da
+  dokunma alanı yoktu.
+
+  **BEKLEYEN(BACKLOG §1):** tasarımın yükleme ekranında yanlış okutma KALICI kırmızı bir kart
+  ("Araçtaki hiçbir sefere ait değil — koyma") ve altında **"yanlış okuttum — geri al"** eylemi var.
+  Mesaj bizde toast (21.203) ama GERİ ALMA hiç yok ve bu bir yetenek boşluğu: tek kutunun araç
+  damgasını silen uç yazılmamış (`discard_delivery_run` seferin tamamını indiriyor). Uç açılmadan
+  ekrana düğme konulamaz.
+
+- [x] (21.206) **D1 TOPLAMA: TAMAMLANANLAR KAPSAMI · KUTU GERİ AÇMA İÇERİĞİ KORUYOR · ETİKET ÇEKMECESİ EKRANIN PARÇASI** (kullanıcı kararları/bulguları 01.09)
+  touches: `apps/mobile/src/screens/warehouse/{preparation-screen,use-preparation.hook,messages.json,picking-box.test}.*` ·
+  `apps/mobile/src/lib/api/warehouse.ts` · `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `packages/application/src/warehouse/{preparation,boxes}.ts` · `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `supabase/migrations/0048_order_box.sql`
+
+  **Durum:** tamamlandı; hepsi fiziksel Android cihazda (CPH1907) ölçüldü. Beş iş tek turda:
+
+  1. **Kuyruğun iki yüzü — bekleyenler ve son tamamlananlar** (kullanıcı isteği: *"son tamamlanan on
+     kutu … bekleyenler ayrı, tamamlananlar ayrı, geçiş yapılabilsin, bu butonu header'da aksiyon
+     butonu olarak koyabiliriz"*). Uç `?scope=done` alıyor; `ready` siparişler **son kutusunun mühür
+     anına göre** sıralanıp ilk on tanesi çiziliyor (`order` tablosunda `updated_at` yok — ölçüldü).
+     Sınır `ready`de ve keyfî değil: `unseal_order_box` bundan ileri geçmiş siparişi reddediyor, yani
+     liste "geçmiş" değil **hâlâ müdahale edilebilir olan** penceredir. Tamamlanmış sipariş
+     SALT OKUNUR açılıyor (okutma · kutu açma · eksik beyanı kapalı); yapılabilen tek şey uzun
+     basmayla etiket yeniden basımı ve kutuyu geri açmak — ki bu listenin var olma sebebi de o.
+  2. **Hazırlık kâğıdı okutması FAB oldu.** Listenin üstündeki düğme on siparişlik kuyrukta
+     kayboluyordu; sipariş açıldıktan sonraki okutma zaten FAB'daydı, yani aynı hareket ekranın iki
+     hâlinde iki ayrı yerde aranıyordu. Ton `action` (mürekkep): kâğıt okutmak işi BAŞLATIR.
+  3. **Son kutu kapanınca ekran siparişi bırakmıyor** (kullanıcı bulgusu: *"sipariş toplamı bittiği
+     anda navigasyon gerçekleşiyor ve açılmakta olan çekmece kapanıyor"*). Sipariş `ready`ye geçince
+     kuyruktan düşüyor, dal değişiyor ve **yeni açılmış etiket çekmecesi siliniyordu** — basım
+     düştüğünde "etiket alınamadı" haberi okunmadan kayboluyordu. İlk denediğim çare (tazelemeyi
+     ertelemek) cihazda DAHA KÖTÜ çıktı: çekmecenin arkasında kutu hâlâ "AÇIK · 0 adet" görünüyordu,
+     yani kapanmış bir kutu açık gösteriliyordu. Doğrusu kapsamı TAMAMLANANLARA almak.
+     **Ve çekmece dallardan çıkarıldı**: beş dalın hepsinde çiziliyor artık — kapsam geçişi çoğu
+     hâli kurtarıyor ama liste boş dönerse ya da okuma düşerse dal yine değişirdi. Çekmece bir dalın
+     değil EKRANIN parçası. (Bu son adım üç eski testi kırdı ve kırdığı için bulundu.)
+  4. **Kutu geri açmak içeriği KAYBETMİYOR** (kullanıcı bulgusu: *"bir kutu açtım, kutunun içi
+     tamamen boşalıverdi … neden sadece kutuyu açıp içinden birkaç şey çıkartamıyorum"*).
+     Sunucu satırları yine serbest bırakıyor ve bırakmak ZORUNDA — *"açık kutu = taslak"* bu sistemin
+     değişmezi: döküm ancak kapanışta yazılıyor (`seal_order_box` `insert` ediyor, `unique (box_id,
+     order_item_id)` ikinci yazımı reddediyor) ve `sealBox`ın birleşimi karşılanan adedi MEVCUT izin
+     üstüne ekliyor. Ama serbest bırakmak İÇERİĞİ KAYBETMEK değil: döküm silinmeden önce okunup
+     cevaba konuyor (`UnsealBoxResponseSchema.items`) ve telefon onu açık kutunun taslağına yazıyor.
+     Cihazda ölçüldü: kutu üç adetle geri açıldı, bir kalem ✕ ile çıkarıldı, listeye döndü, geri
+     konup yeniden kapatıldı; DB `ready` · mühürlü · adetler tutuyor.
+  5. **Bir siparişte AYNI ANDA TEK AÇIK KUTU** (cihazda ölçülen arıza). Kutu 2 açıkken Kutu 1 geri
+     açıldı: veritabanında **iki kutu da açık kaldı**, ekran açık kutuyu tekil bildiği için yalnız
+     birini çizdi ve öteki hiçbir yerden erişilemez bir kayda dönüştü — taslak da yanlış kutuya
+     yazılabilirdi. Kural VERİDE (`unseal_order_box`), cümle ekranda: *"Kutu N zaten açık — bir
+     siparişte tek kutu açık kalabilir."* İkisi de cihazda doğrulandı, DB değişmedi.
+
+  **Yol boyunca kapanan sessiz düşüş:** menüden "etiketi yeniden yazdır"da etiket okuması düşerse
+  `printState` hataya çekiliyordu — ama o durum yalnız ÇEKMECENİN İÇİNDE çiziliyor ve çekmece `label`
+  doluysa açılıyor. Yani depocu düğmeye basıyor, menü kapanıyor ve hiçbir şey olmuyordu. Cümle artık
+  toast'tan gidiyor.
+
+  **ÖLÇÜM — "çekmece bazen açılmıyor"un sebebi Fast Refresh.** Kutu menüsü arka arkaya iki kez
+  açılmadı; tam yeniden yüklemeden (`force-stop` + dev-client) sonra ilk denemede açıldı. Yani kod
+  değiştikten sonra bellekte kalan ölü gorhom örneği; normal kullanımda değil, geliştirme sırasında
+  doğuyor. Kullanıcının 01.09'da tarif ettiği belirtinin karşılığı bu.
+
+  **BEKLEYEN(BACKLOG §1):** etiket başlığı sipariş yarımken de "Kutu 1/1" diyor — `boxCount` o anki
+  kutu sayısı, nihai değil. Doğrusu ya sayıyı hiç yazmamak ya "Kutu 1" demek; karar verilmedi.

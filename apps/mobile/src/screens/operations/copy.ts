@@ -34,7 +34,26 @@ export const operationsCopy = messages;
  * `{n}` / `{sections}` gibi yuvaları doldurur — müşteri tarafındaki `t.card.options.replace('{n}', …)`
  * kalıbının adı konmuş hâli. Şablonun kendisi sözlükte durur ki cümlenin sırası (Türkçede sayı
  * önce mi sonra mı) koda değil metne ait kalsın.
+ *
+ * ── DOLMAYAN YUVA SESSİZ GEÇMEZ (01.09 · kullanıcı bulgusu) ─────────────────
+ * Kurye gün ekranında iki cümlenin anahtarları karışmıştı ve ekranda ham `{driving}`,
+ * `{loaded}/{total}` yazıyordu — testi olmayan bir gövdede günlerce yaşadı. Fonksiyon eksik
+ * anahtarı DÜZELTMEZ (cümlenin nasıl kurulacağını bilmiyor) ama geliştirmede BAĞIRIR: yuva bir
+ * söz ve karşılığı yoksa bunu ilk gören kişi kurye olmamalı.
+ *
+ * Üretimde sessiz: metin yine döner, ham yuvayla — yarım bir cümle, çöken bir ekrandan iyidir.
  */
 export function fillCopy(template: string, values: Record<string, string>): string {
-  return Object.entries(values).reduce((text, [key, value]) => text.replace(`{${key}}`, value), template);
+  const filled = Object.entries(values).reduce(
+    (text, [key, value]) => text.replace(`{${key}}`, value),
+    template,
+  );
+  if (__DEV__) {
+    const kalan = filled.match(/\{[a-zA-Z]\w*\}/g);
+    if (kalan !== null) {
+      // eslint-disable-next-line no-console -- yalnız geliştirme; `logger` istemci paketinde yok.
+      console.warn(`fillCopy: doldurulmayan yuva ${kalan.join(', ')} — şablon: "${template}"`);
+    }
+  }
+  return filled;
 }

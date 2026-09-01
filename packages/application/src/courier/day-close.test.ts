@@ -37,6 +37,8 @@ let stockId: string;
 let accountId: string;
 /** Sefer akışının rotası: claim zone süzgeçli, zonesuz sipariş sefere bağlanmaz. */
 let zoneId: string;
+/** İkinci rota — "araçta iki sefer" hâli ancak iki rotayla kurulur (rota+gün başına tek sefer, K3). */
+let ikinciZoneId: string;
 const createdProfiles: string[] = [];
 
 const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
@@ -70,11 +72,17 @@ beforeAll(async () => {
   zoneId = (await new DeliveryZoneService(db).insert({
     name: `Kapanış rotası ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
   })).id;
+  ikinciZoneId = (await new DeliveryZoneService(db).insert({
+    name: `Kapanış ikinci rota ${stamp}`, warehouseId, weekdays: [1, 2, 3, 4, 5, 6, 7],
+  })).id;
 });
 
 beforeEach(async () => {
   // Sefer temizliği: kapanış seferi `restrict` ile tutar — sıra sabit (close → run).
-  const { data: runRows } = await db.from('delivery_run').select('id').eq('delivery_zone_id', zoneId);
+  const { data: runRows } = await db
+    .from('delivery_run')
+    .select('id')
+    .in('delivery_zone_id', [zoneId, ikinciZoneId]);
   const runIds = (runRows ?? []).map((row) => row.id as string);
   if (runIds.length > 0) {
     await db.from('delivery_run_close').delete().in('delivery_run_id', runIds);
@@ -188,6 +196,28 @@ describe('kapanış taslağı', () => {
     expect(draft.delivered).toHaveLength(1);
     expect(draft.pending.map((stop) => stop.orderId)).toEqual([ulasilamayan]);
     expect(draft.returned.map((stop) => stop.orderId)).toEqual([reddedilen]);
+  });
+
+  it('İKİ SEFER ARAÇTAYKEN kapanış SÜRÜLENİ açar — kurulmuş ama başlamamış olanı değil', async () => {
+    /*
+      ── CİHAZDA ÖLÇÜLEN ARIZA (01.09 · kullanıcı bulgusu) ────────────────────
+      Seçim "kapanmamış İLK sefer"di ve iki seferli günde yanlış kaydı veriyordu: kurye Doğu
+      Hattı'nı sürerken "Seferi kapat" dediğinde ekran, hiç yola çıkmamış Batı Hattı'nın
+      mutabakatını açtı. Bedeli para ve durak — sürülmemiş bir seferi kapatmak onun siparişlerini
+      serbest bırakır ve gerçekten sürülen sefer açık kalır.
+
+      Ölçüt artık `/day` ucunun `run` alanıyla BİREBİR aynı: yola çıkmış ve kapanmamış olan.
+      "Hangi seferi sürüyorum" sorusuna iki okuma iki farklı cevap veremez (CLAUDE §1).
+    */
+    const kurulan = await startCourierDay(db, { courierId, zoneId: ikinciZoneId, date: day, depart: false });
+    expect(kurulan.status).toBe('ok');
+    const surulen = await depart();
+
+    const draft = await openDayClose(db, { courierId, date: day });
+
+    expect(draft.run?.runId).toBe(surulen);
+    if (kurulan.status !== 'ok') return;
+    expect(draft.run?.runId).not.toBe(kurulan.run.runId);
   });
 
   it('sefersiz gün sakin bir boşluktur — run yok, sıfır gösterilir', async () => {

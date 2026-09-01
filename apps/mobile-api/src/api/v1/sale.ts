@@ -1,13 +1,21 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { StockService, WarehouseService, serviceDb } from '@lezzet/database';
-import { ANONYMOUS_BUYER_ID, getCatalogData, getProductDetail, listRecentDoorSales, sellOnSite } from '@lezzet/application';
+import { StockService, serviceDb } from '@lezzet/database';
+import {
+  ANONYMOUS_BUYER_ID,
+  getCatalogData,
+  getProductDetail,
+  listRecentDoorSales,
+  sellOnSite,
+  vehicleWarehouseOf,
+} from '@lezzet/application';
 import {
   DEFAULT_PAGE_SIZE,
   OnSiteSaleRequestSchema,
   OnSiteSaleResponseSchema,
   PreferredLanguageEnum,
   RecentSalesResponseSchema,
+  SalePlaceEnum,
   SaleCatalogPageSchema,
   SaleVariantsResponseSchema,
 } from '@lezzet/types';
@@ -37,44 +45,70 @@ import { warehouseGuard, type WarehouseEnv } from './warehouse';
  * SORULMUYOR (kullanıcı kararı 26.08). İkisini de istemciden almak, kararı istemciye vermek olurdu;
  * `placeOrder`ın *"müşteri kimliği istemciden ASLA alınmaz"* kuralının aynısı.
  */
-export const sale = new Hono<WarehouseEnv>();
+/**
+ * Satışın kendi bağlamı: depo kapısının değişkenlerine **satış yeri** eklenir. Yer, çözülen deponun
+ * kimliğinden ÇIKARILAMAZ (aynı kimlik "seçtiğim tesis" de olabilir) ve katalog okuması buna göre
+ * daralıyor — bu yüzden ayrı bir değişken, türetilmiş bir tahmin değil.
+ */
+interface SaleEnv {
+  Variables: WarehouseEnv['Variables'] & { salePlace: 'facility' | 'van' };
+}
+
+export const sale = new Hono<SaleEnv>();
 
 /**
- * **Kuryenin satış deposu ARACIDIR** — depo çözümünün satışa özel ön adımı (cihazda ölçüldü 26.08).
+ * **SATIŞ YERİ — YÜZEYİN BEYANI, KAPSAMIN İZNİ** (01.09 · kullanıcı kararı, cihazda ölçüldü).
  *
- * `warehouseGuard`ın kuralı "kapsamda tek depo varsa o, değilse söylenmeli" ve depocu için doğru.
- * Kurye için değil: kapsamı BİLEREK çok depoludur (rota seçimi tesislere bakar — `seed/people.ts`
- * 19.25 kararı) ve ekran depo SORAMAZ (sözleşme künyesi: istemcinin dolduracağı meşru kaynak yok).
- * Ölçülen arıza: seed kuryesi {STR, COLMAR} ile `400 warehouse_required` aldı, satış ekranı hiç
- * açılamadı.
+ * ── ÖNCEKİ ÖRTÜK KURAL NEDEN ÇÖKTÜ ──────────────────────────────────────────
+ * Burada `courierVehicleFirst` duruyordu: *"kurye PARAMETRESİZ geldiyse satış yeri aracıdır."*
+ * Kural doğruydu ama sinyali YOKLUKTU ve yokluk bir gün doldu — mobil istemci 30.08'de cihazdaki
+ * depo seçimini her satış isteğine yazmaya başladı (`withWarehouseChoice`). O günden beri adım hiç
+ * çalışmıyordu: kurye "Strasbourg — ana depo"yu seçtiği için kendi ekranında ana deponun katalogunu
+ * görüyordu (ölçüldü 01.09: araçta 4 kalem, ekranda 154 partilik tesis; "kalan 23" birebir
+ * Strasbourg'un stoğu). Kural sunucuda yazılıydı, istemci onu sessizce iptal ediyordu.
  *
- * Kural veri modelinde zaten yazılıydı, buraya yalnız uygulandı: *"yerinde satış yalnız aracın
- * KENDİ stoğundan yapılır — zaten ayrılmış mal satılamaz"* (`data-model/depo.md`, `DOMAIN §17`).
- * Yani kurye parametresiz geldiyse satış yeri kapsamındaki **tek araçtır**; araç yoksa ya da
- * birden çoksa çözüm belirsizdir ve cevap guard'ın dürüst 400'üdür. Parametre VERİLDİYSE bu adım
- * hiç karışmaz — kapsam kontrolü guard'da tek yerde kalır (depo kapısından satan kurye da böyle
- * mümkün olur: `?warehouseId=` kapsamındaki tesisi söyler).
+ * ── YERİNE: AÇIK BEYAN ──────────────────────────────────────────────────────
+ * Yüzey artık `?place=van` diyerek NEREDEN sattığını SÖYLER. Beyan bir yetki değil bir sorudur;
+ * cevabı kapsam verir — araç, personelin kendi `warehouseIds`i içindeki `kind='vehicle'` depodur
+ * (`vehicleWarehouseOf`). İstemci hangi aracı istediğini seçemez, yalnız "aracımdan" diyebilir.
+ * Beyansız istek eskisi gibi guard'a gider: depo kapısından satan depocu da, `?warehouseId=` ile
+ * tesisini söyleyen kurye de aynen çalışır (`DOMAIN §17` — satan kişi malın yanındaki personeldir).
  *
- * Depocu/admin bu adıma hiç girmez: onların çözümü guard'ın kendisidir.
+ * Kuralın kendisi veri modelinde: *"yerinde satış yalnız aracın KENDİ stoğundan yapılır — zaten
+ * ayrılmış mal satılamaz"* (`data-model/depo.md`, `DOMAIN §17`).
  */
-async function courierVehicleFirst(c: Context<WarehouseEnv>, next: Next): Promise<Response | void> {
-  const profile = c.get('staff');
-  const asked = c.req.query('warehouseId');
-  if (!asked && profile.roles.includes('courier') && profile.warehouseIds.length > 1) {
-    const service = new WarehouseService(serviceDb());
-    const scoped = await Promise.all(profile.warehouseIds.map((id) => service.getById(id)));
-    const vehicles = scoped.filter((w) => w?.kind === 'vehicle');
-    if (vehicles.length === 1 && vehicles[0]) {
-      c.set('warehouseId', vehicles[0].id);
-      return next();
-    }
+async function salePlaceGuard(c: Context<SaleEnv>, next: Next): Promise<Response | void> {
+  const raw = c.req.query('place');
+  const declared = raw === undefined ? 'facility' : SalePlaceEnum.safeParse(raw);
+  if (declared !== 'facility' && !declared.success) return fail(c, 'invalid_place', 400);
+  const place = declared === 'facility' ? 'facility' : declared.data;
+
+  /* `facility` beyanı ile BEYANSIZ istek aynı yola gider — ikisi de "kapıdayım" demektir ve depoyu
+     guard çözer (`?warehouseId=` ya da kapsamın tek deposu). Ayrı bir dal yazmak, aynı cevabı iki
+     yerde yaşatmak olurdu. */
+  if (place === 'facility') {
+    c.set('salePlace', 'facility');
+    return warehouseGuard(c, next);
   }
-  return warehouseGuard(c, next);
+
+  const profile = c.get('staff');
+  /* Rol kapısı satışa `warehouse|courier|admin` diyor; "aracımdan" diyebilen yalnız KURYE.
+     Admin'e de açık bırakmak, hiç aracı olmayan bir role kapsam dışı bir depo çözdürmek olurdu. */
+  if (!profile.roles.includes('courier')) return fail(c, 'not_courier', 403);
+
+  const vehicleWarehouseId = await vehicleWarehouseOf(serviceDb(), profile.warehouseIds);
+  /* Araç yoksa cevap DÜRÜST bir redditir, guard'ın "hangi depo" 400'ü değil: kurye bir depo seçmedi,
+     aracından satmak istedi ve aracı yok. Ekran bunu kendi cümlesiyle söyleyebilsin. */
+  if (vehicleWarehouseId === null) return fail(c, 'no_vehicle', 400);
+
+  c.set('warehouseId', vehicleWarehouseId);
+  c.set('salePlace', 'van');
+  await next();
 }
 
 // Sıra güvenlik kararının kendisi (depo ucunun aynı gerekçesi): önce rol (kim), sonra depo (nerede).
 sale.use('*', requireStaffRole('warehouse', 'courier', 'admin'));
-sale.use('*', courierVehicleFirst);
+sale.use('*', salePlaceGuard);
 
 /**
  * Satış — tek çağrıda kapanır. **Kapının kararı ne olursa olsun 200**; "satış oldu mu" gövdede.
@@ -150,7 +184,14 @@ sale.get('/catalog', async (c) => {
   const db = serviceDb();
   const data = await getCatalogData(db, {
     locale,
-    query: { search: q, cursor: decodeCursor(parsed.data.cursor) },
+    query: {
+      search: q,
+      cursor: decodeCursor(parsed.data.cursor),
+      /* ARAÇ BİR VİTRİN DEĞİL (01.09): kurye elinde ne varsa onu satar. Tesis kapısında kural
+         tersine dönüyor ve öyle kalmalı — depocu katalogu tarayıp "burada yok" cevabını da alabilir.
+         Gerekçenin tamamı `listStockedProductIds` künyesinde. */
+      onlyStockedHere: c.get('salePlace') === 'van',
+    },
     place: { warehouseId: c.get('warehouseId'), shippingWarehouseId: null },
     viewer: { channel: 'b2c', b2bApproved: false, customerId: null, groupPercentOff: null },
     limit: DEFAULT_PAGE_SIZE,

@@ -1,3 +1,4 @@
+import { View } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 
 import { Icon } from '@/components/ui/icon';
@@ -75,39 +76,61 @@ export function OperationsScanFab({
   accessibilityHint,
   testID,
 }: OperationsScanFabProps) {
+  /*
+    KONUM DIŞ KABA, GÖRÜNÜŞ DÜĞMEYE (cihazda ölçüldü 01.09 — kullanıcı bulgusu: *"FAB butonu
+    bazen çalışmıyor"*).
+
+    `position:'absolute'` doğrudan `PressableSurface`ın `style`ine veriliyordu ve o stil İÇ görünüme
+    gidiyor (`pressable-surface` künyesi bunu açıkça yazıyor: *"`style` İÇ yüzeye gider"*). Sonuç:
+    daire ÇİZİLİYOR ama dış `Pressable` akışta kalıyor ve tek çocuğu mutlak konumlandığı için
+    **0×0** ölçülüyor — yani dokunacak bir alan yok. Ölçüm: `uiautomator` dökümünde ekranın
+    tıklanabilir düğümleri arasında daire HİÇ görünmüyordu.
+
+    Aynı sınıf hata kitte bir kez daha çözülmüştü: satırda esneyen düğmenin `flex`i de `style`e
+    yazılamıyor, `grow` prop'undan DIŞ Pressable'a veriliyor. Burada da konum dış kaba alındı;
+    `PressableSurface`a yalnız dairenin kendisi (boy, yarıçap, dolgu, gölge) kalıyor ve Pressable
+    o daireye göre ölçülüyor.
+
+    `pointerEvents="box-none"`: kap ekranın köşesinde duran şeffaf bir çerçeve ve altındaki listeyi
+    yutmamalı — dokunuşu yalnız dairenin kendisi alır.
+  */
   return (
-    <PressableSurface
-      onPress={onPress}
-      disabled={disabled}
-      /* Tasarımın `style-active="transform:scale(.94)"`i — küçük yuvarlak öğenin durağı. */
-      feedback="scale-small"
-      style={[
-        styles.fab,
-        { bottom: UnistylesRuntime.insets.bottom + operationsTheme.space['8xl'] + lift },
-        disabled ? styles.fab_disabled : tone === 'scan' ? styles.fab_scan : styles.fab_action,
-      ]}
-      accessibilityLabel={accessibilityLabel}
-      accessibilityHint={accessibilityHint}
-      testID={testID}
+    <View
+      style={[styles.anchor, { bottom: UnistylesRuntime.insets.bottom + operationsTheme.space['8xl'] + lift }]}
+      pointerEvents="box-none"
     >
-      <Icon
-        name={icon}
-        size={operationsTheme.size.fabIcon}
-        /* Koyu ve zeytin dolgunun ikisinde de krem: `on-image` rolünün tanımı zaten "koyu yüzey
+      <PressableSurface
+        onPress={onPress}
+        disabled={disabled}
+        /* Tasarımın `style-active="transform:scale(.94)"`i — küçük yuvarlak öğenin durağı. */
+        feedback="scale-small"
+        style={[styles.fab, disabled ? styles.fab_disabled : tone === 'scan' ? styles.fab_scan : styles.fab_action]}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
+        testID={testID}
+      >
+        <Icon
+          name={icon}
+          size={operationsTheme.size.fabIcon}
+          /* Koyu ve zeytin dolgunun ikisinde de krem: `on-image` rolünün tanımı zaten "koyu yüzey
            üstünde krem metin" (token künyesi). Sönük hâlde de aynı krem kalır — daire zaten
            soluyor, ikinci bir soldurma ikonu okunmaz yapardı. */
-        color={operationsTheme.colors['on-image']}
-        bold
-      />
-    </PressableSurface>
+          color={operationsTheme.colors['on-image']}
+          bold
+        />
+      </PressableSurface>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  fab: {
+  /** Ekranın köşesine çakılan ŞEFFAF kap — dokunuşu yutmaz (`box-none`), yalnız daireyi taşır. */
+  anchor: {
     position: 'absolute',
     /* `bottom` çizimde veriliyor (güvenli alan) — burada yalnız değişmeyen yarısı. */
     right: operationsTheme.space['5xl'],
+  },
+  fab: {
     width: operationsTheme.size.fab,
     height: operationsTheme.size.fab,
     /* Tam daire: yarıçap ölçekten DEĞİL boyun yarısından türer — `radius` ailesi kutu köşesidir,

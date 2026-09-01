@@ -16,8 +16,6 @@ async function typeCollection(amount: string) {
 /** Alanı boşaltır — "tutar yazılmadı" hâlinin gerçek yolu. */
 async function clearCollection() {
   await fireEvent.press(screen.getByTestId('courier-collection-amount'));
-  /* Çekmece bir kare sonra çizilir (`present()` bir durum değişimi) — `waitFor` onu bekler. */
-  await waitFor(() => expect(screen.getByTestId('courier-collection-keypad-delete')).toBeOnTheScreen());
   for (let i = 0; i < 8; i += 1) {
     await fireEvent.press(screen.getByTestId('courier-collection-keypad-delete'));
   }
@@ -35,7 +33,11 @@ import messages from './messages.json';
 */
 jest.mock('@/lib/toast/toast-store', () => {
   const actual = jest.requireActual('@/lib/toast/toast-store');
-  return { ...actual, toastSuccess: (message: string) => lastToast.push(message) };
+  /* ÜÇ FİİL DE YAKALANIR (01.09): sonuç bildirimleri sayfa şeridinden toast'a taşındı, yani
+     reddin sebebi de artık bu kanaldan geçiyor. Yalnız `toastSuccess` gözlenseydi olumsuz
+     cevapların ekranda göründüğünü sınayan testler sessizce körelirdi. */
+  const yakala = (message: string) => lastToast.push(message);
+  return { ...actual, toastSuccess: yakala, toastError: yakala, toastWarning: yakala };
 });
 const lastToast: string[] = [];
 
@@ -184,9 +186,6 @@ async function renderScannedStop(
   await renderDelivery();
   for (const label of ['Kutu 1', 'Kutu 2']) {
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
-    /* Çekmece bir kare sonra çizilir: `visible` prop'u kütüphanenin `present()`ine çevriliyor ve o
-       bir durum değişimi. Cihazda görünmez, testte `fireEvent`ler aynı karede koştuğu için görünür. */
-    await waitFor(() => expect(screen.getByLabelText(label)).toBeOnTheScreen());
     await fireEvent.press(screen.getByLabelText(label));
   }
 }
@@ -285,8 +284,6 @@ describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
       ],
     });
     await fireEvent.press(screen.getByTestId('courier-goods-refuse-open'));
-    /* Çekmece bir kare sonra çizilir (`present()` bir durum değişimi) — `waitFor` onu bekler. */
-    await waitFor(() => expect(screen.getByTestId(`courier-refuse-step-${BAKLAVA}-increase`)).toBeOnTheScreen());
     // Baklava 2 adet gönderildi, 1'i geri verildi.
     await fireEvent.press(screen.getByTestId(`courier-refuse-step-${BAKLAVA}-increase`));
     await fireEvent.press(screen.getByTestId('courier-refuse-done'));
@@ -321,8 +318,6 @@ describe('teslimat · mal (reddedilen kalem çekmecesi)', () => {
     expect(screen.getByTestId('courier-collection-amount')).toHaveTextContent(/42,00\s€/);
 
     await fireEvent.press(screen.getByTestId('courier-goods-refuse-open'));
-    /* Çekmece bir kare sonra çizilir (`present()` bir durum değişimi) — `waitFor` onu bekler. */
-    await waitFor(() => expect(screen.getByTestId(`courier-refuse-step-${BAKLAVA}-increase`)).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId(`courier-refuse-step-${BAKLAVA}-increase`));
     await fireEvent.press(screen.getByTestId('courier-refuse-done'));
 
@@ -514,8 +509,6 @@ describe('teslimat · sonuç akışı (K5)', () => {
       undelivered: { ok: { status: 'ok', outcome: 'refused', currentStatus: 'returned' } },
     });
     await fireEvent.press(screen.getByTestId('courier-outcome-refused'));
-    /* Çekmece bir kare sonra çizilir (`present()` bir durum değişimi) — `waitFor` onu bekler. */
-    await waitFor(() => expect(screen.getByTestId('courier-outcome-chip-çok geç geldi')).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId('courier-outcome-chip-çok geç geldi'));
     await fireEvent.press(screen.getByTestId('courier-outcome-sheet-confirm'));
 
@@ -537,7 +530,7 @@ describe('teslimat · sonuç akışı (K5)', () => {
     await fireEvent.press(screen.getByTestId('courier-outcome-sheet-confirm'));
 
     await waitFor(() => expect(screen.getByTestId('courier-outcome-note-error')).toBeOnTheScreen());
-    expect(screen.queryByTestId('courier-delivery-notice')).toBeNull();
+    expect(lastToast).toHaveLength(0);
   });
 });
 
@@ -546,10 +539,10 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     await renderScannedStop({}, undefined, { deliver: { ok: { status: 'stale', currentStatus: 'cancelled' } } });
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('courier-delivery-notice')).toBeOnTheScreen());
-    const notice = screen.getByTestId('courier-delivery-notice');
-    expect(notice).toHaveTextContent(/"İptal" durumunda/);
-    expect(notice).toHaveTextContent(/İKİLENMEDİ/);
+    await waitFor(() => expect(lastToast.length).toBeGreaterThan(0));
+    const notice = lastToast.at(-1) ?? '';
+    expect(notice).toMatch(/"İptal" durumunda/);
+    expect(notice).toMatch(/İKİLENMEDİ/);
     // Ekran SONUÇ ekranına dönmez: kurye tekrar deneyebilmeli.
     expect(screen.getByTestId('courier-delivery-cta')).toBeOnTheScreen();
   });
@@ -559,7 +552,7 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('courier-delivery-notice')).toHaveTextContent(/\(B2B\).*HİÇBİR kayıt yazılmadı/),
+      expect(lastToast.at(-1) ?? '').toMatch(/\(B2B\).*HİÇBİR kayıt yazılmadı/),
     );
   });
 
@@ -568,7 +561,7 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('courier-delivery-notice')).toHaveTextContent(t.delivery.refusal.notAssigned),
+      expect(lastToast.at(-1) ?? '').toMatch(t.delivery.refusal.notAssigned),
     );
   });
 
@@ -579,7 +572,7 @@ describe('teslimat · kapının olumsuz cevapları EKRANDA', () => {
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('courier-delivery-notice')).toHaveTextContent(/Bağlantı yok.*kuyruk YOK/),
+      expect(lastToast.at(-1) ?? '').toMatch(/Bağlantı yok.*kuyruk YOK/),
     );
   });
 
@@ -615,7 +608,6 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     expect(screen.getByTestId('courier-delivery-cta')).toBeDisabled();
 
     await fireEvent.press(screen.getByTestId('courier-box-scan'));
-    await waitFor(() => expect(screen.getByLabelText('Kutu 2')).toBeOnTheScreen());
     await fireEvent.press(screen.getByLabelText('Kutu 2'));
     await waitFor(() => expect(screen.getByTestId('courier-boxes-heading')).toHaveTextContent(/2\/2 OKUTULDU/));
     // Kilit açıldı: kalem ARTIK işaretlenebiliyor ve teslim düğmesi de açık.
@@ -629,10 +621,7 @@ describe('kutu okutması (23.8 — teslimin ön koşulu)', () => {
     // Sıra tasarımın sırası: ÖNCE kutular, sonra kalem — kilit tersini yaptırmıyor.
     for (const label of ['Kutu 1', 'Kutu 2']) {
       await fireEvent.press(screen.getByTestId('courier-box-scan'));
-      /* Çekmece bir kare sonra çizilir: `visible` prop'u kütüphanenin `present()`ine çevriliyor ve o
-       bir durum değişimi. Cihazda görünmez, testte `fireEvent`ler aynı karede koştuğu için görünür. */
-    await waitFor(() => expect(screen.getByLabelText(label)).toBeOnTheScreen());
-    await fireEvent.press(screen.getByLabelText(label));
+      await fireEvent.press(screen.getByLabelText(label));
     }
     await fireEvent.press(screen.getByTestId('courier-delivery-cta'));
 
@@ -695,10 +684,7 @@ describe('adım numarası (v3 · 30.08)', () => {
 
     for (const label of ['Kutu 1', 'Kutu 2']) {
       await fireEvent.press(screen.getByTestId('courier-box-scan'));
-      /* Çekmece bir kare sonra çizilir: `visible` prop'u kütüphanenin `present()`ine çevriliyor ve o
-       bir durum değişimi. Cihazda görünmez, testte `fireEvent`ler aynı karede koştuğu için görünür. */
-    await waitFor(() => expect(screen.getByLabelText(label)).toBeOnTheScreen());
-    await fireEvent.press(screen.getByLabelText(label));
+      await fireEvent.press(screen.getByLabelText(label));
     }
 
     // Hepsi okutulunca düğme HİÇ çizilmez: basılacak bir şey kalmadı.

@@ -9,7 +9,7 @@ import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
-import { OperationsStickyBar } from '@/components/operations/sticky-bar';
+import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { ScanSheet } from '@/components/scan/scan-sheet';
@@ -221,25 +221,29 @@ export function CourierLoadScreen() {
         </View>
 
         {/*
-          OKUT DÜĞMESİ KİTTEN (30.08). İkon + etiket + zeytin dolgu + `flat` yükselti — üçü de
-          `PrimaryButton`ın kendi işi; burada elden çiziliyordu. İkon emoji DEĞİL çizgi ikon:
-          emoji cihazdan cihaza başka çiziliyor ve paletin dışında duruyor.
+          YÜKLEMEYİ BİTİR KOYU BLOĞUN ALTINDA (kullanıcı kararı 01.09).
 
-          IŞIMA VERİLEMİYOR ve sebebi kitte: tasarımın zeytin ışıması (`0 4px 14px`) bugün yalnız
-          `OperationsStickyBar`ın `glow` prop'unda yaşıyor, bu düğme ise AKIŞTA. Ölçtüm — tasarımın
-          dört ışımalı düğmesinin DÖRDÜ DE akışta, hiçbiri yapışkan çubukta değil; yani ışıma
-          bugün ulaşılamaz bir yerde duruyor. Kite bildirildi (ortak defter), karar kit sahibinde.
+          Okutma akıştan çıkıp YÜZEN düğmeye taşındı (aşağıda) ve boşalan yer sayfanın en okunur
+          noktasıydı: sayacın hemen altı. Düğme eskiden yapışkan çubuktaydı; oraya inen göz zaten
+          "bitirdim mi" diye bakıyordu, oysa cevabı sayacın kendisi veriyor. İkisini yan yana
+          koymak, soruyu ve cevabı aynı yere getirir.
+
+          TON YÜKLEMENİN HÂLİNİ TAŞIR (v3 `04-Araca-Yukleme` iki karesi): eksik kutu varken
+          MÜREKKEP ("bitirebilirsin ama eksik"), hepsi bindiğinde ZEYTİN ("tamam").
         */}
-        {remaining === 0 ? null : (
-          <PrimaryButton
-            label={t.day.boxes.scanCta}
-            onPress={() => day.setBoxScanOpen(true)}
-            tone="olive"
-            elevation="flat"
-            icon="scan"
-            testID="courier-load-scan"
-          />
-        )}
+        <PrimaryButton
+          label={
+            remaining === 0
+              ? fillCopy(t.day.load.ctaDone, { n: String(total) })
+              : fillCopy(t.day.load.ctaPartial, { n: String(remaining) })
+          }
+          hint={t.day.load.ctaHint}
+          onPress={() => router.navigate('/van-runs')}
+          tone={remaining === 0 ? 'olive' : 'ink'}
+          elevation="flat"
+          testID="courier-load-back-cta"
+        />
+        {remaining === 0 ? null : <Text style={styles.footnote}>{t.day.load.footnote}</Text>}
 
         {/* BAŞLIK KOŞULSUZ (v3:18 — düz metin): grup başlığı artık tek seferde de çizildiği
             için "DURAKLARA GÖRE" varyantının okuyanı kalmadı. */}
@@ -354,43 +358,25 @@ export function CourierLoadScreen() {
       </ScrollView>
 
       {/*
-        YAPIŞKAN DİP: "günün rotasına dön" + eksik kutu dipnotu (v3:1461).
+        OKUTMA YÜZEN DÜĞMEDE (kullanıcı kararı 01.09 · kitin kendi künyesi bunu 31.08'de zaten
+        yazmıştı): *"Barkod okutma yukarılarda bir yerde kalmamalı, her zaman elinin altında
+        olmalı."* Akıştaki düğme kaydırınca kayboluyordu ve rampada eli koli dolu kuryenin
+        kaybolan bir düğmeyi araması, işin kendisini yavaşlatıyor.
 
-        Dipnot kaydırma alanının içinde, listenin en sonundaydı — yani ancak sonuna kadar inen
-        kurye görüyordu. Oysa cümle bir KARARIN bedelini anlatıyor ("eksik kutuyla çıkarsan o durak
-        açılmaz") ve karar dipteki düğmeyle veriliyor; ikisi yan yana durmalı.
+        Konumu komponentin KENDİSİ biliyor (`OperationsScanFab`) — çağıran yalnız NE okutulduğunu
+        söyler. Yedi operasyon ekranının yedisi de aynı daireyi aynı yerde çizsin diye.
 
-        Dipnot YALNIZ eksik varken çizilir: hepsi bindiğinde uyarının konusu yok ve her hâlde
-        yazılan bir uyarı, okunmayan bir uyarıdır.
+        Kutular bitince daire kalkar: okutacak bir şey kalmadığında elin altındaki eylem de yok.
       */}
-      <OperationsStickyBar>
-        {/*
-          ÇIKIŞ DÜĞMESİ TASARIMIN KENDİ ETİKETİYLE (v3:18 `yukCtaLabel`): tam yüklendiyse "Yola
-          çık — N kutu araçta", eksikse "Yüklemeyi bitir — N kutu eksik". "Günün rotasına dön"
-          yazılıydı ve rampadaki kuryeye yüklemenin BİTTİĞİNİ söylemiyordu — bir geri düğmesi
-          gibi okunuyordu.
-
-          Hedef ARAÇTAKİ SEFERLER (tasarımın `yuklemeBitir`i de oraya gidiyor): yükleme bitince
-          sıradaki karar "hangisini süreceğim" ve o karar orada veriliyor. Düğme yola ÇIKARMIYOR —
-          dipnot bunu söylüyor.
-        */}
-        {/* YARDIMCI SATIR DÜĞMENİN İÇİNDE (v3:18 — `min-height:64px`, iki satır tek dokunma
-            alanında). Düğmenin ALTINA yazılıydı ve ondan kopuk bir not gibi duruyordu: basmanın
-            ne yaptığı, basılan şeyin üstünde yazmalı (araçtaki seferler ekranının aynı kuralı). */}
-        <PrimaryButton
-          label={
-            remaining === 0
-              ? fillCopy(t.day.load.ctaDone, { n: String(total) })
-              : fillCopy(t.day.load.ctaPartial, { n: String(remaining) })
-          }
-          hint={t.day.load.ctaHint}
-          onPress={() => router.navigate('/van-runs')}
-          tone="ink"
-          elevation="flat"
-          testID="courier-load-back-cta"
+      {remaining === 0 ? null : (
+        <OperationsScanFab
+          icon="scan"
+          tone="scan"
+          accessibilityLabel={t.day.boxes.scanCta}
+          onPress={() => day.setBoxScanOpen(true)}
+          testID="courier-load-scan"
         />
-        {remaining === 0 ? null : <Text style={styles.footnote}>{t.day.load.footnote}</Text>}
-      </OperationsStickyBar>
+      )}
 
       <ScanSheet
         open={day.boxScanOpen}

@@ -21,7 +21,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { saleCopy } from './copy';
 import { useWarehouseStatus } from '@/screens/warehouse/warehouse-status';
-import { useSaleContext } from './sale-context';
+import { useSalePlace, useSaleContext } from './sale-context';
 import { selectionOf } from './use-sale.hook';
 
 /*
@@ -44,6 +44,11 @@ const t = saleCopy;
 export function SaleScreen() {
   const router = useRouter();
   const sale = useSaleContext();
+  /* SATIŞ YERİ EKRANIN CÜMLESİNİ DE DEĞİŞTİRİR (01.09): araçtan satarken liste kataloğun tamamı
+     değil ARACIN İÇERİĞİDİR (uç `onlyStockedHere` ile daraltıyor) ve boş liste "aramaya uyan yok"
+     değil "araçta mal yok" demektir. İki hâle aynı cümleyi kurmak, kuryeyi olmayan bir ürünü
+     aramaya gönderirdi. */
+  const place = useSalePlace();
   /* ÇEVRİMDIŞI KİLİDİ (v3:20) — depo yazma ekranlarının kuralı burada da geçerli ve AYNI sinyalden
      okunuyor: sepete atılan kalem, o anki fiyatı ve kalan stoğu taşır; hat kapalıyken ikisi de
      bayattır ve bayat fiyatla yazılan satış, müşterinin gözünün önünde yanlış para demektir. */
@@ -64,7 +69,7 @@ export function SaleScreen() {
     <View style={styles.screen} testID="sale-screen">
       <OperationsStackHeader
         title={t.title}
-        subtitle={t.subtitle}
+        subtitle={place === 'van' ? t.van.subtitle : t.subtitle}
         onBack={() => router.back()}
         backLabel={t.back}
         testID="sale-header"
@@ -102,9 +107,20 @@ export function SaleScreen() {
       ) : (
         <FormScroll contentContainerStyle={styles.list} testID="sale-body">
           {sale.products.length === 0 ? (
-            <Text style={styles.hint} testID="sale-search-empty">
-              {t.searchEmpty}
-            </Text>
+            place === 'van' && sale.search.trim().length === 0 ? (
+              /* Aranmadan boş kalan ARAÇ bir arama sonucu değil, bir DURUMDUR — ve çıkışı da var:
+                 rampada serbest ürün yükleme (v3:19). Cümle o kapıyı gösteriyor. */
+              <OperationsNoticeBlock
+                variant="empty"
+                title={t.van.empty}
+                description={t.van.emptyHint}
+                testID="sale-van-empty"
+              />
+            ) : (
+              <Text style={styles.hint} testID="sale-search-empty">
+                {place === 'van' ? t.van.searchEmpty : t.searchEmpty}
+              </Text>
+            )
           ) : (
             sale.products.map((product) => (
               <ProductRow key={product.id} product={product} onOpen={sale.openProduct} />

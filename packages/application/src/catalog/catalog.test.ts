@@ -405,3 +405,73 @@ describe('yedek kategoriler ÇAĞIRANIN kararıdır', () => {
     expect(data.categories.some((c) => c.id === categoryId)).toBe(true);
   });
 });
+
+/*
+  YALNIZ BURADA DURAN MAL (01.09 · kullanıcı kararı) — vitrin kuralının TERSİ ve tek bir yüzey için.
+
+  Vitrinin kuralı *"katalog süzülmez, işaretlenir"*: rafta olmayan ürün de listede durur, üstünde
+  "tükendi" yazar. Müşteri için doğru — ARAÇ için değil. Kurye elinde ne varsa onu satar ve
+  01.09'da ölçülen arıza tam buydu: kurye kendi satış ekranında aracının dört kalemini değil, ana
+  deponun yüz elli dört partisini görüyordu.
+
+  Daraltma bu yüzden bir BAYRAK, ayrı bir okuma değil: aynı süzgeç, aynı bağlam, aynı kart
+  indirgemesi — ayrışan tek şey kümenin kaynağı. İkinci bir okuma yazmak, vitrinle satış ekranının
+  aynı ürün için farklı "tükendi" demesine kapı bırakırdı.
+*/
+describe('yalnız burada duran mal', () => {
+  // Ayrı damga BİLİNÇLİ: dosyanın öteki testleri `search: String(stamp)` ile süzüyor ve bu iki ürün
+  // o kümeye girseydi fiyat sıralaması iddialarını sessizce bozardı.
+  const vagonStamp = stamp + 7;
+  let dolu: { productId: string; variantId: string };
+  let bos: { productId: string; variantId: string };
+
+  beforeAll(async () => {
+    const yap = async (ad: string, stokVar: boolean) => {
+      const { product, variants } = await new ProductService(db).create({
+        name: ucDil(`Vagon${vagonStamp} ${ad}`),
+        categoryId,
+        ...yayinaHazir,
+        variants: [{ label: { tr: '1 kg' } }],
+      });
+      productIds.push(product.id);
+      await prices.insert({ variantId: variants[0]!.id, channel: 'b2c', amountCents: 500 });
+      if (stokVar) {
+        await stocks.insert({
+          warehouseId, variantId: variants[0]!.id, physicalQty: 3, expiryDate: dayOffset(60), purchasePriceCents: 100,
+        });
+      }
+      return { productId: product.id, variantId: variants[0]!.id };
+    };
+    dolu = await yap('Dolu', true);
+    bos = await yap('Boş', false);
+  });
+
+  const kimlikler = async (onlyStockedHere: boolean, place: PlaceWarehouses) => {
+    const data = await getCatalogData(db, {
+      locale: 'tr',
+      query: { search: `Vagon${vagonStamp}`, onlyStockedHere },
+      place,
+      viewer: VISITOR,
+    });
+    return data.products.map((p) => p.id);
+  };
+
+  it('KAPALIYKEN vitrin kuralı sürüyor — stoksuz ürün de listede', async () => {
+    const ids = await kimlikler(false, yerli());
+    expect(ids).toContain(dolu.productId);
+    expect(ids).toContain(bos.productId);
+  });
+
+  it('AÇIKKEN yalnız o depoda PARTİSİ olan gelir', async () => {
+    const ids = await kimlikler(true, yerli());
+    expect(ids).toEqual([dolu.productId]);
+  });
+
+  it('YER BİLİNMİYORKEN daraltma boş kümedir — "burada duran" sorusunun deposuz cevabı yok', async () => {
+    /* Sessizce tüm katalogu döndürmek, bayrağı geçiren yüzeyi süzgeçsiz bırakmak olurdu — ve o
+       yüzey (kurye satışı) tam olarak süzülmek için geçiriyor. Yanlış cevap vermektense hiç cevap
+       vermemek: `CLAUDE §1` — ölçülemeyen değer sıfır değildir, ama olmayan bir yerin envanteri de
+       tüm envanter değildir. */
+    expect(await kimlikler(true, YERSIZ)).toEqual([]);
+  });
+});

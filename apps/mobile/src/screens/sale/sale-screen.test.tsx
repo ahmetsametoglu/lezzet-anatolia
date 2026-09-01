@@ -1,13 +1,16 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import type { SaleCatalogProduct, SaleVariant, StaffWarehouse } from '@lezzet/types';
+import type { SaleCatalogProduct, SalePlace, SaleVariant, StaffWarehouse } from '@lezzet/types';
 
 import { SaleScreen } from './sale-screen';
 import { SaleCartScreen } from './sale-cart-screen';
 import { SaleHistoryScreen } from './sale-history-screen';
 import { SaleReceiptScreen } from './sale-receipt-screen';
 import { SaleProvider } from './sale-context';
+import { ToastHost } from '@/components/ui/toast-host';
+import { resetToast } from '@/lib/toast/toast-store';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { resetWarehouseStatus } from '@/screens/warehouse/warehouse-status';
+import { chooseWarehouse, resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
 
 /*
   YERİNDE SATIŞ EKRAN TESTİ (21.119) — bu ekranın EN KRİTİK iddiaları paranın yazımıyla ilgilidir:
@@ -142,16 +145,18 @@ function postBody(): { lines: { variantId: string; qty: number; negotiatedUnitPr
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
 }
 
-async function renderSale() {
+async function renderSale(place: SalePlace = 'facility') {
   // Katalog + sepet AYNI sağlayıcı altında birlikte çizilir: akış testleri rota geçişini değil,
   // iki yüzeyin ORTAK durumunu sınar (gezinme expo-router'ın işi, bizim iddiamız değil).
   await render(
-    <SaleProvider>
+    <SaleProvider place={place}>
       <SaleScreen />
       <SaleCartScreen />
       {/* Fiş de aynı sağlayıcının altında: satış yazılınca sepet ekranı `/sale/receipt`e geçiyor
           (v3:22) ve sonucun okunacağı yer artık orası — geçişin KENDİSİ de burada ölçülüyor. */}
       <SaleReceiptScreen />
+      {/* TOAST HOST TESTTE DE ÇİZİLİR (01.09): olumsuz cevaplar artık bu kanaldan geçiyor. */}
+      <ToastHost />
     </SaleProvider>,
   );
   await waitFor(() => expect(screen.getByTestId(`sale-product-${TEK_ID}`)).toBeTruthy());
@@ -181,6 +186,10 @@ beforeEach(() => {
   // Çevrimdışı sinyali KÜRESELDİR (depo ekranlarıyla ortak); sıfırlanmazsa bir testin düşen isteği
   // sonraki testin ekranını kilitli açardı.
   resetWarehouseStatus();
+  // Depo seçimi de MODÜL DÜZEYİNDE: bir testin seçtiği depo, sonrakinin adresine sessizce eklenirdi.
+  resetWarehouseChoice();
+  // Toast MODÜL düzeyinde: sayacı düşmezse mesaj sonraki teste sızar, süreç de kapanmaz.
+  resetToast();
 });
 
 it('kart kalan adedi yazıyor — personel satmayı denemeden okuyor', async () => {
@@ -235,9 +244,10 @@ it('yetersiz stok cevabı adı ve kalanıyla görünür — sepet BOZULMAZ', asy
   await pickCash();
 
   await fireEvent.press(screen.getByTestId('sale-cta'));
-  await waitFor(() => expect(screen.getByTestId('sale-notice')).toBeTruthy());
-
-  expect(screen.getByTestId('sale-notice').props.children).toContain('Simit (kalan 3)');
+  /* Cevap artık TOAST'ta (01.09): düğmenin üstündeki cümle bir sonraki eyleme kadar asılı
+     kalıyordu. Ölçülen şey değişmedi — personel müşteriye "üçü var" diyebilmeli. */
+  await waitFor(() => expect(screen.getByTestId('toast-message')).toBeTruthy());
+  expect(screen.getByTestId('toast-message')).toHaveTextContent(/Simit \(kalan 3\)/);
   // Sepet duruyor: personel adedi düşürüp yeniden dener, her şeyi baştan seçmez.
   expect(screen.getByTestId(`sale-cart-${TEK_VARYANT}`)).toBeTruthy();
 });
@@ -355,7 +365,11 @@ async function renderHistory(warehouse: StaffWarehouse | null = null) {
         resolvedWarehouseId: warehouse?.id ?? null,
       }}
     >
-      <SaleHistoryScreen />
+      {/* Sağlayıcı BURADA DA sarıyor (01.09): ekran artık satış YERİNİ okuyor (`useSalePlace`) —
+          uygulamada zaten `sale/_layout`ın altında duruyor, sağlayıcısız hâli yok. */}
+      <SaleProvider place="facility">
+        <SaleHistoryScreen />
+      </SaleProvider>
     </OperationsSessionProvider>,
   );
 }
@@ -451,5 +465,52 @@ describe('fiş (v3:22)', () => {
 
     expect(screen.getByTestId('sale-receipt-empty')).toBeTruthy();
     expect(screen.queryByTestId('sale-receipt-card')).toBeNull();
+  });
+});
+
+describe('araçtan satış (01.09 · kullanıcı kararı)', () => {
+  /*
+    ── ÖLÇÜLEN ARIZA ──────────────────────────────────────────────────────────
+    Kurye "Yoldan gelen müşteri"ye dokununca ANA DEPONUN kataloğunu görüyordu: araçta dört kalem
+    varken ekranda tesisin partileri vardı. Sebep telde: satış istekleri cihazdaki depo seçimini
+    (`?warehouseId=`) taşıyordu ve sunucunun "kuryenin satış deposu aracıdır" kuralı yalnız
+    PARAMETRESİZ isteğe karışıyordu — yani hiç karışmıyordu.
+
+    Kuryenin seçtiği depo onun ROTA deposudur (hangi bölgenin duraklarını sürüyor), satış deposu
+    değil. İkisi aynı parametreye yazıldığı sürece kural bir daha ölür; bu yüzden yer artık
+    ADRESTE ve açık.
+  */
+  it('araç yüzeyi depo seçimini TAŞIMAZ, yerini SÖYLER', async () => {
+    withNetwork({ status: 'failed' });
+    chooseWarehouse('00000000-0000-4000-8000-0000000000fa'); // personelin seçtiği rota deposu
+    await renderSale('van');
+
+    const catalogUrl = String(fetchMock.mock.calls.find(([url]) => String(url).includes('/sale/catalog'))?.[0]);
+    expect(catalogUrl).toContain('place=van');
+    expect(catalogUrl).not.toContain('warehouseId=');
+  });
+
+  it('KAPI yüzeyi seçilen depoyu taşımaya devam eder — iki yüzey ayrışmaz', async () => {
+    withNetwork({ status: 'failed' });
+    chooseWarehouse('00000000-0000-4000-8000-0000000000fa');
+    await renderSale('facility');
+
+    const catalogUrl = String(fetchMock.mock.calls.find(([url]) => String(url).includes('/sale/catalog'))?.[0]);
+    expect(catalogUrl).toContain('warehouseId=00000000-0000-4000-8000-0000000000fa');
+  });
+
+  it('BOŞ ARAÇ bir arama sonucu değil, bir durumdur — çıkışını da gösterir', async () => {
+    /* "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin" cümlesi burada kuryeyi olmayan bir
+       ürünü aramaya gönderirdi. Doğru cümle malın nereden geleceğini söyler (v3:19). */
+    fetchMock.mockImplementation(() => Promise.resolve(ok({ products: [], total: 0, nextCursor: null })));
+    await render(
+      <SaleProvider place="van">
+        <SaleScreen />
+      </SaleProvider>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId('sale-van-empty')).toBeTruthy());
+    expect(screen.getByTestId('sale-van-empty')).toHaveTextContent(/Araca serbest ürün/);
+    expect(screen.queryByTestId('sale-search-empty')).toBeNull();
   });
 });

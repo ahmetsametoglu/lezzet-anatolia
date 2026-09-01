@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
+import { hapticError, hapticSuccess, hapticWarning } from '@/lib/haptics/haptics';
 
 /*
   TOAST DEPOSU — v3'ün `toastM`i (v3:437): tek satırlık bilgi mesajı, 2400 ms sonra kendiliğinden
@@ -18,9 +18,18 @@ import { hapticError, hapticSuccess } from '@/lib/haptics/haptics';
   biliyordu — yani kimse bilmiyordu. Oysa toast basılan an, tanımı gereği kullanıcının SONUÇ
   BEKLEDİĞİ andır: uygulamanın en doğal geri bildirim kanalı burası.
 
-  Üç fiil, üç niyet: `toastSuccess` (işlem oldu) · `toastError` (olmadı) · `toastInfo` (ne oldu
-  ne olmadı — bilgi). Titreşim ilk ikisine bağlı, `toastInfo` SESSİZ. Ayrımın bedeli çağıranın
-  tek kelime seçmesi; kazancı yirmi ekranın aynı üslupla konuşması.
+  Dört fiil, dört niyet: `toastSuccess` (işlem oldu) · `toastWarning` (oldu ama tam olmadı) ·
+  `toastError` (olmadı) · `toastInfo` (ne oldu ne olmadı — bilgi). Titreşim ilk üçüne bağlı,
+  `toastInfo` SESSİZ. Ayrımın bedeli çağıranın tek kelime seçmesi; kazancı yirmi ekranın aynı
+  üslupla konuşması.
+
+  ── `toastWarning` NEDEN SONRADAN GELDİ (01.09) ─────────────────────────────
+  Operasyon kancalarının ortak ton sözlüğü dört tonlu (`use-notice.hook`) ve KISMİ başarı orada
+  gerçek bir hâl: *"sefer açıldı ama iki durak atlandı"*. Bildirimler toast'a taşınınca (kullanıcı
+  kararı: sonuç ekranda değil toast'ta görünür) o ton kanalsız kaldı — `toastInfo`ya düşseydi
+  SESSİZ olurdu, `toastError`a düşseydi kısmen başarılı bir işlem hata gibi titreşirdi. Metnin
+  görünüşü aynı (şablonda tek toast var); ayrışan tek şey ele giden sinyal, ki operasyonda ekrana
+  bakmadan alınan tek sinyal odur.
 
   Titreşim burada, host'ta DEĞİL: host bir çizim katmanı ve kendini yeniden çizebilir; titreşim
   ise bir OLAY, iki kez olmamalı. Yayın anı olayın tek gerçekleştiği yerdir.
@@ -53,6 +62,12 @@ export function toastSuccess(message: string): void {
   publish(message);
 }
 
+/** OLDU AMA TAM OLMADI — kısmi sonuç ("sefer açıldı, iki durak atlandı"). Uyarı titreşimi. */
+export function toastWarning(message: string): void {
+  hapticWarning();
+  publish(message);
+}
+
 /** OLMADI — istenen sonuç gelmedi ve kullanıcının bunu bilmesi gerekiyor. Titreşir. */
 export function toastError(message: string): void {
   hapticError();
@@ -62,6 +77,21 @@ export function toastError(message: string): void {
 /** BİLGİ — bir sonucun duyurusu değil, yalnız haber ("yakında", "listenin sonu"). SESSİZ. */
 export function toastInfo(message: string): void {
   publish(message);
+}
+
+/**
+ * **Testlerin başlangıç noktası** — mesajı ve SAYACI birlikte düşürür (01.09).
+ *
+ * Sayaç asıl mesele: toast basan bir ekran testi bittiğinde 2400 ms'lik `setTimeout` ayakta
+ * kalıyor ve Jest süreci kapanmıyor ("did not exit one second after the test run"). Modül
+ * düzeyinde durum dosyalar arası da sızar — bir testin bastığı mesaj, sonraki testin ekranında
+ * asılı kalırdı (`resetWarehouseChoice`in aynı gerekçesi).
+ */
+export function resetToast(): void {
+  if (timer !== null) clearTimeout(timer);
+  timer = null;
+  current = null;
+  emit();
 }
 
 /** Kökteki host'un aboneliği — mesaj yokken `null` (host hiçbir şey çizmez). */

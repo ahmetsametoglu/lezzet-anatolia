@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import {
   type OnSiteSaleRequest,
+  type SalePlace,
   OnSiteSaleResponseSchema,
   RecentSalesResponseSchema,
   SaleCatalogPageSchema,
@@ -12,20 +13,30 @@ import { withWarehouseChoice } from '../operations/warehouse-choice';
 import type { ApiFetchInit, ApiResult } from './client';
 
 /**
- * **Bu dosyanın TEK çağrı kapısı** — depo istemcisiyle AYNI sarmalayıcı (`lib/api/warehouse.ts`
- * künyesi): personelin seçtiği depo adrese yazılır, seçim yoksa adres aynen gider.
+ * **Bu dosyanın TEK çağrı kapısı** — ve satış yerini adrese yazan yer.
  *
- * Satış uçları da depo kapısının arkasında (`courierVehicleFirst` → `warehouseGuard`) ve seçimi
- * ATLASAYDI iki ekran ayrışırdı: depo işleri seçilen tesiste, satış ise kapının kendi çözdüğü
- * yerde (kuryede: araçta) yazılırdı. Aynı personelin aynı telefonda iki farklı depoda çalışması,
- * stoğu iki yerden birden bozmanın en sessiz yoludur (DOMAIN §17).
+ * ── İKİ YÜZEY, İKİ DEPO ─────────────────────────────────────────────────────
+ * `facility` (depo kapısı): personelin seçtiği depo adrese yazılır, seçim yoksa adres aynen gider —
+ * depo istemcisinin (`lib/api/warehouse.ts`) birebir aynı sarmalayıcısı. Depo işleri ile satış aynı
+ * tesiste yazılsın diye; ayrışsalardı aynı personel aynı telefonda iki depoyu birden bozardı.
+ *
+ * `van` (kuryenin aracı): cihazdaki depo seçimi **YAZILMAZ** ve yazılmamalı. Kuryenin seçtiği tesis
+ * onun ROTA deposudur (hangi bölgenin duraklarını sürüyor), satış deposu değil — aracını sunucu
+ * kapsamdan çözer. Ölçülen arıza (01.09): seçim satış isteğine de yazıldığı için kurye kendi
+ * ekranında ana deponun kataloğunu görüyordu, aracındaki dört kalemi değil.
+ *
+ * Beyan HER İSTEKTE yazılıyor, yalnız `van`da değil: isteğin nereden geldiğini söylemesi, sunucunun
+ * yokluktan çıkarım yapmasından güvenlidir — bir önceki kural (`courierVehicleFirst`) tam olarak
+ * yokluk sinyali dolduğu için sessizce ölmüştü.
  */
 function saleFetch<TSchema extends z.ZodTypeAny>(
   path: string,
+  place: SalePlace,
   schema: TSchema,
   init: ApiFetchInit = {},
 ): Promise<ApiResult<z.infer<TSchema>>> {
-  return authorizedFetch(withWarehouseChoice(path), schema, init);
+  const addressed = `${path}${path.includes('?') ? '&' : '?'}place=${place}`;
+  return authorizedFetch(place === 'van' ? addressed : withWarehouseChoice(addressed), schema, init);
 }
 
 /*
@@ -61,13 +72,21 @@ function queryOf(params: Record<string, string | undefined>): string {
 export function fetchSaleCatalog(params: {
   q?: string;
   cursor?: string;
+  place: SalePlace;
 }): Promise<ApiResult<z.infer<typeof SaleCatalogPageSchema>>> {
-  return saleFetch(`/api/v1/sale/catalog${queryOf({ locale: 'tr', q: params.q, cursor: params.cursor })}`, SaleCatalogPageSchema);
+  return saleFetch(
+    `/api/v1/sale/catalog${queryOf({ locale: 'tr', q: params.q, cursor: params.cursor })}`,
+    params.place,
+    SaleCatalogPageSchema,
+  );
 }
 
 /** **Boy çekmecesi** — çok boylu ürünün boyları, fiyat ve kalan adetle (boy seçimi satış anında). */
-export function fetchSaleVariants(slug: string): Promise<ApiResult<z.infer<typeof SaleVariantsResponseSchema>>> {
-  return saleFetch(`/api/v1/sale/catalog/${encodeURIComponent(slug)}/variants?locale=tr`, SaleVariantsResponseSchema);
+export function fetchSaleVariants(
+  slug: string,
+  place: SalePlace,
+): Promise<ApiResult<z.infer<typeof SaleVariantsResponseSchema>>> {
+  return saleFetch(`/api/v1/sale/catalog/${encodeURIComponent(slug)}/variants?locale=tr`, place, SaleVariantsResponseSchema);
 }
 
 /**
@@ -75,11 +94,19 @@ export function fetchSaleVariants(slug: string): Promise<ApiResult<z.infer<typeo
  * Pazarlıklı fiyat YALNIZ üstüne yazılan kalemde gönderilir; dokunulmamış kalemin fiyatını
  * sunucu çözer — siparişin parasını istemci yazmaz.
  */
-export function sellOnSite(body: OnSiteSaleRequest): Promise<ApiResult<z.infer<typeof OnSiteSaleResponseSchema>>> {
-  return saleFetch('/api/v1/sale/on-site', OnSiteSaleResponseSchema, { method: 'POST', body });
+export function sellOnSite(
+  body: OnSiteSaleRequest,
+  place: SalePlace,
+): Promise<ApiResult<z.infer<typeof OnSiteSaleResponseSchema>>> {
+  return saleFetch('/api/v1/sale/on-site', place, OnSiteSaleResponseSchema, { method: 'POST', body });
 }
 
-/** **Son satışlar** — bu deponun kapı satışları, kim yazdıysa adıyla (en yeni önce, sabit tavan). */
-export function fetchRecentSales(): Promise<ApiResult<z.infer<typeof RecentSalesResponseSchema>>> {
-  return saleFetch('/api/v1/sale/recent', RecentSalesResponseSchema);
+/**
+ * **Son satışlar** — bu SATIŞ YERİNİN kapı satışları, kim yazdıysa adıyla (en yeni önce, sabit tavan).
+ *
+ * Yer buraya da geçiyor: kurye "az önce ne sattım" diye sorduğunda cevabı kendi aracının satışları
+ * olmalı, seçtiği rota deposunun değil.
+ */
+export function fetchRecentSales(place: SalePlace): Promise<ApiResult<z.infer<typeof RecentSalesResponseSchema>>> {
+  return saleFetch('/api/v1/sale/recent', place, RecentSalesResponseSchema);
 }

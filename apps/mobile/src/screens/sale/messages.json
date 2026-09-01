@@ -10,6 +10,12 @@
   "retry": "Tekrar dene",
   "searchPlaceholder": "Ürün adıyla ara",
   "searchEmpty": "Eşleşen ürün yok — adın bir kısmını yazmayı deneyin.",
+  "van": {
+    "subtitle": "araçtan satış · anonim satış",
+    "empty": "Araçta satılacak mal yok.",
+    "emptyHint": "Kurye günü → Araca serbest ürün ile depodan mal alın; sipariş kutuları burada satılmaz.",
+    "searchEmpty": "Araçta eşleşen ürün yok — burada yalnız aracındaki mal satılır."
+  },
   "loadMore": "Daha fazla göster",
   "card": {
     "remaining": "kalan {n}",

@@ -19,6 +19,22 @@ import { CatalogProductSchema, CatalogVariantSchema } from './catalog-api.schema
  * istemcinin belirlemesi demekti — `placeOrder`ın "müşteri kimliği istemciden ASLA alınmaz"
  * kuralının aynısı.
  */
+/**
+ * **SATIŞ YERİ** — isteğin `?place=` beyanı (01.09 · kullanıcı kararı).
+ *
+ * Depo künyeden çözülmeye devam ediyor; beyan edilen şey depo DEĞİL, **yüzey**: personel kapıda mı
+ * duruyor yoksa aracından mı satıyor. İkisi aynı kişide birleşebiliyor (kurye rolü tesisleri de
+ * kapsar — rota seçimi onlara bakar) ve sunucunun bunu istekten anlamasının başka yolu yok.
+ *
+ * `van` = kuryenin aracı; depo kimliğini yine SUNUCU çözer (kapsamdaki `kind='vehicle'` depo).
+ * Beyansız istek eski davranışı korur: `?warehouseId=` ya da kapsamın tek deposu.
+ *
+ * **Beyan yetki değildir:** `van` diyen bir depocuya `403`, aracı olmayan kuryeye `400 no_vehicle`
+ * döner. İstemci hangi aracı istediğini SEÇEMEZ, yalnız "aracımdan" diyebilir.
+ */
+export const SalePlaceEnum = z.enum(['facility', 'van']);
+export type SalePlace = z.infer<typeof SalePlaceEnum>;
+
 export const OnSiteSaleLineSchema = z.object({
   variantId: z.string().uuid(),
   qty: z.number().int().positive(),

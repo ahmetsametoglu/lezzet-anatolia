@@ -100,14 +100,21 @@ describe('K · araca yükleme', () => {
     expect(screen.getByTestId('courier-load-counter')).toHaveStyle({ backgroundColor: customerColors.ink });
   });
 
-  /* Dipnot bir KARARIN bedelini anlatıyor ("eksik kutuyla çıkarsan o durak açılmaz") ve karar
-     dipteki düğmeyle veriliyor — eksik yokken uyarının konusu da yok (v3:1465). */
+  /*
+     Dipnot bir KARARIN bedelini anlatıyor ve eksik yokken uyarının konusu da yok (v3:1465).
+
+     **KARAR 01.09'DA İKİ KEZ DÖNDÜ** (kullanıcı): önce "eksik kutulu sefer HİÇ başlatılamaz"
+     denendi, sonra kullanıcı geri aldı — *"eksik kutuyu net şekilde ifade edelim, gerekirse onay
+     çekmecesi açılsın; kabul ediyorsa eksik kutuyla da kurye yola çıkabilmeli."* Yani engel değil
+     UYARI: dipnot bedeli söyler (o duraklar açılmaz), kararı onay çekmecesi alır. Cümle bu yüzden
+     "başlatılamaz" DEMİYOR; tersini söyleyen bir dipnot, yaptırımı olmayan bir yasak olurdu.
+  */
   it('eksik kutu dipnotu YALNIZ eksik varken çizilir', async () => {
     mockDay(loadingDay());
 
     await renderLoad();
 
-    expect(screen.getByText(/o durak/)).toBeOnTheScreen();
+    expect(screen.getByText(/kutusu binmemiş duraklar AÇILMAZ/)).toBeOnTheScreen();
   });
 
   /* İLK YÜK İSKELET, HALKA DEĞİL (N9 · 30.08) — ayıran iz ROL: halka `progressbar`dır. */

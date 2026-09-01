@@ -19,7 +19,7 @@ import {
   loadCourierBox,
   startCourierDay,
 } from '@/lib/api/courier';
-import { useNotice } from '@/lib/haptics/use-notice.hook';
+import { toastError, toastSuccess, toastWarning } from '@/lib/toast/toast-store';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 
@@ -132,9 +132,22 @@ interface UseCourierDayResult {
   selectedVehicleId: string | null;
   selectVehicle: (vehicleId: string | null) => void;
   /** Seçilen rotalar için seferleri KURAR (yola çıkarmaz) ve yükleme ekranına hazırlar. */
-  openRuns: () => void;
-  /** Kurulmuş bir seferi YOLA ÇIKARIR: durakları açar, müşteriye haber gider. */
-  departRun: (runId: string) => void;
+  /**
+   * **Sefer(ler)i KUR** — sonuç DÖNER (01.09 · kullanıcı bulgusu).
+   *
+   * Eskiden `void`di ve ekran kurulduktan sonra yerinde kalıyordu: *"rotanın sorumluluğunu alıyor
+   * ama hâlâ rota sayfasında kalıyor, ne olduğunu anlayamıyor bile."* Yönlendirmeyi kanca YAPMAZ
+   * (router'ı bilmez, `useDayClose`un aynı kuralı) — sonucu söyler, nereye gidileceğine ekran
+   * karar verir.
+   */
+  openRuns: () => Promise<'ok' | 'partial' | 'failed'>;
+  /**
+   * **Seferi YOLA ÇIKAR** (durakları açar, müşteriye haber gider) — sonuç DÖNER ve ekran yalnız
+   * TEMİZ başlangıçta yer değiştirir.
+   * `awaiting` (kutu okutulmayı bekliyor) ve `blocked` (başka sefer sürülüyor) dallarında
+   * yapılacak iş BU ekranda: kurye burada kalmalı.
+   */
+  departRun: (runId: string) => Promise<'ok' | 'awaiting' | 'blocked' | 'failed'>;
   /**
    * Kurulmuş ama BAŞLAMAMIŞ seferi araçtan çıkarır: siparişler serbest kalır, kutuların araç
    * damgası silinir, sefer kaydı düşer. `routeLabel` yalnız sonuç cümlesi için — kanca ekranın
@@ -148,8 +161,14 @@ interface UseCourierDayResult {
   started: boolean;
   /** Başlatma isteği havada — düğme ikinci kez basılmaz. */
   starting: boolean;
-  /** Başlatmanın sonucu (kısmi başarı dahil); `null` = henüz basılmadı. */
-  startNotice: StartNotice | null;
+  /**
+   * **Kısmi başarıdan sonra "kalanları yola çıkar" ikinci basışı açık mı** (01.09).
+   *
+   * Başlatmanın METNİ artık toast'ta (kurulum künyesi); ekranda kalan tek şey EYLEM. İki hâlde
+   * `true` olur: atlanmış ya da bayatlamış durak kaldığında, ve yola çıkarma isteği düştüğünde —
+   * ikisinde de çare aynı düğmeye ikinci kez basmaktır (uç catch-up claim yapıyor).
+   */
+  canRetryStart: boolean;
   start: () => void;
   reload: () => void;
   /**
@@ -235,7 +254,28 @@ export function useCourierDay(): UseCourierDayResult {
   const [stops, setStops] = useState<CourierStopContract[]>([]);
   const [collectedCents, setCollectedCents] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
-  const [startNotice, setStartNotice] = useNotice<StartNotice>();
+  /*
+    SONUÇ EKRANDA DEĞİL TOAST'TA (kullanıcı kararı 01.09).
+
+    Burada `useNotice` ile bir `{tone, text}` durumu tutuluyordu ve üç ekran onu kendi köşesinde
+    çiziyordu — biri yapışkan çubuğun içinde, biri listenin altında, biri kartın yanında. Aynı
+    cümle üç farklı yerde, üç farklı biçimde görünüyordu ve hiçbiri kaybolmuyordu: bir sonraki
+    eyleme kadar ekranda asılı kalıyordu. Kullanıcının kuralı tek satır: **sonuç toast'tır.**
+
+    Titreşim KAYBOLMADI, yalnız yer değiştirdi: `useNotice`ın yaptığı işi toast fiilleri yapıyor
+    (`toast-store` künyesi) — ve `warn` kanalı tam bu geçiş için açıldı.
+
+    Geriye kalan tek durum bir MESAJ değil bir EYLEM: kısmi başarıdan sonra "kalanları yola çıkar"
+    ikinci basışı. O bir düğmedir, toast onu taşıyamaz — bu yüzden ayrı bir bayrak olarak yaşıyor.
+  */
+  const [canRetryStart, setCanRetryStart] = useState(false);
+  const setStartNotice = useCallback((notice: StartNotice | null) => {
+    setCanRetryStart(notice?.canRetry ?? false);
+    if (notice === null) return;
+    if (notice.tone === 'ok') toastSuccess(notice.text);
+    else if (notice.tone === 'warn') toastWarning(notice.text);
+    else toastError(notice.text);
+  }, []);
   const [boxScanOpen, setBoxScanOpen] = useState(false);
 
   /** Kaçıncı yükün geçerli olduğu — geç gelen eski cevaplar yazılmaz (katalog emsali). */
@@ -336,12 +376,12 @@ export function useCourierDay(): UseCourierDayResult {
    * açılamazsa ötekiler açılmalı. Toplu bir istek "hepsi ya da hiçbiri" vaat ederdi; oysa burada
    * yarım başarı meşru ve görünür olmalı.
    */
-  const openRuns = useCallback(() => {
-    if (starting || selectedZoneIds.length === 0) return;
+  const openRuns = useCallback(async (): Promise<'ok' | 'partial' | 'failed'> => {
+    if (starting || selectedZoneIds.length === 0) return 'failed';
     setStarting(true);
     setStartNotice(null);
 
-    void (async () => {
+    {
       const results = await Promise.all(
         selectedZoneIds.map((zoneId) =>
           startCourierDay({
@@ -366,7 +406,8 @@ export function useCourierDay(): UseCourierDayResult {
       });
       setPickedZoneIds([]);
       await load();
-    })();
+      return opened === 0 ? 'failed' : failed === 0 ? 'ok' : 'partial';
+    }
   }, [date, load, pickedVehicleId, selectedZoneIds, setStartNotice, starting]);
 
   /**
@@ -374,39 +415,41 @@ export function useCourierDay(): UseCourierDayResult {
    * geri alınamaz; ekran düğmenin altında bunu yazıyor (v3:15).
    */
   const departRun = useCallback(
-    (runId: string) => {
-      if (starting) return;
+    async (runId: string): Promise<'ok' | 'awaiting' | 'blocked' | 'failed'> => {
+      if (starting) return 'failed';
       setStarting(true);
       setStartNotice(null);
 
-      void (async () => {
-        const result = await departCourierRun(runId);
-        setStarting(false);
+      const result = await departCourierRun(runId);
+      setStarting(false);
 
-        /* "Başka sefer sürülüyor" bir ARIZA DEĞİL, kuralın kendisi (31.08): araç birden çok
-           seferi taşır ama kurye birini sürer. Cümle hangisini kapatacağını söylüyor ve `canRetry`
-           KAPALI — tekrar basmak hiçbir şeyi değiştirmez, yapılacak iş başka bir ekranda. */
-        if (result.error === null && result.data.status === 'another_running') {
-          setStartNotice({
-            tone: 'error',
-            text: fillCopy(t.day.vanRuns.departBlocked, { ref: result.data.referenceNo }),
-            canRetry: false,
-          });
-          await load();
-          return;
-        }
-        if (result.error !== null || result.data.status !== 'ok') {
-          setStartNotice({
-            tone: 'error',
-            text: result.error === 'network_error' ? t.day.start.network : t.day.start.departFailed,
-            canRetry: true,
-          });
-          await load();
-          return;
-        }
-        setStartNotice(noticeOfStart(result.data));
+      /* "Başka sefer sürülüyor" bir ARIZA DEĞİL, kuralın kendisi (31.08): araç birden çok
+         seferi taşır ama kurye birini sürer. Cümle hangisini kapatacağını söylüyor ve `canRetry`
+         KAPALI — tekrar basmak hiçbir şeyi değiştirmez, yapılacak iş başka bir ekranda. */
+      if (result.error === null && result.data.status === 'another_running') {
+        setStartNotice({
+          tone: 'error',
+          text: fillCopy(t.day.vanRuns.departBlocked, { ref: result.data.referenceNo }),
+          canRetry: false,
+        });
         await load();
-      })();
+        return 'blocked';
+      }
+      if (result.error !== null || result.data.status !== 'ok') {
+        setStartNotice({
+          tone: 'error',
+          text: result.error === 'network_error' ? t.day.start.network : t.day.start.departFailed,
+          canRetry: true,
+        });
+        await load();
+        return 'failed';
+      }
+      setStartNotice(noticeOfStart(result.data));
+      await load();
+      /* KUTUSU OKUTULMAMIŞ SİPARİŞ VARSA EKRAN DEĞİŞMEZ: sefer açıldı ama yapılacak iş hâlâ
+         burada (kutuları okut, sonra yeniden başlat). Kuryeyi duraklara göndermek, okutulmamış
+         kutuyu görmeden yola çıkarmak olurdu. */
+      return result.data.awaitingBoxes.length > 0 ? 'awaiting' : 'ok';
     },
     [load, setStartNotice, starting],
   );
@@ -626,7 +669,7 @@ export function useCourierDay(): UseCourierDayResult {
        bekliyordur ve durakları açılmamıştır (31.08). */
     started: run !== null && !run.closed,
     starting,
-    startNotice,
+    canRetryStart,
     start,
     reload,
     boxCounter,

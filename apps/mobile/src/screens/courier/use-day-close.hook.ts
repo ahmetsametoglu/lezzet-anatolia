@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DayCloseDraftContract } from '@lezzet/types';
 
 import { fetchDayCloseDraft, submitDayClose } from '@/lib/api/courier';
-import { useNotice } from '@/lib/haptics/use-notice.hook';
+import { toastError, toastInfo, toastSuccess } from '@/lib/toast/toast-store';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 import { centsToAmountText, money, parseAmountToCents, signedMoney } from './courier-format';
@@ -84,25 +84,50 @@ interface UseDayCloseResult {
   askConfirm: () => void;
   cancelConfirm: () => void;
   sending: boolean;
-  notice: { tone: 'ok' | 'info' | 'error'; text: string } | null;
+  /**
+   * Kapanışın sonucunun ŞEKLİ — tip olarak duruyor, DURUM olarak değil (01.09). `announce` bunu
+   * toast fiillerine çeviriyor; ekran artık okumuyor. Sözlük burada kalıyor ki tonların kümesi
+   * tek yerde tanımlı kalsın.
+   */
+  noticeShape?: { tone: 'ok' | 'info' | 'error'; text: string };
   close: () => void;
 }
 
-export function useDayClose(): UseDayCloseResult {
+/**
+ * @param onClosed Kapanış YAZILDIKTAN sonra çağrılır — ekranın kendini kapatması için (01.09).
+ *   Kanca yönlendirme bilmez ve bilmemeli; bildiği tek şey "sefer artık kapalı". `already_closed`
+ *   dalında ÇAĞRILMAZ: orada yeni bir kapanış olmadı, kurye zaten kapalı bir kaydı açtı.
+ * @param runId Kapatılacak sefer — verilmezse sunucu SÜRÜLEN seferi çözer. İki seferli günde
+ *   kimliği söylemek şart: sunucunun tahmini (`readCourierRun`) doğru cevabı verse de, ekranın
+ *   gösterdiği künye ile kapatılan kaydın aynı olduğunu ancak kimlik garanti eder.
+ */
+export function useDayClose(onClosed?: () => void, runId?: string): UseDayCloseResult {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [draft, setDraft] = useState<DayCloseDraftContract | null>(null);
   const [counted, setCounted] = useState<Partial<Record<CloseMethod, string>>>({});
   const [note, setNote] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useNotice<NonNullable<UseDayCloseResult['notice']>>();
+  /*
+    SONUÇ TOAST'TA (kullanıcı kararı 01.09) — ve bu ekranda ayrıca bir AKIŞ arızasını kapatıyor.
+
+    Kapanış yazıldıktan sonra ekran yerinde kalıyor, alanlar kilitleniyor ve altta yeşil bir cümle
+    beliriyordu: kurye "kapattım" diyor ama kapattığı sefer hâlâ karşısında duruyordu (kullanıcı
+    bulgusu: *"kapanan sefer ekranda durmaya devam ediyor"*). Sonuç toast'a taşınınca ekranın
+    yerinde kalması için bir sebep de kalmadı — kapanan sefer geride bırakılır (`onClosed`).
+  */
+  const announce = useCallback((notice: NonNullable<UseDayCloseResult['noticeShape']>) => {
+    if (notice.tone === 'ok') toastSuccess(notice.text);
+    else if (notice.tone === 'error') toastError(notice.text);
+    else toastInfo(notice.text);
+  }, []);
   const [closedLocally, setClosedLocally] = useState(false);
 
   const generation = useRef(0);
 
   const load = useCallback(async () => {
     const run = (generation.current += 1);
-    const result = await fetchDayCloseDraft();
+    const result = await fetchDayCloseDraft(runId === undefined ? {} : { runId });
     if (run !== generation.current) return;
 
     if (result.error !== null) {
@@ -112,7 +137,7 @@ export function useDayClose(): UseDayCloseResult {
     setDraft(result.data);
     setNote(result.data.closed?.note ?? '');
     setStatus('ready');
-  }, []);
+  }, [runId]);
 
   useEffect(() => {
     void load();
@@ -184,7 +209,6 @@ export function useDayClose(): UseDayCloseResult {
        kimlik kuryenin onayladığı seferin kimliğidir. */
     const runId = draft.run.runId;
     setSending(true);
-    setNotice(null);
 
     void (async () => {
       // Bozuk girdide BEKLENEN gönderilir: "sayamadım" hâlinde uydurma bir sayı yazmak yerine
@@ -202,19 +226,19 @@ export function useDayClose(): UseDayCloseResult {
       setConfirming(false);
 
       if (result.error !== null) {
-        setNotice({ tone: 'error', text: fillCopy(t.dayClose.failed, { error: result.error }) });
+        announce({ tone: 'error', text: fillCopy(t.dayClose.failed, { error: result.error }) });
         return;
       }
       if (!result.data.ok) {
         // `already_closed` bir hata DEĞİL: kapanmış sefer salt-okunurdur, ikinci çağrı EZMEZ.
         setClosedLocally(true);
-        setNotice({ tone: 'info', text: t.dayClose.alreadyClosed });
+        announce({ tone: 'info', text: t.dayClose.alreadyClosed });
         return;
       }
 
       const released = result.data.releasedCount ?? 0;
       setClosedLocally(true);
-      setNotice({
+      announce({
         tone: 'ok',
         text:
           fillCopy(t.dayClose.done, {
@@ -226,6 +250,10 @@ export function useDayClose(): UseDayCloseResult {
           // burada okur. Sıfırsa cümle hiç kurulmaz — "0 durak çözüldü" bir bilgi değil gürültüdür.
           (released > 0 ? fillCopy(t.dayClose.released, { n: String(released) }) : ''),
       });
+      /* KAPANAN SEFER GERİDE BIRAKILIR (01.09): ekran yerinde kalırsa kurye kapattığı seferi
+         karşısında görmeye devam eder ve "kapandı mı" sorusu ekranın kendisiyle çelişir. Sonuç
+         zaten toast'ta; burada yapılacak iş kalmadı. */
+      onClosed?.();
     })();
   };
 
@@ -255,7 +283,6 @@ export function useDayClose(): UseDayCloseResult {
     },
     cancelConfirm: () => setConfirming(false),
     sending,
-    notice,
     close,
   };
 }

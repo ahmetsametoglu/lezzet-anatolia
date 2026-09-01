@@ -4,6 +4,7 @@ import type {
   CourierRunBrief,
   CourierStopContract,
   DayCloseDraftContract,
+  StartCourierDayResponse,
 } from '@lezzet/types';
 
 /*
@@ -249,6 +250,32 @@ export function closedDayRecord(
     closedBy: uuid(901),
     closedAt: '2026-08-08T18:00:00.000Z',
     reconciled: false,
+    ...overrides,
+  };
+}
+
+/**
+ * **BAŞLATMA CEVABI** — `POST /courier/day/start` ve `/runs/:id/depart` aynı şekli döndürür.
+ *
+ * `courier-day-screen.test`in içinde yerel bir yardımcıydı; 01.09'da ÜÇÜNCÜ çağıranı doğunca
+ * fikstüre taşındı (rota seçimi ve araçtaki seferler ekranları da kurma/başlatma sonrasını
+ * ölçüyor). Üç kopya, cevabın bir alanı değiştiğinde ikisinin sessizce eskimesi demekti.
+ */
+export function startResult(
+  overrides: Partial<Extract<StartCourierDayResponse, { status: 'ok' }>> = {},
+): StartCourierDayResponse {
+  return {
+    status: 'ok',
+    date: '2026-08-08',
+    // Başlatma cevabının künyesi GÜN seferiyle aynı şekli taşıyor (30.08): ekran bu değeri
+    // doğrudan günün seferi olarak yazıyor, ayrışsalardı depo adı sefer başlar başlamaz boş kalırdı.
+    run: courierDayRun(),
+    started: [],
+    alreadyOut: [],
+    stale: [],
+    skipped: [],
+    // 23.8: kutulu sipariş okutulmayı bekliyor olabilir — varsayılan "kutusuz gün".
+    awaitingBoxes: [],
     ...overrides,
   };
 }

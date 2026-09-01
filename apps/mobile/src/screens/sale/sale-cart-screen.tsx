@@ -136,15 +136,9 @@ export function SaleCartScreen() {
             {t.offline.sellHint}
           </Text>
         ) : null}
-        {sale.notice === null ? null : (
-          <Text
-            style={[styles.notice, styles[`notice_${sale.notice.tone}`]]}
-            accessibilityRole="alert"
-            testID="sale-notice"
-          >
-            {sale.notice.text}
-          </Text>
-        )}
+        {/* Satışın OLUMSUZ cevabı TOAST'ta (kullanıcı kararı 01.09): düğmenin üstündeki cümle
+            bir sonraki eyleme kadar asılı kalıyordu. Üstteki çevrimdışı satırı ise bir sonuç
+            değil, kapalı düğmenin SEBEBİ — o yerinde kalır. */}
         <PressableSurface
           onPress={sale.submit}
           disabled={!cta.enabled}
@@ -249,17 +243,9 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.helper,
     lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
   },
-  notice_ok: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    color: operationsTheme.colors['olive-dark'],
-  },
   notice_warn: {
     backgroundColor: operationsTheme.colors['terracotta-bg'],
     color: operationsTheme.colors.terracotta,
-  },
-  notice_error: {
-    backgroundColor: operationsTheme.colors['error-bg'],
-    color: operationsTheme.colors.error,
   },
   cta: {
     height: operationsTheme.size.controlLg,

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SaleCatalogProduct, SaleVariant } from '@lezzet/types';
+import type { SaleCatalogProduct, SalePlace, SaleVariant } from '@lezzet/types';
 
 import { fetchSaleCatalog, fetchSaleVariants, sellOnSite } from '@/lib/api/sale';
 /* ÇEVRİMDIŞI SİNYALİ DEPONUNKİYLE AYNI (v3:20 istiyor: "Sepete ekleme kapalı" / "Satış yazma
@@ -7,7 +7,7 @@ import { fetchSaleCatalog, fetchSaleVariants, sellOnSite } from '@/lib/api/sale'
    (`warehouseGuard`), yani hattın açık olup olmadığı sorusu birebir aynı soru. İki ayrı sinyal,
    bir gün birbirinden ayrılır ve iki ekran aynı hat için iki farklı şey söylerdi (CLAUDE §1). */
 import { trackWarehouse } from '@/screens/warehouse/warehouse-status';
-import { useNotice } from '@/lib/haptics/use-notice.hook';
+import { toastError, toastWarning } from '@/lib/toast/toast-store';
 import { centsToAmountText, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
 import { saleCopy } from './copy';
@@ -123,7 +123,13 @@ export interface SaleReceipt {
   paymentRecorded: boolean;
 }
 
-export function useSale() {
+/**
+ * @param place Satış yeri — `van` ise adresler cihazdaki depo seçimini TAŞIMAZ ve sunucu kuryenin
+ *   aracını kapsamdan çözer. Parametre zorunlu ve varsayılansız: varsayılan bıraksaydık yeri
+ *   geçirmeyi unutan çağrı derlenir ve sessizce tesisten satardı (`CatalogInput.place`in aynı
+ *   gerekçesi).
+ */
+export function useSale(place: SalePlace) {
   const [status, setStatus] = useState<CatalogStatus>('loading');
   const [receipt, setReceipt] = useState<SaleReceipt | null>(null);
   const [products, setProducts] = useState<SaleCatalogProduct[]>([]);
@@ -140,7 +146,15 @@ export function useSale() {
   */
   const [payment, setPayment] = useState<'cash' | 'card' | null>(null);
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useNotice<SaleNotice>();
+  /* SONUÇ TOAST'TA (kullanıcı kararı 01.09) — cümle sepet ekranında, satış düğmesinin üstünde
+     duruyordu ve bir sonraki eyleme kadar orada kalıyordu. Başarılı satışın kendi ekranı zaten
+     var (fiş, v3:22), yani bu kanaldan yalnız OLUMSUZ cevaplar geçiyor: yetersiz stok, kapanmayan
+     satış, hat. Titreşim `useNotice`tan toast fiillerine geçti. */
+  const setNotice = useCallback((notice: SaleNotice | null) => {
+    if (notice === null) return;
+    if (notice.tone === 'warn') toastWarning(notice.text);
+    else toastError(notice.text);
+  }, []);
   const seqRef = useRef(0);
 
   /*
@@ -150,10 +164,11 @@ export function useSale() {
     Açılış durumu zaten 'loading' başlıyor; sonraki yüklemeler mevcut listeyi ekranda tutar ve
     cevap gelince değiştirir. Yarışın bekçisi durum değil sıra numarasıdır (`seqRef`).
   */
-  const load = useCallback(async (term: string, cursor?: string) => {
+  const load = useCallback(
+    async (term: string, cursor?: string) => {
     const seq = ++seqRef.current;
     const result = await trackWarehouse(
-      fetchSaleCatalog({ q: term.trim().length === 0 ? undefined : term.trim(), cursor }),
+      fetchSaleCatalog({ q: term.trim().length === 0 ? undefined : term.trim(), cursor, place }),
     );
     if (seq !== seqRef.current) return; // geciken cevap — taze listeyi ezmesin
     if (result.error !== null) {
@@ -163,7 +178,9 @@ export function useSale() {
     setProducts((prev) => (cursor === undefined ? result.data.products : [...prev, ...result.data.products]));
     setNextCursor(result.data.nextCursor);
     setStatus('ready');
-  }, []);
+    },
+    [place],
+  );
 
   useEffect(() => {
     void load('');
@@ -184,7 +201,8 @@ export function useSale() {
   const reload = useCallback(() => void load(search), [load, search]);
 
   /** Kart dokunuşu: tek boylu doğrudan çekmeceye, çok boylu önce boylarını okur. */
-  const openProduct = useCallback((product: SaleCatalogProduct) => {
+  const openProduct = useCallback(
+    (product: SaleCatalogProduct) => {
     const multi = product.variantCount > 1;
     setDraft({
       product,
@@ -195,13 +213,15 @@ export function useSale() {
     });
     if (!multi) return;
     void (async () => {
-      const result = await fetchSaleVariants(product.slug);
+      const result = await fetchSaleVariants(product.slug, place);
       setDraft((current) => {
         if (current === null || current.product.id !== product.id) return current; // çekmece değişti
         return { ...current, variants: result.error !== null ? 'error' : result.data.variants };
       });
     })();
-  }, []);
+    },
+    [place],
+  );
 
   const closeDraft = useCallback(() => setDraft(null), []);
 
@@ -282,7 +302,7 @@ export function useSale() {
             ...(line.negotiatedCents === null ? {} : { negotiatedUnitPriceCents: line.negotiatedCents }),
           })),
           paymentMethod: payment,
-        }),
+        }, place),
       );
       setSending(false);
 
@@ -338,7 +358,6 @@ export function useSale() {
     payment,
     setPayment,
     sending,
-    notice,
     submit,
     receipt,
     clearReceipt,

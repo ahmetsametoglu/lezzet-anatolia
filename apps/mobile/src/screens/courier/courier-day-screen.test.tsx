@@ -9,6 +9,7 @@ import {
   courierRoute,
   courierStop,
   dayCloseDraft,
+  startResult,
   stopItemId,
   takenRouteRun,
 } from './courier-fixture';
@@ -77,24 +78,6 @@ function failResponse(): Response {
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
 
 /** Açılan seferin dört listesi: varsayılanı hiçbir şey olmamış sefer — testler kendi dalını doldurur. */
-function startResult(
-  overrides: Partial<Extract<StartCourierDayResponse, { status: 'ok' }>> = {},
-): StartCourierDayResponse {
-  return {
-    status: 'ok',
-    date: '2026-08-08',
-    // Başlatma cevabının künyesi GÜN seferiyle aynı şekli taşıyor (30.08): ekran bu değeri
-    // doğrudan günün seferi olarak yazıyor, ayrışsalardı depo adı sefer başlar başlamaz boş kalırdı.
-    run: courierDayRun(),
-    started: [],
-    alreadyOut: [],
-    stale: [],
-    skipped: [],
-    // 23.8: kutulu sipariş okutulmayı bekliyor olabilir — varsayılan "kutusuz gün".
-    awaitingBoxes: [],
-    ...overrides,
-  };
-}
 
 /**
  * Gün, kapanış taslağı, başlatma cevabı ve rota listesi ayrı ayrı kurulur — dördünün kaderi ekranda
@@ -204,6 +187,85 @@ describe('K1 · günün seferi', () => {
     expect(screen.getByTestId('courier-day-cta')).toHaveTextContent(t.day.vanEmpty.cta);
   });
 
+  it('YERİNDE SATIŞ kapısı YALNIZ sürülen seferde çizilir — "yoldan gelen" yolda gelir', async () => {
+    /*
+      Kapı bir tur boyunca üç hâlde de çiziliyordu ve gerekçesi *"şartı sefer değil ARAÇ"* diye
+      YAZILMIŞTI — o cümle bize aitti, tasarıma değil: v3:15'te satır tek yerde, `sürülenVar`
+      gövdesinde. Kullanıcı sefersiz açılışta görüp sordu (01.09): *"henüz bir sefer bile seçili
+      değil."*
+
+      Kapının adı da onu söylüyor: "YOLDAN gelen müşteri". Sefer kurmamış kurye depodadır ve
+      oradaki satış depo kapısının işidir (tesis stoğundan) — sefersiz kuryeye araçtan satış
+      açmak, çoğu zaman boş bir aracın kataloğunu açmaktı.
+    */
+    mockDay(courierDay([], { run: null, runs: [] }), dayCloseDraft(), startResult(), []);
+    await renderDay();
+    await waitFor(() => expect(screen.getByTestId('courier-day-guide')).toBeOnTheScreen());
+    expect(screen.queryByTestId('courier-day-sale')).toBeNull();
+
+    // Kutular araçta ama hiçbir sefer BAŞLATILMADI: durak da açılmadı, satış da açılmaz.
+    mockDay(courierDay([], { run: null, runs: [courierDayRun()] }), dayCloseDraft(), startResult(), []);
+    await renderDay();
+    await waitFor(() => expect(screen.getByTestId('courier-day-van')).toBeOnTheScreen());
+    expect(screen.queryByTestId('courier-day-sale')).toBeNull();
+
+    // Sürülen sefer VAR: kapı burada, ve satış ARACIN stoğundan (`place=van`).
+    mockDay(courierDay([courierStop(1)]));
+    await renderDay();
+    await waitFor(() => expect(screen.getByTestId('courier-day-sale')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('courier-day-sale'));
+    expect(mockNavigate).toHaveBeenCalledWith('/sale?place=van');
+  });
+
+  it('DURAKSIZ sürülen sefer ÇIKMAZ DEĞİL — araçtaki seferler kapısı yine çizilir', async () => {
+    /*
+      ── ÖLÇÜLEN ARIZA (kullanıcı bulgusu 01.09) ──────────────────────────────
+      Kurye iki sefer kurdu, birini sürdü; sürülen seferin O GÜN durağı yoktu (rotaya sipariş
+      yazılmamış). Ekran künye + "Seferde durak yok" + "Seferi kapat"tan ibaret kaldı ve araçta
+      bekleyen ÖTEKİ sefere gidecek yol hiç çizilmedi: *"ikinci sefer yok ortalıkta, ikinci
+      sefere geçemiyorum."*
+
+      Sebep yapıdaydı: "Araçtaki seferler" ve "Yoldan gelen müşteri" kapıları durak listesiyle
+      AYNI dalın içindeydi, yani varlıkları duraklara bağlıydı. Oysa ikisi de seferin değil
+      ARACIN kapısı — tasarım da onları `sürülenVar` gövdesine koyuyor, listeye değil (v3:15).
+    */
+    const ikinci = courierDayRun({ runId: '00000000-0000-4000-8000-000000000803', zoneName: 'Batı Hattı' });
+    mockDay(courierDay([], { runs: [courierDayRun(), { ...ikinci, departedAt: null }] }));
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-empty')).toBeOnTheScreen());
+    // Çıkış yolu VAR: araçtaki seferlere ve araçtan satışa.
+    expect(screen.getByTestId('courier-day-trip')).toBeOnTheScreen();
+    expect(screen.getByTestId('courier-day-sale')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('courier-day-trip'));
+    expect(mockNavigate).toHaveBeenCalledWith('/van-runs');
+  });
+
+  it('ARAÇTA YÜK VAR gövdesi: cümleler DOLU, kapılar doğru sayıyı sayıyor', async () => {
+    /*
+      Bu gövdenin hiç testi yoktu ve iki cümlenin anahtarları karışmıştı: ekranda ham `{driving}` ve
+      `{loaded}/{total}` yazıyordu (kullanıcı cihazda gördü 01.09). İki metin yer değiştirmişti —
+      yükleme satırı sefer sayıyordu, sefer satırı kutu.
+
+      Kural artık burada çivili: **yükleme kapısı KUTU sayar, sefer kapısı SEFER.**
+    */
+    mockDay(
+      courierDay([], {
+        run: null,
+        runs: [{ ...courierDayRun(), departedAt: null }],
+      }),
+    );
+    await renderDay();
+    await waitFor(() => expect(screen.getByTestId('courier-day-van')).toBeOnTheScreen());
+
+    // Hiçbir yuva ham kalmadı — dolmayan `{...}` ekranda bir söz olarak durur.
+    expect(screen.getByTestId('courier-day-van-empty')).not.toHaveTextContent(/\{[a-z]+\}/i);
+    expect(screen.getByTestId('courier-day-van-empty')).toHaveTextContent(/1 sefer araçta · 0 sürülüyor/);
+    expect(screen.getByTestId('courier-day-van-runs')).toHaveTextContent(/1 sefer araçta · 0 sürülüyor/);
+    expect(screen.getByTestId('courier-day-load')).toHaveTextContent(/kutu araçta/);
+    expect(screen.getByTestId('courier-day-load')).not.toHaveTextContent(/\{[a-z]+\}/i);
+  });
+
   it('rota okunamazsa hata bloğu + tekrar dene; basılınca liste gelir', async () => {
     mockDay(null);
 
@@ -270,7 +332,7 @@ describe('K1 · günün seferi', () => {
      "başlatılmış rota pasif" ve çoklu seçim `route-pick-screen.test.tsx`te ölçülüyor; buraya
      kalan tek şey seçimden DÖNÜNCE listenin gelmesi ve o da aşağıdaki testlerde zaten var. */
 
-  it('sefer kapatma CTA\'sı kapanış ekranına gider', async () => {
+  it('sefer kapatma CTA\'sı KAPATILACAK SEFERİN KİMLİĞİYLE gider', async () => {
     mockDay(
       courierDay([courierStop(1, { outcome: 'delivered', payment: { dueAmountCents: null, expectedMethod: null, collectedAtDoorCents: null } })]),
     );
@@ -279,7 +341,16 @@ describe('K1 · günün seferi', () => {
     await waitFor(() => expect(screen.getByText(t.day.close)).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId('courier-day-cta'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/day-close');
+    /*
+      Kimlik 01.09'da eklendi ve sebebi cihazda ölçüldü: iki seferli günde kapanış ekranı YANLIŞ
+      seferi açıyordu (kurye Doğu Hattı'nı sürerken Batı Hattı'nın mutabakatı geldi). Sunucunun
+      tahmini de düzeltildi ama ekranın gösterdiği künye ile kapatılan kaydın aynı olduğunu ancak
+      kimlik garanti eder — yazma ucunun (`POST /day-close`) zaten uyguladığı kural.
+    */
+    expect(mockNavigate).toHaveBeenCalledWith({
+      pathname: '/day-close',
+      params: { runId: courierDayRun().runId },
+    });
   });
 
   /*
@@ -526,15 +597,23 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
     expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
   });
 
-  it('kutusu OKUNAMAYAN günde sefer kapısı HİÇ çizilmez', async () => {
-    /* Kutusuz sipariş 30.08'de bir VERİ HATASI oldu; bu hâl artık "eski akış" değil, kutuların
-       hiç okunamadığı bir gün. Kapı yine çizilmiyor: olmayan bir adımı göstermek kuryeyi boş
-       ekrana yollar. */
+  it('KUTUSUZ günde de sefer kapısı çizilir — satırın bilgisi kutulardan gelmiyor', async () => {
+    /*
+      **İDDİA 01.09'DA TERSİNE DÖNDÜ.** Burada *"kutusu okunamayan günde kapı HİÇ çizilmez"*
+      yazıyordu ve gerekçesi *"olmayan bir adımı göstermek kuryeyi boş ekrana yollar"*dı. İkisi de
+      yanlıştı: `/van-runs` KUTULARI değil ARAÇTAKİ SEFERLERİ gösteriyor, o seferler kutu okunmasa
+      da duruyor — ve satırın meta'sı ("N sefer araçta · M sürülüyor") kutu sayacına hiç bakmıyor.
+
+      Bedeli ölçüldü (kullanıcı bulgusu): `boxCounter` kutusuz günde `null` olduğu için kapı tam
+      ihtiyaç duyulan hâlde kayboluyordu ve kurye araçtaki ikinci seferine ulaşamıyordu.
+    */
     mockDay(courierDay([courierStop(1, { boxes: [] })]));
     await renderDay();
     await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
 
-    expect(screen.queryByTestId('courier-day-trip')).toBeNull();
+    expect(screen.getByTestId('courier-day-trip')).toBeOnTheScreen();
+    // Yükleme okutması AYRI bir şey ve o gerçekten kutulara bağlı — o kapı yine yok.
+    expect(screen.queryByTestId('courier-day-box-scan')).toBeNull();
   });
 });
 
@@ -609,23 +688,34 @@ describe('araçtaki seferler (31.08)', () => {
     expect(screen.getByTestId(`courier-day-group-${courierDayRun().runId}`)).toBeOnTheScreen();
   });
 
-  it('durak numarası SEFERİN İÇİNDE sayılır — ikinci sefer yine 1den başlar', async () => {
+  it('durak numarası SUNUCUDAN gelir — ekran saymaz, ikinci seferin ilk durağı 1 yazar', async () => {
     const ikinci = courierDayRun({ runId: '00000000-0000-4000-8000-000000000802', zoneName: 'Dağ rotası' });
     mockDay(
       courierDay(
         [
-          courierStop(1),
-          courierStop(2),
-          courierStop(3, { runId: ikinci.runId, runLabel: 'Dağ rotası' }),
+          courierStop(1, { stopSeq: 1 }),
+          courierStop(2, { stopSeq: 2 }),
+          courierStop(3, { runId: ikinci.runId, runLabel: 'Dağ rotası', stopSeq: 1 }),
         ],
         { runs: [courierDayRun(), ikinci] },
       ),
     );
     await renderDay();
 
-    /* Küresel sayaç yazılıydı ve üçüncü durak "3" görünüyordu; oysa o, ikinci seferin İLK durağı.
-       Özet kartı sefer bazında sayarken ("1/2 durak") liste küresel sayınca ekran kendi kendisiyle
-       çelişiyordu (kullanıcı bulgusu 31.08). */
+    /* Ekran bir tur boyunca KENDİ sayıyordu (önce liste boyunca, sonra sefer içinde) ve iki sayaç
+       da yanlıştı: numara bir sayaç değil bir HESAPTIR — sunucu kapalı tur maliyetiyle diziyor ve
+       `stopSeq` alanında taşıyor (11.9). Üçüncü satır listenin üçüncüsü ama ikinci seferin İLK
+       durağı; doğru numarayı ekran değil, o alan söylüyor. */
     expect(screen.getByTestId(`courier-stop-${STOP_3}`)).toHaveTextContent(/^1/);
+  });
+
+  it('SIRA BİLİNMİYORSA numara UYDURULMAZ — kısmen numaralanmış liste numarasızdan kötüdür', async () => {
+    /* Fikstürün varsayılanı bilerek `stopSeq: null`: rota sırası hesaplanamamış gün gerçek bir hâl
+       (sunucu kapalı tur çözemediğinde). Ekran o satıra dizi indeksini yazsaydı, siparişin VERİLME
+       sırasını rota sırasıymış gibi göstermiş olurdu — ve kurye ona göre sürerdi. */
+    mockDay(courierDay([courierStop(1), courierStop(2)]));
+    await renderDay();
+
+    expect(screen.getByTestId(`courier-stop-${STOP_1}`)).not.toHaveTextContent(/^[0-9]/);
   });
 });

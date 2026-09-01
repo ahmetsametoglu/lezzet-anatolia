@@ -179,3 +179,29 @@ function toOfferMap(
   }
   return offers;
 }
+
+/**
+ * **BU DEPODA FİİLEN DURAN ürünlerin kimlikleri** (01.09 · kullanıcı kararı).
+ *
+ * `listOfferProductIds`in kardeşi ve aynı yuvaya girer (`getCatalogData` → `ids`): süzme sayfa
+ * ÇEKİLDİKTEN sonra yapılamaz, yoksa keyset sayfalama ve toplam sayı bozulur.
+ *
+ * ── NEDEN GEREKTİ ───────────────────────────────────────────────────────────
+ * Vitrinin kuralı *"katalog süzülmez, işaretlenir"* (DOMAIN §17) ve müşteri için doğru: rafta
+ * olmayan ürün de katalogda durur, üstünde "tükendi" yazar. **ARAÇ bir vitrin DEĞİLDİR** — kurye
+ * elinde ne varsa onu satar, olmayanı müşteriye "tükendi" diye göstermenin bir karşılığı yok.
+ * Kuryenin satış listesi bu yüzden aracın İÇERİĞİDİR, kataloğun tamamı değil (ölçüldü 01.09:
+ * araçta 4 kalem varken ekran ana deponun 154 partisini listeliyordu).
+ *
+ * Sipariş için yüklenmiş mal buraya KENDİLİĞİNDEN girmez: o mal hâlâ tesisin stoğudur ve aracın
+ * deposunda bir satırı yoktur (`DOMAIN §17` — "araçta iki tür mal yan yana durur, evleri ayrıdır").
+ *
+ * Boş dizi "burada hiç mal yok" demektir — çağıran bunu sonucu daraltmak için kullanır.
+ */
+export async function listStockedProductIds(db: SupabaseClient, warehouseId: string): Promise<string[]> {
+  const batches = await new StockService(db).listInStockDetailed(undefined, [warehouseId]);
+  const variantIds = [...new Set(batches.filter((b) => b.physicalQty > 0).map((b) => b.variantId))];
+  if (!variantIds.length) return [];
+  const variants = await new ProductVariantService(db).listByIds(variantIds);
+  return [...new Set(variants.map((v) => v.productId))];
+}

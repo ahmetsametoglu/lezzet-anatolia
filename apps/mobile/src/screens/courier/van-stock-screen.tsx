@@ -13,6 +13,7 @@ import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { toastError, toastSuccess } from '@/lib/toast/toast-store';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { fillCopy } from '@/screens/operations/copy';
@@ -64,7 +65,17 @@ export function CourierVanStockScreen() {
   const [onVan, setOnVan] = useState<CourierVanStockLine[]>([]);
   const [candidates, setCandidates] = useState<CourierVanCandidate[]>([]);
   const [hasVehicle, setHasVehicle] = useState(true);
-  const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null);
+  /*
+    SONUÇ TOAST'TA — TEK İSTİSNA AÇIK ÇEKMECE (kullanıcı kararı 01.09).
+
+    Sayfadaki bildirim şeridi söküldü; hareketin sonucu artık toast. Ama toast KÖKTE çiziliyor ve
+    okutma çekmecesi bir yerel `Modal`: Android'de modal kendi penceresini açtığı için kökteki
+    katman onun ALTINDA kalır ve kurye kodu okutup hiçbir şey görmez. 31.08'de ölçülen arıza tam
+    buydu ve çözümü de aynı kalıyor — çekmece açıkken sonucu ÇEKMECE söyler (`hint`).
+
+    Kural tek cümle: **mesaj kullanıcının baktığı katmanda görünür.**
+  */
+  const [sheetHint, setSheetHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -118,35 +129,44 @@ export function CourierVanStockScreen() {
     üzerinden çözüyor; tanınmayan kod kendi dalıyla geliyor ve sessizce yutulmuyor.
   */
   const move = useCallback(
-    (direction: 'take' | 'return', target: { variantId: string } | { code: string }, qty: number) => {
+    (
+      direction: 'take' | 'return',
+      target: { variantId: string } | { code: string },
+      qty: number,
+      /** Sonucun görüneceği katman — `sheet` açık çekmecenin içi, `page` toast (künye yukarıda). */
+      surface: 'page' | 'sheet' = 'page',
+    ) => {
       if (busy || qty <= 0) return;
       setBusy(true);
-      setNotice(null);
+      setSheetHint(null);
+      const announce = (tone: 'ok' | 'error', text: string) => {
+        if (surface === 'sheet') setSheetHint(text);
+        else if (tone === 'ok') toastSuccess(text);
+        else toastError(text);
+      };
       void (async () => {
         const result = await moveVanStock(direction, { ...target, qty });
         setBusy(false);
         if (result.error !== null) {
-          setNotice({ tone: 'error', text: t.vanStock.failed });
+          announce('error', t.vanStock.failed);
           return;
         }
         const data = result.data;
         if (data.status === 'ok') {
-          setNotice({
-            tone: 'ok',
-            text: fillCopy(direction === 'take' ? t.vanStock.took : t.vanStock.returned, {
-              n: String(data.movedQty),
-            }),
-          });
+          announce(
+            'ok',
+            fillCopy(direction === 'take' ? t.vanStock.took : t.vanStock.returned, { n: String(data.movedQty) }),
+          );
         } else if (data.status === 'not_enough') {
-          setNotice({ tone: 'error', text: fillCopy(t.vanStock.notEnough, { n: String(data.available) }) });
+          announce('error', fillCopy(t.vanStock.notEnough, { n: String(data.available) }));
         } else if (data.status === 'unknown_code') {
           // Tanınmayan kod SESSİZ GEÇMEZ: kurye okuttuğunu sanır, mal araca hiç binmez.
-          setNotice({ tone: 'error', text: t.vanStock.unknownCode });
+          announce('error', t.vanStock.unknownCode);
         } else if (data.status === 'stuck') {
           // Mal transferde ASILI: sessiz bir "olmadı", kaybolmuş bir malı gizlerdi.
-          setNotice({ tone: 'error', text: t.vanStock.stuck });
+          announce('error', t.vanStock.stuck);
         } else {
-          setNotice({ tone: 'error', text: t.vanStock.failed });
+          announce('error', t.vanStock.failed);
         }
         await load();
       })();
@@ -256,14 +276,6 @@ export function CourierVanStockScreen() {
           </>
         )}
 
-        {notice === null ? null : (
-          <Text
-            style={[styles.notice, notice.tone === 'error' ? styles.noticeError : styles.noticeOk]}
-            testID="courier-van-stock-notice"
-          >
-            {notice.text}
-          </Text>
-        )}
       </ScrollView>
 
       {/* DÖNÜŞ DÜĞMESİ YÜKÜ TAŞIR (v3:19 `serbestCtaLabel`) — kurye ekrandan çıkarken araca ne
@@ -291,12 +303,12 @@ export function CourierVanStockScreen() {
         /* SONUÇ ÇEKMECENİN İÇİNDE (cihazda ölçüldü 31.08): okutma sayfadaki bildirim satırını
            yazıyordu ama çekmece açık kaldığı için o satır katmanın ALTINDA kalıyordu — kurye
            kodu okutuyor, hiçbir şey olmamış gibi görünüyor ve ikinci kez okutuyordu. */
-        hint={notice === null ? t.vanStock.scanHint : notice.text}
+        hint={sheetHint ?? t.vanStock.sheetHint}
         onClose={() => {
           setScanOpen(false);
-          setNotice(null);
+          setSheetHint(null);
         }}
-        onScan={(code) => move('take', { code }, 1)}
+        onScan={(code) => move('take', { code }, 1, 'sheet')}
         testID="courier-van-scan-sheet"
       />
 
@@ -318,7 +330,7 @@ export function CourierVanStockScreen() {
         onClose={() => {
           setSearchOpen(false);
           setQuery('');
-          setNotice(null);
+          setSheetHint(null);
         }}
         testID="courier-van-search-sheet"
       >
@@ -332,12 +344,9 @@ export function CourierVanStockScreen() {
         />
         <View style={styles.sheetHead}>
           <Text style={styles.heading}>{query.trim().length === 0 ? t.vanStock.quickHeading : ''}</Text>
-          {notice === null ? null : (
-            <Text
-              style={[styles.sheetNotice, notice.tone === 'error' ? styles.noticeError : styles.noticeOk]}
-              testID="courier-van-sheet-notice"
-            >
-              {notice.text}
+          {sheetHint === null ? null : (
+            <Text style={styles.sheetNotice} testID="courier-van-sheet-notice">
+              {sheetHint}
             </Text>
           )}
         </View>
@@ -352,7 +361,7 @@ export function CourierVanStockScreen() {
               row={row}
               onVan={vanQtyOf(row.variantId)}
               busy={busy}
-              onPress={() => move('take', { variantId: row.variantId }, 1)}
+              onPress={() => move('take', { variantId: row.variantId }, 1, 'sheet')}
             />
           ))
         )}
@@ -584,11 +593,4 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.meta * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
   },
-  notice: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-  },
-  noticeOk: { color: operationsTheme.colors.muted },
-  noticeError: { color: operationsTheme.colors.error },
 });

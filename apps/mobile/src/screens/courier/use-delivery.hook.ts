@@ -13,8 +13,7 @@ import {
   submitDoorDelivery,
   submitUndelivered,
 } from '@/lib/api/courier';
-import { useNotice } from '@/lib/haptics/use-notice.hook';
-import { toastSuccess } from '@/lib/toast/toast-store';
+import { toastError, toastSuccess } from '@/lib/toast/toast-store';
 import { newRequestKey } from '@/lib/request-key';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
@@ -154,7 +153,6 @@ interface UseDeliveryResult {
   noteError: string | null;
 
   sending: boolean;
-  notice: DeliveryNotice | null;
   /** Yazma başarıyla tamamlandı — ekran artık bir sonuç ekranıdır, form değil. */
   finished: boolean;
   deliver: () => void;
@@ -226,7 +224,14 @@ export function useDelivery(orderId: string): UseDeliveryResult {
   const [noteError, setNoteError] = useState<string | null>(null);
 
   const [sending, setSending] = useState(false);
-  const [notice, setNotice] = useNotice<DeliveryNotice>();
+  /* SONUÇ TOAST'TA (kullanıcı kararı 01.09) — cümle sayfanın altında, kapanış düğmesinin
+     üstünde bir şerit olarak duruyordu: kurye kutu okuturken ekranın altına bakmıyor ve reddin
+     sebebini çoğu zaman hiç görmüyordu. Titreşim `useNotice`tan toast fiillerine geçti. */
+  const setNotice = useCallback((notice: DeliveryNotice | null) => {
+    if (notice === null) return;
+    if (notice.tone === 'ok') toastSuccess(notice.text);
+    else toastError(notice.text);
+  }, []);
 
   /**
    * BAŞARILI SONUÇ: mesaj toast'a gider, ekran kapanır (kullanıcı kararı 30.08).
@@ -626,7 +631,6 @@ export function useDelivery(orderId: string): UseDeliveryResult {
     noteError,
 
     sending,
-    notice,
     finished,
     deliver,
     confirmOutcome,

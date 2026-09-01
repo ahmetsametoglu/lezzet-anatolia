@@ -744,6 +744,17 @@ izi ve soğuk zincir kendiliğinden çalışır.
   stoğudur ve *ayrılmıştır* (rezervasyon çıpası depoya bağlıdır — `ORDER_LIFECYCLE`); serbest satış
   için yüklenen fazlalık ise **aracın** stoğudur. Fiziksel olarak aynı arabada, mantıken ayrı — ki
   zaten ayrılmış mal satılamaz da. Yerinde satış yalnız aracın kendi stoğundan yapılır.
+- **Araç bir VİTRİN değildir** (01.09). Katalogun *"süzülmez, işaretlenir"* kuralı müşteri
+  yüzeyinindir: rafta olmayan ürün de listede durur, üstünde "tükendi" yazar. Kurye ekranında bu
+  kural tersine çalışır — elinde olmayanı göstermenin karşılığı yok. **Kuryenin satış listesi
+  aracın İÇERİĞİDİR**, kataloğun tamamı değil; sipariş kutuları listede olmaz (üstteki maddenin
+  doğal sonucu: o mal aracın stoğu değil).
+- **Satış yerini YÜZEY beyan eder, depoyu SUNUCU çözer** (01.09). Aynı personel hem kapıda hem
+  araçta olabiliyor (kurye rolü tesisleri de kapsar — rota seçimi onlara bakar), o yüzden "neredeyim"
+  sorusunun cevabı istekten çıkarılamaz, SÖYLENİR. Beyan bir yetki değildir: aracı kapsam belirler,
+  istemci hangi aracı istediğini seçemez. Kuryenin cihazda seçtiği tesis onun **rota** deposudur,
+  satış deposu değil — ikisini aynı parametreye yazmak, kuralı sessizce iptal etmenin yoludur
+  (ölçüldü: 30.08–01.09 arası kurye kendi ekranında ana deponun katalogunu gördü).
 
 ### Sipariş: tek depodan, istisnasız
 
