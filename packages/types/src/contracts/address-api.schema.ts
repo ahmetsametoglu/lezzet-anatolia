@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { AddressSchema } from '../entities/address.schema';
-import { CountryEnum } from '../primitives/enums.schema';
+import { AddressGeoPrecisionEnum, CountryEnum } from '../primitives/enums.schema';
 
 /**
  * `/api/v1/me/addresses` SÖZLEŞME şemaları (21.15) — mobil adres uçlarının ve hesap ekranının
@@ -115,4 +115,32 @@ export const AddressWriteSchema = z.object({
    * (kullanıcı kararı 10.08); o yolda da ülke tahmin edilmez, sorulur.
    */
   country: CountryEnum.optional(),
+  /**
+   * SEÇİLEN önerinin KOORDİNATI (11.9) — `country`nin kardeşi ve birebir aynı kuralı izler:
+   * *"alan bir beyan değil, ADAYLAR ARASINDAN yapılmış bir seçimdir."*
+   *
+   * ── NEDEN AYRI BİR NESNE, NEDEN DÜZ `lat`/`lng` DEĞİL ───────────────────────
+   * Adres satırının kendisinde de `lat`/`lng` kolonları var (0011) ve bu alan onlar DEĞİLDİR —
+   * onlara giden bir aday. Ayrımı adında taşımasaydı gövdeden gelen sayı, kapının yazdığı sayıyla
+   * aynı isimde olur ve bir gün biri onu doğrudan satıra geçirirdi: makullük süzgecini
+   * (`plausiblePoint`) atlayan ikinci bir yol. Web'de bu ayrım gövdede değil İMZADA duruyor
+   * (`addAddress(…, point)` ayrı bir parametre) — burada gövdeden geçmek zorunda, çünkü araya HTTP
+   * giriyor; o yüzden ayrımı adı yapıyor.
+   *
+   * ── NEDEN VAR ───────────────────────────────────────────────────────────────
+   * BAN önerisi koordinatı zaten cevabında gönderiyor. 01.09'a kadar mobil yüzey onu ATIYORDU ve
+   * adres noktasız doğuyordu: satır tarama kuyruğuna düşüyor, on dakika sonra AYNI soru ikinci kez
+   * BAN'a soruluyordu. Arada kalan pencerede o adresin durağı posta kodu merkezine düşer — ve
+   * Strasbourg'da o merkez sıfır bilgi taşıyor (ölçüldü 31.08: üç kod da aynı nokta).
+   *
+   * Verilmezse hiçbir şey bozulmaz: satır noktasız doğar ve tarama işi onu çözer. Yani alan bir
+   * hızlandırıcıdır, bir ön koşul değil.
+   */
+  point: z
+    .object({
+      lat: z.number(),
+      lng: z.number(),
+      precision: AddressGeoPrecisionEnum,
+    })
+    .nullish(),
 });

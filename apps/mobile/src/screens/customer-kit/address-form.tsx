@@ -1,3 +1,4 @@
+import type { AddressKind } from '@lezzet/address-fr';
 import { normalizePhone } from '@lezzet/helper';
 import type { LocalizedCopy } from '@lezzet/i18n';
 import type { Country } from '@lezzet/types';
@@ -142,6 +143,18 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
      seçilmiş ülke kaybolmamalı. */
   const [country, setCountry] = useState<Country | null>(editing?.country ?? null);
 
+  /* ── NOKTA: ÜLKENİN KARDEŞİ (11.9 · 01.09) ──────────────────────────────────
+     BAN önerisi koordinatı zaten cevabında gönderiyor ve bu form onu 01.09'a kadar ATIYORDU:
+     adres noktasız kaydediliyor, tarama işi on dakika sonra AYNI soruyu ikinci kez soruyordu.
+     Arada kalan pencerede o durak posta kodu merkezine düşer — Strasbourg'da o merkez hiçbir şey
+     ayırt etmiyor (ölçüldü 31.08: üç kod da aynı nokta), yani rota sırası keyfîleşiyordu.
+
+     Düzenlemede BOŞ başlar ve bu bilinçli: kayıtlı nokta zaten satırda duruyor ve müşteri adresi
+     değiştirmediyse kapı onu KORUYOR (`resolveAddressPoint`). Buraya mevcut noktayı koymak, hiçbir
+     şey değişmemişken onu "yeni bir aday" gibi yeniden yazdırırdı — ve `geoAt` damgası her
+     etiket düzenlemesinde tazelenirdi. */
+  const [point, setPoint] = useState<{ lat: number; lng: number; precision: AddressKind } | null>(null);
+
   /* ÖNERİ DURUMU ARTIK BURADA DEĞİL (MB-06): BAN araması, posta kodu önerisi, çok yerleşimli
      kodun şehir listesi ve ülke türetimi `address-fields`e taşındı — aynı davranışı profesyonel
      başvurusu da kullanabilsin diye. Bu form yalnız SONUCU alır (`onCountryChange`) ve kaydı yazar.
@@ -187,6 +200,9 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
       postalCode: draft.postalCode,
       city,
       ...(country === null ? {} : { country }),
+      /* Nokta yalnız SEÇİLDİYSE gönderilir. `null` göndermek de zararsız (kapı adayı yok sayar) ama
+         gövdeyi anlamsız bir alanla şişirirdi; ülke alanının aynı kuralı. */
+      ...(point === null ? {} : { point }),
     };
     const knownIds = new Set(addresses.map((address) => address.id));
     setSaving(true);
@@ -251,6 +267,7 @@ export function AddressForm({ editing, addresses, onSaved, saveLabel, active = t
         value={{ line1: draft.line1, postalCode: draft.postalCode, city: draft.city }}
         onChange={editDraft}
         onCountryChange={setCountry}
+        onPointChange={setPoint}
         active={active}
         copy={t}
         testIDPrefix="address"

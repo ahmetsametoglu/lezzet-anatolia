@@ -27,12 +27,14 @@ jest.mock('@/lib/api/addresses', () => ({
   deleteAddress: jest.fn(),
 }));
 
-/* BAN (sokak) araması bu dosyanın konusu değil ve dış servise çıkar — susturuluyor ki testin
-   ölçtüğü tek şey posta kodu yolu olsun. */
+/* BAN (sokak) araması dış servise çıkar — taklit ediliyor. VARSAYILANI "unavailable": posta kodu
+   testlerinin ölçtüğü tek şey kod yolu olsun. Koordinat testleri cevabı kendileri kurar; jest
+   fabrikası yalnız `mock` önekli değişkeni görebildiği için değer bir kutuda taşınıyor. */
+const mockBan: { reply: unknown } = { reply: { status: 'unavailable' } };
 jest.mock('@lezzet/address-fr', () => ({
   MIN_QUERY_LENGTH: 3,
-  addressLineOf: () => '',
-  searchAddresses: async () => ({ status: 'unavailable' }),
+  addressLineOf: (suggestion: { line1?: string }) => suggestion.line1 ?? '',
+  searchAddresses: async () => mockBan.reply,
 }));
 
 /** TEK yerleşimli: şehir seçim gerektirmez. */
@@ -90,6 +92,7 @@ beforeEach(() => {
   // Uç taban adresi olmadan `env.apiUrl` FIRLATIR ve çağrı sessizce `network_error`a düşerdi —
   // öneri listesi hiç çizilmez, test de sebebini söylemezdi (kardeş ekran testlerinin aynı satırı).
   process.env.EXPO_PUBLIC_API_URL = 'http://api.test';
+  mockBan.reply = { status: 'unavailable' };
   mockCreate.mockReset();
   mockCreate.mockResolvedValue({ data: [], error: null });
 });
@@ -146,5 +149,91 @@ describe('adres formu — posta kodu seçimi', () => {
 
     await waitFor(() => expect(mockCreate).toHaveBeenCalled());
     expect(mockCreate.mock.calls[0][0].country).toBeUndefined();
+  });
+});
+
+/**
+ * ── ÖNERİNİN KOORDİNATI (11.9 · 01.09) ──────────────────────────────────────
+ * 01.09'a kadar bu form BAN önerisinin koordinatını ATIYORDU (web karşılığı 31.08'de bağlanmıştı).
+ * Sonuç sessizdi: adres noktasız kaydediliyor, tarama işi on dakika sonra AYNI soruyu ikinci kez
+ * BAN'a soruyordu — ve arada kalan pencerede o durak posta kodu merkezine düşüyordu. Strasbourg'da
+ * o merkez hiçbir şey ayırt etmiyor (ölçüldü 31.08: üç kodun üçü de aynı nokta), yani rota sırası
+ * o adres için keyfîleşiyordu.
+ *
+ * Sınanan şey noktanın DOĞRULUĞU değil (o sunucunun süzgecinin işi — `geo-address.test.ts`),
+ * gövdeye GİRİP GİRMEDİĞİ ve seçim bozulunca DÜŞÜP DÜŞMEDİĞİ.
+ */
+const ONERI = {
+  id: 'ban-1',
+  line1: '12 rue des Fleurs',
+  postalCode: '67000',
+  city: 'Strasbourg',
+  latitude: 48.5839,
+  longitude: 7.7455,
+  kind: 'housenumber',
+};
+
+/** Sokak alanına yazıp BAN listesinin gelmesini bekler. */
+async function typeStreet(text: string): Promise<void> {
+  await fireEvent.changeText(screen.getByTestId('address-line'), text);
+  await waitFor(() => expect(screen.getByTestId('address-suggestions')).toBeTruthy());
+}
+
+describe('adres formu — öneri koordinatı', () => {
+  it('BAN önerisi seçilince nokta gövdeye GİRER — ikinci bir ağ turu yok', async () => {
+    mockBan.reply = { status: 'ok', suggestions: [ONERI] };
+    await renderForm([STRASBOURG]);
+    await typeStreet('12 rue des');
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
+
+    await fireEvent.press(screen.getByTestId('address-save'));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0]).toMatchObject({
+      line1: '12 rue des Fleurs',
+      point: { lat: 48.5839, lng: 7.7455, precision: 'housenumber' },
+    });
+  });
+
+  it('öneri seçilmeden yazılan adreste nokta GÖNDERİLMEZ — alan hiç konmaz', async () => {
+    /* "Bilinmiyor"u bir değere çevirmemek (ülke alanının aynı kuralı): `point: null` göndermek de
+       çalışırdı ama gövdeyi anlamsız bir alanla şişirirdi. Satır sunucuda tarama kuyruğuna girer. */
+    await renderForm([STRASBOURG]);
+    await fireEvent.changeText(screen.getByTestId('address-line'), '3 rue des Lilas');
+    await type('67000');
+    await fireEvent.press(screen.getByTestId('address-zip-suggestions-0'));
+    await fireEvent.press(screen.getByTestId('address-save'));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0].point).toBeUndefined();
+  });
+
+  it('SOKAK elle değişince nokta DÜŞER — nokta seçilen SATIRA aittir', async () => {
+    /* Arıza somut: müşteri "12 rue des Fleurs"ü seçer, sonra elle "14" yapar. Nokta 12 numaranınki
+       kalırdı ve makullük süzgeci de geçerdi (aynı posta kodu) — kurye YANLIŞ KAPIYA sıralanırdı ve
+       hiçbir ekran bunu söylemezdi. */
+    mockBan.reply = { status: 'ok', suggestions: [ONERI] };
+    await renderForm([STRASBOURG]);
+    await typeStreet('12 rue des');
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
+
+    await fireEvent.changeText(screen.getByTestId('address-line'), '14 rue des Fleurs');
+    await fireEvent.press(screen.getByTestId('address-save'));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0].point).toBeUndefined();
+  });
+
+  it('POSTA KODU elle değişince de nokta DÜŞER — ülkenin kardeş kuralı', async () => {
+    mockBan.reply = { status: 'ok', suggestions: [ONERI] };
+    await renderForm([STRASBOURG]);
+    await typeStreet('12 rue des');
+    await fireEvent.press(screen.getByTestId('address-suggestions-0'));
+
+    await fireEvent.changeText(screen.getByTestId('address-zip'), '67100');
+    await fireEvent.press(screen.getByTestId('address-save'));
+
+    await waitFor(() => expect(mockCreate).toHaveBeenCalled());
+    expect(mockCreate.mock.calls[0][0].point).toBeUndefined();
   });
 });

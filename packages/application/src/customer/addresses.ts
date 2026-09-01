@@ -3,7 +3,7 @@ import type { Address, AddressInsert } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { resolveAddressCountry } from '../delivery/place';
-import { resolveAddressPoint } from '../delivery/geo-address';
+import { resolveAddressPoint, type AddressPointCandidate } from '../delivery/geo-address';
 
 /*
   MÜŞTERİ ADRES KAPISI — web hesap sayfasının `lib/account/addresses.ts` kurallarının paket hâli
@@ -27,8 +27,20 @@ import { resolveAddressPoint } from '../delivery/geo-address';
   ikinci bir liste turuna mecbur bırakırdı — sözleşmenin aynı kararı (`address-api.schema.ts`).
 */
 
-/** Yazılabilir alanlar — `isDefault` ve `customerId` BİLEREK tipin dışında (üstteki kurallar). */
-export type CustomerAddressWrite = Omit<AddressInsert, 'customerId' | 'isDefault'>;
+/**
+ * Yazılabilir alanlar — `isDefault` ve `customerId` BİLEREK tipin dışında (üstteki kurallar).
+ *
+ * **Koordinat künyesinin yedi alanı da dışarıda (11.9 · 01.09).** Çağıran noktayı `point` ADAYI
+ * olarak verir; kapı onu `resolveAddressPoint` süzgecinden geçirir ve satıra ne yazılacağına O
+ * karar verir. Tip bunları taşısaydı bir çağıran `lat`/`lng`i doğrudan geçebilirdi ve makullük
+ * süzgecini atlayan ikinci bir yol doğardı — üstelik sessizce, çünkü `addForCustomer` gövdeyi
+ * olduğu gibi yazıyor. HTTP ucunda kapı zaten dardı (`AddressWriteSchema` bu alanları hiç
+ * taşımıyor); açık olan TİPTİ, ve tip bir gün ikinci bir çağıran bulur.
+ */
+export type CustomerAddressWrite = Omit<
+  AddressInsert,
+  'customerId' | 'isDefault' | 'lat' | 'lng' | 'geoPrecision' | 'geoSource' | 'geoAt' | 'geoCheckedAt' | 'geoAttempts'
+>;
 
 export type CustomerAddressOutcome =
   | { status: 'ok'; addresses: Address[] }
@@ -73,9 +85,9 @@ async function ownedAddress(service: AddressService, customerId: string, address
 
 export async function addCustomerAddress(
   db: SupabaseClient,
-  input: { customerId: string } & CustomerAddressWrite,
+  input: { customerId: string; point?: AddressPointCandidate | null } & CustomerAddressWrite,
 ): Promise<CustomerAddressOutcome> {
-  const { customerId, ...write } = input;
+  const { customerId, point, ...write } = input;
   const clean = normalized(write);
   if (!clean) return { status: 'invalid_address' };
 
@@ -84,17 +96,29 @@ export async function addCustomerAddress(
      girer (kullanıcı kararı 10.08). */
   const country = await resolveAddressCountry(db, { postalCode: clean.postalCode ?? write.postalCode, country: write.country });
 
+  /* NOKTA TEK KAPIDAN (11.9 · 01.09): istemcinin gönderdiği koordinat bir ADAYDIR ve
+     `resolveAddressPoint` onu posta kodu merkezine göre makullük süzgecinden geçirir. Aday yoksa
+     künye boş döner ve satır tarama kuyruğuna girer — yani öneriye tıklamadan elle yazılan adres
+     eskisi gibi çalışmaya devam eder, yalnız bir tur geç çözülür. */
+  const geo = await resolveAddressPoint(db, { candidate: point, postalCode: clean.postalCode ?? write.postalCode });
+
   const service = new AddressService(db);
   // Spread sırası bilinçli: `write` tam gövdenin TİPİNİ kurar, `clean` aynı alanların temizlenmiş
-  // DEĞERLERİNİ üstüne yazar — `as` cast'ine gerek kalmaz. Ülke EN SONA yazılır: kapının doğruladığı
-  // değer kazanmalı, istemcinin gönderdiği ham alan değil.
-  await service.addForCustomer({ ...write, ...clean, ...(country === null ? {} : { country }), customerId });
+  // DEĞERLERİNİ üstüne yazar — `as` cast'ine gerek kalmaz. Ülke ve koordinat EN SONA yazılır:
+  // kapının doğruladığı değer kazanmalı, istemcinin gönderdiği ham alan değil.
+  await service.addForCustomer({ ...write, ...clean, ...(country === null ? {} : { country }), ...geo, customerId });
   return { status: 'ok', addresses: await listCustomerAddresses(db, customerId) };
 }
 
 export async function updateCustomerAddress(
   db: SupabaseClient,
-  input: { customerId: string; addressId: string; patch: Partial<CustomerAddressWrite> },
+  input: {
+    customerId: string;
+    addressId: string;
+    patch: Partial<CustomerAddressWrite>;
+    /** Düzenlemede yeniden seçilen önerinin koordinatı — `addCustomerAddress`in aynı adayı. */
+    point?: AddressPointCandidate | null;
+  },
 ): Promise<CustomerAddressOutcome> {
   const service = new AddressService(db);
   const current = await ownedAddress(service, input.customerId, input.addressId);
@@ -127,8 +151,12 @@ export async function updateCustomerAddress(
   /* NOKTA DA KODUN PEŞİNDEN GİDER (11.9) — ve bu, ülke kuralının kardeşi.
      Adres satırı/kodu/şehri değiştiyse eski koordinat artık BU adresin cevabı değildir. Yazılmazsa
      en sinsi arıza doğar: müşteri adresini düzeltir, kurye ESKİ kapıya sıralanır ve hiçbir ekran
-     bunu söylemez. Düşen satır tarama kuyruğuna girer (`geocodeAddressesScan`) ve yeniden çözülür. */
+     bunu söylemez. Düşen satır tarama kuyruğuna girer (`geocodeAddressesScan`) ve yeniden çözülür.
+
+     Müşteri düzenlemede YENİ bir öneri seçtiyse aday o noktadır ve düşüş hiç yaşanmaz — süzgeci
+     yine geçmek zorunda (`resolveAddressPoint` içinde). */
   const geo = await resolveAddressPoint(db, {
+    candidate: input.point,
     postalCode: postalCode ?? current.postalCode,
     current: {
       line1: current.line1,

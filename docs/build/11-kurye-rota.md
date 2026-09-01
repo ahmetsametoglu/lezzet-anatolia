@@ -252,7 +252,29 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       abartılıydı — o kural otomatik tamamlama içindir (her tuş vuruşu), kaydetme için değil.
       Ölçüm de bunu söylüyordu: cron kuyruğu **0 satır**. Künyesi düzeltildi, iş artık TELAFİ olarak
       duruyor (elle yazılan adres · ops paneli · süzgeçten düşen aday · servis kesintisi · ileride
-      DE sağlayıcısı). **Mobil yarısı native şeritte.**
+      DE sağlayıcısı). ~~**Mobil yarısı native şeritte.**~~ **MOBİL YARISI DA KAPANDI (01.09):**
+      uygulamada BAN otomatik tamamlama zaten vardı ama koordinat ATILIYORDU — `address-fields`in
+      `onPointChange` karşılığı yoktu ve `POST /api/v1/me/addresses` aday nokta kabul etmiyordu.
+      Yani mobilden girilen her adres noktasız doğuyor, tarama işi on dakika sonra AYNI soruyu
+      ikinci kez BAN'a soruyordu; arada kalan pencerede o durak posta kodu merkezine düşüyordu.
+      Sözleşmeye `point` eklendi — düz `lat`/`lng` DEĞİL, adlandırılmış bir ADAY: web'de bu ayrım
+      imzada duruyor (`addAddress(…, point)`), burada araya HTTP girdiği için ayrımı ADI yapıyor.
+    - **Yan kazanç — sessiz bir açık kapandı:** `CustomerAddressWrite` tipi
+      `Omit<AddressInsert, 'customerId'|'isDefault'>` idi, yani **ham `lat`/`lng` taşıyordu** ve
+      `addForCustomer`a olduğu gibi akıyordu. HTTP ucu dardı (`AddressWriteSchema` o alanları hiç
+      taşımıyor) ama TİP açıktı — ve tip bir gün ikinci bir çağıran bulur. Yedi geo alanı da tipin
+      dışına alındı; nokta artık yalnız `resolveAddressPoint`ten geçerek satıra iniyor.
+    - **Testler:** 6 entegrasyon (uç — makul aday iner, uzak aday yazılmaz ama KAYIT GEÇER, aday
+      yokken satır noktasız doğar, ham `lat` gövdeden sızamaz, düzenlemede güncellenir/düşer) +
+      4 birim (form — nokta gövdeye girer, seçim yoksa alan hiç konmaz, sokak ve kod elle
+      değişince düşer). Sokak dalı **sabotajla doğrulandı**.
+    - ⚠ **WEB'DE AYNI DALIN YARISI EKSİK ve DOKUNULMADI:** web `address-fields` noktayı yalnız
+      POSTA KODU elle değişince düşürüyor, SOKAK değişince düşürmüyor. "12 rue des Fleurs" seçip
+      elle "14" yapan müşteride koordinat 12 numaranınki kalır, makullük süzgeci de geçer (aynı
+      kod) ve kurye YANLIŞ KAPIYA sıralanır. Sapma birkaç metre ama kural nettir: nokta seçilen
+      SATIRA aittir. Mobilde yazıldı; web tarafı kullanıcıya bildirildi ve kararı bekliyor — işaret
+      KODA konmadı, çünkü açığın kaydı bu satırın kendisidir (`BEKLEYEN` bir kayda GİDEN bağdır,
+      kaydın içinde kendini gösteremez) ve 11.9 kapalı bir görevdir.
     - **Durum (01.09) — PLANIN KALAN ALTI MADDESİ KAPANDI.**
       - **Sıranın künyesi sözleşmede** (`StopOrderInfoSchema`): ölçü · incelik · sıralı/sırasız
         sayısı. `DOMAIN §6` *"ekran bunu söyleyebilmeli"* diyordu ama söyleyemiyordu — doküman kodu

@@ -1,4 +1,4 @@
-import { addressLineOf } from '@lezzet/address-fr';
+import { addressLineOf, type AddressKind } from '@lezzet/address-fr';
 import type { Country } from '@lezzet/types';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -76,6 +76,18 @@ interface AddressFieldsProps {
   active?: boolean;
   /** Posta kodundan çözülen ülke; kod elle değişince `null`. Kullanmayan çağıran geçmez. */
   onCountryChange?: (country: Country | null) => void;
+  /**
+   * Seçilen önerinin KOORDİNATI (11.9) — `onCountryChange`in kardeşi ve aynı kuralı izler.
+   *
+   * BAN önerisi noktayı zaten taşıyor; 01.09'a kadar burada ATILIYORDU ve adres noktasız
+   * kaydediliyordu — satır tarama kuyruğuna düşüyor, on dakika sonra AYNI soru ikinci kez BAN'a
+   * soruluyordu. Arada kalan pencerede o durak posta kodu merkezine düşer ve Strasbourg'da o merkez
+   * hiçbir şey ayırt etmez (ölçüldü 31.08: üç kod da aynı nokta).
+   *
+   * Öneri seçilince nokta yukarı verilir, alan ELLE değiştirilince `null`a düşer: nokta seçilen
+   * SATIRA aittir. Kullanmayan çağıran (B2B başvurusu — kayıt yazmıyor) geçmez.
+   */
+  onPointChange?: (point: { lat: number; lng: number; precision: AddressKind } | null) => void;
   /** `${testIDPrefix}-line` gibi türetilir — iki yüzeyin testleri kendi adlarını korur. */
   testIDPrefix: string;
 }
@@ -88,6 +100,7 @@ export function AddressFields({
   shape,
   active = true,
   onCountryChange,
+  onPointChange,
   testIDPrefix,
 }: AddressFieldsProps) {
   /* Kod listesinden SEÇİLEN satır — yalnız ŞEHİR listesini çizmek için (çok yerleşimli kod).
@@ -118,6 +131,9 @@ export function AddressFields({
     // Şehir öneriden geldi; kodun yerleşim listesine ihtiyaç yok.
     setPlace(null);
     onCountryChange?.('FR');
+    // Koordinat SEÇİLEN satırdan geliyor — müşterinin gözüyle onayladığı nokta, sonradan bir
+    // taramanın tahmin edeceğinden iyi kaynaktır ve ikinci bir ağ çağrısı gerektirmez.
+    onPointChange?.({ lat: picked.latitude, lng: picked.longitude, precision: picked.kind });
     onChange({ line1: addressLineOf(picked), postalCode: picked.postalCode, city: picked.city });
   };
 
@@ -152,6 +168,12 @@ export function AddressFields({
         value={value.line1}
         onChangeText={(next) => {
           setSuggestOpen(true);
+          /* Satır ELLE değişti → nokta düşer. Öneriden "12 rue des Fleurs" seçip sonra elle "14"
+             yapan müşteride koordinat 12 numaranınki kalırdı; makullük süzgeci de geçerdi (aynı
+             posta kodu) ve kurye YANLIŞ KAPIYA sıralanırdı. Sapma birkaç metre ama kural nettir:
+             nokta seçilen SATIRA aittir. Öneri seçimi bu yoldan geçmiyor (`applySuggestion` kendi
+             çağrısını yapıyor), yani seçimi düşürmez. */
+          onPointChange?.(null);
           onChange({ line1: next });
         }}
         accessibilityLabel={copy.lineLabel}
@@ -192,6 +214,9 @@ export function AddressFields({
               setZipOpen(true);
               setCityOpen(false);
               onCountryChange?.(null);
+              // Nokta da kodun peşinden gider: elle değiştirilen bir kodda önerinin koordinatı
+              // artık bu adresin cevabı değildir (`geo-address` künyesindeki aynı kural).
+              onPointChange?.(null);
               setPlace(null);
               onChange({ postalCode: next.replace(/\D/g, '').slice(0, 5) });
             }}

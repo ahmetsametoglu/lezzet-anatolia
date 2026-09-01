@@ -143,3 +143,93 @@ describe('sahiplik — başkasının satırına dokunulamaz', () => {
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
+
+/**
+ * ── ÖNERİNİN KOORDİNATI (11.9 · 01.09) ──────────────────────────────────────
+ * 01.09'a kadar bu uç noktayı hiç taşımıyordu: mobil müşteri BAN önerisine tıklıyor, koordinat o
+ * cevapta geliyor ve ATILIYORDU. Adres noktasız doğuyor, tarama işi on dakika sonra AYNI soruyu
+ * ikinci kez soruyordu — ve arada kalan pencerede o durak posta kodu merkezine düşüyordu.
+ *
+ * Burada sınanan şey TAŞIMA (dosyanın kendi ilkesi): gövdenin `point` alanı kapıya ayrı bir aday
+ * olarak ulaşıyor mu, ve süzgeç çalışıyor mu. Süzgecin KURALI `geo-address.test.ts`in konusu.
+ */
+describe('öneri koordinatı', () => {
+  const adresiOku = async (id: string) =>
+    (await db.from('address').select('lat, lng, geo_precision, geo_source').eq('id', id).single()).data;
+
+  /** Adres ekler ve KENDİ satırını döner — cevap güncel listedir, kayıt satırı değil. */
+  async function ekle(body: Record<string, unknown>): Promise<string> {
+    const list = await envelopeData<{ id: string; line1: string }[]>(
+      await req('', { method: 'POST', body: JSON.stringify({ ...yeniAdres, ...body }) }),
+    );
+    const row = list.find((address) => address.line1 === body['line1']);
+    if (!row) throw new Error(`fikstür: eklenen adres listede yok (${String(body['line1'])})`);
+    return row.id;
+  }
+
+  it('MAKUL aday satıra iner — künyesiyle birlikte', async () => {
+    const id = await ekle({ line1: '9 rue du Point', point: { lat: 48.5839, lng: 7.7455, precision: 'housenumber' } });
+
+    const satir = await adresiOku(id);
+    expect(Number(satir?.lat)).toBeCloseTo(48.5839, 4);
+    expect(satir?.geo_precision).toBe('housenumber');
+    // Kaynak `ban`: nokta bir öneriden geldi, elle girilmedi.
+    expect(satir?.geo_source).toBe('ban');
+  });
+
+  it('UZAK aday yazılmaz ama KAYIT GEÇER — adres defteri hiçbir hâlde reddetmez', async () => {
+    /* İki kural aynı anda: makullük süzgeci yanlış koordinatı tutar (Paris'in noktası 67000 için
+       makul değil) VE müşterinin adresi yine kaydedilir. Süzgecin kaydı reddetmesi, bir koordinat
+       yüzünden adres eklenememesi olurdu — koordinatsız adres bundan iyidir. */
+    const id = await ekle({ line1: '11 rue du Uzak', point: { lat: 48.8566, lng: 2.3522, precision: 'housenumber' } });
+
+    const satir = await adresiOku(id);
+    expect(satir?.lat).toBeNull();
+    expect(satir?.geo_source).toBeNull();
+  });
+
+  it('aday YOKSA satır noktasız doğar — tarama kuyruğuna girer', async () => {
+    const id = await ekle({ line1: '13 rue du Elle' });
+
+    expect((await adresiOku(id))?.lat).toBeNull();
+  });
+
+  it('HAM `lat` gövdeden SIZAMAZ — süzgeci atlayan ikinci yol yok', async () => {
+    /* Sözleşme `lat`/`lng` taşımıyor ve Zod bilinmeyen anahtarı SOYUYOR; yani böyle bir gövde
+       reddedilmez, alan sessizce düşer. Ölçülen şey tam olarak bu: kayıt geçer ama koordinat
+       YAZILMAZ. Alan bir gün gövdeye eklenirse bu test kırmızıya döner ve sebebini söyler. */
+    const id = await ekle({ line1: '15 rue du Ham', lat: 48.5839, lng: 7.7455 });
+
+    expect((await adresiOku(id))?.lat).toBeNull();
+  });
+
+  it('DÜZENLEMEDE yeni öneri seçilirse nokta güncellenir', async () => {
+    const id = await ekle({ line1: '17 rue du Duzen', point: { lat: 48.58, lng: 7.74, precision: 'street' } });
+
+    const res = await req(`/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...yeniAdres,
+        line1: '19 rue du Duzen',
+        point: { lat: 48.59, lng: 7.75, precision: 'housenumber' },
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    const satir = await adresiOku(id);
+    expect(Number(satir?.lat)).toBeCloseTo(48.59, 4);
+    expect(satir?.geo_precision).toBe('housenumber');
+  });
+
+  it('DÜZENLEMEDE aday yoksa ve adres değiştiyse nokta DÜŞER', async () => {
+    // Kuralın kendisi `geo-address`te; buradaki iddia taşımanın onu BOZMADIĞI — `point`
+    // gönderilmediğinde kapı düşürme dalını görmeli.
+    const id = await ekle({ line1: '21 rue du Dus', point: { lat: 48.58, lng: 7.74, precision: 'street' } });
+    expect((await adresiOku(id))?.lat).not.toBeNull();
+
+    const res = await req(`/${id}`, { method: 'PATCH', body: JSON.stringify({ ...yeniAdres, line1: '23 rue du Dus' }) });
+    expect(res.status).toBe(200);
+
+    expect((await adresiOku(id))?.lat).toBeNull();
+  });
+});

@@ -55,18 +55,35 @@ addresses.get('/', async (c) => {
   return ok(c, MeAddressListSchema.parse(rows));
 });
 
+/*
+  NOKTA GÖVDENİN İÇİNDE GELİR AMA YAZMA ALANI DEĞİLDİR (11.9 · 01.09) — bu yüzden `point` gövdeden
+  AYRIŞTIRILIP kapıya kendi parametresiyle veriliyor, `patch` içinde taşınmıyor.
+
+  Web'de aynı ayrım imzada duruyor (`addAddress(…, point)`); orada araya HTTP girmediği için nokta
+  gövdeye hiç konmadı. Burada konmak zorunda — ve tam o yüzden burada AYIRMAK gerekiyor: `patch`
+  olduğu gibi geçseydi kapının "yazılabilir alanlar" tipi ile gövde ayrışır, `point` bir gün
+  `address` satırına düz bir alan gibi akardı. Süzgeci (`plausiblePoint`) atlayan ikinci yol böyle
+  doğar.
+*/
 addresses.post('/', async (c) => {
   const body = AddressWriteSchema.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return fail(c, 'invalid_body', 400);
-  return respond(c, await addCustomerAddress(serviceDb(), { customerId: c.get('customerId'), ...body.data }));
+  const { point, ...write } = body.data;
+  return respond(c, await addCustomerAddress(serviceDb(), { customerId: c.get('customerId'), point, ...write }));
 });
 
 addresses.patch('/:id', async (c) => {
   const body = AddressWriteSchema.safeParse(await c.req.json().catch(() => null));
   if (!body.success) return fail(c, 'invalid_body', 400);
+  const { point, ...patch } = body.data;
   return respond(
     c,
-    await updateCustomerAddress(serviceDb(), { customerId: c.get('customerId'), addressId: c.req.param('id'), patch: body.data }),
+    await updateCustomerAddress(serviceDb(), {
+      customerId: c.get('customerId'),
+      addressId: c.req.param('id'),
+      patch,
+      point,
+    }),
   );
 });
 
