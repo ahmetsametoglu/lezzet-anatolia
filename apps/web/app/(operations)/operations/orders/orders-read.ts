@@ -54,7 +54,7 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
     itemCount: items.length,
     unitCount: items.reduce((sum, i) => sum + i.qty, 0),
     hasBundle: items.some((i) => i.bundleId !== null),
-    totalCents: order.totalCents,
+    totalCents: order.orderedTotalCents,
     deliveryType: order.deliveryType,
     deliveryDate: order.deliveryDate,
     deliveryArea: areaOf(order.addressSnapshot),
@@ -126,7 +126,7 @@ export function toCountsView(counts: OrderCounts): OrderCountsView {
     codCount: counts.cod.count,
     // Açık tutar formülü MOTORUN: toplamlar doğrusal olduğu için küme toplamına da birebir uyar.
     codOpenCents: openAmountCents({
-      totalCents: counts.cod.totalCents,
+      orderedTotalCents: counts.cod.totalCents,
       amountCollectedCents: counts.cod.collectedCents,
       amountRefundedCents: counts.cod.refundedCents,
     }),

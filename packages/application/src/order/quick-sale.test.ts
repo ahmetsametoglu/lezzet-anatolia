@@ -76,7 +76,7 @@ afterAll(async () => {
 /** Kapıda açılan taslak: kaynak `door`, teslimat yok. */
 async function doorDraft(qty: number, unitPriceCents = 1000) {
   return orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', totalCents: qty * unitPriceCents },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', orderedTotalCents: qty * unitPriceCents },
     [{ variantId, qty, unitPriceCents, vatRate: 5.5 }],
   );
 }
@@ -333,7 +333,7 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
   /** Araçtan açılan taslak — kaynağı `door`, deposu ARAÇ. */
   async function aracTaslagi() {
     return orders.create(
-      { warehouseId: yerel.aracId!, customerId, channel: 'b2c', orderSource: 'door', totalCents: 500 },
+      { warehouseId: yerel.aracId!, customerId, channel: 'b2c', orderSource: 'door', orderedTotalCents: 500 },
       [{ variantId: yerel.variantId!, qty: 1, unitPriceCents: 500, vatRate: 5.5 }],
     );
   }
@@ -367,7 +367,7 @@ describe('araçtan satış — sefer bağı (26.08)', () => {
   it('TESİSTEN yapılan satış sefere bağlanmaz — ölçüt satışın yeri', async () => {
     await stocks.insert({ warehouseId: yerel.tesisId!, variantId: yerel.variantId!, physicalQty: 5, expiryDate: dayOffset(90), purchasePriceCents: 100 });
     const { order } = await orders.create(
-      { warehouseId: yerel.tesisId!, customerId, channel: 'b2c', orderSource: 'door', totalCents: 500 },
+      { warehouseId: yerel.tesisId!, customerId, channel: 'b2c', orderSource: 'door', orderedTotalCents: 500 },
       [{ variantId: yerel.variantId!, qty: 1, unitPriceCents: 500, vatRate: 5.5 }],
     );
     const sonuc = await quickSale(db, { orderId: order.id, actorId: yerel.kuryeId, paymentMethod: 'cash', paymentAccountId: cashAccount });

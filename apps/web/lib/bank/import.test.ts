@@ -151,9 +151,9 @@ describe('mükerrer koruması', () => {
 
 describe('eşleştirme kuyruğu', () => {
   /** Referansı ekstredeki açıklamayla eşleşen, tahsil edilmemiş bir satış kurar. */
-  async function unpaidSale(referenceNo: string, totalCents: number, daysAgo: number) {
-    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', totalCents }, [
-      { variantId, qty: 1, fulfilledQty: 1, unitPriceCents: totalCents, vatRate: 5.5 },
+  async function unpaidSale(referenceNo: string, orderedTotalCents: number, daysAgo: number) {
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', orderedTotalCents }, [
+      { variantId, qty: 1, fulfilledQty: 1, unitPriceCents: orderedTotalCents, vatRate: 5.5 },
     ]);
     await orders.update({ id: order.id, status: 'completed', referenceNo });
     await db.from('order_status_log').insert({

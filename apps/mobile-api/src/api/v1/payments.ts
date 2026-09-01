@@ -151,7 +151,7 @@ function paymentBlockOf(order: Order): string | null {
   if (UNPAYABLE_STATUSES.has(order.status)) return 'order_not_payable';
   if (order.paymentStatus !== 'pending') return 'already_settled';
   if (order.amountCollectedCents !== 0 || order.amountRefundedCents !== 0) return 'partially_settled';
-  if (order.totalCents <= 0) return 'nothing_to_pay';
+  if (order.orderedTotalCents <= 0) return 'nothing_to_pay';
   return null;
 }
 
@@ -184,7 +184,7 @@ payments.post('/intents', async (c) => {
   try {
     intent = await stripe.paymentIntents.create(
       {
-        amount: order.totalCents,
+        amount: order.orderedTotalCents,
         currency: PROVIDER_CURRENCY,
         description: order.referenceNo,
         // Kart yeterli: cüzdanlar (Apple/Google Pay) da kart yöntemidir (web'in kararı, birebir).
@@ -194,7 +194,7 @@ payments.post('/intents', async (c) => {
         // yalnız künyedir — hangi yüzeyden ödendiği sağlayıcı panelinde görünsün diye.
         metadata: { order_id: order.id, surface: 'mobile' },
       },
-      { idempotencyKey: `mobile:order:${order.id}:${order.totalCents}` },
+      { idempotencyKey: `mobile:order:${order.id}:${order.orderedTotalCents}` },
     );
   } catch (error) {
     // Sağlayıcı hatası BİZİM içsel hatamız değil — 502 ve adlı anahtar. Yutulmuyor: iz düşülüyor

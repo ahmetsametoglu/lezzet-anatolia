@@ -143,7 +143,7 @@ export async function listCourierRoutes(
     stopCount.set(order.deliveryZoneId, (stopCount.get(order.deliveryZoneId) ?? 0) + 1);
     /* Borcun kuralı motorun kendi kuralı: toplam − (tahsil − iade) > 0. Ödenmiş sipariş
        sayılmaz — kuryenin kapıda yapacağı iş yok. */
-    if (order.totalCents - (order.amountCollectedCents - order.amountRefundedCents) > 0) {
+    if (order.orderedTotalCents - (order.amountCollectedCents - order.amountRefundedCents) > 0) {
       collectionCount.set(order.deliveryZoneId, (collectionCount.get(order.deliveryZoneId) ?? 0) + 1);
     }
   }

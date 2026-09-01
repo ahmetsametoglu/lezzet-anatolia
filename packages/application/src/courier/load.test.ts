@@ -96,7 +96,7 @@ async function boxedReady(opts: { boxQtys?: number[]; courier?: string | null } 
       deliveryDate: today,
       courierId: opts.courier === undefined ? courierId : opts.courier,
       paymentMethod: 'cash',
-      totalCents: total * 1000,
+      orderedTotalCents: total * 1000,
     },
     [{ variantId, qty: total, unitPriceCents: 1000, vatRate: 5.5 }],
   );
@@ -138,7 +138,7 @@ describe('araca yükleme (loadBox · karar §1.11)', () => {
 
   it('açık (mühürlenmemiş) kutu araca binemez', async () => {
     const { order } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', courierId, totalCents: 1000 },
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', courierId, orderedTotalCents: 1000 },
       [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
     );
     await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 1 });

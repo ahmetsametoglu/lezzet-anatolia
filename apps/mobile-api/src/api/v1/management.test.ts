@@ -134,7 +134,7 @@ beforeAll(async () => {
       status: 'confirmed',
       deliveryType: 'pickup',
       deliveryDate: today,
-      totalCents: 1800,
+      orderedTotalCents: 1800,
     },
     [{ variantId: scarceVariantId, qty: 3, unitPriceCents: 600, vatRate: 5.5 }],
   );
@@ -151,7 +151,7 @@ beforeAll(async () => {
       status: 'confirmed',
       deliveryType: 'pickup',
       deliveryDate: today,
-      totalCents: 1300,
+      orderedTotalCents: 1300,
     },
     [{ variantId, qty: 1, unitPriceCents: 1300, vatRate: 5.5 }],
   );

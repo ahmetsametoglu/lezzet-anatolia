@@ -92,7 +92,7 @@ beforeAll(async () => {
   createdProfiles.push(buyerId, strangerId, staffId);
 
   const { order } = await orders.create(
-    { warehouseId, customerId: buyerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 1200 },
+    { warehouseId, customerId: buyerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', orderedTotalCents: 1200 },
     [{ variantId, qty: 1, unitPriceCents: 1200, vatRate: 5.5 }],
   );
   createdOrders.push(order.id);

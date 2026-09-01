@@ -116,7 +116,7 @@ async function atTheDoor(qty: number) {
   const { order, items } = await orders.create(
     {
       warehouseId, customerId, channel: 'b2c', deliveryType: 'route',
-      deliveryZoneId: zoneId, deliveryDate: day, courierId, totalCents: qty * 1000,
+      deliveryZoneId: zoneId, deliveryDate: day, courierId, orderedTotalCents: qty * 1000,
     },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );

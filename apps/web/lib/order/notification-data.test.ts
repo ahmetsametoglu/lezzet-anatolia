@@ -53,7 +53,7 @@ async function orderWith(
   extra: Partial<Parameters<typeof orders.create>[0]> = {},
 ) {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, totalCents: 2000, ...extra },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status, orderedTotalCents: 2000, ...extra },
     // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
     // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.
     [{ variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5, lineDiscountAmountCents: extra.discountAmountCents ?? 0 }],

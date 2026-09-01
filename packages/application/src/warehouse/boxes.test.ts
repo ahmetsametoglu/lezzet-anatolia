@@ -106,7 +106,7 @@ afterAll(async () => {
 /** Onaylanmış sipariş — kutunun açılabileceği en kısa yol. Kalem adetleri parametrik. */
 async function confirmedOrder(qtys: number[], opts: { pinTo?: string } = {}) {
   const { order, items } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: qtys.length * 1000 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: qtys.length * 1000 },
     qtys.map((qty) => ({ variantId, qty, unitPriceCents: 1000, vatRate: 5.5, stockId: opts.pinTo })),
   );
   const total = qtys.reduce((sum, qty) => sum + qty, 0);

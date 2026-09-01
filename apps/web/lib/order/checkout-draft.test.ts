@@ -285,7 +285,7 @@ describe('sepet → taslak sipariş', () => {
       expect(items.reduce((sum, i) => sum + i.lineDiscountAmountCents, 0)).toBe(order.discountAmountCents);
 
       // Asıl ölçülen: tamamı tahsil edilmiş sipariş `paid` olmalı, kapıda tahsilat kalmamalı.
-      const derived = derivePaymentStatusForOrder(order, items, { collectedCents: order.totalCents, refundedCents: 0 });
+      const derived = derivePaymentStatusForOrder(order, items, { collectedCents: order.orderedTotalCents, refundedCents: 0 });
       expect(derived).toMatchObject({ status: 'paid', amountToCollectCents: 0 });
     } finally {
       await db.from('discount').delete().eq('id', kampanya.id);
@@ -328,7 +328,7 @@ describe('sepet → taslak sipariş', () => {
       // 2 × 20 €'nun %10'u. Yerel kopya buraya 0 yazıyordu.
       expect(order.discountAmountCents).toBe(400);
       // Ve tahsilat zaten doğruydu — ikisinin AYNI sayı olması sözleşmenin kendisi.
-      expect(order.totalCents).toBe(3600);
+      expect(order.orderedTotalCents).toBe(3600);
     } finally {
       await db.from('discount').delete().eq('id', kampanya.id);
     }

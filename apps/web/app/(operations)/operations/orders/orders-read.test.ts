@@ -33,7 +33,7 @@ const order = (patch: Partial<Order> = {}): Order =>
     invoiceNo: null,
     deliveryProof: null,
     shippingFeeCents: 0,
-    totalCents: 10_000,
+    orderedTotalCents: 10_000,
     discountId: null,
     discountAmountCents: 0,
     amountCollectedCents: 0,

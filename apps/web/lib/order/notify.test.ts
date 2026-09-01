@@ -88,7 +88,7 @@ async function confirmOrder(qty: number, extra: { shippingFeeCents?: number; dis
       warehouseId, customerId, channel: 'b2c', deliveryType: 'route',
       shippingFeeCents,
       discountAmountCents,
-      totalCents: qty * 1000 + shippingFeeCents - discountAmountCents,
+      orderedTotalCents: qty * 1000 + shippingFeeCents - discountAmountCents,
     },
     // İndirim KALEME de dağıtılır: `discount_amount = Σ line_discount_amount` artık veritabanının
     // zorladığı bir değişmez (0041). Tek kalemli fikstürde payın tamamı o kaleme iner.

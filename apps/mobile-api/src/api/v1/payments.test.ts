@@ -62,7 +62,7 @@ beforeAll(async () => {
   // Referans SONRADAN yazılır (`create` almıyor) — `orders.test.ts`in aynı ölçümü.
   otekiReferansi = `LZP-${stamp}`;
   const { order } = await new OrderService(db).create(
-    { warehouseId, customerId: oteki.profileId, channel: 'b2c', deliveryType: 'shipping', totalCents: 2000 },
+    { warehouseId, customerId: oteki.profileId, channel: 'b2c', deliveryType: 'shipping', orderedTotalCents: 2000 },
     [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
   );
   await db.from('order').update({ reference_no: otekiReferansi, status: 'confirmed' }).eq('id', order.id);

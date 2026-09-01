@@ -153,9 +153,31 @@ create table public.order (
   -- çalışmayacak bir takip bağlantısı görürdü.
   constraint order_carrier_only_shipping check (delivery_type = 'shipping' or (carrier is null and tracking_number is null)),
 
-  -- Para (hepsi sipariş anında sabit; DOMAIN §5). Kargo ücreti KDV'ye tabidir.
+  -- Para (DOMAIN §5). Kargo ücreti KDV'ye tabidir.
   shipping_fee numeric(10, 2) not null default 0,
-  total numeric(10, 2) not null default 0,           -- Σ kalem − indirim + kargo
+  -- ── İKİ TUTAR, İKİ AYRI SORU (kullanıcı kararı 01.09) ────────────────────────────────────────
+  --
+  -- Burada bir zamanlar tek bir `total` vardı ve adı, taşıdığı anlamdan genişti. Sonuç ölçüldü:
+  -- yedi ayrı okuyucu onu "bu siparişin borcu" diye okudu ve eksik giden malın parasını da istedi
+  -- — sipariş listesi, kurye durağı, banka eşleştirme kuyruğu, açık bakiye, toplam bloğu, KDV
+  -- satırı. Aynı siparişe iki ekran iki farklı borç yazıyordu. Alan yanlış değildi; ADI yanlıştı,
+  -- ve genel bir ad her okuyanı kendi sorusunu ona sormaya davet ediyordu.
+  --
+  -- `ordered_total` — SİPARİŞ ANINDA ANLAŞILAN tutar (Σ kalem − indirim + kargo). Bir kez yazılır,
+  -- DONUKTUR. Sahibi olduğu sorular: Stripe ödeme niyeti hangi tutarla açılacak · vade limitinden
+  -- ne düşecek · müşterinin onay mailinde hangi rakam var · anlaşmazlıkta neye bakılacak. Motor
+  -- da hazırlık kesinleşmeden bunu okur (`payment-status.ts` künyesi: kalemlerden yeniden toplamak
+  -- indirim payı dağıtılmamışsa yanlış cevap veriyordu).
+  --
+  -- `revenue_total` — GERÇEKLEŞEN CİRO (giden malın tutarı). Kalemlerden TÜRETİLİR, tetikleyiciyle;
+  -- taslakta 0'dır ve bu doğrudur, henüz hiçbir şey gitmemiştir. Sahibi olduğu sorular: kâr ·
+  -- analitik cirosu · fatura tutarı · ne tahsil edilecek.
+  --
+  -- NEDEN SAKLANIYOR, TÜRETİLMİYOR: rapor tarafı SQL'den okuyor (`analytics_order_revenue`) ve SQL
+  -- TypeScript motorunu çağıramaz. Ciro kolon olarak durmak zorunda — türetmekle çözülmüyor.
+  --
+  ordered_total numeric(10, 2) not null default 0,
+  revenue_total numeric(10, 2) not null default 0,
   discount_id uuid,                                  -- FK YOK: `discount` tablosu 09'da; tek indirim (üst üste binmez)
   discount_amount numeric(10, 2) not null default 0,
   -- İnen indirimin MÜŞTERİYE GÖRÜNEN adı, sipariş anındaki hâliyle ({"fr":"Offre de bienvenue",...}).
@@ -273,6 +295,75 @@ create table public.order_item (
 create index order_item_order_idx on public.order_item (order_id);
 -- "Bu ürün hangi siparişlere gitti" (geri çağırma ve satış analizi).
 create index order_item_variant_idx on public.order_item (variant_id);
+
+/*
+  ═══ CİRO KALEMLERDEN TÜRER (01.09) ═══════════════════════════════════════════════════════════
+
+  `order.revenue_total` bir CACHE'tir; kaynağı `order_item.fulfilled_qty`dir. Kural
+  `resync_order_amounts`ın (0018) aynısı: **cache artırılmaz, kaynaktan yeniden hesaplanır.**
+  `revenue_total = revenue_total + x` yazsaydık kaçırılan ya da tekrarlanan her çağrı kalıcı bir
+  sapma bırakırdı ve hangisinin kaydırdığı bulunamazdı.
+
+  ── NEDEN TETİKLEYİCİ, NEDEN UYGULAMA KATMANI DEĞİL ─────────────────────────────────────────
+  `fulfilled_qty` BEŞ yerden yazılıyor ve hepsi SQL: `record_preparation` (0015) ·
+  `adjust_fulfillment` (0020, iki dal: hedef değer ve tam iade) · `quick_sale` (0017) · kutu
+  kapanışı (0048, `record_preparation`ı çağırır). TypeScript bu fonksiyonların içini görmez —
+  yeniden hesaplama uygulama katmanına yazılsaydı bu yolların bazısı onu atlar ve `revenue_total`
+  kalemlerle SESSİZCE ayrışırdı. Yakalayacak bir kısıt da yok. Tetikleyici hepsini kapsıyor, ve
+  yarın altıncı bir yol açılsa onu da kapsar.
+
+  ── FORMÜL MOTORUN AYNISI (`fulfilledLineAmountCents`) ──────────────────────────────────────
+  İndirim payı kalemin TAMAMI için yazılmıştır; karşılanan orana bölünür — yarısı gittiyse
+  indirimin yarısı düşülür. Yuvarlama kuruşta (`round(..., 2)`), TypeScript tarafı da tamsayı
+  cent üstünde yuvarlıyor: aynı sonuç.
+
+  ── KARGO: HİÇBİR KALEM GİTMEDİYSE CİROYA GİRMEZ ────────────────────────────────────────────
+  Motorun kararı birebir (`payment-status.ts`): en az bir kalem gittiyse taşıma hizmeti
+  verilmiştir. Hiçbiri gitmediyse kargo da iade edilir, ciro sıfırdır.
+*/
+create or replace function public.resync_order_revenue(p_order_id uuid)
+returns void
+language sql
+security invoker
+set search_path = public
+as $$
+  update public.order o
+     set revenue_total = coalesce(k.tutar, 0)
+                       + case when coalesce(k.giden, 0) > 0 then o.shipping_fee else 0 end
+    from (
+      select coalesce(sum(
+               oi.fulfilled_qty * oi.unit_price
+               - round(oi.line_discount_amount * oi.fulfilled_qty / greatest(oi.qty, 1), 2)
+             ), 0) as tutar,
+             coalesce(sum(oi.fulfilled_qty), 0) as giden
+        from public.order_item oi
+       where oi.order_id = p_order_id
+    ) k
+   where o.id = p_order_id;
+$$;
+
+create or replace function public.order_item_revenue_sync()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+begin
+  -- Silmede satır artık yok; kimliği OLD taşır. Kalem başka siparişe taşınmaz (order_id sabit),
+  -- yani tek sipariş yeniden hesaplanır.
+  perform public.resync_order_revenue(coalesce(new.order_id, old.order_id));
+  return null;
+end;
+$$;
+
+-- `after` ve `for each row`: yazım tamamlandıktan sonra okuyup toplar. `statement` düzeyi tek
+-- turda birden çok siparişin kalemi yazıldığında hangisini tazeleyeceğini bilemezdi.
+create trigger order_item_revenue_sync_trg
+after insert or update of fulfilled_qty, qty, unit_price, line_discount_amount or delete
+on public.order_item
+for each row execute function public.order_item_revenue_sync();
+
+revoke execute on function public.resync_order_revenue(uuid) from public, anon, authenticated;
 
 -- Hazırlıkta fiilen çıkan parti(ler) — depocu FEFO önerisini onaylarken yazılır (DOMAIN §4).
 -- İki şeyi mümkün kılar: geri çağırmada "bu parti kimlere gitti" TEK sorgu, ve gerçek COGS.
@@ -395,12 +486,16 @@ revoke execute on function public.transition_order_status(uuid, order_status, or
 -- İPTAL EDİLEN sipariş ciroya GİRMEZ (`order_counts`'un `base`'i yalnız `draft`'ı dışlar): vazgeçilen
 -- bir sipariş müşterinin bize kazandırdığı para değildir. İade (`returned`) girer — o satış oldu ve
 -- geri döndü, ciro tarihi onu içerir.
+-- BEKLEYEN(12.2): sütun adı `revenue` ama taban `ordered_total` — yani SİPARİŞ EDİLEN. 01.09'daki
+-- ad ayrımında davranış bilerek DEĞİŞTİRİLMEDİ (o tur yalnız adlandırmaydı); `revenue_total`a
+-- geçmek müşteri kartındaki sayıyı oynatır ve iade edilmiş siparişin katkısını sıfırlar — üstteki
+-- künyenin "iade girer" kuralıyla çelişir. Karar ölçümüyle ayrı gelecek.
 create or replace function public.customer_order_totals(p_customer_id uuid)
 returns table (order_count int, revenue numeric)
 language sql
 stable
 as $$
-  select count(*)::int, coalesce(sum(o.total), 0)
+  select count(*)::int, coalesce(sum(o.ordered_total), 0)
     from public.order o
    where o.customer_id = p_customer_id
      and o.status <> 'draft'
@@ -442,7 +537,9 @@ language sql
 stable
 as $$
   with base as (
-    select o.status, o.total, o.amount_collected, o.amount_refunded, o.payment_method,
+    -- Taban SİPARİŞ EDİLEN (`ordered_total`): sayaçlar "bugün ne kadarlık iş var" diyor, "ne kadarı
+    -- gitti" demiyor. Ciroya geçiş ayrı bir karar (BEKLEYEN(12.2), 01.09 ad ayrımı).
+    select o.status, o.ordered_total as total, o.amount_collected, o.amount_refunded, o.payment_method,
            o.on_account, o.payment_status
     from public.order o
     where o.status <> 'draft'

@@ -73,7 +73,7 @@ afterAll(async () => {
 
 async function draftOrder(qty: number) {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: qty * 1000 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: qty * 1000 },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   return order.id;
@@ -112,7 +112,7 @@ describe('önce ayır, sonra öde (07.4)', () => {
   it('kalemlerden biri ayrılamazsa ÖNCEKİLER geri bırakılır', async () => {
     // İki kalem: ilki elde olanı bitirir, ikincisi ayrılamaz.
     const { order } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', totalCents: 8000 },
+      { warehouseId, customerId, channel: 'b2c', orderedTotalCents: 8000 },
       [
         { variantId, qty: 5, unitPriceCents: 1000, vatRate: 5.5 },
         { variantId, qty: 3, unitPriceCents: 1000, vatRate: 5.5 },

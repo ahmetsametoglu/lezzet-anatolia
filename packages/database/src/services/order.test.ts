@@ -69,7 +69,7 @@ afterAll(async () => {
 });
 
 /** En sade geçerli sipariş: tek kalem, indirimsiz. Testler bunun üstüne tek alan değiştirir. */
-const header = () => ({ customerId, warehouseId, channel: 'b2c' as const, totalCents: 2000 });
+const header = () => ({ customerId, warehouseId, channel: 'b2c' as const, orderedTotalCents: 2000 });
 // `overrides` TİPLİ (02.9): `Record<string, unknown>` yazım hatasını yutuyordu — alan adı değişince
 // eski ad sessizce düşer ve test kendi kurduğu zemini doğrulamaz. Aynı açık `cart/discount.test`'te
 // gerçekten yaşandı: koşulsuz kalan kupon uygulandı, iki test sebebini söylemeden patladı.
@@ -84,7 +84,7 @@ const line = (overrides: Partial<OrderItemInsert> = {}): Omit<OrderItemInsert, '
 describe('create — üç tablo tek gerçek', () => {
   it('başlık, kalemler ve kullanım kaydı birlikte yazılır', async () => {
     const { order, items } = await orders.create(
-      { ...header(), totalCents: 1700, discountAmountCents: 300, discountId },
+      { ...header(), orderedTotalCents: 1700, discountAmountCents: 300, discountId },
       [line({ lineDiscountAmountCents: 200 }), line({ variantId: secondVariantId, qty: 1, unitPriceCents: 500, lineDiscountAmountCents: 100 })],
     );
 
@@ -145,7 +145,7 @@ describe('yarım yazım geride hiçbir şey bırakmaz', () => {
     // SONRA yazılıyordu; düşerse ortada indirimli ama kotayı hiç tüketmemiş bir sipariş kalırdı.
     await expect(
       orders.create(
-        { ...header(), totalCents: 1700, discountAmountCents: 300, discountId: '00000000-0000-0000-0000-000000000000' },
+        { ...header(), orderedTotalCents: 1700, discountAmountCents: 300, discountId: '00000000-0000-0000-0000-000000000000' },
         [line({ lineDiscountAmountCents: 300 })],
       ),
     ).rejects.toThrow();
@@ -165,7 +165,7 @@ describe('indirim dengesi (kısıt tetikleyicisi)', () => {
   it('başlıktaki indirim kalemlere dağıtılmadıysa sipariş YAZILMAZ', async () => {
     const before = await countOrders();
 
-    await expect(orders.create({ ...header(), totalCents: 1700, discountAmountCents: 300 }, [line()])).rejects.toThrow(/indirim/i);
+    await expect(orders.create({ ...header(), orderedTotalCents: 1700, discountAmountCents: 300 }, [line()])).rejects.toThrow(/indirim/i);
 
     // Kontrol COMMIT anında yapılıyor; ihlal yalnız hata vermekle kalmayıp yazımı geri almalı.
     expect(await countOrders()).toBe(before);
@@ -174,7 +174,7 @@ describe('indirim dengesi (kısıt tetikleyicisi)', () => {
   it('payların toplamı tutuyorsa yazılır — kuruş artığı dahil', async () => {
     // 3,00 € üç kaleme bölünürse pay 1,00 + 1,00 + 1,00 değil 1,01 + 1,00 + 0,99 olabilir; motorun
     // garantisi eşit dağıtım değil, TOPLAMIN korunması. Kısıt da onu denetliyor.
-    const { order } = await orders.create({ ...header(), totalCents: 2700, discountAmountCents: 300 }, [
+    const { order } = await orders.create({ ...header(), orderedTotalCents: 2700, discountAmountCents: 300 }, [
       line({ lineDiscountAmountCents: 101 }),
       line({ variantId: secondVariantId, lineDiscountAmountCents: 100 }),
       line({ lineDiscountAmountCents: 99 }),
@@ -194,7 +194,7 @@ describe('indirim dengesi (kısıt tetikleyicisi)', () => {
   });
 
   it('kalemin payını silmek de dengeyi bozar — kısıt kalem tarafını da tutuyor', async () => {
-    const { order, items } = await orders.create({ ...header(), totalCents: 1700, discountAmountCents: 300 }, [
+    const { order, items } = await orders.create({ ...header(), orderedTotalCents: 1700, discountAmountCents: 300 }, [
       line({ lineDiscountAmountCents: 300 }),
       line({ variantId: secondVariantId }),
     ]);
@@ -248,24 +248,24 @@ describe('kargo künyesi yalnız kargo siparişinde', () => {
 describe('sipariş ailesi — euro↔cent sınırı', () => {
   it('cent yazılır, kolonlar euro tutar, cent okunur (gidiş-dönüş)', async () => {
     const { order, items } = await orders.create(
-      { ...header(), totalCents: 1234, shippingFeeCents: 790 },
+      { ...header(), orderedTotalCents: 1234, shippingFeeCents: 790 },
       [line({ unitPriceCents: 617, qty: 2 })],
     );
 
-    expect(order.totalCents).toBe(1234);
+    expect(order.orderedTotalCents).toBe(1234);
     expect(order.shippingFeeCents).toBe(790);
     expect(items[0]?.unitPriceCents).toBe(617);
 
-    const { data: baslik } = await db.from('order').select('total, shipping_fee').eq('id', order.id).single();
-    const ham = baslik as { total: number | string; shipping_fee: number | string };
-    expect(Number(ham.total)).toBe(12.34);
+    const { data: baslik } = await db.from('order').select('ordered_total, shipping_fee').eq('id', order.id).single();
+    const ham = baslik as { ordered_total: number | string; shipping_fee: number | string };
+    expect(Number(ham.ordered_total)).toBe(12.34);
     expect(Number(ham.shipping_fee)).toBe(7.9);
 
     const { data: kalem } = await db.from('order_item').select('unit_price').eq('id', items[0]!.id).single();
     expect(Number((kalem as { unit_price: number | string }).unit_price)).toBe(6.17);
 
     const okunan = await orders.getById(order.id);
-    expect(okunan?.totalCents).toBe(1234);
+    expect(okunan?.orderedTotalCents).toBe(1234);
     expect(okunan?.shippingFeeCents).toBe(790);
   });
 

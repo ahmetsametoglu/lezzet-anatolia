@@ -166,7 +166,7 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
     const collected = await recordOrderPayment(db, {
       orderId: order.id,
       accountId,
-      amountCents: input.collectedAmountCents ?? order.totalCents,
+      amountCents: input.collectedAmountCents ?? order.orderedTotalCents,
       description: 'Kapı önü satış',
     });
     paymentRecorded = collected.status === 'ok';

@@ -121,7 +121,7 @@ export function toCustomerOrderRows(orders: readonly Order[]): CustomerOrderRow[
     id: o.id,
     referenceNo: o.referenceNo,
     createdAt: o.createdAt,
-    totalCents: o.totalCents,
+    totalCents: o.orderedTotalCents,
     status: o.status,
     paymentStatus: o.paymentStatus,
     href: `/operations/orders/${o.id}`,

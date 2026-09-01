@@ -114,7 +114,7 @@ async function confirmedOrder(
 ) {
   const warehouse = opts.inWarehouse ?? warehouseId;
   const { order, items } = await orders.create(
-    { warehouseId: warehouse, customerId, channel: 'b2c', deliveryType: opts.deliveryType ?? 'route', deliveryDate: opts.deliveryDate, totalCents: qty * 1000 },
+    { warehouseId: warehouse, customerId, channel: 'b2c', deliveryType: opts.deliveryType ?? 'route', deliveryDate: opts.deliveryDate, orderedTotalCents: qty * 1000 },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5, stockId: opts.pinTo }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId: warehouse, variantId, qty, stockId: opts.pinTo });
@@ -210,7 +210,7 @@ describe('hazırlık kuyruğu (D1 · 10.1)', () => {
   it('parti kaydı KALEM kimliğiyle eşleşir — iki kalemli sipariş dağılımları karıştırmaz', async () => {
     // Aynı varyanttan iki satır: haritanın anahtarı sipariş olsaydı ikisi tek yığına düşerdi.
     const { order, items } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: 3000 },
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: 3000 },
       [
         { variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 },
         { variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 },

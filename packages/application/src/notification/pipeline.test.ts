@@ -67,7 +67,7 @@ afterAll(async () => {
 
 async function siparis(): Promise<{ id: string; referenceNo: string | null }> {
   const { order } = await orders.create(
-    { warehouseId, customerId: musteriId, channel: 'b2c', deliveryType: 'shipping', totalCents: 2000, status: 'confirmed' },
+    { warehouseId, customerId: musteriId, channel: 'b2c', deliveryType: 'shipping', orderedTotalCents: 2000, status: 'confirmed' },
     [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
   );
   orderIds.push(order.id);

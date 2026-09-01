@@ -163,7 +163,7 @@ beforeAll(async () => {
       deliveryType: 'route',
       deliveryDate: gunSonra(3),
       paymentMethod: 'cash',
-      totalCents: 4570,
+      orderedTotalCents: 4570,
     },
     [{ variantId: fistikliVariantId, qty: 1, unitPriceCents: 4570, vatRate: 5.5 }],
   );

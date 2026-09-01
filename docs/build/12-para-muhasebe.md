@@ -55,10 +55,24 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
     diye okuyor.
   - **Banka kuyruğunda hayalet bakiye:** adaylar ödeme durumuna hiç bakmıyordu, doğru tutarı
     ödeyen kısmi sipariş `paid` olduğu hâlde kuyrukta kapatılamayan bir kalıntı bırakıyordu.
-  - **BEKLEYEN(12.2): `order.total` ikiye ayrılacak** — `ordered_total` (sipariş anı, donuk) +
-    `revenue_total` (gerçekleşen ciro, `order_item` tetikleyicisinden). Gerekçe: rapor cirosu
-    SQL'den geliyor (`analytics_order_revenue` → `sum(o.total)`) ve SQL motoru çağıramaz, yani
-    ciro kolon olarak durmak zorunda. Kullanıcı kararı 01.09; migration + `db:refresh` istiyor.
+  - **Durum (01.09) — `order.total` İKİYE AYRILDI.** Ad genel olduğu için her okuyan kendi sorusunu
+    ona soruyordu; artık ikisi de ne olduğunu söylüyor:
+    · `ordered_total` — sipariş anında anlaşılan (donuk). Ödeme niyeti · vade limiti · onay maili ·
+      anlaşmazlık. Motor hazırlık kesinleşmeden bunu okur.
+    · `revenue_total` — gerçekleşen ciro, `order_item`den TETİKLEYİCİYLE (`resync_order_revenue`).
+      Taslakta 0'dır ve doğrudur.
+    **Neden tetikleyici:** `fulfilled_qty` beş yerden yazılıyor ve hepsi SQL (`record_preparation` ·
+    `adjust_fulfillment` ×2 · `quick_sale` · kutu kapanışı); uygulama katmanına yazılsaydı bazı
+    yollar atlar ve cache sessizce ayrışırdı — yakalayacak kısıt da yok. **Neden saklanıyor:** rapor
+    tarafı SQL'den okuyor ve SQL motoru çağıramaz.
+    Canlı ölçüm (tetikleyici, `LA-26-93UXKY` rakamlarıyla): hazırlanmadan `0,00` · tamamı gitti
+    `46,39` · bir adet eksik **`27,29`** — motorun ve ekranın söylediği sayının aynısı.
+  - **Bu tur DAVRANIŞ DEĞİŞTİRMEDİ:** `total` okuyan her yer `ordered_total`a bağlandı, yani bugünkü
+    sayılar aynı kaldı. `revenue_total` şimdilik YAZILIYOR ama hiçbir yerden OKUNMUYOR.
+  - **BEKLEYEN(13.2): rapor cirosunun tabanı seçilecek.** `analytics_order_revenue` ve
+    `customer_order_totals` bugün `ordered_total` topluyor (sütun adı `revenue` olsa da), muhasebe
+    dosyası ise kalemlerden teslim edileni sayıyor — sistemde iki ciro tanımı var. Ölçümüyle
+    kullanıcıya sorulacak: tek sayı mı iki sayı mı.
 - [x] (12.3) **Tedarik para bağları:** stok alımı → `purchase` hareketi (StockIntake bağı); tedarikçiye ödeme (`supplier_id`) → **tedarikçi borcu türetilir** (girişler − ödemeler)
   - *Bitti:* tedarikçi kartında borç doğru türeniyor
   - **Durum (28.07):** `SupplierService.debt()` tamamlandı (06.8'den beri `paid = 0` TODO'su duruyordu) · kapı `recordSupplierPayment` (`apps/web/lib/money/movement.ts`). 7 test. Yeni tablo/RPC GEREKMEDİ — 12.1'in hareket tablosu bağları (`supplier_id`, `stock_intake_id`) zaten taşıyordu.

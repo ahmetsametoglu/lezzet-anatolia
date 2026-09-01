@@ -57,7 +57,7 @@ afterAll(async () => {
 /** 2 × 25 € = 50 € tutarında, tamamı karşılanmış sipariş. */
 async function createOrder(qty = 2, unitPriceCents = 2500, shippingFeeCents = 0) {
   const { order, items } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', totalCents: qty * unitPriceCents + shippingFeeCents, shippingFeeCents },
+    { warehouseId, customerId, channel: 'b2c', orderedTotalCents: qty * unitPriceCents + shippingFeeCents, shippingFeeCents },
     [{ variantId, qty, unitPriceCents, vatRate: 5.5, fulfilledQty: qty }],
   );
   return { order, items };

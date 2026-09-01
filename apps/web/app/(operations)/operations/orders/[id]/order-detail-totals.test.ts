@@ -62,7 +62,7 @@ const order = (over: Partial<Order> = {}): Order =>
     discountAmountCents: 0,
     discountLabel: null,
     amountRefundedCents: 0,
-    totalCents: 2000,
+    orderedTotalCents: 2000,
     ...over,
   }) as Order;
 
@@ -87,7 +87,7 @@ function karsilanan(o: Order, lines: OrderLineView[], settled: boolean): number 
     refundedCents: 0,
     shippingFeeCents: o.shippingFeeCents,
     fulfillmentSettled: settled,
-    orderTotalCents: o.totalCents,
+    orderTotalCents: o.orderedTotalCents,
   }).fulfilledAmountCents;
 }
 
@@ -117,14 +117,14 @@ describe('İçindeki KDV — karar motorun', () => {
   });
 
   it('KDV satırı bir DÜŞÜM değil bilgidir — ödenecek tutara dokunmaz', () => {
-    const rows = blok(order({ totalCents: 2000 }), [line()], true);
+    const rows = blok(order({ orderedTotalCents: 2000 }), [line()], true);
 
     expect(satir(rows, 'İçindeki KDV')?.kind).toBe('note');
     expect(satir(rows, 'Ödenecek')?.amountCents).toBe(2000);
   });
 
   it('kalem oranları kalem kalem okunur — karışık sepette tek oran varsayılmaz', () => {
-    const rows = blok(order({ channel: 'b2c', totalCents: 4000 }), [
+    const rows = blok(order({ channel: 'b2c', orderedTotalCents: 4000 }), [
       line({ id: 'a', lineTotalCents: 2000, vatRate: 5.5 }),
       line({ id: 'b', lineTotalCents: 2000, vatRate: 20 }),
     ], true);
@@ -153,7 +153,7 @@ describe('taban: hazırlık kesinleşti mi', () => {
 
   it('ARA TOPLAM yalnız ardında bir şey varken yazılır', () => {
     const kargosuz = blok(order(), [line()], true);
-    const kargolu = blok(order({ shippingFeeCents: 590, totalCents: 2590 }), [line()], true);
+    const kargolu = blok(order({ shippingFeeCents: 590, orderedTotalCents: 2590 }), [line()], true);
 
     // Kargosuzda ara toplam ile ödenecek aynı sayıdır; iki kez yazmak okuyana boş bir soru sordurur.
     expect(satir(kargosuz, 'Ara toplam')).toBeUndefined();
@@ -170,7 +170,7 @@ describe('taban: hazırlık kesinleşti mi', () => {
  * bulunmalı ki kusur doğsun).
  */
 describe('LA-26-93UXKY — blok kendi içinde toplanır', () => {
-  const b2c = order({ channel: 'b2c', totalCents: 4639, discountAmountCents: 818, discountLabel: null });
+  const b2c = order({ channel: 'b2c', orderedTotalCents: 4639, discountAmountCents: 818, discountLabel: null });
   const kalemler = [
     line({ id: 'su', qty: 2, fulfilledQty: 1, unitPriceCents: 2247, lineDiscountCents: 675, lineTotalCents: 3819, vatRate: 5.5 }),
     line({ id: 'peynir', qty: 3, fulfilledQty: 3, unitPriceCents: 139, lineDiscountCents: 62, lineTotalCents: 355, vatRate: 5.5 }),

@@ -66,7 +66,7 @@ beforeAll(async () => {
   customerId = (await new UserProfileService(db).insert({ name: 'Fatma Demir', email: `vfb-${stamp}@example.test` })).id;
 
   const { order } = await new OrderService(db).create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 900 },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', orderedTotalCents: 900 },
     [{ variantId: seeded.variants[0]!.id, qty: 1, unitPriceCents: 900, vatRate: 5.5 }],
   );
   orderId = order.id;

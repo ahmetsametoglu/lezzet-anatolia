@@ -159,7 +159,7 @@ async function dispatched(
   opts: {
     courier?: string;
     qty?: number;
-    totalCents?: number;
+    orderedTotalCents?: number;
     date?: string;
     channel?: 'b2b' | 'b2c';
     upTo?: 'confirmed' | 'ready';
@@ -181,7 +181,7 @@ async function dispatched(
       addressId,
       addressSnapshot: { line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg' },
       paymentMethod: 'cash',
-      totalCents: opts.totalCents ?? qty * 1000,
+      orderedTotalCents: opts.orderedTotalCents ?? qty * 1000,
     },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
@@ -420,7 +420,7 @@ describe('kapı: Bearer + rol süzgeci', () => {
 
 describe('GET /api/v1/courier/day', () => {
   it('kuryenin kendi durakları + gün; başka kuryenin durağı yok', async () => {
-    const benim = await dispatched({ qty: 3, totalCents: 3000 });
+    const benim = await dispatched({ qty: 3, orderedTotalCents: 3000 });
     // Başka rotada, başka kuryede: bizim seferimiz onu claim edemez (RPC bölge+gün süzüyor).
     const baskasinin = await dispatched({ courier: otherCourierId, zone: otherZoneId });
     /* DURAKLAR SEFERE BAĞLI (31.08): araç bir ara depo ve gün cevabı ona bakıyor. Sefer
@@ -498,7 +498,7 @@ describe('GET /api/v1/courier/day', () => {
   });
 
   it('durak kalem satırlarını kimlik ve adetle taşır (21.10d)', async () => {
-    const orderId = await dispatched({ qty: 3, totalCents: 3000 });
+    const orderId = await dispatched({ qty: 3, orderedTotalCents: 3000 });
     await startRun(); // durak sefere bağlı (31.08)
 
     const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
@@ -516,7 +516,7 @@ describe('GET /api/v1/courier/day', () => {
     // Boşluğun kendisi buydu (ekran künyesi, 21.10): kurye kapıda eksik kalem işaretleyebiliyor ama
     // gönderemiyordu, çünkü `adjustments[].orderItemId`nin geleceği bir yer yoktu. Test iki ucu
     // birbirine bağlıyor — okunan kimlik, yazan uca aynen gidiyor.
-    const orderId = await dispatched({ qty: 2, totalCents: 2000 });
+    const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
     await startRun(); // durak sefere bağlı (31.08)
     const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
     const item = day.stops.find((s) => s.orderId === orderId)!.items[0]!;
@@ -614,7 +614,7 @@ describe('POST /api/v1/courier/day/start — seferi başlat', () => {
 
 describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
   it('mutlu yol: teslim + kapıda tahsilat tek istekte', async () => {
-    const orderId = await dispatched({ qty: 2, totalCents: 2000 });
+    const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
 
     const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
       collection: { method: 'cash', amountCents: 2000, accountId },
@@ -692,7 +692,7 @@ describe('POST /api/v1/courier/stops/:orderId/deliver', () => {
     // mükerrer yazımın birinci kilidi durum makinesidir (`delivery.ts` künyesi) ve o kilit yukarıda
     // ayrıca sınandı. Anahtar İKİNCİ kilittir; devreye ancak para yazılmışken teslim yazılmamışsa
     // girer. Test tam o hâli kuruyor: hareket önceden yazılı, sipariş hâlâ yolda.
-    const orderId = await dispatched({ totalCents: 2000 });
+    const orderId = await dispatched({ orderedTotalCents: 2000 });
     const key = `kuyruk-${stamp}`;
     await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, description: 'Kapıda tahsilat', idempotencyKey: key });
 
@@ -821,7 +821,7 @@ describe('POST /api/v1/courier/stops/:orderId/proof-upload', () => {
  */
 describe('sefer kapanışı (K7)', () => {
   it('taslak: teslim/bekleyen/dönen ayrı listeler + beklenen tahsilat', async () => {
-    const teslim = await dispatched({ totalCents: 2000 });
+    const teslim = await dispatched({ orderedTotalCents: 2000 });
     const bekleyen = await dispatched();
     const donen = await dispatched();
     // Üç durak da zaten yolda: sefer onları `alreadyOut` diye claim eder — araçtaki mal o seferindir.
@@ -848,7 +848,7 @@ describe('sefer kapanışı (K7)', () => {
   });
 
   it('seferi kapat: fark TÜRER ve işareti anlamlıdır', async () => {
-    const teslim = await dispatched({ totalCents: 2000 });
+    const teslim = await dispatched({ orderedTotalCents: 2000 });
     const run = await startRun();
     await post(`/api/v1/courier/stops/${teslim}/deliver`, {
       collection: { method: 'cash', amountCents: 2000, accountId },

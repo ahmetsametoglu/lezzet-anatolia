@@ -150,7 +150,7 @@ export async function listCustomerOrders(
       createdAt: order.createdAt,
       status,
       active: isActiveForCustomer(status),
-      totalCents: order.totalCents,
+      totalCents: order.orderedTotalCents,
       itemCount: own.length,
       thumbs: thumbs.slice(0, SUMMARY_THUMB_LIMIT),
       // "+N" TEKİLLEŞTİRİLMİŞ kümeden sayılır: yığında görünmeyen ürün sayısıdır, gizlenen kalem

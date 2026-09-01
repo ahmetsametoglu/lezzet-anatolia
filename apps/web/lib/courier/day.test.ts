@@ -96,7 +96,7 @@ afterAll(async () => {
 });
 
 /** Yola çıkmış sipariş — kuryenin gün listesine düşmesi için gereken en kısa yol. */
-async function dispatched(opts: { courier?: string; qty?: number; totalCents?: number; date?: string } = {}) {
+async function dispatched(opts: { courier?: string; qty?: number; orderedTotalCents?: number; date?: string } = {}) {
   const qty = opts.qty ?? 2;
   const { order, items } = await orders.create(
     {
@@ -109,7 +109,7 @@ async function dispatched(opts: { courier?: string; qty?: number; totalCents?: n
       addressId,
       addressSnapshot: { line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg' },
       paymentMethod: 'cash',
-      totalCents: opts.totalCents ?? qty * 1000,
+      orderedTotalCents: opts.orderedTotalCents ?? qty * 1000,
     },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
@@ -132,7 +132,7 @@ const mine = (stops: CourierStop[], orderId: string) => stops.find((stop) => sto
 
 describe('gün listesi (11.1)', () => {
   it('durak teslimat için gerekeni taşır: adres, ödeme beklentisi, içerik', async () => {
-    const { orderId } = await dispatched({ qty: 3, totalCents: 3000 });
+    const { orderId } = await dispatched({ qty: 3, orderedTotalCents: 3000 });
 
     const stop = mine(await listCourierDay({ courierId }), orderId);
 
@@ -168,7 +168,7 @@ describe('gün listesi (11.1)', () => {
   });
 
   it('önceden ödenmiş durakta borç NULL — kapıda para konuşulmaz', async () => {
-    const { orderId } = await dispatched({ totalCents: 2000 });
+    const { orderId } = await dispatched({ orderedTotalCents: 2000 });
     await recordOrderPayment({ orderId, accountId, amountCents: 2000, description: 'Online ödeme' });
 
     expect(mine(await listCourierDay({ courierId }), orderId).payment.dueAmountCents).toBeNull();

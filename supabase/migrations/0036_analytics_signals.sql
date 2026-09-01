@@ -417,8 +417,12 @@ comment on function public.analytics_search_signals(date, date, integer, boolean
 --
 -- Taslak SAYILMAZ (hiç sipariş olmadı), iptal SAYILMAZ (ciro değil), iade SAYILMAZ (parası geri
 -- gitmiş bir satış ne kampanyanın getirisi ne dönemin cirosudur).
+-- İKİ TUTAR DA TAŞINIR (01.09 ad ayrımı): `ordered_total` sipariş edilen, `revenue_total`
+-- gerçekleşen ciro. Bugünkü raporların hepsi SİPARİŞ EDİLENİ okuyor — o tur yalnız adlandırmaydı,
+-- davranış bilerek değişmedi. Ciroya geçiş kararı ölçümüyle ayrı gelecek (BEKLEYEN(13.2)); kolon
+-- şimdiden burada duruyor ki geçiş tek kelimelik olsun, view'ı yeniden yazmak gerekmesin.
 create or replace view public.analytics_order_base as
-  select o.id, o.customer_id, o.channel, o.total, o.created_at, o.address_snapshot
+  select o.id, o.customer_id, o.channel, o.ordered_total, o.revenue_total, o.created_at, o.address_snapshot
     from public.order o
    where o.status not in ('draft', 'cancelled', 'returned');
 
@@ -460,7 +464,7 @@ as $$
          o.channel,
          count(*)::int as order_count,
          -- Euro → cent TAMSAYIDA (`STACK §8`): kayan noktada toplamak her satırda kuruş artığı bırakır.
-         round(sum(o.total) * 100)::bigint as revenue_cents
+         round(sum(o.ordered_total) * 100)::bigint as revenue_cents
     from public.analytics_order_base o
    where o.created_at >= p_from and o.created_at < p_to + 1
    group by 1, 2
@@ -513,7 +517,7 @@ as $$
          coalesce(p.acquisition_source->>'source', p.acquisition_source->>'channel') as source,
          count(*)::int as order_count,
          -- Euro → cent tamsayıda (`STACK §8`): kayan noktada toplamak kuruş artığı bırakır.
-         round(sum(s.total) * 100)::bigint as revenue_cents,
+         round(sum(s.ordered_total) * 100)::bigint as revenue_cents,
          count(distinct s.customer_id)::int as customer_count,
          count(distinct s.customer_id) filter (where i.ilk_at >= p_from and i.ilk_at < p_to + 1)::int as new_customer_count
     from sip s
@@ -567,7 +571,7 @@ as $$
   -- başına sipariş/ciro sayacı sıfırlanır, hiçbir yerde bir hata görünmez.
   select upper(regexp_replace(o.address_snapshot->>'postalCode', '\s', '', 'g')) as postal_code,
          count(*)::int,
-         round(sum(o.total) * 100)::bigint
+         round(sum(o.ordered_total) * 100)::bigint
     from public.analytics_order_base o
    where o.address_snapshot->>'postalCode' is not null
      and upper(regexp_replace(o.address_snapshot->>'postalCode', '\s', '', 'g')) = any (p_codes)
@@ -614,7 +618,7 @@ as $$
     select s.customer_id,
            count(*)::int as siparis,
            max(s.created_at)::date as son,
-           sum(s.total) as ciro
+           sum(s.ordered_total) as ciro
       from sip s
      group by 1
   )
@@ -671,7 +675,7 @@ as $$
     select s.customer_id,
            count(*)::int as siparis,
            max(s.created_at)::date as son,
-           sum(s.total) as ciro
+           sum(s.ordered_total) as ciro
       from sip s
      group by 1
   )

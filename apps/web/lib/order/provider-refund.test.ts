@@ -94,7 +94,7 @@ function fakeRefunder(outcome: ProviderRefundOutcome): ProviderRefunder & { call
  * üretimde bunu webhook yapar, burada aynı kapı taklit edilir.
  */
 async function paidOrder(opts: { providerRef?: string | null; accountId?: string } = {}) {
-  const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: 2000 }, [
+  const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: 2000 }, [
     { variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 },
   ]);
   await transitionOrder({ orderId: order.id, to: 'confirmed' });

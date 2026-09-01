@@ -116,7 +116,7 @@ async function shortOrder(opts: { inWarehouse?: string; ordered?: number; picked
   await stocks.insert({ warehouseId: warehouse, variantId, physicalQty: 20, expiryDate: dayOffset(60), purchasePriceCents: 400 });
 
   const { order, items } = await orders.create(
-    { warehouseId: warehouse, customerId, channel: 'b2c', deliveryType: 'route', totalCents: ordered * 1000 },
+    { warehouseId: warehouse, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: ordered * 1000 },
     [{ variantId, qty: ordered, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId: warehouse, variantId, qty: ordered });

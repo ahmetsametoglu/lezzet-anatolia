@@ -417,7 +417,7 @@ describe('çapa kendiliğinden veriliyor', () => {
 
   async function siparis(customerId: string, status: Order['status'] = 'confirmed') {
     const { order } = await new OrderService(db).create(
-      { warehouseId, customerId, channel: 'b2c', deliveryType: 'shipping', totalCents: 2000, status },
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'shipping', orderedTotalCents: 2000, status },
       [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
     );
     orderIds.push(order.id);

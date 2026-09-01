@@ -53,7 +53,7 @@ export interface DeliveryStopView {
    * Motorun türetim için istediği sipariş alanları — fazlası YOK. Maliyet, kâr, marj ve müşterinin
    * borç durumu bu modele hiç girmiyor (tasarım §6): ekran isteseydi bile gösteremez.
    */
-  order: Pick<Order, 'shippingFeeCents' | 'status' | 'totalCents'>;
+  order: Pick<Order, 'shippingFeeCents' | 'status' | 'orderedTotalCents'>;
   /** Bugüne kadar tahsil edilmiş / iade edilmiş net (**cent**) — türetimin ikinci girdisi. */
   amounts: { collectedCents: number; refundedCents: number };
   lines: DeliveryLineView[];

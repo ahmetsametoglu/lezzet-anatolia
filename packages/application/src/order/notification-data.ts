@@ -131,7 +131,7 @@ export async function buildOrderNotification(
       // ödeyeceği/iade alacağı gerçek rakamı görür.
       // İki taraf da CENT (02.9): eskiden biri euro'ydu ve `/100 * 100` gidip geliyordu — aynı
       // sayının iki kez çevrildiği bir ifade, birim karışıklığının tipik izi.
-      value: formatPrice(event === 'order_confirmed' ? order.totalCents : derivation.fulfilledAmountCents, locale),
+      value: formatPrice(event === 'order_confirmed' ? order.orderedTotalCents : derivation.fulfilledAmountCents, locale),
     },
     statusAt: EXCEPTION_EVENTS.includes(event) ? formatShortDate(new Date().toISOString(), locale) : null,
     // Para çözümü istisna bildirimlerinin ilk kartıdır. İki sayı da TÜRETİLİR: iade borcu motordan
@@ -273,7 +273,7 @@ const PAYMENT_NOTE: Record<PreferredLanguage, { paid: string; onDelivery: (amoun
 function buildTotals(order: Order, locale: PreferredLanguage, event: NotifyEventName) {
   if (event !== 'order_confirmed') return [];
   const t = TOTAL_LABEL[locale];
-  const lineTotalCents = order.totalCents + order.discountAmountCents - order.shippingFeeCents;
+  const lineTotalCents = order.orderedTotalCents + order.discountAmountCents - order.shippingFeeCents;
 
   return [
     { label: t.subtotal, value: formatPrice(lineTotalCents, locale) },
@@ -311,7 +311,7 @@ function discountRowLabel(order: Order, generic: string, locale: PreferredLangua
 function buildRefund(order: Order, amountCents: number, event: NotifyEventName, locale: PreferredLanguage) {
   if (!EXCEPTION_EVENTS.includes(event) || amountCents <= 0) return null;
 
-  const previousCents = order.totalCents;
+  const previousCents = order.orderedTotalCents;
   return {
     amount: formatPrice(amountCents, locale),
     previousTotal: formatPrice(previousCents, locale),

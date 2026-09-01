@@ -252,7 +252,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       status: derivation.status,
       method: order.paymentMethod,
       onAccount: order.onAccount,
-      totalCents: order.totalCents,
+      totalCents: order.orderedTotalCents,
       collectedCents: order.amountCollectedCents,
       refundedCents: order.amountRefundedCents,
       openCents: derivation.amountToCollectCents,

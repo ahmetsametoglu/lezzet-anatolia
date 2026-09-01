@@ -7,6 +7,10 @@ import {
   type Page,
 } from '@lezzet/types';
 import { BaseDbService } from '../core/base.service';
+// Para alan listesi TEK yerde (`order.service`): görünüm siparişin kolonlarını aynen taşıyor, yani
+// listenin de aynısı olmak zorunda. Kopya tutulduğu sürece ad değişikliği birini güncellemeyi
+// unutturuyordu — 01.09'da tam olarak bu oldu.
+import { ORDER_MONEY_FIELDS } from './order.service';
 
 /**
  * **Gerçekleşmiş satışlar** (`order_sale` görünümü, 12.7) — muhasebe export'unun ve dönemsel
@@ -20,24 +24,13 @@ import { BaseDbService } from '../core/base.service';
  * süzseydik `isGiftOrder` "yalnız export filtresini etkiler" kuralı sessizce genişlerdi.
  */
 /** `order_sale` görünümü `Order`'ın para kolonlarını aynen taşır — liste de aynı (STACK §8). */
-const ORDER_SALE_MONEY_FIELDS = [
-  'shippingFeeCents',
-  'totalCents',
-  'discountAmountCents',
-  'amountCollectedCents',
-  'amountRefundedCents',
-  'cogsAmountCents',
-  'deliveryCostCents',
-  'paymentFeeCents',
-  'packagingCostCents',
-];
 
 export class OrderSaleService extends BaseDbService<OrderSale, never, never> {
   /**
    * Görünüm siparişin para kolonlarını olduğu gibi taşır (euro `numeric`), şema ise `OrderSchema`'dan
    * türediği için `…Cents` bekler — beyan bu yüzden burada da gerekli (02.9 · STACK §8).
    */
-  protected override readonly moneyFields = ORDER_SALE_MONEY_FIELDS;
+  protected override readonly moneyFields = ORDER_MONEY_FIELDS;
 
   constructor(supabase: SupabaseClient) {
     super(supabase, 'order_sale', OrderSaleSchema, OrderSaleSchema as never, OrderSaleSchema as never, false);

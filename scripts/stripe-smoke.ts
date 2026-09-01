@@ -51,7 +51,7 @@ const warehouse = await new WarehouseService(db).insert({
 await new StockService(db).insert({ variantId, warehouseId: warehouse.id, physicalQty: 10, expiryDate: dayOffset(30), purchasePriceCents: 400 });
 
 const { order } = await new OrderService(db).create(
-  { customerId: profile.id, warehouseId: warehouse.id, channel: 'b2c', deliveryType: 'route', totalCents: 2400 },
+  { customerId: profile.id, warehouseId: warehouse.id, channel: 'b2c', deliveryType: 'route', orderedTotalCents: 2400 },
   [{ variantId, qty: 2, unitPriceCents: 1200, vatRate: 5.5 }],
 );
 

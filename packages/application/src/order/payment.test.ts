@@ -48,7 +48,7 @@ beforeEach(async () => {
   await db.from('money_movement').delete().eq('account_id', accountId);
   await db.from('order').delete().eq('customer_id', customerId);
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', paymentMethod: 'cash', totalCents: 4000 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', paymentMethod: 'cash', orderedTotalCents: 4000 },
     [{ variantId, qty: 4, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   orderId = order.id;

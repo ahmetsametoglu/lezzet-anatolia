@@ -15,20 +15,28 @@ import type { Order } from '@lezzet/types';
 /** Vade kapsamındaki sipariş için gereken asgari alanlar. */
 export type CreditOrder = Pick<
   Order,
-  'onAccount' | 'paymentStatus' | 'status' | 'totalCents' | 'amountCollectedCents' | 'amountRefundedCents' | 'createdAt'
+  'onAccount' | 'paymentStatus' | 'status' | 'orderedTotalCents' | 'amountCollectedCents' | 'amountRefundedCents' | 'createdAt'
 >;
 
 /**
- * Siparişin AÇIK tutarı (kuruş): toplam − net tahsilat. İade tahsilatı geri alır, yani borcu geri
- * getirir — bu yüzden eklenir.
+ * Siparişin AÇIK tutarı (kuruş): sipariş edilen − net tahsilat. İade tahsilatı geri alır, yani
+ * borcu geri getirir — bu yüzden eklenir.
+ *
+ * **Taban SİPARİŞ EDİLENDİR, ciro değil** (01.09 ad ayrımı): vade defteri siparişin verildiği anda
+ * borcu tanır ve o an hiçbir şey gitmemiştir — `revenueTotalCents` orada 0'dır. Cirodan okusaydık
+ * hazırlanmamış her vadeli sipariş "borcu yok" görünür, vade limiti de boşuna serbest kalırdı.
+ * Kısmi karşılamada tabanın fazla kalması bilinçli: borç kapanışını `payment_status` belirliyor
+ * (`isOpenCredit`), yani doğru tutar ödendiğinde satır defterden zaten düşüyor.
  *
  * Kaynak `Order`'ın `amount_*` alanlarıdır; onlar bir CACHE'tir ve gerçeği para hareketleri tutar
  * (12.2). Cache'in tazeliği çağıranın sorunudur, formülün doğruluğu burasının.
  */
-export function openAmountCents(order: Pick<Order, 'totalCents' | 'amountCollectedCents' | 'amountRefundedCents'>): number {
+export function openAmountCents(
+  order: Pick<Order, 'orderedTotalCents' | 'amountCollectedCents' | 'amountRefundedCents'>,
+): number {
   // Hesap doğrudan cent üstünde (02.9): eskiden euro çıkarılıp sonuç `* 100` ile çevriliyordu ve
   // çıkarma kayan noktada yapılıyordu — `0.1 + 0.2` sapmasının tam yeri (STACK §8).
-  return order.totalCents - order.amountCollectedCents + order.amountRefundedCents;
+  return order.orderedTotalCents - order.amountCollectedCents + order.amountRefundedCents;
 }
 
 /** Vade günü — sipariş tarihinden itibaren. */

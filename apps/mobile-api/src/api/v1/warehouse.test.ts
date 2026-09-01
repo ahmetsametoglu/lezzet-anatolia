@@ -163,7 +163,7 @@ async function pendingOrder(opts: { warehouse?: string; qty?: number; date?: str
       addressId,
       addressSnapshot: { line1: '3 rue du Dôme', postalCode: '67000', city: 'Strasbourg' },
       paymentMethod: 'cash',
-      totalCents: qty * 1000,
+      orderedTotalCents: qty * 1000,
     },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
@@ -402,7 +402,7 @@ describe('D1 · GET /api/v1/warehouse/preparation', () => {
     const serialized = JSON.stringify(await dataOf<PreparationQueueResponse>(await asStaff('/api/v1/warehouse/preparation')));
 
     // İddia ALAN ADIYLA kurulur: rakam aramak uuid'ye takılır.
-    for (const moneyKey of ['unitPrice', 'purchasePrice', 'totalCents', 'vatRate']) {
+    for (const moneyKey of ['unitPrice', 'purchasePrice', 'orderedTotalCents', 'vatRate']) {
       expect(serialized).not.toContain(moneyKey);
     }
   });

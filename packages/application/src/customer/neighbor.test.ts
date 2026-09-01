@@ -125,7 +125,7 @@ async function rotaSiparisi(opts: { customerId?: string; date?: string } = {}) {
       deliveryType: 'route',
       deliveryZoneId: zoneId,
       deliveryDate: opts.date ?? ileriGun(3),
-      totalCents: 2000,
+      orderedTotalCents: 2000,
     },
     [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
   );
@@ -135,7 +135,7 @@ async function rotaSiparisi(opts: { customerId?: string; date?: string } = {}) {
 /** Kargo siparişi — sefer diye bir şey yok, davet de olmamalı. */
 async function kargoSiparisi() {
   const { order } = await orders.create(
-    { warehouseId, customerId: inviterId, channel: 'b2c', deliveryType: 'shipping', totalCents: 2000 },
+    { warehouseId, customerId: inviterId, channel: 'b2c', deliveryType: 'shipping', orderedTotalCents: 2000 },
     [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
   );
   return order;

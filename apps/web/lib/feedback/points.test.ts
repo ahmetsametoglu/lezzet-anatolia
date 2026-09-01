@@ -65,7 +65,7 @@ beforeAll(async () => {
   // Her iki müşteri de ürünü almış olmalı — yorum kapısı satın alma istiyor.
   for (const customerId of [b2cId, b2bId]) {
     const { order } = await new OrderService(db).create(
-      { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 1200 },
+      { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', orderedTotalCents: 1200 },
       [{ variantId, qty: 1, unitPriceCents: 1200, vatRate: 5.5 }],
     );
     createdOrders.push(order.id);

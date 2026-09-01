@@ -124,7 +124,7 @@ export default async function ConfirmationPage({ params }: ConfirmationPageProps
     deliveryDate: order.deliveryDate,
     onAccount: order.onAccount,
     paymentMethod: order.paymentMethod,
-    totalCents: order.totalCents,
+    totalCents: order.orderedTotalCents,
     discountCents: order.discountAmountCents,
     /**
      * İndirim satırının adı. Kaynak SİPARİŞTEKİ KOPYADIR (`discount_label`), tanım değil: kampanya

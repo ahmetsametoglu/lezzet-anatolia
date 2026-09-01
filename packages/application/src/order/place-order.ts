@@ -187,7 +187,7 @@ export async function placeOrder(db: Db, input: PlaceOrderInput): Promise<PlaceO
         return {
           status: 'placed',
           orderId: already.id,
-          totalCents: already.totalCents,
+          totalCents: already.orderedTotalCents,
           deliveryType: already.deliveryType,
           referenceNo: already.referenceNo,
         };

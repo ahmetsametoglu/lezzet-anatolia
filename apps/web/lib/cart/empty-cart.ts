@@ -140,7 +140,7 @@ async function readLastOrder(locale: Locale): Promise<LastOrderSuggestion | null
     placedAt: order.createdAt,
     names: available.slice(0, NAME_LIMIT).map((l) => l.name),
     itemCount: available.length,
-    totalCents: order.totalCents,
+    totalCents: order.orderedTotalCents,
     image: first.image,
     // Yalnız VARYANT satırları: paket kalemleri zaten yukarıda elendi, çözülmüş satırda da paket
     // olamaz — süzgeç tipi daraltmak için, sessizce bir şey düşürmek için değil.

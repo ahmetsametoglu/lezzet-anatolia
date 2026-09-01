@@ -82,7 +82,7 @@ afterAll(async () => {
 /** Taslak sipariş + (istenirse) aktif rezervasyon — ödeme onayının geldiği hâl. */
 async function pendingOrder(qty: number, opts: { reserve?: boolean } = { reserve: true }) {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: qty * 1000 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: qty * 1000 },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   if (opts.reserve) await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty, ttlMinutes: 30 });

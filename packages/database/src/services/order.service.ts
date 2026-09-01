@@ -152,9 +152,17 @@ function searchOptions(f: OrderListFilters): { orFilters?: string[]; rangeFilter
  * anahtar sessizce düşerdi (`rpcMoneyToEuro` künyesi).
  */
 const ITEM_MONEY_FIELDS = ['unitPriceCents', 'listUnitPriceCents', 'lineDiscountAmountCents'];
-const ORDER_MONEY_FIELDS = [
+/**
+ * Dışa VERİLİR (01.09): `order_sale` görünümü siparişin para kolonlarını aynen taşıyor ve kendi
+ * kopyasını tutuyordu. İki liste aynı içerikti, yani bir gün ayrışacaklardı — ve ayrıştılar:
+ * `total` → `ordered_total` ad değişikliğinde muhasebe kopyası güncellenmedi, `order_sale`'den
+ * okunan her satır `orderedTotalCents: undefined` ile Zod'dan geçemedi (13 test). Liste artık tek
+ * yerde (CLAUDE §1).
+ */
+export const ORDER_MONEY_FIELDS = [
   'shippingFeeCents',
-  'totalCents',
+  'orderedTotalCents',
+  'revenueTotalCents',
   'discountAmountCents',
   'amountCollectedCents',
   'amountRefundedCents',

@@ -58,7 +58,7 @@ export async function readMoneyOverview(db: Db, input: { date?: string } = {}): 
     customerName: nameOf.get(order.customerId) ?? '—',
     status: order.status,
     kind: order.paymentStatus === 'partial' ? 'partial' : 'door',
-    remainingCents: order.totalCents - order.amountCollectedCents,
+    remainingCents: order.orderedTotalCents - order.amountCollectedCents,
     method: order.paymentMethod,
   }));
 

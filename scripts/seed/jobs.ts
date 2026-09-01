@@ -52,11 +52,11 @@ async function seedWebhookEvents(db: Db): Promise<void> {
   // eşleştirdiği alandır — uydurma bir kimlik, izlemeyi ekranda kopuk gösterirdi.
   const { data: siparisData } = await db
     .from('order')
-    .select('id,reference_no,total')
+    .select('id,reference_no,ordered_total')
     .not('reference_no', 'is', null)
     .order('created_at', { ascending: false })
     .limit(4);
-  const siparisler = (siparisData ?? []) as Array<{ id: string; reference_no: string; total: number }>;
+  const siparisler = (siparisData ?? []) as Array<{ id: string; reference_no: string; ordered_total: number }>;
   const cent = (v: number): number => Math.round(v * 100);
 
   const olaylar: Array<{
@@ -76,7 +76,7 @@ async function seedWebhookEvents(db: Db): Promise<void> {
             payload: {
               id: 'cs_test_seed01',
               object: 'checkout.session',
-              amount_total: cent(siparisler[0].total),
+              amount_total: cent(siparisler[0].ordered_total),
               currency: 'eur',
               payment_status: 'paid',
               metadata: { order_id: siparisler[0].id, reference_no: siparisler[0].reference_no },
@@ -96,7 +96,7 @@ async function seedWebhookEvents(db: Db): Promise<void> {
             payload: {
               id: 'pi_test_seed01',
               object: 'payment_intent',
-              amount: cent(siparisler[0].total),
+              amount: cent(siparisler[0].ordered_total),
               currency: 'eur',
               status: 'succeeded',
               metadata: { order_id: siparisler[0].id },
@@ -115,7 +115,7 @@ async function seedWebhookEvents(db: Db): Promise<void> {
             payload: {
               id: 'pi_test_seed02',
               object: 'payment_intent',
-              amount: cent(siparisler[1].total),
+              amount: cent(siparisler[1].ordered_total),
               currency: 'eur',
               status: 'succeeded',
               metadata: { order_id: siparisler[1].id },

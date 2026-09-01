@@ -572,7 +572,7 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       vatNumberSnapshot: vat.zeroRated ? customer.vatNumber : null,
       // Servis cent alıyor (02.9): iki `fromCents` kalktı, motorun çıktısı doğrudan gidiyor.
       shippingFeeCents: options.shippingFeeCents,
-      totalCents: options.orderTotalCents,
+      orderedTotalCents: options.orderTotalCents,
       // Paylaşılan fonksiyon (denetim A1): yerel bir kopya vardı ve `rejected` hâlinde 0 dönüyordu.
       // Sepet toplamı zaten paylaşılanı kullanıyor, yani tahsilat doğruydu — ama deftere "indirim
       // verilmedi" yazılıyordu. Kupon reddedilip yerine otomatik kampanya indiğinde müşteri

@@ -67,7 +67,7 @@ async function siparisAc(customerId: string, label: string): Promise<string> {
   productIds.push(product.id);
   const orders = new OrderService(db);
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', paymentMethod: 'cash', totalCents: 1000 },
+    { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', paymentMethod: 'cash', orderedTotalCents: 1000 },
     [{ variantId: variants[0]!.id, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   /* Referansı GEÇİŞE VEREN taraf üretiyor (`transition_order_status`: `coalesce(reference_no,

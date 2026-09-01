@@ -192,7 +192,7 @@ async function addStop(runId: string, opts: StopOpts = {}): Promise<string> {
         ...(point ? { lat: point.lat, lng: point.lng } : {}),
       },
       paymentMethod: 'cash',
-      totalCents: 1000,
+      orderedTotalCents: 1000,
     },
     [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
   );

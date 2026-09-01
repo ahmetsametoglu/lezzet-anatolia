@@ -59,7 +59,7 @@ beforeAll(async () => {
       deliveryType: 'pickup',
       deliveryDate: today,
       paymentMethod: 'cash',
-      totalCents: 2600,
+      orderedTotalCents: 2600,
     },
     [{ variantId, qty: 2, unitPriceCents: 1300, vatRate: 5.5 }],
   );
@@ -78,7 +78,7 @@ beforeAll(async () => {
       deliveryType: 'pickup',
       deliveryDate: today,
       paymentMethod: 'cash',
-      totalCents: 2000,
+      orderedTotalCents: 2000,
     },
     [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
   );

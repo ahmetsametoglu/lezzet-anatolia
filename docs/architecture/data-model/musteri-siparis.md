@@ -266,7 +266,8 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `carrier` | carrier | • |  |
 | `tracking_number` | text | • |  |
 | `shipping_fee` | numeric(10, 2) |  | `0` |
-| `total` | numeric(10, 2) |  | `0` |
+| `ordered_total` | numeric(10, 2) |  | `0` |
+| `revenue_total` | numeric(10, 2) |  | `0` |
 | `discount_id` | uuid | • |  |
 | `discount_amount` | numeric(10, 2) |  | `0` |
 | `discount_label` | jsonb | • |  |
@@ -309,7 +310,8 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 - **`invoice_no`** — dış muhasebeden sonradan eşleşir
 - **`vat_treatment`** — KDV işleme tipi (export için); ileride `oss_destination`
 - **`locale`** — **siparişin dili** — müşterinin bu siparişi verirken okuduğu yüzeyin dili; sipariş maillerinin dili buradan gelir. `null` = bilinmiyor (hızlı satış, operasyon girişi) → profilin `preferred_language`'ına düşülür. Profilden okumamanın sebebi snapshot mantığı: profil sonradan değişebilir, siparişin metni değişmemeli
-- **`total`** — **sipariş edilen** toplam = Σ kalem − indirim + `shipping_fee` (sabit, sipariş anı). App: `totalCents`
+- **`ordered_total`** — **sipariş anında anlaşılan** toplam = Σ kalem − indirim + `shipping_fee` (sabit, sipariş anı). App: `orderedTotalCents`. Adı 01.09'da `total`dan değişti: genel ad, yedi ayrı okuyucuyu onu "borç" sanmaya götürmüştü
+- **`revenue_total`** — **gerçekleşen ciro** = Σ (giden adet × birim − indirim payı) [+ kargo, en az bir kalem gittiyse]. Kalemlerden TÜRETİLİR (`resync_order_revenue` tetikleyicisi); taslakta 0'dır. App: `revenueTotalCents`. **Saklanmasının sebebi rapor tarafının SQL'den okuması** — SQL, TypeScript motorunu çağıramaz
 - **`discount_id`** — uygulanan indirim/kupon (tek; üst üste binmez)
 - **`discount_amount`** — uygulanan indirim tutarı; varsayılan 0. App: `discountAmountCents`
 - **`discount_label`** — inen indirimin **müşteriye görünen adının** sipariş anındaki kopyası (`{"fr":"Offre de bienvenue",…}`) — kampanya yeniden adlandırılsa/silinse de siparişin maili ve fişi aynı şeyi der; `address_snapshot` ile aynı gerekçe. `null` = ad verilmemiş → yüzey genel "İndirim"e düşer

@@ -39,7 +39,7 @@ let kasaId: string;
 /** Teslim edilmeye hazır bir sipariş kurar. Ödülün tetikleyicisi ARTIK ÖDEME (`odemeAl`). */
 async function siparisAc(customerId: string): Promise<string> {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'out_for_delivery', totalCents: 1500 },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'out_for_delivery', orderedTotalCents: 1500 },
     [{ variantId, qty: 1, unitPriceCents: 1500, vatRate: 5.5 }],
   );
   createdOrders.push(order.id);

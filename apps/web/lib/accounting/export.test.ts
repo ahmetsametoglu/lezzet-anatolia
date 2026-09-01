@@ -75,7 +75,7 @@ async function makeSale(g: SaleInput) {
       warehouseId,
       customerId,
       channel: 'b2c',
-      totalCents: qty * unitPriceCents + (g.shippingFeeCents ?? 0),
+      orderedTotalCents: qty * unitPriceCents + (g.shippingFeeCents ?? 0),
       shippingFeeCents: g.shippingFeeCents,
       isGiftOrder: g.isGiftOrder,
     },
@@ -122,7 +122,7 @@ describe('dönem ve satış tarihi', () => {
   });
 
   it('gerçekleşmemiş sipariş hiç görünmez — taslak ciro değildir', async () => {
-    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', totalCents: 5000 }, [{ variantId, qty: 1, unitPriceCents: 5000, vatRate: 5.5 }]);
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', orderedTotalCents: 5000 }, [{ variantId, qty: 1, unitPriceCents: 5000, vatRate: 5.5 }]);
     const { rows } = await buildExport(PERIOD);
     expect(rows.map((r) => r.orderId)).not.toContain(order.id);
   });

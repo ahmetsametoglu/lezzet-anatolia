@@ -118,7 +118,7 @@ async function refusedOrder(
       : (await stocks.insert({ warehouseId: warehouse, variantId, physicalQty: qty, expiryDate: dayOffset(60), purchasePriceCents: 400 })).id;
 
   const { order, items: lines } = await orders.create(
-    { warehouseId: warehouse, customerId, channel: 'b2b', deliveryType: 'route', totalCents: qty * 1000, courierId: opts.withCourier === false ? null : courierId },
+    { warehouseId: warehouse, customerId, channel: 'b2b', deliveryType: 'route', orderedTotalCents: qty * 1000, courierId: opts.withCourier === false ? null : courierId },
     [{ variantId, qty, unitPriceCents: 1000, vatRate: 5.5 }],
   );
   await reservations.reserve({ orderId: order.id, warehouseId: warehouse, variantId, qty });
@@ -192,7 +192,7 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
 
   it('YARIM işaretlenmiş siparişte satırların TAMAMI döner — depocu neyi karara bağladığını görür', async () => {
     const { order, items: lines } = await orders.create(
-      { warehouseId, customerId, channel: 'b2b', deliveryType: 'route', totalCents: 4000, courierId },
+      { warehouseId, customerId, channel: 'b2b', deliveryType: 'route', orderedTotalCents: 4000, courierId },
       [
         { variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 },
         { variantId, qty: 3, unitPriceCents: 1000, vatRate: 5.5 },
@@ -218,7 +218,7 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
 
   it('ULAŞILAMAYAN sipariş dönüş DEĞİLDİR — mal araçta, rampaya hiç girmedi (v2:505)', async () => {
     const { order, items: lines } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: 1000, courierId },
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: 1000, courierId },
       [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
     );
     await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 1 });
@@ -252,7 +252,7 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
 
   it('kalem yoksa liste de yok — teslim edilmiş sipariş rampaya düşmez', async () => {
     const { order, items: lines } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', totalCents: 1000, courierId },
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', orderedTotalCents: 1000, courierId },
       [{ variantId, qty: 1, unitPriceCents: 1000, vatRate: 5.5 }],
     );
     await reservations.reserve({ orderId: order.id, warehouseId, variantId, qty: 1 });

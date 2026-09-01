@@ -104,7 +104,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       orderId: sale.id,
       referenceNo: sale.referenceNo,
       saleDate: sale.saleDate,
-      totalCents: sale.totalCents,
+      totalCents: sale.orderedTotalCents,
       channel: sale.channel,
     })),
     unpricedCount: pnl?.unpricedCount ?? 0,

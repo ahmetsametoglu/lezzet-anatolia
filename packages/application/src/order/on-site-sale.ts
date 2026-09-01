@@ -178,7 +178,7 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
       paymentMethod: input.paymentMethod,
       // Kargo ücreti SORULMUYOR: `resolveShippingFee` `pickup` almıyor, sipariş doğrudan 0 yazar.
       shippingFeeCents: 0,
-      totalCents: view.totalCents,
+      orderedTotalCents: view.totalCents,
       locale,
     },
     items,
@@ -252,7 +252,7 @@ export async function listRecentDoorSales(db: Db, warehouseId: string): Promise<
   return orders.map((order) => ({
     orderId: order.id,
     referenceNo: order.referenceNo,
-    totalCents: order.totalCents,
+    totalCents: order.orderedTotalCents,
     paymentMethod: order.paymentMethod,
     createdAt: order.createdAt,
     lineCount: lineCounts.get(order.id) ?? 0,

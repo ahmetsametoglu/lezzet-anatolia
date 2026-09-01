@@ -124,7 +124,7 @@ function doorDueCents(order: Order): number | null {
  * konusudur"* — ekran o cümleyi görmüyordu.
  */
 function outstandingCents(order: Order): number {
-  return Math.max(0, order.totalCents - (order.amountCollectedCents - order.amountRefundedCents));
+  return Math.max(0, order.orderedTotalCents - (order.amountCollectedCents - order.amountRefundedCents));
 }
 
 export async function readDispatchDay(date: string): Promise<DispatchDayView> {

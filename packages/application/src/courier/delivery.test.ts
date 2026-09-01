@@ -107,7 +107,7 @@ async function atTheDoor(opts: { channel?: 'b2b' | 'b2c'; qty?: number; unitPric
       deliveryDate: today,
       courierId,
       paymentMethod: 'cash',
-      totalCents: qty * unitPriceCents,
+      orderedTotalCents: qty * unitPriceCents,
     },
     [{ variantId, qty, unitPriceCents, vatRate: 5.5 }],
   );

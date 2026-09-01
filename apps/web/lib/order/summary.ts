@@ -99,7 +99,7 @@ export async function readOrderSummary(db: Db, orderId: string): Promise<OrderSu
     subtotalCents: lines.reduce((sum, l) => sum + l.unitPriceCents * l.qty, 0),
     discountCents: order.discountAmountCents,
     shippingCents: order.shippingFeeCents,
-    totalCents: order.totalCents,
+    totalCents: order.orderedTotalCents,
     href: `/operations/orders/${order.id}`,
   };
 }

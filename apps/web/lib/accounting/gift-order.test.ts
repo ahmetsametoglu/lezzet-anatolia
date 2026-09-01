@@ -73,7 +73,7 @@ describe('patron ikramı iç hesapların TAMAMINDA sayılır', () => {
     const exportBefore = await buildExport({ from: dayOffset(0), to: dayOffset(0) });
 
     const { order } = await orders.create(
-      { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, totalCents: TOTAL_CENTS },
+      { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: true, orderedTotalCents: TOTAL_CENTS },
       [{ variantId, qty: QTY, unitPriceCents: UNIT_PRICE_CENTS, vatRate: 5.5 }],
     );
 

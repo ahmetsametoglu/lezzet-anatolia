@@ -121,7 +121,32 @@ export const OrderSchema = z.object({
 
   // Para **cent** (02.9 · STACK §8); DB kolonları euro `numeric`, dönüşüm `OrderService.moneyFields`.
   shippingFeeCents: z.number().int(),
-  totalCents: z.number().int(),
+  /**
+   * **SİPARİŞ ANINDA ANLAŞILAN tutar** (Σ kalem − indirim + kargo). Bir kez yazılır, DONUKTUR.
+   *
+   * Adı 01.09'da `totalCents`ten değişti ve sebebi ölçülmüştü: genel bir ad, her okuyanı kendi
+   * sorusunu ona sormaya davet ediyordu. Yedi ayrı yer onu "bu siparişin borcu" diye okumuş ve
+   * eksik giden malın parasını da istemişti — aynı siparişe iki ekran iki farklı borç yazıyordu.
+   *
+   * Sahibi olduğu sorular: Stripe ödeme niyeti hangi tutarla açılır · vade limitinden ne düşer ·
+   * müşterinin onay mailinde hangi rakam var · anlaşmazlıkta neye bakılır. Motor da hazırlık
+   * kesinleşmeden BUNU okur (`payment-status.ts`: kalemlerden yeniden toplamak, indirim payı
+   * dağıtılmamışsa yanlış cevap veriyordu).
+   *
+   * "Ne tahsil edilecek" sorusunun cevabı BU DEĞİL — o `derivePaymentStatus`tan çıkar.
+   */
+  orderedTotalCents: z.number().int(),
+  /**
+   * **GERÇEKLEŞEN CİRO** — giden malın tutarı. Kalemlerden TÜRETİLİR (`resync_order_revenue`
+   * tetikleyicisi, 0012); taslakta 0'dır ve bu doğrudur, henüz hiçbir şey gitmemiştir.
+   *
+   * Bir CACHE'tir ve kaynağı `order_item.fulfilled_qty`dir — `amount_collected` ile aynı desen
+   * (0018): artırılmaz, her yazımda kaynaktan yeniden hesaplanır.
+   *
+   * **Neden saklanıyor, türetilmiyor:** rapor tarafı SQL'den okuyor
+   * (`analytics_order_revenue`) ve SQL TypeScript motorunu çağıramaz.
+   */
+  revenueTotalCents: z.number().int(),
   discountId: z.string().uuid().nullable(),
   discountAmountCents: z.number().int(),
   /**
@@ -165,7 +190,10 @@ export const OrderInsertSchema = z.object({
   vatNumberSnapshot: z.string().nullish(),
   vatTreatment: VatTreatmentEnum.optional(),
   shippingFeeCents: z.number().int().nonnegative().optional(),
-  totalCents: z.number().int().nonnegative().optional(),
+  orderedTotalCents: z.number().int().nonnegative().optional(),
+  /* `revenueTotalCents` INSERT ŞEMASINDA YOK ve bu bilinçli: kalemlerden türeyen bir cache'i elle
+     yazmak, kaynağıyla çelişen bir sayı bırakmanın en kolay yoludur. Tetikleyici (0012) onu
+     kalemler yazılınca kendisi kuruyor; taslakta 0 kalması doğru cevaptır. */
   discountId: z.string().uuid().nullish(),
   discountAmountCents: z.number().int().nonnegative().optional(),
   discountLabel: LocalizedTextDraftSchema.nullish(),

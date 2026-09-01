@@ -95,7 +95,7 @@ beforeAll(async () => {
       deliveryType: 'route',
       deliveryZoneId: zoneId,
       deliveryDate: ileriGun(3),
-      totalCents: 2000,
+      orderedTotalCents: 2000,
     },
     [{ variantId, qty: 1, unitPriceCents: 2000, vatRate: 5.5 }],
   );

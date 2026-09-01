@@ -47,7 +47,7 @@ export async function listOrderExceptions(
     new OrderService(db).listByIds(orderIds),
   ]);
   const itemOf = new Map(items.map((item) => [item.id, item]));
-  const totalOf = new Map(orders.map((order) => [order.id, order.totalCents]));
+  const totalOf = new Map(orders.map((order) => [order.id, order.orderedTotalCents]));
 
   return Promise.all(
     candidates.map(async ({ order, shortLines }) => {

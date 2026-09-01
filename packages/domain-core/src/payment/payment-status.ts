@@ -86,7 +86,7 @@ export interface PaymentDerivation {
  * (12.2) — çağıran taze toplamı verir.
  */
 export function derivePaymentStatusForOrder(
-  order: Pick<Order, 'shippingFeeCents' | 'status' | 'totalCents'>,
+  order: Pick<Order, 'shippingFeeCents' | 'status' | 'orderedTotalCents'>,
   items: readonly Pick<OrderItem, 'fulfilledQty' | 'qty' | 'unitPriceCents' | 'lineDiscountAmountCents'>[],
   amounts: { collectedCents: number; refundedCents: number },
 ): PaymentDerivation {
@@ -107,8 +107,9 @@ export function derivePaymentStatusForOrder(
     cancelled: order.status === 'cancelled',
     // Hazırlanmamış siparişin `fulfilled_qty`'si bir karar değil, henüz yazılmamış bir sayıdır.
     fulfillmentSettled: isFulfillmentSettled(order.status, items),
-    // O aşamada beklenen tutar siparişin kendi toplamıdır (bkz. `orderTotalCents`).
-    orderTotalCents: order.totalCents,
+    // O aşamada beklenen tutar SİPARİŞ EDİLENDİR (bkz. `orderTotalCents`) — `revenueTotalCents`
+    // orada 0'dır ve doğru cevap değildir: mal henüz hazırlanmadı, "hiçbiri gitmedi" demek değil.
+    orderTotalCents: order.orderedTotalCents,
   });
 }
 

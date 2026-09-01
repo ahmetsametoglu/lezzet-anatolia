@@ -8,7 +8,7 @@ const order = (patch: Partial<CreditOrder> = {}): CreditOrder => ({
   onAccount: true,
   paymentStatus: 'pending',
   status: 'delivered',
-  totalCents: 10_000,
+  orderedTotalCents: 10_000,
   amountCollectedCents: 0,
   amountRefundedCents: 0,
   createdAt: '2026-06-29T10:00:00Z',
@@ -17,11 +17,11 @@ const order = (patch: Partial<CreditOrder> = {}): CreditOrder => ({
 
 describe('openAmountCents', () => {
   it('toplam − net tahsilat', () => {
-    expect(openAmountCents({ totalCents: 10_000, amountCollectedCents: 3000, amountRefundedCents: 0 })).toBe(7000);
+    expect(openAmountCents({ orderedTotalCents: 10_000, amountCollectedCents: 3000, amountRefundedCents: 0 })).toBe(7000);
   });
 
   it('iade borcu GERİ GETİRİR — para geri gittiyse tahsilat da geri alınmıştır', () => {
-    expect(openAmountCents({ totalCents: 10_000, amountCollectedCents: 10_000, amountRefundedCents: 4000 })).toBe(4000);
+    expect(openAmountCents({ orderedTotalCents: 10_000, amountCollectedCents: 10_000, amountRefundedCents: 4000 })).toBe(4000);
   });
 });
 
@@ -62,7 +62,7 @@ describe('isOverdue', () => {
 describe('creditPosition', () => {
   it('yalnız açık vadeli siparişleri toplar', () => {
     const pos = creditPosition(
-      [order({ totalCents: 10_000 }), order({ totalCents: 5000, paymentStatus: 'paid' }), order({ totalCents: 2000, onAccount: false })],
+      [order({ orderedTotalCents: 10_000 }), order({ orderedTotalCents: 5000, paymentStatus: 'paid' }), order({ orderedTotalCents: 2000, onAccount: false })],
       30,
       NOW,
     );

@@ -166,7 +166,7 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
   it('ödenmemiş vadeli sipariş açık bakiyeye girer; limit aşımı admin onayına düşer', async () => {
     // 80 € ödenmemiş vadeli sipariş + 40 € yeni sipariş = 120 € > 100 € limit
     await orders.create(
-      { warehouseId, customerId: creditCustomerId, channel: 'b2b', onAccount: true, totalCents: 8000 },
+      { warehouseId, customerId: creditCustomerId, channel: 'b2b', onAccount: true, orderedTotalCents: 8000 },
       [{ variantId, qty: 1, unitPriceCents: 8000, vatRate: 5.5 }],
     );
 
@@ -178,7 +178,7 @@ describe('vade freni — açık bakiye TÜRETİLİR', () => {
 
   it('iptal edilen vadeli sipariş açık bakiyeye SAYILMAZ', async () => {
     const { order } = await orders.create(
-      { warehouseId, customerId: creditCustomerId, channel: 'b2b', onAccount: true, totalCents: 50_000, status: 'cancelled' },
+      { warehouseId, customerId: creditCustomerId, channel: 'b2b', onAccount: true, orderedTotalCents: 50_000, status: 'cancelled' },
       [{ variantId, qty: 1, unitPriceCents: 50_000, vatRate: 5.5 }],
     );
     expect(order.status).toBe('cancelled');

@@ -72,7 +72,7 @@ afterAll(async () => {
 /** Kapıda satış: tek adımda kapanır, maliyet kalemleri sabitlenir, partiler yazılır. */
 async function sell(variantId: string, qty: number, unitPriceCents: number, opts: { gift?: boolean } = {}) {
   const { order } = await orders.create(
-    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: opts.gift ?? false, totalCents: qty * unitPriceCents },
+    { warehouseId, customerId, channel: 'b2c', orderSource: 'door', isGiftOrder: opts.gift ?? false, orderedTotalCents: qty * unitPriceCents },
     [{ variantId, qty, unitPriceCents, vatRate: 5.5 }],
   );
   const result = await quickSale(db, { orderId: order.id, paymentMethod: 'cash', paymentAccountId: cashAccount });
@@ -178,7 +178,7 @@ describe('eksik maliyet kârı şişirmez', () => {
     const before = await companyPnl(TODAY);
 
     // Teslim edilmiş ama kapanmamış sipariş: `cogs_amount` henüz sabitlenmedi.
-    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', totalCents: 2110 }, [
+    const { order } = await orders.create({ warehouseId, customerId, channel: 'b2c', orderedTotalCents: 2110 }, [
       { variantId: cheapVariant, qty: 1, fulfilledQty: 1, unitPriceCents: 2110, vatRate: 5.5 },
     ]);
     await orders.update({ id: order.id, status: 'delivered', referenceNo: `LA-KR-${stamp}` });

@@ -249,7 +249,7 @@ describe('elle sipariş — personel yolu (09.8)', () => {
       const kalemler = await kalemleriOku(orderId);
       const { data: adetler } = await db.from('order_item').select('unit_price,qty').eq('order_id', orderId);
       const kalemToplam = (adetler ?? []).reduce((a, k) => a + Math.round(Number(k.unit_price) * 100) * k.qty, 0);
-      expect(order!.totalCents).toBe(kalemToplam - order!.discountAmountCents + order!.shippingFeeCents);
+      expect(order!.orderedTotalCents).toBe(kalemToplam - order!.discountAmountCents + order!.shippingFeeCents);
       return { order: order!, kalemler };
     };
 
@@ -261,7 +261,7 @@ describe('elle sipariş — personel yolu (09.8)', () => {
     // Kalem fiyatı gerçekten pazarlıklı olan, ve toplam ONU izliyor.
     expect(Number(listeyle.kalemler[0]!.unit_price)).toBe(20);
     expect(Number(pazarlikli.kalemler[0]!.unit_price)).toBe(15);
-    expect(pazarlikli.order.totalCents).toBeLessThan(listeyle.order.totalCents);
+    expect(pazarlikli.order.orderedTotalCents).toBeLessThan(listeyle.order.orderedTotalCents);
   });
 
   it('pazarlık izini kaleme yazar — liste fiyatı ve KİM birlikte', async () => {

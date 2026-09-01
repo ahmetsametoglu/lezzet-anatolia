@@ -72,7 +72,7 @@ export async function readCustomerContext(customerId: string, limit = CONTEXT_OR
     orders: page.rows.slice(0, limit).map((o) => ({
       id: o.id,
       label: o.referenceNo ?? `#${o.id.slice(0, 8)}`,
-      totalCents: o.totalCents,
+      totalCents: o.orderedTotalCents,
       href: `${ORDER_PATH}/${o.id}`,
     })),
     ordersTruncated: page.rows.length > limit,

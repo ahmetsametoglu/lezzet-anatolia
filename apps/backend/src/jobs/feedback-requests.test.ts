@@ -47,7 +47,7 @@ async function markDelivered(orderId: string, daysAgo: number) {
 
 async function newOrder(): Promise<string> {
   const { order } = await orders.create(
-    { customerId, warehouseId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 1200 },
+    { customerId, warehouseId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', orderedTotalCents: 1200 },
     [{ variantId, qty: 1, unitPriceCents: 1200, vatRate: 5.5 }],
   );
   createdOrders.push(order.id);
@@ -147,7 +147,7 @@ describe('sendPendingFeedbackInvites', () => {
     profileIds.push(phoneOnly.id);
 
     const { order } = await orders.create(
-      { customerId: phoneOnly.id, warehouseId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', totalCents: 1200 },
+      { customerId: phoneOnly.id, warehouseId, channel: 'b2c', orderSource: 'web', deliveryType: 'shipping', status: 'confirmed', orderedTotalCents: 1200 },
       [{ variantId, qty: 1, unitPriceCents: 1200, vatRate: 5.5 }],
     );
     createdOrders.push(order.id);
