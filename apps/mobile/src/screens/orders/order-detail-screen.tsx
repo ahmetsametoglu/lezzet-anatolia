@@ -303,7 +303,36 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
                       Paket hapı ayrı bir rozet olarak değil bu satırın başında yazılıyor — dar
                       ekranda ad + rozet + tutar üçlüsü tek satıra sığmıyor. */}
                   {line.bundle === null ? (
-                    line.unitLabel.length === 0 ? null : <Text style={styles.itemDetail}>{line.unitLabel}</Text>
+                    line.unitLabel.length === 0 && !line.shortfall ? null : (
+                      <Text style={styles.itemDetail}>
+                        {line.unitLabel}
+                        {/*
+                          EKSİK, GRAMAJIN YANINDA (kullanıcı kararı 01.09) — ayrı bir kutu değil.
+
+                          Önce buraya kitin `Note`u konmuştu: tam genişlik, terracotta, iki satır
+                          metinli bir SAYFA DÜZEYİ kutusu, üstelik ayırıcı çizginin altında kaldığı
+                          için anlattığı satıra değil BİR SONRAKİNE bağlanmış görünüyordu. Sonra
+                          tasarımın kendi şeridine çevrildi ve o da kullanıcıda düştü: satır düzeyi
+                          bir bilginin kendi başına kutusu olmasına gerek yok — bilgi zaten satırın
+                          ikinci sesidir, gramajın yanına yazılır.
+
+                          "Kaç sipariş edildi" BURAYA YAZILMAZ: ad satırı zaten "2×" diyor. Cümle
+                          yalnız EKSİĞİ söyler, çünkü bilinmeyen tek şey odur.
+
+                          Para çözümü de metne yazılmaz — tutar sütununda ÜSTÜ ÇİZİLİ eski değerle
+                          gösteriliyor (künye orada). Bir tur burada "tahsilat {tutar}" yazıyordu:
+                          o sipariş DÜZEYİNDE bir sayıdır, satırın altında yeri yok ve birden çok
+                          eksik satırda aynı sayı defalarca tekrarlanırdı.
+                        */}
+                        {line.shortfall ? (
+                          <Text style={styles.itemShortfall}>
+                            {`${line.unitLabel.length === 0 ? '' : ' · '}${fill(t.detail.shortfallLine, {
+                              missing: String(line.qty - line.billedQty),
+                            })}`}
+                          </Text>
+                        ) : null}
+                      </Text>
+                    )
                   ) : (
                     <Text style={styles.itemDetail}>
                       {[
@@ -313,25 +342,31 @@ export function OrderDetailScreen({ reference, locale: forcedLocale }: OrderDeta
                     </Text>
                   )}
                 </View>
-                <Text style={styles.itemPrice}>{formatPrice(line.lineTotalCents, locale)}</Text>
+                {/*
+                  TUTAR SÜTUNU — eksik varsa İKİ sayı: üstte sipariş edilenin tutarı ÜSTÜ ÇİZİLİ,
+                  altında ödenecek olan (kullanıcı kararı 01.09).
+
+                  Eskiden yalnız yeni tutar yazılıyordu ve satır kendi içinde çelişiyordu: ad "2×"
+                  diyor, tutar 1 adedinkini gösteriyordu. Üstü çizili değer o çelişkiyi kapatıyor
+                  ve para çözümünü CÜMLEYE gerek kalmadan anlatıyor.
+
+                  Sipariş edilenin tutarı SÖZLEŞMEDEN TÜRETİLİR, yeni alan eklenmedi: `shortfallCents`
+                  zaten "eksik gelen miktarın para karşılığı" (şema künyesi), yani ödenecek tutara
+                  eklenince sipariş edilenin tutarı çıkar. İkinci bir alan, aynı gerçeğin ikinci
+                  kaynağı olurdu (CLAUDE §1).
+                */}
+                {line.shortfall ? (
+                  <View style={styles.itemPriceBox}>
+                    <Text style={styles.itemPriceWas} testID={`order-line-was-${line.id}`}>
+                      {formatPrice(line.lineTotalCents + line.shortfallCents, locale)}
+                    </Text>
+                    <Text style={styles.itemPrice}>{formatPrice(line.lineTotalCents, locale)}</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.itemPrice}>{formatPrice(line.lineTotalCents, locale)}</Text>
+                )}
               </View>
 
-              {/* Eksik karşılama: miktar + PARA ÇÖZÜMÜ. Sebep anlatılmaz (tasarımın sözleşmesi) —
-                  müşterinin sorusu "hesabım doğru mu", "neden eksik" değil. */}
-              {line.shortfall ? (
-                <Note
-                  description={fill(
-                    detail.paymentMethod === 'online' ? t.detail.shortfallRefund : t.detail.shortfallDoor,
-                    {
-                      ordered: String(line.qty),
-                      fulfilled: String(line.billedQty),
-                      amount: formatPrice(line.shortfallCents, locale),
-                    },
-                  )}
-                  tone="terracotta"
-                  testID={`order-shortfall-${line.id}`}
-                />
-              ) : null}
             </View>
           ))}
         </View>
@@ -417,15 +452,16 @@ const styles = StyleSheet.create((theme, rt) => ({
     letterSpacing: theme.text.eyebrow * 0.18,
     color: theme.colors.terracotta,
   },
-  itemBlock: { gap: theme.space.md },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.space.xl,
+  itemBlock: {
     paddingVertical: theme.space.lg,
     borderBottomWidth: theme.border.base,
     borderBottomColor: theme.colors['sand-400'],
     borderStyle: 'dashed',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.space.xl,
   },
   itemText: { flex: 1, gap: theme.space['2xs'] },
   itemName: {
@@ -438,6 +474,21 @@ const styles = StyleSheet.create((theme, rt) => ({
     fontSize: theme.text['body-sm'],
     lineHeight: theme.text['body-sm'] * theme.text['lead--line-height'],
     color: theme.colors.muted,
+  },
+  /* Gramajın devamı — AYNI satırın ikinci sesi, kendi kutusu yok. Renk `honey` ("bekleyen durum")
+     ve ağırlık bir kademe kalın: cümle gramajdan ayrışmalı ama satırdan kopmamalı. */
+  itemShortfall: {
+    fontFamily: theme.font.body[theme.text['button--font-weight']],
+    color: theme.colors.honey,
+  },
+  /* Eksik varsa tutar sütunu iki satır: üstte çizili eski, altında ödenecek. Sağa yaslı çünkü
+     sütunun kendisi sağa yaslı — iki sayının basamakları alt alta gelmezse göz karşılaştıramaz. */
+  itemPriceBox: { alignItems: 'flex-end', gap: theme.space['2xs'] },
+  itemPriceWas: {
+    fontFamily: theme.font.body[400],
+    fontSize: theme.text.micro,
+    color: theme.colors.muted,
+    textDecorationLine: 'line-through',
   },
   itemPrice: {
     fontFamily: theme.font.body[theme.text['button--font-weight']],

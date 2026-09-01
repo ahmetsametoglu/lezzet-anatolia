@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react-native';
 
-import type { MeOrderDetail } from '@lezzet/types';
+import { CROP_CENTER, type MeOrderDetail } from '@lezzet/types';
 import { OrderDetailScreen } from './order-detail-screen';
 import messages from './messages.json';
 
@@ -189,5 +189,61 @@ describe('sipariş detayı · çok kutulu takip', () => {
     expect(screen.queryByTestId('order-tracking')).toBeNull();
     // `carrierName` boşsa eski enum'a düşülür — elle girilmiş taşıyıcının meşru hâli.
     expect(screen.getByText(t.carrier.other)).toBeOnTheScreen();
+  });
+});
+
+/*
+  EKSİK KARŞILAMA (kullanıcı kararı 01.09) — satırın KENDİSİ konuşur, kutusu yoktur.
+
+  Çivilenen iki şey: (1) cümle yalnız EKSİĞİ söyler — "kaç sipariş edildi" ad satırında zaten var,
+  ikinci kez yazmak gürültü; (2) para çözümü CÜMLEDE değil TUTAR SÜTUNUNDA — sipariş edilenin
+  tutarı üstü çizili, ödenecek olan altında. Bir tur burada "tahsilat {sipariş toplamı}" yazıyordu:
+  o sipariş DÜZEYİNDE bir sayı ve birden çok eksik satırda defalarca tekrarlanırdı.
+*/
+describe('sipariş detayı · eksik karşılama', () => {
+  const eksikSatir = (): MeOrderDetail['lines'] => [
+    {
+      id: 'line-1',
+      name: 'Su Böreği',
+      unitLabel: '2500 g',
+      image: { url: null, crop: CROP_CENTER },
+      bundle: null,
+      qty: 2,
+      billedQty: 1,
+      shortfall: true,
+      shortfallCents: 2247,
+      unitPriceCents: 2247,
+      lineTotalCents: 1572,
+    },
+  ];
+
+  it('cümle yalnız EKSİĞİ söyler ve gramajın yanında durur', async () => {
+    await renderScreen(null, { lines: eksikSatir(), totalCents: 2392 });
+
+    expect(screen.getByText(/2500 g · 1 adet eksik gönderildi/)).toBeOnTheScreen();
+  });
+
+  it('tutar sütununda SİPARİŞ EDİLENİN tutarı üstü çizili, ödenecek olan yanında', async () => {
+    await renderScreen(null, { lines: eksikSatir(), totalCents: 2392 });
+
+    // 15,72 + 22,47 = 38,19 — sipariş edilen 2 adedin tutarı. Sözleşmeden türer, alan eklenmedi.
+    expect(screen.getByTestId('order-line-was-line-1')).toHaveTextContent(/38,19/);
+    expect(screen.getByTestId('order-line-was-line-1')).toHaveStyle({ textDecorationLine: 'line-through' });
+  });
+
+  it('sipariş TOPLAMI satıra yazılmaz — orası satırın yeri, siparişin değil', async () => {
+    await renderScreen(null, { lines: eksikSatir(), paymentMethod: 'cash', paymentStatus: 'pending', totalCents: 2392 });
+
+    // Toplam yalnız özet panelinde geçer; satır bloğunda hiç görünmez.
+    expect(within(screen.getByTestId('order-line-line-1')).queryByText(/23,92/)).toBeNull();
+  });
+
+  it('eksiği OLMAYAN satırda ne cümle ne çizili tutar doğar — ölü işaret yok', async () => {
+    await renderScreen(null, {
+      lines: [{ ...eksikSatir()[0]!, shortfall: false, shortfallCents: 0, billedQty: 2 }],
+    });
+
+    expect(screen.queryByTestId('order-line-was-line-1')).toBeNull();
+    expect(screen.queryByText(/eksik gönderildi/)).toBeNull();
   });
 });

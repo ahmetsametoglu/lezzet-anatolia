@@ -1974,3 +1974,26 @@ fırsatlı ürünler `sortOrder`ın başındaydı. İki ray iki ayrı soru sorar
 var" demeye yetmiyordu). Eleme sorgudan sonra olduğu için okuma bir pay ile çekiyor
 (`HOME_FEATURED_OVERSCAN`) — sınırı sorguya birebir vermek, fırsatlılar sıranın başındayken rayı
 boşaltabilirdi. Uçtan doğrulandı: `featured` 6 kart, fırsat rayıyla kesişim **boş**.
+
+## Eksik karşılanan kalem, satırın KENDİSİNDE anlatılır — kutusu yoktur (01.09)
+
+**Tasarımdan bilinçli sapma** (`Musteri - Siparis Detay.dc.html`). Tasarım eksik kalemi ayrı bir
+şeritle çiziyor (kum-bal zemin, çerçeve, `5 sipariş edildi, 4 gönderildi — 5,90 € iade edilir`) ve
+kapıda ödemeli hâl için de bir not düşüyor: *"tahsilat güncel tutardan yapılır — 97,30 €"*.
+
+**Uygulanan iki tur ve ikisinin de düşme sebebi.** Önce kitin `Note`u kullanılmıştı: sayfa düzeyi
+bir kutu, terracotta, tam genişlik, üstelik ayırıcı çizginin ALTINDA kaldığı için anlattığı satıra
+değil bir sonrakine bağlanmış görünüyordu. Sonra tasarımın kendi şeridine çevrildi ve kullanıcı
+onu da reddetti: *"iki bin beş yüz gramın yanına bizim uyarı metnimiz olacak şekilde yazabiliriz…
+tahsilatı oraya niye yazdın anlamadım"*.
+
+**Karar (kullanıcı, 01.09) — üç hüküm:**
+1. **Cümle gramajın yanında**, satırın ikinci sesi olarak: `2500 g · 1 adet eksik gönderildi`.
+   Satır düzeyinde bir bilginin kendi kutusu olmasına gerek yok; kutu listenin ritmini bozuyor.
+2. **"Kaç sipariş edildi" tekrar edilmez** — ad satırı zaten `2×` diyor. Cümle yalnız EKSİĞİ söyler.
+3. **Para çözümü metinde değil TUTAR SÜTUNUNDA**: sipariş edilenin tutarı üstü çizili, ödenecek olan
+   altında (`38,19 €` → `19,09 €`). Sipariş TOPLAMI satıra yazılmaz — o sipariş düzeyinde bir sayıdır
+   ve birden çok eksik satırda defalarca tekrarlanırdı; yeri özet panelidir.
+
+Sapmanın kazancı görünürdü: eski hâlde satır `2×` diyip 1 adedin tutarını yazıyordu ve çelişkiyi
+ancak koca bir açıklama kutusu kapatabiliyordu. Üstü çizili sayı o çelişkiyi cümlesiz kapatıyor.

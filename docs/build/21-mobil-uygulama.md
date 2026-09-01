@@ -10012,3 +10012,50 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     duruyor ve dokunma alanı başlığın sağ eylemini (hesap menüsü, "Vazgeç") yutuyor — dokunuş
     uygulamaya değil geliştirici menüsüne gidiyor. Düğme sürüklenerek yoldan çekilir. Cihaz turu
     yapan ajanın bilmesi gereken bir tuzak; uygulamada karşılığı yok.
+
+- [x] (21.208) **Tek tesisli personele "bugün hangi depodasın?" diye sorulmuyor** (kullanıcı kararı
+  01.09: *"bu adamın diğer depolardan hiç haberi yok, yine de depo seçiyorum — saçma değil mi?"*)
+  - **Durum (01.09) — ÖLÇÜLDÜ, sebep depo sayısı değil ARAÇ.** Ekran tek satırlık bir liste çizip
+    üstüne *"Birden fazla depoda çalışıyorsun"* yazıyordu; cümle yanlıştı. Veri: `hepsi@…`in
+    kapsamı iki kayıt — STR (`facility`) + VAN-1 (`vehicle`). Kapı kapsamı SAYIYOR
+    (`soleWarehouseIdOf`), araçla birlikte iki görüp `400 warehouse_required` diyordu. Tesis/araç
+    ayrımını yalnız istemci biliyor (`kind`), o yüzden çare de orada: kapsamda TEK tesis varsa
+    seçim türetiliyor (`loadWarehouseChoice`) ve soru hiç sorulmuyor. Hub'ın kapsam dalı da
+    seçenek sayısına bakıyor artık — tek satırlık bir seçici sormak değil, sormuş gibi yapmaktı.
+  - **"Varsayılan depo yoktur" (CLAUDE §1) ihlal edilmedi:** kural sistemin kişi adına depo
+    TAHMİN etmemesidir; tek elemanlı bir kümede tahmin yok. Kapı da değişmedi — kimlik yine
+    `?warehouseId=` ile gidiyor ve kapsama karşı sınanıyor (`403 warehouse_out_of_scope`). Menü bu
+    hükmü zaten taşıyordu ("depo değiştir" yalnız birden çok tesiste çiziliyor); eksik olan aynı
+    hükmün SORUYA uygulanmasıydı.
+  - **Türetilen seçim cihaza YAZILMAZ** — her açılışta kapsamdan yeniden çıkar. Yazsaydık personel
+    ikinci tesise atandığı gün cihazda hiç verilmemiş bir "açık seçim" durur, soru hiç sorulmazdı.
+  - **Testler:** dört yeni birim (tesis+araç → türetilir · türetilen yazılmaz · iki tesiste türetme
+    yok · kapsamdan düşen seçimin yerine tek tesis geçer) + hub'da "TEK tesiste soru sorulmaz".
+    Kapsam bloğunun iki eski hükmü tek tesisli fikstürle koşuyordu; gerçekten doğabilecekleri
+    kapsama (iki tesis) taşındı — o hâlde kapının `warehouse_required` demesi zaten imkânsız.
+
+- [x] (21.209) **Eksik karşılanan sipariş: müşteri ekranı ÜÇ ayrı sayıyı yanlış söylüyordu**
+  (kullanıcı bulgusu 01.09, cihazda: *"hazırlandı aşamasındayken eksik gönderilecekleri ve toplam
+  fiyatının artık ne olduğunu görmeli — hem kapıda ödeme için hem ne kadar iade alacağı için"*)
+  - **Durum (01.09) — arıza EKSİK BİR ÖZELLİK DEĞİL, AYRIŞMIŞ İKİ HESAPTI.** Uyarının çoğu zaten
+    vardı; yanlış olan sayılardı ve hepsi tek kökten geliyordu: satır parası iki ayrı yerde
+    hesaplanıyordu. Ödeme motoru satır indirimini karşılanan orana bölüyor
+    (`fulfilledLineAmountCents`), müşteri okuması ise indirimin TAMAMINI düşürüyordu — yani
+    müşteriye 1 adet için 2 adetlik indirim yazılıyordu. Ölçüldü (`LA-26-93UXKY`, 2 sipariş 1
+    gönderildi): ekran satırı **15,72 €**, kuryenin kapıda tahsil ettiği hesap **19,09 €**.
+    Üstüne `totalCents` ham okunuyordu (`order.total`, eksikten habersiz **46,39 €**) ve
+    `discountCents` de öyle (**8,18 €**) — özet paneli kendi içinde çelişiyordu: 32,10 − 8,18 ≠ 27,29.
+  - **Yapılan:** satır parası, sipariş edilenin tutarı, eksik farkı, ara toplam, indirim ve toplam —
+    altısı da MOTORDAN türetiliyor. `order.total` ve `order.discount_amount` sipariş ANINDA anlaşılan
+    tutarlardır ve eksik gönderimden haberleri yoktur; ekran artık ikisini de ham okumuyor.
+    Doğrulandı (cihaz, Oppo CPH1907): satır ~~38,19~~ → 19,09 · ara toplam 32,10 − indirim 4,81 =
+    toplam 27,29 · kuryenin tahsil edeceği tutarla birebir aynı.
+  - **Görünüş kararı `design/KARARLAR.md`de** (tasarımdan bilinçli sapma): eksik cümlesi gramajın
+    yanında, para çözümü üstü çizili tutarda, sipariş toplamı satıra yazılmaz.
+  - **BEKLEYEN(21.210):** ekran odağa dönünce TAZELENMİYOR — detay yalnız monte olurken okuyor
+    (`use-order.hook.ts`). Kullanıcının ilk gördüğü ekran buydu: sipariş 17:52'de hazırlanmıştı,
+    18:23'te ekran hâlâ "Alındı" diyordu. Vitrindeki takip şeridi de aynı.
+
+- [ ] (21.210) **Sipariş ekranları odağa dönünce tazelensin** — açık bırakılan ekran güncellemeyi
+  hiç görmüyor (21.209'un ölçümü). Karar gereken yer: yalnız odak mı, uygulama öne gelince de mi,
+  ve hangi ekranlar (detay · liste · vitrin takip şeridi).

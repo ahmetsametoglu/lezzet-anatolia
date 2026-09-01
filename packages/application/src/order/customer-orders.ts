@@ -9,6 +9,8 @@ import {
 import {
   bundleQtyOf,
   customerOrderStatus,
+  derivePaymentStatusForOrder,
+  fulfilledLineAmountCents,
   isActiveForCustomer,
   isFulfilmentKnown,
   orderTimeline,
@@ -341,7 +343,27 @@ export async function getCustomerOrderDetail(
    */
   const measured = isFulfilmentKnown(order.status);
   const billedOf = (item: OrderItem) => (measured ? item.fulfilledQty : item.qty);
-  const moneyCentsOf = (item: OrderItem) => item.unitPriceCents * billedOf(item) - item.lineDiscountAmountCents;
+
+  /*
+    SATIR PARASI ÖDEME MOTORUNDAN (kullanıcı bulgusu 01.09) — burada ikinci kez çarpılmıyor.
+
+    Burada bir tur kendi çarpması vardı (`birim × karşılanan − satır indirimi`) ve motorunkinden
+    AYRIŞMIŞTI: motor indirimi karşılanan orana böler (`lineDiscountCents × karşılanan / sipariş`),
+    bu satır ise indirimin TAMAMINI düşürüyordu. Sonuç, müşteriye 1 adet için 2 adetlik indirim
+    yazmaktı — ölçüldü: aynı kalem ekranda 15,72 €, kuryenin kapıda tahsil ettiği hesapta 19,09 €.
+    İki ekran aynı siparişe iki fiyat söylüyordu ve ayrım kimsenin bakmadığı bir çarpmadaydı.
+  */
+  const moneyLine = (item: OrderItem) => ({
+    fulfilledQty: item.fulfilledQty,
+    orderedQty: item.qty,
+    unitPriceCents: item.unitPriceCents,
+    lineDiscountCents: item.lineDiscountAmountCents,
+  });
+  const moneyCentsOf = (item: OrderItem) => fulfilledLineAmountCents(moneyLine(item), measured);
+  /** Sipariş edilenin tutarı — eksik hiç yokmuş gibi; ekranda ÜSTÜ ÇİZİLİ gösterilen sayı. */
+  const orderedCentsOf = (item: OrderItem) => fulfilledLineAmountCents(moneyLine(item), false);
+  /** Satırın indirim payı — ara toplam ile indirim satırının ayrıştırılması için. */
+  const discountShareOf = (item: OrderItem) => item.unitPriceCents * billedOf(item) - moneyCentsOf(item);
 
   const lines: CustomerOrderDetailLine[] = [];
 
@@ -396,11 +418,19 @@ export async function getCustomerOrderDetail(
       qty: item.qty,
       billedQty: billedOf(item),
       shortfall: measured && item.fulfilledQty < item.qty,
-      shortfallCents: measured ? item.unitPriceCents * (item.qty - item.fulfilledQty) : 0,
+      /* Fark, İKİ TUTARIN farkıdır — "eksik adet × birim fiyat" DEĞİL. İndirim payı da eksik adetle
+         birlikte düştüğü için ham çarpım gerçek kaybı olduğundan büyük gösteriyordu; ekran bu sayıyı
+         üstü çizili tutarı geri hesaplamakta kullanıyor (`lineTotal + shortfall = sipariş edilen`),
+         dolayısıyla yanlışı orada da görünürdü. */
+      shortfallCents: measured ? orderedCentsOf(item) - moneyCentsOf(item) : 0,
       unitPriceCents: item.unitPriceCents,
       lineTotalCents: moneyCentsOf(item),
     });
   }
+
+  /* İndirim TÜM kalemlerden toplanır — paketlenmiş olanlar dahil: onların payı da satırlarının
+     tutarından düşülmüş durumda, özet panelinde geri eklenmezse ara toplam eksik kalır. */
+  const discountCents = items.reduce((sum, item) => sum + discountShareOf(item), 0);
 
   /*
     Takip künyesi EN SONDA okunuyor ve yalnız kargo siparişinde: rota siparişinde gönderi satırı
@@ -424,13 +454,37 @@ export async function getCustomerOrderDetail(
     address: order.addressSnapshot as CustomerOrderDetail['address'],
     lines,
     timeline: orderTimeline(order.status, history),
-    // Ara toplam kalemlerden TÜRETİLİR: siparişte ayrı bir alan yok ve olmamalı — iki kaynak bir gün
-    // ayrışır. İndirim ayrı satır olarak gösterildiği için burada payları geri ekliyoruz.
-    subtotalCents: lines.reduce((sum, l) => sum + l.lineTotalCents, 0) + order.discountAmountCents,
-    discountCents: order.discountAmountCents,
+    /*
+      ARA TOPLAM VE İNDİRİM DE TÜRETİLİR — siparişte ayrı bir alan yok ve olmamalı: iki kaynak bir
+      gün ayrışır (ve ayrıştı, künye aşağıda `totalCents`ta).
+
+      İNDİRİM DE KARŞILANANIN PAYIDIR (kullanıcı bulgusu 01.09): `order.discount_amount` sipariş
+      ANINDA anlaşılan indirimdir, eksik gönderimden haberi yoktur. Ham okunduğunda özet paneli
+      kendi içinde çelişiyordu — ölçüldü: ara toplam 32,10, indirim 8,18, toplam 27,29; oysa
+      32,10 − 8,18 = 23,92. Doğrusu satırların indirim paylarının toplamı (4,81), ve o zaman üç
+      satır birbirini tutuyor.
+    */
+    subtotalCents: lines.reduce((sum, l) => sum + l.lineTotalCents, 0) + discountCents,
+    discountCents,
     discountLabel: order.discountLabel ? resolveLocalizedText(order.discountLabel, input.locale) : '',
     shippingFeeCents: order.shippingFeeCents,
-    totalCents: order.totalCents,
+    /*
+      TOPLAM DA TÜRETİLİR — `order.total` HAM OKUNMAZ (kullanıcı bulgusu 01.09).
+
+      Ekran kendi içinde çelişiyordu: ara toplam eksik karşılamayı görüp düşüyor (üstteki künye),
+      toplam ise siparişin ANLAŞILAN tutarını yazıyordu. Cihazda ölçüldü — kalemler 23,92 € ederken
+      Toplam 46,39 € diyordu; kapıda ödemeli bir siparişte müşteri kapıya yanlış parayla hazırlanır.
+
+      Sayı ÖDEME MOTORUNDAN alınıyor, burada ikinci kez çarpılmıyor: `fulfilledAmountCents` zaten
+      kargoyu ve satır indirimlerini içeriyor ve hazırlık kesinleşmediyse siparişin kendi toplamına
+      düşüyor (`payment-status.ts` künyesi). Kuryenin kapıda tahsil ettiği tutar da aynı motordan
+      geliyor (`courier/delivery.ts`) — iki ekran artık aynı hesabı okuyor, ayrışamaz. Üstteki ara
+      toplam künyesinin "iki kaynak bir gün ayrışır" cümlesi tam olarak burada gerçekleşmişti.
+    */
+    totalCents: derivePaymentStatusForOrder(order, items, {
+      collectedCents: order.amountCollectedCents,
+      refundedCents: order.amountRefundedCents,
+    }).fulfilledAmountCents,
     paymentMethod: order.paymentMethod,
     paymentStatus: order.paymentStatus,
     onAccount: order.onAccount,
