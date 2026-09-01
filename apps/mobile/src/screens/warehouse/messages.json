@@ -115,6 +115,23 @@
     },
     "queueHeading": "BEKLEYEN SİPARİŞLER",
     "queueHeadingHint": "birini seç",
+    "scope": {
+      "toDone": "Son tamamlananlar",
+      "toPending": "Bekleyen siparişler",
+      "doneHeading": "SON TAMAMLANANLAR",
+      "doneHeadingHint": "etiket · kutu düzeltme",
+      "doneSummary": {
+        "some": "son {n} tamamlanan",
+        "none": "tamamlanan sipariş yok"
+      },
+      "doneFootnote": "Taşıyıcıya verilene kadar buradalar: etiket yeniden bastırılabilir, kutu geri açılabilir. Devirden sonra kutu depocunun elinden çıkar ve liste onu göstermez.",
+      "doneEmpty": {
+        "title": "Bugün tamamlanan sipariş yok",
+        "body": "Kutusu mühürlenen sipariş buraya düşer ve taşıyıcıya verilene kadar burada kalır."
+      },
+      "doneOrderHint": "Sipariş tamamlandı — kutuya uzun bas: etiketi yeniden bastır ya da kutuyu geri aç.",
+      "doneNoBoxes": "Bu sipariş kutusuz tamamlanmış — geri açılacak kutu yok."
+    },
     "queueSummary": {
       "some": "{n} sipariş bekliyor",
       "someWithHalf": "{n} sipariş bekliyor · {half} yarım"
@@ -231,6 +248,19 @@
       "seal": "Kutuyu KAPAT",
       "sealShort": "Eksikleri bildirerek siparişi kapat",
       "declare": { "body": "{n} kalemin tamamını bulamadın." },
+      "reopened": "Kutu {n} geri açıldı — içindekiler duruyor, çıkarmak istediğini sil.",
+      "reopenedEmpty": "Kutu {n} geri açıldı — içi zaten boştu.",
+      "reopenOtherOpen": "Kutu {n} zaten açık — bir siparişte tek kutu açık kalabilir. Önce onu kapat.",
+      "reopenAlreadyOpen": "Kutu zaten açık.",
+      "reprintNoLabel": "Etiket içeriği alınamadı — kutu kapalı mı?",
+      "reprintNoPrinter": "Yazıcı bulunamadı. Ayarlardan kutu yazıcısını seç.",
+      "boxMenu": {
+        "title": "Kutu {n}",
+        "reprint": "Etiketi yeniden yazdır",
+        "reopen": "Kutuyu geri aç",
+        "reopenHint": "Mühür kalkar, içeriği yeniden düzenlenir. Araca binmiş kutu geri açılamaz.",
+        "hint": "Kutuya uzun basınca bu menü açılır."
+      },
       "declaredShort": "Sipariş eksik kapatıldı — sevkiyata hazır.",
       "declareOpenBox": "Kutu {n} açık ve dolu. Önce onu kapat, sonra siparişi eksik kapatabilirsin.",
       "sealPending": "Kutuya kalem koy — okut ya da elle say",

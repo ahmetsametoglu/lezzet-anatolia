@@ -32,6 +32,7 @@ import {
   sampleBoxLabel,
   declareOrderShort,
   sealBox,
+  unsealBox,
   sendcloudProvider,
   shippingProviderConfigured,
   TRANSFER_TRANSIT_DAYS_DEFAULT,
@@ -73,6 +74,7 @@ import {
   SealBoxRequestSchema,
   DeclareShortResponseSchema,
   SealBoxResponseSchema,
+  UnsealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   ShippingLabelResponseSchema,
   WarehousePrintersResponseSchema,
@@ -250,7 +252,15 @@ warehouse.use('*', warehouseGuard);
  * CLAUDE §1'in "doğal tavanı olan küme" dalı) ve v2'nin hub'ı sayı değil iş listesi gösteriyor.
  * Tavanı parametreleştirmenin tüketicisi çıkarsa `limit` sorgusu bir satırla açılır.
  */
-const PreparationQuerySchema = z.object({ date: IsoDateSchema.optional() });
+const PreparationQuerySchema = z.object({
+  date: IsoDateSchema.optional(),
+  /**
+   * Kuyruğun hangi yüzü (kullanıcı isteği 01.09) — `pending` (varsayılan) bekleyen iş, `done` son
+   * tamamlananlar. Ayrı bir UÇ açılmadı: dönen gövde alan alan AYNI (`PreparationOrder`) ve ikinci
+   * bir uç aynı sözleşmeyi iki yerde tutmak olurdu (CLAUDE §1).
+   */
+  scope: z.enum(['pending', 'done']).optional(),
+});
 
 warehouse.get('/preparation', async (c) => {
   const query = PreparationQuerySchema.safeParse(c.req.query());
@@ -259,6 +269,7 @@ warehouse.get('/preparation', async (c) => {
   const orders = await listPreparationQueue(serviceDb(), {
     warehouseId: c.get('warehouseId'),
     deliveryDate: query.data.date,
+    scope: query.data.scope,
   });
 
   // Gövde `z.input<…>` ile TİPLENİR: kapının döndürdüğü `PreparationOrder` sözleşmeye alan alan
@@ -404,6 +415,25 @@ warehouse.post('/boxes/:boxId/seal', async (c) => {
 
   const body: z.input<typeof SealBoxResponseSchema> = outcome;
   return ok(c, SealBoxResponseSchema.parse(body));
+});
+
+/**
+ * **Kutuyu geri açar** (01.09) — mühür kalkar, döküm silinir, karşılanan adet kalan kutuların
+ * birleşimiyle yeniden yazılır. Gövde almaz. Reddin gerekçesi RPC'den gelir ve ekrana aynen yazılır:
+ * araca binmiş kutu geri açılmaz, hazırlıktan çıkmış siparişin kutusu da.
+ */
+warehouse.post('/boxes/:boxId/unseal', async (c) => {
+  const boxId = UuidSchema.safeParse(c.req.param('boxId'));
+  if (!boxId.success) return fail(c, 'invalid_box_id', 400);
+
+  const outcome = await unsealBox(serviceDb(), {
+    boxId: boxId.data,
+    warehouseId: c.get('warehouseId'),
+    actorId: c.get('staff').id,
+  });
+
+  const body: z.input<typeof UnsealBoxResponseSchema> = outcome;
+  return ok(c, UnsealBoxResponseSchema.parse(body));
 });
 
 /**

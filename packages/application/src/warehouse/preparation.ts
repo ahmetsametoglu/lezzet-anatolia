@@ -176,6 +176,33 @@ export interface PreparationBox {
 }
 
 /**
+ * Kuyruğun hangi YÜZÜ okunuyor (kullanıcı isteği 01.09).
+ *
+ * `pending` günün işidir (`confirmed` + `preparing`). `done` ise **son tamamlananlar**: kutuları
+ * mühürlenmiş, taşıyıcıya HENÜZ verilmemiş siparişler (`ready`).
+ *
+ * Sınır `ready`de ve keyfî değil: kutuyu geri açan RPC (`unseal_order_box`) siparişi `ready`den
+ * ileri geçmişse reddediyor — devredilmiş bir kutuda etiket de kayıt da artık depocunun elinde
+ * değil. Yani bu liste "geçmiş" değil, **hâlâ müdahale edilebilir olan** penceredir; içine
+ * girilemeyecek bir satır koymak, depocuya olmayan bir kapıyı göstermek olurdu.
+ */
+export type PreparationScope = 'pending' | 'done';
+
+/**
+ * Tamamlananlar için OKUNAN sipariş sayısı — çizilen değil (`DONE_LIMIT`).
+ *
+ * "Son tamamlanan"ın gerçek zamanı siparişin oluşturulma anı değil, SON KUTUSUNUN mühürlendiği
+ * andır; sipariş satırında böyle bir sütun yok (`order` tablosunda `updated_at` bulunmuyor,
+ * ölçüldü 01.09) ve kutular ancak siparişler okunduktan sonra geliyor. Bu yüzden geniş okunup
+ * elde sıralanıyor. Tavan bir SESSİZ KESME riski taşır (CLAUDE §1) ama pratikte erişilmez: depoda
+ * aynı anda kırk hazır sipariş beklemesi, taşıyıcının o gün hiç gelmemesi demektir.
+ */
+const DONE_SCAN_LIMIT = 40;
+
+/** Tamamlananlar listesinde ÇİZİLEN satır sayısı (kullanıcı isteği 01.09: "son tamamlanan on"). */
+const DONE_LIMIT = 10;
+
+/**
  * **Günün hazırlama listesi** (D1). `confirmed` ve `preparing` birlikte gelir: ikincisi yarım kalan
  * iştir ve ekranda kaybolmamalıdır (tasarım §4).
  *
@@ -191,13 +218,19 @@ export interface PreparationBox {
  */
 export async function listPreparationQueue(
   db: SupabaseClient,
-  input: { warehouseId: string; deliveryDate?: string; limit?: number; orderId?: string },
+  input: { warehouseId: string; deliveryDate?: string; limit?: number; orderId?: string; scope?: PreparationScope },
 ): Promise<PreparationOrder[]> {
-  const orders = await new OrderService(db).listByStatus(['confirmed', 'preparing'], {
+  const scope = input.scope ?? 'pending';
+  const orders = await new OrderService(db).listByStatus(scope === 'done' ? ['ready'] : ['confirmed', 'preparing'], {
     deliveryDate: input.deliveryDate,
-    limit: input.limit ?? 50,
+    /* TAMAMLANANLARDA TAVAN YÜKSEK VE UÇ TERS: kaç sipariş okunacağı elde SIRALANACAK kümedir,
+       ekrana çizilecek olan değil (aşağıdaki `sonKapanis` sıralaması). En yeni uçtan doldurulur —
+       `asc` olsaydı depoda biriken en ESKİ hazır siparişler pencereyi doldurur, bugün kapanan
+       kutu listeye hiç giremezdi. */
+    limit: input.limit ?? (scope === 'done' ? DONE_SCAN_LIMIT : 50),
     warehouseId: input.warehouseId,
     orderId: input.orderId,
+    orderDirection: scope === 'done' ? 'desc' : undefined,
   });
   if (orders.length === 0) return [];
 
@@ -276,7 +309,25 @@ export async function listPreparationQueue(
       boxes: boxes.get(order.id) ?? [],
     });
   }
+
+  /* TAMAMLANANLAR SON KAPANIŞA GÖRE DİZİLİR — okuma sırasına göre değil. Depocunun aradığı kutu
+     az önce kapattığıdır; `created_at` ise siparişin DOĞUM sırasıdır ve dün girilmiş bir siparişi
+     bugün toplamak sıradan bir hâl. Mühürsüz (kutusuz kapanmış) sipariş sona düşer. */
+  if (scope === 'done') {
+    return queue
+      .sort((a, b) => (sonKapanis(b) ?? '').localeCompare(sonKapanis(a) ?? ''))
+      .slice(0, DONE_LIMIT);
+  }
   return queue;
+}
+
+/** Siparişin EN SON mühürlenen kutusunun zamanı; hiç mühürlü kutusu yoksa `null`. */
+function sonKapanis(order: PreparationOrder): string | null {
+  let enson: string | null = null;
+  for (const box of order.boxes) {
+    if (box.sealedAt !== null && (enson === null || box.sealedAt > enson)) enson = box.sealedAt;
+  }
+  return enson;
 }
 
 /**

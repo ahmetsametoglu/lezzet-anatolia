@@ -172,3 +172,149 @@ end;
 $$;
 
 revoke execute on function public.seal_order_box(uuid, jsonb, jsonb, uuid) from public, anon, authenticated;
+
+-- ─────────────────────────────────────────────────────────────────────────────────────────────
+-- KUTUYU GERİ AÇ (kullanıcı isteği 01.09) — kapanış TERSİNE ÇEVRİLEBİLİR bir kayıttır.
+--
+-- Kapanış eskiden nihaiydi ve ekran künyesi de öyle diyordu: *"kapalı kutu geri açılamaz, blok bir
+-- KAYITTIR."* Kullanıcının itirazı fiziksel: yanlış kutuya yanlış ürün konabilir, adet yanlış
+-- sayılabilir ve kartonun kapağı henüz bantlanmamıştır. Yazılımın "artık olmaz" demesi, depocuyu
+-- kaydı düzeltmek yerine kaydın DIŞINDA çalışmaya iter.
+--
+-- ── NE GERİ ALINIR ──────────────────────────────────────────────────────────────────────────────
+-- Kutunun dökümü silinir, mühür kalkar ve `record_preparation` **kalan kutuların birleşimiyle**
+-- yeniden çağrılır: karşılanan adet her zaman Σ(kutu) olmalı (`seal_order_box`in kendi denetimi).
+-- Kalemin hiç kutusu kalmadıysa sıfırlanır — gönderilmeyen kaleme `record_preparation` dokunmadığı
+-- için sıfır AÇIKÇA yazılır, yoksa eski adet asılı kalırdı.
+--
+-- ── DÖKÜMÜN SİLİNMESİ BİR TERCİH DEĞİL, DEĞİŞMEZİN SONUCU (01.09) ──────────────────────────────
+-- *"Açık kutu = taslak"* bu sistemin değişmezi: bir kutunun dökümü veritabanına ancak kapanışta
+-- yazılır. `seal_order_box` satırları `insert` ediyor ve `order_box_item_uq unique (box_id,
+-- order_item_id)` ikinci yazımı reddediyor; ayrıca uygulama katmanının birleşimi (`sealBox`)
+-- karşılanan adedi MEVCUT izin üstüne ekliyor. Satırlar yerinde bırakılsaydı kutu bir daha
+-- kapanamaz, kapansaydı da adet çift sayılırdı.
+--
+-- Ama serbest bırakmak İÇERİĞİ KAYBETMEK değildir: uygulama katmanı dökümü **silmeden önce okuyup**
+-- cevaba koyuyor (`unsealBox` → `UnsealBoxResponseSchema.items`) ve telefon onu açık kutunun
+-- taslağına yazıyor. Depocunun gördüğü şey "kutu boşaldı" değil, "kutu açıldı, içindekiler duruyor".
+-- Bu satır 01.09'da yazıldı çünkü cihazda tam tersi görüldü: geri açılan kutunun içi boşalıyordu.
+--
+-- ── NE ZAMAN REDDEDİLİR ─────────────────────────────────────────────────────────────────────────
+-- (a) Kutu ARACA BİNMİŞSE (`loaded_at`): fiziksel gerçek artık depoda değil, kayıt onu takip eder.
+-- (b) Sipariş hazırlıktan ÇIKMIŞSA (`ready` sonrası): yüklemeye girmiş, yola çıkmış ya da teslim
+--     edilmiş bir siparişin kutusunu geri açmak, parası hesaplanmış bir gerçeği oynatmaktır.
+-- Sipariş `ready`de ve kutu depodaysa geri açılır — o hâlde sipariş `preparing`e döner, çünkü
+-- artık kutulanmamış bir kalem vardır ve "sevkiyata hazır" cümlesi yalan olur.
+create or replace function public.unseal_order_box(
+  p_box_id uuid,
+  p_actor uuid
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_order uuid;
+  v_sealed timestamptz;
+  v_loaded timestamptz;
+  v_status order_status;
+  v_picks jsonb;
+begin
+  select ob.order_id, ob.sealed_at, ob.loaded_at into v_order, v_sealed, v_loaded
+    from public.order_box ob where ob.id = p_box_id for update;
+  if not found then
+    raise exception 'unseal_order_box: kutu bulunamadı (%)', p_box_id;
+  end if;
+  if v_sealed is null then
+    raise exception 'unseal_order_box: kutu zaten açık (%)', p_box_id;
+  end if;
+  if v_loaded is not null then
+    raise exception 'unseal_order_box: kutu araca binmiş, geri açılamaz (%)', p_box_id;
+  end if;
+
+  /*
+    SİPARİŞTE AYNI ANDA TEK AÇIK KUTU (ölçüldü 01.09 · cihazda).
+
+    Toplama ekranı açık kutuyu TEKİL bir şey olarak biliyor (`boxes.find(sealedAt === null)`) ve
+    doldurulmakta olan kutunun içeriği tek bir taslakta duruyor. İkinci bir kutu açıldığında ekran
+    birini seçip ötekini hiç çizmiyor: cihazda ölçüldü — Kutu 2 açıkken Kutu 1 geri açıldı,
+    veritabanında iki kutu da açık kaldı, ekranda yalnız biri göründü ve Kutu 2 hiçbir yerden
+    erişilemez bir kayda dönüştü. Taslak da yanlış kutuya yazılabilirdi.
+
+    Kural VERİDE duruyor, ekranın hatırlamasına bırakılmıyor (CLAUDE §1).
+  */
+  if exists (
+    select 1 from public.order_box ob2
+     where ob2.order_id = v_order and ob2.id <> p_box_id and ob2.sealed_at is null
+  ) then
+    raise exception 'unseal_order_box: siparişin açık kutusu var — önce onu kapat (%)', p_box_id;
+  end if;
+
+  select o.status into v_status from public."order" o where o.id = v_order for update;
+  if v_status not in ('confirmed', 'preparing', 'ready') then
+    raise exception 'unseal_order_box: sipariş artık % — kutu geri açılamaz', v_status;
+  end if;
+
+  delete from public.order_box_item where box_id = p_box_id;
+
+  /*
+    KALAN kutuların birleşimi — ve buradaki asıl zorluk PARTİ İZİNİN kutu başına tutulmaması.
+
+    `order_box_item` kutu başına ADEDİ biliyor, parti dağılımı ise kalem düzeyinde duruyor
+    (`order_item_batch`, 0012). Yani "bu kutu hangi partiden verdi" sorusunun kayıtta cevabı YOK.
+    Geri açarken bilinen tek şey hedef adettir: kalemin kalan kutularındaki toplam.
+
+    İz bu yüzden hedefe kadar KIRPILIYOR: partiler `stock_id` sırasıyla (deterministik) yürünüyor,
+    hedef dolana kadar olduğu gibi tutuluyor, sınıra denk gelen parti kısmen tutuluyor, gerisi
+    düşüyor. Tek kutulu siparişte bu tam olarak o kutunun yazdığı satırları düşürür. Çok kutuluda
+    hangi partinin geri gittiği kayıttan türetilemez ve bu bir SEÇİMDİR: sıra deterministik
+    olduğu için sonuç tekrarlanabilir, ama "geri açılan kutu şu partiden almıştı" iddiası
+    edilmiyor — edilemez de.
+
+    Kalemin hiç kutusu kalmadıysa liste BOŞ gider ve adet sıfırlanır: `record_preparation`
+    gönderilmeyen kaleme dokunmadığı için sıfır AÇIKÇA yazılmalı, yoksa eski adet asılı kalırdı.
+  */
+  select coalesce(jsonb_agg(jsonb_build_object('order_item_id', x.item_id, 'batches', x.batches)), '[]'::jsonb)
+    into v_picks
+    from (
+      select oi.id as item_id,
+             coalesce(
+               jsonb_agg(jsonb_build_object('stock_id', k.stock_id, 'qty', k.keep))
+                 filter (where k.keep > 0),
+               '[]'::jsonb) as batches
+        from public.order_item oi
+        left join lateral (
+          select b.stock_id,
+                 greatest(
+                   0,
+                   least(
+                     b.qty,
+                     (select coalesce(sum(obi.qty), 0)
+                        from public.order_box_item obi
+                        join public.order_box ob2 on ob2.id = obi.box_id
+                       where ob2.order_id = v_order and obi.order_item_id = oi.id and ob2.id <> p_box_id)
+                     - coalesce(sum(b.qty) over (order by b.stock_id
+                                                 rows between unbounded preceding and 1 preceding), 0)
+                   )
+                 ) as keep
+            from public.order_item_batch b
+           where b.order_item_id = oi.id
+        ) k on true
+       where oi.order_id = v_order
+       group by oi.id
+    ) x;
+
+  perform public.record_preparation(v_order, v_picks);
+
+  update public.order_box set sealed_at = null, sealed_by = null, printed_at = null where id = p_box_id;
+
+  -- Kutulanmamış kalem doğdu: "sevkiyata hazır" artık doğru değil.
+  if v_status = 'ready' then
+    update public."order" set status = 'preparing' where id = v_order;
+  end if;
+
+  return jsonb_build_object('ok', true, 'actor', p_actor);
+end;
+$$;
+
+revoke execute on function public.unseal_order_box(uuid, uuid) from public, anon, authenticated;

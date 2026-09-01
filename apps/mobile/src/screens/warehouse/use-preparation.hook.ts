@@ -25,6 +25,7 @@ import {
   openOrderBox,
   resolveScannedCode,
   sealOrderBox,
+  unsealOrderBox,
 } from '@/lib/api/warehouse';
 import { CLIENT_ERROR } from '@/lib/api/client';
 import { printLabel, printLabelPdf } from '@/lib/print/brother';
@@ -83,6 +84,15 @@ const t = warehouseCopy;
 
 type QueueStatus = 'loading' | 'ready' | 'error';
 
+/**
+ * Kuyruğun okunan yüzü — `pending` bekleyen iş, `done` son tamamlananlar.
+ *
+ * Tip BURADA yazılı, `@lezzet/application`tan alınmıyor: mobil uygulama uygulama katmanını
+ * BİLMEZ (bağımlılık tek yönlü), sözleşmesi `@lezzet/types`. İki değerli bu birlik sözleşmeye de
+ * girmedi — gövdeyi değil SORGUYU tarif ediyor ve sorgunun şeması ucun kendi dosyasında.
+ */
+export type PreparationScope = 'pending' | 'done';
+
 /** Kapının dört cevabı — sözleşmeden TÜRER (`ConfirmPreparationResponseSchema`), elle yazılmaz. */
 type ConfirmOutcome = Extract<Awaited<ReturnType<typeof confirmPreparation>>, { error: null }>['data'];
 
@@ -137,6 +147,15 @@ interface UsePreparationResult {
   submit: () => void;
   reload: () => void;
   /**
+   * Kuyruğun hangi yüzü çiziliyor (kullanıcı isteği 01.09): bekleyen iş mi, son tamamlananlar mı.
+   *
+   * Tek listeye iki küme yığmak yerine GEÇİŞ: "toplanacak" ile "toplandı" farklı sorulardır ve
+   * ikisini alt alta koymak, günün işini arşivin altına gömerdi. Geçiş başlıkta duruyor — ekranın
+   * kapsamı ekranın kimliğinin yanında okunur.
+   */
+  scope: PreparationScope;
+  setScope: (next: PreparationScope) => void;
+  /**
    * Kutu döngüsü (23.6, karar §1.4): sipariş kutu ekseninde mi toplanıyor. HİÇ dokunulmamış
    * sipariş kutuyla başlar; kutusuz BAŞLANMIŞ iş (web masasından yarım) kutusuz biter — kalem
    * düzeyinde karışım RPC'ce reddedilir (0048), ekran o duvara hiç koşturmaz.
@@ -176,6 +195,10 @@ interface UsePreparationResult {
   sealCurrentBox: (options?: { declareShort?: boolean }) => void;
   /** Siparişi EKSİK kapatır — kutuya dokunmaz (künyesi kancada). */
   declareShort: () => void;
+  /** Kapalı kutuyu geri açar (künyesi kancada). */
+  reopenBox: (boxId: string) => void;
+  /** BELİRLİ bir kutunun etiketini yeniden basar. */
+  reprintBoxLabel: (boxId: string) => void;
   /**
    * Bu kutu kapanınca EKSİK KALACAK kalemler — kapanış çekmecesinin listesi.
    *
@@ -349,14 +372,23 @@ export function usePreparation(): UsePreparationResult {
   const [qtyValue, setQtyValue] = useState(0);
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<PreparationNotice>();
+  const [scope, setScopeState] = useState<PreparationScope>('pending');
 
   const generation = useRef(0);
   /** Bir kez dolu okundu mu — çevrimdışı tazelemede eldeki listeyi korumanın koşulu (aşağıda). */
   const loadedOnce = useRef(false);
+  /*
+    OKUNAN KAPSAM REF'TE DE TUTULUYOR — `load` onu bağımlılığına almasın diye.
+
+    `load` odak etkisine, kapanışa, geri açmaya bağlı: kimliği her değiştiğinde bu zincirin tamamı
+    yeniden kuruluyor ve odak etkisi bir kez daha koşuyordu. Kapsam bir SÜZGEÇ, bir bağımlılık
+    değil; `setScope` değeri ref'e yazıp tazelemeyi kendisi tetikliyor.
+  */
+  const scopeRef = useRef<PreparationScope>('pending');
 
   const load = useCallback(async () => {
     const run = (generation.current += 1);
-    const result = await trackWarehouse(fetchPreparationQueue());
+    const result = await trackWarehouse(fetchPreparationQueue(scopeRef.current));
     if (run !== generation.current) return;
 
     if (result.error !== null) {
@@ -387,10 +419,12 @@ export function usePreparation(): UsePreparationResult {
     setStatus('ready');
     // TEK sipariş varsa doğrudan açılır (v2'nin ekranı tek siparişi çiziyor); iki ve üzeri sipariş
     // ise seçim SORULUR — hangi siparişin toplandığını uydurmak, yanlış koliyi doldurmaktır.
+    // TAMAMLANANLARDA AÇILMAZ: orada yapılacak bir iş yok, BAKILACAK bir kayıt var — tek satır
+    // kaldı diye kaydın içine düşmek, depocuyu istemediği bir ekrana taşırdı.
     setSelectedId((current) =>
       current !== null && result.data.orders.some((order) => order.orderId === current)
         ? current
-        : result.data.orders.length === 1
+        : result.data.orders.length === 1 && scopeRef.current === 'pending'
           ? (result.data.orders[0]?.orderId ?? null)
           : null,
     );
@@ -406,6 +440,27 @@ export function usePreparation(): UsePreparationResult {
     setStatus('loading');
     void load();
   }, [load]);
+
+  /**
+   * Kapsam geçişi — seçili sipariş DÜŞER ve liste baştan okunur.
+   *
+   * Seçimi taşımak yanlış olurdu: bekleyen bir sipariş tamamlananlar listesinde yok (ve tersi),
+   * yani taşınan kimlik ilk okumada zaten düşerdi — ama düşene kadar ekran o siparişi çizmeye
+   * devam eder ve depocu "kapsamı değiştirdim, hâlâ aynı iş duruyor" diye okurdu.
+   */
+  const setScope = useCallback(
+    (next: PreparationScope) => {
+      if (scopeRef.current === next) return;
+      scopeRef.current = next;
+      setScopeState(next);
+      setSelectedId(null);
+      setLines({});
+      setNotice(null);
+      setStatus('loading');
+      void load();
+    },
+    [load, setNotice],
+  );
 
   const select = useCallback((orderId: string | null) => {
     setSelectedId(orderId);
@@ -821,6 +876,132 @@ export function usePreparation(): UsePreparationResult {
     Dolu açık kutu varsa REDDEDİYOR — içindekiler kayda geçmeden sipariş kapanamaz; cevabı depocuya
     aynen yazıyoruz.
   */
+  /*
+    KAPALI KUTUNUN MENÜSÜ (kullanıcı isteği 01.09) — iki eylem, ikisi de KUTU başına.
+
+    Etiket kapanışta kendiliğinden basılıyor ama kâğıt yırtılır, yazıcıda kâğıt biter, yanlış
+    kartona yapışır: yeniden basmanın yolu OLMALI ve bugüne kadar yoktu — "yeniden bas" yalnız o
+    turda kapanan kutunun kartında yaşıyordu, ekran yenilenince kayboluyordu.
+
+    Aynı sebeple kutu geri açılabiliyor (künyesi `unseal_order_box`): yanlış ürün, yanlış adet,
+    kapak henüz bantlanmamış. Yazılımın "artık olmaz" demesi depocuyu kaydın DIŞINDA çalışmaya iter.
+  */
+  const reopenBox = useCallback(
+    (boxId: string) => {
+      if (sending) return;
+      setSending(true);
+      setNotice(null);
+
+      void (async () => {
+        const result = await trackWarehouse(unsealOrderBox(boxId));
+        setSending(false);
+
+        if (result.error !== null) {
+          setNotice({
+            tone: 'error',
+            text: result.error === 'network_error' ? t.common.networkError : fillCopy(t.common.serverError, { error: result.error }),
+          });
+          return;
+        }
+
+        const data = result.data;
+        if (data.status === 'ok') {
+          setNotice({
+            tone: 'ok',
+            text: fillCopy(data.items.length > 0 ? t.picking.box.reopened : t.picking.box.reopenedEmpty, {
+              n: String(data.boxNo),
+            }),
+          });
+          /*
+            KUTUNUN İÇİ TASLAĞA GERİ YAZILIR (kullanıcı bulgusu 01.09) — sıfırlanmaz.
+
+            Bir tur önce burada `setLines({})` vardı ve cihazda görülen şey şuydu: kutu geri
+            açılıyor, içi TAMAMEN boşalıyor. Kullanıcının cümlesi: *"bir kutu açtım, kutunun içi
+            tamamen boşalıverdi."*
+
+            Sunucu satırları gerçekten serbest bırakıyor ve bırakmak zorunda (gerekçesi
+            `UnsealBoxResponseSchema.items` künyesinde: açık kutu bu sistemde bir TASLAKTIR ve
+            dökümü ancak kapanışta yazılır). Kaybolan şey kayıt değil, EKRANDAKİ içerikti — cevap
+            artık dökümü geri getiriyor ve taslak ondan kuruluyor. Depocu kutuyu açıp içinden
+            istediğini çıkarır, gerisi yerinde durur.
+
+            Yerel taslak ÜSTÜNE YAZILIYOR, birleştirilmiyor: bu noktada başka bir kutunun yarım
+            girişi varsa o başka kutunun işidir ve geri açılan kutuya karışamaz.
+          */
+          setLines(Object.fromEntries(data.items.map((item) => [item.orderItemId, { qty: item.qty, shortReported: false }])));
+          /*
+            TAMAMLANANLARDAN AÇILDIYSA KAPSAM DA DÖNER (01.09).
+
+            Geri açılan kutu siparişi `ready`den `preparing`e taşıyor — yani sipariş o an
+            "tamamlananlar" listesinden DÜŞÜYOR. Kapsam değişmeseydi tazeleme siparişi listede
+            bulamaz, seçim düşer ve depocu kutuyu açtığı anda elindeki iş ekrandan kaybolurdu.
+            Seçim korunuyor: `load` listede duran kimliği bırakmıyor ve sipariş artık bekleyenlerde.
+          */
+          if (scopeRef.current === 'done') {
+            scopeRef.current = 'pending';
+            setScopeState('pending');
+          }
+          await load();
+          return;
+        }
+        if (data.status === 'not_sealed') {
+          setNotice({ tone: 'warn', text: t.picking.box.reopenAlreadyOpen });
+          return;
+        }
+        if (data.status === 'other_box_open') {
+          setNotice({ tone: 'warn', text: fillCopy(t.picking.box.reopenOtherOpen, { n: String(data.boxNo) }) });
+          return;
+        }
+        if (data.status === 'failed') {
+          setNotice({ tone: 'error', text: data.message });
+          return;
+        }
+        setNotice({ tone: 'error', text: data.status === 'forbidden' ? t.common.outOfScope : t.common.notFound });
+      })();
+    },
+    [load, sending, setNotice],
+  );
+
+  /**
+   * **Belirli bir kutunun etiketini yeniden basar** — kart yalnız son kapanan kutuyu tanıyordu.
+   *
+   * Yazıcı SEÇİMİ her seferinde yeniden çözülüyor (envanterden + cihazın kaydı): depocu aradan
+   * yazıcı değiştirmiş olabilir ve "son kullanılan" bir referans, bir sonraki gün yanlış makineye
+   * basmanın yoludur.
+   */
+  const reprintBoxLabel = useCallback(
+    (boxId: string) => {
+      if (printState.phase === 'printing') return;
+
+      void (async () => {
+        const labelResult = await fetchBoxLabel(boxId);
+        if (labelResult.error !== null || labelResult.data.status !== 'ok') {
+          /*
+            ETİKET OKUNAMAZSA CÜMLE TOAST'TAN GİDER — `printState`ten DEĞİL (01.09).
+
+            `printState` yalnız ÇEKMECENİN İÇİNDE çiziliyor ve çekmece `label` doluysa açılıyor.
+            Okuma düştüğünde `label` null kalıyordu, yani hata mesajı yazılıyor ama hiçbir yerde
+            görünmüyordu: depocu menüden "yeniden yazdır"a basıyor, menü kapanıyor ve HİÇBİR ŞEY
+            olmuyor. Sessiz düşüş (CLAUDE §1) — üstelik en çok ihtiyaç duyulan anda.
+          */
+          setNotice({ tone: 'error', text: t.picking.box.reprintNoLabel });
+          return;
+        }
+        setLabel(labelResult.data.label);
+
+        const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
+        const printer = liste.error === null ? resolvePrinter(liste.data.printers, 'box', secim) : null;
+        if (printer === null || !hasPrinterNativeModule()) {
+          setPrintState({ phase: 'failed', message: t.picking.box.reprintNoPrinter });
+          return;
+        }
+        printTarget.current = { boxId, printer };
+        await runPrint(boxId, printer);
+      })();
+    },
+    [printState.phase, runPrint, setNotice],
+  );
+
   const declareShort = useCallback(() => {
     if (order === null || sending) return;
     setSending(true);
@@ -843,6 +1024,10 @@ export function usePreparation(): UsePreparationResult {
         const shortfalls = shortfallSentences(data.shortfalls, order);
         setNotice({ tone: 'warn', text: [t.picking.box.declaredShort, ...shortfalls].join(' ') });
         setLines({});
+        /* Eksik beyanı da siparişi `ready` yapıyor (uç künyesi) — kapanışla aynı gerekçe:
+           ekran siparişi bırakmasın, kapsam tamamlananlara geçsin. */
+        scopeRef.current = 'done';
+        setScopeState('done');
         await load();
         return;
       }
@@ -926,6 +1111,26 @@ export function usePreparation(): UsePreparationResult {
             printTarget.current = null;
             setPrintState({ phase: 'off' });
           }
+        }
+        /*
+          SİPARİŞ BİTTİYSE KAPSAM TAMAMLANANLARA GEÇER — ekran siparişi BIRAKMAZ (01.09).
+
+          Son kutu kapanınca sipariş `ready`ye geçiyor ve hazırlık kuyruğundan düşüyor. Eskiden
+          `load()` tam o an koşuyor, `order` `null` oluyor, ekran kuyruk dalına atlıyor ve **yeni
+          açılmış etiket çekmecesi o dalda çizilmediği için kapanıyordu**. Kullanıcının cümlesi:
+          *"sipariş toplamı bittiği anda navigasyon gerçekleşiyor ve açılmakta olan çekmece
+          kapanıyor."* Basım DÜŞTÜĞÜNDE bu bir arıza: "etiket alınamadı" haberi ve "yeniden bas"
+          düğmesi okunmadan siliniyordu.
+
+          Bir tur tazelemeyi ERTELEMEYİ denedim ve cihazda daha kötü çıktı: çekmecenin arkasında
+          kutu hâlâ "AÇIK · 0 adet" görünüyordu — kapanmış bir kutuyu açık göstermek, saklanan bir
+          arızadır (CLAUDE §1). Doğru cevap tazelemeyi geciktirmek değil, siparişi bırakmamak:
+          `ready` sipariş TAMAMLANANLAR kapsamında yaşıyor (01.09'da açıldı) ve seçim orada
+          korunuyor. Ekran böylece hem doğruyu gösteriyor (kutu mühürlü) hem de yerinde kalıyor.
+        */
+        if (data.ready) {
+          scopeRef.current = 'done';
+          setScopeState('done');
         }
         await load();
         return;
@@ -1035,6 +1240,8 @@ export function usePreparation(): UsePreparationResult {
     notice,
     submit,
     reload,
+    scope,
+    setScope,
     boxMode,
     boxes,
     openBox: currentBox,
@@ -1047,6 +1254,8 @@ export function usePreparation(): UsePreparationResult {
     openNewBox,
     sealCurrentBox,
     declareShort,
+    reopenBox,
+    reprintBoxLabel,
     scanOpen,
     setScanOpen,
     handleScan,

@@ -551,6 +551,50 @@ export const DeclareShortResponseSchema = z.discriminatedUnion('status', [
 export type DeclareShortResponse = z.infer<typeof DeclareShortResponseSchema>;
 
 /**
+ * **Kutuyu geri aç** (kullanıcı isteği 01.09) — kapanış tersine çevrilebilir bir kayıttır.
+ *
+ * Gövde YOK: karar kutunun kimliğinden ve depodan türüyor. Olumsuz dallar da 200 — `not_sealed`
+ * çift dokunuştur, `failed` RPC'nin okunur reddidir (araca binmiş kutu · hazırlıktan çıkmış
+ * sipariş) ve mesajı depocuya AYNEN gösterilir.
+ */
+export const UnsealBoxResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    boxNo: z.number().int().positive(),
+    /**
+     * **Kutudan ÇIKAN döküm** (kullanıcı bulgusu 01.09) — geri açılan kutunun kapanışta yazılmış
+     * içeriği, kalem kimliği + adet.
+     *
+     * ── NİÇİN CEVAPTA TAŞINIYOR ─────────────────────────────────────────────
+     * Sistemin değişmezi *"açık kutu = taslak"*: bir kutunun dökümü veritabanına ancak KAPANIŞTA
+     * yazılır (`seal_order_box` `insert` eder ve `unique (box_id, order_item_id)` ikinci yazımı
+     * reddeder). Geri açma bu yüzden satırları serbest bırakmak zorunda — bırakmasaydı kutu bir
+     * daha kapanamazdı ve karşılanan adet çift sayılırdı (`sealBox`ın birleşimi mevcut izin
+     * ÜSTÜNE ekliyor).
+     *
+     * Ama serbest bırakmak, İÇERİĞİ KAYBETMEK değildir: döküm burada geri veriliyor ve telefon
+     * onu açık kutunun taslağına yazıyor. Depocunun gördüğü şey "kutu boşaldı" değil, *"kutu
+     * açıldı, içindekiler duruyor, istediğini çıkarabilirsin"* — kullanıcının cümlesi buydu
+     * (*"neden sadece kutuyu açıp içinden birkaç şey çıkartamıyorum"*).
+     *
+     * Kayıt açısından bu bir kayıp değil çünkü açık kutunun dökümü zaten hiçbir zaman kayıtta
+     * yaşamıyordu; doldurulmakta olan HER kutu bu hâlde.
+     */
+    items: z.array(z.object({ orderItemId: z.string().uuid(), qty: z.number().int().positive() })),
+  }),
+  z.object({ status: z.literal('not_sealed') }),
+  /**
+   * Siparişin BAŞKA kutusu açık (ölçüldü 01.09) — geri açma reddedilir, hiçbir şey değişmez.
+   * Ekran açık kutuyu tekil biliyor; ikincisi çizilmez ve erişilemez bir kayda dönüşür (0048).
+   */
+  z.object({ status: z.literal('other_box_open'), boxNo: z.number().int().positive() }),
+  z.object({ status: z.literal('failed'), message: z.string() }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type UnsealBoxResponse = z.infer<typeof UnsealBoxResponseSchema>;
+
+/**
  * 4×6 etiketin içeriği (23.7 · karar §1.5/§1.9) — İÇERİK SUNUCUDAN, telefon gösterir/basar.
  * **Fiyat/tutar alanı YOK ve olamaz** (karar §1.5): tahsilatın yalnız YÖNTEMİ yazılır; kurye
  * tutarı QR'ı okutunca kendi ekranında görür. Bugünkü tüketici kapanış önizlemesi; Brother SDK

@@ -27,7 +27,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
-import { usePreparation, type DispatchState, type PrintState } from './use-preparation.hook';
+import { usePreparation, type DispatchState, type PreparationScope, type PrintState } from './use-preparation.hook';
 import { batchLabel, boxSizeLine, orderPickingQueue, parseQty, productLabel, qtyToText } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
@@ -65,6 +65,8 @@ const QUEUE_SKELETON_HEIGHT = 74;
 export function PreparationScreen() {
   /** Kapanış onayı açık mı — yalnız eksik kalan kalem varken doğar. */
   const [sealAsk, setSealAsk] = useState(false);
+  /** Menüsü açık olan KAPALI kutunun kimliği — `null` = menü kapalı. */
+  const [boxMenu, setBoxMenu] = useState<string | null>(null);
   const router = useRouter();
   const picking = usePreparation();
 
@@ -87,6 +89,45 @@ export function PreparationScreen() {
   const { offline } = useWarehouseStatus();
 
   const order = picking.order;
+  const done = picking.scope === 'done';
+  /*
+    ETİKET ÇEKMECESİ HER DALDA ÇİZİLİR (kullanıcı bulgusu 01.09) — dalların İÇİNDE değil.
+
+    ── NİÇİN ÇEKMECE ───────────────────────────────────────────────────────
+    Kart bir tur listenin başındaydı; içeriği aşağı itiyor ve basım DÜŞTÜĞÜNDE ("etiket görseli
+    alınamadı") ekranın en kritik cümlesi bir kaydırma boyu uzağa düşebiliyordu. Basım sonucu bir
+    HABERDİR ve cevabı bekler.
+
+    ── NİÇİN DALLARIN DIŞINDA ──────────────────────────────────────────────
+    Ekranın beş dalı var (yükleniyor · hata · boş · kuyruk · sipariş) ve çekmece yalnız sonuncuda
+    çiziliyordu. Kutu kapanınca sipariş `ready`ye geçip kuyruktan düşüyor; dal değişiyor ve
+    **yeni açılmış çekmece o anda ekrandan siliniyordu**. Kapsamın tamamlananlara geçmesi bunu
+    çözüyor (hook künyesi) ama tek başına yetmez: liste boş dönerse ya da okuma düşerse dal yine
+    değişir ve etiket yine kaybolurdu. Çekmece bir dalın parçası değil, EKRANIN parçası.
+
+    Değişken olarak duruyor, komponent olarak değil: dört dalda da AYNI nesne çiziliyor ve
+    ikinci bir bileşen, tek satırlık bir JSX'i sarmalamaktan başka bir şey yapmazdı.
+  */
+  const labelSheet = (
+    <BottomSheet
+      visible={picking.label !== null}
+      title={
+        picking.label === null
+          ? ''
+          : fillCopy(t.picking.box.labelTitle, {
+              n: String(picking.label.boxNo),
+              m: String(picking.label.boxCount),
+            })
+      }
+      onClose={picking.dismissLabel}
+      testID="warehouse-picking-label-sheet"
+    >
+      {picking.label === null ? null : (
+        <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} />
+      )}
+    </BottomSheet>
+  );
+
   const header = (
     <OperationsStackHeader
       title={t.picking.title}
@@ -94,9 +135,29 @@ export function PreparationScreen() {
          depocu listeye bakarken "kaç iş var, kaçı yarım" sorusunun cevabını başlıkta okur.
          Sipariş seçilince künye o siparişe döner — hangi işin içinde olduğunu söylemek, o an
          kuyruğun uzunluğundan daha önemlidir. */
-      subtitle={order === null ? queueSummary(picking.orders) : captionOf(order)}
+      subtitle={order === null ? queueSummary(picking.orders, picking.scope) : captionOf(order)}
       onBack={() => (order !== null && picking.orders.length > 1 ? picking.select(null) : router.back())}
       backLabel={t.common.back}
+      /*
+        KAPSAM GEÇİŞİ BAŞLIKTA (kullanıcı isteği 01.09) — "Bekleyenler ayrı, tamamlananlar ayrı".
+
+        Yer başlıktır çünkü değiştirdiği şey EKRANIN KAPSAMI: liste içindeki bir sekme, "listede
+        süzüyorum" der; başlıktaki düğme "başka bir listeye bakıyorum" der ve doğru olan ikincisi.
+        Yuva ZATEN VAR (`right`, 31.08) — ikinci bir başlık düzeni kurulmadı.
+
+        SEÇİLİ SİPARİŞ VARKEN ÇİZİLMEZ: o an ekranın konusu kuyruk değil, elindeki iştir; kapsamı
+        oradan değiştirmek, açık bir siparişi bir dokunuşla kapatmak olurdu.
+      */
+      right={
+        order === null ? (
+          <OperationsIconButton
+            icon={done ? 'packages' : 'check'}
+            onPress={() => picking.setScope(done ? 'pending' : 'done')}
+            accessibilityLabel={done ? t.picking.scope.toPending : t.picking.scope.toDone}
+            testID="warehouse-picking-scope"
+          />
+        ) : undefined
+      }
       testID="warehouse-picking-header"
     />
   );
@@ -115,6 +176,7 @@ export function PreparationScreen() {
             testID="warehouse-picking-loading"
           />
         </View>
+        {labelSheet}
       </View>
     );
   }
@@ -132,6 +194,7 @@ export function PreparationScreen() {
             testID="warehouse-picking-error"
           />
         </View>
+        {labelSheet}
       </View>
     );
   }
@@ -146,19 +209,19 @@ export function PreparationScreen() {
               varsa liste BOŞALIYOR ve ekran bu dala giriyor. Kart yalnız kuyruk/sipariş
               dallarında olsaydı, depocu tam kutuyu mühürlediği anda etiketi alma yolunu
               kaybederdi (testle yakalandı 29.08). Etiket kartının aynı gerekçesi. */}
-          {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
           <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
           <View style={styles.block}>
             <OperationsNoticeBlock
               variant="empty"
-              title={t.picking.empty.title}
-              description={t.picking.empty.body}
+              title={done ? t.picking.scope.doneEmpty.title : t.picking.empty.title}
+              description={done ? t.picking.scope.doneEmpty.body : t.picking.empty.body}
               testID="warehouse-picking-empty"
             />
           </View>
         </ScrollView>
 
         <DispatchSheet picking={picking} />
+        {labelSheet}
       </View>
     );
   }
@@ -170,38 +233,24 @@ export function PreparationScreen() {
         <ScrollView contentContainerStyle={styles.queueList} testID="warehouse-picking-queue">
           {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
               burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
-          {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
           <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
 
-          {/* HAZIRLIK KÂĞIDININ QR'I (10.1) — masada basılan kâğıt buradan telefona bağlanıyor.
-              Düğme listenin ÜSTÜNDE: kâğıdı eline almış depocu listeye hiç bakmadan okutur;
-              altta olsaydı önce göz taraması yaptırırdı ve kâğıdın kazandırdığı adım geri
-              alınırdı. Liste yine duruyor — kâğıtsız çalışan da elle seçebilir. */}
           {/* OKUTMA ÇEVRİMDIŞI KAPANIR (v3:210-221) — düğme yerine SEBEBİ çizilir. Kâğıdı okutup
               "açılmadı" ile karşılaşmak, sebebi olmayan bir arıza gibi görünürdü; kilidin kendisi
-              bir cevaptır. Liste yine duruyor: okumak serbest, YAZMAK kapalı. */}
-          {offline ? (
+              bir cevaptır. Liste yine duruyor: okumak serbest, YAZMAK kapalı.
+              (Düğmenin kendisi artık akışta değil FAB'da — künyesi aşağıda.) */}
+          {offline && !done ? (
             <View style={styles.queueLocked} testID="warehouse-picking-queue-locked">
               <Text style={styles.queueLockedTitle}>{t.picking.queueLocked.title}</Text>
               <Text style={styles.queueLockedBody}>{t.picking.queueLocked.body}</Text>
             </View>
-          ) : (
-            /* KİTİN DÜĞMESİ, ELLE ÇİZİM DEĞİL (31.08): tasarımın ölçüleri (zeytin dolgu · 54
-               yükseklik · zeytin ışıma · solda çizgi ikon) `PrimaryButton`ın kendisi. Elle
-               çizildiğinde ışıma hiç konmamış, ikon da metne gömülü bir 📄 emojisi olmuştu —
-               emoji renk almaz, kalınlık taşımaz ve cihazdan cihaza değişir. */
-            <PrimaryButton
-              label={t.picking.queueScan.cta}
-              icon="scan-paper"
-              elevation="glow"
-              onPress={() => picking.setQueueScanOpen(true)}
-              testID="warehouse-picking-queue-scan"
-            />
-          )}
+          ) : null}
 
           <View style={styles.queueHeadingRow}>
-            <Text style={styles.heading}>{t.picking.queueHeading}</Text>
-            <Text style={styles.queueHeadingHint}>{t.picking.queueHeadingHint}</Text>
+            <Text style={styles.heading}>{done ? t.picking.scope.doneHeading : t.picking.queueHeading}</Text>
+            <Text style={styles.queueHeadingHint}>
+              {done ? t.picking.scope.doneHeadingHint : t.picking.queueHeadingHint}
+            </Text>
           </View>
 
           <View style={styles.queueCards}>
@@ -253,12 +302,37 @@ export function PreparationScreen() {
           })}
           </View>
 
-          <Text style={styles.queueFootnote}>{t.picking.queueFootnote}</Text>
+          <Text style={styles.queueFootnote}>{done ? t.picking.scope.doneFootnote : t.picking.queueFootnote}</Text>
         </ScrollView>
+
+        {/*
+          HAZIRLIK KÂĞIDININ QR'I ARTIK FAB (kullanıcı isteği 01.09) — akıştaki düğme değil.
+
+          Gerekçe ekranın ÖTEKİ yarısıyla aynı (`scan-fab.tsx` künyesi): okutma her ekranda aynı
+          yerde, elin gittiği noktada durmalı. Kâğıt okutması listenin ÜSTÜNDE duruyordu ve on
+          siparişlik bir kuyrukta aşağı inen depocu için kaybolan bir düğmeydi; sipariş açıldıktan
+          sonraki okutma zaten FAB'daydı, yani aynı hareket ekranın iki hâlinde iki ayrı yerde
+          aranıyordu.
+
+          Ton `action` (mürekkep): bu daire kâğıdı okutup İŞE BAŞLATIR — ürün okutmanın zeytini
+          değil. Çevrimdışında gizlenmiyor SÖNÜYOR; sebebi listenin üstündeki kilit bloğu yazıyor.
+          Tamamlananlarda hiç çizilmiyor: orada açılacak bir iş yok.
+        */}
+        {done ? null : (
+          <OperationsScanFab
+            icon="scan-paper"
+            tone="action"
+            disabled={offline}
+            accessibilityLabel={t.picking.queueScan.cta}
+            onPress={() => picking.setQueueScanOpen(true)}
+            testID="warehouse-picking-queue-scan"
+          />
+        )}
 
         {/* Okutucu kuyruk dalında da çizilir — `ScanSheet` bir Modal ve listenin içinde değil.
             Kutu okutmasından AYRI bayrak: iki farklı soru, iki farklı cevap yolu. */}
         <DispatchSheet picking={picking} />
+        {labelSheet}
 
         <ScanSheet
           open={picking.queueScanOpen}
@@ -275,6 +349,18 @@ export function PreparationScreen() {
     );
   }
 
+  /*
+    TAMAMLANMIŞ SİPARİŞ SALT OKUNUR (kullanıcı isteği 01.09) — ölçüt KAPSAM değil SİPARİŞİN DURUMU.
+
+    `ready` bir sipariş kuyrukta yoktur: kalemleri toplanmış, kutuları mühürlenmiştir. Ekran yine
+    de kutu şeridini çizer, çünkü orada yapılacak bir iş kaldı — etiketi yeniden bastırmak ve
+    kutuyu geri açmak (uzun basma menüsü). Ama okutma, kutu açma ve eksik beyanı KAPALI: hepsi
+    kapanmış bir işe yeni bir iş yazardı.
+
+    Ölçüt siparişin kendi durumu, "hangi listeden geldim" değil: kapsam bir GÖRÜNTÜ, durum ise
+    gerçek. İkisi bugün örtüşüyor ama ayrıştıkları gün doğru olan durumdur.
+  */
+  const readOnly = order.status === 'ready';
   /* Yapışkan çubuk artık yalnız ESKİ akışta çiziliyor (aşağıdaki künye), yani tek hâl kaldı. */
   const cta = ctaOf(picking.resolved, picking.anyShort, picking.sending, offline);
   /*
@@ -314,7 +400,6 @@ export function PreparationScreen() {
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-lines">
         {/* Son kapanan kutunun etiketi (23.7) — ara kutu kapanışında burada görünür. */}
-        {picking.label === null ? null : <LabelCard label={picking.label} printState={picking.printState} onReprint={picking.reprintLabel} onClose={picking.dismissLabel} />}
           <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
         {/* KOLİYE YAZILACAK AD (23.3, mobil şeridin işareti) — yalnız alıcı hesabın sahibinden
             FARKLIYSA çizilir (web `parcelName` kuralı birebir): ikisi aynıyken satır, hiçbir şey
@@ -349,7 +434,19 @@ export function PreparationScreen() {
             {picking.boxes
               .filter((box) => box.sealedAt !== null)
               .map((box) => (
-                <View key={box.boxId} style={styles.boxSealedCard} testID={`warehouse-picking-box-${box.boxNo}`}>
+                <PressableSurface
+                  key={box.boxId}
+                  /* Kısa dokunuş BİR ŞEY YAPMAZ ve bu bilinçli: kart bir kayıt, bir düğme değil.
+                     Uzun basma o kaydın menüsünü açar — kullanıcı isteği 01.09: *"kutunun üzerine
+                     uzun basılı tuttuğumuz zaman o kutuyla alakalı bir menü çekmece açılsın."* */
+                  onPress={() => {}}
+                  onLongPress={() => setBoxMenu(box.boxId)}
+                  feedback="opacity"
+                  style={styles.boxSealedCard}
+                  accessibilityLabel={fillCopy(t.picking.box.sealedBox, { n: String(box.boxNo) })}
+                  accessibilityHint={t.picking.box.boxMenu.hint}
+                  testID={`warehouse-picking-box-${box.boxNo}`}
+                >
                   {/* BAŞLIK TEK SATIR (v3:03 · ölçüldü 31.08): ✓ + "Kutu N" solda, künye SAĞA
                       yaslı. Kapanan kutu bir KAYITTIR; üç kademeye yayılan bir başlık onu
                       okunacak bir belgeye çevirir. Onay imi kutunun kapandığını söyleyen tek
@@ -380,7 +477,7 @@ export function PreparationScreen() {
                       />
                     );
                   })}
-                </View>
+                </PressableSurface>
               ))}
           </View>
         ) : null}
@@ -406,7 +503,11 @@ export function PreparationScreen() {
           kalem düzeyinde kutulu/kutusuz karışımını RPC reddediyor (0048) ve o siparişte kutu hiç
           açılmayacak, dolayısıyla yeni akışın dayandığı zemin de yok.
         */}
-        {picking.boxMode ? (
+        {readOnly ? (
+          <Text style={styles.footnote} testID="warehouse-picking-done-hint">
+            {picking.boxes.length === 0 ? t.picking.scope.doneNoBoxes : t.picking.scope.doneOrderHint}
+          </Text>
+        ) : picking.boxMode ? (
           <>
             {picking.openBox === null ? (
               <View style={styles.boxEmpty} testID="warehouse-picking-box-empty">
@@ -453,7 +554,7 @@ export function PreparationScreen() {
         kalıyor, değişen tek şey oradaki eylem. Çevrimdışıyken gizlenmiyor SÖNÜYOR — "burada
         okutma yok" ile "şimdi olmaz" ayrı cümleler ve depocuya doğru olan ikincisi.
       */}
-      {picking.boxMode ? (
+      {picking.boxMode && !readOnly ? (
         <OperationsScanFab
           icon={picking.openBox === null ? 'packages' : 'scan'}
           tone={picking.openBox === null ? 'action' : 'scan'}
@@ -484,7 +585,7 @@ export function PreparationScreen() {
         Ton `error`: geri dönüşü olmayan tek karar bu ve rengi öyle demeli. Basmak tek başına bir
         şey YAPMIYOR — onay çekmecesi açılıyor; kırmızı burada "dikkat et" diyor, "oldu" demiyor.
       */}
-      {picking.boxMode && picking.shortLines.length > 0 && picking.boxedQty > 0 ? (
+      {picking.boxMode && !readOnly && picking.shortLines.length > 0 && picking.boxedQty > 0 ? (
         <View style={styles.declareBar}>
           <Text style={styles.declareBarBody}>
             {fillCopy(t.picking.box.declare.body, { n: String(picking.shortLines.length) })}
@@ -498,6 +599,61 @@ export function PreparationScreen() {
           />
         </View>
       ) : null}
+
+      {/*
+        KAPALI KUTUNUN MENÜSÜ (kullanıcı isteği 01.09) — uzun basmayla açılır.
+
+        Kapanan kutu bir KAYITTIR ve kısa dokunuş bir şey yapmaz; ama kayıt DÜZELTİLEBİLİR olmalı:
+        etiket yırtılır, yanlış kartona yapışır, kutuya yanlış ürün girer. Yazılımın "artık olmaz"
+        demesi depocuyu kaydın DIŞINDA çalışmaya iter — o gün kayıt gerçeği anlatmayı bırakır.
+
+        Çekmece, çünkü cevap tek dokunuş: iki eylem ve bir vazgeçme. Menü ekranın kendi diline
+        yaslanıyor (`BottomSheet` + satırlar), ikinci bir bağlam-menü dili kurulmuyor.
+      */}
+      <BottomSheet
+        visible={boxMenu !== null}
+        title={fillCopy(t.picking.box.boxMenu.title, {
+          n: String(picking.boxes.find((box) => box.boxId === boxMenu)?.boxNo ?? '—'),
+        })}
+        onClose={() => setBoxMenu(null)}
+        testID="warehouse-picking-box-menu"
+      >
+        <PressableSurface
+          onPress={() => {
+            const target = boxMenu;
+            setBoxMenu(null);
+            if (target !== null) picking.reprintBoxLabel(target);
+          }}
+          feedback="opacity"
+          style={styles.boxMenuRow}
+          accessibilityLabel={t.picking.box.boxMenu.reprint}
+          testID="warehouse-picking-box-menu-reprint"
+        >
+          <Icon name="printer" size={operationsTheme.text.body} color={operationsTheme.colors.ink} />
+          <Text style={styles.boxMenuLabel}>{t.picking.box.boxMenu.reprint}</Text>
+        </PressableSurface>
+
+        <PressableSurface
+          onPress={() => {
+            const target = boxMenu;
+            setBoxMenu(null);
+            if (target !== null) picking.reopenBox(target);
+          }}
+          disabled={offline || picking.sending}
+          feedback="opacity"
+          style={styles.boxMenuRow}
+          accessibilityLabel={t.picking.box.boxMenu.reopen}
+          testID="warehouse-picking-box-menu-reopen"
+        >
+          <Icon name="packages" size={operationsTheme.text.body} color={operationsTheme.colors.terracotta} />
+          <View style={styles.boxMenuText}>
+            <Text style={[styles.boxMenuLabel, styles.boxMenuLabel_warn]}>{t.picking.box.boxMenu.reopen}</Text>
+            {/* Bedeli ÖNCEDEN yazılır: geri açma kaydı oynatır ve her kutuda mümkün değil. */}
+            <Text style={styles.boxMenuHint}>{t.picking.box.boxMenu.reopenHint}</Text>
+          </View>
+        </PressableSurface>
+      </BottomSheet>
+
 
       <ScanSheet
         open={picking.scanOpen}
@@ -545,6 +701,7 @@ export function PreparationScreen() {
         beterdir çünkü kendini söylemez.
       */}
       <DispatchSheet picking={picking} />
+      {labelSheet}
 
       <BottomSheet
         visible={picking.boxTypeOpen}
@@ -672,8 +829,19 @@ export function PreparationScreen() {
   );
 }
 
-/** Kuyruğun kendi künyesi (v3:184) — kaç iş var, kaçı yarım kalmış. */
-function queueSummary(orders: readonly PreparationOrderContract[]): string {
+/**
+ * Kuyruğun kendi künyesi (v3:184) — kaç iş var, kaçı yarım kalmış.
+ *
+ * Tamamlananlarda "yarım" diye bir hâl yok (hepsi mühürlenmiş) ve sayı bir İŞ YÜKÜ değil bir
+ * pencere boyudur — künye bu yüzden ayrı cümle kurar. Aynı cümleyi kullanmak, depocuya "on işin
+ * bekliyor" dedirtirdi.
+ */
+function queueSummary(orders: readonly PreparationOrderContract[], scope: PreparationScope): string {
+  if (scope === 'done') {
+    return orders.length === 0
+      ? t.picking.scope.doneSummary.none
+      : fillCopy(t.picking.scope.doneSummary.some, { n: String(orders.length) });
+  }
   const half = orders.filter((row) => row.pickedLineCount > 0 && row.pickedLineCount < row.lineCount).length;
   return half > 0
     ? fillCopy(t.picking.queueSummary.someWithHalf, { n: String(orders.length), half: String(half) })
@@ -1023,12 +1191,10 @@ function LabelCard({
   label,
   printState,
   onReprint,
-  onClose,
 }: {
   label: BoxLabelContract;
   printState: PrintState;
   onReprint: () => void;
-  onClose: () => void;
 }) {
   const route =
     label.deliveryType === 'shipping'
@@ -1038,13 +1204,9 @@ function LabelCard({
           date: label.deliveryDate ?? t.picking.box.labelNoDate,
         });
   return (
+    /* BAŞLIK VE KAPATMA ARTIK ÇEKMECENİN: kart onun içinde yaşıyor ve ikisini de o veriyor —
+       aynı başlığı iki kez çizmek, çekmecenin kendi başlık satırını yok saymak olurdu. */
     <View style={styles.labelCard} testID="warehouse-picking-label">
-      <View style={styles.labelHead}>
-        <Text style={styles.labelTitle}>
-          {fillCopy(t.picking.box.labelTitle, { n: String(label.boxNo), m: String(label.boxCount) })}
-        </Text>
-        <TextAction label={t.picking.box.labelClose} onPress={onClose} testID="warehouse-picking-label-close" />
-      </View>
       <Text style={styles.labelLine}>
         {fillCopy(t.picking.box.labelOrder, { ref: label.referenceNo ?? t.picking.noReference, name: label.parcelName })}
       </Text>
@@ -1743,6 +1905,25 @@ const styles = StyleSheet.create({
     yalnız boşluk kalıyor; burada liste çubuğun dibine kadar geliyor. Zemin bu yüzden düz `cream`
     ve üstünde bir çizgi — nerede bittiği belli olsun.
   */
+  boxMenuRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: operationsTheme.space.xl,
+    paddingVertical: operationsTheme.space.xl,
+  },
+  boxMenuText: { flex: 1, gap: operationsTheme.space.xs },
+  boxMenuLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+  },
+  boxMenuLabel_warn: { color: operationsTheme.colors.terracotta },
+  boxMenuHint: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    lineHeight: operationsTheme.text.meta * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
   declareBar: {
     position: 'absolute',
     left: 0,

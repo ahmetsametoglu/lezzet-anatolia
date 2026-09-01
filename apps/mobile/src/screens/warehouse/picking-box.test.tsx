@@ -83,10 +83,14 @@ function ok(data: unknown): Response {
 interface Net {
   /** Kuyruğun O ANKİ hâli — açılış/kapanış sonrası `load()` bunu yeniden okur, test aralarda değiştirir. */
   orders: unknown[];
+  /** `?scope=done` okumasının cevabı (01.09) — bekleyen listeden AYRI: iki ayrı soru, iki ayrı liste. */
+  doneOrders?: unknown[];
   open?: unknown;
   seal?: unknown;
   /** Sipariş düzeyindeki eksik beyanı (31.08) — kutu ucundan AYRI. */
   declareShort?: unknown;
+  /** Kutuyu geri açma cevabı (01.09). */
+  unseal?: unknown;
   resolve?: unknown;
   label?: unknown;
   /** Deponun kargo kutusu tipleri (07.12) — varsayılan BOŞ: rota testleri bu okumayı hiç görmez. */
@@ -110,10 +114,13 @@ fetchMock.mockImplementation((url, init) => {
   if (path.includes('/codes/resolve')) return Promise.resolve(ok(net.resolve));
   if (path.endsWith('/declare-short')) return Promise.resolve(ok(net.declareShort ?? { status: 'ok', shortfalls: [] }));
   if (path.endsWith('/seal')) return Promise.resolve(ok(net.seal));
+  if (path.endsWith('/unseal')) return Promise.resolve(ok(net.unseal ?? { status: 'ok', boxNo: 1, items: [] }));
   if (path.endsWith('/label')) return Promise.resolve(ok(net.label ?? { status: 'not_found' }));
   if (path.endsWith('/printed')) return Promise.resolve(ok({ status: 'ok', printedAt: '2026-08-22T20:00:00Z' }));
   if (init?.method === 'POST' && path.endsWith('/boxes')) return Promise.resolve(ok(net.open));
   if (init?.method === 'POST') throw new Error(`beklenmeyen POST: ${path}`);
+  // Kapsam SORGUDAN okunuyor: gevşek bir eşleşme tamamlananlar cevabını bekleyen listeye verirdi.
+  if (path.includes('scope=done')) return Promise.resolve(ok({ date: null, orders: net.doneOrders ?? [] }));
   return Promise.resolve(ok({ date: null, orders: net.orders }));
 });
 
@@ -158,6 +165,8 @@ beforeEach(() => {
   net.declareShort = undefined;
   net.resolve = undefined;
   net.label = undefined;
+  net.unseal = undefined;
+  net.doneOrders = undefined;
   net.shippingBoxes = undefined;
   net.dispatchOptions = undefined;
   net.announce = undefined;
@@ -433,6 +442,176 @@ describe('D1 · kutu döngüsü', () => {
 
     expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/seal'))).toBe(false);
     expect(screen.getByTestId('warehouse-picking-box-open')).toBeOnTheScreen();
+  });
+
+  /*
+    KAPALI KUTUNUN MENÜSÜ (kullanıcı isteği 01.09) — uzun basmayla açılır, iki eylem taşır.
+
+    Kapanan kutu bir KAYITTIR ve kısa dokunuş bir şey yapmaz; ama kayıt düzeltilebilir olmalı:
+    etiket yırtılır, yanlış kartona yapışır, kutuya yanlış ürün girer. Yazılımın "artık olmaz"
+    demesi depocuyu kaydın DIŞINDA çalışmaya iter — o gün kayıt gerçeği anlatmayı bırakır.
+  */
+  it('kapalı kutuya UZUN BASMAK menüyü açar; "geri aç" kutu ucuna gider', async () => {
+    net.orders = [
+      preparationOrder({
+        lines: [preparationLine({ orderedQty: 2, pickedQty: 2 })],
+        boxes: [preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] })],
+      }),
+    ];
+    await renderPicking();
+
+    // Kısa dokunuş menüyü AÇMAZ: kart bir kayıt, bir düğme değil.
+    await fireEvent.press(screen.getByTestId('warehouse-picking-box-1'));
+    expect(screen.queryByTestId('warehouse-picking-box-menu-reopen')).toBeNull();
+
+    await fireEvent(screen.getByTestId('warehouse-picking-box-1'), 'longPress');
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-menu-reopen')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-picking-box-menu-reopen'));
+
+    // İSTEK KUTUNUN KİMLİĞİNE gider ve GÖVDESİZDİR: kalan dağılımı sunucu kurar, telefon
+    // "şu kadarı kaldı" iddiası taşımaz (sözleşme künyesi).
+    await waitFor(() => expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/unseal'))).toBe(true));
+    await expectToast(/geri açıldı/);
+  });
+
+  /*
+    GERİ AÇILAN KUTU BOŞALMAZ (kullanıcı bulgusu 01.09).
+
+    Cihazda görülen şuydu: kutu geri açıldı, içi TAMAMEN boşaldı. Sunucu satırları gerçekten
+    serbest bırakıyor ve bırakmak zorunda ("açık kutu = taslak" değişmezi, künyesi 0048'de) — ama
+    dökümü cevapta GERİ VERİYOR ve telefon onu açık kutunun taslağına yazıyor.
+
+    Test yazımı DEĞİL, ekrandaki hâli ölçüyor: kutu açık görünüyor mu, içinde o kalem duruyor mu,
+    ve bir sonraki kapanış o adedi mi gönderiyor. Dökümün kaybolması bu üçünde de kendini gösterir.
+  */
+  it('geri açılan kutunun İÇİNDEKİLER taslağa geri yazılır — kutu boşalmaz', async () => {
+    net.orders = [
+      preparationOrder({
+        lines: [preparationLine({ orderedQty: 2, pickedQty: 2 })],
+        boxes: [preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] })],
+      }),
+    ];
+    net.unseal = { status: 'ok', boxNo: 1, items: [{ orderItemId: ITEM_A, qty: 2 }] };
+    await renderPicking();
+
+    await fireEvent(screen.getByTestId('warehouse-picking-box-1'), 'longPress');
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-menu-reopen')).toBeOnTheScreen());
+
+    /* Geri açma sonrası kuyruk artık kutuyu AÇIK ve kalemi toplanmamış gösteriyor — sunucunun
+       `record_preparation` ile yazdığı yeni gerçek. Taslak boş kalsaydı ekran da bunu gösterirdi. */
+    net.orders = [
+      preparationOrder({
+        lines: [preparationLine({ orderedQty: 2, pickedQty: 0 })],
+        boxes: [preparationBox({ sealedAt: null, items: [] })],
+      }),
+    ];
+    await fireEvent.press(screen.getByTestId('warehouse-picking-box-menu-reopen'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-open')).toBeOnTheScreen());
+    // Kutunun sayacı içeriği söyler: iki adet duruyor, sıfır değil.
+    expect(screen.getByTestId('warehouse-picking-box-open')).toHaveTextContent(/2 adet/);
+
+    // Ve kapanış O ADEDİ gönderir: taslak yalnız ekranda değil, gönderilen gövdede de var.
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/seal'))).toBe(true));
+    const body = lastBodyOf('/seal') as { picks: Array<{ orderItemId: string; batches: Array<{ qty: number }> }> };
+    expect(body.picks[0]?.batches.reduce((sum, batch) => sum + batch.qty, 0)).toBe(2);
+  });
+
+  /*
+    AÇIK KUTU VARKEN GERİ AÇMA REDDEDİLİR (ölçüldü 01.09 · cihazda).
+
+    Ekran açık kutuyu TEKİL biliyor (`boxes.find(sealedAt === null)`) ve doldurulmakta olan kutunun
+    içeriğini tek bir taslakta tutuyor. Cihazda ölçülen: Kutu 2 açıkken Kutu 1 geri açıldı,
+    veritabanında iki kutu da açık kaldı, ekran yalnız birini çizdi ve öteki erişilemez bir kayda
+    dönüştü — taslak da yanlış kutuya yazılabilirdi.
+
+    Kural VERİDE duruyor (0048) ve uygulama katmanı isteği zaten göndermiyor; bu test EKRANIN
+    payını sınıyor: ret sebebiyle ve KUTU NUMARASIYLA yazılıyor mu. Numarasız bir ret depocuyu
+    aramaya gönderirdi.
+  */
+  it('siparişin başka kutusu AÇIKSA geri açma reddedilir — sebebi kutu numarasıyla yazılır', async () => {
+    net.orders = [
+      preparationOrder({
+        lines: [preparationLine({ orderedQty: 2, pickedQty: 2 })],
+        boxes: [
+          preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] }),
+          preparationBox({ boxId: '00000000-0000-4000-8000-0000000000b2', boxNo: 2, code: 'KT-26-IKINCI', sealedAt: null }),
+        ],
+      }),
+    ];
+    net.unseal = { status: 'other_box_open', boxNo: 2 };
+    await renderPicking();
+
+    await fireEvent(screen.getByTestId('warehouse-picking-box-1'), 'longPress');
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-menu-reopen')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-picking-box-menu-reopen'));
+
+    await expectToast(/Kutu 2 zaten açık/);
+  });
+
+  /*
+    SON KUTU KAPANINCA EKRAN SİPARİŞİ BIRAKMAZ (kullanıcı bulgusu 01.09).
+
+    Sipariş `ready`ye geçince hazırlık kuyruğundan düşüyor. Eskiden tazeleme tam o an koşuyor,
+    `order` `null` oluyor, ekran kuyruk dalına atlıyordu — ve **yeni açılmış etiket çekmecesi o
+    dalda çizilmediği için kapanıyordu**. Basım düştüğünde "etiket alınamadı" haberi ve "yeniden
+    bas" düğmesi okunmadan siliniyordu.
+
+    Cevap tazelemeyi geciktirmek DEĞİL (denendi, cihazda daha kötü çıktı: çekmecenin arkasında
+    kutu hâlâ "açık" görünüyordu), kapsamı TAMAMLANANLARA almak: `ready` sipariş orada yaşıyor ve
+    seçim korunuyor.
+  */
+  it('son kutu kapanınca kapsam TAMAMLANANLARA geçer — sipariş ekranda kalır, etiket çekmecesi durur', async () => {
+    const bitmis = preparationOrder({
+      status: 'ready',
+      lines: [preparationLine({ orderedQty: 2, pickedQty: 2 })],
+      boxes: [preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] })],
+    });
+    net.orders = [preparationOrder({ lines: [preparationLine({ orderedQty: 2 })], boxes: [preparationBox()] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    net.label = {
+      status: 'ok',
+      label: {
+        code: 'KT-26-4K2M9P7HWX', boxNo: 1, boxCount: 1, referenceNo: 'LZA-26-3M8C', parcelName: 'Restaurant Bosphore',
+        routeName: null, deliveryType: 'route', deliveryDate: '2026-08-09', paymentMethod: null,
+        items: [{ name: 'Fıstıklı Baklava · 1 kg', qty: 2 }],
+      },
+    };
+    await renderPicking();
+    await putAll(ITEM_A);
+
+    /* Kapanıştan SONRAKİ okuma: bekleyen liste BOŞ (sipariş düştü), tamamlananlarda ise var.
+       Ekran kuyruk dalına atlarsa sipariş künyesi de etiket çekmecesi de kaybolur. */
+    net.orders = [];
+    net.doneOrders = [bitmis];
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-sheet')).toBeOnTheScreen());
+    // Sipariş HÂLÂ açık: kapanan kutu salt-okunur şeritte duruyor, kuyruk listesi çizilmiyor.
+    expect(screen.getByTestId('warehouse-picking-box-1')).toBeOnTheScreen();
+    expect(screen.queryByTestId('warehouse-picking-queue')).toBeNull();
+  });
+
+  it('menüdeki "etiketi yeniden yazdır" O KUTUNUN etiketini okur', async () => {
+    net.orders = [
+      preparationOrder({
+        lines: [preparationLine({ orderedQty: 2, pickedQty: 2 })],
+        boxes: [preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] })],
+      }),
+    ];
+    await renderPicking();
+
+    await fireEvent(screen.getByTestId('warehouse-picking-box-1'), 'longPress');
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-box-menu-reprint')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-picking-box-menu-reprint'));
+
+    /* Eskiden "yeniden bas" YALNIZ o turda kapanan kutuyu tanıyordu (`printTarget`) ve ekran
+       yenilenince kayboluyordu; artık istek kutunun kendi kimliğiyle gidiyor. */
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some((call) => String(call[0]).includes(`${preparationBox().boxId}/label`))).toBe(true),
+    );
   });
 
   it('eksik YOKKEN kapanış hiç sormaz — her kapanışta onay, onayı refleks yapar', async () => {

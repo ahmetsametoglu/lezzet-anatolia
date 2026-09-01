@@ -463,3 +463,69 @@ export async function declareOrderShort(
   );
   return { status: 'ok', shortfalls };
 }
+
+/*
+  ── KUTUYU GERİ AÇ (kullanıcı isteği 01.09) ──────────────────────────────────────────────────────
+
+  Kapanış eskiden nihaiydi ve ekran künyesi de öyle diyordu: *"kapalı kutu geri açılamaz."* İtiraz
+  fiziksel: yanlış kutuya yanlış ürün konabilir, adet yanlış sayılabilir ve kartonun kapağı henüz
+  bantlanmamıştır. Yazılımın "artık olmaz" demesi, depocuyu kaydı düzeltmek yerine kaydın DIŞINDA
+  çalışmaya iter — ve o gün kayıt gerçeği anlatmayı bırakır.
+
+  Kararın tamamı RPC'de (`unseal_order_box`, 0048): döküm silinir, karşılanan adet kalan kutuların
+  birleşimiyle yeniden yazılır, araca binmiş kutu ve hazırlıktan çıkmış sipariş reddedilir. Uygulama
+  katmanı yalnız kapsamı ve okunur cevabı kuruyor — iş kuralını kendi hesaplamıyor (CLAUDE §1).
+*/
+export type UnsealBoxOutcome =
+  /**
+   * `items` kutudan ÇIKAN döküm — telefon onu açık kutunun taslağına yazar, böylece geri açılan
+   * kutu boş görünmez. Gerekçesi sözleşmede (`UnsealBoxResponseSchema`), tek yerde.
+   */
+  | { status: 'ok'; boxNo: number; items: Array<{ orderItemId: string; qty: number }> }
+  /** Kutu zaten açık — çift dokunuş/yarış; hiçbir şey değişmedi. */
+  | { status: 'not_sealed' }
+  /**
+   * Siparişin BAŞKA bir kutusu açık (ölçüldü 01.09) — önce o kapatılmalı.
+   *
+   * Ekran açık kutuyu tekil biliyor ve içeriği tek taslakta tutuyor; ikinci açık kutu ekranda hiç
+   * çizilmiyor ve erişilemez bir kayda dönüşüyor (RPC künyesi). `boxNo` cevaba giriyor çünkü
+   * depocunun soracağı ilk şey "hangisi": numarasız bir ret, aramaya gönderirdi.
+   */
+  | { status: 'other_box_open'; boxNo: number }
+  /** RPC reddi (araca binmiş kutu · hazırlıktan çıkmış sipariş) — mesaj operatöre AYNEN gösterilir. */
+  | { status: 'failed'; message: string }
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  | { status: 'not_found' };
+
+export async function unsealBox(
+  db: SupabaseClient,
+  input: { boxId: string; warehouseId: string; actorId: string | null },
+): Promise<UnsealBoxOutcome> {
+  const boxes = new OrderBoxService(db);
+  const box = await boxes.getById(input.boxId);
+  if (!box) return { status: 'not_found' };
+  if (box.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+  // Ön kontrol okunur cevap içindir; yarışın son savunması RPC'nin kendi kilidi.
+  if (box.sealedAt === null) return { status: 'not_sealed' };
+
+  /* ÖN KONTROL: siparişin başka açık kutusu varsa istek hiç gönderilmiyor — RPC de reddediyor
+     (son savunma), ama oradan dönen cümle numarasız bir hata metni olurdu; depocunun görmesi
+     gereken "Kutu N açık, önce onu kapat". */
+  const acik = (await boxes.listByOrder(box.orderId)).find((row) => row.id !== box.id && row.sealedAt === null);
+  if (acik) return { status: 'other_box_open', boxNo: acik.boxNo };
+
+  /* Döküm RPC'DEN ÖNCE okunuyor: `unseal_order_box` satırları siliyor ve sonra okumak boş liste
+     döndürürdü. Okuma başarısız olsa bile geri açma YAPILMAZ — içeriği geri veremeyeceğimiz bir
+     açma, kullanıcının şikâyet ettiği "kutu boşaldı" hâlinin ta kendisidir. */
+  const items = (await new OrderBoxItemService(db).listByBoxes([box.id])).map((row) => ({
+    orderItemId: row.orderItemId,
+    qty: row.qty,
+  }));
+
+  try {
+    await boxes.unseal(box.id, input.actorId);
+  } catch (error) {
+    return { status: 'failed', message: rpcRejectionMessage(error, 'Kutu geri açılamadı') };
+  }
+  return { status: 'ok', boxNo: box.boxNo, items };
+}

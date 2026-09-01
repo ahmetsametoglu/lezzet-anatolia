@@ -22,6 +22,7 @@ import {
   WarehousePrintersResponseSchema,
   DeclareShortResponseSchema,
   SealBoxResponseSchema,
+  UnsealBoxResponseSchema,
   ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
   WarehouseReturnResponseSchema,
@@ -97,9 +98,17 @@ function warehouseFetch<TSchema extends z.ZodTypeAny>(
   istemci fonksiyonu, ilk günden ölü koddur.
 */
 
-/** **Hazırlama kuyruğu** (D1). Gün SÜZGEÇTİR: verilmezse deponun bekleyen HER siparişi gelir. */
-export function fetchPreparationQueue(): Promise<ApiResult<z.infer<typeof PreparationQueueResponseSchema>>> {
-  return warehouseFetch('/api/v1/warehouse/preparation', PreparationQueueResponseSchema);
+/**
+ * **Hazırlama kuyruğu** (D1). Gün SÜZGEÇTİR: verilmezse deponun bekleyen HER siparişi gelir.
+ *
+ * `scope: 'done'` son tamamlananları getirir (mühürlenmiş ama taşıyıcıya verilmemiş) — aynı uç,
+ * aynı gövde; sınırın gerekçesi `listPreparationQueue`ün `PreparationScope` künyesinde.
+ */
+export function fetchPreparationQueue(
+  scope: 'pending' | 'done' = 'pending',
+): Promise<ApiResult<z.infer<typeof PreparationQueueResponseSchema>>> {
+  const yol = scope === 'done' ? '/api/v1/warehouse/preparation?scope=done' : '/api/v1/warehouse/preparation';
+  return warehouseFetch(yol, PreparationQueueResponseSchema);
 }
 
 /**
@@ -165,6 +174,16 @@ export function declareOrderShort(orderId: string): Promise<ApiResult<z.infer<ty
   return warehouseFetch(`/api/v1/warehouse/orders/${orderId}/declare-short`, DeclareShortResponseSchema, {
     method: 'POST',
   });
+}
+
+/**
+ * **Kutuyu geri açar** (01.09) — mühür kalkar ve kutu yeniden doldurulabilir hâle döner.
+ *
+ * Kapanışın tersi ama simetrik DEĞİL: kapanış içerik gönderir, geri açma yalnız kimlik — kalan
+ * dağılımı sunucu kendi kurar (`unseal_order_box`), telefon "şu kadarı kaldı" iddiası taşımaz.
+ */
+export function unsealOrderBox(boxId: string): Promise<ApiResult<z.infer<typeof UnsealBoxResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/boxes/${boxId}/unseal`, UnsealBoxResponseSchema, { method: 'POST' });
 }
 
 /** **Etiket içeriği** (23.7) — önizleme + basım girdisi; yazıcı ayarı da bu cevapta gelir. */
