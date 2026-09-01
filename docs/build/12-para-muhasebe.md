@@ -38,6 +38,27 @@ Tüm finans tek mantıkla: para bir hesapta durur, hareketlerle girer/çıkar. H
   - **Fazla tahsilat yeni durum açmaz:** `paid` kalır, fark `refundDue` olarak türetilir (motorun 03.6 kararı; enum dört değerde kalıyor).
   - **Hızlı satış (07.10) da bu yoldan geçirildi:** `quick_sale` RPC'sinden `p_amount_collected`/`p_payment_status` kaldırıldı — kapı önü nakdi artık gerçekten kasanın bakiyesine düşüyor, sipariş cache'i de ondan türüyor. **Mal ile para iki ayrı yazımdır ve sıra bilinçlidir:** satış RPC'si stoğu düşürüp siparişi kapatır, tahsilat ardından yazılır; mal zaten gitmiştir, para kaydı onu geri alamaz. Hesap kasiyer ekranından ya da `door_cash_account_id` ayarından gelir; **ikisi de yoksa satış YİNE kapanır**, `paymentRecorded:false` döner — uydurulmuş bir "ödendi"den, kaydedilmemiş ama görünür bir tahsilat iyidir (testli).
   - **Türetim eşlemesi motorda:** `derivePaymentStatusForOrder(order, items, {collected, refunded})`. Aynı eşlemeyi hem web kapısı hem seed yapıyordu; iki yerde yazılsaydı biri kargoyu unutur ya da indirim payını atlar, iki ekran farklı sayı gösterirdi. Motor DB'yi bilmez ama şemayı bilir — `Order`/`OrderItem` alması sınırı bozmaz.
+  - **Durum (01.09) — MOTORUN TEK TÜKETİCİSİ VARDI, ARTIK YEDİ.** Kullanıcı canlı siparişte
+    (`LA-26-93UXKY`) *"nereden tutsam elimde kalıyor"* dedi ve haklıydı: türetim doğru cevabı
+    üretiyordu ama onu okuyan tek yer sipariş detayının para paneliydi. Öteki yerler
+    `order.total`ı ("sipariş edilen") borç sanıyordu — sipariş listesi, kurye durağı, banka
+    eşleştirme adayları, müşteri kartındaki açık bakiye, toplam bloğu ve KDV satırı. Aynı
+    siparişe iki ekranın iki farklı borç yazması, hangisine bakıldığına göre farklı para tahsil
+    edilmesi demekti (ölçüldü: liste 46,39 € · detay 27,29 € · kurye 46,39 €).
+  - **`fulfilledLineAmountCents` dışa verildi** (`payment-status.ts`): kalem formülü artık tek
+    kopya ve KDV tabanı da ondan çıkıyor. Ekranda ikinci kez yazılsaydı iki sayı bir gün ayrışır,
+    ayrıştığı gün kimse fark etmezdi — vergi satırı sessizce yanlış tabana otururdu.
+  - **Kurye kapısı `on_account` bilmiyordu:** vade limiti tanımlı B2B siparişinde ekran "kapıda
+    234,80 € al" diyordu; `DOMAIN §7` vadeli siparişin havaleyle kapandığını yazıyor. Tabanı da
+    ham toplamdı — kısmi karşılamada 19,10 € fazla tahsil ederdi. İkisi de düzeltildi
+    (`courier/day.ts`); sözleşme tipi değişmedi, mobil ekran `null`ı zaten "kapıda para yok"
+    diye okuyor.
+  - **Banka kuyruğunda hayalet bakiye:** adaylar ödeme durumuna hiç bakmıyordu, doğru tutarı
+    ödeyen kısmi sipariş `paid` olduğu hâlde kuyrukta kapatılamayan bir kalıntı bırakıyordu.
+  - **BEKLEYEN(12.2): `order.total` ikiye ayrılacak** — `ordered_total` (sipariş anı, donuk) +
+    `revenue_total` (gerçekleşen ciro, `order_item` tetikleyicisinden). Gerekçe: rapor cirosu
+    SQL'den geliyor (`analytics_order_revenue` → `sum(o.total)`) ve SQL motoru çağıramaz, yani
+    ciro kolon olarak durmak zorunda. Kullanıcı kararı 01.09; migration + `db:refresh` istiyor.
 - [x] (12.3) **Tedarik para bağları:** stok alımı → `purchase` hareketi (StockIntake bağı); tedarikçiye ödeme (`supplier_id`) → **tedarikçi borcu türetilir** (girişler − ödemeler)
   - *Bitti:* tedarikçi kartında borç doğru türeniyor
   - **Durum (28.07):** `SupplierService.debt()` tamamlandı (06.8'den beri `paid = 0` TODO'su duruyordu) · kapı `recordSupplierPayment` (`apps/web/lib/money/movement.ts`). 7 test. Yeni tablo/RPC GEREKMEDİ — 12.1'in hareket tablosu bağları (`supplier_id`, `stock_intake_id`) zaten taşıyordu.

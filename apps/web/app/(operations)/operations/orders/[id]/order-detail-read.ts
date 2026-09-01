@@ -32,15 +32,16 @@ import { publicImageUrl } from '@lezzet/storage';
 import {
   allowedDecisions,
   allowedTransitions,
+  creditPosition,
   derivePaymentStatusForOrder,
   dueDateOf,
   defaultsToDiscardOnReturn,
+  fulfilledLineAmountCents,
   isFulfillmentSettled,
   isOverdue,
   isTerminal,
   isZeroRated,
   needsDedicatedGate,
-  openAmountCents,
   orderContribution,
   skippedBetween,
   vatSplitOf,
@@ -165,6 +166,27 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
   const customer = people.find((p) => p.id === order.customerId);
   const courier = order.courierId ? people.find((p) => p.id === order.courierId) : undefined;
+  // Tek "şimdi": vade gecikmesi, açık bakiye ve yaş etiketleri aynı ana bakmalı — okuma uzun sürerse
+  // iki ayrı `new Date()` aynı satırı hem gecikmiş hem gecikmemiş gösterebilirdi.
+  const now = new Date();
+
+  /*
+    ── MÜŞTERİNİN GERÇEK AÇIK BAKİYESİ (01.09, kullanıcı bildirimi) ───────────────────────────────
+    Kartta "Açık bakiye" yazan sayı `openAmountCents(order)` idi — yani YALNIZ BU SİPARİŞİN açık
+    tutarı. Yanında limit ve bir doluluk çubuğu duruyordu, dolayısıyla ekran "müşteri limitinin
+    neresinde" sorusuna cevap veriyormuş gibi görünüyor ama başka bir sorunun cevabını basıyordu.
+    Beş açık siparişi ve 2.400 € borcu olan müşteride kart yine tek siparişi gösterir, operatör bol
+    yer var sanırdı.
+
+    Doğru cevabı üreten motor zaten var (`creditPosition`: ödenmemiş `on_account` siparişleri
+    toplar) ve Müşteriler ekranı onu kullanıyordu; burada çağrılmamıştı.
+
+    Okuma YALNIZ vadesi açık müşteride yapılır — peşin müşteride kart zaten çizilmiyor, o hâlde
+    sorgusu da olmamalı. Sayfa sınırı `listByCustomer`ın varsayılanı: vade defteri tavanı olan bir
+    kümedir (açık siparişler), veriyle sınırsız büyüyen bir liste değil.
+  */
+  const creditOrders = customer?.creditEnabled ? (await orderSvc.listByCustomer(order.customerId, { limit: 100 })).rows : [];
+  const credit = creditPosition(creditOrders, termDays, now);
   // Sefer köprüsü (18.08): sipariş hangi GERÇEKLEŞEN seferle gitti — SF kodu detayda okunur,
   // geçmişi Seferler sekmesinde durur. Tek satırlık okuma; sefersiz siparişte hiç sorgu yapılmaz.
   const run = order.deliveryRunId ? await new DeliveryRunService(db).getById(order.deliveryRunId) : null;
@@ -182,6 +204,9 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     lineDiscountCents: item.lineDiscountAmountCents,
     vatRate: item.vatRate,
     lineTotalCents: lineTotalOf(item),
+    // Ödenecek: motorun kalem formülü. Hazırlık kesinleşmediyse sipariş edilen okunur — o aşamada
+    // `fulfilled_qty` bir karar değil, henüz yazılmamış bir sayıdır.
+    payableCents: fulfilledLineAmountCents(payableLineOf(item), isFulfillmentSettled(order.status, items)),
     bundleId: item.bundleId,
     returnDisposition: item.returnDisposition,
     defaultsToDiscard: variantDiscardDefault.get(item.variantId) ?? false,
@@ -206,7 +231,6 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
     refundedCents: order.amountRefundedCents,
   });
 
-  const now = new Date();
   const settled = isFulfillmentSettled(order.status, items);
   return {
     id: order.id,
@@ -221,7 +245,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
 
     lines,
     bundles: groups,
-    totals: totalsOf(order, lines, settled),
+    totals: totalsOf(order, lines, settled, derivation.fulfilledAmountCents),
     fulfillmentSettled: settled,
 
     payment: {
@@ -235,6 +259,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       refundDueCents: derivation.refundDueCents,
       dueDate: order.onAccount ? dueDateOf(order.createdAt, termDays).toISOString().slice(0, 10) : null,
       overdue: isOverdue(order, termDays, now),
+      vatTreatment: order.vatTreatment,
     },
     movements: movements.map<OrderMovementView>((m) => ({
       id: m.id,
@@ -291,7 +316,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       // bir kısıtı varmış gibi gösterirdi.
       credit: customer?.creditEnabled
         ? {
-            openBalanceCents: openAmountCents(order),
+            // MÜŞTERİNİN borcu, bu siparişinki değil — gerekçesi yukarıdaki blokta.
+            openBalanceCents: credit.openBalanceCents,
             limitCents: customer.creditLimitCents,
             overdueDays: isOverdue(order, termDays, now)
               ? Math.floor((now.getTime() - dueDateOf(order.createdAt, termDays).getTime()) / 86_400_000)
@@ -460,26 +486,70 @@ function lineTotalOf(item: OrderItem): number {
   return item.unitPriceCents * item.qty - item.lineDiscountAmountCents;
 }
 
+/** Kalem satırının motor karşılığı — `fulfilledLineAmountCents`in beklediği şekil. */
+function payableLineOf(item: OrderItem) {
+  return {
+    fulfilledQty: item.fulfilledQty,
+    orderedQty: item.qty,
+    unitPriceCents: item.unitPriceCents,
+    lineDiscountCents: item.lineDiscountAmountCents,
+  };
+}
+
 /**
- * Toplam bloğu — düşülenler satır satır. "Karşılanmayan adet" ayrı bir satırdır: sipariş tutarı ile
- * ödenecek tutarın neden farklı olduğu, tek bir "toplam" sayısına bakarak anlaşılmaz.
+ * Toplam bloğu — **her satır bir öncekinden çıkar ve sonda gerçek rakam durur.**
+ *
+ * ── ÜÇ ARIZA BİRDEN DÜZELTİLDİ (01.09, kullanıcı bildirimi · sipariş `LA-26-93UXKY`) ────────────
+ *
+ * **(1) İndirim İKİ KEZ görünüyordu.** "Kalemler" satırı `lineTotalCents` topluyordu ve o değer
+ * indirimi ZATEN düşülmüş hâlidir (`lineTotalOf`); hemen altına bir de "Sepet indirimi −8,18"
+ * konuyordu. `order.discount_amount` ile Σ `line_discount_amount` aynı paradır (ertelenmiş kısıt),
+ * yani blok aynı indirimi bir kez uygulayıp bir kez daha listeliyordu. Yukarıdan aşağı okuyan
+ * operatör 46,39 − 8,18 − 19,09 = 19,12 gibi hiçbir gerçeği olmayan bir sayıya varıyordu.
+ * **Çözüm:** "Kalemler" artık BRÜT (adet × birim), indirim satırı gerçekten düşülen bir satır.
+ * Kimlik korunur: brüt − indirim + kargo = `order.total` (Σ lineTotal + kargo ile aynı şey).
+ *
+ * **(2) Blok kendi çıkarmasını yok sayıyordu.** İki düşüm satırı gösterilip altına yine
+ * `order.total` yazılıyordu. **Çözüm:** düşüm varsa "Sipariş toplamı" ARA TOPLAM olur ve sonuç
+ * **"Ödenecek"** satırında durur. Düşüm yoksa blok eskisi gibi tek toplamla biter.
+ *
+ * **(3) Karşılanmayan adet kalemlerden YENİDEN hesaplanıyordu** ve motorun sayısıyla bir kuruş
+ * ayrışıyordu (19,09 + 27,29 = 46,38 ≠ 46,39). **Çözüm:** düşüm artık `total − karşılanan`
+ * farkından geliyor; motorun cevabı esastır ve blok tanım gereği tutar. Aynı gerçeği iki yoldan
+ * hesaplamak, ikisinin ayrıştığı günü beklemekti (CLAUDE §1).
+ *
+ * `fulfilledAmountCents` motordan gelir (`derivePaymentStatusForOrder`) — para panelindeki "Kalan"
+ * ile aynı hesap. Ekranın iki yerinde iki farklı sayı çıkmasının yolu böylece kapalı.
  */
-export function totalsOf(order: Order, lines: OrderLineView[], settled: boolean): OrderTotalLine[] {
-  const subtotal = lines.reduce((sum, l) => sum + l.lineTotalCents, 0);
+export function totalsOf(
+  order: Order,
+  lines: OrderLineView[],
+  settled: boolean,
+  fulfilledAmountCents: number,
+): OrderTotalLine[] {
+  /*
+    ── BLOK GİDEN MALI ANLATIR, SİPARİŞ EDİLENİ DEĞİL (01.09, kullanıcı kararı) ──────────────────
+    Zincir bir gün önce sipariş edilenden başlıyordu (54,57 → −8,18 → 46,39 → −19,10 → 27,29).
+    Aritmetiği tutuyordu ama **indirim satırı yalan söylüyordu:** "Sepet indirimi 8,18 €" müşteriye
+    verilmiş bir indirim gibi okunuyor, oysa onun 3,37 €'su hiç gitmemiş bir kutu böreğin
+    indirimiydi. Gerçekten verilen indirim 4,81 €.
+
+    Ve bu sayıyı sistemin geri kalanı ZATEN öyle biliyor: muhasebe kalemi (`lineAmountCents`)
+    indirim payını karşılanan orana bölüyor, yani kâr paneli, muhasebe dosyası ve KDV beyanı
+    hepsi 4,81 diyor. 8,18 diyen tek yer bu bloktu — ekran kendi sisteminin dışına düşmüştü.
+
+    "Ne sipariş edilmişti" sorusunun cevabı KAYBOLMUYOR: kalem tablosunda SİP./KARŞIL. sütunları
+    duruyor ve satır tutarının üstü çiziliyor (`payableCents`). Aynı gerçeği iki yerde anlatmak
+    yerine, her biri kendi işini yapıyor — tablo sipariş↔teslim farkını, blok ödenecek parayı.
+  */
+  const gross = lines.reduce((sum, l) => sum + (settled ? l.unitPriceCents * l.fulfilledQty : l.unitPriceCents * l.qty), 0);
   const shipping = order.shippingFeeCents;
-  const discount = order.discountAmountCents;
-  // Karşılanmayan adet YALNIZ hazırlık kesinleştiyse bir düşümdür. Hazırlanmamış siparişte bu satır
-  // "tamamı düşüldü" diye okunuyordu ve toplam kendi kendisiyle çelişiyordu.
-  const short = settled
-    ? lines.reduce(
-        (sum, l) =>
-          sum + Math.max(0, l.qty - l.fulfilledQty) * (l.unitPriceCents - Math.round(l.lineDiscountCents / Math.max(1, l.qty))),
-        0,
-      )
-    : 0;
+  // İndirim de aynı tabandan: brüt − indirim + kargo = ödenecek. Kimlik korunuyor, çünkü ikisi de
+  // motorun kalem formülünden türüyor.
+  const discount = Math.max(0, gross + shipping - fulfilledAmountCents);
   const refunded = order.amountRefundedCents;
 
-  const rows: OrderTotalLine[] = [{ label: 'Kalemler', amountCents: subtotal, kind: 'sum' }];
+  const rows: OrderTotalLine[] = [{ label: 'Kalemler', amountCents: gross, kind: 'sum' }];
   // İndirimin SEBEBİ de yazılır (15.08, kullanıcı isteği): müşteri sepette "İndirim — Hoş geldin
   // indirimi" görüyor, operatör yalnız tutarı görüyordu. Ad sipariş anındaki kopyadan gelir
   // (`discountLabel`) — kampanya sonradan silinse de satır sebebini söylemeye devam eder.
@@ -487,12 +557,21 @@ export function totalsOf(order: Order, lines: OrderLineView[], settled: boolean)
     const label = order.discountLabel ? resolveLocalizedText(order.discountLabel) : '';
     rows.push({ label: label ? `Sepet indirimi — ${label}` : 'Sepet indirimi', amountCents: discount, kind: 'deduction' });
   }
-  if (shipping > 0) rows.push({ label: 'Kargo', amountCents: shipping, kind: 'sum' });
-  if (short > 0) rows.push({ label: 'Karşılanmayan adet', amountCents: short, kind: 'deduction' });
+  /*
+    ARA TOPLAM YALNIZ ARDINDA BİR ŞEY VARKEN (kullanıcı isteği 01.09 + itiraz).
+    Kargosuz siparişte ara toplam ile ödenecek aynı sayıdır; iki kez yazmak bloğu okunmaz yapar ve
+    okuyana "bu ikisi neden farklı olabilir" diye boş bir soru sordurur. Kargo varsa satır gerçek
+    bir ara duraktır ve orada yazılıyor.
+  */
+  if (shipping > 0) {
+    rows.push({ label: 'Ara toplam', amountCents: gross - discount, kind: 'sum' });
+    rows.push({ label: 'Kargo', amountCents: shipping, kind: 'sum' });
+  }
+
+  rows.push({ label: 'Ödenecek', amountCents: fulfilledAmountCents, kind: 'grand' });
   // KDV bir DÜŞÜM DEĞİL, bilgi: b2c fiyatı zaten dahil, b2b'de fatura ayrı gösterir. Satırın işi
   // "bu siparişin vergisi ne" sorusunu tutarı bozmadan yanıtlamak.
-  rows.push({ label: 'İçindeki KDV', amountCents: vatInsideOf(order, lines), kind: 'note' });
-  rows.push({ label: 'Sipariş toplamı', amountCents: order.totalCents, kind: 'grand' });
+  rows.push({ label: 'İçindeki KDV', amountCents: vatInsideOf(order, lines, settled), kind: 'note' });
   if (refunded > 0) rows.push({ label: 'İade edildi', amountCents: refunded, kind: 'refund' });
   return rows;
 }
@@ -510,10 +589,29 @@ export function totalsOf(order: Order, lines: OrderLineView[], settled: boolean)
  *
  * Veri hep elin altındaydı: `order.vatTreatment` bu okumanın kendi çıktısında zaten taşınıyor.
  * Eksik olan bilgi değil, motora sormaktı.
+ *
+ * ── TABAN KARŞILANAN TUTAR, SİPARİŞ EDİLEN DEĞİL (01.09, kullanıcı bildirimi) ───────────────────
+ * Hesap `lineTotalCents` üzerinden yapılıyordu, yani **hiç gitmeyen malın vergisi de sayılıyordu.**
+ * Ölçüldü (`LA-26-93UXKY`): ekran 2,42 € yazıyordu, teslim edilenin KDV'si 1,42 € — tam bir euro
+ * fazla. Satır `note` olduğu için toplamı bozmuyordu; bozduğu şey mutabakattı, ve vergi satırının
+ * tek işi zaten mutabakat.
+ *
+ * Kalem başına taban **motorun kendi formülünden** geliyor (`fulfilledLineAmountCents`): "ödenecek"
+ * hangi tutarsa verginin tabanı da odur. Formülü burada ikinci kez yazmak, ikisinin ayrıştığı günü
+ * beklemek olurdu — ve ayrıştığında kimse fark etmezdi.
+ *
+ * `settled = false` iken taban sipariş edilen adettir: hazırlık kesinleşmeden "eksik gitti"
+ * denemez, dolayısıyla eksiltilmiş bir vergi de yazılamaz.
  */
-function vatInsideOf(order: Pick<Order, 'channel' | 'vatTreatment'>, lines: OrderLineView[]): number {
+function vatInsideOf(order: Pick<Order, 'channel' | 'vatTreatment'>, lines: OrderLineView[], settled: boolean): number {
   const zeroRated = isZeroRated(order.vatTreatment);
-  return lines.reduce((sum, l) => sum + vatSplitOf(l.lineTotalCents, order.channel, l.vatRate, zeroRated).vatCents, 0);
+  return lines.reduce((sum, l) => {
+    const base = fulfilledLineAmountCents(
+      { fulfilledQty: l.fulfilledQty, orderedQty: l.qty, unitPriceCents: l.unitPriceCents, lineDiscountCents: l.lineDiscountCents },
+      settled,
+    );
+    return sum + vatSplitOf(base, order.channel, l.vatRate, zeroRated).vatCents;
+  }, 0);
 }
 
 /**

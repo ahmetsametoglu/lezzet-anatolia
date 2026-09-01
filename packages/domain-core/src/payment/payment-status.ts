@@ -140,6 +140,27 @@ function statusOf(net: number, fulfilled: number, refunded: number): PaymentStat
  * İndirim payı kalemin TAMAMI için verildiğinden, karşılanan orana bölünür — yarısı gittiyse
  * indirimin yarısı düşülür. Aksi halde kısmi iade fazla/eksik hesaplanır.
  */
+/**
+ * **BİR KALEMİN karşılanan tutarı** (cent) — indirim payı karşılanan orana bölünmüş hâliyle.
+ *
+ * Dışa VERİLİR ve bu bilinçli (01.09): aynı formüle ekranın KDV satırı da ihtiyaç duyuyor. Sipariş
+ * detayı "içindeki KDV"yi kalem kalem hesaplıyor ve o hesabın tabanı, motorun "ödenecek" dediği
+ * tutarla BİREBİR aynı olmak zorunda. Formül orada ikinci kez yazılsaydı iki sayı bir gün ayrışır
+ * ve ayrıştığı gün kimse fark etmezdi — vergi satırı sessizce yanlış bir tabana oturur (CLAUDE §1).
+ *
+ * `settled = false` iken ölçü SİPARİŞ EDİLEN adettir: karşılanan henüz yazılmamıştır, 0 olması
+ * "hiçbiri gitmedi" demek değil, "daha hazırlanmadı" demektir.
+ */
+export function fulfilledLineAmountCents(line: FulfilledLine, settled = true): number {
+  const qty = settled ? line.fulfilledQty : line.orderedQty;
+  if (qty <= 0) return 0;
+  const gross = line.unitPriceCents * qty;
+  const discountShare = line.lineDiscountCents
+    ? Math.round((line.lineDiscountCents * qty) / Math.max(1, line.orderedQty))
+    : 0;
+  return gross - discountShare;
+}
+
 function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = true, orderTotalCents }: PaymentDerivationInput): number {
   // Hazırlık kesinleşmediyse cevap siparişin ANLAŞILAN toplamıdır — indirim ve kargo zaten içinde.
   // Kalemlerden yeniden toplamak, aynı gerçeği ikinci bir yoldan hesaplamak olurdu.
@@ -149,16 +170,10 @@ function fulfilledAmount({ lines, shippingFeeCents = 0, fulfillmentSettled = tru
   let anyFulfilled = false;
 
   for (const line of lines) {
-    // Hazırlık kesinleşmediyse ölçü SİPARİŞ EDİLEN adettir: karşılanan henüz yazılmamıştır, 0
-    // olması "hiçbiri gitmedi" demek değil, "daha hazırlanmadı" demektir.
     const qty = fulfillmentSettled ? line.fulfilledQty : line.orderedQty;
     if (qty <= 0) continue;
     anyFulfilled = true;
-    const gross = line.unitPriceCents * qty;
-    const discountShare = line.lineDiscountCents
-      ? Math.round((line.lineDiscountCents * qty) / Math.max(1, line.orderedQty))
-      : 0;
-    total += gross - discountShare;
+    total += fulfilledLineAmountCents(line, fulfillmentSettled);
   }
 
   // Hiçbir kalem gitmediyse kargo hizmeti de değersizdir → karşılanan tutara girmez, iade edilir.

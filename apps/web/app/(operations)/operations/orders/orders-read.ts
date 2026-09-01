@@ -1,4 +1,11 @@
-import { allowedTransitions, dueDateOf, isOverdue, needsDedicatedGate, openAmountCents } from '@lezzet/domain-core';
+import {
+  allowedTransitions,
+  derivePaymentStatusForOrder,
+  dueDateOf,
+  isOverdue,
+  needsDedicatedGate,
+  openAmountCents,
+} from '@lezzet/domain-core';
 import type { Order, OrderItem, UserProfile } from '@lezzet/types';
 import type { OrderCountsView, OrderRow } from './orders-types';
 import type { OrderCounts } from '@lezzet/database';
@@ -8,8 +15,8 @@ import type { OrderCounts } from '@lezzet/database';
  * view-model çıkar. Okuma `page.tsx`'te, karar motorda; burası ikisini birleştirir.
  *
  * Kararların hiçbiri burada VERİLMEZ: izinli geçişler `allowedTransitions`'tan, vade gecikmesi
- * `isOverdue`'dan, açık tutar `openAmountCents`'ten gelir — üçü de checkout freninin ve durum
- * makinesinin kullandığı tanımların ta kendisi.
+ * `isOverdue`'dan, tahsil edilecek tutar `derivePaymentStatusForOrder`'dan gelir — üçü de checkout
+ * freninin ve durum makinesinin kullandığı tanımların ta kendisi.
  */
 
 interface OrderRowInput {
@@ -61,7 +68,22 @@ function toOrderRow(order: Order, input: OrderRowInput): OrderRow {
       // Vade günü YALNIZ vadeli siparişte anlamlı: peşin siparişte "vade 12 Tem" yazmak, olmayan
       // bir borcu varmış gibi gösterirdi.
       dueDate: order.onAccount ? dueDateOf(order.createdAt, termDays).toISOString().slice(0, 10) : null,
-      openCents: openAmountCents(order),
+      /*
+        KALAN MOTORDAN (01.09) — liste ile detay AYNI sayıyı söylemek zorunda.
+
+        Burada `openAmountCents(order)` duruyordu ve o hesap `total − net tahsilat`tır: **kısmi
+        karşılamayı görmez.** Ölçüldü (`LA-26-93UXKY`): liste "Kapıda 46,39 €" derken detay
+        "Kalan 27,29 €" diyordu — aradaki 19,10 € hiç gitmemiş maldı. İki ekranın aynı siparişe iki
+        borç yazması, hangisine bakıldığına göre farklı para tahsil edilmesi demek.
+
+        `openAmountCents` yanlış değil, BAŞKA bir sorunun cevabı: vade defterinde siparişin ham
+        borcu odur (`creditPosition` onu kullanır ve orada doğrudur). Kapıda tahsil edilecek tutarı
+        soran ekran motora sorar.
+      */
+      openCents: derivePaymentStatusForOrder(order, items, {
+        collectedCents: order.amountCollectedCents,
+        refundedCents: order.amountRefundedCents,
+      }).amountToCollectCents,
       overdue: isOverdue(order, termDays, input.now),
     },
     isGift: order.isGiftOrder,

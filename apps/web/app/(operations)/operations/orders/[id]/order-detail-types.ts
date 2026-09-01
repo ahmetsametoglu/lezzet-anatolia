@@ -14,6 +14,7 @@ import type {
   PaymentStatus,
   ReturnDisposition,
   ShipmentStatus,
+  VatTreatment,
 } from '@lezzet/types';
 
 /** Kalem satırı — paket grubunun içindeyse `bundleId` dolu gelir. */
@@ -38,8 +39,17 @@ export interface OrderLineView {
   /** Sepet indiriminin bu kaleme düşen payı (kalemin TAMAMI için, kuruş). */
   lineDiscountCents: number;
   vatRate: number;
-  /** Satır tutarı — sipariş edilen adet üzerinden, indirim düşülmüş (KDV dahil taban). */
+  /** Satır tutarı — SİPARİŞ EDİLEN adet üzerinden, indirim düşülmüş. Eksik gitmişse ÜSTÜ ÇİZİLİR. */
   lineTotalCents: number;
+  /**
+   * Satırın ÖDENECEK tutarı — karşılanan adet üzerinden, indirim payı o orana bölünmüş (01.09).
+   *
+   * Eksiksiz kalemde `lineTotalCents` ile aynıdır. Ayrı alan olmasının sebebi ekranın iki sayıyı da
+   * göstermesi: sipariş edilenin üstü çizilir, ödenecek onun yanında durur. Tek sayı gösterilseydi
+   * operatör ya "ne sipariş edildi"yi ya "ne ödenecek"i kaybederdi — ve eksik giden kalemde ekranda
+   * duran tek sayı (38,19) tahsil edilecek olan DEĞİLDİ.
+   */
+  payableCents: number;
   /** Paketten geldiyse paketin kimliği; tek tek alınmış kalemde `null` (DOMAIN §13). */
   bundleId: string | null;
   /** İade edildiyse malın akıbeti — stok hareketini besleyen karar. */
@@ -263,6 +273,15 @@ export interface OrderDetailView {
     refundDueCents: number;
     dueDate: string | null;
     overdue: boolean;
+    /**
+     * Siparişin KDV rejimi — **tutarın hangi tabanda okunacağını söyler** (01.09).
+     *
+     * Ekran "Sipariş toplamı" hücresinin altına sabit `KDV dahil` yazıyordu ve bu B2B'de YANLIŞTI:
+     * işletme fiyatları KDV hariçtir (`vatBaseOf`), yani müşterinin ödeyeceği tutar ekranda yazandan
+     * büyüktür. Ters yükümlülükte ise ne "dahil" ne "hariç" doğrudur — vergi hiç yoktur.
+     * Karar kanal + rejim ikilisinden çıkar; etiketi `moneyCells` kuruyor.
+     */
+    vatTreatment: VatTreatment;
   };
   movements: OrderMovementView[];
 

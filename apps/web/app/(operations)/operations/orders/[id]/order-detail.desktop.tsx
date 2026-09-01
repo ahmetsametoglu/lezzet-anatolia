@@ -16,6 +16,7 @@ import {
   SHIPMENT_STATUS_LABEL,
   creditFill,
   creditPercent,
+  emptyMovementsText,
   initialsOf,
   moneyCells,
   paymentHeadline,
@@ -224,9 +225,7 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
 
             <div className="border-t border-ops-line-soft">
               {order.movements.length === 0 ? (
-                <p className="px-3.5 py-3 font-ops-body text-ops-xs text-ops-muted">
-                  Henüz hareket yok — tahsilat kapıda yapılacak, hareket kurye kapanışında düşer.
-                </p>
+                <p className="px-3.5 py-3 font-ops-body text-ops-xs text-ops-muted">{emptyMovementsText(order)}</p>
               ) : (
                 order.movements.map((m) => (
                   <div

@@ -1,4 +1,4 @@
-import type { OrderDecision } from '@lezzet/domain-core';
+import { isZeroRated, vatBaseOf, type OrderDecision } from '@lezzet/domain-core';
 import type { OrderSource, ShipmentStatus } from '@lezzet/types';
 import { money, shortDateTime } from '@/components/operation/ui/format';
 import type { TimelineStep } from '@/components/operation/ui/timeline';
@@ -38,11 +38,45 @@ export function paymentHeadline(order: OrderDetailView): string {
   return onAccount ? `Vade ${dueDate ?? '—'} · ${money(openCents)}` : `Tahsil edilmedi · ${money(openCents)}`;
 }
 
+/**
+ * Para hareketi HİÇ yokken yazılan cümle (01.09, kullanıcı bildirimi).
+ *
+ * Burada koşulsuz *"tahsilat kapıda yapılacak, hareket kurye kapanışında düşer"* yazıyordu ve
+ * **vadeli siparişte düpedüz yanlıştı:** hemen üstünde "Vade 30 Eyl" yazan kart, altında kapıda
+ * tahsilat vaat ediyordu. `DOMAIN §7` vadeli siparişin havaleyle kapandığını söylüyor; kurye o
+ * kapıdan para istemez.
+ *
+ * Üç hâl üç ayrı şey söyler: vade defterde bekliyor · kapıda alınacak · alınacak bir şey yok
+ * (peşin ödenmiş ya da mal hiç gitmemiş). Tek cümleye indirmek, üçünden ikisine yalan söylemekti.
+ */
+export function emptyMovementsText(order: OrderDetailView): string {
+  const { onAccount, dueDate, openCents } = order.payment;
+  if (onAccount) return `Henüz hareket yok — vadeli satış, tahsilat ${dueDate ?? 'vade gününde'} havaleyle bekleniyor.`;
+  if (openCents > 0) return 'Henüz hareket yok — tahsilat kapıda yapılacak, hareket kurye kapanışında düşer.';
+  return 'Henüz hareket yok — bu siparişte tahsil edilecek tutar bulunmuyor.';
+}
+
 interface MoneyCellView {
   label: string;
   value: string;
   sub: string;
   tone?: 'red' | 'olive' | 'muted';
+}
+
+/**
+ * "Sipariş toplamı" hücresinin altındaki taban açıklaması (01.09, kullanıcı bildirimi).
+ *
+ * Burada bir zamanlar sabit `'KDV dahil'` yazıyordu ve **B2B'de yanlıştı**: işletme fiyatları KDV
+ * HARİÇTİR (`vatBaseOf`: b2c → dahil, b2b → hariç), yani ekranda 234,80 € gören operatör müşterinin
+ * 247,71 € ödeyeceğini bilmiyordu. Sayı doğruydu, ekranın ona verdiği anlam yanlıştı — ve bu tür
+ * bir hata sessizdir: hiçbir hesap tutmaz ama hiçbir yerde de patlamaz.
+ *
+ * **Üçüncü hâl ayrı yazılır:** ters yükümlülükte (VIES ile doğrulanmış AB alıcısı) vergi hiç yoktur,
+ * müşteri kendi ülkesinde beyan eder. Orada "dahil" de "hariç" de yanıltıcı olurdu.
+ */
+function vatBasisText(order: OrderDetailView): string {
+  if (isZeroRated(order.payment.vatTreatment)) return 'KDV yok · ters yükümlülük';
+  return vatBaseOf(order.channel) === 'ttc' ? 'KDV dahil' : 'KDV hariç';
 }
 
 /**
@@ -75,7 +109,7 @@ export function moneyCells(order: OrderDetailView): MoneyCellView[] {
           };
 
   return [
-    { label: 'Sipariş toplamı', value: money(totalCents), sub: refundedCents > 0 ? 'iade öncesi' : 'KDV dahil' },
+    { label: 'Sipariş toplamı', value: money(totalCents), sub: refundedCents > 0 ? 'iade öncesi' : vatBasisText(order) },
     {
       label: 'Tahsil edilen',
       value: money(collectedCents),

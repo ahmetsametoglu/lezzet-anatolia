@@ -222,22 +222,31 @@ function Line({ line, indented, settled }: LineProps) {
             : '—'}
         </span>
         <span className="text-right font-ops-mono text-ops-micro text-ops-muted">{percent(line.vatRate, 1)}</span>
-        <span className="text-right font-ops-mono text-ops-sm text-ops-ink">{amount(line.lineTotalCents)}</span>
+        {/* SATIR TUTARI İKİ SAYIDIR (01.09, kullanıcı isteği): eksik giden kalemde sipariş
+            edilenin ÜSTÜ ÇİZİLİR, ödenecek onun altında durur. Tek sayı yazıldığında ekranda duran
+            38,19 tahsil edilecek tutar DEĞİLDİ ve operatör farkı ancak alttaki bloktan çıkarabiliyordu.
+            Müşteri yüzeyi de aynı deseni kullanıyor (`customer-orders`), iki yüzey ayrışmıyor. */}
+        <span className="text-right font-ops-mono text-ops-sm text-ops-ink">
+          {settled && line.payableCents !== line.lineTotalCents ? (
+            <span className="flex flex-col items-end leading-tight">
+              <span className="text-ops-micro text-ops-muted line-through">{amount(line.lineTotalCents)}</span>
+              <span className="text-ops-amber-dark">{amount(line.payableCents)}</span>
+            </span>
+          ) : (
+            amount(line.lineTotalCents)
+          )}
+        </span>
       </div>
 
-      {/* İKİ AYRI ŞERİT, iki ayrı gerçek: eksik giden mal (teslimden önce) ve iade edilen mal
-          (teslimden sonra). İkincisi malın AKIBETİNİ de söyler — stok hareketi ona bağlı. */}
+      {/* İADE ŞERİDİ KALDI, "EKSİK GİTTİ" ŞERİDİ KALKTI (kullanıcı kararı 01.09).
+          Eksiklik artık satırın kendisinde görünüyor: SİP./KARŞIL. sütunları ve üstü çizili tutar.
+          Şerit aynı gerçeği üçüncü kez söylüyor, üstelik bir satır yüksekliğinde yer kaplayarak.
+          İade şeridi KALIYOR çünkü o farklı bir şey söylüyor: malın AKIBETİ (rafa döndü / imha /
+          jest) sütunlardan okunamaz ve stok hareketi ona bağlıdır. */}
       {line.returnDisposition ? (
         <div className={`mx-3.5 mb-2.5 rounded-ops-card border border-ops-red-line bg-ops-red-bg px-3 py-2 ${indented ? 'ml-7' : ''}`}>
           <span className="font-ops-display text-ops-micro font-semibold text-ops-red">İADE EDİLDİ</span>
           <span className="ml-2 font-ops-body text-ops-xs text-ops-red">{DISPOSITION_TEXT[line.returnDisposition]}</span>
-        </div>
-      ) : short > 0 ? (
-        <div className={`mx-3.5 mb-2.5 rounded-ops-card border border-ops-amber-line bg-ops-amber-bg px-3 py-2 ${indented ? 'ml-7' : ''}`}>
-          <span className="font-ops-display text-ops-micro font-semibold text-ops-amber">EKSİK GİTTİ</span>
-          <span className="ml-2 font-ops-body text-ops-xs text-ops-amber-dark">
-            {short} adet — tutardan düşüldü, tahsil edilmişse iadeye devrolur.
-          </span>
         </div>
       ) : null}
     </div>

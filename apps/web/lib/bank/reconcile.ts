@@ -43,9 +43,26 @@ export async function matchQueue(accountId: string, opts: { limit?: number } = {
     addDays(dates[dates.length - 1]!, 3),
   );
 
-  // Aday = açık bakiyesi olan satış. Tamamı tahsil edilmiş sipariş öneriye girmez: parası zaten
-  // yazılmış bir siparişe ikinci kez ödeme bağlamak, tahsilatı iki kez saymak olurdu.
+  /*
+    Aday = açık bakiyesi olan satış. Tamamı tahsil edilmiş sipariş öneriye girmez: parası zaten
+    yazılmış bir siparişe ikinci kez ödeme bağlamak, tahsilatı iki kez saymak olurdu.
+
+    ── ÖLÇÜT ÖNCE `payment_status` (01.09, kullanıcı bulgusu) ────────────────────────────────────
+    Süzgeç yalnız `total − net tahsilat > 0` idi ve kısmi karşılamada **kapatılamayan bir hayalet**
+    üretiyordu: sipariş 46,39 €, teslim edilen 27,29 €, müşteri doğru tutarı ödüyor → ödeme durumu
+    `paid` oluyor ama formül 19,10 €'yu hâlâ "açık" sayıyor. Satır kuyrukta sonsuza dek duruyor,
+    çünkü kapatılacak bir borç YOK.
+
+    Motorun cevabı `payment_status`tadır (`derivePaymentStatus`: net ≥ karşılanan → `paid`) ve
+    kapanmış siparişi eleyecek tek doğru ölçüt odur. `iptal` de aynı sebeple dışarıda: iptal edilen
+    siparişin borcu yoktur, tahsil edilmişse iade yoluna girer.
+
+    Fark tutarı yine ham formülden okunuyor ve bu bilinçli: kuyruğun işi banka satırını EŞLEŞTİRMEK,
+    tutarı yeniden hesaplamak değil — hangi siparişin ne kadarının açık olduğunu sipariş ekranı
+    söylüyor. Burada gereken yalnız "hangi aday makul", ve onun için ham fark yeterli.
+  */
   const candidates: MatchCandidate[] = sales
+    .filter((s) => s.paymentStatus !== 'paid' && s.paymentStatus !== 'refunded' && s.status !== 'cancelled')
     .map((s) => ({
       orderId: s.id,
       referenceNo: s.referenceNo,
