@@ -1,9 +1,9 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
 <!-- ekran: toplamaDetay · Depo · Toplama detay -->
-<!-- kaynak satırlar: 361-541 -->
+<!-- kaynak satırlar: 364-547 -->
 
-<!-- kaynak: satır 361-541 · görünüm bloğu -->
+<!-- kaynak: satır 364-547 · görünüm bloğu -->
     <sc-if value="{{ is.toplamaDetay }}">
       <div data-screen-label="Depo · Toplama detay" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
         <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 10px">
@@ -24,20 +24,27 @@
         </div>
 
         <sc-if value="{{ kapananVar }}" hint-placeholder-val="{{ true }}">
-          <div style="margin:12px 0 0;display:flex;flex-direction:column;gap:7px">
-            <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8a8270;padding:0 20px">KAPANAN KUTULAR — SALT OKUNUR</span>
-            <div style="display:flex;gap:8px;overflow-x:auto;padding:2px 20px 4px">
-              <sc-for list="{{ kapanan }}" as="kk" hint-placeholder-count="1">
-                <div style="min-width:158px;background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:11px 13px;display:flex;flex-direction:column;gap:2px;flex:none">
-                  <div style="display:flex;align-items:center;gap:6px">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
-                    <span style="font:700 12.5px 'Karla';color:#6d7261">Kutu {{ kk.no }}</span>
-                  </div>
-                  <span style="font:400 11px 'Karla';color:#8a8270">{{ kk.icerik }}</span>
-                  <span style="font:400 10px 'Karla';color:#b3ab97">{{ kk.qr }}</span>
+          <div style="margin:12px 20px 0;display:flex;flex-direction:column;gap:8px">
+            <span style="font:800 9px 'Karla';letter-spacing:.16em;color:#8a8270">KAPANAN KUTULAR — SALT OKUNUR</span>
+            <sc-for list="{{ kapanan }}" as="kk" hint-placeholder-count="1">
+              <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;overflow:hidden">
+                <div style="padding:10px 13px;display:flex;align-items:center;gap:8px">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>
+                  <span style="font:700 12.5px 'Karla';color:#6d7261;flex:none">Kutu {{ kk.no }}</span>
+                  <span style="font:400 10px 'Karla';color:#b3ab97;flex:1;min-width:0;text-align:right">{{ kk.qr }} · {{ kk.icerik }}</span>
                 </div>
-              </sc-for>
-            </div>
+                <sc-for list="{{ kk.kalemler }}" as="kx" hint-placeholder-count="1">
+                  <div style="border-top:1px solid #e7e2d2;padding:6px 13px;display:flex;align-items:center;gap:9px;min-height:38px">
+                    <div style="position:relative;width:28px;height:28px;flex:none;border-radius:8px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                      <span style="font:800 10px 'Karla';color:#8a8270">{{ kx.mono }}</span>
+                      <image-slot class="mini" id="{{ kx.slotId }}" style="position:absolute;inset:0;width:100%;height:100%" shape="rounded" radius="8"></image-slot>
+                    </div>
+                    <span style="font:700 11.5px 'Karla';color:#6d7261;flex:1;min-width:0">{{ kx.ad }} <span style="font-weight:400;color:#a8a191">{{ kx.boy }}</span></span>
+                    <span style="font:700 11.5px 'Karla';color:#8a8270;flex:none">{{ kx.adet }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-for>
           </div>
         </sc-if>
 
@@ -73,42 +80,79 @@
         </div>
         </sc-if>
 
-        <sc-if value="{{ kutuOkutVar }}" hint-placeholder-val="{{ false }}">
-          <div onClick="{{ tg.scanner }}" style="margin:14px 20px 0;border:1.5px solid #5f7a2c;border-radius:18px;height:52px;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
-            <span style="font:700 14px 'Karla';color:#46601f">Kalemi kutuya okut</span>
+        <sc-if value="{{ topKutuYok }}" hint-placeholder-val="{{ true }}">
+          <div style="margin:14px 20px 0;background:#f6f4ec;border:1.5px dashed #ddd6c4;border-radius:20px;padding:18px 16px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 14px 'Karla';color:#6d7261">Kutu açılmadı</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Rafları dolaşıp geldiysen kutuyu aç, sonra okutmaya başla. Okuttuğun ürün kutunun içine yerleşir.</span>
+            </div>
+            <div onClick="{{ topKutuAc }}" style="height:52px;border-radius:16px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 14px 'Karla';cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">{{ topKutuAcLabel }}</div>
           </div>
         </sc-if>
 
-        <div style="margin:14px 20px 0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;align-items:flex-start;gap:12px">
-            <div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0">
-              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">1 · DERİN DONDURUCU 2</span>
-              <span style="font:700 15px 'Karla'">Mangolu Artisan Kek · 90 g</span>
-              <span style="font:400 11.5px 'Karla';color:#8a8270">istenen 3 · parti SKT 03.09.26</span>
-              <span style="font:700 10.5px 'Karla';letter-spacing:.1em;color:#5f7a2c">MOTOR ÖNERİSİ</span>
+        <sc-if value="{{ topKutuVar }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:14px 20px 0;background:#f2f7e8;border:1.5px solid #5f7a2c;border-radius:20px;overflow:hidden">
+            <div style="padding:13px 15px;display:flex;align-items:center;gap:10px">
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#46601f">{{ kutuBasligi }}</span>
+                <span style="font:400 11px 'Karla';color:#6d7261">{{ topBuKutu }} adet · okuttukça buraya düşer</span>
+              </div>
+              <span onClick="{{ topKutuIsle }}" style="background:{{ topCta.bg }};color:{{ topCta.fg }};font:700 12px 'Karla';border-radius:13px;padding:11px 13px;cursor:pointer;flex:none">Kutuyu kapat</span>
             </div>
+            <sc-if value="{{ topKutuBos }}" hint-placeholder-val="{{ true }}">
+              <div style="border-top:1px solid #cddcb2;padding:15px;text-align:center">
+                <span style="font:400 11.5px/1.5 'Karla';color:#6d7261">Kutu boş. Sağ alttaki okutma düğmesine bas, ürün buraya girsin.</span>
+              </div>
+            </sc-if>
+            <sc-if value="{{ topKutuDolu }}" hint-placeholder-val="{{ false }}">
+              <sc-for list="{{ topKutuIcerik }}" as="ki" hint-placeholder-count="2">
+                <div style="border-top:1px solid #cddcb2;background:{{ ki.satirBg }};padding:6px 15px;display:flex;align-items:center;gap:10px;min-height:42px">
+                  <div style="position:relative;width:30px;height:30px;flex:none;border-radius:9px;background:#e3ecd2;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                    <span style="font:800 10px 'Karla';color:#46601f">{{ ki.mono }}</span>
+                    <image-slot class="mini" id="{{ ki.slotId }}" style="position:absolute;inset:0;width:100%;height:100%" shape="rounded" radius="9"></image-slot>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:1px;flex:1;min-width:0">
+                    <span style="font:700 12px 'Karla'">{{ ki.ad }} <span style="font-weight:400;color:#8a8270">{{ ki.boy }}</span></span>
+                    <span style="display:{{ ki.buGoster }};font:400 10px 'Karla';color:#8a8270">{{ ki.buYazi }}</span>
+                    <span style="display:{{ ki.fazlaGoster }};font:700 10px 'Karla';color:#a44a3f">{{ ki.fazlaYazi }}</span>
+                  </div>
+                  <span style="font:700 14px 'Karla';color:{{ ki.sayacFg }};flex:none">{{ ki.toplam }}/{{ ki.istenen }}</span>
+                  <span onClick="{{ ki.geri }}" style="font:400 14px 'Karla';color:#a8b08f;cursor:pointer;padding:0 2px;flex:none">✕</span>
+                </div>
+              </sc-for>
+            </sc-if>
           </div>
-          <sc-if value="{{ oncekiNot }}" hint-placeholder-val="{{ true }}">
-            <div style="background:#f6e6d6;border-radius:13px;padding:10px 12px">
-              <span style="font:700 11.5px/1.45 'Karla';color:#b05c2e">Önceki kutularda 2 yazılmış — bu kutuya konan ayrı sayılır, üstüne yazılmaz.</span>
+        </sc-if>
+
+
+        <div style="margin:16px 20px 8px;display:flex;align-items:baseline;justify-content:space-between">
+          <span style="font:800 9.5px 'Karla';letter-spacing:.18em;color:#8a8270">{{ topListeBaslik }}</span>
+          <span style="font:700 11.5px 'Karla';color:#8a8270">{{ topSayac }}</span>
+        </div>
+        <div style="margin:0 20px;display:flex;flex-direction:column;gap:6px">
+          <sc-if value="{{ topHepsiBitti }}" hint-placeholder-val="{{ false }}">
+            <div style="background:#f2f7e8;border:1.5px solid #c3d3a4;border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:3px">
+              <span style="font:700 13.5px 'Karla';color:#46601f">Kâğıttaki her kalem kutulara girdi</span>
+              <span style="font:400 11.5px/1.5 'Karla';color:#6d7261">Açık kutuyu kapatınca sipariş hazıra geçer.</span>
             </div>
           </sc-if>
-          <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
-              <span onClick="{{ dec.k1 }}" style="width:44px;height:46px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
-              <span style="width:46px;text-align:center;font:700 17px 'Karla'">{{ adet.k1 }}</span>
-              <span onClick="{{ inc.k1 }}" style="width:44px;height:46px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none">+</span>
+          <sc-for list="{{ topKalemler }}" as="tk" hint-placeholder-count="6">
+            <div onClick="{{ tk.elle }}" style="background:{{ tk.bg }};border:1.5px solid {{ tk.bd }};border-radius:16px;padding:10px 12px;display:flex;align-items:center;gap:11px;cursor:pointer;min-height:64px;transition:transform .12s" style-active="transform:scale(.99)">
+              <div style="position:relative;width:48px;height:48px;flex:none;border-radius:12px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;overflow:hidden">
+                <span style="font:800 14px 'Karla';color:#8a8270">{{ tk.mono }}</span>
+                <image-slot class="mini" id="{{ tk.slotId }}" style="position:absolute;inset:0;width:100%;height:100%" shape="rounded" radius="12"></image-slot>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
+                <span style="font:700 13px/1.3 'Karla'">{{ tk.ad }} · {{ tk.boy }}</span>
+                <span style="font:400 10.5px 'Karla';color:#8a8270">{{ tk.raf }} <span style="display:{{ tk.oncekiGoster }};color:#b05c2e;font-weight:700">{{ tk.oncekiYazi }}</span></span>
+                <span style="display:{{ tk.bayrakGoster }};background:{{ tk.bayrakBg }};color:{{ tk.bayrakFg }};font:800 8.5px 'Karla';letter-spacing:.1em;border-radius:7px;padding:3px 6px;align-self:flex-start">{{ tk.bayrak }}</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex:none">
+                <span style="font:600 21px 'Lora';color:{{ tk.sayacFg }};line-height:1.1">{{ tk.kalan }}</span>
+                <span style="font:400 9.5px 'Karla';color:#b3ab97">/ {{ tk.istenen }} kalan</span>
+              </div>
             </div>
-            <span onClick="{{ set.k1full }}" style="flex:1;height:46px;border-radius:15px;background:{{ c.k1full.bg }};color:{{ c.k1full.fg }};border:1.5px solid {{ c.k1full.bd }};display:flex;align-items:center;justify-content:center;gap:6px;font:700 13.5px 'Karla';cursor:pointer">tamamı ✓</span>
-          </div>
-          </sc-if>
-          <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
-            <div style="height:46px;border-radius:15px;background:#f0ede3;border:1.5px solid #e2ddcc;display:flex;align-items:center;padding:0 14px">
-              <span style="font:700 12.5px 'Karla';color:#a8a191">konan {{ adet.k1 }} · sayım kapalı</span>
-            </div>
-          </sc-if>
+          </sc-for>
           <sc-if value="{{ t.eksik }}" hint-placeholder-val="{{ false }}">
             <div style="background:#f4e3e0;border-radius:14px;padding:11px 13px;display:flex;flex-direction:column;gap:2px">
               <span style="font:700 12px 'Karla';color:#a44a3f">Eksik bildirildi</span>
@@ -116,72 +160,31 @@
             </div>
           </sc-if>
           <sc-if value="{{ eksikBildirVar }}" hint-placeholder-val="{{ true }}">
-            <span onClick="{{ tg.eksik }}" style="font:700 13px 'Karla';color:#5f7a2c;cursor:pointer;align-self:flex-start">eksik bildir</span>
+            <span onClick="{{ tg.eksik }}" style="font:700 12.5px 'Karla';color:#5f7a2c;cursor:pointer;align-self:flex-start;margin-top:2px">eksik bildir</span>
           </sc-if>
         </div>
 
-        <div style="margin:10px 20px 0;background:#fbfaf4;border:1.5px solid #d9a97f;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;flex-direction:column;gap:4px">
-            <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">2 · KURU DEPO A3</span>
-            <span style="font:700 15px 'Karla'">Fıstıklı Baklava · 1250 g</span>
-            <span style="font:400 11.5px 'Karla';color:#8a8270">istenen 4 · parti P-0688 · SKT 12.09.26</span>
-            <div style="display:flex;align-items:center;gap:7px;margin-top:2px">
-              <span style="background:#2f353a;color:#f5f1e6;font:800 9px 'Karla';letter-spacing:.1em;border-radius:8px;padding:5px 8px">⚓ ÇIPALI PARTİ</span>
-              <span style="font:700 10.5px 'Karla';color:#b05c2e">başka partiden verilemez</span>
-            </div>
-          </div>
-          <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">Kalem indirimli teklife bağlı — müşteri o partiyi satın aldı. Rafta bu parti yoksa eksik bildir, başka parti koyma.</span>
-          <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
-              <span onClick="{{ dec2 }}" style="width:44px;height:46px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
-              <span style="width:46px;text-align:center;font:700 17px 'Karla'">{{ adet2 }}</span>
-              <span onClick="{{ inc2 }}" style="width:44px;height:46px;display:flex;align-items:center;justify-content:center;font:400 21px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none">+</span>
-            </div>
-            <span onClick="{{ tg.scanner }}" style="flex:1;height:46px;border-radius:15px;border:1.5px solid #5f7a2c;color:#46601f;display:flex;align-items:center;justify-content:center;gap:7px;font:700 13px 'Karla';cursor:pointer">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
-              okut
-            </span>
-          </div>
-          </sc-if>
-          <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
-            <div style="height:46px;border-radius:15px;background:#f0ede3;border:1.5px solid #e2ddcc;display:flex;align-items:center;padding:0 14px">
-              <span style="font:700 12.5px 'Karla';color:#a8a191">konan {{ adet2 }} · okutma kapalı</span>
-            </div>
-          </sc-if>
-          <sc-if value="{{ k2Uyari }}" hint-placeholder-val="{{ false }}">
-            <span style="font:700 11.5px 'Karla';color:#b05c2e">4 isteniyor, {{ adet2 }} kondu — kalanı yeni kutuya koyabilir ya da eksik bildirebilirsin.</span>
-          </sc-if>
-        </div>
-
-        <div style="margin:14px 20px 0;background:#e7e2d2;border-radius:16px;padding:12px 14px">
-          <span style="font:400 11.5px/1.6 'Karla';color:#6d7261">Adet bu <b>kutuya</b> konanı sayar — önceki kutular kayıtta durur, üstüne yazılmaz. Kutu kapanınca içerik kesinleşir ve etiket ayarlı yazıcıdan basılır.</span>
+        <div style="margin:12px 20px 0;background:#e7e2d2;border-radius:16px;padding:12px 14px">
+          <span style="font:400 11.5px/1.6 'Karla';color:#6d7261">Okutma satırı kendi bulur; adet kalanla hazır gelir, onaylaman yeter. Satıra dokunmak elle düzeltme içindir. Kutu kapanınca içerik kesinleşir ve etiket basılır.</span>
         </div>
 
         <div style="flex:1"></div>
-        <div style="position:sticky;bottom:0;padding:14px 20px 18px;background:linear-gradient(180deg,rgba(242,240,232,0),#f2f0e8 45%);display:flex;flex-direction:column;gap:8px">
-          <sc-if value="{{ ctaPasif }}" hint-placeholder-val="{{ true }}">
-            <span style="font:700 11.5px 'Karla';color:#a8a191;text-align:center">Kalem kalem say — ya da "tamamı"</span>
-          </sc-if>
-          <sc-if value="{{ t.kutuAcik }}" hint-placeholder-val="{{ false }}">
-            <div style="display:flex;flex-direction:column;gap:3px;background:#e7e2d2;border-radius:14px;padding:10px 13px">
-              <span style="font:700 11.5px/1.4 'Karla';color:#2f353a">Kapanışta: {{ kapanisSonucu }}</span>
-              <sc-if value="{{ t.eksik }}" hint-placeholder-val="{{ false }}">
-                <span style="font:400 11px/1.45 'Karla';color:#8a8270">Eksik kararı yönetimde verilir — kutular kapansa da sipariş hazıra geçmez.</span>
-              </sc-if>
-            </div>
-          </sc-if>
-          <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
-            <div style="background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:14px 15px;display:flex;flex-direction:column;gap:3px">
-              <span style="font:700 13px 'Karla';color:#6d7261">Kutu kapatma kapalı</span>
-              <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Etiket sunucudan doğan kutu koduyla basılır — bağlantı olmadan basılamaz.</span>
-            </div>
-          </sc-if>
-          <sc-if value="{{ yazmaAcik }}" hint-placeholder-val="{{ true }}">
-          <div onClick="{{ act.kutu }}" style="background:{{ c.kutuCta.bg }};color:{{ c.kutuCta.fg }};font:700 15px 'Karla';border-radius:17px;height:54px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
-<span>{{ kutuCtaLabel }}</span>
+        <div style="position:sticky;bottom:92px;align-self:flex-end;margin:0 20px -66px 0;z-index:6">
+          <div onClick="{{ topFab }}" style="width:66px;height:66px;border-radius:50%;background:{{ topFabRenk.bg }};display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 22px rgba(47,53,58,.26);transition:transform .12s" style-active="transform:scale(.94)">
+            <sc-if value="{{ topKutuVar }}" hint-placeholder-val="{{ false }}">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.2"/></svg>
+            </sc-if>
+            <sc-if value="{{ topKutuYok }}" hint-placeholder-val="{{ true }}">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l9-4.5 9 4.5v7L12 20l-9-4.5z"/><path d="M3 8.5l9 4.5 9-4.5"/><path d="M12 13v7"/></svg>
+            </sc-if>
           </div>
-          </sc-if>
         </div>
+        <sc-if value="{{ yazmaKapali }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:14px 20px 0;background:#f6f4ec;border:1.5px solid #e2ddcc;border-radius:16px;padding:14px 15px;display:flex;flex-direction:column;gap:3px">
+            <span style="font:700 13px 'Karla';color:#6d7261">Kutu kapatma kapalı</span>
+            <span style="font:400 11.5px/1.5 'Karla';color:#a8a191">Etiket sunucudan doğan kutu koduyla basılır — bağlantı olmadan basılamaz.</span>
+          </div>
+        </sc-if>
+        <div style="height:26px"></div>
       </div>
     </sc-if>

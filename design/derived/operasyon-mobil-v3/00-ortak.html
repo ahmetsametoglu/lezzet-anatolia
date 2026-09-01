@@ -3,7 +3,7 @@
 <!-- ekrana bağlanamayan kalan parçalar: sayfa iskeleti, stil, sekme çubuğu, sheet'ler, betik kalanı -->
 <!-- parça sayısı: 39 -->
 
-<!-- kaynak: satır 1-60 · ortak -->
+<!-- kaynak: satır 1-63 · ortak -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -14,6 +14,7 @@
 <body>
 <x-dc>
 <helmet>
+<script src="./image-slot.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400..700&family=Karla:wght@400..800&display=swap" rel="stylesheet">
 <style>
   body { margin:0; background:#dedbd3; font-family:'Karla',sans-serif; display:flex; justify-content:center; padding:36px 16px; }
@@ -24,6 +25,8 @@
   @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
   @keyframes donus { to { transform:rotate(360deg); } }
   ::-webkit-scrollbar { width:0; }
+  /* küçük satırlarda yuvanın boş-hâl yazısı sığmıyor; altındaki monogram görünsün */
+  image-slot.mini::part(empty) { display:none; }
 </style>
 <template id="__bundler_thumbnail">
   <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
@@ -65,112 +68,112 @@
 
 
 
-<!-- kaynak: satır 209-209 · ortak -->
+<!-- kaynak: satır 212-212 · ortak -->
 
 
-<!-- kaynak: satır 360-360 · ortak -->
+<!-- kaynak: satır 363-363 · ortak -->
 
 
-<!-- kaynak: satır 542-542 · ortak -->
+<!-- kaynak: satır 548-548 · ortak -->
 
 
-<!-- kaynak: satır 622-622 · ortak -->
+<!-- kaynak: satır 628-628 · ortak -->
 
 
-<!-- kaynak: satır 781-781 · ortak -->
+<!-- kaynak: satır 787-787 · ortak -->
 
 
-<!-- kaynak: satır 861-861 · ortak -->
+<!-- kaynak: satır 867-867 · ortak -->
 
 
-<!-- kaynak: satır 906-906 · ortak -->
+<!-- kaynak: satır 912-912 · ortak -->
 
 
-<!-- kaynak: satır 1045-1045 · ortak -->
+<!-- kaynak: satır 1051-1051 · ortak -->
 
 
-<!-- kaynak: satır 1181-1181 · ortak -->
+<!-- kaynak: satır 1187-1187 · ortak -->
 
 
-<!-- kaynak: satır 1229-1229 · ortak -->
+<!-- kaynak: satır 1235-1235 · ortak -->
 
 
-<!-- kaynak: satır 1253-1253 · ortak -->
+<!-- kaynak: satır 1259-1259 · ortak -->
 
 
-<!-- kaynak: satır 1340-1340 · ortak -->
+<!-- kaynak: satır 1346-1346 · ortak -->
 
 
-<!-- kaynak: satır 1402-1402 · ortak -->
+<!-- kaynak: satır 1408-1408 · ortak -->
 
 
-<!-- kaynak: satır 1534-1534 · ortak -->
+<!-- kaynak: satır 1540-1540 · ortak -->
 
 
-<!-- kaynak: satır 1672-1672 · ortak -->
+<!-- kaynak: satır 1678-1678 · ortak -->
 
 
-<!-- kaynak: satır 1727-1727 · ortak -->
+<!-- kaynak: satır 1733-1733 · ortak -->
 
 
-<!-- kaynak: satır 1800-1800 · ortak -->
+<!-- kaynak: satır 1806-1806 · ortak -->
 
 
-<!-- kaynak: satır 1889-1889 · ortak -->
+<!-- kaynak: satır 1895-1895 · ortak -->
 
 
-<!-- kaynak: satır 1977-1977 · ortak -->
+<!-- kaynak: satır 1983-1983 · ortak -->
 
 
-<!-- kaynak: satır 2119-2119 · ortak -->
+<!-- kaynak: satır 2125-2125 · ortak -->
 
 
-<!-- kaynak: satır 2184-2184 · ortak -->
+<!-- kaynak: satır 2190-2190 · ortak -->
 
 
-<!-- kaynak: satır 2263-2263 · ortak -->
+<!-- kaynak: satır 2269-2269 · ortak -->
 
 
-<!-- kaynak: satır 2384-2384 · ortak -->
+<!-- kaynak: satır 2390-2390 · ortak -->
 
 
-<!-- kaynak: satır 2437-2437 · ortak -->
+<!-- kaynak: satır 2443-2443 · ortak -->
 
 
-<!-- kaynak: satır 2460-2460 · ortak -->
+<!-- kaynak: satır 2466-2466 · ortak -->
 
 
-<!-- kaynak: satır 2540-2540 · ortak -->
+<!-- kaynak: satır 2546-2546 · ortak -->
 
 
-<!-- kaynak: satır 2580-2580 · ortak -->
+<!-- kaynak: satır 2586-2586 · ortak -->
 
 
-<!-- kaynak: satır 2663-2663 · ortak -->
+<!-- kaynak: satır 2669-2669 · ortak -->
 
 
-<!-- kaynak: satır 2756-2756 · ortak -->
+<!-- kaynak: satır 2762-2762 · ortak -->
 
 
-<!-- kaynak: satır 2866-2866 · ortak -->
+<!-- kaynak: satır 2872-2872 · ortak -->
 
 
-<!-- kaynak: satır 2916-2916 · ortak -->
+<!-- kaynak: satır 2922-2922 · ortak -->
 
 
-<!-- kaynak: satır 2984-2984 · ortak -->
+<!-- kaynak: satır 2990-2990 · ortak -->
 
 
-<!-- kaynak: satır 3020-3020 · ortak -->
+<!-- kaynak: satır 3026-3026 · ortak -->
 
 
-<!-- kaynak: satır 3052-3052 · ortak -->
+<!-- kaynak: satır 3058-3058 · ortak -->
 
 
-<!-- kaynak: satır 3092-3092 · ortak -->
+<!-- kaynak: satır 3098-3098 · ortak -->
 
 
-<!-- kaynak: satır 3162-3719 · ortak -->
+<!-- kaynak: satır 3168-3776 · ortak -->
 
   </div>
 
@@ -275,6 +278,41 @@
         <div style="padding:2px 20px 0">
           <div onClick="{{ closeSheet }}" style="height:54px;border-radius:17px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer">Tamam</div>
         </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ sheetTopAdet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:62">
+      <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px;animation:sheetIn .26s cubic-bezier(.2,.9,.3,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <div style="display:flex;flex-direction:column;gap:3px">
+          <span style="font:600 19px 'Lora'">{{ topAdetBaglam.ad }} · {{ topAdetBaglam.boy }}</span>
+          <span style="font:400 11.5px 'Karla';color:#8a8270">{{ topAdetBaglam.raf }} · {{ topAdetBaglam.parti }}</span>
+        </div>
+        <div style="background:#e7e2d2;border-radius:13px;padding:11px 13px;display:flex;align-items:center;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:0;flex:1">
+            <span style="font:600 20px 'Lora'">{{ topAdetBaglam.istenen }}</span>
+            <span style="font:400 10px 'Karla';color:#8a8270">istenen</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0;flex:1;border-left:1px solid #d5cfbd;padding-left:14px">
+            <span style="font:600 20px 'Lora';color:#b05c2e">{{ topAdetBaglam.kalan }}</span>
+            <span style="font:400 10px 'Karla';color:#8a8270">kalan</span>
+          </div>
+        </div>
+        <div style="background:#fff;border:1.5px solid #ddd6c4;border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:1px;flex:1">
+            <span style="font:600 36px 'Lora';color:#2f353a;line-height:1">{{ topAdetDeger }}</span>
+            <span style="font:400 10.5px 'Karla';color:#8a8270">bu kutuya konuyor</span>
+          </div>
+          <div style="display:flex;align-items:center;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:15px;overflow:hidden;flex:none">
+            <span onClick="{{ topAdetEksi }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#8a8270;cursor:pointer;user-select:none">−</span>
+            <span onClick="{{ topAdetArti }}" style="width:48px;height:52px;display:flex;align-items:center;justify-content:center;font:400 22px 'Karla';color:#5f7a2c;cursor:pointer;user-select:none;border-left:1.5px solid #ddd6c4">+</span>
+          </div>
+        </div>
+        <div onClick="{{ topAdetOnay }}" style="height:54px;border-radius:17px;background:#5f7a2c;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 15px 'Karla';cursor:pointer">Kutuya koy</div>
+        <span style="font:400 11px/1.5 'Karla';color:#a8a191;text-align:center">Adet bu kutuya konanı sayar — önceki kutular kayıtta durur, üstüne yazılmaz.</span>
       </div>
     </div>
   </sc-if>
@@ -626,6 +664,22 @@
           </div>
           <span style="font:400 11.5px 'Karla';color:#7d8a93">Paket ya da koli barkodu — koli, çarpanı kadar sayılır.</span>
         </sc-if>
+        <sc-if value="{{ tarayiciToplama }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ tarayiciToplamaKalemler }}" as="tt" hint-placeholder-count="6">
+              <span onClick="{{ tt.oku }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">{{ tt.et }}</span>
+            </sc-for>
+          </div>
+          <span style="font:400 11.5px 'Karla';color:#7d8a93">Okutulan ürün kendi satırını bulur; adet kalanla hazır gelir.</span>
+        </sc-if>
+        <sc-if value="{{ tarayiciSiparis }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-wrap:wrap;gap:8px">
+            <sc-for list="{{ tarayiciSiparisler }}" as="ts" hint-placeholder-count="3">
+              <span onClick="{{ ts.oku }}" style="font:700 12.5px 'Karla';color:#f5f1e6;border:1.4px solid #4a5157;border-radius:13px;padding:9px 14px;cursor:pointer">{{ ts.et }}</span>
+            </sc-for>
+          </div>
+          <span style="font:400 11.5px 'Karla';color:#7d8a93">Hazırlık kâğıdı bir siparişi seçer — adet sorulmaz, sipariş detayı açılır.</span>
+        </sc-if>
         <sc-if value="{{ tarayiciParti }}" hint-placeholder-val="{{ false }}">
           <div style="display:flex;flex-wrap:wrap;gap:8px">
             <sc-for list="{{ tarayiciPartiler }}" as="tp" hint-placeholder-count="5">
@@ -730,7 +784,7 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;serbestUrun&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
 
-<!-- kaynak: satır 3720-5107 · betik kalanı -->
+<!-- kaynak: satır 3777-5320 · betik kalanı -->
 <script type="text/x-dc-fragment">
 const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar'];
 const TOGGLES = ['kutuAcik','eksik','scanner','yabanci','etiket','kimlikSheet','boySheet','urunAraSheet','imzaOpen','imzaCizildi','ulasilamadi','kabulEtmedi','hasarNotu','sepetVar','maSatir','imzaAlindi','navSheet'];
@@ -826,6 +880,19 @@ const PARTILER = [
   { key:'p0730', kod:'P-0730', ad:'Acılı Ezme', boy:'250 g', adet:12, gun:9, rejim:'yok', omur:null, stok:22, raf:'B2-09' }
 ];
 const PARTI_BUL = (k) => PARTILER.filter(p => p.key === k)[0] || null;
+
+// Hazırlık kâğıdındaki kalemler. Toplayıcı raflardan toplayıp rampaya gelir,
+// sonra kutu açıp barkod okutarak yerleştirir — satırı elle aramaz, okutma satırı bulur.
+// Ürün adından iki harflik monogram — fotoğraf düşene kadar satırda o durur.
+const MONO = (ad) => ad.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toLocaleUpperCase('tr');
+const TOPLAMA_KALEMLER = [
+  { key:'t1', raf:'DERİN DONDURUCU 2', ad:'Mangolu Artisan Kek', boy:'90 g', istenen:3, parti:'SKT 03.09.26', oneri:true },
+  { key:'t2', raf:'KURU DEPO A3', ad:'Fıstıklı Baklava', boy:'1250 g', istenen:4, parti:'P-0688 · SKT 12.09.26', cipa:true },
+  { key:'t3', raf:'KURU DEPO A1', ad:'Şöbiyet', boy:'500 g', istenen:6, parti:'P-0688' },
+  { key:'t4', raf:'SOĞUK ODA B2', ad:'Su Böreği', boy:'tepsi', istenen:2, parti:'P-0712' },
+  { key:'t5', raf:'KURU DEPO C1', ad:'Acılı Ezme', boy:'250 g', istenen:12, parti:'P-0730' },
+  { key:'t6', raf:'KURU DEPO C1', ad:'Antep Fıstığı Ezmesi', boy:'400 g', istenen:2, parti:'P-0705' }
+];
 const PARTI_KARAR = (p) => {
   if (p.rejim === 'yok') return 'yok';
   if (p.gun < 0) return p.rejim === 'DLC' ? 'imha' : 'satilabilir';
@@ -851,7 +918,7 @@ class Component extends DCLogic {
     t: { kutuAcik:false, eksik:false, scanner:false, yabanci:false, etiket:false, kimlikSheet:false, boySheet:false, urunAraSheet:false, imzaOpen:false, imzaCizildi:false, ulasilamadi:false, kabulEtmedi:false, hasarNotu:false, sepetVar:true, maSatir:true },
     sel: { sebep:null, yontem:'kart', tahsilat:null, kanal:'tum', durum:'tumu', mod:'hibrit', boy:null, akibet:null },
     adet: { k1:0, k2:0, ma1:0, sayim:0 },
-    kapananKutular: [{ no:1, icerik:'2 × Fıstıklı Baklava 450 g', qr:'KT-26-PLN7WAQN3L' }],
+    kapananKutular: [{ no:1, icerik:'2 adet', qr:'KT-26-PLN7WAQN3L', kalemler:[{ key:'t1', ad:'Mangolu Artisan Kek', boy:'90 g', adet:2 }] }],
     malDurum: null,
     partiSecili: true,
     kutuTipSheet: false,
@@ -878,6 +945,10 @@ class Component extends DCLogic {
     yuk: {},
     donen: {},
     imhaEdilen: {},
+    topKonan: {},
+    topOnceki: { t1: 2 },
+    topAdetKalem: null,
+    topAdetDeger: 0,
     partiOv: {},
     imhaParti: null,
     imhaAdet: 0,
@@ -1536,7 +1607,9 @@ class Component extends DCLogic {
       })),
       // D3 · Yakın-SKT
       // tarayıcı bağlamı — kodda ekran başına ayrı, prototipte tek kutu bağlamına göre konuşur
-      tarayiciBaslik: cur === 'sayim' ? 'Parti etiketini okut'
+      tarayiciBaslik: cur === 'toplamaDetay' ? 'Ürün barkodunu okut — kutuya koy'
+        : cur === 'toplama' ? 'Hazırlık kâğıdını okut — siparişi aç'
+        : cur === 'sayim' ? 'Parti etiketini okut'
         : cur === 'dusum' ? 'Parti etiketini okut'
         : cur === 'maDetay' ? 'Koli okut — satırı bul'
         : cur === 'kargoDevri' ? 'Kutuyu okut — gönderiyi bul'
@@ -1545,7 +1618,17 @@ class Component extends DCLogic {
         : cur === 'aracaYukle' ? 'Kutuyu okut — araca al'
         : 'Kalemi kutuya okut',
       tarayiciParti: cur === 'sayim' || cur === 'dusum',
-      tarayiciKalem: !(cur === 'sayim' || cur === 'dusum'),
+      tarayiciSiparis: cur === 'toplama',
+      tarayiciKalem: !(cur === 'sayim' || cur === 'dusum' || cur === 'toplama' || cur === 'toplamaDetay'),
+      // hazırlık kâğıdı bir siparişi seçer — adet sorulmaz, sipariş detayı açılır
+      tarayiciSiparisler: [
+        { et:'LA-26-CQQ93Y · Restaurant Oberjaegerhof' },
+        { et:'LA-26-QRPRRV · Claire Weber' },
+        { et:'LA-26-VPUD6F · Épicerie Madame' }
+      ].map(o => ({
+        et: o.et,
+        oku: () => this.setState(s => ({ t: Object.assign({}, s.t, { scanner:false }), screen:'toplamaDetay' }))
+      })),
       tarayiciPartiler: PLIST.map(p => ({
         et: p.kod + ' · ' + p.ad,
         oku: () => this.setState(s => ({
@@ -1558,6 +1641,130 @@ class Component extends DCLogic {
         }))
       })),
       sktSatirlar: sktSatirlar,
+      // D1 · Toplama detay — okutma satırı bulur, kalan adet hazır gelir
+      topKalemler: (() => {
+        const konan = st.topKonan || {};
+        const onceki = st.topOnceki || {};
+        return TOPLAMA_KALEMLER.filter(k => ((konan[k.key]||0) + (onceki[k.key]||0)) < k.istenen).map(k => {
+          const bu = konan[k.key] || 0;
+          const on = onceki[k.key] || 0;
+          const kalan = k.istenen - bu - on;
+          return {
+            slotId: 'urun-' + k.key + '-liste',
+            mono: MONO(k.ad),
+            ad: k.ad, boy: k.boy, raf: k.raf, parti: k.parti, istenen: k.istenen,
+            bu: bu, kalan: kalan,
+            bg: bu > 0 ? '#fdf8f3' : '#fbfaf4',
+            bd: bu > 0 ? '#e6cfae' : '#ddd6c4',
+            sayacFg: bu > 0 ? '#b05c2e' : '#2f353a',
+            oncekiGoster: (bu + on) > 0 ? 'inline' : 'none',
+            oncekiYazi: '· kutulara giren ' + (bu + on),
+            bayrakGoster: (k.cipa || k.oneri) ? 'inline-flex' : 'none',
+            bayrak: k.cipa ? '⚓ ÇIPALI PARTİ' : 'MOTOR ÖNERİSİ',
+            bayrakBg: k.cipa ? '#2f353a' : '#e3ecd2',
+            bayrakFg: k.cipa ? '#f5f1e6' : '#46601f',
+            elle: () => this.setState({ sheet:'topAdet', topAdetKalem: k.key, topAdetDeger: kalan })
+          };
+        });
+      })(),
+      topHepsiBitti: (function () {
+        const konan = st.topKonan || {}, onceki = st.topOnceki || {};
+        return TOPLAMA_KALEMLER.every(k => ((konan[k.key]||0) + (onceki[k.key]||0)) >= k.istenen);
+      })(),
+      topListeBaslik: 'TOPLANACAK — KUTUYA GİRMEDİ',
+      topKutuIcerik: TOPLAMA_KALEMLER.filter(k => (st.topKonan || {})[k.key] > 0).map(k => {
+        const bu = st.topKonan[k.key];
+        const toplam = bu + ((st.topOnceki || {})[k.key] || 0);
+        const fazla = toplam > k.istenen;
+        const tam = toplam === k.istenen;
+        return {
+          slotId: 'urun-' + k.key + '-acikkutu',
+          mono: MONO(k.ad),
+          ad: k.ad, boy: k.boy, bu: bu, toplam: toplam, istenen: k.istenen,
+          satirBg: fazla ? '#f8e7e3' : 'transparent',
+          sayacFg: fazla ? '#a44a3f' : tam ? '#46601f' : '#b05c2e',
+          fazlaGoster: fazla ? 'block' : 'none',
+          fazlaYazi: (toplam - k.istenen) + ' fazla — çıkar',
+          buGoster: bu !== toplam ? 'block' : 'none',
+          buYazi: 'bu kutuda ' + bu,
+          geri: () => this.setState(s => {
+            const n = Object.assign({}, s.topKonan); delete n[k.key];
+            return { topKonan: n };
+          })
+        };
+      }),
+      topKutuBos: (function () {
+        const konan = st.topKonan || {};
+        return !TOPLAMA_KALEMLER.some(k => konan[k.key] > 0);
+      })(),
+      topKutuDolu: (function () {
+        const konan = st.topKonan || {};
+        return TOPLAMA_KALEMLER.some(k => konan[k.key] > 0);
+      })(),
+      topKutuAcLabel: 'Kutu aç · Kutu ' + (st.kapananKutular.length + 1),
+      topSayac: (function () {
+        const konan = st.topKonan || {}, onceki = st.topOnceki || {};
+        let a = 0, b = 0;
+        TOPLAMA_KALEMLER.forEach(k => { a += Math.min(k.istenen, (konan[k.key]||0) + (onceki[k.key]||0)); b += k.istenen; });
+        return a + '/' + b + ' adet';
+      })(),
+      topKutuVar: t.kutuAcik && !kapali,
+      topKutuYok: !t.kutuAcik,
+      topBuKutu: (function () {
+        const konan = st.topKonan || {};
+        let n = 0; TOPLAMA_KALEMLER.forEach(k => { n += konan[k.key] || 0; });
+        return n;
+      })(),
+      topCtaLabel: t.kutuAcik ? 'Kutuyu kapat — etiketi bas' : ('Kutu aç · Kutu ' + (st.kapananKutular.length + 1)),
+      topFab: () => { if (t.kutuAcik) this.setT('scanner'); else this.setT('kutuAcik', true); },
+      topFabRenk: t.kutuAcik ? { bg:'#5f7a2c' } : { bg:'#2f353a' },
+      topCta: (function () {
+        const konan = st.topKonan || {};
+        let n = 0; TOPLAMA_KALEMLER.forEach(k => { n += konan[k.key] || 0; });
+        return (!t.kutuAcik || n > 0) ? { bg:'#5f7a2c', fg:'#f5f1e6' } : { bg:'#c4bda9', fg:'#f7f5ee' };
+      })(),
+      sheetTopAdet: st.sheet === 'topAdet',
+      topAdetBaglam: (function () {
+        const k = TOPLAMA_KALEMLER.filter(x => x.key === st.topAdetKalem)[0];
+        if (!k) return { ad:'—', boy:'', raf:'', istenen:0, kalan:0, parti:'' };
+        const konan = st.topKonan || {}, onceki = st.topOnceki || {};
+        return { ad:k.ad, boy:k.boy, raf:k.raf, parti:k.parti, istenen:k.istenen,
+          kalan: Math.max(0, k.istenen - (konan[k.key]||0) - (onceki[k.key]||0)) };
+      })(),
+      topAdetDeger: st.topAdetDeger || 0,
+      topAdetArti: () => this.setState(s => ({ topAdetDeger: (s.topAdetDeger || 0) + 1 })),
+      topAdetEksi: () => this.setState(s => ({ topAdetDeger: Math.max(0, (s.topAdetDeger || 0) - 1) })),
+      topAdetOnay: () => this.setState(s => {
+        if (!s.topAdetKalem || !s.topAdetDeger) return { sheet: null };
+        const n = Object.assign({}, s.topKonan);
+        n[s.topAdetKalem] = (n[s.topAdetKalem] || 0) + s.topAdetDeger;
+        return { sheet: null, topKonan: n, topAdetKalem: null, topAdetDeger: 0, t: Object.assign({}, s.t, { kutuAcik: true }) };
+      }),
+      topKutuIsle: () => this.setState(s => {
+        if (!s.t.kutuAcik) return { t: Object.assign({}, s.t, { kutuAcik: true }) };
+        let n = 0; TOPLAMA_KALEMLER.forEach(k => { n += (s.topKonan[k.key] || 0); });
+        if (!n) return {};
+        const on = Object.assign({}, s.topOnceki);
+        TOPLAMA_KALEMLER.forEach(k => { if (s.topKonan[k.key]) on[k.key] = (on[k.key] || 0) + s.topKonan[k.key]; });
+        return {
+          t: Object.assign({}, s.t, { kutuAcik:false, etiket:true }),
+          topKonan: {}, topOnceki: on,
+          kapananKutular: s.kapananKutular.concat([{
+            no: s.kapananKutular.length + 1,
+            icerik: n + ' adet',
+            qr:'KT-26-' + (7000 + s.kapananKutular.length),
+            kalemler: TOPLAMA_KALEMLER.filter(k => s.topKonan[k.key] > 0).map(k => ({ key:k.key, ad:k.ad, boy:k.boy, adet:s.topKonan[k.key] }))
+          }])
+        };
+      }),
+      tarayiciToplama: cur === 'toplamaDetay',
+      tarayiciToplamaKalemler: TOPLAMA_KALEMLER.map(k => ({
+        et: k.ad + ' · ' + k.boy,
+        oku: () => this.setState(s => {
+          const kalan = Math.max(1, k.istenen - (s.topKonan[k.key]||0) - (s.topOnceki[k.key]||0));
+          return { t: Object.assign({}, s.t, { scanner:false, kutuAcik:true }), sheet:'topAdet', topAdetKalem:k.key, topAdetDeger: kalan };
+        })
+      })),
       sheetImha: st.sheet === 'imha',
       imhaBaglam: baglam(imhaP),
       imhaAdet: imhaAdet,
@@ -2063,7 +2270,10 @@ class Component extends DCLogic {
       kutuCtaLabel: t.kutuAcik ? 'Kutuyu kapat — etiketi bas' : 'Yeni kutu aç · Kutu ' + kutuNo,
       kutuNo,
       kutuBasligi: 'KUTU ' + kutuNo + ' · AÇIK',
-      kapanan,
+      kapanan: kapanan.map(k => ({
+        no: k.no, icerik: k.icerik, qr: k.qr,
+        kalemler: (k.kalemler || []).map(x => ({ slotId:'urun-' + x.key + '-kutu' + k.no, mono: MONO(x.ad), ad:x.ad, boy:x.boy, adet:x.adet }))
+      })),
       kapananVar: kapanan.length > 0,
       oncekiNot: kapanan.length > 0 ? 'Önceki kutularda 2 paket · üstüne yazılmaz' : '',
       inc2: () => this.setState(s => ({ adet: Object.assign({}, s.adet, { k2: s.adet.k2 + 1 }) })),
@@ -2122,7 +2332,7 @@ class Component extends DCLogic {
 }
 </script>
 
-<!-- kaynak: satır 5108-5110 · ortak -->
+<!-- kaynak: satır 5321-5323 · ortak -->
 </script>
 </body>
 </html>
