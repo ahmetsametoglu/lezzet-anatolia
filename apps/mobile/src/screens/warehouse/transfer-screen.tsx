@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -54,6 +56,19 @@ const PREVIEW_LINES = 3;
 export function TransferScreen() {
   const router = useRouter();
   const transferState = useTransfer();
+
+  /*
+    BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
+
+    Uygulamanın tek bir bildirim dili var (`ToastHost`, kökte); depo ekranlarının her biri kendi
+    satırını çiziyordu, yani aynı iş ekran sayısı kadar görsel dille. `toastInfo` SESSİZ ve bu
+    bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında veriyor — `toastSuccess`/
+    `toastError` seçilseydi her bildirim iki kez titrerdi.
+  */
+  useEffect(() => {
+    if (transferState.notice !== null) toastInfo(transferState.notice.text);
+  }, [transferState.notice]);
+
   const { offline } = useWarehouseStatus();
   const workplace = useOperationsWorkplace();
 
@@ -366,15 +381,6 @@ export function TransferScreen() {
             <Text style={styles.lockedTitle}>{t.transfer.locked.title}</Text>
             <Text style={styles.lockedBody}>{t.transfer.locked.body}</Text>
           </View>
-        )}
-        {transferState.notice === null ? null : (
-          <Text
-            style={[styles.notice, styles[`notice_${transferState.notice.tone}`]]}
-            accessibilityRole="alert"
-            testID="warehouse-transfer-notice"
-          >
-            {transferState.notice.text}
-          </Text>
         )}
         <PressableSurface
           onPress={transferState.submit}

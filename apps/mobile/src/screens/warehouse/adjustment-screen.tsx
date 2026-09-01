@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { WarehouseAdjustmentReasonEnum, type ResolvedBatchContract, type WarehouseAdjustmentReason } from '@lezzet/types';
 
+import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
@@ -66,6 +67,19 @@ export function AdjustmentScreen() {
   );
   const scan = useBatchScan(toStockCount);
 
+  /*
+    BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
+
+    Uygulamanın tek bir bildirim dili var (`ToastHost`, kökte); depo ekranlarının her biri kendi
+    satırını çiziyordu, yani aynı iş ekran sayısı kadar görsel dille. `toastInfo` SESSİZ ve bu
+    bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında veriyor — `toastSuccess`/
+    `toastError` seçilseydi her bildirim iki kez titrerdi.
+  */
+  useEffect(() => {
+    if (scan.notice !== null) toastInfo(scan.notice.text);
+  }, [scan.notice]);
+
+
   const stockId = typeof params.stockId === 'string' && params.stockId.length > 0 ? params.stockId : null;
   const subject = [params.code, params.name].filter((part): part is string => typeof part === 'string' && part.length > 0);
 
@@ -114,12 +128,6 @@ export function AdjustmentScreen() {
           >
             <Text style={styles.toNearExpiryLabel}>{t.adjustment.toNearExpiry}</Text>
           </PressableSurface>
-
-          {scan.notice === null ? null : (
-            <Text style={styles.scanNotice} accessibilityRole="alert" testID="warehouse-adjustment-scan-notice">
-              {scan.notice.text}
-            </Text>
-          )}
         </View>
 
         <ScanSheet

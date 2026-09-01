@@ -1,4 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { toastInfo } from '@/lib/toast/toast-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -99,16 +100,32 @@ export function IntakeScreen() {
   const unplanned = params.unplanned === '1' && purchaseOrderId === null;
   const intake = useIntake(purchaseOrderId, unplanned);
   const { offline } = useWarehouseStatus();
+
+  /*
+    BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
+
+    Uygulamanın tek bir bildirim dili var (`ToastHost`, kökte) ve depo ekranlarının her biri kendi
+    satırını çiziyordu: aynı iş, ekran sayısı kadar görsel dil. Cümle artık her yerden aynı yoldan
+    geçiyor. `toastInfo` SESSİZ olan ve bu bilinçli: titreşimi `useNotice` tonuna göre ZATEN yazma
+    anında veriyor (künyesi orada); `toastSuccess`/`toastError` seçilseydi her bildirim iki kez
+    titrerdi.
+  */
+  useEffect(() => {
+    if (intake.notice !== null) toastInfo(intake.notice.text);
+  }, [intake.notice]);
   const [searchOpen, setSearchOpen] = useState(false);
 
   /*
-    OKUTMA PENCERESİ KAPANMADAN ADET ÇEKMECESİ AÇILMAZ — ARTIK BÖYLE BİR KURAL YOK.
+    OKUTMA PENCERESİ İLE ADET ÇEKMECESİ ARASINDA EL SIKIŞMA YOK — ve gerekmiyor.
 
     Arıza 30.08'de burada bulunmuştu (iOS: koli okutulunca satır sayıyor ama çekmece ekranın altında
-    asılı kalıyor) ve çaresi bu ekranın içine elle yazılmıştı: bir bayrak, iki `onDismiss` teli.
-    31.08'de kural kitin içine alındı; 01.09'da ise KÖK kaldırıldı — çekmece `@gorhom/bottom-sheet`e
-    geçti ve RN `Modal`ı kullanmıyor. "iOS kapanmakta olanın üstüne sunmaz" sınırlaması ortadan
-    kalkınca kapıya da gerek kalmadı (künyesi `components/ui/bottom-sheet.tsx`).
+    asılı kalıyor). Sebebi iki `Modal`ın çakışmasıydı: iOS kapanmakta olanın üstüne yenisini
+    sunmuyor, panelin yerleşimi hiç ölçülmüyor ve ölçüme bağlı açılış hiç tetiklenmiyordu. Çare o
+    gün bu ekranın içine elle yazılmıştı: bir bayrak, iki `onDismiss` teli.
+
+    01.09'da çekmece `@gorhom/bottom-sheet`e geçti ve RN `Modal`ı kullanmıyor — kendi portalına
+    asılıyor. Sınırlamanın kendisi ortadan kalktığı için kapı da söküldü (künyesi
+    `components/ui/bottom-sheet.tsx`).
   */
 
   /* ARAMADAN SEÇİLEN ÜRÜN, ÇEKMECE KAPANANA KADAR BEKLER (künyesi `onPick`te). İki kanca da aynı
@@ -578,11 +595,6 @@ export function IntakeScreen() {
       </FormScroll>
 
       <OperationsStickyBar>
-        {intake.notice === null ? null : (
-          <Text style={[styles.notice, styles[`notice_${intake.notice.tone}`]]} accessibilityRole="alert" testID="warehouse-intake-notice">
-            {intake.notice.text}
-          </Text>
-        )}
         {gateNote === null ? null : (
           <Text style={styles.stickyNote} testID="warehouse-intake-gate">
             {gateNote}

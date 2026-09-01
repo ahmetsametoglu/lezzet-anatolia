@@ -17,6 +17,19 @@ import { resetWarehouseStatus } from './warehouse-status';
   · `stale` ve `failed` yutulmaz.
 */
 
+/*
+  BİLDİRİM KANALI TOAST (01.09) — depo ekranlarında satır içi bildirim satırı kalktı, cümle
+  kökteki tek `ToastHost`a gidiyor (ekran künyesi). Test o yüzden artık bir testID değil,
+  basılan METNİ ölçüyor.
+*/
+const mockToast = jest.fn<void, [string]>();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
+
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
@@ -189,7 +202,7 @@ describe('D5 · rampada sayım', () => {
     expect(screen.getByTestId('warehouse-transfer-cta')).toHaveTextContent(/Kabulü kaydet/);
 
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
-    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
 
     expect(lastPostBody().lines).toEqual([
       { lineId: LINE_A, receivedQty: 4 },
@@ -206,7 +219,7 @@ describe('D5 · rampada sayım', () => {
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-transfer-notice')).toHaveTextContent(/1 satır sayılmamış/),
+      expect(mockToast.mock.calls.some(([m]) => /1 satır sayılmamış/.test(m))).toBe(true),
     );
     expect(screen.getByTestId(`warehouse-transfer-line-${LINE_B}`)).toHaveTextContent(/sayılmadı/);
   });
@@ -220,7 +233,7 @@ describe('D5 · rampada sayım', () => {
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-transfer-notice')).toHaveTextContent(/artık yolda değil \(kabul edildi\)/),
+      expect(mockToast.mock.calls.some(([m]) => /artık yolda değil \(kabul edildi\)/.test(m))).toBe(true),
     );
   });
 
@@ -233,7 +246,7 @@ describe('D5 · rampada sayım', () => {
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-transfer-notice')).toHaveTextContent(/partide 3 var, 5 kabul edilemez/),
+      expect(mockToast.mock.calls.some(([m]) => /partide 3 var, 5 kabul edilemez/.test(m))).toBe(true),
     );
   });
 });

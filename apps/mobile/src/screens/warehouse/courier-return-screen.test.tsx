@@ -13,6 +13,19 @@ import { resetWarehouseStatus } from './warehouse-status';
   gelir (adet 0). Fark sistemde hesaplanır — ekran çıkarma yapmaz.
 */
 
+/*
+  BİLDİRİM KANALI TOAST (01.09) — depo ekranlarında satır içi bildirim satırı kalktı, cümle
+  kökteki tek `ToastHost`a gidiyor (ekran künyesi). Test o yüzden artık bir testID değil,
+  basılan METNİ ölçüyor.
+*/
+const mockToast = jest.fn<void, [string]>();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
 }));
@@ -126,7 +139,7 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-return-discard-${LINE.orderItemId}`));
     await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-return-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
     expect(lastPostBody().adjustments).toEqual([
       { orderItemId: LINE.orderItemId, fulfilledQty: 0, returnDisposition: 'discard', note: null },
     ]);
@@ -139,7 +152,7 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-return-goodwill-${LINE.orderItemId}`));
     await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-return-notice')).toBeOnTheScreen());
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
     expect(lastPostBody().adjustments[0]?.fulfilledQty).toBe(LINE.qty);
   });
 
@@ -160,7 +173,7 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-return-notice')).toHaveTextContent(/sağlayıcısı bağlı değil/),
+      expect(mockToast.mock.calls.some(([m]) => /sağlayıcısı bağlı değil/.test(m))).toBe(true),
     );
     expect(screen.queryByText(/18,00/)).toBeNull();
     expect(screen.queryByText(/€/)).toBeNull();
@@ -183,7 +196,7 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
 
     await waitFor(() =>
-      expect(screen.getByTestId('warehouse-return-notice')).toHaveTextContent(/artık bu durumda düzeltilemez/),
+      expect(mockToast.mock.calls.some(([m]) => /artık bu durumda düzeltilemez/.test(m))).toBe(true),
     );
   });
 });

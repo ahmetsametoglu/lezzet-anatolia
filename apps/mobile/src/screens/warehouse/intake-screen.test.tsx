@@ -721,8 +721,6 @@ describe('D2 · mal kabul', () => {
 
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
     expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('parti'));
-    // Şerit ARTIK BAŞARI için çizilmiyor — hata dalının kendi testi var.
-    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
   });
 
   it('KISMİ kayıt: ekran kapanMAZ — kalan satırlar depocuyu bekliyor', async () => {

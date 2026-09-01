@@ -23,6 +23,23 @@ import { resetWarehouseStatus } from './warehouse-status';
 */
 
 const mockParams: { purchaseOrderId?: string; unplanned?: string } = {};
+/*
+  BİLDİRİM KANALI TOAST (01.09) — depo ekranlarında satır içi bildirim satırı kalktı, cümle
+  kökteki tek `ToastHost`a gidiyor (ekran künyesi). Test o yüzden artık bir testID değil,
+  basılan METNİ ölçüyor.
+*/
+const mockToast = jest.fn<void, [string]>();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
+/** Toast'a basılmış cümlelerden biri kalıba uyuyor mu. */
+async function expectToast(pattern: RegExp): Promise<void> {
+  await waitFor(() => expect(mockToast.mock.calls.some(([message]) => pattern.test(message))).toBe(true));
+}
+
 jest.mock('expo-router', () => ({
   useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
   useLocalSearchParams: () => mockParams,
@@ -147,7 +164,7 @@ describe('D2 · tarama akışı', () => {
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('6'));
     /* BAŞARILI OKUTMA BİLDİRİM BASMAZ (kullanıcı bulgusu 30.08): satır zaten açıldı, adedi
        yazıldı ve künyesi "barkod okutuldu" dedi — şerit aynı şeyi üçüncü kez söylüyordu. */
-    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
+    expect(mockToast).not.toHaveBeenCalled();
 
     // İkinci koli aynı satıra TOPLANIR (6 + 6).
     await scanOnce();
@@ -237,7 +254,7 @@ describe('D2 · tarama akışı', () => {
 
     await scanOnce();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/kaleminde yok/));
+    await expectToast(/kaleminde yok/);
     // Hiçbir satıra adet DÜŞMEZ ve yeni satır doğmaz: fark raporunun kümesi siparişten gelir.
     expect(screen.queryByTestId('warehouse-intake-scanned-qty-value')).toBeNull();
     expect(qtyOf(ROW_A.variantId)).toBe('');
@@ -254,12 +271,16 @@ describe('D2 · tarama akışı', () => {
     await fireEvent.press(screen.getByLabelText(`${ROW_B.productName} · ${ROW_B.variantLabel}`));
     // 2. adım varsayılanı TEKİL: koli olduğunu ancak depocu bilir, tersini varsaymak her pakete
     // uydurma bir çarpan yazmak olurdu.
+    /* Sayaç BU ADIMA sıfırlanır: toast bir GEÇMİŞ tutuyor ve testin daha önceki adımı (yabancı
+       ürün reddi) haklı olarak bir cümle basmıştı. Ölçülen şey "hiç bildirim olmadı" değil,
+       "öğrenme bildirim BASMADI". */
+    mockToast.mockClear();
     await fireEvent.press(screen.getByTestId('warehouse-intake-learn-confirm'));
 
     await waitFor(() => expect(qtyOf(ROW_B.variantId)).toBe('1'));
-    /* Öğrenme de bildirim basmaz: sonucu listenin üstündeki KALICI kart söylüyor ("Kod öğrenildi ·
+    /* Öğrenme bildirim basmaz: sonucu listenin üstündeki KALICI kart söylüyor ("Kod öğrenildi ·
        <kod> → <ürün>"), satırın künyesi de "koli barkodu · bir okutma = N adet" diyor. */
-    expect(screen.queryByTestId('warehouse-intake-notice')).toBeNull();
+    expect(mockToast).not.toHaveBeenCalled();
     const learnCall = fetchMock.mock.calls.findLast((c) => String(c[0]).endsWith('/codes'));
     expect(JSON.parse(String(learnCall?.[1]?.body ?? '{}'))).toMatchObject({
       variantId: ROW_B.variantId,
@@ -321,7 +342,7 @@ describe('D2 · tarama akışı', () => {
     // Depocu B'yi seçti ama kod bu arada A'ya bağlanmış: adet A'ya düşer, B'ye değil.
     await waitFor(() => expect(qtyOf(ROW_A.variantId)).toBe('1'));
     expect(qtyOf(ROW_B.variantId)).toBe('');
-    expect(screen.getByTestId('warehouse-intake-notice')).toHaveTextContent(/bağlanmış/);
+    await expectToast(/bağlanmış/);
   });
 });
 
