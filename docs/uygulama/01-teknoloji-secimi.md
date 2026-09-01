@@ -254,8 +254,13 @@ kendi görünüşüyle getiren kitler.
 > `leaflet` · Brother SDK. Ölçüt görünüş değil UYUM: New Architecture uyumluluğu + Expo SDK'nın
 > sabitlediği sürüm aralığı (§9 eleme ölçütü), ve getirdiği şeyin DAVRANIŞ olması — görünüşü biz
 > veriyoruz.
-
-**Stil motoru: Unistyles 3** + kendi form kitimiz; form kitinin davranış/a11y
+>
+> **Yüzen sayfa göçü DENENDİ VE GERİ ALINDI (01.09).** `@gorhom/bottom-sheet`e geçildi, cihazda üç
+> ayrı arıza çıktı (görünmez örtü dokunuşları yuttu · çekmece kendini portaldan söktü · kapanış
+> kancası hiç gelmedi) ve dördüncüsü — SKT çekmecesinin hiç açılmaması — SEBEBİ BULUNAMADAN kaldı.
+> Karar yanlış değildi, YÖNTEM yanlıştı: sondaj tek akışta, tek platformda doğrulandı ve 1195 yeşil
+> test kanıt sayıldı — oysa testler kendi yazdığımız sahteyi kullanıyor ve bir çekmecenin gerçekten
+> açılıp açılmadığını ÖLÇEMEZ. Tekrar denenirse önce 42 çağrının cihaz turu planlanmalı. **Stil motoru: Unistyles 3** + kendi form kitimiz; form kitinin davranış/a11y
 iskeleti için @rn-primitives'ten **kopyala-sahiplen** (shadcn modeli — kod repoya girer, bizim
 olur; "kütüphane istemem" tercihiyle çelişmez, onu destekler).
 

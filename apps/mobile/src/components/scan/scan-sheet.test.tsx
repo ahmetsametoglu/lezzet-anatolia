@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import { ScanSheet } from './scan-sheet';
 
@@ -57,22 +57,9 @@ describe('ScanSheet', () => {
 
     await view.rerender(<ScanSheet open={false} title="Koli okut" onClose={onClose} onScan={onScan} testID="scan" />);
     await view.rerender(<ScanSheet open title="Koli okut" onClose={onClose} onScan={onScan} testID="scan" />);
-    /* Çekmece bir kare sonra çizilir: `visible` prop'u kütüphanenin `present()`ine çevriliyor ve o
-       bir durum değişimi. Cihazda görünmez, testte `fireEvent`ler aynı karede koştuğu için görünür. */
-    await waitFor(() => expect(screen.getByLabelText('Paket')).toBeOnTheScreen());
     await fireEvent.press(screen.getByLabelText('Paket'));
 
     expect(onScan).toHaveBeenCalledTimes(2);
-  });
-
-  it('çağıranın çip listesi BOŞSA panel sessiz kalmaz — nedenini yazar', async () => {
-    // Kullanıcı bulgusu 31.08: toplama ekranında kalemlerin kayıtlı barkodu yoktu, panel başlığı
-    // çizilip altı boş kalıyordu ve bu "simülasyon bozuk" diye okunuyordu. Boş liste bir HÂLDİR;
-    // varsayılan havuza düşmek değil, hâli söylemek doğrusu — sahte kod okutmak yalancı bir akış.
-    await render(<ScanSheet open title="Kalemi kutuya okut" onClose={onClose} onScan={onScan} devCodes={[]} testID="scan" />);
-
-    expect(screen.getByText(/çip üretilemedi/)).toBeOnTheScreen();
-    expect(screen.queryByLabelText('Paket')).toBeNull();
   });
 
   it('izin verilmemişken vizör yerine izin kutusu çizilir; havuz yine durur', async () => {

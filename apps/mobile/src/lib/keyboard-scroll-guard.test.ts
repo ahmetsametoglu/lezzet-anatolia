@@ -176,9 +176,12 @@ describe('klavye koruması — girdisi olan kaydırıcı ham olamaz', () => {
         'keyboardShouldPersistTaps="handled"',
       );
     }
-    // Çekmece kendi paneliyle çalışıyor; korumasını kendi testi ölçüyor (`bottom-sheet.test.tsx`).
+    /* ÇEKMECEDE KAÇINMA ARTIK KÜTÜPHANENİN (01.09): gövde `@gorhom/bottom-sheet`e geçti ve
+       `KeyboardAvoidingView` yerine `keyboardBehavior` + `android_keyboardInputMode` kullanıyor —
+       kaçınmayı panelin kendi konumundan yürütüyor. Ölçülen şey değişmedi, ADI değişti: kapta
+       klavye koruması YAZILI olmalı. */
     expect(readFileSync(path.join(screensRoot, 'components/ui/bottom-sheet.tsx'), 'utf8')).toContain(
-      'KeyboardAvoidingView',
+      'keyboardBehavior',
     );
   });
 

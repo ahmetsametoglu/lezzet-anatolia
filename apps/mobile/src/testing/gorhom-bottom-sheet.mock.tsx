@@ -23,19 +23,34 @@ interface ModalProps {
   children?: ReactNode;
   onDismiss?: () => void;
   handleComponent?: () => ReactNode;
-  backdropComponent?: (props: { animatedIndex: { value: number }; style: undefined }) => ReactNode;
   backgroundStyle?: StyleProp<ViewStyle>;
 }
 
 export class BottomSheetModal extends Component<ModalProps, { open: boolean }> {
   override state = { open: false };
 
+  /*
+    SÖKÜLMÜŞ ÇEKMECE ÖLÜDÜR — gerçeğin en pahalı davranışı ve ikizin taklit etmesi ŞART.
+
+    Kütüphane, panel zaten kapalıyken gelen `dismiss()`te kendini portaldan çıkarıyor
+    (`unmount()` → `unmountSheet` + `unmountPortal`); ondan sonra gelen `present()` çekmeceyi geri
+    getirmiyor. 01.09'da cihazdaki iki arıza da bundandı: `visible={false}` ile monte olan çekmece
+    daha doğmadan ölüyordu, ve elle kapatılan çekmece ikinci `dismiss()` yüzünden bir daha
+    açılmıyordu. İkiz bunu modellemezse testler ikisini de yeşil geçer — nitekim geçmişti.
+  */
+  private dead = false;
+
   present(): void {
+    if (this.dead) return;
     this.setState({ open: true });
   }
 
   dismiss(): void {
-    if (!this.state.open) return;
+    if (!this.state.open) {
+      this.dead = true;
+      this.props.onDismiss?.();
+      return;
+    }
     this.setState({ open: false }, () => this.props.onDismiss?.());
   }
 
@@ -52,20 +67,30 @@ export class BottomSheetModal extends Component<ModalProps, { open: boolean }> {
   expand(): void {}
   collapse(): void {}
 
+  /*
+    KULLANICININ KAPATMASI İÇİN DİKİŞ — gerçekte bu, tutamaktan aşağı sürüklemedir
+    (`enablePanDownToClose`): çekmece KENDİ kapanır ve `onDismiss` çağırır; çağıranın `visible`ı
+    henüz düşmemiştir. Bileşenin en kırılgan yolu bu ve testin ona ulaşabilmesi gerekiyor.
+  */
+  private selfDismiss = (): void => {
+    if (!this.state.open) return;
+    this.setState({ open: false }, () => this.props.onDismiss?.());
+  };
+
   override render(): ReactNode {
     if (!this.state.open) return null;
-    const { children, handleComponent, backdropComponent, backgroundStyle } = this.props;
+    const { children, handleComponent, backgroundStyle } = this.props;
     return createElement(
       View,
       { style: backgroundStyle },
-      backdropComponent?.({ animatedIndex: { value: 0 }, style: undefined }),
+      createElement(View, { key: 'self-dismiss', testID: 'gorhom-self-dismiss', onTouchEnd: this.selfDismiss }),
       handleComponent?.(),
       children,
     );
   }
 }
 
-/* Yüzey DAR ve bilinçli: yalnız gerçekten ithal edilen üçü. Kullanılmayan bir sahte, bir gün
-   kütüphane o adı değiştirdiğinde sessizce yanlış kalır — `knip` de göremez. */
 export const BottomSheetModalProvider = ({ children }: { children?: ReactNode }): ReactNode => children;
 export const BottomSheetScrollView = ScrollView;
+/* Örtü artık KÜTÜPHANENİN (bileşen künyesi) — testte çizilmesi gerekmiyor, yalnız var olması. */
+export const BottomSheetBackdrop = (): ReactNode => null;

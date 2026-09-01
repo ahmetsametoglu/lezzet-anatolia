@@ -1,96 +1,50 @@
 import { type ReactNode, useCallback, useEffect, useRef } from 'react';
-import { BackHandler, Pressable, Text, View } from 'react-native';
-import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
-import Animated, { Extrapolation, interpolate, useAnimatedStyle } from 'react-native-reanimated';
-import { BottomSheetModal, BottomSheetScrollView, type BottomSheetBackdropProps } from '@gorhom/bottom-sheet';
-
-import { appMetrics } from '@/theme/metrics';
+import { BackHandler, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
 /*
   YÜZEN SAYFA (bottom sheet) — v3'ün tek katman-üstü kalıbı (`shOn`). İçerik YUVADIR: sheet hangi
   içeriğin geleceğini bilmez, yalnız örtüyü, tutamağı, başlığı ve kapanma yollarını garanti eder.
-  23 dosya bu dokuz prop'la çağırıyor; kütüphaneyi hiçbiri görmüyor.
+  42 çağrı bu dokuz prop'la geliyor; kütüphaneyi hiçbiri görmüyor.
 
-  ── GÖVDESİ ARTIK `@gorhom/bottom-sheet` (kullanıcı kararı 01.09) ────────────
-  Eski gövde kendi yazdığımız 452 satırdı: RN `Modal` + Reanimated + gesture-handler. Görünüş
-  doğruydu ama ARIZALIYDI ve arıza hep aynı kökten çıkıyordu: **açılış animasyonu bir ÖLÇÜME
-  bağlıydı.** Panel nereden geleceğini bilmek için kendi yüksekliğini bilmek zorundaydı, onu da
-  ancak çizilince (`onLayout`) öğreniyordu. Zincir koptuğunda Modal biniyor, örtü çiziliyor, panel
-  ekranın dışında kalıyordu — "çekmece açılmıyor" denen şey buydu. Üç kez, üç kılıkta:
+  ── GÖVDE `@gorhom/bottom-sheet`, VE MÜMKÜN OLAN EN SADE HÂLİYLE (kullanıcı kararı 01.09) ────
+  Bir önceki deneme cihazda dört arıza çıkardı ve DÖRDÜ DE kütüphaneye eklediğim makinelerdendi:
+  kendi örtüm dokunuşları yutuyordu (`pointerEvents` sabitti), kendi açma/kapama muhasebem çekmeceyi
+  daha doğmadan portaldan söküyordu, kapanış kancasını kütüphanenin `onDismiss`ine bağlamıştım ve
+  o sinyal gelmiyordu, panelin sürükleme jesti içerideki listelerle yarışıyordu.
 
-    · 10.08 — ikinci açılış: bileşen sökülmediği için ölçü hafızada kalıyor, `onLayout` "değişmedi"
-      diye erken dönüyor, animasyonu kimse başlatmıyor.
-    · 30.08 (mal kabul) — iOS kapanmakta olan modal'ın üstüne yenisini SUNMUYOR: panel monte oluyor,
-      hiç yerleşmiyor, `onLayout` hiç gelmiyor.
-    · 31.08 (toplama) — aynısı, bir ay sonra, başka ekranda.
+  Ders: **kütüphaneye ne kadar az şey eklersem o kadar az yerde yanılırım.** Bu yüzden burada
+  örtü kütüphanenin, açılma/kapanma kütüphanenin, ölçü kütüphanenin. Bize ait olan yalnız GÖRÜNÜŞ
+  (tutamak + başlık + renkler) ve iki DAVRANIŞ: Android'in geri tuşu ve kapanış kancası — ikisi de
+  kütüphanede yok ve ikisi de sözleşmemizde var.
 
-  İlk ikisinin çaresi belirtiyi kovaladı (bayrak, sonra ekran içi bir kapı, sonra kit çapında bir
-  "modal trafiği" kuralı); kök duruyordu. Kütüphane kökü kaldırıyor: `BottomSheetModal` RN
-  `Modal`ını KULLANMIYOR, kendi portalıyla (`@gorhom/portal`) uygulama ağacına asılıyor. Native
-  modal yoksa "kapanmakta olanın üstüne sunulamaz" diye bir kural da yok — `modal-traffic.ts`,
-  `onDismissed` teli ve 450 ms'lik emniyet sayacı bu yüzden söküldü.
-
-  ── NEDEN BU KÜTÜPHANE, NEDEN KİT DEĞİL ─────────────────────────────────────
-  Proje kararı GÖRÜNÜŞ DAYATAN TAM KİTİ eliyor (Material/NativeBase sınıfı), tek işi çözen odaklı
-  kütüphaneyi değil — `01-teknoloji-secimi §11`. Bu paket davranış getiriyor, görünüş getirmiyor:
-  örtü, tutamak ve başlık aşağıda BİZİM komponentlerimiz. `@expo/ui`nin native çekmecesi de aday
-  olarak bakıldı ve ELENDİ: kendi dokümanı özel örtü/tutamak/altlığın çizilmediğini söylüyor ve
-  iOS'ta SwiftUI sheet, Android'de Compose görünüşü dayatıyor — `.dc.html`'i birebir uygulama
-  kuralıyla çatışır.
-
-  ── KORUNAN CİHAZ BULGULARI ─────────────────────────────────────────────────
-  Eski gövde yedi ayrı bulgu taşıyordu; hiçbiri kaybolmadı, yeri değişti:
-    · klavye paneli ezmez → `keyboardBehavior` + `android_keyboardInputMode` (kütüphane işi)
-    · panel tavanı ekranın %82'si, üst güvenli alan korunur → `maxDynamicContentSize` + `topInset`
-    · sığmayan içerik kayar → `BottomSheetScrollView`
-    · tutamaktan aşağı sürükleyerek kapatma → `enablePanDownToClose`
-    · örtü sürüklenirken de solar → kütüphanenin kendi `BottomSheetBackdrop`u
-    · içerideki jestler (adet rayı) çalışır → portal hareket kökünün İÇİNDE (`app/_layout`), artık
-      Modal'ın içine ikinci bir `GestureHandlerRootView` koymak gerekmiyor
-    · alt güvenli alan klavye açıkken EKLENMEZ → `scrollContent`ta, aynı koşulla
+  ── NEDEN KÜTÜPHANE ─────────────────────────────────────────────────────────
+  Kendi gövdemizin açılışı bir ÖLÇÜME bağlıydı (`onLayout`) ve ölçüm gelmediğinde panel ekranın
+  dışında kalıyordu — üç turda üç ekranda (10.08 · 30.08 · 31.08). `BottomSheetModal` RN `Modal`ını
+  kullanmıyor, kendi portalına asılıyor; "iOS kapanmakta olanın üstüne sunmaz" sınırlaması da
+  böylece ortadan kalkıyor.
 */
 
 interface BottomSheetProps {
   visible: boolean;
   /** Başlık — i18n üstte çözülür; ekran okuyucuda katmanın adıdır. */
   title: string;
-  /**
-   * Başlık satırının SAĞ yuvası — "sıfırla" gibi panelin tamamına ait bir eylem (tasarım karesi
-   * `02b-Adet-Klavyesi`: başlık solda, sıfırla onunla aynı hizada sağda).
-   *
-   * Eylem başlığın ALTINA konsaydı satırın konusuyla karışırdı: "sıfırla" bir alanı değil
-   * çekmecenin tamamını sıfırlıyor.
-   */
+  /** Başlık satırının SAĞ yuvası — panelin tamamına ait bir eylem ("sıfırla"). */
   titleAction?: ReactNode;
   /**
    * **SABİT BOYLU PANEL** — yalnız içeriği SIFIRDAN büyüyen çekmecelerde (kullanıcı bulgusu 30.08).
-   *
-   * Ürün arama çekmecesi boşken bir avuç kadar açılıyor, her harfte sonuç geldikçe zıplıyor ve
-   * depocunun parmağının altındaki satır yer değiştiriyor. Panelin boyu ARAMANIN kendisiyle
-   * belirlenemez; sabit olmalı ki liste onun İÇİNDE dolsun.
-   *
-   * Verilmezse davranış aynen eskisi: yükseklik içerikten gelir (`enableDynamicSizing`).
+   * Arama çekmecesi boşken bir avuç kadar açılıyor, her harfte büyüyor ve parmağın altındaki satır
+   * yer değiştiriyordu. Verilmezse yükseklik içerikten gelir.
    */
   fill?: boolean;
   onClose: () => void;
   /**
-   * Çekmece EKRANDAN KALKTIKTAN sonra çağrılır (kütüphanenin `onDismiss`i).
-   *
-   * NEDEN VAR (21.121, cihazda kanıtlandı 26.08): çekmece açıkken kök yığını değiştirmek
-   * (`router.replace`) Fabric'i çökertiyor — söküm ile yeni kabuğun İLK (ağır) mount'u aynı
-   * pencereye giriyor ve "The specified child already has a parent" fırlıyor. Çekmeceden çıkıp
-   * BAŞKA bir köke gidecek her eylem yönlendirmesini buraya bağlar. `onClose` NİYETİN kancasıdır
-   * (görünürlük state'ini düşürür), bu ise sökümün — ikisi bilerek ayrı.
+   * Çekmece kapandıktan SONRA çağrılır — çekmeceden çıkıp başka bir köke gidecek eylemler
+   * yönlendirmeyi buna bağlar (21.121). `onClose` NİYETİN kancasıdır, bu KAPANIŞIN.
    */
   onClosed?: () => void;
-  /**
-   * `onClosed`ın eş anlamlısı — GEÇİŞ DÖNEMİ KANCASI, yeni çağıran KULLANMASIN.
-   *
-   * Eskiden ayrı bir şey demekti: iOS'un `Modal.onDismiss`i, yani "native modal gerçekten kalktı".
-   * Ardından İKİNCİ bir modal açacak çağıranlar buna bakmak zorundaydı, çünkü iOS kapanmakta
-   * olanın üstüne sunmuyordu. Portal'a geçince o sınırlama ortadan kalktı ve ayrım anlamsızlaştı;
-   * kanca yalnız çağıranları kırmamak için duruyor ve `onClosed` ile AYNI anda çağrılıyor.
-   */
+  /** `onClosed`ın eş anlamlısı — geçiş dönemi kancası, yeni çağıran kullanmasın. */
   onDismissed?: () => void;
   children: ReactNode;
   testID?: string;
@@ -108,36 +62,53 @@ export function BottomSheet({
   testID,
 }: BottomSheetProps) {
   const sheet = useRef<BottomSheetModal>(null);
-
-  /* KAPANIŞIN KAYNAĞI AYIRT EDİLİR: kütüphane `onDismiss`i hem kullanıcı kapatınca hem BİZ
-     `dismiss()` çağırınca veriyor. `onClose` ise sözleşmede NİYETİN kancası — çağıranın kendi
-     `visible`ını düşürdüğü yer. Ayırmasaydık `visible=false` → `dismiss()` → `onDismiss` →
-     `onClose()` zinciri doğardı: bugün zararsız (çağıranların hepsi `setX(false)` yazıyor),
-     yarın yan etkisi olan bir çağıranda sessiz bir çift-çalışma. */
-  const programmatic = useRef(false);
+  /** Kütüphane çekmeceyi ekranda mı tutuyor — `dismiss()` YALNIZ buna bakar (künye aşağıda). */
+  const shown = useRef(false);
+  /** Çağıranın niyeti açık mıydı — kapanış KANCALARI buna bakar; ikisi AYNI ŞEY DEĞİL. */
+  const wanted = useRef(false);
 
   useEffect(() => {
     if (visible) {
-      /* Bayrak AÇILIŞTA sıfırlanır: kullanıcı sürükleyerek kapattığında `onDismiss` zaten
-         çalışmış ve çağıran `visible`ı düşürmüştür — aşağıdaki dal `dismiss()` çağırır, kapalı
-         sheet ikinci bir `onDismiss` üretmez ve bayrak `true` asılı kalırdı. Bir sonraki
-         kullanıcı kapatması o zaman `onClose`suz geçerdi. */
-      programmatic.current = false;
+      shown.current = true;
+      wanted.current = true;
       sheet.current?.present();
       return;
     }
-    programmatic.current = true;
-    sheet.current?.dismiss();
-  }, [visible]);
+    /*
+      İKİ BAYRAK, ÇÜNKÜ İKİ AYRI SORU (ölçüldü 01.09):
+        · `shown` — kütüphane bunu ekranda tutuyor mu? `dismiss()` yalnız buna bakar.
+        · `wanted` — çağıran açmak istemiş miydi? `onClosed` yalnız buna bakar.
+      Kullanıcı tutamaktan kapattığında çekmece KENDİ kapanır (`shown` düşer) ama çağıranın
+      `visible`ı bir tur sonra düşer; tek bayrak olsaydı o turda `onClosed` hiç çağrılmazdı —
+      ona kök yönlendirmesi bağlı (prop künyesi).
+    */
+    if (!wanted.current) return;
+    wanted.current = false;
+    /*
+      HİÇ SUNULMAMIŞ ÇEKMECE KAPATILMAZ — kütüphanenin en pahalı davranışı.
 
-  /*
-    ANDROID'İN GERİ HAREKETİ — kütüphane bunu YAPMIYOR (kaynağında `BackHandler` yok, okundu 01.09).
+      `dismiss()`, panel zaten kapalı konumdaysa çekmeceyi PORTALDAN SÖKÜYOR (`BottomSheetModal`
+      kaynağı: `unmount()`), ve sökülen çekmece bir daha açılmıyor. Çekmecelerimizin çoğu
+      `visible={false}` ile monte olduğu için korumasız bir efekt hepsini doğar doğmaz öldürüyordu
+      (cihazda ölçüldü 01.09: SKT çekmecesi ve ürün araması hiç açılmadı).
+    */
+    if (shown.current) {
+      shown.current = false;
+      sheet.current?.dismiss();
+    }
 
-    Eski gövdede `Modal.onRequestClose` bedavaydı ve künyesi şunu yazıyordu: *"Android'de bir
-    katmanın geri tuşuyla kapanmaması ARIZADIR, tasarım eksiği değil."* Göç sırasında sessizce
-    kaybolacaktı; kancayı buraya, KİTE koyuyoruz — 23 çekmecenin hepsi aynı sözü tutsun diye.
-    iOS'ta `BackHandler` zaten sessiz, koşul gerekmiyor.
-  */
+    /* Kapanış kancası BİZDEN: kütüphanenin `onDismiss`i her koşulda gelmiyor (ölçüldü — plansız
+       kabulde seçilen ürün hiç eklenmedi). Bir kare erteleme sözleşmenin kendi gerekçesi (21.121). */
+    const frame = requestAnimationFrame(() => {
+      onClosed?.();
+      onDismissed?.();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [onClosed, onDismissed, visible]);
+
+  /* ANDROID'İN GERİ HAREKETİ — kütüphanede `BackHandler` yok (kaynağı okundu). Eski gövdede
+     `Modal.onRequestClose` bedavaydı ve künyesi *"Android'de geri tuşuyla kapanmamak ARIZADIR"*
+     diyordu; söz kitte tutuluyor. iOS'ta `BackHandler` zaten sessiz. */
   useEffect(() => {
     if (!visible) return;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -147,84 +118,45 @@ export function BottomSheet({
     return () => subscription.remove();
   }, [onClose, visible]);
 
+  /* Kullanıcı kapattı (sürükleme): çekmece kendi kapandığını söylüyor, bayrak burada düşer ki
+     çağıranın `visible`ı düşünce ikinci bir `dismiss()` gitmesin — o çağrı çekmeceyi söker. */
   const handleDismiss = useCallback(() => {
-    const wasProgrammatic = programmatic.current;
-    programmatic.current = false;
-    if (!wasProgrammatic) onClose();
-    onClosed?.();
-    onDismissed?.();
-  }, [onClose, onClosed, onDismissed]);
-
-  /* ÖRTÜ BİZİM, ve bu bir zorunluluk: kütüphanenin `BottomSheetBackdrop`u `testID` geçirmiyor
-     (kaynağında `...rest` yok — okundu) ve üç test örtüye dokunuyor. Kendi örtümüz aynı işi
-     yapıyor: opaklık panelin konumundan türüyor (parmakla inen panelde örtü de solar — eski
-     gövdenin `Math.min(scrimOpacity, dragged)` kuralının kütüphanedeki karşılığı), dokunuş
-     `onClose`a gidiyor. Ekran okuyucuya "kapat" diye ayrı bir hedef EKLENMEZ: katmanın kendi
-     kapatma düğmeleri okunur, örtü yalnız işaretçi kısayoludur. */
-  const renderBackdrop = useCallback(
-    (props: BottomSheetBackdropProps) => <Scrim {...props} onPress={onClose} testID={testID} />,
-    [onClose, testID],
-  );
-
-  /* TUTAMAK + BAŞLIK BİRLİKTE, ve bu bilinçli: ikisi de panelin SABİT bölümü — içerik kayarken
-     yerinde kalmalılar. Kütüphanenin `handleComponent`i tam olarak o sabit bölge; başlığı
-     içeriğin içine koysaydık uzun listede yukarı kaçardı. */
-  const renderHandle = useCallback(
-    () => (
-      <View style={styles.head}>
-        <View style={styles.handleZone} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-          <View style={styles.handle} />
-        </View>
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, styles.titleText]} accessibilityRole="header">
-            {title}
-          </Text>
-          {titleAction}
-        </View>
-      </View>
-    ),
-    [title, titleAction],
-  );
-
-  /* TAVAN: ekranın %82'si (çekmece hissi — arkadan bir şerit hep görünsün) ile GERÇEKTEN boşta
-     olan yerin küçüğü. Klavye yüksekliği düşülür; üst güvenli alanı `topInset` ayrıca koruyor.
-     Oran tek kaynaktan (`appMetrics`) okunuyor — stil dosyasıyla iki ayrı 0.82 tutmak, bir gün
-     birinin değişip ötekinin kalması demekti. */
-  const ceiling =
-    Math.min(
-      UnistylesRuntime.screen.height * appMetrics.sheetMaxHeightRatio,
-      UnistylesRuntime.screen.height - UnistylesRuntime.insets.ime - UnistylesRuntime.insets.top,
-    ) - UnistylesRuntime.insets.top;
+    if (!shown.current) return;
+    shown.current = false;
+    onClose();
+  }, [onClose]);
 
   return (
     <BottomSheetModal
       ref={sheet}
-      /* `fill`de boy SABİT (tek durak), aksi hâlde içerikten gelir — prop künyesi yukarıda. */
       enableDynamicSizing={!fill}
-      snapPoints={fill ? [ceiling] : undefined}
-      maxDynamicContentSize={ceiling}
-      topInset={UnistylesRuntime.insets.top}
+      snapPoints={fill ? ['82%'] : undefined}
       enablePanDownToClose
+      /* SÜRÜKLEME YALNIZ TUTAMAKTAN — eski gövdenin davranışının aynısı (jest `GestureDetector` ile
+         tutamağa bağlıydı). Panelin her yerinden sürüklemek, içerideki her kaydırma alanıyla
+         yarışmak demek: SKT tekerlekleri bu yüzden hiç kaymıyordu (ölçüldü 01.09). */
+      enableContentPanningGesture={false}
       onDismiss={handleDismiss}
-      backdropComponent={renderBackdrop}
-      handleComponent={renderHandle}
+      backdropComponent={Backdrop}
+      handleComponent={() => (
+        <View style={styles.head}>
+          <View style={styles.handleZone} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <View style={styles.handle} />
+          </View>
+          <View style={styles.titleRow}>
+            <Text style={styles.title} accessibilityRole="header">
+              {title}
+            </Text>
+            {titleAction}
+          </View>
+        </View>
+      )}
       backgroundStyle={styles.panel}
-      /* Klavye: içerik parmakla birlikte kayar; Android'de pencere daralır. Eski gövdenin
-         `KeyboardAvoidingView` + "klavye arkası kanama" katmanı bunun elle yazılmış hâliydi. */
       keyboardBehavior="interactive"
-      keyboardBlurBehavior="restore"
       android_keyboardInputMode="adjustResize"
     >
-      {/* `keyboardShouldPersistTaps`: klavye açıkken gönder düğmesi İLK dokunuşta çalışsın
-          (`(21.33)` tuzağı — kullanıcı bulgusu: iki dokunuş gerekiyordu). */}
-      {/* KATMANIN KİMLİĞİ KAYDIRMA ALANINDA (01.09): kütüphanenin `BottomSheetModal`ı `testID`
-          almıyor (tipinde yok, kaynağında `...rest` de yok) ama on iki ekranın testi çekmeceyi
-          kendi kimliğiyle arıyor — "açıldı mı", "içinde şu cümle var mı". Kimlik bu yüzden panelin
-          İÇERİK kabında duruyor: kapalıyken kap hiç çizilmiyor, yani `queryByTestId` yine `null`
-          diyor ve testlerin ölçtüğü anlam birebir korunuyor. */}
       <BottomSheetScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         testID={testID}
       >
@@ -234,40 +166,22 @@ export function BottomSheet({
   );
 }
 
-/** Örtü — künyesi çağırdığı yerde. `animatedIndex`: -1 kapalı, 0 açık. */
-function Scrim({
-  animatedIndex,
-  style,
-  onPress,
-  testID,
-}: BottomSheetBackdropProps & { onPress: () => void; testID?: string }) {
-  const fade = useAnimatedStyle(() => ({
-    opacity: interpolate(animatedIndex.value, [-1, 0], [0, 1], Extrapolation.CLAMP),
-  }));
-
-  return (
-    <Animated.View style={[style, fade]} pointerEvents="auto">
-      <Pressable
-        style={styles.scrim}
-        onPress={onPress}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        testID={testID === undefined ? undefined : `${testID}-scrim`}
-      />
-    </Animated.View>
-  );
+/* ÖRTÜ KÜTÜPHANENİN: dokunuş geçirgenliğini konumdan kendisi hesaplıyor. Kendi örtümü yazdığımda
+   `pointerEvents="auto"` sabit kalmış ve kapanan çekmecenin ardında görünmez bir cam bırakmıştı —
+   ekran hiçbir dokunuşa cevap vermiyordu (kullanıcı bulgusu 01.09). Bize ait olan yalnız renk. */
+function Backdrop(props: React.ComponentProps<typeof BottomSheetBackdrop>) {
+  return <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} style={[props.style, styles.scrim]} />;
 }
 
 const styles = StyleSheet.create((t, rt) => ({
-  scrim: { flex: 1, backgroundColor: t.colors.scrim },
+  scrim: { backgroundColor: t.colors.scrim },
   panel: {
     backgroundColor: t.colors['sand-50'],
-    // Şablon 26'lık köşe çiziyor; resmî yarıçap seti (Token Kararlari #7) yüzen sayfayı `card`
-    // (20) kademesine bağlıyor — ayrı bir 26 durağı açmak seti dörtten beşe çıkarırdı.
+    // Şablon 26'lık köşe çiziyor; resmî yarıçap seti yüzen sayfayı `card` (20) kademesine bağlıyor.
     borderTopLeftRadius: t.radius.card,
     borderTopRightRadius: t.radius.card,
   },
-  /** Panelin SABİT bölümü: tutamak + başlık. Yatay nefes burada başlar. */
+  /** Panelin SABİT bölümü: tutamak + başlık — içerik kayarken yerinde kalır. */
   head: {
     paddingTop: t.space.lg,
     paddingHorizontal: t.space['5xl'],
@@ -275,35 +189,24 @@ const styles = StyleSheet.create((t, rt) => ({
     gap: t.space['2xl'],
   },
   /** Tutamağın KAVRAMA bölgesi — görünmez, yalnız parmağa alan açar. */
-  handleZone: {
-    alignSelf: 'stretch',
-    alignItems: 'center',
-    paddingVertical: t.space.lg,
-    // Kendi dolgusunu ekler, panelin üst boşluğu bir kez sayılsın diye üstteki payı geri alır.
-    marginTop: -t.space.lg,
-  },
+  handleZone: { alignSelf: 'stretch', alignItems: 'center', paddingVertical: t.space.lg, marginTop: -t.space.lg },
   handle: {
     width: t.size.sheetHandle,
     height: t.border.sheetHandle,
-    // Tam yuvarlak uç, kalınlığın YARISINDAN türer — şablonun 3'ü de zaten budur (5/2 ≈ 2,5).
-    // Resmî yarıçap seti bu kademeyi taşımaz ve taşımamalı: bu bir köşe değil, bir çubuğun ucu.
+    // Tam yuvarlak uç, kalınlığın YARISINDAN türer — bu bir köşe değil, bir çubuğun ucu.
     borderRadius: t.border.sheetHandle / 2,
     backgroundColor: t.colors['sand-400'],
   },
-  /** Başlık ile sağ eylem AYNI HİZADA (tasarım) — eylem yoksa satır tek çocuklu kalır. */
   titleRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: t.space.lg },
-  titleText: { flex: 1 },
   title: {
+    flex: 1,
     fontFamily: t.font.display[t.text['sheet-title--font-weight']],
     fontSize: t.text['sheet-title'],
     color: t.colors.ink,
   },
-  scroll: { flexShrink: 1 },
-  /* Şablonun 30 px'lik alt nefesi + cihazın alt güvenli alanı (ana ekran çubuğu).
-     KLAVYE AÇIKKEN GÜVENLİ ALAN EKLENMEZ (kullanıcı bulgusu 11.08, iPhone): o pay ana ekran
-     çubuğunun ÜSTÜNÜ boş tutmak içindir, klavye zaten o bölgeyi kapatıyor — eklendiğinde
-     klavyenin hemen üstünde kullanılamaz bir şerit kalıyor. */
-  scrollContent: {
+  /* Şablonun alt nefesi + cihazın alt güvenli alanı. KLAVYE AÇIKKEN güvenli alan EKLENMEZ
+     (kullanıcı bulgusu 11.08): o pay ana ekran çubuğunun üstü içindir, klavye zaten orayı kapatır. */
+  content: {
     paddingHorizontal: t.space['5xl'],
     paddingBottom: t.space['8xl'] + (rt.insets.ime > 0 ? 0 : rt.insets.bottom),
     gap: t.space['2xl'],

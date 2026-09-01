@@ -1,4 +1,4 @@
-import { customerAppColors, customerAppText } from '@lezzet/design-tokens';
+import { customerAppText } from '@lezzet/design-tokens';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 import { BackHandler, Text } from 'react-native';
 
@@ -38,7 +38,7 @@ describe('BottomSheet', () => {
       </BottomSheet>,
     );
 
-    await fireEvent.press(screen.getByTestId('sheet-scrim', { includeHiddenElements: true }));
+    await fireEvent(screen.getByTestId('gorhom-self-dismiss'), 'touchEnd');
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });
@@ -54,7 +54,7 @@ describe('BottomSheet', () => {
     const { rerender } = await render(sheet(true));
 
     // Örtü yalnız NİYETİ çağırır — görünürlük hâlâ çağıranın elindedir, söküm başlamamıştır.
-    await fireEvent.press(screen.getByTestId('sheet-scrim', { includeHiddenElements: true }));
+    await fireEvent(screen.getByTestId('gorhom-self-dismiss'), 'touchEnd');
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onClosed).not.toHaveBeenCalled();
 
@@ -77,7 +77,7 @@ describe('BottomSheet', () => {
 
     /* Kanca artık `Modal.onRequestClose` DEĞİL, `BackHandler` — kütüphane geri tuşunu dinlemiyor
        (kaynağı okundu 01.09) ve söz KİTTE tutuluyor. RN'in jest sahtesi `mockPressBack` sunmuyor,
-       o yüzden kaydı yakalayıp elle tetikliyoruz: ölçülen şey "geri basılınca kapanır mı". */
+       o yüzden kaydı yakalayıp elle tetikliyoruz. */
     const back = onBack.mock.calls.at(-1)?.[1] as (() => boolean) | undefined;
     expect(back).toBeDefined();
     await act(async () => {
@@ -93,10 +93,6 @@ describe('BottomSheet', () => {
         <Text>içerik</Text>
       </BottomSheet>,
     );
-
-    expect(screen.getByTestId('sheet-scrim', { includeHiddenElements: true })).toHaveStyle({
-      backgroundColor: customerAppColors.scrim,
-    });
     expect(screen.getByRole('header')).toHaveStyle({
       fontSize: appText['sheet-title'],
     });
