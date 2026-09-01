@@ -15,6 +15,26 @@
  *
  * Görseller Cloudflare R2'ye yüklenir (R2 env yoksa atlanır). Giriş: OTP kodu Mailpit'e düşer (54324).
  *
+ * ── §SİPARİŞ: BESLEME HİÇ SİPARİŞ YAZMAZ (kullanıcı kararı 01.09) ────────────────────────────
+ * Kullanıcının cümlesi: *"Sistemde hiç sipariş kalmasın istiyorum … sipariş yoksa o siparişle
+ * alakalı sonraki tüm kayıtların da olmaması lazım."*
+ *
+ * Sipariş beslemenin en çok TÜRETEN kaydıydı: rezervasyon, parti izi, durum logu, kutu, gönderi,
+ * sefer, sefer kapanışı, talep, geri bildirim daveti, değerlendirme, puan, kupon kullanımı ve para
+ * tahsilatı — hepsi bir siparişin varlığından doğuyordu. Karar bu yüzden tek bir tabloyu değil bir
+ * ZİNCİRİ kaldırıyor; yarısını bırakmak sahipsiz kayıtlar (kimsenin siparişine ait olmayan kutu,
+ * boşluğa bakan sefer) demek olurdu ve o kayıtlar "veri" değil ENKAZ olurdu.
+ *
+ * **Kalanlar bilinçli:** `cart` KALDI — sepet bir sipariş değil, ondan ÖNCEKİ hâldir ve müşteri
+ * yüzeyi onu siparişsiz de göstermek zorunda. `discount` tanımları KALDI (operatörün kurduğu şey),
+ * yalnız kullanım kayıtları gitti. Banka ekstresi KALDI, siparişten türeyen üç satırı gitti.
+ *
+ * **Bedeli açık olsun:** kurye bölümünün ve para mutabakatının ekranları besleme sonrası BOŞ açılır;
+ * `seed:coverage`ın sipariş eksenli alanları da boş kalır ve artık kapıyı kapatmaz (künye
+ * `seed/coverage.ts` → `KapsamAlani.siparisGerektirir`). Hâllerin hepsi hâlâ üretilebilir — yalnız
+ * beslemenin değil AKIŞIN eliyle: kullanıcı siparişi kendisi oluşturur, depo toplar, kurye taşır.
+ * Zaten istenen de buydu.
+ *
  * TABLO KAPSAMI (`full`) — hangi tabloya veri girer, girmeyenin sebebi:
  *   ✓ category            4 kategori — 3'ü görselli (anasayfa şeridi), 1'i görselsiz (boş durum)
  *   ✓ product             69 ürün — 5'i elle (yasal beyan/KDV/raf ömrü/marj dolu, farklı durumlar
@@ -47,15 +67,18 @@
  *                        sayım farkı İKİ YÖNLÜ (yön kolonu boş bir kümeyle sınanmasın)
  *   ✓ temperature_log     4 nokta × 21 gün × 2 ölçüm (STR) + 7 gün (KEHL) — İKİ depo, biri aralık DIŞI
  *   ✓ cart                normal · toptan · BAYAT (1 yıllık) + partiye çıpalı teklif satırı
- *   ✓ order               9 durumun hepsi · 4 kaynak (web/whatsapp/door/manual) · tam yol + hızlı
- *                         satış · vadeli gecikmiş/kısmi ödenmiş (açık bakiye türetimi) · KUPONLU
- *                         siparişler · KISMİ İADE (restock/discard/goodwill üçü de) · kurye günleri ·
- *                         SINIR ÖTESİ (DE teslimat · reverse charge/Autoliquidation · OSS izlemi) ·
- *                         PARA İADESİ (tam + kısmi → `refunded`) · İKİNCİ DEPODAN çıkan siparişler ·
- *                         üç dilde (`locale` tr/fr/de) — mail ve belge yolları denenebilsin
- *   ✓ reservation         siparişlerle birlikte doğar (TTL'li checkout + süresiz kapıda/vadeli)
- *   ✓ order_item_batch    hazırlık onayında yazılır → geri çağırma ve gerçek COGS denenebilir
- *   ✓ order_status_log    her geçiş kaydedilir → teslim/kapanış anı buradan türetilir
+ *   ✗ order               **SEED SİPARİŞ YAZMAZ** (kullanıcı kararı 01.09) — künye aşağıda, §SİPARİŞ.
+ *   ✗ reservation         siparişten doğar → yok
+ *   ✗ order_item_batch    hazırlık onayında yazılır → yok
+ *   ✗ order_status_log    geçişten doğar → yok
+ *   ✗ order_box(+item)    kutu döngüsü siparişin üstünde kurulur → yok
+ *   ✗ shipment(+event)    kargo künyesi siparişe yazılır → yok
+ *   ✗ delivery_run(+close) sefer siparişten türer → yok
+ *   ✗ ticket(+message)    talep siparişe ve kalemine bağlanır → yok
+ *   ✗ feedback_request    davet TESLİM EDİLMİŞ siparişe gider → yok
+ *   ✗ product_feedback    davetten doğar → yok
+ *   ✗ points_entry        puan değerlendirmenin izine dayanır → yok
+ *   ✗ discount_use        kullanım siparişten doğar → yok (tanımlar `discount`ta duruyor)
  *   ✓ account             5 hesap: kasa · 2 banka · Stripe · kapanmış (pasif) — bakiye SAKLANMAZ
  *   ✓ money_movement      açılış bakiyeleri (`capital`) · 9 gider (2'si kampanya etiketli reklam) ·
  *                         tedarikçiye KISMİ ödeme (borç açık kalsın) · 2 transfer (kasa→banka,
@@ -63,17 +86,6 @@
  *   ✓ discount            11 tanım: 8 kupon (geçerli · ilk-sipariş · süresi dolmuş · başlamamış ·
  *                         tek haklı · kişiye özel · pasif · kişi-başı sınırlı) + 3 otomatik kampanya
  *                         (kategori · koleksiyon · asgari sepetli). Kupon kutusunun HER cevabı denenir
- *   ✓ discount_use        kullanım kaydı siparişten doğar — "kaç hak kaldı" sayaçtan değil buradan
- *   ✓ delivery_run(+close) rota+gün başına sefer; 2 sefer kapalı (1 mutabık · 1 FARKLI + açıklama) · kalan AÇIK
- *   ✓ ticket              8 talep: 3 durum · 4 kaynak · AI + insan devralma · iade tetikli ·
- *   ✓ ticket_message      fotoğraflı · yeniden açılmış · sonu müşteride biten (kuyrukta cevap bekler)
- *   ✓ product_feedback    yayında · moderasyon kuyruğunda · reddedilmiş · metinsiz yıldız · beğeni ·
- *                         3 dilde yorum · çok yorumlu ürün (sayfalama) · düşük puanlı ürün ·
- *                         aday kaydırmaları (kimlikli + ziyaretçi + eşik altı süre = sinyal kalitesi)
- *   ✓ feedback_request    5 davet: tamamlanmış · yarım (ilerleme çubuğu) · hiç gönderilmemiş ·
- *                         SÜRESİ DOLMUŞ token · WhatsApp kanallı. Kalan sipariş davetsiz (cron kuyruğu)
- *   ✓ points_entry        7 sebebin hepsi · kazanım + harcama · elle düzeltme (+ ve −) ·
- *                         kupona çevirme RPC ile (negatif satır + kişisel kupon aynı turda)
  *   ✓ postal_code_demand  7 posta kodu, YOĞUNLAŞMIŞ dağılım (47 → 2) — "bölge nereye açılmalı"
  *   ✓ zone_notice         6 kayıt: bekleyen + haber verilmiş · kayıtlı müşteri + kayıtsız ziyaretçi
  *   ✓ webhook_event       işlenmiş · DÜŞMÜŞ (hata metinli) · bekleyen · dinlenmeyen tür
@@ -120,16 +132,15 @@
 
 import { createServiceRoleClient, waitForRest } from '@lezzet/database';
 import { seedBundles, seedCatalog, seedCollections } from './seed/catalog';
-import { seedDeliveryRuns, seedRunCloses } from './seed/courier';
+import { seedConversations } from './seed/conversation';
 import { seedAddresses, seedDeliveryZones, seedPostalDemand, seedStockNotices, seedZoneNotices } from './seed/delivery';
 import { seedDiscounts } from './seed/discount';
-import { seedFeedbackRequests, seedPoints, seedProductFeedback } from './seed/feedback';
 import { seedJobRuns } from './seed/jobs';
 import { seedBankQueue, seedMoney } from './seed/money';
 import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedAssistantProposals } from './seed/assistant';
 import { seedBarcodes } from './seed/barcode';
-import { seedCarts, seedOrders } from './seed/orders';
+import { seedCarts } from './seed/cart';
 import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
 import { seedNegotiatedPrices, seedPrices } from './seed/pricing';
 import { seedSiteImages } from './seed/site-image';
@@ -141,7 +152,6 @@ import { seedStock, seedAdjustments, seedTemperatureLogs } from './seed/stock';
 import { seedSupply } from './seed/supply';
 import { seedTestLabels } from './seed/test-labels';
 import { seedNotifications } from './seed/notifications';
-import { seedTickets } from './seed/support';
 import { seedStoragePoints, seedShippingBoxes, seedThresholds, seedTransfer, seedWarehouses, seedWarehousePrinters } from './seed/warehouse';
 
 // Seed Next.js dışında çalışır — .env'i elle yükle (Node 22 process.loadEnvFile).
@@ -288,20 +298,21 @@ async function main(): Promise<void> {
   await seedCarts(db, kisiler, varyantlar);
   // Para SİPARİŞLERDEN ÖNCE: sipariş tahsilatları bir hesaba yazılıyor (12.2), hesap hazır olmalı.
   await seedMoney(db);
-  // Kuponlar SİPARİŞLERDEN ÖNCE: sipariş kuponu uygular ve kullanım kaydını yazar; tanım hazır olmalı.
-  const kuponlar = await seedDiscounts(db, kisiler);
-  await seedOrders(db, kisiler, varyantlar, kuponlar, depolar, katman);
-  // FİZİKSEL test etiketleri siparişlerden SONRA: sabit kodlar tedarik siparişinin ve açık kutulu
-  // siparişin GERÇEK kalemlerine bağlanıyor, sonra bağlar DOĞRULANIYOR (künye: `seed/test-labels.ts`).
+  /*
+    KUPON TANIMI KALIYOR, KULLANIMI YOK — beslemede sipariş olmadığı için (kullanıcı kararı 01.09).
+    Tanım operatörün kurduğu bir şeydir ve kendi başına anlamlıdır; kullanım kaydı ise ancak bir
+    sipariş kuponu uygulayınca doğar.
+  */
+  await seedDiscounts(db, kisiler);
+  // FİZİKSEL test etiketleri: sabit kodlar tedarik siparişinin ve katalog varyantlarının GERÇEK
+  // kalemlerine bağlanıyor, sonra bağlar DOĞRULANIYOR (künye: `seed/test-labels.ts`).
   await seedTestLabels(db, varyantlar);
   // Eşikler: "eşiğin altında mı" sorusu kullanılabilir stoğa bakar. `full`de transferden SONRA
   // koşuyor (sevk edilen mal o sayıyı düşürür); `extend`te transfer yok, sıra da sorun değil.
   await seedThresholds(db, depolar);
-  // Stok bildirimi: tükenmiş varyantlar ancak siparişler işledikten sonra bellidir.
+  // Stok bildirimi: tükenmiş varyantlar. Beslemede tükenmişlik SİPARİŞTEN değil, bilinçli sıfır
+  // bakiyeli partilerden doğuyor (`seed/stock.ts`) — bekleyen müşteri kaydı bir sipariş değildir.
   await seedStockNotices(db, kisiler);
-  const davetler = await seedFeedbackRequests(db); // davet teslim edilmiş siparişe gider
-  const degerlendirmeler = await seedProductFeedback(db, kisiler, varyantlar, davetler);
-  await seedPoints(db, kisiler, degerlendirmeler); // puan, değerlendirmenin izine dayanır
 
   if (!enAz(katman, 'full')) {
     console.log('✓ seed tamam · KATMAN: extend — base + kusurlar + bir miktar geçmiş');
@@ -310,18 +321,18 @@ async function main(): Promise<void> {
 
   // ── YALNIZ `full` ────────────────────────────────────────────────────────────────────────────
   // Kapsam denetiminin (`pnpm seed:coverage`) zorunlu kovalarının tamamı ancak burada dolar.
-  // Banka ekstresi SİPARİŞLERDEN SONRA: eşleştirme kuyruğunun satırları açık siparişlerin
-  // tutarlarından türüyor (güçlü aday · çoklu aday · öneri yok). `seedMoney` içinde kalsaydı
-  // sipariş tablosu henüz boş olur ve kuyruk tek hâlinde donardı.
+  // Banka ekstresi KALIYOR ama artık siparişten türeyen satırı yok (01.09): ekstre bir BANKA
+  // belgesidir, eşleştirme kuyruğu onun ekranıdır. Kuyruk siparişsiz "öneri yok" hâlinde durur —
+  // ve o hâl de gerçek bir hâldir (banka masrafı hiçbir siparişe uymaz).
   await seedBankQueue(db);
-  // Transfer siparişlerden SONRA: sevk kullanılabilir stoğa bakar, rezervasyonlu malı yola çıkarmaz.
   await seedTransfer(db, depolar);
-  // Seferler siparişlerden SONRA: hangi (rota, gün) sürülmüş, siparişlerin kendisi söylüyor.
-  await seedDeliveryRuns(db, kisiler);
-  await seedRunCloses(db, kisiler); // kapanış, seferin tahsilat görünümünü okur
-  await seedTickets(db, kisiler); // talep siparişe ve kalemine bağlanır
-  // Bildirimler EN SONA YAKIN: satırlar sipariş log'undan, davetten, bölge kaydından ve talep
-  // cevabından TÜRETİLİR (künye `seed/notifications.ts`) — kaynakları bu noktada kurulmuş olmalı.
+  /* Konuşmalar (15.1) — SİPARİŞTEN BAĞIMSIZ. Bir tur `seed/support.ts`in içindeydi ve talep
+     siparişe bağlı olduğu için o dosyayla birlikte silinmişti; kapsam denetimi dört boş kovayla
+     yakaladı (künye `seed/conversation.ts`). Müşteri WhatsApp'tan yazmak için sipariş vermiş
+     olmak zorunda değil. */
+  await seedConversations(db);
+  // Bildirimler EN SONA YAKIN: satırlar bölge kaydından TÜRETİLİR (künye `seed/notifications.ts`) —
+  // kaynakları bu noktada kurulmuş olmalı.
   await seedNotifications(db, kisiler);
   // Asistan kuyruğu HER ŞEYDEN SONRA: onbir dilekçenin payload'ı gerçek kimlikler taşıyor (varyant,
   // depo, hesap, bölge, açık tedarik siparişi, eldeki en yakın tarihli parti) ve hepsi bu noktada

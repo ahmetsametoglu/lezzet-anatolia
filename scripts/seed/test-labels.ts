@@ -30,7 +30,7 @@ import type { Db, VaryantRef } from './shared';
 */
 
 /** Etiketin sınadığı yol — basılan kâğıdın üstünde bu ad yazar. */
-export type TestLabelRole = 'paket' | 'koli' | 'toplama' | 'yabanci' | 'taninmayan' | 'kutu';
+export type TestLabelRole = 'paket' | 'koli' | 'toplama' | 'yabanci' | 'taninmayan';
 
 /**
  * Kâğıda hangi SİMGEYLE basılacağı (kullanıcı bulgusu 24.08).
@@ -77,11 +77,17 @@ export const TEST_LABELS: readonly TestLabel[] = [
     hint: 'Mal kabul · koli kodu — çekmece 24 adetle açılır',
   },
   {
+    /*
+      HEDEFİ DEĞİŞTİ (kullanıcı kararı 01.09): eskiden "açık kutulu SİPARİŞİN kalemi"ydi. Besleme
+      artık hiç sipariş yazmıyor, dolayısıyla bağlanacak bir sipariş kalemi de yok. Kod sabit bir
+      KATALOG varyantına bağlanıyor: toplama turu için o varyantı içeren bir sipariş oluşturmak
+      gerekiyor — kâğıt yine çalışıyor, yalnız zemini artık kullanıcının kendi kurduğu sipariş.
+    */
     role: 'toplama',
     code: '8691000030009',
     symbology: 'ean13',
     title: 'TOPLAMA',
-    hint: 'Toplama · açık kutulu siparişin kalemi — kutuya eklenir',
+    hint: 'Toplama · sabit bir katalog varyantı — o varyantı içeren sipariş oluştur, sonra okut',
   },
   {
     role: 'yabanci',
@@ -98,14 +104,16 @@ export const TEST_LABELS: readonly TestLabel[] = [
     title: 'TANINMAYAN',
     hint: 'Öğrenme · hiçbir ürüne bağlı değil ("bu kod hangi ürün?")',
   },
-  {
-    // BİZİM kodumuz — harf taşır, EAN'a sığmaz ve zaten QR olarak basılıyor (kutu etiketi 23.7).
-    role: 'kutu',
-    code: 'KT-99-TESTKUTU01',
-    symbology: 'qr',
-    title: 'KUTU QR',
-    hint: 'Kurye · yükleme + kapıda teslim okutması (kapalı kutu)',
-  },
+  /*
+    KUTU QR'I SETTEN ÇIKTI (kullanıcı kararı 01.09) — `KT-99-TESTKUTU01`.
+
+    Kutu kodu bir KAYIT kimliğidir ve sonradan değiştirilemez (`OrderBoxUpdate` bilerek yalnız damga
+    alanlarını alıyor), o yüzden kutu en baştan sabit kodla açılıyordu — ve o açılış `orders.ts`teydi.
+    Besleme artık sipariş yazmadığı için açılacak kutu da yok; sette bırakılsaydı hiçbir kayda
+    bağlanmayan bir QR basılırdı ve okutan kişi "tanınmayan kod" cevabı alırdı. Basılı kâğıt
+    kullanıcının elinde duruyor; kutu okutmasını denemek isteyen kendi siparişini toplar, kutuyu
+    kapatır ve o kutunun KENDİ etiketini bastırır (23.7 — ekran zaten bunu yapıyor).
+  */
 ];
 
 /** Kod arama — set sabit olduğu için rol daima bulunur (bulunmazsa seed'in kendi arızasıdır). */
@@ -116,15 +124,14 @@ export function testLabelCode(role: TestLabelRole): string {
 }
 
 /**
- * Sabit kodları seed'in GERÇEK kayıtlarına bağlar — siparişlerden SONRA koşar.
+ * Sabit kodları seed'in GERÇEK kayıtlarına bağlar.
  *
  * `taninmayan` hiçbir yere yazılmaz; anlamı zaten "bağlı değil". Öğretildikten sonra tanınır hâle
  * gelir — yeniden "tanınmayan" yapmak için o satırı silmek (ya da `db:refresh`) gerekir; künye
  * `pnpm labels:test` çıktısında da yazar.
  *
- * `kutu` burada değil `orders.ts`te bağlanır: kutu kodu bir KAYIT kimliğidir, sonradan
- * değiştirilemez (`OrderBoxUpdate` bilerek yalnız damga alanlarını alıyor) — o yüzden kutu en
- * baştan sabit kodla açılır.
+ * **Sipariş ARANMIYOR** (01.09): besleme sipariş yazmıyor, dolayısıyla hedefler yalnız tedarik
+ * siparişinden ve katalogdan çıkıyor. `kutu` rolü setten kalktı (künye set tanımında).
  */
 export async function seedTestLabels(db: Db, varyantlar: VaryantRef[]): Promise<void> {
   const barcodes = new VariantBarcodeService(db);
@@ -144,20 +151,40 @@ export async function seedTestLabels(db: Db, varyantlar: VaryantRef[]): Promise<
   await bagla(barcodes, testLabelCode('paket'), kalemler[0]!.variantId, 'unit', 1);
   await bagla(barcodes, testLabelCode('koli'), kalemler[1]!.variantId, 'case', 24);
 
-  // ── Toplama: AÇIK kutusu olan siparişin bir kalemi ──────────────────────────────────────────
-  const acikKutulu = await acikKutuluSiparisVaryanti(db);
-  await bagla(barcodes, testLabelCode('toplama'), acikKutulu, 'unit', 1);
+  // ── Toplama: SATILABİLİR bir katalog varyantı ───────────────────────────────────────────────
+  // Hedef artık siparişten değil katalogdan seçiliyor (künye set tanımında). Ölçüt sabit: tedarik
+  // siparişinin kalemleri DIŞINDA kalan ilk satılabilir varyant — böylece paket/koli kodlarıyla
+  // aynı ürüne düşüp iki etiketi ayırt edilemez hâle getirmiyor.
+  /*
+    SIRA SABİTLENİR — `varyantlar` sırasız gelir (ölçüldü 01.09: seed iki kez koşunca `toplama` ile
+    `yabanci` AYNI varyanta bağlandı ve set kendini bozuk ilan etti). Dosyanın kendi kuralı zaten
+    bu ve tedarik kalemlerine uygulanmıştı — *"sırasız bir listede 'ilk kalem' her koşuda başka
+    ürün demek, sabit kodun anlamı da onunla birlikte kayar"*. Katalog seçimleri de aynı kurala
+    girdi: kimliğe göre sıralanan listede "ilk uygun" her koşuda AYNI ürün.
+  */
+  const adaylar = varyantlar.filter((v) => v.status !== 'candidate').sort((a, b) => a.id.localeCompare(b.id));
+  const poVaryantlari = new Set(kalemler.map((k) => k.variantId));
+  const toplama = adaylar.find((v) => !poVaryantlari.has(v.id));
+  if (toplama === undefined) throw new Error('test etiketi: toplama için satılabilir varyant bulunamadı');
+  await bagla(barcodes, testLabelCode('toplama'), toplama.id, 'unit', 1);
 
-  // ── Yabancı: hiçbir kabulde/siparişte OLMAYAN kayıtlı ürün ──────────────────────────────────
-  // Sabit bir indis SEÇİLMEZ, kesişim ÖLÇÜLÜR: seed'in dilimleri değişince "yabancı" sessizce
-  // tanıdık bir ürüne dönüşür ve ret yolu hiç sınanmaz olurdu.
-  const kullanilan = new Set<string>([...kalemler.map((k) => k.variantId), acikKutulu]);
-  for (const v of await siparisVaryantlari(db)) kullanilan.add(v);
-  const yabanci = varyantlar.find((v) => v.status !== 'candidate' && !kullanilan.has(v.id));
+  /*
+    ── Yabancı: hiçbir kabulde OLMAYAN kayıtlı ürün ──────────────────────────────────────────
+    Sabit bir indis SEÇİLMEZ, kesişim ÖLÇÜLÜR: seed'in dilimleri değişince "yabancı" sessizce
+    tanıdık bir ürüne dönüşür ve ret yolu hiç sınanmaz olurdu.
+
+    ELEME BÜTÜN TEDARİK SİPARİŞLERİNE bakar, yalnız hedefe değil (ölçüldü 01.09, seed kesildi).
+    Sipariş ekseni elemeden kalkınca (besleme artık sipariş yazmıyor) aday liste başına kaydı ve
+    BAŞKA bir tedarik siparişinin kalemine denk geldi; `dogrula` — doğru olarak — bütün kabullere
+    baktığı için seed'i durdurdu. Ölçüt burada da doğrulamadakiyle AYNI olmalı: iki yerde iki
+    farklı "yabancı" tanımı, birinin ötekini yakaladığı gün kesilen bir koşu demek.
+  */
+  const kullanilan = new Set<string>([...(await tedarikVaryantlari(db)), toplama.id]);
+  const yabanci = adaylar.find((v) => !kullanilan.has(v.id));
   if (yabanci === undefined) throw new Error('test etiketi: hiçbir işe girmemiş varyant bulunamadı');
   await bagla(barcodes, testLabelCode('yabanci'), yabanci.id, 'unit', 1);
 
-  await dogrula(db, poId, acikKutulu, yabanci.id);
+  await dogrula(db, poId, yabanci.id);
 
   // Kimlik YAZILMAZ ve gerekmez: mal kabul ekranı 24.08'den beri bekleyen sevkiyatları kendisi
   // listeliyor (`GET /warehouse/intake`), yani tur `/intake` ile açılır. Kimliği künyeye yazmak,
@@ -174,7 +201,7 @@ export async function seedTestLabels(db: Db, varyantlar: VaryantRef[]): Promise<
  * formla görüldü — o noktada sebep de görünmüyordu ("açık kalemi yok" dedi, kimin suçu olduğunu
  * söylemedi). Uyumsuzluk artık makinede, sebebiyle birlikte çıkar.
  */
-async function dogrula(db: Db, poId: string, toplamaVariantId: string, yabanciVariantId: string): Promise<void> {
+async function dogrula(db: Db, poId: string, yabanciVariantId: string): Promise<void> {
   const { data: po } = await db.from('purchase_order').select('status').eq('id', poId).maybeSingle();
   const durum = (po as { status: string } | null)?.status;
   // Kabul ekranı `sent` ve `partially_received` siparişleri listeler; kapanmış bir siparişe bağlanan
@@ -190,60 +217,20 @@ async function dogrula(db: Db, poId: string, toplamaVariantId: string, yabanciVa
     throw new Error('test etiketi: hedef sipariş mal kabul listesinin ilk satırı değil');
   }
 
-  const { data: acik } = await db
-    .from('order_box')
-    .select('id, order_id')
-    .is('sealed_at', null)
-    .limit(1)
-    .maybeSingle();
-  if (acik === null) throw new Error('test etiketi: toplama turu için açık kutu yok');
-
-  const { data: toplamaKalem } = await db
-    .from('order_item')
-    .select('id')
-    .eq('order_id', (acik as { order_id: string }).order_id)
-    .eq('variant_id', toplamaVariantId)
-    .limit(1)
-    .maybeSingle();
-  if (toplamaKalem === null) throw new Error('test etiketi: toplama kodu açık kutulu siparişin kaleminde değil');
-
-  // "Yabancı" olmanın tek ölçütü budur: hiçbir kabulde ve hiçbir siparişte bulunmamak.
+  // "Yabancı" olmanın tek ölçütü budur: hiçbir kabulde bulunmamak. Sipariş ekseni ARANMIYOR —
+  // besleme sipariş yazmıyor, dolayısıyla her varyant zaten "hiçbir siparişte yok" (01.09).
   const { count: poSayisi } = await db
     .from('purchase_order_item')
     .select('id', { count: 'exact', head: true })
     .eq('variant_id', yabanciVariantId);
-  const { count: siparisSayisi } = await db
-    .from('order_item')
-    .select('id', { count: 'exact', head: true })
-    .eq('variant_id', yabanciVariantId);
-  if ((poSayisi ?? 0) > 0 || (siparisSayisi ?? 0) > 0) {
+  if ((poSayisi ?? 0) > 0) {
     throw new Error('test etiketi: "yabancı ürün" tanıdık çıktı — ret yolu sınanamaz');
   }
-
-  const { data: kutu } = await db
-    .from('order_box')
-    .select('sealed_at')
-    .eq('code', testLabelCode('kutu'))
-    .maybeSingle();
-  const muhur = (kutu as { sealed_at: string | null } | null)?.sealed_at ?? null;
-  if (muhur === null) throw new Error('test etiketi: kutu QR kodu KAPALI bir kutuya bağlı değil');
 }
 
-/** Açık (mühürsüz) kutusu olan siparişin ilk kaleminin varyantı — toplama etiketinin hedefi. */
-async function acikKutuluSiparisVaryanti(db: Db): Promise<string> {
-  const { data: kutu } = await db.from('order_box').select('order_id').is('sealed_at', null).limit(1).maybeSingle();
-  const orderId = (kutu as { order_id: string } | null)?.order_id;
-  if (orderId === undefined) throw new Error('test etiketi: açık kutulu sipariş yok');
-
-  const { data: kalem } = await db.from('order_item').select('variant_id').eq('order_id', orderId).limit(1).maybeSingle();
-  const variantId = (kalem as { variant_id: string } | null)?.variant_id;
-  if (variantId === undefined) throw new Error('test etiketi: açık kutulu siparişin kalemi yok');
-  return variantId;
-}
-
-/** Tüm sipariş kalemlerinin varyantları — "yabancı" adayını elemek için. */
-async function siparisVaryantlari(db: Db): Promise<string[]> {
-  const { data } = await db.from('order_item').select('variant_id');
+/** TÜM tedarik siparişlerinin kalem varyantları — "yabancı" adayını elemenin ölçütü. */
+async function tedarikVaryantlari(db: Db): Promise<string[]> {
+  const { data } = await db.from('purchase_order_item').select('variant_id');
   return ((data ?? []) as Array<{ variant_id: string }>).map((r) => r.variant_id);
 }
 

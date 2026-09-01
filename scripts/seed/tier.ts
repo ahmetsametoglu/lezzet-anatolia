@@ -13,7 +13,11 @@
  *             satırın arkasında ya üreticinin kataloğu ya kullanıcının bir kararı var: kategori ·
  *             ürün · varyant · görsel · aile · koleksiyon · tarif.
  *   `extend`  Base + **kusurlar** (pasif/aday/beyansız/kapaksız ürün, çevirisi tamamlanmamış
- *             kayıt) + **bir miktar geçmiş** (müşteri, sipariş, geri bildirim, para). Demo hâli.
+ *             kayıt) + **bir miktar geçmiş** (müşteri, para, sepet). Demo hâli.
+ *             **Sipariş YOK** (kullanıcı kararı 01.09) — ne burada ne `full`de; künye `seed.ts`
+ *             başlığında §SİPARİŞ. Aşağıdaki paragraflarda "sipariş" geçen yerler o karardan
+ *             ÖNCEKİ hâli anlatıyor ve tarihsel olarak duruyor: katmanların birbirinden neden
+ *             ayrıldığını anlatan gerekçe hâlâ geçerli, örneği artık geçerli değil.
  *   `full`    Bugünkü kapsam: her senaryodan en az bir örnek. `pnpm seed:coverage`ın zorunlu
  *             kovalarının tamamı ancak burada dolar.
  *

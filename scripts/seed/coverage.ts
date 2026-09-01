@@ -50,6 +50,19 @@ interface KapsamAlani {
   baslik: string;
   tablo?: string;
   kovalar: KapsamKovasi[];
+  /**
+   * **BU ALAN SİPARİŞ İSTİYOR ve besleme artık sipariş yazmıyor** (kullanıcı kararı 01.09).
+   *
+   * Kovalar SİLİNMEDİ ve bu bilinçli: dosyanın kendi kuralı *"bir kovayı zorunludan çıkarmak
+   * serbesttir — ama gerekçesi buraya yazılır, sessizce silinmez"*. Silinseydi bu ekranların
+   * hangi hâllere ihtiyaç duyduğu kayıttan düşer, ve sipariş bir gün beslemeye geri gelse kimse
+   * neyi geri açacağını bilemezdi.
+   *
+   * İşaretli alanın kovaları RAPORLANIR ama koşuyu KIRMIZIYA ÇEVİRMEZ: boş olmaları bir eksik
+   * değil, beslemenin kararının sonucudur. Kullanıcı bir sipariş oluşturduğu anda dolmaya
+   * başlarlar ve rapor yine doğruyu söyler.
+   */
+  siparisGerektirir?: boolean;
 }
 
 /** PostgREST sorgu kurucusunun bu dosyanın ihtiyaç duyduğu kadarı. */
@@ -530,6 +543,7 @@ const KAPSAM: KapsamAlani[] = [
     */
     baslik: 'Kargo gönderisi',
     tablo: 'shipment',
+    siparisGerektirir: true,
     kovalar: [
       { ad: 'taşıyıcıda (tek koli)', zorunlu: true, filtre: (q) => q.eq('status', 'handed_over') },
       { ad: 'yolda (çok koli)', zorunlu: true, filtre: (q) => q.eq('status', 'in_transit') },
@@ -543,6 +557,7 @@ const KAPSAM: KapsamAlani[] = [
     // (0048 ⚠) ve "tüm kutular binmeden yolda sayılmaz" kuralının tek sınanabildiği hâl.
     baslik: 'Sipariş kutusu',
     tablo: 'order_box',
+    siparisGerektirir: true,
     kovalar: [
       { ad: 'açık kutu', zorunlu: true, filtre: (q) => q.is('sealed_at', null) },
       { ad: 'kapalı kutu', zorunlu: true, filtre: (q) => q.not('sealed_at', 'is', null) },
@@ -552,10 +567,19 @@ const KAPSAM: KapsamAlani[] = [
         sayac: (db) => say(db, 'order_box', (q) => q.not('sealed_at', 'is', null).is('loaded_at', null)),
       },
       {
-        // ARAÇTA olan kutu (30.08): yükleme sayacının "kaç bindi" tarafı. Yüklenmemiş kova tek
-        // başına yarım bir ölçüm — sayaç `5/8` diyebiliyor mu sorusu ancak dolu tarafla sınanır.
+        /*
+          ARAÇTA olan kutu — ZORUNLUDAN ÇIKTI (kullanıcı kararı 01.09).
+
+          Seed bu kovayı `loadBox` çağırarak dolduruyordu, yani kuryenin işini önceden yapıyordu.
+          Kullanıcı cihazda gördü: *"Sefer açıyorum, 'araçta kutu var' diyor — hâlbuki ben hiçbir
+          şey okutmadım."* Yeni kural: **seed sipariş üretir, kutuyu depo üretir, yüklemeyi kurye
+          yapar.** Yüklenmiş kutu artık bir SEED hâli değil, akışın sonucu.
+
+          Kova raporlanmaya devam ediyor: kurye bir kutu okuttuğunda dolar ve o an görünür. Boşken
+          de hangi hâlin seed'de sınanmadığı yazılı kalır.
+        */
         ad: 'araçta (yüklenmiş) kutu',
-        zorunlu: true,
+        zorunlu: false,
         sayac: (db) => say(db, 'order_box', (q) => q.not('loaded_at', 'is', null)),
       },
       {
@@ -885,6 +909,7 @@ const KAPSAM: KapsamAlani[] = [
   {
     baslik: 'Sipariş — yol ve kanal',
     tablo: 'order',
+    siparisGerektirir: true,
     kovalar: [
       { ad: 'rota', zorunlu: true, filtre: (q) => q.eq('delivery_type', 'route') },
       { ad: 'kargo', zorunlu: true, filtre: (q) => q.eq('delivery_type', 'shipping') },
@@ -898,6 +923,7 @@ const KAPSAM: KapsamAlani[] = [
     // seferler sekmesi. Kapanışın üç hâli (mutabık · farklı · sayılmamış) ekranda üç ayrı görünüm.
     baslik: 'Sefer (delivery_run)',
     tablo: 'delivery_run',
+    siparisGerektirir: true,
     kovalar: [
       { ad: 'sefer', zorunlu: true, sayac: (db) => say(db, 'delivery_run', (q) => q) },
       { ad: 'sefere damgalı sipariş', zorunlu: true, sayac: (db) => say(db, 'order', (q) => q.not('delivery_run_id', 'is', null)) },
@@ -941,6 +967,7 @@ const KAPSAM: KapsamAlani[] = [
       ekranın okuduğu fonksiyonun kendisinden geliyor; çakışma tekrarlarsa kova kırmızı döner.
     */
     baslik: 'Sipariş istisnası (eksik toplama)',
+    siparisGerektirir: true,
     kovalar: [{ ad: 'karar bekleyen istisna', zorunlu: true, sayac: eksikToplamaSay }],
   },
   {
@@ -952,6 +979,10 @@ const KAPSAM: KapsamAlani[] = [
     */
     baslik: 'Para — bugünün defteri',
     tablo: 'money_movement',
+    /* Beşinci kova (`eşleşmemiş hareket`) siparişsiz de doluyor — gider hareketleri var. Ama alan
+       bir bütün olarak işaretleniyor: dört tahsilat kovasının dördü de siparişe bağlı ve ekranın
+       gün kırılımı ancak onlarla anlamlı. */
+    siparisGerektirir: true,
     kovalar: [
       { ad: 'bugün sipariş tahsilatı', zorunlu: true, sayac: (db) => say(db, 'money_movement', (q) => q.eq('value_date', bugun()).eq('type', 'order_payment')) },
       { ad: 'bugün NAKİT tahsilat', zorunlu: true, sayac: (db) => bugunYontemliTahsilat(db, 'cash') },
@@ -1106,18 +1137,23 @@ export async function kapsamOl(db: Db): Promise<KapsamSonucu> {
   const bosZorunlular: KapsamSonucu['bosZorunlular'] = [];
 
   for (const alan of KAPSAM) {
+    // Sipariş isteyen alanın kovaları raporlanır ama kapıyı kapatmaz (künye `KapsamAlani`).
+    const zorunluMu = (kova: KapsamKovasi): boolean => kova.zorunlu === true && alan.siparisGerektirir !== true;
     for (const kova of alan.kovalar) {
       const sayi = kova.sayac ? await kova.sayac(db) : await say(db, alan.tablo!, kova.filtre);
-      satirlar.push({ alan: alan.baslik, kova: kova.ad, sayi, zorunlu: kova.zorunlu === true });
-      if (kova.zorunlu && sayi === 0) bosZorunlular.push({ alan: alan.baslik, kova: kova.ad });
+      satirlar.push({ alan: alan.baslik, kova: kova.ad, sayi, zorunlu: zorunluMu(kova) });
+      if (zorunluMu(kova) && sayi === 0) bosZorunlular.push({ alan: alan.baslik, kova: kova.ad });
     }
   }
 
-  // Sipariş durumları — dokuzunun da örneği olmalı: her biri ayrı bir ekran hâli ve ayrı geçiş.
+  /*
+    Sipariş durumları — dokuzunun da örneği OLMALIYDI: her biri ayrı bir ekran hâli ve ayrı geçiş.
+    Besleme 01.09'dan beri hiç sipariş yazmıyor, dolayısıyla dokuzu da boş; satırlar raporda
+    kalıyor (hangi hâllerin sınanmadığı yazılı kalsın) ama zorunlu DEĞİL.
+  */
   for (const durum of SIPARIS_DURUMLARI) {
     const sayi = await say(db, 'order', (q) => q.eq('status', durum));
-    satirlar.push({ alan: 'Sipariş — durum', kova: durum, sayi, zorunlu: true });
-    if (sayi === 0) bosZorunlular.push({ alan: 'Sipariş — durum', kova: durum });
+    satirlar.push({ alan: 'Sipariş — durum', kova: durum, sayi, zorunlu: false });
   }
 
   return { satirlar, bosZorunlular, kdvOranlari: await degerler(db, 'product', 'vat_rate') };

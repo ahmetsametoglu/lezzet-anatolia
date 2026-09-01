@@ -31,30 +31,19 @@ export const an = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 /** 2 ondalığa yuvarlama — para alanları numeric(10,2). */
 export const euro = (v: number) => Math.round(v * 100) / 100;
 
-/**
- * temp/<file> görselini R2'ye verilen key ile yükler ve saklanacak RELATIVE key'i döner. R2 ayarsızsa
- * (local'de creds yoksa) sessizce null döner → kayıt görselsiz oluşur (graceful degradation).
- */
-export async function uploadImage(file: string, key: string): Promise<string | null> {
-  const r2 = getR2();
-  if (!r2) return null;
-  try {
-    const bytes = readFileSync(join(process.cwd(), 'temp', file));
-    await r2.uploadFile(key, bytes, 'image/jpeg');
-    return key;
-  } catch (err) {
-    console.warn(`  ⚠ görsel atlandı (${file}): ${(err as Error).message}`);
-    return null;
-  }
-}
+/*
+  `uploadImage` (temp/ altındaki elle konan görselleri yükleyen yardımcı) 01.09'da SİLİNDİ: tek
+  çağıranı `seed/support.ts`ti (talep mesajlarının fotoğrafı) ve o dosya, besleme sipariş yazmayı
+  bıraktığı için kalktı — talep bir siparişe bağlanır (künye `seed.ts` → §SİPARİŞ). Yükleme yolu
+  gerekirse `uploadImageFromPath` aynı işi repo içi bir dosyayla yapıyor.
+*/
 
 /**
  * DEPO İÇİNDEKİ bir dosyayı R2'ye yükler — yol repo köküne göre verilir.
  *
- * `uploadImage`'dan farkı yalnız kök: o `temp/` altına bakar (repoya girmeyen, elle konan
- * görseller), bu repoda DURAN bir dosyayı alır. İhtiyaç sayfa görsellerinden doğdu (09.16): ana
- * sayfanın kahramanı bugün `apps/web/public/hero-sofra.jpg`'de geçici olarak duruyor ve slot
- * tablosuna taşınırken kaynak o dosyanın kendisi.
+ * İhtiyaç sayfa görsellerinden doğdu (09.16): ana sayfanın kahramanı bugün
+ * `apps/web/public/hero-sofra.jpg`'de geçici olarak duruyor ve slot tablosuna taşınırken kaynak o
+ * dosyanın kendisi.
  */
 export async function uploadImageFromPath(relPath: string, key: string): Promise<string | null> {
   const r2 = getR2();

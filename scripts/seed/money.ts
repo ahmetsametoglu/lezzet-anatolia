@@ -143,53 +143,20 @@ export async function seedMoney(db: Db): Promise<void> {
  * kestirmesini yazsaydı sütun tanıma ve mükerrer koruması yerelde hiç denenmemiş olurdu.
  */
 /**
- * Ekstrenin AÇIK SİPARİŞLERDEN türeyen satırları — eşleştirme kuyruğunun üç hâlini de doğurur.
- *
- * Sabit tutarlı uydurma satırlar bu işi göremiyordu: eşleştirme motoru tutar ve tarih üzerinden
- * puanlıyor (`suggestOrderMatches`), yani gerçek bir siparişin açık bakiyesine denk gelmeyen satır
- * hep "öneri yok" çıkıyor. Kuyruk ekranı böylece tek hâlini gösteriyor ve **çalıştığı ancak canlı
- * veriyle anlaşılıyordu** — seed'in işi tam da bunu önlemek.
- *
- * Üç hâl bilerek kuruluyor:
- * · **güçlü aday** — referans numarası açıklamada geçen tek satır (motorun en güçlü kanıtı, 0.6)
- * · **çoklu aday** — iki siparişle aynı tutar, referans YOK; motor ayıramaz, ekran "Seç" der
- * · **öneri yok** — hiçbir siparişe uymayan banka masrafı
- */
-async function orderDerivedRows(db: Db, frDate: (daysAgo: number) => string) {
-  const { data } = await db
-    .from('order')
-    .select('reference_no,total,amount_collected')
-    .not('reference_no', 'is', null)
-    .limit(12);
-
-  const open = ((data ?? []) as Array<{ reference_no: string; total: string; amount_collected: string }>)
-    .map((row) => ({ ref: row.reference_no, outstanding: Number(row.total) - Number(row.amount_collected) }))
-    .filter((row) => row.outstanding > 1);
-
-  const rows: Array<{ Date: string; 'Libellé': string; Montant: string; Solde: string }> = [];
-  const fr = (value: number) => value.toFixed(2).replace('.', ',');
-
-  // GÜÇLÜ ADAY: referans açıklamada. Bankalar havale açıklamasını böyle taşır.
-  const strong = open[0];
-  if (strong) {
-    rows.push({ Date: frDate(4), 'Libellé': `VIR SEPA ${strong.ref}`, Montant: fr(strong.outstanding), Solde: '0,00' });
-  }
-
-  // ÇOKLU ADAY: aynı tutar, referanssız. İki sipariş de uyar; kararı insan verir.
-  const ambiguous = open[1];
-  if (ambiguous) {
-    rows.push({ Date: frDate(2), 'Libellé': 'VIREMENT 8829 LEROY', Montant: fr(ambiguous.outstanding), Solde: '0,00' });
-    rows.push({ Date: frDate(2), 'Libellé': 'VIREMENT 4417 MARTIN', Montant: fr(ambiguous.outstanding), Solde: '0,00' });
-  }
-
-  return rows;
-}
-
-/**
- * Banka ekstresi + eşleştirme kuyruğu — **siparişler kurulduktan SONRA** çağrılır (`seed.ts`).
+ * Banka ekstresi + eşleştirme kuyruğu.
  *
  * Kendi hesabını arayıp buluyor: çağıranın hesap haritasını taşıması, iki seed adımı arasında bir
  * bağ daha kurardı.
+ *
+ * ── SİPARİŞTEN TÜREYEN SATIRLAR KALKTI (kullanıcı kararı 01.09) ──────────────
+ * Ekstrenin üç satırı açık siparişlerin bakiyesinden üretiliyordu ve eşleştirme kuyruğunun "güçlü
+ * aday" / "çoklu aday" hâllerini doğuruyordu. Besleme artık hiç sipariş yazmıyor (künye
+ * `seed.ts` başlığında), dolayısıyla o satırların dayanağı da yok — uydurma bir tutarla yazılsalar
+ * motor onları zaten hiçbir siparişe bağlayamaz ve "aday" hâli YALANCI olurdu.
+ *
+ * Kuyruk siparişsiz **"öneri yok"** hâlinde duruyor ve bu eksik bir hâl değil, gerçek bir hâl:
+ * banka masrafı, nakit çekimi ve tanımadığı bir havale hiçbir siparişe uymaz. Aday hâllerini
+ * denemek isteyen önce bir sipariş oluşturur — ki artık sistemin doğru yolu da o.
  */
 export async function seedBankQueue(db: Db): Promise<void> {
   // Koruma EKSİKTİ (08.08): buradaki her satır her koşuda yeniden yazılıyordu ve ikinci koşu
@@ -215,7 +182,6 @@ async function seedBankImport(db: Db, accountId: string): Promise<void> {
     { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 692,31' },
     { Date: frDate(3), 'Libellé': 'RETRAIT DAB REPUBLIQUE', Montant: '-50,00', Solde: '12 642,31' },
     { Date: frDate(1), 'Libellé': 'FRAIS TENUE DE COMPTE', Montant: '-4,50', Solde: '12 637,81' },
-    ...(await orderDerivedRows(db, frDate)),
   ];
 
   const suggestion = heuristicColumnMapper(
