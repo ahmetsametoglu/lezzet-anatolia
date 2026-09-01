@@ -1,5 +1,5 @@
-import { type ReactNode, useCallback, useEffect, useRef } from 'react';
-import { BackHandler, Text, View } from 'react-native';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { BackHandler, Dimensions, Keyboard, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
 
@@ -118,6 +118,44 @@ export function BottomSheet({
     return () => subscription.remove();
   }, [onClose, visible]);
 
+  /*
+    KLAVYE PAYI İÇERİĞE VERİLİR — ölçüldü, dört yol denendi (01.09 · cihazda).
+
+    Panel klavye açılınca yerinde kalıyor ve giriş alanı arkada kalıyordu. Sırayla denenenler:
+
+      · `keyboardBehavior` (kütüphanenin kendisi) — çalışmıyor. Klavye kaçınması çekmecedeki
+        alanların KAYITLI olmasını istiyor (`textInputNodesRef`, yalnız `BottomSheetTextInput`
+        doldurur) ve üstüne `react-native-edge-to-edge` işletim sisteminin varsayılan
+        mekanizmasını devre dışı bırakıyor. Kaydı kurdum, yine kıpırdamadı.
+      · `rt.insets.ime` — cihazda SIFIR geliyor (ölçüldü); pay hiç uygulanmıyordu.
+      · `bottomInset` — etkisiz. Dokümanı da yüzdeli snap point hesabı için tarif ediyor;
+        `enableDynamicSizing` ile duruş konumuna dokunmuyor.
+      · **İÇERİĞE ALT PAY — ÇALIŞAN TEK YOL.** `enableDynamicSizing` panel boyunu içerikten
+        alıyor: içerik klavye kadar uzayınca panel de o kadar yukarı büyüyor.
+
+    Yükseklik RN'in `keyboardDidShow` olayından; cihazda ölçüldü ve doğru geliyor (320).
+
+    ── ÖRTME `height`TEN DEĞİL EKRAN DİBİNDEN HESAPLANIR (ölçüldü 01.09 · cihazda) ────────────
+    `endCoordinates.height` klavyenin KENDİ boyudur ve Android'de altındaki hareket çubuğunu
+    saymaz. Cihazda ölçüldü: `height` 320 derken klavyenin gerçekten kapattığı yükseklik 336'ydı
+    (ekran 904 − `screenY` 568). Aradaki 16, çekmecenin en alt satırını yutmaya yetiyordu — ilk
+    turda "çalıştı" dediğim pay, son satırı klavyenin arkasında bırakıyordu ve bunu ancak
+    kullanıcı gördü. Ekran DİBİNDEN ölçmek iOS'ta da doğrudur: orada hareket çubuğu zaten
+    klavyenin içinde sayılır, iki hesap aynı sayıyı verir. Ekran ölçüsü `screen`den alınır,
+    `window`dan değil — `screenY` ekran koordinatıdır.
+  */
+  const [keyboardPad, setKeyboardPad] = useState(0);
+  useEffect(() => {
+    const acildi = Keyboard.addListener('keyboardDidShow', (e) =>
+      setKeyboardPad(Math.max(0, Dimensions.get('screen').height - e.endCoordinates.screenY)),
+    );
+    const kapandi = Keyboard.addListener('keyboardDidHide', () => setKeyboardPad(0));
+    return () => {
+      acildi.remove();
+      kapandi.remove();
+    };
+  }, []);
+
   /* Kullanıcı kapattı (sürükleme): çekmece kendi kapandığını söylüyor, bayrak burada düşer ki
      çağıranın `visible`ı düşünce ikinci bir `dismiss()` gitmesin — o çağrı çekmeceyi söker. */
   const handleDismiss = useCallback(() => {
@@ -155,12 +193,16 @@ export function BottomSheet({
       keyboardBehavior="interactive"
       android_keyboardInputMode="adjustResize"
     >
-      <BottomSheetScrollView
-        contentContainerStyle={styles.content}
-        keyboardShouldPersistTaps="handled"
-        testID={testID}
-      >
+      <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID={testID}>
         {children}
+        {/*
+          PAY AYRI BİR BOŞLUKTUR, `paddingBottom` DEĞİL (ölçüldü 01.09 · cihazda).
+          `contentContainerStyle` dizisine ikinci bir `paddingBottom` yazmak tabandakini TOPLAMAZ,
+          EZER: klavye açılınca içeriğin alt nefesi (`8xl` + güvenli alan) sıfırlanıyor ve son satır
+          klavyeye yapışıyordu (içerik 251 → 525 ölçüldü; 46'lık taban 320'yle değişmişti, oysa
+          571 olmalıydı). Boşluk olarak eklenince taban yerinde kalır.
+        */}
+        {keyboardPad > 0 ? <View style={{ height: keyboardPad }} /> : null}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -208,7 +250,9 @@ const styles = StyleSheet.create((t, rt) => ({
      (kullanıcı bulgusu 11.08): o pay ana ekran çubuğunun üstü içindir, klavye zaten orayı kapatır. */
   content: {
     paddingHorizontal: t.space['5xl'],
-    paddingBottom: t.space['8xl'] + (rt.insets.ime > 0 ? 0 : rt.insets.bottom),
+    /* Klavye payı BURADA DEĞİL, içeriğin sonundaki boşlukta — gerekçesi orada. Buradaki pay
+       klavyesiz hâlin nefesi + cihazın alt güvenli alanıdır ve klavye açıkken de KORUNUR. */
+    paddingBottom: t.space['8xl'] + rt.insets.bottom,
     gap: t.space['2xl'],
   },
 }));

@@ -9984,3 +9984,31 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **BEKLEYEN(BACKLOG §1):** etiket başlığı sipariş yarımken de "Kutu 1/1" diyor — `boxCount` o anki
   kutu sayısı, nihai değil. Doğrusu ya sayıyı hiç yazmamak ya "Kutu 1" demek; karar verilmedi.
+
+- [x] (21.207) **Klavyeli çekmecelerin son satırı klavyenin arkasında kalıyordu** (kullanıcı bulgusu 01.09:
+  *"hâlâ en alttaki yazı görünmüyor"*) — kitin tek çekmecesi, yani 42 çağıranın hepsi.
+  - **Durum (01.09) — İKİ AYRI HATA, ikisi de cihazda ÖLÇÜLDÜ.** Panel klavye açılınca yükseliyordu
+    ama içeriğin son satırı hep eksik kalıyordu. Geçici bir ölçüm ekrana basıldı
+    (`kb320 gor525 ic525 scrY568`, ekran 904 dp) ve iki ayrışma birden çıktı:
+    1. **Klavyenin gerçek örtmesi 336, bildirdiği 320.** `keyboardDidShow`un `endCoordinates.height`ı
+       klavyenin KENDİ boyudur ve Android'de altındaki hareket çubuğunu saymaz. Pay artık ekran
+       DİBİNDEN hesaplanıyor: `Dimensions.get('screen').height − endCoordinates.screenY`. iOS'ta bu
+       iki hesap zaten aynı sayıyı verir (klavye orada ekranın dibine oturur), yani düzeltme
+       Android'in farkını kapatırken iOS'ta hiçbir şeyi değiştirmiyor.
+    2. **Taban nefes eziliyordu.** Pay `contentContainerStyle` dizisine ikinci bir `paddingBottom`
+       olarak veriliyordu; dizi TOPLAMIYOR, EZİYOR — klavye açılınca içeriğin `8xl` + güvenli alan
+       nefesi (46 dp) siliniyordu. Ölçüm bunu da gösterdi: içerik 251 → 525, oysa toplansaydı 571
+       olmalıydı. Pay artık içeriğin sonuna AYRI BİR BOŞLUK olarak ekleniyor.
+  - **Ölçüm (01.09):** Android (Xiaomi 2311DRK48G) — posta kodu çekmecesi sayı klavyesiyle, sonra
+    öneri listesi açılıp panel TAVANA dayanmışken (asıl kırılma hâli), sonra "Bize yazın" çekmecesi
+    METİN klavyesiyle: üçünde de son satır klavyenin üstünde ve nefes payı yerinde. iOS
+    (iPhone 16e · iOS 26.2 simülatörü) — aynı çekmece, yazılım klavyesiyle: son satır görünür.
+  - **Önce denenip ÇÜRÜTÜLENLER** (hepsi cihazda): kütüphanenin kendi `keyboardBehavior`ı ·
+    `BottomSheetTextInput` ile kaydı kurmak · `bottomInset` · `react-native-keyboard-controller` +
+    `KeyboardAwareScrollView`. Sonuncusu topluluğun standart çaresidir ve BU arızayı çözmedi:
+    kaydırma alanının İÇİNDE kaydırıyor, oysa klavyenin altında kalan PANELİN KENDİSİYDİ. Paket
+    kuruldu, dev-client yeniden derlendi, ölçüldü, geri alındı — bağımlılık eklenmedi.
+  - **Yan bulgu (iOS simülatörü, ürün değil):** dev-client'ın yüzen "Tools" düğmesi sağ ÜST köşede
+    duruyor ve dokunma alanı başlığın sağ eylemini (hesap menüsü, "Vazgeç") yutuyor — dokunuş
+    uygulamaya değil geliştirici menüsüne gidiyor. Düğme sürüklenerek yoldan çekilir. Cihaz turu
+    yapan ajanın bilmesi gereken bir tuzak; uygulamada karşılığı yok.
