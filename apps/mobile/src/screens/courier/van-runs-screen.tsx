@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRunDetail } from '@lezzet/types';
 
@@ -141,7 +141,7 @@ export function CourierVanRunsScreen() {
               const state = stateOf(run);
               const load = loadOf(run.runId);
               return (
-                <OperationsSurface
+                <RunCard
                   key={run.runId}
                   /* SÜRÜLEN KART YEŞİL ZEMİNLİ VE ZEYTİN KENARLI (v3:16 `bg:#f2f7e8 · bd:#5f7a2c`
                      · tur 31.08). Bütün kartlar krem çizilmişti; hangisinin sürüldüğü yalnız
@@ -153,6 +153,26 @@ export function CourierVanRunsScreen() {
                      yüzeyin kendi künyesi bu hatayı zaten sayıyor: *"kodda 41 yerde elle
                      çizilmişti."* Kartın kendine ait kalan tek şey SÜRÜLEN hâli: zeytin kenar +
                      açık zeytin zemin (v3:16), o da tonun üstüne kabuk olarak biniyor. */
+                  /*
+                    UZUN BASINCA ARAÇTAN ÇIKAR (kullanıcı kararı 02.09) — kart bir bağlam eylemi
+                    taşıyor ama kısa dokunuşu YOK.
+
+                    Eylem 31.08'de eklenmişti (tasarımda yok; boşluk cihazda görüldü: yanlış rotayı
+                    araca alan kuryenin tek çıkışı onu BAŞLATIP kapatmaktı, yani hatanın bedeli
+                    müşteriye bildirim olarak yansıyordu). Yeri iki kez değişti: önce kartın altında
+                    metin eylemiydi — birincil düğmenin yanında duran yıkıcı bir bağlantı; sonra sağ
+                    üst köşede ikon düğme oldu ve kullanıcı *"orada çok olmamış"* dedi. Üçüncü hâl
+                    onun kararı: **uzun basma**. Yıkıcı eylem böylece ekranda hiç yer kaplamıyor ve
+                    yanlışlıkla basılamıyor.
+
+                    Bedeli KEŞFEDİLEBİLİRLİK: uzun basma görünmez bir yoldur. Ekran okuyucuya ipucu
+                    veriliyor (`accessibilityHint`), gören kullanıcı için karşılığı yok — kart
+                    üstünde bir işaret istenirse tasarım kararı gerekir.
+
+                    Yalnız BAŞLAMAMIŞ seferde: başlamış seferin çıkışı kapanıştır.
+                  */
+                  onDiscard={state.driving ? null : () => setDiscarding(run)}
+                  discardLabel={run.zoneName ?? run.referenceNo}
                   style={[styles.cardBody, state.driving ? styles.cardDriving : null]}
                   testID={`courier-van-run-${run.runId}`}
                 >
@@ -276,6 +296,14 @@ export function CourierVanRunsScreen() {
                         }}
                         disabled={day.starting || drivenRun !== null}
                         tone="olive"
+                        /* IŞIMA TASARIMIN KENDİ ÖLÇÜSÜ (v3:16 satır 37 · kullanıcı bulgusu 02.09:
+                           *"renk ve gölge farkı var"*): düğmenin gölgesi
+                           `box-shadow:0 4px 14px rgba(95,122,44,.22)` ve bizde varsayılan gölge
+                           çiziliyordu. Renk zaten doğruydu (`olive` = #5f7a2c); eksik olan ışımaydı
+                           ve kitte hazır duruyordu — `elevation="glow"` (token `shadow.glow`).
+                           Kitin kendi künyesi bunu bekleyen bir arıza olarak yazmıştı: *"burada
+                           henüz patlamamıştı çünkü `elevation='glow'` hiçbir ekrandan gelmiyordu."* */
+                        elevation="glow"
                         testID={`courier-van-depart-${run.runId}`}
                       />
                       {/* Yükleme yolu KAPANMADI, ikincil oldu: eksik kutu varken kuryenin ilk
@@ -288,19 +316,10 @@ export function CourierVanRunsScreen() {
                           testID={`courier-van-load-${run.runId}`}
                         />
                       ) : null}
-                      {/* ARAÇTAN ÇIKAR (31.08 · tasarımda YOK, boşluk cihazda görüldü): yanlış
-                          rotayı araca alan kuryenin tek çıkışı onu BAŞLATIP kapatmaktı — yani
-                          hatanın bedeli müşteriye bildirim olarak yansıyordu. Yalnız BAŞLAMAMIŞ
-                          seferde çizilir: başlamış seferin çıkışı kapanıştır. */}
-                      <TextAction
-                        label={t.day.vanRuns.discard}
-                        onPress={() => setDiscarding(run)}
-                        disabled={day.starting}
-                        testID={`courier-van-discard-${run.runId}`}
-                      />
+
                     </>
                   )}
-                </OperationsSurface>
+                </RunCard>
               );
             })}
 
@@ -399,7 +418,10 @@ export function CourierVanRunsScreen() {
         }
         confirmLabel={t.day.vanRuns.discardConfirm}
         cancelLabel={t.day.vanRuns.discardCancel}
-        tone="olive"
+        /* KIRMIZI (kullanıcı kararı 02.09): eylem YIKICI — sefer kaydı düşer, siparişler serbest
+           kalır, araçtaki kutuların damgası silinir. Zeytin ton "geri alınamaz ama olumlu" demek
+           (çekmecenin kendi künyesi) ve burada yanlış cümleydi. */
+        tone="error"
         busy={day.starting}
         busyLabel={t.day.vanRuns.discardBusy}
         onConfirm={() => {
@@ -411,6 +433,50 @@ export function CourierVanRunsScreen() {
         testID="courier-van-discard-sheet"
       />
     </View>
+  );
+}
+
+/**
+ * **SEFER KARTININ YÜZEYİ** — kitin yüzeyi, üstüne yalnız uzun basma kararı biniyor.
+ *
+ * Sarmalayıcı bir kaçamak değil, TİPİN gereği: `OperationsSurface`ın dokunuş birleşimi ayrıktır
+ * (ya eylem + ad, ya hiçbiri) ve ayrık birleşime yayılmış nesne (`{...(driving ? {} : {…})}`)
+ * geçirilemiyor — derleyici hangi dalda olduğunu göremiyor. İki dalı burada AÇIKÇA yazmak, kartın
+ * gövdesini iki kez yazmadan aynı sonucu veriyor.
+ *
+ * `onDiscard === null` = sürülen sefer: kart dokunulamaz. Başlamış seferin çıkışı kapanıştır.
+ */
+function RunCard({
+  children,
+  onDiscard,
+  discardLabel,
+  style,
+  testID,
+}: {
+  children: ReactNode;
+  onDiscard: (() => void) | null;
+  /** Ekran okuyucuda kartın adı — rota adı, yoksa sefer künyesi. */
+  discardLabel: string;
+  style: StyleProp<ViewStyle>;
+  testID: string;
+}) {
+  if (onDiscard === null) {
+    return (
+      <OperationsSurface style={style} testID={testID}>
+        {children}
+      </OperationsSurface>
+    );
+  }
+  return (
+    <OperationsSurface
+      onLongPress={onDiscard}
+      accessibilityLabel={discardLabel}
+      accessibilityHint={t.day.vanRuns.discardHint}
+      style={style}
+      testID={testID}
+    >
+      {children}
+    </OperationsSurface>
   );
 }
 

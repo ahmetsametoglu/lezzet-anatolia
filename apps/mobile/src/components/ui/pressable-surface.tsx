@@ -28,7 +28,12 @@ type PressFeedback = 'shadow' | 'scale' | 'scale-small' | 'opacity' | 'tint';
 
 interface PressableSurfaceProps {
   children: ReactNode;
-  onPress: () => void;
+  /**
+   * Kısa dokunuş. **İsteğe bağlı ama yalnız `onLongPress` varsa** (aşağıdaki birleşim): yüzeyin
+   * tek yolu uzun basma olabilir — kurye kartında olduğu gibi, kartın kendisi bir hedef değil ama
+   * üstünde bir bağlam eylemi var (kullanıcı kararı 02.09).
+   */
+  onPress?: () => void;
   /**
    * UZUN BASMA — varsa öğeye ikinci bir yol açar (bağlam menüsü).
    *
@@ -87,6 +92,15 @@ interface PressableSurfaceProps {
   testID?: string;
 }
 
+/*
+  EN AZ BİR YOL OLMALI (02.09) — `onPress` ile `onLongPress`in ikisi birden verilmeyen bir yüzey,
+  dokunulunca hiçbir şey yapmayan bir düğmedir. Birleşim bunu tipte zorluyor: ya kısa dokunuş var
+  (uzun basma da eklenebilir), ya YALNIZ uzun basma. `onPress`i tek başına isteğe bağlı yapmak
+  yetmezdi — o hâlde ikisi de boş bırakılabilirdi.
+*/
+type PressableSurfaceInput = PressableSurfaceProps &
+  ({ onPress: () => void } | { onPress?: undefined; onLongPress: () => void });
+
 export function PressableSurface({
   children,
   onPress,
@@ -103,7 +117,7 @@ export function PressableSurface({
   compact = false,
   compactEdges = 'all',
   testID,
-}: PressableSurfaceProps) {
+}: PressableSurfaceInput) {
   const { theme } = useUnistyles();
   const slop = theme.touchSlop;
   const hitSlop = !compact
@@ -134,12 +148,14 @@ export function PressableSurface({
         hareketi aynı sesle anlatmak olurdu.
       */
       onPress={
-        haptic
-          ? () => {
-              hapticSelect();
-              onPress();
-            }
-          : onPress
+        onPress === undefined
+          ? undefined
+          : haptic
+            ? () => {
+                hapticSelect();
+                onPress();
+              }
+            : onPress
       }
       onLongPress={
         onLongPress === undefined

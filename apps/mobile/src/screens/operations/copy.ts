@@ -44,10 +44,15 @@ export const operationsCopy = messages;
  * Üretimde sessiz: metin yine döner, ham yuvayla — yarım bir cümle, çöken bir ekrandan iyidir.
  */
 export function fillCopy(template: string, values: Record<string, string>): string {
-  const filled = Object.entries(values).reduce(
-    (text, [key, value]) => text.replace(`{${key}}`, value),
-    template,
-  );
+  /*
+    HER GEÇİŞİ doldurur, ilkini değil (kusur, `__DEV__` uyarısı yakaladı 02.09).
+
+    `String.replace` bir metin kalıbıyla YALNIZ İLK eşleşmeyi değiştirir ve bu, aynı yuvayı iki kez
+    kullanan cümlelerde sessizce yarım metin üretiyordu: *"{route} seferinin {n} kutusu araca
+    binmedi… kutusu binmemiş {n} durak AÇILMAZ"* — ikinci `{n}` ham hâliyle ekrana çıkıyordu.
+    Kural artık cümleye bakmıyor: aynı yuva kaç kez geçerse geçsin dolar.
+  */
+  const filled = Object.entries(values).reduce((text, [key, value]) => text.split(`{${key}}`).join(value), template);
   if (__DEV__) {
     const kalan = filled.match(/\{[a-zA-Z]\w*\}/g);
     if (kalan !== null) {

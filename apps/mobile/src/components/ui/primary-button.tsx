@@ -131,6 +131,10 @@ export function PrimaryButton({
       style={[
         styles.base,
         isBlock ? styles.block : styles.pill,
+        /* İKİ SATIRLI blok düğme SABİT değil TABANLI (kullanıcı bulgusu 02.09 · v3:16 satır 37
+           `min-height:58px`): etiket + ipucu 52'ye sıkışıyordu. Yalnız blok biçimde geçerli —
+           hap biçimi tek satırlıktır ve ipucu almaz. */
+        isBlock && hint !== undefined ? styles.blockStack : undefined,
         disabled ? styles.disabled : styles[tone],
         lifted ? styles.shadow : undefined,
         glowing ? styles.glow : undefined,
@@ -188,6 +192,13 @@ const styles = StyleSheet.create((theme) => ({
     /* İkonlu düğmenin ikon–metin aralığı (tasarım: `gap:10`). İkonsuz düğmede görünmez, o yüzden
        koşulsuz yazılıyor — tek çocuklu bir satırda boşluğun karşılığı yoktur. */
     gap: theme.space.lg,
+  },
+  /** İpuçlu blok düğme: yükseklik TABAN olur ve içerik onu büyütebilir (v3:16 `min-height`). */
+  blockStack: {
+    height: undefined,
+    minHeight: theme.size.controlStack,
+    /* Dolgu tabanın içinde kalır; metin iki satırdan uzarsa kutu onunla birlikte büyür. */
+    paddingVertical: theme.space.md,
   },
   block: {
     height: theme.size.controlLg,

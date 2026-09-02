@@ -51,6 +51,18 @@ export const appMetrics = {
     touchTarget: 44,
     /** Blok düğme ve tek satırlı girdi (tasarım: 52). */
     controlLg: 52,
+    /**
+     * **İKİ SATIRLI blok düğmenin TABAN yüksekliği** — etiket + altındaki ipucu (v3:16 satır 37:
+     * `min-height:58px`, `flex-direction:column`, `gap:2px`).
+     *
+     * `controlLg`den (52) ayrı bir durak ve ayrı olmak zorunda: tek satırlık düğme SABİT yükseklikte
+     * (52), iki satırlık ise TABANI olan bir kutudur — tasarım da `height` değil `min-height`
+     * yazıyor. İkisini aynı sayıya bağlamak, ipucu iki satıra kırıldığı gün metni kırpardı.
+     *
+     * Kullanıcı bulgusu 02.09: *"butonun yüksekliği bile farklı"* — ipuçlu düğme 52'ye
+     * sıkıştırılıyordu, tasarım 58 diyor.
+     */
+    controlStack: 58,
     /** Form girdisi, hap düğme (tasarım: 50). */
     controlMd: 50,
     /** Arama kutusu, mesaj alanı, küçük hap kontrol (tasarım: 46). */

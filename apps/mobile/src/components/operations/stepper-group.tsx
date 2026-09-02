@@ -16,10 +16,18 @@ import { operationsTheme } from '@/theme/unistyles';
   tasarımın kendi işaretlemesi — `stepper-button` v2'nin `34×34` dolgusuz düğmesi, bu v3'ün
   `42×46` hücreli grubu.
 
-  ── DEĞER İÇERİDE, ELİN ALTINDA DEĞİL ───────────────────────────────────────
-  Ortadaki sayı DOKUNULABİLİR DEĞİL ve bu bilinçli: eldivenli parmak 34 dp'lik bir hedefe
-  isabet ettiremez ve yanlışlıkla açılan bir klavye, sayacın var olma sebebini (klavyesiz sayım)
-  ortadan kaldırırdı. Sayıyı değiştirmenin tek yolu ± düğmeleridir.
+  ── ORTADAKİ SAYI: 02.09'DA DÜĞME OLABİLİR HÂLE GELDİ (kullanıcı kararı) ────
+  Burada *"ortadaki sayı DOKUNULABİLİR DEĞİL ve bu bilinçli: yanlışlıkla açılan bir klavye, sayacın
+  var olma sebebini (klavyesiz sayım) ortadan kaldırırdı"* yazıyordu. Kural kalktı çünkü DAYANDIĞI
+  VARSAYIM yanlıştı: sayıya basmak klavye açmıyor, kitin kendi ADET ÇEKMECESİNİ açıyor — aynı
+  sayacın büyük hâli (`OperationsScanQtySheet`). Klavyesiz sayım bozulmuyor, hızlanıyor.
+
+  Kullanıcının gerekçesi rampanın kendisi: 12 adet koyacak kurye artı düğmesine on iki kez basıyor.
+  Sayı zaten ekranın ortasında ve parmağın düştüğü yer.
+
+  Dokunuş İSTEĞE BAĞLI (`onPressValue`) ve verilmezse sayı düz metin kalır — eski kural, onu
+  isteyen çağıranlar için hâlâ geçerli. Hedef ± hücreleriyle AYNI yükseklikte (`controlSm`), yani
+  eldivenli parmağın kaçırdığı dar bir şerit değil.
 
   ── TON BİR RENK DEĞİL, SAYININ ANLAMIDIR ───────────────────────────────────
   `neutral` sayılan mal, `positive` sıfırdan büyük koli (tasarım kutuyu zeytine çeviriyor),
@@ -37,6 +45,25 @@ interface OperationsStepperGroupProps {
   tone?: StepperTone;
   /** Taban; altına inilemez. Sayım negatif olamaz, varsayılan 0. */
   min?: number;
+  /**
+   * **ORTADAKİ RAKAMA BASILINCA** (kullanıcı kararı 02.09) — verilirse sayı da bir düğme olur.
+   *
+   * Gerekçe rampanın kendisi: 12 adet koyacak kurye artı düğmesine on iki kez basıyor. Sayı zaten
+   * ekranın ortasında ve parmağın düştüğü yer; ona basmak "bu sayıyı değiştirmek istiyorum"
+   * demenin en kısa yolu. Ne AÇILACAĞINI bilen taraf çağırandır (adet çekmecesi · klavye), o
+   * yüzden burada yalnız dokunuş var.
+   *
+   * Verilmezse rakam düz metin kalır: yirmiye yakın çağıran var ve çoğunda basılacak bir şey yok —
+   * her sayıyı düğmeye çevirmek, dokunulunca hiçbir şey yapmayan bir yüzey üretirdi.
+   */
+  onPressValue?: () => void;
+  /**
+   * Rakama basınca ne olacağını söyleyen ekran-okuyucu ipucu ("adet çekmecesini açar").
+   *
+   * Metin ÇAĞIRANDAN gelir, kitin içinde durmaz: kit i18n bilmez (kardeş bileşenlerin kuralı —
+   * `scan-qty-sheet` de bütün cümlelerini prop olarak alıyor).
+   */
+  valueHint?: string;
   testID?: string;
 }
 
@@ -46,8 +73,22 @@ export function OperationsStepperGroup({
   label,
   tone = 'neutral',
   min = 0,
+  onPressValue,
+  valueHint,
   testID,
 }: OperationsStepperGroupProps) {
+  /* Rakam iki hâlde de AYNI görünür: basılabilir olması bir çerçeve ya da renk değişikliği
+     getirmiyor. Ayrım dokunuşta ortaya çıkıyor — sayaç zaten bir girdi yüzeyi, içindeki her hücre
+     dokunulabilir görünüyor. */
+  const deger = (
+    <Text
+      style={[styles.value, styles[`${tone}Value`]]}
+      accessibilityLabel={`${label}: ${value}`}
+      testID={testID === undefined ? undefined : `${testID}-value`}
+    >
+      {value}
+    </Text>
+  );
   return (
     <View style={[styles.group, styles[`${tone}Border`]]}>
       <PressableSurface
@@ -62,13 +103,21 @@ export function OperationsStepperGroup({
         {/* Eksi İŞARETİ (U+2212), tire değil: rakamla aynı genişlikte durur. */}
         <Text style={[styles.glyph, value <= min ? styles.glyphDisabled : styles.glyphMinus]}>−</Text>
       </PressableSurface>
-      <Text
-        style={[styles.value, styles[`${tone}Value`]]}
-        accessibilityLabel={`${label}: ${value}`}
-        testID={testID === undefined ? undefined : `${testID}-value`}
-      >
-        {value}
-      </Text>
+      {onPressValue === undefined ? (
+        deger
+      ) : (
+        <PressableSurface
+          onPress={onPressValue}
+          feedback="scale-small"
+          compact
+          style={styles.valueHit}
+          accessibilityLabel={`${label}: ${value}`}
+          accessibilityHint={valueHint}
+          testID={testID === undefined ? undefined : `${testID}-value-hit`}
+        >
+          {deger}
+        </PressableSurface>
+      )}
       <PressableSurface
         onPress={() => onChange(value + 1)}
         feedback="scale-small"
@@ -110,6 +159,14 @@ const styles = StyleSheet.create({
   },
   glyphMinus: { color: operationsTheme.colors.muted },
   glyphDisabled: { color: operationsTheme.colors['disabled-text'] },
+  /* Rakamın DOKUNMA hücresi: hücrenin kendisi kadar yüksek, sayının kolonu kadar geniş — yani
+     hedef, artı/eksi hücreleriyle aynı YÜKSEKLİKTE (`controlSm`). Genişliği rakamın kendi sabit
+     kolonundan geliyor (aşağıda) — ikisi ayrı yazılsaydı bir gün ayrışırlardı. */
+  valueHit: {
+    height: operationsTheme.size.controlSm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   value: {
     // Sayının kendi kolonu SABİT: 1 ile 10 arasında geçerken düğmeler yer değiştirmemeli.
     width: operationsTheme.size.stepButton,

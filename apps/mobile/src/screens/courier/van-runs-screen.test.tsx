@@ -274,13 +274,16 @@ describe('K · araçtaki seferler', () => {
       Tasarımda karşılığı YOK (ölçüldü: 14/15/16'da "iptal/vazgeç/araçtan çıkar" hiç geçmiyor) ve
       boşluk cihazda görüldü: yanlış rotayı araca alan kuryenin tek çıkışı onu BAŞLATIP kapatmaktı,
       yani hatanın bedeli müşteriye bildirim olarak yansıyordu.
+
+      YOL UZUN BASMA (kullanıcı kararı 02.09): eylem önce kartın altında metin, sonra sağ üst köşede
+      ikon düğmeydi — ikisi de reddedildi. Yıkıcı eylem artık ekranda yer kaplamıyor.
     */
     const bekleyen = waitingRun();
     mockVan(courierDay([courierStop(1)], { run: null, runs: [bekleyen] }));
 
     await renderVan();
-    await waitFor(() => expect(screen.getByTestId(`courier-van-discard-${bekleyen.runId}`)).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId(`courier-van-discard-${bekleyen.runId}`));
+    await waitFor(() => expect(screen.getByTestId(`courier-van-run-${bekleyen.runId}`)).toBeOnTheScreen());
+    await fireEvent(screen.getByTestId(`courier-van-run-${bekleyen.runId}`), 'longPress');
 
     // Onay ÇEKMECEDE: sayfaya gömülü bir onay bir karar anı gibi değil bir uyarı satırı gibi okunur.
     expect(screen.getByTestId('courier-van-discard-sheet')).toHaveTextContent(/hiç başlamadı/);
@@ -293,14 +296,16 @@ describe('K · araçtaki seferler', () => {
     await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/2 sipariş serbest/));
   });
 
-  it('SÜRÜLEN seferde "araçtan çıkar" HİÇ çizilmez — onun çıkışı kapanıştır', async () => {
+  it('SÜRÜLEN seferin kartı uzun basmaya CEVAP VERMEZ — onun çıkışı kapanıştır', async () => {
     const surulen = courierDayRun();
     mockVan(courierDay([courierStop(1)], { run: surulen, runs: [surulen] }));
 
     await renderVan();
     await waitFor(() => expect(screen.getByTestId(`courier-van-stops-${surulen.runId}`)).toBeOnTheScreen());
 
-    expect(screen.queryByTestId(`courier-van-discard-${surulen.runId}`)).toBeNull();
+    await fireEvent(screen.getByTestId(`courier-van-run-${surulen.runId}`), 'longPress');
+
+    expect(screen.queryByTestId('courier-van-discard-sheet')).toBeNull();
   });
 
   it('ARAÇ BOŞSA seçime çağırır — "sefer araçta olmakla başlamış sayılmaz" yazılı', async () => {

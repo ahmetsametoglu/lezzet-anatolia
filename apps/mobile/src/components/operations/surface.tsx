@@ -65,8 +65,12 @@ interface SurfaceBaseProps {
 */
 type OperationsSurfaceProps = SurfaceBaseProps &
   (
-    | { onPress: () => void; accessibilityLabel: string; accessibilityHint?: string; disabled?: boolean }
-    | { onPress?: undefined; accessibilityLabel?: undefined; accessibilityHint?: undefined; disabled?: undefined }
+    | { onPress: () => void; onLongPress?: () => void; accessibilityLabel: string; accessibilityHint?: string; disabled?: boolean }
+    /* YALNIZ UZUN BASMA (kullanıcı kararı 02.09): kartın kendisi bir hedef değil ama üstünde bir
+       BAĞLAM eylemi var — kurye seferini araçtan çıkarmak gibi. Ad yine ZORUNLU: adsız bir yüzey
+       ekran okuyucuda "düğme" diye okunur ve ne olduğu söylenmez. */
+    | { onPress?: undefined; onLongPress: () => void; accessibilityLabel: string; accessibilityHint?: string; disabled?: boolean }
+    | { onPress?: undefined; onLongPress?: undefined; accessibilityLabel?: undefined; accessibilityHint?: undefined; disabled?: undefined }
   );
 
 export function OperationsSurface({
@@ -77,6 +81,7 @@ export function OperationsSurface({
   style,
   testID,
   onPress,
+  onLongPress,
   accessibilityLabel,
   accessibilityHint,
   disabled = false,
@@ -106,7 +111,7 @@ export function OperationsSurface({
     </>
   );
 
-  if (onPress === undefined) {
+  if (onPress === undefined && onLongPress === undefined) {
     return (
       <View style={box} testID={testID}>
         {body}
@@ -116,7 +121,8 @@ export function OperationsSurface({
 
   return (
     <PressableSurface
-      onPress={onPress}
+      /* İkisinden en az biri var (tipteki birleşim); `PressableSurface` de aynı kuralı zorluyor. */
+      {...(onPress === undefined ? { onLongPress: onLongPress! } : { onPress, onLongPress })}
       disabled={disabled}
       /* v3'te yüzeylerin gölgesi YOK (ölçüldü: v2'de 3 sert gölge, v3'te sıfır), o yüzden basılı
          geri bildirim kayma değil KÜÇÜLMEDİR — tasarımın kendi `style-active`i de öyle diyor. */

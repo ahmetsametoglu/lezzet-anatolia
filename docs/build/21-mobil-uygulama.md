@@ -10479,7 +10479,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **± DÜĞMELERİ KALDI:** çekmece "kaç var" sorusunun, ± ise "bir tane daha buldum" anının aracı.
 
-  **BEKLEYEN(21.226):** aynı kural SAYAÇLARIN ORTASINDAKİ rakam için de geçerli olacak
+  **BEKLEYEN(21.227):** aynı kural SAYAÇLARIN ORTASINDAKİ rakam için de geçerli olacak
   (`OperationsStepperGroup` → D2 hasar · D3 imha · D4b düşüm · kurye ekranları). Prop
   (`onPressValue`) kurye şeridinde YAZILDI ama commit'lenmedi; commit'lenmemiş bir prop'a dayanan
   kod tek başına derlenmeyen bir commit demek. Şartname `docs/talep/`te, prop yayına girince
@@ -10489,3 +10489,74 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   cetvelden seçip onaylıyorlar). **Cihazda (Oppo CPH1907):** büyük rakama basıldı → "Rafta kaç var"
   çekmecesi açıldı (koli bölümü + cetvel), cetvelden 5 seçildi → *"Sistemde 3 yazıyor, sen 5
   saydın — 2 adet FAZLA"*, sebep bloğu açıldı.
+
+- [x] (21.226) **SAYIYA BASINCA ADET ÇEKMECESİ · BAŞLAT DÜĞMESİNİN BOYU · ARAÇTAN ÇIKAR UZUN BASMADA** (kullanıcı kararları 02.09)
+
+  ── **1 · SAYAÇTA ORTADAKİ RAKAM ARTIK DÜĞME** ───────────────────────────────
+  Serbest ürün listesinde her satırın `− n +` sayacı var; kullanıcı *"bu rakamı bastığım zaman adet
+  çekmecesinin açılmasını istiyorum"* dedi. Gerekçe rampanın kendisi: 12 adet koyacak kurye artı
+  düğmesine on iki kez basıyor.
+
+  **KİTTE YAZILI BİR KURAL GERİ ALINDI.** `OperationsStepperGroup`un künyesi *"ortadaki sayı
+  DOKUNULABİLİR DEĞİL… yanlışlıkla açılan bir klavye, sayacın var olma sebebini (klavyesiz sayım)
+  ortadan kaldırırdı"* diyordu. Kuralın dayandığı VARSAYIM yanlıştı: sayıya basmak klavye açmıyor,
+  kitin kendi adet çekmecesini açıyor (`OperationsScanQtySheet` — aynı sayacın büyük hâli).
+
+  Dokunuş isteğe bağlı (`onPressValue`): vermeyen yirmiye yakın çağıranda sayı düz metin kalıyor —
+  dokunulunca hiçbir şey yapmayan bir düğme, bozuk bir düğmedir. Testte iki hâl de çivili.
+
+  Araca yazım ONAYDA, her dokunuşta değil: çekmecede 1'den 12'ye çıkan kurye on iki hareket kaydı
+  doğurmuyor. Fark tek çağrıda uygulanıyor ve listenin `±` düğmeleriyle AYNI kapıdan geçiyor.
+
+  ── **2 · "SEFERİ BAŞLAT" DÜĞMESİ TASARIMIN ÖLÇÜSÜNE GELDİ** ────────────────
+  Kullanıcı *"renk ve gölge farkı var, bu bizim komponentimizi kullanmadığın anlamına geliyor
+  galiba"* dedi; sonra *"butonun yüksekliği bile farklı… ortak komponent tarafındaki buton
+  yüksekliği sabit değil mi?"*
+
+  Komponent bizimdi; iki ayrı eksik vardı ve ikisi de ölçülmeden görülmüyordu:
+
+  · **Işıma yoktu.** Tasarım `box-shadow:0 4px 14px rgba(95,122,44,.22)` (v3:16 satır 37) ve kitte
+    o ışıma HAZIR duruyordu (`shadow.glow`) — hiçbir ekran çağırmadığı için. Kitin kendi künyesi
+    bunu bekleyen bir arıza diye yazmıştı. Tek satır: `elevation="glow"`.
+  · **Yükseklik sabitti.** Blok düğme `size.controlLg` (52) ile sabit çiziliyor; tasarım ise ipuçlu
+    düğme için `min-height:58px` diyor — yani SABİT değil TABAN. Etiket + ipucu 52'ye sıkışıyordu.
+    Yeni durak: `size.controlStack: 58`, ve ipucu verilen blok düğme artık tabanlı — metin uzarsa
+    kutu büyüyor, kırpmıyor. Ayrım tasarımın kendi yazımında duruyordu: düz düğme `height:54`,
+    ipuçlu düğme `min-height:58`.
+
+  **NASIL ATLANDI, kayda geçiyor:** ilk turda söylenen iki şeye (renk, gölge) bakıldı, kutunun
+  kendisi ölçülmedi. Ders: bildirilen belirti bir BAŞLANGIÇ noktasıdır, ölçümün sınırı değil.
+
+  ── **3 · ARAÇTAN ÇIKAR: ÜÇÜNCÜ YERİNDE** ──────────────────────────────────
+  Eylem 31.08'de eklenmişti (tasarımda yok; boşluk cihazda görüldü). Yeri iki kez reddedildi:
+  önce kartın ALTINDA metin eylemiydi — birincil düğmenin yanında duran yıkıcı bir bağlantı; sonra
+  sağ üst köşede ikon düğme oldu, kullanıcı *"orada çok olmamış"* dedi. Üçüncü hâl onun kararı:
+  **karta uzun basınca** kırmızı onay çekmecesi açılıyor.
+
+  Çekmecenin tonu da düzeldi: `olive`ti ve o ton *"geri alınamaz ama olumlu"* demek (çekmecenin
+  kendi künyesi). Eylem yıkıcı — sefer kaydı düşer, siparişler serbest kalır, araçtaki kutuların
+  damgası silinir; metin bunu zaten sayıyla söylüyordu, artık rengi de söylüyor.
+
+  Kitte iki küçük değişiklik gerekti: `PressableSurface` ve `OperationsSurface` "yalnız uzun basma"
+  hâlini tanıyor — ve tipte zorluyor, yani iki eylemden en az biri olmadan bir yüzey dokunulabilir
+  yapılamıyor.
+
+  **BEKLEYEN(BACKLOG §1):** uzun basma GÖRÜNMEZ bir yol. Ekran okuyucuya ipucu veriliyor
+  (`accessibilityHint`), gören kullanıcı için kartın üstünde bir işaret yok — kurye eylemin
+  varlığını ancak öğrenirse biliyor. İşaret istenirse tasarım kararı gerekiyor.
+
+  ── **YOL ÜSTÜNDE ÇIKAN GERÇEK HATA** ───────────────────────────────────────
+  Testler `fillCopy`den uyarı bastı: eksik kutu onay metninde `{n}` İKİ KEZ geçiyor ve fonksiyon
+  yalnız ilkini dolduruyordu (`String.replace` metin kalıbıyla tek eşleşme değiştirir) — ikincisi
+  ham `{n}` olarak ekrana çıkıyordu. Artık her geçiş doluyor. Yakalayan şey 01.09'da eklenen
+  geliştirme uyarısıydı; aynı tuzağa ikinci kez düşülmüştü.
+
+  Doğrulama: mobil Jest **149 paket / 1249 test** · typecheck · lint. Cihazda ölçüm yapılamadı
+  (telefon kilitli); ölçüm kilit açılınca yapılacak.
+
+- [ ] (21.227) **ADET ÇEKMECESİ SAYAÇLARIN ORTASINDAKİ RAKAMA DA BAĞLANSIN — DEPO ekranları**
+  (21.225'in bıraktığı işaret · depo şeridinin işi)
+
+  Prop 21.226'da yayına girdi (`OperationsStepperGroup.onPressValue` + `valueHint`) ve kurye
+  şeridinde bir çağıranı var (serbest ürün listesi). Kalan: D2 hasar · D3 imha · D4b düşüm
+  sayaçlarının ortasındaki rakam. Şartname `docs/talep/`te; bağlayacak olan depo şeridi.

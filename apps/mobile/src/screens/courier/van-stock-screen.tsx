@@ -8,6 +8,7 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProductRow } from '@/components/operations/product-row';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
@@ -78,6 +79,18 @@ export function CourierVanStockScreen() {
   const [sheetHint, setSheetHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
+  /*
+    ADET ÇEKMECESİ (kullanıcı kararı 02.09) — sayacın ORTASINDAKİ rakama basınca açılır.
+
+    Gerekçe rampanın kendisi: 12 adet koyacak kurye artı düğmesine on iki kez basıyor. Çekmece
+    aynı sayacı büyük hâliyle veriyor (`OperationsScanQtySheet`) ve tek yazımda bitiriyor.
+
+    Durum İKİ parça: hangi satır (`qtyLine`) ve çekmecedeki O ANKİ değer (`qtyDraft`). Taslak ayrı
+    tutuluyor çünkü çekmecede oynanan sayı ONAYLANANA KADAR araca yazılmıyor — her dokunuşta uca
+    istek gitseydi kurye 12'ye çıkarken on iki hareket kaydı doğardı.
+  */
+  const [qtyLine, setQtyLine] = useState<CourierVanStockLine | null>(null);
+  const [qtyDraft, setQtyDraft] = useState(0);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CourierVanCandidate[]>([]);
@@ -267,6 +280,10 @@ export function CourierVanStockScreen() {
                     if (next > line.qty) move('take', { variantId: line.variantId }, next - line.qty);
                     else if (next < line.qty) move('return', { variantId: line.variantId }, line.qty - next);
                   }}
+                  onPressQty={() => {
+                    setQtyLine(line);
+                    setQtyDraft(line.qty);
+                  }}
                   onRemove={() => move('return', { variantId: line.variantId }, line.qty)}
                 />
               ))
@@ -293,6 +310,51 @@ export function CourierVanStockScreen() {
           />
         </OperationsStickyBar>
       )}
+
+      {/*
+        ── ADET ÇEKMECESİ (kullanıcı kararı 02.09) ──────────────────────────────
+        Sayacın ortasındaki rakama basınca açılır ve aynı sayacı büyük hâliyle verir. Kite yeni bir
+        çekmece yazılmadı: `OperationsScanQtySheet` zaten tam bu iş için var (ad · bağlam sayısı ·
+        büyük sayaç · onay) ve depo tarafında okutmadan sonra aynı soruyu soruyor.
+
+        ARACA YAZIM ONAYDA, her dokunuşta DEĞİL: çekmecede 1'den 12'ye çıkan kurye on iki hareket
+        kaydı doğurmamalı. Fark tek çağrıda uygulanıyor — artıysa depodan alınır, eksiyse geri
+        konur; ikisi de listenin `+/−` düğmeleriyle aynı kapıdan (`move`).
+
+        TAVAN FİZİKSEL: araçtaki adet + depoda kalan. Yumuşak bir sınır değil — depoda olmayan malı
+        araca yazmak, olmayan malı satmanın ilk adımıdır (`DOMAIN §17`).
+      */}
+      <OperationsScanQtySheet
+        visible={qtyLine !== null}
+        name={qtyLine?.name ?? ''}
+        variantLabel={qtyLine?.variantLabel ?? null}
+        stats={
+          qtyLine === null
+            ? []
+            : /* TEK bağlam sayısı: depoda kalan. Çekmecenin kendi künyesi en fazla ikiye izin
+                 veriyor ("üçüncüsü kartı okunmaz yapar") ve burada sorulan tek soru "kaç tane
+                 alabilirim". */
+              [{ value: String(qtyLine.available), label: t.vanStock.qtySheetStat }]
+        }
+        value={qtyDraft}
+        onChange={setQtyDraft}
+        qtyCaption={t.vanStock.qtySheetCaption}
+        min={0}
+        max={qtyLine === null ? undefined : qtyLine.qty + qtyLine.available}
+        confirmLabel={t.vanStock.qtySheetConfirm}
+        confirmDisabled={busy || qtyLine === null || qtyDraft === qtyLine.qty}
+        onConfirm={() => {
+          if (qtyLine === null) return;
+          const fark = qtyDraft - qtyLine.qty;
+          const hedef = { variantId: qtyLine.variantId };
+          setQtyLine(null);
+          if (fark > 0) move('take', hedef, fark);
+          else if (fark < 0) move('return', hedef, -fark);
+        }}
+        footnote={t.vanStock.qtySheetFootnote}
+        onClose={() => setQtyLine(null)}
+        testID="courier-van-qty-sheet"
+      />
 
       {/* OKUTMA: bir kod = bir adet (v3:19'un kendi davranışı). Adet çekmecesi AÇILMIYOR —
           rampada elindeki paketi okutan kurye zaten bir tane koyuyor; adedi değiştirmek
@@ -428,10 +490,13 @@ function CandidateRow({
 function VanLine({
   line,
   onChange,
+  onPressQty,
   onRemove,
 }: {
   line: CourierVanStockLine;
   onChange: (next: number) => void;
+  /** Ortadaki rakama dokunuş — adet çekmecesini açar (künyesi ekranın `qtyLine` durumunda). */
+  onPressQty: () => void;
   onRemove: () => void;
 }) {
   /* Depoda kalan sıfırsa artırma yolu kapalı ve cümle bunu SÖYLER — pasif bir düğmenin sebebi
@@ -456,6 +521,8 @@ function VanLine({
           <OperationsStepperGroup
             value={line.qty}
             onChange={onChange}
+            onPressValue={onPressQty}
+            valueHint={t.vanStock.qtyHint}
             label={line.name}
             testID={`courier-van-qty-${line.variantId}`}
           />
