@@ -19,7 +19,7 @@ import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { packageStockStatus, stockMarkOf } from '@/lib/places/place-view';
 import { rememberPlaceName, useRememberedPlaceName } from '@/lib/places/place-name-memory';
-import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
+import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { CustomerIcon } from '@/screens/customer-kit/customer-icon';
@@ -213,7 +213,11 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
      atlandı) hap bir DAVET olur — boş bir yer adı basılmaz. */
   const onboarding = useSyncExternalStore(subscribeOnboarding, getOnboardingSnapshot);
   const postalCode = onboarding?.postalCode ?? null;
-  const savedPlace = usePlaceResolution(postalCode ?? '');
+  /* Tam kanca (`place` + `refresh`): aşağı çekme KAPSAMI da tazeliyor — kullanıcı isteği 02.09,
+     *"parmak ile beraber bilginin de güncellenmesi"*. Kanca kendi tetikleyicilerini zaten
+     dinliyor; jest çağıranın kaydırma alanına ait olduğu için buradan bağlanır. */
+  const savedPlaceLookup = usePlaceLookup(postalCode ?? '');
+  const savedPlace = savedPlaceLookup.place;
   const resolvedName = savedPlace?.kind === 'resolved' ? savedPlace.place.placeName : null;
   /* HATIRLANAN AD (MB-80, 23.08) — ölçüldü: `resolvedName` üç durumda birden `null` (kod eksik ·
      cevap HENÜZ gelmedi · istek DÜŞTÜ) ve başlık o üçünde de çıplak kod yazıyordu. Yani vitrin HER
@@ -529,6 +533,7 @@ export function HomeScreen({ data = homeData() }: HomeScreenProps) {
                göstermek kullanıcıya iki ayrı yükleme varmış izlenimi verirdi. */
             onRefresh={() => {
               home.refresh();
+              savedPlaceLookup.refresh();
               meState.refresh();
               // Sipariş bantları da tazelenir: teslimat gün içinde ilerliyor ("hazırlanıyor" →
               // "yolda") ve ekranın en üstünde eski bir durum kalması vitrinin yalan söylemesidir.

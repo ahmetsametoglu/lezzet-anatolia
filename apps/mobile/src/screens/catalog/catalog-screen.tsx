@@ -21,7 +21,7 @@ import { campaignValueOf, cardBadgeOf } from '@/screens/customer-kit/campaign-la
 import { upperIn } from '@/lib/i18n/locale';
 import { getOnboardingSnapshot, subscribeOnboarding } from '@/lib/onboarding/onboarding-store';
 import { placeModeOf, shippableChipVisible, stockMarkOf } from '@/lib/places/place-view';
-import { usePlaceResolution } from '@/lib/places/use-place-resolution.hook';
+import { usePlaceLookup } from '@/lib/places/use-place-resolution.hook';
 import { CartFab } from '@/screens/customer-kit/cart-fab';
 import { cartCount, useCart } from '@/screens/customer-kit/cart-store';
 // Bant KİTE taşındı (10.08): paketler sekmesi ikinci çağıranı oldu (komponentin kendi künyesi).
@@ -131,7 +131,11 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
      Stok HÂLİ süzgece değil, sunucudan gelen cevaba bağlı: kod zaten her istekte gidiyor ve depo
      orada çözülüyor. Buradaki ikinci çözüm yalnız "rota içinde miyim" sorusunu cevaplıyor —
      depo kimliği İSTEMCİYE hiç verilmiyor (`place-api.schema.ts` güvenlik sınırı). */
-  const place = usePlaceResolution(postalCode ?? '');
+  /* Tam kanca (`place` + `refresh`): aşağı çekme yalnız LİSTEYİ değil kapsamı da tazeliyor —
+     kullanıcı isteği 02.09. Katalogda kapsam bir süs değil, kararın kendisi: soğuk zincir
+     ürünlerinin gösterilip gösterilmeyeceğini o belirliyor (künye yukarıda). */
+  const placeLookup = usePlaceLookup(postalCode ?? '');
+  const place = placeLookup.place;
   const placeMode = placeModeOf(place);
   const chipVisible = shippableChipVisible(placeMode);
   /* BANDIN yeri: aynı koşul (çözülmüş + rota dışı), ama bandın kendisi ülke ve normalize posta
@@ -518,7 +522,10 @@ export function CatalogScreen({ requestedCategory = null, requestedCollection = 
         refreshControl={
           <RefreshControl
             refreshing={catalog.refreshing}
-            onRefresh={catalog.refresh}
+            onRefresh={() => {
+              catalog.refresh();
+              placeLookup.refresh();
+            }}
             // Yenileme halkası da temadan; iki platformun iki ayrı propu tek yerden (`pull-refresh`).
             {...pullRefreshColors(theme.colors.olive)}
           />

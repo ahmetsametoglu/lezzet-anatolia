@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { resolvePostalCode, type PlaceResolution } from '@/lib/api/places';
+import { useLiveRefresh } from '@/lib/app-state/use-live-refresh';
 
 /*
   YER ÇÖZÜMÜ — posta kodundan "neredesiniz, size nasıl ulaşırız" sorusunun TEK kapısı
@@ -29,6 +30,14 @@ export function maskPostalCode(value: string): string {
 }
 
 export interface PlaceLookup {
+  /**
+   * **AYNI KODU YENİDEN SOR** — aşağı çekme jestinin bağlanacağı kapı (kullanıcı isteği 02.09).
+   *
+   * Kanca kendi tetikleyicilerini zaten dinliyor (öne dönüş · odağa dönüş · süre), ama jest
+   * çağıranın kaydırma alanına ait: kapsamı okuyan yedi ekranın hangisinde `RefreshControl`
+   * olduğunu bu dosya bilemez. Kapı açık bırakılıyor, kararı ekran veriyor.
+   */
+  refresh: () => void;
   /** `null` = kod eksik, cevap henüz yok ya da istek düştü. Dört hâlin anlamı sözleşmede. */
   place: PlaceResolution | null;
   /**
@@ -57,6 +66,23 @@ export function usePlaceLookup(code: string): PlaceLookup {
   const [place, setPlace] = useState<PlaceResolution | null>(null);
   const [pending, setPending] = useState(false);
 
+  /*
+    ÖNE GELİNCE YENİDEN SORULUR (kullanıcı bulgusu, web şeridi aktardı — 02.09).
+
+    Kapsam DEĞİŞEBİLEN bir cevaptır: müşteri kapsanmayan bir kod için "buraya da gelin" kaydı
+    bırakıyor, o kod sonradan aktif bir rotaya ekleniyor ve sistem müşteriye bildirim gönderiyor.
+    Ama kod değişmediği için bu efekt bir daha koşmuyordu — açık duran uygulama, bildirimi
+    okuyan müşteriye hâlâ "buraya gelmiyoruz" diyordu. İki yüzeyin birbirini yalanlaması, bayat
+    bir sayıdan ağırdır: bildirimin kendisini güvenilmez kılıyor.
+
+    Sayaç bir TETİKTİR, veri değil: efektin bağımlılığına girerek aynı kodu yeniden sordurur.
+    Ekranın gördüğü hâlleri (`place` sıfırlanır, `pending` yanar) hiç ayrıştırmaya gerek yok —
+    ilk okumayla birebir aynı yoldan geçer.
+  */
+  const [tur, setTur] = useState(0);
+  const refresh = useCallback(() => setTur((n) => n + 1), []);
+  useLiveRefresh(refresh);
+
   useEffect(() => {
     setPlace(null);
     if (code.length < POSTAL_CODE_LENGTH) {
@@ -76,9 +102,9 @@ export function usePlaceLookup(code: string): PlaceLookup {
     return () => {
       current = false;
     };
-  }, [code]);
+  }, [code, tur]);
 
-  return { place, pending };
+  return { place, pending, refresh };
 }
 
 /** `null` = kod eksik ya da cevap henüz yok. Dört hâlin anlamı sözleşmede (`place-api.schema.ts`). */

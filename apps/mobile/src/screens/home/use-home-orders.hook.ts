@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchOrders, type OrderSummary } from '@/lib/api/orders';
+import { useLiveRefresh } from '@/lib/app-state/use-live-refresh';
 
 /*
   VİTRİNİN İKİ SİPARİŞ BANDI — "siparişiniz yolda" ve "geçen siparişinizi tekrarlayın" (09.08).
@@ -60,6 +61,11 @@ export function useHomeOrders(locale: Locale, signedIn: boolean): UseHomeOrdersR
   useEffect(() => {
     load();
   }, [load]);
+
+  /* Takip şeridi sipariş detayıyla AYNI cümleyi taşıyor ("Siparişiniz alındı · LA-…") ve aynı
+     sebeple bayatlıyordu — ölçüldü 01.09: detay ekranı "Alındı" derken şerit de öyle diyordu,
+     oysa sipariş 31 dakika önce hazırlanmıştı. Kural tek yerde (`use-foreground-refresh`). */
+  useLiveRefresh(load);
 
   return {
     live: orders.find((order) => order.active) ?? null,

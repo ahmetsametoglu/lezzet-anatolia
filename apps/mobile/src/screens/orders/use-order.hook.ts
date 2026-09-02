@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Locale } from '@lezzet/i18n';
 
 import { fetchOrderDetail, type OrderDetail } from '@/lib/api/orders';
+import { useLiveRefresh } from '@/lib/app-state/use-live-refresh';
 
 /*
   SİPARİŞ DETAY VERİSİ — paket/tarif detay hook'larının deseni birebir (`use-package.hook.ts`):
@@ -49,6 +50,19 @@ export function useOrder(reference: string, locale: Locale): UseOrderResult {
   useEffect(() => {
     load();
   }, [load]);
+
+  /*
+    ÖNE GELİNCE TAZELENİR (kullanıcı bulgusu 01.09 — `21.209`ın ölçümü).
+
+    Sipariş 17:52'de hazırlandı; ekran 18:23'te hâlâ "Alındı" diyordu. Sebep bu dosyaydı: okuma
+    yalnız monte olurken koşuyor ve telefonlar kapatılmıyor, cebe konuyor. Sipariş durumu
+    müşterinin BEKLEDİĞİ şeydir — bayat kaldığında ekran yalnız eskiyi göstermiyor, müşteriyi
+    boşuna bekletiyor.
+
+    `load` eskimiş cevabı zaten eliyor (`generation`), yani öne gelme ile "Tekrar dene" aynı yoldan
+    geçer ve yarışan iki uçuşta son cevap kazanır.
+  */
+  useLiveRefresh(load);
 
   return { status, detail, retry: load };
 }
