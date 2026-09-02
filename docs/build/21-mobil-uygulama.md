@@ -1754,7 +1754,8 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
 
 - [x] (21.33) **KLAVYE AÇIKKEN DÜĞMEYE İLK DOKUNUŞ YUTULUYORDU — geri bildirim yorumu sessizce
   kayboluyordu (cihazda ölçüldü 11.08).**
-  `touches:` `apps/mobile/src/screens/{feedback/feedback-screen.tsx,professionals/professionals-screen.tsx,login/login-screen.tsx,catalog/catalog-screen.tsx,courier/{day-close-screen.tsx,delivery-screen.tsx},management/offer-approval-screen.tsx,warehouse/{adjustment-screen.tsx,courier-return-screen.tsx,transfer-screen.tsx}}`
+  `touches:` `apps/mobile/src/screens/{feedback/feedback-screen.tsx,professionals/professionals-screen.tsx,login/login-screen.tsx,catalog/catalog-screen.tsx,courier/{day-close-screen.tsx,delivery-screen.tsx},management/offer-approval-screen.tsx,warehouse/{courier-return-screen.tsx,transfer-screen.tsx}}`
+  (~~`warehouse/adjustment-screen.tsx`~~ — o ekran 21.222'de ikiye ayrıldı: `stock-count-screen.tsx` + `write-off-screen.tsx`)
 
   **Belirti (fiziksel cihaz, OPPO CPH1907 · Android 11):** klavye açıkken bir düğmeye basılınca
   yalnız klavye kapanıyor, düğmenin işi çalışmıyordu. İki ekranda birebir ölçüldü — Profesyonel
@@ -3063,7 +3064,7 @@ kullanır); `04-auth-kimlik` (OTP akışının sunucu servisleri). Tasarım hatt
   `touches:` `apps/mobile/src/screens/courier/delivery-screen.tsx` ·
   `apps/mobile/src/screens/courier/day-close-screen.tsx` ·
   `apps/mobile/src/screens/warehouse/transfer-screen.tsx` ·
-  `apps/mobile/src/screens/warehouse/adjustment-screen.tsx` ·
+  ~~`apps/mobile/src/screens/warehouse/adjustment-screen.tsx`~~ (21.222'de ikiye ayrıldı: sayım + stok düşümü) ·
   `apps/mobile/src/screens/warehouse/courier-return-screen.tsx` ·
   `apps/mobile/src/screens/warehouse/intake-screen.tsx` ·
   `apps/mobile/src/screens/management/offer-approval-screen.tsx`
@@ -7283,7 +7284,10 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   üç renkte (kırmızı/terracotta/zeytin), ölçülemeyen partide çubuk yok.
 
 - [x] (21.143) **SAYIM / DÜZELTME v3 — boş hâlin çıkış yolu, çevrimdışının sebebi** (v3:898-993)
-  `touches:` `apps/mobile/src/screens/warehouse/{adjustment-screen.tsx,messages.json,adjustment-screen.test.tsx}`
+  `touches:` ~~`apps/mobile/src/screens/warehouse/{adjustment-screen.tsx,adjustment-screen.test.tsx}`~~ ·
+  `apps/mobile/src/screens/warehouse/messages.json`
+  (ekran 21.222'de BAŞTAN yazıldı ve ikiye ayrıldı — `stock-count-screen.tsx` + `write-off-screen.tsx`;
+  buradaki iki kazanım orada da duruyor: boş hâlin çıkış yolu ve çevrimdışının sebebi.)
 
   **Durum (30.08).** İki eksik kapandı, ikisi de aynı kusurun iki hâli: ekran sorusunu soruyor ama
   cevabı söylemiyordu.
@@ -9239,8 +9243,9 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `write_off`/`out`/`expired`, **aktör Deniz Arslan** (21.183 burada da çalışıyor). Satır
   "İMHA EDİLDİ"ye döndü, ekran kapanmadı; liste tazelenince o parti düştü.
 
-  **BEKLEYEN(21.192):** tasarımın B ve C maddeleri — D4 sayım baştan (hedef değer + bağlam + sonuç
-  hâli) ve D4b stok düşümü (yeni ekran, hasar · soğuk zincir · kayıp).
+  **~~BEKLEYEN(21.192): tasarımın B ve C maddeleri — D4 sayım baştan (hedef değer + bağlam + sonuç
+  hâli) ve D4b stok düşümü (yeni ekran, hasar · soğuk zincir · kayıp).~~ → İKİSİ DE YAZILDI (21.222,
+  02.09):** sayım mutlak adet soruyor ve farkı sistem buluyor, düşüm kendi ekranında.
 
 - [x] (21.192) **D3 SAF DEPOCU EKRANI OLDU — teklif bilgisi ve ömür yüzdesi söküldü** (kullanıcı kararı 31.08)
   `touches:` `apps/mobile/src/screens/warehouse/{near-expiry-screen.tsx,near-expiry-screen.test.tsx,messages.json}`
@@ -10338,3 +10343,81 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     mühürlü 9 adet, `Havuç Dilimi Baklava` 1 istenen / 0 gönderildi. 500 yok.
   - Testler: iki yeni bekçi (dolu açık kutuda düğme ÇİZİLMEZ · boş açık kutuda DURUR) + eski
     davranışı kodlayan üç test yeni gerçeğe taşındı.
+
+- [x] (21.222) **D4 BAŞTAN: SAYIM ve STOK DÜŞÜMÜ ayrıldı · raf listesi açıldı** (tasarımın B ve C
+  maddeleri — `BEKLEYEN(21.192)` kapandı; kullanıcı isteği 02.09: *"d dört ve d beş için çalışma yap"*)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/application/src/warehouse/adjustment.ts` · `apps/mobile-api/src/api/v1/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{stock-count-screen.tsx,write-off-screen.tsx,batch-picker.tsx,batch-context-card.tsx,adjustment-result-card.tsx,transfer-screen.tsx}` ·
+  `apps/mobile/src/screens/warehouse/{use-batch-subject.hook.ts,use-adjustment.hook.ts}`
+
+  ### 1 · Eski ekran YANLIŞ SORUYU soruyordu
+  v2'nin "Sayım / Düzeltme"si tek bir **işaretli adet** alanı ve dört sebep çipiydi: depocu farkı
+  KENDİ hesaplayıp yazıyordu ("sistemde 12, rafta 9 → −3"). Üç arıza birden: aritmetiği insan
+  yapıyor ve yanlışı sessizce stoğa geçiyordu · **karşılaştıracağı sayı ekranda hiç yoktu** (parti
+  adedi gösterilmiyordu) · aynı ekran sayımı, imhayı ve kaybı birlikte topluyordu.
+
+  Artık soru tek: **rafta kaç adet var.** Farkı sistem buluyor, sebebi ancak fark VARSA soruyor
+  (sebep = kaydın notu; yazım `count_diff`). Stok DÜŞÜMÜ ayrı ekran (D4b): hasar/soğuk zincir ·
+  kayıp. Süresi geçen mal hiçbirinde yok — o D3'ün kendi eylemi (21.191).
+
+  ### 2 · RAF LİSTESİ — okunamayan etiketin yedeği
+  Ekranın konusu bugüne kadar yalnız dışarıdan geliyordu (D3'ten taşıma ya da okutma) ve okunamayan
+  etiket depocuyu çıkışsız bırakıyordu; ekran bunu kendi de yazıyordu (*"depo partilerini listeleyen
+  bir okuma kapısı henüz yok"*). Açıldı: `GET /warehouse/batches?q=` — depo süzgeci JETONDAN, yalnız
+  stoğu duranlar, SKT'ye göre sıralı. **Sayfa değil pencere** (60) + arama; tavana dayanınca
+  `truncated` bunu SÖYLÜYOR — sessiz kırpma, depocunun "listede yok" deyip yanlış partiye gitmesiydi.
+
+  ### 3 · BAĞLAM KARTI: iki sayı yan yana
+  Sözleşme iki alan kazandı: `variantWarehouseQty` (ürünün BU depodaki toplamı) ve `dateType`
+  (DLC/DDM). İkincisi süsleme değil — D3'te ölçülen arızanın (21.191) aynısı burada da mümkündü:
+  rejimi söylenmeyen bir tarih, satılabilir malı imha ettirir.
+
+  ### 4 · SONUÇ KARTI: sayılar ÖLÇÜLÜR, hesaplanmaz
+  Kayıttan sonra ekran kapanmıyor, TUTANAĞA dönüyor: olay referansı + *"partide 8 → 6"* +
+  *"ürünün toplam stoğu 69 → 67"* + iki çıkış. İkinci sayılar kapıdan geliyor (`after`), ekranın
+  çıkarması değil: `eski − düşülen` aynı partiye o sırada dokunan başka bir yazımı (kabul, toplama)
+  sessizce yok sayardı. **`after: null` = ölçülemedi** ve sıfır değil (CLAUDE §1) — ekran o hâlde
+  "yeni değer okunamadı" der, sayı uydurmaz. Çok partili olayda da `null`: "hangi partinin yeni
+  hâli" sorusunun tek cevabı yoktur.
+
+  ### 5 · D5 · TRANSFER — üç bölümün ikisi KART DEĞİLDİ
+  Cihazda ölçüldü: "YOLDA" ve "SON KAPANANLAR" düz, alt çizgili satırlar hâlindeydi; şablonun üç
+  bölümünde de kutu var. Fark görsel değil yapısal — kutu "bu bir kayıt" der, alt çizgi yalnız
+  "burada bir sınır var" der ve üç bölüm tek uzun listeye eriyordu. Kapanmış kayıt `quiet` tonunda
+  (günlük iş değil), sonucu şablondaki gibi SAĞDA. Ekranın geri kalanı zaten v3'e uygundu.
+
+  **Doğrulama.** Tip · lint · **knip temiz** · mobil **228/228** (yeni: D4 9 test, D4b 6 test) ·
+  uygulama katmanına 7 entegrasyon testi (kapsam süzgeci · iki sayı · tükenmiş parti · arama ·
+  kırpma · ölçülen `after` · çoğulda `null`).
+
+  **Cihazda uçtan uca (Oppo CPH1907, 02.09):** raf listesi 8 parti çizdi (`EXP-DDM · Derin
+  dondurucu 2 · sistemde 8`) → parti seçildi → bağlam kartı **8 / 69** → "6" yazıldı → *"Sistemde 8
+  yazıyor, sen 6 saydın — 2 adet EKSİK"* → sebep *yanlış sayılmıştı* → **SAY-STR-26-0001**, parti
+  8→6, ürün toplamı 69→67, `count_diff`/`out`/2, not ve aktör kayıtta. Ardından D4b: aynı partiden
+  1 adet *kayıp* → **IMH-STR-26-0001** (`write_off`/`lost`/`out`/1), parti 6→5. D5 kartlı hâliyle
+  yeniden çekildi.
+
+- [x] (21.223) **KUTU AÇMAK HAZIRLIĞI BAŞLATMIYORDU — `preparing` yazan yer kalmamıştı**
+  (tam paket koşusunda yakalandı 02.09; kırmızı 21.222 öncesinden duruyordu)
+  `touches:` `packages/application/src/warehouse/{boxes.ts,boxes.test.ts}` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts`
+
+  **Belirti:** `boxes.test.ts` *"BEYANSIZ kapanışta eksik sipariş HAZIR OLMAZ"* testi `preparing`
+  bekliyor, `confirmed` alıyordu. Ölçüm testin haklı olduğunu söyledi: **kodda `preparing` yazan
+  hiçbir yer kalmamıştı** — `grep "= 'preparing'"` tüm migration'larda tek satır buluyor
+  (`unseal_order_box`, yani kutu GERİ AÇILINCA). Eski akışta geçişi `confirmPreparation` yazıyordu;
+  v3'ün kutu döngüsüne geçilirken (`c81e7c36`) o yol kutulara devredildi ama geçiş devredilmedi.
+
+  **Neden sessiz kaldı:** D1 kuyruğu `['confirmed','preparing']` birlikte okuyor, yani depocu
+  tarafında hiçbir şey bozulmuş görünmüyordu. Bozulan MÜŞTERİ tarafıydı: sipariş kutulanırken
+  ekranda hâlâ "Alındı" yazıyor, "Hazırlanıyor" hâli hiç görünmüyordu (`notification-data`nın
+  `prepared` damgası da `firstAt('preparing')` okuyor).
+
+  **Çare geçişi KUTU AÇILIŞINA koymak** — hazırlığın gerçekten başladığı an (`ORDER_LIFECYCLE`:
+  *`preparing` = depoda hazırlanıyor*). Geçiş kutuyu BAĞLAMAZ: başarısızlığı yutuluyor, çünkü kutu
+  açılmıştır ve fiziksel gerçek odur. Aktör kutuyu açan personeldir (21.183'ün iz kuralı).
+
+  **Doğrulama.** Yeni bekçi: `confirmed` → `openBox` → `preparing`. Tam paket **4132/4132**
+  (kalan tek kırmızı web şeridinin `checkout-shipping-order` dosyasında — `address_city_mismatch`,
+  bu şeridin işi değil; not bırakıldı).

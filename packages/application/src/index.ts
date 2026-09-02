@@ -434,8 +434,15 @@ export type {
   RepricePort,
   StorageMismatch,
 } from './warehouse/intake';
-export { recordAdjustment, resolveBatchCode } from './warehouse/adjustment';
-export type { AdjustmentLine, AdjustmentOutcome, ResolvedBatch, ResolveBatchOutcome, WarehouseReason } from './warehouse/adjustment';
+export { listWarehouseBatches, recordAdjustment, resolveBatchCode } from './warehouse/adjustment';
+export type {
+  AdjustmentAfterCounts,
+  AdjustmentLine,
+  AdjustmentOutcome,
+  ResolvedBatch,
+  ResolveBatchOutcome,
+  WarehouseReason,
+} from './warehouse/adjustment';
 export {
   cancelTransfer,
   dispatchTransfer,

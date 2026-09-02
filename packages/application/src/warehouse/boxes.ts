@@ -65,7 +65,7 @@ export type OpenBoxOutcome =
  */
 export async function openBox(
   db: SupabaseClient,
-  input: { orderId: string; warehouseId: string; shippingBoxId?: string | null },
+  input: { orderId: string; warehouseId: string; shippingBoxId?: string | null; actorId?: string | null },
 ): Promise<OpenBoxOutcome> {
   const order = await new OrderService(db).getById(input.orderId);
   if (!order) return { status: 'not_found' };
@@ -97,6 +97,29 @@ export async function openBox(
         code: orderBoxCode(new Date().getFullYear()),
         shippingBoxId,
       });
+      /*
+        KUTU AÇMAK HAZIRLIĞIN BAŞLAMASIDIR (ölçüldü 02.09) — `confirmed → preparing`.
+
+        v3'ün kutu döngüsüne geçilirken bu geçiş DÜŞMÜŞTÜ: eski akışta `confirmPreparation`
+        yazıyordu, yenisinde hiçbir yerde yoktu (`= 'preparing'` yazan tek yer `unseal_order_box`
+        kalmıştı). Sonuç sessizdi ama gerçekti: yarım kutulanmış sipariş `confirmed`de kalıyor,
+        MÜŞTERİ ekranı sipariş kapanana kadar "Alındı" diyordu — oysa mal o sırada kutulanıyor.
+        `ORDER_LIFECYCLE`: *`preparing` = depoda hazırlanıyor*, ve hazırlığın başladığı an tam
+        olarak burasıdır.
+
+        Geçiş KUTUYU BAĞLAMAZ: başarısızlığı yutuluyor (yarışta biri önce yazmışsa `false` döner)
+        çünkü kutu zaten açıldı ve fiziksel gerçek odur — açılmış bir kutuyu bir durum yazımı
+        yüzünden geri almak, depocuyu elindeki kartonla ekransız bırakırdı.
+      */
+      if (order.status === 'confirmed') {
+        await new OrderService(db).transition({
+          orderId: input.orderId,
+          from: 'confirmed',
+          to: 'preparing',
+          actorId: input.actorId,
+        });
+      }
+
       return {
         status: 'ok',
         box: { boxId: box.id, boxNo: box.boxNo, code: box.code, sealedAt: null, items: [], shippingBoxId: box.shippingBoxId },

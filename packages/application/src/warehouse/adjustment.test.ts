@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, StockMovementService, StockService, serviceDb } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair } from '@lezzet/database/testing';
-import { recordAdjustment, type AdjustmentLine, type WarehouseReason } from './adjustment';
+import { listWarehouseBatches, recordAdjustment, type AdjustmentLine, type WarehouseReason } from './adjustment';
 
 /**
  * **İmha / sayım OLAY belgesi — D4** (10.5), terfi 21.11 (kaynağı `apps/web/lib/stock/adjustment.test.ts`).
@@ -230,5 +230,108 @@ describe('depo kimliği (21.11 — CLAUDE.md §1)', () => {
     });
 
     expect(outcome).toEqual({ status: 'not_found', stockIds: [ghost] });
+  });
+});
+
+/*
+  RAF LİSTESİ VE SONUÇ SAYILARI (02.09) — D4'ün baştan yazılmasıyla açılan iki yol.
+
+  Listenin sınandığı şey ekranın ona GÜVENEBİLMESİ: yalnız kendi deposu, yalnız stoğu duranlar ve
+  bağlam kartının iki sayısı. Sonuç sayılarının sınandığı şey ise ÖLÇÜLMÜŞ olmaları — ekran kendi
+  çıkarmasını yapsaydı aynı partiye o sırada dokunan bir yazım sessizce yok sayılırdı.
+*/
+describe('raf listesi', () => {
+  it('yalnız KENDİ deposunun partileri gelir — kapsam dışı satır listede yok', async () => {
+    const { batches } = await listWarehouseBatches(db, { warehouseId });
+
+    const ids = batches.map((row) => row.stockId);
+    expect(ids).toContain(batchA);
+    expect(ids).toContain(batchB);
+    expect(ids).not.toContain(foreignBatch);
+  });
+
+  it('bağlam kartının İKİ sayısını taşır: partide kayıtlı ve ürünün depodaki toplamı', async () => {
+    const { batches } = await listWarehouseBatches(db, { warehouseId });
+
+    const row = batches.find((batch) => batch.stockId === batchA);
+    expect(row?.physicalQty).toBe(10);
+    /* Toplam LİSTENİN KENDİSİNDEN doğrulanıyor, sabit bir sayıdan değil: bu dosyanın partileri
+       koşu boyunca birikiyor (`beforeEach` künyesi) ve sabit bir toplam ikinci testte yalan
+       olurdu. Sınanan iddia zaten "aynı ürünün bu depodaki partilerinin toplamı" — ve YABANCI
+       depo bu toplama girmiyor (üstteki test). */
+    const listedTotal = batches
+      .filter((batch) => batch.variantId === row?.variantId)
+      .reduce((sum, batch) => sum + batch.physicalQty, 0);
+    expect(row?.variantWarehouseQty).toBe(listedTotal);
+    expect(row?.dateType).toBe('DDM');
+  });
+
+  it('stoğu BİTMİŞ parti listelenmez — düşürülemeyecek bir satır seçtirilmez', async () => {
+    await stocks.setPhysicalQty(batchB, 0);
+
+    const { batches } = await listWarehouseBatches(db, { warehouseId });
+
+    expect(batches.map((row) => row.stockId)).not.toContain(batchB);
+  });
+
+  it('LOTSUZ parti de listelenir — etiketi olmayan parti, sayımın en çok gerektiği partidir', async () => {
+    /* Ölçülmüş arıza (02.09): ilk tur lotu olmayan partiyi listeden DÜŞÜRÜYORDU (sözleşme lotu
+       zorunlu tutuyordu) ve mal kabulde lot boş bırakmak meşru. Yani okunacak etiketi olmayan
+       parti hem okutulamıyor hem listelenemiyordu: depocunun hiçbir yolu kalmıyordu. */
+    const lotless = await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(11), purchasePriceCents: 300 });
+
+    const { batches } = await listWarehouseBatches(db, { warehouseId });
+
+    const row = batches.find((batch) => batch.stockId === lotless.id);
+    expect(row?.lotNumber).toBeNull();
+    expect(row?.physicalQty).toBe(3);
+  });
+
+  it('arama ürün adında da lot numarasında da eşleşir', async () => {
+    const byName = await listWarehouseBatches(db, { warehouseId, query: `Peynir ${stamp}` });
+    expect(byName.batches.length).toBeGreaterThan(0);
+
+    const nonsense = await listWarehouseBatches(db, { warehouseId, query: `yok-${stamp}` });
+    expect(nonsense.batches).toHaveLength(0);
+  });
+
+  it('tavana dayanan liste bunu SÖYLER — sessiz kırpma yok', async () => {
+    const { batches, truncated } = await listWarehouseBatches(db, { warehouseId, limit: 1 });
+
+    expect(batches).toHaveLength(1);
+    expect(truncated).toBe(true);
+  });
+});
+
+describe('yazımdan sonraki sayılar', () => {
+  it('TEK partili yazımda iki sayı da ÖLÇÜLEREK döner', async () => {
+    const before = await listWarehouseBatches(db, { warehouseId });
+    const totalBefore = before.batches.find((batch) => batch.stockId === batchA)?.variantWarehouseQty ?? 0;
+
+    const outcome = await recordAdjustment(db, {
+      warehouseId,
+      lines: [{ stockId: batchA, qty: 3, direction: 'out' }],
+      reason: 'damaged',
+    });
+
+    expect(outcome.status).toBe('ok');
+    // Parti 10 → 7; ürünün depodaki toplamı da tam 3 azalmış olmalı. İkisi de kayıttan OKUNDU.
+    expect(outcome.status === 'ok' ? outcome.after : null).toEqual({
+      batchQty: 7,
+      variantWarehouseQty: totalBefore - 3,
+    });
+  });
+
+  it('ÇOK partili olayda `null` — "hangi partinin yeni hâli" sorusunun tek cevabı yok', async () => {
+    const outcome = await recordAdjustment(db, {
+      warehouseId,
+      lines: [
+        { stockId: batchA, qty: 1, direction: 'out' },
+        { stockId: batchB, qty: 1, direction: 'out' },
+      ],
+      reason: 'lost',
+    });
+
+    expect(outcome.status === 'ok' ? outcome.after : undefined).toBeNull();
   });
 });

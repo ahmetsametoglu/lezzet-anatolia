@@ -132,6 +132,21 @@ describe('kutu açılışı (openBox)', () => {
     expect(row.boxes.map((box) => box.boxNo)).toEqual([1, 2]);
   });
 
+  it('kutu AÇMAK hazırlığı başlatır — sipariş `confirmed`den `preparing`e geçer', async () => {
+    /*
+      ÖLÇÜLEN ARIZA (02.09): v3'ün kutu döngüsüne geçilirken bu geçiş düşmüştü — `preparing` yazan
+      tek yer `unseal_order_box` kalmıştı. Sessizdi ama gerçekti: yarım kutulanmış sipariş
+      `confirmed`de kalıyor, MÜŞTERİ ekranı sipariş kapanana kadar "Alındı" diyordu.
+      `ORDER_LIFECYCLE`: `preparing` = depoda hazırlanıyor.
+    */
+    const { orderId } = await confirmedOrder([2]);
+    expect((await orders.getById(orderId))?.status).toBe('confirmed');
+
+    await openBox(db, { orderId, warehouseId });
+
+    expect((await orders.getById(orderId))?.status).toBe('preparing');
+  });
+
   it('toplanabilir olmayan siparişe kutu açılmaz — `stale` durumuyla söyler', async () => {
     const { orderId, itemIds } = await confirmedOrder([1]);
     await orders.recordPreparation(orderId, [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 1 }] }]);

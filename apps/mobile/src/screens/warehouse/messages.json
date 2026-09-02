@@ -64,8 +64,13 @@
       },
       "adjustment": {
         "code": "D4",
-        "title": "Sayım / düzeltme",
-        "subtitle": "dört sebep · işaretli adet"
+        "title": "Sayım",
+        "subtitle": "raftakini say · farkı sistem bulur"
+      },
+      "writeOff": {
+        "code": "D4b",
+        "title": "Stok düşümü",
+        "subtitle": "hasar · soğuk zincir · kayıp"
       },
       "transfer": {
         "code": "D5",
@@ -610,13 +615,6 @@
     "toAdjustment": "Sayım/Düzeltme →"
   },
   "adjustment": {
-    "title": "Sayım / Düzeltme",
-    "noSubject": "parti seçilmedi",
-    "noSubjectBlock": {
-      "title": "Hangi parti düzeltilecek?",
-      "body": "Düzeltme her zaman bir partiye yazılır. Yakın-SKT turundan parti seçerek gelin — depo partilerini listeleyen bir okuma kapısı henüz yok."
-    },
-    "toNearExpiry": "Yakın-SKT turuna git →",
     "scan": {
       "cta": "Parti etiketini okut",
       "title": "Parti etiketini okut",
@@ -624,43 +622,104 @@
       "unknown": "{code} ile bu depoda açık parti yok — kod başka deponun olabilir ya da parti tükenmiş olabilir.",
       "error": "Parti çözülemedi — bağlantıyı kontrol edip yeniden okutun.",
       "pickTitle": "Hangi parti?",
-      "pickBody": "{code} ile {n} parti eşleşti — lot numarası benzersiz değildir. Düzeltilecek olanı seçin.",
+      "pickBody": "{code} ile {n} parti eşleşti — lot numarası benzersiz değildir. Konu olanı seçin.",
       "pickRow": "{qty} adet · SKT {date}",
       "pickArea": "{area}",
       "pickNoArea": "rafı belirsiz",
       "pickLife": "kalan ömür %{pct}",
       "pickLifeUnknown": "kalan ömür bilinmiyor"
     },
-    "locked": {
-      "title": "Düzeltme kaydı kapalı",
-      "body": "Olay referansı sunucuda doğar — bağlantısız yazılan düzeltme kâğıt tutanakla eşleşemez."
+    "picker": {
+      "heading": "YA DA RAF LİSTESİNDEN SEÇ",
+      "searchLabel": "Parti ara",
+      "searchPlaceholder": "ürün adı ya da lot numarası",
+      "loading": "Raf listesi yükleniyor…",
+      "error": "Raf listesi yüklenemedi — bağlantıyı kontrol edip yeniden deneyin.",
+      "empty": "Bu depoda stoğu duran parti yok.",
+      "emptySearch": "\"{q}\" ile eşleşen parti yok.",
+      "row": "{code} · {area} · sistemde {qty}",
+      "noArea": "rafı belirsiz",
+      "noLot": "lot yazılmamış",
+      "truncated": "İlk {n} parti listeleniyor — aradığınızı görmüyorsanız arama alanıyla daraltın."
     },
-    "reasonHeading": "SEBEP — DÖRT TİP",
-    "reason": {
-      "expired": "süresi geçti (imha)",
-      "damaged": "hasar / soğuk zincir",
-      "count_diff": "sayım farkı",
-      "lost": "kayıp"
+    "context": {
+      "meta": "{code} · {area} · {dateType} {date}",
+      "change": "değiştir",
+      "batchQty": "bu partide\nsistemde kayıtlı",
+      "variantQty": "ürünün depodaki\ntoplam stoğu"
     },
-    "reasonNote": "\"İade stoğa döndü\" depocuya açılmaz — yönetim istisnasıdır.",
-    "qtyLabel": "Adet (işaretli)",
-    "qtyHelp": "− düşüm · + yalnız sayım fazlasında",
-    "qtyField": "İşaretli adet",
-    "surplusOnlyCount": "Fazla yalnız \"sayım farkı\" sebebiyle yazılır — başka sebeple stok artmaz.",
-    "noteRequired": "Geri eklemede sebep notu zorunlu — sistem zorlar.",
-    "noteField": "Sebep notu",
-    "notePlaceholder": "ne oldu?",
-    "refHeading": "OLAY REFERANSI",
-    "refPending": "kayıttan sonra verilir",
-    "refHelp": "kâğıt tutanakla eşleşir · kayıt atomiktir — bir satır düşerse hiçbiri yazılmaz",
-    "cta": {
-      "ready": "Düzeltmeyi kaydet",
-      "pending": "Sebep ve adet gerekli",
-      "sending": "Yazılıyor…"
+    "ref": {
+      "heading": "OLAY REFERANSI",
+      "help": "Kâğıt tutanakla eşleşir. Kayıt atomiktir — bir satır düşerse hiçbiri yazılmaz."
     },
     "result": {
+      "batchLabel": "partide",
+      "variantLabel": "ürünün toplam stoğu",
+      "change": "{before} → {after}",
+      "changeUnknown": "yeni değer okunamadı",
+      "toHub": "Depo İşleri'ne dön"
+    },
+    "outcome": {
       "ok": "{ref} yazıldı — {lines} satır, {qty} adet.",
       "empty": "Satırsız istek — hiçbir şey yazılmadı."
+    },
+    "count": {
+      "title": "Sayım",
+      "subtitle": "raftaki gerçek adedi yaz · farkı sistem hesaplar",
+      "noSubject": "parti seçilmedi",
+      "emptyTitle": "Hangi parti sayılacak?",
+      "emptyBody": "Sayım her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.",
+      "qtyHeading": "RAFTA SAYDIĞIN ADET",
+      "qtyField": "Rafta sayılan adet",
+      "same": "Fark yok — kayıt sistemdekiyle aynı.",
+      "less": "Sistemde {system} yazıyor, sen {counted} saydın — {diff} adet EKSİK.",
+      "more": "Sistemde {system} yazıyor, sen {counted} saydın — {diff} adet FAZLA.",
+      "noteTitle": "FARK VAR — SEBEP GEREKLİ",
+      "noteBody": "Stok sayımla değişiyor; niçin değiştiği yazılmadan kaydedilmez.",
+      "notes": ["yanlış sayılmıştı", "kayıt hatası", "yeri değişmiş", "sebebi bilinmiyor"],
+      "footnote": "Bu ekran yalnız sayar. Hasar, soğuk zincir ve kayıp Stok düşümü ekranında; süresi geçen mal Yakın-SKT turunda imha edilir.",
+      "locked": {
+        "title": "Sayım kaydı kapalı",
+        "body": "Olay referansı sunucuda doğar — bağlantısız yazılan sayım kâğıt tutanakla eşleşemez."
+      },
+      "cta": {
+        "ready": "Sayımı kaydet",
+        "needsCount": "Rafta saydığın adedi yaz",
+        "same": "Fark yok — yazılacak bir şey yok",
+        "needsNote": "Farkın sebebini seç",
+        "sending": "Yazılıyor…"
+      },
+      "resultTitle": "Sayım kaydedildi",
+      "again": "Başka parti say"
+    },
+    "writeOff": {
+      "title": "Stok Düşümü",
+      "subtitle": "elindeki mal eksildi · sebebini yaz",
+      "noSubject": "parti seçilmedi",
+      "emptyTitle": "Hangi partiden düşülecek?",
+      "emptyBody": "Düşüm her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.",
+      "emptyFootnote": "Süresi geçmiş mal buraya girmez — onun imhası Yakın-SKT turunda, sebebi zaten bellidir.",
+      "qtyHeading": "KAÇ ADET DÜŞÜYOR",
+      "qtyField": "Düşülecek adet",
+      "limit": "Partinin tamamı — bundan fazlası düşülemez.",
+      "reasonHeading": "SEBEP",
+      "reason": {
+        "damaged": "hasar / soğuk zincir",
+        "lost": "kayıp"
+      },
+      "reasonNote": "Olay öneki sebepten doğar: {prefix}. \"İade stoğa döndü\" depocuya açılmaz — yönetim istisnasıdır.",
+      "locked": {
+        "title": "Düşüm kaydı kapalı",
+        "body": "Olay referansı sunucuda doğar — bağlantısız yazılan düşüm kâğıt tutanakla eşleşemez."
+      },
+      "cta": {
+        "ready": "Düşümü kaydet",
+        "needsQty": "Kaç adet düştüğünü yaz",
+        "needsReason": "Sebep seç",
+        "sending": "Yazılıyor…"
+      },
+      "resultTitle": "Düşüm kaydedildi · {reason}",
+      "again": "Başka parti düş"
     }
   },
   "transfer": {

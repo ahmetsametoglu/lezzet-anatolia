@@ -633,6 +633,19 @@ function buildTiles(
       onPress: () => router.navigate('/stock-count'),
     },
     {
+      /* D4b · STOK DÜŞÜMÜ (v3:01, 02.09) — sayımdan AYRI kutucuk, çünkü ayrı iş: sayım kaydı
+         düzeltir, düşüm malın gerçekten eksildiğini yazar. Rengi terracotta: hub'da stok DÜŞÜREN
+         tek iş bu ve zeytin kutucuklarla aynı sesle konuşmamalı. */
+      key: 'writeOff',
+      code: t.hub.rows.writeOff.code,
+      icon: 'stock-count',
+      tone: operationsTheme.colors.terracotta,
+      title: t.hub.rows.writeOff.title,
+      subtitle: t.hub.rows.writeOff.subtitle,
+      alert: false,
+      onPress: () => router.navigate('/write-off'),
+    },
+    {
       key: 'transfer',
       code: transfer.code,
       icon: 'transfer',

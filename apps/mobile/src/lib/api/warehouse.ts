@@ -14,6 +14,7 @@ import {
   RecordAdjustmentResponseSchema,
   ResolveBatchResponseSchema,
   ResolveCodeResponseSchema,
+  WarehouseBatchesResponseSchema,
   WarehouseTransfersResponseSchema,
   AnnounceShipmentResponseSchema,
   DispatchOptionsResponseSchema,
@@ -306,6 +307,19 @@ export function resolveBatchCode(code: string): Promise<ApiResult<z.infer<typeof
     method: 'POST',
     body: { code },
   });
+}
+
+/**
+ * **RAF LİSTESİ** (D4/D4b · v3:08/09) — okutmanın YEDEĞİ, alternatifi değil.
+ *
+ * Okutma hızlı yoldur; bu kapı okunamayan etiket içindir (yırtılmış, silinmiş, hiç
+ * yapıştırılmamış). Boş sorgu BOŞ LİSTE DEĞİL, ilk pencereyi döner: depocu ekranı açtığında
+ * karşısında bir liste bulmalı — aramaya ancak listede göremezse başvurur.
+ */
+export function fetchWarehouseBatches(
+  query: string,
+): Promise<ApiResult<z.infer<typeof WarehouseBatchesResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/batches?q=${encodeURIComponent(query)}`, WarehouseBatchesResponseSchema);
 }
 
 /**

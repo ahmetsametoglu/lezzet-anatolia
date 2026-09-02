@@ -940,9 +940,33 @@ export const RecordAdjustmentRequestSchema = z.object({
 });
 export type RecordAdjustmentRequest = z.infer<typeof RecordAdjustmentRequestSchema>;
 
+/**
+ * **Yazımdan SONRAKİ iki sayı** (v3:08/09'un sonuç kartı), 02.09.
+ *
+ * Sonuç kartı *"partide 12 → 9"* diyor ve o ikinci sayı ÖLÇÜLEN olmalı, hesaplanan değil: ekran
+ * `eski − düşülen` diye kendi çıkarmasını yapsaydı, aynı partiye o sırada dokunan başka bir
+ * yazım (kabul, toplama) sessizce yok sayılırdı — tutanağa yanlış sayı yazılırdı.
+ *
+ * **`null` = ölçülemedi** (yazım tuttu ama okuma düştü) ve sıfır değildir (CLAUDE §1): ekran o
+ * hâlde "yeni değer" yerine bir şey göstermez, uydurmaz.
+ */
+export const AdjustmentAfterSchema = z.object({
+  /** Partinin yazımdan sonraki fiili adedi. */
+  batchQty: z.number().int(),
+  /** Ürünün bu depodaki toplam fiili stoğu — bağlam kartındaki ikinci sayının yeni hâli. */
+  variantWarehouseQty: z.number().int(),
+});
+export type AdjustmentAfter = z.infer<typeof AdjustmentAfterSchema>;
+
 export const RecordAdjustmentResponseSchema = z.discriminatedUnion('status', [
   /** `result.referenceNo` OLAY belgesidir — ekranda gösterilir, kâğıt tutanakla eşleşir. */
-  z.object({ status: z.literal('ok'), result: AdjustBatchResultSchema }),
+  z.object({
+    status: z.literal('ok'),
+    result: AdjustBatchResultSchema,
+    /** TEK partili yazımda dolu; çok partili bir olayda `null` — "hangi partinin yeni hâli" sorusu
+        o hâlde tek cevaplı değildir. */
+    after: AdjustmentAfterSchema.nullable(),
+  }),
   /** Fiziksel gerçek ihlali ("partide 3 var, 5 düşülemez") — mesaj operatöre AYNEN gösterilir. */
   z.object({ status: z.literal('failed'), message: z.string() }),
   /** Başka deponun partisi — hangileri olduğu döner ki operatör satırı bulabilsin. */
@@ -1288,9 +1312,24 @@ export const ResolvedBatchSchema = z.object({
   variantId: z.string().uuid(),
   /** "Ürün (boy)" — operasyon dilinde; ekranın üstbaşlığında görünen ad. */
   name: z.string(),
-  /** Rafta okunan kod; eşleşme bunun üzerinden kuruldu, yani burada daima dolu. */
-  lotNumber: z.string(),
+  /**
+   * Partinin lot numarası — **`null` olabilir** ve bu ölçülmüş bir gerçektir (02.09).
+   *
+   * OKUTMA yolunda daima dolu (eşleşme onun üzerinden kuruluyor). RAF LİSTESİ yolunda değil:
+   * mal kabulde lot boş bırakmak meşru (`stock.lot_number` nullable) ve lotsuz partiyi listeden
+   * DÜŞÜRMEK, tam da sayımın en çok gerektiği partiyi görünmez yapardı — etiketi olmayan parti,
+   * kaydı da en şüpheli olandır. Ekran o hâlde "lot yazılmamış" der, bir kod uydurmaz.
+   */
+  lotNumber: z.string().nullable(),
   expiryDate: z.string(),
+  /**
+   * Tarih REJİMİ — `DLC` (son tüketim, geçince satılamaz) / `DDM` (kalite tarihi, geçince satılır).
+   *
+   * Bağlam kartında tarihin YANINDA duruyor (v3:08/09 · "{rejim} {tarih}") ve süsleme değil: D3'te
+   * ölçülen arızanın aynısı burada da mümkündü — rejimi söylenmeyen bir tarih, depocuya satılabilir
+   * malı imha ettirebilir (21.191'in DLC/DDM ayrımı).
+   */
+  dateType: ProductDateTypeEnum,
   /** Kayıttaki fiili adet — sayımın karşılaştıracağı sayı. */
   physicalQty: z.number().int(),
   /** Partinin alanının ADI ("Derin dondurucu 2"); rafı seçilmemiş partide `null` (19.29). */
@@ -1300,6 +1339,18 @@ export const ResolvedBatchSchema = z.object({
    * DEĞİLDİR — "%0" yazmak sağlam bir partiyi imhalık gösterirdi (CLAUDE §1).
    */
   lifePercent: z.number().nullable(),
+  /**
+   * **Ürünün bu depodaki TOPLAM fiili stoğu** — partinin kendi adedinin yanındaki ikinci sayı
+   * (v3:08/09'un iki kolonlu bağlam kartı), 02.09'da eklendi.
+   *
+   * Neden gerekli: depocu 12 yazan bir partiden 3 düşerken "ürün bitiyor mu" sorusunu soramıyordu.
+   * Parti adedi tek başına o soruyu cevaplamaz — aynı ürünün rafta üç partisi olabilir. İki sayı
+   * yan yana durunca karar bağlamıyla veriliyor: *bu partide 12, üründe toplam 46*.
+   *
+   * **Depo süzgeçli** ve öyle kalmalı (CLAUDE §1): depo-üstü toplam, başka şehrin malını burada
+   * varmış gibi gösterirdi.
+   */
+  variantWarehouseQty: z.number().int(),
 });
 export type ResolvedBatchContract = z.infer<typeof ResolvedBatchSchema>;
 
@@ -1313,6 +1364,32 @@ export const ResolveBatchResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('unknown') }),
 ]);
 export type ResolveBatchResponse = z.infer<typeof ResolveBatchResponseSchema>;
+
+/**
+ * **RAF LİSTESİ** — `GET /warehouse/batches?q=…` (v3:08/09'un *"ya da raf listesinden seç"* yolu),
+ * 02.09'da açıldı.
+ *
+ * ── NEDEN AÇILDI ────────────────────────────────────────────────────────────
+ * D4'ün konusu (parti) bugüne kadar YALNIZ dışarıdan geliyordu: ya D3 turundan taşınıyor ya rafta
+ * bir etiket okutuluyordu. Okunamayan etiket — yırtılmış, silinmiş, hiç yapıştırılmamış — depocuyu
+ * çıkışsız bırakıyordu ve ekran bunu kendi de yazıyordu (*"depo partilerini listeleyen bir okuma
+ * kapısı henüz yok"*). Sayım tam da o partide gerekir: kaydı şüpheli olan parti, etiketi de
+ * şüpheli olandır.
+ *
+ * ── PENCERE, SAYFA DEĞİL — VE KIRPMA SÖYLENİR ───────────────────────────────
+ * Küme veriyle büyür (CLAUDE §1) ama bu bir LİSTE ekranı değil, bir SEÇİCİ: depocu aradığı partiyi
+ * bilir, gözüyle tarar. Bu yüzden sabit tavan + arama (`q`) — `/warehouse/variants`in deseni.
+ * Tavana dayanıldığında `truncated` bunu SÖYLER; sessiz kırpma, depocunun "listede yok" diye
+ * yanlış partiye gitmesi demekti.
+ *
+ * Sıra SON KULLANMA TARİHİNE göre: rafta ilk elden çıkacak parti listenin de başındadır.
+ */
+export const WarehouseBatchesResponseSchema = z.object({
+  batches: z.array(ResolvedBatchSchema),
+  /** `true` = tavana dayanıldı, liste TAM DEĞİL — ekran "aramayla daralt" der. */
+  truncated: z.boolean(),
+});
+export type WarehouseBatchesResponse = z.infer<typeof WarehouseBatchesResponseSchema>;
 
 /**
  * **Plansız kabulün ürün araması** (23.13) — `GET /warehouse/variants?q=…`.

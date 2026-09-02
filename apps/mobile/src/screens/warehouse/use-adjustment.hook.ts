@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { AdjustmentLineContract, WarehouseAdjustmentReason } from '@lezzet/types';
+import type { AdjustmentAfter, AdjustmentLineContract, WarehouseAdjustmentReason } from '@lezzet/types';
 
 import { recordAdjustment } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
@@ -8,33 +8,36 @@ import { warehouseCopy } from './copy';
 import { trackWarehouse } from './warehouse-status';
 
 /*
-  D4 · SAYIM / DÜZELTME (v2:427-455). `/warehouse/adjustments`.
+  D4 · SAYIM ve D4b · STOK DÜŞÜMÜ'nün YAZMA yarısı — `/warehouse/adjustments`.
+
+  ── TEK KAPI, İKİ EKRAN (v3 · 02.09) ────────────────────────────────────────
+  Tasarım D4'ü ikiye ayırdı ve ayrım DOĞRU: sayım "raftaki gerçek adet kaç" diye sorar ve farkı
+  sistem bulur; düşüm "kaç adet eksildi" diye sorar ve sebebini operatör söyler. Yazılan şey ise
+  aynı: bir partiye adet farkı. Bu yüzden ekran ikiye ayrıldı, KAPI ayrılmadı — ikinci bir yazma
+  yolu, aynı kuralın iki yerde yaşaması demekti (CLAUDE §1).
 
   ── EKRAN İŞARETLE, KAYIT YÖN ALANIYLA KONUŞUR (27.08 · 06.14) ──────────────
   İki taraf aynı olayı BAŞKA dilde anlatıyor ve çeviri tek yerde (`toRequestLine`, testli):
-  · **Ekran** (v2:437): *"− düşüm · + yalnız sayım fazlasında"* — operatörün dili; stok azaldıysa
-    eksi, raftan fazla çıktıysa artı. Kâğıt tutanakla ve sağduyuyla uyumlu olan bu. DEĞİŞMEDİ.
+  · **Ekran**: eksi "stoktan düştü", artı "raftan fazla çıktı" — operatörün ve kâğıt tutanağın dili.
   · **Kapı** (`AdjustmentLine`): `qty` DAİMA POZİTİF, yön ayrı alanda (`direction: 'out' | 'in'`).
 
   **Kapının dili 06.14'te değişti ve gerekçesi ölçülmüş bir arızaydı** (stok hareket defteri talebi):
   işaret miktara gömülüyken girişler ve çıkışlar aynı toplamda eriyor, "Çıkışlar" sekmesi dönem
   toplamını EKSİ gösteriyordu (−13,49 €). Aynı kuralı para modülü yıllar önce koymuştu
-  (`0018_money.sql:35`: *"yön ayrı alandır, işaret tutara gömülmez"*). Öncesinde kapı `+` düşüm ·
-  `−` geri ekleme diyordu, yani ekranın TAM TERSİ; çeviri bir işaret çevirmesiydi (`toRequestQty`).
+  (`0018_money.sql:35`: *"yön ayrı alandır, işaret tutara gömülmez"*).
 
   Ekranın dilini kapıya uydurmak yine seçenek DEĞİL: operatör tutanakta eksi görmeli. Sessiz bir
   yön hatası burada en pahalı hatadır — stoğu düşürmek yerine ARTIRIR ve kimse fark etmez.
 
-  ── SEBEP LİSTESİ TİPTEN GELİR ──────────────────────────────────────────────
-  Dört sebep `WarehouseAdjustmentReason`ın kendisidir (`return_restock` varlık enum'undan
-  `.exclude` ile çıkarılmış — v2: *"'İade stoğa döndü' depocuya açılmaz"*). Ekran kendi listesini
-  yazmaz; yarın beşinci sebep eklenirse burada derleme kırılır ve kimse listeyi unutmaz.
-
   ── BELGE NUMARASI ÖNCEDEN BİLİNMEZ ─────────────────────────────────────────
-  v2 "OLAY REFERANSI"nı ekranda dolu gösteriyor (demo, yerel dize). Gerçekte numarayı VERİTABANI
-  üretiyor (`adjust_stock_batch`, depo koduna çıpalı) ve istemcinin onu önceden bilmesinin tek yolu
-  uydurmaktır. Kutu bu yüzden kayıttan ÖNCE "kayıttan sonra verilir" der, sonra gerçek numarayı
-  yazar — kâğıda yanlış numara geçirmemenin tek dürüst yolu bu.
+  Numarayı VERİTABANI üretiyor (`adjust_stock_batch`, depo koduna çıpalı) ve istemcinin onu önceden
+  bilmesinin tek yolu uydurmaktır. Bu yüzden sonuç kartı KAYITTAN SONRA doğuyor; ekranda önceden
+  duran bir "referans" kutusu yok — kâğıda yanlış numara geçirmemenin tek dürüst yolu bu.
+
+  ── SONUÇTAKİ İKİ SAYI ÖLÇÜLÜR, HESAPLANMAZ (02.09) ─────────────────────────
+  *"partide 12 → 9"* satırının ikinci sayısı kapıdan geliyor (`after`), ekranın çıkarması değil:
+  `eski − düşülen` aynı partiye o sırada dokunan başka bir yazımı (kabul, toplama) sessizce yok
+  sayardı. `after: null` = ölçülemedi ve sıfır DEĞİLDİR — ekran o hâlde yeni değeri hiç yazmaz.
 */
 
 const t = warehouseCopy;
@@ -47,31 +50,36 @@ interface AdjustmentNotice {
   text: string;
 }
 
+/** Yazım tuttuğunda ekranın sonuç kartına verdiği her şey. */
+export interface AdjustmentRecord {
+  referenceNo: string;
+  /** Yazımdan sonraki iki sayı; **`null` = ölçülemedi** (uydurulmaz). */
+  after: AdjustmentAfter | null;
+}
+
+export interface AdjustmentSubmit {
+  stockId: string;
+  /** EKRANIN işaretiyle adet: − düşüm, + sayım fazlası. */
+  qty: number;
+  reason: WarehouseAdjustmentReason;
+  note?: string | null;
+}
+
 interface UseAdjustmentResult {
-  reason: WarehouseAdjustmentReason | null;
-  pickReason: (reason: WarehouseAdjustmentReason) => void;
-  /** EKRANIN işaretiyle adet: − düşüm, + sayım fazlası. `null` = hiç girilmedi. */
-  qty: number | null;
-  setQty: (qty: number | null) => void;
-  note: string;
-  setNote: (note: string) => void;
-  /** Stoğa geri ekleme mi — not ZORUNLU olduğu hâl (kuralı veritabanı zorlar). */
-  isRestock: boolean;
-  /** Fazla yalnız "sayım farkı" sebebiyle yazılabilir (v2'nin `dSayOk`u). */
-  surplusAllowed: boolean;
-  canSubmit: boolean;
   sending: boolean;
   notice: AdjustmentNotice | null;
-  /** Kayıt yazıldıysa OLAY belgesi; öncesinde `null` — uydurulmaz. */
-  referenceNo: string | null;
-  submit: (stockId: string) => void;
+  /** Yazım tuttuysa sonuç; öncesinde `null` — ekran o hâlde formu çizer. */
+  record: AdjustmentRecord | null;
+  submit: (input: AdjustmentSubmit) => void;
+  /** Sonucu bırakıp yeni bir partiye geçmek ("Başka parti say"). */
+  reset: () => void;
 }
 
 /**
  * EKRAN İŞARETİ → KAYIT SATIRI. Ekranda eksi "stoktan düştü" demek; kayıtta bu, pozitif bir adet
  * ve `direction: 'out'` olur. Artı (sayım fazlası) `'in'`e gider.
  *
- * Bu ekranın en kritik dönüşümü — kendi birim testi var. `Math.abs` bilinçli: yön artık AYRI
+ * Bu ekranların en kritik dönüşümü — kendi birim testi var. `Math.abs` bilinçli: yön artık AYRI
  * alanda taşındığı için miktarda işaret kalması, aynı bilgiyi iki yerde tutmak olurdu ve
  * ayrıştıkları gün hangisinin doğru olduğunu söyleyecek bir yer kalmazdı.
  */
@@ -80,45 +88,27 @@ export function toRequestLine(stockId: string, screenQty: number): AdjustmentLin
 }
 
 export function useAdjustment(): UseAdjustmentResult {
-  const [reason, setReason] = useState<WarehouseAdjustmentReason | null>(null);
-  const [qty, setQtyState] = useState<number | null>(null);
-  const [note, setNote] = useState('');
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<AdjustmentNotice>();
-  const [referenceNo, setReferenceNo] = useState<string | null>(null);
+  const [record, setRecord] = useState<AdjustmentRecord | null>(null);
 
-  const pickReason = useCallback((next: WarehouseAdjustmentReason) => {
-    setReason(next);
+  const reset = useCallback(() => {
+    setRecord(null);
     setNotice(null);
-  }, []);
-
-  const setQty = useCallback((next: number | null) => {
-    setQtyState(next);
-    setNotice(null);
-  }, []);
-
-  const isRestock = qty !== null && qty > 0;
-  const surplusAllowed = reason === 'count_diff';
-  const canSubmit =
-    reason !== null &&
-    qty !== null &&
-    qty !== 0 &&
-    // Fazla (stoğa geri ekleme) YALNIZ sayım farkında ve NOTLA yazılır; ikisini de veri zorluyor,
-    // ekran yalnız kullanıcıyı boşuna reddettirmiyor.
-    (!isRestock || (surplusAllowed && note.trim().length > 0));
+  }, [setNotice]);
 
   const submit = useCallback(
-    (stockId: string) => {
-      if (reason === null || qty === null || qty === 0 || sending) return;
+    (input: AdjustmentSubmit) => {
+      if (input.qty === 0 || sending) return;
       setSending(true);
       setNotice(null);
 
       void (async () => {
-        const trimmed = note.trim();
+        const trimmed = (input.note ?? '').trim();
         const result = await trackWarehouse(
           recordAdjustment({
-            lines: [toRequestLine(stockId, qty)],
-            reason,
+            lines: [toRequestLine(input.stockId, input.qty)],
+            reason: input.reason,
             note: trimmed.length === 0 ? null : trimmed,
           }),
         );
@@ -135,28 +125,16 @@ export function useAdjustment(): UseAdjustmentResult {
           return;
         }
 
-        if (result.data.status === 'ok') setReferenceNo(result.data.result.referenceNo);
+        if (result.data.status === 'ok') {
+          setRecord({ referenceNo: result.data.result.referenceNo, after: result.data.after });
+        }
         setNotice(noticeOf(result.data));
       })();
     },
-    [note, qty, reason, sending],
+    [sending, setNotice],
   );
 
-  return {
-    reason,
-    pickReason,
-    qty,
-    setQty,
-    note,
-    setNote,
-    isRestock,
-    surplusAllowed,
-    canSubmit,
-    sending,
-    notice,
-    referenceNo,
-    submit,
-  };
+  return { sending, notice, record, submit, reset };
 }
 
 function noticeOf(outcome: AdjustOutcome): AdjustmentNotice {
@@ -164,12 +142,12 @@ function noticeOf(outcome: AdjustOutcome): AdjustmentNotice {
     case 'ok':
       return {
         tone: 'ok',
-        text: fillCopy(t.adjustment.result.ok, {
+        text: fillCopy(t.adjustment.outcome.ok, {
           ref: outcome.result.referenceNo,
           lines: String(outcome.result.lines),
-          /* İKİ YÖN AYRI DÖNÜYOR (06.14) ve burada TOPLANMAZ: bu ekran tek satır gönderiyor, yani
-             ikisinden yalnız biri dolu — dolu olanı yazıyoruz. Toplamak, defterin ayırdığı iki
-             büyüklüğü geri birleştirmek olurdu; kapının künyesi karışık bir tutanakta çıkan
+          /* İKİ YÖN AYRI DÖNÜYOR (06.14) ve burada TOPLANMAZ: bu ekranlar tek satır gönderiyor,
+             yani ikisinden yalnız biri dolu — dolu olanı yazıyoruz. Toplamak, defterin ayırdığı
+             iki büyüklüğü geri birleştirmek olurdu; kapının künyesi karışık bir tutanakta çıkan
              *"1 adet · −35,56 €"* sonucunu tam bu yüzden bir arıza olarak kaydetmiş. */
           qty: String(outcome.result.outQty > 0 ? outcome.result.outQty : outcome.result.inQty),
         }),
@@ -183,6 +161,6 @@ function noticeOf(outcome: AdjustOutcome): AdjustmentNotice {
     case 'not_found':
       return { tone: 'error', text: t.common.notFound };
     default:
-      return { tone: 'error', text: t.adjustment.result.empty };
+      return { tone: 'error', text: t.adjustment.outcome.empty };
   }
 }

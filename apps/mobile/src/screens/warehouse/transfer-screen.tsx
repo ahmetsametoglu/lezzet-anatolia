@@ -9,6 +9,7 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQtyField } from '@/components/operations/qty-field';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
@@ -228,18 +229,29 @@ export function TransferScreen() {
             <View style={styles.section} testID="warehouse-transfer-outbound">
               <Text style={styles.heading}>{t.transfer.outboundHeading}</Text>
               {transferState.outbound.map((row) => (
-                <View key={row.transferId} style={styles.plainRow} testID={`warehouse-transfer-outbound-${row.transferId}`}>
-                  <Text style={styles.rowTitle}>{row.referenceNo}</Text>
-                  <Text style={styles.rowSub}>
-                    {fillCopy(t.transfer.outboundMeta, {
-                      n: String(row.lineCount),
-                      // Tahmini varış SUNUCUDAN gelen bir GÜN (sevk günü + ulaşım süresi ayarı) —
-                      // ekran kendi hesabını kurmuyor ve saat göstermiyor: elimizde olmayan bir
-                      // kesinliği ima etmek, taşıyıcıdan gelmemiş bir sözü söylemek olurdu.
-                      date: shortDate(row.etaDate) ?? row.etaDate,
-                    })}
-                  </Text>
-                </View>
+                /* SATIR KART (v3:1127 · cihazda ölçüldü 02.09): bölüm çizgiyle ayrılmış düz
+                   satırlar hâlindeydi, oysa şablonun üç bölümünde de KUTU var. Fark görsel
+                   değil yapısal — kutu "bu bir kayıt" der, alt çizgi yalnız "burada bir sınır
+                   var" der ve üç bölüm tek uzun listeye eriyordu. */
+                <OperationsSurface
+                  key={row.transferId}
+                  tone="panel"
+                  padding="md"
+                  testID={`warehouse-transfer-outbound-${row.transferId}`}
+                >
+                  <View style={styles.rowBody}>
+                    <Text style={styles.rowTitle}>{row.referenceNo}</Text>
+                    <Text style={styles.rowSub}>
+                      {fillCopy(t.transfer.outboundMeta, {
+                        n: String(row.lineCount),
+                        // Tahmini varış SUNUCUDAN gelen bir GÜN (sevk günü + ulaşım süresi ayarı) —
+                        // ekran kendi hesabını kurmuyor ve saat göstermiyor: elimizde olmayan bir
+                        // kesinliği ima etmek, taşıyıcıdan gelmemiş bir sözü söylemek olurdu.
+                        date: shortDate(row.etaDate) ?? row.etaDate,
+                      })}
+                    </Text>
+                  </View>
+                </OperationsSurface>
               ))}
               <Text style={styles.queueFootnote}>{t.transfer.outboundNote}</Text>
             </View>
@@ -260,37 +272,49 @@ export function TransferScreen() {
             <View style={styles.section} testID="warehouse-transfer-closed">
               <Text style={styles.heading}>{t.transfer.closedHeading}</Text>
               {transferState.closed.map((row) => (
-                <View key={row.transferId} style={styles.plainRow} testID={`warehouse-transfer-closed-${row.transferId}`}>
-                  <Text style={styles.rowTitle}>{row.referenceNo}</Text>
-                  <Text style={styles.rowSub}>
-                    {fillCopy(t.transfer.closedMeta, {
-                      direction: t.transfer.direction[row.direction],
-                      n: String(row.lineCount),
-                      date: shortDate(row.closedAt.slice(0, 10)) ?? row.closedAt,
-                    })}
-                  </Text>
-                  {/* SONUÇ ÜÇ AYRI CÜMLE: "tam kabul" · "N eksik" · "geri alındı". Geri alınmışta
-                      eksik SAYISI YOKTUR (`shortLineCount: null`) ve "0 eksik" yazmak, hiç
-                      sayılmamış bir sevkiyatı sorunsuz kabul gibi okuturdu (CLAUDE §1). */}
-                  <Text
-                    style={[
-                      styles.closedResult,
-                      // Üç hâl, üç ton — ve iptal "iyi" DEĞİL nötr: geri alınmış bir sevkiyatı
-                      // tam kabulle aynı renge boyamak, olmayan bir başarıyı boyamaktır.
-                      row.shortLineCount === null
-                        ? styles.closedNeutral
+                /* KAPANMIŞ KAYIT `quiet` TONUNDA (v3:1136): günlük iş DEĞİL, bakılıp geçilen bir
+                   kayıt. Gelen kuyruğuyla aynı zeminde durursa "burada bir iş var" der. */
+                <OperationsSurface
+                  key={row.transferId}
+                  tone="quiet"
+                  padding="md"
+                  testID={`warehouse-transfer-closed-${row.transferId}`}
+                >
+                  <View style={styles.closedRow}>
+                    <View style={styles.rowBody}>
+                      <Text style={styles.rowTitle}>{row.referenceNo}</Text>
+                      <Text style={styles.rowSub}>
+                        {fillCopy(t.transfer.closedMeta, {
+                          direction: t.transfer.direction[row.direction],
+                          n: String(row.lineCount),
+                          date: shortDate(row.closedAt.slice(0, 10)) ?? row.closedAt,
+                        })}
+                      </Text>
+                    </View>
+                    {/* SONUÇ SAĞDA ve ÜÇ AYRI CÜMLE: "tam kabul" · "N eksik" · "geri alındı".
+                        Geri alınmışta eksik SAYISI YOKTUR (`shortLineCount: null`) ve "0 eksik"
+                        yazmak, hiç sayılmamış bir sevkiyatı sorunsuz kabul gibi okuturdu
+                        (CLAUDE §1). */}
+                    <Text
+                      style={[
+                        styles.closedResult,
+                        // Üç hâl, üç ton — ve iptal "iyi" DEĞİL nötr: geri alınmış bir sevkiyatı
+                        // tam kabulle aynı renge boyamak, olmayan bir başarıyı boyamaktır.
+                        row.shortLineCount === null
+                          ? styles.closedNeutral
+                          : row.shortLineCount === 0
+                            ? styles.closedOk
+                            : styles.closedShort,
+                      ]}
+                    >
+                      {row.shortLineCount === null
+                        ? t.transfer.closedCancelled
                         : row.shortLineCount === 0
-                          ? styles.closedOk
-                          : styles.closedShort,
-                    ]}
-                  >
-                    {row.shortLineCount === null
-                      ? t.transfer.closedCancelled
-                      : row.shortLineCount === 0
-                        ? t.transfer.closedFull
-                        : fillCopy(t.transfer.closedShort, { n: String(row.shortLineCount) })}
-                  </Text>
-                </View>
+                          ? t.transfer.closedFull
+                          : fillCopy(t.transfer.closedShort, { n: String(row.shortLineCount) })}
+                    </Text>
+                  </View>
+                </OperationsSurface>
               ))}
             </View>
           )}
@@ -419,6 +443,7 @@ const styles = StyleSheet.create({
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
+    gap: operationsTheme.space.lg,
   },
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
@@ -484,11 +509,11 @@ const styles = StyleSheet.create({
   /* Satır BASILABİLİR DEĞİL: iki bölümde de yapılacak bir iş yok. Kuyruk kartının panel zemini ve
      "›" oku burada bilerek yok — dokunulabilir görünen bir satır, dokunup bir şey olmayınca
      arıza gibi okunur. */
-  plainRow: {
-    gap: operationsTheme.space['2xs'],
-    paddingVertical: operationsTheme.space.lg,
-    borderBottomWidth: operationsTheme.border.base,
-    borderBottomColor: operationsTheme.colors['sand-300'],
+  /** Kapanmış kaydın iç düzeni: künye solda, sonuç sağda (v3:1136). */
+  closedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
   },
   closedResult: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

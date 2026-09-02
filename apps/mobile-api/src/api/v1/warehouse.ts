@@ -18,6 +18,7 @@ import {
   listNearExpiry,
   listPendingIntakes,
   listPreparationQueue,
+  listWarehouseBatches,
   listWarehouseReturns,
   openBox,
   openIntakeForm,
@@ -78,6 +79,7 @@ import {
   ShippingBoxesResponseSchema,
   ShippingLabelResponseSchema,
   WarehousePrintersResponseSchema,
+  WarehouseBatchesResponseSchema,
   WarehouseTransfersResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
@@ -386,6 +388,9 @@ warehouse.post('/orders/:orderId/boxes', async (c) => {
     orderId: orderId.data,
     warehouseId: c.get('warehouseId'),
     shippingBoxId: parsed.data.shippingBoxId,
+    // Kutuyu açan kişi hazırlığı BAŞLATAN kişidir: `confirmed → preparing` geçişinin izi ona
+    // yazılır (21.183'ün aktör kuralı — iz, suçlama değil).
+    actorId: c.get('staff').id,
   });
   const body: z.input<typeof OpenBoxResponseSchema> = outcome;
   return ok(c, OpenBoxResponseSchema.parse(body));
@@ -987,6 +992,27 @@ warehouse.post('/batches/resolve', async (c) => {
   const outcome = await resolveBatchCode(serviceDb(), { ...parsed.data, warehouseId: c.get('warehouseId') });
   const body: z.input<typeof ResolveBatchResponseSchema> = outcome;
   return ok(c, ResolveBatchResponseSchema.parse(body));
+});
+
+/**
+ * **RAF LİSTESİ** (D4/D4b) — `GET /warehouse/batches?q=…`, okutmanın ALTERNATİFİ değil YEDEĞİ.
+ *
+ * Okutma hızlı yoldur ve öyle kalır; bu kapı okunamayan etiket içindir — yırtılmış, silinmiş, hiç
+ * yapıştırılmamış. Sayım tam da o partide gerekir: kaydı şüpheli olan parti, etiketi de şüpheli
+ * olandır.
+ *
+ * Depo süzgeci JETONDAN (`warehouseId`), sorgudan değil — dosyanın değişmezi. Tavana dayanan liste
+ * `truncated: true` ile döner ve ekran "aramayla daralt" der; sessiz kırpma depocunun "listede yok"
+ * deyip yanlış partiye gitmesi demekti (CLAUDE §1).
+ */
+warehouse.get('/batches', async (c) => {
+  const result = await listWarehouseBatches(serviceDb(), {
+    warehouseId: c.get('warehouseId'),
+    query: c.req.query('q') ?? '',
+  });
+
+  const body: z.input<typeof WarehouseBatchesResponseSchema> = result;
+  return ok(c, WarehouseBatchesResponseSchema.parse(body));
 });
 
 /**
