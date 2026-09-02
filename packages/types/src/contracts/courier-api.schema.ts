@@ -695,8 +695,20 @@ export const LoadBoxResponseSchema = z.discriminatedUnion('status', [
     loadedBoxes: z.number().int(),
     boxCount: z.number().int(),
   }),
-  /** Kutu bu kuryenin seferine ait değil — YÜKLENMEZ (karar §1.11). */
-  z.object({ status: z.literal('wrong_route'), referenceNo: z.string().nullable() }),
+  /**
+   * Kutu bu kuryenin seferine ait değil — YÜKLENMEZ (karar §1.11).
+   *
+   * Ret, kutunun NEREYE ait olduğunu da söyler (kullanıcı kararı 01.09): kurye rampada onu doğru
+   * yığına geri koyabilmeli. Sıralama bilinçli — **rota adı önce**, sefer künyesi sonra: `SF-26-…`
+   * bir kayıt numarası, "Kuzey Hattı — Frankfurt" kuryenin bildiği şey. İkisi de `null` olabilir:
+   * sipariş henüz hiçbir sefere damgalanmamıştır.
+   */
+  z.object({
+    status: z.literal('wrong_route'),
+    referenceNo: z.string().nullable(),
+    routeName: z.string().nullable(),
+    runReferenceNo: z.string().nullable(),
+  }),
   /** Açık (mühürlenmemiş) kutu araca binemez — içeriği kesinleşmedi (0048 kısıtı). */
   z.object({ status: z.literal('not_sealed'), boxNo: z.number().int().positive() }),
   /** Sipariş yüklenebilir durumda değil (iptal/teslim edilmiş) — durumuyla söylenir. */

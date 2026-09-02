@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react-native';
 import { customerColors } from '@lezzet/design-tokens';
 import type { CourierDayResponse } from '@lezzet/types';
 
+import { useToastMessage } from '@/lib/toast/toast-store';
 import { CourierLoadScreen } from './load-screen';
 import { courierDay, courierStop, dayCloseDraft } from './courier-fixture';
 
@@ -163,6 +164,101 @@ describe('K · araca yükleme', () => {
 
     expect(screen.getByTestId('courier-load-counter')).toHaveTextContent(/tüm kutuları yüklendi/);
     expect(screen.queryByTestId('courier-load-scan')).toBeNull();
+  });
+
+  /*
+    DÜĞME KAYBOLMAZ, İŞİ DEĞİŞİR (kullanıcı kararı 01.09).
+
+    Daire eskiden hepsi binince hiç çizilmiyordu ve o an ekranda elinin altında HİÇBİR eylem
+    kalmıyordu — kurye "bitir"i bulmak için yukarı kaydırıyordu. Artık metinli hâle geçiyor;
+    yukarıdaki düğme de kalkıyor, yoksa ekranda iki ayrı "bitir" olurdu.
+  */
+  it('hepsi binince YÜZEN düğme "Yüklemeyi bitir" olur, üstteki düğme kalkar', async () => {
+    mockDay(
+      courierDay([
+        courierStop(1, {
+          orderId: STOP_A,
+          boxes: [{ boxNo: 1, code: 'KT-26-AAAAAAAAAA', loadedAt: '2026-08-30T08:00:00Z' }],
+        }),
+      ]),
+    );
+
+    await renderLoad();
+
+    expect(screen.getByTestId('courier-load-finish-fab')).toHaveTextContent('Yüklemeyi bitir');
+    expect(screen.queryByTestId('courier-load-back-cta')).toBeNull();
+  });
+
+  /*
+    OKUTMA SONUCU HANGİ ROTAYA YAZILDIĞINI SÖYLER (kullanıcı kararı 01.09).
+
+    Araçta birden çok sefer durabiliyor; "Kutu 2 yüklendi — LA-26-…" cümlesi kuryenin asıl sorusunu
+    (*"hangi sefere yazdı"*) cevapsız bırakıyordu. Ad SUNUCUDAN değil elimizdeki duraktan çözülüyor
+    (`runLabel`) — aynı adı iki kaynaktan okumamak için.
+  */
+  it('okutma sonucu ROTA ADIYLA başlar', async () => {
+    mockDay(loadingDay());
+    await renderLoad();
+    await waitFor(() => expect(screen.getByTestId('courier-load-scan')).toBeOnTheScreen());
+
+    fetchMock.mockImplementation((url) =>
+      String(url).includes('/boxes/load')
+        ? Promise.resolve(
+            okResponse({
+              status: 'ok',
+              orderId: STOP_B,
+              referenceNo: 'LA-26-93UXKY',
+              boxNo: 1,
+              loadedBoxes: 1,
+              boxCount: 1,
+              allBoxesLoaded: true,
+            }),
+          )
+        : Promise.resolve(okResponse(loadingDay())),
+    );
+
+    await fireEvent.press(screen.getByTestId('courier-load-scan'));
+    await fireEvent(screen.getByTestId('courier-load-scan-sheet'), 'scan', 'KT-26-CCCCCCCCCC');
+
+    /* Toast KÖKTE çiziliyor, bu ekranın ağacında değil — sonucu deponun kendisinden okuyoruz.
+       Depo modül düzeyinde olduğu için ayrı bir kök de aynı mesajı görür. */
+    await waitFor(async () => {
+      const { result } = await renderHook(() => useToastMessage());
+      expect(result.current).toMatch(/^Kuzey rotası · Kutu 1 yüklendi/);
+    });
+  });
+
+  /*
+    YANLIŞ KUTU ÇEKMECE AÇAR VE ROTAYI SÖYLER (kullanıcı kararı 01.09).
+
+    Toast birkaç saniyede düşüyor; rampada kaçırılan bir uyarı, yanlış kutunun araca binmesi
+    demek. Cümlede ROTA ADI önce geliyor — sefer künyesi bir kayıt numarası, rota kuryenin bildiği
+    şey.
+  */
+  it('araca ait olmayan kutu ÇEKMECE açar ve hangi rotanın olduğunu söyler', async () => {
+    mockDay(loadingDay());
+    await renderLoad();
+    await waitFor(() => expect(screen.getByTestId('courier-load-scan')).toBeOnTheScreen());
+
+    fetchMock.mockImplementation((url) =>
+      String(url).includes('/boxes/load')
+        ? Promise.resolve(
+            okResponse({
+              status: 'wrong_route',
+              referenceNo: 'LA-26-ZZZZZZ',
+              routeName: 'Güney Hattı — Mulhouse',
+              runReferenceNo: 'SF-26-TTLM40',
+            }),
+          )
+        : Promise.resolve(okResponse(loadingDay())),
+    );
+
+    await fireEvent.press(screen.getByTestId('courier-load-scan'));
+    await fireEvent(screen.getByTestId('courier-load-scan-sheet'), 'scan', 'KT-26-BASKA');
+
+    await waitFor(() => expect(screen.getByTestId('courier-load-wrong-box')).toBeOnTheScreen());
+    expect(screen.getByTestId('courier-load-wrong-box')).toHaveTextContent(/Güney Hattı — Mulhouse/);
+    expect(screen.getByTestId('courier-load-wrong-box')).toHaveTextContent(/SF-26-TTLM40/);
   });
 
   /* Simülasyon çipleri BU seferin YÜKLENMEMİŞ kutularıdır: başka bir kod okutulsa kapı reddeder

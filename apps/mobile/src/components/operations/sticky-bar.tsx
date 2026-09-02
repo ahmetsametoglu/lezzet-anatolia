@@ -25,12 +25,31 @@ import { operationsTheme } from '@/theme/unistyles';
 
 interface OperationsStickyBarProps {
   children: ReactNode;
+  /**
+   * **Çubuğun ÖLÇÜLEN yüksekliği** (kullanıcı bulgusu 01.09) — listenin altına ne kadar boşluk
+   * bırakılacağını söyler.
+   *
+   * Çubuk mutlak konumlu, yani listenin son kartını ÖRTER. Ekranlar bunu bugüne dek bir formülle
+   * telafi ediyordu (`size.controlLg + space['8xl']`, yani "düğme + biraz") ve formül çubuğun
+   * gerçek içeriğini bilmiyor: rota seçiminde düğmenin altında üç satırlık bir dipnot da var ve
+   * "Araca alınacaklar" özeti bu yüzden düğmenin ARKASINDA kalıyordu — kullanıcı ekranda yarısı
+   * kesilmiş bir kart gördü.
+   *
+   * Ölçüm formülü yener çünkü içerik değişkendir: dipnot metni uzayınca, dil değişince ya da
+   * yazı tipi ölçeği büyüyünce formül sessizce yanlış olur, ölçüm olmaz.
+   */
+  onHeight?: (height: number) => void;
   testID?: string;
 }
 
-export function OperationsStickyBar({ children, testID }: OperationsStickyBarProps) {
+export function OperationsStickyBar({ children, onHeight, testID }: OperationsStickyBarProps) {
   return (
-    <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.bar} testID={testID}>
+    <LinearGradient
+      {...operationsTheme.gradient.stickyFade}
+      style={styles.bar}
+      onLayout={onHeight === undefined ? undefined : (e) => onHeight(e.nativeEvent.layout.height)}
+      testID={testID}
+    >
       {children}
     </LinearGradient>
   );

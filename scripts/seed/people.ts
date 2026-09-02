@@ -225,22 +225,29 @@ const KISILER: SeedKisi[] = [
   { key: 'yonetici', name: 'Selin Kaya', email: 'yonetim@lezzetanatolia.fr', phone: '+33600000104', roles: ['admin'], preferredLanguage: 'tr' },
   // — Personel: operasyon rolleri. Sipariş geçişlerinin AKTÖRÜ ve kuryesi bunlar.
   // Depocu TEK depoya bağlı: ekranında depo seçici görmez, kendi deposunun kuyruğunu görür.
-  // **Depocu TEK kapsamlı, Colmar'ın depocusu AYRI** (düzeltme 22.08, cihazda ölçüldü): 19.25 bir
-  // gün depocuya çift kapsam vermişti (str+colmar) ve mobil depo bölümü ÇOK kapsamlı depocuda
-  // kapanıyor — depo seçim listesi uçtan henüz gelmiyor, ekran bunu dürüstçe söylüyor ama bölüm
-  // fiilen kilitli kalıyordu. Günlük hâl zaten tek depodur (v2: "DEPO · STRASBOURG (SABİT)");
-  // Colmar kendi depocusunu aldı — hazırlık ekranının personel şartı (setup gap) da böyle dolu
-  // kalıyor. Çok kapsamlı DEPO ROLÜ hâli kaybolmadı: `muhasebe` (accounting+warehouse, str+kehl)
-  // o ekran hâlini taşımaya devam ediyor.
+  // **Depocu TEK kapsamlı** (düzeltme 22.08, cihazda ölçüldü): 19.25 bir gün depocuya çift kapsam
+  // vermişti (str+colmar) ve mobil depo bölümü ÇOK kapsamlı depocuda kapanıyor — depo seçim listesi
+  // uçtan henüz gelmiyor, ekran bunu dürüstçe söylüyor ama bölüm fiilen kilitli kalıyordu. Günlük
+  // hâl zaten tek depodur (v2: "DEPO · STRASBOURG (SABİT)"). Çok kapsamlı DEPO ROLÜ hâli
+  // kaybolmadı: `muhasebe` (accounting+warehouse, str+kehl) o ekran hâlini taşıyor.
   //
-  // **Kurye ÇİFT kapsamlı KALIR** (19.25): kurye akışı rota SEÇİMLİ (K1) — çok kapsam onu
-  // kilitlemez, Colmar rotasının koşulabilmesi için şarttır (11.7: kapsam dışı rota görünmez).
+  // **Üçüncü deponun depocusu 01.09'da Colmar'dan Bordeaux'ya taşındı** (depo da taşındı —
+  // `warehouse.ts` baş künyesi). Personelsiz bir depo, hazırlık ekranında kalıcı bir "kurulum
+  // eksik" uyarısıdır; o uyarının hâli başka yerde deneniyor, burada gürültü olurdu.
   { key: 'depocu', name: 'Deniz Arslan', email: 'depo@lezzetanatolia.fr', phone: '+33600000101', roles: ['warehouse'], depolar: ['str'], preferredLanguage: 'tr' },
-  { key: 'depocuColmar', name: 'Claire Muller', email: 'depo.colmar@lezzetanatolia.fr', phone: '+33600000105', roles: ['warehouse'], depolar: ['colmar'], preferredLanguage: 'fr' },
+  { key: 'depocuBordeaux', name: 'Claire Muller', email: 'depo.bordeaux@lezzetanatolia.fr', phone: '+33600000105', roles: ['warehouse'], depolar: ['bdx'], preferredLanguage: 'fr' },
   // Kapsama ARAÇ da girdi (26.08 · 21.119): yerinde satışın depo çözümü kuryenin kapsamındaki tek
-  // araçtır (`sale.ts` `courierVehicleFirst`) — araçsız kuryede satış ekranı hiç açılamaz (ölçüldü:
-  // {str, colmar} kapsamı `400 warehouse_required` veriyordu). Tesisler rota seçimi için kalır.
-  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str', 'colmar', 'van'], preferredLanguage: 'fr' },
+  // araçtır (01.09'dan beri açık beyanla — `?place=van`); araçsız kuryede satış ekranı hiç açılamaz
+  // (ölçüldü: {str, colmar} kapsamı `400 warehouse_required` veriyordu).
+  //
+  // **Kapsam 01.09'da TEK TESİSE indi ({str, van}) ve bu bir düzeltme.** Kurye rotaları kapsamla
+  // süzülür (11.7 · `startCourierDay` → `warehouseScope`): kapsamda olmayan deponun hattı ekranda
+  // hiç görünmez. Eski kapsam {str, colmar, van} idi ve iki yönden de yanlıştı — Colmar'ın hattı
+  // görünüyordu ama Doğu Hattı (o zaman KEHL'in) GÖRÜNMÜYORDU; oysa Doğu, rota SEÇİMİNİ (K1)
+  // sınamak için Batı ile aynı günlere konmuştu. Yani salı günü tek aday çıkıyor, `route_required`
+  // dalı hiç koşmuyordu. Kullanıcı kararıyla dört hattın dördü de STR'ye bağlanınca (`delivery.ts`)
+  // sorun kaynağında bitti: tek tesis kapsamı dört hattı da görüyor ve salı+cuma iki aday veriyor.
+  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str', 'van'], preferredLanguage: 'fr' },
   // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
   // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
   // seçmez (C2). Tek depolu bir seed'de bu ekran hiç denenemezdi.

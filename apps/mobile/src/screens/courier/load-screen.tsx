@@ -13,6 +13,7 @@ import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { ScanSheet } from '@/components/scan/scan-sheet';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { fetchVanStock } from '@/lib/api/courier';
 import { fillCopy } from '@/screens/operations/copy';
@@ -231,19 +232,28 @@ export function CourierLoadScreen() {
           TON YÜKLEMENİN HÂLİNİ TAŞIR (v3 `04-Araca-Yukleme` iki karesi): eksik kutu varken
           MÜREKKEP ("bitirebilirsin ama eksik"), hepsi bindiğinde ZEYTİN ("tamam").
         */}
-        <PrimaryButton
-          label={
-            remaining === 0
-              ? fillCopy(t.day.load.ctaDone, { n: String(total) })
-              : fillCopy(t.day.load.ctaPartial, { n: String(remaining) })
-          }
-          hint={t.day.load.ctaHint}
-          onPress={() => router.navigate('/van-runs')}
-          tone={remaining === 0 ? 'olive' : 'ink'}
-          elevation="flat"
-          testID="courier-load-back-cta"
-        />
-        {remaining === 0 ? null : <Text style={styles.footnote}>{t.day.load.footnote}</Text>}
+        {/*
+          ── HEPSİ BİNDİYSE BU DÜĞME YOK, YÜZEN DÜĞME VAR (kullanıcı kararı 01.09) ──
+          Kullanıcının cümlesi: *"kutular eksik de yüklemeyi bitirmek gerekebileceği için
+          yukarıdaki butona hâlâ gerek var."* Yani bu düğmenin işi EKSİKLE bitirmek; eksik yokken
+          aynı işi yüzen düğme metinli hâliyle yapıyor ve ikisi birden çizilseydi ekranda iki ayrı
+          "bitir" olurdu.
+        */}
+        {remaining === 0 ? null : (
+          <>
+            <PrimaryButton
+              label={fillCopy(t.day.load.ctaPartial, { n: String(remaining) })}
+              hint={t.day.load.ctaHint}
+              onPress={() => router.navigate('/van-runs')}
+              /* TON: eksik varken MÜREKKEP ("bitirebilirsin ama eksik"). Zeytin hâli yüzen
+                 düğmeye geçti — tamam olan iş artık orada bitiriliyor. */
+              tone="ink"
+              elevation="flat"
+              testID="courier-load-back-cta"
+            />
+            <Text style={styles.footnote}>{t.day.load.footnote}</Text>
+          </>
+        )}
 
         {/* BAŞLIK KOŞULSUZ (v3:18 — düz metin): grup başlığı artık tek seferde de çizildiği
             için "DURAKLARA GÖRE" varyantının okuyanı kalmadı. */}
@@ -366,9 +376,26 @@ export function CourierLoadScreen() {
         Konumu komponentin KENDİSİ biliyor (`OperationsScanFab`) — çağıran yalnız NE okutulduğunu
         söyler. Yedi operasyon ekranının yedisi de aynı daireyi aynı yerde çizsin diye.
 
-        Kutular bitince daire kalkar: okutacak bir şey kalmadığında elin altındaki eylem de yok.
+        ── KUTULAR BİTİNCE DÜĞME KAYBOLMAZ, İŞİ DEĞİŞİR (kullanıcı kararı 01.09) ──
+        Daire eskiden `remaining === 0` olunca hiç çizilmiyordu ve gerekçesi *"okutacak bir şey
+        kalmadığında elin altındaki eylem de yok"*du. Ölçülen sonuç başkaydı: o an ekranda elinin
+        altında HİÇBİR eylem kalmıyor, kurye "bitir"i bulmak için yukarı kaydırıyordu. Kullanıcının
+        çözümü: *"tarama butonu tüm kutular eklendikten sonra yüklemeyi bitir butonuna dönebilir."*
+
+        Sıfır kutuluk sefer AYRI bir hâl: okutacak kutu hiç yoktu, "hepsi bindi" demek yalan olurdu
+        (yukarıdaki `boxedStops` künyesi) — orada ekranın kendi boş hâli çiziliyor, düğme değil.
       */}
-      {remaining === 0 ? null : (
+      {total === 0 ? null : remaining === 0 ? (
+        <OperationsScanFab
+          icon="check"
+          tone="scan"
+          label={t.day.load.fabDone}
+          accessibilityLabel={t.day.load.fabDone}
+          accessibilityHint={t.day.load.ctaHint}
+          onPress={() => router.navigate('/van-runs')}
+          testID="courier-load-finish-fab"
+        />
+      ) : (
         <OperationsScanFab
           icon="scan"
           tone="scan"
@@ -391,11 +418,73 @@ export function CourierLoadScreen() {
         )}
         testID="courier-load-scan-sheet"
       />
+
+      {/*
+        ── YANLIŞ KUTU ÇEKMECESİ (kullanıcı kararı 01.09) ───────────────────────
+        Araçtaki hiçbir sefere ait olmayan bir kod okutulunca açılır. Kullanıcının cümlesi:
+        *"seferlerde olmayan bir kutu taratılırsa çekmece açılmalı, kırmızı ağırlıklı bir çekmece
+        ve bunun farklı bir sefer olduğunu söyleyip hangi sefere ait olduğunu da söylemeli."*
+
+        NİÇİN TOAST DEĞİL: toast birkaç saniyede düşer ve rampada eli koli dolu kuryenin kaçırdığı
+        bir uyarı, yanlış kutunun araca binmesi demek. Öteki okutma sonuçları toast'ta kalıyor —
+        onlar OLAN bir şeyi bildiriyor, bu ise OLMAYACAK bir şeyi durduruyor.
+
+        **TASARIMDAN SAPMA, kayda geçiyor:** v3:18 bunu listenin içinde duran kırmızı bir KART
+        olarak çiziyor (*"Araçtaki hiçbir sefere ait değil — koyma"*). Kullanıcı çekmece istedi ve
+        gerekçesi güçlü: kutu yüklenmediği için listede duracak bir satır yok; kartın yeri boşluk,
+        çekmecenin yeri ise kuryenin gözünün önü. Kartın METNİ aynen alındı.
+
+        Rota adı SEFER KÜNYESİNDEN önce geliyor (kullanıcının düzeltmesi): `SF-26-…` bir kayıt
+        numarası, "Kuzey Hattı" kuryenin bildiği şey.
+      */}
+      <BottomSheet
+        visible={day.wrongBox !== null}
+        title={t.day.boxes.wrongBoxTitle}
+        onClose={day.dismissWrongBox}
+        testID="courier-load-wrong-box"
+      >
+        <View style={styles.wrongBox}>
+          <Text style={styles.wrongBoxText}>
+            {day.wrongBox === null
+              ? ''
+              : day.wrongBox.routeName === null
+                ? fillCopy(t.day.boxes.wrongBoxOrphan, { ref: day.wrongBox.orderRef ?? '—' })
+                : fillCopy(t.day.boxes.wrongBoxOwned, {
+                    ref: day.wrongBox.orderRef ?? '—',
+                    route: day.wrongBox.routeName,
+                    run: day.wrongBox.runRef ?? '—',
+                  })}
+          </Text>
+        </View>
+        <PrimaryButton
+          label={t.day.boxes.wrongBoxOk}
+          onPress={day.dismissWrongBox}
+          tone="ink"
+          elevation="flat"
+          testID="courier-load-wrong-box-ok"
+        />
+      </BottomSheet>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  /** Uyarı gövdesi KIRMIZI zeminde (v3:18 kartının rengi): çekmecenin ağırlığı da o karttan gelir. */
+  wrongBox: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['error-line'],
+    borderRadius: operationsTheme.radius.card,
+    padding: operationsTheme.space['3xl'],
+    marginBottom: operationsTheme.space.xl,
+  },
+  /** Gövde de KIRMIZI — bildirim kutusunun kendi kuralı: kutu tek sesle konuşur. */
+  wrongBoxText: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
+  },
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,

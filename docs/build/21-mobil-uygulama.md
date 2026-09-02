@@ -10056,6 +10056,223 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     (`use-order.hook.ts`). Kullanıcının ilk gördüğü ekran buydu: sipariş 17:52'de hazırlanmıştı,
     18:23'te ekran hâlâ "Alındı" diyordu. Vitrindeki takip şeridi de aynı.
 
-- [ ] (21.210) **Sipariş ekranları odağa dönünce tazelensin** — açık bırakılan ekran güncellemeyi
-  hiç görmüyor (21.209'un ölçümü). Karar gereken yer: yalnız odak mı, uygulama öne gelince de mi,
-  ve hangi ekranlar (detay · liste · vitrin takip şeridi).
+- [x] (21.210) **Açık bırakılan ekran öne gelince tazeleniyor** — sipariş ekranları VE teslimat
+  kapsamı (21.209'un ölçümü + `docs/talep/` gözlemi, web şeridi aktardı)
+  - **Durum (02.09) — iki ayrı belirti, TEK kök.** (a) Sipariş 17:52'de hazırlandı, ekran 18:23'te
+    hâlâ "Alındı" diyordu; vitrindeki takip şeridi de öyle. (b) Kapsanmayan bir posta kodu aktif
+    rotaya eklendi, sistem müşteriye BİLDİRİM gönderdi, açık duran uygulama hâlâ "buraya gelmiyoruz"
+    diyordu — iki yüzey aynı anda birbirini yalanlıyor ve bildirimi güvenilmez kılıyordu. İkisinin
+    de sebebi aynı: okuma yalnız monte olurken koşuyor, telefonlar da kapatılmıyor.
+  - **Kural TEK yerde** (`lib/app-state/use-live-refresh.ts`). Depoda bu desenin dört ayrı kopyası
+    vardı (`use-discover` · `use-me` · `use-visit-points` · `lib/auth/supabase`); beşincisi
+    yazılmadı. Üç okuma bağlandı: sipariş detayı, vitrin sipariş bandı, yer/kapsam çözümü.
+  - **İKİ TETİKLEYİCİ — ilk tur eksikti (kullanıcı bulgusu 02.09).** İlk hâl yalnız öne dönüşü
+    dinliyordu; kullanıcı hemen gördü: *"bu arka plana gitmeden ön plandayken de yenilenmesi
+    lazım"*. Eklenen ikinci yol SÜRE: ekranda bekleyen kullanıcı için düzenli tazeleme
+    (`LIVE_REFRESH_INTERVAL_MS`, **60 sn** — parametrik). Aralık ölçüye göre seçildi: kapsam kararı
+    saat başı koşan bir işten (`zone_available`), sipariş durumu depocunun elinden geliyor; ikisi de
+    dakikalar mertebesinde. Sayaç arka planda susar — görünmeyen ekran için tel açmak olurdu.
+  - **AŞAĞI ÇEKME de bilgiyi tazeliyor** (kullanıcı isteği 02.09: *"parmak ile beraber bilginin de
+    güncellenmesi"*). Jest kancanın işi değil, çağıranın kaydırma alanının işi: kapsam kancası
+    `refresh` kapısını dışarı verdi, vitrin ve katalog onu kendi `onRefresh`ine bağladı. Katalogda
+    bu bir süs değil kararın kendisi — kapsam, soğuk zincir ürünlerinin gösterilip
+    gösterilmeyeceğini belirliyor.
+  - **ODAK KANCASI DENENDİ VE GERİ ALINDI.** `useFocusEffect` "başka ekrana gidip geri dönünce
+    tazele" için eklendi; `expo-router` bağımlılığı getirdiği anda o modülü kendi fabrikasıyla
+    taklit eden **18 ekran testi** düştü (`useFocusEffect is not a function`). Bedeli kazancından
+    büyüktü: bundan sonra `expo-router`ı taklit eden her yeni ekran testi aynı duvara çarpardı,
+    üstelik kancanın eklediği tek şey "60 saniyeyi beklemeden tazele"ydi. Geri dönüş zaten sayaçla
+    karşılanıyor: alttaki ekran sökülmüyor, sayacı çalışmaya devam ediyor.
+  - **ÖLÇÜT "arka planı görmüş olmak", önceki durum DEĞİL — testin yakaladığı kusur.** İlk kurgu
+    *"önceki hâl `active` değilse tazele"* diyordu; iOS'un `active → inactive → active` sıyırması
+    (bildirim merkezi, arama çubuğu) her seferinde bir istek gönderirdi. Katı `background → active`
+    kuralı ise TERS yönde yanlış: gerçek dönüşte `active`ten hemen önceki hâl `background` değil
+    `inactive`tir, yani hiç tazelenmezdi. Bayrak `background` görülünce yanar, dönüşte harcanır.
+  - **Cihazda uçtan uca ölçüldü (Oppo CPH1907, 02.09):** çekmece AÇIKKEN uygulama arka plana atıldı,
+    67380 kapsanan bölgeye eklendi, uygulama öne getirildi — ekran kendini düzeltti
+    (*"Buraya aracımız gitmiyor"* → *"Harika — kapınıza ücretsiz teslim ediyoruz!"*). Satır geri
+    alınıp tur tekrarlandı: cümle geri döndü. Uygulama hiçbir aşamada kapatılmadı.
+
+- [x] (21.211) **SEFER ROTANIN GÜNÜNE KURULUYOR · İŞSİZ ROTA SEÇİLEMİYOR · TEK ADAY BIRAKILABİLİYOR** (kullanıcı bulguları 01.09, hepsi cihazda ölçüldü)
+
+  Üç arıza, üçü de kurye seçim ekranında ve üçü de yalnız gerçek veriyle görünüyor.
+
+  ── **1 · SEFER YANLIŞ GÜNE AÇILIYORDU** ─────────────────────────────────────
+  Kullanıcı 3 Eylül'ün Kuzey Hattı'nı seçti (kartta *"1 durak · 2 kutu · 1 tahsilat"*), sefer kuruldu
+  ve **boş** doğdu: *"içinde kutu ve sipariş var yazıyordu ama bu sefer de kutu ve sipariş yok."*
+
+  Ölçüm: `SF-26-WWYH39` açılmış, `delivery_date` **bugün**; 3 Eylül'ün siparişi (`LA-26-93UXKY`)
+  damgasız kalmış, dolayısıyla kutuları da sefere hiç girmemiş. Sebep tek satır: kurma isteği GÜNÜN
+  tarihini taşıyordu (`/courier/day` cevabının `date`i), oysa seçim ekranı 31.08'den beri **üç gün**
+  listeliyor. Uç siparişleri seferin gününe göre damgalıyor (`claimOrders` `deliveryDate`), o gün de
+  hiçbir sipariş yok. Ekran yanlış davranmadı — kendisine boş verilen seferi dürüstçe boş gösterdi.
+
+  Artık her istek KENDİ rotasının gününü taşıyor. Rota listede bulunamazsa gün hiç gönderilmiyor:
+  uydurma bir tarih yerine sunucunun kendi varsayılanına düşmek doğru. Test kuralı çiviliyor ve
+  **yakaladığı doğrulandı** (kural geri alınınca düşüyor); fikstürün günü gün cevabınınkinden
+  bilerek farklı, yoksa test bozulmayı göremezdi.
+
+  Yükleme adımı bundan etkilenmiyor ve kullanıcı bunu kendisi sordu — *"tarihle ne alakası var
+  artık, zaten o sefere yazılmadı mı o siparişler?"* Haklı: `readCourierRuns` güne değil
+  "kapanmamış"a bakıyor, duraklar da sefer kimlikleriyle okunuyor (`listCourierDay` `runIds`).
+  Tarihin tek işi kurma anındadır.
+
+  ── **2 · İŞİ OLMAYAN ROTA SEÇİLEBİLİYORDU** ────────────────────────────────
+  *"Seferde herhangi bir durak, kutu veya tahsilat objesi yoksa inaktif olmalı değil mi?"* Tek kural
+  "başkası almamış"tı (`isRouteFree`); sayılara hiçbir yerde bakılmıyordu. `routeHasWork` eklendi ve
+  **üç sayıya birden** bakıyor — yalnız durağa bakan bir kural, kutusu hazırlanmış ama durağı
+  damgalanmamış rotayı yanlışlıkla kapatırdı.
+
+  Kart soluk, dokunulamaz, notu sebebini söylüyor. "Başkasında" ile "iş yok" AYRI cümleler: tek bir
+  "seçilemez" hâli kuryeye yarın gelip gelmemesi gerektiğini söylemezdi. Cümle GÜN SÖYLEMİYOR
+  (kullanıcı bulgusu: *"yarında da bugün iş yok diyor"*) — liste üç gün taşıyor ve kart zaten bir gün
+  başlığının altında.
+
+  **Bedeli kayda geçti:** yalnız serbest ürünle yola çıkmak artık mümkün değil (araçtan satış sürülen
+  bir sefere bağlı). Kullanıcı bunu bilerek seçti.
+
+  ── **3 · TEK ADAY BIRAKILAMIYORDU** ────────────────────────────────────────
+  *"Üç Eylül'dekini bana zorla seçtirtiyor, bırakamıyorum."* "Tek adayda soru sorulmaz" kuralı boş
+  listeyi İKİ ayrı şey sayıyordu: "henüz seçmedim" ve "işaretini KALDIRDIM". Kurye işareti kaldırınca
+  liste boşalıyor, kural yeniden devreye girip aynı rotayı geri işaretliyordu.
+
+  Kusur dünden beri vardı ama görünmüyordu: dört boş rota da aday sayıldığı sürece "tek aday" hâli
+  hiç doğmuyordu. (2) onları kapatınca kilit ortaya çıktı. Düzeltme iki parça — dokunuldu bayrağı, ve
+  terslemenin ETKİN seçimin üstüne yazılması (kendiliğinden işaretlenen rota ham listede yoktur; ham
+  listeye bakan bir tersleme onu "ekle" diye okur ve ilk dokunuş yine hiçbir şey yapmamış görünürdü).
+
+  **Yol üstünde kapanan test borcu:** dört test tek rota kurup karta AYRICA basıyordu; bu 01.09'a
+  kadar zararsızdı, bırakma düzelince o basış işareti kaldırmaya başladı — testler seçili bir kartı
+  bırakıp seçili sanıyordu. Basışlar kalktı, gerekçesi dosyaya yazıldı.
+
+  ── **ÖZET BLOĞU İKİ HÂLDE DE AYNI BOYDA** (kullanıcı kararı) ───────────────
+  Kesikli "Ne yükleneceği sefer seçilince görünür" kutusu ile dolu özet kartı farklı yükseklikteydi
+  ve her işaretlemede altındaki her şey zıplıyordu. İkisi de **102 dp** tabanına bağlandı (cihazda
+  ölçüldü: 305 px @3x; iki hâl aynı turda). Tasarımda ikisi eşit DEĞİL (≈100 ↔ ≈70) — bilinçli sapma,
+  sebebi hareket: tasarım duran bir kare, ekran seçimle değişen canlı bir yüzey.
+
+  *(Ölçüm hatası da kayda geçiyor: ilk turda boy tek bir piksel sütunundan okundu, sütun kartın
+  yuvarlak köşesine denk geldi ve 85 çıktı. Doğrusu satır satır, tüm genişlik taranarak bulundu.)*
+
+- [x] (21.212) **YÜKLEME EKRANI: OKUTMA ROTAYI SÖYLÜYOR · DÜĞME İŞİNİ DEĞİŞTİRİYOR · YANLIŞ KUTU ÇEKMECE AÇIYOR** (kullanıcı kararları 01.09)
+
+  Kullanıcının çerçevesi: araç bir ara depo ve içinde birden çok seferin kutusu duruyor; okutulan
+  kutu bunların arasından birine yazılıyor. *"Barkod okutuldukça o kutu hangi sefere ait yazılmalı."*
+
+  **1 · SONUÇ ROTAYI SÖYLÜYOR.** Toast yalnız `Kutu 2 yüklendi — LA-26-…` diyordu; iki seferli araçta
+  kuryenin asıl sorusu cevapsızdı. Artık `Kuzey Hattı — Frankfurt · Kutu 2 yüklendi — …`. **Sefer
+  künyesi değil ROTA ADI** (kullanıcının düzeltmesi): `SF-26-…` bir kayıt numarası. Ad sunucudan
+  gelmiyor, elimizdeki duraktan çözülüyor (`runLabel`) — ekranın grup başlıkları da onunla kuruluyor,
+  yeni bir alan aynı adı iki kaynaktan okumak olurdu.
+
+  *Testin yakaladığı gerçek hata:* okutma geri çağrısı `stops`u bağımlılıklarına almıyordu, yani ilk
+  render'ın BOŞ listesini kapatıyordu — rota adı hiçbir zaman bulunamayacaktı.
+
+  **2 · TOAST SÜRESİ METNE GÖRE** (kullanıcı: *"rota adını söyleyeceği için bir miktar uzun tutulması
+  gerekebilir"*). Sabit 2400 ms yerine okuma süresi: eşik 40 karakter, üstü karakter başına 45 ms,
+  tavan 6 sn. Tavan şart — süresi metne bağlı bir toast, uzun bir hata mesajıyla ekranda kalıcı olur.
+
+  **3 · OKUTMA DÜĞMESİ BİTİNCE "YÜKLEMEYİ BİTİR" OLUYOR.** Daire `remaining === 0` olunca hiç
+  çizilmiyordu ve gerekçesi *"okutacak bir şey kalmadığında elin altındaki eylem de yok"*du; ölçülen
+  sonuç başkaydı — o an ekranda elinin altında HİÇBİR eylem kalmıyor. Artık metinli hapa dönüşüyor;
+  yukarıdaki düğme kalkıyor (ikisi birden dursa iki ayrı "bitir" olurdu). Eksik varken düzen aynı:
+  yuvarlak okutma + yukarıda "N kutu eksik" düğmesi — *"kutular eksik de yüklemeyi bitirmek
+  gerekebileceği için yukarıdaki butona hâlâ gerek var."*
+
+  **4 · YANLIŞ KUTU ÇEKMECESİ.** *"Seferlerde olmayan bir kutu taratılırsa çekmece açılmalı, kırmızı
+  ağırlıklı, hangi sefere ait olduğunu da söylemeli."* Hâl vardı ama toast'tı ve nereye ait olduğunu
+  söylemiyordu — çünkü uç söylemiyordu. `wrong_route` cevabı `routeName` + `runReferenceNo` taşımaya
+  başladı (sipariş → sefer → bölge, sunucuda); ikisi de `null` olabilir (sipariş hiçbir sefere
+  damgalı değilse) ve cümle o zaman "henüz hiçbir sefere yazılmamış" oluyor. Ek okuma yalnız bu
+  dalda: reddedilen okutma nadir, yükleme yolu hiçbir şey ödemiyor.
+
+  Öteki sonuçlar toast'ta kaldı: onlar OLAN bir şeyi bildiriyor, bu ise OLMAYACAK bir şeyi durduruyor
+  — kaçırılan bir uyarı, yanlış kutunun araca binmesi demek.
+
+  **TASARIMDAN SAPMA:** v3:18 bunu listenin içinde duran kırmızı bir KART olarak çiziyor
+  (*"Araçtaki hiçbir sefere ait değil — koyma"*). Kullanıcı çekmece istedi; kutu yüklenmediği için
+  listede duracak bir satır yok. Kartın METNİ aynen alındı.
+
+  **Yazılımın yapamayacağı kısım kayda geçiyor:** "aynı siparişin kutuları bir arada" ve "sefer sefer
+  yükleme" büyük ölçüde rampanın fiziksel kuralı — kullanıcı bunu kendisi söyledi. Yazılım tarafında
+  yapılabilecek üç şeyin üçü de artık var: liste sefere+siparişe göre gruplu, her okutma hangi rota
+  olduğunu söylüyor, yabancı kutu görünür şekilde geri çevriliyor.
+
+- [x] (21.213) **HAREKET ÇUBUĞU ŞERİDİ ARTIK KREM — perde kapatıldı** (kullanıcı bulgusu 01.09, cihazda ölçüldü)
+
+  Ekranın en altındaki 16 dp'lik şerit uygulamanın kreminden açık çiziliyordu; üstteki durum çubuğunda
+  aynı sorun yoktu. Ölçüm sebebi doğrudan verdi: uygulama zemini `#f2f0e8`, şerit `#fefefd` — ve
+  `#fefefd`, kremin ÜSTÜNE %90 opaklıkta beyaz koymanın tam sonucu. Yani krem oraya çiziliyor,
+  üstüne bir PERDE seriliyor.
+
+  Perdeyi Android çiziyor (`isNavigationBarContrastEnforced`) ve açan kütüphanenin kendi teması:
+  `Theme.EdgeToEdge`, `enforceNavigationBarContrast` özniteliğini varsayılan `true` yapıyor. Amacı
+  koyu içerikli uygulamalarda çubuğun okunur kalması; bizde zaten açık bir zeminin üstüne ikinci bir
+  açık katman koyuyor. Üstte sorun olmamasının sebebi de aynı modülde: `isStatusBarContrastEnforced`
+  her iki dalda da `false`, ayrım yalnız gezinme çubuğunda.
+
+  Çözüm eklentinin kendi seçeneği (`app.config.ts` → `enforceNavigationBarContrast: false`), yani
+  native klasöre elle dokunulmadı. **Yeniden derleme ister.**
+
+  **YANLIŞ TEŞHİS KAYDA GEÇİYOR:** ilk teori *"pencere zemini boyanmamış"*tı ve `expo-system-ui` ile
+  boyandı — cihazda HİÇBİR ŞEY değişmedi (kayıt `expoRootBackgroundColor = #f2f0e8` yazılmıştı, şerit
+  aynı kaldı). O değişiklik geri alındı: ölçüm teoriyi yalanladığında kod da gider.
+
+- [x] (21.214) **BESLEME ARACA MAL KOYMUYOR** (kullanıcı bulgusu 01.09)
+
+  *"Ben araca ürün eklemedim ama araçta ürün görünüyor. Bunlar besleme datası mı?"* Evetti: STR → VAN-1
+  arası 4 kalemlik bir transfer açılıp aynı anda kabul ediliyordu ("Sabah yüklemesi — serbest satış
+  fazlası"), yani araç dolu doğuyordu (ölçüldü: 4 stok satırı, 6'şar adet, `db:refresh` anında).
+
+  26.08'deki gerekçe artık geçerli değil: araca serbest ürün koymak kuryenin kendi adımı (yükleme
+  ekranının SERBEST ÜRÜN bölümü, v3:19). Kutular için 01.09'da verilen kararın aynısı — **besleme
+  dünyayı kurar, işi insan yapar.** Kapsam denetimi etkilenmiyor: zorunlu kovalar deponun araç
+  TÜRÜNÜ ve araç kaydını sayıyor, araçtaki stoğu değil.
+
+- [ ] (21.215) **Sipariş tamamlamada mevcut adres düzenlenebilsin** — bugün yalnız YENİ adres
+  kurulabiliyor; adres kartına dokunmanın düzenleme karşılığı yok (kullanıcı bulgusu, web şeridi
+  aktardı). Kullanıcının istediği yol: karta UZUN BASINCA düzenleme açılsın, keşfedilebilirlik için
+  kartın bir köşesinde silik bir ipucu dursun (*"düzenlemek için uzun basınız"*).
+
+- [x] (21.216) **Dokunmatik geri bildirim KİTE bağlandı — "eylem titresin, gezinme sessiz"**
+  (kullanıcı bulgusu 01.09 + kararı 02.09)
+  - **Durum (02.09) — sözlük eksik değildi, BAĞLANMAMIŞTI.** `lib/haptics` beş niyeti iyi tarif
+    ediyordu ama yalnız ALTI dosya çağırıyordu; üstelik sözlüğün kendi künyesinde adı geçen yerler
+    bile boştu — `hapticSelect` *"adet değiştirme"* için yazılmış, oysa hiçbir adet düğmesi
+    titremiyordu (kullanıcının verdiği örnek tam buydu). Ekran ekran eklemenin sonucu bu: eksik
+    titreşim hata vermez, yani unutulanı kimse göremez.
+  - **İKİ KARAR ÇATIŞIYORDU, ikisi de ayakta bırakıldı.** 16.08: *"her yerde olsun istemiyorum"*
+    (sekme/çip geçişleri bilerek dışarıda). 01.09: *"düğmelere basıldığında mümkün mertebe geri
+    bildirim"*. Kullanıcı 02.09'da sınırı çizdi: **eylem titrer, gezinme sessiz.** Kural kitin TEK
+    dokunma yüzeyine kondu (`PressableSurface` — 93 dosya oradan geçiyor), muafiyet ÜÇ yerde açık
+    yazıldı: çip · metin eylemi · sekme çubuğu.
+  - **Ayrım rolden TÜRETİLEMEDİ** (ölçüldü): çipler `accessibilityRole` vermiyor, varsayılan
+    `button`a düşüyorlar — yani a11y rolü burada bir sınır değil. Muafiyet açık bir prop
+    (`haptic={false}`), çünkü örtük bir kural bu üç yerde yanlış tarafa düşerdi.
+  - **Uzun basma daha güçlü** (`hapticCommit`): kazara olmaz, kullanıcı bekleyerek yapar ve fiziksel
+    bir "oldu" bekler. Aynı tıkla geçiştirmek iki ayrı hareketi aynı sesle anlatmak olurdu.
+  - **Testler:** dördü kuralın kendisini çiviliyor (varsayılan tık · uzun basma commit'i · muafiyet
+    susturur · olmayan uzun basma kanca kurmaz). Bekçi gerekliydi: fazla konan muafiyet uygulamayı
+    sessizleştirir, eksik konan gezinirken titretir — ikisi de hata vermez.
+
+- [ ] (21.217) **B2B onay ekranı yok ama bildirimi var** — `notification-map.ts:42`
+  `b2b_application_received → 'management'` diyor, `screens/management/` altında karşılığı olan
+  ekran yok. Bildirim cihaza düşüyor, dokunuluyor, boşluğa gidiyor. İki yol: ya ekran yazılır ya
+  bildirim mobilde yönlendirilmez. Kural/metin/motor hazır (`b2bSignals` · `b2bFlag` ·
+  `b2bSummaryTask` · `setB2bApproval`), iş yalnız ekranın kendisi.
+
+- [ ] (21.218) **"Eksikleri bildirerek siparişi kapat" düğmesi açık kutu varken görünmesin** —
+  sunucu kuralı ZATEN var (`declareOrderShort` içi dolu açık kutuda `open_box_not_empty` dönüyor);
+  eksik olan ekranın kapıyı önden okuması. **DOLU** açık kutuda gizlenir, boşta gizlenmez: sunucu
+  boş kutuyu "niyet artığı" sayıp siliyor ve beyanı yazıyor — her açık kutuda gizlemek, boş kutu
+  açmış depocuyu çıkışsız bırakırdı.
+  - **BEKLEYEN(21.218):** ölçüm için toplanacak sipariş gerekiyor; `order` tablosu 02.09'da boş
+    (besleme artık sipariş üretmiyor). Sipariş doğunca cihazda doğrulanacak.
+
+- [ ] (21.219) **Durak ekranından geri dönüşte Android çökmesi** — `addViewAt: failed to insert
+  view … The specified child already has a parent` (31.08, CPH1907; üç turda tekrar üretilmiş).
+  Yalnız DURAK ekranının geri dönüşünde; kardeş geçişler aynı turda sağlam. Şüphe ekranın üç
+  örtüsünde (iki çekmece + `ScanSheet`) — gezinme sırasında sökülen portal.
+  - **BEKLEYEN(21.219):** 01.09'daki `@gorhom/bottom-sheet` göçü RN `Modal`ını tamamen kaldırdı
+    ve yığın izi tam oraya işaret ediyordu; arıza göç ile kapanmış OLABİLİR. Ölçüm sefer + durak
+    ister, `delivery_run` tablosu 02.09'da boş — sipariş ve sefer doğunca ilk iş bu turu tekrarlamak.

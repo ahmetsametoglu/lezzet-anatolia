@@ -32,6 +32,17 @@ const BOLGELER: Array<{
   // Her hatta bir "şehir içi" kod + gittikçe uzaklaşan duraklar var; mesafeler depoya kuş uçuşu
   // (ölçüldü 31.08, `postal_code_place`ten).
   //
+  // ── DÖRDÜ DE STR'NİN, KEHL'İN ROTASI YOK (kullanıcı kararı 01.09) ───────────
+  // *"Strasbourg merkezli dört rota olsun, Kehl deposuna ait bir rota olmasın, dört farklı yöne
+  // olsun."* Doğu Hattının deposu bu yüzden KEHL'den STR'ye geçti; hat aynı yerden geçmeye devam
+  // ediyor (Kehl → Offenburg → Stuttgart) ama artık Strasbourg'un doğu koludur. Kural sadeleştirme
+  // değil, gerçeğe uyum: Kehl depoya 5 km ve iki tarafın rotaları aynı sokaklarda kesişiyordu —
+  // "hangi deponun hattı" sorusu ekrandan okunamıyordu.
+  //
+  // **Kuryenin işine yarayan yan etki:** dört hattın dördü de tek deponun olduğu için kuryenin
+  // kapsamı da tek tesistir ({str, van}) — rota listesi kapsamla süzülüyor (11.7) ve iki tesisli
+  // kapsam, ekranda hiçbir karşılığı olmayan bir yetki genişlemesiydi.
+  //
   // ── KUZEY: Strasbourg → Haguenau → Wissembourg → Landau → Frankfurt ────────
   { name: 'Kuzey Hattı — Frankfurt', depo: 'str', weekdays: [1, 4], // pazartesi + perşembe
     codes: [fr('67000'), fr('67500'), fr('67160'), de('76829'), de('60311')] }, // 0 · 22 · 48 · 71 · 183 km
@@ -42,17 +53,33 @@ const BOLGELER: Array<{
   { name: 'Batı Hattı — Metz', depo: 'str', weekdays: [2, 5], // salı + cuma
     codes: [fr('67100'), fr('67200'), fr('67700'), fr('57400'), fr('57000')] }, // 0 · 0 · 30 · 54 · 130 km
   // ── GÜNEY: Sélestat → Colmar → Mulhouse ────────────────────────────────────
-  // Deposu COLMAR ve bu 19.25'ten devralınan bir değişmez: **rota deposu ile kargo çıkışı aynı
-  // depo olduğu sürece sepet ikiye bölünemiyor.** Colmar `shipsOnline=false`, kargo çıkışı STR —
-  // karma sepet ancak bu ayrımla doğuyor.
-  { name: 'Güney Hattı — Mulhouse', depo: 'colmar', weekdays: [3, 6], // çarşamba + cumartesi
+  // Deposu 01.09'a kadar COLMAR'dı; o depo Bordeaux'ya taşınınca hat STR'ye geçti (`warehouse.ts`
+  // baş künyesi). Colmar ve Mulhouse artık birer DURAK — bir zamanlar depo oldukları için değil,
+  // güney kolunun (98 km) gerçek şehirleri oldukları için buradalar.
+  { name: 'Güney Hattı — Mulhouse', depo: 'str', weekdays: [3, 6], // çarşamba + cumartesi
     codes: [fr('67600'), fr('68000'), fr('68100')] }, // 39 · 63 · 98 km
   // ── DOĞU: Kehl → Offenburg → Stuttgart ─────────────────────────────────────
-  // KEHL deposu ilk kez bir rotaya sahip. Gün seti Batı ile AYNI (salı+cuma) ve bu bilinçli: aynı
-  // gün iki rota koşmazsa kuryenin rota SEÇİMİ (K1) hiç sınanmaz — tek adayda ekran soru sormuyor.
-  // Sınır ötesi hat ADR-002'nin meşru saydığı şey; sınır rotanın değil devletin çizgisidir.
-  { name: 'Doğu Hattı — Stuttgart', depo: 'kehl', weekdays: [2, 5], // salı + cuma
+  // Gün seti Batı ile AYNI (salı+cuma) ve bu bilinçli: aynı gün iki rota koşmazsa kuryenin rota
+  // SEÇİMİ (K1) hiç sınanmaz — tek adayda ekran soru sormuyor. **İkisi de STR'nin olduğu için
+  // seçim TEK KAPSAMDA doğuyor**, yani seçim ekranı bir yetki genişlemesine değil gerçek bir güne
+  // dayanıyor. Sınır ötesi hat ADR-002'nin meşru saydığı şey; sınır rotanın değil devletin çizgisi.
+  { name: 'Doğu Hattı — Stuttgart', depo: 'str', weekdays: [2, 5], // salı + cuma
     codes: [de('77694'), de('77652'), de('70173')] }, // 5 · 19 · 107 km
+
+  // ── BORDEAUX: kurye hattı DEĞİL, sepetin bölündüğü yer (19.25 · 01.09) ──────
+  //
+  // Öteki dört satır Strasbourg'un günlük araç turları; bu değil. Bordeaux 800 km ötede ve kendi
+  // şehrine dağıtıyor — beslemede var olma sebebi tek: **müşterinin ROTA deposu ile ülkenin KARGO
+  // çıkışının farklı olduğu tek adres.** Bordeaux'lu müşterinin sepetinde BDX'te bulunan kalem
+  // "kapıya geliyor", yalnız STR'de bulunan kalem "kargoyla gelecek" grubuna düşüyor.
+  //
+  // Kuryenin rota listesinde GÖRÜNMEZ: liste kapsamla süzülüyor (11.7) ve kuryenin kapsamı {str,
+  // van}. Yani "dört rota" kuralı ekranda birebir duruyor.
+  //
+  // Tek kod (33000) ve tek gün: bu bir tur değil, bir hâl. Duraklarını çoğaltmak rota sıralamasına
+  // hiçbir şey katmaz — o iş Strasbourg'un dört kolunda zaten yapılıyor.
+  { name: 'Bordeaux Hattı — şehir içi', depo: 'bdx', weekdays: [4], // perşembe
+    codes: [fr('33000')] },
 ];
 
 function fr(postalCode: string) {
@@ -146,10 +173,19 @@ export async function seedAddresses(db: Db, kisiler: Kisiler): Promise<void> {
     // (69007) taşımaya devam ediyor: kargo yolu tek bir adresle de sınanabiliyor.
     { kisi: 'b2bAlman', label: 'Marktplatz', recipient: 'Stefan Weber', line1: 'Marktplatz 3', lat: 48.573, lng: 7.8152, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '77694', city: 'Kehl', country: 'DE', phone: '+497851445566', isDefault: true },
     { kisi: 'b2bBekleyen', label: 'Ev', recipient: 'Ali Şahin', line1: '22 rue de la Krutenau', lat: 48.581303, lng: 7.757079, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '67000', city: 'Strasbourg', phone: '+33655443322', isDefault: true },
-    // COLMAR rotası (19.25) — karma sepetin YAŞADIĞI adres. Buraya bir adres düşmezse ikinci rota
-    // yalnız kâğıt üstünde kalır: sepet ekranı yeri çerezden çözebilir ama CHECKOUT teslimatı
-    // ADRESTEN çözüyor, yani iki gruplu bir siparişin gerçekten açılabilmesi bu satıra bağlı.
+    // Güney Hattının orta durağı. 19.25'e kadar karma sepetin de yaşadığı adresti; o rol 01.09'da
+    // Bordeaux'ya geçti (bir alttaki satır), adres durak olarak kaldı — ortada durağı olmayan bir
+    // hat rota sıralamasını sınamaz.
     { kisi: 'b2cKapaliKapida', label: 'Colmar evi', recipient: 'Julien Fischer', line1: '5 rue des Marchands', lat: 48.077328, lng: 7.356656, geoPrecision: 'housenumber', geoSource: 'ban', postalCode: '68000', city: 'Colmar', phone: '+33698765432' },
+    /* KARMA SEPETİN ADRESİ (19.25 · 01.09) — buraya bir adres düşmezse Bordeaux bölgesi yalnız
+       kâğıt üstünde kalır: sepet ekranı yeri çerezden çözebilir ama CHECKOUT teslimatı ADRESTEN
+       çözüyor, yani iki gruplu bir siparişin gerçekten açılabilmesi bu satıra bağlı.
+
+       Sahibi bilerek `b2cKapaliKapida`: bayat sepetin müşterisi o (`cart.ts`) ve sepetin ikiye
+       bölünmesi ancak sepetin sahibi Bordeaux'lu bir adres seçebildiğinde görünür. Aynı müşterinin
+       Strasbourg ve Colmar adresleri de duruyor — adres DEĞİŞTİRİNCE grupların yeniden hesaplandığı
+       hâl de böylece tek hesapta denenebiliyor. */
+    { kisi: 'b2cKapaliKapida', label: 'Bordeaux dükkân', recipient: 'Julien Fischer', line1: '12 rue Sainte-Catherine', lat: 44.8404, lng: -0.5805, geoPrecision: 'municipality', geoSource: 'manual', postalCode: '33000', city: 'Bordeaux', phone: '+33556334455' },
 
     /* ── HATLARIN UÇLARI (31.08) ───────────────────────────────────────────────
        Dört hat açıldı ama her hat tek duraklı kalsaydı rota sıralaması (11.9) yine sınanamazdı:
@@ -211,8 +247,8 @@ const POSTA_TALEPLERI: Array<{ kod: string; adet: number; not: string }> = [
   { kod: '67500', adet: 47, not: 'Haguenau — açık ara önde, bölge açma adayı' },
   { kod: '67200', adet: 31, not: 'Strasbourg batı — bölge İÇİ, rota sıklığı sinyali' },
   // 68000 COLMAR'dır (eski not "Mulhouse" diyordu — 68100'ün koduydu, düzeltildi 21.08). Bu satır
-  // artık "talep birikti, bölge AÇILDI" hâlini örnekliyor: 19.25'in rotası tam bu koda kuruldu.
-  { kod: '68000', adet: 18, not: 'Colmar — talep birikti, rota açıldı (19.25)' },
+  // "talep birikti, bölge AÇILDI" hâlini örnekliyor: kod Güney Hattının orta durağı.
+  { kod: '68000', adet: 18, not: 'Colmar — talep birikti, Güney Hattına girdi' },
   { kod: '67600', adet: 12, not: 'Sélestat' },
   { kod: '77694', adet: 9, not: 'Kehl (DE) — deposu var ama rotası YOK; talep birikiyor' },
   { kod: '54000', adet: 4, not: 'Nancy — tek tük' },

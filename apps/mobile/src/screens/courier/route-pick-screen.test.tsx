@@ -128,12 +128,72 @@ describe('K · sefer ve araç seçimi', () => {
     expect(screen.getByTestId('courier-route-pick-summary')).not.toHaveTextContent('1 sefer');
   });
 
+  /*
+    İŞİ OLMAYAN ROTA SEÇİLEMEZ (kullanıcı kararı 01.09).
+
+    Kullanıcı cihazda dört tane `0 durak · 0 kutu · 0 tahsilat` rota gördü ve sordu: *"seferde
+    herhangi bir durak, kutu veya tahsilat objesi yoksa inaktif olmalı değil mi?"* İş olmayan
+    seferi kurmak, akşam kapatılacak boş bir kayıt açmaktan başka bir şey yapmıyor.
+
+    Test ÜÇ SAYIYI DA sıfırlıyor: kural üçünün birden sıfır olmasına bakıyor, yalnız durağa değil —
+    kutusu hazırlanmış ama durağı damgalanmamış rota kapanmamalı (bir alttaki test onu çiviliyor).
+  */
+  it('İŞİ OLMAYAN rota seçilemez ve sebebini söyler', async () => {
+    mockPick([courierRoute({ zoneId: ZONE_B, zoneName: 'Güney rotası', stopCount: 0, boxCount: 0, collectionCount: 0 })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toBeOnTheScreen());
+
+    expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toHaveTextContent(/iş yok/);
+    await fireEvent.press(screen.getByTestId(`courier-route-${ZONE_B}`));
+    // Basıldı ama seçilmedi; üstelik TEK aday olduğu için kendiliğinden de işaretlenmedi.
+    expect(screen.getByTestId('courier-route-pick-summary')).not.toHaveTextContent('1 sefer');
+  });
+
+  it('KUTUSU olan ama durağı damgalanmamış rota SEÇİLEBİLİR kalır', async () => {
+    mockPick([courierRoute({ zoneId: ZONE_B, stopCount: 0, boxCount: 2, collectionCount: 0 })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toBeOnTheScreen());
+
+    /* Basmaya gerek yok ve olmamalı: kendiliğinden işaretlenme ölçütü `isRoutePickable`, yani
+       kartın işaretli GELMESİ tek başına "seçilebilir sayıldı" demek. */
+    expect(screen.getByTestId('courier-route-pick-summary')).toHaveTextContent(/1\s*sefer/);
+    expect(screen.getByTestId('courier-route-pick-summary')).toHaveTextContent(/2\s*kutu/);
+  });
+
+  /*
+    TEK ADAY KENDİLİĞİNDEN İŞARETLİDİR — AMA BIRAKILABİLİR (kullanıcı bulgusu 01.09:
+    *"üç Eylül'dekini bana zorla seçtirtiyor, bırakamıyorum"*).
+
+    Kural boş listeyi iki ayrı şey sayıyordu: "henüz seçmedim" ve "işaretini kaldırdım". Kurye
+    işareti kaldırınca liste boşalıyor, kural yeniden devreye giriyor ve aynı rotayı geri
+    işaretliyordu — dokunuşun ekranda hiçbir etkisi olmuyordu.
+  */
+  it('kendiliğinden işaretlenen TEK aday BIRAKILABİLİR', async () => {
+    mockPick([courierRoute({ zoneId: ZONE_B })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toBeOnTheScreen());
+    // Tek aday: dokunulmadan işaretli gelir.
+    expect(screen.getByTestId('courier-route-pick-summary')).toHaveTextContent(/1\s*sefer/);
+
+    await fireEvent.press(screen.getByTestId(`courier-route-${ZONE_B}`));
+
+    // Bırakıldı ve BIRAKILMIŞ KALDI — kural onu geri işaretlemiyor.
+    expect(screen.getByTestId('courier-route-pick-summary')).not.toHaveTextContent(/1\s*sefer/);
+    expect(screen.getByTestId('courier-route-pick-cta')).toBeDisabled();
+  });
+
+  /* Bu ve alttaki üç test TEK rota kuruyor, yani rota kendiliğinden işaretli gelir ("tek adayda
+     soru sorulmaz"). Karta AYRICA basılıyordu ve 01.09'a kadar bu zararsızdı: dokunuş ham listeye
+     ekliyor, seçim yine aynı kalıyordu. Bırakma düzeltilince (kullanıcı bulgusu) o basış artık
+     işaretİ KALDIRIYOR — testler seçili bir kartı bırakıp seçili sanıyordu. Basışlar kalktı. */
   it('ARAÇ KARARI VERİLMEDEN sefer kurulmaz — düğme eksiği söyler (v3:17)', async () => {
     mockPick([courierRoute({ stopCount: 3 })]);
 
     await renderPick();
     await waitFor(() => expect(screen.getByTestId('courier-route-pick-cta')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
 
     /* Rota seçili ama araç kararı yok: düğme pasif ve NEDEN pasif olduğunu yazıyor. Tek bir
        "önce sefer seç" etiketi, kuryeye hangi adımın eksik olduğunu söylemiyordu. */
@@ -153,7 +213,6 @@ describe('K · sefer ve araç seçimi', () => {
 
     await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
     await fireEvent.press(screen.getByTestId('courier-vehicle-none'));
-    await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
 
     expect(screen.getByTestId('courier-vehicle-gate')).toHaveTextContent(/Araçsız/);
     expect(screen.getByTestId('courier-route-pick-cta')).toHaveTextContent(/Seferleri kur — 1 sefer/);
@@ -168,12 +227,36 @@ describe('K · sefer ve araç seçimi', () => {
        kurye rampada aracı plakasından buluyor. */
     await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
     await fireEvent.press(screen.getByTestId(`courier-vehicle-${VEHICLE}`));
-    await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
     await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
 
     await waitFor(() => {
       const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/day/start'));
       expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ depart: false });
+    });
+  });
+
+  /*
+    SEFER, ROTANIN GÜNÜNE AÇILIR (kullanıcı bulgusu 01.09, cihazda ölçüldü).
+
+    İstek GÜNÜN tarihini taşıyordu ve seçim ekranı ÜÇ GÜN listeliyor. Kurye ileri bir günün
+    rotasını seçince sefer BUGÜNE açılıyor, uç da siparişleri seferin gününe göre damgaladığı için
+    hiçbir sipariş bulunamıyordu: kartta "1 durak · 2 kutu" yazan rotadan BOŞ bir sefer doğuyordu.
+
+    Fikstürün günü (`2026-08-10`) `/courier/day` cevabının gününden (`2026-08-08`) BİLEREK farklı —
+    ikisi aynı olsaydı test kuralın bozulduğunu göremezdi.
+  */
+  it('sefer ROTANIN gününe kurulur, bugüne değil', async () => {
+    mockPick([courierRoute({ day: '2026-08-10' })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId('courier-vehicle-gate')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
+    await fireEvent.press(screen.getByTestId(`courier-vehicle-${VEHICLE}`));
+    await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
+
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/day/start'));
+      expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ date: '2026-08-10' });
     });
   });
 
@@ -197,7 +280,6 @@ describe('K · sefer ve araç seçimi', () => {
     await waitFor(() => expect(screen.getByTestId('courier-route-pick-cta')).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId('courier-vehicle-gate'));
     await fireEvent.press(screen.getByTestId(`courier-vehicle-${VEHICLE}`));
-    await fireEvent.press(screen.getByTestId(`courier-route-${courierRoute().zoneId}`));
     await fireEvent.press(screen.getByTestId('courier-route-pick-cta'));
 
     await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/load'));

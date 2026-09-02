@@ -10,26 +10,55 @@ import { tabloDolu, type Db } from './shared';
 //
 // STR kargo deposudur (`shipsOnline`): bölge dışı müşteriler ve rota müşterilerinin kargo dolgusu
 // oradan gider. Ülke başına EN FAZLA BİR aktif kargo deposu olabilir — kural veritabanında.
+//
+// ── ÜÇ DEPO, VE ÜÇÜNCÜSÜ UZAKTA (kullanıcı kararı 01.09) ────────────────────────────────────────
+//
+// Karar iki adımda oluştu ve ikinci adım birincisini düzeltti:
+//   1. *"Besleme dosyasında sadece iki depo olsun: Strasbourg ve Kehl."*
+//   2. *"Colmar'ın birbirine çok yakın olması problemdi. Colmar yerine Marsilya, Bordo gibi şehirler
+//      seçmek daha doğru. Gerekiyorsa öyle bir yerde depo açalım."*
+//
+// **Sorun depo SAYISI değil, MESAFEYDİ.** COLMAR Strasbourg'a 60 km ve Güney Hattının kendi
+// DURAĞIYDI: aynı yer hem "başka bir deponun bölgesi" hem "bu deponun rotasında bir kapı" gibi
+// duruyordu. Ekranda bu ayrım okunmuyor, kafada da kurulmuyor. Bordeaux 800 km ötede — bir deponun
+// neden ayrı bir depo olduğu tek bakışta anlaşılıyor ve Strasbourg'un dört hattından hiçbiri oraya
+// uzanamıyor.
+//
+// **Üçüncü deponun tek işi bir SENARYOYU var etmek** (19.25) ve o senaryo başka hiçbir kurulumda
+// doğmuyor: KARMA SEPET — aynı sepette hem "kapıya geliyor" hem "kargoyla gelecek" kalem. Sepetin
+// ikiye bölünmesi için müşterinin ROTA deposu ile ülkenin KARGO çıkışının FARKLI olması gerekir;
+// STR ikisini birden yaptığı sürece `decideCartAgainstWarehouse` iki havuzu tek yerden okur ve
+// `shipping` yolu rota içi bir adres için matematiksel olarak doğamaz (ölçüldü 10.08 · 15.08).
+// Bordeaux `shipsOnline=false`: Bordeaux'lu müşterinin rota deposu BDX, kargo çıkışı STR.
+//
+// **MULHOUSE (kapalı pilot depo) GERİ GELMEDİ** — pasif depo hâli (kapsam seçicisinde görünmeyen
+// depo, "depo kapandı" rozeti, stok okumasının onu atlaması) beslemede yok. `seed:coverage`ın o
+// kovası zorunluluktan çıktı, gerekçesi orada yazılı; operatör ekrandan bir depo kapattığı an dolar.
+//
+// **Rotaların hepsi STR'nin** (kullanıcı kararı 01.09: *"Strasbourg merkezli dört rota olsun, Kehl
+// deposuna ait bir rota olmasın, dört farklı yöne olsun"*). KEHL depo olarak duruyor — transfer
+// hedefi, ikinci ülke, kapsamı dar personelin deposu — ama rotası yok. Bordeaux'nun kendi şehir
+// bölgesi var ve o bir KURYE hattı değil, sepetin bölünmesinin adresi (`delivery.ts` künyesi).
 
 export interface Depolar {
-  /** Strasbourg — ana depo, aynı zamanda kargo çıkış deposu. */
+  /** Strasbourg — ana depo, aynı zamanda kargo çıkış deposu. Dört rotanın da deposu. */
   str: string;
-  /** Kehl (DE) — ikinci depo. Sınır ötesi rota ve transfer buradan denenir. */
+  /** Kehl (DE) — sınır deposu. Transfer hedefi ve ikinci ülke; ROTASI YOK (01.09). */
   kehl: string;
   /**
-   * Colmar — **rota deposu, kargo çıkışı DEĞİL** (19.25).
+   * Bordeaux — **rota deposu, kargo çıkışı DEĞİL** (19.25 · yeri 01.09'da Colmar'dan taşındı).
    *
-   * Varlık sebebi tek bir senaryodur ve o senaryo başka türlü doğmuyordu: **karma sepet**. Sepetin
-   * ikiye bölünmesi için müşterinin ROTA deposu ile ülkenin KARGO çıkışının farklı olması gerekir —
-   * STR ikisini birden yaptığı sürece `decideCartAgainstWarehouse` iki havuzu aynı yerden okur ve
-   * kalem ya ikisinde birden vardır (`local`) ya ikisinde de yoktur (`unavailable`). `shipping`
-   * yolu rota içi bir adres için matematiksel olarak doğamıyordu (ölçüldü 10.08, 15.08'de yeniden).
+   * Varlık sebebi tek bir senaryodur: karma sepet. Gerekçenin tamamı dosyanın baş künyesinde.
+   * Uzaklığı da senaryonun parçası — Strasbourg'un rota ağıyla hiç kesişmiyor.
    */
-  colmar: string;
+  bdx: string;
   /**
-   * VAN-1 — kurye aracı (`kind='vehicle'`, 26.08). Tipe 26.08'de girdi çünkü iki tüketicisi
-   * doğdu: kuryenin kapsamı (yerinde satışın depo çözümü araçtan — `sale.ts` `courierVehicleFirst`)
-   * ve araca yükleme transferi (araçta satılacak mal ancak böyle var olur).
+   * VAN-1 — kurye aracı (`kind='vehicle'`, 26.08). Tipe girmesinin sebebi kuryenin KAPSAMI: yerinde
+   * satışın depo çözümü araçtandır (`?place=van` — 01.09'dan beri açık beyanla).
+   *
+   * **İÇİ BOŞ BAŞLAR** (01.09): besleme araca mal koymuyor, koymak kuryenin adımı. Satır yine de
+   * şart, çünkü türün üç kuralı ancak bir araç varsa koşuyor — bölge bağlanamaz, kargo deposu
+   * olamaz, depo-üstü toplamaya girmez.
    */
   van: string;
 }
@@ -44,7 +73,7 @@ export interface Depolar {
  * üstelik sessizce. Test kendi satırını silince de geriye FK'si kırık bir kurulum kalıyordu
  * (`user_profiles.warehouse_ids: … diye bir depo yok` — yaşandı).
  *
- * Ölçüt bu yüzden varlıktır: STR/KEHL/COLMAR kodlu satır var mı? Yoksa açılır. Böylece hem boş
+ * Ölçüt bu yüzden varlıktır: STR/KEHL kodlu satır var mı? Yoksa açılır. Böylece hem boş
  * veritabanında hem yabancı satırlarla dolu bir tabloda aynı sonuç doğar.
  */
 export async function seedWarehouses(db: Db): Promise<Depolar> {
@@ -55,7 +84,13 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   // kurduğumuz kayıt bir sonraki koşuda "yabancı" diye raporlanır ve uyarı anlamsızlaşır.
   // VAN-1 26.08'de eklendi — küme künyesinin uyardığı tuzak birebir yaşanmıştı: aracı seed'in
   // kendisi kuruyor ama kümede olmadığı için ikinci koşu onu "yabancı depo" diye raporluyordu.
-  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'COLMAR', 'MULHOUSE', 'VAN-1']);
+  //
+  // COLMAR/MULHOUSE 01.09'da kümeden ÇIKTI, yerine BDX geldi (kullanıcı kararı, künye dosyanın
+  // başında). Tazelenmemiş bir veritabanında eski satırlar hâlâ durur ve buradaki uyarı onları
+  // "yabancı" diye sayar — bu doğrudur ve işe yarar: seed onları artık yönetmiyor, ekranda
+  // görünüyorlarsa `db:refresh` gerekiyor demektir. Seed onları SİLMEZ; depo silmek `restrict`
+  // FK'lerin işi değil, kararın işi.
+  const SEED_DEPOLARI = new Set(['STR', 'KEHL', 'BDX', 'VAN-1']);
   const yabanci = mevcut.filter((w) => !SEED_DEPOLARI.has(w.code));
   if (yabanci.length > 0) {
     // Yabancı satır SESSİZ geçilmez: operasyon ekranında görünen her depo veriyi etkiler.
@@ -64,11 +99,11 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
 
   let strId = koduyla.get('STR');
   let kehlId = koduyla.get('KEHL');
-  let colmarId = koduyla.get('COLMAR');
+  let bdxId = koduyla.get('BDX');
   let vanId = koduyla.get('VAN-1');
-  if (strId && kehlId && colmarId && koduyla.has('MULHOUSE') && vanId) {
-    console.log('▸ depolar zaten kurulu (STR + KEHL + COLMAR + MULHOUSE + VAN-1) — atlandı');
-    return { str: strId, kehl: kehlId, colmar: colmarId, van: vanId };
+  if (strId && kehlId && bdxId && vanId) {
+    console.log('▸ depolar zaten kurulu (STR + KEHL + BDX + VAN-1) — atlandı');
+    return { str: strId, kehl: kehlId, bdx: bdxId, van: vanId };
   }
   console.log('▸ DEPO seed');
 
@@ -105,63 +140,31 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
     console.log(`  ✓ ${kehl.code} · ${kehl.name}`);
   }
 
-  // ── ÜÇÜNCÜ DEPO: ROTASI VAR, KARGO ÇIKIŞI YOK (19.25) ───────────────────────────────────────
+  // ── ÜÇÜNCÜ DEPO: ROTASI VAR, KARGO ÇIKIŞI YOK, ve UZAKTA (19.25 · 01.09) ────────────────────
   //
-  // **Bu deponun tek işi bir SENARYOYU var etmek** ve o senaryo başka hiçbir kurulumda doğmuyor:
-  // karma sepet (aynı sepette hem "kapıya geliyor" hem "kargoyla gelecek" kalem). Ölçüm 10.08 ve
-  // 15.08'de iki kez yapıldı — üç aktif bölgenin üçü de STR'ye bağlıydı ve STR aynı zamanda FR
-  // kargo çıkışıydı; yani rota içi bir adres için `warehouseId` ile `shippingWarehouseId` AYNI
-  // depoyu gösteriyordu. `decideCartAgainstWarehouse` iki havuzu tek yerden okuyunca kalem ya
-  // ikisinde birden var (`local`) ya ikisinde de yok (`unavailable`) — **`shipping` yolu rota içi
-  // adres için doğamıyordu.** Sınanmayan davranışlar: iki grup başlığı, "kargolu ürünleri ayrıca
-  // sipariş ver" ikinci siparişi, kargo eşiğinin kendi matrahından hesabı (`shippingSubtotalCents`),
-  // `shippingOnly` bayrağı, kargo KDV'sinin oransal bölünmesi.
+  // Rolün tamamı ve niçin uzakta olduğu dosyanın baş künyesinde. Burada yalnız iki alan konuşuyor:
   //
-  // Colmar bunu tek satırla çözüyor: **rota deposu ama `shipsOnline = false`.** Colmar'lı müşterinin
-  // rota deposu COLMAR, kargo çıkışı STR olur ve iki havuz artık gerçekten ayrı yerlerdir.
+  //   · `shipsOnline: false` — rolün kendisi. Ülke başına tek aktif kargo deposu kuralına
+  //     dokunmuyor (kısmi unique indeks yalnız `ships_online` satırına bakar; FR'de o hâlâ STR).
+  //   · nokta (`lat/lng`) — rotanın çıpası; onsuz sıra hesabı `no_start` der. Sabit yazılıyor,
+  //     ağa çıkılmıyor: besleme çevrimdışı ve belirlenimci olmalı. Değer `postal_code_place`in
+  //     33000 satırıyla birebir (`0034` — Bordeaux merkezi).
   //
-  // Gerçekçi de: yeni açılan bir pilot depo önce yakın çevresine araçla dağıtır, kargo anlaşması
-  // sonra gelir. Ülke başına tek aktif kargo deposu kuralına da dokunmuyor (kısmi unique indeks
-  // yalnız `ships_online` satırına bakar — FR'de o hâlâ yalnız STR).
-  if (!colmarId) {
-    const colmar = await warehouses.insert({
-      code: 'COLMAR',
-      name: 'Colmar — rota deposu',
+  // Gerçekçi bir hikâye de: yeni açılan bir bölge deposu önce yakın çevresine araçla dağıtır,
+  // kargo anlaşması sonra gelir.
+  if (!bdxId) {
+    const bdx = await warehouses.insert({
+      code: 'BDX',
+      name: 'Bordeaux — bölge deposu',
       countryCode: 'FR',
-      address: { line1: 'Rue des Clefs 4', postalCode: '68000', city: 'Colmar', country: 'FR' },
+      address: { line1: '24 cours de l’Intendance', postalCode: '33000', city: 'Bordeaux', country: 'FR' },
+      lat: 44.8404,
+      lng: -0.5805,
       shipsOnline: false,
       sortOrder: 3,
     });
-    colmarId = colmar.id;
-    console.log(`  ✓ ${colmar.code} · ${colmar.name} · rotası var, kargo çıkışı YOK`);
-  }
-
-  // **KAPALI depo** (kapsam denetimi 09.08) — pasif deponun kendi ekran hâli var: kapsam
-  // seçicisinde görünmez, bölge ataması yapılamaz, stok okuması onu atlar. Bu hâl seed'de hiç
-  // doğmadığı için o yollar bugüne dek hiç koşmadı.
-  //
-  // **Kapatılan gerçek bir depo, uydurma bir kayıt değil:** sezonluk/pilot depo açılıp kapanır ve
-  // kapandığında SİLİNMEZ — geçmiş siparişler, partiler ve hareketler ona bağlı kalır (`restrict`
-  // FK'ler zaten silmeyi engelliyor). "Kapalı ama duruyor" bu modelin normal hâlidir.
-  //
-  // **Bu rolü 19.25'e kadar COLMAR taşıyordu ve devri ZORUNLUYDU:** Colmar aktifleşince pasif depo
-  // hiç kalmıyordu ve `seed:coverage`ın **zorunlu** "pasif depo" kovası boşalırdı — yani bir
-  // senaryoyu kazanırken ötekini sessizce kaybederdik. Mulhouse aynı hikâyeyi devralıyor: Colmar
-  // pilotu tuttu, Mulhouse denendi ve kapatıldı.
-  //
-  // Seed yalnız kendi kodlarını yönettiği için (yukarıdaki künye) bu satır da koda göre koşullu:
-  // varlığı koddan sorulur, tablo doluluğundan değil.
-  if (!koduyla.has('MULHOUSE')) {
-    const kapali = await warehouses.insert({
-      code: 'MULHOUSE',
-      name: 'Mulhouse — pilot depo (kapalı)',
-      countryCode: 'FR',
-      address: { line1: 'Rue du Sauvage 12', postalCode: '68100', city: 'Mulhouse', country: 'FR' },
-      shipsOnline: false,
-      isActive: false,
-      sortOrder: 4,
-    });
-    console.log(`  ✓ ${kapali.code} · ${kapali.name} · PASİF`);
+    bdxId = bdx.id;
+    console.log(`  ✓ ${bdx.code} · ${bdx.name} · rotası var, kargo çıkışı YOK`);
   }
 
   // ── ARAÇ DEPOSU (26.08, kullanıcı kararı) ───────────────────────────────────────────────────
@@ -172,8 +175,10 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
   //
   // **Seed'de bulunması şart, çünkü türün üç kuralı ancak böyle KOŞAR:** araca bölge bağlanamaz
   // (tetikleyici), araç kargo deposu olamaz (kısıt), araç `available_stock_total`a girmez. Hiç
-  // araç satırı yoksa bu üç yol da hiç sınanmaz ve "yazdım ama çalışıyor mu bilmiyorum" hâli
-  // doğar — MULHOUSE'un pasif depo için var olmasıyla birebir aynı gerekçe.
+  // araç satırı yoksa bu üç yol da hiç sınanmaz ve "yazdım ama çalışıyor mu bilmiyorum" hâli doğar.
+  //
+  // **Araç, "iki depo" kararının dışındadır** (01.09): sayılan şey TESİStir, araç bir tesis değil —
+  // kuryenin yükü. Kalkarsa yükleme transferi, araçtan satış ve akşam dönüşü hiç koşmaz.
   //
   // `shipsOnline` hiç verilmiyor: kısıt zaten reddederdi, ama varsayılana güvenmek de bir kural
   // beyanıdır — araçtan kargo çıkmaz.
@@ -186,14 +191,19 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       // Adres YOK ve bu doğru: araç bir yerdir ama sabit bir adresi yoktur. `null` burada
       // "girilmedi" değil "yok" demek — uydurma bir adres onu tesis gibi okuturdu.
       address: null,
-      sortOrder: 5,
+      // **Aracın evi STR** (02.09) — kurulum, iş değil. 01.09'un kuralı *"besleme dünyayı kurar,
+      // işi insan yapar"*: araca MAL koymak iştir ve beslemeden kaldırıldı, aracın hangi tesise
+      // ait olduğu ise dünyanın kendisi — plakası gibi, künyenin parçası. Bağ olmadan tesisin
+      // paneli "aracımda ek olarak ne var" diye soramaz ve o yol yerelde hiç koşmaz.
+      homeWarehouseId: strId,
+      sortOrder: 4,
     });
     vanId = arac.id;
     console.log(`  ✓ ${arac.code} · ${arac.name} · ARAÇ (bölge bağlanamaz, kargo çıkışı olamaz)`);
   }
 
-  console.log('✓ depo: STR (kargo çıkışı) + KEHL + COLMAR (rota, kargosuz) + MULHOUSE pasif + VAN-1 araç');
-  return { str: strId, kehl: kehlId, colmar: colmarId, van: vanId };
+  console.log('✓ depo: STR (kargo çıkışı, dört rota) + KEHL (rotasız) + BDX (rota, kargosuz) + VAN-1 araç');
+  return { str: strId, kehl: kehlId, bdx: bdxId, van: vanId };
 }
 
 /**
@@ -331,28 +341,25 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
     console.log(`  ✓ ${gec.referenceNo} · YOLDA ve GECİKMİŞ (4 gün)`);
   }
 
-  // 5) ARACA YÜKLEME (26.08 · 21.119) — serbest satış fazlası: kurye yolda isteyene bundan satar.
-  //    Yerinde satışın tek stok kaynağı budur (yerinde satış aracın KENDİ stoğundan yapılır,
-  //    rezerve maldan değil — `data-model/depo.md`); bu transfer olmadan satış ekranı araçta hep
-  //    "tükendi" gösterir ve akış yerelde hiç denenemez. Tam kabul: mal araca sayılarak yüklenir.
-  const aracPartileri = ((data ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
-    .filter((p) => !mesgulVaryantlar.has(p.variant_id) && !partiler.some((s) => s.id === p.id) && !digerPartiler.some((s) => s.id === p.id))
-    .slice(0, 4);
-  if (aracPartileri.length > 0) {
-    const yukleme = await transfers.dispatch({
-      toWarehouseId: depolar.van,
-      lines: aracPartileri.map((p) => ({ sourceStockId: p.id, qty: Math.min(6, p.physical_qty) })),
-      note: 'Sabah yüklemesi — serbest satış fazlası.',
-    });
-    const yuklemeSatirlari = await transfers.listLines(yukleme.transferId);
-    await transfers.receive({
-      transferId: yukleme.transferId,
-      lines: yuklemeSatirlari.map((l) => ({ lineId: l.id, receivedQty: l.qty })),
-    });
-    console.log(`  ✓ ${yukleme.referenceNo} · ARACA YÜKLENDİ · ${aracPartileri.length} kalem · STR → VAN-1`);
-  }
+  /*
+    ── 5) ARACA YÜKLEME KALKTI (kullanıcı kararı 01.09) ────────────────────────
 
-  console.log('✓ transfer: 6 kayıt (yolda · GECİKMİŞ yolda · tam kabul · eksikli kabul · geri alınmış · araca yükleme)');
+    Burada STR'den VAN-1'e 4 kalemlik bir transfer açılıp aynı anda kabul ediliyordu ("Sabah
+    yüklemesi — serbest satış fazlası"), yani araç dolu doğuyordu. Kullanıcı cihazda gördü:
+    *"Ben araca ürün eklemedim ama araçta ürün görünüyor."*
+
+    **Gerekçesi 26.08'de yazılmıştı ve artık geçerli değil:** *"bu transfer olmadan satış ekranı
+    araçta hep 'tükendi' gösterir ve akış yerelde hiç denenemez."* Bugün araca serbest ürün koymak
+    kuryenin kendi adımı (yükleme ekranının SERBEST ÜRÜN bölümü, v3:19) — besleme onu önceden
+    yapınca akışın bir adımı atlanmış oluyor ve araçta nereden geldiği belirsiz mal duruyor.
+
+    Kutular için 01.09'da verilen kararın aynısı: **besleme dünyayı kurar, işi insan yapar.**
+
+    Kapsam denetimi etkilenmiyor: zorunlu kovalar deponun araç TÜRÜNÜ (`kind='vehicle'`) ve araç
+    kaydını sayıyor, araçtaki STOĞU değil. VAN-1 duruyor, yalnız içi boş başlıyor.
+  */
+
+  console.log('✓ transfer: 5 kayıt (yolda · GECİKMİŞ yolda · tam kabul · eksikli kabul · geri alınmış)');
 }
 
 // ── Depo bazlı asgari stok eşiği (19.x) ──────────────────────────────────────────────────────────
@@ -533,13 +540,13 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
   koşuyor. Elle `insert` etseydik o yol yalnız testte sınanır, beslemede hiç yürümezdi.
 
   ── ÜÇ HÂL, ve üçü de bir ekranın karşılığı ─────────────────────────────────
-    STR    → üç kutu, biri KAPALI (kapanmış kutu listede görünür ama seçicide görünmez)
-    KEHL   → bir kutu (asgari hâl: kargo çıkışı olmayan depo da kutu tanımlayabilir)
-    COLMAR → HİÇ kutu yok — "bu depodan kargo etiketi alınamaz" uyarısının tek kaynağı
+    STR  → üç kutu, biri KAPALI (kapanmış kutu listede görünür ama seçicide görünmez)
+    KEHL → bir kutu (asgari hâl: kargo çıkışı olmayan depo da kutu tanımlayabilir)
+    BDX  → HİÇ kutu yok — "bu depodan kargo etiketi alınamaz" uyarısının tek kaynağı
 
   Kargo çıkışı olan depo (STR) kutusuz bırakılsaydı ekranın amber cümlesi doğru görünür ama
-  hiçbir gönderi hazırlanamazdı; kutusuz hâli TAŞIMAYAN bir depoda (COLMAR) göstermek ise o
-  cümleyi zararsız bir yerde sınıyor.
+  hiçbir gönderi hazırlanamazdı; kutusuz hâli TAŞIMAYAN bir depoda (BDX) göstermek ise o cümleyi
+  zararsız bir yerde sınıyor. (Bu rolü 01.09'a kadar COLMAR taşıyordu — depo değişti, hâl aynı.)
 */
 export async function seedShippingBoxes(db: Db, depolar: Depolar): Promise<void> {
   const svc = new ShippingBoxService(db);
@@ -573,9 +580,9 @@ export async function seedShippingBoxes(db: Db, depolar: Depolar): Promise<void>
   yazıcıyı hem etiket TÜRÜNÜ çoğalttı ve envanter tabloya taşındı (`0054`).
 
   ── ÜÇ HÂL, üçü de bir ekranın karşılığı ────────────────────────────────────
-    STR    → İKİ yazıcı (kutu + kargo) — cihaz seçicisinin normal hâli
-    KEHL   → TEK yazıcı, yalnız `box` — kargo etiketi basamayan depo; ekran bunu söylemeli
-    COLMAR → HİÇ yazıcı yok — "yazıcı tanımlı değil" cümlesinin tek kaynağı
+    STR  → İKİ yazıcı (kutu + kargo) — cihaz seçicisinin normal hâli
+    KEHL → TEK yazıcı, yalnız `box` — kargo etiketi basamayan depo; ekran bunu söylemeli
+    BDX  → HİÇ yazıcı yok — "yazıcı tanımlı değil" cümlesinin tek kaynağı
 
   Adresler 23.5'in iğne deneyinde ÖLÇÜLEN gerçek yazıcıdan (`192.168.1.90`); ikincisi ondan
   türetilmiş makul bir varsayım — depo kurulumunda düzeltilir.

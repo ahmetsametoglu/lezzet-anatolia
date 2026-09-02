@@ -505,8 +505,15 @@ const KAPSAM: KapsamAlani[] = [
     tablo: 'warehouse',
     kovalar: [
       { ad: 'aktif', zorunlu: true, filtre: (q) => q.eq('is_active', true) },
-      // Pasif depo: kapsam seçicisi ve "depo kapandı" hâli.
-      { ad: 'pasif', zorunlu: true, filtre: (q) => q.eq('is_active', false) },
+      /*
+        Pasif depo: kapsam seçicisi ve "depo kapandı" hâli.
+
+        **ZORUNLUDAN ÇIKTI (kullanıcı kararı 01.09):** bu hâli MULHOUSE (kapalı pilot depo)
+        taşıyordu ve besleme iki depoya inince kalktı. Kova SİLİNMEDİ — dosyanın kuralı bu: bir
+        kovayı zorunludan çıkarmak serbest, gerekçesi buraya yazılır. Ölçmeye devam ediyor, çünkü
+        operatör ekrandan bir depoyu kapattığı an dolar ve o gün rapor yine doğruyu söyler.
+      */
+      { ad: 'pasif', zorunlu: false, filtre: (q) => q.eq('is_active', false) },
       { ad: 'kargo çıkışlı', zorunlu: true, filtre: (q) => q.eq('ships_online', true) },
       { ad: 'yalnız rota', zorunlu: true, filtre: (q) => q.eq('ships_online', false) },
       // Araç deposu (26.08): türün üç kuralı — bölge bağlanamaz · kargo çıkışı olamaz ·
@@ -688,12 +695,17 @@ const KAPSAM: KapsamAlani[] = [
          * çıkışıydı, dolayısıyla `decideCartAgainstWarehouse` iki havuzu tek yerden okuyordu ve
          * `shipping` yolu rota içi bir adres için doğamıyordu.
          *
+         * Ölçüt kalemin kendisi: kargolanabilir, kargo deposunda var, müşterinin rota deposunda yok.
+         *
          * Kova o boşluğun geri gelmesini engelliyor: sayı sıfıra düşerse **iki gruplu sepet artık
          * üretilemiyor** demektir — ve o zaman iki grup başlığı, "kargolu ürünleri ayrıca sipariş
          * ver" akışı, `shippingSubtotalCents` matrahı ve kargo KDV'sinin oransal bölünmesi yine
          * hiçbir koşuda koşmaz. Sessizce kaybolmasın diye ZORUNLU.
          *
-         * Ölçüt kalemin kendisi: kargolanabilir, kargo deposunda var, müşterinin rota deposunda yok.
+         * **Hâli var eden depo 01.09'da COLMAR'dan BORDEAUX'ya taşındı** (kullanıcı kararı — 60 km
+         * "uzak depo" değildi ve Güney Hattının kendi durağıydı). Kova bundan etkilenmiyor ve tam
+         * da bu yüzden doğru yazılmış: ölçtüğü şey deponun ADI değil, İLİŞKİ — kargo deposunda var,
+         * rota deposunda yok. Depo taşındı, sayı yerinde kaldı.
          */
         sayac: async (db) => {
           const [{ data: depoSatirlari }, { data: bolgeSatirlari }, { data: stokSatirlari }, { data: varyantSatirlari }, { data: urunSatirlari }] =

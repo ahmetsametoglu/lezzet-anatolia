@@ -256,52 +256,54 @@ export async function seedStock(
     }
   }
 
-  // ── COLMAR: BİR KISMI ORADA, GERİSİ KARGODAN (19.25) ─────────────────────────────────────────
+  // ── BORDEAUX: BİR KISMI ORADA, GERİSİ KARGODAN (19.25) ───────────────────────────────────────
   //
-  // **Dağılımın kendisi senaryodur ve sadeleştirilmemelidir.** Karma sepet ancak Colmar'lı
+  // **Dağılımın kendisi senaryodur ve sadeleştirilmemelidir.** Karma sepet ancak Bordeaux'lu
   // müşterinin bazı kalemleri KENDİ deposunda bulup bazılarını bulamamasıyla doğar:
-  //   · COLMAR'da var        → `local`   ("kapıya geliyor")
-  //   · COLMAR'da yok, STR'de var, kargolanabilir → `shipping` ("kargoyla gelecek")  ← ARANAN HÂL
-  //   · COLMAR'da yok, soğuk zincir              → `not_shippable_here`
-  //   · hiçbir depoda yok                        → `unavailable`
+  //   · BDX'te var                             → `local`   ("kapıya geliyor")
+  //   · BDX'te yok, STR'de var, kargolanabilir  → `shipping` ("kargoyla gelecek")  ← ARANAN HÂL
+  //   · BDX'te yok, soğuk zincir               → `not_shippable_here`
+  //   · hiçbir depoda yok                      → `unavailable`
   // Dördü de aynı katalogda duruyor, yani tek bir sepet dört cümleyi birden gösterebiliyor.
   //
-  // Oran bilinçli AZ (her dördüncü varyant + iki soğuk zincir kalemi): yeni açılmış pilot depo dar
-  // bir çekirdek stokla çalışır. Colmar'a her şeyi koysaydık `shipping` grubu yine hiç doğmazdı —
+  // *(Bu blok 01.09'a kadar COLMAR'ı besliyordu; depo Bordeaux'ya taşındı, kural aynı kaldı.)*
+  //
+  // Oran bilinçli AZ (her dördüncü varyant + iki soğuk zincir kalemi): yeni açılmış bir bölge deposu
+  // dar bir çekirdek stokla çalışır. BDX'e her şeyi koysaydık `shipping` grubu yine hiç doğmazdı —
   // bu bölümün var oluş sebebini kendi elimizle silerdik.
   //
-  // **Soğuk zincir kalemi BİLEREK var:** hepsi kargolanabilir olsaydı Colmar'lı müşteri için
+  // **Soğuk zincir kalemi BİLEREK var:** hepsi kargolanabilir olsaydı Bordeaux'lu müşteri için
   // "buraya gelemez" hâli hiç oluşmaz, kısıt cümlesi yalnız rota DIŞI adreslerde görünürdü.
   const { data: sogukSatirlar, error: sogukHatasi } = await db.from('product').select('id').eq('shippable', false);
   if (sogukHatasi) throw sogukHatasi;
   const sogukUrunler = new Set((sogukSatirlar ?? []).map((r) => (r as { id: string }).id));
 
-  // Tükenmiş ürün burada da tükenmiş kalır: Colmar'a stok koymak onu diriltirdi ve "hiçbir depoda
-  // yok" (`unavailable`) hâli — bu beslemenin ikinci kazanımı — kaybolurdu.
-  const colmarAdaylari = satilabilir.filter((v) => !tukenmisUrun.has(v.productId));
-  const colmarKume = new Map<string, (typeof colmarAdaylari)[number]>();
-  for (const [i, v] of colmarAdaylari.entries()) {
-    if (i % 4 === 0 && colmarKume.size < 10) colmarKume.set(v.id, v);
+  // Tükenmiş ürün burada da tükenmiş kalır: BDX'e stok koymak onu diriltirdi ve "hiçbir depoda yok"
+  // (`unavailable`) hâli — bu beslemenin ikinci kazanımı — kaybolurdu.
+  const bdxAdaylari = satilabilir.filter((v) => !tukenmisUrun.has(v.productId));
+  const bdxKume = new Map<string, (typeof bdxAdaylari)[number]>();
+  for (const [i, v] of bdxAdaylari.entries()) {
+    if (i % 4 === 0 && bdxKume.size < 10) bdxKume.set(v.id, v);
   }
-  for (const v of colmarAdaylari.filter((v) => sogukUrunler.has(v.productId)).slice(0, 2)) colmarKume.set(v.id, v);
+  for (const v of bdxAdaylari.filter((v) => sogukUrunler.has(v.productId)).slice(0, 2)) bdxKume.set(v.id, v);
 
-  let colmarParti = 0;
-  for (const v of colmarKume.values()) {
+  let bdxParti = 0;
+  for (const v of bdxKume.values()) {
     await stocks.insert({
-      warehouseId: depolar.colmar,
+      warehouseId: depolar.bdx,
       variantId: v.id,
-      // Küçük depo, küçük miktar: eşit hacim "pilot depo" gerçeğini yalanlar.
-      physicalQty: 5 + (colmarParti % 9),
-      expiryDate: gun(30 + ((colmarParti * 11) % 240)),
-      lotNumber: `CO${String(2600 + colmarParti)}-1`,
-      purchasePriceCents: alisFiyati(v, colmarParti + 3),
-      // Rafı YOK ve bu bilinçli: Colmar'ın tanımlı alanı henüz açılmadı (yeni depo), `storage_area_id`
+      // Küçük depo, küçük miktar: eşit hacim "yeni bölge deposu" gerçeğini yalanlar.
+      physicalQty: 5 + (bdxParti % 9),
+      expiryDate: gun(30 + ((bdxParti * 11) % 240)),
+      lotNumber: `BX${String(2600 + bdxParti)}-1`,
+      purchasePriceCents: alisFiyati(v, bdxParti + 3),
+      // Rafı YOK ve bu bilinçli: BDX'in tanımlı alanı henüz açılmadı (yeni depo), `storage_area_id`
       // nullable ve ekranların "raf bilinmiyor" hâli ikinci bir depoda da doğsun.
     });
-    colmarParti += 1;
+    bdxParti += 1;
   }
   console.log(
-    `  ✓ COLMAR · ${colmarParti} parti (${colmarKume.size} varyant) — gerisi o adrese KARGOYLA gider: karma sepetin kaynağı`,
+    `  ✓ BDX · ${bdxParti} parti (${bdxKume.size} varyant) — gerisi o adrese KARGOYLA gider: karma sepetin kaynağı`,
   );
 
   // 4) SINIR DURUMLAR — ekranların uyarı/engel hâlleri bunlarsız hiç görünmez.

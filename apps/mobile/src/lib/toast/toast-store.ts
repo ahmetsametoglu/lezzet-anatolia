@@ -3,8 +3,8 @@ import { useSyncExternalStore } from 'react';
 import { hapticError, hapticSuccess, hapticWarning } from '@/lib/haptics/haptics';
 
 /*
-  TOAST DEPOSU — v3'ün `toastM`i (v3:437): tek satırlık bilgi mesajı, 2400 ms sonra kendiliğinden
-  düşer; yeni mesaj eskinin sayacını SIFIRLAR (art arda iki eylemde ilkinin artığı ikincinin
+  TOAST DEPOSU — v3'ün `toastM`i (v3:437): tek satırlık bilgi mesajı, kendiliğinden düşer (süre
+  metnin uzunluğundan türer — künyesi `sureOf`ta); yeni mesaj eskinin sayacını SIFIRLAR (art arda iki eylemde ilkinin artığı ikincinin
   süresini yemez — şablonun kendi `clearTimeout` kuralı).
 
   MODÜL-DURUMLU (`use-me.hook` deseni): basan taraf herhangi bir ekran ya da akış, çizen taraf
@@ -35,7 +35,30 @@ import { hapticError, hapticSuccess, hapticWarning } from '@/lib/haptics/haptics
   ise bir OLAY, iki kez olmamalı. Yayın anı olayın tek gerçekleştiği yerdir.
 */
 
-const TOAST_MS = 2400;
+/*
+  ── SÜRE METNİN UZUNLUĞUNA GÖRE (kullanıcı kararı 01.09) ────────────────────
+  2400 ms sabitti ve şablonun kendi değeriydi (v3:437 `toastM`). Mesajlar kısa kaldığı sürece
+  doğruydu; kutu okutma cümlesine ROTA ADI girince değil: *"toast mesajı süresi kutunun hangi
+  rota olduğunu söyleyeceği için bir miktar uzun tutulması da gerekebilir."*
+
+  Süre bu yüzden sabit değil, OKUMA SÜRESİ: kısa cümle eskisi kadar durur, uzun cümle karakter
+  başına biraz daha. Sabit bir "hepsi 4 saniye" iki yönden de yanlış olurdu — kısa onaylar ekranda
+  gereksiz asılır, uzun cümle yine yetişmezdi.
+
+  Sayılar rampada okuyan bir kuryeye göre: eşik 40 karakter (bir bakışta okunan cümle), üstü
+  karakter başına 45 ms (~22 karakter/sn — göz atarak okuma hızı), tavan 6 sn. Tavan şart:
+  süresi metne bağlı bir toast, bir gün gelen uzun bir hata mesajıyla ekranda kalıcı olurdu.
+  Üçü de burada, tek yerde parametrik.
+*/
+const TOAST_BASE_MS = 2400;
+const TOAST_ESIK_KARAKTER = 40;
+const TOAST_KARAKTER_MS = 45;
+const TOAST_TAVAN_MS = 6000;
+
+function sureOf(message: string): number {
+  const fazla = Math.max(0, message.length - TOAST_ESIK_KARAKTER);
+  return Math.min(TOAST_TAVAN_MS, TOAST_BASE_MS + fazla * TOAST_KARAKTER_MS);
+}
 
 let current: string | null = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
@@ -53,7 +76,7 @@ function publish(message: string): void {
     current = null;
     timer = null;
     emit();
-  }, TOAST_MS);
+  }, sureOf(message));
 }
 
 /** İŞLEM OLDU — kullanıcının beklediği sonuç geldi. Titreşir. */

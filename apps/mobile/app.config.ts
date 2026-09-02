@@ -194,7 +194,42 @@ const config: ExpoConfig = {
         imageWidth: 164,
       },
     ],
-    'react-native-edge-to-edge',
+    [
+      'react-native-edge-to-edge',
+      {
+        android: {
+          /*
+            SİSTEM ÇUBUĞUNUN KONTRAST PERDESİ KAPALI (kullanıcı bulgusu 01.09, cihazda ölçüldü).
+
+            ── BELİRTİ ──────────────────────────────────────────────────────────
+            Ekranın en altındaki 16 dp'lik hareket çubuğu şeridi uygulamanın kreminden AÇIK
+            çiziliyordu; üstteki durum çubuğu şeridinde aynı sorun YOKTU.
+
+            ── ÖLÇÜM ────────────────────────────────────────────────────────────
+            Poco (Android 15 · yoğunluk 480): uygulama zemini `#f2f0e8`, şerit `#fefefd`, sınır
+            y=2664. Sayı tesadüf değil — `#fefefd`, kremin ÜSTÜNE %90 opaklıkta beyaz koymanın
+            tam sonucu. Yani krem oraya çiziliyor ve üstüne bir PERDE seriliyor.
+
+            Perdeyi Android çiziyor (`Window.isNavigationBarContrastEnforced`) ve açan da
+            kütüphanenin kendi teması: `Theme.EdgeToEdge` bu özniteliği varsayılan `true` yapıyor,
+            modül de onu okuyup pencereye uyguluyor (`EdgeToEdgeModuleImpl` — `true` dalı). Amacı
+            koyu içerikli uygulamalarda çubuğun okunur kalması; bizde ise zaten AÇIK bir zeminin
+            üstüne ikinci bir açık katman koyuyor ve tek yaptığı rengi bozmak.
+
+            ── YANLIŞ TEŞHİS KAYDA GEÇİYOR ──────────────────────────────────────
+            İlk teori "pencere zemini boyanmamış" idi ve `expo-system-ui` ile boyandı: cihazda
+            HİÇBİR ŞEY değişmedi (kayıt `expoRootBackgroundColor = #f2f0e8` yazılmıştı, şerit yine
+            aynı). O değişiklik geri alındı — ölçüm teoriyi yalanladığında kod da gider.
+
+            Durum çubuğunda sorun olmamasının sebebi de burada: modül `isStatusBarContrastEnforced`
+            değerini her iki dalda da `false` yapıyor, yalnız gezinme çubuğunda ayrım var.
+
+            **NATIVE DEĞİŞİKLİK:** `styles.xml`e yazılır, yani yeniden derleme ister.
+          */
+          enforceNavigationBarContrast: false,
+        },
+      },
+    ],
     'expo-secure-store',
     [
       // Kamera YALNIZ kod okutmak için (Modül 23) ve izin metni bunu söylüyor — genel bir "kamera

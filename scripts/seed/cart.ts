@@ -54,33 +54,35 @@ export async function seedCarts(db: Db, kisiler: Kisiler, varyantlar: VaryantRef
     /**
      * ── KARMA SEPET: aynı sepette YEREL + KARGO (19.25) ───────────────────────────────────────
      *
-     * Bu müşterinin öteki satırları yalnız STR'de duruyor, yani Colmar'lı bir yer için hepsi kargo
+     * Bu müşterinin öteki satırları yalnız STR'de duruyor, yani Bordeaux'lu bir yer için hepsi kargo
      * grubuna düşüyor — tek gruplu bir sepet, bölünmenin hiçbir şeyini göstermez. Burada eklenen
-     * satır COLMAR deposunda BULUNAN bir varyant: sepet ikiye ayrılıyor ve o ana kadar hiç
-     * koşmamış davranışlar birden görünür oluyor — iki grup başlığı, "kargolu ürünleri ayrıca
-     * sipariş ver" ikinci siparişi, kargo eşiğinin KENDİ matrahından hesabı, "iki grup toplanmaz"
-     * cümlesi.
+     * satır BDX deposunda BULUNAN bir varyant: sepet ikiye ayrılıyor ve o ana kadar hiç koşmamış
+     * davranışlar birden görünür oluyor — iki grup başlığı, "kargolu ürünleri ayrıca sipariş ver"
+     * ikinci siparişi, kargo eşiğinin KENDİ matrahından hesabı, "iki grup toplanmaz" cümlesi.
      *
-     * **Varyant SORGUYLA seçiliyor, indisle değil:** stok bölümü Colmar'a hangi varyantları
-     * koyduğunu kendi kuralıyla belirliyor (`stock.ts`, her dördüncü + iki soğuk zincir) ve buraya
-     * sabit bir indis yazmak, o kural değiştiği gün sessizce kargo grubuna düşen bir satır bırakırdı
-     * — sepet yine tek gruplu olur, kimse fark etmezdi.
+     * **Varyant SORGUYLA seçiliyor, indisle değil:** stok bölümü BDX'e hangi varyantları koyduğunu
+     * kendi kuralıyla belirliyor (`stock.ts`, her dördüncü + iki soğuk zincir) ve buraya sabit bir
+     * indis yazmak, o kural değiştiği gün sessizce kargo grubuna düşen bir satır bırakırdı — sepet
+     * yine tek gruplu olur, kimse fark etmezdi.
      *
-     * **Bölünmeyi görmek için yerin 68000 olması gerekir** (çerez ya da Colmar adresi): grup kararı
+     * **Bölünmeyi görmek için yerin 33000 olması gerekir** (çerez ya da Bordeaux adresi): grup kararı
      * müşterinin YERİNE bağlı, sepetin kendisine değil. Adres seed'de hazır (`delivery.ts`).
+     *
+     * *(01.09'a kadar bu depo COLMAR'dı; 60 km'lik bir "uzak depo" ikna edici olmadığı için
+     * Bordeaux'ya taşındı — kullanıcı kararı, künye `seed/warehouse.ts` başında.)*
      */
-    const { data: colmarDepo } = await db.from('warehouse').select('id').eq('code', 'COLMAR').limit(1);
-    const colmarId = ((colmarDepo ?? [])[0] as { id: string } | undefined)?.id;
-    if (colmarId) {
-      const { data: colmarStok } = await db
+    const { data: bdxDepo } = await db.from('warehouse').select('id').eq('code', 'BDX').limit(1);
+    const bdxId = ((bdxDepo ?? [])[0] as { id: string } | undefined)?.id;
+    if (bdxId) {
+      const { data: bdxStok } = await db
         .from('stock')
         .select('variant_id')
-        .eq('warehouse_id', colmarId)
+        .eq('warehouse_id', bdxId)
         .gt('physical_qty', 0)
         .limit(1);
-      const yerelVaryant = ((colmarStok ?? [])[0] as { variant_id: string } | undefined)?.variant_id;
+      const yerelVaryant = ((bdxStok ?? [])[0] as { variant_id: string } | undefined)?.variant_id;
       if (yerelVaryant) await carts.addItem(bayat, { variantId: yerelVaryant, qty: 1, unitPrice: euro(6.5) });
-      else console.log('  ⚠ COLMAR stoğu yok — karma sepet hâli bu koşuda doğmayacak (19.25)');
+      else console.log('  ⚠ BDX stoğu yok — karma sepet hâli bu koşuda doğmayacak (19.25)');
     }
   }
   console.log('✓ sepet: 3 sepet (normal · toptan · BAYAT+KARMA) + partiye çıpalı teklif satırı');

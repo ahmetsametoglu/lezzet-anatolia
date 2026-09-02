@@ -1,4 +1,4 @@
-import { OrderBoxService, OrderService } from '@lezzet/database';
+import { DeliveryRunService, DeliveryZoneService, OrderBoxService, OrderService } from '@lezzet/database';
 import type { Order } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -45,7 +45,18 @@ export type LoadBoxOutcome =
       allBoxesLoaded: boolean;
     }
   | { status: 'already_loaded'; orderId: string; boxNo: number; loadedBoxes: number; boxCount: number }
-  | { status: 'wrong_route'; referenceNo: string | null }
+  | {
+      status: 'wrong_route';
+      referenceNo: string | null;
+      /**
+       * **Kutunun AİT OLDUĞU rota** (kullanıcı kararı 01.09) — "hangi sefer" değil "hangi rota":
+       * `SF-26-…` bir kayıt numarası, "Kuzey Hattı — Frankfurt" kuryenin kafasındaki şey.
+       * `null` = sipariş hiçbir sefere damgalı değil (henüz kurulmamış ya da başkasınınki de değil).
+       */
+      routeName: string | null;
+      /** Seferin künyesi — rampada kâğıtla eşleştirmek için; rota adının yanında ikincil. */
+      runReferenceNo: string | null;
+    }
   | { status: 'not_sealed'; boxNo: number }
   | { status: 'not_loadable'; currentStatus: Order['status'] }
   | { status: 'unknown_code' };
@@ -62,9 +73,28 @@ export async function loadBox(
   // Kutusu olan sipariş silinemez (cascade kutuyu da götürür) — bu dal saf savunma.
   if (!order) return { status: 'unknown_code' };
 
-  // Sipariş bu kuryenin seferine damgalı değil → kutu bu rotanın malı değil. Referans söylenir
-  // ki kurye rampada kutuyu DOĞRU yığına geri koyabilsin — sessiz bir ret, kutuyu araçta unutturur.
-  if (order.courierId !== input.courierId) return { status: 'wrong_route', referenceNo: order.referenceNo };
+  /*
+    Sipariş bu kuryenin seferine damgalı değil → kutu bu rotanın malı değil.
+
+    ── RET, KUTUNUN NEREYE AİT OLDUĞUNU DA SÖYLER (kullanıcı kararı 01.09) ────
+    Eskiden yalnız siparişin referansı dönüyordu ve kurye "peki bu kutu kimin" sorusuyla kalıyordu.
+    Tasarımın kendi kırmızı kartı bunu zaten yazıyor (v3:18): *"KT-26-8891 · SF-26-TTLM40'a ait, o
+    sefer bu araçta yok."* Rota adı SEFERDEN çözülüyor; sipariş hiçbir sefere damgalı değilse ikisi
+    de `null` kalır — bilinmeyen bir şeyi uydurmaktansa söylememek doğru (CLAUDE §1).
+
+    Okuma İKİ EK TURA mal oluyor ve yalnız bu dalda: reddedilen okutma nadir bir hâl, mutlu yol
+    (yükleme) hiçbir şey ödemiyor.
+  */
+  if (order.courierId !== input.courierId) {
+    const run = order.deliveryRunId === null ? null : await new DeliveryRunService(db).getById(order.deliveryRunId);
+    const zone = run === null ? null : await new DeliveryZoneService(db).getById(run.deliveryZoneId);
+    return {
+      status: 'wrong_route',
+      referenceNo: order.referenceNo,
+      routeName: zone?.name ?? null,
+      runReferenceNo: run?.referenceNo ?? null,
+    };
+  }
 
   // Açık kutu araca binemez (0048 kısıtı `check` olarak da duruyor; burası okunur cümle).
   if (box.sealedAt === null) return { status: 'not_sealed', boxNo: box.boxNo };

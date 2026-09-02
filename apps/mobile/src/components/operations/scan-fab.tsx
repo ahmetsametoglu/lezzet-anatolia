@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet, UnistylesRuntime } from 'react-native-unistyles';
 
 import { Icon } from '@/components/ui/icon';
@@ -62,6 +62,19 @@ interface OperationsScanFabProps {
    * şey "altımda şu kadarlık bir çubuk var"; nereye oturacağına yine bileşen karar veriyor.
    */
   lift?: number;
+  /**
+   * **METİN — daire hapa dönüşür** (kullanıcı kararı 01.09).
+   *
+   * Yükleme ekranında son kutu binince okutacak bir şey kalmıyor ve daire kayboluyordu: elin
+   * gittiği yer boşalıyor, kurye "bitir"i aramak için yukarı kaydırmak zorunda kalıyordu.
+   * Kullanıcının çözümü: *"tarama butonu tüm kutular eklendikten sonra yüklemeyi bitir butonuna
+   * dönebilir; fab butonu içinde metin barındıran geniş bir buton olur."*
+   *
+   * Yani düğme kaybolmuyor, İŞİ değişiyor — dosyanın kendi kuralının devamı ("daire okutma
+   * düğmesi değil, buradaki tek eylem"). Metin gelince yalnız kabuk genişler: konum, gölge, ton
+   * ve dokunma alanı aynı kalır.
+   */
+  label?: string;
   accessibilityHint?: string;
   testID?: string;
 }
@@ -73,6 +86,7 @@ export function OperationsScanFab({
   tone = 'scan',
   disabled = false,
   lift = 0,
+  label,
   accessibilityHint,
   testID,
 }: OperationsScanFabProps) {
@@ -104,7 +118,11 @@ export function OperationsScanFab({
         disabled={disabled}
         /* Tasarımın `style-active="transform:scale(.94)"`i — küçük yuvarlak öğenin durağı. */
         feedback="scale-small"
-        style={[styles.fab, disabled ? styles.fab_disabled : tone === 'scan' ? styles.fab_scan : styles.fab_action]}
+        style={[
+          styles.fab,
+          label === undefined ? styles.fab_round : styles.fab_wide,
+          disabled ? styles.fab_disabled : tone === 'scan' ? styles.fab_scan : styles.fab_action,
+        ]}
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
         testID={testID}
@@ -118,6 +136,7 @@ export function OperationsScanFab({
           color={operationsTheme.colors['on-image']}
           bold
         />
+        {label === undefined ? null : <Text style={styles.label}>{label}</Text>}
       </PressableSurface>
     </View>
   );
@@ -131,14 +150,25 @@ const styles = StyleSheet.create({
     right: operationsTheme.space['5xl'],
   },
   fab: {
-    width: operationsTheme.size.fab,
     height: operationsTheme.size.fab,
     /* Tam daire: yarıçap ölçekten DEĞİL boyun yarısından türer — `radius` ailesi kutu köşesidir,
-       burada istenen şey köşe değil dairenin kendisi. */
+       burada istenen şey köşe değil dairenin kendisi. Metinli hâlde de aynı yarıçap kalıyor: hap
+       biçimi, dairenin iki yana uzamış hâlidir — köşesi değişen bir düğme başka bir düğme olurdu. */
     borderRadius: operationsTheme.size.fab / 2,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: operationsTheme.space.lg,
     boxShadow: operationsTheme.shadow.fab,
+  },
+  /** Metinsiz hâl: en = boy, yani tam daire. */
+  fab_round: { width: operationsTheme.size.fab },
+  /** Metinli hâl: genişlik içeriğe göre, dolgu dairenin yarıçapına yakın durur ki hap dengeli olsun. */
+  fab_wide: { paddingHorizontal: operationsTheme.space['5xl'] },
+  label: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.button,
+    color: operationsTheme.colors['on-image'],
   },
   fab_scan: {
     backgroundColor: operationsTheme.colors.olive,

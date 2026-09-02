@@ -18,7 +18,7 @@ import { timeOf } from '@/lib/operations/stamp';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
 import { dayTagOf } from './day-tag';
-import { isRouteFree, useCourierDay } from './use-courier-day.hook';
+import { isRouteFree, routeHasWork, useCourierDay } from './use-courier-day.hook';
 
 /*
   K · SEFER VE ARAÇ SEÇİMİ (v3:17) — kurulacak seferlerin seçildiği ekran.
@@ -44,6 +44,27 @@ const t = courierCopy;
 /** İlk yük iskeleti — araç satırı ve iki rota kartı; ekranın gerçekten çizdiği bloklar. */
 const PICK_SKELETON = { vehicle: 62, route: 96 } as const;
 
+/**
+ * **ÖZET BLOĞUNUN YÜKSEKLİĞİ — iki hâlde de aynı** (kullanıcı kararı 01.09).
+ *
+ * Blok iki ayrı şey çiziyor: seçim yokken kesikli bir bekleyiş kutusu, seçim varken üç sayılık
+ * özet. İkisi farklı yükseklikteydi ve her işaretlemede altındaki her şey zıplıyordu —
+ * kullanıcının istediği şey bu zıplamanın bitmesi: *"o bölümün yüksekliği ile seçilince ortaya
+ * çıkan bilgi kartının yüksekliği aynı olmalı."*
+ *
+ * Değer DOLU hâlin ölçülmüş doğal yüksekliği: cihazda **305 px @3x = 102 dp** (Poco, iki hâl aynı
+ * turda ölçüldü; boş hâl 65 dp'ydi). Tasarımın kendi hesabıyla da aynı kapıya çıkıyor (v3:17 dolu
+ * blok ≈ 100 px). Taban olarak (`minHeight`) iki stile de veriliyor, yani dolu hâl büyürse buradaki
+ * sayı da onunla güncellenir.
+ *
+ * Tasarımda ikisi eşit DEĞİL (≈100 ↔ ≈70 px) — bu bilinçli bir sapma ve sebebi HAREKET: tasarım
+ * duran bir kare, ekran ise seçimle değişen canlı bir yüzey.
+ *
+ * *(İlk denemede 85 yazılmıştı: ölçüm tek bir sütundan alınmış ve kartın yuvarlatılmış köşesine
+ * denk gelmişti. Doğrusu satır satır, tüm genişlikte taranarak bulundu.)*
+ */
+const SUMMARY_BOX_MIN_HEIGHT = 102;
+
 export function CourierRoutePickScreen() {
   const router = useRouter();
   const day = useCourierDay();
@@ -64,6 +85,19 @@ export function CourierRoutePickScreen() {
     karar vermiş kuryeyi sonsuza kadar bekletirdi.
   */
   const [noVehicle, setNoVehicle] = useState(false);
+  /*
+    LİSTENİN ALTINDAKİ BOŞLUK ÖLÇÜLÜR, TAHMİN EDİLMEZ (kullanıcı bulgusu 01.09).
+
+    Yapışkan çubuk mutlak konumlu ve listenin son kartını örtüyordu: *"aşağıda açılan bir bölüm
+    var"* — kullanıcının gördüğü şey, "Araca alınacaklar" özetinin yarısı düğmenin arkasında
+    kalmış hâliydi (cihazda ölçüldü: kartın üst 30 dp'si görünüyor, üç hücrelik ızgarası hiç
+    görünmüyor). Boşluk `space['9xl']` (70) yazılıydı; çubuğun kendisi düğme + ÜÇ SATIR DİPNOT
+    taşıdığı için gerçek yüksekliği bunun iki katına yakın.
+
+    İlk hâl `0`: çubuk ölçülene kadar bir kare boyunca boşluk yok ve bu doğru — uydurma bir
+    başlangıç değeri, ölçüm gelince listeyi zıplatırdı.
+  */
+  const [barHeight, setBarHeight] = useState(0);
   const vehicle = day.vehicles.find((row) => row.vehicleId === day.selectedVehicleId) ?? null;
   const vehicleDecided = vehicle !== null || noVehicle;
 
@@ -108,7 +142,7 @@ export function CourierRoutePickScreen() {
     <View style={styles.screen} testID="courier-route-pick">
       {header}
 
-      <ScrollView contentContainerStyle={styles.list}>
+      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: barHeight + operationsTheme.space.xl }]}>
         {/* ── ARAÇ: TEK SATIR + ÇEKMECE (v3:17) ───────────────────────── */}
         <VehicleGate
           value={
@@ -136,7 +170,6 @@ export function CourierRoutePickScreen() {
         ) : (
           day.routes.map((route, index) => {
             const selected = day.selectedZoneIds.includes(route.zoneId);
-            const usable = isRouteFree(route);
             /* GÜN ETİKETİ grup başlığı olarak (v3:17): araç birden çok günün seferini alabiliyor
                ve hangi günün rotasını işaretlediği kartın üstünde yazmalı. */
             const dayHead =
@@ -146,7 +179,7 @@ export function CourierRoutePickScreen() {
             return (
               <Fragment key={route.zoneId}>
                 {dayHead}
-                <RouteCard route={route} selected={selected} usable={usable} onPress={() => day.toggleRoute(route.zoneId)} />
+                <RouteCard route={route} selected={selected} onPress={() => day.toggleRoute(route.zoneId)} />
               </Fragment>
             );
           })
@@ -177,7 +210,7 @@ export function CourierRoutePickScreen() {
         )}
       </ScrollView>
 
-      <OperationsStickyBar>
+      <OperationsStickyBar onHeight={setBarHeight}>
         {/* DÜĞME EKSİĞİ SÖYLER (v3:17 `seferCtaLabel`): sefer yoksa "önce sefer seç", sefer var
             ama araç kararı yoksa "önce araç seç". Tek bir pasif etiket, kuryeye hangi adımın
             eksik olduğunu söylemiyordu. */}
@@ -377,14 +410,22 @@ function SummaryCell({ value, label, first = false }: { value: number; label: st
 function RouteCard({
   route,
   selected,
-  usable,
   onPress,
 }: {
   route: CourierRoute;
   selected: boolean;
-  usable: boolean;
   onPress: () => void;
 }) {
+  /* İKİ AYRI SEBEP, İKİ AYRI CÜMLE (kullanıcı kararı 01.09): rota ya BAŞKASINDA olduğu için ya da
+     İŞİ OLMADIĞI için seçilemez. İkisi de kartı pasifleştiriyor ama aynı şey değiller — tek bir
+     "seçilemez" hâli, kuryeye yarın gelip gelmemesi gerektiğini söylemezdi.
+
+     CÜMLE GÜN SÖYLEMEZ (kullanıcı bulgusu 01.09: *"yarında da bugün iş yok diyor"*): liste ÜÇ GÜN
+     taşıyor ve kart zaten bir gün başlığının altında duruyor. "Bugün iş yok" yazan bir kart,
+     yarının satırında düpedüz yanlış bilgidir. */
+  const free = isRouteFree(route);
+  const hasWork = routeHasWork(route);
+  const pickable = free && hasWork;
   /* ÜÇ SAYI (v3:17 `r.ozet`): "5 durak · 7 kutu · 2 tahsilat". Depo adı buradan ÇIKTI ve
      başlığa gitti — liste zaten tek deponun, her kartta tekrarlanması bir bilgi değil bir
      gürültüydü. Yerine gelen iki sayı kuryenin seçerken sorduğu asıl soruları cevaplıyor:
@@ -397,7 +438,7 @@ function RouteCard({
   /* ÜÇÜNCÜ SATIR HÂLİ SÖYLER (v3:17 `r.not`): boşta · araca alınacak · kimin sürdüğü. Yalnız
      "alınmış" hâli yazılıydı; seçilebilir kartlar sessizdi ve işaretlemenin ne değiştirdiği
      karttan okunamıyordu. */
-  const note = !usable
+  const note = !free
     ? [
         /* KAPANMIŞ SEFER "sürüyor" DEMEZ (31.08): rota alınmış ama iş BİTMİŞ — geçmiş zaman
            kipiyle yazılmazsa kurye o rotanın hâlâ yolda olduğunu sanır. */
@@ -408,15 +449,17 @@ function RouteCard({
       ]
         .filter((part): part is string => part !== null)
         .join(' · ')
-    : selected
-      ? t.routePick.willTake
-      : t.routePick.free;
+    : !hasWork
+      ? t.routePick.noWork
+      : selected
+        ? t.routePick.willTake
+        : t.routePick.free;
   return (
     <PressableSurface
       onPress={onPress}
-      disabled={!usable}
+      disabled={!pickable}
       feedback="scale"
-      style={[styles.card, selected ? styles.cardOn : usable ? styles.cardOff : styles.cardTaken]}
+      style={[styles.card, selected ? styles.cardOn : pickable ? styles.cardOff : styles.cardTaken]}
       accessibilityLabel={route.zoneName}
       testID={`courier-route-${route.zoneId}`}
     >
@@ -427,9 +470,9 @@ function RouteCard({
         {selected ? <Text style={styles.checkMark}>✓</Text> : null}
       </View>
       <View style={styles.rowText}>
-        <Text style={[styles.cardTitle, usable ? null : styles.cardTitleTaken]}>{route.zoneName}</Text>
+        <Text style={[styles.cardTitle, pickable ? null : styles.cardTitleTaken]}>{route.zoneName}</Text>
         <Text style={styles.rowMeta}>{meta}</Text>
-        <Text style={[styles.takenNote, !usable ? styles.takenNoteBusy : selected ? styles.takenNoteOn : null]}>
+        <Text style={[styles.takenNote, !pickable ? styles.takenNoteBusy : selected ? styles.takenNoteOn : null]}>
           {note}
         </Text>
       </View>
@@ -448,7 +491,8 @@ const styles = StyleSheet.create({
        `padding:0 20px`). 14 yazılıydı ve kartlar tasarımdan 6 px geniş çiziliyordu; fark tek
        başına küçük ama ekranın tamamını sıkışık gösteriyor (kullanıcı bulgusu 01.09). */
     paddingHorizontal: operationsTheme.space['5xl'],
-    paddingBottom: operationsTheme.space['9xl'],
+    /* DİKEY BOŞLUK BURADA DEĞİL: yapışkan çubuğun ÖLÇÜLEN yüksekliği satır içinde ekleniyor
+       (künyesi `barHeight` durumunda). Sabit bir değer bırakmak, iki doğruluk kaynağı olurdu. */
     gap: operationsTheme.space.md,
   },
   heading: {
@@ -655,6 +699,7 @@ const styles = StyleSheet.create({
   },
   summary: {
     marginTop: operationsTheme.space.xl,
+    minHeight: SUMMARY_BOX_MIN_HEIGHT,
     padding: operationsTheme.space.xl,
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,
@@ -700,6 +745,10 @@ const styles = StyleSheet.create({
   /** Seçim yokken KESİKLİ kutu (v3:17 `secimBos`) — bir eksik değil, bir bekleyiş. */
   summaryIdleBox: {
     marginTop: operationsTheme.space.xl,
+    minHeight: SUMMARY_BOX_MIN_HEIGHT,
+    /* İki satır az yer tuttuğu için ortalanıyor: tabanı yükseltip metni yukarıda bırakmak,
+       kutunun altında sebepsiz bir boşluk gösterirdi. */
+    justifyContent: 'center',
     padding: operationsTheme.space.xl,
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,

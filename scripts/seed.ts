@@ -15,7 +15,15 @@
  *
  * Görseller Cloudflare R2'ye yüklenir (R2 env yoksa atlanır). Giriş: OTP kodu Mailpit'e düşer (54324).
  *
- * ── §SİPARİŞ: BESLEME HİÇ SİPARİŞ YAZMAZ (kullanıcı kararı 01.09) ────────────────────────────
+ * ── §SİPARİŞ: BESLEME ZİNCİR YAZMAZ — İKİ DENEME SİPARİŞİ HARİÇ ──────────────────────────────
+ *
+ * **02.09 DARALTMASI:** karar aşağıdaki hâliyle bir tur yaşadı ve bedeli görüldü — her `db:refresh`
+ * sonrası kurye akışını denemek için önce müşteri yüzeyinden sipariş vermek gerekiyordu. Kullanıcı
+ * *"sipariş oluşturmayı sen yap… doğrudan besleme üzerinden"* dedi. `seed/test-orders.ts` iki
+ * `confirmed` sipariş yazıyor ve **zinciri açmıyor**: kutu, sefer, tahsilat, geri bildirim, puan —
+ * hiçbiri doğmuyor. Aşağıdaki gerekçenin tamamı o zincir için geçerli ve yürürlükte.
+ *
+ * ── ESKİ KARARIN GEREKÇESİ (01.09, zincir için hâlâ geçerli) ─────────────────────────────────
  * Kullanıcının cümlesi: *"Sistemde hiç sipariş kalmasın istiyorum … sipariş yoksa o siparişle
  * alakalı sonraki tüm kayıtların da olmaması lazım."*
  *
@@ -141,6 +149,7 @@ import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedAssistantProposals } from './seed/assistant';
 import { seedBarcodes } from './seed/barcode';
 import { seedCarts } from './seed/cart';
+import { seedTestOrders } from './seed/test-orders';
 import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
 import { seedNegotiatedPrices, seedPrices } from './seed/pricing';
 import { seedSiteImages } from './seed/site-image';
@@ -313,6 +322,15 @@ async function main(): Promise<void> {
   // Stok bildirimi: tükenmiş varyantlar. Beslemede tükenmişlik SİPARİŞTEN değil, bilinçli sıfır
   // bakiyeli partilerden doğuyor (`seed/stock.ts`) — bekleyen müşteri kaydı bir sipariş değildir.
   await seedStockNotices(db, kisiler);
+  /*
+    DENEME SİPARİŞLERİ (kullanıcı kararı 02.09) — §SİPARİŞ'in DAR bir istisnası, künyesi kendi
+    dosyasında. İki `confirmed` sipariş: zincir doğurmuyorlar (kutu · sefer · tahsilat · geri
+    bildirim yok), yalnız depo toplama kuyruğunun başında bekliyorlar.
+
+    SIRA SONDA: stoğun ve bölgelerin kurulmuş olması şart (rezervasyon kullanılabilir stoğa bakar,
+    teslim günü bölgenin gününden hesaplanır).
+  */
+  await seedTestOrders(db, varyantlar, depolar);
 
   if (!enAz(katman, 'full')) {
     console.log('✓ seed tamam · KATMAN: extend — base + kusurlar + bir miktar geçmiş');

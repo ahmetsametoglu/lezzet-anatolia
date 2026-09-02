@@ -35,6 +35,34 @@ describe('toast-store', () => {
     expect(result.current).toBeNull();
   });
 
+  /*
+    UZUN MESAJ DAHA UZUN DURUR (kullanıcı kararı 01.09).
+
+    Kutu okutma cümlesine rota adı girince sabit 2400 ms yetmez oldu: *"toast mesajı süresi kutunun
+    hangi rota olduğunu söyleyeceği için bir miktar uzun tutulması da gerekebilir."* Süre artık
+    okuma süresi — eşik 40 karakter, üstü karakter başına 45 ms, tavan 6 sn.
+
+    Test İKİ UÇU birden çiviliyor: kısa mesaj eskisi kadar durmalı (yoksa her onay ekranda asılır),
+    uzun mesaj eskisinden fazla (yoksa değişikliğin konusu kalmaz).
+  */
+  it('süre METNİN uzunluğundan türer — kısa mesaj 2400, uzun mesaj daha fazla', async () => {
+    const { result } = await renderHook(() => useToastMessage());
+    const uzun = 'Kuzey Hattı — Frankfurt · Kutu 2 yüklendi — LA-26-93UXKY (2/2).';
+    expect(uzun.length).toBeGreaterThan(40);
+
+    await act(async () => toastSuccess(uzun));
+    await act(async () => {
+      jest.advanceTimersByTime(2400);
+    });
+    // Kısa mesajın ölmüş olacağı anda uzun mesaj HÂLÂ ekranda.
+    expect(result.current).toBe(uzun);
+
+    await act(async () => {
+      jest.advanceTimersByTime(45 * (uzun.length - 40));
+    });
+    expect(result.current).toBeNull();
+  });
+
   it('yeni mesaj eskinin sayacını SIFIRLAR — ikinci mesaj tam süresini yaşar', async () => {
     const { result } = await renderHook(() => useToastMessage());
 
