@@ -18,6 +18,10 @@
     "apps/web": {
       "entry": [
         "lib/guard.ts"
+      ],
+      "ignoreDependencies": [
+        "pino",
+        "pino-pretty"
       ]
     },
     "packages/domain-core": {

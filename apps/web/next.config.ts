@@ -151,6 +151,16 @@ const config: NextConfig = {
   // `MODULE_NOT_FOUND` ile ÇÖKER (yaşandı: POST /fr/compte). Next'in varsayılan dış-paket
   // listesi pino'yu tanır ama transpile edilen paketin import zincirinden gelen kopyayı
   // kurtarmadı; açık beyan ikisini de dışta tutar: worker gerçek node_modules yolundan doğar.
+  //
+  // **BU SATIR TEK BAŞINA YETMEZ — `pino`/`pino-pretty` `apps/web`in KENDİ bağımlılıkları olmalı.**
+  // Beyan "paketleme, çalışma anında `require` et" demek; require'ın çözebilmesi için paketin
+  // `apps/web`ten görünmesi şart. pnpm'in katı `node_modules`ında pino yalnız
+  // `@lezzet/observability`nin bağımlılığı, yani web'den ÇÖZÜLEMİYOR — çözemeyen Next sessizce
+  // gömmeye düşer ve beyan hiçbir şey yapmaz. Web koddan pino'yu hiç `import` etmediği için ikili
+  // "kullanılmayan bağımlılık" görünür: 19.08'de bir temizlik commit'i tam olarak bunu sildi
+  // (`55573957`), satır yerinde kaldı, zemin çekildi ve arıza aynen geri geldi (ölçüldü 02.09:
+  // `vendor-chunks/thread-stream@3.2.0.js` yeniden oradaydı). `knip.json` bu yüzden ikisini
+  // `apps/web` için yoksayıyor — kaldırılırsa arıza üçüncü kez döner.
   serverExternalPackages: ['pino', 'pino-pretty'],
   // Paketler kaynak olarak dışa verildiği için Next transpile eder (ara derleme yok).
   transpilePackages: [
