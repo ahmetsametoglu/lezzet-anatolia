@@ -311,10 +311,24 @@ export function toProduct(
    * okumanın bağlamında yaşar, ürünün kendisinde değil.
    */
   campaign: ScopeCampaign | null = null,
+  /**
+   * **YALNIZ BURADA DURAN BOYLAR** (kullanıcı bulgusu 02.09) — `CatalogQuery.onlyStockedHere` ile
+   * aynı bayrak, aynı gerekçe: **araç bir vitrin değil, bir yüktür** (`DOMAIN §17`).
+   *
+   * Bayraksız hâl vitrinin kuralıdır ve doğrudur: rafta olmayan boy da kartta sayılır, müşteri
+   * ürünün kaç boyu olduğunu görür. Araçta o cümle YALAN oluyor — kullanıcı cihazda gördü:
+   * *"cevizli baklavanın dört boyunu eklediğimi zannetmiyorum"*, oysa kart "4 boy" diyordu çünkü
+   * sayı KATALOĞUN boylarını sayıyordu; araçta o ürünün yalnız İKİ boyu vardı (12 ve 4 adet).
+   *
+   * Süzgeç yalnız SAYIYI değil satın alma kipini de düzeltiyor: araçta tek boyu kalan ürün artık
+   * "1 boy — dokun, seç" demiyor, doğrudan "kalan N" diyor (`purchaseMode` aynı kümeden türüyor).
+   */
+  onlyStockedHere = false,
 ): StorefrontProduct {
   // Fiyat, ürünün EN UCUZ aktif boyundan okunur (`primaryVariantOf`) — çok boyluda bu gerçekten
   // "başlangıç fiyatı"dır. Eskiden ilk boydan okunuyordu ve o boy en ucuz olmak zorunda değildi.
-  const variants = ctx.variants.filter((v) => v.isActive);
+  const aktif = ctx.variants.filter((v) => v.isActive);
+  const variants = onlyStockedHere ? aktif.filter((v) => (ctx.stock?.get(v.id)?.availableQty ?? 0) > 0) : aktif;
   const primary = primaryVariantOf(variants, ctx);
   const selling = primary ? sellingOf(primary, ctx) : null;
   // Stok kararı kartta ÜRÜN düzeyindedir: bir boyu biten ürün listede tükenmiş görünmemeli — bu

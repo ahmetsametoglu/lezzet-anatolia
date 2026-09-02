@@ -140,6 +140,15 @@ function withNetwork(saleResult: unknown) {
   });
 }
 
+/** Okutma cevabı — öteki dallar `withNetwork`ten; yalnız `/scan` üstüne biniyor. */
+function withScan(scanResult: unknown, saleResult: unknown = { status: 'ok' }) {
+  withNetwork(saleResult);
+  const temel = fetchMock.getMockImplementation()!;
+  fetchMock.mockImplementation((url, init) =>
+    String(url).includes('/sale/scan') ? Promise.resolve(ok(scanResult)) : temel(url, init),
+  );
+}
+
 function postBody(): { lines: { variantId: string; qty: number; negotiatedUnitPriceCents?: number }[]; paymentMethod: string } {
   const call = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
@@ -309,20 +318,48 @@ it('karta dokunmak KART LİSTESİNİ yeniden çizdirmez — çekmece animasyonu 
   expect(mockRowRenders.count).toBe(0);
 });
 
-it('adet kalanı aşınca çekmece onaylatmaz ve sebebini söyler', async () => {
+it('sayaç kalanda durur — tek boylu kartın çekmecesi boy sormaz, adet kitin sayacı', async () => {
   withNetwork({ status: 'failed' });
   await renderSale();
 
   await fireEvent.press(screen.getByTestId(`sale-product-${TEK_ID}`));
-  await waitFor(() => expect(screen.getByTestId('sale-drawer-qty')).toBeTruthy());
-  // Kalan 4 → beş kez artır: 1'den 6'ya. İnce ayar düğmesi tek tek sayar.
+  await waitFor(() => expect(screen.getByTestId('sale-drawer-qty-value')).toBeTruthy());
+  // Tek boylu: "BOY SEÇ" bölümü yok, boy başlıkta.
+  expect(screen.queryByText('BOY SEÇ')).toBeNull();
+  // Kalan 4 → beş kez artır: sayaç 4'te söner, 5'e çıkmaz; fazla adet uyarısı hiç doğmaz.
   for (let i = 0; i < 5; i += 1) {
-    await fireEvent.press(screen.getByLabelText('adedi artır'));
+    await fireEvent.press(screen.getByLabelText('Satılan adet — artır'));
   }
+  expect(screen.getByTestId('sale-drawer-qty-value')).toHaveTextContent('4');
+  expect(screen.queryByTestId('sale-drawer-overstock')).toBeNull();
+  expect(screen.getByTestId('sale-drawer-confirm')).not.toBeDisabled();
+});
+
+it('okutmayla gelen adet kalanı aşınca çekmece onaylatmaz ve sebebini söyler', async () => {
+  /* Sayaç `+`yı kalanda söndürür; kalanın ÜSTÜNDE bir adet yalnız okutmayla gelir — koli çarpanı
+     (6) kalandan (2) büyük. Sessizce kırpılmaz: kurye kolinin tamamını satamayacağını görür. */
+  withScan({ status: 'ok', product: COK, variant: BOYLAR[1], qtyPerCode: 6 });
+  await renderSale();
+
+  await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+  await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'KOLI-1KG');
 
   await waitFor(() => expect(screen.getByTestId('sale-drawer-overstock')).toBeTruthy());
+  expect(screen.getByTestId('sale-drawer-qty-value')).toHaveTextContent('6');
+  expect(screen.getByTestId('sale-drawer-confirm')).toBeDisabled();
   await fireEvent.press(screen.getByTestId('sale-drawer-confirm'));
-  expect(screen.queryByTestId(`sale-cart-${TEK_VARYANT}`)).toBeNull(); // sepete yazılmadı
+  expect(screen.queryByTestId(`sale-cart-${COK_VARYANT_2}`)).toBeNull(); // sepete yazılmadı
+});
+
+it('yüzen daire de okutmayı açar; simülasyon çipinin altında okutulacak ÜRÜNÜN ADI yazar', async () => {
+  /* Kullanıcı kararı 02.09: "yerinde satışta da fab barkod butonu olsun" + çiplere ürün adı.
+     Ad aynı `/sale/scan` ucundan çözülür: çipin altındaki ad, basınca açılacak çekmecenin başlığı. */
+  withScan({ status: 'ok', product: COK, variant: { ...BOYLAR[1], availableHere: 12 }, qtyPerCode: 6 });
+  await renderSale();
+
+  await fireEvent.press(screen.getByTestId('sale-scan-fab'));
+  await waitFor(() => expect(screen.getByTestId('sale-scan-sheet')).toBeTruthy());
+  await waitFor(() => expect(screen.getByTestId('scan-dev-chip-name-8691000007919')).toHaveTextContent('Baklava · 1 kg'));
 });
 
 const SATISLAR = [
@@ -416,6 +453,53 @@ describe('çevrimdışı kilidi (v3:20)', () => {
     Ölçülen şey ikisinin AYNI ağ düşüşüne aynı anda tepki verdiği — sepete ekleme de, satış yazma
     da kapanıyor ve ikisi de sebebini söylüyor.
   */
+  /*
+    BARKOD OKUTMA (kullanıcı kararı 02.09): okutma sepete DOĞRUDAN yazmaz — kartla açılan aynı
+    çekmece açılır, boy seçili, adet koli çarpanı. Kurye adedi görüp onaylar; 12'lik koli
+    barkodunu okutan biri sepetinde sessizce 12 kalem bulmamalı.
+  */
+  it('OKUTMA çekmeceyi açar — okutulan boy seçili, adet koli çarpanı', async () => {
+    /* Kalan 12: koli çarpanı (6) kalanı AŞMAMALI, yoksa sınanan şey okutma değil stok kilidi olur
+       (ilk yazımda fikstürün kalanı 2'ydi ve çekmece haklı olarak onaylatmadı). */
+    withScan({ status: 'ok', product: COK, variant: { ...BOYLAR[1], availableHere: 12 }, qtyPerCode: 6 });
+    await renderSale();
+
+    await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+    await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'KOLI-1KG');
+
+    await waitFor(() => expect(screen.getByTestId('sale-drawer-confirm')).toBeTruthy());
+    // Boy SORULMAZ (kullanıcı kararı 02.09): başlıkta durur, çip yok; adet 6 ile açıldı.
+    expect(screen.getByText('Baklava · 1 kg')).toBeTruthy();
+    expect(screen.queryByTestId(`sale-variant-${COK_VARYANT_2}`)).toBeNull();
+    expect(screen.queryByTestId(`sale-variant-${COK_VARYANT_1}`)).toBeNull();
+    expect(screen.getByTestId('sale-drawer-qty-value')).toHaveTextContent('6');
+
+    await fireEvent.press(screen.getByTestId('sale-drawer-confirm'));
+    await waitFor(() => expect(screen.getByTestId(`sale-cart-${COK_VARYANT_2}`)).toBeTruthy());
+    expect(screen.getByTestId(`sale-cart-${COK_VARYANT_2}`)).toHaveTextContent(/6 ×/);
+  });
+
+  it('TANINMAYAN kod sepete hiçbir şey koymaz, sebebini toast söyler', async () => {
+    withScan({ status: 'unknown_code' });
+    await renderSale();
+
+    await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+    await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'YOK-123');
+
+    await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/Kod tanınmadı/));
+    expect(screen.queryByTestId('sale-drawer-confirm')).toBeNull();
+  });
+
+  it('ARAÇTA OLMAYAN ürün okutulunca adıyla reddedilir', async () => {
+    withScan({ status: 'not_here', name: 'Kara Orman Pastası' });
+    await renderSale('van');
+
+    await fireEvent.press(screen.getByTestId('sale-scan-cta'));
+    await fireEvent(screen.getByTestId('sale-scan-sheet'), 'scan', 'KOP-1');
+
+    await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/Kara Orman Pastası araçta yok/));
+  });
+
   it('ağ düşünce hem satış yazma hem sepete ekleme kapanır ve sebebini söyler', async () => {
     withNetwork({ status: 'ok', orderId: TEK_ID, totalCents: 450, referenceNo: null, paymentRecorded: true });
     await renderSale();

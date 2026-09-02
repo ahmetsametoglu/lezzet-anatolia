@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
 import { ScanSheet } from './scan-sheet';
 
@@ -36,6 +36,21 @@ describe('ScanSheet', () => {
 
     expect(onScan).toHaveBeenCalledTimes(1);
     // Kod havuzdan geldiği gibi HAM gider — bileşen çözmez, süslemez, kırpmaz.
+    expect(onScan).toHaveBeenCalledWith('8691000007919');
+  });
+
+  it('çağıran ad çözücü verirse çipin altına ÜRÜN ADI yazılır; çözemediği çip yalın kalır', async () => {
+    /* Kullanıcı kararı 02.09: etiket YOLU söyler, ad ise koda o gün hangi ürünün bağlandığını.
+       Ad havuza yazılmaz — çözümden gelir; çip erişilebilirlik adıyla yine yoluyla bulunur. */
+    const devResolve = jest.fn(async (code: string) => (code === '8691000007919' ? 'Fıstıklı Baklava · 500 g' : null));
+    await render(<ScanSheet open title="Ürünü okut" onClose={onClose} onScan={onScan} devResolve={devResolve} testID="scan" />);
+
+    await waitFor(() => expect(screen.getByTestId('scan-dev-chip-name-8691000007919')).toHaveTextContent('Fıstıklı Baklava · 500 g'));
+    expect(screen.queryByTestId('scan-dev-chip-name-18691000047516')).toBeNull();
+    expect(devResolve).toHaveBeenCalledTimes(5); // havuzun beş çipi, hepsi soruldu
+
+    // Ad çipin işini değiştirmez: yine ham kod, yine tek yol.
+    await fireEvent.press(screen.getByLabelText('Paket'));
     expect(onScan).toHaveBeenCalledWith('8691000007919');
   });
 

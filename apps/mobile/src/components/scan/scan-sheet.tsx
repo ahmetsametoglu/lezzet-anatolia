@@ -107,10 +107,20 @@ interface ScanSheetProps {
    * Yalnız `__DEV__`de okunur — release'te bu dal zaten yok.
    */
   devCodes?: ReadonlyArray<{ label: string; code: string }>;
+  /**
+   * ÇİPİN YANINA ÜRÜN ADI (kullanıcı kararı 02.09): *"simülasyon çalıştığı zaman okuyucunun
+   * altındaki etiketlere ürün isimleri gidebilsin."* Havuzun etiketi YOLU söyler ("Paket",
+   * "Koli ×24"); hangi ürünü tetiklediği ise sabit değil — kod ürüne ROLLE bağlanır
+   * (`scripts/seed/test-labels.ts`: "kabul bekleyen siparişin ilk kalemi"), katalog değişince ürün
+   * de değişir. Adı havuza yazmak ilk beslemede yalan söylerdi; ad ÇÖZÜMDEN okunur ve çözüm
+   * ÇAĞIRANIN (satış kendi `/sale/scan` ucuyla, kabul kendi çözümüyle). `null` = çip yalın kalır.
+   * Yalnız `__DEV__`de çağrılır — üretimde havuz da, çözüm de yok.
+   */
+  devResolve?: (code: string) => Promise<string | null>;
   testID?: string;
 }
 
-export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCodes, testID }: ScanSheetProps) {
+export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCodes, devResolve, testID }: ScanSheetProps) {
   // Modül ömür boyu ya hep var ya hep yok — memo bir kez yüklenir, render dalları sabit kalır.
   const camera = useMemo(loadCameraModule, []);
   const locked = useRef(false);
@@ -119,6 +129,22 @@ export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCo
   useEffect(() => {
     if (open) locked.current = false;
   }, [open]);
+
+  /* Çip adları her açılışta yeniden çözülür (araç içeriği, stok değişmiş olabilir). Geciken cevap
+     kapanmış pencereye yazmasın diye açılış sayısı damga olarak tutuluyor. */
+  const [devNames, setDevNames] = useState<Readonly<Record<string, string>>>({});
+  const openSeq = useRef(0);
+  useEffect(() => {
+    if (!__DEV__ || !open || devResolve === undefined) return;
+    const seq = ++openSeq.current;
+    const entries = devCodes ?? DEV_SCAN_POOL;
+    void Promise.all(
+      entries.map(async (entry) => [entry.code, await devResolve(entry.code).catch(() => null)] as const),
+    ).then((pairs) => {
+      if (seq !== openSeq.current) return;
+      setDevNames(Object.fromEntries(pairs.filter((pair): pair is readonly [string, string] => pair[1] !== null)));
+    });
+  }, [open, devCodes, devResolve]);
 
   /** İki kaynağın ORTAK teslim noktası — kamera da simülasyon çipi de buradan geçer. */
   const deliver = useCallback(
@@ -166,6 +192,12 @@ export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCo
                   accessibilityLabel={entry.label}
                 >
                   <Text style={styles.devChipLabel}>{entry.label}</Text>
+                  {/* Çözülen ürün adı etiketin ALTINDA, soluk: yol hâlâ ilk okunan şey. */}
+                  {devNames[entry.code] === undefined ? null : (
+                    <Text style={styles.devChipName} testID={`scan-dev-chip-name-${entry.code}`}>
+                      {devNames[entry.code]}
+                    </Text>
+                  )}
                 </PressableSurface>
               ))}
             </View>
@@ -346,6 +378,12 @@ const styles = StyleSheet.create((_theme, rt) => ({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors.cream,
+  },
+  devChipName: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.cream,
+    opacity: 0.75,
   },
   hint: {
     fontFamily: operationsTheme.font.body[400],

@@ -153,5 +153,35 @@ export const SaleRecordSchema = z.object({
 });
 export type SaleRecord = z.infer<typeof SaleRecordSchema>;
 
+/**
+ * **Barkod okutma** — `GET /sale/scan?code=…` (kullanıcı kararı 02.09: *"ürünü okutmak, hangi
+ * ürünün sepette olduğunu sonra görmek önemli; okuttuktan sonra adet çekmecesinin açılması da"*).
+ *
+ * Cevap KARTIN KENDİSİ + okutulan BOY: ekran okutmadan sonra aynı çekmeceyi açıyor (kartla açılan
+ * çekmece) ve o çekmece kartı ister — ikinci bir "okutulmuş ürün" görünümü yazmak aynı ürünü iki
+ * şekilde göstermek olurdu. Kart katalog motorundan geliyor (`productIds` daraltması), yani fiyat
+ * ve kalan sayısı liste kartıyla aynı kaynaktan.
+ *
+ * Kod → varyant çözümü `variant_barcode`dan (Modül 23); SKU ve tedarikçi kodu da tanınır
+ * (`findByCode`). `qtyPerCode` koli barkodunun çarpanı — çekmece o adetle açılır.
+ *
+ * Dört olumsuz dal, dördü de 200 ve dördü de ekranda ayrı cümle:
+ *   `unknown_code`  — kod hiçbir kayda bağlı değil
+ *   `not_sellable`  — ürün var ama bu kanalda satılmıyor / boy pasif
+ *   `not_here`      — ürün var, BU depoda/araçta yok (araçta "burada duran mal" kuralı)
+ */
+export const SaleScanResponseSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('ok'),
+    product: SaleCatalogProductSchema,
+    variant: SaleVariantSchema,
+    qtyPerCode: z.number().int().positive(),
+  }),
+  z.object({ status: z.literal('unknown_code') }),
+  z.object({ status: z.literal('not_sellable') }),
+  z.object({ status: z.literal('not_here'), name: z.string() }),
+]);
+export type SaleScanResponse = z.infer<typeof SaleScanResponseSchema>;
+
 export const RecentSalesResponseSchema = z.object({ sales: z.array(SaleRecordSchema) });
 export type RecentSalesResponse = z.infer<typeof RecentSalesResponseSchema>;

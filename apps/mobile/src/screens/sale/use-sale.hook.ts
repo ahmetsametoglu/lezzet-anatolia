@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SaleCatalogProduct, SalePlace, SaleVariant } from '@lezzet/types';
 
-import { fetchSaleCatalog, fetchSaleVariants, sellOnSite } from '@/lib/api/sale';
+import { fetchSaleCatalog, fetchSaleVariants, scanSaleCode, sellOnSite } from '@/lib/api/sale';
 /* ÇEVRİMDIŞI SİNYALİ DEPONUNKİYLE AYNI (v3:20 istiyor: "Sepete ekleme kapalı" / "Satış yazma
    kapalı"). İkinci bir ölçüm yazılmadı — yerinde satış zaten depo kapsamlı bir yazmadır
    (`warehouseGuard`), yani hattın açık olup olmadığı sorusu birebir aynı soru. İki ayrı sinyal,
@@ -225,6 +225,76 @@ export function useSale(place: SalePlace) {
 
   const closeDraft = useCallback(() => setDraft(null), []);
 
+  /*
+    ── BARKOD OKUTMA (kullanıcı kararı 02.09) ────────────────────────────────
+    *"Ürünü okutmak, hangi ürünün sepette olduğunu sonra görmek önemli; okuttuktan sonra adet
+    çekmecesinin açılması da."* Okutma SEPETE DOĞRUDAN YAZMAZ: kod çözülür, kartla açılan aynı
+    çekmece açılır (boy başlıkta ve SORULMAZ — kod zaten boyu söyledi; adet koli çarpanı) ve
+    kurye adedi/fiyatı görüp onaylar. Doğrudan yazmak, 12'lik koli barkodunu okutan kuryenin
+    sepetinde sessizce 12 kalem bulması demekti.
+
+    Çekmece aynı `draft` durumu: `variants` tek elemanlı (okutulan boy), `pickedVariantId` o boy;
+    ekran tek elemanlı listeye boy çipi çizmez. İkinci bir "okutulmuş ürün" çekmecesi yazılmadı —
+    aynı ürün iki yerde iki farklı görünümle çıkardı (CLAUDE §1).
+  */
+  const [scanOpen, setScanOpen] = useState(false);
+  const handleScan = useCallback(
+    (code: string) => {
+      setScanOpen(false);
+      void (async () => {
+        const result = await scanSaleCode(code, place);
+        if (result.error !== null) {
+          setNotice({ tone: 'error', text: t.scan.error });
+          return;
+        }
+        const data = result.data;
+        if (data.status === 'unknown_code') {
+          setNotice({ tone: 'error', text: t.scan.unknownCode });
+          return;
+        }
+        if (data.status === 'not_sellable') {
+          setNotice({ tone: 'error', text: t.scan.notSellable });
+          return;
+        }
+        if (data.status === 'not_here') {
+          setNotice({
+            tone: 'error',
+            text: fillCopy(place === 'van' ? t.scan.notHereVan : t.scan.notHereFacility, { name: data.name }),
+          });
+          return;
+        }
+        setDraft({
+          product: data.product,
+          variants: [data.variant],
+          pickedVariantId: data.variant.id,
+          qty: data.qtyPerCode,
+          priceText: data.variant.priceCents === null ? '' : centsToAmountText(data.variant.priceCents),
+        });
+      })();
+    },
+    [place, setNotice],
+  );
+
+  /**
+   * Simülasyon çipinin yanına ÜRÜN ADI (yalnız geliştirme; `ScanSheet.devResolve` künyesi).
+   * Aynı uçtan, aynı yer beyanıyla okunur: çipin altında yazan ad, çipe basınca açılacak
+   * çekmecenin başlığıyla birebir aynıdır. Olumsuz dallar da adıyla söylenir ki kurye hangi
+   * çipin "araçta yok"u tetiklediğini basmadan görsün.
+   */
+  const describeDevCode = useCallback(
+    async (code: string): Promise<string | null> => {
+      const result = await scanSaleCode(code, place);
+      if (result.error !== null) return null;
+      const data = result.data;
+      if (data.status === 'ok') {
+        return data.variant.label.length === 0 ? data.product.name : `${data.product.name} · ${data.variant.label}`;
+      }
+      if (data.status === 'not_here') return fillCopy(t.scan.devNotHere, { name: data.name });
+      return null;
+    },
+    [place],
+  );
+
   /** Boy seçimi fiyat metnini de tazeler: pazarlık alanı hep SEÇİLİ boyun listesiyle açılır. */
   const pickVariant = useCallback((variant: SaleVariant) => {
     if (variant.priceCents === null) return;
@@ -345,6 +415,10 @@ export function useSale(place: SalePlace) {
     setSearch,
     loadMore,
     reload,
+    scanOpen,
+    setScanOpen,
+    handleScan,
+    describeDevCode,
     draft,
     openProduct,
     closeDraft,

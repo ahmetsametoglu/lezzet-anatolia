@@ -17,6 +17,20 @@
     "searchEmpty": "Araçta eşleşen ürün yok — burada yalnız aracındaki mal satılır."
   },
   "loadMore": "Daha fazla göster",
+  "scanCta": "Barkod okut",
+  "searchCta": "Ürün ara",
+  "searchSheetTitle": "Ürün ara",
+  "recentLinkLower": "son satışlar ›",
+  "scan": {
+    "title": "Ürünü okut",
+    "hint": "Ürünün barkodu — bulunca adet çekmecesi açılır.",
+    "unknownCode": "Kod tanınmadı — bu bizim ürün barkodumuz değil.",
+    "notSellable": "Bu ürün satışa kapalı — sepete alınmadı.",
+    "notHereVan": "{name} araçta yok — burada yalnız aracındaki mal satılır.",
+    "notHereFacility": "{name} bu depoda yok — sepete alınmadı.",
+    "error": "Okutma gönderilemedi — bağlantıyı kontrol edin.",
+    "devNotHere": "{name} — burada yok"
+  },
   "card": {
     "remaining": "kalan {n}",
     "soldOut": "tükendi",
@@ -24,15 +38,12 @@
     "options": "{n} boy — dokun, seç"
   },
   "drawer": {
-    "title": "Sepete ekle",
     "variantsLoading": "Boylar yükleniyor…",
     "variantsError": "Boylar okunamadı — kapatıp yeniden deneyin.",
     "variantHeading": "BOY SEÇ",
     "variantMeta": "{label} · {price} · kalan {n}",
     "variantMetaClosed": "{label} · satışa kapalı",
     "qty": "Satılan adet",
-    "qtyIncrease": "adedi artır",
-    "qtyDecrease": "adedi azalt",
     "overStock": "Bu depoda kalan {n} — daha fazlası tek satışta yazılamaz.",
     "priceHeading": "BİRİM FİYAT",
     "priceHint": "Liste {price}. Değiştirirseniz pazarlık fiyatı olarak, kim yazdıysa onun izinde kaydedilir.",

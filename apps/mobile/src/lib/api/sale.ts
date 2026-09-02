@@ -5,6 +5,7 @@ import {
   OnSiteSaleResponseSchema,
   RecentSalesResponseSchema,
   SaleCatalogPageSchema,
+  SaleScanResponseSchema,
   SaleVariantsResponseSchema,
 } from '@lezzet/types';
 
@@ -87,6 +88,14 @@ export function fetchSaleVariants(
   place: SalePlace,
 ): Promise<ApiResult<z.infer<typeof SaleVariantsResponseSchema>>> {
   return saleFetch(`/api/v1/sale/catalog/${encodeURIComponent(slug)}/variants?locale=tr`, place, SaleVariantsResponseSchema);
+}
+
+/**
+ * **Barkod okutma** — kodu karta + boya çözer; ekran ardından kartla açılan aynı çekmeceyi açar.
+ * Yer buraya da geçiyor: araçta "burada duran mal" kuralı okutmada da geçerli (`not_here`).
+ */
+export function scanSaleCode(code: string, place: SalePlace): Promise<ApiResult<z.infer<typeof SaleScanResponseSchema>>> {
+  return saleFetch(`/api/v1/sale/scan${queryOf({ locale: 'tr', code })}`, place, SaleScanResponseSchema);
 }
 
 /**

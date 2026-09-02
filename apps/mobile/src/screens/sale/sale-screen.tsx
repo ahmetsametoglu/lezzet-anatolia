@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TextInput, View } from 'react-native';
@@ -7,14 +7,17 @@ import type { SaleCatalogProduct } from '@lezzet/types';
 
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
-import { OperationsQtySlider } from '@/components/operations/qty-slider';
+import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { OperationsProductRow } from '@/components/operations/product-row';
-import { CirclePhoto } from '@/components/ui/circle-photo';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { LoadingState } from '@/components/ui/loading-state';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { PrimaryButton } from '@/components/ui/primary-button';
+import { SecondaryButton } from '@/components/ui/secondary-button';
+import { ScanSheet } from '@/components/scan/scan-sheet';
 import { TextAction } from '@/components/ui/text-action';
 import { money, parseAmountToCents } from '@/lib/operations/money';
 import { fillCopy } from '@/screens/operations/copy';
@@ -41,6 +44,9 @@ import { selectionOf } from './use-sale.hook';
 
 const t = saleCopy;
 
+/** Sepet çubuğunun boyu (`styles.sticky` + `styles.cta`) — daire bunun kadar yukarı kalkar. */
+const CART_BAR_LIFT = operationsTheme.space.xl + operationsTheme.size.controlLg + operationsTheme.space['3xl'];
+
 export function SaleScreen() {
   const router = useRouter();
   const sale = useSaleContext();
@@ -57,6 +63,9 @@ export function SaleScreen() {
   const draftSelection = sale.draft === null ? null : selectionOf(sale.draft);
   const draftPriceCents = sale.draft === null ? null : parseAmountToCents(sale.draft.priceText);
   const overStock = draftSelection !== null && sale.draft !== null && sale.draft.qty > draftSelection.availableHere;
+  /* Arama çekmecesi EKRANIN durumu, kancanın değil: aramanın kendisi (metin, sonuçlar) kancada
+     yaşıyor ve orada kalıyor; açık/kapalı yalnız bu ekranın bir yüzeyi. */
+  const [searchOpen, setSearchOpen] = useState(false);
   const draftReady =
     !offline &&
     draftSelection !== null &&
@@ -75,24 +84,36 @@ export function SaleScreen() {
         testID="sale-header"
       />
 
-      {/* Arama DURUM DALININ DIŞINDA: her tuş bir yeniden yükleme tetikliyor ve alan o dalın
-          içinde olsaydı her yüklemede sökülüp odak/IME kompozisyonunu öldürürdü (cihazda ölçüldü
-          26.08 — alanda tek harf kalıyordu). Alan hep ayakta durur, yalnız GÖVDE değişir. */}
-      <View style={styles.searchBlock}>
-        <View style={styles.searchRow}>
-          <TextInput
-            value={sale.search}
-            onChangeText={sale.setSearch}
-            placeholder={t.searchPlaceholder}
-            placeholderTextColor={operationsTheme.colors.muted}
-            accessibilityLabel={t.searchPlaceholder}
-            style={styles.search}
-            testID="sale-search"
-          />
-        </View>
-        <View style={styles.recentRow}>
-          <TextAction label={t.recentLink} onPress={() => router.navigate('/sale/history')} testID="sale-recent-link" />
-        </View>
+      {/*
+        ── GİRİŞ TASARIMIN İKİ DÜĞMESİ (v3:23 · kullanıcı kararı 02.09) ────────
+        Tasarım ekranı iki düğmeyle açıyor: **Barkod okut** (zeytin, ışımalı, 54) ve **Ürün ara**
+        (çerçeveli, "+"). Bizde bunun yerine sürekli açık bir arama kutusu vardı ve okutma hiç
+        yoktu — kullanıcı: *"barkod okuma bence burada önemli… kötü bir desen bu."*
+
+        Arama artık ÇEKMECEDE (tasarımın `urunAraSheet`i): kutu düğmenin arkasında duruyor, listeyi
+        çekmecenin içinde daraltıyor. Alanın durum dalının DIŞINDA kalma gerekçesi (her tuş bir
+        yükleme tetikliyor, alan sökülürse IME kompozisyonu ölür — 26.08) çekmecede de geçerli:
+        çekmece kendi kabında ve gövde tazelenirken sökülmüyor.
+
+        "son satışlar ›" tasarımdaki yerine indi: listenin ALTINDA, sola yaslı, zeytin.
+      */}
+      <View style={styles.entryBlock}>
+        <PrimaryButton
+          label={t.scanCta}
+          icon="scan"
+          tone="olive"
+          elevation="glow"
+          onPress={() => sale.setScanOpen(true)}
+          disabled={offline}
+          testID="sale-scan-cta"
+        />
+        <SecondaryButton
+          label={t.searchCta}
+          icon="plus"
+          elevation="flat"
+          onPress={() => setSearchOpen(true)}
+          testID="sale-search-cta"
+        />
       </View>
 
       {sale.status === 'loading' ? (
@@ -128,6 +149,11 @@ export function SaleScreen() {
           )}
           {sale.hasMore ? <TextAction label={t.loadMore} onPress={sale.loadMore} testID="sale-load-more" /> : null}
 
+          {/* SON SATIŞLAR — tasarımın yeri (v3:23): listenin altında, sola yaslı, zeytin. */}
+          <View style={styles.recentRow}>
+            <TextAction label={t.recentLinkLower} onPress={() => router.navigate('/sale/history')} testID="sale-recent-link" />
+          </View>
+
           {/* DİPNOT (v3:20) — bu ekranın üç kuralı: müşteri kaydı istenmez, para alınınca stok
               anında iner, pazarlık meşrudur ama iz bırakır. Üçü de ekranda görünmeyen ama satışı
               yazan kişinin bilmesi gereken şeyler. */}
@@ -158,31 +184,101 @@ export function SaleScreen() {
         </LinearGradient>
       )}
 
+      {/* ARAMA ÇEKMECESİ (v3:23 `urunAraSheet`) — kutu + daralan liste; ürün seçilince çekmece
+          kapanır ve kartın kendi çekmecesi açılır. Liste aynı `sale.products`: iki liste, iki
+          gerçek demek olurdu. */}
+      <BottomSheet visible={searchOpen} title={t.searchSheetTitle} fill onClose={() => setSearchOpen(false)} testID="sale-search-sheet">
+        <TextInput
+          value={sale.search}
+          onChangeText={sale.setSearch}
+          placeholder={t.searchPlaceholder}
+          placeholderTextColor={operationsTheme.colors.muted}
+          accessibilityLabel={t.searchPlaceholder}
+          autoFocus
+          style={styles.search}
+          testID="sale-search"
+        />
+        <View style={styles.sheetList}>
+          {sale.products.length === 0 ? (
+            <Text style={styles.hint} testID="sale-search-empty">
+              {place === 'van' ? t.van.searchEmpty : t.searchEmpty}
+            </Text>
+          ) : (
+            sale.products.map((product) => (
+              <ProductRow
+                key={product.id}
+                product={product}
+                onOpen={(picked) => {
+                  setSearchOpen(false);
+                  sale.openProduct(picked);
+                }}
+              />
+            ))
+          )}
+        </View>
+      </BottomSheet>
+
+      {/* OKUTMA PENCERESİ — çözüm ve karar kancada (`handleScan`): bulunan boy kartın çekmecesini
+          açar, bulunamayan kod toast'la söylenir. Simülasyon çipleri kitin havuzundan (ürün
+          barkodları statik formülle taklit edilebiliyor — `dev-scan-pool`). */}
+      {/*
+        OKUTMA YÜZEN DÜĞMEDE DE (kullanıcı kararı 02.09: *"yerinde satışta da fab barkod butonu
+        olsun"*) — yükleme ekranının kararıyla aynı: üstteki "Barkod okut" tasarımın giriş düğmesi
+        ve listeyle birlikte kayıp gidiyor; daire ise her zaman elin altında. Sepet çubuğu varken
+        daire onun kadar yukarı kalkar (`lift`), yoksa çubuğun tutarını örterdi.
+      */}
+      <OperationsScanFab
+        icon="scan"
+        tone="scan"
+        accessibilityLabel={t.scanCta}
+        onPress={() => sale.setScanOpen(true)}
+        disabled={offline}
+        lift={sale.lines.length === 0 ? 0 : CART_BAR_LIFT}
+        testID="sale-scan-fab"
+      />
+
+      <ScanSheet
+        open={sale.scanOpen}
+        title={t.scan.title}
+        hint={t.scan.hint}
+        onClose={() => sale.setScanOpen(false)}
+        onScan={sale.handleScan}
+        devResolve={sale.describeDevCode}
+        testID="sale-scan-sheet"
+      />
+
+      {/*
+        ── SEPETE EKLEME ÇEKMECESİ — kitin `sheetTopAdet` şekli + satışın iki sorusu ──────
+        Kullanıcı kararı 02.09: *"Barkodunu okuttuktan sonra boyu seçmek mantıklı değil; sadece
+        adet girişine müsaade eden bir çekmece yeterli. Fiyat orada düzeltilebiliyor, kapıda satışın
+        mantığı gereği o da olsa olur. O kaydırmalı komponenti komple kaldırabiliriz."*
+
+        - BOY yalnız birden çok boy varken sorulur (listeden dokunulan çok boylu kart). Okutmada ve
+          tek boyluda boy BAŞLIKTA durur ("Fıstıklı Baklava · 2500 g"), seçtirilmez — tek çipli bir
+          "BOY SEÇ" bölümü, cevabı belli bir soruydu.
+        - ADET kitin sayacı, büyük boyda (`OperationsStepperGroup size="lg"`) — depo çekmeceleriyle
+          aynı şekil. Elastik kaydırıcı (`qty-slider`) buradan söküldü: kabulün "kaç koli geldi"
+          sorusu için yazılmıştı; satışta adet küçük ve tavanı belli (kalan), ray gereksizdi.
+        - FİYAT satışa özgü. Kitin `OperationsScanQtySheet`i bilerek fiyat taşımaz (kendi künyesi:
+          "fiyat, tutar, müşteri YOK — depo yüzeyinin tip sınırı"); o yüzden çekmece burada aynı
+          parçalardan kuruluyor — ikinci bir kit çekmecesi değil, kit çekmecesinin satış cümlesi.
+        - Fotoğraf yok: soru "kaç tane, kaça"; ürünün yüzü listede zaten görüldü.
+      */}
       <BottomSheet
         visible={sale.draft !== null}
-        title={t.drawer.title}
+        title={draftSelection?.name ?? sale.draft?.product.name ?? ''}
         onClose={sale.closeDraft}
         testID="sale-drawer"
       >
         {sale.draft === null ? null : (
-          <>
-            <View style={styles.drawerHead}>
-              <CirclePhoto
-                size={44}
-                initial={sale.draft.product.name.slice(0, 1)}
-                initialFontSize={18}
-                photoUri={sale.draft.product.image.url}
-              />
-              <Text style={styles.drawerName}>{sale.draft.product.name}</Text>
-            </View>
-
+          <View style={styles.drawerBody}>
             {sale.draft.variants === 'loading' ? (
               <Text style={styles.hint}>{t.drawer.variantsLoading}</Text>
             ) : sale.draft.variants === 'error' ? (
               <Text style={styles.warnText} testID="sale-drawer-variants-error">
                 {t.drawer.variantsError}
               </Text>
-            ) : Array.isArray(sale.draft.variants) ? (
+            ) : Array.isArray(sale.draft.variants) && sale.draft.variants.length > 1 ? (
               <View style={styles.section}>
                 <Text style={styles.heading}>{t.drawer.variantHeading}</Text>
                 <View style={styles.chipRow}>
@@ -209,17 +305,23 @@ export function SaleScreen() {
 
             {draftSelection === null ? null : (
               <>
-                <OperationsQtySlider
-                  key={draftSelection.variantId}
-                  value={sale.draft.qty}
-                  onChange={sale.setDraftQty}
-                  step={1}
-                  expected={draftSelection.availableHere}
-                  accessibilityLabel={t.drawer.qty}
-                  fineLabels={{ increase: t.drawer.qtyIncrease, decrease: t.drawer.qtyDecrease }}
-                  caption={fillCopy(t.card.remaining, { n: String(draftSelection.availableHere) })}
-                  testID="sale-drawer-qty"
-                />
+                <View style={styles.qty}>
+                  <OperationsStepperGroup
+                    value={sale.draft.qty}
+                    onChange={sale.setDraftQty}
+                    label={t.drawer.qty}
+                    min={1}
+                    max={draftSelection.availableHere}
+                    size="lg"
+                    testID="sale-drawer-qty"
+                  />
+                  <Text style={styles.qtyCaption}>
+                    {fillCopy(t.card.remaining, { n: String(draftSelection.availableHere) })}
+                  </Text>
+                </View>
+                {/* Sayaç `+`yı kalanda söndürür; buraya yalnız okutmayla gelen fazla düşer (koli
+                    çarpanı kalandan büyük). Sessizce kırpılmaz — kurye kolinin tamamını
+                    satamayacağını görmeli. */}
                 {overStock ? (
                   <Text style={styles.warnText} testID="sale-drawer-overstock">
                     {fillCopy(t.drawer.overStock, { n: String(draftSelection.availableHere) })}
@@ -247,16 +349,13 @@ export function SaleScreen() {
               </>
             )}
 
-            <PressableSurface
+            <PrimaryButton
+              label={offline ? t.offline.addCta : t.drawer.confirm}
               onPress={sale.confirmDraft}
               disabled={!draftReady}
-              feedback="shadow"
-              style={[styles.cta, draftReady ? styles.ctaReady : styles.ctaIdle]}
-              accessibilityLabel={offline ? t.offline.addCta : t.drawer.confirm}
+              elevation="flat"
               testID="sale-drawer-confirm"
-            >
-              <Text style={styles.ctaLabel}>{offline ? t.offline.addCta : t.drawer.confirm}</Text>
-            </PressableSurface>
+            />
             {/* SEBEP DÜĞMENİN ALTINDA: kapalı bir düğme, neden kapalı olduğunu söylemezse arıza
                 gibi okunur (depo ekranlarının aynı kararı). */}
             {offline ? (
@@ -264,7 +363,7 @@ export function SaleScreen() {
                 {t.offline.addHint}
               </Text>
             ) : null}
-          </>
+          </View>
         )}
       </BottomSheet>
     </View>
@@ -355,13 +454,16 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
     gap: operationsTheme.space.lg,
   },
-  searchBlock: {
+  /** İki giriş düğmesi alt alta (v3:23 `gap:12px`), listeyle aynı yan nefes. */
+  entryBlock: {
     paddingHorizontal: operationsTheme.space['6xl'],
-    paddingBottom: operationsTheme.space.sm,
-    gap: operationsTheme.space['2xs'],
+    paddingBottom: operationsTheme.space.xl,
+    gap: operationsTheme.space.xl,
   },
-  searchRow: {
-    flexDirection: 'row',
+  /** Arama çekmecesinin sonuç listesi — kutunun altında, kartlar arası listeyle aynı aralık. */
+  sheetList: {
+    paddingTop: operationsTheme.space.xl,
+    gap: operationsTheme.space.lg,
   },
   search: {
     flex: 1,
@@ -377,7 +479,7 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.ink,
   },
   recentRow: {
-    alignItems: 'flex-end',
+    alignItems: 'flex-start',
   },
   section: {
     gap: operationsTheme.space.md,
@@ -423,16 +525,18 @@ const styles = StyleSheet.create({
   productBadgeClosed: {
     color: operationsTheme.colors.muted,
   },
-  drawerHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.lg,
+  /** Çekmece gövdesi — kit çekmecesinin (`scan-qty-sheet`) dikey nefesi. */
+  drawerBody: {
+    gap: operationsTheme.space.xl,
   },
-  drawerName: {
-    flex: 1,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text['card-title-sm'],
-    color: operationsTheme.colors.ink,
+  qty: {
+    gap: operationsTheme.space.sm,
+  },
+  qtyCaption: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+    textAlign: 'center',
   },
   warnText: {
     paddingVertical: operationsTheme.space.lg,
@@ -486,7 +590,6 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.ink,
     boxShadow: operationsTheme.shadow['hard-on-ink'],
   },
-  ctaIdle: { backgroundColor: operationsTheme.colors['disabled-fill'] },
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,

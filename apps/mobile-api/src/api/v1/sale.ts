@@ -1,6 +1,6 @@
 import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
-import { StockService, serviceDb } from '@lezzet/database';
+import { ProductVariantService, StockService, VariantBarcodeService, serviceDb } from '@lezzet/database';
 import {
   ANONYMOUS_BUYER_ID,
   getCatalogData,
@@ -17,6 +17,7 @@ import {
   RecentSalesResponseSchema,
   SalePlaceEnum,
   SaleCatalogPageSchema,
+  SaleScanResponseSchema,
   SaleVariantsResponseSchema,
 } from '@lezzet/types';
 import { captureError, SOURCES } from '@lezzet/observability';
@@ -227,6 +228,10 @@ sale.get('/catalog/:slug/variants', async (c) => {
   const locale = PreferredLanguageEnum.default('tr').safeParse(c.req.query('locale') ?? undefined);
   if (!locale.success) return fail(c, 'invalid_locale', 400);
 
+  /* Yer beyanı listedekiyle AYNI parametreden okunuyor (`?place=`) — istemci onu her satış
+     isteğine ekliyor (`saleFetch`), yani çekmece ile liste aynı kaynağa bakıyor. */
+  const yer = SalePlaceEnum.safeParse(c.req.query('place')).data ?? 'facility';
+
   const db = serviceDb();
   const detail = await getProductDetail(db, {
     locale: locale.data,
@@ -246,11 +251,100 @@ sale.get('/catalog/:slug/variants', async (c) => {
     SaleVariantsResponseSchema.parse({
       productId: detail.id,
       name: detail.name,
-      variants: detail.variants.map((v) => ({
-        ...v,
-        availableHere: available.get(v.id)?.availableQty ?? 0,
-      })),
+      /*
+        ARAÇTA OLMAYAN BOY ÇEKMECEDE DE GÖRÜNMEZ (kullanıcı bulgusu 02.09).
+
+        Liste ve kart araca göre süzülüyor (`onlyStockedHere`), ama boy çekmecesi ürünün TÜM
+        boylarını döndürüyordu ve araçta olmayanlar orada "kalan 0" diye duruyordu — kurye
+        satamayacağı bir boyu seçebiliyordu. Aynı cümlenin devamı: **araç bir vitrin değil, bir
+        yüktür** (`DOMAIN §17`).
+
+        Süzgeç YALNIZ araçta: depo kapısında satış tesisin katalogundan yapılıyor ve orada "bu boy
+        şu an yok" bilgisi kendisi de bir cevaptır (vitrinin "süzülmez, işaretlenir" kuralı).
+      */
+      variants: detail.variants
+        .filter((v) => yer !== 'van' || (available.get(v.id)?.availableQty ?? 0) > 0)
+        .map((v) => ({
+          ...v,
+          availableHere: available.get(v.id)?.availableQty ?? 0,
+        })),
     } satisfies z.input<typeof SaleVariantsResponseSchema>),
+  );
+});
+
+/*
+  ── BARKOD OKUTMA (kullanıcı kararı 02.09) ─────────────────────────────────────
+
+  Kod → varyant → ürün → KART. Cevap kartın kendisi çünkü ekran okutmadan sonra kartla açılan
+  aynı çekmeceyi açıyor (adet · boy · fiyat) ve o çekmece kartı ister. Kart katalog motorundan
+  (`getCatalogData` + `productIds`), boy ise detay motorundan (`getProductDetail`) — listeyle ve
+  boy çekmecesiyle AYNI iki kaynak; ikinci bir fiyat/kalan yolu açılmıyor.
+
+  ARAÇTA "BURADA DURAN MAL" KURALI OKUTMADA DA GEÇERLİ: `onlyStockedHere` kartı süzüyor ve süzülen
+  ürün `not_here` diye döner — kurye araçta olmayan bir ürünü okutup sepete alamaz. Tesis kapısında
+  kural yok (vitrin kuralı) ama okutulan BOYUN kendisi bu depoda sıfırsa yine `not_here`: sıfır
+  kalanla sepete alınan bir satır, satışta zaten reddedilirdi — erken söylemek daha dürüst.
+
+  Kalem sayısı `qtyPerCode` ile döner (koli barkodu 1'den büyük taşır); çekmece o adetle açılır.
+*/
+sale.get('/scan', async (c) => {
+  const locale = PreferredLanguageEnum.default('tr').safeParse(c.req.query('locale') ?? undefined);
+  if (!locale.success) return fail(c, 'invalid_locale', 400);
+  const code = (c.req.query('code') ?? '').trim();
+  if (code.length === 0) return fail(c, 'code_required', 400);
+  const yer = c.get('salePlace');
+
+  const db = serviceDb();
+  const match = await new VariantBarcodeService(db).findByCode(code);
+  if (match === null) return ok(c, SaleScanResponseSchema.parse({ status: 'unknown_code' }));
+
+  const variant = await new ProductVariantService(db).getById(match.variantId);
+  if (variant === null) return ok(c, SaleScanResponseSchema.parse({ status: 'unknown_code' }));
+
+  const place = { warehouseId: c.get('warehouseId'), shippingWarehouseId: null };
+  const viewer = { channel: 'b2c' as const, b2bApproved: false, customerId: null, groupPercentOff: null };
+
+  const page = await getCatalogData(db, {
+    locale: locale.data,
+    query: { productIds: [variant.productId], onlyStockedHere: yer === 'van' },
+    place,
+    viewer,
+    limit: 1,
+  });
+  const card = page.products[0];
+  if (card === undefined) {
+    /* Kart yoksa iki sebep var ve ayrılmalı: ürün pasif/kanalsız (satışa kapalı) ya da araçta
+       değil. İkincisi yalnız araçta doğar (`onlyStockedHere`); adı söylenir ki kurye elindeki
+       paketin ne olduğunu bilsin. Ürünün adı için süzgeçsiz ikinci bir okuma yapılıyor — nadir
+       dal, mutlu yol hiçbir şey ödemiyor. */
+    if (yer === 'van') {
+      const plain = await getCatalogData(db, { locale: locale.data, query: { productIds: [variant.productId] }, place, viewer, limit: 1 });
+      const adsiz = plain.products[0];
+      if (adsiz !== undefined) return ok(c, SaleScanResponseSchema.parse({ status: 'not_here', name: adsiz.name }));
+    }
+    return ok(c, SaleScanResponseSchema.parse({ status: 'not_sellable' }));
+  }
+
+  const detail = await getProductDetail(db, { locale: locale.data, slug: card.slug, place, viewer });
+  const boy = detail?.variants.find((v) => v.id === variant.id);
+  if (boy === undefined || boy.priceCents === null) return ok(c, SaleScanResponseSchema.parse({ status: 'not_sellable' }));
+
+  const available = await new StockService(db).getAvailableMap(c.get('warehouseId'), [variant.id]);
+  const availableHere = available.get(variant.id)?.availableQty ?? 0;
+  if (availableHere === 0) return ok(c, SaleScanResponseSchema.parse({ status: 'not_here', name: card.name }));
+
+  return ok(
+    c,
+    SaleScanResponseSchema.parse({
+      status: 'ok',
+      product: {
+        ...card,
+        campaign: toWireCampaign(card.campaign, locale.data) ?? undefined,
+        availableHere: card.variantId === null ? null : (available.get(card.variantId)?.availableQty ?? availableHere),
+      },
+      variant: { ...boy, availableHere },
+      qtyPerCode: match.qtyPerCode,
+    } satisfies z.input<typeof SaleScanResponseSchema>),
   );
 });
 

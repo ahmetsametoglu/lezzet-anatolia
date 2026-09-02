@@ -45,6 +45,16 @@ export interface CatalogQuery {
    */
   onlyStockedHere?: boolean;
   /**
+   * **Belirli ürünler** — kimlik listesine daraltır (02.09). Öteki daraltmalarla KESİŞİR, yani
+   * `productIds` + `onlyStockedHere` "şu ürün, ama yalnız burada duruyorsa" sorusunu sorar.
+   *
+   * Tüketicisi barkod okutma: kod bir varyanta, varyant bir ürüne çözülüyor ve ekranın ihtiyacı
+   * o ürünün TAM KARTI (fiyat · kalan · boy sayısı · kampanya) — kartı üreten motor burası ve
+   * ikinci bir kart yolu açmak, aynı ürünü iki ekranda iki farklı fiyatla göstermek olurdu.
+   * Boş dizi "hiçbiri"dir ve erken çıkışa gider; `undefined` süzgeç yok demektir.
+   */
+  productIds?: readonly string[];
+  /**
    * Yalnız kargolanabilenler — "adresime gönderilebilir" çipi. Çip VARSAYILAN KAPALIDIR (tasarım):
    * bölge dışı bir posta kodunda soğuk zincir ürünleri gizlenmez, kartta etiketiyle durur. Katalogu
    * kendiliğinden küçültmek, müşteriye sormadan seçim yapmak olurdu.
@@ -171,6 +181,7 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
      `onlyStockedHere` depo-ÜSTÜ okumada (yer bilinmiyor) boş küme demektir: "burada duran mal"
      sorusunun deposuz bir cevabı yok ve sessizce tüm katalogu döndürmek yanlış cevap olurdu. */
   const idSets = await Promise.all([
+    Promise.resolve(q.productIds === undefined ? null : [...q.productIds]),
     q.onlyOffers ? listOfferProductIds(db, place.warehouseId) : Promise.resolve(null),
     q.onlyStockedHere
       ? place.warehouseId === null
@@ -284,7 +295,9 @@ export async function getCatalogData(db: SupabaseClient, input: CatalogInput): P
     activeCategory,
     activeCollection,
     products: page.rows.map((p) =>
-      toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT, byProduct.get(p.id) ?? null),
+      /* Süzgeç KARTA da iniyor (02.09): liste ürünü araçta duruyor diye seçildi, ama kartın "kaç
+         boy" sayısı katalogun boylarını sayıyordu — araçta olmayan boyu vaat eden bir rozet. */
+      toProduct(p, locale, context.get(p.id) ?? EMPTY_PRODUCT_CONTEXT, byProduct.get(p.id) ?? null, q.onlyStockedHere === true),
     ),
     total,
     nextCursor: page.nextCursor,

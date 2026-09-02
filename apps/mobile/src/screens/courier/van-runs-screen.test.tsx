@@ -22,11 +22,14 @@ import { CourierVanRunsScreen } from './van-runs-screen';
 */
 
 const mockBack = jest.fn();
+/* HEDEF ADIYLA (02.09): ekran "geri" değil `dismissTo('/courier')` diyor — yığında varsa oraya
+   kadar kapatır, yoksa onunla değiştirir. Testler artık o sözü ölçüyor. */
+const mockDismissTo = jest.fn();
 const mockNavigate = jest.fn();
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
-    useRouter: () => ({ navigate: mockNavigate, back: mockBack }),
+    useRouter: () => ({ navigate: mockNavigate, back: mockBack, dismissTo: mockDismissTo }),
     useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
   };
 });
@@ -118,6 +121,7 @@ beforeEach(() => {
   resetToast();
   fetchMock.mockReset();
   mockBack.mockReset();
+  mockDismissTo.mockReset();
   mockNavigate.mockReset();
 });
 
@@ -171,7 +175,7 @@ describe('K · araçtaki seferler', () => {
     // Onaylayan kurye yola çıkar ve ekran duraklara döner.
     await fireEvent.press(screen.getByTestId('courier-van-depart-short-sheet-confirm'));
     await waitFor(() => expect(fetchMock.mock.calls.some(([url]) => String(url).includes('/depart'))).toBe(true));
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/courier'));
   });
 
   it('KUTULARI TAM sefer doğrudan başlar — onay çekmecesi hiç açılmaz', async () => {
@@ -185,7 +189,7 @@ describe('K · araçtaki seferler', () => {
 
     await fireEvent.press(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`));
     expect(screen.queryByTestId('courier-van-depart-short-sheet')).toBeNull();
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/courier'));
   });
 
   it('SEFER BAŞLAYINCA EKRAN DURAKLARA DÖNER — ama kutu bekliyorsa KALIR', async () => {
@@ -207,7 +211,7 @@ describe('K · araçtaki seferler', () => {
     await waitFor(() => expect(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`)).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId(`courier-van-depart-${bekleyen.runId}`));
 
-    await waitFor(() => expect(mockBack).toHaveBeenCalled());
+    await waitFor(() => expect(mockDismissTo).toHaveBeenCalledWith('/courier'));
   });
 
   it('KUTUSU OKUTULMAMIŞ sipariş varsa ekran KALIR — yapılacak iş burada', async () => {
@@ -223,7 +227,7 @@ describe('K · araçtaki seferler', () => {
 
     // Sonuç toast'ta göründü ama ekran YERİNDE: sıradaki iş bu ekranın kutu okutması.
     await waitFor(() => expect(screen.getByTestId('toast-message')).toHaveTextContent(/kutu/));
-    expect(mockBack).not.toHaveBeenCalled();
+    expect(mockDismissTo).not.toHaveBeenCalled();
   });
 
   it('BAŞLATMA uca gider ve dört listenin cümlesi yazılır — kısmi başarı görünür', async () => {

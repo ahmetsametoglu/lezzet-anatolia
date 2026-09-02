@@ -131,7 +131,13 @@ export function CourierVanRunsScreen() {
               description={t.day.vanRuns.emptyBody}
               testID="courier-van-empty"
             />
-            <SecondaryButton label={t.day.vanRuns.pick} elevation="flat" onPress={() => router.back()} testID="courier-van-pick" />
+            <SecondaryButton
+              label={t.day.vanRuns.pick}
+              elevation="flat"
+              /* HEDEF ADIYLA (künye aşağıda, `toStops`ta). */
+              onPress={() => router.dismissTo('/route-pick')}
+              testID="courier-van-pick"
+            />
           </>
         ) : (
           <>
@@ -220,7 +226,19 @@ export function CourierVanRunsScreen() {
                            ve yeşil kartın üstünde neredeyse görünmüyor. İkisi de yalnız operasyon
                            temasında var, o yüzden tondan değil kabuktan geliyor. */
                         style={styles.toStops}
-                        onPress={() => router.back()}
+                        /*
+                          ── HEDEF ADIYLA VERİLİR, "GERİ" DEĞİL (kullanıcı bulgusu 02.09) ────────
+                          `router.back()` yazılıydı ve bir HEDEF değil bir GEÇMİŞ adımıdır: bu
+                          ekrana yükleme sayfasından gelen kurye "Duraklara git" deyince yükleme
+                          sayfasına dönüyordu. Kullanıcı bunu birebir gördü — *"duraklara gitmek
+                          yerine tekrardan kutuları araca yükleme sayfasına gidiyordu; ilk
+                          denememde oldu, sonra düzeldi"* — ve "sonra düzeldi" kısmı da aynı şeyi
+                          söylüyor: ikinci turda yığın farklıydı, yani sonuç yığına bağlıydı.
+
+                          `dismissTo` hedefi ADLANDIRIYOR: yığında varsa oraya kadar kapatır, yoksa
+                          onunla değiştirir. Düğmenin verdiği söz her iki hâlde de tutuluyor.
+                        */
+                        onPress={() => router.dismissTo('/courier')}
                         testID={`courier-van-stops-${run.runId}`}
                       />
                       {/*
@@ -291,7 +309,9 @@ export function CourierVanRunsScreen() {
                             return;
                           }
                           void day.departRun(run.runId).then((outcome) => {
-                            if (outcome === 'ok') router.back();
+                            /* Sefer başladı → DURAKLAR (01.09 kararı); hedef adıyla veriliyor
+                               (`toStops` künyesi). */
+                            if (outcome === 'ok') router.dismissTo('/courier');
                           });
                         }}
                         disabled={day.starting || drivenRun !== null}
@@ -397,7 +417,7 @@ export function CourierVanRunsScreen() {
           void day.departRun(runId).then((outcome) => {
             /* `awaiting` BURADA BEKLENEN cevap: kurye eksiği zaten onayladı. Ekran yine duraklara
                gider — sefer başladı ve bakılacak yer orası. */
-            if (outcome === 'ok' || outcome === 'awaiting') router.back();
+            if (outcome === 'ok' || outcome === 'awaiting') router.dismissTo('/courier');
           });
         }}
         onCancel={() => setDepartingShort(null)}

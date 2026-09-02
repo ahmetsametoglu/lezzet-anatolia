@@ -10604,3 +10604,92 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (ölçülen genişlik · ölçümsüz ilk kare · ondalıksızda virgül yok · değer ancak onayda çıkar).
   Cihazda çekmece açıldı ve arıza görüldü/düzeltildi; **düzeltmenin cihaz turu Oppo bağlantısı
   düştüğü için yapılamadı** — ölçüm testte çivili.
+- [x] (21.229) **YERİNDE SATIŞ: GİRİŞ TASARIMIN İKİ DÜĞMESİ · BARKOD OKUTMA · ARAÇTA OLMAYAN BOY ÇEKMECEDE YOK** (kullanıcı kararları 02.09, Oppo'da ölçüldü)
+
+  Üç bulgu, üçü de ekran görüntüsüyle geldi (`docs/design` v3:23 ile karşılaştırıldı).
+
+  ── **1 · "4 BOY" — KART KATALOĞU SAYIYORDU, ARACI DEĞİL** ──────────────────
+  Kullanıcı: *"cevizli baklavanın dört boyunu eklediğimi zannetmiyorum"*. Ölçüm: araçta o ürünün
+  İKİ boyu vardı (12 + 4 adet); kartın "4 boy" rozeti `variantCount`u kataloğun boylarından
+  sayıyordu ve boy çekmecesi de ürünün TÜM boylarını döndürüyordu — araçta olmayanlar orada
+  "kalan 0" diye duruyordu. İkisi de araca süzüldü (`toProduct` `onlyStockedHere` · `/variants`
+  `place=van`). Yan kazanç: araçta tek boyu kalan ürün artık "1 boy — dokun, seç" değil, doğrudan
+  "kalan N". Motor doğrudan ölçüldü: 2 · 1 · 1.
+
+  ── **2 · GİRİŞ BLOĞU TASARIMA GELDİ** ──────────────────────────────────────
+  Tasarım ekranı iki düğmeyle açıyor — **Barkod okut** (zeytin, ışımalı) ve **Ürün ara**
+  (çerçeveli, "+"); bizde sürekli açık bir arama kutusu vardı, okutma hiç yoktu, "Son satışlar"
+  sağ üstteydi. Kullanıcı: *"kötü bir desen bu"*. Şimdi: iki düğme, arama ÇEKMECEDE (`urunAraSheet`),
+  "son satışlar ›" listenin altında sola yaslı. Cihazda ölçüldü: okut düğmesi 52 dp (`controlLg`;
+  tasarım 54 — kitin tek satırlık düğme durağı, 2 dp'lik fark bilinçli olarak token'a bırakıldı).
+
+  **Tasarımda olup bizde OLMAYAN:** SIK SATILANLAR iki sütunlu kart ızgarası. Liste olarak
+  kalıyor — araçta liste zaten aracın içeriği kadar. `BEKLEYEN(BACKLOG §1)` işareti duruyor.
+
+  ── **3 · BARKOD OKUTMA** ───────────────────────────────────────────────────
+  *"Ürünü okutmak, hangi ürünün sepette olduğunu sonra görmek önemli; okuttuktan sonra adet
+  çekmecesinin açılması da."* Satış ucunda kod çözümü YOKTU; `GET /sale/scan?code=` açıldı: kod →
+  varyant (`findByCode`, barkod/SKU/tedarikçi kodu) → ürün → KART (`getCatalogData` + yeni
+  `productIds` daraltması) + BOY (`getProductDetail`). Cevap kartın kendisi çünkü ekran ardından
+  kartla açılan AYNI çekmeceyi açıyor — ikinci bir "okutulmuş ürün" görünümü yazılmadı.
+
+  Okutma sepete DOĞRUDAN yazmaz: çekmece boy seçili ve adet koli çarpanıyla (`qtyPerCode`)
+  açılır, kurye onaylar. Araçta "burada duran mal" kuralı okutmada da geçerli (`not_here`, adıyla).
+  Dört olumsuz dal toast'ta.
+
+  **Cihazda ölçüldü (Oppo, kablosuz):** "Barkod okut" → okutma penceresi → "Paket" çipi →
+  "Sepete ekle" çekmecesi: Fıstıklı Baklava · 2500 g · 50,81 € · kalan 41, adet 1, boy çipi seçili.
+
+  Testler: okutma çekmeceyi açar (boy seçili · adet çarpan · onaylanınca sepette) · tanınmayan kod
+  · araçta olmayan ürün. Fikstür dersi künyede: koli çarpanı kalanı aşınca sınanan şey stok kilidi
+  olur, okutma değil.
+
+  ── **Yol üstünde: "Duraklara git" hedefi adıyla veriyor** ─────────────────
+  `router.back()` bir geçmiş adımıydı; yükleme sayfasından gelen kurye "Duraklara git" deyince
+  yüklemeye dönüyordu (kullanıcı: *"ilk denememde oldu, sonra düzeldi"* — yığına bağlıydı). Aynı
+  ekranda dört yer `dismissTo('/courier')` / `'/route-pick'` oldu; testler hedefi ölçüyor.
+
+  ── **4 · ÇEKMECE: okutmada BOY SORULMAZ · adet kitin sayacı · kaydırıcı söküldü · yüzen daire · çipte ürün adı** ──
+  Kullanıcı, okutma akışını cihazda görünce (02.09): *"Ürünün barkodunu okuttuktan sonra boyu
+  seçmek mantıklı değil. Sadece adet girişine müsaade eden bir çekmece yeterli; fiyat orada
+  düzeltilebiliyor galiba, kapıda satışın mantığı gereği o da olsa olur. O kaydırmalı komponent
+  eski bir komponent, onu da komple kaldırabiliriz."*
+
+  Çekmece (`sale-screen.tsx`, `sale-drawer`) kitin okutma çekmecesinin (`sheetTopAdet`,
+  `scan-qty-sheet`) şekline geldi, satışın iki sorusu üstüne:
+  - **Boy yalnız birden çok boy varken sorulur** (listeden dokunulan çok boylu kart). Okutmada ve
+    tek boyluda boy BAŞLIKTA ("Fıstıklı Baklava · 2500 g"), "BOY SEÇ" bölümü çizilmez — tek çipli
+    bir seçim, cevabı belli bir soruydu.
+  - **Adet kitin sayacı** (`OperationsStepperGroup size="lg"`, tek adet deseni), tavan kalan: `+`
+    kalanda söner. Kalanın üstüne yalnız okutma çıkarabilir (koli çarpanı > kalan) ve o hâl
+    sessizce kırpılmaz — uyarı + kapalı düğme, kurye kolinin tamamını satamayacağını görür.
+  - **Fiyat kalıyor** (pazarlık alanı, liste ipucu). Kitin `OperationsScanQtySheet`i bilerek fiyat
+    taşımıyor (kendi künyesi: depo yüzeyinin tip sınırı), o yüzden çekmece aynı parçalardan
+    burada kuruldu; kite fiyat yuvası açılmadı.
+  - Fotoğraf ve "Sepete ekle" başlığı gitti: başlık ürün (· boy), soru "kaç tane, kaça". Onay
+    kitin `PrimaryButton`u (elden çizilen `cta` yalnız alt çubukta kaldı).
+
+  **Kaydırıcı (`qty-slider`) satıştan söküldü.** Tek kullanıcısı mal kabulün koli çarpanı öğrenme
+  adımı (`intake-screen.tsx`) — dosya depo şeridinde açık değişiklik taşıdığı için dokunulmadı;
+  sökme + dosya silme talebi `docs/talep/depo-qty-slider-sokumu.md`.
+
+  **Okutma yüzen dairede de** (*"yerinde satışta da fab barkod butonu olsun"*): yükleme ekranının
+  kararıyla aynı — üstteki "Barkod okut" tasarımın giriş düğmesi ve listeyle kayıp gidiyor, daire
+  hep elin altında (`OperationsScanFab`, sepet çubuğu varken `lift`). Çevrimdışı sönük.
+
+  **Simülasyon çipinin altında ÜRÜN ADI** (*"okuyucunun altındaki etiketlere ürün isimleri
+  gidebilsin"*): havuzun etiketi YOLU söyler ("Paket", "Koli ×24"), ürün ise sabit değil — kod
+  ürüne ROLLE bağlanıyor (`test-labels.ts`), her beslemede değişebilir; adı havuza yazmak yalan
+  söylerdi. `ScanSheet.devResolve` (kit, yalnız `__DEV__`): çağıran koda ad çözer, pencere her
+  açılışta beş çipi sorar ve adı etiketin altına soluk yazar. Satış kendi `/sale/scan` ucuyla
+  çözüyor ("Baklava · 1 kg", araçta olmayan "— burada yok"), yani çipin altındaki ad basınca
+  açılacak çekmecenin başlığının ta kendisi. Öteki ekranlar kendi çözücülerini verdiğinde aynı
+  yuvadan geçer; havuz dosyası değişmedi.
+
+  Testler: tek boylu çekmece boy sormaz + sayaç kalanda durur · okutmayla gelen fazla adet
+  onaylatmaz · okutma başlığı "Baklava · 1 kg", çip yok · daire okutmayı açar + çip adı · kit:
+  çözücü adı yazar, çözemediği yalın kalır, ad çipin yolunu değiştirmez.
+
+  Doğrulama: mobil Jest sale 22 · scan 10 · courier 124 · `test:unit` 1953 · typecheck · lint.
+
+
