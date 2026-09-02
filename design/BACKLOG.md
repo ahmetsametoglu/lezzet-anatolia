@@ -476,6 +476,23 @@ Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel k
 Paketler istisnası dışında). Operasyon, depo ve kurye yüzeylerinin **sayfa** tasarımları da mevcut;
 onların kod tarafındaki açıkları kendi `docs/build` dosyalarında izlenir, burada tekrarlanmaz.
 
+**Adres düzeltme teklifi — dört yüzeyde de çizilmedi, 01.09 (`11.11`).** Kullanıcı ölçtü: aynı adres
+satırı iki siparişte, biri gerçek kapı (67380 Lingolsheim, `housenumber`), öteki var olmayan kapı
+(67000 Strasbourg, `street`) — arada 7,2 km. Sistem farkı biliyor (`geo_precision`) ve hiçbir yerde
+söylemiyor. Kullanıcı kararı: **düzeltme teklifi, engel yok.** Çizilecek dört öğe:
+
+- **Müşteri adres formu** (web `components/customer/delivery/` + mobil `screens/customer-kit/`) —
+  *"Bunu mu demek istediniz: 192c Rue du Maréchal Foch 67380 Lingolsheim?"* + [Düzelt] / [Böyle
+  kalsın]. Kapı hiçbir yerde bulunamadıysa (yeni yapı olabilir) teklif değil, **yumuşak tek satır**.
+  İki hâlin tonu FARKLI olmalı: biri düzeltilebilir bir hata, öteki yalnız bir belirsizlik.
+- **Sevkiyat masası engel şeridi** — *"1 durağın kapı numarası doğrulanmadı"*. Şeridin sözleşmesi
+  zaten var (kısa, paralel, sertlik sırasına göre); yeni bir kalıp değil, **beşinci madde**.
+- **Kurye durak kartı** (mobil) — *"Kapı numarası doğrulanmadı."* Rozet değil, uyarı tonu değil.
+
+**Engel DEĞİL ve öyle görünmemeli:** adres defteri hiçbir hâlde reddetmez (10.08). Teklif bir
+sorudur; reddedilince akış aynen sürer. Sözcükler iki yüzeyde AYNI olmalı — ayrışırsa aynı müşteri
+web'de ve uygulamada farklı bir şey okur.
+
 **Sosyal gelen kutusu — "siteye devir" öğesi çizilmedi, 29.08.** `CHANNELS §3b` (28.08 kararı)
 Messenger/Instagram'ın rolünü *"danışma sohbette, işlem sitede"* diye bağladı ve devir anını
 tanımladı: kimliğe bağlı soru gelince ya da satış kapanacakken müşteri siteye yönlendirilir.

@@ -6,9 +6,26 @@
  * müşterinin adres önerisi kutusu onu kullanıyor. Yeni npm paketi girmediği için `STACK §2` beyanı
  * gerekmedi.
  *
- * **`postcode` burada SERT SÜZGEÇ olarak veriliyor ve bu doğru.** Otomatik tamamlamada bilerek
- * verilmiyor (müşteri hediye/iş adresi ararken başka şehri yazıyor olabilir — `ban-client` künyesi);
- * burada durum tersi: posta kodunu ZATEN BİLİYORUZ, başka kodda çıkan sonuç yanlış cevaptır.
+ * **`postcode` burada SERT SÜZGEÇ olarak veriliyor.** Otomatik tamamlamada bilerek verilmiyor
+ * (müşteri hediye/iş adresi ararken başka şehri yazıyor olabilir — `ban-client` künyesi); burada
+ * posta kodunu ZATEN BİLİYORUZ ve başka kodda çıkan sonuç aradığımız cevap değildir.
+ *
+ * ⚠ **AMA BU KISIT AYNI ZAMANDA BİR KÖRLÜK — ve künyenin eski hâli onu "doğru" diye savunuyordu.**
+ * Kullanıcı ölçtü (01.09): `192c Rue du Maréchal Foch` yalnız **67380 Lingolsheim**'de var
+ * (BAN kısıtsız: `housenumber`, score 0.973). Aynı satır **67000 Strasbourg** ile kaydedilince bu
+ * fonksiyon `postcode=67000` pinliyor, BAN elindeki en iyisini veriyor — aynı adlı SOKAK, score
+ * 0.717 — ve satır `precision: street` ile yazılıyor. Sonuç: **var olmayan bir kapıya çıkan sipariş,
+ * 7,2 km ötede bir sokağın ortasına dizilmiş bir durak, ve hiçbir yerde uyarı.**
+ *
+ * Kısıt "yanlış posta kodu" hâlini yapısal olarak GÖRÜNMEZ kılıyor: kodu pinlediğimiz sürece
+ * adresin başka kodda olduğunu öğrenmenin yolu yok. Çözüm kısıtı kaldırmak DEĞİL (o zaman hediye
+ * adresi yanlış şehirde eşleşirdi) — ilk sonuç `housenumber` değilse **İKİNCİ ve kısıtsız** bir
+ * sorgu atmak; iki hâl ancak böyle ayrılıyor: "kapı hiçbir yerde yok" (yeni yapı — yumuşak uyarı)
+ * ile "kapı VAR ama başka kodda" (yazım hatası — düzeltme teklifi).
+ *
+ * Servisin `score`u da bugün ALINIP ATILIYOR (`GeocodeOutcome.score` taşıyor, kimse okumuyor,
+ * kolonu yok) — oysa 0.973 ile 0.717 arasındaki fark aradığımız sinyalin ta kendisi.
+ * BEKLEYEN(11.11)
  *
  * **`kind` süzgeci verilmiyor:** `housenumber` dayatmak, kapı numarası bilinmeyen adreste "eşleşme
  * yok" derdi. Kaba eşleşme atılmıyor — kaba OLDUĞU söyleniyor (`precision`).

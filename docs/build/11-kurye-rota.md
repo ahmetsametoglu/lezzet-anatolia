@@ -225,14 +225,24 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     yani sıralama hiç sınanamıyordu.
     - **Kuzey — Frankfurt** (STR, pzt+prş): 67000 · 67500 · 67160 · DE 76829 · DE 60311 → 183 km'ye
     - **Batı — Metz** (STR, salı+cuma): 67100 · 67200 · 67700 · 57400 · 57000 → 130 km'ye
-    - **Güney — Mulhouse** (COLMAR, çrş+cts): 67600 · 68000 · 68100 → 98 km'ye
-    - **Doğu — Stuttgart** (KEHL, salı+cuma): DE 77694 · 77652 · 70173 → 107 km'ye
+    - **Güney — Mulhouse** (~~COLMAR~~ → **STR**, çrş+cts): 67600 · 68000 · 68100 → 98 km'ye
+    - **Doğu — Stuttgart** (~~KEHL~~ → **STR**, salı+cuma): DE 77694 · 77652 · 70173 → 107 km'ye
+    - **DÖRDÜNÜN DE DEPOSU STR OLDU (kullanıcı kararı 01.09):** *"Strasbourg merkezli dört rota
+      olsun, Kehl deposuna ait bir rota olmasın, dört farklı yöne olsun."* Hatların kendisi, kodları
+      ve günleri değişmedi — yalnız sahipleri. Gerekçe mesafe: Kehl depoya 5 km, Colmar 60 km ve
+      Güney Hattının kendi DURAĞI; iki tarafın rotaları aynı sokaklarda kesişiyor ve "hangi deponun
+      hattı" sorusu ekrandan okunamıyordu. Kuryenin kapsamı da tek tesise indi ({str, van}) ve bu
+      **bir arızayı da kapattı**: eski kapsam {str, colmar, van} idi, yani Doğu Hattı (KEHL'in)
+      kuryeye HİÇ görünmüyordu — oysa K1'i sınamak için Batı ile aynı güne konmuştu. Salı günü tek
+      aday çıkıyor, `route_required` dalı hiç koşmuyordu (11.7: kapsam dışı rota görünmez). Artık
+      dört hat da tek kapsamda: salı+cuma iki aday, seçim ekranı gerçekten açılıyor.
     - Kodlar ve mesafeler `postal_code_place`ten **ölçüldü**, uydurulmadı. Hatların uçlarına on
       adres ve bugünün kuzey hattına üç sipariş eklendi (22/48/71 km) — kapalı turun şekli ancak
       yayılmış bir günde okunabilir.
-    - Yan kazanç: KEHL deposu ilk kez bir rotaya sahip; Batı ve Doğu **aynı gün** koşuyor, yani
-      kuryenin rota SEÇİMİ (K1) gerçekten sınanıyor. Rota dışı hâli Lyon (69007) taşımaya devam
-      ediyor. Sınır ötesi hat ADR-002'nin meşru saydığı şey.
+    - Yan kazanç: ~~KEHL deposu ilk kez bir rotaya sahip;~~ (01.09'da geri alındı — Kehl rotasız)
+      Batı ve Doğu **aynı gün** koşuyor, yani kuryenin rota SEÇİMİ (K1) gerçekten sınanıyor. Rota
+      dışı hâli Lyon (69007) taşımaya devam ediyor. Sınır ötesi hat ADR-002'nin meşru saydığı şey —
+      Doğu Hattı sınırı hâlâ geçiyor, yalnız deposu Strasbourg.
     - **Beslemede koordinat SABİT yazılıyor** (kullanıcı itirazı 31.08 — ilk hâlinde yazılmıyordu ve
       her `db:refresh` sonrası elle bir komut gerekiyordu; unutulduğu gün sıra sessizce posta kodu
       merkezine düşerdi). "Ağa çıkma" ilkesinin doğru sonucu *koordinat yazmamak* değil, **bir kez
@@ -366,6 +376,65 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     yanlış olur. `costOfMatrix` simetrikleştiriyor; adaptör bunu bozmamalı.
   - Kapsam: self-host OSRM (hücre ücretsiz). Ticari API'de 60 durak = 3.721 hücre — orada önbellek
     bir hız işi değil PARA işidir. Gerekçe ve maliyet kıyası: `BACKLOG` §8 (c).
+
+- [ ] (11.11) **Adres DOĞRULANABİLİRLİĞİ — "bu kapı var mı" sorusu hiç sorulmuyor:** kaba eşleşme tespit edilir, müşteriye düzeltme teklif edilir, düzeltilmezse sevkiyat ve kurye uyarılır
+  `touches: supabase/migrations/0011_customer_fields.sql, packages/domain-core/src/delivery/, packages/application/src/delivery/{geocode-port,geocode-provider,geo-address,geocode-scan}.ts, apps/web/components/customer/delivery/, apps/web/app/(operations)/operations/deliveries/, apps/mobile/src/screens/customer-kit/, apps/mobile/src/screens/courier/`
+  - **KULLANICI BULGUSU (01.09) — iki gerçek sipariş, aynı adres, biri var olmayan kapı.** Kullanıcı
+    uygulamadan iki sipariş kurdu (15:24 ve 15:43) ve ikisinin de satırı **`192c Rue du Maréchal Foch`**:
+    - `LA-26-T77JPW` · 5 Eylül · **67380 Lingolsheim** → `housenumber`, (48.551249, 7.669976) — GERÇEK
+    - `LA-26-93UXKY` · 3 Eylül · **67000 Strasbourg** → `street`, (48.589231, 7.749851) — kapı YOK
+    - Aralarında **~7,2 km**. BAN'a KISITSIZ soruldu (01.09, doğrudan ölçüm):
+      `housenumber` **0.973** → 67380 Lingolsheim · `street` 0.719/0.717/0.716/0.715 →
+      Lille / **Strasbourg** / Perpignan / Versailles. Sokak adı onlarca şehirde var; **192c kapısı
+      yalnız Lingolsheim'de.** Yani 3 Eylül siparişi var olmayan bir kapıya gidiyor ve kurye
+      Strasbourg'da bir sokağın ortasına yönlendirilecek.
+  - **NEDEN TESPİT EDEMİYORUZ — üç kapı da YAPISAL olarak kör (ölçüldü):**
+    - `cityMatchesPlaces` geçirir: Strasbourg, 67000 için GEÇERLİ bir şehirdir. Çift tutarlı —
+      **sokağın koda ait olup olmadığına hiç bakılmıyor.**
+    - `plausiblePoint` geçirir: tek sorduğu "nokta posta kodu merkezine 25 km'den yakın mı".
+      Strasbourg sokağı Strasbourg merkezine yakındır. Bu süzgeç *istemcinin uydurduğu koordinatı*
+      yakalamak için yazıldı, *yanlış posta kodunu* değil.
+    - **Ve asıl sebep:** `geocode-provider.ts` BAN'a posta kodunu **sert süzgeç** (`postcode`) olarak
+      veriyor. Yani "bu adresi 67000 İÇİNDE bul" diyoruz; BAN elinden geleni yapıp 0.717'lik sokağı
+      döndürüyor. **Kısıt, adresin yanlış kodda olduğunu öğrenmemizi yapısal olarak imkânsız kılıyor.**
+      Dosyanın künyesi bu kararı *"ve bu doğru"* diye savunuyor — **o cümle yanlış ve düzeltilmeli.**
+    - Üstüne: BAN güven skorunu gönderiyor, `GeocodeOutcome.score` onu TAŞIYOR, **hiçbir yerde
+      kullanılmıyor ve kolonu yok.** 0.973 ile 0.717 arasındaki fark aradığımız sinyalin ta kendisiydi.
+  - **KİMSE UYARILMIYOR (ölçüldü):** `geo_precision` ekranda TEK yerde görünüyor — rota haritasının
+    künye satırı, ve orada **sefer düzeyinde toplu** değer (`address`/`mixed`/`postal_centroid`);
+    hangi durağın kaba olduğunu söylemiyor. Engel şeridinde adres kalitesi maddesi yok, bildirim yok,
+    `geoAttempts` web ve mobil arayüzde sıfır kez geçiyor.
+  - **TASARIM: iki hâl AYRILABİLİR ve ayrılmalı.** `street` tek başına bir hüküm değil bir GÜVEN
+    DÜZEYİ'dir (BAN yeni yapıları ve `bis/ter/quater` eklerini bilmeyebiliyor). Kısıtsız ikinci bir
+    sorgu ikisini ayırıyor:
+    - **Kapı hiçbir yerde yok** → muhtemelen yeni yapı → yumuşak uyarı, engel yok.
+    - **Kapı VAR ama başka posta kodunda** → neredeyse kesin yazım hatası → düzeltme teklifi.
+    İkinci sorgu **yalnız** ilk sonuç `housenumber` değilse atılır — bugünkü veride 20 adresin 1'i,
+    yani maliyet sıfıra yakın.
+  - **KULLANICI KARARLARI (01.09):**
+    - **Düzeltme teklifi, ENGEL YOK.** *"Bunu mu demek istediniz: 192c Rue du Maréchal Foch 67380
+      Lingolsheim?"* — tek tıkla düzeltir. Reddederse sipariş geçer; kayıt "uyarıldı ve devam etti"
+      olur ve sevkiyat + kurye uyarılır. Adres defteri hiçbir hâlde reddetmez (10.08) korunuyor.
+    - **`0011` DOĞRUDAN düzenlenecek** (greenfield kuralı) — `db:reset` gerekir ve **KULLANICININ
+      kararıdır**; yereldeki iki test siparişi silinir.
+  - **SAKLAMA — tek nullable kolon yeter:** `address.geo_alt_label text` = BAN'ın bulduğu daha iyi
+    cevabın tam etiketi. Dolu olması "yanlış kodda" demek, içeriği doğrudan ekrana yazılabilir; enum
+    yok, ikinci tablo yok. **Ve "uyarıldı ama düzeltmedi" kaydı da budur** — müşteri teklifi kabul
+    ederse adres değişir, nokta düşer, yeniden çözülür ve etiket temizlenir; reddederse etiket kalır.
+    Ayrı bir alan gerekmiyor; eksik olan alan değil OKUYAN.
+  - **DÖRT YÜZEY, ÜÇ MUHATAP** (hiçbiri engel değil):
+    - **Müşteri** (web checkout + hesap adres defteri · mobil `customer-kit` adres formu) — düzeltme
+      teklifi. Adresi bilen tek kişi orada ve en ucuz düzeltme anı.
+    - **Sevkiyat masası** (`/operations/deliveries` engel şeridi) — şerit zaten var ve sözleşmesi tam
+      bu: kısa paralel cümleler, sertlik sırasına göre, engel yoksa *"Araç çıkabilir."*
+      *"1 durağın kapı numarası doğrulanmadı"* oraya doğal oturuyor; araç çıkmadan telefon açılır.
+    - **Kurye** (mobil durak kartı) — tek satır: *"Kapı numarası doğrulanmadı."* Kurye zaten oraya
+      gidiyor; sürpriz yerine hazırlıklı gitsin.
+    - Yönetim için **AYRI bir bildirim kanalı açılmıyor**: sevkiyat masası zaten yönetimin yüzeyi ve
+      engel şeridi tam olarak "bu sipariş çıkarken dikkat" için var. İkinci kanal aynı bilgiyi iki
+      yerde yaşatır ve biri bir gün ötekinden ayrışır.
+  - **Mobil yarısı native şeritte** — talep: `docs/talep/mobil-adres-dogrulanabilirligi.md`.
+  - Müşteri yüzeyindeki cümlenin **tasarım karşılığı yok** → `design/BACKLOG.md §4`.
 
 ## Netleşecekler
 
