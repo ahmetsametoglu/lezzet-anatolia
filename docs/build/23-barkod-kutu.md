@@ -331,7 +331,9 @@ mobile-api dahil), mobil şeride bilgilendirme notu bırakılır. Plan: etüt §
   okutma bir SAYIM değil TANITIMDIR. Kod çözülünce ürün kartı çekmecesi açılır (görsel + ad +
   kaynak künyesi + beklenen), varsayılan adet okutulan birimin miktarı (koli → çarpan, tekil → 1);
   "10 koli geldi" gerçeği adet artırılarak söylenir, satıra ONAYLA yazılır. · touches:
-  `apps/mobile/src/components/operations/qty-slider.tsx`, `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`,
+  ~~`apps/mobile/src/components/operations/qty-slider.tsx`~~ (kaydırıcı 02.09'da söküldü — kullanıcı
+  kararı, 21.231: adet her yerde kitin sayacı; koli çarpanı öğrenme adımı da ona geçti),
+  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,use-intake.hook.ts,intake-scan.test.tsx,messages.json}`,
   `packages/types/src/contracts/warehouse-api.schema.ts`, `packages/application/src/warehouse/{scan.ts,names.ts}`
   - **Durum (24.08) — YAZILDI ve CİHAZDA ÖLÇÜLDÜ; tek açık kalem sürükleme jestinin turu.**
     Kâğıttan okutulan koli kodu (ITF-14) çekmeceyi 24 adetle açtı; "1 koli" dökümü, beklenen

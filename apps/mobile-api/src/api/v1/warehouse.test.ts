@@ -799,6 +799,7 @@ describe('D5 · transfer (gelen)', () => {
         dispatchedQty: 4,
         // `null` = henüz sayılmadı; `0` olsaydı "geldi ama kayıp" derdi (0042).
         receivedQty: null,
+        caseSizes: [],
       },
     ]);
   });

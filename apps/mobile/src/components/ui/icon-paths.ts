@@ -102,7 +102,7 @@ export const ICON_PATHS = {
   /**
    * Artı — bir bölüme SATIR EKLEYEN eylem (kuryenin "reddedilen kalem ekle"si, 30.08).
    *
-   * `OperationsStepperButton`ın `+` glifiyle karışmaz: o bir SAYIYI artırır ve metin karakteridir;
+   * `OperationsStepperGroup`un `+` glifiyle karışmaz: o bir SAYIYI artırır ve metin karakteridir;
    * bu bir çizgi ikondur ve "yeni bir şey ekle" der. İkisi aynı ekranda yan yana durabiliyor
    * (mal bölümünün başlığı ile çekmecedeki adet düğmeleri) — ayrı olmaları gerekiyor.
    */

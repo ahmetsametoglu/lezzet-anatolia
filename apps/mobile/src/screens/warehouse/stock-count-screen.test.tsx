@@ -54,6 +54,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     storageAreaName: 'Derin dondurucu 2',
     lifePercent: 64,
     variantWarehouseQty: 46,
+    caseSizes: [],
     ...overrides,
   };
 }
@@ -79,7 +80,7 @@ beforeEach(() => {
  * değil adet çekmecesini açıyor — mal kabuldeki cetvelin aynısı. Test de gerçek kullanımı izliyor.
  */
 async function countOnShelf(qty: number) {
-  await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty'));
+  await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-value-hit'));
   const cell = `warehouse-stock-count-qty-sheet-ruler-${qty}`;
   await waitFor(() => expect(screen.getByTestId(cell)).toBeOnTheScreen());
   await fireEvent.press(screen.getByTestId(cell));
@@ -103,7 +104,7 @@ describe('D4 · Sayım', () => {
     */
     await selectBatch();
 
-    await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-value-hit'));
     await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-open')).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-open'));
 
@@ -112,14 +113,14 @@ describe('D4 · Sayım', () => {
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-confirm'));
 
     // Sayı ekrana geçti ve fark cümlesi onu okudu (sistemde 12 vardı).
-    expect(screen.getByTestId('warehouse-stock-count-qty')).toHaveTextContent('40');
+    expect(screen.getByTestId('warehouse-stock-count-qty-value')).toHaveTextContent('40');
   });
 
   it('konu seçilmeden form çizilmez; raf listesi seçiciden gelir', async () => {
     await render(<StockCountScreen />);
 
     expect(await screen.findByTestId('warehouse-stock-count-picker')).toBeTruthy();
-    expect(screen.queryByTestId('warehouse-stock-count-qty')).toBeNull();
+    expect(screen.queryByTestId('warehouse-stock-count-qty-value')).toBeNull();
   });
 
   it('bağlam kartı İKİ sayıyı birden gösterir — partide kayıtlı ve ürünün depodaki toplamı', async () => {
@@ -227,6 +228,6 @@ describe('D4 · Sayım', () => {
     const row = await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
     await fireEvent.press(row);
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-qty')).toHaveTextContent('—'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-qty-value')).toHaveTextContent('—'));
   });
 });

@@ -986,6 +986,12 @@ export const InboundTransferLineSchema = z.object({
   dispatchedQty: z.number().int(),
   /** **`null` = henüz sayılmadı, `0` = geldi ama kayıp.** İkisi ayrı şeydir (0042). */
   receivedQty: z.number().int().nullable(),
+  /**
+   * Ürünün kayıtlı KOLİ BOYLARI — rampada sayım koli koli yapılır ve adet çekmecesi çarpanı
+   * buradan alır (kullanıcı kararı 02.09: koli sorulan yerde çekmece, çarpan ürün kartından).
+   * Boş dizi = kayıtlı koli boyu yok; çekmece "başka koli boyu" ile sahada ölçtürür.
+   */
+  caseSizes: z.array(CaseSizeSchema),
 });
 export type InboundTransferLineContract = z.infer<typeof InboundTransferLineSchema>;
 
@@ -1351,6 +1357,8 @@ export const ResolvedBatchSchema = z.object({
    * varmış gibi gösterirdi.
    */
   variantWarehouseQty: z.number().int(),
+  /** Ürünün kayıtlı koli boyları — rafta koli de durur, sayım çekmecesi çarpanı buradan alır (02.09). */
+  caseSizes: z.array(CaseSizeSchema),
 });
 export type ResolvedBatchContract = z.infer<typeof ResolvedBatchSchema>;
 

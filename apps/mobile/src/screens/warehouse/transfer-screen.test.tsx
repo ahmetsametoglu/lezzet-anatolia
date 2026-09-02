@@ -84,6 +84,19 @@ const STR: StaffWarehouse = { id: 'w-str', code: 'STR', name: 'Strasbourg Merkez
  * çizilemez: sağlayıcısız çağrı sessizce boş değer DÖNMEZ, fırlatır (`sections-context` künyesi —
  * kapıyı geçmemiş bir ekranı yetkili gibi göstermemek).
  */
+/**
+ * Satırı ÇEKMECEDEN sayar (kitin tek adet deseni, 02.09): sayacın ortasındaki rakam adet
+ * çekmecesini açar, cetvelden sayı seçilir. Eski metin alanı kalktı; test de gerçek kullanımı
+ * izliyor. Sıfır da cetvelin ilk hücresidir — "0 · hiç gelmedi" kısayolu ayrıca sınanıyor.
+ */
+async function countLine(lineId: string, qty: number) {
+  await fireEvent.press(screen.getByTestId(`warehouse-transfer-qty-${lineId}-value-hit`));
+  const cell = `warehouse-transfer-qty-sheet-ruler-${qty}`;
+  await waitFor(() => expect(screen.getByTestId(cell)).toBeOnTheScreen());
+  await fireEvent.press(screen.getByTestId(cell));
+  await fireEvent.press(screen.getByTestId('warehouse-transfer-qty-sheet-confirm'));
+}
+
 async function renderTransfer(warehouse: StaffWarehouse | null = STR) {
   await render(
     <OperationsSessionProvider
@@ -134,6 +147,7 @@ describe('D5 · rampada sayım', () => {
           name: `Ürün ${n}`,
           dispatchedQty: n,
           receivedQty: null,
+          caseSizes: [],
         })),
       }),
       inboundTransfer({ transferId: '00000000-0000-4000-8000-000000000052', referenceNo: 'TRF-B' }),
@@ -169,7 +183,7 @@ describe('D5 · rampada sayım', () => {
     await renderTransfer();
     await fireEvent.press(screen.getByTestId(`warehouse-transfer-zero-${LINE_A}`));
 
-    expect(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}`)).toHaveDisplayValue('0');
+    expect(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}-value`)).toHaveTextContent('0');
     // Aynı şeyi ikinci kez söyleten kontrol, basıldığında hiçbir şey olmadığı için bozuk görünür.
     expect(screen.queryByTestId(`warehouse-transfer-zero-${LINE_A}`)).toBeNull();
   });
@@ -186,7 +200,7 @@ describe('D5 · rampada sayım', () => {
     withTransfers([TRANSFER]);
 
     await renderTransfer();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}`), '4');
+    await countLine(LINE_A, 4);
 
     expect(screen.getByTestId('warehouse-transfer-cta')).toHaveTextContent(/boş satır kabulü bloklar/);
     expect(screen.getByTestId('warehouse-transfer-cta')).toBeDisabled();
@@ -196,8 +210,8 @@ describe('D5 · rampada sayım', () => {
     withTransfers([TRANSFER]);
 
     await renderTransfer();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}`), '4');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_B}`), '0');
+    await countLine(LINE_A, 4);
+    await countLine(LINE_B, 0);
 
     expect(screen.getByTestId('warehouse-transfer-cta')).toHaveTextContent(/Kabulü kaydet/);
 
@@ -214,8 +228,8 @@ describe('D5 · rampada sayım', () => {
     withTransfers([TRANSFER], { status: 'incomplete', missingLineIds: [LINE_B], unknownLineIds: [] });
 
     await renderTransfer();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}`), '4');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_B}`), '2');
+    await countLine(LINE_A, 4);
+    await countLine(LINE_B, 2);
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
 
     await waitFor(() =>
@@ -228,8 +242,8 @@ describe('D5 · rampada sayım', () => {
     withTransfers([TRANSFER], { status: 'stale', currentStatus: 'received' });
 
     await renderTransfer();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}`), '4');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_B}`), '2');
+    await countLine(LINE_A, 4);
+    await countLine(LINE_B, 2);
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
 
     await waitFor(() =>
@@ -241,8 +255,8 @@ describe('D5 · rampada sayım', () => {
     withTransfers([TRANSFER], { status: 'failed', message: 'receive_transfer: partide 3 var, 5 kabul edilemez' });
 
     await renderTransfer();
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}`), '4');
-    await fireEvent.changeText(screen.getByTestId(`warehouse-transfer-qty-${LINE_B}`), '2');
+    await countLine(LINE_A, 4);
+    await countLine(LINE_B, 2);
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
 
     await waitFor(() =>

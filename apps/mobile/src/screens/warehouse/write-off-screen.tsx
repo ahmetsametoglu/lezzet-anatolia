@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { StockWriteOffReason } from '@lezzet/types';
 
 import { toastInfo } from '@/lib/toast/toast-store';
+import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
@@ -63,6 +64,8 @@ export function WriteOffScreen() {
   /** Düşülecek adet — POZİTİF; `null` = hiç yazılmadı. */
   const [qty, setQty] = useState<number | null>(null);
   const [reason, setReason] = useState<Exclude<StockWriteOffReason, 'expired'> | null>(null);
+  /** Sayacın ortasındaki rakam TUŞ TAKIMINI açar (kullanıcı kararı 02.09 — künye aşağıda). */
+  const [keypadOpen, setKeypadOpen] = useState(false);
 
   const batch = subject.subject;
 
@@ -173,6 +176,8 @@ export function WriteOffScreen() {
               onQtyChange={setQty}
               qtyLabel={fillCopy(t.adjustment.writeOff.qtyField, { n: String(qty ?? 0) })}
               max={batch.physicalQty}
+              onPressQty={() => setKeypadOpen(true)}
+              qtyHint={t.common.keypadHint}
               reason={reason === null ? null : t.adjustment.writeOff.reason[reason]}
               reasons={REASONS.map((option) => t.adjustment.writeOff.reason[option])}
               /* Etiket → SEBEP KODU: bileşen metinle konuşuyor (kit i18n bilmez), kayıt ise kodla.
@@ -187,6 +192,36 @@ export function WriteOffScreen() {
               testID="warehouse-write-off-row"
             />
           </OperationsSurface>
+
+          {/*
+            ORTADAKİ RAKAM TUŞ TAKIMI AÇAR, ADET ÇEKMECESİ DEĞİL (kullanıcı kararı 02.09).
+
+            Kullanıcının ölçütü: *"çekmece açılacaksa bir durumdan ötürü açılıyor demektir ve o
+            duruma özgü bir çekmece olması gerekir."* Düşümde öyle bir durum yok — koli sorulmaz
+            (parti sözleşmesi çarpan taşımıyor, düşüm çoğu zaman tek tek sayılan bir iki adet),
+            cetvel ve koli bölümü burada gürültüydü. Kitin tuş takımı (eldivenli el, sayı tuşların
+            ÜSTÜNDE durur) yeter. CANLI kip: her tuş sayaca anında yazılır, kapatmak yeter (onay
+            düğmesi yok — kullanıcı 02.09). Tavan tuşta: partiden fazlasını yazacak tuş işlemez,
+            dipnot bunu söyler.
+          */}
+          <OperationsAmountKeypad
+            visible={keypadOpen}
+            title={t.adjustment.writeOff.keypad.title}
+            value={String(qty ?? 0)}
+            expected={null}
+            unit={t.common.keypad.unit}
+            allowDecimals={false}
+            max={batch.physicalQty}
+            hint={fillCopy(t.adjustment.writeOff.keypad.hint, {
+              name: batch.name,
+              code: batch.lotNumber ?? t.adjustment.picker.noLot,
+            })}
+            footnote={fillCopy(t.adjustment.writeOff.keypad.footnote, { total: String(batch.physicalQty) })}
+            deleteLabel={t.common.keypad.delete}
+            onChange={(text) => setQty(text.length === 0 ? 0 : Number.parseInt(text, 10))}
+            onClose={() => setKeypadOpen(false)}
+            testID="warehouse-write-off-keypad"
+          />
 
           {atLimit ? (
             <View style={styles.limit} testID="warehouse-write-off-limit">

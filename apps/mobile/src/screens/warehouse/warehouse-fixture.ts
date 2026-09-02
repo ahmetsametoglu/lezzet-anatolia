@@ -145,8 +145,8 @@ export function inboundTransfer(overrides: Partial<InboundTransferContract> = {}
     dispatchedAt: '2026-08-07T09:00:00.000Z',
     note: 'rampa',
     lines: [
-      { lineId: uuid(71), sourceStockId: STOCK_A, name: 'Mantı · 500 g', dispatchedQty: 4, receivedQty: null },
-      { lineId: uuid(72), sourceStockId: STOCK_B, name: 'Künefe · 2 kişilik', dispatchedQty: 2, receivedQty: null },
+      { lineId: uuid(71), sourceStockId: STOCK_A, name: 'Mantı · 500 g', dispatchedQty: 4, receivedQty: null, caseSizes: [] },
+      { lineId: uuid(72), sourceStockId: STOCK_B, name: 'Künefe · 2 kişilik', dispatchedQty: 2, receivedQty: null, caseSizes: [] },
     ],
     ...overrides,
   };

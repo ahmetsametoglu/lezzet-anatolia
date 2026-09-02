@@ -1,10 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { operationsTheme } from '@/theme/unistyles';
-import { OperationsQtyStepperField } from './qty-stepper-field';
+import { OperationsKeypadPanel } from './keypad-panel';
+import { OperationsStepperGroup } from './stepper-group';
 
 /*
   OKUTULAN KALEMİN ADET ÇEKMECESİ (v3:00-ortak · `sheetTopAdet`, 31.08).
@@ -25,6 +27,19 @@ import { OperationsQtyStepperField } from './qty-stepper-field';
   ── SAYI ÇİFTİ SERBEST, ÇÜNKÜ SORU EKRANIN ──────────────────────────────────
   `stats` dizisi sabit iki alan değil: toplamada "istenen / kalan", imhada "partide / toplam stok".
   Çekmece hangi sayının sorulduğunu bilmez, yalnız nasıl gösterileceğini bilir.
+
+  ── SAYAÇ KİTİN TEK ADET DESENİ, BÜYÜK BOYDA ────────────────────────────────
+  Eskiden burada kendi şekli vardı: büyük rakam solda, ± çifti sağda ayrı bir hapta
+  (`qty-stepper-field`). Kullanıcı 02.09'da "yerleri değişen artı eksi"yi sorun olarak söyledi ve
+  o şekil söküldü — adet her yerde `− 27 +`tır; burada yalnız BOYU büyük (`size="lg"`), çünkü
+  sayı çekmecenin konusu ve karşıdan okunur.
+
+  ── RAKAMA BASINCA TUŞ TAKIMI ADIMI (kullanıcı kararı 02.09) ─────────────────
+  Bu zaten bir çekmece ve çekmece çekmece açamaz (`bottom-sheet` künyesi, 21.121); tuş takımı bu
+  yüzden aynı çekmecenin bir ADIMI: sayı ve bağlam yerinde kalır, altına tuşlar gelir, "Tamam"
+  sayaca döner. CANLI yazar — her tuş değeri anında çağırana verir; tavan aynı `max`. Adım
+  isteğe bağlı (`keypad` sözleri verilmezse rakam düz metin kalır) — kurye çağıranı sözlerini
+  kendi turunda verir.
 */
 
 /** Bağlam sayısı — büyük rakam + altında ne olduğu. */
@@ -56,6 +71,8 @@ interface OperationsScanQtySheetProps {
   confirmDisabled?: boolean;
   /** Çekmecenin altındaki kural cümlesi. */
   footnote?: string;
+  /** Tuş takımı adımının sözleri — verilirse ortadaki rakam adımı açar (künye). */
+  keypad?: { unit: string; hint: string; deleteLabel: string; backLabel: string; valueHint: string };
   onClose: () => void;
   /** iOS'ta ikinci bir çekmece açılacaksa: `Modal` söküldükten SONRA (bottom-sheet künyesi). */
   onDismissed?: () => void;
@@ -77,11 +94,17 @@ export function OperationsScanQtySheet({
   onConfirm,
   confirmDisabled = false,
   footnote,
+  keypad,
   onClose,
   onDismissed,
   testID,
 }: OperationsScanQtySheetProps) {
   const title = variantLabel ? `${name} · ${variantLabel}` : name;
+  /** Adım: sayaç · tuş takımı. Her açılış sayaçla başlar. */
+  const [step, setStep] = useState<'count' | 'keypad'>('count');
+  useEffect(() => {
+    if (visible) setStep('count');
+  }, [visible]);
 
   return (
     <BottomSheet
@@ -112,23 +135,53 @@ export function OperationsScanQtySheet({
           </View>
         ) : null}
 
-        <OperationsQtyStepperField
-          value={value}
-          onChange={onChange}
-          caption={qtyCaption}
-          label={title}
-          min={min}
-          max={max}
-          testID={testID === undefined ? undefined : `${testID}-qty`}
-        />
+        {step === 'keypad' && keypad !== undefined ? (
+          <>
+            <OperationsKeypadPanel
+              value={String(value)}
+              unit={keypad.unit}
+              allowDecimals={false}
+              max={max}
+              hint={keypad.hint}
+              deleteLabel={keypad.deleteLabel}
+              onChange={(text) => onChange(text.length === 0 ? (min ?? 0) : Number.parseInt(text, 10))}
+              testID={testID === undefined ? undefined : `${testID}-keypad`}
+            />
+            <PrimaryButton
+              label={keypad.backLabel}
+              tone="ink"
+              elevation="flat"
+              onPress={() => setStep('count')}
+              testID={testID === undefined ? undefined : `${testID}-keypad-back`}
+            />
+          </>
+        ) : (
+          <>
+            <View style={styles.qty}>
+              <OperationsStepperGroup
+                value={value}
+                onChange={onChange}
+                label={title}
+                min={min}
+                max={max}
+                size="lg"
+                onPressValue={keypad === undefined ? undefined : () => setStep('keypad')}
+                valueHint={keypad?.valueHint}
+                testID={testID === undefined ? undefined : `${testID}-qty`}
+              />
+              {/* Rakamın altında NE olduğu — "bu kutuya konuyor" · "partiden düşülecek". */}
+              <Text style={styles.qtyCaption}>{qtyCaption}</Text>
+            </View>
 
-        <PrimaryButton
-          label={confirmLabel}
-          elevation="flat"
-          disabled={confirmDisabled}
-          onPress={onConfirm}
-          testID={testID === undefined ? undefined : `${testID}-confirm`}
-        />
+            <PrimaryButton
+              label={confirmLabel}
+              elevation="flat"
+              disabled={confirmDisabled}
+              onPress={onConfirm}
+              testID={testID === undefined ? undefined : `${testID}-confirm`}
+            />
+          </>
+        )}
 
         {footnote ? <Text style={styles.footnote}>{footnote}</Text> : null}
       </View>
@@ -174,6 +227,15 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text['badge-sm'],
     color: operationsTheme.colors.muted,
+  },
+  qty: {
+    gap: operationsTheme.space.sm,
+  },
+  qtyCaption: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+    textAlign: 'center',
   },
   footnote: {
     fontFamily: operationsTheme.font.body[400],

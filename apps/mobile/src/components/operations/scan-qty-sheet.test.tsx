@@ -63,6 +63,35 @@ describe('OperationsScanQtySheet', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
+  /* RAKAMA BASINCA TUŞ TAKIMI ADIMI (kullanıcı kararı 02.09) — sözleri verilirse. Canlı yazar,
+     "Tamam" sayaca döner. Sözleri verilmeyen çağıranda rakam düz metindir (kurye kendi turunda). */
+  it('tuş takımı sözleri verilirse rakam adımı açar; her tuş çağırana canlı gider', async () => {
+    const onChange = jest.fn();
+    await render(
+      <OperationsScanQtySheet
+        {...base}
+        onChange={onChange}
+        max={9}
+        keypad={{ unit: 'adet', hint: 'bu kutuya konuyor', deleteLabel: 'sil', backLabel: 'Tamam', valueHint: 'tuş takımını açar' }}
+        testID="adet-sheet"
+      />,
+    );
+
+    await fireEvent.press(screen.getByTestId('adet-sheet-qty-value-hit'));
+    await fireEvent.press(screen.getByTestId('adet-sheet-keypad-key-7'));
+    expect(onChange).toHaveBeenLastCalledWith(7);
+    expect(screen.queryByTestId('adet-sheet-keypad-confirm')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('adet-sheet-keypad-back'));
+    expect(screen.getByTestId('adet-sheet-qty-value')).toBeTruthy();
+  });
+
+  it('tuş takımı sözleri verilmezse rakam düğme DEĞİLDİR', async () => {
+    await render(<OperationsScanQtySheet {...base} testID="adet-sheet" />);
+
+    expect(screen.queryByTestId('adet-sheet-qty-value-hit')).toBeNull();
+  });
+
   it('kapalı onay çağırana ULAŞMAZ — boş kutuya kalem yazılmaz', async () => {
     const onConfirm = jest.fn();
     await render(

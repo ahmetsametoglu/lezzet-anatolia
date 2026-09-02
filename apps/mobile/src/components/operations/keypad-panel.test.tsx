@@ -63,6 +63,38 @@ describe('OperationsKeypadPanel', () => {
     expect(screen.getByTestId('keypad-key-00')).toBeTruthy();
   });
 
+  /* CANLI kip (kullanıcı kararı 02.09): adet her tuşta çağırana gider ve onay satırı HİÇ
+     çizilmez — çekmeceyi kapatmak yeter. */
+  it('canlı kipte her tuş çağırana gider ve onay düğmesi YOKTUR', async () => {
+    const onChange = jest.fn();
+    await render(
+      <OperationsKeypadPanel value="0" unit="adet" hint="" deleteLabel="sil" allowDecimals={false} onChange={onChange} testID="keypad" />,
+    );
+
+    await fireEvent.press(screen.getByTestId('keypad-key-1'));
+    await fireEvent.press(screen.getByTestId('keypad-key-2'));
+    expect(onChange).toHaveBeenLastCalledWith('12');
+
+    await fireEvent.press(screen.getByTestId('keypad-delete'));
+    expect(onChange).toHaveBeenLastCalledWith('1');
+    expect(screen.queryByTestId('keypad-confirm')).toBeNull();
+  });
+
+  /* Tavanı aşan tuş HİÇ işlemez: "partide 4 var" iken 6 yazılmaz, sonra kırpılmaz. */
+  it('tavanı aşacak tuş işlemez — değer kırpılmaz, hiç yazılmaz', async () => {
+    const onChange = jest.fn();
+    await render(
+      <OperationsKeypadPanel value="0" unit="adet" hint="" deleteLabel="sil" allowDecimals={false} max={4} onChange={onChange} testID="keypad" />,
+    );
+
+    await fireEvent.press(screen.getByTestId('keypad-key-6'));
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByTestId('keypad-value')).toHaveTextContent('0 adet');
+
+    await fireEvent.press(screen.getByTestId('keypad-key-4'));
+    expect(onChange).toHaveBeenLastCalledWith('4');
+  });
+
   it('değer ancak ONAYLANINCA çıkar — her tuşta değil', async () => {
     const onConfirm = jest.fn();
     await renderPanel({ onConfirm });

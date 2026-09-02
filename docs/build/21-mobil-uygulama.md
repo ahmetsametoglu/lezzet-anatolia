@@ -10554,12 +10554,18 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: mobil Jest **149 paket / 1249 test** · typecheck · lint. Cihazda ölçüm yapılamadı
   (telefon kilitli); ölçüm kilit açılınca yapılacak.
 
-- [ ] (21.227) **ADET ÇEKMECESİ SAYAÇLARIN ORTASINDAKİ RAKAMA DA BAĞLANSIN — DEPO ekranları**
+- [x] (21.227) **ADET ÇEKMECESİ SAYAÇLARIN ORTASINDAKİ RAKAMA DA BAĞLANSIN — DEPO ekranları**
   (21.225'in bıraktığı işaret · depo şeridinin işi)
 
   Prop 21.226'da yayına girdi (`OperationsStepperGroup.onPressValue` + `valueHint`) ve kurye
   şeridinde bir çağıranı var (serbest ürün listesi). Kalan: D2 hasar · D3 imha · D4b düşüm
   sayaçlarının ortasındaki rakam. Şartname `docs/talep/`te; bağlayacak olan depo şeridi.
+  - **Durum (02.09 — 21.230 ile birlikte tamamlandı):** D2 hasar ve D4b düşüm sayaçları
+    `qty-reason-row`un `onPressQty`si üzerinden ADET ÇEKMECESİNİ açıyor; ikisi de kendi
+    tavanını çekmecede kırpıyor (kabul edilen adet · partideki mal). **D3 imha BAĞLANMADI ve bu
+    bilinçli:** o sayaç zaten bir çekmecenin (imha çekmecesi) içinde duruyor ve çekmece çekmece
+    açamaz (`bottom-sheet` künyesi, Fabric söküm arızası 21.121). Tavanı kite geçti (`max`),
+    artı partinin sonunda sönüyor. Talep dosyası kapatıldı (açan taraf sildi).
 
 - [x] (21.228) **ADET ÇEKMECESİNE "RAKAMLA GİR" ADIMI — cetvel 24'te bitiyordu**
   (kullanıcı sorusu 02.09: *"ortaya tıklandığında doğrudan sayı klavyesi açılsa daha mı hızlı
@@ -10594,16 +10600,15 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ızgarada zaten ölçülmüştü (koli boyu seçici, 30.08) — yüzde bu kaplarda çözülmüyor. Kap artık
   `onLayout` ile ölçülüyor; testi de var.
 
-  **BEKLEYEN(21.229):** kullanıcı 02.09'da daha büyüğünü söyledi — *"adet arttırma azaltma için
-  klasik bir desenimiz olması lazım; bir input var, sonra başında artı eksi var ama yerleri
-  değişiyor, bu hoş değil."* Ölçüldü: kitte **beş ayrı adet kontrolü** var (`QtyField` metin alanı
-  · `StepperGroup` bağlı sayaç · `StepperButton` tek düğme · `QtyStepperField` · `QtySlider`) ve
-  aynı soru ekrandan ekrana başka bir kalıpla soruluyor. Tekilleştirme kendi görevini istiyor.
+  Kullanıcı 02.09'da daha büyüğünü söyledi — *"adet arttırma azaltma için klasik bir desenimiz
+  olması lazım; bir input var, sonra başında artı eksi var ama yerleri değişiyor, bu hoş değil."*
+  Tekilleştirme kendi görevini aldı: **21.230** (aynı gün tamamlandı).
 
   **Doğrulama.** Tip · lint temiz · tam paket **4133/4133**; tuş takımı gövdesinin dört testi
   (ölçülen genişlik · ölçümsüz ilk kare · ondalıksızda virgül yok · değer ancak onayda çıkar).
   Cihazda çekmece açıldı ve arıza görüldü/düzeltildi; **düzeltmenin cihaz turu Oppo bağlantısı
   düştüğü için yapılamadı** — ölçüm testte çivili.
+
 - [x] (21.229) **YERİNDE SATIŞ: GİRİŞ TASARIMIN İKİ DÜĞMESİ · BARKOD OKUTMA · ARAÇTA OLMAYAN BOY ÇEKMECEDE YOK** (kullanıcı kararları 02.09, Oppo'da ölçüldü)
 
   Üç bulgu, üçü de ekran görüntüsüyle geldi (`docs/design` v3:23 ile karşılaştırıldı).
@@ -10693,3 +10698,100 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Doğrulama: mobil Jest sale 22 · scan 10 · courier 124 · `test:unit` 1953 · typecheck · lint.
 
 
+- [x] (21.230) **TEK ADET DESENİ — beş kontrol bire indi: `− 27 +`, ortadaki rakam ADET ÇEKMECESİ**
+  (kullanıcı kararı 02.09: *"adet arttırma azaltma için klasik bir desenimiz olması lazım her
+  yerde; bir input var, sonra başında artı eksi var ama yerleri değişiyor, bu hoş değil."*)
+  `touches:` `apps/mobile/src/components/operations/{stepper-group.tsx,stepper-group.test.tsx,qty-reason-row.tsx,scan-qty-sheet.tsx}` ·
+  `apps/mobile/src/screens/warehouse/{stock-count-screen.tsx,write-off-screen.tsx,intake-screen.tsx,near-expiry-screen.tsx,transfer-screen.tsx,preparation-screen.tsx,copy.ts,messages.json,warehouse-format.ts}`
+
+  **Ölçüldü:** kitte BEŞ ayrı adet kontrolü vardı ve aynı soru ekrandan ekrana başka bir
+  kalıpla soruluyordu — `QtyField` çerçeveli metin alanı (transfer · toplama), `StepperGroup`
+  bağlı sayaç (araç stoğu · teslimat · yakın-SKT), `StepperButton` tek başına ± (yalnız sayım
+  ekranı: büyük rakam + yanında iki ayrı düğme, başka hiçbir yerde olmayan bir şekil),
+  `QtyStepperField` büyük rakam solda ± çifti sağda (okutma çekmecesi), `QtySlider` kaydırıcı.
+
+  **Karar: `OperationsStepperGroup` tek desen.** `[− değer +]` tek çerçeve; ortadaki rakam
+  basılınca kitin ADET ÇEKMECESİ (cetvel + koli çarpanı + rakamla gir). Üç ihtiyaç tek kontrolde:
+  ince ayar ±, hızlı ayar cetvel, kesin giriş rakam. Kit üç şey öğrendi:
+  · **`value: null` = HİÇ SAYILMADI** — transferin *"boş = saymadım, 0 = geldi ama mal yok"*
+    kuralı ve sayımın "—" hâli sayaçta yaşıyor; boştan `+` tabanın bir üstüne çıkar.
+  · **`max` kitte** — üç çağıran aynı kırpmayı kendi `onChange`inde yapıyordu ve artı
+    sönmüyordu; dokunulup hiçbir şey olmayan bir `+` bozuk bir `+`dır.
+  · **`size="lg"`** — ekranın konusu olan sayı için (sayım ekranı, okutma çekmecesi): tam
+    genişlik, 52'lik hücreler, Lora'yla büyük rakam. Şekil aynı, ölçek büyüyor.
+
+  **Silinenler:** `qty-field.tsx`, `qty-stepper-field.tsx` (+ testleri); `parseQty`/`qtyToText`
+  (adet artık metinden okunmuyor, sayılıyor). **Kalan tek istisna `qty-slider`:** o bir sayaç
+  değil, okutma anının elastik rayı (kullanıcı tasarımı 23.08) — ± çifti rayın iki ucunda,
+  `stepper-button` yalnız onun için duruyor.
+
+  **Çekmecenin sözleri tek tabanda** (`qtySheetCopy`, `messages.qtySheet`): altı ekran yirmi
+  cümlelik bloğu kopyalamak yerine yalnız kendi sorusunu söylüyor (başlık · künye · koli bölümü ·
+  tuş takımı başlığı). Mal kabul kendi tabanını veriyor ("paket").
+
+  **Bağlananlar:** D4 sayım (lg, boş hâl "—") · D4b düşüm ve D2 hasar (`qty-reason-row`
+  `onPressQty`, tavan çekmecede kırpılıyor) · D5 transfer (metin alanı gitti; tek çekmece, satırı
+  `qtyLineId` seçiyor) · D1 toplama (metin alanı gitti; tavan motorun kapasitesi; okutma
+  çekmecesinden AYRI bir satır çekmecesi). **Bağlanmayanlar ve niçin:** D3 imha sayacı ve okutma
+  çekmecesinin sayacı ZATEN bir çekmecenin içinde — çekmece çekmece açamaz (21.121); ± ve
+  büyük boy orada da aynı şekil.
+
+  **Cihazda ölçüldü (Oppo):** büyük boyun rakam hücresi ilk turda esnemedi — stildeki `flex: 1`
+  `PressableSurface`ın dış kabuğuna ulaşmıyor, üç hücre sola yığıldı; kitin kuralı zaten
+  yazılıydı (*"esneyecek düğme `grow` verir, stiline flex yazmaz"*), ona geçildi.
+
+  **Doğrulama.** Tip · lint · knip temiz; kit testi altı iddia (komşu sayı · taban · TAVAN · boş
+  hâl · düz metin · düğme); D4/D4b/D5/D1 ekran testleri gerçek kullanımı izliyor (çekmeceden
+  sayma). Tam paket sonucu commit notunda.
+  - **Durum (02.09, aynı gün · devamı 21.231):** kullanıcı bloğun ardından ölçütü netleştirdi —
+    *"ortaya tıklandığında ne açılacak: çekmece mi klavye mi? Çekmece açılıyorsa bir durumdan ötürü
+    açılıyor demektir ve o duruma özgü bir çekmece olması gerekir."* Koli sorulmayan yerlerin
+    çekmecesi tuş takımına çevrildi; ayrıntı 21.231'de.
+
+- [x] (21.231) **RAKAMA BASINCA NE AÇILIR — koli soran yerde çekmece, sormayan yerde CANLI tuş takımı; sil tuşu değerin sağında; çekmece içi boşluk örtüye düşmüyor; koli boyları sayım ve transfere; kaydırıcı söküldü** (kullanıcı kararları 02.09, Oppo'da ölçüldü)
+  `touches:` `apps/mobile/src/components/operations/{keypad-panel.tsx,keypad-panel.test.tsx,amount-keypad.tsx,quantity-sheet.tsx,scan-qty-sheet.tsx,scan-qty-sheet.test.tsx,stepper-group.tsx}` ·
+  `apps/mobile/src/components/ui/bottom-sheet.tsx` ·
+  `apps/mobile/src/screens/warehouse/{write-off-screen.tsx,intake-screen.tsx,preparation-screen.tsx,near-expiry-screen.tsx,stock-count-screen.tsx,transfer-screen.tsx,messages.json}` ·
+  `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/application/src/warehouse/{case-sizes.ts,adjustment.ts,transfer.ts,intake.ts,variant-search.ts}`
+
+  **Ölçüt (kullanıcı):** ± her yerde kalır; ortadaki rakama dokununca ya tuş takımı ya çekmece
+  açılır ve çekmece ancak o duruma özgü bir soru varsa açılır. On iki sayı girişi tek tek geçildi:
+  · **Çekmece (koli soran):** D2 kabul · D5 transfer · D4 sayım · araç yükleme (kurye şeridi).
+    Transfer ve sayımın sözleşmesi çarpan taşımıyordu; **`caseSizes`** iki uca da eklendi
+    (`ResolvedBatchSchema`, `InboundTransferLineSchema`) — harita dört yerde elle kuruluyordu,
+    tek yardımcıya indi (`case-sizes.ts`; kabul ve ürün araması da ona geçti).
+  · **Tuş takımı (koli sormayan):** D2 hasar · D4b düşüm · D1 satır. Üçü de adet çekmecesi
+    açıyordu — cetvel, koli bölümü ve "başka koli boyu" burada gürültüydü.
+  · **Zaten çekmece içinde olanlar:** D3 imha · okutma çekmecesi — rakam aynı çekmecenin tuş
+    takımı ADIMINI açar (çekmece çekmece açamaz, 21.121). Okutma çekmecesinde adım isteğe bağlı
+    (`keypad` sözleri); kurye çağıranı sözlerini kendi turunda verir.
+
+  **Tuş takımı CANLI, onay satırı yok** (kullanıcı: *"alttaki iki düğmeye neden gerek var?
+  değiştirdiğim an yazılmaz mı?"*): adet kipinde her tuş sayaca anında gider, kapatmak yeter.
+  Para onaylı kaldı — tutar tuş tuş sızarsa fark hesabı titrer. **Sil tuşu değerin sağında** ve
+  ızgaradaki tuşlarla aynı genişlikte (kullanıcı: *"daha doğal bir yer"* · *"diğer butonların
+  genişliği kadar olsun"*, cihazda ölçüldü: ikisi de 312 px). **Tavan tuşta:** aşacak tuş hiç
+  işlemez, kırpma iki değer gösterirdi. Adet çekmecesinin "rakamla gir" adımı da canlı oldu.
+
+  **Kit arızası, kullanıcı buldu:** tuş takımında "00"un sağındaki boşluğa dokununca çekmece
+  kapanıyordu. Ölçüm (uiautomator, noktanın altındaki görünümler): boşlukta dokunuşu sahiplenen
+  öğe yok, kütüphanenin örtüsü tam ekran tıklanabilir bir düğme; jest kütüphanesi dokunuşu önden
+  arkaya bir jest bulana kadar arıyor ve örtüye varıyordu. Kırk iki çekmecenin hepsinde geçerliydi.
+  Çare kitin çekmecesinde: içerik hiçbir şey yapmayan bir dokunma jestiyle dokunuşu sahipleniyor;
+  örtüye dokunuş hâlâ kapatıyor (cihazda üçü de ölçüldü).
+
+  **Tuş takımı geri besleme arızası, birim testte ölçüldü:** canlı kipte çağıran değeri geri
+  verince taslak "taze"leniyor ve ikinci rakam ilkini eziyordu ("4" → "0" basınca "0"). Dışarıdan
+  gelen değer taslağı yalnız FARKLIYSA ezer; açılış (`resetKey`) koşulsuz tazeler.
+
+  **Kaydırıcı söküldü** (kullanıcı: *"o kaydırmalı komponent komple kalksın"*, kurye şeridinin
+  talebi `docs/talep/depo-qty-slider-sokumu.md`): son kullanıcısı mal kabulün koli çarpanı öğrenme
+  adımıydı → kitin sayacı (`lg`, taban 2). `qty-slider` ve tek kullanıcısı `stepper-button`
+  silindi; tek adet deseninin istisnası kalmadı.
+
+  **Doğrulama.** Tip · lint · knip temiz; dokunulan 16 test dosyası 226/226 (yeni iddialar: canlı
+  kip · tavan tuşta · hasar/toplama/imha/okutma tuş takımı · sözsüz okutma çekmecesinde rakam
+  düğme değil). Cihazda: D4b tuş takımı (canlı yazım, tavan, sil tuşu genişliği, boşluk artık
+  kapatmıyor, örtü kapatıyor). D2 hasar · D1 satır · D3 imha · D5 için cihaz turu yerel veride
+  konu bulunamadığı için yapılamadı (toplanacak sipariş, STR'ye yolda transfer ve imhalık parti
+  yok) — bunlar birim testte çivili. Tam paket sonucu commit notunda.

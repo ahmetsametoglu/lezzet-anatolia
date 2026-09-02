@@ -52,6 +52,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     storageAreaName: 'Derin dondurucu 2',
     lifePercent: 64,
     variantWarehouseQty: 46,
+    caseSizes: [],
     ...overrides,
   };
 }
@@ -129,6 +130,26 @@ describe('D4b · Stok düşümü', () => {
       reason: 'damaged',
       note: null,
     });
+  });
+
+  /* Sayacın ortasındaki rakam TUŞ TAKIMINI açar — adet çekmecesini DEĞİL (kullanıcı kararı
+     02.09: koli sorulmayan yerde çekmece gürültü). Tuş takımı CANLI: onay düğmesi yok, her tuş
+     sayaca anında yazılır. Tavan tuşta: partide 4 varken "6" hiç işlemez, "4" yazılır ve sınır
+     satırı çizilir. */
+  it('ortadaki rakam canlı tuş takımını açar; partiden fazlasını yazacak tuş işlemez', async () => {
+    await selectBatch();
+
+    await fireEvent.press(screen.getByTestId('warehouse-write-off-row-qty-value-hit'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-write-off-keypad-key-6')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-write-off-qty-sheet')).toBeNull();
+    expect(screen.queryByTestId('warehouse-write-off-keypad-confirm')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('warehouse-write-off-keypad-key-6'));
+    expect(screen.getByTestId('warehouse-write-off-row-qty-value')).toHaveTextContent('0');
+
+    await fireEvent.press(screen.getByTestId('warehouse-write-off-keypad-key-4'));
+    expect(screen.getByTestId('warehouse-write-off-row-qty-value')).toHaveTextContent('4');
+    expect(screen.getByTestId('warehouse-write-off-limit')).toBeTruthy();
   });
 
   it('sebep seçilmeden yazılmaz', async () => {

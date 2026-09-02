@@ -14,3 +14,22 @@ import messages from './messages.json';
 */
 
 export const warehouseCopy = messages;
+
+type QtySheetBase = typeof messages.qtySheet;
+
+/**
+ * ADET ÇEKMECESİNİN SÖZLERİ — bir taban, ekran başına birkaç cümle.
+ *
+ * Çekmece uygulamanın tek adet deseninin (kullanıcı kararı 02.09) hızlı ayarı ve artık altı
+ * ekrandan açılıyor. Yirmi cümlelik bloğu altı kez yazmak, "sıfırla"yı bir gün beş yerde
+ * değiştirmek demekti (CLAUDE §1). Ekran yalnız KENDİ sorusunu söyler: başlık, künye satırı,
+ * koli bölümünün adı ve tuş takımının başlığı. Mal kabul kendi tabanını verir (`t.intake.qtySheet`
+ * — orada birim "paket"tir ve soru "kaç geldi"dir).
+ */
+export function qtySheetCopy(
+  override: Partial<Omit<QtySheetBase, 'keypad' | 'extra'>> & { keypadTitle?: string },
+  base: QtySheetBase = messages.qtySheet,
+): QtySheetBase {
+  const { keypadTitle, ...flat } = override;
+  return { ...base, ...flat, keypad: { ...base.keypad, title: keypadTitle ?? base.keypad.title } };
+}

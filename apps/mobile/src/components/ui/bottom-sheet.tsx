@@ -1,7 +1,25 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, Dimensions, Keyboard, Text, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+
+/*
+  İÇERİKTEKİ BOŞLUK ÖRTÜYE DÜŞMESİN (ölçüldü 02.09 · cihazda, kullanıcı bulgusu).
+
+  Tuş takımının "00" tuşunun sağındaki boş hücreye dokununca çekmece KAPANIYORDU. Ölçüm (uiautomator,
+  dokunulan noktanın altındaki görünümler): boşlukta dokunuşu sahiplenen hiçbir öğe yok, ve
+  kütüphanenin örtüsü tam ekran, tıklanabilir bir düğme — dokunuş içerikten geçip ona düşüyor ve
+  örtü "dışarı dokunuldu" sanıp kapatıyor. Jest kütüphanesi (gesture-handler) dokunuşu ağaçta EN
+  ÖNDEN arkaya doğru bir jest bulana kadar arıyor; içerikte jest yoksa arkadaki örtünün dokunma
+  jestine varıyor.
+
+  Çare içeriğe kendi jestini vermek: hiçbir şey yapmayan bir dokunma jesti. İçerikteki boşluk artık
+  dokunuşu sahipleniyor, örtüye yalnız gerçekten örtüye dokunulunca ulaşılıyor. Kaydırma ve
+  içerideki düğmeler etkilenmez — dokunma jesti yalnız hareketsiz, kısa dokunuşta biter ve içeride
+  bir düğme varsa o zaten daha önde. Jest nesnesi ÇEKMECE BAŞINA üretilir (`useMemo`): tek nesneyi
+  kırk çekmecenin paylaşması kütüphanenin "aynı jest birden çok algılayıcıda" uyarısıdır.
+*/
 
 /*
   YÜZEN SAYFA (bottom sheet) — v3'ün tek katman-üstü kalıbı (`shOn`). İçerik YUVADIR: sheet hangi
@@ -158,6 +176,9 @@ export function BottomSheet({
 
   /* Kullanıcı kapattı (sürükleme): çekmece kendi kapandığını söylüyor, bayrak burada düşer ki
      çağıranın `visible`ı düşünce ikinci bir `dismiss()` gitmesin — o çağrı çekmeceyi söker. */
+  /** İçerikteki boşluğun dokunuşunu sahiplenen, hiçbir şey yapmayan jest (dosya başındaki künye). */
+  const contentTap = useMemo(() => Gesture.Tap(), []);
+
   const handleDismiss = useCallback(() => {
     if (!shown.current) return;
     shown.current = false;
@@ -194,7 +215,10 @@ export function BottomSheet({
       android_keyboardInputMode="adjustResize"
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID={testID}>
-        {children}
+        {/* Boşluk dokunuşu burada biter, örtüye düşmez (dosya başındaki künye). */}
+        <GestureDetector gesture={contentTap}>
+          <View>{children}</View>
+        </GestureDetector>
         {/*
           PAY AYRI BİR BOŞLUKTUR, `paddingBottom` DEĞİL (ölçüldü 01.09 · cihazda).
           `contentContainerStyle` dizisine ikinci bir `paddingBottom` yazmak tabandakini TOPLAMAZ,

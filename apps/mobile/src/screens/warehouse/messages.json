@@ -6,6 +6,14 @@
     },
     "back": "Geri",
     "retry": "Tekrar dene",
+    "qtyHint": "adet çekmecesini açar",
+    "keypadHint": "tuş takımını açar",
+    "keypad": {
+      "unit": "adet",
+      "unitPack": "paket",
+      "delete": "Son rakamı sil",
+      "back": "Tamam"
+    },
     "offlineCta": "Bağlantı yok — kayıt kilitli",
     "offlineHint": "Bağlantı yok — raf ile sistemin çelişmemesi için yazma kapalı; işaret kuyruğa alınmaz.",
     "networkError": "Bağlantı yok — istek gönderilemedi.",
@@ -179,6 +187,11 @@
       "batch": "{code} · SKT {date}",
       "complete": "tamamı ✓",
       "qtyLabel": "{name} için toplanan adet",
+      "keypad": {
+        "title": "Kaç adet toplandı",
+        "hint": "{name} · istenen {qty}",
+        "footnote": "Motorun ayırdığı partiden fazlası yazılamaz — rafta olmayan mal toplanmış sayılmaz."
+      },
       "pinned": "⚓ İndirimli teklif — yalnız bu partiden verilebilir",
       "shortReported": "Eksik bildirildi — bu kalem eksik gidiyor",
       "shortLink": "eksik bildir",
@@ -440,8 +453,6 @@
         "open": "rakamla gir",
         "title": "Kaç paket geldi",
         "hint": "Yazdığın sayı TOPLAM olur — koli dökümü sıfırlanır.",
-        "confirm": "Yaz",
-        "cancel": "Vazgeç",
         "delete": "Son rakamı sil"
       },
       "extra": {
@@ -495,6 +506,11 @@
       "placeholder": "ne oldu?",
       "title": "HASARLI PAKET SAYISI",
       "question": "Kabul ettiğin {n} paketin kaçı hasarlı? Toplam değişmez, içinden işaretlenir.",
+      "keypad": {
+        "title": "Kaç paket hasarlı",
+        "hint": "{name} · kabul edilen {n}",
+        "footnote": "Kabul edilen {n} paketin içinden işaretlenir — fazlası yazılamaz."
+      },
       "sound": "sağlam {n}",
       "broken": "hasarlı {n}",
       "reasons": ["ıslak koli", "ezik / kırık", "soğuk zincir şüphesi", "ambalaj açık"],
@@ -545,8 +561,6 @@
       "drawerSku": "SKU eşleşmesi — barkod değil, katalog kodu",
       "drawerSupplier": "Tedarikçi kodu eşleşmesi",
       "drawerQty": "Gelen adet",
-      "drawerQtyIncrease": "Adedi artır",
-      "drawerQtyDecrease": "Adedi azalt",
       "drawerCases": "{k} koli",
       "drawerCasesPlus": "{k} koli + {m} adet",
       "drawerConfirm": "Satıra ekle",
@@ -679,41 +693,13 @@
       "emptyBody": "Sayım her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.",
       "qtyHeading": "RAFTA SAYDIĞIN ADET",
       "qtyField": "Rafta sayılan adet",
-      "qtyOpen": "Rafta saydığın adedi gir",
       "qtyEmpty": "—",
       "qtySheet": {
         "title": "Rafta kaç var",
         "subject": "{name} · {code}",
-        "reset": "sıfırla",
         "unit": "adet · rafta",
-        "sumLoose": "{n} tek",
-        "sumTotal": "{parts}  =  {n} adet",
-        "sumEmpty": "henüz sayılmadı",
         "casesTitle": "KAÇ KOLİ SAYDIN",
-        "casesHint": "Koliyi tek tek açma: kaç koli varsa o kadar ekle, çarpmayı ekran yapar.",
-        "caseLabel": "Koli — {n} adet",
-        "caseTotal": "{n} adet",
-        "caseIdle": "kolideki adet",
-        "caseNew": "YENİ · yalnız bu sayımda",
-        "addTitle": "Başka koli boyu",
-        "addHint": "altılı, onlu… listede yoksa ekle",
-        "looseTitle": "KOLİ DIŞI TEK",
-        "looseHint": "açık duran, tek tek sayılanlar",
-        "confirm": "Tamam",
-        "keypad": {
-          "open": "rakamla gir",
-          "title": "Rafta kaç adet var",
-          "hint": "Yazdığın sayı TOPLAM olur — koli dökümü sıfırlanır.",
-          "confirm": "Yaz",
-          "cancel": "Vazgeç",
-          "delete": "Son rakamı sil"
-        },
-        "extra": {
-          "title": "Kolide kaç adet var",
-          "hint": "Rafta duran kolinin çarpanını seç — sayım bu çarpanla toplanır.",
-          "footnote": "Listede yoksa tek tek say: sahada uydurulmuş bir çarpan, sayımı düzeltmek yerine bozar.",
-          "cancel": "Vazgeç"
-        }
+        "keypadTitle": "Rafta kaç adet var"
       },
       "same": "Fark yok — kayıt sistemdekiyle aynı.",
       "less": "Sistemde {system} yazıyor, sen {counted} saydın — {diff} adet EKSİK.",
@@ -745,6 +731,11 @@
       "emptyFootnote": "Süresi geçmiş mal buraya girmez — onun imhası Yakın-SKT turunda, sebebi zaten bellidir.",
       "qtyHeading": "KAÇ ADET DÜŞÜYOR",
       "qtyField": "Düşülen adet: {n}",
+      "keypad": {
+        "title": "Kaç adet düşüyor",
+        "hint": "{name} · {code}",
+        "footnote": "Partide {total} adet var — fazlası yazılamaz."
+      },
       "tally": "Partideki {total} adetin kaçı düşüyor? Kalan {left} rafta durmaya devam eder.",
       "limit": "Partinin tamamı — bundan fazlası düşülemez.",
       "reasonPick": "sebep seç",
@@ -786,6 +777,12 @@
     "heading": "RAMPADA SAY — GELEN ADEDİ GİR",
     "dispatched": "sevk edilen {qty}",
     "qtyLabel": "{name} için gelen adet",
+    "qtySheet": {
+      "title": "Kaç adet geldi",
+      "subject": "{name} · sevk edilen {qty}",
+      "casesTitle": "KAÇ KOLİ GELDİ",
+      "keypadTitle": "Kaç adet geldi"
+    },
     "missing": "sayılmadı",
     "footnote": "Boş bırakmak ile 0 yazmak ayrı şeydir: boş “saymadım” demektir ve kabulü bloklar; 0 “koli geldi, mal yok” demektir ve fark kaydı doğurur. Sevk anında mal kaynaktan düşer; dönüş ters transferdir.",
     "cta": {
@@ -934,5 +931,37 @@
       "failed": "Basılamadı: {error}"
     },
     "footnote": "Yazıcı seçimi cihaz başına saklanır; başka telefonla girdiğinde yeniden sorulur."
+  },
+  "qtySheet": {
+    "title": "Kaç adet",
+    "subject": "{name}",
+    "reset": "sıfırla",
+    "unit": "adet · toplam",
+    "sumLoose": "{n} tek",
+    "sumTotal": "{parts}  =  {n} adet",
+    "sumEmpty": "henüz sayılmadı",
+    "casesTitle": "KAÇ KOLİ",
+    "casesHint": "Koliyi tek tek açma: kaç koli varsa o kadar ekle, çarpmayı ekran yapar.",
+    "caseLabel": "Koli — {n} adet",
+    "caseTotal": "{n} adet",
+    "caseIdle": "kolideki adet",
+    "caseNew": "YENİ · yalnız bu sayımda",
+    "addTitle": "Başka koli boyu",
+    "addHint": "altılı, onlu… listede yoksa ekle",
+    "looseTitle": "KOLİ DIŞI TEK",
+    "looseHint": "açık duran, tek tek sayılanlar",
+    "confirm": "Tamam",
+    "keypad": {
+      "open": "rakamla gir",
+      "title": "Kaç adet",
+      "hint": "Yazdığın sayı TOPLAM olur — koli dökümü sıfırlanır.",
+      "delete": "Son rakamı sil"
+    },
+    "extra": {
+      "title": "Kolide kaç adet var",
+      "hint": "Elindeki kolinin çarpanını seç — sayı bu çarpanla toplanır.",
+      "footnote": "Listede yoksa tek tek say: sahada uydurulmuş bir çarpan, sayımı düzeltmek yerine bozar.",
+      "cancel": "Vazgeç"
+    }
   }
 }

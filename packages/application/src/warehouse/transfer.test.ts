@@ -177,6 +177,8 @@ describe('"bana ne geliyor" listesi', () => {
         dispatchedQty: 4,
         // `null` = henüz sayılmadı; `0` olsaydı "geldi ama kayıp" derdi (0042).
         receivedQty: null,
+        // Fikstür ürünü koli kodu taşımıyor — liste boş, uydurulmaz.
+        caseSizes: [],
       },
     ]);
   });

@@ -1,4 +1,5 @@
 import { ProductService, StockService, VariantBarcodeService } from '@lezzet/database';
+import { caseSizesByVariant } from './case-sizes';
 import { publicImageUrl } from '@lezzet/storage';
 import { resolveLocalizedText, type ProductDateType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -140,23 +141,16 @@ async function withStock(
   if (rows.length === 0) return [];
   const variantIds = rows.map((row) => row.variantId);
   // Stok ve koli boyları birbirini beklemez: ikisi de aynı listenin aynı anındaki künyesi.
-  const [stock, barcodes] = await Promise.all([
+  const [stock, casesOf] = await Promise.all([
     new StockService(db).listAvailableAcross([warehouseId], variantIds),
-    new VariantBarcodeService(db).listByVariants(variantIds),
+    // Eleme (paket kodu) ve sıra (çarpan) tek kapıda — `case-sizes` künyesi.
+    caseSizesByVariant(db, variantIds),
   ]);
   const available = new Map(stock.map((row) => [row.variantId, row.availableQty]));
-  const casesOf = new Map<string, { code: string; qtyPerCode: number }[]>();
-  for (const barcode of barcodes) {
-    // Paket kodu (`unit`, çarpan 1) elenir: çekmecede "1 paketlik koli" diye görünürdü.
-    if (barcode.kind !== 'case') continue;
-    const list = casesOf.get(barcode.variantId) ?? [];
-    list.push({ code: barcode.code, qtyPerCode: barcode.qtyPerCode });
-    casesOf.set(barcode.variantId, list);
-  }
   return rows.map((row) => ({
     ...row,
     stockQty: available.get(row.variantId) ?? 0,
-    caseSizes: (casesOf.get(row.variantId) ?? []).sort((a, b) => a.qtyPerCode - b.qtyPerCode),
+    caseSizes: casesOf.get(row.variantId) ?? [],
   }));
 }
 

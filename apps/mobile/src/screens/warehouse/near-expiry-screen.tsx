@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { OperationsKeypadPanel } from '@/components/operations/keypad-panel';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -46,11 +47,14 @@ export function NearExpiryScreen() {
   /** Çekmecenin konusu — `null` = kapalı. Adet ayrı tutuluyor: depocu kısmi imha yazabilir. */
   const [discardTarget, setDiscardTargetState] = useState<NearExpiryBatchContract | null>(null);
   const [discardQty, setDiscardQty] = useState(0);
+  /** Çekmecenin adımı: sayaç · tuş takımı. Her açılış sayaçla başlar. */
+  const [discardStep, setDiscardStep] = useState<'form' | 'keypad'>('form');
   /* Çekmece açılırken adet partinin TAMAMI ile başlar: imha edilen mal çoğunlukla partinin
      hepsidir ve depocuya sayı yazdırmak, bildiği bir şeyi tekrarlatmak olurdu. Azaltabilir. */
   const setDiscardTarget = (batch: NearExpiryBatchContract | null) => {
     setDiscardTargetState(batch);
     setDiscardQty(batch?.qty ?? 0);
+    setDiscardStep('form');
   };
 
   /* Partiyi D4'e taşıyan tek yol — hem satırdaki bağ hem alttaki düğme buradan geçiyor.
@@ -247,16 +251,43 @@ export function NearExpiryScreen() {
             <Text style={styles.sheetReason}>{t.nearExpiry.discard.reasonFixed}</Text>
 
             {/* ± SAYACI, metin alanı DEĞİL (tasarım): depocu partinin tamamını imha ediyor ve
-                azaltıyorsa bir iki adet azaltıyor — klavye açtırmak o işi yavaşlatırdı. Üst sınır
-                partinin kendisi: olmayan malı düşürmek fiziksel gerçeğin ihlalidir. */}
-            <OperationsStepperGroup
-              value={discardQty}
-              onChange={(next) => setDiscardQty(Math.min(next, discardTarget.qty))}
-              min={0}
-              label={t.nearExpiry.discard.qtyHeading}
-              tone="error"
-              testID="warehouse-near-expiry-discard-qty"
-            />
+                azaltıyorsa bir iki adet azaltıyor. Üst sınır partinin kendisi (`max`): olmayan
+                malı düşürmek fiziksel gerçeğin ihlalidir. Ortadaki rakam TUŞ TAKIMI adımını açar
+                (kullanıcı kararı 02.09): bu sayaç zaten bir çekmecenin içinde ve çekmece çekmece
+                açamaz (`bottom-sheet` künyesi, 21.121) — tuş takımı aynı çekmecenin adımı olur. */}
+            {discardStep === 'keypad' ? (
+              <>
+                <OperationsKeypadPanel
+                  value={String(discardQty)}
+                  unit={t.common.keypad.unit}
+                  allowDecimals={false}
+                  max={discardTarget.qty}
+                  hint={t.nearExpiry.discard.qtyHeading}
+                  deleteLabel={t.common.keypad.delete}
+                  onChange={(text) => setDiscardQty(text.length === 0 ? 0 : Number.parseInt(text, 10))}
+                  testID="warehouse-near-expiry-discard-keypad"
+                />
+                <PrimaryButton
+                  label={t.common.keypad.back}
+                  tone="ink"
+                  elevation="flat"
+                  onPress={() => setDiscardStep('form')}
+                  testID="warehouse-near-expiry-discard-keypad-back"
+                />
+              </>
+            ) : (
+              <OperationsStepperGroup
+                value={discardQty}
+                onChange={setDiscardQty}
+                min={0}
+                max={discardTarget.qty}
+                label={t.nearExpiry.discard.qtyHeading}
+                tone="error"
+                onPressValue={() => setDiscardStep('keypad')}
+                valueHint={t.common.keypadHint}
+                testID="warehouse-near-expiry-discard-qty"
+              />
+            )}
             <Text style={styles.sheetContext}>
               {fillCopy(t.nearExpiry.discard.context, {
                 left: String(discardTarget.qty),

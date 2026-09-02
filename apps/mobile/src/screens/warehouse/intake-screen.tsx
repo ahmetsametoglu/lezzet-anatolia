@@ -13,8 +13,9 @@ import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsDateSheet } from '@/components/operations/date-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
-import { OperationsQtySlider } from '@/components/operations/qty-slider';
+import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
@@ -760,15 +761,21 @@ function LearnSheet({ intake, onLearnSearch }: { intake: ReturnType<typeof useIn
             />
           </View>
           {intake.learn.kind === 'unit' ? null : (
-            <OperationsQtySlider
-              value={intake.learn.qtyPerCode}
-              onChange={intake.setLearnQty}
-              step={1}
-              accessibilityLabel={t.intake.scan.learnUnitQty}
-              fineLabels={{ increase: t.intake.scan.drawerQtyIncrease, decrease: t.intake.scan.drawerQtyDecrease }}
-              caption={t.intake.scan.learnUnitCaption}
-              testID="warehouse-intake-learn-qty"
-            />
+            /* KİTİN TEK ADET DESENİ (kullanıcı kararı 02.09: "o kaydırmalı komponent komple
+               kalksın") — kaydırıcının son kullanıcısıydı. Taban 2: koli en az iki paket,
+               `confirmLearn`in kilidi de aynı kuralda. Ortadaki rakam bu çekmecede çekmece açmaz
+               (çekmece çekmece açamaz); çarpan çoğu zaman 6–24 arası, ± yeter. */
+            <View style={styles.learnQty}>
+              <OperationsStepperGroup
+                value={intake.learn.qtyPerCode}
+                onChange={intake.setLearnQty}
+                min={2}
+                size="lg"
+                label={t.intake.scan.learnUnitQty}
+                testID="warehouse-intake-learn-qty"
+              />
+              <Text style={styles.learnQtyCaption}>{t.intake.scan.learnUnitCaption}</Text>
+            </View>
           )}
           <PrimaryButton
             label={t.intake.scan.learnConfirm}
@@ -943,6 +950,8 @@ interface IntakeRowProps {
 function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountConsumed, lotSuggestions, onPatch }: IntakeRowProps) {
   const [dateOpen, setDateOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
+  /** Hasar sayacının ortasındaki rakam TUŞ TAKIMINI açar (kullanıcı kararı 02.09; künye aşağıda). */
+  const [damageQtyOpen, setDamageQtyOpen] = useState(false);
   const [lotOpen, setLotOpen] = useState(false);
   /* Hasar SEBEBİ çekmecesinin AÇIKLIĞI artık ekranın durumu değil: kalıp kite taşındı ve çekmeceyi
      `OperationsQtyReasonRow` kendi içinde tutuyor (02.09) — açılışı ekranın bilmesi gereken bir şey
@@ -1222,6 +1231,26 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
             testID={`warehouse-intake-qty-sheet-${row.variantId}`}
           />
 
+          {/* HASARIN TUŞ TAKIMI — sayacın ortasındaki rakamdan; ADET ÇEKMECESİ DEĞİL (kullanıcı
+              kararı 02.09: koli sorulmayan yerde çekmece gürültü — hasar paket paket işaretlenir).
+              CANLI: her tuş sayaca yazılır, kapatmak yeter. Tavan tuşta: kabul edilen adetten
+              fazlasını yazacak tuş işlemez. */}
+          <OperationsAmountKeypad
+            visible={damageQtyOpen}
+            title={t.intake.damage.keypad.title}
+            value={String(state.damagedQty)}
+            expected={null}
+            unit={t.common.keypad.unitPack}
+            allowDecimals={false}
+            max={state.qty ?? 0}
+            hint={fillCopy(t.intake.damage.keypad.hint, { name, n: String(state.qty ?? 0) })}
+            footnote={fillCopy(t.intake.damage.keypad.footnote, { n: String(state.qty ?? 0) })}
+            deleteLabel={t.common.keypad.delete}
+            onChange={(text) => onPatch({ damagedQty: text.length === 0 ? 0 : Number.parseInt(text, 10) })}
+            onClose={() => setDamageQtyOpen(false)}
+            testID={`warehouse-intake-damage-keypad-${row.variantId}`}
+          />
+
           <OperationsDateSheet
             visible={dateOpen}
             title={t.intake.expiry.sheet.title}
@@ -1371,6 +1400,8 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
                 onQtyChange={(next) => onPatch({ damagedQty: next })}
                 qtyLabel={fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}
                 max={state.qty ?? 0}
+                onPressQty={() => setDamageQtyOpen(true)}
+                qtyHint={t.common.keypadHint}
                 reason={state.damageReason}
                 reasons={t.intake.damage.reasons}
                 onReasonChange={(reason) => onPatch({ damageReason: reason })}
@@ -2145,6 +2176,13 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.muted,
+  },
+  learnQty: { gap: operationsTheme.space.sm },
+  learnQtyCaption: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+    textAlign: 'center',
   },
   learnCancel: {
     marginTop: operationsTheme.space.xl,

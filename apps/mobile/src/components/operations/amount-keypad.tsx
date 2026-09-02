@@ -48,11 +48,16 @@ interface OperationsAmountKeypadProps {
    * yok ve virgül tuşunu açık bırakmak, kabul edilemeyecek bir değeri yazılabilir gösterirdi.
    */
   allowDecimals?: boolean;
-  confirmLabel: string;
+  /** Tam sayı tavanı — aşacak tuş işlemez (`keypad-panel` künyesi). */
+  max?: number;
   hint: string;
-  footnote: string;
+  footnote?: string;
   deleteLabel: string;
-  onConfirm: (text: string) => void;
+  /** CANLI kip (adet): her tuş çağırana gider, onay satırı yok — kapatmak yeter (kullanıcı 02.09). */
+  onChange?: (text: string) => void;
+  /** ONAYLI kip (para): değer ancak düğmeyle çıkar. */
+  onConfirm?: (text: string) => void;
+  confirmLabel?: string;
   onClose: () => void;
   testID?: string;
 }
@@ -65,11 +70,13 @@ export function OperationsAmountKeypad({
   expectedLabel,
   unit,
   allowDecimals = true,
-  confirmLabel,
+  max,
   hint,
   footnote,
   deleteLabel,
+  onChange,
   onConfirm,
+  confirmLabel,
   onClose,
   testID,
 }: OperationsAmountKeypadProps) {
@@ -81,11 +88,13 @@ export function OperationsAmountKeypad({
         expectedLabel={expectedLabel}
         unit={unit}
         allowDecimals={allowDecimals}
-        confirmLabel={confirmLabel}
+        max={max}
         hint={hint}
         footnote={footnote}
         deleteLabel={deleteLabel}
+        onChange={onChange}
         onConfirm={onConfirm}
+        confirmLabel={confirmLabel}
         /* Taslak her AÇILIŞTA sıfırlanır: çekmece kapalıyken de monte kalıyor ve bir önceki
            denemenin yarım kalan tutarı ikinci açılışta karşımıza çıkmamalı. */
         resetKey={visible}

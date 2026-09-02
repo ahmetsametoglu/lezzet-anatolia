@@ -30,9 +30,13 @@ import { OperationsStepperGroup } from './stepper-group';
   · **Alan + çekmece** — BURASI: sebep bir sayacın yanında, satırın ikinci sütunu. Çipler o satıra
     sığmaz, sığdırılırsa sayacı ezer.
 
-  ── TAVAN BİLEŞENDE ─────────────────────────────────────────────────────────
-  `max` verilirse sayaç oraya dayanır ve artı düğmesi söner. "12 paketin 15'i hasarlı" bir sayım
-  değil, bir çelişkidir; kapının reddedeceği bir işi hiç yaptırmamak ekranın görevi.
+  ── TAVAN SAYAÇTA ───────────────────────────────────────────────────────────
+  `max` kitin sayacına gider ve artı orada söner. "12 paketin 15'i hasarlı" bir sayım değil, bir
+  çelişkidir; kapının reddedeceği bir işi hiç yaptırmamak ekranın görevi.
+
+  ── SAYAÇ KİTİN TEK ADET DESENİDİR ──────────────────────────────────────────
+  Soldaki sayaç `OperationsStepperGroup`un kendisi (kullanıcı kararı 02.09: her yerde aynı
+  `− 3 +`), ortadaki rakam `onPressQty` ile ADET ÇEKMECESİNİ açar — çekmece çağıranda durur.
 */
 
 interface OperationsQtyReasonRowProps {
@@ -44,6 +48,15 @@ interface OperationsQtyReasonRowProps {
   /** Tavan; verilmezse sınırsız. Sayaç buna dayanınca artı söner. */
   max?: number;
   tone?: 'neutral' | 'positive' | 'error';
+  /**
+   * Sayacın ORTASINDAKİ rakama basılınca — çağıran ADET ÇEKMECESİNİ açar (kullanıcı kararı
+   * 02.09, kitin tek adet deseni). Çekmece BURADA değil çağıranda durur: kit i18n bilmez ve bu
+   * satır zaten bir çekmece (sebep) taşıyor — ikincisini de taşısaydı, sözlerinin tamamını prop
+   * olarak alması gerekirdi.
+   */
+  onPressQty?: () => void;
+  /** Rakama basınca ne olacağının ekran-okuyucu ipucu ("adet çekmecesini açar"). */
+  qtyHint?: string;
   /** Seçili sebep; `null` = henüz seçilmedi ve alan yer tutucusunu gösterir. */
   reason: string | null;
   reasons: readonly string[];
@@ -63,6 +76,8 @@ export function OperationsQtyReasonRow({
   min = 0,
   max,
   tone = 'error',
+  onPressQty,
+  qtyHint,
   reason,
   reasons,
   onReasonChange,
@@ -75,14 +90,17 @@ export function OperationsQtyReasonRow({
 
   return (
     <View style={styles.row} testID={testID}>
+      {/* Tavan SAYAÇTA (kit): artı orada söner. Sınırın kendisi çağıranın gerçeğinden geliyor
+          (kabul edilen adet, partideki mal); kit yalnız duvarı çizer. */}
       <OperationsStepperGroup
         value={qty}
         min={min}
+        max={max}
         label={qtyLabel}
         tone={tone}
-        // Tavan BURADA, `StepperGroup`ta değil: kitin sayacı bir sınır bilmiyor ve bilmemeli —
-        // sınır çağıranın gerçeğinden (kabul edilen adet, partideki mal) geliyor.
-        onChange={(next) => onQtyChange(max === undefined ? next : Math.min(next, max))}
+        onChange={onQtyChange}
+        onPressValue={onPressQty}
+        valueHint={qtyHint}
         testID={`${testID}-qty`}
       />
 

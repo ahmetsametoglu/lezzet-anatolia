@@ -10,11 +10,12 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsProductRow } from '@/components/operations/product-row';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
-import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { PrintProbe } from '@/components/print/print-probe';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -28,7 +29,7 @@ import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import { usePreparation, type DispatchState, type PreparationScope, type PrintState } from './use-preparation.hook';
-import { batchLabel, boxSizeLine, orderPickingQueue, parseQty, productLabel, qtyToText } from './warehouse-format';
+import { batchLabel, boxSizeLine, orderPickingQueue, productLabel } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -67,6 +68,8 @@ export function PreparationScreen() {
   const [sealAsk, setSealAsk] = useState(false);
   /** Menüsü açık olan KAPALI kutunun kimliği — `null` = menü kapalı. */
   const [boxMenu, setBoxMenu] = useState<string | null>(null);
+  /** Satır sayacının ortasındaki rakamdan açılan TUŞ TAKIMININ kalemi — `null` = kapalı. */
+  const [qtyLineId, setQtyLineId] = useState<string | null>(null);
   const router = useRouter();
   const picking = usePreparation();
 
@@ -550,6 +553,7 @@ export function PreparationScreen() {
                 shortReported={picking.lineState(line.itemId).shortReported}
                 capacity={picking.capacityOf(line)}
                 onQty={(value) => picking.setQty(line.itemId, value, picking.capacityOf(line))}
+                onPressQty={() => setQtyLineId(line.itemId)}
                 onComplete={() =>
                   picking.setQty(line.itemId, Math.min(line.orderedQty, picking.capacityOf(line)), picking.capacityOf(line))
                 }
@@ -848,10 +852,50 @@ export function PreparationScreen() {
           confirmDisabled={picking.qtyValue <= 0}
           onConfirm={picking.confirmQty}
           footnote={t.picking.qtySheet.footnote}
+          /* Ortadaki rakam tuş takımı ADIMINI açar (kullanıcı kararı 02.09) — çekmece çekmece
+             açamaz, tuş takımı aynı çekmecenin adımı; sözleri buradan. */
+          keypad={{
+            unit: t.common.keypad.unit,
+            hint: t.picking.qtySheet.qtyCaption,
+            deleteLabel: t.common.keypad.delete,
+            backLabel: t.common.keypad.back,
+            valueHint: t.common.keypadHint,
+          }}
           onClose={picking.closeQtySheet}
           testID="warehouse-picking-qty-sheet"
         />
       )}
+
+      {/* SATIR SAYACININ TUŞ TAKIMI — okutma çekmecesinden AYRI: o okutulan kalemi kalanla dolu
+          getirir, bu elle sayılan kalemin rakamıdır. ADET ÇEKMECESİ DEĞİL (kullanıcı kararı 02.09:
+          toplamada koli sorulmaz, koli bölümü ve cetvel gürültüydü). CANLI: her tuş sayaca yazılır;
+          tavan tuşta — motorun kapasitesinden fazlasını yazacak tuş işlemez. Tek örnek; hangi
+          kaleme yazacağını `qtyLineId` söyler. */}
+      {(() => {
+        const qtyLine = order?.lines.find((line) => line.itemId === qtyLineId) ?? null;
+        return qtyLine === null ? null : (
+          <OperationsAmountKeypad
+            visible
+            title={t.picking.line.keypad.title}
+            value={String(picking.lineState(qtyLine.itemId).qty)}
+            expected={null}
+            unit={t.common.keypad.unit}
+            allowDecimals={false}
+            max={picking.capacityOf(qtyLine)}
+            hint={fillCopy(t.picking.line.keypad.hint, {
+              name: productLabel(qtyLine.productName, qtyLine.variantLabel),
+              qty: String(qtyLine.orderedQty),
+            })}
+            footnote={t.picking.line.keypad.footnote}
+            deleteLabel={t.common.keypad.delete}
+            onChange={(text) =>
+              picking.setQty(qtyLine.itemId, text.length === 0 ? 0 : Number.parseInt(text, 10), picking.capacityOf(qtyLine))
+            }
+            onClose={() => setQtyLineId(null)}
+            testID="warehouse-picking-line-keypad"
+          />
+        );
+      })()}
     </View>
   );
 }
@@ -1284,11 +1328,25 @@ interface LineRowProps {
   shortReported: boolean;
   capacity: number;
   onQty: (qty: number | null) => void;
+  /** Sayacın ortasındaki rakam — ekran bu kalem için TUŞ TAKIMINI açar. */
+  onPressQty: () => void;
   onComplete: () => void;
   onShort: () => void;
 }
 
-function LineRow({ line, index, boxMode, offline, qty, shortReported, capacity, onQty, onComplete, onShort }: LineRowProps) {
+function LineRow({
+  line,
+  index,
+  boxMode,
+  offline,
+  qty,
+  shortReported,
+  capacity,
+  onQty,
+  onPressQty,
+  onComplete,
+  onShort,
+}: LineRowProps) {
   const name = productLabel(line.productName, line.variantLabel);
   const first = line.suggestion[0];
   const wanted =
@@ -1339,12 +1397,17 @@ function LineRow({ line, index, boxMode, offline, qty, shortReported, capacity, 
           </Text>
         ) : (
           <>
-            <OperationsQtyField
-              value={qtyToText(qty)}
-              onChangeText={(text) => onQty(parseQty(text))}
-              accessibilityLabel={fillCopy(t.picking.line.qtyLabel, { name })}
-              tone={complete ? 'done' : 'neutral'}
-              size="sm"
+            {/* KİTİN TEK ADET DESENİ (02.09) — eskiden çerçeveli bir metin alanıydı. Tavan motorun
+                kapasitesi: rafta olmayan mal "toplandı" yazılamaz (sert duvar). Tam toplanmış
+                kalem zeytine döner; ortadaki rakam adet çekmecesini açar. */}
+            <OperationsStepperGroup
+              value={qty}
+              onChange={onQty}
+              max={capacity}
+              label={fillCopy(t.picking.line.qtyLabel, { name })}
+              tone={complete ? 'positive' : 'neutral'}
+              onPressValue={onPressQty}
+              valueHint={t.common.keypadHint}
               testID={`warehouse-picking-qty-${line.itemId}`}
             />
             <PressableSurface

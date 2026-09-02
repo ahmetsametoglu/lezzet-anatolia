@@ -87,8 +87,8 @@ interface QuantitySheetCopy {
   confirm: string;
   /** İkinci adım: koli boyu seçimi. */
   extra: { title: string; hint: string; footnote: string; cancel: string };
-  /** Üçüncü adım: rakamla giriş — koyu kartın ipucu metni de burada (`open`). */
-  keypad: { open: string; title: string; hint: string; confirm: string; cancel: string; delete: string };
+  /** Üçüncü adım: rakamla giriş — koyu kartın ipucu metni de burada (`open`). Canlı yazar; onayı yok. */
+  keypad: { open: string; title: string; hint: string; delete: string };
 }
 
 interface OperationsQuantitySheetProps {
@@ -150,28 +150,23 @@ export function OperationsQuantitySheet({
     return (
       <BottomSheet visible={visible} title={copy.keypad.title} onClose={onClose} testID={testID}>
         <Text style={styles.subject}>{copy.subject}</Text>
+        {/* CANLI: her tuş toplamı anında yazar, onay düğmesi yok (kullanıcı kararı 02.09 — tuş
+            takımı künyesi). Boş alan sıfır DEĞİL "henüz yazmadım"dır: silinip boş kalan alan
+            toplamı sıfırlamaz, önceki sayı durur; sıfırlamanın kendi yolu var (başlıktaki
+            "sıfırla"). "Tamam" burada da KAPATMADIR, sayım adımındaki gibi. */}
         <OperationsKeypadPanel
           value={total === 0 ? '' : String(total)}
           unit={copy.unit}
           allowDecimals={false}
-          confirmLabel={copy.keypad.confirm}
           hint={copy.keypad.hint}
           deleteLabel={copy.keypad.delete}
-          onConfirm={(text) => {
-            /* Boş onay DEĞERİ SİLMEZ, adımı kapatır: "yazmaktan vazgeçtim" ile "sıfır say" ayrı
-               şeyler ve ikincisinin kendi yolu var (başlıktaki "sıfırla"). */
-            const typed = Number.parseInt(text.replace(/\D/g, ''), 10);
-            if (Number.isSafeInteger(typed)) onChange({ cases: [], loose: typed });
-            setStep('count');
+          onChange={(text) => {
+            if (text.length === 0) return;
+            onChange({ cases: [], loose: Number.parseInt(text, 10) });
           }}
           testID={id('keypad')}
         />
-        <SecondaryButton
-          label={copy.keypad.cancel}
-          onPress={() => setStep('count')}
-          elevation="flat"
-          testID={id('keypad-cancel')}
-        />
+        <PrimaryButton label={copy.confirm} onPress={onClose} tone="ink" elevation="flat" testID={id('keypad-confirm')} />
       </BottomSheet>
     );
   }

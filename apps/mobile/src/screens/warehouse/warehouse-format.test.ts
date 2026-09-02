@@ -3,9 +3,7 @@ import {
   boxSizeLine,
   orderPickingQueue,
   parseDate,
-  parseQty,
   productLabel,
-  qtyToText,
   shortDate,
 } from './warehouse-format';
 import { warehouseCopy } from './copy';
@@ -13,37 +11,9 @@ import { warehouseCopy } from './copy';
 /*
   BİÇİMLEME BİRİM TESTİ — ekran çizmeden, yalnız kurallar.
 
-  En önemli iddia `parseQty`in `null`/`0` ayrımı: bütün D5 ekranı bu ayrımın üstünde duruyor
-  ("0 = geldi ama kayıp; boş = sayılmadı") ve bir gün biri "boşu sıfır sayalım" derse bu dosya
-  kırmızıya döner.
+  Boş ile sıfır ayrımı (D5: "0 = geldi ama kayıp; boş = sayılmadı") artık burada değil kitin
+  sayacında sınanıyor (`stepper-group.test.tsx`, 02.09): adet metinden okunmuyor, sayılıyor.
 */
-
-describe('parseQty · boş ile sıfır AYRI şeydir', () => {
-  it('boş girdi `null` döner — sıfır DEĞİL', () => {
-    expect(parseQty('')).toBeNull();
-    expect(parseQty('   ')).toBeNull();
-  });
-
-  it('sıfır GEÇERLİ bir beyandır', () => {
-    expect(parseQty('0')).toBe(0);
-  });
-
-  it('işaretli adet okunur (D4 iki yönlüdür)', () => {
-    expect(parseQty('-3')).toBe(-3);
-    expect(parseQty('12')).toBe(12);
-  });
-
-  it('ondalık ve harf reddedilir — adet tamdır', () => {
-    expect(parseQty('1,5')).toBeNull();
-    expect(parseQty('1.5')).toBeNull();
-    expect(parseQty('iki')).toBeNull();
-  });
-
-  it('`qtyToText` boşu boş bırakır (yer tutucu görünsün)', () => {
-    expect(qtyToText(null)).toBe('');
-    expect(qtyToText(0)).toBe('0');
-  });
-});
 
 describe('SKT çevrimi', () => {
   it('ISO → kısa yazım', () => {

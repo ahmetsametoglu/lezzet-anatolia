@@ -8,7 +8,6 @@ import {
   StorageAreaService,
   SupplierProductService,
   SupplierService,
-  VariantBarcodeService,
 } from '@lezzet/database';
 import { meetsMlor } from '@lezzet/domain-core';
 import { logger } from '@lezzet/observability';
@@ -21,6 +20,7 @@ import type {
   StorageAreaKind,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { caseSizesByVariant } from './case-sizes';
 import { variantNames } from './names';
 
 /**
@@ -184,15 +184,14 @@ export async function openIntakeForm(
   // İki okuma birbirini beklemez: ad+tarih rejimi tek zincirden (`names.ts`), tedarikçi kodu ayrı.
   // Kod eşlemesi KALEMİN işaret ettiği kimlikle çözülür (`supplierProductId`), varyantla değil —
   // gerekçe `SupplierProductService.listByIds` künyesinde.
-  const [names, mappings, barcodes, lotsOf] = await Promise.all([
+  const [names, mappings, casesOf, lotsOf] = await Promise.all([
     variantNames(db, lines.map((line) => line.variantId)),
     new SupplierProductService(db).listByIds(
       lines.map((line) => line.supplierProductId).filter((id): id is string => id !== null),
     ),
     // Koli boyları TEK sorguda, form açılışında: çekmece açıldığında ikinci bir tur atılsaydı
-    // depocu ± düğmelerine bir yükleme beklerken basardı. Paket kodları (`unit`) burada elenir —
-    // çarpanı 1 olan bir kod çekmecede "1 paketlik koli" diye görünürdü.
-    new VariantBarcodeService(db).listByVariants(lines.map((line) => line.variantId)),
+    // depocu ± düğmelerine bir yükleme beklerken basardı. Eleme ve sıra tek kapıda (`case-sizes`).
+    caseSizesByVariant(db, lines.map((line) => line.variantId)),
     // LOT ADAYLARI da aynı turda: çekmece açıldığında ayrı bir uçuş, depocuyu öneri listesi
     // dolarken bekletirdi. Deposuz çağrıda okuma hiç yapılmaz (künye imzada).
     warehouseId == null
@@ -200,13 +199,6 @@ export async function openIntakeForm(
       : new StockService(db).recentLotsByVariants(warehouseId, lines.map((line) => line.variantId), LOT_CANDIDATE_LIMIT),
   ]);
   const codeOf = new Map(mappings.map((mapping) => [mapping.id, mapping.supplierCode]));
-  const casesOf = new Map<string, CaseSizeContract[]>();
-  for (const barcode of barcodes) {
-    if (barcode.kind !== 'case') continue;
-    const list = casesOf.get(barcode.variantId) ?? [];
-    list.push({ code: barcode.code, qtyPerCode: barcode.qtyPerCode });
-    casesOf.set(barcode.variantId, list);
-  }
 
   return lines.map((line) => ({
     variantId: line.variantId,
@@ -218,9 +210,7 @@ export async function openIntakeForm(
     // "bilinmiyorsa ne olur" kararı burada kurulmuyor (gerekçe orada, tek yerde).
     dateType: names.get(line.variantId)?.dateType ?? 'DDM',
     shelfLifeDays: names.get(line.variantId)?.shelfLifeDays ?? null,
-    // Sıralama ÇARPANA göre: küçük koli önce. Okunan sıra (`createdAt`) depocuya bir şey söylemiyor;
-    // elindeki koliyi listede ararken baktığı şey kaç paket olduğudur.
-    caseSizes: (casesOf.get(line.variantId) ?? []).sort((a, b) => a.qtyPerCode - b.qtyPerCode),
+    caseSizes: casesOf.get(line.variantId) ?? [],
     // İlerleme satırı yoksa kalan = ısmarlanan; `?? 0` OLAMAZ: görünüm bir satırı bir gün taşımazsa
     // "0 bekleniyor" demek, depocuyu kendi kaydımıza karşı sessizce kör bırakırdı (`CLAUDE §1` —
     // ölçülemeyen değer sıfır değildir).

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
@@ -6,9 +6,11 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
-import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
+import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
+import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -18,9 +20,9 @@ import { fillCopy } from '@/screens/operations/copy';
 import { useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
-import { warehouseCopy } from './copy';
+import { qtySheetCopy, warehouseCopy } from './copy';
 import { useTransfer } from './use-transfer.hook';
-import { parseQty, qtyToText, shortDate } from './warehouse-format';
+import { shortDate } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -57,6 +59,8 @@ const PREVIEW_LINES = 3;
 export function TransferScreen() {
   const router = useRouter();
   const transferState = useTransfer();
+  /** Adet çekmecesi açık olan satır — `null` = kapalı. Sayacın ortasındaki rakamdan açılır. */
+  const [qtyLineId, setQtyLineId] = useState<string | null>(null);
 
   /*
     BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
@@ -361,14 +365,15 @@ export function TransferScreen() {
                       : fillCopy(t.transfer.dispatched, { qty: String(line.dispatchedQty) })}
                   </Text>
                 </View>
-                <OperationsQtyField
-                  value={qtyToText(counted)}
-                  onChangeText={(text) => transferState.setCount(line.lineId, parseQty(text))}
-                  /* Yer tutucu "—": alanın boş olması bir DEĞER değil, bir eksikliktir ve sıfırla
-                     karışmaması için görsel olarak da ayrı durur (v2:468). */
-                  placeholder="—"
-                  accessibilityLabel={fillCopy(t.transfer.qtyLabel, { name: line.name })}
-                  tone={counted === null ? 'muted' : counted === line.dispatchedQty ? 'neutral' : 'diff'}
+                {/* KİTİN TEK ADET DESENİ (02.09) — eskiden çerçeveli bir metin alanıydı. Boş
+                    hâl `null`: "—" bir DEĞER değil, bir eksikliktir ve sıfırla karışmaması için
+                    soluk durur (v2:468). Ortadaki rakam adet çekmecesini açar. */}
+                <OperationsStepperGroup
+                  value={counted}
+                  onChange={(next) => transferState.setCount(line.lineId, next)}
+                  label={fillCopy(t.transfer.qtyLabel, { name: line.name })}
+                  onPressValue={() => setQtyLineId(line.lineId)}
+                  valueHint={t.common.qtyHint}
                   testID={`warehouse-transfer-qty-${line.lineId}`}
                 />
               </View>
@@ -395,6 +400,29 @@ export function TransferScreen() {
 
         <Text style={styles.footnote}>{t.transfer.footnote}</Text>
       </FormScroll>
+
+      {/* ADET ÇEKMECESİ — tek örnek, hangi satıra yazacağını `qtyLineId` söyler. Koli boyları
+          ürün kartından (sözleşme 02.09'dan beri taşıyor): rampada mal koli koli sayılır. Çekmece
+          toplamı yukarı verir; sıfır da meşru bir beyandır (0 = geldi ama mal yok), o yüzden
+          kapatınca hiçbir şey silinmez. */}
+      {(() => {
+        const qtyLine = transfer.lines.find((line) => line.lineId === qtyLineId) ?? null;
+        return qtyLine === null ? null : (
+          <OperationsQuantitySheet
+            visible
+            title={t.transfer.qtySheet.title}
+            value={{ cases: [], loose: transferState.countOf(qtyLine.lineId) ?? 0 }}
+            caseSizes={qtyLine.caseSizes}
+            onChange={(next) => transferState.setCount(qtyLine.lineId, quantityTotal(next))}
+            copy={qtySheetCopy({
+              ...t.transfer.qtySheet,
+              subject: fillCopy(t.transfer.qtySheet.subject, { name: qtyLine.name, qty: String(qtyLine.dispatchedQty) }),
+            })}
+            onClose={() => setQtyLineId(null)}
+            testID="warehouse-transfer-qty-sheet"
+          />
+        );
+      })()}
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {/* ÇEVRİMDIŞI SEBEBİ (v3:1206) — bu ekranda sebep ötekilerden farklı ve daha ağır: kabul

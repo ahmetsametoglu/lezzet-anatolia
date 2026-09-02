@@ -258,13 +258,31 @@ describe('D1 · sayım', () => {
     expect(screen.getByTestId('warehouse-picking-cta')).toBeDisabled();
   });
 
+  /* SATIR SAYACININ RAKAMI TUŞ TAKIMINI AÇAR (kullanıcı kararı 02.09) — adet çekmecesini değil:
+     toplamada koli sorulmaz. Canlı yazar; tavan motorun kapasitesi (2 iken "5" işlemez). */
+  it('satır sayacının rakamı canlı tuş takımını açar; kapasiteden fazlasını yazacak tuş işlemez', async () => {
+    withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })]);
+
+    await renderPicking();
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}-value-hit`));
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-line-keypad-key-5')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-picking-line-keypad-confirm')).toBeNull();
+
+    await fireEvent.press(screen.getByTestId('warehouse-picking-line-keypad-key-5'));
+    expect(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}-value`)).toHaveTextContent('0');
+
+    await fireEvent.press(screen.getByTestId('warehouse-picking-line-keypad-key-2'));
+    expect(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}-value`)).toHaveTextContent('2');
+    expect(screen.getByTestId('warehouse-picking-cta')).toHaveTextContent(/Sipariş HAZIR/);
+  });
+
   it('"tamamı" motorun kapasitesine kadar doldurur ve CTA "Sipariş HAZIR"a döner', async () => {
     withQueue([preparationOrder({ lines: [preparationLine({ pickedQty: 1 })] })]);
 
     await renderPicking();
     await fireEvent.press(screen.getByTestId(`warehouse-picking-all-${ITEM_A}`));
 
-    expect(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`).props.value).toBe('2');
+    expect(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}-value`)).toHaveTextContent('2');
     expect(screen.getByTestId('warehouse-picking-cta')).toHaveTextContent(/Sipariş HAZIR/);
   });
 
@@ -505,7 +523,9 @@ describe('D1 · kargoda kutusuz onay', () => {
     );
     await renderPicking();
 
-    await fireEvent.changeText(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}`), '2');
+    // Sayaç sıfırdan başlar (önceki kayıt "yerine geçer"); istenen 2 → iki dokunuş.
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}-increase`));
+    await fireEvent.press(screen.getByTestId(`warehouse-picking-qty-${ITEM_A}-increase`));
     await fireEvent.press(screen.getByTestId('warehouse-picking-cta'));
 
     await waitFor(() =>

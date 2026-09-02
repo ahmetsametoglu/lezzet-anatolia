@@ -9,7 +9,7 @@ import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { OperationsStepperButton } from '@/components/operations/stepper-button';
+import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -19,7 +19,7 @@ import { operationsTheme } from '@/theme/unistyles';
 import { AdjustmentResultCard } from './adjustment-result-card';
 import { BatchContextCard } from './batch-context-card';
 import { BatchPicker } from './batch-picker';
-import { warehouseCopy } from './copy';
+import { qtySheetCopy, warehouseCopy } from './copy';
 import { useAdjustment } from './use-adjustment.hook';
 import { useBatchSubject } from './use-batch-subject.hook';
 import { useWarehouseStatus } from './warehouse-status';
@@ -146,51 +146,27 @@ export function StockCountScreen() {
         <View style={styles.section}>
           <Text style={styles.heading}>{t.adjustment.count.qtyHeading}</Text>
           <OperationsSurface tone="panel" padding="lg">
-            <View style={styles.qtyRow}>
-              {/*
-                BÜYÜK RAKAM BİR DÜĞMEDİR (tasarım v3:08 `sayBasla` · kullanıcı kararı 02.09).
+            {/*
+              KİTİN TEK ADET DESENİ, BÜYÜK BOYDA (kullanıcı kararı 02.09): `− 27 +`, ortadaki
+              rakam basılınca ADET ÇEKMECESİ. Eskiden burada büyük bir rakam ve yanında iki AYRI
+              ± düğmesi vardı — başka hiçbir ekranda olmayan bir şekil; kullanıcı "yerleri değişen
+              artı eksi"yi sorun olarak söyledi ve o şekil söküldü.
 
-                Klavye değil ÇEKMECE açılıyor ve fark pratik: depocu rafta 27 paketi rakam rakam
-                yazmaz, *"iki koli, üç tek"* der — çarpmayı ekran yapar. Aynı çekmece mal kabulde
-                zaten bu işi görüyor (`OperationsQuantitySheet`); ikinci bir sayım dili yazmak,
-                aynı soruyu iki ayrı yerde sormak olurdu (CLAUDE §1).
-
-                ± DÜĞMELERİ KALIYOR: çekmece "kaç var" sorusunun, ± ise "bir tane daha buldum"
-                anının aracı. İkisi aynı sayıyı besliyor.
-              */}
-              <PressableSurface
-                onPress={() => setSheetOpen(true)}
-                feedback="scale"
-                grow
-                style={styles.qtyOpen}
-                accessibilityLabel={t.adjustment.count.qtyOpen}
-                accessibilityHint={t.adjustment.count.qtySheet.title}
-                testID="warehouse-stock-count-qty"
-              >
-                <Text style={[styles.qtyValue, counted === null ? styles.qtyValueIdle : null]}>
-                  {counted === null ? t.adjustment.count.qtyEmpty : String(counted)}
-                </Text>
-              </PressableSurface>
-              {/* ARTI/EKSİ SAYIMIN İNCE AYARI: raftaki adedi giren depocu bir kutu daha bulunca
-                  çekmeceyi yeniden açmak zorunda kalmamalı. Taban SIFIR — eksiye inen bir
-                  "sayılan adet" yoktur ve tabanı olmayan bir sayaç, negatif bir gerçeği
-                  yazdırırdı. */}
-              <View style={styles.steppers}>
-                <OperationsStepperButton
-                  direction="decrease"
-                  onPress={() => setCounted(Math.max(0, (counted ?? 0) - 1))}
-                  disabled={(counted ?? 0) <= 0}
-                  accessibilityLabel={t.adjustment.count.qtyField}
-                  testID="warehouse-stock-count-minus"
-                />
-                <OperationsStepperButton
-                  direction="increase"
-                  onPress={() => setCounted((counted ?? 0) + 1)}
-                  accessibilityLabel={t.adjustment.count.qtyField}
-                  testID="warehouse-stock-count-plus"
-                />
-              </View>
-            </View>
+              Klavye değil ÇEKMECE açılıyor ve fark pratik: depocu rafta 27 paketi rakam rakam
+              yazmaz, *"iki koli, üç tek"* der — çarpmayı ekran yapar. ± ise "bir tane daha buldum"
+              anının aracı; ikisi aynı sayıyı besliyor. Taban SIFIR — eksiye inen bir "sayılan
+              adet" yoktur. Boş hâl (`null`) sıfır DEĞİL: "—" henüz rafa bakılmadığını söyler.
+            */}
+            <OperationsStepperGroup
+              value={counted}
+              onChange={setCounted}
+              label={t.adjustment.count.qtyField}
+              size="lg"
+              emptyLabel={t.adjustment.count.qtyEmpty}
+              onPressValue={() => setSheetOpen(true)}
+              valueHint={t.common.qtyHint}
+              testID="warehouse-stock-count-qty"
+            />
           </OperationsSurface>
 
           {/*
@@ -209,15 +185,16 @@ export function StockCountScreen() {
             visible={sheetOpen}
             title={t.adjustment.count.qtySheet.title}
             value={{ cases: [], loose: counted ?? 0 }}
-            caseSizes={[]}
+            /* Koli boyları ÜRÜN KARTINDAN (02.09): rafta koli de durur; sözleşme çarpanı artık taşıyor. */
+            caseSizes={batch.caseSizes}
             onChange={(next) => setCounted(quantityTotal(next))}
-            copy={{
+            copy={qtySheetCopy({
               ...t.adjustment.count.qtySheet,
               subject: fillCopy(t.adjustment.count.qtySheet.subject, {
                 name: batch.name,
                 code: batch.lotNumber ?? t.adjustment.picker.noLot,
               }),
-            }}
+            })}
             onClose={() => setSheetOpen(false)}
             testID="warehouse-stock-count-qty-sheet"
           />
@@ -323,29 +300,6 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.eyebrow,
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
-  },
-  qtyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: operationsTheme.space.lg,
-  },
-  /** Rakamın dokunma hücresi — satırın solunu tümüyle kaplar (`grow`), hedef küçük kalmasın. */
-  qtyOpen: {
-    justifyContent: 'center',
-    paddingVertical: operationsTheme.space.sm,
-  },
-  /** Tasarımın 40/Lora sayısı: sayfanın en büyük rakamı, çünkü ekranın konusu o. */
-  qtyValue: {
-    fontFamily: operationsTheme.font.display[600],
-    fontSize: operationsTheme.text.h2,
-    color: operationsTheme.colors.ink,
-  },
-  /** Sayılmamış hâl SOLUK: "—" bir değer değil, bir eksikliktir (sıfırla karışmamalı). */
-  qtyValueIdle: { color: operationsTheme.colors.muted },
-  steppers: {
-    flexDirection: 'row',
-    gap: operationsTheme.space.md,
   },
   diff: {
     borderRadius: operationsTheme.radius.control,

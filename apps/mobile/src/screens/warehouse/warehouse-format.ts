@@ -10,28 +10,6 @@
 import { fillCopy } from '@/screens/operations/copy';
 
 /**
- * GİRDİ METNİ → ADET. `null` = "hiç yazmadım"; `0` = "sıfır yazdım" ve İKİSİ AYRI ŞEYDİR.
- *
- * Ayrım D5'in kuralının kendisi (v2:474): *"0 = geldi ama kayıp; boş = sayılmadı — boş satır kabulü
- * bloklar."* Boşu sıfıra düşürmek, sayılmamış bir satırı "geldi ama kayıp" diye BEYAN etmek olurdu;
- * kaybolan malın kaydı da kimsenin fark etmediği bir yerde doğardı (CLAUDE §1).
- *
- * İşaret kabul edilir çünkü D4'ün adedi işaretlidir; ondalık kabul EDİLMEZ (adet tamdır).
- */
-export function parseQty(text: string): number | null {
-  const clean = text.replace(/\s/g, '');
-  if (clean.length === 0) return null;
-  if (!/^-?\d+$/.test(clean)) return null;
-  const value = Number(clean);
-  return Number.isSafeInteger(value) ? value : null;
-}
-
-/** ADET → GİRDİ METNİ. `null` boş dizedir: alan yer tutucusunu (`—`) göstersin. */
-export function qtyToText(qty: number | null): string {
-  return qty === null ? '' : String(qty);
-}
-
-/**
  * `"2026-08-12"` → `"12.08.26"` (v2'nin `fmtD`si birebir). Biçim tanınmazsa **`null`** döner ve
  * çağıran ham dizeyi yazar — uydurma bir tarih, SKT'nin okunduğu ekranda en pahalı yalandır.
  */

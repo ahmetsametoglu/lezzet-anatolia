@@ -1,7 +1,8 @@
 import { transferDecision, type TransferSuggestion } from '@lezzet/domain-core';
 import { StockService, WarehouseTransferService } from '@lezzet/database';
-import type { DispatchLine, ReceiveLine, TransferStatus, WarehouseTransferLine } from '@lezzet/types';
+import type { CaseSizeContract, DispatchLine, ReceiveLine, TransferStatus, WarehouseTransferLine } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { caseSizesByVariant } from './case-sizes';
 import { displayName, variantNames } from './names';
 import { rpcRejectionMessage } from './rpc-error';
 
@@ -46,6 +47,8 @@ export interface InboundTransferLine {
    * ve ayrımı veri taşır (0042).
    */
   receivedQty: number | null;
+  /** Ürünün kayıtlı koli boyları — rampa sayımının çekmecesi çarpanı buradan alır. */
+  caseSizes: CaseSizeContract[];
 }
 
 /** Yoldaki transfer — künye + satırlar. Para YOK: transfer bir mal hareketidir, alım değil. */
@@ -98,8 +101,10 @@ async function lineDetails(db: SupabaseClient, lines: WarehouseTransferLine[]) {
   const stockIds = [...new Set(lines.map((line) => line.sourceStockId))];
   const batches = await new StockService(db).getBatchDetails(stockIds);
   const batchOf = new Map(batches.map((batch) => [batch.id, batch]));
-  const names = await variantNames(db, [...new Set(batches.map((batch) => batch.variantId))]);
-  return { batchOf, names };
+  const variantIds = [...new Set(batches.map((batch) => batch.variantId))];
+  // Adlar ve koli boyları birbirini beklemez: ikisi de aynı satırın künyesi (kabulün deseni).
+  const [names, casesOf] = await Promise.all([variantNames(db, variantIds), caseSizesByVariant(db, variantIds)]);
+  return { batchOf, names, casesOf };
 }
 
 function toInboundLine(
@@ -115,6 +120,8 @@ function toInboundLine(
     expiryDate: batch?.expiryDate ?? '',
     dispatchedQty: line.qty,
     receivedQty: line.receivedQty,
+    // Rampada koli koli sayılır; çekmece çarpanı ürün kartından alır (sözleşme künyesi).
+    caseSizes: batch ? (details.casesOf.get(batch.variantId) ?? []) : [],
   };
 }
 

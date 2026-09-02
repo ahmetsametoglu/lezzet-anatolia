@@ -785,6 +785,26 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`warehouse-intake-damage-card-${ROW_A.variantId}`)).toHaveTextContent(/sağlam 0/);
   });
 
+  /* HASAR SAYACININ ORTASINDAKİ RAKAM TUŞ TAKIMINI AÇAR (kullanıcı kararı 02.09) — adet çekmecesini
+     değil: koli sorulmayan yerde çekmece gürültü. Canlı yazar; tavan tuşta (kabul edilen 2 iken
+     "3" işlemez, "2" yazılır). */
+  it('hasar sayacının rakamı canlı tuş takımını açar; kabul edilenden fazlasını yazacak tuş işlemez', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '2');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-value-hit`));
+    await openSheet(`warehouse-intake-damage-keypad-${ROW_A.variantId}-key-3`);
+    expect(screen.queryByTestId(`warehouse-intake-damage-keypad-${ROW_A.variantId}-confirm`)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-keypad-${ROW_A.variantId}-key-3`));
+    expect(screen.getByTestId(`warehouse-intake-damage-card-${ROW_A.variantId}`)).toHaveTextContent(/hasarlı 0/);
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-keypad-${ROW_A.variantId}-key-2`));
+    expect(screen.getByTestId(`warehouse-intake-damage-card-${ROW_A.variantId}`)).toHaveTextContent(/hasarlı 2/);
+  });
+
   it('raf ömrü uyarısı KAPIDAN gelir; ölçülemeyen ömür "bilinmiyor" der (sıfır DEĞİL)', async () => {
     withForm([ROW_A], {
       status: 'ok',

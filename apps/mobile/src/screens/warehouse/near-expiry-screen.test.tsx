@@ -217,6 +217,26 @@ describe('D3 · yakın-SKT turu', () => {
     expect(sheet).toHaveTextContent(/partide 4 adet · toplam stok 24/);
   });
 
+  /* SAYACIN RAKAMI ÇEKMECENİN İÇİNDE TUŞ TAKIMI ADIMI AÇAR (kullanıcı kararı 02.09): çekmece
+     çekmece açamaz, tuş takımı aynı çekmecenin adımıdır. Canlı yazar; tavan partinin kendisi
+     (4 iken "6" işlemez, "2" yazılır); "Tamam" sayaca döner ve yazılan sayı düğmede okunur. */
+  it('imha adedi tuş takımı adımından yazılır; partiden fazlasını yazacak tuş işlemez', async () => {
+    await renderScreen();
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641-discard')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-P-0641-discard'));
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-qty-value-hit'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-discard-keypad-key-2')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-keypad-key-6'));
+    expect(screen.getByTestId('warehouse-near-expiry-discard-keypad-value')).toHaveTextContent('4 adet');
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-keypad-key-2'));
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-keypad-back'));
+
+    expect(screen.getByTestId('warehouse-near-expiry-discard-qty-value')).toHaveTextContent('2');
+    expect(screen.getByTestId('warehouse-near-expiry-discard-confirm')).toHaveTextContent(/2 adet/);
+  });
+
   /* İmha bir ÇIKIŞtır ve adet POZİTİF gider: işaret miktara gömülmez (sözleşme künyesi). */
   it('imha kapıya `expired` sebebiyle ve `out` yönüyle yazılır', async () => {
     await renderScreen();

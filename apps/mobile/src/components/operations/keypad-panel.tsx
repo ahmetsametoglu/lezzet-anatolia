@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -21,9 +21,24 @@ import { keypadDelete, keypadDisplay, keypadFill, keypadFrom, keypadPress, type 
   üslup tercihi değil sahanın şartı; ikinci sebep de görüş alanı: sistem klavyesi ekranın yarısını
   kaplayıp yazılan değeri örtüyordu, burada değer tuşların ÜSTÜNDE durur.
 
-  ── DEĞER SADECE ONAYLANINCA ÇIKAR ──────────────────────────────────────────
-  Panel kendi taslağını tutar; çağıran ancak onaya basılınca haber alır. Her tuşta dışarı haber
-  vermek, alanın altındaki hesapları yarım değerlerle titretirdi.
+  ── İKİ KİP: CANLI (adet) · ONAYLI (para) — kullanıcı kararı 02.09 ─────────
+  Kullanıcının sorusu: *"Alttaki iki düğmeye neden gerek var? Değiştirdiğim an yazılmaz mı?"*
+  Adet için haklı: her tuş çağırana ANINDA gider (`onChange`), çekmece kapandığında değer zaten
+  yazılmıştır; onay satırı hiç çizilmez. Arkadaki sayacın canlı değişmesi ayrıca bir doğrulama —
+  yazdığını ekranda görürsün. Para ise ONAYLI kalır (`onConfirm`): tutar tuş tuş dışarı sızarsa
+  fark sütunu ve CTA "1 → 12 → 12,50" diye titrer. Kip, hangi geri çağırmanın verildiğinden
+  çıkar; ikisi birden verilmez.
+
+  ── SİL TUŞU DEĞERİN SAĞINDA ────────────────────────────────────────────────
+  Kullanıcı kararı 02.09: *"silme tuşunu adet yazısının sağına koyalım, daha doğal bir yer."*
+  Silinen şey değerin son rakamıdır; tuşun yeri de o değerin yanı. Alt satırda "Yaz"ın yanında
+  durması, onun bir onay adımıymış gibi okunmasına yol açıyordu. Kendi tuş takımımızda başka geri
+  alma yolu yok — sistem klavyesinin backspace'i bu.
+
+  ── TAVAN TUŞTA DURUR ───────────────────────────────────────────────────────
+  `max` verilirse tavanı aşacak tuş HİÇ İŞLEMEZ: "partide 4 var" iken "6" basılınca değer 6 olup
+  sonra 4'e kırpılmaz, 6 hiç yazılmaz. Kırpma iki değer gösterirdi (tuş takımında 6, sayaçta 4);
+  reddetmek tek gerçeği gösterir. Yalnız tam sayı kipinde anlamlı (adet); para tavan bilmez.
 */
 
 /** Tuş dizilişi v3'ün ızgarası: üç sütun, on iki tuş — son satır virgül · 0 · çift sıfır. */
@@ -45,11 +60,16 @@ interface OperationsKeypadPanelProps {
    * yok ve virgül tuşunu açık bırakmak, kabul edilemeyecek bir değeri yazılabilir gösterirdi.
    */
   allowDecimals?: boolean;
-  confirmLabel: string;
+  /** Tam sayı tavanı — aşacak tuş işlemez (künye). Ondalıklı kipte yok sayılır. */
+  max?: number;
   hint: string;
   footnote?: string;
   deleteLabel: string;
-  onConfirm: (text: string) => void;
+  /** CANLI kip: her tuşta çağrılır, onay satırı çizilmez. `onConfirm` ile birlikte verilmez. */
+  onChange?: (text: string) => void;
+  /** ONAYLI kip: değer ancak düğmeye basılınca çıkar. `confirmLabel` ile birlikte gelir. */
+  onConfirm?: (text: string) => void;
+  confirmLabel?: string;
   /**
    * Değiştiğinde taslak DIŞARIDAN sıfırlanır. Çekmecesinde kalıcı duran çağıran (para tuş takımı)
    * bunu `visible` ile besler: kapatılıp yeniden açılan bir tuş takımı, bir önceki denemenin yarım
@@ -65,21 +85,51 @@ export function OperationsKeypadPanel({
   expectedLabel,
   unit,
   allowDecimals = true,
-  confirmLabel,
+  max,
   hint,
   footnote,
   deleteLabel,
+  onChange,
   onConfirm,
+  confirmLabel,
   resetKey,
   testID,
 }: OperationsKeypadPanelProps) {
   const [draft, setDraft] = useState<KeypadValue>(() => keypadFrom(value));
   /** Izgaranın ölçülen genişliği — tuş genişliği bundan türer (künyesi ızgarada). */
   const [gridWidth, setGridWidth] = useState(0);
+  /** Bir tuşun genişliği: ölçülen kap eksi iki boşluk, üçe bölünmüş. Sil tuşu da bu boyda. */
+  const keyWidth = gridWidth === 0 ? null : (gridWidth - 2 * operationsTheme.space.md) / 3;
 
+  /*
+    DIŞARIDAN GELEN DEĞER TASLAĞI YALNIZ FARKLIYSA EZER (ölçüldü 02.09, birim testte).
+
+    Canlı kipte her tuş çağırana gider, çağıran değeri geri verir ve o değer zaten taslağın
+    kendisidir. Eski efekt her `value` değişiminde taslağı "taze" (ilk rakam ezer) diye
+    sıfırlıyordu: "4" yazılıyor → çağıran "4" veriyor → taslak tazeleniyor → "0" basılınca "40"
+    değil "0" oluyordu. Eşitse dokunulmaz; yalnız gerçekten dışarıdan değişen değer (sıfırla,
+    başka satır) taslağı yeniler. `resetKey` ise her açılışta KOŞULSUZ tazeler: kapatılıp
+    yeniden açılan tuş takımında ilk rakam yine eskisini ezmeli.
+  */
+  const valueRef = useRef(value);
+  valueRef.current = value;
   useEffect(() => {
-    setDraft(keypadFrom(value));
-  }, [value, resetKey]);
+    setDraft(keypadFrom(valueRef.current));
+  }, [resetKey]);
+  useEffect(() => {
+    setDraft((current) => (current.text === value ? current : keypadFrom(value)));
+  }, [value]);
+
+  /** Taslağı değiştirir ve canlı kipte çağırana haber verir — tek kapı, iki kip. */
+  const apply = (next: (current: KeypadValue) => KeypadValue) => {
+    setDraft((current) => {
+      const updated = next(current);
+      /* Tavanı aşan tuş HİÇ işlemez (künye): taslak değişmez, dışarı haber gitmez. */
+      if (max !== undefined && !allowDecimals && Number(updated.text || '0') > max) return current;
+      if (updated !== current) onChange?.(updated.text);
+      return updated;
+    });
+  };
 
   return (
     <>
@@ -90,9 +140,21 @@ export function OperationsKeypadPanel({
           </Text>
           <Text style={styles.hint}>{hint}</Text>
         </View>
+        {/* SİL değerin sağında (künye) — sildiği şeyin yanında durur; ızgaradaki tuşlarla AYNI
+            genişlikte (kullanıcı 02.09: "diğer butonların genişliği kadar olsun"). */}
+        <PressableSurface
+          onPress={() => apply(keypadDelete)}
+          feedback="scale"
+          compact
+          style={[styles.delete, keyWidth === null ? null : { width: keyWidth }]}
+          accessibilityLabel={deleteLabel}
+          testID={testID === undefined ? undefined : `${testID}-delete`}
+        >
+          <Icon name="backspace" size={operationsTheme.size.headerIcon} color={operationsTheme.colors.ink} />
+        </PressableSurface>
         {expected === null || expectedLabel === undefined ? null : (
           <PressableSurface
-            onPress={() => setDraft(keypadFill(expected))}
+            onPress={() => apply(() => keypadFill(expected))}
             feedback="scale"
             compact
             style={styles.expected}
@@ -122,9 +184,9 @@ export function OperationsKeypadPanel({
         {KEYS.filter((key) => allowDecimals || key !== ',').map((key) => (
           <PressableSurface
             key={key}
-            onPress={() => setDraft((current) => keypadPress(current, key))}
+            onPress={() => apply((current) => keypadPress(current, key))}
             feedback="scale"
-            style={[styles.key, gridWidth === 0 ? null : { width: (gridWidth - 2 * operationsTheme.space.md) / 3 }]}
+            style={[styles.key, keyWidth === null ? null : { width: keyWidth }]}
             accessibilityLabel={key}
             testID={testID === undefined ? undefined : `${testID}-key-${key}`}
           >
@@ -133,27 +195,18 @@ export function OperationsKeypadPanel({
         ))}
       </View>
 
-      <View style={styles.actions}>
-        <PressableSurface
-          onPress={() => setDraft(keypadDelete)}
-          feedback="scale"
-          style={styles.delete}
-          accessibilityLabel={deleteLabel}
-          testID={testID === undefined ? undefined : `${testID}-delete`}
-        >
-          <Icon name="backspace" size={operationsTheme.size.headerIcon} color={operationsTheme.colors.ink} />
-        </PressableSurface>
+      {/* ONAY SATIRI yalnız onaylı kipte (künye): canlı kipte değer zaten yazılmıştır. */}
+      {onConfirm === undefined || confirmLabel === undefined ? null : (
         <PressableSurface
           onPress={() => onConfirm(draft.text)}
           feedback="shadow"
-          grow
           style={styles.confirm}
           accessibilityLabel={confirmLabel}
           testID={testID === undefined ? undefined : `${testID}-confirm`}
         >
           <Text style={styles.confirmLabel}>{confirmLabel}</Text>
         </PressableSurface>
-      </View>
+      )}
 
       {footnote === undefined ? null : <Text style={styles.footnote}>{footnote}</Text>}
     </>
@@ -163,11 +216,11 @@ export function OperationsKeypadPanel({
 const styles = StyleSheet.create({
   head: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
+    alignItems: 'center',
     gap: operationsTheme.space.xl,
   },
-  headText: { gap: operationsTheme.space['2xs'] },
+  /** Değer + ipucu satırın solunu alır; sil tuşu ve "beklenen" çipi sağa yaslanır. */
+  headText: { flex: 1, gap: operationsTheme.space['2xs'] },
   value: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['page-title--font-weight']],
     fontSize: operationsTheme.text['page-title'],
@@ -197,8 +250,6 @@ const styles = StyleSheet.create({
     gap: operationsTheme.space.md,
     marginTop: operationsTheme.space.xl,
   },
-  /* Üç sütun: genişlik yüzdeyle değil, ARALIKTAN düşülerek hesaplanır — yüzde + boşluk üçüncü
-     tuşu alt satıra atıyordu (`flexWrap` ile ölçüldü). */
   /*
     ÜÇ SÜTUNLUK IZGARA — `flexShrink` SIFIR olmak ZORUNDA (arıza, cihazda görüldü 30.08).
 
@@ -207,14 +258,9 @@ const styles = StyleSheet.create({
     kuralı — sarmalı bir kapsayıcıda **küçülebilen öğe önce küçülür, sonra sarar**; `flexShrink: 1`
     verildiği sürece satır hiçbir zaman taşmaz, dolayısıyla sarma hiç tetiklenmez.
 
-    `%33`ten `%30`a da inildi çünkü aradaki boşluk (gap) yüzdeye dahil değil: üç tuş %100'ü tam
-    doldurunca iki boşluk taşırıyordu. %30 üçlüyü sığdırır, `flexGrow` kalan payı bölüştürür —
-    yani ızgara ekran genişliğinden bağımsız olarak üç sütun kalır.
-
-    Arıza para ekranlarını da etkiliyordu (aynı komponent); orada kimse bakmamıştı.
+    Genişlik ÖLÇÜLEN kaptan gelir (yukarıdaki künye); burada yalnız kalan nitelikler durur.
+    `flexShrink: 0` yerinde kalıyor: ölçüm gelene kadarki ilk karede tuşlar içeriğe daralmasın.
   */
-  /* Genişlik ÖLÇÜLEN kaptan gelir (yukarıdaki künye); burada yalnız kalan nitelikler durur.
-     `flexShrink: 0` yerinde kalıyor: ölçüm gelene kadarki ilk karede tuşlar içeriğe daralmasın. */
   key: {
     flexShrink: 0,
     height: operationsTheme.size.controlLg,
@@ -230,13 +276,9 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['card-title-sm'],
     color: operationsTheme.colors.ink,
   },
-  actions: {
-    flexDirection: 'row',
-    gap: operationsTheme.space.md,
-    marginTop: operationsTheme.space.xl,
-  },
+  /** Sil tuşu: değerle aynı satırda, tuş boyunda; ölçüm gelene kadar kare. */
   delete: {
-    width: operationsTheme.size.circleSm,
+    width: operationsTheme.size.controlLg,
     height: operationsTheme.size.controlLg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -244,6 +286,7 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors['neutral-bg'],
   },
   confirm: {
+    marginTop: operationsTheme.space.xl,
     height: operationsTheme.size.controlLg,
     alignItems: 'center',
     justifyContent: 'center',

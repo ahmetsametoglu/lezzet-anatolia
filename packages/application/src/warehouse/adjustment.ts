@@ -2,6 +2,7 @@ import { StockMovementService, StockService } from '@lezzet/database';
 import { documentPrefixFor, remainingShelfLifePercent } from '@lezzet/domain-core';
 import type {
   AdjustBatchResult,
+  CaseSizeContract,
   ProductDateType,
   StockBatchDetail,
   StockDirection,
@@ -9,6 +10,7 @@ import type {
   StockWriteOffReason,
 } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { caseSizesByVariant } from './case-sizes';
 import { displayName, variantNames } from './names';
 import { rpcRejectionMessage } from './rpc-error';
 
@@ -210,6 +212,8 @@ export interface ResolvedBatch {
    * burada varmış gibi gösterirdi.
    */
   variantWarehouseQty: number;
+  /** Ürünün kayıtlı koli boyları — sayım çekmecesinin çarpanı (sözleşme künyesi). */
+  caseSizes: CaseSizeContract[];
 }
 
 export type ResolveBatchOutcome = { status: 'found'; batches: ResolvedBatch[] } | { status: 'unknown' };
@@ -270,9 +274,11 @@ async function toResolvedBatches(
   const variantIds = [...new Set(batches.map((batch) => batch.variantId))];
   // İki okuma birbirini beklemez ve ikisi de TEK tur: satır başına ayrı sorgu, otuz partili bir
   // rafta altmış gidiş-dönüş demekti.
-  const [names, availability] = await Promise.all([
+  const [names, availability, casesOf] = await Promise.all([
     variantNames(db, variantIds),
     new StockService(db).getAvailableMap(warehouseId, variantIds),
+    // Rafta koli de durur: sayımın çekmecesi çarpanı ürün kartından alır (kullanıcı 02.09).
+    caseSizesByVariant(db, variantIds),
   ]);
 
   return batches.map((batch) => ({
@@ -290,6 +296,7 @@ async function toResolvedBatches(
     // Ürünün DEPODAKİ toplamı — bağlam kartının ikinci sayısı. Satır yoksa okuma sıfırlarla
     // döner (servisin sözleşmesi), yani burada `null` doğmaz.
     variantWarehouseQty: availability.get(batch.variantId)?.physicalQty ?? 0,
+    caseSizes: casesOf.get(batch.variantId) ?? [],
   }));
 }
 
