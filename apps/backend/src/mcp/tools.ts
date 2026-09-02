@@ -130,7 +130,8 @@ const BRIEFING_LINE_LIMIT = 8;
 
 async function reorderOverview() {
   const db = serviceDb();
-  const warehouses = await new WarehouseService(db).list({ activeOnly: true });
+  // Yalnız TESİSLER (02.09): tur her depo için eşik önerisi soruyor ve araçta eşik kavramı yok.
+  const warehouses = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' });
   const reorder = new ReorderService(db);
 
   const perWarehouse = await Promise.all(

@@ -75,7 +75,12 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
   // Depo bağlamı BURADA okunur: sidebar'da durur ve sayfadan sayfaya taşınır — kimlik düzeyinde bir
   // tercih (19.5). Sayfalar aynı isteğin içinde tekrar sorduğunda `cache()` sayesinde bedava, ve
   // daha önemlisi seçici ile liste AYNI cevabı görür.
-  const { warehouses, activeWarehouseId, scope } = await readWarehouseContext();
+  //
+  // Seçiciye TESİSLER gider (02.09, kullanıcı bildirimi: *"en yukarıdaki filtre kısmında hâlâ araç
+  // görünüyor"*). Başlıktaki blok bir bakış açısı seçtiriyor ve o seçim aşağıda YAZMA hedefine
+  // dönüşüyor — araç orada bir evren değil. Araçtaki mal stok ekranında kırılım olarak görünmeye
+  // devam eder (`warehousesWithVehicles`).
+  const { facilities, activeWarehouseId, scope } = await readWarehouseContext();
 
   return (
     <RootShell lang="tr" surface="operations" className={fontVars}>
@@ -86,7 +91,7 @@ export default async function OperationsLayout({ children }: OperationsLayoutPro
         <OpsShellProvider
           value={{
             user: { email: user.email ?? '', roles },
-            warehouse: { warehouses, activeWarehouseId, unscoped: scope.kind === 'all' },
+            warehouse: { warehouses: facilities, activeWarehouseId, unscoped: scope.kind === 'all' },
             /* Zilin canlı kanal adı SUNUCUDA türetilir (`node:crypto` + sunucu sırrı — bell.ts
                künyesi: adı yalnız guard'ın arkasındaki taraf öğrenir) ve buradan prop olarak iner. */
             notifications: { channel: staffNotificationsChannelName() },

@@ -52,8 +52,10 @@ export async function loadProductStockPeekAction(productId: string): Promise<Act
       data: {
         // Kategori adı bakışta çizilmiyor — boş harita bilinçli (satır alanı '—' bırakır).
         rows: toLevelRows({ products: page.rows, batches, available, categoryNames: new Map(), warehouseLabels }),
-        warehouses: ctx.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name })),
-        showWarehouse: ctx.activeWarehouseId === null && ctx.warehouses.length > 1,
+        // Stok BAKIŞI — seçenek değil KIRILIM: "bu ürün nerede duruyor" sorusunun cevabına araç da
+        // girer (`data-model/depo.md`: depo bazlı okuma aracı aynen gösterir).
+        warehouses: ctx.warehousesWithVehicles.map((w) => ({ id: w.id, code: w.code, name: w.name })),
+        showWarehouse: ctx.activeWarehouseId === null && ctx.warehousesWithVehicles.length > 1,
       },
       error: null,
     };

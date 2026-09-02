@@ -11,8 +11,10 @@ import {
   UserProfileService,
   type serviceDb,
 } from '@lezzet/database';
+import { readFacilityVanSummary } from '@lezzet/application';
 import type { Order, OrderStatus, TicketStatus } from '@lezzet/types';
 import { readWarehouseContext, readWarehouseLabels } from '@/lib/warehouse/context';
+import { stockLink } from './stock/stock-url';
 import { DAY_HOUR_FALLBACK, DAY_HOUR_KEYS, type DayHourKey } from '@/lib/settings/day-hours';
 import { money, num } from '@/components/operation/ui/format';
 import { toOrderRows } from './orders/orders-read';
@@ -29,7 +31,7 @@ import {
   type RouteFlowFact,
   type StopFact,
 } from './dashboard-read';
-import type { DashboardData, DeliveryRouteView } from './dashboard-types';
+import type { DashboardData, DeliveryRouteView, VanLoadBandView } from './dashboard-types';
 
 type Db = ReturnType<typeof serviceDb>;
 
@@ -199,8 +201,56 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     queue,
     proposals: buildProposals(proposalCount, []),
     routes: routesOf(rows, dayLog.deliveredAt, await runLabelsOf(db, today)),
+    /*
+      Araç yükü YALNIZ TEK TESİS SEÇİLİYKEN (kullanıcı isteği 02.09: *"seçili deponun panel
+      ekranında"*). "Tüm depolar" bakışında bu blok yazılmaz ve bu bir eksiklik değil bir karar:
+      ağın bütün araçlarını tek satırda toplamak, "ek olarak" cümlesini anlamsız kılardı — neyin
+      ekine? Panelin geri kalanı da bağlamı izliyor (18.08 kararı).
+    */
+    vanLoad: ctx.activeWarehouseId ? await readVanLoadBand(db, ctx.activeWarehouseId) : null,
   };
 }
+
+/**
+ * Panelin araç şeridi — motoru `@lezzet/application` (`readFacilityVanSummary`), burası yalnız
+ * cümleyi kuruyor.
+ *
+ * **Sıfır cümlesi KURULMAZ.** Kutu yoksa kutu yarısı, mal yoksa mal yarısı `null` döner; ikisi de
+ * boşsa şeridin kendisi `null` olur ve panelde hiç çizilmez. "Araçta 0 kutu · 0 adet" bir bilgi
+ * değil, her sabah tekrarlanan bir gürültüdür — ve gürültü, dolduğu gün fark edilmesini zorlaştırır.
+ */
+async function readVanLoadBand(db: Db, facilityId: string): Promise<VanLoadBandView | null> {
+  const summary = await readFacilityVanSummary(db, { facilityId, lineLimit: VAN_SAMPLE_LINES });
+  const units = summary.vans.reduce((sum, van) => sum + van.unitCount, 0);
+  if (summary.boxCount === 0 && units === 0) return null;
+
+  // Tek araçta adıyla, çoklukta sayısıyla: "VAN-1" bir yerdir, "2 araç" bir kümedir. Araç hiç
+  // yokken de buraya gelinebilir (kutu var, araç kaydı bağlanmamış) — özne o hâlde "Araçta".
+  const tekArac = summary.vans.length === 1 ? summary.vans[0] : null;
+  const subject = tekArac ? tekArac.code : summary.vans.length > 1 ? `${summary.vans.length} araç` : 'Araçta';
+  const variants = summary.vans.reduce((sum, van) => sum + van.variantCount, 0);
+  const sample = summary.vans
+    .flatMap((van) => van.lines)
+    .slice(0, VAN_SAMPLE_LINES)
+    .map((line) => `${line.name} ${line.qty}`)
+    .join(' · ');
+
+  return {
+    subject,
+    boxes:
+      summary.boxCount > 0
+        ? `${summary.boxCount} kutu · ${summary.orderCount} sipariş`
+        : null,
+    goods: units > 0 ? `${units} adet · ${variants} üründen` : null,
+    sample: sample || null,
+    // Köprü ARACIN stok bakışına gider; araç bilinmiyorsa tesisin kendi stoğuna (yanlış bir yere
+    // götürmektense bilinen yere götürmek).
+    href: stockLink(tekArac ? { depo: tekArac.code } : {}),
+  };
+}
+
+/** Şeritte adı geçen kalem sayısı — cümle bir satırda kalmalı, liste Stok'ta yaşıyor. */
+const VAN_SAMPLE_LINES = 3;
 
 /**
  * Günün sefer künyeleri — panel kartlarının kimliği (18.08). Kart artık kurye grubunun değil
@@ -517,6 +567,7 @@ function queueFacts(input: { overdue: readonly OrderRow[]; openTickets: Record<T
 /** Bağlam adı: tek tesis seçiliyse onun adı, değilse "Tüm depolar". */
 function scopeLabelOf(ctx: Awaited<ReturnType<typeof readWarehouseContext>>): string {
   if (!ctx.activeWarehouseId) return 'Tüm depolar';
-  const active = ctx.warehouses.find((w) => w.id === ctx.activeWarehouseId);
+  // `facilities` yeter: seçilebilen bağlam zaten tesistir (`context.ts` — çerez tesise karşı doğrulanır).
+  const active = ctx.facilities.find((w) => w.id === ctx.activeWarehouseId);
   return active ? active.name : 'Tüm depolar';
 }

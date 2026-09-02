@@ -80,6 +80,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     scopeOptions: toScopeOptions(zones, warehouses.filter((w) => w.isActive)),
     // Kapsam seçimi YALNIZ aktif depolardan: kapalı bir tesise personel bağlamak, kişiye
     // göremeyeceği bir kapsam vermektir.
+    //
+    // **ARAÇLAR BURADA BİLEREK DURUYOR** (02.09 taramasının kararı): 02.09'da araç seçicilerden,
+    // süzgeçten ve yazma hedeflerinden çıkarıldı — ama personel kapsamı onlardan biri DEĞİL.
+    // Kuryenin aracı tam da kapsamından bulunuyor (`vehicleWarehouseOf`: *"kapsamındaki
+    // `kind='vehicle'` ilk depo"*); araçları elesek kurye araç stoğunu göremez ve araçtan satış
+    // yapamaz olurdu. Kapsam "neye erişebilir", seçici "hangi evrende çalışıyor" — ayrı sorular.
     warehouseOptions: warehouses.filter((w) => w.isActive).map((w) => ({ value: w.id, label: `${w.code} · ${w.name}` })),
     // Seçenekler YALNIZ aktif hesaplardan (gerekçe `settings-types.ts`); ad sözlüğü ise
     // yukarıdaki tam listeden — kapalı bir hesap seçilemez ama seçilmişse adıyla görünür.

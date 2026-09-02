@@ -214,9 +214,9 @@ async function readSummary(db: Db, date: string): Promise<ManagementSummary> {
  */
 export async function readManagementHub(db: Db, input: { date?: string } = {}): Promise<ManagementHub> {
   const date = input.date ?? isoDate(new Date());
-  const facilities = (await new WarehouseService(db).list({ activeOnly: true })).filter(
-    (warehouse) => warehouse.kind === 'facility',
-  );
+  // Süzgeç servise geçti (02.09): aynı cümle beş ekranda ayrı ayrı yazılıyordu ve çoğu yerde hiç
+  // yazılmamıştı. `list({ kind })` tek kapı.
+  const facilities = await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' });
   const [queue, summary] = await Promise.all([
     readQueue(db, facilities.map((warehouse) => warehouse.id)),
     readSummary(db, date),

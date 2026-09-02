@@ -70,6 +70,8 @@ export function toWarehouseRows({ warehouses, zones, staff, batches, transfers }
       code: w.code,
       name: w.name,
       kind: w.kind,
+      // Aracın evi (02.09) — kartta "STR'nin aracı" diye okunur; tesiste daima `null`.
+      homeWarehouseId: w.homeWarehouseId,
       countryCode: w.countryCode,
       address: parseAddress(w.address),
       // Deponun noktası (11.9) — rotanın çıpası. `null` = girilmemiş; karne bunu bir eksiklik olarak

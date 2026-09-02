@@ -12,7 +12,7 @@ import { addressForClipboard, addressOneLine, statusLabel, statusTone } from './
 import { reorderWarehousesAction } from './actions';
 import { MeasurePoints } from './measure-points';
 import type { ShippingBox } from '@lezzet/types';
-import { FacilityStrip, PrinterCard, Scorecard, ShippingBoxCard, StaffChips, ZoneCard } from './warehouses-sections';
+import { FacilityStrip, PrinterCard, Scorecard, ShippingBoxCard, StaffChips, VanLoadRow, ZoneCard } from './warehouses-sections';
 import type { MeasurePointView, WarehouseCardView, WarehouseRowView, WarehousesData, ZoneCardView } from './warehouses-types';
 
 // Depolar — web. **TEK görünüm** (kullanıcı kararı 16.08): başlık · tesis şeridi · seçili tesisin
@@ -193,6 +193,9 @@ function FacilityView({
           <section className="flex flex-col gap-2.5">
             <SectionHead title="Karne" hint="bugün nasıl durduğu — her sayı Stok'a bu depo bağlamıyla gider" />
             <Scorecard card={card.scorecard} code={row.code} />
+            {/* Karnenin ALTINDA, içinde değil: dört kutu deponun içini sayıyor, bu satır dışını.
+                Beşinci kutu olsaydı aynı ağırlıkta okunur ve "ek olarak" anlamını yitirirdi. */}
+            {card.vanLoad && <VanLoadRow load={card.vanLoad} />}
           </section>
 
           {/* ── Hizmet alanı ── Teslimat'tan buraya taşındı (01.08): kurulum kurulumla durur. */}

@@ -81,10 +81,15 @@ export default async function PreparationPage() {
    * olarak seçili OLMAYAN depoları da göstermek. Onunla beslendiğinde şerit tek çipe iner ve
    * `length > 1` koşuluna hiç takılmaz — yani sessizce hiç çizilmez.
    *
-   * `warehouses` kapsamla süzülmüş depoların hepsidir; kapsam dışı depo zaten burada yoktur.
+   * `facilities` kapsamla süzülmüş TESİSLERİN hepsidir; kapsam dışı depo zaten burada yoktur.
+   *
+   * **Araç yok ve olmamalı** (02.09): şeridin adı zaten "tesis şeridi" ve altındaki iki iş de
+   * tesisin işi — hazırlık kuyruğunu bir araçtan toplayamazsın, `WarehouseChoice` de bir YAZMA
+   * hedefi soruyor. Araç kapsamdaysa (kuryenin aracı kapsamından bulunur, `vehicleWarehouseOf`)
+   * şeritte bir çip olarak beliriyor ve tıklandığında boş bir kuyruk açıyordu.
    */
-  const { warehouses } = await readWarehouseContext();
-  const scopeIds = warehouses.map((w) => w.id);
+  const { facilities } = await readWarehouseContext();
+  const scopeIds = facilities.map((w) => w.id);
 
   if (workplace.status === 'needs_choice') {
     return <WarehouseChoice data={await readWarehouseChoices(scopeIds, today)} />;

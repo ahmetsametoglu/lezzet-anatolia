@@ -14,6 +14,8 @@ const WAREHOUSE = {
   code: 'STR',
   name: 'Strasbourg',
   kind: 'facility' as const,
+  /** Tesisin evi olmaz — kural veride de zorlanıyor (`warehouse_home_only_vehicle`). */
+  homeWarehouseId: null,
   countryCode: 'FR' as const,
   address: null,
   lat: null,
@@ -120,6 +122,8 @@ describe('kapatmanın sonuçları', () => {
     // Kargo kutuları bu dosyanın konusu değil (URL/okuma çözümü) — boş künye.
     shippingBoxes: { boxes: [], adoptable: [] },
     points: [],
+    /** Araç yükü bu dosyanın konusu değil (URL/okuma çözümü) — "araçta bir şey yok" hâli. */
+    vanLoad: null,
     measureTruncated: false,
     scorecard: {
       variantCount: 0,

@@ -108,7 +108,11 @@ export async function readOrdersPage(
     counts: toCountsView(counts),
     warehouse: {
       // Depo sütunu YALNIZ çok depolu bakışta anlamlı (kural 4): tek depoda aynı bilgi gürültüdür.
-      showColumn: ctx.activeWarehouseId === null && ctx.warehouses.length > 1 && warehouse.active === null,
+      //
+      // Sayım ARAÇLI (02.09): sütun siparişlerin deposunu YAZIYOR ve tezgâh satışı araçtan çıkabilir
+      // (`quick_sale`, araç deposundan düşer). Tesisleri saysaydık "STR + araç" kurulumunda sayı 1'e
+      // düşer, sütun hiç çizilmez ve araçtan çıkmış siparişin deposu görünmez olurdu.
+      showColumn: ctx.activeWarehouseId === null && ctx.warehousesWithVehicles.length > 1 && warehouse.active === null,
       available: warehouse.available,
       active: warehouse.active,
       dropped: warehouse.dropped,

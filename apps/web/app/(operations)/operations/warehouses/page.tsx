@@ -12,17 +12,19 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import type { Country, UserProfile } from '@lezzet/types';
-import { printersFor } from '@lezzet/application';
+import { printersFor, readFacilityVanSummary } from '@lezzet/application';
 import { guarded, requireAdmin } from '@/lib/guard';
 import { readStaff } from '@/lib/staff';
 import { readExpiryThresholds, toBatchViews } from '@/lib/stock/batch-view';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { NoAccessPane } from '@/components/operation/ui/no-access-pane';
+import { num } from '@/components/operation/ui/format';
+import { stockLink } from '../stock/stock-url';
 import { WarehousesClient } from './warehouses-client';
 import { readMeasurePoints } from './measure-read';
 import { openOrderCountOf, toScorecard, toStaffChips, toWarehouseRows, toZoneCards } from './warehouses-read';
 import { parseWarehousesUrl } from './warehouses-url';
-import type { WarehouseCardView, WarehousesData } from './warehouses-types';
+import type { VanLoadCardView, WarehouseCardView, WarehousesData } from './warehouses-types';
 
 // Depolar (19.5) — tesisin **kim olduğu, nereye hizmet ettiği ve nasıl durduğu**; üçü aynı nesneye
 // ait olduğu için ayrılmaz (`design/pages/admin-depolar.md`).
@@ -191,11 +193,40 @@ async function readCard(
     shippingBoxes,
     points: measure.points,
     measureTruncated: measure.truncated,
+    /*
+      Araç yükü YALNIZ TESİS kartında ve YALNIZ AÇIK tesiste (02.09). Araç kartında sorulmaz:
+      aracın kendi karnesi zaten onu sayıyor. Kapalı tesiste de sorulmaz — karnenin kuralının
+      aynısı; kapalı tesisin aracı olsaydı bile o mal bugünün işi değil.
+    */
+    vanLoad: row.kind === 'facility' && row.isActive ? await readVanLoadCard(db, row.id) : null,
     scorecard: toScorecard({
       batches: ownBatches,
       belowMinCount: belowMin.length,
       inTransitIn: row.inTransitIn,
       openOrderCount: orderCounts ? openOrderCountOf(orderCounts.byStatus) : 0,
     }),
+  };
+}
+
+/**
+ * Karnenin altındaki araç satırı — motoru `@lezzet/application`, burası yalnız cümleyi kurar
+ * (panelin şeridiyle aynı kaynak, iki ekran ayrışamasın).
+ *
+ * **Boş satır çizilmez:** ne kutu ne mal varsa `null` döner. Her tesisin altında sabit duran bir
+ * "araçta 0" satırı, dolduğu gün fark edilmeyen bir satırdır.
+ */
+async function readVanLoadCard(db: ReturnType<typeof serviceDb>, facilityId: string): Promise<VanLoadCardView | null> {
+  const summary = await readFacilityVanSummary(db, { facilityId });
+  const dolu = summary.vans.filter((van) => van.unitCount > 0);
+  if (summary.boxCount === 0 && dolu.length === 0) return null;
+
+  return {
+    vans: dolu.map((van) => ({
+      code: van.code,
+      name: van.name,
+      summary: `${num(van.unitCount)} adet · ${num(van.variantCount)} üründen`,
+      href: stockLink({ depo: van.code }),
+    })),
+    boxes: summary.boxCount > 0 ? `${num(summary.boxCount)} kutu · ${num(summary.orderCount)} sipariş` : null,
   };
 }

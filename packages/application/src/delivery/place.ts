@@ -39,7 +39,8 @@ export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: 
   const [matches, zones, warehouses] = await Promise.all([
     new PostalCodePlaceService(db).findByPostalCode(code),
     new DeliveryZoneService(db).listWithCodes(),
-    new WarehouseService(db).list({ activeOnly: true }),
+    // TESİSLER — gerekçe `order/delivery.ts:readDeliveryInputs` künyesinde (`activeCountries`).
+    new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
   ]);
   return resolvePlaceByPostalCode(code, matches, zones, warehouses);
 }
@@ -76,7 +77,9 @@ export async function resolvePlaceForPostalCode(db: SupabaseClient, postalCode: 
 export async function resolvePlaceWarehouses(db: SupabaseClient, postalCode: string): Promise<PlaceWarehouses> {
   const [resolution, warehouses] = await Promise.all([
     resolvePlaceForPostalCode(db, postalCode),
-    new WarehouseService(db).list({ activeOnly: true }),
+    // Yalnız `findShippingWarehouse`e gidiyor ve araç zaten `shipsOnline` olamaz — tesise indirmek
+    // sonucu değiştirmez, listeyi niyetiyle uyumlu tutar.
+    new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
   ]);
 
   if (resolution.kind !== 'route' && resolution.kind !== 'shipping') return UNRESOLVED_PLACE;

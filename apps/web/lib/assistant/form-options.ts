@@ -155,9 +155,10 @@ export async function readAssistantFormOptions(
     variantOptionsForVariants(db, bundleVariantIds),
     accountService.list(),
     accountService.balances(),
-    // Kabul yalnız AÇIK depoya yazılır; kapalı bir depo listede durursa operatör onu seçebilir ve
-    // kimsenin bakmadığı bir rafa mal girer.
-    new WarehouseService(db).list({ activeOnly: true }),
+    // Kabul yalnız AÇIK TESİSE yazılır; kapalı bir depo listede durursa operatör onu seçebilir ve
+    // kimsenin bakmadığı bir rafa mal girer. Araç aynı cümlenin ikinci yarısı (02.09): o da bir
+    // depodur ama mal kabulün hedefi olamaz — araca mal transferle girer, tedarikçiden değil.
+    new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
     new SupplierService(db).list({ activeOnly: true }),
   ]);
 

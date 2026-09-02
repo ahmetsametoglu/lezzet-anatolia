@@ -95,7 +95,13 @@ export interface DeliveryInputs {
 export async function readDeliveryInputs(db: Db): Promise<DeliveryInputs> {
   const [zones, warehouses] = await Promise.all([
     new DeliveryZoneService(db).listWithCodes(),
-    new WarehouseService(db).list({ activeOnly: true }),
+    // **TESİSLER** (02.09): motorun iki seçim yolu da zaten tesise çıkıyor (bölgenin deposu —
+    // `delivery_zone_warehouse_is_facility`; kargo deposu — `warehouse_vehicle_never_ships`), yani
+    // araç buraya girse de hiç seçilemezdi. Ama motorun ÜÇÜNCÜ kullanımı `activeCountries` ve o
+    // sessizce yanlıştı: "hizmet verdiğimiz ülkeler" kümesine aracın ülkesi de giriyordu. Bugün
+    // etkisiz (hepsi FR) — DE plakalı bir araç eklendiği gün vitrin, o ülkede deposu olmadan
+    // "Almanya'ya gönderiyoruz" derdi. Hareket hâlindeki bir yer bir ülkeye hizmet sözü veremez.
+    new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
   ]);
   return { zones, warehouses };
 }

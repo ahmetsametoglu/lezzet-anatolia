@@ -34,8 +34,33 @@ const ALL = 'all';
 /** Seçici komponenti (19.5) prop tipi olarak istedi → dışa açıldı (dosyanın kendi notu gereği). */
 export interface WarehouseContext {
   scope: WarehouseScope;
-  /** Kapsamla SÜZÜLMÜŞ depolar — seçiciyi çizmeye yeter (ad + kod). Kapsam dışı depo burada yoktur. */
-  warehouses: Warehouse[];
+  /**
+   * **VARSAYILAN LİSTE — kapsamla süzülmüş TESİSLER.** Seçici, süzgeç ve yazma hedefi bunu kullanır.
+   *
+   * Araç bir depodur (`0031`) — içindeki mal gerçek partidir, transferi ve stoğu vardır — ama
+   * operatörün "hangi depodayım" seçiminde bir seçenek DEĞİLDİR: mal kabulün, satın almanın,
+   * hazırlığın ve rotanın hedefi bir tesis olmak zorunda. Kural veritabanında zaten yazılıydı
+   * (`delivery_zone_warehouse_is_facility`, `warehouse_vehicle_never_ships`,
+   * `available_stock_total`'ın `kind = 'facility'` birleşimi) — eksik olan EKRANDI.
+   *
+   * ── ADLANDIRMA BİR SAVUNMADIR (02.09) ────────────────────────────────────────
+   * Bu alan bir kez `warehouses` adını taşıyordu ve araçları da içeriyordu; her ekran doğru olanı
+   * yapmak için ARAÇLARI ELEMEYİ HATIRLAMAK zorundaydı. Hatırlamayan çoktu: mal kabul, satın alma,
+   * hazırlık şeridi, rota çıkış deposu, üstteki süzgeç çubuğu ve başlıktaki seçicinin hepsi aracı
+   * gösteriyordu. Bir düzeltme turu daha yapmak yerine **varsayılan güvenli** yapıldı: tehlikeli
+   * olan liste artık adında ne olduğunu söylüyor (`warehousesWithVehicles`) ve derleyici onu
+   * isteyen her yeri tek tek saydırıyor. Unutmanın sonucu artık yanlış ekran değil, kırmızı build.
+   */
+  facilities: Warehouse[];
+  /**
+   * **ARAÇLARI DA İÇEREN liste** — yalnız aracın gerçekten bir cevap olduğu üç soru için:
+   * *(a)* kimlik → ad sözlüğü (araçtan çıkmış bir kayıt adını söyleyebilmeli), *(b)* stok kırılımı
+   * (*"kurye arabasında ne var"* gerçek bir sorudur, `data-model/depo.md`), *(c)* transfer hedefi
+   * (aracı yüklemek bir transferdir).
+   *
+   * Bunu SEÇENEK listesi olarak kullanma. Seçici, süzgeç ve yazma hedefi `facilities`tir.
+   */
+  warehousesWithVehicles: Warehouse[];
   /** Etkin bağlam; "tüm depolar" seçiliyken null. Kapsama karşı doğrulanmıştır. */
   activeWarehouseId: string | null;
   /**
@@ -77,18 +102,26 @@ export const readWarehouseContext = cache(async (): Promise<WarehouseContext> =>
     warehouseIds: scope.kind === 'limited' ? scope.warehouseIds : undefined,
   });
 
+  const facilities = warehouses.filter((w) => w.kind === 'facility');
+
   const raw = (await cookies()).get(COOKIE)?.value;
   // Çerezdeki kimlik kapsama karşı doğrulanır. Geçmezse "tüm depolar"a düşer — kapalı kapı değil,
   // daha geniş ama YETKİLİ bir görüş: kapsamı daraltılan personel çalışmaya devam edebilmeli.
+  //
+  // Doğrulama TESİS listesine karşı (02.09): seçici artık aracı sunmuyor, dolayısıyla çerezde bir
+  // araç kimliği ancak eski bir seçimden ya da elle düzenlemeden gelir — ikisi de "tüm depolar"a
+  // düşmeli. Kapsam denetiminin (`canAccessWarehouse`) yerini almaz, üstüne biner.
   const activeWarehouseId =
-    raw && raw !== ALL && canAccessWarehouse(scope, raw) && warehouses.some((w) => w.id === raw) ? raw : null;
+    raw && raw !== ALL && canAccessWarehouse(scope, raw) && facilities.some((w) => w.id === raw) ? raw : null;
 
   return {
     scope,
-    warehouses,
+    facilities,
+    warehousesWithVehicles: warehouses,
     activeWarehouseId,
     warehouseIds: warehouseIdsFor(scope, activeWarehouseId, warehouses),
-    // Kırılım evreni: tek depo seçiliyse yalnız o, değilse görünen depoların hepsi.
+    // Kırılım evreni: tek depo seçiliyse yalnız o, değilse görünen depoların hepsi — ARAÇ DAHİL.
+    // Süzgeç seçeneği değil kırılım evreni: "kurye arabasında ne var" satırı burada doğuyor.
     visibleWarehouseIds: activeWarehouseId ? [activeWarehouseId] : warehouses.map((w) => w.id),
   };
 });
@@ -112,10 +145,16 @@ export const readWarehouseContext = cache(async (): Promise<WarehouseContext> =>
  * olmayan bir kararı varmış gibi göstermektir"*. 27.08'e kadar burada ELLE yeniden yazılmıştı —
  * künye motoru alıntılıyor, kod kendi nüshasını çalıştırıyordu (`03.12`). Artık motora soruluyor.
  *
- * **Motora ne veriliyor, önemli:** `ctx.warehouses` — yani AKTİF ve kapsamla süzülmüş liste, ham
- * kapsam değil. Motorun ikinci argümanı *"bugün seçilebilir olanlar"* demek; oraya ağın tamamını
- * vermek kapatılmış bir tesisi seçenek yapardı. Kapsam denetimi zaten `readWarehouseContext`te
+ * **Motora ne veriliyor, önemli:** `ctx.facilities` — yani AKTİF, kapsamla süzülmüş ve ARAÇSIZ
+ * liste; ham kapsam değil. Motorun ikinci argümanı *"bugün seçilebilir olanlar"* demek; oraya ağın
+ * tamamını vermek kapatılmış bir tesisi seçenek yapardı, `warehouses`ı vermek de aracı. Burası
+ * tanımı gereği YAZMA hedefi (künyenin ilk satırı) ve araca mal kabul edilmez, araçtan sipariş
+ * hazırlanmaz — araç yalnız transferle dolar. Kapsam denetimi zaten `readWarehouseContext`te
  * yapıldı, burada ikinci kez sorulmaz.
+ *
+ * Yan etkisi istenen bir sadeleşme: kapsamı "STR + araç" olan kuryede seçilecek tek tesis kalır,
+ * yani `needs_choice` hiç doğmaz — motorun *"seçenek sunmak, olmayan bir kararı varmış gibi
+ * göstermektir"* kuralı burada kendiliğinden işler.
  */
 type WorkWarehouse =
   | { status: 'ok'; warehouseId: string; name: string }
@@ -127,15 +166,19 @@ export async function readWorkWarehouse(): Promise<WorkWarehouse> {
 
   const { options, needsChoice } = warehouseOptions(
     ctx.scope,
-    ctx.warehouses.map((w) => w.id),
+    ctx.facilities.map((w) => w.id),
   );
   if (options.length === 0) return { status: 'none' };
 
   // Seçili bağlam kazanır; yoksa motor "sorulmaz" diyorsa tek seçenek alınır. Kapsam doğrulaması
   // `readWarehouseContext` içinde yapıldı — burada ikinci kez sorulmaz, yoksa aynı kuralın iki
   // kopyası olurdu.
+  //
+  // Bağlamda ARAÇ seçiliyse `find` boş döner ve cevap `needs_choice` olur — doğrusu bu: operatör
+  // araca bakarken "mal kabul et" derse ekran ona tesisi sordurur, sessizce başka bir depoya
+  // yazmaz (varsayılan depo YOKTUR, CLAUDE §1).
   const secilenId = ctx.activeWarehouseId ?? (needsChoice ? null : options[0]);
-  const chosen = secilenId ? ctx.warehouses.find((w) => w.id === secilenId) : null;
+  const chosen = secilenId ? ctx.facilities.find((w) => w.id === secilenId) : null;
 
   if (chosen) return { status: 'ok', warehouseId: chosen.id, name: chosen.name };
   return { status: 'needs_choice' };

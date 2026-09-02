@@ -214,7 +214,11 @@ export async function createDraftFromSuggestionAction(supplierId: string): Promi
     // adrese gelir ve iki deponun eksiği tek yerde birikirdi. Aynı varyant iki depoda eşik altıysa
     // iki satır olur ve bu doğrudur: farklı yere gidecek iki parti.
     const lines: Array<{ variantId: string; qty: number; unitPriceCents: number | null; targetWarehouseId: string }> = [];
-    for (const warehouseId of ctx.visibleWarehouseIds) {
+    // Tur YALNIZ TESİSLERDEN — `readSuggestionGroups` ile aynı evren ve aynı gerekçe (02.09):
+    // hedef depo bir tesistir, araca tedarikçi malı sipariş edilmez. İkisi ayrışsaydı ekranda
+    // görünen öneri ile taslağa yazılan satırlar birbirini tutmazdı.
+    const facilityIds = ctx.facilities.map((w) => w.id).filter((id) => ctx.visibleWarehouseIds.includes(id));
+    for (const warehouseId of facilityIds) {
       const group = (await reorder.suggestions(warehouseId)).find((g) => g.supplierId === supplierId);
       for (const line of group?.lines ?? []) {
         lines.push({

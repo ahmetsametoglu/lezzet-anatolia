@@ -3,7 +3,15 @@ import { Card, cardClass } from '@/components/operation/ui/card';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { num } from '@/components/operation/ui/format';
-import type { AlertBandView, DashboardData, DeliveryRouteView, KpiCardView, QueueGroupView, RouteFlowView } from './dashboard-types';
+import type {
+  AlertBandView,
+  DashboardData,
+  DeliveryRouteView,
+  KpiCardView,
+  QueueGroupView,
+  RouteFlowView,
+  VanLoadBandView,
+} from './dashboard-types';
 
 // Panel (09.3) sunumu — operasyon web'i masaüstü-yalnız (`CLAUDE §2`); mobil deneyim native
 // uygulamada. Renk YOK, ton var: her blok `OpsTone`u kendi sınıflarına çeviriyor (`tone.ts` kuralı).
@@ -122,6 +130,10 @@ export function DashboardDesktop({ data }: DashboardDesktopProps) {
         <AlertBand band={data.band} />
 
         {data.kpis.length > 0 && <KpiStrip kpis={data.kpis} />}
+
+        {/* Göstergelerin HEMEN ALTINDA ve bilerek: kartlar "depoda ne var"ı sayıyor, bu satır
+            "ek olarak nerede ne var"ı. Araya bir blok girseydi iki sayı birbirinden kopardı. */}
+        {data.vanLoad && <VanLoadBand band={data.vanLoad} />}
 
         <FlowStrip rows={data.flow} />
 
@@ -246,6 +258,36 @@ function Sparkline({ series, tone }: { series: number[]; tone: OpsTone }) {
       ))}
       <span className="ml-1.5 self-end font-ops-body text-ops-micro text-ops-faint">7 gün</span>
     </div>
+  );
+}
+
+/**
+ * **ARAÇTA EK OLARAK** (kullanıcı isteği 02.09) — tek satır, kart değil.
+ *
+ * Kart yapılmadı ve bu bir tercih: göstergeler "depoda ne var" sorusunun cevabı, bu satır onların
+ * DİPNOTU — *"bir de şu kadarı dışarıda"*. Beşinci bir kart, aynı ağırlıkta ikinci bir gerçek gibi
+ * okunur ve operatörün gözü her sabah onu da taramak zorunda kalırdı.
+ *
+ * **İki sayı ayrı yazılıyor, toplanmıyor:** kutu emanettir (satılmış, yolda), adet satılabilir
+ * maldır. Toplamak "elimde 45 var" gibi okunurdu; oysa beşi başkasının.
+ */
+function VanLoadBand({ band }: { band: VanLoadBandView }) {
+  // Yalnız DOLU yarılar yazılır — boş yarı için "0 kutu" demek gürültüdür (`dashboard-page-read`).
+  const parts = [band.boxes, band.goods].filter((p): p is string => p !== null);
+
+  return (
+    <Link
+      href={band.href}
+      className={`${cardClass} flex cursor-pointer items-baseline gap-3 px-4 py-2.5 transition-colors hover:border-ops-accent`}
+    >
+      <span className="font-ops-body text-ops-xs uppercase tracking-wide text-ops-muted">{band.subject}</span>
+      <span className="font-ops-body text-ops-sm text-ops-ink">
+        ek olarak {parts.join(' · ')}
+      </span>
+      {band.sample && (
+        <span className="truncate font-ops-body text-ops-xs text-ops-faint">{band.sample}</span>
+      )}
+    </Link>
   );
 }
 

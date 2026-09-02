@@ -15,7 +15,14 @@ import { ordersLink } from '../orders/orders-url';
 import { settingsLink } from '../settings/settings-url';
 import { stockLink } from '../stock/stock-url';
 import { LABEL_SIZE_OPTIONS, postalCodeLabel, weekdayList } from './warehouses-labels';
-import type { ScorecardView, ShippingBoxesView, StaffChipView, WarehouseRowView, ZoneCardView } from './warehouses-types';
+import type {
+  ScorecardView,
+  ShippingBoxesView,
+  StaffChipView,
+  VanLoadCardView,
+  WarehouseRowView,
+  ZoneCardView,
+} from './warehouses-types';
 
 // Depolar ekranının bölümleri — liste ve kart görünümü AYNI parçaları kullanır. Bölümler burada
 // durur ki "karne başka yerde başka şey sayar" gibi bir ayrışma doğmasın.
@@ -253,6 +260,39 @@ export function Scorecard({ card, code }: { card: ScorecardView; code: string })
 // karşılama ekranı aynı kutuyu çiziyor; iki kopya, "amber"in bir ekranda uyarı ötekinde dekorasyon
 // olmasına giden yoldu. "Yolda bekleyen"in bilerek kapısız oluşu gibi kutuya özel gerekçeler
 // kutunun kendi künyesinde.
+
+/**
+ * **ARAÇTA EK OLARAK** (kullanıcı isteği 02.09) — karnenin dipnotu.
+ *
+ * Karne deponun İÇİNİ sayıyor ve araç ayrı bir depo olduğu için o sayılara girmiyor; yani "elimde
+ * ne var" sorusunun tam cevabı iki satırın toplamı. Operatörün bunu kafasında yapması gerekiyordu.
+ *
+ * **İki sayı ayrı:** kutu emanettir (satılmış, yolda ve o mal artık müşterinin), adet satılabilir
+ * maldır (araçta duruyor, kapıda satılabilir). Tek sayıda toplamak ikisini karıştırırdı.
+ */
+export function VanLoadRow({ load }: { load: VanLoadCardView }) {
+  return (
+    <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-0.5">
+      <span className="font-ops-body text-ops-xs uppercase tracking-wide text-ops-muted">Araçta ek olarak</span>
+      {load.boxes && <span className="font-ops-body text-ops-sm text-ops-ink">{load.boxes}</span>}
+      {load.vans.map((van) => (
+        <Link
+          key={van.code}
+          href={van.href}
+          className="cursor-pointer font-ops-body text-ops-sm text-ops-ink underline-offset-2 hover:text-ops-accent hover:underline"
+          title={van.name}
+        >
+          {van.code} · {van.summary}
+        </Link>
+      ))}
+      {/* Araç kaydı bağlanmamışsa kutu yine sayılır ama malın nerede olduğu söylenemez — sessiz
+          kalmak yerine sebebi yazılıyor (kurulum eksikliği bir arıza değil, bir eksik). */}
+      {load.vans.length === 0 && (
+        <span className="font-ops-body text-ops-xs text-ops-faint">bu tesise bağlı araç tanımlı değil</span>
+      )}
+    </div>
+  );
+}
 
 /**
  * Bağlı personel — **okunur.** Amaç yönetim değil SONUÇ: tek kapsamı burası olan biri varsa kapatma

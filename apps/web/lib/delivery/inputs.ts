@@ -24,7 +24,8 @@ export const readDeliveryInputs = cache(async () => {
     // cevap "rota kapalı, kargoyla gönderiyoruz". Rotanın açık olup olmadığına MOTOR karar verir
     // (`matchZones` pasifleri zaten eliyor); okuma o kararı önden vermemeli.
     new DeliveryZoneService(db).listWithCodes(),
-    new WarehouseService(db).list({ activeOnly: true }),
+    // TESİSLER — gerekçe `@lezzet/application` `readDeliveryInputs` künyesinde (`activeCountries`).
+    new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
   ]);
   return { zones, warehouses };
 });

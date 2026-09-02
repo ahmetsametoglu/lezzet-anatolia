@@ -60,10 +60,25 @@ create table public.warehouse (
   ships_online boolean not null default false,
   is_active boolean not null default true,
   sort_order int not null default 0,
+  -- ── ARAÇ NEREYE BAĞLI: EVİ OLAN TESİS (02.09) ──────────────────────────────
+  -- Araç bir YERDİR ama gezen bir yerdir; sabahları bir tesisten çıkar, akşam ona döner. O tesisin
+  -- panelinin *"aracımda ek olarak ne var"* diyebilmesi için bu bağ ŞART ve türetilemez:
+  --   · transferden türetmek → aracı bir kez KEHL yüklerse ev sessizce değişirdi;
+  --   · kuryenin kapsamından türetmek → kapsam KİŞİYE ait, tesise değil (iki tesise bakan bir
+  --     kurye aracı ikisine birden bağlardı);
+  --   · seferden türetmek → yalnız o günü söyler, aracın evini değil.
+  -- Üçü de "genelde doğru"dur ve depo kararlarında genelde doğru yetmez (`lat/lng` ile aynı yargı).
+  --
+  -- Nullable ve YALNIZ araçta dolu: tesisin evi olmaz. Ev tesis olmak zorunda ("aracın evi araç"
+  -- bir döngüdür) — o kural satır-arası olduğu için tetikleyicide (`delivery_zone`ın emsali).
+  -- `restrict`: aracı olan tesis silinemez; zaten hiçbir depo silinmiyor, kapatılıyor.
+  home_warehouse_id uuid references public.warehouse (id) on delete restrict,
   created_at timestamptz not null default now(),
   -- Araçtan kargo çıkmaz: kargo çıkış deposu bir adrestir, taşıyıcı oraya gelir. Kısıt aynı
   -- tabloda durabildiği için tetikleyiciye gerek yok — en ucuz yerde.
   constraint warehouse_vehicle_never_ships check (kind = 'facility' or not ships_online),
+  -- Ev YALNIZ aracın alanıdır. Tesise ev yazılabilseydi ağaç iki anlama gelirdi.
+  constraint warehouse_home_only_vehicle check (kind = 'vehicle' or home_warehouse_id is null),
   -- `postal_code_place_point` / `address_geo_point` ile aynı kural, aynı gerekçe.
   constraint warehouse_geo_point check ((lat is null) = (lng is null))
 );
@@ -218,6 +233,33 @@ $$;
 create trigger delivery_zone_warehouse_is_facility
   before insert or update of warehouse_id on public.delivery_zone
   for each row execute function public.assert_zone_warehouse_is_facility();
+
+-- Aracın EVİ bir tesistir (02.09). Kolon kısıtı "yalnız araçta dolu" der ama işaret ettiği satırın
+-- ne olduğunu göremez: kısıt kendi satırını okur, ötekini değil. Araç aracın evi olsaydı zincir
+-- kapanır ve "bu aracın malı hangi tesisin" sorusunun cevabı olmazdı.
+create or replace function public.assert_home_warehouse_is_facility() returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  if new.home_warehouse_id is null then return new; end if;
+  if not exists (
+    select 1 from public.warehouse w
+     where w.id = new.home_warehouse_id and w.kind = 'facility'
+  ) then
+    raise exception 'warehouse.home_warehouse_id bir tesis olmalı (aracın evi araç olamaz): %', new.home_warehouse_id
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger warehouse_home_is_facility
+  before insert or update of home_warehouse_id on public.warehouse
+  for each row execute function public.assert_home_warehouse_is_facility();
+
+-- Evine göre araç okuması: panelin ve depo kartının sorgusu ("bu tesisin araçları").
+create index warehouse_home_idx on public.warehouse (home_warehouse_id) where home_warehouse_id is not null;
 -- Parti ↔ tedarik kalemi (T5): parçalı kabulde fark raporunun bağı.
 alter table public.stock add constraint stock_purchase_order_item_fk
   foreign key (purchase_order_item_id) references public.purchase_order_item (id) on delete set null;

@@ -60,7 +60,8 @@ export default async function ProcurementPage({ searchParams }: ProcurementPageP
         ordersCursor: orders?.nextCursor ?? null,
         pendingOrderCount,
         supplierOptions,
-        warehouseOptions: ctx?.warehouses.map((w) => ({ id: w.id, code: w.code, name: w.name })) ?? null,
+        // Yalnız TESİSLER: satın alma siparişi bir araca teslim edilmez (bağlamın `facilities` künyesi).
+        warehouseOptions: ctx?.facilities.map((w) => ({ id: w.id, code: w.code, name: w.name })) ?? null,
         // Gün SUNUCUDAN: "kaç gündür yolda" istemcide `new Date()` ile hesaplansaydı sunucu ve
         // istemci gece yarısını geçen bir istekte farklı gün üretirdi (sipariş ekranının deseni).
         today: new Date().toISOString().slice(0, 10),

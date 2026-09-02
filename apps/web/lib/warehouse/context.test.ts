@@ -32,7 +32,7 @@ const cerez: { deger: string | undefined } = { deger: undefined };
 const kapsam: { simdiki: WarehouseScope } = { simdiki: { kind: 'none' } };
 const tesisler: { hepsi: Warehouse[] } = { hepsi: [] };
 /** Servise giden sorgu — "aktif süzgeci gerçekten isteniyor mu" iddiası için. */
-let sonSorgu: { activeOnly?: boolean; warehouseIds?: readonly string[] } | null = null;
+let sonSorgu: { activeOnly?: boolean; warehouseIds?: readonly string[]; kind?: Warehouse['kind'] } | null = null;
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({
@@ -51,12 +51,17 @@ vi.mock('@lezzet/database', () => ({
     // Gerçek `list`in sözleşmesini AYNEN uygular (`warehouse.service.ts:37`): boş dizi = hiçbiri,
     // `activeOnly` pasifi eler, `warehouseIds` kapsamı süzer. Taklit süzmezse test sahte olurdu —
     // kapatılmış depo hâli tam da süzgecin sonucudur.
-    list(opts: { activeOnly?: boolean; warehouseIds?: readonly string[] } = {}): Promise<Warehouse[]> {
+    list(
+      opts: { activeOnly?: boolean; warehouseIds?: readonly string[]; kind?: Warehouse['kind'] } = {},
+    ): Promise<Warehouse[]> {
       sonSorgu = opts;
       if (opts.warehouseIds?.length === 0) return Promise.resolve([]);
       return Promise.resolve(
         tesisler.hepsi.filter(
-          (w) => (!opts.activeOnly || w.isActive) && (!opts.warehouseIds || opts.warehouseIds.includes(w.id)),
+          (w) =>
+            (!opts.activeOnly || w.isActive) &&
+            (!opts.kind || w.kind === opts.kind) &&
+            (!opts.warehouseIds || opts.warehouseIds.includes(w.id)),
         ),
       );
     }
@@ -65,12 +70,14 @@ vi.mock('@lezzet/database', () => ({
 
 const { readWarehouseContext, readWorkWarehouse } = await import('./context');
 
-const depo = (id: string, isActive = true): Warehouse =>
-  ({ id, code: id.toUpperCase(), name: `Depo ${id}`, isActive, sortOrder: 0 }) as unknown as Warehouse;
+const depo = (id: string, isActive = true, kind: Warehouse['kind'] = 'facility'): Warehouse =>
+  ({ id, code: id.toUpperCase(), name: `Depo ${id}`, isActive, kind, sortOrder: 0 }) as unknown as Warehouse;
 
 const STR = depo('str');
 const COL = depo('col');
 const KAPALI = depo('kapali', false);
+/** Kurye aracı — bir DEPO ama mal kabulün, hazırlığın ve rotanın hedefi olamaz (`0031`). */
+const ARAC = depo('van', true, 'vehicle');
 
 beforeEach(() => {
   cerez.deger = undefined;
@@ -118,6 +125,35 @@ describe('readWorkWarehouse — "malı hangi kapıdan sokacağım"', () => {
     expect(sonSorgu).toMatchObject({ activeOnly: true });
   });
 
+  /*
+    ARAÇ bir depodur ama YAZMA hedefi değildir (02.09). Kurye kendi aracını kapsamında taşır —
+    `vehicleWarehouseOf` onu tam da oradan buluyor — yani "araç kapsamda" normaldir, istisna değil.
+    Kapatılmış tesis kuralının aynısı: kapsam iki kimlik taşır, seçilebilir tek TESİS kalır.
+  */
+  it('kapsamda tesis + ARAÇ varsa araç sayılmaz — geriye tek tesis kalır ve sorulmaz', async () => {
+    kapsam.simdiki = { kind: 'limited', warehouseIds: [STR.id, ARAC.id] };
+    tesisler.hepsi = [STR, ARAC];
+
+    expect(await readWorkWarehouse()).toEqual({ status: 'ok', warehouseId: STR.id, name: STR.name });
+  });
+
+  it('bağlamda ARAÇ seçiliyken yazma hedefi SORULUR — sessizce başka depoya yazılmaz', async () => {
+    kapsam.simdiki = { kind: 'limited', warehouseIds: [STR.id, COL.id, ARAC.id] };
+    tesisler.hepsi = [STR, COL, ARAC];
+    cerez.deger = ARAC.id;
+
+    // Araç geçerli bir bağlamdır (stok okumak için) ama mal kabulün kapısı olamaz: cevap "hangi
+    // tesis" sorusudur, ilk tesisi seçmek değil.
+    expect(await readWorkWarehouse()).toEqual({ status: 'needs_choice' });
+  });
+
+  it('kapsamda YALNIZ araç varsa `none` — araca mal kabul edilmez', async () => {
+    kapsam.simdiki = { kind: 'limited', warehouseIds: [ARAC.id] };
+    tesisler.hepsi = [ARAC];
+
+    expect(await readWorkWarehouse()).toEqual({ status: 'none' });
+  });
+
   it('kapsamdaki depoların HEPSİ kapatılmışsa `none` — boş seçiciye gönderilmez', async () => {
     kapsam.simdiki = { kind: 'limited', warehouseIds: [KAPALI.id] };
     tesisler.hepsi = [KAPALI];
@@ -157,7 +193,7 @@ describe('readWarehouseContext — çerez KAPSAMA karşı doğrulanır', () => {
     const ctx = await readWarehouseContext();
     expect(ctx.activeWarehouseId).toBeNull();
     // Ve kapsam dışı depo listede HİÇ görünmez — görüp de seçememek değil, hiç görmemek.
-    expect(ctx.warehouses.map((w) => w.id)).toEqual([STR.id]);
+    expect(ctx.facilities.map((w) => w.id)).toEqual([STR.id]);
   });
 
   it('KAPATILMIŞ deponun kimliği de düşer — yetki var ama tesis yok', async () => {
@@ -197,5 +233,33 @@ describe('readWarehouseContext — çerez KAPSAMA karşı doğrulanır', () => {
     const ctx = await readWarehouseContext();
     expect(ctx.warehouseIds).toEqual([STR.id]);
     expect(ctx.visibleWarehouseIds).toEqual([STR.id]);
+  });
+
+  /*
+    İki liste, iki ayrı soru: `warehouses` = "bu kişi neyi GÖRÜR", `facilities` = "mal nereye KONUR".
+    Aracı görmezden gelmek de bir hata olurdu — araçtaki mal gerçek partidir, transferi ve stoğu
+    vardır; onu okumalardan düşürmek "araçta ne var" sorusunu cevapsız bırakırdı.
+  */
+  it('araç YALNIZ araçlı listede kalır, seçenek listesinden düşer — okuma ile seçim ayrı', async () => {
+    kapsam.simdiki = { kind: 'limited', warehouseIds: [STR.id, ARAC.id] };
+    tesisler.hepsi = [STR, ARAC];
+
+    const ctx = await readWarehouseContext();
+    // Seçici, süzgeç ve yazma hedefi buradan besleniyor — araç yok.
+    expect(ctx.facilities.map((w) => w.id)).toEqual([STR.id]);
+    // Etiket sözlüğü, stok kırılımı ve transfer buradan — araç var.
+    expect(ctx.warehousesWithVehicles.map((w) => w.id)).toEqual([STR.id, ARAC.id]);
+    // Kırılım evreni de aracı KAPSAR: stok okuması onun satırını çizmeli.
+    expect(ctx.visibleWarehouseIds).toEqual([STR.id, ARAC.id]);
+  });
+
+  it('çerezdeki ARAÇ kimliği düşer — seçici onu sunmuyor, eski seçim de geçerli değil', async () => {
+    kapsam.simdiki = { kind: 'limited', warehouseIds: [STR.id, ARAC.id] };
+    tesisler.hepsi = [STR, ARAC];
+    cerez.deger = ARAC.id;
+
+    // Kapsam denetimi bu kimliği GEÇİRİR (araç gerçekten kuryenin kapsamında); düşüren şey tesis
+    // doğrulaması. İkisi ayrı kapı ve ikincisi olmasa çerez elle düzenlenerek araç bağlamı kurulurdu.
+    expect((await readWarehouseContext()).activeWarehouseId).toBeNull();
   });
 });

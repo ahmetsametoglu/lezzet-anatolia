@@ -17,7 +17,8 @@ const KEHL = warehouse('w-kehl', 'KEHL', 'Kehl');
 
 const ctx = (patch: Partial<WarehouseContext> = {}): WarehouseContext => ({
   scope: { kind: 'all' },
-  warehouses: [STR, KEHL],
+  facilities: [STR, KEHL],
+  warehousesWithVehicles: [STR, KEHL],
   activeWarehouseId: null,
   warehouseIds: undefined,
   visibleWarehouseIds: [STR.id, KEHL.id],
@@ -70,17 +71,35 @@ describe('tablo depo süzgeci', () => {
   });
 
   it('tek depolu KURULUMDA süzgeç hiç çizilmez (daraltacak bir şey yok)', () => {
-    const only = ctx({ warehouses: [STR], visibleWarehouseIds: [STR.id] });
+    const only = ctx({ facilities: [STR], warehousesWithVehicles: [STR], visibleWarehouseIds: [STR.id] });
     expect(warehouseFilterOf(only, '').available).toBe(false);
   });
 
   it('seçenekler kapsamdan türer — kapsam dışı depo listede YOKTUR (kural 8)', () => {
     const limited = ctx({
       scope: { kind: 'limited', warehouseIds: [STR.id] },
-      warehouses: [STR],
+      facilities: [STR],
+      warehousesWithVehicles: [STR],
       warehouseIds: [STR.id],
       visibleWarehouseIds: [STR.id],
     });
     expect(warehouseFilterOf(limited, '').options.map((o) => o.code)).toEqual(['STR']);
+  });
+
+  /*
+    Süzgeç çubuğu ARAÇ SUNMAZ (02.09, kullanıcı bildirimi: *"en yukarıdaki filtre kısmında hâlâ araç
+    görünüyor"*). Araç bir bakış açısı değil, malın taşındığı yer: `?depo=VAN-1` diye bir evren yok.
+    Araçlı liste bağlamda duruyor ve stok kırılımı onu kullanmaya devam ediyor — bu testin ölçtüğü
+    şey ikisinin AYRIŞTIĞI nokta, aracın hiç yokluğu değil.
+  */
+  it('süzgeç seçenekleri araçları GÖSTERMEZ — araçlı liste bağlamda dursa bile', () => {
+    const araclı = ctx({
+      facilities: [STR],
+      warehousesWithVehicles: [STR, KEHL],
+      visibleWarehouseIds: [STR.id, KEHL.id],
+    });
+    expect(warehouseFilterOf(araclı, '').options.map((o) => o.code)).toEqual(['STR']);
+    // Ve tek seçenek kalınca süzgeç hiç çizilmez: daraltacak bir şey yok.
+    expect(warehouseFilterOf(araclı, '').available).toBe(false);
   });
 });

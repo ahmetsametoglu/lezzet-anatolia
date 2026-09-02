@@ -60,7 +60,9 @@ interface WarehouseFilter {
  * söylemek için kapsam dışı bir satırı okumak gerekirdi.
  */
 export function warehouseFilterOf(ctx: WarehouseContext, rawCode: string): WarehouseFilter {
-  const options = ctx.warehouses.map(toOption);
+  // SEÇENEK listesi = tesisler (02.09, kullanıcı bildirimi). Süzgeç çubuğu `?depo=VAN-1` gibi bir
+  // evren sunmamalı: araç bir bakış açısı değil, malın taşındığı yer.
+  const options = ctx.facilities.map(toOption);
   // Bağlam tek depodayken süzgeç YOKTUR; adresten gelen kod da uygulanmaz.
   const available = ctx.activeWarehouseId === null && options.length > 1;
   const code = rawCode.trim().toUpperCase();
@@ -70,7 +72,7 @@ export function warehouseFilterOf(ctx: WarehouseContext, rawCode: string): Wareh
   if (!available) {
     // Tek depolu bağlamda gelen kod: kendi deposuysa gürültü (sessizce yok sayılır), başkasıysa
     // kullanıcı gerçekten başka bir evrenin bağlantısını açmıştır ve bunu bilmeli.
-    const own = ctx.warehouses.find((w) => w.id === ctx.activeWarehouseId);
+    const own = ctx.facilities.find((w) => w.id === ctx.activeWarehouseId);
     const dropped = own && own.code === code ? null : code;
     return { warehouseIds: ctx.warehouseIds, active: null, dropped, available, options };
   }

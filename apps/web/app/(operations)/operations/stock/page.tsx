@@ -251,13 +251,18 @@ export default async function StockPage({ searchParams }: StockPageProps) {
         warehouse: {
           // Başlıktaki evren adı BAĞLAMIN adıdır, süzgecin değil (kural 5): sayaçlar bağlamı
           // izliyorsa onların hangi evrene ait olduğunu da bağlam söylemeli.
+          // Stok ekranı ARAÇLI sayar (02.09): kırılım evreni `visibleWarehouseIds` zaten aracı
+          // içeriyor, satırlar araç sütununu çiziyor — sayıyı tesislerden alsaydık "STR + araç"
+          // kurulumunda kırılım kapanır ve çizilen sütunun başlığı kaybolurdu. Seçili bağlamın adı
+          // ise tesistendir; araç zaten seçilemiyor.
           scopeLabel:
-            ctx.warehouses.length < 2
+            ctx.warehousesWithVehicles.length < 2
               ? ''
-              : (ctx.activeWarehouseId && ctx.warehouses.find((w) => w.id === ctx.activeWarehouseId)?.name) || 'Tüm depolar',
+              : (ctx.activeWarehouseId && ctx.facilities.find((w) => w.id === ctx.activeWarehouseId)?.name) ||
+                'Tüm depolar',
           // Kırılım ve parti rozeti yalnız çok depolu bakışta (kural 4); süzgeç aktifken satır
           // zaten tek deponun sayılarını gösterir, kırılım kapanır.
-          showSplit: ctx.activeWarehouseId === null && ctx.warehouses.length > 1 && warehouse.active === null,
+          showSplit: ctx.activeWarehouseId === null && ctx.warehousesWithVehicles.length > 1 && warehouse.active === null,
           available: warehouse.available,
           active: warehouse.active,
           dropped: warehouse.dropped,

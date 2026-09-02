@@ -42,11 +42,19 @@ type Db = ReturnType<typeof serviceDb>;
  */
 export async function readSuggestionGroups(db: Db): Promise<SuggestionGroupView[]> {
   const ctx = await readWarehouseContext();
-  const codeOf = new Map(ctx.warehouses.map((w) => [w.id, w.code]));
+  // Etiket sözlüğü ARAÇLI: kimlik → kod eşlemesi eksik kalırsa satır '—' yazar.
+  const codeOf = new Map(ctx.warehousesWithVehicles.map((w) => [w.id, w.code]));
 
   const reorder = new ReorderService(db);
+  // **Öneri turu YALNIZ TESİSLERDEN** (02.09): satın alma önerisi "bu deponun rafı boşalıyor"
+  // demektir ve araçta raf yoktur — araç transferle dolar, tedarikçiden değil. Bugün araç için
+  // eşik tanımlı olmadığından tur boş dönüyordu; yani arıza görünmüyordu ama ilk eşik tanımlandığı
+  // gün tedarikçiye araç adına satır yazılırdı.
+  const suggestionWarehouseIds = ctx.facilities
+    .map((w) => w.id)
+    .filter((id) => ctx.visibleWarehouseIds.includes(id));
   const perWarehouse = await Promise.all(
-    ctx.visibleWarehouseIds.map(async (warehouseId) => ({
+    suggestionWarehouseIds.map(async (warehouseId) => ({
       warehouseId,
       code: codeOf.get(warehouseId) ?? '—',
       groups: await reorder.suggestions(warehouseId),
@@ -200,7 +208,7 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
   // eşleme sonradan değişse bile tedarikçiye giden liste o gün ne yazdıysa odur.
   const mappings = await new SupplierProductService(db).listBySupplier(order.supplierId);
   const codeOfMapping = new Map(mappings.map((m) => [m.id, m.supplierCode]));
-  const warehouseCodeOf = new Map(ctx.warehouses.map((w) => [w.id, w.code]));
+  const warehouseCodeOf = new Map(ctx.warehousesWithVehicles.map((w) => [w.id, w.code]));
   const progressOf = new Map(progress.map((p) => [p.purchaseOrderItemId, p]));
 
   return {

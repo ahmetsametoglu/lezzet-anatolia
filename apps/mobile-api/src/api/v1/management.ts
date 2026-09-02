@@ -62,8 +62,9 @@ management.get('/hub', async (c) => {
 
 /** Yönetim okumalarının kapsamı: aktif TESİSLER — hub motoruyla aynı küme, iki yerde ayrışmasın. */
 async function activeFacilityIds(): Promise<string[]> {
-  const warehouses = await new WarehouseService(serviceDb()).list({ activeOnly: true });
-  return warehouses.filter((warehouse) => warehouse.kind === 'facility').map((warehouse) => warehouse.id);
+  // Süzgeç servise geçti (02.09) — aynı cümlenin üçüncü elle yazılmış kopyasıydı.
+  const warehouses = await new WarehouseService(serviceDb()).list({ activeOnly: true, kind: 'facility' });
+  return warehouses.map((warehouse) => warehouse.id);
 }
 
 /* ── Y3 · Yakın-SKT teklif onayı ────────────────────────────────────────────── */

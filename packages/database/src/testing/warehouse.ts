@@ -33,6 +33,8 @@ export interface TestWarehouseOptions {
   kind?: Warehouse['kind'];
   shipsOnline?: boolean;
   isActive?: boolean;
+  /** Aracın evi olan tesis (02.09) — yalnız `kind: 'vehicle'` ile birlikte anlamlı. */
+  homeWarehouseId?: string;
 }
 
 /**
@@ -47,6 +49,7 @@ export async function createTestWarehouse(db: SupabaseClient, opts: TestWarehous
     name: `Test deposu ${opts.label ?? stamp}`,
     countryCode: opts.countryCode ?? 'FR',
     kind: opts.kind ?? 'facility',
+    homeWarehouseId: opts.homeWarehouseId ?? null,
     shipsOnline: opts.shipsOnline ?? false,
     isActive: opts.isActive ?? true,
   });

@@ -24,6 +24,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | `ships_online` | boolean |  | `false` |
 | `is_active` | boolean |  | `true` |
 | `sort_order` | int |  | `0` |
+| `home_warehouse_id` | uuid | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 
@@ -31,11 +32,19 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 - **`code`** — benzersiz kısa kod (`STR`, `KEHL`) — belge numarasına girer (`IMH-STR-26-0012`), denetmen ve tedarikçi elle yazar
 - **`name`** — ekranda okunan ad
-- **`kind`** — `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil ÜÇ SORGUNUN süzgeci (aşağıda)
+- **`kind`** — `facility` \| `vehicle` (26.08) — **araç da bir depodur**; yükleme/dönüş birer transfer, içindeki mal gerçek parti. Tür bir etiket değil DÖRT KURALIN süzgeci — üçü veride, dördüncüsü seçicilerde (aşağıda)
 - **`country_code`** — **fiziksel tesis nerede.** Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır ötesi olabilir (ADR-002), depo olamaz. ⚠ KDV'nin bağlı olduğu alan (`DOMAIN §5/§17`)
 - **`ships_online`** — kargo çıkış deposu — bölge dışı müşteriler + rota müşterilerinin kargo dolgusu
 - **`is_active`** — depo **kapatılır, silinmez**: geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorunda (FK'ler `restrict`)
 - **`sort_order`** — operatörün seçici sırası
+- **`home_warehouse_id`** (02.09) — **aracın evi olan tesis**; yalnız `kind='vehicle'` satırında dolu
+  (`warehouse_home_only_vehicle`), ev tesis olmak zorunda (`warehouse_home_is_facility` tetikleyicisi
+  — "aracın evi araç" bir döngüdür). Araç gezen bir yerdir: sabah bir tesisten çıkar, akşam ona
+  döner; tesisin paneli *"aracımda ek olarak ne var"* diyebilsin diye bağ VERİDE duruyor.
+  **Türetilmedi ve gerekçesi ölçülü:** son transferden türetmek aracı bir kez KEHL yüklediğinde evi
+  sessizce değiştirirdi, kuryenin kapsamından türetmek kapsamı KİŞİYE bağlar (iki tesise bakan kurye
+  aracı ikisine birden bağlar), seferden türetmek yalnız o günü söyler. Üçü de "genelde doğru"dur ve
+  depo kararlarında genelde doğru yetmez (`lat`/`lng` ile aynı yargı)
 - **`lat`/`lng`** (11.9) — deponun coğrafi noktası: **rotanın çıpası**, kapalı turun başlangıcı ve
   bitişi. `address` jsonb'sinin içine gömülmedi ve gerekçe yapısal: **gömülü sayı kısıt taşıyamaz** —
   tek başına enlem yazan bir yolu hiçbir şey engelleyemezdi. Kolon hâlinde `warehouse_geo_point`
@@ -52,7 +61,23 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 
 **Varsayılan depo kavramı YOKTUR** (C2) — bu yüzden şemada bir `is_default` bayrağı da yoktur. Depo daima açık bir kaynaktan gelir: adresin posta kodu (uzaktan sipariş) ya da personelin o anki deposu (yerinde satış: depo kapısı ya da kuryenin aracı).
 
-**Araç deposu — türün üç sonucu, üçü de VERİDE** (26.08, `DOMAIN §17`): *(a)* **araca bölge bağlanamaz** — `delivery_zone_warehouse_is_facility` tetikleyicisi; "posta kodu → bölge → depo" zincirinin sonu bir adres olmak zorunda, yoksa müşteri siparişi hareket hâlindeki bir yere yazılır ve hiçbir ekran fark etmez. *(b)* **araç kargo deposu olamaz** — `warehouse_vehicle_never_ships` kısıtı (taşıyıcı bir adrese gelir); aynı tabloda durabildiği için tetikleyiciye gerek yok. *(c)* **araç `available_stock_total`a girmez** — katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz; tedarik önerisi içinse o mal zaten tesisten çıkmış, akşam dönecektir (sayılsaydı ikinci kez sayılırdı). Depo bazlı `available_stock` aracı **aynen gösterir**: kurye arabasında ne olduğunu görmek zorunda — ayrım bu yüzden toplamda, kaynakta değil.
+**Araç deposu — türün DÖRT sonucu; ilk üçü VERİDE** (26.08, `DOMAIN §17`): *(a)* **araca bölge bağlanamaz** — `delivery_zone_warehouse_is_facility` tetikleyicisi; "posta kodu → bölge → depo" zincirinin sonu bir adres olmak zorunda, yoksa müşteri siparişi hareket hâlindeki bir yere yazılır ve hiçbir ekran fark etmez. *(b)* **araç kargo deposu olamaz** — `warehouse_vehicle_never_ships` kısıtı (taşıyıcı bir adrese gelir); aynı tabloda durabildiği için tetikleyiciye gerek yok. *(c)* **araç `available_stock_total`a girmez** — katalog için "bizde var" bir SÖZDÜR ve araçtaki mal siteden alınamaz; tedarik önerisi içinse o mal zaten tesisten çıkmış, akşam dönecektir (sayılsaydı ikinci kez sayılırdı). Depo bazlı `available_stock` aracı **aynen gösterir**: kurye arabasında ne olduğunu görmek zorunda — ayrım bu yüzden toplamda, kaynakta değil.
+
+**DÖRDÜNCÜ SONUÇ — araç YAZMA hedefi değildir, ve bu tek başına veriye sığmaz** (02.09, kullanıcı bildirimi: *"araç bir depo olarak birçok yere geliyor, engellenmesi gerekiyor"*). Üstteki üç kural veritabanında duruyor ve **çalışıyor** — ama hiçbiri ekranın aracı SEÇENEK olarak göstermesini engellemiyordu. Ölçüm: mal kabul depo listesi, satın alma hedef deposu, hazırlığın tesis şeridi, asistanın kabul dilekçesi ve rota formunun "Çıkış deposu" seçicisi VAN-1'i sunuyordu. Rota formunda zarar somut: operatör aracı seçebiliyor, kaydederken `delivery_zone_warehouse_is_facility` reddediyor — yani kural tuttu ama operatöre *sebebi ancak kaydetmeye basınca görünen* bir ret olarak göründü. Kapının kendi kuralı bunu zaten yasaklıyor: *"kapsam dışı depo hiçbir seçicide ve süzgeçte seçenek olarak var olmamalı — görüp de seçememek değil, hiç görmemek"*.
+
+**Çözüm bir düzeltme turu DEĞİL, varsayılanın tersine çevrilmesi.** İlk tur elle yapıldı ve eksik kaldı: başlıktaki seçici ile üstteki süzgeç çubuğu gözden kaçtı (kullanıcı ikisini de gördü). Sebep yöntemdi — "araçları elemeyi hatırla" diye bir kural, hatırlamayan ilk çağrı yerinde çöker. Bu yüzden operasyon bağlamının alanı yeniden adlandırıldı: güvenli liste artık `facilities`, araçlı liste ise adında ne olduğunu söyleyen `warehousesWithVehicles`. **Derleyici o gün on iki çağrı yerini tek tek saydırdı** ve her biri açık bir gerekçeyle sınıflandırıldı; bundan sonra unutmanın sonucu yanlış ekran değil, kırmızı build.
+
+| araç YOK (`facilities`) | araç VAR (`warehousesWithVehicles` / tam liste) |
+| --- | --- |
+| başlıktaki bağlam seçicisi · üstteki süzgeç çubuğu (`filter.ts`) | kimlik → ad/kod sözlükleri (`readWarehouseLabels`, satın alma, sevkiyat) |
+| yazma hedefi kapısı (`readWorkWarehouse`) | stok kırılımı ve ürün bakışı (*"kurye arabasında ne var"*) |
+| mal kabul · satın alma hedefi · hazırlık şeridi · rota çıkış deposu | sipariş listesinin depo sütunu (tezgâh satışı araçtan çıkabilir) |
+| eşik/öneri turları (web · MCP · yönetim hub'ı) | transfer kaynak/hedef — aracı yüklemek zaten bir transferdir |
+| yer çözümü motorunun girdisi (aşağıdaki not) | **personel kapsamı** — kuryenin aracı kapsamından bulunuyor (`vehicleWarehouseOf`) · depo yönetim ekranı |
+
+`readWorkWarehouse` bağlamda araç seçiliyken `needs_choice` döner — sessizce başka bir depoya yazmaz (*varsayılan depo YOKTUR*); çerezdeki araç kimliği de artık tesis listesine karşı doğrulandığı için düşer.
+
+**Taramanın çıkardığı sessiz hata:** `activeCountries` (yer çözümü motoru) *"hizmet verdiğimiz ülkeler"* kümesini aktif depoların ülkesinden türetiyor ve araçları da sayıyordu. Bugün etkisizdi (hepsi FR) ama DE plakalı bir araç eklendiği gün vitrin, o ülkede deposu olmadan *"Almanya'ya gönderiyoruz"* derdi — hareket hâlindeki bir yer bir ülkeye hizmet sözü veremez. Motorun iki seçim yolu da (bölgenin deposu · kargo deposu) zaten tesise çıktığı için girdiyi tesise indirmek sonucu değiştirmedi, yalnız bu üçüncü kullanımı düzeltti.
 
 `vehicle` TABLOSU AYRI YAŞAR (0045) ve bu duplication değil: orası aracın **soğuk zincirini ölçer** (ölçüm noktası kimliği), burası **içindeki malı sayar**. 0031'in künyesi *"araç bir depoya mı, bir güne mi, bir kuryeye mi bağlanır"* sorusunu açık bırakmıştı; cevap **hiçbirine — araç bir YERDİR.**
 

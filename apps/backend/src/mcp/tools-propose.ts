@@ -392,7 +392,12 @@ export async function proposePurchaseOrder(args: Record<string, unknown>) {
   const warehouseCode = String(args.warehouseCode ?? '').trim();
   if (!warehouseCode) return { error: 'warehouseCode zorunlu (örn. "STR").' };
 
-  const warehouse = (await new WarehouseService(db).list({ activeOnly: true })).find((w) => w.code === warehouseCode);
+  // TESİS aranır (02.09): satın alma önerisi "bu deponun rafı boşalıyor" demektir, araçta raf yok.
+  // Araç kodu verilirse cevap "bulunamadı" olur — doğrusu bu, çünkü orada sipariş edilecek bir şey
+  // gerçekten yok; sessizce boş öneri dönmek asistanı "eşik yok" diye yanıltırdı.
+  const warehouse = (await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' })).find(
+    (w) => w.code === warehouseCode,
+  );
   if (!warehouse) return { error: `Depo bulunamadı: ${warehouseCode}` };
 
   const groups = await new ReorderService(db).suggestions(warehouse.id);
@@ -738,7 +743,11 @@ export async function proposeStockIntake(args: Record<string, unknown>) {
   if (!warehouseCode) return { error: 'warehouseCode zorunlu — mal hangi depoya girdi?' };
   if (rawLines.length === 0) return { error: 'lines boş — faturadaki kalemleri verin.' };
 
-  const warehouse = (await new WarehouseService(db).list({ activeOnly: true })).find((w) => w.code === warehouseCode);
+  // TESİS aranır (02.09): mal kabulün hedefi bir tesistir — araca tedarikçiden mal girmez, araç
+  // transferle dolar. Web'deki kabul seçicisiyle aynı kural; asistan yolundan da atlanamamalı.
+  const warehouse = (await new WarehouseService(db).list({ activeOnly: true, kind: 'facility' })).find(
+    (w) => w.code === warehouseCode,
+  );
   if (!warehouse) return { error: `Depo bulunamadı: ${warehouseCode}` };
 
   const variantIds = rawLines.map((l) => String(l.variantId ?? '')).filter(isUuid);

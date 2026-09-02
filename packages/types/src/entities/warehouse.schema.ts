@@ -19,10 +19,20 @@ export const WarehouseSchema = z.object({
    * Tesis mi, kurye aracı mı (26.08). Araç bir YERDİR — yüklenir, sayılır, transfer alır ve
    * içinden satış yapılır; ölçüm noktası kimliği (`vehicle`, 0045) ayrı yaşar.
    *
-   * Okuyan tarafın bilmesi gereken üç sonuç, üçü de veride zorlanıyor: araca bölge bağlanamaz,
-   * araç kargo deposu olamaz, araç `available_stock_total`a girmez.
+   * Okuyan tarafın bilmesi gereken dört sonuç: araca bölge bağlanamaz, araç kargo deposu olamaz,
+   * araç `available_stock_total`a girmez (üçü de veride zorlanıyor) — ve araç bir SEÇENEK değildir:
+   * seçici, süzgeç ve yazma hedefi yalnız tesis sunar (02.09, `data-model/depo.md`).
    */
   kind: WarehouseKindEnum,
+  /**
+   * **Aracın evi olan tesis** (02.09) — yalnız `kind='vehicle'` satırında dolu, tesiste daima `null`.
+   *
+   * Araç gezen bir yerdir: sabah bir tesisten çıkar, akşam ona döner. Tesisin paneli *"aracımda ek
+   * olarak ne var"* diyebilsin diye bu bağ veride duruyor — türetilmiş hâli ("son transferi kim
+   * yaptı", "hangi kuryenin kapsamında") yalnız genelde doğrudur ve depo kararlarında genelde doğru
+   * yetmez. Evin tesis olması tetikleyiciyle zorlanır (`warehouse_home_is_facility`).
+   */
+  homeWarehouseId: z.string().uuid().nullable(),
   /**
    * Deponun ülkesi — FİZİKSEL tesis nerede. Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır
    * ötesi olabilir (ADR-002), depo olamaz. KDV'nin bağlı olduğu alan da budur (DOMAIN §5/§17).
@@ -53,6 +63,8 @@ export const WarehouseInsertSchema = z.object({
   name: z.string().min(1),
   /** Verilmezse `facility` — bugüne kadarki her satır bir tesistir, araç İSTİSNADIR. */
   kind: WarehouseKindEnum.optional(),
+  /** Aracın evi; tesiste verilmez (veride de kısıt var — `warehouse_home_only_vehicle`). */
+  homeWarehouseId: z.string().uuid().nullish(),
   countryCode: CountryEnum.optional(),
   address: z.record(z.unknown()).nullish(),
   lat: z.number().nullish(),

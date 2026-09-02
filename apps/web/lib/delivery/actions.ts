@@ -32,7 +32,9 @@ export async function resolvePlaceAction(rawPostalCode: string, chosenCountry?: 
       // ülkesi ondan türer. Rotanın açık olup olmadığına motor karar verir — okuma o kararı
       // önden vermemeli, yoksa kapalı bölgedeki müşteri "tanımadık" cevabı alır.
       new DeliveryZoneService(db).listWithCodes(),
-      new WarehouseService(db).list({ activeOnly: true }),
+      // TESİSLER — gerekçe `readDeliveryInputs` künyesinde (`activeCountries` aracın ülkesini
+      // "hizmet verdiğimiz ülke" sayıyordu).
+      new WarehouseService(db).list({ activeOnly: true, kind: 'facility' }),
     ]);
 
     // ── ÜLKE SORULMAZ, TÜRETİLİR (19.8) ──────────────────────────────────────

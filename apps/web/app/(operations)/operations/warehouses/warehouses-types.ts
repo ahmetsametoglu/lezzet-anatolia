@@ -230,10 +230,33 @@ export interface WarehouseCardView {
   /** Ölçüm noktaları (19.28) — depo içi alanlar + bu tesise künyelenmiş araçlar. */
   points: MeasurePointView[];
   /**
+   * **Bu tesisin araçlarında ne var** (kullanıcı isteği 02.09) — `null` = araçta bir şey yok.
+   *
+   * Karnenin dört kutusu deponun İÇİNİ sayıyor; araç deponun dışında ama malı hâlâ bu tesisin.
+   * Ayrı bir kutu olmadı, karnenin altında tek satır oldu — dört kutu kararı (17.08) bilinçliydi ve
+   * beşincisi o kararı sessizce geri alırdı.
+   *
+   * **ARAÇ kartında `null`:** aracın kendi kartında "araçta ne var" demek, karnenin zaten saydığı
+   * şeyi ikinci kez yazmak olurdu (araç bir depodur, "Elde ne var" kutusu onu sayıyor).
+   */
+  vanLoad: VanLoadCardView | null;
+  /**
    * Takvim okuması tavana çarptı mı (`TemperatureLogService.listRange`). Kesilen bir okumanın boş
    * günleri "ölçülmemiş" diye boyanırdı — yani altyapı sınırı bir hijyen ihlali gibi görünürdü.
    */
   measureTruncated: boolean;
+}
+
+/**
+ * Karnenin altındaki araç satırı. Panelin şeridiyle AYNI cümleyi kurar (`VanLoadBandView`) ama
+ * ayrı tip: ikisi aynı motordan (`readFacilityVanSummary`) besleniyor, sunumları farklı — kart
+ * araç araç yazabilir, panelin tek satırı toplar.
+ */
+export interface VanLoadCardView {
+  /** Araç başına satır: "VAN-1 · 40 adet · 6 üründen". Araç yoksa boş dizi. */
+  vans: { code: string; name: string; summary: string; href: string }[];
+  /** "5 kutu · 3 sipariş" — TESİS düzeyinde (kutu araç kimliği taşımıyor); yoksa `null`. */
+  boxes: string | null;
 }
 
 /**

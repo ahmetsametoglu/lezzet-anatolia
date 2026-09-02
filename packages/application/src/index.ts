@@ -658,6 +658,7 @@ export { readManagementHub } from './management/hub';
 export { readMoneyDayEnd, readMoneyOverview } from './accounting/money';
 export { listOfferCandidates, openBatchOffer, type OpenBatchOfferOutcome } from './warehouse/offer';
 export { createSupplyDraft, listSupplyGroups } from './warehouse/supply';
+export { readFacilityVanSummary, type FacilityVanSummary, type VanLoadView } from './warehouse/van-summary';
 // Talep PERSONEL yolu (21.12 terfisi) — kuyruk/detay okumaları ve yazma kapıları; web köprüyle okur.
 export { customerLabel } from './customer/label';
 export { getStaffTicketDetail, listTicketQueue, ticketOrderRefOf, ticketReturnOutcomeOf } from './ticket/staff-read';

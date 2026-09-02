@@ -33,11 +33,27 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
    * Kapsam buraya **dizi** olarak girer, `WarehouseScope` motor tipi olarak DEĞİL: `domain-core`
    * (saf karar) ile `database` (saf I/O) birbirini bilmez (`STACK §4`) ve `boundaries` lint'i o
    * bağımlılığı geçirmez. Kapsamı diziye çeviren tek yer uygulama katmanındaki bağlam kapısıdır.
+   *
+   * `kind` = tür süzgeci — pratikte hep `'facility'`, yani **araçsız**. Araç bir depodur (`0031`)
+   * ama YAZMA hedefi olamaz: mal kabul, satın alma, hazırlık ve rota çıkışı bir tesise bağlanır.
+   * Süzgeç burada duruyor çünkü çağıranın hepsi aynı cümleyi kurmak zorundaydı; iki yerde elle
+   * yazılmıştı (`management/hub`, `warehouse/supply`) ve geri kalan her seçici araçları da
+   * gösteriyordu (ölçüldü 02.09).
    */
-  list(opts: { activeOnly?: boolean; warehouseIds?: readonly string[] } = {}): Promise<Warehouse[]> {
+  list(
+    opts: {
+      activeOnly?: boolean;
+      warehouseIds?: readonly string[];
+      kind?: Warehouse['kind'];
+      /** Evi bu tesis olan araçlar (02.09) — panelin ve depo kartının sorgusu. */
+      homeWarehouseId?: string;
+    } = {},
+  ): Promise<Warehouse[]> {
     if (opts.warehouseIds?.length === 0) return Promise.resolve([]);
     const filters: Record<string, unknown> = {};
     if (opts.activeOnly) filters.isActive = true;
+    if (opts.kind) filters.kind = opts.kind;
+    if (opts.homeWarehouseId) filters.homeWarehouseId = opts.homeWarehouseId;
     if (opts.warehouseIds) filters.id = [...opts.warehouseIds];
     return this.getAll(Object.keys(filters).length > 0 ? filters : undefined, { orderBy: 'sort_order' });
   }

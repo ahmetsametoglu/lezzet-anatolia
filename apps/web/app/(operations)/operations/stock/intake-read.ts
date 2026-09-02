@@ -202,7 +202,10 @@ export async function readIntakeTab(rows: ProgressRow[]): Promise<IntakeTabData>
   return {
     pending,
     suppliers: suppliers.filter((supplier) => supplier.isActive).map((s) => ({ id: s.id, name: s.name })),
-    warehouseOptions: ctx.warehouses.map((warehouse) => ({ id: warehouse.id, name: warehouse.name })),
+    // Araç seçenek DEĞİL: mal kabul bir tesise yapılır, araç transferle dolar (bağlamın
+    // `facilities` künyesi). Listede dursaydı operatör onu seçebilir ve kimsenin saymadığı bir
+    // araca tedarikçi malı girerdi — "kapalı depo listede durmasın" gerekçesinin aynısı.
+    warehouseOptions: ctx.facilities.map((warehouse) => ({ id: warehouse.id, name: warehouse.name })),
     storageAreas,
     warehouseId: workplace.status === 'ok' ? workplace.warehouseId : null,
     received: received.rows,

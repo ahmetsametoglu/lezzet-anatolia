@@ -100,7 +100,13 @@ export async function readRoutes(): Promise<RoutesData> {
   // ise "en çok sorulanlar hangileri" diye soruyor. Liderlik tablosunun cevapladığı soru bu.
   const [zones, warehouses, demands] = await Promise.all([
     new DeliveryZoneService(db).listWithCodes(),
-    new WarehouseService(db).list(),
+    // **YALNIZ TESİSLER** — rotanın çıkış deposu bir adrestir, araç değil. Kural veritabanında
+    // zaten yazılı (`delivery_zone_warehouse_is_facility` tetikleyicisi) ama seçici araçları da
+    // gösteriyordu: operatör "Çıkış deposu"nda VAN-1'i seçebiliyor, kaydetmeye basınca tetikleyici
+    // reddediyordu — sebebi ancak kayıt anında görünen bir ret (ölçüldü 02.09). Aktiflik süzgeci
+    // BURADA YOK ve bu bilinçli: pasif tesis "— pasif" etiketiyle listede durur (aşağıdaki uyarı
+    // satırı ona bağlı), araç ise hiç durmaz. İkisi ayrı sorular.
+    new WarehouseService(db).list({ kind: 'facility' }),
     new PostalCodeDemandService(db).listTop(DEMAND_POOL),
   ]);
 

@@ -21,6 +21,32 @@ export interface DashboardData {
   /** Asistan kuyruğu ayrı durur: bekleyen iş değil, ONAY bekleyen öneri (22.3). */
   proposals: ProposalTeaserView | null;
   routes: DeliveryRouteView[];
+  /**
+   * **Araçta ek olarak ne var** (kullanıcı isteği 02.09) — `null` = gösterilecek bir şey yok.
+   *
+   * Panelin öteki blokları DEPODAKİ işi sayıyor; bu blok deponun DIŞINDA ama hâlâ ona ait olanı
+   * sayıyor. "Ek olarak" tam da bunu söylüyor: karnedeki stok araçtakini içermez (`available_stock`
+   * depo bazlıdır ve araç ayrı bir depodur), yani operatör iki sayıyı toplamadan "elimde ne var"
+   * sorusunu cevaplayamaz.
+   */
+  vanLoad: VanLoadBandView | null;
+}
+
+/**
+ * Aracın yükü — İKİ AYRI SAYI, bilerek toplanmamış (`application/warehouse/van-summary` künyesi):
+ * kutu **emanettir** (satılmış, yolda), serbest ürün **satılabilir stoktur** (araçta duruyor).
+ * Tek sayıda toplamak "elimde 45 var" gibi okunurdu; oysa beşi başkasının malı.
+ */
+export interface VanLoadBandView {
+  /** "VAN-1" ya da çok araçlı tesiste "2 araç" — cümlenin öznesi. */
+  subject: string;
+  /** "5 kutu · 3 sipariş" — emanet yarısı; kutu yoksa `null` (sıfır cümlesi kurulmaz). */
+  boxes: string | null;
+  /** "40 adet · 6 üründen" — satılabilir yarısı; stok yoksa `null`. */
+  goods: string | null;
+  /** İlk birkaç kalem: "Şöbiyet 12 · Cevizli Baklava 8" — sayıya yüz veren satır. */
+  sample: string | null;
+  href: string;
 }
 
 /**
