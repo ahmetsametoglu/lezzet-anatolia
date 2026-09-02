@@ -10300,3 +10300,15 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   - Test: mevcut "son kutu kapanınca" testi genişletildi — kapanış sonrası kuyruğa dönüş çivilendi.
     İki bekleyen siparişle kuruluyor, çünkü tek sipariş kalırsa ekran onu doğrudan açıyor (kuyruk
     hiç çizilmez) ve testin ölçtüğü şey görünmez olurdu.
+  - **ÇIKIŞ YOLU İKİ TANEYDİ, İLK TUR BİRİNİ KAÇIRDI** (kullanıcı bulgusu 02.09, aynı gün):
+    *"yukarıdaki geri butonuyla çıktığımızda gittiği sayfa ana sayfa oluyor."* Çekmecenin kapanışı
+    düzeltilmişti ama BAŞLIKTAKİ GERİ hâlâ `router.back()`e düşüyordu — kapanışta kapsam
+    tamamlananlara geçiyor ve o listede tek kayıt varken "kuyrukta başka iş var mı" dalı tutmuyor,
+    depocu DEPO KABUĞUNA çıkıyordu. Kural artık tek kapıda (`leaveFinished`): iki çıkış yolu da
+    aynı yerden geçiyor, biri düzeltilip öteki unutulamaz. Geri düğmesi üç ayrı sorunun cevabı
+    oldu — iş yeni mi bitti · kuyrukta başka iş var mı · yoksa ekrandan çık.
+  - **Cihazda ikinci tur (Oppo CPH1907, 02.09):** `LA-26-VJC3CU` (4 kalem · 10 adet) toplandı,
+    kutu kapatıldı → sipariş tamamlandı, etiket çekmecesi açıldı, basım 400 ile düştü. **Üstteki
+    geri düğmesine** basıldı → ekran "BEKLEYEN SİPARİŞLER · 5 sipariş bekliyor" listesine döndü
+    (6'ydı) ve çekmece de kapandı. DB: sipariş `ready`. Testte `router.back`in çağrılMAdığı ayrıca
+    çivilendi.

@@ -229,6 +229,16 @@ interface UsePreparationResult {
   label: BoxLabelContract | null;
   dismissLabel: () => void;
   /**
+   * **İŞİ YENİ BİTİRDİYSE KUYRUĞA DÖNDÜR** — döndürdüyse `true`, edecek bir şey yoksa `false`.
+   *
+   * Etiket çekmecesini kapatmak tek çıkış yolu DEĞİL: başlıktaki geri düğmesi de var ve o, bu
+   * kapı olmadan siparişi bitirmiş depocuyu DEPO KABUĞUNA atıyordu (kullanıcı bulgusu 02.09:
+   * *"yukarıdaki geri butonuyla çıktığımızda gittiği sayfa ana sayfa oluyor"*). Sebep: kapsam
+   * TAMAMLANANLARA geçmiş oluyor ve o listede tek kayıt varsa geri düğmesi `router.back()`e
+   * düşüyor. Çağıran önce burayı sorar; `false` dönerse kendi eski kararını uygular.
+   */
+  leaveFinished: () => boolean;
+  /**
    * Basımın hâli (23.7). `off` = yazıcı tanımsız ya da modül bu derlemede yok — kart önizleme
    * olarak kalır; öteki hâller fiili basımın seyri. Hata cümlesi AYNEN taşınır (SDK reddi
    * teşhisin verisidir, sabit metne indirgenmez).
@@ -707,6 +717,26 @@ export function usePreparation(): UsePreparationResult {
   }, [load]);
 
   const dismissDispatch = useCallback(() => setDispatch({ phase: 'idle' }), []);
+
+  /*
+    ETİKETİ BIRAK — ve işi yeni bitirdiysek KUYRUĞA dön.
+
+    İki çıkış yolu da buradan geçiyor: çekmecenin kendi kapanışı ve başlıktaki geri düğmesi
+    (`leaveFinished`). Kural tek yerde durmalı, yoksa biri düzeltilip öteki unutulurdu — nitekim
+    02.09'da tam olarak bu oldu: çekmece kapanışı kuyruğa dönerken geri düğmesi depo kabuğuna
+    çıkıyordu.
+
+    Bayrak burada harcanır: aynı çekmece TAMAMLANANLAR listesinden "yeniden bas" için de açılıyor
+    ve orada depocu bilerek gitti — onu kuyruğa fırlatmak istemediği bir ekrana taşımak olurdu.
+  */
+  const dismissLabel = useCallback(() => {
+    setLabel(null);
+    setPrintState({ phase: 'off' });
+    printTarget.current = null;
+    if (!kuyrugaDon.current) return;
+    kuyrugaDon.current = false;
+    setScope('pending');
+  }, [setScope]);
 
   const reprintLabel = useCallback(() => {
     const target = printTarget.current;
@@ -1290,16 +1320,12 @@ export function usePreparation(): UsePreparationResult {
     setQueueScanOpen,
     scanQueueOrder,
     label,
-    dismissLabel: useCallback(() => {
-      setLabel(null);
-      setPrintState({ phase: 'off' });
-      printTarget.current = null;
-      /* İşi yeni bitirmiş depocu KUYRUĞA döner — künye `kuyrugaDon`da. Bayrak burada harcanır:
-         aynı çekmece TAMAMLANANLAR listesinden yeniden basım için de açılıyor ve orada dönülmez. */
-      if (!kuyrugaDon.current) return;
-      kuyrugaDon.current = false;
-      setScope('pending');
-    }, [setScope]),
+    dismissLabel,
+    leaveFinished: useCallback(() => {
+      if (!kuyrugaDon.current) return false;
+      dismissLabel();
+      return true;
+    }, [dismissLabel]),
     printState,
     reprintLabel,
     dispatch,

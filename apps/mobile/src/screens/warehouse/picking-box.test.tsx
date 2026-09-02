@@ -37,10 +37,15 @@ async function expectToast(pattern: RegExp): Promise<void> {
   await waitFor(() => expect(mockToast.mock.calls.some(([message]) => pattern.test(message))).toBe(true));
 }
 
+/* `mock` ÖNEKİ ZORUNLU: `jest.mock` fabrikası dosyanın tepesine taşınıyor ve kendi kapsamı
+   dışındaki değişkenleri yalnız bu önekle görebiliyor. Geri düğmesinin ekrandan ÇIKMADIĞINI
+   ölçmek için `back`in çağrılmadığını görmemiz gerekiyor — her çizimde yeni bir `jest.fn()`
+   üreten eski kurgu bunu imkânsız kılıyordu. */
+const mockBack = jest.fn();
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
-    useRouter: () => ({ navigate: jest.fn(), back: jest.fn() }),
+    useRouter: () => ({ navigate: jest.fn(), back: mockBack }),
     useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
   };
 });
@@ -157,6 +162,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  mockBack.mockClear();
   fetchMock.mockClear();
   resetWarehouseStatus();
   net.orders = [];
@@ -613,6 +619,50 @@ describe('D1 · kutu döngüsü', () => {
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-queue')).toBeOnTheScreen());
     expect(screen.queryByTestId('warehouse-picking-label-sheet')).toBeNull();
+  });
+
+  it('BAŞLIKTAKİ GERİ de kuyruğa döner — ekrandan çıkmaz (kullanıcı bulgusu 02.09)', async () => {
+    /*
+      Çıkış yolu İKİ tane ve ikisi ayrı ayrı kırılabilir. Çekmece kapanışı düzeltilmişti; geri
+      düğmesi hâlâ `router.back()`e düşüyordu, çünkü kapanışta kapsam TAMAMLANANLARA geçiyor ve o
+      listede tek kayıt varken "kuyrukta başka iş var mı" dalı tutmuyordu. Depocu işini bitirince
+      DEPO KABUĞUNA çıkıyordu: *"yukarıdaki geri butonuyla çıktığımızda gittiği sayfa ana sayfa
+      oluyor."*
+    */
+    const bitmis = preparationOrder({
+      status: 'ready',
+      lines: [preparationLine({ orderedQty: 2, pickedQty: 2 })],
+      boxes: [preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] })],
+    });
+    net.orders = [preparationOrder({ lines: [preparationLine({ orderedQty: 2 })], boxes: [preparationBox()] })];
+    net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
+    net.label = {
+      status: 'ok',
+      label: {
+        code: 'KT-26-4K2M9P7HWX', boxNo: 1, boxCount: 1, referenceNo: 'LZA-26-3M8C', parcelName: 'Restaurant Bosphore',
+        routeName: null, deliveryType: 'route', deliveryDate: '2026-08-09', paymentMethod: null,
+        items: [{ name: 'Fıstıklı Baklava · 1 kg', qty: 2 }],
+      },
+    };
+    await renderPicking();
+    await putAll(ITEM_A);
+
+    net.orders = [];
+    net.doneOrders = [bitmis];
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-sheet')).toBeOnTheScreen());
+
+    // TAMAMLANANLARDA TEK kayıt var: eski kural burada ekrandan çıkardı.
+    net.orders = [
+      preparationOrder({ orderId: '00000000-0000-4000-8000-000000000007', lines: [preparationLine({ orderedQty: 1 })], boxes: [] }),
+      preparationOrder({ orderId: '00000000-0000-4000-8000-000000000008', lines: [preparationLine({ orderedQty: 1 })], boxes: [] }),
+    ];
+    await fireEvent.press(screen.getByTestId('warehouse-picking-header-back'));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-queue')).toBeOnTheScreen());
+    // Etiket de bırakılır: geri düğmesi çekmeceyi arkada açık bırakmaz.
+    expect(screen.queryByTestId('warehouse-picking-label-sheet')).toBeNull();
+    expect(mockBack).not.toHaveBeenCalled();
   });
 
   it('menüdeki "etiketi yeniden yazdır" O KUTUNUN etiketini okur', async () => {

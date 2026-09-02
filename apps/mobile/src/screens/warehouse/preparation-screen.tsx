@@ -136,7 +136,21 @@ export function PreparationScreen() {
          Sipariş seçilince künye o siparişe döner — hangi işin içinde olduğunu söylemek, o an
          kuyruğun uzunluğundan daha önemlidir. */
       subtitle={order === null ? queueSummary(picking.orders, picking.scope) : captionOf(order)}
-      onBack={() => (order !== null && picking.orders.length > 1 ? picking.select(null) : router.back())}
+      /*
+        GERİ ÜÇ AYRI SORUNUN CEVABI (kullanıcı bulgusu 02.09).
+
+        1. İş YENİ BİTTİ mi? → bekleyen kuyruğa dön (`leaveFinished`). Bu dal olmadan geri düğmesi
+           depocuyu DEPO KABUĞUNA atıyordu: kapanışta kapsam tamamlananlara geçiyor ve o listede
+           tek kayıt varsa üçüncü dal (`router.back()`) çalışıyordu. Kullanıcının cümlesi:
+           *"yukarıdaki geri butonuyla çıktığımızda gittiği sayfa ana sayfa oluyor."*
+        2. Kuyrukta başka iş var mı? → seçimi bırak, listeye dön.
+        3. Yoksa ekrandan çık.
+      */
+      onBack={() => {
+        if (picking.leaveFinished()) return;
+        if (order !== null && picking.orders.length > 1) picking.select(null);
+        else router.back();
+      }}
       backLabel={t.common.back}
       /*
         KAPSAM GEÇİŞİ BAŞLIKTA (kullanıcı isteği 01.09) — "Bekleyenler ayrı, tamamlananlar ayrı".
