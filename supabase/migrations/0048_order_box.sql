@@ -318,3 +318,56 @@ end;
 $$;
 
 revoke execute on function public.unseal_order_box(uuid, uuid) from public, anon, authenticated;
+
+-- ── Boş taslak kutuyu at ────────────────────────────────────────────────────
+--
+-- NİYET ARTIĞI, KAYIT DEĞİL (02.09). Depocu kutu açıp hiçbir şey koymadan "eksikleri bildirerek
+-- siparişi kapat" diyebiliyor. O kutu bir belge değil: mühürlenmedi, etiketi basılmadı (etiket
+-- kapanışta doğuyor), içine hiçbir kalem girmedi. Sipariş `ready`ye geçerken onu bırakmak, hazır
+-- bir siparişin üstünde AÇIK bir kutu asılı bırakmak olurdu — ekran onu "Kutu 1 · AÇIK · 0 adet"
+-- diye çizer ve `unseal_order_box`ın "siparişin açık kutusu var" kuralı da o günden sonra hep
+-- tetiklenirdi.
+--
+-- NEDEN RPC, NEDEN SERVİSTEN `delete` DEĞİL (ölçüldü 02.09 · cihazda): `OrderBoxService` silmeye
+-- KAPALI kurulu (`allowDelete = false`) ve uygulama katmanı yine de `delete` çağırıyordu — dal hiç
+-- koşmamıştı, ilk tetikleyen kullanıcı oldu ve uç 500 döndü
+-- (`[order_box] delete kapalı. Ters kayıt ya da RPC kullan.`). Servisi silmeye AÇMAK yanlış cevap
+-- olurdu: o zaman MÜHÜRLÜ kutu da silinebilir hâle gelirdi. Kural burada, veride durur ve dar:
+-- yalnız mühürsüz VE boş kutu atılabilir.
+create or replace function public.discard_order_box(
+  p_box_id uuid,
+  p_actor uuid
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_sealed timestamptz;
+  v_loaded timestamptz;
+  v_items int;
+begin
+  select ob.sealed_at, ob.loaded_at into v_sealed, v_loaded
+    from public.order_box ob where ob.id = p_box_id for update;
+  if not found then
+    raise exception 'discard_order_box: kutu bulunamadı (%)', p_box_id;
+  end if;
+  if v_sealed is not null then
+    raise exception 'discard_order_box: kutu mühürlü, atılamaz (%)', p_box_id;
+  end if;
+  if v_loaded is not null then
+    raise exception 'discard_order_box: kutu araca binmiş, atılamaz (%)', p_box_id;
+  end if;
+
+  select count(*) into v_items from public.order_box_item where box_id = p_box_id;
+  if v_items > 0 then
+    raise exception 'discard_order_box: kutu boş değil (% kalem), atılamaz', v_items;
+  end if;
+
+  delete from public.order_box where id = p_box_id;
+
+  return jsonb_build_object('ok', true, 'actor', p_actor);
+end;
+$$;
+
+revoke execute on function public.discard_order_box(uuid, uuid) from public, anon, authenticated;

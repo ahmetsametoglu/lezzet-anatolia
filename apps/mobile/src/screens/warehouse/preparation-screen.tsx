@@ -599,7 +599,20 @@ export function PreparationScreen() {
         Ton `error`: geri dönüşü olmayan tek karar bu ve rengi öyle demeli. Basmak tek başına bir
         şey YAPMIYOR — onay çekmecesi açılıyor; kırmızı burada "dikkat et" diyor, "oldu" demiyor.
       */}
-      {picking.boxMode && !readOnly && picking.shortLines.length > 0 && picking.boxedQty > 0 ? (
+      {/*
+        AÇIK KUTU DOLUYKEN DÜĞME YOK (kullanıcı kararı 02.09, ikinci kez söylendi).
+
+        Ölçülen arıza: depocu kutuya ürün koydu, kutuyu KAPATMADAN kırmızı düğmeye bastı ve uç 500
+        döndü. Sunucunun kendi kuralı var (`declareOrderShort` → `open_box_not_empty`) ama pratikte
+        HİÇ tutmuyor: taslak İSTEMCİDE yaşıyor, kutunun içeriği ancak mühürlenince yazılıyor —
+        yani sunucu açık kutuyu her zaman BOŞ görüyor. Kararı ekran vermek zorunda.
+
+        BOŞ açık kutuda düğme DURUYOR ve bu bilinçli: kutuyu tamamen gizlemek, mühürlü kutusu olan
+        depocuyu çıkışsız bırakırdı — boş kutu mühürlenemiyor (`empty` reddi), beyan da veremezdi.
+        O yol sunucuda geçerli: boş kutu bir niyet artığıdır, beyanla birlikte atılır
+        (`discard_order_box`).
+      */}
+      {picking.boxMode && !readOnly && picking.shortLines.length > 0 && picking.boxedQty > 0 && picking.boxItems.length === 0 ? (
         <View style={styles.declareBar}>
           <Text style={styles.declareBarBody}>
             {fillCopy(t.picking.box.declare.body, { n: String(picking.shortLines.length) })}

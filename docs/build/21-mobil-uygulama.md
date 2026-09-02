@@ -10312,3 +10312,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     geri düğmesine** basıldı → ekran "BEKLEYEN SİPARİŞLER · 5 sipariş bekliyor" listesine döndü
     (6'ydı) ve çekmece de kapandı. DB: sipariş `ready`. Testte `router.back`in çağrılMAdığı ayrıca
     çivilendi.
+
+- [x] (21.221) **"Eksikleri bildirerek siparişi kapat" 500 veriyordu — ve düğme hiç görünmemeliydi**
+  (kullanıcı bulgusu 02.09, log paylaşıldı; düğmenin gizlenmesi ikinci kez söylendi)
+  - **İKİ AYRI ARIZA, biri ötekini doğurdu.**
+    1. **Düğme açık kutuda görünüyordu.** Depocu kutuya ürün koydu, KAPATMADAN kırmızı düğmeye
+       bastı. Sunucunun kendi kuralı var (`declareOrderShort` → `open_box_not_empty`) ama pratikte
+       **hiç tutmuyor**: taslak İSTEMCİDE yaşıyor, kutunun içeriği ancak mühürlenince yazılıyor —
+       yani sunucu açık kutuyu her zaman BOŞ görüyor. Kararı ekran vermek zorunda; artık veriyor.
+    2. **Boş kutu dalı ÖLÜYDÜ.** Sunucu "boş açık kutu" hâlinde onu niyet artığı sayıp siliyordu:
+       `OrderBoxService.delete`. Ama servis silmeye KAPALI kurulu (`allowDelete = false`), yani bu
+       satır hiç koşmamıştı — ilk tetikleyen kullanıcı oldu ve uç 500 döndü
+       (`[order_box] delete kapalı. Ters kayıt ya da RPC kullan.`).
+  - **Çare servisi silmeye açmak DEĞİL**: o zaman mühürlü kutu da silinebilir hâle gelirdi. Kural
+    veriye kondu ve dar: `discard_order_box` (0048) yalnız **mühürsüz VE boş** kutuyu atar; mühürlü,
+    araca binmiş ya da dolu kutuyu reddeder. Cihazdan doğan gerçek bir boş kutuyla ölçüldü: RPC
+    `{"ok": true}` döndü ve satır silindi; mühürlü kutuda `kutu mühürlü, atılamaz` ile reddetti.
+  - **Düğme BOŞ açık kutuda DURUYOR** ve bu bilinçli: tamamen gizlemek, mühürlü kutusu olan
+    depocuyu çıkışsız bırakırdı — boş kutu mühürlenemiyor (`empty` reddi), beyan da veremezdi.
+    O yol artık sunucuda geçerli.
+  - **Beyandan sonra da KUYRUĞA dönülüyor.** Bir tur burada da kapsam tamamlananlara geçiyordu ve
+    gerekçesi kapanıştan kopyalanmıştı; oysa o gerekçe ETİKET ÇEKMECESİNİNDİ — beyanda korunacak
+    bir çekmece yok. `21.220`nin aynı hükmü.
+  - **Cihazda ölçüldü (Oppo CPH1907):** `LA-26-MR6HFL` eksik beyanıyla kapandı — `ready`, kutu
+    mühürlü 9 adet, `Havuç Dilimi Baklava` 1 istenen / 0 gönderildi. 500 yok.
+  - Testler: iki yeni bekçi (dolu açık kutuda düğme ÇİZİLMEZ · boş açık kutuda DURUR) + eski
+    davranışı kodlayan üç test yeni gerçeğe taşındı.

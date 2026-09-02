@@ -105,6 +105,26 @@ export class OrderBoxService extends BaseDbService<OrderBox, OrderBoxInsert, Ord
       p_actor: actorId,
     });
   }
+
+  /**
+   * **Kutuyu geri açar** (01.09) — mühür kalkar, döküm silinir, karşılanan adet kalan kutuların
+   * birleşimiyle yeniden yazılır. Kararın tamamı RPC'de (`0048`): araca binmiş kutu ve hazırlıktan
+   * çıkmış sipariş REDDEDİLİR, `ready` sipariş `preparing`e döner.
+   */
+  async unseal(boxId: string, actorId: string | null): Promise<void> {
+    await this.executeRpc('unseal_order_box', { p_box_id: boxId, p_actor: actorId });
+  }
+
+  /**
+   * **Boş taslak kutuyu atar** (02.09) — mühürsüz VE boş olma şartı RPC'de (`0048`).
+   *
+   * Servis silmeye KAPALI (`allowDelete = false`) ve öyle kalmalı: açmak, mühürlü kutuyu da
+   * silinebilir yapardı. Uygulama katmanı bir tur `delete` çağırıyordu ve dal hiç koşmamıştı —
+   * ilk tetikleyen kullanıcı oldu, uç 500 döndü (künye migration'da).
+   */
+  async discard(boxId: string, actorId: string | null): Promise<void> {
+    await this.executeRpc('discard_order_box', { p_box_id: boxId, p_actor: actorId });
+  }
 }
 
 /**

@@ -404,15 +404,22 @@ describe('D1 · kutu döngüsü', () => {
     "rafta yok" kararı.
   */
   it('eksikleri bildirme ayrı eylemdir, ÖNCE sorar; beyan `declareShort` ile gider', async () => {
-    net.orders = [preparationOrder({ boxes: [preparationBox()], lines: [preparationLine({ orderedQty: 5 })] })];
+    /* Kutu 1 MÜHÜRLÜ (2 adet), Kutu 2 açık ve BOŞ — beyanın meşru hâli. Düğme açık kutunun
+       içinde bir şey varken çizilmiyor (02.09): taslak istemcide yaşadığı için sunucu açık kutuyu
+       her zaman boş görüyor ve kararı ekran vermek zorunda. */
+    net.orders = [
+      preparationOrder({
+        boxes: [
+          preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] }),
+          preparationBox({ boxId: '00000000-0000-4000-8000-0000000000b2', boxNo: 2 }),
+        ],
+        lines: [preparationLine({ orderedQty: 5, pickedQty: 2 })],
+      }),
+    ];
     net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
     await renderPicking();
 
-    // Öneri 2 taşıyor, sipariş 5 — kalanın tamamı konsa bile 3 adet eksik kalıyor.
-    await putAll(ITEM_A);
-    expect(screen.queryByTestId(`warehouse-picking-short-${ITEM_A}`)).toBeNull();
-
-    // "Kutuyu kapat" hiçbir şey SORMAZ; soru yalnız bildirme eyleminin önünde.
+    // 2 kutulandı, sipariş 5 — 3 adet eksik kalıyor.
     await fireEvent.press(screen.getByTestId('warehouse-picking-declare-short'));
 
     // Soru eksikleri TEK TEK sayar: "3 kalem eksik" hangileri olduğunu söylemez.
@@ -436,12 +443,51 @@ describe('D1 · kutu döngüsü', () => {
     dokunuşta gizleniyordu. Çekmece artık kendi düğmesiyle açılıyor ve iptalin karşılığı yalnız
     vazgeçmek: hiçbir istek gitmez, kutu açık kalır.
   */
-  it('beyan onayından VAZGEÇMEK hiçbir şey göndermez — kutu açık kalır', async () => {
+  it('AÇIK kutunun içinde bir şey varken kırmızı düğme ÇİZİLMEZ (kullanıcı kararı 02.09)', async () => {
+    /*
+      Ölçülen arıza: depocu kutuya ürün koydu, KAPATMADAN kırmızı düğmeye bastı, uç 500 döndü.
+      Sunucunun kendi kuralı (`open_box_not_empty`) pratikte hiç tutmuyor — taslak İSTEMCİDE
+      yaşıyor, kutunun içeriği ancak mühürlenince yazılıyor, yani sunucu açık kutuyu her zaman BOŞ
+      görüyor. Kararı ekran vermek zorunda ve bekçisi burada.
+    */
     net.orders = [preparationOrder({ boxes: [preparationBox()], lines: [preparationLine({ orderedQty: 5 })] })];
-    net.seal = { status: 'ok', boxNo: 1, ready: false, missing: [{ itemId: ITEM_A, missingQty: 3 }], shortfalls: [] };
     await renderPicking();
 
     await putAll(ITEM_A);
+
+    expect(screen.queryByTestId('warehouse-picking-declare-short')).toBeNull();
+  });
+
+  it('BOŞ açık kutuda düğme DURUR — mühürlü kutusu olan depocu çıkışsız kalmasın', async () => {
+    /* Tamamen gizlemek bir tuzak olurdu: boş kutu mühürlenemiyor (`empty` reddi), beyan da
+       verilemezdi. Sunucu bu yolu tanıyor — boş kutu bir niyet artığıdır, beyanla atılır. */
+    net.orders = [
+      preparationOrder({
+        boxes: [
+          preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] }),
+          preparationBox({ boxId: '00000000-0000-4000-8000-0000000000b2', boxNo: 2 }),
+        ],
+        lines: [preparationLine({ orderedQty: 5, pickedQty: 2 })],
+      }),
+    ];
+    await renderPicking();
+
+    expect(screen.getByTestId('warehouse-picking-declare-short')).toBeOnTheScreen();
+  });
+
+  it('beyan onayından VAZGEÇMEK hiçbir şey göndermez — kutu açık kalır', async () => {
+    net.orders = [
+      preparationOrder({
+        boxes: [
+          preparationBox({ sealedAt: '2026-08-22T10:00:00Z', items: [{ orderItemId: ITEM_A, qty: 2 }] }),
+          preparationBox({ boxId: '00000000-0000-4000-8000-0000000000b2', boxNo: 2 }),
+        ],
+        lines: [preparationLine({ orderedQty: 5, pickedQty: 2 })],
+      }),
+    ];
+    net.seal = { status: 'ok', boxNo: 1, ready: false, missing: [{ itemId: ITEM_A, missingQty: 3 }], shortfalls: [] };
+    await renderPicking();
+
     await fireEvent.press(screen.getByTestId('warehouse-picking-declare-short'));
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-seal-confirm-cancel')).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId('warehouse-picking-seal-confirm-cancel'));

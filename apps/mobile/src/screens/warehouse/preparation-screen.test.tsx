@@ -460,13 +460,11 @@ describe('D1 · kalem satırı (v3)', () => {
        kilidin satıra düştüğü ölçülebilsin. Tamamı konsaydı satır listeden düşerdi. */
     await fireEvent.press(screen.getByTestId('warehouse-picking-qty-sheet-qty-decrease'));
     await fireEvent.press(screen.getByTestId('warehouse-picking-qty-sheet-confirm'));
-    /* Kapatma artık ÖNCE SORUYOR (eksik kalan kalem var): çevrimdışı bayrağı ancak ağa çıkan
-       istek düşünce doğduğu için beyanlı yolu seçip kapanışı gerçekten deniyoruz. */
-    /* Onay "Eksikleri bildirerek kapat"ın önünde: sık geçilen yol sormaz, geri dönüşü olmayan
-       karar sorar (kullanıcı kararı 31.08). */
-    await fireEvent.press(screen.getByTestId('warehouse-picking-declare-short'));
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-seal-confirm-confirm')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('warehouse-picking-seal-confirm-confirm'));
+    /* Çevrimdışı bayrağı ancak ağa çıkan bir istek düşünce doğuyor; burada onu KUTU KAPANIŞI
+       tetikliyor. Bir tur "eksikleri bildir" düğmesi kullanılıyordu — o düğme 02.09'dan beri açık
+       kutunun içinde bir şey varken çizilmiyor (`picking-box.test` bekçisi) ve testin ölçtüğü şey
+       zaten kilit, beyan değil. Kapanış hiçbir şey sormuyor (31.08 kararı). */
+    await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-fab')).toBeDisabled());
     // Satır artık düğme değil: dokunuş çekmeceyi açmaz.

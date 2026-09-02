@@ -1068,10 +1068,20 @@ export function usePreparation(): UsePreparationResult {
         const shortfalls = shortfallSentences(data.shortfalls, order);
         setNotice({ tone: 'warn', text: [t.picking.box.declaredShort, ...shortfalls].join(' ') });
         setLines({});
-        /* Eksik beyanı da siparişi `ready` yapıyor (uç künyesi) — kapanışla aynı gerekçe:
-           ekran siparişi bırakmasın, kapsam tamamlananlara geçsin. */
-        scopeRef.current = 'done';
-        setScopeState('done');
+        /*
+          BEYANDAN SONRA DOĞRUDAN KUYRUĞA (kullanıcı bulgusu 02.09).
+
+          Bir tur burada da kapsam TAMAMLANANLARA geçiyordu ve gerekçesi kapanıştan kopyalanmıştı
+          ("ekran siparişi bırakmasın"). Ama o gerekçe ETİKET ÇEKMECESİNİNDİ: kapanışta korunacak
+          bir çekmece var, beyanda YOK — burada hiçbir şey açılmıyor. Kapsamı çevirmek, depocuyu
+          işi biter bitmez bakmadığı bir listeye taşıyıp sıradakine dönmek için elle geri
+          çevirtmekti. Sipariş `ready`ye geçtiği için kuyruktan zaten düşüyor; `load()` onu
+          listeden çıkarıyor ve depocu sıradaki işin başında oluyor.
+
+          Sonucu kaybetmiyoruz: beyan cümlesi toast'a gidiyor (`setNotice` → `toastInfo`), yani
+          kapsam değişmese de okunuyor.
+        */
+        setSelectedId(null);
         await load();
         return;
       }

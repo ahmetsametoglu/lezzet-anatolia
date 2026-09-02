@@ -438,8 +438,12 @@ export async function declareOrderShort(
   if (open) {
     const contents = await new OrderBoxItemService(db).listByBoxes([open.id]);
     if (contents.length > 0) return { status: 'open_box_not_empty', boxNo: open.boxNo };
-    // Boş kutu bir kayıt değil, bir niyet artığı — beyanla birlikte kaldırılır.
-    await boxes.delete(open.id);
+    /* Boş kutu bir kayıt değil, bir niyet artığı — beyanla birlikte kaldırılır.
+       SİLME SERVİSTEN DEĞİL RPC'DEN (02.09): `OrderBoxService` silmeye kapalı kurulu ve bu satır
+       `delete` çağırıyordu, yani dal HİÇ koşmamıştı. İlk tetikleyen kullanıcı oldu ve uç 500
+       döndü. Servisi silmeye açmak yanlış cevaptı — mühürlü kutu da silinebilir hâle gelirdi;
+       kural veride ve dar: yalnız mühürsüz ve boş kutu atılır (`discard_order_box`). */
+    await boxes.discard(open.id, input.actorId);
   }
 
   const transition: TransitionResult = await new OrderService(db).transition({
