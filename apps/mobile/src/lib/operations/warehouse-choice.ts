@@ -1,3 +1,4 @@
+import type { StaffWarehouse } from '@lezzet/types';
 import { useSyncExternalStore } from 'react';
 
 import { DEVICE_STORE_KEYS, deviceStore } from '../storage/device-store';
@@ -51,8 +52,28 @@ function publish(next: string | null): void {
  * Cihaz deposu düşerse (izin, bozuk kayıt, taze kurulum) seçim YOK sayılır — hata yutulmuyor,
  * çağıranın davranışını değiştiren bir sonuca çevriliyor: ekran sorar (printer-choice'un aynı
  * hükmü).
+ *
+ * ── SEÇENEK TEKSE SORU SORULMAZ (kullanıcı kararı 01.09) ────────────────────
+ * Kapsamında tek TESİS olan personele "bugün hangi depodasın?" diye sormak saçmaydı: ekran tek
+ * satırlık bir liste çiziyor ve üstüne *"birden fazla depoda çalışıyorsun"* yazıyordu — kişinin
+ * öteki depolardan haberi bile yok. Sorunun kaynağı araçtı: kapı kapsamı SAYIYOR ve
+ * `hepsi@lezzetanatolia.fr`in kapsamı iki kayıt (bir tesis + bir panelvan), yani `soleWarehouseId`
+ * `null` dönüp `400 warehouse_required` diyordu. Tesis/araç ayrımını yalnız istemci biliyor
+ * (`kind`), o yüzden çare de burada.
+ *
+ * **"Varsayılan depo yoktur" ihlal edilmiyor** (CLAUDE §1): kural, sistemin kişi adına bir depo
+ * TAHMİN etmemesidir. Burada tahmin yok — seçenek kümesi tek elemanlı, yani seçim kişinin
+ * verebileceği tek cevap. Kapı da değişmiyor: kimlik yine `?warehouseId=` ile gidiyor ve kapsama
+ * karşı sınanıyor (`403 warehouse_out_of_scope`). Menü zaten bu hükmü taşıyordu — "depo değiştir"
+ * yalnız birden çok tesiste çiziliyor (`staff-menu.tsx`); eksik olan, aynı hükmün SORUYA
+ * uygulanmasıydı.
+ *
+ * Türetilen seçim CİHAZA YAZILMAZ: her açılışta kapsamdan yeniden çıkar. Yazsaydık, personel
+ * ikinci bir tesise atandığı gün cihazda kişinin hiç vermediği bir "açık seçim" durur ve soru
+ * hiç sorulmazdı.
  */
-export async function loadWarehouseChoice(scopeIds: readonly string[]): Promise<void> {
+export async function loadWarehouseChoice(scope: readonly StaffWarehouse[]): Promise<void> {
+  const scopeIds = scope.map((warehouse) => warehouse.id);
   let stored: string | null = null;
   try {
     stored = await deviceStore.getItem(DEVICE_STORE_KEYS.warehouseChoice);
@@ -61,16 +82,21 @@ export async function loadWarehouseChoice(scopeIds: readonly string[]): Promise<
   }
 
   if (stored !== null && !scopeIds.includes(stored)) {
-    publish(null);
+    stored = null;
     try {
       await deviceStore.removeItem(DEVICE_STORE_KEYS.warehouseChoice);
     } catch {
       // Silinemedi: bellekteki seçim yine de temiz ve kapsam denetimi her açılışta yeniden koşar.
     }
-    return;
   }
 
-  publish(stored);
+  publish(stored ?? soleFacilityId(scope));
+}
+
+/** Kapsamdaki TEK tesis — yoksa ya da birden çoksa `null` (künye `loadWarehouseChoice`ta). */
+function soleFacilityId(scope: readonly StaffWarehouse[]): string | null {
+  const facilities = scope.filter((warehouse) => warehouse.kind === 'facility');
+  return facilities.length === 1 ? (facilities[0]?.id ?? null) : null;
 }
 
 /**

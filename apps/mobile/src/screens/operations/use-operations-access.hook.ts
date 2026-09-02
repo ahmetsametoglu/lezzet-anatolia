@@ -109,7 +109,7 @@ export function useOperationsAccess(): OperationsAccess {
        ancak burada biliniyor. Yönetici personeli başka tesise aldığında cihazda kalan eski kimlik
        her isteği `403`e çevirirdi; kapı onu sessizce değil, seçimi düşürerek karşılar (ekran
        yeniden sorar). Seçim tele buradan sonra karışır — `warehouseFetch` onu senkron okur. */
-    await loadWarehouseChoice(warehouses.map((warehouse) => warehouse.id));
+    await loadWarehouseChoice(warehouses);
     if (!alive.current) return;
 
     setState({

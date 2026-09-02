@@ -203,8 +203,14 @@ export function WarehouseHubScreen() {
     "depo değiştir"den sonra soru ancak bir sonraki okumada geri gelirdi. Bu bir tahmin değil —
     seçimin yokluğu istemcinin kendi bildiği bir gerçek; kimin hangi depoya yazabileceği kararı ise
     hâlâ tamamen kapının (her istekte `?warehouseId=` kapsama karşı sınanıyor).
+
+    ── AMA TEK TESİSTE HİÇ SORULMAZ (kullanıcı kararı 01.09) ─────────────────────────────────
+    Seçenek tekse cevap da tek: seçim kapsamdan türetiliyor (`loadWarehouseChoice`), ekran soruyu
+    hiç sormuyor. Süzgeç kapının hâline DEĞİL seçenek sayısına bakıyor — `ambiguous` yolu da
+    kapanıyor, çünkü tek satırlık bir seçici sormak değil, sormuş gibi yapmaktı. Kapının 400'ü bu
+    hâlde zaten doğmaz: adrese artık türetilmiş kimlik yazılıyor.
   */
-  if (scope === 'ambiguous' || (workplace === null && warehouseOptions.length > 0)) {
+  if (warehouseOptions.length !== 1 && (scope === 'ambiguous' || (workplace === null && warehouseOptions.length > 0))) {
     return (
       <View style={styles.screen} testID="operations-section-warehouse">
         {header}

@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react-nativ
 import type { StaffWarehouse } from '@lezzet/types';
 
 import { resetWarehouseChoice } from '@/lib/operations/warehouse-choice';
+import type { OperationsSection } from '@/lib/operations/sections';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import { inboundTransfer, nearExpiryBatch, preparationOrder } from './warehouse-fixture';
 import { WarehouseHubScreen } from './warehouse-hub-screen';
@@ -503,32 +504,60 @@ describe('depo hub', () => {
     });
   });
 
-  it('tek bölümlü personelde çıkış yolu HİÇ doğmaz — gösterilecek kapı yok', async () => {
+  /*
+    KAPSAM BLOĞUNUN İKİ HÜKMÜ — kapsam GERÇEKTEN belirsizken (iki tesis).
+
+    İkisi de eskiden tek tesisli fikstürle (`renderHub`) koşuyordu; artık koşamaz ve koşmaması
+    DOĞRU: tek tesiste soru hiç sorulmuyor (01.09), üstelik o hâlde kapının `warehouse_required`
+    demesi de imkânsız — adrese türetilmiş kimlik yazılıyor. Hükümler değişmedi, yalnız gerçekten
+    doğabilecekleri kapsama taşındı.
+  */
+  const renderTwoFacilityAmbiguous = async (sections: OperationsSection[]) => {
     routeReplies({
       preparation: () => Promise.resolve(fail('warehouse_required', 400)),
       transfers: () => Promise.resolve(fail('warehouse_required', 400)),
       handover: () => Promise.resolve(fail('warehouse_required', 400)),
     });
 
-    await renderHub();
+    await render(
+      <OperationsSessionProvider
+        value={{
+          sections,
+          userName: 'Ayşe K.',
+          userEmail: 'ayse@lezzetanatolia.fr',
+          warehouses: [STR, KEHL],
+          resolvedWarehouseId: null,
+        }}
+      >
+        <WarehouseHubScreen />
+      </OperationsSessionProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId('warehouse-scope-block')).toBeOnTheScreen());
+  };
 
-    expect(screen.getByTestId('warehouse-scope-block')).toBeOnTheScreen();
+  it('tek bölümlü personelde çıkış yolu HİÇ doğmaz — gösterilecek kapı yok', async () => {
+    await renderTwoFacilityAmbiguous(['warehouse']);
+
     for (const section of ['courier', 'management', 'money']) {
       expect(screen.queryByTestId(`warehouse-scope-to-${section}`)).toBeNull();
     }
   });
 
   it('kapı "hangi depo" diye sorarsa liste ÇİZİLMEZ — yanlış deponun işi gösterilmez', async () => {
-    routeReplies({
-      preparation: () => Promise.resolve(fail('warehouse_required', 400)),
-      transfers: () => Promise.resolve(fail('warehouse_required', 400)),
-      handover: () => Promise.resolve(fail('warehouse_required', 400)),
-    });
+    await renderTwoFacilityAmbiguous(['warehouse']);
+
+    expect(screen.queryByTestId('warehouse-hub-list')).toBeNull();
+  });
+
+  it('TEK tesiste soru hiç sorulmaz — kapı sorsa bile (kullanıcı kararı 01.09)', async () => {
+    /* Ölçülen saçmalık: tek satırlık bir liste ve üstünde "birden fazla depoda çalışıyorsun".
+       `renderHub` kapsamı tek tesis (`[STR]`); blok artık hiç doğmuyor, hub kendi işini çiziyor. */
+    routeReplies({});
 
     await renderHub();
 
-    expect(screen.getByTestId('warehouse-scope-block')).toBeOnTheScreen();
-    expect(screen.queryByTestId('warehouse-hub-list')).toBeNull();
+    expect(screen.queryByTestId('warehouse-scope-block')).toBeNull();
+    expect(screen.getByTestId('warehouse-hub-picking')).toBeOnTheScreen();
   });
 
   /*

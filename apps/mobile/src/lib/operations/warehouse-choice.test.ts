@@ -11,6 +11,8 @@
       duvar olurdu.
    4. Cihaz deposu DÜŞERSE seçim yok sayılır — hata yutulmuyor, ekranın yeniden sormasına
       çevriliyor.
+   5. Kapsamda TEK TESİS varsa seçim kapsamdan TÜRETİLİR ve soru hiç sorulmaz (01.09). Araç
+      seçenek değildir; sayan taraf kapı olduğu için tesis/araç ayrımını yalnız istemci bilir.
 */
 
 /* `mock` ÖNEKİ ZORUNLU: `jest.mock` fabrikası dosyanın tepesine taşınıyor ve kendi kapsamı
@@ -44,6 +46,12 @@ import {
 
 const STR = 'w-str';
 const KEHL = 'w-kehl';
+
+/* Kapsam artık KİMLİK listesi değil, tesis/araç ayrımını taşıyan kayıtlar — türetme o ayrıma
+   dayanıyor (`loadWarehouseChoice` künyesi). */
+const str = { id: STR, code: 'STR', name: 'Strasbourg — ana depo', kind: 'facility' } as const;
+const kehl = { id: KEHL, code: 'KEHL', name: 'Kehl — sınır deposu', kind: 'facility' } as const;
+const van = { id: 'w-van', code: 'VAN-1', name: 'Kurye aracı 1', kind: 'vehicle' } as const;
 
 beforeEach(() => {
   mockStore.clear();
@@ -84,16 +92,16 @@ describe('kapıdaki doğrulama', () => {
   it('cihazdaki seçim kapsamdaysa YÜKLENİR', async () => {
     mockStore.set(DEVICE_STORE_KEYS.warehouseChoice, KEHL);
 
-    await loadWarehouseChoice([STR, KEHL]);
+    await loadWarehouseChoice([str, kehl]);
 
     expect(chosenWarehouseId()).toBe(KEHL);
   });
 
   it('kapsamdan DÜŞEN seçim temizlenir — 403 duvarı yerine yeniden sorulur', async () => {
-    mockStore.set(DEVICE_STORE_KEYS.warehouseChoice, KEHL);
+    mockStore.set(DEVICE_STORE_KEYS.warehouseChoice, 'w-bdx');
 
-    // Yönetici personeli başka tesise aldı: eski kimlik artık kapsamda değil.
-    await loadWarehouseChoice([STR]);
+    // Yönetici personeli başka tesislere aldı: cihazdaki kimlik artık kapsamda değil.
+    await loadWarehouseChoice([str, kehl]);
 
     expect(chosenWarehouseId()).toBeNull();
     expect(mockStore.has(DEVICE_STORE_KEYS.warehouseChoice)).toBe(false);
@@ -102,9 +110,41 @@ describe('kapıdaki doğrulama', () => {
   it('cihaz deposu okunamazsa seçim YOK sayılır — ekran sorar', async () => {
     mockFails = true;
 
-    await loadWarehouseChoice([STR, KEHL]);
+    await loadWarehouseChoice([str, kehl]);
 
     expect(chosenWarehouseId()).toBeNull();
+  });
+});
+
+describe('tek tesis — soru sorulmaz', () => {
+  it('kapsam bir tesis + bir ARAÇ ise tesis türetilir', async () => {
+    // `hepsi@lezzetanatolia.fr`in gerçek kapsamı: kapı ikisini de sayıp `warehouse_required`
+    // diyordu, oysa seçilebilecek tek şey tesis.
+    await loadWarehouseChoice([str, van]);
+
+    expect(chosenWarehouseId()).toBe(STR);
+  });
+
+  it('türetilen seçim CİHAZA YAZILMAZ — ikinci tesise atandığı gün soru geri gelsin', async () => {
+    await loadWarehouseChoice([str, van]);
+    await Promise.resolve();
+
+    expect(mockStore.has(DEVICE_STORE_KEYS.warehouseChoice)).toBe(false);
+  });
+
+  it('İKİ tesiste türetme YOK — cevabı personel verir', async () => {
+    await loadWarehouseChoice([str, kehl, van]);
+
+    expect(chosenWarehouseId()).toBeNull();
+  });
+
+  it('kapsamdan düşen seçimin yerine tek tesis geçer — duvar da soru da doğmaz', async () => {
+    mockStore.set(DEVICE_STORE_KEYS.warehouseChoice, KEHL);
+
+    await loadWarehouseChoice([str, van]);
+
+    expect(chosenWarehouseId()).toBe(STR);
+    expect(mockStore.has(DEVICE_STORE_KEYS.warehouseChoice)).toBe(false);
   });
 });
 
