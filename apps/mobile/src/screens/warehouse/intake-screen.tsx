@@ -11,9 +11,9 @@ import type { IntakeFormRowContract, VariantSearchRowContract } from '@lezzet/ty
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
-import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsDateSheet } from '@/components/operations/date-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsQtySlider } from '@/components/operations/qty-slider';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -944,8 +944,9 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
   const [dateOpen, setDateOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
   const [lotOpen, setLotOpen] = useState(false);
-  /** Hasar SEBEBİ çekmecesi (kullanıcı kararı 30.08) — kartın içinde çip yok, liste burada. */
-  const [reasonOpen, setReasonOpen] = useState(false);
+  /* Hasar SEBEBİ çekmecesinin AÇIKLIĞI artık ekranın durumu değil: kalıp kite taşındı ve çekmeceyi
+     `OperationsQtyReasonRow` kendi içinde tutuyor (02.09) — açılışı ekranın bilmesi gereken bir şey
+     değildi, yalnız seçilen sebep ekranın verisi. */
 
   /* OKUTULAN SATIR KENDİLİĞİNDEN AÇILIR ve adet çekmecesini getirir (tasarım: okutma → `sheet:
      'adet'`). Sinyal hemen tüketiliyor: ikinci bir çizimde çekmece yeniden açılmasın. */
@@ -1361,62 +1362,23 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
                 <Text style={styles.damageBroken}>{fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}</Text>
               </Text>
 
-              <View style={styles.damageRow}>
-                <OperationsStepperGroup
-                  value={state.damagedQty}
-                  min={0}
-                  label={fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}
-                  tone="error"
-                  /* Üst sınır KABUL EDİLEN ADET: hasar toplamın içinden işaretlenir, onu aşamaz —
-                     "12 paketin 15'i hasarlı" bir sayım değil, bir çelişkidir. Stepper'ın kendi
-                     `max`ı yok, o yüzden kapı burada. */
-                  onChange={(next: number) => onPatch({ damagedQty: Math.min(next, state.qty ?? 0) })}
-                  testID={`warehouse-intake-damage-qty-${row.variantId}`}
-                />
-                {/* SEBEP ARTIK ÇEKMECEDEN, TEK SEÇİM (kullanıcı kararı 30.08 — tasarımdan sapma):
-                    şablon dört çipi karta seriyor ve çoklu seçime izin veriyor (`multi:true`).
-                    Kullanıcı sayacın sağındaki boş alanı bir düğmeye verdi; liste aşağıdan açılan
-                    çekmecede ve tek sebep seçiliyor. Kart kısalıyor, seçim tek bir cümleye iniyor. */}
-                <PressableSurface
-                  onPress={() => setReasonOpen(true)}
-                  feedback="scale"
-                  grow
-                  selected={state.damageReason !== null}
-                  style={[styles.damageReasonField, state.damageReason === null ? null : styles.damageReasonFieldSet]}
-                  accessibilityLabel={state.damageReason ?? t.intake.damage.reasonPick}
-                  testID={`warehouse-intake-damage-reason-${row.variantId}`}
-                >
-                  <Text style={state.damageReason === null ? styles.damageReasonIdle : styles.damageReasonLabel}>
-                    {state.damageReason ?? t.intake.damage.reasonPick}
-                  </Text>
-                </PressableSurface>
-              </View>
-
-              <BottomSheet
-                visible={reasonOpen}
-                title={t.intake.damage.reasonTitle}
-                onClose={() => setReasonOpen(false)}
-                testID={`warehouse-intake-damage-reason-sheet-${row.variantId}`}
-              >
-                <Text style={styles.damageQuestion}>{t.intake.damage.reasonHint}</Text>
-                {t.intake.damage.reasons.map((reason) => (
-                  <PressableSurface
-                    key={reason}
-                    onPress={() => {
-                      /* Aynı sebebe ikinci dokunuş SEÇİMİ KALDIRIR: yanlış seçilen sebebin geri
-                         alınabilmesi için ayrı bir "temizle" düğmesi koymaya gerek yok. */
-                      onPatch({ damageReason: state.damageReason === reason ? null : reason });
-                      setReasonOpen(false);
-                    }}
-                    feedback="scale"
-                    selected={state.damageReason === reason}
-                    style={[styles.damageReasonRow, state.damageReason === reason ? styles.damageReasonRowSet : null]}
-                    testID={`warehouse-intake-damage-reason-option-${row.variantId}-${reason}`}
-                  >
-                    <Text style={state.damageReason === reason ? styles.damageReasonLabel : styles.subFieldLabel}>{reason}</Text>
-                  </PressableSurface>
-                ))}
-              </BottomSheet>
+              {/* ADET SOLDA, SEBEP SAĞDA — kalıp 02.09'da KİTE TAŞINDI (`qty-reason-row`).
+                  Burada doğmuştu ve burada kalsaydı ikinci kullanıcısı (D4b · stok düşümü) onu
+                  ancak kopyalayarak alabilirdi. Ekranın kendi kuralı prop olarak duruyor: tavan
+                  KABUL EDİLEN ADET — hasar toplamın içinden işaretlenir, onu aşamaz. */}
+              <OperationsQtyReasonRow
+                qty={state.damagedQty}
+                onQtyChange={(next) => onPatch({ damagedQty: next })}
+                qtyLabel={fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}
+                max={state.qty ?? 0}
+                reason={state.damageReason}
+                reasons={t.intake.damage.reasons}
+                onReasonChange={(reason) => onPatch({ damageReason: reason })}
+                reasonPlaceholder={t.intake.damage.reasonPick}
+                sheetTitle={t.intake.damage.reasonTitle}
+                sheetHint={t.intake.damage.reasonHint}
+                testID={`warehouse-intake-damage-${row.variantId}`}
+              />
 
               {/* SERBEST NOT KUTUSU YOK — tasarımda öyle bir alan hiç çizilmemiş (kullanıcı
                   bulgusu 30.08). Eski koddan taşımıştım ve bu bir FAZLALIKTI: hasarın ne olduğunu

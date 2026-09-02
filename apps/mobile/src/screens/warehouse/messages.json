@@ -700,9 +700,12 @@
       "emptyBody": "Düşüm her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.",
       "emptyFootnote": "Süresi geçmiş mal buraya girmez — onun imhası Yakın-SKT turunda, sebebi zaten bellidir.",
       "qtyHeading": "KAÇ ADET DÜŞÜYOR",
-      "qtyField": "Düşülecek adet",
+      "qtyField": "Düşülen adet: {n}",
+      "tally": "Partideki {total} adetin kaçı düşüyor? Kalan {left} rafta durmaya devam eder.",
       "limit": "Partinin tamamı — bundan fazlası düşülemez.",
-      "reasonHeading": "SEBEP",
+      "reasonPick": "sebep seç",
+      "reasonTitle": "Mal niçin eksildi?",
+      "reasonHint": "Sebep tutanağa yazılır: hasarlı mal ile kayıp mal ayrı kalemlerdir.",
       "reason": {
         "damaged": "hasar / soğuk zincir",
         "lost": "kayıp"

@@ -6,10 +6,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { StockWriteOffReason } from '@lezzet/types';
 
 import { toastInfo } from '@/lib/toast/toast-store';
-import { OperationsChoiceChip } from '@/components/operations/choice-chip';
-import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { OperationsStepperButton } from '@/components/operations/stepper-button';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -22,7 +20,6 @@ import { BatchPicker } from './batch-picker';
 import { warehouseCopy } from './copy';
 import { useAdjustment } from './use-adjustment.hook';
 import { useBatchSubject } from './use-batch-subject.hook';
-import { parseQty, qtyToText } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -149,43 +146,46 @@ export function WriteOffScreen() {
       <FormScroll contentContainerStyle={styles.list} testID="warehouse-write-off-body">
         <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-write-off-context" />
 
+        {/*
+          ADET SOLDA, SEBEP SAĞDA (kullanıcı kararı 02.09) — mal kabulün hasar kartının kalıbı.
+
+          Tasarım (v3:09) burada büyük bir `−N` ve ayrı bir sebep bloğu çiziyordu; kullanıcı mal
+          kabulde oturmuş kalıbı buraya da istedi ve gerekçesi sağlam: iki ekranın sorusu AYNI —
+          *bir tavanın içinden ne kadarı, ve niçin*. Kalıbın kendisi de o gün kullanıcının kararı
+          (şablonun çip serisi yerine sayaç + sebep alanı).
+
+          Kazanç yalnız tutarlılık değil: cümle KALANI da söylüyor. "6 adetin kaçı düşüyor, kalan
+          4 rafta durmaya devam eder" — depocunun kafasındaki soru tam olarak bu ve eski hâlde
+          hiçbir yerde yazmıyordu.
+        */}
         <View style={styles.section}>
           <Text style={styles.heading}>{t.adjustment.writeOff.qtyHeading}</Text>
           <OperationsSurface tone="panel" padding="lg">
-            <View style={styles.qtyRow}>
-              {/* Eksi İŞARETİ (U+2212), tire değil: rakamla aynı genişlikte durur (kit kuralı). */}
-              <Text style={styles.qtyMinus}>−</Text>
-              <OperationsQtyField
-                value={qtyToText(qty)}
-                onChangeText={(text) => {
-                  const next = parseQty(text);
-                  // Tavan GİRİŞTE uygulanıyor: yazdığı sayının sessizce başka bir sayıya dönmesi
-                  // yerine partinin tamamında durur ve altındaki bant sebebini söyler.
-                  setQty(next === null ? null : Math.min(Math.max(next, 0), batch.physicalQty));
-                }}
-                accessibilityLabel={t.adjustment.writeOff.qtyField}
-                size="lg"
-                placeholder="—"
-                tone={qty === null || qty === 0 ? 'neutral' : 'down'}
-                testID="warehouse-write-off-qty"
-              />
-              <View style={styles.steppers}>
-                <OperationsStepperButton
-                  direction="decrease"
-                  onPress={() => setQty(Math.max(0, (qty ?? 0) - 1))}
-                  disabled={(qty ?? 0) <= 0}
-                  accessibilityLabel={t.adjustment.writeOff.qtyField}
-                  testID="warehouse-write-off-minus"
-                />
-                <OperationsStepperButton
-                  direction="increase"
-                  onPress={() => setQty(Math.min(batch.physicalQty, (qty ?? 0) + 1))}
-                  disabled={atLimit}
-                  accessibilityLabel={t.adjustment.writeOff.qtyField}
-                  testID="warehouse-write-off-plus"
-                />
-              </View>
-            </View>
+            <Text style={styles.tally}>
+              {fillCopy(t.adjustment.writeOff.tally, {
+                total: String(batch.physicalQty),
+                left: String(batch.physicalQty - (qty ?? 0)),
+              })}
+            </Text>
+            <View style={styles.rowSpace} />
+            <OperationsQtyReasonRow
+              qty={qty ?? 0}
+              onQtyChange={setQty}
+              qtyLabel={fillCopy(t.adjustment.writeOff.qtyField, { n: String(qty ?? 0) })}
+              max={batch.physicalQty}
+              reason={reason === null ? null : t.adjustment.writeOff.reason[reason]}
+              reasons={REASONS.map((option) => t.adjustment.writeOff.reason[option])}
+              /* Etiket → SEBEP KODU: bileşen metinle konuşuyor (kit i18n bilmez), kayıt ise kodla.
+                 Çeviri burada ve tek yerde — eşleşmeyen bir etiket `null` olur, yani seçim
+                 kaldırılmış sayılır; sessizce yanlış sebeple yazmaktansa hiç yazmamak. */
+              onReasonChange={(label) =>
+                setReason(REASONS.find((option) => t.adjustment.writeOff.reason[option] === label) ?? null)
+              }
+              reasonPlaceholder={t.adjustment.writeOff.reasonPick}
+              sheetTitle={t.adjustment.writeOff.reasonTitle}
+              sheetHint={t.adjustment.writeOff.reasonHint}
+              testID="warehouse-write-off-row"
+            />
           </OperationsSurface>
 
           {atLimit ? (
@@ -193,21 +193,7 @@ export function WriteOffScreen() {
               <Text style={styles.limitText}>{t.adjustment.writeOff.limit}</Text>
             </View>
           ) : null}
-        </View>
 
-        <View style={styles.section}>
-          <Text style={styles.heading}>{t.adjustment.writeOff.reasonHeading}</Text>
-          <View style={styles.chipRow}>
-            {REASONS.map((option) => (
-              <OperationsChoiceChip
-                key={option}
-                label={t.adjustment.writeOff.reason[option]}
-                selected={reason === option}
-                onPress={() => setReason(option)}
-                testID={`warehouse-write-off-reason-${option}`}
-              />
-            ))}
-          </View>
           {/* ÖNEK SEBEPTEN DOĞAR ama iki sebep de aynı tutanağa yazılır (`write_off` → `IMH`):
               cümle bunu SÖYLÜYOR, çünkü depocu kâğıtta hangi numarayı arayacağını bilmeli. */}
           <Text style={styles.hint}>{fillCopy(t.adjustment.writeOff.reasonNote, { prefix: 'IMH' })}</Text>
@@ -274,22 +260,15 @@ const styles = StyleSheet.create({
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
-  qtyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.md,
+  /** Kartın soru cümlesi: kaç adet var, kaçı düşüyor, kaçı kalıyor. */
+  tally: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.body,
   },
-  /** Eksi İŞARETİ (U+2212) alanın DIŞINDA: yazılan sayı pozitif, okunan değer negatif. */
-  qtyMinus: {
-    fontFamily: operationsTheme.font.display[600],
-    fontSize: operationsTheme.text['card-title'],
-    color: operationsTheme.colors.terracotta,
-  },
-  steppers: {
-    flexDirection: 'row',
-    gap: operationsTheme.space.md,
-    marginLeft: 'auto',
-  },
+  /** Cümle ile satır arasındaki nefes — kartın kendi `gap`i yok (çocukları serbest). */
+  rowSpace: { height: operationsTheme.space.lg },
   limit: {
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors['warning-bg'],
@@ -301,11 +280,6 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.terracotta,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: operationsTheme.space.md,
   },
   hint: {
     fontFamily: operationsTheme.font.body[400],

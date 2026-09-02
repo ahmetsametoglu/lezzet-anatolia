@@ -8,11 +8,15 @@ import { resetWarehouseStatus } from './warehouse-status';
   D4b · STOK DÜŞÜMÜ EKRAN TESTİ (02.09).
 
   Ekranın kimliği iki KURALDA duruyor ve ikisi de burada sınanıyor:
-  1. **Süresi geçmiş mal buraya girmez** — `expired` çipi YOK. Bir gün biri onu geri koyarsa bu
-     test kırılır ve kırılması gerekir: o kararı D3 veriyor, sistem zaten biliyor.
-  2. **Partiden fazlası düşülemez** — tavan girişte; kapının reddedeceği bir iş hiç yaptırılmıyor.
+  1. **Süresi geçmiş mal buraya girmez** — sebep çekmecesinde `expired` YOK. Bir gün biri onu geri
+     koyarsa bu test kırılır ve kırılması gerekir: o kararı D3 veriyor, sistem zaten biliyor.
+  2. **Partiden fazlası düşülemez** — tavan sayaçta; kapının reddedeceği bir iş hiç yaptırılmıyor.
 
-  Ayrıca ekranın dili: alan POZİTİF adet alıyor, kapıya EKSİ gidiyor (`direction: 'out'`).
+  Ayrıca ekranın dili: sayaç POZİTİF adet sayıyor, kapıya EKSİ gidiyor (`direction: 'out'`).
+
+  **Adet ve sebep 02.09'da mal kabulün kalıbına geçti** (kullanıcı kararı): sayaç solda, sebep
+  sağdaki alandan çekmeceyle. Testler o yüzden artık metin yazmıyor, SAYIYOR ve çekmeceden
+  seçiyor — ekranın gerçek kullanımı bu.
 */
 
 const mockBack = jest.fn();
@@ -68,6 +72,24 @@ beforeEach(() => {
   });
 });
 
+const OPTION_DAMAGED = 'warehouse-write-off-row-option-hasar / soğuk zincir';
+const OPTION_LOST = 'warehouse-write-off-row-option-kayıp';
+
+/** Sayacın artı hücresine N kez basar — adet artık yazılmıyor, SAYILIYOR (kalıp 02.09). */
+async function bumpQty(times: number) {
+  for (let i = 0; i < times; i += 1) {
+    await fireEvent.press(screen.getByTestId('warehouse-write-off-row-qty-increase'));
+  }
+}
+
+/** Sebep alanı → çekmece → seçim. Çipler kalktı; sebep sayacın yanındaki alandan seçiliyor. */
+async function pickReason(label: string) {
+  await fireEvent.press(screen.getByTestId('warehouse-write-off-row-reason'));
+  const option = `warehouse-write-off-row-option-${label}`;
+  await waitFor(() => expect(screen.getByTestId(option)).toBeOnTheScreen());
+  await fireEvent.press(screen.getByTestId(option));
+}
+
 async function selectBatch() {
   await render(<WriteOffScreen />);
   const row = await screen.findByTestId('warehouse-write-off-picker-row-00000000-0000-4000-8000-000000000401');
@@ -85,17 +107,20 @@ describe('D4b · Stok düşümü', () => {
 
   it('SEBEP listesinde "süresi geçti" YOKTUR — o karar D3ün', async () => {
     await selectBatch();
+    await pickReason('hasar / soğuk zincir');
 
-    expect(screen.getByTestId('warehouse-write-off-reason-damaged')).toBeTruthy();
-    expect(screen.getByTestId('warehouse-write-off-reason-lost')).toBeTruthy();
-    expect(screen.queryByTestId('warehouse-write-off-reason-expired')).toBeNull();
+    // Çekmece açıldığında iki sebep var; imha (süresi geçti) hiç listelenmiyor.
+    await fireEvent.press(screen.getByTestId('warehouse-write-off-row-reason'));
+    await waitFor(() => expect(screen.getByTestId(OPTION_DAMAGED)).toBeOnTheScreen());
+    expect(screen.getByTestId(OPTION_LOST)).toBeTruthy();
+    expect(screen.queryByTestId('warehouse-write-off-row-option-süresi geçti (imha)')).toBeNull();
   });
 
   it('pozitif adet yazılır, kapıya ÇIKIŞ olarak gider', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-write-off-qty'), '2');
-    await fireEvent.press(screen.getByTestId('warehouse-write-off-reason-damaged'));
+    await bumpQty(2);
+    await pickReason('hasar / soğuk zincir');
     await fireEvent.press(screen.getByTestId('warehouse-write-off-cta'));
 
     await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalledTimes(1));
@@ -109,26 +134,31 @@ describe('D4b · Stok düşümü', () => {
   it('sebep seçilmeden yazılmaz', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-write-off-qty'), '2');
+    await bumpQty(2);
     await fireEvent.press(screen.getByTestId('warehouse-write-off-cta'));
 
     expect(mockRecordAdjustment).not.toHaveBeenCalled();
   });
 
-  it('partide olandan fazlası girilemez — tavan partinin kendisi', async () => {
+  it('partide olandan fazlası düşülemez — sayaç tavanda durur', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-write-off-qty'), '9');
+    // Partide 4 var; altı kez artırmayı dene.
+    await bumpQty(6);
 
-    expect(screen.getByTestId('warehouse-write-off-qty').props.value).toBe('4');
     expect(screen.getByTestId('warehouse-write-off-limit')).toBeTruthy();
+    await pickReason('kayıp');
+    await fireEvent.press(screen.getByTestId('warehouse-write-off-cta'));
+
+    await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalledTimes(1));
+    expect(mockRecordAdjustment.mock.calls[0]?.[0].lines[0]?.qty).toBe(4);
   });
 
   it('sonuç kartı sebebi, referansı ve ölçülen yeni değerleri taşır', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-write-off-qty'), '2');
-    await fireEvent.press(screen.getByTestId('warehouse-write-off-reason-lost'));
+    await bumpQty(2);
+    await pickReason('kayıp');
     await fireEvent.press(screen.getByTestId('warehouse-write-off-cta'));
 
     expect(await screen.findByTestId('warehouse-write-off-result-ref')).toHaveTextContent('IMH-STR-26-0003');

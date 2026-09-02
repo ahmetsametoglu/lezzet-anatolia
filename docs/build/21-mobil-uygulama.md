@@ -10421,3 +10421,37 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Yeni bekçi: `confirmed` → `openBox` → `preparing`. Tam paket **4132/4132**
   (kalan tek kırmızı web şeridinin `checkout-shipping-order` dosyasında — `address_city_mismatch`,
   bu şeridin işi değil; not bırakıldı).
+
+- [x] (21.224) **"ADET SOLDA, SEBEP SAĞDA" KALIBI KİTE TAŞINDI — mal kabulden stok düşümüne**
+  (kullanıcı kararı 02.09: *"mal kabulde hasar belirt dediğinde görünen yer… bu tasarımı başka
+  yerlerde de kullanmak mümkün görünüyor, bir bak"*)
+  `touches:` `apps/mobile/src/components/operations/qty-reason-row.tsx` ·
+  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,intake-screen.test.tsx}` ·
+  `apps/mobile/src/screens/warehouse/{write-off-screen.tsx,write-off-screen.test.tsx,messages.json}`
+
+  **Kullanıcı haklıydı ve kalıp gerçekten iki yerin ortak sorusu:** *bir tavanın içinden ne kadarı,
+  ve niçin.* D2'de "kabul edilen 12 paketin kaçı hasarlı", D4b'de "partideki 6 adetin kaçı düşüyor".
+  İkisinde de adet tek başına anlamsız, sebep tek başına eksik.
+
+  Kalıbın kendisi zaten kullanıcının kararıydı (30.08): şablon dört sebep çipini karta seriyordu,
+  kullanıcı sayacın sağındaki boş alanı bir düğmeye verdi ve listeyi çekmeceye aldı. Ama kalıp
+  `intake-screen.tsx`in 2200 satırı arasında GÖMÜLÜYDÜ — ikinci kullanıcısı onu ancak kopyalayarak
+  alabilirdi (`CLAUDE §1`). Artık kitte: `OperationsQtyReasonRow` (sayaç + sebep alanı + çekmece).
+
+  **D4b bu kalıba geçti** ve tasarımdan (v3:09'un büyük `−N` alanı + ayrı sebep bloğu) bilinçle
+  sapıldı. Kazanç yalnız tutarlılık değil: cümle artık KALANI da söylüyor — *"Partideki 5 adetin
+  kaçı düşüyor? Kalan 3 rafta durmaya devam eder."* Depocunun kafasındaki soru buydu ve hiçbir
+  yerde yazmıyordu. Tavan da sayaçta: artı düğmesi partinin tamamında sönüyor.
+
+  **D4 sayım BU KALIBA GEÇMEDİ ve bu bilinçli.** Oradaki adet bir tavanın PAYI değil, ölçülen
+  mutlak bir sayı; "içinden işaretlenir" cümlesi orada yanlış olurdu. Sebep de kendi UYARI
+  bloğunun konusu ("FARK VAR — SEBEP GEREKLİ") ve liste kısa — çip orada doğru dil. Ayrım kitin
+  künyesinde yazılı, yoksa iki dil bir gün rastgele seçilmeye başlar.
+
+  **Kurye teslimatı da geçmedi:** oradaki sebep bir KISIT değil, serbest metnin hızlı doldurucusu
+  (21.8'in kararı) — çip listesi kapalı bir küme olmadığı için alan+çekmece yanlış olurdu.
+
+  **Doğrulama.** Tip · lint · knip temiz · mobil **1249/1249** (mal kabulün üç testi yeni
+  kimliklere taşındı, D4b'nin beş testi sayaç+çekmece akışına). **Cihazda (Oppo CPH1907):** aynı
+  partiden 2 adet *hasar / soğuk zincir* → `IMH-STR-26-0002` (`write_off`/`damaged`/`out`/2),
+  parti 5→3; sebep etiketinin koda çevrildiği kayıtta doğrulandı.

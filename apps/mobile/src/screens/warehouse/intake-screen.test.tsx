@@ -757,13 +757,13 @@ describe('D2 · mal kabul', () => {
     await countRow(ROW_A.variantId, '10');
     await pickExpiry(ROW_A.variantId, 12, 8, 2026);
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
-    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-qty-${ROW_A.variantId}-increase`));
-    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-qty-${ROW_A.variantId}-increase`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
     /* Sebep artık çekmeceden ve TEK seçim (kullanıcı kararı 30.08): kartta çip yok, sayacın
        sağındaki düğme listeyi açıyor. */
-    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-reason-${ROW_A.variantId}`));
-    await openSheet(`warehouse-intake-damage-reason-option-${ROW_A.variantId}-ezik / kırık`);
-    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-reason-option-${ROW_A.variantId}-ezik / kırık`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-reason`));
+    await openSheet(`warehouse-intake-damage-${ROW_A.variantId}-option-ezik / kırık`);
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-option-ezik / kırık`));
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalled());
@@ -778,7 +778,7 @@ describe('D2 · mal kabul', () => {
     await countRow(ROW_A.variantId, '2');
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
     for (let press = 0; press < 4; press += 1) {
-      await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-qty-${ROW_A.variantId}-increase`));
+      await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
     }
 
     expect(screen.getByTestId(`warehouse-intake-damage-card-${ROW_A.variantId}`)).toHaveTextContent(/hasarlı 2/);
