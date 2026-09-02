@@ -563,7 +563,7 @@ describe('D1 · kutu döngüsü', () => {
     kutu hâlâ "açık" görünüyordu), kapsamı TAMAMLANANLARA almak: `ready` sipariş orada yaşıyor ve
     seçim korunuyor.
   */
-  it('son kutu kapanınca kapsam TAMAMLANANLARA geçer — sipariş ekranda kalır, etiket çekmecesi durur', async () => {
+  it('son kutu kapanınca sipariş ekranda KALIR; etiket çekmecesi kapanınca KUYRUĞA dönülür', async () => {
     const bitmis = preparationOrder({
       status: 'ready',
       lines: [preparationLine({ orderedQty: 2, pickedQty: 2 })],
@@ -592,6 +592,27 @@ describe('D1 · kutu döngüsü', () => {
     // Sipariş HÂLÂ açık: kapanan kutu salt-okunur şeritte duruyor, kuyruk listesi çizilmiyor.
     expect(screen.getByTestId('warehouse-picking-box-1')).toBeOnTheScreen();
     expect(screen.queryByTestId('warehouse-picking-queue')).toBeNull();
+
+    /*
+      ÇEKMECE KAPANINCA KUYRUĞA DÖNÜLÜR (kullanıcı bulgusu 02.09).
+
+      Kapsam geçişinin sebebi siparişin bitmesi DEĞİL, etiket çekmecesinin hazırlık dalında
+      çizilmemesiydi. Çekmece kapandığı an o sebep ortadan kalkıyor ve depocunun işi de bitiyor:
+      sıradaki sipariş kuyrukta. Eskiden orada BIRAKILIYORDU ve kapsamı elle çevirmesi
+      gerekiyordu — *"toplama bittiği zaman tekrardan bekleyen siparişler listesine dönmem
+      gerekiyor ama sanki yönlendirme başka oluyor."*
+    */
+    /* İKİ bekleyen sipariş: tek sipariş kalırsa ekran onu DOĞRUDAN açar (kuyruk çizilmez) ve
+       testin ölçtüğü şey görünmez olurdu. Kuyruğun kendisini görmek için iki satır gerekiyor. */
+    net.orders = [
+      preparationOrder({ orderId: '00000000-0000-4000-8000-000000000007', lines: [preparationLine({ orderedQty: 1 })], boxes: [] }),
+      preparationOrder({ orderId: '00000000-0000-4000-8000-000000000008', lines: [preparationLine({ orderedQty: 1 })], boxes: [] }),
+    ];
+    // Çekmece kendi kapanışını bildirir (tutamaktan sürükleme) — ikizin kapısı `gorhom-self-dismiss`.
+    await fireEvent(screen.getByTestId('gorhom-self-dismiss'), 'touchEnd');
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-picking-queue')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-picking-label-sheet')).toBeNull();
   });
 
   it('menüdeki "etiketi yeniden yazdır" O KUTUNUN etiketini okur', async () => {

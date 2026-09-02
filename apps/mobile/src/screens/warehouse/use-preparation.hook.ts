@@ -385,6 +385,20 @@ export function usePreparation(): UsePreparationResult {
     değil; `setScope` değeri ref'e yazıp tazelemeyi kendisi tetikliyor.
   */
   const scopeRef = useRef<PreparationScope>('pending');
+  /**
+   * **İŞ BİTTİ, ETİKETİ KAPATINCA KUYRUĞA DÖN** (kullanıcı bulgusu 02.09).
+   *
+   * Sipariş bitince kapsam TAMAMLANANLARA geçiyor ve bunun gerekçesi duruyor (etiket çekmecesi
+   * hazırlık dalında çizilmiyor, künye kapanış işleyicisinde). Ama depocu orada BIRAKILIYORDU:
+   * etiketi kapatıp sıradaki siparişe geçmek için kapsamı elle değiştirmesi gerekiyordu —
+   * kullanıcının cümlesi: *"toplama bittiği zaman tekrardan bekleyen siparişler listesine dönmem
+   * gerekiyor ama sanki yönlendirme başka oluyor."*
+   *
+   * Bayrak iki hâli ayırıyor ve ayrım şart: çekmece "işi yeni bitirdim" diye de açılıyor,
+   * TAMAMLANANLAR listesinden "şu etiketi yeniden basayım" diye de. İkincisinde depocu oraya
+   * BİLEREK gitti; onu kuyruğa fırlatmak, istemediği bir ekrana taşımak olurdu.
+   */
+  const kuyrugaDon = useRef(false);
 
   const load = useCallback(async () => {
     const run = (generation.current += 1);
@@ -1097,7 +1111,11 @@ export function usePreparation(): UsePreparationResult {
         // Etiket önizlemesi (23.7): içerik kapanışta kesinleşti, sunucudan okunur. Okuma düşerse
         // sessiz kalınır — kapanışın kendisi yazıldı, etiket karta sonra da bakılabilir.
         const labelResult = await fetchBoxLabel(currentBox.boxId);
+        /* Bayrak koşulun İÇİNDE kuruluyor: dışarı çıkarılan bir `boolean` TypeScript'in
+           daraltmasını kaybediyor ve `labelResult.data.label` erişilemez oluyor. */
+        let cekmeceAcildi = false;
         if (labelResult.error === null && labelResult.data.status === 'ok') {
+          cekmeceAcildi = true;
           setLabel(labelResult.data.label);
           // Basım kutu kapanışında (karar §1.6) — yazıcı ayarlıysa ve modül bu derlemede varsa.
           // Beklenmez (`void`): kapanışın kendisi yazıldı, kâğıdın seyri kartta ayrıca akar.
@@ -1128,9 +1146,18 @@ export function usePreparation(): UsePreparationResult {
           `ready` sipariş TAMAMLANANLAR kapsamında yaşıyor (01.09'da açıldı) ve seçim orada
           korunuyor. Ekran böylece hem doğruyu gösteriyor (kutu mühürlü) hem de yerinde kalıyor.
         */
-        if (data.ready) {
+        /*
+          KAPSAM YALNIZ ÇEKMECE AÇILDIYSA DEĞİŞİR (02.09'da daraltıldı).
+
+          Eskiden `ready` olan her kapanışta değişiyordu. Ama sebep siparişin bitmesi değil,
+          ETİKET ÇEKMECESİNİN hazırlık dalında çizilmemesiydi — çekmece hiç açılmadıysa (etiket
+          okuması düştü) korunacak bir şey de yok: kuyrukta kalmak zaten doğru yer, `load()`
+          biten siparişi listeden düşürüyor ve depocu sıradakine bakıyor.
+        */
+        if (data.ready && cekmeceAcildi) {
           scopeRef.current = 'done';
           setScopeState('done');
+          kuyrugaDon.current = true;
         }
         await load();
         return;
@@ -1267,7 +1294,12 @@ export function usePreparation(): UsePreparationResult {
       setLabel(null);
       setPrintState({ phase: 'off' });
       printTarget.current = null;
-    }, []),
+      /* İşi yeni bitirmiş depocu KUYRUĞA döner — künye `kuyrugaDon`da. Bayrak burada harcanır:
+         aynı çekmece TAMAMLANANLAR listesinden yeniden basım için de açılıyor ve orada dönülmez. */
+      if (!kuyrugaDon.current) return;
+      kuyrugaDon.current = false;
+      setScope('pending');
+    }, [setScope]),
     printState,
     reprintLabel,
     dispatch,

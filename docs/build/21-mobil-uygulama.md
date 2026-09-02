@@ -10276,3 +10276,27 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   - **BEKLEYEN(21.219):** 01.09'daki `@gorhom/bottom-sheet` göçü RN `Modal`ını tamamen kaldırdı
     ve yığın izi tam oraya işaret ediyordu; arıza göç ile kapanmış OLABİLİR. Ölçüm sefer + durak
     ister, `delivery_run` tablosu 02.09'da boş — sipariş ve sefer doğunca ilk iş bu turu tekrarlamak.
+
+- [x] (21.220) **D1: etiket çekmecesi kapanınca BEKLEYEN kuyruğa dönülüyor** (kullanıcı bulgusu
+  02.09: *"toplama bittiği zaman tekrardan bekleyen siparişler listesine dönmem gerekiyor ama sanki
+  yönlendirme başka oluyor"*)
+  - **Durum (02.09) — kapsam geçişi doğruydu, BIRAKMA yanlıştı.** Son kutu kapanınca ekran
+    TAMAMLANANLAR kapsamına geçiyor; sebebi 01.09'da yazıldı ve duruyor: etiket çekmecesi hazırlık
+    dalında çizilmiyor, sipariş kuyruktan düşünce ekran o dala atlıyor ve **yeni açılmış çekmece
+    kapanıyordu** — basım düştüğünde "yeniden bas" düğmesi okunmadan siliniyordu. Eksik olan
+    geçişin kendisi değil DÖNÜŞÜYDÜ: depocu tamamlananlarda bırakılıyor, sıradaki siparişe geçmek
+    için kapsamı ELLE çevirmesi gerekiyordu.
+  - **Çekmece kapanınca kuyruğa dönülüyor.** Çekmecenin kapanması "etikete bakmayı bitirdim"
+    demektir; o an geçişin sebebi de ortadan kalkar. Bayrak iki hâli ayırıyor ve ayrım şart:
+    aynı çekmece TAMAMLANANLAR listesinden "şu etiketi yeniden basayım" diye de açılıyor —
+    orada depocu bilerek gitti, onu kuyruğa fırlatmak istemediği bir ekrana taşımak olurdu.
+  - **Kapsam geçişi de daraldı:** yalnız çekmece GERÇEKTEN açıldıysa. Etiket okuması düşerse
+    korunacak bir şey yok; kuyrukta kalmak zaten doğru yer ve `load()` biten siparişi listeden
+    düşürüyor. Eskiden `ready` olan her kapanışta geçiliyordu.
+  - **Cihazda uçtan uca ölçüldü (Oppo CPH1907, 02.09):** `LA-26-3L3CNR` (3 kalem · 7 adet) kutu
+    açılıp elle dolduruldu, kutu kapatıldı → sipariş tamamlandı, etiket çekmecesi açıldı (basım
+    400 ile düştü, çekmece açık kaldı — 01.09'un güvencesi çalışıyor). Çekmece kapatıldı → ekran
+    **"BEKLEYEN SİPARİŞLER · 6 sipariş bekliyor"** listesine döndü (7'ydi). DB: sipariş `ready`.
+  - Test: mevcut "son kutu kapanınca" testi genişletildi — kapanış sonrası kuyruğa dönüş çivilendi.
+    İki bekleyen siparişle kuruluyor, çünkü tek sipariş kalırsa ekran onu doğrudan açıyor (kuyruk
+    hiç çizilmez) ve testin ölçtüğü şey görünmez olurdu.
