@@ -6,7 +6,8 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
-import { OperationsQtyField } from '@/components/operations/qty-field';
+import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
+import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperButton } from '@/components/operations/stepper-button';
 import { OperationsSurface } from '@/components/operations/surface';
@@ -21,7 +22,6 @@ import { BatchPicker } from './batch-picker';
 import { warehouseCopy } from './copy';
 import { useAdjustment } from './use-adjustment.hook';
 import { useBatchSubject } from './use-batch-subject.hook';
-import { parseQty, qtyToText } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -56,8 +56,9 @@ export function StockCountScreen() {
   const adjustment = useAdjustment();
   const { offline } = useWarehouseStatus();
 
-  /** Rafta sayılan adet — `null` = HİÇ YAZILMADI (sıfır değil; ayrım kaydın kendisi). */
+  /** Rafta sayılan adet — `null` = HİÇ SAYILMADI (sıfır değil; ayrım kaydın kendisi). */
   const [counted, setCounted] = useState<number | null>(null);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
   const batch = subject.subject;
@@ -146,18 +147,34 @@ export function StockCountScreen() {
           <Text style={styles.heading}>{t.adjustment.count.qtyHeading}</Text>
           <OperationsSurface tone="panel" padding="lg">
             <View style={styles.qtyRow}>
-              <OperationsQtyField
-                value={qtyToText(counted)}
-                onChangeText={(text) => setCounted(parseQty(text))}
-                accessibilityLabel={t.adjustment.count.qtyField}
-                size="lg"
-                placeholder="—"
-                tone={diff === null || diff === 0 ? 'neutral' : 'diff'}
+              {/*
+                BÜYÜK RAKAM BİR DÜĞMEDİR (tasarım v3:08 `sayBasla` · kullanıcı kararı 02.09).
+
+                Klavye değil ÇEKMECE açılıyor ve fark pratik: depocu rafta 27 paketi rakam rakam
+                yazmaz, *"iki koli, üç tek"* der — çarpmayı ekran yapar. Aynı çekmece mal kabulde
+                zaten bu işi görüyor (`OperationsQuantitySheet`); ikinci bir sayım dili yazmak,
+                aynı soruyu iki ayrı yerde sormak olurdu (CLAUDE §1).
+
+                ± DÜĞMELERİ KALIYOR: çekmece "kaç var" sorusunun, ± ise "bir tane daha buldum"
+                anının aracı. İkisi aynı sayıyı besliyor.
+              */}
+              <PressableSurface
+                onPress={() => setSheetOpen(true)}
+                feedback="scale"
+                grow
+                style={styles.qtyOpen}
+                accessibilityLabel={t.adjustment.count.qtyOpen}
+                accessibilityHint={t.adjustment.count.qtySheet.title}
                 testID="warehouse-stock-count-qty"
-              />
-              {/* ARTI/EKSİ SAYIMIN İNCE AYARI: raftaki adedi yazan depocu bir kutu daha bulunca
-                  klavye açmak zorunda kalmamalı. Taban SIFIR — eksiye inen bir "sayılan adet"
-                  yoktur ve tabanı olmayan bir sayaç, negatif bir gerçeği yazdırırdı. */}
+              >
+                <Text style={[styles.qtyValue, counted === null ? styles.qtyValueIdle : null]}>
+                  {counted === null ? t.adjustment.count.qtyEmpty : String(counted)}
+                </Text>
+              </PressableSurface>
+              {/* ARTI/EKSİ SAYIMIN İNCE AYARI: raftaki adedi giren depocu bir kutu daha bulunca
+                  çekmeceyi yeniden açmak zorunda kalmamalı. Taban SIFIR — eksiye inen bir
+                  "sayılan adet" yoktur ve tabanı olmayan bir sayaç, negatif bir gerçeği
+                  yazdırırdı. */}
               <View style={styles.steppers}>
                 <OperationsStepperButton
                   direction="decrease"
@@ -175,6 +192,35 @@ export function StockCountScreen() {
               </View>
             </View>
           </OperationsSurface>
+
+          {/*
+            ÇEKMECE TOPLAMI YUKARI VERİR, DÖKÜMÜ DEĞİL (bilinçli).
+
+            Sayımın kaydı bir SAYIDIR; "2 koli + 3 tek" o sayıya varmanın yoludur ve kayıtta
+            karşılığı yok. Bu yüzden çekmece her açılışta toplamı TEK olarak gösteriyor: döküm
+            saklansaydı ekranda duran sayı ile kayda giden sayı iki ayrı yerde yaşardı.
+
+            `caseSizes` BOŞ: parti sözleşmesi koli boyu taşımıyor. Çekmece o hâlde kendi "başka
+            koli boyu" adımını açıyor — depocu elindeki koliye bakıp çarpanı seçiyor ve bu YALNIZ
+            bu sayımda geçerli (kopya metni bunu söylüyor; mal kabulün aksine ürün kartına
+            yazılmıyor).
+          */}
+          <OperationsQuantitySheet
+            visible={sheetOpen}
+            title={t.adjustment.count.qtySheet.title}
+            value={{ cases: [], loose: counted ?? 0 }}
+            caseSizes={[]}
+            onChange={(next) => setCounted(quantityTotal(next))}
+            copy={{
+              ...t.adjustment.count.qtySheet,
+              subject: fillCopy(t.adjustment.count.qtySheet.subject, {
+                name: batch.name,
+                code: batch.lotNumber ?? t.adjustment.picker.noLot,
+              }),
+            }}
+            onClose={() => setSheetOpen(false)}
+            testID="warehouse-stock-count-qty-sheet"
+          />
 
           {/* FARKI SİSTEM SÖYLER, CÜMLEYLE: "−3" bir sayı, "3 adet EKSİK" bir bulgudur. */}
           {diff === null ? null : (
@@ -284,6 +330,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: operationsTheme.space.lg,
   },
+  /** Rakamın dokunma hücresi — satırın solunu tümüyle kaplar (`grow`), hedef küçük kalmasın. */
+  qtyOpen: {
+    justifyContent: 'center',
+    paddingVertical: operationsTheme.space.sm,
+  },
+  /** Tasarımın 40/Lora sayısı: sayfanın en büyük rakamı, çünkü ekranın konusu o. */
+  qtyValue: {
+    fontFamily: operationsTheme.font.display[600],
+    fontSize: operationsTheme.text.h2,
+    color: operationsTheme.colors.ink,
+  },
+  /** Sayılmamış hâl SOLUK: "—" bir değer değil, bir eksikliktir (sıfırla karışmamalı). */
+  qtyValueIdle: { color: operationsTheme.colors.muted },
   steppers: {
     flexDirection: 'row',
     gap: operationsTheme.space.md,

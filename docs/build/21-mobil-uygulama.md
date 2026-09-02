@@ -10455,3 +10455,37 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kimliklere taşındı, D4b'nin beş testi sayaç+çekmece akışına). **Cihazda (Oppo CPH1907):** aynı
   partiden 2 adet *hasar / soğuk zincir* → `IMH-STR-26-0002` (`write_off`/`damaged`/`out`/2),
   parti 5→3; sebep etiketinin koda çevrildiği kayıtta doğrulandı.
+
+- [x] (21.225) **D4'ün BÜYÜK RAKAMI ARTIK DÜĞME — klavye değil ADET ÇEKMECESİ açılıyor**
+  (kullanıcı kararı 02.09: *"ortadaki rakama tıklandığı zaman adet çekmecesi açılsın… kastım mal
+  sayımda kullandığımız adet çekmecesi"*)
+  `touches:` `apps/mobile/src/screens/warehouse/{stock-count-screen.tsx,stock-count-screen.test.tsx,messages.json}`
+
+  **Fark pratik, süs değil:** depocu rafta 27 paketi rakam rakam yazmaz — *"iki koli, üç tek"* der.
+  Çarpmayı ekran yapıyor (`OperationsQuantitySheet`, mal kabulün çekmecesi) ve cetvel sayıyı tek
+  dokunuşla veriyor. Eski hâlde alan bir `TextInput`ti: sayısal klavye açılıyordu.
+
+  Tasarım bunu zaten söylüyormuş — v3:08'in büyük rakamında `onClick="{{ sayBasla }}"` var; ilk
+  turda düz metin olarak yazılmıştı.
+
+  **İkinci bir sayım dili yazılmadı** (CLAUDE §1): aynı çekmece, çağıranın kopya metniyle. Metin
+  sayıma göre değişiyor ve BİR ŞEY SÖZ VERMİYOR — mal kabulde eklenen koli boyu ürün kartına
+  yazılır, sayımda yazılmaz; kopya bu yüzden *"YENİ · yalnız bu sayımda"* diyor.
+
+  **Döküm YUKARI ÇIKMIYOR, toplam çıkıyor.** Sayımın kaydı bir SAYIDIR; "2 koli + 3 tek" ona
+  varmanın yolu ve kayıtta karşılığı yok. Döküm saklansaydı ekranda duran sayı ile kayda giden sayı
+  iki ayrı yerde yaşardı. `caseSizes` boş geçiliyor: parti sözleşmesi koli boyu taşımıyor, depocu
+  elindeki koliye bakıp çarpanı çekmecenin kendi adımından seçiyor.
+
+  **± DÜĞMELERİ KALDI:** çekmece "kaç var" sorusunun, ± ise "bir tane daha buldum" anının aracı.
+
+  **BEKLEYEN(21.226):** aynı kural SAYAÇLARIN ORTASINDAKİ rakam için de geçerli olacak
+  (`OperationsStepperGroup` → D2 hasar · D3 imha · D4b düşüm · kurye ekranları). Prop
+  (`onPressValue`) kurye şeridinde YAZILDI ama commit'lenmedi; commit'lenmemiş bir prop'a dayanan
+  kod tek başına derlenmeyen bir commit demek. Şartname `docs/talep/`te, prop yayına girince
+  depo tarafını bağlayacağım.
+
+  **Doğrulama.** Tip · lint temiz · mobil **1249/1249** (D4 testleri artık gerçek kullanımı izliyor:
+  cetvelden seçip onaylıyorlar). **Cihazda (Oppo CPH1907):** büyük rakama basıldı → "Rafta kaç var"
+  çekmecesi açıldı (koli bölümü + cetvel), cetvelden 5 seçildi → *"Sistemde 3 yazıyor, sen 5
+  saydın — 2 adet FAZLA"*, sebep bloğu açıldı.

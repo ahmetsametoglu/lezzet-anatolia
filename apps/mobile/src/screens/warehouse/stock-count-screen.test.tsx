@@ -74,6 +74,18 @@ beforeEach(() => {
   });
 });
 
+/**
+ * Raftaki adedi ÇEKMECEDEN girer (kullanıcı kararı 02.09): büyük rakam artık bir düğme, klavye
+ * değil adet çekmecesini açıyor — mal kabuldeki cetvelin aynısı. Test de gerçek kullanımı izliyor.
+ */
+async function countOnShelf(qty: number) {
+  await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty'));
+  const cell = `warehouse-stock-count-qty-sheet-ruler-${qty}`;
+  await waitFor(() => expect(screen.getByTestId(cell)).toBeOnTheScreen());
+  await fireEvent.press(screen.getByTestId(cell));
+  await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-sheet-confirm'));
+}
+
 /** Ekranı açar ve raf listesinden partiyi seçer — her testin ortak başlangıcı. */
 async function selectBatch() {
   await render(<StockCountScreen />);
@@ -100,7 +112,7 @@ describe('D4 · Sayım', () => {
   it('MUTLAK adet yazılır, kapıya FARK gider (9 sayıldı → 3 adet çıkış)', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-qty'), '9');
+    await countOnShelf(9);
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-yanlış sayılmıştı'));
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
 
@@ -115,7 +127,7 @@ describe('D4 · Sayım', () => {
   it('sayım FAZLASI stoğa ekleme olarak gider (15 sayıldı → 3 adet giriş)', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-qty'), '15');
+    await countOnShelf(15);
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-kayıt hatası'));
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
 
@@ -130,7 +142,7 @@ describe('D4 · Sayım', () => {
   it('fark yoksa yazım yok — düğme kapalı ve sebep bloğu hiç açılmıyor', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-qty'), '12');
+    await countOnShelf(12);
 
     expect(screen.queryByTestId('warehouse-stock-count-note-block')).toBeNull();
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
@@ -140,7 +152,7 @@ describe('D4 · Sayım', () => {
   it('fark varken SEBEP zorunlu — seçilmeden yazılmaz', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-qty'), '9');
+    await countOnShelf(9);
 
     expect(screen.getByTestId('warehouse-stock-count-note-block')).toBeTruthy();
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
@@ -150,7 +162,7 @@ describe('D4 · Sayım', () => {
   it('sonuç kartı ÖLÇÜLEN iki sayıyı yazar ve olay referansını taşır', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-qty'), '9');
+    await countOnShelf(9);
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-kayıt hatası'));
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
 
@@ -178,7 +190,7 @@ describe('D4 · Sayım', () => {
     });
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-qty'), '9');
+    await countOnShelf(9);
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-kayıt hatası'));
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
 
@@ -189,12 +201,12 @@ describe('D4 · Sayım', () => {
   it('konu değişince sayılan adet SIFIRLANIR — yanlış partiye tek dokunuşla yazılamaz', async () => {
     await selectBatch();
 
-    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-qty'), '9');
+    await countOnShelf(9);
     await fireEvent.press(screen.getByTestId('warehouse-stock-count-context-change'));
 
     const row = await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
     await fireEvent.press(row);
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-qty').props.value).toBe(''));
+    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-qty')).toHaveTextContent('—'));
   });
 });
