@@ -10560,3 +10560,47 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Prop 21.226'da yayına girdi (`OperationsStepperGroup.onPressValue` + `valueHint`) ve kurye
   şeridinde bir çağıranı var (serbest ürün listesi). Kalan: D2 hasar · D3 imha · D4b düşüm
   sayaçlarının ortasındaki rakam. Şartname `docs/talep/`te; bağlayacak olan depo şeridi.
+
+- [x] (21.228) **ADET ÇEKMECESİNE "RAKAMLA GİR" ADIMI — cetvel 24'te bitiyordu**
+  (kullanıcı sorusu 02.09: *"ortaya tıklandığında doğrudan sayı klavyesi açılsa daha mı hızlı
+  olur? Adet çekmecesi bu anlamda kötü bir seçenek mi?"*)
+  `touches:` `apps/mobile/src/components/operations/{keypad-panel.tsx,keypad-panel.test.tsx,amount-keypad.tsx,quantity-sheet.tsx}` ·
+  `apps/mobile/src/screens/warehouse/{stock-count-screen.test.tsx,messages.json}`
+
+  **Soru haklıydı ve ölçüm ikisini de haklı buldu.** Cetvel 0–24 arasını TEK dokunuşla veriyor ve
+  klavyesiz; ama orada bitiyor, ötesi yalnız ±1. Rafta 40 açık paket varsa cetvelden 24, sonra on
+  altı kez artı — tuş takımında iki tuş. Mal kabulde bu delik dar (mal koli koli geliyor ve çarpan
+  ürün kartında **kayıtlı**), sayımda geniş (parti sözleşmesi çarpan taşımıyor, raf çoğu zaman
+  açık duruyor).
+
+  Bu yüzden ikisinden biri değil İKİSİ: koli ve küçük sayı cetvelden, büyük ve tek sayı rakamdan.
+  30.08'in bulgusu (*"depocu 27 paketi rakam rakam yazmaz"*) yerinde duruyor — o bulgu tuş
+  takımının çekmecenin YERİNE geçmesine karşıydı, yanında durmasına değil.
+
+  **Sistem klavyesi DEĞİL kendi tuş takımımız:** eldivenli el (tasarımın kendi cümlesi) ve —
+  burada özellikle — çekmecenin üstüne açılan bir klavye yazılan sayıyı ve toplamı görüş alanından
+  çıkarırdı; bu oturumda o arızayı bir kez düzeltmiştik.
+
+  **Gövde çekmeceden ayrıldı** (`OperationsKeypadPanel`): tuş takımı bir `BottomSheet`ti ve adet
+  çekmecesinin içine olduğu gibi konsaydı ÇEKMECE İÇİNDE ÇEKMECE açardı — `bottom-sheet`
+  künyesindeki Fabric söküm arızasının (21.121) tetikleyicisi. Para tuş takımı artık aynı gövdeyi
+  kendi kabında çiziyor; iki kopya yok.
+
+  **Yazılan sayı TOPLAMDIR ve döküm sıfırlanır:** "2 koli + 3 tek" iken 30 yazan depocu 54 değil
+  30 demek istiyor.
+
+  **IZGARA ARIZASI, cihazda ölçüldü:** tuşlar `flexBasis: '30%'` ile diziliyordu ve adet
+  çekmecesinin içinde on bir tuşun HEPSİ tek satıra ince şeritler hâlinde çöktü. Aynı arıza komşu
+  ızgarada zaten ölçülmüştü (koli boyu seçici, 30.08) — yüzde bu kaplarda çözülmüyor. Kap artık
+  `onLayout` ile ölçülüyor; testi de var.
+
+  **BEKLEYEN(21.229):** kullanıcı 02.09'da daha büyüğünü söyledi — *"adet arttırma azaltma için
+  klasik bir desenimiz olması lazım; bir input var, sonra başında artı eksi var ama yerleri
+  değişiyor, bu hoş değil."* Ölçüldü: kitte **beş ayrı adet kontrolü** var (`QtyField` metin alanı
+  · `StepperGroup` bağlı sayaç · `StepperButton` tek düğme · `QtyStepperField` · `QtySlider`) ve
+  aynı soru ekrandan ekrana başka bir kalıpla soruluyor. Tekilleştirme kendi görevini istiyor.
+
+  **Doğrulama.** Tip · lint temiz · tam paket **4133/4133**; tuş takımı gövdesinin dört testi
+  (ölçülen genişlik · ölçümsüz ilk kare · ondalıksızda virgül yok · değer ancak onayda çıkar).
+  Cihazda çekmece açıldı ve arıza görüldü/düzeltildi; **düzeltmenin cihaz turu Oppo bağlantısı
+  düştüğü için yapılamadı** — ölçüm testte çivili.

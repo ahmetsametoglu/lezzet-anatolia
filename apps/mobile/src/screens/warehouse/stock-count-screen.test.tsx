@@ -95,6 +95,26 @@ async function selectBatch() {
 }
 
 describe('D4 · Sayım', () => {
+  it('BÜYÜK SAYI için rakamla giriş var — cetvel 24te bitiyor, tuş takımı bitmiyor', async () => {
+    /*
+      Kullanıcının sorusundan doğdu (02.09): *"ortaya tıklandığında doğrudan sayı klavyesi açılsa
+      daha mı hızlı olur?"* Ölçüm ikisini de haklı buldu — cetvel 0–24'ü tek dokunuşla veriyor ama
+      orada bitiyor; ötesi yalnız ±1. Bu test o kapının açık olduğunu çiviliyor.
+    */
+    await selectBatch();
+
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-open')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-open'));
+
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-key-4'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-key-0'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-qty-sheet-keypad-confirm'));
+
+    // Sayı ekrana geçti ve fark cümlesi onu okudu (sistemde 12 vardı).
+    expect(screen.getByTestId('warehouse-stock-count-qty')).toHaveTextContent('40');
+  });
+
   it('konu seçilmeden form çizilmez; raf listesi seçiciden gelir', async () => {
     await render(<StockCountScreen />);
 

@@ -8,6 +8,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
+import { OperationsKeypadPanel } from './keypad-panel';
 import { OperationsStepperGroup } from './stepper-group';
 import {
   breakdownRows,
@@ -86,6 +87,8 @@ interface QuantitySheetCopy {
   confirm: string;
   /** İkinci adım: koli boyu seçimi. */
   extra: { title: string; hint: string; footnote: string; cancel: string };
+  /** Üçüncü adım: rakamla giriş — koyu kartın ipucu metni de burada (`open`). */
+  keypad: { open: string; title: string; hint: string; confirm: string; cancel: string; delete: string };
 }
 
 interface OperationsQuantitySheetProps {
@@ -111,8 +114,11 @@ export function OperationsQuantitySheet({
   onClose,
   testID,
 }: OperationsQuantitySheetProps) {
-  /** `sizes` = "başka koli boyu" adımı. Çekmece her açılışta ADET adımıyla başlar. */
-  const [step, setStep] = useState<'count' | 'sizes'>('count');
+  /**
+   * Adımlar: `count` (koli + tek) · `sizes` ("başka koli boyu") · `keypad` (rakamla gir).
+   * Çekmece her açılışta ADET adımıyla başlar.
+   */
+  const [step, setStep] = useState<'count' | 'sizes' | 'keypad'>('count');
   /** Boy ızgarasının ölçülen genişliği — hücre genişliği bundan türer (künyesi ızgarada). */
   const [gridWidth, setGridWidth] = useState(0);
   useEffect(() => {
@@ -122,6 +128,53 @@ export function OperationsQuantitySheet({
   const rows = breakdownRows(value, caseSizes);
   const total = quantityTotal(value);
   const id = (suffix: string) => (testID === undefined ? undefined : `${testID}-${suffix}`);
+
+  /*
+    ── RAKAMLA GİR (kullanıcı kararı 02.09) ──────────────────────────────────
+    Kullanıcının sorusu haklıydı: *"ortaya tıklandığı zaman doğrudan sayı klavyesi açılsa daha mı
+    hızlı olur?"* Ölçüm ikisinin de haklı olduğu yeri gösterdi — cetvel 0–24 arasını TEK dokunuşla
+    veriyor ve klavyesiz; ama cetvel 24'te bitiyor ve ötesi yalnız ±1. Rafta 40 açık paket varsa
+    cetvelden 24, sonra on altı kez artı; tuş takımında iki tuş.
+
+    Bu yüzden ikisinden biri değil, İKİSİ: koli ve küçük sayı cetvelden, büyük ve tek sayı
+    rakamdan. 30.08'in bulgusu (*"depocu 27 paketi rakam rakam yazmaz"*) yerinde duruyor — o bulgu
+    tuş takımının çekmecenin YERİNE geçmesine karşıydı, yanında durmasına değil.
+
+    Sistem klavyesi DEĞİL kendi tuş takımımız: eldivenli el ve — burada özellikle — çekmecenin
+    üstüne açılan bir klavye, yazılan sayıyı ve toplamı görüş alanından çıkarırdı.
+
+    YAZILAN SAYI TOPLAMDIR ve döküm SIFIRLANIR: "2 koli + 3 tek" iken 30 yazan depocu 54 değil 30
+    demek istiyor. Dökümü koruyup üstüne eklemek, hiç kimsenin beklemediği bir sayı üretirdi.
+  */
+  if (step === 'keypad') {
+    return (
+      <BottomSheet visible={visible} title={copy.keypad.title} onClose={onClose} testID={testID}>
+        <Text style={styles.subject}>{copy.subject}</Text>
+        <OperationsKeypadPanel
+          value={total === 0 ? '' : String(total)}
+          unit={copy.unit}
+          allowDecimals={false}
+          confirmLabel={copy.keypad.confirm}
+          hint={copy.keypad.hint}
+          deleteLabel={copy.keypad.delete}
+          onConfirm={(text) => {
+            /* Boş onay DEĞERİ SİLMEZ, adımı kapatır: "yazmaktan vazgeçtim" ile "sıfır say" ayrı
+               şeyler ve ikincisinin kendi yolu var (başlıktaki "sıfırla"). */
+            const typed = Number.parseInt(text.replace(/\D/g, ''), 10);
+            if (Number.isSafeInteger(typed)) onChange({ cases: [], loose: typed });
+            setStep('count');
+          }}
+          testID={id('keypad')}
+        />
+        <SecondaryButton
+          label={copy.keypad.cancel}
+          onPress={() => setStep('count')}
+          elevation="flat"
+          testID={id('keypad-cancel')}
+        />
+      </BottomSheet>
+    );
+  }
 
   if (step === 'sizes') {
     return (
@@ -188,17 +241,27 @@ export function OperationsQuantitySheet({
       {/* TOPLAM KOYU KARTTA: ekranın tek konusu bu sayı ve krem bir yüzeyde krem bir kartla
           ayrışmazdı. Altındaki hesap satırı sonucu DOĞRULATIR — depocu 27'yi değil, 27'nin
           nereden geldiğini okur. */}
-      <View style={styles.total}>
+      <PressableSurface
+        onPress={() => setStep('keypad')}
+        feedback="scale"
+        style={styles.total}
+        accessibilityLabel={copy.keypad.open}
+        accessibilityHint={copy.keypad.title}
+        testID={id('keypad-open')}
+      >
         <View style={styles.totalHead}>
           <Text style={styles.totalValue} testID={id('total')}>
             {total}
           </Text>
           <Text style={styles.totalUnit}>{copy.unit}</Text>
+          {/* KARTIN BASILABİLİR OLDUĞUNU KART SÖYLER: ipucu metni sağda, tuş takımı işaretiyle.
+              Görünmez bir dokunma alanı, olmayan bir özelliktir. */}
+          <Text style={styles.totalKeypad}>{copy.keypad.open}</Text>
         </View>
         <Text style={styles.totalSum} testID={id('sum')}>
           {breakdownText(value, { loose: copy.sumLoose, total: copy.sumTotal, empty: copy.sumEmpty })}
         </Text>
-      </View>
+      </PressableSurface>
 
       {/* BÖLÜM HER ZAMAN ÇİZİLİR, AMA VARSAYILAN KOLİ YOKTUR (düzeltildi 30.08, kullanıcı bulgusu).
           Eskiden kayıtlı boyu olmayan üründe bölüm hiç çizilmiyordu ve künyesi bunu şöyle
@@ -345,6 +408,15 @@ const styles = StyleSheet.create({
   },
   totalUnit: {
     fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['on-ink-label'],
+    paddingBottom: operationsTheme.space.sm,
+  },
+  /** "rakamla gir" ipucu — kartın sağ ucunda, birimden ayrı: biri ne olduğunu, öteki ne
+      yapabileceğini söylüyor. */
+  totalKeypad: {
+    marginLeft: 'auto',
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors['on-ink-label'],
     paddingBottom: operationsTheme.space.sm,

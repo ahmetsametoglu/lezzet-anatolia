@@ -436,6 +436,14 @@
       "looseTitle": "KOLİ DIŞI TEK PAKET",
       "looseHint": "açık gelen, tek tek sayılanlar",
       "confirm": "Tamam",
+      "keypad": {
+        "open": "rakamla gir",
+        "title": "Kaç paket geldi",
+        "hint": "Yazdığın sayı TOPLAM olur — koli dökümü sıfırlanır.",
+        "confirm": "Yaz",
+        "cancel": "Vazgeç",
+        "delete": "Son rakamı sil"
+      },
       "extra": {
         "title": "Kolide kaç paket var",
         "hint": "Bu koli ürün kartında kayıtlı boylardan farklıysa seç — ürüne yeni kutu tipi olarak kaydedilir, sonraki kabullerde hazır çıkar.",
@@ -692,6 +700,14 @@
         "looseTitle": "KOLİ DIŞI TEK",
         "looseHint": "açık duran, tek tek sayılanlar",
         "confirm": "Tamam",
+        "keypad": {
+          "open": "rakamla gir",
+          "title": "Rafta kaç adet var",
+          "hint": "Yazdığın sayı TOPLAM olur — koli dökümü sıfırlanır.",
+          "confirm": "Yaz",
+          "cancel": "Vazgeç",
+          "delete": "Son rakamı sil"
+        },
         "extra": {
           "title": "Kolide kaç adet var",
           "hint": "Rafta duran kolinin çarpanını seç — sayım bu çarpanla toplanır.",
