@@ -2,6 +2,8 @@ import type { ReactNode } from 'react';
 import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
+import { hapticCommit, hapticSelect } from '@/lib/haptics/haptics';
+
 /*
   Basılı geri bildirimin TEK kaynağı. Web'de her etkileşimli öğe `cursor-pointer` + hover
   geri bildirimi taşımak zorunda (CLAUDE §2); RN'de imleç yok, karşılığı BASILI DURUMDUR —
@@ -27,7 +29,24 @@ type PressFeedback = 'shadow' | 'scale' | 'scale-small' | 'opacity' | 'tint';
 interface PressableSurfaceProps {
   children: ReactNode;
   onPress: () => void;
+  /**
+   * UZUN BASMA — varsa öğeye ikinci bir yol açar (bağlam menüsü).
+   *
+   * Kitte durmasının sebebi tekrar: dokunma geri bildirimi, dokunma alanı ve erişilebilirlik
+   * kancaları burada kurulu; uzun basmayı ekranların kendi `Pressable`larıyla eklemek aynı yüzeyi
+   * ikinci kez, eksik kurmak olurdu.
+   */
+  onLongPress?: () => void;
   feedback: PressFeedback;
+  /**
+   * **DOKUNMA TİTREŞİMİ — varsayılan AÇIK** (kullanıcı kararı 02.09: *"eylem titresin, gezinme
+   * sessiz"*).
+   *
+   * `false` yalnız GEZİNME yüzeylerinde verilir: çip, sekme ve metin eylemi. Ayrım rolden
+   * türetilemedi — çipler de rol vermiyor, varsayılan `button`a düşüyor (ölçüldü 02.09), yani
+   * a11y rolü burada bir sınır değil. O yüzden muafiyet AÇIK yazılır ve üç yerde durur.
+   */
+  haptic?: boolean;
   /** Yüzeyin görsel stili (zemin, çerçeve, yarıçap, dolgu) — çağıranın işi. */
   style?: StyleProp<ViewStyle>;
   disabled?: boolean;
@@ -71,7 +90,9 @@ interface PressableSurfaceProps {
 export function PressableSurface({
   children,
   onPress,
+  onLongPress,
   feedback,
+  haptic = true,
   style,
   disabled = false,
   accessibilityLabel,
@@ -95,7 +116,41 @@ export function PressableSurface({
 
   return (
     <Pressable
-      onPress={onPress}
+      /*
+        TİTREŞİM KURALI BURADA, EKRANLARDA DEĞİL (kullanıcı kararı 02.09).
+
+        Kapsam darlığının sebebi ölçüldü: sözlük iyi kurulmuştu ama yalnız ALTI dosya çağırıyordu
+        ve sözlüğün kendi künyesinde adı geçen yerler bile bağlanmamıştı — `hapticSelect` "adet
+        değiştirme" için yazılmış, oysa hiçbir adet düğmesi titremiyordu. Ekran ekran eklemenin
+        sonucu buydu: eksik titreşim hata vermez, yani unutulanı kimse göremez.
+
+        Kural kitin TEK dokunma yüzeyine kondu (93 dosya buradan geçiyor): yeni bir ekran
+        kendiliğinden doğru davranır. 16.08'in *"her yerde olsun istemiyorum"* kararı da ayakta —
+        gezinme yüzeyleri `haptic={false}` ile muaf (çip · sekme · metin eylemi), yani gezinirken
+        uygulama titremiyor. İki karar aynı anda geçerli.
+
+        UZUN BASMA daha güçlü: `commit`. Uzun basma kazara olmaz, kullanıcı BEKLEYEREK yapar ve
+        fiziksel bir "oldu" bekler (`hapticCommit` künyesi). Aynı tıkla geçiştirmek, iki ayrı
+        hareketi aynı sesle anlatmak olurdu.
+      */
+      onPress={
+        haptic
+          ? () => {
+              hapticSelect();
+              onPress();
+            }
+          : onPress
+      }
+      onLongPress={
+        onLongPress === undefined
+          ? undefined
+          : haptic
+            ? () => {
+                hapticCommit();
+                onLongPress();
+              }
+            : onLongPress
+      }
       disabled={disabled}
       /* Sert gölge kutunun DIŞINA taşar; kaydırma alanı da çocuklarını sınırında kırpar. İkisi
          birleşince kabın kenarındaki öğenin gölgesi sessizce kayboluyordu (ölçüldü, cihaz 09.08).

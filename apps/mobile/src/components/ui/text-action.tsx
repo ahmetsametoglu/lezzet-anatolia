@@ -42,6 +42,8 @@ export function TextAction({
 }: TextActionProps) {
   return (
     <PressableSurface
+      /* Metin eylemi bir BAĞLANTIDIR: dokunuş bir yere götürür, bir şey yapmaz (16.08 kararı). */
+      haptic={false}
       onPress={onPress}
       disabled={disabled}
       feedback="opacity"

@@ -102,6 +102,8 @@ export function BottomTabBar({ items, tone = 'customer', testID }: BottomTabBarP
         // `flex: 1` geçirilemez — dördü eşit paylaşsın diye sarmalayıcı burada.
         <View key={item.key} style={styles.slot}>
           <PressableSurface
+      /* Sekme çubuğu saf gezinmedir — her geçişte titremek titreşimin anlamını sıfırlar (16.08 kararı). */
+      haptic={false}
             onPress={item.onPress}
             /* Müşteri şablonu sekmede opaklık kullanıyor, operasyon v2 küçültme (`scale(.94)` —
                kitin `scale` durağına, .97'ye çekildi; .9'a olan uzaklık daha büyük). */

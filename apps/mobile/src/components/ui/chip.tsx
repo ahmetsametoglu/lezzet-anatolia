@@ -26,6 +26,8 @@ interface ChipProps {
 export function Chip({ label, onPress, selected = false, shape = 'control', disabled = false, testID }: ChipProps) {
   return (
     <PressableSurface
+      /* Çip bir GEZİNME/süzgeç yüzeyi: seçim değiştirmek gezinmektir, iş yapmak değil (16.08 kararı). */
+      haptic={false}
       onPress={onPress}
       disabled={disabled}
       selected={selected}

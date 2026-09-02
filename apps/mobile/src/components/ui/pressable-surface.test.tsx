@@ -4,7 +4,15 @@ import type { ComponentProps } from 'react';
 import { Text } from 'react-native';
 
 import { appMetrics } from '../../theme/metrics';
+import { hapticCommit, hapticSelect } from '../../lib/haptics/haptics';
 import { PressableSurface, pressFeedbackStyles } from './pressable-surface';
+
+/* Titreşim TAKLİT: gerçek `expo-haptics` yerel modüldür ve testte yok. Ölçülen şey donanım değil
+   KURAL — hangi dokunuşun hangi niyeti ateşlediği. */
+jest.mock('../../lib/haptics/haptics', () => ({
+  hapticSelect: jest.fn(),
+  hapticCommit: jest.fn(),
+}));
 
 // Token Kararlari #8'in kanıtı: hangi yüzey basıldığında NE yapıyor. Web'in `cursor-pointer` +
 // hover kuralının RN karşılığı budur — kural tek yerde durur ve burada ölçülür.
@@ -66,5 +74,58 @@ describe('PressableSurface', () => {
     await setup({ accessibilityRole: 'tab', accessibilityLabel: 'Vitrin' });
 
     expect(screen.getByRole('tab', { name: 'Vitrin' })).toBeOnTheScreen();
+  });
+
+  /*
+    TİTREŞİM KURALI (kullanıcı kararı 02.09: "eylem titresin, gezinme sessiz").
+
+    Kural kitte durduğu için sessizce kaybolabilir: bir muafiyet fazladan konursa uygulama
+    titremez, eksik konursa gezinirken titrer — ikisi de hata vermez. Bekçi burada.
+  */
+  describe('titreşim', () => {
+    beforeEach(() => {
+      (hapticSelect as jest.Mock).mockClear();
+      (hapticCommit as jest.Mock).mockClear();
+    });
+
+    it('dokunuş VARSAYILAN olarak hafif tık verir — yeni ekran kendiliğinden doğru davranır', async () => {
+      const onPress = jest.fn();
+      await setup({ onPress });
+
+      fireEvent.press(screen.getByTestId('surface'));
+
+      expect(hapticSelect).toHaveBeenCalledTimes(1);
+      // Titreşim eylemin YERİNE geçmez: çağıranın işleyicisi yine koşar.
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('UZUN BASMA daha güçlü tık verir — kazara olmayan hareket', async () => {
+      const onLongPress = jest.fn();
+      await setup({ onLongPress });
+
+      fireEvent(screen.getByTestId('surface'), 'longPress');
+
+      expect(hapticCommit).toHaveBeenCalledTimes(1);
+      expect(hapticSelect).not.toHaveBeenCalled();
+      expect(onLongPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('`haptic={false}` GEZİNME yüzeyini susturur — çip, sekme, metin eylemi', async () => {
+      const onPress = jest.fn();
+      await setup({ haptic: false, onPress });
+
+      fireEvent.press(screen.getByTestId('surface'));
+
+      expect(hapticSelect).not.toHaveBeenCalled();
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it('uzun basma yoksa kanca da kurulmaz — olmayan hareket titremez', async () => {
+      await setup({});
+
+      fireEvent(screen.getByTestId('surface'), 'longPress');
+
+      expect(hapticCommit).not.toHaveBeenCalled();
+    });
   });
 });
