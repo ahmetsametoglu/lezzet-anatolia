@@ -140,12 +140,12 @@ export function WriteOffScreen() {
         </FormScroll>
 
         {/* OKUTMA FAB'DA (kullanıcı isteği 03.09): kaydırılan içeriğin DIŞINDA, sağ altta sabit —
-            liste akarken de erişilir ve ekranın üstünü yemiyor. */}
+            liste akarken de erişilir ve ekranın üstünü yemiyor. Metinsiz daire — sayım ekranının
+            aynı kararı (kullanıcı 03.09). */}
         <OperationsScanFab
           icon="scan"
           onPress={scan.openScan}
           accessibilityLabel={t.adjustment.scan.cta}
-          label={t.adjustment.scan.fab}
           testID="warehouse-write-off-scan"
         />
       </View>

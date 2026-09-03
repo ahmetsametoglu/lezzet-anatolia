@@ -653,7 +653,6 @@
   "adjustment": {
     "scan": {
       "cta": "Parti etiketini okut",
-      "fab": "Okut",
       "title": "Parti etiketini okut",
       "hint": "Kolideki lot barkodunu ya da bizim parti numaramızı çerçeveye getirin — bu deponun açık partileri listelenir.",
       "unknown": "{code} ile bu depoda açık parti yok — kod başka deponun olabilir ya da parti tükenmiş olabilir.",

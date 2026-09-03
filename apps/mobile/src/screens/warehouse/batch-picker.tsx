@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -66,6 +67,15 @@ const t = warehouseCopy;
 const ROW_SKELETON_HEIGHT = 84;
 const SKELETON_ROWS = [ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT];
 
+/** Simülasyonun "tanınmayan" çipi — biçimi bizim numaramızın biçimi, kaydı yok (yalnız `__DEV__`). */
+const DEV_UNKNOWN_BATCH = { label: 'Tanınmayan', code: 'PRT-XXX-00-0000' } as const;
+/**
+ * Çip sayısı TAVANLI (POCO'da ölçüldü 03.09): liste otuz satırken otuz çip çizildi ve vizörü
+ * ekrandan itti — kamera alanı `flex:1`, havuz altında sınırsız büyüyor, kamera SIFIR boya düştü.
+ * Beş, varsayılan havuzun kendi boyu; listenin İLK satırları — depocunun ekranda zaten gördükleri.
+ */
+const DEV_CHIP_LIMIT = 5;
+
 interface BatchPickerProps {
   /** Ekranın kendi kuralı (D4b: *"süresi geçmiş mal buraya girmez"*); verilmezse çizilmez. */
   footnote?: string;
@@ -81,6 +91,31 @@ interface BatchPickerProps {
 }
 
 export function BatchPicker({ footnote, subject, scan, testID }: BatchPickerProps) {
+  /*
+    SİMÜLASYON ÇİPLERİ = LİSTEDEKİ PARTİLERİN NUMARALARI (kullanıcı isteği 03.09: *"parti kodu
+    barkod okuyucuya parametre olarak gitsin"*).
+
+    Varsayılan havuz ÜRÜN barkodlarıdır (EAN/ITF) ve bu kapı partiyi lot ya da parti NUMARASIYLA
+    çözer (`resolveBatchCode` → `findByLot`): havuzun beş çipi burada hep "açık parti yok" diyordu,
+    yani okutma akışı cihazda kamerasız hiç sınanamıyordu. Çip artık ekranda duran satırın kendi
+    numarası — çipe basmak ile o partinin etiketini okutmak AYNI kodu üretir (havuzun kendi ilkesi).
+    Sonuncu çip bilinmeyen bir kod: "bu depoda açık parti yok" cümlesinin de bir yolu olsun.
+
+    Adı LİSTEDEN çözülür, kapıya sorulmaz — satır zaten elde; ikinci bir istek aynı cevabı
+    getirirdi. İkisi de yalnız `__DEV__`de okunur (`scan-sheet` künyesi).
+  */
+  const devCodes = useMemo(
+    () => [
+      ...subject.batches.slice(0, DEV_CHIP_LIMIT).map((batch) => ({ label: batch.batchNo, code: batch.batchNo })),
+      DEV_UNKNOWN_BATCH,
+    ],
+    [subject.batches],
+  );
+  const devResolve = useCallback(
+    (code: string) => Promise.resolve(subject.batches.find((batch) => batch.batchNo === code)?.name ?? null),
+    [subject.batches],
+  );
+
   return (
     <View style={styles.block} testID={testID}>
       {/* "HANGİ PARTİ SAYILACAK?" BLOĞU KALDIRILDI (kullanıcı 03.09: *"son maksadı nedir? İhtiyaç
@@ -217,6 +252,8 @@ export function BatchPicker({ footnote, subject, scan, testID }: BatchPickerProp
         hint={t.adjustment.scan.hint}
         onClose={scan.closeScan}
         onScan={scan.handleScan}
+        devCodes={devCodes}
+        devResolve={devResolve}
         testID={`${testID}-scan-sheet`}
       />
 

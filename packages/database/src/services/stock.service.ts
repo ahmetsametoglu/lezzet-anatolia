@@ -323,7 +323,13 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       select: BATCH_DETAIL_SELECT,
       // Parti numarası da eşleşir (03.09): raftaki etiket ister tedarikçinin lotu ister bizim
       // `PRT-…` numaramız olsun, aynı kapıdan çözülür. İki sütun, tek soru: "bu kod hangi parti".
-      orFilters: [`lot_number.ilike.*${term}*`, `batch_no.ilike.*${term}*`],
+      //
+      // TEK GRUP, VİRGÜLLE (cihazda ölçüldü 03.09): dizinin her elemanı AYRI bir `or=(…)` grubudur
+      // ve gruplar birbirine VE ile bağlanır (`base.service` künyesi). İki eleman olarak yazılınca
+      // sorgu "lot eşleşsin VE parti no eşleşsin" oldu — hiçbir satır iki sütunda aynı kodu taşımaz,
+      // okutma hem lotta hem parti numarasında "açık parti yok" dedi; raf listesi aynı satırı
+      // gösterirken. `discount.service` deseniyle aynı: grup = virgülle ayrılmış tek dize.
+      orFilters: [`lot_number.ilike.*${term}*,batch_no.ilike.*${term}*`],
       rangeFilters: opts.onlyInStock ? [{ field: 'physical_qty', operator: 'gt', value: 0 }] : undefined,
       orderBy: 'expiryDate',
       orderDirection: 'desc',

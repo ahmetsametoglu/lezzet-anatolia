@@ -10285,6 +10285,20 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   - **BEKLEYEN(21.219):** 01.09'daki `@gorhom/bottom-sheet` göçü RN `Modal`ını tamamen kaldırdı
     ve yığın izi tam oraya işaret ediyordu; arıza göç ile kapanmış OLABİLİR. Ölçüm sefer + durak
     ister, `delivery_run` tablosu 02.09'da boş — sipariş ve sefer doğunca ilk iş bu turu tekrarlamak.
+  - **Durum (03.09) — göçle KAPANMADI; durak ekranına da bağlı değil.** POCO (2311DRK48G) bir günde
+    beş kez aynı hata ekranına düştü (`DevLauncherErrorActivity`, aynı yığın: `SurfaceMountingManager.addViewAt`
+    ← `ReactClippingViewManager.addView` ← `ViewGroup.addViewInner: The specified child already has
+    a parent`). Tetikleyiciler logcat'ten ölçüldü: **13:45 ve 16:50 güç tuşuyla uykudan uyanış**
+    (MIUI `GreezeManager` süreci çözer çözmez, 47 ms sonra hata); **16:52 bildirim gölgesi
+    kapanınca, 16:57 başlatıcıdan uygulamaya dönünce** — dördü de ARKA PLANDAN DÖNÜŞ, dokunuş yok;
+    **16:48 yığın başlığının geri okuna adb dokunuşu** (kullanıcının OPPO'da "iki kere geri" bulgusuyla
+    aynı sınıf). Uygulama o sırada depo yığınındaydı (sayım/düşüm seçicisi). Java yığını logcat'e
+    DÜŞMÜYOR (tamponda sıfır `ReactNativeJS`/`AndroidRuntime` satırı — hata dev-launcher'da
+    yakalanıyor); kanıt hata ekranının görüntüsü. Sebep ÖLÇÜLMEDİ, teori kurulmadı: iki tetikleyici
+    (dönüş + geri) ortak bir sökülen-görünüm hikâyesine işaret ediyor ama hangi bileşen olduğu
+    ancak release derlemesinde ya da `adb logcat -b crash` ile yığın alınarak bulunur. Dev-client'ın
+    Metro'ya yeniden bağlanırken tetiklediği bir yenileme de aday — arka plandan dönüşlerin
+    hepsinde Metro bağlantısı kopmuş olabilir; release derlemesinde tekrar üretilmezse dev-only.
 
 - [x] (21.220) **D1: etiket çekmecesi kapanınca BEKLEYEN kuyruğa dönülüyor** (kullanıcı bulgusu
   02.09: *"toplama bittiği zaman tekrardan bekleyen siparişler listesine dönmem gerekiyor ama sanki
@@ -11202,3 +11216,39 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   dokunulur ve düzeltir · düşümde kapı yok · boş blok yok, alt başlık yönlendirir). Tam paket
   commit notunda. Cihazda ölçüldü (POCO 2311DRK48G): seçici bloksuz, alt başlık yönlendirmeyi taşıyor;
   kartın altında "RAFTA SAYDIĞIN ADET" ve "PARTİNİN YERİ" aynı boyda alt alta.
+
+- [x] (21.244) **D4/D4b OKUTMA: FAB metinsiz · simülasyon çipleri LİSTEDEKİ parti numaraları · okutma kapısı ARIZALIYDI (iki `or` grubu VE'ye bağlanıyordu) — düzeltildi, testi yazıldı** (kullanıcı isteği 03.09, POCO'da ölçüldü)
+  `touches:` `apps/mobile/src/screens/warehouse/{batch-picker.tsx,stock-count-screen.tsx,write-off-screen.tsx,messages.json,stock-count-screen.test.tsx}` · `packages/database/src/services/stock.service.ts` · `packages/application/src/warehouse/adjustment.test.ts`
+
+  **1 · FAB METİNSİZ.** Kullanıcı: *"okut diye bir yazı FAB butonu içerisine yazmana gerek yok."*
+  İki ekranda `label` kalktı, `scan.fab` sözlükten düştü; daire yalnız ikon (hap biçimi yüklemenin
+  "bitir" hâline saklı).
+
+  **2 · ÇİPLER = PARTİ NUMARALARI.** Kullanıcı: *"parti kodu barkod okuyucuya parametre olarak
+  gitsin."* Seçicinin `ScanSheet`i varsayılan havuzu (ürün EAN'ları) çiziyordu; bu kapı partiyi
+  lot/parti numarasıyla çözdüğü için beş çip hep "açık parti yok" diyordu — okutma cihazda
+  kamerasız hiç sınanamıyordu. Artık `devCodes` = listenin İLK BEŞ satırının `batchNo`su + bir
+  "Tanınmayan" (`PRT-XXX-00-0000`); çipin altında ürün adı LİSTEDEN çözülür (`devResolve`, kapıya
+  soru yok). Tavan ölçümle geldi: otuz satır otuz çip çizdi ve vizörü ekrandan itti (kamera alanı
+  `flex:1`, havuz sınırsız büyüyordu).
+
+  **3 · ARIZA — OKUTMA HİÇ ÇALIŞMIYORDU.** İlk çip *"PRT-STR-26-0159 ile bu depoda açık parti yok"*
+  dedi; satır listede 14 adetle duruyordu. Katman katman ölçüldü: PostgREST'e elle atılan `or`
+  sorgusu satırı BULDU; API (`/batches/resolve?warehouseId=`) hem parti numarasında hem lotta
+  (`NE-001`) `unknown` döndü; raf listesi (`/batches?q=`) aynı satırı getirdi. Sebep `findByLot`:
+  `orFilters: ['lot_number.ilike…', 'batch_no.ilike…']` — dizinin her elemanı AYRI `or` grubudur ve
+  gruplar VE ile bağlanır (`base.service` künyesi), yani sorgu "lot eşleşsin VE parti no eşleşsin"
+  olmuştu. 03.09 15:04'ten beri parti numarasıyla da lotla da okutma imkânsızdı ve hiçbir test bu
+  kapıdan geçmiyordu (`adjustment.test`te `resolveBatchCode` yoktu). Düzeltme tek grup
+  (`discount.service` deseni); yeni entegrasyon testi üç kodu sınıyor (numara · lot · uydurma).
+
+  **Doğrulama.** Tip · lint · knip · docs:check temiz; sayım ekranı 25 test yeşil (yeni: FAB metinsiz
+  + çipler listeden + çipe basınca parti seçilir · tavan); `adjustment.test` 22 yeşil (yeni: numara ·
+  lot · uydurma). Tam paket iki koşuda 4137/4149 — düşen 12'nin hepsi satış testleri (`sale.test` ·
+  `on-site-sale.test`), `beforeEach`te: cihazdan 14:32Z'de yapılmış anonim bir satış (VAN-1) testin
+  toptan silmesini engelliyor; depo/parti dosyalarıyla ilgisi yok, kurye şeridine not bırakıldı
+  (`docs/talep/not-kurye-satis-testleri-anonim-siparisleri-toptan-siliyor.md`). POCO (2311DRK48G): vizör + beş
+  çip + Tanınmayan + yönerge tek ekranda; `PRT-STR-26-0159` çipi → bağlam kartı (lot NE-001 · 14 ·
+  Derin dondurucu 1); Tanınmayan → "açık parti yok" bildirimi; düşümde aynı akış (`PRT-STR-26-0164`
+  → kart, Karantina). Kamera bu derlemede VAR (vizör çizildi, izin verili) — gerçek etiketle deneme
+  kullanıcıya kaldı, akış çiple bayt bayt aynı yoldan geçiyor (`scan-sheet` künyesi).

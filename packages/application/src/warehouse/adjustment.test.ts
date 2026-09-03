@@ -1,7 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, StockMovementService, StockService, StorageAreaService, serviceDb } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair } from '@lezzet/database/testing';
-import { listWarehouseBatches, recordAdjustment, type AdjustmentLine, type WarehouseReason } from './adjustment';
+import {
+  listWarehouseBatches,
+  recordAdjustment,
+  resolveBatchCode,
+  type AdjustmentLine,
+  type WarehouseReason,
+} from './adjustment';
 
 /**
  * **İmha / sayım OLAY belgesi — D4** (10.5), terfi 21.11 (kaynağı `apps/web/lib/stock/adjustment.test.ts`).
@@ -303,6 +309,35 @@ describe('raf listesi', () => {
     Liste eskiden PENCEREYDİ: deponun tamamı okunuyor, ilk N satır veriliyor, gerisi `truncated`
     diye söyleniyordu. Artık keyset: sayfa gelir, imleç sonrakini açar, imleç `null` olunca biter.
   */
+  /*
+    OKUTMA KAPISI (cihazda ölçüldü 03.09): iki sütun TEK `or` grubunda aranmalı. `findByLot` iki
+    grup olarak yazılmıştı (gruplar VE ile bağlanır) ve hem lot hem parti numarası "bilinmiyor"
+    dönüyordu — raf listesi aynı satırı gösterirken. Hiçbir test bu kapıdan geçmiyordu; bu test
+    üç kodu sınıyor: bizim numaramız · tedarikçinin lotu · uydurma.
+  */
+  it('okutulan kod PARTİ NUMARASIYLA da LOTLA da çözülür; uydurma kod bilinmiyor', async () => {
+    const lot = `LOT-${stamp}-X`;
+    const row = await stocks.insert({
+      warehouseId,
+      variantId,
+      physicalQty: 3,
+      expiryDate: dayOffset(4),
+      purchasePriceCents: 400,
+      lotNumber: lot,
+    });
+
+    const byBatchNo = await resolveBatchCode(db, { code: row.batchNo, warehouseId });
+    expect(byBatchNo.status).toBe('found');
+    if (byBatchNo.status === 'found') expect(byBatchNo.batches.map((batch) => batch.stockId)).toContain(row.id);
+
+    const byLot = await resolveBatchCode(db, { code: lot, warehouseId });
+    expect(byLot.status).toBe('found');
+    if (byLot.status === 'found') expect(byLot.batches.map((batch) => batch.stockId)).toEqual([row.id]);
+
+    const unknown = await resolveBatchCode(db, { code: `PRT-XXX-00-${stamp}`, warehouseId });
+    expect(unknown.status).toBe('unknown');
+  });
+
   it('SAYFA SAYFA gelir — imleç sonraki sayfayı açar, tekrar yok', async () => {
     const first = await listWarehouseBatches(db, { warehouseId, limit: 1 });
     expect(first.batches).toHaveLength(1);

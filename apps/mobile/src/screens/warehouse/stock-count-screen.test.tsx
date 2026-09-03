@@ -37,13 +37,20 @@ const mockRecordAdjustment = jest.fn<
 >();
 const mockFetchAreas = jest.fn<Promise<{ data: { areas: WarehouseAreaContract[] } | null; error: string | null }>, []>();
 const mockMarkSeen = jest.fn<Promise<{ data: unknown; error: string | null }>, [string, string]>();
+const mockResolveBatch = jest.fn<
+  Promise<{
+    data: { status: 'found'; batches: ResolvedBatchContract[] } | { status: 'unknown' } | null;
+    error: string | null;
+  }>,
+  [string]
+>();
 
 jest.mock('@/lib/api/warehouse', () => ({
   fetchWarehouseBatches: (input: { query: string; storageAreaId?: string | null; cursor?: string | null }) =>
     mockFetchBatches(input),
   fetchWarehouseAreas: () => mockFetchAreas(),
   markBatchSeen: (stockId: string, areaId: string) => mockMarkSeen(stockId, areaId),
-  resolveBatchCode: jest.fn(),
+  resolveBatchCode: (code: string) => mockResolveBatch(code),
   recordAdjustment: (body: RecordAdjustmentRequest) => mockRecordAdjustment(body),
 }));
 
@@ -89,6 +96,8 @@ beforeEach(() => {
   });
   mockMarkSeen.mockReset();
   mockMarkSeen.mockResolvedValue({ data: { status: 'ok', changed: true, storageAreaName: 'Derin dondurucu 1' }, error: null });
+  mockResolveBatch.mockReset();
+  mockResolveBatch.mockResolvedValue({ data: { status: 'unknown' }, error: null });
   mockRecordAdjustment.mockReset();
   mockRecordAdjustment.mockResolvedValue({
     data: {
@@ -121,6 +130,50 @@ async function selectBatch() {
 }
 
 describe('D4 · Sayım', () => {
+  /*
+    OKUTMA FAB'DAN AÇILIR; simülasyon çipleri LİSTEDEKİ partilerin numaralarıdır (kullanıcı
+    isteği 03.09: *"parti kodu barkod okuyucuya parametre olarak gitsin"*). Çipe basmak, o partinin
+    etiketini okutmakla aynı kodu kapıya taşır ve partiyi seçer. FAB metinsiz daire.
+  */
+  it('FAB metinsiz; çipler listedeki parti numaraları — çipe basmak kodu kapıya taşır ve partiyi seçer', async () => {
+    mockResolveBatch.mockResolvedValue({ data: { status: 'found', batches: [batch()] }, error: null });
+    await render(<StockCountScreen />);
+    await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
+
+    // Daire yalnız ikon: "Okut" yazısı yok (kullanıcı 03.09).
+    expect(screen.queryByText('Okut')).toBeNull();
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-scan'));
+
+    // Çip = satırın parti numarası; altında ürün adı LİSTEDEN çözülmüş — kapıya henüz soru yok.
+    await waitFor(() => expect(screen.getByLabelText('PRT-STR-26-0401')).toBeOnTheScreen());
+    await waitFor(() =>
+      expect(screen.getByTestId('scan-dev-chip-name-PRT-STR-26-0401')).toHaveTextContent(/Su Böreği/),
+    );
+    expect(screen.getByLabelText('Tanınmayan')).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Paket')).toBeNull(); // ürün barkodu havuzu burada yok
+    expect(mockResolveBatch).not.toHaveBeenCalled();
+
+    await fireEvent.press(screen.getByLabelText('PRT-STR-26-0401'));
+    expect(mockResolveBatch).toHaveBeenCalledWith('PRT-STR-26-0401');
+    await screen.findByTestId('warehouse-stock-count-context');
+    expect(screen.getByTestId('warehouse-stock-count-context')).toHaveTextContent(/PRT-STR-26-0401/);
+  });
+
+  /* TAVAN: cihazda otuz satır otuz çip oldu ve vizörü ekrandan itti (03.09). İlk beş + bilinmeyen. */
+  it('simülasyon çipleri TAVANLI — otuz satır otuz çip olmaz, vizör ekranda kalır', async () => {
+    const rows = Array.from({ length: 7 }, (_, i) =>
+      batch({ stockId: `00000000-0000-4000-8000-00000000041${i}`, batchNo: `PRT-STR-26-041${i}` }),
+    );
+    mockFetchBatches.mockResolvedValue({ data: { batches: rows, nextCursor: null }, error: null });
+    await render(<StockCountScreen />);
+    await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000416');
+
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-scan'));
+    await waitFor(() => expect(screen.getByLabelText('PRT-STR-26-0414')).toBeOnTheScreen());
+    expect(screen.queryByLabelText('PRT-STR-26-0415')).toBeNull();
+    expect(screen.getByLabelText('Tanınmayan')).toBeOnTheScreen();
+  });
+
   it('BÜYÜK SAYI için rakamla giriş var — cetvel 24te bitiyor, tuş takımı bitmiyor', async () => {
     /*
       Kullanıcının sorusundan doğdu (02.09): *"ortaya tıklandığında doğrudan sayı klavyesi açılsa

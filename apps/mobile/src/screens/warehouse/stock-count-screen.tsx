@@ -148,12 +148,13 @@ export function StockCountScreen() {
         </FormScroll>
 
         {/* OKUTMA FAB'DA (kullanıcı isteği 03.09): kaydırılan içeriğin DIŞINDA, sağ altta sabit —
-            liste akarken de erişilir ve ekranın üstünü yemiyor. */}
+            liste akarken de erişilir ve ekranın üstünü yemiyor. METİNSİZ daire (kullanıcı 03.09,
+            ikinci tur: *"okut diye bir yazı FAB butonu içerisine yazmana gerek yok"*) — ikon
+            okutmayı zaten söylüyor; hap biçimi yüklemenin "bitir" hâline saklı. */}
         <OperationsScanFab
           icon="scan"
           onPress={scan.openScan}
           accessibilityLabel={t.adjustment.scan.cta}
-          label={t.adjustment.scan.fab}
           testID="warehouse-stock-count-scan"
         />
       </View>
