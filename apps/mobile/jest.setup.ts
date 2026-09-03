@@ -62,3 +62,10 @@ jest.mock('expo-camera', () => ({
    DEĞİL (bir kez denendi ve preset'in öteki native sahtelerini deldi — 7 suite düştü, ölçüldü),
    yalnız bizim tek soruluk yoklama dosyamız: "var" der, üstteki mock'lu JS dalı çalışır. */
 jest.mock('@/components/scan/camera-availability', () => ({ hasCameraNativeModule: () => true }));
+/* DOKUNMA ERTELEMESİ TESTTE EŞZAMANLI (21.219 · ölçüldü 03.09). Kitin `onPress`i cihazda bir kare
+   erteleniyor ve o erteleme Fabric'in "child already has a parent" çökmesini kesiyor — gerekçesi
+   `lib/interaction/defer-press.ts` künyesinde. Testin konusu Fabric zamanlaması DEĞİL: erteleme
+   çıplak bırakılınca `fireEvent.press` sonrası eşzamanlı bekleyen 251 test kırılıyordu (ölçüldü);
+   sahteyle 1276/1276 geçiyor. Sahtelenebilir bir yüzey olsun diye modül ayrı yazıldı — çıplak bir
+   `requestAnimationFrame` çağrısı burada tutulamazdı. */
+jest.mock('@/lib/interaction/defer-press', () => ({ deferPress: (handler: () => void) => handler() }));

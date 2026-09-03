@@ -3,6 +3,7 @@ import { Pressable, type StyleProp, View, type ViewStyle } from 'react-native';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
 import { hapticCommit, hapticSelect } from '@/lib/haptics/haptics';
+import { deferPress } from '@/lib/interaction/defer-press';
 
 /*
   Basılı geri bildirimin TEK kaynağı. Web'de her etkileşimli öğe `cursor-pointer` + hover
@@ -146,6 +147,17 @@ export function PressableSurface({
         UZUN BASMA daha güçlü: `commit`. Uzun basma kazara olmaz, kullanıcı BEKLEYEREK yapar ve
         fiziksel bir "oldu" bekler (`hapticCommit` künyesi). Aynı tıkla geçiştirmek, iki ayrı
         hareketi aynı sesle anlatmak olurdu.
+
+        ── İŞ BİR KARE ERTELENİR, TİTREŞİM ERTELENMEZ (21.219 · ölçüldü 03.09) ──
+        Aşağıdaki `deferPress` bir kolaylık değil, ÇÖKMENİN kesildiği yer: ekranı kaldıran bir
+        işleyici (`router.back()`) bırakma çizimiyle aynı mount partisine düşünce Fabric
+        "child already has a parent" ile düşüyordu (iki cihaz, dört ekran, beş kayıt). Gerekçenin
+        tamamı ve ölçüm tablosu `lib/interaction/defer-press.ts` künyesinde. Titreşim ÖNCE ve
+        eşzamanlı kalır — dokunuşun fiziksel cevabı gecikmez, ertelenen yalnız işin kendisi.
+
+        UZUN BASMADA ERTELEME YOK ve bu bilinçli: uzun basma menü/çekmece AÇAR (kutu menüsü,
+        seferi araçtan çıkar), ekran KALDIRMAZ — arızanın koşulu oluşmuyor. Gereksiz yere
+        ertelemek, tek yerde duran kuralı iki farklı gecikmeyle anlatmak olurdu.
       */
       onPress={
         onPress === undefined
@@ -153,9 +165,9 @@ export function PressableSurface({
           : haptic
             ? () => {
                 hapticSelect();
-                onPress();
+                deferPress(onPress);
               }
-            : onPress
+            : () => deferPress(onPress)
       }
       onLongPress={
         onLongPress === undefined

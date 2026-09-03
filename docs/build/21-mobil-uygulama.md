@@ -10278,13 +10278,14 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     defterindeki §10 bu ölçümle listeden düştü. Cihaz turu yine yapılamadı: STR'de 8 sipariş var,
     hepsi `ready` — toplanacak `confirmed` sipariş yok. Görev o tur için açık kalıyor.
 
-- [ ] (21.219) **Durak ekranından geri dönüşte Android çökmesi** — `addViewAt: failed to insert
-  view … The specified child already has a parent` (31.08, CPH1907; üç turda tekrar üretilmiş).
-  Yalnız DURAK ekranının geri dönüşünde; kardeş geçişler aynı turda sağlam. Şüphe ekranın üç
-  örtüsünde (iki çekmece + `ScanSheet`) — gezinme sırasında sökülen portal.
-  - **BEKLEYEN(21.219):** 01.09'daki `@gorhom/bottom-sheet` göçü RN `Modal`ını tamamen kaldırdı
-    ve yığın izi tam oraya işaret ediyordu; arıza göç ile kapanmış OLABİLİR. Ölçüm sefer + durak
-    ister, `delivery_run` tablosu 02.09'da boş — sipariş ve sefer doğunca ilk iş bu turu tekrarlamak.
+- [x] (21.219) **Geri dokunuşunda Android çökmesi — sebep ölçüldü, kit düzeyinde kesildi** — `addViewAt:
+  failed to insert view … The specified child already has a parent` (31.08, CPH1907; üç turda tekrar
+  üretilmiş). Başlıkta "yalnız DURAK ekranı" yazıyordu; 03.09'da dört ekranda ve iki cihazda ölçüldü,
+  ekrana değil DOKUNUŞA bağlı. Şüphe ekranın üç örtüsündeydi (iki çekmece + `ScanSheet`) — yanlış çıktı.
+  `touches:` `apps/mobile/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx` · `apps/mobile/jest.setup.ts`
+  - ~~**BEKLEYEN(21.219):** 01.09'daki `@gorhom/bottom-sheet` göçü RN `Modal`ını tamamen kaldırdı
+    ve yığın izi tam oraya işaret ediyordu; arıza göç ile kapanmış OLABİLİR.~~ Göç KAPATMADI
+    (03.09 ölçümü) ve çekmecelerle ilgisi yoktu — işaret cevaplandığı için üstü çizildi.
   - **Durum (03.09) — göçle KAPANMADI; durak ekranına da bağlı değil.** POCO (2311DRK48G) bir günde
     beş kez aynı hata ekranına düştü (`DevLauncherErrorActivity`, aynı yığın: `SurfaceMountingManager.addViewAt`
     ← `ReactClippingViewManager.addView` ← `ViewGroup.addViewInner: The specified child already has
@@ -10299,6 +10300,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     ancak release derlemesinde ya da `adb logcat -b crash` ile yığın alınarak bulunur. Dev-client'ın
     Metro'ya yeniden bağlanırken tetiklediği bir yenileme de aday — arka plandan dönüşlerin
     hepsinde Metro bağlantısı kopmuş olabilir; release derlemesinde tekrar üretilmezse dev-only.
+  - **Durum (03.09) — SEBEP ÖLÇÜLDÜ VE KESİLDİ.** Kurye döngüsü turunda arıza beş kez, iki cihazda
+    (CPH1907/Android 11 · 2311DRK48G/Android 15), dört ayrı ekranda çıktı: toplama → kabuk, araçtaki
+    seferler → gün, araç stoğu → yükleme, seferi kapat → gün. Ortak nokta ekran değil, DOKUNUŞ:
+    parmak kalkınca `Pressable`ın `pressed → false` yeniden çizimi ile o dokunuşun ekranı KALDIRAN
+    işleyicisi (`router.back()`) aynı React işlemine düşüyor, React ikisini tek Fabric mount
+    partisine topluyor ve kaldırılan ekranın görünümü geri dönüşüm havuzuna düşerken aynı partideki
+    güncelleme onu eski ebeveynine bağlı buluyor. RN 0.86'da View/Text/Image geri dönüşümü VARSAYILAN
+    AÇIK. Kök hata bizim değil (react-native-screens #3249 · #2803 · #4137 — üçü de açık, 4.27.0'da
+    düzeltme yok); tetiği biz çekiyoruz çünkü native başlığı gizleyip JS state taşıyan kendi
+    düğmemizi çiziyoruz ve kaldırmayı dokunma olayının içinde eşzamanlı yapıyoruz.
+  - **Ölçüm (Oppo, toplama → kabuk, adb dokunuşu).** Mevcut kod 1/6 ve 1/8 (~%14, aralıklı);
+    `animation:'none'` **7/10** (pencere animasyon DEĞİL — animasyon kalkınca arıza artıyor);
+    `animation:'none'` + dokunuş bir kare ertelenmiş **0/10**; erteleme kit düzeyine alınınca yine
+    **0/10**. Donanım geri tuşu aynı ekranlarda hiç düşürmedi (bırakılan düğme yok). Basılı görünümü
+    tamamen kaldırmak da 0/10 verdi ve ELENDİ — tasarımın basılı hâli bilinçli bir karar, erteleme
+    aynı sonucu görünümü bozmadan alıyor.
+  - **Çözüm kitin tek dokunma yüzeyinde** (`PressableSurface` → `deferPress`): işleyici bırakma
+    çiziminden sonraki kareye alınıyor, titreşim ertelenmiyor, uzun basma dokunulmadan kalıyor
+    (menü açar, ekran kaldırmaz). Ekranı dokunuşla kaldıran 44 çağrı var; kuralı çağrı başına
+    yazmak unutan ilk ekranda arızayı geri getirirdi. Gerekçe + ölçüm tablosu `defer-press.ts`
+    künyesinde. Testte erteleme eşzamanlı sahteleniyor (`jest.setup.ts`): çıplak bırakılınca
+    `fireEvent.press` sonrası bekleyen 251 test kırılıyordu, sahteyle 1276/1276 geçiyor.
+  - **Kalan:** kök düzeltme RN/screens tarafında → `BEKLEYEN(21.245)`.
 
 - [x] (21.220) **D1: etiket çekmecesi kapanınca BEKLEYEN kuyruğa dönülüyor** (kullanıcı bulgusu
   02.09: *"toplama bittiği zaman tekrardan bekleyen siparişler listesine dönmem gerekiyor ama sanki
@@ -11252,3 +11276,25 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Derin dondurucu 1); Tanınmayan → "açık parti yok" bildirimi; düşümde aynı akış (`PRT-STR-26-0164`
   → kart, Karantina). Kamera bu derlemede VAR (vizör çizildi, izin verili) — gerçek etiketle deneme
   kullanıcıya kaldı, akış çiple bayt bayt aynı yoldan geçiyor (`scan-sheet` künyesi).
+
+- [ ] (21.245) **Dokunma ertelemesi geçicidir — RN/screens kök düzeltmesi gelince sökülür** (21.219'un kalanı)
+  `touches:` `apps/mobile/src/lib/interaction/defer-press.ts` · `apps/mobile/src/components/ui/pressable-surface.tsx`
+
+  21.219'da ölçülen çökmenin kökü bizde değil: Fabric ekran kaldırılırken geri dönüştürülen görünümü
+  eski ebeveynine bağlı buluyor (react-native-screens **#3249** `endRemovalTransition` bozuk ·
+  **#2803** ShadowTree ↔ native ayrışması · **#4137** bizim yığınımızın aynısı, "üretimde her yerde
+  çöküyor", tekrar üretilemediği için kapanmamış). screens **4.27.0**'da düzeltme YOK; kurulu sürüm
+  4.26.2, RN 0.86.2, expo-router 57.0.11.
+
+  Bizim `deferPress`imiz TETİĞİ kaldırıyor, hatayı değil: dokunma işleyicisi bırakma çiziminden
+  sonraki kareye alınıyor. Kütüphane tarafı düzelince bu erteleme sökülebilir ve kit yeniden
+  eşzamanlı `onPress`e döner — o gün `jest.setup.ts`teki sahte de düşer.
+
+  **Yedek yol (ölçülmedi):** `enableViewRecyclingForView` bayrağını native tarafta kapatmak. RN
+  0.86'da varsayılan `true` (`ReactNativeFeatureFlagsDefaults.kt`), JS'ten override edilemiyor —
+  config plugin + dev-client yeniden derlemesi ister. Erteleme yetmezse ya da başka bir yerde aynı
+  sınıf arıza çıkarsa ilk denenecek şey bu.
+
+  **Nöbet:** screens sürümü yükseltilirken bu satır okunur; yükseltmeden sonra `animation:'none'`
+  koşulunda 20 döngü geri dokunuşu ölçülür (21.219'un ölçüm deseni). Sıfır çökme çıkarsa erteleme
+  sökülür ve bu görev kapanır.
