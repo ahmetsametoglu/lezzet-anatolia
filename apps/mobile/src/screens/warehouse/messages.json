@@ -683,8 +683,8 @@
     "area": {
       "heading": "HANGİ DOLABIN ÖNÜNDESİN",
       "hint": "İsteğe bağlı süzgeç — seçersen yalnız o dolabın partileri listelenir.",
-      "inCard": "yeri",
-      "change": "değiştir →",
+      "fieldHeading": "PARTİNİN YERİ",
+      "fieldHint": "dolabı değiştirmek için dokun",
       "sheetTitle": "Parti hangi dolapta?",
       "sheetHint": "Rafta başka yerde bulduysan buradan düzelt — kayıt o an güncellenir.",
       "clear": "Rafı belirsiz bırak",
@@ -717,9 +717,7 @@
     "count": {
       "title": "Sayım",
       "subtitle": "raftaki gerçek adedi yaz · farkı sistem hesaplar",
-      "noSubject": "parti seçilmedi",
-      "emptyTitle": "Hangi parti sayılacak?",
-      "emptyBody": "Sayım her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.",
+      "noSubject": "raftaki etiketi okut ya da listeden seç",
       "qtyHeading": "RAFTA SAYDIĞIN ADET",
       "qtyField": "Rafta sayılan adet",
       "qtyEmpty": "—",
@@ -754,9 +752,7 @@
     "writeOff": {
       "title": "Stok Düşümü",
       "subtitle": "elindeki mal eksildi · sebebini yaz",
-      "noSubject": "parti seçilmedi",
-      "emptyTitle": "Hangi partiden düşülecek?",
-      "emptyBody": "Düşüm her zaman bir partiye yazılır. Raftaki etiketi okut ya da listeden seç.",
+      "noSubject": "raftaki etiketi okut ya da listeden seç",
       "emptyFootnote": "Süresi geçmiş mal buraya girmez — onun imhası Yakın-SKT turunda, sebebi zaten bellidir.",
       "qtyHeading": "KAÇ ADET DÜŞÜYOR",
       "qtyField": "Düşülen adet: {n}",

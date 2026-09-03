@@ -17,6 +17,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { AdjustmentResultCard } from './adjustment-result-card';
+import { BatchAreaField } from './batch-area-field';
 import { BatchContextCard } from './batch-context-card';
 import { BatchPicker } from './batch-picker';
 import { warehouseCopy } from './copy';
@@ -131,8 +132,6 @@ export function WriteOffScreen() {
           testID="warehouse-write-off-picker-body"
         >
           <BatchPicker
-            title={t.adjustment.writeOff.emptyTitle}
-            body={t.adjustment.writeOff.emptyBody}
             footnote={t.adjustment.writeOff.emptyFootnote}
             subject={subject}
             scan={scan}
@@ -273,6 +272,11 @@ export function WriteOffScreen() {
               cümle bunu SÖYLÜYOR, çünkü depocu kâğıtta hangi numarayı arayacağını bilmeli. */}
           <Text style={styles.hint}>{fillCopy(t.adjustment.writeOff.reasonNote, { prefix: 'IMH' })}</Text>
         </View>
+
+        {/* PARTİNİN YERİ — sayımla aynı bölüm, ama SALT OKUNUR (kullanıcı kararı 03.09: *"düşümde
+            yer değiştirmesi mantıklı değil ama görünür olması lazım"*). Buradaki iş malın
+            eksilmesi; depocu doğru partinin önünde olduğunu yine buradan anlıyor. */}
+        <BatchAreaField areaName={batch.storageAreaName} testID="warehouse-write-off-area" />
       </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>

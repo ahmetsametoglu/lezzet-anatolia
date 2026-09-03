@@ -19,6 +19,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { AdjustmentResultCard } from './adjustment-result-card';
+import { BatchAreaField } from './batch-area-field';
 import { BatchContextCard } from './batch-context-card';
 import { BatchPicker } from './batch-picker';
 import { qtySheetCopy, warehouseCopy } from './copy';
@@ -140,8 +141,6 @@ export function StockCountScreen() {
           testID="warehouse-stock-count-picker-body"
         >
           <BatchPicker
-            title={t.adjustment.count.emptyTitle}
-            body={t.adjustment.count.emptyBody}
             subject={subject}
             scan={scan}
             testID="warehouse-stock-count-picker"
@@ -192,15 +191,7 @@ export function StockCountScreen() {
       {header}
 
       <FormScroll contentContainerStyle={styles.list} testID="warehouse-stock-count-body">
-        <BatchContextCard
-          batch={batch}
-          onChange={subject.clear}
-          /* YER DEĞİŞTİRME SAYIMDA AÇIK, DÜŞÜMDE DEĞİL (kullanıcı kararı 03.09): rafı sayan
-             depocu partiyi başka dolapta bulabilir ve kaydı o an düzeltmesi işin parçasıdır.
-             Düşümde iş malın eksilmesi; yer yine görünür ama dokunulmaz. */
-          onChangeArea={subject.areas.length === 0 ? undefined : () => setAreaSheetOpen(true)}
-          testID="warehouse-stock-count-context"
-        />
+        <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-stock-count-context" />
 
         {/* PARTİ HANGİ DOLAPTA — açık beyan, sessiz yazım yok. Seçilen alan ANINDA kayda gider
             (`assignArea`); "rafı belirsiz" seçeneği YOK, çünkü bilinen bir yeri silmek bir
@@ -301,6 +292,16 @@ export function StockCountScreen() {
             </View>
           )}
         </View>
+
+        {/* PARTİNİN YERİ — adet girdisiyle aynı boyda kendi bölümü (kullanıcı kararı 03.09):
+            YER DEĞİŞTİRME SAYIMDA AÇIK, DÜŞÜMDE DEĞİL. Rafı sayan depocu partiyi başka dolapta
+            bulabilir ve kaydı o an düzeltmesi işin parçasıdır; dolap listesi okunamadıysa alan
+            salt okunur kalır (`onPress` yok) — seçilecek bir şey olmadan çekmece açmak boş kapıdır. */}
+        <BatchAreaField
+          areaName={batch.storageAreaName}
+          onPress={subject.areas.length === 0 ? undefined : () => setAreaSheetOpen(true)}
+          testID="warehouse-stock-count-area"
+        />
 
         {needsNote ? (
           <View style={styles.noteBox} testID="warehouse-stock-count-note-block">

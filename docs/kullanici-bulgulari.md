@@ -205,29 +205,6 @@ doğrulanmadı. Önce SDK sürümünün belgesine bakılmalı.
 **Yoksa alternatifler:** `defaultBillingDetails` ile ad/e-posta/adres önden doldurulur (kart numarası
 değil), ve yalnız geliştirme derlemesinde görünen bir "test kartını kopyala" kısayolu konabilir.
 
-## 10. Native uygulama · operasyon toplama — açık kutu varken "eksikleri bildirerek kapat" düğmesi görünüyor  ⟶ MOBİL ŞERİT
-
-**Bulgu (01.09):** Sipariş toplama ekranında açık bir kutu varken *"eksikleri bildirerek siparişi
-kapat"* düğmesi görünmemeli. Düğme yalnız **tüm kutular kapalıyken** görünmeli.
-
-**Ölçüm — kural SUNUCUDA ZATEN VAR, eksik olan ekran.**
-`declareOrderShort` (`packages/application/src/warehouse/boxes.ts:428`) açık kutuyu arıyor ve
-içi doluysa yazımı hiç yapmadan `open_box_not_empty` + `boxNo` döndürüyor. Yani bugün düğmeye
-basılsa sipariş kapanmıyor; depocu yalnız gereksiz bir ret cümlesi görüyor.
-
-**Bir ince fark var, kararı gerekiyor:** sunucu **boş** açık kutuya izin veriyor — onu *"niyet
-artığı"* sayıp siliyor ve beyanı yazıyor. Kullanıcının istediği kural bundan daha katı: *"açık kutu
-varsa düğme yok."* İkisi birebir uyuşmazsa depocu şu tuzağa düşebilir: boş bir kutu açmış, düğme
-gizlenmiş, kutuyu kapatamıyor (içi boş) ve beyanı da veremiyor — **çıkışsız kalır.**
-
-İki çözüm var, ekranın kararı:
-- (a) Düğme yalnız **dolu** açık kutu varken gizlensin — sunucunun kuralıyla birebir aynı olur.
-- (b) Kullanıcının istediği gibi her açık kutuda gizlensin, **ama** boş kutuyu kapatmanın/atmanın
-  bir yolu ekranda dursun.
-
-**Not:** düğmeyi gizlemek reddi ortadan kaldırmaz, yalnız görünmez yapar. Sunucu kapısı yerinde
-kalmalı — ekran tek yazma yolu değil.
-
 ## 11. Talebin varsayılan modu `human` — AI taslağı hiç üretilmiyor
 
 **Bulgu (01.09):** Müşteri talebi açılıyor ama AI taslak cevap üretmiyor. **Sebep ölçüldü:** talep

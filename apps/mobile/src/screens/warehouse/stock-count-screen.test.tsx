@@ -313,8 +313,8 @@ describe('D4 · Sayım', () => {
 
     await screen.findByTestId('warehouse-stock-count-context');
     expect(mockMarkSeen).not.toHaveBeenCalled();
-    // Kart hâlâ partinin KAYITLI adresini okuyor; ekran bir şey değiştirmiş gibi yapmıyor.
-    expect(screen.getByTestId('warehouse-stock-count-context')).toHaveTextContent(/Derin dondurucu 2/);
+    // Yer alanı hâlâ partinin KAYITLI adresini okuyor; ekran bir şey değiştirmiş gibi yapmıyor.
+    expect(screen.getByTestId('warehouse-stock-count-area-value')).toHaveTextContent('Derin dondurucu 2');
   });
 
   it('KAYIT yazılınca adres yazılır ve kart yeni adresi okur', async () => {
@@ -400,16 +400,26 @@ describe('D4 · Sayım', () => {
 
   /* PARTİNİN YERİ KARTTA (kullanıcı isteği 03.09) ve SAYIMDA düzeltilebilir: depocu partiyi başka
      dolapta bulduysa kaydı o an düzeltir. Düşümde bu kapı yok (o dosyanın kendi testi). */
-  it('kart partinin YERİNİ gösterir; sayımda çekmeceden düzeltilir', async () => {
+  it('PARTİNİN YERİ kendi bölümünde; sayımda dokunulur ve çekmeceden düzeltilir', async () => {
     await selectBatch();
-    expect(screen.getByTestId('warehouse-stock-count-context-area')).toHaveTextContent('Derin dondurucu 2');
+    expect(screen.getByTestId('warehouse-stock-count-area-value')).toHaveTextContent('Derin dondurucu 2');
 
-    await fireEvent.press(screen.getByTestId('warehouse-stock-count-context-area-change'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-area-open'));
     await waitFor(() => expect(screen.getByTestId(`warehouse-stock-count-area-option-${FREEZER_1}`)).toBeOnTheScreen());
     await fireEvent.press(screen.getByTestId(`warehouse-stock-count-area-option-${FREEZER_1}`));
 
     await waitFor(() => expect(mockMarkSeen).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000401', FREEZER_1));
-    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-context-area')).toHaveTextContent('Derin dondurucu 1'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-area-value')).toHaveTextContent('Derin dondurucu 1'));
+  });
+
+  /* "HANGİ PARTİ SAYILACAK?" BLOĞU YOK (kullanıcı 03.09): işlevsiz bir başlıktı; cümle başlığın
+     altına indi. Test, bloğun geri gelmemesini ve alt başlığın yönlendirmeyi taşımasını çiviliyor. */
+  it('seçicide boş-hâl bloğu yok; yönlendirme başlığın altında', async () => {
+    await render(<StockCountScreen />);
+    await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
+
+    expect(screen.queryByTestId('warehouse-stock-count-picker-prompt')).toBeNull();
+    expect(screen.getByTestId('warehouse-stock-count-header')).toHaveTextContent(/raftaki etiketi okut ya da listeden seç/);
   });
 
   it('dolap seçilmemişse adres yazımı yok — seçim isteğe bağlı', async () => {

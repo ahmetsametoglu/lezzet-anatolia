@@ -11177,3 +11177,24 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   imleci · alan süzgeci), API 2 (sayfa + `?area=` · bozuk imleç 200), sayım ekranı 3 (filtre kapıya
   gider · dibe inince imleçle sonraki sayfa ve satırlar EKLENİR · kartta yer ve düzeltme), düşüm 1
   (yer görünür, kapı yok). Tam paket sonucu commit notunda.
+
+- [x] (21.243) **D4/D4b: "Hangi parti sayılacak?" bloğu KALDIRILDI (işlevsizdi) · partinin yeri adet girdisiyle aynı boyda KENDİ BÖLÜMÜNDE — sayımda dokunulur, düşümde salt okunur** (kullanıcı kararları 03.09, POCO'da ölçüldü)
+  `touches:` `apps/mobile/src/screens/warehouse/{batch-area-field.tsx,batch-picker.tsx,batch-context-card.tsx,stock-count-screen.tsx,write-off-screen.tsx,messages.json,stock-count-screen.test.tsx,write-off-screen.test.tsx}`
+
+  **1 · BOŞ BLOK.** Kullanıcı: *"en üstteki 'hangi parti sayılacak' bölümünün son maksadı nedir?
+  İhtiyaç yoksa kaldır."* Ölçüldü: `OperationsNoticeBlock variant="empty"` — kesikli çerçeveli bir
+  başlık + cümle, hiçbir işlevi yok, okutunca dolmuyor, parti seçilince bütün seçiciyle kayboluyor.
+  Ekranın ilk çeyreğini yiyordu. Kaldırıldı; cümle başlığın altına indi (`noSubject`: *"raftaki
+  etiketi okut ya da listeden seç"*), liste yukarı çıktı. `emptyTitle`/`emptyBody` sözlükten düştü.
+
+  **2 · PARTİNİN YERİ.** 21.242'de kartın içine rozet + "değiştir →" konmuştu; kullanıcı: *"bu yeri
+  çok hoş yapmamışım, aşağıda yeterince boş alan var — büyük bir seçim kısmı koy, adet input'unun
+  ölçüleriyle uyumlu olsun."* Kart KİMLİKTİR (ad · numara · tarih · iki sayı), yer bir GİRDİDİR;
+  girdiler gövdede kendi başlığıyla durur. `BatchAreaField`: "PARTİNİN YERİ" başlığı, sayacın
+  büyük boyuyla aynı kutu (`controlLg`), sayımda dokunulur → aynı çekmece (`assignArea`), düşümde
+  salt okunur (kum çerçeve, ok yok). Kartın künyesinden alan tamamen çıktı.
+
+  **Doğrulama.** Tip · lint · knip · docs:check temiz; sayım+düşüm 31 test yeşil (yeni: yer bölümü
+  dokunulur ve düzeltir · düşümde kapı yok · boş blok yok, alt başlık yönlendirir). Tam paket
+  commit notunda. Cihazda ölçüldü (POCO 2311DRK48G): seçici bloksuz, alt başlık yönlendirmeyi taşıyor;
+  kartın altında "RAFTA SAYDIĞIN ADET" ve "PARTİNİN YERİ" aynı boyda alt alta.

@@ -36,20 +36,16 @@ interface BatchContextCardProps {
   batch: ResolvedBatchContract;
   /** Konuyu bırakma — seçiciye döner. */
   onChange: () => void;
-  /**
-   * **Partinin YERİNİ değiştirme kapısı** — verilirse "yeri" satırının yanında bir eylem çıkar
-   * (kullanıcı kararı 03.09).
-   *
-   * Yalnız SAYIM verir: depocu rafı sayarken partiyi başka dolapta bulabilir ve kaydı o an
-   * düzeltmesi doğaldır. DÜŞÜM vermez ve bu bilinçli — orada iş malın eksilmesidir, yerinin
-   * düzeltilmesi değil; ama yer yine GÖRÜNÜR, çünkü depocu doğru partinin önünde olduğunu
-   * ondan anlıyor.
-   */
-  onChangeArea?: () => void;
   testID: string;
 }
 
-export function BatchContextCard({ batch, onChange, onChangeArea, testID }: BatchContextCardProps) {
+/*
+  PARTİNİN YERİ BU KARTTA DEĞİL (kullanıcı kararı 03.09, ikinci tur): bir ara rozet + "değiştir →"
+  olarak buradaydı; kullanıcı beğenmedi (*"çok hoş yapmamışım"*) ve adet girdisiyle aynı boyda kendi
+  bölümüne taşındı (`batch-area-field`). Kart KİMLİKTİR (ad · numara · tarih · iki sayı), yer ise
+  bir GİRDİ — girdiler gövdede durur.
+*/
+export function BatchContextCard({ batch, onChange, testID }: BatchContextCardProps) {
   return (
     <OperationsSurface tone="panel" padding="lg" testID={testID}>
       <View style={styles.head}>
@@ -70,18 +66,6 @@ export function BatchContextCard({ batch, onChange, onChangeArea, testID }: Batc
             </Text>
           )}
 
-          {/* PARTİNİN YERİ KENDİ SATIRINDA (kullanıcı isteği 03.09): *"sayımın/düşümün içine
-              girince ürünün nerede olduğu yazsın"*. Künye satırında da geçiyordu ama üç bilginin
-              arasında kayboluyordu; burada kendi rozetinde ve sayımda dokunulabilir. */}
-          <View style={styles.areaRow}>
-            <Text style={styles.areaLabel}>{t.adjustment.area.inCard}</Text>
-            <Text style={[styles.areaBadge, batch.storageAreaName === null ? styles.areaBadgeEmpty : null]} testID={`${testID}-area`}>
-              {batch.storageAreaName ?? t.adjustment.picker.noArea}
-            </Text>
-            {onChangeArea === undefined ? null : (
-              <TextAction label={t.adjustment.area.change} onPress={onChangeArea} testID={`${testID}-area-change`} />
-            )}
-          </View>
         </View>
         <TextAction label={t.adjustment.context.change} onPress={onChange} testID={`${testID}-change`} />
       </View>
@@ -126,33 +110,6 @@ const styles = StyleSheet.create({
   meta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.helper,
-    color: operationsTheme.colors.muted,
-  },
-  areaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.md,
-    paddingTop: operationsTheme.space.xs,
-  },
-  areaLabel: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors.muted,
-  },
-  /** Yer rozeti zeytin: partinin fiziksel adresi bu ekranın ikinci en önemli bilgisi. */
-  areaBadge: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.meta,
-    paddingHorizontal: operationsTheme.space.md,
-    paddingVertical: operationsTheme.space['2xs'],
-    borderRadius: operationsTheme.radius.badge,
-    overflow: 'hidden',
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    color: operationsTheme.colors['olive-dark'],
-  },
-  /** Rafı bilinmeyen parti KUM: bilgi yok, uyarı da yok — kabulde alan seçmek zorunlu değil. */
-  areaBadgeEmpty: {
-    backgroundColor: operationsTheme.colors['neutral-bg'],
     color: operationsTheme.colors.muted,
   },
   rule: {

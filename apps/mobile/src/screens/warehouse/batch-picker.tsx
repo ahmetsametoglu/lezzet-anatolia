@@ -67,9 +67,6 @@ const ROW_SKELETON_HEIGHT = 84;
 const SKELETON_ROWS = [ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT];
 
 interface BatchPickerProps {
-  /** Boş hâlin sorusu — ekranına göre değişen tek şey. */
-  title: string;
-  body: string;
   /** Ekranın kendi kuralı (D4b: *"süresi geçmiş mal buraya girmez"*); verilmezse çizilmez. */
   footnote?: string;
   subject: UseBatchSubjectResult;
@@ -83,11 +80,13 @@ interface BatchPickerProps {
   testID: string;
 }
 
-export function BatchPicker({ title, body, footnote, subject, scan, testID }: BatchPickerProps) {
+export function BatchPicker({ footnote, subject, scan, testID }: BatchPickerProps) {
   return (
     <View style={styles.block} testID={testID}>
-      <OperationsNoticeBlock variant="empty" title={title} description={body} testID={`${testID}-prompt`} />
-
+      {/* "HANGİ PARTİ SAYILACAK?" BLOĞU KALDIRILDI (kullanıcı 03.09: *"son maksadı nedir? İhtiyaç
+          yoksa kaldır"*). Ölçüldü: fonksiyonu yoktu — kesikli çerçeveli bir başlık, okutunca dolmuyor,
+          parti seçilince bütün seçiciyle birlikte kayboluyordu. Ekranın ilk çeyreğini yiyen bir
+          cümleydi; cümle başlığın altına indi (`noSubject`), liste yukarı çıktı. */}
       {subject.areas.length === 0 ? null : (
         <View style={styles.areaBlock} testID={`${testID}-areas`}>
           <Text style={styles.heading}>{t.adjustment.area.heading}</Text>

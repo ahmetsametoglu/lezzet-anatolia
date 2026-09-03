@@ -109,11 +109,11 @@ describe('D4b · Stok düşümü', () => {
   /* DÜŞÜMDE YER GÖRÜNÜR AMA DEĞİŞTİRİLEMEZ (kullanıcı kararı 03.09): buradaki iş malın
      eksilmesidir, yerinin düzeltilmesi değil — ama depocu doğru partinin önünde olduğunu yerden
      anlıyor, o yüzden gizlenmiyor. */
-  it('kart partinin YERİNİ gösterir ama düşümde değiştirme kapısı YOK', async () => {
+  it('PARTİNİN YERİ bölümü var ama düşümde dokunulmaz — kapı yok', async () => {
     await selectBatch();
 
-    expect(screen.getByTestId('warehouse-write-off-context-area')).toHaveTextContent('Derin dondurucu 2');
-    expect(screen.queryByTestId('warehouse-write-off-context-area-change')).toBeNull();
+    expect(screen.getByTestId('warehouse-write-off-area-value')).toHaveTextContent('Derin dondurucu 2');
+    expect(screen.queryByTestId('warehouse-write-off-area-open')).toBeNull();
   });
 
   it('boş hâl kendi kuralını yazar: süresi geçmiş mal buraya girmez', async () => {
