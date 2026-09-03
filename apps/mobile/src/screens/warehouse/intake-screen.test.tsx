@@ -750,6 +750,55 @@ describe('D2 · mal kabul', () => {
      bu test onu dolduruyordu; tasarımda öyle bir alan hiç yok — hasar, kabul edilen adedin
      İÇİNDEN sayaçla işaretleniyor ve sebep çiplerden seçiliyor. Sözleşmede satır başına hasar
      alanı olmadığı için üçü isteğin tek notunda, satır adı yazılarak birleşiyor. */
+  /*
+    AKORDEON (kullanıcı kararı 03.09) — *"başka bir kart açıldığı zaman bir önceki kart küçülsün."*
+    Ölçülen şey satırın FORMUNUN kapanması: kapalı satırda SKT alanı çizilmez, yerine özet rozeti
+    durur. Sayılmış olmak satırı açık TUTMAZ; açık olan tek satırı ekran seçer.
+  */
+  it('başka satır açılınca öncekinin FORMU kapanır — açık kart tektir', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '4');
+    expect(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_B.variantId}`));
+
+    expect(screen.queryByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeNull();
+    expect(screen.getByTestId(`warehouse-intake-expiry-${ROW_B.variantId}`)).toBeOnTheScreen();
+  });
+
+  /* KAPALI KARTIN ÖZETİ: SKT kendi rozetinde TARİHİ yazar (kural değil değer), hasar varsa kendi
+     rozetinde adediyle durur. Kart kapanınca girilenler görünmez olmamalı. */
+  it('kapalı kart SKT tarihini ve hasar adedini rozetlerinde taşır', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '4');
+    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
+
+    // Başka satır açılır → ROW_A kapanır ve özetini rozetlerde gösterir.
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_B.variantId}`));
+
+    // Rozet REJİMİ de taşır: tarih tek başına "hangi tarih" sorusunu cevaplamıyor (DLC/DDM ayrımı).
+    expect(screen.getByTestId(`warehouse-intake-date-badge-${ROW_A.variantId}`)).toHaveTextContent('DDM 12.08.26');
+    expect(screen.getByTestId(`warehouse-intake-damage-badge-${ROW_A.variantId}`)).toHaveTextContent('hasarlı 1');
+  });
+
+  /* Başlık satırın ANAHTARI: aynı satıra ikinci dokunuş kartı kapatır. */
+  it('başlığa dokunuş kartı açar, ikinci dokunuş kapatır', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-row-toggle-${ROW_A.variantId}`));
+    expect(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeOnTheScreen();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-row-toggle-${ROW_A.variantId}`));
+    expect(screen.queryByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeNull();
+  });
+
   it('hasar SAYI ve SEBEP olarak işaretlenir; satır adıyla birlikte isteğin notuna taşınır', async () => {
     withForm([ROW_A]);
 

@@ -215,9 +215,16 @@ export function BottomSheet({
       android_keyboardInputMode="adjustResize"
     >
       <BottomSheetScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" testID={testID}>
-        {/* Boşluk dokunuşu burada biter, örtüye düşmez (dosya başındaki künye). */}
+        {/*
+          Boşluk dokunuşu burada biter, örtüye düşmez (dosya başındaki künye).
+
+          ARALIK SARMALAYICININ İÇİNDE (kullanıcı bulgusu 03.09): jest kutusu eklendiğinde
+          çekmecenin çocukları TEK bir görünüme indi ve kaydırma kabının `gap`i artık onların
+          arasına düşmüyordu — sebep çekmecesinin seçenekleri bitişik çizildi. Aralık çocukların
+          gerçek ebeveyninde durmalı; kabın `gap`i tek çocuğa hiçbir şey yapmaz.
+        */}
         <GestureDetector gesture={contentTap}>
-          <View>{children}</View>
+          <View style={styles.contentInner}>{children}</View>
         </GestureDetector>
         {/*
           PAY AYRI BİR BOŞLUKTUR, `paddingBottom` DEĞİL (ölçüldü 01.09 · cihazda).
@@ -277,6 +284,9 @@ const styles = StyleSheet.create((t, rt) => ({
     /* Klavye payı BURADA DEĞİL, içeriğin sonundaki boşlukta — gerekçesi orada. Buradaki pay
        klavyesiz hâlin nefesi + cihazın alt güvenli alanıdır ve klavye açıkken de KORUNUR. */
     paddingBottom: t.space['8xl'] + rt.insets.bottom,
+  },
+  /** Çocuklar arasındaki nefes — kabın değil, GERÇEK ebeveynin işi (yukarıdaki künye). */
+  contentInner: {
     gap: t.space['2xl'],
   },
 }));

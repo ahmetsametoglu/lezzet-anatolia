@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { toastInfo } from '@/lib/toast/toast-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, View, type ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 // Ömür kararı MOTORDAN: ekran kendi yüzdesini kurmaz — kabul kapısı da aynı motoru çağırıyor ve
 // ikisi ayrışsaydı ekran bir şey der, kayıt başkasını yazardı (`CLAUDE §1`).
@@ -18,7 +18,6 @@ import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { OperationsSurface } from '@/components/operations/surface';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -75,6 +74,9 @@ const LINE_SKELETON_HEIGHT = 74;
  * başına sayı veriyor — ikinci bir "özet" ucu, iki kez okunan aynı gerçeği bir kez daha okumak
  * olurdu (hub'ın aynı kuralı).
  */
+/** Okutulan satır üste getirilirken bırakılan nefes — satır ekranın tepesine yapışmasın. */
+const SCROLL_MARGIN = 24;
+
 function pendingSummary(pending: readonly { lineCount: number }[]): string {
   const lines = String(pending.reduce((sum, row) => sum + row.lineCount, 0));
   return pending.length === 1
@@ -115,6 +117,44 @@ export function IntakeScreen() {
     if (intake.notice !== null) toastInfo(intake.notice.text);
   }, [intake.notice]);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  /*
+    TEK KART AÇIK — AKORDEON (kullanıcı kararı 03.09).
+
+    Satır sayıldıktan sonra açık kalıyordu ve altı kalemlik bir kabulde altı dev kart alt alta
+    diziliyordu: SKT alanı, lot alanı, hasar kartı, sebep satırı… Depocu hangi satırda olduğunu
+    kaydırarak arıyordu. Kullanıcının cümlesi: *"başka bir kart açıldığı zaman bir önceki kart
+    küçülsün."*
+
+    Açıklık artık SATIRIN değil EKRANIN durumu — iki satır aynı anda açık olamaz, çünkü kural
+    satırlar ARASINDA. Kapalı kart özetini kendi rozetlerinde taşır (satırın künyesi).
+  */
+  const [openRow, setOpenRow] = useState<string | null>(null);
+  /** Kaydırıcı ve satırların ölçülen y'si — okutulan satırı görünür kılmak için (aşağıdaki künye). */
+  const scroll = useRef<ScrollView>(null);
+  const rowY = useRef<Record<string, number>>({});
+
+  /*
+    OKUTULAN SATIR EKRANA GETİRİLİR (kullanıcı sorusu 03.09: *"barkod okuttuğum ürünü bu listede
+    bulmak kolay olabilecek mi, liste çok kalabalık olursa?"*).
+
+    Ölçüldü: okutma o satırı açıp adet çekmecesini getiriyordu ama listede satırın NEREDE olduğunu
+    söylemiyordu — altı kalemlik bir siparişte beşinci satır ekranın dışındaydı ve çekmece
+    kapanınca depocu boş bir listeye bakıyordu. Akordeon listeyi zaten kısaltıyor; kaydırma da
+    satırı üste getiriyor. İkisi birlikte "okuttum, işte satırın" cümlesini tamamlıyor.
+  */
+  useEffect(() => {
+    const target = intake.pendingCount;
+    if (target === null) return;
+    setOpenRow(target);
+    const y = rowY.current[target];
+    if (y !== undefined) scroll.current?.scrollTo({ y: Math.max(0, y - SCROLL_MARGIN), animated: true });
+  }, [intake.pendingCount]);
+
+  /** Satırın anahtarı — aynı satıra ikinci dokunuş onu KAPATIR. */
+  const toggleRow = useCallback((variantId: string) => {
+    setOpenRow((current) => (current === variantId ? null : variantId));
+  }, []);
 
   /*
     OKUTMA PENCERESİ İLE ADET ÇEKMECESİ ARASINDA EL SIKIŞMA YOK — ve gerekmiyor.
@@ -488,7 +528,7 @@ export function IntakeScreen() {
     <View style={styles.screen} testID="warehouse-intake">
       {header}
 
-      <FormScroll contentContainerStyle={styles.list} testID="warehouse-intake-lines">
+      <FormScroll contentContainerStyle={styles.list} scrollRef={scroll} testID="warehouse-intake-lines">
         {/* ÖĞRENİLEN KOD LİSTENİN ÜSTÜNDE KALIR (v3:05 · kullanıcı bulgusu 30.08). Önceden yalnız
             geçip giden bir bildirimdi; oysa öğrenme bir ADIM değil bir SONUÇTUR — o kod bir dahaki
             kabulde tanınacak ve depocunun bunu görmesi, aynı koliyi ikinci kez öğretmeye
@@ -561,6 +601,11 @@ export function IntakeScreen() {
             mlorPercent={intake.mlorPercent}
             pendingCount={intake.pendingCount === row.variantId}
             onCountConsumed={intake.clearPendingCount}
+            expanded={openRow === row.variantId}
+            onToggle={() => toggleRow(row.variantId)}
+            onLayoutY={(y) => {
+              rowY.current[row.variantId] = y;
+            }}
             lotSuggestions={intake.lotsUsedBy(row.variantId)}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
           />
@@ -593,50 +638,66 @@ export function IntakeScreen() {
 
         <Text style={styles.footnote}>{t.intake.footnote}</Text>
         <Text style={styles.footnote}>{t.intake.photoNote}</Text>
-      </FormScroll>
-
-      <OperationsStickyBar>
-        {gateNote === null ? null : (
-          <Text style={styles.stickyNote} testID="warehouse-intake-gate">
-            {gateNote}
-          </Text>
-        )}
-        <PrimaryButton
-          label={cta.label}
-          /* BAŞARIDA EKRAN KAPANIR (kullanıcı bulgusu 30.08): kabul yazıldıysa bu ekranda
-             yapılacak iş kalmadı — depocu sevkiyat listesine döner ve siparişin listeden
-             düştüğünü görür. Sonucu toast söylüyor (`use-intake` künyesi), yani kapanan
-             ekranda okunmayacak bir şerit beklemiyor. */
-          onPress={() => intake.submit({ onDone: () => router.back() })}
-          disabled={!cta.enabled}
-          elevation="flat"
-          testID="warehouse-intake-cta"
-        />
 
         {/*
-          İKİNCİ YOL: KISMİ KAYIT (v3:05 · `act.kismiKabul`) — tasarımın yapışkan çubuğunda ayrı
-          bir düğme ve ayrı bir karar. Rampada koli koli gelen bir sevkiyatta "her satırı say"
-          beklemesi gerçek dışı: mal geldiği kadarıyla stoğa girmeli, kalanı açık kalmalı.
+          KAYIT DÜĞMELERİ LİSTENİN SONUNDA, YAPIŞKAN ÇUBUKTA DEĞİL (kullanıcı kararı 03.09):
+          *"listenin en altında olsunlar, liste en alta kaydırılınca çıksınlar, ekranı
+          daraltmasınlar."*
 
-          KOŞULU BİZİM kararımız, tasarımın değil: şablon düğmeyi hep çiziyor, biz yalnız
-          "hepsi sayılmamış AMA en az biri sayılmış" hâlinde çiziyoruz. Hepsi sayılıyken ikinci
-          düğme birinciyle aynı şeyi daha kötü yapardı; hiçbiri sayılmamışken de kapıya boş bir
-          kabul göndermeye davet ederdi.
+          Yapışkan çubuk ekranın altını kalıcı olarak yiyordu ve bu ekranda bedeli ağırdı: açık
+          kartın hasar bloğu ile sebep satırı sürekli çubuğun ARDINDA kalıyordu (cihazda ölçüldü
+          — sayaç ve "sebep seç" düğmesi görünmüyordu). Kabul zaten listenin SONUNDA verilen bir
+          karar: her satır sayılır, sonra kaydedilir. Düğmenin yeri de o kararın yeridir.
         */}
-        {offline || intake.complete || !intake.hasAnyCounted ? null : (
-          <>
-            <SecondaryButton
-              label={t.intake.cta.partialAction}
-              onPress={() => intake.submit({ partial: true })}
-              tone="sand"
-              elevation="flat"
-              disabled={intake.sending}
-              testID="warehouse-intake-partial-cta"
-            />
-            <Text style={styles.stickyNote}>{t.intake.cta.partialNote}</Text>
-          </>
-        )}
-      </OperationsStickyBar>
+        <View style={styles.formActions}>
+          {gateNote === null ? null : (
+            <Text style={styles.stickyNote} testID="warehouse-intake-gate">
+              {gateNote}
+            </Text>
+          )}
+          <PrimaryButton
+            label={cta.label}
+            /* BAŞARIDA EKRAN KAPANIR (kullanıcı bulgusu 30.08): kabul yazıldıysa bu ekranda
+               yapılacak iş kalmadı — depocu sevkiyat listesine döner ve siparişin listeden
+               düştüğünü görür. Sonucu toast söylüyor (`use-intake` künyesi), yani kapanan
+               ekranda okunmayacak bir şerit beklemiyor. */
+            onPress={() => intake.submit({ onDone: () => router.back() })}
+            disabled={!cta.enabled}
+            elevation="flat"
+            testID="warehouse-intake-cta"
+          />
+
+          {/*
+            İKİNCİ YOL: KISMİ KAYIT (v3:05 · `act.kismiKabul`) — tasarımın yapışkan çubuğunda ayrı
+            bir düğme ve ayrı bir karar. Rampada koli koli gelen bir sevkiyatta "her satırı say"
+            beklemesi gerçek dışı: mal geldiği kadarıyla stoğa girmeli, kalanı açık kalmalı.
+
+            KOŞULU BİZİM kararımız, tasarımın değil: şablon düğmeyi hep çiziyor, biz yalnız
+            "hepsi sayılmamış AMA en az biri sayılmış" hâlinde çiziyoruz. Hepsi sayılıyken ikinci
+            düğme birinciyle aynı şeyi daha kötü yapardı; hiçbiri sayılmamışken de kapıya boş bir
+            kabul göndermeye davet ederdi.
+          */}
+          {offline || intake.complete || !intake.hasAnyCounted ? null : (
+            <>
+              <SecondaryButton
+                label={t.intake.cta.partialAction}
+                onPress={() => intake.submit({ partial: true })}
+                /* KİREMİT (kullanıcı kararı 03.09: "kırmızı tonlarında olursa daha iyi") — kısmi
+                   kayıt bir HATA değil ama geri alınamayan bir SAPMA: sevkiyat "kısmen teslim
+                   alındı"ya döner ve kalan satırlar açık kalır. Uyarı ailesi tam bunun rengi;
+                   `error` yanlış olurdu — burada bozulan bir şey yok. */
+                tone="terracotta"
+                elevation="flat"
+                disabled={intake.sending}
+                testID="warehouse-intake-partial-cta"
+              />
+              <Text style={styles.stickyNote}>{t.intake.cta.partialNote}</Text>
+            </>
+          )}
+        </View>
+      </FormScroll>
+
+
 
       <ScanSheet
         open={intake.scanOpen}
@@ -944,10 +1005,27 @@ interface IntakeRowProps {
    */
   pendingCount: boolean;
   onCountConsumed: () => void;
+  /** Satır AÇIK mı — akordeon kuralı ekranda (künyesi orada); satır kendi açıklığını tutmaz. */
+  expanded: boolean;
+  onToggle: () => void;
+  /** Satırın listedeki y'si — okutulan satırı ekrana getiren kaydırma bunu kullanır. */
+  onLayoutY: (y: number) => void;
   onPatch: (patch: Partial<IntakeRowState>) => void;
 }
 
-function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountConsumed, lotSuggestions, onPatch }: IntakeRowProps) {
+function IntakeRow({
+  row,
+  state,
+  unplanned,
+  mlorPercent,
+  pendingCount,
+  onCountConsumed,
+  expanded,
+  onToggle,
+  onLayoutY,
+  lotSuggestions,
+  onPatch,
+}: IntakeRowProps) {
   const [dateOpen, setDateOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
   /** Hasar sayacının ortasındaki rakam TUŞ TAKIMINI açar (kullanıcı kararı 02.09; künye aşağıda). */
@@ -961,15 +1039,19 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
      'adet'`). Sinyal hemen tüketiliyor: ikinci bir çizimde çekmece yeniden açılmasın. */
   useEffect(() => {
     if (!pendingCount) return;
-    setExpanded(true);
+    // Satırı AÇAN ve ekrana getiren taraf EKRAN (akordeon künyesi); burada yalnız çekmece açılır.
     setQtyOpen(true);
     onCountConsumed();
   }, [pendingCount, onCountConsumed]);
-  /* SATIR SAYILDIĞINDA AÇILIR. Ölçüt adedin GİRİLMİŞ olması (`qty !== null`), sıfırdan büyük
-     olması değil: "0 adet geldi" de bir sayımdır ve o satırın SKT'si sorulmaz ama sapma özetine
-     girer. Sıfırı kapalı saymak, depocunun bilinçli beyanını "hiç dokunmadım"la eşitlerdi. */
-  const [expanded, setExpanded] = useState(false);
-  const counted = state.qty !== null || expanded;
+  /* SAYILMIŞ MI — ölçüt adedin GİRİLMİŞ olması (`qty !== null`), sıfırdan büyük olması değil:
+     "0 adet geldi" de bir sayımdır ve o satırın SKT'si sorulmaz ama sapma özetine girer. Sıfırı
+     "sayılmamış" saymak, depocunun bilinçli beyanını "hiç dokunmadım"la eşitlerdi.
+
+     AÇIKLIK AYRI BİR ŞEY (03.09): sayılmış satır da kapalı durur ve özetini rozetlerinde taşır;
+     açık olan tek satırı ekran seçer (akordeon). Eskiden ikisi tek bayraktı ve sayılan her satır
+     sonsuza kadar açık kalıyordu. */
+  const measured = state.qty !== null;
+  const counted = expanded;
   const name = productLabel(row.productName, row.variantLabel);
   const expiry = parseDate(state.expiryText);
   const damaged = state.damageOpen;
@@ -979,9 +1061,28 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
   const life = expiry === null ? null : meetsMlor(expiry, row.shelfLifeDays, new Date(), mlorPercent);
 
   return (
-    <View style={[styles.lineRow, counted ? null : styles.lineRowIdle]} testID={`warehouse-intake-line-${row.variantId}`}>
+    <View
+      style={[styles.lineRow, measured ? null : styles.lineRowIdle]}
+      /* Satırın listedeki yeri ÖLÇÜLÜR: okutulan satırı ekrana getiren kaydırma bunu kullanıyor
+         (ekranın künyesi). Hesaplanamaz — kartların boyu içeriğe göre değişiyor. */
+      onLayout={(event) => onLayoutY(event.nativeEvent.layout.y)}
+      testID={`warehouse-intake-line-${row.variantId}`}
+    >
       <View style={styles.lineHead}>
-        <View style={styles.rowBody}>
+        {/* BAŞLIK KARTIN ANAHTARI (03.09): dokunuş satırı açar, ikinci dokunuş kapatır. Kapalı
+            kartta da açık kartta da aynı yer — depocu tek bir hareketi öğreniyor. */}
+        <PressableSurface
+          onPress={onToggle}
+          feedback="opacity"
+          grow
+          compact
+          style={styles.rowBody}
+          /* Ad TEK BAŞINA yetmez: aynı ad çekmecelerde de geçiyor ve ekran okuyucu iki ayrı
+             hedefi ayırt edemiyordu (testte ölçüldü). Düğmenin adı satırın kendisidir. */
+          accessibilityLabel={fillCopy(t.intake.rowToggle, { name })}
+          accessibilityHint={counted ? t.intake.rowCollapse : t.intake.rowExpand}
+          testID={`warehouse-intake-row-toggle-${row.variantId}`}
+        >
           <Text style={styles.rowTitle}>{name}</Text>
           {/*
             SIFIR BEKLENEN İKİ AYRI ŞEY DEMEK (ölçüldü 30.08, yerel veritabanından):
@@ -1019,12 +1120,14 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
               {t.intake.expectedDone}
             </Text>
           )}
-        </View>
+        </PressableSurface>
         {/* SAYILMAMIŞ SATIR KAPALI DURUR (v3:05): sağda kesikli "say →", altında hiçbir alan yok.
             Altı kalemlik bir sipariş açıkken üç ekran sürüyordu ve depocu hangi satıra geldiğini
             kaydırarak arıyordu; kapalı hâlde altısı da tek ekrana sığıyor. Sayı girilir girilmez
             satır AÇILIR — çünkü o andan sonra SKT ve lot da sorulacak. */}
-        {counted ? (
+        {/* ADET KUTUSU: satır açıksa HER ZAMAN, kapalıysa yalnız SAYILMIŞSA. Kesikli "say →"
+            kapalı ve sayılmamış satırın davetidir — açık satırda o davet zaten kabul edilmiştir. */}
+        {measured || counted ? (
           /*
             ADET KUTUSU CİHAZ KLAVYESİNİ AÇMAZ (v3 · görsel ajanı ölçümü 30.08, fark #1).
 
@@ -1073,7 +1176,7 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
                yazmıştım ve yanlıştı — o hâlde "saydım" ile "dokundum" aynı kayda düşerdi. Sayı
                depocunun beyanıdır; ekran onu asla onun yerine söylemez (CLAUDE §1). */
             onPress={() => {
-              setExpanded(true);
+              onToggle();
               setQtyOpen(true);
             }}
             feedback="scale"
@@ -1086,14 +1189,36 @@ function IntakeRow({ row, state, unplanned, mlorPercent, pendingCount, onCountCo
         )}
       </View>
 
-      {/* Kapalı satırın tek künyesi: SKT kuralı ve lot durumu — açmadan da ne isteneceği görünür.
-          İkisi de DOLGULU rozet ve ayrı ailelerden: zorunluluk terracotta, durum nötr krem. */}
+      {/*
+        KAPALI SATIRIN ÖZETİ (kullanıcı kararı 03.09) — kart kapalıyken ne girildiği rozetlerden
+        okunur: *"son kullanma tarihi kendi rozetinin içinde yazsın, hasar varsa sağ alt köşede
+        hasar adedi."*
+
+        Rozetler DURUMU söyler, kuralı değil:
+        · SKT — girilmemişse zorunluluk (terracotta, "SKT ZORUNLU · DDM"), girilmişse TARİHİN
+          KENDİSİ ("DDM 12.08.26"). Sayılmamış satırda tarih zaten sorulmadı; orada kural doğru.
+        · LOT — yalnız GİRİLDİYSE çizilir. Boş lot meşru bir hâldir ("lot yok") ve kapalı kartta
+          "lot: —" yazmak, doldurulmamış bir alan varmış gibi okunuyordu.
+        · HASAR — sağa yaslı, yalnız beyan varsa. Kapalı kartın tek kırmızı işareti bu; bir sayı
+          olduğu için "hasar var" demekle kalmaz, ne kadarını da söyler.
+      */}
       {counted ? null : (
         <View style={styles.chipRow}>
-          <Text style={[styles.badge, styles.badgeRequired]}>{fillCopy(t.intake.dateTag, { type: row.dateType })}</Text>
-          <Text style={[styles.badge, styles.badgeLot]}>
-            {fillCopy(t.intake.lot.short, { lot: state.lotText.length === 0 ? '—' : state.lotText })}
-          </Text>
+          {measured && expiry !== null ? (
+            <Text style={[styles.badge, styles.badgeDate]} testID={`warehouse-intake-date-badge-${row.variantId}`}>
+              {fillCopy(t.intake.dateBadge, { type: row.dateType, date: shortDate(expiry) ?? expiry })}
+            </Text>
+          ) : (
+            <Text style={[styles.badge, styles.badgeRequired]}>{fillCopy(t.intake.dateTag, { type: row.dateType })}</Text>
+          )}
+          {state.lotText.length === 0 ? null : (
+            <Text style={[styles.badge, styles.badgeLot]}>{fillCopy(t.intake.lot.short, { lot: state.lotText })}</Text>
+          )}
+          {damaged && state.damagedQty > 0 ? (
+            <Text style={[styles.badge, styles.badgeDamage]} testID={`warehouse-intake-damage-badge-${row.variantId}`}>
+              {fillCopy(t.intake.damage.broken, { n: String(state.damagedQty) })}
+            </Text>
+          ) : null}
         </View>
       )}
 
@@ -1451,7 +1576,8 @@ const styles = StyleSheet.create({
   },
   list: {
     paddingHorizontal: operationsTheme.space['6xl'],
-    paddingBottom: operationsTheme.size.controlLg + operationsTheme.space['8xl'],
+    /* Alt nefes artık YAPIŞKAN ÇUBUK payı değil, listenin kendi sonu (03.09): düğmeler içeride. */
+    paddingBottom: operationsTheme.space['8xl'],
     // Kartlar arası nefes: ayraç çizgisi kalktı, boşluk onun işini görüyor.
     gap: operationsTheme.space.lg,
   },
@@ -1632,6 +1758,11 @@ const styles = StyleSheet.create({
   },
   /* Yapışkan çubuğun dipnotu — kısmi kaydın ne YAPACAĞINI söyler, ortalanmış ve en sessiz ton.
      Düğmenin etiketine sığmayan tek şey sonucudur: kalan satırlar açık kalır. */
+  /** Kayıt düğmeleri listenin son bloğu — kartlardan bir kademe geniş nefesle ayrılır. */
+  formActions: {
+    marginTop: operationsTheme.space['2xl'],
+    gap: operationsTheme.space.lg,
+  },
   stickyNote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
@@ -1742,6 +1873,21 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['badge-sm'],
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text['badge-sm']),
     color: operationsTheme.colors.terracotta,
+  },
+  /** SKT GİRİLMİŞ hâli — zorunluluk uyarısı değil, ölçülmüş bir DEĞER: zeytin ailesi. */
+  badgeDate: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  /** Hasar rozeti SAĞA yaslanır (kullanıcı 03.09: "sağ alt köşede hasar adedi"). */
+  badgeDamage: {
+    marginLeft: 'auto',
+    backgroundColor: operationsTheme.colors['error-bg'],
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.error,
   },
   badgeLot: {
     backgroundColor: operationsTheme.colors.cream,

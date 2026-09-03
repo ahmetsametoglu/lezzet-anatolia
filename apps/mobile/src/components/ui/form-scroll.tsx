@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, RefreshControl, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
+import type { RefObject } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 
 /*
@@ -57,15 +58,24 @@ interface FormScrollProps {
    * ayrılır ve halka isteği bitmiş bir ekranda dönmeye devam ederdi.
    */
   refresh?: { onRefresh: () => void; refreshing: boolean };
+  /**
+   * Kaydırıcının kendisi — ekranın onu PROGRAMLA sürmesi gerektiğinde (03.09).
+   *
+   * Tek kullanıcısı mal kabul: barkod okutulan satır listenin altında kalıyorsa depocu onu
+   * göremiyor. Kaydırma bir GÖRÜNÜM kararıdır ve hangi noktaya gidileceğini yalnız ekran bilir
+   * (satırın ölçülen y'si); kit yalnız kapıyı açar. Verilmeyen çağıranlar hiç etkilenmez.
+   */
+  scrollRef?: RefObject<ScrollView | null>;
 }
 
-export function FormScroll({ children, contentContainerStyle, testID, refresh }: FormScrollProps) {
+export function FormScroll({ children, contentContainerStyle, testID, refresh, scrollRef }: FormScrollProps) {
   return (
     /* `behavior="padding"`: çekmecede ölçülmüş olan davranış. Android'de `height` de bir seçenek
        ama panelin yüksekliğini zorlar; `padding` yalnız altına boşluk ekler ve kaydırıcı o boşluğu
        kullanarak odaklanan alanı yukarı taşır. */
     <KeyboardAvoidingView behavior="padding" style={styles.layer}>
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={contentContainerStyle}
         keyboardShouldPersistTaps="handled"
         refreshControl={

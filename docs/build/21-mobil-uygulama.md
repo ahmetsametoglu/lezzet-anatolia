@@ -10795,3 +10795,46 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kapatmıyor, örtü kapatıyor). D2 hasar · D1 satır · D3 imha · D5 için cihaz turu yerel veride
   konu bulunamadığı için yapılamadı (toplanacak sipariş, STR'ye yolda transfer ve imhalık parti
   yok) — bunlar birim testte çivili. Tam paket sonucu commit notunda.
+
+- [x] (21.232) **MAL KABUL KARTI AKORDEON — tek kart açık, kapalı kart özetini rozetlerinde taşır; okutulan satır ekrana getiriliyor; çekmece içi aralık geri geldi** (kullanıcı kararları 03.09, Oppo'da ölçüldü)
+  `touches:` `apps/mobile/src/components/ui/{bottom-sheet.tsx,form-scroll.tsx}` ·
+  `apps/mobile/src/screens/warehouse/{intake-screen.tsx,intake-screen.test.tsx,intake-scan.test.tsx,messages.json}`
+
+  **Çekmece içi ARALIK, 21.231'in yan etkisiydi** (kullanıcı bulgusu: *"sebep çekmecesinin
+  item'ları arasında boşluk bırakılması gerekiyor"*). Dokunuşu sahiplenen jest kutusu eklenince
+  çekmecenin çocukları TEK görünüme indi ve kaydırma kabının `gap`i artık onların arasına
+  düşmüyordu. Aralık gerçek ebeveyne taşındı; kırk iki çekmecenin hepsini birden düzeltiyor.
+
+  **AKORDEON** (kullanıcı: *"başka bir kart açıldığı zaman bir önceki kart küçülsün"*): açıklık
+  artık satırın değil EKRANIN durumu — iki satır aynı anda açık olamaz, çünkü kural satırlar
+  ARASINDA. Eskiden `qty !== null` satırı sonsuza kadar açık tutuyordu ve altı kalemlik bir
+  kabulde altı dev kart alt alta diziliyordu. Sayılmış olmak ile AÇIK olmak ayrıldı
+  (`measured` ⟷ `expanded`); başlık satırın anahtarı oldu (ikinci dokunuş kapatır).
+
+  **KAPALI KARTIN ÖZETİ** (kullanıcı: *"son kullanma tarihi kendi rozetinin içinde yazsın, hasar
+  varsa sağ alt köşede hasar adedi"*): SKT rozeti girilmemişse kuralı (terracotta "SKT ZORUNLU ·
+  DDM"), girilmişse TARİHİ yazar ("DDM 01.09.26", zeytin); lot rozeti yalnız doluysa çizilir —
+  "lot: —" doldurulmamış bir alan varmış gibi okunuyordu; hasar rozeti sağa yaslı ve adedi taşır.
+
+  **OKUTULAN SATIR EKRANA GETİRİLİR** (kullanıcı sorusu: *"barkod okuttuğum ürünü bu listede
+  bulmak kolay olabilecek mi, liste çok kalabalık olursa?"*). Ölçüldü: okutma satırı açıp adet
+  çekmecesini getiriyordu ama satırın listede NEREDE olduğunu söylemiyordu — altı kalemlik bir
+  siparişte beşinci satır ekranın dışındaydı ve çekmece kapanınca depocu boş listeye bakıyordu.
+  Satırın y'si ölçülüyor (hesaplanamaz: kart boyu içeriğe göre değişir) ve kaydırıcı oraya
+  gidiyor. Kit kabına isteğe bağlı `scrollRef` eklendi — kaydırma bir GÖRÜNÜM kararıdır ve
+  hedefini yalnız ekran bilir.
+
+  **KAYIT DÜĞMELERİ LİSTENİN SONUNDA** (kullanıcı kararı: *"listenin en altında olsunlar, liste
+  en alta kaydırılınca çıksınlar, ekranı daraltmasınlar"*): yapışkan çubuk söküldü. Bu ekranda
+  bedeli ağırdı — açık kartın hasar bloğu ve sebep satırı sürekli çubuğun ARDINDA kalıyordu
+  (cihazda ölçüldü, o yüzden sayaca ulaşmak için önce kaydırmak gerekiyordu). Kabul zaten listenin
+  sonunda verilen bir karar. **Kısmi kayıt KİREMİT** oldu (*"kırmızı tonlarında olursa daha
+  iyi"*): bir hata değil ama geri alınamayan bir sapma — uyarı ailesi; `error` yanlış olurdu,
+  burada bozulan bir şey yok.
+
+  **Doğrulama.** Tip · lint temiz; depo paketi 217/217 — yeni dört iddia (akordeon · kapalı kartın
+  rozetleri · başlığın aç/kapat anahtarı · okutulan satırın açılması). Cihazda ölçüldü (Oppo):
+  ilk satır sayıldı, tarih ve hasar girildi, ikinci satır açılınca ilki kapandı ve özetini
+  "4 ADET · DDM 01.09.26 · hasarlı 2" olarak gösterdi; sebep çekmecesinin seçenekleri arasında
+  36 px aralık ölçüldü; kayıt düğmeleri listenin sonunda çizildi ve kısmi kayıt kiremit çerçeveyle
+  göründü. Tam paket sonucu commit notunda.

@@ -206,6 +206,35 @@ describe('D2 · tarama akışı', () => {
     await waitFor(() => expect(screen.getByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}`)).toBeTruthy());
   });
 
+  /*
+    OKUTULAN SATIR AÇILIR (akordeon, 03.09) — kullanıcı sorusu: *"barkod okuttuğum ürünü bu listede
+    bulmak kolay olabilecek mi, liste çok kalabalık olursa?"* Açıklık artık ekranın durumu ve
+    okutma onu okutulan satıra taşıyor; kaydırma da satırı ekrana getiriyor (ekran künyesi, cihazda
+    ölçülür). Burada ölçülen şey KAPININ kendisi: okutulan satırın formu açık, öteki satırınki değil.
+  */
+  it('okutulan satır AÇILIR; öteki satırlar kapalı kalır', async () => {
+    withScan({
+      status: 'found',
+      variantId: ROW_A.variantId,
+      productName: ROW_A.productName,
+      variantLabel: ROW_A.variantLabel,
+      kind: 'unit',
+      qtyPerCode: 1,
+      source: 'barcode',
+      sku: 'SKU-4120',
+      dateType: 'DDM' as const,
+      shelfLifeDays: 360,
+      imageUrl: null,
+      caseSizes: [],
+    });
+    await renderIntake();
+
+    await scanOnce();
+
+    await waitFor(() => expect(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeOnTheScreen());
+    expect(screen.queryByTestId(`warehouse-intake-expiry-${ROW_B.variantId}`)).toBeNull();
+  });
+
   it('SKU eşleşmesi kaynağını SÖYLER — barkod kadar kesin değil, cümle bunu taşır', async () => {
     withScan({
       status: 'found',
