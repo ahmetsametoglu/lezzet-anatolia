@@ -76,6 +76,10 @@ export function StockCountScreen() {
     if (adjustment.notice !== null) toastInfo(adjustment.notice.text);
   }, [adjustment.notice]);
 
+  useEffect(() => {
+    if (subject.notice !== null) toastInfo(subject.notice.text);
+  }, [subject.notice]);
+
   const header = (
     <OperationsStackHeader
       title={t.adjustment.count.title}

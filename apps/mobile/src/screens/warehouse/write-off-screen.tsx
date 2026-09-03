@@ -80,6 +80,10 @@ export function WriteOffScreen() {
     if (adjustment.notice !== null) toastInfo(adjustment.notice.text);
   }, [adjustment.notice]);
 
+  useEffect(() => {
+    if (subject.notice !== null) toastInfo(subject.notice.text);
+  }, [subject.notice]);
+
   const header = (
     <OperationsStackHeader
       title={t.adjustment.writeOff.title}

@@ -10875,7 +10875,59 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   varsayımı güncellendi. Cihazda ölçüldü (Oppo): "30 BEKLENEN" düğmesine dokunuldu, adet kutusu
   30 oldu, kart açıldı, çekmece açılmadı. Tam paket sonucu commit notunda.
 
-- [x] (21.234) **KURYE DENETİMİ — ilk üç bulgu kapandı: müşteri haberi mobil yoldan gidiyor · sürülen seferin tek tanımı · sefer yoldayken son kutu durağı açıyor** (kullanıcı kararı 03.09)
+- [x] (21.234) **PARTİNİN ALANI = SON GÖRÜLDÜĞÜ YER — depo içi taşıma kaydı YOK; sayım/düşüm seçicisi "hangi dolabın önündesin" diye bir kez sorar; parti satırında alan rozette, adet sağda** (kullanıcı kararı 03.09, Oppo'da ölçüldü)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/database/src/services/stock.service.ts` · `packages/application/src/warehouse/{batch-area.ts,batch-area.test.ts,adjustment.ts}` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/{warehouse.ts,warehouse.test.ts}` · `apps/mobile/src/lib/api/warehouse.ts` · `apps/mobile/src/lib/operations/{area-choice.ts,area-choice.test.ts}` · `apps/mobile/src/screens/warehouse/{use-batch-subject.hook.ts,batch-picker.tsx,stock-count-screen.tsx,write-off-screen.tsx,messages.json,stock-count-screen.test.tsx,write-off-screen.test.tsx}` · `docs/architecture/data-model/stok-tedarik.md`
+
+  **Ölçülen gerçek (cihaz + DB, 03.09).** Kullanıcı sayım listesindeki *"NE-001 · Derin dondurucu 1 ·
+  sistemde 14"* satırını "dondurucuda 1 var, sistemde 14" diye okudu. Alan adının sonundaki rakam,
+  yanındaki adetle bitişince sayı gibi görünüyordu. İki sayı (partide 14 · üründe 40) DB'yle tutarlı
+  çıktı; arıza okunurluktaydı. Sonra saha senaryosu geldi: *"elli paket soğuk odada, onu küçük
+  dondurucuya konuyor, bittikçe yenisi getiriliyor — sistem nereye oturuyor?"* Ölçüm: parti TEK alanda
+  kayıtlı, depo içi taşıma diye bir hareket türü ya da yazıcı YOK. Senaryo sisteme oturmuyordu.
+
+  **Karar (kullanıcı, iki seçenek arasında):** "her şeyi kusursuz yazılıma dökmek sahayı zorlaştırır;
+  kurye aynı zamanda depocuysa gereksiz prosedüre döner — ama kontrol de olmalı." Kontrolün gerçek
+  hedefi (fire · son tarih · geri çağırma) partiye bağlı, alan–adet dağılımına değil; alan yalnız
+  "nerede bulurum" sorusuna yarar. Bu yüzden **taşıma kaydı açılmadı**: alan artık partinin *son
+  görüldüğü yer*. Depocu seçicide "hangi dolabın önündeyim" der (isteğe bağlı, oturumla yaşar, cihaza
+  yazılmaz — bayat bir dolap seçimi yanlış adres yazardı), o dolapta okuttuğu/seçtiği parti oraya
+  yazılır. Adet bölünmez, hareket defterine satır düşmez. Tek yazıcı `markBatchSeen`: alan ve parti
+  aynı deponun olmalı (iki ayrı ret: `invalid_area` · `out_of_scope`), kapalı dolap seçilemez, aynı
+  dolaba ikinci görülme `changed:false`.
+
+  **Hazırlamaya DOKUNULMADI ve bu düzeltilmiş bir varsayım:** ilk tasarım "toplamada parti etiketi
+  zaten okutuluyor" diyordu. Ölçüm tersini söyledi — toplama ürünün paket barkodunu okutuyor
+  (`/codes/resolve`), partiyi FEFO seçiyor; etiket okuyucunun önünden geçmiyor. Oradan alan
+  öğrenilemez; öğrenilen tek yer sayım/düşüm seçicisi.
+
+  **Satır yeniden çizildi:** ad · `lot · DLC tarih` · alan ROZETTE (aktif dolapsa zeytin) · adet SAĞDA
+  büyük, altında "sistemde". Aktif dolabın partileri listenin başına gelir, gerisi SÜZÜLMEZ — soğuk
+  odada kayıtlı parti dondurucunun önünde seçilince oraya taşınmış sayılacak; süzülseydi taşınan
+  parti hiç seçilemezdi.
+
+  **Bedeli söylendi:** sistem "dondurucu boşalıyor, doldur" diyemez; tek depocu gözle görüyor. Çok
+  vardiyalı büyük depoda alan–adet tablosu gerekir, bugünkü kolon o kapıyı kapatmaz
+  (`data-model/stok-tedarik.md`). Aynı lotun iki kabulünü tek sayıma birleştirme (kullanıcı 03.09:
+  "sayım listesi lot altında gruplansın") → **BEKLEYEN(21.235)**.
+
+  **Doğrulama.** Tip · lint temiz. Yeni testler: uygulama kapısı 4 iddia (`batch-area.test.ts`),
+  API 4 iddia, sayım ekranı 3 iddia (dolap seçiliyken adres yazılır ve kart yeni adresi okur ·
+  aynı dolaptaysa yazılmaz · dolap seçilmemişse yazılmaz), alan deposu 1. Cihazda ölçüldü (Oppo):
+  seçici çipleri çizdi, "Derin dondurucu 1" seçildi, soğuk odadaki parti seçilince DB'de
+  `storage_area_id` dondurucuya döndü ve kart yeni adresi okudu. Tam paket sonucu commit notunda.
+
+- [ ] (21.235) **SAYIM LİSTESİ LOT ALTINDA GRUPLANIR — aynı ürün · aynı lot · aynı son tarih · aynı alan tek satır, sayım fark dağılımını sistem yapar** (kullanıcı kararı 03.09, henüz başlanmadı)
+  `touches:` `packages/domain-core/src/stock/` (fark dağılımı — saf karar) · `packages/application/src/warehouse/adjustment.ts` (`measureAfter` çok partili toplam) · `apps/mobile/src/screens/warehouse/{batch-picker.tsx,use-batch-subject.hook.ts,stock-count-screen.tsx,write-off-screen.tsx,batch-context-card.tsx}`
+
+  **Neden:** aynı lotun iki kabulü (seed'de NE-003 · 10 + 11, gerçekte aynı lotun ikinci sevkiyatı)
+  rafta fiziksel olarak AYIRT EDİLEMEZ; depocu ikisini ayrı sayamaz. Partiler BİRLEŞTİRİLMEZ —
+  alış bağı (`purchase_order_item_id`), alış fiyatı ve kabul tarihi ayrı kalmalı (21.234 sohbetinde
+  geri alınan "lotu birleştir" fikri). Ekranda tek satır: *"NE-003 · 2 kabul · 21"*; depocu toplamı
+  sayar, sistem eksiği en eski kabulden düşer, fazlayı en yeni kabule yazar (motorda, testli).
+  Sonuç kartının "12 → 9"u grubun toplamı olur.
+
+
+- [x] (21.236) **KURYE DENETİMİ — ilk üç bulgu kapandı: müşteri haberi mobil yoldan gidiyor · sürülen seferin tek tanımı · sefer yoldayken son kutu durağı açıyor** (kullanıcı kararı 03.09)
 
   Kuryenin günü baştan sona üç katmanda yüründü (ekran · mobil API + uygulama katmanı · `0046`
   RPC'leri + durum makinesi); on bir bulgu listelendi, kullanıcı ilk üçünü kapattırdı. Kalan
@@ -10916,4 +10968,3 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ikinci başlatma tekrarlamaz) · `load.test` sefersiz yüklemede `stopOpened:false` ·
   `quick-sale.test` dünün seferine bağ. Tip · lint · `test:unit` 1953 · courier Jest 124; tam
   paket sonucu commit notunda.
-

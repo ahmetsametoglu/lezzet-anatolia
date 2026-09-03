@@ -435,6 +435,8 @@ export type {
   StorageMismatch,
 } from './warehouse/intake';
 export { listWarehouseBatches, recordAdjustment, resolveBatchCode } from './warehouse/adjustment';
+export { listWarehouseAreas, markBatchSeen } from './warehouse/batch-area';
+export type { MarkBatchSeenOutcome, WarehouseArea } from './warehouse/batch-area';
 export type {
   AdjustmentAfterCounts,
   AdjustmentLine,

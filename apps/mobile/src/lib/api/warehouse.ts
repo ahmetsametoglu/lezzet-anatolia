@@ -27,6 +27,8 @@ import {
   ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
   WarehouseReturnResponseSchema,
+  WarehouseAreasResponseSchema,
+  MarkBatchSeenResponseSchema,
   type ConfirmPreparationRequest,
   type LearnCodeRequest,
   type RecordAdjustmentRequest,
@@ -320,6 +322,29 @@ export function fetchWarehouseBatches(
   query: string,
 ): Promise<ApiResult<z.infer<typeof WarehouseBatchesResponseSchema>>> {
   return warehouseFetch(`/api/v1/warehouse/batches?q=${encodeURIComponent(query)}`, WarehouseBatchesResponseSchema);
+}
+
+/**
+ * **Deponun alanları** (kullanıcı kararı 03.09) — seçicinin *"hangi dolabın önündesin"* sorusunun
+ * envanteri. Yalnız açık alanlar; depo süzgeci jetondan/seçimden.
+ */
+export function fetchWarehouseAreas(): Promise<ApiResult<z.infer<typeof WarehouseAreasResponseSchema>>> {
+  return warehouseFetch('/api/v1/warehouse/areas', WarehouseAreasResponseSchema);
+}
+
+/**
+ * **Parti bu alanda görüldü** — partinin alanı "son görüldüğü yer"dir, taşıma kaydı YOK
+ * (`batch-area.ts` künyesi). Dört cevap da 200; `invalid_area` ve `out_of_scope` operatöre
+ * söylenecek cümlelerdir.
+ */
+export function markBatchSeen(
+  stockId: string,
+  storageAreaId: string,
+): Promise<ApiResult<z.infer<typeof MarkBatchSeenResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/batches/${stockId}/seen`, MarkBatchSeenResponseSchema, {
+    method: 'POST',
+    body: { storageAreaId },
+  });
 }
 
 /**

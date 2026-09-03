@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/order.schema';
 import { ProductDateTypeEnum } from '../entities/product.schema';
 import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
+import { StorageAreaSchema } from '../entities/storage-point.schema';
 import { PurchaseOrderStatusEnum, ReceiveIntakeResultSchema } from '../entities/supply.schema';
 import { VariantBarcodeSchema } from '../entities/variant-barcode.schema';
 import { DispatchLineSchema, ReceiveLineSchema } from '../entities/warehouse.schema';
@@ -1341,6 +1342,11 @@ export const ResolvedBatchSchema = z.object({
   /** Partinin alanının ADI ("Derin dondurucu 2"); rafı seçilmemiş partide `null` (19.29). */
   storageAreaName: z.string().nullable(),
   /**
+   * Alanın KİMLİĞİ — adın yanında, 03.09. Ekran "depocunun aktif alanı bu partinin alanı mı"
+   * sorusunu adla soramaz: iki tesiste aynı ad olabilir ve ad değişebilir. `null` = rafı bilinmiyor.
+   */
+  storageAreaId: z.string().uuid().nullable(),
+  /**
    * Kalan raf ömrü yüzdesi. **`null` = ölçülemedi** (ürünün toplam ömrü girilmemiş) ve sıfır
    * DEĞİLDİR — "%0" yazmak sağlam bir partiyi imhalık gösterirdi (CLAUDE §1).
    */
@@ -1398,6 +1404,40 @@ export const WarehouseBatchesResponseSchema = z.object({
   truncated: z.boolean(),
 });
 export type WarehouseBatchesResponse = z.infer<typeof WarehouseBatchesResponseSchema>;
+
+/*
+  ══ DEPONUN ALANLARI + "PARTİ BURADA GÖRÜLDÜ" (kullanıcı kararı 03.09) ════════
+  Parti TEK alanda durur (`stock.storage_area_id`) ve depo içinde taşıma diye bir işlem YOKTUR —
+  bilinçli: elli paketin onunu dondurucuya götürmek için kayıt açtırmak, tek depocunun sahasını
+  prosedüre çevirirdi. Alan bunun yerine partinin SON GÖRÜLDÜĞÜ YERDİR ve sistem onu zaten
+  yapılan işten öğrenir: depocu sayımda hangi dolabın önünde durduğunu bir kez söyler, o dolapta
+  okuttuğu/seçtiği parti oraya yazılır. Adet bölünmez, hareket defterine satır düşmez.
+*/
+
+/**
+ * Deponun alanı — seçici için dar görünüm. Sıcaklık aralıkları ve denetim beklentisi burada
+ * YOK: sayım ekranı "hangi dolap" diye soruyor, "kaç derece olmalı" diye değil.
+ */
+export const WarehouseAreaSchema = StorageAreaSchema.pick({ id: true, name: true, kind: true, sortOrder: true });
+export type WarehouseAreaContract = z.infer<typeof WarehouseAreaSchema>;
+
+/** `GET /warehouse/areas` — depo süzgeci jetondan. Yalnız AÇIK alanlar: pasif dolap seçilemez. */
+export const WarehouseAreasResponseSchema = z.object({ areas: z.array(WarehouseAreaSchema) });
+export type WarehouseAreasResponse = z.infer<typeof WarehouseAreasResponseSchema>;
+
+/** `POST /warehouse/batches/:stockId/seen` — parti bu alanda görüldü. */
+export const MarkBatchSeenRequestSchema = z.object({ storageAreaId: z.string().uuid() });
+export type MarkBatchSeenRequest = z.infer<typeof MarkBatchSeenRequestSchema>;
+
+export const MarkBatchSeenResponseSchema = z.discriminatedUnion('status', [
+  /** `changed: false` = parti zaten oradaydı; yazım yok, cevap yine `ok` (çift dokunuş hata değil). */
+  z.object({ status: z.literal('ok'), changed: z.boolean(), storageAreaName: z.string() }),
+  /** Alan bu deponun değil ya da kapatılmış — kapsam dışı partiyle AYNI şey değil, ayrı söylenir. */
+  z.object({ status: z.literal('invalid_area') }),
+  z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
+  z.object({ status: z.literal('not_found') }),
+]);
+export type MarkBatchSeenResponse = z.infer<typeof MarkBatchSeenResponseSchema>;
 
 /**
  * **Plansız kabulün ürün araması** (23.13) — `GET /warehouse/variants?q=…`.

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import type { RecordAdjustmentRequest, ResolvedBatchContract } from '@lezzet/types';
+import type { RecordAdjustmentRequest, ResolvedBatchContract, WarehouseAreaContract } from '@lezzet/types';
 
+import { resetActiveArea } from '@/lib/operations/area-choice';
 import { StockCountScreen } from './stock-count-screen';
 import { resetWarehouseStatus } from './warehouse-status';
 
@@ -34,12 +35,19 @@ const mockRecordAdjustment = jest.fn<
   Promise<{ data: unknown; error: string | null }>,
   [RecordAdjustmentRequest]
 >();
+const mockFetchAreas = jest.fn<Promise<{ data: { areas: WarehouseAreaContract[] } | null; error: string | null }>, []>();
+const mockMarkSeen = jest.fn<Promise<{ data: unknown; error: string | null }>, [string, string]>();
 
 jest.mock('@/lib/api/warehouse', () => ({
   fetchWarehouseBatches: () => mockFetchBatches(),
+  fetchWarehouseAreas: () => mockFetchAreas(),
+  markBatchSeen: (stockId: string, areaId: string) => mockMarkSeen(stockId, areaId),
   resolveBatchCode: jest.fn(),
   recordAdjustment: (body: RecordAdjustmentRequest) => mockRecordAdjustment(body),
 }));
+
+const FREEZER_1 = '00000000-0000-4000-8000-000000000601';
+const FREEZER_2 = '00000000-0000-4000-8000-000000000602';
 
 /** Kapı cevabının bir satırı — sözleşmenin şekli, ekranın değil. */
 function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchContract {
@@ -52,6 +60,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     dateType: 'DLC',
     physicalQty: 12,
     storageAreaName: 'Derin dondurucu 2',
+    storageAreaId: FREEZER_2,
     lifePercent: 64,
     variantWarehouseQty: 46,
     caseSizes: [],
@@ -61,9 +70,22 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
 
 beforeEach(() => {
   resetWarehouseStatus();
+  resetActiveArea();
   mockBack.mockReset();
   mockFetchBatches.mockReset();
   mockFetchBatches.mockResolvedValue({ data: { batches: [batch()], truncated: false }, error: null });
+  mockFetchAreas.mockReset();
+  mockFetchAreas.mockResolvedValue({
+    data: {
+      areas: [
+        { id: FREEZER_1, name: 'Derin dondurucu 1', kind: 'frozen', sortOrder: 0 },
+        { id: FREEZER_2, name: 'Derin dondurucu 2', kind: 'frozen', sortOrder: 1 },
+      ],
+    },
+    error: null,
+  });
+  mockMarkSeen.mockReset();
+  mockMarkSeen.mockResolvedValue({ data: { status: 'ok', changed: true, storageAreaName: 'Derin dondurucu 1' }, error: null });
   mockRecordAdjustment.mockReset();
   mockRecordAdjustment.mockResolvedValue({
     data: {
@@ -217,6 +239,35 @@ describe('D4 · Sayım', () => {
 
     const row = await screen.findByTestId('warehouse-stock-count-result-batch');
     expect(row).toHaveTextContent('yeni değer okunamadı');
+  });
+
+  /*
+    "HANGİ DOLABIN ÖNÜNDESİN" (kullanıcı kararı 03.09): partinin alanı son görüldüğü yerdir ve
+    taşıma kaydı YOK. Üç iddia: aktif dolap seçilip başka dolabın partisi seçilince adres yazılır ve
+    kart yeni adresi gösterir · parti zaten o dolaptaysa tel açılmaz · dolap seçilmemişse hiç yazım
+    yok (seçim isteğe bağlı, yokluğu sayımı değiştirmez).
+  */
+  it('aktif dolap seçiliyken başka dolabın partisi seçilince ADRES yazılır ve kart yeni adresi okur', async () => {
+    await render(<StockCountScreen />);
+    await fireEvent.press(await screen.findByTestId(`warehouse-stock-count-picker-area-${FREEZER_1}`));
+    await fireEvent.press(await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401'));
+
+    await waitFor(() => expect(mockMarkSeen).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000401', FREEZER_1));
+    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-context')).toHaveTextContent(/Derin dondurucu 1/));
+  });
+
+  it('parti zaten seçili dolaptaysa adres YAZILMAZ', async () => {
+    await render(<StockCountScreen />);
+    await fireEvent.press(await screen.findByTestId(`warehouse-stock-count-picker-area-${FREEZER_2}`));
+    await fireEvent.press(await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401'));
+
+    await screen.findByTestId('warehouse-stock-count-context');
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+  });
+
+  it('dolap seçilmemişse adres yazımı yok — seçim isteğe bağlı', async () => {
+    await selectBatch();
+    expect(mockMarkSeen).not.toHaveBeenCalled();
   });
 
   it('konu değişince sayılan adet SIFIRLANIR — yanlış partiye tek dokunuşla yazılamaz', async () => {

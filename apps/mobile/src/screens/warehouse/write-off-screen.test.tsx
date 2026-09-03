@@ -36,6 +36,10 @@ const mockRecordAdjustment = jest.fn<Promise<{ data: unknown; error: string | nu
 
 jest.mock('@/lib/api/warehouse', () => ({
   fetchWarehouseBatches: () => mockFetchBatches(),
+  /* Alan listesi BOŞ: bu dosyanın konusu düşüm; dolap seçimi sayım testinde sınanıyor ve seçici
+     ortak (`batch-picker`). Boş liste "çip çizilmez" hâlini de bedavaya kanıtlıyor. */
+  fetchWarehouseAreas: () => Promise.resolve({ data: { areas: [] }, error: null }),
+  markBatchSeen: jest.fn(),
   resolveBatchCode: jest.fn(),
   recordAdjustment: (body: RecordAdjustmentRequest) => mockRecordAdjustment(body),
 }));
@@ -50,6 +54,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     dateType: 'DLC',
     physicalQty: 4,
     storageAreaName: 'Derin dondurucu 2',
+    storageAreaId: '00000000-0000-4000-8000-000000000602',
     lifePercent: 64,
     variantWarehouseQty: 46,
     caseSizes: [],

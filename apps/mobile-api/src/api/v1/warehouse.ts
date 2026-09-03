@@ -18,8 +18,10 @@ import {
   listNearExpiry,
   listPendingIntakes,
   listPreparationQueue,
+  listWarehouseAreas,
   listWarehouseBatches,
   listWarehouseReturns,
+  markBatchSeen,
   openBox,
   openIntakeForm,
   quoteOrderShipment,
@@ -79,6 +81,9 @@ import {
   ShippingBoxesResponseSchema,
   ShippingLabelResponseSchema,
   WarehousePrintersResponseSchema,
+  WarehouseAreasResponseSchema,
+  MarkBatchSeenRequestSchema,
+  MarkBatchSeenResponseSchema,
   WarehouseBatchesResponseSchema,
   WarehouseTransfersResponseSchema,
   WarehouseReturnQueueResponseSchema,
@@ -1013,6 +1018,38 @@ warehouse.get('/batches', async (c) => {
 
   const body: z.input<typeof WarehouseBatchesResponseSchema> = result;
   return ok(c, WarehouseBatchesResponseSchema.parse(body));
+});
+
+/**
+ * **DEPONUN ALANLARI** (kullanıcı kararı 03.09) — sayım/düşüm seçicisinin *"hangi dolabın
+ * önündesin"* sorusunun envanteri. Depo süzgeci jetondan; yalnız açık alanlar; sayfalama yok
+ * (operatörün elle kurduğu, doğal tavanı olan küme — CLAUDE §1).
+ */
+warehouse.get('/areas', async (c) => {
+  const areas = await listWarehouseAreas(serviceDb(), c.get('warehouseId'));
+  const body: z.input<typeof WarehouseAreasResponseSchema> = { areas };
+  return ok(c, WarehouseAreasResponseSchema.parse(body));
+});
+
+/**
+ * **PARTİ BU ALANDA GÖRÜLDÜ** — partinin alanı "son görüldüğü yer"dir, taşıma kaydı YOK (gerekçe
+ * `batch-area.ts` künyesinde). Dört cevap da 200: `invalid_area` ve `out_of_scope` operatöre
+ * söylenecek cümlelerdir, ağ arızası değil.
+ */
+warehouse.post('/batches/:stockId/seen', async (c) => {
+  const stockId = UuidSchema.safeParse(c.req.param('stockId'));
+  if (!stockId.success) return fail(c, 'invalid_stock_id', 400);
+
+  const parsed = MarkBatchSeenRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await markBatchSeen(serviceDb(), {
+    warehouseId: c.get('warehouseId'),
+    stockId: stockId.data,
+    storageAreaId: parsed.data.storageAreaId,
+  });
+  const body: z.input<typeof MarkBatchSeenResponseSchema> = outcome;
+  return ok(c, MarkBatchSeenResponseSchema.parse(body));
 });
 
 /**

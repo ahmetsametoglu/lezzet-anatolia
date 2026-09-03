@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { toastInfo } from '@/lib/toast/toast-store';
+import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsSurface } from '@/components/operations/surface';
@@ -30,6 +31,18 @@ import { shortDate } from './warehouse-format';
   Liste onun YEDEĞİ — etiket yırtılmış, silinmiş ya da hiç yapıştırılmamışsa. İkisi yer değiştirseydi
   hızlı yol ekranın dibinde kalırdı.
 
+  ── "HANGİ DOLABIN ÖNÜNDESİN" (kullanıcı kararı 03.09) ──────────────────────
+  Okutma ile liste arasında bir çip sırası: depocu durduğu dolabı bir kez söyler, o dolapta
+  okuttuğu/seçtiği parti oraya yazılır (`use-batch-subject` künyesi). İSTEĞE BAĞLI — seçmeden de
+  her şey çalışır; seçince o dolabın partileri listenin başına gelir. Depoda alan tanımlı değilse
+  sıra hiç çizilmez: olmayan bir seçeneği sormak, boş bir soru sormaktır.
+
+  ── SATIR: ALAN ROZETTE, ADET SAĞDA (kullanıcı bulgusu 03.09) ───────────────
+  Eski satır *"NE-001 · Derin dondurucu 1 · sistemde 14"* diyordu ve kullanıcı "dondurucuda 1 var,
+  sistemde 14" diye okudu — alan adının sonundaki rakam, yanındaki adetle bitişince sayı gibi
+  görünüyordu. Şimdi alan kendi rozetinde, adet sağda büyük ve altında "sistemde" yazıyor: iki
+  sayı aynı satırda yan yana durmuyor.
+
   ── LİSTENİN ÜÇ HÂLİ AYRI ŞEYLER SÖYLER ─────────────────────────────────────
   · **yükleniyor** — iskelet; halka değil (satırın kendi boyunda, veri gelince sayfa zıplamasın).
   · **hata** — "yüklenemedi" + tekrar dene. Boş listeyle KARIŞMAMALI: biri arıza, öteki cevap.
@@ -42,8 +55,8 @@ import { shortDate } from './warehouse-format';
 
 const t = warehouseCopy;
 
-/** İskelet satır yüksekliği (dp) — parti satırının kendi boyu (ad + künye, iki satır). */
-const ROW_SKELETON_HEIGHT = 72;
+/** İskelet satır yüksekliği (dp) — parti satırının kendi boyu (ad + künye + rozet). */
+const ROW_SKELETON_HEIGHT = 84;
 const SKELETON_ROWS = [ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT, ROW_SKELETON_HEIGHT];
 
 interface BatchPickerProps {
@@ -84,6 +97,24 @@ export function BatchPicker({ title, body, footnote, subject, testID }: BatchPic
       >
         <Text style={styles.scanCtaLabel}>{t.adjustment.scan.cta}</Text>
       </PressableSurface>
+
+      {subject.areas.length === 0 ? null : (
+        <View style={styles.areaBlock} testID={`${testID}-areas`}>
+          <Text style={styles.heading}>{t.adjustment.area.heading}</Text>
+          <View style={styles.chipRow}>
+            {subject.areas.map((area) => (
+              <OperationsChoiceChip
+                key={area.id}
+                label={area.name}
+                selected={subject.activeAreaId === area.id}
+                onPress={() => subject.chooseArea(area.id)}
+                testID={`${testID}-area-${area.id}`}
+              />
+            ))}
+          </View>
+          <Text style={styles.hint}>{t.adjustment.area.hint}</Text>
+        </View>
+      )}
 
       <Text style={styles.heading}>{t.adjustment.picker.heading}</Text>
 
@@ -131,19 +162,41 @@ export function BatchPicker({ title, body, footnote, subject, testID }: BatchPic
           accessibilityLabel={batch.name}
           testID={`${testID}-row-${batch.stockId}`}
         >
-          <View style={styles.rowBody}>
-            <Text style={styles.rowTitle} numberOfLines={1}>
-              {batch.name}
-            </Text>
-            <Text style={styles.rowMeta} numberOfLines={1}>
-              {fillCopy(t.adjustment.picker.row, {
-                /* LOTSUZ PARTİ GİZLENMEZ, SÖYLENİR: kabulde lot boş bırakmak meşru ve etiketi
-                   olmayan parti sayımın en çok gerektiği partidir (sözleşme künyesi). */
-                code: batch.lotNumber ?? t.adjustment.picker.noLot,
-                area: batch.storageAreaName ?? t.adjustment.picker.noArea,
-                qty: String(batch.physicalQty),
-              })}
-            </Text>
+          <View style={styles.row}>
+            <View style={styles.rowBody}>
+              <Text style={styles.rowTitle} numberOfLines={1}>
+                {batch.name}
+              </Text>
+              <Text style={styles.rowMeta} numberOfLines={1}>
+                {fillCopy(t.adjustment.picker.row, {
+                  /* LOTSUZ PARTİ GİZLENMEZ, SÖYLENİR: kabulde lot boş bırakmak meşru ve etiketi
+                     olmayan parti sayımın en çok gerektiği partidir (sözleşme künyesi). */
+                  code: batch.lotNumber ?? t.adjustment.picker.noLot,
+                  dateType: batch.dateType,
+                  date: shortDate(batch.expiryDate) ?? batch.expiryDate,
+                })}
+              </Text>
+              <View style={styles.badgeRow}>
+                <Text
+                  style={[
+                    styles.badge,
+                    batch.storageAreaId !== null && batch.storageAreaId === subject.activeAreaId
+                      ? styles.badgeHere
+                      : styles.badgeArea,
+                  ]}
+                  numberOfLines={1}
+                  testID={`${testID}-row-area-${batch.stockId}`}
+                >
+                  {batch.storageAreaName ?? t.adjustment.picker.noArea}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.rowQty}>
+              <Text style={styles.rowQtyValue} testID={`${testID}-row-qty-${batch.stockId}`}>
+                {batch.physicalQty}
+              </Text>
+              <Text style={styles.rowQtyLabel}>{t.adjustment.picker.rowQty}</Text>
+            </View>
           </View>
         </OperationsSurface>
       ))}
@@ -238,7 +291,21 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space.sm,
   },
+  areaBlock: {
+    gap: operationsTheme.space.md,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: operationsTheme.space.md,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.lg,
+  },
   rowBody: {
+    flex: 1,
     gap: operationsTheme.space['2xs'],
   },
   rowTitle: {
@@ -249,6 +316,42 @@ const styles = StyleSheet.create({
   rowMeta: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    paddingTop: operationsTheme.space['2xs'],
+  },
+  badge: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    paddingHorizontal: operationsTheme.space.md,
+    paddingVertical: operationsTheme.space['2xs'],
+    borderRadius: operationsTheme.radius.badge,
+    overflow: 'hidden',
+  },
+  badgeArea: {
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    color: operationsTheme.colors.muted,
+  },
+  /** Depocunun DURDUĞU dolap — zeytin: "bu parti burada" tek bakışta ayrılsın. */
+  badgeHere: {
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    color: operationsTheme.colors['olive-dark'],
+  },
+  rowQty: {
+    alignItems: 'flex-end',
+    minWidth: operationsTheme.size.controlLg,
+  },
+  /** Sayı SERİF (Lora): bağlam kartının aynı ayrımı — büyük sayılar başlık ailesinden. */
+  rowQtyValue: {
+    fontFamily: operationsTheme.font.display[600],
+    fontSize: operationsTheme.text['card-title'],
+    color: operationsTheme.colors.ink,
+  },
+  rowQtyLabel: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.muted,
   },
   hint: {

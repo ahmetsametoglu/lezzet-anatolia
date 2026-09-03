@@ -202,6 +202,8 @@ export interface ResolvedBatch {
   physicalQty: number;
   /** Partinin alanının ADI ("Derin dondurucu 2"); rafı seçilmemiş partide `null` (19.29). */
   storageAreaName: string | null;
+  /** Alanın kimliği — ekranın "aktif alanım bu mu" sorusu adla sorulamaz (sözleşme künyesi, 03.09). */
+  storageAreaId: string | null;
   /** Kalan raf ömrü yüzdesi; **`null` = ölçülemedi** (ürünün toplam ömrü girilmemiş), sıfır DEĞİL. */
   lifePercent: number | null;
   /**
@@ -290,6 +292,7 @@ async function toResolvedBatches(
     dateType: batch.variant.product.dateType,
     physicalQty: batch.physicalQty,
     storageAreaName: batch.storageArea?.name ?? null,
+    storageAreaId: batch.storageArea?.id ?? null,
     // Ömür yüzdesi MOTORDAN (`domain-core`): uygulama katmanı kendi hesabını kurmaz. Ürünün
     // toplam ömrü girilmemişse motor `null` döner ve ekran "bilinmiyor" gösterir.
     lifePercent: remainingShelfLifePercent(batch.expiryDate, batch.variant.product.shelfLifeDays, now),

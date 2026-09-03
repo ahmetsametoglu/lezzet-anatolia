@@ -546,6 +546,15 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
   }
 
   /**
+   * Partinin alanını yazar — "son görüldüğü yer" (kullanıcı kararı 03.09). Tek kolon, tek tablo;
+   * hareket defterine satır düşmez (adet değişmiyor). Alanın bu deponun olup olmadığı KAPININ
+   * sorusudur (`markBatchSeen`), servis satır yazar.
+   */
+  async setStorageArea(id: string, storageAreaId: string | null): Promise<Stock> {
+    return this.update({ id, storageAreaId });
+  }
+
+  /**
    * `available_stock` GÖRÜNÜMÜNÜ okur — base'in sorgu kurucusu `stock` tablosuna bağlı olduğu için
    * tek ham okuma burada. Dönüşüm ve doğrulama yine ortak yoldan geçer (dbToApp + Zod).
    */

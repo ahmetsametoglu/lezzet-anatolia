@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import type { ResolvedBatchContract } from '@lezzet/types';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ResolvedBatchContract, WarehouseAreaContract } from '@lezzet/types';
 
-import { fetchWarehouseBatches } from '@/lib/api/warehouse';
+import { fetchWarehouseAreas, fetchWarehouseBatches, markBatchSeen } from '@/lib/api/warehouse';
+import { useNotice } from '@/lib/haptics/use-notice.hook';
+import { chooseActiveArea, useActiveAreaId } from '@/lib/operations/area-choice';
+import { fillCopy } from '@/screens/operations/copy';
+import { warehouseCopy } from './copy';
 import { trackWarehouse } from './warehouse-status';
 
 /*
@@ -15,6 +19,7 @@ import { trackWarehouse } from './warehouse-status';
 
   Bu hook YAZMAYI BİLMEZ: sebep, adet, not `use-adjustment`ta durur. Ayrım işlevsel — konusu henüz
   seçilmemiş bir ekranda yazma durumu taşımak, ekranın hangi hâlde olduğunu bulanıklaştırırdı.
+  **Tek istisna partinin ADRESİ** (aşağıda): o yazım konunun SEÇİLME anına bağlı, kaydına değil.
 
   ── LİSTE ANINDA OKUNUR, ARAMA GECİKMELİ ────────────────────────────────────
   Ekran açılır açılmaz ilk pencere okunuyor: depocu karşısında bir liste bulmalı, aramaya ancak
@@ -24,12 +29,28 @@ import { trackWarehouse } from './warehouse-status';
   ── GEÇ DÖNEN CEVAP YENİSİNİ EZMEZ ──────────────────────────────────────────
   Sayaçlı koruma (`generation`) okutma hook'undaki ile aynı gerekçeyle: "bakl" turu "baklava"
   turundan sonra dönerse ekranda eski liste kalırdı ve kimse bunun neden olduğunu bilemezdi.
+
+  ── AKTİF ALAN: PARTİNİN ADRESİ SEÇİM ANINDA ÖĞRENİLİR (kullanıcı kararı 03.09) ─
+  Depo içinde taşıma kaydı YOK ve olmayacak (`batch-area.ts` künyesi — tek depocunun sahası
+  prosedüre dönmesin). Bunun yerine depocu "hangi dolabın önündeyim" der (`area-choice.ts`) ve o
+  dolapta okuttuğu/seçtiği parti oraya yazılır. Yazım BURADA, çünkü tetikleyen olay konunun
+  seçilmesidir: sayım farksız bitse de (kayıt yazılmasa da) parti orada görüldü.
+
+  Yazım konuyu BEKLETMEZ: ekran partiyi hemen alır, adres arkadan gider; dönerse konu güncellenir,
+  dönmezse bildirim çıkar. Adres yazımı sayımın önkoşulu değildir — ağ düşükken bile depocu sayar.
 */
 
 /** Arama turları arası bekleme (ms) — parametrik, çağıran değiştirebilir. */
 export const SEARCH_DEBOUNCE_MS = 300;
 
+const t = warehouseCopy;
+
 type SubjectStatus = 'loading' | 'error' | 'ready';
+
+interface SubjectNotice {
+  tone: 'ok' | 'warn' | 'error';
+  text: string;
+}
 
 export interface UseBatchSubjectResult {
   /** Ekranın KONUSU; `null` = henüz seçilmedi ve ekran seçiciyi çizer. */
@@ -40,22 +61,58 @@ export interface UseBatchSubjectResult {
   query: string;
   setQuery: (query: string) => void;
   status: SubjectStatus;
+  /** Aktif alanın partileri ÖNDE — depocu durduğu dolabın listesini üstte görür; ötekiler süzülmez. */
   batches: readonly ResolvedBatchContract[];
   /** Tavana dayanıldı — liste TAM DEĞİL; ekran "aramayla daralt" der (CLAUDE §1). */
   truncated: boolean;
   reload: () => void;
+  /** Deponun açık alanları — seçicinin çipleri. Boş = alan tanımsız ya da okunamadı; çip çizilmez. */
+  areas: readonly WarehouseAreaContract[];
+  /** Depocunun "önünde durduğum dolap" seçimi; `null` = belirtilmedi (isteğe bağlı). */
+  activeAreaId: string | null;
+  chooseArea: (areaId: string | null) => void;
+  /** Adres yazımının sonucu — ekran toast'a verir. */
+  notice: SubjectNotice | null;
 }
 
 export function useBatchSubject(): UseBatchSubjectResult {
   const [subject, setSubject] = useState<ResolvedBatchContract | null>(null);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<SubjectStatus>('loading');
-  const [batches, setBatches] = useState<readonly ResolvedBatchContract[]>([]);
+  const [rows, setRows] = useState<readonly ResolvedBatchContract[]>([]);
   const [truncated, setTruncated] = useState(false);
+  const [areas, setAreas] = useState<readonly WarehouseAreaContract[]>([]);
+  const [notice, setNotice] = useNotice<SubjectNotice>();
   /** Elle tazeleme sayacı — "tekrar dene" aynı sorguyu yeniden koşturur. */
   const [reloadKey, setReloadKey] = useState(0);
 
+  const chosenAreaId = useActiveAreaId();
+  /*
+    SEÇİM LİSTEYE KARŞI DOĞRULANIR, MUTASYONSUZ: depo değişince (çok depolu personel) eski dolabın
+    kimliği yeni listede yoktur ve `null` sayılır. Seçimi silmek yerine türetmek, alan listesi henüz
+    gelmemişken (boş) seçimi yanlışlıkla düşürmemek için — liste dolunca karar kendiliğinden doğru.
+  */
+  const activeAreaId = useMemo(
+    () => (areas.some((area) => area.id === chosenAreaId) ? chosenAreaId : null),
+    [areas, chosenAreaId],
+  );
+
   const generation = useRef(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await trackWarehouse(fetchWarehouseAreas());
+      if (cancelled) return;
+      /* Alan listesi OKUNAMAZSA seçici çipsiz çizilir ve bu sessiz bir yutma değil, kararın
+         kendisi: alan seçimi isteğe bağlıdır, yokluğu sayımı kilitlemez. Ağ arızasını raf
+         listesinin kendi hata bloğu zaten söylüyor; ikinci bir uyarı aynı haberi iki kez vermekti. */
+      if (result.error === null) setAreas(result.data.areas);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey]);
 
   useEffect(() => {
     // Konu seçilmişken liste okunmaz: ekran o hâlde seçiciyi çizmiyor ve arka planda tel açmak,
@@ -76,7 +133,7 @@ export function useBatchSubject(): UseBatchSubjectResult {
           setStatus('error');
           return;
         }
-        setBatches(result.data.batches);
+        setRows(result.data.batches);
         setTruncated(result.data.truncated);
         setStatus('ready');
       })();
@@ -88,7 +145,53 @@ export function useBatchSubject(): UseBatchSubjectResult {
     };
   }, [query, reloadKey, subject]);
 
-  const select = useCallback((batch: ResolvedBatchContract) => setSubject(batch), []);
+  /* Aktif alanın partileri ÖNDE, gerisi olduğu gibi (kararlı sıralama — kapının SKT sırası korunur).
+     SÜZÜLMÜYOR ve bu işin özü: soğuk odada kayıtlı parti dondurucunun önünde okutulunca oraya
+     taşınmış sayılacak; listeden düşürülseydi taşınan parti hiç seçilemezdi. */
+  const batches = useMemo(() => {
+    if (activeAreaId === null) return rows;
+    const here = rows.filter((batch) => batch.storageAreaId === activeAreaId);
+    const elsewhere = rows.filter((batch) => batch.storageAreaId !== activeAreaId);
+    return [...here, ...elsewhere];
+  }, [rows, activeAreaId]);
+
+  const select = useCallback(
+    (batch: ResolvedBatchContract) => {
+      setSubject(batch);
+      if (activeAreaId === null || batch.storageAreaId === activeAreaId) return;
+
+      void (async () => {
+        const result = await trackWarehouse(markBatchSeen(batch.stockId, activeAreaId));
+        if (result.error !== null) {
+          setNotice({ tone: 'warn', text: t.adjustment.area.writeFailed });
+          return;
+        }
+        const outcome = result.data;
+        if (outcome.status === 'ok') {
+          // Konu HÂLÂ aynı partiyse adresi güncelle — depocu bu arada başka partiye geçtiyse
+          // onun kartına yabancı bir adres yazılmaz.
+          setSubject((current) =>
+            current !== null && current.stockId === batch.stockId
+              ? { ...current, storageAreaId: activeAreaId, storageAreaName: outcome.storageAreaName }
+              : current,
+          );
+          if (outcome.changed) {
+            setNotice({ tone: 'ok', text: fillCopy(t.adjustment.area.moved, { area: outcome.storageAreaName }) });
+          }
+          return;
+        }
+        if (outcome.status === 'invalid_area') {
+          // Dolap bu depoda yok ya da kapatılmış: seçim düşürülür ki bir sonraki parti de aynı
+          // duvara çarpmasın; sebebi söylenir.
+          chooseActiveArea(null);
+          setNotice({ tone: 'warn', text: t.adjustment.area.invalid });
+          return;
+        }
+        setNotice({ tone: 'error', text: outcome.status === 'forbidden' ? t.common.outOfScope : t.common.notFound });
+      })();
+    },
+    [activeAreaId, setNotice],
+  );
 
   /**
    * Seçimi bırakırken ARAMA DA SIFIRLANIR: depocu bir partiyi bırakıyorsa aradığı başkasıdır ve
@@ -101,5 +204,25 @@ export function useBatchSubject(): UseBatchSubjectResult {
 
   const reload = useCallback(() => setReloadKey((key) => key + 1), []);
 
-  return { subject, select, clear, query, setQuery, status, batches, truncated, reload };
+  /** Aynı çipe ikinci dokunuş BIRAKMADIR — "hiçbirinin önünde değilim" için ayrı çip yok. */
+  const chooseArea = useCallback(
+    (areaId: string | null) => chooseActiveArea(areaId === activeAreaId ? null : areaId),
+    [activeAreaId],
+  );
+
+  return {
+    subject,
+    select,
+    clear,
+    query,
+    setQuery,
+    status,
+    batches,
+    truncated,
+    reload,
+    areas,
+    activeAreaId,
+    chooseArea,
+    notice,
+  };
 }

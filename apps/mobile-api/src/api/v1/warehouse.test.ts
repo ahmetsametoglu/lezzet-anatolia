@@ -10,6 +10,7 @@ import {
   ReservationService,
   serviceDb,
   StockService,
+  StorageAreaService,
   SupplierService,
   UserProfileService,
   WarehouseTransferService,
@@ -22,8 +23,11 @@ import type {
   ConfirmPreparationResponse,
   DeclareShortResponse,
   IntakeFormResponse,
+  MarkBatchSeenResponse,
   OrderStatus,
   PendingIntakesResponse,
+  WarehouseAreasResponse,
+  WarehouseBatchesResponse,
   PreparationQueueResponse,
   ReceiveGoodsResponse,
   ReceiveTransferResponse,
@@ -763,6 +767,57 @@ describe('D4 · POST /api/v1/warehouse/adjustments', () => {
       await post('/api/v1/warehouse/adjustments', { lines: [], reason: 'lost' }),
     );
     expect(outcome).toEqual({ status: 'empty' });
+  });
+});
+
+/*
+  "HANGİ DOLABIN ÖNÜNDESİN" (kullanıcı kararı 03.09): partinin alanı son görüldüğü yerdir,
+  taşıma kaydı YOK. Kapının sınırları `batch-area.test.ts`te; burada sınanan şey uçların
+  zarfı — alan listesi depo süzgeçli gelir, `seen` çağrısı partiyi yazar ve raf listesi yeni
+  adresi (kimlik + ad) taşır.
+*/
+describe('D4 · alanlar ve "parti burada görüldü"', () => {
+  let freezerId = '';
+  let foreignAreaId = '';
+
+  beforeAll(async () => {
+    const areas = new StorageAreaService(db);
+    freezerId = (await areas.insert({ warehouseId, name: `API dolabı ${stamp}`, kind: 'frozen' })).id;
+    foreignAreaId = (await areas.insert({ warehouseId: otherWarehouseId, name: `Kehl dolabı ${stamp}`, kind: 'frozen' })).id;
+  });
+
+  it('GET /areas yalnız BU deponun alanlarını döner', async () => {
+    const { areas } = await dataOf<WarehouseAreasResponse>(await asStaff('/api/v1/warehouse/areas'));
+    const ids = areas.map((area) => area.id);
+    expect(ids).toContain(freezerId);
+    expect(ids).not.toContain(foreignAreaId);
+  });
+
+  it('POST /batches/:stockId/seen partiyi yazar; raf listesi yeni adresi kimlikle taşır', async () => {
+    const outcome = await dataOf<MarkBatchSeenResponse>(
+      await post(`/api/v1/warehouse/batches/${stockId}/seen`, { storageAreaId: freezerId }),
+    );
+    expect(outcome).toEqual({ status: 'ok', changed: true, storageAreaName: `API dolabı ${stamp}` });
+
+    const { batches } = await dataOf<WarehouseBatchesResponse>(await asStaff('/api/v1/warehouse/batches?q=LOT-DEPO'));
+    const row = batches.find((batch) => batch.stockId === stockId);
+    expect(row?.storageAreaId).toBe(freezerId);
+    expect(row?.storageAreaName).toBe(`API dolabı ${stamp}`);
+  });
+
+  it('başka deponun dolabı `invalid_area`, başka deponun partisi `out_of_scope` — ikisi de 200', async () => {
+    expect(
+      await dataOf<MarkBatchSeenResponse>(await post(`/api/v1/warehouse/batches/${stockId}/seen`, { storageAreaId: foreignAreaId })),
+    ).toEqual({ status: 'invalid_area' });
+    expect(
+      await dataOf<MarkBatchSeenResponse>(await post(`/api/v1/warehouse/batches/${foreignStockId}/seen`, { storageAreaId: freezerId })),
+    ).toEqual({ status: 'forbidden', reason: 'out_of_scope' });
+  });
+
+  it('kimliksiz gövde 400 — alan uydurulmaz', async () => {
+    const res = await post(`/api/v1/warehouse/batches/${stockId}/seen`, {});
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ data: null, error: 'invalid_body' });
   });
 });
 

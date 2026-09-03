@@ -665,10 +665,18 @@
       "error": "Raf listesi yüklenemedi — bağlantıyı kontrol edip yeniden deneyin.",
       "empty": "Bu depoda stoğu duran parti yok.",
       "emptySearch": "\"{q}\" ile eşleşen parti yok.",
-      "row": "{code} · {area} · sistemde {qty}",
+      "row": "{code} · {dateType} {date}",
+      "rowQty": "sistemde",
       "noArea": "rafı belirsiz",
       "noLot": "lot yazılmamış",
       "truncated": "İlk {n} parti listeleniyor — aradığınızı görmüyorsanız arama alanıyla daraltın."
+    },
+    "area": {
+      "heading": "HANGİ DOLABIN ÖNÜNDESİN",
+      "hint": "İsteğe bağlı. Seçersen burada okuttuğun ya da seçtiğin parti bu alana yazılır — taşıma kaydı gerekmez.",
+      "moved": "Partinin yeri {area} olarak yazıldı.",
+      "invalid": "Bu alan bu depoda yok ya da kapatılmış — seçim bırakıldı.",
+      "writeFailed": "Partinin yeri yazılamadı — sayıma devam edebilirsin, yer kayıtta eskisi gibi kaldı."
     },
     "context": {
       "meta": "{code} · {area} · {dateType} {date}",
