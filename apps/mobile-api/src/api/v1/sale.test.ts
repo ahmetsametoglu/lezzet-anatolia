@@ -100,9 +100,20 @@ beforeEach(async () => {
     Belirtisi düşen teardown DEĞİL, ÇİFT SAYIMDI: kalan adet `4` yerine `17` ölçüldü — her test bir
     öncekinin malını da sayıyordu. Sıra zorunlu: parti önce (purge bütün hareketleri toplar), sipariş
     sonra.
+
+    ── SİLME BU DOSYANIN DEPOLARIYLA SINIRLI (03.09) ─────────────────────────
+    Süzgeç bir tur yalnız `customer_id = ANONYMOUS_BUYER_ID` idi ve anonim alıcı KÜRESEL TEKİL bir
+    satırdır: silme, veritabanındaki BÜTÜN kapı satışlarını kapsıyordu — başka dosyanınkini de,
+    cihazdan yapılanı da. Ölçüldü (depo şeridinin notu + kurye cihaz turu, 03.09): kurye ekranda tek
+    bir yerinde satış yapınca (`VAN-1`, hareketi SEED partisine çıpalı) `stock_movement_order_fk`
+    silmeyi reddediyor, `mustDelete` görevi gereği fırlıyor ve dosyanın 12 testi birden kırmızıya
+    dönüyor — kod değişmeden. CLAUDE §4b'nin kuralı bu: *"kendi kurduğun satırları say."*
+    Depo süzgeci fikstürün kendi üç deposu; bu dosyanın yazdığı her anonim sipariş onların içinde.
   */
   await purgeVariantStock(db, [variantId, sadeceTesisVariantId]);
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', ANONYMOUS_BUYER_ID));
+  await mustDelete(db, 'order', (q) =>
+    q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId]),
+  );
   await new StockService(db).insert({ warehouseId: vehicleId, variantId, physicalQty: 4, expiryDate: dayOffset(20), purchasePriceCents: 200 });
   await new StockService(db).insert({ warehouseId: facilityId, variantId, physicalQty: 9, expiryDate: dayOffset(20), purchasePriceCents: 200 });
   // Karşı-örnek: bu ürün ARAÇTA HİÇ YOK. Araç katalogu onu listelemeyecek, tesis katalogu listeleyecek.
@@ -110,15 +121,37 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  // Aynı gerekçe (`beforeEach` künyesi): parti önce, sipariş sonra — ve ikisi de GÜRÜLTÜLÜ.
+  // Aynı gerekçe (`beforeEach` künyesi): parti önce, sipariş sonra — ikisi de GÜRÜLTÜLÜ ve silme
+  // bu dosyanın depolarıyla SINIRLI (küresel anonim silmesinin bedeli orada yazılı).
   await purgeVariantStock(db, [variantId, sadeceTesisVariantId]);
-  await mustDelete(db, 'order', (q) => q.eq('customer_id', ANONYMOUS_BUYER_ID));
+  await mustDelete(db, 'order', (q) =>
+    q.eq('customer_id', ANONYMOUS_BUYER_ID).in('warehouse_id', [facilityId, vehicleId, baskaDepoId]),
+  );
   await purgeTestData(db, {
     productIds: [productId, sadeceTesisProductId], categoryIds: [categoryId],
     profileIds: [kurye.profileId, depocu.profileId, aracsizKurye.profileId],
     warehouseIds: [facilityId, vehicleId, baskaDepoId],
   });
 });
+
+/**
+ * **BU DOSYANIN yazdığı anonim sipariş sayısı** — "veritabanındaki bütün kapı satışları" DEĞİL.
+ *
+ * İki test "reddedilen istek sipariş bırakmaz" diye sayıyor ve sayaç bir tur küreseldi
+ * (`eq('customer_id', ANONYMOUS_BUYER_ID)`). Anonim alıcı küresel tekil bir satır: başka bir
+ * dosyanın ya da CİHAZDAN yapılmış gerçek bir yerinde satışın sipariş(ler)i sayaca giriyor ve
+ * `0` beklentisi kod değişmeden kırmızıya dönüyordu (ölçüldü 03.09: 4 satır sayıldı, ikisi
+ * cihaz turundan). CLAUDE §4b: *"Küresel sayıya bakan test yazma … kendi kurduğun satırları say."*
+ * Süzgeç silmenin süzgeciyle AYNI (fikstürün üç deposu) — ikisi ayrışırsa biri bir gün yanlış olur.
+ */
+const anonimSiparisSayisi = async (): Promise<number> => {
+  const { data } = await db
+    .from('order')
+    .select('id')
+    .eq('customer_id', ANONYMOUS_BUYER_ID)
+    .in('warehouse_id', [facilityId, vehicleId, baskaDepoId]);
+  return data?.length ?? 0;
+};
 
 const post = (user: SignedInUser, body: unknown, query = '') =>
   app.request(`/api/v1/sale/on-site${query}`, {
@@ -157,8 +190,7 @@ describe('POST /sale/on-site', () => {
 
     expect(res.status).toBe(403);
     // Ve hiçbir şey yazılmadı: reddedilen istek sipariş bırakmaz.
-    const { data: rows } = await db.from('order').select('id').eq('customer_id', ANONYMOUS_BUYER_ID);
-    expect(rows?.length ?? 0).toBe(0);
+    expect(await anonimSiparisSayisi()).toBe(0);
   });
 
   it('YETERSİZ STOK bir HTTP hatası değil, bir CEVAPtır — 200 + kalan sayı', async () => {
@@ -307,8 +339,7 @@ describe('POST /sale/on-site', () => {
     expect(((await aracsizDeneme.json()) as { error: string }).error).toBe('no_vehicle');
 
     // Ve hiçbiri sipariş bırakmadı: reddedilen istek yazmaz.
-    const { data: rows } = await db.from('order').select('id').eq('customer_id', ANONYMOUS_BUYER_ID);
-    expect(rows?.length ?? 0).toBe(0);
+    expect(await anonimSiparisSayisi()).toBe(0);
   });
 
   it('olmayan ürün 404 — çekmece uydurma bir liste açmaz', async () => {

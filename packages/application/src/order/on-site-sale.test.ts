@@ -3,7 +3,7 @@ import {
   AccountService, CategoryService, OrderItemService, OrderService, PriceService, ProductService,
   StockService, UserProfileService, WarehouseService, serviceDb,
 } from '@lezzet/database';
-import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
+import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, sellOnSite } from './on-site-sale';
 
 /**
@@ -181,10 +181,20 @@ describe('yerinde satış', () => {
     const sayfa = await new UserProfileService(db).list({ limit: 200 });
     expect(sayfa.rows.some((row) => row.id === ANONYMOUS_BUYER_ID)).toBe(false);
 
-    // **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışı deftere `counter_sale` yazıyor ve satır
-    // siparişi `restrict` ile tutuyor. Anonim alıcının siparişi `purgeTestData`nın kapsamında
-    // DEĞİL (profil purge'ün malı değil), o yüzden temizliği burada ve sırasıyla yapılıyor.
+    /*
+      **DEFTER SİPARİŞTEN ÖNCE** (06.14): kapı satışı deftere `counter_sale` yazıyor ve satır
+      siparişi `restrict` ile tutuyor. Anonim alıcının siparişi `purgeTestData`nın kapsamında
+      DEĞİL (profil purge'ün malı değil), o yüzden temizliği burada ve sırasıyla yapılıyor.
+
+      SİLME BU TESTİN KENDİ SİPARİŞİ, "bütün anonim satışlar" DEĞİL (03.09). Süzgeç bir tur
+      `eq('customer_id', ANONYMOUS_BUYER_ID)` idi ve anonim alıcı küresel tekil bir satır: ifade
+      veritabanındaki her kapı satışını kapsıyordu. Postgres silmesi atomiktir — cihazdan yapılmış
+      TEK bir satış (`stock_movement_order_fk`) bütün ifadeyi reddediyor, bu testin kendi siparişi
+      de kalıyor ve `afterAll` `order_item_variant_id_fkey`e takılıp yarım kalıyordu (ölçüldü
+      03.09: teardown 2 adımda yarım, dosya kırmızı). Üstelik sessizdi: çıplak `delete()` hatayı
+      fırlatmaz, döndürür (`mustDelete` künyesi). Kimliğe indirildi ve GÜRÜLTÜLÜ oldu.
+    */
     await purgeVariantStock(db, [variantId]);
-    await db.from('order').delete().eq('customer_id', ANONYMOUS_BUYER_ID);
+    await mustDelete(db, 'order', (q) => q.eq('id', result.orderId));
   });
 });

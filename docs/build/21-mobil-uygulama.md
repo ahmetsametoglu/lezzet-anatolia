@@ -11298,3 +11298,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Nöbet:** screens sürümü yükseltilirken bu satır okunur; yükseltmeden sonra `animation:'none'`
   koşulunda 20 döngü geri dokunuşu ölçülür (21.219'un ölçüm deseni). Sıfır çökme çıkarsa erteleme
   sökülür ve bu görev kapanır.
+
+- [x] (21.246) **Satış testleri küresel anonim siparişleri siliyor/sayıyordu — fikstürün depolarına daraltıldı** (depo şeridinin notu + kurye cihaz turu, 03.09)
+  `touches:` `apps/mobile-api/src/api/v1/sale.test.ts` · `packages/application/src/order/on-site-sale.test.ts`
+
+  **Belirti:** tam paket 12 test birden kırmızı (`sale.test.ts`), `on-site-sale.test` teardown'ı
+  "2 adımda yarım kaldı" — ve arada SATIŞ KODU DEĞİŞMEDİ. Bir önceki paket yeşildi.
+
+  **Sebep veritabanında, kodda değil.** Anonim alıcı (`ANONYMOUS_BUYER_ID`) KÜRESEL TEKİL bir
+  satır; iki dosya da ona göre siliyor ve sayıyordu. Cihaz turunda kurye ekranından yapılan tek bir
+  yerinde satış (`VAN-1`, hareketi SEED partisine çıpalı) `stock_movement_order_fk` ile silmeyi
+  reddediyor → `mustDelete` fırlıyor → dosyanın tamamı düşüyor. Postgres silmesi atomik olduğu için
+  testin KENDİ siparişi de kalıyor, `purgeTestData` `order_item_variant_id_fkey`e takılıyor.
+  Kural zaten yazılıydı (CLAUDE §4b): *"Testler küresel tekil satırı kirletmez … kendi kurduğun
+  satırları say."* Cihaz Metro'ya bağlıyken bu her kurye satışında tekrarlanacaktı.
+
+  **Düzeltme:** silme ve sayma fikstürün üç deposuyla (`facilityId · vehicleId · baskaDepoId`)
+  sınırlandı; sayaç tek yardımcıya toplandı (`anonimSiparisSayisi`) ki süzgeç iki yerde ayrışmasın.
+  `on-site-sale.test` kendi anonim siparişini KİMLİĞİYLE ve GÜRÜLTÜLÜ siliyor (`mustDelete`) —
+  eskiden çıplak `delete()` ile sessizdi ve temizliği `sale.test.ts`in toptan silmesine yaslanmıştı.
+
+  **Durum (03.09):** tam paket 4148/4149 — kalan tek düşüş web şeridinin bilinen kırılgan testi
+  (`checkout-shipping-order`, test posta kodu gerçek Fransız koduna denk geliyor; notu 29.08'de
+  açılmış). Cihazdan yapılan satış artık veritabanında durabiliyor ve paketi kırmıyor.
