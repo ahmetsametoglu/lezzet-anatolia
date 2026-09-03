@@ -467,6 +467,8 @@
       }
     },
     "countCta": "say →",
+    "countExpectedCaption": "BEKLENEN",
+    "countExpectedLabel": "{name} — beklenen {qty} adet geldi olarak yaz",
     "source": {
       "manual": "barkod okutulmadı",
       "scanned": "barkod okutuldu"

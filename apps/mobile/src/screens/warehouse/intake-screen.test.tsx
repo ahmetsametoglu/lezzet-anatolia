@@ -661,12 +661,50 @@ describe('D2 · mal kabul', () => {
     /* KAYITLI BOYU OLMAYAN ÜRÜNDE DE EKLEME KAPISI DURUR (düzeltildi 30.08, cihaz bulgusu).
        Eskiden bölüm hiç çizilmiyordu ve bu satır onu ölçüyordu; kapatılan şey gerekçesinden
        fazlaydı — depocu kayıtlı boyu olmayan üründe koli SAYAMIYORDU. Uydurma çarpan yasağı
-       yerinde duruyor: liste boş, önceden sayılmış hiçbir koli yok, yalnız ekleme satırı var. */
+       yerinde duruyor: liste boş, önceden sayılmış hiçbir KOLİ yok, yalnız ekleme satırı var.
+
+       Toplam 0 DEĞİL 10: düğme artık beklenen adedi yazıyor (03.09) ve o sayı TEK PAKET olarak
+       duruyor — koli dökümü yine boş, ölçülen şey de o. */
     expect(screen.getByTestId(`${sheet}-add-size`)).toBeOnTheScreen();
-    expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('0');
+    expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('10');
 
     await fireEvent.press(screen.getByTestId(`${sheet}-ruler-2`));
     expect(screen.getByTestId(`${sheet}-total`)).toHaveTextContent('2');
+  });
+
+  /*
+    BEKLENEN ADET TEK DOKUNUŞLA YAZILIR — ama OTOMATİK DEĞİL (kullanıcı kararı 03.09).
+
+    Ölçülen şey ayrımın kendisi: satır dokunulmadan ÖNCE boştur (`say` düğmesi bir davet, bir
+    kayıt değil), dokunuşla beklenen adet yazılır ve kart açılır — çekmece açılmaz, çünkü
+    yazılacak sayı zaten söylenmiştir. Fark varsa adet kutusu çekmeceyi açar.
+  */
+  it('beklenen adet DOKUNUNCA yazılır; açılışta satır boş kalır', async () => {
+    withForm([ROW_A]);
+
+    await renderIntake();
+    // Dokunulmadan önce: adet kutusu YOK, yani hiçbir şey beyan edilmemiş.
+    expect(screen.queryByTestId(`warehouse-intake-qty-${ROW_A.variantId}`)).toBeNull();
+    // Düğme sayıyı ve ne olduğunu birlikte söyler ("10 · BEKLENEN").
+    expect(screen.getByTestId(`warehouse-intake-count-${ROW_A.variantId}`)).toHaveTextContent(/^10/);
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_A.variantId}`));
+
+    // Beklenen yazıldı, kart açıldı (SKT sorulur), çekmece AÇILMADI.
+    expect(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`)).toHaveTextContent(/^10/);
+    expect(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}-confirm`)).toBeNull();
+  });
+
+  /* Beklenen YOKSA (kalanı bitmiş kalem) düğme yalnız kapıyı açar: yazılacak bir sayı yok. */
+  it('beklenen yoksa düğme çekmeceyi açar — uydurma sayı yazılmaz', async () => {
+    withForm([{ ...ROW_A, expectedQty: 0 }]);
+
+    await renderIntake();
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_A.variantId}`));
+
+    await openSheet(`warehouse-intake-qty-sheet-${ROW_A.variantId}-ruler-2`);
+    expect(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`)).toHaveTextContent(/^—/);
   });
 
   /*

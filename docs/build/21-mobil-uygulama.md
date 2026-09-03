@@ -10846,3 +10846,31 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   "4 ADET · DDM 01.09.26 · hasarlı 2" olarak gösterdi; sebep çekmecesinin seçenekleri arasında
   36 px aralık ölçüldü; kayıt düğmeleri listenin sonunda çizildi ve kısmi kayıt kiremit çerçeveyle
   göründü. Tam paket sonucu commit notunda.
+
+- [x] (21.233) **MAL KABUL: BEKLENEN ADET TEK DOKUNUŞLA YAZILIR — otomatik doldurma DEĞİL** (kullanıcı kararı 03.09, şıkla seçildi, Oppo'da ölçüldü)
+  `touches:` `apps/mobile/src/screens/warehouse/{intake-screen.tsx,intake-screen.test.tsx,messages.json}`
+
+  **Kullanıcının önerisi:** *"Bu malların ne kadar geleceği önceden girilmiş, biliyoruz biz.
+  Adetler direkt girili gelsin, kullanıcı farklı ise değiştirsin."*
+
+  **Çelişki açıldı, çünkü bu bir kez yazılıp GERİ ALINMIŞTI** (künye satırdaydı: *"beklenen adedi
+  otomatik doldurmayı bir kez yazmıştım ve yanlıştı — 'saydım' ile 'dokundum' aynı kayda
+  düşerdi"*). Riski somut: altı kalemlik bir sipariş dolu gelirse depocu hiç saymadan kaydete
+  basabilir, fark raporu sessiz kalır ve eksik mal ancak sonraki sayımda çıkar.
+
+  **Kullanıcı ödünleşmeyi şıklarla gördü ve ORTA YOLU seçti:** doldurma otomatik değil, kapalı
+  karttaki kesikli düğme artık beklenen adedi YAZIYOR ("30 · BEKLENEN"). Tek dokunuş, ama
+  dokunuşun kendisi bir beyandır — depocu sayıyı görüp onaylıyor, ekran onun yerine konuşmuyor.
+  Kart açılıyor (SKT sorulacak), çekmece açılmıyor: yazılacak sayı zaten söylendi. Fark varsa adet
+  kutusu çekmeceyi açıyor — kapalı kartta da (21.232'nin düzeltmesi).
+
+  **Beklenen YOKSA eski davranış sürüyor** (plansız kabul, kalanı bitmiş kalem): yazılacak bir
+  sayı olmadığı için düğme yalnız kapıyı açar. Uydurma sayı yazılmaz.
+
+  **Kazanç ölçüldü:** altı kalemlik sevkiyat "say → çekmece → cetvel → Tamam" ile satır başına
+  dört dokunuştu (24 dokunuş); şimdi beklendiği gibi gelen satır tek dokunuş.
+
+  **Doğrulama.** Tip · lint temiz; depo paketi 220/220 — yeni iki iddia (dokununca yazılır ve kart
+  açılır, çekmece açılmaz · beklenen yoksa çekmece açılır, sayı yazılmaz) + koli boyu testinin
+  varsayımı güncellendi. Cihazda ölçüldü (Oppo): "30 BEKLENEN" düğmesine dokunuldu, adet kutusu
+  30 oldu, kart açıldı, çekmece açılmadı. Tam paket sonucu commit notunda.

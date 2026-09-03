@@ -1167,24 +1167,51 @@ function IntakeRow({
           </PressableSurface>
         ) : (
           <PressableSurface
-            /* Düğme satırı AÇAR ve ÇEKMECEYİ DE AÇAR (kullanıcı bulgusu 30.08): eskiden yalnız
-               satırı açıyordu, depocu adedi girmek için bir kez daha ADET kutusuna dokunmak
-               zorundaydı. "Say" bir niyet cümlesidir — dokunan kişi saymaya başlamak istiyor,
-               satırı seyretmek değil.
+            /*
+              DÜĞME BEKLENEN ADEDİ YAZAR — AMA OTOMATİK DEĞİL (kullanıcı kararı 03.09).
 
-               Adedi YAZMAZ, yalnız kapıyı açar: beklenen adedi otomatik doldurmayı bir kez
-               yazmıştım ve yanlıştı — o hâlde "saydım" ile "dokundum" aynı kayda düşerdi. Sayı
-               depocunun beyanıdır; ekran onu asla onun yerine söylemez (CLAUDE §1). */
+              Burada *"adedi YAZMAZ, yalnız kapıyı açar; beklenen adedi otomatik doldurmayı bir kez
+              yazmıştım ve yanlıştı"* diyordu ve o gerekçe HÂLÂ geçerli: satırlar kendiliğinden dolu
+              gelseydi hiç sayılmamış bir sipariş "sayıldı" görünür, fark raporu sessiz kalır ve
+              eksik mal ancak haftalar sonra sayımda çıkardı.
+
+              Değişen şey doldurmanın OTOMATİK olması değil, kaç dokunuş sürdüğü: altı kalemlik bir
+              sevkiyat "say → çekmece → cetvel → Tamam" ile yirmi dört dokunuş demekti ve rampada
+              en sık gerçek "beklendiği kadar geldi". Düğme artık o cümleyi tek dokunuşla söylüyor
+              — ama dokunuşun kendisi BEYANDIR: depocu sayıyı görüp onaylıyor, ekran onun yerine
+              konuşmuyor. Fark varsa adet kutusu çekmeceyi açıyor (kapalı kartta da).
+
+              Beklenen YOKSA (plansız kabul ya da kalanı bitmiş kalem) eski davranış sürüyor:
+              yazılacak bir sayı yok, düğme yalnız kapıyı açar.
+            */
             onPress={() => {
               onToggle();
+              if (row.expectedQty > 0) {
+                onPatch({ qty: row.expectedQty, breakdown: { cases: [], loose: row.expectedQty } });
+                return;
+              }
               setQtyOpen(true);
             }}
             feedback="scale"
             style={styles.countCta}
-            accessibilityLabel={fillCopy(t.intake.qtyLabel, { name })}
+            accessibilityLabel={
+              row.expectedQty > 0
+                ? fillCopy(t.intake.countExpectedLabel, { name, qty: String(row.expectedQty) })
+                : fillCopy(t.intake.qtyLabel, { name })
+            }
             testID={`warehouse-intake-count-${row.variantId}`}
           >
-            <Text style={styles.countCtaLabel}>{t.intake.countCta}</Text>
+            {row.expectedQty > 0 ? (
+              <>
+                <Text style={styles.countExpectedValue}>{String(row.expectedQty)}</Text>
+                {/* Başlık ekran okuyucudan gizli: düğmenin kendi adı zaten cümleyi söylüyor. */}
+                <Text style={styles.countExpectedCaption} accessibilityElementsHidden importantForAccessibility="no">
+                  {t.intake.countExpectedCaption}
+                </Text>
+              </>
+            ) : (
+              <Text style={styles.countCtaLabel}>{t.intake.countCta}</Text>
+            )}
           </PressableSurface>
         )}
       </View>
@@ -1862,6 +1889,19 @@ const styles = StyleSheet.create({
     borderColor: operationsTheme.colors['sand-500'],
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors.card,
+  },
+  /* BEKLENEN ADET DÜĞMESİ — kesikli çerçeve KORUNUR: sayı henüz BEYAN EDİLMEDİ, bir davet.
+     Beyan edilince kutu kesiksiz `qtyBox`a döner ve fark varsa tonu değişir. */
+  countExpectedValue: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.step,
+    color: operationsTheme.colors.muted,
+  },
+  countExpectedCaption: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text['badge-sm'],
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text['badge-sm']),
+    color: operationsTheme.colors['tab-inactive'],
   },
   countCtaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
