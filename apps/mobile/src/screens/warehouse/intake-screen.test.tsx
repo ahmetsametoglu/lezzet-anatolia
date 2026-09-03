@@ -97,14 +97,28 @@ async function countRow(variantId: string, qty: string) {
   await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
 }
 
+/**
+ * SKT ALTI RAKAMLA (kullanıcı kararı 03.09): alan tuş takımını açar, depocu kolideki tarihi
+ * `gg aa yy` diye yazar, "yaz"a basar. Tekerlek ayrı bir bağlantının arkasında (`pickExpiryOnWheel`).
+ */
 async function pickExpiry(variantId: string, day: number, month: number, year: number) {
   await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${variantId}`));
   const sheet = `warehouse-intake-expiry-sheet-${variantId}`;
-  await openSheet(`${sheet}-year-${year}`);
-  await fireEvent.press(screen.getByTestId(`${sheet}-year-${year}`));
-  await fireEvent.press(screen.getByTestId(`${sheet}-month-${month}`));
-  await fireEvent.press(screen.getByTestId(`${sheet}-day-${day}`));
+  await openSheet(`${sheet}-key-1`);
+  const digits = `${String(day).padStart(2, '0')}${String(month).padStart(2, '0')}${String(year).slice(2)}`;
+  for (const digit of digits) await fireEvent.press(screen.getByTestId(`${sheet}-key-${digit}`));
   await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
+}
+
+/** Tekerlekli seçiciye giden yol: tuş takımı → "takvimden seç" → tekerlek. */
+async function openWheel(variantId: string): Promise<string> {
+  await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${variantId}`));
+  const keypad = `warehouse-intake-expiry-sheet-${variantId}`;
+  await openSheet(`${keypad}-wheel`);
+  await fireEvent.press(screen.getByTestId(`${keypad}-wheel`));
+  const wheel = `warehouse-intake-expiry-wheel-${variantId}`;
+  await openSheet(`${wheel}-month-1`);
+  return wheel;
 }
 
 const fetchMock = jest.fn<Promise<Response>, Parameters<typeof fetch>>();
@@ -457,14 +471,42 @@ describe('D2 · mal kabul', () => {
     /* Eski hâlde "31.02.2026" YAZILABİLİYOR ve ekran onu reddediyordu. Seçicide o gün listeye hiç
        girmiyor: hata yakalanmıyor, DOĞMUYOR. Şubat'a geçen seçici günü de kendiliğinden kırpıyor
        (`date-wheel-value.test.ts` — "ay kısaldığında gün son güne iner"). */
-    const sheet = `warehouse-intake-expiry-sheet-${ROW_A.variantId}`;
-    await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`));
-    await openSheet(`${sheet}-month-2`);
+    const sheet = await openWheel(ROW_A.variantId);
     await fireEvent.press(screen.getByTestId(`${sheet}-month-2`));
 
     expect(screen.queryByTestId(`${sheet}-day-31`)).toBeNull();
     expect(screen.queryByTestId(`${sheet}-day-29`)).toBeNull(); // 2026 artık yıl değil
     expect(screen.getByTestId(`${sheet}-day-28`)).toBeOnTheScreen();
+  });
+
+  /*
+    TUŞ TAKIMI (kullanıcı kararı 03.09): olmayan gün YAZILABİLİR ama onaylanamaz — kırmızı satır
+    söyler, düğme kapalı kalır. Aynı kabuldeki öteki satırın tarihi çip olarak gelir ve taslağı
+    doldurur; "yaz" düğmesi hangi tarihi yazacağını söyler.
+  */
+  it('tuş takımında olmayan gün onaylanamaz; öteki satırın tarihi çip olarak gelir', async () => {
+    withForm([ROW_A, ROW_B]);
+    await renderIntake();
+
+    await countRow(ROW_A.variantId, '10');
+    await pickExpiry(ROW_A.variantId, 12, 9, 2027);
+    expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_A.variantId}`)).toHaveTextContent('12.09.27');
+
+    // B satırı: 31.02.27 yazılır, onay kapalı, uyarı satırı kırmızı cümleyi okur.
+    await countRow(ROW_B.variantId, '4');
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-expiry-${ROW_B.variantId}`));
+    const sheet = `warehouse-intake-expiry-sheet-${ROW_B.variantId}`;
+    await openSheet(`${sheet}-key-1`);
+    for (const digit of '310227') await fireEvent.press(screen.getByTestId(`${sheet}-key-${digit}`));
+    expect(screen.getByTestId(`${sheet}-hint`)).toHaveTextContent(/Böyle bir gün yok/);
+    await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
+    expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_B.variantId}`)).toHaveTextContent('SKT gir *');
+
+    // A'nın tarihi çip: dokununca taslak dolar, düğme o tarihi söyler, yaz.
+    await fireEvent.press(screen.getByTestId(`${sheet}-pick-2027-09-12`));
+    expect(screen.getByTestId(`${sheet}-confirm`)).toHaveTextContent('12.09.27 · yaz');
+    await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
+    expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_B.variantId}`)).toHaveTextContent('12.09.27');
   });
 
   it('adet + geçerli SKT ile CTA açılır ve satır ISO tarihle gönderilir', async () => {

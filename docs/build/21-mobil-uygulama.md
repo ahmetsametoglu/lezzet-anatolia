@@ -11075,3 +11075,24 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Testler: yükleme (hazırlanmamış → bekle · kayıt hatası → depoyu ara · karma → ek satır) · sefer
   kartı özeti · durak etiketi · `day.test` gün listesi bayrağı. Courier Jest 130; tam paket sonucu
   commit notunda.
+
+- [x] (21.240) **SKT ALTI RAKAMLA — tarih tuş takımı çekmece ailesinin deseniyle; aynı kabulün tarihleri hızlı çip; tekerlek "takvimden seç" bağlantısında duruyor** (kullanıcı kararı 03.09, Oppo'da ölçüldü)
+  `touches:` `apps/mobile/src/components/operations/{key-grid.tsx,date-keypad.tsx,date-keypad-value.ts,date-keypad-value.test.ts,keypad-panel.tsx}` · `apps/mobile/src/screens/warehouse/{intake-screen.tsx,intake-screen.test.tsx,use-intake.hook.ts,messages.json}`
+
+  **Kullanıcının bulgusu:** *"mal kabuldeki SKT bileşenini seçmesi çok zor… elle hızlı, gün ay yıl
+  iki hane, altı rakam; aynı partideki tarihler de lot gibi öneri olarak gelmeli"* ve ardından:
+  *"çekmece bileşenlerimizin bir tasarım deseni var, yenisini o desenle yapalım."* İncelediği
+  kolilerde tarih gün.ay.yıl basılı — depocu okuduğunu yazar, seçmez.
+
+  **Yapılan:** `OperationsDateKeypad` — tekerlekli çekmeceyle (`date-sheet`) aynı iskelet (künye ·
+  zeytin hızlı çipler · gövde · "Vazgeç" + yeşil "{tarih} · yaz"), gövdesi tuş takımı ailesinden
+  (büyük değer · ipucu · SİL sağda · ızgara). Izgara ve sil tuşu `key-grid.tsx`e ÇIKARILDI: para/adet
+  tuş takımı (`keypad-panel`) ve tarih aynı tuşları kullanıyor, ikinci kopya yok. Değer saf modül
+  (`date-keypad-value.ts`, testli): altı rakamda durur, maske `12.0_.__` eksiği gösterir, olmayan
+  gün (`31.02.27`) ISO'ya dönmez — kırmızı satır söyler, düğme kapalı kalır. Hızlı çipler aynı
+  kabuldeki öteki satırların tarihleri (`datesUsedBy`, lotun kuralı; depodaki eski partilerin tarihi
+  BİLEREK yok). Tekerlek silinmedi — "takvimden seç →" bağlantısı onu açıyor (tarihi okunamayan koli).
+
+  **Doğrulama.** Tip · lint · knip temiz; mal kabul 4x testleri + tuş takımı + tarih değeri (55)
+  yeşil — yeni iddialar: olmayan gün onaylanamaz · çip taslağı doldurur ve düğme tarihi söyler ·
+  tekerleğe bağlantıdan gidilir. Tam paket sonucu commit notunda. Cihazda ölçüldü (Oppo).

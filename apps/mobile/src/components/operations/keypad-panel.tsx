@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { operationsTheme } from '@/theme/unistyles';
+import { OperationsKeyGrid, OperationsKeypadDelete } from './key-grid';
 import { keypadDelete, keypadDisplay, keypadFill, keypadFrom, keypadPress, type KeypadValue } from './keypad-value';
 
 /*
@@ -96,10 +96,8 @@ export function OperationsKeypadPanel({
   testID,
 }: OperationsKeypadPanelProps) {
   const [draft, setDraft] = useState<KeypadValue>(() => keypadFrom(value));
-  /** Izgaranın ölçülen genişliği — tuş genişliği bundan türer (künyesi ızgarada). */
-  const [gridWidth, setGridWidth] = useState(0);
-  /** Bir tuşun genişliği: ölçülen kap eksi iki boşluk, üçe bölünmüş. Sil tuşu da bu boyda. */
-  const keyWidth = gridWidth === 0 ? null : (gridWidth - 2 * operationsTheme.space.md) / 3;
+  /** Izgaradan ölçülen tuş genişliği — sil tuşu da bu boyda (`key-grid` künyesi). */
+  const [keyWidth, setKeyWidth] = useState<number | null>(null);
 
   /*
     DIŞARIDAN GELEN DEĞER TASLAĞI YALNIZ FARKLIYSA EZER (ölçüldü 02.09, birim testte).
@@ -142,16 +140,12 @@ export function OperationsKeypadPanel({
         </View>
         {/* SİL değerin sağında (künye) — sildiği şeyin yanında durur; ızgaradaki tuşlarla AYNI
             genişlikte (kullanıcı 02.09: "diğer butonların genişliği kadar olsun"). */}
-        <PressableSurface
+        <OperationsKeypadDelete
           onPress={() => apply(keypadDelete)}
-          feedback="scale"
-          compact
-          style={[styles.delete, keyWidth === null ? null : { width: keyWidth }]}
-          accessibilityLabel={deleteLabel}
+          label={deleteLabel}
+          width={keyWidth}
           testID={testID === undefined ? undefined : `${testID}-delete`}
-        >
-          <Icon name="backspace" size={operationsTheme.size.headerIcon} color={operationsTheme.colors.ink} />
-        </PressableSurface>
+        />
         {expected === null || expectedLabel === undefined ? null : (
           <PressableSurface
             onPress={() => apply(() => keypadFill(expected))}
@@ -169,31 +163,13 @@ export function OperationsKeypadPanel({
       {/* VİRGÜL TUŞU ONDALIKSIZ ALANDA HİÇ ÇİZİLMEZ, engelli çizilmez: engelli bir tuş "burada bir
           şey var ama olmuyor" der; olmayan bir tuş "burada öyle bir şey yok" der. Yarım paket diye
           bir şey olmadığı için doğrusu ikincisi. */}
-      {/*
-        KAP ÖLÇÜLÜR, YÜZDE KULLANILMAZ (cihazda ölçüldü 02.09).
-
-        Izgara `flexBasis: '30%'` ile yazılmıştı ve para çekmecesinde çalışıyordu; ADET
-        çekmecesinin içine adım olarak konunca on bir tuşun HEPSİ tek satıra ince şeritler hâlinde
-        dizildi. Aynı arıza bu dosyanın komşusunda zaten ölçülmüştü — `quantity-sheet`in koli boyu
-        ızgarası da yüzdeyle çözülmüyor ve orada da kap `onLayout` ile ölçülüyor. Yüzde, kabın
-        genişliği KESİN olduğunda çözülür; çekmecenin kaydırma kabında her zaman öyle değil.
-
-        Ölçüm varsayımsız tek yol: genişliği al, iki boşluğu düş, üçe böl.
-      */}
-      <View style={styles.grid} onLayout={(event) => setGridWidth(event.nativeEvent.layout.width)}>
-        {KEYS.filter((key) => allowDecimals || key !== ',').map((key) => (
-          <PressableSurface
-            key={key}
-            onPress={() => apply((current) => keypadPress(current, key))}
-            feedback="scale"
-            style={[styles.key, keyWidth === null ? null : { width: keyWidth }]}
-            accessibilityLabel={key}
-            testID={testID === undefined ? undefined : `${testID}-key-${key}`}
-          >
-            <Text style={styles.keyLabel}>{key}</Text>
-          </PressableSurface>
-        ))}
-      </View>
+      {/* Izgara ve ölçüm `key-grid`te (03.09): tarih tuş takımı aynı tuşları kullanıyor. */}
+      <OperationsKeyGrid
+        keys={KEYS.filter((key) => allowDecimals || key !== ',')}
+        onKey={(key) => apply((current) => keypadPress(current, key))}
+        onKeyWidth={setKeyWidth}
+        testID={testID}
+      />
 
       {/* ONAY SATIRI yalnız onaylı kipte (künye): canlı kipte değer zaten yazılmıştır. */}
       {onConfirm === undefined || confirmLabel === undefined ? null : (
@@ -243,47 +219,6 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.helper,
     color: operationsTheme.colors['olive-dark'],
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: operationsTheme.space.md,
-    marginTop: operationsTheme.space.xl,
-  },
-  /*
-    ÜÇ SÜTUNLUK IZGARA — `flexShrink` SIFIR olmak ZORUNDA (arıza, cihazda görüldü 30.08).
-
-    Eski hâl `width: 33.33% + flexBasis: 33.33% + flexShrink: 1`di ve tuşlar SARMIYOR, tek satıra
-    sıkışıyordu: on iki tuş ekran boyunca ince şeritler hâlinde diziliyordu. Sebep Yoga'nın
-    kuralı — sarmalı bir kapsayıcıda **küçülebilen öğe önce küçülür, sonra sarar**; `flexShrink: 1`
-    verildiği sürece satır hiçbir zaman taşmaz, dolayısıyla sarma hiç tetiklenmez.
-
-    Genişlik ÖLÇÜLEN kaptan gelir (yukarıdaki künye); burada yalnız kalan nitelikler durur.
-    `flexShrink: 0` yerinde kalıyor: ölçüm gelene kadarki ilk karede tuşlar içeriğe daralmasın.
-  */
-  key: {
-    flexShrink: 0,
-    height: operationsTheme.size.controlLg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors['sand-300'],
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.panel,
-  },
-  keyLabel: {
-    fontFamily: operationsTheme.font.body[700],
-    fontSize: operationsTheme.text['card-title-sm'],
-    color: operationsTheme.colors.ink,
-  },
-  /** Sil tuşu: değerle aynı satırda, tuş boyunda; ölçüm gelene kadar kare. */
-  delete: {
-    width: operationsTheme.size.controlLg,
-    height: operationsTheme.size.controlLg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors['neutral-bg'],
   },
   confirm: {
     marginTop: operationsTheme.space.xl,

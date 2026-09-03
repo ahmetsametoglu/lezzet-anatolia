@@ -211,6 +211,8 @@ interface UseIntakeResult {
   filledCount: number;
   /** Bu kabulde BAŞKA satırlara girilmiş lot kodları — çekmecenin öneri listesi. */
   lotsUsedBy: (variantId: string) => string[];
+  /** Bu kabulde BAŞKA satırlara yazılmış SKT'ler (ISO) — tarih tuş takımının hızlı çipleri. */
+  datesUsedBy: (variantId: string) => string[];
   /** Beklenenden SAPAN satırlar — yalnız onlar gösterilir (v2'nin fark özeti). */
   differences: { name: string; expected: number; received: number }[];
   sending: boolean;
@@ -407,6 +409,23 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     for (const code of rows.find((row) => row.variantId === variantId)?.lotCandidates ?? []) {
       const trimmed = code.trim();
       if (trimmed.length > 0) seen.add(trimmed);
+    }
+    return [...seen];
+  };
+
+  /**
+   * TARİH ÖNERİLERİ — lot önerisinin aynı kuralı, tek kaynak (kullanıcı kararı 03.09: *"aynı
+   * partideki tarihler de lot gibi öneri olarak gelmeli"*). Bu kabulde BAŞKA satırlara yazılmış
+   * geçerli tarihler, ilk yazılan önce; satırın kendi tarihi listede olmaz, tekrarlar elenir.
+   * İkinci kaynak (depodaki partilerin tarihleri) BİLEREK yok: eski partinin tarihi yeni gelen
+   * koliye ancak yanlışlıkla yazılır.
+   */
+  const datesUsedBy = (variantId: string): string[] => {
+    const seen = new Set<string>();
+    for (const row of rows) {
+      if (row.variantId === variantId) continue;
+      const iso = parseDate(states[row.variantId]?.expiryText ?? '');
+      if (iso !== null) seen.add(iso);
     }
     return [...seen];
   };
@@ -791,6 +810,7 @@ export function useIntake(purchaseOrderId: string | null, unplanned = false): Us
     hasAnyCounted,
     filledCount,
     lotsUsedBy,
+    datesUsedBy,
     differences,
     sending,
     notice,

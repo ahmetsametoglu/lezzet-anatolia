@@ -11,6 +11,7 @@ import type { IntakeFormRowContract, VariantSearchRowContract } from '@lezzet/ty
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsDateKeypad } from '@/components/operations/date-keypad';
 import { OperationsDateSheet } from '@/components/operations/date-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
@@ -607,6 +608,7 @@ export function IntakeScreen() {
               rowY.current[row.variantId] = y;
             }}
             lotSuggestions={intake.lotsUsedBy(row.variantId)}
+            dateSuggestions={intake.datesUsedBy(row.variantId)}
             onPatch={(patch) => intake.patch(row.variantId, patch)}
           />
         ))}
@@ -998,6 +1000,8 @@ interface IntakeRowProps {
    * yazdığı şeyi önermek gürültüdür.
    */
   lotSuggestions: string[];
+  /** Aynı kabulde BAŞKA satırlara yazılmış SKT'ler (ISO) — tarih tuş takımının hızlı çipleri (03.09). */
+  dateSuggestions: string[];
   /**
    * Bu satır AZ ÖNCE OKUTULDU mu (kullanıcı kararı 30.08). Okutma adedi kendisi yazıyor; geriye
    * depocuyu o satıra götürmek kalıyor — satır açılır ve adet çekmecesi gelir, tıpkı tasarımın
@@ -1024,9 +1028,12 @@ function IntakeRow({
   onToggle,
   onLayoutY,
   lotSuggestions,
+  dateSuggestions,
   onPatch,
 }: IntakeRowProps) {
+  /** SKT alanı TUŞ TAKIMINI açar (kullanıcı kararı 03.09); tekerlek onun altındaki bağlantıda. */
   const [dateOpen, setDateOpen] = useState(false);
+  const [wheelOpen, setWheelOpen] = useState(false);
   const [qtyOpen, setQtyOpen] = useState(false);
   /** Hasar sayacının ortasındaki rakam TUŞ TAKIMINI açar (kullanıcı kararı 02.09; künye aşağıda). */
   const [damageQtyOpen, setDamageQtyOpen] = useState(false);
@@ -1382,8 +1389,33 @@ function IntakeRow({
             testID={`warehouse-intake-damage-keypad-${row.variantId}`}
           />
 
-          <OperationsDateSheet
+          {/* SKT ALTI RAKAMLA (kullanıcı kararı 03.09): kolideki "12.09.27" okunup yazılır; aynı
+              kabulün öteki tarihleri çip. Tekerlek DURUYOR — çekmecedeki "takvimden seç" bağlantısı
+              bunu kapatıp onu açar (tarihi okunamayan koli için yol kapanmıyor). */}
+          <OperationsDateKeypad
             visible={dateOpen}
+            title={t.intake.expiry.sheet.title}
+            subject={fillCopy(t.intake.expiry.sheet.subject, {
+              name,
+              selected: expiry === null ? t.intake.expiry.sheet.none : (shortDate(expiry) ?? expiry),
+            })}
+            value={expiry ?? ''}
+            suggestions={dateSuggestions}
+            copy={t.intake.expiry.keypad}
+            onConfirm={(iso) => {
+              onPatch({ expiryText: iso });
+              setDateOpen(false);
+            }}
+            onWheel={() => {
+              setDateOpen(false);
+              setWheelOpen(true);
+            }}
+            onClose={() => setDateOpen(false)}
+            testID={`warehouse-intake-expiry-sheet-${row.variantId}`}
+          />
+
+          <OperationsDateSheet
+            visible={wheelOpen}
             title={t.intake.expiry.sheet.title}
             subject={fillCopy(t.intake.expiry.sheet.subject, {
               name,
@@ -1400,10 +1432,10 @@ function IntakeRow({
             cancelLabel={t.intake.expiry.sheet.cancel}
             onConfirm={(iso) => {
               onPatch({ expiryText: iso });
-              setDateOpen(false);
+              setWheelOpen(false);
             }}
-            onClose={() => setDateOpen(false)}
-            testID={`warehouse-intake-expiry-sheet-${row.variantId}`}
+            onClose={() => setWheelOpen(false)}
+            testID={`warehouse-intake-expiry-wheel-${row.variantId}`}
           />
 
           {/* KALAN ÖMÜR SATIRIN İÇİNDE, KAYITTAN SONRA DEĞİL (v3:610 · 30.08).

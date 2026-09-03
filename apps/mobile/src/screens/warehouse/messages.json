@@ -488,6 +488,14 @@
         "confirm": "{date} · yaz",
         "cancel": "Vazgeç"
       },
+      "keypad": {
+        "hint": "gün · ay · yıl — kolideki tarihi altı rakamla yaz",
+        "deleteLabel": "Son rakamı sil",
+        "invalid": "Böyle bir gün yok — tarihi kontrol et",
+        "confirmLabel": "{date} · yaz",
+        "cancelLabel": "Vazgeç",
+        "wheelLabel": "takvimden seç →"
+      },
       "field": "{name} için son kullanma tarihi",
       "done": "tamam"
     },
