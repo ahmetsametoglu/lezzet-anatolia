@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   ORDER_STATUS_LABELS,
+  type CourierDayResponse,
   type CourierDayStopState,
   type CourierRoute,
   type CourierRunDetail,
@@ -155,6 +156,11 @@ interface UseCourierDayResult {
    */
   discardRun: (runId: string, routeLabel: string) => void;
   stops: CourierStopContract[];
+  /**
+   * **ASKIDA KALAN DURAKLAR** (03.09 · denetim bulgusu 7) — teslim günü geçmiş, sonuçlanmamış;
+   * kutusu araçta olabilir. Kurye buradan iş yapmaz, yalnız görür: yeni günü sevkiyat seçer (16.08).
+   */
+  stranded: CourierDayResponse['stranded'];
   /** Bugün tahsil edilmiş toplam (cent). `null` = ÖLÇÜLEMEDİ, sıfır değil. */
   collectedCents: number | null;
   /** Sefer sürülüyor mu — durak kilidinin kapısı; sunucudaki sefer kaydından TÜRER. */
@@ -302,6 +308,7 @@ export function useCourierDay(): UseCourierDayResult {
   const [wrongBox, setWrongBox] = useState<UseCourierDayResult['wrongBox']>(null);
   const [pickedVehicleId, setPickedVehicleId] = useState<string | null>(null);
   const [stops, setStops] = useState<CourierStopContract[]>([]);
+  const [stranded, setStranded] = useState<CourierDayResponse['stranded']>([]);
   const [collectedCents, setCollectedCents] = useState<number | null>(null);
   const [starting, setStarting] = useState(false);
   /*
@@ -347,6 +354,7 @@ export function useCourierDay(): UseCourierDayResult {
     setRun(day.run);
     setRuns(day.runs);
     setStops(day.stops);
+    setStranded(day.stranded);
 
     /*
       ── ROTALAR VE ARAÇLAR HER HÂLDE OKUNUR (arıza · cihazda ölçüldü 31.08) ────────────────────
@@ -778,6 +786,7 @@ export function useCourierDay(): UseCourierDayResult {
     departRun,
     discardRun,
     stops,
+    stranded,
     collectedCents,
     /* Duraklara yazılabilir mi — SÜRÜLEN sefer varsa evet. Kurulmuş ama başlamamış sefer araçta
        bekliyordur ve durakları açılmamıştır (31.08). */

@@ -10975,3 +10975,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ikinci başlatma tekrarlamaz) · `load.test` sefersiz yüklemede `stopOpened:false` ·
   `quick-sale.test` dünün seferine bağ. Tip · lint · `test:unit` 1953 · courier Jest 124; tam
   paket sonucu commit notunda.
+
+  ── **5 · KAPANIŞ MALI SAYMIYOR — teşhis doğru, yer yanlıştı (03.09, ikinci tur)** ──────
+  Kullanıcı şartı: *"doğru tespit, doğru çözüm, sahada ekstra işlem yok."* Yeniden ölçüldü:
+  aranan bölümler (SERBEST ÜRÜN — SAY VE DEVRET · KUTULAR — DEPOYA İNEN / ARAÇTA KALAN) kuryenin
+  kapanışında değil **depocunun** kurye dönüşü ekranında (v3:14 `kuryeDonus`, D6 — var, bugün yalnız
+  dönen malın akıbetini işaretliyor; `BEKLEYEN(21.194)` tam bu boşluk). Tasarımın kendi kuralı
+  ilk teşhisi de düzeltti: ulaşılamayan durağın kutusu **araçta kalır, kabul edilmez**; yalnız
+  reddedilen iner. Kuryeye ek adım yok — sayım rampada malı fiilen alan depocunun tek dokunuşu.
+  Kapı yazıldı (`courier/return.ts`: `readCourierReturn` · `acceptCourierReturn`; sözleşme
+  `courier-return-api.schema.ts`): beklenen = araç deposu kaydı, dönen adet araca→depoya transfer,
+  eksik `shortfalls` (araçta kalır, sayım/düşüm kapatır), reddedilenin damgası silinir. Uç + ekran
+  depo şeridinin dosyalarında (açık değişiklik taşıyor) → `docs/talep/depo-kurye-donusu-say-ve-devret.md`.
+  Test: `return.test.ts` (taslak üç liste · kapsam dışı · fazla dönen · kabul).
+
+  ── **7 · ASKIDA KALAN DURAK — sevkiyatçı karar verir + dürtü (kullanıcı seçimi 03.09)** ──
+  Web'in askıda şeridi var, 16.08 kararı korunuyor (günü sevkiyatçı seçer, müşteri haber
+  verilmeden gün değişmez). Boşluk iki şeydi: kapanışta kimse dürtülmüyor, kurye ertesi sabah
+  araçtaki kutunun neden duraksız olduğunu göremiyor. Şimdi: kapanış `pending` doluysa yeni
+  personel bildirimi `run_close_pending` (admin + o tesisin depocusu; `notification-copy.ts`
+  "N durak askıda, yeniden planla"); gün cevabına `stranded[]` (teslim günü geçmiş, sonuçlanmamış,
+  kutusu araçta mı) ve gün ekranının üç gövdesinde aynı yerde bir şerit — kapısı yok, yalnız
+  söyler. Web'de satır rotası eşlemesi web şeridine not (`not-web-askida-bildirimi-rotasi.md`).
+  Testler: gün ekranı şerit (iki durak · kutusu araçta/değil · düğme yok) ve boşken çizilmez.

@@ -623,6 +623,36 @@ describe('yükleme okutması (23.8 · karar §1.11)', () => {
   Ekran 31.08'e kadar iki hâlliydi: sefer ya vardı ya yoktu. Araçta kurulmuş ama başlatılmamış
   sefer olabildiği an üçüncü bir hâl doğdu ve o hâl ölçülmeden ekranda kutular görünmez kalırdı.
 */
+describe('askıda kalan duraklar (03.09 · denetim bulgusu 7)', () => {
+  it('teslim günü geçmiş durak ŞERİTTE görünür — kutusu araçta olan ayrıca söylenir; kurye buradan iş yapmaz', async () => {
+    mockDay(
+      courierDay([courierStop(1)], {
+        stranded: [
+          { orderId: '00000000-0000-4000-8000-00000000a001', referenceNo: 'LA-26-ASKIDA1', customerName: 'Léa Girard', deliveryDate: '2026-08-07', boxOnVan: true },
+          { orderId: '00000000-0000-4000-8000-00000000a002', referenceNo: 'LA-26-ASKIDA2', customerName: 'Hugo Bernard', deliveryDate: '2026-08-06', boxOnVan: false },
+        ],
+      }),
+    );
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-stranded')).toBeOnTheScreen());
+    expect(screen.getByTestId('courier-day-stranded')).toHaveTextContent(/ASKIDA — 2 durak/);
+    expect(screen.getByTestId('courier-day-stranded-00000000-0000-4000-8000-00000000a001')).toHaveTextContent(/LA-26-ASKIDA1 · Léa Girard/);
+    expect(screen.getByTestId('courier-day-stranded-00000000-0000-4000-8000-00000000a001')).toHaveTextContent(/kutusu araçta/);
+    expect(screen.getByTestId('courier-day-stranded-00000000-0000-4000-8000-00000000a002')).toHaveTextContent(/kutusu araçta değil/);
+    // Şerit bir liste, bir kapı DEĞİL: dokunulacak düğmesi yok — yeni günü sevkiyat seçer (16.08).
+    expect(screen.queryByRole('button', { name: /askıda/i })).toBeNull();
+  });
+
+  it('askıda durak yoksa şerit hiç çizilmez', async () => {
+    mockDay(courierDay([courierStop(1)]));
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-summary')).toBeOnTheScreen());
+    expect(screen.queryByTestId('courier-day-stranded')).toBeNull();
+  });
+});
+
 describe('araçtaki seferler (31.08)', () => {
   it('ARAÇ BOŞ: rehber çizilir, araçtaki seferler kapısı çizilmez', async () => {
     mockDay(courierDay([], { run: null, runs: [] }));

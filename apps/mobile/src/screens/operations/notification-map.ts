@@ -39,6 +39,8 @@ const SECTION: Partial<Record<AppNotificationKind, OperationsSection>> = {
   ticket_opened: 'management',
   stock_low: 'warehouse',
   run_close_mismatch: 'money',
+  /* Askıda kalan durak (03.09): sevkiyat planlaması yönetimin işi — web'in askıda şeridi. */
+  run_close_pending: 'management',
   b2b_application_received: 'management',
 };
 

@@ -49,6 +49,7 @@ export * from './package-api.schema';
 // Kurye — gün listesi, kapıda teslim/tahsilat, kanıt yükleme, gün kapanışı. Kaynağı
 // `@lezzet/application`ın kurye kapıları; kanıt ve kapanış varlık şemalarından türer.
 export * from './courier-api.schema';
+export * from './courier-return-api.schema';
 // Depo — hazırlık kuyruğu/onayı, mal kabul, sayım-düzeltme, transfer, kurye dönüşü (D1–D6).
 // Kaynağı `@lezzet/application`ın depo kapıları; parti/kabul/transfer varlık şemalarından türer.
 export * from './warehouse-api.schema';

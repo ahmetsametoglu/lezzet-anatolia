@@ -55,6 +55,12 @@ export const AppNotificationKindEnum = z.enum([
   'stock_low',
   /** Kurye gün kapanışında sayım/tahsilat farkı çıktı — para tarafının kapı zili. */
   'run_close_mismatch',
+  /**
+   * Sefer kapandı, durak(lar) sonuçlanmadı — askıda kalanlar sevkiyat masasına düştü (03.09,
+   * kurye denetimi bulgu 7). Günü sevkiyatçı seçer (16.08 kararı korunur); bu zil yalnız "bak"
+   * der. Hedefi web'in askıda şeridi (`/operations/deliveries`).
+   */
+  'run_close_pending',
   /** Yeni kurumsal başvuru düştü — onay kuyruğunun kapı zili. */
   'b2b_application_received',
 ]);
@@ -72,6 +78,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'ticket_opened',
   'stock_low',
   'run_close_mismatch',
+  'run_close_pending',
   'b2b_application_received',
 ] as const satisfies readonly AppNotificationKind[];
 

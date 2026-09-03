@@ -389,6 +389,29 @@ export const CourierDayResponseSchema = z.object({
    * ya da rastgele bir değere düşmek ise kapıda alınan parayı olmayan bir hesaba yazmak olurdu.
    */
   doorAccountId: z.string().uuid().nullable(),
+  /**
+   * **ASKIDA KALAN DURAKLAR** (03.09 · kurye denetimi bulgu 7) — kuryenin kendi geçmiş seferlerinden
+   * sonuçlanmamış siparişler: teslim günü geçmiş, durum hâlâ hazır/hazırlanıyor/onaylı. Kutusu
+   * araçta kalmış olabilir (ulaşılamayan durağın kutusu araçta kalır — v3:14 "kabul edilmez").
+   *
+   * Kurye BURADAN bir şey YAPMAZ: yeni günü sevkiyat masası seçer (kullanıcı kararı 16.08, "görünür
+   * devir"). Alan yalnız "araçtaki kutu neden duraksız" sorusuna cevap — o cevap olmadan kurye kutuyu
+   * rampada bırakıp bırakmamaya kendi karar veriyordu. Eklemeli alan (`default([])`): eski istemci
+   * ve fikstürler kırılmaz.
+   */
+  stranded: z
+    .array(
+      z.object({
+        orderId: z.string().uuid(),
+        referenceNo: z.string().nullable(),
+        customerName: z.string(),
+        /** Söz verilen (geçmiş) teslim günü — "3 Eylül'ün durağı". */
+        deliveryDate: z.string(),
+        /** Kutusu araçta mı — kurye rampada hangi kutuyu taşımaya devam ettiğini bilsin. */
+        boxOnVan: z.boolean(),
+      }),
+    )
+    .default([]),
 });
 export type CourierDayResponse = z.infer<typeof CourierDayResponseSchema>;
 

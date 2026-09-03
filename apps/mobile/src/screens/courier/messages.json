@@ -118,6 +118,13 @@
       "meta": "yerinde satış · anonim",
       "cta": "Yerinde satış"
     },
+    "stranded": {
+      "heading": "ASKIDA — {n} durak",
+      "body": "Teslim günü geçti, durak sonuçlanmadı. Yeni günü sevkiyat seçer; o gün gelince durak listene yeniden düşer.",
+      "row": "{ref} · {customer} · {date}",
+      "boxOnVan": "kutusu araçta — indirme, sefere yeniden yazılınca gider",
+      "boxOff": "kutusu araçta değil"
+    },
     "boxes": {
       "counter": "{loaded}/{total} kutu araçta",
       "scanCta": "Kutuyu okut",

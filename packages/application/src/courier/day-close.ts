@@ -1,5 +1,5 @@
 import { DeliveryRunCloseService, DeliveryRunCollectionService, DeliveryRunService, DeliveryZoneService } from '@lezzet/database';
-import { notifyRunCloseMismatch } from '../notification/staff-events';
+import { notifyRunCloseMismatch, notifyRunClosePending } from '../notification/staff-events';
 import type { CloseDeliveryRunResult, DeliveryRunClose } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { listCourierDay, readCourierRun, type CourierRunBriefView, type CourierStop } from './day';
@@ -119,6 +119,17 @@ export async function closeCourierDay(
       differenceCashCents: sonuc.differenceCashCents ?? 0,
       differenceCardCents: sonuc.differenceCardCents ?? 0,
       differenceChequeCents: sonuc.differenceChequeCents ?? 0,
+    });
+  }
+  /* ASKIDA KALAN DURAK ZİLİ (03.09 · denetim bulgusu 7): kapanış fotoğrafı `pending` listesi
+     doluysa — kapanışın `ready`ye düşürdükleri de, hiç hazırlanmamış olanlar da — sevkiyat masası
+     dürtülür. Gün burada SEÇİLMEZ; karar 16.08'den beri sevkiyatçının. Seferin deposu süzgeç:
+     o tesisin depocusu ve depo-üstü yönetim görür. */
+  if (sonuc.ok && (sonuc.pendingCount ?? 0) > 0) {
+    await notifyRunClosePending(db, {
+      runReferenceNo: run.referenceNo,
+      warehouseId: run.warehouseId,
+      pendingCount: sonuc.pendingCount ?? 0,
     });
   }
   return sonuc;

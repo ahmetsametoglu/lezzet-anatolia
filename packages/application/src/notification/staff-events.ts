@@ -99,6 +99,32 @@ export async function notifyRunCloseMismatch(
   }
 }
 
+/**
+ * Sefer kapandı, durak(lar) sonuçlanmadı — sevkiyat masasına (03.09 · kurye denetimi bulgu 7).
+ *
+ * Kapanış askıda kalanı `ready`ye düşürüp "yeniden planlanacak" diyor; planlayan sevkiyatçı (16.08
+ * kararı). Ama o güne dek kimse dürtülmüyordu: askıda şeridi web'de duruyor, bakan yoksa durak
+ * kaybolmuş gibi kalıyor — kutusu araçta, müşterisi beklemede. Zil yalnız "bak" der, gün SEÇMEZ.
+ * Depo süzgeçli: kapsamı o tesisi içeren personel + depo-üstü roller. Dedupesiz — her kapanış ayrı.
+ */
+export async function notifyRunClosePending(
+  db: SupabaseClient,
+  input: { runReferenceNo: string; warehouseId: string; pendingCount: number },
+): Promise<void> {
+  try {
+    await dispatchStaffNotification(db, {
+      kind: 'run_close_pending',
+      roles: ['admin', 'warehouse'],
+      warehouseId: input.warehouseId,
+      target: null,
+      payload: { referenceNo: input.runReferenceNo, pendingCount: input.pendingCount },
+      dedupeKey: null,
+    });
+  } catch (err) {
+    yut(err, 'run_close_pending');
+  }
+}
+
 /** Yeni kurumsal başvuru — yönetime. Dedupesiz: ret sonrası ikinci başvuru da ayrı haberdir. */
 export async function notifyB2bApplicationReceived(db: SupabaseClient, customerId: string): Promise<void> {
   try {

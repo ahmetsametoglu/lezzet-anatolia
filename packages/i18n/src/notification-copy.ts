@@ -270,6 +270,12 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     label: 'Para',
     title: `Gün kapanışında uyuşmazlık${referans(p)} — sayım beklenenden farklı`,
   }),
+  /* Askıda kalan durak (03.09): kapanış "yeniden planlanacak" dedi, planlayan sevkiyat masası. */
+  run_close_pending: (p) => ({
+    tone: 'attention',
+    label: 'Sevkiyat',
+    title: `Sefer kapandı${referans(p)} — ${typeof p.pendingCount === 'number' ? p.pendingCount : '?'} durak askıda, yeniden planla`,
+  }),
   b2b_application_received: () => ({
     tone: 'attention',
     label: 'Kurumsal',

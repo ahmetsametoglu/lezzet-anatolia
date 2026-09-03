@@ -25,6 +25,7 @@ import {
 } from '@lezzet/domain-core';
 // Araç adının kuralı rota seçim listesiyle ORTAK — künyesi kendi dosyasında.
 import { vehicleLabelOf } from './vehicle-label';
+import { customerCardsOf } from './names';
 import { listCourierRoutes } from './routes';
 import { ensureStopOrder } from './stop-order';
 import { notifyStatusEffect, type OrderEffects } from '../order/effects';
@@ -213,7 +214,7 @@ export async function listCourierDay(
   const [items, logs, customers, addresses, allBoxes] = await Promise.all([
     new OrderItemService(db).listByOrders(orderIds),
     new OrderStatusLogService(db).listByOrders(orderIds),
-    customerCards(db, orders),
+    customerCardsOf(db, orders),
     addressTexts(db, orders),
     new OrderBoxService(db).listByOrders(orderIds),
   ]);
@@ -1071,18 +1072,57 @@ function summarize(lines: readonly OrderItem[], names: Map<string, string>): str
   return rest > 0 ? `${shown.join(', ')} +${rest}` : shown.join(', ');
 }
 
-/** Müşteri künyesi — ad ve telefon. Vade/limit/borç ve sipariş geçmişi OKUNMAZ (tasarım §6). */
-async function customerCards(
+/** Askıda kalan durağın künyesi — sözleşmedeki `stranded[]` elemanının aynası. */
+export interface CourierStrandedStop {
+  orderId: string;
+  referenceNo: string | null;
+  customerName: string;
+  deliveryDate: string;
+  boxOnVan: boolean;
+}
+
+/**
+ * **ASKIDA KALAN DURAKLAR** (03.09 · kurye denetimi bulgu 7) — kuryeye damgalı, teslim günü GEÇMİŞ,
+ * hâlâ sonuçlanmamış siparişler.
+ *
+ * Kapanış takılı durağı `ready`ye düşürüyor ve "yeniden planlanacak" diyor; planlayan sevkiyat
+ * masasıdır (16.08 — günü o seçer). Ama planlanana kadar durak HİÇBİR ekranda yoktu: günün listesi
+ * bugüne, sefer listesi araçtaki seferlere bakıyor, dünün tarihini taşıyan sipariş ikisine de
+ * düşmüyor — kutusu ise araçta duruyor (v3:14: ulaşılamayanın kutusu "kabul edilmez", araçta kalır).
+ * Kurye rampada o kutuyu görüyor ve neden taşıdığını bilmiyordu.
+ *
+ * Bu okuma cevabı verir, iş yapmaz. Kümeyi tarih değil DURUM daraltıyor (kuryenin açık siparişleri —
+ * zaten az); gün süzgeci TS'te: `getAll` eşitlik/`in` bilir, "küçüktür" bilmez ve bu küme için
+ * ikinci bir sorgu dili gereksiz.
+ */
+export async function listStrandedStops(
   db: SupabaseClient,
-  orders: readonly Order[],
-): Promise<Map<string, { name: string; phone: string | null }>> {
-  const profiles = new UserProfileService(db);
-  const map = new Map<string, { name: string; phone: string | null }>();
-  for (const customerId of new Set(orders.map((order) => order.customerId))) {
-    const profile = await profiles.getById(customerId);
-    if (profile) map.set(customerId, { name: profile.name, phone: profile.phone });
-  }
-  return map;
+  input: { courierId: string; today: string },
+): Promise<CourierStrandedStop[]> {
+  const orders = (await new OrderService(db).listByCourier(input.courierId, { limit: 200 })).filter(
+    (order) =>
+      order.deliveryType === 'route' &&
+      (order.status === 'ready' || order.status === 'confirmed' || order.status === 'preparing') &&
+      order.deliveryDate !== null &&
+      order.deliveryDate < input.today,
+  );
+  if (orders.length === 0) return [];
+
+  const [customers, boxes] = await Promise.all([
+    customerCardsOf(db, orders),
+    new OrderBoxService(db).listByOrders(orders.map((order) => order.id)),
+  ]);
+  const onVan = new Set(boxes.filter((box) => box.loadedAt !== null).map((box) => box.orderId));
+
+  return orders
+    .sort((a, b) => (a.deliveryDate! < b.deliveryDate! ? -1 : a.deliveryDate! > b.deliveryDate! ? 1 : 0))
+    .map((order) => ({
+      orderId: order.id,
+      referenceNo: order.referenceNo,
+      customerName: customers.get(order.customerId)?.name ?? '—',
+      deliveryDate: order.deliveryDate!,
+      boxOnVan: onVan.has(order.id),
+    }));
 }
 
 /**

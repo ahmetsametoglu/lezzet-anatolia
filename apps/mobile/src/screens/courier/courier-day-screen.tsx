@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { Fragment } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { CourierStopContract } from '@lezzet/types';
+import type { CourierDayResponse, CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
@@ -290,6 +290,7 @@ export function CourierDayScreen() {
           eklemek), yani gün ekranının boş hâline bağlı olamaz.
         */
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-routes">
+          <StrandedStrip stops={day.stranded} />
           <View style={styles.guide} testID="courier-day-guide">
             <Text style={styles.guideTitle}>{t.day.vanEmpty.title}</Text>
             <Text style={styles.guideBody}>{t.day.vanEmpty.body}</Text>
@@ -324,6 +325,7 @@ export function CourierDayScreen() {
           gitmez. Ekran bunu SÖYLER ve tek bir yol gösterir — v3:15, "birini başlat".
         */
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-van">
+          <StrandedStrip stops={day.stranded} />
           <OperationsNoticeBlock
             variant="empty"
             title={t.day.vanLoaded.title}
@@ -374,6 +376,7 @@ export function CourierDayScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.list} testID="courier-day-list">
+          <StrandedStrip stops={day.stranded} />
           {/*
             ÜST GÖVDE — durak VARSA özet kartı, YOKSA künye şeridi + boş bloğu.
 
@@ -802,6 +805,44 @@ function stopSubtitle(stop: CourierStopContract): { text: string; tone: 'muted' 
   if (stop.attempts > 0) parts.push(fillCopy(t.day.stop.attempt, { n: String(stop.attempts + 1) }));
   if (stop.payment.dueAmountCents === null) parts.push(t.day.stop.noDebt);
   return { text: parts.join(' · '), tone: 'muted' };
+}
+
+interface StrandedStripProps {
+  stops: CourierDayResponse['stranded'];
+}
+
+/**
+ * **ASKIDA KALAN DURAKLAR** (03.09 · kurye denetimi bulgu 7) — teslim günü geçmiş, sonuçlanmamış;
+ * kutusu araçta olabilir.
+ *
+ * Kurye buradan HİÇBİR ŞEY yapmaz — yeni günü sevkiyat masası seçer (16.08 "görünür devir") ve
+ * seçince durak zaten listeye kendi gününde düşer. Şerit yalnız "araçtaki kutu neden duraksız"
+ * sorusuna cevap: kapanış "yeniden planlanacak" demişti, ertesi sabah o durak hiçbir ekranda yoktu ve
+ * kurye kutuyu indirip indirmemeye kendi karar veriyordu. Boşsa çizilmez; üç gövdenin (rehber ·
+ * araçta yük · sürülen sefer) üstünde aynı yerde durur — hâl değişince kaybolmasın.
+ */
+function StrandedStrip({ stops }: StrandedStripProps) {
+  if (stops.length === 0) return null;
+  return (
+    <View style={styles.stranded} testID="courier-day-stranded">
+      <Text style={styles.strandedHeading}>{fillCopy(t.day.stranded.heading, { n: String(stops.length) })}</Text>
+      <Text style={styles.strandedBody}>{t.day.stranded.body}</Text>
+      {stops.map((stop) => (
+        <View key={stop.orderId} style={styles.strandedRow} testID={`courier-day-stranded-${stop.orderId}`}>
+          <Text style={styles.strandedRef}>
+            {fillCopy(t.day.stranded.row, {
+              ref: stop.referenceNo ?? '—',
+              customer: stop.customerName,
+              date: dayLabel(stop.deliveryDate) ?? stop.deliveryDate,
+            })}
+          </Text>
+          <Text style={[styles.strandedMeta, stop.boxOnVan ? styles.strandedMeta_onVan : null]}>
+            {stop.boxOnVan ? t.day.stranded.boxOnVan : t.day.stranded.boxOff}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 interface StopRowProps {
@@ -1322,6 +1363,42 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
     color: operationsTheme.colors.muted,
+  },
+  /** Askıda şeridi — terracotta zemin: dikkat ister ama alarm değil (kapanış uyarı kutusunun deseni). */
+  stranded: {
+    gap: operationsTheme.space.sm,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
+  },
+  strandedHeading: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    color: operationsTheme.colors.terracotta,
+  },
+  strandedBody: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.ink,
+  },
+  strandedRow: {
+    paddingTop: operationsTheme.space.sm,
+    gap: operationsTheme.space.xs,
+  },
+  strandedRef: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.ink,
+  },
+  strandedMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  strandedMeta_onVan: {
+    color: operationsTheme.colors.terracotta,
   },
   /* Dikey dolgu KALDIRILDI: aralık artık listenin `gap`i — iki kaynak olduğunda durak satırları
      listenin geri kalanından farklı bir ritimde duruyordu (kullanıcı bulgusu 30.08). */

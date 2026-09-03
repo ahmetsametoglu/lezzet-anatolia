@@ -81,6 +81,12 @@ Sıra önem sırasıdır. Her maddede **Varsayım** satırı benim gerçek düny
 
 ## 5 · Kapanış parayı sayıyor, malı saymıyor
 
+- **Durum (03.09, ikinci tur):** teşhis doğru, YER yanlıştı — bölümler kuryenin kapanışında değil
+  depocunun kurye dönüşü ekranında (v3:14 `kuryeDonus`, D6; `BEKLEYEN(21.194)`). Tasarım kuralı:
+  ulaşılamayanın kutusu araçta KALIR, yalnız reddedilen iner (aşağıdaki "ghost kutu" cümlesi bu
+  yüzden yalnız reddedilen için geçerli). Kapı yazıldı (`courier/return.ts`), uç + ekran depo
+  şeridine talep. Kuryeye ek saha adımı yok.
+
 - **Tasarım v3:14:** "SERBEST ÜRÜN — SAY VE DEVRET" (alınan · satılan · dönen · fark) ve
   "KUTULAR — ARAÇTA KALAN" bölümleri. **Kodda yok:** gün ve kapanış ekranlarında serbest ürün/
   kutu sayımı geçmiyor (`courier-day-screen.tsx`, `day-close-screen.tsx` — grep boş); araç stoğu
@@ -106,6 +112,11 @@ Sıra önem sırasıdır. Her maddede **Varsayım** satırı benim gerçek düny
 - **Varsayım:** Rota kartındaki sayılar "bugün araca binecek iş"i anlatmalı.
 
 ## 7 · Kapanış hazırlanmamış ve ulaşılamayan durakları sessizce bırakıyor
+
+- **Durum (03.09, ikinci tur — kullanıcı seçimi: sevkiyatçı karar verir + dürtü):** 16.08 kararı
+  korundu. Kapanışta `run_close_pending` personel bildirimi (admin + tesisin depocusu); gün
+  cevabında `stranded[]` ve gün ekranında kapısız bir şerit ("kutusu araçta — sevkiyat
+  planlayacak"). Web'de satır rotası eşlemesi web şeridine not.
 
 - `open_delivery_run` `confirmed`/`preparing` siparişi de sefere damgalıyor (`0046:513`); bunlar
   gün listesinde durak olarak görünür, hiç yola çıkmaz (`skipped`), kapanış yalnız

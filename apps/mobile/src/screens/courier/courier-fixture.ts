@@ -213,6 +213,7 @@ export function courierDay(
     runs: run && !run.closed ? [run] : [],
     doorAccountId: null,
     stops,
+    stranded: [],
     ...overrides,
   };
 }
