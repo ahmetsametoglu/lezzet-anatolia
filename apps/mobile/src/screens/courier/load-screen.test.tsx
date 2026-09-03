@@ -288,8 +288,45 @@ describe('K · araca yükleme', () => {
 
     await renderLoad();
 
-    expect(screen.getByTestId('courier-load-no-boxes')).toHaveTextContent(/kutulu sipariş yok/);
+    /* Hazır (kutulu olması gereken) ama kutusu olmayan durak KAYIT HATASIDIR (03.09): ekran
+       "yola çıkabilirsin" DEMEZ, depoyu aramayı söyler. */
+    expect(screen.getByTestId('courier-load-no-boxes')).toHaveTextContent(/kutu yok/);
+    expect(screen.getByTestId('courier-load-no-boxes')).toHaveTextContent(/depoyu arayın/);
     expect(screen.queryByTestId('courier-load-counter')).toBeNull();
     expect(screen.queryByTestId(`courier-load-stop-${STOP_A}`)).toBeNull();
+  });
+
+  /*
+    HAZIRLANMAMIŞ SEFER "KUTUSUZ" DEĞİLDİR (kullanıcı bulgusu 03.09, veritabanında ölçüldü): sekiz
+    onaylı siparişli sefer kuruldu, kutu yoktu çünkü depo daha toplamamıştı; ekran "kutusuz akışla
+    hazırlanmış, doğrudan yola çıkabilirsin" deyince kurye kutuların başka araca yüklendiğini sandı.
+  */
+  it('hazırlanmamış durakları olan seferde ekran BEKLEMEYİ söyler — "yola çık" değil', async () => {
+    mockDay(
+      courierDay([
+        courierStop(1, { orderId: STOP_A, boxes: [], awaitingPreparation: true }),
+        courierStop(2, { orderId: STOP_B, boxes: [], awaitingPreparation: true }),
+      ]),
+    );
+
+    await renderLoad();
+
+    expect(screen.getByTestId('courier-load-awaiting-prep')).toHaveTextContent(/2 durak depoda hazırlanmayı bekliyor/);
+    expect(screen.getByTestId('courier-load-awaiting-prep')).not.toHaveTextContent(/yola çık/);
+    expect(screen.queryByTestId('courier-load-no-boxes')).toBeNull();
+  });
+
+  it('kutulu ve hazırlanmamış durak yan yana: sayaç kutuyu sayar, hazırlanmamışı AYRICA söyler', async () => {
+    mockDay(
+      courierDay([
+        courierStop(1, { orderId: STOP_A }),
+        courierStop(2, { orderId: STOP_B, boxes: [], awaitingPreparation: true }),
+      ]),
+    );
+
+    await renderLoad();
+
+    expect(screen.getByTestId('courier-load-counter')).toBeOnTheScreen();
+    expect(screen.getByTestId('courier-load-awaiting-prep-line')).toHaveTextContent(/1 durak hazırlanmadı/);
   });
 });

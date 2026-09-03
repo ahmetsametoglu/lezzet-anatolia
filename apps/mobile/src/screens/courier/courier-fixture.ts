@@ -58,6 +58,9 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
        (yaygın hâl). Alıcının AYRI olduğu hâli sınayan test bunu `overrides` ile verir. */
     recipient: null,
     channel: 'b2c',
+    /* Varsayılan HAZIR: fikstürün durakları kutulu ve toplanmış; "hazırlanmadı" hâlini ölçen test
+       bunu `overrides` ile verir (03.09). */
+    awaitingPreparation: false,
     address: `Grand Rue ${index}`,
     phone: '+33600000001',
     whatsAppLink: 'https://wa.me/33600000001',

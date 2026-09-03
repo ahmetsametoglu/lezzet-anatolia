@@ -68,12 +68,15 @@ export function CourierVanRunsScreen() {
 
   /* Seferin yükü duraklardan TÜRER — ikinci bir uç istenmiyor (sefer künyesi ekranının aynı
      kuralı). Durak zaten `runId` taşıyor (31.08), yani gruplama tek geçişte kuruluyor. */
-  const loadOf = (runId: string): { stops: number; boxes: number; loaded: number } => {
+  const loadOf = (runId: string): { stops: number; boxes: number; loaded: number; unprepared: number } => {
     const own = day.stops.filter((stop) => stop.runId === runId);
     return {
       stops: own.length,
       boxes: own.reduce((sum, stop) => sum + stop.boxes.length, 0),
       loaded: own.reduce((sum, stop) => sum + stop.boxes.filter((box) => box.loadedAt !== null).length, 0),
+      /* Depoda HAZIRLANMAMIŞ durak (03.09): "0/0 kutu araçta" hazırlanmamış seferi "yüklemesi yok"
+         gibi okutuyordu; kurye kutuları başka araçta sanıyordu. Kart sebebi söyler. */
+      unprepared: own.filter((stop) => stop.awaitingPreparation).length,
     };
   };
 
@@ -191,11 +194,13 @@ export function CourierVanRunsScreen() {
                       {/* KART ÖZETİ OKUNAN/TOPLAM (v3:16 `s.ozet`): "N durak · X/Y kutu araçta".
                           Yalnız toplam yazılıydı ve o seferin YÜKLEMESİ bitmiş mi görünmüyordu. */}
                       <Text style={styles.cardSummary}>
-                        {fillCopy(t.day.vanRuns.summary, {
-                          stops: String(load.stops),
-                          loaded: String(load.loaded),
-                          total: String(load.boxes),
-                        })}
+                        {load.boxes === 0 && load.unprepared > 0
+                          ? fillCopy(t.day.vanRuns.summaryUnprepared, { stops: String(load.stops), n: String(load.unprepared) })
+                          : fillCopy(t.day.vanRuns.summary, {
+                              stops: String(load.stops),
+                              loaded: String(load.loaded),
+                              total: String(load.boxes),
+                            })}
                       </Text>
                     </View>
                     {/* Durum ROZET (v3:16) — dolgulu ve sağ üstte; düz metin olarak çizilmişti ve

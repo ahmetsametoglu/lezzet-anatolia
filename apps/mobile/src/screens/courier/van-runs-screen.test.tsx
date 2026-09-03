@@ -126,6 +126,25 @@ beforeEach(() => {
 });
 
 describe('K · araçtaki seferler', () => {
+  it('HAZIRLANMAMIŞ seferin kartı "0/0 kutu" değil "N hazırlanmadı" der (kullanıcı bulgusu 03.09)', async () => {
+    /* Sekiz onaylı siparişli sefer: "0/0 kutu araçta" yüklemesi bitmiş gibi okunuyordu. */
+    const bekleyen = waitingRun({ runId: RUN_B, zoneName: 'Güney Hattı' });
+    mockVan(
+      courierDay(
+        [
+          courierStop(1, { runId: RUN_B, boxes: [], awaitingPreparation: true }),
+          courierStop(2, { runId: RUN_B, boxes: [], awaitingPreparation: true }),
+        ],
+        { run: null, runs: [bekleyen] },
+      ),
+    );
+
+    await renderVan();
+
+    await waitFor(() => expect(screen.getByTestId(`courier-van-run-${RUN_B}`)).toBeOnTheScreen());
+    expect(screen.getByTestId(`courier-van-run-${RUN_B}`)).toHaveTextContent(/2 durak · 2 hazırlanmadı — kutu yok/);
+  });
+
   it('BEKLEYEN sefer başlatılabilir, SÜRÜLEN sefer başlatılamaz — iki eylem karışmaz', async () => {
     const surulen = courierDayRun();
     const bekleyen = waitingRun({ runId: RUN_B, zoneName: 'Dağ rotası' });

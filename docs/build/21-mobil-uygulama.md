@@ -11050,3 +11050,28 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   - **11 · Küçükler (bilgi):** `sefer.md`nin andığı araç zorunluluğu ayarı yok; açık sefer listesi
     son 30 seferle sınırlı (`delivery-run.service.ts:67`); kod yedeği ile migration varsayılanı
     ayrışan `delivery_proof_required` (pratikte görünmez).
+
+- [x] (21.239) **HAZIRLANMAMIŞ DURAK "KUTU YOK" DEĞİL "HAZIRLANMADI" — yükleme ekranı, sefer kartı ve durak listesi sebebi söylüyor** (kullanıcı bulgusu 03.09, veritabanında ölçüldü)
+
+  Kullanıcı: *"Rotada sekiz durak var ama hiç kutu yok; muhtemelen başka bir kullanıcı bu rotanın
+  kutularını başka bir araca yükledi — aynı aracı iki kişi seçmiş gibi."* Ölçüm bunu doğrulamadı:
+  tek sefer (`SF-26-DCNCNQ`, 05.09, Marc Lemoine, 67 LZT 01), sekiz siparişin hepsi `confirmed`,
+  `order_box` tablosu boş. Kutu yoktu çünkü depo daha toplamamıştı (besleme 02.09'dan beri yalnız
+  onaylı sipariş yazıyor; 02.09'daki kutular kullanıcının elle mühürledikleriydi, refresh sildi).
+  Araç paylaşımı (denetim bulgu 4) gerçek ama bu olayın sebebi değil.
+
+  **Yanıltan arayüzdü.** Yükleme ekranı sıfır kutuda *"kutulu sipariş yok — kutusuz akışla
+  hazırlanmış, doğrudan yola çıkabilirsin"* diyordu: siparişler hazırlanmış değil HİÇ
+  hazırlanmamıştı, "kutusuz akış" 30.08'den beri yok. Durak listesi ve sefer kartı da onaylı ile
+  hazırı ayırt etmiyordu (sözleşme durumu değil sonucu taşıyor).
+
+  Şimdi: durak sözleşmesine `awaitingPreparation` (eklemeli, `default(false)`; `confirmed`/
+  `preparing`). Yükleme ekranı sıfır kutuda *"N durak depoda hazırlanmayı bekliyor — mühürlenince
+  burada görünür"*; hazırlanmamış durak yokken kutu da yoksa bu kayıt hatasıdır, ekran "depoyu
+  arayın" der (teslimat ekranının aynı kararı). Kutulu ve hazırlanmamış yan yana ise sayacın altında
+  ayrı satır. Araçtaki seferler kartı *"N durak · M hazırlanmadı — kutu yok"*; gün listesinde durak
+  saatsiz **HAZIRLANMADI** etiketi taşıyor (sonuç değil hâl).
+
+  Testler: yükleme (hazırlanmamış → bekle · kayıt hatası → depoyu ara · karma → ek satır) · sefer
+  kartı özeti · durak etiketi · `day.test` gün listesi bayrağı. Courier Jest 130; tam paket sonucu
+  commit notunda.

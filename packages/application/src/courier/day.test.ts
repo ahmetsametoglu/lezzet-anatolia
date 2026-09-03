@@ -618,6 +618,12 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect(result.skipped).toEqual([{ orderId, currentStatus: 'confirmed' }]);
     expect(result.started).toHaveLength(0);
     expect((await orders.getById(orderId))?.status).toBe('confirmed');
+
+    // Gün listesi de söyler (03.09): sefere damgalı ama hazırlanmamış durak bayrağını taşır —
+    // yükleme ekranı "kutu yok"u "hazırlanmadı" diye okuyabilsin.
+    const stop = mine(await listCourierDay(db, { courierId, runId: result.run.runId }), orderId);
+    expect(stop.awaitingPreparation).toBe(true);
+    expect(stop.outcome).toBe('pending');
   });
 
   it('kısmi başarı GÖRÜNÜR: üç aday, üç ayrı liste', async () => {

@@ -157,17 +157,38 @@ export function CourierLoadScreen() {
     Günün rotası bu ekranın kapısını zaten çizmiyor (kutusuz akışta `boxCounter` null), yani buraya
     ancak derin bağlantıyla gelinir — ama gelinen hâl de doğruyu söylemeli.
   */
+  /*
+    ── SIFIR KUTUNUN İKİ SEBEBİ VAR ve ekran ayırt etmek zorunda (kullanıcı bulgusu 03.09) ────────
+    Sekiz onaylı siparişli sefer kuruldu; kutu YOKTU çünkü depo daha toplamamıştı. Ekran "kutulu
+    sipariş yok — kutusuz akışla hazırlanmış, doğrudan yola çıkabilirsin" dedi ve kurye kutuların
+    BAŞKA araca yüklendiğini sandı (veritabanı: `order_box` boştu, siparişler `confirmed`).
+    "Kutusuz akış" 30.08'den beri yok; o cümle eski modeli anlatıyordu ve yanlış bir hikâye kurdu.
+
+    Hazırlanmamış durak varsa hâl "bekle"dir, "yola çık" değil: kutular depoda mühürlenince burada
+    görünür. Hiç hazırlanmamış durak yokken kutu da yoksa bu bir KAYIT HATASIDIR (mal kutusuyla
+    hazırlanır) ve ekran öyle der — teslimat ekranının aynı kararı (`boxes.missing`).
+  */
+  const awaitingPrep = day.stops.filter((stop) => stop.awaitingPreparation).length;
   if (total === 0) {
     return (
       <View style={styles.screen} testID="courier-load">
         {header}
         <View style={styles.block}>
-          <OperationsNoticeBlock
-            variant="empty"
-            title={t.day.load.noBoxes.title}
-            description={t.day.load.noBoxes.body}
-            testID="courier-load-no-boxes"
-          />
+          {awaitingPrep > 0 ? (
+            <OperationsNoticeBlock
+              variant="empty"
+              title={fillCopy(t.day.load.awaitingPrep.title, { n: String(awaitingPrep) })}
+              description={t.day.load.awaitingPrep.body}
+              testID="courier-load-awaiting-prep"
+            />
+          ) : (
+            <OperationsNoticeBlock
+              variant="error"
+              title={t.day.load.noBoxes.title}
+              description={t.day.load.noBoxes.body}
+              testID="courier-load-no-boxes"
+            />
+          )}
         </View>
       </View>
     );
@@ -220,6 +241,14 @@ export function CourierLoadScreen() {
             {remaining === 0 ? t.day.load.complete : fillCopy(t.day.load.remaining, { n: String(remaining) })}
           </Text>
         </View>
+        {/* Kutulu ve hazırlanmamış durak yan yana olabilir (03.09): sayaç yalnız var olan kutuyu
+            sayar, hazırlanmamış durağı ayrıca söyler — yoksa "hepsi bindi" eksik bir sefer için
+            yazılır. */}
+        {awaitingPrep === 0 ? null : (
+          <Text style={styles.footnote} testID="courier-load-awaiting-prep-line">
+            {fillCopy(t.day.load.awaitingPrepLine, { n: String(awaitingPrep) })}
+          </Text>
+        )}
 
         {/*
           YÜKLEMEYİ BİTİR KOYU BLOĞUN ALTINDA (kullanıcı kararı 01.09).

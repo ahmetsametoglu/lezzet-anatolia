@@ -106,6 +106,11 @@ export interface CourierStop {
   /** Kapıdaki sonuç — sistemin iç durumu değil, kuryenin gördüğü hâl. */
   outcome: StopOutcome;
   /**
+   * Depoda HENÜZ HAZIRLANMADI (`confirmed`/`preparing`) — sözleşme künyesi. Sefere damgalı ama
+   * kutusu yok; yükleme ekranı "kutu yok"u "hazırlanmadı" diye okuyabilsin (03.09).
+   */
+  awaitingPreparation: boolean;
+  /**
    * Durağın SONUÇLANDIĞI an (ISO) — `null` = daha sonuçlanmadı.
    *
    * Geçiş geçmişinden okunur (`attempts` ile AYNI dizi, ikinci sorgu yok): teslimde/iadede o
@@ -316,6 +321,7 @@ export async function listCourierDay(
         lineDiscountAmountCents: line.lineDiscountAmountCents,
       })),
       outcome,
+      awaitingPreparation: order.status === 'confirmed' || order.status === 'preparing',
       /* Saat ve sebep TEK kayıttan (`settlementLog`) — ikisi aynı olayın iki yüzü. Dizi zaten
          `attempts` için okunuyor, ikinci sorgu doğmuyor. */
       settledAt: settled?.createdAt ?? null,

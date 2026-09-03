@@ -527,6 +527,18 @@ describe('K1 · günün seferi', () => {
   });
 });
 
+describe('hazırlanmamış durak (kullanıcı bulgusu 03.09)', () => {
+  it('depoda toplanmamış durak listede "HAZIRLANMADI" etiketi taşır — saatsiz, sonuç değil hâl', async () => {
+    mockDay(courierDay([courierStop(1, { awaitingPreparation: true, boxes: [] }), courierStop(2)]));
+
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).toHaveTextContent(/^HAZIRLANMADI$/);
+    expect(screen.queryByTestId('courier-stop-tag-' + STOP_2)).toBeNull();
+  });
+});
+
 describe('K1 · "Seferi başlat" — gerçek yazım', () => {
 
   it('boş hâlin düğmesi SEÇİM EKRANINA götürür — uca istek göndermez', async () => {

@@ -731,6 +731,10 @@ function circleTone(stop: CourierStopContract, isNext: boolean, started: boolean
  * Sonuçlanmamış durakta `null`: etiketi olan şey bitmiş iştir.
  */
 function stopTag(stop: CourierStopContract): string | null {
+  /* HAZIRLANMADI (03.09): sonuç değil ön koşul eksiği — depo toplamadan bu durağa kutu da teslim
+     de yok. Saatsiz yazılır: bir olayın damgası değil, bir hâlin adı. Sefer kurulabiliyor ama
+     durak listede "sıradaki" gibi durmamalı. */
+  if (stop.outcome === 'pending' && stop.awaitingPreparation) return t.day.stop.tagUnprepared;
   const tag =
     stop.outcome === 'delivered'
       ? isPartial(stop)

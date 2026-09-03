@@ -64,9 +64,14 @@
       "remaining": "{n} kutu daha okutulmalı",
       "complete": "Araçtaki seferlerin tüm kutuları yüklendi",
       "noBoxes": {
-        "title": "Bu seferde kutulu sipariş yok",
-        "body": "Yükleme adımı yalnız kutulu siparişlerde vardır — bu seferin durakları kutusuz akışla hazırlanmış. Doğrudan yola çıkabilirsin."
+        "title": "Bu seferde kutu yok",
+        "body": "Mal kutusuyla hazırlanır ve kutusuyla araca biner — durağı olup kutusu olmayan sefer bir kayıt hatasıdır. Yükleme yapılamaz; depoyu arayın."
       },
+      "awaitingPrep": {
+        "title": "{n} durak depoda hazırlanmayı bekliyor",
+        "body": "Siparişler onaylı ama henüz toplanıp kutulanmadı. Depo mühürlediğinde kutular burada görünür; o zamana kadar yüklenecek bir şey yok."
+      },
+      "awaitingPrepLine": "{n} durak hazırlanmadı — kutusu depoda mühürlenince burada görünür.",
       "stopsBySefer": "SEFERE GÖRE KUTULAR",
       "stopCounter": "{loaded}/{total}",
       "stopBoxCounter": "{loaded}/{total} kutu",
@@ -161,6 +166,7 @@
       "tagPartial": "KISMİ TESLİM",
       "tagUnreachable": "ULAŞILAMADI",
       "tagRefused": "KABUL ETMEDİ",
+      "tagUnprepared": "HAZIRLANMADI",
       "tagAt": "{tag} · {time}",
       "collected": "{method} {amount} alındı",
       "proof": "imza var",
@@ -209,6 +215,7 @@
       "emptyBody": "Sefer ve araç seçip yüklemeyi yaptığında seferler burada birikir. Bir sefer araçta olmakla başlamış sayılmaz.",
       "pick": "Sefer ve araç seç",
       "summary": "{stops} durak · {loaded}/{total} kutu araçta",
+      "summaryUnprepared": "{stops} durak · {n} hazırlanmadı — kutu yok",
       "catchUp": "Geç yüklenen kutuları yola çıkar",
       "discard": "Araçtan çıkar",
       "discardHint": "onay çekmecesi açar — sefer araçtan iner",

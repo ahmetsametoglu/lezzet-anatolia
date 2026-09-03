@@ -139,6 +139,15 @@ export const CourierStopSchema = z.object({
   ),
   outcome: StopOutcomeEnum,
   /**
+   * **DEPODA HENÜZ HAZIRLANMADI** (03.09 · kullanıcı bulgusu): sipariş sefere damgalı ama
+   * `confirmed`/`preparing` — toplanmamış, kutusu açılmamış. Bir "sonuç" değil, bir ön koşul
+   * eksikliği; o yüzden `outcome`a yeni değer açılmadı. Ölçülen arıza: sekiz onaylı siparişli
+   * sefer kuruldu, yükleme ekranı "kutulu sipariş yok, doğrudan yola çıkabilirsin" dedi ve
+   * kurye kutuların başka araca yüklendiğini sandı. Bayrak ekranın "hazırlanmadı" diyebilmesi
+   * için. Eklemeli (`default(false)`): eski fikstür ve istemci kırılmaz.
+   */
+  awaitingPreparation: z.boolean().default(false),
+  /**
    * Durağın SONUÇLANDIĞI an (ISO) — `null` = henüz sonuçlanmadı (`pending`).
    *
    * Kaynak `order_status_log`: `delivered`/`returned` geçişinin damgası, ulaşılamayanda son
