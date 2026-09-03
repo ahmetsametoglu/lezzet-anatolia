@@ -1334,27 +1334,6 @@ function IntakeRow({
             </PressableSurface>
           </View>
 
-          {/* ADET ÇEKMECESİ — tuş takımı DEĞİL (v3 `sheetAdet`; künyesi komponentte). Toplam ile döküm
-          TEK yamada yazılır: ikisi ayrı gitseydi biri bir gün ötekinden geride kalırdı. */}
-          <OperationsQuantitySheet
-            visible={qtyOpen}
-            title={t.intake.qtySheet.title}
-            value={state.breakdown}
-            caseSizes={row.caseSizes}
-            onChange={(next) => onPatch({ breakdown: next, qty: quantityTotal(next) })}
-            copy={{
-              ...t.intake.qtySheet,
-              /* Künye satırı v3'ün kendi cümlesi: ürün + boy + SAYININ KAYNAĞI ("barkod okutulmadı"
-             ya da "koli barkodu okundu"). Kaynak denetim bilgisidir — elle sayılmış satırla
-             okutularak sayılmış satır aynı görünmemeli (satırın `scan` alanının künyesi). */
-              subject: fillCopy(t.intake.qtySheet.subject, {
-                name,
-                source: state.scan === null ? t.intake.source.manual : t.intake.source.scanned,
-              }),
-            }}
-            onClose={() => setQtyOpen(false)}
-            testID={`warehouse-intake-qty-sheet-${row.variantId}`}
-          />
 
           {/* HASARIN TUŞ TAKIMI — sayacın ortasındaki rakamdan; ADET ÇEKMECESİ DEĞİL (kullanıcı
               kararı 02.09: koli sorulmayan yerde çekmece gürültü — hasar paket paket işaretlenir).
@@ -1551,6 +1530,41 @@ function IntakeRow({
           ) : null}
         </>
       ) : null}
+
+      {/*
+        ADET ÇEKMECESİ KARTIN KÖKÜNDE, AÇIK DALIN İÇİNDE DEĞİL (kullanıcı bulgusu 03.09).
+
+        Ölçülen arıza: kapalı ama SAYILMIŞ kartta adet kutusuna dokununca hiçbir şey olmuyordu —
+        `qtyOpen` doğru oluyor ama çekmece açık dalın içinde çizildiği için hiç monte edilmiyordu.
+        Depocu kartı adından açtığında çekmece bir anda beliriyordu ("önce kart genişliyor, sonra
+        çekmece bir anda açılıyor"). Kapalı kartta adet düzeltmek meşru bir iş ve kartı açmayı
+        gerektirmez.
+
+        Kural kitin çekmece künyesindekiyle aynı: çekmece bir DALIN parçası değil, satırın
+        parçasıdır. Öteki çekmeceler (tarih · lot · hasar tuş takımı) yalnız açık kartta
+        tetiklenebiliyor, o yüzden yerlerinde kaldılar.
+      */}
+        {/* ADET ÇEKMECESİ — tuş takımı DEĞİL (v3 `sheetAdet`; künyesi komponentte). Toplam ile döküm
+        TEK yamada yazılır: ikisi ayrı gitseydi biri bir gün ötekinden geride kalırdı. */}
+        <OperationsQuantitySheet
+          visible={qtyOpen}
+          title={t.intake.qtySheet.title}
+          value={state.breakdown}
+          caseSizes={row.caseSizes}
+          onChange={(next) => onPatch({ breakdown: next, qty: quantityTotal(next) })}
+          copy={{
+            ...t.intake.qtySheet,
+            /* Künye satırı v3'ün kendi cümlesi: ürün + boy + SAYININ KAYNAĞI ("barkod okutulmadı"
+           ya da "koli barkodu okundu"). Kaynak denetim bilgisidir — elle sayılmış satırla
+           okutularak sayılmış satır aynı görünmemeli (satırın `scan` alanının künyesi). */
+            subject: fillCopy(t.intake.qtySheet.subject, {
+              name,
+              source: state.scan === null ? t.intake.source.manual : t.intake.source.scanned,
+            }),
+          }}
+          onClose={() => setQtyOpen(false)}
+          testID={`warehouse-intake-qty-sheet-${row.variantId}`}
+        />
     </View>
   );
 }

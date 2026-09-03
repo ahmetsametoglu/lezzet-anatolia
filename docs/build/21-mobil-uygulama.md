@@ -10832,8 +10832,16 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   iyi"*): bir hata değil ama geri alınamayan bir sapma — uyarı ailesi; `error` yanlış olurdu,
   burada bozulan bir şey yok.
 
-  **Doğrulama.** Tip · lint temiz; depo paketi 217/217 — yeni dört iddia (akordeon · kapalı kartın
-  rozetleri · başlığın aç/kapat anahtarı · okutulan satırın açılması). Cihazda ölçüldü (Oppo):
+  **KAPALI KARTTA ADET DÜZELTİLEBİLİR** (kullanıcı bulgusu, aynı gün): sayılmış ama kapalı bir
+  kartta adet kutusuna dokunmak hiçbir şey yapmıyordu — `qtyOpen` doğru oluyor ama çekmece AÇIK
+  DALIN içinde çizildiği için hiç monte edilmiyordu; kart adından açılınca çekmece bir anda
+  beliriyordu (*"önce kart genişliyor, sonra adet çekmecesi bir anda açılıyor"*). Adet çekmecesi
+  kartın KÖKÜNE alındı: kapalı kartta adet düzeltmek meşru bir iş ve kartı açmayı gerektirmez.
+  Öteki çekmeceler (tarih · lot · hasar tuş takımı) yalnız açık kartta tetiklenebiliyor, yerlerinde
+  kaldılar.
+
+  **Doğrulama.** Tip · lint temiz; depo paketi 218/218 — yeni beş iddia (akordeon · kapalı kartın
+  rozetleri · başlığın aç/kapat anahtarı · okutulan satırın açılması · kapalı karttan adet). Cihazda ölçüldü (Oppo):
   ilk satır sayıldı, tarih ve hasar girildi, ikinci satır açılınca ilki kapandı ve özetini
   "4 ADET · DDM 01.09.26 · hasarlı 2" olarak gösterdi; sebep çekmecesinin seçenekleri arasında
   36 px aralık ölçüldü; kayıt düğmeleri listenin sonunda çizildi ve kısmi kayıt kiremit çerçeveyle

@@ -787,6 +787,31 @@ describe('D2 · mal kabul', () => {
     expect(screen.getByTestId(`warehouse-intake-damage-badge-${ROW_A.variantId}`)).toHaveTextContent('hasarlı 1');
   });
 
+  /* KAPALI KARTTA DA ADET DÜZELTİLİR (kullanıcı bulgusu 03.09): sayılmış bir satırın adet
+     kutusuna dokunmak çekmeceyi AÇAR — kartı açmayı gerektirmez. Eskiden çekmece açık dalın
+     içinde çiziliyordu ve kapalı kartta hiç monte edilmiyordu: dokunuş sessizce yutuluyor, kart
+     sonradan açıldığında çekmece bir anda beliriyordu. */
+  it('kapalı kartta adet kutusu çekmeceyi AÇAR — kartı açmaya gerek yok', async () => {
+    withForm([ROW_A, ROW_B]);
+
+    await renderIntake();
+    await countRow(ROW_A.variantId, '4');
+    // Başka satır açılır → ROW_A kapanır ama adedi kalır.
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_B.variantId}`));
+    expect(screen.queryByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeNull();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`));
+
+    await openSheet(`warehouse-intake-qty-sheet-${ROW_A.variantId}-ruler-6`);
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}-ruler-6`));
+    await fireEvent.press(screen.getByTestId(`warehouse-intake-qty-sheet-${ROW_A.variantId}-confirm`));
+
+    // Kart hâlâ KAPALI, adet güncellendi: çekmece kartın açıklığından bağımsız.
+    expect(screen.queryByTestId(`warehouse-intake-expiry-${ROW_A.variantId}`)).toBeNull();
+    // Kutu rakamı ve "ADET" başlığını birlikte taşır — ölçülen şey rakamın kendisi.
+    expect(screen.getByTestId(`warehouse-intake-qty-${ROW_A.variantId}`)).toHaveTextContent(/^6/);
+  });
+
   /* Başlık satırın ANAHTARI: aynı satıra ikinci dokunuş kartı kapatır. */
   it('başlığa dokunuş kartı açar, ikinci dokunuş kapatır', async () => {
     withForm([ROW_A]);
