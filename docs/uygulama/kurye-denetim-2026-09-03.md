@@ -133,6 +133,13 @@ Sıra önem sırasıdır. Her maddede **Varsayım** satırı benim gerçek düny
 
 ## 8 · Kısmi ret teslimden ÖNCE yazılıyor; teslim düşerse düzeltme geri alınmıyor
 
+- **Yeniden ölçüm (03.09, üçüncü tur):** teşhis doğru ve bir kademe AĞIRLAŞTI. `adjustFulfillment`
+  yalnız adedi düşürmüyor: aynı çağrıda iade hesabını çözüyor (`settleRefund`) ve müşteriye
+  "eksik karşılandı" (`order_shortfall`) haberini gönderiyor (`refund.ts:127-136`). Bulgu 1 ile
+  bildirim portu mobil teslim yoluna bağlandığı için bu haber artık GERÇEKTEN gidiyor — teslim
+  bir sonraki adımda `stale` dönerse müşteri teslim edilmemiş bir sipariş için eksik haberi almış
+  olur. Yine nadir (kapanış + teslim yarışı), ama artık yalnız veri değil, müşteriye giden bir cümle.
+
 - `confirmDoorDelivery`: `adjustFulfillment` (`delivery.ts:147-160`) → `deliverOrder`
   (`:167`). Teslim `stale` dönerse (başka cihaz, kapanış araya girdi) `fulfilled_qty` düşmüş
   kalır, sipariş teslim edilmemiş. Künye yalnız parayı sona aldığını söylüyor; mal için aynı
@@ -140,6 +147,12 @@ Sıra önem sırasıdır. Her maddede **Varsayım** satırı benim gerçek düny
 - **Varsayım:** Nadir ama gerçek (kapanış + teslim yarışı 0046:740'ta zaten anılıyor).
 
 ## 9 · Kurulmuş seferden çıkarma, web'den yola çıkmış siparişi sahipsiz bırakıyor
+
+- **Yeniden ölçüm (03.09, üçüncü tur):** teşhis doğru, sonuç cümlesi ABARTILIYDI. "Ne mobil teslim
+  edebilir ne kapanış çözer" doğru; ama web'in askıda şeridi `out_for_delivery` durumundaki
+  sipariş için ayrı bir hikâye taşıyor (`dispatch-sections.tsx:647-651` `strandedStuck`) ve
+  `bringForward` onu `ready`ye düşürüp yeniden planlıyor (`dispatch-actions.ts:122-129`). Yani
+  kurtarma yolu VAR, yalnız ertesi güne kalır (şart: teslim günü geçmiş olmalı). Seviye: bilgi.
 
 - Claim `out_for_delivery` siparişi de alıyor (web'in tekil "yola çıktım"ı, `0046:513`);
   `discard_delivery_run` serbest bırakırken `courier_id = null` yazıyor (`0046:644`), durum
@@ -157,9 +170,11 @@ Sıra önem sırasıdır. Her maddede **Varsayım** satırı benim gerçek düny
 
 ## 11 · Ayar ve besleme tutarsızlıkları (küçük)
 
-- `delivery_proof_required` beslemede `{b2b:false, b2c:false}`; kod varsayılanı ve DOMAIN §6
-  B2B'yi zorunlu sayıyor. Yerelde B2B teslimi imzasız kapanıyor — gerçek kurulumda ayar
-  girilmezse kod varsayılanı devreye girer, yani yerel test gerçek davranışı sınamıyor.
+- ~~`delivery_proof_required` beslemede `{b2b:false, b2c:false}`; kod varsayılanı B2B'yi zorunlu
+  sayıyor…~~ **GERİ ÇEKİLDİ (03.09, üçüncü tur):** değer beslemenin değil MIGRATION'ın kendi
+  varsayılanı (`0013_settings.sql:98` — "ikisi de kapalı, kanıt kutu okutmasıdır"), yani bilinçli
+  karar. Kalan tek pürüz kodun ayar okunamazsa düştüğü yedek (`delivery.ts` `{b2b:true}`) ile
+  migration varsayılanının ayrışması — ayar her zaman okunabildiği için pratikte görünmez.
 - `0046` künyesi "araç zorunluluğu `Setting` ile" diyor; öyle bir ayar anahtarı yok
   (`settings`te yalnız `courier_close_time`, o da mobilde okunmuyor).
 - `readCourierRuns` son 30 seferi okuyup kapanmamışları süzüyor (`delivery-run.service.ts:67`);
