@@ -80,6 +80,21 @@ export function StockCountScreen() {
     if (subject.notice !== null) toastInfo(subject.notice.text);
   }, [subject.notice]);
 
+  /*
+    PARTİNİN YERİ KAYITTAN SONRA YAZILIR (kullanıcı kararı 03.09).
+
+    Seçim anında yazılıyordu ve tehlikeliydi: liste süzülmediği için başka dolabın partisine
+    yanlışlıkla dokunmak, o partinin yerini sessizce değiştirmeye yetiyordu. Sayım kaydı ise bir
+    BEYAN — depocu o dolabın önünde saydığını söylüyor. Vazgeçen hiçbir şeyi oynatmaz.
+
+    Etki kaydın kendisine değil SONUCUNA bağlı (`record`): yazım düşerse adres de yazılmaz.
+  */
+  useEffect(() => {
+    /* Yalnız kaydın doğduğu an tetiklenir: bağımlılıkta SADECE `record` var — `batch` ve `subject`
+       her çizimde yeni referans olabilir ve efekt her karede yeniden koşardı. */
+    if (adjustment.record !== null && batch !== null) subject.markSeen(batch);
+  }, [adjustment.record]);
+
   const header = (
     <OperationsStackHeader
       title={t.adjustment.count.title}

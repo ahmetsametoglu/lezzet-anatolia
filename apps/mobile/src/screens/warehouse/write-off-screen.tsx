@@ -84,6 +84,13 @@ export function WriteOffScreen() {
     if (subject.notice !== null) toastInfo(subject.notice.text);
   }, [subject.notice]);
 
+  /* Partinin yeri KAYITTAN SONRA yazılır — sayım ekranının aynı kararı (kullanıcı 03.09):
+     seçmek beyan değildir, düşümü kaydetmek beyandır. */
+  useEffect(() => {
+    /* Bağımlılıkta yalnız `record` — sayım ekranının aynı gerekçesi. */
+    if (adjustment.record !== null && batch !== null) subject.markSeen(batch);
+  }, [adjustment.record]);
+
   const header = (
     <OperationsStackHeader
       title={t.adjustment.writeOff.title}

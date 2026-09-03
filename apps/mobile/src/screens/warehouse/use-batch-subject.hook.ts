@@ -56,6 +56,11 @@ export interface UseBatchSubjectResult {
   /** Ekranın KONUSU; `null` = henüz seçilmedi ve ekran seçiciyi çizer. */
   subject: ResolvedBatchContract | null;
   select: (batch: ResolvedBatchContract) => void;
+  /**
+   * Kayıt YAZILDIKTAN sonra çağrılır: parti aktif dolapta görüldü, adresi oraya yazılır. Seçim
+   * anında değil, çünkü seçmek bir beyan değildir (kullanıcı kararı 03.09 — künye uygulamada).
+   */
+  markSeen: (batch: ResolvedBatchContract) => void;
   /** Seçimi bırakır — bağlam kartındaki "değiştir". */
   clear: () => void;
   query: string;
@@ -155,9 +160,23 @@ export function useBatchSubject(): UseBatchSubjectResult {
     return [...here, ...elsewhere];
   }, [rows, activeAreaId]);
 
-  const select = useCallback(
+  /** Konuyu seçmek YALNIZCA seçmektir — adres yazımı kayda bağlı (`markSeen`, künye yukarıda). */
+  const select = useCallback((batch: ResolvedBatchContract) => setSubject(batch), []);
+
+  /**
+   * **KAYIT YAZILDIKTAN SONRA çağrılır: parti bu alanda görüldü.**
+   *
+   * Tetikleyici SEÇİM değil KAYITTIR (kullanıcı kararı 03.09) ve bu bir güvenlik kararı. Eskiden
+   * adres seçim anında yazılıyordu: depocu dolabı seçip listeden başka alandaki bir partiye
+   * dokunduğu anda o partinin yeri SESSİZCE değişiyordu — liste süzülmediği için yanlış satıra
+   * dokunmak yeterliydi ve bildirim rampada okunmuyor. *"Sayacağım partiyi seçmek"* ile *"bu
+   * partinin yerini değiştirmek"* tek dokunuşa binmişti; iki ayrı iş, tek eylem.
+   *
+   * Sayım/düşüm kaydı ise bir BEYANDIR: depocu o dolabın önünde saydığını söylüyor. Vazgeçen,
+   * yanlış partiye dokunup geri dönen, ekranı terk eden hiçbir şeyi değiştirmez.
+   */
+  const markSeen = useCallback(
     (batch: ResolvedBatchContract) => {
-      setSubject(batch);
       if (activeAreaId === null || batch.storageAreaId === activeAreaId) return;
 
       void (async () => {
@@ -213,6 +232,7 @@ export function useBatchSubject(): UseBatchSubjectResult {
   return {
     subject,
     select,
+    markSeen,
     clear,
     query,
     setQuery,

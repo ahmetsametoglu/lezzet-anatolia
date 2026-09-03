@@ -297,31 +297,74 @@ describe('D4 · Sayım', () => {
   });
 
   /*
-    "HANGİ DOLABIN ÖNÜNDESİN" (kullanıcı kararı 03.09): partinin alanı son görüldüğü yerdir ve
-    taşıma kaydı YOK. Üç iddia: aktif dolap seçilip başka dolabın partisi seçilince adres yazılır ve
-    kart yeni adresi gösterir · parti zaten o dolaptaysa tel açılmaz · dolap seçilmemişse hiç yazım
-    yok (seçim isteğe bağlı, yokluğu sayımı değiştirmez).
+    "HANGİ DOLABIN ÖNÜNDESİN" (kullanıcı kararı 03.09, ikinci tur): partinin alanı son görüldüğü
+    yerdir, taşıma kaydı YOK — ama adresi yazan şey SEÇİM DEĞİL KAYITTIR.
+
+    İlk hâlde seçim yazıyordu ve kullanıcı tehlikeyi gördü: liste süzülmediği için başka dolabın
+    partisine yanlışlıkla dokunmak, o partinin yerini sessizce değiştirmeye yetiyordu. Dört iddia:
+    seçmek YAZMAZ · kaydetmek yazar ve kart yeni adresi okur · parti zaten o dolaptaysa tel
+    açılmaz · dolap seçilmemişse hiç yazım yok.
   */
-  it('aktif dolap seçiliyken başka dolabın partisi seçilince ADRES yazılır ve kart yeni adresi okur', async () => {
+  it('SEÇMEK adres yazmaz — sayacağı partiye dokunmak bir beyan değildir', async () => {
     await render(<StockCountScreen />);
     await fireEvent.press(await screen.findByTestId(`warehouse-stock-count-picker-area-${FREEZER_1}`));
     await fireEvent.press(await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401'));
 
-    await waitFor(() => expect(mockMarkSeen).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000401', FREEZER_1));
-    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-context')).toHaveTextContent(/Derin dondurucu 1/));
+    await screen.findByTestId('warehouse-stock-count-context');
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+    // Kart hâlâ partinin KAYITLI adresini okuyor; ekran bir şey değiştirmiş gibi yapmıyor.
+    expect(screen.getByTestId('warehouse-stock-count-context')).toHaveTextContent(/Derin dondurucu 2/);
   });
 
-  it('parti zaten seçili dolaptaysa adres YAZILMAZ', async () => {
+  it('KAYIT yazılınca adres yazılır ve kart yeni adresi okur', async () => {
+    await render(<StockCountScreen />);
+    await fireEvent.press(await screen.findByTestId(`warehouse-stock-count-picker-area-${FREEZER_1}`));
+    await fireEvent.press(await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401'));
+    await screen.findByTestId('warehouse-stock-count-context');
+
+    await countOnShelf(9);
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-yanlış sayılmıştı'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
+
+    await waitFor(() => expect(mockMarkSeen).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000401', FREEZER_1));
+  });
+
+  it('KAYIT DÜŞERSE adres de yazılmaz — etki sonuca bağlı', async () => {
+    mockRecordAdjustment.mockResolvedValue({ data: null, error: 'network_error' });
+    await render(<StockCountScreen />);
+    await fireEvent.press(await screen.findByTestId(`warehouse-stock-count-picker-area-${FREEZER_1}`));
+    await fireEvent.press(await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401'));
+    await screen.findByTestId('warehouse-stock-count-context');
+
+    await countOnShelf(9);
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-yanlış sayılmıştı'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
+
+    await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalled());
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+  });
+
+  it('parti zaten seçili dolaptaysa kayıttan sonra da adres YAZILMAZ', async () => {
     await render(<StockCountScreen />);
     await fireEvent.press(await screen.findByTestId(`warehouse-stock-count-picker-area-${FREEZER_2}`));
     await fireEvent.press(await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401'));
-
     await screen.findByTestId('warehouse-stock-count-context');
+
+    await countOnShelf(9);
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-kayıt hatası'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
+
+    await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalled());
     expect(mockMarkSeen).not.toHaveBeenCalled();
   });
 
   it('dolap seçilmemişse adres yazımı yok — seçim isteğe bağlı', async () => {
     await selectBatch();
+    await countOnShelf(9);
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-note-kayıt hatası'));
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-cta'));
+
+    await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalled());
     expect(mockMarkSeen).not.toHaveBeenCalled();
   });
 

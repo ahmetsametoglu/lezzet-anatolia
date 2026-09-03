@@ -10905,6 +10905,15 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   odada kayıtlı parti dondurucunun önünde seçilince oraya taşınmış sayılacak; süzülseydi taşınan
   parti hiç seçilemezdi.
 
+  **DÜZELTME (kullanıcı kararı 03.09, ikinci tur): adresi yazan şey SEÇİM DEĞİL KAYIT.** İlk hâlde
+  parti seçilir seçilmez adres yazılıyordu ve kullanıcı tehlikeyi gördü: *"dışarıda bunu seçip bu
+  işlemi yapmak tehlikeli değil mi?"* Haklı — liste süzülmüyor (süzülmemeli de, taşınan parti
+  seçilebilmeli), yani başka dolabın partisine YANLIŞLIKLA dokunmak o partinin yerini sessizce
+  değiştirmeye yetiyordu; bildirim de rampada okunmuyor. *"Sayacağım partiyi seçmek"* ile *"bu
+  partinin yerini değiştirmek"* tek dokunuşa binmişti. Artık `markSeen` kaydın SONUCUNA bağlı
+  (`adjustment.record`): sayım/düşüm yazıldıysa depocu o dolabın önünde saydığını beyan etmiş
+  demektir; vazgeçen, yanlış satıra dokunup dönen, yazımı düşen hiçbir şeyi oynatmaz.
+
   **Bedeli söylendi:** sistem "dondurucu boşalıyor, doldur" diyemez; tek depocu gözle görüyor. Çok
   vardiyalı büyük depoda alan–adet tablosu gerekir, bugünkü kolon o kapıyı kapatmaz
   (`data-model/stok-tedarik.md`). Aynı lotun iki kabulünü tek sayıma birleştirme (kullanıcı 03.09:
