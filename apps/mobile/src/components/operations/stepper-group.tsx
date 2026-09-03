@@ -210,7 +210,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mdValueHit: { height: operationsTheme.size.controlSm },
+  /* Orta hedef ± düğmelerinden GENİŞ (kullanıcı bulgusu 03.09): rakam bir tuş değil, çekmeceyi
+     açan alandır. Genişlik hücrede DE duruyor — metnin kendi kolonu (`mdValue`) dokunma alanını
+     büyütmez, `PressableSurface` içeriğine göre daralır. */
+  mdValueHit: { width: operationsTheme.size.stepValue, height: operationsTheme.size.controlSm },
   /* İç yüzey dış kabuğu ENİNE doldurur (`alignSelf`), esnemeyi dış kabuk yapar (`grow`). İçe
      `flex: 1` yazılmaz: sütun ekseninde yükseklik hesabını çökertiyor (`pressable-surface`). */
   lgValueHit: { alignSelf: 'stretch', height: operationsTheme.size.controlLg },
@@ -221,7 +224,7 @@ const styles = StyleSheet.create({
   },
   mdValue: {
     // Sayının kendi kolonu SABİT: 1 ile 10 arasında geçerken düğmeler yer değiştirmemeli.
-    width: operationsTheme.size.stepButton,
+    width: operationsTheme.size.stepValue,
     fontFamily: operationsTheme.font.body[700],
     fontSize: operationsTheme.text.step,
   },

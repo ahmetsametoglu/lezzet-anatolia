@@ -10923,7 +10923,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   duruyordu; artık yalnız `ready`de çizilir (test: tur dönmeyince yalnız iskelet). Cihazda ölçüldü
   (Oppo): açılışta üç iskelet + "yükleniyor", sonra resimli satırlar.
 
-- [ ] (21.235) **SAYIM LİSTESİ LOT ALTINDA GRUPLANIR — aynı ürün · aynı lot · aynı son tarih · aynı alan tek satır, sayım fark dağılımını sistem yapar** (kullanıcı kararı 03.09, henüz başlanmadı)
+- [~] (21.235) ~~**SAYIM LİSTESİ LOT ALTINDA GRUPLANIR — aynı ürün · aynı lot · aynı son tarih · aynı alan tek satır, sayım fark dağılımını sistem yapar** (kullanıcı kararı 03.09, henüz başlanmadı)
   `touches:` `packages/domain-core/src/stock/` (fark dağılımı — saf karar) · `packages/application/src/warehouse/adjustment.ts` (`measureAfter` çok partili toplam) · `apps/mobile/src/screens/warehouse/{batch-picker.tsx,use-batch-subject.hook.ts,stock-count-screen.tsx,write-off-screen.tsx,batch-context-card.tsx}`
 
   **Neden:** aynı lotun iki kabulü (seed'de NE-003 · 10 + 11, gerçekte aynı lotun ikinci sevkiyatı)
@@ -10931,7 +10931,15 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   alış bağı (`purchase_order_item_id`), alış fiyatı ve kabul tarihi ayrı kalmalı (21.234 sohbetinde
   geri alınan "lotu birleştir" fikri). Ekranda tek satır: *"NE-003 · 2 kabul · 21"*; depocu toplamı
   sayar, sistem eksiği en eski kabulden düşer, fazlayı en yeni kabule yazar (motorda, testli).
-  Sonuç kartının "12 → 9"u grubun toplamı olur.
+  Sonuç kartının "12 → 9"u grubun toplamı olur.~~
+
+  **İPTAL (kullanıcı kararı 03.09):** *"Aynı lotun iki partisini tek satırda neden sayıyorum? Zaten
+  ayrı ayrı gelmiş."* Öneri `21.234`ten önce doğmuştu ve gerekçesi *"rafta ayırt edilemez"*di —
+  partinin insan okur bir kimliği yoktu, iki satır aynı lot numarasını gösteriyordu. `21.237` o
+  zemini kaldırdı: her partinin kendi numarası var (`PRT-STR-26-0161` ≠ `0163`), ekranda o yazıyor
+  ve etiket basıldığı gün rafta da okunacak. İki ayrı kabul iki ayrı partidir; alışı, maliyeti ve
+  kabul tarihi ayrı — tek satırda toplamak kaydın kendi ayrımını ekranda silmek olurdu. Fark
+  dağıtım motoru da bu yüzden yazılmadı.
 
 
 - [x] (21.236) **KURYE DENETİMİ — ilk üç bulgu kapandı: müşteri haberi mobil yoldan gidiyor · sürülen seferin tek tanımı · sefer yoldayken son kutu durağı açıyor** (kullanıcı kararı 03.09)
@@ -11098,3 +11106,23 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Tip · lint · knip temiz; mal kabul 4x testleri + tuş takımı + tarih değeri (55)
   yeşil — yeni iddialar: olmayan gün onaylanamaz · çip taslağı doldurur ve düğme tarihi söyler ·
   tekerleğe bağlantıdan gidilir. Tam paket sonucu commit notunda. Cihazda ölçüldü (Oppo).
+
+- [x] (21.241) **STOK DÜŞÜMÜNÜN KENDİ İKONU — hub'da sayımla aynı şekli gösteriyordu; sayacın ORTA hedefi ± düğmelerinden dar kalmıştı** (kullanıcı bulguları 03.09, Oppo'da ölçüldü)
+  `touches:` `apps/mobile/src/components/ui/icon-paths.ts` · `apps/mobile/src/theme/metrics.ts` · `apps/mobile/src/components/operations/stepper-group.tsx` · `apps/mobile/src/screens/warehouse/warehouse-hub-screen.tsx`
+
+  **1 · İKON.** D4b 02.09'da açılırken sayımın liste ikonunu (`stock-count`, üç çizgi) ödünç
+  almıştı; hub'da iki kutucuk aynı şekli gösteriyordu, ayıran tek şey renkti. Tasarımın kendi ikonu
+  var ve ölçüldü (`Operasyon Mobil v3.dc.html`, `dusum` kutucuğu): `M5 4h14` raf çizgisi + `M12 20V8`
+  ile `M7 15l5 5 5-5` aşağı inen ok. `stock-write-off` adıyla sözlüğe eklendi. İki iş artık bakışta
+  ayrılıyor: biri SAYAR, öteki DÜŞER.
+
+  **2 · SAYACIN ORTA HEDEFİ.** Kullanıcı: *"ortaya tıklamak isterken artı ve eksiye tıklanıyor."*
+  Ölçüldü: ± hücreleri 42 (`iconButtonOnPhoto`), rakam kolonu 34 (`stepButton`) — yani ekranın tek
+  DOKUNMALI orta alanı, yanındaki iki düğmeden dardı. Rakam bir tuş değil: çekmeceyi/tuş takımını o
+  açıyor, en geniş hedef o olmalı. Yeni durak `stepValue: 60`; genişlik metnin kolonunda DA, dokunma
+  hücresinde DE (`PressableSurface` içeriğine göre daraldığı için ikisi birden gerekiyor). Sebep
+  alanı `grow` ile kalanı aldığından kendiliğinden küçüldü — kullanıcının ikinci isteği.
+
+  **Doğrulama.** Tip · lint · knip temiz; hub + düşüm + sayaç + mal kabul testleri (85) yeşil. Tam
+  paket sonucu commit notunda. Cihazda ölçüldü (Oppo): hub'da D4b aşağı ok, D4 üç çizgi; düşüm
+  satırında orta hedef ± ikilisinden geniş, "sebep seç" alanı daraldı.

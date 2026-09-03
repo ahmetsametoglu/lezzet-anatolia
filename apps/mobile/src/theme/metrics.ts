@@ -217,6 +217,17 @@ export const appMetrics = {
     radioMark: 28,
     /** Tahsilat tutarının ±/− düğmesi (v2:174 — 34×34). */
     stepButton: 34,
+    /**
+     * Sayacın ORTASINDAKİ rakam kolonu — `stepButton`dan (34) ayrı ve ondan GENİŞ (kullanıcı
+     * bulgusu 03.09: *"ortaya tıklamak isterken artı ve eksiye tıklanıyor"*).
+     *
+     * Ölçüldü: ± hücreleri `iconButtonOnPhoto` (42), rakam kolonu ise 34'tü — yani ekranın tek
+     * DOKUNMALI orta hedefi, yanındaki iki düğmeden dardı. Rakam bir tuş değil bir ALAN: çekmeceyi
+     * ya da tuş takımını o açıyor, dolayısıyla en geniş hedef o olmalı. 60, ± ikilisinin toplamına
+     * yaklaşmadan parmağı ortada tutar; tasarımın kendi D4b'si de rakamı `flex:1` ile en geniş
+     * öğe yapıyordu (v3 `dusum`).
+     */
+    stepValue: 60,
     /* ── v3 depo hub'ı (v3:35-174) ─────────────────────────────────────────
        Izgara kutucuğunun ikonu 32, alt şeritlerin ikonu 18, önizleme işareti 5×26, kutucuğun
        asgari yüksekliği 104. Dördü de YAPISAL ölçüdür (dosyanın kendi kuralı: yapısal ölçüler

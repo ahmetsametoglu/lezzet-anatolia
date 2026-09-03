@@ -94,7 +94,7 @@ const shell = operationsCopy;
 interface HubTile {
   key: string;
   code: string;
-  icon: 'intake' | 'near-expiry' | 'stock-count' | 'transfer' | 'courier-return' | 'sale' | 'handover';
+  icon: 'intake' | 'near-expiry' | 'stock-count' | 'stock-write-off' | 'transfer' | 'courier-return' | 'sale' | 'handover';
   /** İkonun rengi — şablonda kutucuk başına AYRI ve rastgele değil: terracotta olanlar bekleyen iş. */
   tone: string;
   title: string;
@@ -638,7 +638,9 @@ function buildTiles(
          tek iş bu ve zeytin kutucuklarla aynı sesle konuşmamalı. */
       key: 'writeOff',
       code: t.hub.rows.writeOff.code,
-      icon: 'stock-count',
+      /* İkonu SAYIMINKİ değil (kullanıcı bulgusu 03.09): iki kutucuk aynı liste şeklini
+         gösteriyordu. Tasarımın kendi ikonu raftan aşağı inen ok — `icon-paths` künyesi. */
+      icon: 'stock-write-off',
       tone: operationsTheme.colors.terracotta,
       title: t.hub.rows.writeOff.title,
       subtitle: t.hub.rows.writeOff.subtitle,

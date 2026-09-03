@@ -180,6 +180,14 @@ export const ICON_PATHS = {
   'near-expiry': { paths: ['M12 7v5l3 2'], circles: [[12, 12, 9]] },
   /** D4 sayım / düzeltme — daralan üç satır (liste). */
   'stock-count': { paths: ['M4 6h16M4 12h16M4 18h10'] },
+  /**
+   * D4b stok düşümü — RAFTAN AŞAĞI İNEN mal (v3 hub ızgarası, `dusum` kutucuğu).
+   *
+   * Kutucuk 02.09'da açıldığında sayımın liste ikonu ödünç alınmıştı ve ikisi hub'da AYNI şekli
+   * gösteriyordu (kullanıcı bulgusu 03.09) — oysa tasarımın kendi ikonu bu: üstte raf çizgisi,
+   * altında aşağı inen ok. İki iş bakışta ayrılıyor: biri sayar, öteki düşer.
+   */
+  'stock-write-off': { paths: ['M5 4h14', 'M12 20V8', 'M7 15l5 5 5-5'] },
   /** D5 transfer — SAĞA giden ok, dikey çizgi hedef depodur. */
   transfer: { paths: ['M3 12h13', 'M12 7l5 5-5 5', 'M21 5v14'] },
   /** D6 kurye dönüşü — SOLA gelen ok; D5'in aynası, çünkü mal geri geliyor. */
