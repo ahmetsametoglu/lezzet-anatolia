@@ -11092,6 +11092,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   gün (`31.02.27`) ISO'ya dönmez — kırmızı satır söyler, düğme kapalı kalır. Hızlı çipler aynı
   kabuldeki öteki satırların tarihleri (`datesUsedBy`, lotun kuralı; depodaki eski partilerin tarihi
   BİLEREK yok). Tekerlek silinmedi — "takvimden seç →" bağlantısı onu açıyor (tarihi okunamayan koli).
+  **Geçmiş tarih de onaylanamaz** (kullanıcı 03.09 ikinci tur): bugün serbest, dünden öncesi kapalı — ikinci
+  kırmızı cümle "tarih geçmişte"; sınır yerel takvim günü (`isPastDate`, testli).
 
   **Doğrulama.** Tip · lint · knip temiz; mal kabul 4x testleri + tuş takımı + tarih değeri (55)
   yeşil — yeni iddialar: olmayan gün onaylanamaz · çip taslağı doldurur ve düğme tarihi söyler ·

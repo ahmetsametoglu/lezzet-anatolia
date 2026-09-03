@@ -492,6 +492,7 @@
         "hint": "gün · ay · yıl — kolideki tarihi altı rakamla yaz",
         "deleteLabel": "Son rakamı sil",
         "invalid": "Böyle bir gün yok — tarihi kontrol et",
+        "past": "Tarih geçmişte — kabul edilen malın SKT'si geçmiş olamaz",
         "confirmLabel": "{date} · yaz",
         "cancelLabel": "Vazgeç",
         "wheelLabel": "takvimden seç →"

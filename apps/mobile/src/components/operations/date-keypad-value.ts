@@ -34,6 +34,17 @@ export function dateMask(digits: string): string {
 }
 
 /**
+ * GEÇMİŞTE Mİ — bugünden önceki gün (kullanıcı kararı 03.09: *"geçmiş tarih girmesi de mantıklı
+ * değil"*). Bugün serbest: bugün son günü olan mal bugün satılır. Sınır YEREL takvim günüdür,
+ * UTC değil — depocu gece yarısından sonra da kendi gününe göre okur. `now` dışarıdan (test).
+ */
+export function isPastDate(iso: string, now: Date = new Date()): boolean {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  return iso < today;
+}
+
+/**
  * Rakamlar → ISO; altı rakam dolmadıysa ya da takvimde yoksa `null` (`31.02.27` gibi). Tarihin
  * gerçekliği `Date`in sessiz normalleştirmesini geri-çevrimle yakalayarak sınanır.
  */

@@ -502,6 +502,13 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
     expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_B.variantId}`)).toHaveTextContent('SKT gir *');
 
+    // GEÇMİŞ tarih de onaylanamaz (kullanıcı 03.09): altı kez sil, 01.01.20 yaz, kırmızı satır.
+    for (let i = 0; i < 6; i += 1) await fireEvent.press(screen.getByTestId(`${sheet}-delete`));
+    for (const digit of '010120') await fireEvent.press(screen.getByTestId(`${sheet}-key-${digit}`));
+    expect(screen.getByTestId(`${sheet}-hint`)).toHaveTextContent(/Tarih geçmişte/);
+    await fireEvent.press(screen.getByTestId(`${sheet}-confirm`));
+    expect(screen.getByTestId(`warehouse-intake-expiry-state-${ROW_B.variantId}`)).toHaveTextContent('SKT gir *');
+
     // A'nın tarihi çip: dokununca taslak dolar, düğme o tarihi söyler, yaz.
     await fireEvent.press(screen.getByTestId(`${sheet}-pick-2027-09-12`));
     expect(screen.getByTestId(`${sheet}-confirm`)).toHaveTextContent('12.09.27 · yaz');
@@ -514,14 +521,14 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
 
     expect(screen.getByTestId('warehouse-intake-cta')).toHaveTextContent(/Kabulü kaydet/);
 
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
     await waitFor(() => expect(mockToast).toHaveBeenCalled());
 
-    expect(lastPostBody().lines).toEqual([{ variantId: ROW_A.variantId, qty: 10, expiryDate: '2026-08-12', lotNumber: null }]);
+    expect(lastPostBody().lines).toEqual([{ variantId: ROW_A.variantId, qty: 10, expiryDate: '2027-08-12', lotNumber: null }]);
   });
 
   it('fark özeti YALNIZ sapan satırı taşır — uyan satır listeye girmez', async () => {
@@ -541,7 +548,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '8');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
 
     expect(screen.getByTestId('warehouse-intake-cta')).toHaveTextContent(/Kısmen teslim alındı/);
   });
@@ -551,7 +558,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
 
     /* KUTU BOŞSA LOT YOKTUR (kullanıcı kararı 30.08): "Lot yok" diye ayrı bir düğme kalmadı —
        yazılanı TEMİZLE düğmesi siler ve boş kutu zaten `lotNumber: null` demektir. */
@@ -614,7 +621,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
 
     /* ONAY DÜĞMESİ YOK: kutuya yazılan kod satıra CANLI işleniyor, çekmece yalnız kapanıyor. */
     await fireEvent.press(screen.getByTestId(`warehouse-intake-lot-toggle-${ROW_A.variantId}`));
@@ -771,7 +778,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
 
     await fireEvent.press(screen.getByTestId('warehouse-intake-partial-cta'));
     await waitFor(() => expect(mockToast).toHaveBeenCalled());
@@ -796,7 +803,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(mockBack).toHaveBeenCalled());
@@ -808,7 +815,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
     await fireEvent.press(screen.getByTestId('warehouse-intake-partial-cta'));
 
     await waitFor(() => expect(mockToast).toHaveBeenCalled());
@@ -820,7 +827,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
 
     expect(screen.queryByTestId('warehouse-intake-partial-cta')).toBeNull();
     expect(screen.getByTestId('warehouse-intake-cta')).toBeOnTheScreen();
@@ -855,7 +862,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '4');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
 
@@ -863,7 +870,7 @@ describe('D2 · mal kabul', () => {
     await fireEvent.press(screen.getByTestId(`warehouse-intake-count-${ROW_B.variantId}`));
 
     // Rozet REJİMİ de taşır: tarih tek başına "hangi tarih" sorusunu cevaplamıyor (DLC/DDM ayrımı).
-    expect(screen.getByTestId(`warehouse-intake-date-badge-${ROW_A.variantId}`)).toHaveTextContent('DDM 12.08.26');
+    expect(screen.getByTestId(`warehouse-intake-date-badge-${ROW_A.variantId}`)).toHaveTextContent('DDM 12.08.27');
     expect(screen.getByTestId(`warehouse-intake-damage-badge-${ROW_A.variantId}`)).toHaveTextContent('hasarlı 1');
   });
 
@@ -909,7 +916,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-toggle-${ROW_A.variantId}`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
     await fireEvent.press(screen.getByTestId(`warehouse-intake-damage-${ROW_A.variantId}-qty-increase`));
@@ -970,7 +977,7 @@ describe('D2 · mal kabul', () => {
 
     await renderIntake();
     await countRow(ROW_A.variantId, '10');
-    await pickExpiry(ROW_A.variantId, 12, 8, 2026);
+    await pickExpiry(ROW_A.variantId, 12, 8, 2027);
     await fireEvent.press(screen.getByTestId('warehouse-intake-cta'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-intake-warning')).toHaveTextContent(/raf ömrü bilinmiyor/));

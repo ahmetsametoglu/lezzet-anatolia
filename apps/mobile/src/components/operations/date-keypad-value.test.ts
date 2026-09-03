@@ -1,4 +1,4 @@
-import { dateDigitsDelete, dateDigitsFrom, dateDigitsPress, dateFromDigits, dateMask } from './date-keypad-value';
+import { dateDigitsDelete, dateDigitsFrom, dateDigitsPress, dateFromDigits, dateMask, isPastDate } from './date-keypad-value';
 
 /*
   Tarih tuş takımının değer kuralları: altı rakamda durur, maske eksiği gösterir, olmayan gün
@@ -25,6 +25,13 @@ describe('date-keypad-value', () => {
     expect(dateFromDigits('12092')).toBeNull();
     expect(dateFromDigits('310227')).toBeNull();
     expect(dateFromDigits('290228')).toBe('2028-02-29');
+  });
+
+  it('geçmiş gün geçmiştir, bugün ve yarın değil — sınır yerel takvim günü', () => {
+    const now = new Date(2027, 8, 12, 23, 30); // 12 Eylül 2027, gece yarısına yarım saat
+    expect(isPastDate('2027-09-11', now)).toBe(true);
+    expect(isPastDate('2027-09-12', now)).toBe(false);
+    expect(isPastDate('2027-09-13', now)).toBe(false);
   });
 
   it('ISO açılış değeri rakama döner; tanınmayan boş', () => {

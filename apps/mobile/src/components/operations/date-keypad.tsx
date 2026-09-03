@@ -7,7 +7,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { fillCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
-import { dateDigitsDelete, dateDigitsFrom, dateDigitsPress, dateFromDigits, dateMask, DATE_DIGITS } from './date-keypad-value';
+import { dateDigitsDelete, dateDigitsFrom, dateDigitsPress, dateFromDigits, dateMask, DATE_DIGITS, isPastDate } from './date-keypad-value';
 import { OperationsKeyGrid, OperationsKeypadDelete } from './key-grid';
 
 /*
@@ -54,6 +54,8 @@ interface OperationsDateKeypadProps {
     deleteLabel: string;
     /** Altı rakam dolu ama takvimde yok. */
     invalid: string;
+    /** Takvimde var ama GEÇMİŞTE — kabul edilen malın tarihi geçmiş olamaz (kullanıcı 03.09). */
+    past: string;
     /** `{date}` yer tutucusu — "12.09.27 · yaz". */
     confirmLabel: string;
     cancelLabel: string;
@@ -94,8 +96,12 @@ export function OperationsDateKeypad({
     }
   }, [visible, value]);
 
-  const iso = dateFromDigits(digits);
-  const invalid = digits.length === DATE_DIGITS && iso === null;
+  const parsed = dateFromDigits(digits);
+  /* İki ret, iki cümle: takvimde olmayan gün ("böyle bir gün yok") ve geçmiş gün ("tarih geçmiş").
+     İkisinde de düğme kapalı; yazılabilir olması bilinçli — depocu neyi yanlış yazdığını görür. */
+  const past = parsed !== null && isPastDate(parsed);
+  const iso = past ? null : parsed;
+  const problem = digits.length === DATE_DIGITS && parsed === null ? copy.invalid : past ? copy.past : null;
   const id = (suffix: string) => (testID === undefined ? undefined : `${testID}-${suffix}`);
 
   return (
@@ -125,11 +131,11 @@ export function OperationsDateKeypad({
 
       <View style={styles.head}>
         <View style={styles.headText}>
-          <Text style={[styles.value, invalid ? styles.valueInvalid : null]} testID={id('value')}>
+          <Text style={[styles.value, problem === null ? null : styles.valueInvalid]} testID={id('value')}>
             {dateMask(digits)}
           </Text>
-          <Text style={[styles.hint, invalid ? styles.hintInvalid : null]} testID={id('hint')}>
-            {invalid ? copy.invalid : copy.hint}
+          <Text style={[styles.hint, problem === null ? null : styles.hintInvalid]} testID={id('hint')}>
+            {problem ?? copy.hint}
           </Text>
         </View>
         <OperationsKeypadDelete
