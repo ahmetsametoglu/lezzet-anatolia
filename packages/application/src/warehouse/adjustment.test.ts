@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, ProductService, StockMovementService, StockService, serviceDb } from '@lezzet/database';
+import { CategoryService, ProductService, StockMovementService, StockService, StorageAreaService, serviceDb } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair } from '@lezzet/database/testing';
 import { listWarehouseBatches, recordAdjustment, type AdjustmentLine, type WarehouseReason } from './adjustment';
 
@@ -278,7 +278,10 @@ describe('raf listesi', () => {
     /* Ölçülmüş arıza (02.09): ilk tur lotu olmayan partiyi listeden DÜŞÜRÜYORDU (sözleşme lotu
        zorunlu tutuyordu) ve mal kabulde lot boş bırakmak meşru. Yani okunacak etiketi olmayan
        parti hem okutulamıyor hem listelenemiyordu: depocunun hiçbir yolu kalmıyordu. */
-    const lotless = await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(11), purchasePriceCents: 300 });
+    /* SKT EN YAKIN olsun: liste artık SAYFALI (SKT sırasında ilk 30) ve `beforeEach` her testte iki
+       parti daha biriktiriyor (5 ve 9 gün). 11 günlük parti onların ARKASINDA kalıp ikinci sayfaya
+       düşüyordu — testin konusu lotsuz partinin görünürlüğü, sayfa sınırı değil. */
+    const lotless = await stocks.insert({ warehouseId, variantId, physicalQty: 3, expiryDate: dayOffset(1), purchasePriceCents: 300 });
 
     const { batches } = await listWarehouseBatches(db, { warehouseId });
 
@@ -295,11 +298,37 @@ describe('raf listesi', () => {
     expect(nonsense.batches).toHaveLength(0);
   });
 
-  it('tavana dayanan liste bunu SÖYLER — sessiz kırpma yok', async () => {
-    const { batches, truncated } = await listWarehouseBatches(db, { warehouseId, limit: 1 });
+  /*
+    SAYFALAMA (kullanıcı bulgusu 03.09: *"tüm stok yükleniyor, parça parça yüklenmesi gerekir"*).
+    Liste eskiden PENCEREYDİ: deponun tamamı okunuyor, ilk N satır veriliyor, gerisi `truncated`
+    diye söyleniyordu. Artık keyset: sayfa gelir, imleç sonrakini açar, imleç `null` olunca biter.
+  */
+  it('SAYFA SAYFA gelir — imleç sonraki sayfayı açar, tekrar yok', async () => {
+    const first = await listWarehouseBatches(db, { warehouseId, limit: 1 });
+    expect(first.batches).toHaveLength(1);
+    expect(first.nextCursor).not.toBeNull();
 
-    expect(batches).toHaveLength(1);
-    expect(truncated).toBe(true);
+    const second = await listWarehouseBatches(db, { warehouseId, limit: 1, cursor: first.nextCursor ?? undefined });
+    expect(second.batches).toHaveLength(1);
+    // İkinci sayfa BAŞKA partidir: imleç kaymadı, satır tekrarlanmadı.
+    expect(second.batches[0]?.stockId).not.toBe(first.batches[0]?.stockId);
+  });
+
+  it('ALAN süzgeci sorguda uygulanır — başka dolabın partisi sayfaya hiç girmez', async () => {
+    const areas = new StorageAreaService(db);
+    const shelf = await areas.insert({ warehouseId, name: `Sayfa rafı ${stamp}`, kind: 'frozen' });
+    const onShelf = await stocks.insert({
+      warehouseId,
+      variantId,
+      physicalQty: 4,
+      expiryDate: dayOffset(3),
+      purchasePriceCents: 300,
+      storageAreaId: shelf.id,
+    });
+
+    const { batches } = await listWarehouseBatches(db, { warehouseId, storageAreaId: shelf.id, limit: 30 });
+
+    expect(batches.map((batch) => batch.stockId)).toEqual([onShelf.id]);
   });
 });
 

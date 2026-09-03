@@ -318,10 +318,17 @@ export function resolveBatchCode(code: string): Promise<ApiResult<z.infer<typeof
  * yapıştırılmamış). Boş sorgu BOŞ LİSTE DEĞİL, ilk pencereyi döner: depocu ekranı açtığında
  * karşısında bir liste bulmalı — aramaya ancak listede göremezse başvurur.
  */
-export function fetchWarehouseBatches(
-  query: string,
-): Promise<ApiResult<z.infer<typeof WarehouseBatchesResponseSchema>>> {
-  return warehouseFetch(`/api/v1/warehouse/batches?q=${encodeURIComponent(query)}`, WarehouseBatchesResponseSchema);
+export function fetchWarehouseBatches(input: {
+  query: string;
+  /** Dolap süzgeci — depocunun önünde durduğu alan (kullanıcı kararı 03.09: çipler FİLTRE). */
+  storageAreaId?: string | null;
+  /** Sonraki sayfanın opak imleci; verilmezse liste baştan gelir. */
+  cursor?: string | null;
+}): Promise<ApiResult<z.infer<typeof WarehouseBatchesResponseSchema>>> {
+  const params = new URLSearchParams({ q: input.query });
+  if (input.storageAreaId != null) params.set('area', input.storageAreaId);
+  if (input.cursor != null) params.set('cursor', input.cursor);
+  return warehouseFetch(`/api/v1/warehouse/batches?${params.toString()}`, WarehouseBatchesResponseSchema);
 }
 
 /**

@@ -28,8 +28,8 @@ jest.mock('expo-router', () => {
 });
 
 const mockFetchBatches = jest.fn<
-  Promise<{ data: { batches: ResolvedBatchContract[]; truncated: boolean } | null; error: string | null }>,
-  []
+  Promise<{ data: { batches: ResolvedBatchContract[]; nextCursor: string | null } | null; error: string | null }>,
+  [{ query: string; storageAreaId?: string | null; cursor?: string | null }]
 >();
 const mockRecordAdjustment = jest.fn<
   Promise<{ data: unknown; error: string | null }>,
@@ -39,7 +39,8 @@ const mockFetchAreas = jest.fn<Promise<{ data: { areas: WarehouseAreaContract[] 
 const mockMarkSeen = jest.fn<Promise<{ data: unknown; error: string | null }>, [string, string]>();
 
 jest.mock('@/lib/api/warehouse', () => ({
-  fetchWarehouseBatches: () => mockFetchBatches(),
+  fetchWarehouseBatches: (input: { query: string; storageAreaId?: string | null; cursor?: string | null }) =>
+    mockFetchBatches(input),
   fetchWarehouseAreas: () => mockFetchAreas(),
   markBatchSeen: (stockId: string, areaId: string) => mockMarkSeen(stockId, areaId),
   resolveBatchCode: jest.fn(),
@@ -75,7 +76,7 @@ beforeEach(() => {
   resetActiveArea();
   mockBack.mockReset();
   mockFetchBatches.mockReset();
-  mockFetchBatches.mockResolvedValue({ data: { batches: [batch()], truncated: false }, error: null });
+  mockFetchBatches.mockResolvedValue({ data: { batches: [batch()], nextCursor: null }, error: null });
   mockFetchAreas.mockReset();
   mockFetchAreas.mockResolvedValue({
     data: {
@@ -170,7 +171,7 @@ describe('D4 · Sayım', () => {
     mockFetchBatches.mockResolvedValue({
       data: {
         batches: [batch(), batch({ stockId: '00000000-0000-4000-8000-000000000402', batchNo: 'PRT-STR-26-0402', lotNumber: null })],
-        truncated: false,
+        nextCursor: null,
       },
       error: null,
     });
@@ -356,6 +357,59 @@ describe('D4 · Sayım', () => {
 
     await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalled());
     expect(mockMarkSeen).not.toHaveBeenCalled();
+  });
+
+  /*
+    DOLAP = FİLTRE (kullanıcı kararı 03.09, ikinci tur): çip seçilince süzgeç KAPIYA gider, liste
+    baştan kurulur. Önce yalnız sıralıyordu; gerekçesi ve düşüşü hook künyesinde.
+  */
+  it('dolap seçilince süzgeç KAPIYA gider ve liste baştan kurulur', async () => {
+    await render(<StockCountScreen />);
+    await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
+    expect(mockFetchBatches).toHaveBeenLastCalledWith({ query: '', storageAreaId: null });
+
+    await fireEvent.press(screen.getByTestId(`warehouse-stock-count-picker-area-${FREEZER_1}`));
+
+    await waitFor(() => expect(mockFetchBatches).toHaveBeenLastCalledWith({ query: '', storageAreaId: FREEZER_1 }));
+  });
+
+  /*
+    SAYFA SAYFA (kullanıcı bulgusu 03.09: *"tüm stok yükleniyor, parça parça yüklenmesi gerekir"*).
+    Liste dibe yaklaşınca sonraki sayfa imleçle istenir ve satırlar EKLENİR — üstteki satırlar
+    kaybolmaz, depocu okuduğu yeri yitirmez.
+  */
+  it('dibe inince sonraki sayfa İMLEÇLE istenir ve satırlar eklenir', async () => {
+    const second = batch({ stockId: '00000000-0000-4000-8000-000000000402', batchNo: 'PRT-STR-26-0402' });
+    mockFetchBatches.mockResolvedValueOnce({ data: { batches: [batch()], nextCursor: 'imlec-1' }, error: null });
+    mockFetchBatches.mockResolvedValueOnce({ data: { batches: [second], nextCursor: null }, error: null });
+
+    await render(<StockCountScreen />);
+    await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
+
+    await fireEvent.scroll(screen.getByTestId('warehouse-stock-count-picker-body'), {
+      nativeEvent: { contentOffset: { y: 900 }, contentSize: { height: 1000 }, layoutMeasurement: { height: 100 } },
+    });
+
+    await waitFor(() =>
+      expect(mockFetchBatches).toHaveBeenLastCalledWith({ query: '', storageAreaId: null, cursor: 'imlec-1' }),
+    );
+    // İki satır DA listede: sayfa eklenir, ezilmez.
+    expect(screen.getByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401')).toBeOnTheScreen();
+    expect(screen.getByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000402')).toBeOnTheScreen();
+  });
+
+  /* PARTİNİN YERİ KARTTA (kullanıcı isteği 03.09) ve SAYIMDA düzeltilebilir: depocu partiyi başka
+     dolapta bulduysa kaydı o an düzeltir. Düşümde bu kapı yok (o dosyanın kendi testi). */
+  it('kart partinin YERİNİ gösterir; sayımda çekmeceden düzeltilir', async () => {
+    await selectBatch();
+    expect(screen.getByTestId('warehouse-stock-count-context-area')).toHaveTextContent('Derin dondurucu 2');
+
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-context-area-change'));
+    await waitFor(() => expect(screen.getByTestId(`warehouse-stock-count-area-option-${FREEZER_1}`)).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId(`warehouse-stock-count-area-option-${FREEZER_1}`));
+
+    await waitFor(() => expect(mockMarkSeen).toHaveBeenCalledWith('00000000-0000-4000-8000-000000000401', FREEZER_1));
+    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-context-area')).toHaveTextContent('Derin dondurucu 1'));
   });
 
   it('dolap seçilmemişse adres yazımı yok — seçim isteğe bağlı', async () => {

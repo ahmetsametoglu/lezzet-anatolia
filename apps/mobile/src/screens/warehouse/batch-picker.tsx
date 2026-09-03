@@ -1,14 +1,11 @@
-import { useEffect } from 'react';
-import { Text, View } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProductThumb } from '@/components/operations/product-thumb';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsSurface } from '@/components/operations/surface';
-import { PressableSurface } from '@/components/ui/pressable-surface';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { TextField } from '@/components/ui/text-field';
@@ -16,7 +13,7 @@ import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
-import { useBatchScan } from './use-batch-scan.hook';
+import type { UseBatchScanResult } from './use-batch-scan.hook';
 import type { UseBatchSubjectResult } from './use-batch-subject.hook';
 import { shortDate } from './warehouse-format';
 
@@ -27,16 +24,16 @@ import { shortDate } from './warehouse-format';
   Sayım ve stok düşümü aynı soruyla başlıyor; ayrı ayrı çizilseydi bir gün ayrışırlardı. Değişen
   yalnız CÜMLE (*"Hangi parti sayılacak?"* ↔ *"Hangi partiden düşülecek?"*) ve o da prop.
 
-  ── OKUTMA ÖNCE, LİSTE SONRA ────────────────────────────────────────────────
-  Sıra tasarımın sırası ve doğru olan bu: rafta duran depocunun en hızlı yolu etiketi okutmaktır.
-  Liste onun YEDEĞİ — etiket yırtılmış, silinmiş ya da hiç yapıştırılmamışsa. İkisi yer değiştirseydi
-  hızlı yol ekranın dibinde kalırdı.
+  ── OKUTMA FAB'DA, LİSTE EKRANDA (kullanıcı isteği 03.09) ──────────────────
+  Okutma en hızlı yoldur ve öyle kalmalı; ama listenin üstünde tam genişlikte bir şerit olarak
+  duruyordu ve ekranın ilk üçte birini yiyordu (soru bloğu + düğme + çipler + arama). Şimdi ekranın
+  sağ altında sabit bir FAB: kaydırırken de erişilir, listeyi hiç itmiyor. Çekmece ve çoğul-eşleşme
+  listesi BURADA kaldı — onlar listenin işi.
 
-  ── "HANGİ DOLABIN ÖNÜNDESİN" (kullanıcı kararı 03.09) ──────────────────────
-  Okutma ile liste arasında bir çip sırası: depocu durduğu dolabı bir kez söyler, o dolapta
-  okuttuğu/seçtiği parti oraya yazılır (`use-batch-subject` künyesi). İSTEĞE BAĞLI — seçmeden de
-  her şey çalışır; seçince o dolabın partileri listenin başına gelir. Depoda alan tanımlı değilse
-  sıra hiç çizilmez: olmayan bir seçeneği sormak, boş bir soru sormaktır.
+  ── "HANGİ DOLABIN ÖNÜNDESİN" = FİLTRE (kullanıcı kararı 03.09) ────────────
+  Yatayda kayan bir çip sırası; seçilen dolabın partileri SÜZÜLÜR (önce yalnız öne alınıyordu —
+  gerekçesi ve düşüşü `use-batch-subject` künyesinde). İSTEĞE BAĞLI: seçmeden de her şey çalışır,
+  aynı çipe ikinci dokunuş süzgeci kaldırır. Depoda alan tanımlı değilse sıra hiç çizilmez.
 
   ── SATIR: ALAN ROZETTE, ADET SAĞDA (kullanıcı bulgusu 03.09) ───────────────
   Eski satır *"NE-001 · Derin dondurucu 1 · sistemde 14"* diyordu ve kullanıcı "dondurucuda 1 var,
@@ -57,8 +54,10 @@ import { shortDate } from './warehouse-format';
   · **boş** — sorgu varsa *"bu terimle eşleşen yok"*, yoksa *"bu depoda stoğu duran parti yok"*.
     İki cümle ayrı, çünkü ikisi ayrı şey: biri aramanın sonucu, öteki deponun hâli.
 
-  Tavana dayanan liste ayrıca SÖYLER (`truncated`): sessiz kırpma, depocunun "listede yok" deyip
-  yanlış partiye gitmesi demekti (CLAUDE §1).
+  ── LİSTE SAYFA SAYFA GELİR (kullanıcı bulgusu 03.09) ──────────────────────
+  Eskiden deponun TAMAMI tek turda okunuyordu (`truncated` ile "ilk 60" deniyordu). Artık keyset
+  sayfalama: ekran dibe yaklaşınca sonraki sayfa gelir, altta tek satır "yükleniyor" der. Sayfa
+  iskeleti DEĞİL — iskelet listeyi gizler ve depocu okuduğu satırı kaybederdi.
 */
 
 const t = warehouseCopy;
@@ -74,51 +73,39 @@ interface BatchPickerProps {
   /** Ekranın kendi kuralı (D4b: *"süresi geçmiş mal buraya girmez"*); verilmezse çizilmez. */
   footnote?: string;
   subject: UseBatchSubjectResult;
+  /**
+   * Okutma durumu — ekrandan gelir (03.09). Hook eskiden BURADAYDI ve okutma düğmesi de listenin
+   * üstünde bir şeritti; kullanıcı okutmayı FAB'a taşıttı ve FAB kaydırılan içeriğin İÇİNDE
+   * duramaz (`scan-fab` künyesi: konum dış kaba). Hook ekrana çıkınca çekmece ve seçim listesi
+   * burada kaldı — onlar listenin işi, düğme ekranın.
+   */
+  scan: UseBatchScanResult;
   testID: string;
 }
 
-export function BatchPicker({ title, body, footnote, subject, testID }: BatchPickerProps) {
-  /*
-    OKUTMA DA BURADA (02.09): iki ekranın ikisi de aynı çekmeceyi, aynı çoğul-eşleşme sorusunu ve
-    aynı bildirim kanalını istiyordu. Ekranlarda bırakılsaydı üç parça (çekmece · seçim listesi ·
-    toast köprüsü) iki dosyada birden yaşardı — kopyanın en sinsi türü, çünkü ikisi de çalışır.
-  */
-  const scan = useBatchScan(subject.select);
-
-  /* BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09): ekrana yapıştırılan satır yok, uygulamanın
-     tek bildirim dili var. `toastInfo` SESSİZ — titreşimi `useNotice` tonuna göre zaten veriyor. */
-  useEffect(() => {
-    if (scan.notice !== null) toastInfo(scan.notice.text);
-  }, [scan.notice]);
-
+export function BatchPicker({ title, body, footnote, subject, scan, testID }: BatchPickerProps) {
   return (
     <View style={styles.block} testID={testID}>
       <OperationsNoticeBlock variant="empty" title={title} description={body} testID={`${testID}-prompt`} />
 
-      {/* OKUTMA HIZLI YOL: dolu zeytin düğme — listeden görsel olarak da ayrı durur. */}
-      <PressableSurface
-        onPress={scan.openScan}
-        feedback="shadow"
-        style={styles.scanCta}
-        accessibilityLabel={t.adjustment.scan.cta}
-        testID={`${testID}-scan`}
-      >
-        <Text style={styles.scanCtaLabel}>{t.adjustment.scan.cta}</Text>
-      </PressableSurface>
-
       {subject.areas.length === 0 ? null : (
         <View style={styles.areaBlock} testID={`${testID}-areas`}>
           <Text style={styles.heading}>{t.adjustment.area.heading}</Text>
-          <View style={styles.chipRow}>
-            {subject.areas.map((area) => (
-              <OperationsChoiceChip
-                key={area.id}
-                label={area.name}
-                selected={subject.activeAreaId === area.id}
-                onPress={() => subject.chooseArea(area.id)}
-                testID={`${testID}-area-${area.id}`}
-              />
-            ))}
+          {/* ÇİPLER YATAYDA KAYAR (kullanıcı isteği 03.09): sarmalı ızgara altı dolapta üç satıra
+              çıkıyor ve listeyi ekranın dışına itiyordu. Yatay şerit yüksekliği sabit tutuyor;
+              `bleed` kenar boşluğunu delip çipleri ekranın kenarına kadar kaydırıyor. */}
+          <View style={styles.chipBleed}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
+              {subject.areas.map((area) => (
+                <OperationsChoiceChip
+                  key={area.id}
+                  label={area.name}
+                  selected={subject.activeAreaId === area.id}
+                  onPress={() => subject.chooseArea(area.id)}
+                  testID={`${testID}-area-${area.id}`}
+                />
+              ))}
+            </ScrollView>
           </View>
           <Text style={styles.hint}>{t.adjustment.area.hint}</Text>
         </View>
@@ -215,9 +202,11 @@ export function BatchPicker({ title, body, footnote, subject, testID }: BatchPic
         </OperationsSurface>
       ))}
 
-      {subject.truncated ? (
-        <Text style={styles.hint} testID={`${testID}-truncated`}>
-          {fillCopy(t.adjustment.picker.truncated, { n: String(subject.batches.length) })}
+      {/* SONRAKİ SAYFA YOLDA — listenin ALTINDA tek satır; iskelet DEĞİL (o listeyi gizlerdi ve
+          depocu okuduğu satırı kaybederdi). Sayfa gelince satırlar altına eklenir. */}
+      {subject.loadingMore ? (
+        <Text style={styles.hint} testID={`${testID}-loading-more`}>
+          {t.adjustment.picker.loadingMore}
         </Text>
       ) : null}
 
@@ -289,18 +278,6 @@ const styles = StyleSheet.create({
   block: {
     gap: operationsTheme.space.md,
   },
-  scanCta: {
-    height: operationsTheme.size.controlLg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors['olive-dark'],
-  },
-  scanCtaLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.button,
-    color: operationsTheme.colors.cream,
-  },
   heading: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
     fontSize: operationsTheme.text.eyebrow,
@@ -311,10 +288,15 @@ const styles = StyleSheet.create({
   areaBlock: {
     gap: operationsTheme.space.md,
   },
+  /* Çip şeridi kenar boşluğunu DELER: yatay kayan bir sıra, ekranın kenarında bitmiş görünmeli —
+     içeride bitince "liste burada bitti" der ve depocu kaydırmayı denemez (ruler'ın aynı kararı). */
+  chipBleed: {
+    marginHorizontal: -operationsTheme.space['6xl'],
+  },
   chipRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: operationsTheme.space.md,
+    paddingHorizontal: operationsTheme.space['6xl'],
   },
   row: {
     flexDirection: 'row',

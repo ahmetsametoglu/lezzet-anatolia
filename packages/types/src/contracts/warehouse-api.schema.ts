@@ -1408,8 +1408,17 @@ export type ResolveBatchResponse = z.infer<typeof ResolveBatchResponseSchema>;
  */
 export const WarehouseBatchesResponseSchema = z.object({
   batches: z.array(ResolvedBatchSchema),
-  /** `true` = tavana dayanıldı, liste TAM DEĞİL — ekran "aramayla daralt" der. */
-  truncated: z.boolean(),
+  /**
+   * Sonraki sayfanın imleci — **opak dize**, istemci yorumlamaz, `?cursor=` diye geri verir
+   * (katalog/bildirim uçlarının aynı sözleşmesi). `null` = liste bitti.
+   *
+   * 03.09'da `truncated`ın yerini aldı: liste eskiden PENCEREYDİ (ilk 60 satır) ve tavana
+   * dayanınca ekran *"aramayla daralt"* diyordu — depoda 154 parti varken tel hepsini taşıyor,
+   * ekran 60'ını gösteriyordu. Kullanıcı bulgusu: *"tüm stok yükleniyor, parça parça yüklenmesi
+   * gerekir."* Artık `CLAUDE §1`'in kuralı uygulanıyor: veriyle büyüyen küme → keyset + sonsuz
+   * kaydırma.
+   */
+  nextCursor: z.string().nullable(),
 });
 export type WarehouseBatchesResponse = z.infer<typeof WarehouseBatchesResponseSchema>;
 

@@ -3,6 +3,7 @@ import { documentPrefixFor, remainingShelfLifePercent } from '@lezzet/domain-cor
 import type {
   AdjustBatchResult,
   CaseSizeContract,
+  KeysetCursor,
   ProductDateType,
   StockBatchDetail,
   StockDirection,
@@ -46,13 +47,23 @@ import { rpcRejectionMessage } from './rpc-error';
 export type WarehouseReason = StockWriteOffReason | 'count_diff';
 
 /**
- * Raf listesinin tavanı — seçicinin penceresi, sayfa değil (`listWarehouseBatches`).
+ * Raf listesinin SAYFA BOYU (kullanıcı bulgusu 03.09: *"tüm stok yükleniyor, parça parça
+ * yüklenmesi gerekir"*).
  *
- * 60: bir deponun rafında aynı anda duran parti sayısı bu mertebede (yerel veriden ÇIKARIM
- * yapılmadı — CLAUDE.md'nin yasağı; sayı bir tavan, bir ölçüm değil). Dolduğunda ekran "aramayla
- * daralt" der; parametrik, çağıran değiştirebilir.
+ * Liste eskiden pencereliydi: deponun TAMAMI okunuyor, elde süzülüyor ve ilk 60 satır veriliyordu
+ * — yani ekran 60 satır gösterse de tel 154 partiyi taşıyordu ve depo büyüdükçe o sayı büyüyecekti.
+ * Artık keyset sayfalama var (`CLAUDE §1`: veriyle büyüyen küme → imleç + sonsuz kaydırma).
+ *
+ * 30 `DEFAULT_PAGE_SIZE` ile aynı; parametrik, çağıran değiştirebilir.
  */
-const BATCH_LIST_LIMIT = 60;
+const BATCH_PAGE_SIZE = 30;
+
+/**
+ * Aramanın tarayacağı EN ÇOK sayfa. Ad süzgeci elde uygulanıyor (ürün adı çok dilli JSON, parti
+ * sorgusuna girmiyor); tavansız bir arama, eşleşme bulamadığında deponun tamamını sayfa sayfa
+ * dolaşırdı. Beş sayfa = 150 parti; ötesini depocu terimi daraltarak bulur.
+ */
+const SEARCH_SCAN_PAGES = 5;
 
 /** Depocunun seçimi → defterin hareket tipi. */
 function kindOf(reason: WarehouseReason): Extract<StockMovementKind, 'write_off' | 'count_diff'> {
@@ -328,24 +339,64 @@ async function toResolvedBatches(
  */
 export async function listWarehouseBatches(
   db: SupabaseClient,
-  input: { warehouseId: string; query?: string; limit?: number; now?: Date },
-): Promise<{ batches: ResolvedBatch[]; truncated: boolean }> {
-  const limit = input.limit ?? BATCH_LIST_LIMIT;
-  // Küme fiziksel gerçekle sınırlı (servis künyesi): depoda duran parti sayısı kadar, mal
-  // tükendikçe erir. Sayfalanmıyor — süzgeci elde uygulamak için TAM kümeye ihtiyaç var.
-  const rows = await new StockService(db).listInStockDetailed(undefined, [input.warehouseId]);
-  const resolved = await toResolvedBatches(db, rows, input.warehouseId, input.now ?? new Date());
-
+  input: { warehouseId: string; query?: string; storageAreaId?: string; limit?: number; cursor?: KeysetCursor; now?: Date },
+): Promise<{ batches: ResolvedBatch[]; nextCursor: KeysetCursor | null }> {
+  const limit = input.limit ?? BATCH_PAGE_SIZE;
+  const stock = new StockService(db);
   const term = (input.query ?? '').trim().toLocaleLowerCase('tr-TR');
-  const matched =
-    term.length === 0
-      ? resolved
-      : resolved.filter(
-          (batch) =>
-            batch.name.toLocaleLowerCase('tr-TR').includes(term) ||
-            batch.batchNo.toLocaleLowerCase('tr-TR').includes(term) ||
-            (batch.lotNumber ?? '').toLocaleLowerCase('tr-TR').includes(term),
-        );
 
-  return { batches: matched.slice(0, limit), truncated: matched.length > limit };
+  /*
+    ── ARAMASIZ YOL: DÜZ SAYFA ────────────────────────────────────────────────
+    Depo + alan süzgeci sorguda, sıra SKT'de, imleç son satırın yerini işaret ediyor. Otuz satır
+    çeker, otuz satır çözer, imleci verir.
+  */
+  if (term.length === 0) {
+    const page = await stock.pageInStockDetailed({
+      warehouseId: input.warehouseId,
+      storageAreaId: input.storageAreaId,
+      limit,
+    cursor: input.cursor,
+    });
+    return {
+      batches: await toResolvedBatches(db, page.rows, input.warehouseId, input.now ?? new Date()),
+      nextCursor: page.nextCursor,
+    };
+  }
+
+  /*
+    ── ARAMALI YOL: SAYFA SAYFA TARA, İSTENEN KADARINI TOPLA ──────────────────
+    Ad `product` tablosunda ve çok dilli bir JSON; parti sorgusuna eklenemez (servis künyesi), yani
+    ad araması ELDE yapılıyor. Ama artık TÜM depoyu belleğe almıyor: sayfa çeker, süzer, istenen
+    sayıya ulaşınca durur. Tavan (`SEARCH_SCAN_PAGES`) tarama derinliğini sınırlıyor — sonsuz
+    kaydırma araması bir gün 154 partiyi 154 sayfada dolaşmasın.
+
+    İmleç TARANAN son satırındır, EŞLEŞENİN değil: bir sonraki tur kaldığı yerden tarar. Eşleşenin
+    imlecini verseydik, aradaki eşleşmeyen satırlar bir daha hiç taranmazdı.
+  */
+  const matched: ResolvedBatch[] = [];
+  let cursor = input.cursor;
+  let scanned = 0;
+  while (scanned < SEARCH_SCAN_PAGES) {
+    const page = await stock.pageInStockDetailed({
+      warehouseId: input.warehouseId,
+      storageAreaId: input.storageAreaId,
+      limit,
+      cursor,
+    });
+    scanned += 1;
+    const resolved = await toResolvedBatches(db, page.rows, input.warehouseId, input.now ?? new Date());
+    for (const batch of resolved) {
+      if (
+        batch.name.toLocaleLowerCase('tr-TR').includes(term) ||
+        batch.batchNo.toLocaleLowerCase('tr-TR').includes(term) ||
+        (batch.lotNumber ?? '').toLocaleLowerCase('tr-TR').includes(term)
+      ) {
+        matched.push(batch);
+      }
+    }
+    cursor = page.nextCursor ?? undefined;
+    if (page.nextCursor === null || matched.length >= limit) break;
+  }
+
+  return { batches: matched, nextCursor: cursor ?? null };
 }

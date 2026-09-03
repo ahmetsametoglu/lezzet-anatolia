@@ -8,9 +8,11 @@ import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
+import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSurface } from '@/components/operations/surface';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
@@ -21,7 +23,9 @@ import { BatchContextCard } from './batch-context-card';
 import { BatchPicker } from './batch-picker';
 import { qtySheetCopy, warehouseCopy } from './copy';
 import { useAdjustment } from './use-adjustment.hook';
+import { useBatchScan } from './use-batch-scan.hook';
 import { useBatchSubject } from './use-batch-subject.hook';
+import { useSubjectBack } from './use-subject-back.hook';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -55,10 +59,14 @@ export function StockCountScreen() {
   const subject = useBatchSubject();
   const adjustment = useAdjustment();
   const { offline } = useWarehouseStatus();
+  /* OKUTMA EKRANDA (03.09): düğme FAB'a taşındı ve FAB kaydırılan içeriğin dışında durmalı. */
+  const scan = useBatchScan(subject.select);
 
   /** Rafta sayılan adet — `null` = HİÇ SAYILMADI (sıfır değil; ayrım kaydın kendisi). */
   const [counted, setCounted] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  /** Partinin yerini düzeltme çekmecesi (kullanıcı isteği 03.09) — yalnız SAYIMDA. */
+  const [areaSheetOpen, setAreaSheetOpen] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
   const batch = subject.subject;
@@ -80,6 +88,10 @@ export function StockCountScreen() {
     if (subject.notice !== null) toastInfo(subject.notice.text);
   }, [subject.notice]);
 
+  useEffect(() => {
+    if (scan.notice !== null) toastInfo(scan.notice.text);
+  }, [scan.notice]);
+
   /*
     PARTİNİN YERİ KAYITTAN SONRA YAZILIR (kullanıcı kararı 03.09).
 
@@ -94,6 +106,11 @@ export function StockCountScreen() {
        her çizimde yeni referans olabilir ve efekt her karede yeniden koşardı. */
     if (adjustment.record !== null && batch !== null) subject.markSeen(batch);
   }, [adjustment.record]);
+
+  /* CİHAZIN GERİ TUŞU da bir adım geri atar (kullanıcı bulgusu 03.09) — sol üstteki okla aynı
+     şey; künye `use-subject-back`te. Sonuç kartındayken kapı KAPALI: orada geri, ekranı terk
+     etmelidir (iş bitti, konu artık bir tutanak). */
+  useSubjectBack(batch !== null && adjustment.record === null, subject.clear);
 
   const header = (
     <OperationsStackHeader
@@ -117,14 +134,29 @@ export function StockCountScreen() {
     return (
       <View style={styles.screen} testID="warehouse-stock-count">
         {header}
-        <FormScroll contentContainerStyle={styles.list} testID="warehouse-stock-count-picker-body">
+        <FormScroll
+          contentContainerStyle={styles.list}
+          onEndReached={subject.loadMore}
+          testID="warehouse-stock-count-picker-body"
+        >
           <BatchPicker
             title={t.adjustment.count.emptyTitle}
             body={t.adjustment.count.emptyBody}
             subject={subject}
+            scan={scan}
             testID="warehouse-stock-count-picker"
           />
         </FormScroll>
+
+        {/* OKUTMA FAB'DA (kullanıcı isteği 03.09): kaydırılan içeriğin DIŞINDA, sağ altta sabit —
+            liste akarken de erişilir ve ekranın üstünü yemiyor. */}
+        <OperationsScanFab
+          icon="scan"
+          onPress={scan.openScan}
+          accessibilityLabel={t.adjustment.scan.cta}
+          label={t.adjustment.scan.fab}
+          testID="warehouse-stock-count-scan"
+        />
       </View>
     );
   }
@@ -160,7 +192,43 @@ export function StockCountScreen() {
       {header}
 
       <FormScroll contentContainerStyle={styles.list} testID="warehouse-stock-count-body">
-        <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-stock-count-context" />
+        <BatchContextCard
+          batch={batch}
+          onChange={subject.clear}
+          /* YER DEĞİŞTİRME SAYIMDA AÇIK, DÜŞÜMDE DEĞİL (kullanıcı kararı 03.09): rafı sayan
+             depocu partiyi başka dolapta bulabilir ve kaydı o an düzeltmesi işin parçasıdır.
+             Düşümde iş malın eksilmesi; yer yine görünür ama dokunulmaz. */
+          onChangeArea={subject.areas.length === 0 ? undefined : () => setAreaSheetOpen(true)}
+          testID="warehouse-stock-count-context"
+        />
+
+        {/* PARTİ HANGİ DOLAPTA — açık beyan, sessiz yazım yok. Seçilen alan ANINDA kayda gider
+            (`assignArea`); "rafı belirsiz" seçeneği YOK, çünkü bilinen bir yeri silmek bir
+            düzeltme değil bilgi kaybıdır. */}
+        <BottomSheet
+          visible={areaSheetOpen}
+          title={t.adjustment.area.sheetTitle}
+          onClose={() => setAreaSheetOpen(false)}
+          testID="warehouse-stock-count-area-sheet"
+        >
+          <Text style={styles.hint}>{t.adjustment.area.sheetHint}</Text>
+          {subject.areas.map((area) => (
+            <PressableSurface
+              key={area.id}
+              onPress={() => {
+                subject.assignArea(batch, area.id);
+                setAreaSheetOpen(false);
+              }}
+              feedback="scale"
+              selected={batch.storageAreaId === area.id}
+              style={[styles.areaOption, batch.storageAreaId === area.id ? styles.areaOptionSet : null]}
+              accessibilityLabel={area.name}
+              testID={`warehouse-stock-count-area-option-${area.id}`}
+            >
+              <Text style={batch.storageAreaId === area.id ? styles.areaOptionLabelSet : styles.areaOptionLabel}>{area.name}</Text>
+            </PressableSurface>
+          ))}
+        </BottomSheet>
 
         <View style={styles.section}>
           <Text style={styles.heading}>{t.adjustment.count.qtyHeading}</Text>
@@ -366,6 +434,30 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.muted,
+  },
+  /** Çekmecedeki alan satırı — lot önerisinin aynı kalıbı (tek dokunuş yazar ve kapatır). */
+  areaOption: {
+    height: operationsTheme.size.controlLg,
+    justifyContent: 'center',
+    paddingHorizontal: operationsTheme.space['3xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.control,
+    backgroundColor: operationsTheme.colors.card,
+  },
+  areaOptionSet: {
+    borderColor: operationsTheme.colors['olive-line'],
+    backgroundColor: operationsTheme.colors['olive-bg'],
+  },
+  areaOptionLabel: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors.muted,
+  },
+  areaOptionLabelSet: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['field-label'],
+    color: operationsTheme.colors['olive-dark'],
   },
   sticky: {
     paddingHorizontal: operationsTheme.space['6xl'],

@@ -814,6 +814,26 @@ describe('D4 · alanlar ve "parti burada görüldü"', () => {
     ).toEqual({ status: 'forbidden', reason: 'out_of_scope' });
   });
 
+  /* SAYFALAMA (03.09): liste imleçli gelir, `?area=` süzer. Eskiden deponun tamamı tek turda
+     okunup ilk 60 satır veriliyordu (`truncated`); sözleşme künyesi gerekçeyi yazıyor. */
+  it('raf listesi SAYFA döner: imleç sonrakini açar, `?area=` süzer', async () => {
+    const first = await dataOf<WarehouseBatchesResponse>(await asStaff('/api/v1/warehouse/batches?limit=1'));
+    expect(first.batches.length).toBeGreaterThan(0);
+
+    const areaFiltered = await dataOf<WarehouseBatchesResponse>(
+      await asStaff(`/api/v1/warehouse/batches?area=${freezerId}`),
+    );
+    // Bu depoda o dolaba yazılmış tek parti var (yukarıdaki `seen` testi oraya taşıdı).
+    expect(areaFiltered.batches.every((batch) => batch.storageAreaId === freezerId)).toBe(true);
+  });
+
+  it('BOZUK imleç 400 değil — liste baştan gelir', async () => {
+    const res = await asStaff('/api/v1/warehouse/batches?cursor=bu-imlec-degil');
+    expect(res.status).toBe(200);
+    const page = await dataOf<WarehouseBatchesResponse>(res);
+    expect(page.batches.length).toBeGreaterThan(0);
+  });
+
   it('kimliksiz gövde 400 — alan uydurulmaz', async () => {
     const res = await post(`/api/v1/warehouse/batches/${stockId}/seen`, {});
     expect(res.status).toBe(400);

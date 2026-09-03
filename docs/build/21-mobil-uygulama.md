@@ -11135,3 +11135,45 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama.** Tip · lint · knip temiz; hub + düşüm + sayaç + mal kabul testleri (85) yeşil. Tam
   paket sonucu commit notunda. Cihazda ölçüldü (Oppo): hub'da D4b aşağı ok, D4 üç çizgi; düşüm
   satırında orta hedef ± ikilisinden geniş, "sebep seç" alanı daraldı.
+
+- [x] (21.242) **D4/D4b SEÇİCİ BAŞTAN: liste SAYFA SAYFA · dolap FİLTRE · okutma FAB'da · çipler yatayda · partinin yeri KARTTA (sayımda düzeltilir, düşümde salt okunur) · cihazın geri tuşu bir adım geri atar** (kullanıcı kararları 03.09)
+  `touches:` `packages/database/src/services/stock.service.ts` · `packages/application/src/warehouse/{adjustment.ts,adjustment.test.ts}` · `packages/types/src/contracts/warehouse-api.schema.ts` · `apps/mobile-api/src/api/v1/{warehouse.ts,warehouse.test.ts}` · `apps/mobile/src/lib/api/warehouse.ts` · `apps/mobile/src/components/ui/form-scroll.tsx` · `apps/mobile/src/screens/warehouse/{use-batch-subject.hook.ts,use-subject-back.hook.ts,batch-picker.tsx,batch-context-card.tsx,stock-count-screen.tsx,write-off-screen.tsx,messages.json,*.test.tsx}`
+
+  Altı bulgu tek turda; hepsi aynı iki ekranın (D4 sayım · D4b düşüm) seçici ve kart yüzeyi.
+
+  **1 · LİSTE SAYFALANDI.** Kullanıcı: *"tüm stok yükleniyor galiba, parça parça yüklenmesi
+  gerekir."* Ölçüldü ve doğru: `listWarehouseBatches` deponun TAMAMINI okuyup (`listInStockDetailed`)
+  elde süzüyor, ilk 60 satırı veriyor, gerisini `truncated` diye söylüyordu — Strasbourg'da 154
+  parti, yani tel 154 satır taşıyıp ekran 60'ını gösteriyordu. `CLAUDE §1`'in kuralı zaten yazılıydı
+  (veriyle büyüyen küme → keyset + sonsuz kaydırma). Yeni okuma `pageInStockDetailed` (imleçli, alan
+  süzgeci SORGUDA); `truncated` yerine `nextCursor`. Aramalı yol sayfa sayfa TARAR (ad çok dilli JSON,
+  parti sorgusuna girmiyor) ve `SEARCH_SCAN_PAGES` ile tavanı var. `FormScroll` `onEndReached`
+  kazandı — `FlatList`e geçilmedi: liste karma (başlık + çip + arama + satır), kazancı olmayan
+  yeniden yazım olurdu.
+
+  **2 · DOLAP ARTIK FİLTRE.** Önce yalnız SIRALIYORDU ve gerekçesi *"taşınan parti listeden düşerse
+  seçilemez"*di. O gerekçe düştü: taşıma artık seçimle değil, kartın içinden açıkça yapılıyor.
+  Süzgeç KAPIDA (`?area=`) — sayfalanan bir listeyi elde süzmek "otuz istedim, dördü geldi" demekti.
+
+  **3 · OKUTMA FAB'DA.** Tam genişlikte şerit ekranın ilk üçte birini yiyordu (soru bloğu + düğme +
+  çipler + arama). `OperationsScanFab` sağ altta sabit; hook ekrana çıktı (FAB kaydırılan içeriğin
+  içinde duramaz — `scan-fab` künyesi), çekmece ve çoğul-eşleşme listesi seçicide kaldı.
+
+  **4 · ÇİPLER YATAYDA KAYIYOR.** Altı dolapta sarmalı ızgara üç satıra çıkıp listeyi ekran dışına
+  itiyordu; şerit yüksekliği sabitliyor, `bleed` ile kenara kadar kayıyor.
+
+  **5 · PARTİNİN YERİ KARTTA.** Kullanıcı: *"sayımın/düşümün içine girince ürün nerede olduğu
+  yazsın; sayımda yer değiştirebilsin, düşümde mantıklı değil ama görünür olsun."* Künye satırındaki
+  `{area}` kaldırıldı (üç bilginin arasında kayboluyordu), yerine kendi satırında zeytin rozet.
+  Sayımda yanında "değiştir →" — çekmeceden alan seçilir, `assignArea` o an yazar. Düşümde kapı
+  YOK, rozet var.
+
+  **6 · CİHAZIN GERİ TUŞU.** Kullanıcı: *"cihazın kendi geri tuşunu kullandığım zaman depo ekranına
+  gidiyorum."* Sol üstteki ok iki hâli ayırıyordu (parti seçiliyse bir adım geri), donanım tuşu
+  bilmiyordu. `useSubjectBack`: konu seçiliyken `BackHandler` olayı tüketir ve seçiciye döner; sonuç
+  kartında kapı kapalı (iş bitti, geri ekranı terk etmeli).
+
+  **Doğrulama.** Tip · lint · knip · docs:check temiz. Yeni testler: uygulama katmanı 2 (sayfa
+  imleci · alan süzgeci), API 2 (sayfa + `?area=` · bozuk imleç 200), sayım ekranı 3 (filtre kapıya
+  gider · dibe inince imleçle sonraki sayfa ve satırlar EKLENİR · kartta yer ve düzeltme), düşüm 1
+  (yer görünür, kapı yok). Tam paket sonucu commit notunda.

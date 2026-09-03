@@ -11,6 +11,8 @@ import {
   StockWithProductDatesSchema,
   type AvailableStock,
   type AvailableStockTotal,
+  type KeysetCursor,
+  type Page,
   type Stock,
   type StockBatchDetail,
   type StockInsert,
@@ -223,6 +225,38 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
       select: BATCH_DETAIL_SELECT,
       rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
       orderBy: 'expiryDate',
+    });
+  }
+
+  /**
+   * **RAF LİSTESİNİN SAYFASI** — depodaki partiler, SKT sırasında, keyset imleçli (kullanıcı
+   * bulgusu 03.09: *"tüm stok yükleniyor galiba, parça parça yüklenmesi gerekir"*).
+   *
+   * `listInStockDetailed`den ayrı ve ayrı olmak ZORUNDA: o okuma TAM küme ister (yakın-SKT turu bir
+   * partiyi kaçırırsa imha edilecek mal satılır), bu okuma ise bir SEÇİCİYİ besliyor ve depocu
+   * aradığı partiyi listeyi akıtarak buluyor. Aynı metoda `limit` eklemek, tam küme isteyen
+   * çağıranın bir gün sessizce kırpılmış liste almasıydı.
+   *
+   * Süzgeçler SORGUDA: depo (değişmez — `CLAUDE §1`), stoğu duranlar, isteğe bağlı ALAN. Elde
+   * süzmek sayfayı delerdi — otuz satır çekip yirmisini atınca sayfa boyu yalan söyler.
+   *
+   * Arama (`q`) burada YOK: ürün adı `product` tablosunda ve çok dilli bir JSON; bu okumanın
+   * sorgusuna eklenemez. Adı çağıran süzüyor (`listWarehouseBatches` künyesi).
+   */
+  async pageInStockDetailed(input: {
+    warehouseId: string;
+    storageAreaId?: string;
+    limit: number;
+    cursor?: KeysetCursor;
+  }): Promise<Page<StockBatchDetail>> {
+    const filters: Record<string, unknown> = { warehouseId: input.warehouseId };
+    if (input.storageAreaId !== undefined) filters.storageAreaId = input.storageAreaId;
+    return this.getPageAs(StockBatchDetailSchema, filters, {
+      select: BATCH_DETAIL_SELECT,
+      rangeFilters: [{ field: 'physical_qty', operator: 'gt', value: 0 }],
+      orderBy: 'expiryDate',
+      limit: input.limit,
+      keysetAfter: input.cursor,
     });
   }
 

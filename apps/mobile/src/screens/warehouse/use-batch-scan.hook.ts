@@ -34,7 +34,7 @@ interface BatchScanNotice {
   text: string;
 }
 
-interface UseBatchScanResult {
+export interface UseBatchScanResult {
   /** Tarama sayfası açık mı — ekran `ScanSheet`i bununla çizer. */
   open: boolean;
   openScan: () => void;

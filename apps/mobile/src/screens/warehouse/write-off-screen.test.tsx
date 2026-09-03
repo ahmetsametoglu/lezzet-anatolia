@@ -29,7 +29,7 @@ jest.mock('expo-router', () => {
 });
 
 const mockFetchBatches = jest.fn<
-  Promise<{ data: { batches: ResolvedBatchContract[]; truncated: boolean } | null; error: string | null }>,
+  Promise<{ data: { batches: ResolvedBatchContract[]; nextCursor: string | null } | null; error: string | null }>,
   []
 >();
 const mockRecordAdjustment = jest.fn<Promise<{ data: unknown; error: string | null }>, [RecordAdjustmentRequest]>();
@@ -68,7 +68,7 @@ beforeEach(() => {
   resetWarehouseStatus();
   mockBack.mockReset();
   mockFetchBatches.mockReset();
-  mockFetchBatches.mockResolvedValue({ data: { batches: [batch()], truncated: false }, error: null });
+  mockFetchBatches.mockResolvedValue({ data: { batches: [batch()], nextCursor: null }, error: null });
   mockRecordAdjustment.mockReset();
   mockRecordAdjustment.mockResolvedValue({
     data: {
@@ -106,6 +106,16 @@ async function selectBatch() {
 }
 
 describe('D4b · Stok düşümü', () => {
+  /* DÜŞÜMDE YER GÖRÜNÜR AMA DEĞİŞTİRİLEMEZ (kullanıcı kararı 03.09): buradaki iş malın
+     eksilmesidir, yerinin düzeltilmesi değil — ama depocu doğru partinin önünde olduğunu yerden
+     anlıyor, o yüzden gizlenmiyor. */
+  it('kart partinin YERİNİ gösterir ama düşümde değiştirme kapısı YOK', async () => {
+    await selectBatch();
+
+    expect(screen.getByTestId('warehouse-write-off-context-area')).toHaveTextContent('Derin dondurucu 2');
+    expect(screen.queryByTestId('warehouse-write-off-context-area-change')).toBeNull();
+  });
+
   it('boş hâl kendi kuralını yazar: süresi geçmiş mal buraya girmez', async () => {
     await render(<WriteOffScreen />);
 

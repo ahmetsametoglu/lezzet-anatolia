@@ -66,9 +66,24 @@ interface FormScrollProps {
    * (satırın ölçülen y'si); kit yalnız kapıyı açar. Verilmeyen çağıranlar hiç etkilenmez.
    */
   scrollRef?: RefObject<ScrollView | null>;
+  /**
+   * **Listenin dibine yaklaşıldı** — sonsuz kaydırmanın ucu (03.09).
+   *
+   * `ScrollView` `FlatList`in `onEndReached`ini taşımıyor; eşik burada elle ölçülüyor
+   * (`END_REACHED_MARGIN`). Kap değişmedi çünkü bu ekranların listesi kısa ve karma: satırların
+   * arasında başlık, çip sırası ve arama alanı var — `FlatList`e geçmek onları `ListHeaderComponent`
+   * altına toplamak demekti, kazancı olmayan bir yeniden yazım.
+   *
+   * Çağıran KENDİ kapısını tutar (`loadMore` zaten "yolda mı, sayfa var mı" diye bakıyor): kaydırma
+   * saniyede onlarca olay üretir ve kapı burada olsaydı her kaydıran ekranda tekrarlanırdı.
+   */
+  onEndReached?: () => void;
 }
 
-export function FormScroll({ children, contentContainerStyle, testID, refresh, scrollRef }: FormScrollProps) {
+/** Dibe "yaklaşmış" sayılan mesafe (dp) — bir satır boyu kadar: sayfa, depocu dibe varmadan gelsin. */
+const END_REACHED_MARGIN = 96;
+
+export function FormScroll({ children, contentContainerStyle, testID, refresh, scrollRef, onEndReached }: FormScrollProps) {
   return (
     /* `behavior="padding"`: çekmecede ölçülmüş olan davranış. Android'de `height` de bir seçenek
        ama panelin yüksekliğini zorlar; `padding` yalnız altına boşluk ekler ve kaydırıcı o boşluğu
@@ -78,6 +93,16 @@ export function FormScroll({ children, contentContainerStyle, testID, refresh, s
         ref={scrollRef}
         contentContainerStyle={contentContainerStyle}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={onEndReached === undefined ? undefined : 200}
+        onScroll={
+          onEndReached === undefined
+            ? undefined
+            : (event) => {
+                const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+                const remaining = contentSize.height - contentOffset.y - layoutMeasurement.height;
+                if (remaining <= END_REACHED_MARGIN) onEndReached();
+              }
+        }
         refreshControl={
           refresh === undefined ? undefined : (
             <RefreshControl refreshing={refresh.refreshing} onRefresh={refresh.onRefresh} />

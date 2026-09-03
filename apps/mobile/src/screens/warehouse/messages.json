@@ -653,6 +653,7 @@
   "adjustment": {
     "scan": {
       "cta": "Parti etiketini okut",
+      "fab": "Okut",
       "title": "Parti etiketini okut",
       "hint": "Kolideki lot barkodunu ya da bizim parti numaramızı çerçeveye getirin — bu deponun açık partileri listelenir.",
       "unknown": "{code} ile bu depoda açık parti yok — kod başka deponun olabilir ya da parti tükenmiş olabilir.",
@@ -677,17 +678,22 @@
       "rowQty": "sistemde",
       "rowLot": "lot {lot}",
       "noArea": "rafı belirsiz",
-      "truncated": "İlk {n} parti listeleniyor — aradığınızı görmüyorsanız arama alanıyla daraltın."
+      "loadingMore": "Sonraki partiler yükleniyor…"
     },
     "area": {
       "heading": "HANGİ DOLABIN ÖNÜNDESİN",
-      "hint": "İsteğe bağlı. Seçersen burada okuttuğun ya da seçtiğin parti bu alana yazılır — taşıma kaydı gerekmez.",
+      "hint": "İsteğe bağlı süzgeç — seçersen yalnız o dolabın partileri listelenir.",
+      "inCard": "yeri",
+      "change": "değiştir →",
+      "sheetTitle": "Parti hangi dolapta?",
+      "sheetHint": "Rafta başka yerde bulduysan buradan düzelt — kayıt o an güncellenir.",
+      "clear": "Rafı belirsiz bırak",
       "moved": "Partinin yeri {area} olarak yazıldı.",
       "invalid": "Bu alan bu depoda yok ya da kapatılmış — seçim bırakıldı.",
       "writeFailed": "Partinin yeri yazılamadı — sayıma devam edebilirsin, yer kayıtta eskisi gibi kaldı."
     },
     "context": {
-      "meta": "{code} · {area} · {dateType} {date}",
+      "meta": "{code} · {dateType} {date}",
       "lot": "lot {lot}",
       "change": "değiştir",
       "batchQty": "bu partide\nsistemde kayıtlı",

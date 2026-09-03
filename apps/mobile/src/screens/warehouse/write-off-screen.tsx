@@ -8,6 +8,7 @@ import type { StockWriteOffReason } from '@lezzet/types';
 import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
+import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
@@ -20,7 +21,9 @@ import { BatchContextCard } from './batch-context-card';
 import { BatchPicker } from './batch-picker';
 import { warehouseCopy } from './copy';
 import { useAdjustment } from './use-adjustment.hook';
+import { useBatchScan } from './use-batch-scan.hook';
 import { useBatchSubject } from './use-batch-subject.hook';
+import { useSubjectBack } from './use-subject-back.hook';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -60,6 +63,8 @@ export function WriteOffScreen() {
   const subject = useBatchSubject();
   const adjustment = useAdjustment();
   const { offline } = useWarehouseStatus();
+  /* OKUTMA EKRANDA (03.09): düğme FAB'a taşındı ve FAB kaydırılan içeriğin dışında durmalı. */
+  const scan = useBatchScan(subject.select);
 
   /** Düşülecek adet — POZİTİF; `null` = hiç yazılmadı. */
   const [qty, setQty] = useState<number | null>(null);
@@ -84,12 +89,21 @@ export function WriteOffScreen() {
     if (subject.notice !== null) toastInfo(subject.notice.text);
   }, [subject.notice]);
 
+  useEffect(() => {
+    if (scan.notice !== null) toastInfo(scan.notice.text);
+  }, [scan.notice]);
+
   /* Partinin yeri KAYITTAN SONRA yazılır — sayım ekranının aynı kararı (kullanıcı 03.09):
      seçmek beyan değildir, düşümü kaydetmek beyandır. */
   useEffect(() => {
     /* Bağımlılıkta yalnız `record` — sayım ekranının aynı gerekçesi. */
     if (adjustment.record !== null && batch !== null) subject.markSeen(batch);
   }, [adjustment.record]);
+
+  /* CİHAZIN GERİ TUŞU da bir adım geri atar (kullanıcı bulgusu 03.09) — sol üstteki okla aynı
+     şey; künye `use-subject-back`te. Sonuç kartındayken kapı KAPALI: orada geri, ekranı terk
+     etmelidir (iş bitti, konu artık bir tutanak). */
+  useSubjectBack(batch !== null && adjustment.record === null, subject.clear);
 
   const header = (
     <OperationsStackHeader
@@ -111,15 +125,30 @@ export function WriteOffScreen() {
     return (
       <View style={styles.screen} testID="warehouse-write-off">
         {header}
-        <FormScroll contentContainerStyle={styles.list} testID="warehouse-write-off-picker-body">
+        <FormScroll
+          contentContainerStyle={styles.list}
+          onEndReached={subject.loadMore}
+          testID="warehouse-write-off-picker-body"
+        >
           <BatchPicker
             title={t.adjustment.writeOff.emptyTitle}
             body={t.adjustment.writeOff.emptyBody}
             footnote={t.adjustment.writeOff.emptyFootnote}
             subject={subject}
+            scan={scan}
             testID="warehouse-write-off-picker"
           />
         </FormScroll>
+
+        {/* OKUTMA FAB'DA (kullanıcı isteği 03.09): kaydırılan içeriğin DIŞINDA, sağ altta sabit —
+            liste akarken de erişilir ve ekranın üstünü yemiyor. */}
+        <OperationsScanFab
+          icon="scan"
+          onPress={scan.openScan}
+          accessibilityLabel={t.adjustment.scan.cta}
+          label={t.adjustment.scan.fab}
+          testID="warehouse-write-off-scan"
+        />
       </View>
     );
   }

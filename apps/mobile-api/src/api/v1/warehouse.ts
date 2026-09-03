@@ -92,7 +92,7 @@ import {
 } from '@lezzet/types';
 import { privateReadUrl } from '@lezzet/storage';
 import { fail, ok } from '../../lib/respond';
-import { IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
+import { decodeCursor, encodeCursor, IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
 import { renderLabelPng } from '../../lib/label-png';
 import { requireStaffRole, type StaffEnv } from './auth';
 
@@ -1006,17 +1006,28 @@ warehouse.post('/batches/resolve', async (c) => {
  * yapıştırılmamış. Sayım tam da o partide gerekir: kaydı şüpheli olan parti, etiketi de şüpheli
  * olandır.
  *
- * Depo süzgeci JETONDAN (`warehouseId`), sorgudan değil — dosyanın değişmezi. Tavana dayanan liste
- * `truncated: true` ile döner ve ekran "aramayla daralt" der; sessiz kırpma depocunun "listede yok"
- * deyip yanlış partiye gitmesi demekti (CLAUDE §1).
+ * Depo süzgeci JETONDAN (`warehouseId`), sorgudan değil — dosyanın değişmezi.
+ *
+ * **SAYFALANIR** (03.09): `?cursor=` ile sonraki sayfa, `?area=` ile dolap süzgeci. Liste eskiden
+ * pencereydi (ilk 60) ve tel deponun tamamını taşıyordu; sözleşme künyesi gerekçeyi yazıyor.
+ * Bozuk imleç 400 DEĞİL, listeyi baştan verir (`decodeCursor`ın kararı).
  */
 warehouse.get('/batches', async (c) => {
+  const area = c.req.query('area');
+  const areaId = area === undefined ? undefined : UuidSchema.safeParse(area);
+  if (areaId !== undefined && !areaId.success) return fail(c, 'invalid_area', 400);
+
   const result = await listWarehouseBatches(serviceDb(), {
     warehouseId: c.get('warehouseId'),
     query: c.req.query('q') ?? '',
+    storageAreaId: areaId?.data,
+    cursor: decodeCursor(c.req.query('cursor')),
   });
 
-  const body: z.input<typeof WarehouseBatchesResponseSchema> = result;
+  const body: z.input<typeof WarehouseBatchesResponseSchema> = {
+    batches: result.batches,
+    nextCursor: result.nextCursor === null ? null : encodeCursor(result.nextCursor),
+  };
   return ok(c, WarehouseBatchesResponseSchema.parse(body));
 });
 

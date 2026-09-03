@@ -61,15 +61,23 @@ export interface UseBatchSubjectResult {
    * anında değil, çünkü seçmek bir beyan değildir (kullanıcı kararı 03.09 — künye uygulamada).
    */
   markSeen: (batch: ResolvedBatchContract) => void;
+  /**
+   * Partinin yerini AÇIKÇA değiştirir — sayım kartındaki "değiştir" (kullanıcı kararı 03.09).
+   * Depocu partiyi başka dolapta bulduysa kaydı o an düzeltir; düşüm ekranı bu kapıyı AÇMAZ.
+   */
+  assignArea: (batch: ResolvedBatchContract, areaId: string | null) => void;
   /** Seçimi bırakır — bağlam kartındaki "değiştir". */
   clear: () => void;
   query: string;
   setQuery: (query: string) => void;
   status: SubjectStatus;
-  /** Aktif alanın partileri ÖNDE — depocu durduğu dolabın listesini üstte görür; ötekiler süzülmez. */
+  /** Sayfa sayfa biriken satırlar; dolap seçiliyse YALNIZ o dolabınkiler (filtre, 03.09). */
   batches: readonly ResolvedBatchContract[];
-  /** Tavana dayanıldı — liste TAM DEĞİL; ekran "aramayla daralt" der (CLAUDE §1). */
-  truncated: boolean;
+  /** Daha sayfa var mı — ekran listenin dibinde `loadMore` çağırır. */
+  hasMore: boolean;
+  /** Sonraki sayfa yolda — listenin ALTINDA küçük bir satır; iskelet DEĞİL (o listeyi gizler). */
+  loadingMore: boolean;
+  loadMore: () => void;
   reload: () => void;
   /** Deponun açık alanları — seçicinin çipleri. Boş = alan tanımsız ya da okunamadı; çip çizilmez. */
   areas: readonly WarehouseAreaContract[];
@@ -85,7 +93,10 @@ export function useBatchSubject(): UseBatchSubjectResult {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<SubjectStatus>('loading');
   const [rows, setRows] = useState<readonly ResolvedBatchContract[]>([]);
-  const [truncated, setTruncated] = useState(false);
+  /** Sonraki sayfanın opak imleci; `null` = liste bitti (sözleşme künyesi). */
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  /** Sonraki sayfa okunuyor mu — ilk yükten AYRI: iskelet listeyi gizler, bu satır sonunda döner. */
+  const [loadingMore, setLoadingMore] = useState(false);
   const [areas, setAreas] = useState<readonly WarehouseAreaContract[]>([]);
   const [notice, setNotice] = useNotice<SubjectNotice>();
   /** Elle tazeleme sayacı — "tekrar dene" aynı sorguyu yeniden koşturur. */
@@ -131,7 +142,12 @@ export function useBatchSubject(): UseBatchSubjectResult {
       void (async () => {
         const run = (generation.current += 1);
         setStatus('loading');
-        const result = await trackWarehouse(fetchWarehouseBatches(query.trim()));
+        /* İLK SAYFA — imleçsiz. Süzgeç (dolap) ya da terim değişince buraya dönülür ve liste
+           BAŞTAN kurulur: eski sayfaların satırlarını yeni süzgecin altında bırakmak, ekranda
+           süzgece uymayan satır göstermekti. */
+        const result = await trackWarehouse(
+          fetchWarehouseBatches({ query: query.trim(), storageAreaId: activeAreaId }),
+        );
         if (cancelled || run !== generation.current) return;
 
         if (result.error !== null) {
@@ -139,7 +155,7 @@ export function useBatchSubject(): UseBatchSubjectResult {
           return;
         }
         setRows(result.data.batches);
-        setTruncated(result.data.truncated);
+        setNextCursor(result.data.nextCursor);
         setStatus('ready');
       })();
     }, delay);
@@ -148,17 +164,51 @@ export function useBatchSubject(): UseBatchSubjectResult {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, reloadKey, subject]);
+    // `activeAreaId` de bağımlılık: dolap FİLTRE (kullanıcı kararı 03.09), değişince liste baştan kurulur.
+  }, [query, reloadKey, subject, activeAreaId]);
 
-  /* Aktif alanın partileri ÖNDE, gerisi olduğu gibi (kararlı sıralama — kapının SKT sırası korunur).
-     SÜZÜLMÜYOR ve bu işin özü: soğuk odada kayıtlı parti dondurucunun önünde okutulunca oraya
-     taşınmış sayılacak; listeden düşürülseydi taşınan parti hiç seçilemezdi. */
-  const batches = useMemo(() => {
-    if (activeAreaId === null) return rows;
-    const here = rows.filter((batch) => batch.storageAreaId === activeAreaId);
-    const elsewhere = rows.filter((batch) => batch.storageAreaId !== activeAreaId);
-    return [...here, ...elsewhere];
-  }, [rows, activeAreaId]);
+  /**
+   * **SONRAKİ SAYFA** — sonsuz kaydırmanın ucu (kullanıcı bulgusu 03.09).
+   *
+   * Aynı anda tek tur: `loadingMore` kapıyı tutuyor, yoksa hızlı kaydıran depocu aynı imleçle üç
+   * istek açar ve satırlar üç kez eklenirdi. `generation` burada da geçerli — süzgeç değişip liste
+   * başa dönerse yolda olan sayfa satırlarını YENİ listeye ekleyemez.
+   */
+  const loadMore = useCallback(() => {
+    if (nextCursor === null || loadingMore || status !== 'ready') return;
+    const run = generation.current;
+    setLoadingMore(true);
+    void (async () => {
+      const result = await trackWarehouse(
+        fetchWarehouseBatches({ query: query.trim(), storageAreaId: activeAreaId, cursor: nextCursor }),
+      );
+      setLoadingMore(false);
+      if (run !== generation.current || result.error !== null) return;
+      /* Satırlar EKLENİR, kimlikle tekilleştirilerek: iki tur aynı imleci taşırsa (hızlı dokunuş,
+         yeniden deneme) aynı parti listede iki kez görünmemeli. */
+      setRows((current) => {
+        const seen = new Set(current.map((batch) => batch.stockId));
+        return [...current, ...result.data.batches.filter((batch) => !seen.has(batch.stockId))];
+      });
+      setNextCursor(result.data.nextCursor);
+    })();
+  }, [nextCursor, loadingMore, status, query, activeAreaId]);
+
+  /*
+    DOLAP SEÇİMİ ARTIK FİLTRE (kullanıcı kararı 03.09) — ve süzgeç SORGUDA, elde değil.
+
+    Önce yalnız SIRALIYORDU ("aktif alanın partileri önde") ve gerekçesi şuydu: taşınan parti
+    listeden düşerse hiç seçilemez. O gerekçe artık geçersiz — taşıma seçimle olmuyor, partinin
+    kartından açıkça yapılıyor (`markSeen`). Kullanıcı da filtreyi istedi: dolabın önündeki depocu
+    o dolabın listesini görmeli, başka dolabın partisi listesini kalabalıklaştırmamalı.
+
+    Süzgeç sorguda olmak ZORUNDA: sayfa sayfa gelen bir listeyi elde süzmek, "otuz satır istedim,
+    dördü ekrana geldi" demekti — sayfa boyu yalan söylerdi.
+
+    Taşınmış parti nasıl bulunur: arama filtreden bağımsız değil ama terimi yazan depocu genelde
+    filtreyi de kaldırır; kaldırmak tek dokunuş (aynı çipe ikinci dokunuş).
+  */
+  const batches = rows;
 
   /** Konuyu seçmek YALNIZCA seçmektir — adres yazımı kayda bağlı (`markSeen`, künye yukarıda). */
   const select = useCallback((batch: ResolvedBatchContract) => setSubject(batch), []);
@@ -175,12 +225,12 @@ export function useBatchSubject(): UseBatchSubjectResult {
    * Sayım/düşüm kaydı ise bir BEYANDIR: depocu o dolabın önünde saydığını söylüyor. Vazgeçen,
    * yanlış partiye dokunup geri dönen, ekranı terk eden hiçbir şeyi değiştirmez.
    */
-  const markSeen = useCallback(
-    (batch: ResolvedBatchContract) => {
-      if (activeAreaId === null || batch.storageAreaId === activeAreaId) return;
+  const assignArea = useCallback(
+    (batch: ResolvedBatchContract, areaId: string | null) => {
+      if (areaId === null || batch.storageAreaId === areaId) return;
 
       void (async () => {
-        const result = await trackWarehouse(markBatchSeen(batch.stockId, activeAreaId));
+        const result = await trackWarehouse(markBatchSeen(batch.stockId, areaId));
         if (result.error !== null) {
           setNotice({ tone: 'warn', text: t.adjustment.area.writeFailed });
           return;
@@ -191,7 +241,7 @@ export function useBatchSubject(): UseBatchSubjectResult {
           // onun kartına yabancı bir adres yazılmaz.
           setSubject((current) =>
             current !== null && current.stockId === batch.stockId
-              ? { ...current, storageAreaId: activeAreaId, storageAreaName: outcome.storageAreaName }
+              ? { ...current, storageAreaId: areaId, storageAreaName: outcome.storageAreaName }
               : current,
           );
           if (outcome.changed) {
@@ -209,7 +259,13 @@ export function useBatchSubject(): UseBatchSubjectResult {
         setNotice({ tone: 'error', text: outcome.status === 'forbidden' ? t.common.outOfScope : t.common.notFound });
       })();
     },
-    [activeAreaId, setNotice],
+    [setNotice],
+  );
+
+  /** Kayıttan sonra: parti AKTİF dolapta görüldü. `assignArea`nın özel hâli (künye yukarıda). */
+  const markSeen = useCallback(
+    (batch: ResolvedBatchContract) => assignArea(batch, activeAreaId),
+    [assignArea, activeAreaId],
   );
 
   /**
@@ -233,12 +289,15 @@ export function useBatchSubject(): UseBatchSubjectResult {
     subject,
     select,
     markSeen,
+    assignArea,
     clear,
     query,
     setQuery,
     status,
     batches,
-    truncated,
+    hasMore: nextCursor !== null,
+    loadingMore,
+    loadMore,
     reload,
     areas,
     activeAreaId,
