@@ -218,7 +218,7 @@ export function WriteOffScreen() {
             max={batch.physicalQty}
             hint={fillCopy(t.adjustment.writeOff.keypad.hint, {
               name: batch.name,
-              code: batch.lotNumber ?? t.adjustment.picker.noLot,
+              code: batch.batchNo,
             })}
             footnote={fillCopy(t.adjustment.writeOff.keypad.footnote, { total: String(batch.physicalQty) })}
             deleteLabel={t.common.keypad.delete}

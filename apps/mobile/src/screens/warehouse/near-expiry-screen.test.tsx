@@ -48,6 +48,7 @@ jest.mock('@/lib/api/warehouse', () => ({
 function batch(overrides: Partial<NearExpiryBatchContract> = {}): NearExpiryBatchContract {
   return {
     stockId: '00000000-0000-4000-8000-000000000301',
+    batchNo: 'PRT-STR-26-0301',
     lotNumber: 'P-0698',
     productName: 'Su Böreği',
     variantLabel: 'tepsi',
@@ -66,6 +67,7 @@ function batch(overrides: Partial<NearExpiryBatchContract> = {}): NearExpiryBatc
 
 const DISCARD = batch({
   stockId: '00000000-0000-4000-8000-000000000302',
+  batchNo: 'PRT-STR-26-0302',
   lotNumber: 'P-0641',
   productName: 'Kaymaklı Baklava',
   variantLabel: '1 kg',
@@ -82,6 +84,7 @@ const DISCARD = batch({
 /** Raf ömrü BİLİNMEYEN parti: yüzde ölçülemedi ve karar da doğmadı. */
 const UNKNOWN_LIFE = batch({
   stockId: '00000000-0000-4000-8000-000000000303',
+  batchNo: 'PRT-STR-26-0303',
   lotNumber: 'P-0688',
   productName: 'Kuru İncir',
   variantLabel: '500 g',
@@ -116,13 +119,13 @@ describe('D3 · yakın-SKT turu', () => {
   it('bütün partiler kararlarıyla listelenir', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toBeOnTheScreen());
-    expect(screen.getByTestId('warehouse-near-expiry-P-0641')).toHaveTextContent(/İMHA EDİLMELİ/);
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0301')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302')).toHaveTextContent(/İMHA EDİLMELİ/);
     // Rejim satırı sebebi söylüyor: DLC geçmiş = satılamaz.
-    expect(screen.getByTestId('warehouse-near-expiry-P-0641')).toHaveTextContent(/geçti — satılamaz/);
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302')).toHaveTextContent(/geçti — satılamaz/);
     // Rozet ağırlığı düştü (tasarım 31.08): teklif hâlleri artık SESSİZ — depocuya iş vermiyorlar.
     // Teklif rozeti YOK; satır yine de listede — depocu ömrü azalan malı görmeli.
-    expect(screen.getByTestId('warehouse-near-expiry-P-0688')).toBeOnTheScreen();
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0303')).toBeOnTheScreen();
   });
 
   /*
@@ -135,19 +138,19 @@ describe('D3 · yakın-SKT turu', () => {
   it('teklif rozeti ÇİZİLMEZ — karar depocunun değil', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toBeOnTheScreen());
-    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).not.toHaveTextContent(/teklif/);
-    expect(screen.queryByTestId('warehouse-near-expiry-P-0698-verdict')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0301')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0301')).not.toHaveTextContent(/teklif/);
+    expect(screen.queryByTestId('warehouse-near-expiry-PRT-STR-26-0301-verdict')).toBeNull();
   });
 
   it('ömür YÜZDESİ ve çubuğu çizilmez — aciliyeti kalan gün söylüyor', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toBeOnTheScreen());
-    expect(screen.queryByTestId('warehouse-near-expiry-P-0698-life')).toBeNull();
-    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).not.toHaveTextContent(/ömür %/);
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0301')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-near-expiry-PRT-STR-26-0301-life')).toBeNull();
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0301')).not.toHaveTextContent(/ömür %/);
     // Kalan gün DURUYOR: depocunun aciliyet ölçüsü o.
-    expect(screen.getByTestId('warehouse-near-expiry-P-0698')).toHaveTextContent(/2 gün/);
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0301')).toHaveTextContent(/2 gün/);
   });
 
   /*
@@ -157,8 +160,8 @@ describe('D3 · yakın-SKT turu', () => {
   it('geçmiş parti "geçti" der ve günü pozitif yazar', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641')).toBeOnTheScreen());
-    expect(screen.getByTestId('warehouse-near-expiry-P-0641')).toHaveTextContent(/1 gün \(geçti\)/);
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302')).toHaveTextContent(/1 gün \(geçti\)/);
   });
 
   /*
@@ -201,15 +204,15 @@ describe('D3 · yakın-SKT turu', () => {
   it('imhalık satırda İMHA düğmesi var; ötekilerde yok', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641-discard')).toBeOnTheScreen());
-    expect(screen.queryByTestId('warehouse-near-expiry-P-0698-discard')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-near-expiry-PRT-STR-26-0301-discard')).toBeNull();
   });
 
   it('imha çekmecesi SEBEP SORMAZ, yalnız adet ve bağlam gösterir', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641-discard')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-P-0641-discard'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
 
     const sheet = screen.getByTestId('warehouse-near-expiry-discard-sheet');
     expect(sheet).toHaveTextContent(/Sebep sorulmaz: süresi geçti/);
@@ -223,8 +226,8 @@ describe('D3 · yakın-SKT turu', () => {
   it('imha adedi tuş takımı adımından yazılır; partiden fazlasını yazacak tuş işlemez', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641-discard')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-P-0641-discard'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
     await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-qty-value-hit'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-discard-keypad-key-2')).toBeOnTheScreen());
@@ -241,8 +244,8 @@ describe('D3 · yakın-SKT turu', () => {
   it('imha kapıya `expired` sebebiyle ve `out` yönüyle yazılır', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641-discard')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-P-0641-discard'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
     await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-confirm'));
 
     await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalled());
@@ -256,23 +259,24 @@ describe('D3 · yakın-SKT turu', () => {
   it('imha sonrası satır referansı taşır ve ekranda kalır', async () => {
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641-discard')).toBeOnTheScreen());
-    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-P-0641-discard'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
     await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-confirm'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-P-0641-ref')).toHaveTextContent('IMH-STR-26-0007'));
-    expect(screen.getByTestId('warehouse-near-expiry-P-0641-verdict')).toHaveTextContent(/İMHA EDİLDİ/);
-    expect(screen.queryByTestId('warehouse-near-expiry-P-0641-discard')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-ref')).toHaveTextContent('IMH-STR-26-0007'));
+    expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-verdict')).toHaveTextContent(/İMHA EDİLDİ/);
+    expect(screen.queryByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeNull();
   });
 
   /*
-    KODSUZ PARTİ DE LİSTELENİR (21.187): lot yazılmamış olabilir ve o parti yok sayılamaz —
-    ömrü azalan mal, kodu olmasa da rafta duruyor.
+    LOTSUZ PARTİ DE LİSTELENİR (21.187) — ve artık tireyle değil, PARTİ NUMARASIYLA (03.09):
+    lot tedarikçinin numarasıdır ve boş olabilir; parti numarası bizim kimliğimizdir ve hep vardır.
+    Ömrü azalan mal, lotu olmasa da rafta duruyor ve künyesi boş kalmıyor.
   */
-  it('lotu olmayan parti tireyle listelenir, düşmez', async () => {
+  it('lotu olmayan parti kendi numarasıyla listelenir, düşmez', async () => {
     withBatches([batch({ lotNumber: null })]);
     await renderScreen();
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-—')).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0301')).toBeOnTheScreen());
   });
 });

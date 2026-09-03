@@ -47,12 +47,19 @@ export function BatchContextCard({ batch, onChange, testID }: BatchContextCardPr
           <Text style={styles.name}>{batch.name}</Text>
           <Text style={styles.meta}>
             {fillCopy(t.adjustment.context.meta, {
-              code: batch.lotNumber ?? t.adjustment.picker.noLot,
+              /* PARTİ NUMARASI önde (03.09): bizim kimliğimiz, her partide var. Lot ayrı satırda
+                 ve yalnız varsa — tedarikçinin numarası kimlik değil, geri çağırma anahtarıdır. */
+              code: batch.batchNo,
               area: batch.storageAreaName ?? t.adjustment.picker.noArea,
               dateType: batch.dateType,
               date: shortDate(batch.expiryDate) ?? batch.expiryDate,
             })}
           </Text>
+          {batch.lotNumber === null ? null : (
+            <Text style={styles.meta} testID={`${testID}-lot`}>
+              {fillCopy(t.adjustment.context.lot, { lot: batch.lotNumber })}
+            </Text>
+          )}
         </View>
         <TextAction label={t.adjustment.context.change} onPress={onChange} testID={`${testID}-change`} />
       </View>

@@ -121,6 +121,7 @@ export function intakeRow(overrides: Partial<IntakeFormRowContract> = {}): Intak
 export function nearExpiryBatch(overrides: Partial<NearExpiryBatchContract> = {}): NearExpiryBatchContract {
   return {
     stockId: '00000000-0000-4000-8000-000000000401',
+    batchNo: 'PRT-STR-26-0401',
     lotNumber: 'P-0401',
     productName: 'Su Böreği',
     variantLabel: 'tepsi',

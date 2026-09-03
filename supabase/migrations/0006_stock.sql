@@ -25,6 +25,12 @@ create table public.stock (
   -- Partinin son tarihi. TİPİ üründedir (`product.date_type`): DLC = güvenlik (geçince satılamaz),
   -- DDM = kalite (geçse de satılır). Kolon adı bu yüzden tipten bağımsız: `expiry_date`.
   expiry_date date not null,
+  -- PARTİ NUMARASI — BİZİM kimliğimiz (kullanıcı kararı 03.09): `PRT-STR-26-0031`. Belge ailesinin
+  -- aynı biçimi (IMH/SAY/TRF): önek · depo kodu · yıl · o yıl o depoda sıra. Tetikleyici üretir
+  -- (`stock_set_batch_no`, 0031 — depo kodu orada doğar), elle yazılmaz. `not null`: numarasız parti
+  -- yoktur; before-insert tetikleyicisi kısıttan önce koşar. LOT İLE KARIŞTIRILMAZ: lot tedarikçinin
+  -- üretim numarasıdır ve boş olabilir; parti numarası bizim mal alımımızdır ve hep vardır.
+  batch_no text not null,
   lot_number text,                                   -- tedarikçinin lot no'su — geri çağırma (rappel) eşleşmesi
   -- BİRİM (paket) başına alış maliyeti. Toptan alınıp paketlenirse giriş paket adediyle yapılır
   -- (1 kg → 10 × 100 gr) ve maliyet pakete bölünür; gerçek COGS bu alandan çıkar (DOMAIN §12).
@@ -77,6 +83,8 @@ create trigger stock_initial_qty_trg
 -- depo — her okuma bir depoya bakar (depocu kendi deposunu görür, hazırlık siparişin deposundan
 -- toplar), depo-üstü tarama yalnız raporun işidir.
 create index stock_variant_expiry_idx on public.stock (warehouse_id, variant_id, expiry_date);
+-- Parti numarası benzersiz: etiket okutulunca tek satıra düşer (lotun aksine — lot benzersiz değil).
+create unique index stock_batch_no_key on public.stock (batch_no);
 -- Teklif havuzu: indirimli partiler doğrudan süzülür (kısmi indeks — çoğu satır null).
 create index stock_offer_idx on public.stock (warehouse_id, variant_id) where offer_price is not null;
 -- Tedarik fark raporu: "bu PO kalemine karşılık ne girdi" (parçalı kabulde kalem başına toplanır).

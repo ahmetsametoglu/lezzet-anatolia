@@ -595,7 +595,6 @@
     "life": "ömür %{n}",
     "lifeUnknown": "ömür bilinmiyor — eşik uygulanmaz",
     "toBatchCount": "sayım/düzeltmeye götür →",
-    "noLot": "—",
     "loading": "Partiler okunuyor…",
     "error": {
       "title": "Liste getirilemedi",
@@ -646,7 +645,7 @@
     "scan": {
       "cta": "Parti etiketini okut",
       "title": "Parti etiketini okut",
-      "hint": "Kutunun üstündeki lot numarasını çerçeveye getirin — bu deponun açık partileri listelenir.",
+      "hint": "Kolideki lot barkodunu ya da bizim parti numaramızı çerçeveye getirin — bu deponun açık partileri listelenir.",
       "unknown": "{code} ile bu depoda açık parti yok — kod başka deponun olabilir ya da parti tükenmiş olabilir.",
       "error": "Parti çözülemedi — bağlantıyı kontrol edip yeniden okutun.",
       "pickTitle": "Hangi parti?",
@@ -660,15 +659,15 @@
     "picker": {
       "heading": "YA DA RAF LİSTESİNDEN SEÇ",
       "searchLabel": "Parti ara",
-      "searchPlaceholder": "ürün adı ya da lot numarası",
+      "searchPlaceholder": "ürün adı, parti ya da lot numarası",
       "loading": "Raf listesi yükleniyor…",
       "error": "Raf listesi yüklenemedi — bağlantıyı kontrol edip yeniden deneyin.",
       "empty": "Bu depoda stoğu duran parti yok.",
       "emptySearch": "\"{q}\" ile eşleşen parti yok.",
       "row": "{code} · {dateType} {date}",
       "rowQty": "sistemde",
+      "rowLot": "lot {lot}",
       "noArea": "rafı belirsiz",
-      "noLot": "lot yazılmamış",
       "truncated": "İlk {n} parti listeleniyor — aradığınızı görmüyorsanız arama alanıyla daraltın."
     },
     "area": {
@@ -680,6 +679,7 @@
     },
     "context": {
       "meta": "{code} · {area} · {dateType} {date}",
+      "lot": "lot {lot}",
       "change": "değiştir",
       "batchQty": "bu partide\nsistemde kayıtlı",
       "variantQty": "ürünün depodaki\ntoplam stoğu"

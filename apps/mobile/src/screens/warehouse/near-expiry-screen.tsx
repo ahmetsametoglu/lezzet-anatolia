@@ -120,7 +120,8 @@ export function NearExpiryScreen() {
           /* Aciliyet ve künye SATIRDA türetiliyor (hook'un künyesi): kapı günü sayı olarak veriyor,
              rengin eşiği ve "2 gün" cümlesi ekranın kararı. */
           const urgency = urgencyOf(batch.daysLeft);
-          const code = batch.lotNumber ?? t.nearExpiry.noLot;
+          // Künye PARTİ NUMARASIYLA (03.09): her partide var; lot boşsa satır boş kalmaz.
+          const code = batch.batchNo;
           /* Bu parti imha edildi mi — referans hook'ta duruyor (liste yeniden okunmuyor). */
           const discardRef = nearExpiry.discarded[batch.stockId];
           const done = discardRef !== undefined;
@@ -242,7 +243,7 @@ export function NearExpiryScreen() {
           <View style={styles.sheetBody}>
             <Text style={styles.sheetCaption}>
               {fillCopy(t.nearExpiry.discard.caption, {
-                code: discardTarget.lotNumber ?? t.nearExpiry.noLot,
+                code: discardTarget.batchNo,
                 shelf: discardTarget.shelfLabel ?? t.nearExpiry.discard.noShelf,
                 regime: t.nearExpiry.regime[regimeOf(discardTarget)],
                 date: daysLabelOf(discardTarget.daysLeft),

@@ -192,6 +192,8 @@ export interface ResolvedBatch {
   variantId: string;
   /** "Ürün (boy)" — operasyon dilinde; ekranın üstbaşlığı. */
   name: string;
+  /** Parti numarası — bizim kimliğimiz (`PRT-STR-26-0031`), her partide var (03.09). */
+  batchNo: string;
   /** Lot numarası; **okutma yolunda daima dolu, raf listesinde `null` olabilir** (kabulde boş
       bırakmak meşru). Lotsuz partiyi listeden düşürmek, sayımın en çok gerektiği partiyi görünmez
       yapardı. */
@@ -289,6 +291,7 @@ async function toResolvedBatches(
     stockId: batch.id,
     variantId: batch.variantId,
     name: displayName(names.get(batch.variantId)),
+    batchNo: batch.batchNo,
     lotNumber: batch.lotNumber,
     expiryDate: batch.expiryDate,
     dateType: batch.variant.product.dateType,
@@ -340,6 +343,7 @@ export async function listWarehouseBatches(
       : resolved.filter(
           (batch) =>
             batch.name.toLocaleLowerCase('tr-TR').includes(term) ||
+            batch.batchNo.toLocaleLowerCase('tr-TR').includes(term) ||
             (batch.lotNumber ?? '').toLocaleLowerCase('tr-TR').includes(term),
         );
 

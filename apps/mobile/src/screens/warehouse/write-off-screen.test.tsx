@@ -49,6 +49,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     stockId: '00000000-0000-4000-8000-000000000401',
     variantId: '00000000-0000-4000-8000-000000000501',
     name: 'Su Böreği · tepsi',
+    batchNo: 'PRT-STR-26-0401',
     lotNumber: 'A227-05',
     expiryDate: '2027-04-20',
     dateType: 'DLC',

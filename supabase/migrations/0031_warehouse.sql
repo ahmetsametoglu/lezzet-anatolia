@@ -180,6 +180,41 @@ alter table public.warehouse_transfer_line enable row level security;
 -- silinmez — geçmiş sipariş ve parti hangi tesisten çıktığını bilmek zorundadır.
 alter table public.stock add constraint stock_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
+
+-- ── Parti numarası tetikleyicisi (kullanıcı kararı 03.09) ────────────────────
+-- Kolon 0006'da doğdu (`stock.batch_no`), üretimi BURADA: numara depo KODUNU taşıyor
+-- (`PRT-STR-26-0031`) ve kod bu dosyada doğuyor. Sayaç belge ailesinin sayacı (`next_document_no`,
+-- 0009) — imha/sayım/transfer numaralarıyla aynı seri mantığı: depo başına, yıl başına, atomik.
+--
+-- NEDEN TETİKLEYİCİ, UYGULAMA DEĞİL: parti üç yoldan doğuyor (mal kabul RPC'si, transfer kabulü
+-- RPC'si, tohum) ve yarın dördüncüsü açılabilir. Numara satırın doğduğu yerde verilirse hiçbir yol
+-- unutamaz; uygulamada verilseydi ilk unutan yol numarasız parti üretir ve `not null` orada patlardı.
+--
+-- ELLE VERİLEN NUMARA EZİLMEZ: `new.batch_no` doluysa dokunulmaz (test fikstürü, ileride dış
+-- sistemden taşıma). Boşsa üretilir.
+create or replace function public.stock_set_batch_no() returns trigger
+language plpgsql
+set search_path = public
+as $$
+declare
+  v_code text;
+begin
+  if new.batch_no is not null and length(new.batch_no) > 0 then
+    return new;
+  end if;
+  select w.code into v_code from public.warehouse w where w.id = new.warehouse_id;
+  if v_code is null then
+    raise exception 'stock_set_batch_no: depo bulunamadı (%)', new.warehouse_id;
+  end if;
+  new.batch_no := public.next_document_no('PRT-' || v_code, extract(year from now())::int);
+  return new;
+end;
+$$;
+
+create trigger stock_batch_no_trg
+  before insert on public.stock
+  for each row execute function public.stock_set_batch_no();
+
 alter table public.reservation add constraint reservation_warehouse_fk
   foreign key (warehouse_id) references public.warehouse (id) on delete restrict;
 alter table public.order add constraint order_warehouse_fk

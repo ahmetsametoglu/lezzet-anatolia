@@ -20,6 +20,13 @@ export const StockSchema = z.object({
   /** Girişte yazılan miktar — tarihtir, değişmez. Fiili erirken bu durur (fark raporu, tüketim). */
   initialQty: z.number().int(),
   expiryDate: z.string(),
+  /**
+   * PARTİ NUMARASI — bizim kimliğimiz (`PRT-STR-26-0031`), veritabanı tetikleyicisi üretir
+   * (kullanıcı kararı 03.09). LOT DEĞİL: lot tedarikçinin üretim numarasıdır ve boş olabilir;
+   * parti numarası bizim mal alımımızdır, hep vardır ve benzersizdir. Ekranlar partiyi bununla
+   * anar, lotu yanına yazar.
+   */
+  batchNo: z.string(),
   lotNumber: z.string().nullable(), // geri çağırmada (rappel) eşleşme anahtarı
   // Para **cent** (02.9 · STACK §8); DB kolonları `purchase_price` / `offer_price` euro `numeric`.
   purchasePriceCents: z.number().int().nullable(), // birim (paket) başına alış — gerçek COGS
@@ -56,7 +63,8 @@ export const StockInsertSchema = z.object({
 });
 export type StockInsert = z.infer<typeof StockInsertSchema>;
 
-export const StockUpdateSchema = StockSchema.partial().required({ id: true });
+/** Parti numarası GÜNCELLENMEZ: kimliktir, tetikleyici verir; şemadan bilerek düşürüldü. */
+export const StockUpdateSchema = StockSchema.omit({ batchNo: true }).partial().required({ id: true });
 export type StockUpdate = z.infer<typeof StockUpdateSchema>;
 
 /**

@@ -54,7 +54,7 @@ export function AdjustmentResultCard({
     <View style={styles.block} testID={testID}>
       <OperationsSurface tone="panel" padding="lg">
         <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subject}>{`${batch.lotNumber ?? t.adjustment.picker.noLot} · ${batch.name}`}</Text>
+        <Text style={styles.subject}>{`${batch.batchNo} · ${batch.name}`}</Text>
 
         <View style={styles.rule} />
 

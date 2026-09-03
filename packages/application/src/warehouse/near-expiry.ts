@@ -64,6 +64,7 @@ export async function listNearExpiry(
     .sort((a, b) => a.daysLeft - b.daysLeft)
     .map((view) => ({
       stockId: view.id,
+      batchNo: view.batchNo,
       lotNumber: view.lotNumber,
       productName: view.productName,
       variantLabel: view.variantLabel,

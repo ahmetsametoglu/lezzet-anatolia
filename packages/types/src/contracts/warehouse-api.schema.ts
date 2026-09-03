@@ -1320,6 +1320,12 @@ export const ResolvedBatchSchema = z.object({
   /** "Ürün (boy)" — operasyon dilinde; ekranın üstbaşlığında görünen ad. */
   name: z.string(),
   /**
+   * PARTİ NUMARASI (`PRT-STR-26-0031`) — partinin BİZİM kimliğimiz, her partide var (kullanıcı
+   * kararı 03.09). Ekran partiyi bununla anar; lot (tedarikçinin numarası, boş olabilir) yanına yazılır.
+   * Okutma ikisini de tanır: parti numarası tek satıra düşer, lot birden çoğa düşebilir.
+   */
+  batchNo: z.string(),
+  /**
    * Partinin lot numarası — **`null` olabilir** ve bu ölçülmüş bir gerçektir (02.09).
    *
    * OKUTMA yolunda daima dolu (eşleşme onun üzerinden kuruluyor). RAF LİSTESİ yolunda değil:
@@ -1465,7 +1471,9 @@ export type MarkBatchSeenResponse = z.infer<typeof MarkBatchSeenResponseSchema>;
  */
 export const NearExpiryBatchSchema = z.object({
   stockId: z.string().uuid(),
-  /** Parti kodu — kâğıt etiketle eşleşen künye; yazılmamış olabilir. */
+  /** Parti numarası — bizim kimliğimiz, hep var (03.09). Satırın künyesi bununla başlar. */
+  batchNo: z.string(),
+  /** Tedarikçinin lotu — geri çağırma anahtarı; yazılmamış olabilir, o zaman satırda hiç görünmez. */
   lotNumber: z.string().nullable(),
   productName: z.string(),
   variantLabel: z.string(),

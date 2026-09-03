@@ -21,6 +21,8 @@ const batch = (variantLabel: Record<string, string>) => ({
   physical_qty: 20,
   initial_qty: 20,
   expiry_date: '2026-08-22',
+  // Parti numarası — bizim kimliğimiz, tetikleyici üretir; satırda hep dolu (03.09).
+  batch_no: 'PRT-STR-26-0012',
   lot_number: 'AF-20260725-0',
   purchase_price: '2.90',
   intake_id: null,

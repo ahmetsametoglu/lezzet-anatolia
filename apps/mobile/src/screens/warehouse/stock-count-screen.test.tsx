@@ -55,6 +55,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     stockId: '00000000-0000-4000-8000-000000000401',
     variantId: '00000000-0000-4000-8000-000000000501',
     name: 'Su Böreği · tepsi',
+    batchNo: 'PRT-STR-26-0401',
     lotNumber: 'A227-05',
     expiryDate: '2027-04-20',
     dateType: 'DLC',
@@ -161,6 +162,35 @@ describe('D4 · Sayım', () => {
         includeHiddenElements: true,
       }),
     ).toBeTruthy();
+  });
+
+  /* PARTİ ≠ LOT (kullanıcı kararı 03.09): satır PARTİ NUMARASIYLA anılır, lot rozette ve yalnız
+     varsa. Lotsuz parti "lot yazılmamış" değil, numarasıyla listelenir. */
+  it('satır parti numarasını yazar, lotu rozette gösterir; lotsuz partide rozet yok', async () => {
+    mockFetchBatches.mockResolvedValue({
+      data: {
+        batches: [batch(), batch({ stockId: '00000000-0000-4000-8000-000000000402', batchNo: 'PRT-STR-26-0402', lotNumber: null })],
+        truncated: false,
+      },
+      error: null,
+    });
+    await render(<StockCountScreen />);
+
+    const withLot = await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
+    expect(withLot).toHaveTextContent(/PRT-STR-26-0401/);
+    expect(screen.getByTestId('warehouse-stock-count-picker-row-lot-00000000-0000-4000-8000-000000000401')).toHaveTextContent('lot A227-05');
+
+    const withoutLot = screen.getByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000402');
+    expect(withoutLot).toHaveTextContent(/PRT-STR-26-0402/);
+    expect(screen.queryByTestId('warehouse-stock-count-picker-row-lot-00000000-0000-4000-8000-000000000402')).toBeNull();
+    expect(withoutLot).not.toHaveTextContent(/lot yazılmamış/);
+  });
+
+  it('bağlam kartı parti numarasıyla açılır, lot ikinci satırda', async () => {
+    await selectBatch();
+
+    expect(screen.getByTestId('warehouse-stock-count-context')).toHaveTextContent(/PRT-STR-26-0401/);
+    expect(screen.getByTestId('warehouse-stock-count-context-lot')).toHaveTextContent('lot A227-05');
   });
 
   it('konu seçilmeden form çizilmez; raf listesi seçiciden gelir', async () => {

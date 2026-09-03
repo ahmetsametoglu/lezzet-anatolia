@@ -178,14 +178,19 @@ export function BatchPicker({ title, body, footnote, subject, testID }: BatchPic
               </Text>
               <Text style={styles.rowMeta} numberOfLines={1}>
                 {fillCopy(t.adjustment.picker.row, {
-                  /* LOTSUZ PARTİ GİZLENMEZ, SÖYLENİR: kabulde lot boş bırakmak meşru ve etiketi
-                     olmayan parti sayımın en çok gerektiği partidir (sözleşme künyesi). */
-                  code: batch.lotNumber ?? t.adjustment.picker.noLot,
+                  /* PARTİ NUMARASI (03.09): bizim kimliğimiz, her partide var — lotsuz parti artık
+                     "lot yazılmamış" diye değil, numarasıyla anılır. Lot varsa rozette. */
+                  code: batch.batchNo,
                   dateType: batch.dateType,
                   date: shortDate(batch.expiryDate) ?? batch.expiryDate,
                 })}
               </Text>
               <View style={styles.badgeRow}>
+                {batch.lotNumber === null ? null : (
+                  <Text style={[styles.badge, styles.badgeLot]} numberOfLines={1} testID={`${testID}-row-lot-${batch.stockId}`}>
+                    {fillCopy(t.adjustment.picker.rowLot, { lot: batch.lotNumber })}
+                  </Text>
+                )}
                 <Text
                   style={[
                     styles.badge,
@@ -332,7 +337,14 @@ const styles = StyleSheet.create({
   },
   badgeRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: operationsTheme.space.xs,
     paddingTop: operationsTheme.space['2xs'],
+  },
+  /** Lot rozeti KUM, alan rozetinden daha sessiz: kimlik parti numarasıdır, lot ek bilgi. */
+  badgeLot: {
+    backgroundColor: operationsTheme.colors['sand-300'],
+    color: operationsTheme.colors.muted,
   },
   badge: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

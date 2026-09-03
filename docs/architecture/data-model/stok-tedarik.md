@@ -17,6 +17,7 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 | `physical_qty` | int |  | `0` |
 | `initial_qty` | int |  | `0` |
 | `expiry_date` | date |  |  |
+| `batch_no` | text |  |  |
 | `lot_number` | text | • |  |
 | `purchase_price` | numeric(10, 2) | • |  |
 | `intake_id` | uuid | • |  |
@@ -33,6 +34,7 @@ Parti, rezervasyon, düzeltme, sıcaklık; tedarikçi ve satın alma zinciri.
 - **`physical_qty`** — fiili (satış/fire ile erir)
 - **`initial_qty`** — **girişte** yazılan miktar — tarihtir, değişmez; trigger yazar. "Sipariş ettiğim kadar geldi mi" (§16 fark raporu) ve "bu partiden ne kadar tüketildi" buna dayanır
 - **`expiry_date`** — partinin son tarihi; **tipi üründedir** (`Product.date_type`: DLC güvenlik / DDM kalite) — bu yüzden kolon adı tipten bağımsız
+- **`batch_no`** — **PARTİ NUMARASI, bizim kimliğimiz** (kullanıcı kararı 03.09, `21.237`): `PRT-STR-26-0031` — belge ailesinin aynı biçimi (önek · depo kodu · yıl · o yıl o depoda sıra), aynı sayaç (`next_document_no`). **Tetikleyici üretir** (`stock_set_batch_no`, `0031`), elle yazılmaz, güncellenmez, benzersizdir. Parti üç yoldan doğuyor (kabul RPC'si, transfer kabulü, tohum); numara satırın doğduğu yerde verildiği için hiçbir yol atlayamaz. **Lot ile karıştırılmaz:** lot tedarikçinin ÜRETİM numarasıdır, boş olabilir ve benzersiz değildir; parti bizim MAL ALIMIMIZDIR, hep vardır. Ekranlar partiyi numarasıyla anar, lotu yanına yazar; okutma ikisini de tanır. Tedarikçi kodu numaraya GÖMÜLMEDİ: transferle doğan partinin tedarikçisi yok, plansız kabulde de olmayabilir — tedarikçi numaranın yanında gösterilir
 - **`lot_number`** — tedarikçinin lot numarası — geri çağırma (rappel) eşleşmesi; girişte istenir
 - **`purchase_price`** — **birim (paket) başına** alış maliyeti — kâr/marj için; toptan alınıp paketlenirse giriş paket adediyle yapılır (ör. 1kg → 10×100gr), maliyet pakete bölünür. Uygulamadaki adı `purchasePriceCents`, birimi **cent** (`STACK §8`)
 - **`intake_id`** — bağlı stok girişi/satın alma (bkz. `StockIntake`)

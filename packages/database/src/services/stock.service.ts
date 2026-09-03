@@ -287,7 +287,9 @@ export class StockService extends BaseDbService<Stock, StockInsert, StockUpdate>
     if (!term) return [];
     return this.getAllAs(StockBatchDetailSchema, opts.warehouseId ? { warehouseId: opts.warehouseId } : undefined, {
       select: BATCH_DETAIL_SELECT,
-      orFilters: [`lot_number.ilike.*${term}*`],
+      // Parti numarası da eşleşir (03.09): raftaki etiket ister tedarikçinin lotu ister bizim
+      // `PRT-…` numaramız olsun, aynı kapıdan çözülür. İki sütun, tek soru: "bu kod hangi parti".
+      orFilters: [`lot_number.ilike.*${term}*`, `batch_no.ilike.*${term}*`],
       rangeFilters: opts.onlyInStock ? [{ field: 'physical_qty', operator: 'gt', value: 0 }] : undefined,
       orderBy: 'expiryDate',
       orderDirection: 'desc',

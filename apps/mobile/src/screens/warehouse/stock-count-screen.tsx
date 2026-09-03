@@ -196,7 +196,7 @@ export function StockCountScreen() {
               ...t.adjustment.count.qtySheet,
               subject: fillCopy(t.adjustment.count.qtySheet.subject, {
                 name: batch.name,
-                code: batch.lotNumber ?? t.adjustment.picker.noLot,
+                code: batch.batchNo,
               }),
             })}
             onClose={() => setSheetOpen(false)}

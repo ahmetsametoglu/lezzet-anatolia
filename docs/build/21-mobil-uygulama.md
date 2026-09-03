@@ -10998,3 +10998,55 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kutusu araçta mı) ve gün ekranının üç gövdesinde aynı yerde bir şerit — kapısı yok, yalnız
   söyler. Web'de satır rotası eşlemesi web şeridine not (`not-web-askida-bildirimi-rotasi.md`).
   Testler: gün ekranı şerit (iki durak · kutusu araçta/değil · düğme yok) ve boşken çizilmez.
+
+- [x] (21.237) **PARTİ NUMARASI DOĞDU — `PRT-STR-26-0031`, tetikleyici üretir; ekranlar partiyi numarasıyla anar, lotu yanına yazar; okutma ikisini de tanır** (kullanıcı kararı 03.09, Oppo'da ölçüldü)
+  `touches:` `supabase/migrations/{0006_stock.sql,0031_warehouse.sql}` · `packages/types/src/entities/stock.schema.ts` · `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/database/src/services/stock.service.ts` · `packages/application/src/warehouse/{adjustment.ts,near-expiry.ts}` · `apps/mobile/src/screens/warehouse/{batch-picker.tsx,batch-context-card.tsx,adjustment-result-card.tsx,near-expiry-screen.tsx,stock-count-screen.tsx,write-off-screen.tsx,messages.json,warehouse-fixture.ts,*.test.tsx}` · `docs/architecture/data-model/stok-tedarik.md`
+
+  **Kullanıcının sorusu:** *"sistemde bir parti ifadesi var, bir de lot ifadesi var… veri tabanı
+  modelinde ikisi aynı şeyi mi ifade ediyor?"* Ölçüm: aynı şey değil ama partinin insan okur bir
+  numarası YOKTU — kimliği yalnız uuid. Ekranlar bir partiyi göstermek zorunda kalınca elde okunur
+  tek kod olarak tedarikçinin LOTUNU yazıyordu ("NE-001"); "Parti etiketini okut" düğmesi de lot
+  okutuyordu. Kayıt doğruydu, dil yanlıştı. Kullanıcı kararı: *"parti numarası anlamlı üretilsin,
+  barkod basmasak bile gösterilsin; gerekirse hem parti hem lot."*
+
+  **Karar:** `stock.batch_no` (`0006`, `not null`, benzersiz) + before-insert tetikleyicisi
+  (`0031` — depo kodu orada doğuyor). Biçim belge ailesiyle bire bir (`IMH`/`SAY`/`TRF`): depocu
+  dördüncü bir dil öğrenmiyor. Tedarikçi kodu numaraya GÖMÜLMEDİ (transferle doğan partinin
+  tedarikçisi yok; plansız kabulde olmayabilir; tedarikçide kod alanı yok) — yanında gösterilecek.
+  Numara elle verilirse ezilmiyor (fikstür, ileride dış taşıma).
+
+  **Ekranlar:** seçici satırı `PRT-… · DLC tarih`, lot varsa kum rozette ("lot NE-001"); bağlam
+  kartı parti numarasıyla açılır, lot ikinci satırda ve yalnız varsa; sonuç kartı, sayım çekmecesi,
+  düşüm tuş takımı, yakın-SKT turu — hepsi parti numarası. **Lotsuz parti** artık "lot yazılmamış"
+  ya da "—" değil, numarasıyla listelenir (yakın-SKT testi buna göre yeniden yazıldı). Okutma
+  (`findByLot`) iki sütuna bakıyor: lot VEYA parti numarası; raf listesi araması da.
+
+  **Web şeridine not:** operasyon web'inde lot yirmi civarı yerde kimlik gibi kullanılıyor
+  (`stock/`, `intake-form`, geri çağırma diyaloğu); `BatchView` `StockBatchDetail`ten türediği için
+  alan oraya zaten geldi — gösterimi web şeridinin işi (`docs/talep/not-web-parti-numarasi.md`).
+  Kendi etiketimizi basma kararı hâlâ ertelenmiş (`feature/barkod-okuyucu.md §3`); basıldığı gün QR
+  bu numarayı taşır.
+
+  **Doğrulama.** `db:refresh` (kullanıcı onayı 03.09) → tohum partileri tetikleyiciden numara aldı.
+  Tip · lint · docs:check temiz; tam paket sonucu commit notunda. Cihazda ölçüldü (Oppo): seçici
+  satırları `PRT-STR-26-…` ile açılıyor, lot rozette; bağlam kartı numara + lot satırı.
+
+- [ ] (21.238) **KURYE DENETİMİ — kalan bulgular (kenara not, kullanıcı kararı 03.09: "şimdilik not olarak düş")**
+  `touches: packages/application/src/courier/routes.ts · packages/application/src/courier/delivery.ts · supabase/migrations/0046_delivery_run.sql · docs/uygulama/kurye-denetim-2026-09-03.md`
+
+  Üç turda ölçülüp doğrulanmış, henüz KAPATILMAMIŞ altı madde; kanıt satırları ve düzeltme
+  önerileri `docs/uygulama/kurye-denetim-2026-09-03.md`te. Sıra kullanıcının.
+  - **4 · Araç ↔ kurye ↔ depo bağı (orta, ikinci araçtan ÖNCE):** seferler kuryeye bağlı, araç
+    tekelliği yok, araç deposu ve serbest ürünün çıkış deposu seferden değil kapsam sırasından.
+    Migration ister; web şeridiyle ortak (`docs/talep/not-web-arac-deposu-filo-kaydiyla-bagli-degil.md`).
+  - **6 · Rota kartı sayaçları (orta, bir saat):** iptal edilmiş sipariş durak/kutu sayılıyor
+    (`cancel_order` bölge/günü temizlemiyor); vadeli sipariş "tahsilat" sayılıyor (`routes.ts:146`).
+  - **8 · Kısmi ret teslimden ÖNCE yazılıyor (düşük→orta):** `adjustFulfillment` iade hesabını çözüp
+    "eksik karşılandı" haberini teslim geçişinden önce gönderiyor; teslim `stale` dönerse geri
+    alınmıyor (`delivery.ts:147-176`). Nadir (kapanış + teslim yarışı).
+  - **9 · Çıkarılan seferden kuryesiz kalan `out_for_delivery` sipariş (bilgi):** web'in askıda
+    şeridi ertesi gün kurtarıyor; `discard` o siparişi `ready`ye çekse aynı gün çözülür.
+  - **10 · Saat dilimi (bilgi):** sunucu UTC gün, cihaz yerel gün; yaz saatinde 00:00–02:00.
+  - **11 · Küçükler (bilgi):** `sefer.md`nin andığı araç zorunluluğu ayarı yok; açık sefer listesi
+    son 30 seferle sınırlı (`delivery-run.service.ts:67`); kod yedeği ile migration varsayılanı
+    ayrışan `delivery_proof_required` (pratikte görünmez).
