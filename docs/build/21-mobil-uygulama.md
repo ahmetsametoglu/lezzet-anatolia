@@ -10273,6 +10273,10 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   açmış depocuyu çıkışsız bırakırdı.
   - **BEKLEYEN(21.218):** ölçüm için toplanacak sipariş gerekiyor; `order` tablosu 02.09'da boş
     (besleme artık sipariş üretmiyor). Sipariş doğunca cihazda doğrulanacak.
+  - **Durum (03.09):** kod ve test yerinde — `preparation-screen` dolu açık kutuda düğmeyi çizmiyor,
+    `picking-box.test` iki hâli birden çiviliyor (gizli · boş kutuda görünür). Kullanıcı bulguları
+    defterindeki §10 bu ölçümle listeden düştü. Cihaz turu yine yapılamadı: STR'de 8 sipariş var,
+    hepsi `ready` — toplanacak `confirmed` sipariş yok. Görev o tur için açık kalıyor.
 
 - [ ] (21.219) **Durak ekranından geri dönüşte Android çökmesi** — `addViewAt: failed to insert
   view … The specified child already has a parent` (31.08, CPH1907; üç turda tekrar üretilmiş).
