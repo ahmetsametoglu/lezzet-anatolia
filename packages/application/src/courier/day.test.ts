@@ -569,16 +569,26 @@ describe('seferi başlat (K1 · 18.08)', () => {
     expect(result.awaitingBoxes).toEqual([{ orderId, loadedBoxes: 0, boxCount: 1 }]);
     expect((await orders.getById(orderId))?.status).toBe('ready');
 
-    /* Kutu araca biner ama sipariş HÂLÂ HAZIR: yükleme emanet değişimidir (31.08). Araç bir ara
-       depodur ve içinde yarının seferinin kutusu da durabilir — okutma müşteriye haber göndermez. */
-    const loaded = await loadBox(db, { code: opened.box.code, courierId });
-    expect(loaded).toMatchObject({ status: 'ok', allBoxesLoaded: true });
-    expect((await orders.getById(orderId))?.status).toBe('ready');
-
-    // Geçişi yazan İKİNCİ başlatmadır (catch-up claim): kutular tamam, durak artık yola çıkar.
-    const again = mustStart(await startCourierDay(db, { courierId, zoneId }));
-    expect(again.started).toContain(orderId);
+    /* SEFER YOLDAYKEN okutulan son kutu durağı AÇAR (kullanıcı kararı 03.09 · denetim bulgusu 3).
+       31.08'e kadar burada "sipariş HÂLÂ HAZIR" ölçülüyordu ve geçişi ikinci başlatma yazıyordu —
+       ama sürülen seferde o ikinci başlatmaya giden düğme yoktu; durak teslim edilemiyordu.
+       Yükleme yine emanet değişimidir (`load.test.ts`: sefersiz/başlamamış seferde `ready` kalır);
+       istisna yalnız yola çıkmış sefer. Haber de tam bu anda ve BİR KEZ gider: port çağrısı ölçülür. */
+    const notified: Array<{ orderId: string; status: string }> = [];
+    const loaded = await loadBox(db, {
+      code: opened.box.code,
+      courierId,
+      effects: { notifyStatus: async (id, status) => void notified.push({ orderId: id, status }) },
+    });
+    expect(loaded).toMatchObject({ status: 'ok', allBoxesLoaded: true, stopOpened: true });
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+    expect(notified).toEqual([{ orderId, status: 'out_for_delivery' }]);
+
+    // İkinci başlatma geçişi TEKRARLAMAZ: durak zaten yolda, haber de yeniden gitmez.
+    const again = mustStart(await startCourierDay(db, { courierId, zoneId, effects: { notifyStatus: async (id, status) => void notified.push({ orderId: id, status }) } }));
+    expect(again.started).not.toContain(orderId);
+    expect(again.alreadyOut).toContain(orderId);
+    expect(notified).toHaveLength(1);
 
     const { data } = await db.from('order_status_log').select('from_status,to_status,actor_id').eq('order_id', orderId);
     expect(

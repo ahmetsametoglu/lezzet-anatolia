@@ -686,6 +686,12 @@ export const LoadBoxResponseSchema = z.discriminatedUnion('status', [
     loadedBoxes: z.number().int(),
     boxCount: z.number().int(),
     allBoxesLoaded: z.boolean(),
+    /**
+     * Bu okutma DURAĞI DA AÇTI (kullanıcı kararı 03.09): sefer zaten yola çıkmışken siparişin son
+     * kutusu okutulduysa sipariş `out_for_delivery` olur ve müşteriye haber o an gider. Sefer
+     * başlamamışsa `false` — yükleme yine emanet değişimidir, yola çıkaran sefer başlatmadır.
+     */
+    stopOpened: z.boolean(),
   }),
   /** Aynı kutu ikinci kez okutuldu — hata değil, "zaten araçta" cevabı; sayaç değişmedi. */
   z.object({

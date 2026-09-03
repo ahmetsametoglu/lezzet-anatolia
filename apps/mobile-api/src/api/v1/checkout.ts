@@ -6,13 +6,13 @@ import {
   effectiveChannelOf,
   entryOfItem,
   getPackagesByIds,
-  notifyOrderStatus,
   placeOrder,
   readCheckoutSnapshot,
   UNRESOLVED_PLACE,
-  type OrderEffects,
 } from '@lezzet/application';
-import { CartService, serviceDb, UserProfileService, type Db } from '@lezzet/database';
+import { CartService, serviceDb, UserProfileService } from '@lezzet/database';
+// Yan etki portu artık ortak dosyada (03.09): kurye uçları da aynı nesneyi geçiriyor.
+import { mobileOrderEffects } from '../../lib/order-effects';
 import {
   CheckoutOrderBodySchema,
   CheckoutOrderResultSchema,
@@ -85,27 +85,6 @@ async function resolveCustomer(c: Context<CustomerEnv>, next: Next): Promise<Res
   c.set('customerId', profile.id);
   c.set('channel', effectiveChannelOf(profile));
   await next();
-}
-
-/**
- * Durum geçişinin yan etkileri — webin `webOrderEffects`inin mobil ikizi (`apps/web/lib/order/
- * transition.ts`). İkisi de AYNI paket kapılarını çağırıyor; ayrışan bir kural yok, yalnız `db`
- * bağlanıyor (`placeOrder`ın `bundles` portundaki desen).
- *
- * `refunder` BİLEREK yok: sağlayıcı iadesi `stripe` istemcisi ister ve sipariş AÇMA zincirinde iade
- * diye bir adım yoktur. Kayıtsız port sessiz kalmaz — kapı süreç başına bir kez uyarır
- * (`application/order/effects.ts` → `warnMissing`).
- *
- * **`rewardDelivered` PORTU KALKTI (17.9 · web şeridi, mobil dosyasına tek satırlık dokunuş).**
- * Sipariş puanı kaldırıldı (kullanıcı kararı 11.08) ve getirenin ödülü teslimattan ÖDEMEYE taşındı;
- * ödül artık `application/order/payment.ts` → `finalize` içinde, yani bu uçtan geçen ödemeli
- * siparişte de kendiliğinden yazılıyor. Port dışarıdan doldurulan bir kanca olarak kalsaydı iki
- * yüzey onu ayrı ayrı bağlamak zorunda kalırdı. Gerekçe: `docs/talep/not-mobil-davet-baglantisi.md`.
- */
-function mobileOrderEffects(db: Db): OrderEffects {
-  return {
-    notifyStatus: (orderId, status) => notifyOrderStatus(db, orderId, status),
-  };
 }
 
 export const checkout = new Hono<CustomerEnv>();

@@ -2,7 +2,7 @@ import { OrderService, SettingsService, WarehouseService, type Db } from '@lezze
 import { canTransition, generateReferenceNo, producesReferenceNo, stockEffectOf } from '@lezzet/domain-core';
 import type { OrderStatus, PaymentMethod, PreparationPick } from '@lezzet/types';
 import { recordOrderPayment } from './payment';
-import { readCourierRun } from '../courier/day';
+import { readCourierRuns } from '../courier/day';
 import { suggestPicksForVariant } from '../warehouse/preparation';
 
 /**
@@ -141,19 +141,27 @@ export async function quickSale(db: Db, input: QuickSaleInput): Promise<QuickSal
   // kural değil: seed dönüş damgasını kapanış olmadan yazınca ikisi ayrıştı ve motor, ekranın
   // "açık" dediği sefere bağ kurmayı reddetti. İki tanım varsa biri bir gün yanlış olur.
   //
-  // Bu yüzden ölçüt artık ekranın okuduğu fonksiyonun ta kendisi (`readCourierRun`): aynı gün, aynı
-  // kurye, aynı öncelik kuralı. Ve tanım TEK sinyale indi — **sefer kapanmamışsa açıktır**. Ölçüt
-  // dönüş damgası DEĞİL, çünkü sorulan soru "araç yolda mı" değil, *"bu para hâlâ bir mutabakata
-  // girebilir mi"*: kapanmış sefere sonradan satış bağlamak, dün mutabık olan fotoğrafı bugün
-  // sebepsiz "eksik" göstermek olurdu. Damgayı ölçüt yapmak ise ekranla ayrışmayı geri getirirdi.
+  // Bu yüzden ölçüt artık ekranın okuduğu fonksiyonun ta kendisi: aynı kurye, aynı öncelik kuralı.
+  // Ve tanım TEK sinyale indi — **sefer kapanmamışsa açıktır**. Ölçüt dönüş damgası DEĞİL, çünkü
+  // sorulan soru "araç yolda mı" değil, *"bu para hâlâ bir mutabakata girebilir mi"*: kapanmış
+  // sefere sonradan satış bağlamak, dün mutabık olan fotoğrafı bugün sebepsiz "eksik" göstermek
+  // olurdu.
   //
-  // "Günler önce dönülmüş, kapatılmamış bir sefer bugünün parasını yutar mı?" — yutamaz: okuma
-  // GÜNE bağlı (`readCourierRun` varsayılanı bugün), dünün seferi hiç aday olmaz.
+  // ── VE GÜNE DE BAĞLI DEĞİL (03.09 · denetim bulgusu 2) ─────────────────────
+  // Önceki sürüm `readCourierRun`ı (güne bağlı, varsayılan bugün) okuyordu ve gerekçesi "dünün
+  // seferi bugünün parasını yutmasın"dı. Ölçüldü: sefer kendi gününden başka bir günde sürülürse
+  // (uzak rotaya bir akşam önce çıkmak, kapatmadan gece geçmesi) `/day` o seferi SÜRÜLEN sayıyor,
+  // burası ise bulamıyordu — o günün araç satışları mutabakata girmiyor, kapanış fazla veriyordu.
+  // Sürülen seferin tanımı artık `/day` ucununkiyle BİREBİR aynı kaynaktan: `readCourierRuns`
+  // (kapanmamışlar) içinde yola çıkmış olan. "Dünün seferi bugünün parasını yutar mı?" sorusunun
+  // cevabı da bu tanımın içinde: kapanmamış ve yola çıkmış sefer, kuryenin HÂLÂ sürdüğü seferdir —
+  // parası ona aittir. Kapatılmamış eski bir sefer zaten yeni seferi başlatmayı da kilitliyor
+  // (`another_running`), yani iki tanım aynı anda iki sefer gösteremez.
   if (input.actorId) {
     const warehouse = await new WarehouseService(db).getById(order.warehouseId);
     if (warehouse?.kind === 'vehicle') {
-      const sefer = await readCourierRun(db, { courierId: input.actorId });
-      if (sefer && !sefer.closed) await orders.update({ id: order.id, deliveryRunId: sefer.runId });
+      const sefer = (await readCourierRuns(db, { courierId: input.actorId })).find((run) => run.departedAt !== null);
+      if (sefer) await orders.update({ id: order.id, deliveryRunId: sefer.runId });
     }
   }
 

@@ -27,6 +27,7 @@ import {
 import { vehicleLabelOf } from './vehicle-label';
 import { listCourierRoutes } from './routes';
 import { ensureStopOrder } from './stop-order';
+import { notifyStatusEffect, type OrderEffects } from '../order/effects';
 import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
 import type {
@@ -543,7 +544,19 @@ export interface CourierDayRunView extends CourierRunBriefView {
  */
 export async function startCourierDay(
   db: SupabaseClient,
-  input: { courierId: string; date?: string; zoneId?: string; vehicleId?: string | null; depart?: boolean },
+  input: {
+    courierId: string;
+    date?: string;
+    zoneId?: string;
+    vehicleId?: string | null;
+    depart?: boolean;
+    /**
+     * Müşteri haberi portu (03.09 · denetim bulgusu 1): yola çıkan HER durak için `out_for_delivery`
+     * haberi buradan gider. Port geçirilmezse kapı süreç başına bir kez uyarır (`effects.ts`);
+     * ekran ise "müşterilerine bildirim gider" yazıyor — o cümlenin karşılığı bu parametredir.
+     */
+    effects?: OrderEffects;
+  },
 ): Promise<CourierDayStart> {
   const date = input.date ?? new Date().toISOString().slice(0, 10);
   /*
@@ -719,8 +732,16 @@ export async function startCourierDay(
       to: 'out_for_delivery',
       actorId: input.courierId,
     });
-    if (transitioned.ok) result.started.push(claim.orderId);
-    else result.stale.push({ orderId: claim.orderId, currentStatus: transitioned.currentStatus });
+    if (transitioned.ok) {
+      result.started.push(claim.orderId);
+      /* HABER DURAK BAŞINA (03.09): yola çıkan sipariş müşterisine "yolda" der. Kutusu binmeyen
+         durak bu döngüye hiç gelmez (yukarıda `awaitingBoxes`), yani ona haber gitmez; yeniden
+         başlatmada zaten yoldaki durak `alreadyOut`a düşer, geçiş ve haber tekrarlanmaz. Bu iki
+         kural ekrana ayrıca yazılmadı — geçişin kendisi kuraldır. */
+      await notifyStatusEffect(input.effects, claim.orderId, 'out_for_delivery');
+    } else {
+      result.stale.push({ orderId: claim.orderId, currentStatus: transitioned.currentStatus });
+    }
   }
 
   /* Sıra hesabı BURADA, claim'den sonra — ve sefer başlatmayı BLOKE ETMEZ (11.9): kapı hiçbir hâlde

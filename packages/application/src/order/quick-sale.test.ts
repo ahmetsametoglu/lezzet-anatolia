@@ -268,7 +268,10 @@ describe('hızlı satış (07.10)', () => {
  */
 describe('araçtan satış — sefer bağı (26.08)', () => {
   const yerel: { aracId?: string; tesisId?: string; kuryeId?: string; zoneId?: string; runId?: string; variantId?: string; productId?: string } = {};
-  const gun = new Date().toISOString().slice(0, 10);
+  /* SEFER DÜNÜN TARİHİYLE (03.09 · denetim bulgusu 2): bağ artık güne değil "sürülen sefer"e
+     bakıyor — yola çıkmış ve kapanmamış olan, kendi günü ne olursa olsun (`/day` ucunun tanımı).
+     Bugünün tarihiyle yazılsaydı eski (güne bağlı) okuma da geçerdi ve gerileme görünmezdi. */
+  const gun = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 
   beforeAll(async () => {
     yerel.aracId = (await createTestWarehouse(db, { label: 'VAN', kind: 'vehicle' })).id;

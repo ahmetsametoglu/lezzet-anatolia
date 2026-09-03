@@ -173,8 +173,9 @@ export function moveVanStock(
 
 /**
  * **Araca yükleme okutması** (23.8 · karar §1.11). Kutulu siparişin `ready → out_for_delivery`
- * durum geçişi burada YAZILMAZ (31.08 · `allBoxesLoaded` yalnız "tamamı araçta" der); yanlış rota `wrong_route`
- * ile GÖRÜNÜR reddedilir.
+ * durum geçişi burada YAZILMAZ (31.08 · `allBoxesLoaded` yalnız "tamamı araçta" der) — tek istisna
+ * sefer zaten yoldayken okutulan son kutu (`stopOpened`, 03.09); yanlış rota `wrong_route` ile
+ * GÖRÜNÜR reddedilir.
  */
 export function loadCourierBox(body: LoadBoxRequest): Promise<ApiResult<z.infer<typeof LoadBoxResponseSchema>>> {
   return authorizedFetch('/api/v1/courier/boxes/load', LoadBoxResponseSchema, { method: 'POST', body });

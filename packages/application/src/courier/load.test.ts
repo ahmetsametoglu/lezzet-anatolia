@@ -154,9 +154,10 @@ describe('araca yükleme (loadBox · karar §1.11)', () => {
 
     const outcome = await loadBox(db, { code: codes[0]!, courierId });
 
-    expect(outcome).toMatchObject({ status: 'ok', boxNo: 1, loadedBoxes: 1, boxCount: 1, allBoxesLoaded: true });
+    expect(outcome).toMatchObject({ status: 'ok', boxNo: 1, loadedBoxes: 1, boxCount: 1, allBoxesLoaded: true, stopOpened: false });
     /* İDDİANIN KALBİ: mal araçta ama sipariş HÂLÂ HAZIR. Araç bir ara depodur ve içinde yarının
-       seferinin kutusu da durabilir; yükleme müşteriye haber göndermez. */
+       seferinin kutusu da durabilir; yükleme müşteriye haber göndermez. Sefersiz sipariş için
+       `stopOpened` hiç doğamaz — yola çıkmış sefer istisnası `day.test.ts`te ölçülüyor (03.09). */
     expect((await orders.getById(orderId))?.status).toBe('ready');
     const box = await boxService.getByCode(codes[0]!);
     expect(box?.loadedAt).not.toBeNull();
@@ -171,7 +172,7 @@ describe('araca yükleme (loadBox · karar §1.11)', () => {
     expect((await orders.getById(orderId))?.status).toBe('ready');
 
     const second = await loadBox(db, { code: codes[1]!, courierId });
-    expect(second).toMatchObject({ status: 'ok', loadedBoxes: 2, boxCount: 2, allBoxesLoaded: true });
+    expect(second).toMatchObject({ status: 'ok', loadedBoxes: 2, boxCount: 2, allBoxesLoaded: true, stopOpened: false });
     // Tamamı araçta — ama yola çıkaran yine sefer başlatma (31.08).
     expect((await orders.getById(orderId))?.status).toBe('ready');
   });

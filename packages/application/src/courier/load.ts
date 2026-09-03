@@ -1,6 +1,8 @@
 import { DeliveryRunService, DeliveryZoneService, OrderBoxService, OrderService } from '@lezzet/database';
+import { canTransition } from '@lezzet/domain-core';
 import type { Order } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { notifyStatusEffect, type OrderEffects } from '../order/effects';
 
 /**
  * **ARACA YÜKLEME OKUTMASI** (23.8 · karar §1.11) — kurye kutunun QR'ını okutur; kutu rotasına
@@ -21,8 +23,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
  * yola çıkarırdı. Ayrıca `startCourierDay`ın `started` listesi ULAŞILAMAZ hâle gelmişti — kutu
  * yüklenen sipariş buradan çoktan çıkmış oluyordu, sefer başlatmaya iş kalmıyordu.
  *
- * Geçişin tek sahibi artık `startCourierDay`: kutuları tam olan durağı o yola çıkarır, olmayanı
+ * Geçişin sahibi `startCourierDay`: kutuları tam olan durağı o yola çıkarır, olmayanı
  * `awaitingBoxes`ta gösterir.
+ *
+ * ── TEK İSTİSNA: SEFER ZATEN YOLDAYSA SON KUTU DURAĞI AÇAR (kullanıcı kararı 03.09) ─────────
+ * Eksik kutuyla başlatılan seferde kurye eksik kutuyu sonradan okutuyordu ve durak `ready`de
+ * kalıyordu: gün ekranında sürülen seferin düğmesi "kapat", araçtaki seferlerde "duraklara git",
+ * yeniden başlatmaya giden yol yok — teslimat ekranı kapıyı açıyor, sunucu `stale` diyordu.
+ * Denetim 03.09, bulgu 3. Yukarıdaki gerekçe ("yarının kutusu bugün yola çıkmasın") burada
+ * geçerli değil: sefer çoktan yolda, müşterilere haber gitti; bu durağın haberi de tam şimdi,
+ * bir kez gider. Kararı yine motor verir (`canTransition`), geçiş koşullu yazılır (`stale` yutulur:
+ * araya başka bir yazım girdiyse durum zaten değişmiştir).
  *
  * ── ROTA KONTROLÜNÜN KAYNAĞI SİPARİŞİN DAMGASIDIR ───────────────────────────
  * `start_delivery_run` seferi açarken siparişlere `courier_id` yazar ("siparişin kuryesi seferin
@@ -40,9 +51,11 @@ export type LoadBoxOutcome =
       boxCount: number;
       /**
        * Bu okutma siparişin SON kutusuydu — siparişin tamamı artık araçta. **Yola çıktı demek
-       * DEĞİL** (31.08): durumu değiştiren tek kapı sefer başlatmadır.
+       * DEĞİL** (31.08): durumu değiştiren kapı sefer başlatmadır — tek istisna aşağıda.
        */
       allBoxesLoaded: boolean;
+      /** Sefer zaten yoldaydı ve bu son kutu durağı AÇTI (`out_for_delivery`, haber gitti) — 03.09. */
+      stopOpened: boolean;
     }
   | { status: 'already_loaded'; orderId: string; boxNo: number; loadedBoxes: number; boxCount: number }
   | {
@@ -63,7 +76,7 @@ export type LoadBoxOutcome =
 
 export async function loadBox(
   db: SupabaseClient,
-  input: { code: string; courierId: string },
+  input: { code: string; courierId: string; effects?: OrderEffects },
 ): Promise<LoadBoxOutcome> {
   const boxes = new OrderBoxService(db);
   const box = await boxes.getByCode(input.code.trim());
@@ -120,6 +133,7 @@ export async function loadBox(
 
   await boxes.update({ id: box.id, loadedAt: new Date().toISOString(), loadedBy: input.courierId });
   const loadedBoxes = loadedOthers + 1;
+  const allBoxesLoaded = loadedBoxes >= siblings.length;
 
   return {
     status: 'ok',
@@ -128,6 +142,37 @@ export async function loadBox(
     boxNo: box.boxNo,
     loadedBoxes,
     boxCount: siblings.length,
-    allBoxesLoaded: loadedBoxes >= siblings.length,
+    allBoxesLoaded,
+    stopOpened: allBoxesLoaded ? await openStopIfRunDeparted(db, order, input) : false,
   };
+}
+
+/**
+ * Son kutu okutuldu; sefer ZATEN YOLDAYSA durağı aç (künyedeki tek istisna, 03.09).
+ *
+ * Üç koşul: sipariş hâlâ `ready` (yola çıkmamış), bir sefere damgalı, o sefer yola çıkmış. Sefer
+ * kurulmuş ama başlamamışsa `false` — yarının kutusu bugün yola çıkmaz (31.08). Geçiş koşullu:
+ * `stale` (araya başka yazım girdi) sessizce `false`dur, çünkü durum zaten bu kapının kararı olmaktan
+ * çıkmıştır; ekran bir sonraki okumada gerçeği görür.
+ */
+async function openStopIfRunDeparted(
+  db: SupabaseClient,
+  order: Order,
+  input: { courierId: string; effects?: OrderEffects },
+): Promise<boolean> {
+  if (order.status !== 'ready' || order.deliveryRunId === null) return false;
+  const run = await new DeliveryRunService(db).getById(order.deliveryRunId);
+  if (run === null || run.departedAt === null) return false;
+  if (!canTransition('ready', 'out_for_delivery').allowed) return false;
+
+  const transitioned = await new OrderService(db).transition({
+    orderId: order.id,
+    from: 'ready',
+    to: 'out_for_delivery',
+    actorId: input.courierId,
+  });
+  if (!transitioned.ok) return false;
+  // Haber TAM ŞİMDİ ve bir kez: durak yola çıktı. Tekrar kilidi `notifyOrderStatus`ta (geçiş başına tek).
+  await notifyStatusEffect(input.effects, order.id, 'out_for_delivery');
+  return true;
 }

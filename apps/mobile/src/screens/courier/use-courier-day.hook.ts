@@ -589,9 +589,14 @@ export function useCourierDay(): UseCourierDayResult {
     setStartNotice(null);
 
     void (async () => {
-      // Ekranın gösterdiği gün VE seçilen rota gönderilir; gün henüz okunmadıysa alan hiç doğmaz ve
-      // kapı bugüne düşer. İkinci basış ZARARSIZDIR: sefer varsa `already_started` döner, ezmez.
-      const result = await startCourierDay({ zoneId: startZoneId, ...(date === null ? {} : { date }) });
+      /* GÜN SEFERİN KENDİ GÜNÜDÜR (03.09 · denetim bulgusu 2). Sürülen sefer varken buraya gönderilen
+         gün ekranın "bugün"üydü; sefer kendi gününden başka bir günde sürülüyorsa (uzak rotaya bir
+         akşam önce çıkmak, kapatmadan gece geçmesi) uç aynı rotaya BUGÜN için ikinci bir sefer
+         satırı açıyordu — `depart` `another_running` diyor, satır geri alınmıyordu: araçta hayalet
+         sefer. Sefer açıkken gün seferin gününden, yoksa ekranın gününden gelir; ikisi de yoksa alan
+         hiç doğmaz ve kapı bugüne düşer. İkinci basış ZARARSIZDIR: sefer varsa catch-up claim. */
+      const gun = run !== null && !run.closed ? run.deliveryDate : date;
+      const result = await startCourierDay({ zoneId: startZoneId, ...(gun === null ? {} : { date: gun }) });
       setStarting(false);
 
       if (result.error !== null) {
@@ -702,7 +707,11 @@ export function useCourierDay(): UseCourierDayResult {
                o iş sefer başlatmanın. Eski metin kuryeye olmayan bir şeyi haber veriyordu. */
             text: withRoute(
               route,
-              data.allBoxesLoaded
+              /* DURAK AÇILDIYSA cümle onu söyler (03.09): sefer yoldayken okutulan son kutu durağı
+                 yola çıkardı ve müşteriye haber gitti — "tamamı araçta" bunu anlatmazdı. */
+              data.stopOpened
+                ? fillCopy(t.day.boxes.loadedOpened, { route: route ?? '', n: String(data.boxNo), ref, m: String(data.boxCount) })
+                : data.allBoxesLoaded
                 ? fillCopy(t.day.boxes.loadedComplete, { route: route ?? '', n: String(data.boxNo), ref, m: String(data.boxCount) })
                 : fillCopy(t.day.boxes.loaded, {
                     route: route ?? '',

@@ -10874,3 +10874,46 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   açılır, çekmece açılmaz · beklenen yoksa çekmece açılır, sayı yazılmaz) + koli boyu testinin
   varsayımı güncellendi. Cihazda ölçüldü (Oppo): "30 BEKLENEN" düğmesine dokunuldu, adet kutusu
   30 oldu, kart açıldı, çekmece açılmadı. Tam paket sonucu commit notunda.
+
+- [x] (21.234) **KURYE DENETİMİ — ilk üç bulgu kapandı: müşteri haberi mobil yoldan gidiyor · sürülen seferin tek tanımı · sefer yoldayken son kutu durağı açıyor** (kullanıcı kararı 03.09)
+
+  Kuryenin günü baştan sona üç katmanda yüründü (ekran · mobil API + uygulama katmanı · `0046`
+  RPC'leri + durum makinesi); on bir bulgu listelendi, kullanıcı ilk üçünü kapattırdı. Kalan
+  sekiz (araç↔kurye↔depo bağı, kapanışta mal sayımı, rota kartı sayaçları, hazırlanmamış/
+  ulaşılamayan durakların kapanışta kalması, kısmi ret sırası, çıkarma ile sahipsiz kalan sipariş,
+  saat dilimi, ayar/besleme tutarsızlıkları) `docs/uygulama/kurye-denetim-2026-09-03.md`te
+  kanıt satırlarıyla; karar kullanıcının.
+
+  ── **1 · MÜŞTERİ HABERİ MOBİL YOLDAN GİDİYOR** ─────────────────────────────
+  Ekran "durakları açar · müşterilerine bildirim gider" yazıyordu; geçiş doğrudan DB RPC'siyle
+  yazılıyor, `effects` portu kurye uçlarında bilerek boştu (defter 08.08 sınırı — terfi 21.21'de
+  olmuş, kurye uçları unutulmuştu). `mobileOrderEffects` `checkout.ts`ten `lib/order-effects.ts`e
+  çıktı; üç kapı onu alıyor: `startCourierDay` (yola çıkan durak başına `out_for_delivery`),
+  `loadBox` (aşağıdaki istisna) ve `confirmDoorDelivery` (`delivered`). Kullanıcının iki kuralı
+  yapıda zaten vardı ve ölçüldü: kutusu binmeyen durağa haber gitmez (geçiş yapmaz), yeniden
+  başlatma haber tekrarlamaz (`alreadyOut` + `notifyOrderStatus`un geçiş-başına-tek kilidi).
+
+  ── **2 · "SÜRÜLEN SEFER" TEK TANIM** ───────────────────────────────────────
+  Kullanıcı düzeltmesiyle ORTA: normal çok günlük akışta sorun yok (yarının seferi yarın
+  başlatılır). Ayrışma sefer kendi gününden başka bir günde sürülürse: `/day` seferi sürülen
+  sayıyor, araç satışının bağı (`quick-sale.ts`, güne bağlı `readCourierRun`) bulamıyor → o günün
+  araç satışları mutabakat dışı; "kalanları yola çıkar" bugünün tarihini gönderip aynı rotaya
+  hayalet sefer açıyordu. Şimdi: satış bağı `readCourierRuns` içinde yola çıkmış olana (uçla aynı
+  kaynak); kanca sürülen seferin kendi gününü gönderiyor. Test: sefer dünün tarihiyle kuruluyor
+  (bugünle yazılsaydı eski okuma da geçerdi).
+
+  ── **3 · SEFER YOLDAYKEN SON KUTU DURAĞI AÇAR** ────────────────────────────
+  Eksik kutuyla başlatılan seferde geç okutulan kutu yalnız damga yazıyordu; sürülen seferde
+  yeniden başlatmaya giden düğme yok (gün ekranı "kapat", araçtaki seferler "duraklara git"),
+  teslimat ekranı kapıyı açıyor, `deliver_order` `ready`den teslim etmediği için `stale` diyordu.
+  `loadBox`: son kutu + sipariş `ready` + seferi yola çıkmış → `ready → out_for_delivery`
+  (motor kararı, koşullu; `stale` yutulur) + haber o an, bir kez. Sözleşmeye `stopOpened`
+  (`LoadBoxResponse.ok`), toast "durak açıldı, müşteriye haber gitti". Sefer başlamamışsa davranış
+  aynen 31.08: yükleme emanet değişimi, `stopOpened:false`. Eksik kutuyla başlatma çekmecesinin
+  metni düzeltildi: haber yalnız binen duraklara gider, binmeyene kutu okutulunca.
+
+  Testler: `day.test` KUTULU senaryosu yeniden yazıldı (son kutu durağı açar + haber bir kez +
+  ikinci başlatma tekrarlamaz) · `load.test` sefersiz yüklemede `stopOpened:false` ·
+  `quick-sale.test` dünün seferine bağ. Tip · lint · `test:unit` 1953 · courier Jest 124; tam
+  paket sonucu commit notunda.
+

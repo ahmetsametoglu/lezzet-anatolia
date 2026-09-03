@@ -212,6 +212,7 @@ describe('K · araca yükleme', () => {
               loadedBoxes: 1,
               boxCount: 1,
               allBoxesLoaded: true,
+              stopOpened: false,
             }),
           )
         : Promise.resolve(okResponse(loadingDay())),

@@ -33,11 +33,10 @@ import type { OrderStatus } from '@lezzet/types';
  * "belirtiyi susturan düzeltme çözüm değildir" kuralının tam karşılığı. Uyarı bir kez basılır:
  * her teslimatta basılsaydı gürültüye dönüşür, gürültü de görünmezliğin ikinci hâlidir.
  *
- * O terfi 21.21'de yapıldı ve `POST /api/v1/me/checkout/order` portu doldurdu.
- * **BEKLEYEN(14.11): `/api/v1/courier/*` hâlâ `effects` GEÇMİYOR** (`courier.ts` → `stops/:orderId/
- * deliver`) — yani mobil kuryenin teslim ettiği sipariş müşteriye "teslim edildi" haberi vermiyor ve
- * sipariş puanı yazılmıyor. Engel kalktı, kalan iş mekanik: aynı `mobileOrderEffects` nesnesini o
- * çağrılara da geçirmek.
+ * O terfi 21.21'de yapıldı ve `POST /api/v1/me/checkout/order` portu doldurdu. Kurye uçları
+ * 03.09'da bağlandı (denetim bulgusu 1): `mobileOrderEffects` artık `apps/mobile-api/src/lib/
+ * order-effects.ts`te tek yerde ve sefer başlatma, geç kutu yükleme ve kapıda teslim üçü de onu
+ * geçiriyor — "yolda" ve "teslim edildi" haberleri mobil yoldan da gidiyor.
  */
 
 /** İstisna haberleri (14.5) — iptal, eksik karşılanma, iade. Durum geçişine değil PARA çözümüne bağlı. */

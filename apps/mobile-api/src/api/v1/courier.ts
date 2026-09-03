@@ -47,6 +47,7 @@ import {
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import { IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
+import { mobileOrderEffects } from '../../lib/order-effects';
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
@@ -82,14 +83,14 @@ import { requireStaffRole, type StaffEnv } from './auth';
  * ve `forbidden` (hangi sebep) için de geçerli. Sözleşme şemaları bu yüzden ayrımlı birleşim
  * (`discriminatedUnion`) — ret dalları da cevabın kendisidir, hata gövdesi değil.
  *
- * ── YAN ETKİ SINIRI: BU UÇTAN MAİL/PUAN ÇIKMAZ (defter 08.08) ────────────────
- * `confirmDoorDelivery` müşteri haberini ve sadakat puanını PORT üzerinden alıyor
- * (`application/order/effects.ts`) ve o portların uygulamaları (`@lezzet/notify` + bildirim verisi,
- * `rewardCompletedOrder`) henüz terfi etmedi — terfileri defterde ayrı pozisyon. Uçlar bu sınırla
- * AÇILIYOR: kapıda teslim yazılır, stok düşer, para defterine hareket girer; **müşteriye teslim
- * maili gitmez ve sipariş puanı yazılmaz.** Sessiz değil: port takılmadığı için kapı süreç başına
- * bir kez `logger.warn` basıyor. Port terfi ettiği gün burada değişecek tek şey `confirmDoorDelivery`
- * çağrısına bir `effects` nesnesi eklenmesidir.
+ * ── YAN ETKİ: MÜŞTERİ HABERİ BU UÇTAN DA GİDİYOR (03.09 · denetim bulgusu 1) ──
+ * Defter 08.08'den beri bu dosya `effects` geçirmiyordu: port uygulaması terfi etmemişti, uçlar
+ * "mail çıkmaz" sınırıyla açılmıştı. Terfi 21.21'de oldu, checkout portu doldurdu, kurye uçları
+ * UNUTULDU — ve ekran o sırada "durakları açar · müşterilerine bildirim gider" yazıyordu. Ölçüldü
+ * 03.09: mobilden çıkan kurye hiçbir haber göndermiyordu, web'den "yola çıktım" diyen operatör
+ * gönderiyordu. Üç kapı artık aynı `mobileOrderEffects`i alıyor (`lib/order-effects.ts`, checkout
+ * ile ortak): sefer başlatma (`out_for_delivery`, durak başına), geç kutu yükleme (aynı haber, o
+ * durak için) ve kapıda teslim (`delivered`). Tekrar kilidi portun kendisinde (geçiş başına tek).
  *
  * ── LOG: KİMLİK EVET, İÇERİK HAYIR (CLAUDE §1) ──────────────────────────────
  * Bu dosya ayrıca kayıt düşmez; `app.ts`in istek satırı yolu ve durumu zaten yazıyor ve yolda yalnız
@@ -246,13 +247,15 @@ courier.post('/day/start', async (c) => {
   const parsed = StartDayBodySchema.safeParse((await readJsonBody(c)) ?? {});
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
-  const result = await startCourierDay(serviceDb(), {
+  const db = serviceDb();
+  const result = await startCourierDay(db, {
     courierId: c.get('staff').id,
     date: parsed.data.date,
     zoneId: parsed.data.zoneId,
     vehicleId: parsed.data.vehicleId,
     // `depart:false` = seferi KUR, yola çıkarma (31.08). Ekran önce kurar, yükler, sonra başlatır.
     depart: parsed.data.depart,
+    effects: mobileOrderEffects(db),
   });
 
   const body: z.input<typeof StartCourierDayResponseSchema> = result;
@@ -411,6 +414,7 @@ courier.post('/runs/:runId/depart', async (c) => {
     date: run.deliveryDate,
     zoneId: run.deliveryZoneId,
     vehicleId: run.vehicleId,
+    effects: mobileOrderEffects(db),
   });
   /* "Başka sefer sürülüyor" bir HATA DEĞİL cevabın kendisidir ve künyesiyle iner: kurye önce
      hangisini kapatacağını bilmeli. `not_found`a yıkılsaydı ekran "sefer kayboldu" derdi. */
@@ -455,7 +459,9 @@ courier.post('/boxes/load', async (c) => {
   const parsed = LoadBoxRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
-  const outcome = await loadBox(serviceDb(), { code: parsed.data.code, courierId: c.get('staff').id });
+  const db = serviceDb();
+  // Sefer yoldaysa son kutu durağı açar ve haber gider (03.09) — port bu yüzden burada da geçiyor.
+  const outcome = await loadBox(db, { code: parsed.data.code, courierId: c.get('staff').id, effects: mobileOrderEffects(db) });
   const body: z.input<typeof LoadBoxResponseSchema> = outcome;
   return ok(c, LoadBoxResponseSchema.parse(body));
 });
@@ -467,11 +473,13 @@ courier.post('/stops/:orderId/deliver', async (c) => {
   const parsed = ConfirmDoorDeliveryRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
-  const outcome = await confirmDoorDelivery(serviceDb(), {
+  const db = serviceDb();
+  const outcome = await confirmDoorDelivery(db, {
     orderId: orderId.data,
     courierId: c.get('staff').id,
     ...parsed.data,
-    // `effects` BİLEREK geçirilmiyor — dosya künyesindeki yan etki sınırı.
+    // "Teslim edildi" haberi (03.09) — dosya künyesi.
+    effects: mobileOrderEffects(db),
   });
 
   const body: z.input<typeof ConfirmDoorDeliveryResponseSchema> = outcome;
