@@ -1346,6 +1346,8 @@ export const ResolvedBatchSchema = z.object({
    * sorusunu adla soramaz: iki tesiste aynı ad olabilir ve ad değişebilir. `null` = rafı bilinmiyor.
    */
   storageAreaId: z.string().uuid().nullable(),
+  /** Ürün kapağı (public URL) — seçici satırının solundaki kare (kullanıcı isteği 03.09); kapaksız üründe `null`. */
+  imageUrl: z.string().nullable(),
   /**
    * Kalan raf ömrü yüzdesi. **`null` = ölçülemedi** (ürünün toplam ömrü girilmemiş) ve sıfır
    * DEĞİLDİR — "%0" yazmak sağlam bir partiyi imhalık gösterirdi (CLAUDE §1).

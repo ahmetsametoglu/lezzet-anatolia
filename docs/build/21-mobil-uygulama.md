@@ -10916,6 +10916,13 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   seçici çipleri çizdi, "Derin dondurucu 1" seçildi, soğuk odadaki parti seçilince DB'de
   `storage_area_id` dondurucuya döndü ve kart yeni adresi okudu. Tam paket sonucu commit notunda.
 
+  **Ek (03.09, cihaz turu sonrası — kullanıcı isteği):** satırın soluna ÜRÜN KARESİ
+  (`OperationsProductThumb`, kapaksızda monogram; `ResolvedBatch.imageUrl` — `variantNames` zaten
+  çözüyordu, ek okuma yok). **İskeletin altında bayat satır arızası kapandı:** satırlar durumdan
+  bağımsız çiziliyordu, arama turu sürerken üstte üç iskelet altta önceki turun satırları
+  duruyordu; artık yalnız `ready`de çizilir (test: tur dönmeyince yalnız iskelet). Cihazda ölçüldü
+  (Oppo): açılışta üç iskelet + "yükleniyor", sonra resimli satırlar.
+
 - [ ] (21.235) **SAYIM LİSTESİ LOT ALTINDA GRUPLANIR — aynı ürün · aynı lot · aynı son tarih · aynı alan tek satır, sayım fark dağılımını sistem yapar** (kullanıcı kararı 03.09, henüz başlanmadı)
   `touches:` `packages/domain-core/src/stock/` (fark dağılımı — saf karar) · `packages/application/src/warehouse/adjustment.ts` (`measureAfter` çok partili toplam) · `apps/mobile/src/screens/warehouse/{batch-picker.tsx,use-batch-subject.hook.ts,stock-count-screen.tsx,write-off-screen.tsx,batch-context-card.tsx}`
 

@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsProductThumb } from '@/components/operations/product-thumb';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
@@ -43,8 +44,15 @@ import { shortDate } from './warehouse-format';
   görünüyordu. Şimdi alan kendi rozetinde, adet sağda büyük ve altında "sistemde" yazıyor: iki
   sayı aynı satırda yan yana durmuyor.
 
+  ── SATIRIN SOLUNDA ÜRÜN KARESİ (kullanıcı isteği 03.09) ────────────────────
+  Depocu rafta kutuya bakıyor, listede adı okuyor; kare ikisini tek bakışta eşliyor. Kapaksız
+  üründe monogram (`OperationsProductThumb`) — boş bir kutu değil, adın baş harfleri.
+
   ── LİSTENİN ÜÇ HÂLİ AYRI ŞEYLER SÖYLER ─────────────────────────────────────
   · **yükleniyor** — iskelet; halka değil (satırın kendi boyunda, veri gelince sayfa zıplamasın).
+    **Yalnız iskelet** (kullanıcı bulgusu 03.09): satırlar eskiden durumdan bağımsız çiziliyordu
+    ve arama her tur yenilenirken üstte üç iskelet, altında ÖNCEKİ turun satırları duruyordu —
+    depocu bayat satıra basabilirdi. Satırlar artık yalnız `ready`de çizilir.
   · **hata** — "yüklenemedi" + tekrar dene. Boş listeyle KARIŞMAMALI: biri arıza, öteki cevap.
   · **boş** — sorgu varsa *"bu terimle eşleşen yok"*, yoksa *"bu depoda stoğu duran parti yok"*.
     İki cümle ayrı, çünkü ikisi ayrı şey: biri aramanın sonucu, öteki deponun hâli.
@@ -152,7 +160,7 @@ export function BatchPicker({ title, body, footnote, subject, testID }: BatchPic
         </Text>
       ) : null}
 
-      {subject.batches.map((batch) => (
+      {subject.status !== 'ready' ? null : subject.batches.map((batch) => (
         <OperationsSurface
           key={batch.stockId}
           tone="card"
@@ -163,6 +171,7 @@ export function BatchPicker({ title, body, footnote, subject, testID }: BatchPic
           testID={`${testID}-row-${batch.stockId}`}
         >
           <View style={styles.row}>
+            <OperationsProductThumb name={batch.name} photoUri={batch.imageUrl} size="md" testID={`${testID}-row-thumb-${batch.stockId}`} />
             <View style={styles.rowBody}>
               <Text style={styles.rowTitle} numberOfLines={1}>
                 {batch.name}
@@ -245,21 +254,24 @@ export function BatchPicker({ title, body, footnote, subject, testID }: BatchPic
             accessibilityLabel={batch.name}
             testID={`${testID}-pick-${batch.stockId}`}
           >
-            <View style={styles.rowBody}>
-              <Text style={styles.rowTitle} numberOfLines={1}>
-                {batch.name}
-              </Text>
-              <Text style={styles.rowMeta} numberOfLines={1}>
-                {fillCopy(t.adjustment.scan.pickRow, {
-                  qty: String(batch.physicalQty),
-                  date: shortDate(batch.expiryDate) ?? batch.expiryDate,
-                })}
-              </Text>
-              <Text style={styles.rowMeta} numberOfLines={1}>
-                {batch.storageAreaName === null
-                  ? t.adjustment.scan.pickNoArea
-                  : fillCopy(t.adjustment.scan.pickArea, { area: batch.storageAreaName })}
-              </Text>
+            <View style={styles.row}>
+              <OperationsProductThumb name={batch.name} photoUri={batch.imageUrl} size="md" />
+              <View style={styles.rowBody}>
+                <Text style={styles.rowTitle} numberOfLines={1}>
+                  {batch.name}
+                </Text>
+                <Text style={styles.rowMeta} numberOfLines={1}>
+                  {fillCopy(t.adjustment.scan.pickRow, {
+                    qty: String(batch.physicalQty),
+                    date: shortDate(batch.expiryDate) ?? batch.expiryDate,
+                  })}
+                </Text>
+                <Text style={styles.rowMeta} numberOfLines={1}>
+                  {batch.storageAreaName === null
+                    ? t.adjustment.scan.pickNoArea
+                    : fillCopy(t.adjustment.scan.pickArea, { area: batch.storageAreaName })}
+                </Text>
+              </View>
             </View>
           </OperationsSurface>
         ))}

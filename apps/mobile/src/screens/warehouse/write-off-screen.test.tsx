@@ -54,6 +54,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     dateType: 'DLC',
     physicalQty: 4,
     storageAreaName: 'Derin dondurucu 2',
+    imageUrl: null,
     storageAreaId: '00000000-0000-4000-8000-000000000602',
     lifePercent: 64,
     variantWarehouseQty: 46,

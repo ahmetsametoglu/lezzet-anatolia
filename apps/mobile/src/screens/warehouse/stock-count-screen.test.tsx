@@ -60,6 +60,7 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
     dateType: 'DLC',
     physicalQty: 12,
     storageAreaName: 'Derin dondurucu 2',
+    imageUrl: null,
     storageAreaId: FREEZER_2,
     lifePercent: 64,
     variantWarehouseQty: 46,
@@ -136,6 +137,30 @@ describe('D4 · Sayım', () => {
 
     // Sayı ekrana geçti ve fark cümlesi onu okudu (sistemde 12 vardı).
     expect(screen.getByTestId('warehouse-stock-count-qty-value')).toHaveTextContent('40');
+  });
+
+  /* İSKELETİN ALTINDA BAYAT SATIR YOK (kullanıcı bulgusu 03.09): arama turu sürerken önceki
+     turun satırları çizilmez — depocu yükleniyor görünen bir listede eski satıra basamaz. */
+  it('arama turu sürerken yalnız iskelet çizilir, önceki satırlar gizlenir', async () => {
+    await render(<StockCountScreen />);
+    await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
+
+    // İkinci tur hiç dönmesin: yükleme hâli açıkta kalsın.
+    mockFetchBatches.mockReturnValue(new Promise(() => undefined));
+    await fireEvent.changeText(screen.getByTestId('warehouse-stock-count-picker-search'), 'bakl');
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-stock-count-picker-loading')).toBeOnTheScreen());
+    expect(screen.queryByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401')).toBeNull();
+  });
+
+  it('satırın solunda ürün karesi var — kapaksız üründe monogram', async () => {
+    await render(<StockCountScreen />);
+    // Kare SÜSTÜR (adı satır zaten okuyor) ve erişilebilirlikten gizli; sorgu onu bilerek dahil ediyor.
+    expect(
+      await screen.findByTestId('warehouse-stock-count-picker-row-thumb-00000000-0000-4000-8000-000000000401', {
+        includeHiddenElements: true,
+      }),
+    ).toBeTruthy();
   });
 
   it('konu seçilmeden form çizilmez; raf listesi seçiciden gelir', async () => {
