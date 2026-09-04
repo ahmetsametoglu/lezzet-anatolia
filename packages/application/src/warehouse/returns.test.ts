@@ -10,9 +10,10 @@ import {
   serviceDb,
 } from '@lezzet/database';
 import { createTestWarehousePair, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
+import type { WarehouseScope } from '@lezzet/domain-core';
 import { advanceOrder } from '../order/advance.testkit';
 import { deliverOrder } from '../order/fulfillment';
-import { listWarehouseReturns, type ReturnDrop } from './returns';
+import { listReturningCouriers, listWarehouseReturns, readReturningCourier, type ReturnDrop } from './returns';
 
 /**
  * **Kurye dönüşü — D6'nın OKUMA yarısı** (21.11d).
@@ -326,5 +327,81 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
 
     expect(drops.map((drop) => drop.orderId)).toContain(newer.orderId);
     expect(drops.map((drop) => drop.orderId)).not.toContain(older.orderId);
+  });
+});
+
+/**
+ * **RAMPA LİSTESİ** (D6 · 04.09) — "kimden teslim alıyorum".
+ *
+ * Sınanan şey kümeleme: dönüşler KURYE başına toplanıyor, kuryesizler kendi kümesinde. Kapsam
+ * kararını `readCourierReturn` veriyor ve bu dosyanın kuryesi bilerek bir DEPO KURYESİ DEĞİL
+ * (rolü yok, tesise bağlı değil) — yani listenin en kolay kırılacak dalını, "kapsam dışı kurye
+ * sessizce düşmez" dalını sınıyor. Araç ve kutu tarafının kendi testi var (`courier/return.test.ts`).
+ */
+describe('rampa listesi (D6 · 04.09)', () => {
+  const scope = (): WarehouseScope => ({ kind: 'limited', warehouseIds: [warehouseId] });
+
+  it('dönüşler KURYE başına toplanır; bekleyen kalem sayısı satırlardan gelir', async () => {
+    await refusedOrder(3);
+    await refusedOrder(2);
+
+    const rows = await listReturningCouriers(db, { warehouseId, scope: scope() });
+    const own = rows.find((row) => row.courierId === courierId)!;
+
+    // İki sipariş, her birinde bir kalem → tek satırda 2 bekleyen kalem.
+    expect(own.pendingLines).toBe(2);
+    expect(own.courierName).toBe('Musa K.');
+    // Kurye bu tesise bağlı DEĞİL: araç künyesi çözülemez ama satır DÜŞMEZ — mal rampada duruyor.
+    expect(own.vehicleLabel).toBeNull();
+    expect(own.freeGoodsQty).toBe(0);
+  });
+
+  /* KURYESİZ DÖNÜŞ (kargo/tezgâh yolu) kendi kümesinde: akıbeti işaretlenir ama aracı ve kutusu
+     yoktur. Kimliği `null` olduğu için ekran onu `unassigned` adresinden açar. */
+  it('kuryesiz dönüşler AYRI kümede toplanır', async () => {
+    await refusedOrder(1, { withCourier: false });
+
+    const rows = await listReturningCouriers(db, { warehouseId, scope: scope() });
+    const orphan = rows.find((row) => row.courierId === null)!;
+
+    expect(orphan.pendingLines).toBeGreaterThan(0);
+    expect(orphan.courierName).toBeNull();
+    expect(orphan.boxesDownCount).toBe(0);
+  });
+
+  it('kuryesiz kümenin detayı YALNIZ dökümdür — araç bölümleri boş', async () => {
+    const { orderId } = await refusedOrder(1, { withCourier: false });
+
+    const detail = await readReturningCourier(db, { courierId: null, warehouseId, scope: scope() });
+    if ('status' in detail) throw new Error(`detay reddedildi (${detail.reason})`);
+
+    expect(detail.drops.map((drop) => drop.orderId)).toContain(orderId);
+    expect(detail.freeGoods).toEqual([]);
+    expect(detail.boxesDown).toEqual([]);
+    expect(detail.boxesStay).toEqual([]);
+    expect(detail.vehicleLabel).toBeNull();
+  });
+
+  /*
+    Bir kuryenin detayı YALNIZ onun dökümünü taşır: karışırsa depocu, hiç görmediği bir kalemi
+    karara bağlamış olur.
+
+    Bu dosyanın kuryesi bilerek DEPO KURYESİ DEĞİL (rolü yok, tesise bağlı değil), yani test aynı
+    anda ikinci bir iddiayı da tutuyor: künye çözülemese bile DÖKÜM reddedilmez. İlk yazımda kapı
+    burada `forbidden` dönüyordu ve liste ile detay çelişiyordu — liste satırı açıyor, satır
+    açılmıyordu; rampadaki koli hiçbir yerden işaretlenemez hâle geliyordu (düzeltildi 04.09).
+  */
+  it('kurye detayı BAŞKA kuryenin dönüşünü taşımaz; künye çözülemese de döküm gelir', async () => {
+    const own = await refusedOrder(1);
+    const orphan = await refusedOrder(1, { withCourier: false });
+
+    const detail = await readReturningCourier(db, { courierId, warehouseId, scope: scope() });
+    if ('status' in detail) throw new Error(`detay reddedildi (${detail.reason})`);
+
+    expect(detail.drops.map((drop) => drop.orderId)).toContain(own.orderId);
+    expect(detail.drops.map((drop) => drop.orderId)).not.toContain(orphan.orderId);
+    // Araç bölümleri boş: reddin koruduğu şey ARAÇ verisi, deponun kendi dökümü değil.
+    expect(detail.freeGoods).toEqual([]);
+    expect(detail.vehicleLabel).toBeNull();
   });
 });

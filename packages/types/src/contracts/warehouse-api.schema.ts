@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CourierReturnBoxSchema, CourierReturnFreeGoodSchema, CourierReturnStayBoxSchema } from './courier-return-api.schema';
 import { FulfillmentAdjustmentSchema, PreparationPickSchema } from '../entities/order.schema';
 import { ProductDateTypeEnum } from '../entities/product.schema';
 import { AdjustBatchResultSchema, StockDirectionEnum, StockWriteOffReasonEnum } from '../entities/stock-movement.schema';
@@ -1273,6 +1274,12 @@ export type ReturnDropLineContract = z.infer<typeof ReturnDropLineSchema>;
 export const ReturnDropSchema = z.object({
   orderId: z.string().uuid(),
   referenceNo: z.string().nullable(),
+  /**
+   * Malı getiren kurye — **kimlik**, çünkü rampa listesi dönüşleri kuryeye göre kümeliyor ve ada
+   * göre kümelemek iki adaşı tek satırda birleştirirdi. `null` = sipariş bir kuryeye hiç
+   * atanmamış (kargo/tezgâh yolu); o dönüşler kendi kümesinde toplanır.
+   */
+  courierId: z.string().uuid().nullable(),
   courierName: z.string().nullable(),
   note: z.string().nullable(),
   /** `returned`'a geçiş ANI — liste bununla sıralanır. Geçiş kaydı yoksa `null`. */
@@ -1295,6 +1302,66 @@ export type ReturnDropContract = z.infer<typeof ReturnDropSchema>;
  */
 export const WarehouseReturnQueueResponseSchema = z.object({ drops: z.array(ReturnDropSchema) });
 export type WarehouseReturnQueueResponse = z.infer<typeof WarehouseReturnQueueResponseSchema>;
+
+/**
+ * **RAMPA LİSTESİNİN SATIRI** (D6 · tasarım "D6 Rampa Listesi", 04.09) — rampada teslim vermeyi
+ * bekleyen BİR KURYE.
+ *
+ * ── EKSEN KURYE, SEFER DEĞİL — VE BU BİR SADELEŞTİRME DEĞİL ─────────────────
+ * Para sefer başına kapanır (`delivery_run_close`, 18.08 K1); MAL kurye başına teslim alınır. Sebep
+ * fiziksel: araç bir yerdedir ve o gün tek kuryenin yükünü taşır (`assert_vehicle_single_courier`),
+ * yani iki sefer sürmüş kurye rampaya BİR KEZ döner ve araç bir kez boşalır. Satırı sefere
+ * bağlasaydık aynı aracın malı iki satıra bölünür, ikisi de aynı araç deposunu sayardı.
+ *
+ * ── `courierId` NULL OLABİLİR ───────────────────────────────────────────────
+ * Kargo ya da tezgâh yoluyla dönen siparişin kuryesi yoktur ama akıbeti yine işaretlenir. O
+ * dönüşler tek bir kümede toplanır: kimliksiz satırın aracı, kutusu ve serbest ürünü olmaz.
+ */
+export const ReturningCourierSchema = z.object({
+  courierId: z.string().uuid().nullable(),
+  courierName: z.string().nullable(),
+  vehicleLabel: z.string().nullable(),
+  /** Akıbeti BEKLEYEN kalem sayısı — işin kendisi. */
+  pendingLines: z.number().int().nonnegative(),
+  /** Reddedilen siparişin araçtan inecek kutuları. */
+  boxesDownCount: z.number().int().nonnegative(),
+  /** Ulaşılamayanın ve başka seferlerin kutuları — kabul EDİLMEZ, yalnız sayılır. */
+  boxesStayCount: z.number().int().nonnegative(),
+  /** Araç deposunda duran serbest ürün TOPLAM adedi (kalem değil adet: rampada sayılan şey adet). */
+  freeGoodsQty: z.number().int().nonnegative(),
+  /** Sürülen sefer sayısı — doluysa araç bugün boşalmayabilir. */
+  drivingRuns: z.number().int().nonnegative(),
+  /** En yeni dönüş anı; liste bununla sıralanır. Dönüşü olmayan (yalnız araçta malı olan) satırda `null`. */
+  lastReturnAt: z.string().nullable(),
+});
+export type ReturningCourierContract = z.infer<typeof ReturningCourierSchema>;
+
+export const WarehouseReturningCouriersResponseSchema = z.object({ couriers: z.array(ReturningCourierSchema) });
+export type WarehouseReturningCouriersResponse = z.infer<typeof WarehouseReturningCouriersResponseSchema>;
+
+/**
+ * **TEK KURYENİN DÖNÜŞÜ** — D6 detayının tamamı, tek okumada.
+ *
+ * İki kapının cevabı BİRLEŞTİRİLİYOR (`listWarehouseReturns` + `readCourierReturn`) çünkü ekran
+ * tek CTA ile ikisini birden yazıyor: iki ayrı istek, kullanıcının tek gördüğü işi iki yarım
+ * fotoğraftan kurmak olurdu ve biri düşerse ekran hangi yarısının eksik olduğunu söyleyemezdi.
+ *
+ * **Kuryesiz küme aynı şekli taşır**, ayrı bir tip DEĞİL: `courierId` boş, araç ve kutu listeleri
+ * boş, `drops` dolu. Ayrık birleşim yazmak ekrana iki ayrı çizim yolu açardı; oysa fark yalnız
+ * hangi bölümlerin boş olduğudur ve ekran zaten boş bölümü çizmiyor.
+ */
+export const WarehouseCourierReturnResponseSchema = z.object({
+  courierId: z.string().uuid().nullable(),
+  courierName: z.string().nullable(),
+  vehicleLabel: z.string().nullable(),
+  vehicleWarehouseId: z.string().uuid().nullable(),
+  drivingRuns: z.number().int().nonnegative(),
+  freeGoods: z.array(CourierReturnFreeGoodSchema),
+  boxesDown: z.array(CourierReturnBoxSchema),
+  boxesStay: z.array(CourierReturnStayBoxSchema),
+  drops: z.array(ReturnDropSchema),
+});
+export type WarehouseCourierReturnResponse = z.infer<typeof WarehouseCourierReturnResponseSchema>;
 
 /**
  * Dönen malın akıbeti (D6). Satır tipi VARLIK şemasından (`FulfillmentAdjustmentSchema`):

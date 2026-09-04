@@ -9318,8 +9318,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `/trip` ekranı SÖKÜLDÜ: tasarımda 15 numara "Rota ve araç seçimi" oldu ve onun gövdesi gün
   ekranının kendi seçim hâli — ekranın karşılığı kalmadı.
 
-  **BEKLEYEN(21.194):** kurye dönüşünde sayım ve kutu inişi (v3:14) yazılmadı — o ekran DEPO
-  yüzeyinin (`courier-return`), tasarımı geldi, kodu yok.
+  ~~**BEKLEYEN(21.194):** kurye dönüşünde sayım ve kutu inişi (v3:14) yazılmadı~~ — **kapandı
+  (21.255, 04.09):** iki bölüm de D6'ya yazıldı, üstüne rampa listesi doğdu.
 
 - [x] (21.194) **ARACA SERBEST ÜRÜN: DEPODAN ARACA GERÇEK STOK HAREKETİ** (v3:19 · kullanıcı kararı 31.08)
   `touches: packages/application/src/courier/van-stock.ts · apps/mobile-api/src/api/v1/courier.ts · apps/mobile/src/screens/courier/van-stock-screen.tsx`
@@ -11635,3 +11635,67 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   doluya geçen kutu Android'de kesikli KALIYORDU — yerli görünüm önceki `borderStyle`ı koruyor →
   iki hâlde de açıkça yazılıyor. D2 regresyon: "say →" ve "30 · BEKLENEN" kutuları yerinde, dokununca
   "30 · ADET". iOS kaydırması bu makinede ölçülemedi (simülatör açık değil) — kullanıcı bakacak.
+
+- [x] (21.255) **D6 GERÇEĞE BAĞLANDI: RAMPA LİSTESİ DOĞDU, DÖKÜM FIXTURE OLMAKTAN ÇIKTI; "say ve devret" + kutu inişi yazıldı** (kullanıcı kararı 04.09, tasarım sayfası onaylı)
+  `touches:` `packages/types/src/contracts/{courier-return-api.schema.ts,warehouse-api.schema.ts}` · `packages/application/src/courier/{return.ts,return.test.ts}` · `packages/application/src/warehouse/{returns.ts,returns.test.ts}` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/{warehouse.ts,warehouse.test.ts}` · `apps/mobile/src/lib/api/warehouse.ts` · `apps/mobile/src/screens/warehouse/{courier-return-screen.tsx,courier-return-screen.test.tsx,use-courier-return.hook.ts,use-warehouse-hub.hook.ts,warehouse-hub-screen.tsx,messages.json}` · `scripts/seed/courier-return.ts` · `scripts/seed.ts` · `design/pages/app-depo.md` · `design/KARARLAR.md`
+
+  **Kullanıcının sorusu:** *"Bu ekran kurye dönüşü için yeterli bir ekran mı? Kuryeler birden fazla
+  kurye döndüğü zaman nasıl teslim alınıyor? Bir araç birden fazla rotayı yükleyip sefere çıkıp da
+  geri döndüğünde bu kapanışlar rota rota mı yapılıyor? Bu kapanış araç bazlı mı sürücü bazlı mı?"*
+
+  **ÖLÇÜM ÖNCE (04.09).** Ekran 08.08'de yazılmış, 30.08'de v3'e geçmişti — ama yalnız YAZMA yarısı
+  gerçekti. Döküm kodun içine yazılmış SABİT bir nesneydi (`courier-return-fixture.ts`: `Musa K.`,
+  `LZA-26-9Q2B`, 2 × Su Böreği) ve her telefonda aynı satır çıkıyordu. Sunucudaki okuma ucu
+  (`GET /warehouse/returns`) aynı gün, 21.11d'de yazılmış ve testliydi; **istemci onu hiç
+  çağırmıyordu** (arandı, tek çağrı yok). Fixture'ın kimliği uydurma olduğu için kapı `not_found`
+  dönüyordu ve ekran o reddi gösteriyordu. Fixture'ın kendi künyesi *"okuma kapısı YOK"* diyordu ve
+  o cümle bayattı.
+
+  **EKSEN: PARA SEFERE, MAL KURYEYE.** Kapanış 18.08'de sefer eksenine indi (K1) ve orada kalıyor —
+  kurye iki sefer sürdüyse ikisini AYRI kapatır, "fark hangi seferde doğdu" cevaplanır. **Mal başka:**
+  araç bir yerdedir ve o gün tek kuryenin yükünü taşır (`assert_vehicle_single_courier`), yani kurye
+  rampaya BİR KEZ döner ve araç BİR KEZ boşalır. Liste bu yüzden KURYE eksenli. Sefere bağlansaydı
+  aynı aracın serbest ürünü iki satırda iki kez sayılırdı.
+
+  **RAMPA LİSTESİ (yeni yüzey).** Kart: kurye adı · plaka · *"N kalem akıbet bekliyor · M kutu
+  inecek"* · *"araçta X adet serbest ürün · Y kutu kalacak"*. Listeye girme ölçütü YAPILACAK İŞ:
+  bekleyen kalem, inecek kutu ya da araçtaki serbest ürün. **Yalnız araçta malı olan kurye de
+  listede** — kurye denetiminin ölçtüğü "kaybolan mal" tam orada doğuyordu. Yalnız ARAÇTA KALAN
+  kutusu olan kurye listede YOK: o kutular tanımı gereği kalıyor. Kuryesiz dönüşler (kargo/tezgâh)
+  kendi kümesinde, adresi `unassigned`. Sürülen seferi olan kuryede kiremit uyarı: *"araç bugün
+  boşalmayabilir"* — malın tamamını devralmak yanlış olurdu.
+
+  **DETAY v3:14'ÜN KENDİSİ, İKİ DÜZELTMEYLE.** (1) Altyazı *"rota kapandı"* KALKTI: teslim alma
+  kurye eksenli, kapanış sefer eksenli — kapanmamış seferi olan kurye de mal teslim eder, yani o
+  cümle her zaman doğru değildi (`ekranda yalnız olgu`). Yerine plaka + sürülen sefer. (2) Tasarımın
+  *"araca alınan X · kapıda satılan Y"* ikilisi YAZILMIYOR: sistem o iki sayıyı ayrı tutmuyor, araç
+  deposundaki adet zaten ikisinin FARKI. İkinci bir hesap bir gün birincisinden ayrılırdı; uydurmak
+  ise hiç. Satır *"araçta kayıtlı N"* der.
+
+  **TEK DOKUNUŞ, İKİ YAZIM VE SIRASI.** CTA önce AKIBETLERİ yazar (sipariş başına
+  `POST /returns/:orderId`), sonra MALI devreder (`POST /courier-return/:courierId`). Sıra bilinçli:
+  akıbet yazımı stoktan bağımsızdır ve düşmez; devir düşerse akıbetler yazılmış kalır — mal zaten
+  rampada. Ters sırada tek bir siparişin reddi bütün devri geri aldırırdı. Akıbeti YAZILMIŞ satır
+  artık seçici çizmiyor, sonucunu yazıyor: ikinci kez gönderilen `restock` stoğa iki kez yazardı.
+
+  **HUB'IN D6 KARTI DA OLGU OLDU.** Altyazı *"1 döküm bekliyor"* diye SABİT yazıyordu ve o sayı
+  hiçbir yerden gelmiyordu — rampa boşken bile "1 döküm" diyordu. Satırın kendi künyesi bunu
+  *"kapı gelince sayıya bağlanır"* diye yazmıştı; kapı geldi. Uyarı rengi de sayıya bağlandı:
+  okunamadıysa yanmaz (ölçülemeyeni "iş var" diye göstermek, sıfıra düşürmenin ters yönden aynı hatası).
+
+  **BESLEME SAHNESİ (`scripts/seed/courier-return.ts`).** Kullanıcının şikâyeti: *"her seferinde şu
+  an akışı koşmak zor biraz."* `delivery_run` tablosu beslemede BOŞTU; D6 ve "araçtaki seferler"
+  ekranlarının hiçbir hâli doğmuyordu. Blok satırları GERÇEK KAPILARDAN geçiriyor (sefer aç · kutu
+  mühürle · araca yükle · kapıda sonuçlandır · seferi kapat) — elle yazılan satır hiçbir kuraldan
+  geçmez ve üretimde oluşamayacak bir hâl kurardı. Sahne: bir kurye, aynı gün iki rota, tek araç;
+  Sefer A sürüldü ve kapandı (1 teslim · 1 red · 1 ulaşılamadı), Sefer B araçta bekliyor, araçta 10
+  adet serbest ürün. **`db:reset` GEREKTİRMEZ** — guard `delivery_run`a bakıyor ve o tablo boş, yani
+  `pnpm db:seed` tek başına koşuyor. Kuryesiz dönüş sahneye GİRMEDİ ve bilerek: o zincir kargo
+  yolundan geçiyor, beslemede kapalı (01.09) — uydurma bir yoldan `returned` yazmak üretimde
+  oluşamayacak bir hâl kurmak olurdu; ekranın o kümesi birim testinde sınanıyor.
+
+  **Ölçüldü (yerel DB, 04.09):** liste Marc Lemoine'ı 1 bekleyen kalem · 1 inecek kutu · 2 kalacak
+  kutu · 10 adet serbest ürünle veriyor; detayda inen kutu reddedilen siparişin, kalanların biri
+  `unreachable` (kapanmış seferden) öteki `other_run` (açık seferden). Testler: mobil 19 (liste +
+  detay + iki yazım + eksik/fazla dalları), uygulama katmanı 4 (kümeleme · kuryesiz küme · detay
+  ayrımı), uç 4. Tip · birim 1953 · depo ekranları 257.

@@ -130,6 +130,11 @@ describe('kurye dönüşü (v3:14 · D6)', () => {
 
     expect(draft.courierId).toBe(courierId);
     expect(draft.vehicleWarehouseId).toBe(vanId);
+    /* KÜNYE ARAÇTAN GELİR (04.09): rampa listesi plakayı ve sürülen sefer sayısını yazıyor.
+       Fikstürün seferi kurulu ama YOLA ÇIKMAMIŞ (`depart: false`), yani sürülen sefer sıfır —
+       sıfırsa ekran cümleyi hiç kurmaz. */
+    expect(draft.vehicleLabel).not.toBeNull();
+    expect(draft.drivingRuns).toBe(0);
     expect(draft.freeGoods).toEqual([expect.objectContaining({ variantId, onVanQty: 5 })]);
     expect(draft.boxesDown.map((row) => row.orderId)).toEqual([refused.orderId]);
     expect(draft.boxesDown[0]!.boxes).toEqual([{ boxNo: 1, code: refused.code }]);

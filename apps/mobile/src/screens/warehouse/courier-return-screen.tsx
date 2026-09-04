@@ -1,37 +1,51 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { ReturnDispositionEnum, type ReturnDisposition } from '@lezzet/types';
+import { ReturnDispositionEnum, UNASSIGNED_RETURNS, type ReturnDisposition, type ReturningCourierContract } from '@lezzet/types';
 
 import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
+import { OperationsProductThumb } from '@/components/operations/product-thumb';
+import { OperationsQuantityBox } from '@/components/operations/quantity-box';
+import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
+import { quantityTotal } from '@/components/operations/quantity-value';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
+import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
-import { warehouseCopy } from './copy';
-import { COURIER_RETURN_FIXTURE, COURIER_RETURN_UNREACHED } from './courier-return-fixture';
+import { qtySheetCopy, warehouseCopy } from './copy';
 import { useCourierReturn } from './use-courier-return.hook';
+import { useSubjectBack } from './use-subject-back.hook';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
-  D6 · KURYE DÖNÜŞÜ KABULÜ (v2:483-510).
+  D6 · KURYE DÖNÜŞÜ KABULÜ (v3:14 + tasarım "D6 Rampa Listesi", 04.09).
+
+  ── EKRAN İKİ KATMAN: RAMPA LİSTESİ → BİR KURYENİN DÖNÜŞÜ ───────────────────
+  Liste 04.09'da doğdu. Öncesinde ekran doğrudan TEK kuryeyle açılıyordu ve o kurye kodun içine
+  yazılmıştı — aynı gün iki kurye döndüğünde ekranın verecek cevabı yoktu. Eksen kurye: para sefer
+  başına kapanır, MAL kurye başına devredilir (araç bir yerdedir ve bir kez boşalır).
 
   ── ÜÇ AKIBET, ÜÇ FARKLI GERÇEK ─────────────────────────────────────────────
   `restock` malı stoğa geri koyar (**sebep notu zorunlu** — soğuk zincir beyanı, kuralı veri
   zorlar), `discard` fiiliden düşer, `goodwill` mala DOKUNMAZ (müşteride kaldı) ve yalnız kayıt
   düşer. Üçü aynı listede satır satır seçilebilir — bir kolinin yarısı iade, yarısı jest olabilir.
 
-  ── ULAŞILAMAYANLAR KABUL EDİLMEZ ───────────────────────────────────────────
-  v2:505'in bloğu bir LİSTE, bir form değil: araçta kalan mal bu ekrandan kayda geçmez, yarına
-  devrolur. Dokunulabilir bir öğe gibi çizmek, olmayan bir eylemi varmış gibi gösterirdi.
+  ── ARAÇTA KALAN KABUL EDİLMEZ ──────────────────────────────────────────────
+  Ulaşılamayan durağın kutusu ve araçtaki başka seferlerin yükü yalnız LİSTELENİR: dokunulabilir
+  çizmek, olmayan bir eylemi varmış gibi göstermek olurdu (v2:505 · v3:14).
 
-  ── DÖKÜM FIXTURE, KAYIT GERÇEK ─────────────────────────────────────────────
-  Gerekçe `courier-return-fixture.ts` künyesinde (okuma kapısı yok). Ekranın geri kalanı TAM.
+  ── TASARIMDAN BİLİNÇLİ SAPMA: "alınan · satılan" YAZILMAZ ──────────────────
+  v3:14 her serbest ürün satırında *"araca alınan X · kapıda satılan Y"* yazıyor. Sistem o iki
+  sayıyı ayrı tutmuyor — araç deposundaki adet zaten ikisinin FARKI (`courier/return.ts` künyesi:
+  *"ikinci bir hesap bir gün birincisinden ayrılırdı"*). Satır bu yüzden yalnız araçta KAYITLI
+  adedi söyler. Ekrana yazılamayan bir sayı uydurulmaz (CLAUDE §1).
 */
 
 const t = warehouseCopy;
@@ -39,24 +53,92 @@ const t = warehouseCopy;
 /** Üç akıbet — sırası TİPTEN gelir (`ReturnDispositionEnum`), ekran kendi listesini yazmaz. */
 const DISPOSITIONS: readonly ReturnDisposition[] = ReturnDispositionEnum.options;
 
+/** İlk yük iskeleti — künye satırı ve iki kurye kartı; ekranın gerçekten çizdiği bloklar. */
+const RETURN_SKELETON = [40, 116, 116];
+
 export function CourierReturnScreen() {
   const router = useRouter();
-  const drop = COURIER_RETURN_FIXTURE;
-  const returnState = useCourierReturn(drop);
+  const returnState = useCourierReturn();
+  const { offline } = useWarehouseStatus();
+  const [qtyVariantId, setQtyVariantId] = useState<string | null>(null);
 
   /*
     BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
 
     Uygulamanın tek bir bildirim dili var (`ToastHost`, kökte); depo ekranlarının her biri kendi
     satırını çiziyordu, yani aynı iş ekran sayısı kadar görsel dille. `toastInfo` SESSİZ ve bu
-    bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında veriyor — `toastSuccess`/
-    `toastError` seçilseydi her bildirim iki kez titrerdi.
+    bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında veriyor.
   */
   useEffect(() => {
     if (returnState.notice !== null) toastInfo(returnState.notice.text);
   }, [returnState.notice]);
 
-  const { offline } = useWarehouseStatus();
+  const detail = returnState.detail;
+  /* Geri: DETAYDAN LİSTEYE, listeden hub'a. Android tuşu ve iOS kaydırması da aynı yolu izler
+     (`useSubjectBack`) — D5'te ölçülen kusurun aynısı burada da doğardı: konu açıkken geri, iki
+     adım birden atıp depo ekranına düşerdi. */
+  const leaveDetail = useCallback(() => returnState.select(null), [returnState]);
+  useSubjectBack(detail !== null, leaveDetail);
+
+  const header = (
+    <OperationsStackHeader
+      title={detail === null ? t.return.title : (detail.courierName ?? t.return.orphanName)}
+      subtitle={detail === null ? listCaptionOf(returnState.couriers) : detailSubtitleOf(detail)}
+      onBack={() => (detail === null ? router.back() : leaveDetail())}
+      backLabel={t.common.back}
+      testID="warehouse-return-header"
+    />
+  );
+
+  if (returnState.status === 'loading') {
+    return (
+      <View style={styles.screen} testID="warehouse-courier-return">
+        {header}
+        <OperationsSkeletonList heights={RETURN_SKELETON} label={t.return.title} />
+      </View>
+    );
+  }
+
+  // ── LİSTE ──────────────────────────────────────────────────────────────────
+  if (detail === null) {
+    const withCourier = returnState.couriers.filter((row) => row.courierId !== null);
+    const orphans = returnState.couriers.filter((row) => row.courierId === null);
+
+    return (
+      <View style={styles.screen} testID="warehouse-courier-return">
+        {header}
+        <FormScroll contentContainerStyle={styles.list} testID="warehouse-return-body">
+          {returnState.status === 'error' ? (
+            <Text style={styles.emptyBody} testID="warehouse-return-error">
+              {t.return.loadError}
+            </Text>
+          ) : returnState.couriers.length === 0 ? (
+            <View style={styles.empty} testID="warehouse-return-empty">
+              <Text style={styles.emptyTitle}>{t.return.emptyTitle}</Text>
+              <Text style={styles.emptyBody}>{t.return.emptyBody}</Text>
+            </View>
+          ) : null}
+
+          {withCourier.length === 0 ? null : <Text style={styles.heading}>{t.return.queueHeading}</Text>}
+          {withCourier.map((row) => (
+            <CourierCard key={row.courierId} row={row} onPress={() => returnState.select(row.courierId)} />
+          ))}
+
+          {orphans.length === 0 ? null : <Text style={styles.heading}>{t.return.orphanHeading}</Text>}
+          {orphans.map((row) => (
+            <CourierCard key={UNASSIGNED_RETURNS} row={row} onPress={() => returnState.select(UNASSIGNED_RETURNS)} />
+          ))}
+
+          {returnState.couriers.length === 0 ? null : <Text style={styles.footnote}>{t.return.listFoot}</Text>}
+        </FormScroll>
+      </View>
+    );
+  }
+
+  // ── DETAY ──────────────────────────────────────────────────────────────────
+  const expectedQty = detail.freeGoods.reduce((sum, line) => sum + line.onVanQty, 0);
+  const countedQty = detail.freeGoods.reduce((sum, line) => sum + returnState.countOf(line.variantId), 0);
+  const qtyLine = detail.freeGoods.find((line) => line.variantId === qtyVariantId) ?? null;
 
   const cta = offline
     ? { label: t.common.offlineCta, enabled: false }
@@ -68,86 +150,146 @@ export function CourierReturnScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-courier-return">
-      <OperationsStackHeader
-        title={t.return.title}
-        subtitle={fillCopy(t.return.caption, { courier: drop.courierName })}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="warehouse-return-header"
-      />
+      {header}
 
       <FormScroll contentContainerStyle={styles.list} testID="warehouse-return-body">
-        <Text style={styles.heading}>{t.return.heading}</Text>
+        {detail.drops.length === 0 ? null : <Text style={styles.heading}>{t.return.heading}</Text>}
 
-        {drop.lines.map((line) => {
-          const disposition = returnState.dispositionOf(line.orderItemId);
-          return (
-            <View key={line.orderItemId} style={styles.lineRow} testID={`warehouse-return-line-${line.orderItemId}`}>
-              <Text style={styles.rowTitle}>{`${drop.referenceNo} · ${line.qty} × ${line.name}`}</Text>
-              {drop.note === null ? null : (
-                <Text style={styles.rowSub}>
-                  {fillCopy(t.return.courierNote, { note: drop.note })}
-                  {drop.hasPhoto ? ` · ${t.return.hasPhoto}` : ''}
+        {detail.drops.flatMap((drop) =>
+          drop.lines.map((line) => {
+            // İşaretlenmiş satır SALT-OKUNUR: ikinci kez gönderilirse `restock` stoğa iki kez yazılır.
+            const written = line.disposition;
+            const disposition = written ?? returnState.dispositionOf(line.orderItemId);
+            return (
+              <View key={line.orderItemId} style={styles.lineRow} testID={`warehouse-return-line-${line.orderItemId}`}>
+                <Text style={styles.rowTitle}>
+                  {fillCopy(t.return.dropLine, {
+                    ref: drop.referenceNo ?? '—',
+                    qty: String(line.fulfilledQty),
+                    name: line.name,
+                  })}
                 </Text>
-              )}
+                {drop.note === null ? null : (
+                  <Text style={styles.rowSub}>{fillCopy(t.return.courierNote, { note: drop.note })}</Text>
+                )}
 
-              <View style={styles.chipRow}>
-                {DISPOSITIONS.map((option) => (
-                  <OperationsChoiceChip
-                    key={option}
-                    label={t.return.disposition[option]}
-                    selected={disposition === option}
-                    onPress={() => returnState.pick(line.orderItemId, option)}
-                    fill
-                    testID={`warehouse-return-${option}-${line.orderItemId}`}
-                  />
-                ))}
+                {/* AKIBETİ YAZILMIŞ SATIR SEÇİCİ ÇİZMEZ, SONUCU YAZAR: çipleri kapalı göstermek
+                    dokunulabilir görünen ölü bir kontrol olurdu ve ikinci kez gönderilen `restock`
+                    stoğa iki kez yazardı. Satır listede duruyor çünkü depocu neyi karara bağladığını
+                    görmeden kalanı işaretleyemez (`listWarehouseReturns` künyesi). */}
+                {written !== null ? (
+                  <Text style={styles.written} testID={`warehouse-return-written-${line.orderItemId}`}>
+                    {fillCopy(t.return.written, { disposition: t.return.disposition[written] })}
+                  </Text>
+                ) : (
+                  <>
+                    <View style={styles.chipRow}>
+                      {DISPOSITIONS.map((option) => (
+                        <OperationsChoiceChip
+                          key={option}
+                          label={t.return.disposition[option]}
+                          selected={disposition === option}
+                          onPress={() => returnState.pick(line.orderItemId, option)}
+                          fill
+                          testID={`warehouse-return-${option}-${line.orderItemId}`}
+                        />
+                      ))}
+                    </View>
+
+                    {/*
+                      SONUÇLAR SEÇİMDEN ÖNCE (v3:1244) — üç akıbetin bedeli düğmelerin ALTINDA, her
+                      zaman yazılı. Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve "İmha: parti
+                      düşer" hiç yazmıyordu: depocu partinin düşeceğini öğrenmeden imhayı
+                      seçebiliyordu.
+                    */}
+                    <View style={styles.hintBlock} testID={`warehouse-return-hint-${line.orderItemId}`}>
+                      <Text style={styles.rowSub}>{t.return.dispositionHint.rules}</Text>
+                      <Text style={styles.rowSub}>{t.return.dispositionHint.goodwill}</Text>
+                    </View>
+                  </>
+                )}
+
+                {disposition === 'restock' && written === null ? (
+                  <View style={styles.noteBlock} testID={`warehouse-return-note-block-${line.orderItemId}`}>
+                    <Text style={styles.noteHint}>{t.return.restockNote}</Text>
+                    <TextInput
+                      value={returnState.noteOf(line.orderItemId)}
+                      onChangeText={(text) => returnState.setNote(line.orderItemId, text)}
+                      placeholder={t.return.notePlaceholder}
+                      placeholderTextColor={operationsTheme.colors.muted}
+                      accessibilityLabel={fillCopy(t.return.noteField, { name: line.name })}
+                      style={styles.noteInput}
+                      testID={`warehouse-return-note-${line.orderItemId}`}
+                    />
+                  </View>
+                ) : null}
               </View>
+            );
+          }),
+        )}
 
-              {/*
-                SONUÇLAR SEÇİMDEN ÖNCE (v3:1244) — üç akıbetin bedeli düğmelerin ALTINDA, her
-                zaman yazılı. Eskiden ipucu ancak seçildikten SONRA çıkıyordu ve "İmha: parti
-                düşer" hiç yazmıyordu: depocu partinin düşeceğini öğrenmeden imhayı seçebiliyordu.
-                Bu üç düğme geri alınamayan bir kaydı hazırlıyor; bedeli önce okunmalı.
-              */}
-              <View style={styles.hintBlock} testID={`warehouse-return-hint-${line.orderItemId}`}>
-                <Text style={styles.rowSub}>{t.return.dispositionHint.rules}</Text>
-                <Text style={styles.rowSub}>{t.return.dispositionHint.goodwill}</Text>
-              </View>
-
-              {disposition === 'restock' ? (
-                <View style={styles.noteBlock} testID={`warehouse-return-note-block-${line.orderItemId}`}>
-                  <Text style={styles.noteHint}>{t.return.restockNote}</Text>
-                  <TextInput
-                    value={returnState.noteOf(line.orderItemId)}
-                    onChangeText={(text) => returnState.setNote(line.orderItemId, text)}
-                    placeholder={t.return.notePlaceholder}
-                    placeholderTextColor={operationsTheme.colors.muted}
-                    accessibilityLabel={fillCopy(t.return.noteField, { name: line.name })}
-                    style={styles.noteInput}
-                    testID={`warehouse-return-note-${line.orderItemId}`}
-                  />
+        {detail.freeGoods.length === 0 ? null : (
+          <>
+            <Text style={styles.heading}>{t.return.freeGoodsHeading}</Text>
+            {detail.freeGoods.map((line) => {
+              const counted = returnState.countOf(line.variantId);
+              return (
+                <View key={line.variantId} style={styles.lineRow} testID={`warehouse-return-free-${line.variantId}`}>
+                  <View style={styles.freeRow}>
+                    <OperationsProductThumb name={line.name} photoUri={line.imageUrl} />
+                    <View style={styles.freeText}>
+                      <Text style={styles.rowTitle}>{line.name}</Text>
+                      {line.variantLabel.length === 0 ? null : <Text style={styles.rowSub}>{line.variantLabel}</Text>}
+                    </View>
+                    <OperationsQuantityBox
+                      value={counted}
+                      caption={t.return.qtyCaption}
+                      tone={counted === line.onVanQty ? 'ink' : 'diff'}
+                      onPress={() => setQtyVariantId(line.variantId)}
+                      accessibilityLabel={line.name}
+                      accessibilityHint={t.common.qtyHint}
+                      testID={`warehouse-return-qty-${line.variantId}`}
+                    />
+                  </View>
+                  <Text style={styles.rowSub}>{fillCopy(t.return.freeGoodsHint, { n: String(line.onVanQty) })}</Text>
                 </View>
-              ) : null}
-
+              );
+            })}
+            <View style={styles.summary} testID="warehouse-return-free-summary">
+              <Text style={styles.rowTitle}>
+                {fillCopy(t.return.freeGoodsSummary, { expected: String(expectedQty), counted: String(countedQty) })}
+              </Text>
+              {countedQty >= expectedQty ? null : <Text style={styles.rowSub}>{t.return.freeGoodsShort}</Text>}
             </View>
-          );
-        })}
+          </>
+        )}
 
-        <Text style={styles.heading}>{t.return.unreachedHeading}</Text>
-        {COURIER_RETURN_UNREACHED.map((row) => (
-          <Text key={row.referenceNo} style={styles.unreached} testID={`warehouse-return-unreached-${row.referenceNo}`}>
-            {fillCopy(t.return.unreachedRow, { ref: row.referenceNo, n: String(row.parcels) })}
-          </Text>
-        ))}
+        {detail.boxesDown.length + detail.boxesStay.length === 0 ? null : (
+          <>
+            <Text style={styles.heading}>{t.return.boxesHeading}</Text>
+            <View style={styles.lineRow}>
+              {detail.boxesDown.map((card) => (
+                <View key={card.orderId} style={styles.boxRow} testID={`warehouse-return-box-down-${card.orderId}`}>
+                  <Text style={styles.boxName}>{`${card.customerName} · ${card.referenceNo ?? '—'}`}</Text>
+                  <Text style={styles.boxWhy}>{fillCopy(t.return.boxDown, { n: String(card.boxes.length) })}</Text>
+                </View>
+              ))}
+              {detail.boxesStay.map((card) => (
+                <View key={card.orderId} style={[styles.boxRow, styles.boxStay]} testID={`warehouse-return-box-stay-${card.orderId}`}>
+                  <Text style={styles.boxName}>{card.runReferenceNo ?? `${card.customerName} · ${card.referenceNo ?? '—'}`}</Text>
+                  <Text style={styles.boxWhy}>{t.return.boxStay[card.reason]}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         <Text style={styles.footnote}>{t.return.footnote}</Text>
       </FormScroll>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {/* ÇEVRİMDIŞI SEBEBİ (v3:1284) — kilidin gerekçesi akıbetin kendisinde: dönen mal stoğa
-            GİRER ya da İMHA olur, ikisi de bir stok hareketidir ve bağlantı ister. Genel "kayıt
-            kilitli" cümlesi bunu söylemiyordu. */}
+            GİRER ya da İMHA olur, ikisi de bir stok hareketidir ve bağlantı ister. */}
         {!offline ? null : (
           <View style={styles.locked} testID="warehouse-return-locked">
             <Text style={styles.lockedTitle}>{t.return.locked.title}</Text>
@@ -165,8 +307,103 @@ export function CourierReturnScreen() {
           <Text style={styles.ctaLabel}>{cta.label}</Text>
         </PressableSurface>
       </LinearGradient>
+
+      {qtyLine === null ? null : (
+        <OperationsQuantitySheet
+          visible
+          title={t.return.qtySheet.title}
+          value={{ cases: [], loose: returnState.countOf(qtyLine.variantId) }}
+          caseSizes={[]}
+          onChange={(next) => returnState.setCount(qtyLine.variantId, quantityTotal(next))}
+          copy={qtySheetCopy({
+            ...t.return.qtySheet,
+            subject: fillCopy(t.return.qtySheet.subject, { name: qtyLine.name, qty: String(qtyLine.onVanQty) }),
+          })}
+          onClose={() => setQtyVariantId(null)}
+          testID="warehouse-return-qty-sheet"
+        />
+      )}
     </View>
   );
+}
+
+/** Rampa kartı — bir kurye ya da kuryesiz küme. Sayılar İŞİ söyler, araçtakiler ikinci satırda. */
+function CourierCard({ row, onPress }: { row: ReturningCourierContract; onPress: () => void }) {
+  const work = [
+    row.pendingLines > 0 ? fillCopy(t.return.partLines, { n: String(row.pendingLines) }) : null,
+    row.boxesDownCount > 0 ? fillCopy(t.return.partBoxesDown, { n: String(row.boxesDownCount) }) : null,
+  ].filter((part): part is string => part !== null);
+  const onVan = [
+    row.freeGoodsQty > 0 ? fillCopy(t.return.partFreeGoods, { n: String(row.freeGoodsQty) }) : null,
+    row.boxesStayCount > 0 ? fillCopy(t.return.partBoxesStay, { n: String(row.boxesStayCount) }) : null,
+  ].filter((part): part is string => part !== null);
+
+  return (
+    <PressableSurface
+      onPress={onPress}
+      feedback="scale"
+      style={styles.card}
+      accessibilityLabel={row.courierName ?? t.return.orphanName}
+      testID={`warehouse-return-courier-${row.courierId ?? UNASSIGNED_RETURNS}`}
+    >
+      <View style={styles.cardHead}>
+        <View style={[styles.cardTile, row.courierId === null ? styles.cardTileQuiet : styles.cardTileOlive]}>
+          <Icon
+            name={row.courierId === null ? 'transfer' : 'courier'}
+            size={operationsTheme.size.cardTileIcon}
+            color={row.courierId === null ? operationsTheme.colors.muted : operationsTheme.colors['olive-dark']}
+          />
+        </View>
+        <Text style={styles.cardName} numberOfLines={1}>
+          {row.courierName ?? t.return.orphanName}
+        </Text>
+        {row.vehicleLabel === null ? null : (
+          <Text style={styles.plate} numberOfLines={1}>
+            {row.vehicleLabel}
+          </Text>
+        )}
+      </View>
+
+      {work.length === 0 ? null : (
+        <Text style={styles.cardFact} testID={`warehouse-return-work-${row.courierId ?? UNASSIGNED_RETURNS}`}>
+          {work.join(' · ')}
+        </Text>
+      )}
+      {onVan.length === 0 ? null : <Text style={styles.cardFact}>{onVan.join(' · ')}</Text>}
+
+      {/* KURYESİZ küme kendi sebebini söyler; ARAÇSIZ kurye de. Sürülen sefer varsa uyarı kiremit:
+          araç bugün boşalmayacak, malın tamamını devralmak yanlış olur. */}
+      {row.courierId === null ? (
+        <Text style={styles.cardMeta}>{t.return.orphanMeta}</Text>
+      ) : row.drivingRuns > 0 ? (
+        <Text style={[styles.cardMeta, styles.cardWarn]} testID={`warehouse-return-driving-${row.courierId}`}>
+          {fillCopy(t.return.cardDriving, { n: String(row.drivingRuns) })}
+        </Text>
+      ) : row.vehicleLabel === null ? (
+        <Text style={styles.cardMeta}>{t.return.cardNoVehicle}</Text>
+      ) : null}
+
+      <Text style={styles.cardOpen}>{t.return.open}</Text>
+    </PressableSurface>
+  );
+}
+
+/** Liste künyesi — kaç kurye bekliyor. Boş listede cümle kurulmaz; boş hâl kendi metnini yazıyor. */
+function listCaptionOf(couriers: readonly ReturningCourierContract[]): string | undefined {
+  return couriers.length === 0 ? undefined : fillCopy(t.return.listCaption, { n: String(couriers.length) });
+}
+
+/**
+ * Detay künyesi: plaka ve sürülen sefer. ~~"rota kapandı"~~ KALKTI (04.09) — teslim alma kurye
+ * eksenli, kapanış sefer eksenli; kapanmamış seferi olan kurye de mal teslim eder, yani o cümle
+ * ekranda her zaman doğru değildi (CLAUDE §1: doğrulanamayan bilgi yazılmaz).
+ */
+function detailSubtitleOf(detail: { vehicleLabel: string | null; drivingRuns: number }): string | undefined {
+  const parts = [
+    detail.vehicleLabel,
+    detail.drivingRuns > 0 ? fillCopy(t.return.subtitleDriving, { n: String(detail.drivingRuns) }) : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length === 0 ? undefined : parts.join(' · ');
 }
 
 const styles = StyleSheet.create({
@@ -186,12 +423,94 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space.lg,
   },
+  /** Rampa kartı — transfer kuyruğunun kart geometrisi (v3:1097), içeriği kurye künyesi. */
+  card: {
+    gap: operationsTheme.space.md,
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space['2xl'],
+    paddingHorizontal: operationsTheme.space['2xl'],
+  },
+  cardHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.xl,
+  },
+  cardTile: {
+    width: operationsTheme.size.cardTile,
+    height: operationsTheme.size.cardTile,
+    borderRadius: operationsTheme.radius.badge,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTileOlive: { backgroundColor: operationsTheme.colors['olive-bg'] },
+  cardTileQuiet: { backgroundColor: operationsTheme.colors['neutral-bg'] },
+  cardName: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors.ink,
+  },
+  /** Plaka künyenin sağ ucunda: "hangi araç" sorusunun tek tekil cevabı (`vehicleLabelOf`). */
+  plate: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.body,
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderRadius: operationsTheme.radius.badge,
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.md,
+    overflow: 'hidden',
+  },
+  cardFact: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.body,
+  },
+  cardMeta: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  cardWarn: { color: operationsTheme.colors.terracotta },
+  /** Yazılmış akıbetin sonucu — seçici değil, KAYIT: zeytin harf, dokunulacak bir şey yok. */
+  written: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  cardOpen: {
+    alignSelf: 'flex-end',
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['olive-dark'],
+  },
+  empty: {
+    gap: operationsTheme.space.sm,
+    paddingTop: operationsTheme.space['8xl'],
+  },
+  emptyTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors.ink,
+  },
+  emptyBody: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
+  /** Detayın satırı da KART (D5'in 04.09 kararı): çizgiyle ayrılan satır künyeye karışıyordu. */
   lineRow: {
     gap: operationsTheme.space.sm,
-    paddingVertical: operationsTheme.space.lg,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    backgroundColor: operationsTheme.colors.panel,
+    borderRadius: operationsTheme.radius.card,
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space['2xl'],
+    paddingHorizontal: operationsTheme.space['2xl'],
   },
   rowTitle: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -215,24 +534,38 @@ const styles = StyleSheet.create({
   noteBlock: {
     gap: operationsTheme.space.sm,
   },
-  locked: {
-    backgroundColor: operationsTheme.colors['error-bg'],
-    borderRadius: operationsTheme.radius.control,
-    paddingVertical: operationsTheme.space.lg,
-    paddingHorizontal: operationsTheme.space.xl,
+  freeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.xl,
+  },
+  freeText: { flex: 1 },
+  /** Sayımın toplamı — kum zeminli özet, kartlardan bir kademe sessiz. */
+  summary: {
     gap: operationsTheme.space['2xs'],
-    marginBottom: operationsTheme.space.lg,
+    backgroundColor: operationsTheme.colors['neutral-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
   },
-  lockedTitle: {
+  boxRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: operationsTheme.space.md,
+    paddingVertical: operationsTheme.space.sm,
+  },
+  /** ARAÇTA KALAN soluk ve dokunulamaz: bu ekrandan kayda geçmez, yarına devrolur (v2:506). */
+  boxStay: { opacity: 0.55 },
+  boxName: {
+    flex: 1,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.note,
-    color: operationsTheme.colors.error,
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.ink,
   },
-  lockedBody: {
+  boxWhy: {
     fontFamily: operationsTheme.font.body['400'],
-    fontSize: operationsTheme.text.micro,
-    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
-    color: operationsTheme.colors.error,
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
   },
   noteHint: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -251,14 +584,6 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['field-label'],
     color: operationsTheme.colors.ink,
   },
-  /** v2:506 — soluk, dokunulamaz: araçta kalan mal bu ekrandan kayda geçmez. */
-  unreached: {
-    opacity: 0.55,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.control,
-    color: operationsTheme.colors.ink,
-    paddingVertical: operationsTheme.space.md,
-  },
   footnote: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.micro,
@@ -275,24 +600,23 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.space['3xl'],
     paddingHorizontal: operationsTheme.space['5xl'],
   },
-  notice: {
-    marginBottom: operationsTheme.space.md,
-    padding: operationsTheme.space.xl,
-    borderRadius: operationsTheme.radius.control,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.helper,
-    lineHeight: operationsTheme.text.helper * operationsTheme.text['lead--line-height'],
-  },
-  notice_ok: {
-    backgroundColor: operationsTheme.colors['olive-bg'],
-    color: operationsTheme.colors['olive-dark'],
-  },
-  notice_warn: {
-    backgroundColor: operationsTheme.colors['terracotta-bg'],
-    color: operationsTheme.colors.terracotta,
-  },
-  notice_error: {
+  locked: {
     backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+    marginBottom: operationsTheme.space.lg,
+  },
+  lockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  lockedBody: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.error,
   },
   cta: {

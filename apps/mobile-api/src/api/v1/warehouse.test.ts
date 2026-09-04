@@ -32,6 +32,8 @@ import type {
   ReceiveGoodsResponse,
   ReceiveTransferResponse,
   RecordAdjustmentResponse,
+  WarehouseCourierReturnResponse,
+  WarehouseReturningCouriersResponse,
   WarehouseReturnQueueResponse,
   WarehouseReturnResponse,
   WarehouseTransfersResponse,
@@ -1041,6 +1043,67 @@ describe('D6 · GET /api/v1/warehouse/returns', () => {
 
     for (const moneyKey of ['unitPrice', 'total', 'purchasePrice', 'refunded', 'amountCollected', 'vatRate']) {
       expect(serialized).not.toContain(moneyKey);
+    }
+  });
+});
+
+/**
+ * **RAMPA LİSTESİ** (D6 · 04.09) — "kimden teslim alıyorum".
+ *
+ * Bu dosyanın siparişleri KURYESİZ kuruluyor (`pendingOrder` `courierId` yazmıyor), yani buradaki
+ * iddialar listenin kuryesiz kümesini sınıyor: kargo/tezgâh yolundan dönen malın akıbeti de
+ * işaretlenir ama aracı ve kutusu yoktur. Kuryeli dalın kendi testi uygulama katmanında
+ * (`warehouse/returns.test.ts` · `courier/return.test.ts`).
+ */
+describe('D6 · GET /api/v1/warehouse/courier-return', () => {
+  it('kuryesiz dönüşler kendi kümesinde ve bekleyen kalem sayısıyla gelir', async () => {
+    const order = await returnedOrder(2);
+
+    const body = await dataOf<WarehouseReturningCouriersResponse>(await asStaff('/api/v1/warehouse/courier-return'));
+    const orphan = body.couriers.find((row) => row.courierId === null);
+
+    expect(orphan).toBeDefined();
+    expect(orphan!.pendingLines).toBeGreaterThan(0);
+    // Kuryesi olmayan dönüşün aracı da kutusu da yoktur — uydurma bir künye yazılmaz.
+    expect(orphan!.vehicleLabel).toBeNull();
+    expect(orphan!.boxesDownCount).toBe(0);
+    expect(orphan!.freeGoodsQty).toBe(0);
+    // Sipariş gerçekten bu kümede: detay onu taşıyor.
+    const detail = await dataOf<WarehouseCourierReturnResponse>(
+      await asStaff('/api/v1/warehouse/courier-return/unassigned'),
+    );
+    expect(detail.drops.some((drop) => drop.orderId === order.orderId)).toBe(true);
+  });
+
+  it('`unassigned` detayı YALNIZ dökümdür — araç bölümleri boş döner', async () => {
+    await returnedOrder(2);
+
+    const body = await dataOf<WarehouseCourierReturnResponse>(
+      await asStaff('/api/v1/warehouse/courier-return/unassigned'),
+    );
+
+    expect(body.courierId).toBeNull();
+    expect(body.freeGoods).toEqual([]);
+    expect(body.boxesDown).toEqual([]);
+    expect(body.boxesStay).toEqual([]);
+    expect(body.drivingRuns).toBe(0);
+  });
+
+  /* Yol parçası ya `unassigned` ya bir UUID'dir. Biçimsiz kimlik kapıya hiç girmez — kapsam
+     kararı bir sorgu turu harcamadan önce reddedilir. */
+  it('biçimsiz kurye kimliği REDDEDİLİR', async () => {
+    const response = await asStaff('/api/v1/warehouse/courier-return/kim-bu');
+
+    expect(response.status).toBe(400);
+  });
+
+  it('rampa listesinde TUTAR yok — depocu parayı görmez', async () => {
+    await returnedOrder(2);
+
+    const body = await dataOf<WarehouseReturningCouriersResponse>(await asStaff('/api/v1/warehouse/courier-return'));
+
+    for (const moneyKey of ['unitPrice', 'total', 'purchasePrice', 'refunded', 'amountCollected', 'vatRate']) {
+      expect(JSON.stringify(body)).not.toContain(moneyKey);
     }
   });
 });

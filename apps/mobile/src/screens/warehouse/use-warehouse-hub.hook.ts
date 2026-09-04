@@ -9,6 +9,7 @@ import type {
 
 import {
   fetchNearExpiry,
+  fetchReturningCouriers,
   fetchWarehouseTransfers,
   fetchPendingHandover,
   fetchPreparationQueue,
@@ -57,6 +58,11 @@ interface UseWarehouseHubResult {
   /** Gelen transferler; `null` = OKUNAMADI. */
   transfers: InboundTransferContract[] | null;
   /**
+   * **Rampada teslim vermeyi bekleyen kurye sayısı** (D6, 04.09); **`null` = OKUNAMADI, sıfır
+   * DEĞİL** (CLAUDE §1). Sıfıra düşürmek "rampa boş" derdi ve akşam devri hiç yapılmazdı.
+   */
+  returningCouriers: number | null;
+  /**
    * Rampada taşıyıcıyı bekleyen kutu adedi; **`null` = OKUNAMADI, sıfır DEĞİL** (CLAUDE §1).
    * Sıfıra düşürmek "rampa boş" derdi ve depocu kutuları orada bırakırdı.
    */
@@ -87,6 +93,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const [status, setStatus] = useState<HubStatus>('loading');
   const [orders, setOrders] = useState<PreparationOrderContract[] | null>(null);
   const [transfers, setTransfers] = useState<InboundTransferContract[] | null>(null);
+  const [returningCouriers, setReturningCouriers] = useState<number | null>(null);
   const [pendingHandover, setPendingHandover] = useState<number | null>(null);
   const [printers, setPrinters] = useState<BoxPrinterContract[] | null>(null);
   /** D3 kartının iki sayısı — okunamadıysa `null` ve kart "okunamadı" der (CLAUDE §1). */
@@ -98,7 +105,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
   const load = useCallback(async () => {
     const run = (generation.current += 1);
 
-    const [queue, inbound, handover, printerList, expiring] = await Promise.all([
+    const [queue, inbound, handover, printerList, expiring, ramp] = await Promise.all([
       trackWarehouse(fetchPreparationQueue()),
       trackWarehouse(fetchWarehouseTransfers()),
       trackWarehouse(fetchPendingHandover()),
@@ -117,6 +124,12 @@ export function useWarehouseHub(): UseWarehouseHubResult {
          hazırlık kuyruğunun çevrimdışı sinyalini eziyordu. Sayaç bir ROZETTİR (devir sayacıyla
          aynı gerekçe): düşmesi hub'ı kullanılamaz yapmaz, yalnız bir satırın rakamını söylemez. */
       fetchNearExpiry(),
+      /* D6 SAYACI (04.09): kart artık "kim bekliyor" diyebiliyor — kapı yazılana kadar metin
+         sabitti ve satırın kendi künyesi bunu *"kapı gelince sayıya bağlanır"* diye yazmıştı.
+
+         `trackWarehouse`TAN GEÇMEZ: D3 sayacıyla aynı gerekçe — başarılı bir D6 okuması hazırlık
+         kuyruğunun çevrimdışı sinyalini ezerdi. Rozetin düşmesi hub'ı kullanılamaz yapmaz. */
+      fetchReturningCouriers(),
     ]);
     if (run !== generation.current) return;
 
@@ -125,6 +138,7 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     setPendingHandover(handover.error === null ? handover.data.boxes : null);
     setPrinters(printerList.error === null ? printerList.data.printers : null);
     setNearExpiry(expiring.error === null ? expiring.data.batches : null);
+    setReturningCouriers(ramp.error === null ? ramp.data.couriers.length : null);
     /*
       HATA HÂLİ İKİ ANA OKUMAYA BAĞLI KALDI — devir sayacı onu tetiklemiyor.
 
@@ -155,5 +169,5 @@ export function useWarehouseHub(): UseWarehouseHubResult {
     void load().finally(() => setReloading(false));
   }, [load]);
 
-  return { status, orders, transfers, pendingHandover, printers, nearExpiry, reload, refresh, reloading };
+  return { status, orders, transfers, returningCouriers, pendingHandover, printers, nearExpiry, reload, refresh, reloading };
 }

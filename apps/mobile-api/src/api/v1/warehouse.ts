@@ -2,6 +2,7 @@ import { Hono, type Context, type Next } from 'hono';
 import { z } from 'zod';
 import { OrderBoxService, serviceDb, SettingsService, ShippingBoxService, WarehouseService } from '@lezzet/database';
 import {
+  acceptCourierReturn,
   adjustFulfillment,
   announceOrderShipment,
   boxLabelPayload,
@@ -20,6 +21,7 @@ import {
   listPreparationQueue,
   listWarehouseAreas,
   listWarehouseBatches,
+  listReturningCouriers,
   listWarehouseReturns,
   markBatchSeen,
   openBox,
@@ -27,6 +29,7 @@ import {
   quoteOrderShipment,
   readExpiryThresholds,
   readIntakeHeader,
+  readReturningCourier,
   receiveGoods,
   receiveTransfer,
   recordAdjustment,
@@ -86,10 +89,16 @@ import {
   MarkBatchSeenResponseSchema,
   WarehouseBatchesResponseSchema,
   WarehouseTransfersResponseSchema,
+  AcceptCourierReturnRequestSchema,
+  AcceptCourierReturnResponseSchema,
+  WarehouseCourierReturnResponseSchema,
+  WarehouseReturningCouriersResponseSchema,
   WarehouseReturnQueueResponseSchema,
   WarehouseReturnRequestSchema,
   WarehouseReturnResponseSchema,
+  UNASSIGNED_RETURNS,
 } from '@lezzet/types';
+import { warehouseScope } from '@lezzet/domain-core';
 import { privateReadUrl } from '@lezzet/storage';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor, IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
@@ -955,6 +964,89 @@ warehouse.post('/returns/:orderId', async (c) => {
 
   const body: z.input<typeof WarehouseReturnResponseSchema> = outcome;
   return ok(c, WarehouseReturnResponseSchema.parse(body));
+});
+
+// ── D6 · Rampa listesi + tek kuryenin dönüşü (04.09) ────────────────────────
+
+/**
+ * **"Rampada kim bekliyor"** — D6'nın liste yarısı.
+ *
+ * ── NEDEN ÜSTTEKİ UÇ YETMİYOR ───────────────────────────────────────────────
+ * `GET /returns` deponun DÖNEN SİPARİŞLERİNİ veriyor ve o listede araçtan inecek kutu da, araçta
+ * duran serbest ürün de yok. Depocunun rampadaki sorusu "hangi sipariş döndü" değil, **"kimden
+ * teslim alıyorum"**: aynı rampaya iki kurye döner ve mal kurye başına devredilir (araç bir kez
+ * boşalır). Bu uç iki kapının cevabını kurye başına toplar.
+ *
+ * Kapsam jetondan: `warehouseGuard` deponun kimliğini çözdü, kapsam kararını kapı veriyor
+ * (`canAccessWarehouse`) — başka tesisin kuryesi listeye giremez.
+ */
+warehouse.get('/courier-return', async (c) => {
+  const staff = c.get('staff');
+  const couriers = await listReturningCouriers(serviceDb(), {
+    warehouseId: c.get('warehouseId'),
+    scope: warehouseScope(staff.roles, staff.warehouseIds),
+  });
+
+  const body: z.input<typeof WarehouseReturningCouriersResponseSchema> = { couriers };
+  return ok(c, WarehouseReturningCouriersResponseSchema.parse(body));
+});
+
+/**
+ * **Bir kuryenin rampadaki her şeyi** — döküm + serbest ürün + kutular, tek okumada.
+ *
+ * `:courierId` yerine `unassigned` gelirse kuryeye hiç atanmamış dönüşler döner (kargo/tezgâh
+ * yolu): araç bölümleri boş, döküm dolu. Ayrı bir uç açılmadı — soru aynı soru, değişen yalnız
+ * hangi bölümlerin boş olduğu.
+ */
+warehouse.get('/courier-return/:courierId', async (c) => {
+  const param = c.req.param('courierId');
+  const courierId = param === UNASSIGNED_RETURNS ? null : UuidSchema.safeParse(param);
+  if (courierId !== null && !courierId.success) return fail(c, 'invalid_courier_id', 400);
+
+  const staff = c.get('staff');
+  const outcome = await readReturningCourier(serviceDb(), {
+    courierId: courierId === null ? null : courierId.data,
+    warehouseId: c.get('warehouseId'),
+    scope: warehouseScope(staff.roles, staff.warehouseIds),
+  });
+  if ('status' in outcome) return fail(c, outcome.reason, 403);
+
+  const body: z.input<typeof WarehouseCourierReturnResponseSchema> = outcome;
+  return ok(c, WarehouseCourierReturnResponseSchema.parse(body));
+});
+
+/**
+ * **Dönüşün kabulü** — sayılan serbest ürün araçtan depoya geçer, reddedilen kutuların araç damgası
+ * silinir (kurye denetimi bulgu 5, 03.09).
+ *
+ * ── AKIBET BU UÇTAN GEÇMEZ ──────────────────────────────────────────────────
+ * Kalemlerin akıbeti (`restock`/`discard`/`goodwill`) sipariş başına yazılıyor ve kendi kapısı var
+ * (`POST /returns/:orderId`): o yazım siparişin karşılanan adedini ve iade borcunu da hareket
+ * ettiriyor, yani bir sipariş işlemidir. Buradaki kabul ise MAL DEVRİDİR ve öznesi araçtır. İkisini
+ * tek uçta birleştirmek, bir siparişin düşmesi hâlinde bütün devri geri almak demekti — oysa mal
+ * fiilen rampada ve kaydı gecikmemeli. Ekran ikisini tek dokunuşta sırayla çağırır.
+ *
+ * Fark (`shortfalls`) SESSİZ değil: eksik dönen mal araç deposunda açık kalır ve sayım/düşüm
+ * kapatır — cevap onu adıyla söyler.
+ */
+warehouse.post('/courier-return/:courierId', async (c) => {
+  const courierId = UuidSchema.safeParse(c.req.param('courierId'));
+  if (!courierId.success) return fail(c, 'invalid_courier_id', 400);
+
+  const parsed = AcceptCourierReturnRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const staff = c.get('staff');
+  const outcome = await acceptCourierReturn(serviceDb(), {
+    courierId: courierId.data,
+    warehouseId: c.get('warehouseId'),
+    scope: warehouseScope(staff.roles, staff.warehouseIds),
+    actorId: staff.id,
+    freeGoods: parsed.data.freeGoods,
+  });
+
+  const body: z.input<typeof AcceptCourierReturnResponseSchema> = outcome;
+  return ok(c, AcceptCourierReturnResponseSchema.parse(body));
 });
 
 // ── Tarama · kod çözümü + öğrenen eşleme (Modül 23) ─────────────────────────

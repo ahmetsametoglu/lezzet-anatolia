@@ -317,7 +317,7 @@ export function WarehouseHubScreen() {
 
   const overview = buildOverview(hub.orders, hub.pendingHandover);
   const picking = buildPicking(hub.orders);
-  const tiles = buildTiles(hub.orders, hub.transfers, hub.pendingHandover, hub.nearExpiry, router);
+  const tiles = buildTiles(hub.orders, hub.transfers, hub.returningCouriers, hub.pendingHandover, hub.nearExpiry, router);
 
   return (
     <View style={styles.screen} testID="operations-section-warehouse">
@@ -559,6 +559,8 @@ function printerSummary(printers: readonly BoxPrinterContract[] | null): string 
 function buildTiles(
   orders: readonly PreparationOrderContract[] | null,
   transfers: readonly { referenceNo: string }[] | null,
+  /** D6'nın kaynağı — `null` = okunamadı; sıfıra düşürmek "rampa boş" derdi (CLAUDE §1). */
+  returningCouriers: number | null,
   pendingHandover: number | null,
   /** D3'ün kaynağı — `null` = okunamadı (kart sayı yazmaz, "okunamadı" der). */
   nearExpiry: readonly { decision: string }[] | null,
@@ -566,6 +568,16 @@ function buildTiles(
 ): HubTile[] {
   const transfer = t.hub.rows.transfer;
   const handover = t.hub.rows.handover;
+  const ramp = t.hub.rows.return;
+
+  /* D6 ALTYAZISI ARTIK OLGU (04.09): satır *"1 döküm bekliyor"* yazıyordu ve o sayı hiçbir yerden
+     gelmiyordu — kodun içine yazılmış bir cümleydi. Rampa boşken bile "1 döküm" diyordu. */
+  const returnSubtitle =
+    returningCouriers === null
+      ? ramp.unknown
+      : returningCouriers === 0
+        ? ramp.none
+        : fillCopy(ramp.some, { n: String(returningCouriers) });
 
   const handoverSubtitle =
     pendingHandover === null
@@ -666,10 +678,12 @@ function buildTiles(
       icon: 'courier-return',
       tone: operationsTheme.colors.terracotta,
       title: t.hub.rows.return.title,
-      subtitle: t.hub.rows.return.subtitle,
-      /* `d6Rengi` — bekleyen döküm bir karardır, bekleyen bir iştir. Bugün metin sabit (dökümü
-         listeleyen kapı yok), o yüzden koşul da sabit; kapı gelince sayıya bağlanır. */
-      alert: true,
+      subtitle: returnSubtitle,
+      /* `d6Rengi` — bekleyen dönüş bir karar değil, bekleyen bir İŞTİR. Uyarı artık SAYIYA bağlı
+         (04.09, rampa kapısı yazıldı): rampa boşken kırmızı yakmak, her gün yanan ve bu yüzden
+         hiçbir şey söylemeyen bir işaret olurdu. Okunamadıysa da yanmaz — ölçülemeyeni "iş var"
+         diye göstermek, sıfıra düşürmenin ters yönden aynı hatası. */
+      alert: (returningCouriers ?? 0) > 0,
       onPress: () => router.navigate('/courier-return'),
     },
     {

@@ -1,51 +1,73 @@
-import { useCallback, useState } from 'react';
-import type { ReturnDisposition } from '@lezzet/types';
+import { useCallback, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { UNASSIGNED_RETURNS, type ReturnDisposition, type ReturningCourierContract, type WarehouseCourierReturnResponse } from '@lezzet/types';
 
-import { submitWarehouseReturn } from '@/lib/api/warehouse';
+import { acceptCourierReturn, fetchCourierReturn, fetchReturningCouriers, submitWarehouseReturn } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
-import type { CourierReturnDrop } from './courier-return-fixture';
 import { trackWarehouse } from './warehouse-status';
 
 /*
-  D6 · KURYE DÖNÜŞÜ KABULÜ (v2:483-510). `/warehouse/returns/:orderId`.
+  D6 · KURYE DÖNÜŞÜ KABULÜ — `/courier-return`. Tasarım: v3:14 + "D6 Rampa Listesi" (04.09).
+
+  ── LİSTE KURYE EKSENLİ, SEFER EKSENLİ DEĞİL ────────────────────────────────
+  Para SEFER başına kapanır (kuryenin kendi ekranından, her sefer ayrı); MAL kurye başına teslim
+  alınır. Ayrım fiziksel: araç bir yerdedir ve o gün tek kuryenin yükünü taşır, yani iki sefer
+  sürmüş kurye rampaya BİR KEZ döner ve araç BİR KEZ boşalır. Satırı sefere bağlasaydık aynı aracın
+  serbest ürünü iki satırda iki kez sayılırdı.
+
+  ── FIXTURE ÖLDÜ (04.09) ────────────────────────────────────────────────────
+  Ekran 08.08'den 04.09'a kadar kod içine yazılmış TEK bir dökümle açılıyordu (`Musa K.`,
+  `LZA-26-9Q2B`): sunucudaki okuma ucu aynı gün yazılmıştı ama istemci onu hiç çağırmıyordu. Kayıt
+  gerçekti, döküm değildi — uydurma kimlik yüzünden kapı `not_found` dönüyordu ve ekran o reddi
+  gösteriyordu. Şimdi üçü de gerçek: liste, döküm, kayıt.
 
   ── MİKTAR HEDEF DEĞERDİR, FARK DEĞİL ───────────────────────────────────────
-  v2 birebir: *"Miktar hedef değer olarak girilir; fark sistemde hesaplanır."* Sözleşme bunu
-  taşıyor (`FulfillmentAdjustment.fulfilledQty` = kalemin KALAN karşılanan adedi) ve bu ekran ondan
-  çıkarma YAPMAZ — yapsaydı aynı hesap iki yerde olurdu ve ikisi bir gün ayrışırdı.
+  v2 birebir: *"Miktar hedef değer olarak girilir; fark sistemde hesaplanır."* Sözleşme bunu taşıyor
+  (`FulfillmentAdjustment.fulfilledQty` = kalemin KALAN karşılanan adedi) ve bu ekran ondan çıkarma
+  YAPMAZ — yapsaydı aynı hesap iki yerde olurdu ve ikisi bir gün ayrışırdı. Hedef değer akıbetten
+  TÜRER: `restock`/`discard` → mal geri geldi, karşılanan adet **0**; `goodwill` → mal müşteride
+  KALDI, adet **değişmez**.
 
-  Tasarımda adet alanı YOK ve bu bilinçli: dönen mal KOLİNİN kendisidir, satırın tamamı geri gelir.
-  O yüzden hedef değer akıbetten TÜREr:
-  · `restock` / `discard` → mal geri geldi, karşılanan adet **0**,
-  · `goodwill` → mal müşteride KALDI, adet **değişmez** (kapı da böyle diyor: jestte miktar aynı).
-
-  ── "STOĞA DÖN"DE NOT ZORUNLU ───────────────────────────────────────────────
-  Soğuk zincir beyanıdır ve kuralı veritabanı zorlar; ekran yalnız kapıyı boşuna zorlamamak için
-  CTA'yı kapalı tutar. İmha ve jestte not serbesttir.
-
-  ── DÖKÜM FIXTURE, KAYIT GERÇEK ─────────────────────────────────────────────
-  "Bugün ne geri geldi" sorusunun kapısı yok; gerekçe `courier-return-fixture.ts` künyesinde.
-  Fixture'ın kimliği gerçek olmadığı için kapı `not_found` döner ve ekran o reddi AYNEN gösterir.
+  ── TEK DOKUNUŞ, İKİ YAZIM VE SIRASI ────────────────────────────────────────
+  CTA önce AKIBETLERİ yazar (sipariş başına `POST /returns/:orderId`), sonra MALI devreder
+  (`POST /courier-return/:courierId`). Sıra bilinçli: akıbet yazımı stoktan bağımsızdır ve
+  düşmez; devir düşerse (`not_enough`/`stuck`) akıbetler yazılmış kalır — mal zaten rampada ve
+  kaydı geciktirmenin bir faydası yok. Ters sırada, tek bir sipariş yüzünden bütün devri geri
+  almak gerekirdi.
 */
 
 const t = warehouseCopy;
-
-/** Kapının dört cevabı — sözleşmeden TÜRER, elle yazılmaz. */
-type ReturnOutcome = Extract<Awaited<ReturnType<typeof submitWarehouseReturn>>, { error: null }>['data'];
 
 interface ReturnNotice {
   tone: 'ok' | 'warn' | 'error';
   text: string;
 }
 
+type DetailStatus = 'idle' | 'loading' | 'ready' | 'error';
+
 interface UseCourierReturnResult {
+  status: 'loading' | 'ready' | 'error';
+  /** Rampada bekleyen kuryeler — kuryesiz küme de bir satırdır (`courierId: null`). */
+  couriers: ReturningCourierContract[];
+  reload: () => void;
+
+  /** Seçili kuryenin dökümü; `null` = liste görünüyor. */
+  detail: WarehouseCourierReturnResponse | null;
+  detailStatus: DetailStatus;
+  select: (courierId: string | null) => void;
+
   dispositionOf: (orderItemId: string) => ReturnDisposition | null;
   pick: (orderItemId: string, disposition: ReturnDisposition) => void;
   noteOf: (orderItemId: string) => string;
   setNote: (orderItemId: string, note: string) => void;
-  /** Her kalemde akıbet var mı ve "stoğa dön"lerin notu yazılmış mı — CTA'nın kapısı. */
+
+  /** Sayılan DÖNEN adet — kutu beklenenle (araçta kayıtlı) dolu açılır. */
+  countOf: (variantId: string) => number;
+  setCount: (variantId: string, qty: number) => void;
+
+  /** Her bekleyen kalemde akıbet var mı ve "stoğa dön"lerin notu yazılmış mı — CTA'nın kapısı. */
   canSubmit: boolean;
   sending: boolean;
   notice: ReturnNotice | null;
@@ -60,21 +82,106 @@ export function targetQtyOf(disposition: ReturnDisposition, deliveredQty: number
   return disposition === 'goodwill' ? deliveredQty : 0;
 }
 
-export function useCourierReturn(drop: CourierReturnDrop): UseCourierReturnResult {
+/** Kuryesiz kümenin adresi — liste satırındaki `null` kimliğin yoldaki karşılığı. */
+function pathIdOf(courierId: string | null): string {
+  return courierId ?? UNASSIGNED_RETURNS;
+}
+
+export function useCourierReturn(): UseCourierReturnResult {
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [couriers, setCouriers] = useState<ReturningCourierContract[]>([]);
+  const [detail, setDetail] = useState<WarehouseCourierReturnResponse | null>(null);
+  const [detailStatus, setDetailStatus] = useState<DetailStatus>('idle');
   const [dispositions, setDispositions] = useState<Record<string, ReturnDisposition>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [counts, setCounts] = useState<Record<string, number>>({});
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useNotice<ReturnNotice>();
+
+  const generation = useRef(0);
+  /* Seçim `useRef`te DE tutuluyor: liste tazelenirken açık detayı yeniden okumak gerekiyor ve
+     `load` bağımlılığına seçimi koymak, her seçimde listeyi de yeniden çekerdi. */
+  const selectedRef = useRef<string | null>(null);
+
+  const load = useCallback(async () => {
+    const run = (generation.current += 1);
+    const result = await trackWarehouse(fetchReturningCouriers());
+    if (run !== generation.current) return;
+
+    if (result.error !== null) {
+      setStatus('error');
+      return;
+    }
+    setCouriers(result.data.couriers);
+    setStatus('ready');
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
+
+  const openDetail = useCallback(async (courierId: string | null) => {
+    setDetailStatus('loading');
+    const result = await trackWarehouse(fetchCourierReturn(pathIdOf(courierId)));
+    if (selectedRef.current !== pathIdOf(courierId)) return;
+
+    if (result.error !== null) {
+      setDetailStatus('error');
+      return;
+    }
+    setDetail(result.data);
+    setDetailStatus('ready');
+  }, []);
+
+  const select = useCallback(
+    (courierId: string | null) => {
+      // Seçim değişince taslak SIFIRLANIR: bir kuryenin işaretleri ötekinde durursa depocu, hiç
+      // görmediği bir kalemi karara bağlamış olur (transfer ekranının aynı kuralı).
+      setDispositions({});
+      setNotes({});
+      setCounts({});
+      setNotice(null);
+
+      // `select(null)` LİSTEYE DÖNÜŞTÜR. Kuryesiz küme de bir seçimdir ama kimliği `null` olduğu
+      // için bu imzayla ifade edilemez — onun kapısı `UNASSIGNED_RETURNS` dizgesi (dışarıya açılan
+      // `select` onu ayırıyor). İki ayrı niyeti tek `null`a bindirmek, geri tuşuyla kuryesiz kümeyi
+      // aynı çağrı yapardı.
+      if (courierId === null) {
+        selectedRef.current = null;
+        setDetail(null);
+        setDetailStatus('idle');
+        return;
+      }
+      selectedRef.current = courierId;
+      void openDetail(courierId);
+    },
+    [openDetail, setNotice],
+  );
+
+  /** Kuryesiz kümeyi seçmenin yolu — kimliği `null` olduğu için `select` ile ifade edilemez. */
+  const selectUnassigned = useCallback(() => {
+    setDispositions({});
+    setNotes({});
+    setCounts({});
+    setNotice(null);
+    selectedRef.current = UNASSIGNED_RETURNS;
+    void openDetail(null);
+  }, [openDetail, setNotice]);
 
   const dispositionOf = useCallback(
     (orderItemId: string): ReturnDisposition | null => dispositions[orderItemId] ?? null,
     [dispositions],
   );
 
-  const pick = useCallback((orderItemId: string, disposition: ReturnDisposition) => {
-    setDispositions((current) => ({ ...current, [orderItemId]: disposition }));
-    setNotice(null);
-  }, []);
+  const pick = useCallback(
+    (orderItemId: string, disposition: ReturnDisposition) => {
+      setDispositions((current) => ({ ...current, [orderItemId]: disposition }));
+      setNotice(null);
+    },
+    [setNotice],
+  );
 
   const noteOf = useCallback((orderItemId: string): string => notes[orderItemId] ?? '', [notes]);
 
@@ -82,74 +189,201 @@ export function useCourierReturn(drop: CourierReturnDrop): UseCourierReturnResul
     setNotes((current) => ({ ...current, [orderItemId]: note }));
   }, []);
 
-  const canSubmit = drop.lines.every((line) => {
+  /* Sayaç ARAÇTA KAYITLI adetle açılır (para satırlarının deseni, v3:14): normal günde fark
+     sıfırdır ve depocuya üç kutuyu elle doldurtmak, doğru olanı yazmak için emek isteyip yanlış
+     olanı sessizce geçirir. Değiştirilen kutu farkı zaten anında gösteriyor. */
+  const countOf = useCallback(
+    (variantId: string): number =>
+      counts[variantId] ?? detail?.freeGoods.find((line) => line.variantId === variantId)?.onVanQty ?? 0,
+    [counts, detail],
+  );
+
+  const setCount = useCallback((variantId: string, qty: number) => {
+    // Negatif adet bir sayım değil bir yazım hatasıdır; kapı da `nonnegative` istiyor. TAVAN
+    // BURADA YOK: beklenenden fazlasını kapı reddediyor (`not_enough`) ve sebebini söylüyor —
+    // ekranda sessizce kırpmak, depocunun saydığı sayıyı yalanlamak olurdu.
+    setCounts((current) => ({ ...current, [variantId]: Math.max(0, qty) }));
+  }, []);
+
+  /** Akıbeti BEKLEYEN satırlar — işaretlenmiş olanlar ikinci kez gönderilmez. */
+  const pendingLines = (detail?.drops ?? []).flatMap((drop) =>
+    drop.lines.filter((line) => line.disposition === null).map((line) => ({ drop, line })),
+  );
+
+  const canSubmit = pendingLines.every(({ line }) => {
     const disposition = dispositions[line.orderItemId];
     if (disposition === undefined) return false;
     return disposition !== 'restock' || (notes[line.orderItemId]?.trim().length ?? 0) > 0;
   });
 
   const submit = useCallback(() => {
-    if (sending || !canSubmit) return;
+    if (sending || !canSubmit || detail === null) return;
     setSending(true);
     setNotice(null);
 
     void (async () => {
-      const adjustments = drop.lines.flatMap((line) => {
-        const disposition = dispositions[line.orderItemId];
-        if (disposition === undefined) return [];
-        const note = notes[line.orderItemId]?.trim() ?? '';
-        return [
-          {
-            orderItemId: line.orderItemId,
-            fulfilledQty: targetQtyOf(disposition, line.qty),
-            returnDisposition: disposition,
-            note: note.length === 0 ? null : note,
-          },
-        ];
-      });
+      const parts: string[] = [];
+      let tone: ReturnNotice['tone'] = 'ok';
 
-      const result = await trackWarehouse(submitWarehouseReturn(drop.orderId, { adjustments }));
-      setSending(false);
+      // 1) AKIBETLER — sipariş başına. Yazılmış satır ikinci kez gönderilmez.
+      let restocked = 0;
+      let discarded = 0;
+      let released = 0;
+      let blocked: string | null = null;
 
-      if (result.error !== null) {
-        setNotice({
-          tone: 'error',
-          text:
-            result.error === 'network_error'
-              ? t.common.networkError
-              : fillCopy(t.common.serverError, { error: result.error }),
+      for (const drop of detail.drops) {
+        const adjustments = drop.lines.flatMap((line) => {
+          const disposition = dispositions[line.orderItemId];
+          if (line.disposition !== null || disposition === undefined) return [];
+          const note = notes[line.orderItemId]?.trim() ?? '';
+          return [
+            {
+              orderItemId: line.orderItemId,
+              fulfilledQty: targetQtyOf(disposition, line.fulfilledQty),
+              returnDisposition: disposition,
+              note: note.length === 0 ? null : note,
+            },
+          ];
         });
-        return;
+        if (adjustments.length === 0) continue;
+
+        const written = await trackWarehouse(submitWarehouseReturn(drop.orderId, { adjustments }));
+        if (written.error !== null) {
+          setSending(false);
+          setNotice({
+            tone: 'error',
+            text:
+              written.error === 'network_error'
+                ? t.common.networkError
+                : fillCopy(t.common.serverError, { error: written.error }),
+          });
+          return;
+        }
+        const outcome = written.data;
+        if (outcome.status !== 'ok') {
+          setSending(false);
+          setNotice({ tone: 'error', text: refusalOf(outcome) });
+          return;
+        }
+        restocked += outcome.restockedQty;
+        discarded += outcome.discardedQty;
+        released += outcome.releasedQty;
+        // PARA ALANLARI GÖSTERİLMEZ (`refundedAmountCents`, `amountToCollectCents`): depo ekranı
+        // tutar görmez. `refundBlocked` ise para değil bir DURUM bildirir — yutulsaydı iade
+        // yapılmış gibi görünürdü.
+        if (outcome.refundBlocked !== undefined) blocked = t.return.refundBlocked[outcome.refundBlocked];
       }
 
-      setNotice(noticeOf(result.data));
-    })();
-  }, [canSubmit, dispositions, drop, notes, sending]);
+      if (restocked + discarded + released > 0) {
+        parts.push(
+          fillCopy(t.return.result.ok, {
+            restocked: String(restocked),
+            discarded: String(discarded),
+            released: String(released),
+          }),
+        );
+      }
 
-  return { dispositionOf, pick, noteOf, setNote, canSubmit, sending, notice, submit };
+      // 2) MAL DEVRİ — kuryesiz kümede yok (araç da kutu da yok).
+      if (detail.courierId !== null && (detail.freeGoods.length > 0 || detail.boxesDown.length > 0)) {
+        const accepted = await trackWarehouse(
+          acceptCourierReturn(detail.courierId, {
+            freeGoods: detail.freeGoods.map((line) => ({ variantId: line.variantId, returnedQty: countOf(line.variantId) })),
+          }),
+        );
+        if (accepted.error !== null) {
+          setSending(false);
+          setNotice({
+            tone: 'error',
+            text:
+              accepted.error === 'network_error'
+                ? t.common.networkError
+                : fillCopy(t.common.serverError, { error: accepted.error }),
+          });
+          return;
+        }
+        const outcome = accepted.data;
+        if (outcome.status === 'ok') {
+          parts.push(
+            fillCopy(t.return.result.accepted, {
+              boxes: String(outcome.unloadedBoxes),
+              qty: String(outcome.transferred.reduce((sum, row) => sum + row.qty, 0)),
+            }),
+          );
+          if (outcome.shortfalls.length > 0) {
+            tone = 'warn';
+            parts.push(fillCopy(t.return.result.shortfall, { n: String(outcome.shortfalls.length) }));
+          }
+        } else {
+          tone = 'warn';
+          parts.push(
+            outcome.status === 'not_enough'
+              ? fillCopy(t.return.result.notEnough, { n: String(outcome.available) })
+              : outcome.status === 'stuck'
+                ? t.return.result.stuck
+                : outcome.status === 'no_vehicle'
+                  ? t.return.result.noVehicle
+                  : t.common.outOfScope,
+          );
+        }
+      }
+
+      if (blocked !== null) {
+        tone = 'warn';
+        parts.push(blocked);
+      }
+
+      setSending(false);
+      setNotice({ tone, text: parts.join(' ') });
+      // Teslim alınan kurye GERİDE BIRAKILIR: ekran yerinde kalırsa depocu kapattığı işi karşısında
+      // görmeye devam eder ve "yazıldı mı" sorusu ekranla çelişir (kapanış ekranının 01.09 dersi).
+      selectedRef.current = null;
+      setDetail(null);
+      setDetailStatus('idle');
+      setDispositions({});
+      setNotes({});
+      setCounts({});
+      void load();
+    })();
+  }, [canSubmit, countOf, detail, dispositions, load, notes, sending, setNotice]);
+
+  return {
+    status,
+    couriers,
+    reload: useCallback(() => {
+      setStatus('loading');
+      void load();
+    }, [load]),
+
+    detail,
+    detailStatus,
+    select: useCallback(
+      (courierId: string | null) => {
+        if (courierId === UNASSIGNED_RETURNS) selectUnassigned();
+        else select(courierId);
+      },
+      [select, selectUnassigned],
+    ),
+
+    dispositionOf,
+    pick,
+    noteOf,
+    setNote,
+    countOf,
+    setCount,
+
+    canSubmit,
+    sending,
+    notice,
+    submit,
+  };
 }
 
 /**
- * Kapının cevabı → ekrandaki cümle.
- *
- * PARA ALANLARI GÖSTERİLMEZ (`refundedAmountCents`, `amountToCollectCents`): depo ekranı tutar
- * görmez — sözleşmenin kendi hükmü, o sayılar çağıranın (yönetim akışı, defter) okuduğu şey.
- * `refundBlocked` ise GÖSTERİLİR ve para değil bir DURUM bildirir: borç yazılamadı, sebebiyle.
- * Yutulsaydı iade yapılmış gibi görünürdü.
+ * Akıbet yazımının REDDİ → ekrandaki cümle. Reddin kendisi bir cevaptır, hata değil: `stale` sipariş
+ * artık o durumda değildir, `forbidden` kapsam dışıdır, `not_found` kayıt yoktur.
  */
-function noticeOf(outcome: ReturnOutcome): ReturnNotice {
-  if (outcome.status === 'stale') {
-    return { tone: 'error', text: fillCopy(t.return.result.stale, { status: outcome.currentStatus }) };
-  }
-  if (outcome.status === 'forbidden') return { tone: 'error', text: t.common.outOfScope };
-  if (outcome.status === 'not_found') return { tone: 'error', text: t.common.notFound };
-
-  const head = fillCopy(t.return.result.ok, {
-    restocked: String(outcome.restockedQty),
-    discarded: String(outcome.discardedQty),
-    released: String(outcome.releasedQty),
-  });
-  const blocked = outcome.refundBlocked === undefined ? null : t.return.refundBlocked[outcome.refundBlocked];
-
-  return blocked === null ? { tone: 'ok', text: head } : { tone: 'warn', text: `${head} ${blocked}` };
+function refusalOf(outcome: { status: 'forbidden' | 'stale' | 'not_found'; currentStatus?: string }): string {
+  if (outcome.status === 'stale') return fillCopy(t.return.result.stale, { status: outcome.currentStatus ?? '—' });
+  return outcome.status === 'forbidden' ? t.common.outOfScope : t.common.notFound;
 }

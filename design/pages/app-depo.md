@@ -105,15 +105,31 @@
 
 ## D6 · Kurye dönüşü kabulü
 
-- **An:** rota kapandı, kurye rampada.
-- **Veri:** gün kapanışının DÖNÜŞ DÖKÜMÜ (kabul etmeyen durakların malları) — sipariş · içerik ·
-  kurye notu. (Ulaşılamayanların malı ARAÇTA kalır — dökümde ayrı küme, kabul edilmez.)
-- **İş:** dökümü fiziksel malla karşılaştır; kalem başına AKIBET işaretle — **stoğa dön · imha ·
-  müşteride kaldı (jest)** üçlüsü (model hazır): "stoğa dön"de sebep notu zorunlu; "jest"te mal
-  ve stok DEĞİŞMEZ. Miktarlar HEDEF değer olarak girilir (kalan adet), fark sistemde hesaplanır.
-- **Yetki notu (tasarımı etkiler):** akıbet kararı bugün yönetici kapısında — mobilde depocuya
-  açılması bizim iş listemizde; ekran depocu akışı olarak çizilir, "yönetici onayı" hâli
-  varyasyon değildir.
+- **An:** kurye rampada, araç boşalıyor.
+- **İKİ KATMAN (04.09):** önce RAMPA LİSTESİ (kimden teslim alıyorum), sonra o kuryenin dökümü.
+  Aynı rampaya iki kurye döner; ekran tek kuryeyle açılamaz.
+- **Liste eksen KURYE, sefer DEĞİL.** Para sefer başına kapanır (kuryenin kendi ekranından, her
+  sefer ayrı); MAL kurye başına devredilir, çünkü araç bir yerdedir ve o gün tek kuryenin yükünü
+  taşır — kurye rampaya bir kez döner, araç bir kez boşalır.
+  - Kart: kurye · plaka · "N kalem akıbet bekliyor · M kutu inecek" · "araçta X adet serbest ürün ·
+    Y kutu kalacak". Sürülen sefer varsa kiremit uyarı: araç bugün boşalmayabilir.
+  - Listeye girme ölçütü YAPILACAK İŞ. Yalnız araçta malı olan kurye de listede (kaybolan mal orada
+    doğuyor); yalnız araçta KALAN kutusu olan kurye listede yok.
+  - Kuryesiz dönüşler (kargo/tezgâh) kendi kümesinde — araç ve kutu bölümü çizilmez.
+- **Detayın verisi:** dönen siparişler (sipariş · içerik · kurye notu) + araçtaki serbest ürün +
+  kutuların İNEN/KALAN ayrımı. Ulaşılamayanın ve başka seferlerin kutusu ARAÇTA kalır, kabul
+  edilmez — yalnız listelenir, sebebiyle.
+- **İş:** kalem başına AKIBET işaretle — **stoğa dön · imha · müşteride kaldı (jest)**: "stoğa
+  dön"de sebep notu zorunlu; "jest"te mal ve stok DEĞİŞMEZ. Miktarlar HEDEF değer olarak girilir
+  (kalan adet), fark sistemde hesaplanır. Serbest ürün SAYILIR ve devredilir; kutu araçta kayıtlı
+  adetle dolu açılır, dokunuş adet çekmecesini açar (D4/D5'in aynı deseni). Eksik sayım araç
+  deposunda açık kalır — sayım ya da düşüm kapatır, ekran bunu söyler.
+- **Tek CTA, iki yazım:** önce akıbetler (sipariş başına), sonra mal devri (kurye başına).
+- **Künye OLGU:** "rota kapandı" YAZILMAZ — kapanmamış seferi olan kurye de mal teslim eder.
+  Yerine plaka ve sürülen sefer sayısı. "Araca alınan · kapıda satılan" ikilisi de yazılmaz: sistem
+  o iki sayıyı ayrı tutmuyor, araç deposundaki adet zaten ikisinin farkı (karar defteri).
+- **Yetki notu:** akıbet kararı depocuya açık; ekran depocu akışı olarak çizilir, "yönetici onayı"
+  hâli varyasyon değildir.
 
 ## D7 · Yerinde satış (kapıya gelen müşteri)
 
@@ -291,6 +307,11 @@ kapanışta kendiliğinden (karar §1.8).
 
 **Kurye dönüşü (D6):**
 - "Jest"in ne yaptığı yazılmamış (mal ve stok DEĞİŞMEZ, yalnız kayıt düşülür).
+- **Rampa listesi yok:** tasarım tek kuryeyle, seçilmiş hâlde açılıyor. Aynı rampaya iki kurye
+  döner ve teslim alma kurye başınadır — listenin bir yüzeyi olmalı. *(Yazıldı 04.09, tasarım
+  sayfası "D6 Rampa Listesi".)*
+- **"Araca alınan · kapıda satılan" ikilisi ekrana yazılamaz** — sistem o iki sayıyı ayrı tutmuyor
+  (karar defteri, 04.09).
 
 **Bölüm geneli:**
 - **Çevrimdışı hâli hiçbir depo ekranında yok.** Bölüm kuralı bağlayıcı: bağlantı yokken yazma

@@ -91,7 +91,9 @@
       "return": {
         "code": "D6",
         "title": "Kurye dönüşü",
-        "subtitle": "1 döküm bekliyor"
+        "some": "{n} kurye bekliyor",
+        "none": "rampada bekleyen kurye yok",
+        "unknown": "okunamadı"
       },
       "handover": {
         "code": "D8",
@@ -265,7 +267,9 @@
       "scanError": "Kod çözülemedi — bağlantıyı kontrol edip yeniden okutun.",
       "seal": "Kutuyu KAPAT",
       "sealShort": "Eksikleri bildirerek siparişi kapat",
-      "declare": { "body": "{n} kalemin tamamını bulamadın." },
+      "declare": {
+        "body": "{n} kalemin tamamını bulamadın."
+      },
       "reopened": "Kutu {n} geri açıldı — içindekiler duruyor, çıkarmak istediğini sil.",
       "reopenedEmpty": "Kutu {n} geri açıldı — içi zaten boştu.",
       "reopenOtherOpen": "Kutu {n} zaten açık — bir siparişte tek kutu açık kalabilir. Önce onu kapat.",
@@ -528,7 +532,12 @@
       },
       "sound": "sağlam {n}",
       "broken": "hasarlı {n}",
-      "reasons": ["ıslak koli", "ezik / kırık", "soğuk zincir şüphesi", "ambalaj açık"],
+      "reasons": [
+        "ıslak koli",
+        "ezik / kırık",
+        "soğuk zincir şüphesi",
+        "ambalaj açık"
+      ],
       "reasonPick": "sebep seç",
       "reasonTitle": "Hasarın sebebi",
       "reasonHint": "Tek sebep seçilir; aynı satıra ikinci kez dokunmak seçimi kaldırır.",
@@ -617,8 +626,16 @@
       "title": "DLC geçti = satılamaz · DDM geçti = satılabilir",
       "body": "Tarih rejimi her satırda yazar. Ömür tarihi geçmiş her mal imhalık değildir — kararı satırdaki rejim belirler."
     },
-    "regime": { "DLC": "DLC", "DDM": "DDM", "none": "ÖMÜR YOK" },
-    "regimeNote": { "DLC": "son tüketim tarihi", "DDM": "tavsiye edilen tüketim", "none": "eşik uygulanmaz" },
+    "regime": {
+      "DLC": "DLC",
+      "DDM": "DDM",
+      "none": "ÖMÜR YOK"
+    },
+    "regimeNote": {
+      "DLC": "son tüketim tarihi",
+      "DDM": "tavsiye edilen tüketim",
+      "none": "eşik uygulanmaz"
+    },
     "outcome": {
       "left": "{n} gün kaldı",
       "expiredBlocked": "geçti — satılamaz",
@@ -732,7 +749,12 @@
       "more": "Sistemde {system} yazıyor, sen {counted} saydın — {diff} adet FAZLA.",
       "noteTitle": "FARK VAR — SEBEP GEREKLİ",
       "noteBody": "Stok sayımla değişiyor; niçin değiştiği yazılmadan kaydedilmez.",
-      "notes": ["yanlış sayılmıştı", "kayıt hatası", "yeri değişmiş", "sebebi bilinmiyor"],
+      "notes": [
+        "yanlış sayılmıştı",
+        "kayıt hatası",
+        "yeri değişmiş",
+        "sebebi bilinmiyor"
+      ],
       "footnote": "Bu ekran yalnız sayar. Hasar, soğuk zincir ve kayıp Stok düşümü ekranında; süresi geçen mal Yakın-SKT turunda imha edilir.",
       "locked": {
         "title": "Sayım kaydı kapalı",
@@ -896,8 +918,7 @@
     "closedRouteShortfall": "{from} → {to} · {n} kalem · {date} · eksik {ref}"
   },
   "return": {
-    "title": "Kurye Dönüşü Kabulü",
-    "caption": "{courier} · rota kapandı",
+    "title": "Kurye Dönüşü",
     "heading": "DÖNEN MALLAR — AKIBET İŞARETLE",
     "courierNote": "kurye notu: \"{note}\"",
     "hasPhoto": "hasar fotoğrafı var",
@@ -909,16 +930,19 @@
     "restockNote": "\"Stoğa dön\"de sebep notu zorunlu: soğuk zincir kesintisiz — ambalaj sağlam",
     "noteField": "{name} için sebep notu",
     "notePlaceholder": "soğuk zincir kesintisiz — ambalaj sağlam",
-    "unreachedHeading": "ULAŞILAMAYANLAR — ARAÇTA KALIR, KABUL EDİLMEZ",
-    "unreachedRow": "{ref} · {n} koli — yeniden planlanacak",
     "footnote": "Miktar hedef değer olarak girilir; fark sistemde hesaplanır.",
     "cta": {
-      "ready": "Dönüşü kaydet",
+      "ready": "Dönüşü kabul et",
       "pending": "Her kalemde akıbet işaretle",
       "sending": "Yazılıyor…"
     },
     "result": {
       "ok": "Dönüş yazıldı — {restocked} stoğa, {discarded} imha, {released} serbest.",
+      "accepted": "{boxes} kutu indi, {qty} adet depoya devredildi.",
+      "shortfall": "{n} kalemde eksik var — araçta açık kaldı.",
+      "notEnough": "Araçta o kadar mal kayıtlı değil ({n} adet) — sayıyı düzelt.",
+      "stuck": "Devir yarım kaldı: mal transferde asılı. Transfer ekranından çözülür.",
+      "noVehicle": "Kuryenin aracı yok — serbest ürün devredilemez.",
       "stale": "Sipariş artık bu durumda düzeltilemez ({status})."
     },
     "refundBlocked": {
@@ -934,7 +958,43 @@
     "locked": {
       "title": "Döküm kaydı kapalı",
       "body": "Dönen mal stoğa girer ya da imha olur; ikisi de bağlantı ister."
-    }
+    },
+    "listCaption": "{n} kurye bekliyor",
+    "queueHeading": "RAMPADA BEKLEYEN",
+    "orphanHeading": "KURYE ATANMAMIŞ",
+    "orphanName": "Kargo ve tezgâh dönüşleri",
+    "orphanMeta": "kuryeye hiç atanmamış — yalnız akıbet işaretlenir",
+    "partLines": "{n} kalem akıbet bekliyor",
+    "partBoxesDown": "{n} kutu inecek",
+    "partFreeGoods": "araçta {n} adet serbest ürün",
+    "partBoxesStay": "{n} kutu kalacak",
+    "cardDriving": "{n} sefer sürülüyor — araç bugün boşalmayabilir",
+    "cardNoVehicle": "araçsız sefer — serbest ürün alınmamış",
+    "open": "teslim al →",
+    "emptyTitle": "Rampada bekleyen kurye yok",
+    "emptyBody": "Kapıda reddedilen sipariş, araçtan inecek kutu ya da araçta kalan serbest ürün burada görünür.",
+    "listFoot": "Ulaşılamayan durağın kutusu araçta kalır, kabul edilmez.",
+    "loadError": "Rampa listesi okunamadı.",
+    "subtitleDriving": "{n} sefer sürülüyor",
+    "dropLine": "{ref} · {qty} × {name}",
+    "freeGoodsHeading": "SERBEST ÜRÜN — SAY VE DEVRET",
+    "freeGoodsHint": "araçta kayıtlı {n} — sayılan adeti değiştirebilirsin",
+    "freeGoodsSummary": "araçta kayıtlı {expected} · sayılan {counted}",
+    "freeGoodsShort": "Eksik sayarsan fark araçta açık kalır; sayım ya da düşüm kapatır.",
+    "qtyCaption": "ADET",
+    "boxesHeading": "KUTULAR",
+    "boxDown": "{n} kutu iner",
+    "boxStay": {
+      "unreachable": "ulaşılamadı — araçta kalır",
+      "other_run": "başka seferin yükü — araçta kalır"
+    },
+    "qtySheet": {
+      "title": "Kaç adet döndü",
+      "subject": "{name} · araçta kayıtlı {qty}",
+      "casesTitle": "KAÇ KOLİ DÖNDÜ",
+      "keypadTitle": "Kaç adet döndü"
+    },
+    "written": "akıbeti yazıldı: {disposition}"
   },
   "handover": {
     "title": "Kargo devri",

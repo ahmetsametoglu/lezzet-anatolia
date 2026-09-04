@@ -149,6 +149,7 @@ import { seedErrorLog, seedSystemHealth } from './seed/observability';
 import { seedAssistantProposals } from './seed/assistant';
 import { seedBarcodes } from './seed/barcode';
 import { seedCarts } from './seed/cart';
+import { seedCourierReturn } from './seed/courier-return';
 import { seedTestOrders } from './seed/test-orders';
 import { seedDraftCustomers, seedKisiler, seedStaffLogins } from './seed/people';
 import { seedNegotiatedPrices, seedPrices } from './seed/pricing';
@@ -331,6 +332,16 @@ async function main(): Promise<void> {
     teslim günü bölgenin gününden hesaplanır).
   */
   await seedTestOrders(db, varyantlar, depolar);
+  /*
+    KURYE DÖNÜŞÜ SAHNESİ (kullanıcı kararı 04.09) — D6 ve "araçtaki seferler" ekranlarının hiçbir
+    hâli beslemede doğmuyordu; her `db:refresh`ten sonra akışın tamamı elle koşuluyordu. Blok
+    satırları GERÇEK KAPILARDAN geçiriyor (sefer aç · kutu mühürle · araca yükle · kapıda sonuçlandır
+    · seferi kapat), gerekçesi kendi künyesinde.
+
+    SIRA `seedTestOrders`TAN SONRA ve zorunlu: sahne o bloğun açtığı deneme MÜŞTERİLERİNİ ve
+    adreslerini kullanıyor — ikinci bir müşteri kümesi açmak, aynı kişiyi iki kez uydurmak olurdu.
+  */
+  await seedCourierReturn(db, varyantlar, depolar);
 
   if (!enAz(katman, 'full')) {
     console.log('✓ seed tamam · KATMAN: extend — base + kusurlar + bir miktar geçmiş');

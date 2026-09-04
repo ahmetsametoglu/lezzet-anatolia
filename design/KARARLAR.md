@@ -2117,3 +2117,25 @@ görünmüyor, ötekilere göre yeni bir tasarım yap."*
 state"); konu seçiliyken jest kapatılır (`gestureEnabled: false`), geri adımı başlık oku ve Android
 tuşundan atılır. Kalıcı çözüm istenirse detay ayrı bir rota olur (kaydırma doğal pop) — bugün
 sayım/düşüm/transfer üçü de "konu seçili" kalıbında, o gün üçü birlikte taşınır.
+
+## D6 · Kurye dönüşü — rampa listesi ve iki sapma (04.09)
+
+**Karar 1 — liste ekseni KURYE, sefer değil.** Para sefer başına kapanıyor (18.08 K1) ama mal kurye
+başına devrediliyor: araç bir yerdedir ve o gün tek kuryenin yükünü taşır (`assert_vehicle_single_courier`),
+yani kurye rampaya bir kez döner ve araç bir kez boşalır. Satır sefere bağlansaydı aynı aracın serbest
+ürünü iki satırda iki kez sayılırdı — ikisi de aynı araç deposunu okuyor. Kullanıcı sorusu: *"bu
+kapanış araç bazlı mı sürücü bazlı mı oluyor?"*
+
+**Karar 2 — v3:14'ten sapma: "araca alınan · kapıda satılan" YAZILMAZ.** Tasarım her serbest ürün
+satırında bu ikiliyi gösteriyor; sistem o iki sayıyı ayrı tutmuyor ve tutmamalı — araç deposundaki
+adet zaten ikisinin farkıdır (araca alma transferi, kapıda satış düşümü). İkinci bir hesap bir gün
+birincisinden ayrılırdı. Satır *"araçta kayıtlı N"* der; sayaç beklenenle dolu açılır.
+
+**Karar 3 — künye olgu olur: "rota kapandı" kalktı.** Teslim alma kurye eksenli, kapanış sefer
+eksenli; kapanmamış seferi olan kurye de mal teslim eder, yani o altyazı ekranda her zaman doğru
+değildi. Yerine plaka ve sürülen sefer sayısı — ikisi de ölçülen alanlar. Sürülen sefer varsa uyarı
+kiremit: araç bugün boşalmayabilir, malın tamamını devralmak yanlış olur.
+
+**Karar 4 — akıbeti yazılmış satır seçici çizmez.** Kapalı çip dokunulabilir görünen ölü bir kontrol
+olurdu ve ikinci kez gönderilen `restock` stoğa iki kez yazardı. Satır listede kalır (depocu neyi
+karara bağladığını görmeden kalanı işaretleyemez) ama sonucunu yazar.

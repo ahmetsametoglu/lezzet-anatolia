@@ -476,8 +476,8 @@ export type {
 // D6'nın OKUMA yarısı (21.11d). Yazma yarısı `order/refund.adjustFulfillment`ta ve orada KALIYOR:
 // sipariş düzeltmesi depo işi değil, üç ayrı çağıranı var (`refund.ts` künyesi). Burada yalnız
 // "rampama ne geri geldi" sorusu yaşıyor ve o gerçekten deponun sorusudur.
-export { listWarehouseReturns } from './warehouse/returns';
-export type { ReturnDrop, ReturnDropLine } from './warehouse/returns';
+export { listReturningCouriers, listWarehouseReturns, readReturningCourier } from './warehouse/returns';
+export type { ReturnDrop, ReturnDropLine, ReturningCourier, ReturningCourierDetail } from './warehouse/returns';
 
 // ── Depo: parti görünümü — terfi 06.13 ──────────────────────────────────────
 // Yakın-SKT kararının TEK adresi. Kaynağı `apps/web/lib/stock/batch-view.ts`ti ve `server-only`

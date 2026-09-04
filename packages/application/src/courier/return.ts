@@ -10,6 +10,7 @@ import type { AcceptCourierReturnResponse, CourierReturnDraft, Order } from '@le
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { customerCardsOf } from './names';
 import { readVanStock, returnFromVan, vehicleWarehouseOf } from './van-stock';
+import { vehicleLabelOf } from './vehicle-label';
 
 /**
  * **KURYE DÖNÜŞÜ — SAY VE DEVRET · KUTU İNİŞİ** (v3:14 · kurye denetimi bulgu 5, 03.09).
@@ -45,7 +46,7 @@ export async function readCourierReturn(
   db: SupabaseClient,
   input: { courierId: string; warehouseId: string; scope: WarehouseScope },
 ): Promise<CourierReturnDraft | { status: 'forbidden'; reason: 'out_of_scope' | 'not_courier' }> {
-  const courier = await courierOf(db, input);
+  const courier = await courierIdentityOf(db, input);
   if ('status' in courier) return courier;
 
   const [freeGoods, boxes] = await Promise.all([
@@ -68,6 +69,8 @@ export async function readCourierReturn(
     courierId: courier.id,
     courierName: courier.name,
     vehicleWarehouseId: courier.vehicleWarehouseId,
+    vehicleLabel: courier.vehicleLabel,
+    drivingRuns: courier.drivingRuns,
     freeGoods: freeGoods.map((line) => ({
       variantId: line.variantId,
       name: line.name,
@@ -100,7 +103,7 @@ export async function acceptCourierReturn(
     freeGoods: ReadonlyArray<{ variantId: string; returnedQty: number }>;
   },
 ): Promise<AcceptCourierReturnResponse> {
-  const courier = await courierOf(db, input);
+  const courier = await courierIdentityOf(db, input);
   if ('status' in courier) return courier;
 
   const expected = new Map<string, number>();
@@ -151,17 +154,46 @@ export async function acceptCourierReturn(
   return { status: 'ok', transferred, shortfalls, unloadedBoxes };
 }
 
-/** Kurye profili + kapsam kararı + araç deposu — iki kapının ortak girişi. */
-async function courierOf(
+/** Kurye künyesi — kapsam kararı, araç deposu, aracın adı ve sürülen sefer sayısı. */
+export interface ReturningCourierIdentity {
+  id: string;
+  name: string;
+  vehicleWarehouseId: string | null;
+  /** Aracın plakası/adı; `null` = araçsız sefer (eksik değil, meşru hâl). */
+  vehicleLabel: string | null;
+  /** Çıkış damgası olan, dönüş damgası olmayan sefer sayısı. */
+  drivingRuns: number;
+}
+
+/**
+ * Kurye profili + kapsam kararı + araç künyesi — iki kapının ve rampa listesinin ortak girişi.
+ *
+ * `vehicleLabel` ve `drivingRuns` AYNI okumadan çıkıyor (kuryenin seferleri): araç deposu zaten o
+ * satırlardan çözülüyor, ikinci bir sorgu aynı gerçeği ikinci kez sorardı. Sürülen seferin sayısı
+ * depocunun kararına girer — aracı bugün boşalmayacak bir kuryeden malın tamamını devralmak yanlış.
+ */
+export async function courierIdentityOf(
   db: SupabaseClient,
   input: { courierId: string; warehouseId: string; scope: WarehouseScope },
-): Promise<{ id: string; name: string; vehicleWarehouseId: string | null } | { status: 'forbidden'; reason: 'out_of_scope' | 'not_courier' }> {
+): Promise<ReturningCourierIdentity | { status: 'forbidden'; reason: 'out_of_scope' | 'not_courier' }> {
   if (!canAccessWarehouse(input.scope, input.warehouseId)) return { status: 'forbidden', reason: 'out_of_scope' };
   const profile = await new UserProfileService(db).getById(input.courierId);
   if (!profile || !profile.roles.includes('courier')) return { status: 'forbidden', reason: 'not_courier' };
   // Kurye BU tesise bağlı olmalı: aracı bu rampaya döner. Başka tesisin kuryesi burada teslim vermez.
   if (!profile.warehouseIds.includes(input.warehouseId)) return { status: 'forbidden', reason: 'out_of_scope' };
-  return { id: profile.id, name: profile.name, vehicleWarehouseId: await vehicleWarehouseOf(db, { courierId: profile.id }) };
+
+  const [vehicleWarehouseId, runs] = await Promise.all([
+    vehicleWarehouseOf(db, { courierId: profile.id }),
+    new DeliveryRunService(db).listByCourier(profile.id, { limit: 20 }),
+  ]);
+  const open = runs.filter((run) => run.returnedAt === null);
+  return {
+    id: profile.id,
+    name: profile.name,
+    vehicleWarehouseId,
+    vehicleLabel: await vehicleLabelOf(db, open.find((run) => run.vehicleId !== null)?.vehicleId ?? null),
+    drivingRuns: open.filter((run) => run.departedAt !== null).length,
+  };
 }
 
 /** Kuryeye damgalı siparişlerin ARAÇTA damgalı kutuları — sipariş başına gruplu. */

@@ -24,6 +24,15 @@ import { z } from 'zod';
  * döner ve ekran onu söyler; sessizce yutulmaz (CLAUDE §1).
  */
 
+/**
+ * Kuryesiz dönüşlerin YOL PARÇASI (`/warehouse/courier-return/unassigned`).
+ *
+ * Sözleşmede duruyor çünkü üç taraf da aynı dizgeyi bilmek zorunda: uç yolu çözerken, kapı kümeyi
+ * ayırırken, ekran adresi kurarken. Üçüne ayrı yazılsaydı biri bir gün ötekinden ayrılır ve
+ * "kuryesiz dönüşler" sessizce 404 dönerdi.
+ */
+export const UNASSIGNED_RETURNS = 'unassigned';
+
 export const CourierReturnFreeGoodSchema = z.object({
   variantId: z.string().uuid(),
   name: z.string(),
@@ -41,25 +50,47 @@ export const CourierReturnBoxSchema = z.object({
   boxes: z.array(z.object({ boxNo: z.number().int().positive(), code: z.string() })),
 });
 
+/**
+ * ARAÇTA KALAN kutu — inen kutunun aynısı, üstüne KALMA SEBEBİ. Ayrı ad taşıyor çünkü rampa
+ * listesi ve detay aynı satırı iki yerde çiziyor; şekli tek yerde durmazsa biri bir gün ayrışır.
+ */
+export const CourierReturnStayBoxSchema = CourierReturnBoxSchema.extend({
+  /** Neden kalıyor: ulaşılamayan durak (yeniden planlanacak) ya da araçtaki başka bir sefer. */
+  reason: z.enum(['unreachable', 'other_run']),
+  runReferenceNo: z.string().nullable(),
+});
+export type CourierReturnStayBox = z.infer<typeof CourierReturnStayBoxSchema>;
+
 export const CourierReturnDraftSchema = z.object({
   courierId: z.string().uuid(),
   courierName: z.string(),
   /** Kuryenin araç deposu; `null` = kapsamında araç deposu yok (serbest ürün hiç alınamamıştır). */
   vehicleWarehouseId: z.string().uuid().nullable(),
+  /**
+   * Aracın plakası/adı — künyenin ikinci yarısı. `null` = araçsız sefer, ve bu bir EKSİK DEĞİL:
+   * araç seçimi isteğe bağlı (`day.ts`). Tire koymak bilgiyi tamamlamak değil uydurmak olurdu, o
+   * yüzden ekran cümleyi hiç kurmaz (`van-runs-screen`in ölçülmüş kararı, 31.08).
+   */
+  vehicleLabel: z.string().nullable(),
+  /**
+   * SÜRÜLEN sefer sayısı — çıkış damgası var, dönüş damgası yok.
+   *
+   * Depocunun kararını değiştirir, süs değil: sürülen seferi olan kuryenin aracı bugün boşalmaz ve
+   * serbest ürünün tamamını devralmak yanlış olur. Sayı sıfırsa ekran cümleyi hiç kurmaz.
+   */
+  drivingRuns: z.number().int().nonnegative(),
   freeGoods: z.array(CourierReturnFreeGoodSchema),
   boxesDown: z.array(CourierReturnBoxSchema),
-  boxesStay: z.array(
-    CourierReturnBoxSchema.extend({
-      /** Neden kalıyor: ulaşılamayan durak (yeniden planlanacak) ya da araçtaki başka bir sefer. */
-      reason: z.enum(['unreachable', 'other_run']),
-      runReferenceNo: z.string().nullable(),
-    }),
-  ),
+  boxesStay: z.array(CourierReturnStayBoxSchema),
 });
 export type CourierReturnDraft = z.infer<typeof CourierReturnDraftSchema>;
 
+/**
+ * Kabul isteği. **Kurye kimliği GÖVDEDE DEĞİL, YOLDA** (`POST /warehouse/courier-return/:courierId`,
+ * 04.09): kimlik iki yerden gelirse bir gün ikisi ayrışır ve kapı hangisine uyacağını bilemez —
+ * yolda duran kimlik zaten okumanın da adresidir.
+ */
 export const AcceptCourierReturnRequestSchema = z.object({
-  courierId: z.string().uuid(),
   /** Sayılan DÖNEN adet, varyant başına — beklenenle aynıysa yine gönderilir (onaylanmış sayı). */
   freeGoods: z.array(z.object({ variantId: z.string().uuid(), returnedQty: z.number().int().nonnegative() })),
 });

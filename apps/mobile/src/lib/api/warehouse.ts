@@ -27,6 +27,9 @@ import {
   ShippingBoxesResponseSchema,
   VariantSearchResponseSchema,
   WarehouseReturnResponseSchema,
+  WarehouseCourierReturnResponseSchema,
+  WarehouseReturningCouriersResponseSchema,
+  AcceptCourierReturnResponseSchema,
   WarehouseAreasResponseSchema,
   MarkBatchSeenResponseSchema,
   type ConfirmPreparationRequest,
@@ -36,6 +39,7 @@ import {
   type ReceiveTransferRequest,
   type AnnounceShipmentRequest,
   type SealBoxRequest,
+  type AcceptCourierReturnRequest,
   type WarehouseReturnRequest,
 } from '@lezzet/types';
 
@@ -361,6 +365,45 @@ export function markBatchSeen(
  */
 export function learnScannedCode(body: LearnCodeRequest): Promise<ApiResult<z.infer<typeof LearnCodeResponseSchema>>> {
   return warehouseFetch('/api/v1/warehouse/codes', LearnCodeResponseSchema, { method: 'POST', body });
+}
+
+/**
+ * **RAMPADA KİM BEKLİYOR** (D6 listesi · 04.09). Dönen sipariş, araçtan inecek kutu ve araçtaki
+ * serbest ürün — üçü kurye başına toplanmış hâlde.
+ *
+ * Ekranın açılış sorusu bu: aynı rampaya iki kurye döner ve mal KURYE BAŞINA devredilir (araç bir
+ * kez boşalır). Eskiden ekran tek kuryeyi sabit yazılmış bir dökümle açıyordu.
+ */
+export function fetchReturningCouriers(): Promise<ApiResult<z.infer<typeof WarehouseReturningCouriersResponseSchema>>> {
+  return warehouseFetch('/api/v1/warehouse/courier-return', WarehouseReturningCouriersResponseSchema);
+}
+
+/**
+ * **Bir kuryenin rampadaki her şeyi** — döküm + serbest ürün + kutular, TEK turda. Ekran üçünü aynı
+ * anda çiziyor ve tek dokunuşla yazıyor; ayrı turlar bölümlerden biri gelene kadar yarım bir
+ * gerçeklik gösterirdi (transfer ekranının aynı gerekçesi).
+ *
+ * `courierId` yerine `unassigned` = kuryeye hiç atanmamış dönüşler (kargo/tezgâh yolu).
+ */
+export function fetchCourierReturn(
+  courierId: string,
+): Promise<ApiResult<z.infer<typeof WarehouseCourierReturnResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/courier-return/${courierId}`, WarehouseCourierReturnResponseSchema);
+}
+
+/**
+ * **Dönüşün kabulü** — sayılan serbest ürün araçtan depoya geçer, reddedilen kutuların araç damgası
+ * silinir. Eksik sayılan mal araç deposunda AÇIK kalır ve cevap onu `shortfalls` ile söyler; sayım
+ * (D4) ya da düşüm (D4b) kapatır.
+ */
+export function acceptCourierReturn(
+  courierId: string,
+  body: AcceptCourierReturnRequest,
+): Promise<ApiResult<z.infer<typeof AcceptCourierReturnResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/courier-return/${courierId}`, AcceptCourierReturnResponseSchema, {
+    method: 'POST',
+    body,
+  });
 }
 
 /**
