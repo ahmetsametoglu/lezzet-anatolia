@@ -5,6 +5,7 @@ import {
   parseDate,
   productLabel,
   shortDate,
+  shortDayMonth,
 } from './warehouse-format';
 import { warehouseCopy } from './copy';
 
@@ -22,6 +23,12 @@ describe('SKT çevrimi', () => {
 
   it('tanınmayan biçim `null` — uydurma tarih yazılmaz', () => {
     expect(shortDate('12/08/2026')).toBeNull();
+  });
+
+  /* Liste tarihi YILSIZ (v3 transfer listesi, 04.09): "tahmini 30.08", "· 26.08". */
+  it('liste tarihi gün.ay — yıl yalnız SKT\'de', () => {
+    expect(shortDayMonth('2026-08-26')).toBe('26.08');
+    expect(shortDayMonth('26.08.2026')).toBeNull();
   });
 
   it('noktalı, tireli, iki ve dört haneli yıl kabul edilir', () => {

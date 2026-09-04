@@ -44,6 +44,7 @@ const SECTION: Partial<Record<AppNotificationKind, OperationsSection>> = {
   b2b_application_received: 'management',
   /* Transfer eksiği (04.09): gönderen deponun personeline düşer — depo bölümünün zili. */
   transfer_shortfall: 'warehouse',
+  transfer_excess: 'warehouse',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (yukarıdaki künye). */

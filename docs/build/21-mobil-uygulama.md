@@ -11428,3 +11428,210 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     IMH-KEHL-26-0002"* **"−1 adet"**.
   Turda bulunan tek artık: eski `closedShort` ("{n} eksik") kopya anahtarı ölü kalmıştı, silindi.
   Ekran görüntüleri oturum scratchpad'inde (`tour/11…20`); depoya alınmadı (`docs/uygulama/ekran-goruntuleri` bayat sayılıyor, 31.08 kararı).
+
+- [x] (21.249) **ARAÇ SEÇİMİ BİR ETİKETTİ — sistem kuryenin seçtiği aracı kullanmıyordu; araç deposu ile ruhsat kaydı birbirine BAĞLI DEĞİLDİ** (kurye denetimi bulgu 4, kullanıcı isteği 04.09)
+  `touches:` `supabase/migrations/{0045_storage_area_vehicle.sql,0046_delivery_run.sql}` · `packages/types/src/{entities/{warehouse,delivery-run}.schema.ts,contracts/courier-api.schema.ts}` · `packages/database/src/{services/warehouse.service.ts,testing/{warehouse.ts,cleanup.ts}}` · `packages/application/src/courier/{van-stock.ts,day.ts,vehicle-binding.test.ts,day.test.ts,van-stock.test.ts,return.ts,return.test.ts}` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/{courier.ts,sale.ts,sale.test.ts}` · `apps/mobile/src/screens/courier/{messages.json,use-courier-day.hook.ts}` · `apps/web/app/(operations)/operations/warehouses/{warehouses-types.ts,warehouses-read.test.ts}` · `scripts/seed/warehouse.ts` · `docs/architecture/data-model/depo.md`
+
+  **Ölçüm (04.09, kod + yerel DB).** Sistemde İKİ ayrı "araç" var: ruhsat tarafı (`vehicle` — plaka,
+  ad, soğuk zincir beklentisi; seferin seçtiği şey) ve malın durduğu yer (`warehouse` satırı,
+  `kind='vehicle'`). **Aralarında hiçbir bağ yoktu.** Sonuç: `delivery_run.vehicle_id` yazılıyor,
+  ekranda gösteriliyor ve başka hiçbir karara girmiyordu — malın hangi araçtan çıkacağını
+  `vehicleWarehouseOf` kuryenin PROFİL KAPSAM DİZİSİNİ baştan tarayarak seçiyordu (ilk
+  `kind='vehicle'` satırı). Yani cevap kaydından değil **dizinin sırasından** geliyordu.
+
+  Aynı ailenin ikinci, daha sessiz hatası: serbest ürünün alındığı ÇIKIŞ TESİSİ de kapsamdan
+  çözülüyordu — *"araç OLMAYAN ilk kapsam satırı"*. Kapsamda iki araç varsa öteki araç **tesis
+  sanılıyor** ve mal araçtan araca taşınıyordu. İkisi de tek araçlı kurulumda doğru cevap veriyor,
+  hiçbir belirti üretmiyordu: ikinci araç girdiği gün kurye A'yı seçerken serbest ürün, kapıda satış
+  ve akşam dönüşü B'den işleyecekti — sessizce, hiçbir yerde hata çıkmadan.
+
+  Üçüncüsü tekellik: aynı fiziksel aracı **iki kurye aynı gün seçebiliyordu** (ne kısıt vardı ne
+  kontrol), ve bir kuryenin araca eklediği ikinci sefer BAŞKA bir araç taşıyabiliyordu — oysa rota
+  seçim ekranının kendi cümlesi *"araç hepsini birden taşır"*, yani tek araç varsayıyor. Karışsaydı
+  "araçtaki seferler" listesi iki ayrı aracın yükünü tek liste gibi gösterirdi.
+
+  **Neden birim testinden kaçtı.** Kural hiç YAZILMAMIŞTI: yazılmamış bir kararın düşen iddiası da
+  olmaz. Üstelik her fikstürde tam bir araç vardı — "iki araçtan hangisi" sorusu hiç doğmuyordu.
+  Kullanıcının isteği üzerine önce eksik testler yazıldı ve **kırmızı görüldü**: `vehicle_taken`
+  yerine `ok`, `vehicle_mismatch` yerine `ok`, araç deposunun `vehicleId`si `undefined`, kapsam
+  dizisi çözümü B aracını döndürüyor.
+
+  **Düzeltme — bağ veriye, karar sefere.**
+  1. **`warehouse.vehicle_id`** (0045): 1:1 (`warehouse_vehicle_unique`), `on delete restrict`, ve
+     çift yönlü kimlik kısıtı `warehouse_vehicle_identity` — araç deposu aracını söylemek ZORUNDA,
+     tesis söyleyemez. Bağ artık tahmin edilmiyor, veride duruyor.
+  2. **Sefer açma iki ADLI ret kazandı** (0046 · `open_delivery_run`): `vehicle_taken` (araç başka
+     kuryenin açık seferinde) ve `vehicle_mismatch` (kuryenin öteki açık seferi başka araçta).
+     Ayrı retler çünkü çareleri ayrı. Yarış anı da kapalı: `assert_vehicle_single_courier`
+     tetikleyicisi aynı kuralı satır yazılırken zorluyor.
+  3. **Çözüm kapsamı değil SEFERİ okuyor** (`van-stock.ts`). Rampa uçları (`/van-stock` + alma /
+     devretme) `courierVanContext`ten geçiyor: araç deposu seferin ARACINDAN, çıkış tesisi seferin
+     ROTASINDAN — iki uç tek gerçekten. Kapıda satış ve dönüş kapısı `vehicleWarehouseOf`tan:
+     açık sefer varsa onun aracı, yoksa **en son sürülen seferin** aracı.
+
+  **Neden dönüşte kapanmış sefere düşülüyor.** `return.ts` kutu listesini bilerek sefere bağlamıyor
+  (*"dünkü seferin reddedilen kutusu bugün de araçtaysa yine inmelidir"* — o dosyanın künyesi). Araç
+  yalnız açık seferden çözülseydi aynı ekranın iki yarısı çelişirdi: kutular listelenir, serbest ürün
+  "araç yok" derdi — hem de tam o kutuların durduğu araç için. Kurye akşam parasını teslim edip
+  seferi kapattığında depocunun ekranı boşalırdı. Fallback seçim değil ölçüm: kapanış malı indirmez,
+  yalnız parayı mutabık kılar.
+
+  **Ekran.** `day.start` iki yeni cümle kazandı (künyeli ve künyesiz hâlleriyle dört anahtar) —
+  öncesinde ikisi de *"bugün koşan rota yok"* diye görünecekti ve o bir yalan: rota duruyor, engel
+  araçta.
+
+  **Test zemini de düzeldi.** `createTestWarehouse(kind:'vehicle')` damgalı aracı kendisi açıyor
+  (plaka `vehicle.plate` benzersiz, üç ajan tek DB paylaşıyor); `purgeTestData` yeni bir §9 adımı
+  kazandı — araç satırı artık "bağımsız kayıt" değil, deposundan SONRA silinmek zorunda
+  (`warehouse_vehicle_id_fkey … restrict`). Seed VAN-1'i `67 LZT 01` plakasına bağlıyor; plaka
+  sabiti tek yerde. `sale.test` ve `return.test` fikstürlerine sefer eklendi — tören değil gerçeğin
+  kendisi: mal araca ancak bir seferle biner.
+
+  **Testleri yazıldı.** `vehicle-binding.test.ts` (yeni · 3): araç deposu aracını söyler; stok
+  seferin aracından çözülür — kapsam sırası BİLEREK yanlış kuruldu (B önce yazılı), sıra tesadüfe
+  bırakılsaydı test kendiliğinden geçerdi; araçsız seferde araç deposu yoktur (`no_vehicle`, sessizce
+  başka araca düşmez). `day.test.ts` "araç tekelliği" (3): araç başka kuryede → `vehicle_taken`;
+  aynı araçla ikinci sefer → `ok`; başka araçla → `vehicle_mismatch`.
+
+  **Durum (04.09):** `db:refresh` kullanıcı onayıyla koşuldu, migration'lar uygulandı (kısıtlar +
+  tetikleyici yerinde, VAN-1 ↔ `67 LZT 01` bağlı). Tip 20/20 · lint temiz · **tam paket 4163/4163
+  (370 dosya)**. Kalan açık, bu görevin dışında: operasyon yüzeyinde **filo ekranı yok** — araç
+  kaydı yalnız seed'den doğuyor, web'de depo/araç oluşturma akışı hiç yok. Bugün engel değil (araç
+  deposu da migration/seed'den geliyor), ama ikinci aracı işletmeye almak elle SQL gerektirir.
+
+- [x] (21.250) **D5 LİSTE HER ZAMAN GÖRÜNÜR — tek gelen transfer kendiliğinden açılmıyor, geri tuşu listeye dönüyor** (kullanıcı kararı 04.09)
+  `touches:` `apps/mobile/src/screens/warehouse/{use-transfer.hook.ts,transfer-screen.tsx,transfer-screen.test.tsx}` · `design/pages/app-depo.md`
+
+  **Ölçüm (04.09, kullanıcı bildirimi + kod).** Kullanıcı STR deposuyla girip Transfer'e bastığında
+  gideni ve geleni ayrı göremedi. Sebep: depoya tam BİR gelen düşünce hook onu kendiliğinden
+  seçiyor (08.08'deki ilk kuruluş, toplama kuyruğunun "tek sipariş kalınca aç" kalıbı — transfer
+  için yazılı gerekçesi yok) ve geri düğmesi tek gelen varken listeye değil hub'a dönüyordu. O
+  hâlde YOLDA ve SON KAPANANLAR'a hiç ulaşılamıyordu; STR'de o an bir gelen (`TRF-KEHL-26-0001`)
+  ve iki giden (`0005`, `0010`) vardı, giden hiç görünmedi. Tasarım
+  (`screenshots/Depo/Transfer/01-Liste`) listeyi her zaman gösterir, detaya "kabule başla" ile girilir.
+
+  **Karar (kullanıcı 04.09).** Otomatik açılma transferden kaldırıldı: seçim yalnız korunur, hiç
+  kurulmaz; detaydan geri DAİMA listeye, hub'a yalnız listeden çıkılır. Toplama kuyruğundaki kalıp
+  yerinde (orada anlamlı). Testler gerçek yolu izliyor (`openTransfer` yardımcısı: karta bas, satırları
+  bekle); yeni test tek gelen + bir giden ile listeyi, karttan girişi ve geri tuşunun listeye
+  dönüşünü (`router.back` çağrılmaz) ölçüyor. Mobil transfer ekranı **17/17**.
+
+- [x] (21.251) **D5 SATIRDA ÜRÜN KARESİ; "0 · hiç gelmedi" çipi kalktı; monogram harf olmayan kelimeyi atlıyor** (kullanıcı isteği 04.09)
+  `touches:` `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/application/src/warehouse/{transfer.ts,transfer.test.ts}` · `apps/mobile-api/src/api/v1/warehouse.test.ts` · `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,transfer-screen.test.tsx,warehouse-fixture.ts,messages.json}` · `apps/mobile/src/components/operations/{monogram.ts,monogram.test.ts}` · `design/pages/app-depo.md` · `design/KARARLAR.md`
+
+  **İstek (kullanıcı 04.09).** Üç şey: rampadaki satırda ürünün resmi olsun (mal kabuldeki gibi);
+  "0 · hiç gelmedi" düğmesi anlamsız — sıfır zaten çekmeceden giriliyor; rakama basınca kitin adet
+  çekmecesi ötekilerdeki gibi açılsın.
+
+  **Yapılan.** Sözleşmeye `imageUrl` (satır başına, `null` = kapaksız); uygulama katmanı kapağı
+  `variantNames`ten geçiriyor — o okuma kapağı zaten taşıyordu, ek sorgu yok. Ekranda satırın solunda
+  `OperationsProductThumb` (md, kum zemin), kapaksız üründe monogram. Çip kaldırıldı (v3:1189'dan
+  bilinçli sapma, `design/KARARLAR.md`): adet çekmecesinde sıfır cetvelin ilk hücresi (02.09), boş ≠ 0
+  kuralı yerinde. Adet çekmecesi zaten rakamdan açılıyordu (`value-hit` → `OperationsQuantitySheet`,
+  21.231); testte ölçülü, cihazda kullanıcı bakacak. **Monogram düzeltmesi:** operasyon adı
+  "Ürün (boy)" olduğundan tek kelimelik üründe kare "K(" / "M·" çiziyordu; harfle başlamayan kelime
+  atlanıyor ("Künefe (2 kişilik)" → "KK", "Mantı · 500 g" → "MG") — üç kullanımı birden düzeltir.
+
+  **Doğrulama.** Tip: types · application · mobile-api · mobile temiz; lint temiz. Mobil transfer
+  ekranı **17/17** (sıfır testi çekmeceden giren hâle döndü; künye testi kareyi ölçüyor — kare
+  dekoratif olduğu için sorgu `includeHiddenElements` ile), monogram **7/7** (+1). API ve uygulama
+  katmanı testlerinin satır beklentisine `imageUrl: null` girdi; tam paket commit notunda. Cihaz
+  turu YAPILAMADI: Oppo kablosuz ADB'den düştü (mDNS'te görünmüyor) — kullanıcı bakacak.
+
+- [x] (21.252) **D5 LİSTE TASARIMIN KARTINA ÇEKİLDİ — ikon karesi, "GELDİ" rozeti, düz kalemler, yoldakinde rota + durum + tahmini gün, kapananda rota adla, liste tarihleri yılsız** (kullanıcı bulgusu 04.09)
+  `touches:` `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,transfer-screen.test.tsx,messages.json,warehouse-format.ts,warehouse-format.test.ts}` · `apps/mobile/src/theme/metrics.ts` · `design/pages/app-depo.md` · `design/KARARLAR.md`
+
+  **Bulgu (kullanıcı 04.09, tasarımın liste görüntüsüyle yan yana).** Gelen kartta ikon karesi ve
+  "GELDİ" rozeti yoktu, chevron ve "N kalem · tarih" satırı fazlaydı, kalemler kum kutudaydı, "kabule
+  başla" solda; yoldaki kartta ikon karesi ve iki satırlı sağ sütun yoktu, hedef adı tek başınaydı,
+  gecikme rozet zeminliydi; kapananlarda rota yerine yön kelimesi ("gelen/giden", "araca/araçtan");
+  tarihler yıllı ("04.09.26", tasarımda "26.08").
+
+  **Yapılan.** Kart başı: 36'lık ikon karesi (`size.cardTile`, `radius.badge`; gelen zeytin
+  `arrow-right`, yoldaki kiremit `courier`), "GELDİ" rozeti (`queueArrived`), chevron ve
+  `queueLines` satırı kalktı (anahtar silindi), kalemler düz (`queueLines` stili), "kabule başla →"
+  `alignSelf:flex-end`. Yoldaki kart gelen kartla aynı kalıp: "{depo} → {hedef} · N kalem"
+  (`outboundRoute`), sağ sütunda durum metni (üç ton, zemin yok — "yolda" tasarımdaki gibi kiremit)
+  + `outboundEta` "tahmini 31.08". Kapananlar: `closedMetaOf` — "{kaynak} → {alan} · N kalem ·
+  03.09" (`closedRoute` / `closedRouteShortfall`), bir ucun adı yoksa yön kelimesine düşer
+  (`directionVehicle` silindi — araç da adıyla okunur). `shortDayMonth` (yılsız liste tarihi)
+  `warehouse-format`e girdi, testi var. "GELDİ"nin anlamı `design/KARARLAR.md`de.
+
+  **Doğrulama.** Tip · lint temiz; mobil transfer ekranı **17/17** (liste testi tasarımın kartına göre
+  yeniden yazıldı: rozet, rota, yılsız tarih, araç adı), biçimleme **16/16** (+1). Cihaz turu
+  yapılamadı — Oppo hâlâ kablosuz ADB'de görünmüyor; ilk bağlantıda liste ekranı çekilecek.
+  **Aynı gün geri alınan iki karar (21.253):** "GELDİ" rozeti ve üç tonlu gecikme + "tahmini" — ekranda
+  yalnız olgu kalır (aşağıda).
+
+- [x] (21.253) **D5 FAZLA KABUL beyanla — sevk edilenden fazlası engellenmez, uyarılır, SAY belgesiyle stoğa yazılır; ekranda yalnız OLGU ("tahmini", "gecikti", "GELDİ" kalktı); donanım geri tuşu detaydan listeye** (kullanıcı kararı 04.09)
+  `touches:` `supabase/migrations/0031_warehouse.sql` · `packages/types/src/{entities/{warehouse,app-notification}.schema.ts,contracts/warehouse-api.schema.ts}` · `packages/application/src/{warehouse/transfer.ts,warehouse/transfer.test.ts,notification/staff-events.ts}` · `packages/i18n/src/notification-copy.ts` · `packages/database/src/services/warehouse.test.ts` · `apps/mobile-api/src/api/v1/warehouse.test.ts` · `apps/mobile/src/screens/warehouse/{use-transfer.hook.ts,transfer-screen.tsx,transfer-screen.test.tsx,messages.json}` · `apps/mobile/src/screens/operations/notification-map.ts` · `design/pages/app-depo.md` · `design/KARARLAR.md`
+
+  **İstek (kullanıcı 04.09).** *"Sevk edilenden fazlasını girebilmeli — yanlışlıkla dört sevk etti
+  zannederken beş göndermiş olabilir. Fazla girildiğinde tıpkı eksikteki gibi uyaralım ama engel
+  olmayalım."* Ardından: *"tahminse veya doğrulanamayacak bilgiyse kaldıralım"* ve *"kabul bekleyen
+  transferin içine girip geri geldiğimde depo ekranına gidiyorum."*
+
+  **Model (eksiğin aynası).** `receive_transfer` fazlayı reddetmiyor: parti yine SEVK EDİLEN adetle
+  doğar (`transfer_in` tam), fazlası aynı transaction'da `adjust_stock_batch` ile `count_diff · in`
+  olarak o partiye eklenir — rampadaki sayım bir sayımdır, belgesi SAY serisinden (alan deponun),
+  notu beyan (boşsa sabit cümle, `count_diff · in` not ister), hareket `transfer_id` taşır. Gönderenin
+  defteri DEĞİŞMEZ: fazladan görünen birim onun bir sonraki sayımında düşer; gönderene ve yönetime
+  `transfer_excess` bildirimi ("N adet fazla, KEHL stoğuna yazdı"). Bir satır eksik öteki fazla
+  gelebilir: iki belge (IMH + SAY). Sözleşme: `excess` (eksikle aynı biçim), kapananlarda
+  `excessQty/excessReferenceNo`, beyanın `reason`ı artık isteğe bağlı (fazla-yalnız beyanda gönderilmez).
+
+  **Ekran.** Tavan kalktı (sayaç ve çekmece); satır "1 fazla · stoğa fazla yazılacak"; panel "FARK
+  BEYANI" (eksik + fazla satırları, iki toplam, tek sonuç cümlesi); düğme "1 eksik, 2 fazla
+  beyanıyla" / "N fazla beyanıyla"; çekmecede iki büyük rakam, sebep çipleri yalnız eksikte; toast
+  "2 parti açıldı · 1 birim eksik kayıp yazıldı · IMH-… · 2 birim fazla stoğa yazıldı · SAY-…";
+  kapananlarda "+N adet", eksikle birlikte "−1 adet · +2 adet". **Yalnız olgu:** yoldaki kartta
+  "yolda · çıktı 04.09" (tahmini varış ve gecikme kalktı — ayardan türeyen varsayımdı; yaş tonu
+  sözleşmede duruyor, web okuyor), gelen kartta rozet "YOLDA". **Geri:** `useSubjectBack` ile
+  donanım geri tuşu da detaydan listeye. iOS'un kenardan kaydırması (kullanıcı bulgusu 04.09:
+  *"Apple'ın kendi geri hareketiyle depo ekranına dönüyorum"*) önce `beforeRemove` + `preventDefault`
+  ile yakalandı ve iOS'ta ÇÖKTÜ (*"The screen 'inbound' was removed from js state"* — native yığın
+  jest bitince ekranı native tarafta kaldırıyor, JS'in iptali iki durumu ayrıştırıyor). Doğru araç
+  jesti hiç başlatmamak: konu seçiliyken `gestureEnabled: false`, bırakılınca açık; sayım ve düşüm
+  ekranları da aynı kancayı kullandığından üçü birden. Oppo'da ölçüldü (13:00): başlık oku ve cihaz
+  geri tuşu listeye döndü, hub'a değil.
+
+  **Doğrulama.** Tip (types · application · mobile-api · i18n · mobile) · lint temiz. Mobil transfer
+  ekranı **19/19** (yeni: fazla akışı uçtan uca — sebepsiz beyan, toast SAY belgesi; eksik + fazla
+  birlikte), bildirim haritası 2/2. DB: `warehouse.test` +1 (bir satır eksik, öteki fazla: iki
+  belge, partiler 3 ve 2); uygulama katmanı +2 (fazla kabul: parti 5/4, `count_diff · in` notlu ve
+  transfere bağlı, kaynak 8; gönderene zil); API +1 (fazla kabul cevabı). `db:refresh` kullanıcı
+  onayıyla koşuldu; tam paket commit notunda. Cihaz turu yapılamadı — Oppo kablosuz ADB'de yok.
+
+- [x] (21.254) **D5 SATIRI MAL KABULÜN KALIBINA GEÇTİ — kart, solda ürün karesi, sağda ADET KUTUSU (kite terfi: `OperationsQuantityBox`), tek dokunuşla "sevk edildiği kadar", sayaç kalktı; sözleşmede ürün adı + boy ayrı** (kullanıcı kararı 04.09, tasarım sayfası onaylı)
+  `touches:` `apps/mobile/src/components/operations/{quantity-box.tsx,quantity-box.test.tsx}` · `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,transfer-screen.test.tsx,use-transfer.hook.ts,intake-screen.tsx,warehouse-fixture.ts,messages.json}` · `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/application/src/warehouse/{transfer.ts,transfer.test.ts}` · `apps/mobile-api/src/api/v1/warehouse.test.ts` · `design/pages/app-depo.md` · `design/KARARLAR.md`
+
+  **Bulgu (kullanıcı 04.09).** *"Ürün list item'ları adet girilecek şekilde depo ekranımızın birçok
+  yerinde var; yerleşim olarak bu ondan biraz farklı, göze hoş görünmüyor."* Oppo'dan üç satır yan
+  yana ölçüldü (tasarım sayfası *D5 Satır Tasarımı*, Artifact 04.09): D5 kartsız ve kesik çizgiliydi,
+  sağda −/+ sayaç, ad "Ürün (boy)", künye üç satır; D2 mal kabul kart + sağda adet kutusu (kesikli
+  "30 BEKLENEN" davet, sayılınca "ADET"), sayılmamış satır soluk; D4 seçicisi kart + solda resim.
+
+  **Yapılan.** D2'nin adet kutusu KİTE alındı (`OperationsQuantityBox`: dolu/kesikli, davet rakamı ya
+  da "say →", ton `ink|muted|diff`; iç metinler `…-value/-caption/-label`), D2 onu çağırıyor (stiller
+  ekrandan silindi). D5 satırı: kart (`lineRow` D2 ile aynı ölçüler, sayılmamış `.7`), solda ürün
+  karesi, künye tek satır "sevk edilen 6 · lot L2673-2 · SKT 07.06.27", sağda kutu — kesikliyken
+  "6 · BEKLENEN" (tek dokunuş = "sevk edildiği kadar geldi" BEYANI, otomatik dolmaz; kelime D2 ile
+  aynı — "SEVK EDİLEN" kutuya sığmıyordu, Oppo'da ölçüldü), doluyken
+  "6 · ADET" (dokunuş çekmece; farklı rakam kiremit). Sayaç satırdan çıktı; ± çekmecede. Sıfır satır
+  "hiç gelmedi · 6 eksik kayıp yazılacak" der. Sözleşme: `name` yerine `productName` + `variantLabel`
+  (`productLabel` ile "Ürün · boy", D2 ile aynı yazım); uygulama katmanı ikisini `variantNames`ten
+  ayrı geçiriyor.
+
+  **Doğrulama.** Tip (types · application · mobile-api · mobile) · lint temiz. Kit kutusu 3/3; mobil
+  transfer ekranı **19/19** (yardımcı `countLine` iki hâli sürüyor; yeni: davet kutusu tek dokunuş;
+  sıfır cümlesi); mal kabul ve öteki depo ekranları mobil paketinde (149 dosya · 1290 test). API ve
+  uygulama beklentisi `productName/variantLabel`.
+
+  **Cihaz turu (Oppo, 04.09 13:18–13:22).** D5 detay: kartlar, "Fıstık Sarma Baklava · 2000 g",
+  künye "sevk edilen 6 · lot L2673-2 · SKT 07.06.27", kesikli kutu; tek dokunuş → "6 · ADET" dolu
+  kutu; ikinci dokunuş → adet çekmecesi. **İki kusur ilk turda çıktı ve düzeltildi:** (1) "SEVK
+  EDİLEN" altyazısı sabit ende kutuda ikinci satıra kırılıp çerçeveden taşıyordu → kelime D2'yle
+  aynı "BEKLENEN" (rampada sevk edilen beklenendir) ve altyazı `numberOfLines={1}`; (2) kesikliden
+  doluya geçen kutu Android'de kesikli KALIYORDU — yerli görünüm önceki `borderStyle`ı koruyor →
+  iki hâlde de açıkça yazılıyor. D2 regresyon: "say →" ve "30 · BEKLENEN" kutuları yerinde, dokununca
+  "30 · ADET". iOS kaydırması bu makinede ölçülemedi (simülatör açık değil) — kullanıcı bakacak.

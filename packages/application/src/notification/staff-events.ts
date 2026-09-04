@@ -181,3 +181,42 @@ export async function notifyTransferShortfall(
     yut(err, 'transfer_shortfall');
   }
 }
+
+/**
+ * Transfer FAZLA kabul edildi (kullanıcı kararı 04.09, 21.253) — eksiğin aynası, aynı alıcılar.
+ *
+ * Alan depo sevk edilenden fazlasını saydı ve SAY belgesiyle stoğuna yazdı; gönderen deponun
+ * defterinde o birim hâlâ duruyor ("dört sandım, beş koymuşum"). Zil gönderene gider ki kendi
+ * sayımında bulsun. Dedupe transfer başına.
+ */
+export async function notifyTransferExcess(
+  db: SupabaseClient,
+  input: {
+    transferId: string;
+    referenceNo: string;
+    fromWarehouseId: string;
+    toWarehouseId: string;
+    excessQty: number;
+    excessReferenceNo: string | null;
+  },
+): Promise<void> {
+  try {
+    const [alan] = await new WarehouseService(db).list({ warehouseIds: [input.toWarehouseId] });
+    await dispatchStaffNotification(db, {
+      kind: 'transfer_excess',
+      roles: ['admin', 'warehouse'],
+      warehouseId: input.fromWarehouseId,
+      target: null,
+      payload: {
+        referenceNo: input.referenceNo,
+        transferId: input.transferId,
+        excessQty: input.excessQty,
+        ...(alan ? { toWarehouseCode: alan.code } : {}),
+        ...(input.excessReferenceNo ? { excessReferenceNo: input.excessReferenceNo } : {}),
+      },
+      dedupeKey: `transfer-excess:${input.transferId}`,
+    });
+  } catch (err) {
+    yut(err, 'transfer_excess');
+  }
+}

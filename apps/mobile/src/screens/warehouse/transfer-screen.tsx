@@ -1,20 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import type { ClosedTransferContract } from '@lezzet/types';
 
 import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsProductThumb } from '@/components/operations/product-thumb';
+import { OperationsQuantityBox } from '@/components/operations/quantity-box';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
-import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSurface } from '@/components/operations/surface';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
+import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
@@ -24,8 +27,9 @@ import { useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { qtySheetCopy, warehouseCopy } from './copy';
+import { useSubjectBack } from './use-subject-back.hook';
 import { useTransfer } from './use-transfer.hook';
-import { shortDate } from './warehouse-format';
+import { productLabel, shortDate, shortDayMonth } from './warehouse-format';
 import { useWarehouseStatus } from './warehouse-status';
 
 /*
@@ -45,6 +49,48 @@ import { useWarehouseStatus } from './warehouse-status';
 */
 
 const t = warehouseCopy;
+
+/**
+ * Kapanmış kaydın künyesi — rota iki ucun ADIYLA, tarih yılsız. Bir ucun adı yoksa (kapsam
+ * seçilmemiş oturum ya da silinmiş karşı depo) yön kelimesine düşülür: uydurma bir ad yazmaktansa
+ * "gelen · 2 kalem" doğru kalır.
+ */
+function closedMetaOf(row: ClosedTransferContract, workplace: string | null): string {
+  const n = String(row.lineCount);
+  const date = shortDayMonth(row.closedAt.slice(0, 10)) ?? row.closedAt;
+  const ref = row.shortfallReferenceNo ?? '';
+  const counterpart = row.counterpartName;
+  if (workplace === null || counterpart === null) {
+    return fillCopy(row.shortfallReferenceNo === null ? t.transfer.closedMeta : t.transfer.closedShortfallRef, {
+      direction: t.transfer.direction[row.direction],
+      n,
+      date,
+      ref,
+    });
+  }
+  const from = row.direction === 'out' ? workplace : counterpart;
+  const to = row.direction === 'out' ? counterpart : workplace;
+  return fillCopy(row.shortfallReferenceNo === null ? t.transfer.closedRoute : t.transfer.closedRouteShortfall, {
+    from,
+    to,
+    n,
+    date,
+    ref,
+  });
+}
+
+/**
+ * Kapanmış kaydın SONUCU: "tam kabul" · "−N adet" · "+N adet" · ikisi birden · "geri alındı".
+ * Eksik ve fazla ayrı yazılır (21.253) — toplamak "−2 +2 = tam kabul" gibi bir yalan üretirdi.
+ */
+function closedResultOf(row: ClosedTransferContract): string {
+  if (row.shortQty === null) return t.transfer.closedCancelled;
+  const parts = [
+    ...(row.shortQty > 0 ? [fillCopy(t.transfer.closedShortQty, { n: String(row.shortQty) })] : []),
+    ...((row.excessQty ?? 0) > 0 ? [fillCopy(t.transfer.closedExcessQty, { n: String(row.excessQty ?? 0) })] : []),
+  ];
+  return parts.length === 0 ? t.transfer.closedFull : parts.join(' · ');
+}
 
 /**
  * İlk yükün yer tutucu panel yüksekliği (dp) — `skeleton-list.tsx` künyesinde bu ekran için
@@ -85,6 +131,11 @@ export function TransferScreen() {
 
   const { offline } = useWarehouseStatus();
   const workplace = useOperationsWorkplace();
+  /* DETAYDAN GERİ = LİSTE, iki geri tuşunda da (kullanıcı bulgusu 04.09: "geri geldiğimde depo
+     ekranına gidiyorum"): sol üstteki ok ve cihazın kendi geri tuşu aynı adımı atar — sayım ve
+     düşüm ekranlarının kalıbı (`use-subject-back`). Çekmece açıksa önce o kapanır (kit). */
+  const leaveDetail = useCallback(() => transferState.select(null), [transferState.select]);
+  useSubjectBack(transferState.transfer !== null, leaveDetail);
 
   const transfer = transferState.transfer;
   const header = (
@@ -106,7 +157,9 @@ export function TransferScreen() {
           : captionOf(transfer === null ? undefined : fillCopy(t.transfer.caption, { ref: transfer.referenceNo }), workplace)
       }
       onBack={() =>
-        transfer !== null && transferState.transfers.length > 1 ? transferState.select(null) : router.back()
+        // Detaydan geri DAİMA listeye (04.09): tek gelen varken hub'a dönmek, YOLDA ve SON
+        // KAPANANLAR'ı görülmez kılıyordu. Hub'a yalnız listeden çıkılır.
+        transfer !== null ? leaveDetail() : router.back()
       }
       backLabel={t.common.back}
       testID="warehouse-transfer-header"
@@ -193,6 +246,15 @@ export function TransferScreen() {
               testID={`warehouse-transfer-row-${row.transferId}`}
             >
               <View style={styles.queueHead}>
+                {/* TASARIMIN KARTI (v3 transfer listesi; kullanıcı bulgusu 04.09 — "orijinal tasarımla
+                    çok fark var"): solda kartın türünü söyleyen zeytin OK KARESİ, sağda "GELDİ" rozeti;
+                    chevron ve "N kalem · tarih" satırı tasarımda yok — kalemler zaten altında
+                    sıralı, tarih kapananların işi. "GELDİ" bir durum değil bir cümle: sevkiyat bu
+                    depoya sevk edildi ve rampada sayılmayı bekliyor (arkasında ayrı bir "vardı"
+                    olayı yok — bilinen tek olay gönderenin sevki). */}
+                <View style={[styles.cardTile, styles.cardTileOlive]}>
+                  <Icon name="arrow-right" size={operationsTheme.size.cardTileIcon} color={operationsTheme.colors['olive-dark']} />
+                </View>
                 <View style={styles.rowBody}>
                   <Text style={styles.rowTitle}>{row.referenceNo}</Text>
                   {/* "Kehl → Strasbourg" (04.09): kart hangi depodan geldiğini söyler — referansın
@@ -202,14 +264,12 @@ export function TransferScreen() {
                       {fillCopy(t.transfer.queueRoute, { from: row.fromWarehouseName, to: workplace })}
                     </Text>
                   )}
-                  <Text style={styles.rowSub}>
-                    {fillCopy(t.transfer.queueLines, {
-                      n: String(row.lines.length),
-                      date: shortDate(row.dispatchedAt.slice(0, 10)) ?? row.dispatchedAt,
-                    })}
-                  </Text>
                 </View>
-                <Text style={styles.chevron}>›</Text>
+                {/* Rozet bir OLGU (kullanıcı kararı 04.09): tasarımın "GELDİ"si arkasında varış olayı
+                    olmayan bir etiketti; "YOLDA" transferin durumudur, doğrulanır. */}
+                <Text style={styles.arrivedPill} testID={`warehouse-transfer-status-${row.transferId}`}>
+                  {t.transfer.queueInTransit}
+                </Text>
               </View>
 
               {/*
@@ -221,11 +281,11 @@ export function TransferScreen() {
                 satır kartı listeye çevirir ve kuyruğun kendisi ekrandan taşardı. Kalan varsa
                 söyleniyor: kırpmayı sessizce yapmak, eksik bir kabule hazırlanmak olurdu.
               */}
-              <View style={styles.queuePreview}>
+              <View style={styles.queueLines}>
                 {row.lines.slice(0, PREVIEW_LINES).map((line) => (
                   <View key={line.lineId} style={styles.previewRow}>
                     <Text style={styles.previewName} numberOfLines={1}>
-                      {line.name}
+                      {productLabel(line.productName, line.variantLabel)}
                     </Text>
                     <Text style={styles.previewQty}>{line.dispatchedQty}</Text>
                   </View>
@@ -257,44 +317,43 @@ export function TransferScreen() {
                    satırlar hâlindeydi, oysa şablonun üç bölümünde de KUTU var. Fark görsel
                    değil yapısal — kutu "bu bir kayıt" der, alt çizgi yalnız "burada bir sınır
                    var" der ve üç bölüm tek uzun listeye eriyordu. */
-                <OperationsSurface
-                  key={row.transferId}
-                  tone="panel"
-                  padding="md"
-                  testID={`warehouse-transfer-outbound-${row.transferId}`}
-                >
+                <View key={row.transferId} style={styles.queueRow} testID={`warehouse-transfer-outbound-${row.transferId}`}>
+                  {/* TASARIMIN YOLDA KARTI (v3 transfer listesi, 04.09): kiremit ARAÇ KARESİ solda,
+                      "Strasbourg → Kehl · N kalem" ortada, sağda iki satır — durum üstte, tahmini
+                      varış altta. Kart gelen kartla aynı zeminde (aynı kalıbın iki türü), rozet
+                      zemini yok: durum düz metin, yalnız rengi konuşur. */}
                   <View style={styles.closedRow}>
+                    <View style={[styles.cardTile, styles.cardTileTerracotta]}>
+                      <Icon name="courier" size={operationsTheme.size.cardTileIcon} color={operationsTheme.colors.terracotta} />
+                    </View>
                     <View style={styles.rowBody}>
                       <Text style={styles.rowTitle}>{row.referenceNo}</Text>
                       <Text style={styles.rowSub}>
-                        {/* Tahmini varış SUNUCUDAN gelen bir GÜN (sevk günü + ulaşım süresi ayarı) —
-                            ekran kendi hesabını kurmuyor ve saat göstermiyor: elimizde olmayan bir
-                            kesinliği ima etmek, taşıyıcıdan gelmemiş bir sözü söylemek olurdu. */}
-                        {row.toWarehouseName === null
-                          ? fillCopy(t.transfer.outboundMeta, {
-                              n: String(row.lineCount),
-                              date: shortDate(row.etaDate) ?? row.etaDate,
-                            })
+                        {row.toWarehouseName === null || workplace === null
+                          ? fillCopy(t.transfer.outboundMeta, { n: String(row.lineCount) })
                           : fillCopy(t.transfer.outboundRoute, {
+                              from: workplace,
                               to: row.toWarehouseName,
                               n: String(row.lineCount),
-                              date: shortDate(row.etaDate) ?? row.etaDate,
                             })}
                       </Text>
                     </View>
-                    {/* GECİKME ROZETİ (04.09) — web'in üç tonu: ayar içinde zeytin "yolda", bir gün
-                        aşınca kum "1 gün gecikti", sonrası kiremit "N gün gecikti". Tahmin geçmiş
-                        bir tarihken satır sessiz duruyordu (cihazda ölçüldü 03.09: üç gün geçmiş). */}
-                    <Text
-                      style={[styles.agePill, styles[`agePill_${row.ageTone}`]]}
-                      testID={`warehouse-transfer-outbound-age-${row.transferId}`}
-                    >
-                      {row.ageTone === 'late'
-                        ? fillCopy(t.transfer.outboundAge.late, { n: String(row.lateDays) })
-                        : t.transfer.outboundAge[row.ageTone]}
-                    </Text>
+                    <View style={styles.outboundRight}>
+                      {/* YALNIZ OLGU (kullanıcı kararı 04.09): "tahmini varış" bir ayardan türeyen
+                          varsayımdı, "N gün gecikti" doğrulanamayan bir iddia — ikisi de kalktı.
+                          Kalan iki şey bilinen iki şey: transferin durumu ve çıktığı gün. Yaş tonu
+                          sözleşmede duruyor (web okuyor), ekran onu artık yazmıyor. */}
+                      <Text style={styles.ageText} testID={`warehouse-transfer-outbound-status-${row.transferId}`}>
+                        {t.transfer.outboundStatus}
+                      </Text>
+                      <Text style={styles.outboundEta}>
+                        {fillCopy(t.transfer.outboundDispatched, {
+                          date: shortDayMonth(row.dispatchedAt.slice(0, 10)) ?? row.dispatchedAt,
+                        })}
+                      </Text>
+                    </View>
                   </View>
-                </OperationsSurface>
+                </View>
               ))}
               <Text style={styles.queueFootnote}>{t.transfer.outboundNote}</Text>
             </View>
@@ -327,18 +386,11 @@ export function TransferScreen() {
                     <View style={styles.rowBody}>
                       <Text style={styles.rowTitle}>{row.referenceNo}</Text>
                       <Text style={styles.rowSub}>
-                        {/* YÖN KARŞI TARAFA GÖRE (04.09): araç yüklemesi "araca / araçtan", tesis
-                            "gelen / giden" — on satırın sekizi araç yüklemesiydi ve depolar arası
-                            geçmiş aralarında kayboluyordu. Eksik belgesi varsa künyede yazar. */}
-                        {fillCopy(row.shortfallReferenceNo === null ? t.transfer.closedMeta : t.transfer.closedShortfallRef, {
-                          direction:
-                            row.counterpartKind === 'vehicle'
-                              ? t.transfer.directionVehicle[row.direction]
-                              : t.transfer.direction[row.direction],
-                          n: String(row.lineCount),
-                          date: shortDate(row.closedAt.slice(0, 10)) ?? row.closedAt,
-                          ref: row.shortfallReferenceNo ?? '',
-                        })}
+                        {/* ROTA ADLA (v3 transfer listesi, kullanıcı bulgusu 04.09): "Strasbourg Merkez →
+                            Kehl — sınır deposu · 2 kalem · 03.09" — yön kelimesi ("gelen/giden",
+                            "araca/araçtan") yerine iki ucun adı; araç yüklemesi de aracın adıyla
+                            okunur, ayrı sözlük gerekmez. Eksik belgesi varsa künyenin sonunda. */}
+                        {closedMetaOf(row, workplace)}
                       </Text>
                     </View>
                     {/* SONUÇ SAĞDA ve ÜÇ AYRI CÜMLE: "tam kabul" · "−N adet" · "geri alındı".
@@ -350,20 +402,17 @@ export function TransferScreen() {
                       style={[
                         styles.closedResult,
                         // Üç hâl, üç ton — ve iptal "iyi" DEĞİL nötr: geri alınmış bir sevkiyatı
-                        // tam kabulle aynı renge boyamak, olmayan bir başarıyı boyamaktır.
+                        // tam kabulle aynı renge boyamak, olmayan bir başarıyı boyamaktır. Fazla da
+                        // bir farktır (21.253): eksikle aynı kiremit.
                         row.shortQty === null
                           ? styles.closedNeutral
-                          : row.shortQty === 0
+                          : row.shortQty === 0 && (row.excessQty ?? 0) === 0
                             ? styles.closedOk
                             : styles.closedShort,
                       ]}
                       testID={`warehouse-transfer-closed-result-${row.transferId}`}
                     >
-                      {row.shortQty === null
-                        ? t.transfer.closedCancelled
-                        : row.shortQty === 0
-                          ? t.transfer.closedFull
-                          : fillCopy(t.transfer.closedShortQty, { n: String(row.shortQty) })}
+                      {closedResultOf(row)}
                     </Text>
                   </View>
                 </OperationsSurface>
@@ -379,15 +428,31 @@ export function TransferScreen() {
 
   /* CTA EKSİĞİ TAŞIR (04.09): eksik varsa düğme kiremit tona döner ve "5 eksik beyanıyla" der —
      kaydetmeden önce son cümle. Eksik yoksa bugünkü zeytin düğme, tek dokunuş. */
+  const { shortfall, excess } = transferState;
+  // Fark cümlesi (21.253): eksik, fazla ya da ikisi — düğme hangisi varsa onu söyler.
+  const diffLabel =
+    shortfall !== null && excess !== null
+      ? fillCopy(t.transfer.ctaBoth, { short: String(shortfall.qty), excess: String(excess.qty) })
+      : shortfall !== null
+        ? fillCopy(t.transfer.ctaShort, { n: String(shortfall.qty) })
+        : excess !== null
+          ? fillCopy(t.transfer.ctaExcess, { n: String(excess.qty) })
+          : null;
   const cta = offline
     ? { label: t.common.offlineCta, enabled: false, short: false }
     : transferState.sending
       ? { label: t.transfer.cta.sending, enabled: false, short: false }
-      : transferState.shortfall !== null
-        ? { label: fillCopy(t.transfer.ctaShort, { n: String(transferState.shortfall.qty) }), enabled: true, short: true }
+      : diffLabel !== null
+        ? { label: diffLabel, enabled: true, short: true }
         : transferState.counted
           ? { label: t.transfer.cta.ready, enabled: true, short: false }
           : { label: t.transfer.cta.pending, enabled: false, short: false };
+  // Fark satırları (eksik + fazla) ve sonuç cümlesinin parçaları — panel ve çekmece aynı metni okur.
+  const diffLines = [...(shortfall?.lines ?? []), ...(excess?.lines ?? [])];
+  const effectParts = [
+    ...(shortfall === null ? [] : [fillCopy(t.transfer.shortfall.effectShort, { n: String(shortfall.qty) })]),
+    ...(excess === null ? [] : [fillCopy(t.transfer.shortfall.effectExcess, { n: String(excess.qty) })]),
+  ].join(', ');
 
   return (
     <View style={styles.screen} testID="warehouse-transfer">
@@ -406,62 +471,83 @@ export function TransferScreen() {
         {transfer.lines.map((line) => {
           const counted = transferState.countOf(line.lineId);
           const missing = transferState.missingLineIds.includes(line.lineId);
+          const name = productLabel(line.productName, line.variantLabel);
+          // LOT VE SKT künyede (04.09): aynı üründen iki parti aynı sevkiyatta gelebilir, ad ikisini
+          // ayırmaz — rampadaki koli satırla lotundan eşlenir.
+          const lotText =
+            line.lotNumber === null
+              ? fillCopy(t.transfer.lineNoLot, { date: shortDate(line.expiryDate) ?? line.expiryDate })
+              : fillCopy(t.transfer.lineLot, { lot: line.lotNumber, date: shortDate(line.expiryDate) ?? line.expiryDate });
           return (
-            <View key={line.lineId} style={styles.lineRow} testID={`warehouse-transfer-line-${line.lineId}`}>
+            /* SATIR MAL KABULÜN KARTI (kullanıcı kararı 04.09, 21.254): kart, solda ürün karesi,
+               sağda ADET KUTUSU — depo bölümünün adet satırı tek kalıp. Sayaç satırdan çıktı; adet,
+               kutuya dokununca açılan çekmeceden (cetvel, tuş takımı, ± içeride). Sayılmamış satır
+               SOLUK (v3:05): depocu "nerede kaldım"ı kaydırmadan görür. */
+            <View
+              key={line.lineId}
+              style={[styles.lineRow, counted === null && !missing ? styles.lineRowIdle : null]}
+              testID={`warehouse-transfer-line-${line.lineId}`}
+            >
               <View style={styles.lineHead}>
+                <OperationsProductThumb
+                  name={name}
+                  photoUri={line.imageUrl}
+                  size="md"
+                  testID={`warehouse-transfer-thumb-${line.lineId}`}
+                />
                 <View style={styles.rowBody}>
-                  <Text style={styles.rowTitle}>{line.name}</Text>
-                  <Text style={[styles.rowSub, missing ? styles.rowSubMissing : undefined]}>
-                    {missing
-                      ? t.transfer.missing
-                      : fillCopy(t.transfer.dispatched, { qty: String(line.dispatchedQty) })}
-                  </Text>
-                  {/* LOT VE SKT SATIRDA (04.09): aynı üründen iki parti aynı sevkiyatta gelebilir,
-                      ad ikisini ayırmaz — rampadaki koli satırla lotundan eşlenir. Sözleşme bunları
-                      düşürüyordu, uygulama katmanı zaten taşıyordu (ölçüldü 03.09). */}
-                  <Text style={styles.rowSub} testID={`warehouse-transfer-line-lot-${line.lineId}`}>
-                    {line.lotNumber === null
-                      ? fillCopy(t.transfer.lineNoLot, { date: shortDate(line.expiryDate) ?? line.expiryDate })
-                      : fillCopy(t.transfer.lineLot, { lot: line.lotNumber, date: shortDate(line.expiryDate) ?? line.expiryDate })}
+                  <Text style={styles.rowTitle}>{name}</Text>
+                  {/* Künye TEK SATIR (D2'nin "beklenen 30 · GZT-1013" kalıbı): sevk edilen · lot · SKT.
+                      Kapı "sayılmadı" dediyse sevk edilenin yerini o alır — cevaptan gelir, tahmin değil. */}
+                  <Text
+                    style={[styles.rowSub, missing ? styles.rowSubMissing : undefined]}
+                    testID={`warehouse-transfer-line-lot-${line.lineId}`}
+                  >
+                    {`${missing ? t.transfer.missing : fillCopy(t.transfer.dispatched, { qty: String(line.dispatchedQty) })} · ${lotText}`}
                   </Text>
                 </View>
-                {/* KİTİN TEK ADET DESENİ (02.09) — eskiden çerçeveli bir metin alanıydı. Boş
-                    hâl `null`: "—" bir DEĞER değil, bir eksikliktir ve sıfırla karışmaması için
-                    soluk durur (v2:468). Ortadaki rakam adet çekmecesini açar. */}
-                <OperationsStepperGroup
+                {/* KESİKLİ KUTU = DAVET: içinde sevk edilen adet, altyazısı D2 ile aynı kelime
+                    ("BEKLENEN" — rampada sevk edilen beklenendir; "SEVK EDİLEN" kutuya sığmıyordu,
+                    ölçüldü 04.09). Tek dokunuş "sevk edildiği kadar geldi" BEYANIdır (D2'nin
+                    "beklenen" düğmesiyle aynı kural: otomatik dolmaz). Dolu kutu çekmeceyi açar;
+                    sevk edilenden farklı rakam kiremit. TAVAN YOK (21.253). */}
+                <OperationsQuantityBox
                   value={counted}
-                  onChange={(next) => transferState.setCount(line.lineId, next)}
-                  label={fillCopy(t.transfer.qtyLabel, { name: line.name })}
-                  onPressValue={() => setQtyLineId(line.lineId)}
-                  valueHint={t.common.qtyHint}
-                  /* TAVAN SEVK EDİLEN (04.09): artı tavanda söner — fazlası kapıda zaten reddediliyordu
-                     ama ret sunucudan fonksiyon adıyla geliyordu (cihazda ölçüldü 03.09). */
-                  max={line.dispatchedQty}
+                  placeholderValue={line.dispatchedQty}
+                  caption={counted === null ? t.transfer.qtyDispatchedCaption : t.transfer.qtyCaption}
+                  dashed={counted === null}
+                  tone={counted === null ? 'muted' : counted === line.dispatchedQty ? 'ink' : 'diff'}
+                  onPress={() =>
+                    counted === null ? transferState.setCount(line.lineId, line.dispatchedQty) : setQtyLineId(line.lineId)
+                  }
+                  accessibilityLabel={
+                    counted === null
+                      ? fillCopy(t.transfer.countDispatchedLabel, { name, qty: String(line.dispatchedQty) })
+                      : fillCopy(t.transfer.qtyLabel, { name })
+                  }
+                  accessibilityHint={counted === null ? undefined : t.common.qtyHint}
                   testID={`warehouse-transfer-qty-${line.lineId}`}
                 />
               </View>
 
-              {/*
-                "0 · HİÇ GELMEDİ" TEK DOKUNUŞLA (v3:1189) — sıfır bu ekranın en anlamlı ve en zor
-                girilen değeri. Klavye açıp "0" yazmak, boş bırakmakla aynı hızda değil; oysa
-                ikisi taban tabana zıt beyanlar ("koli geldi, mal yok" ↔ "saymadım"). Kısayol
-                sıfırı bir tercih hâline getiriyor, bir zahmet olmaktan çıkarıyor.
-
-                Zaten sıfır yazılmışsa düğme çizilmez: aynı şeyi ikinci kez söyleten bir kontrol,
-                basıldığında hiçbir şey olmadığı için bozuk görünür.
-              */}
-              {counted === 0 ? null : (
-                <TextAction
-                  label={t.transfer.zero}
-                  onPress={() => transferState.setCount(line.lineId, 0)}
-                  testID={`warehouse-transfer-zero-${line.lineId}`}
-                />
-              )}
+              {/* "0 · HİÇ GELMEDİ" KISAYOLU KALKTI (kullanıcı kararı 04.09): v3:1189'un çipi, klavyeli
+                  girişin zahmetine karşı yazılmıştı; adet çekmecesinde sıfır cetvelin ilk hücresi
+                  olduğundan (02.09) artık aynı işi ikinci kez söyleyen bir düğmeydi. Boş ≠ 0 kuralı
+                  yerinde: boş satır kabulü bloklar, sıfır çekmeceden girilir. */}
               {/* SATIRIN KENDİ EKSİĞİ (04.09): sayılan adet sevk edilenden azsa satır bunu hemen
                   söyler — depocu özeti beklemeden hangi satırın kayıp yazacağını görür. */}
               {counted === null || counted >= line.dispatchedQty ? null : (
                 <Text style={styles.lineShort} testID={`warehouse-transfer-line-short-${line.lineId}`}>
-                  {fillCopy(t.transfer.lineShort, { n: String(line.dispatchedQty - counted) })}
+                  {counted === 0
+                    ? fillCopy(t.transfer.lineZero, { n: String(line.dispatchedQty) })
+                    : fillCopy(t.transfer.lineShort, { n: String(line.dispatchedQty - counted) })}
+                </Text>
+              )}
+              {/* SATIRIN FAZLASI (21.253): sevk edilenden çok sayıldıysa satır bunu da hemen söyler —
+                  engel yok, uyarı var; fazla beyan çekmecesinden yazılır. */}
+              {counted === null || counted <= line.dispatchedQty ? null : (
+                <Text style={styles.lineShort} testID={`warehouse-transfer-line-excess-${line.lineId}`}>
+                  {fillCopy(t.transfer.lineExcess, { n: String(counted - line.dispatchedQty) })}
                 </Text>
               )}
             </View>
@@ -474,10 +560,10 @@ export function TransferScreen() {
           kabul "1 parti açıldı" diyor, beş birim eksik hiçbir yerde geçmiyordu (cihazda ölçüldü
           03.09). Eksik yoksa panel hiç çizilmez — "0 eksik" bir beyan değildir.
         */}
-        {transferState.shortfall === null ? null : (
+        {shortfall === null && excess === null ? null : (
           <View style={styles.shortBox} testID="warehouse-transfer-shortfall">
             <Text style={styles.shortHeading}>{t.transfer.shortfall.heading}</Text>
-            {transferState.shortfall.lines.map((line) => (
+            {diffLines.map((line) => (
               <View key={line.lineId} style={styles.shortLine}>
                 <Text style={styles.shortName} numberOfLines={1}>
                   {line.name}
@@ -490,14 +576,19 @@ export function TransferScreen() {
                 </Text>
               </View>
             ))}
-            <Text style={styles.shortTotal} testID="warehouse-transfer-shortfall-total">
-              {fillCopy(t.transfer.shortfall.total, { n: String(transferState.shortfall.qty) })}
-            </Text>
+            {shortfall === null ? null : (
+              <Text style={styles.shortTotal} testID="warehouse-transfer-shortfall-total">
+                {fillCopy(t.transfer.shortfall.total, { n: String(shortfall.qty) })}
+              </Text>
+            )}
+            {/* FAZLA (21.253): eksiğin aynası, aynı panelde — bir satır eksik öteki fazla gelebilir. */}
+            {excess === null ? null : (
+              <Text style={styles.shortTotal} testID="warehouse-transfer-excess-total">
+                {fillCopy(t.transfer.shortfall.totalExcess, { n: String(excess.qty) })}
+              </Text>
+            )}
             <Text style={styles.shortEffect}>
-              {fillCopy(t.transfer.shortfall.effect, {
-                n: String(transferState.shortfall.qty),
-                ref: transfer.referenceNo,
-              })}
+              {fillCopy(t.transfer.shortfall.effect, { parts: effectParts, ref: transfer.referenceNo })}
             </Text>
           </View>
         )}
@@ -524,22 +615,31 @@ export function TransferScreen() {
         onClose={transferState.cancelDeclaration}
         testID="warehouse-transfer-declare"
       >
-        {transferState.shortfall === null ? null : (
+        {shortfall === null && excess === null ? null : (
           <View style={styles.declareBody}>
             <Text style={styles.declareSub}>
-              {fillCopy(t.transfer.declare.subtitle, {
-                ref: transfer.referenceNo,
-                n: String(transferState.shortfall.lines.length),
-              })}
+              {fillCopy(t.transfer.declare.subtitle, { ref: transfer.referenceNo, n: String(diffLines.length) })}
             </Text>
             <View style={styles.declareCard}>
-              <View style={styles.declareBigRow}>
-                <Text style={styles.declareBig} testID="warehouse-transfer-declare-qty">
-                  {transferState.shortfall.qty}
-                </Text>
-                <Text style={styles.declareUnit}>{t.transfer.declare.unit}</Text>
-              </View>
-              {transferState.shortfall.lines.map((line) => (
+              {/* Koyu sayaç kartında iki büyük rakam olabilir (21.253): eksik ve fazla ayrı satır,
+                  ayrı belge — toplamak ikisini birbirine karıştırırdı. */}
+              {shortfall === null ? null : (
+                <View style={styles.declareBigRow}>
+                  <Text style={styles.declareBig} testID="warehouse-transfer-declare-qty">
+                    {shortfall.qty}
+                  </Text>
+                  <Text style={styles.declareUnit}>{t.transfer.declare.unit}</Text>
+                </View>
+              )}
+              {excess === null ? null : (
+                <View style={styles.declareBigRow}>
+                  <Text style={styles.declareBig} testID="warehouse-transfer-declare-excess-qty">
+                    {excess.qty}
+                  </Text>
+                  <Text style={styles.declareUnit}>{t.transfer.declare.unitExcess}</Text>
+                </View>
+              )}
+              {diffLines.map((line) => (
                 <View key={line.lineId} style={styles.declareLine}>
                   <Text style={styles.declareLineName} numberOfLines={1}>
                     {line.name}
@@ -553,18 +653,23 @@ export function TransferScreen() {
                 </View>
               ))}
             </View>
-            <Text style={styles.heading}>{t.transfer.declare.reasonHeading}</Text>
-            <View style={styles.declareChips}>
-              {DECLARATION_REASONS.map((reason) => (
-                <OperationsChoiceChip
-                  key={reason}
-                  label={t.transfer.declare.reasons[reason]}
-                  selected={transferState.declaration.reason === reason}
-                  onPress={() => transferState.setDeclarationReason(reason)}
-                  testID={`warehouse-transfer-declare-reason-${reason}`}
-                />
-              ))}
-            </View>
+            {/* Sebep yalnız EKSİĞİN sorusudur: fazlanın sebebi olmaz, sayımın kendisi kayıttır. */}
+            {shortfall === null ? null : (
+              <>
+                <Text style={styles.heading}>{t.transfer.declare.reasonHeading}</Text>
+                <View style={styles.declareChips}>
+                  {DECLARATION_REASONS.map((reason) => (
+                    <OperationsChoiceChip
+                      key={reason}
+                      label={t.transfer.declare.reasons[reason]}
+                      selected={transferState.declaration.reason === reason}
+                      onPress={() => transferState.setDeclarationReason(reason)}
+                      testID={`warehouse-transfer-declare-reason-${reason}`}
+                    />
+                  ))}
+                </View>
+              </>
+            )}
             <TextField
               value={transferState.declaration.note}
               onChangeText={transferState.setDeclarationNote}
@@ -574,10 +679,7 @@ export function TransferScreen() {
               testID="warehouse-transfer-declare-note"
             />
             <Text style={styles.declareEffect}>
-              {fillCopy(t.transfer.declare.effect, {
-                ref: transfer.referenceNo,
-                n: String(transferState.shortfall.qty),
-              })}
+              {fillCopy(t.transfer.declare.effect, { ref: transfer.referenceNo, parts: effectParts })}
             </Text>
             <PressableSurface
               onPress={transferState.confirmDeclaration}
@@ -608,7 +710,10 @@ export function TransferScreen() {
             onChange={(next) => transferState.setCount(qtyLine.lineId, quantityTotal(next))}
             copy={qtySheetCopy({
               ...t.transfer.qtySheet,
-              subject: fillCopy(t.transfer.qtySheet.subject, { name: qtyLine.name, qty: String(qtyLine.dispatchedQty) }),
+              subject: fillCopy(t.transfer.qtySheet.subject, {
+                name: productLabel(qtyLine.productName, qtyLine.variantLabel),
+                qty: String(qtyLine.dispatchedQty),
+              }),
             })}
             onClose={() => setQtyLineId(null)}
             testID="warehouse-transfer-qty-sheet"
@@ -687,13 +792,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: operationsTheme.space.xl,
   },
-  /** Kalem önizlemesi — gömülü blok, kartın "içeride ne var" cümlesi. */
-  queuePreview: {
-    backgroundColor: operationsTheme.colors['neutral-bg'],
-    borderRadius: operationsTheme.radius.control,
-    paddingVertical: operationsTheme.space.lg,
-    paddingHorizontal: operationsTheme.space.xl,
-    gap: operationsTheme.space['2xs'],
+  /** Kalem satırları — kartın gövdesinde DÜZ dururlar (v3 transfer listesi, 04.09): gömülü kum
+      blok tasarımda yok; kart zaten kutudur, kutunun içinde ikinci kutu satırları yabancılaştırıyordu. */
+  queueLines: {
+    gap: operationsTheme.space.sm,
+  },
+  /** Kartın türünü söyleyen ikon karesi (v3: 36×36, yarıçap `badge`) — gelen zeytin, yoldaki kiremit. */
+  cardTile: {
+    width: operationsTheme.size.cardTile,
+    height: operationsTheme.size.cardTile,
+    borderRadius: operationsTheme.radius.badge,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTileOlive: { backgroundColor: operationsTheme.colors['olive-bg'] },
+  cardTileTerracotta: { backgroundColor: operationsTheme.colors['terracotta-bg'] },
+  /** "GELDİ" rozeti (v3): zeytin zemin, koyu zeytin eyebrow harf — kartın sağ üst köşesi. */
+  arrivedPill: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors['olive-dark'],
+    backgroundColor: operationsTheme.colors['olive-bg'],
+    borderRadius: operationsTheme.radius.badge,
+    paddingVertical: operationsTheme.space.xs,
+    paddingHorizontal: operationsTheme.space.md,
+    overflow: 'hidden',
   },
   previewRow: {
     flexDirection: 'row',
@@ -719,7 +843,9 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space['2xs'],
   },
+  /** "kabule başla →" kartın SAĞ altında (v3: `align-self:flex-end`) — eylem okla birlikte sağa akar. */
   queueOpen: {
+    alignSelf: 'flex-end',
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors['olive-dark'],
@@ -742,19 +868,22 @@ const styles = StyleSheet.create({
   closedOk: { color: operationsTheme.colors['olive-dark'] },
   closedShort: { color: operationsTheme.colors.terracotta },
   closedNeutral: { color: operationsTheme.colors.muted },
-  /** Yoldaki satırın gecikme rozeti — üç ton, web'in transfer sekmesiyle aynı sözlük. */
-  agePill: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text.micro,
-    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.micro),
-    borderRadius: operationsTheme.radius.pill,
-    paddingVertical: operationsTheme.space.sm,
-    paddingHorizontal: operationsTheme.space.lg,
-    overflow: 'hidden',
+  /** Yoldaki kartın sağ sütunu (v3): durum üstte, tahmini varış altta, ikisi sağa yaslı. */
+  outboundRight: {
+    alignItems: 'flex-end',
+    gap: operationsTheme.space['2xs'],
   },
-  agePill_ok: { backgroundColor: operationsTheme.colors['olive-bg'], color: operationsTheme.colors['olive-dark'] },
-  agePill_warn: { backgroundColor: operationsTheme.colors['terracotta-bg'], color: operationsTheme.colors.terracotta },
-  agePill_late: { backgroundColor: operationsTheme.colors['error-bg'], color: operationsTheme.colors.error },
+  /** Yoldaki durum — düz metin, kiremit (v3: `#b05c2e`): süren bir iş, bitmiş değil. */
+  ageText: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.terracotta,
+  },
+  outboundEta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
   /** Satırın kendi eksiği — kiremit, çünkü kaydetmeden önce okunması gereken bir sonuç. */
   lineShort: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -869,13 +998,18 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
     paddingTop: operationsTheme.space.lg,
   },
+  /* SATIR BİR KART (21.254, D2'nin `lineRow`u birebir): kesik çizgiyle ayrılmış düz satırlar tek
+     bir metin bloğu gibi okunuyordu; kart her kalemi kendi işi yapıyor. Sayılmamış satır soluk. */
   lineRow: {
     gap: operationsTheme.space.sm,
-    paddingVertical: operationsTheme.space.xl,
-    borderBottomWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    borderBottomColor: operationsTheme.colors['sand-300'],
+    paddingVertical: operationsTheme.space['2xl'],
+    paddingHorizontal: operationsTheme.space['3xl'],
+    borderWidth: operationsTheme.border.base,
+    borderColor: operationsTheme.colors['sand-300'],
+    borderRadius: operationsTheme.radius.card,
+    backgroundColor: operationsTheme.colors.panel,
   },
+  lineRowIdle: { opacity: 0.7 },
   lineHead: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -931,11 +1065,6 @@ const styles = StyleSheet.create({
   rowSubMissing: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     color: operationsTheme.colors.error,
-  },
-  chevron: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text['icon-sm'],
-    color: operationsTheme.colors['sand-600'],
   },
   footnote: {
     fontFamily: operationsTheme.font.body[400],

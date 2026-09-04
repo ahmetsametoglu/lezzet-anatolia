@@ -237,6 +237,13 @@ export const appMetrics = {
     tileIcon: 32,
     /** Liste satırının solundaki ikon — mal kabul sevkiyatı (v3: 25×25). */
     rowIcon: 25,
+    /**
+     * Transfer kartının solundaki İKON KARESİ — gelen kartta ok, yoldakinde araç (v3 transfer
+     * listesi: 36×36, yarıçap `badge`). `thumb`a (44) bağlanamaz: o ürün karesidir ve satırın
+     * içeriğini gösterir; bu kare kartın TÜRÜNÜ söyler ve daha küçüktür. İçindeki çizim 18.
+     */
+    cardTile: 36,
+    cardTileIcon: 18,
     /** Alt şeritlerin satır içi ikonu — yazıcı dişlisi (v3: 18×18). */
     stripIcon: 18,
     /** D1 önizleme satırının sol işareti — en (v3: 5). */

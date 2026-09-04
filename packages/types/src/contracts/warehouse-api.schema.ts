@@ -983,8 +983,17 @@ export type RecordAdjustmentResponse = z.infer<typeof RecordAdjustmentResponseSc
 export const InboundTransferLineSchema = z.object({
   lineId: z.string().uuid(),
   sourceStockId: z.string().uuid(),
-  /** "Ürün (boy)" — operasyon dilinde. */
-  name: z.string(),
+  /**
+   * Ürün adı ve boy etiketi AYRI (04.09, 21.254): satır mal kabuldeki gibi "Ürün · boy" yazar
+   * (`productLabel`), ekran kalıbı ortak. Tek boylu üründe `variantLabel` boş dize.
+   */
+  productName: z.string(),
+  variantLabel: z.string(),
+  /**
+   * Ürün kapağı (kullanıcı isteği 04.09): rampada satır, mal kabuldeki gibi resmiyle tanınır;
+   * `null` = kapak yok, ekran monogram çizer. EK OKUMA İSTEMİYOR — `variantNames` kapağı zaten taşır.
+   */
+  imageUrl: z.string().nullable(),
   /**
    * Kaynak partinin lotu ve tarihi (04.09): rampadaki koli satırla BUNLARLA eşlenir — aynı üründen
    * iki parti aynı sevkiyatta gelebilir ve ad ikisini ayırmaz. Uygulama katmanı zaten taşıyordu,
@@ -1088,6 +1097,10 @@ export const ClosedTransferSchema = z.object({
   shortQty: z.number().int().nonnegative().nullable(),
   /** Eksiğin IMH belgesi; eksik yoksa ya da beyan öncesi kayıtsa `null`. */
   shortfallReferenceNo: z.string().nullable(),
+  /** Fazla gelen TOPLAM ADET (04.09, 21.253) — rozet "+2 adet"; geri alınmışta `null`. */
+  excessQty: z.number().int().nonnegative().nullable(),
+  /** Fazlanın SAY belgesi (`count_diff · in`, transfere bağlı); fazla yoksa `null`. */
+  excessReferenceNo: z.string().nullable(),
   /**
    * Karşı taraf tesis mi araç mı (04.09): araç yüklemeleri geçmişte "araca / araçtan" diye ayrılır.
    * Ölçüldü: on satırın sekizi depodan araca yüklemeydi ve depolar arası geçmiş altında kayboluyordu.
@@ -1128,7 +1141,11 @@ export type WarehouseTransfersResponse = z.infer<typeof WarehouseTransfersRespon
  * Not isteğe bağlı: beyanın kendisi kayıttır, cümle zorunlu tutulsaydı rampada uydurulurdu.
  */
 export const TransferShortfallDeclarationSchema = z.object({
-  reason: StockWriteOffReasonEnum.extract(['transfer_shortfall', 'damaged']),
+  /**
+   * Eksiğin sebebi; FAZLA-yalnız beyanda anlamsız ve gönderilmez (04.09, 21.253) — fazlanın sebebi
+   * yok, sayımın kendisi kayıttır. Eksik varken boş geçilirse kapı `transfer_shortfall` sayar.
+   */
+  reason: StockWriteOffReasonEnum.extract(['transfer_shortfall', 'damaged']).nullish(),
   note: z.string().max(500).nullish(),
 });
 export type TransferShortfallDeclaration = z.infer<typeof TransferShortfallDeclarationSchema>;
@@ -1138,6 +1155,15 @@ export const ReceiveTransferRequestSchema = z.object({
   declaration: TransferShortfallDeclarationSchema.nullish(),
 });
 export type ReceiveTransferRequest = z.infer<typeof ReceiveTransferRequestSchema>;
+
+/** Sayım farkının kaydı — eksik ve fazla için aynı biçim: toplam adet, belge, satır satır fark. */
+const TransferDiscrepancySchema = z.object({
+  qty: z.number().int().positive(),
+  referenceNo: z.string().nullable(),
+  lines: z.array(
+    z.object({ lineId: z.string().uuid(), dispatchedQty: z.number().int(), receivedQty: z.number().int() }),
+  ),
+});
 
 export const ReceiveTransferResponseSchema = z.discriminatedUnion('status', [
   z.object({
@@ -1149,15 +1175,13 @@ export const ReceiveTransferResponseSchema = z.discriminatedUnion('status', [
      * "5 birim eksik kayıp yazıldı · IMH-STR-26-0013" diyebilsin. Tam kabulde `null`: "0 eksik"
      * yazmak, hiç beyan edilmemiş bir şeyi beyan gibi okuturdu.
      */
-    shortfall: z
-      .object({
-        qty: z.number().int().positive(),
-        referenceNo: z.string().nullable(),
-        lines: z.array(
-          z.object({ lineId: z.string().uuid(), dispatchedQty: z.number().int(), receivedQty: z.number().int() }),
-        ),
-      })
-      .nullable(),
+    shortfall: TransferDiscrepancySchema.nullable(),
+    /**
+     * Fazla beyanı yazıldıysa (04.09, 21.253): sevk edilenden fazlası SAY belgesiyle partiye eklendi —
+     * toast "1 birim fazla yazıldı · SAY-KEHL-26-0003" der. Fazla yoksa `null`. Eksikle aynı biçim:
+     * ikisi aynı sayımın iki yüzü, bir satır eksik öteki fazla gelebilir.
+     */
+    excess: TransferDiscrepancySchema.nullable(),
   }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   /** Araya biri girdi: transfer artık yolda değil. Ekran bunu GÖSTERİR, yutmaz. */

@@ -872,7 +872,11 @@ describe('D5 · transfer (gelen)', () => {
       {
         lineId,
         sourceStockId: foreignStockId,
-        name: `Fıstıklı Baklava ${stamp} (1 kg)`,
+        // Ad ve boy AYRI (21.254): ekran "Ürün · boy" kalıbını kendisi kurar, mal kabulle aynı.
+        productName: `Fıstıklı Baklava ${stamp}`,
+        variantLabel: '1 kg',
+        // Ürün kapağı satırda (04.09): fikstür ürününün kapağı yok, `null` gelir (boş dize değil).
+        imageUrl: null,
         // Lot ve SKT satırda (04.09): rampadaki koli satırla bunlarla eşlenir.
         lotNumber: null,
         expiryDate: dayOffset(70),
@@ -954,6 +958,29 @@ describe('D5 · transfer (gelen)', () => {
     const arrived = (await stocks.listByVariant(warehouseId, variantId)).filter((batch) => batch.id !== stockId);
     expect(arrived).toHaveLength(1);
     expect(arrived[0]!.physicalQty).toBe(3);
+    expect(arrived[0]!.initialQty).toBe(4);
+  });
+
+  it('FAZLA KABUL reddedilmez (21.253): cevap fazlayı ve SAY belgesini taşır, parti sevk edilenle doğup fazlası eklenir', async () => {
+    const { transferId, lineId } = await inbound(4);
+
+    const outcome = await dataOf<ReceiveTransferResponse>(
+      await post(`/api/v1/warehouse/transfers/${transferId}/receive`, {
+        lines: [{ lineId, receivedQty: 5 }],
+        // Fazla-yalnız beyanda sebep yok: fazlanın sebebi olmaz, sayımın kendisi kayıttır.
+        declaration: { note: 'koli beş çıktı' },
+      }),
+    );
+
+    expect(outcome).toMatchObject({
+      status: 'ok',
+      createdBatches: 1,
+      shortfall: null,
+      excess: { qty: 1, referenceNo: expect.stringMatching(/^SAY-/), lines: [{ lineId, dispatchedQty: 4, receivedQty: 5 }] },
+    });
+    const arrived = (await stocks.listByVariant(warehouseId, variantId)).filter((batch) => batch.id !== stockId);
+    expect(arrived).toHaveLength(1);
+    expect(arrived[0]!.physicalQty).toBe(5);
     expect(arrived[0]!.initialQty).toBe(4);
   });
 

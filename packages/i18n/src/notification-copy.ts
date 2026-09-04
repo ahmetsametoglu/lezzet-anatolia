@@ -282,6 +282,12 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     label: 'Transfer',
     title: `Transfer eksik kabul edildi${referans(p)} — ${typeof p.shortQty === 'number' ? p.shortQty : '?'} adet eksik, ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} kayıp yazdı`,
   }),
+  /* Transfer fazlası (04.09, 21.253): alan depo fazlayı stoğuna yazdı — gönderende o birim hâlâ duruyor, kendi sayımında bulsun. */
+  transfer_excess: (p) => ({
+    tone: 'attention',
+    label: 'Transfer',
+    title: `Transfer fazla kabul edildi${referans(p)} — ${typeof p.excessQty === 'number' ? p.excessQty : '?'} adet fazla, ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} stoğuna yazdı`,
+  }),
   b2b_application_received: () => ({
     tone: 'attention',
     label: 'Kurumsal',

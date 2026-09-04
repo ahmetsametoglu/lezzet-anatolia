@@ -69,6 +69,12 @@ export const AppNotificationKindEnum = z.enum([
    * artık kimsenin sekmesini açmasına bağlı değil. Hedefi transfer belgesi (payload'da).
    */
   'transfer_shortfall',
+  /**
+   * Transfer FAZLA kabul edildi (04.09, 21.253): alan depo sevk edilenden fazlasını saydı, SAY belgesiyle
+   * stoğuna ekledi. Gönderen deponun defterinde o birim hâlâ duruyor — zil gönderene gider ki kendi
+   * sayımında bulsun ("dört sandım, beş koymuşum").
+   */
+  'transfer_excess',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -87,6 +93,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'run_close_pending',
   'b2b_application_received',
   'transfer_shortfall',
+  'transfer_excess',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

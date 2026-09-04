@@ -222,6 +222,32 @@ describe('transfer — iki fiziksel gerçek an', () => {
     expect(sonuc.shortfallReferenceNo).toMatch(/^IMH-/);
   });
 
+  it('bir satır EKSİK, öteki FAZLA gelen kabul: iki belge — eksik IMH ile düşer, fazla SAY ile eklenir (21.253)', async () => {
+    const a = await stocks.insert({ variantId, warehouseId: doluDepo, physicalQty: 6, expiryDate: dayOffset(90) });
+    const b = await stocks.insert({ variantId, warehouseId: doluDepo, physicalQty: 6, expiryDate: dayOffset(95) });
+    const sevk = await transfers.dispatch({
+      toWarehouseId: bosDepo,
+      lines: [{ sourceStockId: a.id, qty: 2 }, { sourceStockId: b.id, qty: 3 }],
+    });
+    const satirlar = await transfers.listLines(sevk.transferId);
+
+    // Sevk 2 iken 3 sayıldı (fazla 1), sevk 3 iken 2 sayıldı (eksik 1). Fazla artık REDDEDİLMEZ:
+    // gönderen iki sanıp üç koymuş olabilir, rampada sayılan gerçektir.
+    const sonuc = await transfers.receive({
+      transferId: sevk.transferId,
+      lines: satirlar.map((s) => ({ lineId: s.id, receivedQty: s.qty === 2 ? 3 : 2 })),
+      declaration: { reason: 'transfer_shortfall', note: 'koliler karışmış' },
+    });
+    expect(sonuc.createdBatches).toBe(2);
+    expect(sonuc.shortfallQty).toBe(1);
+    expect(sonuc.shortfallReferenceNo).toMatch(/^IMH-/);
+    expect(sonuc.excessQty).toBe(1);
+    expect(sonuc.excessReferenceNo).toMatch(/^SAY-/);
+    // Hedefteki partiler sayılan adette: 3 ve 2 (doğuş sevk edilenle, fark aynı transaction'da).
+    const hedef = (await stocks.listByVariant(bosDepo, variantId)).map((p) => p.physicalQty).sort();
+    expect(hedef).toEqual([2, 3]);
+  });
+
   it('sevk kaydı geri alınır: mal KAYNAK PARTİYE döner, yeni parti doğmaz (19.6)', async () => {
     const kaynak = await stocks.insert({
       variantId,

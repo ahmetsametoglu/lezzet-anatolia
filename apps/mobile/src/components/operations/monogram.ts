@@ -17,11 +17,16 @@
  * Boşluklara göre bölünür ve İLK İKİ kelimenin baş harfi alınır; tasarımın kendi kuralı bu
  * (`ad.split(' ').slice(0, 2)`). Adı olmayan/boş satırda boş dize döner — uydurma bir harf,
  * olmayan bir ürünü varmış gibi gösterirdi.
+ *
+ * HARFLE BAŞLAMAYAN KELİME SAYILMAZ (04.09): operasyon adı "Ürün (boy)" biçimindedir ve tek
+ * kelimelik üründe ikinci "kelime" parantez ya da rakam oluyordu — "Künefe (2 kişilik)" → "K(",
+ * "Mantı · 500 g" → "M·". Transfer satırına kare gelince görüldü; harf olmayan bir işaret monogram
+ * değildir, atlanır ve sıradaki harfli kelime alınır ("KK", "MG").
  */
 export function monogramOf(name: string): string {
   return name
     .split(' ')
-    .filter(Boolean)
+    .filter((word) => /^\p{L}/u.test(word))
     .slice(0, 2)
     .map((word) => word[0] ?? '')
     .join('')

@@ -23,6 +23,8 @@ jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
     useRouter: () => ({ navigate: jest.fn(), back: mockBack }),
+    // Konu seçiliyken iOS kaydırması kapatılır (`use-subject-back`, `setOptions`); testte sessiz.
+    useNavigation: () => ({ setOptions: () => {} }),
     useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
   };
 });

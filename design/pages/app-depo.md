@@ -68,7 +68,30 @@
   ölçü KULLANILABİLİR stoktur (rezerve mal sevk edilemez).
 - **İş (kabul):** rampada SAY, satır satır gelen adedi gir — `null` bırakmak kabulü bloklar;
   **`0` girmek "geldi ama kayıp" demektir, ikisi ayrı şeydir** (ekran bu farkı sorar). Bağlantı
-  şartlı (kuyruk yok — iki deponun stoku aynı anda doğru kalmalı).
+  şartlı (kuyruk yok — iki deponun stoku aynı anda doğru kalmalı). **Liste her zaman görünür
+  (kullanıcı kararı 04.09 · 21.250):** tek gelen transfer olsa da ekran onu kendiliğinden AÇMAZ —
+  gelen, yolda ve kapananlar bir arada okunur, detaya yalnız "kabule başla" ile girilir ve geri
+  tuşu daima listeye döner (`screenshots/Depo/Transfer/01-Liste`). **Satırda ürün karesi, "0 · hiç
+  gelmedi" çipi yok (kullanıcı kararı 04.09 · 21.251):** satır mal kabuldeki gibi resmiyle tanınır
+  (kapaksız üründe monogram); tasarımın sıfır çipi kaldırıldı — adet çekmecesinde sıfır cetvelin ilk
+  hücresi, çip aynı işi ikinci kez söylüyordu. Boş ≠ 0 kuralı yerinde, sıfır çekmeceden girilir.
+  **Liste kartı tasarımın kartı (kullanıcı bulgusu 04.09 · 21.252):** gelen kartta zeytin ok
+  karesi + "GELDİ" rozeti, kalemler düz, "kabule başla →" sağda (chevron ve "N kalem · tarih" yok);
+  yoldakinde kiremit araç karesi, "{depo} → {hedef} · N kalem", sağda durum + çıktığı gün;
+  kapananlarda rota iki ucun adıyla. Liste tarihleri yılsız. Korunan fazlalıklar `design/KARARLAR.md`.
+- **Yalnız OLGU (kullanıcı kararı 04.09 · 21.253):** "tahmini varış" (ayardan türeyen varsayım),
+  "N gün gecikti" (doğrulanamayan iddia) ve "GELDİ" (arkasında olay olmayan etiket) ekrandan kalktı;
+  yoldakinde "yolda · çıktı 04.09", gelen kartta "YOLDA". Ölçüt: gerçekse kalsın, tahminse kaldır.
+- **İş (fazla beyanı, kullanıcı kararı 04.09 · 21.253):** sevk edilenden FAZLASI engellenmez —
+  gönderen dört sanıp beş koymuş olabilir. Satır "N fazla · stoğa fazla yazılacak" der; FARK BEYANI
+  paneli ve düğme eksikle fazlayı birlikte sayar; çekmecede fazla için sebep çipi yok. Kabul sevk
+  edilen adetle yazılır, fazlası SAY belgesiyle (sayım farkı) aynı partiye eklenir, gönderenin
+  defteri değişmez, gönderene bildirim gider; kapananlarda "+N adet". Donanım geri tuşu detaydan
+  listeye döner; iOS kaydırması konu seçiliyken kapalı (native yığın JS iptalini kaldırmıyor).
+- **Satır mal kabulün kalıbı (kullanıcı kararı 04.09 · 21.254, tasarım sayfası *D5 Satır Tasarımı*):**
+  kart, solda ürün karesi, künye tek satır ("sevk edilen 6 · lot … · SKT …"), sağda ADET KUTUSU —
+  kesikliyken "6 · BEKLENEN" (tek dokunuş = beyan; kelime D2 ile aynı), doluyken "6 · ADET" (dokunuş çekmece, farklı
+  rakam kiremit). Sayaç satırda yok; sayılmamış satır soluk. Ad yazımı D2 ile aynı: "Ürün · boy".
 - **İş (eksik beyanı, kullanıcı kararı 04.09 · 21.248):** sayım bitince eksik varsa ekran ÖNCE
   özetini gösterir (satır satır "gönderildi · geldi", toplam, sonuç cümlesi) ve kaydet düğmesi
   "N eksik beyanıyla" der; dokununca **beyan çekmecesi** açılır — koyu sayaç kartında toplam,

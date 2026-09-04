@@ -30,4 +30,14 @@ describe('monogramOf', () => {
     expect(monogramOf('')).toBe('');
     expect(monogramOf('   ')).toBe('');
   });
+
+  /*
+    HARFLE BAŞLAMAYAN KELİME (04.09) — operasyon adı "Ürün (boy)" biçiminde; tek kelimelik üründe
+    ikinci kelime parantez ya da rakam çıkıyordu ("K(", "M·"). İşaret monogram değildir, atlanır.
+  */
+  it('parantez ve rakamla başlayan kelimeyi atlar, sıradaki harfli kelimeyi alır', () => {
+    expect(monogramOf('Künefe (2 kişilik)')).toBe('KK');
+    expect(monogramOf('Mantı · 500 g')).toBe('MG');
+    expect(monogramOf('Su Böreği (1 kg)')).toBe('SB');
+  });
 });

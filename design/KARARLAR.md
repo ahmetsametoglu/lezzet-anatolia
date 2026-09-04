@@ -2029,3 +2029,91 @@ beyanıyla"; çekmecede koyu sayaç kartı (yerinde satışın kartı), iki sebe
 tonuyla, kapananlarda "−N adet" ve "araca / araçtan" ayrımı. Tasarım sayfası: *D5 Eksik Beyanı*
 (Artifact, 04.09). Tasarım sayfasındaki dört çip ikiye indi: her çip bir sebep olsun diye
 ("koli açılmış" ve "sayım şüpheli" sebep değil, not).
+
+## D5 transfer: liste her zaman görünür; satırda ürün karesi; "0 · hiç gelmedi" çipi yok (04.09, kullanıcı kararı · 21.250 · 21.251)
+
+**Ölçüm (Oppo, 04.09).** Kullanıcı Strasbourg deposuyla Transfer'e bastığında gideni ve geleni
+ayrı göremedi: depoya tam BİR gelen düşünce hook onu kendiliğinden seçiyor (08.08, toplama
+kuyruğunun "tek sipariş kalınca aç" kalıbı — transfer için yazılı gerekçesi yoktu) ve geri düğmesi
+tek gelen varken listeye değil hub'a dönüyordu. YOLDA ile SON KAPANANLAR o hâlde hiç görülemiyordu.
+Tasarım (`screenshots/Depo/Transfer/01-Liste`) listeyi her zaman gösterir, detaya "kabule başla" ile
+girilir.
+
+**Karar 1 — liste her zaman (21.250):** seçim yalnız korunur, hiç kurulmaz; detaydan geri DAİMA
+listeye, hub'a yalnız listeden çıkılır. Toplama kuyruğundaki kalıp yerinde — orada tek sipariş
+kalınca açılmak işin kendisi.
+
+**Karar 2 — satırda ürün karesi (21.251):** rampadaki satır, mal kabuldeki gibi resmiyle tanınır
+(`OperationsProductThumb`, kapaksız üründe monogram). Kapak `variantNames`ten geliyor, ek okuma yok.
+Monogram kuralı da düzeldi: harfle başlamayan kelime ("(2", "·", "500") atlanır — "Künefe (2 kişilik)"
+artık "K(" değil "KK".
+
+**Karar 3 — "0 · hiç gelmedi" çipi kaldırıldı (21.251, tasarımdan sapma):** v3:1189'un çipi klavyeli
+girişin zahmetine karşı çizilmişti. Adet çekmecesinde sıfır cetvelin ilk hücresi olduğundan (02.09)
+çip aynı işi ikinci kez söylüyordu ve kullanıcıya "zaten boşken niye var" diye göründü. Boş ≠ 0
+kuralı yerinde: boş satır kabulü bloklar, sıfır çekmeceden girilir ve satır sayılmış sayılır.
+
+## D5 liste tasarımın kartına çekildi (04.09, kullanıcı bulgusu · 21.252)
+
+**Bulgu.** Kullanıcı tasarımın liste görüntüsünü yanına koyup baktı: *"orijinal tasarım ile bizim
+transfer item'ları arasında çok fark var."* Ölçülen farklar: gelen kartta ikon karesi ve "GELDİ"
+rozeti yok, chevron ve "N kalem · tarih" satırı fazla, kalemler kum kutuda; yoldaki kartta ikon
+karesi ve iki satırlı sağ sütun ("yolda" + "tahmini 30.08") yok, hedef adı tek başına; kapananlarda
+rota yerine yön kelimesi ("gelen/giden", "araca/araçtan"), tarihler yıllı.
+
+**Karar — tasarım birebir, dört bilinçli fazlalık korunarak:** ikon karesi (36, `badge` yarıçap;
+gelen zeytin ok, yoldaki kiremit araç), "GELDİ" rozeti, kalemler düz, "kabule başla →" sağda;
+yoldakinde "{depo} → {hedef} · N kalem" + sağda durum/tahmini gün; kapananlarda "{kaynak} → {alan}
+· N kalem · 26.08". Liste tarihleri YILSIZ (`shortDayMonth`), yıl SKT'de kalır. Korunanlar
+(tasarımdan sapma, gerekçeleri önceki bölümlerde): kartta "+N kalem daha" (21.146), yoldakinde üç
+tonlu gecikme (21.248), kapananda "−N adet" ve eksik belgesi (21.248). **"GELDİ" bir durum
+değildir:** arkasında ayrı bir "vardı" olayı yok, bilinen tek olay gönderenin sevki — rozet
+"bu depoya sevk edildi, sayılmayı bekliyor" cümlesinin kısaltmasıdır; ayrı bir varış olayı istenirse
+o zaman sözleşmeye girer, rozet o güne kadar tasarımın kelimesiyle kalır.
+
+## D5: ekranda yalnız OLGU — "tahmini", "gecikti", "GELDİ" kalktı; fazla kabul beyanla (04.09, kullanıcı kararı · 21.253)
+
+**Karar 1 — tahmin ve doğrulanamayan bilgi ekrana yazılmaz.** Kullanıcının sorusu: *"kaç gün
+geciktiğini biz nasıl söyleyebiliyoruz?"* Cevap: söyleyemiyoruz — "tahmini varış" sevk günü +
+ulaşım süresi AYARIydı, "N gün gecikti" o ayardan türeyen bir iddia; bilinen tek olay karşı deponun
+henüz kabul etmemesi. Yukarıdaki 21.252 bölümünün "üç tonlu gecikme korunur" ve "GELDİ tasarımın
+kelimesiyle kalır" hükümleri BU KARARLA KAPANDI: yoldaki kartın sağında yalnız durum ("yolda") ve
+çıktığı gün ("çıktı 04.09"); gelen kartın rozeti "YOLDA" (transferin durumu, doğrulanır). Yaş tonu
+sözleşmede duruyor (web okuyor), mobil ekran yazmıyor. Ölçüt kalıcı: *gerçekse kalsın, tahminse ya
+da doğrulanamıyorsa kaldır.*
+
+**Karar 2 — sevk edilenden FAZLASI engellenmez, beyan edilir.** Gönderen dört sanıp beş koymuş
+olabilir; rampada sayılan gerçektir. Eksiğin aynası: parti sevk edilenle doğar, fazlası aynı
+transaction'da `count_diff · in` ile SAY belgesine (alan deponun serisi) yazılır, hareket transfere
+bağlı; gönderenin defteri değişmez (fazladan görünen birim onun bir sonraki sayımında düşer),
+gönderene ve yönetime `transfer_excess` bildirimi gider. Ekranda tavan yok: satır "N fazla · stoğa
+fazla yazılacak" der, FARK BEYANI paneli ve düğme fazlayı da sayar ("1 eksik, 2 fazla beyanıyla"),
+çekmecede fazla için sebep çipi YOK — fazlanın sebebi olmaz, sayımın kendisi kayıttır. Kapanan
+listede "+N adet", eksikle birlikte "−1 adet · +2 adet" (toplanmaz: "−2 +2 = tam kabul" yalan olurdu).
+
+**Karar 3 — donanım geri tuşu detaydan listeye döner** (kullanıcı bulgusu 04.09; sayım/düşüm
+ekranlarının `use-subject-back` kalıbı).
+
+## D5 satırı mal kabulün kalıbı; adet kutusu kitte; iOS kaydırması konu seçiliyken kapalı (04.09, kullanıcı kararı · 21.254)
+
+**Bulgu.** *"Adet girilen satır depoda birçok yerde var, bu ondan farklı."* Oppo'dan üç satır yan
+yana ölçüldü: D5 kartsız, kesik çizgili, sağda −/+ sayaç; D2 kart + adet kutusu (kesikli davet /
+dolu); D4 kart + resim. Tasarım sayfası *D5 Satır Tasarımı* (Artifact 04.09) onaylandı.
+
+**Karar 1 — tek kalıp, tek kutu.** Depo bölümünde adet girilen satır D2'nin kartıdır: solda ürün
+karesi, ortada ad "Ürün · boy" + tek satır künye, sağda adet kutusu. Kutu kite terfi etti
+(`OperationsQuantityBox`), D2 ve D5 aynı parçayı çağırır. Sayaç (−/+) satırdan çıktı: ± zaten adet
+çekmecesinin içinde; satırda iki ayrı giriş yolu tutmak kalıbı bozuyordu.
+
+**Karar 2 — kesikli kutu bir DAVETTİR, dokunuş bir BEYANDIR.** D5'te kesikli kutuda sevk edilen adet
+yazar; tek dokunuş "sevk edildiği kadar geldi" der (D2'nin "beklenen" düğmesi, 03.09 kararı). Kutu
+kendiliğinden dolmaz: dolu gelseydi hiç sayılmamış bir sevkiyat sayılmış görünürdü.
+
+**Karar 3 — v3'ten sapma (13-transferKabul).** Tasarımın transfer satırı sayaçlıydı; D2'nin kalıbı
+seçildi çünkü kullanıcı tutarlılığı tek satırın tasarımına tercih etti. Kullanıcı sözü: *"göze hoş
+görünmüyor, ötekilere göre yeni bir tasarım yap."*
+
+**Karar 4 — iOS kaydırması.** `beforeRemove` ile yakalamak native yığında çöktü ("removed from js
+state"); konu seçiliyken jest kapatılır (`gestureEnabled: false`), geri adımı başlık oku ve Android
+tuşundan atılır. Kalıcı çözüm istenirse detay ayrı bir rota olur (kaydırma doğal pop) — bugün
+sayım/düşüm/transfer üçü de "konu seçili" kalıbında, o gün üçü birlikte taşınır.

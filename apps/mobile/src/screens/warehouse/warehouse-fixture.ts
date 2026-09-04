@@ -150,7 +150,9 @@ export function inboundTransfer(overrides: Partial<InboundTransferContract> = {}
       {
         lineId: uuid(71),
         sourceStockId: STOCK_A,
-        name: 'Mantı · 500 g',
+        productName: 'Mantı',
+        variantLabel: '500 g',
+        imageUrl: 'https://cdn.test/manti.jpg',
         lotNumber: 'L2667-2',
         expiryDate: '2027-04-25',
         dispatchedQty: 4,
@@ -160,7 +162,10 @@ export function inboundTransfer(overrides: Partial<InboundTransferContract> = {}
       {
         lineId: uuid(72),
         sourceStockId: STOCK_B,
-        name: 'Künefe · 2 kişilik',
+        productName: 'Künefe',
+        variantLabel: '2 kişilik',
+        // Kapaksız ürün: kare monogram çizer ("KK") — resim yoksa boş kutu değil.
+        imageUrl: null,
         lotNumber: null,
         expiryDate: '2026-12-01',
         dispatchedQty: 2,

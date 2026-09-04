@@ -185,7 +185,11 @@ describe('"bana ne geliyor" listesi', () => {
       {
         lineId,
         sourceStockId: sourceBatch,
-        name: `Su Böreği ${stamp} (1 kg)`,
+        // Ad ve boy AYRI (21.254): ekran "Ürün · boy" kalıbını kendisi kurar.
+        productName: `Su Böreği ${stamp}`,
+        variantLabel: '1 kg',
+        // Ürün kapağı satırda (04.09): fikstür ürününün kapağı yok — `null`, boş dize değil.
+        imageUrl: null,
         // Parti künyesi satırda (19.6): rampadaki eşleşme lottan yapılır, web kabul penceresi de
         // aynı satırı okur — fikstürün kurduğu lot/tarih buraya birebir yansımalı.
         lotNumber: 'LOT-TRF',
@@ -304,6 +308,71 @@ describe('kabul (D5 · "al")', () => {
 
     expect(outcome).toMatchObject({ status: 'ok', shortfall: null });
     expect(await new StockMovementService(db).listByTransferIds([transferId], { kind: 'write_off' })).toEqual([]);
+  });
+
+  /*
+    FAZLA KABUL = BEYAN + SAYIM FARKI (kullanıcı kararı 04.09, 21.253). Eskiden fazlası kapıda
+    reddediliyordu ("sevk edilen 4 iken 5 kabul edilemez"); oysa gönderen dört sanıp beş koymuş
+    olabilir ve rampada sayılan gerçek beştir. Eksiğin aynası: parti sevk edilenle doğar, fazlası
+    `count_diff · in` ile SAY belgesiyle partiye eklenir, gönderenin defteri değişmez.
+  */
+  it('FAZLA KABUL: parti SEVK EDİLEN adetle doğar, fazlası SAY belgesiyle partiye eklenir, hareket transfere bağlı, kaynak değişmez', async () => {
+    const { transferId, lineId } = await inTransit(4);
+    const outcome = await receiveTransfer(db, {
+      transferId,
+      warehouseId: toWarehouseId,
+      lines: [{ lineId, receivedQty: 5 }],
+      declaration: { note: 'koli beş çıktı' },
+    });
+
+    expect(outcome).toMatchObject({
+      status: 'ok',
+      createdBatches: 1,
+      shortfall: null,
+      excess: { qty: 1, referenceNo: expect.stringMatching(/^SAY-/), lines: [{ lineId, dispatchedQty: 4, receivedQty: 5 }] },
+    });
+    const arrived = (await stocks.listByVariant(toWarehouseId, variantId)).find((batch) => batch.lotNumber === 'LOT-TRF')!;
+    expect(arrived.physicalQty).toBe(5);
+    expect(arrived.initialQty).toBe(4);
+
+    const movements = await new StockMovementService(db).listByTransferIds([transferId]);
+    expect(movements.find((m) => m.kind === 'transfer_in')?.qty).toBe(4);
+    const ekleme = movements.find((m) => m.kind === 'count_diff')!;
+    expect(ekleme).toMatchObject({ stockId: arrived.id, direction: 'in', qty: 1, note: 'koli beş çıktı' });
+    expect(ekleme.referenceNo).toBe(outcome.status === 'ok' ? outcome.excess?.referenceNo : null);
+    expect(movements.some((m) => m.kind === 'write_off')).toBe(false);
+    // Gönderenin defteri değişmez: fazladan görünen birim onun bir sonraki sayımında düşer.
+    expect((await stocks.getById(sourceBatch))?.physicalQty).toBe(8);
+
+    const row = (await listClosedTransfers(db, { warehouseId: toWarehouseId })).find((r) => r.transferId === transferId)!;
+    expect(row).toMatchObject({ shortQty: 0, excessQty: 1, excessReferenceNo: expect.stringMatching(/^SAY-/) });
+  });
+
+  it('fazla kabul GÖNDEREN deponun personeline zil düşürür — "dört sandım, beş koymuşum"', async () => {
+    const staff = await new UserProfileService(db).insert({
+      name: `Kehl depocusu ${stamp}`,
+      roles: ['warehouse'],
+      warehouseIds: [fromWarehouseId],
+    });
+    const { transferId, lineId } = await inTransit(4);
+    try {
+      await receiveTransfer(db, { transferId, warehouseId: toWarehouseId, lines: [{ lineId, receivedQty: 6 }] });
+
+      const { data, error } = await db.from('notification').select('payload').eq('profile_id', staff.id).eq('kind', 'transfer_excess');
+      if (error) throw error;
+      expect(data).toHaveLength(1);
+      expect((data as Array<{ payload: Record<string, unknown> }>)[0]!.payload).toMatchObject({
+        transferId,
+        excessQty: 2,
+        excessReferenceNo: expect.stringMatching(/^SAY-/),
+      });
+    } finally {
+      const { data } = await db.from('notification').select('id').eq('dedupe_key', `transfer-excess:${transferId}`);
+      await purgeTestData(db, {
+        notificationIds: ((data ?? []) as { id: string }[]).map((r) => r.id),
+        profileIds: [staff.id],
+      });
+    }
   });
 
   it('kapanan listede eksik ADET ve belge; karşı taraf tesis, adıyla', async () => {

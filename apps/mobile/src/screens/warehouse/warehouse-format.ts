@@ -20,6 +20,17 @@ export function shortDate(isoDate: string): string | null {
 }
 
 /**
+ * `"2026-08-26"` → `"26.08"` — LİSTE tarihi, yılsız (v3 transfer listesi: "tahmini 30.08",
+ * "· 26.08"). Yoldaki ve son kapanan sevkiyatlar bu haftanın işidir, yıl orada gürültüdür; yıl
+ * SKT'de kalır (`shortDate`), çünkü raf ömrü yıla bakar. Tanınmazsa `null` — uydurma tarih yok.
+ */
+export function shortDayMonth(isoDate: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!match) return null;
+  return `${match[3]}.${match[2]}`;
+}
+
+/**
  * GİRDİ (`"12.08.2026"` · `"12.08.26"` · `"2026-08-12"`) → ISO. Tanınmazsa `null`.
  *
  * Neden elle: cihazda tarih seçici modülü YOK (`@react-native-community/datetimepicker`

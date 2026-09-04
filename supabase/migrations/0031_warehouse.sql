@@ -769,6 +769,16 @@ revoke execute on function public.dispatch_transfer(uuid, jsonb, uuid, text) fro
 -- hanesine yazılır. Tam kabulde hiçbir düşüm yazılmaz; araç yüklemesi (`takeToVan`) bu kapıyı
 -- tam adetle çağırdığı için eksik dalına hiç girmez.
 --
+-- ── FAZLA KABUL = BEYAN + SAYIM FARKI (kullanıcı kararı 04.09, 21.253) ───────
+-- Sevk edilenden FAZLASI reddedilmez (eskiden `raise`): gönderen dört sanıp beş koymuş olabilir ve
+-- rampada sayılan gerçek beştir. Kural eksiğin aynası:
+--   1. Parti yine SEVK EDİLEN adetle doğar (`transfer_in` tam adet) — iki deponun defteri tutar.
+--   2. Fazlası (`received_qty − qty`) aynı transaction'da `adjust_stock_batch` ile o partiye
+--      `count_diff · in` olarak eklenir: rampadaki sayım bir sayımdır, belgesi SAY serisinden
+--      (alan deponun), notu depocunun beyanı (boşsa sabit cümle — `count_diff · in` not ister).
+--   3. Gönderen deponun defterine DOKUNULMAZ: orada fazladan görünen birim bir sonraki sayımda
+--      düşer; alan depo beyan eder, gönderen depoya bildirim gider (uygulama katmanı).
+--
 -- p_lines: [{"line_id": uuid, "received_qty": int}, ...]
 create or replace function public.receive_transfer(
   p_transfer_id uuid,
@@ -794,6 +804,10 @@ declare
   v_short jsonb := '[]'::jsonb;
   v_short_qty int := 0;
   v_short_ref text := null;
+  -- Fazla beyanı (04.09, 21.253): hedefte doğan partiye eklenecek satırlar — eksiğin aynası.
+  v_excess jsonb := '[]'::jsonb;
+  v_excess_qty int := 0;
+  v_excess_ref text := null;
   v_adjust jsonb;
 begin
   select status, to_warehouse_id into v_status, v_to_warehouse_id
@@ -826,9 +840,8 @@ begin
     if v_src is null then
       raise exception 'receive_transfer: satır bu transfere ait değil (%)', v_line_id;
     end if;
-    if v_received > v_src.qty then
-      raise exception 'receive_transfer: sevk edilen % iken % kabul edilemez', v_src.qty, v_received;
-    end if;
+    -- Sevk edilenden FAZLASI artık reddedilmez (04.09, 21.253): rampada sayılan gerçektir, fazlası
+    -- döngüden sonra `count_diff · in` ile partiye eklenir — aşağıda.
 
     -- Parti SEVK EDİLEN adetle doğar — sıfır gelende de (04.09): kaybın bağlanacağı parti bu.
     -- `initial_qty` tetikleyiciden sevk edilen adet olur; "bu partiden ne kadar tüketildi"
@@ -850,6 +863,11 @@ begin
         'stock_id', v_target_stock_id, 'qty', v_src.qty - v_received, 'direction', 'out'
       );
       v_short_qty := v_short_qty + (v_src.qty - v_received);
+    elsif v_received > v_src.qty then
+      v_excess := v_excess || jsonb_build_object(
+        'stock_id', v_target_stock_id, 'qty', v_received - v_src.qty, 'direction', 'in'
+      );
+      v_excess_qty := v_excess_qty + (v_received - v_src.qty);
     end if;
 
     -- `received_qty is null` şartı AYNI SATIRIN İKİ KEZ kabulünü kapatır: koşul olmasaydı ikinci
@@ -889,6 +907,21 @@ begin
      where reference_no = v_short_ref and kind = 'write_off' and transfer_id is null;
   end if;
 
+  -- FAZLA BEYANI (04.09, 21.253): tek SAY belgesi, alan deponun serisinden — rampadaki sayım bir
+  -- sayımdır. `count_diff · in` sebep notu ister; depocu yazmadıysa sabit cümle, uydurulmaz.
+  -- Eksik ve fazla aynı kabulde birlikte olabilir (bir satır eksik, öteki fazla): iki belge.
+  if v_excess_qty > 0 then
+    v_adjust := public.adjust_stock_batch(
+      v_excess, 'count_diff', 'SAY', null,
+      coalesce(nullif(btrim(p_note), ''), 'Transfer fazla geldi — sevk edilenden fazlası rampada sayıldı'),
+      p_actor_id
+    );
+    v_excess_ref := v_adjust ->> 'reference_no';
+    update public.stock_movement
+       set transfer_id = p_transfer_id
+     where reference_no = v_excess_ref and kind = 'count_diff' and transfer_id is null;
+  end if;
+
   update public.warehouse_transfer
      set status = 'received', received_by = p_actor_id, received_at = now()
    where id = p_transfer_id;
@@ -898,7 +931,9 @@ begin
     'transfer_id', p_transfer_id,
     'created_batches', v_created,
     'shortfall_qty', v_short_qty,
-    'shortfall_reference_no', v_short_ref
+    'shortfall_reference_no', v_short_ref,
+    'excess_qty', v_excess_qty,
+    'excess_reference_no', v_excess_ref
   );
 end;
 $$;

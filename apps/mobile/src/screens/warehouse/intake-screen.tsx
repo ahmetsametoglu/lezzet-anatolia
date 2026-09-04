@@ -8,6 +8,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { meetsMlor } from '@lezzet/domain-core';
 import type { IntakeFormRowContract, VariantSearchRowContract } from '@lezzet/types';
 
+import { OperationsQuantityBox } from '@/components/operations/quantity-box';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
@@ -1147,33 +1148,22 @@ function IntakeRow({
             kaydetmişti ve o kayıt YANLIŞTI: eksik veri yalnız `sheetAdet`in "kaç koli geldi"
             listesini engelliyor, tuş takımını değil. Tuş takımı zaten vardı (21.159, para).
           */
-          <PressableSurface
+          /* ADET KUTUSU KİTTE (21.254): D5 transfer kabulü de aynı kutuyu çiziyor; ölçüler ve iki
+             hâl `quantity-box` künyesinde. Sapma tonu beklentinin VARLIĞINA bağlı: beklenen yokken
+             her sayı "farklı" görünürdü. */
+          <OperationsQuantityBox
+            value={state.qty}
+            caption={t.intake.qtyCaption}
+            tone={
+              state.qty === null ? 'muted' : row.expectedQty === 0 || state.qty === row.expectedQty ? 'ink' : 'diff'
+            }
             onPress={() => setQtyOpen(true)}
-            feedback="scale"
-            style={styles.qtyBox}
             accessibilityLabel={fillCopy(t.intake.qtyLabel, { name })}
             accessibilityHint={t.intake.qtyHint}
             testID={`warehouse-intake-qty-${row.variantId}`}
-          >
-            <Text
-              style={[
-                styles.qtyValue,
-                // Sapma tonu beklentinin VARLIĞINA bağlı: beklenen yokken her sayı "farklı" görünürdü.
-                state.qty === null
-                  ? styles.qtyValueMuted
-                  : row.expectedQty === 0 || state.qty === row.expectedQty
-                    ? null
-                    : styles.qtyValueDiff,
-              ]}
-            >
-              {state.qty === null ? '—' : String(state.qty)}
-            </Text>
-            <Text style={styles.qtyCaption} accessibilityElementsHidden importantForAccessibility="no">
-              {t.intake.qtyCaption}
-            </Text>
-          </PressableSurface>
+          />
         ) : (
-          <PressableSurface
+          <OperationsQuantityBox
             /*
               DÜĞME BEKLENEN ADEDİ YAZAR — AMA OTOMATİK DEĞİL (kullanıcı kararı 03.09).
 
@@ -1199,27 +1189,19 @@ function IntakeRow({
               }
               setQtyOpen(true);
             }}
-            feedback="scale"
-            style={styles.countCta}
+            value={null}
+            placeholderValue={row.expectedQty > 0 ? row.expectedQty : null}
+            caption={row.expectedQty > 0 ? t.intake.countExpectedCaption : undefined}
+            label={t.intake.countCta}
+            dashed
+            tone="muted"
             accessibilityLabel={
               row.expectedQty > 0
                 ? fillCopy(t.intake.countExpectedLabel, { name, qty: String(row.expectedQty) })
                 : fillCopy(t.intake.qtyLabel, { name })
             }
             testID={`warehouse-intake-count-${row.variantId}`}
-          >
-            {row.expectedQty > 0 ? (
-              <>
-                <Text style={styles.countExpectedValue}>{String(row.expectedQty)}</Text>
-                {/* Başlık ekran okuyucudan gizli: düğmenin kendi adı zaten cümleyi söylüyor. */}
-                <Text style={styles.countExpectedCaption} accessibilityElementsHidden importantForAccessibility="no">
-                  {t.intake.countExpectedCaption}
-                </Text>
-              </>
-            ) : (
-              <Text style={styles.countCtaLabel}>{t.intake.countCta}</Text>
-            )}
-          </PressableSurface>
+          />
         )}
       </View>
 
@@ -1802,33 +1784,6 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text['field-label'],
     color: operationsTheme.colors.error,
   },
-  /* ADET KUTUSU — `OperationsQtyField`in çerçevesiyle AYNI ölçüde ama girdi değil DÜĞME: tuş
-     takımını açar. Ölçüler "say →" kutusuyla da aynı kaynaktan; üçü de aynı yerde durmalı ki
-     satır sayıldığında sağ kenar zıplamasın. */
-  qtyBox: {
-    width: operationsTheme.size.avatarLg + operationsTheme.space['2xl'],
-    height: operationsTheme.size.controlLg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: operationsTheme.border.base,
-    borderColor: operationsTheme.colors.ink,
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.card,
-  },
-  qtyValue: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.step,
-    color: operationsTheme.colors.ink,
-    lineHeight: operationsTheme.text.step,
-  },
-  qtyValueMuted: { color: operationsTheme.colors.muted },
-  qtyValueDiff: { color: operationsTheme.colors.terracotta },
-  qtyCaption: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text['badge-sm'],
-    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text['badge-sm']),
-    color: operationsTheme.colors['tab-inactive'],
-  },
   /* Yapışkan çubuğun dipnotu — kısmi kaydın ne YAPACAĞINI söyler, ortalanmış ve en sessiz ton.
      Düğmenin etiketine sığmayan tek şey sonucudur: kalan satırlar açık kalır. */
   /** Kayıt düğmeleri listenin son bloğu — kartlardan bir kademe geniş nefesle ayrılır. */
@@ -1898,48 +1853,10 @@ const styles = StyleSheet.create({
   /* KAPALI SATIRIN "say →" DÜĞMESİ — kesikli, çünkü bir kayıt değil bir DAVET: burada henüz
      sayılmış bir şey yok. Dolu bir düğme, satırı sayılmış gibi gösterirdi. */
   /*
-    "say →" KUTUSU, ADET KUTUSUNUN TA KENDİ ÖLÇÜSÜNDE (v3:05 · kullanıcı bulgusu 30.08).
-
-    Tasarım ikisini AYNI kutuya çiziyor (`min-width:74; height:52; border-radius:15`) ve fark
-    yalnız çerçevede: sayılmamışta KESİKLİ + beyaz, sayılmışta düz + tonlu. Sebebi ölçülünce
-    görünüyor — satır sayıldığında kutu YERİNDE KALIR, yalnız içi değişir.
-
-    Bizdeki hâl 120×46'lık bir haptı: "say →"ye basıldığı anda kutu daralıp uzuyor ve satırın
-    sağ kenarı zıplıyordu. Ölçüler artık `OperationsQtyField`in `md` kutusuyla aynı kaynaktan
-    (`avatarLg + space['2xl']` = 70 · `controlLg` = 52) — ikisi ayrı yazılsaydı biri bir gün
-    ötekinden kayardı ve zıplama sessizce geri gelirdi.
+    ADET KUTUSU ve "say →" KİTTE (`quantity-box`, 21.254): ölçü (74×52, `OperationsQtyField`in
+    `md` kutusuyla aynı kaynak), kesikli/dolu hâl ve tonlar orada — D5 transfer kabulü aynı kutuyu
+    çiziyor. Ölçüm tarihçesi (30.08: "say →"ye basınca kutunun zıplaması) kitin künyesinde.
   */
-  countCta: {
-    width: operationsTheme.size.avatarLg + operationsTheme.space['2xl'],
-    height: operationsTheme.size.controlLg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: operationsTheme.border.base,
-    borderStyle: 'dashed',
-    // Ölçülen #c4bda9 → `sand-500` (#cdc4a8, Δ9/7/1). Bir kanalda eşiğin 1 üstünde; kesikli bir
-    // çerçevede o fark görülemiyor ve yeni bir kum durağı açmak paleti sebepsiz büyütürdü.
-    borderColor: operationsTheme.colors['sand-500'],
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.card,
-  },
-  /* BEKLENEN ADET DÜĞMESİ — kesikli çerçeve KORUNUR: sayı henüz BEYAN EDİLMEDİ, bir davet.
-     Beyan edilince kutu kesiksiz `qtyBox`a döner ve fark varsa tonu değişir. */
-  countExpectedValue: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.step,
-    color: operationsTheme.colors.muted,
-  },
-  countExpectedCaption: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
-    fontSize: operationsTheme.text['badge-sm'],
-    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text['badge-sm']),
-    color: operationsTheme.colors['tab-inactive'],
-  },
-  countCtaLabel: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.micro,
-    color: operationsTheme.colors.muted,
-  },
   /*
     KAPALI SATIRIN İKİ ROZETİ (v3:05) — dolgulu, çerçevesiz, `tight` yarıçapta.
 
