@@ -314,8 +314,11 @@ kapanışta kendiliğinden (karar §1.8).
   (karar defteri, 04.09).
 
 **Bölüm geneli:**
-- **Çevrimdışı hâli hiçbir depo ekranında yok.** Bölüm kuralı bağlayıcı: bağlantı yokken yazma
-  kapalıdır ve ekran bunu açıkça söyler (kuyruk yok).
+- ~~**Çevrimdışı hâli hiçbir depo ekranında yok.**~~ **KAPANDI (04.09).** Bölüm kuralı bağlayıcı:
+  bağlantı yokken yazma kapalıdır ve ekran bunu açıkça söyler (kuyruk yok). Yazan her depo ekranı
+  artık kilidi taşıyor; en son D3 eklendi (21.260) — o ekran sinyali besliyor ama hiç okumuyordu ve
+  bölümün tek kilitsiz yazma ekranıydı. Kilit YAZIMDA durur, okumada değil: parti ve bağlam
+  çevrimdışıyken de okunur.
 - **Boş · hata · yükleniyor hâlleri çizilmemiş** (hiçbir depo ekranında). Her listenin boş hâli
   ne olduğunu ve nereden dolacağını söylemeli.
 - **"Hangi depoda çalıştığın belli değil" hâli yok** — kapsamında birden çok depo olan (ya da

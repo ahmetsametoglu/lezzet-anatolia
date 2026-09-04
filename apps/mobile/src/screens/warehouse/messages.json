@@ -652,7 +652,11 @@
       "footnote": "Parti düşer, olay referansı kayıttan sonra verilir.",
       "done": "İMHA EDİLDİ",
       "noShelf": "—",
-      "failed": "İmha yazılamadı — {error}"
+      "failed": "İmha yazılamadı — {error}",
+      "locked": {
+        "title": "İmha kaydı kapalı",
+        "body": "İmha bir stok hareketidir: parti düşer ve olay referansı sunucuda doğar. Bağlantı yokken yazılamaz — raf ile sistem çelişmesin."
+      }
     },
     "daysLeft": "{n} gün",
     "daysToday": "bugün son gün",

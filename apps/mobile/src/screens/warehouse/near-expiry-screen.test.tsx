@@ -255,6 +255,50 @@ describe('D3 · yakın-SKT turu', () => {
     });
   });
 
+  /*
+    ── ÇEVRİMDIŞI KİLİDİ (kusur, ölçüldü 04.09) ────────────────────────────────────────────────
+    Bölümün kırmızı çizgisi: bağlantı yokken YAZMA kapalıdır ve ekran bunu SÖYLER (kuyruk yok).
+    D3 bölümün tek kilitsiz yazma ekranıydı — sinyali besliyordu (`trackWarehouse`) ama hiç
+    okumuyordu. Hat kopukken depocu imhayı basıyor, istek düşüyor ve mal raftan kalkmışken kayıt
+    hiç doğmuyordu.
+
+    Kilit YAZIMDA, çekmecenin açılışında değil: parti ve bağlam okunmaya devam eder — kapalı olan
+    karar, bilgi değil.
+  */
+  it('ağ düşünce imha kilitlenir ve SEBEBİ yazılır — çekmece yine açılır', async () => {
+    await renderScreen();
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeOnTheScreen());
+
+    // İlk deneme ağa çıkar ve düşer — çevrimdışı bayrağı böyle doğar (mal kabulün aynı deseni).
+    mockRecordAdjustment.mockResolvedValueOnce({ data: null, error: 'network_error' });
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-confirm'));
+    await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalled());
+
+    // İkinci turda çekmece AÇILIR (okumak serbest) ama yazım kapalı ve sebebi yazılı.
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-discard-locked')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-near-expiry-discard-locked')).toHaveTextContent(/İmha bir stok hareketidir/);
+    expect(screen.getByTestId('warehouse-near-expiry-discard-confirm')).toBeDisabled();
+    // Bağlam yerinde: parti okunmaya devam ediyor.
+    expect(screen.getByTestId('warehouse-near-expiry-discard-sheet')).toHaveTextContent(/partide 4 adet/);
+  });
+
+  it('kilitliyken düğmeye basmak kapıya İSTEK GÖNDERMEZ', async () => {
+    await renderScreen();
+    await waitFor(() => expect(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard')).toBeOnTheScreen());
+
+    mockRecordAdjustment.mockResolvedValueOnce({ data: null, error: 'network_error' });
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-confirm'));
+    await waitFor(() => expect(mockRecordAdjustment).toHaveBeenCalledTimes(1));
+
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-PRT-STR-26-0302-discard'));
+    await fireEvent.press(screen.getByTestId('warehouse-near-expiry-discard-confirm'));
+
+    expect(mockRecordAdjustment).toHaveBeenCalledTimes(1);
+  });
+
   /* Ekran KAPANMAZ (tasarım): satır "imha edildi"ye döner ve referansı taşır — tur devam eder. */
   it('imha sonrası satır referansı taşır ve ekranda kalır', async () => {
     await renderScreen();

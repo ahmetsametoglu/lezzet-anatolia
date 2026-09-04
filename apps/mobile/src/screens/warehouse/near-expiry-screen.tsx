@@ -18,6 +18,7 @@ import type { NearExpiryBatchContract } from '@lezzet/types';
 
 import { productLabel } from './warehouse-format';
 import { urgencyOf, useNearExpiry } from './use-near-expiry.hook';
+import { useWarehouseStatus } from './warehouse-status';
 
 /*
   D3 · YAKIN-SKT TURU (v2:403-424) — bölümün TEK salt-okunur ekranı.
@@ -44,6 +45,9 @@ const t = warehouseCopy;
 export function NearExpiryScreen() {
   const router = useRouter();
   const nearExpiry = useNearExpiry();
+  /* Bölüm kuralı: bağlantı yokken YAZMA kapalı ve ekran bunu söyler (kuyruk yok). D3 sinyali zaten
+     besliyordu (`trackWarehouse`) ama hiç okumuyordu — bölümün tek kilitsiz yazma ekranıydı. */
+  const { offline } = useWarehouseStatus();
   /** Çekmecenin konusu — `null` = kapalı. Adet ayrı tutuluyor: depocu kısmi imha yazabilir. */
   const [discardTarget, setDiscardTargetState] = useState<NearExpiryBatchContract | null>(null);
   const [discardQty, setDiscardQty] = useState(0);
@@ -296,12 +300,30 @@ export function NearExpiryScreen() {
               })}
             </Text>
 
+            {/*
+              ── ÇEVRİMDIŞI KİLİDİ (kusur, ölçüldü 04.09) ────────────────────────────────────
+              Bölümün kırmızı çizgisi: *"bağlantı yokken YAZMA kapalıdır ve ekran bunu açıkça
+              söyler (kuyruk yok)"* — depo yazma ekranlarının hepsinde vardı, D3'te YOKTU. Oysa bu
+              ekran da yazıyor (`recordAdjustment · expired`): hat kopukken depocu imhayı basıyor,
+              istek düşüyor ve mal raftan kalkmışken kayıt hiç doğmuyor. Üstelik sinyal zaten
+              besleniyordu (`trackWarehouse`), yalnız hiç OKUNMUYORDU.
+
+              Kilit YAZIMDA duruyor, çekmecenin açılışında değil: depocu partiyi ve bağlamı görmeye
+              devam etsin — kapalı olan karar, bilgi değil.
+            */}
+            {!offline ? null : (
+              <View style={styles.locked} testID="warehouse-near-expiry-discard-locked">
+                <Text style={styles.lockedTitle}>{t.nearExpiry.discard.locked.title}</Text>
+                <Text style={styles.lockedBody}>{t.nearExpiry.discard.locked.body}</Text>
+              </View>
+            )}
             <PrimaryButton
-              label={fillCopy(t.nearExpiry.discard.confirm, { n: String(discardQty) })}
+              label={offline ? t.common.offlineCta : fillCopy(t.nearExpiry.discard.confirm, { n: String(discardQty) })}
               tone="error"
               elevation="flat"
-              disabled={nearExpiry.discarding || discardQty <= 0}
+              disabled={offline || nearExpiry.discarding || discardQty <= 0}
               onPress={() => {
+                if (offline) return;
                 nearExpiry.discard(discardTarget.stockId, discardQty);
                 setDiscardTarget(null);
               }}
@@ -370,6 +392,25 @@ function outcomeToneOf(batch: NearExpiryBatchContract): { color: string } {
 const ROW_SKELETON_HEIGHT = 96;
 
 const styles = StyleSheet.create({
+  /** Çevrimdışı sebebi — D4b/D5/D6'nın kilit bloğuyla aynı ölçü ve ton. */
+  locked: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space['2xs'],
+  },
+  lockedTitle: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.error,
+  },
+  lockedBody: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.error,
+  },
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,

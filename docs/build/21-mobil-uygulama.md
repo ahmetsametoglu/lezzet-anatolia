@@ -11841,3 +11841,26 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Yeni testler: `refund.test` beş iddia (beyan yazılır · farklı akıbet reddedilir · aynı akıbet
   geçilir · teslim sonrası iade stoğa geri koyar · teslim sonrası imha ikinci kez düşmez) ve
   D6 ekranında iki iddia (sürülen seferde sıfır sayaç · `already_marked` tazeler).
+
+- [x] (21.260) **D3'ÜN ÇEVRİMDIŞI KİLİDİ — bölümün tek kilitsiz yazma ekranıydı; hat kopukken imha basılıyor, istek düşüyor, mal raftan kalkmışken kayıt hiç doğmuyordu** (denetim bulgusu 04.09, aciliyet sırasında ilk)
+  `touches:` `apps/mobile/src/screens/warehouse/{near-expiry-screen.tsx,near-expiry-screen.test.tsx,messages.json}` · `design/pages/app-depo.md`
+
+  **Ölçüm.** `grep -c offline` → D3 ekranı **0**, kardeşleri 2-22 arası. Buna karşılık D3 YAZIYOR:
+  `recordAdjustment({ reason: 'expired', direction: 'out' })`. Bölümün kendi kırmızı çizgisi
+  (*"bağlantı yokken yazma kapalıdır ve ekran bunu açıkça söyler — kuyruk yok"*) tam da bu ekranda
+  tutmuyordu.
+
+  **En can sıkıcı yanı:** D3 çevrimdışı sinyalini zaten BESLİYORDU (`trackWarehouse`, iki çağrıda)
+  ama hiç OKUMUYORDU. Yani eksik olan altyapı değil, tek satırlık tüketimdi — ve sessizdi: depocu
+  düğmeye basıyor, istek düşüyor, satırda bir hata cümlesi beliriyor ama ekran ikinci, üçüncü
+  denemeyi de kabul etmeye devam ediyordu.
+
+  **Kilit YAZIMDA, çekmecenin açılışında değil.** Depocu partiyi, rafı, kalan adedi ve toplam stoğu
+  görmeye devam eder — kapalı olan KARAR, bilgi değil. Çekmecede onay düğmesinin üstünde sebep
+  yazılı (*"İmha bir stok hareketidir: parti düşer ve olay referansı sunucuda doğar"*), düğme
+  kapalı ve etiketi bağlantı cümlesine dönüyor; kardeş ekranların kilit bloğuyla aynı ölçü ve ton.
+
+  **Testler:** iki iddia — ağ düşünce çekmece YİNE açılıyor ama yazım kilitli ve sebebi yazılı
+  (bağlam yerinde), ve kilitliyken düğmeye basmak kapıya İSTEK GÖNDERMİYOR (`toHaveBeenCalledTimes(1)`
+  ikinci turdan sonra da 1). Tasarım sayfasının *"Çevrimdışı hâli hiçbir depo ekranında yok"*
+  maddesi kapatıldı — yazan her depo ekranı artık kilidi taşıyor.
