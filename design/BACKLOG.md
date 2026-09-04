@@ -476,6 +476,45 @@ Müşteri evreninin 15 sayfasının hepsinde hem içerik envanteri hem görsel k
 Paketler istisnası dışında). Operasyon, depo ve kurye yüzeylerinin **sayfa** tasarımları da mevcut;
 onların kod tarafındaki açıkları kendi `docs/build` dosyalarında izlenir, burada tekrarlanmaz.
 
+**KARGO DÖNÜŞÜ — hiçbir yüzeyi yok, 05.09 (ölçüldü).** Müşteriye ulaşmayan bir kargo kolisi depoya
+geri döndüğünde onu karşılayan ekran YOK: ne mobilde ne web operasyonda. Boşluk kayıtsızdı; burada
+açılıyor.
+
+Ölçülen hâl:
+
+- **Sistem koliyi biliyor.** Taşıyıcının bildirimi çözülüyor ve gönderiye `returned` yazılıyor
+  (`RETURNED_TO_SENDER` · `REFUSED_BY_RECIPIENT`). Bu bir kalıntı değil, testle çivili bir karar:
+  taşıyıcının *"gönderene dönüyor"* demesi malın depoda olduğu anlamına gelmez, o yüzden sipariş
+  kıpırdatılmıyor (`shipping/sync-status.ts`). **Karar doğru ve korunmalı** — çizilecek şey onun
+  yerine geçen bir otomasyon değil, FİZİKSEL KABUL ANI.
+- **Ama kimseye söylenmiyor.** Sipariş `out_for_delivery`de süresiz asılı kalıyor: takılı gönderi
+  nöbeti `returned`ı terminal saydığı için sormayı bırakıyor, sevkiyat masasının "askıda kalanlar"
+  sorgusu ise açıkça yalnız rota siparişlerine bakıyor. Kargo siparişi yola çıktığı an operasyon
+  yüzeylerinden kayboluyor.
+- **Kutunun kaydı donuyor.** `order_box`ta "geri döndü" diye kolon ya da durum yok; satır
+  "mühürlü + taşıyıcıya devredilmiş" hâlinde kalıyor. Devir damgasını silen tek kod kurye
+  dönüşünde ve kargo kutusuna erişemiyor.
+- **D6'nın altyapısı HAZIR, tetiği yok.** Dönüş listesi `delivery_type` süzmüyor, kuryesiz dönüşler
+  kendi kümesinde ve o kümenin kendi adresi var (`unassigned`); metni bile *"Kargo ve tezgâh
+  dönüşleri"* diyor. Eksik olan tek halka arada: **bir kargo siparişini `returned`a taşıyan hiçbir
+  üretim yolu yok.** Bugün tek çare web'de sipariş detayından elle "İade" demek ve onu hiçbir uyarı
+  tetiklemiyor.
+- **Stok tarafı zaten doğru, çizilecek bir şey yok.** Teslim edilmeden dönen kolide stok ARTMAZ ve
+  artmamalı: mal fiziksel stoktan hiç düşmemiştir (düşüm teslim anında olur), yapılacak tek şey
+  rezervasyonun serbest bırakılmasıdır ve onu yapan yol var. Teslim edilip sonra iade edilen malda
+  stok gerçekten geri giriyor (04.09'da `adjust_fulfillment`ın ölçütü durum günlüğüne çevrildi).
+  Mal ÇIKTIĞI partiye dönüyor, yeni parti açılmıyor ve raf sorulmuyor.
+
+Çizilecek olan: **koliyi karşılayan an.** Kim okutuyor, ne okutuyor (taşıyıcının takip barkodu mu,
+bizim kutu kodumuz mu), ekran hangi siparişi bulup ne diyor, koli açılıp içindekiler kaleme
+bağlanırken ne soruluyor. Kararı verilmesi gerekenler: bu D6'nın içinde bir küme mi yoksa ayrı bir
+ekran mı; kutunun mührü açılıyor mu; ve operatör kolinin geldiğini nasıl öğreniyor (bildirim türü
+`order_delivery_failed` tasarımda önerilmiş ama kodda yok).
+
+**Kayıt hatası düzeltildi (05.09):** bu boşluk iki yerde *"kargo yolundan gelir, o zincir beslemede
+kapalı"* diye yazılıydı ve YANLIŞTI — zincir beslemede kapalı değil, hiç yazılmamış. O notu okuyan
+"besleme açılınca gelir" sanardı.
+
 **Adres düzeltme teklifi — dört yüzeyde de çizilmedi, 01.09 (`11.11`).** Kullanıcı ölçtü: aynı adres
 satırı iki siparişte, biri gerçek kapı (67380 Lingolsheim, `housenumber`), öteki var olmayan kapı
 (67000 Strasbourg, `street`) — arada 7,2 km. Sistem farkı biliyor (`geo_precision`) ve hiçbir yerde

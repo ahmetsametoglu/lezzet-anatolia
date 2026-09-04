@@ -53,9 +53,12 @@ import type { Depolar } from './warehouse';
     · SERBEST ÜRÜN — araca iki varyant alındı, satılmadı. D6'nın "say ve devret" bölümü.
 
   **KURYESİZ DÖNÜŞ bu blokta YOK ve bilerek yok:** kuryesi olmayan bir dönüş kargo yolundan gelir
-  (gönderi kaydı, taşıyıcı, iade süreci) ve o zincir beslemede kapalı (01.09 kararı). Uydurma bir
-  yoldan `returned` yazmak, üretimde oluşamayacak bir hâl kurmak olurdu. Ekranın o kümesi kendi
-  birim testinde sınanıyor (`courier-return-screen.test.tsx`).
+  ve o yol ~~beslemede kapalı (01.09 kararı)~~ **HİÇ YAZILMAMIŞ** (düzeltildi 05.09, ölçüldü):
+  taşıyıcının iadesi gönderiye yazılıyor ama siparişi kıpırdatmıyor — bu testle çivili bilinçli bir
+  karar — ve depoya dönen koliyi karşılayan bir kapı hiç yok. Yani sahne kurulamıyor çünkü besleme
+  kapalı değil, üretim yolu yok. Uydurma bir yoldan `returned` yazmak, üretimde oluşamayacak bir
+  hâl kurmak olurdu. Ekranın o kümesi kendi birim testinde sınanıyor
+  (`courier-return-screen.test.tsx`). Açığın kendisi `design/BACKLOG.md §4`te.
 
   İki sefer de AYNI GÜN ve aynı araçta: kural veride (`assert_vehicle_single_courier`) ve sahne o
   kuralın içinde duruyor — para iki kez (sefer başına), mal bir kez (araç bir kez boşalır).

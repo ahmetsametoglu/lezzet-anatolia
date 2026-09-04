@@ -11691,8 +11691,11 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Sefer A sürüldü ve kapandı (1 teslim · 1 red · 1 ulaşılamadı), Sefer B araçta bekliyor, araçta 10
   adet serbest ürün. **`db:reset` GEREKTİRMEZ** — guard `delivery_run`a bakıyor ve o tablo boş, yani
   `pnpm db:seed` tek başına koşuyor. Kuryesiz dönüş sahneye GİRMEDİ ve bilerek: o zincir kargo
-  yolundan geçiyor, beslemede kapalı (01.09) — uydurma bir yoldan `returned` yazmak üretimde
-  oluşamayacak bir hâl kurmak olurdu; ekranın o kümesi birim testinde sınanıyor.
+  yolundan geçiyor ve ~~beslemede kapalı (01.09)~~ **HİÇ YAZILMAMIŞ** (düzeltildi 05.09, ölçüldü —
+  cümle yanlıştı ve okuyanı "besleme açılınca gelir" sanmaya götürürdü): taşıyıcının iadesi
+  gönderiye yazılıyor ama siparişi kıpırdatmıyor (testli, bilinçli karar) ve depoya dönen koliyi
+  karşılayan bir kapı hiç yok. Uydurma bir yoldan `returned` yazmak üretimde oluşamayacak bir hâl
+  kurmak olurdu; ekranın o kümesi birim testinde sınanıyor. Açığın kendisi `design/BACKLOG.md §4`te.
 
   **Ölçüldü (yerel DB, 04.09):** liste Marc Lemoine'ı 1 bekleyen kalem · 1 inecek kutu · 2 kalacak
   kutu · 10 adet serbest ürünle veriyor; detayda inen kutu reddedilen siparişin, kalanların biri
@@ -11864,3 +11867,40 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   (bağlam yerinde), ve kilitliyken düğmeye basmak kapıya İSTEK GÖNDERMİYOR (`toHaveBeenCalledTimes(1)`
   ikinci turdan sonra da 1). Tasarım sayfasının *"Çevrimdışı hâli hiçbir depo ekranında yok"*
   maddesi kapatıldı — yazan her depo ekranı artık kilidi taşıyor.
+
+- [x] (21.261) **D8 ÇİZİME BİREBİR ÇEKİLDİ — sonuç satırı iki katmanlı kart, ton üçten dörde, saat geri geldi; emoji yerine kit ikonu** (kullanıcı kararı 05.09 "birebir yapalım")
+  `touches:` `apps/mobile/src/screens/warehouse/{handover-screen.tsx,handover-screen.test.tsx,messages.json}` · `design/KARARLAR.md` · `design/pages/app-depo.md`
+
+  **Ölçüm önce.** v3:22 çizimi ile kod karşılaştırıldı, bulgular ayrıca çürütmeye verildi. Sonuç:
+  **mantık ve cümleler sadıktı, kayan şey görsel dilbilgisiydi.** Bir iddiam çürüdü (çizimdeki
+  "kutusuz sipariş" kartı bu ekranda ÜRETİLEMİYOR — o duvar 21.131'de hazırlık onayına taşınmış),
+  üç sapmayı da kaçırmışım.
+
+  **En ağırı TON ÇÖKMESİYDİ.** Kod üç ton taşıyordu ve çakışma en yanlış yerdeydi: *"kutu verildi"*
+  ile *"son kutuyla sipariş YOLA ÇIKTI"* aynı kartı alıyordu — yani ekranın var olma sebebi olan tek
+  olay görsel yüzünü kaybetmişti. Şimdi dört ton var: tamamlanan gönderi yeşil zemin + tik, kısmi
+  devir nötr, tekrar ve kapsam dışı SESSİZ, gerçek engel kırmızı. Kırmızı ailesinin üç rengi de
+  token'larda birebir duruyordu (`error-bg` · `error-line` · `error`), kullanılmamıştı.
+
+  **"Başka deponun kutusu" kırmızıdan çıktı.** Çizim onu nötr çiziyor ve haklı: depocu yanlış bir
+  şey yapmadı, kutuyu doğru yığına koyacak. Aynı sınıf "zaten verilmişti" — bir tekrar, bir arıza
+  değil.
+
+  **Öteki çekilenler:** satırlar iki katman (kalın başlık + ince alt satır); saat sağ üstte —
+  zaten hesaplanıyordu, satır anahtarı olarak kullanılıp atılıyordu; dipnot çizimin GEREKÇELİ
+  cümlesine döndü (*"bir siparişin kutuları iki gönderiye bölünmüş olabilir"*) ve yalnız dolu
+  listede çiziliyor; kilit metninin düşen ikinci cümlesi (*"Bağlantı gelince okutucu geri
+  çizilir"*) geri geldi; düğmedeki emoji gitti, kitin `scan` ikonu geldi — geometrisi çizimle
+  birebir ve "emoji gitti, çizgi ikon geldi" kararı iki yerde kayıtlıydı, D8'e uygulanmamıştı; ölü
+  `hint` dizesi silindi (`knip` JSON anahtarlarını görmüyor).
+
+  **İKİ SAPMA BİLEREK KALDI**, gerekçeleri karar defterinde: sayacın YERİ (anlamı 21.134'te
+  bilinçli değişti, çizimin başlık kuyruğuna oturmuyor) ve "başka deponun kutusu" satırında DEPO
+  KODU (kapı onu döndürmüyor; elimizde olmayan kimliği yazmıyoruz — kullanıcı kuralı 05.09).
+
+  **Cihazda ölçüldü (Oppo CPH1907):** düğmede kit ikonu, kural düğmenin altında, boş hâl kesikli
+  bloğunda ve dipnot boş listede ÇİZİLMİYOR. Sonuç kartları cihazda üretilemedi — yerelde kargo
+  siparişi yok (kayıtlı boşluk, `design/BACKLOG.md §4`).
+
+  Testler 8'den 10'a: kapsam dışı ile ikinci okutmanın SESSİZ tonda olduğu ve her satırın saatini
+  taşıdığı ayrıca çivilendi; mevcut sekiz iddia iki katmanlı yapıya çekildi.

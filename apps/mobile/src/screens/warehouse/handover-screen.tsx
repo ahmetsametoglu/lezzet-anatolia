@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
+import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fetchPendingHandover, handOverBox } from '@/lib/api/warehouse';
 import { fillCopy } from '@/screens/operations/copy';
@@ -44,11 +45,34 @@ import { trackWarehouse, useWarehouseStatus } from './warehouse-status';
 
 const t = warehouseCopy;
 
-/** Okutma geçmişinin bir satırı — sonucun tonu cümleyle birlikte taşınır. */
+/*
+  ── SATIR İKİ KATMAN, TON DÖRT (çizime çekildi 05.09) ───────────────────────
+  Çizim her sonucu bir KART olarak veriyor: kalın başlık, ince alt satır, sağ üstte saat. Kod
+  ikisini tek cümlede birleştirip saati atıyordu — saat zaten hesaplanıyordu, satır anahtarı
+  olarak kullanılıp çöpe gidiyordu.
+
+  Ton sayısı da üçe düşmüştü ve çakışma en yanlış yerdeydi: "kutu verildi" ile "son kutuyla sipariş
+  YOLA ÇIKTI" aynı kartı alıyordu. Oysa ekranın var olma sebebi o ikincisi — gönderinin yola
+  çıktığı an. Çizim onu ayrı bir tonla ve tikle işaretliyor; kısmi devir nötr kalıyor.
+
+  `muted` da bilinçli: "başka deponun kutusu" ve "zaten verilmişti" HATA DEĞİL. Biri yönlendirme
+  (kutuyu doğru yığına koy), öteki bir tekrar. Kırmızıya boyamak depocuya yanlış yaptığını söyler.
+*/
+type ScanTone = 'done' | 'neutral' | 'muted' | 'error';
+
+/** Okutma geçmişinin bir satırı — başlık, alt satır, saat ve ton birlikte taşınır. */
 interface ScanRow {
   key: string;
-  tone: 'ok' | 'warn' | 'error';
-  text: string;
+  tone: ScanTone;
+  title: string;
+  sub: string;
+  /** Okutmanın CİHAZDAKİ anı ("14:20") — kapı zaman döndürmüyor, bu yerel ölçüm. */
+  time: string;
+}
+
+/** `Date` → "14:20". Yerel saat; ekranın tek kullanıcısı rampadaki depocu ve saati onun saati. */
+function clockOf(at: Date): string {
+  return `${String(at.getHours()).padStart(2, '0')}:${String(at.getMinutes()).padStart(2, '0')}`;
 }
 
 export function HandoverScreen() {
@@ -82,31 +106,58 @@ export function HandoverScreen() {
       setBusy(false);
 
       const satir = ((): ScanRow => {
-        const key = `${code}-${Date.now()}`;
+        const now = new Date();
+        const key = `${code}-${now.getTime()}`;
+        const time = clockOf(now);
+        const r = t.handover.result;
+
         if (result.error !== null) {
-          return { key, tone: 'error', text: result.error === 'network_error' ? t.common.networkError : fillCopy(t.common.serverError, { error: result.error }) };
+          return {
+            key,
+            tone: 'error',
+            time,
+            title: r.failed.title,
+            sub: fillCopy(r.failed.sub, {
+              reason: result.error === 'network_error' ? t.common.networkError : fillCopy(t.common.serverError, { error: result.error }),
+            }),
+          };
         }
         const data = result.data;
         switch (data.status) {
-          case 'ok':
+          case 'ok': {
+            const ref = data.referenceNo ?? '—';
+            // SON KUTU AYRI BİR TON: ekranın var olma sebebi bu an (çizim: yeşil zemin + tik).
+            if (data.shipmentHandedOver) {
+              return {
+                key,
+                tone: 'done',
+                time,
+                title: r.doneAll.title,
+                sub: fillCopy(r.doneAll.sub, { ref, handed: String(data.handedBoxes), total: String(data.boxCount) }),
+              };
+            }
+            // Kalan kutu sayısı TÜRETİLİR (toplam − verilen); çizimin alt satırı bunu söylüyor.
+            const kalan = data.boxCount - data.handedBoxes;
             return {
               key,
-              tone: 'ok',
-              text: data.shipmentHandedOver
-                ? fillCopy(t.handover.doneAll, { ref: data.referenceNo ?? '—', n: String(data.boxCount) })
-                : fillCopy(t.handover.done, { n: String(data.boxNo), handed: String(data.handedBoxes), total: String(data.boxCount) }),
+              tone: 'neutral',
+              time,
+              title: fillCopy(r.done.title, { handed: String(data.handedBoxes), total: String(data.boxCount) }),
+              sub: kalan === 1 ? fillCopy(r.done.subOne, { ref }) : fillCopy(r.done.subMany, { ref, n: String(kalan) }),
             };
+          }
           // İkinci okutma bir HATA değil: sayaç kıpırdamadı, depocu sayımına güvenmeye devam etsin.
           case 'already_handed':
-            return { key, tone: 'warn', text: fillCopy(t.handover.already, { n: String(data.boxNo), handed: String(data.handedBoxes), total: String(data.boxCount) }) };
+            return { key, tone: 'muted', time, title: r.already.title, sub: fillCopy(r.already.sub, { code }) };
+          // Kapsam dışı kutu da hata DEĞİL, bir yönlendirme: kutuyu doğru yığına geri koy.
           case 'out_of_scope':
-            return { key, tone: 'error', text: fillCopy(t.handover.outOfScope, { ref: data.referenceNo ?? '—' }) };
+            return { key, tone: 'muted', time, title: r.outOfScope.title, sub: fillCopy(r.outOfScope.sub, { ref: data.referenceNo ?? '—' }) };
           case 'not_sealed':
-            return { key, tone: 'error', text: fillCopy(t.handover.notSealed, { n: String(data.boxNo) }) };
+            return { key, tone: 'error', time, title: r.notSealed.title, sub: fillCopy(r.notSealed.sub, { code }) };
           case 'not_announced':
-            return { key, tone: 'error', text: fillCopy(t.handover.notAnnounced, { n: String(data.boxNo) }) };
+            return { key, tone: 'error', time, title: r.notAnnounced.title, sub: r.notAnnounced.sub };
           default:
-            return { key, tone: 'error', text: fillCopy(t.handover.unknownCode, { code }) };
+            return { key, tone: 'error', time, title: r.unknownCode.title, sub: fillCopy(r.unknownCode.sub, { code }) };
         }
       })();
 
@@ -167,6 +218,7 @@ export function HandoverScreen() {
               accessibilityLabel={t.handover.cta}
               testID="warehouse-handover-scan"
             >
+              <Icon name="scan" size={operationsTheme.size.cardTileIcon} color={operationsTheme.colors.cream} />
               <Text style={styles.scanLabel}>{busy ? t.handover.busy : t.handover.cta}</Text>
             </PressableSurface>
             {/* EKRANIN KURALI DÜĞMENİN ALTINDA (v3:1686) — "hangi siparişi vereceğini seçmiyorsun"
@@ -185,13 +237,22 @@ export function HandoverScreen() {
           </View>
         ) : (
           rows.map((row) => (
-            <Text key={row.key} style={[styles.notice, styles[`notice_${row.tone}`]]} testID={`warehouse-handover-row-${row.key}`}>
-              {row.text}
-            </Text>
+            <View key={row.key} style={[styles.row, styles[`row_${row.tone}`]]} testID={`warehouse-handover-row-${row.key}`}>
+              <View style={styles.rowHead}>
+                {row.tone !== 'done' ? null : (
+                  <Icon name="check" size={operationsTheme.size.cardTileIcon} color={operationsTheme.colors['olive-dark']} />
+                )}
+                <Text style={[styles.rowTitle, styles[`title_${row.tone}`]]}>{row.title}</Text>
+                {/* SAAT sağ üstte (çizim): depocu "hangi kutuyu ne zaman verdim" sorusunu
+                    listeden okuyor. Kapı zaman döndürmüyor, bu CİHAZIN ölçtüğü an. */}
+                <Text style={styles.rowTime}>{row.time}</Text>
+              </View>
+              <Text style={styles.rowSub}>{row.sub}</Text>
+            </View>
           ))
         )}
 
-        <Text style={styles.footnote}>{t.handover.footnote}</Text>
+        {rows.length === 0 ? null : <Text style={styles.footnote}>{t.handover.footnote}</Text>}
       </ScrollView>
 
       <ScanSheet
@@ -218,8 +279,10 @@ const styles = StyleSheet.create({
     height: operationsTheme.size.controlLg,
     borderRadius: operationsTheme.radius.control,
     backgroundColor: operationsTheme.colors.olive,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: operationsTheme.space.lg,
   },
   scanLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
@@ -285,28 +348,62 @@ const styles = StyleSheet.create({
     lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
     color: operationsTheme.colors.error,
   },
-  notice: {
-    fontFamily: operationsTheme.font.body[400],
-    fontSize: operationsTheme.text['body-sm'],
-    padding: operationsTheme.space.md,
+  /*
+    SONUÇ KARTI (çizime çekildi 05.09) — başlık + saat üstte, alt satır altta.
+    Dört ton, dördü de çizimin kendi zeminleri; kırmızı ailesi token'larda BİREBİR duruyor.
+  */
+  row: {
+    gap: operationsTheme.space['2xs'],
+    paddingVertical: operationsTheme.space.lg,
+    paddingHorizontal: operationsTheme.space.xl,
     borderRadius: operationsTheme.radius.card,
     borderWidth: operationsTheme.border.base,
   },
-  notice_ok: {
-    color: operationsTheme.colors.ink,
-    borderColor: operationsTheme.colors['olive-line'],
-    backgroundColor: operationsTheme.colors.card,
+  rowHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.md,
   },
-  notice_warn: {
-    color: operationsTheme.colors.ink,
-    borderColor: operationsTheme.colors['olive-line'],
+  rowTitle: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text['body-sm'],
+  },
+  /** Saat sağ üstte, satırın en sessiz öğesi — bir künye, bir vurgu değil. */
+  rowTime: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  rowSub: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.body,
+  },
+  /** TAMAMLANDI — gönderi yola çıktı. Ekranın var olma sebebi olan tek olay (çizim: yeşil + tik). */
+  row_done: {
+    backgroundColor: operationsTheme.colors['success-bg'],
+    borderColor: operationsTheme.colors['success-line'],
+  },
+  title_done: { color: operationsTheme.colors['olive-dark'] },
+  /** KISMİ devir — nötr kart; iş sürüyor, kutlanacak bir şey yok. */
+  row_neutral: {
     backgroundColor: operationsTheme.colors.panel,
+    borderColor: operationsTheme.colors['sand-300'],
   },
-  notice_error: {
-    color: operationsTheme.colors.terracotta,
-    borderColor: operationsTheme.colors.terracotta,
-    backgroundColor: operationsTheme.colors.card,
+  title_neutral: { color: operationsTheme.colors.ink },
+  /** HATA DEĞİL, SESSİZ: ikinci okutma ve başka deponun kutusu. Biri tekrar, öteki yönlendirme. */
+  row_muted: {
+    backgroundColor: operationsTheme.colors.cream,
+    borderColor: operationsTheme.colors['neutral-bg'],
   },
+  title_muted: { color: operationsTheme.colors.body },
+  /** GERÇEK ENGEL — mühürsüz kutu, etiketsiz gönderi, tanınmayan kod. */
+  row_error: {
+    backgroundColor: operationsTheme.colors['error-bg'],
+    borderColor: operationsTheme.colors['error-line'],
+  },
+  title_error: { color: operationsTheme.colors.error },
   footnote: {
     marginTop: operationsTheme.space.lg,
     fontFamily: operationsTheme.font.body[400],

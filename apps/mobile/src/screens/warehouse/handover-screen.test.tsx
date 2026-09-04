@@ -93,7 +93,10 @@ describe('kargo devri', () => {
 
     await okut('Toplama');
 
-    await waitFor(() => expect(screen.getByText(/Kutu 2 verildi — 2\/3/)).toBeOnTheScreen());
+    /* SATIR İKİ KATMAN (çizime çekildi 05.09): kalın başlık sayacı, ince alt satır siparişi ve
+       kalanı söyler. Eskiden ikisi tek cümlede birleşikti. */
+    await waitFor(() => expect(screen.getByText('Kutu verildi · 2/3')).toBeOnTheScreen());
+    expect(screen.getByText('LZA-26-3M8C · bir kutu daha bekliyor')).toBeOnTheScreen();
     // Gövde SUNUCUYA gidiyor: hangi kolonda aranacağını telefon bilmiyor, kod olduğu gibi gidiyor.
     expect(okutmaCagrilari()).toHaveLength(1);
   });
@@ -104,8 +107,10 @@ describe('kargo devri', () => {
 
     await okut('Toplama');
 
-    await waitFor(() => expect(screen.getByText(/TAŞIYICIYA VERİLDİ/)).toBeOnTheScreen());
-    expect(screen.getByText(/sipariş yola çıktı/)).toBeOnTheScreen();
+    /* Ekranın var olma sebebi olan an KENDİ TONUNU taşır (çizim: yeşil zemin + tik). Eskiden
+       "kutu verildi" ile aynı kartı alıyordu, yani tek gerçek olay görsel yüzünü kaybediyordu. */
+    await waitFor(() => expect(screen.getByText('Son kutuyla sipariş YOLA ÇIKTI')).toBeOnTheScreen());
+    expect(screen.getByText('LZA-26-3M8C · gönderi 3/3 kutu verildi')).toBeOnTheScreen();
   });
 
   it('İKİNCİ okutma hata değil: "zaten verilmişti" ve sayı DEĞİŞMEZ', async () => {
@@ -116,7 +121,8 @@ describe('kargo devri', () => {
 
     // Depocu rampada aynı kutuyu iki kez okutabilir; hata cümlesi onu kendi sayımından
     // şüphelendirirdi.
-    await waitFor(() => expect(screen.getByText(/zaten verilmişti — sayı değişmedi \(1\/2\)/)).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByText('Zaten verilmişti')).toBeOnTheScreen());
+    expect(screen.getByText(/ikinci okutma yok sayıldı/)).toBeOnTheScreen();
   });
 
   /*
@@ -157,14 +163,39 @@ describe('kargo devri', () => {
     await waitFor(() => expect(screen.getAllByTestId('warehouse-handover-pending').at(-1)).toHaveTextContent(/okunamadı/));
   });
 
+  /*
+    KAPSAM DIŞI KUTU HATA DEĞİL, YÖNLENDİRMEDİR (çizime çekildi 05.09). Kod onu kırmızı yazıyordu;
+    çizim nötr çiziyor ve haklı: depocu yanlış bir şey yapmadı, kutuyu doğru yığına koyacak.
+    "Zaten verilmişti" de aynı sınıf — bir tekrar, bir arıza değil.
+  */
+  it('kapsam dışı kutu ve ikinci okutma SESSİZ tonda — hata ailesinde değil', async () => {
+    net.handover = { status: 'out_of_scope', referenceNo: 'LZA-26-KEHL1' };
+    await render(<HandoverScreen />);
+    await okut('Toplama');
+
+    await waitFor(() => expect(screen.getByText('Başka deponun kutusu — geri koy')).toBeOnTheScreen());
+    expect(screen.getByText('LZA-26-KEHL1 · buradan verilemez')).toBeOnTheScreen();
+  });
+
+  /* SAAT SATIRDA (çizim: 14:20 · 14:19 · 14:17) — depocu "hangi kutuyu ne zaman verdim"i
+     listeden okuyor. Kapı zaman döndürmüyor; bu cihazın ölçtüğü an, uydurma değil. */
+  it('her okutma satırı SAATİNİ taşır', async () => {
+    net.handover = { status: 'ok', boxNo: 1, referenceNo: 'LZA-26-3M8C', handedBoxes: 1, boxCount: 2, shipmentHandedOver: false };
+    await render(<HandoverScreen />);
+    await okut('Toplama');
+
+    await waitFor(() => expect(screen.getByText('Kutu verildi · 1/2')).toBeOnTheScreen());
+    expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeOnTheScreen();
+  });
+
   it('adlı retler SEBEBİYLE yazılır — mühürsüz kutu ve duyurulmamış gönderi ayrı cümleler', async () => {
     net.handover = { status: 'not_sealed', boxNo: 1 };
     await render(<HandoverScreen />);
     await okut('Toplama');
-    await waitFor(() => expect(screen.getByText(/mühürlü değil/)).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByText(/Mühürlü değil/)).toBeOnTheScreen());
 
     net.handover = { status: 'not_announced', boxNo: 1 };
     await okut('Toplama');
-    await waitFor(() => expect(screen.getByText(/etiket alınmamış/)).toBeOnTheScreen());
+    await waitFor(() => expect(screen.getByText('Etiket alınmamış')).toBeOnTheScreen());
   });
 });

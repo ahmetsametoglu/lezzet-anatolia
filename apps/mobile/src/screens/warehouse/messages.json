@@ -1007,7 +1007,7 @@
   "handover": {
     "title": "Kargo devri",
     "subtitle": "taşıyıcı rampada · kutuyu okut",
-    "cta": "📷 Kutuyu okut",
+    "cta": "Kutuyu okut",
     "busy": "Okutuluyor…",
     "pending": "Rampada {n} kutu taşıyıcıyı bekliyor.",
     "pendingOne": "Rampada 1 kutu taşıyıcıyı bekliyor.",
@@ -1015,15 +1015,7 @@
     "pendingUnknown": "Bekleyen kutu sayısı okunamadı.",
     "scanTitle": "Kutuyu okut",
     "scanHint": "Taşıyıcının etiketindeki takip barkodunu çerçeveye getirin.",
-    "hint": "Henüz kutu okutulmadı. Elindeki kutuyu okut — hangi gönderi olduğunu sistem çözer.",
-    "done": "Kutu {n} verildi — {handed}/{total}.",
-    "doneAll": "{ref} TAŞIYICIYA VERİLDİ — {n} kutunun hepsi okutuldu, sipariş yola çıktı.",
-    "already": "Kutu {n} zaten verilmişti — sayı değişmedi ({handed}/{total}).",
-    "outOfScope": "Bu kutu başka deponun ({ref}) — geri koy.",
-    "notSealed": "Kutu {n} mühürlü değil — açık kutu taşıyıcıya verilemez.",
-    "notAnnounced": "Kutu {n} için etiket alınmamış — önce hazırlık ekranından kargoya ver.",
-    "unknownCode": "{code} tanınmıyor — taşıyıcı etiketinin barkodunu okutun.",
-    "footnote": "Sayım GÖNDERİYİ sayar: son kutu okutulunca sipariş kendiliğinden yola çıkar.",
+    "footnote": "Sayım gönderiyi sayar, siparişi değil — bir siparişin kutuları iki gönderiye bölünmüş olabilir.",
     "scanRule": "Hangi siparişi vereceğini seçmiyorsun — eldeki kutuyu okut, hangi gönderi olduğunu sistem çözer.",
     "logHeading": "OKUTMA GEÇMİŞİ",
     "empty": {
@@ -1032,7 +1024,42 @@
     },
     "locked": {
       "title": "Okutucu kapalı",
-      "body": "Kutu devri ANINDA yazılır, kuyruğa alınmaz — taşıyıcıya verilen kutunun sistemde beklemesi kabul edilemez."
+      "body": "Kutu devri ANINDA yazılır, kuyruğa alınmaz — taşıyıcıya verilen kutunun sistemde beklemesi kabul edilemez. Bağlantı gelince okutucu geri çizilir."
+    },
+    "result": {
+      "done": {
+        "title": "Kutu verildi · {handed}/{total}",
+        "subOne": "{ref} · bir kutu daha bekliyor",
+        "subMany": "{ref} · {n} kutu daha bekliyor"
+      },
+      "doneAll": {
+        "title": "Son kutuyla sipariş YOLA ÇIKTI",
+        "sub": "{ref} · gönderi {handed}/{total} kutu verildi"
+      },
+      "already": {
+        "title": "Zaten verilmişti",
+        "sub": "{code} · ikinci okutma yok sayıldı"
+      },
+      "notSealed": {
+        "title": "Mühürlü değil — açık kutu verilmez",
+        "sub": "{code} · önce kutuyu kapat"
+      },
+      "notAnnounced": {
+        "title": "Etiket alınmamış",
+        "sub": "Önce hazırlıktan \"kargoya ver\" ile etiketi al"
+      },
+      "outOfScope": {
+        "title": "Başka deponun kutusu — geri koy",
+        "sub": "{ref} · buradan verilemez"
+      },
+      "unknownCode": {
+        "title": "Kod tanınmıyor",
+        "sub": "{code} · taşıyıcı etiketinin barkodunu okutun"
+      },
+      "failed": {
+        "title": "Okutma yazılamadı",
+        "sub": "{reason}"
+      }
     }
   },
   "printers": {

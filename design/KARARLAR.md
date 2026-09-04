@@ -2139,3 +2139,31 @@ kiremit: araç bugün boşalmayabilir, malın tamamını devralmak yanlış olur
 **Karar 4 — akıbeti yazılmış satır seçici çizmez.** Kapalı çip dokunulabilir görünen ölü bir kontrol
 olurdu ve ikinci kez gönderilen `restock` stoğa iki kez yazardı. Satır listede kalır (depocu neyi
 karara bağladığını görmeden kalanı işaretleyemez) ama sonucunu yazar.
+
+## D8 · Kargo devri — çizime birebir çekildi, iki sapma kaldı (05.09)
+
+Ekranın mantığı ve cümleleri zaten sadıktı; kayan şey görsel dilbilgisiydi. Çekilenler: sonuç
+satırları iki katmanlı karta döndü (kalın başlık + ince alt satır + sağ üstte saat), ton sayısı
+üçten dörde çıktı, dipnot çizimin kendi cümlesine döndü ve yalnız dolu listede çiziliyor, kilit
+metninin düşen ikinci cümlesi geri geldi, düğmedeki emoji yerini kitin `scan` ikonuna bıraktı.
+
+**Karar 1 — TON, ANLAMIN KENDİSİ.** Kod üç ton taşıyordu ve çakışma en yanlış yerdeydi: "kutu
+verildi" ile "son kutuyla sipariş YOLA ÇIKTI" aynı kartı alıyordu. Oysa ekranın var olma sebebi o
+ikincisi. Artık dört ton var ve ikisi bilinçli olarak HATA DEĞİL: "zaten verilmişti" bir tekrar,
+"başka deponun kutusu" bir yönlendirmedir. Kırmızıya boyamak depocuya yanlış yaptığını söylerdi;
+çizim de ikisini nötr çiziyor.
+
+**Karar 2 — SAAT CİHAZIN ÖLÇÜMÜ.** Kapı zaman döndürmüyor. Satırdaki saat okutmanın telefondaki
+anıdır ve bu dürüst: ekranın tek kullanıcısı rampadaki depocu, saati de onun saati. Zaten
+hesaplanıyordu — satır anahtarı olarak kullanılıp atılıyordu.
+
+**SAPMA 1 (kalıyor) — sayacın YERİ.** Çizim sayacı geçmiş başlığının kuyruğuna koyuyor
+("OKUTMA GEÇMİŞİ · 2 kutu verildi"). Uygulama onu düğmenin üstünde ayrı bir cümle olarak yazıyor.
+Sebep: sayacın ANLAMI 21.134'te bilinçli olarak değişti — "verilen"i değil BEKLEYENİ sayıyor.
+"OKUTMA GEÇMİŞİ · Rampada 3 kutu bekliyor" başlık kuyruğunda okunmuyor; üstelik sayının işi
+okutmaya başlamadan ÖNCE cevap vermek ve orada başlığın altında kalırdı.
+
+**SAPMA 2 (kalıyor) — "başka deponun kutusu" satırında DEPO KODU yok.** Çizim "KEHL deposuna ait"
+diyor; kapı depo kodunu döndürmüyor, sipariş referansını döndürüyor. Elimizde olmayan bir kimliği
+yazmıyoruz (kullanıcı kuralı 05.09: sahte bilgi üretilmez). Depo kodunu göstermek isteniyorsa kapı
+alanı taşımalı — o zaman satır çizimin cümlesine tam oturur.

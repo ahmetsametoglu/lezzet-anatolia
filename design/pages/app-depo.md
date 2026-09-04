@@ -161,7 +161,9 @@
 
 ## D8 · Kargo devri (kutuları taşıyıcıya verme)
 
-> Brief'e 29.08'de eklendi — ekran ÇALIŞIYOR, v3 tasarımında hiç yok.
+> Brief'e 29.08'de eklendi. ~~v3 tasarımında hiç yok~~ — **v3 onu çiziyor (22 `kargoDevri`)**;
+> not bayattı, düzeltildi 05.09. Ekran çizime birebir çekildi (21.261); iki bilinçli sapma
+> `design/KARARLAR.md`'de.
 
 - **An:** taşıyıcı kurye rampada, depocu kutuları tek tek uzatıyor.
 - **Ekran bir LİSTE DEĞİL, bir OKUTUCUDUR.** "Hangi siparişi vereceğim" diye bir soru yok —
