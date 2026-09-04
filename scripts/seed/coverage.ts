@@ -1,6 +1,6 @@
 import { listOrderExceptions } from '@lezzet/application';
 import type { createServiceRoleClient } from '@lezzet/database';
-import { AssistantProposalKindEnum } from '@lezzet/types';
+import { AssistantProposalKindEnum, STAFF_NOTIFICATION_KINDS } from '@lezzet/types';
 
 /**
  * İstemci tipi `@supabase/supabase-js`'ten DEĞİL, fabrikanın dönüşünden türetiliyor: `scripts`
@@ -86,6 +86,28 @@ async function say(db: Db, tablo: string, filtre?: KapsamKovasi['filtre']): Prom
   const q = db.from(tablo).select('*', { count: 'exact', head: true });
   const { count, error } = await (filtre ? (filtre(q as unknown as PostgrestFilter) as unknown as typeof q) : q);
   if (error) throw new Error(`[kapsam] ${tablo}: ${error.message}`);
+  return count ?? 0;
+}
+
+/**
+ * **Hedefi TESİS olan transferler** (kusur, ölçüldü 04.09).
+ *
+ * Transfer kovaları DEPOLAR ARASI sevkiyatı ölçüyor ve ekranı (D5) da odur. Ama aynı tabloya
+ * araca yükleme de yazıyor (`takeToVan` → depodan araca transfer, aynı anda kabul) ve ölçüt
+ * daraltılmadığı için `transfer` ve `transfer kabul edilmiş` kovaları o iki satırla **yanlış
+ * yeşil** veriyordu: tesis sevkiyatı hiç doğmamışken kova dolu görünüyordu.
+ */
+async function tesisTransferi(db: Db, durum?: string): Promise<number> {
+  const { data, error } = await db.from('warehouse').select('id').eq('kind', 'vehicle');
+  if (error) throw new Error(`[kapsam] warehouse: ${error.message}`);
+  const araclar = (data ?? []).map((r) => (r as { id: string }).id);
+
+  const temel = db.from('warehouse_transfer').select('*', { count: 'exact', head: true });
+  const durumlu = durum === undefined ? temel : temel.eq('status', durum);
+  const { count, error: sayimHatasi } = await (araclar.length === 0
+    ? durumlu
+    : durumlu.not('to_warehouse_id', 'in', `(${araclar.join(',')})`));
+  if (sayimHatasi) throw new Error(`[kapsam] warehouse_transfer: ${sayimHatasi.message}`);
   return count ?? 0;
 }
 
@@ -764,23 +786,76 @@ const KAPSAM: KapsamAlani[] = [
        * kuyruğunun kendisi yaşıyor (77694 Kehl kaydı bekliyor) — kopan yalnız bölge tarafı.
        */
       { ad: 'bölge pasif', zorunlu: false, sayac: (db) => say(db, 'delivery_zone', (q) => q.eq('is_active', false)) },
-      { ad: 'transfer', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer') },
+      { ad: 'transfer', zorunlu: true, sayac: (db) => tesisTransferi(db) },
       /**
        * Transferin DÖRT hâli ayrı kovadır (19.6): ekran her hâli başka çizer — yoldaki liste,
        * gecikmiş amber şerit, geçmişte "Tam/Kısmi kabul" ve "Sevk geri alındı" rozetleri. Toplam
        * sayı dördü birden 0 olmadan da tutar; hâl kovası olmasa biri sessizce kaybolurdu.
        */
-      { ad: 'transfer yolda', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer', (q) => q.eq('status', 'in_transit')) },
+      { ad: 'transfer yolda', zorunlu: true, sayac: (db) => tesisTransferi(db, 'in_transit') },
       {
         ad: 'transfer yolda GECİKMİŞ',
         zorunlu: true,
-        sayac: (db) =>
-          say(db, 'warehouse_transfer', (q) =>
-            q.eq('status', 'in_transit').lt('dispatched_at', new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()),
-          ),
+        sayac: async (db) => {
+          // Tesis sevkiyatı VE 2 günden eski: iki ölçüt de gerekli — araca yükleme bu kovaya
+          // hiç girmemeli, gecikme de sevk damgasından okunmalı.
+          const { data, error } = await db
+            .from('warehouse_transfer')
+            .select('to_warehouse_id, warehouse:to_warehouse_id(kind)')
+            .eq('status', 'in_transit')
+            .lt('dispatched_at', new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString());
+          if (error) throw new Error(`[kapsam] warehouse_transfer: ${error.message}`);
+          type Satir = { warehouse: { kind: string } | null };
+          return ((data ?? []) as unknown as Satir[]).filter((r) => r.warehouse?.kind !== 'vehicle').length;
+        },
       },
-      { ad: 'transfer kabul edilmiş', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer', (q) => q.eq('status', 'received')) },
-      { ad: 'transfer geri alınmış', zorunlu: true, sayac: (db) => say(db, 'warehouse_transfer', (q) => q.eq('status', 'cancelled')) },
+      { ad: 'transfer kabul edilmiş', zorunlu: true, sayac: (db) => tesisTransferi(db, 'received') },
+      { ad: 'transfer geri alınmış', zorunlu: true, sayac: (db) => tesisTransferi(db, 'cancelled') },
+    ],
+  },
+  {
+    /**
+     * **BİLDİRİM — kova 04.09'da açıldı, çünkü bu alan BELİRTİSİZ kırılmıştı.**
+     *
+     * `seedNotifications` muhafızı "tablo dolu mu" diye soruyordu ve tabloya canlı akış da yazıyor:
+     * kurye sahnesi seferi kapatınca `run_close_pending` zili çalıyor, dört personel satırı doğuyor
+     * ve blok komple atlanıyordu — müşteri bildirimlerinin tamamı (sipariş · davet · bölge · talep)
+     * hiç doğmadan. Kapsam denetimi bunu GÖREMİYORDU çünkü tablonun kovası yoktu; arıza ancak
+     * bildirim ekranı elle açılınca fark edilirdi.
+     *
+     * Muhafız düzeltildi; kova bu düzeltmenin BEKÇİSİ: aynı sınıf bir sonraki hata (başka bir blok
+     * canlı akışı tetikler, muhafız yine yanılır) sessiz kalmasın.
+     */
+    baslik: 'Bildirim',
+    tablo: 'notification',
+    kovalar: [
+      {
+        ad: 'müşteriye giden bildirim',
+        zorunlu: true,
+        sayac: async (db) => {
+          const { count, error } = await db
+            .from('notification')
+            .select('*', { count: 'exact', head: true })
+            .not('kind', 'in', `(${STAFF_NOTIFICATION_KINDS.join(',')})`);
+          if (error) throw new Error(`[kapsam] notification: ${error.message}`);
+          return count ?? 0;
+        },
+      },
+      /* Personel bildirimi BİLGİ: canlı akışın ürünü, beslemenin değil — sayısı sahneye göre
+         değişir ve boş olması bir arıza değildir. */
+      {
+        ad: 'personele giden bildirim',
+        zorunlu: false,
+        sayac: async (db) => {
+          const { count, error } = await db
+            .from('notification')
+            .select('*', { count: 'exact', head: true })
+            .in('kind', [...STAFF_NOTIFICATION_KINDS]);
+          if (error) throw new Error(`[kapsam] notification: ${error.message}`);
+          return count ?? 0;
+        },
+      },
+      { ad: 'okunmamış bildirim', zorunlu: false, sayac: (db) => say(db, 'notification', (q) => q.is('read_at', null)) },
     ],
   },
   {

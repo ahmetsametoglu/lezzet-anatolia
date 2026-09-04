@@ -82,7 +82,16 @@ const DETAIL = {
       customerName: 'Épicerie Ravanelli',
       boxes: [{ boxNo: 1, code: 'KUTU-2' }],
       reason: 'unreachable' as const,
-      runReferenceNo: null,
+      // Ulaşılamayan durak KAPANMIŞ bir seferin: kimliği var ama satır onu YAZMAMALI.
+      runReferenceNo: 'SF-26-9RTMJM',
+    },
+    {
+      orderId: '00000000-0000-4000-8000-000000000403',
+      referenceNo: 'LA-26-CM44',
+      customerName: 'Colmar dükkânı',
+      boxes: [{ boxNo: 1, code: 'KUTU-3' }, { boxNo: 2, code: 'KUTU-4' }],
+      reason: 'other_run' as const,
+      runReferenceNo: 'SF-26-CM4417',
     },
   ],
   drops: [
@@ -374,10 +383,18 @@ describe('D6 · kurye dönüşü kabulü', () => {
     await render(<CourierReturnScreen />);
     await openCourier();
 
-    expect(screen.getByTestId('warehouse-return-box-stay-00000000-0000-4000-8000-000000000402')).toHaveTextContent(
-      /ulaşılamadı — araçta kalır/,
-    );
+    const stay = screen.getByTestId('warehouse-return-box-stay-00000000-0000-4000-8000-000000000402');
+    expect(stay).toHaveTextContent(/1 kutu · ulaşılamadı — araçta kalır/);
+    /* KİMLİK SEBEBE GÖRE (cihazda görüldü 04.09): ULAŞILAMAYAN kutu bir MÜŞTERİNİN ve depocu onu
+       rampada ona göre ayırıyor — satır sefer kodunu yazıyordu, yani hangi koli olduğunu
+       söylemiyordu. Sefer kodu yalnız "başka seferin yükü" satırının doğru cevabı. */
+    expect(stay).toHaveTextContent(/Épicerie Ravanelli · LA-26-7T4D/);
     expect(screen.queryByTestId('warehouse-return-restock-00000000-0000-4000-8000-000000000402')).toBeNull();
+
+    // BAŞKA SEFERİN yükünde ayırt edici olan SEFER — orada sefer kodu doğru cevap.
+    expect(screen.getByTestId('warehouse-return-box-stay-00000000-0000-4000-8000-000000000403')).toHaveTextContent(
+      /SF-26-CM4417/,
+    );
   });
 
   /* AKIBETİ YAZILMIŞ SATIR seçici çizmez: ikinci kez gönderilen `restock` stoğa iki kez yazardı. */

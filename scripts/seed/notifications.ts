@@ -1,5 +1,5 @@
 import { STAFF_NOTIFICATION_KINDS, type AppNotificationKind } from '@lezzet/types';
-import { tabloDolu, type Db, type Kisiler } from './shared';
+import { type Db, type Kisiler } from './shared';
 
 /*
   BİLDİRİM SEED'İ (kullanıcı kararı 26.08) — "her bildirim çeşidinden en az bir örnek olmalı."
@@ -37,8 +37,29 @@ interface SatirTaslak {
 const IKI_GUN_MS = 2 * 86_400_000;
 
 export async function seedNotifications(db: Db, kisiler: Kisiler): Promise<void> {
-  if (await tabloDolu(db, 'notification')) {
-    console.log('▸ bildirimler zaten dolu — atlandı');
+  /*
+    ── MUHAFIZ "TABLO DOLU MU" DEĞİL, "BENİM SATIRIM VAR MI" (kusur, ölçüldü 04.09) ──────────────
+
+    Muhafız `tabloDolu(db, 'notification')` idi ve sessizce yanlış oldu: bu tabloya CANLI AKIŞ da
+    yazıyor ve besleme artık o akışı kendisi tetikliyor. `seedCourierReturn` seferi kapatırken
+    askıda kalan durak için `run_close_pending` zilini çalıyor (`day-close.ts`) — dört personel
+    satırı doğuyor, tablo "dolu" görünüyor ve bu blok komple atlanıyor. Sonuç: sıfırdan bir
+    `db:refresh`ten sonra tabloda YALNIZ o dört satır kalıyor, müşteri bildirimlerinin tamamı
+    (sipariş · davet · bölge · talep) hiç doğmuyor. Kapsam denetimi bunu GÖREMEZ — `notification`
+    kovası yok, yani arıza belirtisiz.
+
+    Ölçüt artık bu bloğun ürettiği şeyin kendisi: **personel olmayan (müşteriye giden) bir bildirim
+    var mı.** Personel türleri canlı akışın işi (`STAFF_NOTIFICATION_KINDS`); onların varlığı bu
+    bloğun koştuğunu söylemez. Emsal `seedWarehouses`ın kod bazlı kurulumu ve aynı gün düzeltilen
+    `seedTransfer` muhafızı.
+  */
+  const { count: musteriBildirimi, error: muhafizHatasi } = await db
+    .from('notification')
+    .select('*', { count: 'exact', head: true })
+    .not('kind', 'in', `(${STAFF_NOTIFICATION_KINDS.join(',')})`);
+  if (muhafizHatasi) throw muhafizHatasi;
+  if ((musteriBildirimi ?? 0) > 0) {
+    console.log('▸ müşteri bildirimleri zaten var — atlandı');
     return;
   }
   console.log('▸ BİLDİRİM seed (gerçek kayıtlardan türetilir)');

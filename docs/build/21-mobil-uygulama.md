@@ -11699,3 +11699,52 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `unreachable` (kapanmış seferden) öteki `other_run` (açık seferden). Testler: mobil 19 (liste +
   detay + iki yazım + eksik/fazla dalları), uygulama katmanı 4 (kümeleme · kuryesiz küme · detay
   ayrımı), uç 4. Tip · birim 1953 · depo ekranları 257.
+
+- [x] (21.256) **BESLEME MUHAFIZLARI "TABLO DOLU MU" DEĞİL "BENİM SATIRIM VAR MI" — kapsam kapısı sıfırdan refresh'te 3 zorunlu kovayla kırılıyordu; D6 cihazda koşuldu** (kullanıcı bildirimi 04.09)
+  `touches:` `scripts/seed/{warehouse.ts,notifications.ts,coverage.ts}` · `apps/mobile/src/screens/warehouse/{courier-return-screen.tsx,courier-return-screen.test.tsx,messages.json}` · `docs/build/README.md`
+
+  **Belirti (kullanıcı):** `pnpm db:refresh` sonunda kapsam denetimi çıkış kodu 1 — *"transfer yolda ·
+  transfer yolda GECİKMİŞ · transfer geri alınmış"* boş.
+
+  **KÖK SEBEP BENİM DÜN AÇTIĞIM BLOK (21.255).** Dört paralel ajanla ölçüldü, her bulgu ayrıca
+  çürütmeye verildi. `seedCourierReturn` (seed.ts:344) `seedTransfer`DEN (seed.ts:357) ÖNCE koşuyor
+  ve araca serbest ürün alırken `takeToVan` çağırıyor; o da depodan araca bir TRANSFER açıp aynı anda
+  kabul ediyor. `seedTransfer`in muhafızı `tabloDolu('warehouse_transfer')` — yani tabloda o iki
+  satırı görüp **bloğun tamamını atlıyor**. Sonuç: sıfırdan bir beslemede hiçbir tesis transferi
+  doğmuyor. Üstelik `transfer` ve `transfer kabul edilmiş` kovaları araç yüklemesini sayıp **yanlış
+  yeşil** veriyordu — tesis sevkiyatı hiç yokken kova dolu görünüyordu.
+
+  **AYNI SINIF İKİNCİ ARIZA, BELİRTİSİZ.** `seedNotifications` muhafızı da `tabloDolu('notification')`
+  idi ve sahnenin kapanışı `run_close_pending` zilini çalıyor (4 personel satırı) — blok komple
+  atlanıyor, müşteri bildirimlerinin tamamı (sipariş · davet · bölge · talep) hiç doğmuyordu. Kapsam
+  denetimi bunu GÖREMİYORDU: `notification` kovası yoktu.
+
+  **Düzeltme muhafızda, sırada değil.** Emsal bu dosyaların kendi başında yazılı (`seedWarehouses`
+  kod bazında kurulur: *"bu tablo seed'in kendi verisi dışında da dolabiliyor"*). Ölçüt artık her
+  bloğun ürettiği şeyin kendisi: `seedTransfer` → **hedefi TESİS olan** transfer var mı;
+  `seedNotifications` → **personel olmayan** bildirim var mı. Sıra değişmedi ve bu bilinçli: sahne
+  `seedNotifications`tan önce koştuğu için onun durum kayıtlarından `order_out_for_delivery` ve
+  `order_delivered` bildirimleri de türüyor (ölçüldü: 3 + 1 satır, öncesinde ikisi de sıfırdı).
+
+  **Kova tarafı da düzeltildi:** beş transfer kovası tesis sevkiyatına daraltıldı (araca yükleme
+  artık sayılmıyor) ve **yeni `Bildirim` bölümü** açıldı — `müşteriye giden bildirim` zorunlu, kova
+  bu düzeltmenin bekçisi: aynı sınıf bir sonraki hata sessiz kalmasın.
+
+  **CİHAZ TURU (Oppo CPH1907, kullanıcı isteği).** D6 uçtan uca koşuldu: hub kartı *"1 kurye
+  bekliyor"*, liste *"Marc Lemoine · 67 LZT 01 · Frigo kamyonet · 1 kalem akıbet bekliyor · 1 kutu
+  inecek · araçta 10 adet serbest ürün · 2 kutu kalacak"*, detayda üç bölüm, adet çekmecesi açılıyor,
+  "stoğa dön" notu zorluyor ve not girilince CTA açılıyor. Kabul yazıldı: toast *"Dönüş yazıldı — 0
+  stoğa, 2 imha, 2 serbest. 1 kutu indi, 10 adet depoya devredildi."*, ekran listeye döndü ve
+  *"Rampada bekleyen kurye yok"* dedi. DB'de doğrulandı: akıbet `discard`, araç stoğu 0, VAN-1→STR
+  iki transfer, kutu damgası silinmiş.
+
+  **Turda bir kusur bulundu ve düzeltildi:** araçta KALAN kutu satırı sefer kodunu yazıyordu
+  (`SF-26-9RTMJM`), yani ULAŞILAMAYAN kutunun hangi müşterinin olduğu görünmüyordu. Kimlik artık
+  sebebe göre: ulaşılamayan → müşteri + sipariş referansı, başka seferin yükü → sefer kodu (v3:14 de
+  ikisini böyle anıyor). Satırlara kutu sayısı da eklendi.
+
+  Kurye şeridine not: dönüş transferi ters yönde de *"Araca serbest ürün"* yazıyor
+  (`docs/talep/not-kurye-donus-transferi-tersine-arac-notu-yaziyor.md`).
+
+  Tam paket 4175/4175 · mobil Jest 1300 · lint · knip · docs:check temiz · `seed:coverage` **169
+  kovanın hepsinde örnek var**.

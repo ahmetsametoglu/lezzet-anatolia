@@ -249,8 +249,29 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
  * bir kaydı olur.
  */
 export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
-  if (await tabloDolu(db, 'warehouse_transfer')) {
-    console.log('▸ transfer zaten dolu — atlandı');
+  /*
+    ── MUHAFIZ "TABLO DOLU MU" DEĞİL, "BENİM SATIRIM VAR MI" (kusur, ölçüldü 04.09) ──────────────
+
+    Muhafız `tabloDolu(db, 'warehouse_transfer')` idi ve bu **sessizce yanlış** oldu: aynı tabloya
+    başka bir besleme bloğu da yazıyor. `seedCourierReturn` araca serbest ürün alırken `takeToVan`
+    çağırıyor, o da depodan araca bir TRANSFER açıp aynı anda kabul ediyor (`van-stock.ts`) — yani
+    bu blok koşmadan tablo iki satırla doluyordu ve blok komple atlanıyordu. Sonuç: sıfırdan bir
+    `db:refresh`ten sonra **hiçbir tesis transferi doğmuyordu**; kapsam denetimi üç zorunlu kovayla
+    (`transfer yolda` · `transfer yolda GECİKMİŞ` · `transfer geri alınmış`) çıkış kodu 1 veriyordu.
+    Üstelik `transfer kabul edilmiş` kovası araç yüklemesini sayarak YANLIŞ YEŞİL veriyordu.
+
+    Emsal bu dosyanın kendi başında yazılı (`seedWarehouses` kod bazında kurulur): *"bu tablo
+    seed'in kendi verisi dışında da dolabiliyor"*. Ölçüt artık bu bloğun ürettiği şeyin ta kendisi:
+    **hedefi bir TESİS olan transfer.** Araç yüklemesi tesise değil araca gider, o yüzden sayılmaz.
+  */
+  const tesisler = [depolar.str, depolar.kehl, depolar.bdx];
+  const { count: tesisTransferi, error: muhafizHatasi } = await db
+    .from('warehouse_transfer')
+    .select('*', { count: 'exact', head: true })
+    .in('to_warehouse_id', tesisler);
+  if (muhafizHatasi) throw muhafizHatasi;
+  if ((tesisTransferi ?? 0) > 0) {
+    console.log('▸ tesis transferi zaten var — atlandı');
     return;
   }
   console.log('▸ TRANSFER seed');

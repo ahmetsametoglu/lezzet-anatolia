@@ -994,7 +994,8 @@
       "casesTitle": "KAÇ KOLİ DÖNDÜ",
       "keypadTitle": "Kaç adet döndü"
     },
-    "written": "akıbeti yazıldı: {disposition}"
+    "written": "akıbeti yazıldı: {disposition}",
+    "boxCount": "{n} kutu"
   },
   "handover": {
     "title": "Kargo devri",

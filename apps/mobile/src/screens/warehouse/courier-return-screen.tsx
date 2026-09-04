@@ -276,8 +276,21 @@ export function CourierReturnScreen() {
               ))}
               {detail.boxesStay.map((card) => (
                 <View key={card.orderId} style={[styles.boxRow, styles.boxStay]} testID={`warehouse-return-box-stay-${card.orderId}`}>
-                  <Text style={styles.boxName}>{card.runReferenceNo ?? `${card.customerName} · ${card.referenceNo ?? '—'}`}</Text>
-                  <Text style={styles.boxWhy}>{t.return.boxStay[card.reason]}</Text>
+                  {/*
+                    KİMLİK SEBEBE GÖRE DEĞİŞİR (cihazda görüldü 04.09) — satır sefer kodunu yazıyordu
+                    ve ULAŞILAMAYAN kutuda bu yanlış: o kutu bir MÜŞTERİNİN, depocunun rampada
+                    ayırması gereken şey de o. Sefer kodu yalnız "başka seferin yükü" satırında
+                    doğru cevap, çünkü orada ayırt edici olan sefer (v3:14 de ikisini böyle çiziyor:
+                    ulaşılamayanı sipariş referansıyla, öteki seferi `SF-…` ile anıyor).
+                  */}
+                  <Text style={styles.boxName}>
+                    {card.reason === 'other_run' && card.runReferenceNo !== null
+                      ? card.runReferenceNo
+                      : `${card.customerName} · ${card.referenceNo ?? '—'}`}
+                  </Text>
+                  <Text style={styles.boxWhy}>
+                    {`${fillCopy(t.return.boxCount, { n: String(card.boxes.length) })} · ${t.return.boxStay[card.reason]}`}
+                  </Text>
                 </View>
               ))}
             </View>
