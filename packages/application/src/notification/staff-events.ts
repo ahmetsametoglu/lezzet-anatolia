@@ -1,4 +1,4 @@
-import { ProductVariantService, StockService } from '@lezzet/database';
+import { ProductVariantService, StockService, WarehouseService } from '@lezzet/database';
 import { captureError, SOURCES } from '@lezzet/observability';
 import type { TicketType } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -137,5 +137,47 @@ export async function notifyB2bApplicationReceived(db: SupabaseClient, customerI
     });
   } catch (err) {
     yut(err, 'b2b_application_received');
+  }
+}
+
+/**
+ * Transfer EKSİK kabul edildi (kullanıcı kararı 04.09, 21.248) — gönderen deponun personeline ve yönetime.
+ *
+ * Alan depo eksiği beyan etti ve kayıp KENDİ hanesine yazıldı; gönderen taraf "ben 8 yolladım,
+ * 7 geldi" cümlesini artık web'in geçmiş sekmesini açmadan duyar (ölçüldü 03.09: fark yalnız o
+ * sekmede, satır sayısı olarak duruyordu). Depo süzgeci KAYNAK depo: alan depo zaten biliyor,
+ * beyanı o yaptı. Dedupe transfer başına — kabul bir kez yazılır, ikinci kabul zaten `stale`.
+ */
+export async function notifyTransferShortfall(
+  db: SupabaseClient,
+  input: {
+    transferId: string;
+    referenceNo: string;
+    fromWarehouseId: string;
+    toWarehouseId: string;
+    shortQty: number;
+    shortfallReferenceNo: string | null;
+  },
+): Promise<void> {
+  try {
+    // Alan deponun KODU cümleye girer ("STR kayıp yazdı") — kimlik değil; depo bulunamazsa kod yerine
+    // sözlük "alan depo" der, uydurulmaz.
+    const [alan] = await new WarehouseService(db).list({ warehouseIds: [input.toWarehouseId] });
+    await dispatchStaffNotification(db, {
+      kind: 'transfer_shortfall',
+      roles: ['admin', 'warehouse'],
+      warehouseId: input.fromWarehouseId,
+      target: null,
+      payload: {
+        referenceNo: input.referenceNo,
+        transferId: input.transferId,
+        shortQty: input.shortQty,
+        ...(alan ? { toWarehouseCode: alan.code } : {}),
+        ...(input.shortfallReferenceNo ? { shortfallReferenceNo: input.shortfallReferenceNo } : {}),
+      },
+      dedupeKey: `transfer-shortfall:${input.transferId}`,
+    });
+  } catch (err) {
+    yut(err, 'transfer_shortfall');
   }
 }

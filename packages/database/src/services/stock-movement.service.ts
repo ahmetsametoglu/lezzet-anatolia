@@ -151,6 +151,22 @@ export class StockMovementService extends BaseDbService<StockMovement, StockMove
   }
 
   /**
+   * **Transferlerin hareketleri** (04.09, 21.248) — `transfer_id` taşıyan satırlar, isteğe bağlı tipe
+   * daraltılmış. Kapanmış sevkiyat listesi eksik beyanının IMH belgesini buradan okur: `write_off`
+   * hareketi transfere bağlı ve `reference_no` belgenin kendisi. Transfer kaydına ikinci bir kolon
+   * açılmadı — belge zaten defterde, iki yerde tutulan numara bir gün ayrışırdı.
+   */
+  async listByTransferIds(
+    transferIds: readonly string[],
+    opts: { kind?: StockMovement['kind'] } = {},
+  ): Promise<StockMovement[]> {
+    if (transferIds.length === 0) return [];
+    const filters: Record<string, unknown> = { transferId: [...transferIds] };
+    if (opts.kind) filters.kind = opts.kind;
+    return this.getAll(filters, { orderBy: 'createdAt', orderDirection: 'desc' });
+  }
+
+  /**
    * **Varyantın ÇIKIŞLARI** — hangi partiden, ne zaman, ne kadar mal gitti (22.30 · 06.14).
    *
    * ── BU OKUMA ESKİDEN BİR TAHMİNDİ ───────────────────────────────────────────

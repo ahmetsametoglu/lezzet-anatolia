@@ -887,6 +887,8 @@ warehouse.post('/transfers/:transferId/receive', async (c) => {
     warehouseId: c.get('warehouseId'),
     lines: parsed.data.lines,
     actorId: c.get('staff').id,
+    // Eksik beyanı (04.09): sebep + not; kapı eksik yoksa okumaz, varsa kaybı bu sebeple yazar.
+    declaration: parsed.data.declaration ?? null,
   });
 
   const body: z.input<typeof ReceiveTransferResponseSchema> = outcome;

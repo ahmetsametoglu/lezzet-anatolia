@@ -11321,3 +11321,82 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Durum (03.09):** tam paket 4148/4149 — kalan tek düşüş web şeridinin bilinen kırılgan testi
   (`checkout-shipping-order`, test posta kodu gerçek Fransız koduna denk geliyor; notu 29.08'de
   açılmış). Cihazdan yapılan satış artık veritabanında durabiliyor ve paketi kırmıyor.
+
+- [x] (21.247) **Kapıda satış indirimi siparişe YAZILMIYORDU — müşteri tam ödemişken sistem onu borçlu sayıyordu** (kullanıcı bulgusu 03.09, cihazda ölçüldü)
+  `touches:` `packages/application/src/order/on-site-sale.ts` · `packages/application/src/cart/cart-types.ts` · `packages/application/src/order/checkout-draft.ts` · `packages/application/src/order/on-site-sale.test.ts`
+
+  **Ölçüm (LA-26-9DPPDL · araçtan 2 adet Cevizli Baklava).** Sepet 18,30 € dedi, kurye 15,30 €
+  tahsil etti — aradaki 3 € otomatik "Bayram Sofrası seçkisi" kampanyası. Kayıt:
+  `ordered_total 15,30` · `revenue_total 18,30` · `discount_amount 0` · `discount_id ∅` ·
+  **`payment_status partial`**. Yani sipariş ucuzdu ama SEBEBİ yoktu.
+
+  **Tek sebep, üç sonuç.** `on-site-sale` indirimli toplamı (`orderedTotalCents`) yazıyor, indirimin
+  KENDİSİNİ (başlık üç alanı + kalem payı) hiç yazmıyordu.
+  1. **Ciro şişik:** `revenue_total` kalemlerden türüyor (`resync_order_revenue`, 0012) ve yalnız
+     `line_discount_amount` okuyor — pay yazılmayınca indirim ciroya hiç girmiyor.
+  2. **Sahte borç:** `payment_status` ciroyu tahsilatla karşılaştırıyor → 15,30 < 18,30 → `partial`.
+     Parasını tam ödemiş müşteri borçlu görünüyor ve borç hatırlatması yolu açık kalıyor.
+  3. **Kota sessizce deliniyor:** kampanya kullanımı `create_order` RPC'sinde siparişin
+     `discount_id`sinden tükeniyor; boş kalınca kapıda satılan hiçbir indirimli kalem kotadan
+     düşmüyordu. `OrderService.create` künyesi bu açığı 09.6'da checkout için kapatmıştı — kapıda
+     satış aynı deliği geri açmıştı.
+
+  **Düzeltme.** İndirimin okuyucuları tek yere toplandı: `discountIdOf` ve `discountLabelOf`
+  `checkout-draft.ts`ten `cart/cart-types.ts`e taşındı, ailenin geri kalanının (`discountAmountOf` ·
+  `discountSharesOf`) yanına — iki kapı artık AYNI fonksiyonlardan okuyor. `on-site-sale` üç başlık
+  alanını yazıyor ve payı kaleme dağıtıyor; paylar satırla BİRLİKTE süzülüyor (konum dizisi —
+  süzülmeseydi kalan kalemlere başkasının indirimi yazılırdı). Kupon kodu geçilmiyor: bu kapı sepete
+  kod almıyor, yalnız otomatik kampanya iniyor.
+
+  **Emniyet veride:** `discount_amount = Σ line_discount_amount` değişmezini `order_discount_balance`
+  (0041) commit anında denetliyor — başlık ile pay ayrışırsa yazım reddedilir, sessiz sapma imkânsız.
+
+  **Testi yazıldı** (`on-site-sale.test`, kategori kapsamlı otomatik kampanya): başlık · kalem payı ·
+  ciro · `payment_status paid` dördü birden çivilendi.
+
+  **Durum (04.09):** satış dosyalarının üçü de yeşil (`sale.test` 12 · `quick-sale` 14 ·
+  `on-site-sale` 8). Tam paket bu turda 4130/4150 — düşen 20 testin hepsi depo şeridinin yarım
+  transfer işinden (`transfer_shortfall` migration'ı yazılmış ama yerel veritabanına uygulanmamış;
+  enum'da değer yok) ve bu değişiklikle ilgisiz.
+
+- [~] (21.248) **D5 EKSİK BEYANI — eksik gelen mal beyan edilir, kayıp ALAN depoya `write_off · transfer_shortfall` olarak yazılır; kabul RPC'si partiyi sevk edilen adetle açar; künye "kaynak → alan", satırda lot/SKT, tavan girişte, gecikme rozeti, adetli sonuç, gönderene bildirim** (kullanıcı kararı 04.09, dört hüküm önerildiği gibi; kod + testler tamam, KALAN: cihaz turu)
+  `touches:` `supabase/migrations/{0006_stock.sql,0031_warehouse.sql}` · `packages/types/src/{entities/{stock-movement,warehouse,app-notification}.schema.ts,contracts/warehouse-api.schema.ts}` · `packages/database/src/services/{warehouse-transfer,stock-movement}.service.ts` · `packages/application/src/{warehouse/transfer.ts,warehouse/transfer.test.ts,notification/staff-events.ts,index.ts}` · `packages/i18n/src/notification-copy.ts` · `apps/mobile-api/src/api/v1/{warehouse.ts,warehouse.test.ts}` · `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,use-transfer.hook.ts,messages.json,warehouse-fixture.ts,transfer-screen.test.tsx,write-off-screen.tsx}` · `apps/mobile/src/screens/operations/notification-map.ts` · `apps/web/lib/stock/loss-labels.ts` (tek etiket satırı — derleme kırılmasın) · dokümanlar: `06-stok.md` · `19-coklu-depo.md` (19.6 Durum) · `DATA_MODEL.md` · `design/pages/app-depo.md` · `design/KARARLAR.md` · `docs/talep/not-web-transfer-yas-tonu-ve-eksik-beyani.md`
+
+  **Ölçüm (03.09, POCO + API + DB).** Kehl → Strasbourg gerçek transfer eksik sayıldı: ekran *"Kabul
+  yazıldı — 1 parti açıldı"* dedi, 7 birim kaynaktan düşmüş hedefte doğmamıştı, hiçbir stok hareketi
+  yoktu, gönderene bildirim yoktu; tek iz geçmiş listesinde "2 eksik" (satır sayısı, adet değil).
+  Sevk edilen 5 iken 6 girilebiliyor, ret sunucudan *"receive_transfer: sevk edilen 5 iken 6 kabul
+  edilemez"* diye geliyordu. Künye alan deponun adını yazıyordu ("Strasbourg'dan geldi" gibi
+  okunuyor); satırda lot/SKT yoktu; "tahmini 31.08" üç gün geçmişken sessizdi; kapananlarda on satırın
+  sekizi araç yüklemesiydi. Web'in transfer sekmesi bunların çoğunu zaten gösteriyordu (yaş tonu,
+  "Kısmi · −N", satır satır fark) — eksik gösterim değil, üç şeydi: sayan kişi görmüyor, kimseye
+  gitmiyor, kayıp muhasebe olgusuna dönüşmüyor.
+
+  **Karar (kullanıcı 04.09).** Sorumluluk alan depodadır, beyanı o yapar: `receive_transfer` partiyi
+  hedefte SEVK EDİLEN adetle açar (`transfer_in` tam adet — iki deponun defteri tutar), eksiği aynı
+  transaction'da `adjust_stock_batch` ile `write_off · transfer_shortfall` (koli hasarlıysa
+  `damaged`) olarak o partiden düşer; tek IMH belgesi alan deponun serisinden, hareketler
+  `transfer_id` taşır; sıfır gelen satır da sıfır adetli parti açar. 27.08'in "kaybın partisi yok"
+  çıkmazı transit depo icat etmeden, partiyi doğurarak kapandı (`BEKLEYEN(19.6)` söküldü). İki depo
+  aynı şirketin, para tarafında değişen yok. Enum'a `transfer_shortfall`; `transfer_shortfall`
+  bildirimi gönderen deponun personeline + yönetime (dedupe transfer başına).
+
+  **Ekran (tasarım sayfası: D5 Eksik Beyanı, Artifact 04.09).** Künye "TRF-… · Kehl → Strasbourg";
+  liste kartında "Kehl → Strasbourg"; satırda "lot L2667-2 · SKT 25.04.27"; artı ve çekmece sevk
+  edilende durur; satır kendi eksiğini söyler ("3 eksik · kayıp olarak yazılacak"); bütün satırlar
+  sayılınca kiremit "EKSİK BEYANI" paneli ve düğme "Kabulü kaydet · 5 eksik beyanıyla"; dokununca
+  kitin `BottomSheet`i: koyu sayaç kartı, iki sebep çipi, isteğe bağlı not, sonuç cümlesi, "Beyan
+  et ve kabulü yaz"; eksik yoksa çekmece yok, tek dokunuş. Toast "Kabul yazıldı — 2 parti açıldı ·
+  5 birim eksik kayıp yazıldı · IMH-STR-26-0013". Yoldakilerde gecikme rozeti (`transitAgeOf`,
+  web'in üç tonu, uygulama katmanına taşındı); kapananlarda "−5 adet" ve "araca / araçtan".
+
+  **Doğrulama.** Tip · lint temiz (types · database · application · i18n · mobile-api · mobile · web
+  etiketi); mobil transfer ekranı **16/16** (yeni altı: künye+lot, tavan, eksiksiz tek dokunuş,
+  eksik akışı uçtan uca, vazgeç, liste rozetleri); uygulama katmanı yeni yedi test (eksik kabul
+  belge+hareket, sıfır satır partisi, tam kabulde düşüm yok, kapanan liste adet+belge, yaş tonu,
+  kaynak adı, gönderene zil); API yeni bir test (beyanla kabul); `packages/database`
+  `warehouse.test` beklentisi yeni kurala çekildi (sıfır satır da parti açar → 2 parti, eksik 3,
+  IMH belgesi). `db:refresh` kullanıcı onayıyla koşuldu. Tam paket commit notunda.
+  **KALAN — cihaz turu:** POCO commit anında bağlı değildi (kullanıcı kararı 04.09: önce commit).
+  Yerel veride iki fikstür yolda (`TRF-KEHL-26-0001` 2 kalem · `TRF-KEHL-26-0002` 1 kalem, Kehl →
+  Strasbourg); tur yapılınca ekran görüntüleriyle bu satır `[x]` olur.

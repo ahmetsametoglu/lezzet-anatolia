@@ -15,6 +15,7 @@ import {
   PaymentStatusEnum,
   ReturnDispositionEnum,
   TransferStatusEnum,
+  WarehouseKindEnum,
 } from '../primitives/enums.schema';
 
 /**
@@ -984,6 +985,13 @@ export const InboundTransferLineSchema = z.object({
   sourceStockId: z.string().uuid(),
   /** "Ürün (boy)" — operasyon dilinde. */
   name: z.string(),
+  /**
+   * Kaynak partinin lotu ve tarihi (04.09): rampadaki koli satırla BUNLARLA eşlenir — aynı üründen
+   * iki parti aynı sevkiyatta gelebilir ve ad ikisini ayırmaz. Uygulama katmanı zaten taşıyordu,
+   * sözleşme düşürüyordu (cihazda ölçüldü 03.09).
+   */
+  lotNumber: z.string().nullable(),
+  expiryDate: z.string(),
   dispatchedQty: z.number().int(),
   /** **`null` = henüz sayılmadı, `0` = geldi ama kayıp.** İkisi ayrı şeydir (0042). */
   receivedQty: z.number().int().nullable(),
@@ -1001,6 +1009,12 @@ export const InboundTransferSchema = z.object({
   /** TRF-COL-26-0007 — KAYNAK deponun kodu; kâğıt klasör orada durur. */
   referenceNo: z.string(),
   fromWarehouseId: z.string().uuid(),
+  /**
+   * Kaynak deponun ADI (04.09): künye "Kehl → Strasbourg" diyebilsin. Eskiden yalnız kimlik geliyordu
+   * ve ekran alan deponun adını yazıyordu — "TRF-KEHL … Strasbourg" okunuşta "Strasbourg'dan geldi"
+   * gibi duruyordu (cihazda ölçüldü 03.09). Depo silinmişse `null`; ekran o zaman yalnız referansı yazar.
+   */
+  fromWarehouseName: z.string().nullable(),
   dispatchedAt: z.string(),
   note: z.string().nullable(),
   lines: z.array(InboundTransferLineSchema),
@@ -1028,6 +1042,17 @@ export const OutboundTransferSchema = z.object({
    * Bir SÖZ değil bir beklentidir: taşıyıcıdan gelen gerçek bir tarih değil, deponun kendi ayarı.
    */
   etaDate: z.string(),
+  /** Hedef deponun adı (04.09) — "Strasbourg → Bordeaux" cümlesinin sağ yarısı; depo silinmişse `null`. */
+  toWarehouseName: z.string().nullable(),
+  /**
+   * Sevkten bu yana geçen GÜN ve tonu (04.09) — web'in transfer sekmesiyle aynı üç hâl:
+   * `ok` ayarın içinde · `warn` bir gün aştı · `late` daha fazla. Gecikmiş sevkiyat bugüne dek
+   * telefonda "tahmini 31.08" diye sessizce duruyordu (cihazda ölçüldü 03.09: üç gün geçmiş, uyarı yok).
+   */
+  ageDays: z.number().int().nonnegative(),
+  ageTone: z.enum(['ok', 'warn', 'late']),
+  /** Tahmini varışı KAÇ GÜN aştı — rozetin sayısı ("3 gün gecikti"); ayar içindeyken `0`. */
+  lateDays: z.number().int().nonnegative(),
 });
 export type OutboundTransferContract = z.infer<typeof OutboundTransferSchema>;
 
@@ -1056,6 +1081,19 @@ export const ClosedTransferSchema = z.object({
    * (CLAUDE §1 — ölçülemeyen değer sıfır değildir).
    */
   shortLineCount: z.number().int().nullable(),
+  /**
+   * Eksik gelen TOPLAM ADET (04.09) — satır sayısı değil; rozet "−5 adet" der. Cihazda ölçüldü
+   * (03.09): "2 eksik" satır sayısıydı, kayıp beş birimdi ve kimse okuyamıyordu. Geri alınmışta `null`.
+   */
+  shortQty: z.number().int().nonnegative().nullable(),
+  /** Eksiğin IMH belgesi; eksik yoksa ya da beyan öncesi kayıtsa `null`. */
+  shortfallReferenceNo: z.string().nullable(),
+  /**
+   * Karşı taraf tesis mi araç mı (04.09): araç yüklemeleri geçmişte "araca / araçtan" diye ayrılır.
+   * Ölçüldü: on satırın sekizi depodan araca yüklemeydi ve depolar arası geçmiş altında kayboluyordu.
+   */
+  counterpartKind: WarehouseKindEnum,
+  counterpartName: z.string().nullable(),
 });
 export type ClosedTransferContract = z.infer<typeof ClosedTransferSchema>;
 
@@ -1084,11 +1122,43 @@ export type WarehouseTransfersResponse = z.infer<typeof WarehouseTransfersRespon
  * sıfır olabilir ve bu bir BEYANDIR ("sevk edildi ama gelmedi"); satırı hiç göndermemek ise kabulü
  * bloklar (v2: *"boş satır kabulü bloklar, ikisi ayrı şeydir"*).
  */
-export const ReceiveTransferRequestSchema = z.object({ lines: z.array(ReceiveLineSchema) });
+/**
+ * EKSİK BEYANI (kullanıcı kararı 04.09, 21.248) — yalnız eksik varken okunur. Sebep iki çipten biri:
+ * `transfer_shortfall` (koli eksik geldi — nakliyede kayıp) · `damaged` (hasarlı geldi — imha).
+ * Not isteğe bağlı: beyanın kendisi kayıttır, cümle zorunlu tutulsaydı rampada uydurulurdu.
+ */
+export const TransferShortfallDeclarationSchema = z.object({
+  reason: StockWriteOffReasonEnum.extract(['transfer_shortfall', 'damaged']),
+  note: z.string().max(500).nullish(),
+});
+export type TransferShortfallDeclaration = z.infer<typeof TransferShortfallDeclarationSchema>;
+export const ReceiveTransferRequestSchema = z.object({
+  lines: z.array(ReceiveLineSchema),
+  /** Verilmezse ve eksik varsa kapı `transfer_shortfall` sayar, notsuz — web'in kabul formu böyle çağırır. */
+  declaration: TransferShortfallDeclarationSchema.nullish(),
+});
 export type ReceiveTransferRequest = z.infer<typeof ReceiveTransferRequestSchema>;
 
 export const ReceiveTransferResponseSchema = z.discriminatedUnion('status', [
-  z.object({ status: z.literal('ok'), transferId: z.string().uuid(), createdBatches: z.number().int() }),
+  z.object({
+    status: z.literal('ok'),
+    transferId: z.string().uuid(),
+    createdBatches: z.number().int(),
+    /**
+     * Eksik beyanı yazıldıysa (04.09): toplam adet, IMH belgesi ve satır satır fark — toast
+     * "5 birim eksik kayıp yazıldı · IMH-STR-26-0013" diyebilsin. Tam kabulde `null`: "0 eksik"
+     * yazmak, hiç beyan edilmemiş bir şeyi beyan gibi okuturdu.
+     */
+    shortfall: z
+      .object({
+        qty: z.number().int().positive(),
+        referenceNo: z.string().nullable(),
+        lines: z.array(
+          z.object({ lineId: z.string().uuid(), dispatchedQty: z.number().int(), receivedQty: z.number().int() }),
+        ),
+      })
+      .nullable(),
+  }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   /** Araya biri girdi: transfer artık yolda değil. Ekran bunu GÖSTERİR, yutmaz. */
   z.object({ status: z.literal('stale'), currentStatus: TransferStatusEnum }),

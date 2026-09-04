@@ -1,7 +1,23 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, ProductService, StockService, WarehouseTransferService, serviceDb } from '@lezzet/database';
+import {
+  CategoryService,
+  ProductService,
+  StockMovementService,
+  StockService,
+  UserProfileService,
+  WarehouseTransferService,
+  serviceDb,
+} from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
-import { cancelTransfer, dispatchTransfer, listInboundTransfers, receiveTransfer } from './transfer';
+import {
+  cancelTransfer,
+  dispatchTransfer,
+  listClosedTransfers,
+  listInboundTransfers,
+  listOutboundTransfers,
+  receiveTransfer,
+  transitAgeOf,
+} from './transfer';
 
 /**
  * **Depolar arası transfer — D5** (19.1/19.6), 21.11.
@@ -230,6 +246,132 @@ describe('kabul (D5 · "al")', () => {
 
     expect(outcome.status).toBe('ok');
     expect((await transfers.getById(transferId))?.status).toBe('received');
+  });
+
+  /*
+    EKSİK KABUL = BEYAN + KAYIP KAYDI (kullanıcı kararı 04.09). 27.08'e kadar eksik yalnız
+    `received_qty`de duruyordu: kaynaktan düşmüş, hedefte doğmamış, hiçbir defterde yok (cihazda
+    ölçüldü 03.09: 7 birim kayboldu, tek hareket yok). Şimdi parti sevk edilen adetle doğar, eksik
+    o partiden `write_off` ile düşer ve transfere bağlanır.
+  */
+  it('EKSİK KABUL: parti SEVK EDİLEN adetle doğar, eksik o partiden IMH belgesiyle düşer, hareket transfere bağlı', async () => {
+    const { transferId, lineId } = await inTransit(4);
+    const outcome = await receiveTransfer(db, {
+      transferId,
+      warehouseId: toWarehouseId,
+      lines: [{ lineId, receivedQty: 3 }],
+      declaration: { reason: 'damaged', note: 'mühür açıktı' },
+    });
+
+    expect(outcome).toMatchObject({
+      status: 'ok',
+      createdBatches: 1,
+      shortfall: { qty: 1, referenceNo: expect.stringMatching(/^IMH-/), lines: [{ lineId, dispatchedQty: 4, receivedQty: 3 }] },
+    });
+    const arrived = (await stocks.listByVariant(toWarehouseId, variantId)).find((batch) => batch.lotNumber === 'LOT-TRF')!;
+    expect(arrived.physicalQty).toBe(3);
+    expect(arrived.initialQty).toBe(4);
+
+    const movements = await new StockMovementService(db).listByTransferIds([transferId]);
+    const giris = movements.find((m) => m.kind === 'transfer_in' && m.stockId === arrived.id)!;
+    const dusum = movements.find((m) => m.kind === 'write_off')!;
+    expect(giris.qty).toBe(4);
+    expect(dusum).toMatchObject({ stockId: arrived.id, direction: 'out', qty: 1, reason: 'damaged', note: 'mühür açıktı' });
+    expect(dusum.referenceNo).toBe(outcome.status === 'ok' ? outcome.shortfall?.referenceNo : null);
+    // Kaynak deponun defteri değişmez: sevk anındaki düşüm olduğu gibi durur (iki depo, tek şirket).
+    expect((await stocks.getById(sourceBatch))?.physicalQty).toBe(8);
+  });
+
+  it('SIFIR gelen satır da parti açar — sıfır adetle; kayıp ona bağlı ve sebep varsayılan `transfer_shortfall`', async () => {
+    const { transferId, lineId } = await inTransit(4);
+    const outcome = await receiveTransfer(db, { transferId, warehouseId: toWarehouseId, lines: [{ lineId, receivedQty: 0 }] });
+
+    expect(outcome).toMatchObject({ status: 'ok', createdBatches: 1, shortfall: { qty: 4 } });
+    const arrived = (await stocks.listByVariant(toWarehouseId, variantId)).find((batch) => batch.lotNumber === 'LOT-TRF')!;
+    expect(arrived.physicalQty).toBe(0);
+    const dusum = (await new StockMovementService(db).listByTransferIds([transferId], { kind: 'write_off' }))[0]!;
+    expect(dusum).toMatchObject({ stockId: arrived.id, qty: 4, reason: 'transfer_shortfall', note: null });
+  });
+
+  it('TAM kabulde hiçbir düşüm yazılmaz — `shortfall` null, beyan okunmaz', async () => {
+    const { transferId, lineId } = await inTransit(4);
+    const outcome = await receiveTransfer(db, {
+      transferId,
+      warehouseId: toWarehouseId,
+      lines: [{ lineId, receivedQty: 4 }],
+      declaration: { reason: 'damaged', note: 'okunmamalı' },
+    });
+
+    expect(outcome).toMatchObject({ status: 'ok', shortfall: null });
+    expect(await new StockMovementService(db).listByTransferIds([transferId], { kind: 'write_off' })).toEqual([]);
+  });
+
+  it('kapanan listede eksik ADET ve belge; karşı taraf tesis, adıyla', async () => {
+    const { transferId, lineId } = await inTransit(4);
+    await receiveTransfer(db, { transferId, warehouseId: toWarehouseId, lines: [{ lineId, receivedQty: 1 }] });
+
+    const row = (await listClosedTransfers(db, { warehouseId: toWarehouseId })).find((r) => r.transferId === transferId)!;
+    expect(row).toMatchObject({
+      direction: 'in',
+      shortLineCount: 1,
+      shortQty: 3,
+      shortfallReferenceNo: expect.stringMatching(/^IMH-/),
+      counterpartKind: 'facility',
+    });
+    expect(row.counterpartName).toEqual(expect.any(String));
+  });
+
+  it('yoldaki sevkiyatın YAŞI üç tonlu — ayar içinde ok, bir gün aşınca warn, sonrası late', () => {
+    const sevk = '2026-09-01T09:00:00.000Z';
+    expect(transitAgeOf(sevk, 1, new Date('2026-09-01T20:00:00.000Z'))).toEqual({ ageDays: 0, ageTone: 'ok', lateDays: 0 });
+    expect(transitAgeOf(sevk, 1, new Date('2026-09-02T08:00:00.000Z'))).toEqual({ ageDays: 1, ageTone: 'ok', lateDays: 0 });
+    expect(transitAgeOf(sevk, 1, new Date('2026-09-03T08:00:00.000Z'))).toEqual({ ageDays: 2, ageTone: 'warn', lateDays: 1 });
+    expect(transitAgeOf(sevk, 1, new Date('2026-09-05T08:00:00.000Z'))).toEqual({ ageDays: 4, ageTone: 'late', lateDays: 3 });
+  });
+
+  it('gelen listede kaynak deponun ADI, yoldakilerde hedefin adı ve yaş tonu', async () => {
+    const { transferId } = await inTransit(2);
+
+    const gelen = (await listInboundTransfers(db, { warehouseId: toWarehouseId })).find((r) => r.transferId === transferId)!;
+    expect(gelen.fromWarehouseName).toEqual(expect.any(String));
+    expect(gelen.lines[0]).toMatchObject({ lotNumber: 'LOT-TRF', dispatchedQty: 2 });
+
+    const yolda = (
+      await listOutboundTransfers(db, { warehouseId: fromWarehouseId, transitDays: 1, now: new Date(Date.now() + 4 * 86_400_000) })
+    ).find((r) => r.transferId === transferId)!;
+    expect(yolda).toMatchObject({ toWarehouseName: expect.any(String), ageTone: 'late', lateDays: 3 });
+  });
+
+  it('eksik kabul GÖNDEREN deponun personeline zil düşürür — alan depo beyanı zaten yaptı', async () => {
+    const staff = await new UserProfileService(db).insert({
+      name: `Kehl depocusu ${stamp}`,
+      roles: ['warehouse'],
+      warehouseIds: [fromWarehouseId],
+    });
+    const { transferId, lineId } = await inTransit(4);
+    try {
+      await receiveTransfer(db, { transferId, warehouseId: toWarehouseId, lines: [{ lineId, receivedQty: 2 }] });
+
+      const { data, error } = await db
+        .from('notification')
+        .select('payload')
+        .eq('profile_id', staff.id)
+        .eq('kind', 'transfer_shortfall');
+      if (error) throw error;
+      expect(data).toHaveLength(1);
+      expect((data as Array<{ payload: Record<string, unknown> }>)[0]!.payload).toMatchObject({
+        transferId,
+        shortQty: 2,
+        shortfallReferenceNo: expect.stringMatching(/^IMH-/),
+      });
+    } finally {
+      // Fan-out seed yöneticilerine de yazar — dedupe anahtarı transfer damgalı, hepsi oradan bulunur.
+      const { data } = await db.from('notification').select('id').eq('dedupe_key', `transfer-shortfall:${transferId}`);
+      await purgeTestData(db, {
+        notificationIds: ((data ?? []) as { id: string }[]).map((r) => r.id),
+        profileIds: [staff.id],
+      });
+    }
   });
 
   it('SAYILMAMIŞ satır kabulü BLOKLAR — hangi satır olduğu döner', async () => {

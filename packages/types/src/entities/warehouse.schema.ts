@@ -164,6 +164,10 @@ export const ReceiveTransferResultSchema = z.object({
   ok: z.boolean(),
   transferId: z.string().uuid(),
   createdBatches: z.number().int(),
+  /** Eksik beyan edilen toplam adet (04.09) — `0` = tam kabul, hiçbir düşüm yazılmadı. */
+  shortfallQty: z.number().int().nonnegative(),
+  /** Eksiğin IMH belgesi (`IMH-STR-26-0013`); eksik yoksa `null`. */
+  shortfallReferenceNo: z.string().nullable(),
 });
 export type ReceiveTransferResult = z.infer<typeof ReceiveTransferResultSchema>;
 

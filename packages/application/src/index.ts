@@ -457,6 +457,7 @@ export {
   readDispatchCandidate,
   readTransferDetail,
   receiveTransfer,
+  transitAgeOf,
 } from './warehouse/transfer';
 export type {
   CancelTransferOutcome,
@@ -468,6 +469,8 @@ export type {
   OutboundTransfer,
   ReceiveTransferOutcome,
   TransferDetail,
+  TransferShortfall,
+  TransitAgeTone,
 } from './warehouse/transfer';
 // D6'nın OKUMA yarısı (21.11d). Yazma yarısı `order/refund.adjustFulfillment`ta ve orada KALIYOR:
 // sipariş düzeltmesi depo işi değil, üç ayrı çağıranı var (`refund.ts` künyesi). Burada yalnız

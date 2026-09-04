@@ -215,7 +215,11 @@ describe('transfer — iki fiziksel gerçek an', () => {
       transferId: sevk.transferId,
       lines: satirlar.map((s) => ({ lineId: s.id, receivedQty: s.qty === 3 ? 0 : s.qty })),
     });
-    expect(sonuc.createdBatches).toBe(1);
+    // İKİ parti (04.09, 21.248): sıfır gelen satır da parti açar — sıfır adetle, kayıp ona bağlı.
+    // Eksik 3 birim aynı transaction'da IMH belgesiyle düşer; eskiden hiçbir kayda geçmiyordu.
+    expect(sonuc.createdBatches).toBe(2);
+    expect(sonuc.shortfallQty).toBe(3);
+    expect(sonuc.shortfallReferenceNo).toMatch(/^IMH-/);
   });
 
   it('sevk kaydı geri alınır: mal KAYNAK PARTİYE döner, yeni parti doğmaz (19.6)', async () => {

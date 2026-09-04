@@ -12,6 +12,7 @@ import {
   type ReceiveLine,
   type ReceiveTransferResult,
   type CancelTransferResult,
+  type StockWriteOffReason,
   type KeysetCursor,
   type Page,
   DEFAULT_PAGE_SIZE,
@@ -85,11 +86,18 @@ export class WarehouseTransferService extends BaseDbService<WarehouseTransfer, n
     transferId: string;
     lines: ReceiveLine[];
     actorId?: string | null;
+    /**
+     * Eksik beyanı (04.09): eksik gelen adet hedefte doğan partiden bu sebeple düşer (`write_off`),
+     * not depocunun gördüğüdür. Verilmezse RPC `transfer_shortfall` sayar; tam kabulde okunmaz.
+     */
+    declaration?: { reason: StockWriteOffReason; note?: string | null } | null;
   }): Promise<ReceiveTransferResult> {
     const raw = await this.executeRpc('receive_transfer', {
       p_transfer_id: input.transferId,
       p_lines: input.lines.map((l) => ({ line_id: l.lineId, received_qty: l.receivedQty })),
       p_actor_id: input.actorId ?? null,
+      p_reason: input.declaration?.reason ?? 'transfer_shortfall',
+      p_note: input.declaration?.note ?? null,
     });
     return ReceiveTransferResultSchema.parse(dbToApp(raw as Record<string, unknown>));
   }

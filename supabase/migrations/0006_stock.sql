@@ -185,8 +185,8 @@ create type stock_movement_kind as enum (
   'count_diff'       -- sayım farkı                         (İKİ YÖNLÜ)
 );
 
--- ── `transfer_loss` diye bir tip YOK ve bu ölçülmüş bir karar (27.08) ────────
--- İlk tasarımda vardı (`BEKLEYEN(19.6)`: "sevk edildi, hedefe eksik ulaştı"). Yazılamadı, çünkü
+-- ── `transfer_loss` diye bir tip YOK ve bu ölçülmüş bir karar (27.08 · KAPANDI 04.09, aşağıda) ──
+-- İlk tasarımda vardı (19.6'nın açık borcu: "sevk edildi, hedefe eksik ulaştı"). Yazılamadı, çünkü
 -- kaybın bir PARTİSİ yok: kaynak parti `transfer_out` ile zaten düşüldü — oraya ikinci bir çıkış
 -- yazmak aynı malı iki kez düşürür ve mutabakatı bozar; hedefte ise o mal için parti hiç doğmadı.
 -- Yazılabileceği tek yer bir transit deposudur ve tasarım onu açıkça yasaklıyor (*"sanal transit
@@ -195,8 +195,17 @@ create type stock_movement_kind as enum (
 -- Doğrusu: kayıp bir hareket değil, İKİ HAREKETİN FARKI (`transfer_out` − `transfer_in`) ve o fark
 -- zaten kayıtlı (`warehouse_transfer_line.qty` ↔ `received_qty`). Mutabakat da kendiliğinden tutar:
 -- mal kaynaktan çıktı (yazıldı), hedefe girmedi (yazılmadı) — iki depo arasında yok oldu, ki fiziksel
--- gerçek de budur. `BEKLEYEN(19.6)` bu yüzden AÇIK kalıyor: kaybın kayda dönüşmesi bir defter işi
+-- gerçek de budur. 19.6'nın borcu bu yüzden açık kalmıştı: kaybın kayda dönüşmesi bir defter işi
 -- değil, sorumluluk/telafi işi (tedarikçiye mi kurye şirketine mi yazılacağı kararı verilmemiş).
+--
+-- ── KARAR VERİLDİ (kullanıcı 04.09, 21.248): kayıp ALAN depoya yazılır ────────
+-- Sorumluluk alan depodadır ve beyanı o yapar: `receive_transfer` partiyi hedefte SEVK EDİLEN
+-- adetle açar (`transfer_in` tam adet — kaynaktan çıkan kadar hedefe girer, defter dengelenir),
+-- eksik kalanı aynı transaction'da `adjust_stock_batch` ile `write_off · transfer_shortfall`
+-- olarak o partiden düşer ve hareketi `transfer_id` ile transfere bağlar. Yani ne transit depo
+-- doğdu ne `transfer_loss` tipi: kaybın partisi ARTIK VAR (hedefte doğan parti), tip yine `write_off`.
+-- Sıfır gelen satır da parti açar (sıfır adetle) — lot izi ve kayıp belgesi ona bağlanır. İki depo
+-- aynı şirketin, depolar arası fatura yok: kayıp bugünkü imha kayıtlarıyla aynı yoldan maliyetlenir.
 
 -- SEBEP KODU — hareket tipinden AYRI bir seviye ve bu ayrım bilinçli (SAP: hareket tipi 551 +
 -- ayrıca reason code). "Çöpe attım" bir hareket tipidir; "neden" onun içinde bir kırılımdır ve
@@ -208,7 +217,11 @@ create type stock_movement_kind as enum (
 create type stock_write_off_reason as enum (
   'expired',   -- DLC geçti → imha
   'damaged',   -- hasar / soğuk zincir kırıldı
-  'lost'       -- kayıp (sayımda bulunamadı)
+  'lost',      -- kayıp (sayımda bulunamadı)
+  -- TRANSFER EKSİĞİ (kullanıcı kararı 04.09, 21.248): sevk edilen geldi diye yazılır, gelmeyen
+  -- ALAN depodan bu sebeple düşülür. Ayrı sebep, çünkü kayıp listesinde "transit kaybı" ile
+  -- "sayımda bulunamadı" ayrı sorulardır: biri nakliyeye, öteki rafa bakar.
+  'transfer_shortfall'
 );
 
 create table public.stock_movement (

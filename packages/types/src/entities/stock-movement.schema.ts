@@ -51,6 +51,12 @@ export const StockWriteOffReasonEnum = z.enum([
   'expired', // DLC geçti → imha
   'damaged', // hasar / soğuk zincir kırıldı
   'lost', // kayıp (sayımda bulunamadı)
+  /**
+   * Transfer eksiği (kullanıcı kararı 04.09, 21.248): sevk edilen hedefe eksik geldi, alan depo
+   * beyan etti — fark o depodan bu sebeple düşer, hareketi `transfer_id` taşır. Ayrı sebep, çünkü
+   * "transit kaybı" ile "sayımda bulunamadı" ayrı sorular: biri nakliyeye, öteki rafa bakar.
+   */
+  'transfer_shortfall',
 ]);
 export type StockWriteOffReason = z.infer<typeof StockWriteOffReasonEnum>;
 

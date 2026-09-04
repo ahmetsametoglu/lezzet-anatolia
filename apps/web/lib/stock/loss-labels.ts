@@ -27,6 +27,8 @@ export const WRITE_OFF_REASON: Record<StockWriteOffReason, string> = {
   expired: 'Tarihi geçti',
   damaged: 'Hasar / soğuk zincir',
   lost: 'Kayıp',
+  /* Transfer eksiği (04.09, 21.248): alan deponun beyanı — nakliyede kaybolan, rafta değil. */
+  transfer_shortfall: 'Transfer eksiği',
 };
 
 /**

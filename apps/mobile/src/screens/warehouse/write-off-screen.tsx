@@ -57,7 +57,7 @@ const t = warehouseCopy;
  * ama tip onu koruyor: `StockWriteOffReason`dan yeni bir sebep doğarsa sözlük anahtarı eksik
  * kalır ve derleme kırılır.
  */
-const REASONS: readonly Exclude<StockWriteOffReason, 'expired'>[] = ['damaged', 'lost'];
+const REASONS: readonly Extract<StockWriteOffReason, 'damaged' | 'lost'>[] = ['damaged', 'lost'];
 
 export function WriteOffScreen() {
   const router = useRouter();
@@ -69,7 +69,7 @@ export function WriteOffScreen() {
 
   /** Düşülecek adet — POZİTİF; `null` = hiç yazılmadı. */
   const [qty, setQty] = useState<number | null>(null);
-  const [reason, setReason] = useState<Exclude<StockWriteOffReason, 'expired'> | null>(null);
+  const [reason, setReason] = useState<Extract<StockWriteOffReason, 'damaged' | 'lost'> | null>(null);
   /** Sayacın ortasındaki rakam TUŞ TAKIMINI açar (kullanıcı kararı 02.09 — künye aşağıda). */
   const [keypadOpen, setKeypadOpen] = useState(false);
 

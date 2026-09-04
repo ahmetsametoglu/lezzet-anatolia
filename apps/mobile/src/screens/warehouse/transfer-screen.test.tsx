@@ -57,7 +57,10 @@ function ok(data: unknown): Response {
   return { status: 200, headers: { get: () => null }, json: async () => ({ data, error: null }) } as unknown as Response;
 }
 
-function lastPostBody(): { lines: { lineId: string; receivedQty: number }[] } {
+function lastPostBody(): {
+  lines: { lineId: string; receivedQty: number }[];
+  declaration?: { reason: string; note: string | null } | null;
+} {
   const call = fetchMock.mock.calls.findLast((entry) => entry[1]?.method === 'POST');
   return JSON.parse(String(call?.[1]?.body ?? '{}'));
 }
@@ -70,7 +73,9 @@ function lastPostBody(): { lines: { lineId: string; receivedQty: number }[] } {
 function withTransfers(transfers: unknown[], receive?: unknown, extra: { outbound?: unknown[]; closed?: unknown[] } = {}) {
   fetchMock.mockImplementation((_url, init) => {
     if (init?.method === 'POST') {
-      return Promise.resolve(ok(receive ?? { status: 'ok', transferId: TRANSFER.transferId, createdBatches: 2 }));
+      return Promise.resolve(
+        ok(receive ?? { status: 'ok', transferId: TRANSFER.transferId, createdBatches: 2, shortfall: null }),
+      );
     }
     return Promise.resolve(ok({ transfers, outbound: extra.outbound ?? [], closed: extra.closed ?? [] }));
   });
@@ -121,6 +126,9 @@ beforeAll(() => {
 
 beforeEach(() => {
   fetchMock.mockReset();
+  // Toast sayacı da testler arası sıfırlanır: "hiçbir şey gönderilmedi" iddiası önceki testin
+  // toast'ını görmemeli.
+  mockToast.mockReset();
   resetWarehouseStatus();
 });
 
@@ -145,6 +153,8 @@ describe('D5 · rampada sayım', () => {
           lineId: `00000000-0000-4000-8000-00000000008${n}`,
           sourceStockId: STOCK_A,
           name: `Ürün ${n}`,
+          lotNumber: null,
+          expiryDate: '2027-01-01',
           dispatchedQty: n,
           receivedQty: null,
           caseSizes: [],
@@ -206,22 +216,30 @@ describe('D5 · rampada sayım', () => {
     expect(screen.getByTestId('warehouse-transfer-cta')).toBeDisabled();
   });
 
-  it('SIFIR geçerli bir beyandır: satır sayılmış sayılır ve 0 olarak GÖNDERİLİR', async () => {
+  it('SIFIR geçerli bir beyandır: satır sayılmış sayılır ve 0 olarak GÖNDERİLİR — beyan çekmecesinden', async () => {
     withTransfers([TRANSFER]);
 
     await renderTransfer();
     await countLine(LINE_A, 4);
     await countLine(LINE_B, 0);
 
-    expect(screen.getByTestId('warehouse-transfer-cta')).toHaveTextContent(/Kabulü kaydet/);
+    // Sıfır bir EKSİKTİR (04.09): düğme beyanı taşır, ilk dokunuş çekmeceyi açar, ikincisi yazar.
+    expect(screen.getByTestId('warehouse-transfer-cta')).toHaveTextContent(/Kabulü kaydet · 2 eksik beyanıyla/);
 
     await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-declare-cta')).toBeOnTheScreen());
+    expect(fetchMock.mock.calls.some((entry) => entry[1]?.method === 'POST')).toBe(false);
+
+    await fireEvent.press(screen.getByTestId('warehouse-transfer-declare-cta'));
     await waitFor(() => expect(mockToast).toHaveBeenCalled());
 
-    expect(lastPostBody().lines).toEqual([
-      { lineId: LINE_A, receivedQty: 4 },
-      { lineId: LINE_B, receivedQty: 0 },
-    ]);
+    expect(lastPostBody()).toEqual({
+      lines: [
+        { lineId: LINE_A, receivedQty: 4 },
+        { lineId: LINE_B, receivedQty: 0 },
+      ],
+      declaration: { reason: 'transfer_shortfall', note: null },
+    });
   });
 
   it('kapının `incomplete` cevabı HANGİ satır olduğunu ekranda gösterir', async () => {
@@ -262,5 +280,163 @@ describe('D5 · rampada sayım', () => {
     await waitFor(() =>
       expect(mockToast.mock.calls.some(([m]) => /partide 3 var, 5 kabul edilemez/.test(m))).toBe(true),
     );
+  });
+
+  /*
+    EKSİK BEYANI (kullanıcı kararı 04.09) — cihazda ölçülen üç açığın testleri:
+    · künye "Strasbourg — ana depo" diyordu ("Strasbourg'dan geldi" gibi okunuyordu),
+    · sevk edilen 5 iken 6 girilebiliyor, ret sunucudan fonksiyon adıyla geliyordu,
+    · "Kabul yazıldı — 1 parti açıldı" beş birim kaybı yutuyordu.
+  */
+  it('künye "kaynak → alan" der; satırda lot ve SKT yazar', async () => {
+    withTransfers([TRANSFER]);
+
+    await renderTransfer();
+
+    expect(screen.getByTestId('warehouse-transfer-header')).toHaveTextContent(/Colmar Şube → Strasbourg Merkez/);
+    expect(screen.getByTestId(`warehouse-transfer-line-lot-${LINE_A}`)).toHaveTextContent('lot L2667-2 · SKT 25.04.27');
+    // Lotsuz partide "lot" kelimesi hiç yazılmaz — olmayan bir bilgi boş bir etiketle gösterilmez.
+    expect(screen.getByTestId(`warehouse-transfer-line-lot-${LINE_B}`)).toHaveTextContent('SKT 01.12.26');
+  });
+
+  it('TAVAN sevk edilen adet: artı tavanda durur, çekmecenin fazlası da tavana iner', async () => {
+    withTransfers([TRANSFER]);
+
+    await renderTransfer();
+    // Künefe: sevk edilen 2 — üç artı, iki adet.
+    for (let i = 0; i < 3; i += 1) await fireEvent.press(screen.getByTestId(`warehouse-transfer-qty-${LINE_B}-increase`));
+    expect(screen.getByTestId(`warehouse-transfer-qty-${LINE_B}-value`)).toHaveTextContent('2');
+
+    // Çekmeceden 6 seçilse de satıra tavan yazılır (Mantı: sevk edilen 4).
+    await countLine(LINE_A, 6);
+    expect(screen.getByTestId(`warehouse-transfer-qty-${LINE_A}-value`)).toHaveTextContent('4');
+  });
+
+  it('eksik yoksa çekmece YOK — kabul tek dokunuşla, beyansız yazılır', async () => {
+    withTransfers([TRANSFER]);
+
+    await renderTransfer();
+    await countLine(LINE_A, 4);
+    await countLine(LINE_B, 2);
+
+    expect(screen.queryByTestId('warehouse-transfer-shortfall')).toBeNull();
+    expect(screen.getByTestId('warehouse-transfer-cta')).toHaveTextContent('Kabulü kaydet');
+
+    await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
+
+    expect(screen.queryByTestId('warehouse-transfer-declare-cta')).toBeNull();
+    expect(lastPostBody().declaration).toBeNull();
+    expect(mockToast.mock.calls.some(([m]) => /Kabul yazıldı — 2 parti açıldı\.$/.test(m))).toBe(true);
+  });
+
+  it('EKSİK: satır kendi eksiğini söyler, özet paneli kaydetmeden önce çıkar, beyan sebep ve notla gider, toast belgeyi söyler', async () => {
+    withTransfers([TRANSFER], {
+      status: 'ok',
+      transferId: TRANSFER.transferId,
+      createdBatches: 2,
+      shortfall: { qty: 1, referenceNo: 'IMH-STR-26-0013', lines: [{ lineId: LINE_A, dispatchedQty: 4, receivedQty: 3 }] },
+    });
+
+    await renderTransfer();
+    await countLine(LINE_A, 3);
+    // Sayım bitmeden özet YOK: yarım sayımın eksiği bir beyan değil, bir bilinmezdir.
+    expect(screen.queryByTestId('warehouse-transfer-shortfall')).toBeNull();
+    expect(screen.getByTestId(`warehouse-transfer-line-short-${LINE_A}`)).toHaveTextContent('1 eksik · kayıp olarak yazılacak');
+
+    await countLine(LINE_B, 2);
+    expect(screen.getByTestId('warehouse-transfer-shortfall')).toHaveTextContent(/Mantı · 500 g/);
+    expect(screen.getByTestId('warehouse-transfer-shortfall')).toHaveTextContent(/4 gönderildi · 3 geldi/);
+    expect(screen.getByTestId('warehouse-transfer-shortfall-total')).toHaveTextContent('1 birim eksik');
+    expect(screen.getByTestId('warehouse-transfer-shortfall')).toHaveTextContent(/TRF-COL-26-0007 belgesine bağlanır/);
+    expect(screen.getByTestId('warehouse-transfer-cta')).toHaveTextContent('Kabulü kaydet · 1 eksik beyanıyla');
+
+    await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-declare-qty')).toHaveTextContent('1'));
+    await fireEvent.press(screen.getByTestId('warehouse-transfer-declare-reason-damaged'));
+    await fireEvent.changeText(screen.getByTestId('warehouse-transfer-declare-note'), '  mühür açıktı ');
+    await fireEvent.press(screen.getByTestId('warehouse-transfer-declare-cta'));
+
+    await waitFor(() => expect(mockToast).toHaveBeenCalled());
+    expect(lastPostBody().declaration).toEqual({ reason: 'damaged', note: 'mühür açıktı' });
+    expect(
+      mockToast.mock.calls.some(([m]) => /2 parti açıldı · 1 birim eksik kayıp yazıldı · IMH-STR-26-0013/.test(m)),
+    ).toBe(true);
+  });
+
+  it('vazgeç çekmeceyi kapatır, hiçbir şey gönderilmez', async () => {
+    withTransfers([TRANSFER]);
+
+    await renderTransfer();
+    await countLine(LINE_A, 3);
+    await countLine(LINE_B, 2);
+    await fireEvent.press(screen.getByTestId('warehouse-transfer-cta'));
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-declare-cancel')).toBeOnTheScreen());
+
+    await fireEvent.press(screen.getByTestId('warehouse-transfer-declare-cancel'));
+
+    expect(fetchMock.mock.calls.some((entry) => entry[1]?.method === 'POST')).toBe(false);
+    expect(mockToast).not.toHaveBeenCalled();
+  });
+
+  it('listede yoldaki satır GECİKME rozeti taşır; kapanan satır eksiği ADET ve belgeyle, aracı "araçtan" diye yazar', async () => {
+    withTransfers([TRANSFER, inboundTransfer({ transferId: '00000000-0000-4000-8000-000000000052', referenceNo: 'TRF-B' })], undefined, {
+      outbound: [
+        {
+          transferId: '00000000-0000-4000-8000-000000000053',
+          referenceNo: 'TRF-STR-26-0005',
+          toWarehouseId: '00000000-0000-4000-8000-000000000063',
+          toWarehouseName: 'Kehl — sınır deposu',
+          dispatchedAt: '2026-08-30T09:00:00.000Z',
+          lineCount: 1,
+          etaDate: '2026-08-31',
+          ageDays: 4,
+          ageTone: 'late',
+          lateDays: 3,
+        },
+      ],
+      closed: [
+        {
+          transferId: '00000000-0000-4000-8000-000000000054',
+          referenceNo: 'TRF-KEHL-26-0002',
+          fromWarehouseId: '00000000-0000-4000-8000-000000000063',
+          toWarehouseId: '00000000-0000-4000-8000-000000000060',
+          direction: 'in',
+          status: 'received',
+          closedAt: '2026-09-03T17:00:00.000Z',
+          lineCount: 2,
+          shortLineCount: 2,
+          shortQty: 5,
+          shortfallReferenceNo: 'IMH-STR-26-0013',
+          counterpartKind: 'facility',
+          counterpartName: 'Kehl — sınır deposu',
+        },
+        {
+          transferId: '00000000-0000-4000-8000-000000000055',
+          referenceNo: 'TRF-STR-26-0012',
+          fromWarehouseId: '00000000-0000-4000-8000-000000000060',
+          toWarehouseId: '00000000-0000-4000-8000-000000000064',
+          direction: 'out',
+          status: 'received',
+          closedAt: '2026-09-03T14:00:00.000Z',
+          lineCount: 1,
+          shortLineCount: 0,
+          shortQty: 0,
+          shortfallReferenceNo: null,
+          counterpartKind: 'vehicle',
+          counterpartName: 'Kurye aracı 1',
+        },
+      ],
+    });
+
+    await renderTransfer();
+
+    expect(screen.getByTestId(`warehouse-transfer-route-${TRANSFER.transferId}`)).toHaveTextContent('Colmar Şube → Strasbourg Merkez');
+    expect(screen.getByTestId('warehouse-transfer-outbound-age-00000000-0000-4000-8000-000000000053')).toHaveTextContent('3 gün gecikti');
+    expect(screen.getByTestId('warehouse-transfer-outbound-00000000-0000-4000-8000-000000000053')).toHaveTextContent(/Kehl — sınır deposu · 1 kalem/);
+    expect(screen.getByTestId('warehouse-transfer-closed-result-00000000-0000-4000-8000-000000000054')).toHaveTextContent('−5 adet');
+    expect(screen.getByTestId('warehouse-transfer-closed-00000000-0000-4000-8000-000000000054')).toHaveTextContent(/gelen · 2 kalem · 03\.09\.26 · eksik IMH-STR-26-0013/);
+    expect(screen.getByTestId('warehouse-transfer-closed-00000000-0000-4000-8000-000000000055')).toHaveTextContent(/araca · 1 kalem/);
+    expect(screen.getByTestId('warehouse-transfer-closed-result-00000000-0000-4000-8000-000000000055')).toHaveTextContent('tam kabul');
   });
 });

@@ -69,6 +69,16 @@
 - **İş (kabul):** rampada SAY, satır satır gelen adedi gir — `null` bırakmak kabulü bloklar;
   **`0` girmek "geldi ama kayıp" demektir, ikisi ayrı şeydir** (ekran bu farkı sorar). Bağlantı
   şartlı (kuyruk yok — iki deponun stoku aynı anda doğru kalmalı).
+- **İş (eksik beyanı, kullanıcı kararı 04.09 · 21.248):** sayım bitince eksik varsa ekran ÖNCE
+  özetini gösterir (satır satır "gönderildi · geldi", toplam, sonuç cümlesi) ve kaydet düğmesi
+  "N eksik beyanıyla" der; dokununca **beyan çekmecesi** açılır — koyu sayaç kartında toplam,
+  iki sebep çipi (koli eksik geldi · hasarlı geldi/imha), isteğe bağlı not, "Beyan et ve kabulü
+  yaz". Eksik yoksa çekmece yok, kabul tek dokunuş. Kabul SEVK EDİLEN adetle yazılır, eksik alan
+  depodan kayıp olarak düşer (IMH belgesi, transfere bağlı), gönderen depoya ve yönetime bildirim
+  gider; sonuç toast'ı adedi ve belgeyi söyler. Sayaç ve çekmece sevk edilende durur (tavan
+  girişte). Satırda lot ve SKT yazar; künye "Kehl → Strasbourg"; yoldakiler gecikme rozeti taşır
+  (web'in üç tonu); kapananlarda sonuç ADET olarak ("−5 adet"), araç yüklemeleri "araca/araçtan".
+  Tasarım sayfası: D5 Eksik Beyanı (Artifact 04.09).
 
 ## D6 · Kurye dönüşü kabulü
 

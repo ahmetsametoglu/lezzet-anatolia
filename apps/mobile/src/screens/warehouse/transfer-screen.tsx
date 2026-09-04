@@ -5,6 +5,7 @@ import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { toastInfo } from '@/lib/toast/toast-store';
+import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
@@ -12,9 +13,11 @@ import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSurface } from '@/components/operations/surface';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
+import { TextField } from '@/components/ui/text-field';
 import { captionOf } from '@/lib/operations/caption';
 import { fillCopy } from '@/screens/operations/copy';
 import { useOperationsWorkplace } from '@/screens/operations/sections-context';
@@ -56,6 +59,12 @@ const PANEL_SKELETON_HEIGHT = 140;
  */
 const PREVIEW_LINES = 3;
 
+/**
+ * Beyan çekmecesinin iki sebebi (04.09) — sözleşmenin `extract`i ile aynı küme. "Tarihi geçti" ve
+ * "sayımda bulunamadı" bu kapının cümlesi değil: rampada mal ya eksik geldi ya hasarlı geldi.
+ */
+const DECLARATION_REASONS = ['transfer_shortfall', 'damaged'] as const;
+
 export function TransferScreen() {
   const router = useRouter();
   const transferState = useTransfer();
@@ -81,17 +90,21 @@ export function TransferScreen() {
   const header = (
     <OperationsStackHeader
       title={t.transfer.title}
-      /* KÜNYE: SEVKİYATIN REFERANSI + KABUL EDEN TESİS (v3:11 · 30.08).
-         Şablon satırlarda "Paris Depo → Strasbourg Merkez" yazıyor; SAĞ yarısı bu deponun adıdır
-         ve rampada duran kişinin doğrulaması gereken şeydir ("bu sevkiyatı benim depom mu
-         alıyor"). SOL yarı — kaynak deponun adı — bu sözleşmede henüz yok (`InboundTransferSchema`
-         yalnız `fromWarehouseId` taşıyor) ve uydurulmuyor; okla birlikte yarım bir cümle yazmak,
-         olmayan bir bilgiyi varmış gibi göstermekti.
-         Kuyruk yine şartlı: tesis adı gelmiyorsa künye yalnız referanstır. */
-      subtitle={captionOf(
-        transfer === null ? undefined : fillCopy(t.transfer.caption, { ref: transfer.referenceNo }),
-        workplace,
-      )}
+      /* KÜNYE: REFERANS + "KAYNAK → ALAN" (v3:11 · 04.09).
+         Şablonun cümlesi "Paris Depo → Strasbourg Merkez"; sağ yarı bu deponun adı (rampada duran
+         kişinin doğrulaması gereken şey: "bu sevkiyatı benim depom mu alıyor"), sol yarı kaynak
+         depo. Sol yarı 30.08'de sözleşmede yoktu ve ekran yalnız sağı yazıyordu — cihazda
+         "TRF-KEHL-26-0002 · yolda · Strasbourg — ana depo" diye okundu, yani "Strasbourg'dan geldi"
+         (ölçüldü 03.09). Şimdi ad geliyor; gelmezse (depo silinmiş) eski künye: uydurma yok. */
+      subtitle={
+        transfer !== null && transfer.fromWarehouseName !== null && workplace !== null
+          ? fillCopy(t.transfer.captionRoute, {
+              ref: transfer.referenceNo,
+              from: transfer.fromWarehouseName,
+              to: workplace,
+            })
+          : captionOf(transfer === null ? undefined : fillCopy(t.transfer.caption, { ref: transfer.referenceNo }), workplace)
+      }
       onBack={() =>
         transfer !== null && transferState.transfers.length > 1 ? transferState.select(null) : router.back()
       }
@@ -182,6 +195,13 @@ export function TransferScreen() {
               <View style={styles.queueHead}>
                 <View style={styles.rowBody}>
                   <Text style={styles.rowTitle}>{row.referenceNo}</Text>
+                  {/* "Kehl → Strasbourg" (04.09): kart hangi depodan geldiğini söyler — referansın
+                      içindeki depo kodu bunu bilene söylüyordu, bilmeyene değil. */}
+                  {row.fromWarehouseName === null || workplace === null ? null : (
+                    <Text style={styles.rowSub} testID={`warehouse-transfer-route-${row.transferId}`}>
+                      {fillCopy(t.transfer.queueRoute, { from: row.fromWarehouseName, to: workplace })}
+                    </Text>
+                  )}
                   <Text style={styles.rowSub}>
                     {fillCopy(t.transfer.queueLines, {
                       n: String(row.lines.length),
@@ -243,16 +263,35 @@ export function TransferScreen() {
                   padding="md"
                   testID={`warehouse-transfer-outbound-${row.transferId}`}
                 >
-                  <View style={styles.rowBody}>
-                    <Text style={styles.rowTitle}>{row.referenceNo}</Text>
-                    <Text style={styles.rowSub}>
-                      {fillCopy(t.transfer.outboundMeta, {
-                        n: String(row.lineCount),
-                        // Tahmini varış SUNUCUDAN gelen bir GÜN (sevk günü + ulaşım süresi ayarı) —
-                        // ekran kendi hesabını kurmuyor ve saat göstermiyor: elimizde olmayan bir
-                        // kesinliği ima etmek, taşıyıcıdan gelmemiş bir sözü söylemek olurdu.
-                        date: shortDate(row.etaDate) ?? row.etaDate,
-                      })}
+                  <View style={styles.closedRow}>
+                    <View style={styles.rowBody}>
+                      <Text style={styles.rowTitle}>{row.referenceNo}</Text>
+                      <Text style={styles.rowSub}>
+                        {/* Tahmini varış SUNUCUDAN gelen bir GÜN (sevk günü + ulaşım süresi ayarı) —
+                            ekran kendi hesabını kurmuyor ve saat göstermiyor: elimizde olmayan bir
+                            kesinliği ima etmek, taşıyıcıdan gelmemiş bir sözü söylemek olurdu. */}
+                        {row.toWarehouseName === null
+                          ? fillCopy(t.transfer.outboundMeta, {
+                              n: String(row.lineCount),
+                              date: shortDate(row.etaDate) ?? row.etaDate,
+                            })
+                          : fillCopy(t.transfer.outboundRoute, {
+                              to: row.toWarehouseName,
+                              n: String(row.lineCount),
+                              date: shortDate(row.etaDate) ?? row.etaDate,
+                            })}
+                      </Text>
+                    </View>
+                    {/* GECİKME ROZETİ (04.09) — web'in üç tonu: ayar içinde zeytin "yolda", bir gün
+                        aşınca kum "1 gün gecikti", sonrası kiremit "N gün gecikti". Tahmin geçmiş
+                        bir tarihken satır sessiz duruyordu (cihazda ölçüldü 03.09: üç gün geçmiş). */}
+                    <Text
+                      style={[styles.agePill, styles[`agePill_${row.ageTone}`]]}
+                      testID={`warehouse-transfer-outbound-age-${row.transferId}`}
+                    >
+                      {row.ageTone === 'late'
+                        ? fillCopy(t.transfer.outboundAge.late, { n: String(row.lateDays) })
+                        : t.transfer.outboundAge[row.ageTone]}
                     </Text>
                   </View>
                 </OperationsSurface>
@@ -288,34 +327,43 @@ export function TransferScreen() {
                     <View style={styles.rowBody}>
                       <Text style={styles.rowTitle}>{row.referenceNo}</Text>
                       <Text style={styles.rowSub}>
-                        {fillCopy(t.transfer.closedMeta, {
-                          direction: t.transfer.direction[row.direction],
+                        {/* YÖN KARŞI TARAFA GÖRE (04.09): araç yüklemesi "araca / araçtan", tesis
+                            "gelen / giden" — on satırın sekizi araç yüklemesiydi ve depolar arası
+                            geçmiş aralarında kayboluyordu. Eksik belgesi varsa künyede yazar. */}
+                        {fillCopy(row.shortfallReferenceNo === null ? t.transfer.closedMeta : t.transfer.closedShortfallRef, {
+                          direction:
+                            row.counterpartKind === 'vehicle'
+                              ? t.transfer.directionVehicle[row.direction]
+                              : t.transfer.direction[row.direction],
                           n: String(row.lineCount),
                           date: shortDate(row.closedAt.slice(0, 10)) ?? row.closedAt,
+                          ref: row.shortfallReferenceNo ?? '',
                         })}
                       </Text>
                     </View>
-                    {/* SONUÇ SAĞDA ve ÜÇ AYRI CÜMLE: "tam kabul" · "N eksik" · "geri alındı".
-                        Geri alınmışta eksik SAYISI YOKTUR (`shortLineCount: null`) ve "0 eksik"
-                        yazmak, hiç sayılmamış bir sevkiyatı sorunsuz kabul gibi okuturdu
-                        (CLAUDE §1). */}
+                    {/* SONUÇ SAĞDA ve ÜÇ AYRI CÜMLE: "tam kabul" · "−N adet" · "geri alındı".
+                        Eksik ADET olarak yazılır (04.09): "2 eksik" satır sayısıydı, kayıp beş
+                        birimdi (cihazda ölçüldü 03.09). Geri alınmışta eksik SAYISI YOKTUR
+                        (`shortQty: null`) ve "0 eksik" yazmak, hiç sayılmamış bir sevkiyatı sorunsuz
+                        kabul gibi okuturdu (CLAUDE §1). */}
                     <Text
                       style={[
                         styles.closedResult,
                         // Üç hâl, üç ton — ve iptal "iyi" DEĞİL nötr: geri alınmış bir sevkiyatı
                         // tam kabulle aynı renge boyamak, olmayan bir başarıyı boyamaktır.
-                        row.shortLineCount === null
+                        row.shortQty === null
                           ? styles.closedNeutral
-                          : row.shortLineCount === 0
+                          : row.shortQty === 0
                             ? styles.closedOk
                             : styles.closedShort,
                       ]}
+                      testID={`warehouse-transfer-closed-result-${row.transferId}`}
                     >
-                      {row.shortLineCount === null
+                      {row.shortQty === null
                         ? t.transfer.closedCancelled
-                        : row.shortLineCount === 0
+                        : row.shortQty === 0
                           ? t.transfer.closedFull
-                          : fillCopy(t.transfer.closedShort, { n: String(row.shortLineCount) })}
+                          : fillCopy(t.transfer.closedShortQty, { n: String(row.shortQty) })}
                     </Text>
                   </View>
                 </OperationsSurface>
@@ -329,13 +377,17 @@ export function TransferScreen() {
     );
   }
 
+  /* CTA EKSİĞİ TAŞIR (04.09): eksik varsa düğme kiremit tona döner ve "5 eksik beyanıyla" der —
+     kaydetmeden önce son cümle. Eksik yoksa bugünkü zeytin düğme, tek dokunuş. */
   const cta = offline
-    ? { label: t.common.offlineCta, enabled: false }
+    ? { label: t.common.offlineCta, enabled: false, short: false }
     : transferState.sending
-      ? { label: t.transfer.cta.sending, enabled: false }
-      : transferState.counted
-        ? { label: t.transfer.cta.ready, enabled: true }
-        : { label: t.transfer.cta.pending, enabled: false };
+      ? { label: t.transfer.cta.sending, enabled: false, short: false }
+      : transferState.shortfall !== null
+        ? { label: fillCopy(t.transfer.ctaShort, { n: String(transferState.shortfall.qty) }), enabled: true, short: true }
+        : transferState.counted
+          ? { label: t.transfer.cta.ready, enabled: true, short: false }
+          : { label: t.transfer.cta.pending, enabled: false, short: false };
 
   return (
     <View style={styles.screen} testID="warehouse-transfer">
@@ -364,6 +416,14 @@ export function TransferScreen() {
                       ? t.transfer.missing
                       : fillCopy(t.transfer.dispatched, { qty: String(line.dispatchedQty) })}
                   </Text>
+                  {/* LOT VE SKT SATIRDA (04.09): aynı üründen iki parti aynı sevkiyatta gelebilir,
+                      ad ikisini ayırmaz — rampadaki koli satırla lotundan eşlenir. Sözleşme bunları
+                      düşürüyordu, uygulama katmanı zaten taşıyordu (ölçüldü 03.09). */}
+                  <Text style={styles.rowSub} testID={`warehouse-transfer-line-lot-${line.lineId}`}>
+                    {line.lotNumber === null
+                      ? fillCopy(t.transfer.lineNoLot, { date: shortDate(line.expiryDate) ?? line.expiryDate })
+                      : fillCopy(t.transfer.lineLot, { lot: line.lotNumber, date: shortDate(line.expiryDate) ?? line.expiryDate })}
+                  </Text>
                 </View>
                 {/* KİTİN TEK ADET DESENİ (02.09) — eskiden çerçeveli bir metin alanıydı. Boş
                     hâl `null`: "—" bir DEĞER değil, bir eksikliktir ve sıfırla karışmaması için
@@ -374,6 +434,9 @@ export function TransferScreen() {
                   label={fillCopy(t.transfer.qtyLabel, { name: line.name })}
                   onPressValue={() => setQtyLineId(line.lineId)}
                   valueHint={t.common.qtyHint}
+                  /* TAVAN SEVK EDİLEN (04.09): artı tavanda söner — fazlası kapıda zaten reddediliyordu
+                     ama ret sunucudan fonksiyon adıyla geliyordu (cihazda ölçüldü 03.09). */
+                  max={line.dispatchedQty}
                   testID={`warehouse-transfer-qty-${line.lineId}`}
                 />
               </View>
@@ -394,12 +457,141 @@ export function TransferScreen() {
                   testID={`warehouse-transfer-zero-${line.lineId}`}
                 />
               )}
+              {/* SATIRIN KENDİ EKSİĞİ (04.09): sayılan adet sevk edilenden azsa satır bunu hemen
+                  söyler — depocu özeti beklemeden hangi satırın kayıp yazacağını görür. */}
+              {counted === null || counted >= line.dispatchedQty ? null : (
+                <Text style={styles.lineShort} testID={`warehouse-transfer-line-short-${line.lineId}`}>
+                  {fillCopy(t.transfer.lineShort, { n: String(line.dispatchedQty - counted) })}
+                </Text>
+              )}
             </View>
           );
         })}
 
+        {/*
+          EKSİK ÖZETİ (kullanıcı kararı 04.09) — bütün satırlar sayılınca ve en az biri eksikse.
+          Sonuç kaydetmeden ÖNCE okunur (D4b'nin "akıbetin bedeli seçimden önce" ilkesi): eskiden
+          kabul "1 parti açıldı" diyor, beş birim eksik hiçbir yerde geçmiyordu (cihazda ölçüldü
+          03.09). Eksik yoksa panel hiç çizilmez — "0 eksik" bir beyan değildir.
+        */}
+        {transferState.shortfall === null ? null : (
+          <View style={styles.shortBox} testID="warehouse-transfer-shortfall">
+            <Text style={styles.shortHeading}>{t.transfer.shortfall.heading}</Text>
+            {transferState.shortfall.lines.map((line) => (
+              <View key={line.lineId} style={styles.shortLine}>
+                <Text style={styles.shortName} numberOfLines={1}>
+                  {line.name}
+                </Text>
+                <Text style={styles.shortQty}>
+                  {fillCopy(t.transfer.shortfall.line, {
+                    sent: String(line.dispatchedQty),
+                    received: String(line.receivedQty),
+                  })}
+                </Text>
+              </View>
+            ))}
+            <Text style={styles.shortTotal} testID="warehouse-transfer-shortfall-total">
+              {fillCopy(t.transfer.shortfall.total, { n: String(transferState.shortfall.qty) })}
+            </Text>
+            <Text style={styles.shortEffect}>
+              {fillCopy(t.transfer.shortfall.effect, {
+                n: String(transferState.shortfall.qty),
+                ref: transfer.referenceNo,
+              })}
+            </Text>
+          </View>
+        )}
+
         <Text style={styles.footnote}>{t.transfer.footnote}</Text>
       </FormScroll>
+
+      {/*
+        BEYAN ÇEKMECESİ (kullanıcı kararı 04.09) — yalnız eksik varken, CTA'nın ikinci dokunuşu.
+        Adet çekmecesinin deseni: kitin `BottomSheet`i, sağda metin eylemi, koyu sayaç kartı
+        (yerinde satışın kartı). Sebep iki çip, not isteğe bağlı; sonuç cümlesi düğmeden önce.
+        Yanlışlıkla "0 · hiç gelmedi"ye basılmış bir satırı kayıp olarak yazmadan son bir bakış.
+      */}
+      <BottomSheet
+        visible={transferState.declarationOpen}
+        title={t.transfer.declare.title}
+        titleAction={
+          <TextAction
+            label={t.transfer.declare.cancel}
+            onPress={transferState.cancelDeclaration}
+            testID="warehouse-transfer-declare-cancel"
+          />
+        }
+        onClose={transferState.cancelDeclaration}
+        testID="warehouse-transfer-declare"
+      >
+        {transferState.shortfall === null ? null : (
+          <View style={styles.declareBody}>
+            <Text style={styles.declareSub}>
+              {fillCopy(t.transfer.declare.subtitle, {
+                ref: transfer.referenceNo,
+                n: String(transferState.shortfall.lines.length),
+              })}
+            </Text>
+            <View style={styles.declareCard}>
+              <View style={styles.declareBigRow}>
+                <Text style={styles.declareBig} testID="warehouse-transfer-declare-qty">
+                  {transferState.shortfall.qty}
+                </Text>
+                <Text style={styles.declareUnit}>{t.transfer.declare.unit}</Text>
+              </View>
+              {transferState.shortfall.lines.map((line) => (
+                <View key={line.lineId} style={styles.declareLine}>
+                  <Text style={styles.declareLineName} numberOfLines={1}>
+                    {line.name}
+                  </Text>
+                  <Text style={styles.declareLineQty}>
+                    {fillCopy(t.transfer.declare.line, {
+                      sent: String(line.dispatchedQty),
+                      received: String(line.receivedQty),
+                    })}
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.heading}>{t.transfer.declare.reasonHeading}</Text>
+            <View style={styles.declareChips}>
+              {DECLARATION_REASONS.map((reason) => (
+                <OperationsChoiceChip
+                  key={reason}
+                  label={t.transfer.declare.reasons[reason]}
+                  selected={transferState.declaration.reason === reason}
+                  onPress={() => transferState.setDeclarationReason(reason)}
+                  testID={`warehouse-transfer-declare-reason-${reason}`}
+                />
+              ))}
+            </View>
+            <TextField
+              value={transferState.declaration.note}
+              onChangeText={transferState.setDeclarationNote}
+              placeholder={t.transfer.declare.notePlaceholder}
+              accessibilityLabel={t.transfer.declare.noteLabel}
+              density="compact"
+              testID="warehouse-transfer-declare-note"
+            />
+            <Text style={styles.declareEffect}>
+              {fillCopy(t.transfer.declare.effect, {
+                ref: transfer.referenceNo,
+                n: String(transferState.shortfall.qty),
+              })}
+            </Text>
+            <PressableSurface
+              onPress={transferState.confirmDeclaration}
+              disabled={transferState.sending}
+              feedback="shadow"
+              style={[styles.cta, styles.ctaReady]}
+              accessibilityLabel={t.transfer.declare.cta}
+              testID="warehouse-transfer-declare-cta"
+            >
+              <Text style={styles.ctaLabel}>{t.transfer.declare.cta}</Text>
+            </PressableSurface>
+          </View>
+        )}
+      </BottomSheet>
 
       {/* ADET ÇEKMECESİ — tek örnek, hangi satıra yazacağını `qtyLineId` söyler. Koli boyları
           ürün kartından (sözleşme 02.09'dan beri taşıyor): rampada mal koli koli sayılır. Çekmece
@@ -438,7 +630,7 @@ export function TransferScreen() {
           onPress={transferState.submit}
           disabled={!cta.enabled}
           feedback="shadow"
-          style={[styles.cta, cta.enabled ? styles.ctaReady : styles.ctaIdle]}
+          style={[styles.cta, cta.enabled ? (cta.short ? styles.ctaShort : styles.ctaReady) : styles.ctaIdle]}
           accessibilityLabel={cta.label}
           testID="warehouse-transfer-cta"
         >
@@ -550,6 +742,126 @@ const styles = StyleSheet.create({
   closedOk: { color: operationsTheme.colors['olive-dark'] },
   closedShort: { color: operationsTheme.colors.terracotta },
   closedNeutral: { color: operationsTheme.colors.muted },
+  /** Yoldaki satırın gecikme rozeti — üç ton, web'in transfer sekmesiyle aynı sözlük. */
+  agePill: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.micro),
+    borderRadius: operationsTheme.radius.pill,
+    paddingVertical: operationsTheme.space.sm,
+    paddingHorizontal: operationsTheme.space.lg,
+    overflow: 'hidden',
+  },
+  agePill_ok: { backgroundColor: operationsTheme.colors['olive-bg'], color: operationsTheme.colors['olive-dark'] },
+  agePill_warn: { backgroundColor: operationsTheme.colors['terracotta-bg'], color: operationsTheme.colors.terracotta },
+  agePill_late: { backgroundColor: operationsTheme.colors['error-bg'], color: operationsTheme.colors.error },
+  /** Satırın kendi eksiği — kiremit, çünkü kaydetmeden önce okunması gereken bir sonuç. */
+  lineShort: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.terracotta,
+  },
+  /** EKSİK ÖZETİ paneli — kiremit zemin: bir uyarı değil, kaydedilecek bir beyanın önizlemesi. */
+  shortBox: {
+    backgroundColor: operationsTheme.colors['terracotta-bg'],
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space.xl,
+    gap: operationsTheme.space.sm,
+  },
+  shortHeading: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],
+    fontSize: operationsTheme.text.eyebrow,
+    letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
+    color: operationsTheme.colors.terracotta,
+  },
+  shortLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
+  },
+  shortName: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.body,
+  },
+  shortQty: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors.terracotta,
+  },
+  shortTotal: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.ink,
+    paddingTop: operationsTheme.space.sm,
+  },
+  shortEffect: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.body,
+  },
+  /** Beyan çekmecesinin gövdesi — adet çekmecesinin ritmi. */
+  declareBody: { gap: operationsTheme.space.xl },
+  declareSub: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
+  },
+  /** Koyu sayaç kartı — yerinde satışın kartıyla aynı dil: büyük rakam krem, satırlar altında. */
+  declareCard: {
+    backgroundColor: operationsTheme.colors.ink,
+    borderRadius: operationsTheme.radius.control,
+    paddingVertical: operationsTheme.space.xl,
+    paddingHorizontal: operationsTheme.space['2xl'],
+    gap: operationsTheme.space.md,
+  },
+  declareBigRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: operationsTheme.space.md,
+  },
+  declareBig: {
+    fontFamily: operationsTheme.font.display[600],
+    fontSize: operationsTheme.text['screen-title'],
+    color: operationsTheme.colors['on-image'],
+  },
+  declareUnit: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors['on-image'],
+  },
+  declareLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: operationsTheme.space.lg,
+  },
+  declareLineName: {
+    flex: 1,
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['on-image'],
+  },
+  declareLineQty: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
+    fontSize: operationsTheme.text.tag,
+    color: operationsTheme.colors['on-image'],
+  },
+  declareChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: operationsTheme.space.md,
+  },
+  declareEffect: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
   queueFootnote: {
     fontFamily: operationsTheme.font.body['400'],
     fontSize: operationsTheme.text.tag,
@@ -672,6 +984,8 @@ const styles = StyleSheet.create({
     // Gölge YOK: v3'te sert gölge sıfır kez geçiyor (ölçüldü — v2'de 3, v3'te 0).
   },
   ctaIdle: { backgroundColor: operationsTheme.colors['disabled-fill'] },
+  /** Eksikli kabulün düğmesi KİREMİT: yazılacak şey bir kayıp, rengi onu söyler. */
+  ctaShort: { backgroundColor: operationsTheme.colors.terracotta },
   ctaLabel: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
     fontSize: operationsTheme.text.button,

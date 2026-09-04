@@ -845,6 +845,48 @@
     "locked": {
       "title": "Teslim alma kapalı",
       "body": "İki deponun stoku aynı anda doğru kalmalı — transfer kabulü kuyruğa alınmaz."
+    },
+    "captionRoute": "{ref} · {from} → {to}",
+    "queueRoute": "{from} → {to}",
+    "lineLot": "lot {lot} · SKT {date}",
+    "lineNoLot": "SKT {date}",
+    "lineShort": "{n} eksik · kayıp olarak yazılacak",
+    "shortfall": {
+      "heading": "EKSİK BEYANI",
+      "line": "{sent} gönderildi · {received} geldi",
+      "total": "{n} birim eksik",
+      "effect": "Kabul sevk edilen adetle yazılır; {n} birim bu depodan kayıp olarak düşülür ve {ref} belgesine bağlanır. Gönderen deponun kaydı değişmez."
+    },
+    "ctaShort": "Kabulü kaydet · {n} eksik beyanıyla",
+    "declare": {
+      "title": "Eksik beyanı",
+      "subtitle": "{ref} · {n} kalem eksik",
+      "unit": "birim eksik · kayıp yazılır",
+      "line": "{sent} → {received}",
+      "reasonHeading": "NE GÖRDÜN",
+      "reasons": {
+        "transfer_shortfall": "koli eksik geldi",
+        "damaged": "hasarlı geldi, imha"
+      },
+      "noteLabel": "beyan notu",
+      "notePlaceholder": "isteğe bağlı: mühür sağlam, bir koli hiç yoktu",
+      "effect": "Kabul {ref} belgesine sevk edilen adetle yazılır; {n} birim bu depodan düşülür, belge transfere bağlanır. Gönderen depoya ve yöneticiye bildirim gider.",
+      "cta": "Beyan et ve kabulü yaz",
+      "cancel": "vazgeç"
+    },
+    "resultShort": "Kabul yazıldı — {n} parti açıldı · {qty} birim eksik kayıp yazıldı · {ref}",
+    "resultShortNoRef": "Kabul yazıldı — {n} parti açıldı · {qty} birim eksik kayıp yazıldı",
+    "outboundRoute": "{to} · {n} kalem · tahmini {date}",
+    "outboundAge": {
+      "ok": "yolda",
+      "warn": "1 gün gecikti",
+      "late": "{n} gün gecikti"
+    },
+    "closedShortQty": "−{n} adet",
+    "closedShortfallRef": "{direction} · {n} kalem · {date} · eksik {ref}",
+    "directionVehicle": {
+      "in": "araçtan",
+      "out": "araca"
     }
   },
   "return": {

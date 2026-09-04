@@ -42,6 +42,8 @@ const SECTION: Partial<Record<AppNotificationKind, OperationsSection>> = {
   /* Askıda kalan durak (03.09): sevkiyat planlaması yönetimin işi — web'in askıda şeridi. */
   run_close_pending: 'management',
   b2b_application_received: 'management',
+  /* Transfer eksiği (04.09): gönderen deponun personeline düşer — depo bölümünün zili. */
+  transfer_shortfall: 'warehouse',
 };
 
 /** Bilinmeyen türün genel satırı — metin mobile özgü (yukarıdaki künye). */

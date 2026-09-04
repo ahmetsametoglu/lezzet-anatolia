@@ -864,6 +864,8 @@ describe('D5 · transfer (gelen)', () => {
     const body = await dataOf<WarehouseTransfersResponse>(res);
     const mine = body.transfers.find((row) => row.transferId === transferId)!;
     expect(mine.fromWarehouseId).toBe(otherWarehouseId);
+    // Kaynak deponun ADI da gelir (04.09): künye "Kehl → Strasbourg" diyebilsin.
+    expect(mine.fromWarehouseName).toEqual(expect.any(String));
     expect(mine.referenceNo).toMatch(/^TRF-/);
     expect(mine.note).toBe('rampa testi');
     expect(mine.lines).toEqual([
@@ -871,6 +873,9 @@ describe('D5 · transfer (gelen)', () => {
         lineId,
         sourceStockId: foreignStockId,
         name: `Fıstıklı Baklava ${stamp} (1 kg)`,
+        // Lot ve SKT satırda (04.09): rampadaki koli satırla bunlarla eşlenir.
+        lotNumber: null,
+        expiryDate: dayOffset(70),
         dispatchedQty: 4,
         // `null` = henüz sayılmadı; `0` olsaydı "geldi ama kayıp" derdi (0042).
         receivedQty: null,
@@ -929,6 +934,27 @@ describe('D5 · transfer (gelen)', () => {
     );
 
     expect(outcome).toEqual({ status: 'stale', currentStatus: 'received' });
+  });
+
+  it('EKSİK KABUL beyanla yazılır: cevap eksiği ve IMH belgesini taşır, parti sevk edilen adetle doğup eksik düşer', async () => {
+    const { transferId, lineId } = await inbound(4);
+
+    const outcome = await dataOf<ReceiveTransferResponse>(
+      await post(`/api/v1/warehouse/transfers/${transferId}/receive`, {
+        lines: [{ lineId, receivedQty: 3 }],
+        declaration: { reason: 'transfer_shortfall', note: 'bir koli hiç yoktu' },
+      }),
+    );
+
+    expect(outcome).toMatchObject({
+      status: 'ok',
+      createdBatches: 1,
+      shortfall: { qty: 1, referenceNo: expect.stringMatching(/^IMH-/), lines: [{ lineId, dispatchedQty: 4, receivedQty: 3 }] },
+    });
+    const arrived = (await stocks.listByVariant(warehouseId, variantId)).filter((batch) => batch.id !== stockId);
+    expect(arrived).toHaveLength(1);
+    expect(arrived[0]!.physicalQty).toBe(3);
+    expect(arrived[0]!.initialQty).toBe(4);
   });
 
   it('uuid olmayan transfer kimliği 400', async () => {

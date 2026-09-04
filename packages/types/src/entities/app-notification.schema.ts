@@ -63,6 +63,12 @@ export const AppNotificationKindEnum = z.enum([
   'run_close_pending',
   /** Yeni kurumsal başvuru düştü — onay kuyruğunun kapı zili. */
   'b2b_application_received',
+  /**
+   * Transfer eksik kabul edildi (04.09, 21.248): alan depo eksiği beyan etti, kayıp yazıldı.
+   * Zil GÖNDEREN deponun personeline ve yönetime gider — "ben 8 yolladım, 7 geldi" cümlesi
+   * artık kimsenin sekmesini açmasına bağlı değil. Hedefi transfer belgesi (payload'da).
+   */
+  'transfer_shortfall',
 ]);
 export type AppNotificationKind = z.infer<typeof AppNotificationKindEnum>;
 
@@ -80,6 +86,7 @@ export const STAFF_NOTIFICATION_KINDS = [
   'run_close_mismatch',
   'run_close_pending',
   'b2b_application_received',
+  'transfer_shortfall',
 ] as const satisfies readonly AppNotificationKind[];
 
 /** "Tıkla, git" hedefinin türü — adres, içerik değil. Yeni hedef türü ekranıyla birlikte gelir. */

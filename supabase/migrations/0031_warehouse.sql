@@ -756,14 +756,26 @@ revoke execute on function public.dispatch_transfer(uuid, jsonb, uuid, text) fro
 -- değildir; tedarik fark raporu PO kalemi ↔ giriş partileri bağından hesaplanır ve transfer onu
 -- bozamaz. Kökeni `warehouse_transfer_line.source_stock_id → target_stock_id` bağında durur.
 --
--- Kısmi kabul serbest: eksik gelen mal `received_qty` ile yazılır, fark raporda görünür.
--- BEKLEYEN(19.6): eksik farkının fire kaydına dönüşmesi (bugün rapor, kayıt değil).
+-- ── EKSİK KABUL = BEYAN + KAYIP KAYDI (kullanıcı kararı 04.09, 21.248) ──────
+-- Eskiden kısmi kabul yalnız `received_qty` ile yazılıyor, fark raporda görünüyordu ve kayıp
+-- hiçbir defterde yoktu (`0006`'nın 27.08 notu: "kaybın partisi yok"). Şimdi partinin var:
+--   1. Parti hedefte SEVK EDİLEN adetle doğar, `transfer_in` tam adet — kaynaktan çıkan kadar
+--      hedefe girer, iki deponun defteri birbirini tutar.
+--   2. Eksik kalan (`qty − received_qty`) aynı transaction'da `adjust_stock_batch` ile o partiden
+--      düşer: `write_off · p_reason` (varsayılan `transfer_shortfall`; koli hasarlı geldiyse
+--      `damaged`), tek IMH belgesi, notu depocunun beyanı; hareketler `transfer_id`ye bağlanır.
+--   3. Sıfır gelen satır da parti açar (sıfır adetle): lot izi ve kayıp belgesi bir yere bağlanır.
+-- Sorumluluk ALAN depodadır (iki depo aynı şirketin, fatura yok) — beyanı o yapar, kayıp onun
+-- hanesine yazılır. Tam kabulde hiçbir düşüm yazılmaz; araç yüklemesi (`takeToVan`) bu kapıyı
+-- tam adetle çağırdığı için eksik dalına hiç girmez.
 --
 -- p_lines: [{"line_id": uuid, "received_qty": int}, ...]
 create or replace function public.receive_transfer(
   p_transfer_id uuid,
   p_lines jsonb,
-  p_actor_id uuid default null
+  p_actor_id uuid default null,
+  p_reason stock_write_off_reason default 'transfer_shortfall',
+  p_note text default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -778,6 +790,11 @@ declare
   v_src record;
   v_target_stock_id uuid;
   v_created int := 0;
+  -- Eksik beyanı: hedefte doğan partiden düşülecek satırlar (`adjust_stock_batch` biçiminde).
+  v_short jsonb := '[]'::jsonb;
+  v_short_qty int := 0;
+  v_short_ref text := null;
+  v_adjust jsonb;
 begin
   select status, to_warehouse_id into v_status, v_to_warehouse_id
     from public.warehouse_transfer where id = p_transfer_id for update;
@@ -813,21 +830,26 @@ begin
       raise exception 'receive_transfer: sevk edilen % iken % kabul edilemez', v_src.qty, v_received;
     end if;
 
-    if v_received > 0 then
-      insert into public.stock (warehouse_id, variant_id, physical_qty, expiry_date, lot_number, purchase_price)
-      values (v_to_warehouse_id, v_src.variant_id, v_received, v_src.expiry_date, v_src.lot_number, v_src.purchase_price)
-      returning id into v_target_stock_id;
-      v_created := v_created + 1;
+    -- Parti SEVK EDİLEN adetle doğar — sıfır gelende de (04.09): kaybın bağlanacağı parti bu.
+    -- `initial_qty` tetikleyiciden sevk edilen adet olur; "bu partiden ne kadar tüketildi"
+    -- sorusunun doğru tabanı — kayıp da bir tüketimdir.
+    insert into public.stock (warehouse_id, variant_id, physical_qty, expiry_date, lot_number, purchase_price)
+    values (v_to_warehouse_id, v_src.variant_id, v_src.qty, v_src.expiry_date, v_src.lot_number, v_src.purchase_price)
+    returning id into v_target_stock_id;
+    v_created := v_created + 1;
 
-      -- Hedefte mal DOĞDU: defterin giriş satırı (06.14). Eksik gelen kısım buraya YAZILMAZ ve
-      -- gerekçesi `stock_movement_kind` künyesinde — kaybın bir partisi yok, o fark `qty` ile
-      -- `received_qty` arasında duruyor.
-      insert into public.stock_movement
-        (stock_id, direction, qty, kind, unit_cost, actor_id, transfer_id)
-      values
-        (v_target_stock_id, 'in', v_received, 'transfer_in', v_src.purchase_price, p_actor_id, p_transfer_id);
-    else
-      v_target_stock_id := null;
+    -- Hedefte mal DOĞDU: defterin giriş satırı (06.14) — kaynaktan çıkan kadar, eksiksiz. Eksik
+    -- kalan kısım bu satıra değil, döngüden sonraki `write_off`a yazılır (04.09).
+    insert into public.stock_movement
+      (stock_id, direction, qty, kind, unit_cost, actor_id, transfer_id)
+    values
+      (v_target_stock_id, 'in', v_src.qty, 'transfer_in', v_src.purchase_price, p_actor_id, p_transfer_id);
+
+    if v_received < v_src.qty then
+      v_short := v_short || jsonb_build_object(
+        'stock_id', v_target_stock_id, 'qty', v_src.qty - v_received, 'direction', 'out'
+      );
+      v_short_qty := v_short_qty + (v_src.qty - v_received);
     end if;
 
     -- `received_qty is null` şartı AYNI SATIRIN İKİ KEZ kabulünü kapatır: koşul olmasaydı ikinci
@@ -854,15 +876,34 @@ begin
     raise exception 'receive_transfer: kabul edilmemiş satır var — her satır için miktar (kayıpsa 0) gerekli';
   end if;
 
+  -- EKSİK BEYANI (04.09): tek IMH belgesi, alan deponun serisinden; hareketler transfere bağlanır.
+  -- `adjust_stock_batch` aynı transaction'da koşar — kabul yazılıp kayıp yazılamamış bir hâl yok.
+  -- Sebep boş geçilirse `transfer_shortfall`: imhanın sebebi kısıtla zorunlu, kapı sessiz düşmez.
+  if v_short_qty > 0 then
+    v_adjust := public.adjust_stock_batch(
+      v_short, 'write_off', 'IMH', coalesce(p_reason, 'transfer_shortfall'), p_note, p_actor_id
+    );
+    v_short_ref := v_adjust ->> 'reference_no';
+    update public.stock_movement
+       set transfer_id = p_transfer_id
+     where reference_no = v_short_ref and kind = 'write_off' and transfer_id is null;
+  end if;
+
   update public.warehouse_transfer
      set status = 'received', received_by = p_actor_id, received_at = now()
    where id = p_transfer_id;
 
-  return jsonb_build_object('ok', true, 'transfer_id', p_transfer_id, 'created_batches', v_created);
+  return jsonb_build_object(
+    'ok', true,
+    'transfer_id', p_transfer_id,
+    'created_batches', v_created,
+    'shortfall_qty', v_short_qty,
+    'shortfall_reference_no', v_short_ref
+  );
 end;
 $$;
 
-revoke execute on function public.receive_transfer(uuid, jsonb, uuid) from public, anon, authenticated;
+revoke execute on function public.receive_transfer(uuid, jsonb, uuid, stock_write_off_reason, text) from public, anon, authenticated;
 
 -- ── Sevk kaydının geri alınması (19.6) ──────────────────────────────────────
 -- **İki farklı gerçeği ayırıyoruz, çünkü tek düğmeye sıkıştırılırsa stok yalan söyler:**

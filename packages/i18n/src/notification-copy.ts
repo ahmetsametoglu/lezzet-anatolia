@@ -276,6 +276,12 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     label: 'Sevkiyat',
     title: `Sefer kapandı${referans(p)} — ${typeof p.pendingCount === 'number' ? p.pendingCount : '?'} durak askıda, yeniden planla`,
   }),
+  /* Transfer eksiği (04.09, 21.248): alan depo beyan etti, kayıp onun hanesine yazıldı — gönderen depo duyar. */
+  transfer_shortfall: (p) => ({
+    tone: 'attention',
+    label: 'Transfer',
+    title: `Transfer eksik kabul edildi${referans(p)} — ${typeof p.shortQty === 'number' ? p.shortQty : '?'} adet eksik, ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} kayıp yazdı`,
+  }),
   b2b_application_received: () => ({
     tone: 'attention',
     label: 'Kurumsal',

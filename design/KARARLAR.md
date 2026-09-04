@@ -1997,3 +1997,35 @@ tahsilatı oraya niye yazdın anlamadım"*.
 
 Sapmanın kazancı görünürdü: eski hâlde satır `2×` diyip 1 adedin tutarını yazıyordu ve çelişkiyi
 ancak koca bir açıklama kutusu kapatabiliyordu. Üstü çizili sayı o çelişkiyi cümlesiz kapatıyor.
+
+## D5 transfer: eksik gelen mal BEYAN edilir, kayıp alan depoya yazılır (04.09, kullanıcı kararı · 21.248)
+
+**Ölçüm (POCO, 03.09):** Kehl'den Strasbourg'a gerçek kapıdan sevk edilen bir transfer eksik
+sayıldı; ekran *"Kabul yazıldı — 1 parti açıldı"* dedi, beş birim eksik hiçbir kayda geçmedi,
+gönderene bildirim gitmedi. Sevk edilenden fazlası girilebiliyor ve ret sunucudan
+*"receive_transfer: sevk edilen 5 iken 6 kabul edilemez"* diye geliyordu. Künye *"Strasbourg —
+ana depo"* diyordu (alan deponun adı, "oradan geldi" gibi okunuyor); satırda lot/SKT yoktu;
+gecikmiş sevkiyat sessizdi; "2 eksik" satır sayısıydı.
+
+**Karar (kullanıcı, 04.09) — dört hüküm, dördü de önerildiği gibi:**
+1. **Yeni sebep `transfer_shortfall`** (mevcut `lost` değil): kayıp listesinde transit kaybı ile
+   sayım kaybı ayrı süzülür. Koli hasarlı geldiyse `damaged`.
+2. **Sıfır gelen satır da parti açar**, sıfır adetle: lot izi ve kayıp belgesi ona bağlanır.
+3. **Beyan çekmecesi yalnız eksik varken**, CTA'nın ikinci dokunuşu; eksiksiz kabul tek dokunuş.
+   Yanlışlıkla "0 · hiç gelmedi"ye basılmış satırı kayıp yazmadan son bakış.
+4. **Bildirim gönderen deponun personeline ve yöneticiye** — alan depo zaten biliyor, beyanı o yaptı.
+
+**Model:** parti hedefte SEVK EDİLEN adetle doğar (`transfer_in` tam adet, iki defter tutar),
+eksik aynı transaction'da `write_off` ile o partiden düşer (IMH, `transfer_id` bağlı). Transit depo
+yok, `transfer_loss` tipi yok — 27.08 kararı korunur, "kaybın partisi yok" çıkmazı partiyi
+doğurarak çözülür. İki depo aynı şirketin; para tarafında değişen bir şey yok, kayıp bugünkü imha
+kayıtlarıyla aynı yoldan maliyetlenir.
+
+**Ekran (uygulamanın kendi bileşenleriyle):** künye "Kehl → Strasbourg"; satırda lot ve SKT; artı
+ve çekmece sevk edilende durur; satır kendi eksiğini söyler; bütün satırlar sayılınca kiremit
+"EKSİK BEYANI" paneli (satır satır gönderildi · geldi, toplam, sonuç cümlesi) ve düğme "N eksik
+beyanıyla"; çekmecede koyu sayaç kartı (yerinde satışın kartı), iki sebep çipi, isteğe bağlı not,
+"Beyan et ve kabulü yaz"; toast adedi ve belgeyi söyler. Listede gecikme rozeti web'in üç
+tonuyla, kapananlarda "−N adet" ve "araca / araçtan" ayrımı. Tasarım sayfası: *D5 Eksik Beyanı*
+(Artifact, 04.09). Tasarım sayfasındaki dört çip ikiye indi: her çip bir sebep olsun diye
+("koli açılmış" ve "sayım şüpheli" sebep değil, not).

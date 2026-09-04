@@ -1,7 +1,17 @@
 import { transferDecision, type TransferSuggestion } from '@lezzet/domain-core';
-import { StockService, WarehouseTransferService } from '@lezzet/database';
-import type { CaseSizeContract, DispatchLine, ReceiveLine, TransferStatus, WarehouseTransferLine } from '@lezzet/types';
+import { StockMovementService, StockService, WarehouseService, WarehouseTransferService } from '@lezzet/database';
+import type {
+  CaseSizeContract,
+  DispatchLine,
+  ReceiveLine,
+  StockWriteOffReason,
+  TransferStatus,
+  Warehouse,
+  WarehouseKind,
+  WarehouseTransferLine,
+} from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { notifyTransferShortfall } from '../notification/staff-events';
 import { caseSizesByVariant } from './case-sizes';
 import { displayName, variantNames } from './names';
 import { rpcRejectionMessage } from './rpc-error';
@@ -57,6 +67,8 @@ export interface InboundTransfer {
   /** TRF-COL-26-0007 — KAYNAK deponun kodu; kâğıt klasör orada durur. */
   referenceNo: string;
   fromWarehouseId: string;
+  /** Kaynak deponun adı (04.09) — künyenin "Kehl → Strasbourg" cümlesi; depo silinmişse `null`. */
+  fromWarehouseName: string | null;
   dispatchedAt: string;
   note: string | null;
   lines: InboundTransferLine[];
@@ -83,13 +95,17 @@ export async function listInboundTransfers(
   // küçük olduğu için bu bir N+1 değil, sınırlı bir tur. Parti künyesi ise TEK turda: bütün
   // transferlerin partileri toplanıp bir kez sorulur — `getBatchDetails` kimliğin yanına lot ve
   // tarihi de getiriyor (19.6: rampadaki eşleşme lottan yapılır), ikinci bir okuma açılmadı.
-  const lineSets = await Promise.all(rows.map((row) => transfers.listLines(row.id)));
+  const [lineSets, labels] = await Promise.all([
+    Promise.all(rows.map((row) => transfers.listLines(row.id))),
+    warehouseLabels(db, rows.map((row) => row.fromWarehouseId)),
+  ]);
   const details = await lineDetails(db, lineSets.flat());
 
   return rows.map((row, index) => ({
     transferId: row.id,
     referenceNo: row.referenceNo,
     fromWarehouseId: row.fromWarehouseId,
+    fromWarehouseName: labels.get(row.fromWarehouseId)?.name ?? null,
     dispatchedAt: row.dispatchedAt,
     note: row.note,
     lines: (lineSets[index] ?? []).map((line) => toInboundLine(line, details)),
@@ -241,8 +257,21 @@ export async function readDispatchCandidate(
   };
 }
 
+/** Eksik beyanının kaydı (04.09) — toplam adet RPC'den, IMH belgesi defterden, satırlar girdiden. */
+export interface TransferShortfall {
+  qty: number;
+  referenceNo: string | null;
+  lines: Array<{ lineId: string; dispatchedQty: number; receivedQty: number }>;
+}
+
 export type ReceiveTransferOutcome =
-  | { status: 'ok'; transferId: string; createdBatches: number }
+  | {
+      status: 'ok';
+      transferId: string;
+      createdBatches: number;
+      /** Eksik beyanı yazıldıysa (04.09): adet, IMH belgesi, satır satır fark. Tam kabulde `null`. */
+      shortfall: TransferShortfall | null;
+    }
   /** Transfer bu depoya gelmiyor — başka deponun kabulü buradan kapatılamaz. */
   | { status: 'forbidden'; reason: 'out_of_scope' }
   /** Araya biri girdi: transfer artık yolda değil (kabul edilmiş ya da geri alınmış). */
@@ -272,6 +301,12 @@ export async function receiveTransfer(
     warehouseId: string;
     lines: readonly ReceiveLine[];
     actorId?: string | null;
+    /**
+     * EKSİK BEYANI (04.09): eksik gelen adet hedefte doğan partiden bu sebeple düşer. Verilmezse
+     * `transfer_shortfall`, notsuz — tam kabulde hiç okunmaz. Sebep iki değerle sınırlı: nakliyede
+     * kayıp ya da hasarlı geldi; "tarihi geçti" ve "sayımda bulunamadı" bu kapının cümlesi değil.
+     */
+    declaration?: { reason: Extract<StockWriteOffReason, 'transfer_shortfall' | 'damaged'>; note?: string | null } | null;
   },
 ): Promise<ReceiveTransferOutcome> {
   const transfers = new WarehouseTransferService(db);
@@ -280,7 +315,8 @@ export async function receiveTransfer(
   if (transfer.toWarehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
   if (transfer.status !== 'in_transit') return { status: 'stale', currentStatus: transfer.status };
 
-  const expected = new Set((await transfers.listLines(input.transferId)).map((line) => line.id));
+  const expectedLines = await transfers.listLines(input.transferId);
+  const expected = new Set(expectedLines.map((line) => line.id));
   const given = new Set(input.lines.map((line) => line.lineId));
   const missingLineIds = [...expected].filter((id) => !given.has(id));
   const unknownLineIds = [...given].filter((id) => !expected.has(id));
@@ -289,8 +325,36 @@ export async function receiveTransfer(
   }
 
   try {
-    const result = await transfers.receive({ transferId: input.transferId, lines: [...input.lines], actorId: input.actorId });
-    return { status: 'ok', transferId: result.transferId, createdBatches: result.createdBatches };
+    const result = await transfers.receive({
+      transferId: input.transferId,
+      lines: [...input.lines],
+      actorId: input.actorId,
+      declaration: input.declaration ?? null,
+    });
+    // Eksik SATIRLAR kapının kendi girdisinden kurulur (sevk edilen ↔ sayılan); RPC toplamı ve
+    // belgeyi verir. İkisi aynı gerçeğin iki yüzü — toplam RPC'den okunur ki ekran defterle çelişmesin.
+    const dispatchedOf = new Map(expectedLines.map((line) => [line.id, line.qty]));
+    const shortLines = input.lines.flatMap((line) => {
+      const dispatchedQty = dispatchedOf.get(line.lineId) ?? 0;
+      return line.receivedQty < dispatchedQty
+        ? [{ lineId: line.lineId, dispatchedQty, receivedQty: line.receivedQty }]
+        : [];
+    });
+    const shortfall: TransferShortfall | null =
+      result.shortfallQty > 0 ? { qty: result.shortfallQty, referenceNo: result.shortfallReferenceNo, lines: shortLines } : null;
+    // Zil GÖNDEREN depoya (04.09): "ben 8 yolladım, 7 geldi" cümlesi artık kimsenin sekmesine
+    // bağlı değil. Zil düşerse kabul DURMAZ (`staff-events` kuralı): kayıt yazıldı, haber ikincil.
+    if (shortfall !== null) {
+      await notifyTransferShortfall(db, {
+        transferId: transfer.id,
+        referenceNo: transfer.referenceNo,
+        fromWarehouseId: transfer.fromWarehouseId,
+        toWarehouseId: transfer.toWarehouseId,
+        shortQty: shortfall.qty,
+        shortfallReferenceNo: shortfall.referenceNo,
+      });
+    }
+    return { status: 'ok', transferId: result.transferId, createdBatches: result.createdBatches, shortfall };
   } catch (error) {
     // Ret mesajı OLDUĞU GİBİ taşınır (`rpcRejectionMessage` künyesi): rampadaki depocu "kabul
     // yazılamadı" değil, RPC'nin söylediği fiziksel gerçeği okumalı.
@@ -395,6 +459,39 @@ export interface OutboundTransfer {
   lineCount: number;
   /** Tahmini varış günü (`YYYY-MM-DD`) — sevk günü + ulaşım süresi AYARI; taşıyıcıdan gelen söz değil. */
   etaDate: string;
+  /** Hedef deponun adı (04.09); depo silinmişse `null`. */
+  toWarehouseName: string | null;
+  /** Sevkten bu yana geçen gün ve tonu (04.09) — `transitAgeOf`; web'in transfer sekmesiyle aynı eşik. */
+  ageDays: number;
+  ageTone: TransitAgeTone;
+  /** Tahmini varışı kaç gün aştı; ayar içindeyken `0`. */
+  lateDays: number;
+}
+
+export type TransitAgeTone = 'ok' | 'warn' | 'late';
+
+/**
+ * Yoldaki sevkiyatın YAŞI (04.09) — üç ton, tek eşik: ayarın içinde `ok`, bir gün aşınca `warn`,
+ * sonrası `late`. Web'in transfer sekmesi aynı üçlüyü kendi okumasında hesaplıyordu; eşik artık
+ * burada, iki yüzey aynı kuralı okusun diye (web'e not bırakıldı: `docs/talep`).
+ *
+ * Gün farkı TAKVİM günüdür, 24 saatlik pencere değil: sabah 9'da çıkan ve ertesi sabah 8'de hâlâ
+ * yolda olan sevkiyat "1 gün" yolda demektir — depocunun kendi cümlesi bu.
+ */
+export function transitAgeOf(
+  dispatchedAt: string,
+  transitDays: number,
+  now: Date,
+): { ageDays: number; ageTone: TransitAgeTone; lateDays: number } {
+  const from = Date.UTC(
+    new Date(dispatchedAt).getUTCFullYear(),
+    new Date(dispatchedAt).getUTCMonth(),
+    new Date(dispatchedAt).getUTCDate(),
+  );
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const ageDays = Math.max(0, Math.round((today - from) / 86_400_000));
+  const ageTone: TransitAgeTone = ageDays <= transitDays ? 'ok' : ageDays <= transitDays + 1 ? 'warn' : 'late';
+  return { ageDays, ageTone, lateDays: Math.max(0, ageDays - transitDays) };
 }
 
 /**
@@ -414,11 +511,13 @@ export interface OutboundTransfer {
  */
 export async function listOutboundTransfers(
   db: SupabaseClient,
-  input: { warehouseId: string; transitDays: number },
+  input: { warehouseId: string; transitDays: number; now?: Date },
 ): Promise<OutboundTransfer[]> {
   const transfers = new WarehouseTransferService(db);
   const rows = await transfers.listDispatchedFrom(input.warehouseId);
   if (rows.length === 0) return [];
+  const now = input.now ?? new Date();
+  const labels = await warehouseLabels(db, rows.map((row) => row.toWarehouseId));
 
   // Satır SAYISI için satırları okumak gerekiyor (kayıtta sayaç kolonu yok) ama künyeleri
   // çözülmüyor: sayı bir uzunluk, ad çözümü ise iki tur daha demekti.
@@ -431,7 +530,19 @@ export async function listOutboundTransfers(
     dispatchedAt: row.dispatchedAt,
     lineCount: lineSets[index]?.length ?? 0,
     etaDate: addDaysToDate(row.dispatchedAt, input.transitDays),
+    toWarehouseName: labels.get(row.toWarehouseId)?.name ?? null,
+    ...transitAgeOf(row.dispatchedAt, input.transitDays, now),
   }));
+}
+
+/**
+ * Depo adı ve türü, kimlikle — tek turda (04.09). `WarehouseService.list` boş dizide sorgu atmaz;
+ * silinmiş/kapalı depo listede olmayabilir, çağıran `null`a düşer ve uydurmaz.
+ */
+async function warehouseLabels(db: SupabaseClient, ids: readonly string[]): Promise<Map<string, Warehouse>> {
+  const unique = [...new Set(ids)];
+  const rows = await new WarehouseService(db).list({ warehouseIds: unique });
+  return new Map(rows.map((row) => [row.id, row]));
 }
 
 /**
@@ -460,6 +571,13 @@ export interface ClosedTransfer {
   lineCount: number;
   /** Sevk edilenden AZ sayılan satır sayısı; `0` = tam kabul. **Geri alınmışta `null`** (aşağıda). */
   shortLineCount: number | null;
+  /** Eksik gelen TOPLAM ADET (04.09) — satır sayısı değil; geri alınmışta `null`. */
+  shortQty: number | null;
+  /** Eksiğin IMH belgesi (`write_off` hareketi `transfer_id` taşır); eksik yoksa ya da beyan öncesi kayıtsa `null`. */
+  shortfallReferenceNo: string | null;
+  /** Karşı taraf tesis mi araç mı (04.09): araç yüklemeleri geçmişte "araca / araçtan" diye ayrılır. */
+  counterpartKind: WarehouseKind;
+  counterpartName: string | null;
 }
 
 /**
@@ -485,13 +603,34 @@ export async function listClosedTransfers(
   const rows = await transfers.listClosedFor([input.warehouseId]);
   if (rows.length === 0) return [];
 
-  const lineSets = await Promise.all(rows.map((row) => transfers.listLines(row.id)));
+  // Üç okuma birbirini beklemez: satırlar, karşı depoların künyesi ve eksik belgeleri (04.09 —
+  // `write_off` hareketi `transfer_id` taşıyor; belge numarası oradan okunur, transfer kaydına
+  // ikinci bir kolon açılmadı: belge zaten defterde, iki yerde tutmak bir gün ayrıştırırdı).
+  const [lineSets, labels, shortfallMovements] = await Promise.all([
+    Promise.all(rows.map((row) => transfers.listLines(row.id))),
+    warehouseLabels(
+      db,
+      rows.map((row) => (row.toWarehouseId === input.warehouseId ? row.fromWarehouseId : row.toWarehouseId)),
+    ),
+    new StockMovementService(db).listByTransferIds(
+      rows.map((row) => row.id),
+      { kind: 'write_off' },
+    ),
+  ]);
+  const shortfallRefOf = new Map<string, string>();
+  for (const movement of shortfallMovements) {
+    if (movement.transferId !== null && movement.referenceNo !== null && !shortfallRefOf.has(movement.transferId)) {
+      shortfallRefOf.set(movement.transferId, movement.referenceNo);
+    }
+  }
 
   return rows.flatMap((row, index) => {
     // Durum daraltması yoklamayla: sorgu ikisini süzüyor ama tipin söylediğini `as` ile ezmek,
     // sorgu bir gün genişlediğinde sessizce yalan söylerdi (`listPendingIntakes` ile aynı karar).
     if (row.status !== 'received' && row.status !== 'cancelled') return [];
     const lines = lineSets[index] ?? [];
+    const counterpartId = row.toWarehouseId === input.warehouseId ? row.fromWarehouseId : row.toWarehouseId;
+    const counterpart = labels.get(counterpartId);
     return [
       {
         transferId: row.id,
@@ -506,6 +645,15 @@ export async function listClosedTransfers(
         lineCount: lines.length,
         shortLineCount:
           row.status === 'cancelled' ? null : lines.filter((line) => (line.receivedQty ?? 0) < line.qty).length,
+        shortQty:
+          row.status === 'cancelled'
+            ? null
+            : lines.reduce((sum, line) => sum + Math.max(0, line.qty - (line.receivedQty ?? 0)), 0),
+        shortfallReferenceNo: shortfallRefOf.get(row.id) ?? null,
+        // Karşı taraf bilinmiyorsa (depo silinmiş) TESİS sayılır: araç etiketi bir iddiadır,
+        // uydurulmaz; tesis ise transferin varsayılan cümlesidir.
+        counterpartKind: counterpart?.kind ?? 'facility',
+        counterpartName: counterpart?.name ?? null,
       },
     ];
   });
