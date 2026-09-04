@@ -45,6 +45,8 @@ declare
   v_target int;
   v_delta int;                                       -- geri gelen / hiç gitmeyen adet
   v_disposition return_disposition;
+  /** Kalemde ZATEN yazılı akıbet — "bir kez yazılır" kapısının ölçütü (04.09). */
+  v_existing return_disposition;
   v_note text;
   v_batch record;
   v_take int;
@@ -69,7 +71,25 @@ begin
     return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_status);
   end if;
 
-  v_consumed := v_status in ('delivered', 'completed');
+  /*
+    ── "MAL FİİLİ STOKTAN DÜŞTÜ MÜ" GEÇMİŞTEN SORULUR, ANLIK DURUMDAN DEĞİL (kusur, ölçüldü 04.09) ──
+
+    Ölçüt `v_status in ('delivered','completed')` idi ve teslim SONRASI iade yolunda sessizce
+    yanlış cevap veriyordu: sipariş önce `delivered` olur (stok `deliver_order` ile fiilen düşer),
+    sonra `returned`a çevrilir — bu geçiş motorda izinli ve bugün kurye ucundan erişilebilir. O
+    noktada durum artık `returned` olduğu için ölçüt FALSE dönüyordu ve iki dal birden ters
+    çalışıyordu: `restock`ta mal deftere geri girmiyor (kalıcı hayalet kayıp), `discard`ta stok
+    İKİNCİ kez düşüyordu.
+
+    Doğru soru "şu an hangi durumda" değil, "bu sipariş HİÇ teslim edildi mi": stoğu düşüren olay
+    teslimin kendisi (`0016_deliver_order.sql`) ve o olay geri alınmıyor. Cevabı durum GÜNLÜĞÜ
+    taşıyor — anlık durum bir sonraki geçişte değişir, günlük değişmez.
+  */
+  v_consumed := v_status in ('delivered', 'completed')
+    or exists (
+      select 1 from public.order_status_log l
+       where l.order_id = p_order_id and l.to_status in ('delivered', 'completed')
+    );
 
   for v_line in select * from jsonb_array_elements(p_lines)
   loop
@@ -78,7 +98,7 @@ begin
     v_disposition := nullif(v_line ->> 'return_disposition', '')::return_disposition;
     v_note := nullif(v_line ->> 'note', '');
 
-    select qty, fulfilled_qty into v_ordered, v_current
+    select qty, fulfilled_qty, return_disposition into v_ordered, v_current, v_existing
       from public.order_item
      where id = v_item_id and order_id = p_order_id
      for update;
@@ -87,10 +107,41 @@ begin
       raise exception 'adjust_fulfillment: kalem bu siparişe ait değil (%)', v_item_id;
     end if;
 
+    /*
+      ── AKIBET BİR KEZ YAZILIR (kusur, ölçüldü 04.09) ─────────────────────────────────────────
+
+      Kapının "bu kalem zaten karara bağlanmış" sorusu YOKTU: gelen akıbet `coalesce` ile üzerine
+      yazılıyor, goodwill dalı ise miktar doğrulamalarının ikisini birden atlayıp doğrudan
+      yazıyordu. Tek savunma ekranın salt-okunur çizimiydi ve o çizim BAYAT olabiliyor — iki
+      dönüşlü bir kuryede ikinci sipariş ağ hatasıyla düşerse ekran yerinde kalır, ilk siparişin
+      yazılmış satırları hâlâ işaretsiz görünür ve çipleri yeniden basılabilir.
+
+      Sonuç kendi kendini yalanlayan bir kayıttı: `goodwill` ("mal müşteride kaldı") yazan, ama
+      karşılanan adedi ilk turda 0'a düşürülmüş, parti bağı silinmiş bir kalem. COGS de geri
+      çağırma izi de o kalemde artık yanlış.
+
+      AYNI akıbetin ikinci kez gelmesi hata DEĞİL (ağ tekrarı, ikinci dokunuş) — sessizce geçilir.
+      FARKLI bir akıbet ise çağıranın bayat bir ekrandan yazdığını söyler: istek TAMAMEN reddedilir
+      ve sebebi adıyla döner, çünkü yarısı yazılmış bir düzeltme en kötü sonuçtur.
+    */
+    if v_existing is not null and v_disposition is not null and v_disposition <> v_existing then
+      return jsonb_build_object(
+        'ok', false, 'reason', 'already_marked', 'current_status', v_status,
+        'order_item_id', v_item_id, 'current_disposition', v_existing
+      );
+    end if;
+    if v_existing is not null and v_disposition = v_existing then
+      v_lines := v_lines + 1;
+      continue;
+    end if;
+
     -- Jest iadesi: mal müşteride KALDI. Miktarı düşürmek malın hiç gitmediğini söylerdi — stok da
     -- COGS de bozulurdu (DOMAIN §8). Yalnız tasarruf işaretlenir; para tarafı elle girilen iadedir.
     if v_disposition = 'goodwill' then
-      update public.order_item set return_disposition = 'goodwill' where id = v_item_id;
+      update public.order_item
+         set return_disposition = 'goodwill',
+             return_note = coalesce(v_note, return_note)
+       where id = v_item_id;
       v_lines := v_lines + 1;
       continue;
     end if;
@@ -106,7 +157,11 @@ begin
     v_delta := v_current - v_target;
     update public.order_item
        set fulfilled_qty = v_target,
-           return_disposition = coalesce(v_disposition, return_disposition)
+           return_disposition = coalesce(v_disposition, return_disposition),
+           -- BEYAN KALEME YAZILIR (04.09): "stoğa dön"ün zorunlu tuttuğu soğuk zincir cümlesi
+           -- eskiden yalnız stok hareketinin serbest metnine geçiyordu ve D6 yolunda o dal hiç
+           -- ateşlenmiyordu — yani ekranda zorunlu olan not hiçbir yere yazılmıyordu.
+           return_note = coalesce(v_note, return_note)
      where id = v_item_id;
     v_lines := v_lines + 1;
 

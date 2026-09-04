@@ -11788,3 +11788,56 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Kalan iş ölçüm gerektiriyor: depo seçicisi (`warehouse-choice`) ve `?place=van` yolu araç
   kapsamdan çıkınca ne yapıyor. Kullanıcının *"bir kişi hem depoya hem araca mı atanır"* sorusunun
   cevabı ancak bu kalkınca "hayır" olur.
+
+- [x] (21.259) **AKIBETİN ÜÇ DEĞİŞMEZİ VERİYE İNDİ — beyan kaleme yazılır · akıbet bir kez yazılır · "mal düştü mü" GEÇMİŞTEN sorulur; sürülen seferde devir durur** (denetim bulgusu 04.09, kullanıcı seçimi "veriyi bozan beş madde")
+  `touches:` `supabase/migrations/{0012_order.sql,0020_order_return.sql}` · `packages/types/src/entities/order.schema.ts` · `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/application/src/order/{refund.ts,refund.test.ts}` · `packages/application/src/warehouse/{returns.ts,returns.test.ts}` · `apps/mobile/src/screens/warehouse/{courier-return-screen.tsx,courier-return-screen.test.tsx,use-courier-return.hook.ts,messages.json}` · `apps/mobile-api/src/api/v1/warehouse.test.ts` · `apps/web/app/(operations)/operations/{orders/actions.ts,stock/transfer-read.ts}` · `docs/architecture/data-model/musteri-siparis.md`
+
+  **Kullanıcının sorusu:** *"D6 tamamlandı mı? Uçtan uca denedik mi? Akışta bir problem var mı?"*
+  On ajanla denetlendi (her bulgu ayrıca çürütmeye verildi); çıkan beş "veriyi bozan" maddeden
+  bu şeridin dördü burada kapandı, ikisi öteki şeritlere bildirildi.
+
+  **1 · BEYAN KAYBOLUYORDU.** D6 `restock`ta sebep notunu ZORUNLU tutuyor (soğuk zincir) ama not
+  hiçbir yere yazılmıyordu: `adjust_fulfillment` onu yalnız `adjust_stock`un serbest metnine
+  geçiriyor, o dal ise dönüş yolunda (mal hiç çıkmamış) hiç ateşlenmiyor. Depocuya zorunlu tutulan
+  cümle ekrandan çıkıp yok oluyordu. Yeni kolon `order_item.return_note` — not **harekete değil
+  KALEME** yazılır, çünkü iddia malın kendisi hakkında ("neden yeniden satılabilir sayıldı") ve o
+  soru ileride geri çağırma ya da denetimle yeniden açılır. Ekran da geri okuyor: işaretlenmiş
+  satır artık beyanını gösteriyor — görünmeyen bir zorunluluk forma doldurma törenidir.
+
+  **2 · AKIBET DEĞİŞTİRİLEBİLİYORDU.** Kapının "bu kalem zaten karara bağlanmış" sorusu yoktu;
+  gelen akıbet `coalesce` ile üzerine yazılıyor, `goodwill` dalı miktar doğrulamalarının ikisini
+  birden atlıyordu. Tek savunma ekranın salt-okunur çizimiydi ve o çizim BAYAT olabiliyor: iki
+  dönüşlü kuryede ikinci sipariş ağ hatasıyla düşerse ekran yerinde kalıyor, ilk siparişin yazılmış
+  satırları hâlâ işaretsiz görünüyor ve çipleri yeniden basılabiliyordu. Sonuç kendi kendini
+  yalanlayan bir kayıt: `goodwill` ("mal müşteride kaldı") yazan ama karşılanan adedi 0'a
+  düşürülmüş, parti bağı silinmiş bir kalem. Artık AYNI akıbetin tekrarı sessizce geçiliyor,
+  FARKLI olan `already_marked` ile TAMAMEN reddediliyor (yarısı yazılmış düzeltme en kötü sonuç).
+  İstemci tarafı da kapandı: her düşen yazımdan sonra detay TAZELENİYOR.
+
+  **3 · "MAL FİİLİ STOKTAN DÜŞTÜ MÜ" ANLIK DURUMA SORULUYORDU.** Teslim sonrası iade yolunda
+  (`delivered → returned`, motorda izinli ve bugün kurye ucundan erişilebilir) ölçüt FALSE dönüyor,
+  iki dal birden ters çalışıyordu: `restock`ta mal deftere geri girmiyor (kalıcı hayalet kayıp),
+  `discard`ta stok İKİNCİ kez düşüyordu. Soru artık durum GÜNLÜĞÜNE soruluyor — anlık durum bir
+  sonraki geçişte değişir, günlük değişmez.
+
+  **4 · SÜRÜLEN SEFERDE DEVİR DURUYOR.** Kurye bir seferi sürüyorsa araç bugün boşalmaz, ama serbest
+  ürün kutuları araçtaki HER ŞEYLE dolu açılıyordu: tek dokunuş yola çıkacak kuryenin malını elinden
+  alıyordu. Ekran uyarıyor, varsayılan uyarının tersini yapıyordu. Artık sıfırdan açılıyor ve sebebi
+  bölümün başında yazılı; sayılmayan mal araçta kalır.
+
+  **ÖTEKİ ŞERİTLERE İKİ NOT.** (a) `markUndelivered` durum şartı koşmuyor — TESLİM EDİLMİŞ sipariş
+  `returned` yapılabiliyor ve hiçbir ekranı yok (kurye şeridi). (b) Ops web'in "İzinli geçişler →
+  Tamamlandı" düğmesi siparişi kapatıyor ama kâr kalemlerini NULL bırakıyor; kapanışın doğru kapısı
+  (`close_order`) üretimde hiç çağrılmıyor (web şeridi · `07.16`nın komşusu, ondan ayrı bir kusur).
+
+  **YAN ONARIM — WEB DERLEMESİ BİR GÜNDÜR KIRIKMIŞ.** 21.254'te sözleşmede `InboundTransferLine.name`
+  alanını ikiye ayırmıştım (`productName` + `variantLabel`); `apps/web`in transfer okuması o alanı
+  okuyordu ve o günden beri derlenmiyordu. Paket paket `typecheck` koştuğum için görülmedi — tam
+  test paketi ve `lint` web tipini kapsamıyor. Kökten `pnpm typecheck` artık commit öncesi sıraya
+  girdi (bellek notu). Web'e minimum düzeltme yazıldı: birleştirme masaüstü tablosunda, sözleşmede
+  değil.
+
+  Kök typecheck (20 paket) · tam paket 4181/4181 · mobil Jest 1302 · lint · knip · docs:check temiz.
+  Yeni testler: `refund.test` beş iddia (beyan yazılır · farklı akıbet reddedilir · aynı akıbet
+  geçilir · teslim sonrası iade stoğa geri koyar · teslim sonrası imha ikinci kez düşmez) ve
+  D6 ekranında iki iddia (sürülen seferde sıfır sayaç · `already_marked` tazeler).

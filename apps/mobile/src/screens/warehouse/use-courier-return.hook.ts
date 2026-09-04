@@ -189,12 +189,25 @@ export function useCourierReturn(): UseCourierReturnResult {
     setNotes((current) => ({ ...current, [orderItemId]: note }));
   }, []);
 
-  /* Sayaç ARAÇTA KAYITLI adetle açılır (para satırlarının deseni, v3:14): normal günde fark
-     sıfırdır ve depocuya üç kutuyu elle doldurtmak, doğru olanı yazmak için emek isteyip yanlış
-     olanı sessizce geçirir. Değiştirilen kutu farkı zaten anında gösteriyor. */
+  /*
+    Sayaç ARAÇTA KAYITLI adetle açılır (para satırlarının deseni, v3:14): normal günde fark sıfırdır
+    ve depocuya kutuları elle doldurtmak, doğru olanı yazmak için emek isteyip yanlış olanı sessizce
+    geçirir.
+
+    ── SÜRÜLEN SEFERDE VARSAYILAN SIFIR (kusur, ölçüldü 04.09) ─────────────────
+    Kurye bir seferi SÜRÜYORSA araç bugün boşalmaz: araçtaki malın çoğu yola devam edecek. Kutular
+    yine de araçtaki her şeyle dolu açılıyordu, yani tek dokunuş yola çıkacak kuryenin malını
+    elinden alıyordu — ekran uyarıyor ama varsayılan uyarının tersini yapıyordu. Artık sıfırdan
+    başlar: depocu FİİLEN indirileni sayar. Sayılmayan mal araçta kalır (devir yazılmaz), ki
+    doğrusu da odur.
+  */
   const countOf = useCallback(
-    (variantId: string): number =>
-      counts[variantId] ?? detail?.freeGoods.find((line) => line.variantId === variantId)?.onVanQty ?? 0,
+    (variantId: string): number => {
+      const stored = counts[variantId];
+      if (stored !== undefined) return stored;
+      if ((detail?.drivingRuns ?? 0) > 0) return 0;
+      return detail?.freeGoods.find((line) => line.variantId === variantId)?.onVanQty ?? 0;
+    },
     [counts, detail],
   );
 
@@ -257,12 +270,18 @@ export function useCourierReturn(): UseCourierReturnResult {
                 ? t.common.networkError
                 : fillCopy(t.common.serverError, { error: written.error }),
           });
+          /* EKRAN BAYAT KALMAZ (kusur, ölçüldü 04.09): yarıda kesilen turda ÖNCEKİ siparişler
+             yazılmıştır ama ekran onları hâlâ işaretsiz gösterir; ikinci denemede aynı satırlar
+             yeniden gönderilir ve depocu akıbeti değiştirirse kayıt kendi kendini yalanlar.
+             Tazeleme yazılmış satırları salt-okunur yapar. */
+          void openDetail(detail.courierId);
           return;
         }
         const outcome = written.data;
         if (outcome.status !== 'ok') {
           setSending(false);
           setNotice({ tone: 'error', text: refusalOf(outcome) });
+          void openDetail(detail.courierId);
           return;
         }
         restocked += outcome.restockedQty;
@@ -300,6 +319,9 @@ export function useCourierReturn(): UseCourierReturnResult {
                 ? t.common.networkError
                 : fillCopy(t.common.serverError, { error: accepted.error }),
           });
+          // Akıbetler bu noktada YAZILDI — ekran onları yazılı göstermeli, yoksa ikinci deneme
+          // aynı satırları yeniden gönderir.
+          void openDetail(detail.courierId);
           return;
         }
         const outcome = accepted.data;
@@ -383,7 +405,20 @@ export function useCourierReturn(): UseCourierReturnResult {
  * Akıbet yazımının REDDİ → ekrandaki cümle. Reddin kendisi bir cevaptır, hata değil: `stale` sipariş
  * artık o durumda değildir, `forbidden` kapsam dışıdır, `not_found` kayıt yoktur.
  */
-function refusalOf(outcome: { status: 'forbidden' | 'stale' | 'not_found'; currentStatus?: string }): string {
+function refusalOf(outcome: {
+  status: 'forbidden' | 'stale' | 'not_found' | 'already_marked';
+  currentStatus?: string;
+  currentDisposition?: ReturnDisposition | null;
+}): string {
   if (outcome.status === 'stale') return fillCopy(t.return.result.stale, { status: outcome.currentStatus ?? '—' });
+  /* `already_marked` bir HATA değil, ekranın bayat olduğunun cevabı: kalem karara bağlanmış ve
+     gelen istek başkasını söylüyor. Kapı hiçbir satır yazmadı; ekran tazelenip yazılı hâli
+     gösteriyor (çağıran `openDetail`i tetikliyor). */
+  if (outcome.status === 'already_marked') {
+    const yazili = outcome.currentDisposition ?? null;
+    return fillCopy(t.return.result.alreadyMarked, {
+      disposition: yazili === null ? '—' : t.return.disposition[yazili],
+    });
+  }
   return outcome.status === 'forbidden' ? t.common.outOfScope : t.common.notFound;
 }

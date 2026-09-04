@@ -144,7 +144,10 @@ export async function readTransferDetailView(transferId: string): Promise<Transf
     outcome: detail.status === 'in_transit' ? null : outcomeOf(detail.status, sentQty, receivedQty),
     lines: detail.lines.map((line) => ({
       lineId: line.lineId,
-      name: line.name,
+      /* Ad ve BOY 04.09'da sözleşmede ayrıldı (21.254 · mobil D5 satırı ikisini farklı ağırlıkta
+         yazıyor). Web tarafı tek dize okuyor; birleştirme burada, çünkü masaüstü tablosu tek
+         sütun gösteriyor. Birleşik alanı sözleşmede tutmak, bilgiyi kaynağında kaybetmekti. */
+      name: line.variantLabel.length === 0 ? line.productName : `${line.productName} (${line.variantLabel})`,
       lotNumber: line.lotNumber,
       expiryDate: line.expiryDate,
       sentQty: line.dispatchedQty,

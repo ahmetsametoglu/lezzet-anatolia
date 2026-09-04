@@ -178,9 +178,19 @@ export function CourierReturnScreen() {
                     stoğa iki kez yazardı. Satır listede duruyor çünkü depocu neyi karara bağladığını
                     görmeden kalanı işaretleyemez (`listWarehouseReturns` künyesi). */}
                 {written !== null ? (
-                  <Text style={styles.written} testID={`warehouse-return-written-${line.orderItemId}`}>
-                    {fillCopy(t.return.written, { disposition: t.return.disposition[written] })}
-                  </Text>
+                  <>
+                    <Text style={styles.written} testID={`warehouse-return-written-${line.orderItemId}`}>
+                      {fillCopy(t.return.written, { disposition: t.return.disposition[written] })}
+                    </Text>
+                    {/* BEYAN GERİ OKUNUR (04.09): "stoğa dön"de zorunlu tutulan soğuk zincir cümlesi
+                        artık kaleme yazılıyor. Görünmezse zorunluluk bir forma doldurma töreni olur;
+                        depocu ne beyan ettiğini kendi satırında görmeli. */}
+                    {line.note === null || line.note.length === 0 ? null : (
+                      <Text style={styles.rowSub} testID={`warehouse-return-written-note-${line.orderItemId}`}>
+                        {fillCopy(t.return.writtenNote, { note: line.note })}
+                      </Text>
+                    )}
+                  </>
                 ) : (
                   <>
                     <View style={styles.chipRow}>
@@ -231,6 +241,13 @@ export function CourierReturnScreen() {
         {detail.freeGoods.length === 0 ? null : (
           <>
             <Text style={styles.heading}>{t.return.freeGoodsHeading}</Text>
+            {/* SÜRÜLEN SEFERDE DEVİR YOK (04.09): araç bugün boşalmıyor, sayaçlar sıfırdan açılıyor
+                ve sebebi burada yazılı — uyarı varken varsayılanın tersini yapması kusurdu. */}
+            {detail.drivingRuns === 0 ? null : (
+              <Text style={[styles.rowSub, styles.holdNote]} testID="warehouse-return-driving-hold">
+                {t.return.drivingHold}
+              </Text>
+            )}
             {detail.freeGoods.map((line) => {
               const counted = returnState.countOf(line.variantId);
               return (
@@ -488,6 +505,8 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   cardWarn: { color: operationsTheme.colors.terracotta },
+  /** Sürülen seferde devrin durduğunu söyleyen satır — uyarı tonu, kartın kendi rengiyle aynı. */
+  holdNote: { color: operationsTheme.colors.terracotta },
   /** Yazılmış akıbetin sonucu — seçici değil, KAYIT: zeytin harf, dokunulacak bir şey yok. */
   written: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],

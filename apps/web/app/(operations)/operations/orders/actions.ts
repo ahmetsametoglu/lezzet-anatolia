@@ -120,6 +120,12 @@ export async function adjustFulfillmentAction(
         `Sipariş bu sırada "${ORDER_STATUS_LABELS[result.currentStatus]}" durumuna geçmiş — ekranı tazeleyin.`,
       );
     }
+    /* Kalemin akıbeti ZATEN yazılmış ve gelen istek başkasını söylüyor (04.09 · kapıya eklendi).
+       `stale`den ayrı bir cevap: orada sipariş değişmiştir, burada KALEM karara bağlanmıştır ve
+       operatörün yapacağı şey aynı — ekranı tazeleyip yazılı hâli görmek. Hiçbir satır yazılmadı. */
+    if (result.status === 'already_marked') {
+      throw new Error('Bu kalemin akıbeti zaten yazılmış — ekranı tazeleyip yazılı hâlini görün.');
+    }
 
     revalidatePath(`${ORDERS_PATH}/${orderId}`);
     revalidatePath(ORDERS_PATH);

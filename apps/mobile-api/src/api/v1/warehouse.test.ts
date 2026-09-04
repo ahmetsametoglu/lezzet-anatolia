@@ -1002,7 +1002,7 @@ describe('D6 · GET /api/v1/warehouse/returns', () => {
     const mine = body.drops.find((drop) => drop.orderId === order.orderId);
     expect(mine?.lines).toEqual([
       // Tavan KARŞILANMIŞ adet: `adjust_fulfillment` hedefi bunun üstüne çıkaramaz.
-      { orderItemId: order.itemId, name: expect.stringContaining('Fıstıklı Baklava'), fulfilledQty: 2, disposition: null },
+      { orderItemId: order.itemId, name: expect.stringContaining('Fıstıklı Baklava'), fulfilledQty: 2, disposition: null, note: null },
     ]);
     expect(mine?.returnedAt).not.toBeNull();
   });

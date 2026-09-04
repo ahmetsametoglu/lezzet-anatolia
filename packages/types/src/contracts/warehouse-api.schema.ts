@@ -1258,6 +1258,14 @@ export const ReturnDropLineSchema = z.object({
   name: z.string(),
   fulfilledQty: z.number().int(),
   disposition: ReturnDispositionEnum.nullable(),
+  /**
+   * Akıbetle birlikte YAZILMIŞ beyan (soğuk zincir notu) — yalnız işaretlenmiş satırda dolu.
+   *
+   * Okumaya 04.09'da eklendi: ekran "stoğa dön"de notu ZORUNLU tutuyor ama not hiçbir yere
+   * yazılmıyordu (kusur). Not artık kaleme yazılıyor ve yazılmış satırda GERİ OKUNUYOR — zorunlu
+   * tutulan bir beyanın nereye gittiği görünmezse, zorunluluk bir forma doldurma törenidir.
+   */
+  note: z.string().nullable(),
 });
 export type ReturnDropLineContract = z.infer<typeof ReturnDropLineSchema>;
 
@@ -1395,6 +1403,16 @@ export const WarehouseReturnResponseSchema = z.discriminatedUnion('status', [
   }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
+  /**
+   * Kalemin akıbeti ZATEN yazılmış ve gelen istek BAŞKASINI söylüyor — ekran bayat (04.09).
+   * `stale`den ayrı: orada SİPARİŞ değişmiştir, burada KALEM karara bağlanmıştır ve ekranın
+   * yapacağı şey farklıdır (tazele, yazılı hâli göster). Hiçbir satır yazılmamıştır.
+   */
+  z.object({
+    status: z.literal('already_marked'),
+    orderItemId: z.string().uuid().nullable(),
+    currentDisposition: ReturnDispositionEnum.nullable(),
+  }),
   z.object({ status: z.literal('not_found') }),
 ]);
 export type WarehouseReturnResponse = z.infer<typeof WarehouseReturnResponseSchema>;

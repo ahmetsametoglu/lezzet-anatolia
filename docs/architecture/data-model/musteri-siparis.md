@@ -346,12 +346,14 @@ Admin tarafından düzenlenir; rota-içi belirleme ve teslimat günü bundan tü
 | `line_discount_amount` | numeric(10, 2) |  | `0` |
 | `vat_rate` | numeric(4, 2) |  |  |
 | `return_disposition` | return_disposition | • |  |
+| `return_note` | text | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
 - **`qty`** — sipariş edilen
 - **`fulfilled_qty`** — **fiziksel olarak müşteriye giden** miktar (varsayılan = qty; eksikte düşer, 0 olabilir). Mal geri döndüyse düşer; `goodwill` iadesinde düşmez — mal müşteride kalmıştır
+- **`return_note`** — akıbetin GEREKÇESİ; D6'nın *"stoğa dön"*de ZORUNLU tuttuğu soğuk zincir beyanı (04.09). Kolonun sebebi bir kusurdu: ekran notu zorunlu tutuyor ama `adjust_fulfillment` onu yalnız stok hareketinin serbest metnine geçiriyordu ve o dal dönüş yolunda hiç ateşlenmiyordu — beyan ekrandan çıkıp kayboluyordu. Not **harekete değil KALEME** yazılır: iddia malın kendisi hakkında ("neden yeniden satılabilir sayıldı") ve o soru ileride geri çağırma ya da denetimle yeniden açılır; hareket o beyanın sonucudur
 - **`stock_id`** — partiye bağlı teklif satırıysa hangi parti (batch-pinned); normal satırda null. Fiilen çıkan parti(ler) `OrderItemBatch`'te
 - **`bundle_id`** — bu kalem bir paketten geldiyse hangi paket; normal satırda null
 - **`unit_price`** — **sabitlenmiş** fiyat (sepete eklenince). App: `unitPriceCents`

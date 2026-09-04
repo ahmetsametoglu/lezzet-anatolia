@@ -102,7 +102,7 @@ const DETAIL = {
       courierName: 'Marc Lemoine',
       note: 'kapıda reddetti — koku şüphesi',
       returnedAt: '2026-09-04T16:20:00.000Z',
-      lines: [{ orderItemId: ITEM_ID, name: 'Su Böreği (500 g)', fulfilledQty: 2, disposition: null }],
+      lines: [{ orderItemId: ITEM_ID, name: 'Su Böreği (500 g)', fulfilledQty: 2, disposition: null, note: null }],
     },
   ],
 };
@@ -400,7 +400,15 @@ describe('D6 · kurye dönüşü kabulü', () => {
   /* AKIBETİ YAZILMIŞ SATIR seçici çizmez: ikinci kez gönderilen `restock` stoğa iki kez yazardı. */
   it('akıbeti yazılmış satır SALT-OKUNUR — çip yok, sonuç yazılı', async () => {
     withGates({
-      detail: { ...DETAIL, drops: [{ ...DETAIL.drops[0], lines: [{ ...DETAIL.drops[0]!.lines[0], disposition: 'restock' }] }] },
+      detail: {
+        ...DETAIL,
+        drops: [
+          {
+            ...DETAIL.drops[0],
+            lines: [{ ...DETAIL.drops[0]!.lines[0], disposition: 'restock', note: 'soğuk zincir kesintisiz' }],
+          },
+        ],
+      },
     });
 
     await render(<CourierReturnScreen />);
@@ -410,6 +418,53 @@ describe('D6 · kurye dönüşü kabulü', () => {
       'akıbeti yazıldı: Stoğa dön',
     );
     expect(screen.queryByTestId(`warehouse-return-restock-${ITEM_ID}`)).toBeNull();
+    /* BEYAN GERİ OKUNUR (04.09): "stoğa dön"de zorunlu tutulan not artık kaleme yazılıyor ve
+       satırda görünüyor — görünmezse zorunluluk bir forma doldurma töreni olurdu. */
+    expect(screen.getByTestId(`warehouse-return-written-note-${ITEM_ID}`)).toHaveTextContent(
+      /soğuk zincir kesintisiz/,
+    );
+  });
+
+  /*
+    SÜRÜLEN SEFERDE DEVİR DURUR (kusur, ölçüldü 04.09) — araç bugün boşalmıyor: araçtaki malın çoğu
+    yola devam edecek. Kutular yine de araçtaki her şeyle DOLU açılıyordu, yani tek dokunuş yola
+    çıkacak kuryenin malını elinden alıyordu. Ekran uyarıyor ama varsayılan uyarının tersini
+    yapıyordu.
+  */
+  it('sürülen seferde sayaç SIFIRDAN açılır ve sebebi yazılır', async () => {
+    withGates({ detail: { ...DETAIL, drivingRuns: 1 } });
+
+    await render(<CourierReturnScreen />);
+    await openCourier();
+
+    expect(screen.getByTestId('warehouse-return-driving-hold')).toHaveTextContent(/araçta kalan mal devredilmez/);
+    expect(screen.getByTestId(`warehouse-return-qty-${VARIANT_ID}-value`)).toHaveTextContent('0');
+    // Özet de sıfırı söyler: "araçta kayıtlı 5 · sayılan 0".
+    expect(screen.getByTestId('warehouse-return-free-summary')).toHaveTextContent(/araçta kayıtlı 5 · sayılan 0/);
+  });
+
+  /*
+    BAYAT EKRAN KAPIDA DURUR (kusur, ölçüldü 04.09) — kalemin akıbeti zaten yazılmışken BAŞKA bir
+    akıbet gönderilirse kapı hiçbir satır yazmadan reddeder ve ekran tazelenir. `stale`den ayrı bir
+    cevap: orada sipariş değişmiştir, burada KALEM karara bağlanmıştır.
+  */
+  it('`already_marked` reddi adıyla söylenir ve ekran tazelenir', async () => {
+    withGates({ adjust: { status: 'already_marked', orderItemId: ITEM_ID, currentDisposition: 'restock' } });
+
+    await render(<CourierReturnScreen />);
+    await openCourier();
+    await fireEvent.press(screen.getByTestId(`warehouse-return-discard-${ITEM_ID}`));
+    await fireEvent.press(screen.getByTestId('warehouse-return-cta'));
+
+    await waitFor(() =>
+      expect(mockToast.mock.calls.some(([m]) => /akıbeti zaten yazılmış \(Stoğa dön\)/.test(m))).toBe(true),
+    );
+    // Ekran DETAYDA kalır (listeye kaçmaz) ve detayı yeniden okur — bayat satırlar tazelensin.
+    expect(screen.getByTestId(`warehouse-return-line-${ITEM_ID}`)).toBeOnTheScreen();
+    const detayCagrisi = fetchMock.mock.calls.filter(
+      (c) => /\/courier-return\/[^/?]+/.test(String(c[0])) && c[1]?.method !== 'POST',
+    );
+    expect(detayCagrisi.length).toBeGreaterThan(1);
   });
 
   it('`stale` YUTULMAZ: sipariş artık düzeltilemez cümlesi ekranda', async () => {

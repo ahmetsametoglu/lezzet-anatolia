@@ -261,6 +261,15 @@ export const OrderItemSchema = z.object({
   /** ORAN, para değil (5.5 = %5,5) — bu yüzden `…Cents` almaz ve `dbNumeric` kalır. */
   vatRate: dbNumeric,
   returnDisposition: ReturnDispositionEnum.nullable(),
+  /**
+   * Akıbetin GEREKÇESİ — "stoğa dön"ün zorunlu tuttuğu soğuk zincir beyanı (04.09).
+   *
+   * Kolonun sebebi bir kusurdu: D6 ekranı notu zorunlu tutuyor ama not hiçbir yere yazılmıyordu
+   * (`adjust_fulfillment` onu yalnız stok hareketinin serbest metnine geçiriyor, o dal ise dönüş
+   * yolunda hiç ateşlenmiyor). Beyan artık kalemde durur — malın kendisi hakkında bir iddia
+   * olduğu için hareketin değil KALEMİN alanı.
+   */
+  returnNote: z.string().nullable(),
 });
 export type OrderItem = z.infer<typeof OrderItemSchema>;
 
@@ -388,11 +397,22 @@ export const FulfillmentAdjustmentSchema = z.object({
 });
 export type FulfillmentAdjustment = z.infer<typeof FulfillmentAdjustmentSchema>;
 
-/** `adjust_fulfillment` dönüşü (07.8) — malın gerçeğinde ne değişti; para tarafı kapıda türetilir. */
+/**
+ * `adjust_fulfillment` dönüşü (07.8) — malın gerçeğinde ne değişti; para tarafı kapıda türetilir.
+ *
+ * İki "hayır" AYRIDIR: `stale` sipariş artık düzeltilebilir durumda değil demektir; `already_marked`
+ * ise kalemin akıbeti ZATEN yazılmış ve gelen istek BAŞKA bir akıbet söylüyor demektir — yani
+ * çağıran bayat bir ekrandan yazıyor (kusur, ölçüldü 04.09). İkisini tek ada indirmek, ekrana
+ * "araya biri girdi" dedirtip depocuyu yanlış yere bakmaya gönderirdi.
+ */
 export const FulfillmentResultSchema = z.object({
   ok: z.boolean(),
-  reason: z.literal('stale').optional(),
+  reason: z.enum(['stale', 'already_marked']).optional(),
   currentStatus: OrderStatusEnum,
+  /** `already_marked`ta hangi kalem — ekran o satırı tazeleyip yazılı hâlini gösterebilsin diye. */
+  orderItemId: z.string().uuid().optional(),
+  /** `already_marked`ta kalemde ZATEN yazılı olan akıbet. */
+  currentDisposition: ReturnDispositionEnum.optional(),
   lines: z.number().int().optional(),
   /** Teslim sonrası iadede depoya geri giren adet. */
   restockedQty: z.number().int().optional(),

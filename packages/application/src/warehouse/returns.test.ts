@@ -156,7 +156,8 @@ describe('depoya geri gelenler (D6 · 21.11d)', () => {
     expect(drop.returnedAt).not.toBeNull();
     expect(drop.lines).toEqual([
       // Tavan KARŞILANMIŞ adettir (3), sipariş adedi değil: `adjust_fulfillment` üstüne çıkamaz.
-      { orderItemId: itemId, name: expect.stringContaining('Su Böreği'), fulfilledQty: 3, disposition: null },
+      // `note` 04.09'da eklendi: akıbetin gerekçesi kaleme yazılıyor, işaretsiz satırda boş.
+      { orderItemId: itemId, name: expect.stringContaining('Su Böreği'), fulfilledQty: 3, disposition: null, note: null },
     ]);
   });
 

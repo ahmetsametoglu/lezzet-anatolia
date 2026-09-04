@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderItemBatchService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
+  AccountService, CategoryService, OrderItemBatchService, OrderItemService, OrderService, ProductService, ReservationService, StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock } from '@lezzet/database/testing';
 import { recordOrderPayment } from './payment';
@@ -20,6 +20,7 @@ import { transitionOrder } from './transition';
 const db = serviceDb();
 const orders = new OrderService(db);
 const itemBatches = new OrderItemBatchService(db);
+const items = new OrderItemService(db);
 const stocks = new StockService(db);
 const reservations = new ReservationService(db);
 
@@ -359,5 +360,88 @@ describe('iptal (07.9)', () => {
 
     expect(await cancelOrder(db, orderId)).toMatchObject({ status: 'forbidden', reason: 'not_allowed' });
     expect((await orders.getById(orderId))?.status).toBe('delivered');
+  });
+});
+
+/**
+ * **AKIBETİN ÜÇ DEĞİŞMEZİ** (kusurlar, ölçüldü 04.09 · D6 denetimi).
+ *
+ * Üçü de sessizdi: hiçbiri hata vermiyordu, yalnız yanlış yazıyordu.
+ *   1. "Stoğa dön"ün ZORUNLU tuttuğu soğuk zincir beyanı hiçbir yere yazılmıyordu.
+ *   2. Yazılmış bir akıbet ikinci bir istekle DEĞİŞTİRİLEBİLİYORDU (bayat ekran).
+ *   3. "Mal fiili stoktan düştü mü" sorusu ANLIK duruma bakıyordu; teslim SONRASI iade yolunda
+ *      iki dal birden ters çalışıyordu.
+ */
+describe('akıbetin değişmezleri (04.09)', () => {
+  it('BEYAN KALEME YAZILIR — "stoğa dön"ün zorunlu notu kaybolmuyor', async () => {
+    const { orderId, itemId } = await sendOut(2);
+
+    await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'soğuk zincir kesintisiz' },
+    ]);
+
+    const item = (await items.listByOrders([orderId])).find((row) => row.id === itemId);
+    expect(item?.returnDisposition).toBe('restock');
+    expect(item?.returnNote).toBe('soğuk zincir kesintisiz');
+  });
+
+  it('AKIBET BİR KEZ YAZILIR — farklı bir akıbet reddedilir, hiçbir satır değişmez', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'ambalaj sağlam' },
+    ]);
+
+    const ikinci = await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'goodwill' },
+    ]);
+
+    expect(ikinci).toMatchObject({ status: 'already_marked', orderItemId: itemId, currentDisposition: 'restock' });
+    // Ret TAMAMEN geri çeviriyor: kalem ilk kararın hâlinde kalmalı, yarısı yazılmış olmamalı.
+    const item = (await items.listByOrders([orderId])).find((row) => row.id === itemId);
+    expect(item?.returnDisposition).toBe('restock');
+    expect(item?.fulfilledQty).toBe(0);
+  });
+
+  it('AYNI akıbetin ikinci kez gelmesi hata DEĞİL — ağ tekrarı sessizce geçilir', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard' }]);
+
+    const tekrar = await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard' },
+    ]);
+
+    expect(tekrar).toMatchObject({ status: 'ok' });
+  });
+
+  /*
+    TESLİM SONRASI İADE — sipariş `delivered` olur (stok fiilen düşer), sonra `returned`a çevrilir.
+    Ölçüt anlık duruma baksaydı bu noktada FALSE derdi ve `restock` malı deftere geri koymazdı:
+    kalıcı hayalet kayıp. Ölçüt artık durum GÜNLÜĞÜNDEN geliyor.
+  */
+  it('TESLİM SONRASI iade: `returned`a çevrilmiş sipariş de malı stoğa GERİ KOYAR', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await deliverOrder(db, orderId);
+    const teslimSonrasi = (await stocks.getById(batchId))?.physicalQty ?? 0;
+    // Kapıdan sonra iade: durum `returned`a çevriliyor (motorda izinli geçiş).
+    await orders.transition({ orderId, from: 'delivered', to: 'returned' });
+
+    await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'restock', note: 'kutu açılmamış' },
+    ]);
+
+    expect((await stocks.getById(batchId))?.physicalQty).toBe(teslimSonrasi + 2);
+  });
+
+  it('TESLİM SONRASI imha: stok İKİNCİ kez düşmez — maliyet siparişte kalır', async () => {
+    const { orderId, itemId } = await sendOut(2);
+    await deliverOrder(db, orderId);
+    const teslimSonrasi = (await stocks.getById(batchId))?.physicalQty ?? 0;
+    await orders.transition({ orderId, from: 'delivered', to: 'returned' });
+
+    await adjustFulfillment(db, orderId, [
+      { orderItemId: itemId, fulfilledQty: 0, returnDisposition: 'discard', note: 'soğuk zincir koptu' },
+    ]);
+
+    expect((await stocks.getById(batchId))?.physicalQty).toBe(teslimSonrasi);
   });
 });

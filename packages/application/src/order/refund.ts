@@ -1,6 +1,6 @@
 import { AccountService, MoneyMovementService, OrderService } from '@lezzet/database';
 import { canTransition } from '@lezzet/domain-core';
-import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus } from '@lezzet/types';
+import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus, ReturnDisposition } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { notifyExceptionEffect, providerRefunder, type OrderEffects } from './effects';
 import { recordOrderRefund, syncOrderPaymentStatus } from './payment';
@@ -60,6 +60,13 @@ export type AdjustOutcome =
   | { status: 'forbidden'; reason: 'out_of_scope' }
   /** Sipariş artık düzeltilebilir bir durumda değil (iptal edilmiş). */
   | { status: 'stale'; currentStatus: OrderStatus }
+  /**
+   * Kalemin akıbeti ZATEN yazılmış ve gelen istek BAŞKA bir akıbet söylüyor — çağıran bayat bir
+   * ekrandan yazıyor (kusur, ölçüldü 04.09). `stale`den ayrı tutuluyor: orada sipariş değişmiştir,
+   * burada KALEM karara bağlanmıştır ve ekranın yapması gereken şey farklıdır (tazele, yazılı hâli
+   * göster). Hiçbir satır yazılmaz — yarısı yazılmış bir düzeltme en kötü sonuçtur.
+   */
+  | { status: 'already_marked'; orderItemId: string | null; currentDisposition: ReturnDisposition | null }
   | { status: 'not_found' };
 
 export type CancelOutcome =
@@ -123,6 +130,13 @@ export async function adjustFulfillment(
   if (outOfScope(order.warehouseId, opts.warehouseScope)) return { status: 'forbidden', reason: 'out_of_scope' };
 
   const result = await orders.adjustFulfillment(orderId, lines, opts.actorId);
+  if (!result.ok && result.reason === 'already_marked') {
+    return {
+      status: 'already_marked',
+      orderItemId: result.orderItemId ?? null,
+      currentDisposition: result.currentDisposition ?? null,
+    };
+  }
   if (!result.ok) return { status: 'stale', currentStatus: result.currentStatus };
 
   const settled = await settleRefund(db, orderId, opts);

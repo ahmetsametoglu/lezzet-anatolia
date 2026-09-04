@@ -290,7 +290,19 @@ create table public.order_item (
   -- hesaplanır, sonradan hesap belirsizliği kalmaz (DOMAIN §5).
   line_discount_amount numeric(10, 2) not null default 0,
   vat_rate numeric(4, 2) not null,
-  return_disposition return_disposition
+  return_disposition return_disposition,
+  -- AKIBETİN GEREKÇESİ (04.09) — "stoğa dön"ün ZORUNLU kıldığı beyan.
+  --
+  -- D6 (kurye dönüşü) ekranı `restock` seçildiğinde sebep notunu zorunlu tutuyor ve gerekçesi soğuk
+  -- zincir: geri gelen malın yeniden satılabilir olduğunu birinin BEYAN etmesi gerekir. Ölçüldü
+  -- 04.09: o beyan hiçbir yere yazılmıyordu — `adjust_fulfillment` notu yalnız stok hareketinin
+  -- serbest metnine geçiriyor, o dal ise D6 yolunda (mal hiç çıkmamış dönüş) hiç ateşlenmiyor.
+  -- Yani depocuya zorunlu tutulan cümle ekrandan çıkıp KAYBOLUYORDU.
+  --
+  -- Not stok hareketine değil KALEME yazılır, çünkü beyan malın kendisi hakkında: aynı kalem
+  -- ileride başka bir soruyla (geri çağırma, müşteri itirazı, denetim) açıldığında "neden yeniden
+  -- satılabilir sayıldı" sorusunun cevabı burada durmalı. Stok hareketi o beyanın SONUCU.
+  return_note text
 );
 create index order_item_order_idx on public.order_item (order_id);
 -- "Bu ürün hangi siparişlere gitti" (geri çağırma ve satış analizi).

@@ -67,6 +67,14 @@ export interface ReturnDropLine {
   fulfilledQty: number;
   /** Doluysa bu satırın akıbeti ZATEN işaretlenmiş — ekran onu ikinci kez göndermez. */
   disposition: ReturnDisposition | null;
+  /**
+   * Akıbetle birlikte yazılmış BEYAN — "stoğa dön"ün zorunlu tuttuğu soğuk zincir cümlesi.
+   *
+   * Okumaya 04.09'da eklendi ve sebebi bir kusurdu: ekran notu zorunlu tutuyor, veritabanı onu
+   * saklamıyordu. Not artık kaleme yazılıyor; burada geri okunması zorunluluğu bir törene
+   * dönmekten kurtarıyor — depocu ne beyan ettiğini satırda görür.
+   */
+  note: string | null;
 }
 
 /** Depoya geri gelen bir sipariş — D6'nın "dökümü". Tutar, adres, iletişim YOK. */
@@ -161,6 +169,7 @@ function toDropLine(names: Awaited<ReturnType<typeof variantNames>>) {
     name: displayName(names.get(item.variantId)),
     fulfilledQty: item.fulfilledQty,
     disposition: item.returnDisposition,
+    note: item.returnNote,
   });
 }
 
