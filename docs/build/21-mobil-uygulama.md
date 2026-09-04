@@ -11748,3 +11748,43 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Tam paket 4175/4175 · mobil Jest 1300 · lint · knip · docs:check temiz · `seed:coverage` **169
   kovanın hepsinde örnek var**.
+
+- [x] (21.257) **Araçtan depoya dönen transferin belgesi "Araca serbest ürün" yazıyordu — yön ters, cümle sabitti** (depo şeridinin notu 04.09, Oppo'da ölçüldü)
+  `touches:` `packages/application/src/courier/van-stock.ts` · `packages/application/src/courier/van-stock.test.ts`
+
+  **Ölçüm (depo şeridi, D6 uçtan uca).** Kurye dönüşü kabul edilince araçtaki serbest ürün depoya
+  devredildi ve iki transfer yazıldı:
+
+  ```
+  TRF-VAN-1-26-0001 | received | VAN-1 → STR | note: "Araca serbest ürün"
+  TRF-VAN-1-26-0002 | received | VAN-1 → STR | note: "Araca serbest ürün"
+  ```
+
+  Kayıt DOĞRU — depolar, adet, durum yerinde. Yanlış olan okunan cümle: `returnFromVan` ayrı bir
+  yol değil, `takeToVan`ın aynası (kaynak ile hedef yer değiştiriyor) ve not kapının GÖVDESİNDE
+  sabitti, yani iki yön de aynı cümleyi yazıyordu. Transfer geçmişine bakan (D5'in kapananlar
+  bölümü, ileride araç hareket defteri) araçtan İNEN malı "araca konmuş" diye okuyordu.
+
+  **Düzeltme.** Not çağırana bırakıldı: `takeToVan` `note?: string` alıyor, varsayılanı bugünkü
+  dize; `returnFromVan` `'Araçtan depoya devir'` geçiyor. Yönü kapının içinde tahmin etmek (hedef
+  araç mı diye bakmak) da olurdu ama çağıranın zaten bildiği niyeti kapıda yeniden çıkarmak olurdu —
+  notu açan şeridin önerisi de buydu.
+
+  **Testi yazıldı** (`van-stock.test`): al + devret ardışık koşuluyor, iki belgenin notu AYRI
+  çiviliniyor. Süzgeç fikstürün kendi iki deposu (CLAUDE §4b).
+
+- [ ] (21.258) **Kuryenin kapsamından ARAÇ DEPOSU kalkmalı — kurye tesise atanır, araç seferden gelir** (21.249'un kalanı)
+  `touches:` `scripts/seed/people.ts` · `apps/mobile/src/lib/operations/warehouse-choice.ts` (ölçülecek)
+
+  21.249 araç deposunu kapsamdan kopardı: stok artık kuryenin `warehouse_ids` dizisinden değil,
+  sürülen seferin aracından çözülüyor. Ama dizideki `VAN-1` satırı DURUYOR ve artık hiçbir işe
+  yaramıyor — üstelik zararı var: cihazdaki depo seçicisi onu bir seçenek gibi listeliyor ve
+  01.09'da düzeltilen arızanın (`?place=van` künyesi) zemini buydu.
+
+  **Ölçüldü (04.09):** kurye yolundaki `canAccessWarehouse` çağrılarının HİÇBİRİ araç deposuna
+  bakmıyor — `routes.ts:122` bölgenin deposuna, `routes.ts:261` aracın EVİ olan tesise, `day.ts:618`
+  yine bölgenin deposuna, `return.ts:179` depocunun tesisine. Yani kapsamdan çıkarmanın önü açık.
+
+  Kalan iş ölçüm gerektiriyor: depo seçicisi (`warehouse-choice`) ve `?place=van` yolu araç
+  kapsamdan çıkınca ne yapıyor. Kullanıcının *"bir kişi hem depoya hem araca mı atanır"* sorusunun
+  cevabı ancak bu kalkınca "hayır" olur.

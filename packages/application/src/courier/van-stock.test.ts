@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, ProductService, StockService, serviceDb } from '@lezzet/database';
+import { CategoryService, ProductService, StockService, WarehouseTransferService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
 import { listVanCandidates, readVanStock, returnFromVan, takeToVan } from './van-stock';
 
@@ -116,6 +116,24 @@ describe('araca al / depoya devret', () => {
       expect.objectContaining({ variantId, qty: 1 }),
     ]);
     expect((await stocks.getAvailable(facilityId, variantId)).physicalQty).toBe(9);
+  });
+
+  it('DEVRİN BELGESİ KENDİ YÖNÜNÜ YAZAR — "araca" değil "araçtan depoya"', async () => {
+    /* Depo şeridinin ölçümü (04.09, Oppo · D6 uçtan uca): araçtan inen malın iki transferi de
+       `note: "Araca serbest ürün"` yazıyordu, çünkü `returnFromVan` depoları takas edip aynı kapıyı
+       çağırıyor ve not kapının gövdesinde SABİTTİ. Kayıt doğru, cümle tersti — geçmişe bakan
+       (D5'in kapananlar bölümü) araçtan inen malı "araca konmuş" diye okuyordu. */
+    await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 2 });
+    await returnFromVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 2 });
+
+    /* Süzgeç fikstürün KENDİ iki deposu (CLAUDE §4b: kendi kurduğun satırları say) — başka bir
+       ajanın transferi bu listeye giremez. */
+    const kapananlar = await new WarehouseTransferService(db).listClosedFor([facilityId, vanId]);
+    const alis = kapananlar.find((t) => t.fromWarehouseId === facilityId && t.toWarehouseId === vanId);
+    const devir = kapananlar.find((t) => t.fromWarehouseId === vanId && t.toWarehouseId === facilityId);
+
+    expect(alis?.note).toBe('Araca serbest ürün');
+    expect(devir?.note).toBe('Araçtan depoya devir');
   });
 
   it('ARAÇ YOKSA hiçbir şey yazılmaz — gidecek bir yer yok', async () => {

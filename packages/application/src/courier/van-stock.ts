@@ -312,6 +312,18 @@ export async function takeToVan(
     variantId: string;
     qty: number;
     actorId?: string | null;
+    /**
+     * Transfer belgesinin notu (21.257 · depo şeridinin ölçümü 04.09).
+     *
+     * Sabitti ve `returnFromVan` aynı kapıyı depoları TAKAS EDEREK çağırdığı için iki yön de
+     * *"Araca serbest ürün"* yazıyordu: akşam araçtan inen mal, geçmişte "araca konmuş" diye
+     * okunuyordu (ölçüldü Oppo'da: `TRF-VAN-1-26-0001/0002`, yön `VAN-1 → STR`, not "Araca").
+     * Kayıt doğruydu, CÜMLESİ tersti — belge künyesi olayın kendisini söylemeli.
+     *
+     * Notu ÇAĞIRANA bıraktık, kapının içinde yönü tahmin etmedik ("hedef araç mı" diye bakmak,
+     * çağıranın zaten bildiği niyeti kapıda yeniden çıkarmak olurdu).
+     */
+    note?: string;
   },
 ): Promise<TakeToVanOutcome> {
   if (input.vehicleWarehouseId === null) return { status: 'no_vehicle' };
@@ -346,7 +358,7 @@ export async function takeToVan(
     toWarehouseId: input.vehicleWarehouseId,
     lines,
     actorId: input.actorId ?? null,
-    note: 'Araca serbest ürün',
+    note: input.note ?? 'Araca serbest ürün',
   });
   if (sevk.status !== 'ok') {
     if (sevk.status === 'failed') return { status: 'failed', message: sevk.message };
@@ -376,6 +388,9 @@ export async function takeToVan(
  * Akşam dönüşünde satılmayan mal geri veriliyor. Ayrı bir kapı DEĞİL aynı kapının aynası: kaynak
  * ile hedef yer değiştiriyor, mekanizma bir. İki ayrı yol yazılsaydı biri bir gün ötekinden
  * ayrılırdı (fire kaydı, parti izi, defter satırı).
+ *
+ * **Aynasının yazdığı NOT kendisinindir** (21.257): mekanizma ortak, cümle değil — belgeyi okuyan
+ * yönü nottan anlar. Künye `takeToVan`ın `note` alanında.
  */
 export async function returnFromVan(
   db: SupabaseClient,
@@ -394,5 +409,6 @@ export async function returnFromVan(
     variantId: input.variantId,
     qty: input.qty,
     actorId: input.actorId ?? null,
+    note: 'Araçtan depoya devir',
   });
 }
