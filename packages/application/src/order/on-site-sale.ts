@@ -2,6 +2,7 @@ import { OrderItemService, OrderService, OrderStatusLogService, UserProfileServi
 import type { CreateOrderItemInput } from '@lezzet/database';
 import type { PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView } from '../cart/read';
+import { discountAmountOf, discountIdOf, discountLabelOf, discountSharesOf } from '../cart/cart-types';
 import { quickSale, type QuickSaleOutcome } from './quick-sale';
 
 /**
@@ -153,9 +154,20 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
     genişler; o gün pazarlığın pakete UYGULANMADIĞI da hatırlanmalı (`priceOverrides` künyesi:
     paketin fiyatı tek sayıdır ve payların toplamı olmak zorundadır — DOMAIN §13).
   */
-  const variantLines = view.lines.filter((line): line is typeof line & { variantId: string } => line.variantId !== undefined);
+  /*
+    ── İNDİRİM PAYLARI SATIRLA BİRLİKTE SÜZÜLÜR (03.09) ───────────────────────
+    `discountSharesOf` KONUM dizisi döner: `view.lines[i]`nin payı `shares[i]`dir. Satırları süzüp
+    payları süzmemek, kalan kalemlere BAŞKASININ indirimini yazmaktır (`orderScopeOf` künyesi aynı
+    tuzağı checkout tarafında anlatıyor). Bugün süzgeç hiçbir satırı elemiyor — bu kapı yalnız
+    varyant kalemi alıyor — ama hizayı tesadüfe bırakmak, girdi bir gün genişlediğinde sessizce
+    yanlış kaleme indirim yazmaktır.
+  */
+  const shares = discountSharesOf(view.discount);
+  const kept = view.lines
+    .map((line, index) => ({ line, share: shares[index] ?? 0 }))
+    .filter((row): row is { line: typeof row.line & { variantId: string }; share: number } => row.line.variantId !== undefined);
 
-  const items: CreateOrderItemInput[] = variantLines.map((line) => ({
+  const items: CreateOrderItemInput[] = kept.map(({ line, share }) => ({
     variantId: line.variantId,
     qty: line.qty,
     unitPriceCents: line.unitPriceCents ?? 0,
@@ -164,6 +176,10 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
       ? { listUnitPriceCents: line.listUnitPriceCents, priceSetBy: input.staffId }
       : {}),
     vatRate: line.vatRate,
+    /* İNDİRİM KALEME YAZILIR, yoksa CİRO indirimi hiç görmez: `revenue_total` tetikleyicisi
+       (0012 `resync_order_revenue`) kalemlerden türüyor ve tek gördüğü alan bu. Künyenin
+       tamamı aşağıda, sipariş alanlarının yanında. */
+    lineDiscountAmountCents: share,
   }));
 
   const { order } = await new OrderService(db).create(
@@ -179,6 +195,32 @@ export async function sellOnSite(db: Db, input: OnSiteSaleInput): Promise<OnSite
       // Kargo ücreti SORULMUYOR: `resolveShippingFee` `pickup` almıyor, sipariş doğrudan 0 yazar.
       shippingFeeCents: 0,
       orderedTotalCents: view.totalCents,
+      /*
+        ── İNDİRİM SİPARİŞE YAZILIR (kullanıcı bulgusu 03.09, cihazda ölçüldü) ──
+        Bu üç alan bir tur BOŞ GİDİYORDU ve `orderedTotalCents` indirimli tutarı taşıyordu; yani
+        sipariş ucuz, sebebi yoktu. Ölçülen sonuç (LA-26-9DPPDL, araçtan iki adet baklava):
+        sepet 18,30 €, tahsilat 15,30 € (otomatik "Bayram Sofrası seçkisi" 3 €) — ve kayıtta
+        `ordered_total 15,30` · `revenue_total 18,30` · `discount_amount 0` · **`payment_status
+        partial`**. Yani müşteri parasını tam ödemişken sistem onu 3 € BORÇLU sayıyordu; ciro da
+        indirimi görmediği için şişik. Üç ayrı sonuç, tek sebep:
+          · `revenue_total` kalemlerden türer (`resync_order_revenue`) ve yalnız
+            `line_discount_amount`ı okur — pay yazılmayınca indirim ciroya hiç girmez.
+          · `payment_status` ciroyu tahsilatla karşılaştırır → `partial`, borç hatırlatması yolu açık.
+          · Kampanya KOTASI `create_order` RPC'sinde siparişin `discount_id`sinden tükenir; boş
+            kalınca kapıda satılan her indirimli kalem kotayı sessizce deliyordu (`OrderService.create`
+            künyesi bu açığı 09.6'da checkout için kapatmıştı — kapıda satış aynı deliği geri açmıştı).
+        Alanlar checkout'un okuduğu AYNI fonksiyonlardan geliyor (`cart-types`): iki kapı bir gün
+        ayrışsaydı aynı sepet iki farklı kayıt üretirdi. `discount_amount = Σ line_discount_amount`
+        değişmezini veritabanı commit anında denetliyor (`order_discount_balance`, 0041) — pay ile
+        başlık ayrışırsa yazım reddedilir, sessiz sapma imkânsız.
+
+        KUPON KODU YOK ve olmayacak: bu kapı sepete kod almıyor, yalnız OTOMATİK kampanya iniyor
+        (`create`in `discountCodeId` seçeneği bu yüzden geçilmiyor — uydurulmuş bir "kod karşılık
+        buldu" kaydı, kampanya raporunu yanlış okuturdu).
+      */
+      discountAmountCents: discountAmountOf(view.discount),
+      discountId: discountIdOf(view.discount),
+      discountLabel: discountLabelOf(view.discount),
       locale,
     },
     items,

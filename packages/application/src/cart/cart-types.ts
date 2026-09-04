@@ -755,6 +755,33 @@ export function discountAmountOf(discount: CartDiscount): number {
   return discount.status === 'rejected' ? discount.appliedInsteadCents : 0;
 }
 
+/**
+ * Siparişe yazılacak KAMPANYA KİMLİĞİ — indirimin dört hâlinin ikisinde dolu.
+ *
+ * `discountAmountOf`ın kardeşi ve aynı sebeple burada: siparişi yazan her kapı (checkout · kapıda
+ * satış · yarın elle giriş) aynı üç alanı aynı kurala göre doldurmalı. `checkout-draft.ts`in
+ * yerel kopyasıydı; kapıda satış onu göremediği için indirim kaydını hiç yazmıyordu ve sonuç
+ * ölçüldü (03.09) — bkz. `on-site-sale.ts` künyesi.
+ *
+ * **Reddedilen kuponda `null`:** tutar `appliedInsteadCents` üzerinden düşse de kampanya kimliği
+ * yazılmaz mı? Yazılır — ama o hâlde kazanan indirim `automatic` hâlinde gelir; `rejected`
+ * yalnız girilen KODUN reddidir ve onun kimliği siparişe ait değildir.
+ */
+export function discountIdOf(discount: CartDiscount): string | null {
+  return discount.status === 'applied' || discount.status === 'automatic' ? (discount.discountId ?? null) : null;
+}
+
+/**
+ * İndirimin müşteriye görünen adının SİPARİŞ ANINDAKİ kopyası (0015 `discount_label`).
+ *
+ * `discountId` üzerinden sonradan okumak yetmezdi: kampanya yeniden adlandırılabilir, süresi
+ * dolabilir, silinebilir. O zaman altı ay önce gönderilmiş mailin yeniden basımı başka bir şey
+ * derdi. Siparişe ait olan bilgi siparişte durur — `addressSnapshot` ile aynı kural.
+ */
+export function discountLabelOf(discount: CartDiscount): LocalizedText | null {
+  return discount.status === 'applied' || discount.status === 'automatic' ? discount.label : null;
+}
+
 export function viewWithEntries(view: CartView, entries: readonly CartEntry[]): CartView {
   const wanted = new Map(entries.map((e) => [cartKey(e), e.qty]));
   const lines = view.lines

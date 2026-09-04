@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  AccountService, CategoryService, OrderItemService, OrderService, PriceService, ProductService,
-  StockService, UserProfileService, WarehouseService, serviceDb,
+  AccountService, CategoryService, DiscountService, OrderItemService, OrderService, PriceService, ProductService,
+  StockService, UserProfileService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
 import { ANONYMOUS_BUYER_ID, sellOnSite } from './on-site-sale';
@@ -43,9 +43,9 @@ beforeAll(async () => {
   facilityId = (await createTestWarehouse(db)).id;
   // ARAÇ DEPOSU: tür bir etiket değil, üç sorgunun süzgeci (0031 künyesi). Satış tarafında ayrım
   // yok — kurye arabasından da tezgâhtan da aynı kapı satar.
-  vehicleId = (await new WarehouseService(db).insert({
-    code: `VEH${stamp % 100000}`, name: `Test aracı ${stamp}`, kind: 'vehicle',
-  })).id;
+  // Araç deposu ARACINI söylemek zorunda (21.249 · `warehouse_vehicle_identity`); yardımcı damgalı
+  // aracı kendisi açıyor ve teardown'da depoyla birlikte topluyor.
+  vehicleId = (await createTestWarehouse(db, { label: 'VEH', kind: 'vehicle' })).id;
 
   const category = await new CategoryService(db).create({ name: { tr: `Yerinde satış testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({ name: { tr: `Börek ${stamp}` }, categoryId: category.id });
@@ -196,5 +196,68 @@ describe('yerinde satış', () => {
     */
     await purgeVariantStock(db, [variantId]);
     await mustDelete(db, 'order', (q) => q.eq('id', result.orderId));
+  });
+
+  it('OTOMATİK İNDİRİM siparişe DE kaleme DE yazılır — ciro indirimli, borç YOK', async () => {
+    /*
+      Kullanıcı bulgusu 03.09, cihazda ölçüldü: araçtan iki adet baklava satıldı, sepet 18,30 €
+      dedi, kurye 15,30 € tahsil etti (otomatik "Bayram Sofrası seçkisi" 3 €) — ve kayıt şöyleydi:
+      `ordered_total 15,30` · `revenue_total 18,30` · `discount_amount 0` · **`payment_status
+      partial`**. Yani parasını tam ödemiş müşteri sistemde 3 € BORÇLU görünüyordu; ciro da
+      indirimi görmediği için şişikti ve kampanya kotası hiç tükenmiyordu.
+
+      Sebep tek satırdı: kapı `orderedTotalCents`i indirimli yazıyor ama indirimin KENDİSİNİ
+      (başlık + kalem payı) hiç yazmıyordu. `revenue_total` kalemlerden türer ve yalnız
+      `line_discount_amount` okur — pay yoksa indirim ciroya girmez, `payment_status` da ciroyu
+      tahsilatla karşılaştırdığı için `partial` çıkar.
+
+      Test dördünü birden çiviliyor: başlık, kalem payı, ciro ve ödeme durumu. Biri düşerse
+      ötekiler de yalan söylüyor demektir.
+    */
+    const kampanya = await new DiscountService(db).insert({
+      name: `Kapı kampanyası ${stamp}`,
+      publicLabel: { tr: `Kapı kampanyası ${stamp}` },
+      trigger: 'automatic',
+      type: 'fixed',
+      amountCents: 200,
+      // KAPSAM BU DOSYANIN KATEGORİSİ: küresel bir kampanya paketteki her sepet okumasına
+      // karışırdı (CLAUDE §4b — kendi kurduğun satırları kullan).
+      scope: 'category',
+      categoryId,
+      isActive: true,
+    });
+
+    try {
+      const result = await sale({ lines: [{ variantId, qty: 2 }] });
+      expect(result.status).toBe('ok');
+      if (result.status !== 'ok') return;
+
+      // Müşterinin ödediği sayı: 2 × 10,00 − 2,00 indirim.
+      expect(result.totalCents).toBe(2 * LISTE - 200);
+
+      const order = await orders.getById(result.orderId);
+      expect(order).toMatchObject({
+        orderedTotalCents: 2 * LISTE - 200,
+        // CİRO İNDİRİMİ GÖRÜYOR (arızanın kendisi buradaydı: 2000 yazıyordu).
+        revenueTotalCents: 2 * LISTE - 200,
+        discountAmountCents: 200,
+        discountId: kampanya.id,
+        // Kampanya adının SİPARİŞ ANINDAKİ kopyası — kampanya sonra adlandırılsa da kayıt değişmez.
+        discountLabel: { tr: `Kapı kampanyası ${stamp}` },
+        // BORÇ YOK: tahsilat ciroya eşit. Bir tur `partial` çıkıyordu ve borç hatırlatması yolu açıktı.
+        paymentStatus: 'paid',
+      });
+
+      // Pay kaleme yazıldı; `discount_amount = Σ line_discount_amount` değişmezini veritabanı da
+      // denetliyor (`order_discount_balance`, 0041) — yani bu satır kısıtla birlikte iki kez tutuyor.
+      const items = await new OrderItemService(db).listByOrder(result.orderId);
+      expect(items.reduce((sum, item) => sum + item.lineDiscountAmountCents, 0)).toBe(200);
+
+      await purgeVariantStock(db, [variantId]);
+      await mustDelete(db, 'order', (q) => q.eq('id', result.orderId));
+    } finally {
+      // Kampanya bu testin malı: kalırsa dosyanın öteki testlerinin tutarlarını sessizce oynatır.
+      await mustDelete(db, 'discount', (q) => q.eq('id', kampanya.id));
+    }
   });
 });

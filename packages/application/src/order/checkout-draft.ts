@@ -10,20 +10,21 @@ import {
 } from '@lezzet/database';
 import { cityMatchesPlaces, deriveChannel, meetsMinBasket, resolveVatTreatment } from '@lezzet/domain-core';
 import { toCents } from '@lezzet/helper';
-import type { AddressDeliveryType, LocalizedText, OrderItemInsert, OrderSource, PaymentMethod, PreferredLanguage } from '@lezzet/types';
+import type { AddressDeliveryType, OrderItemInsert, OrderSource, PaymentMethod, PreferredLanguage } from '@lezzet/types';
 import { getCartView, type CartBundlePort } from '../cart/read';
 import { matchNeighborInviteForOrder } from '../customer/neighbor';
 import { placesForPostalCode } from '../delivery/places';
 import { cartFingerprint } from '../cart/fingerprint';
 import {
   discountAmountOf,
+  discountIdOf,
+  discountLabelOf,
   entryOf,
   itemOfEntry,
   orderScopeOf,
   storedPrices,
   type CartEntry,
   type CartLine,
-  type CartView,
 } from '../cart/cart-types';
 import { resolveCheckoutPayment } from './checkout-options';
 import { readDeliveryInputs, resolveDelivery } from './delivery';
@@ -578,8 +579,8 @@ export async function createCheckoutDraft(db: Db, input: CheckoutDraftInput): Pr
       // verilmedi" yazılıyordu. Kupon reddedilip yerine otomatik kampanya indiğinde müşteri
       // indirimli ödüyor, kayıt sıfır gösteriyordu: marj ve kampanya raporu ikisi de yanlış okunur.
       discountAmountCents: discountAmountOf(cart.discount),
-      discountId: discountIdOf(cart),
-      discountLabel: discountLabelOf(cart),
+      discountId: discountIdOf(cart.discount),
+      discountLabel: discountLabelOf(cart.discount),
       // Siparişin dili: müşteri bu siparişi hangi yüzeyde okuyorsa o. Mailler buradan konuşur.
       locale: input.locale,
     },
@@ -711,20 +712,9 @@ function discountCodeIdOf(cart: { discount: { status: string; codeId?: string } 
   return cart.discount.status === 'applied' ? (cart.discount.codeId ?? null) : null;
 }
 
-function discountIdOf(cart: { discount: { status: string; discountId?: string | null } }): string | null {
-  return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? (cart.discount.discountId ?? null) : null;
-}
-
-/**
- * İndirimin müşteriye görünen adının SİPARİŞ ANINDAKİ kopyası (0015 `discount_label`).
- *
- * `discountId` üzerinden sonradan okumak yetmezdi: kampanya yeniden adlandırılabilir, süresi
- * dolabilir, silinebilir. O zaman altı ay önce gönderilmiş mailin yeniden basımı başka bir şey
- * derdi. Siparişe ait olan bilgi siparişte durur — `addressSnapshot` ile aynı kural.
- */
-function discountLabelOf(cart: CartView): LocalizedText | null {
-  return cart.discount.status === 'applied' || cart.discount.status === 'automatic' ? cart.discount.label : null;
-}
+/* `discountIdOf` ve `discountLabelOf` BURADAN TAŞINDI (03.09) → `cart/cart-types.ts`, ailenin geri
+   kalanının (`discountAmountOf` · `discountSharesOf`) yanına. Yerel kalınca kapıda satış onları
+   göremiyordu ve indirim kaydını hiç yazmıyordu; bedeli `on-site-sale.ts` künyesinde ölçülü. */
 
 /**
  * Bu siparişin seferine uyan kabul edilmiş komşu daveti — kimlik ya da `null` (17.10 · 12.08).
