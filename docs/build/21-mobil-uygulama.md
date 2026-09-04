@@ -11359,7 +11359,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   transfer işinden (`transfer_shortfall` migration'ı yazılmış ama yerel veritabanına uygulanmamış;
   enum'da değer yok) ve bu değişiklikle ilgisiz.
 
-- [~] (21.248) **D5 EKSİK BEYANI — eksik gelen mal beyan edilir, kayıp ALAN depoya `write_off · transfer_shortfall` olarak yazılır; kabul RPC'si partiyi sevk edilen adetle açar; künye "kaynak → alan", satırda lot/SKT, tavan girişte, gecikme rozeti, adetli sonuç, gönderene bildirim** (kullanıcı kararı 04.09, dört hüküm önerildiği gibi; kod + testler tamam, KALAN: cihaz turu)
+- [x] (21.248) **D5 EKSİK BEYANI — eksik gelen mal beyan edilir, kayıp ALAN depoya `write_off · transfer_shortfall` olarak yazılır; kabul RPC'si partiyi sevk edilen adetle açar; künye "kaynak → alan", satırda lot/SKT, tavan girişte, gecikme rozeti, adetli sonuç, gönderene bildirim** (kullanıcı kararı 04.09, dört hüküm önerildiği gibi; kod + testler + cihaz turu tamam)
   `touches:` `supabase/migrations/{0006_stock.sql,0031_warehouse.sql}` · `packages/types/src/{entities/{stock-movement,warehouse,app-notification}.schema.ts,contracts/warehouse-api.schema.ts}` · `packages/database/src/services/{warehouse-transfer,stock-movement}.service.ts` · `packages/application/src/{warehouse/transfer.ts,warehouse/transfer.test.ts,notification/staff-events.ts,index.ts}` · `packages/i18n/src/notification-copy.ts` · `apps/mobile-api/src/api/v1/{warehouse.ts,warehouse.test.ts}` · `apps/mobile/src/screens/warehouse/{transfer-screen.tsx,use-transfer.hook.ts,messages.json,warehouse-fixture.ts,transfer-screen.test.tsx,write-off-screen.tsx}` · `apps/mobile/src/screens/operations/notification-map.ts` · `apps/web/lib/stock/loss-labels.ts` (tek etiket satırı — derleme kırılmasın) · dokümanlar: `06-stok.md` · `19-coklu-depo.md` (19.6 Durum) · `DATA_MODEL.md` · `design/pages/app-depo.md` · `design/KARARLAR.md` · `docs/talep/not-web-transfer-yas-tonu-ve-eksik-beyani.md`
 
   **Ölçüm (03.09, POCO + API + DB).** Kehl → Strasbourg gerçek transfer eksik sayıldı: ekran *"Kabul
@@ -11397,6 +11397,34 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   kaynak adı, gönderene zil); API yeni bir test (beyanla kabul); `packages/database`
   `warehouse.test` beklentisi yeni kurala çekildi (sıfır satır da parti açar → 2 parti, eksik 3,
   IMH belgesi). `db:refresh` kullanıcı onayıyla koşuldu. Tam paket commit notunda.
-  **KALAN — cihaz turu:** POCO commit anında bağlı değildi (kullanıcı kararı 04.09: önce commit).
-  Yerel veride iki fikstür yolda (`TRF-KEHL-26-0001` 2 kalem · `TRF-KEHL-26-0002` 1 kalem, Kehl →
-  Strasbourg); tur yapılınca ekran görüntüleriyle bu satır `[x]` olur.
+
+  **Cihaz turu (04.09 11:08–11:24, Oppo CPH1907, kablosuz ADB, testID ile sürüldü).** Commit sonrası
+  DB yeniden tazelenmişti; elle kurduğum Kehl → Strasbourg fikstürleri gitmiş, seed'in beş
+  transferi gelmişti (STR → KEHL: `0001` yolda 2 kalem · `0005` yolda 31.08'den beri · `0002`
+  eksikli · `0003` geri alınmış · `0004` tam) — tur onlarla yapıldı, `muhasebe@` (depo rolü,
+  KEHL+STR) ile KEHL seçilerek. **İlk ölçüm eski paketi gösterdi:** cihaz saatlerdir kopuktu, HMR
+  güncellemeleri kaçmıştı; uiautomator dökümünde yeni testID'ler yoktu, "1 eksik" (satır sayısı)
+  duruyordu. Soğuk başlatma (`am force-stop` + dev-client URL'i) sonrası:
+  - Liste: kartta *"Strasbourg — ana depo → Kehl — sınır deposu"*; kapananlarda `0002` **"−2 adet"**
+    ve *"eksik IMH-KEHL-26-0001"* (seed'in eksikli kabulü yeni RPC'den geçmiş, belge doğmuş).
+  - Detay: künye *"TRF-STR-26-0001 · Strasbourg — ana depo → Kehl — sınır deposu"*; satırda
+    *"lot L2639-1 · SKT 24.06.27"*. Artıya 5 kez basıldı, değer **4'te durdu** (artı koyulaştı).
+  - İkinci satır 3: *"1 eksik · kayıp olarak yazılacak"*, EKSİK BEYANI paneli *"4 gönderildi · 3
+    geldi / 1 birim eksik"*, düğme kiremit *"Kabulü kaydet · 1 eksik beyanıyla"*. Çekmece: koyu
+    sayaç kartı "4 → 3", çipler "koli eksik geldi / hasarlı geldi, imha", not alanı; **hasarlı**
+    seçilip not yazıldı ("Koli ezik, bir dilim yok"), klavye BACK ile kapanınca çekmece açık kaldı.
+  - Toast: *"Kabul yazıldı — 2 parti açıldı · 1 birim eksik kayıp yazıldı · IMH-KEHL-26-0002"*;
+    kuyruk kendiliğinden `0005`e geçti.
+  - **DB (aynı saniye, tek transaction):** transfer `received`; satırlar 4/4 ve 4/3; KEHL'de
+    `PRT-KEHL-26-0025` (4/4) ve `-0026` (fiziksel 3 / başlangıç 4); `transfer_in` 4+4;
+    `write_off · damaged` 1 adet, not aynen, `IMH-KEHL-26-0002`, `transfer_id` dolu.
+  - **Bildirim:** dört alıcı, her biri bir satır, `dedupe_key` transfer başına: `depo@` (STR
+    depo), `muhasebe@` (STR kapsamında depo rolü — beyanı yapan kişinin kendisi; kapsam kesişimi
+    aktörü ayırmıyor, kabul), `hepsi@` ve `yonetim@` (yönetim depo-üstü). `depo@` ile girilince zil: *"Transfer eksik kabul edildi — TRF-STR-26-0001 —
+    1 adet eksik, KEHL kayıp yazdı · Transfer · Depo · 3 dk"*; dokununca depo bölümüne düşüyor
+    (bölüm haritası, ekran değil — mevcut kalıp).
+  - **STR tarafı:** YOLDA'da `0005` *"Kehl — sınır deposu · 1 kalem · tahmini 01.09.26"* + kırmızı
+    rozet **"3 gün gecikti"**; kapananlarda `0001` *"giden · 2 kalem · 04.09.26 · eksik
+    IMH-KEHL-26-0002"* **"−1 adet"**.
+  Turda bulunan tek artık: eski `closedShort` ("{n} eksik") kopya anahtarı ölü kalmıştı, silindi.
+  Ekran görüntüleri oturum scratchpad'inde (`tour/11…20`); depoya alınmadı (`docs/uygulama/ekran-goruntuleri` bayat sayılıyor, 31.08 kararı).

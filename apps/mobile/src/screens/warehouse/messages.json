@@ -833,7 +833,6 @@
     "closedHeading": "SON KAPANANLAR",
     "closedMeta": "{direction} · {n} kalem · {date}",
     "closedFull": "tam kabul",
-    "closedShort": "{n} eksik",
     "closedCancelled": "geri alındı — mal hiç çıkmadı",
     "direction": {
       "in": "gelen",
