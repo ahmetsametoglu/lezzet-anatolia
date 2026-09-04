@@ -126,7 +126,16 @@ export type DeliveryRunCollection = z.infer<typeof DeliveryRunCollectionSchema>;
  */
 export const OpenDeliveryRunResultSchema = z.object({
   ok: z.boolean(),
-  reason: z.enum(['already_started', 'zone_not_found', 'reference_collision']).optional(),
+  /**
+   * `vehicle_taken` / `vehicle_mismatch` (21.249 · 04.09): araç bir yerdedir ve araçtaki yük tek
+   * araca aittir. Birincisi "araç başka kuryenin açık seferinde", ikincisi "senin öteki açık
+   * seferin başka araçta" — ayrı retler, çünkü çareleri ayrı.
+   */
+  reason: z
+    .enum(['already_started', 'zone_not_found', 'reference_collision', 'vehicle_taken', 'vehicle_mismatch'])
+    .optional(),
+  /** `vehicle_mismatch` dalında: çakışan seferin aracı — ekran "şu araçtasın" diyebilsin. */
+  vehicleId: z.string().uuid().nullable().optional(),
   runId: z.string().uuid().optional(),
   referenceNo: z.string().optional(),
   /** `already_started` dalında: seferi kim sürüyor — ekran "rota bugün X'te" diyebilsin. */

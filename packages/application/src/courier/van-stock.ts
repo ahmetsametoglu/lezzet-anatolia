@@ -1,4 +1,4 @@
-import { StockService, WarehouseService, WarehouseTransferService } from '@lezzet/database';
+import { DeliveryRunCloseService, DeliveryRunService, StockService, WarehouseService, WarehouseTransferService } from '@lezzet/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { dispatchTransfer, receiveTransfer } from '../warehouse/transfer';
 import { displayName, variantNames } from '../warehouse/names';
@@ -25,9 +25,11 @@ import { displayName, variantNames } from '../warehouse/names';
  * malı ikinci kez onaylatmak olurdu. Yarım kalma riski de var ve GÖRÜNÜR: sevk yazılıp kabul
  * düşerse mal transferde asılı kalır, o yüzden cevap ikisini birden söyler.
  *
- * ── ARAÇ DEPOSU KAPSAMDAN GELİR, İSTEMCİDEN DEĞİL ───────────────────────────
- * Kuryenin `warehouseIds`i içindeki `kind='vehicle'` depo — yerinde satış ucunun aynı çözümü
- * (`sale.ts` künyesi). İstemciden gelen bir depo kimliği, kapsam kontrolünü kandırmanın kendisidir.
+ * ── ARAÇ DEPOSU SEFERİN ARACINDAN GELİR, İSTEMCİDEN DEĞİL (21.249 · 04.09) ──
+ * Kuryenin açık seferinin aracı → o aracın deposu (`warehouse.vehicle_id`). İstemciden gelen bir
+ * depo kimliği, kapsam kontrolünü kandırmanın kendisidir. **Kapsam bu soruya artık karışmıyor:**
+ * 04.09'a kadar çözüm `warehouseIds` dizisini tarayıp türü araç olan İLKİNİ alıyordu ve seferde
+ * seçilen araç hiçbir yere girmiyordu — ölçüm ve gerekçe `vehicleWarehouseOf` künyesinde.
  */
 
 /** Araçta duran bir kalem — parti değil VARYANT düzeyinde toplanır (kurye partiyi konuşmaz). */
@@ -98,12 +100,102 @@ function foldTurkish(value: string): string {
     .replace(/[çğıöşüâîû]/g, (ch) => FOLD[ch] ?? ch);
 }
 
-/** Kuryenin araç deposu — kapsamındaki `kind='vehicle'` ilk depo; yoksa `null`. */
-export async function vehicleWarehouseOf(db: SupabaseClient, warehouseIds: readonly string[]): Promise<string | null> {
-  if (warehouseIds.length === 0) return null;
-  const service = new WarehouseService(db);
-  const rows = await Promise.all(warehouseIds.map((id) => service.getById(id)));
-  return rows.find((row) => row?.kind === 'vehicle')?.id ?? null;
+/**
+ * **KURYENİN ARAÇ DEPOSU — SEFERİN ARACINDAN** (21.249 · kullanıcı kararı 04.09).
+ *
+ * ── ÖNCE NE VARDI, NEDEN YANLIŞTI ──────────────────────────────────────────
+ * İmza `(db, warehouseIds)` idi ve kuryenin KAPSAM DİZİSİNİ tarayıp türü araç olan İLK satırı
+ * alıyordu. Yani sistem seferde seçilen aracı kaydediyor ama kullanmıyordu: malın hangi araçtan
+ * çıkacağını profildeki dizinin SIRASI belirliyordu. Tek araçlı kurulumda doğru cevap veriyor ve
+ * hiçbir belirtisi olmuyordu; ikinci araç girdiği gün kurye A'yı seçerken serbest ürün, kapıda
+ * satış ve akşam dönüşü B'den işleyecekti — sessizce, hiçbir yerde hata çıkmadan.
+ *
+ * ── ŞİMDİ: TEK KAYNAK SEFERİN ARACI ────────────────────────────────────────
+ * Kuryenin AÇIK seferleri okunur (kapanmamış olanlar), aracı alınır, o aracın deposu döner. Bağ
+ * veride: `warehouse.vehicle_id` (21.249 · `warehouse_vehicle_identity`). Kapsam artık bu soruya
+ * hiç karışmıyor — kapsamın işi "hangi depoları görebilirsin", "malın nerede" değil.
+ *
+ * ── ARAÇSIZ SEFERDE `null` VE BU BİR EKSİK DEĞİL ───────────────────────────
+ * Araç seçmek isteğe bağlı (`day.ts` künyesi: kurulum eksikse kurye kilitlenmesin). Araçsız
+ * seferde araç deposu da YOKTUR ve kapılar `no_vehicle` döner. Kapsamdaki ilk aracı sessizce
+ * devreye sokmak, kuryeye adını koymadığı bir aracın malını sattırmaktı (CLAUDE §1: ölçülemeyen
+ * değer uydurulmaz).
+ *
+ * Açık seferlerin hepsi AYNI aracı taşır — kural veride (`assert_vehicle_single_courier`) ve sefer
+ * açma kapısında (`vehicle_mismatch`). Yine de ilk NON-NULL araç alınıyor: kural bir gün gevşerse
+ * burası çökmemeli, yalnız bir cevap vermeli.
+ *
+ * ── AÇIK SEFER YOKSA SON SEFERİN ARACI (04.09) ─────────────────────────────
+ * Bu okuma KAPANIŞTAN SONRA da doğru cevap vermek zorunda ve sebebi dönüş kapısı: `return.ts`
+ * kutu listesini bilerek sefere bağlamıyor (*"dünkü seferin reddedilen kutusu bugün de araçtaysa
+ * yine inmelidir"* — o dosyanın künyesi). Araç yalnız AÇIK seferden çözülseydi aynı ekranın iki
+ * yarısı çelişirdi: kutular listelenir, serbest ürün "araç yok" derdi — hem de tam o kutuların
+ * durduğu araç için. Kurye akşam parasını teslim edip seferi kapattığında depocunun ekranı boşalırdı.
+ *
+ * Fallback SEÇİM DEĞİL, ÖLÇÜMDÜR: kuryenin en son sürdüğü sefer hangi aracı yazdıysa mal fiziken
+ * o araçtadır — kapanış malı indirmez, yalnız parayı mutabık kılar. Kapsamdaki ilk aracı almakla
+ * arasındaki fark da bu: orada cevap dizinin sırasından geliyordu, burada kaydından.
+ *
+ * RAMPA yolları (`/van-stock`, alma/devretme) bu gevşemeyi KULLANMAZ, `courierVanContext`i okur:
+ * onların ayrıca seferin ÇIKIŞ TESİSİNE de ihtiyacı var ve kapanmış seferin tesisi bugünün malını
+ * nereden alacağını söylemez.
+ */
+export async function vehicleWarehouseOf(db: SupabaseClient, input: { courierId: string }): Promise<string | null> {
+  const run = await vanRunOf(db, input.courierId, { includeClosed: true });
+  return run === null ? null : vanWarehouseIdOf(db, run.vehicleId);
+}
+
+/**
+ * **SERBEST ÜRÜNÜN İKİ UCU** — mal nereden alınıyor, nereye konuyor (21.249).
+ *
+ * Çıkış tesisi de bir tur kapsamdan çözülüyordu ve aynı aileden bir hataydı: *"araç OLMAYAN ilk
+ * kapsam satırı"* deniyordu, yani kapsamda iki araç varsa ÖTEKİ ARAÇ tesis sanılıyordu ve mal
+ * araçtan araca taşınıyordu. Şimdi ikisi de tek gerçekten türüyor: açık seferin aracı (deposu) ve
+ * açık seferin çıkış tesisi (`delivery_run.warehouse_id` — rotanın deposu).
+ *
+ * Sefer yoksa ikisi de `null` ve çağıranlar `no_vehicle` döndürüyor.
+ */
+export interface CourierVanContext {
+  /** Aracın STOK deposu; `null` = açık seferde araç yok. */
+  vehicleWarehouseId: string | null;
+  /** Seferin ÇIKIŞ tesisi — serbest ürünün alındığı depo. */
+  facilityId: string | null;
+}
+
+export async function courierVanContext(db: SupabaseClient, input: { courierId: string }): Promise<CourierVanContext> {
+  const run = await vanRunOf(db, input.courierId, { includeClosed: false });
+  if (run === null) return { vehicleWarehouseId: null, facilityId: null };
+  return { vehicleWarehouseId: await vanWarehouseIdOf(db, run.vehicleId), facilityId: run.warehouseId };
+}
+
+/** Aracı olan sefer — araç kimliği daraltılmış, çağıranların ayrıca `null` elemesi gerekmesin. */
+type VanRun = { vehicleId: string; warehouseId: string };
+
+/**
+ * Kuryenin ARAÇLI seferi. `includeClosed` yalnız SIRAYI genişletir, sırayı bozmaz: açık sefer
+ * varsa daima o kazanır — kapanmışa ancak açık yokken düşülür. "Açık" tanımı `quick-sale`ınkiyle
+ * aynı tek sinyalden: **kapanış kaydı yoksa açıktır** (dönüş damgası değil).
+ *
+ * `listByCourier` `deliveryDate` azalan sırada geliyor, yani kapanmışların ilki EN SON sürülendir.
+ */
+async function vanRunOf(
+  db: SupabaseClient,
+  courierId: string,
+  opts: { includeClosed: boolean },
+): Promise<VanRun | null> {
+  const runs = (await new DeliveryRunService(db).listByCourier(courierId, {})).filter((run) => run.vehicleId !== null);
+  if (runs.length === 0) return null;
+
+  const closes = await new DeliveryRunCloseService(db).listByRuns(runs.map((run) => run.id));
+  const closedIds = new Set(closes.map((close) => close.deliveryRunId));
+  const run = runs.find((candidate) => !closedIds.has(candidate.id)) ?? (opts.includeClosed ? runs[0] : undefined);
+  return run === undefined || run.vehicleId === null ? null : { vehicleId: run.vehicleId, warehouseId: run.warehouseId };
+}
+
+/** Aracın STOK deposu — bağ `warehouse.vehicle_id` (21.249), birebir ve benzersiz. */
+async function vanWarehouseIdOf(db: SupabaseClient, vehicleId: string): Promise<string | null> {
+  const [van] = await new WarehouseService(db).list({ kind: 'vehicle', vehicleId });
+  return van?.id ?? null;
 }
 
 /**

@@ -47,6 +47,8 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
       kind?: Warehouse['kind'];
       /** Evi bu tesis olan araçlar (02.09) — panelin ve depo kartının sorgusu. */
       homeWarehouseId?: string;
+      /** Bu ARACIN deposu (21.249) — bağ 1:1, yani sonuç ya tek satır ya boş. */
+      vehicleId?: string;
     } = {},
   ): Promise<Warehouse[]> {
     if (opts.warehouseIds?.length === 0) return Promise.resolve([]);
@@ -54,6 +56,7 @@ export class WarehouseService extends BaseDbService<Warehouse, WarehouseInsert, 
     if (opts.activeOnly) filters.isActive = true;
     if (opts.kind) filters.kind = opts.kind;
     if (opts.homeWarehouseId) filters.homeWarehouseId = opts.homeWarehouseId;
+    if (opts.vehicleId) filters.vehicleId = opts.vehicleId;
     if (opts.warehouseIds) filters.id = [...opts.warehouseIds];
     return this.getAll(Object.keys(filters).length > 0 ? filters : undefined, { orderBy: 'sort_order' });
   }

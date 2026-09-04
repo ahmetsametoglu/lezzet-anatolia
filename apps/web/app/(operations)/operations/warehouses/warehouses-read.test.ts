@@ -16,6 +16,8 @@ const WAREHOUSE = {
   kind: 'facility' as const,
   /** Tesisin evi olmaz — kural veride de zorlanıyor (`warehouse_home_only_vehicle`). */
   homeWarehouseId: null,
+  /** Tesis ARAÇ da göstermez (21.249 · `warehouse_vehicle_identity`): bağ yalnız araç deposunda dolu. */
+  vehicleId: null,
   countryCode: 'FR' as const,
   address: null,
   lat: null,

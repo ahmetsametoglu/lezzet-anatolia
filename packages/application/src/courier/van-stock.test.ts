@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, StockService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
-import { listVanCandidates, readVanStock, returnFromVan, takeToVan, vehicleWarehouseOf } from './van-stock';
+import { listVanCandidates, readVanStock, returnFromVan, takeToVan } from './van-stock';
 
 /**
  * **ARACA SERBEST ÜRÜN** (v3:19 · kullanıcı kararı 31.08).
@@ -64,13 +64,15 @@ afterAll(async () => {
   await purgeTestData(db, { productIds: [productId], categoryIds: [categoryId], warehouseIds: [facilityId, vanId] });
 });
 
-describe('araç deposunun çözümü', () => {
-  it('kapsamdaki `vehicle` depo bulunur; tesisler arasından o AYIKLANIR', async () => {
-    expect(await vehicleWarehouseOf(db, [facilityId, vanId])).toBe(vanId);
-    // Araç yoksa `null` — ekran boş liste değil SEBEP gösterir (serbest ürün gidecek yer ister).
-    expect(await vehicleWarehouseOf(db, [facilityId])).toBeNull();
-  });
-});
+/*
+  ARAÇ DEPOSUNUN ÇÖZÜMÜ BU DOSYADAN TAŞINDI (21.249 · 04.09) → `vehicle-binding.test.ts`.
+
+  Buradaki tek test *"kapsamdaki tesisleri atla, aracı bul"* kuralını sınıyordu ve o kural
+  DOĞRUYDU — ama tek başına eksikti: "kapsamda İKİ araç varsa hangisi" sorusunun cevabı hiçbir
+  yerde verilmemişti, dizinin sırasından düşüyordu. Fikstür de tek araç kurduğu için soru hiç
+  doğmuyordu. Çözüm artık kapsamı değil SEFERİN ARACINI okuyor; testi de iki araçlı kurulumu
+  kuran yeni dosyada, çünkü asıl kanıt orada.
+*/
 
 describe('araca al / depoya devret', () => {
   it('MAL GERÇEKTEN TAŞINIR: depodan düşer, araca yazılır', async () => {

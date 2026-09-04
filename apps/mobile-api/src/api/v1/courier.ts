@@ -13,7 +13,7 @@ import {
   readVanStock,
   returnFromVan,
   takeToVan,
-  vehicleWarehouseOf,
+  courierVanContext,
   loadBox,
   markUndelivered,
   openDayClose,
@@ -297,8 +297,10 @@ courier.post('/day/start', async (c) => {
 courier.get('/van-stock', async (c) => {
   const staff = c.get('staff');
   const db = serviceDb();
-  const vehicleWarehouseId = await vehicleWarehouseOf(db, staff.warehouseIds);
-  const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
+  /* İKİ UÇ TEK GERÇEKTEN (21.249): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN.
+     Bir tur ikisi de kapsamdan çözülüyordu ve kapsamda iki araç olan kuryede ikisi birden yanlış
+     olurdu — künye `courierVanContext`te. */
+  const { vehicleWarehouseId, facilityId } = await courierVanContext(db, { courierId: staff.id });
   /* ARAMA AYNI UÇTAN (v3:19 "+ Ürün ara") — ikinci bir uç açılmadı: soru aynı ("depodan ne
      alabilirim"), yalnız süzgeci var. Ayrı bir uç, aynı listeyi iki farklı sıralama ve iki farklı
      tavanla döndürmeye açık kapı bırakırdı. Boş sorgu = süzgeçsiz şerit. */
@@ -339,8 +341,10 @@ courier.post('/van-stock/take', async (c) => {
 
   const staff = c.get('staff');
   const db = serviceDb();
-  const vehicleWarehouseId = await vehicleWarehouseOf(db, staff.warehouseIds);
-  const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
+  /* İKİ UÇ TEK GERÇEKTEN (21.249): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN.
+     Bir tur ikisi de kapsamdan çözülüyordu ve kapsamda iki araç olan kuryede ikisi birden yanlış
+     olurdu — künye `courierVanContext`te. */
+  const { vehicleWarehouseId, facilityId } = await courierVanContext(db, { courierId: staff.id });
   if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
 
   /* KOD → VARYANT ÇEVİRİSİ UÇTA (v3:19 "Barkod okut"): eşleme `variant_barcode`ta duruyor ve
@@ -371,8 +375,10 @@ courier.post('/van-stock/return', async (c) => {
 
   const staff = c.get('staff');
   const db = serviceDb();
-  const vehicleWarehouseId = await vehicleWarehouseOf(db, staff.warehouseIds);
-  const facilityId = staff.warehouseIds.find((id) => id !== vehicleWarehouseId) ?? null;
+  /* İKİ UÇ TEK GERÇEKTEN (21.249): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN.
+     Bir tur ikisi de kapsamdan çözülüyordu ve kapsamda iki araç olan kuryede ikisi birden yanlış
+     olurdu — künye `courierVanContext`te. */
+  const { vehicleWarehouseId, facilityId } = await courierVanContext(db, { courierId: staff.id });
   if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
 
   /* Devret yolunda kod OKUTULMUYOR (v3:19'da yalnız alma tarafında "Barkod okut" var) — ama

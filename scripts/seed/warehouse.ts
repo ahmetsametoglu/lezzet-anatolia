@@ -76,6 +76,35 @@ export interface Depolar {
  * Ölçüt bu yüzden varlıktır: STR/KEHL kodlu satır var mı? Yoksa açılır. Böylece hem boş
  * veritabanında hem yabancı satırlarla dolu bir tabloda aynı sonuç doğar.
  */
+/**
+ * **KURYE ARACININ PLAKASI — TEK YERDE** (21.249).
+ *
+ * İki seed adımı aynı aracı istiyor: depo adımı VAN-1'i o araca BAĞLAMAK için (bağ 04.09'da veriye
+ * girdi — `warehouse.vehicle_id`), ölçüm noktası adımı ise soğuk zincir beklentisini yazmak için.
+ * Plaka iki yere yazılsaydı ikinci adım birinciyi bulamaz ve tabloda iki araç doğardı — `plate`
+ * benzersiz olduğu için de ikincisi patlardı.
+ */
+const KURYE_ARACI_PLAKA = '67 LZT 01';
+
+/** Aracı bul ya da aç — iki seed adımının ortak kapısı; ikinci çağrı mevcut satırı döndürür. */
+async function kuryeAraciKaydi(db: Db, homeWarehouseId: string): Promise<string> {
+  const vehicles = new VehicleService(db);
+  const mevcut = (await vehicles.list()).find((v) => v.plate === KURYE_ARACI_PLAKA);
+  if (mevcut) return mevcut.id;
+  // **Frigo kamyonet günde 1 ölçüm bekliyor** — araç varsayılanı 0 ama bu araç soğuk taşıyor.
+  // Ayrım veride tutulmadığı için (`vehicle` tablosunda soğutucu bayrağı yok) kararı operatör
+  // veriyor; seed de o kararı örnekliyor.
+  return (
+    await vehicles.insert({
+      plate: KURYE_ARACI_PLAKA,
+      label: 'Frigo kamyonet',
+      warehouseId: homeWarehouseId,
+      expectedDailyChecks: 1,
+      sortOrder: 1,
+    })
+  ).id;
+}
+
 export async function seedWarehouses(db: Db): Promise<Depolar> {
   const warehouses = new WarehouseService(db);
   const mevcut = await warehouses.list();
@@ -196,6 +225,11 @@ export async function seedWarehouses(db: Db): Promise<Depolar> {
       // ait olduğu ise dünyanın kendisi — plakası gibi, künyenin parçası. Bağ olmadan tesisin
       // paneli "aracımda ek olarak ne var" diye soramaz ve o yol yerelde hiç koşmaz.
       homeWarehouseId: strId,
+      /* ARAÇ DEPOSU ARACINI SÖYLER (21.249): 04.09'a kadar VAN-1 ile "67 LZT 01" birbirini
+         tanımıyordu ve malın hangi araçtan çıkacağını kuryenin kapsam dizisinin SIRASI
+         belirliyordu. Bağ artık zorunlu (`warehouse_vehicle_identity`) — beslemenin kurduğu
+         dünya da onsuz kurulamıyor. */
+      vehicleId: await kuryeAraciKaydi(db, strId),
       sortOrder: 4,
     });
     vanId = arac.id;
@@ -341,8 +375,41 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
     console.log(`  ✓ ${gec.referenceNo} · YOLDA ve GECİKMİŞ (4 gün)`);
   }
 
+  // 5) GELEN yoldaki — KEHL → STR (kullanıcı isteği 04.09). Buraya kadar her sevkiyat STR'den
+  //    çıkıyordu; ana deponun ekranında yalnız "YOLDA" doluydu, "GELEN — KABUL BEKLİYOR" hep boştu
+  //    ve kabul akışı ancak KEHL'e geçilerek denenebiliyordu. Aynı kişi (STR depocusu) iki yönü
+  //    tek ekranda görsün diye ters yönde bir sevkiyat: KEHL'in rezervasyonsuz partilerinden.
+  const { data: kehlRezerveli, error: kehlRezerveHatasi } = await db
+    .from('reservation')
+    .select('variant_id')
+    .eq('warehouse_id', depolar.kehl);
+  if (kehlRezerveHatasi) throw kehlRezerveHatasi;
+  const kehlMesgul = new Set((kehlRezerveli ?? []).map((r) => (r as { variant_id: string }).variant_id));
+  const { data: kehlData, error: kehlHatasi } = await db
+    .from('stock')
+    .select('id,variant_id,physical_qty')
+    .eq('warehouse_id', depolar.kehl)
+    .is('offer_price', null)
+    .gt('physical_qty', 8)
+    .order('physical_qty', { ascending: false })
+    .limit(20);
+  if (kehlHatasi) throw kehlHatasi;
+  const kehlPartiler = ((kehlData ?? []) as Array<{ id: string; variant_id: string; physical_qty: number }>)
+    .filter((p) => !kehlMesgul.has(p.variant_id))
+    .slice(0, 2);
+  if (kehlPartiler.length === 0) {
+    console.log('  ▸ KEHL\'de rezervasyonsuz uygun parti yok — gelen transfer atlandı');
+  } else {
+    const gelen = await transfers.dispatch({
+      toWarehouseId: depolar.str,
+      lines: kehlPartiler.map((p) => ({ sourceStockId: p.id, qty: Math.min(6, p.physical_qty) })),
+      note: 'Strasbourg takviyesi — kabul bekliyor.',
+    });
+    console.log(`  ✓ ${gelen.referenceNo} · ${kehlPartiler.length} kalem · KEHL → STR (yolda, ana depoya GELEN)`);
+  }
+
   /*
-    ── 5) ARACA YÜKLEME KALKTI (kullanıcı kararı 01.09) ────────────────────────
+    ── (eski 5) ARACA YÜKLEME KALKTI (kullanıcı kararı 01.09) ──────────────────
 
     Burada STR'den VAN-1'e 4 kalemlik bir transfer açılıp aynı anda kabul ediliyordu ("Sabah
     yüklemesi — serbest satış fazlası"), yani araç dolu doğuyordu. Kullanıcı cihazda gördü:
@@ -359,7 +426,7 @@ export async function seedTransfer(db: Db, depolar: Depolar): Promise<void> {
     kaydını sayıyor, araçtaki STOĞU değil. VAN-1 duruyor, yalnız içi boş başlıyor.
   */
 
-  console.log('✓ transfer: 5 kayıt (yolda · GECİKMİŞ yolda · tam kabul · eksikli kabul · geri alınmış)');
+  console.log('✓ transfer: 6 kayıt (yolda · GECİKMİŞ yolda · KEHL → STR gelen yolda · tam kabul · eksikli kabul · geri alınmış)');
 }
 
 // ── Depo bazlı asgari stok eşiği (19.x) ──────────────────────────────────────────────────────────
@@ -472,7 +539,6 @@ export const gunlukOlcum = (ad: string): number => STR_ALANLARI.find((a) => a.ad
 
 export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Noktalar> {
   const areas = new StorageAreaService(db);
-  const vehicles = new VehicleService(db);
 
   // Guard alan BAZINDA, "tablo dolu mu" ile değil: depo seed'inin kendi gerekçesi burada da geçerli
   // — testler `storage_area` satırı bırakabiliyor ve tablo doluysa atlamak seed'i kendi alanları
@@ -519,14 +585,8 @@ export async function seedStoragePoints(db: Db, depolar: Depolar): Promise<Nokta
       })
     ).id;
 
-  const plaka = '67 LZT 01';
-  const mevcutArac = (await vehicles.list()).find((v) => v.plate === plaka);
-  const arac =
-    mevcutArac?.id ??
-    // **Frigo kamyonet günde 1 ölçüm bekliyor** — araç varsayılanı 0 ama bu araç soğuk taşıyor.
-    // Ayrım veride tutulmadığı için (`vehicle` tablosunda soğutucu bayrağı yok) kararı operatör
-    // veriyor; seed de o kararı örnekliyor.
-    (await vehicles.insert({ plate: plaka, label: 'Frigo kamyonet', warehouseId: depolar.str, expectedDailyChecks: 1, sortOrder: 1 })).id;
+  // Araç depo adımında ZATEN açıldı (VAN-1 ona bağlanmak zorunda — 21.249); burada yalnız bulunuyor.
+  const arac = await kuryeAraciKaydi(db, depolar.str);
 
   console.log(`✓ ölçüm noktası: ${strAlan.size} alan (STR) · 1 alan (KEHL) · 1 araç`);
   return { strAlan, kehlAlan, arac };

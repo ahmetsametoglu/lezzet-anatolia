@@ -641,6 +641,30 @@ export const StartCourierDayResponseSchema = z.discriminatedUnion('status', [
    * seferi söylüyor — çıplak bir ret kuryeye ne yapacağını söylemez.
    */
   z.object({ status: z.literal('another_running'), runId: z.string().uuid(), referenceNo: z.string() }),
+  /**
+   * **ARAÇ BAŞKA KURYEDE** (21.249 · 04.09) — araç bir yerdedir ve aynı anda tek kuryenin yükünü
+   * taşır. 04.09'a kadar hiçbir kısıt ve kontrol yoktu: aynı panelvanı iki kurye aynı gün
+   * seçebiliyordu ve ikisi de aynı araç stoğundan satıyordu.
+   *
+   * Künye NULLABLE: kural veride de duruyor (`assert_vehicle_single_courier`) ve yarış dalında
+   * çakışan seferin künyesi okunamayabilir — "kim" bilinmese de ret geçerlidir.
+   */
+  z.object({
+    status: z.literal('vehicle_taken'),
+    runId: z.string().uuid().nullable(),
+    referenceNo: z.string().nullable(),
+  }),
+  /**
+   * **KURYENİN AÇIK SEFERİ BAŞKA ARAÇTA** (21.249) — "araç hepsini birden taşır" (rota seçim
+   * ekranı) tek araç varsayar. Karışırsa "araçtaki seferler" listesi iki ayrı aracın yükünü tek
+   * liste gibi gösterir ve yükleme sayacı ikisinin kutularını toplar.
+   */
+  z.object({
+    status: z.literal('vehicle_mismatch'),
+    runId: z.string().uuid().nullable(),
+    referenceNo: z.string().nullable(),
+    vehicleId: z.string().uuid().nullable(),
+  }),
   /** O gün koşan rota yok (ya da verilen `zoneId` bugün koşmuyor/yok). */
   z.object({ status: z.literal('no_route') }),
 ]);

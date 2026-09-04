@@ -617,7 +617,14 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     }
     // Sefer aracı `restrict` ile tutar (0046) — sefer görmüş araç ancak seferleriyle gider.
     await purgeDeliveryRuns(db, 'vehicle_id', vehicleIds);
-    if (vehicleIds.length > 0) await mustDelete(db, 'vehicle', (q) => q.in('id', vehicleIds));
+    /*
+      ARAÇ SATIRININ KENDİSİ BURADA DEĞİL, §9'DA SİLİNİR (21.249 · 04.09) — araç artık "bağımsız
+      kayıt" DEĞİL: `warehouse.vehicle_id … on delete restrict` ile araç deposu onu tutuyor, yani
+      araç ancak deposundan sonra gidebilir. Bu blok depolardan ÖNCE koşuyor; satır burada kalsaydı
+      hem aracını hem deposunu bildiren her teardown `warehouse_vehicle_id_fkey` ile yarıda kalırdı
+      (ölçüldü 04.09: `vehicle-binding.test.ts`). Sıcaklık ve sefer süpürmesi burada kalabilir —
+      ikisi de araca bağlı, araçtan önce gitmeleri gerekiyor ve depoyla işleri yok.
+    */
     if (zoneNoticePostalCodes.length > 0) {
       await mustDelete(db, 'zone_notice', (q) => q.in('postal_code', zoneNoticePostalCodes));
     }
@@ -636,6 +643,10 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   //    `T-MSAFW5VS1` gibi satırları listeler). Yukarıdaki herhangi bir dalda takılan teardown,
   //    eskiden depoyu da bırakıyordu — ölçüldü 14.08: 51 artık deponun 46'sı bomboştu, yani onları
   //    hiçbir FK tutmuyordu, silme sadece hiç denenmemişti.
+  //
+  //    Silinen ARAÇ DEPOLARININ araçları §9'a taşınıyor: depo silinmeden okunmak zorundalar (bağ
+  //    depoda duruyor), silinmeleri ise depodan sonra olmak zorunda.
+  let vanVehicleIds: string[] = [];
   await step(async () => {
     if (warehouseIds.length > 0) {
       // Tedarikçisi olmayan mal kabulü de vardır (elle giriş) — o satır §3'te yakalanmaz ve depoyu
@@ -662,8 +673,31 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
       // Süzgeç `warehouse_id`: **sistem şablonları (`warehouse_id null`) BU SÜZGECE GİRMEZ** ve
       // girmemeli — onlar migration'ın kurduğu kalıcı kayıtlar, testin çöpü değil.
       await mustDelete(db, 'shipping_box', (q) => q.in('warehouse_id', warehouseIds));
+      /*
+        ARAÇ DEPOSUNUN ARACI DA GİDER (21.249 · 04.09) — ama SONRA (§9), çünkü yön depodan araca:
+        `warehouse.vehicle_id … on delete restrict`. Araç önce silinseydi depo onu tutardı.
+        Burada yalnız OKUNUYOR: bağ depo satırında duruyor, depo silindikten sonra sorulamaz.
+
+        Bu adım olmadan `createTestWarehouse(kind:'vehicle')`ın kendiliğinden açtığı araç kaydı
+        geride kalırdı: FK yok, hata yok, yalnız her koşuda tabloya bir ölü plaka — `document_counter`
+        ile aynı sessiz birikim sınıfı (yukarıdaki künye). Testin AYRICA `vehicleIds` bildirmesi
+        gerekmiyor; deposunu bildirmesi yetiyor, çünkü bağ 1:1 ve depodan okunabiliyor.
+      */
+      vanVehicleIds = await vehiclesOfWarehouses(db, warehouseIds);
       await mustDelete(db, 'warehouse', (q) => q.in('id', warehouseIds));
     }
+  });
+
+  // 9) ARAÇLAR — depolardan SONRA (21.249). İki kaynak birleşiyor: testin açıkça bildirdiği
+  //    araçlar ve §8'in silinen araç depolarından okuduğu araçlar. Aynı araç iki listede de
+  //    olabilir (hem deposunu hem plakasını bildiren test), o yüzden küme.
+  await step(async () => {
+    const targets = [...new Set([...vehicleIds, ...vanVehicleIds])];
+    if (targets.length === 0) return;
+    // Sefer aracı `restrict` ile tutar (0046) — deposu başkasının olan bir sefer §8'e takılmaz.
+    await purgeDeliveryRuns(db, 'vehicle_id', targets);
+    await mustDelete(db, 'temperature_log', (q) => q.in('vehicle_id', targets));
+    await mustDelete(db, 'vehicle', (q) => q.in('id', targets));
   });
 
   // SAHİPSİZ BİLDİRİMLER — EN SONDA, hedefler silindikten sonra (27.08).
@@ -739,6 +773,20 @@ async function codesOf(db: SupabaseClient, warehouseIds: string[]): Promise<stri
   const { data, error } = await db.from('warehouse').select('code').in('id', warehouseIds);
   if (error) throw error;
   return (data ?? []).map((row) => (row as { code: string }).code);
+}
+
+/**
+ * Silinecek depoların ARAÇ kayıtları (21.249) — yalnız `kind='vehicle'` satırlarında dolu.
+ *
+ * Depo silinmeden ÖNCE okunur (sonra okunacak satır kalmaz), silinmesi ise depodan SONRA olur:
+ * yön depodan araca ve `restrict` (`warehouse.vehicle_id`).
+ */
+async function vehiclesOfWarehouses(db: SupabaseClient, warehouseIds: string[]): Promise<string[]> {
+  const { data, error } = await db.from('warehouse').select('vehicle_id').in('id', warehouseIds);
+  if (error) throw error;
+  return (data ?? [])
+    .map((row) => (row as { vehicle_id: string | null }).vehicle_id)
+    .filter((id): id is string => id !== null);
 }
 
 /** Bir üst kaydın alt satır kimlikleri — silme sırası için gerekli ara adım. */

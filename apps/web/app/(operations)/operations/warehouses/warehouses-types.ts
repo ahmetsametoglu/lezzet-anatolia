@@ -111,7 +111,11 @@ export type VehicleFormInput = z.infer<typeof VehicleFormSchema>;
  * çözüldüğü için (`jsonb` → `WarehouseAddress`) yeniden tanımlanıyor, `createdAt` ise ekranın
  * sorusu değil.
  */
-export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt'> & {
+/* `vehicleId` DE ATILIYOR (21.249): araç deposunun ruhsat kaydına bağı 04.09'da veriye girdi ama bu
+   ekran onu HENÜZ okumuyor — kart araçları deponun ev bağından buluyor (`VanLoadRow`). Taşınmayan
+   bir alanı satıra koymak, "bir gün lazım olur" diye hesaplanıp atılan değer olurdu; gerekince
+   omit'ten çıkarılır ve orada ne gösterdiği de yazılır. */
+export type WarehouseRowView = Omit<Warehouse, 'address' | 'createdAt' | 'vehicleId'> & {
   address: WarehouseAddressView;
   /** Bağlı bölge sayısı + o bölgelerin kod toplamı; pasif bölgeler ayrı sayılır. */
   zoneCount: number;

@@ -26,6 +26,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | `sort_order` | int |  | `0` |
 | `home_warehouse_id` | uuid | • |  |
 | `created_at` | timestamptz |  | `now()` |
+| `vehicle_id` | uuid | • |  |
 <!-- /alanlar -->
 
 **Kararlar**

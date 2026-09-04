@@ -34,6 +34,18 @@ export const WarehouseSchema = z.object({
    */
   homeWarehouseId: z.string().uuid().nullable(),
   /**
+   * **Bu deponun ARACI** (21.249) — yalnız `kind='vehicle'` satırında dolu ve orada ZORUNLU.
+   *
+   * Sistemde iki "araç" var: ruhsat tarafı (`vehicle` — plaka, soğuk zincir ölçümü) ve MALIN
+   * durduğu yer (bu satır). 04.09'a kadar aralarında bağ yoktu; malın hangi araçtan çıkacağını
+   * seferin aracı değil, kuryenin kapsam dizisinin SIRASI belirliyordu. Tek araçlı kurulumda
+   * doğru cevap veriyordu, ikinci araçta sessizce yanlış olurdu.
+   *
+   * Çift yönlü kısıt veride (`warehouse_vehicle_identity`): araç deposu aracını söylemek zorunda,
+   * tesis söyleyemez. 1:1 (`warehouse_vehicle_unique`) — iki depo aynı aracı gösteremez.
+   */
+  vehicleId: z.string().uuid().nullable(),
+  /**
    * Deponun ülkesi — FİZİKSEL tesis nerede. Bölgenin ülkesiyle karıştırılmamalı: bir bölge sınır
    * ötesi olabilir (ADR-002), depo olamaz. KDV'nin bağlı olduğu alan da budur (DOMAIN §5/§17).
    * Araçta da doludur: araç bir ülkenin içinde dolaşır, sınır geçmez.
@@ -65,6 +77,8 @@ export const WarehouseInsertSchema = z.object({
   kind: WarehouseKindEnum.optional(),
   /** Aracın evi; tesiste verilmez (veride de kısıt var — `warehouse_home_only_vehicle`). */
   homeWarehouseId: z.string().uuid().nullish(),
+  /** Araç deposunda ZORUNLU, tesiste yasak (`warehouse_vehicle_identity`) — künyesi varlık şemasında. */
+  vehicleId: z.string().uuid().nullish(),
   countryCode: CountryEnum.optional(),
   address: z.record(z.unknown()).nullish(),
   lat: z.number().nullish(),
@@ -168,6 +182,10 @@ export const ReceiveTransferResultSchema = z.object({
   shortfallQty: z.number().int().nonnegative(),
   /** Eksiğin IMH belgesi (`IMH-STR-26-0013`); eksik yoksa `null`. */
   shortfallReferenceNo: z.string().nullable(),
+  /** Fazla beyan edilen toplam adet (04.09, 21.253) — `0` = sevk edilenden fazlası yok. */
+  excessQty: z.number().int().nonnegative(),
+  /** Fazlanın SAY belgesi (`count_diff · in`, alan deponun serisi); fazla yoksa `null`. */
+  excessReferenceNo: z.string().nullable(),
 });
 export type ReceiveTransferResult = z.infer<typeof ReceiveTransferResultSchema>;
 

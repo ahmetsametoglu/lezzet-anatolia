@@ -406,6 +406,70 @@ describe('seferin künyesi: araç adı + çıkış deposu (30.08 · uyuşmazlık
   });
 });
 
+/*
+  ── ARAÇ TEKELLİĞİ (21.249 · kullanıcı kararı 04.09) ─────────────────────────
+  Bugüne kadar seferin aracı YALNIZ bir etiketti: kaydediliyor, ekranda yazılıyor, başka hiçbir
+  karara girmiyordu. Bunun iki sessiz sonucu ölçüldü (04.09):
+    · aynı fiziksel aracı iki kurye aynı gün seçebiliyordu — ne kısıt vardı ne kontrol;
+    · bir kuryenin araca eklediği ikinci sefer BAŞKA bir araç taşıyabiliyordu, oysa "araç hepsini
+      birden taşır" (rota seçim ekranının kendi cümlesi) tek bir araç varsayıyor.
+  İkisi de test edilmiyordu ve edilemezdi: ortada doğrulanacak bir karar yoktu. Bu blok kararı
+  önce yazıyor, uygulaması arkadan geliyor.
+*/
+describe('araç tekelliği: bir araç, bir kurye', () => {
+  it('AYNI ARAÇ iki kuryede birden açık sefer taşıyamaz', async () => {
+    const arac = await new VehicleService(db).insert({ plate: `TK-${stamp}`, label: 'Paylaşılan', warehouseId });
+    vehicleIds.push(arac.id);
+
+    mustStart(await startCourierDay(db, { courierId, zoneId, vehicleId: arac.id, depart: false }));
+
+    /* İkinci kurye AYNI aracı istiyor. Reddin adı olmalı: "araç başkasında" ile "sen zaten
+       sürüyorsun" ayrı sorular ve ekran ikisine ayrı cümle kuruyor. */
+    const ikinci = await startCourierDay(db, {
+      courierId: otherCourierId,
+      zoneId: secondZoneId,
+      vehicleId: arac.id,
+      depart: false,
+    });
+
+    expect(ikinci.status).toBe('vehicle_taken');
+  });
+
+  it('ARACA İKİNCİ SEFER eklenebilir — AYNI araçla; beklenen yol budur', async () => {
+    const arac = await new VehicleService(db).insert({ plate: `A1-${stamp}`, warehouseId });
+    vehicleIds.push(arac.id);
+
+    mustStart(await startCourierDay(db, { courierId, zoneId, vehicleId: arac.id, depart: false }));
+
+    /* "Birden çok sefer seçebilirsin — araç hepsini birden taşır" (rota seçim ekranı). Kural
+       ikinci seferi engellemiyor, yalnız aracın aynı olmasını istiyor. */
+    const ikinci = await startCourierDay(db, { courierId, zoneId: secondZoneId, vehicleId: arac.id, depart: false });
+
+    expect(ikinci.status).toBe('ok');
+  });
+
+  it('İKİNCİ SEFER BAŞKA ARAÇ isterse reddedilir — araçtaki yük tek araca aittir', async () => {
+    const [ilkArac, baskaArac] = await Promise.all([
+      new VehicleService(db).insert({ plate: `A2-${stamp}`, warehouseId }),
+      new VehicleService(db).insert({ plate: `A3-${stamp}`, warehouseId }),
+    ]);
+    vehicleIds.push(ilkArac.id, baskaArac.id);
+
+    mustStart(await startCourierDay(db, { courierId, zoneId, vehicleId: ilkArac.id, depart: false }));
+
+    /* Reddedilmezse kuryenin "araçtaki seferler" listesi İKİ ayrı aracın yükünü tek liste gibi
+       gösterir; yükleme sayacı da iki aracın kutularını toplar. */
+    const farkli = await startCourierDay(db, {
+      courierId,
+      zoneId: secondZoneId,
+      vehicleId: baskaArac.id,
+      depart: false,
+    });
+
+    expect(farkli.status).toBe('vehicle_mismatch');
+  });
+});
+
 describe('sefer KUR ↔ sefer BAŞLAT (31.08)', () => {
   it('kurulan sefer YOLA ÇIKMAZ: damga yok, siparişler HAZIR, dört liste boş', async () => {
     const { orderId } = await dispatched({ upTo: 'ready' });

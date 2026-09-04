@@ -204,11 +204,58 @@ declare
   v_zone public.delivery_zone;
   v_existing public.delivery_run;
   v_run public.delivery_run;
+  v_other public.delivery_run;
   v_claimed jsonb;
 begin
   select * into v_zone from public.delivery_zone where id = p_zone_id;
   if not found then
     return jsonb_build_object('ok', false, 'reason', 'zone_not_found');
+  end if;
+
+  /*
+    ── ARAÇ TEKELLİĞİ (21.249 · kullanıcı kararı 04.09) ───────────────────────
+    İki sessiz açık ölçüldü ve ikisi de burada kapanıyor:
+      · `vehicle_taken` — aynı fiziksel aracı iki kurye aynı gün seçebiliyordu. Araç bir yerde,
+        yani aynı anda tek kuryenin yükünü taşır.
+      · `vehicle_mismatch` — kuryenin araca eklediği ikinci sefer BAŞKA araç taşıyabiliyordu.
+        Oysa "araç hepsini birden taşır" (rota seçim ekranının kendi cümlesi) tek araç varsayar;
+        karışırsa "araçtaki seferler" listesi iki ayrı aracın yükünü tek liste gibi gösterir.
+
+    Ret ADLI dönüyor, istisna olarak DEĞİL: ekran ikisine ayrı cümle kuruyor ("araç başkasında"
+    ile "önce öteki seferi kapat" farklı çareler). Tetikleyici (`assert_vehicle_single_courier`)
+    aynı kuralı yarış anı için ikinci kez koruyor — buradaki kontrol gidiş-dönüşü boşuna
+    harcamamak ve rette bir AD verebilmek için (`open_delivery_run`ın kendi deseni).
+
+    KAPANMIŞ sefer sayılmaz: araç akşam boşalır, ertesi gün başkası alır (`returned_at`).
+  */
+  if p_vehicle_id is not null then
+    select * into v_other from public.delivery_run r
+     where r.vehicle_id = p_vehicle_id
+       and r.returned_at is null
+       and r.courier_id <> p_courier_id
+     limit 1;
+    if found then
+      return jsonb_build_object(
+        'ok', false, 'reason', 'vehicle_taken',
+        'run_id', v_other.id, 'reference_no', v_other.reference_no, 'courier_id', v_other.courier_id
+      );
+    end if;
+  end if;
+
+  -- Kuryenin ÖTEKİ açık seferleri (bu rota+gün hariç — o satır catch-up'ın kendisidir) aynı aracı
+  -- taşımalı. `is distinct from` null'ı da kapsıyor: araçlı yükün yanına araçsız sefer eklemek de
+  -- karışıklıktır, çünkü o seferin malı hangi araçta duracaktır sorusunun cevabı olmaz.
+  select * into v_other from public.delivery_run r
+   where r.courier_id = p_courier_id
+     and r.returned_at is null
+     and not (r.delivery_zone_id = p_zone_id and r.delivery_date = p_date)
+     and r.vehicle_id is distinct from p_vehicle_id
+   limit 1;
+  if found then
+    return jsonb_build_object(
+      'ok', false, 'reason', 'vehicle_mismatch',
+      'run_id', v_other.id, 'reference_no', v_other.reference_no, 'vehicle_id', v_other.vehicle_id
+    );
   end if;
 
   -- Rota+gün başına TEK sefer (18.08). Mevcut satır iki yoldan bulunur — sakin ikinci basış İLK
@@ -664,3 +711,55 @@ $$;
 
 revoke execute on function public.set_run_stop_order(uuid, uuid[], text, text, text, uuid, boolean)
   from public, anon, authenticated;
+
+-- ── SEFERİN ARACI TEK KURYENİNDİR (21.249) ──────────────────────────────────
+--
+-- İki sessiz açık ölçüldü (04.09): aynı fiziksel aracı iki kurye aynı gün seçebiliyordu, ve bir
+-- kuryenin araca eklediği ikinci sefer BAŞKA araç taşıyabiliyordu. İkincisi tasarımın kendi
+-- cümlesine aykırı ("araç hepsini birden taşır" tek araç varsayar) ve "araçtaki seferler" listesini
+-- iki ayrı aracın yükünü tek liste gibi gösterir hâle getiriyordu.
+--
+-- KURAL TETİKLEYİCİDE, KISITTA DEĞİL: soru satırlar ARASI ("bu araçta başka kimin açık seferi
+-- var") ve kısıt kendi satırından ötesini göremez. Kapanmış sefer (`returned_at`) sayılmaz —
+-- araç akşam boşalır, ertesi gün başkası alabilir.
+create or replace function public.assert_vehicle_single_courier() returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_other public.delivery_run;
+begin
+  if new.vehicle_id is null then return new; end if;
+
+  select * into v_other from public.delivery_run r
+   where r.vehicle_id = new.vehicle_id
+     and r.id <> new.id
+     and r.returned_at is null
+   limit 1;
+
+  if found and v_other.courier_id <> new.courier_id then
+    raise exception 'vehicle_taken: araç % başka kuryenin açık seferinde (%)', new.vehicle_id, v_other.reference_no
+      using errcode = 'check_violation';
+  end if;
+
+  -- Aynı kuryenin ÖTEKİ açık seferleri de aynı aracı taşımalı: araçtaki yük tek araca aittir.
+  select * into v_other from public.delivery_run r
+   where r.courier_id = new.courier_id
+     and r.id <> new.id
+     and r.returned_at is null
+     and r.vehicle_id is distinct from new.vehicle_id
+   limit 1;
+
+  if found then
+    raise exception 'vehicle_mismatch: kuryenin açık seferi başka araçta (%)', v_other.reference_no
+      using errcode = 'check_violation';
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger delivery_run_vehicle_single_courier
+  before insert or update of vehicle_id, courier_id on public.delivery_run
+  for each row execute function public.assert_vehicle_single_courier();

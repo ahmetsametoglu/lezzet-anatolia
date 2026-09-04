@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { WarehouseService } from '../services/warehouse.service';
+import { VehicleService } from '../services/storage-point.service';
 import type { Warehouse } from '@lezzet/types';
 
 /**
@@ -35,6 +36,16 @@ export interface TestWarehouseOptions {
   isActive?: boolean;
   /** Aracın evi olan tesis (02.09) — yalnız `kind: 'vehicle'` ile birlikte anlamlı. */
   homeWarehouseId?: string;
+  /**
+   * Deponun ARAÇ kaydı (21.249) — yalnız `kind: 'vehicle'`de anlamlı ve orada ZORUNLU
+   * (`warehouse_vehicle_identity`).
+   *
+   * Verilmezse yardımcı damgalı bir araç AÇAR: araç deposu kuran onlarca test aracın kendisiyle
+   * ilgilenmiyor, yalnız "bir araç deposu olsun" diyor. Bağı her dosyaya elle yazdırmak aynı üç
+   * satırı otuz yere kopyalamak olurdu (CLAUDE §1). Açılan araç `purgeTestData({ warehouseIds })`
+   * ile depoyla birlikte gider — testin ayrıca `vehicleIds` bildirmesi gerekmez.
+   */
+  vehicleId?: string;
 }
 
 /**
@@ -44,12 +55,20 @@ export interface TestWarehouseOptions {
 export async function createTestWarehouse(db: SupabaseClient, opts: TestWarehouseOptions = {}): Promise<Warehouse> {
   counter += 1;
   const stamp = `${Date.now().toString(36)}${counter.toString(36)}`.toUpperCase().slice(-10);
+  /* Araç deposu ARACINI söylemek zorunda (21.249). Plaka damgalı: `vehicle.plate` benzersiz ve üç
+     ajan tek veritabanını paylaşıyor — sabit plaka eşzamanlı iki koşuyu çakıştırırdı (kodun aynı
+     gerekçesi). */
+  const vehicleId =
+    opts.kind === 'vehicle'
+      ? (opts.vehicleId ?? (await new VehicleService(db).insert({ plate: `T-${stamp}`, label: 'Test aracı' })).id)
+      : null;
   return new WarehouseService(db).insert({
     code: `T${opts.label ?? ''}-${stamp}`,
     name: `Test deposu ${opts.label ?? stamp}`,
     countryCode: opts.countryCode ?? 'FR',
     kind: opts.kind ?? 'facility',
     homeWarehouseId: opts.homeWarehouseId ?? null,
+    vehicleId,
     shipsOnline: opts.shipsOnline ?? false,
     isActive: opts.isActive ?? true,
   });

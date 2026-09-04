@@ -465,6 +465,19 @@ export type CourierDayStart =
    * seferi söylüyor ki ekran "önce şunu kapat" diyebilsin.
    */
   | { status: 'another_running'; runId: string; referenceNo: string }
+  /**
+   * **ARAÇ BAŞKA KURYEDE** (21.249 · 04.09) — araç bir yerdedir ve aynı anda tek kuryenin yükünü
+   * taşır. Künye çakışan seferi söylüyor ki ekran "şu sefer kapanmalı" diyebilsin; çıplak bir ret
+   * kuryeye ne yapacağını söylemez. Alanlar `null` olabilir: kural veride de duruyor
+   * (`assert_vehicle_single_courier`) ve yarış dalında künye okunamayabilir.
+   */
+  | { status: 'vehicle_taken'; runId: string | null; referenceNo: string | null }
+  /**
+   * **KURYENİN AÇIK SEFERİ BAŞKA ARAÇTA** (21.249) — "araç hepsini birden taşır" tek araç varsayar.
+   * Karışırsa "araçtaki seferler" listesi iki ayrı aracın yükünü tek liste gibi gösterir ve
+   * yükleme sayacı ikisini toplar.
+   */
+  | { status: 'vehicle_mismatch'; runId: string | null; referenceNo: string | null; vehicleId: string | null }
   | { status: 'route_required' }
   | { status: 'no_route' };
 
@@ -636,6 +649,26 @@ export async function startCourierDay(
         referenceNo: start.referenceNo,
         courierId: start.courierId,
         mine: start.courierId === input.courierId,
+      };
+    }
+    /*
+      ARAÇ RETLERİ ADIYLA GEÇER (21.249 · 04.09) — `no_route`a katlanmaz.
+
+      İkisi de kuruluma değil O ANKİ duruma bakıyor ve çareleri farklı: `vehicle_taken`da araç
+      başka kuryenin açık seferinde (çare: öteki kurye kapatsın ya da başka araç seç),
+      `vehicle_mismatch`te kuryenin kendi açık seferi başka araçta (çare: aynı aracı seç ya da
+      önce o seferi kapat/araçtan çıkar). "Rota yok" deseydik ekran kuryeyi rota listesine
+      gönderirdi ve orada değiştirebileceği hiçbir şey yok.
+    */
+    if (start.reason === 'vehicle_taken') {
+      return { status: 'vehicle_taken', runId: start.runId ?? null, referenceNo: start.referenceNo ?? null };
+    }
+    if (start.reason === 'vehicle_mismatch') {
+      return {
+        status: 'vehicle_mismatch',
+        runId: start.runId ?? null,
+        referenceNo: start.referenceNo ?? null,
+        vehicleId: start.vehicleId ?? null,
       };
     }
     // `zone_not_found` (silinmiş/bozuk kimlik) ve tükenen referans denemesi aynı kapıya çıkar:

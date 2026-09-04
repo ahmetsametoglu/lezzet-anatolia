@@ -161,7 +161,7 @@ async function courierOf(
   if (!profile || !profile.roles.includes('courier')) return { status: 'forbidden', reason: 'not_courier' };
   // Kurye BU tesise bağlı olmalı: aracı bu rampaya döner. Başka tesisin kuryesi burada teslim vermez.
   if (!profile.warehouseIds.includes(input.warehouseId)) return { status: 'forbidden', reason: 'out_of_scope' };
-  return { id: profile.id, name: profile.name, vehicleWarehouseId: await vehicleWarehouseOf(db, profile.warehouseIds) };
+  return { id: profile.id, name: profile.name, vehicleWarehouseId: await vehicleWarehouseOf(db, { courierId: profile.id }) };
 }
 
 /** Kuryeye damgalı siparişlerin ARAÇTA damgalı kutuları — sipariş başına gruplu. */

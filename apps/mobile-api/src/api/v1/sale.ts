@@ -97,7 +97,7 @@ async function salePlaceGuard(c: Context<SaleEnv>, next: Next): Promise<Response
      Admin'e de açık bırakmak, hiç aracı olmayan bir role kapsam dışı bir depo çözdürmek olurdu. */
   if (!profile.roles.includes('courier')) return fail(c, 'not_courier', 403);
 
-  const vehicleWarehouseId = await vehicleWarehouseOf(serviceDb(), profile.warehouseIds);
+  const vehicleWarehouseId = await vehicleWarehouseOf(serviceDb(), { courierId: profile.id });
   /* Araç yoksa cevap DÜRÜST bir redditir, guard'ın "hangi depo" 400'ü değil: kurye bir depo seçmedi,
      aracından satmak istedi ve aracı yok. Ekran bunu kendi cümlesiyle söyleyebilsin. */
   if (vehicleWarehouseId === null) return fail(c, 'no_vehicle', 400);

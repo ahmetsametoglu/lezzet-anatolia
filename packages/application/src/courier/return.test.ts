@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   CategoryService,
+  DeliveryZoneService,
   OrderBoxService,
   OrderService,
   ProductService,
@@ -13,6 +14,7 @@ import { createTestWarehouse, purgeOrdersBy, purgeTestData, purgeVariantStock } 
 import type { WarehouseScope } from '@lezzet/domain-core';
 import { advanceOrder } from '../order/advance.testkit';
 import { openBox, sealBox } from '../warehouse/boxes';
+import { startCourierDay } from './day';
 import { loadBox } from './load';
 import { acceptCourierReturn, readCourierReturn } from './return';
 import { readVanStock } from './van-stock';
@@ -37,6 +39,7 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 
 let facilityId: string;
 let vanId: string;
+let zoneId: string;
 let courierId: string;
 let customerId: string;
 let categoryId: string;
@@ -46,7 +49,8 @@ let facilityStockId: string;
 
 beforeAll(async () => {
   facilityId = (await createTestWarehouse(db, { label: 'DONUS-TESIS' })).id;
-  vanId = (await createTestWarehouse(db, { label: 'DONUS-VAN', kind: 'vehicle' })).id;
+  const van = await createTestWarehouse(db, { label: 'DONUS-VAN', kind: 'vehicle' });
+  vanId = van.id;
 
   const category = await new CategoryService(db).create({ name: { tr: `Dönüş testi ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
@@ -61,6 +65,16 @@ beforeAll(async () => {
   const profiles = new UserProfileService(db);
   courierId = (await profiles.insert({ name: 'Kurye Dönüş', email: `donus-${stamp}@example.test`, roles: ['courier'], warehouseIds: [facilityId, vanId] })).id;
   customerId = (await profiles.insert({ name: 'Dönüş Müşterisi', email: `donus-musteri-${stamp}@example.test` })).id;
+
+  /* SEFER FİKSTÜRÜ (21.249): araç deposu artık kapsamdan değil kuryenin SEFERİNDEN çözülüyor —
+     mal araca ancak bir seferle biner, o yüzden seferi olmayan kurye üretimde de araçsızdır.
+     Kapanmıyor: dönüş kapısı kapanmış seferi de okur (`vehicleWarehouseOf` künyesi), fikstürün
+     sınadığı şey o değil. */
+  zoneId = (await new DeliveryZoneService(db).insert({
+    name: `Dönüş rotası ${stamp}`, warehouseId: facilityId, weekdays: [1, 2, 3, 4, 5, 6, 7],
+  })).id;
+  const start = await startCourierDay(db, { courierId, zoneId, vehicleId: van.vehicleId, depart: false });
+  if (start.status !== 'ok') throw new Error(`sefer kurulamadı: ${start.status}`);
 
   // Tesiste parti (siparişlerin kutuları buradan mühürlenir) + araçta serbest ürün (5 adet).
   facilityStockId = (await stocks.insert({ warehouseId: facilityId, variantId, physicalQty: 40, expiryDate: dayOffset(60), purchasePriceCents: 300 })).id;

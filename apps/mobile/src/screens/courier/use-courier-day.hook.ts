@@ -639,6 +639,32 @@ export function useCourierDay(): UseCourierDayResult {
         return;
       }
 
+      /*
+        ARAÇ RETLERİ KENDİ CÜMLESİYLE (21.249 · 04.09) — aşağıdaki dal ikisini de "bugün koşan
+        rota yok" diye gösterecekti ve o bir YALAN: rota duruyor, engel araçta. Kurye rota
+        listesine gönderilse orada değiştirebileceği hiçbir şey yok.
+
+        Künyesiz hâl AYRI cümle: sefer numarası yarış dalında okunamayabiliyor (sözleşme künyesi)
+        ve boş bir parantez, kuryeye "hangi sefer" sorusunu cevaplamadan sorar.
+      */
+      if (result.data.status === 'vehicle_taken' || result.data.status === 'vehicle_mismatch') {
+        const ref = result.data.referenceNo;
+        const taken = result.data.status === 'vehicle_taken';
+        setStartNotice({
+          tone: 'error',
+          text:
+            ref === null
+              ? taken
+                ? t.day.start.vehicleTakenNoRef
+                : t.day.start.vehicleMismatchNoRef
+              : fillCopy(taken ? t.day.start.vehicleTaken : t.day.start.vehicleMismatch, { ref }),
+          canRetry: false,
+        });
+        // Araçtaki seferler listesi gerçeği söylesin: engel ORADA çözülüyor (araçtan çıkar).
+        await load();
+        return;
+      }
+
       if (result.data.status !== 'ok') {
         setStartNotice({
           tone: 'error',

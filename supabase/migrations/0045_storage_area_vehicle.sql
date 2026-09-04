@@ -112,6 +112,31 @@ create index vehicle_warehouse_idx on public.vehicle (warehouse_id) where wareho
 
 alter table public.vehicle enable row level security;
 
+-- ── ARAÇ DEPOSU ARACINI SÖYLER (21.249 · kullanıcı kararı 04.09) ────────────
+--
+-- Sistemde iki "araç" var ve 04.09'a kadar aralarında hiçbir bağ YOKTU:
+--   · `vehicle` satırı — ruhsat/künye tarafı (plaka, ad, soğuk zincir ölçümü). Seferin seçtiği araç.
+--   · `warehouse` satırı, türü `vehicle` — MALIN durduğu yer (yükleme, serbest ürün, kapıda satış).
+--
+-- Bağ olmayınca malın hangi araçtan çıkacağını seferin aracı değil, kuryenin profilindeki depo
+-- kapsam DİZİSİNİN SIRASI belirliyordu: çözüm diziyi tarayıp türü araç olan ilkini alıyordu. Tek
+-- araçlı kurulumda doğru cevap veriyordu ve hiçbir belirtisi yoktu; ikinci araç girdiği gün kurye
+-- A'yı seçerken mal B'den düşecekti, üstelik sessizce. Soğuk zincirde de aynı boşluk: ölçüm
+-- `vehicle`e, mal `warehouse`a bağlı olduğu için "sıcaklığı bozulan araçta hangi partiler vardı"
+-- sorusunun cevabı verilerde yoktu.
+--
+-- YÖN BİLEREK DEPODAN ARACA: kural tek satırda ifade edilebiliyor. Ters yönde (`vehicle.stock_warehouse_id`)
+-- hedefin TÜRÜNÜ doğrulamak için tetikleyici gerekirdi — kısıt kendi satırını okur, ötekini değil
+-- (`home_warehouse_id`in aynı dersi, 0031).
+alter table public.warehouse
+  add column vehicle_id uuid references public.vehicle (id) on delete restrict,
+  -- 1:1 — iki depo aynı aracı gösteremez, yoksa "bu aracın malı" sorusunun iki cevabı olurdu.
+  add constraint warehouse_vehicle_unique unique (vehicle_id),
+  -- ÇİFT YÖNLÜ: araç deposu aracını söylemek ZORUNDA, tesis ise söyleyemez. Eşitlik olarak
+  -- yazıldı çünkü iki ayrı check "araçta dolu" ve "tesiste boş" kuralını ayrı ayrı taşırdı ve
+  -- biri bir gün ötekinden ayrılırdı.
+  add constraint warehouse_vehicle_identity check ((kind = 'vehicle') = (vehicle_id is not null));
+
 -- ── Sıcaklık kaydının bağları (kolonlar 0006'da doğdu) ──────────────────────
 -- `restrict`: ölçümü olan bir nokta silinemez. Denetim geçmişi noktanın adına değil KAYDINA bağlı;
 -- silinebilseydi "bu dolabın kayıtları" sorusu bir gün cevapsız kalırdı. Kullanımdan kalkan nokta

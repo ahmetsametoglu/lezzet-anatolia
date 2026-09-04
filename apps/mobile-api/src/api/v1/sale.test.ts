@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { CategoryService, PriceService, ProductService, StockService, WarehouseService, serviceDb } from '@lezzet/database';
+import { CategoryService, DeliveryZoneService, PriceService, ProductService, StockService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
-import { ANONYMOUS_BUYER_ID } from '@lezzet/application';
+import { ANONYMOUS_BUYER_ID, startCourierDay } from '@lezzet/application';
 // Beklenen şekil ELLE YAZILMAZ, sözleşmeden gelir: uç bir alanı düşürürse iddia değil DERLEME kırılır.
 import type { OnSiteSaleResponse, SaleCatalogPage, SaleVariantsResponse } from '@lezzet/types';
 import { app } from '../../app';
@@ -38,6 +38,9 @@ let depocu: SignedInUser;
 let aracsizKurye: SignedInUser;
 let facilityId: string;
 let vehicleId: string;
+/** Araç deposunun RUHSAT kimliği (21.249) — sefer aracı bununla seçilir, depo kimliğiyle değil. */
+let vanVehicleId: string | null;
+let zoneId: string;
 let baskaDepoId: string;
 let variantId: string;
 let productId: string;
@@ -53,9 +56,11 @@ const dayOffset = (n: number) => new Date(Date.now() + n * 86_400_000).toISOStri
 beforeAll(async () => {
   facilityId = (await createTestWarehouse(db)).id;
   baskaDepoId = (await createTestWarehouse(db)).id;
-  vehicleId = (await new WarehouseService(db).insert({
-    code: `VEHU${stamp % 10000}`, name: `Uç testi aracı ${stamp}`, kind: 'vehicle',
-  })).id;
+  // Araç deposu ARACINI söylemek zorunda (21.249 · `warehouse_vehicle_identity`); yardımcı damgalı
+  // aracı kendisi açıyor ve teardown'da depoyla birlikte topluyor.
+  const van = await createTestWarehouse(db, { label: 'VEHU', kind: 'vehicle' });
+  vehicleId = van.id;
+  vanVehicleId = van.vehicleId;
 
   const category = await new CategoryService(db).create({ name: { tr: `Uç yerinde satış ${stamp}` } });
   const { product, variants } = await new ProductService(db).create({
@@ -87,6 +92,15 @@ beforeAll(async () => {
   kurye = await createSignedInUser({ prefix: 'sale', label: 'kurye', roles: ['courier'], warehouseIds: [facilityId, vehicleId] });
   depocu = await createSignedInUser({ prefix: 'sale', label: 'depocu', roles: ['warehouse'], warehouseIds: [facilityId] });
   aracsizKurye = await createSignedInUser({ prefix: 'sale', label: 'aracsiz', roles: ['courier'], warehouseIds: [facilityId] });
+
+  /* KURYENİN SEFERİ (21.249): kapıda satış artık malı kapsamdan değil kuryenin SEFERİNİN aracından
+     düşüyor. Fikstürün seferi olması bir tören değil, gerçeğin kendisi — mal araca ancak seferle
+     biner. `aracsizKurye` bilerek sefersiz kalıyor: `no_vehicle` dalını o sınıyor. */
+  zoneId = (await new DeliveryZoneService(db).insert({
+    name: `Kapı satışı rotası ${stamp}`, warehouseId: facilityId, weekdays: [1, 2, 3, 4, 5, 6, 7],
+  })).id;
+  const start = await startCourierDay(db, { courierId: kurye.profileId, zoneId, vehicleId: vanVehicleId, depart: false });
+  if (start.status !== 'ok') throw new Error(`sefer kurulamadı: ${start.status}`);
 });
 
 beforeEach(async () => {
