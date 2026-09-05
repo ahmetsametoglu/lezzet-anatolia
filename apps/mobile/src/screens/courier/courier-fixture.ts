@@ -61,6 +61,9 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
     /* Varsayılan HAZIR: fikstürün durakları kutulu ve toplanmış; "hazırlanmadı" hâlini ölçen test
        bunu `overrides` ile verir (03.09). */
     awaitingPreparation: false,
+    /* İptal edilmiş durak fikstürde AÇIKÇA kurulur — varsayılan satır teslim edilecek bir
+       duraktır ve iptal onun bir varyantı değil, ayrı bir hâldir (05.09). */
+    cancelled: false,
     address: `Grand Rue ${index}`,
     phone: '+33600000001',
     whatsAppLink: 'https://wa.me/33600000001',
@@ -161,6 +164,9 @@ export function courierRoute(overrides: Partial<CourierRoute> = {}): CourierRout
     /* Seçim kartının üç sayısı (v3:17): durak · kutu · tahsilat. Kutu sayısı durak sayısından
        BÜYÜK — gerçek veride de öyle ve eşit yazılırsa "kutu" sütunu hiç sınanmamış olurdu. */
     boxCount: 5,
+    /* Geri getirilecek kutu varsayılanı SIFIR: normal bir rotada iptal edilmiş yük yoktur ve
+       o hâli sınayan test kendisi verir (05.09). */
+    returningBoxCount: 0,
     collectionCount: 2,
     run: null,
     ...overrides,

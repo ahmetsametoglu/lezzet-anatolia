@@ -45,6 +45,8 @@ export interface CourierRouteView {
   stopCount: number;
   /** Rotanın kutu sayısı (v3:17) — durak sayısı hacmi söylemez, üç durak on bir kutu olabilir. */
   boxCount: number;
+  /** İptal edilmiş siparişin ARAÇTAKİ kutuları — sözleşme künyesi (05.09). Teslim edilecek yük değil. */
+  returningBoxCount: number;
   /** Kapıda tahsilat bekleyen durak sayısı (v3:17) — günün nakit yükü. */
   collectionCount: number;
   run: {
@@ -137,8 +139,16 @@ export async function listCourierRoutes(
   const stopCount = new Map<string, number>();
   const collectionCount = new Map<string, number>();
   const zoneOfOrder = new Map<string, string>();
+  /* İPTAL EDİLEN SİPARİŞ YÜKÜN PARÇASI DEĞİL (kullanıcı kararı 05.09) — ama kutusu araca
+     bindiyse kaybolmamalı; o yüzden ayrı bir haritada toplanıyor (aşağıda `returningBoxCount`).
+     Kümeler ayrık: bir sipariş ya bugünün işidir ya geri getirilecek yüktür. */
+  const iptalEdilen = new Map<string, string>();
   for (const order of orders) {
     if (!order.deliveryZoneId) continue;
+    if (order.status === 'cancelled') {
+      iptalEdilen.set(order.id, order.deliveryZoneId);
+      continue;
+    }
     zoneOfOrder.set(order.id, order.deliveryZoneId);
     stopCount.set(order.deliveryZoneId, (stopCount.get(order.deliveryZoneId) ?? 0) + 1);
     /* Borcun kuralı motorun kendi kuralı: toplam − (tahsil − iade) > 0. Ödenmiş sipariş
@@ -147,9 +157,26 @@ export async function listCourierRoutes(
       collectionCount.set(order.deliveryZoneId, (collectionCount.get(order.deliveryZoneId) ?? 0) + 1);
     }
   }
+  /*
+    İKİ KUTU SAYISI, İKİ AYRI SORU (05.09):
+    · `boxCount` — bugün YÜKLENECEK kutular. Yükün ölçüsü; kurye aracı doldurmadan önce buna bakar.
+    · `returningBoxCount` — iptal edilmiş siparişin araca BİNMİŞ kutuları. Bunlar teslim edilecek
+      iş değil, geri getirilecek yüktür ve `boxCount`un içinde saklanamaz: saklanırsa kurye onu
+      teslim edilecek bir kutu sanır ve akşam sayısı tutmaz.
+
+    Binmemiş kutu HİÇBİRİNE girmez: iptal edilmiş siparişin rampada kalan kutusu kuryenin işi
+    değil, deponun işi (`load.ts` onu zaten `not_loadable` ile reddediyor).
+  */
   const boxCount = new Map<string, number>();
-  if (zoneOfOrder.size > 0) {
-    for (const box of await new OrderBoxService(db).listByOrders([...zoneOfOrder.keys()])) {
+  const returningBoxCount = new Map<string, number>();
+  const kutuluSiparisler = [...zoneOfOrder.keys(), ...iptalEdilen.keys()];
+  if (kutuluSiparisler.length > 0) {
+    for (const box of await new OrderBoxService(db).listByOrders(kutuluSiparisler)) {
+      const iptalZone = iptalEdilen.get(box.orderId);
+      if (iptalZone !== undefined) {
+        if (box.loadedAt !== null) returningBoxCount.set(iptalZone, (returningBoxCount.get(iptalZone) ?? 0) + 1);
+        continue;
+      }
       const zoneId = zoneOfOrder.get(box.orderId);
       if (zoneId === undefined) continue;
       boxCount.set(zoneId, (boxCount.get(zoneId) ?? 0) + 1);
@@ -167,6 +194,7 @@ export async function listCourierRoutes(
     day: input.date,
     stopCount: stopCount.get(zone.id) ?? 0,
     boxCount: boxCount.get(zone.id) ?? 0,
+    returningBoxCount: returningBoxCount.get(zone.id) ?? 0,
     collectionCount: collectionCount.get(zone.id) ?? 0,
     warehouseName: warehouseName.get(zone.warehouseId) ?? null,
     closedRuns,
@@ -182,6 +210,8 @@ function toRouteView(
     day: string;
     stopCount: number;
     boxCount: number;
+    /** İptal edilmiş siparişin araçtaki kutuları — geri getirilecek yük (05.09). */
+    returningBoxCount: number;
     collectionCount: number;
     warehouseName: string | null;
     closedRuns: ReadonlySet<string>;
@@ -197,6 +227,7 @@ function toRouteView(
     warehouseName: ctx.warehouseName,
     stopCount: ctx.stopCount,
     boxCount: ctx.boxCount,
+    returningBoxCount: ctx.returningBoxCount,
     collectionCount: ctx.collectionCount,
     run: run
       ? {

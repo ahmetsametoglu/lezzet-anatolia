@@ -10,6 +10,7 @@ import { loadBox } from './load';
 import { openBox, sealBox } from '../warehouse/boxes';
 import { listCourierRoutes } from './routes';
 import { recordOrderPayment } from '../order/payment';
+import { cancelOrder } from '../order/refund';
 import { advanceOrder } from '../order/advance.testkit';
 
 /**
@@ -161,7 +162,16 @@ afterAll(async () => {
  * `out_for_delivery`e kadar gider.
  */
 async function dispatched(
-  opts: { courier?: string; qty?: number; orderedTotalCents?: number; date?: string; upTo?: 'confirmed' | 'ready' } = {},
+  opts: {
+    courier?: string;
+    qty?: number;
+    orderedTotalCents?: number;
+    date?: string;
+    upTo?: 'confirmed' | 'ready';
+    /* Kutu araca BİNMESİN (05.09): mühürlenir ama okutulmaz. "Kutusu rampada kalmış"
+       hâli — iptal edilen durağın görünüp görünmeyeceğini belirleyen tek ölçüt bu. */
+    load?: boolean;
+  } = {},
 ) {
   const qty = opts.qty ?? 2;
   const { order, items } = await orders.create(
@@ -204,8 +214,10 @@ async function dispatched(
     picks: [{ orderItemId: items[0]!.id, batches: [{ stockId, qty }] }],
   });
   if (sealed.status !== 'ok') throw new Error(`fikstür: kutu mühürlenemedi (${sealed.status})`);
-  const loaded = await loadBox(db, { code: box.box.code, courierId: opts.courier ?? courierId });
-  if (loaded.status !== 'ok') throw new Error(`fikstür: kutu araca alınamadı (${loaded.status})`);
+  if (opts.load !== false) {
+    const loaded = await loadBox(db, { code: box.box.code, courierId: opts.courier ?? courierId });
+    if (loaded.status !== 'ok') throw new Error(`fikstür: kutu araca alınamadı (${loaded.status})`);
+  }
   if (opts.upTo !== 'ready') await advanceOrder(db, order.id, ['out_for_delivery']);
   return { orderId: order.id, itemId: items[0]!.id, boxCode: box.box.code };
 }
@@ -286,6 +298,49 @@ describe('gün listesi (11.1)', () => {
     // E.164: baştaki 0 düşer, ülke kodu 33 gelir — beklenti damgalı numaradan türetilir.
     expect(stop.whatsAppLink).toContain(`wa.me/33${customerPhone.slice(1)}`);
     expect(decodeURIComponent(stop.whatsAppLink!)).toContain('Bonjour Marie Dupont');
+  });
+
+  /*
+    ── İPTAL EDİLEN DURAK: DURAĞI AYAKTA TUTAN ŞEY ARAÇTAKİ KUTUDUR ───────────────────────────
+    (kullanıcı kararı 05.09)
+
+    ÖLÇÜLEN HÂL: `listCourierDay` durum süzgeci HİÇ uygulamıyordu ve `outcomeOf` iptal edilmiş
+    siparişi `pending`e düşürüyordu — iptal edilmiş durak, teslim edilecek durakla BİREBİR aynı
+    görünüyordu. Kurye o kapıya gidiyor, zili çalıyor, teslim etmeye çalışıyordu.
+
+    Ölçüt siparişin durumu DEĞİL kutunun araçta olması: kutu binmediyse kuryenin orada işi yok
+    (gösterilmesi yalnız gürültü, üstelik "acaba araçta var mı" diye aracı karıştırtır); kutu
+    araçtaysa iş VARDIR ve fizikseldir — o mal depoya geri getirilecek.
+
+    Pencere gerçek ve dar: `out_for_delivery → cancelled` motorda İZİNLİ DEĞİL, yani bu hâl ancak
+    kutu rampada araca bindikten sonra, sefer yola çıkmadan önce doğabiliyor. Sefer çıkınca sipariş
+    `cancelled` kalıyor (`startCourierDay` onu `skipped`a atıyor) ve kurye o kutuyla yola çıkıyor.
+  */
+  it('İPTAL + KUTU ARAÇTA → durak DURUR ve iptal olduğunu SÖYLER', async () => {
+    const { orderId } = await dispatched({ upTo: 'ready' });
+    expect(await cancelOrder(db, orderId)).toMatchObject({ status: 'ok' });
+
+    const stop = mine(await listCourierDay(db, { courierId }), orderId);
+
+    expect(stop.cancelled).toBe(true);
+    // Kutu ARAÇTA — durağı ayakta tutan şey bu; ekran sayısını buradan okuyor.
+    expect(stop.boxes.filter((box) => box.loadedAt !== null)).toHaveLength(1);
+  });
+
+  it('İPTAL + KUTU ARACA BİNMEMİŞ → durak HİÇ GÖRÜNMEZ', async () => {
+    /* Kutu mühürlü ama okutulmamış: "herhangi bir sebepten araca konmadı" hâli. Kuryenin orada
+       yapacağı iş yok — ne teslim edilecek bir mal var ne geri getirilecek. */
+    const { orderId } = await dispatched({ upTo: 'ready', load: false });
+    expect(await cancelOrder(db, orderId)).toMatchObject({ status: 'ok' });
+
+    expect((await listCourierDay(db, { courierId })).some((stop) => stop.orderId === orderId)).toBe(false);
+  });
+
+  it('KUTUSU HİÇ OLMAYAN iptal de görünmez — depo daha hazırlamamıştı', async () => {
+    const { orderId } = await dispatched({ upTo: 'confirmed' });
+    expect(await cancelOrder(db, orderId)).toMatchObject({ status: 'ok' });
+
+    expect((await listCourierDay(db, { courierId })).some((stop) => stop.orderId === orderId)).toBe(false);
   });
 
   it('başka günün durağı listede yok', async () => {
@@ -884,5 +939,52 @@ describe('seçim kartının üç sayısı (v3:17 · 31.08)', () => {
     /* Borç motorun kuralından türer (toplam − tahsil + iade > 0): ödenmiş sipariş sayılmaz,
        çünkü kuryenin kapıda yapacağı iş yok. */
     expect(route?.collectionCount).toBeGreaterThanOrEqual(1);
+  });
+
+  /*
+    İPTAL EDİLEN SİPARİŞ YÜKÜN PARÇASI DEĞİL — ama araçtaki kutusu KAYBOLMAZ (05.09).
+
+    Üç sayı ("5 durak · 7 kutu · 2 tahsilat") "bugün ne taşıyacağım" sorusunun cevabı; iptal edilmiş
+    sipariş bunların hiçbiri değil. Araca binmiş kutusu ise AYRI bir sayı: "araçta yanlışlıkla duran
+    ne var". İçeri karışsaydı kurye onu teslim edilecek bir kutu sanar, akşam sayısı tutmazdı.
+
+    DELTA ile ölçülüyor (CLAUDE §4b): aynı rotada bu dosyanın öteki testleri de sipariş kuruyor.
+  */
+  it('İPTAL sayaçlardan DÜŞER; araçtaki kutusu AYRI sayılır', async () => {
+    const scope = warehouseScope(['courier'], [warehouseId]);
+    const routeOf = async () =>
+      (await listCourierRoutes(db, { date: today, scope })).find((row) => row.zoneId === zoneId)!;
+
+    const { orderId } = await dispatched({ upTo: 'ready' });
+    const once = await routeOf();
+    expect(once.stopCount).toBeGreaterThan(0);
+
+    expect(await cancelOrder(db, orderId)).toMatchObject({ status: 'ok' });
+    const sonra = await routeOf();
+
+    // Yükün üç sayısı da bir azaldı: iptal edilen sipariş bugünün işi değil.
+    expect(sonra.stopCount).toBe(once.stopCount - 1);
+    expect(sonra.boxCount).toBe(once.boxCount - 1);
+    expect(sonra.collectionCount).toBe(once.collectionCount - 1);
+    // Ama kutu araçta ve GÖRÜNÜR kalıyor — geri getirilecek yük olarak.
+    expect(sonra.returningBoxCount).toBe(once.returningBoxCount + 1);
+  });
+
+  it('KUTUSU ARACA BİNMEMİŞ iptal HİÇBİR sayıya girmez — o deponun işi, kuryenin değil', async () => {
+    const scope = warehouseScope(['courier'], [warehouseId]);
+    const routeOf = async () =>
+      (await listCourierRoutes(db, { date: today, scope })).find((row) => row.zoneId === zoneId)!;
+
+    const { orderId } = await dispatched({ upTo: 'ready', load: false });
+    const once = await routeOf();
+
+    expect(await cancelOrder(db, orderId)).toMatchObject({ status: 'ok' });
+    const sonra = await routeOf();
+
+    expect(sonra.stopCount).toBe(once.stopCount - 1);
+    expect(sonra.boxCount).toBe(once.boxCount - 1);
+    /* Geri getirilecek yük DEĞİL: kutu rampada kaldı, kurye onu hiç almadı. Sayılsaydı kurye
+       araçta olmayan bir kutuyu arardı. */
+    expect(sonra.returningBoxCount).toBe(once.returningBoxCount);
   });
 });

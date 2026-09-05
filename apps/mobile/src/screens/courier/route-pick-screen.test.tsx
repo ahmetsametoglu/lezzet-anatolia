@@ -163,6 +163,35 @@ describe('K · sefer ve araç seçimi', () => {
   });
 
   /*
+    GERİ GETİRİLECEK KUTU AYRI SATIR (kullanıcı kararı 05.09) — üç sayının İÇİNE karışmıyor.
+
+    Üç sayı ("5 durak · 7 kutu · 2 tahsilat") "bugün ne taşıyacağım"ı söylüyor; bu satır ise araçta
+    yanlışlıkla duran malı. İçeri karışsaydı kurye onu teslim edilecek bir kutu sanar ve akşam
+    sayısı tutmazdı.
+  */
+  it('İPTAL EDİLMİŞ ARAÇTAKİ KUTU ayrı satırda söylenir — yük sayısına karışmaz', async () => {
+    mockPick([courierRoute({ zoneId: ZONE_B, stopCount: 3, boxCount: 4, returningBoxCount: 2 })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toBeOnTheScreen());
+
+    expect(screen.getByTestId(`courier-route-returning-${ZONE_B}`)).toHaveTextContent(
+      '2 kutu iptal edildi — depoya geri getirilecek',
+    );
+    // Yük sayısı KIPIRDAMADI: dört kutu bugünün işi, iki kutu geri getirilecek yük.
+    expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toHaveTextContent(/4 kutu/);
+  });
+
+  it('geri getirilecek kutu YOKSA satır HİÇ çizilmez — olmayan işi duyurmak her kartı uyarıya çevirir', async () => {
+    mockPick([courierRoute({ zoneId: ZONE_B, returningBoxCount: 0 })]);
+
+    await renderPick();
+    await waitFor(() => expect(screen.getByTestId(`courier-route-${ZONE_B}`)).toBeOnTheScreen());
+
+    expect(screen.queryByTestId(`courier-route-returning-${ZONE_B}`)).toBeNull();
+  });
+
+  /*
     TEK ADAY KENDİLİĞİNDEN İŞARETLİDİR — AMA BIRAKILABİLİR (kullanıcı bulgusu 01.09:
     *"üç Eylül'dekini bana zorla seçtirtiyor, bırakamıyorum"*).
 

@@ -12285,3 +12285,53 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   test). **Cihazda (Oppo) uçtan uca:** yoldaki `TRF-STR-26-0003` açıldı → iki kalem, lot/SKT, "4 sevk
   edilen · sayılmadı"; kapanmış `TRF-STR-26-0006` açıldı → "4 sevk edilen · 4 sayılan". Sayaç ve CTA
   hiçbirinde yok.
+
+- [x] (21.268) **İPTAL EDİLEN DURAK: kutusu araçtaysa ÜSTÜ ÇİZİLİ kalır, değilse HİÇ GÖRÜNMEZ** (kullanıcı kararı 05.09)
+  `touches:` `packages/types/src/contracts/courier-api.schema.ts` · `packages/application/src/courier/{day.ts,routes.ts,day.test.ts}` · `apps/mobile/src/screens/courier/{courier-day-screen.tsx,route-pick-screen.tsx,courier-fixture.ts,messages.json,courier-day-screen.test.tsx,route-pick-screen.test.tsx}`
+
+  **ÖLÇÜLEN ARIZA — durak kaybolmuyordu, NORMAL görünüyordu.** `listCourierDay` durum süzgecini
+  HİÇ uygulamıyordu ve `outcomeOf` iptal edilmiş siparişi `pending`e düşürüyordu: iptal edilmiş
+  durak, teslim edilecek durakla birebir aynıydı. Sözleşmede `cancelled` diye bir hâl yoktu, yani
+  ekranın bilmesinin yolu da yoktu. Üç somut sonuç — "sıradaki durak" oku kuryeyi iptal edilmiş
+  kapıya YÖNLENDİRİYOR (`nextOrderId`), tahsilat özeti onun parasını bekliyor (`doorStops`),
+  ilerleme çubuğu hiç dolmuyordu (payda hep bir fazla). Kısacası kurye o kapıya gidiyor, zili
+  çalıyor, teslim etmeye çalışıyordu. Kargo tarafında 21.265/A1 ile kapatılan deliğin kurye
+  kardeşi; kural repoda vardı, öğrenildiği yerde kalmıştı.
+
+  **ÖLÇÜT SİPARİŞİN DURUMU DEĞİL, KUTUNUN ARAÇTA OLMASI** (kullanıcının kendi çerçevesi):
+  *"eğer kutu araca herhangi bir sebepten konmadıysa o durağın görünmesinin hiçbir anlamı yok…
+  kutu araçtaysa ve sipariş iptal olduysa durağın üstü çizilsin."* İlk taslakta kutusuz iptal de
+  üstü çizili gösteriliyordu ve gerekçesi "kurye kutunun araçta olup olmadığını bilmeyebilir"di;
+  kullanıcı bunu eledi ve haklıydı — merakın kaynağı olmayan durağın gösterilmesiydi. **Durağı
+  ayakta tutan şey iptal değil, araçtaki kutudur:** iptal durağı siler, kutu onu geri çağırır.
+
+  **PENCERE DAR VE ÖLÇÜLDÜ:** `out_for_delivery → cancelled` motorda İZİNLİ DEĞİL (cihazda
+  `forbidden` alındı), yani bu hâl ancak *sefer kurulmuş, kutu araca binmiş, sefer henüz
+  çıkmamışken* doğabiliyor. Sefer çıkınca sipariş `cancelled` kalıyor (`startCourierDay` onu
+  `skipped`a atıyor) ve kurye o kutuyla yola çıkıyor — durak da onunla birlikte.
+
+  **Sözleşmeye BAYRAK eklendi, beşinci `outcome` DEĞİL** (`cancelled`, eklemeli `default(false)`):
+  `outcome` kuryenin KAPIDA ürettiği sonuçtur ve enum aynı zamanda `MarkUndeliveredRequest`in dili
+  (şemanın kendi künyesi). `awaitingPreparation`ın aynı gerekçesi.
+
+  **Ekran:** etiket `SİPARİŞ İPTAL EDİLDİ` (en üstte — ötekilerin hepsi teslimat sonucu, burada
+  teslimat yok), adres üstü çizili + sönük, alt satır tek şey söylüyor: *"N kutu araçta — depoya
+  geri getir"*. Müşteri adı ve kanal YAZILMAZ (onlar "kime teslim edeceksin"in cevabı). Ok yok
+  (ok bir davettir), kapıda tahsilat rozeti yok (iptalde para konuşulmaz), daire tonu `issue`.
+  Altı sayaç tek süzgeçten geçiyor (`teslimatIsleri`) — koşul altı yere yazılsaydı biri unutulurdu.
+
+  **Sabah kartı:** iptal üç sayıdan da düşüyor; araçtaki kutusu AYRI satır (`returningBoxCount` —
+  *"N kutu iptal edildi — depoya geri getirilecek"*). İçeri karışsaydı kurye onu teslim edilecek
+  bir kutu sanar, akşam sayısı tutmazdı. Binmemiş kutu HİÇBİRİNE girmez: rampada kalan kutu
+  deponun işi (`load.ts` onu zaten `not_loadable` ile reddediyor).
+
+  **Doğrulama:** kök typecheck · lint · **tam paket 4207/4207 (370 dosya)** · **mobil 1341/1341
+  (150 dosya)**. Beş entegrasyon testi (iptal+kutu araçta → durur ve söyler · iptal+kutu binmemiş →
+  hiç görünmez · kutusuz iptal → görünmez · sayaçlar düşer ve `returningBoxCount` artar · binmemiş
+  kutu geri sayısına girmez), dört ekran testi.
+
+  **Cihazda (Oppo CPH1907) uçtan uca:** iki sipariş kuruldu, biri araca bindirildi, sefer kuruldu →
+  iptal → sefer çıktı. Ölçülen: rampadaki durak listeden düştü; araçtaki durak `SİPARİŞ İPTAL
+  EDİLDİ` + üstü çizili adres + *"1 kutu araçta — depoya geri getir"* olarak çizildi; sayaç
+  `0/10 → 0/8`, kapıda tahsilat `1.426,10 € → 1.342,10 €` (tam 2 × 42,00 €); rota kartında
+  *"1 kutu iptal edildi — depoya geri getirilecek"*. Fikstür satırları temizlendi.

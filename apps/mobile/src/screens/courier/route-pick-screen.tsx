@@ -472,6 +472,15 @@ function RouteCard({
       <View style={styles.rowText}>
         <Text style={[styles.cardTitle, pickable ? null : styles.cardTitleTaken]}>{route.zoneName}</Text>
         <Text style={styles.rowMeta}>{meta}</Text>
+        {/* GERİ GETİRİLECEK KUTU AYRI SATIR (kullanıcı kararı 05.09) — üç sayının İÇİNE
+            karışmıyor. Üç sayı "bugün ne taşıyacağım"ı söylüyor; bu ise araçta yanlışlıkla duran
+            malı. İçeri karışsaydı kurye onu teslim edilecek bir kutu sanar, akşam sayısı tutmazdı.
+            Sıfırsa hiç çizilmez: olmayan bir işi duyurmak her kartı uyarıya çevirirdi. */}
+        {route.returningBoxCount > 0 ? (
+          <Text style={styles.returning} testID={`courier-route-returning-${route.zoneId}`}>
+            {fillCopy(t.routePick.returningBoxes, { n: String(route.returningBoxCount) })}
+          </Text>
+        ) : null}
         <Text style={[styles.takenNote, !pickable ? styles.takenNoteBusy : selected ? styles.takenNoteOn : null]}>
           {note}
         </Text>
@@ -689,6 +698,14 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   /** Alınmış rota — kimin sürdüğü UYARI değil bir GERÇEK; terracotta, hata kırmızısı değil. */
+  /* GERİ GETİRİLECEK KUTU (05.09) — `rowMeta`nın ölçüsü, terracotta rengi. Yük sayılarıyla aynı
+     boyda çünkü aynı ailedendir (kartın "ne taşıyacağım" bloğu); rengi ayrı çünkü aynı iş değil:
+     bu satır bir uyarı, ötekiler bir ölçü. */
+  returning: {
+    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.terracotta,
+  },
   takenNoteBusy: { color: operationsTheme.colors.terracotta },
   takenNoteOn: { color: operationsTheme.colors['olive-dark'] },
   /** Sefer künyesi sağ uçta — kartın en sessiz öğesi (v3:17 `#b3ab97`). */

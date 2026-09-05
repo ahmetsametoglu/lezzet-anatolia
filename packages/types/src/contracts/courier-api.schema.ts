@@ -148,6 +148,30 @@ export const CourierStopSchema = z.object({
    */
   awaitingPreparation: z.boolean().default(false),
   /**
+   * **SİPARİŞ İPTAL EDİLDİ — ama kutusu ARAÇTA** (kullanıcı kararı 05.09).
+   *
+   * ── NEDEN BAYRAK, NEDEN BEŞİNCİ `outcome` DEĞİL ─────────────────────────
+   * `awaitingPreparation`in aynı gerekçesi ve `fulfilledQty` künyesinin aynı kuralı: `outcome`
+   * kuryenin KAPIDA ürettiği sonuçtur ve enum aynı zamanda `MarkUndeliveredRequest.outcome`un
+   * dilidir. İptal kapıda olan bir şey değil, siparişin hâli.
+   *
+   * ── ÖLÇÜLEN ARIZA (05.09) ───────────────────────────────────────────────
+   * `listCourierDay` durum süzgeci HİÇ uygulamıyordu ve `outcomeOf` iptal edilmiş siparişi
+   * `pending`e düşürüyordu — yani iptal edilmiş durak, teslim edilecek durakla birebir aynı
+   * görünüyordu. Üç somut sonuç: gün ekranının "sıradaki durak" oku (`nextOrderId`) kuryeyi
+   * oraya YÖNLENDİRİYOR, "kapıda kalan tahsilat" onu para toplanacak durak sayıyor
+   * (`doorStops`), ve ilerleme çubuğu hiç dolmuyordu (`openCount` hep bir fazla).
+   *
+   * ── DURAĞI AYAKTA TUTAN ŞEY İPTAL DEĞİL, ARAÇTAKİ KUTUDUR ───────────────
+   * İptal edilmiş ve kutusu araca BİNMEMİŞ sipariş listede hiç görünmez — kuryenin orada işi
+   * yok, gösterilmesi yalnız gürültü olurdu. Kutusu araçtaysa durak KALIR ve üstü çizilir:
+   * kurye elinde fiziksel bir mal taşıyor ve onu depoya geri getirmesi gerekiyor (`courier-return`).
+   * Bayrak `true` iken durak bir teslimat değil bir GERİ GETİRME işidir.
+   *
+   * Eklemeli (`default(false)`): eski fikstür ve istemci kırılmaz.
+   */
+  cancelled: z.boolean().default(false),
+  /**
    * Durağın SONUÇLANDIĞI an (ISO) — `null` = henüz sonuçlanmadı (`pending`).
    *
    * Kaynak `order_status_log`: `delivered`/`returned` geçişinin damgası, ulaşılamayanda son
@@ -338,6 +362,19 @@ export const CourierRouteSchema = z.object({
    * kutu da sayılır, çünkü soru "rampada beni ne bekliyor".
    */
   boxCount: z.number().int(),
+  /**
+   * **GERİ GETİRİLECEK KUTU** — iptal edilmiş siparişin ARACA BİNMİŞ kutuları (kullanıcı kararı 05.09).
+   *
+   * `boxCount`un İÇİNDE saklanamaz ve bu bir titizlik değil: yukarıdaki üç sayı "bugün ne
+   * taşıyacağım" sorusunun cevabı, bu ise "araçta yanlışlıkla duran ne var" sorusununki. İçeri
+   * karışsaydı kurye onu teslim edilecek bir kutu sanır, akşam sayısı tutmazdı.
+   *
+   * Binmemiş kutu buraya da GİRMEZ: iptal edilmiş siparişin rampada kalan kutusu deponun işidir,
+   * kuryenin değil (`load.ts` onu zaten `not_loadable` ile reddediyor).
+   *
+   * Eklemeli (`default(0)`): eski istemci ve fikstür kırılmaz.
+   */
+  returningBoxCount: z.number().int().default(0),
   /**
    * **KAÇINDA KAPIDA TAHSİLAT VAR** — üçüncü sayı. Kurye günün nakit yükünü seçerken görür;
    * "üç tahsilat" bir rotayı ötekinden daha ağır yapar (üstü, imza, kasa).

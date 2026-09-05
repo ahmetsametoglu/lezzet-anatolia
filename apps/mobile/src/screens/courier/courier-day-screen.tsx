@@ -127,7 +127,19 @@ export function CourierDayScreen() {
   const departedRunIds = new Set(day.runs.filter((run) => run.departedAt !== null).map((run) => run.runId));
   const stops = day.stops.filter((stop) => departedRunIds.has(stop.runId));
   const drivenStops = run === null ? [] : stops.filter((stop) => stop.runId === run.runId);
-  const doneCount = drivenStops.filter((stop) => stop.outcome !== 'pending').length;
+  /*
+    İPTAL EDİLEN DURAK SAYILARIN DIŞINDA (kullanıcı kararı 05.09) — ama LİSTEDE durur.
+
+    Kapı bu durakları artık yalnız kutusu araçtayken gönderiyor: iş var ama iş TESLİMAT DEĞİL,
+    malı depoya geri getirmek. Sayaçların hepsi teslimat sorularını soruyor ("kaçı bitti",
+    "kaçında sorun var", "kapıda ne kadar kalacak", "sıradaki hangisi") ve iptal edilmiş durak
+    bunların hiçbirinin cevabı değil. Süzgeç tek yerde: `outcome` `pending` görünmeye devam
+    ediyor (enum büyütülmedi — sözleşme künyesi) ve altı ayrı sayaçta koşul tekrarlansaydı biri
+    bir gün unutulurdu. Ölçülen bedeli somutu: "sıradaki durak" oku kuryeyi iptal edilmiş kapıya
+    yönlendiriyor, tahsilat özeti onun parasını bekliyordu.
+  */
+  const teslimatIsleri = drivenStops.filter((stop) => !stop.cancelled);
+  const doneCount = teslimatIsleri.filter((stop) => stop.outcome !== 'pending').length;
   /*
     ÇUBUĞUN YEŞİLİ "SORUNSUZ TESLİM" (v3:14 `surulenYesil` = teslim/durak, `surulenKirmizi` =
     (ulasilamadi + kismi)/durak · ölçüldü 31.08). Yeşil pay `doneCount`tan çiziliyordu ve KISMİ
@@ -135,22 +147,22 @@ export function CourierDayScreen() {
     tasarım onu kırmızı payda sayıyor. Sayaç ("3/6 durak") sonuçlanan her durağı saymaya devam
     ediyor: o soru "kaçı bitti", çubuğunki "kaçı temiz bitti".
   */
-  const cleanCount = drivenStops.filter((stop) => stop.outcome === 'delivered' && !isPartial(stop)).length;
-  const issueCount = stops.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused').length;
+  const cleanCount = teslimatIsleri.filter((stop) => stop.outcome === 'delivered' && !isPartial(stop)).length;
+  const issueCount = stops.filter((stop) => !stop.cancelled && (stop.outcome === 'unreachable' || stop.outcome === 'refused')).length;
   /* KAPANIŞ ROZETİ SEFER BAZINDA: "Seferi kapat" SÜRÜLEN seferi kapatıyor (`openDayClose({runId})`),
      yani rozetin saydığı da o seferin durakları olmalı. Liste başlığındaki "N takılı" ise LİSTENİN
      kapsamında kalır (başlatılmış seferlerin hepsi) — iki sayı, iki ayrı soru. */
-  const drivenIssues = drivenStops.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused').length;
-  const openCount = drivenStops.length - doneCount;
+  const drivenIssues = teslimatIsleri.filter((stop) => stop.outcome === 'unreachable' || stop.outcome === 'refused').length;
+  const openCount = teslimatIsleri.length - doneCount;
   /** Araçta BEKLEYEN sefer sayısı — özet kartının kapsam cümlesini besliyor (v3:15). */
   const waitingCount = day.runs.filter((candidate) => candidate.departedAt === null).length;
   /* KAPIDA KALAN TAHSİLAT ÖZET KARTININ İÇİNDE ve kart "yalnız sürülen sefere aittir" diyor —
      sayı da oradan gelmeli (v3:15 `surulenKapida`). Bütün başlatılmış seferlerden sayılıyordu ve
      kartın kendi cümlesiyle çelişiyordu (ölçüldü 31.08). */
-  const doorStops = drivenStops.filter((stop) => stop.outcome === 'pending' && stop.payment.dueAmountCents !== null);
+  const doorStops = teslimatIsleri.filter((stop) => stop.outcome === 'pending' && stop.payment.dueAmountCents !== null);
   const doorTotal = doorStops.reduce((total, stop) => total + (stop.payment.dueAmountCents ?? 0), 0);
   /** Sıradaki durak — v2:848: ilk sonuçlanmamış durak, koyu daireyle işaretlenir. */
-  const nextOrderId = stops.find((stop) => stop.outcome === 'pending')?.orderId ?? null;
+  const nextOrderId = stops.find((stop) => !stop.cancelled && stop.outcome === 'pending')?.orderId ?? null;
 
   /*
     ── DURAK NUMARASI SUNUCUDAN GELİR (11.9 · 31.08) ─────────────────────────────────────────
@@ -428,7 +440,7 @@ export function CourierDayScreen() {
                       olduğunu ayırt edemiyordu — ikisi de aynı ağırlıktaydı. */}
                   <Text style={styles.summaryCount}>
                     {fillCopy(t.day.progressDone, { done: String(doneCount) })}
-                    <Text style={styles.summaryCountRest}>{fillCopy(t.day.progressRest, { total: String(drivenStops.length) })}</Text>
+                    <Text style={styles.summaryCountRest}>{fillCopy(t.day.progressRest, { total: String(teslimatIsleri.length) })}</Text>
                   </Text>
                   <View style={styles.pocketBox}>
                     <Text style={styles.pocketLabel}>{t.day.pocketLabel}</Text>
@@ -446,9 +458,11 @@ export function CourierDayScreen() {
                     iyi gösteriyordu — ulaşılamayan durak çubukta hiç görünmüyor, kalan boşlukta
                     "sırası gelmemiş" gibi duruyordu. */}
                 <OperationsProgressBar
-                  value={drivenStops.length === 0 ? 0 : cleanCount / drivenStops.length}
+                  /* PAYDA DA İPTALSİZ (05.09): pay `teslimatIsleri`nden geliyor, payda
+                     `drivenStops`tan gelseydi çubuk iptal edilmiş durak yüzünden hiç dolmazdı. */
+                  value={teslimatIsleri.length === 0 ? 0 : cleanCount / teslimatIsleri.length}
                   secondary={{
-                    value: drivenStops.length === 0 ? 0 : (doneCount - cleanCount) / drivenStops.length,
+                    value: teslimatIsleri.length === 0 ? 0 : (doneCount - cleanCount) / teslimatIsleri.length,
                     tone: operationsTheme.colors.error,
                   }}
                   onInk
@@ -716,6 +730,9 @@ function groupMetaOf(run: { referenceNo: string; closed: boolean } | undefined, 
 
 /** v3:14 — sonuç dairesinin tonu. "Sıradaki" yalnız YOLA ÇIKILMIŞSA koyulur. */
 function circleTone(stop: CourierStopContract, isNext: boolean, started: boolean): CircleTone {
+  /* İptal edilmiş durak sorunlu bir duraktır, "sıradaki" değil: teslim edilecek bir şey yok,
+     araçta yanlış yere gitmiş bir mal var (05.09). */
+  if (stop.cancelled) return 'issue';
   if (stop.outcome === 'delivered') return isPartial(stop) ? 'partial' : 'delivered';
   if (stop.outcome === 'unreachable' || stop.outcome === 'refused') return 'issue';
   return isNext && started ? 'next' : 'idle';
@@ -731,6 +748,12 @@ function circleTone(stop: CourierStopContract, isNext: boolean, started: boolean
  * Sonuçlanmamış durakta `null`: etiketi olan şey bitmiş iştir.
  */
 function stopTag(stop: CourierStopContract): string | null {
+  /* İPTAL EDİLDİ (05.09) — HER ŞEYDEN ÖNCE. Kapı bu durağı yalnız kutusu ARAÇTAYKEN gönderiyor
+     (kutusuz iptal listeye hiç girmiyor), yani buraya düşen her durakta elde fiziksel bir mal
+     var ve tek yapılacak iş onu depoya geri getirmek. Etiket saatsiz: bir olayın damgası değil,
+     siparişin hâlinin adı. En üstte çünkü ötekilerin hepsi TESLİMAT sonucu ve bu durakta
+     teslimat diye bir şey yok. */
+  if (stop.cancelled) return t.day.stop.tagCancelled;
   /* HAZIRLANMADI (03.09): sonuç değil ön koşul eksiği — depo toplamadan bu durağa kutu da teslim
      de yok. Saatsiz yazılır: bir olayın damgası değil, bir hâlin adı. Sefer kurulabiliyor ama
      durak listede "sıradaki" gibi durmamalı. */
@@ -757,6 +780,18 @@ function stopTag(stop: CourierStopContract): string | null {
  */
 function stopSubtitle(stop: CourierStopContract): { text: string; tone: 'muted' | 'error' | 'terracotta' } {
   const channel = t.channel[stop.channel];
+  /*
+    İPTAL EDİLMİŞ DURAĞIN TEK CÜMLESİ: KUTUYU GERİ GETİR (kullanıcı kararı 05.09).
+
+    Kapı bu durağı yalnız kutusu araçtayken gönderiyor, yani söylenecek tek şey elde kalan malın
+    akıbeti. Müşteri adı ve kanal YAZILMAZ: onlar "kime teslim edeceksin" sorusunun cevabı ve o
+    soru burada yok. Kutu SAYISI yazılıyor çünkü kurye araçta hangisini arayacağını bilmeli —
+    "bir kutu" ile "üç kutu" farklı bir aramadır.
+  */
+  if (stop.cancelled) {
+    const araçta = stop.boxes.filter((box) => box.loadedAt !== null).length;
+    return { text: fillCopy(t.day.stop.cancelledBoxes, { n: String(araçta) }), tone: 'error' };
+  }
   if (stop.outcome === 'delivered') {
     /* KISMİ: adet dökümü + araçta kalan. Kalan borç burada YAZILMAZ — kısmi durağın borcu zaten
        düzeltmeyle düşmüştür (07.8) ve iki sayı yan yana kuryeye hangisinin geçerli olduğunu
@@ -910,13 +945,18 @@ function GateRow({ icon, title, meta, tone, onPress, testID }: GateRowProps) {
 function StopRow({ stop, order, tone, started, last, onPress }: StopRowProps) {
   const subtitle = stopSubtitle(stop);
   const tag = stopTag(stop);
-  /** Durak hâlâ AÇIK mı — yön oku ve "yapılacak iş" görüntüsü yalnız buna bağlı. */
-  const open = stop.outcome === 'pending';
+  /* Durak hâlâ AÇIK mı — yön oku ve "yapılacak iş" görüntüsü yalnız buna bağlı. İptal edilmiş
+     durakta ok YOK: ok bir davettir ("burada teslim edilecek iş var") ve burada teslimat yok;
+     yapılacak şey araçtaki kutuyu depoya geri götürmek ve o kapıda olmuyor (05.09). */
+  const open = stop.outcome === 'pending' && !stop.cancelled;
   const address = stop.address ?? t.day.stop.noAddress;
   const due = stop.payment.dueAmountCents;
   const method = stop.payment.expectedMethod;
+  /* İPTALDE PARA KONUŞULMAZ (05.09): borç motorun gözünde hâlâ açık görünebilir ama kapıda
+     tahsil edilecek bir şey yok — kurye oraya gitmiyor. Rozeti çizmek onu para toplamaya
+     çağırırdı. */
   const badge =
-    stop.outcome === 'pending' && due !== null
+    !stop.cancelled && stop.outcome === 'pending' && due !== null
       ? method === null
         ? fillCopy(t.day.stop.door, { amount: money(due) })
         : fillCopy(t.day.stop.doorWithMethod, { amount: money(due), method: turkishUpper(t.method[method]) })
@@ -970,7 +1010,17 @@ function StopRow({ stop, order, tone, started, last, onPress }: StopRowProps) {
             {tag}
           </Text>
         )}
-        <Text style={[styles.stopAddress, stop.outcome === 'delivered' ? styles.stopAddressDone : undefined]}>{address}</Text>
+        {/* ÜSTÜ ÇİZİLİ ADRES (kullanıcı kararı 05.09): satır listede DURUYOR çünkü araçta kutusu
+            var, ama gidilecek bir yer değil. Çizgi bunu tek bakışta söyleyen şey. */}
+        <Text
+          style={[
+            styles.stopAddress,
+            stop.outcome === 'delivered' ? styles.stopAddressDone : undefined,
+            stop.cancelled ? styles.stopAddressCancelled : undefined,
+          ]}
+        >
+          {address}
+        </Text>
         <Text style={[styles.stopSub, styles[`stopSub_${subtitle.tone}`]]}>{subtitle.text}</Text>
         {/*
           ALT ŞERİT: rozet solda, yön oku sağda (v3:14 — `justify-content:space-between`).
@@ -1571,6 +1621,14 @@ const styles = StyleSheet.create({
     /* v3:14 `teslim.baslikFg:#6d7261` = `body`. `muted` (#8a8270) yazılıydı ve o TASARIMIN ALT
        SATIR rengidir — başlık ile alt satır aynı tona düşünce kartın kendi hiyerarşisi siliniyordu. */
     color: operationsTheme.colors.body,
+  },
+  /* İPTAL EDİLMİŞ DURAK (05.09) — adresin üstü çizili ve rengi sönük. İkisi birlikte: yalnız
+     çizgi koyu bir başlıkta hâlâ "gidilecek yer" gibi okunuyor, yalnız solukluk ise teslim
+     edilmiş durakla karışıyor. Ton `stopAddressDone`un yanına yazılıyor ve ondan SONRA
+     uygulanıyor — iptal, öteki hâllerin hepsini ezer. */
+  stopAddressCancelled: {
+    color: operationsTheme.colors.muted,
+    textDecorationLine: 'line-through',
   },
   stopSub: {
     fontFamily: operationsTheme.font.body[400],

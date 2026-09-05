@@ -111,6 +111,11 @@ export interface CourierStop {
    */
   awaitingPreparation: boolean;
   /**
+   * SİPARİŞ İPTAL EDİLDİ ve kutusu ARAÇTA — sözleşme künyesi (05.09). `true` ise durak bir
+   * teslimat değil bir GERİ GETİRME işidir; kutusu araca binmemiş iptaller listeye hiç girmez.
+   */
+  cancelled: boolean;
+  /**
    * Durağın SONUÇLANDIĞI an (ISO) — `null` = daha sonuçlanmadı.
    *
    * Geçiş geçmişinden okunur (`attempts` ile AYNI dizi, ikinci sorgu yok): teslimde/iadede o
@@ -322,6 +327,7 @@ export async function listCourierDay(
       })),
       outcome,
       awaitingPreparation: order.status === 'confirmed' || order.status === 'preparing',
+      cancelled: order.status === 'cancelled',
       /* Saat ve sebep TEK kayıttan (`settlementLog`) — ikisi aynı olayın iki yüzü. Dizi zaten
          `attempts` için okunuyor, ikinci sorgu doğmuyor. */
       settledAt: settled?.createdAt ?? null,
@@ -341,7 +347,27 @@ export async function listCourierDay(
     };
   });
 
-  return applyStopOrder(stops, runById);
+  /*
+    ── İPTAL EDİLEN DURAK: KUTU ARAÇTAYSA KALIR, DEĞİLSE HİÇ GÖRÜNMEZ ───────────────────────
+    (kullanıcı kararı 05.09)
+
+    ÖLÇÜLEN HÂL: bu fonksiyon durum süzgeci HİÇ uygulamıyordu ve `outcomeOf` iptal edilmiş
+    siparişi `pending`e düşürüyordu — iptal edilmiş durak, teslim edilecek durakla birebir aynı
+    görünüyordu. Gün ekranının "sıradaki durak" oku kuryeyi oraya yönlendiriyor, "kapıda kalan
+    tahsilat" onu para toplanacak durak sayıyor, ilerleme çubuğu hiç dolmuyordu.
+
+    ÖLÇÜT SİPARİŞİN DURUMU DEĞİL, KUTUNUN ARAÇTA OLMASI. İptal edilmiş ve kutusu binmemiş
+    siparişte kuryenin yapacağı iş YOKTUR — durağı göstermek yalnız gürültü olur, üstelik
+    "acaba araçta kutusu var mı" diye aracı karıştırtır. Kutusu araçtaysa iş VARDIR ve fiziksel:
+    o mal depoya geri getirilecek (`courier-return`). Durağı ayakta tutan şey iptal değil,
+    araçtaki kutudur.
+
+    Süzgeç SIRALAMADAN ÖNCE: `applyStopOrder` numaraları listedeki yere göre yazıyor ve elenen
+    durak numarayı da götürmeli — yoksa kurye "3/6" derken 4 durak görürdü.
+  */
+  const kalanlar = stops.filter((stop) => !stop.cancelled || stop.boxes.some((box) => box.loadedAt !== null));
+
+  return applyStopOrder(kalanlar, runById);
 }
 
 /** Bölge adları — grup başlıkları için, tek turda (doğal tavanlı küme, CLAUDE §1). */

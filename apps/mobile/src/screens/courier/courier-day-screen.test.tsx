@@ -539,6 +539,63 @@ describe('hazırlanmamış durak (kullanıcı bulgusu 03.09)', () => {
   });
 });
 
+/*
+  ── İPTAL EDİLEN DURAK (kullanıcı kararı 05.09) ──────────────────────────────────────────────
+  Kapı bu durağı LİSTEYE yalnız kutusu araçtayken koyuyor (kutusuz iptal hiç gelmiyor), yani
+  ekranın sınavı şu: geleni doğru anlatabiliyor mu ve teslimat sayılarına karıştırmıyor mu.
+
+  Ölçülen arıza şuydu: iptal edilmiş sipariş `outcome: 'pending'` görünüyordu ve ekran onu teslim
+  edilecek bir durak sanıyordu — "sıradaki durak" oku oraya bakıyor, tahsilat özeti onun parasını
+  bekliyor, ilerleme çubuğu hiç dolmuyordu.
+*/
+describe('iptal edilen durak (05.09)', () => {
+  const iptalli = (index: number) =>
+    courierStop(index, {
+      cancelled: true,
+      payment: { dueAmountCents: 4200, expectedMethod: 'cash', collectedAtDoorCents: null },
+    });
+
+  it('üstü çizili "SİPARİŞ İPTAL EDİLDİ" — ve tek söylediği şey kutunun geri getirileceği', async () => {
+    mockDay(courierDay([iptalli(1), courierStop(2)]));
+
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    expect(screen.getByTestId('courier-stop-tag-' + STOP_1)).toHaveTextContent(/^SİPARİŞ İPTAL EDİLDİ$/);
+    /* Müşteri adı ve kanal YAZILMAZ: onlar "kime teslim edeceksin" sorusunun cevabı ve o soru
+       burada yok. Kutu SAYISI yazılır — kurye araçta hangisini arayacağını bilmeli. */
+    expect(screen.getByText('1 kutu araçta — depoya geri getir')).toBeOnTheScreen();
+  });
+
+  it('KAPIDA PARA KONUŞULMAZ — rozet çizilmez, tahsilat özetine de girmez', async () => {
+    /* Borç motorun gözünde hâlâ açık görünebilir (iade yazılmamış olabilir) ama kapıda tahsil
+       edilecek bir şey yok: kurye oraya gitmiyor. Rozeti çizmek onu para toplamaya çağırırdı. */
+    mockDay(courierDay([iptalli(1), courierStop(2)]));
+
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    expect(screen.queryByTestId('courier-stop-door-' + STOP_1)).toBeNull();
+    // Özet yalnız ÖTEKİ durağın parasını sayıyor (fikstürün varsayılanı 42,00 €).
+    expect(screen.getByText('1 kapıda tahsilat kaldı · 42,00 €')).toBeOnTheScreen();
+  });
+
+  it('İLERLEME İPTALİ SAYMAZ — tek gerçek durak teslim edilince gün BİTER', async () => {
+    /* Ölçülen arıza buydu: iptal edilmiş durak `pending` sayıldığı için çubuk hiç dolmuyor ve
+       kurye günü kapatamadığını sanıyordu. */
+    mockDay(courierDay([iptalli(1), courierStop(2, { outcome: 'delivered' })]));
+
+    await renderDay();
+
+    await waitFor(() => expect(screen.getByTestId('courier-day-list')).toBeOnTheScreen());
+    /* Sayı çubuğun DEĞİL, üstündeki özetin metni (`progressDone` + `progressRest`). PAYDA
+       ölçülüyor: iki durak var ama biri iptal, yani gün TEK duraklık. Payda ikide kalsaydı
+       çubuk hiç dolmaz, kurye günü bitiremediğini sanırdı. */
+    expect(screen.getByText('/1 durak')).toBeOnTheScreen();
+    expect(screen.queryByText('/2 durak')).toBeNull();
+  });
+});
+
 describe('K1 · "Seferi başlat" — gerçek yazım', () => {
 
   it('boş hâlin düğmesi SEÇİM EKRANINA götürür — uca istek göndermez', async () => {
