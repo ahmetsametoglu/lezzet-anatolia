@@ -11939,8 +11939,18 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   başlıklarıyla ayrı. Rampanın DOLU hâli cihazda görülemedi — yerelde kargo siparişi yok (kayıtlı
   boşluk, `design/BACKLOG.md §4`); üç iddia birim testinde çivili.
 
-  Testler 10'dan 13'e: bekleyen kutular listeleniyor ve satır dokunulamaz · rampa boşken sebebini
-  yazıyor · liste kırpılınca ekran bunu söylüyor.
+  Testler 10'dan 14'e: bekleyen kutular listeleniyor ve satır dokunulamaz · liste kırpılınca ekran
+  bunu söylüyor · boş ekran tek blok · sayı okunamadıysa "boş" denmiyor · rampa boşalınca bölümler
+  duruyor.
+
+  **AYNI TURDA DÜZELTİLDİ — BOŞ EKRAN ÜÇ KEZ "BOŞ" DİYORDU.** Rampa bölümü açılınca boş ekran
+  kalabalıklaştı: üstte *"Rampa boş"*, ortada *"bekleyen kutu yok"*, altta *"bugün kutu
+  verilmedi"*. Kullanıcı cihazda gördü: *"buraya giren biri ilk etapta burası ne acaba diyor…
+  karmaşa var gibi, boş yani."* İki değişiklik: ayrı duran sayaç cümlesi kalktı ve sayı bölüm
+  başlığının kuyruğuna girdi (*"RAMPADA BEKLEYEN · 3 kutu"* — v3'ün kendi grameri); rampa boş VE
+  hiç okutma yoksa iki bölüm de çizilmiyor, yerine ekranın ne olduğunu söyleyen tek blok geliyor.
+  Ayrım korundu: sayı OKUNAMADIYSA ekran "boş" demiyor, bilmediğini söylüyor ve bölümleri çizmeye
+  devam ediyor.
 
 - [x] (21.263) **YAZIM KİMLİĞİ DESENİ İKİ DEFTERE + rampa teli MUTLAK konuşuyor — cevabı kaybolan istek malı iki kez yazıyordu** (kullanıcı kararı 04.09: *"yeşil alandayız, her zaman en doğru çözüme odaklanmalıyız"*; üç seçenekten **desen** seçildi)
   `touches:` `supabase/migrations/{0018_money.sql,0031_warehouse.sql}` · `packages/types/src/entities/{money,warehouse}.schema.ts` · `packages/types/src/contracts/courier-api.schema.ts` (+ testi) · `packages/database/src/services/{money,warehouse-transfer}.service.ts` · `packages/application/src/order/{payment.ts,payment.test.ts}` · `packages/application/src/warehouse/transfer.ts` · `packages/application/src/courier/{van-stock.ts,van-stock.test.ts,delivery.test.ts}` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/courier.ts` · `apps/mobile/src/lib/api/courier.ts` · `apps/mobile/src/screens/courier/{van-stock-screen.tsx,van-stock-screen.test.tsx,messages.json}`

@@ -183,6 +183,20 @@ export function HandoverScreen() {
     [loadPending],
   );
 
+  /* Rampanın sayı künyesi — başlığın kuyruğuna giriyor. `null` OKUNAMADI demek, sıfır değil. */
+  const rampaSayisi =
+    pending === null
+      ? t.handover.rampCountUnknown
+      : pending === 0
+        ? t.handover.rampCountNone
+        : pending === 1
+          ? t.handover.rampCountOne
+          : fillCopy(t.handover.rampCount, { n: String(pending) });
+
+  /* İKİSİ DE BOŞ: rampada kutu yok VE bugün hiç okutma yapılmadı. Okunamayan sayı bu hâle
+     GİRMEZ — "bilmiyorum"u "boş" saymak, depocuyu dolu bir rampadan uzaklaştırırdı. */
+  const bosEkran = pending === 0 && waiting.length === 0 && rows.length === 0;
+
   return (
     <View style={styles.screen} testID="warehouse-handover">
       <OperationsStackHeader
@@ -194,20 +208,8 @@ export function HandoverScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.list} testID="warehouse-handover-list">
-        {/* Sayı düğmenin ÜSTÜNDE: depocu "daha var mı" sorusunu okutmadan ÖNCE soruyor. */}
-        <Text style={styles.pending} testID="warehouse-handover-pending">
-          {pending === null
-            ? t.handover.pendingUnknown
-            : pending === 0
-              ? t.handover.pendingNone
-              : pending === 1
-                ? t.handover.pendingOne
-                : fillCopy(t.handover.pending, { n: String(pending) })}
-        </Text>
-
         {/* EKRANIN KURALI HER ZAMAN GÖRÜNÜR (v3:1686) — "hangi siparişi vereceğini seçmiyorsun"
-            bu ekranın tasarım kararıdır. Düğme FAB'a taşınınca kural sayının altına geldi:
-            kaybolan bir kural, ikinci kutuda unutulur. */}
+            bu ekranın tasarım kararıdır. Kaybolan bir kural, ikinci kutuda unutulur. */}
         <Text style={styles.scanRule}>{t.handover.scanRule}</Text>
 
         {!offline ? null : (
@@ -221,18 +223,31 @@ export function HandoverScreen() {
         )}
 
         {/*
-          ── RAMPADA BEKLEYEN (kullanıcı kararı 05.09) ────────────────────────────────────────
-          Ekranın kuralı "liste değil OKUTUCU" ve bu liste onunla ÇELİŞMİYOR: seçim değil
-          ENVANTER. Satırlar dokunulamaz — hiçbiri bir eylem açmıyor. Sayaç zaten "3 kutu
-          bekliyor" diyordu; bu bölüm o cümleyi somutlaştırıyor, yerine geçmiyor.
+          ── BOŞ EKRAN TEK CÜMLE (kullanıcı bulgusu 05.09) ────────────────────────────────────
+          Rampa boşken ve henüz okutma yapılmamışken ekran aynı şeyi ÜÇ kez söylüyordu: üstte
+          "rampa boş", ortada "RAMPADA BEKLEYEN → bekleyen kutu yok", altta "bugün kutu
+          verilmedi". Üç boş blok, boş bir ekranda kalabalık yapıyordu ve ilk kez giren
+          *"burası ne"* diye soruyordu. İkisi de boşken artık tek blok var ve ekranın ne
+          olduğunu söylüyor.
         */}
-        <Text style={styles.logHeading}>{t.handover.rampHeading}</Text>
-        {waiting.length === 0 ? (
-          <Text style={styles.rampEmpty} testID="warehouse-handover-ramp-empty">
-            {t.handover.rampEmpty}
-          </Text>
+        {bosEkran ? (
+          <View style={styles.emptyBlock} testID="warehouse-handover-idle">
+            <Text style={styles.emptyTitle}>{t.handover.idle.title}</Text>
+            <Text style={styles.emptyBody}>{t.handover.idle.body}</Text>
+          </View>
         ) : (
           <>
+            {/*
+              ── RAMPADA BEKLEYEN (kullanıcı kararı 05.09) ────────────────────────────────────
+              Ekranın kuralı "liste değil OKUTUCU" ve bu liste onunla ÇELİŞMİYOR: seçim değil
+              ENVANTER. Satırlar dokunulamaz — hiçbiri bir eylem açmıyor.
+
+              SAYI BAŞLIĞIN KUYRUĞUNDA (v3'ün kendi grameri): ayrı bir cümle olarak yazılınca
+              bölümün boş hâliyle aynı şeyi iki kez söylüyordu.
+            */}
+            <Text style={styles.logHeading} testID="warehouse-handover-pending">
+              {`${t.handover.rampHeading} · ${rampaSayisi}`}
+            </Text>
             {waiting.map((box) => (
               <View key={box.boxId} style={styles.rampRow} testID={`warehouse-handover-ramp-${box.code}`}>
                 <Text style={styles.rampTitle}>
@@ -252,17 +267,18 @@ export function HandoverScreen() {
                 {fillCopy(t.handover.rampMore, { n: String(waiting.length), total: String(pending) })}
               </Text>
             )}
+
+            <Text style={styles.logHeading}>{t.handover.logHeading}</Text>
+            {rows.length !== 0 ? null : (
+              <View style={styles.emptyBlock} testID="warehouse-handover-empty">
+                <Text style={styles.emptyTitle}>{t.handover.empty.title}</Text>
+                <Text style={styles.emptyBody}>{t.handover.empty.body}</Text>
+              </View>
+            )}
           </>
         )}
 
-        <Text style={styles.logHeading}>{t.handover.logHeading}</Text>
-
-        {rows.length === 0 ? (
-          <View style={styles.emptyBlock} testID="warehouse-handover-empty">
-            <Text style={styles.emptyTitle}>{t.handover.empty.title}</Text>
-            <Text style={styles.emptyBody}>{t.handover.empty.body}</Text>
-          </View>
-        ) : (
+        {rows.length === 0 ? null : (
           rows.map((row) => (
             <View key={row.key} style={[styles.row, styles[`row_${row.tone}`]]} testID={`warehouse-handover-row-${row.key}`}>
               <View style={styles.rowHead}>

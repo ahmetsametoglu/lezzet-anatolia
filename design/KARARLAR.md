@@ -2194,3 +2194,19 @@ rampayı olduğundan boş sanmaktır.
 **Sayı ve liste TEK turda, AYNI süzgeçten** (`countAwaitingHandover` ile `listAwaitingHandover`
 birebir aynı üç şartı kullanıyor). Ayrı turlarda okunsalardı arada bir kutu devredilir ve ekran
 kendi kendini yalanlardı.
+
+**Karar 3 — BOŞ EKRAN TEK CÜMLE (kullanıcı bulgusu 05.09).** Rampa bölümü açılınca boş ekran aynı
+şeyi ÜÇ kez söylemeye başladı: üstte *"Rampa boş — okutulacak kutu kalmadı"*, ortada
+*"RAMPADA BEKLEYEN → bekleyen kutu yok"*, altta *"Bugün kutu verilmedi"*. Kullanıcının cümlesi:
+*"buraya giren biri ilk etapta burası ne acaba diyor… karmaşa var gibi, boş yani."*
+
+İki değişiklik: (1) ayrı duran sayaç cümlesi KALKTI, sayı bölüm başlığının kuyruğuna girdi
+(*"RAMPADA BEKLEYEN · 3 kutu"*) — v3'ün kendi grameri de bu, ve ayrı cümle bölümün boş hâliyle
+aynı şeyi iki kez söylüyordu. (2) Rampa boş VE hiç okutma yoksa iki bölüm de çizilmiyor, yerine
+ekranın ne olduğunu söyleyen TEK blok geliyor.
+
+**Ayrım korunuyor:** sayı OKUNAMADIYSA ekran "boş" demez. Başlık *"· okunamadı"* der ve bölümler
+çizilmeye devam eder — "bilmiyorum"u "boş" saymak, depocuyu dolu bir rampadan uzaklaştırırdı.
+Rampa boşalmış ama bugün okutma yapılmışsa da bölümler durur: geçmiş yerinde kalır, başlık
+*"· boş"* der.
+

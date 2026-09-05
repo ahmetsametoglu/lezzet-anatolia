@@ -152,7 +152,9 @@ describe('kargo devri', () => {
     net.pending = rampa(4);
     await render(<HandoverScreen />);
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/4 kutu taşıyıcıyı bekliyor/));
+    // SAYI BAŞLIĞIN KUYRUĞUNDA (05.09): ayrı bir cümle olarak yazılınca bölümün boş hâliyle aynı
+    // şeyi iki kez söylüyordu ve boş ekran üç ayrı yerde "boş" diyordu.
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/RAMPADA BEKLEYEN · 4 kutu/));
   });
 
   it('sayı her okutmadan sonra SUNUCUDAN tazelenir — yerelde eksiltilmiyor', async () => {
@@ -166,18 +168,21 @@ describe('kargo devri', () => {
     net.pending = rampa(1);
     await okut('Toplama');
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/1 kutu taşıyıcıyı bekliyor/));
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/RAMPADA BEKLEYEN · 1 kutu/));
   });
 
-  it('sıfır ile OKUNAMADI ayrı cümleler — "rampa boş" yanlış bir izdir', async () => {
-    net.pending = rampa(0);
-    await render(<HandoverScreen />);
-    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/Rampa boş/));
-
-    // Bozuk cevap: sayı OKUNAMADI. Sıfıra düşürmek depocuyu kutuların yanından uzaklaştırırdı.
+  /*
+    SIFIR ile OKUNAMADI AYRI ŞEYLER ve ayrımı boş ekran kararı da taşıyor: sayı okunamadıysa ekran
+    "boş" DEMEZ — bilmediğini söyler ve bölümleri çizmeye devam eder. "Bilmiyorum"u "boş" saymak,
+    depocuyu dolu bir rampadan uzaklaştırırdı.
+  */
+  it('sayı OKUNAMADIYSA ekran "boş" demez, bilmediğini söyler', async () => {
     net.pending = { bozuk: true };
     await render(<HandoverScreen />);
-    await waitFor(() => expect(screen.getAllByTestId('warehouse-handover-pending').at(-1)).toHaveTextContent(/okunamadı/));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/RAMPADA BEKLEYEN · okunamadı/));
+    // Boş ekran bloğu ÇIKMAZ: bilinmeyen bir rampa boş sayılmaz.
+    expect(screen.queryByTestId('warehouse-handover-idle')).toBeNull();
   });
 
   /*
@@ -197,12 +202,34 @@ describe('kargo devri', () => {
     expect(screen.getByTestId('warehouse-handover-ramp-KT-26-A2')).toBeOnTheScreen();
   });
 
-  it('rampa boşken bölüm SEBEBİNİ yazar, sessizce kaybolmaz', async () => {
+  /*
+    BOŞ EKRAN TEK CÜMLE (kullanıcı bulgusu 05.09) — rampa boşken ve hiç okutma yokken ekran aynı
+    şeyi ÜÇ kez söylüyordu (üstte "rampa boş", ortada "bekleyen kutu yok", altta "bugün kutu
+    verilmedi"). İlk kez giren "burası ne" diye soruyordu.
+  */
+  it('rampa boş VE hiç okutma yoksa TEK blok çıkar, üç ayrı boş cümle değil', async () => {
     net.pending = rampa(0);
     await render(<HandoverScreen />);
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-handover-ramp-empty')).toBeOnTheScreen());
-    expect(screen.getByTestId('warehouse-handover-ramp-empty')).toHaveTextContent(/Rampada bekleyen kutu yok/);
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-idle')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-handover-idle')).toHaveTextContent(/Rampa boş — okutulacak kutu kalmadı/);
+    // Öteki iki boş blok ve rampa başlığı ÇİZİLMEZ.
+    expect(screen.queryByTestId('warehouse-handover-empty')).toBeNull();
+    expect(screen.queryByTestId('warehouse-handover-pending')).toBeNull();
+  });
+
+  /* Rampa boşalmış ama BUGÜN okutma yapılmışsa bölümler durur: "boşaldı" bilgisi başlığın
+     kuyruğunda okunur ve geçmiş yerinde kalır. */
+  it('rampa boşaldıysa ama okutma yapıldıysa bölümler DURUR — başlık "boş" der', async () => {
+    net.pending = rampa(1);
+    net.handover = { status: 'ok', boxNo: 1, referenceNo: 'LZA-26-3M8C', handedBoxes: 1, boxCount: 1, shipmentHandedOver: true };
+    await render(<HandoverScreen />);
+    net.pending = rampa(0);
+    await okut('Toplama');
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/RAMPADA BEKLEYEN · boş/));
+    expect(screen.queryByTestId('warehouse-handover-idle')).toBeNull();
+    expect(screen.getByText('Son kutuyla sipariş YOLA ÇIKTI')).toBeOnTheScreen();
   });
 
   /* TAVAN SESSİZ DEĞİL: gerçek toplam sayaçtan geliyor. Kırpılmış bir listeyi tam sanmak,

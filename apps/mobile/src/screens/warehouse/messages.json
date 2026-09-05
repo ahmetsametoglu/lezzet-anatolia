@@ -1009,10 +1009,6 @@
     "subtitle": "taşıyıcı rampada · kutuyu okut",
     "cta": "Kutuyu okut",
     "busy": "Okutuluyor…",
-    "pending": "Rampada {n} kutu taşıyıcıyı bekliyor.",
-    "pendingOne": "Rampada 1 kutu taşıyıcıyı bekliyor.",
-    "pendingNone": "Rampa boş — okutulacak kutu kalmadı.",
-    "pendingUnknown": "Bekleyen kutu sayısı okunamadı.",
     "scanTitle": "Kutuyu okut",
     "scanHint": "Taşıyıcının etiketindeki takip barkodunu çerçeveye getirin.",
     "footnote": "Sayım gönderiyi sayar, siparişi değil — bir siparişin kutuları iki gönderiye bölünmüş olabilir.",
@@ -1064,8 +1060,15 @@
     "rampHeading": "RAMPADA BEKLEYEN",
     "rampRow": "{ref} · kutu {no}/{total}",
     "rampCode": "{code}",
-    "rampEmpty": "Rampada bekleyen kutu yok.",
-    "rampMore": "İlk {n} kutu listelendi — rampada {total} kutu var."
+    "rampMore": "İlk {n} kutu listelendi — rampada {total} kutu var.",
+    "rampCount": "{n} kutu",
+    "rampCountOne": "1 kutu",
+    "rampCountNone": "boş",
+    "rampCountUnknown": "okunamadı",
+    "idle": {
+      "title": "Rampa boş — okutulacak kutu kalmadı.",
+      "body": "Hazırlıkta \"kargoya ver\" ile etiketi alınan kutular burada birikir; okuttukça geçmişe düşer."
+    }
   },
   "printers": {
     "title": "Bu cihaz · Yazıcılar",
