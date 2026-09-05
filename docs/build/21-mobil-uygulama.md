@@ -11093,13 +11093,32 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 - [ ] (21.238) **KURYE DENETİMİ — kalan bulgular (kenara not, kullanıcı kararı 03.09: "şimdilik not olarak düş")**
   `touches: packages/application/src/courier/routes.ts · packages/application/src/courier/delivery.ts · supabase/migrations/0046_delivery_run.sql · docs/uygulama/kurye-denetim-2026-09-03.md`
 
-  Üç turda ölçülüp doğrulanmış, henüz KAPATILMAMIŞ altı madde; kanıt satırları ve düzeltme
-  önerileri `docs/uygulama/kurye-denetim-2026-09-03.md`te. Sıra kullanıcının.
-  - **4 · Araç ↔ kurye ↔ depo bağı (orta, ikinci araçtan ÖNCE):** seferler kuryeye bağlı, araç
+  Üç turda ölçülüp doğrulanmış altı madde; kanıt satırları ve düzeltme önerileri
+  `docs/uygulama/kurye-denetim-2026-09-03.md`te. Sıra kullanıcının.
+
+  **AÇIK KALAN: 8 (kısmi ret yarışı).** 4 ve 6 kapandı, üstleri çizili — 9/10/11 bilgi maddesi,
+  karar gerektirmiyor. **Ders:** madde 4 iki gün "açık" göründü çünkü 21.249 onu çözerken bu satıra
+  dönülmedi; kullanıcı hatırlattı, ölçünce kapalı çıktı. **Bir denetim maddesi, onu çözen iş
+  bittiğinde ÇÖZEN İŞİN turunda kapatılır** — sonraki tur onu açık sanıp yeniden planlar
+  (`CLAUDE §5`: durumun tek sahibi görev satırıdır).
+  - ~~**4 · Araç ↔ kurye ↔ depo bağı (orta, ikinci araçtan ÖNCE):** seferler kuryeye bağlı, araç
     tekelliği yok, araç deposu ve serbest ürünün çıkış deposu seferden değil kapsam sırasından.
-    Migration ister; web şeridiyle ortak (`docs/talep/not-web-arac-deposu-filo-kaydiyla-bagli-degil.md`).
-  - **6 · Rota kartı sayaçları (orta, bir saat):** iptal edilmiş sipariş durak/kutu sayılıyor
-    (`cancel_order` bölge/günü temizlemiyor); vadeli sipariş "tahsilat" sayılıyor (`routes.ts:146`).
+    Migration ister; web şeridiyle ortak.~~ **KAPANDI — 21.249 (`3176a716`) üçünü birden çözmüş;
+    bu not 03.09'da, yani ÖNCESİNDE yazılmıştı ve iki gün bayat kaldı** (kullanıcı hatırlattı,
+    ölçüldü 05.09). Kanıtlar: araç tekelliği artık VERİDE — `assert_vehicle_single_courier`
+    (`0046_delivery_run.sql:725`) iki kuralı birden zorluyor (`vehicle_taken`: araç başka kuryenin
+    açık seferinde · `vehicle_mismatch`: aynı kuryenin öteki açık seferi başka araçta); kapanmış
+    sefer sayılmıyor, araç akşam boşalıyor. 05.09 cihaz turunda CANLI çarpıldı (`vehicle_taken`).
+    Araç deposu `vehicleWarehouseOf` ile seferin aracından çözülüyor, serbest ürünün çıkış tesisi
+    `courierVanContext.facilityId` ile `delivery_run.warehouse_id`ten — ikisinin de künyesi eski
+    hâli arıza olarak yazıyor (*"cevap dizinin sırasından geliyordu, burada kaydından"*). Anılan
+    talep dosyası `docs/talep/`te YOK: web şeridi karşılamış ve silmiş. **Kalan tek kalıntı 21.258**
+    (kuryenin `warehouse_ids` dizisindeki artık işlevsiz `VAN-1` satırı).
+  - ~~**6 · Rota kartı sayaçları (orta, bir saat):** iptal edilmiş sipariş durak/kutu sayılıyor
+    (`cancel_order` bölge/günü temizlemiyor); vadeli sipariş "tahsilat" sayılıyor.~~ **KAPANDI —**
+    iptal yarısı 21.268'de (durak/kutu sayaçları iptali eliyor, araçtaki kutu ayrı sayılıyor),
+    vadeli yarısı 21.270'te (hesap `door-payment.ts`e alındı; rota kartı artık durağın okuduğu
+    fonksiyonu okuyor).
   - **8 · Kısmi ret teslimden ÖNCE yazılıyor (düşük→orta):** `adjustFulfillment` iade hesabını çözüp
     "eksik karşılandı" haberini teslim geçişinden önce gönderiyor; teslim `stale` dönerse geri
     alınmıyor (`delivery.ts:147-176`). Nadir (kapanış + teslim yarışı).
@@ -12335,3 +12354,78 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   EDİLDİ` + üstü çizili adres + *"1 kutu araçta — depoya geri getir"* olarak çizildi; sayaç
   `0/10 → 0/8`, kapıda tahsilat `1.426,10 € → 1.342,10 €` (tam 2 × 42,00 €); rota kartında
   *"1 kutu iptal edildi — depoya geri getirilecek"*. Fikstür satırları temizlendi.
+
+- [x] (21.269) **YAZICI TANITMA TELEFONA GELDİ — ve envanterin kimliği IP olmaktan çıktı**
+  (kullanıcı bulgusu + kararı 05.09)
+  `touches:` `supabase/migrations/0054_warehouse_printer.sql` ·
+  `packages/types/src/entities/warehouse-printer.schema.ts` ·
+  `packages/types/src/contracts/warehouse-api.schema.ts` ·
+  `packages/domain-core/src/printing/paper.ts` · `packages/application/src/warehouse/boxes.ts` ·
+  `apps/mobile-api/src/api/v1/warehouse.ts` · `apps/mobile/src/lib/print/{brother,printer-locate}.ts` ·
+  `apps/mobile/src/lib/api/warehouse.ts` ·
+  `apps/mobile/src/screens/warehouse/{printer-setup-screen.tsx,messages.json}` ·
+  `scripts/seed/{warehouse,settings}.ts`
+
+  **Durum (05.09).** Üç bulgu tek oturumda ölçüldü ve üçü de aynı kökten çıkıyordu: **envanter
+  odanın gerçeğiyle bağını kaybedebiliyordu ve bunu kimseye söylemiyordu.**
+
+  **1 · Tasarımın asıl fikri hiç görünmemişti.** Şablon (v3:1027-1038) "Tanımlı değil" kartının
+  altına SEÇİLECEK YAZICILARIN LİSTESİNİ çiziyor; kod listeyi `aday ≥ 2` şartına bağlamıştı, yani
+  tam da tanımsız hâlde (0 ya da 1 aday) hiç çizilmiyordu. Yerleşimin geri kalanı tutuyordu —
+  eksik olan tek şey kartın kendisiydi. Şart kalktı, satır cinsi ikiye çıktı: envanterdeki aday
+  (**seç**) ve ağda bulunan ama envanterde olmayan (**tanıt**).
+
+  **2 · Ekran çıkmaza yolluyordu.** Aday yokken kart *"yazıcılar Depolar ekranından tanımlanır"*
+  diyordu ve orası WEB'di: yazıcının önünde telefonla duran depocunun yapabileceği hiçbir şey
+  yoktu. Envantere yazan ilk mobil kapı açıldı (`POST /warehouse/printers`). Adres ELLE değil
+  KEŞİFTEN gidiyor; kâğıt boyu gövdede HİÇ yok — sunucu modelin rulo sınıfından türetiyor
+  (`defaultLabelSizeFor`, `domain-core`) ve tanınmayan modeli reddediyor. Kâğıdın ölçülmesi
+  yerine modelden varsayılması **kullanıcı kararı** (05.09; alternatifleri: tanıtırken iğne
+  deneyiyle ölçmek · tanıtırken sormak) — bedeli açık: varsayım yanlışsa arıza kurulumda değil
+  ilk basımda görünür, "test bas" onu erken yakalamak için orada.
+
+  **3 · ADRES KİMLİK SANILIYORDU** (kullanıcı sorusu: *"yazıcıların IP adresi değişebilir, biz
+  IP üzerinden mi yönetiyoruz yoksa bir ID tarzı bir şey var mı"*). Cihazın SEÇİMİ zaten kimliğe
+  bağlıydı (`printer-choice` uuid saklıyor); ama **envanterin kendisi IP ile yönetiliyordu** ve
+  eşleşme adresten yapılıyordu. Arıza ölçüldü: envanterde `192.168.1.91`, gerçek QL-820NWB
+  `192.168.1.169`, ekran "ağda görünmüyor". O gün adresi seed uydurmuştu — ama DHCP yenilemesinin
+  ürettiği tablo birebir aynı ve daha sinsi: basım eski adrese gider, o adres artık başka bir
+  cihazın olabilir. Çare SDK'da hazırdı ve atılıyordu: `BPChannel.serialNumber`. Envantere
+  `serial_number` girdi, eşleşme oraya taşındı (`locatePrinter`), adres bir ÖNBELLEĞE düştü.
+  Onarım iki yerde: ekran taramadan sonra eskimiş adresi sessizce tazeliyor, basım hattı ise
+  arıza anında seriden güncelini bulup **bir kez** daha deniyor (`printHealing` — mutlu yolda
+  tarama bedeli ödenmiyor).
+
+  **Seed artık yazıcı UYDURMUYOR.** Üç satır yazıyordu; kutu yazıcısının adresi tesadüfen
+  doğruydu (23.5'te ölçülmüştü), kargonunki uydurmaydı, Kehl'inki hiç var olmamıştı. Envanter
+  odanın gerçeğidir ve uydurulduğunda sessizce yanıltır; ekranın üç hâli artık testin işi.
+  `seedWarehousePrinters` ve çağrısı silindi.
+
+  **Doğrulama.** Kök `typecheck` · `lint` · `knip` temiz · birim **1961/1961** · mobil
+  **1359/1359** (yazıcı dosyaları 31, on biri yeni). Cihazda (Poco 2311DRK48G) uçtan uca — ölçüm
+  bu satırın altındaki nota yazıldı.
+
+- [x] (21.270) **TAHSİLAT SAYISI TEK HESAPTAN — rota kartı vadeliyi sayıyor, gün ekranı saymıyordu** (denetim bulgusu 6'nın kalanı · 05.09)
+  `touches:` `packages/application/src/courier/{door-payment.ts,day.ts,routes.ts,day.test.ts}` · `apps/mobile-api/src/api/v1/sale.ts` · `docs/build/21-mobil-uygulama.md`
+
+  **AYNI SORU, İKİ CEVAP.** Durak hesabı (`day.ts`) vadeliyi 01.09'dan beri muaf tutuyordu ve
+  gerekçesi yazılıydı — `DOMAIN §7`: *"vadeli sipariş banka havalesiyle ödenir"*, yani kurye o
+  kapıdan para istemez. Rota kartı (`routes.ts`) ise KENDİ formülünü yazmıştı: `toplam − (tahsil −
+  iade) > 0`. Tek satır ayrılıyordu ama sonucu çelişkiydi: **kurye sabah "2 tahsilat" diye seçtiği
+  rotada akşam kapıda konuşulacak para bulamıyordu.** Kısmi karşılama da aynı deliğe düşüyordu —
+  motorun `derivePaymentStatusForOrder`ı kalemleri okuyor, rota kartı hiç okumuyordu.
+
+  **Hesap ortak dosyaya alındı** (`door-payment.ts`) ve iki okuyucu da onu çağırıyor. Üçüncü bir
+  dosya gerekti çünkü bağımlılık tek yönlü olmalı: `day.ts` zaten `routes.ts`i çağırıyor
+  (`startCourierDay → listCourierRoutes`), ters yönde bir import döngü olurdu. Rota kartı artık
+  kalemleri de çekiyor — TEK sorgu (`listByOrders`), sipariş başına tur yok.
+
+  **Ayrıca bir BAYAT YORUM düzeltildi** (`sale.ts:73`): *"araç, personelin kendi `warehouseIds`i
+  içindeki `kind='vehicle'` depodur"* yazıyordu — bu tam da 21.249'un KALDIRDIĞI davranış. Kod
+  doğruydu, yorum yanlıştı ve zararı yanlış olmasında değil ÖĞRETMESİNDE: o satırı okuyan bir
+  sonraki kişi kaldırılmış deseni doğru sanıp tekrarlar (`CLAUDE`: kod ile doküman çelişirse KOD
+  haklı). Yerine cevabın artık SEFERDEN geldiği ve eski hâlin neden arıza olduğu yazıldı.
+
+  **Doğrulama:** kök typecheck · lint · docs:check temiz · tam paket. Testi: vadeli sipariş kurulup
+  İKİ ekranın cevabı yan yana konuyor — durak `dueAmountCents: null`, rota kartında `stopCount`
+  artıyor ama `collectionCount` kıpırdamıyor. Ayrışırlarsa artık bu satır kırılır.

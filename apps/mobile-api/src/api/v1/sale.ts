@@ -69,9 +69,17 @@ export const sale = new Hono<SaleEnv>();
  * Strasbourg'un stoğu). Kural sunucuda yazılıydı, istemci onu sessizce iptal ediyordu.
  *
  * ── YERİNE: AÇIK BEYAN ──────────────────────────────────────────────────────
- * Yüzey artık `?place=van` diyerek NEREDEN sattığını SÖYLER. Beyan bir yetki değil bir sorudur;
- * cevabı kapsam verir — araç, personelin kendi `warehouseIds`i içindeki `kind='vehicle'` depodur
- * (`vehicleWarehouseOf`). İstemci hangi aracı istediğini seçemez, yalnız "aracımdan" diyebilir.
+ * Yüzey artık `?place=van` diyerek NEREDEN sattığını SÖYLER. Beyan bir yetki değil bir sorudur ve
+ * cevabı **SEFER** verir: araç, kuryenin sürdüğü seferin YAZDIĞI araçtır ve satılan mal o aracın
+ * deposundadır (`vehicleWarehouseOf`). İstemci hangi aracı istediğini seçemez, yalnız "aracımdan"
+ * diyebilir.
+ *
+ * CEVABIN KAYNAĞI 21.249'DA DEĞİŞTİ ve bu satır bir tur eski hâli anlatmaya devam etmişti (ölçüldü
+ * 05.09): eskiden cevabı KAPSAM veriyordu — `warehouseIds` dizisi taranıp türü araç olan İLKİ
+ * alınıyordu. Yani cevap bir listenin SIRASINDAN geliyordu, kaydından değil; kapsamda iki araç
+ * varsa kurye A'yı sürerken B'nin malını satabiliyordu, üstelik seferde hangi aracı seçtiği yazılı
+ * olduğu hâlde o bilgi hiç okunmuyordu. Künye ve ölçüm `van-stock.ts`te.
+ *
  * Beyansız istek eskisi gibi guard'a gider: depo kapısından satan depocu da, `?warehouseId=` ile
  * tesisini söyleyen kurye de aynen çalışır (`DOMAIN §17` — satan kişi malın yanındaki personeldir).
  *

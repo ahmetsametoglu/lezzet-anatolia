@@ -17,13 +17,13 @@ import {
   canAccessWarehouse,
   canTransition,
   deliveryRunReferenceNo,
-  derivePaymentStatusForOrder,
   sortBySequence,
   warehouseScope,
   whatsAppLink,
   type MessageLocale,
 } from '@lezzet/domain-core';
 // Araç adının kuralı rota seçim listesiyle ORTAK — künyesi kendi dosyasında.
+import { amountDueCents } from './door-payment';
 import { vehicleLabelOf } from './vehicle-label';
 import { customerCardsOf } from './names';
 import { listCourierRoutes } from './routes';
@@ -962,39 +962,6 @@ async function warehouseNameOf(db: SupabaseClient, warehouseId: string): Promise
   return (await new WarehouseService(db).getById(warehouseId))?.name ?? null;
 }
 
-/**
- * Kapıda tahsil edilecek tutar. `null` = kapıda para konuşulmaz.
- *
- * ── İKİ ARIZA DÜZELTİLDİ (01.09) ────────────────────────────────────────────────────────────────
- *
- * **(1) VADELİ SİPARİŞ ARTIK MUAF.** Hesap `total − net tahsilat` idi ve `on_account`'a hiç
- * bakmıyordu; alanın künyesi de yalnız tek muafiyet tanıyordu ("önceden ödenmiş"). Sonuç: vade
- * limiti tanımlı, vade günü belli bir B2B siparişinde kuryenin ekranı **"kapıda 234,80 € al"**
- * diyordu. `DOMAIN §7` tersini yazıyor: *"vadeli sipariş… sonra **banka havalesiyle** ödenir ve
- * banka import eşleştirmesinde `paid` olur."* Kurye o kapıdan para istemez; isteseydi restoranın
- * ay sonu mutabakatı bizde bozulurdu.
- *
- * **(2) TABAN ARTIK KARŞILANAN TUTAR.** `order.totalCents` SİPARİŞ EDİLENİ söyler; kısmi
- * karşılamada kapıda ödenecek olan gitmiş maldır. Ölçüldü (`LA-26-93UXKY`): sipariş 46,39 €,
- * teslim edilen 27,29 € — kurye 19,10 € fazla tahsil ederdi. Cevabı motor veriyor
- * (`derivePaymentStatusForOrder`), yani kuryenin gördüğü sayı ile sipariş detayının gösterdiği
- * sayı aynı hesaptan çıkıyor.
- *
- * "Kuruş altı kalıntı sıfır sayılır" kuralı KALKTI (02.9) ve kalkması gerekiyordu: hesap artık
- * tamsayı cent üstünde yapılıyor, yani 0,004 € gibi bir kalıntı ARTIK DOĞAMAZ. O eşik kayan nokta
- * çıkarmasının ürettiği çöpü süpürmek içindi; sebep ortadan kalkınca eşik de bir sayıyı sessizce
- * yutan gereksiz bir kapıya dönüşürdü.
- */
-function amountDueCents(order: Order, lines: readonly OrderItem[]): number | null {
-  // Vadeli satışta kapıda tahsilat YOKTUR — borç deftere yazıldı, havaleyle kapanacak.
-  if (order.onAccount) return null;
-
-  const dueCents = derivePaymentStatusForOrder(order, lines, {
-    collectedCents: order.amountCollectedCents,
-    refundedCents: order.amountRefundedCents,
-  }).amountToCollectCents;
-  return dueCents > 0 ? dueCents : null;
-}
 
 /**
  * Kapıdaki sonuç. `out_for_delivery` yolda demektir; `ready`'e dönmüş sipariş DENENMİŞ ve

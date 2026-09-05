@@ -3,15 +3,17 @@ import {
   DeliveryRunService,
   DeliveryZoneService,
   OrderBoxService,
+  OrderItemService,
   OrderService,
   UserProfileService,
   VehicleService,
   WarehouseService,
 } from '@lezzet/database';
 import { canAccessWarehouse, type WarehouseScope } from '@lezzet/domain-core';
-import type { DeliveryRun, DeliveryZone } from '@lezzet/types';
+import type { DeliveryRun, DeliveryZone, OrderItem } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 // Araç adının kuralı ("ad varsa ad, yoksa plaka") günün seferiyle ORTAK — künyesi kendi dosyasında.
+import { amountDueCents } from './door-payment';
 import { vehicleLabelsOf } from './vehicle-label';
 
 /**
@@ -136,6 +138,16 @@ export async function listCourierRoutes(
     Kutular AYRI bir sorgu (`listByOrders`) — sipariş satırında kutu sayısı yok ve olmamalı: kutu
     hazırlıkta doğar, sipariş yazılırken değil.
   */
+  /* KALEMLER TAHSİLAT HESABI İÇİN (21.270): motor kısmi karşılamayı kalemlerden okuyor, yani
+     "kapıda ne kalacak" sorusu onlarsız cevaplanamıyor. TEK sorgu — sipariş başına tur yok. */
+  const orderItems = orders.length === 0 ? [] : await new OrderItemService(db).listByOrders(orders.map((o) => o.id));
+  const itemsByOrder = new Map<string, OrderItem[]>();
+  for (const item of orderItems) {
+    const list = itemsByOrder.get(item.orderId);
+    if (list) list.push(item);
+    else itemsByOrder.set(item.orderId, [item]);
+  }
+
   const stopCount = new Map<string, number>();
   const collectionCount = new Map<string, number>();
   const zoneOfOrder = new Map<string, string>();
@@ -151,9 +163,16 @@ export async function listCourierRoutes(
     }
     zoneOfOrder.set(order.id, order.deliveryZoneId);
     stopCount.set(order.deliveryZoneId, (stopCount.get(order.deliveryZoneId) ?? 0) + 1);
-    /* Borcun kuralı motorun kendi kuralı: toplam − (tahsil − iade) > 0. Ödenmiş sipariş
-       sayılmaz — kuryenin kapıda yapacağı iş yok. */
-    if (order.orderedTotalCents - (order.amountCollectedCents - order.amountRefundedCents) > 0) {
+    /*
+      TAHSİLAT SAYISI DURAĞINKİYLE AYNI HESAPTAN (21.270 · denetim bulgusu 6'nın kalanı).
+
+      Burada yerel bir formül yazılıydı — `toplam − (tahsil − iade) > 0` — ve gün ekranınınkiyle
+      TEK SATIR ayrılıyordu: vadeliyi elemiyordu. Sonucu çelişkiydi; kurye sabah "2 tahsilat" diye
+      seçtiği rotada akşam kapıda konuşulacak para bulamıyordu (`day.ts` künyesi: *"vadeli
+      sipariş banka havalesiyle ödenir, kurye o kapıdan para istemez"*). Hesap artık ortak
+      (`door-payment.ts`) ve kısmi karşılamayı da motorun kendi kuralıyla çözüyor.
+    */
+    if (amountDueCents(order, itemsByOrder.get(order.id) ?? []) !== null) {
       collectionCount.set(order.deliveryZoneId, (collectionCount.get(order.deliveryZoneId) ?? 0) + 1);
     }
   }

@@ -283,6 +283,34 @@ describe('gün listesi (11.1)', () => {
     expect(stop.payment.dueAmountCents).toBe(2000); // gördüğü tek para
   });
 
+  /*
+    VADELİ SİPARİŞ: İKİ EKRAN TEK CEVAP (21.270 · denetim bulgusu 6'nın kalanı).
+
+    Durak hesabı vadeliyi 01.09'dan beri muaf tutuyordu (`DOMAIN §7`: vadeli sipariş banka
+    havalesiyle ödenir, kurye o kapıdan para istemez). Rota kartı ise KENDİ formülünü yazmıştı ve
+    tek satır ayrılıyordu: vadeliyi elemiyordu. Sonuç çelişkiydi — kurye sabah "1 tahsilat" diye
+    seçtiği rotada akşam kapıda konuşulacak para bulamıyordu.
+
+    Bu test o iki cevabı AYNI siparişte yan yana koyuyor: hesap ortak dosyaya alındığı için (
+    `door-payment.ts`) ayrışmaları artık derlemeyi değil bu satırı kırar.
+  */
+  it('VADELİ sipariş iki ekranda da tahsilat DEĞİL — rota kartı ile durak aynı hesabı okuyor', async () => {
+    const scope = warehouseScope(['courier'], [warehouseId]);
+    const routeOf = async () =>
+      (await listCourierRoutes(db, { date: today, scope })).find((row) => row.zoneId === zoneId)!;
+    const once = await routeOf();
+
+    const { orderId } = await dispatched({ orderedTotalCents: 2000 });
+    await orders.update({ id: orderId, onAccount: true });
+
+    // 1) Durak: kapıda para konuşulmaz.
+    expect(mine(await listCourierDay(db, { courierId }), orderId).payment.dueAmountCents).toBeNull();
+    // 2) Rota kartı: durak sayısı arttı ama TAHSİLAT sayısı kıpırdamadı — aynı gerçeğin iki yüzü.
+    const sonra = await routeOf();
+    expect(sonra.stopCount).toBe(once.stopCount + 1);
+    expect(sonra.collectionCount).toBe(once.collectionCount);
+  });
+
   it('önceden ödenmiş durakta borç NULL — kapıda para konuşulmaz', async () => {
     const { orderId } = await dispatched({ orderedTotalCents: 2000 });
     await recordOrderPayment(db, { orderId, accountId, amountCents: 2000, description: 'Online ödeme' });
