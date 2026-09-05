@@ -70,6 +70,65 @@ export async function countAwaitingHandover(db: SupabaseClient, input: { warehou
   return new OrderBoxService(db).countAwaitingHandover(input.warehouseId);
 }
 
+/** Rampada taşıyıcıyı bekleyen bir kutu — devir ekranının üst bölümünün satırı (05.09). */
+export interface AwaitingHandoverBox {
+  boxId: string;
+  /** BİZİM kutu kodumuz. Kargo kutusunda etiket olarak basılmaz ama taşıyıcının etiketine METİN
+      olarak yazılır (§4.6) — yani depocu onu kutunun üstünde okuyabiliyor. */
+  code: string;
+  boxNo: number;
+  /** Bu GÖNDERİNİN toplam kutusu — "kutu 2/3" cümlesinin paydası. */
+  boxCount: number;
+  referenceNo: string | null;
+}
+
+/**
+ * **Rampada bekleyenlerin LİSTESİ** (kullanıcı kararı 05.09).
+ *
+ * ── EKRANIN KURALIYLA ÇELİŞMİYOR, ÇÜNKÜ SEÇİM DEĞİL ────────────────────────
+ * Ekranın tasarım kararı *"liste değil OKUTUCU"*dur ve gerekçesi seçim: bekleyen GÖNDERİLERİ
+ * seçilebilir diye çizmek, olmayan bir kararı varmış gibi göstermek olurdu. Bu liste seçim
+ * DEĞİL, envanterdir: dokunulamaz, sıralanamaz, süzülemez — "elimde ne kaldı" sorusunun cevabı.
+ * Sayaç zaten aynı soruyu tek sayıyla cevaplıyordu; liste onu somutlaştırıyor.
+ *
+ * Süzgeç sayacınkiyle BİREBİR (`countAwaitingHandover`): ikisi tek gerçeği söylüyor ve ayrışırsa
+ * ekran kendi kendini yalanlar.
+ *
+ * **Tavan var ve SESSİZ DEĞİL:** gerçek toplam sayaçtan geliyor, ekran ikisini karşılaştırıp
+ * kırpıldığını söylüyor. Kırpılmış bir listeyi tam sanmak, rampayı boş sanmaktır.
+ */
+export async function listAwaitingHandover(
+  db: SupabaseClient,
+  input: { warehouseId: string; limit?: number },
+): Promise<AwaitingHandoverBox[]> {
+  const boxes = new OrderBoxService(db);
+  const bekleyen = await boxes.listAwaitingHandover(input.warehouseId, input.limit ?? 40);
+  if (bekleyen.length === 0) return [];
+
+  const orderIds = [...new Set(bekleyen.map((box) => box.orderId))];
+  const [orders, kardesler] = await Promise.all([
+    new OrderService(db).listByIds(orderIds),
+    boxes.listByOrders(orderIds),
+  ]);
+  const referansOf = new Map(orders.map((order) => [order.id, order.referenceNo]));
+
+  /* Payda GÖNDERİNİN kutu sayısı, siparişin değil — ekranın her yerinde geçerli olan kural
+     (`handOverBox`in aynı hesabı): bir siparişin kutuları iki gönderiye bölünmüş olabilir. */
+  const gonderiKutusu = (shipmentId: string | null): number =>
+    kardesler.filter((kardes) => kardes.shipmentId === shipmentId).length;
+
+  return bekleyen
+    .map((box) => ({
+      boxId: box.id,
+      code: box.code,
+      boxNo: box.boxNo,
+      boxCount: gonderiKutusu(box.shipmentId),
+      referenceNo: referansOf.get(box.orderId) ?? null,
+    }))
+    // Aynı siparişin kutuları yan yana: rampada yığın da öyle duruyor.
+    .sort((a, b) => (a.referenceNo ?? '').localeCompare(b.referenceNo ?? '') || a.boxNo - b.boxNo);
+}
+
 export async function handOverBox(
   db: SupabaseClient,
   input: { code: string; warehouseId: string; actorId: string; effects?: OrderEffects },

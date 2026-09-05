@@ -455,9 +455,31 @@ export type HandoverResponse = z.infer<typeof HandoverResponseSchema>;
  * Sayaç devir kapısının reddettikleriyle **birebir aynı** süzgeci kullanıyor (mühürsüz ve
  * duyurulmamış kutu sayılmaz): gevşek bir sayaç, yapılamayacak bir işi varmış gibi gösterirdi.
  */
+export const AwaitingHandoverBoxSchema = z.object({
+  boxId: z.string().uuid(),
+  /** BİZİM kutu kodumuz — kargo kutusunda etiket olarak basılmaz ama taşıyıcının etiketine METİN
+      olarak yazılır (§4.6), yani depocu onu kutunun üstünde okuyabiliyor. */
+  code: z.string(),
+  boxNo: z.number().int().positive(),
+  /** Bu GÖNDERİNİN toplam kutusu — "kutu 2/3" cümlesinin paydası, siparişinki değil. */
+  boxCount: z.number().int().positive(),
+  referenceNo: z.string().nullable(),
+});
+export type AwaitingHandoverBoxContract = z.infer<typeof AwaitingHandoverBoxSchema>;
+
 export const HandoverPendingResponseSchema = z.object({
   /** Mühürlü + duyurulmuş + henüz verilmemiş kutu adedi. Sıfır meşru bir cevap: rampa boş. */
   boxes: z.number().int().nonnegative(),
+  /**
+   * Rampada bekleyen kutuların KENDİSİ (kullanıcı kararı 05.09) — üstteki sayının satır hâli.
+   *
+   * Ekranın *"liste değil okutucu"* kuralıyla çelişmiyor: bu liste SEÇİM değil ENVANTERDİR,
+   * dokunulamaz. Sayaç zaten aynı soruyu tek sayıyla cevaplıyordu, liste onu somutlaştırıyor.
+   *
+   * **Tavanlı ve tavanı sessiz değil:** `boxes` gerçek toplamı taşımaya devam ediyor, ekran
+   * ikisini karşılaştırıp listenin kırpıldığını söylüyor.
+   */
+  waiting: z.array(AwaitingHandoverBoxSchema),
 });
 export type HandoverPendingResponse = z.infer<typeof HandoverPendingResponseSchema>;
 

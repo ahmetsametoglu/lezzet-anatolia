@@ -1233,7 +1233,10 @@ describe('D1 · sevk uçları (teklif + duyuru)', () => {
     // 503 dönmüyor: bu uç sağlayıcıya HİÇ çıkmıyor, kendi tablomuzu sayıyor. Teklif/duyuru
     // uçlarıyla aynı kefeye konsaydı depocu, kargo anahtarı yokken rampasını da göremezdi.
     expect(res.status).toBe(200);
-    expect(await dataOf<{ boxes: number }>(res)).toEqual({ boxes: 0 });
+    /* Cevap 05.09'da genişledi: sayının yanında SATIRLARI da taşıyor (devir ekranının "rampada
+       bekleyen" bölümü). İkisi AYNI süzgeçten geliyor, o yüzden boş rampada ikisi de boş — biri
+       dolu öteki boş çıksaydı ekran kendi kendini yalanlardı. */
+    expect(await dataOf<{ boxes: number; waiting: unknown[] }>(res)).toEqual({ boxes: 0, waiting: [] });
   });
 
   it('bozuk sipariş kimliği 400 — uuid olmayan yol parçası kapıya hiç ulaşmaz', async () => {

@@ -39,6 +39,23 @@ function ok(data: unknown): Response {
   (`GET /handover/pending`). İkincisi ilkinin ÖNEKİNİ paylaşıyor (`/warehouse/handover…`), yani
   gevşek bir eşleşme sayaç cevabını okutmaya, okutma cevabını sayaca verirdi.
 */
+/**
+ * Rampa cevabı — sayı ve liste AYNI gerçeği söyler (kapı da öyle: tek tur, tek süzgeç).
+ * `göster` verilirse liste kırpılmış olur; ekranın "ilk N listelendi" cümlesi böyle sınanır.
+ */
+function rampa(boxes: number, goster = boxes) {
+  return {
+    boxes,
+    waiting: Array.from({ length: goster }, (_, i) => ({
+      boxId: `00000000-0000-4000-8000-00000000000${i + 1}`,
+      code: `KT-26-A${i + 1}`,
+      boxNo: i + 1,
+      boxCount: Math.max(boxes, 1),
+      referenceNo: 'LZA-26-3M8C',
+    })),
+  };
+}
+
 const net: { handover?: unknown; pending?: unknown } = {};
 fetchMock.mockImplementation((url) =>
   Promise.resolve(ok(String(url).includes('/handover/pending') ? net.pending : net.handover)),
@@ -58,7 +75,7 @@ beforeEach(() => {
   fetchMock.mockClear();
   resetWarehouseStatus();
   net.handover = undefined;
-  net.pending = { boxes: 3 };
+  net.pending = rampa(3);
 });
 
 /** Okutucuyu açıp simülasyon çipiyle bir kod gönderir — cihazsız ortamın tek yolu. */
@@ -132,28 +149,28 @@ describe('kargo devri', () => {
     rampada üç ayrı siparişin kutuları varken "bitti mi" sorusunun cevabı hiçbir yerde yoktu.
   */
   it('rampada bekleyen kutu sayısı okutmadan ÖNCE yazılır', async () => {
-    net.pending = { boxes: 4 };
+    net.pending = rampa(4);
     await render(<HandoverScreen />);
 
     await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/4 kutu taşıyıcıyı bekliyor/));
   });
 
   it('sayı her okutmadan sonra SUNUCUDAN tazelenir — yerelde eksiltilmiyor', async () => {
-    net.pending = { boxes: 2 };
+    net.pending = rampa(2);
     net.handover = { status: 'ok', boxNo: 1, referenceNo: 'LZA-26-3M8C', handedBoxes: 1, boxCount: 2, shipmentHandedOver: false };
     await render(<HandoverScreen />);
     await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/2 kutu/));
 
     // Sunucu artık BİR kutu diyor: aynı depodaki ikinci telefon da okutmuş olabilir ve yerel bir
     // eksiltme o gerçeği kaçırırdı.
-    net.pending = { boxes: 1 };
+    net.pending = rampa(1);
     await okut('Toplama');
 
     await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/1 kutu taşıyıcıyı bekliyor/));
   });
 
   it('sıfır ile OKUNAMADI ayrı cümleler — "rampa boş" yanlış bir izdir', async () => {
-    net.pending = { boxes: 0 };
+    net.pending = rampa(0);
     await render(<HandoverScreen />);
     await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/Rampa boş/));
 
@@ -161,6 +178,41 @@ describe('kargo devri', () => {
     net.pending = { bozuk: true };
     await render(<HandoverScreen />);
     await waitFor(() => expect(screen.getAllByTestId('warehouse-handover-pending').at(-1)).toHaveTextContent(/okunamadı/));
+  });
+
+  /*
+    ── RAMPA BÖLÜMÜ (kullanıcı kararı 05.09) ───────────────────────────────────────────────────
+    Ekranın kuralı "liste değil OKUTUCU" ve bu bölüm onunla çelişmiyor: SEÇİM değil ENVANTER.
+    Satırlar dokunulamaz — bir eylem açan hiçbir öğe yok. Sayaç zaten "3 kutu bekliyor" diyordu;
+    bölüm o cümleyi somutlaştırıyor.
+  */
+  it('rampada bekleyen kutular LİSTELENİR — satır dokunulamaz, seçim yok', async () => {
+    net.pending = rampa(2);
+    await render(<HandoverScreen />);
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-ramp-KT-26-A1')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-handover-ramp-KT-26-A1')).toHaveTextContent(/LZA-26-3M8C · kutu 1\/2/);
+    // Kutu kodu künyede: taşıyıcının etiketine METİN olarak yazılı, depocu kutunun üstünde okuyor.
+    expect(screen.getByTestId('warehouse-handover-ramp-KT-26-A1')).toHaveTextContent(/KT-26-A1/);
+    expect(screen.getByTestId('warehouse-handover-ramp-KT-26-A2')).toBeOnTheScreen();
+  });
+
+  it('rampa boşken bölüm SEBEBİNİ yazar, sessizce kaybolmaz', async () => {
+    net.pending = rampa(0);
+    await render(<HandoverScreen />);
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-ramp-empty')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-handover-ramp-empty')).toHaveTextContent(/Rampada bekleyen kutu yok/);
+  });
+
+  /* TAVAN SESSİZ DEĞİL: gerçek toplam sayaçtan geliyor. Kırpılmış bir listeyi tam sanmak,
+     rampayı olduğundan boş sanmaktır. */
+  it('liste kırpılmışsa ekran bunu SÖYLER — sessiz tavan yok', async () => {
+    net.pending = rampa(9, 2);
+    await render(<HandoverScreen />);
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-handover-ramp-more')).toBeOnTheScreen());
+    expect(screen.getByTestId('warehouse-handover-ramp-more')).toHaveTextContent(/İlk 2 kutu listelendi — rampada 9 kutu var/);
   });
 
   /*

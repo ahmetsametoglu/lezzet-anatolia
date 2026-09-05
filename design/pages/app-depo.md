@@ -167,8 +167,12 @@
 
 - **An:** taşıyıcı kurye rampada, depocu kutuları tek tek uzatıyor.
 - **Ekran bir LİSTE DEĞİL, bir OKUTUCUDUR.** "Hangi siparişi vereceğim" diye bir soru yok —
-  eldeki kutu okutulur, hangi gönderi olduğunu sistem çözer. Bekleyenler listesi çizilmez:
-  olmayan bir seçimi varmış gibi göstermek olur.
+  eldeki kutu okutulur, hangi gönderi olduğunu sistem çözer. ~~Bekleyenler listesi çizilmez~~ →
+  **RAMPADA BEKLEYEN bölümü açıldı (kullanıcı kararı 05.09)** ve kural bozulmadı: o bölüm SEÇİM
+  değil ENVANTERDİR, satırları dokunulamaz. Yasak olan şey bir seçimi varmış gibi göstermekti;
+  "elimde ne kaldı" sorusunu cevaplamak değil. Gerekçe `design/KARARLAR.md`'de.
+- **Okutma düğmesi FAB** (05.09): gövde iki bölüme ayrılınca satır içi düğme listeyi kesiyordu.
+  Sayım, düşüm, yükleme ve kapı satışının aynı kararı.
 - **Gövde = okutma geçmişi:** hangi kutu verildi, kaç kaldı. Depocunun tek sorusu budur.
 - **Sayım GÖNDERİYİ sayar, siparişi değil** — bir siparişin kutuları iki gönderiye bölünmüş
   olabilir; ekran "2/3 kutu verildi" derken duyurulan gönderiyi sayar.

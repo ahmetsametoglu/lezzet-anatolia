@@ -21,6 +21,7 @@ import {
   listPreparationQueue,
   listWarehouseAreas,
   listWarehouseBatches,
+  listAwaitingHandover,
   listReturningCouriers,
   listWarehouseReturns,
   markBatchSeen,
@@ -609,8 +610,14 @@ warehouse.post('/handover', async (c) => {
  * (`CLAUDE §1`) ve süzgeci istemciye bırakmak, başka deponun yığınını saydırabilirdi.
  */
 warehouse.get('/handover/pending', async (c) => {
-  const boxes = await countAwaitingHandover(serviceDb(), { warehouseId: c.get('warehouseId') });
-  return ok(c, HandoverPendingResponseSchema.parse({ boxes }));
+  const warehouseId = c.get('warehouseId');
+  /* Sayı ve liste TEK turda ve AYNI süzgeçten: ikisi tek gerçeği söylüyor, ayrı turlarda
+     okunsalardı arada bir kutu devredilir ve ekran kendi kendini yalanlardı. */
+  const [boxes, waiting] = await Promise.all([
+    countAwaitingHandover(serviceDb(), { warehouseId }),
+    listAwaitingHandover(serviceDb(), { warehouseId }),
+  ]);
+  return ok(c, HandoverPendingResponseSchema.parse({ boxes, waiting }));
 });
 
 /**

@@ -1060,7 +1060,12 @@
         "title": "Okutma yazılamadı",
         "sub": "{reason}"
       }
-    }
+    },
+    "rampHeading": "RAMPADA BEKLEYEN",
+    "rampRow": "{ref} · kutu {no}/{total}",
+    "rampCode": "{code}",
+    "rampEmpty": "Rampada bekleyen kutu yok.",
+    "rampMore": "İlk {n} kutu listelendi — rampada {total} kutu var."
   },
   "printers": {
     "title": "Bu cihaz · Yazıcılar",

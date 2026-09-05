@@ -2,11 +2,12 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import type { AwaitingHandoverBoxContract } from '@lezzet/types';
 
+import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { Icon } from '@/components/ui/icon';
-import { PressableSurface } from '@/components/ui/pressable-surface';
 import { fetchPendingHandover, handOverBox } from '@/lib/api/warehouse';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
@@ -83,10 +84,15 @@ export function HandoverScreen() {
   const [busy, setBusy] = useState(false);
   /** Rampada bekleyen kutu; **`null` = OKUNAMADI, sıfır DEĞİL** — "rampa boş" yanlış bir izindir. */
   const [pending, setPending] = useState<number | null>(null);
+  /** Rampada bekleyen kutuların KENDİSİ — sayının satır hâli (kullanıcı kararı 05.09). */
+  const [waiting, setWaiting] = useState<AwaitingHandoverBoxContract[]>([]);
 
   const loadPending = useCallback(async () => {
     const result = await trackWarehouse(fetchPendingHandover());
     setPending(result.error === null ? result.data.boxes : null);
+    // Okunamayan liste BOŞ liste değildir; ama sayı da `null` olduğu için ekran zaten "okunamadı"
+    // diyor — iki yarım cevap yerine tek cümle.
+    setWaiting(result.error === null ? result.data.waiting : []);
   }, []);
 
   // Ekran açılınca bir kez: sayının işi okutmaya BAŞLAMADAN önce cevap vermek.
@@ -199,32 +205,53 @@ export function HandoverScreen() {
                 : fillCopy(t.handover.pending, { n: String(pending) })}
         </Text>
 
-        {offline ? (
+        {/* EKRANIN KURALI HER ZAMAN GÖRÜNÜR (v3:1686) — "hangi siparişi vereceğini seçmiyorsun"
+            bu ekranın tasarım kararıdır. Düğme FAB'a taşınınca kural sayının altına geldi:
+            kaybolan bir kural, ikinci kutuda unutulur. */}
+        <Text style={styles.scanRule}>{t.handover.scanRule}</Text>
+
+        {!offline ? null : (
           /* ÇEVRİMDIŞI SEBEBİ BU EKRANDA EN KESKİN (v3:1692): kutu devri ANINDA yazılır ve
              kuyruğa alınamaz — taşıyıcıya fiziksel olarak verilmiş bir kutunun sistemde "sırada"
-             beklemesi, malın kimde olduğunu belirsiz bırakır. Genel "yazma kapalı" cümlesi bunu
-             söylemiyordu. */
+             beklemesi, malın kimde olduğunu belirsiz bırakır. */
           <View style={styles.locked} testID="warehouse-handover-locked">
             <Text style={styles.lockedTitle}>{t.handover.locked.title}</Text>
             <Text style={styles.lockedBody}>{t.handover.locked.body}</Text>
           </View>
+        )}
+
+        {/*
+          ── RAMPADA BEKLEYEN (kullanıcı kararı 05.09) ────────────────────────────────────────
+          Ekranın kuralı "liste değil OKUTUCU" ve bu liste onunla ÇELİŞMİYOR: seçim değil
+          ENVANTER. Satırlar dokunulamaz — hiçbiri bir eylem açmıyor. Sayaç zaten "3 kutu
+          bekliyor" diyordu; bu bölüm o cümleyi somutlaştırıyor, yerine geçmiyor.
+        */}
+        <Text style={styles.logHeading}>{t.handover.rampHeading}</Text>
+        {waiting.length === 0 ? (
+          <Text style={styles.rampEmpty} testID="warehouse-handover-ramp-empty">
+            {t.handover.rampEmpty}
+          </Text>
         ) : (
           <>
-            <PressableSurface
-              onPress={() => setScanOpen(true)}
-              feedback="scale"
-              disabled={busy}
-              style={styles.scanButton}
-              accessibilityLabel={t.handover.cta}
-              testID="warehouse-handover-scan"
-            >
-              <Icon name="scan" size={operationsTheme.size.cardTileIcon} color={operationsTheme.colors.cream} />
-              <Text style={styles.scanLabel}>{busy ? t.handover.busy : t.handover.cta}</Text>
-            </PressableSurface>
-            {/* EKRANIN KURALI DÜĞMENİN ALTINDA (v3:1686) — "hangi siparişi vereceğini seçmiyorsun"
-                bu ekranın tasarım kararıdır (liste değil OKUTUCU). Eskiden yalnız geçmiş boşken
-                görünüyordu; ilk okutmadan sonra kaybolan bir kural, ikinci kutuda unutulur. */}
-            <Text style={styles.scanRule}>{t.handover.scanRule}</Text>
+            {waiting.map((box) => (
+              <View key={box.boxId} style={styles.rampRow} testID={`warehouse-handover-ramp-${box.code}`}>
+                <Text style={styles.rampTitle}>
+                  {fillCopy(t.handover.rampRow, {
+                    ref: box.referenceNo ?? '—',
+                    no: String(box.boxNo),
+                    total: String(box.boxCount),
+                  })}
+                </Text>
+                <Text style={styles.rampCode}>{box.code}</Text>
+              </View>
+            ))}
+            {/* KIRPILMA SESSİZ DEĞİL: gerçek toplam sayaçtan geliyor, liste tavanlı. Kırpılmış bir
+                listeyi tam sanmak, rampayı olduğundan boş sanmaktır. */}
+            {pending === null || pending <= waiting.length ? null : (
+              <Text style={styles.rampMore} testID="warehouse-handover-ramp-more">
+                {fillCopy(t.handover.rampMore, { n: String(waiting.length), total: String(pending) })}
+              </Text>
+            )}
           </>
         )}
 
@@ -255,6 +282,19 @@ export function HandoverScreen() {
         {rows.length === 0 ? null : <Text style={styles.footnote}>{t.handover.footnote}</Text>}
       </ScrollView>
 
+      {/* OKUTMA FAB'DA (kullanıcı isteği 05.09) — sayım, düşüm ve yükleme ekranlarının aynı
+          kararı: kaydırılan içeriğin DIŞINDA, sağ altta sabit. İki bölümlü gövdede satır içi bir
+          düğme listeyi ikiye bölerdi ve aşağı kaydırınca elin gittiği yer boşalırdı.
+          Çevrimdışında daire GİZLENMİYOR, SÖNÜYOR: kaybolan düğme "bu ekranda okutma yok" der,
+          sönük düğme "şimdi olmaz" der ve sebebi zaten yukarıdaki kilit bloğunda yazılı. */}
+      <OperationsScanFab
+        icon="scan"
+        onPress={() => setScanOpen(true)}
+        disabled={offline || busy}
+        accessibilityLabel={busy ? t.handover.busy : t.handover.cta}
+        testID="warehouse-handover-scan"
+      />
+
       <ScanSheet
         open={scanOpen}
         title={t.handover.scanTitle}
@@ -274,20 +314,44 @@ const styles = StyleSheet.create({
     paddingBottom: operationsTheme.space['4xl'],
     gap: operationsTheme.space.md,
   },
-  scanButton: {
-    marginTop: operationsTheme.space.xl,
-    height: operationsTheme.size.controlLg,
-    borderRadius: operationsTheme.radius.control,
-    backgroundColor: operationsTheme.colors.olive,
+  /*
+    RAMPA SATIRI — DOKUNULAMAZ (05.09). Kart zemini ve "›" oku bilerek YOK: dokunulabilir görünen
+    bir satır, dokunup bir şey olmayınca arıza gibi okunur (transfer listesinin aynı kuralı).
+    Bu bölüm bir envanter, bir seçim değil.
+  */
+  rampRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
     gap: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.md,
+    borderBottomWidth: operationsTheme.border.base,
+    borderStyle: 'dashed',
+    borderBottomColor: operationsTheme.colors['sand-300'],
   },
-  scanLabel: {
+  rampTitle: {
+    flex: 1,
     fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text.button,
-    color: operationsTheme.colors.cream,
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
+  },
+  /** Kutu kodu künye: taşıyıcının etiketine METİN olarak yazılı, depocu kutunun üstünde okuyor. */
+  rampCode: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
+  rampEmpty: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.helper,
+    color: operationsTheme.colors.muted,
+    paddingVertical: operationsTheme.space.md,
+  },
+  rampMore: {
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+    paddingTop: operationsTheme.space.md,
   },
   /** Sayı satırı — ipucundan AYRI yüz: bu bir açıklama değil, işin ölçüsü. */
   pending: {

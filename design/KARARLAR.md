@@ -2167,3 +2167,30 @@ okutmaya başlamadan ÖNCE cevap vermek ve orada başlığın altında kalırdı
 diyor; kapı depo kodunu döndürmüyor, sipariş referansını döndürüyor. Elimizde olmayan bir kimliği
 yazmıyoruz (kullanıcı kuralı 05.09: sahte bilgi üretilmez). Depo kodunu göstermek isteniyorsa kapı
 alanı taşımalı — o zaman satır çizimin cümlesine tam oturur.
+
+## D8 · Okutma FAB'a taşındı, rampa bölümü açıldı (kullanıcı kararı 05.09)
+
+**Karar 1 — okutma düğmesi FAB.** Satır içi yeşil düğme sağ alttaki daireye taşındı. Sebep gövdenin
+ikiye bölünmesi: düğme iki bölümün arasında kalıp listeyi kesiyordu ve aşağı kaydırınca elin
+gittiği yer boşalıyordu. Sayım, düşüm, yükleme ve kapı satışı ekranları zaten bu kararda; D8 son
+katılan oldu. Çevrimdışında daire GİZLENMİYOR, SÖNÜYOR — kaybolan düğme *"bu ekranda okutma yok"*
+der, sönük düğme *"şimdi olmaz"* der ve sebebi zaten yukarıdaki kilit bloğunda yazılı.
+
+**Karar 2 — "RAMPADA BEKLEYEN" bölümü, v3'ün kuralına RAĞMEN değil, onun İÇİNDE.** Çizim ve brief
+*"bekleyenler listesi çizilmez"* diyor ve gerekçesi SEÇİM: bekleyen gönderileri seçilebilir diye
+çizmek, olmayan bir kararı varmış gibi göstermek olurdu. Bu bölüm seçim değil **envanter** ve fark
+koda geçirildi: satırlar dokunulamaz, kart zemini ve "›" oku bilerek yok, hiçbiri bir eylem
+açmıyor. Zaten var olan sayaç (*"Rampada 3 kutu bekliyor"*) aynı soruyu tek sayıyla cevaplıyordu;
+bölüm o cümleyi somutlaştırıyor, yerine geçmiyor.
+
+Satır *"{sipariş} · kutu 2/3"* der ve künyesinde BİZİM kutu kodumuzu taşır. Kod kargo kutusuna
+etiket olarak basılmaz ama taşıyıcının etiketine METİN olarak yazılır (§4.6) — yani depocu onu
+kutunun üstünde okuyabiliyor, uydurma bir kimlik değil.
+
+**Tavan sessiz değil.** Liste tavanlı (40) ama gerçek toplam sayaçtan geliyor ve ekran ikisi
+ayrıştığında *"ilk N listelendi — rampada M kutu var"* diyor. Kırpılmış bir listeyi tam sanmak,
+rampayı olduğundan boş sanmaktır.
+
+**Sayı ve liste TEK turda, AYNI süzgeçten** (`countAwaitingHandover` ile `listAwaitingHandover`
+birebir aynı üç şartı kullanıyor). Ayrı turlarda okunsalardı arada bir kutu devredilir ve ekran
+kendi kendini yalanlardı.

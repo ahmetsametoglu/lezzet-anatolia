@@ -51,6 +51,23 @@ export class OrderBoxService extends BaseDbService<OrderBox, OrderBoxInsert, Ord
     return this.count({ warehouseId }, { isNotNullFields: ['sealedAt', 'shipmentId'], isNullFields: ['loadedAt'] });
   }
 
+  /**
+   * **Rampadaki yığının KENDİSİ** (05.09) — sayacın (`countAwaitingHandover`) satır hâli.
+   *
+   * Süzgeç birebir aynı, ve aynı olmak ZORUNDA: liste sayaçtan gevşek olsaydı ekran "3 kutu
+   * bekliyor" der ama dördünü listeler, ya da tersi. İkisi tek gerçeği iki kez söylüyor.
+   *
+   * Sıra `orderId` sonra `boxNo`: aynı siparişin kutuları yan yana dursun — rampada yığın da
+   * öyle duruyor. Tavan çağıranın: liste sınırsız büyümez ama kırpıldığında SUSMAZ, çünkü gerçek
+   * toplam zaten sayaçtan geliyor.
+   */
+  async listAwaitingHandover(warehouseId: string, limit: number): Promise<OrderBox[]> {
+    return this.getAll(
+      { warehouseId },
+      { isNotNullFields: ['sealedAt', 'shipmentId'], isNullFields: ['loadedAt'], orderBy: 'boxNo', limit },
+    );
+  }
+
   /** Birden çok siparişin kutuları TEK sorguda — kuyruk sipariş başına tur atmasın (21.11d dersi). */
   async listByOrders(orderIds: string[]): Promise<OrderBox[]> {
     if (orderIds.length === 0) return [];

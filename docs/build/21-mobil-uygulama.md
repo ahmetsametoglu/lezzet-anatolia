@@ -11904,3 +11904,127 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   Testler 8'den 10'a: kapsam dışı ile ikinci okutmanın SESSİZ tonda olduğu ve her satırın saatini
   taşıdığı ayrıca çivilendi; mevcut sekiz iddia iki katmanlı yapıya çekildi.
+
+- [x] (21.262) **D8'E İKİ BÖLÜM: OKUTMA FAB'A TAŞINDI, "RAMPADA BEKLEYEN" AÇILDI — sayının satır hâli, seçim değil envanter** (kullanıcı isteği 05.09)
+  `touches:` `apps/mobile/src/screens/warehouse/{handover-screen.tsx,handover-screen.test.tsx,messages.json}` · `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/application/src/shipping/handover.ts` · `packages/application/src/index.ts` · `packages/database/src/services/order-box.service.ts` · `apps/mobile-api/src/api/v1/warehouse.ts` · `design/KARARLAR.md` · `design/pages/app-depo.md`
+
+  **Kullanıcının isteği:** *"Şimdi bir okutma butonu var, bunu FAB butonu yapalım. Ayrıca okutulacak
+  ve okutulan kutular var — üstte rampadaki kutular için bir bölüm, aşağıda da şu anki gibi okutma
+  geçmişi olsun."*
+
+  **FAB.** Satır içi yeşil düğme sağ alttaki daireye taşındı (`OperationsScanFab`, kitte zaten
+  vardı ve beş ekran kullanıyor — ikinci bir daire yazılmadı). Sebep gövdenin ikiye bölünmesi:
+  düğme iki bölümün arasında kalıp listeyi kesiyordu. Çevrimdışında daire GİZLENMİYOR, SÖNÜYOR.
+
+  **TASARIM KURALIYLA ÇELİŞMİYOR, İÇİNDE KALIYOR.** Çizim ve brief *"bekleyenler listesi
+  çizilmez"* diyor ve gerekçesi SEÇİM: bekleyen gönderileri seçilebilir çizmek olmayan bir kararı
+  varmış gibi göstermek olurdu. Yeni bölüm seçim değil ENVANTER ve fark koda geçti — satırlar
+  dokunulamaz, kart zemini ve "›" oku bilerek yok. Zaten var olan sayaç aynı soruyu tek sayıyla
+  cevaplıyordu; bölüm onu somutlaştırıyor.
+
+  **KAPI GENİŞLEDİ, ÇÜNKÜ BUGÜNE KADAR YALNIZ SAYI VARDI.** `GET /handover/pending` sayı dönüyordu;
+  artık satırları da dönüyor (`listAwaitingHandover`). Süzgeç sayacınkiyle BİREBİR aynı ve aynı
+  olmak zorunda: ayrışsalardı ekran "3 kutu bekliyor" deyip dördünü listelerdi. İkisi TEK turda
+  okunuyor — ayrı turlarda arada bir kutu devredilir ve ekran kendi kendini yalanlardı.
+
+  **Satır ne diyor:** *"{sipariş} · kutu 2/3"*, künyede BİZİM kutu kodumuz. Kod kargo kutusuna
+  etiket olarak basılmaz ama taşıyıcının etiketine METİN olarak yazılır (§4.6) — depocu onu kutunun
+  üstünde okuyabiliyor, uydurma bir kimlik değil. Payda GÖNDERİNİN kutu sayısı, siparişin değil
+  (ekranın her yerinde geçerli kural).
+
+  **Tavan sessiz değil:** liste 40 ile sınırlı ama gerçek toplam sayaçtan geliyor ve ikisi
+  ayrıştığında ekran *"ilk N listelendi — rampada M kutu var"* diyor.
+
+  **Cihazda ölçüldü (Oppo CPH1907):** FAB sağ altta ve zeytin, kural sayının altında, iki bölüm
+  başlıklarıyla ayrı. Rampanın DOLU hâli cihazda görülemedi — yerelde kargo siparişi yok (kayıtlı
+  boşluk, `design/BACKLOG.md §4`); üç iddia birim testinde çivili.
+
+  Testler 10'dan 13'e: bekleyen kutular listeleniyor ve satır dokunulamaz · rampa boşken sebebini
+  yazıyor · liste kırpılınca ekran bunu söylüyor.
+
+- [x] (21.263) **YAZIM KİMLİĞİ DESENİ İKİ DEFTERE + rampa teli MUTLAK konuşuyor — cevabı kaybolan istek malı iki kez yazıyordu** (kullanıcı kararı 04.09: *"yeşil alandayız, her zaman en doğru çözüme odaklanmalıyız"*; üç seçenekten **desen** seçildi)
+  `touches:` `supabase/migrations/{0018_money.sql,0031_warehouse.sql}` · `packages/types/src/entities/{money,warehouse}.schema.ts` · `packages/types/src/contracts/courier-api.schema.ts` (+ testi) · `packages/database/src/services/{money,warehouse-transfer}.service.ts` · `packages/application/src/order/{payment.ts,payment.test.ts}` · `packages/application/src/warehouse/transfer.ts` · `packages/application/src/courier/{van-stock.ts,van-stock.test.ts,delivery.test.ts}` · `packages/application/src/index.ts` · `apps/mobile-api/src/api/v1/courier.ts` · `apps/mobile/src/lib/api/courier.ts` · `apps/mobile/src/screens/courier/{van-stock-screen.tsx,van-stock-screen.test.tsx,messages.json}`
+
+  **Ölçüm (04.09, Oppo + kod).** Rampada araca serbest ürün alırken cevabı kaybolan bir istek
+  tekrarlanınca mal İKİ KEZ yazılıyordu ve kimse görmüyordu. Zincir dört halka:
+  1. `van-stock-screen.tsx:163` hata dalı erken `return` ediyor, sondaki `load()`u ATLIYOR — liste
+     tazelenmiyor.
+  2. Ekranın cümlesi *"bağlantıyı kontrol edip yeniden dene"* — kör tekrara DAVET.
+  3. Hareket idempotent değil: `takeToVan` her çağrıda yeni bir `warehouse_transfer` doğuruyor.
+  4. **Asıl kusur:** ekran MUTLAK düşünüyor ("araçta 5 olsun") ama tel FARK taşıyor
+     (`:280` `next - line.qty`) ve farkın tabanı istemcinin — hata dalında bilerek tazelenmeyen —
+     görüşü. Yani o andan sonraki her MEŞRU düzeltme de yanlış tabandan hesaplanıyor.
+
+  **Dört bağımsız tasarım jüriden geçirildi** (en küçük yama · kökü kes · repo desenine sadakat ·
+  şerit maliyeti; her biri üç hakemden). Kazanan *"mutlak hedef + görülen taban"*; idempotency
+  anahtarı tek başına ELENDİ çünkü **yanlış farkı idempotent yazar** — kök kusur tekrarın kendisi
+  değil, farkın doğrulanmamış bir tabandan hesaplanması.
+
+  **Kullanıcı kararı maliyet eksenini reddetti.** Tasarım atomik kapanışı "depo şeridinin dosyası +
+  migration" diye ertelemişti; kullanıcı *"yeşil alandayız, en doğru çözüm"* diyerek hem onu hem de
+  `payment.ts`in aynı borcunu birlikte istedi.
+
+  **DESEN — üç parça, iki defterde aynen.**
+  1. `idempotency_key text` kolonu (`money_movement` + `warehouse_transfer`).
+  2. Tekil indeks. **Kısmi DEĞİL** — `0018`in kendi künyesi gerekçeyi zaten yazmış: `null`'lar
+     tekillikte birbirine eşit sayılmaz, yani anahtarsız yazım (elle giriş, besleme, banka içe
+     aktarma) kısıta hiç takılmaz; `on conflict` de düz indeksi çıkarım inceliği olmadan hedefler.
+  3. Yordam `p_idempotency_key` alır; **çakışmada HATA FIRLATMAZ**, var olan satırın sonucunu
+     `deduped` ile döndürür — kapı için tekrar bir arıza değil, *"zaten yazılmıştı"* cevabıdır.
+
+  `import_fingerprint` BİRLEŞTİRİLMEDİ: onun anlamı *"bu ekstredeki bu satır"* ve tekilliği hesap
+  başına; yazım kimliğininki küresel. Tek kolona sıkıştırmak banka parmak izlerini küresel benzersiz
+  olmaya zorlardı. İki kolon, iki anlam, TEK şekil.
+
+  **Transferde iki incelik.** Tekrar eden istek stok düşüm döngüsüne HİÇ girmiyor (girseydi mal
+  ikinci kez kaynaktan inerdi — arıza büyüyerek geri gelirdi); ve bilinen anahtar en başta bir hızlı
+  yolda yakalanıyor ki tekrar boşuna BELGE NUMARASI yakmasın (`next_document_no` sayacı ilerletiyor,
+  yoksa depo kâğıt serisinde her yeniden denemede boşluk doğardı). O erken okuma **koruma değil**;
+  korumanın indeks olduğu künyeye yazılı.
+
+  **`BEKLEYEN(12.11) KAPANDI.** `payment.ts`in oku-sonra-yaz kontrolü (`alreadyWritten`, `meta`dan
+  okuyordu) söküldü; karar veritabanına geçti. Anahtar `meta`ya artık YAZILMIYOR — iki yerde duran
+  bir gerçek bir gün ayrışır.
+
+  **RAMPA TELİ (kurye kapısı).** `CourierVanStockMoveRequestSchema` (fark + `variantId XOR code`
+  `refine`'ı) ikiye ayrıldı: `set` (varyant + **hedef** + **görülen taban** + anahtar) ve `scan`
+  (yalnız kod — okutan taraf varyantı bilmediği için hedef de taban da veremez). Cevapta `movedQty`
+  → **`delta`** (İŞARETLİ: `+` alındı, `−` geri kondu, **`0` hiçbir hareket yazılmadı**) ve yeni bir
+  `stale` dalı. `/van-stock/take` + `/van-stock/return` uçları `/van-stock/set` + `/van-stock/scan`
+  oldu — ikisi ayrıyken gövdeleri birbirinin kopyasıydı.
+
+  `setVanQty` kapısının **sırası bağlayıcı**: (1) YAKINSAMA — gerçek zaten hedefteyse hiçbir şey
+  yazma, `delta: 0` ile BAŞARI dön; (2) TABAN — gerçek görülenden farklıysa hiçbir şey yazma,
+  `stale` dön. Yakınsama mutlaka önce: kaybolmuş cevabın tekrarında taban zaten bayattır ama sonuç
+  DOĞRUDUR; ters sıra kuryeyi doğru isteği için cezalandırırdı.
+
+  **EKRAN ARTIK HİÇBİR DALDA SUSMUYOR.** Hata dalındaki erken `return` kalktı, ölçüm her yolda
+  koşuyor; `setBusy(false)` ölçümden SONRA (eskiden kurye tazelenmemiş listeye ikinci kez
+  dokunabiliyordu); ilk okuma düşünce ekran **"araç boş" demek yerine hata çiziyor** —
+  `status:'error'` yazılıyor ama hiçbir yerde çizilmiyordu, `hasVehicle` varsayılanı `true` olduğu
+  için ölçülemeyen değer SIFIR gösteriliyordu (CLAUDE §1); tazeleme düşerse "depoda N kalır"
+  tavsiyesi GİZLENİYOR (dayanağı düşmüş sayıyı söylemeye devam etmek aynı hata olurdu); meşgulken
+  gelen okutma artık sebebini söylüyor (çıplak `return`du, ikinci kutu izsiz kayboluyordu).
+
+  **Tasarım sırasında ölçülen ikinci hata da düzeltildi:** `returnFromVan` depoları takas edip
+  `takeToVan`ı çağırıyor, o da `input.vehicleWarehouseId`i ölçüyor — takas edilmiş hâlde bu TESİS.
+  Yani devir yönünde dönen `vanQty` çıkış deposunun adediydi. Bugüne dek görünmüyordu (ekran yalnız
+  `movedQty`yi okuyordu) ama yeni tasarımda o sayı satırın kaynağı oluyor.
+
+  **Testleri yazıldı.** Uygulama: aynı anahtarla iki `takeToVan` malı bir kez taşır · anahtarsız iki
+  çağrı ikisi de yazılır (karşı-örnek) · devir ARACIN adedini söyler (fikstür bilerek ayrık: araçta
+  1, tesiste 9 — eşit olsalardı test yanlış kodda da geçerdi) · hedef yazılır yönü sunucu bulur ·
+  yakınsama (taban BAYAT gönderilerek sıra çivileniyor) · taban tutmazsa hiçbir şey yazılmaz. Para:
+  tekrar eden istek `deduped` der ve defter tek satır kalır; anahtar `meta`da ARTIK YOK. Sözleşme
+  testi baştan yazıldı (eski XOR kuralı düştü): taban zorunlu, sıfır meşru, eksi/kesirli ret.
+  Ekran: ilk okuma düşerse "araç boş" demez · yazım telde düşerse liste yine ölçülür.
+
+  **Durum (05.09):** `db:refresh` kullanıcının isteğiyle koşuldu; kolonlar, indeksler ve iki yordam
+  yeni parametreleriyle doğrulandı. Tip 20/20 · lint · **tam paket 4190/4190 (370 dosya)**.
+
+  **Kapatmadığı — dürüst kalan risk.** `scan` yolu tekrara karşı korunamaz ve bu kapatılabilir bir
+  açık değil: *"aynı paketi yeniden okuttum"* ile *"ikinci paketi okuttum"* hiçbir ölçümün
+  ayıramayacağı iki şey; oradaki koruma mekanizma değil GÖRÜNÜRLÜK. Dar bir yarış da duruyor: yazım
+  olduktan sonra üçüncü biri aynı varyantı eski sayıya çekerse kuryenin tekrarındaki taban yeniden
+  tutar. Ve `set` uçları değiştiği için telefondaki eski derleme 404 alır — sessizce korumasız
+  yazmaktansa gürültüyle kırılmak seçildi.
