@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { CategoryService, ProductService, StockService, WarehouseTransferService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock } from '@lezzet/database/testing';
-import { listVanCandidates, readVanStock, returnFromVan, takeToVan } from './van-stock';
+import { listVanCandidates, readVanStock, returnFromVan, setVanQty, takeToVan } from './van-stock';
 
 /**
  * **ARACA SERBEST ÜRÜN** (v3:19 · kullanıcı kararı 31.08).
@@ -134,6 +134,84 @@ describe('araca al / depoya devret', () => {
 
     expect(alis?.note).toBe('Araca serbest ürün');
     expect(devir?.note).toBe('Araçtan depoya devir');
+  });
+
+  it('DEVİR ARACIN adedini söyler — tesisinkini DEĞİL', async () => {
+    /* AYNANIN TUZAĞI (21.263, ölçüldü 05.09): `returnFromVan` depoları takas edip `takeToVan`ı
+       çağırıyor, o da `input.vehicleWarehouseId`i ölçüyor — takas edilmiş hâlde bu TESİS. Yani
+       dönen `vanQty` çıkış deposunun adedini taşıyordu. Fikstür bunu ancak İKİ SAYI AYRIŞIRSA
+       yakalar: burada araçta 1, tesiste 9 — eşit olsalardı test yanlış kodda da geçerdi. */
+    await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 4 });
+
+    const sonuc = await returnFromVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 3 });
+
+    expect(sonuc).toMatchObject({ status: 'ok', movedQty: 3, vanQty: 1 });
+    expect((await stocks.getAvailable(facilityId, variantId)).physicalQty).toBe(9);
+  });
+
+  it('AYNI ANAHTARLA iki çağrı malı BİR KEZ taşır — cevabı kaybolan isteğin tekrarı', async () => {
+    /* ÖLÇÜLEN ARIZA (04.09, Oppo): rampada cevabı kaybolan istek tekrarlanınca mal araca İKİNCİ
+       kez biniyordu ve ekran eski sayıyı gösterdiği için kimse görmüyordu. Kararı artık veritabanı
+       veriyor (`warehouse_transfer_idempotency_key`), kapı da kabul adımını hiç çalıştırmıyor —
+       çalıştırsaydı mal ikinci kez kaynaktan inerdi. */
+    const key = `van-${stamp}-tekrar`;
+    const ilk = await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 2, idempotencyKey: key });
+    const ikinci = await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 2, idempotencyKey: key });
+
+    expect(ilk).toMatchObject({ status: 'ok', movedQty: 2, vanQty: 2 });
+    /* İkinci çağrı TAŞIMADI (`movedQty: 0`) ama yalan da söylemiyor: araçtaki GERÇEK sayıyı
+       veriyor. "2 alındı" deseydi yazılmamış bir hareketi yazılmış gösterirdi. */
+    expect(ikinci).toMatchObject({ status: 'ok', movedQty: 0, vanQty: 2 });
+    expect((await stocks.getAvailable(facilityId, variantId)).physicalQty).toBe(8);
+  });
+
+  it('ANAHTARSIZ iki çağrı meşrudur ve İKİSİ DE yazılır — tekrarın tanımı anahtardır', async () => {
+    // Karşı-örnek olmadan üstteki test "iki çağrı hep bir kez yazar" gibi de okunabilirdi.
+    // Rampada aynı üründen art arda bir adet almak gerçek bir iştir; koruma anahtarla istenir.
+    await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 1 });
+    await takeToVan(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, qty: 1 });
+
+    expect((await stocks.getAvailable(facilityId, variantId)).physicalQty).toBe(8);
+    expect(await readVanStock(db, { vehicleWarehouseId: vanId })).toEqual([
+      expect.objectContaining({ variantId, qty: 2 }),
+    ]);
+  });
+
+  it('HEDEF yazılır, yönü SUNUCU bulur — artırma da azaltma da tek kapıdan', async () => {
+    const yukari = await setVanQty(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, targetQty: 4, observedQty: 0 });
+    expect(yukari).toMatchObject({ status: 'ok', delta: 4, vanQty: 4 });
+
+    const asagi = await setVanQty(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, targetQty: 1, observedQty: 4 });
+    /* İŞARET yönü söylüyor: istemci hiçbir yerde "al" ya da "geri koy" demedi. */
+    expect(asagi).toMatchObject({ status: 'ok', delta: -3, vanQty: 1 });
+    expect((await stocks.getAvailable(facilityId, variantId)).physicalQty).toBe(9);
+  });
+
+  it('YAKINSAMA: gerçek zaten hedefteyse hiçbir şey yazılmaz ve bu bir BAŞARIDIR', async () => {
+    /* ARIZANIN ÇEKİRDEĞİ. Cevabı kaybolan bir istek yazmıştır ama ekran göremez; kurye aynı sayıyı
+       yeniden yazar. Fark gönderilseydi mal ikinci kez binerdi. Mutlak hedefte ikinci istek
+       zararsızdır — ve `stale` DEĞİL `ok` döner: o istek bir çatışma değil, bir başarıdır.
+       Sırayı (yakınsama önce, taban sonra) çiviliyen test bu: taban 0 gönderiliyor, yani BAYAT. */
+    await setVanQty(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, targetQty: 2, observedQty: 0 });
+
+    const tekrar = await setVanQty(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, targetQty: 2, observedQty: 0 });
+
+    expect(tekrar).toMatchObject({ status: 'ok', delta: 0, vanQty: 2 });
+    expect((await stocks.getAvailable(facilityId, variantId)).physicalQty).toBe(8);
+  });
+
+  it('TABAN TUTMAZSA hiçbir şey yazılmaz — cevap gerçeği taşır', async () => {
+    /* Araçtaki sayı arada değişmiş olabilir (kapıda satış, D6 kabulü, başka bir yazım). Kurye
+       bayat bir sayıya bakarak hedef yazıyorsa hedefi de yanlış hesaplamış demektir; kapı yazmayı
+       reddediyor ve GERÇEĞİ söylüyor ki ekran satırı yerinde düzeltebilsin. */
+    await setVanQty(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, targetQty: 3, observedQty: 0 });
+
+    const bayat = await setVanQty(db, { warehouseId: facilityId, vehicleWarehouseId: vanId, variantId, targetQty: 6, observedQty: 5 });
+
+    expect(bayat).toEqual({ status: 'stale', variantId, vanQty: 3 });
+    // "Hiçbir şey yazılmadı" bir GARANTİ: depo da araç da kıpırdamamalı.
+    expect((await stocks.getAvailable(facilityId, variantId)).physicalQty).toBe(7);
+    expect(await readVanStock(db, { vehicleWarehouseId: vanId })).toEqual([expect.objectContaining({ variantId, qty: 3 })]);
   });
 
   it('ARAÇ YOKSA hiçbir şey yazılmaz — gidecek bir yer yok', async () => {

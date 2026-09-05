@@ -134,6 +134,15 @@ export const WarehouseTransferSchema = z.object({
   /** Geri almanın gerekçesi — `note` sevk anının notudur, bu onu iptal eden kararın. */
   cancelReason: z.string().nullable(),
   note: z.string().nullable(),
+  /**
+   * **Yazımın kimliği** (21.263) — "bu sevki zaten yazdım mı?". İstemcide üretilir ve İSTEĞİN
+   * kimliğidir; cevabı kaybolan bir "araca al" isteği tekrarlandığında aynı anahtarla gelir ve
+   * veritabanı ikinci yazımı reddeder (`warehouse_transfer_idempotency_key`). Künyesi
+   * `0031_warehouse.sql`de; aynı kalıbın eşi `money_movement.idempotency_key`.
+   *
+   * `null` = korumasız sevk (depo ekranından elle transfer, besleme) ve meşrudur.
+   */
+  idempotencyKey: z.string().nullable(),
   createdAt: z.string(),
 });
 export type WarehouseTransfer = z.infer<typeof WarehouseTransferSchema>;
@@ -171,6 +180,15 @@ export const DispatchTransferResultSchema = z.object({
   ok: z.boolean(),
   transferId: z.string().uuid(),
   referenceNo: z.string(),
+  /**
+   * **Bu çağrı yeni bir sevk YAZMADI** (21.263): aynı `idempotencyKey` ile daha önce yazılmış bir
+   * transfer bulundu ve onun künyesi döndü — stok ikinci kez DÜŞMEDİ. Okuyan taraf için `true` bir
+   * hata değil bir bilgidir: rampada ekran "aldım" yerine "zaten alınmıştı" diyebilsin.
+   *
+   * `optional`: anahtarsız çağrıda RPC `false` yazıyor, ama eski bir kayıt okunursa alan hiç
+   * bulunmayabilir; okuyan taraf VARLIĞINA değil DEĞERİNE baksın.
+   */
+  deduped: z.boolean().optional(),
 });
 export type DispatchTransferResult = z.infer<typeof DispatchTransferResultSchema>;
 

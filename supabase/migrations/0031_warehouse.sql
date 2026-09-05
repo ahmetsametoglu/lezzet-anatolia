@@ -147,6 +147,21 @@ create table public.warehouse_transfer (
   -- karışmamalı — `note` sevk anının notudur, bu ise onu iptal eden kararın.
   cancel_reason text,
   note text,
+  /*
+    YAZIMIN KİMLİĞİ (21.263 · kullanıcı kararı 04.09) — "bu sevki zaten yazdım mı?"
+
+    İstemcide üretilir ve İSTEĞİN kimliğidir, transferin değil: rampada cevabı kaybolan bir "araca
+    al" isteği tekrarlandığında aynı anahtarla gelir, aşağıdaki tekil indeks ikinci yazımı
+    reddeder ve `dispatch_transfer` var olan transferin künyesini döndürür. Ölçülen arıza buydu
+    (04.09, Oppo): kurye tekrar dokununca mal araca İKİNCİ kez biniyor, ekran eski sayıyı
+    gösterdiği için kimse görmüyordu.
+
+    Aynı kalıp para defterinde de var (`money_movement.idempotency_key`, 0018) — kullanıcı kararı
+    tek tek değil DESEN olarak çözmekti. `note`a ya da `reference_no`ya binmiyor: `note` sevk
+    anının cümlesidir (04.09'da yön anlamı yüklendi, 21.257) ve `reference_no` insanın okuduğu
+    belge numarasıdır.
+  */
+  idempotency_key text,
   created_at timestamptz not null default now(),
   -- Durum ile izler birbirini tutar: `cancelled` damgasız olamaz, damga da başka durumda duramaz.
   -- Kural veride durur (CLAUDE §1) — RPC'yi atlayan bir `update` bunu delemesin.
@@ -157,6 +172,11 @@ create table public.warehouse_transfer (
 -- "Yolda ne var" — sanal transit depo AÇILMADI (T4), bu sorunun kaynağı transfer kaydının kendisi.
 create index warehouse_transfer_status_idx on public.warehouse_transfer (status, dispatched_at desc);
 create index warehouse_transfer_to_idx on public.warehouse_transfer (to_warehouse_id, status);
+-- Yazım kimliği (21.263): aynı istek İKİ KEZ sevk yazamaz. Kısmi indeks DEĞİL — anahtarsız sevk
+-- (depo ekranından elle transfer, besleme) `null` taşır ve `null`'lar tekil karşılaştırmada
+-- birbirine eşit sayılmaz, yani bu kısıta hiç takılmazlar. `on conflict (idempotency_key)` de
+-- böylece çıkarım inceliği olmadan hedefleyebiliyor. (Para defterindeki eşinin aynı gerekçesi.)
+create unique index warehouse_transfer_idempotency_key on public.warehouse_transfer (idempotency_key);
 
 create table public.warehouse_transfer_line (
   id uuid primary key default gen_random_uuid(),
@@ -621,7 +641,11 @@ create or replace function public.dispatch_transfer(
   p_to_warehouse_id uuid,
   p_lines jsonb,
   p_actor_id uuid default null,
-  p_note text default null
+  p_note text default null,
+  -- Yazımın kimliği (21.263) — künyesi kolonun kendisinde. `null` = korumasız sevk (depo
+  -- ekranından elle transfer, besleme); `null`'lar tekil indekste çakışmadığı için o yol
+  -- aynen çalışır.
+  p_idempotency_key text default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -642,6 +666,23 @@ declare
 begin
   if p_lines is null or jsonb_array_length(p_lines) = 0 then
     raise exception 'dispatch_transfer: en az bir kalem gerekli';
+  end if;
+
+  /*
+    HIZLI YOL — KORUMA DEĞİL (21.263). Bilinen bir anahtar burada erkenden yakalanır ki tekrar
+    eden istek boşuna BELGE NUMARASI yakmasın: `next_document_no` aşağıda sayacı ilerletiyor ve
+    her yeniden denemede depo kâğıt serisinde bir boşluk doğardı.
+
+    Korumanın kendisi bu satır DEĞİL, aşağıdaki `on conflict`tir: burası oku-sonra-yaz, yani aynı
+    ANDA gelen ikinci isteği göremez. Tam da kapatmaya çalıştığımız pencere bu; iki mekanizma bu
+    yüzden birlikte duruyor ve hangisinin ne yaptığı burada yazılı.
+  */
+  if p_idempotency_key is not null then
+    select id, reference_no into v_transfer_id, v_reference
+      from public.warehouse_transfer where idempotency_key = p_idempotency_key;
+    if v_transfer_id is not null then
+      return jsonb_build_object('ok', true, 'transfer_id', v_transfer_id, 'reference_no', v_reference, 'deduped', true);
+    end if;
   end if;
 
   -- Kaynak depo KALEMLERDEN türer, parametre değil: partiler zaten bir depoda duruyor ve ayrıca
@@ -694,9 +735,22 @@ begin
   -- Belge numarası kaynak deponun koduyla ayrışır (T6): kâğıt klasör o depoda duruyor.
   v_reference := public.next_document_no('TRF-' || v_from_code, extract(year from now())::int);
 
-  insert into public.warehouse_transfer (from_warehouse_id, to_warehouse_id, reference_no, dispatched_by, note)
-  values (v_from_warehouse_id, p_to_warehouse_id, v_reference, p_actor_id, p_note)
+  insert into public.warehouse_transfer (from_warehouse_id, to_warehouse_id, reference_no, dispatched_by, note, idempotency_key)
+  values (v_from_warehouse_id, p_to_warehouse_id, v_reference, p_actor_id, p_note, p_idempotency_key)
+  on conflict (idempotency_key) do nothing
   returning id into v_transfer_id;
+
+  /*
+    ASIL KORUMA BURASI (21.263). Hızlı yolu geçen ama aynı anda gelen ikinci istek indekse takılır
+    ve buraya düşer. **Erken dönmek ZORUNLU**: aşağıdaki kalem döngüsü stoğu DÜŞÜYOR; düşülmezse
+    mal ikinci kez kaynaktan iner ve arıza büyüyerek geri gelir. Yakılan belge numarası burada
+    kaybediliyor — seride boşluk doğar ve bu kabul: numara ucuz, mükerrer stok hareketi değil.
+  */
+  if v_transfer_id is null then
+    select id, reference_no into v_transfer_id, v_reference
+      from public.warehouse_transfer where idempotency_key = p_idempotency_key;
+    return jsonb_build_object('ok', true, 'transfer_id', v_transfer_id, 'reference_no', v_reference, 'deduped', true);
+  end if;
 
   for v_line in select * from jsonb_array_elements(p_lines) loop
     v_stock_id := (v_line ->> 'source_stock_id')::uuid;
@@ -740,11 +794,13 @@ begin
        p_actor_id, v_reference, v_transfer_id);
   end loop;
 
-  return jsonb_build_object('ok', true, 'transfer_id', v_transfer_id, 'reference_no', v_reference);
+  -- `deduped` her iki yolda da YAZILIR (21.263): okuyan taraf alanın varlığına değil DEĞERİNE
+  -- baksın. Yalnız tekrar dalında yazılsaydı "alan yok" ile "yeni yazım" aynı şeye benzerdi.
+  return jsonb_build_object('ok', true, 'transfer_id', v_transfer_id, 'reference_no', v_reference, 'deduped', false);
 end;
 $$;
 
-revoke execute on function public.dispatch_transfer(uuid, jsonb, uuid, text) from public, anon, authenticated;
+revoke execute on function public.dispatch_transfer(uuid, jsonb, uuid, text, text) from public, anon, authenticated;
 
 -- ── Kabul (19.1) ────────────────────────────────────────────────────────────
 -- İkinci fiziksel gerçek an: mal hedef depoda doğar. Parti kimliği KORUNUR (T4) — tarih, lot ve

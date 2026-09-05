@@ -103,10 +103,34 @@ describe('kapı tahsilatı tekillik anahtarı (K4)', () => {
   });
 
   it('anahtar harekete KALICI yazılır — tekrar bir saat sonra gelse de yakalanır', async () => {
+    /* ANAHTARIN EVİ DEĞİŞTİ (21.263): 05.09'a kadar `meta.idempotencyKey`de duruyordu ve kontrol
+       uygulama katmanında oku-sonra-yaz idi. Artık kendi kolonunda (`money_movement.idempotency_key`)
+       ve kararı tekil indeks veriyor. Testin ÇİVİLEDİĞİ ŞEY DEĞİŞMEDİ — anahtar kalıcı olmalı,
+       yoksa saatler sonra gelen tekrar yakalanamaz; değişen yalnız nerede durduğu. */
     const key = `door-${stamp}-kalici`;
     await recordOrderPayment(db, { orderId, accountId, amountCents: 1500, idempotencyKey: key });
 
     const written = (await movements.listByOrder(orderId)).filter((m) => m.type === 'order_payment');
-    expect(written[0]?.meta?.['idempotencyKey']).toBe(key);
+    expect(written[0]?.idempotencyKey).toBe(key);
+    // `meta` ARTIK TAŞIMIYOR ve bu bilinçli: iki yerde duran bir gerçek bir gün ayrışır.
+    expect(written[0]?.meta?.['idempotencyKey']).toBeUndefined();
+  });
+
+  it('TEKRAR EDEN İSTEK "yazdım" demez — cevap `deduped`, defter tek satır', async () => {
+    /* Kararı artık veritabanı veriyor; kapının okuyan tarafa söylediği şey de değişti: ikinci çağrı
+       bir hata DEĞİL ama "tahsil edildi" de değil. Ekran bunu ayırabilsin diye `deduped` var —
+       yoksa kurye aynı parayı iki kez aldığını sanır. */
+    const key = `door-${stamp}-tekrar`;
+    const ilk = await recordOrderPayment(db, { orderId, accountId, amountCents: 1200, idempotencyKey: key });
+    const ikinci = await recordOrderPayment(db, { orderId, accountId, amountCents: 1200, idempotencyKey: key });
+
+    expect(ikinci).toMatchObject({ status: 'ok', deduped: true });
+    // İlk çağrıda alan HİÇ YOK — sözleşmenin kendi kuralı: "alan yoksa yazım gerçekten yapıldı".
+    // `deduped: undefined` diye yazmak yetmiyor; `toMatchObject` yokluk ile `undefined`ı ayırıyor.
+    expect(ilk.status).toBe('ok');
+    expect(ilk).not.toHaveProperty('deduped');
+    expect(await paymentsOfOrder()).toBe(1);
+    // Tutar da tekrar dalında GÜNCEL: RPC orada da defteri yeniden topluyor.
+    expect((await orders.getById(orderId))?.amountCollectedCents).toBe(1200);
   });
 });

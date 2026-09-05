@@ -324,6 +324,12 @@ export async function takeToVan(
      * çağıranın zaten bildiği niyeti kapıda yeniden çıkarmak olurdu).
      */
     note?: string;
+    /**
+     * Yazımın kimliği (21.263) — rampada cevabı kaybolan isteğin tekrarı malı İKİNCİ kez araca
+     * bindirmesin. Anahtar sevke gider; tekil indeks ikinci yazımı reddeder ve bu kapı kabul
+     * adımını hiç çalıştırmadan ölçülmüş sonucu döndürür (aşağıdaki `deduped` dalı).
+     */
+    idempotencyKey?: string | null;
   },
 ): Promise<TakeToVanOutcome> {
   if (input.vehicleWarehouseId === null) return { status: 'no_vehicle' };
@@ -359,10 +365,26 @@ export async function takeToVan(
     lines,
     actorId: input.actorId ?? null,
     note: input.note ?? 'Araca serbest ürün',
+    idempotencyKey: input.idempotencyKey,
   });
   if (sevk.status !== 'ok') {
     if (sevk.status === 'failed') return { status: 'failed', message: sevk.message };
     return { status: 'forbidden', reason: 'out_of_scope' };
+  }
+
+  /*
+    TEKRAR EDEN İSTEK BURADA DURUR (21.263). Sevk zaten yazılmışsa KABUL ADIMI ÇALIŞTIRILMAZ:
+    ilk çağrı ya işi bitirmiştir (transfer `received`, mal araçta) ya da kabulde takılmıştır
+    (transfer `in_transit`, hâli `stuck` olarak zaten görünür ve depo ekranından çözülür — bu
+    dosyanın `stuck` künyesinin kararı). İkisinde de doğru davranış aynı: hiçbir şey yazma, malın
+    ŞU AN nerede olduğunu ÖLÇ ve onu söyle.
+
+    `movedQty: 0` bilerek: bu çağrı hiçbir şey taşımadı. Taşındığını yazmak, yazılmamış bir
+    hareketi yazılmış göstermek olurdu.
+  */
+  if (sevk.deduped) {
+    const olcum = await vanQtyOfVariant(db, input.vehicleWarehouseId, input.variantId);
+    return { status: 'ok', variantId: input.variantId, movedQty: 0, vanQty: olcum };
   }
 
   const transferLines = await new WarehouseTransferService(db).listLines(sevk.transferId);
@@ -376,10 +398,24 @@ export async function takeToVan(
      çözülebilsin. Sessiz bir `ok`, kaybolmuş bir malı "araçta" diye gösterirdi. */
   if (kabul.status !== 'ok') return { status: 'stuck', transferId: sevk.transferId };
 
-  const vanda = (await readVanStock(db, { vehicleWarehouseId: input.vehicleWarehouseId })).find(
-    (line) => line.variantId === input.variantId,
-  );
-  return { status: 'ok', variantId: input.variantId, movedQty: input.qty, vanQty: vanda?.qty ?? input.qty };
+  return {
+    status: 'ok',
+    variantId: input.variantId,
+    movedQty: input.qty,
+    vanQty: await vanQtyOfVariant(db, input.vehicleWarehouseId, input.variantId),
+  };
+}
+
+/**
+ * Bir varyantın BİR depodaki adedi — tek satır, tek süzgeç.
+ *
+ * Kendi fonksiyonu, çünkü üç yerden soruluyor (yazım sonrası ölçüm, tekrar dalı, devrin düzeltmesi)
+ * ve üçünde de `readVanStock`un TAM listesini çekip içinden aramak gereksiz iş olurdu. Üçüncü bir
+ * kopya doğmasın diye tek yerde (CLAUDE §1).
+ */
+async function vanQtyOfVariant(db: SupabaseClient, warehouseId: string, variantId: string): Promise<number> {
+  const line = (await readVanStock(db, { vehicleWarehouseId: warehouseId })).find((row) => row.variantId === variantId);
+  return line?.qty ?? 0;
 }
 
 /**
@@ -391,6 +427,13 @@ export async function takeToVan(
  *
  * **Aynasının yazdığı NOT kendisinindir** (21.257): mekanizma ortak, cümle değil — belgeyi okuyan
  * yönü nottan anlar. Künye `takeToVan`ın `note` alanında.
+ *
+ * ── AYNANIN TUZAĞI: DÖNEN `vanQty` DÜZELTİLİYOR (21.263 · ölçüldü 05.09) ────
+ * Takas yalnız depoları değil ADLARINI da yer değiştiriyor: `takeToVan`ın içinde
+ * `input.vehicleWarehouseId` bu yönde **tesistir**, araç değil. Dolayısıyla oradan dönen `vanQty`
+ * aracın değil ÇIKIŞ DEPOSUNUN o varyanttaki adediydi. Bugüne dek görünmüyordu çünkü ekran yalnız
+ * `movedQty`yi yazıp listeyi yeniden okuyordu — ama sayı yanlıştı, ve yanlış kaldığı sürece bir gün
+ * ona güvenen biri çıkardı. Ölçüm burada, ARACIN kendi deposundan, yeniden yapılıyor.
  */
 export async function returnFromVan(
   db: SupabaseClient,
@@ -400,15 +443,96 @@ export async function returnFromVan(
     variantId: string;
     qty: number;
     actorId?: string | null;
+    /** Yazımın kimliği (21.263) — geçirgen; künyesi `takeToVan`ın aynı alanında. */
+    idempotencyKey?: string | null;
   },
 ): Promise<TakeToVanOutcome> {
   if (input.vehicleWarehouseId === null) return { status: 'no_vehicle' };
-  return takeToVan(db, {
-    warehouseId: input.vehicleWarehouseId,
+  const van = input.vehicleWarehouseId;
+  const sonuc = await takeToVan(db, {
+    warehouseId: van,
     vehicleWarehouseId: input.warehouseId,
     variantId: input.variantId,
     qty: input.qty,
     actorId: input.actorId ?? null,
     note: 'Araçtan depoya devir',
+    idempotencyKey: input.idempotencyKey,
   });
+  // Yukarıdaki künyenin tuzağı: `takeToVan` tesisin adedini ölçtü. Araçtakini burada söylüyoruz.
+  return sonuc.status === 'ok' ? { ...sonuc, vanQty: await vanQtyOfVariant(db, van, input.variantId) } : sonuc;
+}
+
+export type SetVanQtyOutcome =
+  | { status: 'ok'; variantId: string; delta: number; vanQty: number }
+  /** Taban tutmadı — HİÇBİR ŞEY YAZILMADI ve `vanQty` aracın gerçeğidir. Künye kapının içinde. */
+  | { status: 'stale'; variantId: string; vanQty: number }
+  | { status: 'not_enough'; available: number }
+  | { status: 'no_vehicle' }
+  | { status: 'forbidden'; reason: 'out_of_scope' }
+  | { status: 'stuck'; transferId: string }
+  | { status: 'failed'; message: string };
+
+/**
+ * **ARAÇTAKİ ADEDİ YAZ** — rampanın tek yazım kapısı (21.263 · kullanıcı kararı 04.09).
+ *
+ * İstemci "şu kadar EKLE" demeyi bıraktı, "şu kadar OLSUN — ben şu kadar görüyorum" diyor. Farkı ve
+ * yönü burada, aracın GERÇEK adedi ölçülerek buluyoruz. Sözleşme künyesi
+ * (`CourierVanStockSetRequestSchema`) neden fark göndermediğimizi anlatıyor; burada yalnız SIRA var
+ * ve sıranın kendisi bir karar.
+ *
+ * ── İKİ KONTROL, BU SIRAYLA ─────────────────────────────────────────────────
+ * 1. **YAKINSAMA** — gerçek zaten hedefe eşitse hiçbir şey yazma, BAŞARI dön (`delta: 0`).
+ * 2. **TABAN** — gerçek, istemcinin gördüğünden farklıysa hiçbir şey yazma, `stale` dön.
+ *
+ * **Yakınsama MUTLAKA tabandan önce.** Cevabı kaybolan bir isteğin tekrarında taban zaten bayattır
+ * (ilk istek yazdı, ekran göremedi) ama sonuç DOĞRUDUR — o istek bir çatışma değil bir başarıdır.
+ * Sıra ters olsaydı kurye doğru isteği için `stale` yer, ekran ona "değişmiş" derdi ve o an
+ * araçtaki sayı zaten istediği sayı olurdu. Bu iki cümle bu kapının çekirdeği.
+ *
+ * ── NEDEN AYRI BİR KAPI, `takeToVan`ın İÇİNE GÖMÜLMEDİ ──────────────────────
+ * `takeToVan`/`returnFromVan` fiziksel hareketin iki yönü ve başka çağıranları var (akşam dönüşü
+ * `returnFromVan`ı adet vererek çağırıyor, besleme `takeToVan`ı). Onlara mutlak hedef mantığını
+ * zorlamak, kendi tabanı olmayan çağıranlara olmayan bir soru sordurmak olurdu.
+ */
+export async function setVanQty(
+  db: SupabaseClient,
+  input: {
+    /** Malın alındığı/geri konduğu ÇIKIŞ TESİSİ — seferin rotasından gelir. */
+    warehouseId: string;
+    vehicleWarehouseId: string | null;
+    variantId: string;
+    /** Araçta OLMASI istenen adet. */
+    targetQty: number;
+    /** İstemcinin O ANDA gördüğü adet — doğrulanacak iddia. */
+    observedQty: number;
+    actorId?: string | null;
+    idempotencyKey?: string | null;
+  },
+): Promise<SetVanQtyOutcome> {
+  if (input.vehicleWarehouseId === null) return { status: 'no_vehicle' };
+
+  const current = await vanQtyOfVariant(db, input.vehicleWarehouseId, input.variantId);
+  if (current === input.targetQty) return { status: 'ok', variantId: input.variantId, delta: 0, vanQty: current };
+  if (current !== input.observedQty) return { status: 'stale', variantId: input.variantId, vanQty: current };
+
+  const diff = input.targetQty - current;
+  const ortak = {
+    warehouseId: input.warehouseId,
+    vehicleWarehouseId: input.vehicleWarehouseId,
+    variantId: input.variantId,
+    actorId: input.actorId ?? null,
+    idempotencyKey: input.idempotencyKey,
+  };
+  const sonuc = diff > 0 ? await takeToVan(db, { ...ortak, qty: diff }) : await returnFromVan(db, { ...ortak, qty: -diff });
+  if (sonuc.status !== 'ok') return sonuc;
+
+  /* `delta` İŞARETLİ ve `movedQty`den TÜRÜYOR, `diff`ten değil: tekrar eden istekte hareket
+     yazılmaz ve `movedQty` sıfır gelir (`takeToVan`ın `deduped` dalı). `diff`i yazsaydık
+     yazılmamış bir hareketi yazılmış gösterirdik. */
+  return {
+    status: 'ok',
+    variantId: sonuc.variantId,
+    delta: diff > 0 ? sonuc.movedQty : -sonuc.movedQty,
+    vanQty: sonuc.vanQty,
+  };
 }

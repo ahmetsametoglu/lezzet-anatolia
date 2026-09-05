@@ -64,12 +64,19 @@ export class WarehouseTransferService extends BaseDbService<WarehouseTransfer, n
     lines: DispatchLine[];
     actorId?: string | null;
     note?: string | null;
+    /**
+     * Yazımın kimliği (21.263) — aynı anahtarla ikinci çağrı stoğu BİR DAHA DÜŞMEZ, ilk sevkin
+     * künyesini `deduped: true` ile döndürür. Verilmezse sevk korumasızdır ve bu meşru: depo
+     * ekranından elle açılan iki aynı transfer bir kaza değil bir karardır.
+     */
+    idempotencyKey?: string | null;
   }): Promise<DispatchTransferResult> {
     const raw = await this.executeRpc('dispatch_transfer', {
       p_to_warehouse_id: input.toWarehouseId,
       p_lines: input.lines.map((l) => ({ source_stock_id: l.sourceStockId, qty: l.qty })),
       p_actor_id: input.actorId ?? null,
       p_note: input.note ?? null,
+      p_idempotency_key: input.idempotencyKey ?? null,
     });
     return DispatchTransferResultSchema.parse(dbToApp(raw as Record<string, unknown>));
   }

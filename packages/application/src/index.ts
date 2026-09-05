@@ -346,7 +346,7 @@ export { routeMatrixConfigured, routeMatrixProvider } from './delivery/route-mat
 export type { RouteMatrix, RouteMatrixOutcome, RouteMatrixProvider } from './delivery/route-matrix-port';
 export type { CourierDayStart, CourierRunBriefView, CourierStop, CourierStopItem, StopOutcome, UndeliveredOutcome } from './courier/day';
 export { listCourierRoutes, listCourierVehicles } from './courier/routes';
-export { courierVanContext, listVanCandidates, readVanStock, returnFromVan, takeToVan, vehicleWarehouseOf } from './courier/van-stock';
+export { courierVanContext, listVanCandidates, readVanStock, returnFromVan, setVanQty, takeToVan, vehicleWarehouseOf } from './courier/van-stock';
 export type { CourierVanContext } from './courier/van-stock';
 export type { CourierRouteView } from './courier/routes';
 export { confirmDoorDelivery } from './courier/delivery';

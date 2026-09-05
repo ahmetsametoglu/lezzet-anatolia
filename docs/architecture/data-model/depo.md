@@ -202,6 +202,7 @@ Sistem tek depo varsayımıyla kuruldu: stok bir yerdeydi, "kullanılabilir" tek
 | `cancelled_at` | timestamptz | • |  |
 | `cancel_reason` | text | • |  |
 | `note` | text | • |  |
+| `idempotency_key` | text | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 

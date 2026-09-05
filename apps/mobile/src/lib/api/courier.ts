@@ -9,7 +9,8 @@ import {
   CourierVehiclesResponseSchema,
   CourierVanStockMoveResponseSchema,
   CourierVanStockResponseSchema,
-  type CourierVanStockMoveRequest,
+  type CourierVanStockScanRequest,
+  type CourierVanStockSetRequest,
   DepartCourierRunResponseSchema,
   DiscardCourierRunResponseSchema,
   DayCloseDraftSchema,
@@ -158,17 +159,26 @@ export function searchVanCandidates(
 }
 
 /**
- * **Araca al / depoya devret** — yön UÇTADIR, gövde ikisinde de aynı. Tek sarmalayıcı, çünkü
- * ikisi aynı mekanizmanın iki yönü; ayrı yazılsaydı biri cevabın bir dalını işlemeyi unuturdu.
+ * **Araçtaki adedi yaz** (21.263) — "şu kadar EKLE" değil "şu kadar OLSUN, ben şu kadar görüyorum".
+ *
+ * Yön parametresi KALKTI: alma ve devretme tek karar oldu, yönü sunucu araçtaki gerçeği ölçerek
+ * buluyor. `moveVanStock(direction, …)` bunun yerine duruyordu ve farkı istemci hesaplıyordu —
+ * ölçülen çift yazımın kaynağı oydu (künye `CourierVanStockSetRequestSchema`de).
  */
-export function moveVanStock(
-  direction: 'take' | 'return',
-  body: CourierVanStockMoveRequest,
+export function setVanQty(
+  body: CourierVanStockSetRequest,
 ): Promise<ApiResult<z.infer<typeof CourierVanStockMoveResponseSchema>>> {
-  return authorizedFetch(`/api/v1/courier/van-stock/${direction}`, CourierVanStockMoveResponseSchema, {
-    method: 'POST',
-    body,
-  });
+  return authorizedFetch('/api/v1/courier/van-stock/set', CourierVanStockMoveResponseSchema, { method: 'POST', body });
+}
+
+/**
+ * **Okut ve bir tane al** — ayrı kapı, çünkü ayrı bilgi durumu: okutan taraf kodun hangi varyant
+ * olduğunu bilmiyor, dolayısıyla hedef de taban da veremez. Künyesi ucun kendisinde.
+ */
+export function scanToVan(
+  body: CourierVanStockScanRequest,
+): Promise<ApiResult<z.infer<typeof CourierVanStockMoveResponseSchema>>> {
+  return authorizedFetch('/api/v1/courier/van-stock/scan', CourierVanStockMoveResponseSchema, { method: 'POST', body });
 }
 
 /**

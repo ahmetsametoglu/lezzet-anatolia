@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ScrollView, Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { CourierVanCandidate, CourierVanStockLine } from '@lezzet/types';
+import type { CourierVanCandidate, CourierVanStockLine, CourierVanStockMoveResponse } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProductRow } from '@/components/operations/product-row';
@@ -18,7 +18,9 @@ import { toastError, toastSuccess } from '@/lib/toast/toast-store';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { fillCopy } from '@/screens/operations/copy';
-import { fetchVanStock, moveVanStock, searchVanCandidates } from '@/lib/api/courier';
+import { fetchVanStock, scanToVan, searchVanCandidates, setVanQty as setVanQtyRequest } from '@/lib/api/courier';
+import type { ApiResult } from '@/lib/api/client';
+import { newRequestKey } from '@/lib/request-key';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
 
@@ -94,17 +96,27 @@ export function CourierVanStockScreen() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<CourierVanCandidate[]>([]);
+  /*
+    LİSTE BAYAT (21.263). Yazımdan SONRAKİ tazeleme düştüğünde açılır: ekrandaki sayılar artık
+    ölçüm değil hatıra. Satırların TAVSİYE cümlesi ("depoda N kalır") o hâlde GİZLENİYOR — çünkü
+    o cümle bir ölçüme dayanıyordu ve dayanağı düştü; söylemeye devam etmek CLAUDE §1'in
+    yasakladığı şey olurdu (ölçülemeyen değeri ölçülmüş gibi göstermek).
+  */
+  const [refreshFailed, setRefreshFailed] = useState(false);
 
-  const load = useCallback(async () => {
+  /** Okuma başarılı mıydı — yazım sonrası ölçümün düşüp düşmediğini çağıran bilmek zorunda. */
+  const load = useCallback(async (): Promise<boolean> => {
     const result = await fetchVanStock();
     if (result.error !== null) {
       setStatus('error');
-      return;
+      return false;
     }
     setOnVan(result.data.onVan);
     setCandidates(result.data.candidates);
     setHasVehicle(result.data.vehicleWarehouseId !== null);
     setStatus('ready');
+    setRefreshFailed(false);
+    return true;
   }, []);
 
   useEffect(() => {
@@ -141,35 +153,61 @@ export function CourierVanStockScreen() {
     Kimlik iki dallı: varyant (çekmece/adet) ya da KOD (okutma). Uç kodu `variant_barcode`
     üzerinden çözüyor; tanınmayan kod kendi dalıyla geliyor ve sessizce yutulmuyor.
   */
-  const move = useCallback(
+  const submit = useCallback(
     (
-      direction: 'take' | 'return',
-      target: { variantId: string } | { code: string },
-      qty: number,
+      run: () => Promise<ApiResult<CourierVanStockMoveResponse>>,
       /** Sonucun görüneceği katman — `sheet` açık çekmecenin içi, `page` toast (künye yukarıda). */
       surface: 'page' | 'sheet' = 'page',
     ) => {
-      if (busy || qty <= 0) return;
-      setBusy(true);
-      setSheetHint(null);
       const announce = (tone: 'ok' | 'error', text: string) => {
         if (surface === 'sheet') setSheetHint(text);
         else if (tone === 'ok') toastSuccess(text);
         else toastError(text);
       };
+      /*
+        MEŞGULKEN GELEN DOKUNUŞ ARTIK SESSİZ DEĞİL (21.263). Bu satır çıplak bir `return`du:
+        önceki yazım sürerken okutulan ikinci kutu hiçbir iz bırakmadan kayboluyor, kurye
+        okuttuğunu sanıyordu. Sebep söylenmeden yutulan hareket, bu dosyanın `unknown_code`
+        künyesinin yasakladığı şeyin ta kendisi.
+      */
+      if (busy) {
+        announce('error', t.vanStock.busyScan);
+        return;
+      }
+      setBusy(true);
+      setSheetHint(null);
       void (async () => {
-        const result = await moveVanStock(direction, { ...target, qty });
-        setBusy(false);
+        const result = await run();
+        /*
+          TEL HATASINDA DA ÖLÇÜLÜR (21.263 · ölçülen arıza). Burada bir erken `return` duruyordu ve
+          alttaki `load()`u atlıyordu: kurye eski sayıya bakmaya devam ediyor, üstelik ekran ona
+          "yeniden dene" diyordu — yanlışa davet. Cevabın gelmemesi "yazılmadı" DEMEK DEĞİLDİR;
+          tek dürüst hareket ölçüp gerçeği göstermektir.
+        */
         if (result.error !== null) {
-          announce('error', t.vanStock.failed);
+          const taze = await load();
+          setBusy(false);
+          announce('error', taze ? t.vanStock.failed : t.vanStock.refreshFailed);
+          if (!taze) setRefreshFailed(true);
           return;
         }
         const data = result.data;
         if (data.status === 'ok') {
+          /* İŞARET YÖNÜ SÖYLER (21.263): yön artık istemcinin gönderdiği bir parametre değil,
+             sunucunun ölçtüğü sonuç. `0` = hiçbir hareket yazılmadı ve bu GİZLENMEZ — "2 alındı"
+             demek yazılmamış bir hareketi yazılmış göstermek olurdu. */
           announce(
             'ok',
-            fillCopy(direction === 'take' ? t.vanStock.took : t.vanStock.returned, { n: String(data.movedQty) }),
+            data.delta === 0
+              ? fillCopy(t.vanStock.converged, { n: String(data.vanQty) })
+              : fillCopy(data.delta > 0 ? t.vanStock.took : t.vanStock.returned, { n: String(Math.abs(data.delta)) }),
           );
+        } else if (data.status === 'stale') {
+          /* TABAN TUTMADI — ve bu `failed`ten AYRI bir şey: burada "yazılmadı" bir GARANTİ.
+             Satır cevaptaki gerçekle YERİNDE düzeltiliyor ki tazeleme de düşse kurye doğruyu
+             görsün; aracın sayısı arada kapıda satışla ya da D6 kabulüyle kaymış olabilir. */
+          setOnVan((rows) => rows.map((row) => (row.variantId === data.variantId ? { ...row, qty: data.vanQty } : row)));
+          announce('error', fillCopy(t.vanStock.staleLine, { n: String(data.vanQty) }));
         } else if (data.status === 'not_enough') {
           announce('error', fillCopy(t.vanStock.notEnough, { n: String(data.available) }));
         } else if (data.status === 'unknown_code') {
@@ -181,11 +219,40 @@ export function CourierVanStockScreen() {
         } else {
           announce('error', t.vanStock.failed);
         }
-        await load();
+        /* ÖLÇÜM YAZIMDAN SONRA, KİLİT ÖLÇÜMDEN SONRA: `setBusy(false)` buraya taşındı (21.263).
+           Eskiden istekten hemen sonra açılıyordu, yani kurye HENÜZ TAZELENMEMİŞ bir listeye
+           ikinci kez dokunabiliyordu — farkın tabanı da o bayat listeden geliyordu. */
+        const taze = await load();
+        setRefreshFailed(!taze);
+        if (!taze) announce('error', t.vanStock.refreshFailed);
+        setBusy(false);
       })();
     },
     [busy, load],
   );
+
+  /**
+   * **Araçtaki adedi yaz** — hedef ve GÖRÜLEN taban birlikte gider (21.263). Fark aritmetiği
+   * ekrandan kalktı: `next - line.qty` iki yerde duruyordu ve tabanı bayat olabilen bir listeden
+   * alıyordu. Artık istemci yalnız ne gördüğünü ve ne istediğini söylüyor.
+   *
+   * Anahtar HER ÇAĞRIDA yeni: burada korunan şey insanın tekrarı değil (onu mutlak hedef zaten
+   * zararsız kılıyor), tek bir isteğin telde ÇOĞALMASI. Kapıda tahsilattaki gibi bir `ref`te
+   * saklanmıyor çünkü burada kuyruk yok — künye `request-key.ts`te.
+   */
+  const setQty = useCallback(
+    (variantId: string, targetQty: number, observedQty: number, surface: 'page' | 'sheet' = 'page') => {
+      if (targetQty === observedQty) return;
+      submit(
+        () => setVanQtyRequest({ variantId, targetQty, observedQty, idempotencyKey: newRequestKey('van') }),
+        surface,
+      );
+    },
+    [submit],
+  );
+
+  /** Okutma — hedef yok, taban yok: "eldekine bir ekle" (ucun künyesi). */
+  const scan = useCallback((code: string) => submit(() => scanToVan({ code }), 'sheet'), [submit]);
 
   const header = (
     <OperationsStackHeader
@@ -205,6 +272,34 @@ export function CourierVanStockScreen() {
           heights={[VAN_STOCK_SKELETON.scan, VAN_STOCK_SKELETON.search, VAN_STOCK_SKELETON.row]}
           label={t.day.loading}
         />
+      </View>
+    );
+  }
+
+  /*
+    İLK OKUMA DÜŞTÜĞÜNDE EKRAN "ARAÇ BOŞ" DEMEZ (21.263 · ölçüldü 05.09).
+
+    `status: 'error'` yazılıyordu ama HİÇBİR YERDE ÇİZİLMİYORDU: `hasVehicle` varsayılanı `true`
+    olduğu için akış normal gövdeye düşüyor, `onVan` boş kaldığı için de ekran *"Araç şimdilik
+    yalnız durak kutularını taşıyor"* diyordu. Yani ölçülemeyen değer SIFIR olarak gösteriliyordu —
+    CLAUDE §1'in adıyla andığı hata. Kurye araçtaki malı görmediği için yeniden alır.
+
+    Yazma yolları da bu hâlde KAPALI kalıyor (gövde hiç çizilmiyor): taban bilinmiyorken hedef
+    hesaplanamaz.
+  */
+  if (status === 'error') {
+    return (
+      <View style={styles.screen} testID="courier-van-stock">
+        {header}
+        <View style={styles.list}>
+          <OperationsNoticeBlock
+            variant="error"
+            title={t.vanStock.loadError.title}
+            description={t.vanStock.loadError.body}
+            testID="courier-van-stock-load-error"
+          />
+          <PrimaryButton label={t.vanStock.loadError.retry} onPress={() => void load()} testID="courier-van-stock-retry" />
+        </View>
       </View>
     );
   }
@@ -276,15 +371,16 @@ export function CourierVanStockScreen() {
                 <VanLine
                   key={line.variantId}
                   line={line}
+                  stale={refreshFailed}
                   onChange={(next) => {
-                    if (next > line.qty) move('take', { variantId: line.variantId }, next - line.qty);
-                    else if (next < line.qty) move('return', { variantId: line.variantId }, line.qty - next);
+                    // Fark aritmetiği KALKTI (21.263): sayaç zaten mutlak düşünüyor, tel de öyle.
+                    setQty(line.variantId, next, line.qty);
                   }}
                   onPressQty={() => {
                     setQtyLine(line);
                     setQtyDraft(line.qty);
                   }}
-                  onRemove={() => move('return', { variantId: line.variantId }, line.qty)}
+                  onRemove={() => setQty(line.variantId, 0, line.qty)}
                 />
               ))
             )}
@@ -345,11 +441,11 @@ export function CourierVanStockScreen() {
         confirmDisabled={busy || qtyLine === null || qtyDraft === qtyLine.qty}
         onConfirm={() => {
           if (qtyLine === null) return;
-          const fark = qtyDraft - qtyLine.qty;
-          const hedef = { variantId: qtyLine.variantId };
+          /* Taban çekmece AÇILDIĞINDA dondurulan satırdır (`qtyLine`), sayfanın o anki listesi
+             değil: kuryenin gerçekten GÖRDÜĞÜ sayı tam olarak odur. Fark hesabı burada da kalktı. */
+          const { variantId, qty } = qtyLine;
           setQtyLine(null);
-          if (fark > 0) move('take', hedef, fark);
-          else if (fark < 0) move('return', hedef, -fark);
+          setQty(variantId, qtyDraft, qty);
         }}
         footnote={t.vanStock.qtySheetFootnote}
         onClose={() => setQtyLine(null)}
@@ -370,7 +466,7 @@ export function CourierVanStockScreen() {
           setScanOpen(false);
           setSheetHint(null);
         }}
-        onScan={(code) => move('take', { code }, 1, 'sheet')}
+        onScan={(code) => scan(code)}
         testID="courier-van-scan-sheet"
       />
 
@@ -423,7 +519,10 @@ export function CourierVanStockScreen() {
               row={row}
               onVan={vanQtyOf(row.variantId)}
               busy={busy}
-              onPress={() => move('take', { variantId: row.variantId }, 1, 'sheet')}
+              /* Çekmecenin aday satırı: taban SAYFANIN listesinden okunuyor (`vanQtyOf`) — o
+                 satırın kendi `onVan` alanı arama sonucundan geliyor ve tazelenmiyor (yukarıdaki
+                 künye). Hedef "bir fazlası". */
+              onPress={() => setQty(row.variantId, vanQtyOf(row.variantId) + 1, vanQtyOf(row.variantId), 'sheet')}
             />
           ))
         )}
@@ -489,11 +588,18 @@ function CandidateRow({
  */
 function VanLine({
   line,
+  stale,
   onChange,
   onPressQty,
   onRemove,
 }: {
   line: CourierVanStockLine;
+  /**
+   * Liste BAYAT (21.263): yazımdan sonraki ölçüm düştü. `available`e dayanan iki cümle (satırın
+   * "depoda N kalır" notu ve "depoda N" künyesi) bu hâlde YAZILMIYOR — dayanağı düşmüş bir sayıyı
+   * söylemeye devam etmek, ölçülemeyen değeri ölçülmüş göstermektir (CLAUDE §1).
+   */
+  stale: boolean;
   onChange: (next: number) => void;
   /** Ortadaki rakama dokunuş — adet çekmecesini açar (künyesi ekranın `qtyLine` durumunda). */
   onPressQty: () => void;
@@ -501,8 +607,9 @@ function VanLine({
 }) {
   /* Depoda kalan sıfırsa artırma yolu kapalı ve cümle bunu SÖYLER — pasif bir düğmenin sebebi
      düğmenin kendisinde yazmaz. */
-  const note =
-    line.available === 0
+  const note = stale
+    ? t.vanStock.staleNote
+    : line.available === 0
       ? t.vanStock.lineNoteMax
       : fillCopy(t.vanStock.lineNote, { n: String(line.available - 1) });
   return (
@@ -513,7 +620,7 @@ function VanLine({
         photoUri={line.imageUrl}
         size="md"
         tone="olive"
-        meta={<Text style={styles.rowMeta}>{fillCopy(t.vanStock.lineMeta, { n: String(line.available) })}</Text>}
+        meta={stale ? null : <Text style={styles.rowMeta}>{fillCopy(t.vanStock.lineMeta, { n: String(line.available) })}</Text>}
         /* Adedi DÜŞÜRMEK malı depoya geri koymaktır — ayrı bir "geri ver" düğmesi yazılmadı:
            kurye zaten sayıyı düşünüyor, ikinci bir eylem adı öğretmek aynı işi iki kez anlatmak
            olurdu. Toptan çıkarma alttaki bağlantıyla, adet adet oynama buradan. */

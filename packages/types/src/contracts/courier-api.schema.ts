@@ -530,27 +530,89 @@ export type CourierVanStockResponse = z.infer<typeof CourierVanStockResponseSche
  * İkisi birden GÖNDERİLEMEZ ve hiçbiri gönderilmeden de çağrılamaz: hangisinin kazanacağı
  * sorusunu doğurmayan tek şekil budur.
  */
-export const CourierVanStockMoveRequestSchema = z
-  .object({
-    variantId: z.string().uuid().optional(),
-    /** Okutulan barkod / SKU / tedarikçi kodu — uç `variant_barcode` üzerinden çözer. */
-    code: z.string().trim().min(1).max(64).optional(),
-    qty: z.number().int().positive(),
-  })
-  .refine(
-    (body) => (body.variantId === undefined) !== (body.code === undefined),
-    'variantId ya da code — biri, yalnız biri',
-  );
-export type CourierVanStockMoveRequest = z.infer<typeof CourierVanStockMoveRequestSchema>;
+/**
+ * **ARAÇTAKİ ADEDİ YAZ — "şu kadar EKLE" değil "şu kadar OLSUN"** (21.263 · kullanıcı kararı 04.09).
+ *
+ * ── NEDEN FARK GÖNDERMİYORUZ ────────────────────────────────────────────────
+ * Ekran zaten mutlak düşünüyor ("araçta 5 olsun"), ama 05.09'a kadar tele FARK gidiyordu ve farkı
+ * istemci hesaplıyordu: `next - line.qty`. Tabanı (`line.qty`) istemci tutuyordu ve kimse
+ * doğrulamıyordu. Ölçülen sonucu (04.09, Oppo): cevabı kaybolan bir istekten sonra ekran eski
+ * sayıya bakmaya devam ediyor, kurye yeniden dokunuyor ve mal araca İKİNCİ kez biniyordu. Daha
+ * sinsisi de vardı — o andan sonraki her MEŞRU düzeltme de yanlış tabandan hesaplanıyordu.
+ *
+ * Mutlak hedefte tekrar zararsızdır: aynı istek yüz kez gelse sonuç aynıdır.
+ *
+ * ── `observedQty` BİR YETKİ DEĞİL, EŞLEŞTİRME ETİKETİ ───────────────────────
+ * Kuryenin EKRANDA GÖRDÜĞÜ sayı. Sunucu kendi ölçtüğüyle karşılaştırır: tutmuyorsa hiçbir şey
+ * yazmaz ve `stale` döner. Yani istemci "5 olsun" derken hangi gerçeğe bakarak dediğini de
+ * söylüyor; kör bir emir yerine doğrulanabilir bir iddia gönderiyor.
+ *
+ * `min(0)` ve `positive()` DEĞİL: `0` hem meşru bir hedeftir ("araçtan çıkar") hem meşru bir
+ * tabandır (aday satırından ilk alma). İkisi de ZORUNLU — isteğe bağlı olsalardı koruma tam da en
+ * sık yolda (alanı yazmayan istemci) atlanırdı; eksiklik burada `400` ile görünür reddedilir.
+ */
+export const CourierVanStockSetRequestSchema = z.object({
+  variantId: z.string().uuid(),
+  /** Araçta OLMASI istenen adet. Fark değil hedef; yönü sunucu ölçerek bulur. */
+  targetQty: z.number().int().min(0),
+  /** İstemcinin O ANDA gördüğü araç adedi — künyesi yukarıda. */
+  observedQty: z.number().int().min(0),
+  /**
+   * **Yazımın kimliği** (21.263) — mutlak hedefin YAKALAYAMADIĞI dalı kapatır.
+   *
+   * Hedef+taban, PEŞ PEŞE gelen tekrarı çözüyor: ikinci istek ya yakınsar ya `stale` yer. Ama
+   * **aynı anda** gelen iki eş istek ikisi de aynı tabanı okur, ikisi de geçer ve ikisi de yazar —
+   * taban kontrolü oku-sonra-yazdır. O pencereyi ancak veritabanı kapatabiliyor
+   * (`warehouse_transfer.idempotency_key` + tekil indeks). İki mekanizma bu yüzden birlikte:
+   * biri yanlış TABANI, öteki eşzamanlı YAZIMI durduruyor.
+   *
+   * `nullish`: anahtarsız istek eskisi gibi çalışır (koruma yalnız hedef+tabandan gelir).
+   * Üretimi istemcinin işi — `lib/request-key.ts`, kapıda tahsilatın aynı deseni.
+   */
+  idempotencyKey: z.string().min(1).max(64).nullish(),
+});
+export type CourierVanStockSetRequest = z.infer<typeof CourierVanStockSetRequestSchema>;
+
+/**
+ * **Okutma AYRI bir kapı** (21.263) — çünkü ayrı bir bilgi durumu.
+ *
+ * Okutan istemci kodun hangi varyant olduğunu BİLMİYOR; dolayısıyla o varyantın araçtaki adedini de
+ * bilemez, hedef de taban da veremez. Adet daima 1: okutulan şey bir pakettir.
+ *
+ * Eskiden kimlik tek gövdede `variantId | code` diye dallanıyordu ve `refine` ile "biri, yalnız
+ * biri" deniyordu. İki farklı niyet tek şekle sıkıştırılmıştı; ayrılınca ikisi de kendi kuralını
+ * taşıyor ve okutma yolunun taban taşımaması bir eksiklik değil bir OLGU olarak okunuyor.
+ */
+export const CourierVanStockScanRequestSchema = z.object({
+  /** Okutulan barkod / SKU / tedarikçi kodu — uç `variant_barcode` üzerinden çözer. */
+  code: z.string().trim().min(1).max(64),
+});
+export type CourierVanStockScanRequest = z.infer<typeof CourierVanStockScanRequestSchema>;
 
 export const CourierVanStockMoveResponseSchema = z.discriminatedUnion('status', [
   z.object({
     status: z.literal('ok'),
     variantId: z.string().uuid(),
-    movedQty: z.number().int(),
-    /** Hareketten SONRA araçta kalan — ekran kendi hesabını yapmaz. */
+    /**
+     * **İŞARETLİ** (21.263): `+` araca alındı, `−` depoya devredildi, **`0` hiçbir hareket
+     * yazılmadı**. Sonuncusu tekrar eden isteğin cevabıdır ve gizlenmiyor — ekran "2 alındı" yerine
+     * "zaten yazılmıştı" diyebilsin. Adı `movedQty` idi ve işaretsizdi; yönü ayrıca `direction`
+     * parametresi taşıyordu, o da kalktı çünkü yönü artık sunucu ölçerek buluyor.
+     */
+    delta: z.number().int(),
+    /** Hareketten SONRA araçta kalan — ÖLÇÜLMÜŞ değerdir, hedefin kopyası değil. */
     vanQty: z.number().int(),
   }),
+  /**
+   * **Taban tutmadı** (21.263): istemcinin gördüğü adet ile aracın gerçeği ayrışmış — arada kapıda
+   * satış, D6 kabulü ya da başka bir yazım olmuş olabilir. **HİÇBİR ŞEY YAZILMADI** ve bu garanti,
+   * `failed`ten ayıran şey de bu: orada "yazıldı mı" bilinmez, burada bilinir.
+   *
+   * `vanQty` gerçeği taşıyor ki ekran doğru satırı YERİNDE düzeltebilsin — tazeleme de düşse
+   * kurye yine gerçeği görür. `stale` yeni bir kavram değil, `MarkUndeliveredResponseSchema` aynı
+   * sözcüğü aynı anlamda kullanıyor.
+   */
+  z.object({ status: z.literal('stale'), variantId: z.string().uuid(), vanQty: z.number().int() }),
   /** Depoda o kadar KULLANILABİLİR yok; sayı dönüyor ki ekran "şu kadar var" diyebilsin. */
   z.object({ status: z.literal('not_enough'), available: z.number().int() }),
   /**

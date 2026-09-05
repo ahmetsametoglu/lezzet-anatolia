@@ -50,6 +50,7 @@ Tüm para hareketleri **tek tablo**; kasa/banka ayrımı yok — hareketin **hes
 | `description` | text | • |  |
 | `source` | movement_source |  | `'manual'` |
 | `reconciled` | boolean |  | `false` |
+| `idempotency_key` | text | • |  |
 | `import_fingerprint` | text | • |  |
 | `bank_import_id` | uuid | • |  |
 | `created_at` | timestamptz |  | `now()` |

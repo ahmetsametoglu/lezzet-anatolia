@@ -55,6 +55,27 @@ create table public.money_movement (
   source movement_source not null default 'manual',
   -- Banka ekstresiyle eşleşti mi (12.4). Elle girilen hareket eşleşmeyi bekler.
   reconciled boolean not null default false,
+  /*
+    YAZIMIN KİMLİĞİ (21.263 · kullanıcı kararı 04.09) — "bu isteği zaten yazdım mı?"
+
+    İstemcide üretilir ve İSTEĞİN kimliğidir, hareketin değil: cevabı kaybolan bir tahsilat isteği
+    tekrarlandığında aynı anahtarla gelir, aşağıdaki tekil indeks ikinci yazımı reddeder ve
+    `record_order_movement` var olan satırın sonucunu döndürür — kapı için tekrar bir arıza değil,
+    *"zaten yazılmıştı"* cevabıdır.
+
+    ── NEDEN `import_fingerprint`E BİNMİYOR ──────────────────────────────────
+    İkisi farklı şey söylüyor. Parmak izi *"bu banka ekstresindeki bu satır"*tır ve tekilliği HESAP
+    BAŞINADIR (`unique (account_id, import_fingerprint)`) — aynı parmak izi iki hesapta meşru olarak
+    doğabilir. Yazım kimliği ise isteğin kendisidir ve tekilliği KÜRESELDİR. Tek kolona sıkıştırmak,
+    banka parmak izlerini küresel benzersiz olmaya zorlardı; değiller ve olmaları da gerekmiyor.
+    İki kolon, iki anlam, TEK şekil — aynı kalıp `warehouse_transfer.idempotency_key`te de var.
+
+    ── BU KOLON 12.11'İN BORCUNU KAPATIYOR ───────────────────────────────────
+    `application/src/order/payment.ts` bugüne dek OKU-SONRA-YAZ ile koruyordu (`meta.idempotencyKey`
+    aranıyordu) ve künyesi kendi sınırını yazıyordu: *"aynı anda gelen iki eş-anahtarlı istek ikisi
+    de 'yok' okuyup ikisi de yazabilir."* Kararı artık veritabanı veriyor, o pencere kapandı.
+  */
+  idempotency_key text,
   -- Banka satırının KİMLİĞİ (12.4). Bankalar satır kimliği vermez; hesap+tarih+tutar+yön+açıklama
   -- ve tekrar sırasından ÜRETİLİR (`domain-core/bank/fingerprint`). Aşağıdaki tekil indeks, aynı
   -- ekstre iki kez yüklendiğinde ya da dönemler çakıştığında paranın iki kez yazılmasını engeller —
@@ -92,6 +113,11 @@ create index money_movement_unreconciled_idx on public.money_movement (account_i
 -- parmak izi olmayan (elle girilen) hareketler bu indeksin kısıtına hiç takılmaz; elle iki kez
 -- 20 € girmek meşrudur ve meşru kalır.
 create unique index money_movement_import_key on public.money_movement (account_id, import_fingerprint);
+-- Yazım kimliği (21.263): aynı istek İKİ KEZ para yazamaz. Kısmi indeks DEĞİL — üstteki künyenin
+-- birebir gerekçesi: anahtarsız hareket (elle giriş, besleme, banka içe aktarma) `null` taşır ve
+-- `null`'lar tekil karşılaştırmada birbirine eşit sayılmaz, yani bu kısıta hiç takılmazlar.
+-- `on conflict (idempotency_key)` de böylece çıkarım inceliği olmadan hedefleyebiliyor.
+create unique index money_movement_idempotency_key on public.money_movement (idempotency_key);
 
 -- ── Defter satırı ────────────────────────────────────────────────────────────
 -- Bir hareket DOKUNDUĞU HER HESAPTA bir satır üretir: normal hareket bir, transfer iki. Bakiye de
@@ -194,7 +220,10 @@ create or replace function public.record_order_movement(
   -- Sağlayıcı künyesi (07.11): kartla ödenmiş bir siparişte iade, paranın GELDİĞİ ödeme niyetinin
   -- üzerinden yapılır — `{"providerRef": "pi_..."}`. Sipariş kolonuna değil harekete yazılır:
   -- referans o ödemenin künyesidir, siparişin değil (bir siparişin birden çok tahsilatı olabilir).
-  p_meta jsonb default null
+  p_meta jsonb default null,
+  -- Yazımın kimliği (21.263) — künyesi kolonun kendisinde. `null` = korumasız yazım (elle giriş,
+  -- besleme); kolonun `null`'ları tekil indekste çakışmadığı için o yol aynen çalışır.
+  p_idempotency_key text default null
 ) returns jsonb
 language plpgsql
 security invoker
@@ -204,6 +233,7 @@ declare
   v_movement_id uuid;
   v_direction movement_direction;
   v_amounts jsonb;
+  v_deduped boolean := false;
 begin
   if p_type not in ('order_payment', 'order_refund') then
     raise exception 'record_order_movement: sipariş parası yalnız order_payment/order_refund olur (%)', p_type;
@@ -217,15 +247,34 @@ begin
     raise exception 'record_order_movement: sipariş bulunamadı (%)', p_order_id;
   end if;
 
-  insert into public.money_movement (account_id, direction, amount, type, order_id, value_date, description, source, meta)
-  values (p_account_id, v_direction, p_amount, p_type, p_order_id, p_value_date, p_description, p_source, p_meta)
+  /*
+    ÇAKIŞMA BİR ARIZA DEĞİL, CEVAPTIR (21.263). Aynı anahtarla ikinci kez gelen istek yazmaz ama
+    REDDEDİLMEZ de: var olan hareketin kimliğiyle ve `deduped: true` ile döner. Sebebi kuryenin ve
+    kapıdaki tahsilatın gerçeğidir — cevabı kaybolan bir isteği tekrarlayan kişi bir şey yapmıyor,
+    aynı şeyi soruyor. Hata dönseydi ekran ona "olmadı" derdi ve para iki kez tahsil edilirdi.
+
+    Hedef AÇIKÇA `(idempotency_key)`: çıkarım yalnız o indekse bakar, `money_movement_import_key`
+    ihlali eskisi gibi fırlar (banka içe aktarmasının kendi koruması bozulmaz).
+  */
+  insert into public.money_movement (account_id, direction, amount, type, order_id, value_date, description, source, meta, idempotency_key)
+  values (p_account_id, v_direction, p_amount, p_type, p_order_id, p_value_date, p_description, p_source, p_meta, p_idempotency_key)
+  on conflict (idempotency_key) do nothing
   returning id into v_movement_id;
 
+  if v_movement_id is null then
+    -- Buraya YALNIZ anahtarlı çakışmada düşülür (anahtarsız yazımda `null`'lar çakışmaz).
+    select id into v_movement_id from public.money_movement where idempotency_key = p_idempotency_key;
+    v_deduped := true;
+  end if;
+
+  -- Tekrar eden istekte de çalışır ve YENİ satır üretmez: defteri yeniden toplar, yani dönen
+  -- tutarlar her iki yolda da defterin O ANKİ hâlidir.
   v_amounts := public.resync_order_amounts(p_order_id);
 
   return jsonb_build_object(
     'ok', true,
     'movement_id', v_movement_id,
+    'deduped', v_deduped,
     'amount_collected', v_amounts ->> 'amount_collected',
     'amount_refunded', v_amounts ->> 'amount_refunded'
   );
@@ -233,7 +282,7 @@ end;
 $$;
 
 revoke execute on function public.resync_order_amounts(uuid) from public, anon, authenticated;
-revoke execute on function public.record_order_movement(uuid, uuid, numeric, movement_type, date, text, movement_source, jsonb)
+revoke execute on function public.record_order_movement(uuid, uuid, numeric, movement_type, date, text, movement_source, jsonb, text)
   from public, anon, authenticated;
 
 -- Sağlayıcı künyesinden harekete (07.11): `charge.refunded` bize yalnız `pi_...` ile gelir, sipariş

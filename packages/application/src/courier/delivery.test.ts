@@ -280,7 +280,8 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
   it('K4: kapı anahtarı HAREKETE yazılır — kuyruk tekrarının yakalanacağı tek yer orası', async () => {
     // Anahtar sözleşmede duruyor ama harekete geçmiyorsa hiçbir şeyi engellemez: tekrarı yakalayan
-    // kontrol `meta.idempotencyKey` üzerinden okuyor (`order/payment.ts`).
+    // kontrol artık hareketin KENDİ KOLONU üzerinden çalışıyor (`money_movement.idempotency_key`
+    // + tekil indeks, 21.263). 05.09'a kadar `meta`da duruyordu ve kontrol oku-sonra-yazdı.
     const { orderId, boxCode } = await atTheDoor({ qty: 2 });
     const key = `door-${stamp}-${orderId}`;
 
@@ -291,7 +292,7 @@ describe('tahsilat ve nakit sınırı (11.3)', () => {
 
     const written = (await movements.listByOrder(orderId)).filter((m) => m.type === 'order_payment');
     expect(written).toHaveLength(1);
-    expect(written[0]?.meta?.['idempotencyKey']).toBe(key);
+    expect(written[0]?.idempotencyKey).toBe(key);
   });
 
   it('K4: siparişin tamamı yeniden gönderilirse teslim RPC’si `stale` der — para adımına HİÇ gelinmez', async () => {

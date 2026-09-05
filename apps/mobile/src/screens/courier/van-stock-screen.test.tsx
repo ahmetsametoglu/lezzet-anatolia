@@ -71,8 +71,8 @@ function mockVanStock(
     if (address.includes('q=')) {
       return Promise.resolve(okResponse({ vehicleWarehouseId: VAN, onVan: [], candidates: search }));
     }
-    if (address.includes('/van-stock/take') || address.includes('/van-stock/return')) {
-      return Promise.resolve(okResponse({ status: 'ok', variantId: SOBIYET, movedQty: 1, vanQty: 4 }));
+    if (address.includes('/van-stock/set') || address.includes('/van-stock/scan')) {
+      return Promise.resolve(okResponse({ status: 'ok', variantId: SOBIYET, delta: 1, vanQty: 4 }));
     }
     return Promise.resolve(
       okResponse({
@@ -144,8 +144,10 @@ describe('K · araca serbest ürün', () => {
        kuryeye aynı işi üç kez yaptırırdı. */
     await fireEvent.press(screen.getByTestId(`courier-van-remove-${SOBIYET}`));
     await waitFor(() => {
-      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/van-stock/return'));
-      expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ variantId: SOBIYET, qty: 3 });
+      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/van-stock/set'));
+      /* Tel MUTLAK konuşuyor (21.263): "3 geri koy" değil "0 olsun, ben 3 görüyorum". Taban da
+         gidiyor ki sunucu iddiayı doğrulayabilsin. */
+      expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ variantId: SOBIYET, targetQty: 0, observedQty: 3 });
     });
   });
 
@@ -189,10 +191,13 @@ describe('K · araca serbest ürün', () => {
     await fireEvent(screen.getByTestId('courier-van-scan-sheet'), 'scan', '8690000000001');
 
     await waitFor(() => {
-      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/van-stock/take'));
+      const call = fetchMock.mock.calls.find(([url]) => String(url).includes('/van-stock/scan'));
       /* Barkod → varyant eşlemesi `variant_barcode`ta ve istemcinin oraya erişimi YOK; kodu
-         istemcide çözmeye çalışmak ikinci bir sözleşme kurmak olurdu. */
-      expect(JSON.parse(String(call?.[1]?.body))).toMatchObject({ code: '8690000000001', qty: 1 });
+         istemcide çözmeye çalışmak ikinci bir sözleşme kurmak olurdu.
+
+         Gövde YALNIZ kod (21.263): okutan taraf varyantı bilmediği için o varyantın araçtaki
+         adedini de bilemez — hedef ve taban gönderemez. Adet sabit 1, uçta. */
+      expect(JSON.parse(String(call?.[1]?.body))).toEqual({ code: '8690000000001' });
     });
   });
 
@@ -203,5 +208,51 @@ describe('K · araca serbest ürün', () => {
 
     await waitFor(() => expect(screen.getByTestId('courier-van-stock-no-vehicle')).toBeOnTheScreen());
     expect(screen.queryByTestId('courier-van-scan')).toBeNull();
+  });
+
+  it('İLK OKUMA DÜŞERSE ekran "araç boş" DEMEZ, okunamadığını söyler ve yazmayı kapatır', async () => {
+    /* ÖLÇÜLEN ARIZA (21.263, 05.09): `status: 'error'` yazılıyor ama hiçbir yerde çizilmiyordu.
+       `hasVehicle` varsayılanı `true` olduğu için akış normal gövdeye düşüyor, `onVan` boş kaldığı
+       için ekran "Araç şimdilik yalnız durak kutularını taşıyor" diyordu — ölçülemeyen değer SIFIR
+       gösteriliyordu (CLAUDE §1). Kurye araçtaki malı görmediği için yeniden alırdı. */
+    fetchMock.mockImplementation(() => Promise.reject(new Error('ağ yok')));
+
+    await render(<CourierVanStockScreen />);
+
+    await waitFor(() => expect(screen.getByTestId('courier-van-stock-load-error')).toBeOnTheScreen());
+    expect(screen.getByTestId('courier-van-stock-retry')).toBeOnTheScreen();
+    // "Araç boş" hâli ÇİZİLMEMELİ ve yazma yolları kapalı olmalı: taban bilinmeden hedef yazılmaz.
+    expect(screen.queryByTestId('courier-van-stock-empty')).toBeNull();
+    expect(screen.queryByTestId('courier-van-scan')).toBeNull();
+    expect(screen.queryByTestId('courier-van-search')).toBeNull();
+  });
+
+  it('YAZIM TELDE DÜŞERSE liste yine ÖLÇÜLÜR — kurye eski sayıya bakmaya devam etmez', async () => {
+    /* Arızanın görünmeyen yarısı: hata dalı erken `return` ediyor ve tazelemeyi atlıyordu. Ekran
+       "yeniden dene" diyor, kurye dokunuyor, mal ikinci kez biniyordu. Sayının tazelenmesi
+       çift yazımı engellemez ama kuryeye GERÇEĞİ gösterir — tekrar kararını o vererek verir. */
+    let okumaSayisi = 0;
+    fetchMock.mockImplementation((url) => {
+      const address = String(url);
+      if (address.includes('/van-stock/set') || address.includes('/van-stock/scan')) {
+        return Promise.reject(new Error('cevap kayboldu'));
+      }
+      okumaSayisi += 1;
+      return Promise.resolve(
+        okResponse({ vehicleWarehouseId: VAN, onVan: [vanLine({ qty: okumaSayisi })], candidates: [] }),
+      );
+    });
+
+    await render(<CourierVanStockScreen />);
+    await waitFor(() => expect(screen.getByTestId(`courier-van-line-${SOBIYET}`)).toBeOnTheScreen());
+    const ilkOkuma = okumaSayisi;
+
+    fireEvent.press(screen.getByTestId(`courier-van-qty-${SOBIYET}-increase`));
+
+    // Yazım düştü ama ÖLÇÜM koştu: ikinci okuma yapıldı VE ekrandaki sayı onunla değişti.
+    // Sayının değişmesi asıl iddia — sayaç ölçümü değil, kuryenin hatırasını gösteriyor olsaydı
+    // "1" kalırdı ve bir sonraki dokunuşun farkı da o yanlış tabandan hesaplanırdı.
+    await waitFor(() => expect(okumaSayisi).toBeGreaterThan(ilkOkuma));
+    await waitFor(() => expect(screen.getByTestId(`courier-van-qty-${SOBIYET}-value`)).toHaveTextContent('2'));
   });
 });

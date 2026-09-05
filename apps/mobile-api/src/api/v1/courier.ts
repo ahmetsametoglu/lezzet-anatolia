@@ -11,7 +11,7 @@ import {
   listStrandedStops,
   listVanCandidates,
   readVanStock,
-  returnFromVan,
+  setVanQty,
   takeToVan,
   courierVanContext,
   loadBox,
@@ -31,7 +31,8 @@ import {
   CourierDayResponseSchema,
   CourierRoutesResponseSchema,
   CourierVehiclesResponseSchema,
-  CourierVanStockMoveRequestSchema,
+  CourierVanStockScanRequestSchema,
+  CourierVanStockSetRequestSchema,
   CourierVanStockMoveResponseSchema,
   CourierVanStockResponseSchema,
   DepartCourierRunResponseSchema,
@@ -331,12 +332,15 @@ courier.get('/van-stock', async (c) => {
 });
 
 /**
- * **Araca al** — depodan araca. Sevk + kabul TEK çağrıda: rampada malı eline alıp araca koyan
- * kişi hem veren hem alandır; ayrı bir kabul adımı, kuryeye kendi koyduğu malı ikinci kez
- * onaylatmak olurdu (kapının künyesi).
+ * **Araçtaki adedi YAZ** (21.263) — alma da devretme de burada, çünkü ikisi tek karardır: "araçta
+ * şu kadar olsun." Yönü istemci seçmiyor, sunucu ÖLÇEREK buluyor (`setVanQty` künyesi).
+ *
+ * `/van-stock/take` ve `/van-stock/return` uçlarının yerine geçti. İkisi ayrıyken gövdeleri
+ * birbirinin kopyasıydı (bağlam çözümü, kod çevirisi, cevap sarma) ve ikisi de FARK alıyordu —
+ * farkı istemcinin bayat tabanından hesaplattığı için ölçülen çift yazımın kaynağıydı.
  */
-courier.post('/van-stock/take', async (c) => {
-  const parsed = CourierVanStockMoveRequestSchema.safeParse(await readJsonBody(c));
+courier.post('/van-stock/set', async (c) => {
+  const parsed = CourierVanStockSetRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
   const staff = c.get('staff');
@@ -347,54 +351,57 @@ courier.post('/van-stock/take', async (c) => {
   const { vehicleWarehouseId, facilityId } = await courierVanContext(db, { courierId: staff.id });
   if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
 
-  /* KOD → VARYANT ÇEVİRİSİ UÇTA (v3:19 "Barkod okut"): eşleme `variant_barcode`ta duruyor ve
-     istemcinin oraya erişimi yok. Tanınmayan kod SESSİZ GEÇMEZ — kendi dalıyla döner, yoksa
-     kurye okuttuğunu sanır ve mal araca hiç binmez. */
-  const variantId =
-    parsed.data.variantId ?? (await new VariantBarcodeService(db).findByCode(parsed.data.code ?? ''))?.variantId ?? null;
-  if (variantId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'unknown_code' }));
-
-  const result = await takeToVan(db, {
+  const result = await setVanQty(db, {
     warehouseId: facilityId,
     vehicleWarehouseId,
-    variantId,
-    qty: parsed.data.qty,
+    variantId: parsed.data.variantId,
+    targetQty: parsed.data.targetQty,
+    observedQty: parsed.data.observedQty,
     actorId: staff.id,
+    idempotencyKey: parsed.data.idempotencyKey,
   });
   const body: z.input<typeof CourierVanStockMoveResponseSchema> = result;
   return ok(c, CourierVanStockMoveResponseSchema.parse(body));
 });
 
 /**
- * **Depoya devret** — araçtan depoya (v3:14 "SAY VE DEVRET"). Aynı kapının aynası: kaynak ile
- * hedef yer değiştiriyor, mekanizma bir.
+ * **Okut ve bir tane al** (21.263) — kendi ucu, çünkü kendi bilgi durumu.
+ *
+ * Okutan istemci kodun hangi varyant olduğunu bilmiyor; hedef de taban da veremez. Bu yüzden burada
+ * mutlak hedef YOK: "eldekine bir ekle". Tekrara karşı da korumasız ve bu KAPATILABİLİR BİR AÇIK
+ * DEĞİL — *"aynı paketi yeniden okuttum"* ile *"ikinci paketi okuttum"* hiçbir ölçümün ayıramayacağı
+ * iki şey. Korumanın yerini görünürlük alıyor: ekran her dalda ölçüp araçtaki güncel adedi yazıyor,
+ * kararı sayıyı görerek kurye veriyor.
+ *
+ * KOD → VARYANT ÇEVİRİSİ UÇTA (v3:19): eşleme `variant_barcode`ta ve istemcinin oraya erişimi yok.
+ * Tanınmayan kod SESSİZ GEÇMEZ — kendi dalıyla döner, yoksa kurye okuttuğunu sanır ve mal araca
+ * hiç binmez.
  */
-courier.post('/van-stock/return', async (c) => {
-  const parsed = CourierVanStockMoveRequestSchema.safeParse(await readJsonBody(c));
+courier.post('/van-stock/scan', async (c) => {
+  const parsed = CourierVanStockScanRequestSchema.safeParse(await readJsonBody(c));
   if (!parsed.success) return fail(c, 'invalid_body', 400);
 
   const staff = c.get('staff');
   const db = serviceDb();
-  /* İKİ UÇ TEK GERÇEKTEN (21.249): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN.
-     Bir tur ikisi de kapsamdan çözülüyordu ve kapsamda iki araç olan kuryede ikisi birden yanlış
-     olurdu — künye `courierVanContext`te. */
   const { vehicleWarehouseId, facilityId } = await courierVanContext(db, { courierId: staff.id });
   if (facilityId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'no_vehicle' }));
 
-  /* Devret yolunda kod OKUTULMUYOR (v3:19'da yalnız alma tarafında "Barkod okut" var) — ama
-     sözleşme ortak olduğu için kimlik yine iki dallı gelebiliyor; çözüm de aynı kapıdan geçer. */
-  const variantId =
-    parsed.data.variantId ?? (await new VariantBarcodeService(db).findByCode(parsed.data.code ?? ''))?.variantId ?? null;
+  const variantId = (await new VariantBarcodeService(db).findByCode(parsed.data.code))?.variantId ?? null;
   if (variantId === null) return ok(c, CourierVanStockMoveResponseSchema.parse({ status: 'unknown_code' }));
 
-  const result = await returnFromVan(db, {
+  const result = await takeToVan(db, {
     warehouseId: facilityId,
     vehicleWarehouseId,
     variantId,
-    qty: parsed.data.qty,
+    qty: 1,
     actorId: staff.id,
   });
-  const body: z.input<typeof CourierVanStockMoveResponseSchema> = result;
+  /* Cevap ortak şekilde konuşuyor: `movedQty` → `delta`. Okutma yolu daima artırıyor, yani işaret
+     hep `+`; ayrı bir cevap şekli yazmak aynı dokuz dalı iki yerde bakmak olurdu. */
+  const body: z.input<typeof CourierVanStockMoveResponseSchema> =
+    result.status === 'ok'
+      ? { status: 'ok', variantId: result.variantId, delta: result.movedQty, vanQty: result.vanQty }
+      : result;
   return ok(c, CourierVanStockMoveResponseSchema.parse(body));
 });
 

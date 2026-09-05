@@ -260,6 +260,12 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
     source?: 'manual' | 'bank_import';
     /** Sağlayıcı künyesi (07.11) — `{ providerRef: 'pi_...' }`. İade bu referansın üzerinden döner. */
     meta?: Record<string, unknown> | null;
+    /**
+     * Yazımın kimliği (21.263) — aynı anahtarla ikinci çağrı YAZMAZ, ilkin sonucunu `deduped: true`
+     * ile döndürür. Verilmezse yazım korumasızdır ve bu meşru: elle girilen hareketin tekrarı bir
+     * kaza değil bir karardır. Künyesi `0018_money.sql`de.
+     */
+    idempotencyKey?: string | null;
   }): Promise<OrderAmounts> {
     const raw = await this.executeRpc('record_order_movement', {
       p_order_id: input.orderId,
@@ -271,6 +277,7 @@ export class MoneyMovementService extends BaseDbService<MoneyMovement, MoneyMove
       p_description: input.description ?? null,
       p_source: input.source ?? 'manual',
       p_meta: input.meta ?? null,
+      p_idempotency_key: input.idempotencyKey ?? null,
     });
     return OrderAmountsSchema.parse(rpcMoneyToCents(dbToApp(raw), ['amountCollected', 'amountRefunded']));
   }

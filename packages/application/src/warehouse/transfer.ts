@@ -394,7 +394,12 @@ export async function receiveTransfer(
 }
 
 export type DispatchTransferOutcome =
-  | { status: 'ok'; transferId: string; referenceNo: string }
+  /**
+   * `deduped` (21.263): bu çağrı YENİ bir sevk yazmadı — aynı `idempotencyKey` ile daha önce
+   * yazılmış transferin künyesi döndü ve **stok ikinci kez düşmedi**. `false` = gerçekten yazıldı.
+   * Anahtarsız çağrıda daima `false`, çünkü orada tekrarın tanımı yoktur.
+   */
+  | { status: 'ok'; transferId: string; referenceNo: string; deduped: boolean }
   /**
    * `out_of_scope` — parti çağıranın deposunda değil (kaynak KALEMLERDEN türer, bu yüzden kontrol
    * partilerin üstünde). `same_warehouse` — hedef kaynakla aynı; bir transfer değil, hiçbir şey.
@@ -420,6 +425,13 @@ export async function dispatchTransfer(
     lines: readonly DispatchLine[];
     actorId?: string | null;
     note?: string | null;
+    /**
+     * Yazımın kimliği (21.263) — GEÇİRGEN, kararı burada verilmez: aynı anahtarla ikinci çağrı
+     * stoğu bir daha düşmez, RPC ilk sevkin künyesini `deduped: true` ile döndürür. Anahtarı
+     * ÜRETEN taraf isteği başlatandır (rampada kurye ekranı); bu kapı yalnız taşır.
+     * Verilmezse sevk korumasızdır — depo ekranından elle açılan transferin durumu budur.
+     */
+    idempotencyKey?: string | null;
   },
 ): Promise<DispatchTransferOutcome> {
   if (input.lines.length === 0) return { status: 'empty' };
@@ -441,8 +453,9 @@ export async function dispatchTransfer(
       lines: [...input.lines],
       actorId: input.actorId,
       note: input.note,
+      idempotencyKey: input.idempotencyKey,
     });
-    return { status: 'ok', transferId: result.transferId, referenceNo: result.referenceNo };
+    return { status: 'ok', transferId: result.transferId, referenceNo: result.referenceNo, deduped: result.deduped === true };
   } catch (error) {
     return { status: 'failed', message: rpcRejectionMessage(error, 'Sevk yazılamadı') };
   }

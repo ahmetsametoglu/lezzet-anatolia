@@ -57,15 +57,17 @@ export interface OrderMovementInput {
    * **Aynı tahsilatın iki kez yazılmasını engelleyen anahtar** (K4 · 21.10).
    *
    * Sahadaki kurye kuyruklu çalışır: cevabı alamadığı isteği tekrar gönderir. Anahtar hareketin
-   * `meta`sında KALICI olarak durur, dolayısıyla tekrar bir saat sonra gelse de yakalanır.
+   * KENDİ KOLONUNDA kalıcı durur, dolayısıyla tekrar bir saat sonra gelse de yakalanır.
    *
-   * ── SINIRI OLDUĞU GİBİ YAZILIYOR ────────────────────────────────────────────
-   * Kontrol **oku-sonra-yaz**dır, atomik DEĞİL: `money_movement`ta bu anahtar için tekil indeks
-   * yoktur (`import_fingerprint` var ama `record_order_movement` onu hiç doldurmuyor — ölçüldü,
-   * migration 0018). Yani **aynı anda** gelen iki eş-anahtarlı istek ikisi de "yok" okuyup ikisi de
-   * yazabilir; peş peşe gelen ikinci istek yakalanır. Tam kapanış migration ister
-   * (`money_movement.idempotency_key` + kısmi tekil indeks — checkout emsali `order.idempotency_key`,
-   * 0012); şema bu görevin alanı dışında ve rapora yazıldı.
+   * ── ARTIK ATOMİK (21.263 · BEKLEYEN(12.11) KAPANDI) ─────────────────────────
+   * 05.09'a kadar kontrol burada, uygulama katmanında, OKU-SONRA-YAZ idi: hareketler okunup
+   * `meta.idempotencyKey` aranıyordu. Sınırı bu künyede yazılıydı ve gerçekti — **aynı anda** gelen
+   * iki eş-anahtarlı istek ikisi de "yok" okuyup ikisi de yazabiliyordu; yalnız peş peşe gelen
+   * ikinci istek yakalanıyordu.
+   *
+   * Kararı artık veritabanı veriyor: `money_movement.idempotency_key` + tekil indeks (0018) ve
+   * `record_order_movement` çakışmada var olan hareketin sonucunu döndürüyor. Kullanıcı kararı
+   * 04.09 — aynı boşluk `warehouse_transfer`da da vardı ve ikisi tek DESEN olarak kapatıldı.
    */
   idempotencyKey?: string | null;
 }
@@ -80,18 +82,6 @@ export function recordOrderRefund(db: SupabaseClient, input: OrderMovementInput)
   return writeOrderMovement(db, input, 'order_refund');
 }
 
-/**
- * Bu anahtarla zaten yazılmış bir hareket var mı. Sipariş başına okunur — anahtar siparişin
- * hareketleri arasında aranır, tablo taranmaz.
- *
- * BEKLEYEN(12.11): bu arama atomik DEĞİL (birinci kilit durum makinesi); kalıcı kapanış
- * `money_movement.idempotency_key` kolonu + kısmi tekil indeks + RPC parametresi.
- */
-async function alreadyWritten(db: SupabaseClient, orderId: string, type: 'order_payment' | 'order_refund', key: string): Promise<boolean> {
-  const movements = await new MoneyMovementService(db).listByOrder(orderId);
-  return movements.some((movement) => movement.type === type && movement.meta?.['idempotencyKey'] === key);
-}
-
 async function writeOrderMovement(
   db: SupabaseClient,
   input: OrderMovementInput,
@@ -100,14 +90,16 @@ async function writeOrderMovement(
   const found = await new OrderService(db).getWithItems(input.orderId);
   if (!found) return { status: 'not_found' };
 
-  if (input.idempotencyKey && (await alreadyWritten(db, input.orderId, type, input.idempotencyKey))) {
-    // Yazım YOK ama cevap gerçek: tekrar eden istek ilk isteğin sonucunu görür. `resync` hareketleri
-    // yeniden toplar (yeni satır üretmez), böylece dönen tutarlar defterin o anki hâlidir.
-    const synced = await syncOrderPaymentStatus(db, input.orderId);
-    return synced.status === 'ok' ? { ...synced, deduped: true } : synced;
-  }
+  /*
+    TEKRAR KONTROLÜ ARTIK BURADA DEĞİL, VERİDE (21.263). Bu satırın üstünde bir `alreadyWritten`
+    yardımcısı duruyordu: siparişin hareketlerini okuyup `meta.idempotencyKey` arıyordu. Doğru
+    çalışıyordu ama oku-sonra-yazdı ve kendi künyesinde bunu yazıyordu — aynı ANDA gelen iki
+    eş-anahtarlı istek ikisi de "yok" okuyup ikisi de yazabiliyordu.
 
-  const meta = input.idempotencyKey ? { ...(input.meta ?? {}), idempotencyKey: input.idempotencyKey } : (input.meta ?? null);
+    Şimdi anahtar kolona gidiyor, tekil indeks ikinci yazımı reddediyor ve RPC var olan hareketin
+    sonucunu `deduped` ile döndürüyor. Yani KAPI TEK: yazım denenir, cevabı veritabanı verir.
+    Anahtar ayrıca `meta`ya YAZILMIYOR — iki yerde duran bir gerçek bir gün ayrışırdı.
+  */
   const amounts = await new MoneyMovementService(db).recordForOrder({
     orderId: input.orderId,
     accountId: input.accountId,
@@ -115,11 +107,15 @@ async function writeOrderMovement(
     valueDate: input.valueDate,
     description: input.description,
     source: input.source,
-    meta,
+    meta: input.meta ?? null,
+    idempotencyKey: input.idempotencyKey,
     type,
   });
   // Para hareketi ailesi de cent'e geçti (02.9 dilim 6) — buradaki iki `toCents` düştü.
-  return finalize(db, found.order, found.items, amounts.amountCollectedCents, amounts.amountRefundedCents);
+  const outcome = await finalize(db, found.order, found.items, amounts.amountCollectedCents, amounts.amountRefundedCents);
+  // Tekrar eden istek ilk isteğin cevabını görür; tutarlar zaten defterin o anki hâli (RPC tekrar
+  // dalında da `resync` koşuyor), değişen tek şey okuyan tarafa "yeni bir şey yazılmadı" demek.
+  return outcome.status === 'ok' && amounts.deduped === true ? { ...outcome, deduped: true } : outcome;
 }
 
 /**

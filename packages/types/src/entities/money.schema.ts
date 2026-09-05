@@ -95,6 +95,16 @@ export const MoneyMovementSchema = z.object({
    * harekette `null`: elle iki kez 20 € girmek meşrudur, kısıt ona takılmamalı.
    */
   importFingerprint: z.string().nullable(),
+  /**
+   * **Yazımın kimliği** (21.263) — "bu isteği zaten yazdım mı?". İstemcide üretilir; cevabı
+   * kaybolan bir tahsilat isteği tekrarlandığında aynı anahtarla gelir ve veritabanı ikinci
+   * yazımı reddeder (`money_movement_idempotency_key`).
+   *
+   * `importFingerprint`in yerine geçmez: o *"bu banka ekstresindeki bu satır"*tır ve tekilliği
+   * HESAP BAŞINADIR; bu ise isteğin kimliğidir ve tekilliği küreseldir. Künyenin tamamı
+   * `0018_money.sql`de. `null` = korumasız yazım (elle giriş, besleme) ve meşrudur.
+   */
+  idempotencyKey: z.string().nullable(),
   bankImportId: z.string().uuid().nullable(),
   createdAt: z.string(),
 });
@@ -116,6 +126,8 @@ export const MoneyMovementInsertSchema = z.object({
   source: MovementSourceEnum.optional(),
   reconciled: z.boolean().optional(),
   importFingerprint: z.string().nullish(),
+  /** Yazımın kimliği (21.263) — künyesi varlık şemasında. Verilmezse yazım korumasızdır. */
+  idempotencyKey: z.string().nullish(),
   bankImportId: z.string().uuid().nullish(),
 });
 export type MoneyMovementInsert = z.infer<typeof MoneyMovementInsertSchema>;
@@ -143,6 +155,15 @@ export type AccountLedgerRow = z.infer<typeof AccountLedgerRowSchema>;
 export const OrderAmountsSchema = z.object({
   ok: z.boolean(),
   movementId: z.string().uuid().optional(),
+  /**
+   * **Bu çağrı yeni bir hareket YAZMADI** (21.263): aynı `idempotencyKey` ile daha önce yazılmış
+   * bir hareket bulundu ve onun sonucu döndü. Tutarlar yine defterin O ANKİ hâlidir (RPC tekrar
+   * dalında da `resync_order_amounts` koşuyor), yani okuyan taraf için `true` bir eksiklik değil
+   * bir BİLGİDİR: ekran "tahsil edildi" yerine "zaten yazılmıştı" diyebilsin.
+   *
+   * `optional` çünkü yalnız sipariş parasını yazan RPC bu alanı üretiyor.
+   */
+  deduped: z.boolean().optional(),
   // RPC euro döndürür; cent'e çevrim servis sınırında (`rpcMoneyToCents`, 02.9 · STACK §8).
   amountCollectedCents: z.number().int(),
   amountRefundedCents: z.number().int(),

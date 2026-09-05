@@ -528,7 +528,17 @@
     "returned": "{n} adet depoya devredildi.",
     "notEnough": "Depoda o kadar yok — kullanılabilir {n} adet.",
     "stuck": "Mal sevk edildi ama araca yazılamadı; transfer askıda kaldı. Depo ekranından çözülmeli.",
-    "failed": "Hareket yazılamadı — bağlantıyı kontrol edip yeniden dene."
+    "failed": "Yazılamadı. Liste tazelendi — araçtaki sayıya bak, gerekiyorsa yeniden yaz.",
+    "refreshFailed": "Bağlantı yok — araçtaki sayı okunamadı. Aşağıdaki sayılar eski olabilir.",
+    "staleNote": "Depodaki sayı okunamadı",
+    "staleLine": "Araçtaki sayı değişmiş — araçta {n} adet. Hiçbir hareket yazılmadı.",
+    "converged": "Zaten yazılmıştı — araçta {n} adet var.",
+    "busyScan": "Önceki hareket sürüyor — bitince yeniden okut.",
+    "loadError": {
+      "title": "Araçtaki mal okunamadı",
+      "body": "Bağlantı ya da sunucu sorunu. Araçta ne olduğunu bilmeden mal almak, olanı ikinci kez almak demektir — o yüzden bu ekran okuma gelene kadar yazmıyor.",
+      "retry": "Yeniden dene"
+    }
   },
   "routePick": {
     "title": "Sefer ve Araç",
