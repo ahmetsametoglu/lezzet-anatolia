@@ -1,4 +1,4 @@
-import { Karla_400Regular, Karla_600SemiBold, Karla_700Bold } from '@expo-google-fonts/karla';
+import { Karla_400Regular, Karla_600SemiBold, Karla_700Bold, Karla_800ExtraBold } from '@expo-google-fonts/karla';
 import { Lora_400Regular, Lora_600SemiBold } from '@expo-google-fonts/lora';
 
 /*
@@ -50,6 +50,12 @@ export const appFontAssets = {
   Karla_400Regular,
   Karla_600SemiBold,
   Karla_700Bold,
+  /* 800 — BİLDİRİM EKRANI İÇİN AÇILDI (kullanıcı kararı 05.09). v3'ün gün başlığı (BUGÜN/DÜN) ve
+     bölüm rozeti (DEPO · KURYE · …) 800 istiyor; ikisi de harf aralıklı küçük büyük-harf üstbaşlık
+     ve 700 ile 800 farkı o puntoda ağırlığın kendisiyle değil, harflerin gövde kalınlığıyla
+     okunuyor. Sahte kalınla üretilemez: dosyanın kendi kuralı `fontWeight` yazmayı yasaklıyor
+     (ağırlık aile adının içinde) ve yazılsaydı iki platformda da sistem fontuna düşerdi. */
+  Karla_800ExtraBold,
 } as const;
 
 /** Yüklenen aile adlarının birliği — seam bunun DIŞINA çıkamaz (aşağıdaki `satisfies` zorlar). */
@@ -73,5 +79,6 @@ export const appFont = {
     400: 'Karla_400Regular',
     600: 'Karla_600SemiBold',
     700: 'Karla_700Bold',
+    800: 'Karla_800ExtraBold',
   },
 } as const satisfies Record<string, Record<number, LoadedFontFamily>>;

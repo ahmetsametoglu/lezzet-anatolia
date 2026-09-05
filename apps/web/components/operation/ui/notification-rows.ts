@@ -16,6 +16,8 @@ import type { MeNotification } from '@lezzet/types';
 export interface OpsNotificationRow {
   id: string;
   title: string;
+  /** Açıklayıcı ikinci satır (05.09) — sözlük başlığı ikiye ayırdı; `null` meşru (künyesi orada). */
+  subtitle: string | null;
   tone: StaffNotificationTone;
   /** Kısa TÜR etiketi ("Belge") — bir bakışta ayırt etme (26.08); sözlükten gelir. */
   label: string;
@@ -46,6 +48,7 @@ export function toOpsNotificationRow(row: MeNotification): OpsNotificationRow {
     id: row.id,
     // Genel başlık webde KISA: "uygulamayı güncelleyin" tavsiyesi mobile özgü (orada sürüm eskir).
     title: brief?.title ?? 'Yeni bir bildirim',
+    subtitle: brief?.subtitle ?? null,
     tone: brief?.tone ?? 'quiet',
     label: brief?.label ?? 'Bildirim',
     href: opsNotificationHref(row),

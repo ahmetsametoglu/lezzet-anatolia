@@ -21,7 +21,7 @@ import {
   useOperationsWorkplace,
   useWarehouseOptions,
 } from '@/screens/operations/sections-context';
-import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
+import { useOperationsNotificationBadge } from '@/screens/operations/use-notification-badge.hook';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
@@ -119,7 +119,7 @@ export function WarehouseHubScreen() {
   const router = useRouter();
   const hub = useWarehouseHub();
   const { scope, offline } = useWarehouseStatus();
-  const unread = useOperationsNotifications().unread;
+  const unread = useOperationsNotificationBadge();
   const identity = useOperationsIdentity();
   const sections = useOperationsSections();
   const workplace = useOperationsWorkplace();
@@ -164,7 +164,7 @@ export function WarehouseHubScreen() {
       right={
         <NotificationBell
           onPress={() => router.navigate('/notifications')}
-          accessibilityLabel={unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })}
+          accessibilityLabel={unread === null || unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })}
           count={unread}
           testID="operations-bell"
         />

@@ -1,9 +1,25 @@
 {
   "sections": {
-    "courier": { "tab": "Kurye", "eyebrow": "KURYE", "title": "Günün Rotası" },
-    "warehouse": { "tab": "Depo", "eyebrow": "DEPO", "title": "Depo İşleri" },
-    "management": { "tab": "Yönetim", "eyebrow": "YÖNETİM · BİLDİRİM → KISA KARAR", "title": "Karar Kutusu" },
-    "money": { "tab": "Para", "eyebrow": "PARA · SALT OKUMA", "title": "Tahsilat İzleme" }
+    "courier": {
+      "tab": "Kurye",
+      "eyebrow": "KURYE",
+      "title": "Günün Rotası"
+    },
+    "warehouse": {
+      "tab": "Depo",
+      "eyebrow": "DEPO",
+      "title": "Depo İşleri"
+    },
+    "management": {
+      "tab": "Yönetim",
+      "eyebrow": "YÖNETİM · BİLDİRİM → KISA KARAR",
+      "title": "Karar Kutusu"
+    },
+    "money": {
+      "tab": "Para",
+      "eyebrow": "PARA · SALT OKUMA",
+      "title": "Tahsilat İzleme"
+    }
   },
   "bell": {
     "label": "Bildirimler",
@@ -12,14 +28,29 @@
   "notifications": {
     "title": "Bildirimler",
     "back": "Geri",
-    "scopeAll": "tüm bölümler — çok rollü oturum",
-    "scopeFiltered": "yalnız {sections} — rol süzmesi",
+    "subtitle": "yalnız senin rollerine düşen olaylar",
     "loading": "Bildirimler yükleniyor…",
+    "filterAll": "Tümü",
+    "clearFilter": "Süzgeci temizle",
+    "more": "Devamını yükle",
+    "tailFailed": "Devamı gelmedi — yeniden dene",
     "empty": {
       "title": "Bildirim yok",
-      "body": "Yeni iş düştüğünde burada görünür — listeler elle de açılır."
+      "body": "Bildirimler hızlandırıcıdır, tek kapı değil — her listeye alt sekmelerden de girebilirsin."
     },
-    "rule": "Süzme kuralı: tek rollü kullanıcı yalnız kendi bölümünün bildirimlerini görür; çok rollüde tümü akar. Bildirim hızlandırıcıdır, tek kapı değil."
+    "filteredEmpty": {
+      "title": "Bu bölümde bildirim yok",
+      "body": "Süzgeç açık — başka bölümlerde bekleyen olaylar olabilir."
+    },
+    "error": {
+      "title": "Bildirimler yüklenemedi",
+      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
+      "retry": "Tekrar dene"
+    },
+    "rule": {
+      "title": "Bildirim tek kapı değil",
+      "body": "Push altyapısı henüz kurulmadı; her liste alt sekmelerden elle de açılır. Yalnız senin rollerine düşen olaylar listelenir — satırın rengi ve rozeti bölümü söyler."
+    }
   },
   "gate": {
     "loading": "Yükleniyor…",

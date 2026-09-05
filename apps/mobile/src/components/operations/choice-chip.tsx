@@ -22,8 +22,18 @@ import { operationsTheme } from '@/theme/unistyles';
   Renkler `operationsTheme` sabitinden — gerekçe `theme/unistyles.ts` künyesinde.
 */
 
-/** Dolgunun anlamı: `ink` nötr seçim (yöntem), `error` olumsuz sonuç (ulaşılamadı/red notu). */
-type ChoiceTone = 'ink' | 'error';
+/**
+ * Dolgunun anlamı: `ink` nötr seçim (yöntem), `error` olumsuz sonuç (ulaşılamadı/red notu),
+ * `filter` bir LİSTEYİ daraltan süzgeç (bildirim akışının bölüm şeridi, v3:36).
+ *
+ * `filter` neden `ink`in bir varyantı değil de ayrı bir ton: seçili hâli aynı (mürekkep dolu) ama
+ * BOŞTAKİ hâli başka — süzgeç çipi zeminli (beyaz hap) ve kenarı bir kademe açık. Sebep rolde:
+ * `ink` bir SORUYA verilen cevaptır ("hangi yöntem?") ve boşta durduğunda sayfanın zeminine
+ * karışması doğrudur; süzgeç şeridi ise yatay kayan bir KONTROL çubuğudur ve boştaki çipin de
+ * dokunulabilir bir yüzey olduğunu söylemesi gerekir. Dördüncü bir prop yerine ton, çünkü
+ * dosyanın kendi kuralı bu: "boştaki çip DE TONUNU TAŞIR".
+ */
+type ChoiceTone = 'ink' | 'error' | 'filter';
 
 interface OperationsChoiceChipProps {
   /** Çip metni — sözlükten gelir, komponent metin gömmez. */
@@ -73,6 +83,11 @@ const styles = StyleSheet.create({
     backgroundColor: operationsTheme.colors.error,
     borderColor: operationsTheme.colors.error,
   },
+  /* Süzgecin seçili hâli `ink` ile birebir aynı (v3: `bg:#2f353a`) — ayrı bir durak açılmadı. */
+  filter: {
+    backgroundColor: operationsTheme.colors.ink,
+    borderColor: operationsTheme.colors.ink,
+  },
   /* Boştaki çip ZEMİNSİZDİR (v2: `background:transparent`) — palete sahte bir "saydam" rengi
      eklemek yerine zemin hiç verilmiyor (katalog süzgeç düğmesinin aynı kararı).
 
@@ -82,6 +97,12 @@ const styles = StyleSheet.create({
      taşıyor — çünkü çipin ailesi neyi sorduğunu söylüyor, seçili olup olmaması değil. */
   idle_ink: { borderColor: operationsTheme.colors['sand-500'] },
   idle_error: { borderColor: operationsTheme.colors['error-line'] },
+  /* Süzgecin boştaki hâli ZEMİNLİ (v3: `bg:#fff` + `bd:#ddd6c4`) — yatay kayan bir kontrol
+     çubuğunda zeminsiz çipler sayfaya karışıyor ve dokunulabilir görünmüyor. */
+  idle_filter: {
+    backgroundColor: operationsTheme.colors.card,
+    borderColor: operationsTheme.colors['sand-300'],
+  },
   label: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['field-label--font-weight']],
     fontSize: operationsTheme.text['field-label'],
@@ -90,4 +111,5 @@ const styles = StyleSheet.create({
   selectedLabel: { color: operationsTheme.colors.card },
   idleLabel_ink: { color: operationsTheme.colors.ink },
   idleLabel_error: { color: operationsTheme.colors.error },
+  idleLabel_filter: { color: operationsTheme.colors.ink },
 });

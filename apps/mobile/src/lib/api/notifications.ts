@@ -31,9 +31,17 @@ export function fetchNotifications(cursor?: string, audience: NotificationAudien
   return authorizedFetch(`/api/v1/me/notifications${query}`, MeNotificationsPageSchema);
 }
 
-/** Rozet — zil çalınca (kanal yükü boş) ya da sekmeye dönünce, LİSTE ÇEKMEDEN tazeleme. */
-export function fetchNotificationBadge(): Promise<ApiResult<z.infer<typeof MeNotificationBadgeSchema>>> {
-  return authorizedFetch('/api/v1/me/notifications/badge', MeNotificationBadgeSchema);
+/**
+ * Rozet — zil çalınca (kanal yükü boş) ya da sekmeye dönünce, LİSTE ÇEKMEDEN tazeleme.
+ *
+ * KİTLE 05.09'DA EKLENDİ: parametre yoktu ve uç varsayılana (`customer`) düşüyordu — operasyon
+ * tarafından çağrılsaydı personelin zili MÜŞTERİ sayısını gösterirdi. Kullanılmadığı için
+ * görünmemişti; hub zilleri sayıyı 30 satırlık listeden kendileri sayıyordu ve rozet 30'u hiç
+ * geçemiyordu.
+ */
+export function fetchNotificationBadge(audience: NotificationAudience = 'customer'): Promise<ApiResult<z.infer<typeof MeNotificationBadgeSchema>>> {
+  const query = audience === 'customer' ? '' : `?audience=${audience}`;
+  return authorizedFetch(`/api/v1/me/notifications/badge${query}`, MeNotificationBadgeSchema);
 }
 
 const DoneSchema = z.object({ done: z.boolean() });
@@ -42,8 +50,16 @@ export function markNotificationRead(id: string): Promise<ApiResult<z.infer<type
   return authorizedFetch(`/api/v1/me/notifications/${id}/read`, DoneSchema, { method: 'POST' });
 }
 
-export function markAllNotificationsRead(audience: NotificationAudience = 'customer'): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
-  const query = audience === 'customer' ? '' : `?audience=${audience}`;
+/**
+ * "Buraya kadarını gördüm". `since` — çizilen EN ESKİ satırın damgası: beyan yalnız o damgadan
+ * yeni satırları kapsar. Sayfalayan bir ekran "hepsini gördüm" DİYEMEZ; sayfanın arkasında kalan
+ * satırı okundu yapmak onu rozetten düşürür ve 90 gün sonra saklama süpürmesine yem eder.
+ */
+export function markAllNotificationsRead(audience: NotificationAudience = 'customer', since?: string): Promise<ApiResult<z.infer<typeof DoneSchema>>> {
+  const params = new URLSearchParams();
+  if (audience !== 'customer') params.set('audience', audience);
+  if (since !== undefined) params.set('since', since);
+  const query = params.size > 0 ? `?${params.toString()}` : '';
   return authorizedFetch(`/api/v1/me/notifications/read-all${query}`, DoneSchema, { method: 'POST' });
 }
 

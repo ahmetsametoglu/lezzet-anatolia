@@ -162,6 +162,12 @@ export function NotificationBell({ channel }: NotificationBellProps) {
                       </span>
                     </span>
                     <span className="font-ops-body text-ops-sm text-ops-ink">{row.title}</span>
+                    {/* Alt satır (05.09): sözlük başlığı ikiye ayırdı — burada çizilmezse web,
+                        04.09'a kadar başlıkta duran "3 adet eksik · STR kayıp yazdı" gibi olguyu
+                        sessizce kaybederdi. `null` olduğunda hiç çizilmez (boş satır bırakmaz). */}
+                    {row.subtitle ? (
+                      <span className="font-ops-body text-ops-micro text-ops-muted">{row.subtitle}</span>
+                    ) : null}
                   </span>
                 </>
               );

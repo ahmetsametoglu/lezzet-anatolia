@@ -1,4 +1,4 @@
-import { staffNotificationBrief } from '@lezzet/i18n';
+import { staffNotificationBrief, type StaffNotificationTone } from '@lezzet/i18n';
 import type { AppNotificationKind } from '@lezzet/types';
 
 import type { NotificationRow } from '@/lib/api/notifications';
@@ -6,73 +6,119 @@ import type { OperationsSection } from '@/lib/operations/sections';
 
 /*
   UÇTAN GELEN SATIR → OPERASYON BİLDİRİMİ (14.13 — fixture'ın yerini alan çeviri katmanı).
-  Fixture künyesi sözünü tutuyor: "gerçek akış geldiği gün bu dosya silinir, süzme kuralı yerinde
-  kalır" — kural (`visibleNotifications`) gerçekten yerinde, değişen yalnız veri kaynağı.
 
-  ── BAŞLIK + TON `@lezzet/i18n`DEN (14.15 terfisi) ──────────────────────────
-  Web operasyon zili aynı personel satırını aynı başlıkla göstermek zorunda — sözlük paylaşılan
-  pakete taşındı (`staffNotificationBrief`, Türkçe: operasyon yüzeyi tek dil, CLAUDE §2). Burada
-  YÜZEYE ÖZGÜ olan kalır: satırın hangi BÖLÜME düştüğü (webde karşılığı rota) ve bilinmeyen türün
-  genel metni — "uygulamayı güncelleyin" ancak mobilde anlamlı, web her zaman sunucuyla eşzamanlı.
+  ── BAŞLIK + ALT SATIR + TON `@lezzet/i18n`DEN ──────────────────────────────
+  Web operasyon zili aynı personel satırını aynı cümleyle göstermek zorunda; sözlük paylaşılan
+  pakette (`staffNotificationBrief`, Türkçe: operasyon yüzeyi tek dil, CLAUDE §2). Burada YÜZEYE
+  ÖZGÜ olan kalır: satırın nereye GİTTİĞİ ve bilinmeyen türün genel metni.
 
-  ── KÜME AÇIK: bilinmeyen tür SESSİZCE DÜŞMEZ ───────────────────────────────
-  `kind` sunucuda büyür; eski sürüm yeni personel türünü genel satırla gösterir (yönetim/quiet).
+  ── BÖLÜM ARTIK BİR KAPI DEĞİL, ETİKET (kullanıcı kararı 05.09) ─────────────
+  Eski hâlde bölüm iki iş yapıyordu: satırın rengini söylemek VE satırı gizlemek. İkincisi ölçülen
+  bir arızaydı — sunucu alıcıyı *rol × depo* ile seçtikten sonra ekran aynı satırı bir kez daha
+  *bölüm* ile süzüyordu ve iki süzgeç aynı fikirde değildi. Somut: `stock_low` rolleri
+  `['admin','warehouse']` ama eski eşleme onu `'warehouse'` bölümüne bağlıyordu, yani YALNIZ yönetici
+  olan kişiye YAZILAN satır ekranda hiç çizilmiyordu. Ters yönü de vardı: `run_close_pending`
+  depocuya yazılıyor ama bölümü `'management'`, depocu göremiyordu.
+
+  Bundan sonra kitleyi YALNIZ SUNUCU belirler. Bölüm rengi/rozeti/çipi verir; hiçbir satırı
+  düşürmez (`sections.ts` künyesi).
+
+  ── BÖLÜM = HEDEF EKRANIN BÖLÜMÜ, üreten modülün değil ─────────────────────
+  Kural tasarımın kendi verisinden: v3'ün örnek satırında "Azalan stok" bir STOK olayı ama bölümü
+  YÖNETİM, çünkü hedefi tedarik ekranı; "Musa K. rotayı kapattı" bir KURYE olayı ama bölümü DEPO,
+  çünkü hedefi kurye dönüş kabulü. Web de aynı şeyi söylüyor (`opsNotificationHref`: `stock_low` →
+  `/operations/procurement`). Eski mobil eşleme bölümü üreten modüle göre yazmıştı — tasarımla da
+  weble de çelişen tek yer orasıydı.
+
+  ── HEDEFİ OLMAYAN SATIR TIKLANMAZ ─────────────────────────────────────────
+  Tasarım bunu zaten öngörmüş (`sc-if bn.hedef`). Mobilde operasyon tarafında derin bağ altyapısı
+  yok ve üç türün (belge · askıda kapanış · kurumsal başvuru) açacağı ekran HENÜZ YOK — o satırlar
+  yalnız haber verir. "Var olmayan adrese götürmektense hiç götürme" kararının devamı; eskisinden
+  farkı, artık HERKESİ bölüm köküne götürmüyor olması (bölüm kökü bir cevap değil, bir savuşturmaydı).
+  BEKLEYEN(21.217): belge · askıda kapanış · kurumsal başvuru için hedef ekranlar.
 */
 
-/** Satır başındaki noktanın tonu — fixture'dan taşındı (token ADI, renk değil; CLAUDE §3). */
-export type NotificationDot = 'courier' | 'warehouse' | 'attention' | 'alert' | 'quiet';
-
-/** Ekranın çizdiği şekil — fixture'ın sözleşmesi, artık uçtan kurulur. */
+/** Ekranın çizdiği şekil — uçtan kurulur, sözlük + hedef eşlemesiyle zenginleşir. */
 export interface OperationsNotification {
   id: string;
   title: string;
+  /** Açıklayıcı ikinci satır (tasarımın `bn.alt`ı) — sözlükten; olgusu yoksa `null`. */
+  sub: string | null;
   /** Kısa TÜR etiketi ("Belge") — bir bakışta ayırt etme (26.08); sözlükten gelir. */
   label: string;
+  /** Satırın RENGİNİ ve rozetini veren bölüm — hedef ekranın bölümü. Satırı GİZLEMEZ. */
   section: OperationsSection;
-  dot: NotificationDot;
-  ago: string;
+  /** Aciliyet — sözleşmenin üç değeri; kart zeminini/kenarını/başlık rengini bu belirler. */
+  tone: StaffNotificationTone;
+  /** Ham damga: satırın saati ve gün grubu bundan türer (ekran cihaz saatiyle biçimler). */
+  createdAt: string;
+  /** `null` = okunmamış → tasarımın 8 px noktası. */
+  readAt: string | null;
+  /** Hedef — yoksa satır tıklanmaz ve hedef satırı çizilmez. */
+  destination: NotificationDestination | null;
 }
 
-/** Türün düştüğü bölüm — yüzeye özgü (webde karşılığı rota). Yeni personel türü eşlemesini BURAYA getirir. */
-const SECTION: Partial<Record<AppNotificationKind, OperationsSection>> = {
-  document_undeliverable: 'management',
-  ticket_opened: 'management',
-  stock_low: 'warehouse',
-  run_close_mismatch: 'money',
-  /* Askıda kalan durak (03.09): sevkiyat planlaması yönetimin işi — web'in askıda şeridi. */
-  run_close_pending: 'management',
-  b2b_application_received: 'management',
-  /* Transfer eksiği (04.09): gönderen deponun personeline düşer — depo bölümünün zili. */
-  transfer_shortfall: 'warehouse',
-  transfer_excess: 'warehouse',
-};
-
-/** Bilinmeyen türün genel satırı — metin mobile özgü (yukarıdaki künye). */
-const FALLBACK = { section: 'management' as OperationsSection, dot: 'quiet' as NotificationDot, title: 'Yeni bir bildirim — ayrıntı için uygulamayı güncelleyin' };
+/** Satıra dokununca gidilecek yer + tasarımın "… aç →" etiketi. */
+export interface NotificationDestination {
+  href: string;
+  /** Tasarımın hedef satırı — EKRANIN adını söyler, olayı değil ("Transferi aç"). */
+  label: string;
+  /** Hedefin bölümü; kullanıcı o bölümü açamıyorsa satır tıklanmaz. */
+  section: OperationsSection;
+}
 
 /**
- * Göreli zaman, Türkçe — fixture'ın "2 dk" biçimi (v2). Dakika altı "şimdi": saniye saymak,
- * operatöre yanlış bir aciliyet ritmi dayatmak olurdu.
+ * TÜR → HEDEF. Etiket TÜR başına değil HEDEF başına yazılır: iki transfer türü aynı ekrana gider,
+ * aynı cümleyi paylaşır. Şablonla türetilmedi ("{ad}'ı aç") çünkü Türkçe çekim eki sesli/sessiz
+ * uyumuna göre değişiyor ("Transfer'i", "Gün Sonu'nu", "Toplama'yı") ve şablon üçünü de bozardı.
+ *
+ * Bölüm bu tablodan OKUNUR (aşağıdaki `sectionOf`) — ikinci bir bölüm tablosu tutmak, aynı gerçeği
+ * iki yerde yazmak olurdu (CLAUDE §1).
  */
-export function agoOf(createdAt: string, now: Date): string {
-  const ms = now.getTime() - new Date(createdAt).getTime();
-  const dk = Math.floor(ms / 60_000);
-  if (dk < 1) return 'şimdi';
-  if (dk < 60) return `${dk} dk`;
-  const sa = Math.floor(dk / 60);
-  if (sa < 24) return `${sa} sa`;
-  return `${Math.floor(sa / 24)} g`;
-}
+const DESTINATION: Partial<Record<AppNotificationKind, (targetId: string | null) => NotificationDestination | null>> = {
+  /* Talep kuyruğunun kaydına doğrudan açılan TEK tür — ekran `?id=` alıyor (complaint-screen). */
+  ticket_opened: (targetId) => (targetId === null ? null : { href: `/complaint?id=${targetId}`, label: 'Talebi aç', section: 'management' }),
+  /* Eşik listesi tedarik önerisinde yaşıyor; varyanta açılan bir ekran yok, kuyruk var. */
+  stock_low: () => ({ href: '/supply-suggestion', label: 'Tedarik önerisini aç', section: 'management' }),
+  /* Kapanış farkı gün sonu özetinde okunur (M2) — parametresiz, salt okuma. */
+  run_close_mismatch: () => ({ href: '/day-end', label: 'Gün sonunu aç', section: 'money' }),
+  /* Transferin iki yüzü de aynı ekranda: "son kapananlar" listesi gönderen satırını da taşıyor.
+     BEKLEYEN(21.217): ekran `?transferId=` alıp satırı seçmiyor — bugün liste başına gidiliyor. */
+  transfer_shortfall: () => ({ href: '/inbound', label: 'Transferi aç', section: 'warehouse' }),
+  transfer_excess: () => ({ href: '/inbound', label: 'Transferi aç', section: 'warehouse' }),
+};
 
-export function toOperationsNotification(row: NotificationRow, now: Date): OperationsNotification {
+/**
+ * Hedefi OLMAYAN türün bölümü — işin yapılacağı yer. Hedef doğduğu gün bu tablodan düşer ve
+ * bölüm `DESTINATION`dan okunmaya başlar; iki tablo aynı anda aynı türü taşımaz.
+ */
+const SECTION_WITHOUT_DESTINATION: Partial<Record<AppNotificationKind, OperationsSection>> = {
+  document_undeliverable: 'management',
+  run_close_pending: 'management',
+  b2b_application_received: 'management',
+};
+
+/** Bilinmeyen türün genel satırı — metin mobile özgü (web her zaman sunucuyla eşzamanlı). */
+const FALLBACK = {
+  section: 'management' as OperationsSection,
+  tone: 'quiet' as StaffNotificationTone,
+  title: 'Yeni bir bildirim — ayrıntı için uygulamayı güncelleyin',
+  label: 'Bildirim',
+};
+
+export function toOperationsNotification(row: NotificationRow): OperationsNotification {
   const brief = staffNotificationBrief(row);
+  const kind = row.kind as AppNotificationKind;
+  const destination = DESTINATION[kind]?.(row.targetId) ?? null;
   return {
     id: row.id,
     title: brief?.title ?? FALLBACK.title,
-    label: brief?.label ?? 'Bildirim',
-    section: SECTION[row.kind as AppNotificationKind] ?? FALLBACK.section,
-    // Paylaşılan ton (`alert`/`quiet`) mobil nokta paletinin alt kümesi — doğrudan geçer.
-    dot: brief?.tone ?? FALLBACK.dot,
-    ago: agoOf(row.createdAt, now),
+    sub: brief?.subtitle ?? null,
+    label: brief?.label ?? FALLBACK.label,
+    section: destination?.section ?? SECTION_WITHOUT_DESTINATION[kind] ?? FALLBACK.section,
+    tone: brief?.tone ?? FALLBACK.tone,
+    createdAt: row.createdAt,
+    readAt: row.readAt,
+    destination,
   };
 }

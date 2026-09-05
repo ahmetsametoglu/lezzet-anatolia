@@ -110,10 +110,20 @@ notifications.post('/:id/read', async (c) => {
   return ok(c, { done: true });
 });
 
-/** "Hepsini gördüm" — rozeti tek dokunuşta kapatır; imza gereği yalnız kendi satırları ve KENDİ kitlesi. */
+/**
+ * "Buraya kadarını gördüm" — imza gereği yalnız kendi satırları ve KENDİ kitlesi.
+ *
+ * `since` (05.09, isteğe bağlı): beyanı GÖRÜLENLE sınırlar. Sayfalayan bir ekran çizdiği EN ESKİ
+ * satırın damgasını gönderir; sayfanın arkasında kalan, kullanıcının hiç görmediği satırlar
+ * okundu damgalanmaz (kapı künyesindeki gerekçe — saklama süpürmesi onları GÖRÜLMÜŞ sayıp silerdi).
+ * Geçersiz damga SESSİZCE YOK SAYILMAZ, istek reddedilir: bozuk bir damgayı "sınır yok" diye
+ * okumak, tam da önlemek istediğimiz geniş beyanı üretirdi.
+ */
 notifications.post('/read-all', async (c) => {
   const audience = c.req.query('audience') === 'staff' ? 'staff' : 'customer';
-  await markAllNotificationsRead(serviceDb(), c.get('customerId'), audience);
+  const sinceRaw = c.req.query('since');
+  if (sinceRaw !== undefined && Number.isNaN(Date.parse(sinceRaw))) return fail(c, 'invalid_since', 400);
+  await markAllNotificationsRead(serviceDb(), c.get('customerId'), audience, sinceRaw);
   return ok(c, { done: true });
 });
 

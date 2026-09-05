@@ -1,4 +1,4 @@
-import { dateLabelOf } from '@/lib/operations/stamp';
+import { dateLabelOf, turkishUpper } from '@/lib/operations/stamp';
 import { fillCopy } from '@/screens/operations/copy';
 import { courierCopy } from './copy';
 
@@ -23,14 +23,15 @@ export { centsToAmountText, money, parseAmountToCents, signedMoney } from '@/lib
 const t = courierCopy;
 
 /**
- * TÜRKÇE BÜYÜK HARF — `toUpperCase` tek başına YANLIŞTIR: JS'in dil-bağımsız dönüşümü `i` → `I`
- * verir, Türkçede ise `İ` olmalı ("Nisan" → "NISAN" değil "NİSAN"). Üstbaşlık CSS/RN tarafında
- * ayrıca `textTransform:'uppercase'` alıyor; buradan zaten büyük çıkan harfler orada değişmez,
- * yani iki katman çelişmiyor — bu fonksiyon yalnız noktalı/noktasız i ayrımını KURTARIYOR.
+ * TÜRKÇE BÜYÜK HARF — kural `lib/operations/stamp.ts`te yaşıyor (05.09'da oraya taşındı: ikinci
+ * tüketici bildirim akışının gün ayracı oldu ve bir DİL kuralının evi tek bir bölümün biçimleyicisi
+ * olamaz). Buradan yeniden ihraç ediliyor ki kuryenin çağıranları ve testi tek adresten okusun.
+ *
+ * Üstbaşlık RN tarafında ayrıca `textTransform:'uppercase'` alıyor; buradan zaten büyük çıkan
+ * harfler orada değişmez — iki katman çelişmiyor, bu fonksiyon yalnız noktalı/noktasız i ayrımını
+ * kurtarıyor.
  */
-export function turkishUpper(value: string): string {
-  return value.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase();
-}
+export { turkishUpper };
 
 /**
  * `"2026-08-08"` → `"8 AĞUSTOS"` (v2:38'in üstbaşlığı).

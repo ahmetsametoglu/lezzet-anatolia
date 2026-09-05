@@ -746,19 +746,13 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
     // süpürme burada referanstan yürüyor. İki ayrı kapanış testi var (`apps/web/lib/courier` +
     // `packages/application/src/courier`) ve ikisi de aynı artığı bırakıyordu — temizliği test
     // dosyalarına kopyalamak yerine tek yerde tutmak, üçüncü test yazıldığında da çalışır.
-    const { data: uyusmazliklar, error: uyusmazlikHata } = await db.from('notification').select('id, payload').eq('kind', 'run_close_mismatch');
-    if (uyusmazlikHata) throw uyusmazlikHata;
-    const referansli = ((uyusmazliklar ?? []) as { id: string; payload: Record<string, unknown> }[]).filter(
-      (r): r is { id: string; payload: { referenceNo: string } } => typeof r.payload?.referenceNo === 'string',
-    );
-    if (referansli.length > 0) {
-      const referanslar = [...new Set(referansli.map((r) => r.payload.referenceNo))];
-      const { data: seferler, error: seferHata } = await db.from('delivery_run').select('reference_no').in('reference_no', referanslar);
-      if (seferHata) throw seferHata;
-      const yasayanSefer = new Set(((seferler ?? []) as { reference_no: string }[]).map((r) => r.reference_no));
-      const sahipsiz = referansli.filter((r) => !yasayanSefer.has(r.payload.referenceNo)).map((r) => r.id);
-      if (sahipsiz.length > 0) await mustDelete(db, 'notification', (q) => q.in('id', sahipsiz));
-    }
+    /* ÜÇ TÜR DAHA aynı sınıfta ve 05.09'a kadar EKSİKTİ — ölçüldü: yerelde 198 sahipsiz satır
+       birikmiş (144 transfer + 54 askıda kapanış). Künyenin kendi uyarısı gerçekleşmiş: "eksik
+       bırakılan tür sessizce birikir". `run_close_pending` 03.09'da, iki transfer türü 04.09'da
+       eklenmişti; süpürücüye eklenmedikleri için testlerin yazdığı satırlar paylaşılan DB'de kaldı.
+       Sefere referansla bağlananlar tek turda, transfer kimliğiyle bağlananlar kendi turunda. */
+    await sahipsizBildirimleriSil(db, ['run_close_mismatch', 'run_close_pending'], 'delivery_run', 'reference_no', 'referenceNo');
+    await sahipsizBildirimleriSil(db, ['transfer_shortfall', 'transfer_excess'], 'warehouse_transfer', 'id', 'transferId');
   });
 
   // Ne yapılamadıysa TEK hatada toplanır: teardown işini bitirdi ve şimdi ne bırakmak zorunda
@@ -766,6 +760,39 @@ export async function purgeTestData(db: SupabaseClient, targets: PurgeTargets): 
   if (failures.length > 0) {
     throw new Error(`teardown ${failures.length} adımda yarım kaldı:\n· ${failures.join('\n· ')}`);
   }
+}
+
+/**
+ * HEDEF NESNESİ OLMAYAN personel bildirimlerini sahipliğine göre süpürür.
+ *
+ * Bu türler `target_type`/`target_id` yazmıyor (şemanın kuralı: "yeni hedef türü EKRANIYLA birlikte
+ * gelir" ve o ekranlar henüz yok), bağlarını `payload` içinde taşıyorlar. Süpürme o bağdan yürür:
+ * payload'daki kimlik/referans artık tabloda YOKSA satır bir testin artığıdır.
+ *
+ * Tek yerde durmasının sebebi ölçülmüş: aynı artığı bırakan üç ayrı test dosyası var ve temizliği
+ * her birine kopyalamak, dördüncüsü yazıldığında yine unutulurdu. Nitekim tür listesi eksik
+ * bırakıldığı için 198 satır birikmişti.
+ */
+async function sahipsizBildirimleriSil(
+  db: SupabaseClient,
+  kinds: string[],
+  tablo: string,
+  kolon: string,
+  payloadAlani: string,
+): Promise<void> {
+  const { data, error } = await db.from('notification').select('id, payload').in('kind', kinds);
+  if (error) throw error;
+  const bagli = ((data ?? []) as { id: string; payload: Record<string, unknown> | null }[])
+    .map((row) => ({ id: row.id, bag: row.payload?.[payloadAlani] }))
+    .filter((row): row is { id: string; bag: string } => typeof row.bag === 'string');
+  if (bagli.length === 0) return;
+
+  const bagsiz = [...new Set(bagli.map((row) => row.bag))];
+  const { data: duran, error: duranHata } = await db.from(tablo).select(kolon).in(kolon, bagsiz);
+  if (duranHata) throw duranHata;
+  const yasayan = new Set(((duran ?? []) as unknown as Record<string, unknown>[]).map((row) => String(row[kolon])));
+  const sahipsiz = bagli.filter((row) => !yasayan.has(row.bag)).map((row) => row.id);
+  if (sahipsiz.length > 0) await mustDelete(db, 'notification', (q) => q.in('id', sahipsiz));
 }
 
 /** Depo kodları — belge numaratörü kimliğe değil KODA çıpalı olduğu için gerekli. */

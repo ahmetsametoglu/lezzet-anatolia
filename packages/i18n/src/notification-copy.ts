@@ -217,6 +217,16 @@ export type StaffNotificationTone = 'alert' | 'attention' | 'quiet';
 
 export interface StaffNotificationBrief {
   title: string;
+  /**
+   * AÇIKLAYICI İKİNCİ SATIR (05.09) — tasarımın `bn.alt`ı. YENİ BİLGİ DEĞİL: 04.09'a kadar tek
+   * satıra sıkışan cümlenin kendi dikişinden ayrılmış hâli. Başlık "ne oldu + hangi kayıt", alt
+   * satır "ne kadar / neden". Bölmenin sebebi tasarım değil okunabilirlik: tek satır cihazda üç
+   * satıra sarıyordu ve kartın baş satırındaki rozet/saat hizası bozuluyordu.
+   *
+   * `null` meşru bir değerdir — her türün söyleyecek ikinci bir şeyi yok (talep tipi yazılmamışsa
+   * "Yeni talep — REF" satırının altına yazacak bir olgu YOKTUR ve uydurulmaz).
+   */
+  subtitle: string | null;
   tone: StaffNotificationTone;
   /** Kısa TÜR etiketi ("Belge") — satırın şapkası: operatör bir bakışta türü ayırt eder (26.08). */
   label: string;
@@ -253,45 +263,54 @@ const STAFF_COPY: Partial<Record<AppNotificationKind, (payload: Record<string, u
     // `alert`: yasal belge (dayanıklı ortam) hiçbir kanala ulaşamadı ve iş İNSANA düştü.
     tone: 'alert',
     label: 'Belge',
-    title: `Ulaştırılamayan ${belgeAdi(p)}${referans(p)} — müşterinin e-postası yok`,
+    title: `Ulaştırılamayan ${belgeAdi(p)}${referans(p)}`,
+    subtitle: 'müşterinin e-postası yok',
   }),
   ticket_opened: (p) => ({
     tone: 'alert',
     label: p.ticketType === 'damaged' || p.ticketType === 'missing' ? 'Şikâyet' : 'Talep',
-    title: `Yeni ${p.ticketType === 'damaged' || p.ticketType === 'missing' ? 'şikâyet' : 'talep'}${referans(p)}${typeof p.ticketType === 'string' && TALEP_TIPI[p.ticketType] ? ` (${TALEP_TIPI[p.ticketType]})` : ''}`,
+    title: `Yeni ${p.ticketType === 'damaged' || p.ticketType === 'missing' ? 'şikâyet' : 'talep'}${referans(p)}`,
+    /* Talep tipi yazılmamışsa alt satır YOK — "diğer" yazmak, bilinmeyeni bir kategoriye çevirmek olurdu. */
+    subtitle: typeof p.ticketType === 'string' ? (TALEP_TIPI[p.ticketType] ?? null) : null,
   }),
   stock_low: (p) => ({
     tone: 'attention',
     label: 'Stok',
-    title: `Eşik altına indi — ${typeof p.sku === 'string' && p.sku ? p.sku : 'varyant'}: kullanılabilir ${typeof p.availableQty === 'number' ? p.availableQty : '?'}/${typeof p.minStockQty === 'number' ? p.minStockQty : '?'}`,
+    title: `Eşik altına indi — ${typeof p.sku === 'string' && p.sku ? p.sku : 'varyant'}`,
+    subtitle: `kullanılabilir ${typeof p.availableQty === 'number' ? p.availableQty : '?'}/${typeof p.minStockQty === 'number' ? p.minStockQty : '?'}`,
   }),
   run_close_mismatch: (p) => ({
     tone: 'alert',
     label: 'Para',
-    title: `Gün kapanışında uyuşmazlık${referans(p)} — sayım beklenenden farklı`,
+    title: `Gün kapanışında uyuşmazlık${referans(p)}`,
+    subtitle: 'sayım beklenenden farklı',
   }),
   /* Askıda kalan durak (03.09): kapanış "yeniden planlanacak" dedi, planlayan sevkiyat masası. */
   run_close_pending: (p) => ({
     tone: 'attention',
     label: 'Sevkiyat',
-    title: `Sefer kapandı${referans(p)} — ${typeof p.pendingCount === 'number' ? p.pendingCount : '?'} durak askıda, yeniden planla`,
+    title: `Sefer kapandı${referans(p)}`,
+    subtitle: `${typeof p.pendingCount === 'number' ? p.pendingCount : '?'} durak askıda · yeniden planla`,
   }),
   /* Transfer eksiği (04.09, 21.248): alan depo beyan etti, kayıp onun hanesine yazıldı — gönderen depo duyar. */
   transfer_shortfall: (p) => ({
     tone: 'attention',
     label: 'Transfer',
-    title: `Transfer eksik kabul edildi${referans(p)} — ${typeof p.shortQty === 'number' ? p.shortQty : '?'} adet eksik, ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} kayıp yazdı`,
+    title: `Transfer eksik kabul edildi${referans(p)}`,
+    subtitle: `${typeof p.shortQty === 'number' ? p.shortQty : '?'} adet eksik · ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} kayıp yazdı`,
   }),
   /* Transfer fazlası (04.09, 21.253): alan depo fazlayı stoğuna yazdı — gönderende o birim hâlâ duruyor, kendi sayımında bulsun. */
   transfer_excess: (p) => ({
     tone: 'attention',
     label: 'Transfer',
-    title: `Transfer fazla kabul edildi${referans(p)} — ${typeof p.excessQty === 'number' ? p.excessQty : '?'} adet fazla, ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} stoğuna yazdı`,
+    title: `Transfer fazla kabul edildi${referans(p)}`,
+    subtitle: `${typeof p.excessQty === 'number' ? p.excessQty : '?'} adet fazla · ${typeof p.toWarehouseCode === 'string' ? p.toWarehouseCode : 'alan depo'} stoğuna yazdı`,
   }),
   b2b_application_received: () => ({
     tone: 'attention',
     label: 'Kurumsal',
-    title: 'Yeni kurumsal başvuru — onay kuyruğunda',
+    title: 'Yeni kurumsal başvuru',
+    subtitle: 'onay kuyruğunda',
   }),
 };
 

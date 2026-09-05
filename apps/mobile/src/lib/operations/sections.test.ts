@@ -1,12 +1,6 @@
 import { UserRoleEnum } from '@lezzet/types';
 
-import {
-  notificationScopeOf,
-  OPERATIONS_SECTIONS,
-  operationsSectionsOf,
-  showsSectionTabs,
-  visibleNotifications,
-} from './sections';
+import { OPERATIONS_SECTIONS, operationsSectionsOf, showsSectionTabs } from './sections';
 
 /*
   SAF KURAL TESTİ — React yok, ağ yok. Rol süzmesinin doğruluğu ekrandan bağımsız ölçülür;
@@ -63,41 +57,5 @@ describe('showsSectionTabs', () => {
     expect(showsSectionTabs(['courier'])).toBe(false);
     expect(showsSectionTabs(['courier', 'money'])).toBe(true);
     expect(showsSectionTabs([...OPERATIONS_SECTIONS])).toBe(true);
-  });
-});
-
-describe('visibleNotifications', () => {
-  const feed = [
-    { id: 'a', section: 'warehouse' as const },
-    { id: 'b', section: 'courier' as const },
-    { id: 'c', section: 'management' as const },
-    { id: 'd', section: 'money' as const },
-  ];
-
-  it('tek bölümlü kullanıcı yalnız kendi bölümünü görür', () => {
-    expect(visibleNotifications(feed, ['courier']).map((item) => item.id)).toEqual(['b']);
-  });
-
-  it('dört bölümlü kullanıcıda tümü akar (süzme kaybı yok)', () => {
-    expect(visibleNotifications(feed, [...OPERATIONS_SECTIONS])).toHaveLength(feed.length);
-  });
-
-  it('iki bölümlü kullanıcı, AÇAMADIĞI bölümlerin bildirimini görmez', () => {
-    expect(visibleNotifications(feed, ['courier', 'money']).map((item) => item.id)).toEqual(['b', 'd']);
-  });
-
-  it('bölümsüz kullanıcıda liste boşalır', () => {
-    expect(visibleNotifications(feed, [])).toEqual([]);
-  });
-});
-
-describe('notificationScopeOf', () => {
-  it('dört bölümün hepsi varsa "tümü"', () => {
-    expect(notificationScopeOf([...OPERATIONS_SECTIONS])).toEqual({ kind: 'all' });
-  });
-
-  it('eksik kümede süzülen bölümler adlarıyla döner — "tüm bölümler" denmez', () => {
-    expect(notificationScopeOf(['courier'])).toEqual({ kind: 'filtered', sections: ['courier'] });
-    expect(notificationScopeOf(['courier', 'money'])).toEqual({ kind: 'filtered', sections: ['courier', 'money'] });
   });
 });

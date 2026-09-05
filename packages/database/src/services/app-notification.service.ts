@@ -123,7 +123,7 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
    * saati yeterli (customer_phone'daki iki-saat dersinin tersi: orada damga sessizlik hesabına
    * giriyordu, burada yalnız "dolu mu" diye okunuyor).
    */
-  async markAllRead(profileId: string, audience?: NotificationAudience): Promise<void> {
+  async markAllRead(profileId: string, audience?: NotificationAudience, since?: string): Promise<void> {
     let query = this.supabase
       .from('notification')
       .update({ read_at: new Date().toISOString() })
@@ -134,6 +134,15 @@ export class AppNotificationService extends BaseDbService<AppNotification, AppNo
     // personel satırını okundu yapsaydı, operasyon rozeti kimse görmeden sönerdi (tersi de aynı).
     if (audience === 'staff') query = query.in('kind', [...STAFF_NOTIFICATION_KINDS]);
     else if (audience === 'customer') query = query.not('kind', 'in', `(${STAFF_NOTIFICATION_KINDS.join(',')})`);
+    /* GÖRÜLENLE SINIRLA (05.09) — `since` verilirse yalnız o damgadan YENİ satırlar okundu olur.
+       Sebep ölçülmüş bir arıza: ekran bir SAYFA (30 satır) çiziyor ama beyan TÜM kitleyi okundu
+       yapıyordu; sayfanın arkasında kalan, kullanıcının hiç görmediği satırlar da damgalanıyordu.
+       Bedeli iki kat: satır rozetten düşüyor (kimse haberdar olmadan sessizleşiyor) ve 90 gün
+       sonra `purgeSeenStaffBefore` onu GÖRÜLMÜŞ sayıp siliyor — saklama künyesinin "görülmemiş
+       satır bekleyen iştir, durur" güvencesi tam buradan deliniyordu.
+       Çağıran `since` olarak çizdiği EN ESKİ satırın damgasını verir; liste `created_at desc`
+       sıralı olduğu için o damgadan yenisi = ekranda gerçekten görülenlerdir. */
+    if (since !== undefined) query = query.gte('created_at', since);
     const { error } = await query;
     if (error) throw error;
   }

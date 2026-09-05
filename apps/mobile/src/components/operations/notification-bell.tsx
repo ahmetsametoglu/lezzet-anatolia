@@ -31,8 +31,14 @@ interface NotificationBellProps {
   onPress: () => void;
   /** Ekran okuyucu adı — sayı dahil, i18n üstte çözülür. */
   accessibilityLabel: string;
-  /** Süzülmüş bildirim sayısı; 0 ise rozet çizilmez. */
-  count: number;
+  /**
+   * Okunmamış sayısı. `0` → rozet çizilmez ("0 yeni" demez). `null` → HENÜZ ÖLÇÜLMEDİ ve bu
+   * sıfırdan farklıdır (CLAUDE §1: ölçülemeyen değer sıfır değildir) — soğuk açılışta rozetin
+   * hiç çizilmemesi doğru, "0" yazması yalan olurdu. İkisi ekranda aynı görünür, ama ayrım
+   * çağıranın elinde kalsın diye tipe yazıldı: bir gün "ölçülmedi" için ayrı bir işaret çizilirse
+   * (soluk nokta) bu tip onu mümkün kılar, `number` kılmazdı.
+   */
+  count: number | null;
   testID?: string;
 }
 
@@ -46,7 +52,7 @@ export function NotificationBell({ onPress, accessibilityLabel, count, testID }:
       testID={testID}
     >
       <Icon name="bell" size={operationsTheme.size.headerIcon} color={operationsTheme.colors.ink} />
-      {count > 0 ? (
+      {count !== null && count > 0 ? (
         <View style={styles.badge} testID={testID === undefined ? undefined : `${testID}-badge`}>
           <Text style={styles.badgeLabel}>{count}</Text>
         </View>

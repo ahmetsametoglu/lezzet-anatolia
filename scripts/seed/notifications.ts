@@ -32,6 +32,14 @@ interface SatirTaslak {
   payload: Record<string, unknown>;
   dedupe_key: string | null;
   created_at: string;
+  /**
+   * DEPO BOYUTU (eklendi 05.09) — alan taslakta HİÇ YOKTU ve depo-bağlamlı türler kolonu boş
+   * yazıyordu. Ölçüldü: `stock_low` satırlarının `warehouse_id`si null, ama `dedupe_key`i deponun
+   * kimliğini taşıyor ve o depo hâlâ duruyor — yani FK'nin `on delete set null`ı değil, seed'in
+   * kendisi. CLAUDE §1: "Depo bir boyut değil, DEĞİŞMEZ"; şemanın künyesi de o kolonu
+   * "depo-bağlamlı PERSONEL olayının süzgeci" diye tanımlıyor. Depo-üstü türlerde `null` meşrudur.
+   */
+  warehouse_id: string | null;
 }
 
 const IKI_GUN_MS = 2 * 86_400_000;
@@ -307,6 +315,7 @@ export async function seedNotifications(db: Db, kisiler: Kisiler): Promise<void>
           target_type: 'variant',
           target_id: v.id,
           payload: { ...(v.sku ? { sku: v.sku } : {}), availableQty: v.available, minStockQty: v.min_stock_qty },
+          warehouse_id: (depo as { id: string }).id,
           dedupe_key: `stock-low:${(depo as { id: string }).id}:${v.id}`,
           created_at: new Date(Date.now() - 6 * 3_600_000).toISOString(),
         });

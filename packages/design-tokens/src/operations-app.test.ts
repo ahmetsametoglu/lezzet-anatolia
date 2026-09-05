@@ -236,8 +236,13 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
        ölçerdi; yeni bir durak açan buraya uğrayıp gerekçesini yazmak zorunda kalsın diye böyle.
        31.08'de üç durak daha açıldı ve üçü de D1'in kutu eksenli akışından doğdu: `shadow.fab`
        (yüzen okutma düğmesinin gölgesi — `glow`dan ayrı, gerekçesi orada) + TONLU KARTIN ÜÇÜNCÜ
-       AİLESİ `success-bg`/`success-line` (tasarımda 8 kullanımla ölçülmüştü, tüketicisi yoktu). */
-    expect(total).toBe(24);
+       AİLESİ `success-bg`/`success-line` (tasarımda 8 kullanımla ölçülmüştü, tüketicisi yoktu).
+       05.09'da üç durak daha, üçü de v3 BİLDİRİM SATIRINDAN: `courier-bg` (bölüm rozeti ailesinin
+       dördüncü üyesi — `neutral-bg`e Δ5/2/14 ve ondan farklı olarak SOĞUK, gerekçe orada) +
+       `badge-xs` ile `badge-xs--letter-spacing` (8,5 px rozet kademesi; setin tabanı 10 ve
+       `customer.ts` §0.4b kontrol kademelerinde yuvarlamayı yasaklıyor) + `snug--line-height`
+       (1.45; şablonda 29 kullanım, sette tek oran `lead` 1.6 idi ve o bir PARAGRAFIN nefesi). */
+    expect(total).toBe(28);
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {

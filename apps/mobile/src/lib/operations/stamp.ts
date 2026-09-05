@@ -64,6 +64,66 @@ export function dateLabelOf(isoDate: string): string | null {
 }
 
 /**
+ * Göreli zaman, Türkçe: `şimdi` · `9 dk` · `3 sa` · `3 g`. Dakika altı "şimdi" — saniye saymak,
+ * operatöre yanlış bir aciliyet ritmi dayatmak olurdu.
+ *
+ * EVİ 05.09'DA DEĞİŞTİ: `notification-map.ts`te doğmuştu, ama bildirim satırı artık MUTLAK saat
+ * yazıyor (gün grupları gelince "DÜN" başlığının altında "19 sa" aynı şeyi iki kez ve ikincisini
+ * daha kötü söylüyordu). Geriye tek tüketici kaldı — yönetim hub'ının "son hareket" künyesi — ve
+ * bir biçimleyicinin evi, onu kullanmayan bir çeviri katmanı olamaz. Kardeşleriyle aynı dosyada.
+ */
+export function agoOf(createdAt: string, now: Date): string {
+  const ms = now.getTime() - new Date(createdAt).getTime();
+  const dk = Math.floor(ms / 60_000);
+  if (dk < 1) return 'şimdi';
+  if (dk < 60) return `${dk} dk`;
+  const sa = Math.floor(dk / 60);
+  if (sa < 24) return `${sa} sa`;
+  return `${Math.floor(sa / 24)} g`;
+}
+
+/**
+ * Bir damganın gün GRUBU başlığı, cihazın yerel takvimiyle: `BUGÜN` · `DÜN` · `3 EYLÜL` ·
+ * `3 EYLÜL 2025`. Bildirim akışının gün ayracı (v3 `bg.baslik`).
+ *
+ * YIL, YALNIZ BAŞKA YILDA yazılır ve yazılması şart: okunmamış personel bildirimi hiç süpürülmüyor
+ * (`notification-retention` yalnız GÖRÜLMÜŞ satırı siliyor), yani bir yıl önceki satır listenin
+ * kuyruğunda gerçekten durabiliyor ve "3 EYLÜL" hangi yılın olduğunu söylemez.
+ *
+ * Grup anahtarı ISO'dan değil YEREL takvimden kesiliyor: `toISOString()` Fransa'da yaz saatiyle
+ * 22:00'den sonra günü kaydırır ve gece vardiyasındaki personel "bugün"ü dünde görürdü
+ * (`day-tag.ts` künyesindeki ders).
+ *
+ * `Intl` KULLANILMIYOR: Hermes'in ICU kapsamı platforma göre değişiyor ve `toLocaleDateString`
+ * Android'de İngilizce ay adı döndürebiliyor — ay adları bu dosyanın kendi listesinden gelir.
+ */
+export function dayGroupLabelOf(iso: string, now: Date): string {
+  const d = new Date(iso);
+  const gun = (x: Date) => `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}`;
+  if (gun(d) === gun(now)) return 'BUGÜN';
+  const dun = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (gun(d) === gun(dun)) return 'DÜN';
+  const ay = MONTHS[d.getMonth()] ?? '';
+  const yil = d.getFullYear() === now.getFullYear() ? '' : ` ${d.getFullYear()}`;
+  return turkishUpper(`${d.getDate()} ${ay}${yil}`);
+}
+
+/**
+ * TÜRKÇE BÜYÜK HARF — `toUpperCase` tek başına YANLIŞTIR: JS'in dil-bağımsız dönüşümü `i` → `I`
+ * verir, Türkçede ise `İ` olmalı ("Nisan" → "NISAN" değil "NİSAN").
+ *
+ * EVİ 05.09'DA BURAYA GELDİ: `courier-format.ts`te doğmuştu, ama ikinci tüketici bildirim akışının
+ * gün ayracı oldu ve bir dil kuralının evi tek bir bölümün biçimleyicisi olamaz. Kurye dosyası
+ * artık buradan alıyor; iki kopya olsaydı biri bir gün ötekinden ayrılırdı (CLAUDE §1).
+ *
+ * Not: tasarımın kendi şablonu bu tuzağa DÜŞÜYOR — `n.bolum.toUpperCase()` ile rozette "YÖNETIM"
+ * yazıyor (noktasız I). Kod onu birebir kopyalamıyor; sapma bilinçli.
+ */
+export function turkishUpper(value: string): string {
+  return value.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase();
+}
+
+/**
  * Bugünün gün adı, **cihazın yerel takvimiyle** (`28 Ağustos`). UTC'den kesilmiş bir ISO metni
  * gece yarısına yakın saatlerde bir gün kayar; personelin "bugün" dediği gün cihazının günüdür.
  */

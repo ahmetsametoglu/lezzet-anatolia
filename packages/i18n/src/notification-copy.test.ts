@@ -76,12 +76,14 @@ describe('staffNotificationBrief', () => {
     }
   });
 
-  it('ulaştırılamayan belge: alert tonu, başlıkta referans ve sebep', () => {
+  /* BAŞLIK "ne oldu + hangi kayıt", ALT SATIR "neden" (05.09 bölmesi) — sebep artık başlıkta
+     aranmaz. Bölme bilgi eklemedi/çıkarmadı, dikişinden ayırdı; test de o dikişi çiviliyor. */
+  it('ulaştırılamayan belge: alert tonu, başlıkta referans, alt satırda sebep', () => {
     const brief = staffNotificationBrief({ kind: 'document_undeliverable', payload: { referenceNo: 'LA-26-X1' } });
     expect(brief).not.toBeNull();
     expect(brief!.tone).toBe('alert');
     expect(brief!.title).toContain('LA-26-X1');
-    expect(brief!.title).toContain('e-postası yok');
+    expect(brief!.subtitle).toContain('e-postası yok');
   });
 
   it('belge başlığı HANGİ belge olduğunu söyler — aynı siparişin iki olayı ayrı satır okunur', () => {
@@ -98,15 +100,23 @@ describe('staffNotificationBrief', () => {
     expect(baslik('yarin_gelecek_belge')).toContain('Ulaştırılamayan belge');
   });
 
-  it('şikâyet tipi başlıkta Türkçedir; eşik satırı sayıları taşır; soru "Talep" etiketi alır', () => {
+  it('şikâyet tipi alt satırda Türkçedir; eşik satırı sayıları taşır; soru "Talep" etiketi alır', () => {
     const sikayet = staffNotificationBrief({ kind: 'ticket_opened', payload: { ticketType: 'damaged', referenceNo: 'LA-26-X1' } });
     expect(sikayet!.label).toBe('Şikâyet');
-    expect(sikayet!.title).toContain('hasarlı ürün');
+    expect(sikayet!.title).toContain('LA-26-X1');
+    expect(sikayet!.subtitle).toBe('hasarlı ürün');
     const soru = staffNotificationBrief({ kind: 'ticket_opened', payload: { ticketType: 'question' } });
     expect(soru!.label).toBe('Talep');
     const esik = staffNotificationBrief({ kind: 'stock_low', payload: { sku: 'BKL-500', availableQty: 3, minStockQty: 10 } });
     expect(esik!.title).toContain('BKL-500');
-    expect(esik!.title).toContain('3/10');
+    expect(esik!.subtitle).toContain('3/10');
+  });
+
+  /* ALT SATIR UYDURMAZ: tipi olmayan talebin altına yazacak bir OLGU yoktur ve "diğer" demek,
+     bilinmeyeni bir kategoriye çevirmek olurdu (CLAUDE §1 — ölçülemeyen değer sıfır değildir). */
+  it('alt satır uydurmaz: tipsiz talepte null, tanınmayan tipte de null', () => {
+    expect(staffNotificationBrief({ kind: 'ticket_opened', payload: { referenceNo: 'LA-26-X1' } })!.subtitle).toBeNull();
+    expect(staffNotificationBrief({ kind: 'ticket_opened', payload: { ticketType: 'yarin_gelecek_tip' } })!.subtitle).toBeNull();
   });
 
   it('referanssız payload başlığı bozmaz; bilinmeyen türde null — genel metin yüzeyin işi', () => {

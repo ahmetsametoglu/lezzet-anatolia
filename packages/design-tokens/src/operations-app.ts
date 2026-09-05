@@ -126,6 +126,14 @@ export const operationsAppSurface = {
      bağlanmadı: `closed-bg` bir DURUM rengidir (kapanmış rozet arkası) ve 26 nötr yüzeyi bir
      durumun kaderine bağlamak, o durumun tonu değiştiği gün ekranın yarısını değiştirirdi. */
   'neutral-bg': '#e7e2d2',
+  /* KURYE bölümünün rozet zemini — v3 bildirim satırı (05.09). Ailesi `olive-bg`/`terracotta-bg`/
+     `neutral-bg` ile aynı: bölüm rozetinin arkası. Kendi durağı çünkü en yakını `neutral-bg`e
+     Δ5/2/14 ve fark üçüncü kanalda eşiğin üstünde; asıl ayrım kanal dengesinde: bu ton SOĞUK
+     (R−G = −2), `neutral-bg` SICAK (R−G = +5). Kurye rayı `ink` olduğu için rozetinin de nötr-soğuk
+     olması gerekiyor — sıcak bir zemine oturan mürekkep, yanındaki zeytin ve terracotta rozetlerin
+     arasında bölüm değil "eski satır" gibi okunuyordu. `error-bg`in kendi künyesindeki istisna
+     gerekçesinin aynısı. */
+  'courier-bg': '#e2e4e0',
   /* Koyu (`ink`) CTA'nın İÇİNDEKİ saydam blok — "3 açık" sayacının arkası. Rengi yok, ışığı var:
      zemin ne olursa olsun onu bir tık açar. Ham `rgba()` kodun içine dağılmasın diye token
      (CLAUDE §3). Web operasyonunun `ops-alarm-inset`i (.10) ile aynı fikir, ayrı bağlam. */
@@ -287,6 +295,26 @@ export const operationsAppText = {
      forku, uygulamada kullanılmaz" diye işaretliyor. Bu yüzden ölçüyü kendi rolüyle taşıyan ayrı
      bir durak — alt anahtarsız, ki ağırlık çağıranın kararı kalsın. */
   tag: '11px',
+  /* BİLDİRİM SATIRININ BÖLÜM ROZETİ — v3: `800 8.5px` + `.12em` (DEPO · KURYE · YÖNETİM · PARA).
+     Setin en küçük durağı 10 (`eyebrow`, `badge-sm`) ve 8,5 → 10 sıçraması %18 büyüme demek: rozet
+     dört harflik bir kelime taşıyor ve kartın baş satırında saat ile noktayla aynı hizada duruyor,
+     büyüdüğünde o satırın dengesini bozuyor. `customer.ts` §0.4b yuvarlamayı zaten yasaklıyor —
+     rozet bir KONTROL öğesidir, kontrol kademelerinde ölçü hiyerarşi değil KOMŞUYLA DENGE kurar.
+     Emsal bir kademe yukarıda: `meta` (10,5) de aynı gerekçeyle açılmıştı.
+     Aralık BURADA, çünkü değer rolüyle birlikte anlamlı: `eyebrow-sm--letter-spacing` (.1em) yakın
+     ama o durak "web'in mobil forku, uygulamada KULLANILMAZ" diye işaretli. Ağırlık gömülmedi
+     (`tag` emsali) — 800 çağıranın `font.body[800]`iyle gelir. */
+  'badge-xs': '8.5px',
+  'badge-xs--letter-spacing': '0.12em',
+  /* İKİNCİ SATIR YÜKSEKLİĞİ — mobil sette tek durak vardı (`lead`, 1.6) ve o, bir PARAGRAFIN
+     nefesi. v3'ün kart alt satırı 1.45 istiyor ve bu bir tek-ekran kaprisi değil: şablonda 29
+     kullanım (`lead`in 38'inden sonra ikinci en kalabalık oran). Fark rolde — 1.6 okunacak bir
+     metnin, 1.45 bir kartın içinde SIKIŞIK duran açıklamanın oranı; kartta 1.6 satırları birbirinden
+     koparıp kutuyu şişiriyor.
+     Tasarımın 1.3 (3 kullanım) ve 1.35 (20) oranları için durak AÇILMADI: 1.3 tek başlık satırında
+     geçiyor ve RN'in kendi varsayılanı ona yakın; 1.35 ise bu ekranda hiç kullanılmıyor —
+     tüketicisi doğduğu gün ölçülüp eklenir, bugün açılsaydı boş durak olurdu. */
+  'snug--line-height': '1.45',
 } as const satisfies Record<string, string>;
 
 /* ── KÖŞE YARIÇAPI — resmî 4'lü set yetiyor, altına bir durak eklendi ────────

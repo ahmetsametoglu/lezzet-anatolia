@@ -27,7 +27,8 @@ describe('toOpsNotificationRow', () => {
     const sonuc = toOpsNotificationRow(row());
     expect(sonuc.tone).toBe('alert');
     expect(sonuc.title).toContain('LA-26-X1');
-    expect(sonuc.title).toContain('e-postası yok');
+    /* Sebep 05.09'da ALT SATIRA indi (sözlük başlığı dikişinden ayırdı) — panel ikisini de çiziyor. */
+    expect(sonuc.subtitle).toContain('e-postası yok');
     expect(sonuc.href).toBe('/operations/orders/00000000-0000-4000-8000-000000000002');
   });
 

@@ -194,20 +194,23 @@ describe('operasyon kabuğu — bildirim kapısı', () => {
     expect(screen.queryByTestId('operations-tabs')).toBeNull();
   });
 
-  it('bildirim satırına basmak GERÇEKTEN o bölümün adresini açar', async () => {
-    /* Fixture dönemi kapandı (14.13): satır artık UÇTAN gelir — mock adrese göre ayrışır. Satır
-       gerçek eşlemeden geçer (`document_undeliverable` → yönetim), yani basış yalnız gezinmeyi
-       değil kind→bölüm çevirisini de uçtan uca sınar. Rol de ona göre: kurye + admin (yönetim). */
+  it('bildirim satırına basmak GERÇEKTEN hedef KAYDI açar — bölüm kökü değil', async () => {
+    /* Fixture dönemi kapandı (14.13): satır UÇTAN gelir ve gerçek eşlemeden geçer, yani basış
+       yalnız gezinmeyi değil kind→hedef çevirisini de uçtan uca sınar.
+
+       HEDEF 05.09'DA DEĞİŞTİ: satır artık bölüm KÖKÜNE savuşturulmuyor, kaydın kendisini açıyor.
+       Eski davranış ("hepsi bölüm köküne") bir cevap değil, derin bağın olmayışına verilmiş bir
+       erteleme idi. Tür de ona göre seçildi: `ticket_opened` bugün KAYDA açılabilen tek tür. */
     fetchMock.mockImplementation((url) =>
       Promise.resolve(
         String(url).includes('/me/notifications')
           ? notificationsResponse([
               {
                 id: '00000000-0000-4000-8000-0000000000b1', // zarf uuid doğrular — takma ad parse'ı düşürür
-                kind: 'document_undeliverable',
-                targetType: 'order',
+                kind: 'ticket_opened',
+                targetType: 'ticket',
                 targetId: '00000000-0000-4000-8000-000000000009',
-                payload: { referenceNo: 'LA-26-TEST' },
+                payload: { referenceNo: 'LZA-26-TEST', ticketType: 'damaged' },
                 createdAt: new Date().toISOString(),
                 readAt: null,
               },
@@ -222,8 +225,7 @@ describe('operasyon kabuğu — bildirim kapısı', () => {
 
     await fireEvent.press(await screen.findByTestId('operations-notification-00000000-0000-4000-8000-0000000000b1'));
 
-    expect(app).toHavePathname('/management');
-    expect(await screen.findByTestId('operations-section-management')).toBeOnTheScreen();
+    expect(app).toHavePathname('/complaint');
   });
 
   it('PARA bölümünde zil YOKTUR — tasarım oraya metin eylemi koyuyor (v2:719)', async () => {

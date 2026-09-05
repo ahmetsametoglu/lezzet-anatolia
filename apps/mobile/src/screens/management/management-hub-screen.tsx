@@ -11,9 +11,9 @@ import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
+import { agoOf } from '@/lib/operations/stamp';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
-import { agoOf } from '@/screens/operations/notification-map';
-import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
+import { useOperationsNotificationBadge } from '@/screens/operations/use-notification-badge.hook';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { ManagementHub, ManagementQueue } from '@lezzet/types';
@@ -322,7 +322,7 @@ function pulseTilesOf(hub: ManagementHub | null): PulseTile[] {
 
 export function ManagementHubScreen() {
   const router = useRouter();
-  const unread = useOperationsNotifications().unread;
+  const unread = useOperationsNotificationBadge();
   const { state, retry, refresh, reloading } = useManagementHub();
   const { width } = useWindowDimensions();
 
@@ -358,7 +358,7 @@ export function ManagementHubScreen() {
           <NotificationBell
             onPress={() => router.navigate('/notifications')}
             accessibilityLabel={
-              unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })
+              unread === null || unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })
             }
             count={unread}
             testID="operations-bell"

@@ -66,9 +66,18 @@ export async function markNotificationRead(
  * Tümünü okundu say — "hepsini gördüm" beyanı. Yalnız kendi satırları (imza bunu zorlar) ve yalnız
  * KENDİ KİTLESİ: müşteri ekranının beyanı personel satırını okundu yapsaydı operasyon rozeti kimse
  * görmeden sönerdi (tersi de aynı).
+ *
+ * `since` (05.09) — beyanı GÖRÜLENLE sınırlar: yalnız o damgadan yeni satırlar okundu olur.
+ * Sayfalayan bir ekran "hepsini gördüm" diyemez, "buraya kadarını gördüm" der; verilmezse davranış
+ * eskisi gibi (tüm kitle) kalır ve bu, sayfalamayan yüzeyler için doğru olandır.
  */
-export function markAllNotificationsRead(db: SupabaseClient, profileId: string, audience: NotificationAudience): Promise<void> {
-  return new AppNotificationService(db).markAllRead(profileId, audience);
+export function markAllNotificationsRead(
+  db: SupabaseClient,
+  profileId: string,
+  audience: NotificationAudience,
+  since?: string,
+): Promise<void> {
+  return new AppNotificationService(db).markAllRead(profileId, audience, since);
 }
 
 /** Satırı gizle — listeden kalkar, rozetten düşer; geçmiş silinmez (satır durur). */

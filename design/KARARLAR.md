@@ -2210,3 +2210,94 @@ ekranın ne olduğunu söyleyen TEK blok geliyor.
 Rampa boşalmış ama bugün okutma yapılmışsa da bölümler durur: geçmiş yerinde kalır, başlık
 *"· boş"* der.
 
+
+## Bildirim omurgası — kitle TEK eksende, bölüm ETİKET; üç tür iş emri (05.09, kullanıcı kararı)
+
+Tasarımın 36-bildirim ekranı gerçekten kurulacak. Ekran bugün v3'e göre değil, v3'ün **30.08'deki
+hâline** göre yazılmış: kaynak dosya 31.08'de büyürken bildirim bloğu baştan yazıldı (iki örnek
+kart → süzgeç çipleri + gün grupları + renkli ray + bölüm rozeti + okunmadı noktası + alt satır +
+hedef satırı + iki boş hâl + dipnot kutusu). Kodun künyesindeki *"şablon yalnız İKİ kart varyantı
+çiziyor"* cümlesi bu yüzden bayat.
+
+**Karar 1 — KİTLE TEK EKSENDE KARARLAŞTIRILIR.** Bugün iki kez soruluyor: sunucu alıcıyı
+*rol × depo* ile seçiyor, mobil ekran aynı satırı *bölüm* ile bir daha süzüyor. İkisi aynı fikirde
+değil ve fark satır yutuyor. Mekanizma kodla kanıtlı: `stock_low` rolleri `['admin','warehouse']`
+ama mobil eşleme onu `'warehouse'` bölümüne bağlıyor, `visibleNotifications` de kullanıcının
+bölümünde olmayan satırı atıyor — yani yalnız-yönetici bir kişiye YAZILAN satır ekranda hiç
+çizilemiyor. Ters yönü de var: `run_close_pending` depocuya yazılıyor ama bölümü `'management'`,
+depocu göremiyor.
+
+*Ölçüm uyarısı:* yereldeki 104/74 gibi sayılar **fan-out'un değil SEED'in** ölçüsüdür — personel
+satırları yalnız iki seed hesabına yazılıyor (`scripts/seed/notifications.ts`, künyesi de
+*"fan-out'un tam taklidi DEĞİL"* diyor). Arızanın varlığı kanıtlı, büyüklüğü ölçülmedi. Web de temiz
+bir referans değil: paneli 15 satırla sınırlı (`STAFF_PANEL_LIMIT`), personel için tam ekran
+bildirim sayfası yok, ve sekiz türün üçünde `href` `null` olduğu için satır tıklanmıyor.
+
+Bundan sonra kitleyi **yalnız sunucu** belirler (olayın rolleri ∩ kişinin rolleri, artı depo
+kapsamı). İstemci süzgeci kalkar. Dağıtım tarafı DOĞRU çalışıyor ve dokunulmuyor — `WAREHOUSE_EXEMPT`
+dahil: muafiyet kişinin tüm rollerine değil, **olayın rolleriyle kesişen** rollerine bakıyor
+(muhasebe+depocu olan kişi bir depo olayında muaf değil, gün kapanışında muaf).
+
+**Karar 2 — BÖLÜM BİR KAPI DEĞİL, ETİKETTİR.** Rengi, rozeti ve süzgeç çipini belirler; satırı
+gizlemez. Tanımı tasarımın kendi kuralıdır: **bölüm = hedef ekranın bölümü** (tasarım "Azalan
+stok"u yönetime koyuyor çünkü hedefi tedarik ekranı; "rotayı kapattı"yı depoya koyuyor çünkü hedefi
+kurye dönüşü). Bugünkü mobil harita bölümü *üreten modüle* göre yazmış — bu yüzden tasarımla
+çelişiyor.
+
+Gerekçe ayrıca yetkilendirme tarafında: `SECTION_OF_ROLE` yalnız bildirim süzgeci değil, **rota
+kapısı** (`_layout.tsx` `redirect`). Bölüme görünürlük yüklemek, bildirim düzeltmesini bir yetki
+değişikliğine bağlardı.
+
+**Karar 3 — ROLLER CÖMERTÇE VERİLİR.** Kullanıcının cümlesi: *"şirkette bir çalışan varsa o
+hepsidir."* Yöneticiye öteki roller de verilebilir, verildiğinde bildirimleri de gelir. Bu, Karar
+1'i mümkün kılan şeydir: roller gerçeği söylediğinde ikinci süzgecin varlık sebebi kalmıyor.
+
+**Karar 4 — ALICI SEÇİLMEZ; "sorumlu kişi" kavramı AÇILMAZ.** Dar hedefleme bir nöbet/atama katmanı
+ister ve o katman bayatladığı gün **sessizlik** üretir; sessizlik gürültüden pahalıdır çünkü
+görünmez. Sistemin kendi kalıbı da bu: 54 migration tarandı, `assigned`/`assignee`/`claimed_by`/
+`locked_by` **sıfır sonuç**. Talep paylaşılan kuyruk, istisna kuyruğu tablo bile değil (türetiliyor),
+toplama kuyruğu depo kapsamlı ve kişisiz. Kişiye atanan tek iş **sefer** — çünkü bir araçta bir
+kurye var. Aynı karar kurye ataması için 18.08'de zaten verilmişti.
+
+Hacim **alıcıdan değil OLAYDAN** kısılır. Ölçüt: *bildirime hak kazanan olay, ekranın kendiliğinden
+anlatamayacağı olaydır* — aktörü olmayan olay (gece yarısı geçen tarih, kapanan cevap penceresi),
+yanlış kişinin gördüğü olay, kişinin altından değişen gerçek.
+
+**Karar 5 — OKUNDU KİŞİ BAŞINA KALIR.** Ortak söndürme ("biri okuyunca herkeste söner") bir zil için
+aktif olarak yanlıştır: ilk açan kişi, hiç görmemiş olanın uyarısını susturmuş olur — belirtiyi
+susturan çözüm yasağının (CLAUDE §0) birebir örneği. Tek satır + ayrı okundu tablosu modeli
+kullanıcıya görünen davranışı hiç değiştirmiyor; ertelendi.
+
+**Karar 6 — ÜÇ TÜR İŞ EMRİDİR, KUYRUĞU AÇILIR.** `transfer_shortfall` · `transfer_excess` ·
+`run_close_pending`. Sekiz türün yalnız bu üçünün arkasında **açık/kapalı hâli olan bir kuyruk yok**
+ve webde tıklanacak hedefleri bile yok (`opsNotificationHref` üçüne de `null` dönüyor) — yani zil
+sessizce iş emri rolüne kaymış. *"Beş depocu aynı işi beş kez görür, biri yapınca dördünde okunmamış
+durur"* tarifi tam olarak bu üçünü anlatıyor; öteki beşte okunmamış satır zararsızdır çünkü kuyruk
+zaten boş görünür.
+
+Ayrıca şema künyeleri tutulmamış söz veriyor: `run_close_pending` için *"Hedefi web'in askıda şeridi
+(/operations/deliveries)"*, transfer türleri için *"Hedefi transfer belgesi (payload'da)"*. Kod ile
+künye çelişiyor.
+
+**Karar 7 — DEPO SATIRDA YAZAR, AKIŞ SÜZÜLMEZ.** Kapsamdaki tüm depoların olayı akar; Strasbourg'da
+dururken Kehl'in sorunu duyulmalıdır — bildirim haberdir. Depo kodu tasarımın **alt satırına**
+yazılır: o alan (`bn.alt`) çizimde var ve bugün hiç kullanılmıyor, yani yeni öğe icat edilmiyor.
+Bugün satır hangi depoya ait olduğunu söylemiyor — iki depoda aynı ürün eşiğin altına inse ekranda
+tıpatıp aynı iki satır oluyor. Personelin deposu zaten çoğul (`user_profiles.warehouse_ids uuid[]`;
+yerelde 8 personelin 3'ü iki depolu).
+
+**Karar 8 — Karla 800 varlığa eklenir.** Tasarım grup başlığı (BUGÜN/DÜN) ve bölüm rozetinde 800
+istiyor; yüklü ağırlıklar 400/600/700 ve `fonts.ts` kuralı sahte kalını yasaklıyor (ağırlık aile
+adının içinde). Ayrıca 8,5 px rozet kademesi ölçeğin tabanının altında ve rozet bir KONTROL öğesi
+olduğu için yuvarlanamıyor (`customer.ts` §0.4b) — `badge-xs` durağı açılır.
+
+**Karar 9 — HUB ZİLİ TOPLAMI GÖSTERİR** (kullanıcının tüm bölümlerinin okunmamışı), bölüm başına
+değil. Sayı sunucudan gelir: bugün zarftaki `unread` atılıyor ve rozet 30 satırlık sayfadan yeniden
+sayıldığı için **30'u hiç geçemiyor**.
+
+**Uygulanmayacak olan.** Tasarımın örnek satırlarından ikisi kurulmaz: *"Yeni sipariş onaylandı →
+toplama bekliyor"* (migration 0049 bunu adıyla yasaklamış — *"buraya kuyruk maddesi yazılmaz"*; depo
+rolü 5 profil, her sipariş 5 satır) ve *"Gün sonu kapandı — fark yok"* (ortada "günü kapat" diye bir
+yazım yok, `readMoneyDayEnd` saf okuma; farksız kapanış iki ayrı yerde bilinçle susturulmuş).
+Tasarımın **kurye** satırının da karşılığı yok ve olmayacak: kurye rotayı kendi alıyor (18.08),
+ekranı her odakta kendini tazeliyor. Kurye bölümüne düşecek tek meşru olay **sefer devri**.

@@ -68,7 +68,7 @@ function routeReplies(replies: {
     // çünkü duyurulmuş siparişin kutuları hazırlık kuyruğundan çoktan düşmüştür.
     // D3 SAYAÇLARI (21.187): kart "kaç parti listede, kaçı imhalık" diyor ve sayı bu uçtan geliyor.
     if (path.includes('/near-expiry')) return (replies.nearExpiry ?? (() => Promise.resolve(ok({ batches: [] }))))();
-    if (path.includes('/handover/pending')) return (replies.handover ?? (() => Promise.resolve(ok({ boxes: 0 }))))();
+    if (path.includes('/handover/pending')) return (replies.handover ?? (() => Promise.resolve(ok({ boxes: 0, waiting: [] }))))();
     /* Transfer yanıtı ÜÇ liste taşıyor (`WarehouseTransfersResponseSchema`); eksik gönderilen bir
        cevap şema kapısından geçemez ve hub'ın İKİ okuması birden düşmüş gibi görünür. */
     return (replies.transfers ?? (() => Promise.resolve(ok({ transfers: [], outbound: [], closed: [] }))))();
@@ -175,7 +175,7 @@ describe('depo hub', () => {
             ],
           }),
         ),
-      handover: () => Promise.resolve(ok({ boxes: 3 })),
+      handover: () => Promise.resolve(ok({ boxes: 3, waiting: [] })),
     });
 
     await renderHub();
@@ -270,7 +270,7 @@ describe('depo hub', () => {
     kuyruğundan düşmüştür ve gelen transferlerle ilgisi yok. Sayaç bu yüzden kendi ucundan geliyor.
   */
   it('devir kutucuğu KENDİ ucundan sayıyor — sayı hem kutucukta hem özet kartında', async () => {
-    routeReplies({ handover: () => Promise.resolve(ok({ boxes: 4 })) });
+    routeReplies({ handover: () => Promise.resolve(ok({ boxes: 4, waiting: [] })) });
 
     await renderHub();
 
@@ -279,7 +279,7 @@ describe('depo hub', () => {
   });
 
   it('devirde sıfır ile OKUNAMADI ayrı cümleler — "rampa boş" yanlış bir izdir', async () => {
-    routeReplies({ handover: () => Promise.resolve(ok({ boxes: 0 })) });
+    routeReplies({ handover: () => Promise.resolve(ok({ boxes: 0, waiting: [] })) });
     await renderHub();
 
     // Alt metin küçük harfle: kutucukların deseni ("yolda transfer yok"), cümle değil etiket.

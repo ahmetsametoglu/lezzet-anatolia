@@ -66,32 +66,24 @@ export function showsSectionTabs(sections: readonly OperationsSection[]): boolea
   return sections.length > 1;
 }
 
-/**
- * Bildirim süzmesi. Tasarımın demo mantığı iki hâli çiziyor (v2:1077): çok rollüde TÜMÜ akar, tek
- * rollüde yalnız kendi bölümü. Buradaki kural ikisini de BİREBİR üretir ve arasını da doldurur —
- * kullanıcının bölümlerine ait olan bildirimler görünür.
- *
- * Neden "çok rollüyse hepsi" diye yazılmadı: dört rolden ikisini taşıyan bir kullanıcıya, açamadığı
- * iki bölümün bildirimleri gösterilirdi. Bildirim bir HIZLANDIRICIDIR (zemin brief kuralı) — basınca
- * gidilecek bir yer yoksa hızlandırdığı bir şey de yoktur.
- */
-export function visibleNotifications<T extends { section: OperationsSection }>(
-  items: readonly T[],
-  sections: readonly OperationsSection[],
-): T[] {
-  return items.filter((item) => sections.includes(item.section));
-}
+/*
+  ── BİLDİRİM SÜZGECİ SÖKÜLDÜ (kullanıcı kararı 05.09) ───────────────────────
+  Burada iki fonksiyon vardı: `visibleNotifications` (satırı bölüme göre eleyen kapı) ve
+  `notificationScopeOf` (o kapının üstbaşlıkta kurduğu cümlenin kararı). İkisi de kalktı.
 
-/**
- * Bildirim ekranının üstbaşlığı hangi cümleyi kuracak (v2:1140 `bilKapsam`). Fonksiyon CÜMLE
- * DÖNDÜRMEZ, kararı döndürür: metin `messages.json`'da yaşar, kural burada. Karışsalardı süzme
- * kuralının testi bir çeviri dizesine bağlanırdı.
- *
- * `all` yalnız kullanıcı DÖRT bölümü de taşıyorsa: "tüm bölümler" diyip iki bölüm göstermek,
- * ekranın kendi künyesinde yalan söylemesi olurdu.
- */
-export function notificationScopeOf(
-  sections: readonly OperationsSection[],
-): { kind: 'all' } | { kind: 'filtered'; sections: OperationsSection[] } {
-  return sections.length === OPERATIONS_SECTIONS.length ? { kind: 'all' } : { kind: 'filtered', sections: [...sections] };
-}
+  SEBEP ÖLÇÜLDÜ, tasarım tercihi değil: kitle İKİ KEZ kararlaştırılıyordu. Sunucu alıcıyı
+  *rol × depo* ile seçiyor (`dispatchStaffNotification`), sonra bu dosya aynı satırı *bölüm* ile bir
+  daha süzüyordu — ve iki eksen aynı sözlüğü kullanmadığı için kesişim boş kalabiliyordu. Somut iki
+  yön: `stock_low` roles `['admin','warehouse']` ama bölümü `'warehouse'`du, yani YALNIZ yönetici
+  olan kişiye YAZILAN satır ekranda hiç çizilmiyordu; `run_close_pending` depocuya yazılıyor ama
+  bölümü `'management'`, depocu göremiyordu. Satır kişiye yazılıyor, kişi göremiyor.
+
+  Kaldırmanın şartı kullanıcının kararıydı: roller cömertçe verilir ("şirkette bir çalışan varsa o
+  hepsidir"), yani fan-out'un "bu seni ilgilendiriyor mu" cevabına GÜVENİLİR. İkinci kez sormak
+  satır yutmaktan başka bir iş yapmıyordu.
+
+  Bölüm ölmedi, ROLÜ değişti: artık satırın rengini, rozetini ve süzgeç çipini veriyor
+  (`notification-map.ts`). Süzgeç kullanıcının kendi eliyle açtığı bir çiptir — kapı değil.
+  Sekme çubuğunun ve rota kapısının bölüm kuralı (`SECTION_OF_ROLE`, `_layout.tsx`) DEĞİŞMEDİ:
+  orası bir yetki sorusu, burası bir görünürlük sorusuydu ve ikisi aynı şey değil.
+*/

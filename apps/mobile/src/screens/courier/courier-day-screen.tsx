@@ -18,7 +18,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { useOperationsUserName } from '@/screens/operations/sections-context';
-import { useOperationsNotifications } from '@/screens/operations/use-notifications.hook';
+import { useOperationsNotificationBadge } from '@/screens/operations/use-notification-badge.hook';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
@@ -105,7 +105,7 @@ export function CourierDayScreen() {
   const router = useRouter();
   const day = useCourierDay();
   const userName = useOperationsUserName();
-  const unread = useOperationsNotifications().unread;
+  const unread = useOperationsNotificationBadge();
 
   const run = day.run;
 
@@ -201,7 +201,7 @@ export function CourierDayScreen() {
       right={
         <NotificationBell
           onPress={() => router.navigate('/notifications')}
-          accessibilityLabel={unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })}
+          accessibilityLabel={unread === null || unread === 0 ? shell.bell.label : fillCopy(shell.bell.labelWithCount, { n: String(unread) })}
           count={unread}
           testID="operations-bell"
         />

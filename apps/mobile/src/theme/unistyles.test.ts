@@ -101,6 +101,10 @@ describe('Unistyles teması ↔ @lezzet/design-tokens kompozisyonu', () => {
       'Karla_400Regular',
       'Karla_600SemiBold',
       'Karla_700Bold',
+      /* 800 — bildirim ekranının gün başlığı ve bölüm rozeti için açıldı (kullanıcı kararı 05.09).
+         Sahte kalınla üretilemez: ağırlık aile ADININ içinde ve stile `fontWeight` yazmak iki
+         platformda da sistem fontuna düşürüyor (`fonts.ts` künyesi, cihaz kanıtı 09.08). */
+      'Karla_800ExtraBold',
       'Lora_400Regular',
       'Lora_600SemiBold',
     ]);
