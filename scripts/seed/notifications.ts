@@ -327,52 +327,83 @@ export async function seedNotifications(db: Db, kisiler: Kisiler): Promise<void>
       }
     }
 
-    // Kapanış uyuşmazlığı: farkı sıfır olmayan gerçek kapanıştan.
-    // Tablo FARKI TUTMAZ, beklenen ile sayılanı tutar (numeric, euro) — fark hesaplanır ve
-    // sözlüğün beklediği KURUŞA çevrilir (üretici de kuruşla konuşur: `notifyRunCloseMismatch`).
-    // 27.08'e kadar burada var olmayan `difference_*_cents` kolonları okunuyordu; hata yutulduğu
-    // için tür sessizce hiç doğmuyordu — `throw` eklenince seed bu satırda durup kendini söyledi.
-    const { data: kapanislar, error: kapanisHata } = await db
-      .from('delivery_run_close')
-      .select('id, closed_at, expected_cash, expected_card, expected_cheque, counted_cash, counted_card, counted_cheque, run:delivery_run_id(reference_no)')
-      .limit(20);
-    if (kapanisHata) throw kapanisHata;
-    type Kapanis = {
-      id: string;
-      closed_at: string;
-      expected_cash: number | null;
-      expected_card: number | null;
-      expected_cheque: number | null;
-      counted_cash: number | null;
-      counted_card: number | null;
-      counted_cheque: number | null;
-      run: { reference_no: string | null } | null;
-    };
-    const kurusFarki = (sayilan: number | null, beklenen: number | null) => Math.round((Number(sayilan ?? 0) - Number(beklenen ?? 0)) * 100);
-    const farkli = ((kapanislar ?? []) as unknown as Kapanis[])
-      .map((k) => ({
-        ...k,
-        nakitKurus: kurusFarki(k.counted_cash, k.expected_cash),
-        kartKurus: kurusFarki(k.counted_card, k.expected_card),
-        cekKurus: kurusFarki(k.counted_cheque, k.expected_cheque),
-      }))
-      .find((k) => k.nakitKurus !== 0 || k.kartKurus !== 0 || k.cekKurus !== 0);
-    if (farkli) {
+    /* DEPO BÖLÜMÜNÜN İKİ TÜRÜ (05.09) — beslemede hiç yoktu ve bölüm her kurulumda BOŞ açılıyordu
+       (kullanıcı bulgusu: *"sadece yönetimle alakalı bildirimler var"*). Yereldeki 144 satırın
+       tamamı test artığıydı; 05.09 temizliği onları süpürünce boşluk görünür oldu.
+
+       GERÇEK BELGEYE YASLANIR: `transferId` kapanmış bir `warehouse_transfer`ın kimliğidir. Uydurma
+       bir kimlik yazılamaz — teardown'un sahipsiz-bildirim süpürücüsü (`cleanup.ts`) tam olarak bu
+       bağı denetliyor ve karşılığı olmayan satırı siler. Yani buradaki satır ancak GERÇEKSE yaşar.
+
+       Depo boyutu GÖNDEREN depodur: eksiği/fazlayı ALAN depo beyan eder, haberi gönderen alır
+       (`staff-events.ts` künyesi). `toWarehouseCode` da o yüzden alan deponun kodudur. */
+    const { data: transferler, error: transferHata } = await db
+      .from('warehouse_transfer')
+      .select('id, reference_no, from_warehouse_id, to_warehouse_id, received_at')
+      .eq('status', 'received')
+      .order('received_at', { ascending: false })
+      .limit(2);
+    if (transferHata) throw transferHata;
+    type Transfer = { id: string; reference_no: string; from_warehouse_id: string; to_warehouse_id: string; received_at: string | null };
+    const kapananlar = (transferler ?? []) as Transfer[];
+    if (kapananlar.length > 0) {
+      const kodlar = new Map<string, string>();
+      const { data: depolar, error: depolarHata } = await db
+        .from('warehouse')
+        .select('id, code')
+        .in('id', kapananlar.map((t) => t.to_warehouse_id));
+      if (depolarHata) throw depolarHata;
+      for (const d of (depolar ?? []) as { id: string; code: string }[]) kodlar.set(d.id, d.code);
+
+      /* İki tür de aynı belgeden doğmaz — biri eksik, öteki fazla kabul. Tek transfer varsa yalnız
+         eksik yazılır: aynı belgeye hem "3 eksik" hem "1 fazla" demek çelişkili bir sahne olurdu. */
+      const eksik = kapananlar[0]!;
       satirlar.push({
         profile_id: yonetici,
-        kind: 'run_close_mismatch',
+        kind: 'transfer_shortfall',
         target_type: null,
         target_id: null,
         payload: {
-          ...(farkli.run?.reference_no ? { referenceNo: farkli.run.reference_no } : {}),
-          differenceCashCents: farkli.nakitKurus,
-          differenceCardCents: farkli.kartKurus,
-          differenceChequeCents: farkli.cekKurus,
+          transferId: eksik.id,
+          referenceNo: eksik.reference_no,
+          shortQty: 3,
+          toWarehouseCode: kodlar.get(eksik.to_warehouse_id) ?? 'alan depo',
         },
-        dedupe_key: null,
-        created_at: farkli.closed_at,
+        warehouse_id: eksik.from_warehouse_id,
+        dedupe_key: `transfer-shortfall:${eksik.id}`,
+        created_at: eksik.received_at ?? new Date(Date.now() - 3 * 3_600_000).toISOString(),
       });
+
+      const fazla = kapananlar[1];
+      if (fazla) {
+        satirlar.push({
+          profile_id: yonetici,
+          kind: 'transfer_excess',
+          target_type: null,
+          target_id: null,
+          payload: {
+            transferId: fazla.id,
+            referenceNo: fazla.reference_no,
+            excessQty: 1,
+            toWarehouseCode: kodlar.get(fazla.to_warehouse_id) ?? 'alan depo',
+          },
+          warehouse_id: fazla.from_warehouse_id,
+          dedupe_key: `transfer-excess:${fazla.id}`,
+          created_at: fazla.received_at ?? new Date(Date.now() - 5 * 3_600_000).toISOString(),
+        });
+      }
     }
+
+    /* KAPANIŞ UYUŞMAZLIĞI ARTIK BURADA YAZILMIYOR (05.09) — GERÇEK ÜRETİCİDEN doğuyor.
+       Burada elle bir satır vardı ve farkı olan bir kapanış arıyordu; hiçbir sahnede fark
+       olmadığı için hiç yazmıyordu (PARA bölümü her kurulumda boş açılıyordu). Çare satırı
+       zorlamak değil, SAHNEYİ kurmak oldu: kurye dönüşü sahnesi artık kapıda nakit tahsil ediyor
+       ve kapanışta eksik beyan ediyor (`courier-return.ts` künyesi). Farkı `closeCourierDay`
+       hesaplıyor, zili `notifyRunCloseMismatch` çalıyor.
+
+       Blok geri KONULMAMALI: iki kaynak olursa aynı kapanış için iki satır doğar ve hangisinin
+       gerçek olduğu okunamaz. Sahne koşmadıysa tür de doğmaz — dosyanın sonundaki "örneği DOĞMAYAN
+       türler" satırı bunu zaten söylüyor. */
 
     // Kurumsal başvuru: onay kuyruğunda bekleyen gerçek profil.
     const { data: bekleyen, error: bekleyenHata } = await db

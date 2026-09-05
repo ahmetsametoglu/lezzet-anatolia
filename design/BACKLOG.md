@@ -879,3 +879,107 @@ yeniden gönderme yolu ayrı bir tasarım ister. WhatsApp şablon onayı da gere
 `DeliveryProofRecordSchema`ya yeni bir `kind` (`otp`) · kapıda kod doğrulama ucu · kurye ekranında
 kod alanı · WhatsApp şablonu. Kanıt yükleme altyapısı (`/courier/stops/:id/proof-upload`) DURUYOR ve
 yeniden kullanılabilir.
+
+---
+
+## 6. Bildirim TÜRLERİ — tasarım çiziyor, sistem üretmiyor (ölçüldü 05.09)
+
+Bildirim EKRANI 21.264'te tasarıma çekildi ve veri yolu düzeldi; eksik kalan tür KÜMESİ.
+Kullanıcı tüm yetkilerle girip *"sadece yönetimle alakalı bildirimler var"* dedi ve ölçüm onu
+doğruladı: sekiz personel türünün beşi yönetim, ikisi depo, biri para, **sıfırı kurye**.
+
+Aşağıdakiler ölçülmüş hâlleriyle duruyor — dönüldüğünde tetik yeri aranmasın diye tek tek yazıldı.
+Sıra ÖNERİ; her biri kendi başına yazılabilir.
+
+**Ortak maliyet (her yeni tür için):** `AppNotificationKindEnum` + `STAFF_NOTIFICATION_KINDS`
+(`packages/types`) · `STAFF_COPY` (`packages/i18n`, başlık + alt satır + ton + etiket) · mobil
+`DESTINATION`/`SECTION_WITHOUT_DESTINATION` (`notification-map.ts`) · web `opsNotificationHref`.
+DDL YOK — `notification.kind` TEXT, enum/CHECK yok (0049). Hiçbirini derleyici zorlamıyor: dört
+eşleme de `Partial`, eksik bırakılan sessizce genel satıra düşer.
+
+### 6.1 `run_reassigned` — sefer başka kuryeye devredildi (KURYE'nin tek meşru türü)
+
+Kuryenin altından değişebilen TEK gerçek. Devreden kuryenin ekranı bir sonraki odakta `run: null`
+okuyup rota seçimine dönüyor — sefer buhar olmuş gibi, arıza gibi okunan sessiz bir durum değişimi.
+Devralan ise kutuları, durakları ve **kapıda tahsil edilecek nakdi** üstlendiğini ancak uygulamayı
+açarsa görüyor.
+
+- **Tetik:** `apps/web/app/(operations)/operations/deliveries/dispatch-actions.ts:29`
+  (`DeliveryRunService.reassign` → RPC `reassign_delivery_run`, `0046:605`), `revalidatePath`ten önce.
+- **Eldeki veri:** `result.movedStops` (tasarımın "4 durak"ının birebir karşılığı) · `referenceNo`.
+- **Alıcı:** rol değil **KİŞİ** — iki kurye kimliği. `dispatchStaffNotification` bugün yalnız rol
+  kümesine yazıyor (`dispatch.ts:171`); doğru hamle ikinci bir yol açmak DEĞİL, o fonksiyona
+  `profileIds` kapısı eklemek (aksi hâlde kayıt + zil + "alıcısız = arıza" dalı kopyalanır).
+- **Dedupe:** `run-reassigned:<runId>:<courierId>`.
+- **Not:** günlük anlamıyla "rota atandı" YAZILMAZ — o akış 18.08'de kullanıcı kararıyla kaldırıldı
+  (*"arayüzden atama saçma — kurye rotayı alır ve sürer"*). Yalnız DEVİR hâli.
+
+### 6.2 `whatsapp_window_closing` — 24 saatlik ücretsiz cevap penceresi doluyor
+
+Doğrudan para: pencere açıkken serbest metin bedava, kapandıktan sonra yalnız onaylı şablon gidiyor
+ve ücretli. Aktörü olmayan olay — pencereyi kapatan şey SAATTİR, hiçbir ekran kendiliğinden
+tazelenmez. `ringConversationsBell` yalnız AÇIK duran sayfayı tazeliyor.
+
+- **Tetik:** ÜRETİCİSİ YOK — yeni zamanlanmış iş (saatte bir: `window_expires_at < şimdi + eşik`
+  AND cevap bekliyor).
+- **Sözleşme:** `NotificationTargetTypeEnum`a `conversation` eklenmeli (bugün yok).
+- **Eşik parametrik** (varsayılan 3 saat, ayardan). **Dedupe konuşma başına ZORUNLU**, yoksa aynı
+  konuşma her turda çalar.
+
+### 6.3 `refund_failed` — iade borcu yazılamadı, hiçbir kuyrukta yok
+
+Para gerçekten borçlu ve hiçbir yerde görünmüyor: `payment_status` `paid` KALIYOR (fazla tahsilat
+yeni durum açmıyor, fark yalnız `refundDueCents` diye türetiliyor), yani sipariş hiçbir "ödenmemiş"
+süzgecine düşmüyor. Tek iz işlemi yapan kişinin ekranındaki tek seferlik uyarı — üstelik o kişi
+mobil DEPOCU olabiliyor ve depo ekranı para alanı göstermiyor.
+
+- **Tetik:** `packages/application/src/order/refund.ts:250` (`no_account`) · `:262`
+  (`provider_ref_missing`) · `:270` (`provider_failed`). **`:269` (`provider_unavailable`) HARİÇ** —
+  o bir ortam olgusu (anahtar yok), iş olayı değil; yazılırsa yerelde her turda çalar.
+- **Alıcı:** accounting + admin · **Bölüm:** para · **Hedef:** `order` (enum'da var).
+- **Dedupe sipariş başına:** `retryRefund` ikinci kez düşerse ikinci zil çalmamalı.
+
+### 6.4 `delivered_uncollected` — teslim edildi, kapıda tahsil edilmedi
+
+Mal gitti, para gelmedi ve ertesi gün GÖRÜNMEZ oluyor: para ekranının bekleyen tahsilat listesi
+TESLİM GÜNÜNE bağlı tek gün okuyor.
+
+- **Tetik:** `packages/application/src/courier/delivery.ts:182-192` — `collection` verilmeyen dal,
+  `amountDueCents > 0` iken.
+- **ŞART — yanlış pozitifi kesen süzgeç:** vadeli müşteride teslimde tahsil etmemek NORMALDİR. Zil
+  yalnız `paymentTermDays = 0` olan müşteride çalmalı, yoksa her B2B teslimi zil çalar.
+- `cashLimitExceeded` aynı kapıdan dönüyor ama AYRI bir olay (yasal nakit tavanı) — aynı türe
+  sıkıştırılmamalı.
+
+### 6.5 `job_partial_failure` — zamanlanmış iş "başarılı" yazıp işi yapmamış
+
+Runner sözleşmesi yalnız FIRLATILAN hatayı görüyor; iş kendi içinde `failed: 5` dönerse bu bir
+BAŞARIDIR ve `last_error` boş kalır.
+
+- **Tetik:** `apps/backend/src/jobs/runner.ts:31` — `recordSuccess`ten önce sonuç sözlüğünde
+  `failed`/`errors`/`unbuildable` > 0 kontrolü.
+- **DİKKAT (çürütme turu 05.09):** `failed` bir HATA sayacı değil, "teslim edilmedi" sayacı.
+  Anahtarsız yerel ortamda `zone_available` her turda `failed > 0` yazıyor ve bu DOĞRU davranış —
+  ölçüt "ardışık N tur boyunca failed > 0" olmalı, tek tur değil. Aksi hâlde tür bir gürültü
+  üreticisine döner (bunu bir kez yanlış ölçüp kullanıcıya yanlış aktardım).
+
+### 6.6 `order_not_ready_on_delivery_day` — teslim günü geldi, sipariş hâlâ hazır değil
+
+Kurye bunu KUTU KUTU öğreniyor; hiç toplanmamış siparişin kutusu yok, yani okutacak bir şey de yok
+ve sipariş sessizce araca binmiyor. Aktörü olmayan olay: kesim saatinin gelmesi.
+
+- **Tetik:** yeni günlük iş (kesim saatinde: `deliveryDate = bugün` AND `status IN (confirmed, preparing)`).
+- **Zil SİPARİŞ başına değil DEPO+GÜN başına tek satır** ("3 sipariş hâlâ hazır değil").
+- Kesim saati parametrik — sorulmaz, makul varsayılan konur.
+
+### YAZILMAYACAKLAR (kapanmış kararlar, `KARARLAR.md`)
+
+- *"Yeni sipariş onaylandı → toplama bekliyor"* — migration 0049 adıyla yasaklamış; kuyruk zaten
+  depocunun ana ekranı, depo rolü 5 profil = her sipariş 5 satır.
+- *"Gün sonu kapandı — fark yok"* — "günü kapat" diye bir yazım YOK (`readMoneyDayEnd` saf okuma);
+  farksız kapanış iki ayrı yerde bilinçle susturulmuş.
+- *"Kurye dönüş dökümü"* — `run_close_pending` ile aynı anda çalan ikinci zil olur; doğrusu yeni tür
+  değil, o türün payload'unu zenginleştirmek.
+- *"Eksik toplama → karar bekliyor"* ve *"SKT geçti"* — çürütme turu ikisini de geri çevirdi:
+  birincisi kuyruğu olmayan bir karara TEK taşıyıcı olarak zil koyuyor (0049'un tersi), ikincisinin
+  listesi depo hub'ında zaten çekiliyor ve günlük tarama sayfalamasız tüm partileri okuyor.

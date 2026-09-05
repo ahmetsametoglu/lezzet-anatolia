@@ -856,6 +856,36 @@ const KAPSAM: KapsamAlani[] = [
         },
       },
       { ad: 'okunmamış bildirim', zorunlu: false, sayac: (db) => say(db, 'notification', (q) => q.is('read_at', null)) },
+      /* BÖLÜM BAŞINA ZORUNLU (05.09, kullanıcı bulgusu) — "personele bildirim var mı" sorusu
+         yetmiyormuş: dört bölümün üçü BOŞken de o kova doluydu ve kapı yeşil geçiyordu. Kullanıcı
+         tüm yetkilerle girip *"sadece yönetimle alakalı bildirimler var"* dedi; ekran doğruydu,
+         besleme eksikti.
+
+         Kovalar TÜRLE adlandırılıyor, bölümle değil: bölüm eşlemesi mobilin dosyasında yaşıyor
+         (`notification-map.ts`) ve onu buraya kopyalamak aynı gerçeği iki yerde tutmak olurdu
+         (CLAUDE §1). Tür adı zaten sözleşmede.
+
+         KURYE bölümü İÇİN KOVA YOK ve bu bir eksiklik değil: hiçbir tür kuryeye düşmüyor. Kurye
+         bildirimi doğduğu gün (sefer devri) buraya kendi kovası gelir. */
+      {
+        ad: 'depo bölümüne düşen bildirim (transfer eksik/fazla)',
+        zorunlu: true,
+        sayac: async (db) => {
+          const { count, error } = await db
+            .from('notification')
+            .select('*', { count: 'exact', head: true })
+            .in('kind', ['transfer_shortfall', 'transfer_excess']);
+          if (error) throw new Error(`[kapsam] notification: ${error.message}`);
+          return count ?? 0;
+        },
+      },
+      {
+        /* Yalnız FARKLI kapanışta doğar — kurye dönüşü sahnesi kapıda nakit tahsil edip kapanışta
+           eksik beyan ediyor (`courier-return.ts`). Sahne bozulursa kova bunu söyler. */
+        ad: 'para bölümüne düşen bildirim (kapanış uyuşmazlığı)',
+        zorunlu: true,
+        sayac: (db) => say(db, 'notification', (q) => q.eq('kind', 'run_close_mismatch')),
+      },
     ],
   },
   {

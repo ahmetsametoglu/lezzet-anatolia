@@ -63,10 +63,20 @@ import type { Depolar } from './warehouse';
   İki sefer de AYNI GÜN ve aynı araçta: kural veride (`assert_vehicle_single_courier`) ve sahne o
   kuralın içinde duruyor — para iki kez (sefer başına), mal bir kez (araç bir kez boşalır).
 
-  ── KAPIDA PARA KONUŞULMUYOR ─────────────────────────────────────────────────
-  Teslim edilen durakta tahsilat YAZILMIYOR (`collection` geçilmiyor): bu blok D6'nın sahnesi ve
-  para tarafı kendi sahnesinin işi. Sefer kapanışı da bu yüzden beklenen ile sayılanı sıfır olarak
-  mutabık kılıyor — uydurma bir kasa farkı, ölçülmemiş bir sayıyı gerçek gibi okuturdu.
+  ── KAPIDA PARA: 05.09'DA GİRDİ, ÇÜNKÜ ARTIK ÖLÇÜLÜ ──────────────────────────
+  Bu blok 04.09'da bilerek parasızdı ve gerekçesi şuydu: *"uydurma bir kasa farkı, ölçülmemiş bir
+  sayıyı gerçek gibi okuturdu."* İtiraz UYDURMA sayıyaydı, paranın kendisine değil — ve artık
+  uydurma bir sayı yok: durak zaten NAKİT bir sipariş (`paymentMethod: 'cash'`) ve kapıda gerçekten
+  tahsil edilecek bir tutarı var. Kurye o tutarı topluyor, kapanışta EKSİK teslim ediyor; fark
+  hesaplanan bir sonuç, yazılan bir varsayım değil.
+
+  Neden gerekti: PARA bölümünün TEK bildirim türü `run_close_mismatch` ve o da yalnız FARK varken
+  doğuyor. Hiçbir sahnede fark olmadığı için bölüm her kurulumda boş açılıyordu — ekran doğru
+  çalışıyor ama gösterecek olayı hiç olmuyordu (kullanıcı bulgusu 05.09: *"sadece yönetimle
+  alakalı bildirimler var"*).
+
+  Fark KURYENİN ELİNDE eksilen paradır, kasanın değil: teslim edilen tutar tam, kapanışta beyan
+  edilen eksik. Gerçek hayatta bunun adı sayım farkıdır ve tam da bu yüzden bir zil çalar.
 */
 
 /** Sahnenin kurye anahtarı — `people.ts`teki `kurye` satırı (Marc Lemoine, kapsamı {str, van}). */
@@ -129,7 +139,7 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
 
   let imlec = 0;
   /** Sipariş kurar, `ready`ye getirir, kutusunu mühürler ve ARACA yükler — dört durağın ortak yolu. */
-  const durakKur = async (zoneId: string, musteriIndex: number): Promise<{ orderId: string; code: string } | null> => {
+  const durakKur = async (zoneId: string, musteriIndex: number): Promise<{ orderId: string; code: string; dueCents: number } | null> => {
     const musteri = musteriler[musteriIndex % musteriler.length];
     if (!musteri) return null;
     const adres = (await adresler.listByCustomer(musteri.id))[0];
@@ -193,8 +203,15 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     });
     if (muhurlendi.status !== 'ok') throw new Error(`seed: kutu mühürlenemedi (${muhurlendi.status})`);
 
-    return { orderId: order.id, code: acildi.box.code };
+    return { orderId: order.id, code: acildi.box.code, dueCents: birim * adet };
   };
+
+  /* Kapı tahsilatının gireceği hesap — para sahnesinin açtığı KASA. `maybeSingle` bilerek: hesap
+     yoksa (para sahnesi koşmamışsa) tahsilat atlanır ve kapanış farksız kapanır; sahne yine kurulur,
+     yalnız PARA zili doğmaz. Hesabı burada YARATMIYORUZ — para defterinin sahibi `money.ts`. */
+  const { data: kasa } = await db.from('account').select('id').eq('type', 'cash').eq('is_active', true).limit(1).maybeSingle();
+  const kasaId = (kasa as { id: string } | null)?.id ?? null;
+  let tahsilEdilenKurus = 0;
 
   // ── SEFER A — sürülür, üç durak sonuçlanır, kapanır ────────────────────────
   const durakA: SahneDurak[] = [
@@ -202,7 +219,7 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     { musteri: MUSTERI_EPOSTALARI[1]!, akibet: 'refused', not: 'kapıda reddetti — koku şüphesi' },
     { musteri: MUSTERI_EPOSTALARI[2]!, akibet: 'unreachable', not: 'zil çalmadı, kimse yok' },
   ];
-  const kutularA: Array<{ orderId: string; code: string; akibet: SahneDurak['akibet']; not?: string }> = [];
+  const kutularA: Array<{ orderId: string; code: string; dueCents: number; akibet: SahneDurak['akibet']; not?: string }> = [];
   for (const [i, durak] of durakA.entries()) {
     const kutu = await durakKur(rotaA.id, i);
     if (kutu) kutularA.push({ ...kutu, akibet: durak.akibet, not: durak.not });
@@ -222,8 +239,22 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
 
   for (const kutu of kutularA) {
     if (kutu.akibet === 'delivered') {
-      const teslim = await confirmDoorDelivery(db, { orderId: kutu.orderId, courierId: kurye.id, scannedBoxCodes: [kutu.code] });
+      /* Kapıda NAKİT tahsil ediliyor: sipariş zaten `cash` ve tutarı belli — para uydurulmuyor,
+         siparişin kendi borcu kapatılıyor. Kuyruk tekrarına karşı anahtar istemcide üretilir;
+         burada sahnenin kendi sabit anahtarı yeter (aynı seed iki kez koşarsa satır tekrarlamaz). */
+      const teslim = await confirmDoorDelivery(db, {
+        orderId: kutu.orderId,
+        courierId: kurye.id,
+        scannedBoxCodes: [kutu.code],
+        collection: kasaId === null ? null : {
+          method: 'cash',
+          amountCents: kutu.dueCents,
+          accountId: kasaId,
+          idempotencyKey: `seed-kurye-donus:${kutu.orderId}`,
+        },
+      });
       if (teslim.status !== 'ok') throw new Error(`seed: teslim yazılamadı (${teslim.status})`);
+      tahsilEdilenKurus += kutu.dueCents;
       continue;
     }
     if (kutu.akibet === 'refused' || kutu.akibet === 'unreachable') {
@@ -237,7 +268,17 @@ export async function seedCourierReturn(db: Db, varyantlar: VaryantRef[], depola
     }
   }
 
-  const kapandi = await closeCourierDay(db, { courierId: kurye.id, runId: seferA.run.runId });
+  /* KAPANIŞ EKSİK BEYANLA: kurye 2,50 € eksik teslim ediyor. Fark hesaplanan bir sonuçtur
+     (beklenen = kapıda yazılan tahsilat, sayılan = beyan) ve `notifyRunCloseMismatch` onu gerçek
+     üreticiden çalıyor — PARA bölümünün tek türü ancak böyle doğar. Eksik tutar sahnenin sabiti;
+     tahsilat sıfırsa (kasa hesabı yok) fark da sıfır kalır ve zil haklı olarak susar. */
+  const eksikBeyanKurus = tahsilEdilenKurus > 0 ? 250 : 0;
+  const kapandi = await closeCourierDay(db, {
+    courierId: kurye.id,
+    runId: seferA.run.runId,
+    countedCashCents: tahsilEdilenKurus - eksikBeyanKurus,
+    note: eksikBeyanKurus > 0 ? 'kasa sayımı eksik çıktı — kurye beyanı' : null,
+  });
   if (!kapandi.ok) throw new Error(`seed: sefer A kapanamadı (${kapandi.reason})`);
 
   // ── SEFER B — araçta bekler, yola çıkmaz ───────────────────────────────────
