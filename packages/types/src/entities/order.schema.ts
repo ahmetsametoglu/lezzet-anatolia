@@ -459,5 +459,12 @@ export const OrderCountsRowSchema = z.object({
   codTotalCents: z.number().int(),
   codCollectedCents: z.number().int(),
   codRefundedCents: z.number().int(),
+  /**
+   * **İptal HARİÇ sayılan iş** (21.265). `total`/`sumTotal` iptalleri içeriyor ve bu bilerek —
+   * `byStatus` iptal sekmesini besliyor. Ama "bugün kaç sipariş / bugün ne kadar ciro" bir İŞ
+   * ölçüsüdür; iptal edilmiş sipariş bir iş değildir. Panelin kartı bu ikisini okuyor.
+   */
+  activeCount: z.number().int(),
+  activeTotalCents: z.number().int(),
 });
 export type OrderCountsRow = z.infer<typeof OrderCountsRowSchema>;

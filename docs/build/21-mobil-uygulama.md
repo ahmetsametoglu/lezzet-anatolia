@@ -12038,3 +12038,171 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   olduktan sonra üçüncü biri aynı varyantı eski sayıya çekerse kuryenin tekrarındaki taban yeniden
   tutar. Ve `set` uçları değiştiği için telefondaki eski derleme 404 alır — sessizce korumasız
   yazmaktansa gürültüyle kırılmak seçildi.
+
+- [x] (21.264) **BİLDİRİM EKRANI v3'ün GÜNCEL çizimine geçti VE kitlenin iki kez sorulması bitti — bölüm artık kapı değil etiket; sunucu rozeti, imleç, hedef satırı, gün grupları** (kullanıcı kararı 05.09: *"tasarımı çok beğendim, bunu realize etmek istiyorum"*)
+  `touches: apps/mobile/src/screens/operations/*, apps/mobile/src/lib/operations/{sections,stamp}.ts, apps/mobile/src/lib/api/notifications.ts, apps/mobile/src/components/operations/{choice-chip,notification-bell}.tsx, apps/mobile/src/theme/fonts.ts, packages/design-tokens/src/operations-app.ts, packages/i18n/src/notification-copy.ts, packages/application/src/notification/read.ts, packages/database/src/services/app-notification.service.ts, packages/database/src/testing/cleanup.ts, apps/mobile-api/src/api/v1/notifications.ts, apps/web/components/operation/ui/notification-*, scripts/seed/notifications.ts`
+
+  **Durum (05.09).** Ekran 30.08'de v3'e geçirilmişti ama kaynak dosyanın O GÜNKÜ hâline göre:
+  bildirim bloğu 31.08'de baştan yazıldı ve ekran o güncellemeyi hiç görmedi. Aradaki fark iki örnek
+  kart ile şu liste arasındaydı: bölüm süzgeci çipleri · gün grupları · sol renkli ray · bölüm
+  rozeti · okunmadı noktası · alt satır · hedef satırı · iki ayrı boş hâl · dipnot kutusu.
+
+  **Ama asıl iş çizim değildi.** Ölçüm (üç iş akışı, 32 ajan, her bulgu ayrıca çürütmeye verildi)
+  ekranın çizim olarak değil VERİ YOLU olarak kırık olduğunu gösterdi ve üç arıza birbirini
+  örtüyordu:
+
+  1. **Kitle İKİ KEZ kararlaştırılıyordu.** Sunucu alıcıyı *rol × depo* ile seçiyor, ekran aynı
+     satırı *bölüm* ile bir daha süzüyordu. `stock_low` roles `['admin','warehouse']` ama bölümü
+     `'warehouse'`du → yalnız yönetici olan kişiye YAZILAN satır ekranda hiç çizilmiyordu;
+     `run_close_pending` depocuya yazılıyor ama bölümü `'management'` → depocu göremiyordu.
+     Sekiz türün DÖRDÜ, alıcılarının bir kısmı için görünmez yazılıyordu.
+  2. **"Ekranı açmak = gördüm" HİÇ ÇALIŞMIYORDU.** `useEffect(…, [])` mount'ta koşuyor, o an veri
+     gelmediği için erken dönüyordu — `read-all` isteği hiç gitmiyor, rozet hiç sönmüyordu.
+  3. **Düzeltilseydi durum KÖTÜLEŞECEKTİ:** `read-all` kapsam tanımıyordu ve ekranda hiç çizilmemiş
+     satırları da okundu yapardı; `notification-retention` 90 gün sonra onları *görülmüş* sayıp
+     silerdi — saklama künyesinin *"görülmemiş satır bekleyen iştir, durur"* güvencesi tam oradan
+     deliniyordu.
+
+  **Kararlar `design/KARARLAR.md`de** (dokuz madde): kitle tek eksende · bölüm etiket · roller
+  cömertçe verilir · alıcı seçilmez · okundu kişi başına · üç tür iş emridir · depo satırda yazar ·
+  Karla 800 · hub zili toplamı gösterir.
+
+  **Yazılanlar.** İstemci süzgeci söküldü (`visibleNotifications` + `notificationScopeOf` kalktı).
+  Bölüm artık HEDEF EKRANIN bölümü — kural tasarımın kendi verisinden ("Azalan stok" bir stok olayı
+  ama bölümü yönetim, çünkü hedefi tedarik ekranı) ve web'in rotasıyla da bu uyuşuyor. Sözlük
+  başlığı ikiye ayrıldı (`subtitle`); yeni bilgi değil, tek satıra sıkışmış cümlenin kendi dikişi —
+  web paneli de aynı anda bağlandı, yoksa bilgi kaybederdi. `read-all` ucu `since` aldı: beyan
+  çizilen EN ESKİ satırın damgasıyla sınırlı. Rozet sunucudan (`/badge`, `audience=staff` — istemci
+  o parametreyi hiç göndermiyordu, çağrılsa MÜŞTERİ sayısını verirdi); üç hub artık bir sayı için
+  30 satırlık tur atmıyor. İmleç tüketiliyor. Hata dalı açıldı — ilk çekim düşerse ekran sonsuza
+  kadar iskelet çiziyordu. Satırın damgası göreli süre değil SAAT (gün başlığı varken "19 sa" aynı
+  şeyi iki kez söylüyordu); `agoOf` silinmedi, evi `lib/operations/stamp.ts` oldu.
+
+  **Token/varlık:** `Karla_800ExtraBold` yüklendi (gün başlığı + rozet 800 istiyor, sahte kalın
+  yasak), `badge-xs` 8,5 px kademesi açıldı (kontrol kademesi, yuvarlanamaz), `courier-bg` rozet
+  zemini (`neutral-bg` SICAK, bu SOĞUK), `snug--line-height` 1.45 (şablonda 29 kullanım).
+
+  **Tasarımın KENDİ kusurları kopyalanmadı:** `bldSuzgecBos` satır sayısına değil rol iznine baktığı
+  için yapısı gereği ölüydü (kodda satır sayısına bakıyor); rozet `toUpperCase` ile "YÖNETIM"
+  yazıyordu (noktasız I — kod `turkishUpper` kullanıyor); "dün" grubunda saatler sıralı değildi.
+
+  **Yan düzeltmeler:** test temizliği üç türü (`run_close_pending` · `transfer_shortfall` ·
+  `transfer_excess`) tanımıyordu ve yerelde 198 sahipsiz satır birikmişti — süpürücü artık
+  payload'daki bağdan yürüyor. Besleme `stock_low`u DEPOSUZ yazıyordu (taslakta alan yoktu);
+  `dedupe_key` deponun kimliğini taşıyor ve o depo duruyor, yani FK değil beslemenin kendisiydi.
+  D8'in rampa sözleşmesine 05.09'da eklenen `waiting` alanı depo hub'ı testinin fikstüründe
+  eksikti ve üç test sessizce "—" okuyordu.
+
+  **Doğrulama:** kök `typecheck` · `lint` · `knip` temiz; mobil 1330/1330. Kancanın (bugün en çok
+  mantığı taşıyan dosya) 05.09'a kadar HİÇ testi yoktu — dokuz test yazıldı, en kritiği "gördüm
+  beyanı çizilen en eski satırın damgasıyla sınırlanır". Ekran testi de yeniden yazıldı: RNTL
+  `fireEvent.press` işleyici ararken KOMPOZİT propları da tarıyor, o yüzden kartın prop'u `onPress`
+  olamazdı — `onOpen` oldu; aksi hâlde "basılamaz kart basılmıyor" testi yanlış yerden yeşil geçerdi.
+
+  **BEKLEYEN(21.217):** belge · askıda kapanış · kurumsal başvuru için hedef ekranlar yok; o üç tür
+  bugün yalnız haber veriyor. Yeni bildirim türleri (sefer devri · WhatsApp penceresi · yazılamayan
+  iade · tahsil edilmemiş teslim) ayrı iş birimi.
+
+- [x] (21.265) **İPTAL EDİLEN SİPARİŞ — mal hâlâ çıkabiliyordu, para hâlâ bekleniyordu** (kullanıcı kararı 05.09: A ve B grupları kritik, uçtan uca)
+  `touches:` `supabase/migrations/0012_order.sql` · `packages/types/src/entities/order.schema.ts` · `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/database/src/services/{order,order-box}.service.ts` · `packages/application/src/shipping/{cancel.ts,handover.ts,announce.ts,tracking.ts,announce.test.ts}` · `packages/application/src/warehouse/{boxes.ts,boxes.test.ts}` · `packages/application/src/order/{refund.ts,refund.test.ts}` · `packages/application/src/index.ts` · `apps/web/app/(operations)/operations/{dashboard-page-read.ts,orders/actions.ts,orders/orders-read.test.ts}` · `apps/mobile/src/screens/warehouse/messages.json`
+
+  **Ön çalışma (37 ajan, 05.09).** *"Bir sipariş iptal edilince ne olmalı?"* sorusu sistemin kendi
+  modelinden türetildi ve karşılığı ölçüldü: 49 beklenti, **20'si karşılanıyor**, 29'u açık; çürütme
+  turu 14'ünü eledi. Ayakta kalanlar iki kümeye toplandı ve kullanıcı ikisini de kritik saydı.
+
+  **Boşluklar rastgele değildi.** Kurye yolu temiz çıktı — iptal orada her kapıda karşılanmış.
+  Açıkların hepsi üç yerde: **kargo yolu** (kurye kapılarının kardeşleri hiç yazılmamış),
+  **panel toplamları** (motor doğru, toplamlar motoru okumuyor) ve müşteriye kurulan cümle. Yine
+  aynı desen: kural repoda VAR ama öğrenildiği yerde kalmış.
+
+  ── **A · MAL FİZİKSEL OLARAK ÇIKABİLİYORDU** ────────────────────────────────
+
+  **A1 — kargo devir kapısında durum kontrolü yoktu.** Kurye kulvarında kural ve künyesi yazılı
+  (`load.ts:129`: *"iptal edilmiş siparişin kutusu yüklenmez"*); kargo kardeşinde yoktu. İptal
+  edilmiş ve **parası iade edilmiş** siparişin kolisi taşıyıcıya veriliyor, `loaded_at` damgalanıyor,
+  gönderi `handed_over` oluyor, deftere `HANDOVER_SCAN` yazılıyordu — ardından `siparisiTasi` hiçbir
+  şey yazamıyordu (sipariş `cancelled`). Mal yola çıkıyor, sistem çıkmadığını sanıyordu.
+
+  Rampa **sayacı ve listesi** de aynı süzgeci öğrendi; servisin kendi künyesi bunu zaten şart
+  koşuyordu (*"sayaç kapıdan gevşek olsaydı hub '3 kutu bekliyor' der, depocu üçünü de okutur ve
+  biri reddedilirdi"*). Kural tek yerde, üç okuyucu paylaşıyor.
+
+  **Ölçüt LİSTE DEĞİL, SORUNUN KENDİSİ oldu — ve bunu testler öğretti.** İlk yazımda izin listesi
+  kurye kapısından kopyalanmıştı (`['ready','out_for_delivery']`) ve dört test kırmızıya döndü.
+  Ölçünce liste yanlış çıktı: durum makinesi `confirmed → out_for_delivery` ve
+  `preparing → out_for_delivery` geçişlerini **bilerek** açıyor (*"Atlanabilir adımlar"*), yani kargo
+  siparişi `ready`ye uğramadan devredilebiliyor. Dar liste meşru bir yolu sessizce kıracaktı. Kapı
+  artık motora soruyor (`canTransition(status,'out_for_delivery')`) — makineye yeni bir durum
+  girerse kendiliğinden öğrenir.
+
+  **A2 — `sealBox` sipariş durumunu sormuyordu.** `openBox` *"yalnız toplanabilir siparişe kutu
+  açılır"* diyor, `sealBox` hiç sormuyordu. Aradaki pencere gerçek: kutu açıkken sipariş iptal
+  edilebiliyor ve açık kutu yine kapatılabiliyordu. Bedeli sessizdi — mühür `record_preparation`
+  çağırdığı için `cancel_order`ın temizlediği `order_item_batch` ve `fulfilled_qty` YENİDEN
+  doluyordu; iptal edilmiş sipariş "bizden çıkmış mal" olarak kayda giriyor, geri çağırma sorgusu ve
+  COGS onu sayıyordu. Aynı delik `declareOrderShort`ta da vardı.
+
+  **A3 — gönderi hiç kapatılmıyordu.** `ShippingRateProvider.cancel` repoda tanımlıydı ama
+  **hiçbir yerden çağrılmıyordu**: iptalde müşteriye kargo bedeli iade ediliyor, etiket taşıyıcıda
+  ayakta kalıyordu. Yeni `cancelOrderShipment` üç yazımı sırayla yapıyor — sağlayıcı (tek geri
+  alınamaz adım, o yüzden önce), yerel gönderi, olay satırı. **Port açılmadı:** `sendcloudProvider`
+  bu paketin içinde ve anahtarlarını ENV'den kendisi okuyor; yeni bir kanca her yüzeye doldurulacak
+  bir borç olurdu. Sağlayıcı düşse de yerel kapanış yazılıyor ama **sessiz geçmiyor**
+  (`provider_failed` / `provider_unavailable`) — "iptal edildi" ile "etiket hâlâ ayakta olabilir"
+  aynı cevap olamaz.
+
+  Bu arada `announce.ts` ve `tracking.ts`teki iki "açık gönderi" kopyası da ortak ölçüte çekildi
+  (`isOpenShipment`) — üçüncü kopya doğmadan (CLAUDE §1).
+
+  ── **B · PARA YANLIŞ GÖRÜNÜYORDU** ─────────────────────────────────────────
+
+  **B4 — hayalet alacak.** `order_counts` tabanı yalnız `draft`ı eliyordu: iptal edilmiş **ödenmemiş**
+  her sipariş tutarı kadar kalıcı bir alacak yazıyordu. Motor aynı siparişe "borç yok" derken
+  (`isOpenCredit`) toplam "borç var" diyordu. Üç tüketici birden yanlış okuyordu: "Bekleyen tahsilat"
+  KPI'si, sipariş ekranının alt şeridi ve **sabah brifingi** — patronun günü olmayan bir tahsilat
+  maddesiyle başlıyordu. Süzgeç `base`e DEĞİL kovaya kondu: `by_status` iptal sekmesini besliyor,
+  orada görünmeleri gerekiyor.
+
+  **B5 — "Bugünkü ciro" kartının üç parçası üç ayrı tabandan.** Başlık `total`dan (iptal DÂHİL),
+  altındaki depo kırılımı `OUT_OF_DAY`den (hariç), 7 günlük çizgi `analytics_order_base`ten (hariç).
+  Tek kart kendi içinde üç gerçek söylüyordu. `order_counts` `active_count`/`active_total` kazandı;
+  üçü de artık aynı kümeden. Dünle karşılaştıran yüzde de aynı tabandan — biri iptalli biri iptalsiz
+  olsaydı oran uydurmaydı.
+
+  **B6 — bölünmüş tahsilatta iade tek hesaptan çıkıyordu.** Hesap "son tahsilat hareketinin hesabı"
+  diye seçiliyordu; para iki hesaba bölünmüşse (kartla kapora + kapıda nakit) iadenin tamamı son
+  hareketin hesabından çıkıyor, para hiç girmediği kasadan düşüyor ve o hesabın bakiyesi sessizce
+  yanlış oluyordu. Hesap artık paranın **net olarak durduğu** yerden çözülüyor.
+
+  **Otomatik bölme BİLEREK yapılmadı** (`BEKLEYEN(21.266)`): hesap başına ayrı sağlayıcı çağrısı,
+  ayrı tekillik anahtarı ve "ikincisi düşerse birincisi yazılı kalır" hâli demek — geri alınamayan
+  yarım bir iade bugünkü arızadan beter olurdu. Yerine dosyanın KENDİ ilkesi uygulandı ve o ilke
+  zaten yazılıydı: *"sessizce yanlış hesaba yazmaktansa borcu açıkta bırakmak doğrudur."* Yeni
+  `split_payment` reddi borcu görünür tutuyor; operatör hesap başına yazabiliyor.
+
+  **Testleri yazıldı.** Devir: sağlayıcıya iptal gider + yerel kapanır + defter satırı · sağlayıcı
+  düşse de yerel yazılır ama sessiz geçmez · gönderisiz siparişte hiçbir şey yazılmaz · kapanmış
+  gönderi ikinci kez kapanmaz. Kutu: açıldıktan sonra iptal edilen sipariş kapatılamaz **ve iptalin
+  temizlediği iki iz yerinde kalır** (bu bir garanti, ayrıca çivilendi) · eksik beyanı da yazılamaz.
+  Para: iki hesaplı iptal `split_payment` der ve hiçbir şey yazmaz · tek hesapta davranış birebir
+  aynı (karşı-örnek) · iptal edilen sipariş `cod` ve `active` kovalarından düşer ama iptal
+  sekmesinde GÖRÜNÜR kalır.
+
+  Bir testin öncülü ölçümle düzeltildi: `prepareOrderToReady` ödeme yöntemi yazmıyor, yöntemsiz
+  sipariş `cod` kovasına hiç girmiyor — kova boşken "bir azaldı" iddia edilemez. Test kendi kapı
+  siparişini kuruyor ve önce öncülü doğruluyor.
+
+  **Durum (05.09):** `db:refresh` koşuldu, yeni kolonlar DB'den doğrulandı (`active_count 12`).
+  Tip · lint · **tam paket 4200/4200 (370 dosya)**.
+
+- [ ] (21.266) **İadeyi hesap başına BÖL — bölünmüş tahsilatta bugün hiç yazılmıyor** (21.265'in kalanı)
+  `touches:` `packages/application/src/order/refund.ts` (ölçülecek)
+
+  21.265 yanlış hesaptan yazmayı durdurdu ama doğrusunu yazmıyor: para birden çok hesaba girmişse
+  iade `split_payment` ile reddediliyor ve borç açıkta kalıyor. Operatör `refundAccountId` ile hesap
+  başına yazabiliyor, yani çıkış yolu var — ama otomatik değil.
+
+  Tam çözüm hesap başına ayrı hareket ister ve üç zor soruyu birlikte getirir: sağlayıcı hesabında
+  o hesaba ait `providerRef` hangisi, tekillik anahtarı hesap başına nasıl türetilir, ve ikinci
+  yazım düşerse birincisi yazılı kalırken ne yapılır. Sonuncusu kritik: geri alınamayan yarım bir
+  iade bugünkü hâlden beterdir. Bu yüzden ertelendi, gizlenmedi.

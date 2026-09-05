@@ -363,6 +363,7 @@ export { readDeliveryProof, requestDeliveryProofUploadUrl } from './courier/proo
 // da aynı kapıyı çağırıyor). `payment` ve `fulfillment` zorunlu geçiş: ikisi de kurye kapısının
 // içinden geçiyordu, bırakılsalardı terfi eden kapı web'e bakmak zorunda kalırdı.
 export { adjustFulfillment, cancelOrder, retryRefund } from './order/refund';
+export { cancelOrderShipment, isOpenShipment, type ShipmentCancelOutcome } from './shipping/cancel';
 export type { AdjustOutcome, CancelOutcome, RefundBlockReason, RefundOptions, WarehouseScope } from './order/refund';
 export { closeOrder, deliverOrder } from './order/fulfillment';
 export { recordOrderPayment, recordOrderRefund, syncOrderPaymentStatus } from './order/payment';

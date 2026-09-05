@@ -61,7 +61,12 @@ export class OrderBoxService extends BaseDbService<OrderBox, OrderBoxInsert, Ord
    * öyle duruyor. Tavan çağıranın: liste sınırsız büyümez ama kırpıldığında SUSMAZ, çünkü gerçek
    * toplam zaten sayaçtan geliyor.
    */
-  async listAwaitingHandover(warehouseId: string, limit: number): Promise<OrderBox[]> {
+  async listAwaitingHandover(warehouseId: string, limit?: number): Promise<OrderBox[]> {
+    /* TAVAN İSTEĞE BAĞLI (21.265): sayaç da bu satırları okumak zorunda kaldı — süzgecin son
+       yarısı (siparişin durumu) burada değil uygulama katmanında, çünkü ilişkili tabloya süzgeç
+       koyacak bir yol yok. Tavansız çağrı SAYIM içindir ve kırpılmamalı; kırpılan bir sayı
+       "rampada 40 kutu var" diye yalan söylerdi. Küme fiziksel olarak sınırlı: bir deponun
+       rampasında bekleyen, mühürlenmiş, duyurulmuş ve henüz verilmemiş kutular. */
     return this.getAll(
       { warehouseId },
       { isNotNullFields: ['sealedAt', 'shipmentId'], isNullFields: ['loadedAt'], orderBy: 'boxNo', limit },

@@ -98,6 +98,8 @@ export interface OrderCounts {
   /** Tutarlar **cent** (02.9 · STACK §8) — RPC euro toplar, çevrim `counts()` sınırında. */
   sum: { totalCents: number; collectedCents: number; refundedCents: number };
   cod: { count: number; totalCents: number; collectedCents: number; refundedCents: number };
+  /** İptal HARİÇ sayılan iş (21.265) — künyesi `OrderCountsRowSchema`da. */
+  active: { count: number; totalCents: number };
 }
 
 /**
@@ -755,6 +757,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
         total: 0,
         sum: { totalCents: 0, collectedCents: 0, refundedCents: 0 },
         cod: { count: 0, totalCents: 0, collectedCents: 0, refundedCents: 0 },
+        active: { count: 0, totalCents: 0 },
       };
     }
     const rows = await this.executeRpc<unknown[]>('order_counts', {
@@ -775,7 +778,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
     const flat = dbToApp(raw) as Record<string, unknown>;
     // RPC dönüşü bir TABLO SATIRI değil (jsonb) — `moneyFields` yolundan geçmez; toplamlar euro
     // gelir ve cent'e burada, ortak yardımcıyla inilir (02.9 · STACK §8).
-    const money = rpcMoneyToCents(flat, ['sumTotal', 'sumCollected', 'sumRefunded', 'codTotal', 'codCollected', 'codRefunded']);
+    const money = rpcMoneyToCents(flat, ['sumTotal', 'sumCollected', 'sumRefunded', 'codTotal', 'codCollected', 'codRefunded', 'activeTotal']);
     const row = OrderCountsRowSchema.parse({ ...money, byStatus: raw.by_status ?? {} });
     return {
       byStatus: new Map(Object.entries(row.byStatus) as Array<[OrderStatus, number]>),
@@ -787,6 +790,7 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
         collectedCents: row.codCollectedCents,
         refundedCents: row.codRefundedCents,
       },
+      active: { count: row.activeCount, totalCents: row.activeTotalCents },
     };
   }
 

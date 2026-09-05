@@ -167,14 +167,19 @@ export async function readDashboard(db: Db, now = new Date()): Promise<Dashboard
     band: buildBand({ flow, queue }),
     kpis: buildKpis({
       orders: {
-        today: todayCounts.total,
-        yesterday: yesterdayCounts.total,
+        /* İPTAL HARİÇ (21.265): kartın başlığı `total`dan geliyordu (iptal DÂHİL) ama hemen
+           altındaki depo kırılımı (`splitOf(rows)` — `OUT_OF_DAY` iptali eliyor) ve 7 günlük çizgi
+           (`analytics_order_base` de eliyor) iptalsizdi. Tek kart üç ayrı gerçek söylüyordu.
+           Üçü de artık aynı kümeden: iptal hariç, aynı depo kapsamı, aynı tarih ekseni. */
+        today: todayCounts.active.count,
+        yesterday: yesterdayCounts.active.count,
         split: splitOf(rows),
         series: seriesOf(revenueRows, seriesFrom, now, 'orderCount'),
       },
       revenue: {
-        todayCents: todayCounts.sum.totalCents,
-        deltaPercent: deltaPercentOf(todayCounts.sum.totalCents, yesterdayCounts.sum.totalCents),
+        todayCents: todayCounts.active.totalCents,
+        // Dünle karşılaştırma da AYNI tabandan — biri iptalli biri iptalsiz olsaydı yüzde uydurmaydı.
+        deltaPercent: deltaPercentOf(todayCounts.active.totalCents, yesterdayCounts.active.totalCents),
         split: revenueSplitOf(rows),
         series: seriesOf(revenueRows, seriesFrom, now, 'revenueCents'),
       },

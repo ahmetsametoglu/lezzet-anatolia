@@ -1,6 +1,7 @@
 import { OrderBoxService, ShipmentEventService, ShipmentService } from '@lezzet/database';
 import { getR2Private, r2Keys } from '@lezzet/storage';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isOpenShipment } from './cancel';
 import { resolveDispatch, type DispatchBlock } from './dispatch';
 import type { ShippingRateProvider } from './port';
 
@@ -92,7 +93,7 @@ export async function announceOrderShipment(
   const { order, boxes: ordered, from, to, parcels } = resolved.plan;
 
   const shipments = new ShipmentService(db);
-  const mevcut = (await shipments.listByOrder(input.orderId)).find((s) => s.cancelledAt === null && s.status !== 'cancelled');
+  const mevcut = (await shipments.listByOrder(input.orderId)).find(isOpenShipment);
   // Aynı siparişe ikinci kez duyuru = ikinci koli = gerçek para. Operatöre "zaten var" denir.
   if (mevcut) return { status: 'already_announced', shipmentId: mevcut.id };
 

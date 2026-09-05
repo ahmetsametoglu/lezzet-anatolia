@@ -15,7 +15,8 @@ import {
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehousePair, mustDelete, purgeVariantStock } from '@lezzet/database/testing';
 import { advanceOrder } from '../order/advance.testkit';
-import { boxLabelPayload, markBoxPrinted, openBox, printersFor, sealBox } from './boxes';
+import { cancelOrder } from '../order/refund';
+import { boxLabelPayload, declareOrderShort, markBoxPrinted, openBox, printersFor, sealBox } from './boxes';
 import { listPreparationQueue } from './preparation';
 
 /**
@@ -320,6 +321,43 @@ describe('kutu kapanışı (sealBox)', () => {
 
     expect(await sealBox(db, { boxId, warehouseId, picks })).toEqual({ status: 'already_sealed' });
     expect(await boxItems.listByBoxes([boxId])).toHaveLength(1);
+  });
+
+  it('KUTU AÇILDIKTAN SONRA İPTAL EDİLEN sipariş kapatılamaz — karşılanan adet dirilmez', async () => {
+    /* ÖLÇÜLEN AÇIK (21.265 · iptal ön çalışması 05.09): `openBox` "yalnız toplanabilir siparişe
+       kutu açılır" diyordu ama `sealBox` sipariş durumunu HİÇ sormuyordu. Aradaki pencere gerçek:
+       kutu açıkken sipariş iptal edilebiliyor.
+
+       Bedeli sessizdi: mühür `record_preparation` çağırıyor, yani `cancel_order`ın temizlediği
+       (`0020:275-281`) `order_item_batch` ve `fulfilled_qty` YENİDEN doluyordu — iptal edilmiş
+       sipariş "bizden çıkmış mal" olarak kayda giriyor, geri çağırma ve COGS onu sayıyordu. */
+    const { orderId, itemIds } = await confirmedOrder([2]);
+    const opened = await openBox(db, { orderId, warehouseId });
+    const boxId = opened.status === 'ok' ? opened.box.boxId : '';
+    await cancelOrder(db, orderId);
+
+    const sonuc = await sealBox(db, {
+      boxId,
+      warehouseId,
+      picks: [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 2 }] }],
+    });
+
+    expect(sonuc).toEqual({ status: 'stale', currentStatus: 'cancelled' });
+    // "Hiçbir yazım yok" bir GARANTİ: iptalin temizlediği iki iz yerinde kalmalı.
+    expect(await itemBatches.listByOrder(orderId)).toEqual([]);
+    expect((await orders.getWithItems(orderId))?.items.every((row) => row.fulfilledQty === 0)).toBe(true);
+  });
+
+  it('İPTAL EDİLEN siparişte eksik beyanı da yazılamaz — mührün kardeş kapısı', async () => {
+    /* `declareOrderShort` de `record_preparation` yazıyor; aynı delik onda da vardı. İki kardeş
+       kapı aynı kuralı taşımazsa biri bir gün ötekinden ayrılır. */
+    const { orderId } = await confirmedOrder([2]);
+    await cancelOrder(db, orderId);
+
+    expect(await declareOrderShort(db, { orderId, warehouseId, actorId: null })).toEqual({
+      status: 'stale',
+      currentStatus: 'cancelled',
+    });
   });
 
   it('boş kutu kapatılamaz — partisiz satırlar içerik sayılmaz', async () => {

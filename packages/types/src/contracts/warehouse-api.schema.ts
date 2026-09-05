@@ -441,6 +441,21 @@ export const HandoverResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('not_sealed'), boxNo: z.number().int().positive() }),
   /** Gönderi duyurulmadı: satın alınmamış etiketle kutu taşıyıcıya verilemez. */
   z.object({ status: z.literal('not_announced'), boxNo: z.number().int().positive() }),
+  /**
+   * **Sipariş artık gönderilebilir değil** (21.265) — en sık hâli İPTAL. Kurye kulvarının
+   * `not_loadable` dalının kargo karşılığı; o kural vardı, bunun yoktu ve iptal edilmiş, parası
+   * iade edilmiş siparişin kolisi taşıyıcıya veriliyordu.
+   *
+   * Üç alan da ekranın cümlesi için: referans depocunun elindeki koliyi tanıması, `currentStatus`
+   * sebebi söylemesi ("bu sipariş iptal edilmiş") içindir — çıplak bir ret depocuya ne yapacağını
+   * söylemez.
+   */
+  z.object({
+    status: z.literal('not_shippable'),
+    boxNo: z.number().int().positive(),
+    referenceNo: z.string().nullable(),
+    currentStatus: OrderStatusEnum,
+  }),
 ]);
 export type HandoverResponse = z.infer<typeof HandoverResponseSchema>;
 
@@ -546,6 +561,12 @@ export const SealBoxResponseSchema = z.discriminatedUnion('status', [
   z.object({ status: z.literal('already_sealed') }),
   /** Boş kutu kapatılamaz — etiketi basılacak içerik yok. */
   z.object({ status: z.literal('empty') }),
+  /**
+   * **Sipariş artık toplanabilir kümede değil** (21.265) — kutu açıldıktan SONRA iptal edilmiş
+   * olabilir. `openBox`un aynı dalı: kapıyı açan kural kapıyı kapatan kuralla eş olmalı, yoksa
+   * mühür iptal edilmiş siparişte karşılanan adedi diriltir.
+   */
+  z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   /** RPC reddi — mesaj operatöre AYNEN gösterilir (en sık: fiziksel gerçek ihlali, 0015/0048). */
   z.object({ status: z.literal('failed'), message: z.string() }),
@@ -569,6 +590,8 @@ export const DeclareShortResponseSchema = z.discriminatedUnion('status', [
   }),
   /** Açık kutuda ürün var: önce o kutu kapanmalı, yoksa içindekiler kayda geçmez. */
   z.object({ status: z.literal('open_box_not_empty'), boxNo: z.number().int().positive() }),
+  /** Sipariş artık toplanabilir kümede değil (21.265) — mührün aynı dalı, aynı gerekçe. */
+  z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('failed'), message: z.string() }),
   z.object({ status: z.literal('not_found') }),
@@ -1421,7 +1444,12 @@ export const WarehouseReturnResponseSchema = z.discriminatedUnion('status', [
      * Borç vardı ama iade YAZILAMADI — sebebiyle. Yokluğu "iade tamam" demektir; sessizce sıfır
      * dönmek operatöre iadeyi yapılmış gibi gösterirdi.
      */
-    refundBlocked: z.enum(['no_account', 'provider_ref_missing', 'provider_unavailable', 'provider_failed']).optional(),
+    /* `split_payment` (21.265): para birden çok hesaba girmiş — iade tek hesaptan yazılamaz, çünkü
+       parayı almamış hesabın bakiyesi sessizce yanlış olurdu. Ekran bunu ayrı bir cümleyle söylemeli:
+       çare "tekrar dene" değil, hesap başına elle iade. */
+    refundBlocked: z
+      .enum(['no_account', 'provider_ref_missing', 'provider_unavailable', 'provider_failed', 'split_payment'])
+      .optional(),
   }),
   z.object({ status: z.literal('forbidden'), reason: z.literal('out_of_scope') }),
   z.object({ status: z.literal('stale'), currentStatus: OrderStatusEnum }),

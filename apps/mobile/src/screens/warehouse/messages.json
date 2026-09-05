@@ -954,7 +954,8 @@
       "no_account": "İade borcu YAZILAMADI: müşterinin hesabı yok.",
       "provider_ref_missing": "İade borcu YAZILAMADI: ödeme referansı yok.",
       "provider_unavailable": "İade borcu YAZILAMADI: ödeme sağlayıcısı bağlı değil.",
-      "provider_failed": "İade borcu YAZILAMADI: sağlayıcı reddetti."
+      "provider_failed": "İade borcu YAZILAMADI: sağlayıcı reddetti.",
+      "split_payment": "İade borcu YAZILAMADI: para birden çok hesaba girmiş — iade hesap başına elle yazılmalı."
     },
     "dispositionHint": {
       "rules": "Stoğa dön: sebep notu zorunlu · İmha: parti düşer",

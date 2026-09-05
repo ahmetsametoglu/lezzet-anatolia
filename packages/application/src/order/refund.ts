@@ -2,6 +2,7 @@ import { AccountService, MoneyMovementService, OrderService } from '@lezzet/data
 import { canTransition } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus, ReturnDisposition } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
 import { notifyExceptionEffect, providerRefunder, type OrderEffects } from './effects';
 import { recordOrderRefund, syncOrderPaymentStatus } from './payment';
 
@@ -48,7 +49,17 @@ interface RefundOutcome {
  * `provider_unavailable` — sağlayıcı portu kayıtlı değil ya da anahtarı yok (yerel ortam).
  * `provider_failed` — sağlayıcı reddetti ya da ulaşılamadı.
  */
-export type RefundBlockReason = 'no_account' | 'provider_ref_missing' | 'provider_unavailable' | 'provider_failed';
+/**
+ * `split_payment` — para BİRDEN ÇOK hesaba girmiş (ör. kartla kapora + kapıda nakit). İade tek
+ * hesaptan yazılamaz: parayı hiç almamış hesabın bakiyesi sessizce yanlış olurdu. Operatör
+ * `refundAccountId` ile hesap başına yazabilir; otomatik bölme yapılmıyor (BEKLEYEN(21.266)).
+ */
+export type RefundBlockReason =
+  | 'no_account'
+  | 'provider_ref_missing'
+  | 'provider_unavailable'
+  | 'provider_failed'
+  | 'split_payment';
 
 export type AdjustOutcome =
   | ({ status: 'ok'; restockedQty: number; discardedQty: number; releasedQty: number } & RefundOutcome)
@@ -70,7 +81,13 @@ export type AdjustOutcome =
   | { status: 'not_found' };
 
 export type CancelOutcome =
-  | ({ status: 'ok'; releasedQty: number } & RefundOutcome)
+  /**
+   * `shipment` (21.265) — iptalin KARGO yarısı. `no_shipment` çoğu iptalde normaldir (rota
+   * siparişi ya da hiç duyurulmamış kargo); `provider_failed`/`provider_unavailable` ise
+   * operatörün görmesi gereken bir hâl: yerel gönderi kapandı ama **etiket taşıyıcıda ayakta
+   * olabilir**. İptali durdurmuyor, çünkü sipariş iptali kesin bir olgu.
+   */
+  | ({ status: 'ok'; releasedQty: number; shipment: ShipmentCancelOutcome } & RefundOutcome)
   | { status: 'forbidden'; reason: 'same_status' | 'terminal' | 'not_allowed' | 'out_of_scope' }
   | { status: 'stale'; currentStatus: OrderStatus }
   | { status: 'not_found' };
@@ -187,9 +204,22 @@ export async function cancelOrder(
   const settled = await settleRefund(db, orderId, { description: 'Sipariş iptali — iade', ...opts });
   if (!settled) return { status: 'not_found' };
 
+  /*
+    GÖNDERİ DE KAPANIR (21.265 · iptal ön çalışması 05.09). `cancel_order` kargo tarafına hiç
+    dokunmuyordu ve `ShippingRateProvider.cancel` repoda tanımlı olmasına rağmen hiçbir yerden
+    çağrılmıyordu: iptalde müşteriye kargo bedeli iade ediliyor ama ETİKET TAŞIYICIDA AYAKTA
+    kalıyordu.
+
+    SONUCU DÖNDÜRÜLÜYOR ama iptali DURDURMUYOR: sipariş iptali kesin bir olgu, gönderinin
+    kapanamaması onu geri almaz. Sessiz de geçmiyor — sağlayıcı düştüyse ya da anahtar yoksa
+    `shipment` alanı bunu söylüyor ve operatör "etiket hâlâ ayakta olabilir" cümlesini okuyabiliyor.
+    Künyenin tamamı `shipping/cancel.ts`te.
+  */
+  const shipment = await cancelOrderShipment(db, { orderId, actorId: opts.actorId });
+
   await notifyExceptionEffect(opts.effects, orderId, 'order_cancelled', { refundedAmountCents: settled.refundedAmountCents });
 
-  return { status: 'ok', releasedQty: result.releasedQty ?? 0, ...settled };
+  return { status: 'ok', releasedQty: result.releasedQty ?? 0, shipment, ...settled };
 }
 
 /**
@@ -244,7 +274,22 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
   if (dueCents <= 0) return unsettled();
 
   const payment = await lastPayment(db, orderId);
-  const accountId = opts.refundAccountId ?? payment?.accountId ?? null;
+  /*
+    HESAP "SON HAREKET" DEĞİL, PARANIN GERÇEKTEN DURDUĞU YER (21.265 · ölçüldü 05.09).
+
+    Eski çözüm `lastPayment`ın hesabıydı ve tek hesaplı siparişte doğru cevap veriyordu. Para İKİ
+    hesaba bölünmüşse (kartla kapora + kapıda nakit — üçü de `order_payment` yazıyor) iadenin
+    tamamı SON hareketin hesabından çıkıyordu: para hiç girmediği kasadan düşüyor ve o hesabın
+    bakiyesi sessizce yanlış oluyordu.
+
+    Bölünmüş hâlde OTOMATİK BÖLME YAPILMIYOR ve bu bilinçli bir sınır: orantılı bölme hesap başına
+    ayrı sağlayıcı çağrısı, ayrı tekillik anahtarı ve "ikincisi düşerse birincisi yazılmış kalır"
+    hâli demek — geri alınamayan yarım bir iade, bugünkü arızadan beter olurdu. Bunun yerine dosyanın
+    kendi ilkesi uygulanıyor (aşağıdaki `no_account` künyesi): **sessizce yanlış hesaba yazmaktansa
+    borcu açıkta bırak.** Operatör `refundAccountId` ile hesap başına yazabiliyor.
+  */
+  const accountId = opts.refundAccountId ?? (await soleFundedAccount(db, orderId));
+  if (accountId === 'split') return unsettled('split_payment');
   // Hesap türetilemiyorsa iade yazılamaz ama düzeltme geçerlidir: borç `amountToCollect`'in negatifi
   // olarak zaten görünür. Sessizce yanlış hesaba yazmaktansa borcu açıkta bırakmak doğrudur.
   if (!accountId) return unsettled('no_account');
@@ -293,6 +338,25 @@ async function settleRefund(db: SupabaseClient, orderId: string, opts: RefundOpt
     paymentStatus: after.paymentStatus,
     amountToCollectCents: after.derivation.amountToCollectCents,
   };
+}
+
+/**
+ * **Paranın NET olarak durduğu tek hesap** (21.265) — yoksa `null`, birden çoksa `'split'`.
+ *
+ * Net: tahsilat − iade. Kısmen iade edilmiş bir hesap sıfıra inerse artık "parayı tutan hesap"
+ * değildir ve listeye girmemeli; yoksa ikinci bir iade oraya yazılırdı.
+ */
+async function soleFundedAccount(db: SupabaseClient, orderId: string): Promise<string | null | 'split'> {
+  const movements = await new MoneyMovementService(db).listByOrder(orderId);
+  const net = new Map<string, number>();
+  for (const m of movements) {
+    if (m.type !== 'order_payment' && m.type !== 'order_refund') continue;
+    const isaret = m.type === 'order_payment' ? 1 : -1;
+    net.set(m.accountId, (net.get(m.accountId) ?? 0) + isaret * m.amountCents);
+  }
+  const dolu = [...net.entries()].filter(([, tutar]) => tutar > 0).map(([id]) => id);
+  if (dolu.length === 0) return null;
+  return dolu.length === 1 ? dolu[0]! : 'split';
 }
 
 /** Para hangi hesaba girdiyse oradan çıkar — son tahsilat hareketi (künyesi de ondan okunur). */

@@ -144,6 +144,12 @@ export type SealBoxOutcome =
   | { status: 'pinned_violation'; itemId: string; requiredStockId: string }
   | { status: 'already_sealed' }
   | { status: 'empty' }
+  /**
+   * **Sipariş artık toplanabilir kümede değil** (21.265) — iptal edildi ya da başka bir yola geçti.
+   * `openBox`un aynı dalı ve aynı adı: kapıyı açan kural kapıyı KAPATAN kuralla eş olmalı.
+   * Gerçek durum dönüyor ki ekran "sipariş iptal edilmiş" diyebilsin, çıplak bir ret değil.
+   */
+  | { status: 'stale'; currentStatus: Order['status'] }
   | { status: 'forbidden'; reason: 'out_of_scope' }
   | { status: 'failed'; message: string }
   | { status: 'not_found' };
@@ -176,6 +182,22 @@ export async function sealBox(
 
   const found = await new OrderService(db).getWithItems(box.orderId);
   if (!found) return { status: 'not_found' };
+
+  /*
+    KAPIYI AÇAN KURAL KAPIYI DA KAPATIR (21.265 · ölçüldü 05.09).
+
+    `openBox` "yalnız TOPLANABİLİR siparişe kutu açılır" diyordu (`confirmed`/`preparing`), ama
+    `sealBox` sipariş durumunu HİÇ sormuyordu. Aradaki pencere gerçek: kutu açıldıktan sonra sipariş
+    iptal edilebiliyor ve açık kutu yine de kapatılabiliyordu.
+
+    Bedeli sessiz ve kalıcı: mühür `record_preparation`ı çağırıyor, yani İPTAL EDİLMİŞ siparişte
+    `order_item_batch` ve `fulfilled_qty` YENİDEN doluyor — oysa `cancel_order` ikisini de temizlemişti
+    (`0020:275-281`). "Bizden çıkıp geri gelmeyen mal" kaydı artık iptal edilmiş bir siparişi
+    gösteriyor; geri çağırma sorgusu ve COGS onu sayıyor.
+  */
+  if (found.order.status !== 'confirmed' && found.order.status !== 'preparing') {
+    return { status: 'stale', currentStatus: found.order.status };
+  }
 
   // Partisiz satır "bu kutuya bu kalemden koymadım" demektir — kutu içeriği değildir, süzülür.
   const picks = input.picks.filter((pick) => pick.batches.length > 0);
@@ -444,6 +466,8 @@ export type DeclareShortOutcome =
   | { status: 'ok'; shortfalls: Array<{ itemId: string; suggestion: ShortfallSuggestion }> }
   /** Açık kutunun içinde ürün var: önce o kutu kapanmalı, yoksa içindekiler kayda geçmez. */
   | { status: 'open_box_not_empty'; boxNo: number }
+  /** Sipariş artık toplanabilir kümede değil (21.265) — `sealBox`un aynı dalı, aynı gerekçe. */
+  | { status: 'stale'; currentStatus: Order['status'] }
   | { status: 'failed'; message: string }
   | { status: 'forbidden'; reason: 'out_of_scope' }
   | { status: 'not_found' };
@@ -455,6 +479,11 @@ export async function declareOrderShort(
   const found = await new OrderService(db).getWithItems(input.orderId);
   if (!found) return { status: 'not_found' };
   if (found.order.warehouseId !== input.warehouseId) return { status: 'forbidden', reason: 'out_of_scope' };
+  /* `sealBox`un aynı kapısı (21.265): eksik beyanı da `record_preparation` yazıyor, yani iptal
+     edilmiş siparişte karşılanan adedi diriltebilirdi. İki kardeş kapı aynı kuralı taşımalı. */
+  if (found.order.status !== 'confirmed' && found.order.status !== 'preparing') {
+    return { status: 'stale', currentStatus: found.order.status };
+  }
 
   const boxes = new OrderBoxService(db);
   const open = (await boxes.listByOrders([input.orderId])).find((box) => box.sealedAt === null);

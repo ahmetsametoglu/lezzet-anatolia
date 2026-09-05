@@ -16,6 +16,7 @@ import type { AnnouncedShipment, ShippingQuote } from '@lezzet/sendcloud';
 import { quoteOrderShipment } from './dispatch';
 import { countAwaitingHandover, handOverBox } from './handover';
 import { announceOrderShipment } from './announce';
+import { cancelOrderShipment } from './cancel';
 import type { ShippingRateProvider } from './port';
 import { providerStub } from './provider.testkit';
 
@@ -592,5 +593,68 @@ describe('devir okutması (29.08)', () => {
     expect(await handOverBox(db, { code: kutular[0]!.code, warehouseId: yabanci.id, actorId: customerId })).toMatchObject({
       status: 'out_of_scope',
     });
+  });
+});
+
+/**
+ * **SİPARİŞ İPTALİ GÖNDERİYİ DE KAPATIR** (21.265 · iptal ön çalışması 05.09).
+ *
+ * `cancel_order` kargo tarafına hiç dokunmuyordu ve `ShippingRateProvider.cancel` repoda tanımlı
+ * olmasına rağmen HİÇBİR YERDEN çağrılmıyordu: iptalde müşteriye kargo bedeli iade ediliyor ama
+ * etiket taşıyıcıda ayakta kalıyordu. Koli alınırsa iptal edilmiş sipariş yola çıkıyor.
+ */
+describe('iptal gönderiyi kapatır (21.265)', () => {
+  async function duyurulmusSiparis() {
+    const { orderId, itemId } = await siparisKur('shipping');
+    await kutuKur(orderId, { boxNo: 1, itemId, qty: 1 });
+    const sonuc = await announceOrderShipment(db, fakeProvider(), girdi(orderId), fakeUploader().upload);
+    if (sonuc.status !== 'ok') throw new Error(`duyuru bekleniyordu: ${sonuc.status}`);
+    return orderId;
+  }
+
+  it('SAĞLAYICIYA iptal gider, yerel gönderi kapanır ve deftere satır düşer', async () => {
+    const orderId = await duyurulmusSiparis();
+    const iptaller: string[] = [];
+    const port = { ...providerStub({ cancel: (id: string) => { iptaller.push(id); return Promise.resolve(); } }) };
+
+    const sonuc = await cancelOrderShipment(db, { orderId }, port);
+
+    expect(sonuc.status).toBe('ok');
+    // 1) Sağlayıcı çağrıldı — etiket iptal edildi. Bu adım repoda HİÇ koşmuyordu.
+    expect(iptaller).toHaveLength(1);
+    // 2) Yerel gönderi kapandı: iki alan birden, çünkü açık gönderi ölçütü ikisine birden bakıyor.
+    const [gonderi] = await new ShipmentService(db).listByOrder(orderId);
+    expect(gonderi).toMatchObject({ status: 'cancelled' });
+    expect(gonderi?.cancelledAt).not.toBeNull();
+    // 3) Olay satırı BİZİM gözlemimiz — kaynağı kaydın içinde yazılı.
+    const olaylar = await new ShipmentEventService(db).listByShipment(gonderi!.id);
+    expect(olaylar.some((o) => o.providerCode === 'ORDER_CANCELLED')).toBe(true);
+  });
+
+  it('SAĞLAYICI DÜŞSE DE yerel kapanış YAZILIR — ama sessiz geçmez', async () => {
+    /* Sipariş iptali kesin bir olgu; gönderinin kapanamaması onu geri almaz. Ama "iptal edildi" ile
+       "etiket hâlâ ayakta olabilir" aynı cevap OLAMAZ — operatör ikincisini görmeli. */
+    const orderId = await duyurulmusSiparis();
+    const port = { ...providerStub({ cancel: () => Promise.reject(new Error('sağlayıcı 500')) }) };
+
+    const sonuc = await cancelOrderShipment(db, { orderId }, port);
+
+    expect(sonuc.status).toBe('provider_failed');
+    const [gonderi] = await new ShipmentService(db).listByOrder(orderId);
+    expect(gonderi).toMatchObject({ status: 'cancelled' });
+  });
+
+  it('gönderisi olmayan siparişte hiçbir şey yazılmaz — rota siparişinin normal hâli', async () => {
+    const { orderId } = await siparisKur('route');
+
+    expect(await cancelOrderShipment(db, { orderId })).toEqual({ status: 'no_shipment' });
+  });
+
+  it('KAPANMIŞ gönderi ikinci kez kapatılmaz — açık gönderi ölçütü onu görmez', async () => {
+    const orderId = await duyurulmusSiparis();
+    const port = { ...providerStub({ cancel: () => Promise.resolve() }) };
+    await cancelOrderShipment(db, { orderId }, port);
+
+    expect(await cancelOrderShipment(db, { orderId }, port)).toEqual({ status: 'no_shipment' });
   });
 });

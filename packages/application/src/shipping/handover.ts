@@ -1,5 +1,6 @@
 import { OrderBoxService, OrderService, ShipmentEventService, ShipmentService } from '@lezzet/database';
-import type { OrderBox } from '@lezzet/types';
+import { canTransition } from '@lezzet/domain-core';
+import type { Order, OrderBox } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { OrderEffects } from '../order/effects';
 import { siparisiTasi } from './sync-status';
@@ -48,7 +49,57 @@ export type HandoverOutcome =
   /** Kutu mühürlü değil: açık kutu taşıyıcıya verilemez. */
   | { status: 'not_sealed'; boxNo: number }
   /** Gönderi henüz duyurulmadı — satın alınmamış bir etiketle kutu taşıyıcıya verilemez. */
-  | { status: 'not_announced'; boxNo: number };
+  | { status: 'not_announced'; boxNo: number }
+  /**
+   * **Sipariş artık gönderilebilir değil** (21.265) — iptal edildi ya da başka bir yola girdi.
+   * Kurye kapısının aynı kararı (`courier/load.ts:129` `not_loadable`) ve aynı şekli: gerçek durum
+   * dönüyor ki depocu "bu iptal edilmiş, koliyi yığına geri koy" cümlesini okusun. Referans da
+   * dönüyor çünkü depocunun elindeki fiziksel koliyi tanıması gerekiyor.
+   */
+  | { status: 'not_shippable'; boxNo: number; referenceNo: string | null; currentStatus: Order['status'] };
+
+/**
+ * **RAMPADA VERİLEBİLİR Mİ** (21.265) — tek yerde, çünkü ÜÇ okuyucusu var: devir kapısı
+ * (`handOverBox`), rampa sayacı ve rampa listesi. Servisin künyesi bu eşitliği zaten şart koşuyor:
+ * *"sayaç kapıdan gevşek olsaydı hub '3 kutu bekliyor' der, depocu üçünü de okutur ve biri
+ * reddedilirdi."* Kapıya bir ret eklenince sayacın da öğrenmesi bu yüzden zorunlu.
+ *
+ * ── ÖLÇÜT LİSTE DEĞİL, SORUNUN KENDİSİ ─────────────────────────────────────
+ * İlk yazımda izin listesi `['ready','out_for_delivery']` idi — kurye kapısından (`load.ts:129`)
+ * kopyalanmıştı. ÖLÇÜNCE YANLIŞ ÇIKTI: durum makinesi `confirmed → out_for_delivery` ve
+ * `preparing → out_for_delivery` geçişlerini BİLEREK açıyor (`status-machine.ts:21-22`,
+ * *"ORDER_LIFECYCLE — Atlanabilir adımlar"*). Yani kargo siparişi `ready`ye uğramadan devredilebilir
+ * ve dar liste o meşru yolu sessizce kırardı (dört test bunu yakaladı).
+ *
+ * Devrin gerçek sorusu şu: **bu sipariş hâlâ yola çıkabilir mi?** Cevabı motor veriyor, biz
+ * kopyalamıyoruz — makineye bir gün yeni bir durum girerse kapı kendiliğinden öğrenir. `already`
+ * dalı ayrı: çok kutulu gönderide ilk kutu devredilince sipariş `out_for_delivery` oluyor ve kalan
+ * kutular hâlâ verilecek; motor o kenarı (kendine geçiş) tanımıyor.
+ */
+function rampadaVerilebilir(status: Order['status']): boolean {
+  return status === 'out_for_delivery' || canTransition(status, 'out_for_delivery').allowed;
+}
+
+/**
+ * Rampada GERÇEKTEN verilecek kutular — ham küme okunur, siparişi artık gönderilebilir olmayanlar
+ * (iptal başta olmak üzere) süzülür. Sayaç ve liste bunu paylaşıyor ki ikisi ayrışmasın.
+ *
+ * Süzgecin son yarısı burada, veri katmanında değil: ilişkili tablonun kolonuna süzgeç koyacak bir
+ * yol yok (`BaseDbService` iç-birleşim taşımıyor) ve zaten "hangi durum gönderilebilir" bir I/O
+ * ayrıntısı değil, bir KARAR (CLAUDE §1).
+ */
+async function rampadakiler(
+  db: SupabaseClient,
+  warehouseId: string,
+  limit?: number,
+): Promise<{ kutular: OrderBox[]; siparisler: Order[] }> {
+  const ham = await new OrderBoxService(db).listAwaitingHandover(warehouseId, limit);
+  if (ham.length === 0) return { kutular: [], siparisler: [] };
+
+  const siparisler = await new OrderService(db).listByIds([...new Set(ham.map((box) => box.orderId))]);
+  const verilebilir = new Set(siparisler.filter((o) => rampadaVerilebilir(o.status)).map((o) => o.id));
+  return { kutular: ham.filter((box) => verilebilir.has(box.orderId)), siparisler };
+}
 
 /**
  * **Rampada bekleyen kutu sayısı** (07.12 · §8.6) — hub rozetinin ve devir ekranının başlığı.
@@ -67,7 +118,10 @@ export type HandoverOutcome =
  * gibi gösterirdi.
  */
 export async function countAwaitingHandover(db: SupabaseClient, input: { warehouseId: string }): Promise<number> {
-  return new OrderBoxService(db).countAwaitingHandover(input.warehouseId);
+  /* TAVANSIZ: sayı bir BİTİŞ ölçüsü ve kırpılırsa yalan söyler (bu dosyanın kendi künyesi:
+     "sıfıra inince rampa boşalmıştır"). Servisin `countAwaitingHandover`u artık kullanılmıyor
+     çünkü süzgecin yarısı orada uygulanamıyor. */
+  return (await rampadakiler(db, input.warehouseId)).kutular.length;
 }
 
 /** Rampada taşıyıcıyı bekleyen bir kutu — devir ekranının üst bölümünün satırı (05.09). */
@@ -102,15 +156,15 @@ export async function listAwaitingHandover(
   input: { warehouseId: string; limit?: number },
 ): Promise<AwaitingHandoverBox[]> {
   const boxes = new OrderBoxService(db);
-  const bekleyen = await boxes.listAwaitingHandover(input.warehouseId, input.limit ?? 40);
+  /* Süzme TAVANDAN ÖNCE (21.265): önce iptal edilenler elenir, sonra tavan uygulanır. Ters sırada
+     olsaydı listenin ilk 40 satırının bir kısmı elenir ve ekran sayaçtan az satır gösterirdi. */
+  const { kutular, siparisler } = await rampadakiler(db, input.warehouseId);
+  const bekleyen = kutular.slice(0, input.limit ?? 40);
   if (bekleyen.length === 0) return [];
 
   const orderIds = [...new Set(bekleyen.map((box) => box.orderId))];
-  const [orders, kardesler] = await Promise.all([
-    new OrderService(db).listByIds(orderIds),
-    boxes.listByOrders(orderIds),
-  ]);
-  const referansOf = new Map(orders.map((order) => [order.id, order.referenceNo]));
+  const kardesler = await boxes.listByOrders(orderIds);
+  const referansOf = new Map(siparisler.map((order) => [order.id, order.referenceNo]));
 
   /* Payda GÖNDERİNİN kutu sayısı, siparişin değil — ekranın her yerinde geçerli olan kural
      (`handOverBox`in aynı hesabı): bir siparişin kutuları iki gönderiye bölünmüş olabilir. */
@@ -147,6 +201,26 @@ export async function handOverBox(
   if (box.warehouseId !== input.warehouseId) return { status: 'out_of_scope', referenceNo: order.referenceNo };
   if (box.sealedAt === null) return { status: 'not_sealed', boxNo: box.boxNo };
   if (box.shipmentId === null) return { status: 'not_announced', boxNo: box.boxNo };
+
+  /*
+    KARDEŞ KAPININ EKSİK KALAN YARISI (21.265 · ölçüldü 05.09).
+
+    Kurye kulvarında bu kural VAR ve künyesi de yazılı: *"Teslim edilmiş/iptal edilmiş siparişin
+    kutusu yüklenmez"* (`courier/load.ts:129`). Kargo kulvarında YOKTU — `handOverBox` depoyu,
+    mührü ve duyuruyu soruyor, siparişin durumunu hiç sormuyordu.
+
+    Ölçülen sonuç: iptal edilmiş ve `settleRefund` ile PARASI İADE EDİLMİŞ siparişin kolisi
+    taşıyıcıya fiziksel olarak veriliyor, `loaded_at` damgalanıyor, gönderi `handed_over` oluyor ve
+    deftere `HANDOVER_SCAN` yazılıyor. Ardından `siparisiTasi` hiçbir şey yazamıyor (sipariş
+    `cancelled`, motor geçişi reddediyor) — yani mal yola çıkıyor, sistem çıkmadığını sanıyor.
+
+    Ölçüt kutunun değil SİPARİŞİN hâli: `ready` (devri bekliyor) ve `out_for_delivery` (çok kutulu
+    gönderide ilk kutu devredilince sipariş oraya geçiyor, kalan kutular hâlâ verilecek). Gerisi —
+    iptal, iade, taslak, henüz hazırlanmamış — bu rampada işi olmayan sipariştir.
+  */
+  if (!rampadaVerilebilir(order.status)) {
+    return { status: 'not_shippable', boxNo: box.boxNo, referenceNo: order.referenceNo, currentStatus: order.status };
+  }
 
   /*
     SAYIM GÖNDERİNİN TAMAMINI ANLATIR, SİPARİŞİNKİNİ DEĞİL.

@@ -543,7 +543,17 @@ returns table (
   cod_count int,
   cod_total numeric,
   cod_collected numeric,
-  cod_refunded numeric
+  cod_refunded numeric,
+  -- ── SAYILAN İŞ: iptal HARİÇ (21.265) ────────────────────────────────────────
+  -- `total`/`sum_total` iptalleri İÇERİYOR ve bu bilerek: `by_status` sayımı iptal sekmesini
+  -- besliyor, orada görünmeleri gerekiyor. Ama panelin "Bugünkü sipariş / Bugünkü ciro" kartları
+  -- bir İŞ ölçüsü — iptal edilmiş sipariş bir iş değil.
+  --
+  -- Ölçülen çelişki (05.09): kartın BAŞLIĞI `total`dan geliyordu (iptal dâhil), hemen altındaki
+  -- depo kırılımı ve 7 günlük çizgi ise iptali eleyen kaynaklardan. Tek kart kendi içinde üç ayrı
+  -- gerçek söylüyordu ve operatör hangisinin doğru olduğunu ayırt edemiyordu.
+  active_count int,
+  active_total numeric
 )
 language sql
 stable
@@ -570,9 +580,22 @@ as $$
   ),
   -- Kapıda tahsilat: peşin ödenmemiş, vadeye de yazılmamış, yöntemi kapı yöntemi olan sipariş.
   -- Yöntem eşlemesi bir KURAL değil, enum'ın kendi anlamıdır (online = önceden ödendi).
+  --
+  -- ── İPTAL EDİLEN SİPARİŞİN TAHSİLATI YOKTUR (21.265 · ölçüldü 05.09) ──────
+  -- Süzgeç `cancelled`ı elemiyordu ve taban da yalnız `draft`ı eliyor: iptal edilmiş, ödenmemiş
+  -- her sipariş tutarı kadar KALICI BİR HAYALET ALACAK yazıyordu. Motor aynı siparişe "borç yok"
+  -- diyor (`credit.ts:50` `isOpenCredit` → `status <> 'cancelled'`) ama bu toplam "borç var"
+  -- diyordu — iki kaynak aynı soruya iki cevap veriyordu.
+  --
+  -- Üç tüketici birden yanlış okuyordu: panelin "Bekleyen tahsilat" kartı, sipariş ekranının alt
+  -- şeridi ve **sabah brifingi** (`mcp/tools.ts:78` — patronun günü olmayan bir tahsilat maddesiyle
+  -- başlıyordu). Düzeltme TEK yerde, çünkü üçü de bu kovadan okuyor.
+  --
+  -- Düzeltme `base`e DEĞİL bilerek: `by_status` sayımı iptal sekmesini besliyor ve orada iptaller
+  -- GÖRÜNMELİ. Elenmesi gereken şey siparişin varlığı değil, ondan para bekleniyor olması.
   cod as (
     select * from base
-    where payment_status <> 'paid' and not on_account and payment_method in ('cash', 'card')
+    where status <> 'cancelled' and payment_status <> 'paid' and not on_account and payment_method in ('cash', 'card')
   )
   select
     coalesce(
@@ -586,7 +609,9 @@ as $$
     (select count(*) from cod)::int,
     (select coalesce(sum(total), 0) from cod),
     (select coalesce(sum(amount_collected), 0) from cod),
-    (select coalesce(sum(amount_refunded), 0) from cod);
+    (select coalesce(sum(amount_refunded), 0) from cod),
+    (select count(*) from base where status <> 'cancelled')::int,
+    (select coalesce(sum(total), 0) from base where status <> 'cancelled');
 $$;
 
 -- Operasyon okumasıdır; müşteri yüzeyine açılmaz.

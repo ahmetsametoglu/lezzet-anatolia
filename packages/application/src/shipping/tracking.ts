@@ -1,6 +1,7 @@
 import { OrderBoxService, ShipmentService } from '@lezzet/database';
 import type { Carrier, ShipmentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { isOpenShipment } from './cancel';
 import { trackingUrlOf } from '../order/carrier';
 
 /**
@@ -57,7 +58,7 @@ export async function readOrderTracking(
   const shipments = await new ShipmentService(db).listByOrder(orderId);
   // İptal edilmiş gönderi takip edilmez: numarası ölüdür, gösterilmesi müşteriyi boş bir sayfaya
   // yollar. Aktif gönderi yoksa elle girilen numaraya düşülür.
-  const shipment = shipments.find((s) => s.cancelledAt === null && s.status !== 'cancelled');
+  const shipment = shipments.find(isOpenShipment);
 
   if (shipment) {
     const boxes = (await new OrderBoxService(db).listByOrder(orderId)).filter((b) => b.shipmentId === shipment.id);

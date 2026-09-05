@@ -230,6 +230,10 @@ function refundNotice(reason: RefundBlockReason | undefined): string | null {
     provider_ref_missing:
       'İade yazılamadı: kart ödemesinin sağlayıcı künyesi kayıtlı değil, hangi ödemenin üzerinden dönüleceği bilinmiyor. Stripe panelinden iade edin.',
     provider_unavailable: 'İade yazılamadı: ödeme sağlayıcısı bu ortamda tanımlı değil.',
+    /* 21.265: para birden çok hesaba girmiş. Otomatik bölme YAPILMIYOR — parayı hiç almamış
+       hesaptan iade yazmak o hesabın bakiyesini sessizce bozardı. Çare "tekrar dene" değil. */
+    split_payment:
+      'İade yazılamadı: bu siparişin parası birden çok hesaba girmiş (ör. kartla kapora + kapıda nakit). İadeyi hesap başına, o hesabı seçerek yazın.',
     provider_failed: 'İade yazılamadı: sağlayıcı çağrısı başarısız oldu. Para ÇIKMADI — tekrar deneyin ya da Stripe panelinden iade edin.',
   };
   return notices[reason];

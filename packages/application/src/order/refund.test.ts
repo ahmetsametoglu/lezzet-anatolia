@@ -112,6 +112,44 @@ describe('kısmi karşılama (07.8)', () => {
     expect(order).toMatchObject({ amountCollectedCents: 3000, amountRefundedCents: 1000, paymentStatus: 'paid' });
   });
 
+  it('PARA İKİ HESABA girmişse iade YAZILMAZ — yanlış hesaptan çıkarmaktansa borç açıkta kalır', async () => {
+    /* ÖLÇÜLEN ARIZA (21.265 · iptal ön çalışması 05.09): hesap "son tahsilat hareketinin hesabı"
+       diye seçiliyordu. Tek hesaplı siparişte doğru cevap veriyor; para bölünmüşse (kartla kapora
+       + kapıda nakit — üçü de `order_payment` yazıyor) iadenin TAMAMI son hareketin hesabından
+       çıkıyor: para hiç girmediği kasadan düşüyor ve o hesabın bakiyesi sessizce yanlış oluyordu.
+
+       Otomatik bölme YAPILMIYOR (BEKLEYEN(21.266)): hesap başına ayrı sağlayıcı çağrısı, ayrı
+       tekillik anahtarı ve "ikincisi düşerse birincisi yazılı kalır" hâli demek — geri alınamayan
+       yarım bir iade bugünkü arızadan beter olurdu. Dosyanın kendi ilkesi uygulanıyor: sessizce
+       yanlış hesaba yazmaktansa borcu açıkta bırak. */
+    const ikinciKasa = (await new AccountService(db).insert({ name: `İkinci kasa ${stamp}`, type: 'cash' })).id;
+    try {
+      const { orderId, itemId } = await sendOut(3);
+      await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 2000 });
+      await recordOrderPayment(db, { orderId, accountId: ikinciKasa, amountCents: 1000 });
+
+      const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
+
+      expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 0, refundBlocked: 'split_payment' });
+      // Borç GÖRÜNÜR kalıyor: tahsil edilecek tutarın negatifi müşteriye borcumuzu söylüyor.
+      const order = await orders.getById(orderId);
+      expect(order?.amountRefundedCents).toBe(0);
+    } finally {
+      await purgeTestData(db, { accountIds: [ikinciKasa] });
+    }
+  });
+
+  it('TEK hesapta para varsa iade oraya yazılır — bölünme yoksa davranış birebir aynı', async () => {
+    // Karşı-örnek: üstteki testin "iade hiç yazılmaz" diye okunmasını engelliyor.
+    const { orderId, itemId } = await sendOut(3);
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500 });
+    await recordOrderPayment(db, { orderId, accountId: cashAccount, amountCents: 1500 });
+
+    const outcome = await adjustFulfillment(db, orderId, [{ orderItemId: itemId, fulfilledQty: 2 }]);
+
+    expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 1000 });
+  });
+
   it('kuponlu + kargolu siparişte iade tutarı KALEMİN payından hesaplanır', async () => {
     // 3 × 10 € = 30, kupon payı 6 €, kargo 5 € → tahsilat 29 €.
     const { orderId, itemId } = await sendOut(3, { shippingFeeCents: 500, lineDiscountAmountCents: 600 });
@@ -337,6 +375,36 @@ describe('iptal (07.9)', () => {
 
     expect(outcome).toMatchObject({ status: 'ok', refundedAmountCents: 0, paymentStatus: 'pending' });
     expect((await orders.getById(orderId))?.amountRefundedCents).toBe(0);
+  });
+
+  it('İPTAL EDİLEN sipariş TAHSİLAT BEKLEYENLERE girmez ve "bugünkü iş" sayılmaz', async () => {
+    /* ÖLÇÜLEN ARIZA (21.265 · iptal ön çalışması 05.09): `order_counts` tabanı yalnız `draft`ı
+       eliyordu. İptal edilmiş ÖDENMEMİŞ her sipariş tutarı kadar KALICI BİR HAYALET ALACAK
+       yazıyordu — motor aynı siparişe "borç yok" derken (`credit.ts` `isOpenCredit`) toplam
+       "borç var" diyordu. Üç tüketici birden yanlış okuyordu: panelin "Bekleyen tahsilat" kartı,
+       sipariş ekranının alt şeridi ve sabah brifingi.
+
+       Süzgeç `base`e DEĞİL kovalara kondu: `byStatus` iptal SEKMESİNİ besliyor, orada görünmeleri
+       gerekiyor. Elenmesi gereken şey siparişin varlığı değil, ondan para bekleniyor olması. */
+    /* Kapı yöntemi AÇIKÇA yazılıyor: `prepareOrderToReady` ödeme yöntemi koymuyor ve yöntemsiz
+       sipariş `cod` kovasına hiç girmiyor — ölçüldü, ilk yazımda test bunu varsaymış ve öncülü
+       yanlış olduğu için düşmüştü. Kova boşken "bir azaldı" diye bir şey iddia edilemez. */
+    const { order } = await orders.create(
+      { warehouseId, customerId, channel: 'b2c', deliveryType: 'route', paymentMethod: 'cash', orderedTotalCents: 2000, status: 'confirmed' },
+      [{ variantId, qty: 2, unitPriceCents: 1000, vatRate: 5.5 }],
+    );
+    const oncesi = await orders.counts({ warehouseIds: [warehouseId] });
+    expect(oncesi.cod.count).toBeGreaterThan(0); // öncül: sipariş gerçekten kovada
+
+    await cancelOrder(db, order.id);
+    const sonrasi = await orders.counts({ warehouseIds: [warehouseId] });
+
+    // Kapıda tahsilat kovası ve "sayılan iş" kovası küçüldü…
+    expect(sonrasi.cod.count).toBe(oncesi.cod.count - 1);
+    expect(sonrasi.active.count).toBe(oncesi.active.count - 1);
+    // …ama sipariş KAYBOLMADI: iptal sekmesi onu görmeli.
+    expect(sonrasi.byStatus.get('cancelled') ?? 0).toBe((oncesi.byStatus.get('cancelled') ?? 0) + 1);
+    expect(sonrasi.total).toBe(oncesi.total);
   });
 
   it('hazırlanmış mal iptalde "müşteride" sayılmaz — kalem–parti kaydı silinir', async () => {

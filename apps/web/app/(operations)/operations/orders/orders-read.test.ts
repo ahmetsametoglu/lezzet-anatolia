@@ -128,6 +128,8 @@ describe('sayaç görünümü', () => {
       byStatus: new Map([['confirmed', 2]]),
       total: 5,
       sum: { totalCents: 30_000, collectedCents: 10_000, refundedCents: 0 },
+      // İptal hariç sayılan iş (21.265) — bu testin konusu değil, tipin gereği.
+      active: { count: 5, totalCents: 30_000 },
       cod: { count: 2, totalCents: 14_000, collectedCents: 4000, refundedCents: 1000 },
     });
     expect(view.totalCents).toBe(30000);
