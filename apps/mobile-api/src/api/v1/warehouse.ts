@@ -15,6 +15,7 @@ import {
   learnCode,
   listClosedTransfers,
   listInboundTransfers,
+  readTransferDetail,
   listOutboundTransfers,
   listNearExpiry,
   listPendingIntakes,
@@ -89,6 +90,7 @@ import {
   MarkBatchSeenRequestSchema,
   MarkBatchSeenResponseSchema,
   WarehouseBatchesResponseSchema,
+  TransferDetailResponseSchema,
   WarehouseTransfersResponseSchema,
   AcceptCourierReturnRequestSchema,
   AcceptCourierReturnResponseSchema,
@@ -881,6 +883,32 @@ warehouse.get('/transfers', async (c) => {
 
   const body: z.input<typeof WarehouseTransfersResponseSchema> = { transfers, outbound, closed };
   return ok(c, WarehouseTransfersResponseSchema.parse(body));
+});
+
+/**
+ * **Tek transferin içi — SALT OKUMA** (kullanıcı isteği 05.09). Liste "8 kalem" der, bu uç o sekizi
+ * söyler; yoldaki ve kapanmış kayıtlar için telefonda başka yol yoktu.
+ *
+ * **KAPI: kayıt bu depoya DEĞİYOR mu.** İki uçtan biri olmak yeter — gönderen de alan da kendi
+ * sevkiyatının içini görebilmeli (eksiği ALAN beyan eder, hesabını GÖNDEREN sorar). Değmiyorsa
+ * `not_found`, "yasak" değil: ayrım, kimlik tahmin eden birine kaydın VARLIĞINI söylerdi (bildirim
+ * okuma kapısının aynı kuralı).
+ *
+ * Durum SÜZÜLMEZ — `received`, `cancelled` ve `in_transit` aynı kapıdan okunur. Süzseydik "geçmişte
+ * ne olmuş" sorusunun cevabı yine kapalı kalırdı ki bu ucun varlık sebebi tam olarak odur.
+ */
+warehouse.get('/transfers/:transferId', async (c) => {
+  const transferId = UuidSchema.safeParse(c.req.param('transferId'));
+  if (!transferId.success) return fail(c, 'invalid_transfer_id', 400);
+
+  const detay = await readTransferDetail(serviceDb(), { transferId: transferId.data });
+  if (!detay) return fail(c, 'not_found', 404);
+
+  const warehouseId = c.get('warehouseId');
+  if (detay.fromWarehouseId !== warehouseId && detay.toWarehouseId !== warehouseId) return fail(c, 'not_found', 404);
+
+  const body: z.input<typeof TransferDetailResponseSchema> = detay;
+  return ok(c, TransferDetailResponseSchema.parse(body));
 });
 
 /**

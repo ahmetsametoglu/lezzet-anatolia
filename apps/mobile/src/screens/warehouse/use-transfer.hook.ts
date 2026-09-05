@@ -4,10 +4,11 @@ import type {
   ClosedTransferContract,
   InboundTransferContract,
   OutboundTransferContract,
+  TransferDetailContract,
   TransferShortfallDeclaration,
 } from '@lezzet/types';
 
-import { fetchWarehouseTransfers, receiveTransfer } from '@/lib/api/warehouse';
+import { fetchTransferDetail, fetchWarehouseTransfers, receiveTransfer } from '@/lib/api/warehouse';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
 import { warehouseCopy } from './copy';
@@ -40,6 +41,17 @@ const t = warehouseCopy;
 
 type TransferStatus = 'loading' | 'ready' | 'error';
 
+/**
+ * Salt-okuma detayının hâli — ayrık birlik: "yükleniyor" ile "boş" ve "hata" birbirine karışmaz.
+ * `kapali` bir hâl DEĞİL bir yokluk ve o yüzden `null` değil kendi etiketi: `null` bir sonraki
+ * okuyucuya "henüz gelmedi mi, kapalı mı" diye sorduracaktı.
+ */
+type TransferDetailState =
+  | { status: 'kapali' }
+  | { status: 'loading'; transferId: string }
+  | { status: 'error'; transferId: string }
+  | { status: 'ready'; detail: TransferDetailContract };
+
 /** Kapının altı cevabı — sözleşmeden TÜRER, elle yazılmaz. */
 type ReceiveOutcome = Extract<Awaited<ReturnType<typeof receiveTransfer>>, { error: null }>['data'];
 
@@ -57,6 +69,17 @@ interface UseTransferResult {
   closed: ClosedTransferContract[];
   transfer: InboundTransferContract | null;
   select: (transferId: string | null) => void;
+  /**
+   * SALT OKUMA DETAYI (kullanıcı isteği 05.09) — yoldaki ve kapanmış kaydın içi.
+   *
+   * `select`ten AYRI bir durum ve bu bilinçli: `select` KABUL akışını açıyor (sayaç, eksik/fazla
+   * beyanı, CTA) ve o akış yalnız `in_transit` + bu depoya gelen kayıt için geçerli. Aynı duruma
+   * bağlansaydı ekran, kapanmış bir kaydı sayılabilir gibi göstermenin bir adım yakınında olurdu —
+   * ayrı durum, o yolu YAPISAL olarak kapatıyor.
+   */
+  detail: TransferDetailState;
+  openDetail: (transferId: string) => void;
+  closeDetail: () => void;
   /** Satırın sayılan adedi; `null` = HENÜZ SAYILMADI (sıfır değil). */
   countOf: (lineId: string) => number | null;
   setCount: (lineId: string, qty: number | null) => void;
@@ -152,6 +175,31 @@ export function useTransfer(): UseTransferResult {
     setStatus('loading');
     void load();
   }, [load]);
+
+  /* SALT OKUMA DETAYI (05.09) — kendi turu, kendi kuşak sayacı: liste tazelenirken açılan bir
+     detayın cevabı, kapatılıp yeniden açılan bir detayın cevabını EZMEZ. */
+  const [detail, setDetail] = useState<TransferDetailState>({ status: 'kapali' });
+  const detayKusak = useRef(0);
+
+  const openDetail = useCallback((transferId: string) => {
+    const benim = ++detayKusak.current;
+    setDetail({ status: 'loading', transferId });
+    void fetchTransferDetail(transferId)
+      .catch(() => null)
+      .then((result) => {
+        if (benim !== detayKusak.current) return;
+        if (result === null || result.error !== null) {
+          setDetail({ status: 'error', transferId });
+          return;
+        }
+        setDetail({ status: 'ready', detail: result.data });
+      });
+  }, []);
+
+  const closeDetail = useCallback(() => {
+    detayKusak.current += 1;
+    setDetail({ status: 'kapali' });
+  }, []);
 
   const select = useCallback((transferId: string | null) => {
     setSelectedId(transferId);
@@ -268,6 +316,9 @@ export function useTransfer(): UseTransferResult {
     closed,
     transfer,
     select,
+    detail,
+    openDetail,
+    closeDetail,
     countOf,
     setCount,
     missingLineIds,

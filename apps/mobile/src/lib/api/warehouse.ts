@@ -15,6 +15,7 @@ import {
   ResolveBatchResponseSchema,
   ResolveCodeResponseSchema,
   WarehouseBatchesResponseSchema,
+  TransferDetailResponseSchema,
   WarehouseTransfersResponseSchema,
   AnnounceShipmentResponseSchema,
   DispatchOptionsResponseSchema,
@@ -272,6 +273,17 @@ export function recordAdjustment(
  */
 export function fetchWarehouseTransfers(): Promise<ApiResult<z.infer<typeof WarehouseTransfersResponseSchema>>> {
   return warehouseFetch('/api/v1/warehouse/transfers', WarehouseTransfersResponseSchema);
+}
+
+/**
+ * **Tek transferin içi — SALT OKUMA** (kullanıcı isteği 05.09). Liste satırı yalnız "8 kalem" der;
+ * yoldaki ve kapanmış kayıtların arkasını görmenin telefonda başka yolu yoktu.
+ *
+ * Kendi turunu ister ve bu bilinçli: kapanan pencere on satır, her biri N kalem — hepsini her
+ * açılışta indirmek, nadiren açılan bir şey için her seferinde ödemek olurdu.
+ */
+export function fetchTransferDetail(transferId: string): Promise<ApiResult<z.infer<typeof TransferDetailResponseSchema>>> {
+  return warehouseFetch(`/api/v1/warehouse/transfers/${transferId}`, TransferDetailResponseSchema);
 }
 
 /**

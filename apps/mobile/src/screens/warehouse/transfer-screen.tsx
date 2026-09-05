@@ -304,10 +304,14 @@ export function TransferScreen() {
           {/*
             YOLDA — BU DEPODAN ÇIKAN (v3:11'in ikinci bölümü · 30.08).
 
-            EYLEMSİZ ve öyle kalmalı: kabul hedef deponundur, buradan yapılabilecek bir şey yok.
-            Bölüm bir hatırlatmadır — "unuttuğum bir sevkiyat yolda mı". Satırlar bu yüzden
-            basılabilir değil ve kalem ÖNİZLEMESİ de yok: gelen transferin satırları rampada
-            sayılacak şeydir, çıkanınki çoktan sayılmıştır.
+            EYLEMSİZ ve öyle kalmalı: kabul hedef deponundur, buradan YAZILABİLECEK bir şey yok.
+            Bölüm bir hatırlatmadır — "unuttuğum bir sevkiyat yolda mı".
+
+            AMA OKUNABİLİR (kullanıcı isteği 05.09): satıra dokunmak SALT OKUMA çekmecesini açıyor.
+            "5 kalem yolda" yazan bir satırın hangi kalemler olduğunu sormanın telefonda başka yolu
+            yoktu. Eylemsizlik kararı DEĞİŞMEDİ — çekmecede sayaç da CTA da yok; değişen, kaydın
+            içine bakabilmek. Kalem önizlemesi yine YOK: liste satırı kısa kalır, ayrıntı isteyen
+            açar (kapanan pencere on satır, hepsinin kalemini her açılışta indirmek pahalı olurdu).
           */}
           {transferState.outbound.length === 0 ? null : (
             <View style={styles.section} testID="warehouse-transfer-outbound">
@@ -317,7 +321,14 @@ export function TransferScreen() {
                    satırlar hâlindeydi, oysa şablonun üç bölümünde de KUTU var. Fark görsel
                    değil yapısal — kutu "bu bir kayıt" der, alt çizgi yalnız "burada bir sınır
                    var" der ve üç bölüm tek uzun listeye eriyordu. */
-                <View key={row.transferId} style={styles.queueRow} testID={`warehouse-transfer-outbound-${row.transferId}`}>
+                <PressableSurface
+                  key={row.transferId}
+                  onPress={() => transferState.openDetail(row.transferId)}
+                  feedback="scale"
+                  style={styles.queueRow}
+                  accessibilityLabel={row.referenceNo}
+                  testID={`warehouse-transfer-outbound-${row.transferId}`}
+                >
                   {/* TASARIMIN YOLDA KARTI (v3 transfer listesi, 04.09): kiremit ARAÇ KARESİ solda,
                       "Strasbourg → Kehl · N kalem" ortada, sağda iki satır — durum üstte, tahmini
                       varış altta. Kart gelen kartla aynı zeminde (aynı kalıbın iki türü), rozet
@@ -353,7 +364,7 @@ export function TransferScreen() {
                       </Text>
                     </View>
                   </View>
-                </View>
+                </PressableSurface>
               ))}
               <Text style={styles.queueFootnote}>{t.transfer.outboundNote}</Text>
             </View>
@@ -375,11 +386,18 @@ export function TransferScreen() {
               <Text style={styles.heading}>{t.transfer.closedHeading}</Text>
               {transferState.closed.map((row) => (
                 /* KAPANMIŞ KAYIT `quiet` TONUNDA (v3:1136): günlük iş DEĞİL, bakılıp geçilen bir
-                   kayıt. Gelen kuyruğuyla aynı zeminde durursa "burada bir iş var" der. */
+                   kayıt. Gelen kuyruğuyla aynı zeminde durursa "burada bir iş var" der.
+
+                   BASILABİLİR AMA YAZILAMAZ (kullanıcı isteği 05.09): dokunuş SALT OKUMA çekmecesini
+                   açıyor. "8 kalem · tam kabul" yazan bir satırın hangi kalemler olduğunu ve her
+                   birinden kaç sayıldığını sormanın telefonda başka yolu yoktu. Ton `quiet` KALIYOR —
+                   basılabilirlik satırın ağırlığını değiştirmez, yalnız bir kapı açar. */
                 <OperationsSurface
                   key={row.transferId}
                   tone="quiet"
                   padding="md"
+                  onPress={() => transferState.openDetail(row.transferId)}
+                  accessibilityLabel={row.referenceNo}
                   testID={`warehouse-transfer-closed-${row.transferId}`}
                 >
                   <View style={styles.closedRow}>
@@ -422,6 +440,15 @@ export function TransferScreen() {
 
           <Text style={styles.queueFootnote}>{t.transfer.queueFootnote}</Text>
         </ScrollView>
+
+        {/* SALT OKUMA DETAYI (kullanıcı isteği 05.09) — yoldaki ve kapanmış kaydın içi.
+            ÇEKMECE, ekran değil: liste yerinde kalıyor ve kapanınca operatör baktığı yere dönüyor.
+            Ayrı bir ekran olsaydı geri tuşu bir yığın adımı daha eklerdi ve "bakıp geçilen kayıt"
+            bir yolculuğa dönerdi.
+            YAZAN HİÇBİR ŞEY YOK: sayaç yok, çekmece yok, CTA yok. Kabul akışı `select` ile açılıyor
+            ve o yol yalnız GELEN kuyruğunun satırında var — iki durum ayrı tutulduğu için kapanmış
+            bir kaydı sayılabilir gibi göstermek yapısal olarak mümkün değil (kanca künyesi). */}
+        <TransferDetailSheet state={transferState.detail} onClose={transferState.closeDetail} />
       </View>
     );
   }
@@ -746,7 +773,136 @@ export function TransferScreen() {
   );
 }
 
+/** Çekmecenin durumu — kancanın dönüşünden TÜRER, elle yazılmaz (ikinci bir şekil doğmasın). */
+type TransferDetailStateProp = ReturnType<typeof useTransfer>['detail'];
+
+/**
+ * **SALT OKUMA DETAYI** (kullanıcı isteği 05.09) — yoldaki ve kapanmış transferin içi.
+ *
+ * Tasarımda ÇİZİLİ DEĞİL ve bu bilinçli bir ekleme (`design/KARARLAR.md`): v3 listeyi üç bölüm
+ * hâlinde çiziyor ama yoldaki/kapanan satırların arkasına bakmanın hiçbir yolunu vermiyor. Şekil
+ * uydurulmadı, RAMPA SATIRINDAN alındı: aynı kapak · aynı "ürün · boy" · aynı lot/SKT künyesi.
+ * Ekranın iki yerinde aynı kalem iki farklı biçimde görünseydi, operatör aynı şeyi iki kez
+ * öğrenmek zorunda kalırdı.
+ *
+ * SAYILAN ile SEVK EDİLEN yan yana: geçmişte "ne gelmiş" sorusunun cevabı ikisinin farkıdır.
+ * `receivedQty === null` "sayılmadı" der, `0` demez — ikisi ayrı şeydir (0042) ve yoldaki bir
+ * kayıtta hepsi `null`dır, çünkü daha sayılmamıştır.
+ */
+function TransferDetailSheet({ state, onClose }: { state: TransferDetailStateProp; onClose: () => void }) {
+  return (
+    <BottomSheet
+      visible={state.status !== 'kapali'}
+      title={t.transfer.detailTitle}
+      onClose={onClose}
+      testID="warehouse-transfer-detail"
+    >
+      {state.status === 'loading' ? (
+        <Text style={styles.detailNote}>{t.transfer.detailLoading}</Text>
+      ) : state.status === 'error' ? (
+        <OperationsNoticeBlock
+          variant="error"
+          title={t.transfer.detailErrorTitle}
+          description={t.transfer.detailErrorBody}
+          testID="warehouse-transfer-detail-error"
+        />
+      ) : state.status === 'ready' ? (
+        <View style={styles.detailBody}>
+          <Text style={styles.detailRef}>{state.detail.referenceNo}</Text>
+          {/* Salt okuma OLDUĞU SÖYLENİYOR: eylemi olmayan bir ekranda "neden dokunamıyorum"
+              sorusunu doğuran şey, cevabın hiç yazılmamış olmasıdır. */}
+          <Text style={styles.detailNote}>{t.transfer.detailReadOnly}</Text>
+
+          {state.detail.lines.length === 0 ? (
+            <Text style={styles.detailNote}>{t.transfer.detailEmpty}</Text>
+          ) : (
+            state.detail.lines.map((line) => (
+              <View key={line.lineId} style={styles.detailLine} testID={`warehouse-transfer-detail-line-${line.lineId}`}>
+                <OperationsProductThumb name={productLabel(line.productName, line.variantLabel)} photoUri={line.imageUrl} size="sm" />
+                <View style={styles.detailLineBody}>
+                  <Text style={styles.detailLineName} numberOfLines={2}>
+                    {productLabel(line.productName, line.variantLabel)}
+                  </Text>
+                  <Text style={styles.detailLineMeta}>
+                    {line.lotNumber === null
+                      ? fillCopy(t.transfer.detailNoLot, { date: shortDate(line.expiryDate) ?? line.expiryDate })
+                      : fillCopy(t.transfer.detailLot, { lot: line.lotNumber, date: shortDate(line.expiryDate) ?? line.expiryDate })}
+                  </Text>
+                </View>
+                <View style={styles.detailQty}>
+                  <Text style={styles.detailQtyValue}>{line.dispatchedQty}</Text>
+                  <Text style={styles.detailQtyLabel}>{t.transfer.detailDispatched}</Text>
+                  {/* SAYILAN yalnız sayılmışsa yazılır: yoldaki kayıtta "0 sayılan" demek,
+                      henüz sayılmamış bir sevkiyatı kayıp gibi okuturdu. */}
+                  {line.receivedQty === null ? (
+                    <Text style={styles.detailQtyPending}>{t.transfer.detailNotCounted}</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.detailQtyValue}>{line.receivedQty}</Text>
+                      <Text style={styles.detailQtyLabel}>{t.transfer.detailReceived}</Text>
+                    </>
+                  )}
+                </View>
+              </View>
+            ))
+          )}
+        </View>
+      ) : null}
+    </BottomSheet>
+  );
+}
+
 const styles = StyleSheet.create({
+  /* SALT OKUMA ÇEKMECESİ (05.09) — ölçüler rampa satırından devralındı, yeni bir dil açılmadı. */
+  detailBody: { gap: operationsTheme.space.lg },
+  detailRef: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.control,
+    color: operationsTheme.colors.ink,
+  },
+  detailNote: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    lineHeight: operationsTheme.text.micro * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
+  },
+  detailLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: operationsTheme.space.lg,
+    paddingVertical: operationsTheme.space.md,
+    borderTopWidth: operationsTheme.border.hairline,
+    borderTopColor: operationsTheme.colors['sand-300'],
+  },
+  detailLineBody: { flex: 1, minWidth: 0, gap: operationsTheme.space['2xs'] },
+  detailLineName: {
+    fontFamily: operationsTheme.font.body[600],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.ink,
+  },
+  detailLineMeta: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.micro,
+    color: operationsTheme.colors.muted,
+  },
+  /* Sayılan ile sevk edilen ALT ALTA ve sağda: fark göz bir sütunda okunduğunda görünür. */
+  detailQty: { alignItems: 'flex-end', minWidth: operationsTheme.space['9xl'] },
+  detailQtyValue: {
+    fontFamily: operationsTheme.font.body[700],
+    fontSize: operationsTheme.text.note,
+    color: operationsTheme.colors.ink,
+  },
+  detailQtyLabel: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors['tab-inactive'],
+  },
+  /* "sayılmadı" bir SAYI değil bir hâldir — sayı gibi çizilmez (0042: null ≠ 0). */
+  detailQtyPending: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.meta,
+    color: operationsTheme.colors.muted,
+  },
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,

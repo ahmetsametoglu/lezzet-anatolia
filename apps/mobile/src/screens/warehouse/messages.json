@@ -919,7 +919,18 @@
     "closedExcessQty": "+{n} adet",
     "closedShortfallRef": "{direction} · {n} kalem · {date} · eksik {ref}",
     "closedRoute": "{from} → {to} · {n} kalem · {date}",
-    "closedRouteShortfall": "{from} → {to} · {n} kalem · {date} · eksik {ref}"
+    "closedRouteShortfall": "{from} → {to} · {n} kalem · {date} · eksik {ref}",
+    "detailTitle": "Sevkiyatın içi",
+    "detailReadOnly": "Salt okuma — bu kayıtta değişiklik yapılmaz.",
+    "detailLoading": "Kalemler yükleniyor…",
+    "detailErrorTitle": "Kalemler yüklenemedi",
+    "detailErrorBody": "Bağlantı ya da sunucu sorunu — tekrar denenebilir.",
+    "detailDispatched": "sevk edilen",
+    "detailReceived": "sayılan",
+    "detailNotCounted": "sayılmadı",
+    "detailLot": "lot {lot} · SKT {date}",
+    "detailNoLot": "SKT {date}",
+    "detailEmpty": "Bu sevkiyatta kalem yok."
   },
   "return": {
     "title": "Kurye Dönüşü",

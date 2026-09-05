@@ -1177,6 +1177,37 @@ export const WarehouseTransfersResponseSchema = z.object({
 export type WarehouseTransfersResponse = z.infer<typeof WarehouseTransfersResponseSchema>;
 
 /**
+ * `GET /warehouse/transfers/:transferId` — **TEK KAYDIN İÇİ, SALT OKUMA** (kullanıcı isteği 05.09).
+ *
+ * Liste satırı yalnız `lineCount` taşıyor; "8 kalem" yazan bir satırın ARKASINI görmenin telefonda
+ * tek yolu *"kabule başla"* düğmesiydi — yani yalnız KABUL BEKLEYEN transferin. Yoldaki ve kapanmış
+ * kayıtlar açılamıyordu. Bu uç o boşluğu kapatıyor ve adı gereği hiçbir şey yazmıyor.
+ *
+ * **Kalemler liste yanıtına KOYULMADI.** Kapanan pencere on satır ve her biri N kalem taşıyor;
+ * hepsini her açılışta indirmek, nadiren açılan bir şey için her seferinde ödemek olurdu. Detay
+ * kendi turunu ister — mal kabul detayının aynı kararı.
+ *
+ * Şema `InboundTransferLineSchema`yı YENİDEN KULLANIR: rampada sayılan satırla geçmişte okunan satır
+ * aynı şeydir (ad · boy · kapak · lot · SKT · sevk edilen · sayılan). İkinci bir kalem şekli açmak,
+ * aynı gerçeğin iki sözleşmesi olurdu (CLAUDE §1). `receivedQty` geçmişte "ne sayılmış" sorusunun
+ * cevabıdır ve `null` ("hiç sayılmadı") ile `0` ("geldi ama kayıp") orada da ayrı kalır.
+ */
+export const TransferDetailResponseSchema = z.object({
+  transferId: z.string().uuid(),
+  referenceNo: z.string(),
+  fromWarehouseId: z.string().uuid(),
+  toWarehouseId: z.string().uuid(),
+  /** Durum SÜZÜLMEZ — kapanmış, iptal edilmiş ve yoldaki kayıt aynı kapıdan okunur. */
+  status: TransferStatusEnum,
+  dispatchedAt: z.string(),
+  note: z.string().nullable(),
+  lines: z.array(InboundTransferLineSchema),
+});
+export type TransferDetailResponse = z.infer<typeof TransferDetailResponseSchema>;
+/** Ekranın okuduğu ad — liste satırlarının `…Contract` kalıbıyla aynı. */
+export type TransferDetailContract = TransferDetailResponse;
+
+/**
  * Transfer kabulü isteği (D5). Satır tipi VARLIK şemasından (`ReceiveLineSchema`) — `receivedQty`
  * sıfır olabilir ve bu bir BEYANDIR ("sevk edildi ama gelmedi"); satırı hiç göndermemek ise kabulü
  * bloklar (v2: *"boş satır kabulü bloklar, ikisi ayrı şeydir"*).

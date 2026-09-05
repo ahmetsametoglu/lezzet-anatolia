@@ -74,15 +74,64 @@ function lastPostBody(): {
   Fikstür üçünü de taşımalı — eksik alan, ekranın "yolda hiçbir şey yok" demesine değil, cevabı
   hiç ayrıştıramamasına yol açar.
 */
-function withTransfers(transfers: unknown[], receive?: unknown, extra: { outbound?: unknown[]; closed?: unknown[] } = {}) {
-  fetchMock.mockImplementation((_url, init) => {
+function withTransfers(
+  transfers: unknown[],
+  receive?: unknown,
+  extra: { outbound?: unknown[]; closed?: unknown[]; detail?: unknown } = {},
+) {
+  fetchMock.mockImplementation((url, init) => {
     if (init?.method === 'POST') {
       return Promise.resolve(
         ok(receive ?? { status: 'ok', transferId: TRANSFER.transferId, createdBatches: 2, shortfall: null, excess: null }),
       );
     }
+    /* SALT OKUMA DETAYI KENDİ TURUNU İSTİYOR (05.09) — adres liste ucunun ALTINDA (`/transfers/:id`),
+       yani taklit URL'e bakmak ZORUNDA: bakmasaydı detay isteği liste gövdesini alır ve şema kapısına
+       takılıp sessizce "hata" hâline düşerdi. Kalıp sorgu dizesini de KABUL EDİYOR — istemci adrese
+       `?warehouseId=` ekliyor ve `$` çıpası tek başına tutmuyordu (ölçüldü). */
+    if (/\/transfers\/[0-9a-f-]{36}(\?|$)/.test(String(url))) return Promise.resolve(ok(extra.detail ?? transferDetail()));
     return Promise.resolve(ok({ transfers, outbound: extra.outbound ?? [], closed: extra.closed ?? [] }));
   });
+}
+
+/** Salt-okuma detayı — kalem şekli rampa satırıyla AYNI sözleşmeden (`InboundTransferLineSchema`). */
+function transferDetail(over: Record<string, unknown> = {}) {
+  return {
+    transferId: '00000000-0000-4000-8000-000000000054',
+    referenceNo: 'TRF-KEHL-26-0002',
+    fromWarehouseId: '00000000-0000-4000-8000-000000000063',
+    toWarehouseId: '00000000-0000-4000-8000-000000000060',
+    status: 'received',
+    dispatchedAt: '2026-09-02T09:00:00.000Z',
+    note: null,
+    lines: [
+      {
+        lineId: '00000000-0000-4000-8000-0000000000a1',
+        sourceStockId: '00000000-0000-4000-8000-0000000000b1',
+        productName: 'Fıstıklı Baklava',
+        variantLabel: '450 g',
+        imageUrl: null,
+        lotNumber: 'GAZ-7120',
+        expiryDate: '2026-12-01',
+        dispatchedQty: 6,
+        receivedQty: 4,
+        caseSizes: [],
+      },
+      {
+        lineId: '00000000-0000-4000-8000-0000000000a2',
+        sourceStockId: '00000000-0000-4000-8000-0000000000b2',
+        productName: 'Şöbiyet',
+        variantLabel: '',
+        imageUrl: null,
+        lotNumber: null,
+        expiryDate: '2026-11-15',
+        dispatchedQty: 4,
+        receivedQty: null,
+        caseSizes: [],
+      },
+    ],
+    ...over,
+  };
 }
 
 /** Kabul eden tesis — künyenin sağ yarısı ("… · Strasbourg Merkez"). */
@@ -625,5 +674,132 @@ describe('D5 · rampada sayım', () => {
       /Strasbourg Merkez → Kurye aracı 1 · 1 kalem · 03\.09/,
     );
     expect(screen.getByTestId('warehouse-transfer-closed-result-00000000-0000-4000-8000-000000000055')).toHaveTextContent('+2 adet');
+  });
+
+  /*
+    SALT OKUMA DETAYI (kullanıcı isteği 05.09) — "detaylarını görebilmeli ama değiştirememeliyim".
+    Testin taşıdığı iki iddia var ve ikincisi asıl olan: satır AÇILIYOR, ve açılan şey YAZMIYOR.
+  */
+  const KAPANAN = '00000000-0000-4000-8000-000000000054';
+  const YOLDAKI = '00000000-0000-4000-8000-000000000053';
+
+  const listeyle = async () =>
+    withTransfers([TRANSFER], undefined, {
+      outbound: [
+        {
+          transferId: YOLDAKI,
+          referenceNo: 'TRF-STR-26-0005',
+          toWarehouseId: '00000000-0000-4000-8000-000000000063',
+          toWarehouseName: 'Kehl — sınır deposu',
+          dispatchedAt: '2026-08-30T09:00:00.000Z',
+          lineCount: 1,
+          etaDate: '2026-08-31',
+          ageDays: 4,
+          ageTone: 'late',
+          lateDays: 3,
+        },
+      ],
+      closed: [
+        {
+          transferId: KAPANAN,
+          referenceNo: 'TRF-KEHL-26-0002',
+          fromWarehouseId: '00000000-0000-4000-8000-000000000063',
+          toWarehouseId: '00000000-0000-4000-8000-000000000060',
+          direction: 'in',
+          status: 'received',
+          closedAt: '2026-09-03T17:00:00.000Z',
+          lineCount: 2,
+          shortLineCount: 1,
+          shortQty: 2,
+          shortfallReferenceNo: null,
+          excessQty: 0,
+          excessReferenceNo: null,
+          counterpartKind: 'facility',
+          counterpartName: 'Kehl — sınır deposu',
+        },
+      ],
+    });
+
+  it('KAPANAN satır açılır: kalemler, lot/SKT ve sevk edilen ↔ sayılan görünür', async () => {
+    await listeyle();
+    await renderTransfer();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-transfer-closed-${KAPANAN}`));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-detail-line-00000000-0000-4000-8000-0000000000a1')).toBeOnTheScreen());
+    const satir = screen.getByTestId('warehouse-transfer-detail-line-00000000-0000-4000-8000-0000000000a1');
+    expect(satir).toHaveTextContent(/Fıstıklı Baklava/);
+    expect(satir).toHaveTextContent(/GAZ-7120/);
+    expect(satir).toHaveTextContent(/6/);
+    expect(satir).toHaveTextContent(/4/);
+  });
+
+  /* `null` ≠ `0` (0042): sayılmamış satır "sayılmadı" der, "0" DEMEZ — yoldaki bir kayıtta bütün
+     satırlar öyledir ve "0" yazmak henüz sayılmamış bir sevkiyatı KAYIP gibi okuturdu. */
+  it('sayılmamış satır "sayılmadı" der, sıfır yazmaz', async () => {
+    await listeyle();
+    await renderTransfer();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-transfer-closed-${KAPANAN}`));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-detail-line-00000000-0000-4000-8000-0000000000a2')).toBeOnTheScreen());
+    const satir = screen.getByTestId('warehouse-transfer-detail-line-00000000-0000-4000-8000-0000000000a2');
+    expect(satir).toHaveTextContent(/sayılmadı/);
+    expect(satir).not.toHaveTextContent(/\b0\b/);
+  });
+
+  it('YOLDAKİ satır da açılır — bölüm eylemsiz ama okunabilir', async () => {
+    await listeyle();
+    await renderTransfer();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-transfer-outbound-${YOLDAKI}`));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-detail-line-00000000-0000-4000-8000-0000000000a1')).toBeOnTheScreen());
+  });
+
+  /* ASIL İDDİA: açılan şey YAZMIYOR. Kabul akışının üç işareti de bulunmamalı — adet kutusu,
+     çekmece onayı ve CTA. Biri bile çizilseydi kapanmış bir kayıt sayılabilir görünürdü. */
+  it('detay SALT OKUMA: adet kutusu, sayım çekmecesi ve kaydet düğmesi YOK', async () => {
+    await listeyle();
+    await renderTransfer();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-transfer-closed-${KAPANAN}`));
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-detail-line-00000000-0000-4000-8000-0000000000a1')).toBeOnTheScreen());
+
+    expect(screen.queryByTestId('warehouse-transfer-qty-00000000-0000-4000-8000-0000000000a1')).toBeNull();
+    expect(screen.queryByTestId('warehouse-transfer-qty-sheet-confirm')).toBeNull();
+    expect(screen.queryByTestId('warehouse-transfer-cta')).toBeNull();
+    // Ve hiçbir yazma isteği doğmadı.
+    expect(fetchMock.mock.calls.some((entry) => entry[1]?.method === 'POST')).toBe(false);
+  });
+
+  it('detay turu düşerse hata bloğu çıkar — liste yerinde kalır', async () => {
+    await listeyle();
+    fetchMock.mockImplementation((url) => {
+      if (/\/transfers\/[0-9a-f-]{36}(\?|$)/.test(String(url))) return Promise.reject(new Error('network'));
+      return Promise.resolve(ok({ transfers: [TRANSFER], outbound: [], closed: [{
+        transferId: KAPANAN,
+        referenceNo: 'TRF-KEHL-26-0002',
+        fromWarehouseId: '00000000-0000-4000-8000-000000000063',
+        toWarehouseId: '00000000-0000-4000-8000-000000000060',
+        direction: 'in',
+        status: 'received',
+        closedAt: '2026-09-03T17:00:00.000Z',
+        lineCount: 2,
+        shortLineCount: 0,
+        shortQty: 0,
+        shortfallReferenceNo: null,
+        excessQty: 0,
+        excessReferenceNo: null,
+        counterpartKind: 'facility',
+        counterpartName: 'Kehl — sınır deposu',
+      }] }));
+    });
+    await renderTransfer();
+
+    await fireEvent.press(screen.getByTestId(`warehouse-transfer-closed-${KAPANAN}`));
+
+    await waitFor(() => expect(screen.getByTestId('warehouse-transfer-detail-error')).toBeOnTheScreen());
+    expect(screen.getByTestId(`warehouse-transfer-closed-${KAPANAN}`)).toBeOnTheScreen();
   });
 });

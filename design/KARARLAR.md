@@ -2301,3 +2301,43 @@ rolü 5 profil, her sipariş 5 satır) ve *"Gün sonu kapandı — fark yok"* (o
 yazım yok, `readMoneyDayEnd` saf okuma; farksız kapanış iki ayrı yerde bilinçle susturulmuş).
 Tasarımın **kurye** satırının da karşılığı yok ve olmayacak: kurye rotayı kendi alıyor (18.08),
 ekranı her odakta kendini tazeliyor. Kurye bölümüne düşecek tek meşru olay **sefer devri**.
+
+## D5 · Yoldaki ve kapanmış transfer OKUNABİLİR, yazılamaz (kullanıcı isteği 05.09)
+
+Kullanıcının cümlesi: *"son kapananlar kısmındakilerin üzerine tıkladığım zaman detaylarını
+görebilmeli ama değiştirememeliyim. Ayrıca yoldakileri de görebilmeliyim ama müdahale edememeliyim."*
+
+**Tasarımda ÇİZİLİ DEĞİL — bilinçli ekleme.** v3 listeyi üç bölüm hâlinde çiziyor (`12-transfer`)
+ama yoldaki/kapanan satırların arkasına bakmanın hiçbir yolunu vermiyor: satır yalnız `lineCount`
+taşıyor ve "8 kalem · tam kabul" yazan bir kaydın içini görmenin telefonda tek yolu *"kabule başla"*
+düğmesiydi — yani yalnız KABUL BEKLEYEN transferin.
+
+**Şekil uydurulmadı, RAMPA SATIRINDAN alındı:** aynı ürün karesi, aynı "ürün · boy", aynı lot/SKT
+künyesi. Aynı kalem ekranın iki yerinde iki farklı biçimde görünseydi, operatör aynı şeyi iki kez
+öğrenmek zorunda kalırdı.
+
+**ÇEKMECE, ekran değil.** Liste yerinde kalıyor ve kapanınca operatör baktığı yere dönüyor. Ayrı bir
+ekran olsaydı geri tuşu bir yığın adımı daha eklerdi ve "bakıp geçilen kayıt" bir yolculuğa dönerdi.
+
+**SALT OKUMA YAPISAL, tercih değil.** Kabul akışı `select` ile açılıyor ve o yol yalnız gelen
+kuyruğunun satırında var; okuma `openDetail` ile açılıyor ve ayrı bir durum taşıyor. İkisi aynı
+duruma bağlansaydı ekran, kapanmış bir kaydı sayılabilir gibi göstermenin bir adım yakınında olurdu.
+Çekmecede sayaç yok, adet çekmecesi yok, CTA yok — ve test bunu üç ayrı `queryByTestId` ile
+çiviliyor, artı "hiçbir POST doğmadı" iddiasıyla.
+
+**KALEMLER LİSTE YANITINA KOYULMADI.** Kapanan pencere on satır ve her biri N kalem; hepsini her
+açılışta indirmek, nadiren açılan bir şey için her seferinde ödemek olurdu. Detay kendi turunu
+ister — mal kabul detayının aynı kararı.
+
+**Uç `GET /warehouse/transfers/:transferId`** — durum SÜZMEZ (`received`, `cancelled`, `in_transit`
+aynı kapıdan), çünkü bu ucun varlık sebebi tam olarak geçmişe bakabilmek. Kapı *"kayıt bu depoya
+DEĞİYOR mu"*: gönderen de alan da kendi sevkiyatının içini görebilmeli (eksiği ALAN beyan eder,
+hesabını GÖNDEREN sorar). Değmiyorsa `not_found`, "yasak" değil — ayrım, kimlik tahmin eden birine
+kaydın varlığını söylerdi.
+
+Uygulama katmanı zaten hazırdı: `readTransferDetail` künyesinde *"kapsam dışındaki personel ve
+kapanmış kayıt için hiç yol yoktu"* yazıyor ve web onu 19.08'den beri kullanıyor. Eksik olan tek şey
+mobil uçtu.
+
+**`null` ≠ `0` çekmecede de geçerli:** sayılmamış satır *"sayılmadı"* der, "0" demez. Yoldaki bir
+kayıtta bütün satırlar öyledir ve "0" yazmak henüz sayılmamış bir sevkiyatı KAYIP gibi okuturdu.

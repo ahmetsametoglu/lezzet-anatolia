@@ -12209,8 +12209,34 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `not_announced` değil siparişin hâli. · *sayaç ve liste iptal edileni birlikte düşürür* — servisin
   kendi künyesindeki "sayaç kapıdan gevşek olamaz" şartı, delta ile ölçülüyor.
 
+  **CİHAZ TURU BİR ARIZA BULDU — ve testlerin göremeyeceği cinstendi (05.09, Oppo CPH1907).**
+  İlk teslimde cihazda yalnız ekranın çizimine bakılmıştı; reddin KENDİSİ üretilememişti çünkü
+  beslemede hiç kargo siparişi yok (`delivery_type='shipping'` → 0 satır). Bu turda eksik veri
+  kuruldu (kargo siparişi + mühürlü kutu + duyurulmuş gönderi, sağlayıcıya çıkmadan) ve senaryo
+  uçtan uca koşuldu. Ölçülenler: rampa 1 kutu gösterdi → sipariş iptal edildi → rampa boşaldı
+  (`countAwaitingHandover` + liste, A1'in süzgeci) · `cancelOrder` gönderiyi kapattı ve
+  `provider_unavailable` dedi, "iptal edildi" ile karıştırmadı (A3, canlıda).
+
+  **Sonra kutu okutuldu ve ekran "Kod tanınmıyor" dedi.** Sunucu doğru reddediyordu
+  (`not_shippable`); ekranın `switch`inde o dal YOKTU ve `default`a düşüyordu. Bedeli somut:
+  depocu barkodun okunmadığını sanır — etiketi siler, tekrar dener, elle girer; kutu elinde kalır
+  ve gerçek sebebi ("bu sipariş iptal edildi") hiç öğrenemez. **Üç savunma da göremezdi:**
+  typecheck `default` yüzünden kör (yeni birlik üyesi sessizce yutuluyor), sözleşme testi sunucuyu
+  sınıyor ekranı değil, ekran testi de o dalı hiç kurmuyordu. Yeni cümle kapsam dışı kutunun
+  kardeşi — bir hata değil YÖNLENDİRME: *"Bu sipariş artık gönderilmiyor — kutuyu AYIR"*, durum
+  adı motorun sözlüğünden (`ORDER_STATUS_LABELS`, kurye kardeşinin aynı kaynağı). Testi yazıldı.
+
+  **Cihaz turunun ön koşulu da eksikti:** D8, kutu okutan altı ekran içinde `devCodes` vermeyen
+  TEK ekrandı — `scan-sheet.tsx` künyesi bunu şart koşmasına rağmen (*"kutu kodlarını çağıran ekran
+  kendi devCodes'uyla verir"*). Yani kargo devri kamerasız hiç denenemiyordu ve cihaz doğrulaması
+  bu ekranda başlamadan bitiyordu. Çipler artık rampanın kendi kutuları. Simülasyon çipi ayrıca
+  KİMLİK kazandı (`scan-dev-chip-<kod>`): etiket ekranın içeriğiyle değişiyor ("Kutu 1/3" ↔
+  "Kutu 1/2") ve etikete bağlanan sekiz test, konusu olmayan bir sayı yüzünden kırılmıştı.
+
   **Durum (05.09):** `db:refresh` koşuldu, yeni kolonlar DB'den doğrulandı (`active_count 12`).
-  Tip · lint · **tam paket 4202/4202 (370 dosya)** — A1'in iki testi dahil.
+  Tip · lint · **tam paket 4202/4202 (370 dosya)** — A1'in iki testi dahil — · **mobil 1331/1331
+  (150 dosya)** · cihazda uçtan uca (rampa → iptal → boşalma → okutma → ret). Fikstür satırları
+  temizlendi.
 
 - [ ] (21.266) **İadeyi hesap başına BÖL — bölünmüş tahsilatta bugün hiç yazılmıyor** (21.265'in kalanı)
   `touches:` `packages/application/src/order/refund.ts` (ölçülecek)
@@ -12223,3 +12249,39 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   o hesaba ait `providerRef` hangisi, tekillik anahtarı hesap başına nasıl türetilir, ve ikinci
   yazım düşerse birincisi yazılı kalırken ne yapılır. Sonuncusu kritik: geri alınamayan yarım bir
   iade bugünkü hâlden beterdir. Bu yüzden ertelendi, gizlenmedi.
+
+- [x] (21.267) **D5'te YOLDAKİ ve KAPANMIŞ transfer açılıyor — salt okuma; "8 kalem" yazan satırın arkası telefonda hiç görünmüyordu** (kullanıcı isteği 05.09)
+  `touches: packages/types/src/contracts/warehouse-api.schema.ts, apps/mobile-api/src/api/v1/warehouse.ts, apps/mobile/src/lib/api/warehouse.ts, apps/mobile/src/screens/warehouse/{transfer-screen.tsx,use-transfer.hook.ts,messages.json}`
+
+  **Durum (05.09).** Kullanıcının cümlesi: *"son kapananlar kısmındakilerin üzerine tıkladığım zaman
+  detaylarını görebilmeli ama değiştirememeliyim. Ayrıca yoldakileri de görebilmeliyim ama müdahale
+  edememeliyim."*
+
+  Liste satırı yalnız `lineCount` taşıyordu; bir kaydın içini görmenin telefonda TEK yolu *"kabule
+  başla"* düğmesiydi — yani yalnız kabul bekleyen transferin. Yoldaki ve kapanmış kayıtlar
+  açılamıyordu.
+
+  **Uygulama katmanı zaten hazırdı:** `readTransferDetail` künyesinde *"kapsam dışındaki personel ve
+  kapanmış kayıt için hiç yol yoktu"* yazıyor ve web onu 19.08'den beri kullanıyor. Eksik olan tek
+  şey mobil uçtu — `GET /warehouse/transfers/:transferId`, durum süzgeçsiz, kapısı *"kayıt bu depoya
+  değiyor mu"* (gönderen de alan da kendi sevkiyatını görebilmeli).
+
+  **Kalemler liste yanıtına KOYULMADI:** kapanan pencere on satır × N kalem; hepsini her açılışta
+  indirmek, nadiren açılan bir şey için her seferinde ödemek olurdu. Detay kendi turunu ister.
+
+  **Salt okuma YAPISAL, tercih değil.** Kabul akışı `select` ile açılıyor (yalnız gelen kuyruğunun
+  satırında var), okuma `openDetail` ile — ayrı durum. İkisi aynı duruma bağlansaydı ekran kapanmış
+  bir kaydı sayılabilir gibi göstermenin bir adım yakınında olurdu. Çekmecede sayaç, adet çekmecesi
+  ve CTA YOK; test üçünü ayrı ayrı ve artı "hiçbir POST doğmadı" diye çiviliyor.
+
+  **Şekil tasarımda çizili DEĞİL** (bilinçli ekleme, `design/KARARLAR.md`): v3 üç bölümü çiziyor ama
+  arkalarına bakmanın yolunu vermiyor. Uydurulmadı, RAMPA SATIRINDAN alındı — aynı ürün karesi, aynı
+  "ürün · boy", aynı lot/SKT künyesi. Çekmece, ekran değil: liste yerinde kalıyor.
+
+  **`null` ≠ `0` burada da geçerli:** sayılmamış satır *"sayılmadı"* der, "0" demez — yoldaki kayıtta
+  hepsi öyledir ve "0" yazmak henüz sayılmamış bir sevkiyatı KAYIP gibi okuturdu.
+
+  **Doğrulama:** kök typecheck · lint · knip · docs:check temiz; transfer ekranı 24/24 (beş yeni
+  test). **Cihazda (Oppo) uçtan uca:** yoldaki `TRF-STR-26-0003` açıldı → iki kalem, lot/SKT, "4 sevk
+  edilen · sayılmadı"; kapanmış `TRF-STR-26-0006` açıldı → "4 sevk edilen · 4 sayılan". Sayaç ve CTA
+  hiçbirinde yok.
