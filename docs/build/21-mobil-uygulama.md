@@ -12192,8 +12192,25 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   sipariş `cod` kovasına hiç girmiyor — kova boşken "bir azaldı" iddia edilemez. Test kendi kapı
   siparişini kuruyor ve önce öncülü doğruluyor.
 
+  **A1'İN TESTİ SONRADAN YAZILDI — VE EKSİKLİĞİ KAYDA DEĞER (05.09, kullanıcı sorusu üzerine).**
+  İlk teslimde altı maddenin beşinin testi vardı; **A1'in — grubun en kritik maddesinin — yoktu.**
+  Sebebi öğretici: geliştirme sırasında bu kapı yüzünden dört test kırmızıya dönmüştü ve o kırmızı
+  "kapı ölçüldü" hissi verdi. Oysa o dörtte sınanan TERS yöndü — *meşru* siparişin engellenmemesi
+  (`confirmed` fikstürü). "İptal edilmiş sipariş reddedilir" yönü hiç iddia edilmemişti: **kapı o
+  gün silinse paket yine yeşil kalırdı.** Genel kural olarak not: bir düzeltmenin var olan testleri
+  kırması, o düzeltmenin sınandığı anlamına GELMEZ — kırılan testler çoğu zaman karşı yönü korur.
+
+  İki test eklendi ve ikisi de düzeltmeye **kanıtlanabilir biçimde** bağlı (paylaşılan ağaçta kapıyı
+  geçici silmek başka şeridin commit'ine sızma riski taşıdığı için mutasyon yerine statik ölçüm):
+  `not_shippable` (tekil, `_here`'siz) repoda TEK yerde üretiliyor — `handover.ts:222`, kapının
+  içinde; `rampadakiler` süzgeci de sayaç ile listenin TEK kaynağı (satır 124 ve 161).
+  · *iptal edilen siparişin kutusu devredilmez ve hiçbir şey yazılmaz* — fikstür gerçek yolu kuruyor
+  (`cancelOrder`), elle durum yazmıyor; ayrıca kutunun `shipment_id`si DURUYOR, yani reddi veren
+  `not_announced` değil siparişin hâli. · *sayaç ve liste iptal edileni birlikte düşürür* — servisin
+  kendi künyesindeki "sayaç kapıdan gevşek olamaz" şartı, delta ile ölçülüyor.
+
   **Durum (05.09):** `db:refresh` koşuldu, yeni kolonlar DB'den doğrulandı (`active_count 12`).
-  Tip · lint · **tam paket 4200/4200 (370 dosya)**.
+  Tip · lint · **tam paket 4202/4202 (370 dosya)** — A1'in iki testi dahil.
 
 - [ ] (21.266) **İadeyi hesap başına BÖL — bölünmüş tahsilatta bugün hiç yazılmıyor** (21.265'in kalanı)
   `touches:` `packages/application/src/order/refund.ts` (ölçülecek)

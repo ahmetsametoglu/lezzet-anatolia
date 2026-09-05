@@ -14,8 +14,9 @@ import {
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
 import type { AnnouncedShipment, ShippingQuote } from '@lezzet/sendcloud';
 import { quoteOrderShipment } from './dispatch';
-import { countAwaitingHandover, handOverBox } from './handover';
+import { countAwaitingHandover, handOverBox, listAwaitingHandover } from './handover';
 import { announceOrderShipment } from './announce';
+import { cancelOrder } from '../order/refund';
 import { cancelOrderShipment } from './cancel';
 import type { ShippingRateProvider } from './port';
 import { providerStub } from './provider.testkit';
@@ -572,6 +573,56 @@ describe('devir okutması (29.08)', () => {
 
     // İki kutu BİZİM depomuzda doğdu; yabancı deponun rampası kıpırdamamalı.
     expect(await countAwaitingHandover(db, { warehouseId: yabanci.id })).toBe(once);
+  });
+
+  /*
+    İPTAL EDİLEN SİPARİŞ RAMPADA DURUR (21.265 · testi 05.09).
+
+    Kapının kendisi commit'le birlikte yazıldı ama **reddi hiçbir test iddia etmiyordu** ve bu
+    kaydedilmeye değer: geliştirme sırasında dört test kırmızıya dönmüştü, o yüzden "kapı ölçüldü"
+    sanıldı. Oysa o dörtte sınanan TERS yöndü — *meşru* siparişin engellenmemesi (`confirmed`
+    fikstürü, hemen yukarıdaki "SON kutu" testi). "İptal edilmiş sipariş reddedilir" yönü boştaydı:
+    kapı bugün silinse paket yine yeşil kalırdı.
+
+    Fikstür gerçek yolu kuruyor (`cancelOrder`), elle durum yazmıyor — çünkü sınanan şey iptalin
+    ARDINDAN gelen hâl: gönderi de kapanmış oluyor (A3) ama kutunun `shipment_id`si duruyor, yani
+    `not_announced` bu kutuyu YAKALAMAZ. Reddi veren tek şey siparişin durumu.
+  */
+  it('İPTAL EDİLEN siparişin kutusu DEVREDİLMEZ — ve hiçbir şey yazılmaz', async () => {
+    const { orderId, kutular } = await duyurulmusGonderi(2);
+    const iptal = await cancelOrder(db, orderId);
+    expect(iptal.status).toBe('ok');
+
+    const sonuc = await handOverBox(db, { code: kutular[0]!.code, warehouseId, actorId: customerId });
+
+    expect(sonuc).toMatchObject({ status: 'not_shippable', boxNo: 1, currentStatus: 'cancelled' });
+    // Referans söyleniyor: depocu elindeki kutuyu rampada DOĞRU yığına geri koyabilmeli.
+    expect(sonuc).toHaveProperty('referenceNo', (await new OrderService(db).getById(orderId))!.referenceNo);
+
+    // Ret bir GARANTİ: kutu verilmemiş sayılmalı ve gönderi devredilmiş görünmemeli.
+    const kutu = (await new OrderBoxService(db).listByOrder(orderId)).find((row) => row.boxNo === 1)!;
+    expect(kutu.loadedAt).toBeNull();
+    // Kutunun gönderi bağı DURUYOR — yani reddi veren `not_announced` değil, siparişin hâli.
+    expect(kutu.shipmentId).not.toBeNull();
+    expect((await shipments.getById(kutu.shipmentId!))!.status).not.toBe('handed_over');
+  });
+
+  it('sayaç ve LİSTE iptal edileni birlikte düşürür — ekran kendini yalanlayamaz', async () => {
+    /* Servisin kendi künyesi bunu şart koşuyor: *"sayaç kapıdan GEVŞEK olamaz"*. Gevşek olsaydı
+       rampa "2 kutu bekliyor" derdi, depocu ikisini de okuturdu ve ikisi de reddedilirdi — sayının
+       söylediği iş yapılamaz çıkardı. Liste de aynı süzgeci paylaşıyor (`rampadakiler`); ikisi
+       ayrışırsa D8 ekranı başlığıyla gövdesi çelişen bir şey gösterir. */
+    const once = await countAwaitingHandover(db, { warehouseId });
+
+    const { orderId, kutular } = await duyurulmusGonderi(2);
+    expect(await countAwaitingHandover(db, { warehouseId })).toBe(once + 2);
+
+    await cancelOrder(db, orderId);
+
+    expect(await countAwaitingHandover(db, { warehouseId })).toBe(once);
+    const liste = await listAwaitingHandover(db, { warehouseId });
+    const kodlar = new Set(liste.map((satir) => satir.code));
+    expect(kutular.some((kutu) => kodlar.has(kutu.code))).toBe(false);
   });
 
   it('DUYURULMAMIŞ kutu devredilemez ve BAŞKA deponun kutusu reddedilir', async () => {
