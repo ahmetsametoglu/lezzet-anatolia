@@ -37,9 +37,14 @@ interface SatirTaslak {
    * yazıyordu. Ölçüldü: `stock_low` satırlarının `warehouse_id`si null, ama `dedupe_key`i deponun
    * kimliğini taşıyor ve o depo hâlâ duruyor — yani FK'nin `on delete set null`ı değil, seed'in
    * kendisi. CLAUDE §1: "Depo bir boyut değil, DEĞİŞMEZ"; şemanın künyesi de o kolonu
-   * "depo-bağlamlı PERSONEL olayının süzgeci" diye tanımlıyor. Depo-üstü türlerde `null` meşrudur.
+   * "depo-bağlamlı PERSONEL olayının süzgeci" diye tanımlıyor.
+   *
+   * İSTEĞE BAĞLI ve öyle kalmalı: türlerin ÇOĞU depo-üstüdür (müşteri satırları, talep, kurumsal
+   * başvuru) ve onlarda alan yoktur — `null` yazmak "deposu bilinmiyor" ile "deposu yok"u tek
+   * değere indirirdi. Zorunlu yapmak, depo kavramı olmayan on beş çağrı yerine anlamsız bir `null`
+   * yazdırmak olurdu.
    */
-  warehouse_id: string | null;
+  warehouse_id?: string;
 }
 
 const IKI_GUN_MS = 2 * 86_400_000;
