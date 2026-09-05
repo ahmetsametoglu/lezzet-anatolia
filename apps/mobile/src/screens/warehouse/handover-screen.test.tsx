@@ -78,13 +78,20 @@ beforeEach(() => {
   net.pending = rampa(3);
 });
 
-/** Okutucuyu açıp simülasyon çipiyle bir kod gönderir — cihazsız ortamın tek yolu. */
-async function okut(label: string) {
+/**
+ * Okutucuyu açıp simülasyon çipiyle bir kod gönderir — cihazsız ortamın tek yolu.
+ *
+ * ÇİPLER ARTIK RAMPANIN KENDİ KUTULARI (05.09): ekran `devCodes`unu `waiting`ten veriyor, yani
+ * bu yardımcı ürün barkodu değil GERÇEK bir kutu kodu gönderiyor. Hedef KODLA seçiliyor,
+ * etiketle değil — etiket rampadaki kutu sayısıyla değişiyor ("Kutu 1/3" ↔ "Kutu 1/2") ve
+ * etikete bağlanan test, konusu olmayan bir sayı yüzünden kırılırdı.
+ */
+async function okut(code = 'KT-26-A1') {
   await fireEvent.press(screen.getByTestId('warehouse-handover-scan'));
   /* Çekmece bir kare sonra çizilir: `visible` prop'u kütüphanenin `present()`ine çevriliyor ve o
        bir durum değişimi. Cihazda görünmez, testte `fireEvent`ler aynı karede koştuğu için görünür. */
-  await waitFor(() => expect(screen.getByLabelText(label)).toBeOnTheScreen());
-  await fireEvent.press(screen.getByLabelText(label));
+  await waitFor(() => expect(screen.getByTestId(`scan-dev-chip-${code}`)).toBeOnTheScreen());
+  await fireEvent.press(screen.getByTestId(`scan-dev-chip-${code}`));
 }
 
 describe('kargo devri', () => {
@@ -108,7 +115,7 @@ describe('kargo devri', () => {
     net.handover = { status: 'ok', boxNo: 2, referenceNo: 'LZA-26-3M8C', handedBoxes: 2, boxCount: 3, shipmentHandedOver: false };
     await render(<HandoverScreen />);
 
-    await okut('Toplama');
+    await okut();
 
     /* SATIR İKİ KATMAN (çizime çekildi 05.09): kalın başlık sayacı, ince alt satır siparişi ve
        kalanı söyler. Eskiden ikisi tek cümlede birleşikti. */
@@ -122,7 +129,7 @@ describe('kargo devri', () => {
     net.handover = { status: 'ok', boxNo: 3, referenceNo: 'LZA-26-3M8C', handedBoxes: 3, boxCount: 3, shipmentHandedOver: true };
     await render(<HandoverScreen />);
 
-    await okut('Toplama');
+    await okut();
 
     /* Ekranın var olma sebebi olan an KENDİ TONUNU taşır (çizim: yeşil zemin + tik). Eskiden
        "kutu verildi" ile aynı kartı alıyordu, yani tek gerçek olay görsel yüzünü kaybediyordu. */
@@ -134,7 +141,7 @@ describe('kargo devri', () => {
     net.handover = { status: 'already_handed', boxNo: 1, handedBoxes: 1, boxCount: 2 };
     await render(<HandoverScreen />);
 
-    await okut('Toplama');
+    await okut();
 
     // Depocu rampada aynı kutuyu iki kez okutabilir; hata cümlesi onu kendi sayımından
     // şüphelendirirdi.
@@ -166,7 +173,7 @@ describe('kargo devri', () => {
     // Sunucu artık BİR kutu diyor: aynı depodaki ikinci telefon da okutmuş olabilir ve yerel bir
     // eksiltme o gerçeği kaçırırdı.
     net.pending = rampa(1);
-    await okut('Toplama');
+    await okut();
 
     await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/RAMPADA BEKLEYEN · 1 kutu/));
   });
@@ -225,7 +232,7 @@ describe('kargo devri', () => {
     net.handover = { status: 'ok', boxNo: 1, referenceNo: 'LZA-26-3M8C', handedBoxes: 1, boxCount: 1, shipmentHandedOver: true };
     await render(<HandoverScreen />);
     net.pending = rampa(0);
-    await okut('Toplama');
+    await okut();
 
     await waitFor(() => expect(screen.getByTestId('warehouse-handover-pending')).toHaveTextContent(/RAMPADA BEKLEYEN · boş/));
     expect(screen.queryByTestId('warehouse-handover-idle')).toBeNull();
@@ -250,7 +257,7 @@ describe('kargo devri', () => {
   it('kapsam dışı kutu ve ikinci okutma SESSİZ tonda — hata ailesinde değil', async () => {
     net.handover = { status: 'out_of_scope', referenceNo: 'LZA-26-KEHL1' };
     await render(<HandoverScreen />);
-    await okut('Toplama');
+    await okut();
 
     await waitFor(() => expect(screen.getByText('Başka deponun kutusu — geri koy')).toBeOnTheScreen());
     expect(screen.getByText('LZA-26-KEHL1 · buradan verilemez')).toBeOnTheScreen();
@@ -261,20 +268,45 @@ describe('kargo devri', () => {
   it('her okutma satırı SAATİNİ taşır', async () => {
     net.handover = { status: 'ok', boxNo: 1, referenceNo: 'LZA-26-3M8C', handedBoxes: 1, boxCount: 2, shipmentHandedOver: false };
     await render(<HandoverScreen />);
-    await okut('Toplama');
+    await okut();
 
     await waitFor(() => expect(screen.getByText('Kutu verildi · 1/2')).toBeOnTheScreen());
     expect(screen.getByText(/^\d{2}:\d{2}$/)).toBeOnTheScreen();
   });
 
+  /*
+    İPTAL EDİLEN SİPARİŞİN KUTUSU (05.09 · CİHAZDA BULUNDU).
+
+    Sunucudaki kapı 21.265'te yazıldı; ekran öğrenmemişti. `not_shippable` bu `switch`in
+    `default`ına düşüyor ve depocuya **"Kod tanınmıyor"** diyordu — yani "barkodu okuyamadım".
+    Depocunun o cümleye vereceği doğru tepki yanlış olurdu: etiketi siler, tekrar dener, elle
+    girer; kutu elinde kalır ve gerçek sebebi hiç öğrenemez.
+
+    Typecheck göremezdi (`default` yeni birlik üyesini sessizce yutar), birim testi de görmedi —
+    ancak cihazda gerçek bir iptal edilmiş kutu okutulunca çıktı. Bu satır o boşluğu kapatıyor:
+    ret SEBEBİYLE yazılmalı ve sebep motorun sözlüğünden gelmeli.
+  */
+  it('İPTAL EDİLEN siparişin kutusu SEBEBİYLE reddedilir — "kod tanınmıyor" DEĞİL', async () => {
+    net.handover = { status: 'not_shippable', boxNo: 1, referenceNo: 'LZA-26-3M8C', currentStatus: 'cancelled' };
+    await render(<HandoverScreen />);
+
+    await okut();
+
+    await waitFor(() => expect(screen.getByText(/kutuyu AYIR/)).toBeOnTheScreen());
+    // Durum adı MOTORUN sözlüğünden (`ORDER_STATUS_LABELS`) — ekran kendi çevirisini yazmıyor.
+    expect(screen.getByText('LZA-26-3M8C · İptal · rampadan çek, yönetime bildir')).toBeOnTheScreen();
+    // Ve ASIL iddia: eski davranışa düşmüyor.
+    expect(screen.queryByText('Kod tanınmıyor')).toBeNull();
+  });
+
   it('adlı retler SEBEBİYLE yazılır — mühürsüz kutu ve duyurulmamış gönderi ayrı cümleler', async () => {
     net.handover = { status: 'not_sealed', boxNo: 1 };
     await render(<HandoverScreen />);
-    await okut('Toplama');
+    await okut();
     await waitFor(() => expect(screen.getByText(/Mühürlü değil/)).toBeOnTheScreen());
 
     net.handover = { status: 'not_announced', boxNo: 1 };
-    await okut('Toplama');
+    await okut();
     await waitFor(() => expect(screen.getByText('Etiket alınmamış')).toBeOnTheScreen());
   });
 });

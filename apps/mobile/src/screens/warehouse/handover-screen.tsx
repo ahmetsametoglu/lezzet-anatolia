@@ -2,7 +2,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import type { AwaitingHandoverBoxContract } from '@lezzet/types';
+import { ORDER_STATUS_LABELS, type AwaitingHandoverBoxContract } from '@lezzet/types';
 
 import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
@@ -160,6 +160,30 @@ export function HandoverScreen() {
             return { key, tone: 'muted', time, title: r.outOfScope.title, sub: fillCopy(r.outOfScope.sub, { ref: data.referenceNo ?? '—' }) };
           case 'not_sealed':
             return { key, tone: 'error', time, title: r.notSealed.title, sub: fillCopy(r.notSealed.sub, { code }) };
+          /*
+            SİPARİŞ ARTIK GÖNDERİLMİYOR (05.09 · cihazda bulundu).
+
+            Sunucudaki kapı 21.265'te yazıldı ama ekran öğrenmemişti: `not_shippable` bu `switch`in
+            `default`ına düşüyor ve depocuya **"Kod tanınmıyor"** diyordu. Yanlış cevabın bedeli
+            somut — depocu barkodun okunmadığını sanır, siler, tekrar dener, elle girer; kutu
+            elinde kalır ve gerçek sebebi ("bu sipariş iptal edildi") hiç öğrenemez. Typecheck
+            göremezdi: `default` yeni birlik üyesini sessizce yutar.
+
+            Ret bir YÖNLENDİRME, kapsam dışı kutunun aynı tonu: kutu rampadan ÇEKİLİR. Durum adı
+            motorun sözlüğünden geliyor (`ORDER_STATUS_LABELS`) — kurye kulvarındaki kardeş
+            mesajın aynı kaynağı (`use-courier-day.hook.ts:786`).
+          */
+          case 'not_shippable':
+            return {
+              key,
+              tone: 'error',
+              time,
+              title: r.notShippable.title,
+              sub: fillCopy(r.notShippable.sub, {
+                ref: data.referenceNo ?? '—',
+                status: ORDER_STATUS_LABELS[data.currentStatus],
+              }),
+            };
           case 'not_announced':
             return { key, tone: 'error', time, title: r.notAnnounced.title, sub: r.notAnnounced.sub };
           default:
@@ -317,6 +341,16 @@ export function HandoverScreen() {
         hint={t.handover.scanHint}
         onClose={() => setScanOpen(false)}
         onScan={handleScan}
+        /* Simülasyon çipleri RAMPADA BEKLEYENLERdir (05.09). `scan-sheet.tsx` künyesi bunu şart
+           koşuyordu — *"kutu QR'ı havuzda yok: kutu kodlarını çağıran ekran kendi devCodes'uyla
+           verir, elindeki gerçek kutuların kodları"* — ve kutu okutan altı ekranın beşi veriyordu;
+           D8 tek eksikti. Bedeli ölçüldü: kargo devri kamerasız hiç denenemiyordu, yani cihaz
+           doğrulaması bu ekranda başlamadan bitiyordu. Liste zaten elde (`/handover/pending`).
+
+           Çipler LİSTEDEN geliyor, ayrı bir sorgudan değil: rampada olmayan bir kutuyu çip yapmak
+           depocuya elinde olmayan bir kutuyu vaat ederdi. Kapının reddettiği hâller (iptal, başka
+           depo) burada zaten görünmez — onlar gerçek kâğıtla, kamerayla denenir. */
+        devCodes={waiting.map((box) => ({ label: `Kutu ${box.boxNo}/${box.boxCount}`, code: box.code }))}
         testID="warehouse-handover-scan-sheet"
       />
     </View>

@@ -1060,6 +1060,10 @@
         "title": "Başka deponun kutusu — geri koy",
         "sub": "{ref} · buradan verilemez"
       },
+      "notShippable": {
+        "title": "Bu sipariş artık gönderilmiyor — kutuyu AYIR",
+        "sub": "{ref} · {status} · rampadan çek, yönetime bildir"
+      },
       "unknownCode": {
         "title": "Kod tanınmıyor",
         "sub": "{code} · taşıyıcı etiketinin barkodunu okutun"

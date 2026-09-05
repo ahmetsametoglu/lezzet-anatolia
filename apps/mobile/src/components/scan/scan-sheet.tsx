@@ -190,6 +190,11 @@ export function ScanSheet({ open, title, hint, onClose, onDismiss, onScan, devCo
                   feedback="opacity"
                   style={styles.devChip}
                   accessibilityLabel={entry.label}
+                  /* Kimlik KODDAN, etiketten değil (05.09): çağıranın verdiği etiket ekranın
+                     içeriğiyle değişiyor ("Kutu 1/3" rampa üç kutuluyken, "Kutu 1/2" ikiyken) ve
+                     etikete bağlanan test, konusu olmayan bir sayı yüzünden kırılıyor. Kod ise
+                     çipin kendisidir. */
+                  testID={`scan-dev-chip-${entry.code}`}
                 >
                   <Text style={styles.devChipLabel}>{entry.label}</Text>
                   {/* Çözülen ürün adı etiketin ALTINDA, soluk: yol hâlâ ilk okunan şey. */}
