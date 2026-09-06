@@ -596,7 +596,30 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - `POST` çünkü yan etkisi var: kararı satıra yazıyor (`geo_alt_label`), sevkiyat şeridi ve kurye
       kartı da onu okuyor.
     - Akış ve alan adları talep dosyasına yazıldı — **mobil şerit iki yüzeyi de yazabilir.**
-    - **Sırada:** e2e duman senaryosu · tasarım turu (`design/BACKLOG §4`). **BEKLEYEN(11.11)**
+  - **Durum (06.09f) — E2E YEŞİL: teklif GERÇEKTEN ekranda çıkıyor.**
+    - `e2e/customer/address-check.smoke.ts` — sepet → misafir OTP → adres → onay → **teklif** →
+      kabul → adres düzelir. İki koşuda da geçti (23,2 sn · 23,8 sn).
+    - **Bu testin yerini hiçbir şey dolduramıyordu:** zincirin her halkası ayrı ayrı testliydi (karar
+      14, kapı 10, adaptör 7, uç 4) ama **teklifin ekranda çıktığını hiçbiri ölçmüyordu** — web'de
+      render eden test altyapısı YOK. Sunucu doğru cevabı verip ekran onu hiç çizmese her şey yeşil
+      kalırdı.
+    - **Senaryo deterministik ve fikstürün hediyesi:** gerçek sokak (`192c Rue du Maréchal Foch`,
+      yalnız Lingolsheim'de var) + fikstürün DAMGALI posta kodu. BAN o kodda hiçbir şey bulamaz,
+      kısıtsız sorgu gerçek kapıyı bulur → `wrong_postal_code` kurulmuş olur. **Seed'in hangi kodları
+      taşıdığına hiç bağlı değil.**
+    - ⚠ **Duman GERÇEK BAN'a çıkıyor** ve bu bilinçli: doğrulamanın değeri tam olarak gerçek servisin
+      cevabında. Servis düşerse test kırmızıya döner — künyesi okuyana arızanın bizde olmayabileceğini
+      söylüyor. Kapı zaten FAIL-OPEN: müşteri siparişini yine verir, yalnız uyarıyı görmez.
+    - **Koşular üç hata buldu ve üçü de TESTİN kendisindeydi** (kod değil): yanlış checkout adresi
+      (`/fr/commander` → 404), sepete tıklayıp hemen gezinme (`ERR_ABORTED`), ve ezberden
+      basitleştirilmiş OTP bloğu (alan hidrasyon bitmeden `disabled`, kod kutusu tek `textbox` değil
+      rakam kutuları). Üçünde de kardeş dumanın kanıtlanmış deseni alındı — **e2e yazarken emsal
+      kopyalanır, hatırlanmaz.**
+    - Dev server koşular sırasında **asıldı** (436 MB, eşiğin çok altında — yani bellek değil, `§4`ün
+      "asılı kalır" hâli). `dev:health` eşiğe bakıyor ve haklı olarak dokunmadı; sunucuyu kullanıcı
+      yeniden başlattı. Soğuk rotalar önce ısıtıldı, sonra koşuldu.
+    - **Sırada:** tasarım turu (`design/BACKLOG §4` — kompozisyon çizilmedi) · mobil şeridin iki
+      yüzeyi. **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 
