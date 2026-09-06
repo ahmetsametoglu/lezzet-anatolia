@@ -12747,3 +12747,249 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   ikisi SUSAN hâlleri ölçüyor (`confirmed`, `unknown`): yalnız konuşan hâlleri sınayan bir test,
   satır bir gün her durakta belirdiğinde yeşil kalırdı. Fikstür varsayılanı `unknown` olduğu için
   konuşan testler ancak ekran alanı gerçekten okuduğunda geçiyor.
+
+- [x] (21.275) **TALEP YAZIŞMASI v3'E GEÇTİ — anlatım kartı · gün ayracı · ekli görseller · tek satır cevap kutusu** (kullanıcı kararı 06.09: *"Talepler kısmındaki mesajlaşma bölümüne odaklan ve tasarım ile aynı olsun"*)
+  `touches:` `apps/mobile/src/screens/management/{complaint-screen.tsx,messages.json,complaint-exception-screens.test.tsx}` · `apps/mobile/src/components/operations/{party-avatar.tsx,stack-header.tsx,icon-button.tsx}` · `apps/mobile/src/components/ui/icon-paths.ts`
+
+  **KAPSAM YARIM, VE BİLEREK.** Tasarımın talep ekranı (v3:30) iki yarımdır: **yazışma** ve
+  ⋮ ile açılan **Aksiyonlar çekmecesi**. Bu görev yalnız birincisini getirdi; çekmece 21.276'da.
+  ⋮ düğmesi de konmadı — açacağı yer yokken duran bir düğme, basıldığında hiçbir şey olmayan bir
+  vaattir.
+
+  **Gelenler:** başlıkta karşı taraf avatarı + müşteri adı + "tür · kanal" künyesi · topun kimde
+  olduğunu ve beklemeyi söyleyen durum bandı · gün ayracı ("BUGÜN" / "28 AĞUSTOS") · ilk mesajın
+  **TALEP METNİ kartına** çıkması (çeviri satırı, ekli görseller ızgarası ve BAĞLI KAYIT onun
+  içinde) · "YAZIŞMA · N MESAJ" ayracı · baloncuk künyelerine SAATİN girmesi
+  ("operatör · Selin Kaya · 20:16") · taslak kartının tasarım hizası (*düzenle* · **Gönder** ·
+  "Hibrit modda asistan kendi başına göndermez") · **cevap kutusu + dolu daireli gönder düğmesi
+  tek satırda**.
+
+  **İLK MESAJ ARTIK BALONCUK DEĞİL, KART.** Şema anlatımı da bir MESAJ olarak tutuyor
+  (`0026_ticket.sql`: *"ayrı bir `description` kolonu olsaydı ekran ikisini birleştirmek zorunda
+  kalırdı"*) — ekran onu yazışmadan alıp öne çıkarıyor. Veri tek yerde, sunum iki türlü: şemanın
+  kararı bozulmadı.
+
+  **TASARIMIN ÜÇ ÖĞESİ ÖLÇÜLDÜ VE ÇİZİLMEDİ** (uydurulmuş sayı, olmayan kaydı varmış gibi gösterir):
+  · **Talep referansı** ("SK-26-8H2P") — `public.ticket`te insan okuyabilir referans kolonu YOK,
+    kimlik uuid. Künye bu yüzden "tür · kanal".
+  · **Süre sayacı** ("22 sa kaldı") — talepte SLA YOK ve bu bilinçli (`TicketStatusEnum` künyesi:
+    *"karmaşık ticket mekaniği YOK (atama/öncelik/SLA yok)"*). Bandın taşıdığı zaman gerçek olan
+    tek zamandır: son mesajın yaşı.
+  · **Karar rozeti** — karar kavramı sözleşmede yok; ayrıca tasarımın **"Jest — bedelsiz yeniden
+    gönderim"** adı sistemdekinin TERSİNİ söylüyor (`ReturnDispositionEnum.goodwill`: *"mal
+    müşteride kaldı — paranızı iade ettik, ürün sizde kalsın"*), ve "yeniden gönderim" diye bir
+    yetenek motorda hiç yok (arandı, tek satır çıkmadı). Rozet çizilse yanlış sözlükle çizilecekti.
+    → `design/BACKLOG.md §5`e taşınacak tasarım sorusu.
+
+  **Ekler gerçek:** `attachmentUrls` sözleşmede zaten vardı ve uçta İMZALI üretiliyor
+  (`ticket/read.ts` → `privateReadUrls`, 15 dk). Izgara uydurma değil. "Dokun büyüt" sistem
+  tarayıcısını açıyor — webin talepler ekranı da aynısını yapıyor; uygulama içi tam ekran
+  görüntüleyici ayrı bir komponent + testi demek. **Yerelde R2 ayarlı değilse `privateReadUrls`
+  boş dizi döner**, yani ızgara cihazda görünmez; testi fikstürle çivilendi.
+
+  **Kite iki ekleme:** `OperationsPartyAvatar` (tasarım aynı daireyi dört yerde çiziyor; sosyal
+  gelen kutusundaki elle çizim ikinci tüketici olacak) ve `OperationsStackHeader.leading` yuvası.
+  `OperationsIconButton`a `accent` tonu geldi (dolu zeytin daire). Kâğıt uçak glifi için ikinci bir
+  `send` girdisi AÇILMADI — aynı yolu ikinci kez yazmak olurdu (CLAUDE §1); `navigate` künyesine
+  ikinci anlamı yazıldı.
+
+  **Üstlen nereye gitti:** tasarımda çekmecenin içinde ("KAYDI YÖNET"). Çekmece yokken düğmeyi
+  silmek var olan TEK karar kapısını sökmek olurdu; cevap kutusunun altında sessiz bir metin
+  eylemi olarak durdu. 21.276'da çekmeceye taşınır.
+
+  **Doğrulama:** yönetim + operasyon kiti testleri **220/220** · lint temiz · **İKİ YÜZEYDE de
+  uçtan uca görüldü** — iOS 26.5 simülatörü ve **fiziksel Oppo CPH1907** (1080×2400): başlık ·
+  bant · gün ayracı · anlatım kartı · yazışma ayracı · baloncuk künyeleri · taslak kartı · tek
+  satır cevap kutusu. Ölçüm için yerele bir talep satırı yazıldı (`11111111-…-111111111111`,
+  üç mesaj); ekleri YOK çünkü yerelde R2 ayarlı değil.
+
+  **Kök typecheck bu turda KIRMIZI ama sebebi bu görev DEĞİL:** `courier-fixture.ts:53`
+  `doorCheck` üzerinden `TS2719` veriyor (21.274'ün alanı), dokunulan dosyaların hiçbiri kurye
+  tipine değmiyor.
+
+- [x] (21.276) **Talep ekranının KARAR yarısı — ⋮ Aksiyonlar çekmecesi TASARIMIN DÖRT BÖLÜMÜYLE** (21.275'in ikinci yarısı · kullanıcı kararı 06.09)
+  `touches:` `apps/mobile/src/screens/management/{complaint-screen.tsx,messages.json,complaint-exception-screens.test.tsx}` · `apps/mobile/src/screens/management/use-complaint.hook.ts` · `apps/mobile/src/lib/api/management.ts` · `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/{management.ts,management.test.ts}` · `apps/mobile/src/components/ui/icon-paths.ts`
+
+  **Durum (06.09) — ÇEKMECE AÇILDI, İÇİNDE BİR BÖLÜM VAR.** Kullanıcı *"en büyük fark aksiyon
+  butonlarının olduğu kısım, önce buna odaklan"* dedi; çekmecenin kabuğu ve tasarımın iki kapısı
+  (başlıktaki ⋮, banttaki *"aksiyon ›"*) yazıldı, içine bugün **yalnız DURUM** kondu.
+
+  **`/claim` ucu KALKTI, yerine `/complaints/:id/status` geldi.** Eski uç gövdesiz bir POST'tu ve
+  hedefi kendi içinde `in_progress` diye SABİTLİYORDU; çekmece üç geçişi birden istiyor. İkinci bir
+  uç açmak aynı motor çağrısına (`changeTicketStatus`) iki kapı açmak olurdu (CLAUDE §1) — niyet
+  artık çağıranın, uç yalnız hedefi taşıyor. "Üstlen" bu kapının `in_progress` çağrısı ve cevap
+  kutusunun altından çekmeceye taşındı.
+
+  **HANGİ GEÇİŞİN AÇIK OLDUĞUNU MOTOR SÖYLÜYOR** — `allowedTicketTransitions` (domain-core, saf;
+  künyesi zaten *"ekranın sunacağı geçişler"* diyor). Ekran üç durumu da çiziyor ama yalnız izin
+  verilene bastırıyor: şu anki KOYU ve basılamaz, kapalı olan SÖNÜK ama görünür — operatör "hangi
+  hâller var" sorusunu da bu çekmeceden okusun. İzin listesini ekranda yeniden hesaplamak kuralı
+  ikinci yerde yaşatmak olurdu ve sunucu yine reddederdi, yani ekran yalancı olurdu.
+
+  **DÖRT BÖLÜMÜN DÖRDÜ DE ÇİZİLDİ** (kullanıcı: *"aksiyon menüsü tasarımını dikkatle incele ve
+  bire bir uygula"*): TALEP TÜRÜ · ASİSTAN MODU · KARAR · KAYDI YÖNET, altında koyu düğme ve
+  dipnot. Her bölümde şu anki seçenek KOYU ve basılamaz — basılsaydı sunucu `already_in_*` ile
+  reddederdi ve ekran o reddi hiç doğurmamalı.
+
+  **İKİ FONKSİYON TERFİ ETTİ** (kullanıcı onayı): `setTicketMode` ve `triggerReturnFromTicket`
+  `apps/web/lib/ticket/write.ts`ten `@lezzet/application/ticket/staff-write`a taşındı, web'dekiler
+  KÖPRÜYE döndü — ölçüt zaten dolmuştu (paketin kuralı "en az iki yüzeyin çağırdığı orkestrasyon"),
+  mobil ikinci yüzey oldu. Öteki beşi 21.12'de aynı gerekçeyle terfi etmişti.
+
+  **TALEP TÜRÜ İÇİN YENİ BİR YAZICI AÇILDI** (kullanıcı onayı): `TicketService.setType` +
+  `setTicketType`. Sütun (`ticket.type`) baştan beri vardı, yazanı yoktu. **Geçiş kuralı yok** —
+  tür bir sınıflandırmadır, iş akışını `status` yürütür. Şerit dışından gelen *"sonradan tür
+  değiştirmek geçmişi tutarsız bırakır mı"* uyarısı ölçüldü: türü okuyan tek karar noktası
+  `isReturnBound` ve künyesi zaten *"bir YASAK değil bir İŞARET'tir — `canTriggerReturn` tipe
+  bakmaz"* diyor; üstelik o fonksiyonun bugün hiç tüketicisi yok. Yani düzeltme hiçbir kararı
+  geriye dönük bozmuyor.
+
+  **KARAR BÖLÜMÜ DÖRTTEN İKİYE İNDİ** ve gerekçesi kullanıcı kararı (06.09, *"sistemin diline
+  çevir"*):
+  · *"Kısmi iade"* + *"Tam iade"* → **tek damga** (`triggerReturnFromTicket`). Tutarı talep
+    belirlemiyor, iade siparişte yaşıyor (DOMAIN §8) — iki düğme aynı yazımı yapardı.
+  · *"Jest — bedelsiz yeniden gönderim"* → **çizilmedi.** Adı sistemin `goodwill` tanımının TERSİ
+    (*"mal müşteride kaldı, para iade edildi"*) ve "yeniden gönderim" diye bir yetenek motorda
+    hiç yok. Akıbet (`restock` · `discard` · `goodwill`) siparişin iade akışında seçiliyor.
+  · *"Kapat — işlem yok"* → durum geçişi, tasarımın adıyla.
+
+  **"MASADA DEVAM ET" DÜĞME DEĞİL CÜMLE.** Ölçüldü: tasarımın kendisinde de eylemsiz —
+  `cursor:pointer` ile düğme gibi çizilmiş ama `onClick`i YOK (v3:3727), yanındaki "Üstlen" de
+  öyle. Dokunulacakmış gibi duran ama hiçbir şey yapmayan bir kutu, bölümün sınırını anlatmaz;
+  cümle olarak anlatır.
+
+  **KOYU DÜĞMENİN ADI "KAYDET" DEĞİL "BİTTİ".** Tasarımdaki *"Kararı kaydet — cevaba dön"*ün tek
+  işlevi ölçüldü: çekmeceyi KAPATMAK (`onClick="{{ closeAksiyon }}"`). Bizde de öyle; "kaydet"
+  demek yukarıdaki her dokunuşun ZATEN yazılmış olduğunu gizlerdi. Aynı sebeple çekmece bir
+  seçimden sonra kapanmıyor — operatör türü düzeltip modu değiştirip sonra çıkabilmeli.
+
+  **UCUN TESTİ DE DEĞİŞTİ — ve bunu ben değil kilitli paket yakaladı.** `/claim` kaldırılınca
+  `management.test.ts`in *"ÜSTLEN"* iddiası ölü bir adrese POST atmaya devam ediyordu; Hono 404'ün
+  HTML'ini döndürünce zarf çözücü `SyntaxError` veriyordu (denetim şeridinin kaydı,
+  `docs/talep/not-yonetim-ustlen-ucu-json-yerine-html-donuyor.md`). Ders: **uç yeniden
+  adlandırıldığında testi aynı düzenlemede gider** — yoksa arıza kodda değil, kimsenin okumadığı
+  bir koşuda birikir. İddia `/status` + `{ to: 'in_progress' }`e çevrildi ve çekmecenin öteki üç
+  kapısına (`/type` · `/mode` · `/return`) da birer iddia yazıldı. İadenin ölçtüğü dal `no_order`:
+  fikstürün siparişi yok ve ucun kanıtlaması gereken zaten kablolamadır — motorun mutlu yolu
+  `apps/web/lib/ticket/ticket.test.ts`te, kapısı `packages/domain-core/src/support/ticket-flow.test.ts`te.
+
+  **Doğrulama:** talep ekranının **23 iddiası** + kit/yönetim/destek **380/380** · ucun 4 yeni
+  iddiası · lint temiz · mobil, uygulama ve web typecheck temiz · **fiziksel Oppo'da dört bölüm de
+  görüldü** (şu anki tür ve mod koyu ve basılamaz, karar satırları tam genişlikte, "Bitti — cevaba
+  dön" koyu).
+
+- [x] (21.277) **TESLİM EDİLMİŞ DURAK KAPIDAN GERİ ÇEVRİLEMEZ — kurye iade süreci başlatamıyordu, yalnız durum yazıyordu** (depo notu 04.09 · D6 denetimi)
+  `touches:` `packages/application/src/courier/day.ts` · `packages/application/src/courier/day.test.ts`
+
+  **ÖLÇÜLEN ARIZA.** `markUndelivered` mevcut durumu okuyup yalnız motora soruyordu
+  (`canTransition(order.status, to)`). Motor `delivered: ['completed', 'returned']` diyor, yani
+  geçiş İZİNLİ — ve uçta da durum kapısı yoktu (yalnız UUID biçimi, notun boşluğu, sahiplik).
+  Sonuç: **`delivered` bir sipariş kurye ekranından `returned` yapılabiliyordu** ve o sipariş
+  depocunun D6 rampa listesine düşüyordu.
+
+  Yaptığı tek şey düz bir durum yazımıydı (`orders.transition`): teslimde fiilen düşmüş stok
+  (`0016_deliver_order.sql`) olduğu yerde kalıyor, para hareketi doğmuyor, iade süreci hiç
+  başlamıyor. Yani kurye, teslim ettiği siparişi geri çevirebiliyor ve bunun hiçbir ekranı yok.
+
+  **MOTOR HAKLI, KAPI EKSİKTİ.** `delivered → returned` kenarı İZİNLİ KALMALI — iade süreci tam
+  olarak o kenardır (`status-machine.ts:29`). Kapatılan kenar değil, kuryenin o kenara basma
+  YOLU: `markUndelivered` artık `order.status !== 'out_for_delivery'` ise hiç yazmıyor. İki soru,
+  iki kapı — `canTransition` "bu kenar meşru mu", yeni ölçüt "bu KURYENİN anı mı" diyor. Kapıdaki
+  üç sonuç (teslim · ulaşılamadı · reddedildi) aynı anın üç cevabıdır ve o an `out_for_delivery`.
+
+  **Cevap `forbidden` DEĞİL `stale`** — sipariş kuryenin kendi durağı, yetkisi var; bayat olan
+  ekranın gördüğü hâl. Ekranın cümlesi zaten bunu söylüyor ve YENİ METİN GEREKMEDİ: *"Sipariş artık
+  'Teslim edildi' durumunda … Para ve kayıt İKİLENMEDİ."* Uç eşlemesi de değişmedi (`stale` zaten
+  sözleşmede).
+
+  **İKİNCİ TEST KENARI KORUYOR.** Kapıyı kapatırken kenarı kapatmadığımızın kanıtı ayrı bir
+  iddiada: `canTransition('delivered','returned')` hâlâ izinli. Bu olmadan biri yarın
+  `status-machine`den kenarı silerek "düzeltme" yapabilir ve iade süreci sessizce ölürdü.
+
+  **YOL ÜSTÜNDE: HEAD'İN TİP KONTROLÜ KIRIKTI, DÜZELTİLDİ.** `4e153a35` (11.11 · kapı doğrulaması)
+  `day.test.ts`e `dispatched({ snapshot: … })` çağrıları ekledi ama yardımcının seçenek tipine
+  `snapshot` alanını eklemedi — `@lezzet/application:typecheck` HEAD'de kırmızıydı ve ağaçtaki
+  herkesi kesiyordu. Alan `Record<string, unknown>` olarak eklendi (kolonun kendi tipi:
+  `z.record(z.unknown())`); daraltmak, motorun bir gün öğreneceği beşinci alanı fikstürden dışarıda
+  bırakırdı. Kök typecheck 20/20 yeşile döndü.
+
+- [ ] (21.278) **Van-stock uçlarının HİÇ testi yok — dört uç istek almıyor** (kurye şeridi kaydı 05.09)
+  `touches:` `apps/mobile-api/src/api/v1/courier.test.ts`
+
+  Ölçüldü: `courier.ts` dört `van-stock` yolu tanımlıyor, `courier.test.ts` hiçbirine istek
+  atmıyor (`grep -c van-stock` → uçta 4, testte 0). Uygulama katmanı testli (`van-stock.test.ts`);
+  boşluk yalnız HTTP katmanında — yetki, gövde doğrulama, kapsam ve idempotency anahtarının uçtan
+  geçip geçmediği hiç ölçülmüyor. Kayıt `docs/talep`teki nottan geldi; not kapandı, borç burada.
+
+- [x] (21.279) **SOHBET BİÇİMLENDİRMESİ MOBİLDE ÇİZİLİYOR — üç yüzey birden** (kullanıcı kararı 06.09; sosyal şeridiyle ortak iş)
+  `touches:` `apps/mobile/src/components/ui/{chat-text.tsx,chat-text.test.tsx,icon-paths.ts}` · `apps/mobile/src/theme/fonts.ts` · `apps/mobile/src/screens/management/{chat-bubble.tsx,complaint-screen.tsx}` · `apps/mobile/src/screens/support/ticket-detail-screen.tsx`
+
+  Kullanıcı WhatsApp biçimlendirmesinin **talep ekranlarında da** çizilmesini, hem web hem mobilde,
+  hem müşteri hem operasyonda istedi. İş **iki şerit arasında bölüşüldü**
+  (`docs/talep/sosyal-sohbet-bicimlendirmesi-cizim-motoru.md`): ayrıştırıcı sosyal şeridinde
+  (`parseChatFormatting`, commit `820b15f0`), **mobil çizici ve üç mobil yüzey burada**.
+
+  **ÇİZİCİ KİTTE** (`components/ui/chat-text.tsx`) çünkü DÖRT yüzey okuyor: operasyonun talep ve
+  sosyal yazışmaları, müşterinin kendi talep defteri. Operasyona konsaydı müşteri yüzeyi ikinci bir
+  kopya yazardı ve ayrışma yalnız tek yüzeyde görünürdü.
+
+  **TEMAYA DOKUNMUYOR:** punto, renk ve satır yüksekliği ÇAĞIRANDAN gelir (operasyon statik
+  `operationsTheme`, müşteri çalışma zamanı teması); çizicinin eklediği tek şey vurgudur.
+
+  **İTALİK YÜKLENDİ (`Karla_400Regular_Italic` · `Karla_700Bold_Italic`).** `theme/fonts` künyesi
+  *"italik yüklenmez"* diyordu ve TASARIM için hâlâ doğru — v3'ün 2067 satırında tek `font-style`
+  yok. Ama araya tasarımın çizmediği bir metin girdi: ajanın söz dizimi WhatsApp'ın grameri, bizim
+  tasarım kararımız değil. Sahte italikle üretilemezdi (`fontStyle` özel ailede iOS'ta yok sayılır,
+  Android'de taklit üretir — dosyanın `fontWeight` için yazdığı dersin aynısı). İki kesit yüklendi,
+  dördü değil: 400 ve kalın-italik birleşimi için 700 (ayrıştırıcı iç içe işaretleri TEK parçada
+  birleştiriyor, yani `*_ikisi_*` gerçekten doğuyor).
+
+  **Vurgu AİLE DEĞİŞTİREREK çiziliyor, `fontWeight`/`fontStyle` ile değil** — testi de aileye
+  bağlı, yani bir gün biri `fontWeight: 'bold'` yazarsa kırılır.
+
+  ~~**BEKLEYEN(21.279):** `ai.ts:195` ve `:358` talep taslağını hâlâ KOŞULSUZ söküyor.~~
+  **KAPANDI** — planlandığı gibi en son ve tek seferde: web'in dört yüzeyi bitince sosyal şeridi
+  iki satırı birlikte kaldırdı (`2dec2547`, 15.8). Sıra buydu çünkü bir yüzey eksikken kaldırılsa
+  orada çıplak yıldız müşteriye giderdi.
+
+  **Doğrulama:** çizicinin 8 iddiası + kit/yönetim/destek **377/377** · lint temiz · **fiziksel
+  Oppo'da dördü de görüldü**: kalın ("bedelsiz yeniden gönderim"), gerçek italik ("09:00"), üstü
+  çizili ("bugün 14:00") ve madde listesi — işaret kendi sütununda, madde içindeki kalın da
+  çiziliyor.
+
+- [x] (21.280) **AÇILAN ÇEKMECE KLAVYEYİ KAPATIR — ve yazışmanın altındaki iki kalıntı kalktı** (kullanıcı bulgusu 07.09)
+  `touches:` `apps/mobile/src/components/ui/{bottom-sheet.tsx,bottom-sheet.test.tsx}` · `apps/mobile/src/screens/management/{complaint-screen.tsx,messages.json}`
+
+  **1 · KLAVYE — kitte, çünkü arıza 33 çağıranın hepsinde var.** Cevap kutusuna dokunulup klavye
+  açıkken aksiyon çekmecesi açılınca klavye yerinde kalıyordu: çekmecenin alt payı (`keyboardPad`,
+  01.09 künyesi) klavye boyunca uzuyor ve panel ekranı dolduruyordu. **Pay yanlış değil** — o pay
+  KENDİ kutusu olan çekmeceler için doğru ve öyle kalıyor. Yanlış olan, arkadaki ekranın klavyesini
+  çekmecenin sırtına yüklemekti. Çekmece öne geçtiği anda arkadaki kutunun yazma sırası bitmiştir.
+
+  Ekran ekran değil KİTTE çözüldü: aynı kalıp 33 çağıranda tekrar ediyor ve her birinin ayrı ayrı
+  hatırlaması gereken bir kural, hatırlanmayacak bir kuraldır.
+
+  **Kendi kutusu OLAN çekmece etkilenmiyor** (asıl risk buydu): içerik `present()`ten SONRA monte
+  olur, oradaki `autoFocus` klavyeyi kendi adına açar. Cihazda ölçüldü — satış arama çekmecesi
+  açıldığında `mInputShown=true`, talep çekmecesi açıldığında `mInputShown=false`.
+
+  Pay elle de sıfırlanıyor: `keyboardDidHide` kapanma animasyonunun ARDINDAN gelir ve o çeyrek
+  saniye tam panelin açıldığı andır — beklenirse çekmece uzun açılıp gözün önünde kısalır.
+
+  **2 · "Masada devam et" YAZIŞMANIN ALTINDAN KALKTI.** 21.276'da çekmeceye eklenmişti ama
+  eskisi silinmemişti — aynı cümle iki yerde duruyordu ve kullanıcı cihazda gördü. Tasarımda
+  yazışma çubuğunda kutu ve gönderten başka hiçbir şey yok (v3:30); oraya konan her satır, cevap
+  yazmakla ilgisi olmayan bir işi cevap yazma sırasına sokar. `common.desk` anahtarı ve
+  `deskNote` kalıbı da kalktı — tek okuyanı buydu.
+
+  **3 · Cümle KAYDI YÖNET'in altından DİPNOTA indi** (kullanıcı bulgusu: *"Kaydı yönet kısmı
+  duruyor, bu kısım çalışmıyor demiştin"*). Bölüm çalışıyor: "Üstlen" cihazda ölçüldü, kayıt
+  `open` → `in_progress` oldu. Eylemsiz olan yalnız "Masada devam et"ti (tasarımda da: `onClick`i
+  yok) — ama eylem başlığının altında durunca bölümün TAMAMI yarı ölü okunuyordu. İçeriği zaten
+  kaydı yönetmenin bir yolu değil, çekmecenin SINIRI; dipnotun yanı onun yeri.
+
+  **Doğrulama:** çekmecenin 7 iddiası (biri yeni: açılan çekmece `Keyboard.dismiss` çağırır) ·
+  kit/yönetim **103/103** · mobil typecheck ve lint temiz · **fiziksel Oppo'da ölçüldü**: klavye
+  açıkken çekmece açıldı ve `dumpsys input_method` `mInputShown=false` yazdı, panel tam boyunda
+  çizildi; satış aramasında aynı ölçüm `true` kaldı.
+

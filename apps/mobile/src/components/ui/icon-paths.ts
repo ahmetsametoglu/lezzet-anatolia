@@ -147,7 +147,21 @@ export const ICON_PATHS = {
      Kanıt ikonları (`signature`, `camera`) teslimat ekranının 1. adımında, iletişim üçlüsü
      (`navigate`, `phone`, `whatsapp`) durak künyesinin altındaki eylem sırasında,
      `check-circle` ise "kaydedildi" bandında kullanılır. */
-  /** Navigasyon — kâğıt uçak; adres METNİYLE harita uygulamasına köprü (koordinat yok). */
+  /**
+   * Dikey üç nokta — "bu ekranın öteki eylemleri" (v3:30'un ⋮ menüsü, aksiyon çekmecesini açar).
+   *
+   * Üç ayrı `path`: `Icon` her yolu ayrı çiziyor ve nokta bir ÇİZGİ olarak veriliyor (aynı
+   * noktada başlayıp biten sıfır uzunlukta çizgi, yuvarlak uçla dolu daire olur) — dolgu
+   * gerektiren üç daire çizmek yerine kitin var olan çizgi kalemi kullanılıyor.
+   */
+  more: { paths: ['M12 5v.01', 'M12 12v.01', 'M12 19v.01'] },
+  /**
+   * Kâğıt uçak. İKİ ANLAMI VAR ve tasarım ikisinde de aynı glifi kullanıyor:
+   * · navigasyon — adres METNİYLE harita uygulamasına köprü (koordinat yok, kurye durağı);
+   * · gönder — yazışma kutusunun dolu daireli düğmesi (v3:30 · 32, talep ve konuşma).
+   * İkinci bir `send` girdisi aynı yolu ikinci kez yazmak olurdu (CLAUDE §1); ad glifin kendisini
+   * değil ilk kullanımını anlatıyor, o yüzden ikincisi burada adlandırıldı.
+   */
   navigate: { paths: ['M3 11l19-9-9 19-2-8-8-2z'] },
   phone: {
     paths: [

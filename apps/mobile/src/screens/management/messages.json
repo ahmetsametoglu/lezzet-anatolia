@@ -1,11 +1,9 @@
 {
   "common": {
     "back": "Geri",
-    "desk": "Masada devam et",
     "ourTurn": "top bizde",
     "error": {
       "title": "Okuma yüklenemedi",
-      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
       "retry": "Tekrar dene"
     }
   },
@@ -24,7 +22,6 @@
     "footnote": "Kararlar burada verilir; depo ve kurye ekranları yalnız uygular.",
     "error": {
       "title": "Karar kutusu yüklenemedi",
-      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
       "retry": "Tekrar dene"
     },
     "rows": {
@@ -81,15 +78,54 @@
   },
   "complaint": {
     "title": "Şikâyet / Talep",
-    "caption": "{reference} · {customer}",
-    "noRef": "siparişsiz",
+    "headCaption": "{kind} · {source}",
+    "band": {
+      "ourTurn": "Top bizde · {ago}",
+      "theirTurn": "Top onlarda · {ago}",
+      "ago": "{ago} önce",
+      "agoNow": "az önce"
+    },
+    "request": {
+      "eyebrow": "TALEP METNİ",
+      "stamp": "{source} · {stamp}",
+      "translation": "ÇEVİRİ · {from} → TR",
+      "attachments": "TALEBE EKLİ GÖRSELLER · {n}",
+      "attachmentsNote": "Talep açılışında geldi · dokun büyüt · kayda bağlı",
+      "attachmentLabel": "Ek {i} — büyüt",
+      "attachmentFailed": "Ek açılamadı"
+    },
+    "threadSeparator": "YAZIŞMA · {n} MESAJ",
+    "actions": {
+      "open": "aksiyon ›",
+      "openLabel": "Aksiyonlar",
+      "title": "Aksiyonlar",
+      "caption": "{kind} · {source} — karar cevapla aynı kayıtta yazılır.",
+      "typeLabel": "TALEP TÜRÜ",
+      "modeLabel": "ASİSTAN MODU",
+      "decisionLabel": "KARAR",
+      "manageLabel": "KAYDI YÖNET",
+      "now": "şu an",
+      "mode": {
+        "human": "insan",
+        "hybrid": "hibrit",
+        "ai": "yapay zekâ"
+      },
+      "return": "İade başlat",
+      "returnDone": "İade başlatıldı ✓",
+      "returnNoOrder": "Siparişsiz talepte iade başlatılamaz.",
+      "resolve": "Kapat — işlem yok",
+      "claim": "Üstlen",
+      "reopen": "Yeniden aç",
+      "desk": "Masada devam et — kuyruk, kurulum ve derin inceleme masaüstünde kalır.",
+      "note": "Buradaki hiçbir karar tek başına müşteriye mesaj göndermez; gönderme yazışma ekranında kalır.",
+      "done": "Bitti — cevaba dön"
+    },
     "linked": {
-      "eyebrow": "BAĞLI KAYITLAR",
+      "eyebrow": "BAĞLI KAYIT",
       "order": "sipariş {reference}",
       "orderNone": "bağlı sipariş yok",
       "trace": "kaynak: {source} · son mesaj {stamp}"
     },
-    "decision": "KARAR",
     "source": {
       "order": "sipariş",
       "form": "form",
@@ -102,27 +138,28 @@
       "question": "Soru",
       "other": "Diğer"
     },
-    "attachments": "{n} ek",
     "status": {
       "open": "Açık",
       "in_progress": "İşlemde",
       "resolved": "Çözüldü"
     },
     "author": {
-      "customer": "MÜŞTERİ · çeviri ({from} → TR)",
-      "customerOriginal": "MÜŞTERİ · orijinal ({from})",
-      "customerPlain": "MÜŞTERİ",
-      "ai": "YZ AJANI",
-      "assistantDraft": "YZ ÖNERİSİ — operatör cevabı değildir",
-      "operator": "OPERATÖR · {name}",
-      "operatorUnknown": "OPERATÖR"
+      "customerOriginal": "orijinal · {from}",
+      "ai": "yapay zekâ · {time}",
+      "operator": "operatör · {name} · {time}",
+      "operatorUnknown": "operatör · {time}"
     },
     "original": "orijinali gör",
     "translated": "çeviriyi gör",
-    "assistantSend": "Cevaba çevir →",
-    "assistantEdit": "Düzenleyerek gönder",
-    "replyPlaceholder": "Kısa cevap yaz…",
-    "replyLabel": "Talebe kısa cevap",
+    "draft": {
+      "eyebrow": "ASİSTAN TASLAĞI · GÖNDERİLMEDİ",
+      "edit": "düzenle",
+      "send": "Gönder",
+      "note": "Hibrit modda asistan kendi başına göndermez.",
+      "taken": "taslak kutuya alındı · düzenleyip gönder"
+    },
+    "replyPlaceholder": "Cevap yaz…",
+    "replyLabel": "Talebe cevap",
     "send": "Cevabı gönder",
     "sending": "Yazılıyor…",
     "claim": "Üstlen — İşlemde",
@@ -284,7 +321,6 @@
     },
     "error": {
       "title": "Liste yüklenemedi",
-      "body": "Bağlantıyı kontrol edip yeniden deneyin.",
       "retry": "Tekrar dene"
     },
     "tail": {
@@ -344,7 +380,6 @@
       },
       "notFound": {
         "title": "Sohbet yüklenemedi",
-        "body": "Bağlantıyı kontrol edip yeniden deneyin.",
         "retry": "Tekrar dene"
       }
     }

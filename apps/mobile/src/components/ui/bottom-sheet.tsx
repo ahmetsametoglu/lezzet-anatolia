@@ -84,11 +84,31 @@ export function BottomSheet({
   const shown = useRef(false);
   /** Çağıranın niyeti açık mıydı — kapanış KANCALARI buna bakar; ikisi AYNI ŞEY DEĞİL. */
   const wanted = useRef(false);
+  /** Klavyenin ekran dibinden ölçülen örtme payı — künyesi aşağıdaki dinleyicide. */
+  const [keyboardPad, setKeyboardPad] = useState(0);
 
   useEffect(() => {
     if (visible) {
       shown.current = true;
       wanted.current = true;
+      /*
+        AÇILAN ÇEKMECE KLAVYEYİ KAPATIR (kullanıcı bulgusu 07.09 · talep ekranı).
+
+        O anda açık olan klavye ARKADAKİ ekranın kutusuna aittir — cevap yazarken aksiyon
+        çekmecesi açılınca klavye yerinde kalıyor, alttaki pay (aşağıdaki künye) çekmeceyi
+        klavye boyunca uzatıyor ve panel ekranı dolduruyordu. Pay yanlış değil; yanlış olan
+        BAŞKASININ klavyesini çekmecenin sırtına yüklemek. Çekmece öne geçtiği anda arkadaki
+        kutunun yazma sırası bitmiştir.
+
+        Kendi kutusu OLAN çekmece etkilenmez: içerik `present()`ten SONRA monte olur, oradaki
+        `autoFocus` klavyeyi kendi adına yeniden açar (satış aramasında cihazda doğrulandı).
+
+        Pay burada da elle sıfırlanır: `keyboardDidHide` klavye kapanma animasyonunun ARDINDAN
+        gelir ve o çeyrek saniye tam da panelin açıldığı andır — beklenirse çekmece uzun açılıp
+        gözün önünde kısalır.
+      */
+      Keyboard.dismiss();
+      setKeyboardPad(0);
       sheet.current?.present();
       return;
     }
@@ -162,7 +182,6 @@ export function BottomSheet({
     klavyenin içinde sayılır, iki hesap aynı sayıyı verir. Ekran ölçüsü `screen`den alınır,
     `window`dan değil — `screenY` ekran koordinatıdır.
   */
-  const [keyboardPad, setKeyboardPad] = useState(0);
   useEffect(() => {
     const acildi = Keyboard.addListener('keyboardDidShow', (e) =>
       setKeyboardPad(Math.max(0, Dimensions.get('screen').height - e.endCoordinates.screenY)),

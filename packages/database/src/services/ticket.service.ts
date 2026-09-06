@@ -225,6 +225,21 @@ export class TicketService extends BaseDbService<Ticket, TicketInsert, TicketUpd
   }
 
   /**
+   * Talebin TÜRÜNÜ düzeltir (aksiyon çekmecesi, 21.276 · kullanıcı onayı 06.09).
+   *
+   * Müşterinin seçtiği tür operatörün okuduğuyla tutmayabilir: "soru" diye açılmış bir kayıt
+   * fotoğraflar gelince "bozuk" çıkar. Sütun (`ticket.type`) baştan beri var, yazanı yoktu.
+   *
+   * **Geçiş kuralı YOK ve bu bilinçli:** tür bir SINIFLANDIRMADIR, bir durum değil. İş akışını
+   * `status` yürütüyor (`canTransitionTicket`); tür yalnız kuyruğun süzgeçlerini ve raporun
+   * kümelerini besliyor. Yanlış sınıflandırılmış bir kayıt düzeltilemez olsaydı o sayılar kalıcı
+   * olarak yanlış kalırdı — ve düzeltmenin bozacağı bir akış yok.
+   */
+  setType(id: string, type: TicketType): Promise<Ticket> {
+    return this.update({ id, type });
+  }
+
+  /**
    * Bekleyen AI taslağını tüket (16.08) — gönderilmiş ya da düzenlemeye alınmış taslak satırdan
    * düşer. Cevabın kendisi buradan YAZILMAZ (`reply` ayrı kapı): tüketmek ile göndermek ayrı
    * işler ve gönderim düşerse taslak yerinde kalmalıydı — sıra bu yüzden çağıranda.

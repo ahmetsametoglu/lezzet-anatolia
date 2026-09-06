@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
+import { ChatText } from '@/components/ui/chat-text';
 import { operationsTheme } from '@/theme/unistyles';
 
 /*
@@ -60,7 +61,15 @@ export function ManagementChatBubble({ tone, body, caption, footer, testID }: Ma
   return (
     <View style={[styles.line, SIDE[tone] === 'left' ? styles.lineLeft : styles.lineRight]} testID={testID}>
       <View style={[styles.bubble, styles[tone]]}>
-        <Text style={tone === 'operator' ? styles.bodyOnInk : styles.body}>{body}</Text>
+        {/* GÖVDE SOHBET METNİ olarak çiziliyor (06.09): ajan cevaplarını `*kalın*` · `_italik_` ·
+            `~üstü çizili~` · `•` söz dizimiyle yazıyor ve bu yüzey artık onu çiziyor. Koyu
+            baloncukta kalın kesit 600 — 700 o puntoda mürekkep zeminden taşıyor. */}
+        <ChatText
+          style={tone === 'operator' ? styles.bodyOnInk : styles.body}
+          boldWeight={tone === 'operator' ? 600 : 700}
+        >
+          {body}
+        </ChatText>
       </View>
       {caption === undefined ? null : <Text style={styles.caption}>{caption}</Text>}
       {footer}

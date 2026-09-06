@@ -328,6 +328,40 @@ export type ComplaintResponse = z.infer<typeof ComplaintResponseSchema>;
 export const ComplaintReplyRequestSchema = z.object({ body: z.string().trim().min(1) });
 export type ComplaintReplyRequest = z.infer<typeof ComplaintReplyRequestSchema>;
 
+/**
+ * Talebin DURUMUNU değiştir (v3:30'un aksiyon çekmecesi · 21.276).
+ *
+ * **`/claim` ucunun yerine geçti ve o kalkTI.** Eski uç gövdesiz bir POST'tu ve hedefi kendi
+ * içinde `in_progress` diye SABİTLİYORDU; çekmece üç geçişi birden istiyor (üstlen · çöz ·
+ * yeniden aç) ve ikinci bir uç açmak aynı motor çağrısına (`changeTicketStatus`) iki kapı
+ * açmak olurdu (CLAUDE §1). Niyet artık çağıranın: ekran hangi düğmeye basıldığını bilir,
+ * uç yalnız hedefi taşır.
+ *
+ * Hangi geçişin geçerli olduğunu **motor** söyler (`canTransitionTicket`), ekran hesaplamaz —
+ * uç geçersiz hedefi `ok:false` + sebeple reddeder, HTTP hatasıyla değil.
+ */
+export const ComplaintStatusRequestSchema = z.object({ to: TicketStatusEnum });
+export type ComplaintStatusRequest = z.infer<typeof ComplaintStatusRequestSchema>;
+
+/**
+ * Yürütücü modu — çekmecenin "ASİSTAN MODU" bölümü (v3:30).
+ *
+ * Üç değer de operatörün AÇIK kararıyla seçilir; tasarım ikisini çiziyor (insan · hibrit) ama
+ * sözleşme enum'un tamamını taşıyor — kısıtlama EKRANIN kararıdır, verinin değil.
+ */
+export const ComplaintModeRequestSchema = z.object({ mode: TicketHandlerEnum });
+export type ComplaintModeRequest = z.infer<typeof ComplaintModeRequestSchema>;
+
+/**
+ * Talep türünün düzeltilmesi — çekmecenin "TALEP TÜRÜ" bölümü (v3:30).
+ *
+ * Tür bir SINIFLANDIRMADIR, durum değil: iş akışını değiştirmez, kuyruğun süzgeçlerini besler.
+ * Ölçüldü (06.09): türü okuyan tek karar noktası `isReturnBound` ve o bir işaret, yasak değil —
+ * `canTriggerReturn` türe hiç bakmıyor. Yani sonradan düzeltmek geçmişi tutarsız bırakmıyor.
+ */
+export const ComplaintTypeRequestSchema = z.object({ type: TicketTypeEnum });
+export type ComplaintTypeRequest = z.infer<typeof ComplaintTypeRequestSchema>;
+
 /** Yazma kapılarının ortak zarfı — red bir CÜMLEDİR (`TicketWriteResult` deseni), HTTP hatası değil. */
 export const TicketActionResponseSchema = z.object({
   ok: z.boolean(),

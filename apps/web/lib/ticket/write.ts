@@ -1,12 +1,14 @@
 import 'server-only';
 import { TicketService, serviceDb } from '@lezzet/database';
-import { canTriggerReturn, statusAfterCustomerReply } from '@lezzet/domain-core';
+import { statusAfterCustomerReply } from '@lezzet/domain-core';
 import {
   changeTicketStatus as appChangeTicketStatus,
   consumeTicketDraft as appConsumeTicketDraft,
   openTicket as appOpenTicket,
   replyAsStaff as appReplyAsStaff,
+  setTicketMode as appSetTicketMode,
   takeOverTicket as appTakeOverTicket,
+  triggerReturnFromTicket as appTriggerReturnFromTicket,
   ticketAttachmentsBelongTo,
   translateTicketMessageNow,
   type TicketWriteResult,
@@ -103,17 +105,9 @@ export function takeOverTicket(ticketId: string): Promise<TicketWriteResult<Tick
   return appTakeOverTicket(serviceDb(), ticketId);
 }
 
-/**
- * Yürütücü modunu değiştir (kullanıcı kararı 16.08): human · hybrid · ai. Motor (16.5) henüz yok
- * ama mod bir VERİ kararıdır ve bugünden yazılır. Aynı moda "geçmek" reddedilir: ekran o düğmeyi
- * zaten seçili gösterir, yine de gelen çağrı bir yarışın işaretidir ve sessizce yutulmamalı.
- */
-export async function setTicketMode(ticketId: string, mode: Ticket['handledBy']): Promise<TicketWriteResult<Ticket>> {
-  const service = new TicketService(serviceDb());
-  const ticket = await service.getById(ticketId);
-  if (!ticket) return { ok: false, reason: 'not_found' };
-  if (ticket.handledBy === mode) return { ok: false, reason: 'already_in_mode' };
-  return { ok: true, data: await service.setMode(ticket.id, mode) };
+/** Yürütücü modu — KÖPRÜ (gövde: `staff-write.setTicketMode`; terfi 06.09, ikinci yüzey mobil). */
+export function setTicketMode(ticketId: string, mode: Ticket['handledBy']): Promise<TicketWriteResult<Ticket>> {
+  return appSetTicketMode(serviceDb(), { ticketId, mode });
 }
 
 /** Hibrit taslağı tüket — KÖPRÜ (gövde: `staff-write.consumeTicketDraft`; önce gönder, sonra temizle). */
@@ -125,20 +119,7 @@ export function consumeTicketDraft(input: {
   return appConsumeTicketDraft(serviceDb(), input);
 }
 
-/**
- * İade akışını bu talepten başlat — **yalnız damga.**
- *
- * Para ve stok burada HİÇ hareket etmez: iade siparişte yaşar (`adjustFulfillment` +
- * `recordForOrder`, 07.9) ve operatör oraya yönlendirilir. Bu kapı yalnız "iadeyi hangi talep
- * doğurdu" sorusunu cevaplanabilir kılar; ikinci bir iade arayüzü kurmaz (DOMAIN §8).
- */
-export async function triggerReturnFromTicket(ticketId: string): Promise<TicketWriteResult<Ticket>> {
-  const service = new TicketService(serviceDb());
-  const ticket = await service.getById(ticketId);
-  if (!ticket) return { ok: false, reason: 'not_found' };
-
-  const check = canTriggerReturn(ticket);
-  if (!check.allowed) return { ok: false, reason: check.reason };
-
-  return { ok: true, data: await service.markReturnTriggered(ticket.id) };
+/** İade damgası — KÖPRÜ (gövde: `staff-write.triggerReturnFromTicket`; terfi 06.09). */
+export function triggerReturnFromTicket(ticketId: string): Promise<TicketWriteResult<Ticket>> {
+  return appTriggerReturnFromTicket(serviceDb(), ticketId);
 }

@@ -1,12 +1,34 @@
-import { Karla_400Regular, Karla_600SemiBold, Karla_700Bold, Karla_800ExtraBold } from '@expo-google-fonts/karla';
+import {
+  Karla_400Regular,
+  Karla_400Regular_Italic,
+  Karla_600SemiBold,
+  Karla_700Bold,
+  Karla_700Bold_Italic,
+  Karla_800ExtraBold,
+} from '@expo-google-fonts/karla';
 import { Lora_400Regular, Lora_600SemiBold } from '@expo-google-fonts/lora';
 
 /*
   FONT VARLIKLARI — Token Kararlari #24.
 
-  İKİ AİLE, BEŞ AĞIRLIK: başlık Lora 400·600, gövde Karla 400·600·700. İTALİK YÜKLENMEZ —
-  tasarımın 2067 satırında tek bir `font-style:italic` yok (yalnız VISA logosunun kendi metni,
-  o da bir marka işareti). Yüklenmeyen her varyant açılış süresinden ve paket boyundan düşer.
+  İKİ AİLE, BEŞ AĞIRLIK: başlık Lora 400·600, gövde Karla 400·600·700. Yüklenmeyen her varyant
+  açılış süresinden ve paket boyundan düşer.
+
+  ── "İTALİK YÜKLENMEZ" KARARI DOĞRUYDU VE BAYATLADI (06.09) ─────────────────
+  Kural şuydu: *"italik yüklenmez — tasarımın 2067 satırında tek bir `font-style:italic` yok
+  (yalnız VISA logosunun kendi metni, o da bir marka işareti)"*. Ölçüm doğruydu ve HÂLÂ doğru;
+  değişen şey ölçülen küme. O gün tasarım yalnız **insanın yazdığı** metni çiziyordu. Araya
+  ajanın yazdığı metin girdi ve kendi tipografisini getirdi: sohbet biçimlendirmesi
+  (`domain-core/messaging/chat-formatting`) `*kalın*` · `_italik_` · `~üstü çizili~` söz
+  dizimini kullanıyor ve o söz dizimi WhatsApp'ın grameri, bizim tasarım kararımız değil.
+
+  Karar silinmedi çünkü hâlâ geçerli: **tasarımın kendi metinlerinde italik yok ve yazılmamalı.**
+  İtalik YALNIZ mesaj gövdesinde, yalnız `ChatText` çizerken doğar. İki kesit yüklendi (400 ve
+  kalın-italik birleşimi için 700), dördü değil — 600 ve 800 italiği hiçbir yerde istenmiyor.
+
+  Sahte italik denenmedi çünkü denenemezdi: `fontStyle` özel bir ailede iOS'ta yok sayılıyor,
+  Android'de eğik bir taklit üretiyor — aşağıdaki `fontWeight` dersinin birebir aynısı ve aynı
+  sınıftan bir arıza (tek platformda görünen fark).
 
   NEDEN `@expo-google-fonts/*` PAKETLERİ, `assets/fonts/*.ttf` DEĞİL: paket sürümlü ve kilitli
   (`pnpm-lock.yaml`), yani aynı commit her makinede AYNI dosyayı verir. Repoya elle atılan bir
@@ -56,6 +78,20 @@ export const appFontAssets = {
      okunuyor. Sahte kalınla üretilemez: dosyanın kendi kuralı `fontWeight` yazmayı yasaklıyor
      (ağırlık aile adının içinde) ve yazılsaydı iki platformda da sistem fontuna düşerdi. */
   Karla_800ExtraBold,
+  /* İTALİK AÇILDI (06.09) — bu dosyanın tepesindeki *"italik yüklenmez"* notu TASARIM için
+     doğruydu ve hâlâ doğru: v3'ün 2067 satırında tek bir `font-style:italic` yok. Ama araya
+     tasarımın çizmediği bir metin girdi — **sohbet biçimlendirmesi**: yapay zekâ cevaplarını
+     `*kalın*` · `_italik_` · `~üstü çizili~` söz dizimiyle yazıyor (`domain-core/messaging/
+     chat-formatting`) ve o söz dizimi WhatsApp'ın kendi grameri, bizim tasarım kararımız değil.
+     İtaliği çizemeyen bir yüzeyde işaret sessizce düşer ve ajanın vurgusu kaybolur.
+
+     Sahte italikle üretilemez: `fontStyle:'italic'` özel bir ailede iOS'ta yok sayılıyor,
+     Android'de eğik bir taklit üretiyor — dosyanın `fontWeight` için yazdığı dersin aynısı.
+     İki kesit yüklendi, dördü değil: gövde metni 400, kalın-italik birleşimi için 700
+     (ayrıştırıcı iç içe işaretleri TEK span'da birleştiriyor, yani `*_ikisi_*` gerçekten
+     doğuyor). 600 ve 800 italik hiçbir yerde istenmiyor. */
+  Karla_400Regular_Italic,
+  Karla_700Bold_Italic,
 } as const;
 
 /** Yüklenen aile adlarının birliği — seam bunun DIŞINA çıkamaz (aşağıdaki `satisfies` zorlar). */
@@ -80,5 +116,16 @@ export const appFont = {
     600: 'Karla_600SemiBold',
     700: 'Karla_700Bold',
     800: 'Karla_800ExtraBold',
+  },
+  /**
+   * Sohbet biçimlendirmesinin italik kesitleri — YALNIZ mesaj gövdesi çizer (`ChatText`).
+   *
+   * Ayrı bir rol olarak duruyor, `body`nin içine karışmıyor: `body[400]` ile `bodyItalic[400]`
+   * aynı ağırlığın iki KESİTİdir, iki ağırlık değil. Aynı demete konsaydı ölçek anahtarı
+   * (400·600·700·800) anlamını kaybederdi.
+   */
+  bodyItalic: {
+    400: 'Karla_400Regular_Italic',
+    700: 'Karla_700Bold_Italic',
   },
 } as const satisfies Record<string, Record<number, LoadedFontFamily>>;

@@ -323,13 +323,48 @@ describe('Y1 · şikâyet / talep detayı', () => {
     expect(after.complaint!.awaitingReply).toBe(false);
   });
 
+  /* "Üstlen" ARTIK KENDİ UCU DEĞİL, DURUM KAPISININ BİR ÇAĞRISI (21.276): çekmece dört geçişi de
+     aynı kapıdan yazıyor ve hangisinin açık olduğunu MOTOR söylüyor. Ayrı bir `/claim` ucu, aynı
+     motor çağrısına ikinci bir ad vermek olurdu. */
   it('ÜSTLEN durum kapısından geçer; ikinci üstlenme reddi bir CÜMLEDİR, HTTP hatası değil', async () => {
-    const claim = await envelopeData<TicketActionResponse>(await post(admin, `complaints/${ticketId}/claim`, {}));
+    const claim = await envelopeData<TicketActionResponse>(
+      await post(admin, `complaints/${ticketId}/status`, { to: 'in_progress' }),
+    );
     expect(claim.ok).toBe(true);
 
-    const again = await envelopeData<TicketActionResponse>(await post(admin, `complaints/${ticketId}/claim`, {}));
+    const again = await envelopeData<TicketActionResponse>(
+      await post(admin, `complaints/${ticketId}/status`, { to: 'in_progress' }),
+    );
     expect(again.ok).toBe(false);
     expect(typeof again.reason).toBe('string');
+  });
+
+  /* ÇEKMECENİN ÖTEKİ ÜÇ KAPISI (21.276). Hepsi tek zarfı konuşuyor: ret bir CÜMLEDİR, HTTP hatası
+     değil — ekran sebebi kendi diline çevirir. İade burada YALNIZ damgadır; tutar ve akıbet
+     siparişte seçilir (DOMAIN §8), o yüzden motorun mutlu yolu `apps/web/lib/ticket/ticket.test.ts`te
+     ve kapısı `ticket-flow.test.ts`te ölçülüyor. Ucun kendi işi kablolamayı kanıtlamaktır. */
+  it('TÜR sınıflandırma, MOD geçişi ve İADE damgası aynı zarftan konuşur', async () => {
+    const type = await envelopeData<TicketActionResponse>(
+      await post(admin, `complaints/${ticketId}/type`, { type: 'damaged' }),
+    );
+    expect(type).toEqual({ ok: true, reason: null });
+
+    // Fikstür `form` kaynaklı ve varsayılan modda; ilk geçiş açık, aynı moda ikincisi reddedilir.
+    const mode = await envelopeData<TicketActionResponse>(
+      await post(admin, `complaints/${ticketId}/mode`, { mode: 'ai' }),
+    );
+    expect(mode).toEqual({ ok: true, reason: null });
+
+    const sameMode = await envelopeData<TicketActionResponse>(
+      await post(admin, `complaints/${ticketId}/mode`, { mode: 'ai' }),
+    );
+    expect(sameMode.ok).toBe(false);
+    expect(typeof sameMode.reason).toBe('string');
+
+    /* Fikstürün siparişi YOK — motorun `no_order` dalı. Ucun kanıtlaması gereken tam olarak bu:
+       rota kayıtlı, gövde okundu, motor çağrıldı ve reddi 4xx değil CÜMLE olarak döndü. */
+    const ret = await envelopeData<TicketActionResponse>(await post(admin, `complaints/${ticketId}/return`, {}));
+    expect(ret).toEqual({ ok: false, reason: 'no_order' });
   });
 
   it('taslak yokken tüketme reddi adlandırılır: no_draft', async () => {

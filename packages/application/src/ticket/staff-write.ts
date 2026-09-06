@@ -1,8 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { OrderItemService, OrderService, TicketService } from '@lezzet/database';
-import { canTransitionTicket, checkTicketDraft, statusAfterStaffReply } from '@lezzet/domain-core';
+import { canTransitionTicket, canTriggerReturn, checkTicketDraft, statusAfterStaffReply } from '@lezzet/domain-core';
 import { ticketAttachmentScope } from '@lezzet/storage';
-import type { Ticket, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
+import type { Ticket, TicketHandler, TicketMessage, TicketStatus, TicketType } from '@lezzet/types';
 import { notifyTicketReceived, notifyTicketStatusChanged } from './notify';
 import { queueTicketReplyMail } from './reply-mail';
 import { ringTicketBell } from '../realtime/bell';
@@ -183,6 +183,81 @@ export async function changeTicketStatus(
   // bildirim katmanı verir (16.4), burası olayı bildirmekle yetinir.
   await notifyTicketStatusChanged(db, updated, ticket.status, input.by);
   return { ok: true, data: updated };
+}
+
+/**
+ * Talebin TÜRÜNÜ düzelt (aksiyon çekmecesi, 21.276) — "soru" diye açılmış kayıt fotoğraflar
+ * gelince "bozuk" çıkabilir.
+ *
+ * Durum makinesinin aksine geçiş kuralı YOK: tür bir sınıflandırmadır, iş akışını `status`
+ * yürütür (servis künyesi). Aynı türe "geçmek" yine de reddediliyor — ekran o düğmeyi zaten
+ * seçili gösterir, gelen çağrı bir yarışın işaretidir ve sessizce yutulmamalı (`setTicketMode`
+ * ile aynı gerekçe).
+ *
+ * ── "SONRADAN TÜR DEĞİŞTİRMEK GEÇMİŞİ TUTARSIZ BIRAKIR MI?" — ÖLÇÜLDÜ, HAYIR ─
+ * Soru şerit dışından geldi (06.09) ve haklıydı: türe bakan bir iş kuralı varsa, sonradan
+ * değiştirmek o kararı geçmişe dönük yanlış yapardı. Ölçüm: türü okuyan TEK karar noktası
+ * `isReturnBound` / `RETURN_BOUND_TYPES` ve künyesi zaten *"bir YASAK değil bir İŞARET'tir —
+ * `canTriggerReturn` tipe bakmaz"* diyor; üstelik `isReturnBound`ın bugün hiç tüketicisi yok.
+ * İade tetiği türe değil siparişin varlığına ve damgaya bakıyor. Kalan tek okuma bildirim
+ * gövdesi (`notify.ts`) — o da olayın anındaki fotoğrafı, geçmişe dönük hesaplanan bir şey değil.
+ * Yani tür düzeltmesi hiçbir kararı geriye dönük bozmuyor.
+ */
+export async function setTicketType(
+  db: SupabaseClient,
+  input: { ticketId: string; type: TicketType },
+): Promise<TicketWriteResult<Ticket>> {
+  const service = new TicketService(db);
+  const ticket = await service.getById(input.ticketId);
+  if (!ticket) return { ok: false, reason: 'not_found' };
+  if (ticket.type === input.type) return { ok: false, reason: 'already_in_type' };
+  return { ok: true, data: await service.setType(ticket.id, input.type) };
+}
+
+/**
+ * Yürütücü modunu değiştir (kullanıcı kararı 16.08): human · hybrid · ai.
+ *
+ * **TERFİ (06.09):** gövdesi `apps/web/lib/ticket/write.ts`te duruyordu ve web'e özgü sayılmıştı;
+ * mobilin aksiyon çekmecesi ikinci yüzey olunca ölçüt karşılandı (paketin kuralı: "en az iki
+ * yüzeyin çağırdığı orkestrasyon"). Web tarafı köprüye döndü — öteki beşiyle aynı desen.
+ *
+ * Aynı moda "geçmek" reddedilir: ekran o düğmeyi zaten seçili gösterir, yine de gelen çağrı bir
+ * yarışın işaretidir ve sessizce yutulmamalı.
+ */
+export async function setTicketMode(
+  db: SupabaseClient,
+  input: { ticketId: string; mode: TicketHandler },
+): Promise<TicketWriteResult<Ticket>> {
+  const service = new TicketService(db);
+  const ticket = await service.getById(input.ticketId);
+  if (!ticket) return { ok: false, reason: 'not_found' };
+  if (ticket.handledBy === input.mode) return { ok: false, reason: 'already_in_mode' };
+  return { ok: true, data: await service.setMode(ticket.id, input.mode) };
+}
+
+/**
+ * İade akışını bu talepten başlat — **yalnız damga** (TERFİ 06.09, gerekçe `setTicketMode`de).
+ *
+ * Para ve stok burada HİÇ hareket etmez: iade siparişte yaşar (`adjustFulfillment` +
+ * `recordForOrder`, 07.9) ve operatör oraya yönlendirilir. Bu kapı yalnız "iadeyi hangi talep
+ * doğurdu" sorusunu cevaplanabilir kılar; ikinci bir iade arayüzü kurmaz (DOMAIN §8).
+ *
+ * **Akıbet (`restock` · `discard` · `goodwill`) BURADA SEÇİLMEZ** ve bu ayrım tasarımla açık bir
+ * fark: v3'ün çekmecesi karar setini talebe koyuyor, sistem ise siparişe. Talep tarafında iki
+ * ayrı düğme (ör. "iade" ve "jest") aynı damgayı yazardı — tek kapı, tek ad.
+ */
+export async function triggerReturnFromTicket(
+  db: SupabaseClient,
+  ticketId: string,
+): Promise<TicketWriteResult<Ticket>> {
+  const service = new TicketService(db);
+  const ticket = await service.getById(ticketId);
+  if (!ticket) return { ok: false, reason: 'not_found' };
+
+  const check = canTriggerReturn(ticket);
+  if (!check.allowed) return { ok: false, reason: check.reason };
+
+  return { ok: true, data: await service.markReturnTriggered(ticket.id) };
 }
 
 /**

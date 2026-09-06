@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { claimComplaint, consumeComplaintDraft, fetchComplaint, replyComplaint } from '@/lib/api/management';
-import type { ComplaintDetail } from '@lezzet/types';
+import type { ApiFail } from '@/lib/api/client';
+import {
+  consumeComplaintDraft,
+  fetchComplaint,
+  replyComplaint,
+  setComplaintMode,
+  setComplaintStatus,
+  setComplaintType,
+  triggerComplaintReturn,
+} from '@/lib/api/management';
+import type { ComplaintDetail, TicketHandler, TicketStatus, TicketType } from '@lezzet/types';
 
 /*
   Y1 · ŞİKÂYET/TALEP KANCASI (21.12) — detay + üç yazma kapısı (cevap · üstlen · taslak tüket).
@@ -16,7 +25,9 @@ import type { ComplaintDetail } from '@lezzet/types';
 
 type ComplaintState =
   | { status: 'loading' }
-  | { status: 'error' }
+  /** Düşen çağrı taşınır (06.09 kararı — `lib/api/client` `failureCauseOf` künyesi): ekran
+      "niçin" cümlesini ondan kurar. `null` = cevap 200 döndü ama gövde boştu; sebep iddia edilmez. */
+  | { status: 'error'; failure: ApiFail | null }
   | { status: 'ready'; complaint: ComplaintDetail | null };
 
 interface UseComplaintResult {
@@ -27,7 +38,14 @@ interface UseComplaintResult {
   /** Son yazımın reddi — sunucunun cümle anahtarı; başarılı yazım sıfırlar. */
   lastError: string | null;
   sendReply: () => void;
-  claim: () => void;
+  /** Durum geçişi — "Üstlen" bunun `in_progress` çağrısı (21.276). İzni motor verir. */
+  setStatus: (to: TicketStatus) => void;
+  /** Yürütücü modu (çekmece). Aynı moda geçiş sunucuda reddedilir, ekran onu zaten seçili çizer. */
+  setMode: (mode: TicketHandler) => void;
+  /** Talep türünün düzeltilmesi (çekmece) — sınıflandırma, iş akışı değil. */
+  setType: (type: TicketType) => void;
+  /** İade damgası (çekmece) — tutar ve akıbet siparişte seçilir. */
+  triggerReturn: () => void;
   /** true = taslak olduğu gibi cevap olur; false = taslak metni cevap kutusuna taşınır. */
   consumeDraft: (send: boolean) => void;
   retry: () => void;
@@ -50,7 +68,7 @@ export function useComplaint(ticketId: string | undefined): UseComplaintResult {
     const result = await fetchComplaint(pinnedId.current);
     if (run !== generation.current) return;
     if (result.error !== null || result.data === null) {
-      setState({ status: 'error' });
+      setState({ status: 'error', failure: result.error !== null ? result : null });
       return;
     }
     if (result.data.complaint !== null) pinnedId.current = result.data.complaint.ticketId;
@@ -96,9 +114,24 @@ export function useComplaint(ticketId: string | undefined): UseComplaintResult {
         return result.data;
       });
     },
-    claim: () =>
+    setStatus: (to) =>
       act(async (id) => {
-        const result = await claimComplaint(id);
+        const result = await setComplaintStatus(id, to);
+        return result.error !== null || result.data === null ? null : result.data;
+      }),
+    setMode: (mode) =>
+      act(async (id) => {
+        const result = await setComplaintMode(id, mode);
+        return result.error !== null || result.data === null ? null : result.data;
+      }),
+    setType: (type) =>
+      act(async (id) => {
+        const result = await setComplaintType(id, type);
+        return result.error !== null || result.data === null ? null : result.data;
+      }),
+    triggerReturn: () =>
+      act(async (id) => {
+        const result = await triggerComplaintReturn(id);
         return result.error !== null || result.data === null ? null : result.data;
       }),
     consumeDraft: (send) =>

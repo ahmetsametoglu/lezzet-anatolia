@@ -211,10 +211,102 @@ describe('Y1 · şikâyet', () => {
     });
 
     await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
-    await fireEvent.press(screen.getByTestId('management-complaint-claim'));
+    await fireEvent.press(screen.getByTestId('management-complaint-actions-band'));
+    await fireEvent.press(screen.getByTestId('management-complaint-status-in_progress'));
 
     await waitFor(() => expect(screen.getByTestId('management-complaint-action-error')).toBeOnTheScreen());
     expect(screen.getByText(/already_human/u)).toBeOnTheScreen();
+  });
+
+  /* AKSİYON ÇEKMECESİ (21.276) — tasarımın ⋮ menüsü. Çizilen tek bölüm DURUM ve hangi geçişin
+     açık olduğunu MOTOR söylüyor; ekran listeyi kendisi hesaplamıyor. */
+  it('v3 · çekmece iki kapıdan açılır ve durumu SUNUCUYA yazar', async () => {
+    fetchMock.mockImplementation((url, init) => {
+      if (init?.method === 'POST') return Promise.resolve(ok({ ok: true, reason: null }));
+      return Promise.resolve(ok(complaintData()));
+    });
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    await fireEvent.press(screen.getByTestId('management-complaint-actions-open'));
+    await fireEvent.press(screen.getByTestId('management-complaint-status-resolved'));
+
+    await waitFor(() => {
+      const { url, body } = lastPost();
+      expect(url).toContain(`/management/complaints/${TICKET}/status`);
+      expect(body).toEqual({ to: 'resolved' });
+    });
+  });
+
+  /* Çekmecenin dört bölümü de aynı kuralı paylaşıyor: ŞU ANKİ seçenek basılamaz. Basılabilseydi
+     sunucu `already_in_*` ile reddederdi — ekran o reddi hiç doğurmamalı. */
+  it('v3 · şu anki tür ve şu anki mod basılamaz', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData()));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+    await fireEvent.press(screen.getByTestId('management-complaint-actions-open'));
+
+    // Fikstür: type `damaged`, handledBy `hybrid`.
+    await fireEvent.press(screen.getByTestId('management-complaint-type-damaged'));
+    await fireEvent.press(screen.getByTestId('management-complaint-mode-hybrid'));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+  });
+
+  it('v3 · tür düzeltmesi ve mod değişimi SUNUCUYA yazılır', async () => {
+    fetchMock.mockImplementation((url, init) => {
+      if (init?.method === 'POST') return Promise.resolve(ok({ ok: true, reason: null }));
+      return Promise.resolve(ok(complaintData()));
+    });
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+    await fireEvent.press(screen.getByTestId('management-complaint-actions-open'));
+
+    await fireEvent.press(screen.getByTestId('management-complaint-type-question'));
+    await waitFor(() => {
+      const { url, body } = lastPost();
+      expect(url).toContain(`/management/complaints/${TICKET}/type`);
+      expect(body).toEqual({ type: 'question' });
+    });
+
+    await fireEvent.press(screen.getByTestId('management-complaint-mode-human'));
+    await waitFor(() => {
+      const { url, body } = lastPost();
+      expect(url).toContain(`/management/complaints/${TICKET}/mode`);
+      expect(body).toEqual({ mode: 'human' });
+    });
+  });
+
+  /* İade DAMGADIR: tutar ve akıbet siparişte seçilir. Siparişsiz talepte kapı kapalı ve sebebi
+     düğmenin kendi metninde — sönük ama sessiz bir düğme, neden basılamadığını söylemez. */
+  it('v3 · siparişsiz talepte iade başlatılamaz, sebebi düğmede yazar', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData({ orderReferenceNo: null })));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+    await fireEvent.press(screen.getByTestId('management-complaint-actions-open'));
+
+    expect(screen.getByTestId('management-complaint-return')).toHaveTextContent(t.complaint.actions.returnNoOrder);
+    await fireEvent.press(screen.getByTestId('management-complaint-return'));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+  });
+
+  it('v3 · siparişli talepte iade damgası POST edilir', async () => {
+    fetchMock.mockImplementation((url, init) => {
+      if (init?.method === 'POST') return Promise.resolve(ok({ ok: true, reason: null }));
+      return Promise.resolve(ok(complaintData()));
+    });
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+    await fireEvent.press(screen.getByTestId('management-complaint-actions-open'));
+    await fireEvent.press(screen.getByTestId('management-complaint-return'));
+
+    await waitFor(() => expect(lastPost().url).toContain(`/management/complaints/${TICKET}/return`));
+  });
+
+  /* Motorun kapattığı geçiş SÖNÜK çizilir, gizlenmez: operatör "hangi hâller var" sorusunu da
+     bu çekmeceden okuyor. `resolved` talepte `in_progress` kapalıdır (staff geçiş tablosu). */
+  it('v3 · motorun kapattığı geçiş basılamaz ama görünür kalır', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData({ status: 'resolved' })));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+    await fireEvent.press(screen.getByTestId('management-complaint-actions-open'));
+
+    expect(screen.getByTestId('management-complaint-status-in_progress')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('management-complaint-status-in_progress'));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
 
   it('bekleyen talep yoksa dürüst boş hâl', async () => {
@@ -225,17 +317,133 @@ describe('Y1 · şikâyet', () => {
     expect(screen.getByTestId('management-complaint-empty')).toBeOnTheScreen();
   });
 
-  /* v3 (30.08): künye "referans · müşteri" oldu, kaynak ve damga BAĞLI KAYITLAR bloğuna indi.
-     Test bağın kendisini çiviliyor — sipariş referansı orada görünmeli ve siparişsiz talepte
-     blok boş bir referans uydurmamalı. */
-  it('v3 · künye "referans · müşteri"dir; bağlı kayıtlar bloğu siparişi söyler', async () => {
+  /* v3 yazışma yarısı (06.09): başlık MÜŞTERİNİN ADI, künye "tür · kanal". Referans NUMARASI
+     yazılmıyor çünkü `public.ticket`te öyle bir kolon yok — tasarımın "SK-26-8H2P"si uydurma
+     olurdu. Bağlı kayıt bloğu talep metni kartının içinde ve siparişi söylüyor. */
+  it('v3 · başlık müşterinin adı, künye "tür · kanal"; bağlı kayıt siparişi söyler', async () => {
     fetchMock.mockResolvedValue(ok(complaintData()));
     await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
 
+    expect(screen.getByText('Claire Muller')).toBeOnTheScreen();
+    expect(screen.getByText('bozuk · sipariş')).toBeOnTheScreen();
     expect(screen.getByTestId('management-complaint-linked')).toBeOnTheScreen();
     expect(screen.getByText(t.complaint.linked.order.replace('{reference}', 'LA-26-TEST01'))).toBeOnTheScreen();
-    // Künye artık kaynağı değil müşteriyi yazıyor.
-    expect(screen.getByText('LA-26-TEST01 · Claire Muller')).toBeOnTheScreen();
+  });
+
+  /* Tasarımın anlatım kartı: ilk mesaj baloncuk DEĞİL, kendi kutusunda ve künyesiyle duruyor —
+     kararın dayanağı odur ve baloncuk dizisinin içinde kayboluyordu. */
+  it('v3 · ilk mesaj TALEP METNİ kartında; tek mesajlı talepte yazışma ayracı ÇİZİLMEZ', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData()));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.getByTestId('management-complaint-request')).toBeOnTheScreen();
+    expect(screen.getByText(t.complaint.request.eyebrow)).toBeOnTheScreen();
+    expect(screen.queryByTestId('management-complaint-thread-separator')).toBeNull();
+  });
+
+  it('v3 · yazışma ayracı MESAJIN TAMAMINI sayar (talep metni dahil)', async () => {
+    fetchMock.mockResolvedValue(
+      ok(
+        complaintData({
+          messages: [
+            ...(complaintData().complaint?.messages ?? []),
+            {
+              id: '00000000-0000-4000-8000-0000000000c2',
+              sender: 'admin',
+              body: 'Yarın yenisini gönderiyoruz.',
+              bodyTranslated: false,
+              originalBody: 'Yarın yenisini gönderiyoruz.',
+              language: null,
+              authorName: 'Selin',
+              attachmentUrls: [],
+              createdAt: '2026-08-26T10:00:00Z',
+            },
+          ],
+        }),
+      ),
+    );
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.getByTestId('management-complaint-thread-separator')).toHaveTextContent(/·\s*2\s*MESAJ/u);
+    /* Operatör künyesi SAATİ taşıyor (v3: "operatör · Elif · 13:31") — adı yazıp saati atmak,
+       yazışmanın ritmini okunmaz yapardı. */
+    expect(screen.getByText(/operatör · Selin ·/u)).toBeOnTheScreen();
+  });
+
+  /* Ekler sözleşmede ZATEN var ve uçta imzalı üretiliyor; ızgara uydurma değil. Boş dizide hiç
+     çizilmez — "0 görsel" başlığı, olmayan bir kutunun sözünü vermek olurdu. */
+  it('v3 · eksiz talepte ekli görseller ızgarası HİÇ çizilmez', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData()));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.queryByTestId('management-complaint-attachments')).toBeNull();
+  });
+
+  /* Ekler sözleşmede ZATEN var ve uçta imzalı üretiliyor; ızgara uydurma değil, gelen adresleri
+     çiziyor. */
+  it('v3 · ekli görseller ızgarası gerçek eklerden doğar', async () => {
+    const first = complaintData().complaint?.messages[0];
+    if (first === undefined) throw new Error('fikstür bozuk');
+    fetchMock.mockResolvedValue(
+      ok(complaintData({ messages: [{ ...first, attachmentUrls: ['https://x/1.jpg', 'https://x/2.jpg'] }] })),
+    );
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.getByTestId('management-complaint-attachments')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-complaint-attachment-0')).toBeOnTheScreen();
+    expect(screen.getByTestId('management-complaint-attachment-1')).toBeOnTheScreen();
+  });
+
+  /* Bandın taşıdığı tek zaman GERÇEK olan: son mesajın yaşı. Tasarımın "22 sa kaldı" sayacı
+     çizilmedi (talepte SLA yok) — bant yalnız topun kimde olduğunu ve beklemeyi söyler. */
+  it('v3 · durum bandı "top bizde" der ve SÜRE SAYACI uydurmaz', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData()));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.getByTestId('management-complaint-band')).toHaveTextContent(/^Top bizde · /u);
+    expect(screen.queryByText(/kaldı/u)).toBeNull();
+  });
+
+  it('v3 · cevap onlardayken bant taraf değiştirir', async () => {
+    fetchMock.mockResolvedValue(ok(complaintData({ awaitingReply: false })));
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    expect(screen.getByTestId('management-complaint-band')).toHaveTextContent(/^Top onlarda · /u);
+  });
+
+  /* Düğmenin sönük olduğunu RENGİNDEN değil, YAZMADIĞINDAN sınıyoruz: boş kutuyla basılan gönder
+     bir ağ turu başlatmamalı. */
+  it('v3 · boş kutuda gönder hiçbir şey yazmaz, yazınca cevap POST edilir', async () => {
+    fetchMock.mockImplementation((url, init) => {
+      if (init?.method === 'POST') return Promise.resolve(ok({ ok: true, reason: null }));
+      return Promise.resolve(ok(complaintData()));
+    });
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+
+    await fireEvent.press(screen.getByLabelText(t.complaint.send));
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
+
+    await fireEvent.changeText(screen.getByTestId('management-complaint-reply'), 'Yarın yenisi geliyor.');
+    await fireEvent.press(screen.getByLabelText(t.complaint.send));
+
+    await waitFor(() => {
+      const { url, body } = lastPost();
+      expect(url).toContain(`/management/complaints/${TICKET}/reply`);
+      expect(body).toEqual({ body: 'Yarın yenisi geliyor.' });
+    });
+  });
+
+  /* "düzenle" taslağı kutuya taşıyor; yuvanın yerinde kalan satır operatöre metnin NEREDE
+     olduğunu söyler. Kutu boşalınca satır da düşer — boş kutunun üstünde "kutuya alındı" yalan. */
+  it('v3 · taslak kutuya alınınca yerinde "kutuya alındı" satırı kalır, kutu boşalınca düşer', async () => {
+    fetchMock.mockImplementation((url, init) => {
+      if (init?.method === 'POST') return Promise.resolve(ok({ ok: true, draft: 'SUNUCUDAN dönen taslak metni' }));
+      return Promise.resolve(ok(complaintData({ aiDraftReply: null })));
+    });
+
+    await renderScreen(<ComplaintScreen />, 'management-complaint-loading');
+    await fireEvent.changeText(screen.getByTestId('management-complaint-reply'), 'elle yazılmış');
+    expect(screen.queryByTestId('management-complaint-draft-taken')).toBeNull();
   });
 
   it('v3 · siparişsiz talepte bağlı kayıt bloğu YOKLUĞU söyler, referans uydurmaz', async () => {

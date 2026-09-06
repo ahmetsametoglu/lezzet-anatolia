@@ -21,6 +21,9 @@ import {
   type SupplyResponse,
   type TicketActionResponse,
   TicketActionResponseSchema,
+  type TicketHandler,
+  type TicketStatus,
+  type TicketType,
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
@@ -73,8 +76,36 @@ export function replyComplaint(ticketId: string, body: string): Promise<ApiResul
   });
 }
 
-export function claimComplaint(ticketId: string): Promise<ApiResult<TicketActionResponse>> {
-  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/claim`, TicketActionResponseSchema, {
+/**
+ * Durum geçişi — `claimComplaint`in yerine geçti (21.276): hedef artık gövdede, ekranın niyeti
+ * uçta sabitlenmiş değil. "Üstlen" bu kapının `in_progress` çağrısıdır.
+ */
+export function setComplaintStatus(ticketId: string, to: TicketStatus): Promise<ApiResult<TicketActionResponse>> {
+  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/status`, TicketActionResponseSchema, {
+    method: 'POST',
+    body: { to },
+  });
+}
+
+/** Yürütücü modu — çekmecenin "ASİSTAN MODU" bölümü. */
+export function setComplaintMode(ticketId: string, mode: TicketHandler): Promise<ApiResult<TicketActionResponse>> {
+  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/mode`, TicketActionResponseSchema, {
+    method: 'POST',
+    body: { mode },
+  });
+}
+
+/** Talep türünün düzeltilmesi — çekmecenin "TALEP TÜRÜ" bölümü. */
+export function setComplaintType(ticketId: string, type: TicketType): Promise<ApiResult<TicketActionResponse>> {
+  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/type`, TicketActionResponseSchema, {
+    method: 'POST',
+    body: { type },
+  });
+}
+
+/** İade damgası — gövdesiz; tutar ve akıbet siparişte seçilir. */
+export function triggerComplaintReturn(ticketId: string): Promise<ApiResult<TicketActionResponse>> {
+  return authorizedFetch(`/api/v1/management/complaints/${ticketId}/return`, TicketActionResponseSchema, {
     method: 'POST',
     body: {},
   });

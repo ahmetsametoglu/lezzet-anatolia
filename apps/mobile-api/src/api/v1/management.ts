@@ -12,13 +12,19 @@ import {
   readComplaint,
   readManagementHub,
   replyAsStaff,
+  setTicketMode,
+  setTicketType,
+  triggerReturnFromTicket,
 } from '@lezzet/application';
 import { WarehouseService, serviceDb } from '@lezzet/database';
 import {
   ComplaintDraftRequestSchema,
   ComplaintDraftResponseSchema,
+  ComplaintModeRequestSchema,
   ComplaintReplyRequestSchema,
   ComplaintResponseSchema,
+  ComplaintStatusRequestSchema,
+  ComplaintTypeRequestSchema,
   ExceptionAskResponseSchema,
   ExceptionsResponseSchema,
   ManagementHubSchema,
@@ -143,12 +149,78 @@ management.post('/complaints/:id/reply', async (c) => {
   );
 });
 
-/** "Üstlen — İşlemde": durum kapısından geçer (izni motor verir; open→in_progress dışındaki hâl reddolur). */
-management.post('/complaints/:id/claim', async (c) => {
+/**
+ * Talebin durumunu değiştir — **`/claim`in yerine geçti** (21.276).
+ *
+ * Eski uç hedefi kendi içinde `in_progress` diye sabitliyordu; aksiyon çekmecesi üç geçişi birden
+ * istiyor (üstlen · çöz · yeniden aç). İkinci bir uç açmak aynı motor çağrısına iki kapı açmak
+ * olurdu — niyet artık çağıranın, uç yalnız hedefi taşıyor.
+ *
+ * İZNİ MOTOR VERİYOR (`canTransitionTicket`, `changeTicketStatus`in içinde): geçersiz geçiş
+ * `ok:false` + sebeple döner, HTTP hatasıyla değil — ekran sebebi cümleye çevirir.
+ */
+management.post('/complaints/:id/status', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+  const parsed = ComplaintStatusRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const result = await changeTicketStatus(serviceDb(), { ticketId: id.data, to: parsed.data.to, by: 'staff' });
+  return ok(
+    c,
+    TicketActionResponseSchema.parse({
+      ok: result.ok,
+      reason: result.ok ? null : result.reason,
+    } satisfies z.input<typeof TicketActionResponseSchema>),
+  );
+});
+
+/** Yürütücü modu (çekmecenin "ASİSTAN MODU" bölümü) — aynı moda geçiş `already_in_mode` ile reddedilir. */
+management.post('/complaints/:id/mode', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+  const parsed = ComplaintModeRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const result = await setTicketMode(serviceDb(), { ticketId: id.data, mode: parsed.data.mode });
+  return ok(
+    c,
+    TicketActionResponseSchema.parse({
+      ok: result.ok,
+      reason: result.ok ? null : result.reason,
+    } satisfies z.input<typeof TicketActionResponseSchema>),
+  );
+});
+
+/** Talep türünün düzeltilmesi (çekmecenin "TALEP TÜRÜ" bölümü) — geçiş kuralı yok, sınıflandırma. */
+management.post('/complaints/:id/type', async (c) => {
+  const id = UuidSchema.safeParse(c.req.param('id'));
+  if (!id.success) return fail(c, 'invalid_id', 400);
+  const parsed = ComplaintTypeRequestSchema.safeParse(await readJsonBody(c));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const result = await setTicketType(serviceDb(), { ticketId: id.data, type: parsed.data.type });
+  return ok(
+    c,
+    TicketActionResponseSchema.parse({
+      ok: result.ok,
+      reason: result.ok ? null : result.reason,
+    } satisfies z.input<typeof TicketActionResponseSchema>),
+  );
+});
+
+/**
+ * İade akışını bu talepten başlat — **yalnız damga**, gövdesiz.
+ *
+ * Tutar ve akıbet (`restock` · `discard` · `goodwill`) BURADA seçilmez; iade siparişte yaşıyor
+ * (DOMAIN §8). Tasarımın çekmecesi karar setini talebe koyuyor, sistem siparişe — bu uç o farkın
+ * talep tarafındaki tek meşru yarısı.
+ */
+management.post('/complaints/:id/return', async (c) => {
   const id = UuidSchema.safeParse(c.req.param('id'));
   if (!id.success) return fail(c, 'invalid_id', 400);
 
-  const result = await changeTicketStatus(serviceDb(), { ticketId: id.data, to: 'in_progress', by: 'staff' });
+  const result = await triggerReturnFromTicket(serviceDb(), id.data);
   return ok(
     c,
     TicketActionResponseSchema.parse({

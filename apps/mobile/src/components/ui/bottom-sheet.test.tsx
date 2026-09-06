@@ -1,6 +1,6 @@
 import { customerAppText } from '@lezzet/design-tokens';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import { BackHandler, Text } from 'react-native';
+import { BackHandler, Keyboard, Text } from 'react-native';
 
 import { BottomSheet } from './bottom-sheet';
 import { customerStops } from '../../theme/unistyles';
@@ -85,6 +85,22 @@ describe('BottomSheet', () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('açılan çekmece klavyeyi kapatır — o klavye ARKADAKİ ekranın kutusunundur (07.09)', async () => {
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
+    const sheet = (visible: boolean) => (
+      <BottomSheet visible={visible} title="Aksiyonlar" onClose={jest.fn()}>
+        <Text>içerik</Text>
+      </BottomSheet>
+    );
+    const { rerender } = await render(sheet(false));
+
+    // Kapalı çekmece klavyeye DOKUNMAZ: ekranın kutusu kendi işini görüyor olabilir.
+    expect(dismiss).not.toHaveBeenCalled();
+
+    await rerender(sheet(true));
+    expect(dismiss).toHaveBeenCalledTimes(1);
   });
 
   it('örtü ve başlık kademesi TEMADAN gelir (ham değer yok)', async () => {

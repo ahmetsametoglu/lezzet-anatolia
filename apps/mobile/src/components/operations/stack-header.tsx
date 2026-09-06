@@ -50,10 +50,28 @@ interface OperationsStackHeaderProps {
    * zamanda kaydırma sırasında görünür kalmasını sağlıyor.
    */
   right?: ReactNode;
+  /**
+   * Geri düğmesi ile başlık ARASINA giren yuva — bugün tek kullanıcısı yazışma ekranlarının karşı
+   * taraf avatarı (v3:30 · 32: geri · daire · ad).
+   *
+   * `right` yuvasından ayrı durmasının sebebi anlamı: sağdaki işaret ekranın KONUSUNA ait bir
+   * niteliktir (kanal rozeti), buradaki ise başlığın KİMLİĞİdir — başlık "Mehmet Aydın" diyorsa
+   * avatar o adın parçasıdır, ayrı bir bilgi değil. Sağa konsaydı satırın iki ucu da rozet taşır,
+   * hangisinin adı nitelediği okunmazdı.
+   */
+  leading?: ReactNode;
   testID?: string;
 }
 
-export function OperationsStackHeader({ title, subtitle, onBack, backLabel, right, testID }: OperationsStackHeaderProps) {
+export function OperationsStackHeader({
+  title,
+  subtitle,
+  onBack,
+  backLabel,
+  right,
+  leading,
+  testID,
+}: OperationsStackHeaderProps) {
   return (
     <View style={styles.header} testID={testID}>
       {/* Geri düğmesi operasyonun KUM KUTUCUĞUDUR ve o kutu artık kitte tek yerde
@@ -66,6 +84,7 @@ export function OperationsStackHeader({ title, subtitle, onBack, backLabel, righ
         accessibilityLabel={backLabel}
         testID={testID === undefined ? undefined : `${testID}-back`}
       />
+      {leading === undefined ? null : <View style={styles.leading}>{leading}</View>}
       <View style={styles.titles}>
         <Text style={styles.title} accessibilityRole="header">
           {title}
@@ -93,6 +112,7 @@ const styles = StyleSheet.create((_theme, rt) => ({
     flexGrow: 1,
   },
   right: { flexShrink: 0 },
+  leading: { flexShrink: 0 },
   title: {
     fontFamily: operationsTheme.font.display[operationsTheme.text['h2-sm--font-weight']],
     fontSize: operationsTheme.text['h2-sm'],

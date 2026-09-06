@@ -9,6 +9,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { AppBar } from '@/components/ui/app-bar';
 import { BackButton } from '@/components/ui/back-button';
 import { ChatLayout } from '@/components/ui/chat-layout';
+import { ChatText } from '@/components/ui/chat-text';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
 import { Note } from '@/components/ui/note';
@@ -161,7 +162,12 @@ export function TicketDetailScreen({ id, locale: forcedLocale }: TicketDetailScr
         testID={`ticket-message-${message.id}`}
       >
         <View style={[styles.bubbleColumn, message.fromCustomer ? styles.mineColumn : styles.theirsColumn]}>
-          <Text style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>{message.body}</Text>
+          {/* GÖVDE SOHBET METNİ (06.09): işletmenin cevabı — insanın ya da ajanın — biçimlendirme
+              işaretleriyle yazılıyor ve müşteri onu operasyonun gördüğü gibi görmeli. Aynı çizici
+              operasyon yazışmalarında da çalışıyor (`components/ui/chat-text`). */}
+          <ChatText style={[styles.bubble, message.fromCustomer ? styles.mine : styles.theirs]}>
+            {message.body}
+          </ChatText>
 
           {message.photos.length === 0 ? null : (
             <View style={styles.photoRow}>

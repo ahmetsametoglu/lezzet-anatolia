@@ -688,8 +688,11 @@ export {
   consumeTicketDraft,
   openTicket,
   replyAsStaff,
+  setTicketMode,
+  setTicketType,
   takeOverTicket,
   ticketAttachmentsBelongTo,
+  triggerReturnFromTicket,
   type TicketWriteResult,
 } from './ticket/staff-write';
 export type { StaffTicketDetail, TicketOrderRef, TicketQueueItem } from './ticket/ticket-types';
