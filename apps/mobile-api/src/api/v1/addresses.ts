@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import type { Context, Next } from 'hono';
 import {
   addCustomerAddress,
+  checkAddressForCustomer,
   deleteCustomerAddress,
   listCustomerAddresses,
   setDefaultCustomerAddress,
@@ -9,7 +10,7 @@ import {
   type CustomerAddressOutcome,
 } from '@lezzet/application';
 import { serviceDb, UserProfileService } from '@lezzet/database';
-import { AddressWriteSchema, MeAddressListSchema } from '@lezzet/types';
+import { AddressCheckResultSchema, AddressWriteSchema, MeAddressListSchema } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
 import type { V1Env } from './auth';
 
@@ -85,6 +86,26 @@ addresses.patch('/:id', async (c) => {
       point,
     }),
   );
+});
+
+/**
+ * **Seçilen adresin kapısı gerçekten var mı** (11.11) — SİPARİŞ ANINDA çağrılır.
+ *
+ * Web'in `checkCheckoutAddressAction`ıyla aynı iş, aynı kapı (`checkAddress`) — iki yüzey aynı
+ * soruyu aynı yerden soruyor. `POST` çünkü YAN ETKİSİ var: kararı adres satırına yazıyor
+ * (`geo_alt_label`), yani sonraki okumalar da görüyor.
+ *
+ * ── HİÇBİR HÂLDE 4xx DÖNMEZ ────────────────────────────────────────────────
+ * Cevap bir RET değil bir BİLGİ. Servis düşerse `unknown` döner ve ekran SUSAR — doğrulama sipariş
+ * anında koştuğu için bir dış servisin kesintisi satışı durduramaz (FAIL-OPEN, kullanıcı kararı
+ * 02.09). Başkasının adresi de `unknown`dur: varlığını doğrulamak bilgi sızdırmak olurdu.
+ */
+addresses.post('/:id/check', async (c) => {
+  const outcome = await checkAddressForCustomer(serviceDb(), {
+    customerId: c.get('customerId'),
+    addressId: c.req.param('id'),
+  });
+  return ok(c, AddressCheckResultSchema.parse(outcome));
 });
 
 addresses.delete('/:id', async (c) => {

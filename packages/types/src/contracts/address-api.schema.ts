@@ -57,6 +57,36 @@ export const MeAddressSchema = AddressSchema.pick({
 export const MeAddressListSchema = z.array(MeAddressSchema);
 
 /**
+ * **Adres doğrulamasının sonucu** (11.11) — `POST /me/addresses/:id/check` cevabı.
+ *
+ * ── NEDEN AYRI BİR UÇ, NEDEN `MeAddressSchema`YA ALAN DEĞİL ─────────────────
+ * `MeAddressSchema` bilerek DAR: koordinat künyesi istemciye hiç açılmıyor. Doğrulama da satırın
+ * bir NİTELİĞİ değil, bir ANIN cevabı — sipariş verilirken sorulur (kullanıcı kararı 02.09) ve
+ * cevabı o an ekranda yaşar. Alan olarak taşınsaydı istemci bayat bir cevabı taze sanardı.
+ *
+ * ── ÜÇ HÂL EKRANA ÇIKAR, İKİSİ SUSAR ───────────────────────────────────────
+ * `confirmed` (söylenecek şey yok) ve `unknown` (söyleyecek BİLGİ yok) istemcide elenir; ekrana
+ * yalnız müşteriye bir şey söyleyen üç hâl ulaşır. `unknown`ı göstermek müşteriyi her siparişte
+ * görünen ve hiçbir şey söylemeyen bir satıra alıştırırdı — sonra gerçek uyarı da okunmazdı.
+ */
+export const AddressCheckResultSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('confirmed') }),
+  z.object({
+    status: z.literal('wrong_postal_code'),
+    /** Ekrana yazılan metin — SERVİSİN kendi etiketi, biz cümle kurmayız. */
+    label: z.string(),
+    /* Teklifi UYGULAMAK için: etiketi ayrıştırmak kırılgan olurdu (yazım, aksan, sıralama).
+       Değişen tam olarak bu ikili — sokak ve numara aynı, kapı başka kodda. */
+    postalCode: z.string(),
+    city: z.string(),
+  }),
+  z.object({ status: z.literal('street_only') }),
+  z.object({ status: z.literal('not_found') }),
+  z.object({ status: z.literal('unknown') }),
+]);
+export type AddressCheckResult = z.infer<typeof AddressCheckResultSchema>;
+
+/**
  * Yazma gövdesi (create ve update AYNI form — v3 `shAddr` çekmecesi iki hâlde de aynı dört alanı
  * gösterir). `label` boş geçilebilir (etiketsiz adreste ekran şehri başlık yapar — entity künyesi);
  * boş metnin `null`a indirgenmesi uygulama kapısının işi. `isDefault` BİLEREK YOK: varsayılan

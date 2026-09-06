@@ -582,8 +582,21 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       kendi verir (`stopSeq`in aynı deseni). Sözleşme alanı zorunlu olduğu için fikstür DERLEMEDE
       kırıldı ve düzeltildi: tipin "unutulamaz" vaadi çalıştı.
     - Metinler ve alan adları talep dosyasına yazıldı; **kurye kartı artık mobil şeritte yazılabilir.**
-    - **Sırada:** müşteri formunun mobil yarısı (`MeAddressSchema` alanı — henüz YOK) · e2e duman
-      senaryosu · tasarım turu (`design/BACKLOG §4`). **BEKLEYEN(11.11)**
+  - **Durum (06.09e) — MOBİL UCU AÇILDI; iki yüzeyin de önü temiz.**
+    - **`POST /api/v1/me/addresses/:id/check`** → `AddressCheckResultSchema`. **Alan DEĞİL UÇ** ve bu
+      düzeltilmiş bir karar: talebe önce *"`MeAddressSchema` alanı"* yazmıştım, yanlıştı. O şema
+      bilerek dar (koordinat künyesi istemciye açılmıyor) ve doğrulama satırın bir NİTELİĞİ değil bir
+      ANIN cevabı — alan olarak taşınsaydı istemci **bayat bir cevabı taze sanardı**.
+    - **Sahiplik + doğrulama TEK kapıda** (`checkAddressForCustomer`): web eylemi de mobil uç da
+      oradan geçiyor. Web'de kuralı elle yazmıştım; ikinci yüzey doğunca duplikasyona dönüşürdü ve
+      unutulan yerde başkasının adresi hakkında bilgi sızardı (`CLAUDE §1`).
+    - **Uç hiçbir hâlde 4xx DÖNMEZ ve bu testli:** başkasının adresi de, olmayan kimlik de `unknown`.
+      Doğrulama sipariş anında koştuğu için 4xx istemcide bir HATA gibi okunup akışı durdurabilirdi —
+      oysa cevap bir ret değil bir bilgi (FAIL-OPEN).
+    - `POST` çünkü yan etkisi var: kararı satıra yazıyor (`geo_alt_label`), sevkiyat şeridi ve kurye
+      kartı da onu okuyor.
+    - Akış ve alan adları talep dosyasına yazıldı — **mobil şerit iki yüzeyi de yazabilir.**
+    - **Sırada:** e2e duman senaryosu · tasarım turu (`design/BACKLOG §4`). **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 

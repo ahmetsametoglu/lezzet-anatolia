@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { resolveAddressCountry } from '../delivery/place';
 import { resolveAddressPoint, type AddressPointCandidate } from '../delivery/geo-address';
+import { checkAddress, type AddressCheckOutcome } from '../delivery/address-check';
 
 /*
   MÜŞTERİ ADRES KAPISI — web hesap sayfasının `lib/account/addresses.ts` kurallarının paket hâli
@@ -90,6 +91,25 @@ function normalized(write: Partial<CustomerAddressWrite>): Partial<CustomerAddre
 async function ownedAddress(service: AddressService, customerId: string, addressId: string): Promise<Address | null> {
   const own = (await service.listByCustomer(customerId)).find((a) => a.id === addressId);
   return own ?? null;
+}
+
+/**
+ * **Müşterinin KENDİ adresinin kapısı doğrulanır** (11.11) — sahiplik + doğrulama tek kapıda.
+ *
+ * İki yüzey de buradan geçiyor (web checkout eylemi + mobil `POST /:id/check`): sahiplik kuralını
+ * iki yerde yazmak, birinin bir gün unutması demekti — ve unutulan yerde başkasının adresi hakkında
+ * bilgi sızardı.
+ *
+ * **Başkasının adresi de `unknown`dur**, "bulunamadı" değil: varlığını doğrulamak bilgi sızdırmaktır
+ * (adres ailesinin ortak kuralı — silme ve düzenleme uçları da aynı sessizliği uyguluyor).
+ */
+export async function checkAddressForCustomer(
+  db: SupabaseClient,
+  input: { customerId: string; addressId: string },
+): Promise<AddressCheckOutcome> {
+  const own = await new AddressService(db).listByCustomer(input.customerId);
+  if (!own.some((address) => address.id === input.addressId)) return { status: 'unknown' };
+  return checkAddress(db, { addressId: input.addressId });
 }
 
 export async function addCustomerAddress(

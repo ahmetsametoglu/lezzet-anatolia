@@ -233,3 +233,52 @@ describe('öneri koordinatı', () => {
     expect((await adresiOku(id))?.lat).toBeNull();
   });
 });
+
+/**
+ * ── KAPI DOĞRULAMASI UCU (11.11) ────────────────────────────────────────────
+ * `POST /:id/check` — sipariş anında çağrılır ve web checkout'uyla AYNI kapıdan geçer
+ * (`checkAddressForCustomer`), yani iki yüzey aynı soruyu aynı yerden soruyor.
+ *
+ * Burada sınanan TAŞIMA: sahiplik, zarf, ve **hiçbir hâlde 4xx dönmediği**. Kararın kendisi
+ * `domain-core`da (14 test), kapının kendisi `address-check.test.ts`te (10 test).
+ */
+describe('kapı doğrulaması ucu', () => {
+  it('kendi adresi için cevap döner ve zarf ADLI bir hâl taşır', async () => {
+    const liste = await envelopeData<{ id: string; line1: string }[]>(
+      await req('', { method: 'POST', body: JSON.stringify({ ...yeniAdres, line1: '31 rue du Check' }) }),
+    );
+    const id = liste.find((row) => row.line1 === '31 rue du Check')!.id;
+
+    const res = await req(`/${id}/check`, { method: 'POST' });
+
+    expect(res.status).toBe(200);
+    const sonuc = await envelopeData<{ status: string }>(res);
+    // Gerçek BAN'a çıkılmıyor (test ortamında ağ yok) — beklenen şey hâlin ADLI olması, hangi hâl
+    // olduğu değil. Sözleşme dışı bir değer gelseydi `AddressCheckResultSchema.parse` patlardı.
+    expect(['confirmed', 'wrong_postal_code', 'street_only', 'not_found', 'unknown']).toContain(sonuc.status);
+  });
+
+  it('BAŞKASININ adresi `unknown` — "bulunamadı" bile denmez', async () => {
+    /* Varlığını doğrulamak bilgi sızdırmaktır: 404 dönmek "bu kimlik var ama senin değil" derdi.
+       Adres ailesinin ortak sessizliği (silme ve düzenleme uçları da aynı kuralı uyguluyor). */
+    const res = await req(`/${otekiAdresId}/check`, { method: 'POST' });
+
+    expect(res.status).toBe(200);
+    expect((await envelopeData<{ status: string }>(res)).status).toBe('unknown');
+  });
+
+  it('OLMAYAN kimlik de `unknown` — uç hiçbir hâlde 4xx DÖNMEZ', async () => {
+    /* FAIL-OPEN (kullanıcı kararı 02.09): doğrulama sipariş anında koşuyor; bu uç 4xx dönseydi
+       istemci onu bir hata sanıp akışı durdurabilirdi. Cevap bir RET değil bir BİLGİ. */
+    const res = await req('/00000000-0000-4000-9000-0000000000ff/check', { method: 'POST' });
+
+    expect(res.status).toBe(200);
+    expect((await envelopeData<{ status: string }>(res)).status).toBe('unknown');
+  });
+
+  it('Bearer olmadan 401 — doğrulama da kimliğe bağlı', async () => {
+    const res = await app.request(`/api/v1/me/addresses/${otekiAdresId}/check`, { method: 'POST' });
+
+    expect(res.status).toBe(401);
+  });
+});

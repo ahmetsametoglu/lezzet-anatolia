@@ -8,8 +8,7 @@ import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { updateAddress } from '@/lib/account/addresses';
 import {
-  checkAddress,
-  listCustomerAddresses,
+  checkAddressForCustomer,
   resolveAddressPoint,
   type AddressCheckOutcome,
   type AddressPointCandidate,
@@ -168,11 +167,10 @@ export async function checkCheckoutAddressAction(addressId: string): Promise<Cus
     const customerId = await currentCustomerId();
     if (!customerId) throw new CustomerError('session_expired');
 
-    const own = await listCustomerAddresses(serviceDb(), customerId);
-    // Başkasının adresi de "bilinmiyor"dur: varlığını doğrulamak bilgi sızdırmaktır.
-    if (!own.some((address) => address.id === addressId)) return { data: { status: 'unknown' }, errorKey: null };
-
-    return { data: await checkAddress(serviceDb(), { addressId }), errorKey: null };
+    /* Sahiplik + doğrulama TEK kapıda (`checkAddressForCustomer`): mobil uç da aynı yerden geçiyor.
+       Kuralı iki yerde yazmak, birinin bir gün unutması ve orada başkasının adresi hakkında bilgi
+       sızması demekti. */
+    return { data: await checkAddressForCustomer(serviceDb(), { customerId, addressId }), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }
