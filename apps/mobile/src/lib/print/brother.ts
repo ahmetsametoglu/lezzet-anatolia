@@ -15,10 +15,15 @@ import { hasPrinterNativeModule } from './printer-availability';
   içeriği (23.7) buradan geçmez — o, biçim (PDF/PNG) kesinleşince aynı kapıya bağlanır.
 
   ── RULO GENİŞLİĞİ MODELDEN ─────────────────────────────────────────────────
-  Elimizdeki iki yazıcı iki ayrı rulo taşıyor (karar §1.6): QL-1110NWB 102 mm (4×6'nın yazıcısı),
-  QL-820NWB 62 mm. Yanlış boy SDK'da hataya döner — boyu kanalın model adından seçiyoruz ki iğne
-  deneyi iki yazıcıda da tek dokunuş olsun. Kalıcı ayar 23.7'de `settings`e taşınacak
-  (`label_printer_*`, depo başına) — burada sabit DEĞİL, modelin fiziksel gerçeği.
+  Elimizdeki iki yazıcı iki ayrı rulo taşıyor (karar §1.6): QL-1110NWB 103 mm, QL-820NWB 62 mm.
+  Yanlış boy SDK'da hataya döner — İĞNE DENEYİ boyu kanalın model adından seçiyor ki deney iki
+  yazıcıda da tek dokunuş olsun.
+
+  ⚠ Bu yalnız DENEYİN kestirmesi. Gerçek basımda boy ENVANTERDEN geliyor (`warehouse_printer`,
+  0054) ve kuralın tek sahibi `defaultLabelSizeFor` (`@lezzet/domain-core`). ~~23.7'nin
+  `label_printer_*` ayarı~~ 29.08'de tabloya bıraktı. İş bölüşümü de 06.09'da düzeldi: GENİŞ
+  yazıcı kargo etiketini (A6, 105 mm'lik kenar dar ruloya sığmaz), DAR yazıcı bizim kutu
+  etiketimizi basıyor — 23.7'nin "4×6'nın yazıcısı" notu o gün eskidi.
 
   ── TEMBEL VE KORUMALI YÜKLEME ──────────────────────────────────────────────
   SDK importu yoklamanın (`hasPrinterNativeModule`) arkasında: modülsüz derlemede (bugünkü
@@ -91,10 +96,19 @@ export async function findNetworkPrinters(): Promise<PrinterChannel[]> {
  * Kargo etiketi tek sayfadır. Sağlayıcı bir gün gümrük belgesi eklerse sayfa sınırı olmadan
  * hepsi ruloya art arda basılırdı — `pages: [1]` bunu baştan kapatıyor.
  *
- * ⚠ **Kâğıt uyuşmazlığı GERÇEK ve ölçülü** (tasarım §4.6): alınan gerçek etiket A6 yatay
- * (148×105 mm), elimizdeki rulo 103×164 mm — döndürülünce 2 mm taşıyor. Sürücü küçültürse
- * barkod da küçülür, yani **basılan barkod okutularak doğrulanmadan bu iş bitmiş sayılmaz.**
- * Kod bunu çözemez; kâğıt kararı fizikseldir.
+ * ── ~~2 MM TAŞMA~~ KAPANDI (06.09) ─────────────────────────────────────────
+ * Burada bir uyarı dururdu: *"alınan gerçek etiket A6 yatay (148×105), elimizdeki rulo 103×164 —
+ * döndürülünce 2 mm taşıyor… basılan barkod okutularak doğrulanmadan bu iş bitmiş sayılmaz."*
+ * Kaldırıldı, iki sebeple:
+ *
+ * 1. **Hesap KALIP KESİM kâğıda karşı yapılmıştı** (28.08, `kargo-kanali-tasarimi.md §4.6`) ve o
+ *    kâğıt 06.09'da bıraktı: kargo yazıcısında artık SÜREKLİ RULO var (`RollW103`). Sürekli
+ *    ruloda boy serbest — 164↔148 sınırı yok; geriye yalnız 105↔103 genişlik farkı (%2) kalıyor.
+ * 2. **Kullanıcı böyle bir sorun gözlemlemediğini bildirdi** (06.09). Uyarı masa başında
+ *    hesaplanmıştı, kâğıtta hiç görülmedi — ve bir belirti üretmeyen riski "bitmemiş iş" diye
+ *    tutmak, gerçek işaretlerin arasına gürültü koymaktır.
+ *
+ * Ölçüm silinmiyor, yeri değişiyor: §4.6 onu kendi gününün kaydı olarak taşımaya devam ediyor.
  */
 export async function printLabelPdf(
   fileUri: string,
@@ -112,10 +126,14 @@ export async function printLabelPdf(
 }
 
 /**
- * **Gerçek etiket basımı** (23.7) — sunucunun ürettiği PNG dosyasını deponun ayarlı yazıcısına
- * basar. Boy AYARDAN gelir (`label_printer_label_size`, Depolar ekranı): takılı kâğıt SDK'dan
- * okunamıyor, yanlış boy `SetLabelSizeError` (23.5 ölçümü) — burada deneme listesi YOKTUR, ayar
- * doğruyu söylemekle yükümlü; hata çağırana fırlar ve ekran cümleyi gösterir.
+ * **Gerçek etiket basımı** (23.7) — sunucunun ürettiği PNG dosyasını cihazın seçtiği yazıcıya
+ * basar. Boy ENVANTERDEN gelir (`warehouse_printer.label_size`, 0054): takılı kâğıt SDK'dan
+ * okunamıyor, yanlış boy `SetLabelSizeError` (23.5 ölçümü) — burada deneme listesi YOKTUR,
+ * envanter doğruyu söylemekle yükümlü; hata çağırana fırlar ve ekran cümleyi gösterir.
+ *
+ * PNG de artık O KÂĞIDIN boyunda üretiliyor (06.09): sunucuya `?labelSize=` gidiyor ve şablon
+ * orada çiziliyor. Eskiden sabit 103 mm çizilip SDK tarafından %60'a indiriliyordu ve ürün
+ * satırları okunmuyordu.
  */
 export async function printLabel(
   fileUri: string,

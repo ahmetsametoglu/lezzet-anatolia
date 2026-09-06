@@ -12477,9 +12477,11 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   saf ve şeridin kendi ölçümünü koşabilmesi gerekiyordu. Cihazda envanter kararla uyumlu kuruldu:
   `box → QL-820NWB · RollW62 · seri M1Z805586` · `shipping → QL-1110NWB · RollW103 · seri E4G478387`.
 
-  **BEKLEYEN(21.269):** basılan kâğıt hâlâ görülmedi — "test bas" fiziksel etiket harcıyor ve
-  kullanıcının kararı. Kargo etiketinin 2 mm taşma sorusu (07.12) de ancak basılan barkod
-  okutularak kapanır.
+  **Basılan kâğıt kullanıcı tarafından doğrulandı (06.09).** 2 mm taşma kaydı da kapandı ve
+  gerekçesi iki katlı: hesap 28.08'de KALIP KESİM kâğıda karşı yapılmıştı (148×105 etiket ↔
+  103×164 kâğıt) ve o kâğıt 06.09'da sürekli ruloya bıraktı — yükseklik sınırı kalktı, geriye
+  yalnız 105↔103 farkı (%2) kaldı. Kullanıcı böyle bir sorun gözlemlemediğini bildirdi; masa
+  başında hesaplanmış, kâğıtta hiç görülmemiş bir riskti.
 
 - [x] (21.270) **TAHSİLAT SAYISI TEK HESAPTAN — rota kartı vadeliyi sayıyor, gün ekranı saymıyordu** (denetim bulgusu 6'nın kalanı · 05.09)
   `touches:` `packages/application/src/courier/{door-payment.ts,day.ts,routes.ts,day.test.ts}` · `apps/mobile-api/src/api/v1/sale.ts` · `docs/build/21-mobil-uygulama.md`

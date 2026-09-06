@@ -348,6 +348,12 @@ genişlik** istiyor — kâğıt 103 mm. **2 mm taşıyor**; yükseklikte 16 mm 
 büyük olasılıkla sığdırmak için ~%3 küçültecek, ki bu barkodu da küçültür — **basılan barkodun
 okutularak doğrulanması gerekiyor**, gözle bakmak yetmez.
 
+> **KAPANDI (06.09) — bu ölçüm kendi gününün kaydıdır.** Hesap KALIP KESİM kâğıda karşı yapılmıştı
+> ve o kâğıt bıraktı: kargo yazıcısında artık SÜREKLİ RULO var (`RollW103`, kullanıcı kararı 06.09).
+> Sürekli ruloda boy serbest — 164↔148 sınırı yok, geriye yalnız 105↔103 genişlik farkı (%2) kalıyor.
+> Kullanıcı böyle bir taşma gözlemlemediğini bildirdi; risk masa başında hesaplanmıştı, kâğıtta hiç
+> görülmedi. "Basılan barkod okutulmadan bu iş bitmez" şartı bu satırla kalkıyor.
+
 Alternatif kâğıt SDK'nın listesinde var: `DieCutW102H152` (4×6 inç = 101,6×152,4) — o daha da dar.
 Karar fiziksel: hangi rulo takılı ve barkod okunuyor mu. 23.5'in "iğne deneyi" emsali aynen
 geçerli — **gerçek kâğıtla basılıp barkodu okutulmadan bu iş bitti sayılmaz.**
