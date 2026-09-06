@@ -522,9 +522,30 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       yanlış"* ayrı şeylerdir (`CLAUDE §1`). Almanya bugün kalıcı olarak bu daldadır.
     - `SOURCES.applicationDelivery` kovası açıldı: kapı FAIL-OPEN olduğu için düştüğünde **kimse fark
       etmez** — sipariş geçer, müşteri bir şey görmez, kapı bir daha uyarmaz. Şikâyet gelmez, log söyler.
-    - **Sırada — yüzeyler:** sözleşme alanı (`MeAddressSchema`/checkout) · sipariş anında çağrı ·
-      düzeltme teklifi (web + mobil) · sevkiyat engel şeridi · kurye durak kartı. Tasarım karşılığı
-      yok → `design/BACKLOG §4`; mobil yarısı talep dosyasında bekliyor. **BEKLEYEN(11.11)**
+  - **Durum (06.09b) — SEVKİYAT MASASI ARTIK SÖYLÜYOR + metinler üç dilde yazıldı.**
+    - **Engel şeridine İKİ satır** (`doorElsewhere` · `doorUnverified`) — şeridin mevcut sözleşmesine
+      giriyor (kısa, paralel, sertlik sırasına göre), yeni bir kalıp değil. `elsewhere` `zoneless`in
+      hemen ardında çünkü üçü de *"araç yanlış yere gidiyor ya da hiç gitmiyor"* ailesinden; ve daha
+      serttir çünkü elimizde DOĞRUSU var, telefon açılabilir.
+    - **İKİSİ AYRIK sayılıyor** — `elsewhere` `unverified`e dâhil değil: aynı durağı iki satırda
+      saymak şeridi kendi kendine şişirirdi.
+    - **`unknown` HİÇ sayılmaz** ve bu, bu turun en önemli kararı: bugün Almanya kalıcı olarak o
+      hâlde (sağlayıcı yok). Sayılsaydı her Alman siparişi *"kapı doğrulanmadı"* derdi — ölçemediğimiz
+      şeyi kusur gibi göstermek şeridi gürültüye boğar ve GERÇEK uyarıyı okunmaz kılardı (`CLAUDE §1`).
+    - **`doorCheckOf` saf ve testli** (6 test, `door-check.ts`): karar sipariş ANLIK GÖRÜNTÜSÜNDEN
+      okunuyor, adres kaydından değil — sevkiyatçının sorusu *"bu sipariş hangi adrese çıkıyor"* ve
+      adres sonradan düzeltilmişse o düzeltme bir sonraki siparişi ilgilendirir. **Ek sorgu YOK:**
+      `checkout-draft` snapshot'ı `{ ...address }` diye yazıyor, künye zaten içinde.
+    - `dispatch-sections` künyesindeki *"sistem sırayı bilmiyor"* yorumu **11.9'dan beri yanlıştı**,
+      düzeltildi. Tabloda numara yine YOK ve bu ayrı bir karar: tablo bölgeye göre sıralı bir liste,
+      turun kendisi değil — iki sıralamayı yan yana koymak hangisinin rota olduğunu belirsizleştirirdi.
+    - **Metinler ÜÇ DİLDE yazıldı** ve `docs/talep/mobil-adres-dogrulanabilirligi.md`ye kondu (mobil
+      şerit talebinde ayrıca istemişti: *"Türkçesini değil ÜÇÜNÜ birden yazın"*). İki yazım kararı:
+      *"yanlış"* kelimesi hiç geçmiyor (adresi bilen müşteri; yeni binada o haklı olacak), ve ret
+      düğmesi *"İptal"* değil **"Benim yazdığım doğru"** — ret bir vazgeçiş değil bir BEYAN, ve o
+      beyan `geo_alt_label`ın satırda kalmasıyla kayda geçiyor.
+    - **Sırada — müşteri yüzeyi:** sözleşme alanı · sipariş anında çağrı · düzeltme teklifi (web).
+      Tasarım karşılığı yok → `design/BACKLOG §4`. **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 

@@ -20,9 +20,11 @@ import type { DispatchDayView, DispatchStopView } from './dispatch-types';
 
 // Sevkiyatçının gün planının blokları (09.15).
 //
-// ⚠ **Duraklar arası SIRA çizilmiyor** (tasarım §6): sistem sırayı bilmiyor (rota optimizasyonu
-// ileriki faz). Numaralı bir liste, olmayan bir yeteneği ima ederdi — kurye ekranındaki numara ise
-// "kaçıncı duraktayım" sayacıdır, bir rota sırası değil.
+// ⚠ ~~**Duraklar arası SIRA çizilmiyor** (tasarım §6): sistem sırayı bilmiyor.~~ **DEĞİŞTİ (11.9):**
+// sistem sırayı artık BİLİYOR (kapalı tur hesabı, `delivery_run.stop_order`) ve sefer şeridindeki
+// katlanır harita onu çiziyor. Tabloda hâlâ numara YOK ve bu ayrı bir karar: tablo bölgeye göre
+// sıralı bir LİSTE, turun kendisi değil — iki sıralamayı aynı ekranda yan yana koymak hangisinin
+// rota olduğunu belirsizleştirirdi.
 
 /**
  * **Günün özeti — ÜSTTE KÜNYE, ALTTA ENGEL** (kullanıcı kararı 16.08).
@@ -69,8 +71,13 @@ export function DaySummary({ day }: { day: DispatchDayView }) {
     // Askıda kalan ÖNCE: bugünün değil, geçmişin borcudur ve büyümeye devam eder.
     s.stranded > 0 ? DISPATCH_NOTES.blockers.stranded(s.stranded) : null,
     s.zoneless > 0 ? DISPATCH_NOTES.blockers.zoneless(s.zoneless) : null,
+    /* ADRES UYARILARI (11.11) — `zoneless`in hemen ardında ve bilerek: üçü de "araç yanlış yere
+       gidiyor ya da hiç gitmiyor" ailesinden. `elsewhere` daha sert çünkü elimizde DOĞRUSU var ve
+       telefon açılabilir; `unverified` yalnız bir belirsizlik. */
+    s.doorElsewhere > 0 ? DISPATCH_NOTES.blockers.doorElsewhere(s.doorElsewhere) : null,
     s.notReadyNames.length > 0 ? DISPATCH_NOTES.blockers.notReady(s.notReadyNames) : null,
     s.runless > 0 ? DISPATCH_NOTES.blockers.runless(s.runless) : null,
+    s.doorUnverified > 0 ? DISPATCH_NOTES.blockers.doorUnverified(s.doorUnverified) : null,
     s.parcelsUntracked > 0 ? DISPATCH_NOTES.blockers.untracked(s.parcelsUntracked) : null,
   ].filter((note) => note !== null);
 

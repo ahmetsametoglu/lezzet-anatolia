@@ -120,6 +120,16 @@ export const DISPATCH_NOTES = {
     stranded: (count: number): string => `${count} sipariş önceki günlerden askıda`,
     /** Hiçbir rotaya düşmemiş durak: araç oraya UĞRAMAZ. Engellerin en serti. */
     zoneless: (count: number): string => `${count} sipariş hiçbir rotaya düşmedi`,
+    /**
+     * Kapısı BAŞKA kodda bulunan durak (11.11) — şeridin en SERT adres uyarısı. Cümle "yanlış adres"
+     * demiyor: müşteri haklı olabilir (yeni bina) ve o kendi adresini bilerek korudu. Söylenen şey
+     * bir olgu — sevkiyatçı telefonu açıp sorabilsin.
+     */
+    doorElsewhere: (count: number): string =>
+      count === 1 ? '1 durak başka posta kodunda görünüyor' : `${count} durak başka posta kodunda görünüyor`,
+    /** Kapısı doğrulanamayan durak — yumuşak: kaba eşleşme bir hüküm değil, yeni yapı olabilir. */
+    doorUnverified: (count: number): string =>
+      count === 1 ? '1 durağın kapı numarası doğrulanmadı' : `${count} durağın kapı numarası doğrulanmadı`,
     untracked: (count: number): string => `${count} pakette takip numarası yok`,
   },
   /**

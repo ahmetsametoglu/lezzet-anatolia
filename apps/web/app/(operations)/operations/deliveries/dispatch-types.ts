@@ -1,4 +1,5 @@
 import type { Carrier, Channel, DeliveryType, OrderStatus } from '@lezzet/types';
+import type { DoorCheck } from './door-check';
 
 // Sevkiyatçının gün planının görünüm modeli (09.15) — `design/pages/admin-teslimat.md`.
 
@@ -93,6 +94,12 @@ export interface DispatchStopView {
   zoneName: string | null;
   /** Bölgenin çıkış deposu — aracın hangi tesisten yükleneceği (`null` = bölgesi yok). */
   warehouseName: string | null;
+  /**
+   * Bu siparişin adresinde kapı doğrulandı mı (11.11) — sipariş ANLIK GÖRÜNTÜSÜNDEN okunur, adres
+   * kaydından değil: sevkiyatçının sorusu *"bu sipariş hangi adrese çıkıyor"*, ve adres sonradan
+   * düzeltilmişse o düzeltme bir sonraki siparişi ilgilendirir, araca bugün yüklenen kutuyu değil.
+   */
+  doorCheck: DoorCheck;
 }
 
 /**
@@ -236,6 +243,20 @@ export interface DispatchDayView {
     parcelsUntracked: number;
     /** Önceki günlerden askıda kalan sipariş — engellerin EN SERTİ (`stranded` künyesi). */
     stranded: number;
+    /**
+     * Kapısı BAŞKA posta kodunda bulunan durak (11.11) — servis doğrusunu buldu, müşteri kendi
+     * yazdığını korudu. Sevkiyatçının telefon açacağı durak budur: kurye aksi hâlde var olmayan bir
+     * kapıya gidiyor ve bunu ancak orada anlıyor.
+     */
+    doorElsewhere: number;
+    /**
+     * Kapısı doğrulanamayan durak — kaba eşleşme (sokak/semt). `doorElsewhere` BURAYA SAYILMAZ:
+     * iki satır aynı durağı iki kez saysaydı şerit kendi kendini şişirirdi.
+     *
+     * **Hiç sorulmamış adres de sayılmaz** (`unknown`): bugün Almanya kalıcı olarak o hâlde ve
+     * ölçemediğimiz şeyi kusur gibi göstermek şeridi gürültüye boğardı (`CLAUDE §1`).
+     */
+    doorUnverified: number;
   };
   /**
    * Kesim saatinin o güne etkisi (tasarım §2): **liste kesinleşti mi, hâlâ büyüyebilir mi.**
