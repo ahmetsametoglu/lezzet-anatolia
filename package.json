@@ -66,6 +66,7 @@
     "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhooks/stripe",
     "stripe:smoke": "tsx scripts/stripe-smoke.ts",
     "ai:smoke": "tsx scripts/ai-smoke.ts",
+    "meta:register": "tsx scripts/meta-register.ts",
     "meta:smoke": "tsx scripts/meta-smoke.ts",
     "whatsapp:smoke": "tsx scripts/whatsapp-send-smoke.ts",
     "sendcloud:smoke": "tsx scripts/sendcloud-smoke.ts",

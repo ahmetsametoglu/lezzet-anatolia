@@ -31,6 +31,14 @@ import { createHmac } from 'node:crypto';
 
 const load = (process as { loadEnvFile?: (path: string) => void }).loadEnvFile;
 // SIRA ÖNEMLİ (stripe-smoke ile aynı gerekçe): Node var olan değişkeni ezmez, ilk yükleyen kazanır.
+// Ve sıranın BAŞI backend'in dosyası, çünkü imzayı DOĞRULAYAN uç orada koşuyor: iki dosyadaki
+// `META_APP_SECRET` bir gün ayrışırsa script yanlış sırla imzalar ve arıza "işleyici bozuk" diye
+// okunur. Bugün ikisi aynı (ölçüldü 06.09) — kural o günü değil, ayrıştığı günü hedefliyor.
+try {
+  load?.('apps/backend/.env.local');
+} catch {
+  // Yoksa sorun değil — web'inki ya da ortam devralır.
+}
 try {
   load?.('apps/web/.env.local');
 } catch {
@@ -44,13 +52,23 @@ try {
 
 const SECRET = process.env.META_APP_SECRET;
 if (!SECRET) {
-  console.error('META_APP_SECRET yok — imza üretilemez. apps/web/.env.local kontrol edin.');
+  console.error('META_APP_SECRET yok — imza üretilemez. apps/backend/.env.local kontrol edin.');
   process.exit(1);
 }
 
-/** Uç nokta adresi — tünel/prod denemek için `META_SMOKE_URL` ile ezilir. */
-const BASE = process.env.META_SMOKE_URL ?? 'http://localhost:3000';
-const ENDPOINT = `${BASE}/api/webhooks/meta`;
+/*
+  Uç nokta adresi — tünel/prod denemek için `META_SMOKE_URL` ile ezilir.
+
+  **ADRES 06.09'da DÜZELTİLDİ.** Script 23.08'de yazıldığında uç `apps/web`'deydi
+  (`http://localhost:3000/api/webhooks/meta`); 29.08'de `apps/backend`'e taşındı (`ef9b545e`,
+  Sapma 5) ama script güncellenmedi ve o günden beri **ölü bir adrese** atıyordu. Arıza sessizdi
+  çünkü belirtisi 404'tü: koşu "başarısız" der, sebebi işleyicide aranırdı.
+
+  Yol artık `BASE`in içinde değil AYRI: eski hâlde `META_SMOKE_URL` yalnız konağı eziyordu, yani
+  kaçış kapısıyla bile yeni yola erişilemiyordu — adres değişince tek env ile telafi edilebilsin.
+*/
+const BASE = process.env.META_SMOKE_URL ?? 'http://localhost:8787';
+const ENDPOINT = `${BASE}/webhooks/meta`;
 
 // ── İşaretli kimlikler ───────────────────────────────────────────────────────
 // Telefon E.164 ve gerçek bir numaraya benzemiyor: `+33 6 00 00 00 01` Fransa'da dağıtılmıyor.
