@@ -580,6 +580,7 @@ describe('depo hub', () => {
                 name: 'Masa · QL-1110',
                 purpose: 'box',
                 address: '10.0.0.1',
+                serialNumber: 'E11111',
                 model: 'QL-1110NWB',
                 labelSize: 'DieCutW103H164',
               },

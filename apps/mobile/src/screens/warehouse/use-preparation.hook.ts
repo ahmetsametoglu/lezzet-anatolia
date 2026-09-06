@@ -31,6 +31,7 @@ import { CLIENT_ERROR } from '@/lib/api/client';
 import { printLabel, printLabelPdf } from '@/lib/print/brother';
 import { downloadLabelPng, downloadShippingLabelPdf } from '@/lib/print/label-file';
 import { readPrinterChoice, resolvePrinter } from '@/lib/print/printer-choice';
+import { printHealing } from '@/lib/print/printer-locate';
 import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
 import { useNotice } from '@/lib/haptics/use-notice.hook';
 import { fillCopy } from '@/screens/operations/copy';
@@ -299,6 +300,19 @@ export type PrintState =
   | { phase: 'off' }
   | { phase: 'printing' }
   | { phase: 'printed'; model: string }
+  /**
+   * **KARGO KULVARINDA BİZİM ETİKETİMİZ BASILMAZ** (tasarım §4.6 · kullanıcı doğrulaması 06.09).
+   *
+   * `failed` DEĞİL, ayrı bir hâl: hiçbir şey bozulmadı, kural böyle. Kutunun üstünde iki barkod
+   * taşıyıcının tarayıcısını şaşırtır (kargo firmaları eski etiketlerin üstünün kapatılmasını
+   * ister) ve bedeli de yok — bizim kutu kodumuz taşıyıcı etiketine METİN olarak zaten yazılıyor
+   * (`reference`, §4.5), devir okutması da taşıyıcının takip barkodunu okutuyor.
+   *
+   * Kural §4.6'da ve `0054`ün sütun yorumunda yazılıydı ama KODDA YOKTU: kutu mühürlenişinde
+   * etiket kulvara bakılmadan basılıyordu, yani kargo kutusuna önce bizim QR'ımız çıkıyordu
+   * (ölçüldü 06.09). Etiketin İÇERİĞİ yine gösteriliyor — çekmece açılıyor, kâğıt çıkmıyor.
+   */
+  | { phase: 'suppressed' }
   | { phase: 'failed'; message: string };
 
 /** Motorun bu satır için ayırabildiği toplam adet — sipariş adedi DEĞİL, raftaki gerçek. */
@@ -356,7 +370,8 @@ async function printShippingLabels(boxIds: readonly string[]): Promise<{ printed
   for (const boxId of boxIds) {
     try {
       const fileUri = await downloadShippingLabelPdf(boxId);
-      await printLabelPdf(fileUri, printer);
+      // Kutu etiketiyle aynı onarım: eskimiş adres kâğıdı durdurmasın (05.09 künyesi).
+      await printHealing(printer, (target) => printLabelPdf(fileUri, target));
       // Damga başarının kaydı; düşmesi kâğıdı geri almaz (23.7 dersi) — sayaç yine artar.
       await markBoxPrinted(boxId);
       printed += 1;
@@ -595,8 +610,11 @@ export function usePreparation(): UsePreparationResult {
     setPrintState({ phase: 'printing' });
     try {
       // PNG sunucudan (tek şablon — karar §1.9), basım cihazdan (SDK ağ üzerinden basar, 23.5).
-      const fileUri = await downloadLabelPng(boxId);
-      await printLabel(fileUri, printer);
+      const fileUri = await downloadLabelPng(boxId, printer.labelSize);
+      /* Adres ESKİMİŞ OLABİLİR (05.09): envanterdeki IP bir önbellek ve DHCP onu değiştirir.
+         `printHealing` mutlu yolda hiçbir bedel ödemiyor — yalnız basım düştüğünde seriden
+         güncel adresi bulup bir kez daha deniyor. */
+      await printHealing(printer, (target) => printLabel(fileUri, target));
       // Damga başarının kaydı. Damga yazımı düşse bile kâğıt çıktı GERÇEK — basım "bastı" kalır;
       // düşen damga bir sonraki basımda güncellenir, akışı geriye çekmek kâğıdı geri almaz.
       await markBoxPrinted(boxId);
@@ -1033,6 +1051,14 @@ export function usePreparation(): UsePreparationResult {
         }
         setLabel(labelResult.data.label);
 
+        /* AYNI KAPI, ELLE TETİKLEMEDE DE: kural kutunun kendisine ait, tetikleyene değil. Otomatik
+           basımı durdurup "yeniden bas"ı açık bırakmak, yasağı bir düğmeye tıklanarak aşılabilir
+           hâle getirirdi. */
+        if (order?.deliveryType === 'shipping') {
+          setPrintState({ phase: 'suppressed' });
+          return;
+        }
+
         const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
         const printer = liste.error === null ? resolvePrinter(liste.data.printers, 'box', secim) : null;
         if (printer === null || !hasPrinterNativeModule()) {
@@ -1160,14 +1186,22 @@ export function usePreparation(): UsePreparationResult {
           // Basım kutu kapanışında (karar §1.6) — yazıcı ayarlıysa ve modül bu derlemede varsa.
           // Beklenmez (`void`): kapanışın kendisi yazıldı, kâğıdın seyri kartta ayrıca akar.
           // Kutu yazıcısı da envanterden (07.12 · 29.08): uç artık cevaba yazıcı iliştirmiyor.
-          const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
-          const printer = liste.error === null ? resolvePrinter(liste.data.printers, 'box', secim) : null;
-          if (printer !== null && hasPrinterNativeModule()) {
-            printTarget.current = { boxId: currentBox.boxId, printer };
-            void runPrint(currentBox.boxId, printer);
-          } else {
+          /* KULVAR KAPISI (tasarım §4.6) — kargo kutusuna bizim QR'lı etiketimiz BASILMAZ; kutunun
+             üstündeki ikinci barkod taşıyıcının tarayıcısını şaşırtır. Kapı basımın ÖNÜNDE, çünkü
+             karar kâğıt çıkmadan verilmeli: "bastık, sonra pişman olduk" diye bir hâl yok. */
+          if (order.deliveryType === 'shipping') {
             printTarget.current = null;
-            setPrintState({ phase: 'off' });
+            setPrintState({ phase: 'suppressed' });
+          } else {
+            const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
+            const printer = liste.error === null ? resolvePrinter(liste.data.printers, 'box', secim) : null;
+            if (printer !== null && hasPrinterNativeModule()) {
+              printTarget.current = { boxId: currentBox.boxId, printer };
+              void runPrint(currentBox.boxId, printer);
+            } else {
+              printTarget.current = null;
+              setPrintState({ phase: 'off' });
+            }
           }
         }
         /*

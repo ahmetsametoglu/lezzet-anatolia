@@ -12,14 +12,23 @@ import { getSupabase } from '../auth/supabase';
  *
  * Hata FIRLATIR — basım akışının tek `catch`i var (hook) ve cümle ekranda gösterilir.
  */
-export async function downloadLabelPng(boxId: string): Promise<string> {
+export async function downloadLabelPng(boxId: string, labelSize: string): Promise<string> {
   const { data } = await getSupabase().auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error('oturum yok');
 
-  const response = await fetch(`${env.apiUrl}/api/v1/warehouse/boxes/${boxId}/label.png`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  /*
+    KÂĞIT BOYU İSTEKTE (06.09) — sunucu etiketi O BOYDA çiziyor.
+
+    Eskiden sabit 103 mm çizilip 62 mm'lik ruloya SDK tarafından %60'a indiriliyordu ve ürün
+    satırları okunmuyordu (kullanıcı kâğıtta gördü). Boyu bilen taraf CİHAZ: yazıcıyı o seçti,
+    kâğıdı envanterden okuyor. Sunucunun yazıcı seçmesi 21.132'de bilinçle kapatılmıştı; bu onun
+    tersi — seçimi değil, seçimin ÖLÇÜSÜNÜ bildiriyoruz.
+  */
+  const response = await fetch(
+    `${env.apiUrl}/api/v1/warehouse/boxes/${boxId}/label.png?labelSize=${encodeURIComponent(labelSize)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
   if (!response.ok) throw new Error(`etiket görseli alınamadı (${response.status})`);
 
   const file = new File(Paths.cache, `box-label-${boxId}.png`);
@@ -68,8 +77,9 @@ export async function downloadShippingLabelPdf(boxId: string): Promise<string> {
  * dokunmayan bir örneği. Gerçek bir kutunun etiketini "test" diye bastırmak, o kutunun basım
  * damgasını yalan yere düşürürdü.
  *
- * Yazıcı kimliği YOLDA çünkü uç onu bu deponun açık envanterine karşı sınıyor — görsel yazıcıya
- * göre değişmiyor, kapı değişiyor.
+ * Yazıcı kimliği YOLDA ve iki iş görüyor: uç onu bu deponun açık envanterine karşı sınıyor (kapı),
+ * VE örneği o yazıcının KÂĞIDINDA çiziyor (06.09). İkincisi testin kendisi için şart — sabit boyda
+ * üretilen bir örnek, gerçek basımın ölçüsünü denemeden "geçti" derdi.
  *
  * Hata FIRLATIR (kardeşiyle aynı sözleşme): basım akışının tek `catch`i çağırandadır.
  */

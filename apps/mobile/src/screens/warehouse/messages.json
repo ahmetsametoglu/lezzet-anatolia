@@ -307,7 +307,7 @@
       "labelPayment": "Tahsilat: {method}",
       "labelItem": "{qty} × {name}",
       "labelQr": "QR: {code}",
-      "labelPending": "Önizleme — içerik sunucudan, basılacak olanın kendisi. Yazıcı tanımlı değil: basım için Depolar ekranından yazıcı tanımlanır.",
+      "labelPending": "Önizleme — içerik sunucudan, basılacak olanın kendisi. Yazıcı tanımlı değil: Bu cihaz · Yazıcılar ekranından tanıtılır.",
       "labelClose": "kapat",
       "footnote": "Okutma satırı kendi bulur; adet kalanla hazır gelir, onaylaman yeter. Satıra dokunmak elle düzeltme içindir. Kutu kapanınca içerik kesinleşir ve etiket basılır.",
       "emptyTitle": "Kutu açılmadı",
@@ -333,6 +333,7 @@
       "labelPrinting": "Etiket basılıyor…",
       "labelPrinted": "✓ Etiket basıldı ({model}).",
       "labelPrintFailed": "✗ Basım düştü: {error}",
+      "labelSuppressed": "Kargo kutusuna bizim etiketimiz basılmaz — taşıyıcının etiketi tek barkod taşır. Kutu kodu o etikete metin olarak yazılıyor.",
       "labelReprint": "yeniden bas"
     },
     "dispatch": {
@@ -1095,7 +1096,7 @@
       "body": "Bağlantı ya da sunucu sorunu — seçimin cihazda duruyor, değişmedi."
     },
     "purpose": {
-      "box": "KUTU ETİKETİ · 4×6",
+      "box": "KUTU ETİKETİ",
       "shipping": "KARGO ETİKETİ"
     },
     "consequence": {
@@ -1106,7 +1107,7 @@
       "title": "Tanımlı değil",
       "body": "etiket alınsa da basılamaz"
     },
-    "define": "Bu iş için depoda hiç yazıcı yok — yazıcılar Depolar ekranından tanımlanır.",
+    "define": "Bu iş için depoda hiç yazıcı yok — aşağıdaki listeden tanıtabilirsin.",
     "pick": "seç",
     "picked": "seçili",
     "link": {
@@ -1121,7 +1122,27 @@
       "ok": "Örnek etiket {name} yazıcısına gönderildi — kâğıt çıktıysa kurulum tamam.",
       "failed": "Basılamadı: {error}"
     },
-    "footnote": "Yazıcı seçimi cihaz başına saklanır; başka telefonla girdiğinde yeniden sorulur."
+    "footnote": "Yazıcı seçimi cihaz başına saklanır; başka telefonla girdiğinde yeniden sorulur.",
+    "discover": {
+      "title": "AĞDA BULUNANLAR",
+      "rescan": "yeniden tara",
+      "scanning": "taranıyor…",
+      "empty": "Ağda yazıcı bulunamadı. Yazıcının açık ve telefonla aynı Wi-Fi ağında olduğundan emin ol.",
+      "unavailable": "Bu derlemede yazıcı modülü yok — ağ taranamıyor.",
+      "add": "tanıt",
+      "adding": "tanıtılıyor…",
+      "unknownPaper": "kâğıdı bilinmiyor",
+      "registered": "{name} bu depoya tanıtıldı.",
+      "refreshed": "{name} zaten tanıtılmıştı — adresi {address} olarak güncellendi.",
+      "unsupported": "{model} tanınmayan bir model: hangi kâğıdın takılı olduğu bilinmiyor. Depolar ekranından boyu seçilerek elle tanıtılabilir.",
+      "failed": "Tanıtılamadı: {error}",
+      "change": "yazıcı değiştir",
+      "sheetTitle": "{purpose} · yazıcı"
+    },
+    "explain": {
+      "box": "Bizim kutumuzun üstüne giden QR’lı etiket: hangi sipariş, ne var, hangi rota. Kuryeyle dağıtılan kutular için.",
+      "shipping": "Taşıyıcı şirketin kendi etiketi — takip barkodu onundur. A6 yatay (148×105 mm); dar rulodan okunur çıkmaz."
+    }
   },
   "qtySheet": {
     "title": "Kaç adet",

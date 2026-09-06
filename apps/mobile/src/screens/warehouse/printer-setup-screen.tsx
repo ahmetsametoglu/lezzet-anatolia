@@ -8,32 +8,48 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsSurface } from '@/components/operations/surface';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
-import { fetchPrinters } from '@/lib/api/warehouse';
-import { findNetworkPrinters, printLabel } from '@/lib/print/brother';
+import { fetchPrinters, registerPrinter } from '@/lib/api/warehouse';
+import { findNetworkPrinters, printLabel, type PrinterChannel } from '@/lib/print/brother';
 import { downloadSampleLabelPng } from '@/lib/print/label-file';
+import { locatePrinter, printTargetOf } from '@/lib/print/printer-locate';
 import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
 import { choosePrinter, readPrinterChoice, resolvePrinter, type PrinterChoice } from '@/lib/print/printer-choice';
 import { fillCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
+import { PrinterOptionList } from './printer-option-list';
 import { trackWarehouse } from './warehouse-status';
 
 /*
-  BU CİHAZ · YAZICILAR (07.12 · kullanıcı kararı 29.08 · v3 yerleşimi 30.08).
+  BU CİHAZ · YAZICILAR (07.12 · kullanıcı kararı 29.08 · v3 yerleşimi 30.08 · tanıtma 05.09).
 
   ── EKRAN NEYİ SORUYOR ──────────────────────────────────────────────────────
   *"Sunucu: bu depoda hangi yazıcılar var. Cihaz: hangisini kullanıyor — listeden seçer, elle IP
-  yazmaz."* Envanter sunucuda; bu ekran yalnız ikinci yarıyı, yani BU TELEFONUN seçimini yazıyor
-  ve seçim cihazın yerel deposunda kalıyor — sunucuya hiç gitmiyor.
+  yazmaz."* Envanter sunucuda; bu ekran ikinci yarıyı, yani BU TELEFONUN seçimini yazıyor ve seçim
+  cihazın yerel deposunda kalıyor — sunucuya hiç gitmiyor.
+
+  ── VE ARTIK BİRİNCİ YARIYI DA AÇIYOR (05.09) ───────────────────────────────
+  Envanteri 29.08'den beri yalnız web'deki Depolar ekranı dolduruyordu. Cihazda ölçüldü: yazıcının
+  önünde duran depocu "Tanımlı değil" kartını görüyor ve kart onu **başka bir yüzeye** yolluyordu —
+  elindeki telefonla yapabileceği hiçbir şey yoktu. Artık kart ağda bulunanları listeliyor ve
+  dokunuş yazıcıyı bu depoya tanıtıyor.
 
   ── İKİ İŞ = İKİ KART (v3:1009-1039) ────────────────────────────────────────
   Ayrım fiziksel (tasarım §4.6): kutu etiketi 4×6 kalıp kesim, kargo etiketi taşıyıcının A6'sı.
   Tek bir "yazıcı seç" sorusu iki kâğıdı aynı makineye yollardı ve yanlış boy basım anında
   reddedilirdi. v3 bu ayrımı LİSTE BAŞLIĞIYLA değil KARTLA kuruyor: her iş kendi kutusunda, kendi
-  üstbaşlığı (`KUTU ETİKETİ · 4×6`), kendi hedefi ve kendi sonuç cümlesiyle duruyor.
+  üstbaşlığı, kendi hedefi ve kendi sonuç cümlesiyle duruyor.
+
+  ── ÜSTBAŞLIKTAN "· 4×6" DÜŞTÜ (06.09) ──────────────────────────────────────
+  Şablon `KUTU ETİKETİ · 4×6` diyordu ve o gün doğruydu: kutu etiketi geniş yazıcının 4×6 kalıp
+  kesiminden çıkıyordu. Kullanıcı iş bölüşümünü düzeltince (kutu etiketi → 62 mm'lik QL-820,
+  kargo etiketi → 103 mm'lik QL-1110) o ölçü YANILTICI oldu — kartın üstünde "4×6" yazarken
+  makinede 62 mm rulo duruyor. 4×6 şablonun çizim boyu, kâğıdın adı değil (SDK ~%60 ölçekliyor,
+  23.5'te okunur çıktığı ölçüldü). Ölçü artık kartın izah satırında, kâğıdın gerçeğiyle.
 
   ── KARTIN İKİ HÂLİ, RENGİ KENARINDAN ───────────────────────────────────────
   · HEDEF VAR  → nötr kart (`panel` + `sand-300`): zeytin karonun içinde yazıcı ikonu, adı,
@@ -47,11 +63,14 @@ import { trackWarehouse } from './warehouse-status';
   ile aynı cevabı okuyor (seçim varsa o · o iş için tek yazıcı varsa o · yoksa `null`). İki ayrı
   hesap olsaydı ekran bir yazıcı gösterip basım başkasına gidebilirdi.
 
-  ── SEÇENEK LİSTESİ SORU OLDUĞUNDA ÇIZİLİR ──────────────────────────────────
-  Şablon seçenek satırlarını (v3:1032-1037) yalnız kargo kartında gösteriyor; kutu kartında tek
-  aday var ve liste yok. Kural adaydan çıkıyor, kartın hâlinden değil: iki ve daha fazla aday
-  varsa soru VARDIR (seçili olan da işaretli durur, böylece cihaz kararı geri alınabilir), tek
-  aday varsa soru yoktur — seçenek yoksa seçim de yoktur.
+  ── LİSTE ARTIK İKİ CİNS SATIR TAŞIYOR ──────────────────────────────────────
+  30.08'de liste yalnız envanterin adaylarını gösteriyordu ve `aday ≥ 2` şartına bağlıydı — yani
+  tam da TANIMSIZ hâlde (0 ya da 1 aday) hiç çizilmiyordu. Tasarımın o karttaki asıl fikri buydu ve
+  uygulamada hiç görünmedi (kullanıcı bulgusu 05.09). Şart değişti; satır cinsi ikiye çıktı:
+    · envanterdeki aday → **seç** (seçili olan da listede kalır, cihaz kararı geri alınabilsin)
+    · ağda bulunan ama envanterde olmayan → **tanıt**
+  Blok çizilir: hedef yoksa DAİMA (boşken bile — "yeniden tara" oradan erişilebilir olmalı), hedef
+  varsa yalnız gösterilecek bir seçenek varsa. Tek yazıcı sorunsuz çalışıyorsa ekran susar.
 */
 
 const t = warehouseCopy;
@@ -67,9 +86,9 @@ type PrinterLink = 'online' | 'offline' | 'unknown';
 /**
  * İskelet kutusu İŞ KARTININ kendi ölçüsünden türer (bildirimler/karar kutusu emsali): iki dolgu +
  * iki iç aralık + üstbaşlık satırı + ikon karosu boyundaki hedef satırı + iki satırlık sonuç
- * cümlesi. Seçenek listesi hesaba GİRMİYOR — o yalnız iki ve daha fazla aday varken çiziliyor ve
- * yükleme anında kaç aday olduğu henüz bilinmiyor; yer tutucu bilinmeyeni değil, her hâlde var
- * olanı tutar (ölçüm: tasarımın kutu kartı 128 dp, bu türetme 133).
+ * cümlesi. Seçenek listesi hesaba GİRMİYOR — kaç satır çizileceği ağ taraması bitmeden bilinmiyor;
+ * yer tutucu bilinmeyeni değil, her hâlde var olanı tutar (ölçüm: tasarımın kutu kartı 128 dp, bu
+ * türetme 133).
  */
 const SKELETON_CARD_HEIGHT =
   operationsTheme.space['2xl'] * 2 +
@@ -84,64 +103,123 @@ export function PrinterSetupScreen() {
   const [choice, setChoice] = useState<PrinterChoice>({});
   const [failed, setFailed] = useState(false);
   /*
-    BAĞLANTI DURUMU ÖLÇÜLÜR, VARSAYILMAZ (v3:1022 "bağlı · Wi-Fi" · 30.08).
+    AĞDA BULUNANLAR — ÖLÇÜM, VARSAYIM DEĞİL (v3:1022 "bağlı · Wi-Fi" · 30.08).
 
     ── VERİDE YOK, CİHAZDA VAR ─────────────────────────────────────────────────
     `warehouse_printer` bir ENVANTERDİR: adres, model, kâğıt boyu. "Şu an açık mı" bilgisi orada
     YOK ve olmamalı — bir yazıcının ayakta olup olmadığını ancak onunla aynı ağdaki cihaz bilir;
     sunucuya yazılmış bir "bağlı" bayrağı, kimsenin tazelemediği anda yalan söylemeye başlar.
-    Ölçüm SDK'nın ağ keşfiyle yapılıyor (`findNetworkPrinters`, mDNS/SNMP) ve eşleşme ADRESTEN.
 
-    ── ÜÇ HÂL, VE ÜÇÜNCÜSÜ SIFIR DEĞİL ─────────────────────────────────────────
-    `online` (keşifte görüldü) · `offline` (tarandı, yok) · **`unknown` (ölçülemedi)**. Üçüncüsü
-    CLAUDE §1'in kuralı: yazıcı modülü bu derlemede yoksa (dev-client, jest) ya da keşif düşerse
-    "bağlı değil" demek, çalışan bir yazıcıyı arızalı göstermek olurdu — depocu sorunu olmayan bir
-    kabloyu kontrol etmeye giderdi. Ölçemediğimizi söylüyoruz.
+    ── `null` SIFIR DEĞİL "ÖLÇEMEDİM" ──────────────────────────────────────────
+    Boş dizi "taradım, kimse yok" demektir; `null` ise "tarayamadım" (modül yok ya da keşif düştü).
+    İkisini aynı saymak, tarama yapamayan bir cihaza "ağda yazıcı yok" dedirtmek olurdu — depocu
+    olmayan bir arızanın peşine düşerdi (CLAUDE §1).
+
+    ── EŞLEŞME ADRESTEN DEĞİL SERİDEN ──────────────────────────────────────────
+    `locatePrinter` tek kural: seri varsa ondan, yoksa adresten. Gerekçesi ölçülmüş bir arıza —
+    künyesi `lib/print/printer-locate.ts`te.
   */
-  const [link, setLink] = useState<Record<string, PrinterLink>>({});
+  const [found, setFound] = useState<PrinterChannel[] | null>(null);
   const [probing, setProbing] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
-  /* Test sonucu HANGİ İŞİN kartına ait olduğuyla saklanıyor: iki kart var ve ekranın altına
-     düşen tek bir cümle, hangi yazıcının cevabı olduğunu söylemezdi. */
+  /** Tanıtma sürüyor — hangi ADRESİN satırında olduğuyla (keşif satırının kimliği adresidir). */
+  const [registering, setRegistering] = useState<string | null>(null);
+  /* Sonuç HANGİ İŞİN kartına ait olduğuyla saklanıyor: iki kart var ve ekranın altına düşen tek
+     bir cümle, hangi yazıcının cevabı olduğunu söylemezdi. */
   const [notice, setNotice] = useState<{ purpose: PrinterPurpose; tone: 'ok' | 'error'; text: string } | null>(null);
+  /**
+   * **HANGİ İŞİN ÇEKMECESİ AÇIK** (kullanıcı kararı 05.09) — tanımlı kartın "yazıcı değiştir"i.
+   *
+   * Liste tanımlı kartın içinde durunca kurulum bittikten sonra bile ekran konuşmaya devam
+   * ediyordu; tasarımın tanımlı kartı ise sessiz (v3:1015-1024). Kullanıcının önerisi: *"gözümüzün
+   * gördüğü bir kart içerisinde tüm yazıcıların listelenmesi hoş olmaz, yazıcıları bir çekmecede
+   * açalım."* Çekmece ayrıca listenin BOYUNU da çözüyor — kaydırılabilir bir katman, kartın
+   * içindeki sabit yığından farklı olarak uzayabilir.
+   */
+  const [sheet, setSheet] = useState<PrinterPurpose | null>(null);
+
+  const readPrinters = useCallback(async () => {
+    const liste = await trackWarehouse(fetchPrinters());
+    if (liste.error !== null) return null;
+    setPrinters(liste.data.printers);
+    return liste.data.printers;
+  }, []);
 
   /**
-   * Ağ keşfi — listedeki her yazıcı için üç hâlden birini yazar. Modül yoksa HİÇ taranmaz ve
-   * hepsi `unknown` kalır: tarama yapamayan bir cihazın "yok" demesi, ölçmediğini ölçmüş gibi
-   * söylemesidir.
+   * **ESKİMİŞ ADRESLERİ ONAR** (05.09) — taramada seriden bulunan yazıcının adresi envanterdekiyle
+   * uyuşmuyorsa sunucuyu tazeler.
+   *
+   * Sessiz ve kendiliğinden, çünkü depocuya sorulacak bir şey yok: yazıcı orada, adresi değişmiş.
+   * Onarım burada duruyor çünkü tarama burada yapılıyor — ve tazelenmiş adres yalnız bu telefona
+   * değil, envanteri okuyan HERKESE lazım (kutu kapanışında basan öteki telefonlar dahil).
+   *
+   * Başarısızlığı yutuluyor ve bu bilinçli: onarım bir kolaylıktır, ekranın işi değil. Yazılamazsa
+   * bu telefon yine doğru adrese basar (`printTargetOf` canlı adresi kullanıyor) ve bir sonraki
+   * açılışta yeniden denenir.
    */
-  const probe = useCallback(async (rows: BoxPrinterContract[]) => {
-    if (rows.length === 0) return;
-    if (!hasPrinterNativeModule()) {
-      setLink(Object.fromEntries(rows.map((row) => [row.id, 'unknown' as const])));
-      return;
-    }
-    setProbing(true);
-    try {
-      const found = await findNetworkPrinters();
-      const addresses = new Set(found.map((channel) => channel.address));
-      setLink(Object.fromEntries(rows.map((row) => [row.id, addresses.has(row.address) ? 'online' : 'offline'])));
-    } catch {
-      // Keşfin kendisi düştü — bu "yazıcı yok" DEĞİL "ölçemedim"dir (CLAUDE §1). Sessiz değil:
-      // satırlar `unknown` yazıyor ve depocu ölçümün yapılamadığını görüyor.
-      setLink(Object.fromEntries(rows.map((row) => [row.id, 'unknown' as const])));
-    } finally {
-      setProbing(false);
-    }
-  }, []);
+  const healAddresses = useCallback(
+    async (rows: readonly BoxPrinterContract[], bulunan: readonly PrinterChannel[]) => {
+      const eskiyen = rows.flatMap((row) => {
+        const canli = locatePrinter(row, bulunan);
+        return canli !== null && canli.address !== row.address && row.serialNumber !== null
+          ? [{ row, address: canli.address }]
+          : [];
+      });
+      if (eskiyen.length === 0) return;
+
+      const yazildi = await Promise.all(
+        eskiyen.map(({ row, address }) =>
+          registerPrinter({
+            purpose: row.purpose,
+            model: row.model,
+            address,
+            serialNumber: row.serialNumber,
+            name: row.name,
+          }).then((sonuc) => sonuc.error === null && sonuc.data.status === 'ok'),
+        ),
+      );
+      if (yazildi.some(Boolean)) await readPrinters();
+    },
+    [readPrinters],
+  );
+
+  /**
+   * Ağ keşfi. Modül yoksa HİÇ taranmaz ve sonuç `null` kalır: tarama yapamayan bir cihazın "yok"
+   * demesi, ölçmediğini ölçmüş gibi söylemesidir.
+   */
+  const probe = useCallback(
+    async (rows: readonly BoxPrinterContract[]) => {
+      if (!hasPrinterNativeModule()) {
+        setFound(null);
+        return;
+      }
+      setProbing(true);
+      try {
+        const bulunan = await findNetworkPrinters();
+        setFound(bulunan);
+        await healAddresses(rows, bulunan);
+      } catch {
+        // Keşfin kendisi düştü — bu "yazıcı yok" DEĞİL "ölçemedim"dir (CLAUDE §1). Sessiz değil:
+        // kartlar ölçümün yapılamadığını yazıyor.
+        setFound(null);
+      } finally {
+        setProbing(false);
+      }
+    },
+    [healAddresses],
+  );
 
   const load = useCallback(async () => {
     setFailed(false);
-    const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
+    const [rows, secim] = await Promise.all([readPrinters(), readPrinterChoice()]);
     setChoice(secim);
-    if (liste.error !== null) {
+    if (rows === null) {
       setFailed(true);
       setPrinters([]);
       return;
     }
-    setPrinters(liste.data.printers);
-    await probe(liste.data.printers);
-  }, [probe]);
+    await probe(rows);
+  }, [probe, readPrinters]);
 
   useEffect(() => {
     void load();
@@ -152,6 +230,64 @@ export function PrinterSetupScreen() {
     setChoice(await readPrinterChoice());
   }, []);
 
+  /** **YENİDEN TARA** — envanteri de tazeliyor: başka telefon bu arada yazıcı tanıtmış olabilir. */
+  const rescan = useCallback(async () => {
+    setNotice(null);
+    const rows = await readPrinters();
+    if (rows !== null) await probe(rows);
+  }, [probe, readPrinters]);
+
+  /**
+   * **TANIT** (05.09) — ağda görülen yazıcıyı bu deponun envanterine yazar.
+   *
+   * Adres KEŞİFTEN geliyor, depocunun parmağından değil: yanlış IP'nin nasıl göründüğünü ölçtük
+   * (envanterde `.91`, gerçek yazıcı `.169`, ekran "ağda görünmüyor"). Kâğıt boyu gövdede YOK —
+   * sunucu modelden türetiyor ve tanınmayan modeli reddediyor.
+   *
+   * İkinci dokunuş EKLEMİYOR, adresi tazeliyor (`created:false`) ve cümle bunu söylüyor: depocu
+   * dokunuşunun ne yaptığını görmeli.
+   */
+  const introduce = useCallback(
+    async (purpose: PrinterPurpose, channel: PrinterChannel) => {
+      setNotice(null);
+      setRegistering(channel.address);
+      try {
+        const sonuc = await registerPrinter({
+          purpose,
+          model: channel.modelName,
+          address: channel.address,
+          serialNumber: channel.serialNumber,
+        });
+        if (sonuc.error !== null) {
+          setNotice({ purpose, tone: 'error', text: fillCopy(t.printers.discover.failed, { error: sonuc.error }) });
+          return;
+        }
+        if (sonuc.data.status === 'unsupported_model') {
+          setNotice({
+            purpose,
+            tone: 'error',
+            text: fillCopy(t.printers.discover.unsupported, { model: sonuc.data.model }),
+          });
+          return;
+        }
+        setNotice({
+          purpose,
+          tone: 'ok',
+          text: sonuc.data.created
+            ? fillCopy(t.printers.discover.registered, { name: sonuc.data.printer.name })
+            : fillCopy(t.printers.discover.refreshed, {
+                name: sonuc.data.printer.name,
+                address: sonuc.data.printer.address,
+              }),
+        });
+        await readPrinters();
+      } finally {
+        setRegistering(null);
+      }
+    },
+    [readPrinters],
+  );
+
   /**
    * **TEST BAS** (v3:1023) — sunucunun ürettiği ÖRNEK etiketi kartın hedef yazıcısına basar.
    *
@@ -161,27 +297,34 @@ export function PrinterSetupScreen() {
    * ekranının sorusu daha dar: *"seçtiğim yazıcıdan BİZİM etiketimiz doğru çıkıyor mu"* — kâğıt
    * boyu tutuyor mu, QR okunuyor mu, yazı kesiliyor mu. Bunu ancak gerçek şablon gösterir.
    *
+   * ── ADRES ENVANTERDEN DEĞİL, ÖLÇÜMDEN ───────────────────────────────────────
+   * Hedef `printTargetOf` ile çözülüyor: taramada bulunduysa GÜNCEL adres. Envanterdeki adres
+   * eskimişse test onun yüzünden düşmemeli — testin sorusu kâğıt, adres değil.
+   *
    * ── HATA YUTULMAZ, CÜMLEYE ÇEVRİLİR ─────────────────────────────────────────
    * SDK reddi (yanlış kâğıt boyu, ulaşılamayan adres) testin VERİSİDİR: "basılamadı" demek
    * yetmez, hangi sebep olduğu ekranda durmalı — kâğıt kararı fizikseldir ve kod onu çözemez.
    */
-  const testPrint = useCallback(async (purpose: PrinterPurpose, printer: BoxPrinterContract) => {
-    setNotice(null);
-    setTesting(printer.id);
-    try {
-      const fileUri = await downloadSampleLabelPng(printer.id);
-      await printLabel(fileUri, { address: printer.address, model: printer.model, labelSize: printer.labelSize });
-      setNotice({ purpose, tone: 'ok', text: fillCopy(t.printers.test.ok, { name: printer.name }) });
-    } catch (err) {
-      setNotice({
-        purpose,
-        tone: 'error',
-        text: fillCopy(t.printers.test.failed, { error: err instanceof Error ? err.message : String(err) }),
-      });
-    } finally {
-      setTesting(null);
-    }
-  }, []);
+  const testPrint = useCallback(
+    async (purpose: PrinterPurpose, printer: BoxPrinterContract, bulunan: readonly PrinterChannel[]) => {
+      setNotice(null);
+      setTesting(printer.id);
+      try {
+        const fileUri = await downloadSampleLabelPng(printer.id);
+        await printLabel(fileUri, printTargetOf(printer, bulunan));
+        setNotice({ purpose, tone: 'ok', text: fillCopy(t.printers.test.ok, { name: printer.name }) });
+      } catch (err) {
+        setNotice({
+          purpose,
+          tone: 'error',
+          text: fillCopy(t.printers.test.failed, { error: err instanceof Error ? err.message : String(err) }),
+        });
+      } finally {
+        setTesting(null);
+      }
+    },
+    [],
+  );
 
   const header = (
     <OperationsStackHeader
@@ -211,6 +354,10 @@ export function PrinterSetupScreen() {
     );
   }
 
+  /* Çekmecenin işi ayrı bir ad: `sheet` durumun kendisi, bu onun okunur hâli — JSX içinde
+     `sheet!` yazmamak için (kesin-değil işareti, tip daraltmasının yerini tutmaz). */
+  const sheetPurpose = sheet;
+
   return (
     <View style={styles.screen} testID="warehouse-printers">
       {header}
@@ -229,9 +376,16 @@ export function PrinterSetupScreen() {
           const adaylar = printers.filter((p) => p.purpose === purpose);
           /* Hedef, basım hattının okuduğu cevabın AYNISI — ekran kendi kuralını kurmuyor. */
           const hedef = resolvePrinter(printers, purpose, choice);
-          const durum: PrinterLink = hedef === null ? 'unknown' : (link[hedef.id] ?? 'unknown');
+          const bulunan = found ?? [];
+          const durum: PrinterLink =
+            hedef === null || found === null ? 'unknown' : locatePrinter(hedef, bulunan) === null ? 'offline' : 'online';
           const uyari = hedef === null;
           const sonuc = notice !== null && notice.purpose === purpose ? notice : null;
+
+          /* Ağda görülen ama BU İŞ için envanterde olmayanlar — tanıtılacak olanlar. Aynı fiziksel
+             yazıcı öteki işte kayıtlı olabilir ve burada yine yeni sayılır: kâğıt değiştirilerek
+             ikinci işe de bakabilir (0054'ün kısmi unique indeksi `purpose`u içeriyor). */
+          const yeniler = bulunan.filter((channel) => !adaylar.some((p) => locatePrinter(p, [channel]) !== null));
 
           return (
             <OperationsSurface
@@ -242,6 +396,13 @@ export function PrinterSetupScreen() {
               testID={`warehouse-printers-${purpose}`}
             >
               <Text style={[styles.eyebrow, uyari ? styles.eyebrowUnset : null]}>{t.printers.purpose[purpose]}</Text>
+              {/* İKİ KAVRAM KARTIN ÜSTÜNDE İZAH EDİLİYOR (kullanıcı isteği 06.09: *"kargo
+                  etiketiyle kutu etiketinin ne anlama geldiği arayüzde izah edilebilir olsun"*).
+                  Karışma gerçek ve bedeli fiziksel: "kargo" bir TAŞIYICI ŞİRKETİN etiketi, "kutu
+                  etiketi" bizim kendi kutumuzun künyesi. Yazıcı seçen kişi hangi kâğıdı hangi
+                  makineye bağladığını bu iki cümleden okuyor — üstbaşlık ("KARGO ETİKETİ") tek
+                  başına ikisini ayırt ettirmiyordu. */}
+              <Text style={styles.explain}>{t.printers.explain[purpose]}</Text>
 
               <View style={styles.head}>
                 {/* KARO BİR DÜĞME DEĞİL: `OperationsIconButton` 40'lık kum KUTUCUK ve dokunulabilir;
@@ -278,7 +439,7 @@ export function PrinterSetupScreen() {
                      etiket basardı. Dokunma payı yalnız yukarı/yanlara: altındaki seçenek
                      satırları da dokunulabilir ve payların çakıştığı yeri üstteki kazanır. */
                   <PressableSurface
-                    onPress={() => void testPrint(purpose, hedef)}
+                    onPress={() => void testPrint(purpose, hedef, bulunan)}
                     disabled={testing !== null}
                     feedback="scale"
                     compact
@@ -294,6 +455,11 @@ export function PrinterSetupScreen() {
                 )}
               </View>
 
+              {/* HİÇ ADAY YOKSA yön: eskiden "Depolar ekranından tanımlanır" diyordu ve depocuyu
+                  ulaşamayacağı bir yüzeye yolluyordu (ölçüldü 05.09). Artık aşağıdaki listeyi
+                  gösteriyor. */}
+              {adaylar.length === 0 ? <Text style={styles.define}>{t.printers.define}</Text> : null}
+
               {sonuc === null ? null : (
                 <Text
                   style={[styles.result, sonuc.tone === 'ok' ? styles.resultOk : styles.resultError]}
@@ -304,39 +470,36 @@ export function PrinterSetupScreen() {
                 </Text>
               )}
 
-              {/* SEÇENEKLER — iki ve daha fazla aday varsa (yukarıdaki künye). Seçili satır da
-                  listede kalır: cihazın kararı görünür ve geri alınabilir olmalı. */}
-              {adaylar.length < 2 ? null : (
-                <View style={styles.options}>
-                  {adaylar.map((row) => {
-                    const secili = hedef !== null && hedef.id === row.id;
-                    return (
-                      <OperationsSurface
-                        key={row.id}
-                        tone="card"
-                        padding="none"
-                        onPress={() => void pick(purpose, row.id)}
-                        /* SEÇİLİLİK ADIN İÇİNDE: `OperationsSurface`in `selected` prop'u yok, yani
-                           `accessibilityState.selected` ekran okuyucuya ulaşmıyor — renk farkı da
-                           ulaşmaz. Bilgi kaybolmasın diye satırın adına yazılıyor (emsal: depo
-                           hub'ının başlık+künye birleşimi). Kit boşluğu raporlandı. */
-                        accessibilityLabel={`${row.name} — ${secili ? t.printers.picked : t.printers.pick}`}
-                        style={[styles.option, secili ? styles.optionSelected : null]}
-                        testID={`warehouse-printers-option-${row.id}`}
-                      >
-                        <Text style={[styles.optionName, secili ? styles.optionNameSelected : null]}>{row.name}</Text>
-                        <Text style={styles.optionAction}>{secili ? t.printers.picked : t.printers.pick}</Text>
-                      </OperationsSurface>
-                    );
-                  })}
-                </View>
+              {/* LİSTE YALNIZ TANIMSIZ KARTTA (tasarımın kargo kartı, v3:1031-1038 · kullanıcı
+                  bulgusu 05.09). TANIMLI kart tasarımda SESSİZDİR: ikon, ad, "bağlı · Wi-Fi",
+                  "test bas" ve sonuç cümlesi — altında liste yok. Kod bir ara tanımlı kartta da
+                  liste çiziyordu (ağda tanıtılmamış yazıcı varsa) ve kurulum bittikten sonra bile
+                  ekran konuşmaya devam ediyordu. Değiştirmenin yolu kapanmadı, ÇEKMECEYE taşındı:
+                  nadir yapılan iş, dinlenme hâlini kirletmez. */}
+              {uyari ? (
+                <PrinterOptionList
+                  candidates={adaylar}
+                  target={hedef}
+                  discovered={yeniler}
+                  scanned={found !== null}
+                  probing={probing}
+                  registering={registering}
+                  onPick={(id) => void pick(purpose, id)}
+                  onIntroduce={(channel) => void introduce(purpose, channel)}
+                  onRescan={() => void rescan()}
+                  testID={`warehouse-printers-options-${purpose}`}
+                />
+              ) : (
+                <PressableSurface
+                  onPress={() => setSheet(purpose)}
+                  feedback="opacity"
+                  compact
+                  accessibilityLabel={t.printers.discover.change}
+                  testID={`warehouse-printers-change-${purpose}`}
+                >
+                  <Text style={styles.change}>{t.printers.discover.change}</Text>
+                </PressableSurface>
               )}
-
-              {/* HİÇ ADAY YOKSA eksiklik sunucudadır, cihazda değil — depocu burada seçemez,
-                  yazıcının nereden tanımlandığını bilmesi gerekir. Tasarımda bu hâl çizilmemiş
-                  (şablonun kargo kartında iki aday var); uyarı kartının içinde tek satırlık bir
-                  yön olarak duruyor. */}
-              {adaylar.length === 0 ? <Text style={styles.define}>{t.printers.define}</Text> : null}
 
               {/* HER İŞİN KENDİ SONUCU (v3:1024, 1039) — seçim bir tercih değil, bir DAVRANIŞ
                   belirliyor: kutu etiketi kapanışta kendiliğinden basar; kargo etiketi alınmışsa
@@ -351,6 +514,35 @@ export function PrinterSetupScreen() {
 
         <Text style={styles.footnote}>{t.printers.footnote}</Text>
       </ScrollView>
+
+      {/* DEĞİŞTİRME ÇEKMECESİ — aynı liste, ikinci host (kullanıcı kararı 05.09). Tanımlı kartın
+          dinlenme hâli sessiz kalıyor; yazıcıyı değiştirmek ya da ikinci bir yazıcı tanıtmak nadir
+          bir iş ve nadir iş, sık görülen yüzeyi kirletmez. Liste uzasa da burada kaydırılıyor —
+          kartın içindeki sabit yığın uzayamazdı. */}
+      <BottomSheet
+        visible={sheet !== null}
+        title={sheetPurpose === null ? '' : fillCopy(t.printers.discover.sheetTitle, { purpose: t.printers.purpose[sheetPurpose] })}
+        onClose={() => setSheet(null)}
+        testID="warehouse-printers-sheet"
+      >
+        {sheetPurpose === null ? null : (
+          <PrinterOptionList
+            candidates={printers.filter((p) => p.purpose === sheetPurpose)}
+            target={resolvePrinter(printers, sheetPurpose, choice)}
+            discovered={(found ?? []).filter(
+              (channel) =>
+                !printers.some((p) => p.purpose === sheetPurpose && locatePrinter(p, [channel]) !== null),
+            )}
+            scanned={found !== null}
+            probing={probing}
+            registering={registering}
+            onPick={(id) => void pick(sheetPurpose, id)}
+            onIntroduce={(channel) => void introduce(sheetPurpose, channel)}
+            onRescan={() => void rescan()}
+            testID="warehouse-printers-sheet-options"
+          />
+        )}
+      </BottomSheet>
     </View>
   );
 }
@@ -382,6 +574,14 @@ const styles = StyleSheet.create({
     color: operationsTheme.colors.muted,
   },
   eyebrowUnset: { color: operationsTheme.colors.terracotta },
+  /** İki kavramın izahı — üstbaşlığın hemen altında, dipnot sesiyle (kartın konusu değil, tarifi). */
+  explain: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.tag,
+    lineHeight: operationsTheme.text.tag * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors['tab-inactive'],
+    marginTop: -operationsTheme.space.xs,
+  },
   /** HEDEF SATIRI (v3:1017) — karo + ad/bağlantı + "test bas". */
   head: {
     flexDirection: 'row',
@@ -429,7 +629,7 @@ const styles = StyleSheet.create({
     fontSize: operationsTheme.text.micro,
     color: operationsTheme.colors.ink,
   },
-  /** Test sonucu — kartın İÇİNDE, hedef satırının hemen altında. */
+  /** Test/tanıtma sonucu — kartın İÇİNDE, hedef satırının hemen altında. */
   result: {
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.tag,
@@ -437,33 +637,14 @@ const styles = StyleSheet.create({
   },
   resultOk: { color: operationsTheme.colors['olive-dark'] },
   resultError: { color: operationsTheme.colors.terracotta },
-  /** SEÇENEK LİSTESİ (v3:1031) — `gap:8`. */
-  options: { gap: operationsTheme.space.md },
   /* Zemin/kenar/yarıçap `OperationsSurface tone="card"`ten (kutunun İÇİNDEKİ satır: beyaz +
      `sand-300` + bir kademe küçük yarıçap). Dolgu `none`, çünkü şablonun satırı yüksekliğiyle
      tarif ediliyor (48) — dikey dolguyla değil. */
-  option: {
-    height: operationsTheme.size.controlMd,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: operationsTheme.space.lg,
-    paddingHorizontal: operationsTheme.space['2xl'],
-  },
-  optionSelected: {
-    borderColor: operationsTheme.colors['olive-line'],
-    backgroundColor: operationsTheme.colors['olive-bg'],
-  },
-  optionName: {
-    flex: 1,
-    fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
-    fontSize: operationsTheme.text.note,
-    color: operationsTheme.colors.ink,
-  },
-  optionNameSelected: { color: operationsTheme.colors['olive-dark'] },
-  optionAction: {
+  /** "yazıcı değiştir" — çekmeceyi açan metin eylemi; kartın sessizliğini bozmayan tek satır. */
+  change: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['control--font-weight']],
     fontSize: operationsTheme.text.tag,
-    color: operationsTheme.colors.muted,
+    color: operationsTheme.colors['olive-dark'],
   },
   /** Aday yoksa yön gösteren tek satır. */
   define: {

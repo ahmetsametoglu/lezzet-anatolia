@@ -22,6 +22,8 @@ import {
   HandoverPendingResponseSchema,
   HandoverResponseSchema,
   WarehousePrintersResponseSchema,
+  RegisterPrinterResponseSchema,
+  type RegisterPrinterRequest,
   DeclareShortResponseSchema,
   SealBoxResponseSchema,
   UnsealBoxResponseSchema,
@@ -484,4 +486,17 @@ export function fetchPendingHandover(): Promise<ApiResult<z.infer<typeof Handove
  */
 export function fetchPrinters(): Promise<ApiResult<z.infer<typeof WarehousePrintersResponseSchema>>> {
   return warehouseFetch('/api/v1/warehouse/printers', WarehousePrintersResponseSchema);
+}
+
+/**
+ * **Ağda bulunan yazıcıyı depoya tanıt** (05.09) — envantere yazan İLK mobil kapı.
+ *
+ * Gövdedeki adres elle yazılmıyor, SDK'nın keşfinden geliyor; kâğıt boyu gövdede HİÇ yok, sunucu
+ * modelden türetiyor (uç künyesi). Aynı seri aynı işte zaten varsa satır eklenmiyor, **adresi
+ * tazeleniyor** — IP değişiminin çaresi tam olarak bu dal.
+ */
+export function registerPrinter(
+  body: RegisterPrinterRequest,
+): Promise<ApiResult<z.infer<typeof RegisterPrinterResponseSchema>>> {
+  return warehouseFetch('/api/v1/warehouse/printers', RegisterPrinterResponseSchema, { method: 'POST', body });
 }

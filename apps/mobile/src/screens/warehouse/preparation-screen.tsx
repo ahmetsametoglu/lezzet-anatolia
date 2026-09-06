@@ -1303,9 +1303,13 @@ function LabelCard({
               ? t.picking.box.labelPrinting
               : printState.phase === 'printed'
                 ? fillCopy(t.picking.box.labelPrinted, { model: printState.model })
-                : fillCopy(t.picking.box.labelPrintFailed, { error: printState.message })}
+                : printState.phase === 'suppressed'
+                  ? t.picking.box.labelSuppressed
+                  : fillCopy(t.picking.box.labelPrintFailed, { error: printState.message })}
           </Text>
-          {printState.phase === 'printing' ? null : (
+          {/* "Yeniden bas" KARGO KUTUSUNDA çizilmiyor: basılmayacak bir şeyi basmayı öneren düğme,
+              her basıldığında aynı cümleyi tekrar eden bir tuzaktır (tasarım §4.6). */}
+          {printState.phase === 'printing' || printState.phase === 'suppressed' ? null : (
             <TextAction label={t.picking.box.labelReprint} onPress={onReprint} testID="warehouse-picking-label-reprint" />
           )}
         </View>

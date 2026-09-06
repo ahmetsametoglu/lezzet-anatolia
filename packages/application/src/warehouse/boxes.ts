@@ -7,7 +7,7 @@ import {
   UserProfileService,
   WarehousePrinterService,
 } from '@lezzet/database';
-import { boxCompletion, orderBoxCode, type ShortfallSuggestion } from '@lezzet/domain-core';
+import { boxCompletion, defaultLabelSizeFor, orderBoxCode, type ShortfallSuggestion } from '@lezzet/domain-core';
 import type { Order, PreparationPick, PrinterPurpose, TransitionResult } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { variantNames } from './names';
@@ -372,7 +372,10 @@ export interface BoxPrinter {
   name: string;
   /** `box` bizim 4×6 QR'lı etiketimiz · `shipping` taşıyıcının A6 etiketi (ayrım FİZİKSEL). */
   purpose: PrinterPurpose;
+  /** Son bilinen yer — **kimlik değil önbellek** (05.09); DHCP yenilenince değişir. */
   address: string;
+  /** Değişmez kimlik (SDK keşfi). `null` = elle tanıtılmış satır; adresten eşleşir. */
+  serialNumber: string | null;
   model: string;
   labelSize: string;
 }
@@ -394,9 +397,82 @@ export async function printersFor(db: SupabaseClient, warehouseId: string): Prom
     name: row.name,
     purpose: row.purpose,
     address: row.address,
+    serialNumber: row.serialNumber,
     model: row.model,
     labelSize: row.labelSize,
   }));
+}
+
+export type RegisterPrinterOutcome =
+  | { status: 'ok'; printer: BoxPrinter; created: boolean }
+  | { status: 'unsupported_model'; model: string };
+
+/**
+ * **Yazıcıyı depoya tanıt** (05.09) — telefonun ağda bulduğu cihazı envantere yazar.
+ *
+ * ── İKİNCİ TANITMA EKLEME DEĞİL, TAZELEME ───────────────────────────────────
+ * Keşif tekrarlanabilir bir şeydir: depocu listeye iki kez dokunabilir, iki telefon aynı yazıcıyı
+ * tanıtabilir. İkinci kayıt bir KOPYA olurdu ve seçim listesinde aynı yazıcı iki satır olarak
+ * dururdu — hangisinin seçili olduğu belirsiz. Aynı seri aynı işte zaten varsa satır eklenmiyor,
+ * **adresi tazeleniyor**; ve bu tam olarak IP değişiminin çaresi: `.91`de kayıtlı yazıcı `.169`da
+ * bulunduğunda ikinci tanıtma onu yerine oturtuyor.
+ *
+ * `created` cevabın içinde, çünkü ekranın söyleyeceği cümle farklı: "tanıtıldı" ile "adresi
+ * güncellendi" aynı şey değil ve depocu dokunuşunun ne yaptığını görmeli.
+ *
+ * ── SERİSİ OLMAYAN İSTEK HER ZAMAN EKLER ────────────────────────────────────
+ * Kimliği olmayan bir satırı "aynı yazıcı" saymanın yolu yok; adresten eşleştirmek yanlış olurdu
+ * çünkü adres tam da güvenilmez olan şey. Böyle bir istek yeni satır açar — keşiften gelen tanıtma
+ * daima seri taşıdığı için pratikte bu dal yalnız SDK'nın seriyi vermediği hâlde çalışır.
+ *
+ * ── KAPALI SATIR YENİDEN AÇILIR ─────────────────────────────────────────────
+ * Sökülüp kapatılmış bir yazıcı geri takılırsa depocu onu ağda görür ve tanıtır; o an yeni bir
+ * satır açmak, kapalı satırı öksüz bırakırdı (`printersFor` kapalıları okumuyor, yani envanterde
+ * görünmez bir ikiz kalırdı). Tazeleme `isActive`i de geri açıyor.
+ */
+export async function registerPrinter(
+  db: SupabaseClient,
+  warehouseId: string,
+  input: { purpose: PrinterPurpose; model: string; address: string; serialNumber: string | null; name?: string },
+): Promise<RegisterPrinterOutcome> {
+  const labelSize = defaultLabelSizeFor(input.model);
+  if (labelSize === null) return { status: 'unsupported_model', model: input.model };
+
+  const svc = new WarehousePrinterService(db);
+  const mevcut =
+    input.serialNumber === null
+      ? undefined
+      : (await svc.listForWarehouse(warehouseId, { purpose: input.purpose })).find(
+          (row) => row.serialNumber === input.serialNumber,
+        );
+
+  // Ad tazelemede DEĞİŞMİYOR: depocu Depolar ekranından "Rampa · QL-820" diye adlandırdıysa,
+  // adresi düzelten bir dokunuş o adı model adına geri çevirmemeli.
+  const row = mevcut
+    ? await svc.update({ id: mevcut.id, address: input.address, labelSize, isActive: true })
+    : await svc.insert({
+        warehouseId,
+        name: input.name?.trim() || input.model,
+        purpose: input.purpose,
+        address: input.address,
+        serialNumber: input.serialNumber,
+        model: input.model,
+        labelSize,
+      });
+
+  return {
+    status: 'ok',
+    created: mevcut === undefined,
+    printer: {
+      id: row.id,
+      name: row.name,
+      purpose: row.purpose,
+      address: row.address,
+      serialNumber: row.serialNumber,
+      model: row.model,
+      labelSize: row.labelSize,
+    },
+  };
 }
 
 export type MarkPrintedOutcome =

@@ -14,7 +14,8 @@ import type { Depolar } from './warehouse';
 // `SCOPE_PRIORITY` 03.08'den beri `warehouse` ile BAŞLIYOR (en dar kapsam kazanır). İlk gerçek
 // ⚠ Etiket yazıcısı ayarları 29.08'de bu dosyadan ÇIKTI ve `warehouse_printer` tablosuna taşındı
 // (0054): ayar tek yazıcı varsayıyordu, kargo kanalı hem yazıcıyı hem etiket türünü çoğalttı.
-// Besleme karşılığı `seed/warehouse.ts → seedWarehousePrinters`.
+// Envanterin BESLEMESİ YOK (05.09): seed yazıcı uydurmuyor — kurulum odanın gerçeğidir ve
+// telefondan tanıtılır (`registerPrinter`). Gerekçe `seed/warehouse.ts`in yazıcı künyesinde.
 
 export async function seedScopedSettings(db: Db, _depolar: Depolar): Promise<void> {
   const settings = new SettingsService(db);
@@ -114,8 +115,9 @@ export async function seedScopedSettings(db: Db, _depolar: Depolar): Promise<voi
     yazıcıyı hem etiket TÜRÜNÜ çoğalttı. Anahtarları bırakmak ikinci bir kaynak demekti — biri
     Depolar ekranından, öteki tablodan okunurdu ve bir gün ayrışırlardı.
 
-    Besleme karşılığı: `seed/warehouse.ts → seedWarehousePrinters` (üç hâl: iki yazıcılı depo ·
-    yalnız kutu yazıcısı olan depo · hiç yazıcısı olmayan depo).
+    Tabloyu SEED DE BESLEMİYOR (05.09): uydurulan adres sessizce yanlış oluyordu (ölçüldü —
+    envanterde `.91`, gerçek yazıcı `.169`). Envanter telefondan, ağda görülen yazıcıya
+    dokunularak kuruluyor; ekranın hâllerini test gösteriyor.
   */
 
   console.log(`✓ kapsamlı ayar: ${sayi} satır (kanal · bölge · depo) — aynı anahtar bağlama göre başka cevap verir`);

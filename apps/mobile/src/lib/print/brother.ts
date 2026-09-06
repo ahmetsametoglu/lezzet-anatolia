@@ -26,8 +26,22 @@ import { hasPrinterNativeModule } from './printer-availability';
 */
 
 export interface PrinterChannel {
+  /** Yazıcının BULUNDUĞU yer — kimlik değil, o anki ölçüm. */
   address: string;
   modelName: string;
+  /**
+   * **Değişmez kimlik** (05.09) — SDK WiFi yazıcılar için veriyor (`BPChannel.serialNumber`).
+   *
+   * Envanterle eşleşme artık BUNDAN yapılıyor, adresten değil: DHCP kirası yenilendiğinde adres
+   * değişir ve adresten eşleşen bir liste yazıcıyı "ağda görünmüyor" diye kaybeder (ölçüldü
+   * 05.09: envanterde `.91` yazılıydı, gerçek yazıcı `.169`daydı). Seri numarası cihazın
+   * etiketinde de basılı olduğu için depocu gözle doğrulayabiliyor — `macAddress`/`nodeName` de
+   * kararlı ama insan-okunur değil.
+   *
+   * `null` = SDK vermedi (isteğe bağlı alan). O yazıcı adresten eşleşmeye düşer; ölçemediğimizi
+   * söylüyoruz, sıfır saymıyoruz (CLAUDE §1).
+   */
+  serialNumber: string | null;
 }
 
 type Sdk = typeof BrotherSdk;
@@ -43,7 +57,13 @@ export async function findNetworkPrinters(): Promise<PrinterChannel[]> {
   const sdk = loadSdk();
   if (!sdk) return [];
   const channels = await sdk.BrotherPrinterSDK.searchNetworkPrinters({ searchDuration: 4000 });
-  return channels.map((channel) => ({ address: channel.address, modelName: channel.modelName }));
+  return channels.map((channel) => ({
+    address: channel.address,
+    modelName: channel.modelName,
+    // Boş dizgi de "vermedi" demektir: SDK alanı isteğe bağlı yazıyor ve boş dönen bir seri,
+    // envanterdeki boş seriyle EŞLEŞİRDİ — iki ayrı yazıcıyı aynı sayardı.
+    serialNumber: channel.serialNumber?.trim() || null,
+  }));
 }
 
 /*

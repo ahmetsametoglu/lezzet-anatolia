@@ -68,3 +68,4 @@ export * from './catalog/similar';
 export * from './catalog/storage';
 export * from './content/user-text';
 export * from './observability/health-status';
+export * from './printing/paper';

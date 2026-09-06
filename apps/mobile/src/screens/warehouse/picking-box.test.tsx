@@ -286,7 +286,7 @@ describe('D1 · kutu döngüsü', () => {
   it('yazıcı ayarlıysa kapanış etiketi KENDİLİĞİNDEN basar: PNG sunucudan, damga başarıdan sonra', async () => {
     mockPrinterModule.available = true;
     // Depoda o iş için TEK yazıcı → seçim sorulmaz, hedef kendiliğinden o (`resolvePrinter`).
-    const printer = { id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa · QL-1110', purpose: 'box' as const, address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
+    const printer = { id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa · QL-1110', purpose: 'box' as const, address: '192.168.1.90', serialNumber: 'E11111', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
     net.orders = [preparationOrder({ boxes: [preparationBox()] })];
     net.seal = { status: 'ok', boxNo: 1, ready: true, missing: [], shortfalls: [] };
     net.label = {
@@ -304,8 +304,15 @@ describe('D1 · kutu döngüsü', () => {
     await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
 
     await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Etiket basıldı \(QL-1110NWB\)/));
-    // PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef ENVANTERDEN geldi.
-    expect(mockPrintLabel).toHaveBeenCalledWith('file:///cache/box-label-00000000-0000-4000-8000-0000000000b1.png', printer);
+    /* PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef ENVANTERDEN geldi.
+       SDK'ya envanter SATIRI değil BASIM HEDEFİ gidiyor (05.09): üç alan — adres, model, kâğıt.
+       Aradaki `printHealing` adresi eskimişse seriden tazeleyebiliyor ve o hâlde satırın kendi
+       adresi zaten yanlış olurdu; kimlik/ad/amaç ise SDK'nın işi değil. */
+    expect(mockPrintLabel).toHaveBeenCalledWith('file:///cache/box-label-00000000-0000-4000-8000-0000000000b1.png', {
+      address: printer.address,
+      model: printer.model,
+      labelSize: printer.labelSize,
+    });
     // Damga başarıdan SONRA vuruldu — niyet sayılmaz (05.08 dersi).
     expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/printed'))).toBe(true);
     // Yeniden basım eli: yırtılan etiketin yolu.
@@ -328,7 +335,7 @@ describe('D1 · kutu döngüsü', () => {
       },
     };
     // Yanlış rulo BİLEREK: SDK'nın `SetLabelSizeError`ı 23.5'te ölçülen gerçek reddin kendisi.
-    net.printers = [{ id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa', purpose: 'box', address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'RollW62' }];
+    net.printers = [{ id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa', purpose: 'box', address: '192.168.1.90', serialNumber: 'E11111', model: 'QL-1110NWB', labelSize: 'RollW62' }];
     await renderPicking();
 
     await putAll(ITEM_A);
@@ -861,6 +868,34 @@ describe('D1 · sevk (kargoya ver)', () => {
     await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
     await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith('/seal'))).toBe(true));
   }
+
+  it('KARGO kutusuna BİZİM etiketimiz basılmaz — tek etiket, tek barkod (§4.6)', async () => {
+    /*
+      Tasarım §4.6: *"TEK ETİKET, TEK BARKOD. Kargo kulvarında bizim QR'lı kutu etiketimiz
+      basılmaz"* — kutunun üstündeki ikinci barkod taşıyıcının tarayıcısını şaşırtır. Kural
+      `0054`ün sütun yorumunda da yazılıydı ama KODDA YOKTU: mühürleme kulvara bakmadan basıyordu
+      (ölçüldü 06.09). Bedeli yok, çünkü kutu kodumuz taşıyıcı etiketine metin olarak yazılıyor.
+    */
+    mockPrinterModule.available = true;
+    net.printers = [{ id: '00000000-0000-4000-8000-0000000000e1', name: 'Masa', purpose: 'box', address: '192.168.1.90', serialNumber: 'E11111', model: 'QL-820NWB', labelSize: 'RollW62' }];
+    net.label = {
+      status: 'ok',
+      label: {
+        code: 'KT-26-4K2M9P7HWX', boxNo: 1, boxCount: 1, referenceNo: 'LZA-26-3M8C',
+        parcelName: 'Restaurant Bosphore', routeName: null, deliveryType: 'shipping',
+        deliveryDate: '2026-08-24', paymentMethod: null, items: [],
+      },
+    };
+    await sonKutuyuKapat('shipping');
+
+    // Etiketin İÇERİĞİ yine gösteriliyor — yasak kâğıda, önizlemeye değil.
+    const serit = await screen.findByTestId('warehouse-picking-label-print');
+    expect(serit).toHaveTextContent(/bizim etiketimiz basılmaz/);
+    expect(mockPrintLabel).not.toHaveBeenCalled();
+    /* "Yeniden bas" da çizilmiyor: basılmayacak bir şeyi öneren düğme, her basıldığında aynı
+       cümleyi tekrar eden bir tuzaktır. */
+    expect(screen.queryByTestId('warehouse-picking-label-reprint')).toBeNull();
+  });
 
   it('ROTA siparişinde sevk kartı HİÇ doğmaz — kutu araca biner, taşıyıcıya değil', async () => {
     await sonKutuyuKapat('route');

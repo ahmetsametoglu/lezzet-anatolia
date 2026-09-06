@@ -1,5 +1,6 @@
 import { create as createQr } from 'qrcode';
 import { PAYMENT_METHOD_LABELS } from '@lezzet/types';
+import { type LabelSizeMm } from '@lezzet/domain-core';
 import type { BoxLabel } from './boxes';
 
 /*
@@ -14,23 +15,103 @@ import type { BoxLabel } from './boxes';
   QR olduğundan o makine fazla: SVG şablonu + `@resvg/resvg-js` yeter. **Bilinçli sapma, bu
   künye kaydıdır.**
 
-  ── BOY TEK: 4×6 (103×164 mm) ──────────────────────────────────────────────
-  Şablon 300 dpi'da 1218×1940 çizer (karar §1.6'nın etiketi). 62 mm ruloya basım SDK'nın
-  ölçeklemesiyle olur (~%60 — okunur, ölçüldü 23.5 deseniyle); rulo başına ikinci şablon
-  AÇILMAZ, ihtiyaç doğarsa o gün parametrik yapılır.
+  ── ŞABLON ARTIK KÂĞIDIN BOYUNDA ÇİZİLİYOR (kullanıcı bulgusu 06.09) ───────
+  Bu bölüm önce *"BOY TEK: 4×6 (103×164 mm)… 62 mm ruloya basım SDK'nın ölçeklemesiyle olur (~%60
+  — okunur)"* diyordu. **Okunur değildi ve kullanıcı kâğıtta gördü:** *"ürünler okunmayacak kadar
+  küçük çıktı… tahminim 4×6 ölçülerinde bir data gönderiyoruz, o da bunu ölçekleyip çıkartıyor."*
+  Hesap doğrulandı: 103 mm'lik şablon 62 mm'ye inerken ölçek 0,60 ve ürün satırı 4,7 mm → **2,9 mm**
+  (≈8 punto). Depo ışığında okunmaz.
+
+  İki şey birden değişti:
+
+  1. **GENİŞLİK HEDEFTEN GELİYOR.** Şablon artık milimetre tabanında ve verilen rulo genişliğinde
+     çiziliyor; ölçekleme yok, punto tasarlandığı boyda çıkıyor. Tipografi RULOYA GÖRE BÜYÜYÜP
+     KÜÇÜLMÜYOR — 3,8 mm'lik bir ürün satırı 62 mm'de de 103 mm'de de 3,8 mm; değişen tek şey
+     satıra sığan karakter sayısı. Fiziksel okunurluk kâğıdın genişliğinin değil, gözün sorusudur.
+
+  2. **YÜKSEKLİK İÇERİKTEN GELİYOR.** Sürekli ruloda kâğıt istenen yerde kesiliyor; sabit 164 mm
+     iki kalemlik bir kutu için de o kadar kâğıt harcıyor, yedi kalemden fazlasını da kırpıyordu.
+     Boy artık dökümle uzuyor (`labelSizeMm(...).heightMm === null`). Kalıp kesimde boy kâğıdın
+     kendisinde sabit — orada içerik ona SIĞMAK zorunda ve fazlası yine "+K kalem daha"ya iner.
 
   ── PARA YOK ────────────────────────────────────────────────────────────────
   `BoxLabel` tutar taşımaz (karar §1.5) ve bu dosya kendi metnini uyduramaz — test yine de
   '€' aramaz olmaz diye ölçüyor (alan-adı sızıntısı emsali `boxes.test.ts`).
 */
 
-/** 300 dpi'da 103×164 mm. */
-export const LABEL_WIDTH_PX = 1218;
-export const LABEL_HEIGHT_PX = 1940;
+/** Şablonun çözünürlüğü — Brother QL serisi 300 dpi basar. */
+const DPI = 300;
+/** Milimetre → şablon pikseli. Tek dönüşüm noktası: ölçüler mm yazılır, çizim px ister. */
+const px = (mm: number): number => Math.round((mm * DPI) / 25.4);
 
-const MARGIN = 56;
-/** Döküm bu satır sayısını aşarsa kalan "+K kalem daha" satırına iner — etiket taşmaz. */
-const MAX_ITEM_LINES = 7;
+/**
+ * **FİZİKSEL TİPOGRAFİ** — milimetre cinsinden, ruloya göre DEĞİŞMEZ.
+ *
+ * Değerler depoda okunacak mesafeye göre seçildi, kâğıdın genişliğine oranla değil: 62 mm'lik
+ * ruloda 3,8 mm'lik bir ürün satırı ile 103 mm'likteki 3,8 mm aynı gözle okunur. Oranlasaydık dar
+ * ruloda yine küçülürdü — düzeltmeye çalıştığımız arızanın kendisi.
+ */
+const TYPE_MM = {
+  /** Sipariş referansı — sol üst. */
+  reference: 4.2,
+  /** Kutu sayacı (N/M) — etiketin en büyük rakamı; depoda uzaktan okunan şey bu. */
+  counter: 7,
+  /** Koliye yazılacak ad (10.9: alıcı ≠ hesap sahibi olabilir). */
+  parcel: 5.2,
+  /** Rota/kulvar · gün. */
+  lane: 3.8,
+  /** Tahsilat YÖNTEMİ — tutar asla (karar §1.5). */
+  payment: 3.8,
+  /** Döküm satırı — kullanıcının "okunmuyor" dediği satır; 2,9 mm'den buraya çıktı. */
+  item: 3.8,
+  /** QR'ın altındaki insan-okunur kod. */
+  code: 3.4,
+} as const;
+
+/** Dikey ritim (mm) — her satırın kendinden ÖNCEKİ boşluğu. */
+const GAP_MM = {
+  margin: 4,
+  afterHeader: 7,
+  afterParcel: 5.6,
+  afterLane: 5,
+  beforeRule: 3.4,
+  item: 5.2,
+  beforeQr: 4.5,
+  afterQr: 4.6,
+} as const;
+
+/** QR'ın kenarı (mm) — kareyi dar ruloda da okunur tutan alt sınır ile kâğıdın izin verdiği üst sınır. */
+const QR_MM = { min: 22, max: 34 } as const;
+
+/**
+ * Döküm için ÜST SINIR — sürekli ruloda bile.
+ *
+ * Boy serbest ama sonsuz değil: kırk kalemlik bir kutu yarım metre etiket üretirdi ve o kâğıt
+ * kutuya sığmaz. Sınır aşılınca kalan "+K kalem daha"ya iniyor — bilgi kaybolmuyor, sayıya
+ * dönüşüyor. Kalıp kesimde sınır ayrıca KÂĞIDIN kendisidir (aşağıda hesaplanıyor).
+ */
+const MAX_ITEM_LINES = 24;
+
+/**
+ * Karla'nın ortalama karakter genişliği ÷ punto — rasterden ÖLÇÜLDÜ (06.09).
+ *
+ * İlk değer 0,52 diye kestirilmişti ve fazla ihtiyatlıydı: 62 mm'lik etikette ürün adları sağda
+ * bir parmak boşluk kalmışken "…"ya iniyordu ve kesilen kısım çoğu zaman gramajdı ("· 9 × 90 g"),
+ * yani satırın en işe yarar yarısı. Basılmış örnekten ölçüldü: 25 karakterlik bir satır 45 px
+ * puntoda ≈510 px tutuyor → karakter başına 20,4 px → **0,454**. Emniyet payıyla 0,47 alındı;
+ * kesim hâlâ erken olabilir ama kâğıdın dışına asla taşmaz.
+ */
+const CHAR_W = 0.47;
+
+/**
+ * Bir satıra sığan karakter sayısı. Taşan ad kesiliyor: kâğıdın dışına akan bir isim, hiç
+ * yazılmamış olmasından beter — okunur sanılır ve depocu eksik olanı fark etmez.
+ */
+function fit(text: string, widthMm: number, fontMm: number): string {
+  const max = Math.max(4, Math.floor(widthMm / (fontMm * CHAR_W)));
+  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
+}
+
 
 /** XML metin kaçışı — ürün/müşteri adı serbest metindir, SVG'yi kıramaz. */
 function esc(value: string): string {
@@ -71,65 +152,111 @@ function formatDate(value: string | null): string | null {
 }
 
 /**
- * Etiketin SVG'si. Düzen yukarıdan aşağı: referans + N/M → koliye yazılacak ad → rota/gün →
- * tahsilat yöntemi → döküm → QR (alt merkez, insan gözü için kodun metni altında).
+ * Etiketin SVG'si — **verilen kâğıdın boyunda**. Düzen yukarıdan aşağı: referans + N/M → koliye
+ * yazılacak ad → rota/gün → tahsilat yöntemi → döküm → QR (alt merkez, kodun metni altında).
+ *
+ * `size` verilmezse kutu yazıcısının kâğıdı varsayılıyor (62 mm sürekli rulo — kullanıcı kararı
+ * 06.09): bizim kutu etiketimizin evi orası. Kargo etiketi bu şablondan ÇIKMAZ, o taşıyıcının
+ * kendi PDF'idir.
  */
-export function boxLabelSvg(label: BoxLabel): string {
-  const W = LABEL_WIDTH_PX;
-  const H = LABEL_HEIGHT_PX;
+export function boxLabelSvg(label: BoxLabel, size: LabelSizeMm = { widthMm: 62, heightMm: null }): string {
+  const W = px(size.widthMm);
+  const M = px(GAP_MM.margin);
+  const contentMm = size.widthMm - GAP_MM.margin * 2;
   const parts: string[] = [];
-  let y = MARGIN;
+  let y = M;
 
   // Üst satır: referans (sol) + kutu sayacı (sağ, en büyük — depoda uzaktan okunan şey bu).
-  y += 84;
-  parts.push(`<text x="${MARGIN}" y="${y}" font-size="72" font-weight="600">${esc(label.referenceNo ?? '—')}</text>`);
+  y += px(GAP_MM.afterHeader);
   parts.push(
-    `<text x="${W - MARGIN}" y="${y}" font-size="96" font-weight="600" text-anchor="end">${label.boxNo}/${label.boxCount}</text>`,
+    `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.reference)}" font-weight="600">${esc(fit(label.referenceNo ?? '—', contentMm * 0.6, TYPE_MM.reference))}</text>`,
+  );
+  parts.push(
+    `<text x="${W - M}" y="${y}" font-size="${px(TYPE_MM.counter)}" font-weight="600" text-anchor="end">${label.boxNo}/${label.boxCount}</text>`,
   );
 
   // Koliye yazılacak ad (10.9 kuralı: alıcı ≠ hesap sahibi olabilir).
-  y += 108;
-  parts.push(`<text x="${MARGIN}" y="${y}" font-size="84" font-weight="600">${esc(label.parcelName)}</text>`);
+  y += px(GAP_MM.afterParcel);
+  parts.push(
+    `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.parcel)}" font-weight="600">${esc(fit(label.parcelName, contentMm, TYPE_MM.parcel))}</text>`,
+  );
 
   // Rota/kulvar + gün. Kargoda rota yok — kulvarın adı yazılır.
   const lane = label.deliveryType === 'shipping' ? 'Kargo' : (label.routeName ?? '—');
   const date = formatDate(label.deliveryDate);
-  y += 88;
-  parts.push(`<text x="${MARGIN}" y="${y}" font-size="64">${esc(date ? `${lane} · ${date}` : lane)}</text>`);
+  y += px(GAP_MM.afterLane);
+  parts.push(
+    `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.lane)}">${esc(fit(date ? `${lane} · ${date}` : lane, contentMm, TYPE_MM.lane))}</text>`,
+  );
 
   // Tahsilatın YÖNTEMİ — tutar asla (karar §1.5). Online'da satır hiç çizilmez: kapıda iş yok.
   if (label.paymentMethod && label.paymentMethod !== 'online') {
-    y += 80;
+    y += px(GAP_MM.afterLane);
     parts.push(
-      `<text x="${MARGIN}" y="${y}" font-size="64" font-weight="600">Tahsilat: ${esc(PAYMENT_METHOD_LABELS[label.paymentMethod])}</text>`,
+      `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.payment)}" font-weight="600">Tahsilat: ${esc(PAYMENT_METHOD_LABELS[label.paymentMethod])}</text>`,
     );
   }
 
+  /*
+    QR'IN KENARI KÂĞIDA GÖRE, DÖKÜMÜN SINIRI DA ÖYLE.
+
+    Kare kâğıdın izin verdiği kadar büyük ama iki ucu var: 22 mm'nin altına inince telefon
+    kamerası uzaktan yakalayamıyor, 34 mm'nin üstü de dar ruloda dökümün yerini yiyor.
+  */
+  const qrMm = Math.min(QR_MM.max, Math.max(QR_MM.min, contentMm));
+  const qrBlockMm = GAP_MM.beforeQr + qrMm + GAP_MM.afterQr + GAP_MM.margin;
+
+  /*
+    KAÇ KALEM SIĞAR — KÂĞIT SORUYORSA KÂĞIT CEVAPLAR.
+
+    Sürekli ruloda tavan yalnız `MAX_ITEM_LINES` (etiket kutuya sığmalı). Kalıp kesimde ikinci bir
+    tavan var ve o KÂĞIDIN kendisi: kalan yüksekliği satır boyuna bölüyoruz. İkisinin küçüğü
+    kazanıyor — sığmayan satırı çizmek, onu kâğıdın dışına yazmaktır.
+  */
+  const dokumBasiMm = (y + px(GAP_MM.beforeRule)) / DPI * 25.4;
+  const kagittaKalanMm = size.heightMm === null ? Infinity : size.heightMm - dokumBasiMm - qrBlockMm;
+  const tavan = Math.max(0, Math.min(MAX_ITEM_LINES, Math.floor(kagittaKalanMm / GAP_MM.item)));
+
   // Ayraç + döküm.
-  y += 48;
-  parts.push(`<line x1="${MARGIN}" y1="${y}" x2="${W - MARGIN}" y2="${y}" stroke="black" stroke-width="3"/>`);
-  const shown = label.items.slice(0, MAX_ITEM_LINES);
+  y += px(GAP_MM.beforeRule);
+  parts.push(`<line x1="${M}" y1="${y}" x2="${W - M}" y2="${y}" stroke="black" stroke-width="${px(0.25)}"/>`);
+  /* Kırpma varsa SON satır "+K kalem daha"ya ayrılıyor: yoksa sığan son kalem yazılır ve gizlenen
+     hiç söylenmezdi — sessiz bir eksiklik, kutunun içeriği hakkında. */
+  /* Önekin ("12 × ") yeri karakterden ayrılıyor, punto katından değil: beş karakter en uzun hâli
+     ve 0,47 çarpanı zaten karakterin kendi genişliği. */
+  const onekMm = 5 * TYPE_MM.item * CHAR_W;
+  const kirpilacak = label.items.length > tavan;
+  const shown = label.items.slice(0, kirpilacak ? Math.max(0, tavan - 1) : tavan);
   const hidden = label.items.length - shown.length;
   for (const item of shown) {
-    y += 72;
-    parts.push(`<text x="${MARGIN}" y="${y}" font-size="56">${item.qty} × ${esc(item.name)}</text>`);
+    y += px(GAP_MM.item);
+    parts.push(
+      `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.item)}">${item.qty} × ${esc(fit(item.name, contentMm - onekMm, TYPE_MM.item))}</text>`,
+    );
   }
   if (hidden > 0) {
-    y += 72;
-    parts.push(`<text x="${MARGIN}" y="${y}" font-size="56">+${hidden} kalem daha</text>`);
+    y += px(GAP_MM.item);
+    parts.push(`<text x="${M}" y="${y}" font-size="${px(TYPE_MM.item)}">+${hidden} kalem daha</text>`);
   }
 
-  // QR alt merkezde sabit — döküm uzasa da yeri değişmez (kurye elini nereye tutacağını bilir).
+  /*
+    ETİKETİN BOYU — sürekli ruloda İÇERİK, kalıp kesimde KÂĞIT.
+
+    Sürekli ruloda QR dökümün hemen altına oturuyor ve etiket orada bitiyor: iki kalemlik kutu iki
+    kalemlik kâğıt harcıyor. Kalıp kesimde QR yine ALTA sabitleniyor (kurye elini nereye tutacağını
+    bilir) ve aradaki boşluk boş kalıyor — kâğıdın boyu zaten kesilmiş.
+  */
+  const qrY = size.heightMm === null ? y + px(GAP_MM.beforeQr) : px(size.heightMm) - px(qrBlockMm - GAP_MM.margin);
+  const H = size.heightMm === null ? qrY + px(qrMm + GAP_MM.afterQr + GAP_MM.margin) : px(size.heightMm);
+
   const qr = qrPath(label.code);
-  const qrSize = 640;
-  const qrX = (W - qrSize) / 2;
-  const qrY = H - MARGIN - 72 - qrSize - 24;
+  const qrSize = px(qrMm);
   const scale = qrSize / qr.moduleCount;
   parts.push(
-    `<g transform="translate(${qrX} ${qrY}) scale(${scale})"><path d="${qr.path}" fill="black"/></g>`,
+    `<g transform="translate(${(W - qrSize) / 2} ${qrY}) scale(${scale})"><path d="${qr.path}" fill="black"/></g>`,
   );
   parts.push(
-    `<text x="${W / 2}" y="${H - MARGIN}" font-size="56" text-anchor="middle">${esc(label.code)}</text>`,
+    `<text x="${W / 2}" y="${qrY + qrSize + px(GAP_MM.afterQr)}" font-size="${px(TYPE_MM.code)}" text-anchor="middle">${esc(label.code)}</text>`,
   );
 
   return (

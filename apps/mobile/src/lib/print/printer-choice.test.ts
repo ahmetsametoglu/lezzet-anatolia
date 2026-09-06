@@ -30,9 +30,9 @@ beforeEach(() => mockStore.clear());
     çıkacağına yazılımın karar vermesi olurdu
 */
 
-const KUTU_A = { id: 'a1', name: 'Masa', purpose: 'box' as const, address: '10.0.0.1', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
-const KUTU_B = { id: 'a2', name: 'Depo', purpose: 'box' as const, address: '10.0.0.2', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
-const KARGO = { id: 'b1', name: 'Rampa', purpose: 'shipping' as const, address: '10.0.0.9', model: 'QL-820NWB', labelSize: 'RollW62' };
+const KUTU_A = { id: 'a1', serialNumber: 'E11111', name: 'Masa', purpose: 'box' as const, address: '10.0.0.1', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
+const KUTU_B = { id: 'a2', serialNumber: 'E22222', name: 'Depo', purpose: 'box' as const, address: '10.0.0.2', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' };
+const KARGO = { id: 'b1', serialNumber: 'E33333', name: 'Rampa', purpose: 'shipping' as const, address: '10.0.0.9', model: 'QL-820NWB', labelSize: 'RollW62' };
 
 describe('resolvePrinter · basımın hedefi', () => {
   it('cihazın SEÇİMİ kazanır', () => {

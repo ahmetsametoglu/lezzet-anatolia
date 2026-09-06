@@ -1,5 +1,4 @@
 import { StorageAreaService, VehicleService, WarehouseService, WarehouseTransferService, ShippingBoxService,
-  WarehousePrinterService,
 } from '@lezzet/database';
 import { tabloDolu, type Db } from './shared';
 
@@ -655,56 +654,23 @@ export async function seedShippingBoxes(db: Db, depolar: Depolar): Promise<void>
 }
 
 /*
-  ── DEPO YAZICILARI (07.12, 29.08) ───────────────────────────────────────────
+  ── DEPO YAZICILARI: SEED ARTIK YAZICI UYDURMUYOR (kullanıcı kararı 05.09) ───
 
-  23.7'nin üç `label_printer_*` ayarının halefi. Ayar tek yazıcı varsayıyordu; kargo kanalı hem
-  yazıcıyı hem etiket TÜRÜNÜ çoğalttı ve envanter tabloya taşındı (`0054`).
+  Bu blok üç yazıcı yazıyordu ve ekranın üç hâlini yerel veride göstermek için kurulmuştu (iki
+  yazıcılı depo · tek yazıcılı depo · hiç yazıcısı olmayan depo). Kaldırıldı, çünkü yazıcı
+  envanteri ODANIN GERÇEĞİDİR ve uydurulduğunda sessizce yalan söylüyor:
 
-  ── ÜÇ HÂL, üçü de bir ekranın karşılığı ────────────────────────────────────
-    STR  → İKİ yazıcı (kutu + kargo) — cihaz seçicisinin normal hâli
-    KEHL → TEK yazıcı, yalnız `box` — kargo etiketi basamayan depo; ekran bunu söylemeli
-    BDX  → HİÇ yazıcı yok — "yazıcı tanımlı değil" cümlesinin tek kaynağı
+    · Kutu yazıcısının adresi doğruydu (23.5'te ölçülmüştü) — ama bu bir tesadüftü.
+    · KARGO yazıcısınınki uydurmaydı; kendi künyesi de "makul bir varsayım" diyordu. Ölçüldü
+      (05.09): envanterde `192.168.1.91` yazılıydı, gerçek QL-820NWB `192.168.1.169`daydı ve ekran
+      "ağda görünmüyor" diyordu. Kimse yalan söylemiyordu — envanter yanlıştı.
+    · Kehl'in `192.168.2.90`ı ise hiç var olmamış bir cihazdı.
 
-  Adresler 23.5'in iğne deneyinde ÖLÇÜLEN gerçek yazıcıdan (`192.168.1.90`); ikincisi ondan
-  türetilmiş makul bir varsayım — depo kurulumunda düzeltilir.
+  Ekranın hâlleri artık TESTİN işi (`printer-setup-screen.test.tsx`), seed'in değil: bir testin
+  kurduğu üç yazıcı kimseyi yanıltmaz, veritabanındaki üç yazıcı depocuyu yanıltır. Ve yazıcı
+  tanıtma 05.09'da telefona taşındığı için (`registerPrinter`) yerel kurulumun doğru yolu artık
+  gerçek: ağdaki yazıcıyı ekrandan tanıtmak.
+
+  Fonksiyon SİLİNDİ, boş bırakılmadı — çağıranı da (`seed.ts`) kaldırıldı; iş yapmayan bir seed
+  adımı, bir gün "yazıcılar neden gelmiyor" diye aranacak bir yanlış iz olurdu.
 */
-export async function seedWarehousePrinters(db: Db, depolar: Depolar): Promise<void> {
-  const svc = new WarehousePrinterService(db);
-
-  const plan = [
-    // Kutu etiketi 4×6 kalıp kesim (DK-1247) — 23.5'te ölçülen kâğıt.
-    { depo: depolar.str, name: 'Masa · QL-1110', purpose: 'box' as const, address: '192.168.1.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' },
-    // Kargo etiketi A6 yatay; sürekli rulo, çünkü taşıyıcının boyu kalıp kesimle tutmuyor (§4.6).
-    { depo: depolar.str, name: 'Rampa · QL-820', purpose: 'shipping' as const, address: '192.168.1.91', model: 'QL-820NWB', labelSize: 'RollW62' },
-    { depo: depolar.kehl, name: 'Kehl · QL-1110', purpose: 'box' as const, address: '192.168.2.90', model: 'QL-1110NWB', labelSize: 'DieCutW103H164' },
-  ];
-
-  /*
-    GUARD TUR BAŞINDA ÖLÇÜLÜR, SATIR SATIR DEĞİL (kusur, ölçüldü 30.08).
-
-    Guard depo bazındaydı ve DOĞRU yerdeydi (kutu kataloğunun aynı gerekçesi: tablo dolu olabilir
-    ve bu, BU deponun yazıcılarının kurulduğu anlamına gelmez) — ama döngünün İÇİNDE ölçülüyordu.
-    Sonuç: STR'nin ilk yazıcısı yazılıyor, ikinci satıra gelindiğinde STR artık "dolu" görünüyor ve
-    KARGO YAZICISI HİÇ KURULMUYORDU. Ölçüm: tabloda 2 yazıcı vardı (STR box · KEHL box), planda 3.
-
-    Sessiz bir kusurdu ve tam olarak dosyanın kendi künyesinin vaat ettiği hâli bozuyordu: "STR →
-    İKİ yazıcı — cihaz seçicisinin normal hâli". İki yazıcılı depo hiç doğmadığı için seçicinin
-    normal hâli yerel veride HİÇ görülemiyordu (kullanıcı bulgusu: "yazıcılar gelmiyor").
-  */
-  const zatenKurulu = new Set<string>();
-  for (const depo of new Set(plan.map((satir) => satir.depo))) {
-    if ((await svc.listForWarehouse(depo)).length > 0) zatenKurulu.add(depo);
-  }
-
-  for (const satir of plan) {
-    if (zatenKurulu.has(satir.depo)) continue;
-    await svc.insert({
-      warehouseId: satir.depo,
-      name: satir.name,
-      purpose: satir.purpose,
-      address: satir.address,
-      model: satir.model,
-      labelSize: satir.labelSize,
-    });
-  }
-}

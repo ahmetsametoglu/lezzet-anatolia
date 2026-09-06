@@ -684,7 +684,10 @@ export const BoxPrinterSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   purpose: PrinterPurposeEnum,
+  /** Son bilinen yer — kimlik değil önbellek; cihaz taramada güncelini bulunca bunu tazeler. */
   address: z.string(),
+  /** Değişmez kimlik (SDK keşfi). `null` = elle tanıtılmış satır; eşleşmesi adresten yapılır. */
+  serialNumber: z.string().nullable(),
   model: z.string(),
   labelSize: z.string(),
 });
@@ -693,6 +696,48 @@ export type BoxPrinterContract = z.infer<typeof BoxPrinterSchema>;
 /** `GET /warehouse/printers` — deponun AÇIK yazıcıları; cihaz listeden seçer, elle IP yazmaz. */
 export const WarehousePrintersResponseSchema = z.object({ printers: z.array(BoxPrinterSchema) });
 export type WarehousePrintersResponse = z.infer<typeof WarehousePrintersResponseSchema>;
+
+/**
+ * **YAZICI TANITMA** (`POST /warehouse/printers`, 05.09) — telefonun ağda bulduğu yazıcıyı bu
+ * deponun envanterine yazar.
+ *
+ * ── NEDEN TELEFONDAN ────────────────────────────────────────────────────────
+ * Envanter 29.08'den beri yalnız web'deki Depolar ekranından doluyordu ve telefon onu okuyordu.
+ * Bu, yazıcının önünde duran depocuyu çıkmaza sokuyordu: ekran "Tanımlı değil" deyip "Depolar
+ * ekranından tanımlanır" diye başka bir yüzeye yolluyordu (ölçüldü 05.09, cihazda).
+ *
+ * ── ADRES YAZILMIYOR, ÖLÇÜLÜYOR ─────────────────────────────────────────────
+ * İstek adresi ELLE değil KEŞİFTEN taşıyor — depocu bir IP yazmıyor, gördüğü yazıcıya dokunuyor.
+ * Yazılan adresin yanlış olma ihtimali böylece sıfırlanıyor: seed'in uydurduğu `.91` ile gerçek
+ * `.169` arasındaki fark tam da bu yüzden doğmuştu.
+ *
+ * ── KÂĞIT MODELDEN TÜRETİLİYOR (kullanıcı kararı 05.09) ─────────────────────
+ * Takılı kâğıt SDK'dan OKUNAMIYOR (23.5 ölçümü). İstek onu taşımıyor; sunucu modelin rulo
+ * sınıfından türetiyor. Tanınmayan model REDDEDİLİYOR — bilmediğimiz bir kâğıdı varsaymak,
+ * basımı `SetLabelSizeError`a göndermek olurdu.
+ */
+export const RegisterPrinterRequestSchema = z.object({
+  purpose: PrinterPurposeEnum,
+  model: z.string().min(1),
+  address: z.string().min(1),
+  /** Keşif veriyorsa kimlik; vermiyorsa `null` ve satır eski davranışta (adresten eşleşme) kalır. */
+  serialNumber: z.string().min(1).nullable(),
+  /** Verilmezse modelin adı kullanılır; Depolar ekranından insan adına çevrilebilir. */
+  name: z.string().min(1).optional(),
+});
+export type RegisterPrinterRequest = z.infer<typeof RegisterPrinterRequestSchema>;
+
+/**
+ * `created` bir süs değil, ekranın cümlesi: ikinci kez dokunulan yazıcı **eklenmez, adresi
+ * tazelenir** (0054'ün kısmi unique indeksi) — ve depocu "tanıtıldı" ile "adresi güncellendi"
+ * arasındaki farkı görmeli, yoksa ikinci dokunuşun bir işe yarayıp yaramadığını bilemez.
+ */
+export const RegisterPrinterResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ok'), printer: BoxPrinterSchema, created: z.boolean() }),
+  /** Kâğıdını bilmediğimiz model — sessizce varsaymak yerine söylüyoruz. */
+  z.object({ status: z.literal('unsupported_model'), model: z.string() }),
+]);
+export type RegisterPrinterResponse = z.infer<typeof RegisterPrinterResponseSchema>;
 
 /**
  * Etiket içeriği cevabı (23.7).

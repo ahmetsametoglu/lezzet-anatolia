@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { BoxLabel } from './boxes';
-import { boxLabelSvg, LABEL_HEIGHT_PX, LABEL_WIDTH_PX } from './label-svg';
+import { boxLabelSvg } from './label-svg';
 
 /*
   Etiket görselinin sözleşmesi (23.7) — şablon SAF olduğu için DB'siz ölçülür. Ölçülenler:
@@ -31,7 +31,8 @@ describe('boxLabelSvg', () => {
     expect(svg).toContain('KT-26-ABCDEFGHJK');
     // QR gerçekten çizilmiş olmalı — boş bir path, okutulamayan bir etiketi yeşil gösterirdi.
     expect(svg).toMatch(/<path d="M\d+ \d+h1v1h-1z/);
-    expect(svg).toContain(`viewBox="0 0 ${LABEL_WIDTH_PX} ${LABEL_HEIGHT_PX}"`);
+    // Varsayılan kâğıt kutu yazıcısının rulosu: 62 mm = 300 dpi'da 732 px.
+    expect(svg).toMatch(/viewBox="0 0 732 \d+"/);
   });
 
   it('para sızdırmaz: € işareti ve tutar biçimi hiçbir girişte görünmez', () => {
@@ -58,9 +59,65 @@ describe('boxLabelSvg', () => {
   });
 
   it('uzun dökümü "+K kalem daha" satırına indirir — etiket taşmaz', () => {
-    const many = Array.from({ length: 10 }, (_, i) => ({ name: `Ürün ${i + 1}`, qty: 1 }));
+    // Sürekli ruloda tavan `MAX_ITEM_LINES` (24): 30 kalemin 23'ü yazılır, kalanı sayıya iner.
+    const many = Array.from({ length: 30 }, (_, i) => ({ name: `Ürün ${i + 1}`, qty: 1 }));
     const svg = boxLabelSvg(label({ items: many }));
-    expect(svg).toContain('+3 kalem daha');
-    expect(svg).not.toContain('Ürün 8');
+    expect(svg).toContain('+7 kalem daha');
+    expect(svg).not.toContain('Ürün 24');
+  });
+
+  /*
+    KULLANICI BULGUSU 06.09 — *"ürünler okunmayacak kadar küçük çıktı"*. Sebep ölçüldü: şablon
+    103 mm sabit çiziliyordu, 62 mm ruloya SDK %60'a indiriyordu ve 4,7 mm'lik ürün satırı 2,9 mm
+    oluyordu. Aşağıdaki üç iddia o arızanın geri gelmesini engelliyor.
+  */
+  describe('kâğıdın boyunda çizim (06.09)', () => {
+    const puntoMm = (svg: string, sira: number): number => {
+      const hepsi = [...svg.matchAll(/font-size="(\d+)"/g)].map((m) => Number(m[1]));
+      return (hepsi[sira]! * 25.4) / 300;
+    };
+
+    it('GENİŞLİK verilen kâğıttan gelir — ölçekleme yok', () => {
+      expect(boxLabelSvg(label(), { widthMm: 62, heightMm: null })).toMatch(/width="732"/);
+      expect(boxLabelSvg(label(), { widthMm: 103, heightMm: null })).toMatch(/width="1217"/);
+    });
+
+    it('TİPOGRAFİ ruloya göre değişmez: 62 mm ile 103 mm aynı puntoyu basar', () => {
+      /* Kritik iddia. Punto genişliğe ORANLANSAYDI dar ruloda yine küçülürdü — düzeltmeye
+         çalıştığımız arızanın kendisi. Değişen tek şey satıra sığan karakter sayısı olmalı. */
+      const dar = boxLabelSvg(label(), { widthMm: 62, heightMm: null });
+      const genis = boxLabelSvg(label(), { widthMm: 103, heightMm: null });
+      expect([...dar.matchAll(/font-size="(\d+)"/g)].map((m) => m[1])).toEqual(
+        [...genis.matchAll(/font-size="(\d+)"/g)].map((m) => m[1]),
+      );
+    });
+
+    it('ürün satırı 62 mm ruloda 3,8 mm — eski hâlde 2,9 mm çıkıyordu', () => {
+      const svg = boxLabelSvg(label(), { widthMm: 62, heightMm: null });
+      // Sıra: referans · sayaç · alıcı · kulvar · tahsilat · ÜRÜN.
+      expect(puntoMm(svg, 5)).toBeCloseTo(3.8, 1);
+    });
+
+    it('YÜKSEKLİK içerikle uzar — sürekli ruloda kâğıt kesildiği yerde biter', () => {
+      const yukseklik = (n: number): number => {
+        const svg = boxLabelSvg(label({ items: Array.from({ length: n }, (_, i) => ({ name: `Ü${i}`, qty: 1 })) }));
+        return Number(/height="(\d+)"/.exec(svg)![1]);
+      };
+      expect(yukseklik(6)).toBeGreaterThan(yukseklik(2));
+      /* Beş kalem farkı BEŞ SATIR kadar uzatmalı. Satır boyu 5,2 mm ve piksele SATIR SATIR
+         yuvarlanıyor (5 × 61), toplamda değil (round(307)) — yuvarlamanın yeri iki px oynatıyor. */
+      const satirPx = Math.round((5.2 * 300) / 25.4);
+      expect(yukseklik(7) - yukseklik(2)).toBe(satirPx * 5);
+    });
+
+    it('KALIP KESİMDE boy sabit kalır ve döküm KÂĞIDA göre kırpılır', () => {
+      const svg = boxLabelSvg(label({ items: Array.from({ length: 30 }, (_, i) => ({ name: `Ü${i}`, qty: 1 })) }), {
+        widthMm: 62,
+        heightMm: 29,
+      });
+      // 29 mm'lik kâğıt: boy sabit ve döküm neredeyse hiç sığmıyor — ama etiket yine üretiliyor.
+      expect(svg).toContain(`height="${Math.round((29 * 300) / 25.4)}"`);
+      expect(svg).toContain('kalem daha');
+    });
   });
 });

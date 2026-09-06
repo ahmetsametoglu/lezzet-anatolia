@@ -29,13 +29,29 @@ jest.mock('expo-router', () => ({
   useFocusEffect: () => undefined,
 }));
 
+/*
+  TARİHLER DUVAR SAATİNE GÖRE KURULUYOR, SABİT DEĞİL (ölçüldü 06.09).
+
+  Fikstürler `new Date(2026, 8, 5, …)` diye sabit yazılmıştı ve "BUGÜN" başlığı 5 Eylül'de doğru
+  görünüyordu. Gece yarısı geçince test kırmızıya döndü — kod değişmemişti, GÜN değişmişti.
+  `dayGroupLabelOf` cevabını `now`a göre veriyor; testin de öyle vermesi gerekiyordu. Sabit tarih
+  bir kez doğru olan, sonra her gün yanlışlaşan bir varsayımdır.
+*/
+const BUGUN = new Date();
+const gunOnce = (gun: number, saat: number, dakika: number): string => {
+  const d = new Date(BUGUN);
+  d.setDate(d.getDate() - gun);
+  d.setHours(saat, dakika, 0, 0);
+  return d.toISOString();
+};
+
 const satir = (over: Partial<OperationsNotification> & Pick<OperationsNotification, 'id'>): OperationsNotification => ({
   title: 'Bir olay oldu',
   sub: null,
   label: 'Bildirim',
   section: 'management',
   tone: 'quiet',
-  createdAt: new Date(2026, 8, 5, 8, 42).toISOString(),
+  createdAt: gunOnce(0, 8, 42),
   readAt: null,
   destination: null,
   ...over,
@@ -67,7 +83,7 @@ const FEED_ROWS: OperationsNotification[] = [
     label: 'Para',
     section: 'money',
     tone: 'alert',
-    readAt: new Date(2026, 8, 5, 9, 0).toISOString(),
+    readAt: gunOnce(0, 9, 0),
     destination: { href: '/day-end', label: 'Gün sonunu aç', section: 'money' },
   }),
   satir({
@@ -75,7 +91,7 @@ const FEED_ROWS: OperationsNotification[] = [
     title: 'Sefer kapandı — SF-26-6',
     sub: '2 durak askıda · yeniden planla',
     label: 'Sevkiyat',
-    createdAt: new Date(2026, 8, 4, 17, 30).toISOString(),
+    createdAt: gunOnce(1, 17, 30),
   }),
 ];
 

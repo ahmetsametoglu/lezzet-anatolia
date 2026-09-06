@@ -11,6 +11,7 @@ import {
   countAwaitingHandover,
   handOverBox,
   printersFor,
+  registerPrinter,
   markBoxPrinted,
   learnCode,
   listClosedTransfers,
@@ -86,6 +87,8 @@ import {
   ShippingBoxesResponseSchema,
   ShippingLabelResponseSchema,
   WarehousePrintersResponseSchema,
+  RegisterPrinterRequestSchema,
+  RegisterPrinterResponseSchema,
   WarehouseAreasResponseSchema,
   MarkBatchSeenRequestSchema,
   MarkBatchSeenResponseSchema,
@@ -101,11 +104,14 @@ import {
   WarehouseReturnResponseSchema,
   UNASSIGNED_RETURNS,
 } from '@lezzet/types';
-import { warehouseScope } from '@lezzet/domain-core';
+import { labelSizeMm, warehouseScope } from '@lezzet/domain-core';
 import { privateReadUrl } from '@lezzet/storage';
 import { fail, ok } from '../../lib/respond';
 import { decodeCursor, encodeCursor, IsoDateSchema, readJsonBody, UuidSchema } from '../../lib/request';
 import { renderLabelPng } from '../../lib/label-png';
+
+/** Kutu yazıcısının kâğıdı (kullanıcı kararı 06.09) — boy bildirilmediğinde varsayılan. */
+const DEFAULT_LABEL_MM = { widthMm: 62, heightMm: null } as const;
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
@@ -345,6 +351,37 @@ warehouse.get('/printers', async (c) => {
 });
 
 /**
+ * **YAZICI TANITMA** (05.09) — telefonun ağda BULDUĞU yazıcıyı bu deponun envanterine yazar.
+ *
+ * ── ENVANTERE İLK YAZAN MOBİL KAPI ──────────────────────────────────────────
+ * 29.08'den beri envanteri yalnız web'deki Depolar ekranı dolduruyordu ve telefon onu okuyordu.
+ * Cihazda ölçüldü (05.09): yazıcının önünde duran depocu "Tanımlı değil" kartını görüyor ve kart
+ * onu başka bir yüzeye yolluyordu — elindeki telefonla yapabileceği hiçbir şey yoktu.
+ *
+ * ── ADRES İSTEKTEN GELİYOR AMA ELLE YAZILMIYOR ──────────────────────────────
+ * Gövdedeki adres SDK'nın ağ keşfinden çıkıyor; depocu bir IP yazmıyor, gördüğü yazıcıya
+ * dokunuyor. Yanlış adresin nasıl göründüğünü de ölçtük: seed `.91` uydurmuştu, gerçek yazıcı
+ * `.169`daydı ve ekran "ağda görünmüyor" diyordu — kimse yalan söylemiyordu, envanter yanlıştı.
+ *
+ * ── KÂĞIT GÖVDEDE YOK, SUNUCU TÜRETİYOR ─────────────────────────────────────
+ * Takılı kâğıt SDK'dan okunamıyor (23.5) ve istemcinin uydurmasına bırakılamaz: yanlış boy
+ * basımı `SetLabelSizeError`a gönderir. Kural tek yerde (`defaultLabelSizeFor`), tanınmayan model
+ * REDDEDİLİYOR — o zaman Depolar ekranından boyu seçilerek elle tanıtılır.
+ *
+ * ── KAPSAM GÖVDEDE DEĞİL, BAĞLAMDA ──────────────────────────────────────────
+ * Hangi depoya yazılacağı istekten alınmıyor; `warehouseId` bağlamdan geliyor (aynı guard'ın
+ * ötekilerle paylaştığı kapı). Gövdeden alınsaydı bir cihaz başka deponun envanterine yazabilirdi.
+ */
+warehouse.post('/printers', async (c) => {
+  const parsed = RegisterPrinterRequestSchema.safeParse(await c.req.json().catch(() => null));
+  if (!parsed.success) return fail(c, 'invalid_body', 400);
+
+  const outcome = await registerPrinter(serviceDb(), c.get('warehouseId'), parsed.data);
+  const body: z.input<typeof RegisterPrinterResponseSchema> = outcome;
+  return ok(c, RegisterPrinterResponseSchema.parse(body));
+});
+
+/**
  * **ÖRNEK ETİKET** (v3:09'un "test bas" eylemi, 30.08) — 4×6 PNG, 300 dpi. Zarfsız BİNARY cevap,
  * kutu etiketiyle aynı gerekçe: tüketicisi `fetch` + dosya yazımı, base64 zarfı yükü %33 şişirirdi.
  *
@@ -362,9 +399,13 @@ warehouse.get('/printers/:printerId/sample-label.png', async (c) => {
   if (!printerId.success) return fail(c, 'invalid_printer_id', 400);
 
   const printers = await printersFor(serviceDb(), c.get('warehouseId'));
-  if (!printers.some((printer) => printer.id === printerId.data)) return fail(c, 'not_found', 404);
+  const printer = printers.find((row) => row.id === printerId.data);
+  if (!printer) return fail(c, 'not_found', 404);
 
-  const png = renderLabelPng(boxLabelSvg(sampleBoxLabel()));
+  /* Örnek O YAZICININ KÂĞIDINDA üretiliyor (06.09): testin sorusu "bu makineden bizim etiketimiz
+     doğru çıkıyor mu" ve kâğıt boyu cevabın yarısı. Sabit boyda üretilseydi test, gerçek basımın
+     ölçüsünü DENEMEDEN "geçti" derdi. Kimlik zaten yolda — envantere karşı sınanıyor. */
+  const png = renderLabelPng(boxLabelSvg(sampleBoxLabel(), labelSizeMm(printer.labelSize) ?? DEFAULT_LABEL_MM));
   return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
 });
 
@@ -508,7 +549,19 @@ warehouse.get('/boxes/:boxId/label.png', async (c) => {
   const outcome = await boxLabelPayload(serviceDb(), { boxId: boxId.data, warehouseId: c.get('warehouseId') });
   if (outcome.status !== 'ok') return fail(c, outcome.status === 'forbidden' ? 'out_of_scope' : outcome.status, outcome.status === 'not_found' ? 404 : 409);
 
-  const png = renderLabelPng(boxLabelSvg(outcome.label));
+  /*
+    KÂĞIT BOYUNU CİHAZ SÖYLÜYOR (06.09) — ve bu, 21.132'nin kapattığı kapıyı AÇMIYOR.
+
+    O gün `BoxLabelResponse.printer` kaldırılmıştı: sunucunun cevaba iliştirdiği yazıcı, cihazın
+    seçimini sessizce ezerdi. Burada yön TERS — sunucu yazıcı seçmiyor, cihaz seçtiği yazıcının
+    kâğıdını BİLDİRİYOR. Karar yine cihazın; sunucu yalnız o kâğıda çiziyor.
+
+    Boy verilmezse ya da tanınmazsa kutu yazıcısının rulosu varsayılıyor (62 mm sürekli, kullanıcı
+    kararı 06.09): sessiz bir yedek değil, bizim kutu etiketimizin evi orası.
+  */
+  const png = renderLabelPng(
+    boxLabelSvg(outcome.label, labelSizeMm(c.req.query('labelSize') ?? '') ?? DEFAULT_LABEL_MM),
+  );
   return c.body(new Uint8Array(png), 200, { 'content-type': 'image/png' });
 });
 

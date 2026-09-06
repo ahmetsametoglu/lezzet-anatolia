@@ -12401,9 +12401,85 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   odanın gerçeğidir ve uydurulduğunda sessizce yanıltır; ekranın üç hâli artık testin işi.
   `seedWarehousePrinters` ve çağrısı silindi.
 
-  **Doğrulama.** Kök `typecheck` · `lint` · `knip` temiz · birim **1961/1961** · mobil
-  **1359/1359** (yazıcı dosyaları 31, on biri yeni). Cihazda (Poco 2311DRK48G) uçtan uca — ölçüm
-  bu satırın altındaki nota yazıldı.
+  **4 · LİSTE TASARIMIN RENGİNİ KULLANMIYORDU** (kullanıcı ekran görüntüsü 05.09). Şablonun seçili
+  satırı `{bg:#2f353a, fg:#f5f1e6}` — **koyu mürekkep zemin + krem yazı** (v3:4523, bütün ekranların
+  ortak "aktif" kuralı); kod 30.08'de zeytin çizmişti ve bu bir improvizasyondu. Düzeltildi
+  (`ink` + `on-image`). Satır da tek satıra döndü: ad ve adres orta noktayla yan yana
+  ("QL-820NWB · 192.168.1.169") — şablonun kendi deyimi ("Zebra ZD421 · rampa"); iki satıra bölmek
+  48'lik satır ritmini bozuyordu.
+
+  **5 · TANIMLI KART SUSTU, LİSTE ÇEKMECEYE TAŞINDI** (kullanıcı kararı 05.09: *"gözümüzün gördüğü
+  bir kart içerisinde tüm yazıcıların listelenmesi hoş olmaz, yazıcıları bir çekmecede açalım"*).
+  Tasarımın TANIMLI kartı sessizdir (v3:1015-1024): ikon, ad, "bağlı · Wi-Fi", "test bas", sonuç
+  cümlesi — altında liste yok. İlk hâlde liste tanımlı kartta da çiziliyordu (ağda tanıtılmamış
+  yazıcı varsa) ve kurulum bittikten sonra bile ekran konuşuyordu. Artık: **tanımsız kart → liste
+  içeride** (tasarımın kargo kartı) · **tanımlı kart → sessiz + "yazıcı değiştir" → çekmece**.
+  Liste TEK bileşen (`printer-option-list.tsx`), iki hostu var — iki kopya yazmak, "tanıt"ın bir
+  yerde çalışıp öteki yerde çalışmadığı bir ekran üretirdi. Çekmece listenin BOYUNU da çözüyor:
+  kaydırılabilir katman, kartın içindeki sabit yığından farklı olarak uzayabilir.
+
+  **QL SÜZGECİ YAZILMADI — SDK'nın kendisi süzüyor** (ölçüldü 05.09). Ağda üç Brother cihazı vardı
+  (QL-1110NWB `.90` · QL-820NWB `.169` · MFC-9330CDW `.68`, mDNS ile doğrulandı); SDK'nın
+  `searchNetworkPrinters`i yalnız **iki QL etiket yazıcısını** döndürdü, A4 lazer hiç gelmedi.
+  İstemcideki "kâğıdı bilinmiyor" dalı yine duruyor: süzgeç SDK'nın kararı, bizim garantimiz değil.
+
+  **Doğrulama.** Kök `typecheck` · `lint` · `knip` · `docs:check` temiz · birim **1961/1961** ·
+  mobil **1360/1360** (yazıcı dosyaları 32, on ikisi yeni).
+
+  **Cihazda (Poco 2311DRK48G) uçtan uca, gerçek yazıcılarla:** envanter boşaltıldı → iki kart da
+  "Tanımlı değil" + ağda bulunanlar listesi → QL-1110NWB kutu kartına, QL-820NWB kargo kartına
+  tanıtıldı. Yazılan satırlar: adres keşiften (`192.168.1.90` / `192.168.1.169`), kâğıt modelden
+  (`DieCutW103H164` / `RollW62`), **seri numarası SDK'dan** (`E4G478387` / `M1Z805586`). İki kart
+  da "bağlı · Wi-Fi"ye döndü ve sustu; "yazıcı değiştir" çekmeceyi açtı, seçili satır koyu
+  mürekkep zeminde durdu. **Adres onarımı ölçüldü:** kargo yazıcısının adresi elle `.222` yapıldı,
+  ekran açılınca seriden bulunup `.169`a kendiliğinden düzeldi.
+
+  ── 06.09 · KAVRAMLAR DÜZELDİ, ETİKET KÂĞIDIN BOYUNDA ÇİZİLİYOR ────────────
+
+  Kullanıcı basılmış kâğıda bakıp üç şey bildirdi ve üçü de gerçek kusurdu.
+
+  **6 · KARGO KUTUSUNA İKİ ETİKET BASILIYORDU.** Tasarım §4.6: *"TEK ETİKET, TEK BARKOD. Kargo
+  kulvarında bizim QR'lı kutu etiketimiz basılmaz"* — kutunun üstündeki ikinci barkod taşıyıcının
+  tarayıcısını şaşırtır. Kural `0054`ün sütun yorumunda da yazılıydı ama **kodda yoktu**: mühürleme
+  kulvara bakmadan basıyordu. Kapı iki yere kondu (mühürleme + "yeniden bas" — elle tetikleme de
+  aynı kurala tabi, yoksa yasak bir düğmeyle aşılırdı). Yeni hâl `suppressed`, `failed` DEĞİL:
+  hiçbir şey bozulmadı. Etiketin İÇERİĞİ yine gösteriliyor, kâğıt çıkmıyor. Testi var.
+
+  **7 · YAZICI/İŞ EŞLEŞMESİ TERSTİ** (kullanıcı kararı 06.09). Taşıyıcının etiketi A6 yatay
+  (148×105) ve 105 mm'lik kenar ancak 102/103 mm ruloya sığar → **kargo GENİŞ yazıcıdan** çıkar.
+  Bizim kutu etiketimiz 62 mm'ye okunur biçimde iniyor → **kutu DAR yazıcıdan**. Seed bunun tersini
+  yazmıştı. `defaultLabelSizeFor` de düzeldi: QL-11* artık `DieCutW103H164` değil **`RollW103`** —
+  kalıp kesim boyu SABİT bir kâğıttır ve boyu bize ait olmayan bir etiketi ortasından keserdi.
+  Hiçbir model artık kalıp kesime düşmüyor.
+
+  **8 · ETİKET %60'A İNİYORDU — "ürünler okunmayacak kadar küçük çıktı".** Kullanıcının teşhisi
+  birebir doğruydu: şablon 103 mm sabit çiziliyor, SDK 62 mm'ye indiriyordu. Ölçüldü: ürün satırı
+  4,7 mm tasarlanıp **2,9 mm** (≈8 punto) çıkıyor. Şablon milimetre tabanına taşındı ve iki şey
+  birden değişti:
+  - **Genişlik hedeften geliyor** — ölçekleme yok, punto tasarlandığı boyda. Tipografi ruloya göre
+    büyüyüp küçülmüyor (62 mm'de de 103 mm'de de ürün satırı 3,8 mm); değişen tek şey satıra sığan
+    karakter. Oranlansaydı dar ruloda yine küçülürdü — arızanın kendisi.
+  - **Yükseklik içerikten geliyor** — sürekli ruloda kâğıt kesildiği yerde bitiyor. Beş kalemlik
+    etiket **98 mm**; eski sabit boy 164 mm'ydi. Kırpma tavanı 7'den 24'e çıktı, kalıp kesimde
+    ayrıca KÂĞIDIN kendisi tavan.
+
+  Genişliği CİHAZ bildiriyor (`?labelSize=`) — 21.132'nin kapattığı kapı açılmadı: sunucu yazıcı
+  SEÇMİYOR, cihaz seçtiği yazıcının ÖLÇÜSÜNÜ söylüyor. Örnek etiket de artık o yazıcının kâğıdında
+  üretiliyor; sabit boyda üretilen bir "test", gerçek basımın ölçüsünü denemeden geçerdi.
+  Karakter genişliği çarpanı rasterden ölçüldü (0,52 kestirimi adları erken kesiyordu → 0,47).
+
+  **Arayüzde izah** (kullanıcı isteği): iki kartın üstbaşlığının altında birer cümle — "kargo" bir
+  TAŞIYICI ŞİRKETİN etiketi, "kutu etiketi" bizim kendi kutumuzun künyesi. Üstbaşlıktan **"· 4×6"
+  düştü**: o ölçü kargo etiketinin, ve kutu kartında yazarken makinede 62 mm rulo duruyordu.
+
+  **Doğrulama (06.09).** Kök `typecheck` · `lint` · `knip` temiz · birim **1976/1976** · mobil
+  **1361/1361**. Etiket şablonu birim projesine alındı (`vitest.config.ts` `UYGULAMA_DBSIZ`) —
+  saf ve şeridin kendi ölçümünü koşabilmesi gerekiyordu. Cihazda envanter kararla uyumlu kuruldu:
+  `box → QL-820NWB · RollW62 · seri M1Z805586` · `shipping → QL-1110NWB · RollW103 · seri E4G478387`.
+
+  **BEKLEYEN(21.269):** basılan kâğıt hâlâ görülmedi — "test bas" fiziksel etiket harcıyor ve
+  kullanıcının kararı. Kargo etiketinin 2 mm taşma sorusu (07.12) de ancak basılan barkod
+  okutularak kapanır.
 
 - [x] (21.270) **TAHSİLAT SAYISI TEK HESAPTAN — rota kartı vadeliyi sayıyor, gün ekranı saymıyordu** (denetim bulgusu 6'nın kalanı · 05.09)
   `touches:` `packages/application/src/courier/{door-payment.ts,day.ts,routes.ts,day.test.ts}` · `apps/mobile-api/src/api/v1/sale.ts` · `docs/build/21-mobil-uygulama.md`

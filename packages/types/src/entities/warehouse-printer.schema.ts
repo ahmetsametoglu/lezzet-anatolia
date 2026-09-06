@@ -23,7 +23,17 @@ export const WarehousePrinterSchema = z.object({
    * Kargo kulvarında ikisi AYNI kutuya basılmaz (tasarım §4.6) — ayrım fiziksel, kozmetik değil.
    */
   purpose: PrinterPurposeEnum,
+  /**
+   * Yazıcının BULUNDUĞU yer — kimlik değil, **önbellek** (kullanıcı sorusu 05.09). DHCP kirası
+   * yenilenince değişir; eşleşme `serialNumber` üzerinden yapılır ve bu alan tazelenir.
+   */
   address: z.string().min(1),
+  /**
+   * **Değişmez kimlik** — SDK'nın ağ keşfinden gelen seri numarası (`BPChannel.serialNumber`).
+   * `null` = elle tanıtılmış satır, serisi bilinmiyor: o eşleşmesini adresten yapar ve IP
+   * değişince kaybolur. Boş bırakmak "ölçemedim"dir, sıfır değil (CLAUDE §1).
+   */
+  serialNumber: z.string().nullable(),
   model: z.string().min(1),
   /** Takılı kâğıt. SDK'dan OKUNAMIYOR (23.5 ölçümü); yanlış boy `SetLabelSizeError` döndürüyor. */
   labelSize: z.string().min(1),
@@ -33,8 +43,13 @@ export const WarehousePrinterSchema = z.object({
 });
 export type WarehousePrinter = z.infer<typeof WarehousePrinterSchema>;
 
+/**
+ * `serialNumber` isteğe bağlı: Depolar ekranının formu adres yazdırıyor, cihaz taramıyor — seriyi
+ * bilemez ve bilmediğini yazmamalı. Yalnız keşiften gelen tanıtma bu alanı doldurur.
+ */
 export const WarehousePrinterInsertSchema = WarehousePrinterSchema.omit({ id: true, createdAt: true }).partial({
   isActive: true,
+  serialNumber: true,
 });
 export type WarehousePrinterInsert = z.infer<typeof WarehousePrinterInsertSchema>;
 

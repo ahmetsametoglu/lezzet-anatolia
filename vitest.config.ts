@@ -76,6 +76,10 @@ const UYGULAMA_DBSIZ = [
   // Hızlı giriş kapısının ret KARARI (27.08) — saf ve zorunlu olarak saf: sınadığı hâl "hiç
   // yönetici yok" ve o hâl kurulu bir veritabanında üretilemez (dosya künyesi).
   'packages/application/src/auth/dev-login.test.ts',
+  // Etiket ŞABLONU (23.7 · 06.09): saf metin üretimi — SVG string. DB'siz olduğu dosyanın kendi
+  // künyesinde yazılı ("bu dosya SAF metin üretir"), rasterize uç katmanın işi. Listeye 06.09'da
+  // girdi: şablon o gün kâğıdın boyunda çizmeye geçti ve şeridin kendi ölçümünü koşabilmesi gerekti.
+  'packages/application/src/warehouse/label-svg.test.ts',
   'packages/application/src/cart/cart-blocker.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi

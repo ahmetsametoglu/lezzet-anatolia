@@ -54,8 +54,13 @@
 
 ## Yazıcılar (09)
 
-- [ ] **N7 — Ekran tasarımla hiç alakası yok, hiç tasarlanmamış.** Yardımcı ajana verildi (30.08);
-      ekran yazıldı, kite geçirilmesi ve cihazda görülmesi kaldı.
+- [x] **N7 — Ekran tasarımla hiç alakası yok, hiç tasarlanmamış.** Yardımcı ajana verildi (30.08);
+      ekran yazıldı, kite geçirildi (21.144) ve **05.09'da cihazda görüldü** (Poco).
+      → Cihazda ölçünce yerleşimin tuttuğu, TASARIMIN ASIL FİKRİNİN eksik olduğu çıktı: şablon
+      "Tanımlı değil" kartının altına seçilecek yazıcıların listesini çiziyor, kod ise listeyi
+      `aday ≥ 2` şartına bağlamıştı — yani tam da tanımsız hâlde hiç çizmiyordu. Kart ayrıca
+      depocuyu web'e yolluyordu ("Depolar ekranından tanımlanır"). İkisi de kapandı: liste ağda
+      bulunanları da taşıyor ve dokunuş yazıcıyı depoya tanıtıyor (21.269).
 
 ## Yönetim (25 · 26)
 

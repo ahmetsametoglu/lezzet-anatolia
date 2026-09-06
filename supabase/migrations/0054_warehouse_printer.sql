@@ -40,7 +40,26 @@ create table public.warehouse_printer (
   name text not null check (length(btrim(name)) > 0),
   -- Hangi İŞ: `box` bizim QR'lı kutu etiketimiz · `shipping` taşıyıcının etiketi.
   purpose text not null check (purpose in ('box', 'shipping')),
+  -- Yazıcının BULUNDUĞU yer. Kimlik DEĞİL, ÖNBELLEK: "en son burada görüldü" (kullanıcı sorusu
+  -- 05.09). DHCP kirası yenilenince değişir ve değiştiği an bu satır sessizce yalan söylemeye
+  -- başlar — cihaz eşleşmeyi bulamayıp "ağda görünmüyor" der, basım da eski adrese gider ki o
+  -- adres artık başka bir cihazın olabilir.
   address text not null check (length(btrim(address)) > 0),
+  -- ── KİMLİK BURADA (05.09) ─────────────────────────────────────────────────
+  -- Yazıcının seri numarası: cihazın etiketinde basılı, ağdan bağımsız, hiç değişmez. SDK ağ
+  -- keşfinde veriyor (`BPChannel.serialNumber`, WiFi yazıcılarda) ve `nodeName`/`macAddress` ile
+  -- birlikte üçü de kararlı; seri numarası seçildi çünkü tek insan-okunur olan o — depocu yazıcının
+  -- arkasına bakıp doğrulayabilir.
+  --
+  -- Eşleşme artık BUNDAN yapılıyor: tarama sonucunda aynı seri görülünce güncel adres oradan
+  -- alınıyor ve bu satırın `address`i tazeleniyor. Yani IP değişse de yazıcı bulunur, ve
+  -- "ağda görünmüyor" gerçekten "yok" demeye başlar — yanlış adres yüzünden değil.
+  --
+  -- NULL OLABİLİR ve bu bilinçli: Depolar ekranından ELLE tanıtılan bir yazıcının serisi
+  -- bilinmiyor (form adresi yazdırıyor, cihazı taramıyor). O satır eski davranışta kalır —
+  -- adresten eşleşir, IP değişirse kaybolur. Seri numarasını yalnız keşiften gelen tanıtma
+  -- doldurur; boş bırakmak "ölçemedim"dir, sıfır değil (CLAUDE §1).
+  serial_number text check (serial_number is null or length(btrim(serial_number)) > 0),
   model text not null check (length(btrim(model)) > 0),
   -- Takılı kâğıt. SDK'dan OKUNAMIYOR (23.5 ölçümü) — doğruyu söylemek bu satırın işi.
   label_size text not null check (length(btrim(label_size)) > 0),
@@ -58,10 +77,27 @@ comment on column public.warehouse_printer.purpose is
   'box = bizim QR''lı kutu etiketimiz · shipping = taşıyıcının A6 etiketi. Kargo kulvarında ikisi '
   'AYNI kutuya basılmaz (tasarım §4.6: iki barkod taşıyıcının tarayıcısını şaşırtır).';
 
+comment on column public.warehouse_printer.serial_number is
+  'Yazıcının değişmez kimliği (SDK ağ keşfinden). Adres önbellek, kimlik bu. NULL = elle '
+  'tanıtılmış satır, serisi bilinmiyor — o eşleşmesini adresten yapar ve IP değişince kaybolur.';
+
 -- Ekranın tek sorgusu: "bu deponun açık yazıcıları". Kısmi indeks, çünkü kapalı satır hiç okunmuyor.
 create index warehouse_printer_scope_idx
   on public.warehouse_printer (warehouse_id, purpose)
   where is_active;
+
+-- ── AYNI CİHAZ AYNI İŞE İKİ KEZ TANITILAMAZ (05.09) ────────────────────────
+-- Tanıtma keşiften geliyor ve keşif tekrarlanabilir: depocu listeye iki kez dokunursa ya da iki
+-- telefon aynı yazıcıyı tanıtırsa ikinci kayıt bir KOPYA olurdu — seçim listesinde aynı yazıcı iki
+-- satır, hangisinin seçili olduğu belirsiz. Kısıt bunu veride kesiyor; uygulama katmanı ikinci
+-- tanıtmayı ekleme değil ADRES TAZELEME olarak işliyor (`registerPrinter`).
+--
+-- `purpose` anahtarın İÇİNDE, çünkü aynı fiziksel yazıcı iki işe bakabilir (kâğıt değiştirilir);
+-- yasaklanan şey aynı işe iki kez yazılması. Serisi olmayan satırlar kısmi indeksin dışında —
+-- onlar için söylenecek bir şey yok.
+create unique index warehouse_printer_serial_idx
+  on public.warehouse_printer (warehouse_id, serial_number, purpose)
+  where serial_number is not null;
 
 alter table public.warehouse_printer enable row level security;
 -- Politika YOK — bilinçli (0047/0048/0052 ile aynı): tabloya yalnız service-role erişir. Yazıcı

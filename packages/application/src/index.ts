@@ -421,9 +421,10 @@ export type { QuickSaleInput, QuickSaleOutcome } from './order/quick-sale';
 export { sellOnSite, listRecentDoorSales, ANONYMOUS_BUYER_ID } from './order/on-site-sale';
 export type { DoorSaleRecord, OnSiteSaleInput, OnSiteSaleLine, OnSiteSaleOutcome } from './order/on-site-sale';
 export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSuggestion } from './warehouse/preparation';
-export { boxLabelPayload, declareOrderShort, printersFor, markBoxPrinted, openBox, sealBox, unsealBox } from './warehouse/boxes';
+export { boxLabelPayload, declareOrderShort, printersFor, registerPrinter, markBoxPrinted, openBox, sealBox, unsealBox } from './warehouse/boxes';
+export type { RegisterPrinterOutcome } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
-export { boxLabelSvg, sampleBoxLabel, LABEL_WIDTH_PX, LABEL_HEIGHT_PX } from './warehouse/label-svg';
+export { boxLabelSvg, sampleBoxLabel } from './warehouse/label-svg';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 // Tarama kapısı (Modül 23): kod → kimlik + öğrenen eşleme. Kimlik bulur, stok/depo kararı VERMEZ.
 export { learnCode, resolveScannedCode } from './warehouse/scan';
