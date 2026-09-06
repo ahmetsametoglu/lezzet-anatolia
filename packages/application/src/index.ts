@@ -362,7 +362,7 @@ export { readDeliveryProof, requestDeliveryProofUploadUrl } from './courier/proo
 // sipariş düzeltmesi kurye işi değildir (operasyon sipariş detayı, şikâyet çözümü ve Stripe webhook
 // da aynı kapıyı çağırıyor). `payment` ve `fulfillment` zorunlu geçiş: ikisi de kurye kapısının
 // içinden geçiyordu, bırakılsalardı terfi eden kapı web'e bakmak zorunda kalırdı.
-export { adjustFulfillment, cancelOrder, retryRefund } from './order/refund';
+export { adjustFulfillment, cancelOrder, deliverOrderWithAdjustments, retryRefund } from './order/refund';
 export { cancelOrderShipment, isOpenShipment, type ShipmentCancelOutcome } from './shipping/cancel';
 export type { AdjustOutcome, CancelOutcome, RefundBlockReason, RefundOptions, WarehouseScope } from './order/refund';
 export { closeOrder, deliverOrder } from './order/fulfillment';

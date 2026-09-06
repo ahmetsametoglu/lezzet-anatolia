@@ -13,6 +13,7 @@ import {
   CancelResultSchema,
   CloseResultSchema,
   DeliverResultSchema,
+  DeliverWithAdjustmentsResultSchema,
   FulfillmentResultSchema,
   PreparationResultSchema,
   QuickSaleResultSchema,
@@ -36,6 +37,7 @@ import {
   type CloseResult,
   type DeliverResult,
   type FulfillmentAdjustment,
+  type DeliverWithAdjustmentsResult,
   type FulfillmentResult,
   type PaymentMethod,
   type PaymentStatus,
@@ -394,6 +396,36 @@ export class OrderService extends BaseDbService<Order, OrderInsert, OrderUpdate>
       p_actor_id: actorId ?? null,
     });
     return FulfillmentResultSchema.parse(dbToApp(raw));
+  }
+
+  /**
+   * **Kapıda tek yazım: düzeltme + teslim** (21.271 · denetim bulgusu 8).
+   *
+   * `adjustFulfillment` + `deliver` ardışık çağrıldığında ikincisi `stale` dönerse birincisi geri
+   * alınmıyordu — yarım bir teslim kalıyordu. RPC ikisini bölünmez yapıyor; künye ve gerekçe
+   * `0020_order_return.sql`de. Düzeltmesiz teslimde `p_lines` boş geçilir ve kapı yalnız teslimi
+   * yazar, yani çağıranın iki ayrı yol tutmasına gerek yok.
+   */
+  async deliverWithAdjustments(
+    orderId: string,
+    lines: readonly FulfillmentAdjustment[],
+    opts: { actorId?: string | null; deliveryProof?: Record<string, unknown> | null } = {},
+  ): Promise<DeliverWithAdjustmentsResult> {
+    const raw = await this.executeRpc('deliver_order_with_adjustments', {
+      p_order_id: orderId,
+      p_lines:
+        lines.length === 0
+          ? null
+          : lines.map((line) => ({
+              order_item_id: line.orderItemId,
+              fulfilled_qty: line.fulfilledQty,
+              return_disposition: line.returnDisposition ?? null,
+              note: line.note ?? null,
+            })),
+      p_actor_id: opts.actorId ?? null,
+      p_delivery_proof: opts.deliveryProof ?? null,
+    });
+    return DeliverWithAdjustmentsResultSchema.parse(dbToApp(raw));
   }
 
   /**

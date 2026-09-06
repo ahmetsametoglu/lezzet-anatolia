@@ -291,5 +291,87 @@ begin
 end;
 $$;
 
+-- ── Kapıda TEK YAZIM: düzeltme + teslim (21.271 · denetim bulgusu 8) ─────────
+--
+-- ÖLÇÜLEN AÇIK: kurye ekranı ikisini ARDIŞIK iki çağrı olarak yapıyordu — önce `adjust_fulfillment`
+-- (kapıda reddedilen kalem), sonra `deliver_order`. İkincisi `stale` dönerse (araya gün kapanışı ya
+-- da başka bir cihaz girmişse) BİRİNCİSİ GERİ ALINMIYORDU: karşılanan adet düşmüş, rezervasyon
+-- serbest kalmış, müşteriye "siparişiniz eksik karşılandı" haberi gitmiş, ama teslim yazılmamış
+-- oluyordu. Ekran kuryeye "olmadı" diyor, oysa yarısı olmuştu.
+--
+-- SIRA DEĞİŞTİRİLEREK ÇÖZÜLEMEZDİ ve sebebi bu dosyanın kendi künyesinde: düzeltmenin anlamı malın
+-- fiili stoktan düşüp düşmediğine bağlı. Teslimden ÖNCE düzeltmek "rezervasyonu küçült"tür,
+-- SONRA düzeltmek "düşmüş stoğu geri koy". İki farklı iş, yani sıra bir dikkatsizlik değil kısıt.
+-- Geriye tek doğru çare kalıyor: ikisini BÖLÜNMEZ yapmak.
+--
+-- MANTIK KOPYALANMADI, iki fonksiyon ÇAĞRILDI (CLAUDE §1): plpgsql içinden çağrılan fonksiyon aynı
+-- transaction'da koşar, yani bölünmezlik bedava gelir. Kopyalasaydık bir gün biri düzeltilir öteki
+-- unutulurdu — bu dosyanın 04.09'da yaşadığı hatanın ta kendisi.
+--
+-- DURUM ÖNCE SORULUR: teslim edilemeyecek bir siparişte malı düzeltmek, tam da kapatmaya
+-- çalıştığımız yarım yazımın kendisi olurdu. `deliver_order` aynı kapıyı bir kez daha soruyor ve
+-- bu bir tekrar değil güvenlik: o fonksiyon tek başına da çağrılabiliyor.
+--
+-- PARA BURADA YAZILMAZ (dosyanın kendi kuralı): iade borcu motorda türetilir, hareketi uygulama
+-- katmanı yazar — üstelik kartlı iade DIŞ BİR ÇAĞRIDIR ve transaction'ın içine alınamaz.
+-- Aynısı MÜŞTERİ HABERİ için de geçerli: yazım kesinleştikten SONRA gönderilir.
+create or replace function public.deliver_order_with_adjustments(
+  p_order_id uuid,
+  p_lines jsonb default null,
+  p_actor_id uuid default null,
+  p_delivery_proof jsonb default null
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_current order_status;
+  v_adjust jsonb := null;
+  v_deliver jsonb;
+begin
+  select status into v_current from public.order where id = p_order_id for update;
+  if not found then
+    raise exception 'deliver_order_with_adjustments: sipariş bulunamadı (%)', p_order_id;
+  end if;
+
+  -- Teslim yalnız yoldaki siparişten olur (`deliver_order`ın aynı ölçütü). Burada erken sorulmasının
+  -- sebebi düzeltmeyi HİÇ yazmamak: cevap `stale` ise mal da para da haber de kıpırdamaz.
+  if v_current <> 'out_for_delivery' then
+    return jsonb_build_object('ok', false, 'reason', 'stale', 'current_status', v_current);
+  end if;
+
+  if p_lines is not null and jsonb_array_length(p_lines) > 0 then
+    v_adjust := public.adjust_fulfillment(p_order_id, p_lines, p_actor_id);
+    -- Düzeltme reddedilirse teslim de yazılmaz: sebep (`stale` / `already_marked`) olduğu gibi
+    -- yukarı çıkar, çağıran ekran kendi cümlesini kurar.
+    if not (v_adjust->>'ok')::boolean then
+      return v_adjust;
+    end if;
+  end if;
+
+  v_deliver := public.deliver_order(p_order_id, p_actor_id, p_delivery_proof);
+  if not (v_deliver->>'ok')::boolean then
+    -- Buraya normalde düşülmez (durum yukarıda kilitli okundu) ama düşülürse transaction geri
+    -- sarılmalı: düzeltme yazılı kalırsa kapatmaya çalıştığımız arıza aynen geri gelir.
+    raise exception 'deliver_order_with_adjustments: teslim yazılamadı (%) — düzeltme geri alındı',
+      coalesce(v_deliver->>'reason', 'bilinmiyor');
+  end if;
+
+  -- İki sonucun BİRLEŞİMİ: çağıran hem kaç kalem düzeltildiğini hem kaç adet çıktığını okuyor.
+  -- Düzeltme yoksa alanlar sıfır — "yazılmadı" ile "sıfır yazıldı" arasındaki farkı `lines` söyler.
+  return jsonb_build_object(
+    'ok', true,
+    'current_status', 'delivered',
+    'consumed_qty', coalesce((v_deliver->>'consumed_qty')::int, 0),
+    'lines', coalesce((v_adjust->>'lines')::int, 0),
+    'restocked_qty', coalesce((v_adjust->>'restocked_qty')::int, 0),
+    'discarded_qty', coalesce((v_adjust->>'discarded_qty')::int, 0),
+    'released_qty', coalesce((v_adjust->>'released_qty')::int, 0)
+  );
+end;
+$$;
+
 revoke execute on function public.adjust_fulfillment(uuid, jsonb, uuid) from public, anon, authenticated;
 revoke execute on function public.cancel_order(uuid, order_status, uuid, order_cancel_reason) from public, anon, authenticated;
+revoke execute on function public.deliver_order_with_adjustments(uuid, jsonb, uuid, jsonb) from public, anon, authenticated;

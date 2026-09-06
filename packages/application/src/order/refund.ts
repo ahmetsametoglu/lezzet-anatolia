@@ -3,7 +3,7 @@ import { canTransition } from '@lezzet/domain-core';
 import type { FulfillmentAdjustment, OrderCancelReason, OrderStatus, PaymentStatus, ReturnDisposition } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cancelOrderShipment, type ShipmentCancelOutcome } from '../shipping/cancel';
-import { notifyExceptionEffect, providerRefunder, type OrderEffects } from './effects';
+import { notifyExceptionEffect, notifyStatusEffect, providerRefunder, type OrderEffects } from './effects';
 import { recordOrderRefund, syncOrderPaymentStatus } from './payment';
 
 /**
@@ -171,6 +171,102 @@ export async function adjustFulfillment(
     restockedQty: result.restockedQty ?? 0,
     discardedQty: result.discardedQty ?? 0,
     releasedQty: result.releasedQty ?? 0,
+    ...settled,
+  };
+}
+
+/**
+ * **KAPIDA TEK YAZIM: düzeltme + teslim** (21.271 · kurye denetimi bulgu 8).
+ *
+ * ── ÖLÇÜLEN AÇIK ────────────────────────────────────────────────────────────
+ * Kurye kapısı ikisini ARDIŞIK iki çağrı olarak yapıyordu: önce `adjustFulfillment`, sonra
+ * `deliverOrder`. İkincisi `stale` dönerse (araya gün kapanışı ya da başka bir cihaz girmişse)
+ * BİRİNCİSİ GERİ ALINMIYORDU — karşılanan adet düşmüş, rezervasyon serbest kalmış ve müşteriye
+ * *"siparişiniz eksik karşılandı"* haberi gitmiş, ama teslim yazılmamış oluyordu. Ekran kuryeye
+ * "olmadı" diyordu; oysa yarısı olmuştu ve gönderilen haber geri alınamıyordu.
+ *
+ * Para bu arızada güvendeydi ve sebebi tesadüf değil: `settleRefund` borcu her seferinde motordan
+ * YENİDEN türetiyor, yazılmış iadeyi ikinci kez yazmıyor. Yani üç izden ikisi (mal, haber) kalıcı,
+ * biri (para) kendiliğinden bağışıktı.
+ *
+ * ── SIRA DEĞİŞTİRİLEREK ÇÖZÜLEMEZDİ ─────────────────────────────────────────
+ * Düzeltmenin ANLAMI malın fiili stoktan düşüp düşmediğine bağlı (`0020` künyesi): teslimden ÖNCE
+ * düzeltmek "rezervasyonu küçült"tür, SONRA düzeltmek "düşmüş stoğu geri koy". İki farklı iş —
+ * yani sıra bir dikkatsizlik değil, kısıt. Geriye tek doğru çare kaldı: ikisini BÖLÜNMEZ yapmak.
+ *
+ * ── NE İÇERİDE, NE DIŞARIDA ────────────────────────────────────────────────
+ * Transaction'ın İÇİNDE yalnız DB yazımları var (RPC `deliver_order_with_adjustments`). DIŞINDA
+ * kalan iki şeyin de sebebi aynı: geri alınamazlar.
+ *   · **Para** — kartlı iade bir DIŞ çağrıdır; transaction'a alınamaz ve alınsaydı sağlayıcıya
+ *     gidip dönmeyen bir çağrı bütün satırı kilitli tutardı.
+ *   · **Haber** — müşteriye giden mesaj geri alınamaz, o yüzden yazım KESİNLEŞTİKTEN sonra
+ *     gönderilir. Arızanın en görünür yarısı buydu.
+ */
+export type DeliverAdjustOutcome =
+  | ({
+      status: 'ok';
+      restockedQty: number;
+      discardedQty: number;
+      releasedQty: number;
+      /** Fiiliden düşülen toplam adet — teslimin kendi sayısı. */
+      consumedQty: number;
+      /** Kaç kalem düzeltildi; `0` = düzeltmesiz teslim. */
+      adjustedLines: number;
+    } & RefundOutcome)
+  | { status: 'stale'; currentStatus: OrderStatus }
+  | { status: 'already_marked'; orderItemId: string | null; currentDisposition: ReturnDisposition | null }
+  | { status: 'not_found' };
+
+export async function deliverOrderWithAdjustments(
+  db: SupabaseClient,
+  orderId: string,
+  lines: readonly FulfillmentAdjustment[],
+  opts: RefundOptions & {
+    actorId?: string | null;
+    deliveryProof?: Record<string, unknown> | null;
+  } = {},
+): Promise<DeliverAdjustOutcome> {
+  const orders = new OrderService(db);
+  if (!(await orders.getById(orderId))) return { status: 'not_found' };
+
+  const written = await orders.deliverWithAdjustments(orderId, lines, {
+    actorId: opts.actorId,
+    deliveryProof: opts.deliveryProof,
+  });
+  if (!written.ok) {
+    if (written.reason === 'already_marked') {
+      return {
+        status: 'already_marked',
+        orderItemId: written.orderItemId ?? null,
+        currentDisposition: written.currentDisposition ?? null,
+      };
+    }
+    return { status: 'stale', currentStatus: written.currentStatus };
+  }
+
+  /* Para YAZIMDAN SONRA: burada düşse bile mal ve teslim doğru yazılmış olur ve borç açıkta
+     görünür — tersi (para yazılıp teslim yazılmaması) elle düzeltilecek bir hâl olurdu. */
+  const settled = await settleRefund(db, orderId, opts);
+  if (!settled) return { status: 'not_found' };
+
+  /* İKİ HABER, İKİ AYRI OLAY ve sırası anlamlı: önce "yolda olan geldi", sonra "ama eksik geldi".
+     Düzeltme yoksa ikincisi hiç gönderilmez — olmayan bir eksikliği duyurmak, müşteriyi kendi
+     siparişinden şüphelendirirdi. Akıbet haberi `order_refunded` DEĞİL `order_shortfall`: mal
+     kapıdan hiç girmedi, iade edilen bir şey yok — geri çevrilen bir şey var. */
+  await notifyStatusEffect(opts.effects, orderId, 'delivered');
+  if ((written.lines ?? 0) > 0) {
+    await notifyExceptionEffect(opts.effects, orderId, 'order_shortfall', {
+      refundedAmountCents: settled.refundedAmountCents,
+    });
+  }
+
+  return {
+    status: 'ok',
+    restockedQty: written.restockedQty ?? 0,
+    discardedQty: written.discardedQty ?? 0,
+    releasedQty: written.releasedQty ?? 0,
+    consumedQty: written.consumedQty ?? 0,
+    adjustedLines: written.lines ?? 0,
     ...settled,
   };
 }

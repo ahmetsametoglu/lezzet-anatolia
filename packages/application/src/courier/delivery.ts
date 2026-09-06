@@ -2,21 +2,23 @@ import { OrderBoxService, OrderService, SettingsService } from '@lezzet/database
 import type { DeliveryProofRecord, FulfillmentAdjustment, Order, PaymentStatus } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { OrderEffects } from '../order/effects';
-import { deliverOrder } from '../order/fulfillment';
 import { recordOrderPayment, syncOrderPaymentStatus } from '../order/payment';
-import { adjustFulfillment } from '../order/refund';
+import { deliverOrderWithAdjustments } from '../order/refund';
 
 /**
  * Kapıda teslim: onay, eksik kalem ve tahsilat (11.2/11.3) — **uygulama katmanı orkestrasyonu**.
  * `design/pages/kurye-teslimat.md` + DOMAIN §6 (teslim onayı), §7 (nakit sınırı), §8 (kısmi).
  * Terfi 21.10; kaynağı `apps/web/lib/courier/delivery.ts`, web kopyası geçiş köprüsüdür.
  *
- * **Sıra kuralın kendisidir:** önce kanıt kapısı (hiçbir yazım yapılmadan), sonra MAL, sonra teslim,
- * en sonda PARA.
+ * **Sıra kuralın kendisidir:** önce kanıt kapısı (hiçbir yazım yapılmadan), sonra MAL + TESLİM
+ * (tek yazım), en sonda PARA.
  * - Kanıt kontrolü başta: B2B teslimatı imzasız kapanmamalı — yarısı yazılmış bir teslimat üstüne
  *   "olmadı" demek, malı düşmüş ama teslim görünmeyen sipariş bırakırdı.
  * - Eksik kalem teslimden ÖNCE düşülür: teslimden sonra düşseydi mal önce fiili stoktan çıkar,
  *   sonra geri alınırdı — kayıt aynı malı iki kez oynatırdı (0026'nın "tam bir kez say" kuralı).
+ *   **İkisi 21.271'den beri BÖLÜNMEZ** (`deliver_order_with_adjustments`): ardışık iki çağrıyken
+ *   teslim `stale` dönünce düzeltme yazılı kalıyordu ve ortada yarım bir teslim doğuyordu — tam da
+ *   yukarıdaki maddenin engellemeye çalıştığı hâl, başka bir kapıdan.
  * - Tahsilat en sonda: teslim `stale` dönerse karşılığı olmayan para yazılmış olmaz.
  *
  * **Kurye hesap yapmaz.** Eksik işaretlendiğinde tahsil edilecek tutarı düşüren şey bu dosyadaki bir
@@ -140,31 +142,28 @@ export async function confirmDoorDelivery(
     return { status: 'proof_required', channel: order.channel };
   }
 
-  // ── Mal ────────────────────────────────────────────────────────────────────
-  // Kapıda reddedilen mal fiili stoktan HİÇ düşmemiştir (sipariş henüz `delivered` değil): kalem–parti
-  // kaydı ve rezervasyon azalır, mal araçta kalır ve depoya döner (0026).
-  const adjustments = input.adjustments ?? [];
-  if (adjustments.length > 0) {
-    const adjusted = await adjustFulfillment(db, input.orderId, adjustments, {
-      actorId: input.courierId,
-      effects: input.effects,
-    });
-    if (adjusted.status === 'stale') return { status: 'stale', currentStatus: adjusted.currentStatus };
-    if (adjusted.status === 'not_found') return { status: 'not_found' };
-    // `forbidden` bu yoldan DOĞAMAZ: kapsam listesi geçirilmiyor, kuryenin yetkisi `courierId`
-    // eşleşmesidir ve yukarıda soruldu. Ulaşılamaz dalı başka bir duruma çevirmek (ör. `not_found`)
-    // YALAN olurdu; değişmez bir gün ihlal edilirse gürültü çıkarsın diye fırlatılıyor.
-    if (adjusted.status === 'forbidden') {
-      throw new Error(`[courier/delivery] kapsam dışı kalem düzeltmesi — sipariş ${input.orderId}`);
-    }
-  }
+  // ── Mal + teslim: TEK YAZIM ────────────────────────────────────────────────
+  /*
+    İKİSİ BÖLÜNMEZ (21.271 · denetim bulgusu 8). Bir tur burada ARDIŞIK iki çağrı vardı — önce
+    `adjustFulfillment`, sonra `deliverOrder` — ve ikincisi `stale` dönerse birincisi geri
+    alınmıyordu: karşılanan adet düşmüş, rezervasyon serbest kalmış, müşteriye "eksik karşılandı"
+    haberi gitmiş, ama teslim yazılmamış oluyordu. Ekran kuryeye "olmadı" diyordu; oysa yarısı
+    olmuştu ve haber geri alınamıyordu.
 
-  // ── Teslim ─────────────────────────────────────────────────────────────────
-  // Kutulu siparişte okutulan kodlar KANITA yazılır (etüt 2.5): görselli kanıt varsa onun içine,
-  // yoksa görselsiz `box_scan` kaydı doğar — B2C'nin bugün hiç kanıt istemeyen teslimi böylece
-  // bedava bir kanıt kazanır.
+    Sırayı ters çevirmek çare değildi: düzeltmenin anlamı malın fiili stoktan düşüp düşmediğine
+    bağlı (`0020` künyesi) — teslimden önce "rezervasyonu küçült", sonra "düşmüş stoğu geri koy".
+    Çare ikisini tek transaction'a almaktı; künye `deliverOrderWithAdjustments`ta.
+
+    Kapıda reddedilen mal fiili stoktan HİÇ düşmemiştir: kalem–parti kaydı ve rezervasyon azalır,
+    mal araçta kalır ve depoya döner (0026).
+
+    Kutulu siparişte okutulan kodlar KANITA yazılır (etüt 2.5): görselli kanıt varsa onun içine,
+    yoksa görselsiz `box_scan` kaydı doğar — B2C'nin bugün hiç kanıt istemeyen teslimi böylece
+    bedava bir kanıt kazanır.
+  */
+  const adjustments = input.adjustments ?? [];
   const boxCodes = boxes.length > 0 ? boxes.map((box) => box.code) : null;
-  const delivered = await deliverOrder(db, input.orderId, {
+  const written = await deliverOrderWithAdjustments(db, input.orderId, adjustments, {
     actorId: input.courierId,
     deliveryProof: input.proof
       ? proofRecord(input.proof, input.courierId, boxCodes)
@@ -173,7 +172,16 @@ export async function confirmDoorDelivery(
         : null,
     effects: input.effects,
   });
-  if (!delivered.ok) return { status: 'stale', currentStatus: delivered.currentStatus };
+  if (written.status === 'stale') return { status: 'stale', currentStatus: written.currentStatus };
+  if (written.status === 'not_found') return { status: 'not_found' };
+  /* `already_marked` KURYE YOLUNDA da doğabilir: aynı durağı iki telefondan işaretlemek. Ekranın
+     yapacağı şey `stale`den farklı (kalemi tazele, yazılı akıbeti göster) ama kurye sözleşmesinde
+     bugün o dal yok — `stale` diyerek ekranı tazelemeye göndermek, kuryeye YANLIŞ sebep söylemek
+     olurdu. Kapı hiçbir şey yazmadı, o yüzden cevap da "yazamadım" değil "araya biri girdi"nin
+     kardeşi: `BEKLEYEN(21.272)` ile sözleşmeye kendi dalı açılacak. */
+  if (written.status === 'already_marked') {
+    return { status: 'stale', currentStatus: 'out_for_delivery' };
+  }
 
   // ── Para ───────────────────────────────────────────────────────────────────
   const cashLimitExceeded =
@@ -188,7 +196,7 @@ export async function confirmDoorDelivery(
       amountDueCents: synced.derivation.amountToCollectCents,
       paymentStatus: synced.paymentStatus,
       cashLimitExceeded: false,
-      adjustedLines: adjustments.length,
+      adjustedLines: written.adjustedLines,
     };
   }
 
@@ -210,7 +218,7 @@ export async function confirmDoorDelivery(
     amountDueCents: paid.derivation.amountToCollectCents,
     paymentStatus: paid.paymentStatus,
     cashLimitExceeded,
-    adjustedLines: adjustments.length,
+    adjustedLines: written.adjustedLines,
     ...(paid.deduped ? { collectionDeduped: true as const } : {}),
   };
 }

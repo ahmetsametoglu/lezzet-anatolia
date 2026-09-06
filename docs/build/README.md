@@ -40,7 +40,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 04 | `04-auth-kimlik.md` | Kimlik ve Yetki: Supabase Auth, Guard'lar, Müşteri Bağlama | sürüyor | 12/13 (+1 kısmi) |
 | 05 | `05-katalog.md` | Katalog: Servisler ve Yönetim Zemini | sürüyor | 37/38 |
 | 06 | `06-stok.md` | Stok ve Tedarik: Parti, Rezervasyon, Satın Alma | sürüyor | 14/15 |
-| 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/16 (+2 kısmi) |
+| 07 | `07-siparis.md` | Sipariş, Checkout ve Ödeme | sürüyor | 13/17 (+2 kısmi) |
 | 08 | `08-musteri-app.md` | Müşteri Web Uygulaması (Vitrin) | sürüyor | 53/57 (+4 kısmi) |
 | 09 | `09-admin.md` | Admin Yüzeyi: Komponentler ve Sayfalar | sürüyor | 14/28 (+14 kısmi) |
 | 10 | `10-depo.md` | Depo Yüzeyi | tamam | 9/9 |
@@ -54,7 +54,7 @@ Aşağıdaki tablo **türetilmiştir — elle düzenlenmez.** Kaynağı modül d
 | 18 | `18-operasyon-guvenlik.md` | Operasyon ve Güvenlik | sürüyor | 1/13 (+2 kısmi) |
 | 19 | `19-coklu-depo.md` | Çok Depo (Depo Ağı) | sürüyor | 27/31 (+4 kısmi) |
 | 20 | `20-yapay-zeka.md` | Yapay Zekâ | sürüyor | 3/4 |
-| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 254/270 (+6 kısmi) |
+| 21 | `21-mobil-uygulama.md` | Mobil Uygulama | sürüyor | 255/272 (+6 kısmi) |
 | 22 | `22-mcp-asistan.md` | MCP Yönetici Asistanı | sürüyor | 32/41 (+9 kısmi) |
 | 23 | `23-barkod-kutu.md` | Barkod/QR ile Operasyon Takibi | tamam | 14/14 |
 <!-- durum:son -->

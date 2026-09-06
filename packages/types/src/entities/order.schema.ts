@@ -423,6 +423,23 @@ export const FulfillmentResultSchema = z.object({
 });
 export type FulfillmentResult = z.infer<typeof FulfillmentResultSchema>;
 
+/**
+ * `deliver_order_with_adjustments` dönüşü (21.271) — **kapıdaki tek yazımın sonucu.**
+ *
+ * Kurye ekranı düzeltmeyi ve teslimi ardışık iki çağrı olarak yapıyordu; ikincisi `stale` dönünce
+ * birincisi geri alınmıyor ve ortada YARIM bir teslim kalıyordu (karşılanan adet düşmüş, müşteriye
+ * "eksik karşılandı" haberi gitmiş, teslim yazılmamış). İkisi tek transaction'a alındı.
+ *
+ * Şema TÜRETİLDİ, elle yazılmadı (CLAUDE §1): dönüş iki fonksiyonun birleşimi olduğu için tipi de
+ * öyle — düzeltmenin bütün alanları + teslimin `consumedQty`si. Elle yazsaydık `adjust_fulfillment`
+ * bir alan kazandığında burası sessizce geride kalırdı.
+ */
+export const DeliverWithAdjustmentsResultSchema = FulfillmentResultSchema.extend({
+  /** Fiiliden düşülen toplam adet — `deliver_order`ın kendi sayısı. */
+  consumedQty: z.number().int().optional(),
+});
+export type DeliverWithAdjustmentsResult = z.infer<typeof DeliverWithAdjustmentsResultSchema>;
+
 /** `cancel_order` dönüşü (07.9) — `stale` = sipariş artık o durumda değil. */
 export const CancelResultSchema = z.object({
   ok: z.boolean(),

@@ -7,6 +7,7 @@ import { purgeTestData, settingsSnapshot, createTestWarehouse, purgeVariantStock
 import { confirmDoorDelivery, type DeliveryProofInput, type DoorCollectionInput } from './delivery';
 import { readDeliveryProof, requestDeliveryProofUploadUrl } from './proof';
 import { advanceOrder } from '../order/advance.testkit';
+import { deliverOrder } from '../order/fulfillment';
 import { openBox, sealBox } from '../warehouse/boxes';
 
 /**
@@ -225,6 +226,55 @@ describe('eksik/reddedilen kalem (11.2)', () => {
     const batches = await itemBatches.listByOrder(orderId);
     expect(batches.reduce((sum, batch) => sum + batch.qty, 0)).toBe(2);
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(28);
+  });
+
+  /*
+    ── TESLİM YAZILAMIYORSA DÜZELTME DE YAZILMAZ (21.271 · denetim bulgusu 8) ──────────────────
+
+    ÖLÇÜLEN ARIZA: düzeltme ve teslim ARDIŞIK iki çağrıydı. İkincisi `stale` dönerse (araya gün
+    kapanışı ya da başka bir cihaz girmişse) birincisi geri alınmıyordu — karşılanan adet düşmüş,
+    rezervasyon serbest kalmış, müşteriye "eksik karşılandı" haberi gitmiş, ama teslim yazılmamış
+    oluyordu. Ekran kuryeye "olmadı" diyordu; oysa yarısı olmuştu ve haber geri alınamıyordu.
+
+    YARIŞ KURULMUYOR, SONUCU KURULUYOR. Gerçek arıza iki `await` arasına başka bir aktörün
+    girmesiyle doğuyor ve öyle bir testi tekrarlanabilir yazmak zamanlamaya bahis oynamaktır. Aynı
+    SONUCU belirlenimci biçimde üreten hâl şu: teslimi yazılamayacak bir sipariş. Eski kod bu
+    siparişte düzeltmeyi YAZAR sonra teslimde düşerdi; yenisi hiçbir şey yazmadan `stale` döner.
+
+    Fikstür siparişi `delivered`a çekiyor — kuryenin durağı başka bir cihazdan kapanmış hâli. Eski
+    kodda `adjust_fulfillment` bu siparişte teslim SONRASI dalını koşar (mal depoya geri girer),
+    yani yazım gerçekten olurdu; ölçüt de tam orası.
+  */
+  it('TESLİM YAZILAMIYORSA DÜZELTME DE YAZILMAZ — yarım teslim kalmaz', async () => {
+    const { orderId, itemId, boxCode } = await atTheDoor({ qty: 4 });
+    /* Durak başka bir cihazdan kapanmış: sipariş artık yolda değil. Geçiş GERÇEK kapıdan yapılıyor
+       (`deliverOrder`) — fikstür düz yazımı bilerek reddediyor ve haklı: `delivered` yalnız stok
+       düşümüyle birlikte doğar, elle yazılan bir durum o düşümü atlar ve testin öncülü uydurma
+       olurdu. Senaryonun kendisi de bu zaten: ikinci cihaz siparişi normal yoldan teslim etti. */
+    const oncedenTeslim = await deliverOrder(db, orderId, { actorId: courierId });
+    expect(oncedenTeslim.ok).toBe(true);
+    const oncekiStok = (await stocks.getAvailable(warehouseId, variantId)).physicalQty;
+
+    const haberler: string[] = [];
+    const sonuc = await confirmDoorDelivery(db, {
+      orderId, courierId, scannedBoxCodes: [boxCode],
+      adjustments: [{ orderItemId: itemId, fulfilledQty: 2, returnDisposition: 'restock' }],
+      effects: {
+        notifyStatus: async (_id, status) => void haberler.push(`status:${status}`),
+        notifyException: async (_id, event) => void haberler.push(`exception:${event}`),
+      },
+    });
+
+    expect(sonuc).toEqual({ status: 'stale', currentStatus: 'delivered' });
+    // 1) MAL: kalem–parti kaydı kıpırdamadı, mal depoya geri girmedi.
+    const batches = await itemBatches.listByOrder(orderId);
+    expect(batches.reduce((sum, batch) => sum + batch.qty, 0)).toBe(4);
+    expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(oncekiStok);
+    // 2) KALEM: karşılanan adet düşmedi ve akıbet yazılmadı.
+    const items = (await orders.getWithItems(orderId))?.items ?? [];
+    expect(items.every((line) => line.fulfilledQty === 4 && line.returnDisposition === null)).toBe(true);
+    // 3) HABER: geri alınamayan tek iz — hiç gitmemeli.
+    expect(haberler).toEqual([]);
   });
 });
 

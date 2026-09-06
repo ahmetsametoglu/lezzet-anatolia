@@ -12531,3 +12531,55 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama:** kök typecheck · lint · docs:check temiz · tam paket. Testi: vadeli sipariş kurulup
   İKİ ekranın cevabı yan yana konuyor — durak `dueAmountCents: null`, rota kartında `stopCount`
   artıyor ama `collectionCount` kıpırdamıyor. Ayrışırlarsa artık bu satır kırılır.
+
+- [x] (21.271) **KAPIDA TEK YAZIM: düzeltme + teslim BÖLÜNMEZ — yarım teslim kalmıyor** (denetim bulgusu 8 · kullanıcı kararı 06.09: "1'i yap")
+  `touches:` `supabase/migrations/0020_order_return.sql` · `packages/types/src/entities/order.schema.ts` · `packages/database/src/services/order.service.ts` · `packages/application/src/order/refund.ts` · `packages/application/src/courier/{delivery.ts,delivery.test.ts}` · `packages/application/src/index.ts`
+
+  **ÖLÇÜLEN ARIZA.** Kurye kapısı ikisini ARDIŞIK iki çağrı olarak yapıyordu: önce
+  `adjustFulfillment` (kapıda reddedilen kalem), sonra `deliverOrder`. İkincisi `stale` dönerse
+  (araya gün kapanışı ya da başka bir cihaz girmişse) **birincisi geri alınmıyordu** — karşılanan
+  adet düşmüş, rezervasyon serbest kalmış, müşteriye *"siparişiniz eksik karşılandı"* haberi gitmiş,
+  ama teslim yazılmamış oluyordu. Ekran kuryeye "olmadı" diyordu; oysa yarısı olmuştu.
+
+  Üç izden ikisi kalıcıydı, biri değildi ve sebebi tesadüf değil: **para güvendeydi** çünkü
+  `settleRefund` borcu her seferinde motordan yeniden türetiyor, yazılmış iadeyi ikinci kez
+  yazmıyor. Yani mal ve haber kalıcı, para kendiliğinden bağışıktı.
+
+  **SIRA DEĞİŞTİRİLEREK ÇÖZÜLEMEZDİ** ve bu ayrım kararın kendisi: düzeltmenin ANLAMI malın fiili
+  stoktan düşüp düşmediğine bağlı (`0020` künyesi) — teslimden ÖNCE düzeltmek *"rezervasyonu
+  küçült"*, SONRA düzeltmek *"düşmüş stoğu geri koy"*. İki farklı iş, yani sıra bir dikkatsizlik
+  değil kısıt. Geriye tek doğru çare kaldı: ikisini bölünmez yapmak.
+
+  **Yeni RPC `deliver_order_with_adjustments`** — mantık KOPYALANMADI, iki fonksiyon ÇAĞRILDI
+  (CLAUDE §1): plpgsql içinden çağrılan fonksiyon aynı transaction'da koşar, yani bölünmezlik bedava
+  gelir. Kopyalasaydık bir gün biri düzeltilir öteki unutulurdu — bu dosyanın 04.09'da yaşadığı
+  hatanın ta kendisi. Durum ÖNCE sorulur: teslim edilemeyecek siparişte malı düzeltmek, kapatmaya
+  çalıştığımız yarım yazımın kendisi olurdu.
+
+  **Transaction'ın DIŞINDA kalan ikisi de geri alınamaz olduğu için dışarıda:** para (kartlı iade
+  bir DIŞ çağrıdır, içeri alınsaydı sağlayıcıya gidip dönmeyen bir çağrı satırı kilitli tutardı) ve
+  müşteri haberi (yazım kesinleştikten SONRA gönderilir — arızanın en görünür yarısı buydu).
+
+  Dönüş şeması TÜRETİLDİ, elle yazılmadı: `DeliverWithAdjustmentsResultSchema =
+  FulfillmentResultSchema.extend({ consumedQty })`.
+
+  **Testi YARIŞ KURMUYOR, SONUCU KURUYOR.** Gerçek arıza iki `await` arasına başka bir aktörün
+  girmesiyle doğuyor ve öyle bir testi tekrarlanabilir yazmak zamanlamaya bahis oynamaktır. Aynı
+  sonucu belirlenimci üreten hâl: teslimi yazılamayacak bir sipariş (`delivered`a çekilmiş durak).
+  Eski kod orada düzeltmeyi YAZAR sonra teslimde düşerdi — yeni kod hiçbir şey yazmadan `stale`
+  döner. Test üç izi birden çiviliyor: kalem–parti kaydı ve fiili stok kıpırdamıyor, `fulfilled_qty`
+  ve akıbet yazılmıyor, **haber hiç gitmiyor**.
+
+  **Doğrulama:** kök typecheck · lint · tam paket.
+
+- [ ] (21.272) **Kurye sözleşmesine `already_marked` dalı — bugün `stale` diye söyleniyor** (21.271'in kalanı)
+  `touches:` `packages/types/src/contracts/courier-api.schema.ts` · `packages/application/src/courier/delivery.ts` · `apps/mobile/src/screens/courier/*`
+
+  `deliver_order_with_adjustments` düzeltme reddini olduğu gibi yukarı taşıyor ve iki sebep var:
+  `stale` (sipariş değişti) ile `already_marked` (KALEM zaten karara bağlanmış — aynı durağı iki
+  telefondan işaretlemek). Ekranın yapması gereken şey farklı: birincide listeyi tazeler, ikincide
+  o kalemi tazeleyip yazılı akıbeti gösterir.
+
+  Kurye sözleşmesinde bugün ikinci dal YOK, o yüzden kapı `already_marked`ı `stale`e çeviriyor —
+  **hiçbir şey yazılmadığı için zararsız ama kuryeye YANLIŞ SEBEP söylüyor.** Depo tarafında ayrım
+  zaten var (`FulfillmentResultSchema.reason`), yani iş sözleşme + ekran cümlesi.
