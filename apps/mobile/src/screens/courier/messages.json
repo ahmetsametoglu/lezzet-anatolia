@@ -295,6 +295,10 @@
     },
     "navigate": "Navigasyon",
     "noNavigate": "adres kayıtlı değil",
+    "doorCheck": {
+      "unverified": "Kapı numarası doğrulanmadı.",
+      "elsewhere": "Kapı doğrulanmadı — müşteri adresini böyle onayladı."
+    },
     "call": "Ara",
     "whatsApp": "WhatsApp",
     "proof": {

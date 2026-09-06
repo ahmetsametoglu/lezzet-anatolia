@@ -220,6 +220,27 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         <View style={styles.addressBlock}>
           <Text style={styles.address}>{stop.address ?? t.day.stop.noAddress}</Text>
           <Text style={styles.addressDetail}>{`${receiver} · ${t.channel[stop.channel]}`}</Text>
+          {/*
+            KAPI DOĞRULAMASI (11.11 · talep: denetim → mobil) — kurye kapıya varmadan bilsin.
+
+            İki hâl YAZILIR, ikisi de sessiz: adresin altında, gövde fontunda, `muted`. Rozet ve
+            uyarı rengi bilerek YOK — kurye zaten oraya gidiyor, amaç onu korkutmak değil hazırlıklı
+            göndermek (gerekirse kapıya varmadan arasın). Navigasyon düğmesi de çizilmeye devam
+            eder: sokak ortası da bir hedeftir ve kuryeyi mahalleye götürür.
+
+            `elsewhere` bu satırın en değerli hâli: servis doğrusunu buldu, müşteri KENDİ yazdığını
+            korudu. Kurye tutarsızlığın BİLİNDİĞİNİ ve kasıtlı olduğunu okur — aksi hâlde kapıda bir
+            veri hatası sanıp ofisi arar, oysa araması gereken müşteridir.
+
+            `confirmed` ve `unknown` HİÇBİR ŞEY yazmaz. `unknown` bir kusur değil ölçülememedir
+            (bugün Almanya kalıcı olarak orada — sağlayıcı yok) ve her durakta görünen, hiçbir şey
+            söylemeyen bir satır kuryeyi GERÇEK uyarıyı da okumamaya alıştırırdı.
+          */}
+          {stop.doorCheck === 'unverified' || stop.doorCheck === 'elsewhere' ? (
+            <Text style={styles.doorCheck} testID={`courier-delivery-door-${stop.doorCheck}`}>
+              {t.delivery.doorCheck[stop.doorCheck]}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.contactRow}>
@@ -842,6 +863,14 @@ const styles = StyleSheet.create({
     fontFamily: operationsTheme.font.body[400],
     fontSize: operationsTheme.text.note,
     color: operationsTheme.colors.body,
+  },
+  /* Adres künyesinin bir tık ALTINDA: aynı punto, `muted` ton. Alıcı satırıyla yarışmıyor ama
+     adresle birlikte okunuyor — kapı doğrulaması adresin bir niteliğidir, ayrı bir uyarı değil. */
+  doorCheck: {
+    fontFamily: operationsTheme.font.body[400],
+    fontSize: operationsTheme.text.note,
+    lineHeight: operationsTheme.text.note * operationsTheme.text['lead--line-height'],
+    color: operationsTheme.colors.muted,
   },
   contactRow: { flexDirection: 'row', gap: operationsTheme.space.md },
   /* NAVİGASYON YATAY, SABİT BOYLU (v3:17 `height:52`): ikon ve etiket yan yana — dikey dizilim

@@ -12708,3 +12708,42 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Etiket gözle doğrulandı (62 mm ruloda zorlu örnek: uzun alıcı, uzun rota, üç uzun ürün adı —
   hiçbiri taşmıyor). `knip.json`a `packages/application → @expo-google-fonts/karla` istisnası girdi:
   bağımlılık `require.resolve` ile dinamik çözülüyor, knip statik göremiyor.
+
+- [x] (21.274) **KURYE DURAK KARTI KAPI DOĞRULAMASINI SÖYLÜYOR — sözleşme taşıyordu, ekran susuyordu** (talep: denetim → mobil · 11.11)
+  `touches:` `apps/mobile/src/screens/courier/delivery-screen.tsx` ·
+  `apps/mobile/src/screens/courier/messages.json` ·
+  `apps/mobile/src/screens/courier/delivery-screen.test.tsx`
+
+  **TALEBİN ÖN KOŞULU YARIM İNMİŞ, ÖLÇÜLEREK GÖRÜLDÜ.** Talep (`docs/talep/mobil-adres-dogrulanabilirligi.md`)
+  02.09'da *"sözleşme alanı kesinleşene kadar mobil tarafta kod yazmayın"* diye sıraya konmuştu ve
+  web şeridi 06.09'da hâlâ `⏳ Sözleşme alanı henüz YOK` yazıyordu. Ölçüm başkasını söyledi: iki
+  yüzeyin ön koşulu **ayrı ayrı** inmiş.
+  · **Kurye yarısı HAZIR:** `CourierStopSchema.doorCheck` sözleşmede
+    (`DoorCheckEnum = confirmed|elsewhere|unverified|unknown`), motor `doorCheckOf`
+    (`@lezzet/domain-core`, 14 test), uç `packages/application/src/courier/day.ts:319` alanı
+    dolduruyor — sevkiyat masasıyla AYNI fonksiyondan, yani iki operasyon yüzeyi aynı durak için
+    aynı şeyi söylüyor. Mobilde alan yalnız fikstürde geçiyordu (`courier-fixture.ts:118`); ekran
+    onu hiç okumuyordu.
+  · **Müşteri formu yarısı HÂLÂ ENGELLİ:** `MeAddressSchema` bir `AddressSchema.pick()` ve
+    listesinde `geoAltLabel`/`geoPrecision` YOK — alan varlıkta var, sözleşmede yok. O yarı
+    talepte beklemeye devam ediyor (metinler üç dilde teslim edilmiş durumda, iş yalnız alanın
+    taşınmasını bekliyor).
+
+  **İKİ HÂL KONUŞUR, İKİSİ SUSAR.** `unverified` → *"Kapı numarası doğrulanmadı."*; `elsewhere` →
+  *"Kapı doğrulanmadı — müşteri adresini böyle onayladı."* Metinler talebin kendi §⑤'inden BİREBİR
+  alındı (uydurulmadı: iki yüzeyin aynı cümleyi kullanması talebin şartıydı). `confirmed` ve
+  `unknown` hiçbir şey yazmaz — `unknown` bir kusur değil ölçülememedir (bugün Almanya kalıcı
+  olarak orada, sağlayıcı yok) ve her durakta görünen boş bir satır kuryeyi GERÇEK uyarıyı da
+  okumamaya alıştırırdı.
+
+  **TON: ROZET DEĞİL, UYARI RENGİ DEĞİL** (talebin kendi şartı). Satır adres künyesinin altında,
+  gövde fontunda, `note` puntoda, `muted` tonda — alıcı satırıyla yarışmıyor ama adresle birlikte
+  okunuyor, çünkü kapı doğrulaması adresin bir NİTELİĞİDİR, ayrı bir uyarı değil. Navigasyon
+  düğmesi çizilmeye devam ediyor: sokak ortası da bir hedeftir ve kuryeyi mahalleye götürür.
+  `elsewhere` satırının değeri de tam burada — kurye tutarsızlığın bilindiğini ve kasıtlı olduğunu
+  okur, aksi hâlde kapıda bir veri hatası sanıp ofisi arar, oysa araması gereken müşteridir.
+
+  **Doğrulama:** kök typecheck yeşil (20/20) · `delivery-screen.test.tsx` **39/39**. Dört testin
+  ikisi SUSAN hâlleri ölçüyor (`confirmed`, `unknown`): yalnız konuşan hâlleri sınayan bir test,
+  satır bir gün her durakta belirdiğinde yeşil kalırdı. Fikstür varsayılanı `unknown` olduğu için
+  konuşan testler ancak ekran alanı gerçekten okuduğunda geçiyor.

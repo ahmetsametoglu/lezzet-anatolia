@@ -231,6 +231,38 @@ describe('teslimat · durak künyesi', () => {
     expect(screen.queryByTestId('courier-delivery-whatsapp')).toBeNull();
   });
 
+  /*
+    KAPI DOĞRULAMASI (11.11) — dört hâlin İKİSİ konuşur, ikisi susar.
+
+    Sessiz olanları da sınıyoruz çünkü asıl kural onlarda: `unknown` her Alman durağında geçerli ve
+    orada bir satır çizmek, kuryeyi GERÇEK uyarıyı da okumamaya alıştırırdı. Yalnız konuşan hâlleri
+    ölçen bir test, o gün satır her durakta belirdiğinde yeşil kalırdı.
+  */
+  it.each([
+    ['unverified', t.delivery.doorCheck.unverified],
+    ['elsewhere', t.delivery.doorCheck.elsewhere],
+  ] as const)('kapı doğrulaması "%s" ise kurye bunu kapıya varmadan okur', async (doorCheck, cumle) => {
+    mockRoutes({ day: courierDay([settledStop({ doorCheck })]) });
+
+    await renderDelivery();
+
+    expect(screen.getByText(cumle)).toBeOnTheScreen();
+    /* Navigasyon SUSMAZ: sokak ortası da bir hedeftir ve kuryeyi mahalleye götürür. */
+    expect(screen.getByTestId('courier-delivery-navigate')).toBeOnTheScreen();
+  });
+
+  it.each(['confirmed', 'unknown'] as const)(
+    'kapı doğrulaması "%s" ise HİÇBİR satır çizilmez — ölçülemeyen bir kusur değildir',
+    async (doorCheck) => {
+      mockRoutes({ day: courierDay([settledStop({ doorCheck })]) });
+
+      await renderDelivery();
+
+      expect(screen.queryByText(t.delivery.doorCheck.unverified)).toBeNull();
+      expect(screen.queryByText(t.delivery.doorCheck.elsewhere)).toBeNull();
+    },
+  );
+
   it('sıra SEFERİN İÇİNDE sayılır — araçtaki öteki seferin durakları paydaya girmez', async () => {
     /*
       Sayaç günün BÜTÜN duraklarından geliyordu ve iki sefer sürülürken "Durak 3/15" yazıyordu;
