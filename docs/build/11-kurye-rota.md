@@ -386,7 +386,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
   - Kapsam: self-host OSRM (hücre ücretsiz). Ticari API'de 60 durak = 3.721 hücre — orada önbellek
     bir hız işi değil PARA işidir. Gerekçe ve maliyet kıyası: `BACKLOG` §8 (c).
 
-- [ ] (11.11) **Adres DOĞRULANABİLİRLİĞİ — "bu kapı var mı" sorusu hiç sorulmuyor:** kaba eşleşme tespit edilir, müşteriye düzeltme teklif edilir, düzeltilmezse sevkiyat ve kurye uyarılır
+- [~] (11.11) **Adres DOĞRULANABİLİRLİĞİ — "bu kapı var mı" sorusu hiç sorulmuyor:** kaba eşleşme tespit edilir, müşteriye düzeltme teklif edilir, düzeltilmezse sevkiyat ve kurye uyarılır
   `touches: supabase/migrations/0011_customer_fields.sql, packages/domain-core/src/delivery/, packages/application/src/delivery/{geocode-port,geocode-provider,geo-address,geocode-scan}.ts, apps/web/components/customer/delivery/, apps/web/app/(operations)/operations/deliveries/, apps/mobile/src/screens/customer-kit/, apps/mobile/src/screens/courier/`
   - **KULLANICI BULGUSU (01.09) — iki gerçek sipariş, aynı adres, biri var olmayan kapı.** Kullanıcı
     uygulamadan iki sipariş kurdu (15:24 ve 15:43) ve ikisinin de satırı **`192c Rue du Maréchal Foch`**:
@@ -620,6 +620,40 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       yeniden başlattı. Soğuk rotalar önce ısıtıldı, sonra koşuldu.
     - **Sırada:** tasarım turu (`design/BACKLOG §4` — kompozisyon çizilmedi) · mobil şeridin iki
       yüzeyi. **BEKLEYEN(11.11)**
+
+  - **Durum (06.09g) — TASARIM SÖZLEŞMESİ YAZILDI + üç operasyon aynası konuşmaya başladı.**
+    - **"Tasarım turu" yanlış boyutlandırılmıştı** (kendi tespitim, ölçüldü). Bizde tasarım iki
+      katman: **sözleşme** (`design/pages/*.md` — hangi bilgi, hangi amaçla) ve **görsel karar**
+      (`.dc.html` — Claude Design). Dördün üçü ikinci katmanı hiç gerektirmiyordu: teklif mevcut
+      uyarı tonu + mevcut `Button`, sevkiyat şeridi mevcut kalıbın iki maddesi, kurye kartı mevcut
+      kartın bir satırı. **Bağlı olan tek gerçek kompozisyon depo formunun enlem/boylamıydı** —
+      bugün iki çıplak sayı kutusu (`warehouse-dialog.tsx:162-163`), plan ise haritada
+      sürüklenebilir işaretçi diyordu; o iş bölge haritasının kardeşi ve kendi ön koşulu
+      (`postal_code_place` koordinatı) hâlâ kapalı. → `design/BACKLOG §4`
+    - **Kullanıcı kararı 06.09:** MCP onarımı bizi aşıyor; müşteri yüzeyleri zaten şekillendi,
+      mevcut desenlere uygun ekleme yapılsın, mobile not düşülsün.
+    - **AÇIK BULUNAN ARIZA — web operasyon aynası SESSİZDİ.** Mobil kurye kartı `doorCheck`i 06.09'da
+      yazdı; web'de aynı olguyu gösteren üç ekranın üçü de hiç yazmıyordu. Üstelik `courier/day.ts`
+      künyesi *"iki operasyon yüzeyi aynı durak için aynı şeyi söylüyor"* diye yazılıydı —
+      **söylemiyordu**. Yazıldı: kurye gün listesi + kapıdaki durak ekranı (`StopDoorNote`) +
+      sipariş detayının adres ipucu.
+    - **Cümleler paylaşılan sözlüğe taşındı** (`components/operation/ui/labels.ts` ›
+      `DOOR_CHECK_NOTE`) — taşıyıcı adlarının 10.9'daki yolculuğunun aynısı, aynı gerekçeyle:
+      ikinci tüketici doğdu. Sayfa-arası import `docs:check §3e` ile zaten yasak.
+    - **`docs:check §3k` yazıldı:** web `DOOR_CHECK_NOTE` ile mobil `screens/courier/messages.json`
+      cümleleri karakter karakter karşılaştırılıyor. Bağ eskiden yalnız künyedeydi ve künye çürür —
+      ayrışma **hiçbir şeyi kırmaz**, iki ekran da kendi içinde tutarlı görünür. `typecheck` göremez
+      (ikisi de geçerli `string`), `lint` göremez (dil kuralı değil). Kuralın yakaladığı doğrulandı:
+      mobil cümle bilerek bozuldu → `✗ §3k … AYRIŞTI`, sonra geri konuldu.
+    - **Sözleşmeler indi:** `musteri-checkout.md` §4c (teklif — iki hâlin ayrımının **yapısal**
+      olduğu, "yanlış" kelimesinin hiç geçmediği, kabulün İKİSİNİ birden düzelttiği) ·
+      `kurye-teslimat.md` §2 · `kurye-gun.md` §6b (telefonda gün listesinin **bilerek sessiz**,
+      web aynasının konuşkan olduğu — kullanıcısı kurye değil sevkiyatçı) · `admin-siparisler.md` §2
+      (eylemin yeri) · `admin-teslimat.md` (şeridin iki maddesi).
+    - Doğrulama: `typecheck` (dokunulan dosyalar temiz; kırmızı olan üç satır `lib/ticket/write.ts`,
+      başka şeridin yarım işi) · `lint` · `knip` · `boundaries` · `test:unit` 2061/2061.
+    - **Kalan tek yüzey:** native uygulamanın müşteri adres akışı — mobil şeridin kuyruğunda, önü
+      tamamen açık (`docs/talep/mobil-adres-dogrulanabilirligi.md`). **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 

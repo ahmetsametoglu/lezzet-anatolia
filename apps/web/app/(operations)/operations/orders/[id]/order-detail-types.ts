@@ -8,6 +8,7 @@
 import type { OrderDecision } from '@lezzet/domain-core';
 import type {
   DeliveryType,
+  DoorCheck,
   OrderSource,
   OrderStatus,
   PaymentMethod,
@@ -302,6 +303,15 @@ export interface OrderDetailView {
     type: DeliveryType;
     date: string | null;
     address: string;
+    /**
+     * **Adresin kapısı doğrulandı mı** (11.11) — sipariş anındaki kopyadan okunur
+     * (`geo_precision`/`geo_alt_label`), adres kaydından DEĞİL: müşteri adresini sonradan düzeltmiş
+     * olabilir ama bu sipariş eski hâliyle yola çıktı ve operatörün baktığı şey o.
+     *
+     * Sevkiyat masası aynı olguyu SAYI olarak gösteriyor ("2 durak başka posta kodunda"); burası
+     * tek siparişin cümlesidir ve **eylemin yeri burası** — operatör telefonu bu ekrandan açıyor.
+     */
+    doorCheck: DoorCheck;
     /**
      * Adrese GİDEN kişi — sipariş anındaki kopyadan (`address_snapshot.recipient`), hesap sahibi
      * DEĞİL. Kargo künyesi adsız üretilemez (taşıyıcıların hepsinde zorunlu alan) ve teslim

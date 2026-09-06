@@ -7,6 +7,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Timeline } from '@/components/operation/ui/timeline';
 import { WhatsAppIcon } from '@/components/operation/ui/icons';
 import { money, percent, shortDate, shortDateTime } from '@/components/operation/ui/format';
+import { DOOR_CHECK_NOTE } from '@/components/operation/ui/labels';
 import { statusLabel, statusTone } from '../orders-labels';
 import { OrderLines } from './components/order-lines';
 import {
@@ -451,7 +452,15 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
             </div>
             <div className="flex flex-col gap-2 px-3.5 py-[11px]">
               <InfoRow label="Gün" value={order.delivery.date ? shortDate(order.delivery.date) : 'girilmemiş'} />
-              <InfoRow label="Adres" value={order.delivery.address || 'kopya yok'} />
+              {/* Kapı doğrulaması adresin İPUCU satırında (11.11) — alıcı satırındaki "adreste alıcı
+                  yazılı değil" ipucuyla aynı kalıp: ikisi de kopyanın bir niteliğini söylüyor, ikisi
+                  de bir engel değil. `confirmed`/`unknown` hiçbir şey yazmaz (`DOOR_CHECK_NOTE`
+                  künyesi); her siparişte beliren bir satır uyarıyı gürültüye çevirirdi. */}
+              <InfoRow
+                label="Adres"
+                value={order.delivery.address || 'kopya yok'}
+                hint={DOOR_CHECK_NOTE[order.delivery.doorCheck]}
+              />
               {/* ALICI — kargo künyesine yazılacak ad. Taşıyıcıların hiçbiri adsız künye üretmiyor
                   ve teslim noktası kimliği bu adla karşılaştırıyor; hediye adresinde o ad hesap
                   sahibininki DEĞİL. Ad adreste yoksa hesap sahibine düşülür ama bu GÖRÜNÜR yazılır:

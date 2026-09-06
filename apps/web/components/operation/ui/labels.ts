@@ -1,5 +1,5 @@
 import type { Locale } from '@lezzet/i18n';
-import { COUNTRY_LABELS, CarrierEnum, CountryEnum, type Carrier } from '@lezzet/types';
+import { COUNTRY_LABELS, CarrierEnum, CountryEnum, type Carrier, type DoorCheck } from '@lezzet/types';
 
 /**
  * OPERASYON YÜZEYİNİN DİLİ — çok dilli katalog metni personele bu dilde çözülür.
@@ -78,3 +78,27 @@ export function placesLabel(places: readonly string[], max = Number.POSITIVE_INF
   if (places.length <= max) return places.join(', ');
   return `${places.slice(0, max).join(', ')} +${places.length - max}`;
 }
+
+/**
+ * **Kapı doğrulaması — DURAK/SİPARİŞ BAŞINA cümle** (11.11).
+ *
+ * Üç operasyon yüzeyi aynı olguyu gösteriyor: kuryenin gün listesi, kapıdaki durak ekranı ve
+ * sipariş detayı. Sözlük kurye sayfasında doğmuştu; ikinci tüketici (sipariş detayı) doğunca buraya
+ * taşındı — taşıyıcı adlarının 10.9'daki yolculuğunun aynısı, aynı gerekçeyle: aynı siparişe iki
+ * ekrandan bakan iki kişi farklı cümle okursa hangisinin daha yeni olduğunu tartışırlar, oysa ikisi
+ * de aynı `geo_precision`ı okuyor.
+ *
+ * **Mobil kurye ekranıyla BİREBİR aynı sözcükler** (`apps/mobile/src/screens/courier/messages.json`
+ * › `delivery.doorCheck`). Orası ayrı bir uygulama, ayrı bir paket — tek dosyada birleştirilemiyor;
+ * bağ künyeyle kuruluyor ve iki taraf birlikte değişir.
+ *
+ * `confirmed` ve `unknown` BİLEREK yok (`Partial`). `unknown` bir kusur değil ÖLÇÜLEMEMEDİR —
+ * Almanya bugün kalıcı olarak orada (sağlayıcı yok) ve her Alman adresine bir uyarı koymak, uyarıyı
+ * gürültüye çevirirdi; gürültüyü okuyan `elsewhere`i de atlar.
+ */
+export const DOOR_CHECK_NOTE: Partial<Record<DoorCheck, string>> = {
+  unverified: 'Kapı numarası doğrulanmadı.',
+  /** Tutarsızlık BİLİNİYOR ve KASITLI: servis doğrusunu buldu, müşteri kendi yazdığını korudu.
+      Okuyan ofisi değil MÜŞTERİYİ aramalı — cümle "yanlış adres" demiyor, çünkü değil. */
+  elsewhere: 'Kapı doğrulanmadı — müşteri adresini böyle onayladı.',
+};

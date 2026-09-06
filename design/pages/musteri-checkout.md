@@ -20,11 +20,13 @@ Müşterinin kimliğini, adresini, teslimat gününü ve ödeme yolunu netleşti
 - **Sipariş özeti** — kalemler, indirim, kargo ücreti, genel toplam; onaydan önce son kontrol
 - **Pazarlama izni kutusu** — "kampanyalardan haberdar olmak istiyorum"; **daima işaretsiz gelir** (yasal şart). İşaretlenmemesi siparişi hiçbir şekilde etkilemez
 - **Stok yetersizliği anı** — ödeme başlarken stok ayrılamayan kalem olursa müşteriye o an sade bildirilir; ödeme başlamaz
+- **Adres düzeltme teklifi (onaya basıldığı an)** — §4c
 
 ## 3. Aksiyonlar
 
 - Hızlı doğrulama (Google / e-posta kodu)
 - Adres seçme / ekleme
+- **Önerilen adresi kabul etme / kendi adresini koruma** (§4c)
 - Teslimat günü seçme (birden çok uygun gün varsa)
 - Ödeme yolu seçme → **siparişi onayla / öde** (ana aksiyon; online'da ödeme sayfasına gider)
 - Sepete dönüp düzeltme
@@ -63,6 +65,42 @@ sayfasında ya da sipariş detayında sorulsa geç kalırdı.
   ("bu sefere sipariş ver"). Adres, sipariş içeriği, tutar hiçbiri geçmez — komşu daveti bir
   teslimat gününü paylaşır, bir siparişi değil.
 
+## 4c. Adres düzeltme teklifi — "bunu mu demek istediniz" (11.11, kullanıcı kararı 02.09)
+
+**Doğrulama ADRES GİRİŞİNDE DEĞİL, SİPARİŞ ANINDA yapılır** (kullanıcı kararı). Müşteri adres
+defterine on adres ekleyebilir ve hiçbiri girerken sorgulanmaz — defter bir taslak alanıdır, sınav
+değil. Soru yalnız o siparişin gideceği adres için, yalnız "Siparişi onayla"ya basıldığında sorulur.
+Gerekçe: sorulan şey "bu adres geçerli mi" değil, **"malı bu kapıya mı götürelim"**; o soru ancak
+kapı seçildiğinde anlamlıdır.
+
+**Bu bir ENGEL DEĞİL** ve öyle görünmemeli — adres defteri hiçbir hâlde reddetmez (10.08). Teklif
+bir SORUDUR; reddedilince akış hiç değişmeden sürer.
+
+### İki hâl, iki AYRI ton — ve fark yapısal olmalı
+
+| Hâl | Ne biliniyor | Ekranda |
+| --- | --- | --- |
+| **Kapı BAŞKA kodda bulundu** | Servis gerçek kapıyı buldu; müşterinin yazdığı kodda o numara yok | Teklif kutusu + **iki düğme**: [Düzelt] · [Benim yazdığım doğru] |
+| **Kapı doğrulanamadı** (sokak var, numara yok · adres hiç bulunamadı) | Bir belirsizlik — yeni yapı, `bis/ter` ekli numara, servisin geç kaldığı bir kayıt olabilir | **Tek yumuşak satır, DÜĞMESİZ** |
+
+Ayrım görsel değil **yapısal**: birinde tıklanacak bir şey var, ötekinde yok. Aynı görünselerdi
+müşteri geçerli bir yeni bina adresini hata sanar ve doğru yazdığı adresi bozardı.
+
+### Kurallar
+
+- **Teklifin metni SERVİSİN etiketidir**, bizim birleştirdiğimiz cümle değil. Kendi kurgumuz
+  servisin bildiği yazımdan (aksan, kısaltma, `bis`) sapar ve müşteriye tanımadığı bir adres gösterir.
+- **Reddin adı "İptal" değildir.** Müşteri haklı olabilir; bastığı şey bir vazgeçiş değil bir
+  **beyandır** ve o beyan kayıtta durur (kurye ve sevkiyat onu okur — `kurye-teslimat.md` §2).
+- **Kabul İKİSİNİ birden düzeltir**: hem bu siparişin adresini hem KAYDIN kendisini. Yalnız siparişi
+  düzeltmek, müşteriyi bir dahaki siparişte aynı soruyla karşılardı.
+- **Aynı adres için ikinci kez sorulmaz.** Cevaplanmış bir soru, akışı ikinci kez durduramaz.
+- **Servis düşerse EKRAN SUSAR** (fail-open): dış bir servisin kesintisi satışı durduramaz. Müşteri
+  siparişini verir, yalnız teklifi görmez.
+- **Sözcükler dört yüzeyde AYNI** — web checkout, native uygulama checkout'u, kurye durak kartı ve
+  operasyon sipariş detayı. Ayrışırsa aynı müşteri iki farklı şey duyar. Operasyon tarafındaki
+  eşleşme `docs:check §3k` ile makineyle zorlanıyor.
+
 ## 5. Akış bağlantıları
 
 Gelinen: sepet; giriş sayfasından dönüş.
@@ -77,6 +115,8 @@ Komşu davetinden gelen ziyaretçi: davet karşılaması → sepet/katalog → a
 - Pazarlama izni kutusu asla işaretli gelmez; siparişe koşul gibi sunulmaz
 - Stok adedi, parti bilgisi, iç fiyat kuralları görünmez
 - Fatura vaadi verilmez (resmî fatura sistemden inmez)
+- Adres doğrulaması **hiçbir hâlde siparişi engellemez**; "geçersiz adres" gibi bir hüküm cümlesi kurulmaz — servis bilmiyor olabilir, müşteri biliyordur
+- Koordinat, eşleşme skoru, servis adı (BAN) ya da `geo_precision` gibi iç ölçüler müşteriye görünmez
 
 ## 7. Web / mobil notları (yalnız işlevsel)
 

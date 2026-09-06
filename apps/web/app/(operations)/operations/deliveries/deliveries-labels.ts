@@ -2,6 +2,7 @@ import type { PaymentMethod } from '@lezzet/types';
 import type { StopOutcome } from '@/lib/courier/day';
 import type { OpsTone } from '@/components/operation/ui/tone';
 import { money } from '@/components/operation/ui/format';
+import { DOOR_CHECK_NOTE } from '@/components/operation/ui/labels';
 import type { ZoneMapFact } from '@/components/operation/ui/zone-map-model';
 import type { DoorMethod } from './[orderId]/delivery-types';
 import type { PrepStage } from './dispatch-types';
@@ -38,6 +39,9 @@ export const NOTES = {
   retryHint: 'Ulaşılamayan duraklar listede kalır; gün içinde geri dönebilirsiniz.',
   /** Kapıda ödeme yoksa para hiç konuşulmaz (tasarım §2). */
   prepaid: 'Ödendi — kapıda para konuşulmaz',
+
+  /** Kapı doğrulamasının cümleleri — üç yüzey ortak (`components/operation/ui/labels`). */
+  doorCheck: DOOR_CHECK_NOTE,
 
   // ── Kapıdaki durak (11.2/11.3/11.4) ───────────────────────────────────────
   /** Yola çıkmadan hiçbir sonuç yazılamaz — düğmenin altındaki tek cümlelik sebep. */

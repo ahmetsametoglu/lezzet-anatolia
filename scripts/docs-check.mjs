@@ -1084,6 +1084,56 @@ function uyarPaylasilanAgac(yeniBlok) {
   console.log('  Aksi hâlde HEAD kendi kaynağıyla çelişir ve ağaçtaki HERKES commit atamaz.\n');
 }
 
+// ── 3k. Kapı doğrulaması: WEB ile MOBİL aynı cümleyi kurmalı ─────────────────
+//
+// **Tasarım sözleşmesinin makineyle zorlanan hâli** (`design/BACKLOG §4`, 11.11): *"Sözcükler iki
+// yüzeyde AYNI olmalı — ayrışırsa aynı müşteri iki farklı şey duyar."* Kural aynı şeyi personel
+// için de söylüyor: aynı durağa telefondan (mobil kurye) ve masaüstünden (gün listesi, durak
+// ekranı, sipariş detayı) bakan iki kişi farklı cümle okursa hangisinin daha yeni olduğunu
+// tartışırlar — oysa ikisi de aynı `geo_precision` değerini okuyor.
+//
+// **Neden tek dosyada birleşemiyor:** web `apps/web`in, mobil `apps/mobile`ın; ikisi ayrı uygulama,
+// ayrı paket, ayrı derleme. Metni ortak bir pakete koymak `@lezzet/types`a UI dili sokardı. Bağ
+// bugüne kadar yalnız künyeydi ve künye çürür — biri cümleyi düzeltir, öteki eski hâlinde kalır ve
+// **hiçbir şey kırılmaz**: iki ekran da kendi içinde tutarlı görünür.
+//
+// `typecheck` göremez (ikisi de geçerli `string`), `lint` göremez (dil kuralı değil, proje kararı).
+// Yalnız `confirmed`/`unknown` DIŞINDAKİ hâller karşılaştırılır: o ikisi bilerek sessiz ve iki
+// tarafta da anahtarları yok.
+{
+  const WEB = 'apps/web/components/operation/ui/labels.ts';
+  const MOBIL = 'apps/mobile/src/screens/courier/messages.json';
+  if (existsSync(join(ROOT, WEB)) && existsSync(join(ROOT, MOBIL))) {
+    const webBlok = read(WEB).match(/export const DOOR_CHECK_NOTE[^=]*=\s*\{([\s\S]*?)\n\};/);
+    if (!webBlok) {
+      note(`${WEB}: DOOR_CHECK_NOTE bulunamadı — §3k karşılaştırma yapamıyor (ad değiştiyse kuralı da güncelle)`);
+    } else {
+      const webCumle = new Map();
+      for (const m of webBlok[1].matchAll(/^\s*(unverified|elsewhere):\s*'((?:[^'\\]|\\.)*)',/gm)) {
+        webCumle.set(m[1], m[2].replace(/\\'/g, "'"));
+      }
+      let mobilCumle = {};
+      try {
+        mobilCumle = JSON.parse(read(MOBIL))?.delivery?.doorCheck ?? {};
+      } catch {
+        note(`${MOBIL}: okunamadı/çözümlenemedi — §3k karşılaştırma yapamıyor`);
+      }
+      for (const hal of ['unverified', 'elsewhere']) {
+        const w = webCumle.get(hal);
+        const m = mobilCumle[hal];
+        if (w === undefined || m === undefined) {
+          note(`§3k: '${hal}' cümlesi ${w === undefined ? WEB : MOBIL} tarafında YOK — iki yüzeyden biri susuyor`);
+        } else if (w !== m) {
+          note(
+            `§3k: '${hal}' cümlesi AYRIŞTI — web: "${w}" / mobil: "${m}". ` +
+              `İkisi aynı ${'`geo_precision`'}ı okuyor; aynı cümleyi kurmalılar (design/BACKLOG §4)`,
+          );
+        }
+      }
+    }
+  }
+}
+
 // ── 3j. BÖLÜM HARFLERİ SABİTTİR — atıflar sessizce yanlışlanamaz (02.17) ─────
 //
 // **Ölçülmüş arıza (26.08).** `§3g` bir zamanlar "DB'siz test entegrasyon kuyruğunda kalmamalı"
@@ -1118,6 +1168,7 @@ const BOLUM_KUNYE = {
   '3h': 'Operasyon yüzeyinde HAM piksel yazı boyu yok',
   '3i': "DB'siz test entegrasyon kuyruğunda kalmamalı",
   '3j': 'BÖLÜM HARFLERİ SABİTTİR — atıflar sessizce yanlışlanamaz (02.17)',
+  '3k': 'Kapı doğrulaması: WEB ile MOBİL aynı cümleyi kurmalı',
   '4': 'build/README durum özeti güncel mi',
 };
 

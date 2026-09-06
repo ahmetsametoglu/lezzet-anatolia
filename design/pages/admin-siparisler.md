@@ -16,6 +16,13 @@ Tüm siparişlerin izlendiği, yönetildiği ve gerektiğinde elle girildiği ek
 
 - **Sipariş kimliği** — referans no, kanal, kaynak, tarih, hediye işareti; sonradan eşleşen resmî fatura no
 - **Müşteri ve teslimat** — müşteri (detayına köprü), adres (sipariş anındaki kopyası), teslimat tipi (rota/kargo), teslimat günü, atanmış kurye
+  - **Adres satırının ipucunda kapı doğrulaması** (11.11): *"Kapı numarası doğrulanmadı."* /
+    *"Kapı doğrulanmadı — müşteri adresini böyle onayladı."* Doğrulanmış ve ölçülemeyen kapı sessiz.
+    Alıcı satırındaki *"adreste alıcı yazılı değil"* ipucuyla **aynı kalıp**: ikisi de kopyanın bir
+    niteliğini söyler, ikisi de engel değildir. **Eylemin yeri burasıdır** — sevkiyat masası aynı
+    olguyu SAYI olarak gösterir ("2 durak başka posta kodunda"), telefonu operatör bu ekrandan açar.
+    Okuma sipariş anındaki KOPYADAN: müşteri adresini sonradan düzeltmiş olabilir, ama bu sipariş
+    eski hâliyle yola çıktı
 - **Kalemler** — ürün/varyant, adet, karşılanan adet (eksikte düşer), sabitlenmiş birim fiyat, kalem indirim payı, paket grubu (paketten gelen kalemler paket adıyla gruplu görünür); toplam, indirim, kargo ücreti
 - **Durum ve geçmişi** — mevcut durum + izinli geçişler; her geçişin kim/ne zaman kaydı (audit). Geçişler esnektir ama serbest değildir — yalnız izin verilenler sunulur
 - **Ödeme** — ödeme durumu (türetilir: tahsil − iade vs karşılanan tutar), yöntem, tahsilat/iade hareketleri; vadeli siparişte vade bilgisi

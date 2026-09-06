@@ -6,7 +6,7 @@ import { Badge } from '@/components/operation/ui/badge';
 import { Button } from '@/components/operation/ui/button';
 import { PageHeader } from '@/components/operation/ui/page-header';
 import { num } from '@/components/operation/ui/format';
-import { StopContactActions } from '../deliveries-sections';
+import { StopContactActions, StopDoorNote } from '../deliveries-sections';
 import { NOTES, OUTCOME_VIEW } from '../deliveries-labels';
 import { CollectionPanel, LineAdjuster, OutcomeDialog } from './delivery-sections';
 import { ProofCapture } from './delivery-proof';
@@ -49,7 +49,12 @@ export function DeliveryStopDesktop(props: DeliveryViewProps) {
       </PageHeader>
 
       <div className="mx-auto flex min-h-0 w-full max-w-[560px] flex-1 flex-col overflow-y-auto">
-        <div className="border-b border-ops-line-soft px-4 py-3">
+        {/* Kapı notu iletişim düğmelerinin ÜSTÜNDE (11.11): adresin niteliği önce okunur, sonra
+            "Ara"ya basılır — sıra tersine olsaydı kurye numarayı çevirdikten sonra sebebini görürdü.
+            Başlıktaki adres satırına konmadı: `PageHeader` alt satırı tek bir künye dizisi ve cümle
+            oraya sıkıştırılınca referans numarasıyla yarışıyor. */}
+        <div className="flex flex-col gap-2 border-b border-ops-line-soft px-4 py-3">
+          <StopDoorNote stop={view.stop} />
           <StopContactActions stop={view.stop} />
         </div>
 

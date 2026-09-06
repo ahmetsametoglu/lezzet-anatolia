@@ -47,6 +47,18 @@ Gidilen: durak → **kurye-teslimat** (tek teslimat ekranı); teslimat sonuçlan
 - Sipariş geçmişi, müşteri hesap detayı, vade/limit bilgisi görünmez — durak için gerekeni aşan müşteri verisi taşınmaz
 - "Rezervasyon", "rota optimizasyonu", "fulfillment" gibi iç terimler arayüz dilinde kullanılmaz
 
+## 6b. Kapı doğrulaması gün listesinde YOK — bilinçli (11.11)
+
+Kapı doğrulaması **durak kartında** yazar (`kurye-teslimat.md` §2), gün listesinde yazmaz. Telefonda
+gün listesi bir TARAMA aracıdır: her kartta üçüncü bir satır, kuryenin bir bakışta okuduğu şeyi
+seyreltir ve asıl işi (sıra, tutar, sonuç) geriletir. Bilgi kuryeye kapıya varmadan lazım, ama
+karta girdiği anda lazım — durağı açmadan yola çıkmıyor.
+
+**Web aynası bilerek AYRILIYOR.** Operasyondaki gün listesi (`/operations/deliveries`) satırı yazar,
+çünkü oradaki kullanıcı kurye değil **sevkiyatçıdır** ve sorusu başkadır: sevkiyat masası "bugün kaç
+durakta sorun var" diyor ama HANGİSİ olduğunu söylemiyor; cevabı veren tek ekran o liste. Ekran da
+dar değil. Ayrım keyfî değil, kullanıcıya bağlı — ve bu yüzden yazılı.
+
 ## 7. Web / mobil notları (yalnız işlevsel)
 
 - **Telefon esastır; ekran araçta kullanılır** — güneş ışığında okunabilirlik, tek elle ve kısa bakışlarla kullanım (sürüş molalarında) işlevsel gerekliliktir

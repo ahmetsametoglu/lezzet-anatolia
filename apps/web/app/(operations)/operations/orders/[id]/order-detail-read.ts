@@ -36,6 +36,7 @@ import {
   derivePaymentStatusForOrder,
   dueDateOf,
   defaultsToDiscardOnReturn,
+  doorCheckOf,
   fulfilledLineAmountCents,
   isFulfillmentSettled,
   isOverdue,
@@ -288,6 +289,9 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       type: order.deliveryType,
       date: order.deliveryDate,
       address: addressOf(order.addressSnapshot),
+      /* Türetim TEK yerden (`doorCheckOf`) — kurye gün listesi, sevkiyat masası ve bu ekran aynı
+         fonksiyonu çağırıyor. Kopyalansaydı üç yüzey bir gün aynı sipariş için üç farklı şey der. */
+      doorCheck: doorCheckOf(order.addressSnapshot as Record<string, unknown> | null),
       recipient: recipientOf(order.addressSnapshot, customer?.name ?? null),
       courierName: courier?.name ?? null,
       runReference: run?.referenceNo ?? null,

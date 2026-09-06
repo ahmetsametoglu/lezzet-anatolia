@@ -515,22 +515,32 @@ ekran mı; kutunun mührü açılıyor mu; ve operatör kolinin geldiğini nası
 kapalı"* diye yazılıydı ve YANLIŞTI — zincir beslemede kapalı değil, hiç yazılmamış. O notu okuyan
 "besleme açılınca gelir" sanardı.
 
-**Adres düzeltme teklifi — dört yüzeyde de çizilmedi, 01.09 (`11.11`).** Kullanıcı ölçtü: aynı adres
-satırı iki siparişte, biri gerçek kapı (67380 Lingolsheim, `housenumber`), öteki var olmayan kapı
-(67000 Strasbourg, `street`) — arada 7,2 km. Sistem farkı biliyor (`geo_precision`) ve hiçbir yerde
-söylemiyor. Kullanıcı kararı: **düzeltme teklifi, engel yok.** Çizilecek dört öğe:
+**Adres düzeltme teklifi — SÖZLEŞMESİ YAZILDI, kalan tek yüzey native uygulama (06.09, `11.11`).**
+Kullanıcı ölçtü (01.09): aynı adres satırı iki siparişte, biri gerçek kapı (67380 Lingolsheim,
+`housenumber`), öteki var olmayan kapı (67000 Strasbourg, `street`) — arada 7,2 km. Sistem farkı
+biliyor (`geo_precision`) ve hiçbir yerde söylemiyordu. Kullanıcı kararı: **düzeltme teklifi, engel yok.**
 
-- **Müşteri adres formu** (web `components/customer/delivery/` + mobil `screens/customer-kit/`) —
-  *"Bunu mu demek istediniz: 192c Rue du Maréchal Foch 67380 Lingolsheim?"* + [Düzelt] / [Böyle
-  kalsın]. Kapı hiçbir yerde bulunamadıysa (yeni yapı olabilir) teklif değil, **yumuşak tek satır**.
-  İki hâlin tonu FARKLI olmalı: biri düzeltilebilir bir hata, öteki yalnız bir belirsizlik.
-- **Sevkiyat masası engel şeridi** — *"1 durağın kapı numarası doğrulanmadı"*. Şeridin sözleşmesi
-  zaten var (kısa, paralel, sertlik sırasına göre); yeni bir kalıp değil, **beşinci madde**.
-- **Kurye durak kartı** (mobil) — *"Kapı numarası doğrulanmadı."* Rozet değil, uyarı tonu değil.
+**06.09'da kapanan kısım.** Claude Design MCP bu oturumda bağlanamıyor (`FIRST_PARTY_AUTH_REJECTED`)
+ve onarımı bizi aşıyor; kullanıcı kararı: *"web ve mobil müşteri kısımları büyük oranda şekillendi,
+mevcut tasarım desenlerine uygun ekleme yap."* Dördünün üçü **yeni bir görsel dil gerektirmiyordu**
+ve mevcut kalıplarla yazıldı — sözleşmeleri de tasarım sayfalarına indi:
+
+- **Müşteri checkout teklifi (web)** → `pages/musteri-checkout.md` §4c · mevcut uyarı tonu
+  (`text-honey`, asgari sepet satırıyla aynı) + mevcut `Button`. İki hâlin ayrımı **yapısal**:
+  düzeltilebilir hatanın düğmesi var, belirsizliğin yok.
+- **Sevkiyat masası engel şeridi** → `pages/admin-teslimat.md` · yeni kalıp değil, şeridin iki maddesi.
+- **Kurye durak kartı (native)** + **operasyon aynaları** (kurye gün listesi, kapıdaki durak ekranı,
+  sipariş detayının adres ipucu) → `pages/kurye-teslimat.md` §2 · `pages/kurye-gun.md` §6b ·
+  `pages/admin-siparisler.md` §2. Gün listesinin telefonda **bilerek sessiz** kaldığı, web aynasının
+  ise konuştuğu §6b'de gerekçesiyle yazılı.
+
+**AÇIK kalan tek yüzey: native uygulamanın MÜŞTERİ adres akışı** (`screens/customer-kit/`) — teklif
+kompozisyonu orada henüz yok. Ön şartları hazır (uç: `POST /me/addresses/:id/check`; sözcükler:
+`musteri-checkout.md` §4c). Talep: `docs/talep/mobil-adres-dogrulanabilirligi.md`.
 
 **Engel DEĞİL ve öyle görünmemeli:** adres defteri hiçbir hâlde reddetmez (10.08). Teklif bir
-sorudur; reddedilince akış aynen sürer. Sözcükler iki yüzeyde AYNI olmalı — ayrışırsa aynı müşteri
-web'de ve uygulamada farklı bir şey okur.
+sorudur; reddedilince akış aynen sürer. Sözcükler dört yüzeyde AYNI olmalı — operasyon tarafındaki
+eşleşme artık makineyle zorlanıyor (`docs:check §3k`), müşteri tarafındaki hâlâ künyeyle.
 
 **Sosyal gelen kutusu — "siteye devir" öğesi çizilmedi, 29.08.** `CHANNELS §3b` (28.08 kararı)
 Messenger/Instagram'ın rolünü *"danışma sohbette, işlem sitede"* diye bağladı ve devir anını

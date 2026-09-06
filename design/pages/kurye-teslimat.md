@@ -7,6 +7,18 @@ Tek bir teslimatın kapıda sonuçlandırıldığı ekran: teslim, tahsilat, kan
 ## 2. İçerik envanteri — ne var, neden
 
 - **Müşteri + adres** — kimin kapısında olduğu; navigasyon ve arama/WhatsApp erişimi buradan
+- **Kapı doğrulaması — adresin altındaki tek satır** (11.11) · yalnız İKİ hâlde konuşur:
+  - *"Kapı numarası doğrulanmadı."* — sokak bilindi, numara doğrulanamadı
+  - *"Kapı doğrulanmadı — müşteri adresini böyle onayladı."* — **en değerli hâl**: servis başka bir
+    kapı buldu, müşteri kendi yazdığını KORUDU. Kurye tutarsızlığın bilindiğini ve **kasıtlı**
+    olduğunu okur; aksi hâlde kapıda bir veri hatası sanıp ofisi arar, oysa araması gereken müşteridir
+  - **Doğrulanmış kapı ve ölçülemeyen kapı HİÇBİR ŞEY yazmaz.** Almanya bugün kalıcı olarak
+    "ölçülemedi" hâlinde (o ülkede adres servisimiz yok) — her Alman durağına satır koymak, uyarıyı
+    gürültüye çevirirdi ve gürültüyü okuyan gerçek uyarıyı da atlar
+  - **Rozet değil, uyarı rengi değil**: adresin bir NİTELİĞİ, ayrı bir alarm değil. Kurye o kapıya
+    yine gidecek — bu bir engel değil, kapıda işine yarayacak bir olgu
+  - Sözcükler müşteri checkout'uyla ve operasyon ekranlarıyla AYNI (`musteri-checkout.md` §4c);
+    operasyon tarafındaki eşleşme `docs:check §3k` ile makineyle zorlanıyor
 - **"Yoldayım" tek tık** — müşteriye WhatsApp'tan tek dokunuşla hazır "yoldayım" mesajı (wa.me); kapıda bekleme ve ulaşılamama oranını düşürür
 - **Kalem listesi** — ürün + varyant + adet; teslim edilen malın tek tek dökümü. Teslim onayının konusu bu listedir — müşteri neyi aldığını bu listeden görür
 - **Eksik/reddedilen kalem işaretleme** — müşteri bir kalemi kabul etmezse veya kalem eksik çıkarsa kurye o an işaretler; tahsil edilecek tutar buna göre **kendiliğinden** düşer (kurye hesap yapmaz)

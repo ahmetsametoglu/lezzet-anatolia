@@ -81,6 +81,7 @@ export function StopCard({ stop }: { stop: CourierStop }) {
             {stop.customerName}
             {stop.channel === 'b2b' ? ' · B2B' : ''}
           </span>
+          <StopDoorNote stop={stop} />
         </Link>
         <Badge tone={view.tone}>{view.label}</Badge>
       </div>
@@ -118,6 +119,27 @@ export function StopCard({ stop }: { stop: CourierStop }) {
 
 const LINK_CLASS =
   'cursor-pointer rounded-ops-btn border border-ops-line px-3 py-1.5 font-ops-display text-ops-xs font-semibold text-ops-muted transition-colors hover:bg-ops-surface-sunken';
+
+/**
+ * **Kapının doğrulanıp doğrulanmadığı** (11.11) — adresin bir NİTELİĞİ, ayrı bir uyarı değil.
+ *
+ * Mobil kurye ekranının birebir aynısı: aynı iki hâl konuşur, ötekiler susar; cümleler tek yerden
+ * (`NOTES.doorCheck`) ve mobilin `messages.json`ıyla aynı sözcüklerle. Ton `muted` ve punto adresin
+ * bir tık altında — kırmızı bir rozet, kuryeyi kapıya gitmemesi gerektiğine inandırırdı, oysa
+ * gidecek: bu bir ENGEL değil, kapıda işine yarayacak bir olgu.
+ *
+ * Web'de bugüne kadar hiç yazmıyordu ve `day.ts` künyesi "iki operasyon yüzeyi aynı durak için aynı
+ * şeyi söylüyor" diyordu — söylemiyordu (ölçüldü 06.09).
+ */
+export function StopDoorNote({ stop, className }: { stop: CourierStop; className?: string }) {
+  const note = NOTES.doorCheck[stop.doorCheck];
+  if (!note) return null;
+  return (
+    <span className={`font-ops-body text-ops-sm text-ops-muted ${className ?? ''}`} data-door={stop.doorCheck}>
+      {note}
+    </span>
+  );
+}
 
 /**
  * **Kapı bulunamadı senaryosu:** ara, yaz, yolu aç.
