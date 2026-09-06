@@ -606,7 +606,14 @@ export function usePreparation(): UsePreparationResult {
   /** Basımın hedefi — etiketle birlikte gelir; yeniden basım aynı kutu + aynı yazıcıyla koşar. */
   const printTarget = useRef<{ boxId: string; printer: BoxPrinterContract } | null>(null);
 
-  const runPrint = useCallback(async (boxId: string, printer: BoxPrinterContract) => {
+  /**
+   * Basımı koşar ve **sonucu DÖNDÜRÜR** — çağıran ona göre davranabilsin diye (06.09).
+   *
+   * Durum yine `printState`e yazılıyor (kart onu çiziyor); dönüş o durumun kopyası değil, aynı
+   * nesnesi. Çağıranın `printState`i okuması işe yaramazdı: `useState` aynı turda güncellenmiş
+   * değeri vermez ve kutu kapanışı basımın sonucunu HEMEN bilmek zorunda.
+   */
+  const runPrint = useCallback(async (boxId: string, printer: BoxPrinterContract): Promise<PrintState> => {
     setPrintState({ phase: 'printing' });
     try {
       // PNG sunucudan (tek şablon — karar §1.9), basım cihazdan (SDK ağ üzerinden basar, 23.5).
@@ -618,9 +625,16 @@ export function usePreparation(): UsePreparationResult {
       // Damga başarının kaydı. Damga yazımı düşse bile kâğıt çıktı GERÇEK — basım "bastı" kalır;
       // düşen damga bir sonraki basımda güncellenir, akışı geriye çekmek kâğıdı geri almaz.
       await markBoxPrinted(boxId);
-      setPrintState({ phase: 'printed', model: printer.model });
+      const basildi: PrintState = { phase: 'printed', model: printer.model };
+      setPrintState(basildi);
+      return basildi;
     } catch (error) {
-      setPrintState({ phase: 'failed', message: error instanceof Error ? error.message : String(error) });
+      const dustu: PrintState = {
+        phase: 'failed',
+        message: error instanceof Error ? error.message : String(error),
+      };
+      setPrintState(dustu);
+      return dustu;
     }
   }, []);
 
@@ -1179,10 +1193,29 @@ export function usePreparation(): UsePreparationResult {
         const labelResult = await fetchBoxLabel(currentBox.boxId);
         /* Bayrak koşulun İÇİNDE kuruluyor: dışarı çıkarılan bir `boolean` TypeScript'in
            daraltmasını kaybediyor ve `labelResult.data.label` erişilemez oluyor. */
+        /*
+          ÇEKMECE YALNIZ KÂĞIT ÇIKMADIYSA AÇILIR (kullanıcı kararı 06.09).
+
+          Eskiden her kapanışta açılıyordu ve başarı hâlinde bir işi yoktu: etiketin ÖNİZLEMESİNİ
+          gösteriyordu, oysa etiketin kendisi depocunun elinde. Kullanıcının cümlesi: *"bu çekmece
+          sadece yazıcıdan çıktı almak başarısız olursa çıkmayacak mıydı?"*
+
+          Açılma kararı artık basımın SONUCUNU bekliyor (`await runPrint`) — eskiden `void` ile
+          bırakılıyordu ve çekmece sonuç bilinmeden açılmış oluyordu. Bekleme akışı tutmuyor:
+          `sending` bir üstte kapandı, kapanış haberi (toast) zaten ekranda.
+
+          Açılmayan çekmecenin ikinci bir etkisi var ve İSTENEN etki bu: `cekmeceAcildi` false
+          kalınca kapsam `done`a geçmiyor, `load()` biten siparişi kuyruktan düşürüyor ve depocu
+          sıradaki işe dönüyor — eski akışta çekmeceyi KAPATINCA olan şeyin ta kendisi.
+        */
         let cekmeceAcildi = false;
         if (labelResult.error === null && labelResult.data.status === 'ok') {
-          cekmeceAcildi = true;
-          setLabel(labelResult.data.label);
+          const etiket = labelResult.data.label;
+          /** Kâğıt çıkmadı — sebebi ne olursa olsun depocu görmeli. */
+          const cekmeceyiAc = () => {
+            cekmeceAcildi = true;
+            setLabel(etiket);
+          };
           // Basım kutu kapanışında (karar §1.6) — yazıcı ayarlıysa ve modül bu derlemede varsa.
           // Beklenmez (`void`): kapanışın kendisi yazıldı, kâğıdın seyri kartta ayrıca akar.
           // Kutu yazıcısı da envanterden (07.12 · 29.08): uç artık cevaba yazıcı iliştirmiyor.
@@ -1192,15 +1225,19 @@ export function usePreparation(): UsePreparationResult {
           if (order.deliveryType === 'shipping') {
             printTarget.current = null;
             setPrintState({ phase: 'suppressed' });
+            // Kâğıt bilerek çıkmadı ve depocu SEBEBİNİ okumalı: sessiz kalmak "yazıcı bozuk mu"
+            // sorusunu doğururdu.
+            cekmeceyiAc();
           } else {
             const [liste, secim] = await Promise.all([trackWarehouse(fetchPrinters()), readPrinterChoice()]);
             const printer = liste.error === null ? resolvePrinter(liste.data.printers, 'box', secim) : null;
             if (printer !== null && hasPrinterNativeModule()) {
               printTarget.current = { boxId: currentBox.boxId, printer };
-              void runPrint(currentBox.boxId, printer);
+              if ((await runPrint(currentBox.boxId, printer)).phase !== 'printed') cekmeceyiAc();
             } else {
               printTarget.current = null;
               setPrintState({ phase: 'off' });
+              cekmeceyiAc();
             }
           }
         }

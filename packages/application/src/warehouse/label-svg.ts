@@ -2,6 +2,7 @@ import { create as createQr } from 'qrcode';
 import { PAYMENT_METHOD_LABELS } from '@lezzet/types';
 import { type LabelSizeMm } from '@lezzet/domain-core';
 import type { BoxLabel } from './boxes';
+import { fitMm, textWidthMm, wrapMm } from './karla-metrics';
 
 /*
   4×6 KUTU ETİKETİNİN GÖRSELİ (23.7) — karar §1.9'un ikinci yarısı: içerik gibi GÖRSEL de tek
@@ -93,24 +94,18 @@ const QR_MM = { min: 22, max: 34 } as const;
 const MAX_ITEM_LINES = 24;
 
 /**
- * Karla'nın ortalama karakter genişliği ÷ punto — rasterden ÖLÇÜLDÜ (06.09).
+ * Uzun adların kaç satıra inebileceği.
  *
- * İlk değer 0,52 diye kestirilmişti ve fazla ihtiyatlıydı: 62 mm'lik etikette ürün adları sağda
- * bir parmak boşluk kalmışken "…"ya iniyordu ve kesilen kısım çoğu zaman gramajdı ("· 9 × 90 g"),
- * yani satırın en işe yarar yarısı. Basılmış örnekten ölçüldü: 25 karakterlik bir satır 45 px
- * puntoda ≈510 px tutuyor → karakter başına 20,4 px → **0,454**. Emniyet payıyla 0,47 alındı;
- * kesim hâlâ erken olabilir ama kâğıdın dışına asla taşmaz.
+ * ~~Tek satır + ortalama karakter genişliğiyle kesme~~ 06.09'da bıraktı: ortalama bir SINIR
+ * koyamaz ve "Güney Hattı — Mulhouse" gibi baştan sona geniş harften oluşan bir ad kâğıdın
+ * dışına taştı (kullanıcı kâğıtta gördü). Genişlik artık fontun kendi tablosundan ölçülüyor
+ * (`karla-metrics`) ve taşan ad KESİLMİYOR, alt satıra iniyor: sürekli ruloda yükseklik bedava,
+ * küçültmek ise kullanıcının ilk şikâyetiydi ("okunmayacak kadar küçük").
+ *
+ * İki satır, üç değil: üçüncü satıra taşan bir ad etiketin ritmini bozuyor ve o boy artık ürün
+ * adı değil paragraf oluyor. Üçüncüye kalan yine "…" ile kesiliyor.
  */
-const CHAR_W = 0.47;
-
-/**
- * Bir satıra sığan karakter sayısı. Taşan ad kesiliyor: kâğıdın dışına akan bir isim, hiç
- * yazılmamış olmasından beter — okunur sanılır ve depocu eksik olanı fark etmez.
- */
-function fit(text: string, widthMm: number, fontMm: number): string {
-  const max = Math.max(4, Math.floor(widthMm / (fontMm * CHAR_W)));
-  return text.length <= max ? text : `${text.slice(0, max - 1)}…`;
-}
+const MAX_WRAP_LINES = 2;
 
 
 /** XML metin kaçışı — ürün/müşteri adı serbest metindir, SVG'yi kıramaz. */
@@ -166,28 +161,34 @@ export function boxLabelSvg(label: BoxLabel, size: LabelSizeMm = { widthMm: 62, 
   const parts: string[] = [];
   let y = M;
 
-  // Üst satır: referans (sol) + kutu sayacı (sağ, en büyük — depoda uzaktan okunan şey bu).
+  /* Üst satır: referans (sol) + kutu sayacı (sağ, en büyük — depoda uzaktan okunan şey bu).
+     Referansın payı sayacın GERÇEK genişliğinden artan yer; eskiden `contentMm * 0.6` diye
+     kestiriliyordu ve "1/1" ile "12/15" aynı yeri tutuyordu sanılıyordu. */
   y += px(GAP_MM.afterHeader);
+  const sayac = `${label.boxNo}/${label.boxCount}`;
+  const sayacMm = textWidthMm(sayac, TYPE_MM.counter, 600);
   parts.push(
-    `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.reference)}" font-weight="600">${esc(fit(label.referenceNo ?? '—', contentMm * 0.6, TYPE_MM.reference))}</text>`,
+    `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.reference)}" font-weight="600">${esc(fitMm(label.referenceNo ?? '—', contentMm - sayacMm - GAP_MM.margin, TYPE_MM.reference, 600))}</text>`,
   );
   parts.push(
-    `<text x="${W - M}" y="${y}" font-size="${px(TYPE_MM.counter)}" font-weight="600" text-anchor="end">${label.boxNo}/${label.boxCount}</text>`,
+    `<text x="${W - M}" y="${y}" font-size="${px(TYPE_MM.counter)}" font-weight="600" text-anchor="end">${sayac}</text>`,
   );
 
-  // Koliye yazılacak ad (10.9 kuralı: alıcı ≠ hesap sahibi olabilir).
-  y += px(GAP_MM.afterParcel);
-  parts.push(
-    `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.parcel)}" font-weight="600">${esc(fit(label.parcelName, contentMm, TYPE_MM.parcel))}</text>`,
-  );
+  // Koliye yazılacak ad (10.9 kuralı: alıcı ≠ hesap sahibi olabilir) — uzun ad alt satıra iner.
+  for (const satir of wrapMm(label.parcelName, contentMm, TYPE_MM.parcel, MAX_WRAP_LINES, 600)) {
+    y += px(GAP_MM.afterParcel);
+    parts.push(
+      `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.parcel)}" font-weight="600">${esc(satir)}</text>`,
+    );
+  }
 
   // Rota/kulvar + gün. Kargoda rota yok — kulvarın adı yazılır.
   const lane = label.deliveryType === 'shipping' ? 'Kargo' : (label.routeName ?? '—');
   const date = formatDate(label.deliveryDate);
-  y += px(GAP_MM.afterLane);
-  parts.push(
-    `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.lane)}">${esc(fit(date ? `${lane} · ${date}` : lane, contentMm, TYPE_MM.lane))}</text>`,
-  );
+  for (const satir of wrapMm(date ? `${lane} · ${date}` : lane, contentMm, TYPE_MM.lane, MAX_WRAP_LINES)) {
+    y += px(GAP_MM.afterLane);
+    parts.push(`<text x="${M}" y="${y}" font-size="${px(TYPE_MM.lane)}">${esc(satir)}</text>`);
+  }
 
   // Tahsilatın YÖNTEMİ — tutar asla (karar §1.5). Online'da satır hiç çizilmez: kapıda iş yok.
   if (label.paymentMethod && label.paymentMethod !== 'online') {
@@ -220,19 +221,44 @@ export function boxLabelSvg(label: BoxLabel, size: LabelSizeMm = { widthMm: 62, 
   // Ayraç + döküm.
   y += px(GAP_MM.beforeRule);
   parts.push(`<line x1="${M}" y1="${y}" x2="${W - M}" y2="${y}" stroke="black" stroke-width="${px(0.25)}"/>`);
+
+  /*
+    BÜTÇE KALEMDE DEĞİL SATIRDA (06.09).
+
+    Uzun ad artık iki satıra inebiliyor, yani bir kalem bir satır etmiyor. Tavanı kalemle saymak
+    kalıp kesim kâğıtta dökümü QR'ın üstüne taşırırdı — sığmayan satırı çizmek onu kâğıdın dışına
+    yazmaktır. Bütçe satır sayar; iki satırlık bir ad iki satır harcar.
+
+    Önek ("12 × ") ASILI GİRİNTİ kuruyor: rakam solda kalıyor, adın devamı adın altından
+    başlıyor. Genişliği önekin KENDİ ölçüsünden geliyor (`textWidthMm`) — "1 × " ile "12 × "
+    aynı yeri tutmuyor ve tek bir tahminle ikisi de yanlış olurdu.
+  */
+  const bloklar = label.items.map((item) => {
+    const onek = `${item.qty} × `;
+    const onekMm = textWidthMm(onek, TYPE_MM.item);
+    return { onek, onekMm, satirlar: wrapMm(item.name, contentMm - onekMm, TYPE_MM.item, MAX_WRAP_LINES) };
+  });
+
   /* Kırpma varsa SON satır "+K kalem daha"ya ayrılıyor: yoksa sığan son kalem yazılır ve gizlenen
      hiç söylenmezdi — sessiz bir eksiklik, kutunun içeriği hakkında. */
-  /* Önekin ("12 × ") yeri karakterden ayrılıyor, punto katından değil: beş karakter en uzun hâli
-     ve 0,47 çarpanı zaten karakterin kendi genişliği. */
-  const onekMm = 5 * TYPE_MM.item * CHAR_W;
-  const kirpilacak = label.items.length > tavan;
-  const shown = label.items.slice(0, kirpilacak ? Math.max(0, tavan - 1) : tavan);
+  const hepsiSatir = bloklar.reduce((toplam, blok) => toplam + blok.satirlar.length, 0);
+  const butce = hepsiSatir > tavan ? Math.max(0, tavan - 1) : tavan;
+  const shown: typeof bloklar = [];
+  let harcanan = 0;
+  for (const blok of bloklar) {
+    if (harcanan + blok.satirlar.length > butce) break;
+    shown.push(blok);
+    harcanan += blok.satirlar.length;
+  }
   const hidden = label.items.length - shown.length;
-  for (const item of shown) {
-    y += px(GAP_MM.item);
-    parts.push(
-      `<text x="${M}" y="${y}" font-size="${px(TYPE_MM.item)}">${item.qty} × ${esc(fit(item.name, contentMm - onekMm, TYPE_MM.item))}</text>`,
-    );
+
+  for (const blok of shown) {
+    blok.satirlar.forEach((satir, i) => {
+      y += px(GAP_MM.item);
+      const x = i === 0 ? M : M + px(blok.onekMm);
+      const metin = i === 0 ? `${blok.onek}${satir}` : satir;
+      parts.push(`<text x="${x}" y="${y}" font-size="${px(TYPE_MM.item)}">${esc(metin)}</text>`);
+    });
   }
   if (hidden > 0) {
     y += px(GAP_MM.item);

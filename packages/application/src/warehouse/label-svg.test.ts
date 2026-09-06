@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BoxLabel } from './boxes';
 import { boxLabelSvg } from './label-svg';
+import { textWidthMm } from './karla-metrics';
 
 /*
   Etiket görselinin sözleşmesi (23.7) — şablon SAF olduğu için DB'siz ölçülür. Ölçülenler:
@@ -84,12 +85,83 @@ describe('boxLabelSvg', () => {
 
     it('TİPOGRAFİ ruloya göre değişmez: 62 mm ile 103 mm aynı puntoyu basar', () => {
       /* Kritik iddia. Punto genişliğe ORANLANSAYDI dar ruloda yine küçülürdü — düzeltmeye
-         çalıştığımız arızanın kendisi. Değişen tek şey satıra sığan karakter sayısı olmalı. */
+         çalıştığımız arızanın kendisi.
+
+         Karşılaştırma SIRALI LİSTEYİ DEĞİL, KÜMEYİ ölçüyor (06.09): uzun ad artık alt satıra
+         indiği için dar ruloda satır SAYISI fazla — bu kırmanın çalıştığının kanıtı, punto
+         farkının değil. Sıralı liste ikisini birbirine karıştırıyordu. */
+      const puntolar = (svg: string) => new Set([...svg.matchAll(/font-size="(\d+)"/g)].map((m) => m[1]));
       const dar = boxLabelSvg(label(), { widthMm: 62, heightMm: null });
       const genis = boxLabelSvg(label(), { widthMm: 103, heightMm: null });
-      expect([...dar.matchAll(/font-size="(\d+)"/g)].map((m) => m[1])).toEqual(
-        [...genis.matchAll(/font-size="(\d+)"/g)].map((m) => m[1]),
+      expect(puntolar(dar)).toEqual(puntolar(genis));
+      // Dar ruloda satır sayısı FAZLA olmalı: aynı metin daha dar yere kırılıyor.
+      const satirSayisi = (svg: string) => [...svg.matchAll(/<text /g)].length;
+      expect(satirSayisi(dar)).toBeGreaterThan(satirSayisi(genis));
+    });
+
+    /*
+      TAŞMA TESTİ — kullanıcı bulgusu 06.09: *"özellikle rotanın adı sığmamış, ve de ürünlerin
+      adı"*. Sebep ölçülmüştü: satır genişliği tek bir ORTALAMA karakter genişliğiyle
+      hesaplanıyordu ve ortalama bir sınır koyamaz. Aşağıdaki iddia o arızanın sınıfını kapatıyor:
+      tek tek adlara değil, ÇİZİLEN HER SATIRA bakıyor.
+    */
+    /*
+      Ölçüm PİKSELDE yapılıyor, milimetrede değil — ve sebebi yuvarlama: şablon her mm'yi tam
+      piksele yuvarlıyor (62 mm → 732 px ama 103 mm → 1216,5 → 1217). Sınırı nominal mm'den
+      hesaplamak, kâğıdın kendi tuvaliyle 0,06 mm'lik hayalî bir fark üretiyor ve taşma testini
+      yuvarlama gürültüsüne boğuyordu. Tuvalin KENDİ genişliği tek doğru referans.
+    */
+    const tasanSatirlar = (svg: string): string[] => {
+      const W = Number(/width="(\d+)"/.exec(svg)![1]);
+      const M = Math.round((4 * 300) / 25.4);
+      const mmPx = (mm: number) => (mm * 300) / 25.4;
+      const tasan: string[] = [];
+      for (const m of svg.matchAll(/<text x="(\d+)" y="\d+" font-size="(\d+)"([^>]*)>([^<]*)<\/text>/g)) {
+        const x = Number(m[1]);
+        const puntoMm = (Number(m[2]) * 25.4) / 300;
+        const nitelik = m[3]!;
+        const kalin = nitelik.includes('font-weight="600"') ? 600 : 400;
+        // XML kaçışını geri al — ölçüm gerçek harfleri saymalı, "&amp;" beş karakter değildir.
+        const metin = m[4]!
+          .replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"')
+          .replaceAll('&apos;', "'").replaceAll('&amp;', '&');
+        const genislik = mmPx(textWidthMm(metin, puntoMm, kalin));
+        // Üç dayanak da var: sola (varsayılan), sağa (kutu sayacı), ortaya (QR'ın altındaki kod).
+        const sol = nitelik.includes('text-anchor="end"')
+          ? x - genislik
+          : nitelik.includes('text-anchor="middle"')
+            ? x - genislik / 2
+            : x;
+        // Yarım piksel: alt piksel bir sapma kâğıtta 0,04 mm eder ve mürekkep zaten o kadar yayılır.
+        if (sol < M - 0.5 || sol + genislik > W - M + 0.5) tasan.push(metin);
+      }
+      return tasan;
+    };
+
+    it('HİÇBİR SATIR KÂĞIDIN DIŞINA TAŞMAZ — uzun rota adı, uzun ürün adı, uzun alıcı', () => {
+      const zorlu = label({
+        parcelName: 'Marie-Christine Vandenberghe-Lefebvre',
+        routeName: 'Güney Hattı — Mulhouse üzeri Saint-Louis',
+        referenceNo: 'LA-26-ÇOKUZUNBIRREFERANS',
+        boxNo: 12,
+        boxCount: 15,
+        items: [
+          { name: 'Mangolu Artisan Kek · 9 × 90 g · derin dondurucu rafı', qty: 12 },
+          { name: 'Antepfıstıklı Baklava Tepsisi Büyük Boy', qty: 3 },
+        ],
+      });
+      expect(tasanSatirlar(boxLabelSvg(zorlu, { widthMm: 62, heightMm: null }))).toEqual([]);
+      expect(tasanSatirlar(boxLabelSvg(zorlu, { widthMm: 103, heightMm: null }))).toEqual([]);
+    });
+
+    it('uzun ad KESİLMEZ, alt satıra iner — asılı girintiyle', () => {
+      const svg = boxLabelSvg(
+        label({ items: [{ name: 'Antepfıstıklı Baklava Tepsisi Büyük Boy', qty: 12 }] }),
+        { widthMm: 62, heightMm: null },
       );
+      // Önek ilk satırda, devamı ALTINDA ve içeriden başlıyor (x > kenar).
+      expect(svg).toMatch(/<text x="47" y="\d+" font-size="45">12 × Antep/);
+      expect(svg).toMatch(/<text x="1\d\d" y="\d+" font-size="45">[^<]*Boy<\/text>/);
     });
 
     it('ürün satırı 62 mm ruloda 3,8 mm — eski hâlde 2,9 mm çıkıyordu', () => {

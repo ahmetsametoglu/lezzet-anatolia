@@ -27,6 +27,11 @@
     "packages/domain-core": {
       "includeEntryExports": true
     },
+    "packages/application": {
+      "ignoreDependencies": [
+        "@expo-google-fonts/karla"
+      ]
+    },
     "apps/mobile": {
       "entry": [
         "src/testing/gorhom-bottom-sheet.mock.tsx"

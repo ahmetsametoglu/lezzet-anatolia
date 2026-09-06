@@ -983,3 +983,13 @@ ve sipariş sessizce araca binmiyor. Aktörü olmayan olay: kesim saatinin gelme
 - *"Eksik toplama → karar bekliyor"* ve *"SKT geçti"* — çürütme turu ikisini de geri çevirdi:
   birincisi kuyruğu olmayan bir karara TEK taşıyıcı olarak zil koyuyor (0049'un tersi), ikincisinin
   listesi depo hub'ında zaten çekiliyor ve günlük tarama sayfalamasız tüm partileri okuyor.
+
+## Depo · D1 toplama — "yeniden bas" onaysız basıyor (06.09)
+
+Etiket çekmecesindeki **"yeniden bas"** ve tamamlananlar menüsündeki **"yeniden yazdır"** hiç
+sormadan yazıcıya gönderiyor. Tek yanlış dokunuş bir etiket harcıyor — 06.09'da tam olarak bu
+yaşandı (bkz. 21.273 künyesi: çekmece açıkken gelen bir dokunuş ikinci bir kâğıt bastı).
+
+Çekmece artık yalnız basım düştüğünde açıldığı için risk azaldı ama kapanmadı: menü yolu duruyor.
+Gereken şey bir onay adımı — "Kutu 1'in etiketini yeniden bas?" — ya da basımdan sonra düğmenin
+kısa bir süre kilitlenmesi. Hangisi olduğu kullanıcının kararı.

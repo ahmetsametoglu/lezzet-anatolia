@@ -87,6 +87,7 @@ const UYGULAMA_DBSIZ = [
   // künyesinde yazılı ("bu dosya SAF metin üretir"), rasterize uç katmanın işi. Listeye 06.09'da
   // girdi: şablon o gün kâğıdın boyunda çizmeye geçti ve şeridin kendi ölçümünü koşabilmesi gerekti.
   'packages/application/src/warehouse/label-svg.test.ts',
+  'packages/application/src/warehouse/karla-metrics.test.ts',
   'packages/application/src/cart/cart-blocker.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi

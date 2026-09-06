@@ -303,20 +303,27 @@ describe('D1 · kutu döngüsü', () => {
     await putAll(ITEM_A);
     await fireEvent.press(screen.getByTestId('warehouse-picking-seal'));
 
-    await waitFor(() => expect(screen.getByTestId('warehouse-picking-label-print')).toHaveTextContent(/Etiket basıldı \(QL-1110NWB\)/));
-    /* PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef ENVANTERDEN geldi.
-       SDK'ya envanter SATIRI değil BASIM HEDEFİ gidiyor (05.09): üç alan — adres, model, kâğıt.
-       Aradaki `printHealing` adresi eskimişse seriden tazeleyebiliyor ve o hâlde satırın kendi
-       adresi zaten yanlış olurdu; kimlik/ad/amaç ise SDK'nın işi değil. */
-    expect(mockPrintLabel).toHaveBeenCalledWith('file:///cache/box-label-00000000-0000-4000-8000-0000000000b1.png', {
-      address: printer.address,
-      model: printer.model,
-      labelSize: printer.labelSize,
-    });
+    /* İDDİA ÇEKMECENİN METNİNDEN BASIMIN KENDİSİNE TAŞINDI (06.09).
+
+       Eskiden burada *"Etiket basıldı (QL-1110NWB)"* cümlesi aranıyordu — ama o cümle çekmecenin
+       içinde ve çekmece artık BAŞARIDA AÇILMIYOR (kullanıcı kararı 06.09: kâğıt eldeyken önizleme
+       göstermenin işi yok). Testin asıl derdi zaten cümle değil, doğru yazıcıya doğru hedefle
+       basılması; onu doğrudan ölçüyor.
+
+       PNG yerel dosyadan basıldı (SDK yalnız file:// basar) ve hedef ENVANTERDEN geldi. SDK'ya
+       envanter SATIRI değil BASIM HEDEFİ gidiyor (05.09): üç alan — adres, model, kâğıt. Aradaki
+       `printHealing` adresi eskimişse seriden tazeleyebiliyor; kimlik/ad/amaç ise SDK'nın işi değil. */
+    await waitFor(() =>
+      expect(mockPrintLabel).toHaveBeenCalledWith('file:///cache/box-label-00000000-0000-4000-8000-0000000000b1.png', {
+        address: printer.address,
+        model: printer.model,
+        labelSize: printer.labelSize,
+      }),
+    );
     // Damga başarıdan SONRA vuruldu — niyet sayılmaz (05.08 dersi).
-    expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/printed'))).toBe(true);
-    // Yeniden basım eli: yırtılan etiketin yolu.
-    expect(screen.getByTestId('warehouse-picking-label-reprint')).toBeTruthy();
+    await waitFor(() => expect(fetchMock.mock.calls.some((call) => String(call[0]).endsWith('/printed'))).toBe(true));
+    // Ve kâğıt çıktığı için ÇEKMECE HİÇ AÇILMADI — arıza yokken ekranı kesen bir kat yok.
+    expect(screen.queryByTestId('warehouse-picking-label-sheet')).toBeNull();
   });
 
   it('basım reddi kutu kapanışını GERİ ÇEKMEZ: cümle AYNEN yazılır, "yeniden bas" beklemede', async () => {

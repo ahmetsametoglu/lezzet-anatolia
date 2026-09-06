@@ -12583,3 +12583,76 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   Kurye sözleşmesinde bugün ikinci dal YOK, o yüzden kapı `already_marked`ı `stale`e çeviriyor —
   **hiçbir şey yazılmadığı için zararsız ama kuryeye YANLIŞ SEBEP söylüyor.** Depo tarafında ayrım
   zaten var (`FulfillmentResultSchema.reason`), yani iş sözleşme + ekran cümlesi.
+
+- [x] (21.273) **ETİKETİN ÖLÇÜSÜ FONTUN KENDİSİNDEN — ad taşmıyor, alt satıra iniyor** (kullanıcı bulgusu 06.09)
+  `touches:` `packages/application/src/warehouse/ttf-advances.ts` ·
+  `packages/application/src/warehouse/karla-metrics.ts` ·
+  `packages/application/src/warehouse/karla-metrics.test.ts` ·
+  `packages/application/src/warehouse/label-svg.ts` ·
+  `packages/application/src/warehouse/label-svg.test.ts` ·
+  `apps/mobile/src/screens/warehouse/use-preparation.hook.ts` ·
+  `apps/mobile/src/screens/warehouse/picking-box.test.tsx` · `vitest.config.ts` · `knip.json`
+
+  **ÖLÇÜLEN ARIZA.** Kullanıcı kâğıtta gördü: *"özellikle rotanın adı sığmamış, ve de ürünlerin adı"*.
+  Sebep 21.269'un kendi kestirmesiydi: satıra kaç karakter sığdığı TEK BİR ORTALAMA karakter
+  genişliğiyle hesaplanıyordu (`CHAR_W = 0.47`). Ortalama bir SINIR koyamaz — "Güney Hattı —
+  Mulhouse" baştan sona geniş harf (M=0,847 · —=0,725 em) ve ortalamayı %30 aşıyor, yani kesim geç
+  geliyor ve ad kâğıdın dışına akıyor. Üstelik 0,47 rakamı da yanlıştı: gerçek ortalama 0,53.
+
+  **YÖNTEM KULLANICIYLA KONUŞULDU.** Soru şuydu: *"PDF'de yüksekliği kendisi belirleyebildiği bir
+  yöntem var mı? Belki de bunu kullanmamız gerekiyor."* Cevap iki parçalı ölçüldü — değişken sayfa
+  yüksekliği PDF'de var ama BİZDE ZATEN VAR (21.269, sürekli rulo); satır kırma ise PDF'de de YOK,
+  o da mutlak konumlu bir biçim. Fark kütüphanededir: PDFKit `text(…, {width})` derken fontun
+  ölçüsünü okuyup kırmayı kendi yapar. Yani hesap ortadan kalkmıyor, el değiştiriyor.
+  Üç yol tartışıldı, **kullanıcı "hangisi daha doğruysa" dedi ve B seçildi:**
+  · A — ölçülmüş bir TABLO gömmek: çalışırdı ama tablo fontun kopyasıdır, yazı tipi değişince
+    sessizce bayatlardı.
+  · **B — ölçüyü fontun kendisinden okumak (SEÇİLDİ):** kopya yok, bayatlama yok, boru hattı
+    (`SVG → resvg → printImage`) hiç değişmiyor.
+  · C — PDF'e geçmek: bize değişken yükseklik dışında bir şey kazandırmıyor (o zaten elimizde),
+    karşılığında çalışan basım yolunu söküyor ve etiket İÇERİĞİNİ sınayan testleri kaybettiriyor
+    (PDF metni sıkıştırılmış; "€ sızmıyor", "XML kaçışı" gibi iddialar ölçülemez hâle gelirdi).
+
+  **`ttf-advances.ts` — 
+  `cmap` + `hmtx` okuyan saf bir okuyucu.** Girdisi bir bayt dizisi, çıktısı bir sayı; font
+  kütüphanesi çekilmedi çünkü gereken tek şey ilerleme genişliği (kütüphaneler yanında
+  şekillendirme, ligatür, alt kümeleme taşıyor). Font okunamazsa FIRLATIR — sessiz sıfır dönmek
+  bütün metinleri "sıfır genişlik" sayıp her satırı kâğıda sığar gibi gösterirdi.
+  **Kerning bilerek sayılmıyor:** kerning genişliği yalnız DARALTIR, yani hesabımız gerçek satırdan
+  bir tık geniş çıkar — yanılma yönü kâğıdın İÇİNE doğru.
+
+  **KESMEK YERİNE KIRMAK.** Sürekli ruloda yükseklik bedava; küçültmek ise kullanıcının ilk
+  şikâyetiydi ("okunmayacak kadar küçük"). Alıcı adı, rota ve ürün adı iki satıra inebiliyor; ürün
+  satırı ASILI GİRİNTİ kuruyor (rakam solda, adın devamı adın altında) ve önekin genişliği kendi
+  ölçüsünden geliyor — "1 × " ile "12 × " aynı yeri tutmuyor.
+  **Bir kural daha (kâğıttan geldi):** ölçü birimi satır BAŞLATMAZ. İlk denemede "· 9 × 90 g"
+  ikiye bölünüp "90 g" öksüz kalıyordu; ölçüt "iki ardışık harf" — gerçek kelimede var (`Kek`),
+  ölçü parçalarında yok (`·`, `9`, `×`, `90`, `g`). Katalogdan ve dilden bağımsız; birim listesi
+  tutmak bir gün listede olmayan birimle sessizce bozulurdu.
+
+  **Döküm bütçesi KALEMDE değil SATIRDA sayılıyor** artık: iki satırlık bir ad iki satır harcıyor.
+  Kalemle saymak kalıp kesim kâğıtta dökümü QR'ın üstüne taşırdı.
+
+  **Regresyon testi tek tek adlara değil ÇİZİLEN HER SATIRA bakıyor** — sınıfı kapatıyor. Ölçüm
+  piksel tabanında, nominal mm'de değil: şablon her mm'yi tam piksele yuvarlıyor (103 mm → 1216,5
+  → 1217) ve nominal sınır 0,06 mm'lik hayalî bir fark üretip testi yuvarlama gürültüsüne boğuyordu.
+
+  **ÇEKMECE ARTIK YALNIZ KÂĞIT ÇIKMADIYSA AÇILIYOR** (kullanıcı kararı 06.09: *"bu çekmece sadece
+  yazıcıdan çıktı almak başarısız olursa çıkmayacak mıydı?"*). Başarı hâlinde önizlemenin işi yok —
+  etiket zaten depocunun elinde. Karar basımın SONUCUNU bekliyor (`runPrint` artık durumu
+  DÖNDÜRÜYOR; `printState`i okumak işe yaramazdı, `useState` aynı turda güncellenmiş değer vermez).
+  Üç hâlde açılmaya devam ediyor: basım düştü · yazıcı tanımlı değil · kargo kutusu (bilerek
+  basmıyoruz, sebebi okunmalı). Yan etkisi İSTENEN etki: çekmece açılmayınca kapsam `done`a
+  geçmiyor, biten sipariş kuyruktan düşüyor ve depocu sıradaki işe dönüyor — eski akışta çekmeceyi
+  KAPATINCA olan şeyin aynısı, bir dokunuş eksiğiyle.
+
+  **BENİM HATAM DA KAYDA GEÇSİN:** aynı turda etiket İKİ KEZ basıldı ve önce uygulamadan şüphelenildi.
+  Logcat ölçtü — iki basım (12:47:17 · 12:47:38), ikincisi benim sürücü betiğimin ekran dökümünden
+  1,2 sn sonra: çekmece açıkken gönderdiğim dokunuş "yeniden bas"a düşmüş. Uygulama arızası değil.
+  Ama gerçek bir açığı gösterdi ve AÇIK duruyor: **"yeniden bas" hiç sormadan basıyor**, tamamlananlar
+  menüsünden de erişiliyor — tek yanlış dokunuş bir etiket harcıyor. → `design/BACKLOG.md`
+
+  **Doğrulama:** kök typecheck · lint · knip · mobil paket 1361/1361 · etiket testleri 26/26.
+  Etiket gözle doğrulandı (62 mm ruloda zorlu örnek: uzun alıcı, uzun rota, üç uzun ürün adı —
+  hiçbiri taşmıyor). `knip.json`a `packages/application → @expo-google-fonts/karla` istisnası girdi:
+  bağımlılık `require.resolve` ile dinamik çözülüyor, knip statik göremiyor.
