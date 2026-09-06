@@ -16,6 +16,7 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { bubbleClass, MessageRow, SectionLabel } from '@/components/operation/ui/message-thread';
 import { EDGE_CLASS, QueueRow as SharedQueueRow } from '@/components/operation/ui/queue-pane';
 import { Thumbnail } from '@/components/operation/ui/thumbnail';
+import { ChatText } from '@/components/text/chat-text';
 import { Textarea } from '@/components/operation/form/input';
 import { MultiToggle, type MultiToggleOption } from '@/components/operation/form/multi-toggle';
 import { CONTROL_H } from '@/components/operation/ui/control';
@@ -446,14 +447,16 @@ function TranslatedBody({ message, className, align = 'start' }: { message: Tick
 
   return (
     <>
-      <div
+      {/* Metin BİÇİMLİ çiziliyor (06.09): ajan cevabını `*kalın*` / `•` madde ile yazıyor ve bu
+          ekran onu bugüne dek sökülmüş görüyordu — yani operatör müşteriye giden vurguyu
+          göremiyordu. Çizici ortak (`ChatText`); kutunun sınıfı yine buradan geçiyor. */}
+      <ChatText
         className={className}
         // Gösterilen metin ORİJİNALSE dilini söylüyoruz: ekran okuyucusu ve tarayıcı çevirisi
         // Fransızca bir cümleyi Türkçe sanmasın. Çeviri gösteriliyorsa dil zaten yüzeyin dili.
         lang={original ? (message.language ?? undefined) : undefined}
-      >
-        {original ? message.originalBody : message.body}
-      </div>
+        text={original ? message.originalBody : message.body}
+      />
       {translated ? (
         <span className={`flex items-center gap-2 ${align === 'end' ? 'self-end' : ''}`}>
           {/* MOR = makine konuştu (`ui/tone.ts` sözlüğü): rozet bir durum değil, KİMİN yazdığını

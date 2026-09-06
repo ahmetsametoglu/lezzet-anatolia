@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { brand } from '@lezzet/brand';
 import type { Locale } from '@lezzet/i18n';
 import { TranslationNote } from '@/components/customer/ui/translation-note';
+import { ChatText } from '@/components/text/chat-text';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CustomerTicketView, TicketMessageView } from '@/lib/ticket/ticket-types';
 import { messageStamp } from './ticket-labels';
@@ -97,13 +98,16 @@ function MessageBubble({
     >
       {!mine && <span className="font-sans text-micro font-bold text-olive">{brand.name}</span>}
       {/* `lang` GERÇEK dili söyler: orijinal gösteriliyorsa metnin kendi dili, çeviri
-          gösteriliyorsa okuyucunun dili. Ekran okuyucuları ve tarayıcı çevirisi buna bakar. */}
-      <span
+          gösteriliyorsa okuyucunun dili. Ekran okuyucuları ve tarayıcı çevirisi buna bakar.
+
+          Metin BİÇİMLİ çizilir (06.09) ve çizici operasyonla ORTAK (`ChatText`): müşteriye giden
+          vurgu iki yüzeyde de aynı görünmeli, yoksa personel "ben böyle yazmamıştım" der. Vurgusuz
+          bir mesajda hiçbir şey değişmez — ayrıştırıcı tek paragraf döndürür. */}
+      <ChatText
         lang={showingOriginal ? (message.language ?? undefined) : locale}
         className={`font-sans text-note leading-relaxed ${mine ? '' : 'text-ink'}`}
-      >
-        {shown}
-      </span>
+        text={shown}
+      />
 
       {message.bodyTranslated && (
         <TranslationNote

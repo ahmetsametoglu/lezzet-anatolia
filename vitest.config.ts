@@ -152,6 +152,20 @@ export default defineConfig({
     projects: [
       {
         resolve: { alias },
+        /*
+          JSX'İ KOŞUCU ÇEVİRİR, TSCONFIG DEĞİL (06.09).
+
+          `apps/web`in tsconfig'i `jsx: "preserve"` diyor ve demek ZORUNDA — çeviriyi Next yapar.
+          Ama Vite tsconfig'e bakıp JSX'i olduğu gibi bırakıyordu, yani web'in JSX yazan HİÇBİR
+          dosyası birim projesinde import EDİLEMİYORDU: "content contains invalid JS syntax".
+          Sonucu sessizdi çünkü kimse denememişti — depodaki dört komponent testi de saf mantık
+          sınıyor, hiçbiri çizmiyor (aşağıdaki `react-hooks` künyesi bu hâli tarif ediyor).
+          İlk çizim testi (`components/text/chat-text.test.tsx`) duvara ilk çarpan oldu.
+
+          Burada verilen `jsx` seçeneği tsconfig'i EZER ve yalnız test koşusunda geçerlidir; Next
+          derlemesi kendi yolundan gider. Otomatik çalışma zamanı: dosyalar `React` import etmiyor.
+        */
+        oxc: { jsx: { runtime: 'automatic' } },
         test: {
           name: 'unit',
           environment: 'node',

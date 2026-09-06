@@ -610,7 +610,10 @@ export function SummaryCard({
  */
 // `title` NULL OLABİLİR (17.08): art arda gelen kartlarda başlığı tekrarlamak ("Cevabımız ·
 // Cevabımız · Cevabımız") bilgi değil gürültüdür — ilki söyler, ötekiler sürdürür.
-export function MessageCard({ title, meta, body }: { title: string | null; meta: string | null; body: string }) {
+// `body` DÜĞÜM (06.09): metin biçimli çizilebilsin diye — ajan cevabını `*kalın*`/`•` madde ile
+// yazıyor ve HTML mail bunu çizebiliyor. Kart yine metnin ne olduğunu bilmiyor; çizimi çağıran
+// getirir. Dize hâlâ geçerli bir düğüm, yani çağıran taraflar aynen çalışır.
+export function MessageCard({ title, meta, body }: { title: string | null; meta: string | null; body: React.ReactNode }) {
   return (
     <Card title={title}>
       {meta && <div style={{ fontFamily: SANS, fontSize: 12, lineHeight: '17px', color: C.faint, paddingBottom: 8 }}>{meta}</div>}
@@ -623,7 +626,8 @@ export function MessageCard({ title, meta, body }: { title: string | null; meta:
 export interface EmailQuote {
   author: string;
   at: string;
-  body: string;
+  /** Düğüm, dize değil — gerekçe `MessageCard`ın künyesinde: alıntı da biçimli çizilir. */
+  body: React.ReactNode;
   /** Gövde kırpıldıysa altına düşen dürüstlük satırı; kırpılmadıysa null. */
   note?: string | null;
 }

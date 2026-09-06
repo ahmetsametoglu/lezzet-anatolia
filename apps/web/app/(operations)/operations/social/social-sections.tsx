@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/operation/ui/empty-state';
 import { AlertIcon, WhatsAppIcon } from '@/components/operation/ui/icons';
 import { bubbleClass, MessageRow, MessageThread, SectionLabel } from '@/components/operation/ui/message-thread';
 import { QueueRow } from '@/components/operation/ui/queue-pane';
+import { ChatText } from '@/components/text/chat-text';
 import { Textarea } from '@/components/operation/form/input';
 import { ORDERS_PATH } from '../orders/orders-url';
 import { TICKETS_PATH } from '../tickets/tickets-url';
@@ -145,7 +146,10 @@ function Bubble({ message }: { message: MessageView }) {
         </>
       }
     >
-      <div className={bubbleClass(ai ? 'violet' : mine ? 'olive' : 'neutral')}>{message.text}</div>
+      {/* Balonun METNİ biçimli çizilir (06.09). WhatsApp müşterinin ekranında `*kalın*`ı zaten
+          çiziyordu; operatör aynı mesajı çıplak yıldızlarla görüyordu — iki taraf aynı cümleyi
+          farklı okuyordu. Çizici ortak (`ChatText`), balonun DERİSİ yine `bubbleClass`. */}
+      <ChatText className={bubbleClass(ai ? 'violet' : mine ? 'olive' : 'neutral')} text={message.text} />
     </MessageRow>
   );
 }

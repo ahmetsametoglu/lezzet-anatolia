@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@lezzet/brand": "workspace:*",
+    "@lezzet/domain-core": "workspace:*",
     "@lezzet/i18n": "workspace:*",
     "@lezzet/observability": "workspace:*",
     "@lezzet/types": "workspace:*",

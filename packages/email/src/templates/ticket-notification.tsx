@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { parseChatFormatting, type ChatSpan } from '@lezzet/domain-core';
 import type { PreferredLanguage, TicketHistoryEntry, TicketNotification } from '@lezzet/types';
 import type { EmailQuote } from '../components/email-layout';
 import { CtaButton, EmailLayout, Headline, MessageCard, MetaLine, NoticeCard, QuoteCard, StatusPill } from '../components/email-layout';
@@ -29,6 +30,59 @@ export interface TicketEmailProps {
 }
 
 /**
+ * Sohbet biçimlendirmesini **e-posta HTML'ine** çizer (06.09).
+ *
+ * Ajan cevabını biçimli yazıyor (`*kalın*`, `_italik_`, `~üstü çizili~`, `•` madde) ve HTML mail
+ * bunu çizebiliyor — çizemeyen kanalda işaretler sökülür, burada SÖKÜLMEZ. Ayrıştırıcı ortak
+ * (`@lezzet/domain-core`), çizim mecraya göre ayrı: web `<p>`/`<ul>` + Tailwind sınıfı çiziyor,
+ * burada satır içi stil ve `<div>` var çünkü e-posta istemcisinde harici CSS ve `list-style`
+ * güvenilir değil.
+ *
+ * **Çizici bu dosyada, `email-layout`ta değil:** kartlar (`MessageCard`/`QuoteCard`) metnin ne
+ * olduğunu bilmez, sipariş mailleri de aynı kartları kullanıyor ve onların gövdesi sohbet değil.
+ * Çiziciyi kartın içine koymak, düz bir metni sohbet gibi ayrıştırmaya başlardı.
+ *
+ * Tipografi (yazı ailesi, punto, renk) **kasten verilmiyor**: kart onu zaten kutusunda kuruyor ve
+ * tam kart (14 px koyu) ile alıntı (13 px soluk) aynı çiziciyi paylaşabilsin. Aynı sebeple satır
+ * sonunu da kart taşıyor (`whiteSpace: 'pre-line'`) — ayrıştırıcı `\n`i span metninde bırakır.
+ */
+function chatBody(text: string): React.ReactNode {
+  return parseChatFormatting(text).map((block, index) => {
+    // Bloklar arası nefes payı; ilk blok kartın kendi boşluğunu kullanır. Kenar boşluğu (`margin`)
+    // yerine `padding`: Outlook `div` üstündeki margin'i keyfine göre yutar.
+    const spacing = { paddingTop: index === 0 ? 0 : 8 };
+    return block.kind === 'paragraph' ? (
+      <div key={index} style={spacing}>
+        {chatSpans(block.spans)}
+      </div>
+    ) : (
+      <div key={index} style={spacing}>
+        {block.items.map((item, itemIndex) => (
+          // Asılı girinti (negatif `textIndent` + `paddingLeft`): satır taşınca devamı madde
+          // işaretinin ALTINA değil metnin hizasına düşer. `<ul>` kullanılmıyor — istemcilerin
+          // liste girintisi ve işaret çizimi birbirini tutmuyor, ölçüsü bizde kalsın.
+          <div key={itemIndex} style={{ paddingLeft: 14, textIndent: -14 }}>
+            {'• '}
+            {chatSpans(item)}
+          </div>
+        ))}
+      </div>
+    );
+  });
+}
+
+/** Tek parça — işaretler BİRLEŞEBİLİR (`*_böyle_*`), o yüzden eleman iç içe sarılıyor. */
+function chatSpans(spans: readonly ChatSpan[]): React.ReactNode {
+  return spans.map((span, index) => {
+    let node: React.ReactNode = span.text;
+    if (span.strike) node = <s>{node}</s>;
+    if (span.italic) node = <em>{node}</em>;
+    if (span.bold) node = <strong>{node}</strong>;
+    return <React.Fragment key={index}>{node}</React.Fragment>;
+  });
+}
+
+/**
  * Gönderen → ekranda görünen ad. **`admin` ile `ai` müşteriye AYNI görünür**: ikisi de "biz"iz
  * (DOMAIN §15 — kimin yazdığı iç izlenebilirlik meselesi, müşterinin muhatabı marka).
  */
@@ -37,7 +91,7 @@ function quoteOf(entry: TicketHistoryEntry, locale: PreferredLanguage): EmailQuo
   return {
     author: entry.sender === 'customer' ? t.senderYou : t.senderUs,
     at: entry.at,
-    body: entry.body,
+    body: chatBody(entry.body),
     note: entry.truncated ? t.truncatedNote : null,
   };
 }
@@ -129,7 +183,7 @@ export function TicketReceivedEmail({ data, brandName, postalAddress }: TicketEm
       intro={t.receivedIntro}
       quoted={rest}
     >
-      {opening && <MessageCard title={t.receivedCardTitle} meta={opening.at} body={opening.body} />}
+      {opening && <MessageCard title={t.receivedCardTitle} meta={opening.at} body={chatBody(opening.body)} />}
     </TicketShell>
   );
 }
@@ -169,7 +223,7 @@ export function TicketRepliedEmail({ data, brandName, postalAddress }: TicketEma
       quoted={rest}
     >
       {unread.map((entry, index) => (
-        <MessageCard key={`${entry.at}-${index}`} title={index === 0 ? t.replyCardTitle : null} meta={entry.at} body={entry.body} />
+        <MessageCard key={`${entry.at}-${index}`} title={index === 0 ? t.replyCardTitle : null} meta={entry.at} body={chatBody(entry.body)} />
       ))}
     </TicketShell>
   );

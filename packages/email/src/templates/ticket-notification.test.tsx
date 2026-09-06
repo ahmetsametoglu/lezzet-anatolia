@@ -90,6 +90,29 @@ describe('cevap maili', () => {
     expect(output).not.toContain('Önceki mesajlar');
   });
 
+  /*
+    BİÇİM ÇİZİLİR, SÖKÜLMEZ (06.09) — ajan cevabını `*kalın*` / `•` madde ile yazıyor ve HTML mail
+    bunu çizebiliyor. Sökülseydi müşteri gelen kutusunda çıplak yıldız okurdu; çizilmeseydi vurgu
+    hiç olmamış gibi görünürdü. Alıntı da aynı çiziciden geçer — geçmiş, yeni mesajdan farklı bir
+    metin görüntüsüne sahip olmamalı.
+  */
+  it('cevabın biçimi çizilir — ham işaret müşteriye gitmez', async () => {
+    const output = await html({
+      ...base,
+      history: [
+        { ...base.history[0]!, body: 'Kalemi *iade* ettik.\n• Fıstıklı Baklava\n• Cevizli Baklava' },
+        { ...base.history[1]!, body: 'Kutuda ~üç~ iki kavanoz eksikti.' },
+      ],
+    });
+
+    expect(output).toContain('<strong>iade</strong>');
+    expect(output).toContain('<s>üç</s>');
+    // Madde satırı listeye döndü; ham işaret HTML'de bir kez, çizim olarak duruyor.
+    expect(output).toContain('Fıstıklı Baklava');
+    expect(output).not.toContain('*iade*');
+    expect(output).not.toContain('~üç~');
+  });
+
   it('kırpılan alıntı kırpıldığını SÖYLER — sessizce kesmek okunanı değiştirirdi', async () => {
     const output = await html({
       ...base,
