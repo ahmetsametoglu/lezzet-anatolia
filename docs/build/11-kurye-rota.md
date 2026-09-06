@@ -155,7 +155,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     sefer hâlâ açıktır (ölçüt damgaya çevrilirse kırmızı) · kapanmış sefere bağlanmaz (kapanış
     denetimi kalkarsa kırmızı — mutabakat fotoğrafı geçmişe dönük değişmez).
 
-- [~] (11.8) **Navigasyon devri:** durak kartından cihazın navigasyon uygulamasına geçiş — rota kurar, yer kartı açmaz
+- [x] (11.8) **Navigasyon devri:** durak kartından cihazın navigasyon uygulamasına geçiş — rota kurar, yer kartı açmaz
   `touches: packages/domain-core/src/delivery/navigation.ts, apps/web/app/(operations)/operations/deliveries/deliveries-sections.tsx, apps/mobile/src/screens/courier/delivery-screen.tsx`
   - **Durum (31.08) — MOTOR + WEB YAZILDI, mobil şeritte bekliyor** (`docs/talep/mobil-navigasyon-koprusu.md`).
   - **Arıza neydi:** iki yüzeyde de URL elle yazılıydı ve ikisi de `maps/search/?api=1&query=` idi — o
@@ -173,7 +173,16 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     bedel sıfır.
   - **Yeni bağımlılık yok** (`STACK §2` beyanı gerekmedi); dokuz birim testi, merkezinde "rota kurar,
     yer kartı açmaz" iddiası.
-  - **BEKLEYEN(11.8):** mobil `delivery-screen.tsx` hâlâ elle URL yazıyor ve `openURL` reddini yutuyor.
+  - ~~**BEKLEYEN(11.8):** mobil `delivery-screen.tsx` hâlâ elle URL yazıyor ve `openURL` reddini
+    yutuyor.~~ **KAPANDI — ama işaret BAYAT KALMIŞTI (denetimde bulundu 02.09).** Mobil yarısı yazılmış,
+    doküman bunu görmemiş. Ölçüldü: `delivery-screen.tsx:5` motoru ithal ediyor, `:232` `navigationLink`
+    ile hedefi üretiyor, `:235` reddi YAKALIYOR (`setNavFailed`) ve `:289` sebebi ekrana yazıyor
+    (`accessibilityRole="alert"`, `testID="courier-navigate-failed"`). Web yarısı da bağlı
+    (`deliveries-sections.tsx:131`). Talep dosyası kapatılmış.
+    - **Dersi işin kendisinden büyük:** `docs:check` bir `BEKLEYEN` işaretinin **kaydının var olduğunu**
+      doğruluyor, **iddiasının hâlâ doğru olduğunu** doğrulamıyor — doğrulayamaz da. Yani kapanan bir
+      işi işaretiyle birlikte kapatmak elle yapılan bir iştir ve unutulduğunda satır sessizce yalan
+      söylemeye başlar: bu satır bir süre boyunca yazılmış bir özelliği "yok" diye gösterdi.
 
 - [x] (11.9) **Durak sırası — coğrafi, `createdAt` değil:** kapalı tur hesabı (2-opt + Or-opt), sıra `delivery_run.stop_order`'da; adres koordinatı (BAN) + posta kodu merkezi geri düşüşü, hangisi olduğu adlandırılır
   `touches: supabase/migrations/0011_customer_fields.sql, supabase/migrations/0031_warehouse.sql, supabase/migrations/0046_delivery_run.sql, packages/domain-core/src/delivery/route-order.ts, packages/application/src/courier/stop-order.ts, packages/application/src/delivery/geocode-port.ts, packages/types/src/contracts/courier-api.schema.ts, apps/web/app/(operations)/operations/deliveries/deliveries-sections.tsx`
