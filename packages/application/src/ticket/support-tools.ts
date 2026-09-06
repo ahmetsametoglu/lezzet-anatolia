@@ -195,6 +195,22 @@ function identityTools(db: Db, customerId: string): ToolSet {
       execute: async () => {
         try {
           const sayfa = await new OrderService(db).listByCustomer(customerId, { limit: 5 });
+          /*
+            ── BOŞ LİSTE BİR CEVAPTIR, SESSİZLİK DEĞİL (07.09 · ölçülmüş arıza) ────────────────
+            Araç sıfır siparişte açıklamasız `{ siparisler: [] }` döndürüyordu ve model bunu
+            YORUMLAMAK zorunda kalıyordu. Yorumu da yanlış çıktı: ajan *"sipariş geçmişini
+            göremediğimiz için"* diye devretti — yani "veri yok"u "erişemiyorum" sandı. Oysa
+            elinde araç vardı ve kapı açıktı; eksik olan tek şey boşluğun ADIYDI.
+
+            Aynı dosyadaki öteki araçlar bunu zaten doğru yapıyor (`urun_ara` boşta *"katalogda
+            eşleşen ürün yok"* diye cümle kurar). Bu araç kurmuyordu — tek fark buydu.
+
+            "Okunamadı" ile "yok" AYRI kalıyor: ilki `bilinmiyor`la (catch dalı), ikincisi burada.
+            İkisini tek cümleye indirmek, arızayı boşlukmuş gibi göstermek olurdu.
+          */
+          if (sayfa.rows.length === 0) {
+            return { siparisYok: 'Bu müşterinin sistemde kayıtlı siparişi YOK. Bu bir erişim sorunu değil — geçmişi okuyabildin, boş çıktı.' };
+          }
           return {
             siparisler: sayfa.rows.map((o) => ({
               numara: o.referenceNo,

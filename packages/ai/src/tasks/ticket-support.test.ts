@@ -157,6 +157,29 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     herIkisinde('Tek seçenek varsa liste YAPMA');
   });
 
+  it('BOŞ araç sonucu devir sebebi DEĞİL — ölçülmüş yanlış devir', () => {
+    /* 07.09'da ölçüldü: müşterinin sıfır siparişi vardı, araç açıklamasız `[]` döndü ve ajan
+       *"sipariş geçmişini GÖREMEDİĞİMİZ için"* diye devretti — elinde araç varken ve kapı açıkken.
+       Araç tarafı düzeltildi (boşluk artık adıyla geliyor); bu satır modelin okumasını çiviliyor. */
+    expect(ticketAgentTask.system).toContain('Boş sonuç bir CEVAPTIR');
+    expect(ticketAgentTask.system).toContain('"göremiyoruz" DEME');
+  });
+
+  it('MEMNUNİYETSİZLİK devir sebebi değil — öfke maddesi daraltıldı', () => {
+    /* Aynı turda ölçülen geri besleme döngüsü: ajan cevap veremiyor → müşteri sitem ediyor → ajan
+       sitemi "öfke" sayıp devrediyor. Yani kendi başarısızlığından kaçıyordu. Tehdit/hakaret
+       maddesi duruyor, memnuniyetsizlik ondan AYRILDI. */
+    expect(ticketAgentTask.system).toContain('Memnuniyetsizlik BUNA GİRMEZ');
+    expect(ticketAgentTask.system).toContain('Önce SORUYU cevapla');
+  });
+
+  it('GEÇMİŞTEKİ devir yeni bir devri gerekçelendirmez', () => {
+    /* Devir bildirimi deftere `ai` mesajı olarak düşüyor ve ajan onu 12 mesajlık pencerede
+       görüyor. Operatör sohbeti YZ'ye geri verdiğinde ajan kendi eski cümlesini okuyup yeniden
+       devrederse, sohbet insana yapışır ve otomasyon fiilen kapanır. */
+    expect(ticketAgentTask.system).toContain('DAHA ÖNCE bir devir görünüyor');
+  });
+
   it('BAŞLANGIÇ FİYATI tek fiyat gibi sunulamaz — ölçülmüş arızanın prompt karşılığı', () => {
     /* 06.09'da ölçüldü: müşteri "fıstıklı baklava" diye genel sordu, ajan dört boydan yalnız en
        ucuzunu (225 g · 4,57 €) söyledi. Cevap yanlış değildi (gramaj ve fiyat aynı varyanttan
