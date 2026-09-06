@@ -38,6 +38,10 @@ const UNRESOLVED: AddressGeoWrite = {
   geoAt: null,
   geoCheckedAt: null,
   geoAttempts: 0,
+  /* Düzeltme önerisi de noktanın peşinden düşer (11.11): adres değiştiyse eski öneri artık BU
+     adresin cevabı değildir. Kalsaydı müşteri adresini düzelttikten sonra bile ekranda çoktan
+     geçersizleşmiş bir "bunu mu demek istediniz" okurdu. */
+  geoAltLabel: null,
 };
 
 /**
@@ -76,6 +80,8 @@ export async function resolveAddressPoint(
         geoAt: new Date().toISOString(),
         geoCheckedAt: new Date().toISOString(),
         geoAttempts: 0,
+        // Müşteri öneriden SEÇTİ: kapı doğrulandı, önerilecek bir şey kalmadı.
+        geoAltLabel: null,
       };
     }
     // Aday makul değil → nokta yazılmaz ve satır kuyruğa düşer. Yanlış bir koordinat,

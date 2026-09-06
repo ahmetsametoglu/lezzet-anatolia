@@ -501,8 +501,30 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       (yanlış kodun şehri de çoğu zaman yanlıştır — aynı yanlışı ikinci kez dayatmak doğru cevabın
       skorunu düşürürdü). Bu fark hiçbir ÇIKTIDAN anlaşılmaz: iki metot da makul görünen bir cevap
       döndürür. O yüzden sınanan yer istek, cevap değil.
-    - **Sırada, `db:reset` penceresinde:** `0011`'e `geo_alt_label` kolonu · sipariş anı kapısı ·
-      sözleşme alanı · yüzeyler. **BEKLEYEN(11.11)**
+  - **Durum (06.09) — KOLON VE KAPI YAZILDI, `db:refresh` koşuldu (kullanıcı izniyle).**
+    - **`address.geo_alt_label text`** (`0011`) — servisin bulduğu daha iyi cevabın tam etiketi. Tek
+      nullable metin kolonu yeter: enum de ikinci tablo da gerekmiyor, ve değer **servisin kendi
+      etiketidir** — kendi cümlemizi kursak servisin bildiği yazımdan (aksan, kısaltma) sapardık.
+      **Aynı zamanda "uyarıldı ama düzeltmedi" kaydıdır:** teklif kabul edilirse adres değişir →
+      nokta düşer → yeniden çözülür → etiket temizlenir; reddedilirse kalır. Ayrı alan gerekmiyor.
+    - **`address_geo_alt` kısıtı:** kapı DOĞRULANMIŞKEN (`geo_precision = 'housenumber'`) düzeltme
+      önerisi taşıyan satır reddedilir — ekran aynı anda hem *"adres doğru"* hem *"şunu mu demek
+      istediniz"* derdi. Veride ÖLÇÜLDÜ (transaction + rollback): çelişkili satır reddedildi, kaba
+      eşleşmedeki öneri kabul edildi. İkisi de testli (`address-geo.test.ts`, 11 test).
+    - **`checkAddress` kapısı** (`application/delivery/address-check.ts`, 10 entegrasyon testi) —
+      `locate` → gerekirse `elsewhere` → `addressVerdict` → satıra yazım. Üç değişmez testli:
+      **① İkinci sorgu yalnız gerekirse atılır** (kapı ilk turda doğrulandıysa `elsewhereCalls` BOŞ)
+      — bunu hiçbir çıktı ele vermez, sonuç aynı görünür yalnız çağrı sayısı ikiye katlanırdı.
+      **② Koordinat da TAZE yazılır**, yalnız etiket değil: az önce ölçülmüş bir kararın yanında bayat
+      bir nokta bırakmak satırı kendi içinde çelişkili yapardı.
+      **③ FAIL-OPEN** — servis düşerse `unknown` döner ve satıra DOKUNULMAZ. Doğrulama sipariş anında
+      koştuğu için bir dış servisin kesintisi satışı durduramaz; *"doğrulayamadım"* ile *"adres
+      yanlış"* ayrı şeylerdir (`CLAUDE §1`). Almanya bugün kalıcı olarak bu daldadır.
+    - `SOURCES.applicationDelivery` kovası açıldı: kapı FAIL-OPEN olduğu için düştüğünde **kimse fark
+      etmez** — sipariş geçer, müşteri bir şey görmez, kapı bir daha uyarmaz. Şikâyet gelmez, log söyler.
+    - **Sırada — yüzeyler:** sözleşme alanı (`MeAddressSchema`/checkout) · sipariş anında çağrı ·
+      düzeltme teklifi (web + mobil) · sevkiyat engel şeridi · kurye durak kartı. Tasarım karşılığı
+      yok → `design/BACKLOG §4`; mobil yarısı talep dosyasında bekliyor. **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 

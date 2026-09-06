@@ -40,6 +40,7 @@ const cozulmus = {
     geoAt: '2026-08-01T10:00:00.000Z',
     geoCheckedAt: '2026-08-01T10:00:00.000Z',
     geoAttempts: 0,
+    geoAltLabel: null,
   },
 };
 
@@ -80,6 +81,8 @@ describe('adres koordinatı · istemcinin adayı', () => {
       geoAt: null,
       geoCheckedAt: null,
       geoAttempts: 0,
+      // Düzeltme önerisi de noktanın peşinden düşer (11.11).
+      geoAltLabel: null,
     });
   });
 

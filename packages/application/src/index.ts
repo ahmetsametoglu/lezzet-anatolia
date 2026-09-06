@@ -340,6 +340,7 @@ export { ensureStopOrder, type StopOrderOutcome } from './courier/stop-order';
 export { geocodeAddressesScan, type GeocodeScanResult } from './delivery/geocode-scan';
 export { geocoder, geocoderConfigured } from './delivery/geocode-provider';
 export { resolveAddressPoint, type AddressPointCandidate } from './delivery/geo-address';
+export { checkAddress, type AddressCheckOutcome } from './delivery/address-check';
 export type { Geocoder, GeocodeOutcome, GeocodeQuery } from './delivery/geocode-port';
 export { costOfMatrix } from './delivery/route-matrix-port';
 export { routeMatrixConfigured, routeMatrixProvider } from './delivery/route-matrix-provider';

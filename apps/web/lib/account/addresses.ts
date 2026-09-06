@@ -72,6 +72,7 @@ export async function updateAddress(
         geoAt: current.geoAt,
         geoCheckedAt: current.geoCheckedAt,
         geoAttempts: current.geoAttempts,
+        geoAltLabel: current.geoAltLabel,
       },
     },
     next: { line1, postalCode, city },

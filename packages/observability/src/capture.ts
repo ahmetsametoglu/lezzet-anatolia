@@ -128,6 +128,13 @@ export const SOURCES = {
    * yalnız duraklar numarasız kalır — kimse şikâyet etmez, log söyler.
    */
   applicationCourier: 'application-courier',
+  /**
+   * Teslimat/adres kararları (`packages/application/src/delivery`, 11.11) — bugün adres
+   * doğrulaması. Kurye kovasıyla aynı gerekçe ve aynı SESSİZLİK riski: doğrulama kapısı FAIL-OPEN,
+   * yani düştüğünde sipariş yine geçer ve müşteri hiçbir şey fark etmez — yalnız kapı bir daha hiç
+   * uyarmaz. Şikâyet gelmez, log söyler.
+   */
+  applicationDelivery: 'application-delivery',
 } as const;
 
 export async function captureError(error: unknown, ctx: CaptureContext): Promise<void> {

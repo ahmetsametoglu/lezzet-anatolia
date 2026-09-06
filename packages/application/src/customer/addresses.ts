@@ -39,7 +39,16 @@ import { resolveAddressPoint, type AddressPointCandidate } from '../delivery/geo
  */
 export type CustomerAddressWrite = Omit<
   AddressInsert,
-  'customerId' | 'isDefault' | 'lat' | 'lng' | 'geoPrecision' | 'geoSource' | 'geoAt' | 'geoCheckedAt' | 'geoAttempts'
+  | 'customerId'
+  | 'isDefault'
+  | 'lat'
+  | 'lng'
+  | 'geoPrecision'
+  | 'geoSource'
+  | 'geoAt'
+  | 'geoCheckedAt'
+  | 'geoAttempts'
+  | 'geoAltLabel'
 >;
 
 export type CustomerAddressOutcome =
@@ -170,6 +179,7 @@ export async function updateCustomerAddress(
         geoAt: current.geoAt,
         geoCheckedAt: current.geoCheckedAt,
         geoAttempts: current.geoAttempts,
+        geoAltLabel: current.geoAltLabel,
       },
     },
     next: {

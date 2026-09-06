@@ -451,9 +451,30 @@ create table public.address (
   -- "servis o gün düşüktü" ayrı kalır ve ayrı bir `geo_status` kolonuna gerek kalmaz.
   geo_attempts int not null default 0,
 
+  -- ── "BUNU MU DEMEK İSTEDİNİZ" (11.11) ─────────────────────────────────────
+  -- Servisin bulduğu DAHA İYİ cevabın tam etiketi — kapı istenen posta kodunda yok ama BAŞKA bir
+  -- kodda varsa doluyor. Dolu olması "yanlış kodda" demek; içeriği doğrudan ekrana yazılır.
+  --
+  -- Neden tek bir metin kolonu: enum de ikinci tablo da gerekmiyor. Değer servisin kendi etiketidir
+  -- ve biz cümle KURMAYIZ — kendi birleştirmemiz servisin bildiği yazımdan (aksan, kısaltma) sapardı.
+  --
+  -- **VE BU AYNI ZAMANDA "UYARILDI AMA DÜZELTMEDİ" KAYDIDIR** (kullanıcı kararı 01.09: teklif
+  -- edilir, ENGELLENMEZ). Müşteri teklifi kabul ederse adres değişir → nokta düşer → yeniden
+  -- çözülür → etiket temizlenir. Reddederse etiket kalır. Ayrı bir "uyarıldı" alanına gerek yok:
+  -- eksik olan alan değil, OKUYAN.
+  --
+  -- Ölçülmüş vaka (01.09): `192c Rue du Maréchal Foch` iki siparişte aynı yazılmıştı; kapı yalnız
+  -- 67380 Lingolsheim'de var (BAN 0,973), 67000 Strasbourg'da yalnız aynı adlı SOKAK (0,717) —
+  -- arada 7,2 km ve sistem farkı hiçbir yerde söylemiyordu.
+  geo_alt_label text,
+
   -- İkisi birlikte var ya da birlikte yok (`postal_code_place_point` emsali): tek başına enlem bir
   -- nokta değildir.
   constraint address_geo_point check ((lat is null) = (lng is null)),
+  -- Kapı DOĞRULANMIŞKEN düzeltme önerisi taşıyan satır bir ÇELİŞKİDİR: ekran aynı anda hem "adres
+  -- doğru" hem "şunu mu demek istediniz" derdi. `wrong_postal_code` hâlinde satırın kendi inceliği
+  -- zaten `housenumber` DEĞİLDİR (kısıtlı arama kapıyı bulamamıştır) — kısıt o değişmezi çiviliyor.
+  constraint address_geo_alt check (geo_alt_label is null or geo_precision is distinct from 'housenumber'),
   -- Kaynağı olan ama noktası olmayan satır YASAK. Böyle bir satır, yazma yolunun yarım kalması
   -- demektir ve sessizce "ölçüldü" gibi okunurdu.
   constraint address_geo_meta check (

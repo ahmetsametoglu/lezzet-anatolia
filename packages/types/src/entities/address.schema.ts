@@ -65,6 +65,17 @@ export const AddressSchema = z.object({
    * yerdi. Sayacın kendisi durumdur — ayrı bir `geoStatus` alanına gerek yok.
    */
   geoAttempts: z.number().int(),
+  /**
+   * **"Bunu mu demek istediniz"** (11.11) — servisin bulduğu DAHA İYİ cevabın tam etiketi. Kapı
+   * istenen posta kodunda yok ama BAŞKA bir kodda varsa dolu; dolu olması "yanlış kodda" demek.
+   *
+   * Metin SERVİSİN etiketidir, bizim birleştirmemiz değil: kendi cümlemizi kursaydık servisin
+   * bildiği yazımdan (aksan, kısaltma) sapardık ve müşteriye tanımadığı bir adres gösterirdik.
+   *
+   * **Aynı zamanda "uyarıldı ama düzeltmedi" kaydıdır:** teklif kabul edilirse adres değişir, nokta
+   * düşer, yeniden çözülür ve etiket temizlenir; reddedilirse etiket kalır. Ayrı bir alan gerekmiyor.
+   */
+  geoAltLabel: z.string().nullable(),
 });
 export type Address = z.infer<typeof AddressSchema>;
 
@@ -83,6 +94,8 @@ export const AddressGeoWriteSchema = z.object({
   geoAt: z.string().nullable(),
   geoCheckedAt: z.string().nullable(),
   geoAttempts: z.number().int(),
+  /** Düzeltme önerisi — adres değişince ötekilerle BİRLİKTE düşer; o yüzden bu parçanın içinde. */
+  geoAltLabel: z.string().nullable(),
 });
 export type AddressGeoWrite = z.infer<typeof AddressGeoWriteSchema>;
 
@@ -110,6 +123,7 @@ export const AddressInsertSchema = z.object({
   geoAt: z.string().nullish(),
   geoCheckedAt: z.string().nullish(),
   geoAttempts: z.number().int().optional(),
+  geoAltLabel: z.string().nullish(),
 });
 export type AddressInsert = z.infer<typeof AddressInsertSchema>;
 

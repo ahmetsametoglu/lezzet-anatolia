@@ -172,6 +172,7 @@ Müşteri, adres, teslimat bölgesi, sipariş ve kalemleri, sepet, kurye gün ka
 | `geo_at` | timestamptz | • |  |
 | `geo_checked_at` | timestamptz | • |  |
 | `geo_attempts` | int |  | `0` |
+| `geo_alt_label` | text | • |  |
 <!-- /alanlar -->
 
 **Kararlar**

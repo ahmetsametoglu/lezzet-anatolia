@@ -93,6 +93,44 @@ describe('adres koordinatı · veri kısıtları', () => {
     expect(row.geoPrecision).toBe('housenumber');
   });
 
+  it('DOĞRULANMIŞ kapıda düzeltme önerisi taşıyan satır reddedilir', async () => {
+    /*
+      Çelişkili satır (11.11): ekran aynı anda hem "adres doğru" hem "şunu mu demek istediniz"
+      derdi. `wrong_postal_code` hâlinde satırın kendi inceliği zaten `housenumber` DEĞİLDİR —
+      kısıtlı arama kapıyı bulamamıştır. Kısıt o değişmezi çiviliyor.
+    */
+    await expect(
+      addresses.insert({
+        ...base,
+        customerId,
+        lat: 48.5839,
+        lng: 7.7455,
+        geoPrecision: 'housenumber',
+        geoSource: 'ban',
+        geoAt: new Date().toISOString(),
+        geoAltLabel: '192c Rue du Maréchal Foch 67380 Lingolsheim',
+      }),
+    ).rejects.toThrow(/address_geo_alt/);
+  });
+
+  it('KABA eşleşmede öneri taşınabilir — asıl kullanım hâli budur', async () => {
+    // Kullanıcının vakası: kapı 67000'de bulunamadı (`street`), 67380'de var. Satır hem kaba
+    // noktayı hem doğrusunun etiketini taşır ve ekran teklifi buradan çizer.
+    const row = await addresses.insert({
+      ...base,
+      customerId,
+      lat: 48.589231,
+      lng: 7.749851,
+      geoPrecision: 'street',
+      geoSource: 'ban',
+      geoAt: new Date().toISOString(),
+      geoAltLabel: '192c Rue du Maréchal Foch 67380 Lingolsheim',
+    });
+
+    expect(row.geoAltLabel).toBe('192c Rue du Maréchal Foch 67380 Lingolsheim');
+    expect(row.geoPrecision).toBe('street');
+  });
+
   it('DENEME SAYACI noktasız satırda serbesttir — "denedik, olmadı" bir çelişki değil', async () => {
     // `geo_checked_at` + `geo_attempts` künye kısıtının DIŞINDA tutuldu ve bu bilinçli: ikisi
     // ölçümü değil, ölçme GİRİŞİMİNİ anlatır. Kısıta dâhil olsalardı tarama kuyruğu hiç
