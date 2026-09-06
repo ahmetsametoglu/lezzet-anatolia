@@ -4,7 +4,7 @@ import {
   ReservationService, StockService, UserProfileService, VehicleService, WarehouseService, serviceDb,
 } from '@lezzet/database';
 import { purgeTestData, createTestWarehouse, settingsSnapshot, purgeVariantStock, mustDelete } from '@lezzet/database/testing';
-import { warehouseScope } from '@lezzet/domain-core';
+import { canTransition, warehouseScope } from '@lezzet/domain-core';
 import { discardCourierRun, listCourierDay, markUndelivered, readCourierRun, readDoorCashAccountId, startCourierDay, type CourierDayStart, type CourierStop } from './day';
 import { loadBox } from './load';
 import { openBox, sealBox } from '../warehouse/boxes';
@@ -171,6 +171,10 @@ async function dispatched(
     /* Kutu araca BİNMESİN (05.09): mühürlenir ama okutulmaz. "Kutusu rampada kalmış"
        hâli — iptal edilen durağın görünüp görünmeyeceğini belirleyen tek ölçüt bu. */
     load?: boolean;
+    /* Adresin ANLIK GÖRÜNTÜSÜNE eklenecek alanlar (11.11) — kapı doğrulaması bu kayıttan okunuyor
+       (`doorCheckOf`), adres tablosundan değil. Kolon `z.record(z.unknown())`, yani tip de öyle:
+       daraltmak, motorun bir gün öğreneceği beşinci alanı fikstürden dışarıda bırakırdı. */
+    snapshot?: Record<string, unknown>;
   } = {},
 ) {
   const qty = opts.qty ?? 2;
@@ -906,6 +910,32 @@ describe('ulaşılamadı / reddedildi (11.4)', () => {
 
     expect(result).toEqual({ status: 'forbidden', reason: 'not_assigned' });
     expect((await orders.getById(orderId))?.status).toBe('out_for_delivery');
+  });
+
+  it('TESLİM EDİLMİŞ durak kapıdan `returned` yapılamaz — iade kuryenin işi değil', async () => {
+    /*
+      Depo notu 04.09: motor `delivered → returned` kenarını İZİNLİ tutuyor (iade süreci o kenar)
+      ve `markUndelivered` yalnız motora soruyordu — yani kurye teslim ettiği siparişi geri
+      çevirebiliyordu. Mal teslimde fiilen düşmüş oluyor; geri yazım stoğu geri getirmiyor, iade
+      sürecini de başlatmıyor. Sipariş sessizce depocunun rampa listesine düşüyordu.
+    */
+    const { orderId } = await dispatched();
+    expect((await orders.deliver(orderId)).ok).toBe(true);
+
+    const result = await markUndelivered(db, { orderId, courierId, outcome: 'refused' });
+
+    expect(result).toEqual({ status: 'stale', currentStatus: 'delivered' });
+    // Sipariş YERİNDE kaldı — reddin kanıtı cevabın kendisi değil, durumun oynamamış olmasıdır.
+    expect((await orders.getById(orderId))?.status).toBe('delivered');
+  });
+
+  it('kenarın kendisi MEŞRU kalır — iade yolu yönetim akışına AÇIK', async () => {
+    /*
+      Kapıyı kapatırken kenarı da kapatmadığımızın kanıtı. `delivered → returned` motor için hâlâ
+      izinli olmalı; kapanan yalnız KURYENİN o kenara basma yolu. Bu iddia olmadan biri yarın
+      `status-machine`den kenarı silerek "düzeltme" yapabilir ve iade süreci sessizce ölürdü.
+    */
+    expect(canTransition('delivered', 'returned').allowed).toBe(true);
   });
 });
 

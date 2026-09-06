@@ -1089,6 +1089,28 @@ export async function markUndelivered(
   if (!order) return { status: 'not_found' };
   if (order.courierId !== input.courierId) return { status: 'forbidden', reason: 'not_assigned' };
 
+  /*
+    KAPIDAKİ SONUÇ YALNIZ YOLDAKİ DURAĞA YAZILIR (depo notu 04.09 · D6 denetimi).
+
+    Aşağıdaki `canTransition` tek başına yetmiyordu ve bu motorun EKSİĞİ DEĞİL, doğru cevabı:
+    `delivered → returned` kenarı İZİNLİ olmalı, çünkü iade süreci tam olarak o kenardır
+    (`status-machine.ts:29` — "teslim sonrası: kapanış ya da iade süreci"). İzinli olan kenarın
+    KAPISI kurye değil: teslim anında mal fiilen stoktan düşmüş (`0016_deliver_order.sql`) ve para
+    kapıda alınmış olabilir. Kurye o siparişi "reddedildi" diye çevirdiğinde `markUndelivered` düz
+    bir durum yazımından başka bir şey yapmıyor — stok geri gelmiyor, para hareketi doğmuyor, iade
+    süreci hiç başlamıyor; sipariş sessizce depocunun rampa listesine düşüyor ve kimse onun neden
+    orada olduğunu bilmiyor.
+
+    İki soru, iki kapı: `canTransition` "bu kenar meşru mu" der, buradaki ölçüt "bu KURYENİN anı mı"
+    der. Kapıdaki üç sonuç (teslim · ulaşılamadı · reddedildi) aynı anın üç cevabıdır ve o an
+    `out_for_delivery`dir.
+
+    Cevap `forbidden` değil `stale`, çünkü olan şey budur: sipariş kuryenin kendi durağıdır, yetkisi
+    vardır — ekranın gördüğü hâl bayattır. Ekranın cümlesi de zaten bunu söylüyor ("Sipariş artık
+    … durumunda … Para ve kayıt İKİLENMEDİ").
+  */
+  if (order.status !== 'out_for_delivery') return { status: 'stale', currentStatus: order.status };
+
   const to = input.outcome === 'unreachable' ? 'ready' : 'returned';
   const verdict = canTransition(order.status, to);
   if (!verdict.allowed) return { status: 'forbidden', reason: verdict.reason };
