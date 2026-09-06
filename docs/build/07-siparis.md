@@ -294,7 +294,16 @@ Siparişin doğuşundan kapanışına kadar tüm akış: sepet, checkout (teslim
   - **Yön (karar bekliyor):** kapanış otomatik mi (teslimden N gün sonra, iade penceresi kapanınca) yoksa operatör eylemi mi? İade süreci `delivered → returned → completed` yolunu da kullanıyor; otomatik kapanış o pencereyi kapatmamalı.
 
 - [ ] (07.17) **AB ülkelerine kargo satış kanalı — bugün sistem iki ülke tanıyor, üçüncüsünü SESSİZCE Fransa yazıyor** *(kullanıcı kararı 02.09)* · `touches: supabase/migrations/0001_auth_user_profiles.sql, packages/types/src/primitives/enums.schema.ts, scripts/build-postal-codes.mjs, packages/database/src/services/warehouse.service.ts, packages/application/src/settings/public-terms.ts, packages/domain-core/src/tax/vat-treatment.ts`
-  - **KARAR:** kargoyla **AB gümrük birliği** ülkelerine satış açılacak. Kurye rotaları FR+DE'de kalıyor — rota zaten bölge/posta kodu eşleşmesine bağlı, bölgesi olmayan yere rota önerilmiyor; yani kulvar ayrımı **yapısal**, ek kural gerekmiyor.
+  - ⏸ **ERTELENDİ — HİÇBİR ADIM ATILMAYACAK (kullanıcı kararı 02.09, kaydın açıldığı gün).** Gerekçe
+    dil: bugün üç dilimiz var — **Türkçe, Fransızca, Almanca**. Genişleme bir gün olursa muhtemelen
+    **bu üç dilin hitap ettiği ülkelere** doğru olur, AB'nin tamamına değil. Bugün konu **erken**.
+    - **Bu satır kapatılmadı, DONDURULDU:** ölçümler ve kapsam analizi geçerli ve tekrar
+      araştırılmasına gerek yok — karar geldiği gün buradan devam edilir.
+    - **AMA ALTTAKİ İKİ ARIZA ERTELEMEDEN BAĞIMSIZ ve bugün de gerçek:** (a) `address.country`
+      varsayılanının bilinmeyen ülkeyi sessizce Fransa yapması, (b) yasal sayfanın "gönderdiğimiz
+      ülkeler" derken deponun ülkesini göstermesi. İkisi de bugün FR+DE'de görünmüyor ama ikisi de
+      YANLIŞ. Genişleme yapılmasa bile düzeltilmeyi hak ediyorlar; genişleme yapılırsa zaten ön koşul.
+  - **KARAR (dondurulmuş):** kargoyla **AB gümrük birliği** ülkelerine satış açılacak. Kurye rotaları FR+DE'de kalıyor — rota zaten bölge/posta kodu eşleşmesine bağlı, bölgesi olmayan yere rota önerilmiyor; yani kulvar ayrımı **yapısal**, ek kural gerekmiyor.
   - **BUGÜNKÜ HÂL ÖLÇÜLDÜ (02.09) ve sessiz bir arıza taşıyor.** `address.country` `not null default 'FR'`: Avusturya adresi posta kodundan çözülemiyor → alan yazılmıyor → **kolon varsayılanı devreye giriyor ve adres Fransız oluyor.** Checkout'un kod↔şehir kontrolü de engellemiyor (kod tabloda yok → boş liste → *"bilinmiyor"* → geçer). Sipariş geçiyor, Sendcloud'a **Fransa** olarak gidiyor. Bu, `CLAUDE §1`'in *"ölçülemeyen değer sıfır değildir"* kuralının doğrudan ihlali: bilinmeyen ülke bir DEĞERE dönüşüyor.
   - **KAPSAM DAR ve ölçüldü** — `Country`ye bağlı yer sayısı az:
     - PG enum `country_code` → `0001_auth_user_profiles.sql:22`, **tek satır**; 12 kolon kullanıyor (`address`, `order.delivery_country`, `warehouse.country_code`, `postal_code_place`, `delivery_zone_postal_code`, `user_profiles`, analitik bölmeleri…). Greenfield: migration doğrudan düzenlenir → **`db:reset` ister ve KULLANICININ kararıdır.**
