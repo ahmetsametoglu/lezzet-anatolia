@@ -477,7 +477,32 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       uyarılır. Aksi hâlde bir dış servisin kesintisi satışı durdurur.
     - ⚠ **Atıf yükümlülüğü:** Google sonucunun gösterildiği yerde "Google Maps" atfı zorunlu ve
       gizlenemez — düzeltme teklifinin çıktığı checkout ekranında görünecek. Tasarım kararı doğuruyor.
-    - Ülke kanallarının açılması ayrı görevde: **`07.17`**.
+    - Ülke kanallarının açılması ayrı görevde: **`07.17`** — ve o **DONDURULDU** (kullanıcı kararı
+      02.09: dil kapsamı üç, AB'nin tamamı erken). Kapsam FR+DE'de kaldığı için **Google yalnız
+      ALMANYA için gerekiyor**; Fransa yarısı BAN'la, sıfır bağımlılıkla çözülüyor (altta).
+  - **Durum (02.09) — FRANSA YARISININ MOTORU YAZILDI, veritabanına dokunulmadan.**
+    Kullanıcının ölçtüğü arızalı sipariş bir FRANSIZ adresti; yani vakanın kendisi Google beklemeden
+    yakalanabiliyor. Google Maps Platform anahtarı ayrıca yok (ölçüldü: env'de Google OAuth ve Gemini
+    var, **Maps yok**) — Almanya yarısı o anahtarı bekliyor ve adaptör `routeMatrixProvider` deseniyle
+    yazılacak: anahtar yokken adlı yokluk döner, geldiği gün açılır.
+    - **`addressVerdict` (`domain-core`, 14 test):** kısıtlı sonuç + kısıtsız adaylar → dört hâl —
+      `confirmed` · `wrong_postal_code` (düzeltme teklifi) · `street_only` (yeni yapı olabilir, yumuşak
+      uyarı) · `not_found`. Ayrım şu yüzden şart: `precision: street` iki BAMBAŞKA hâli aynı değere
+      düşürüyor ve biri düzeltilebilir bir hata, öteki yalnız bir belirsizlik.
+    - **Teklif eşiği 0,8** ve `geocode-provider`ın 0,4'ünden yüksek, bilerek: o eşik *"bu bir cevap mı"*,
+      bu ise *"müşterinin ağzına söz koyacak kadar emin miyim"* sorusunun. Ölçülen vakada doğru cevap
+      0,973 ile rahat geçiyor.
+    - **AYIRT EDİLEMEZ ikili teklif ÜRETMEZ** — motorun `indistinguishable` reddiyle aynı disiplin:
+      aynı kapı iki ayrı kodda benzer güvenle bulunuyorsa birini seçmek hesap değil KURA olurdu.
+    - **Portta `elsewhere()`** — kısıtsız arama, ayrı metot çünkü ayrı SORU ve ayrı MALİYET. Yalnız
+      kapı ilk turda doğrulanamazsa çağrılır (bugünkü veride yirmi adresin biri).
+    - **Adaptörün sözleşmesi TESTLE çivilendi (7 test, ağsız — `fetch` taklit, ölçülen şey istenen
+      URL):** `elsewhere` posta kodunu GÖNDERMEZ (körlüğü açan tek şey bu) ve şehri de sorguya koymaz
+      (yanlış kodun şehri de çoğu zaman yanlıştır — aynı yanlışı ikinci kez dayatmak doğru cevabın
+      skorunu düşürürdü). Bu fark hiçbir ÇIKTIDAN anlaşılmaz: iki metot da makul görünen bir cevap
+      döndürür. O yüzden sınanan yer istek, cevap değil.
+    - **Sırada, `db:reset` penceresinde:** `0011`'e `geo_alt_label` kolonu · sipariş anı kapısı ·
+      sözleşme alanı · yüzeyler. **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 

@@ -13,7 +13,7 @@
  */
 
 import type { AddressGeoPrecision, AddressGeoSource, Country } from '@lezzet/types';
-import type { GeoPoint } from '@lezzet/domain-core';
+import type { AddressCandidate, GeoPoint } from '@lezzet/domain-core';
 
 export interface GeocodeQuery {
   line1: string;
@@ -47,6 +47,27 @@ export type GeocodeOutcome =
    */
   | { status: 'unsupported_country' };
 
+/**
+ * KISITSIZ aramanın sonucu (11.11) — *"bu kapı BAŞKA bir posta kodunda mı var"* sorusunun cevabı.
+ *
+ * `locate`ten ayrı bir metot, çünkü ayrı bir SORU ve ayrı bir MALİYET: `locate` posta kodunu
+ * pinleyerek sorar (istenen davranış — başka kodda çıkan sonuç onun aradığı cevap değil), bu ise
+ * pini KALDIRIR. Aynı çağrıya sıkıştırılsaydı her adres için iki tur atılırdı; oysa kapı istenen
+ * kodda bulunduğunda ikinci soruya hiç gerek yok (bugünkü veride yirmi adresin biri).
+ */
+export type GeocodeElsewhere =
+  | { status: 'ok'; candidates: AddressCandidate[] }
+  /** Geçici — ağ, zaman aşımı, 5xx. Çağıran SUSAR: "doğrulayamadım" ≠ "adres yanlış". */
+  | { status: 'unavailable' }
+  | { status: 'unsupported_country' };
+
 export interface Geocoder {
   locate(query: GeocodeQuery): Promise<GeocodeOutcome>;
+  /**
+   * Aynı adres satırı, posta kodu PİNLENMEDEN. Yalnız `locate` kapıyı doğrulayamadığında çağrılır.
+   *
+   * Kısıtın kendisi doğru ama aynı zamanda bir KÖRLÜK (`geocode-provider` künyesi, ölçüldü 01.09):
+   * kodu pinlediğimiz sürece adresin başka kodda olduğunu öğrenmenin yolu yok.
+   */
+  elsewhere(query: GeocodeQuery): Promise<GeocodeElsewhere>;
 }

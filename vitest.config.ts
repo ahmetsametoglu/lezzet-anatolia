@@ -70,6 +70,13 @@ const UYGULAMA_DBSIZ = [
   // sayaç muhasebesi ve "yarım nokta yazılmaz" kuralı DB'siz sınanabiliyor; yazma tarafı
   // (`geocodeAddressesScan`) entegrasyonda kalıyor.
   'packages/application/src/delivery/geocode-scan.test.ts',
+  /*
+    BAN adaptörünün SÖZLEŞMESİ (11.11) — servise ne gönderdiğimiz. DB'siz ve AĞSIZ: `fetch` taklit
+    ediliyor ve ölçülen şey istenen URL'nin kendisi. Adaptörün iki metodu bilerek FARKLI soruyor
+    (`locate` posta kodunu pinler, `elsewhere` pinlemez) ve bu fark hiçbir çıktıdan anlaşılmaz —
+    ikisi de makul görünen bir cevap döner. O yüzden sınanacak yer istek, cevap değil.
+  */
+  'packages/application/src/delivery/geocode-provider.test.ts',
   // Matris → maliyet çevirisi (11.9): simetrikleştirme ve "tek null tüm matrisi reddeder" kuralı
   // saf; sağlayıcının kendisi ağa çıkar ve o elle provadır.
   'packages/application/src/delivery/route-matrix-port.test.ts',

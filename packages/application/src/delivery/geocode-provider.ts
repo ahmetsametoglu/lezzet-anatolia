@@ -32,7 +32,7 @@
  */
 
 import { searchAddresses } from '@lezzet/address-fr';
-import type { Geocoder, GeocodeOutcome, GeocodeQuery } from './geocode-port';
+import type { Geocoder, GeocodeElsewhere, GeocodeOutcome, GeocodeQuery } from './geocode-port';
 
 /**
  * Bu skorun altındaki eşleşme `no_match` sayılır. Parametrik ve makul seçildi: BAN'ın kendi skoru
@@ -68,8 +68,48 @@ function banGeocoder(): Geocoder {
         score: best.score,
       };
     },
+
+    /**
+     * KISITSIZ arama (11.11) — `postcode` pini KALDIRILIR. Kısıtın körlüğünü açan tek yol bu.
+     *
+     * Ölçülen vaka: `192c Rue du Maréchal Foch` için pinli sorgu 0,717'lik Strasbourg SOKAĞINI
+     * döndürüyor; pinsiz sorgu **0,973 ile 67380 Lingolsheim'daki kapıyı** buluyor — yani doğrusu
+     * elimizdeymiş ve kısıt onu görmemizi engelliyormuş.
+     *
+     * **Şehir de sorguya girmez.** Yanlış posta koduyla gelen adresin şehri de çoğu zaman yanlıştır
+     * (müşteri Strasbourg yazdı, adres Lingolsheim'da); şehri sorguya koymak aynı yanlışı ikinci kez
+     * dayatır ve doğru cevabın skorunu düşürürdü.
+     */
+    async elsewhere(query: GeocodeQuery): Promise<GeocodeElsewhere> {
+      if (query.country !== 'FR') return { status: 'unsupported_country' };
+
+      const lookup = await searchAddresses({ query: query.line1.trim(), limit: ELSEWHERE_LIMIT });
+      // `too_short` burada da geçici DEĞİL kalıcı bir yokluk, ama çağıran için ikisi de "susulacak"
+      // hâl: aday yok. Boş liste bunu zaten söylüyor.
+      if (lookup.status === 'too_short') return { status: 'ok', candidates: [] };
+      if (lookup.status !== 'ok') return { status: 'unavailable' };
+
+      return {
+        status: 'ok',
+        // Eşik ve ayıklama KARARIN işi (`addressVerdict`), burada değil: adaptör servisin dediğini
+        // taşır, yorumlamaz. Skoru da servisin verdiği gibi geçer — biz yeniden sıralamayız.
+        candidates: lookup.suggestions.map((suggestion) => ({
+          label: suggestion.label,
+          postalCode: suggestion.postalCode,
+          precision: suggestion.kind,
+          score: suggestion.score,
+        })),
+      };
+    },
   };
 }
+
+/**
+ * Kısıtsız aramada kaç aday. Küçük ve bilinçli: karar yalnız EN İYİ kapıyı ve onun rakibini
+ * kullanıyor (`addressVerdict`), uzun liste ne kararı değiştirir ne ekrana çıkar. Ölçülen vakada
+ * doğru cevap zaten ilk sıradaydı; rakip kontrolü için birkaç satır yeter.
+ */
+const ELSEWHERE_LIMIT = 5;
 
 /**
  * Ülkeye bakan kodlayıcı — bugün yalnız FR.
