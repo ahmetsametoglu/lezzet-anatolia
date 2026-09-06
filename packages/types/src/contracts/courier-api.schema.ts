@@ -3,6 +3,7 @@ import { DeliveryRunCloseSchema } from '../entities/delivery-run.schema';
 import { FulfillmentAdjustmentSchema } from '../entities/order.schema';
 import {
   ChannelEnum,
+  DoorCheckEnum,
   OrderStatusEnum,
   PaymentMethodEnum,
   PaymentStatusEnum,
@@ -68,6 +69,17 @@ export const CourierStopSchema = z.object({
   phone: z.string().nullable(),
   /** Numara yoksa `null` — düğme hiç çizilmez. */
   whatsAppLink: z.string().nullable(),
+  /**
+   * **Kapı doğrulandı mı** (11.11) — kuryenin kapıya varmadan bilmesi gereken tek adres bilgisi.
+   *
+   * En değerli hâl `elsewhere`: servis doğrusunu buldu ve müşteri KENDİ yazdığını korudu. O satırı
+   * gören kurye tutarsızlığın **bilindiğini ve kasıtlı olduğunu** anlar — aksi hâlde kapıda bir veri
+   * hatası sanıp ofisi arar, oysa araması gereken müşteridir.
+   *
+   * `unknown` hiç uyarı ÜRETMEZ: bugün Almanya kalıcı olarak o hâlde (sağlayıcı yok) ve
+   * ölçemediğimiz şeyi kusur gibi göstermek her Alman durağına yanlış bir işaret koyardı.
+   */
+  doorCheck: DoorCheckEnum,
   payment: z.object({
     /** `null` = önceden ödenmiş; kapıda para konuşulmaz. **Cent**. */
     dueAmountCents: z.number().int().nullable(),

@@ -184,7 +184,7 @@ async function dispatched(
       deliveryDate: opts.date ?? today,
       courierId: opts.courier ?? courierId,
       addressId,
-      addressSnapshot: { line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg' },
+      addressSnapshot: { line1: '12 rue des Fleurs', postalCode: '67000', city: 'Strasbourg', ...(opts.snapshot ?? {}) },
       paymentMethod: 'cash',
       orderedTotalCents: opts.orderedTotalCents ?? qty * 1000,
     },
@@ -1014,5 +1014,54 @@ describe('seçim kartının üç sayısı (v3:17 · 31.08)', () => {
     /* Geri getirilecek yük DEĞİL: kutu rampada kaldı, kurye onu hiç almadı. Sayılsaydı kurye
        araçta olmayan bir kutuyu arardı. */
     expect(sonra.returningBoxCount).toBe(once.returningBoxCount);
+  });
+});
+
+/**
+ * **KAPI DOĞRULAMASI DURAĞA ULAŞIYOR MU** (11.11) — kablonun testi.
+ *
+ * Kararın kendisi saf ve ayrı testli (`domain-core/delivery/door-check.test.ts`, 6 test); burada
+ * sınanan tek şey `listCourierDay`in onu SİPARİŞ ANLIK GÖRÜNTÜSÜNDEN okuyup sözleşmeye koyduğu.
+ *
+ * Bu kablo koparsa hiçbir şey patlamaz: kurye ekranı çizilmeye devam eder, yalnız kapıdaki uyarı
+ * bir daha hiç görünmez — ve kurye var olmayan bir kapıda bunun bilindiğini bilemez.
+ */
+describe('durak kartı · kapı doğrulaması (11.11)', () => {
+  it('KÜNYE YOKSA uyarı üretilmez — `unknown`', async () => {
+    /* Bugün Almanya kalıcı olarak bu hâlde (sağlayıcı yok). Nötr değerin varsayılan olması şart:
+       aksi hâlde hakkında hiçbir şey bilmediğimiz her durak kapıda bir işaret taşırdı. */
+    const { orderId } = await dispatched();
+    mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    expect(mine(await listCourierDay(db, { courierId }), orderId).doorCheck).toBe('unknown');
+  });
+
+  it('KABA eşleşme `unverified` olarak taşınır', async () => {
+    const { orderId } = await dispatched({ snapshot: { geoPrecision: 'street' } });
+    mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    expect(mine(await listCourierDay(db, { courierId }), orderId).doorCheck).toBe('unverified');
+  });
+
+  it('DÜZELTME ÖNERİSİ varsa `elsewhere` — kuryenin bilmesi gereken hâl', async () => {
+    /*
+      Kullanıcının ölçtüğü vaka: kapı 67380 Lingolsheim'de bulundu, müşteri 67000 Strasbourg'u
+      korudu. Kurye var olmayan bir kapıya gidiyor — ve bu satır ona tutarsızlığın BİLİNDİĞİNİ ve
+      KASITLI olduğunu söylüyor. Aksi hâlde bir veri hatası sanıp ofisi arar; oysa araması gereken
+      müşteridir.
+    */
+    const { orderId } = await dispatched({
+      snapshot: { geoPrecision: 'street', geoAltLabel: '192c Rue du Maréchal Foch 67380 Lingolsheim' },
+    });
+    mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    expect(mine(await listCourierDay(db, { courierId }), orderId).doorCheck).toBe('elsewhere');
+  });
+
+  it('kapı doğrulanmışsa `confirmed` — söylenecek bir şey yok', async () => {
+    const { orderId } = await dispatched({ snapshot: { geoPrecision: 'housenumber' } });
+    mustStart(await startCourierDay(db, { courierId, zoneId }));
+
+    expect(mine(await listCourierDay(db, { courierId }), orderId).doorCheck).toBe('confirmed');
   });
 });

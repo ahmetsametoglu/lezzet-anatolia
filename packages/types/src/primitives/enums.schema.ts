@@ -624,6 +624,18 @@ export type TemplateCategory = z.infer<typeof TemplateCategoryEnum>;
  * Kademe SAKLANIYOR çünkü ölçüm her zaman aynı değil ve farkı gizlemek kaba bir ölçümü kesinmiş gibi
  * okuturdu (`CLAUDE §1`): liste dolu ve makul görünür, yalnız kurye yanlış sıraya dizilir.
  */
+/**
+ * **Durağın kapısı doğrulandı mı** (11.11) — sevkiyat masası ve kurye ekranının ORTAK kelimesi.
+ *
+ * Enum burada, `packages/types`ta: sözleşme (`CourierStopSchema`) taşıyor ve iki operasyon yüzeyi
+ * aynı dört hâli okuyor. Ayrı ayrı tanımlansaydı biri bir gün beşinci bir hâl öğrenir, öteki
+ * öğrenmezdi — ve ekranlar aynı durak için farklı şey söylerdi.
+ *
+ * Sertlik sırasına göre: `elsewhere` en sert (doğrusu elimizde), `unknown` hiç uyarı üretmez.
+ */
+export const DoorCheckEnum = z.enum(['confirmed', 'elsewhere', 'unverified', 'unknown']);
+export type DoorCheck = z.infer<typeof DoorCheckEnum>;
+
 export const AddressGeoPrecisionEnum = z.enum(['housenumber', 'street', 'locality', 'municipality']);
 export type AddressGeoPrecision = z.infer<typeof AddressGeoPrecisionEnum>;
 

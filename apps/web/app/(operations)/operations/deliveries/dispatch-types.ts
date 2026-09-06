@@ -1,5 +1,4 @@
-import type { Carrier, Channel, DeliveryType, OrderStatus } from '@lezzet/types';
-import type { DoorCheck } from './door-check';
+import type { Carrier, Channel, DeliveryType, DoorCheck, OrderStatus } from '@lezzet/types';
 
 // Sevkiyatçının gün planının görünüm modeli (09.15) — `design/pages/admin-teslimat.md`.
 

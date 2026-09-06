@@ -566,8 +566,24 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - Metinler üç dilde `checkout/messages.json`da ve mobil şeridin talep dosyasıyla BİREBİR aynı.
     - `geocode-provider` künyesindeki *"`score` alınıp atılıyor"* cümlesi de bayatlamıştı: skor artık
       teklif eşiğini (0,8) besliyor. Düzeltildi.
-    - **Sırada:** kurye durak kartı (mobil şerit) · e2e duman senaryosu · tasarım turu
-      (`design/BACKLOG §4` — kompozisyon hâlâ tasarım istiyor). **BEKLEYEN(11.11)**
+  - **Durum (06.09d) — KURYE SÖZLEŞMESİ İNDİ, mobil şeridin önü açıldı.**
+    - **`DoorCheck` motora TERFİ ETTİ.** Karar önce sevkiyat masasının klasöründe doğmuştu; kurye günü
+      de aynı eşlemeye ihtiyaç duyunca ikinci nüsha riski doğdu (`CLAUDE §1`). Fonksiyon
+      `domain-core/delivery/door-check.ts`e, enum `DoorCheckEnum` olarak `packages/types`a taşındı —
+      **iki operasyon yüzeyi artık aynı durak için aynı kelimeyi okuyor.** Ayrı kalsalardı biri bir
+      gün beşinci bir hâl öğrenir, öteki öğrenmezdi.
+    - **`CourierStopSchema.doorCheck`** — kurye kapıya varmadan bilmesi gereken tek adres bilgisi.
+      `listCourierDay` onu sipariş ANLIK GÖRÜNTÜSÜNDEN dolduruyor (sevkiyat masasıyla aynı kaynak,
+      aynı fonksiyon), **doldurma dört hâl için de testli** (`day.test.ts`, 4 test).
+    - **`unknown` ve `confirmed` ekranda HİÇ yazılmaz** — kararın kendisi: bugün Almanya kalıcı olarak
+      `unknown` ve yazsaydık her Alman durağı kapıda bir işaret taşırdı; kurye onu okumayı bırakır,
+      GERÇEK uyarı da görünmez olurdu.
+    - Mobil fikstür varsayılanı `'unknown'` — nötr hâl varsayılan olmalı, uyarıyı sınayan test değeri
+      kendi verir (`stopSeq`in aynı deseni). Sözleşme alanı zorunlu olduğu için fikstür DERLEMEDE
+      kırıldı ve düzeltildi: tipin "unutulamaz" vaadi çalıştı.
+    - Metinler ve alan adları talep dosyasına yazıldı; **kurye kartı artık mobil şeritte yazılabilir.**
+    - **Sırada:** müşteri formunun mobil yarısı (`MeAddressSchema` alanı — henüz YOK) · e2e duman
+      senaryosu · tasarım turu (`design/BACKLOG §4`). **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 

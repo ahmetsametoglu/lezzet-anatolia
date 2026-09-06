@@ -12,6 +12,7 @@ import { listCourierRoutes } from '@lezzet/application';
 import {
   cutoffBelongsToPreviousDay,
   deliveryRunWindow,
+  doorCheckOf,
   findZoneForPostalCode,
   ORDER_CUTOFF_KEY,
   PREP_CUTOFF_KEY,
@@ -21,7 +22,6 @@ import type { Country, DeliveryZoneWithCodes, Order, OrderStatus } from '@lezzet
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { readDayHours, type ZoneHours } from '@/lib/settings/day-hours';
 import { shiftDay, toIsoDate } from './deliveries-url';
-import { doorCheckOf } from './door-check';
 import { runPreviewOf, type StopOrderPreview } from './dispatch-preview';
 import type { DispatchDayView, DispatchRunView, DispatchStopView, PrepStage } from './dispatch-types';
 

@@ -112,6 +112,10 @@ export function courierStop(index: number, overrides: Partial<CourierStopContrac
        gruplanıyor. Varsayılan, fikstürün tek seferi (`courierRunBrief`in kimliği). */
     runId: uuid(800),
     runLabel: 'Kuzey rotası',
+    /* Varsayılan `unknown` = SORULMADI (11.11) ve bu bilerek NÖTR hâl: uyarı üretmeyen değer
+       varsayılan olmalı, yoksa her fikstür durağı kapıda bir işaret taşırdı. Uyarıyı sınayan test
+       değeri KENDİ verir — `stopSeq`in aynı deseni. */
+    doorCheck: 'unknown',
     /* Varsayılan `null` = SIRA BİLİNMİYOR (11.9). Bilerek sırasız: bugüne dek ekran dizi indeksini
        rota sırasıymış gibi gösteriyordu ve o sıra siparişin verilme sırasıydı. Sıralı günü sınayan
        test `stopSeq`i kendi verir. */

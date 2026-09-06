@@ -46,6 +46,7 @@ export * from './delivery/navigation';
 export * from './delivery/route-order';
 export * from './delivery/geo-point';
 export * from './delivery/address-verdict';
+export * from './delivery/door-check';
 export * from './payment/checkout-options';
 export * from './payment/credit';
 export * from './payment/payment-status';

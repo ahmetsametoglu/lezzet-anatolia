@@ -17,6 +17,7 @@ import {
   canAccessWarehouse,
   canTransition,
   deliveryRunReferenceNo,
+  doorCheckOf,
   sortBySequence,
   warehouseScope,
   whatsAppLink,
@@ -33,6 +34,7 @@ import { logger } from '@lezzet/observability';
 import { resolveLocalizedText } from '@lezzet/types';
 import type {
   DiscardDeliveryRunResult,
+  DoorCheck,
   Order,
   OrderItem,
   OrderStatusLog,
@@ -77,6 +79,8 @@ export interface CourierStop {
   phone: string | null;
   /** Tek dokunuşluk "yoldayım" — müşterinin DİLİNDE. Numara yoksa null: düğme hiç gösterilmez. */
   whatsAppLink: string | null;
+  /** Kapı doğrulandı mı (11.11) — sözleşmedeki `DoorCheckEnum`in aynısı. */
+  doorCheck: DoorCheck;
   /** Kapıda ödenecek mi, ödendi mi — kuryenin duraktaki en kritik bilgisi. */
   payment: {
     /** `null` = önceden ödenmiş; para konuşulmaz. Birim **cent** (02.9). */
@@ -310,6 +314,10 @@ export async function listCourierDay(
         locale: input.locale ?? 'fr',
         customerName: place?.recipient ?? customer?.name,
       }),
+      /* KAPI DOĞRULAMASI (11.11) — sipariş ANLIK GÖRÜNTÜSÜNDEN, adres kaydından değil: kuryenin
+         gittiği adres siparişin yazıldığı andaki adrestir. Sevkiyat masasıyla AYNI fonksiyon
+         (`doorCheckOf`), yani iki operasyon yüzeyi aynı durak için aynı şeyi söylüyor. */
+      doorCheck: doorCheckOf(order.addressSnapshot as Record<string, unknown> | null),
       payment: {
         dueAmountCents: amountDueCents(order, lines),
         expectedMethod: order.paymentMethod,
