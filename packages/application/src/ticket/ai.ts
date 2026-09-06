@@ -10,7 +10,7 @@ import {
   TicketMessageService,
   TicketService,
 } from '@lezzet/database';
-import { formatForChannel, statusAfterStaffReply, stripChatFormatting } from '@lezzet/domain-core';
+import { formatForChannel, statusAfterStaffReply } from '@lezzet/domain-core';
 import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
@@ -192,12 +192,17 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
   const result = await runTask(ticketDraftTask, context, await runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  // Talep ekranı biçimlendirmeyi ÇİZMİYOR (06.09) — işaretler burada sökülür, yoksa operatörün
-  // önüne çıplak yıldızlı bir taslak gelir. Ekran çizmeyi öğrendiği gün bu çağrı kalkar; ajanın
-  // prompt'una dokunulmaz (`chat-formatting` künyesi).
+  /* Taslak HAM yazılır — sökme 06.09'da KALKTI, kendi künyesinin şartı gerçekleştiği için.
+     Buraya *"ekran çizmeyi öğrendiği gün bu çağrı kalkar"* yazılmıştı; talebi gösteren yüzeylerin
+     hepsi artık çiziyor: web'de `components/text/chat-text` (operasyon talep, sosyal, müşteri talep
+     detayı) ile `@lezzet/email` bildirim şablonu, native'de `components/ui/chat-text` (yönetim
+     şikâyet ekranı, müşteri talebi). Sökme sürseydi kazananı olmayan bir kayıp olurdu: ajan biçimli
+     yazmaya devam ediyor ve burada silinen vurgu geri getirilemiyor.
+     Ölçüt YÜZEY değil KANAL olduğu için sohbet yolu ayrı kalır (`formatForChannel`): orada
+     Messenger/IG bu söz dizimini render etmiyor ve sökme sürüyor. */
   await tickets.update({
     id: ticket.id,
-    aiDraftReply: stripChatFormatting(result.data.reply),
+    aiDraftReply: result.data.reply,
     aiDraftGeneratedAt: new Date().toISOString(),
   });
   // Taslağı çoğu zaman CRON yazıyor (5 dakikada bir tur) — yani ekranda hiçbir şey olmadan beliriyor.
@@ -359,8 +364,8 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   const result = await runTask(ticketAgentTask, context, await runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  // Talep yüzeyi biçimlendirmeyi çizmiyor — işaretler burada sökülür (taslak yolunun aynı kuralı).
-  const reply = result.data.action === 'reply' ? stripChatFormatting(result.data.reply ?? '').trim() || null : null;
+  // Cevap HAM gider — sökme 06.09'da kalktı (taslak yolunun aynı gerekçesi, künyesi orada).
+  const reply = result.data.action === 'reply' ? (result.data.reply ?? '').trim() || null : null;
   if (!reply) {
     // Devir: sebep KAYDA geçer ama müşteri metnine sızmaz — operatör kuyrukta görür.
     const reason = result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.';
