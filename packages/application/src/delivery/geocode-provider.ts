@@ -23,9 +23,9 @@
  * sorgu atmak; iki hâl ancak böyle ayrılıyor: "kapı hiçbir yerde yok" (yeni yapı — yumuşak uyarı)
  * ile "kapı VAR ama başka kodda" (yazım hatası — düzeltme teklifi).
  *
- * Servisin `score`u da bugün ALINIP ATILIYOR (`GeocodeOutcome.score` taşıyor, kimse okumuyor,
- * kolonu yok) — oysa 0.973 ile 0.717 arasındaki fark aradığımız sinyalin ta kendisi.
- * BEKLEYEN(11.11)
+ * Servisin `score`u artık KULLANILIYOR: `addressVerdict` düzeltme teklifini 0,8 eşiğine bağlıyor —
+ * 0,973 ile 0,717 arasındaki fark aradığımız sinyalin ta kendisiydi. (Bir süre alınıp atılıyordu;
+ * `elsewhere` ile birlikte devreye girdi.)
  *
  * **`kind` süzgeci verilmiyor:** `housenumber` dayatmak, kapı numarası bilinmeyen adreste "eşleşme
  * yok" derdi. Kaba eşleşme atılmıyor — kaba OLDUĞU söyleniyor (`precision`).
@@ -96,6 +96,7 @@ function banGeocoder(): Geocoder {
         candidates: lookup.suggestions.map((suggestion) => ({
           label: suggestion.label,
           postalCode: suggestion.postalCode,
+          city: suggestion.city,
           precision: suggestion.kind,
           score: suggestion.score,
         })),

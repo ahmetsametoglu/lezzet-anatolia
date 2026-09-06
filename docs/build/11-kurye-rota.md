@@ -544,8 +544,30 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       *"yanlış"* kelimesi hiç geçmiyor (adresi bilen müşteri; yeni binada o haklı olacak), ve ret
       düğmesi *"İptal"* değil **"Benim yazdığım doğru"** — ret bir vazgeçiş değil bir BEYAN, ve o
       beyan `geo_alt_label`ın satırda kalmasıyla kayda geçiyor.
-    - **Sırada — müşteri yüzeyi:** sözleşme alanı · sipariş anında çağrı · düzeltme teklifi (web).
-      Tasarım karşılığı yok → `design/BACKLOG §4`. **BEKLEYEN(11.11)**
+  - **Durum (06.09c) — MÜŞTERİ YÜZEYİ BAĞLANDI (web). Zincir uçtan uca çalışıyor.**
+    - **Doğrulama SİPARİŞ ANINDA ve BİR KEZ** (`checkCheckoutAddressAction`): "Siparişi ver"e
+      basıldığında sorulur; söylenecek bir şey varsa akış DURUR, müşteri kararını verir, ikinci
+      tıklamada sipariş geçer. `checkedFor` hangi adres için sorulduğunu tutuyor — tutulmasaydı
+      *"benim yazdığım doğru"* diyen müşteri sonsuz döngüye girerdi.
+    - **`confirmed` ve `unknown` HİÇ gösterilmez.** Birincisinde söylenecek şey yok; ikincisinde
+      söyleyecek BİLGİMİZ yok — *"doğrulayamadık"* demek müşteriyi her siparişte görünen ve hiçbir
+      şey söylemeyen bir satıra alıştırır, sonra gerçek uyarı geldiğinde de okumaz.
+    - **İki hâlin tonu YAPISAL olarak farklı:** "başka kodda bulundu" düzeltilebilir bir hatadır ve
+      DÜĞMESİ vardır; ötekiler birer belirsizliktir ve düğmesizdir. Aynı görünselerdi müşteri geçerli
+      bir yeni bina adresini hata sanardı.
+    - **Yeni görsel dil YOK** (kullanıcı kararı 06.09: *"mevcut tasarım deseni ve komponent yapısı
+      ile"*): uyarı tonu `text-honey` — asgari sepet satırının aynısı; düğmeler mevcut `Button`.
+    - **Kabul tek yazımda hem siparişi hem KAYDI düzeltir** — sipariş henüz açılmadığı ve seçili adres
+      kaydın kendisi olduğu için ikinci bir yola gerek yok. Değişen YALNIZ kod ve şehir:
+      `wrong_postal_code`ın tanımı zaten bu. Ardından `refresh` şart — kod değişimi BÖLGEYİ, kargo
+      ücretini ve teslim gününü de oynatabilir.
+    - **Aday `city` de taşıyor:** `label` gösterim metnidir ve AYRIŞTIRILAMAZ (servisin yazımı,
+      aksanlar); düzeltme ise satıra yapılandırılmış alan yazar.
+    - Metinler üç dilde `checkout/messages.json`da ve mobil şeridin talep dosyasıyla BİREBİR aynı.
+    - `geocode-provider` künyesindeki *"`score` alınıp atılıyor"* cümlesi de bayatlamıştı: skor artık
+      teklif eşiğini (0,8) besliyor. Düzeltildi.
+    - **Sırada:** kurye durak kartı (mobil şerit) · e2e duman senaryosu · tasarım turu
+      (`design/BACKLOG §4` — kompozisyon hâlâ tasarım istiyor). **BEKLEYEN(11.11)**
 
 ## Netleşecekler
 

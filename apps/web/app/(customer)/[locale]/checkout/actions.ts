@@ -7,7 +7,13 @@ import type { Address, AddressInsert, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import { currentCustomerId } from '@/lib/guard';
 import { updateAddress } from '@/lib/account/addresses';
-import { resolveAddressPoint, type AddressPointCandidate } from '@lezzet/application';
+import {
+  checkAddress,
+  listCustomerAddresses,
+  resolveAddressPoint,
+  type AddressCheckOutcome,
+  type AddressPointCandidate,
+} from '@lezzet/application';
 import { CustomerError, customerErrorKey, type CustomerResult } from '@/lib/customer-error';
 import { formatPrice } from '@/lib/storefront/format';
 import type { CartEntry } from '@/lib/cart/cart-types';
@@ -136,6 +142,37 @@ export async function updateCheckoutAddressAction(
     // Varsayılan TEKİLDİR (0013): servis eskisini düşürür, ekran o kuralı bilmez.
     if (makeDefault) await new AddressService(serviceDb()).setDefault(addressId);
     return { data: true, errorKey: null };
+  } catch (err) {
+    return { data: null, errorKey: customerErrorKey(err) };
+  }
+}
+
+/**
+ * **Seçilen adresin kapısı gerçekten var mı** (11.11) — SİPARİŞ ANINDA sorulur.
+ *
+ * ── NEDEN BURADA, ADRES KAYDEDİLİRKEN DEĞİL ─────────────────────────────────
+ * Kullanıcı kararı (02.09): müşteri on adres ekleyebilir; her birini kaydederken doğrulamak, hiç
+ * kullanılmayacak adresler için servise gitmek olurdu. Hangisini seçerse SİPARİŞ ANINDA o
+ * doğrulanır — ve teklif kabul edilirse hem siparişin adresi hem KAYIT düzelir.
+ *
+ * ── ENGEL DEĞİL ─────────────────────────────────────────────────────────────
+ * Dönüş bir ret değil bir bilgidir; ekran onu gösterir, müşteri kararını verir. Kapı hiçbir hâlde
+ * fırlatmıyor (`checkAddress` FAIL-OPEN) — servis düşerse `unknown` döner ve ekran SUSAR. Bir dış
+ * servisin kesintisi satışı durduramaz.
+ *
+ * **Sahiplik doğrulanır:** kimlik istemciden geliyor ve müşterinin kendi listesinde aranıyor —
+ * yoksa başkasının adresi hakkında bilgi sızardı (adres ailesinin ortak kuralı).
+ */
+export async function checkCheckoutAddressAction(addressId: string): Promise<CustomerResult<AddressCheckOutcome>> {
+  try {
+    const customerId = await currentCustomerId();
+    if (!customerId) throw new CustomerError('session_expired');
+
+    const own = await listCustomerAddresses(serviceDb(), customerId);
+    // Başkasının adresi de "bilinmiyor"dur: varlığını doğrulamak bilgi sızdırmaktır.
+    if (!own.some((address) => address.id === addressId)) return { data: { status: 'unknown' }, errorKey: null };
+
+    return { data: await checkAddress(serviceDb(), { addressId }), errorKey: null };
   } catch (err) {
     return { data: null, errorKey: customerErrorKey(err) };
   }

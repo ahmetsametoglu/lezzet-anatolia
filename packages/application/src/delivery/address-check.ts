@@ -26,8 +26,12 @@ import type { Geocoder } from './geocode-port';
 
 export type AddressCheckOutcome =
   | { status: 'confirmed' }
-  /** Kapı BAŞKA kodda bulundu — `label` ekrana yazılacak teklifin kendisi. */
-  | { status: 'wrong_postal_code'; label: string }
+  /**
+   * Kapı BAŞKA kodda bulundu. `label` EKRANA yazılan metin (servisin kendi yazımı, biz cümle
+   * kurmayız); `postalCode`/`city` ise teklifi UYGULAMAK için — etiketi ayrıştırmak kırılgan olurdu.
+   * Ölçülen vakada değişen tam olarak bu ikili: sokak+numara aynı, kod ve şehir farklı.
+   */
+  | { status: 'wrong_postal_code'; label: string; postalCode: string; city: string }
   /** Sokak var, kapı hiçbir yerde yok — yeni yapı olabilir; yalnız yumuşak uyarı. */
   | { status: 'street_only' }
   | { status: 'not_found' }
@@ -136,7 +140,12 @@ function toOutcome(verdict: AddressVerdict): AddressCheckOutcome {
     case 'confirmed':
       return { status: 'confirmed' };
     case 'wrong_postal_code':
-      return { status: 'wrong_postal_code', label: verdict.suggestion.label };
+      return {
+        status: 'wrong_postal_code',
+        label: verdict.suggestion.label,
+        postalCode: verdict.suggestion.postalCode,
+        city: verdict.suggestion.city,
+      };
     case 'street_only':
       return { status: 'street_only' };
     case 'not_found':

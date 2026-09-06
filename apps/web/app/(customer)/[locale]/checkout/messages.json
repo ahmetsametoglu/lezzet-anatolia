@@ -156,6 +156,13 @@
     "errors": {
       "unexpected": "Bir şeyler ters gitti. Tekrar deneyin; sürerse bize yazın.",
       "session_expired": "Oturumunuz sona ermiş görünüyor. Yeniden giriş yapın."
+    },
+    "addressCheck": {
+      "foundElsewhere": "Bu adresi şurada bulduk:",
+      "useIt": "Böyle kaydet",
+      "keepMine": "Benim yazdığım doğru",
+      "streetOnly": "Kapı numarasını doğrulayamadık. Adresiniz doğruysa devam edebilirsiniz.",
+      "notFound": "Bu adresi bulamadık. Yazımını kontrol eder misiniz?"
     }
   },
   "fr": {
@@ -315,6 +322,13 @@
     "errors": {
       "unexpected": "Une erreur est survenue. Réessayez ; si cela persiste, écrivez-nous.",
       "session_expired": "Votre session semble expirée. Reconnectez-vous."
+    },
+    "addressCheck": {
+      "foundElsewhere": "Nous avons trouvé cette adresse ici :",
+      "useIt": "Corriger",
+      "keepMine": "Mon adresse est correcte",
+      "streetOnly": "Nous n'avons pas pu vérifier le numéro. Si votre adresse est correcte, vous pouvez continuer.",
+      "notFound": "Nous n'avons pas trouvé cette adresse. Pouvez-vous vérifier l'orthographe ?"
     }
   },
   "de": {
@@ -474,6 +488,13 @@
     "errors": {
       "unexpected": "Etwas ist schiefgelaufen. Bitte erneut versuchen; wenn es bleibt, schreiben Sie uns.",
       "session_expired": "Ihre Sitzung scheint abgelaufen zu sein. Bitte erneut anmelden."
+    },
+    "addressCheck": {
+      "foundElsewhere": "Wir haben diese Adresse hier gefunden:",
+      "useIt": "Übernehmen",
+      "keepMine": "Meine Adresse stimmt",
+      "streetOnly": "Wir konnten die Hausnummer nicht bestätigen. Wenn Ihre Adresse stimmt, können Sie fortfahren.",
+      "notFound": "Wir konnten diese Adresse nicht finden. Können Sie die Schreibweise prüfen?"
     }
   }
 }

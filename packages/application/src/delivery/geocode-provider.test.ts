@@ -107,6 +107,7 @@ describe('BAN adaptörü · elsewhere (kısıtsız)', () => {
         {
           label: '192c Rue du Maréchal Foch 67380 Lingolsheim',
           postalCode: '67380',
+          city: 'Strasbourg',
           precision: 'housenumber',
           score: 0.973,
         },

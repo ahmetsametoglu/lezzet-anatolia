@@ -560,6 +560,7 @@ export function PaymentStep({ t, snapshot, state, compact, onSelectPayment, onTo
 /** Sağdaki (mobilde alttaki) özet — kalemler, indirim, kargo, toplam ve onay düğmesi. */
 export function OrderSummary(props: CheckoutViewProps) {
   const { t, locale, cart, cartReady, cartFailed, snapshot, state, compact, busy, error, onConfirm, selectedAddress } = props;
+  const { addressNotice, onAcceptAddressFix, onDismissAddressNotice } = props;
   const payment = snapshot.payment;
   const delivery = snapshot.delivery;
   // Özetin ORTAK sözcükleri (08.20) — aynı blok sepette, onay ekranında ve sipariş detayında da
@@ -710,6 +711,36 @@ export function OrderSummary(props: CheckoutViewProps) {
       )}
 
       {error && <p className="font-sans text-note leading-relaxed font-semibold text-terracotta">{error}</p>}
+
+      {/* ── ADRESİN KAPISI (11.11) ─────────────────────────────────────────
+          Sipariş anında soruluyor ve söylenecek bir şey varsa akış BİR KEZ duruyor. Ton mevcut
+          desenden: `text-honey` uyarı (asgari sepet satırıyla aynı), yeni bir görsel dil YOK.
+
+          **İki hâlin tonu FARKLI olmalı** ve burada yapısal olarak farklı: "başka kodda bulundu"
+          düzeltilebilir bir hatadır ve DÜĞMESİ vardır; ötekiler yalnız birer belirsizliktir ve
+          düğmesizdir. Aynı görünselerdi müşteri geçerli bir yeni bina adresini hata sanardı. */}
+      {addressNotice && addressNotice.status === 'wrong_postal_code' ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-honey/40 bg-honey/10 p-3">
+          <span className="font-sans text-note leading-relaxed text-body">{t.addressCheck.foundElsewhere}</span>
+          {/* Metin SERVİSİN etiketi — biz cümle kurmayız, kendi birleştirmemiz servisin bildiği
+              yazımdan (aksan, kısaltma) sapardı ve müşteriye tanımadığı bir adres gösterirdi. */}
+          <span className="font-sans text-note font-semibold leading-relaxed text-ink">{addressNotice.label}</span>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" compact={compact} disabled={busy} onClick={onAcceptAddressFix}>
+              {t.addressCheck.useIt}
+            </Button>
+            {/* "İptal" DEĞİL: ret bir vazgeçiş değil bir BEYAN — müşteri haklı olabilir (yeni bina,
+                `bis/ter` ekli numara) ve o beyan kayıtta `geo_alt_label` olarak duruyor. */}
+            <Button size="sm" compact={compact} variant="ghost" disabled={busy} onClick={onDismissAddressNotice}>
+              {t.addressCheck.keepMine}
+            </Button>
+          </div>
+        </div>
+      ) : addressNotice ? (
+        <p className="font-sans text-note leading-relaxed font-semibold text-honey">
+          {addressNotice.status === 'not_found' ? t.addressCheck.notFound : t.addressCheck.streetOnly}
+        </p>
+      ) : null}
 
       {showConfirm && (
         <Button size="md" compact={compact} fullWidth disabled={busy || blocked} onClick={onConfirm}>

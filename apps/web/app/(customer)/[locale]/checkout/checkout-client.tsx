@@ -16,9 +16,11 @@ import { errorText } from '@/lib/customer-error-text';
 import { PaymentSection } from './components/payment-element';
 import { CheckoutDesktop } from './checkout.desktop';
 import { CheckoutMobile } from './checkout.mobile';
+import type { AddressCheckOutcome } from '@lezzet/application';
 import { addressDefaultsOf, toAddressFields } from '@/components/customer/delivery/address-form';
 import {
   addCheckoutAddressAction,
+  checkCheckoutAddressAction,
   confirmCheckoutAction,
   loadCheckoutAction,
   updateCheckoutAddressAction,
@@ -160,9 +162,36 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
 
   const selectedAddress = snapshot.addresses.find((a) => a.id === state.addressId) ?? null;
 
+  /**
+   * **Adres doğrulamasının sonucu** (11.11) — sipariş anında sorulur, ekranda gösterilir.
+   *
+   * `checkedFor` hangi adres için sorulduğunu tutuyor: müşteri cevabını verdikten sonra AYNI adres
+   * için ikinci kez tutulmuyor. Tutulsaydı "Benim yazdığım doğru" diyen müşteri sonsuz döngüye
+   * girerdi — ret bir vazgeçiş değil bir BEYAN ve bir kez alınır.
+   */
+  const [addressNotice, setAddressNotice] = useState<AddressCheckOutcome | null>(null);
+  const checkedFor = useRef<string | null>(null);
+
   /** Kart dışı yollar (kapıda / vadeli): sipariş burada kapanır, sağlayıcıya gidilmez. */
   const confirm = async () => {
     if (!state.addressId || !state.paymentMethod) return;
+
+    /* ADRES DOĞRULAMASI SİPARİŞ ANINDA (11.11, kullanıcı kararı 02.09) — ve BİR KEZ. Söylenecek bir
+       şey varsa akış burada DURUR; müşteri görür, kararını verir, ikinci tıklamada sipariş geçer.
+       `confirmed` ve `unknown` hiç göstermez: birincisinde söylenecek şey yok, ikincisinde
+       söyleyecek bilgimiz yok — "doğrulayamadık" demek müşteriyi her siparişte görünen ve hiçbir
+       şey söylemeyen bir satıra alıştırırdı. */
+    if (checkedFor.current !== state.addressId) {
+      setBusy(true);
+      const check = await checkCheckoutAddressAction(state.addressId);
+      checkedFor.current = state.addressId;
+      setBusy(false);
+      const outcome = check.data;
+      if (outcome && outcome.status !== 'confirmed' && outcome.status !== 'unknown') {
+        return setAddressNotice(outcome);
+      }
+    }
+
     setBusy(true);
     setError(null);
     const { data, errorKey } = await confirmCheckoutAction({
@@ -290,7 +319,46 @@ export function CheckoutClient({ t, locale, device, authenticated, shippingOrder
     error,
     selectedAddress,
     paymentSlot,
-    onSelectAddress: (id) => void refresh(id),
+    onSelectAddress: (id) => {
+      // Adres değişti: önceki doğrulama artık BU adresin cevabı değil.
+      checkedFor.current = null;
+      setAddressNotice(null);
+      void refresh(id);
+    },
+    addressNotice,
+    /**
+     * **Teklif kabul edildi** — hem siparişin adresi hem KAYIT düzelir (kullanıcı kararı 02.09).
+     * Tek yazım yeter: sipariş henüz açılmadı ve seçili adres kaydın kendisi.
+     *
+     * Değişen YALNIZ kod ve şehir: `wrong_postal_code`ın tanımı zaten bu — sokak ve numara aynı,
+     * kapı başka kodda. Satırın geri kalanına (alıcı, telefon, etiket) dokunmuyoruz.
+     */
+    onAcceptAddressFix: async () => {
+      if (!selectedAddress || addressNotice?.status !== 'wrong_postal_code') return;
+      setBusy(true);
+      const { errorKey } = await updateCheckoutAddressAction(
+        selectedAddress.id,
+        {
+          label: selectedAddress.label,
+          recipient: selectedAddress.recipient,
+          line1: selectedAddress.line1,
+          line2: selectedAddress.line2,
+          postalCode: addressNotice.postalCode,
+          city: addressNotice.city,
+          phone: selectedAddress.phone,
+        },
+        false,
+      );
+      setBusy(false);
+      if (errorKey) return setError(errorText(t.errors, errorKey));
+      /* Adres değişti → kapı noktayı ve öneriyi düşürdü → yeniden sorulacak. Ve `refresh` şart:
+         kod değişimi BÖLGEYİ, kargo ücretini ve teslim gününü de oynatabilir. */
+      checkedFor.current = null;
+      setAddressNotice(null);
+      void refresh(selectedAddress.id);
+    },
+    /** Teklif reddedildi — bir vazgeçiş değil bir BEYAN; `geo_alt_label` satırda kalır. */
+    onDismissAddressNotice: () => setAddressNotice(null),
     onSelectDate: (date) => setState((prev) => ({ ...prev, deliveryDate: date })),
     /* Seçim SUNUCUYA gidiyor: ücret, KDV kırılımı ve toplam ona bağlı ve hiçbiri istemcide
        hesaplanmıyor. Yerel `setState` ile yetinseydik ekran seçili seçeneği gösterir ama toplam

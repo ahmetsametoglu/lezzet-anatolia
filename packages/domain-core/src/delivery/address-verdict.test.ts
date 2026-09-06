@@ -14,6 +14,7 @@ import { addressVerdict, type AddressCandidate } from './address-verdict';
 const LINGOLSHEIM: AddressCandidate = {
   label: '192c Rue du Maréchal Foch 67380 Lingolsheim',
   postalCode: '67380',
+  city: 'Lingolsheim',
   precision: 'housenumber',
   score: 0.973,
 };

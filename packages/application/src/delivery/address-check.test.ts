@@ -24,6 +24,7 @@ const createdProfiles: string[] = [];
 const LINGOLSHEIM = {
   label: '192c Rue du Maréchal Foch 67380 Lingolsheim',
   postalCode: '67380',
+  city: 'Lingolsheim',
   precision: 'housenumber' as const,
   score: 0.973,
 };
@@ -83,7 +84,13 @@ describe('checkAddress · kullanıcının vakası', () => {
 
     const outcome = await checkAddress(db, { addressId: row.id, geocoder: fake });
 
-    expect(outcome).toEqual({ status: 'wrong_postal_code', label: LINGOLSHEIM.label });
+    expect(outcome).toEqual({
+      status: 'wrong_postal_code',
+      label: LINGOLSHEIM.label,
+      // Teklifi UYGULAMAK için yapılandırılmış alanlar: etiketi ayrıştırmak kırılgan olurdu.
+      postalCode: '67380',
+      city: 'Lingolsheim',
+    });
     // **Ve kayıt kalıcı:** etiket satırda duruyor — ekran teklifi buradan çizecek ve müşteri
     // düzeltmezse "uyarıldı ama düzeltmedi" kaydı da bu satırın kendisi olacak.
     expect((await oku(row.id)).geoAltLabel).toBe(LINGOLSHEIM.label);

@@ -1,3 +1,4 @@
+import type { AddressCheckOutcome } from '@lezzet/application';
 import type { Address, PaymentMethod } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 import type { CartView } from '@/lib/cart/cart-types';
@@ -101,6 +102,15 @@ export interface CheckoutViewProps extends StepProps {
   paymentSlot: React.ReactNode;
   /** Seçili adresin künyesi — özetteki soğuk zincir cümlesi ve fatura bilgisi için. */
   selectedAddress: Address | null;
+  /**
+   * Adres doğrulamasının sonucu (11.11) — `null` = söylenecek bir şey yok. Yalnız MÜŞTERİYE
+   * söylenecek üç hâl buraya ulaşır: `confirmed` ve `unknown` istemcide elenir.
+   */
+  addressNotice: AddressCheckOutcome | null;
+  /** Teklif kabul edildi — kaydın posta kodu ve şehri düzelir, adres yeniden doğrulanır. */
+  onAcceptAddressFix: () => void;
+  /** Teklif reddedildi — bir vazgeçiş değil BEYAN; kayıttaki öneri etiketi silinmez. */
+  onDismissAddressNotice: () => void;
 }
 
 

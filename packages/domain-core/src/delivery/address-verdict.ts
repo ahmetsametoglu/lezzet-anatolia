@@ -27,6 +27,12 @@ export interface AddressCandidate {
   /** Servisin verdiği tam etiket — düzeltme teklifinin metni bu olur. */
   label: string;
   postalCode: string;
+  /**
+   * Şehir — teklifi UYGULAYABİLMEK için şart. `label` gösterim metnidir ve ayrıştırılamaz
+   * (servisin yazımı, aksanlar, sıralama); düzeltme ise satıra yapılandırılmış alan yazar.
+   * Ölçülen vakada değişen tam olarak bu ikili: sokak+numara aynı, **kod ve şehir** farklı.
+   */
+  city: string;
   precision: AddressGeoPrecision;
   /** Servisin eşleşme güveni (0..1). */
   score: number;
