@@ -90,7 +90,7 @@
 
 ## Ortak zemin
 
-- [ ] **N9 — Yükleme SKELETON olacak, halka değil.** *"Projemizdeki loading mantığımız skeleton
+- [x] **N9 — Yükleme SKELETON olacak, halka değil.** *"Projemizdeki loading mantığımız skeleton
       göstermek üzerine. Ekranı bu şekilde çalışmıyor."* Ölçüldü 30.08: müşteri yüzeyinde **40
       dosya** skeleton kullanıyor, operasyonda yalnız **4**; **12 ekran** halka (`LoadingState`)
       ile açılıyor. Komponent zaten var (`OperationsSkeletonList`) ve künyesinde sebebi yazılı —
@@ -98,7 +98,15 @@
       bende, kurye/satış kendi şeritlerinde.
       → **KURYE PAYI KAPANDI (21.169):** beş ekranın beşi de iskelete geçti; ölçüler her ekranın
       kendi bloklarından. Halkanın geri dönüşünü yakalayan test de yazıldı — ayıran iz `progressbar`
-      rolü (halka tanıtır, iskelet tanıtmaz). Kalan: **satış** şeridi.
+      rolü (halka tanıtır, iskelet tanıtmaz).
+      → **SATIŞ PAYI DA KAPANDI (06.09 · kullanıcı isteği):** halka kalan iki yer yerinde satış
+      kataloğu ve satış geçmişiydi (ikisi de operasyon yüzeyi — müşteri tarafı değil). İkisi de
+      iskelete geçti; kutu boyları satırın KENDİ bloklarından türüyor (kart dolgusu + `md` kare 48;
+      geçmişte dolgu + iki metin satırı), sabit sayı yazılmadı — satır değişirse iskelet de değişsin.
+      Kuryenin `progressbar` testi buraya da yazıldı, üstelik iki yönlü: iskelet AÇILIŞTA var,
+      veri gelince KALKIYOR (sonsuza kadar duran bir iskelet de arızadır). Cevabı bekleten elle
+      çözülen bir söz kullanıldı — `sleep` ile zamanlamaya bahis oynanmadı.
+      **Not kapandı: operasyonda halka kalmadı.**
 - [x] **N8 — Başlıklar YAPIŞKAN olacak.** Sayfa aşağı kaydırılınca üstte küçük bir bölüm kalsın;
       örneği müşteri yüzeyinde var (`AppBar` — krem cam + bulanıklık, kaydırma alanının DIŞINDA).
       **Tasarımda karşılığı YOK** (ölçüldü 30.08: v3'teki 15 `position:sticky`'nin 15'i de

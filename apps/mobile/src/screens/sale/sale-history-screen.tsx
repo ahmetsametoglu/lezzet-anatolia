@@ -7,7 +7,7 @@ import type { SaleRecord } from '@lezzet/types';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
-import { LoadingState } from '@/components/ui/loading-state';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { TextAction } from '@/components/ui/text-action';
 import { fetchRecentSales } from '@/lib/api/sale';
 import { captionOf } from '@/lib/operations/caption';
@@ -34,6 +34,19 @@ import { saleCopy } from './copy';
 */
 
 const t = saleCopy;
+
+/**
+ * Yükleme iskeletindeki kutunun boyu — satış satırının KENDİ bloklarından türer: dolgu iki kez,
+ * üstte künye/tutar satırı (`control`), altta künye satırı (`helper`) ve aralarındaki nefes.
+ * Sabit bir sayı yazılsaydı satır bir gün değişir, iskelet ayrışır ve veri gelince sayfa yine
+ * zıplardı — iskeletin var olma sebebinin tersi.
+ */
+const HISTORY_ROW_HEIGHT =
+  operationsTheme.space['2xl'] * 2 +
+  operationsTheme.border.base * 2 +
+  operationsTheme.space['2xs'] +
+  operationsTheme.text.control * operationsTheme.text['lead--line-height'] +
+  operationsTheme.text.helper * operationsTheme.text['lead--line-height'];
 
 type HistoryState =
   | { status: 'loading' }
@@ -73,8 +86,14 @@ export function SaleHistoryScreen() {
       />
 
       {state.status === 'loading' ? (
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.history.loading} label={t.history.loading} />
+        /* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08 · N9'un satış payı, 06.09): halka
+           yerleşim tutmuyor ve söndüğü an liste yerine oturup sayfayı zıplatıyordu. */
+        <View style={styles.list}>
+          <OperationsSkeletonList
+            heights={[HISTORY_ROW_HEIGHT, HISTORY_ROW_HEIGHT, HISTORY_ROW_HEIGHT]}
+            label={t.history.loading}
+            testID="sale-history-loading"
+          />
         </View>
       ) : state.status === 'error' ? (
         <View style={styles.block}>
@@ -137,10 +156,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],

@@ -447,6 +447,78 @@ it('tesis adı yoksa künye KUYRUKSUZ kalır — uydurma bir tesis yazılmaz', a
   expect(screen.getByTestId('sale-history-header')).not.toHaveTextContent(/Strasbourg/);
 });
 
+/*
+  İLK YÜK İSKELET, HALKA DEĞİL (N9'un satış payı · 06.09) — kurye şeridinin emsali birebir.
+
+  Ayıran iz ROL: halka (`LoadingState`) kendini `progressbar` diye tanıtır, iskelet tanıtmaz.
+  Metne ya da testID'ye bakmak yeterli olmazdı: ikisi de aynı "Yükleniyor…" cümlesini taşıyor ve
+  bir gün biri halkayı geri koysa test yine yeşil kalırdı.
+*/
+describe('ilk yük iskeleti (06.09)', () => {
+  /*
+    Cevabı BEKLETMEK şart: `render` efektleri boşaltıyor ve normal sahte ağ aynı karede cevap
+    verdiği için yükleme hâli hiç gözlemlenemiyordu. Elle çözülen bir söz, o hâli açık tutuyor —
+    zamanlamaya bahis oynayan bir `sleep` değil, belirlenimci bir kapı.
+  */
+  function withPendingNetwork(): () => void {
+    let release = () => {};
+    const gate = new Promise<void>((resolve) => {
+      release = () => resolve();
+    });
+    fetchMock.mockImplementation((url) => {
+      const path = String(url);
+      const body = path.includes('/recent')
+        ? ok({ sales: SATISLAR })
+        : ok({ products: [TEK, COK], total: 2, nextCursor: null });
+      return gate.then(() => body);
+    });
+    return release;
+  }
+
+  it('KATALOG iskeletle açılır — halka çizilmez', async () => {
+    const release = withPendingNetwork();
+    await render(
+      <SaleProvider place="facility">
+        <SaleScreen />
+      </SaleProvider>,
+    );
+
+    expect(screen.getByTestId('sale-loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+
+    // Ve veri gelince iskelet gerçekten kalkıyor — sonsuza kadar duran bir iskelet de arızadır.
+    release();
+    await waitFor(() => expect(screen.getByTestId(`sale-product-${TEK_ID}`)).toBeTruthy());
+    expect(screen.queryByTestId('sale-loading')).toBeNull();
+  });
+
+  it('GEÇMİŞ de iskeletle açılır — halka çizilmez', async () => {
+    const release = withPendingNetwork();
+    await render(
+      <OperationsSessionProvider
+        value={{
+          sections: ['warehouse'],
+          userName: 'Deniz Arslan',
+          userEmail: 'depo@lezzetanatolia.fr',
+          warehouses: [],
+          resolvedWarehouseId: null,
+        }}
+      >
+        <SaleProvider place="facility">
+          <SaleHistoryScreen />
+        </SaleProvider>
+      </OperationsSessionProvider>,
+    );
+
+    expect(screen.getByTestId('sale-history-loading')).toBeOnTheScreen();
+    expect(screen.queryByRole('progressbar')).toBeNull();
+
+    release();
+    await waitFor(() => expect(screen.getByTestId(`sale-history-${SATISLAR[0]!.orderId}`)).toBeTruthy());
+    expect(screen.queryByTestId('sale-history-loading')).toBeNull();
+  });
+});
+
 describe('çevrimdışı kilidi (v3:20)', () => {
   /*
     Kilit DEPONUNKİYLE aynı sinyalden okunuyor: yerinde satış zaten depo kapsamlı bir yazmadır.

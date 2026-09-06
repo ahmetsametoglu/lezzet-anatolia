@@ -13,7 +13,7 @@ import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { OperationsProductRow } from '@/components/operations/product-row';
 import { FormScroll } from '@/components/ui/form-scroll';
-import { LoadingState } from '@/components/ui/loading-state';
+import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
@@ -43,6 +43,17 @@ import { selectionOf } from './use-sale.hook';
 */
 
 const t = saleCopy;
+
+/**
+ * Yükleme iskeletindeki kutunun boyu — ürün kartının KENDİ bloklarından türer, elle ölçülmüş bir
+ * sayı değil: kartın dolgusu iki kez, içinde de `md` boyunda kare (48). Metin sütunu kareden
+ * kısa kaldığı için satırın yüksekliğini kare belirliyor (`row` dikeyde ortalıyor).
+ *
+ * Kartın dolgusu değişirse iskelet de değişir; sabit yazılsaydı bir gün sessizce ayrışır ve veri
+ * gelince sayfa yine zıplardı — iskeletin var olma sebebinin tam tersi.
+ */
+const SALE_CARD_HEIGHT =
+  operationsTheme.space['2xl'] * 2 + operationsTheme.size.thumb + operationsTheme.border.base * 2;
 
 /** Sepet çubuğunun boyu (`styles.sticky` + `styles.cta`) — daire bunun kadar yukarı kalkar. */
 const CART_BAR_LIFT = operationsTheme.space.xl + operationsTheme.size.controlLg + operationsTheme.space['3xl'];
@@ -117,8 +128,17 @@ export function SaleScreen() {
       </View>
 
       {sale.status === 'loading' ? (
-        <View style={styles.centered}>
-          <LoadingState accessibilityLabel={t.loading} label={t.loading} />
+        /* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08 · N9'un satış payı, 06.09).
+           Halka ekranın ORTASINDA dönüyordu ve yerleşim tutmuyordu: veri gelince liste bir anda
+           yerine oturup sayfayı zıplatıyordu. Kutular gelecek KARTLARIN boyunda duruyor — personel
+           listeyi görmeden listenin biçimini görüyor. Üç kutu, çünkü ekranda her zaman en az o
+           kadar ürün var. */
+        <View style={styles.list}>
+          <OperationsSkeletonList
+            heights={[SALE_CARD_HEIGHT, SALE_CARD_HEIGHT, SALE_CARD_HEIGHT]}
+            label={t.loading}
+            testID="sale-loading"
+          />
         </View>
       ) : sale.status === 'error' ? (
         <View style={styles.block}>
@@ -439,10 +459,6 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: operationsTheme.colors.cream,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
   },
   block: {
     paddingHorizontal: operationsTheme.space['6xl'],
