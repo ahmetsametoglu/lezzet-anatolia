@@ -1,10 +1,11 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { BoxPrinterContract, PrinterPurpose } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsSurface } from '@/components/operations/surface';
@@ -17,7 +18,7 @@ import { downloadSampleLabelPng } from '@/lib/print/label-file';
 import { locatePrinter, printTargetOf } from '@/lib/print/printer-locate';
 import { hasPrinterNativeModule } from '@/lib/print/printer-availability';
 import { choosePrinter, readPrinterChoice, resolvePrinter, type PrinterChoice } from '@/lib/print/printer-choice';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
@@ -360,8 +361,16 @@ export function PrinterSetupScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-printers">
-      {header}
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-printers-list">
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): kap hem yapışkan mikro başlığı çizer hem
+          kaydırma olayını kabuğa bağlar (alt çubuk gizlemesi de oradan besleniyor). Başlık
+          KAYDIRICININ İÇİNDE: dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      <OperationsScreenScroll
+        title={t.printers.title}
+        caption={operationsCopy.sections.warehouse.tab}
+        contentContainerStyle={styles.list}
+        testID="warehouse-printers-list"
+      >
+        {header}
         {failed ? (
           <OperationsNoticeBlock
             variant="error"
@@ -513,7 +522,7 @@ export function PrinterSetupScreen() {
         })}
 
         <Text style={styles.footnote}>{t.printers.footnote}</Text>
-      </ScrollView>
+      </OperationsScreenScroll>
 
       {/* DEĞİŞTİRME ÇEKMECESİ — aynı liste, ikinci host (kullanıcı kararı 05.09). Tanımlı kartın
           dinlenme hâli sessiz kalıyor; yazıcıyı değiştirmek ya da ikinci bir yazıcı tanıtmak nadir

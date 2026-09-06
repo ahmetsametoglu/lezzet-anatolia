@@ -1,15 +1,16 @@
 import { useRouter } from 'expo-router';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import { RefreshControl, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { SupplyGroup } from '@lezzet/types';
@@ -62,15 +63,21 @@ export function SupplySuggestionScreen() {
   const supply = useSupply();
   const { state } = supply;
 
+  const header = (
+    <OperationsStackHeader
+      title={t.supply.title}
+      subtitle={t.supply.caption}
+      onBack={() => router.back()}
+      backLabel={t.common.back}
+      testID="management-supply-suggestion-header"
+    />
+  );
+
   return (
     <View style={styles.screen} testID="management-supply-suggestion">
-      <OperationsStackHeader
-        title={t.supply.title}
-        subtitle={t.supply.caption}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="management-supply-suggestion-header"
-      />
+      {/* Başlık DEĞİŞKEN, çünkü iki yere giriyor (21.178): kaydırılan dalda kabın İÇİNE, öteki
+          hâllerde doğrudan ekrana. */}
+      {state.status === 'ready' && state.groups.length > 0 ? null : header}
 
       {state.status === 'loading' ? (
         /* İLK YÜK İSKELETLE (v3 dili) — üç kalem kartı yüksekliğinde kutu. */
@@ -86,7 +93,7 @@ export function SupplySuggestionScreen() {
           <OperationsNoticeBlock
             variant="error"
             title={t.common.error.title}
-            description={t.common.error.body}
+            description={operationsFailureText(state.failure)}
             retry={{ label: t.common.error.retry, onPress: supply.retry }}
             testID="management-supply-error"
           />
@@ -102,7 +109,9 @@ export function SupplySuggestionScreen() {
         </View>
       ) : (
         /* AŞAĞI ÇEKİNCE YENİLE: öneri eşik altı stoktan türüyor, kabul/satış oldukça değişiyor. */
-        <ScrollView
+        <OperationsScreenScroll
+          title={t.supply.title}
+          caption={operationsCopy.sections.management.tab}
           contentContainerStyle={styles.body}
           refreshControl={
             <RefreshControl
@@ -113,6 +122,7 @@ export function SupplySuggestionScreen() {
           }
           testID="management-supply-suggestion-body"
         >
+          {header}
           {state.groups
             .filter((group) => group.supplierId !== null)
             .map((group) => (
@@ -128,7 +138,7 @@ export function SupplySuggestionScreen() {
               şey göndermediği grup başına tekrarlanacak bir bilgi değil. */}
           <Text style={styles.footnote}>{t.supply.footnote}</Text>
           <Text style={styles.footnote}>{t.supply.note}</Text>
-        </ScrollView>
+        </OperationsScreenScroll>
       )}
     </View>
   );

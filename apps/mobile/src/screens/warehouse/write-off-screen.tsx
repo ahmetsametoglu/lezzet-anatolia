@@ -9,11 +9,12 @@ import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { AdjustmentResultCard } from './adjustment-result-card';
@@ -183,9 +184,16 @@ export function WriteOffScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-write-off">
-      {header}
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı.
+          Başlık kaydırıcının İÇİNDE: dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      <OperationsScreenChrome
+        title={t.adjustment.writeOff.title}
+        caption={operationsCopy.sections.warehouse.tab}
+      >
+        {(bind) => (
+      <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-write-off-body">
+        {header}
 
-      <FormScroll contentContainerStyle={styles.list} testID="warehouse-write-off-body">
         <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-write-off-context" />
 
         {/*
@@ -278,6 +286,8 @@ export function WriteOffScreen() {
             eksilmesi; depocu doğru partinin önünde olduğunu yine buradan anlıyor. */}
         <BatchAreaField areaName={batch.storageAreaName} testID="warehouse-write-off-area" />
       </FormScroll>
+        )}
+      </OperationsScreenChrome>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {!offline ? null : (

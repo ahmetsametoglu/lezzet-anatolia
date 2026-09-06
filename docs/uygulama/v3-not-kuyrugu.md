@@ -99,11 +99,16 @@
       → **KURYE PAYI KAPANDI (21.169):** beş ekranın beşi de iskelete geçti; ölçüler her ekranın
       kendi bloklarından. Halkanın geri dönüşünü yakalayan test de yazıldı — ayıran iz `progressbar`
       rolü (halka tanıtır, iskelet tanıtmaz). Kalan: **satış** şeridi.
-- [ ] **N8 — Başlıklar YAPIŞKAN olacak.** Sayfa aşağı kaydırılınca üstte küçük bir bölüm kalsın;
+- [x] **N8 — Başlıklar YAPIŞKAN olacak.** Sayfa aşağı kaydırılınca üstte küçük bir bölüm kalsın;
       örneği müşteri yüzeyinde var (`AppBar` — krem cam + bulanıklık, kaydırma alanının DIŞINDA).
       **Tasarımda karşılığı YOK** (ölçüldü 30.08: v3'teki 15 `position:sticky`'nin 15'i de
       `bottom:0`, yani alttaki CTA çubuğu; üstte yapışkan başlık hiç yok) → bilinçli sapma,
-      `design/KARARLAR.md`'ye yazılacak. Bugün `OperationsStackHeader` sayfayla birlikte kayıyor.
+      `design/KARARLAR.md`'ye yazılacak.
+      → **KAPANDI (21.178 · 06.09).** Makine 21.177'de yazılmıştı ama yalnız iki ekrana takılıydı;
+      ölçüm 06.09'da 28 operasyon ekranından 2'si dedi. Kalanların hepsi bağlandı (bir bilinçli
+      istisna: sosyal yazışma — `ChatLayout` bir sayfa değil sohbet, şerit sabit üst bandın üstüne
+      binerdi). `FormScroll` ve `FlatList` için ikinci bir kapı açıldı (`OperationsScreenChrome`,
+      render prop). Gerekçe ve ölçüm görev satırında.
 
 ---
 

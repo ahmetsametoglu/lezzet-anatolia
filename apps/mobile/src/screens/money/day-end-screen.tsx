@@ -1,15 +1,17 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { money, signedMoney } from '@/lib/operations/money';
 import { dateLabelOf, timeOf } from '@/lib/operations/stamp';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import type { MoneyDayEnd } from '@lezzet/types';
@@ -51,17 +53,23 @@ export function MoneyDayEndScreen() {
   const router = useRouter();
   const { state, retry } = useMoneyDayEnd();
 
+  const header = (
+    <OperationsStackHeader
+      title={t.dayEnd.title}
+      /* HANGİ GÜNÜN ÖZETİ (v3:24) — "salt okuma" tek başına hangi günü anlattığını söylemiyordu;
+         gün sunucudan geliyor (`summary.date`), cihazın takviminden tahmin edilmiyor. */
+      subtitle={captionOf(state)}
+      onBack={() => router.back()}
+      backLabel={t.common.back}
+      testID="money-day-end-header"
+    />
+  );
+
   return (
     <View style={styles.screen} testID="money-day-end">
-      <OperationsStackHeader
-        title={t.dayEnd.title}
-        /* HANGİ GÜNÜN ÖZETİ (v3:24) — "salt okuma" tek başına hangi günü anlattığını söylemiyordu;
-           gün sunucudan geliyor (`summary.date`), cihazın takviminden tahmin edilmiyor. */
-        subtitle={captionOf(state)}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="money-day-end-header"
-      />
+      {/* Başlık DEĞİŞKEN, çünkü iki yere giriyor (21.178): kaydırılan dalda kabın İÇİNE (para
+          kökünün deseni), kaydırılmayan hâllerde doğrudan ekrana. */}
+      {state.status === 'ready' ? null : header}
 
       {state.status === 'loading' ? (
         /* İLK YÜK İSKELET, HALKA DEĞİL (ortak karar 30.08). Ölçüler ekranın kendi bloklarının:
@@ -84,7 +92,7 @@ export function MoneyDayEndScreen() {
           />
         </View>
       ) : (
-        <DayEndBody summary={state.data} />
+        <DayEndBody summary={state.data} header={header} />
       )}
     </View>
   );
@@ -119,15 +127,24 @@ function runCaption(discrepancy: MoneyDayEnd['discrepancy']): string | null {
 
 interface DayEndBodyProps {
   summary: MoneyDayEnd;
+  /** Sayfa başlığı — kaydırıcının İÇİNDE çiziliyor (21.178). */
+  header: ReactNode;
 }
 
-function DayEndBody({ summary }: DayEndBodyProps) {
+function DayEndBody({ summary, header }: DayEndBodyProps) {
   const discrepancy = summary.discrepancy;
   const differenceCents = discrepancy === null ? null : discrepancy.countedCents - discrepancy.expectedCents;
   const calm = differenceCents === null || differenceCents === 0;
 
   return (
-    <ScrollView contentContainerStyle={styles.body} testID="money-day-end-body">
+    /* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — para kökünün deseni. */
+    <OperationsScreenScroll
+      title={t.dayEnd.title}
+      caption={operationsCopy.sections.money.tab}
+      contentContainerStyle={styles.body}
+      testID="money-day-end-body"
+    >
+      {header}
       {/* GÜNÜN DÖKÜMÜ TEK KART (v3:24) — üç satır bir arada bir defter sayfası, ayrı ayrı üç
           cümle değil. Dolgu `none`: dikey nefes satırların kendisinde (v3: `padding:6px 16px`). */}
       <OperationsSurface tone="panel" padding="none" style={styles.summaryCard}>
@@ -225,7 +242,7 @@ function DayEndBody({ summary }: DayEndBodyProps) {
       <Text style={styles.footnote} testID="money-day-end-footnote">
         {t.dayEnd.footnote}
       </Text>
-    </ScrollView>
+    </OperationsScreenScroll>
   );
 }
 

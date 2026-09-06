@@ -10,6 +10,7 @@ import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsIconButton } from '@/components/operations/icon-button';
 import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
@@ -21,7 +22,7 @@ import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
 import { centsToAmountText } from '@/lib/operations/money';
@@ -185,6 +186,14 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
 
   return (
     <View style={styles.screen} testID="courier-delivery">
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı.
+          Başlık kaydırıcının İÇİNDE: dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      <OperationsScreenChrome
+        title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
+        caption={operationsCopy.sections.courier.tab}
+      >
+        {(bind) => (
+      <FormScroll {...bind} contentContainerStyle={styles.body} testID="courier-delivery-body">
       <OperationsStackHeader
         title={fillCopy(t.delivery.title, { n: String(delivery.order), total: String(delivery.total) })}
         subtitle={fillCopy(t.delivery.subtitle, {
@@ -204,7 +213,6 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
         testID="courier-delivery-header"
       />
 
-      <FormScroll contentContainerStyle={styles.body} testID="courier-delivery-body">
         {/* ROZET HER KANALDA (kullanıcı bulgusu 30.08 · tasarımda başlığın sabit öğesi): eskiden
             yalnız B2B'de çiziliyordu ve B2C durakta başlığın sağı boş kalıyordu. Kanal kapıda ne
             beklendiğini söyler (fatura, teslim alan kişi, tahsilat âdeti) — "yok" demek "B2C"
@@ -544,6 +552,8 @@ export function CourierDeliveryScreen({ orderId }: { orderId: string }) {
           </View>
         )}
       </FormScroll>
+        )}
+      </OperationsScreenChrome>
 
       {delivery.dueCents === null ? null : (
         <OperationsAmountKeypad

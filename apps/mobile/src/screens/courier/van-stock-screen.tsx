@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, TextInput, View } from 'react-native';
+import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierVanCandidate, CourierVanStockLine, CourierVanStockMoveResponse } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProductRow } from '@/components/operations/product-row';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
@@ -17,7 +18,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { toastError, toastSuccess } from '@/lib/toast/toast-store';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { fetchVanStock, scanToVan, searchVanCandidates, setVanQty as setVanQtyRequest } from '@/lib/api/courier';
 import type { ApiResult } from '@/lib/api/client';
 import { newRequestKey } from '@/lib/request-key';
@@ -314,9 +315,14 @@ export function CourierVanStockScreen() {
 
   return (
     <View style={styles.screen} testID="courier-van-stock">
-      {header}
-
-      <ScrollView contentContainerStyle={styles.list}>
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE. */}
+      <OperationsScreenScroll
+        title={t.vanStock.title}
+        caption={operationsCopy.sections.courier.tab}
+        contentContainerStyle={styles.list}
+      >
+        {header}
         {!hasVehicle ? (
           /* Araç deposu YOKSA ekran boş liste göstermez, SEBEBİ söyler: serbest ürün aracın
              stoğuna giriyor ve araç yoksa gidecek bir yer de yok. */
@@ -389,7 +395,7 @@ export function CourierVanStockScreen() {
           </>
         )}
 
-      </ScrollView>
+      </OperationsScreenScroll>
 
       {/* DÖNÜŞ DÜĞMESİ YÜKÜ TAŞIR (v3:19 `serbestCtaLabel`) — kurye ekrandan çıkarken araca ne
           koyduğunu son bir kez görür. */}

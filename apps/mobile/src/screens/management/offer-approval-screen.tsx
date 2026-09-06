@@ -5,12 +5,13 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import type { OfferCandidate } from '@lezzet/types';
 import { managementCopy } from './copy';
@@ -78,15 +79,21 @@ export function OfferApprovalScreen() {
   const approval = useOfferApproval();
   const { state } = approval;
 
+  const header = (
+    <OperationsStackHeader
+      title={t.offer.title}
+      subtitle={t.offer.caption}
+      onBack={() => router.back()}
+      backLabel={t.common.back}
+      testID="management-offer-approval-header"
+    />
+  );
+
   return (
     <View style={styles.screen} testID="management-offer-approval">
-      <OperationsStackHeader
-        title={t.offer.title}
-        subtitle={t.offer.caption}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="management-offer-approval-header"
-      />
+      {/* Başlık DEĞİŞKEN, çünkü iki yere giriyor (21.178): kaydırılan dalda kabın İÇİNE, öteki
+          hâllerde doğrudan ekrana. */}
+      {state.status === 'ready' && state.candidates.length > 0 ? null : header}
 
       {state.status === 'loading' ? (
         /* İLK YÜK İSKELETLE (v3 dili). Bu ekranda fark en büyük: aday listesi 49 parti getiriyor
@@ -104,7 +111,7 @@ export function OfferApprovalScreen() {
           <OperationsNoticeBlock
             variant="error"
             title={t.common.error.title}
-            description={t.common.error.body}
+            description={operationsFailureText(state.failure)}
             retry={{ label: t.common.error.retry, onPress: approval.retry }}
             testID="management-offer-error"
           />
@@ -122,11 +129,16 @@ export function OfferApprovalScreen() {
         <>
           {/* AŞAĞI ÇEKİNCE YENİLE: aday listesi partilerin SKT'sinden türüyor ve gün içinde
               değişiyor; kabın kendi `refresh` desteği kullanıldı (`FormScroll` künyesi). */}
+          {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı. */}
+          <OperationsScreenChrome title={t.offer.title} caption={operationsCopy.sections.management.tab}>
+            {(bind) => (
           <FormScroll
+            {...bind}
             contentContainerStyle={styles.body}
             refresh={{ onRefresh: approval.refresh, refreshing: approval.reloading }}
             testID="management-offer-approval-body"
           >
+            {header}
             {state.candidates.map((candidate) => (
               <CandidateCard key={candidate.stockId} candidate={candidate} approval={approval} />
             ))}
@@ -143,6 +155,8 @@ export function OfferApprovalScreen() {
             <Text style={styles.footnote}>{t.offer.publishNote}</Text>
             <Text style={styles.footnote}>{t.offer.footnote}</Text>
           </FormScroll>
+            )}
+          </OperationsScreenChrome>
 
           {/* Yapışkan çubuk KİTTEN (`OperationsStickyBar`): gradyan + mutlak konum + dolgular 11
               ekranda elle yazılıyordu. `glow` VERİLMEDİ — ışıma bir OKUTMA işaretidir (kitin

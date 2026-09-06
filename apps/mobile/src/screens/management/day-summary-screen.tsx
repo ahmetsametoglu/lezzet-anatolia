@@ -1,8 +1,10 @@
 import { useRouter } from 'expo-router';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { RefreshControl, Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
@@ -10,7 +12,7 @@ import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { captionOf } from '@/lib/operations/caption';
 import { money } from '@/lib/operations/money';
 import { dateLabelOf } from '@/lib/operations/stamp';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -109,15 +111,22 @@ export function DaySummaryScreen() {
   const day = state.status === 'ready' ? (dateLabelOf(state.hub.summary.date) ?? t.summary.caption) : t.summary.caption;
   const caption = captionOf(day, workplace);
 
+  const header = (
+    <OperationsStackHeader
+      title={t.summary.title}
+      subtitle={caption}
+      onBack={() => router.back()}
+      backLabel={t.common.back}
+      testID="management-day-summary-header"
+    />
+  );
+
   return (
     <View style={styles.screen} testID="management-day-summary">
-      <OperationsStackHeader
-        title={t.summary.title}
-        subtitle={caption}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="management-day-summary-header"
-      />
+      {/* Başlık DEĞİŞKEN, çünkü iki yere giriyor (21.178): kaydırılan dalda kabın İÇİNE (mikro
+          şerit inince altında asılı kalmasın diye), kaydırılmayan hâllerde doğrudan ekrana.
+          Para ekranının deseni (`OverviewBody`) birebir. */}
+      {state.status === 'ready' ? null : header}
 
       {state.status === 'loading' ? (
         /* İLK YÜK İSKELETLE (v3 dili): ekranın kendi sırası — koyu ciro kartı, sonra kutucuk
@@ -134,13 +143,13 @@ export function DaySummaryScreen() {
           <OperationsNoticeBlock
             variant="error"
             title={t.hub.error.title}
-            description={t.hub.error.body}
+            description={operationsFailureText(state.failure)}
             retry={{ label: t.hub.error.retry, onPress: retry }}
             testID="management-day-summary-error"
           />
         </View>
       ) : (
-        <SummaryBody hub={state.hub} refresh={refresh} reloading={reloading} />
+        <SummaryBody hub={state.hub} refresh={refresh} reloading={reloading} header={header} />
       )}
     </View>
   );
@@ -168,21 +177,28 @@ interface SummaryBodyProps {
   hub: ManagementHub;
   refresh: () => void;
   reloading: boolean;
+  /** Sayfa başlığı — kaydırıcının İÇİNDE çiziliyor (21.178). */
+  header: ReactNode;
 }
 
-function SummaryBody({ hub, refresh, reloading }: SummaryBodyProps) {
+function SummaryBody({ hub, refresh, reloading, header }: SummaryBodyProps) {
   const { summary, queue } = hub;
 
   return (
     /* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08): gün özeti GÜNÜN FOTOĞRAFI ve gün ilerledikçe
        değişiyor; tazelemenin tek yolu ekrandan çıkıp girmekti. */
-    <ScrollView
+    /* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+       bu kaptan besleniyor. */
+    <OperationsScreenScroll
+      title={t.summary.title}
+      caption={operationsCopy.sections.management.tab}
       contentContainerStyle={styles.body}
       refreshControl={
         <RefreshControl refreshing={reloading} onRefresh={refresh} {...pullRefreshColors(operationsTheme.colors.olive)} />
       }
       testID="management-day-summary-body"
     >
+      {header}
       <View style={styles.revenue} testID="management-summary-revenue">
         <View style={styles.revenueHead}>
           <View style={styles.revenueHeadText}>
@@ -255,7 +271,7 @@ function SummaryBody({ hub, refresh, reloading }: SummaryBodyProps) {
           ))
         )}
       </View>
-    </ScrollView>
+    </OperationsScreenScroll>
   );
 }
 

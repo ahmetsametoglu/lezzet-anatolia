@@ -5,12 +5,13 @@ import { ConversationSourceEnum, type ConversationSource } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import type { SocialRow } from '@/lib/api/social';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { managementCopy } from './copy';
@@ -182,10 +183,13 @@ export function SocialInboxScreen() {
         </View>
       ) : inbox.status === 'error' ? (
         <View style={styles.noticeWrap}>
+          {/* BAŞLIK NE düştüğünü, ALT SATIR NİÇİN düştüğünü söyler (06.09'da ölçülen arıza):
+              sebep dört sınıfa ayrılıyor ve cümle ortak sözlükten geliyor — oturumu ölmüş cihaza
+              "bağlantını kontrol et" demek, operatörü çalışan bir wifi'nin peşine takıyordu. */}
           <OperationsNoticeBlock
             variant="error"
             title={t.error.title}
-            description={t.error.body}
+            description={operationsFailureText(inbox.failure)}
             retry={{ label: t.error.retry, onPress: inbox.retry }}
             testID="management-social-error"
           />
@@ -195,7 +199,17 @@ export function SocialInboxScreen() {
           <OperationsNoticeBlock variant="empty" title={t.empty.title} description={t.empty.body} testID="management-social-empty" />
         </View>
       ) : (
+        /* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FlatList` sarılamaz (iç içe kaydırıcı
+           sanallaştırmayı öldürür), o yüzden KROM kapısı: şeridi kabuk çizer, bağlantıyı listeye
+           verir. Bu ekran kapının ilk `FlatList` müşterisi.
+
+           Başlık ve süzgeç şeridi listenin DIŞINDA kalıyor ve bu bilinçli: gelen kutusunda süzgeç
+           bir gezinme aracı, aşağı kaydırırken elden çıkmamalı. Mikro şerit yine de doğru iş
+           yapıyor — sayfanın ADINI taşıyor, süzgeçleri değil. */
+        <OperationsScreenChrome title={t.title} caption={operationsCopy.sections.management.tab}>
+          {(bind) => (
         <FlatList
+          {...bind}
           data={inbox.rows}
           keyExtractor={(row) => row.id}
           renderItem={renderRow}
@@ -230,6 +244,8 @@ export function SocialInboxScreen() {
           }
           testID="management-social-list"
         />
+          )}
+        </OperationsScreenChrome>
       )}
     </View>
   );

@@ -19,6 +19,7 @@ import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { ScanSheet } from '@/components/scan/scan-sheet';
@@ -29,7 +30,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextField } from '@/components/ui/text-field';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { searchIntakeVariants } from '@/lib/api/warehouse';
@@ -528,9 +529,17 @@ export function IntakeScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-intake">
-      {header}
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — ama `FormScroll` sarılamaz (klavye farkında
+          kendi kaydırıcısı), o yüzden KROM kapısı: şeridi kabuk çizer, bağlantıyı kaba verir.
+          Başlık kaydırıcının İÇİNDE — dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      <OperationsScreenChrome
+        title={unplanned ? t.intake.unplannedTitle : (intake.purchaseOrder?.referenceNo ?? t.intake.title)}
+        caption={operationsCopy.sections.warehouse.tab}
+      >
+        {(bind) => (
+      <FormScroll {...bind} contentContainerStyle={styles.list} scrollRef={scroll} testID="warehouse-intake-lines">
+        {header}
 
-      <FormScroll contentContainerStyle={styles.list} scrollRef={scroll} testID="warehouse-intake-lines">
         {/* ÖĞRENİLEN KOD LİSTENİN ÜSTÜNDE KALIR (v3:05 · kullanıcı bulgusu 30.08). Önceden yalnız
             geçip giden bir bildirimdi; oysa öğrenme bir ADIM değil bir SONUÇTUR — o kod bir dahaki
             kabulde tanınacak ve depocunun bunu görmesi, aynı koliyi ikinci kez öğretmeye
@@ -699,8 +708,8 @@ export function IntakeScreen() {
           )}
         </View>
       </FormScroll>
-
-
+        )}
+      </OperationsScreenChrome>
 
       <ScanSheet
         open={intake.scanOpen}

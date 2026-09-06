@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ClosedTransferContract } from '@lezzet/types';
 
@@ -13,6 +13,7 @@ import { OperationsQuantityBox } from '@/components/operations/quantity-box';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -22,7 +23,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { TextAction } from '@/components/ui/text-action';
 import { TextField } from '@/components/ui/text-field';
 import { captionOf } from '@/lib/operations/caption';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { useOperationsWorkplace } from '@/screens/operations/sections-context';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -229,8 +230,16 @@ export function TransferScreen() {
   if (transfer === null) {
     return (
       <View style={styles.screen} testID="warehouse-transfer">
-        {header}
-        <ScrollView contentContainerStyle={styles.list} testID="warehouse-transfer-queue">
+        {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+            bu kaptan besleniyor. Başlık İÇERİDE — dışarıda kalsaydı mikro şerit inince altında
+            asılı kalırdı. Öteki dallar kaydırılmıyor, orada başlık doğrudan çiziliyor. */}
+        <OperationsScreenScroll
+          title={t.transfer.title}
+          caption={operationsCopy.sections.warehouse.tab}
+          contentContainerStyle={styles.list}
+          testID="warehouse-transfer-queue"
+        >
+          {header}
           {/* GELEN bölümü boşsa BAŞLIĞI DA ÇİZİLMEZ: altında hiçbir satır olmayan bir "KABUL
               BEKLİYOR" başlığı, bir iş varmış gibi okunur. Aynı kural üç bölümde de geçerli. */}
           {transferState.transfers.length === 0 ? null : (
@@ -439,7 +448,7 @@ export function TransferScreen() {
           )}
 
           <Text style={styles.queueFootnote}>{t.transfer.queueFootnote}</Text>
-        </ScrollView>
+        </OperationsScreenScroll>
 
         {/* SALT OKUMA DETAYI (kullanıcı isteği 05.09) — yoldaki ve kapanmış kaydın içi.
             ÇEKMECE, ekran değil: liste yerinde kalıyor ve kapanınca operatör baktığı yere dönüyor.

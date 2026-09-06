@@ -1,17 +1,18 @@
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsKeypadPanel } from '@/components/operations/keypad-panel';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
 import type { NearExpiryBatchContract } from '@lezzet/types';
@@ -63,15 +64,23 @@ export function NearExpiryScreen() {
 
   /* Partiyi D4'e taşıyan tek yol — hem satırdaki bağ hem alttaki düğme buradan geçiyor.
      İki ayrı çağrı yazsaydık biri bir gün ötekinden başka parametre gönderirdi. */
+  /* Başlık DEĞİŞKEN, çünkü iki ayrı yere giriyor (21.178): kaydırılan dalda kabın İÇİNE (mikro
+     şerit inince altında asılı kalmasın diye), kaydırılmayan üç hâlde doğrudan ekrana. */
+  const header = (
+    <OperationsStackHeader
+      title={t.nearExpiry.title}
+      subtitle={t.nearExpiry.caption}
+      onBack={() => router.back()}
+      backLabel={t.common.back}
+      testID="warehouse-near-expiry-header"
+    />
+  );
+
   return (
     <View style={styles.screen} testID="warehouse-near-expiry">
-      <OperationsStackHeader
-        title={t.nearExpiry.title}
-        subtitle={t.nearExpiry.caption}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="warehouse-near-expiry-header"
-      />
+      {nearExpiry.status === 'loading' || nearExpiry.status === 'error' || nearExpiry.batches.length === 0
+        ? header
+        : null}
 
       {/*
         ÜÇ HÂL, ÜÇ CEVAP (skeleton yapısı 31.08).
@@ -112,7 +121,16 @@ export function NearExpiryScreen() {
           />
         </View>
       ) : (
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-near-expiry-list">
+      /* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+         bu kaptan besleniyor. Kap yalnız DOLU listede var — öteki üç hâl kaydırılmıyor, mikro
+         başlığın çizecek bir şeyi de yok. */
+      <OperationsScreenScroll
+        title={t.nearExpiry.title}
+        caption={operationsCopy.sections.warehouse.tab}
+        contentContainerStyle={styles.list}
+        testID="warehouse-near-expiry-list"
+      >
+        {header}
         {/* REJİM KURALI EN ÜSTTE (tasarım 31.08) — listeyi okumadan önce okunacak tek cümle.
             Bu blok olmadan ekran doğru kararı gösteriyor ama SEBEBİNİ söylemiyordu: "geçti" yazan
             her satır imhalık sanılıyordu ve depocu satılabilir malı çöpe atabilirdi. */}
@@ -221,7 +239,7 @@ export function NearExpiryScreen() {
             {nearExpiry.discardError}
           </Text>
         )}
-      </ScrollView>
+      </OperationsScreenScroll>
       )}
 
       {/*

@@ -1,15 +1,16 @@
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ORDER_STATUS_LABELS, type AwaitingHandoverBoxContract } from '@lezzet/types';
 
 import { OperationsScanFab } from '@/components/operations/scan-fab';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ScanSheet } from '@/components/scan/scan-sheet';
 import { Icon } from '@/components/ui/icon';
 import { fetchPendingHandover, handOverBox } from '@/lib/api/warehouse';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
@@ -223,15 +224,23 @@ export function HandoverScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-handover">
-      <OperationsStackHeader
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+          bu kaptan besleniyor. Başlık KAYDIRICININ İÇİNDE — dışarıda kalsaydı mikro şerit inince
+          altında asılı kalırdı. */}
+      <OperationsScreenScroll
         title={t.handover.title}
-        subtitle={t.handover.subtitle}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="warehouse-handover-header"
-      />
+        caption={operationsCopy.sections.warehouse.tab}
+        contentContainerStyle={styles.list}
+        testID="warehouse-handover-list"
+      >
+        <OperationsStackHeader
+          title={t.handover.title}
+          subtitle={t.handover.subtitle}
+          onBack={() => router.back()}
+          backLabel={t.common.back}
+          testID="warehouse-handover-header"
+        />
 
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-handover-list">
         {/* EKRANIN KURALI HER ZAMAN GÖRÜNÜR (v3:1686) — "hangi siparişi vereceğini seçmiyorsun"
             bu ekranın tasarım kararıdır. Kaybolan bir kural, ikinci kutuda unutulur. */}
         <Text style={styles.scanRule}>{t.handover.scanRule}</Text>
@@ -320,7 +329,7 @@ export function HandoverScreen() {
         )}
 
         {rows.length === 0 ? null : <Text style={styles.footnote}>{t.handover.footnote}</Text>}
-      </ScrollView>
+      </OperationsScreenScroll>
 
       {/* OKUTMA FAB'DA (kullanıcı isteği 05.09) — sayım, düşüm ve yükleme ekranlarının aynı
           kararı: kaydırılan içeriğin DIŞINDA, sağ altta sabit. İki bölümlü gövdede satır içi bir

@@ -1,5 +1,13 @@
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, RefreshControl, ScrollView, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  RefreshControl,
+  ScrollView,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import type { RefObject } from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 
@@ -78,12 +86,32 @@ interface FormScrollProps {
    * saniyede onlarca olay üretir ve kapı burada olsaydı her kaydıran ekranda tekrarlanırdı.
    */
   onEndReached?: () => void;
+  /**
+   * **Dışarıdan gelen kaydırma dinleyicisi** (21.178) — operasyon kabuğunun bağlantısı.
+   *
+   * Kap zaten kendi `onScroll`unu kuruyor (dibe yaklaşma ölçümü), yani prop'u olduğu gibi geçirmek
+   * onu EZERDİ. Burada ikisi birlikte koşuyor: önce dışarıdaki dinleyici, sonra kendi ölçümü.
+   * Kabuk bağlıyken olay sıklığı da 16 ms'ye çıkıyor — yapışkan başlık 200 ms'de tökezliyor.
+   */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  /** Kabuğun istediği olay sıklığı; verilmezse kap kendi ölçümüne göre seçer. */
+  scrollEventThrottle?: number;
 }
 
 /** Dibe "yaklaşmış" sayılan mesafe (dp) — bir satır boyu kadar: sayfa, depocu dibe varmadan gelsin. */
 const END_REACHED_MARGIN = 96;
 
-export function FormScroll({ children, contentContainerStyle, testID, refresh, scrollRef, onEndReached }: FormScrollProps) {
+export function FormScroll({
+  children,
+  contentContainerStyle,
+  testID,
+  refresh,
+  scrollRef,
+  onEndReached,
+  onScroll,
+  scrollEventThrottle,
+}: FormScrollProps) {
+  const dinleniyor = onEndReached !== undefined || onScroll !== undefined;
   return (
     /* `behavior="padding"`: çekmecede ölçülmüş olan davranış. Android'de `height` de bir seçenek
        ama panelin yüksekliğini zorlar; `padding` yalnız altına boşluk ekler ve kaydırıcı o boşluğu
@@ -93,11 +121,14 @@ export function FormScroll({ children, contentContainerStyle, testID, refresh, s
         ref={scrollRef}
         contentContainerStyle={contentContainerStyle}
         keyboardShouldPersistTaps="handled"
-        scrollEventThrottle={onEndReached === undefined ? undefined : 200}
+        scrollEventThrottle={dinleniyor ? (scrollEventThrottle ?? 200) : undefined}
         onScroll={
-          onEndReached === undefined
+          !dinleniyor
             ? undefined
             : (event) => {
+                // Dışarıdaki dinleyici ÖNCE: kabuğun şeridi kaydırmanın ilk karesinde tepki vermeli.
+                onScroll?.(event);
+                if (onEndReached === undefined) return;
                 const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
                 const remaining = contentSize.height - contentOffset.y - layoutMeasurement.height;
                 if (remaining <= END_REACHED_MARGIN) onEndReached();

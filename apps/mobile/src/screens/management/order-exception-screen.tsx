@@ -1,14 +1,15 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { money } from '@/lib/operations/money';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import type { ExceptionLine, OrderException } from '@lezzet/types';
 import { managementCopy } from './copy';
@@ -53,15 +54,21 @@ export function OrderExceptionScreen() {
   const exceptions = useExceptions();
   const { state } = exceptions;
 
+  const header = (
+    <OperationsStackHeader
+      title={t.exception.title}
+      subtitle={t.exception.caption}
+      onBack={() => router.back()}
+      backLabel={t.common.back}
+      testID="management-order-exception-header"
+    />
+  );
+
   return (
     <View style={styles.screen} testID="management-order-exception">
-      <OperationsStackHeader
-        title={t.exception.title}
-        subtitle={t.exception.caption}
-        onBack={() => router.back()}
-        backLabel={t.common.back}
-        testID="management-order-exception-header"
-      />
+      {/* Başlık DEĞİŞKEN, çünkü iki yere giriyor (21.178): kaydırılan dalda kabın İÇİNE, öteki
+          hâllerde doğrudan ekrana. */}
+      {state.status === 'ready' && state.exceptions.length > 0 ? null : header}
 
       {state.status === 'loading' ? (
         /* İLK YÜK İSKELETLE (v3 dili) — iki karar kartı yüksekliğinde kutu. */
@@ -77,7 +84,7 @@ export function OrderExceptionScreen() {
           <OperationsNoticeBlock
             variant="error"
             title={t.common.error.title}
-            description={t.common.error.body}
+            description={operationsFailureText(state.failure)}
             retry={{ label: t.common.error.retry, onPress: exceptions.retry }}
             testID="management-exception-error"
           />
@@ -92,12 +99,19 @@ export function OrderExceptionScreen() {
           />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.body} testID="management-order-exception-body">
+        /* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178). */
+        <OperationsScreenScroll
+          title={t.exception.title}
+          caption={operationsCopy.sections.management.tab}
+          contentContainerStyle={styles.body}
+          testID="management-order-exception-body"
+        >
+          {header}
           {state.exceptions.map((exception) => (
             <ExceptionCard key={exception.orderId} exception={exception} exceptions={exceptions} />
           ))}
           <Text style={styles.footnote}>{t.exception.sendRestNote}</Text>
-        </ScrollView>
+        </OperationsScreenScroll>
       )}
     </View>
   );

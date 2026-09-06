@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
@@ -16,7 +17,7 @@ import { ScanSheet } from '@/components/scan/scan-sheet';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { fetchVanStock } from '@/lib/api/courier';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
@@ -196,9 +197,16 @@ export function CourierLoadScreen() {
 
   return (
     <View style={styles.screen} testID="courier-load">
-      {header}
-
-      <ScrollView contentContainerStyle={styles.list} testID="courier-load-list">
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE — dışarıda kalsaydı mikro şerit inince
+          altında asılı kalırdı. */}
+      <OperationsScreenScroll
+        title={t.day.load.title}
+        caption={operationsCopy.sections.courier.tab}
+        contentContainerStyle={styles.list}
+        testID="courier-load-list"
+      >
+        {header}
         {/*
           SAYAÇ KARTI KOYU (v3:1412 · 30.08 ikinci tur) — günün rotasındaki özet kartıyla AYNI
           aileden ve aynı sebeple: rampada kuryenin ilk bakışı buraya düşmeli. Krem çizilmişti ve
@@ -394,7 +402,7 @@ export function CourierLoadScreen() {
         </PressableSurface>
 
 
-      </ScrollView>
+      </OperationsScreenScroll>
 
       {/*
         OKUTMA YÜZEN DÜĞMEDE (kullanıcı kararı 01.09 · kitin kendi künyesi bunu 31.08'de zaten

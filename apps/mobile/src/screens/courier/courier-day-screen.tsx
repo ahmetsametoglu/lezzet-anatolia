@@ -1,12 +1,13 @@
 import { useRouter } from 'expo-router';
 import { Fragment } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierDayResponse, CourierStopContract } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProgressBar } from '@/components/operations/progress-bar';
 import { ScanSheet } from '@/components/scan/scan-sheet';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { NotificationBell } from '@/components/operations/notification-bell';
@@ -286,8 +287,8 @@ export function CourierDayScreen() {
 
   return (
     <View style={styles.screen} testID="operations-section-courier">
-      {header}
-
+      {/* BAŞLIK ARTIK DALLARIN İÇİNDE (21.178): kaydırıcının dışında kalınca mikro şerit inince
+          altında asılı kalıyordu. Üç dalın üçü de kabı çiziyor ve başlığı içeriye alıyor. */}
       {selecting ? (
         /*
           ARAÇ BOŞ — REHBER, LİSTE DEĞİL (v3:15 · kullanıcı bulgusu 31.08).
@@ -301,7 +302,15 @@ export function CourierDayScreen() {
           Seçimin kendi ekranı olması işlevsel de: sefer AÇIKKEN de gerekiyor (araca ikinci sefer
           eklemek), yani gün ekranının boş hâline bağlı olamaz.
         */
-        <ScrollView contentContainerStyle={styles.list} testID="courier-day-routes">
+        /* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — üç dalın üçünde de: yapışkan mikro başlık ve
+           alt çubuk gizlemesi bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE. */
+        <OperationsScreenScroll
+          title={t.day.title}
+          caption={operationsCopy.sections.courier.tab}
+          contentContainerStyle={styles.list}
+          testID="courier-day-routes"
+        >
+          {header}
           <StrandedStrip stops={day.stranded} />
           <View style={styles.guide} testID="courier-day-guide">
             <Text style={styles.guideTitle}>{t.day.vanEmpty.title}</Text>
@@ -329,14 +338,20 @@ export function CourierDayScreen() {
             `DOMAIN §17`: satan kişi malın yanında duran personeldir). Sefersiz kuryeye araçtan
             satış açmak, çoğu zaman boş bir aracın kataloğunu açmaktı.
           */}
-        </ScrollView>
+        </OperationsScreenScroll>
       ) : vanLoaded ? (
         /*
           ARAÇTA YÜK VAR, SÜRÜLEN SEFER YOK (v3:14) — 31.08'de doğan üçüncü hâl.
           Kutular araçta ama hiçbir sefer başlatılmamış: duraklar açılmaz ve müşteriye haber
           gitmez. Ekran bunu SÖYLER ve tek bir yol gösterir — v3:15, "birini başlat".
         */
-        <ScrollView contentContainerStyle={styles.list} testID="courier-day-van">
+        <OperationsScreenScroll
+          title={t.day.title}
+          caption={operationsCopy.sections.courier.tab}
+          contentContainerStyle={styles.list}
+          testID="courier-day-van"
+        >
+          {header}
           <StrandedStrip stops={day.stranded} />
           <OperationsNoticeBlock
             variant="empty"
@@ -385,9 +400,15 @@ export function CourierDayScreen() {
           />
           {/* Satış kapısı BURADA DA yok: kutular araçta ama araç henüz yola çıkmadı — üstteki
               künyenin aynı gerekçesi. Ekranın tek yolu "birini başlat" (v3:15). */}
-        </ScrollView>
+        </OperationsScreenScroll>
       ) : (
-        <ScrollView contentContainerStyle={styles.list} testID="courier-day-list">
+        <OperationsScreenScroll
+          title={t.day.title}
+          caption={operationsCopy.sections.courier.tab}
+          contentContainerStyle={styles.list}
+          testID="courier-day-list"
+        >
+          {header}
           <StrandedStrip stops={day.stranded} />
           {/*
             ÜST GÖVDE — durak VARSA özet kartı, YOKSA künye şeridi + boş bloğu.
@@ -621,7 +642,7 @@ export function CourierDayScreen() {
               <Text style={styles.stopsFootnote}>{t.day.stopsFootnote}</Text>
             </>
           )}
-        </ScrollView>
+        </OperationsScreenScroll>
       )}
 
       {/* YAPIŞKAN CTA — liste altından akar, gradyan onu kesmeden bitirir (v2:89).

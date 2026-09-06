@@ -6,6 +6,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { OPERATIONS_SECTIONS, type OperationsSection } from '@/lib/operations/sections';
@@ -137,14 +138,20 @@ export function OperationsNotificationsScreen() {
 
   return (
     <View style={styles.screen}>
-      <OperationsStackHeader
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE. */}
+      <OperationsScreenScroll
         title={t.notifications.title}
-        subtitle={t.notifications.subtitle}
-        onBack={() => router.back()}
-        backLabel={t.notifications.back}
-        testID="operations-notifications-header"
-      />
-      <ScrollView contentContainerStyle={styles.list} testID="operations-notifications-list">
+        contentContainerStyle={styles.list}
+        testID="operations-notifications-list"
+      >
+        <OperationsStackHeader
+          title={t.notifications.title}
+          subtitle={t.notifications.subtitle}
+          onBack={() => router.back()}
+          backLabel={t.notifications.back}
+          testID="operations-notifications-header"
+        />
         {feed.state.status === 'loading' ? (
           /* İlk yük — boş hâlle KARIŞMAZ: yüklemeyi "sakin" gibi okutmak yanlış boştu (26.08). */
           <OperationsSkeletonList
@@ -231,7 +238,7 @@ export function OperationsNotificationsScreen() {
             </View>
           </>
         )}
-      </ScrollView>
+      </OperationsScreenScroll>
     </View>
   );
 }

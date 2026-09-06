@@ -14,6 +14,7 @@ import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
 import { OperationsScanQtySheet } from '@/components/operations/scan-qty-sheet';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { PrintProbe } from '@/components/print/print-probe';
@@ -24,7 +25,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
 import { toastInfo } from '@/lib/toast/toast-store';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { warehouseCopy } from './copy';
@@ -246,8 +247,15 @@ export function PreparationScreen() {
   if (order === null) {
     return (
       <View style={styles.screen} testID="warehouse-picking">
-        {header}
-        <ScrollView contentContainerStyle={styles.queueList} testID="warehouse-picking-queue">
+        {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — başlık kaydırıcının İÇİNDE, yoksa mikro
+            şerit inince altında asılı kalıyor. */}
+        <OperationsScreenScroll
+          title={t.picking.title}
+          caption={operationsCopy.sections.warehouse.tab}
+          contentContainerStyle={styles.queueList}
+          testID="warehouse-picking-queue"
+        >
+          {header}
           {/* Son kapanan kutunun etiketi (23.7): sipariş hazır olup kuyruktan düşse de kart
               burada kalır — depocu "ne bastıracağını" kapanış anında okur. */}
           <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
@@ -320,7 +328,7 @@ export function PreparationScreen() {
           </View>
 
           <Text style={styles.queueFootnote}>{done ? t.picking.scope.doneFootnote : t.picking.queueFootnote}</Text>
-        </ScrollView>
+        </OperationsScreenScroll>
 
         {/*
           HAZIRLIK KÂĞIDININ QR'I ARTIK FAB (kullanıcı isteği 01.09) — akıştaki düğme değil.
@@ -413,9 +421,15 @@ export function PreparationScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-picking">
-      {header}
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — sipariş dalında da aynı kural. */}
+      <OperationsScreenScroll
+        title={order.referenceNo ?? t.picking.title}
+        caption={operationsCopy.sections.warehouse.tab}
+        contentContainerStyle={styles.list}
+        testID="warehouse-picking-lines"
+      >
+        {header}
 
-      <ScrollView contentContainerStyle={styles.list} testID="warehouse-picking-lines">
         {/* Son kapanan kutunun etiketi (23.7) — ara kutu kapanışında burada görünür. */}
           <DispatchCard state={picking.dispatch} onStart={picking.startDispatch} onClose={picking.dismissDispatch} />
         {/* KOLİYE YAZILACAK AD (23.3, mobil şeridin işareti) — yalnız alıcı hesabın sahibinden
@@ -563,7 +577,7 @@ export function PreparationScreen() {
             <Text style={styles.footnote}>{t.picking.footnote}</Text>
           </>
         )}
-      </ScrollView>
+      </OperationsScreenScroll>
 
       {/*
         OKUTMA HER ZAMAN ELİN ALTINDA (kullanıcı kararı 31.08) — kaydırmayla kaybolmaz.

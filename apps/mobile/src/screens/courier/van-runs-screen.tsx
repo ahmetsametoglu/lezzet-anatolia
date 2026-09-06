@@ -1,19 +1,20 @@
 import { useState, type ReactNode } from 'react';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRunDetail } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStatusBadge } from '@/components/operations/status-badge';
 import { OperationsSurface } from '@/components/operations/surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { SecondaryButton } from '@/components/ui/secondary-button';
 import { TextAction } from '@/components/ui/text-action';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { courierCopy } from './copy';
 import { dayTagOf } from './day-tag';
@@ -106,9 +107,14 @@ export function CourierVanRunsScreen() {
 
   return (
     <View style={styles.screen} testID="courier-van-runs">
-      {header}
-
-      <ScrollView contentContainerStyle={styles.list}>
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE. */}
+      <OperationsScreenScroll
+        title={t.day.vanRuns.title}
+        caption={operationsCopy.sections.courier.tab}
+        contentContainerStyle={styles.list}
+      >
+        {header}
         {/* ÜST BLOK KOYU (v3:16 `#2f353a`) — kitin `ink` tonu. Açık bir yüzeyle çizilmişti ve
             ekranın ağırlık merkezi kayboluyordu: bu blok "araçta ne var" özetini taşıyor ve
             tasarımda sayfanın tek koyu alanı. */}
@@ -387,7 +393,7 @@ export function CourierVanRunsScreen() {
 
         {/* Yola çıkarma/araçtan çıkarma sonucu TOAST'ta (kullanıcı kararı 01.09) — listenin
             SONUNA yazılıyordu, yani kurye kartlara bakarken sonucu görmüyordu bile. */}
-      </ScrollView>
+      </OperationsScreenScroll>
 
       {/*
         ÇIKARMANIN BEDELİ ÇEKMECEDE YAZILI — kaç sipariş serbest kalıyor, kaç kutu rampada.

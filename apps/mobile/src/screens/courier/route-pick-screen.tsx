@@ -1,18 +1,19 @@
 import { Fragment, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { CourierRoute } from '@lezzet/types';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStickyBar } from '@/components/operations/sticky-bar';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { useOperationsUserName } from '@/screens/operations/sections-context';
 import { timeOf } from '@/lib/operations/stamp';
 import { operationsTheme } from '@/theme/unistyles';
@@ -140,9 +141,15 @@ export function CourierRoutePickScreen() {
 
   return (
     <View style={styles.screen} testID="courier-route-pick">
-      {header}
-
-      <ScrollView contentContainerStyle={[styles.list, { paddingBottom: barHeight + operationsTheme.space.xl }]}>
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE — dışarıda kalsaydı mikro şerit inince
+          altında asılı kalırdı. */}
+      <OperationsScreenScroll
+        title={t.routePick.title}
+        caption={operationsCopy.sections.courier.tab}
+        contentContainerStyle={[styles.list, { paddingBottom: barHeight + operationsTheme.space.xl }]}
+      >
+        {header}
         {/* ── ARAÇ: TEK SATIR + ÇEKMECE (v3:17) ───────────────────────── */}
         <VehicleGate
           value={
@@ -208,7 +215,7 @@ export function CourierRoutePickScreen() {
             </View>
           </View>
         )}
-      </ScrollView>
+      </OperationsScreenScroll>
 
       <OperationsStickyBar onHeight={setBarHeight}>
         {/* DÜĞME EKSİĞİ SÖYLER (v3:17 `seferCtaLabel`): sefer yoksa "önce sefer seç", sefer var

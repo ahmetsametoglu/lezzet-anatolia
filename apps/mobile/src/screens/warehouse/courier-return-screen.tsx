@@ -12,11 +12,12 @@ import { OperationsQuantityBox } from '@/components/operations/quantity-box';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { qtySheetCopy, warehouseCopy } from './copy';
@@ -150,9 +151,16 @@ export function CourierReturnScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-courier-return">
-      {header}
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı.
+          Başlık kaydırıcının İÇİNDE: dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      <OperationsScreenChrome
+        title={detail === null ? t.return.title : (detail.courierName ?? t.return.orphanName)}
+        caption={operationsCopy.sections.warehouse.tab}
+      >
+        {(bind) => (
+      <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-return-body">
+        {header}
 
-      <FormScroll contentContainerStyle={styles.list} testID="warehouse-return-body">
         {detail.drops.length === 0 ? null : <Text style={styles.heading}>{t.return.heading}</Text>}
 
         {detail.drops.flatMap((drop) =>
@@ -316,6 +324,8 @@ export function CourierReturnScreen() {
 
         <Text style={styles.footnote}>{t.return.footnote}</Text>
       </FormScroll>
+        )}
+      </OperationsScreenChrome>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {/* ÇEVRİMDIŞI SEBEBİ (v3:1284) — kilidin gerekçesi akıbetin kendisinde: dönen mal stoğa

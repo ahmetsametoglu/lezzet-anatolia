@@ -8693,13 +8693,65 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **BEKLEYEN(21.178):** kalan 15 operasyon ekranı hâlâ kabuğa bağlı değil; her biri
   `OperationsScreenScroll`e çevrilecek.
 
-- [ ] (21.178) **KALAN 15 EKRAN KABUĞA BAĞLANACAK** (30.08)
-  `touches:` `apps/mobile/src/screens/{warehouse,courier,management,money}/*-screen.tsx`
+- [x] (21.178) **KALAN EKRANLAR KABUĞA BAĞLANDI — yapışkan başlık artık her ekranda** (30.08 · kullanıcı isteği 06.09)
+  `touches:` `apps/mobile/src/components/operations/screen-scroll.tsx` ·
+  `apps/mobile/src/components/operations/micro-header.tsx` ·
+  `apps/mobile/src/components/ui/form-scroll.tsx` · `knip.json` ·
+  depo 8 (`printer-setup-screen.tsx` · `handover-screen.tsx` · `near-expiry-screen.tsx` ·
+  `transfer-screen.tsx` · `intake-screen.tsx` · `preparation-screen.tsx` · `stock-count-screen.tsx` ·
+  `write-off-screen.tsx` · `courier-return-screen.tsx`) · kurye 6 (`courier-day-screen.tsx` ·
+  `load-screen.tsx` · `route-pick-screen.tsx` · `van-runs-screen.tsx` · `van-stock-screen.tsx` ·
+  `day-close-screen.tsx` · `delivery-screen.tsx`) · yönetim 5 (`day-summary-screen.tsx` ·
+  `management-hub-screen.tsx` · `order-exception-screen.tsx` · `supply-suggestion-screen.tsx` ·
+  `offer-approval-screen.tsx` · `social-inbox-screen.tsx`) · `money/day-end-screen.tsx` ·
+  `operations/notifications-screen.tsx`
 
-  **Kapsam.** Kendi kaydırıcısını kuran 17 ekrandan ikisi bağlandı (depo hub · para kökü).
-  Kalanların her biri `OperationsScreenScroll`e (ya da `FlatList` ise
-  `useOperationsScrollBinding()`e) çevrilecek; başlığı kaydırıcının dışında olan ekranlarda
-  başlık İÇERİ alınacak — dışarıda kalırsa mikro başlık inince altında asılı kalıyor.
+  **ÖLÇÜLEN BAŞLANGIÇ (06.09).** 30.08'de "17 ekrandan ikisi" yazılmıştı; ölçüm bugün **28 operasyon
+  ekranından 2'si** dedi (depo hub · para kökü). Yani o 26 ekranda yapışkan mikro başlık da alt çubuk
+  gizlemesi de **hiç doğmuyordu** — 21.177 makineyi düzeltmiş, ekranlara takmayı buraya bırakmıştı.
+
+  **İKİNCİ KAPI AÇILDI: `OperationsScreenChrome`.** Ekranların hepsi `ScrollView` kullanmıyor —
+  yedi ekran `FormScroll` (klavye farkında), biri `FlatList` (sanallaştırılmış). İkisi de
+  `OperationsScreenScroll`e SARILAMAZ: iç içe kaydırıcı ya sanallaştırmayı öldürür ya klavye
+  davranışını bozar. Krom **render prop** ile çalışıyor: şeridi kendisi çizer, kaydırıcının
+  bağlantı proplarını çağırana verir. Kanca döndüren bir çözüm şeridi çizmeyi çağırana bırakırdı
+  ve 30.08'de ölçülen şey tam buydu — elle kurulan çok parçalı davranış kurulmuyor. İkisi tek
+  çağrıdan geliyor, yarısını almak mümkün değil. `OperationsScreenScroll` de bu kapıdan besleniyor
+  (aynı mantığın ikinci kopyası yok, CLAUDE §1). 31.08'de knip'in söktüğü `useOperationsScrollBinding`
+  ~~geri açılmadı~~ — tüketicisi yine olmazdı, krom onun yerini aldı.
+
+  **`FormScroll`a bir kapı eklendi:** kap kendi `onScroll`unu kuruyor (dibe yaklaşma ölçümü), yani
+  prop'u olduğu gibi geçirmek onu EZERDİ. Artık ikisi birlikte koşuyor ve kabuk bağlıyken olay
+  sıklığı 200 → 16 ms'ye çıkıyor (yapışkan başlık 200 ms'de tökezliyor).
+
+  **YAN BULGU — mikro şerit gizliyken de erişilebilirlik ağacındaydı.** Şerit sayfanın başlığını
+  tekrar ediyor; görünürken doğru, gizliyken ekranda aynı başlıktan iki tane oluyor ve ekran
+  okuyucu ikisini de duyuruyordu. `pointerEvents` dokunuşu zaten kesiyordu, ses kesilmiyordu.
+  `accessibilityElementsHidden` + `importantForAccessibility` eklendi (iki platform, iki prop).
+  Kurye testleri bunu "aynı başlıktan iki tane" diye yakaladı — arıza testle bulundu.
+
+  **BİLİNÇLİ İSTİSNA — sosyal yazışma ekranı bağlanmadı.** `ChatLayout` bir sayfa değil bir sohbet:
+  üstte sabit şeritler (`above`), altta sabit yazma çubuğu, arada klavyeyle kısalan bir alan. Mikro
+  şerit `above`ın üstüne binerdi ve kazancı olmayan bir çakışma üretirdi. Gelen kutusu (`FlatList`)
+  bağlandı; süzgeç şeridi bilerek listenin DIŞINDA kaldı — gezinme aracı, kaydırırken elden çıkmamalı.
+
+  **Doğrulama:** kök typecheck · lint · knip temiz · mobil paket **1361/1361**. (`knip.json`a
+  `packages/application → @expo-google-fonts/karla` istisnası girdi: bağımlılık `require.resolve`
+  ile dinamik çözülüyor, knip statik göremiyor — 21.269'un etiket ölçüsünden.)
+
+  **CİHAZ TURU — Poco 2311DRK48G, Android 15 (06.09 · 18:35–18:40).** Üç yol da ayakta:
+  · **Düz `ScrollView`** (toplama kuyruğu): tam başlık yukarı kayıyor, şerit iniyor — solda
+    "Toplama", sağda "Depo".
+  · **Krom kapısı / `FormScroll`** (mal kabul): şerit sevkiyatın künyesini taşıyor
+    (`TS-26-EWV7GR`) — dinamik başlık kaba doğru geçiyor.
+  · **Satış iskeleti**: üç kutu, opaklık merdiveni ve "Katalog yükleniyor…"; halka yok. Yerel
+    sunucu bir saniyeden kısa cevap verdiği için normal turda görünmüyor — hızlı kareyle yakalandı.
+
+  **Bir gözlem ÖLÇÜMLE düzeltildi:** şerit ilk bakışta durum çubuğu bandını kapatmıyor sanıldı
+  (arkadaki başlık soluk soluk okunuyordu). Pikseller aksini söyledi — bandın rengi `242,239,226`,
+  yani şeridin krem camı oraya kadar uzanıyor. Görünen soluk metin `cream-glass`ın %96 saydamlığının
+  kendi etkisi, yani tasarımın istediği buzlu cam. Aynı görüntü 21.177'de bağlanmış olan depo
+  hub'ında da var: gerileme değil, şeridin normal hâli.
 
 - [x] (21.179) **iOS'TA ADET ÇEKMECESİ AÇILMIYORDU — iki `Modal` aynı pencerede** (kullanıcı bulgusu 30.08)
   `touches:` `apps/mobile/src/components/scan/scan-sheet.tsx` ·

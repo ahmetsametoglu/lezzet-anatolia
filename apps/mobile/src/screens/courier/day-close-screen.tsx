@@ -8,11 +8,12 @@ import { OperationsConfirmSheet } from '@/components/operations/confirm-sheet';
 import { OperationsDashedRule } from '@/components/operations/dashed-rule';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsSurface } from '@/components/operations/surface';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { operationsTheme } from '@/theme/unistyles';
 import { centsToAmountText, money } from '@/lib/operations/money';
 import { courierCopy } from './copy';
@@ -138,9 +139,15 @@ export function CourierDayCloseScreen({ runId }: CourierDayCloseScreenProps) {
 
   return (
     <View style={styles.screen} testID="courier-day-close">
-      {header}
-
-      <FormScroll contentContainerStyle={styles.body} testID="courier-day-close-body">
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı.
+          Başlık kaydırıcının İÇİNDE: dışarıda kalsaydı mikro şerit inince altında asılı kalırdı. */}
+      <OperationsScreenChrome
+        title={t.dayClose.title}
+        caption={operationsCopy.sections.courier.tab}
+      >
+        {(bind) => (
+      <FormScroll {...bind} contentContainerStyle={styles.body} testID="courier-day-close-body">
+        {header}
         {dayClose.closed ? (
           <View style={styles.closedBox} testID="courier-day-close-readonly">
             <Text style={styles.closedText}>{t.dayClose.closed}</Text>
@@ -248,6 +255,8 @@ export function CourierDayCloseScreen({ runId }: CourierDayCloseScreenProps) {
           />
         </View>
       </FormScroll>
+        )}
+      </OperationsScreenChrome>
 
       {keypadRow === null ? null : (
         <OperationsAmountKeypad

@@ -76,6 +76,19 @@ export function OperationsMicroHeader({ title, caption, testID }: OperationsMicr
       /* Gizliyken dokunuşu geçirir: şerit tepede duruyor ve `pointerEvents="none"` olmasaydı
          kapalıyken bile altındaki başlığın dokunuşlarını yerdi. */
       pointerEvents="none"
+      /*
+        GİZLİYKEN ERİŞİLEBİLİRLİK AĞACINDAN DA ÇIKAR (21.178).
+
+        Şerit sayfanın başlığını TEKRAR ediyor. Görünürken bu doğru — tam başlık yukarı kaymış,
+        ekrandaki tek başlık bu. Gizliyken ise ekranda AYNI başlıktan iki tane oluyor ve ekran
+        okuyucu ikisini de duyuruyordu: "Günün Rotası, başlık… Günün Rotası, başlık".
+        `pointerEvents` dokunuşu zaten kesiyordu; bu satır sesi kesiyor.
+
+        İki prop birlikte veriliyor çünkü platformlar ayrı: iOS `accessibilityElementsHidden`
+        okuyor, Android `importantForAccessibility`.
+      */
+      accessibilityElementsHidden={!microVisible}
+      importantForAccessibility={microVisible ? 'auto' : 'no-hide-descendants'}
       testID={testID}
     >
       {/* ŞERİT GÜVENLİ ALANI DA KAPLAR (kullanıcı bulgusu 30.08, iki cihazda ölçüldü):

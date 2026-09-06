@@ -1,9 +1,10 @@
 import { useRouter } from 'expo-router';
-import { RefreshControl, ScrollView, Text, useWindowDimensions, View } from 'react-native';
+import { RefreshControl, Text, useWindowDimensions, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { NotificationBell } from '@/components/operations/notification-bell';
+import { OperationsScreenScroll } from '@/components/operations/screen-scroll';
 import { OperationsSectionHeader } from '@/components/operations/section-header';
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
@@ -12,7 +13,7 @@ import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
 import { agoOf } from '@/lib/operations/stamp';
-import { fillCopy, operationsCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy, operationsFailureText } from '@/screens/operations/copy';
 import { useOperationsNotificationBadge } from '@/screens/operations/use-notification-badge.hook';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -339,6 +340,17 @@ export function ManagementHubScreen() {
 
   return (
     <View style={styles.screen} testID="operations-section-management">
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178): yapışkan mikro başlık ve alt çubuk gizlemesi
+          bu kaptan besleniyor. Başlık kaydırıcının İÇİNDE — depo hub'ının deseni. */}
+      <OperationsScreenScroll
+        title={t.hub.title}
+        caption={operationsCopy.sections.management.tab}
+        contentContainerStyle={styles.body}
+        refreshControl={
+          <RefreshControl refreshing={reloading} onRefresh={refresh} {...pullRefreshColors(operationsTheme.colors.olive)} />
+        }
+        testID="management-hub-body"
+      >
       <OperationsSectionHeader
         section="management"
         eyebrow={t.hub.eyebrow}
@@ -371,14 +383,8 @@ export function ManagementHubScreen() {
       />
 
       {/* AŞAĞI ÇEKİNCE YENİLE (kullanıcı isteği 30.08, depo hub'ıyla aynı karar): karar kutusu
-          günün kuyruğunu gösteriyor ve tazelemenin tek yolu ekrandan çıkıp girmekti. */}
-      <ScrollView
-        contentContainerStyle={styles.body}
-        refreshControl={
-          <RefreshControl refreshing={reloading} onRefresh={refresh} {...pullRefreshColors(operationsTheme.colors.olive)} />
-        }
-        testID="management-hub-body"
-      >
+          günün kuyruğunu gösteriyor ve tazelemenin tek yolu ekrandan çıkıp girmekti. Kaydırıcı
+          artık kabın kendisi (yukarıda), çekme oraya bağlı. */}
         {state.status === 'loading' ? (
           /* İLK YÜK: HALKA DEĞİL İSKELET (v3'ün ilk-yük dili — `OperationsSkeletonList` künyesi).
              Halka yerleşim tutmaz: söndüğü an kartlar birden doğar ve sayfa zıplar. Üç kutu
@@ -395,7 +401,7 @@ export function ManagementHubScreen() {
             <OperationsNoticeBlock
               variant="error"
               title={t.hub.error.title}
-              description={t.hub.error.body}
+              description={operationsFailureText(state.failure)}
               retry={{ label: t.hub.error.retry, onPress: retry }}
               testID="management-hub-error"
             />
@@ -514,7 +520,7 @@ export function ManagementHubScreen() {
         </View>
 
         <Text style={styles.footnote}>{t.hub.footnote}</Text>
-      </ScrollView>
+      </OperationsScreenScroll>
     </View>
   );
 }

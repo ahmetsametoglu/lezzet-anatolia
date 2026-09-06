@@ -9,13 +9,14 @@ import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
+import { OperationsScreenChrome } from '@/components/operations/screen-scroll';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { OperationsStepperGroup } from '@/components/operations/stepper-group';
 import { OperationsSurface } from '@/components/operations/surface';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { FormScroll } from '@/components/ui/form-scroll';
 import { PressableSurface } from '@/components/ui/pressable-surface';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { AdjustmentResultCard } from './adjustment-result-card';
@@ -189,9 +190,16 @@ export function StockCountScreen() {
 
   return (
     <View style={styles.screen} testID="warehouse-stock-count">
-      {header}
+      {/* KABUK DAVRANIŞLARI TEK KAPIDAN (21.178) — `FormScroll` sarılamadığı için KROM kapısı:
+          şeridi kabuk çizer, bağlantıyı kaba verir. Başlık kaydırıcının İÇİNDE. */}
+      <OperationsScreenChrome
+        title={t.adjustment.count.title}
+        caption={operationsCopy.sections.warehouse.tab}
+      >
+        {(bind) => (
+      <FormScroll {...bind} contentContainerStyle={styles.list} testID="warehouse-stock-count-body">
+        {header}
 
-      <FormScroll contentContainerStyle={styles.list} testID="warehouse-stock-count-body">
         <BatchContextCard batch={batch} onChange={subject.clear} testID="warehouse-stock-count-context" />
 
         {/* PARTİ HANGİ DOLAPTA — açık beyan, sessiz yazım yok. Seçilen alan ANINDA kayda gider
@@ -324,6 +332,8 @@ export function StockCountScreen() {
 
         <Text style={styles.hint}>{t.adjustment.count.footnote}</Text>
       </FormScroll>
+        )}
+      </OperationsScreenChrome>
 
       <LinearGradient {...operationsTheme.gradient.stickyFade} style={styles.sticky}>
         {/* ÇEVRİMDIŞI SEBEBİ YAZILIR, DÜĞME KALIR: eksik olan sebepti — depocu neden
