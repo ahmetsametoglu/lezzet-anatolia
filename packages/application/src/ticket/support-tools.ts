@@ -214,7 +214,14 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
         'Katalogda ürün arar ve müşterinin KENDİ fiyatıyla, KENDİ adresine göre satın alınabilirliğini söyler. ' +
         '"X var mı", "fiyatı ne", "kaça", "hangi boyları var" sorularında MUTLAKA bunu çağır. Tahmin etme.',
       inputSchema: z.object({
-        terim: z.string().min(2).describe('Aranacak ürün adı ya da anahtar kelime — örn. "baklava", "su böreği"'),
+        terim: z
+          .string()
+          .min(2)
+          .describe(
+            'Ürün adı YA DA kategori adı — örn. "baklava", "su böreği", "tatlı", "pasta", "dondurma". ' +
+              'Terim bir kategoriyle eşleşirse araç o kategorinin ürünlerini döndürür ve bunu `kategori` alanıyla söyler; ' +
+              'eşleşmezse adı eşleşen ürünleri döndürür. Hangisi olduğunu ÇIKTIDAKİ `kapsam` alanından oku.',
+          ),
         postaKodu: z
           .string()
           .min(4)
@@ -251,19 +258,41 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             pricingViewerOf(db, customerId),
           ]);
 
-          const katalog = await getCatalogData(db, {
+          const ortak = {
             // Operasyon dili Türkçe ve model Türkçe yazıyor; cevabın müşteri diline çevrilmesi
             // gönderim anında, tek kapıdan yapılıyor (20.2). Araç ikinci bir dil kararı vermez.
-            locale: 'tr',
+            locale: 'tr' as const,
             place,
             viewer,
-            query: { search: terim },
             /* REFERANS okuma — vitrin değil (08.46). Vitrin, kanalında satılamayan ürünü hiç
                listelemiyor ve müşteri için doğrusu o. Ama burada müşteri bir ürünü ADIYLA soruyor;
                süzseydik araç VAR OLAN bir ürün için "katalogda eşleşen ürün yok" derdi. Doğru cümle
                aşağıda zaten kurulu: "bu kanalda satışa kapalı". */
             includeUnsellable: true,
-          });
+          };
+
+          const isimAramasi = await getCatalogData(db, { ...ortak, query: { search: terim } });
+
+          /*
+            ── "TATLI" BİR ÜRÜN ADI DEĞİL, BİR KATEGORİDİR (06.09 · ölçülmüş arıza) ────────────
+            Müşteri *"başka tatlı çeşitleriniz var mı"* diye sordu; araç yalnız ADDA arayabildiği
+            için `Tatlı Simit` döndü ve ajan bir FIRIN ürününü tatlı diye saydı. Model kusuru
+            DEĞİLDİ: kategori ne girdide vardı ne çıktıda — "tatlı bir kategoridir" bilgisini
+            bilse bile kullanacağı bir kapı yoktu.
+
+            Kapı burada açılıyor ve karar ARAÇTA veriliyor, modelde değil: terim bir kategori
+            adıyla eşleşiyorsa arama o kategoriye daraltılır. Modele "önce kategori mi diye bak"
+            demek, unutulabilecek bir talimat olurdu; burada unutulamaz.
+
+            Kategori listesi ayrı bir okumadan gelmiyor — `getCatalogData` onu zaten döndürüyor.
+            İkinci çağrı yalnız gerçekten kategori eşleştiğinde yapılıyor.
+          */
+          const normalize = (s: string) => s.trim().toLocaleLowerCase('tr');
+          const kategori = isimAramasi.categories.find((c) => normalize(c.name) === normalize(terim)) ?? null;
+
+          const katalog = kategori
+            ? await getCatalogData(db, { ...ortak, query: { categorySlug: kategori.slug } })
+            : isimAramasi;
 
           /*
             FİYAT ALANI ADIYLA NE OLDUĞUNU SÖYLER (06.09 · ölçülmüş arıza).
@@ -316,11 +345,34 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
           // Boy listesi yalnız DOLUYSA gönderiliyor: boş dizi, modele "boy yok" diye okunabilecek
           // bir gürültüdür — tek boylu üründe alan hiç olmamalı.
           const boyAlani = boylar.length > 0 ? { boylar: { urun: ilk!.name, secenekler: boylar } } : {};
+
+          /*
+            ── ÇIKTI HANGİ SORUYU CEVAPLADIĞINI SÖYLER ───────────────────────────────────────
+            İki arama aynı şekle sahip ama ANLAMLARI farklı ve model bunu bilmeden doğru cümleyi
+            kuramaz:
+              · kategori araması → "bunlar o kategorinin ürünleri" (küme TAM)
+              · isim araması     → "bunlar adı eşleşen ürünler" (küme kategori DEĞİL)
+            06.09'daki arıza tam olarak bu ayrımın yokluğuydu: isim eşleşmesi kategori sanıldı.
+
+            İsim aramasında kategori listesi de veriliyor: model "tatlı" diye bir kategorimiz
+            olduğunu görüp doğru soruyu yeniden sorabilsin — ve müşteri "neler satıyorsunuz"
+            derse uydurmak yerine gerçek taksonomiyi söylesin.
+          */
+          const kapsam = kategori
+            ? { kategori: kategori.name, kapsam: `Bunlar "${kategori.name}" kategorisinin ürünleridir.` }
+            : {
+                kapsam:
+                  `Bunlar ADI "${terim}" ile eşleşen ürünlerdir — bir kategori listesi DEĞİL. ` +
+                  'Eşleşen ürünün o türden olduğunu VARSAYMA (örn. adında "tatlı" geçen bir fırın ürünü tatlı değildir).',
+                mevcutKategoriler: isimAramasi.categories.map((c) => c.name),
+              };
+
           return kod
-            ? { urunler, ...boyAlani, yer: kod }
+            ? { urunler, ...boyAlani, ...kapsam, yer: kod }
             : {
                 urunler,
                 ...boyAlani,
+                ...kapsam,
                 yerBilinmiyor:
                   'Yer bilinmiyor — stok "hiç var mı" düzeyinde okundu, bir depoya göre değil. ' +
                   'Müşteriden POSTA KODU iste ve bu aracı postaKodu ile yeniden çağır.',

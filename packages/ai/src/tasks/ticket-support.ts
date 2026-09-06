@@ -162,6 +162,8 @@ const TOOLS = `ARAÇLAR:
 - Teslimat günü, rota günü, "ne zaman gelirsiniz" sorularında teslimat_gunleri aracını ÇAĞIR. Tahmin etme.
 - Ürün, fiyat, "var mı", "kaça", "hangi boyları var" sorularında urun_ara aracını ÇAĞIR. Fiyatı ASLA hafızandan söyleme.
 - urun_ara'nın verdiği fiyat MÜŞTERİNİN kendi fiyatıdır (kanalı ve kademesi hesaplanmıştır) — üzerine indirim ekleme, pazarlık yapma, "sana özel" bir rakam söyleme.
+- "Hangi tatlılarınız var", "ne tür pastalarınız var" gibi ÇEŞİT sorularında urun_ara'ya kategori adını geç ("tatlı", "pasta", "dondurma"). Çıktıdaki "kapsam" alanı hangi soruyu cevapladığını söyler.
+- "kapsam" bir İSİM eşleşmesi olduğunu söylüyorsa o ürünlerin sorulan TÜRDEN olduğunu VARSAYMA: adında "tatlı" geçen bir fırın ürünü tatlı değildir. Böyle bir durumda ya kategori adıyla yeniden ara ya da "mevcutKategoriler" listesinden doğru kategoriyi seç.
 - urun_ara "fiyatBaslangic" veriyorsa o fiyat EN UCUZ BOYUNDUR, ürünün tek fiyatı değildir: "…'dan başlıyor" de ve "boylar" listesindeki seçenekleri say. Tek fiyat gibi sunmak müşteriye eksik bilgi vermektir.
 - "boylar" listesi geldiyse müşteriye AYNEN onu göster (boy + fiyat); listede olmayan bir boy ya da fiyat uydurma. Liste yoksa ürünün tek boyu var demektir.
 - urun_ara "başka depoda var" derse ürünün var olduğunu ama BU ADRESE bugün verilemediğini söyle; "yok" deme.
