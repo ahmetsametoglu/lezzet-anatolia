@@ -43,6 +43,40 @@ export interface ApiFail {
 
 export type ApiResult<T> = ApiOk<T> | ApiFail;
 
+/**
+ * Arızanın SINIFI — "ne yüklenemedi" değil "NİÇİN yüklenemedi".
+ *
+ * ── ÖLÇÜLMÜŞ ARIZA (06.09, sosyal gelen kutusu) ─────────────────────────────
+ * Cihazda oturum ölmüştü (yerel veritabanı tazelenince `auth.users` yeniden doğuyor, elde kalan
+ * jetonun tazelemesi `refresh_token_not_found` ile düşüyor): `authorizedFetch` ağa HİÇ çıkmadan
+ * `401` döndürdü, ekran ise "Bağlantıyı kontrol edip yeniden deneyin" dedi. Operatör wifi'sini
+ * kontrol etti; arıza ise oturumdaydı. Uç, şema ve veri yolu boyunca hiçbir şey yanlış değildi —
+ * yanlış olan tek şey EKRANIN CÜMLESİYDİ (CLAUDE §1: belirtiyi susturan değil, sebebi söyleyen).
+ *
+ * Dört sınıf, dördü de bir CEVABIN kanıtı — tahmin yok:
+ * · `connection` — istek ağa hiç çıkamadı (`network_error`, `status: null`).
+ * · `session`    — 401: ya cihazda oturum yok/ölü (yerel kısa devre) ya uç jetonu reddetti.
+ * · `forbidden`  — 403: kimlik doğru, rol kapısı kapalı (`requireStaffRole`).
+ * · `unexpected` — gerisi: sözleşmeye uymayan gövde, 5xx, tanınmayan alan anahtarı.
+ *
+ * 401'i "oturum öldü" diye YORUMLAMAZ, "oturum doğrulanmadı" der: uç, auth sunucusuna
+ * ulaşamadığında da 401 üretir (ölçüldü: GoTrue `/user` 504 → mobile-api `unauthorized`). Sınıf
+ * ne kadarını biliyorsa onu söyler; oturumu kendiliğinden kapatmak bu kadar bilgiyle yapılamaz.
+ */
+export type ApiFailureCause = 'connection' | 'session' | 'forbidden' | 'unexpected';
+
+/**
+ * Düşen çağrının sebep sınıfı. `null` = sebep kaydı taşınmamış (200 döndü ama gövde boştu gibi
+ * hâller) — o zaman bir sebep İDDİA EDİLMEZ, en dar doğru cümleye (`unexpected`) düşülür.
+ */
+export function failureCauseOf(failure: ApiFail | null): ApiFailureCause {
+  if (failure === null) return 'unexpected';
+  if (failure.error === CLIENT_ERROR.network) return 'connection';
+  if (failure.status === 401) return 'session';
+  if (failure.status === 403) return 'forbidden';
+  return 'unexpected';
+}
+
 export interface ApiFetchInit {
   method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
   body?: unknown;

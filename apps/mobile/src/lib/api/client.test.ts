@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { apiFetch, CLIENT_ERROR } from './client';
+import { apiFetch, CLIENT_ERROR, failureCauseOf, type ApiFail } from './client';
 
 // fetch mock'u — Response'un testte kullanılan yüzü yeter (headers.get + json).
 function fakeResponse(body: unknown, init: { status?: number; headers?: Record<string, string> } = {}): Response {
@@ -54,5 +54,37 @@ describe('apiFetch — /api/v1 zarf istemcisi', () => {
     const result = await apiFetch('/api/v1/thing', z.unknown());
 
     expect(result).toMatchObject({ data: null, error: CLIENT_ERROR.network, status: null, retryAfterSec: null });
+  });
+});
+
+/*
+  SEBEP SINIFI (06.09) — cihazda ölçülen yanlış teşhisin çekirdeği.
+
+  Sosyal gelen kutusu "Liste yüklenemedi — bağlantıyı kontrol edin" diyordu; gerçekte oturum ölmüştü
+  ve istek ağa HİÇ çıkmamıştı. Sınıf burada ölçülür, cümle ekranın sözlüğünde kurulur.
+*/
+describe('failureCauseOf — arızanın sebep sınıfı', () => {
+  const fail = (over: Partial<ApiFail>): ApiFail => ({ data: null, error: 'x', status: 500, retryAfterSec: null, ...over });
+
+  it('ağa çıkamayan istek BAĞLANTIDIR (status null, 0 değil)', () => {
+    expect(failureCauseOf(fail({ error: CLIENT_ERROR.network, status: null }))).toBe('connection');
+  });
+
+  it('401 OTURUMDUR — hem yerel kısa devre hem uçtaki Bearer reddi aynı sınıfa düşer', () => {
+    expect(failureCauseOf(fail({ error: 'unauthorized', status: 401 }))).toBe('session');
+  });
+
+  it('403 YETKİDİR — kimlik doğru, rol kapısı kapalı', () => {
+    expect(failureCauseOf(fail({ error: 'forbidden', status: 403 }))).toBe('forbidden');
+  });
+
+  it('sözleşmeye uymayan gövde ve 5xx BEKLENMEDİKTİR — oturum suçlanmaz', () => {
+    expect(failureCauseOf(fail({ error: CLIENT_ERROR.invalidResponse, status: 200 }))).toBe('unexpected');
+    expect(failureCauseOf(fail({ error: 'internal', status: 500 }))).toBe('unexpected');
+  });
+
+  it('sebep kaydı yoksa bir sebep İDDİA EDİLMEZ', () => {
+    // 200 döndü ama gövde boştu gibi hâller: "ölçülemeyen değer sıfır değildir" (CLAUDE §1).
+    expect(failureCauseOf(null)).toBe('unexpected');
   });
 });

@@ -1,3 +1,5 @@
+import { failureCauseOf, type ApiFail } from '@/lib/api/client';
+
 import messages from './messages.json';
 
 /*
@@ -29,6 +31,28 @@ import messages from './messages.json';
 
 /** Ekran metinleri — tek dil, tek kaynak. Tip `typeof operationsCopy` ile yerinde okunur. */
 export const operationsCopy = messages;
+
+/**
+ * **Hata bloğunun ALT SATIRI — sebebi söyler, tahmin etmez.** Başlık ekranın kendi cümlesidir
+ * ("Liste yüklenemedi" — NE düşdü); bu ise NİÇİN düştüğüdür ve tek yerde yazılır: aynı dört sebep
+ * yedi ekranda yaşıyor ve her ekranın kendi cümlesini yazması, birinin gün gelip ötekinden farklı
+ * konuşması demekti (CLAUDE §1).
+ *
+ * ── NİÇİN DOĞDU (06.09, cihazda ölçüldü) ────────────────────────────────────
+ * Ekranların hepsi tek bir cümle yazıyordu: *"Bağlantıyı kontrol edip yeniden deneyin."* Oturumu
+ * ölmüş bir cihazda (`401`, istek ağa hiç çıkmıyor) operatörün okuduğu şey buydu; wifi'yi kontrol
+ * etmekten başka yapabileceği bir şey yoktu ve arıza oturumdaydı. Sebep sınıfı `lib/api/client`ta
+ * ÖLÇÜLÜYOR (`failureCauseOf`), burada yalnız cümleye çevriliyor.
+ *
+ * ── GELİŞTİRMEDE ANAHTAR DA YAZILIR (sepet ekranının 09.08 kararı) ──────────
+ * Operatöre tek cümle yeter; bize yetmiyor: `unexpected` sınıfı `invalid_response`ı da 500'ü de
+ * aynı görünüşe indiriyor ve hangisi olduğu ancak cihazda tekrar üretilerek anlaşılıyordu. Anahtar
+ * zaten sonucun içinde duruyordu, ekran onu atıyordu.
+ */
+export function operationsFailureText(failure: ApiFail | null): string {
+  const text = messages.failure[failureCauseOf(failure)];
+  return __DEV__ && failure !== null ? `${text} [${failure.error}]` : text;
+}
 
 /**
  * `{n}` / `{sections}` gibi yuvaları doldurur — müşteri tarafındaki `t.card.options.replace('{n}', …)`
