@@ -247,7 +247,19 @@ const KISILER: SeedKisi[] = [
   // sınamak için Batı ile aynı günlere konmuştu. Yani salı günü tek aday çıkıyor, `route_required`
   // dalı hiç koşmuyordu. Kullanıcı kararıyla dört hattın dördü de STR'ye bağlanınca (`delivery.ts`)
   // sorun kaynağında bitti: tek tesis kapsamı dört hattı da görüyor ve salı+cuma iki aday veriyor.
-  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str', 'van'], preferredLanguage: 'fr' },
+  //
+  // ── ARAÇ DEPOSU KAPSAMDAN ÇIKTI (21.258 · 06.09) ──────────────────────────
+  // Kapsam `{str, van}` idi. 21.249 aracı SEFERDEN çözmeye geçince (`vehicleWarehouseOf`) dizideki
+  // `van` satırının işi kalmadı — ama zararı sürüyordu: cihazdaki depo seçicisi onu bir seçenek
+  // gibi listeliyor ve 01.09'da düzeltilen arızanın (`?place=van`) zemini de buydu. Kullanıcının
+  // *"bir kişi hem depoya hem araca mı atanır"* sorusunun cevabı ancak bu satır kalkınca "hayır".
+  //
+  // Ölçüldü (06.09) — hiçbir yol kapsamdaki araç deposuna bakmıyor: `listCourierVehicles` aracı
+  // `vehicle.warehouse_id` üstünden süzüyor ve o alan aracın EVİ olan TESİSİ gösteriyor (STR),
+  // araç deposunu değil ("aidiyet değil adres"); yerinde satış kapısı (`salePlaceGuard`) araç
+  // deposunu `vehicleWarehouseOf` ile SEFERDEN alıyor ve kapsama hiç sormuyor; `/van-stock`
+  // `courierVanContext`ten okuyor. Kurye kapsamsız kalmıyor: `str` duruyor (DB kısıtı sağlanıyor).
+  { key: 'kurye', name: 'Marc Lemoine', email: 'kurye@lezzetanatolia.fr', phone: '+33600000102', roles: ['courier'], depolar: ['str'], preferredLanguage: 'fr' },
   // Çoklu operasyon rolü olağandır (DOMAIN §2): depo + muhasebe aynı kişide olabilir.
   // Kapsamı İKİ depo: ekranda kapsamıyla sınırlı depo seçici görür — sistem onun yerine varsayılan
   // seçmez (C2). Tek depolu bir seed'de bu ekran hiç denenemezdi.
@@ -262,8 +274,11 @@ const KISILER: SeedKisi[] = [
   //   böyle bir kişi varsa denenebilir — tek rollü hesaplarla çubuk hiç dolu görünmez (tek bölümlü
   //   kullanıcıda çubuk zaten çizilmez). Gerçek işletmede olağandışıdır ama YASAK da değildir
   //   (DOMAIN §2: çoklu operasyon rolü olağandır); burada bilinçli olarak abartılmış hâli duruyor.
-  //   Kapsamı kuryeninkiyle aynı (araç dahil): araçsız kapsamda yerinde satış ekranı açılamıyor.
-  { key: 'hepsi', name: 'Emre Yıldız', email: 'hepsi@lezzetanatolia.fr', phone: '+33600000106', roles: ['admin', 'warehouse', 'courier', 'accounting'], depolar: ['str', 'van'], preferredLanguage: 'tr' },
+  //   Kapsamı kuryeninkiyle aynı. ~~"araç dahil: araçsız kapsamda yerinde satış ekranı
+  //   açılamıyor"~~ — bu gerekçe 21.249'la DÜŞTÜ ve satır 21.258'de kalktı: yerinde satış kapısı
+  //   araç deposunu artık SEFERDEN çözüyor (`salePlaceGuard` → `vehicleWarehouseOf`), kapsamdan
+  //   değil. Kapsamda araç tutmak ekranı açmıyor, yalnız depo seçicisine sahte bir seçenek koyuyordu.
+  { key: 'hepsi', name: 'Emre Yıldız', email: 'hepsi@lezzetanatolia.fr', phone: '+33600000106', roles: ['admin', 'warehouse', 'courier', 'accounting'], depolar: ['str'], preferredLanguage: 'tr' },
   // Sınır ötesi rotanın kuryesi — kapsamı da Kehl. Kurye kapsamsız olamaz (DB kısıtı).
   { key: 'kuryeKehl', name: 'Stefan Bauer', email: 'kurye.kehl@lezzetanatolia.fr', phone: '+4978519902', roles: ['courier'], depolar: ['kehl'], country: 'DE', preferredLanguage: 'de' },
 ];

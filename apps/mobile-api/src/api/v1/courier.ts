@@ -292,8 +292,13 @@ courier.post('/day/start', async (c) => {
  * kurmuyor ("üç tane var, dört daha alabilirim"). Ayrı uçlar iki ağ turu ve iki yükleme hâli
  * demekti; rampada bekleyen kurye için o iki hâl tek bir gecikmedir.
  *
- * ÇIKIŞ DEPOSU personelin kendi deposu, ARAÇ DEPOSU kapsamındaki `kind='vehicle'` depo — ikisi de
- * profilden çözülüyor, istemciden değil (yerinde satış ucunun aynı kararı).
+ * ÇIKIŞ DEPOSU seferin ROTASININ deposu, ARAÇ DEPOSU seferin ARACININ deposu — ikisi de SEFERDEN
+ * çözülüyor, istemciden değil (yerinde satış ucunun aynı kararı).
+ *
+ * Bu satır bir tur *"araç deposu KAPSAMDAKİ `kind='vehicle'` depo"* diyordu ve 21.249'dan beri
+ * yanlıştı (düzeltildi 06.09): cevabı kapsam verirken, kapsamda iki araç olan kuryede dizinin
+ * SIRASI karar veriyordu. Künye `courierVanContext`te — hemen aşağıdaki satır zaten doğrusunu
+ * yazıyordu, yani dosya kendi içinde çelişiyordu.
  */
 courier.get('/van-stock', async (c) => {
   const staff = c.get('staff');

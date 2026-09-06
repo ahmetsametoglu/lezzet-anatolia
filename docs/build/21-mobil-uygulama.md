@@ -11112,8 +11112,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     Araç deposu `vehicleWarehouseOf` ile seferin aracından çözülüyor, serbest ürünün çıkış tesisi
     `courierVanContext.facilityId` ile `delivery_run.warehouse_id`ten — ikisinin de künyesi eski
     hâli arıza olarak yazıyor (*"cevap dizinin sırasından geliyordu, burada kaydından"*). Anılan
-    talep dosyası `docs/talep/`te YOK: web şeridi karşılamış ve silmiş. **Kalan tek kalıntı 21.258**
-    (kuryenin `warehouse_ids` dizisindeki artık işlevsiz `VAN-1` satırı).
+    talep dosyası `docs/talep/`te YOK: web şeridi karşılamış ve silmiş. **Kalan tek kalıntı 21.258 idi**
+    (kuryenin `warehouse_ids` dizisindeki artık işlevsiz `VAN-1` satırı) — o da 06.09'da kapandı.
   - ~~**6 · Rota kartı sayaçları (orta, bir saat):** iptal edilmiş sipariş durak/kutu sayılıyor
     (`cancel_order` bölge/günü temizlemiyor); vadeli sipariş "tahsilat" sayılıyor.~~ **KAPANDI —**
     iptal yarısı 21.268'de (durak/kutu sayaçları iptali eliyor, araçtaki kutu ayrı sayılıyor),
@@ -11795,8 +11795,8 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Testi yazıldı** (`van-stock.test`): al + devret ardışık koşuluyor, iki belgenin notu AYRI
   çiviliniyor. Süzgeç fikstürün kendi iki deposu (CLAUDE §4b).
 
-- [ ] (21.258) **Kuryenin kapsamından ARAÇ DEPOSU kalkmalı — kurye tesise atanır, araç seferden gelir** (21.249'un kalanı)
-  `touches:` `scripts/seed/people.ts` · `apps/mobile/src/lib/operations/warehouse-choice.ts` (ölçülecek)
+- [x] (21.258) **Kuryenin kapsamından ARAÇ DEPOSU KALKTI — kurye tesise atanır, araç seferden gelir** (21.249'un kalanı · 06.09)
+  `touches:` `scripts/seed/people.ts` · `apps/mobile-api/src/api/v1/courier.ts`
 
   21.249 araç deposunu kapsamdan kopardı: stok artık kuryenin `warehouse_ids` dizisinden değil,
   sürülen seferin aracından çözülüyor. Ama dizideki `VAN-1` satırı DURUYOR ve artık hiçbir işe
@@ -11807,9 +11807,33 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   bakmıyor — `routes.ts:122` bölgenin deposuna, `routes.ts:261` aracın EVİ olan tesise, `day.ts:618`
   yine bölgenin deposuna, `return.ts:179` depocunun tesisine. Yani kapsamdan çıkarmanın önü açık.
 
-  Kalan iş ölçüm gerektiriyor: depo seçicisi (`warehouse-choice`) ve `?place=van` yolu araç
-  kapsamdan çıkınca ne yapıyor. Kullanıcının *"bir kişi hem depoya hem araca mı atanır"* sorusunun
-  cevabı ancak bu kalkınca "hayır" olur.
+  **ÖLÇÜM TAMAMLANDI (06.09) — kalan soru cihazda ve motorda cevaplandı.** Kapsamdan `van` çıkarıldı
+  (`kurye` ve `hepsi`; `warehouse-choice`a DOKUNULMADI — gerek kalmadı, seçicinin süzgeci zaten
+  tesis bazlı: `soleFacilityId`) ve dört yol ölçüldü, hepsi ayakta:
+
+  | yol | kapsamda araç YOKKEN |
+  |---|---|
+  | Araç listesi (`listCourierVehicles`) | **67 LZT 01 duruyor** — süzgeç `vehicle.warehouse_id` üstünden ve o alan aracın EVİ olan TESİSİ gösteriyor (STR), araç deposunu değil (*"aidiyet değil adres"*) |
+  | Rota listesi | 2 rota duruyor |
+  | `courierVanContext` | araçDeposu = **VAN-1**, tesis = STR — ikisi de SEFERDEN |
+  | Satış kapısı `?place=van` | **VAN-1** — `vehicleWarehouseOf` seferden çözüyor, kapsama hiç sormuyor |
+  | Araçtaki serbest ürün | 2 kalem okundu |
+
+  Ölçüm AÇIK ARAÇLI SEFERİ OLAN kuryeyle yapıldı (Marc Lemoine, `SF-26-XKPFUM`) — seferi olmayanda
+  cevabın `null` gelmesi zaten doğru davranıştır ve kapsamla ilgisi yoktur; o hâlle ölçmek "çalışıyor"
+  ile "veri yok"u karıştırırdı.
+
+  **Beslemedeki bir gerekçe ölçümle YANLIŞ çıktı ve düzeltildi:** `hepsi` künyesi *"araçsız kapsamda
+  yerinde satış ekranı açılamıyor"* diyordu — 21.249'dan beri doğru değil, satış kapısı araç deposunu
+  seferden alıyor. Kapsamda araç tutmak ekranı açmıyordu, yalnız depo seçicisine sahte bir seçenek
+  koyuyordu. **Aynı aileden bir künye daha düzeltildi** (`courier.ts:295`): *"ARAÇ DEPOSU kapsamındaki
+  `kind='vehicle'` depo"* yazıyordu ve hemen altındaki satır zaten doğrusunu söylüyordu — dosya kendi
+  içinde çelişiyordu.
+
+  **Doğrulama:** kök typecheck · lint · tam paket 4213/4213 (371 dosya). Cihazda (Oppo) yeniden
+  giriş: depo "Strasbourg — ana depo"ya kendiliğinden çözüldü, hesap menüsünde depo değiştirme
+  seçeneği yok (kapsam tek tesis), kurye bölümü normal çalışıyor. Kullanıcının *"bir kişi hem depoya
+  hem araca mı atanır"* sorusunun cevabı artık **hayır**.
 
 - [x] (21.259) **AKIBETİN ÜÇ DEĞİŞMEZİ VERİYE İNDİ — beyan kaleme yazılır · akıbet bir kez yazılır · "mal düştü mü" GEÇMİŞTEN sorulur; sürülen seferde devir durur** (denetim bulgusu 04.09, kullanıcı seçimi "veriyi bozan beş madde")
   `touches:` `supabase/migrations/{0012_order.sql,0020_order_return.sql}` · `packages/types/src/entities/order.schema.ts` · `packages/types/src/contracts/warehouse-api.schema.ts` · `packages/application/src/order/{refund.ts,refund.test.ts}` · `packages/application/src/warehouse/{returns.ts,returns.test.ts}` · `apps/mobile/src/screens/warehouse/{courier-return-screen.tsx,courier-return-screen.test.tsx,use-courier-return.hook.ts,messages.json}` · `apps/mobile-api/src/api/v1/warehouse.test.ts` · `apps/web/app/(operations)/operations/{orders/actions.ts,stock/transfer-read.ts}` · `docs/architecture/data-model/musteri-siparis.md`
