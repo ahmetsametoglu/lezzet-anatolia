@@ -346,6 +346,9 @@ export function toProduct(
     // Kartın çeşit satırının sayısı — `purchaseMode` ile AYNI kümeden (aktif boylar), ikinci bir
     // sayım yapılmaz ki ikisi bir gün çelişmesin.
     variantCount: variants.length,
+    // Ürünün DOĞASI, yerin değil: stok hâli "bu adrese gider mi" der, bu "kargoyla hiç gider mi".
+    // Satırdan aynen geçiyor — `stockStatusOf` de aynı değeri okuyor, ikinci bir kaynak yok.
+    shippable: row.shippable,
     comparisonCents: selling?.comparisonCents ?? null,
     priceCents: selling?.priceCents ?? null,
     wasCents: selling?.wasCents,

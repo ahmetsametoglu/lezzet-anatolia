@@ -132,6 +132,18 @@ export interface StorefrontProduct {
    */
   limitLabel: string | null;
   purchaseMode: PurchaseMode;
+  /**
+   * Kargoya verilebilir mi (07.09 · ölçülmüş arıza). Satırda ZATEN vardı (`CatalogProductRow`),
+   * yalnız stok hâli hesabında kullanılıp dışarı verilmiyordu — ve dışarıda buna ihtiyacı olan bir
+   * okuyucu çıktı: destek ajanı *"tüm ürünlerimiz kargo ile gönderime uygundur"* dedi, oysa aktif
+   * 87 üründen **31'i** (bütün Maraş dondurmaları, taze fırın, çiğ köfte) kargoya verilemiyor.
+   * Alan olmadığı için ajan uydurdu; yanlış yön de soğuk zincir yönüydü.
+   *
+   * `stockStatus` bunu ZATEN hesaba katıyor ama cevabı farklı bir soruya veriyor: "bu adrese gider
+   * mi". Ürünün doğası ("hiçbir adrese kargoyla gitmez") ayrı bir gerçektir ve ayrı alan ister —
+   * stoktan türetmek, stok bittiğinde ürünü kargolanamaz göstermek olurdu.
+   */
+  shippable: boolean;
   /** Yere göre stok hâli (19.10) — dört cevap, dört ayrı cümle. `soldOut` bunun daraltılmışı. */
   stockStatus: StockStatus;
   /**

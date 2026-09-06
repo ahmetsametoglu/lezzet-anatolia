@@ -339,8 +339,24 @@ const HANDOFF_NOTICE = 'Bu konuda size bir yetkilimiz yardımcı olacak — en k
  * "İstemezseniz bir şey yapmanıza gerek yok" cümlesi sessizliği RET saymıyor — sessizlik cevapsızdır
  * ve `optIn` false kalır. Söylediği tek şey müşterinin kendini savunmak zorunda olmadığı.
  */
+/*
+  ── METİN 07.09'DA DEĞİŞTİ: TUTAMADIĞIMIZ SÖZÜ VERMİYORUZ ──────────────────
+  Eski cümle *"'Evet' yazmanız yeterli"* diyordu ve bu bir VAATTİ — sistemin tutmadığı bir vaat.
+  Ölçüldü: müşteri "Evet" yazdı, ajan *"Sizi kampanya listemize ekledik"* dedi, veritabanında
+  `opt_in` false kaldı ve `marketing_consent` boştu. Yani müşteriye yanlış beyanda bulunuldu —
+  üstelik GDPR'a konu bir mesele hakkında.
+
+  Kaydı ajanın yapmaması doğru karardır (aşağıdaki künye): modelin "evet mi dedi" yorumu, GDPR'ın
+  *"açık ve tereddüde yer bırakmayan"* şartını bir tahmine dayandırırdı. Yanlış olan kayıt değil,
+  CÜMLEYDİ: sistemin yapamadığı bir şeyi yapacakmış gibi anlatıyordu.
+
+  Yeni cümle müşteriyi KENDİ açabileceği yere yolluyor (hesap → tercihler; anahtar orada duruyor,
+  `preferences-client.tsx`). Böylece izin yine müşterinin açık eyleminden doğuyor, arada yorumlayan
+  bir model yok, ve kimseye tutulmayacak bir söz verilmiyor. İnteraktif düğmeler (15.9) geldiğinde
+  cevap tahmin değil PAYLOAD olur; o gün sohbet içi kayıt yeniden açılabilir.
+*/
 const OPT_IN_QUESTION =
-  'Bu arada: kampanyalarımızdan haberdar olmak ister misiniz? "Evet" yazmanız yeterli — istemezseniz bir şey yapmanıza gerek yok.';
+  'Bu arada: kampanyalarımızdan haberdar olmak isterseniz hesabınızın tercihler sayfasından açabilirsiniz — istemezseniz bir şey yapmanıza gerek yok.';
 
 /**
  * İzin sorusunun sorulacağı EN ERKEN tur — parametrik ve varsayılanı bilinçli (15.12).

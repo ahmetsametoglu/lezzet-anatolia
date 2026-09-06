@@ -61,6 +61,7 @@ export * from './bank/match';
 export * from './support/ticket-flow';
 export * from './messaging/chat-formatting';
 export * from './messaging/notification-preferences';
+export * from './messaging/secret-masking';
 export * from './messaging/service-window';
 export * from './feedback/feedback-score';
 export * from './feedback/points';

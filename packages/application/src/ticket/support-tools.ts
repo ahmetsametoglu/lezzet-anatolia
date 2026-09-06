@@ -1,7 +1,7 @@
 // `z` de porttan geliyor ve gerekçesi teknik: SDK aracın şemasını doğrularken tek zod örneği
 // bekliyor, ikinci bir kopya sessizce tutmaz (`@lezzet/ai` barrel künyesi).
 import { tool, z, type ToolSet } from '@lezzet/ai';
-import { AddressService, OrderService, type Db } from '@lezzet/database';
+import { AddressService, OrderService, PostalCodePlaceService, type Db } from '@lezzet/database';
 import { formatPrice, formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { COUNTRY_LABELS, ORDER_STATUS_LABELS, type Address, type StockStatus } from '@lezzet/types';
@@ -62,6 +62,21 @@ import { readPublicDeliveryTerms } from '../settings/public-terms';
  * sayı — daha fazlası zaten sohbet değil, katalog gezintisidir ve orası sitenin işi.
  */
 const PRODUCT_HITS = 5;
+
+/**
+ * KATEGORİ aramasının tavanı ayrı ve daha yüksek (07.09 · ölçülmüş arıza).
+ *
+ * Beş, "baklava var mı" gibi bir İSİM sorusunda doğru sayıydı. Kategori sorusunda değil: müşteri
+ * *"ne tip tatlı çeşitleriniz var"* diye sordu, Tatlı kategorisindeki **20 üründen** ilk beşi
+ * döndü ve beşi de tesadüfen baklavaydı — ajan da *"tatlı çeşitlerimiz sadece baklavalardan
+ * oluşmaktadır"* dedi. Kırpılmış listeden MUTLAK bir hüküm çıkardı.
+ *
+ * Sayıyı yükseltmek tek başına yetmez ve asıl düzeltme öteki yarıda: kırpma artık SESSİZ değil,
+ * çıktı kaç üründen kaçını gösterdiğini söylüyor (`kapsam`). Sayı da yine sonlu — sınırsız liste
+ * hem maliyeti hem "hangisini söyleyeyim" belirsizliğini büyütür, ve tam katalog sohbetin değil
+ * sitenin işidir.
+ */
+const CATEGORY_HITS = 20;
 
 /**
  * Stok hâlinin modele söylenen karşılığı — DÖRT hâl, dört ayrı cümle (19.10).
@@ -307,11 +322,19 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             Bu, para alanının taşıdığı anlamı adında söyleme kuralının aynısı: tek boyluda `fiyat`,
             çok boyluda `enUcuzBoy`/`fiyatBaslangic`. Model hangisini okuduğunu adından bilir.
           */
-          const urunler = katalog.products.slice(0, PRODUCT_HITS).map((p) => {
+          const tavan = kategori ? CATEGORY_HITS : PRODUCT_HITS;
+          const urunler = katalog.products.slice(0, tavan).map((p) => {
             const fiyat = p.priceCents === null ? 'bu kanalda satışa kapalı' : formatPrice(p.priceCents, 'tr');
             return {
               ad: p.name,
               durum: STOK_SOZLUGU[p.stockStatus],
+              /* KARGO UYGUNLUĞU AYRI BİR GERÇEK (07.09 · ölçülmüş arıza). `durum` "bu adrese gider
+                 mi" sorusunu cevaplıyor; bu "kargoyla hiç gider mi". Ajan bu alan yokken *"tüm
+                 ürünlerimiz kargo ile gönderime uygundur"* dedi ve sorgulanınca ısrar etti — oysa
+                 aktif ürünlerin üçte biri (dondurmalar, taze fırın, çiğ köfte) kargoya verilemiyor.
+                 Cümle olarak veriliyor, bayrak olarak değil: `false` bir alanı model "önemsiz"
+                 sayıp atlayabilir, cümleyi atlayamaz. */
+              kargo: p.shippable ? 'kargoya verilebilir' : 'KARGOYA VERİLEMEZ — yalnız bölge içi kapıya teslim',
               // `null` fiyat = bu kanalda SATIŞA KAPALI (DOMAIN §5) — "0 €" demek yanlış olurdu.
               ...(p.variantCount > 1
                 ? { boySayisi: p.variantCount, enUcuzBoy: p.unitLabel, fiyatBaslangic: fiyat }
@@ -358,12 +381,32 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             olduğunu görüp doğru soruyu yeniden sorabilsin — ve müşteri "neler satıyorsunuz"
             derse uydurmak yerine gerçek taksonomiyi söylesin.
           */
+          /*
+            ── KIRPMA SESSİZ OLMAZ (07.09 · ölçülmüş arıza) ───────────────────────────────────
+            Liste tavanla kesiliyordu ve çıktı bunu SÖYLEMİYORDU. Model kırpılmış listeyi tam sanıp
+            *"tatlı çeşitlerimiz SADECE baklavalardan oluşmaktadır"* dedi — oysa kategoride 20 ürün
+            vardı, ilk beşi tesadüfen baklavaydı.
+
+            Eksik veriden mutlak hüküm, hiç veri olmamasından kötüdür: hiç veri olsa ajan
+            "bilmiyorum" derdi. O yüzden sayı burada CÜMLEYE giriyor — modelin "sadece/hepsi"
+            diyebilmesini yapısal olarak zorlaştırıyor.
+          */
+          const toplam = katalog.products.length;
+          const kirpildi = toplam > urunler.length;
+          const kirpmaNotu = kirpildi
+            ? ` Toplam ${toplam} ürünün ilk ${urunler.length}'i listelendi — bu liste TAM DEĞİL, "sadece bunlar var" DEME.`
+            : '';
+
           const kapsam = kategori
-            ? { kategori: kategori.name, kapsam: `Bunlar "${kategori.name}" kategorisinin ürünleridir.` }
+            ? {
+                kategori: kategori.name,
+                kapsam: `Bunlar "${kategori.name}" kategorisinin ürünleridir.${kirpmaNotu}`,
+              }
             : {
                 kapsam:
                   `Bunlar ADI "${terim}" ile eşleşen ürünlerdir — bir kategori listesi DEĞİL. ` +
-                  'Eşleşen ürünün o türden olduğunu VARSAYMA (örn. adında "tatlı" geçen bir fırın ürünü tatlı değildir).',
+                  'Eşleşen ürünün o türden olduğunu VARSAYMA (örn. adında "tatlı" geçen bir fırın ürünü tatlı değildir).' +
+                  kirpmaNotu,
                 mevcutKategoriler: isimAramasi.categories.map((c) => c.name),
               };
 
@@ -393,10 +436,47 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
         '"Şu koda geliyor musunuz", "adresime gelir mi", "biz X şehrindeyiz" sorularında ÇAĞIR. ' +
         'Müşterinin KENDİ kayıtlı adresi soruluyorsa teslimat_gunleri aracını kullan; bu araç adresi olmayan ya da BAŞKA bir yeri soran kişi içindir.',
       inputSchema: z.object({
-        postaKodu: z.string().min(4).describe('Posta kodu — örn. "67000", "75001"'),
+        postaKodu: z
+          .string()
+          .min(3)
+          .describe(
+            'Posta kodu YA DA yerleşim adı — "67000", "75001", "Lingolsheim", "Kehl". ' +
+              'Müşteri hangisini söylediyse AYNEN geç; ad verildiyse araç kodu kendisi bulur.',
+          ),
       }),
       execute: async ({ postaKodu }) => {
         try {
+          /*
+            ── YER ADI DA KABUL EDİLİR (07.09 · ölçülmüş arıza) ────────────────────────────────
+            Araç yalnız POSTA KODU alıyordu ve müşteri *"lingolsheim a geliyor musunuz?"* diye
+            sordu — ajan cevaplayamayıp *"kontrol edip size bilgi vereceğiz"* dedi. O bir çıkmaz
+            sokaktı: sohbet YZ modundaydı, talep de açılmadı, yani kimse kontrol etmeyecekti.
+
+            Oysa veri elimizdeydi (`postal_code_place.places_search`) ve servis kapısı ikisini de
+            çözüyor (`search` — terimin ad mı kod mu olduğunu kendi ayırt ediyor). Eksik olan tek
+            şey aracın o kapıyı çağırmamasıydı.
+
+            Ve bu kenar durum DEĞİL: müşteri doğal olarak semtinin adını söyler, posta kodunu
+            değil. Kod isteyen bir araç, en sık sorulan biçimi cevapsız bırakıyordu.
+          */
+          const kodMu = /^\d{4,}$/.test(postaKodu.trim());
+          let cozulmusKod = postaKodu.trim();
+          if (!kodMu) {
+            const adaylar = await new PostalCodePlaceService(db).search(postaKodu, 3);
+            if (adaylar.length === 0) {
+              return { bilinmiyor: `"${postaKodu}" diye bir yerleşim bulunamadı. Müşteriden POSTA KODUNU iste.` };
+            }
+            /* BİRDEN ÇOK EŞLEŞMEDE SEÇİM YAPILMAZ, SORULUR: aynı ad birden çok kodda geçebilir
+               (mahalle/ilçe) ve yanlışını seçmek "gelmiyoruz" demek olurdu. Model müşteriye sorar. */
+            if (adaylar.length > 1) {
+              return {
+                belirsiz: `"${postaKodu}" birden çok posta koduna denk geliyor. Müşteriye hangisi olduğunu sor.`,
+                adaylar: adaylar.map((a) => `${a.postalCode} ${a.places.join(', ')}`),
+              };
+            }
+            cozulmusKod = adaylar[0]!.postalCode;
+          }
+          const postaKoduCozum = cozulmusKod;
           /*
             BU ARAÇ GİRDİ ALIYOR ve değişmezi çiğnemiyor: alınan şey KİMLİK değil, herkese açık bir
             soru. "67000'e geliyor musunuz" cevabı sitede zaten var (posta kodu adımı ziyaretçiye
@@ -405,19 +485,19 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             Kimliğe dayalı sorunun aracı ayrı (`teslimat_gunleri`, girdisi boş): "benim adresim"
             sorusunu bu araca postalayan bir model, müşterinin adresini uydurmak zorunda kalırdı.
           */
-          const cozum = await resolvePlaceForPostalCode(db, postaKodu);
+          const cozum = await resolvePlaceForPostalCode(db, postaKoduCozum);
           switch (cozum.kind) {
             case 'route':
               // En değerli cevap: rota günleri ÇÖZÜMLE BİRLİKTE geliyor, ikinci okuma gerekmiyor.
               return {
-                kod: postaKodu,
+                kod: postaKoduCozum,
                 teslimat: 'kapıya teslim (haftalık rota)',
                 yer: cozum.placeName,
                 haftalikGunler: cozum.weekdays.map(gunAdi),
               };
             case 'shipping':
               return {
-                kod: postaKodu,
+                kod: postaKoduCozum,
                 teslimat: 'kargo ile gönderim (haftalık rota yok)',
                 yer: cozum.placeName,
                 not: 'Kargo ücreti ve ücretsiz kargo eşiği için teslimat_sartlari aracına bak.',
@@ -425,19 +505,19 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             case 'unresolved':
               // Ülke biliniyor ama hizmet yok: "yanlış kod" DEĞİL, "buraya henüz gelmiyoruz".
               return {
-                kod: postaKodu,
+                kod: postaKoduCozum,
                 teslimat: 'yok — bu koda şu an teslimat yapmıyoruz',
                 not: 'Kod geçerli; bölgemiz henüz oraya ulaşmıyor. Müşteri isterse haber listesine yazılabilir (bunu operatör yapar).',
               };
             case 'ambiguous':
               // Aynı kod iki hizmet ülkemizde birden geçerli — model UYDURMAZ, SORAR.
               return {
-                kod: postaKodu,
+                kod: postaKoduCozum,
                 bilinmiyor: 'Bu kod birden çok ülkede geçerli — hangi ülke olduğunu müşteriye SOR, tahmin etme.',
                 adaylar: cozum.candidates.map((c) => `${COUNTRY_LABELS[c.country]}${c.inRoute ? ' (rota bölgemizde)' : ''}`),
               };
             case 'unknown':
-              return { kod: postaKodu, bilinmiyor: 'Böyle bir posta kodu bulunamadı — büyük olasılıkla yazım hatası. Müşteriden kodu teyit et.' };
+              return { kod: postaKoduCozum, bilinmiyor: 'Böyle bir posta kodu bulunamadı — büyük olasılıkla yazım hatası. Müşteriden kodu teyit et.' };
           }
         } catch (err) {
           logger.warn(

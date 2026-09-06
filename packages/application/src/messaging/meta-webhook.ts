@@ -1,13 +1,15 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { answerEmailAnchor, offerAnchorIfDue, verifySecurityCode } from '../customer/anchor';
-import { consumeWhatsappLink } from '../customer/whatsapp-link';
+import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationsBell } from '../realtime/bell';
 import { messageSenderFor } from './meta-sender';
 import { recordInboundMessage, recordOutboundMessage } from './record';
-import { ConversationService, CustomerPhoneService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { sendOutboundMessage } from './send';
+import { ConversationService, CustomerPhoneService, UserProfileService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { maskSecretsInText, sixDigitCodeIn } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
-import type { ConversationSource, MessageKind } from '@lezzet/types';
+import type { ConversationSource, MessageKind, PreferredLanguage } from '@lezzet/types';
 import { findOrCreateCustomer } from '../customer/find-or-create';
 import { fetchMetaProfileName } from './meta-profile';
 import { runAutonomousConversationReply } from '../ticket/ai';
@@ -43,6 +45,38 @@ function triggerAutonomousReply(conversationId: string, handledBy: TicketHandler
         context: { area: 'messaging/autonomous-trigger', conversationId },
       }),
   );
+}
+
+/**
+ * Bağlama onayı — müşterinin KENDİ dilinde (07.09).
+ *
+ * Gönderim yolunda çeviri YOK (ölçüldü: `send.ts`te çeviri adımı yok; ajanın metnini çeviren
+ * mekanizma talep kanalınındır). Bu yüzden metin burada dile göre seçiliyor — Fransız müşteriye
+ * Türkçe onay göndermek, doğru işi yanlış dilde bildirmek olurdu ve hazır mesajı Fransızca
+ * gönderdiğimiz akışta özellikle tuhaf kaçardı.
+ *
+ * Metin KISA ve tek işi var: işlemin OLDUĞUNU söylemek. Ne yapıldığının ayrıntısı (hangi hesap,
+ * hangi numara) müşteriye bir şey katmaz, kimlik bilgisini sohbete taşırdı.
+ */
+const LINK_CONFIRMATION: Record<PreferredLanguage, string> = {
+  tr: 'Numaranız hesabınıza bağlandı — buradan siparişlerinizi sorabilirsiniz. Nasıl yardımcı olabiliriz?',
+  fr: 'Votre numéro est désormais lié à votre compte — vous pouvez suivre vos commandes ici. Comment pouvons-nous vous aider ?',
+  de: 'Ihre Nummer ist jetzt mit Ihrem Konto verknüpft — Sie können Ihre Bestellungen hier verfolgen. Wie können wir helfen?',
+};
+
+async function bagalamaOnayiGonder(conversationId: string, customerId: string | null): Promise<void> {
+  const db = serviceDb();
+  const dil = customerId ? ((await new UserProfileService(db).getById(customerId))?.preferredLanguage ?? 'fr') : 'fr';
+  const sonuc = await sendOutboundMessage(db, messageSenderFor(process.env.META_ACCESS_TOKEN), {
+    conversationId,
+    text: LINK_CONFIRMATION[dil],
+    author: 'admin',
+  });
+  // Onay gitmezse bağlama YİNE geçerlidir — yalnız müşteri bilmez. Sessiz geçilmez ki
+  // "bağladım ama söyleyemedim" hâli teşhis edilebilsin (`CLAUDE §1`: sessiz catch yok).
+  if (sonuc.status !== 'sent') {
+    logger.warn({ context: 'messaging/link-confirm', conversationId, outcome: sonuc.status }, 'bağlama onayı gönderilemedi');
+  }
 }
 
 /**
@@ -244,7 +278,8 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
           // `transferred` de bağlanmış sayılır: numara önceki kayıttan alındı ve bu hesaba verildi
           // (04.10, kullanıcı kararı 26.08). Konuşma yeni sahibine gider — eski kaydın geçmişi
           // yerinde kalır, taşınan yalnız kanaldır.
-          if (bag.status === 'linked' || bag.status === 'merged' || bag.status === 'transferred') customerId = bag.customerId;
+          const bagliMi = bag.status === 'linked' || bag.status === 'merged' || bag.status === 'transferred';
+          if (bagliMi) customerId = bag.customerId;
 
           // Kimliği çözmeyi DENE; çözülemezse kimliksiz aç — mesaj her durumda yazılır.
           //
@@ -270,7 +305,7 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
           // Altı haneli sayı gelen mesajlarda boldur (referans, adet, tutar, saat); bu yüzden kapı
           // yalnız BEKLEYEN bir soru varken iş yapar — kapılar `not_pending`/`no_code` ile sessizce
           // düşer ve tahmin denemesine ücretsiz tur açılmaz.
-          if (customerId) await cevabiIsle(phone, text);
+          const kimlikSirri = customerId ? await cevabiIsle(phone, text) : null;
 
           const conversation = await new ConversationService(serviceDb()).open({
             source: 'whatsapp',
@@ -280,9 +315,22 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
             profileName,
           });
 
+          /*
+            ── SIR DEFTERE DÜZ YAZILMAZ (07.09 · kullanıcı bulgusu) ─────────────────────────────
+            Kural 30.07'de yazılmıştı ve yalnız LOG tarafında uygulanmıştı; defter tarafı — belgenin
+            *"şart"* dediği taraf — hiç yapılmamıştı. Ekranda `LA-WA-PVK7LRQJ9FLG` düz görününce
+            ortaya çıktı.
+
+            İki sır geçebilir: hesabı numaraya bağlayan JETON (yanlış ellerde hesap devralma) ve
+            6 haneli GÜVENLİK KODU (aylarca geçerli). Defter kalıcıdır ve operasyon ekranı bütün
+            konuşmaları okutuyor (15.5) — log döner, defter KALIR.
+
+            Maskeleme yazımdan ÖNCE: bir kez düz yazılırsa geri alınamaz, üstelik satırın kopyası
+            gerçek zamanlı olarak ekranlara da düşer (`ringConversationsBell`).
+          */
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
-            text,
+            text: maskSecretsInText(text, [waLinkTokenIn(text), kimlikSirri]),
             kind,
             payload,
             providerMessageId: message.id,
@@ -303,6 +351,23 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
               conversationId: conversation.id,
               customerId,
             });
+          }
+
+          /*
+            ── BAĞLAMA BAŞARISI MÜŞTERİYE SÖYLENİR, AJAN ARAYA GİRMEZ (07.09 · ölçülmüş arıza) ──
+            Ölçülen akış şuydu: müşteri `LA-WA-…` mesajını gönderdi, jeton tüketildi, taslak kayıt
+            gerçek hesapla birleşti — yani her şey ÇALIŞTI — ve müşteriye hiçbir şey söylenmedi.
+            Sonra olan bitenden habersiz ajan, anlamadığı mesaja *"bir yetkilimiz yardımcı olacak"*
+            diye cevap verdi. Üç ayrı zarar: müşteri işlemin olmadığını sandı, kimsenin tutmayacağı
+            bir söz verildi, ve devir yüzünden sohbet YZ modundan `human`a düştü — yani BAŞARILI
+            bir otomatik işlem, otomasyonu kapattı.
+
+            Bağlama mesajı bir SORU değil, sistem mesajıdır: cevabı ajan değil sistem bilir. O yüzden
+            onayı burada gönderiyor ve tetiği çağırmıyoruz.
+          */
+          if (bagliMi) {
+            await bagalamaOnayiGonder(conversation.id, customerId);
+            return;
           }
 
           triggerAutonomousReply(conversation.id, conversation.handledBy);
@@ -363,18 +428,32 @@ async function tasiyiciBeyani(value: Record<string, unknown>): Promise<void> {
   }
 }
 
-async function cevabiIsle(phone: string, text: string | null): Promise<void> {
+/**
+ * Çapa/kod cevabını işler ve **metnin bir SIR taşıyıp taşımadığını söyler** (07.09).
+ *
+ * Dönüş değeri maskeleme içindir: defter bu metni yazmadan önce sırrı silmek zorunda
+ * (`secret-masking` künyesi). Sırrın kendisi döndürülüyor, "evet/hayır" değil — maskeleyici
+ * şekil bilmiyor, silinecek dizeyi çağırandan alıyor.
+ *
+ * **YALNIZ gerçek bir denemede maskeleniyor.** Altı haneli sayı gelen mesajlarda boldur (referans,
+ * adet, tutar, saat); her altı haneyi maskelemek defteri okunmaz yapardı. Kapılar zaten bekleyen
+ * bir soru yokken `not_pending`/`no_code` ile düşüyor — o hâlde sayı sır değildir ve dokunulmuyor.
+ * Yanlış ya da kilitli deneme ise maskelenir: yanlış girilen kod da gerçek kodun yakınında olabilir.
+ */
+async function cevabiIsle(phone: string, text: string | null): Promise<string | null> {
   const capa = await answerEmailAnchor(serviceDb(), phone, text);
   if (capa.status !== 'none' && capa.status !== 'not_pending') {
     // Kodun kendisi ASLA loglanmaz (CLAUDE §1) — kimlik ve sonuç yeter.
     logger.info({ conversationRef: phone.slice(-4), outcome: capa.status }, 'çapa: e-posta bağlama cevabı işlendi');
-    return;
+    return sixDigitCodeIn(text);
   }
 
   const kod = await verifySecurityCode(serviceDb(), phone, text);
   if (kod.status !== 'none' && kod.status !== 'no_code') {
     logger.info({ conversationRef: phone.slice(-4), outcome: kod.status }, 'çapa: güvenlik kodu denendi');
+    return sixDigitCodeIn(text);
   }
+  return null;
 }
 
 /** WhatsApp mesaj tipi → defter türü. Enum dar ve bilinçli: tanınmayan tip payload'ıyla `media` kovasına düşer, kaybolmaz. */
