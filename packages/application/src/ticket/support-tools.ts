@@ -7,6 +7,7 @@ import { logger } from '@lezzet/observability';
 import { COUNTRY_LABELS, ORDER_STATUS_LABELS, type Address, type StockStatus } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
+import { getProductDetail } from '../catalog/product';
 import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
 import { readPublicDeliveryTerms } from '../settings/public-terms';
@@ -264,20 +265,62 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             includeUnsellable: true,
           });
 
-          const urunler = katalog.products.slice(0, PRODUCT_HITS).map((p) => ({
-            ad: p.name,
-            birim: p.unitLabel,
-            // `null` fiyat = bu kanalda SATIŞA KAPALI (DOMAIN §5) — "0 €" demek yanlış olurdu.
-            fiyat: p.priceCents === null ? 'bu kanalda satışa kapalı' : formatPrice(p.priceCents, 'tr'),
-            durum: STOK_SOZLUGU[p.stockStatus],
-            ...(p.variantCount > 1 ? { boySayisi: p.variantCount } : {}),
-          }));
+          /*
+            FİYAT ALANI ADIYLA NE OLDUĞUNU SÖYLER (06.09 · ölçülmüş arıza).
+
+            `p.priceCents` çok boylu üründe **başlangıç fiyatıdır** — en ucuz aktif boyun fiyatı
+            (`map.ts` künyesi; sitede "…'dan" diye çizilir). Alan düpedüz `fiyat` diye veriliyordu
+            ve ajan onu TEK fiyat sanıp öyle yazdı: müşteri "fıstıklı baklava" diye genel sordu,
+            dört boydan yalnız en küçüğünü (225 g · 4,57 €) öğrendi, ötekilerin varlığını hiç
+            duymadı. Cevap YANLIŞ değildi — gramaj ve fiyat aynı varyanttan geldiği için eşleşme
+            doğruydu — ama eksikti, ve eksikliği doğuran şey alan adının sustuğu bilgiydi.
+
+            Bu, para alanının taşıdığı anlamı adında söyleme kuralının aynısı: tek boyluda `fiyat`,
+            çok boyluda `enUcuzBoy`/`fiyatBaslangic`. Model hangisini okuduğunu adından bilir.
+          */
+          const urunler = katalog.products.slice(0, PRODUCT_HITS).map((p) => {
+            const fiyat = p.priceCents === null ? 'bu kanalda satışa kapalı' : formatPrice(p.priceCents, 'tr');
+            return {
+              ad: p.name,
+              durum: STOK_SOZLUGU[p.stockStatus],
+              // `null` fiyat = bu kanalda SATIŞA KAPALI (DOMAIN §5) — "0 €" demek yanlış olurdu.
+              ...(p.variantCount > 1
+                ? { boySayisi: p.variantCount, enUcuzBoy: p.unitLabel, fiyatBaslangic: fiyat }
+                : { birim: p.unitLabel, fiyat }),
+            };
+          });
 
           if (urunler.length === 0) return { bilinmiyor: `"${terim}" için katalogda eşleşen ürün yok.` };
+
+          /*
+            EN İYİ EŞLEŞMENİN BOYLARI — sayı yetmez, LİSTE gerekir.
+
+            Araç bugüne kadar yalnız `boySayisi: 4` diyordu; ajan "dört boy var" bilgisine sahipti
+            ama boyların etiketini ve fiyatını BİLMİYORDU, yani isteseydi de sayamazdı. Müşterinin
+            "hangi boylar var, kaça" sorusu cevapsız kalıyordu.
+
+            YALNIZ İLK EŞLEŞME için okunuyor ve bu bilinçli: beş ürünün beşine detay çekmek beş
+            ekstra sorgu demekti, oysa müşteri genelde tek ürünü soruyor ve arama zaten ilgiye göre
+            sıralı. İkinci ürünün boyları gerekirse model onu adıyla yeniden aratır.
+
+            Detay AYNI motordan okunuyor (`getProductDetail`, aynı `place`+`viewer`): ikinci bir
+            fiyat kuralı doğmuyor, yani listedeki fiyatla boy fiyatları ayrışamaz.
+          */
+          const ilk = katalog.products[0];
+          const boylar =
+            ilk && ilk.variantCount > 1
+              ? ((await getProductDetail(db, { locale: 'tr', slug: ilk.slug, place, viewer }))?.variants ?? [])
+                  .filter((v) => v.priceCents !== null)
+                  .map((v) => ({ boy: v.label, fiyat: formatPrice(v.priceCents!, 'tr') }))
+              : [];
+          // Boy listesi yalnız DOLUYSA gönderiliyor: boş dizi, modele "boy yok" diye okunabilecek
+          // bir gürültüdür — tek boylu üründe alan hiç olmamalı.
+          const boyAlani = boylar.length > 0 ? { boylar: { urun: ilk!.name, secenekler: boylar } } : {};
           return kod
-            ? { urunler, yer: kod }
+            ? { urunler, ...boyAlani, yer: kod }
             : {
                 urunler,
+                ...boyAlani,
                 yerBilinmiyor:
                   'Yer bilinmiyor — stok "hiç var mı" düzeyinde okundu, bir depoya göre değil. ' +
                   'Müşteriden POSTA KODU iste ve bu aracı postaKodu ile yeniden çağır.',

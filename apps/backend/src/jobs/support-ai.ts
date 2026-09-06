@@ -40,6 +40,52 @@ export const SUPPORT_AI = 'support_ai';
  */
 const BATCH = 10;
 
+/*
+  ── DÜŞEN SATIRIN FRENİ (06.09) ─────────────────────────────────────────────
+  Tur sıklığı 5 dakikadan 1 dakikaya çekilirken açılan tek gerçek risk buydu ve kapatılması
+  sıklıktan önce gelir.
+
+  Arıza şöyle: özerk cevap SAĞLAYICI hatasıyla düşerse (`failed`) mod değişmiyor ve giden mesaj
+  yazılmıyor — bilerek, çünkü yapılandırma boşluğu yüzünden sohbeti insana devretmek geri alınması
+  zor bir veri değişikliğidir (`runAutonomousConversationReply` künyesi). Ama satır bu yüzden
+  `awaiting_reply` kalıyor ve HER turda model yeniden çağrılıyor. Beş dakikada saatte 12 çağrı,
+  bir dakikada 60 — hem de hiçbiri müşteriye ulaşmayacak.
+
+  Fren üstel: 1 → 2 → 4 → 8 … dakika, yarım saatte tavan. Başarıda iz siliniyor, yani geçici bir
+  sağlayıcı kesintisi kendini onarıyor ve kalıcı arıza sessizce para yakmıyor.
+
+  **Bellekte tutuluyor, veritabanında değil** ve bu bilinçli: backend tek instance (`STACK §13`),
+  fren bir dayanıklılık kaydı değil bir maliyet siperi. Yeniden başlatma izi siler — en kötü
+  ihtimalle bir kez fazladan denenir, o da doğru davranış.
+*/
+const BACKOFF_BASE_MS = 60_000;
+const BACKOFF_MAX_MS = 30 * 60_000;
+/** Kayıt bu süre boyunca hiç görülmediyse düşer — kuyruktan çıkmış satırlar haritayı şişirmesin. */
+const BACKOFF_TTL_MS = 6 * 60 * 60_000;
+
+const backoff = new Map<string, { fails: number; nextAt: number; seenAt: number }>();
+
+function shouldBackOff(id: string, now: number): boolean {
+  const kayit = backoff.get(id);
+  return kayit !== undefined && now < kayit.nextAt;
+}
+
+function noteFailure(id: string, now: number): void {
+  const fails = (backoff.get(id)?.fails ?? 0) + 1;
+  const bekleme = Math.min(BACKOFF_BASE_MS * 2 ** (fails - 1), BACKOFF_MAX_MS);
+  backoff.set(id, { fails, nextAt: now + bekleme, seenAt: now });
+}
+
+/** Başarı izi siler: geçici kesinti kendini onarır, bir sonraki mesaj hemen cevaplanır. */
+function noteSuccess(id: string): void {
+  backoff.delete(id);
+}
+
+/** Tur başında budama — kuyruktan çıkmış satırların kaydı sonsuza kadar durmasın. */
+function pruneBackoff(now: number): void {
+  for (const [id, kayit] of backoff) if (now - kayit.seenAt > BACKOFF_TTL_MS) backoff.delete(id);
+}
+
 /** Bir taramanın sonucu sayaçlara nasıl düşer — dört tarama aynı çeviriciyi kullanır. */
 function tally(sonuc: Record<string, number>, outcome: SupportAiOutcome): void {
   if (outcome.status === 'replied') sonuc.replied! += 1;
@@ -58,11 +104,22 @@ export async function supportAiJob(): Promise<Record<string, unknown>> {
   const inbox = new ConversationInboxService(db);
 
   // 1) Özerk cevaplar — modu `ai`, son sözü müşteri söylemiş, kapanmamış talepler.
+  const now = Date.now();
+  pruneBackoff(now);
+
   const autonomous = await tickets.list({ handledBy: 'ai', awaitingReply: true, openOnly: true }, undefined, BATCH);
   for (const row of autonomous.rows) {
     if (kalan <= 0) break;
+    // Fren SAYAÇ TÜKETMEDEN atlar: düşen bir satır turun tavanını yiyip sağlıklı satırları
+    // sıraya bırakamamalı — arızanın bedeli kendi dışına taşmasın.
+    if (shouldBackOff(`ticket:${row.id}`, now)) {
+      sonuc.skipped! += 1;
+      continue;
+    }
     kalan -= 1;
     const outcome = await runAutonomousTicketReply(db, row.id);
+    if (outcome.status === 'failed') noteFailure(`ticket:${row.id}`, now);
+    else noteSuccess(`ticket:${row.id}`);
     if (outcome.status === 'failed') {
       // Anahtarsız kurulumda TUR biter, satır satır uyarı basılmaz (`translate-user-text` kuralı).
       if (outcome.reason === 'not_configured') {
@@ -91,8 +148,14 @@ export async function supportAiJob(): Promise<Record<string, unknown>> {
   const conversations = await inbox.list({ awaitingReply: true }, undefined, BATCH);
   for (const row of conversations.rows.filter((r) => r.handledBy === 'ai')) {
     if (kalan <= 0) break;
+    if (shouldBackOff(`conversation:${row.id}`, now)) {
+      sonuc.skipped! += 1;
+      continue;
+    }
     kalan -= 1;
     const outcome = await runAutonomousConversationReply(db, sender, row.id);
+    if (outcome.status === 'failed') noteFailure(`conversation:${row.id}`, now);
+    else noteSuccess(`conversation:${row.id}`);
     if (outcome.status === 'failed') {
       /* İki ayrı "yapılandırılmamış" var ve ikisi aynı tepkiyi hak etmiyor — tip de bunu söylüyor
          (`SupportAiOutcome` künyesi). GÖNDERİM jetonu yoksa yalnız bu tarama anlamsızdır: `break`,

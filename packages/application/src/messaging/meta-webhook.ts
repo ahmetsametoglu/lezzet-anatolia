@@ -10,6 +10,40 @@ import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { ConversationSource, MessageKind } from '@lezzet/types';
 import { findOrCreateCustomer } from '../customer/find-or-create';
 import { fetchMetaProfileName } from './meta-profile';
+import { runAutonomousConversationReply } from '../ticket/ai';
+import type { TicketHandler } from '@lezzet/types';
+
+/**
+ * **ÖZERK CEVABI OLAY ANINDA TETİKLE** (06.09 · kullanıcı sorusu) — tarama emniyet ağına düşer.
+ *
+ * Tarama dakikada bir koşuyor ve bu bedava; ama gecikmenin kendisi bedava değil — müşteri sohbette
+ * bekliyor. Gelen mesaj zaten elimizde, o hâlde cevabı beklemenin sebebi yok.
+ *
+ * ── CEVAP BEKLENMİYOR VE BU ŞART ────────────────────────────────────────────
+ * Model çağrısı saniyeler sürüyor; `await` edilseydi Meta'nın webhook isteği o kadar açık kalırdı.
+ * Meta yavaş cevabı BAŞARISIZ sayıp aynı olayı yeniden gönderir — ve tekrar teslimi defterde
+ * `duplicates` olarak eleniyor olsa da, her tekrar yeni bir model çağrısı doğururdu. Yani
+ * `await`, gecikmeyi çözerken maliyeti çoğaltırdı.
+ *
+ * ── ÇİFT CEVAP RİSKİ KAPIDA KAPALI ──────────────────────────────────────────
+ * Tetik ile tarama aynı sohbete aynı anda girebilir; koruma `runAutonomousConversationReply`in
+ * kendi kilidinde (`in_flight`), burada değil. Çağıran tarafta olsaydı üçüncü bir çağıran onu
+ * unutabilirdi.
+ *
+ * ── SESSİZ DÜŞMEZ ───────────────────────────────────────────────────────────
+ * Beklenmeyen hata `captureError`la gürültü çıkarır (`CLAUDE §1`: sessiz `catch` yok). Cevap
+ * üretilemezse zaten kayıp yok: satır `awaiting_reply` kalır ve bir sonraki tarama devralır.
+ */
+function triggerAutonomousReply(conversationId: string, handledBy: TicketHandler): void {
+  if (handledBy !== 'ai') return;
+  void runAutonomousConversationReply(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), conversationId).catch(
+    (err: unknown) =>
+      captureError(err, {
+        source: SOURCES.webhook,
+        context: { area: 'messaging/autonomous-trigger', conversationId },
+      }),
+  );
+}
 
 /**
  * Meta webhook İŞLEYİCİSİ (15.7) — HTTP'siz, test edilebilir; kabuk `app/api/webhooks/meta/route.ts`.
@@ -270,6 +304,8 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally)
               customerId,
             });
           }
+
+          triggerAutonomousReply(conversation.id, conversation.handledBy);
         },
       });
     }

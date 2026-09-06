@@ -256,11 +256,27 @@ cron.schedule('*/5 * * * *', () => {
   void runJob(TRANSLATE_USER_TEXT, translateUserTextJob);
 });
 
-// AI destek turu (16.5 · 20.4) — beş dakikada bir: özerk cevaplar (mod `ai`) + hibrit taslaklar
-// (talep ve WhatsApp). Çeviriyle AYNI sıklık ve aynı gerekçe: müşteri cevabının gecikmesi bir
-// görünürlük kararı, beş dakika "hemen cevaplandı" hissinin içinde. Tur başına çağrı tavanı işte
-// (`BATCH`); önbellek kuralı çekirdekte — taze taslaklı satır modeli hiç çağırtmaz.
-cron.schedule('*/5 * * * *', () => {
+/*
+  AI destek turu (16.5 · 20.4) — özerk cevaplar (mod `ai`) + hibrit taslaklar (talep ve sohbet).
+
+  ── SIKLIK BEŞ DAKİKADAN BİRE ÇEKİLDİ (06.09 · kullanıcı sorusu) ────────────
+  Eski künye "beş dakika hemen cevaplandı hissinin içinde" diyordu; ölçünce gerekçe çürüktü.
+  **Sıklık AI çağrısı EKLEMİYOR:** model çağrısı müşteri MESAJI başına bir kez oluyor, tur başına
+  değil — cevap gidince görünümün `awaiting_reply` alanı false'a döner (`last_direction`
+  koşulu) ve satır taramadan çıkar. Hibritte ayrıca önbellek var (taslak son mesajdan tazeyse
+  `cached`). Yani bir tikin maliyeti İKİ indeksli sorgu; beş dakika bedava bir gecikmeydi.
+
+  Bir istisna vardı ve o kapatıldı: sağlayıcı hatasında (`failed`) mod değişmiyor ve giden mesaj
+  yazılmıyor, yani satır `awaiting_reply` kalıp her turda modeli yeniden çağırıyordu — sıklık
+  arttıkça bu beş katına çıkardı. Freni `supportAiJob` içinde (`shouldBackOff`).
+
+  ── VE ASIL ÇÖZÜM SIKLIK DEĞİL ──────────────────────────────────────────────
+  `ai` modundaki sohbette cevap artık webhook'tan OLAY TETİKLİ geliyor (`meta-webhook.ts`), yani
+  saniyeler içinde. Bu tarama onun emniyet ağı: tetik düşerse ya da yazım yarıda kalırsa satır bir
+  sonraki turda telafi olur. İkisi aynı kapıdan geçiyor, çift cevap üretemezler — `awaiting_reply`
+  cevap yazıldığı an kapanıyor.
+*/
+cron.schedule('* * * * *', () => {
   void runJob(SUPPORT_AI, supportAiJob);
 });
 

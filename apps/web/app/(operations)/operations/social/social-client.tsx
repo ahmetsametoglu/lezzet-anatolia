@@ -9,7 +9,7 @@ import {
   issueSecurityCodeAction,
   recordConversationOptInAction,
   startEmailAnchorAction,
-  recordOutboundAction,
+  sendOutboundAction,
   setConversationModeAction,
   suggestConversationDraftAction,
 } from './actions';
@@ -114,8 +114,8 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     onChannel: (ch: SocialChannelKey) => go({ ch }),
     // Süzgeç değişmiyor, seçim değişiyor: aynı adres üç soruyu birden taşıyor.
     onSelect: (c: string) => go({ c }),
-    onRecordOutbound: (text: string) =>
-      detail ? run(() => recordOutboundAction({ conversationId: detail.id, text })) : Promise.resolve(false),
+    onSendReply: (text: string) =>
+      detail ? run(() => sendOutboundAction({ conversationId: detail.id, text })) : Promise.resolve(false),
     // Mod anahtarı (16.08) — onaysız: anahtar kararın kendisi; Devral düğmesi de buradan geçer.
     onMode: (mode: TicketHandler) => {
       if (detail) void run(() => setConversationModeAction(detail.id, mode));

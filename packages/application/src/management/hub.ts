@@ -65,7 +65,13 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
       stocks.listInStockDetailed(undefined, facilityIds),
       readExpiryThresholds(new SettingsService(db)),
       Promise.all(facilityIds.map((warehouseId) => new ReorderService(db).suggestions(warehouseId))),
-      new ConversationInboxService(db).countAwaitingReply('whatsapp'),
+      /* Kanal SÜZGECİ YOK ve bu bir düzeltme (06.09): sayaç `'whatsapp'` ile daraltılmıştı, oysa
+         açtığı ekran ÜÇ kanalı birden listeliyor (`/social`, 15.15). Kutucuk "1 bekliyor" derken
+         gelen kutusunda iki sohbetin beklemesi mümkündü — hemen üstteki iki yorumun ("kutu ile
+         ekran aynı kümeyi sayar, ayrışamaz") çiğnendiği tek yer burasıydı. Ayrışma bugüne kadar
+         GİZLİYDİ çünkü defterde yalnız WhatsApp sohbeti var; ilk Messenger/IG sohbetinde
+         görünür olurdu — yani sessizce yanlış sayı gösteren bir kapı. */
+      new ConversationInboxService(db).countAwaitingReply(),
     ]);
 
   /*

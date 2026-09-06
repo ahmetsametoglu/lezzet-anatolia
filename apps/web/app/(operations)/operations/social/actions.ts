@@ -8,7 +8,7 @@ import {
   messageSenderFor,
   recordConversationOptIn,
   recordInboundMessage,
-  recordOutboundMessage,
+  sendOutboundMessage,
   startEmailAnchor,
 } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
@@ -141,20 +141,66 @@ export async function recordFollowUpInboundAction(input: unknown): Promise<Actio
   }
 }
 
+/*
+  GÖNDERİM REDDİ → OPERATÖRÜN CÜMLESİ.
+
+  Sözlük burada, çünkü ayrım operatöre GÖRÜNMEK zorunda: `refused` bizim kuralımızdır (tekrar
+  denemek anlamsız, önce bir şeyin değişmesi gerekir), `failed` sağlayıcı tarafıdır (tekrar
+  denemek anlamlı olabilir). Tek kovaya atmak, "yeniden dene"yi yanlış yere koydururdu.
+
+  Tanınmayan sebep GİZLENMEZ, ham hâliyle gösterilir: sağlayıcı yarın yeni bir kod döndürdüğünde
+  operatörün elinde aranabilir bir dize olsun — "bir hata oluştu" cümlesi teşhisi öldürür.
+*/
+const SEND_REFUSAL: Record<string, string> = {
+  conversation_not_found: 'Konuşma bulunamadı — ekranı tazeleyin.',
+  template_wrong_channel: 'Kalıp mesaj yalnız WhatsApp konuşmasına gönderilebilir.',
+  window_closed: 'Cevap süresi doldu — serbest metin gönderilemez. WhatsApp’ta onaylı kalıp mesaj gerekir.',
+  window_never_opened: 'Müşteri bu kanaldan size hiç yazmadı — cevap penceresi hiç açılmadı.',
+  account_ref_missing: 'Bu konuşma hangi işletme hesabına geldiğini taşımıyor; cevap yönlendirilemez.',
+  not_configured: 'Gönderim kanalı yapılandırılmadı (META_ACCESS_TOKEN yok) — mesaj GÖNDERİLMEDİ.',
+};
+
 /**
- * Var olan konuşmaya GİDEN mesaj — pencereye dokunmaz.
+ * Var olan konuşmaya GİDEN mesaj — **artık gerçekten gönderilir** (06.09).
  *
- * `templateName` verilmiyor ve verilemez: adım 1'de admin kendi telefonundan serbest metin yazıyor,
- * onaylı şablon gönderimi API işidir (15.11). Alan uydurulsaydı, defter hiç gönderilmemiş bir
- * şablonun ücretini raporlardı.
+ * ── NEDEN DEĞİŞTİ: DEFTER KUTUSUNUN DAYANAĞI ÇÖKTÜ ──────────────────────────
+ * Kutu bugüne kadar bir DEFTER kutusuydu ve gerekçesi gerçekti: yazışma operatörün telefonundan
+ * yürüyor, ekran yalnız kaydını tutuyordu. O gerekçe WhatsApp'ta artık YOK — numara Cloud API'ye
+ * kaydedildi ve Meta'nın kuralı gereği kayıttan sonra WhatsApp Business uygulamasıyla
+ * kullanılamıyor (`build/15 Netleşecekler`). Yani telefondan yazan kimse kalmadı: ekran
+ * göndermezse cevap hiç gitmiyor. "Deftere işle" düğmesi o gün sessizce bir yalana dönüştü.
+ *
+ * ── SIRA: ÖNCE GÖNDER, SONRA YAZ ────────────────────────────────────────────
+ * Kararı `sendOutboundMessage` veriyor ve burada tekrarlanmıyor: gönderim geri alınamaz (müşteri
+ * okumuştur), defter yazımı telafi edilebilir. `sent` dönerken `message: null` olabilir — gönderim
+ * OLDU, satır yazılamadı; o hâl bir başarıdır ve öyle raporlanır.
+ *
+ * `templateName` hâlâ verilmiyor: onaylı şablonumuz yok (15.11). Alan uydurulsaydı Meta `132001`
+ * döndürürdü ve defter hiç gönderilmemiş bir şablonun ücretini raporlardı.
  */
-export async function recordOutboundAction(input: unknown): Promise<ActionResult<{ id: string }>> {
+export async function sendOutboundAction(input: unknown): Promise<ActionResult<{ id: string | null }>> {
   try {
     await requireAdmin();
     const parsed = RecordOutboundSchema.parse(input);
-    const message = await recordOutboundMessage(serviceDb(), { conversationId: parsed.conversationId, text: parsed.text });
+    const outcome = await sendOutboundMessage(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), {
+      conversationId: parsed.conversationId,
+      text: parsed.text,
+      author: 'admin',
+    });
     refresh();
-    return { data: { id: message.id }, error: null };
+
+    if (outcome.status === 'sent') return { data: { id: outcome.message?.id ?? null }, error: null };
+    if (outcome.status === 'refused') {
+      return { data: null, error: SEND_REFUSAL[outcome.reason] ?? `Gönderilemedi (${outcome.reason}).` };
+    }
+    // `failed` = sağlayıcı reddetti. Sebep ham geçiyor (`meta_131030: …` gibi) — operatör onu
+    // arayabilsin; ayrıca yeniden denemenin anlamlı olup olmadığı söyleniyor.
+    return {
+      data: null,
+      error: outcome.retryable
+        ? `Sağlayıcı şu an gönderemedi (${outcome.reason}) — birazdan tekrar deneyin.`
+        : `Sağlayıcı reddetti (${outcome.reason}) — tekrar denemek aynı sonucu verir.`,
+    };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

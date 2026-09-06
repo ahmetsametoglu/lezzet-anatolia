@@ -155,16 +155,16 @@ interface ConversationPaneProps {
   busy: boolean;
   error: string | null;
   onIncoming: () => void;
-  onRecordOutbound: (text: string) => Promise<boolean>;
+  onSendReply: (text: string) => Promise<boolean>;
   /** Yürütücü modu (16.08) — Devral da buradan geçer (`mode='human'`). */
   onMode: (mode: TicketHandler) => void;
-  /** Hibrit taslağı tüket — metni döndürür, ekran defter kutusuna taşır. */
+  /** Hibrit taslağı tüket — metni döndürür, ekran cevap kutusuna taşır. */
   onConsumeDraft: () => Promise<string | null>;
   /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
   onSuggestDraft: () => void;
 }
 
-export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutbound, onMode, onConsumeDraft, onSuggestDraft }: ConversationPaneProps) {
+export function ConversationPane({ detail, busy, error, onIncoming, onSendReply, onMode, onConsumeDraft, onSuggestDraft }: ConversationPaneProps) {
   // "Kutuya taşı"nın taşıdığı metin — nesne kimliği tetikleyicidir (talep ekranıyla aynı desen).
   const [prefill, setPrefill] = useState<{ text: string } | null>(null);
 
@@ -278,7 +278,7 @@ export function ConversationPane({ detail, busy, error, onIncoming, onRecordOutb
         busy={busy}
         error={error}
         prefill={prefill}
-        onRecordOutbound={onRecordOutbound}
+        onSendReply={onSendReply}
       />
     </div>
   );
@@ -291,7 +291,7 @@ interface ReplyBoxProps {
   error: string | null;
   /** Hibrit taslağın taşıdığı metin — nesne kimliği değişince kutuya yazılır (16.08). */
   prefill?: { text: string } | null;
-  onRecordOutbound: (text: string) => Promise<boolean>;
+  onSendReply: (text: string) => Promise<boolean>;
 }
 
 /**
@@ -303,14 +303,17 @@ interface ReplyBoxProps {
  * Kapalıyken kutunun kalkması yalnız çizime uymak değil, DOĞRU: pencere kapalıyken serbest metin
  * kanal tarafında da gönderilemez. Yani kaydedilecek bir cevap da yoktur.
  *
- * **Kutu bir GÖNDERME kutusu değil, DEFTER kutusudur** ve tek sapma bu. Çizim uçak düğmesi koyuyor
- * ama arkasında bugün hiçbir şey yok: gönderim kanalı webhook turuyla geliyor (15.7/15.11).
- * Yazdığını gönderdiğini sanan operatör, cevapsız kalan müşteriyi asla fark etmez.
+ * **Kutu 06.09'da DEFTER kutusu olmaktan çıktı, GÖNDERME kutusu oldu.** Eski hâlin gerekçesi
+ * gerçekti — yazışma operatörün telefonundan yürüyor, ekran kaydını tutuyordu — ama WhatsApp'ta o
+ * gerekçe çöktü: numara Cloud API'ye kaydedildi ve Meta'nın kuralı gereği artık WhatsApp Business
+ * uygulamasıyla kullanılamıyor. Telefondan yazan kimse kalmayınca "Deftere işle" düğmesi sessizce
+ * bir yalana döndü: operatör cevabı yazıyor, satır deftere düşüyor, müşteriye HİÇBİR ŞEY gitmiyor.
+ * Şimdi düğme gerçekten gönderiyor ve gönderemezse SEBEBİNİ söylüyor (`SEND_REFUSAL`).
  *
  * **GELEN mesaj burada işlenmez** — o iş "Gelen mesaj işle" penceresinin, çünkü gelen mesaj
  * pencereyi AÇAN olaydır ve alınma anını ister.
  */
-function ReplyBox({ source, window: win, busy, error, prefill, onRecordOutbound }: ReplyBoxProps) {
+function ReplyBox({ source, window: win, busy, error, prefill, onSendReply }: ReplyBoxProps) {
   const [text, setText] = useState('');
 
   // Taslak kutuya OPERATÖRÜN kararıyla taşınır ("Cevap kutusuna taşı") — ezmesi bu yüzden kabul:
@@ -321,7 +324,7 @@ function ReplyBox({ source, window: win, busy, error, prefill, onRecordOutbound 
 
   const submit = async () => {
     if (!text.trim()) return;
-    if (await onRecordOutbound(text)) setText('');
+    if (await onSendReply(text)) setText('');
   };
 
   if (win.state !== 'open') {
@@ -345,10 +348,10 @@ function ReplyBox({ source, window: win, busy, error, prefill, onRecordOutbound 
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={1}
-          placeholder="Telefonunuzdan gönderdiğiniz cevabı buraya geçirin…"
+          placeholder="Cevabınızı yazın…"
         />
         <Button variant="primary" className="flex-none whitespace-nowrap" onClick={() => void submit()} disabled={busy || !text.trim()}>
-          {busy ? 'İşleniyor…' : 'Deftere işle'}
+          {busy ? 'Gönderiliyor…' : 'Gönder'}
         </Button>
       </div>
       <span className="font-ops-body text-ops-micro leading-[1.5] text-ops-faint">
@@ -356,7 +359,7 @@ function ReplyBox({ source, window: win, busy, error, prefill, onRecordOutbound 
           <span className="font-semibold text-ops-red">{error}</span>
         ) : (
           <>
-            {WINDOW_NOTE[source].open} {win.chip} kaldı · buradan mesaj GÖNDERİLMEZ, yazışma telefondan yürür.
+            {WINDOW_NOTE[source].open} {win.chip} kaldı · bu süre içinde cevap ücretsizdir.
           </>
         )}
       </span>

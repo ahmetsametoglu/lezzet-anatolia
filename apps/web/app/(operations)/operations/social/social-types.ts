@@ -247,10 +247,11 @@ export interface SocialViewProps {
   /** Kanal çipi (15.15) — durum çipinden ayrı eksen. */
   onChannel: (ch: SocialChannelKey) => void;
   onSelect: (c: string) => void;
-  onRecordOutbound: (text: string) => Promise<boolean>;
+  /** Cevabı GÖNDERİR (06.09) — sağlayıcıya çıkar, sonra deftere yazılır (`sendOutboundAction`). */
+  onSendReply: (text: string) => Promise<boolean>;
   /** Yürütücü modu (16.08): human · hybrid · ai — Devral da bu kapıdan geçer (`mode='human'`). */
   onMode: (mode: TicketHandler) => void;
-  /** Hibrit taslağı tüket — metni döndürür, ekran defter kutusuna taşır (gönderim kanalı yok, 15.7/15.11). */
+  /** Hibrit taslağı tüket — metni döndürür, ekran cevap kutusuna taşır; gönderme kararı operatörün. */
   onConsumeDraft: () => Promise<string | null>;
   /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */
   onSuggestDraft: () => void;

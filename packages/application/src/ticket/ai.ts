@@ -10,7 +10,7 @@ import {
   TicketMessageService,
   TicketService,
 } from '@lezzet/database';
-import { statusAfterStaffReply } from '@lezzet/domain-core';
+import { formatForChannel, statusAfterStaffReply, stripChatFormatting } from '@lezzet/domain-core';
 import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
@@ -87,7 +87,12 @@ export type SupportAiOutcome =
   | { status: 'cached' }
   | { status: 'replied' }
   | { status: 'handoff'; reason: string }
-  | { status: 'skipped'; reason: 'not_found' | 'wrong_mode' | 'nothing_to_answer' | 'empty_thread' }
+  /**
+   * `in_flight` (06.09) — aynı sohbetin cevabı ZATEN üretiliyor. Öteki sebeplerden farkı, bunun
+   * bir eksiklik değil bir YARIŞ işareti olması: iki çağıran (dakikalık tarama + webhook tetiği)
+   * aynı satıra denk geldi ve ikincisi geri çekildi. Sayaçta "atlandı" görünür; arıza değildir.
+   */
+  | { status: 'skipped'; reason: 'not_found' | 'wrong_mode' | 'nothing_to_answer' | 'empty_thread' | 'in_flight' }
   /**
    * `not_configured` **AI anahtarının** yokluğudur; `send_not_configured` **gönderim jetonunun**.
    * İkisi ayrı, çünkü çağıranın tepkisi ayrı: ilkinde tüm tur anlamsızdır (her tarama model
@@ -187,7 +192,14 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
   const result = await runTask(ticketDraftTask, context, await runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  await tickets.update({ id: ticket.id, aiDraftReply: result.data.reply, aiDraftGeneratedAt: new Date().toISOString() });
+  // Talep ekranı biçimlendirmeyi ÇİZMİYOR (06.09) — işaretler burada sökülür, yoksa operatörün
+  // önüne çıplak yıldızlı bir taslak gelir. Ekran çizmeyi öğrendiği gün bu çağrı kalkar; ajanın
+  // prompt'una dokunulmaz (`chat-formatting` künyesi).
+  await tickets.update({
+    id: ticket.id,
+    aiDraftReply: stripChatFormatting(result.data.reply),
+    aiDraftGeneratedAt: new Date().toISOString(),
+  });
   // Taslağı çoğu zaman CRON yazıyor (5 dakikada bir tur) — yani ekranda hiçbir şey olmadan beliriyor.
   // Zil çalmazsa operatör taslağı ancak sayfayı elle yenileyince görürdü (16.8).
   await ringTicketsBell();
@@ -244,7 +256,14 @@ export async function generateConversationDraft(
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  await conversations.update({ id: conversation.id, aiDraftReply: result.data.reply, aiDraftGeneratedAt: new Date().toISOString() });
+  /* Taslak KANALA GÖRE biçimlendirilir (06.09): operatör kutuya aldığı metni olduğu gibi
+     gönderiyor, yani taslakta duran işaret müşteriye gidecek işarettir. WhatsApp'ta kalır,
+     Messenger/IG'de sökülür — orada çizilmiyor ve müşteri çıplak yıldız görürdü. */
+  await conversations.update({
+    id: conversation.id,
+    aiDraftReply: formatForChannel(result.data.reply, conversation.source),
+    aiDraftGeneratedAt: new Date().toISOString(),
+  });
   // Taslağı cron yazdı — WhatsApp ekranı açık duran operatör onu elle yenilemeden görsün (16.8).
   await ringConversationsBell();
   return { status: 'generated' };
@@ -340,7 +359,8 @@ export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: str
   const result = await runTask(ticketAgentTask, context, await runOpts(db, ticket.customerId, opts));
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  const reply = result.data.action === 'reply' ? result.data.reply?.trim() : null;
+  // Talep yüzeyi biçimlendirmeyi çizmiyor — işaretler burada sökülür (taslak yolunun aynı kuralı).
+  const reply = result.data.action === 'reply' ? stripChatFormatting(result.data.reply ?? '').trim() || null : null;
   if (!reply) {
     // Devir: sebep KAYDA geçer ama müşteri metnine sızmaz — operatör kuyrukta görür.
     const reason = result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.';
@@ -417,6 +437,38 @@ export async function runAutonomousConversationReply(
   conversationId: string,
   opts: SupportAiOpts = {},
 ): Promise<SupportAiOutcome> {
+  /*
+    ── AYNI SOHBETE İKİ CEVAP YAZILAMAZ (06.09) ──────────────────────────────
+    Bu kapının artık İKİ çağıranı var: dakikalık tarama ve gelen mesajın kendisi (webhook, olay
+    tetikli). Model çağrısı saniyeler sürüyor ve `awaiting_reply` ancak giden mesaj YAZILDIĞINDA
+    kapanıyor — yani tetik koşarken araya giren bir tarama aynı sohbeti "cevap bekliyor" görür ve
+    ikinci bir cevap üretir. Müşteriye arka arkaya iki mesaj gider, ikisi de faturalanır.
+
+    Kilit ÇAĞIRANDA değil BURADA, çünkü değişmez bu fonksiyonun: üçüncü bir çağıran doğduğunda
+    (ekrandan "şimdi cevapla" düğmesi gibi) korumayı yeniden yazmak ya da unutmak gerekmesin.
+
+    Bellekte tutuluyor — backend tek instance (`STACK §13`) ve bu bir dayanıklılık kaydı değil,
+    aynı süreç içindeki bir yarışın siperi. Kaybı zararsız: kilit düşerse bir sonraki tur zaten
+    yeniden dener.
+  */
+  if (inFlightConversations.has(conversationId)) return { status: 'skipped', reason: 'in_flight' };
+  inFlightConversations.add(conversationId);
+  try {
+    return await autonomousConversationReply(db, sender, conversationId, opts);
+  } finally {
+    inFlightConversations.delete(conversationId);
+  }
+}
+
+/** Aynı anda cevabı üretilen sohbetler — kilidin kendisi (`runAutonomousConversationReply` künyesi). */
+const inFlightConversations = new Set<string>();
+
+async function autonomousConversationReply(
+  db: SupabaseClient,
+  sender: MessageSender,
+  conversationId: string,
+  opts: SupportAiOpts,
+): Promise<SupportAiOutcome> {
   const conversations = new ConversationService(db);
   const conversation = await conversations.getById(conversationId);
   if (!conversation) return { status: 'skipped', reason: 'not_found' };
@@ -480,7 +532,9 @@ export async function runAutonomousConversationReply(
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
-  const reply = result.data.action === 'reply' ? result.data.reply?.trim() : null;
+  /* Kanal kararı gönderimden ÖNCE, tek yerde: WhatsApp işaretleri kendi çizer, Messenger/IG
+     çizmez ve müşteri `*Fıstıklı Baklava*` diye okurdu (`chat-formatting` künyesi). */
+  const reply = result.data.action === 'reply' ? formatForChannel(result.data.reply ?? '', conversation.source).trim() || null : null;
   if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
 
   /*

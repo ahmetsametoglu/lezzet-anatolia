@@ -36,7 +36,7 @@ export function SocialDesktop({
   onFilter,
   onChannel,
   onSelect,
-  onRecordOutbound,
+  onSendReply,
   onMode,
   onConsumeDraft,
   onSuggestDraft,
@@ -104,7 +104,7 @@ export function SocialDesktop({
               busy={busy}
               error={error}
               onIncoming={onIncoming}
-              onRecordOutbound={onRecordOutbound}
+              onSendReply={onSendReply}
               onMode={onMode}
               onConsumeDraft={onConsumeDraft}
               onSuggestDraft={onSuggestDraft}

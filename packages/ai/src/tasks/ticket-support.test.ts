@@ -132,6 +132,39 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
        engelliyor — "adresinizi yazın, ben girerim" cümlesi araçsız da kurulabilirdi. */
     herIkisinde('Adresi sohbette ALMA');
   });
+
+  it('UZUNLUK ölçülebilir — "kısa yaz" bir kural değildir', () => {
+    /* Eskiden yalnız "Kısa ve net" yazıyordu; ölçülen ilk gerçek cevap dört uzun cümle, ~380
+       karakterdi. Mesajlaşmada müşteri telefonda okuyor — sayı verilmezse "kısa" modelin
+       yorumuna kalır ve her seferinde başka çıkar. */
+    herIkisinde('~500 karakter');
+  });
+
+  it('BİÇİMLENDİRME kuralı var ve KANALDAN BAĞIMSIZ — dallanma yüzeyde, prompt’ta değil', () => {
+    /* Kanala göre dallandırmak ("WhatsApp'ta yıldız kullan, talepte kullanma") modelin
+       unutabileceği bir TALİMAT olurdu ve arızası sessiz olurdu. Model her zaman işaretli yazıyor;
+       kanal kararını `stripChatFormatting`/`formatForChannel` deterministik veriyor. Bu test o
+       ayrımı koruyor: prompt'a bir gün "WhatsApp ise" koşulu sızarsa burada görülür. */
+    herIkisinde('kanalı düşünme, sistem hallediyor');
+    for (const [ad, talimat] of talimatlar) {
+      expect(talimat, `${ad} talimatında kanal koşulu sızmış`).not.toMatch(/WhatsApp['’]?t[ae]\s+(?:ise|olduğunda)/i);
+    }
+  });
+
+  it('İKİDEN ÇOK seçenek liste olur — dört boyu cümleye sıkıştırmak paragraf üretiyordu', () => {
+    herIkisinde('İKİDEN ÇOK seçenek');
+    // Tek seçenekte liste yapmak da yanlış: tek maddelik madde işareti gürültüdür.
+    herIkisinde('Tek seçenek varsa liste YAPMA');
+  });
+
+  it('BAŞLANGIÇ FİYATI tek fiyat gibi sunulamaz — ölçülmüş arızanın prompt karşılığı', () => {
+    /* 06.09'da ölçüldü: müşteri "fıstıklı baklava" diye genel sordu, ajan dört boydan yalnız en
+       ucuzunu (225 g · 4,57 €) söyledi. Cevap yanlış değildi (gramaj ve fiyat aynı varyanttan
+       geliyor) ama eksikti — ve eksikliği doğuran şey aracın `fiyat` diye verdiği alanın aslında
+       BAŞLANGIÇ fiyatı olmasıydı. Araç artık adıyla söylüyor; prompt da okumasını biliyor. */
+    herIkisinde('fiyatBaslangic');
+    herIkisinde('EN UCUZ BOYUNDUR');
+  });
 });
 
 describe('iki görev — ortak girdi, AYRI talimat ve AYRI risk', () => {
