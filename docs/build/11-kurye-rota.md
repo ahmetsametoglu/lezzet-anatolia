@@ -444,6 +444,40 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
       yerde yaşatır ve biri bir gün ötekinden ayrışır.
   - **Mobil yarısı native şeritte** — talep: `docs/talep/mobil-adres-dogrulanabilirligi.md`.
   - Müşteri yüzeyindeki cümlenin **tasarım karşılığı yok** → `design/BACKLOG.md §4`.
+  - **KAYNAK KARARI DEĞİŞTİ (02.09) — üstteki tasarım "BAN'a ikinci sorgu" diyordu, artık GOOGLE.**
+    - **Sendcloud'un `addresses/validate` ucu VAR** (100+ ülke, düzeltilmiş adres döndürüyor) **ama
+      koordinat DÖNDÜRMÜYOR** ve `carrier_code` ZORUNLU — yapısı gereği bir KARGO doğrulaması; kurye
+      rotasında taşıyıcı yok. `here` yöntemi ücretli eklenti, ücretsiz kademesi bizim posta kodu
+      kontrolümüzden fazlasını vermiyor. **Kargo tarafında yine de değerli ve BEDAVA olan bir yol var:**
+      `announce` cevabındaki `errors[]` bugün alınıp ATILIYOR (`sendcloud/client.ts:292` — yalnız
+      istisna detayında), üstelik etiket basıldıktan SONRA geliyor, yani para harcanmışken.
+    - **Google Address Validation seçildi:** tek çağrı dördünü birden veriyor — geçerlilik
+      (`verdict.addressComplete`), neyin düzeltildiği (`hasReplacedComponents`), düzeltilmiş adresin
+      kendisi, **ve `geocode.location` → enlem/boylam.** Sonuncusu olmasaydı ikinci bir çağrı gerekirdi.
+      `geocodeGranularity` bizim `precision` alanımızın karşılığı.
+    - **Google koordinatı en fazla 30 GÜN saklanabilir** (süresiz saklanabilen tek şey `placeId`) —
+      ODbL'nin paylaş-aynı-şekilde sorusundan DAHA sert, düz bir yasak. **Ama kullanıcı kurguyu
+      düzeltti (02.09):** koordinatın gerçek ömrü sipariş↔teslimat penceresi kadar; 30 gün fazlasıyla
+      yetiyor. Kısıt bize dokunmuyor.
+    - **Bu yüzden OSM'ye GEREK KALMADI.** OSM tek bir varsayım için önerilmişti — *"Almanya'ya süresiz
+      saklanabilir koordinat lazım."* Varsayım düştü; kendi geocoder sunucumuzu barındırma, veri hattı
+      ve ODbL sorusu birlikte düştü. (Ölçüm kayda değer: OSM Almanya'da **20.643.188** kapı numarası
+      nesnesi taşıyor — ~19,8 M konut binasına karşı, yani doygun; Fransa'da ise 12,25 M ile BAN'ın
+      25 M'inin yarısından az. Yani FR'de BAN zaten daha iyiydi.) OSM yalnız harita KAROSUNDA kalıyor.
+    - **ZAMANLAMA — kullanıcı düzeltmesi (02.09):** doğrulama **adres girişinde DEĞİL, SİPARİŞ ANINDA.**
+      Müşteri on adres ekleyebilir; hangisini seçerse sipariş anında o doğrulanır ve düzeltme teklifi
+      **hem siparişin adresini hem KAYDI** düzeltir. Koordinat da aynı anda çözülür — siparişi hiç
+      gelmeyecek bir adresin koordinatını çözmek boşa iştir.
+    - **Maliyet:** sipariş başına ~0,5–2 cent, ücretsiz kotanın içinde kalması muhtemel. **Fransa'da
+      çoğu sipariş SIFIR:** BAN önerisinden kapı düzeyinde seçilmiş adres zaten doğrulanmış ve
+      koordinatı **süresiz saklanabilir** (Licence Ouverte) → Google'a hiç gidilmez. Google yalnız
+      DE/BE/diğer ve elle yazılmış FR adresleri için çağrılır.
+    - ⚠ **FAIL-OPEN ZORUNLU:** doğrulama sipariş anında koştuğu için Google'ın düştüğü an **checkout
+      DURMAMALI.** Cevap gelmezse sipariş geçer, adres "doğrulanamadı" işaretlenir, sevkiyat ve kurye
+      uyarılır. Aksi hâlde bir dış servisin kesintisi satışı durdurur.
+    - ⚠ **Atıf yükümlülüğü:** Google sonucunun gösterildiği yerde "Google Maps" atfı zorunlu ve
+      gizlenemez — düzeltme teklifinin çıktığı checkout ekranında görünecek. Tasarım kararı doğuruyor.
+    - Ülke kanallarının açılması ayrı görevde: **`07.17`**.
 
 ## Netleşecekler
 
