@@ -5,7 +5,7 @@ import { formatPrice } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import type { Address, Conversation } from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
-import { getPackagesByIds } from '../catalog/packages';
+import { getPackagesByIds, listStorefrontPackages } from '../catalog/packages';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
 import { resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
@@ -66,10 +66,14 @@ export interface CartAgentToolsInput {
 }
 
 /**
- * Sohbete KAPATILMIŞ sepet araçları — dördü de aynı sepeti görür.
+ * Sohbete KAPATILMIŞ sepet araçları — beşi de aynı sepeti görür.
  *
  * Araç gövdesinde hata olursa fırlatmaz — `bilinmiyor` döner ve log'a KİMLİK düşer (içerik değil):
  * fırlatan bir araç koşuyu düşürür ve müşteri cevapsız kalırdı (`support-tools.ts` ile aynı kural).
+ *
+ * EKLEMEK ile EŞİTLEMEK ayrı araçtır ve bilinçli: *"bir tane daha"* ekler, *"iki tane olsun"*
+ * eşitler. Tek araçta ikisini bir bayrakla ayırmak, modelin bayrağı unuttuğu gün müşterinin
+ * sepetinde istediğinin iki katı ürün demekti — sitedeki "+" ile adet kutusunun aynı ayrımı.
  */
 export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
   const { conversation } = input;
@@ -83,6 +87,24 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
     const adres = input.addressCustomerId ? birincilAdres(await new AddressService(db).listByCustomer(input.addressCustomerId)) : null;
     const kod = postaKodu?.trim() || adres?.postalCode || null;
     return { place: kod ? await resolvePlaceWarehouses(db, kod) : UNRESOLVED_PLACE, kod };
+  };
+
+  /**
+   * Sepetteki satırı ADIYLA bulur (adet değiştirme ve çıkarma aynı soruyu soruyor — tek gövde).
+   * Ad görünümden okunur (`getCartView`): sepet satırı yalnız kimlik taşır, adı bilmez.
+   */
+  const satirBul = async (urun: string, boy: string | undefined): Promise<{ line: CartLine } | { sonuc: Record<string, unknown> }> => {
+    const cart = await carts.getFor(owner);
+    if (cart.items.length === 0) return { sonuc: { sepetBos: 'Sepet zaten boş.' } };
+    const view = await getCartView(db, 'tr', cart.items.map(entryOfItem), {
+      customerId: input.pricingCustomerId,
+      bundles: (ids, locale, bundlePlace) => getPackagesByIds(db, ids, locale, bundlePlace),
+    });
+    const adaylar = view.lines.filter((line) => esitAd(line.name, urun) || icerir(line.name, urun));
+    const daralt = boy ? adaylar.filter((line) => esitAd(line.unitLabel, boy) || icerir(line.unitLabel, boy)) : adaylar;
+    if (daralt.length === 0) return { sonuc: { bilinmiyor: `"${urun}" sepette yok. Sepettekiler: ${view.lines.map(satirAdi).join(' · ')}` } };
+    if (daralt.length > 1) return { sonuc: { secenekler: daralt.slice(0, MAX_CHOICES).map(satirAdi), soru: 'Hangisi? Müşteriye sor.' } };
+    return { line: daralt[0]! };
   };
 
   const ozet = async (postaKodu?: string) => {
@@ -130,11 +152,34 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
         try {
           const secim = await urunuCoz(db, { urun, boy, postaKodu }, input);
           if ('sonuc' in secim) return secim.sonuc;
-          await carts.addItemsFor(owner, [{ variantId: secim.variantId, bundleId: null, qty: adet, unitPrice: secim.priceCents / 100, stockId: null }]);
+          await carts.addItemsFor(owner, [{ variantId: secim.variantId, bundleId: secim.bundleId, qty: adet, unitPrice: secim.priceCents / 100, stockId: null }]);
           return { eklendi: { urun: secim.urun, boy: secim.boy, adet }, sepet: await ozet(postaKodu) };
         } catch (err) {
           logger.warn({ ...log, tool: 'sepete_ekle', err: String(err) }, 'sepet aracı yazamadı');
           return { bilinmiyor: 'Sepete şu an eklenemedi.' };
+        }
+      },
+    }),
+
+    sepet_adet: tool({
+      description:
+        'Sepetteki bir kalemin adedini verilen sayıya EŞİTLER ("iki tane olsun", "üçe çıkar", "bir tane yeter"); 0 çıkarır. ' +
+        'Eklemek için değil — "bir tane daha" sepete_ekle ile. Kalemi ADIYLA geç; aynı ürünün iki boyu varsa boyu da geç.',
+      inputSchema: z.object({
+        urun: z.string().min(2).describe('Sepetteki ürünün adı.'),
+        boy: z.string().min(1).optional().describe('Boy etiketi — aynı üründen iki boy varsa.'),
+        adet: z.number().int().min(0).max(MAX_QTY).describe('Yeni adet — sepette olacak TOPLAM sayı; 0 kalemi çıkarır.'),
+      }),
+      execute: async ({ urun, boy, adet }) => {
+        try {
+          const bulunan = await satirBul(urun, boy);
+          if ('sonuc' in bulunan) return bulunan.sonuc;
+          const { line } = bulunan;
+          await carts.setQtyFor(owner, { variantId: line.variantId ?? null, bundleId: line.bundleId ?? null, stockId: line.stockId ?? null }, adet);
+          return adet === 0 ? { cikarildi: satirAdi(line), sepet: await ozet() } : { guncellendi: { urun: satirAdi(line), adet }, sepet: await ozet() };
+        } catch (err) {
+          logger.warn({ ...log, tool: 'sepet_adet', err: String(err) }, 'sepet aracı yazamadı');
+          return { bilinmiyor: 'Adet şu an değiştirilemedi.' };
         }
       },
     }),
@@ -148,17 +193,9 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
       }),
       execute: async ({ urun, boy }) => {
         try {
-          const cart = await carts.getFor(owner);
-          if (cart.items.length === 0) return { sepetBos: 'Sepet zaten boş.' };
-          const view = await getCartView(db, 'tr', cart.items.map(entryOfItem), {
-            customerId: input.pricingCustomerId,
-            bundles: (ids, locale, bundlePlace) => getPackagesByIds(db, ids, locale, bundlePlace),
-          });
-          const adaylar = view.lines.filter((line) => esitAd(line.name, urun) || icerir(line.name, urun));
-          const daralt = boy ? adaylar.filter((line) => esitAd(line.unitLabel, boy) || icerir(line.unitLabel, boy)) : adaylar;
-          if (daralt.length === 0) return { bilinmiyor: `"${urun}" sepette yok. Sepettekiler: ${view.lines.map(satirAdi).join(' · ')}` };
-          if (daralt.length > 1) return { secenekler: daralt.slice(0, MAX_CHOICES).map(satirAdi), soru: 'Hangisini çıkarayım? Müşteriye sor.' };
-          const line = daralt[0]!;
+          const bulunan = await satirBul(urun, boy);
+          if ('sonuc' in bulunan) return bulunan.sonuc;
+          const { line } = bulunan;
           await carts.removeItemFor(owner, { variantId: line.variantId ?? null, bundleId: line.bundleId ?? null, stockId: line.stockId ?? null });
           return { cikarildi: satirAdi(line), sepet: await ozet() };
         } catch (err) {
@@ -207,18 +244,32 @@ function satirAdi(line: CartLine): string {
   return line.unitLabel ? `${line.name} (${line.unitLabel})` : line.name;
 }
 
+/** Çözülmüş satır — ürün (varyant) ya da paket; ikisinden tam biri dolu (`sameLine` kuralı). */
+interface CozulmusSatir {
+  variantId: string | null;
+  bundleId: string | null;
+  priceCents: number;
+  urun: string;
+  boy: string;
+}
+
 /**
- * Adı söylenen ürünü SATILAN BİRİME (varyant) çözer — ya bir varyant ya da modele sorulacak soru.
+ * Adı söylenen şeyi SATILAN BİRİME çözer — bir varyant, bir paket ya da modele sorulacak soru.
  *
- * Katalog `urun_ara` ile AYNI kapıdan okunur (`getCatalogData`, `getProductDetail`): fiyat ve stok
- * kuralı ikinci kez yazılmıyor. Satışa kapalı ürün (fiyatsız) sepete GİRMEZ ve sebebi söylenir —
- * "0 €" ile eklemek, sitenin satmadığı şeyi sohbetin satması olurdu.
+ * Katalog `urun_ara` ile AYNI kapıdan okunur (`getCatalogData`, `getProductDetail`,
+ * `listStorefrontPackages`): fiyat ve stok kuralı ikinci kez yazılmıyor. Satışa kapalı ürün
+ * (fiyatsız) sepete GİRMEZ ve sebebi söylenir — "0 €" ile eklemek, sitenin satmadığı şeyi sohbetin
+ * satması olurdu.
+ *
+ * PAKET ikinci sırada aranır ve yalnız ürün eşleşmeyince: paket adları ürün adlarını içerir
+ * ("Bayram Sofrası" içinde baklava var) ve ürün sorusunun cevabına paketi karıştırmak yanlış
+ * tarafta hata olurdu. Müşteri paketi adıyla ister; o ad ürün kataloğunda yoktur.
  */
 async function urunuCoz(
   db: Db,
   girdi: { urun: string; boy?: string; postaKodu?: string },
   input: CartAgentToolsInput,
-): Promise<{ variantId: string; priceCents: number; urun: string; boy: string } | { sonuc: Record<string, unknown> }> {
+): Promise<CozulmusSatir | { sonuc: Record<string, unknown> }> {
   const adres = input.addressCustomerId ? birincilAdres(await new AddressService(db).listByCustomer(input.addressCustomerId)) : null;
   const kod = girdi.postaKodu?.trim() || adres?.postalCode || null;
   const [place, viewer] = await Promise.all([kod ? resolvePlaceWarehouses(db, kod) : Promise.resolve(UNRESOLVED_PLACE), pricingViewerOf(db, input.pricingCustomerId)]);
@@ -227,7 +278,7 @@ async function urunuCoz(
   const katalog = await getCatalogData(db, { ...ortak, query: { search: girdi.urun } });
   const tam = katalog.products.filter((p) => esitAd(p.name, girdi.urun));
   const adaylar = tam.length > 0 ? tam : katalog.products;
-  if (adaylar.length === 0) return { sonuc: { bilinmiyor: `"${girdi.urun}" için katalogda eşleşen ürün yok.` } };
+  if (adaylar.length === 0) return paketiCoz(db, girdi.urun);
   if (adaylar.length > 1) {
     return { sonuc: { secenekler: adaylar.slice(0, MAX_CHOICES).map((p) => p.name), soru: 'Birden çok ürün eşleşti — müşteriye hangisini istediğini sor, sonra o adla yeniden çağır.' } };
   }
@@ -235,7 +286,7 @@ async function urunuCoz(
   const urun = adaylar[0]!;
   if (urun.variantCount <= 1) {
     if (!urun.variantId || urun.priceCents === null) return { sonuc: { satisaKapali: `${urun.name} bu kanalda satışa kapalı — sepete eklenemez; "kontrol edip döneceğiz" de.` } };
-    return { variantId: urun.variantId, priceCents: urun.priceCents, urun: urun.name, boy: urun.unitLabel };
+    return { variantId: urun.variantId, bundleId: null, priceCents: urun.priceCents, urun: urun.name, boy: urun.unitLabel };
   }
 
   const detay = await getProductDetail(db, { ...ortak, slug: urun.slug });
@@ -250,7 +301,24 @@ async function urunuCoz(
     return { sonuc: { boylar: { urun: urun.name, secenekler }, soru: `"${girdi.boy}" boyu tek bir seçenekle eşleşmedi — listeden birini müşteriye sor.` } };
   }
   const boy = boyAday[0]!;
-  return { variantId: boy.id, priceCents: boy.priceCents!, urun: urun.name, boy: boy.label };
+  return { variantId: boy.id, bundleId: null, priceCents: boy.priceCents!, urun: urun.name, boy: boy.label };
+}
+
+/**
+ * Paketi adıyla çözer — sitenin satılabilir paket listesinden (`listStorefrontPackages`: pasif ve
+ * kalemi satıştan kalkmış paket zaten düşmüş). Paket sepette TEK satırdır, tek fiyatla (DOMAIN §13);
+ * boyu yoktur.
+ */
+async function paketiCoz(db: Db, ad: string): Promise<CozulmusSatir | { sonuc: Record<string, unknown> }> {
+  const paketler = await listStorefrontPackages(db, 'tr');
+  const tam = paketler.filter((p) => esitAd(p.name, ad));
+  const adaylar = tam.length > 0 ? tam : paketler.filter((p) => icerir(p.name, ad));
+  if (adaylar.length === 0) return { sonuc: { bilinmiyor: `"${ad}" için katalogda eşleşen ürün ya da paket yok.` } };
+  if (adaylar.length > 1) {
+    return { sonuc: { secenekler: adaylar.slice(0, MAX_CHOICES).map((p) => p.name), soru: 'Birden çok paket eşleşti — müşteriye hangisini istediğini sor.' } };
+  }
+  const paket = adaylar[0]!;
+  return { variantId: null, bundleId: paket.id, priceCents: paket.priceCents, urun: paket.name, boy: '' };
 }
 
 /**

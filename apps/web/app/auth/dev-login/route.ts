@@ -5,6 +5,7 @@ import { logger, maskEmail } from '@lezzet/observability';
 import { createClient } from '@/lib/supabase/server';
 import { devLoginOpen } from '@/lib/auth/dev-login-gate';
 import { resolvePostLoginRedirect } from '@/lib/auth/redirect';
+import { handOffInvitesToCustomer } from '@/lib/identity/invite-handoff';
 
 /*
   HIZLI GİRİŞ KAPISI — mobildeki `/api/v1/auth/dev-session`in web karşılığı (kullanıcı isteği
@@ -118,6 +119,12 @@ export async function GET(request: Request): Promise<Response> {
     );
     return NextResponse.json({ error: sessionErr?.message ?? 'oturum açılamadı' }, { status: 400 });
   }
+
+  /* ÇEREZDEN KİŞİYE DEVİR — öteki iki giriş yolunun (OTP · Google) geçtiği kapı (07.09): davetler
+     ve sohbetten gelen sepet bağlantısı burada da tüketilir. Hızlı giriş GERÇEK bir oturum kurar
+     (yukarıdaki künye); gerçek oturumun yan etkilerini atlasaydı, e2e ve yerel prova bağlantı
+     akışının yarısını hiç göremezdi. */
+  await handOffInvitesToCustomer(session.user.id);
 
   // Hedef ROLDEN çözülür, elle yazılmaz: iki-yüzey kuralının tek sahibi bu fonksiyondur
   // (personel → `/operations`, müşteri → vitrin). Kurye adresiyle girildiğinde kurye ekranına

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { z, ToolSet } from '@lezzet/ai';
-import { CartService, CategoryService, ConversationService, PriceService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
+import { BundleService, CartService, CategoryService, ConversationService, PriceService, ProductService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
 import type { Conversation } from '@lezzet/types';
 import { cartAgentTools } from './agent-tools';
@@ -12,8 +12,10 @@ import { cartAgentTools } from './agent-tools';
  * Modelin gerçek yolu şemadır; elle çağrıda parametre adı kaçınca olmayan bir arıza bildirilir.
  *
  * ── SINANAN DEĞİŞMEZLER ─────────────────────────────────────────────────────
- *   · Kimlik ARGÜMAN değil: dört aracın hiçbirinin girdisinde müşteri/sohbet kimliği yok.
+ *   · Kimlik ARGÜMAN değil: beş aracın hiçbirinin girdisinde müşteri/sohbet kimliği yok.
  *   · Ürün ADIYLA çözülür; belirsizlikte araç SEÇMEZ, SORDURUR (`secenekler` / `boylar`).
+ *   · Paket de adıyla eklenir — tek satır, tek fiyat (DOMAIN §13).
+ *   · EKLEMEK ile EŞİTLEMEK ayrı: "bir tane daha" üstüne koyar, "iki tane olsun" adedi eşitler.
  *   · Satışa kapalı ürün sepete girmez ve sebebi söylenir.
  *   · Kimliksiz sohbette sepet SOHBETE yazılır; müşterili sohbette müşterinin gerçek sepetine.
  *   · Bağlantı aracı kabı doldurur — model bağlantıyı yazmaz, `ai.ts` ekler.
@@ -24,6 +26,7 @@ const stamp = Date.now();
 const profileIds: string[] = [];
 const productIds: string[] = [];
 const conversationIds: string[] = [];
+const bundleIds: string[] = [];
 let categoryId = '';
 let musteriId = '';
 let messenger: Conversation;
@@ -40,7 +43,7 @@ async function cagir(tools: ToolSet, ad: string, ham: unknown = {}): Promise<Rec
 
 const ucDil = (metin: string) => ({ tr: metin, fr: metin, de: metin });
 
-async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>): Promise<void> {
+async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>): Promise<string> {
   const { product, variants } = await new ProductService(db).create({
     name: ucDil(`${ad} ${stamp}`),
     description: ucDil('Sepet aracı testi ürünü'),
@@ -54,6 +57,7 @@ async function urunAc(ad: string, boylar: Array<{ label: string; b2c?: number }>
   for (const [i, boy] of boylar.entries()) {
     if (boy.b2c !== undefined) await new PriceService(db).insert({ variantId: variants[i]!.id, channel: 'b2c', amountCents: boy.b2c });
   }
+  return variants[0]!.id;
 }
 
 const AD = (kisa: string) => `${kisa} ${stamp}`;
@@ -64,8 +68,16 @@ function araclar(conversation: Conversation, onLink: (url: string) => void = () 
 
 beforeAll(async () => {
   categoryId = (await new CategoryService(db).create({ name: { tr: `Sepet aracı ${stamp}` } })).id;
-  await urunAc('Fıstıklı Sarma', [{ label: '250 g', b2c: 457 }]);
+  const fistikliVariantId = await urunAc('Fıstıklı Sarma', [{ label: '250 g', b2c: 457 }]);
   await urunAc('Cevizli Sarma', [{ label: '250 g', b2c: 399 }]);
+  // Paket: iki fıstıklı sarma, tek fiyat (DOMAIN §13) — adı ürün adlarını İÇERMİYOR ki ürün araması onu
+  // görmesin; paket ikinci sırada, yalnız ürün eşleşmeyince aranır.
+  const { bundle } = await new BundleService(db).create({
+    name: { tr: `Misafir Kutusu ${stamp}` },
+    totalPrice: 8.5,
+    items: [{ variantId: fistikliVariantId, qty: 2, allocatedUnitPrice: 4.25 }],
+  });
+  bundleIds.push(bundle.id);
   await urunAc('Peynirli Gözleme', [
     { label: '500 g', b2c: 600 },
     { label: '1 kg', b2c: 1100 },
@@ -82,13 +94,15 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // Paketler ÜRÜNDEN ÖNCE gider: kalemler varyanta `restrict` ile bağlı (`bundle.test.ts` dersi).
+  for (const id of bundleIds) await new BundleService(db).delete(id);
   await purgeTestData(db, { productIds, categoryIds: [categoryId], conversationIds, profileIds });
 });
 
 describe('değişmez: kimlik ARGÜMAN değil, KAPANIŞTIR', () => {
-  it('dört aracın hiçbirinin girdisinde müşteri ya da sohbet kimliği YOK', () => {
+  it('beş aracın hiçbirinin girdisinde müşteri ya da sohbet kimliği YOK', () => {
     const tools = araclar(messenger);
-    expect(Object.keys(tools).sort()).toEqual(['sepet_baglantisi', 'sepete_ekle', 'sepetim', 'sepetten_cikar']);
+    expect(Object.keys(tools).sort()).toEqual(['sepet_adet', 'sepet_baglantisi', 'sepete_ekle', 'sepetim', 'sepetten_cikar']);
     for (const arac of Object.values(tools)) {
       const alanlar = Object.keys((arac.inputSchema as z.ZodObject<z.ZodRawShape>).shape ?? {});
       expect(alanlar.some((a) => /customer|conversation|Id$/i.test(a))).toBe(false);
@@ -137,11 +151,33 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
     expect(sonuc).toHaveProperty('satisaKapali');
   });
 
+  it('EKLEMEK üstüne koyar, EŞİTLEMEK sayıyı belirler — "bir tane daha" ile "iki tane olsun" ayrı', async () => {
+    // Sepette 2 fıstıklı var (ilk test). "Bir tane daha" → 3; "iki tane olsun" → 2; "sıfır" → satır gider.
+    const eklenen = await cagir(araclar(messenger), 'sepete_ekle', { urun: AD('Fıstıklı Sarma'), adet: 1 });
+    expect((eklenen.sepet as { kalemler: Array<{ urun: string; adet: number }> }).kalemler.find((k) => k.urun === AD('Fıstıklı Sarma'))?.adet).toBe(3);
+
+    const esitlenen = await cagir(araclar(messenger), 'sepet_adet', { urun: AD('Fıstıklı Sarma'), adet: 2 });
+    expect(esitlenen).toMatchObject({ guncellendi: { adet: 2 } });
+    expect((await new CartService(db).getFor({ conversationId: messenger.id })).items.find((i) => i.qty === 2)).toBeDefined();
+
+    const sifir = await cagir(araclar(messenger), 'sepet_adet', { urun: AD('Cevizli Sarma'), adet: 0 });
+    expect(sifir).toHaveProperty('bilinmiyor'); // sepette yok — uydurma çıkarma yok
+  });
+
+  it('PAKET adıyla eklenir — tek satır, tek fiyat; ürün araması onu görmez, paket araması bulur', async () => {
+    const sonuc = await cagir(araclar(messenger), 'sepete_ekle', { urun: AD('Misafir Kutusu') });
+    expect(sonuc).toMatchObject({ eklendi: { urun: AD('Misafir Kutusu'), adet: 1 } });
+    const satir = (await new CartService(db).getFor({ conversationId: messenger.id })).items.find((i) => i.bundleId);
+    expect(satir).toMatchObject({ variantId: null, qty: 1 });
+    const sepet = sonuc.sepet as { kalemler: Array<{ urun: string; birimFiyat: string }> };
+    expect(sepet.kalemler.find((k) => k.urun === AD('Misafir Kutusu'))?.birimFiyat).toMatch(/8,50/);
+  });
+
   it('kalem ADIYLA çıkarılır; kalan sepet döner', async () => {
     const sonuc = await cagir(araclar(messenger), 'sepetten_cikar', { urun: AD('Fıstıklı Sarma') });
     expect(sonuc).toHaveProperty('cikarildi');
     const sepet = sonuc.sepet as { kalemler: Array<{ urun: string }> };
-    expect(sepet.kalemler.map((k) => k.urun)).toEqual([AD('Peynirli Gözleme')]);
+    expect(sepet.kalemler.map((k) => k.urun)).toEqual([AD('Peynirli Gözleme'), AD('Misafir Kutusu')]);
   });
 
   it('bağlantı aracı KABI doldurur ve modele "yazma" der — adres sohbetin dilinde sepet sayfası', async () => {
