@@ -1,14 +1,5 @@
-import type { B2bApplicationStatus, B2bSignal, SignalTone } from '@lezzet/domain-core';
-import type {
-  Address,
-  Consent,
-  Country,
-  CustomerType,
-  KeysetCursor,
-  OrderStatus,
-  PaymentStatus,
-  UserProfile,
-} from '@lezzet/types';
+import type { B2bApplicationStatus } from '@lezzet/domain-core';
+import type { Address, Consent, CustomerType, KeysetCursor, OrderStatus, PaymentStatus, UserProfile } from '@lezzet/types';
 import type { CustomerScope, CustomersUrlState, MarketingChannelFilter } from './customers-url';
 
 // Müşteri ekranının view-model'i (09.9).
@@ -216,46 +207,8 @@ export type CustomerEditInput = Pick<
   | 'priceGroupId'
 >;
 
-/** Mükerrer ADAYI — kesinlik iddiası yok; operatör kaydı açıp kendisi karar verir. */
-export interface B2bDuplicateRow {
-  id: string;
-  name: string;
-  phone: string | null;
-  /** Taslak kayıt (WhatsApp telefonuyla açılmış) — mükerrer adaylarının en sık kaynağı. */
-  isDraft: boolean;
-}
-
-/**
- * B2B onay KONTROL KARTI — profesyonel müşterinin başvuru diyaloğunun tamamı.
- *
- * Ayrı bir "başvuru" varlığı YOK: onay, müşteri kaydının bir alanıdır (`b2bApproved`) ve kart o kaydın
- * çevresindeki sinyalleri toplar. Bu yüzden tip `CustomerDetail`in içine gömülmedi — detay her seçimde
- * okunuyor, bu ise yalnız diyalog açılınca (dört okuma: profil, adres, bölgeler, mükerrer adayları).
- *
- * `signals`/`flag` tipleri MOTORDAN gelir (`@lezzet/domain-core`), burada yeniden yazılmaz.
- */
-export interface B2bCheckView {
-  customerId: string;
-  name: string;
-  /** Resmî künye adı (`company_info.legalName`) — ticari addan farklı olabilir. */
-  legalName: string | null;
-  siret: string | null;
-  country: Country;
-  phone: string | null;
-  /** Tek satırlık adres; `null` = kayıtlı adresi yok. */
-  addressLine: string | null;
-  mapsHref: string | null;
-  /**
-   * Başvurunun DÖRT hâli — bir tur `approved: boolean | null` yazılıydı ve o alan iki hâli birden
-   * taşıdığı için diyalogda ölçülebilir bir arıza üretti: "Reddet" düğmesi `approved === false`
-   * iken kilitleniyordu, yani **onay bekleyen bir başvuru bu ekrandan hiç reddedilemiyordu** —
-   * kilit tam da reddedilmesi gereken hâle basıyordu (04.08).
-   */
-  status: B2bApplicationStatus;
-  signals: B2bSignal[];
-  flag: { label: string; tone: SignalTone };
-  duplicates: B2bDuplicateRow[];
-}
+// `B2bCheckView` · `B2bDuplicateRow` 07.09'da `@lezzet/application`a terfi etti (mobil talebi):
+// iki yüzey aynı kartı okuyor, görünüm tipi paketin. Tüketenler doğrudan oradan alır.
 
 /** Vade/limit formunun girdisi. Limit KURUŞ (STACK §8), vade süresi GÜN. */
 export interface CreditFormInput {

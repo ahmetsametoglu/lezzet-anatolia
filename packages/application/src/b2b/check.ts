@@ -1,18 +1,36 @@
-import 'server-only';
-import { AddressService, DeliveryZoneService, UserProfileService, type Db } from '@lezzet/database';
-import { b2bFlag, b2bSignals, b2bStatusOf, isInRoute } from '@lezzet/domain-core';
-import type { Address, CompanyInfo, DeliveryZoneWithCodes, UserProfile } from '@lezzet/types';
-import { refreshVatNumberCheck } from '@lezzet/application';
-import { lookupCompanyBySiret } from '@/lib/b2b/company-registry';
-import type { B2bCheckView, B2bDuplicateRow } from '@/app/(operations)/operations/customers/customers-types';
+import { AddressService, DeliveryZoneService, UserProfileService } from '@lezzet/database';
+import {
+  b2bFlag,
+  b2bSignals,
+  b2bStatusOf,
+  isInRoute,
+  type B2bApplicationStatus,
+  type B2bSignal,
+  type SignalTone,
+} from '@lezzet/domain-core';
+import type { Address, CompanyInfo, Country, DeliveryZoneWithCodes, UserProfile } from '@lezzet/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { lookupCompanyBySiret } from './company-registry';
+import { refreshVatNumberCheck } from './vat-check';
 
 /**
- * B2B başvurusunun KONTROL KARTI verisi (09.9; eski 09.11 buraya alındı).
+ * B2B başvurusunun KONTROL KARTI verisi (09.9; eski 09.11 buraya alındı) — **TERFİ 07.09** (mobil
+ * talebi, 21.217): kaynağı `apps/web/lib/customer/b2b-check.ts`tı, web kopyası BIRAKILMADI — web
+ * action'ı doğrudan buradan çağırıyor (`readB2bCheckAction`), mobil arka uç da aynı kapıdan geçer.
+ * Davranış değişmedi: aynı dört okuma, aynı sinyaller, aynı bayrak. Ayrışmanın bedeli ölçülmüş bir
+ * sınıf (`BACKLOG §17`): iki yüzey aynı başvuru için farklı sinyal gösterseydi operatör hangisine
+ * inanacağını bilemezdi.
+ *
+ * **Görünüm tipleri `packages/types`e DEĞİL buraya taşındı** ve bu bir tercih değil sınır:
+ * `B2bCheckView` motorun tiplerini taşıyor (`B2bSignal` · `B2bApplicationStatus` — `domain-core`),
+ * `types` paketi ise motorun ALTINDA (STACK §4, bağımlılık tek yönlü). Yeri uygulama katmanının
+ * dışa verdiği görünüm — `CourierStop`, `OrderBoxTrace` ile aynı desen. Tel sözleşmesi gerekiyorsa
+ * mobil uç onu kendi şemasıyla sarar; alan düşerse derleme kırılır, ekran değil.
  *
  * **Ayrı bir sayfa yok** (kullanıcı kararı 30.07): onay, profesyonel müşterinin bir hâlidir, ayrı bir
  * varlık değil. Ayrı ekran olsaydı aynı müşteri iki yerde yaşardı — onay kuyruğunda bir kimlik, müşteri
  * listesinde başka bir kimlik — ve "onayladıktan sonra vade de açayım" diyen operatör iki ekran
- * arasında gidip gelirdi. Kart müşteri panelinden açılan bir diyalog.
+ * arasında gidip gelirdi. Web'de kart müşteri panelinden açılan bir diyalog; mobilde bildirimden.
  *
  * **Burada KURAL YOK, toplama var** (STACK §4): sinyallerin tonu ve bayrak `domain-core/b2b-approval`
  * motorundan gelir, mükerrer adayları servisten. Bu dosyanın işi dört okumayı tek turda yapmak ve
@@ -27,12 +45,53 @@ import type { B2bCheckView, B2bDuplicateRow } from '@/app/(operations)/operation
  *  · ~~Sirene/Annuaire çağrısı yok~~ **KAPANDI (04.08):** künye kart açılırken tazeleniyor
  *    (`refreshedCompanyInfo`); servis düşerse profildeki künyeye dönülüyor, sessizce "kapandı"
  *    denmiyor.
- *  · ~~`packages/ai` özeti yok~~ **KAPANDI (16.08):** `b2bSummaryAction` sinyalleri tek cümleye
- *    indiriyor (`b2bSummaryTask`, sınıf 3). Cümle BURADAN üretilmiyor ve bilerek: kartın okuması
- *    hızlı olmalı, model çağrısı ise saniye mertebesinde — ekran kartı çizip özeti sonra alıyor.
- *    Üretilemezse eski dürüst hâl korunuyor; uydurma bir cümle "okuma yardımı" değil, yanlış
- *    yönlendirme olurdu.
+ *  · ~~`packages/ai` özeti yok~~ **KAPANDI (16.08):** web'de `b2bSummaryAction` sinyalleri tek
+ *    cümleye indiriyor (`b2bSummaryTask`, sınıf 3). Cümle BURADAN üretilmiyor ve bilerek: kartın
+ *    okuması hızlı olmalı, model çağrısı ise saniye mertebesinde — ekran kartı çizip özeti sonra
+ *    alıyor. Üretilemezse eski dürüst hâl korunuyor; uydurma bir cümle "okuma yardımı" değil,
+ *    yanlış yönlendirme olurdu.
  */
+
+/** Mükerrer ADAYI — kesinlik iddiası yok; operatör kaydı açıp kendisi karar verir. */
+export interface B2bDuplicateRow {
+  id: string;
+  name: string;
+  phone: string | null;
+  /** Taslak kayıt (WhatsApp telefonuyla açılmış) — mükerrer adaylarının en sık kaynağı. */
+  isDraft: boolean;
+}
+
+/**
+ * B2B onay KONTROL KARTI — profesyonel müşterinin başvuru diyaloğunun tamamı.
+ *
+ * Ayrı bir "başvuru" varlığı YOK: onay, müşteri kaydının bir alanıdır (`b2bApproved`) ve kart o kaydın
+ * çevresindeki sinyalleri toplar. Bu yüzden tip müşteri detayının içine gömülmedi — detay her seçimde
+ * okunuyor, bu ise yalnız kart açılınca (dört okuma: profil, adres, bölgeler, mükerrer adayları).
+ *
+ * `signals`/`flag` tipleri MOTORDAN gelir (`@lezzet/domain-core`), burada yeniden yazılmaz.
+ */
+export interface B2bCheckView {
+  customerId: string;
+  name: string;
+  /** Resmî künye adı (`company_info.legalName`) — ticari addan farklı olabilir. */
+  legalName: string | null;
+  siret: string | null;
+  country: Country;
+  phone: string | null;
+  /** Tek satırlık adres; `null` = kayıtlı adresi yok. */
+  addressLine: string | null;
+  mapsHref: string | null;
+  /**
+   * Başvurunun DÖRT hâli — bir tur `approved: boolean | null` yazılıydı ve o alan iki hâli birden
+   * taşıdığı için diyalogda ölçülebilir bir arıza üretti: "Reddet" düğmesi `approved === false`
+   * iken kilitleniyordu, yani **onay bekleyen bir başvuru bu ekrandan hiç reddedilemiyordu** —
+   * kilit tam da reddedilmesi gereken hâle basıyordu (04.08).
+   */
+  status: B2bApplicationStatus;
+  signals: B2bSignal[];
+  flag: { label: string; tone: SignalTone };
+  duplicates: B2bDuplicateRow[];
+}
 
 /** Google Haritalar araması — adresi metin olarak sorar (API anahtarı gerekmez). */
 function mapsHrefOf(address: Address | null): string | null {
@@ -113,9 +172,15 @@ async function refreshedCompanyInfo(profile: UserProfile): Promise<CompanyInfo |
  *
  * İstemciden sinyal ALMAK da bir seçenekti ve seçilmedi: özet metni sunucunun ürettiği olgulardan
  * doğmalı, tarayıcının gönderdiği metinden değil.
+ *
+ * **Mobil için aynı ölçü (07.09, talebin sorusu):** kartın İLK açılışı — bildirime dokunup
+ * başvuruyu incelemek — web'deki ilk açılışla aynı andır ve tazeleme ORADA doğru (`true`, varsayılan):
+ * operatör bugünkü kaydı görmeli, dünkü "Aktif"i değil. Çağrı yine nadir: kart başına bir kez,
+ * listede hiç. Aynı kartın İKİNCİ okuması (özet, yeniden çizim, onay öncesi tazeleme) `false`
+ * geçer — ilk okuma az önce koştu. Kural yüzeye değil okumanın SIRASINA bağlı.
  */
 export async function readB2bCheck(
-  db: Db,
+  db: SupabaseClient,
   customerId: string,
   opts: { refreshExternal?: boolean } = {},
 ): Promise<B2bCheckView | null> {

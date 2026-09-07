@@ -1,6 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import type { B2bCheckView } from '@lezzet/application';
+import { readB2bCheck } from '@lezzet/application';
 import { b2bSummaryTask, runTask } from '@lezzet/ai';
 import {
   AddressService,
@@ -18,7 +20,6 @@ import { DEFAULT_PAGE_SIZE, type Discount, type DiscountCode, type KeysetCursor 
 import { requireAdmin } from '@/lib/guard';
 import { getErrorMessage, type ActionResult } from '@/lib/error';
 import { readOrderSummary, type OrderSummaryView } from '@/lib/order/summary';
-import { readB2bCheck } from '@/lib/customer/b2b-check';
 import { notifyB2bDecision } from '@/lib/b2b/application';
 import { readCustomerScorecard, readOverdueCustomerIds, SCORECARD_WINDOW } from '@/lib/customer/scorecard';
 import {
@@ -30,7 +31,7 @@ import {
   toPersonalCouponRows,
 } from './customers-read';
 import { CUSTOMERS_PATH, parseCustomersUrl, toCustomerFilters } from './customers-url';
-import type { B2bCheckView, CreditFormInput, CustomerDetail, CustomerEditInput, CustomerRow } from './customers-types';
+import type { CreditFormInput, CustomerDetail, CustomerEditInput, CustomerRow } from './customers-types';
 
 // Müşteri ekranı server action'ları — 'use server' + requireAdmin ilk + servise devret +
 // `{ data, error }` DÖNER (throw yok) + revalidatePath.

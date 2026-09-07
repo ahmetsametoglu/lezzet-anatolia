@@ -1,5 +1,6 @@
 'use client';
 
+import type { B2bCheckView } from '@lezzet/application';
 import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { CustomerType } from '@lezzet/types';
@@ -23,7 +24,6 @@ import { CustomerOrderDialog } from './components/customer-order-dialog';
 import { CustomersDesktop } from './customers.desktop';
 import { customersUrl, type CustomerScope, type CustomersUrlState, type MarketingChannelFilter } from './customers-url';
 import type {
-  B2bCheckView,
   CreditFormInput,
   CustomerDetail,
   CustomerEditInput,

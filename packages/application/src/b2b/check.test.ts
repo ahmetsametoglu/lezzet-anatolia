@@ -1,7 +1,7 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { readB2bCheck } from './b2b-check';
+import { readB2bCheck } from './check';
 
 /**
  * **Onay kartının İKİNCİ okuması dış servise gitmez** (28.08).

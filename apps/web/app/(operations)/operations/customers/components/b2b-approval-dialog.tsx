@@ -9,7 +9,7 @@ import { Button } from '@/components/operation/ui/button';
 import { Dialog } from '@/components/operation/ui/dialog';
 import { Textarea } from '@/components/operation/form/input';
 import { Skeleton, SkeletonCard, SkeletonText } from '@/components/operation/ui/skeleton';
-import type { B2bCheckView, B2bDuplicateRow } from '../customers-types';
+import type { B2bCheckView, B2bDuplicateRow } from '@lezzet/application';
 import { CUSTOMERS_PATH } from '../customers-url';
 
 /**

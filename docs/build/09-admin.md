@@ -535,6 +535,15 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     **Testin geçmesi davranışın doğruluğunu göstermez:** `application.test.ts` bu açığı `expect(updated.vatNumber).toBeNull()` diye ÇİVİLEMİŞTİ. İddia doğruydu, çivilediği şey bir arızaydı.
     **MOBİLDE ÖLÇÜLEN YÜZEY AÇIĞI (onların alanı, not bırakıldı):** `notification-map.ts:42` `b2b_application_received`i **Yönetim**'e yönlendiriyor ama `screens/management/` altında B2B onay ekranı YOK. Yani başvuru bildirimi cihaza düşüyor, dokunulduğunda karşılığı olmayan bir bölüme gidiyor.
     **AÇIK KALAN — kararı kullanıcının:** tazeleme yalnız kart açılışında. Onaylanmış bir B2B müşterinin numarası **hiç kart açılmadan** eskiyebilir ve checkout o bayrağa bakmaya devam eder. İki yol var: zamanlı bir yeniden doğrulama işi (`apps/backend`), ya da motorun bayat doğrulamada ters yükümlülüğü kapatması. İkincisi vergi davranışını değiştiriyor ve yanlış tarafa düşerse meşru B2B müşteriye %19 KDV keser — tek başıma değiştirilecek bir şey değil.
+  - **Durum (07.09) — KONTROL KARTI OKUMASI PAKETE TERFİ ETTİ** *(mobil talebi `operasyon-b2b-kontrol-karti-uygulama-paketine.md`, 21.217: başvuru telefondan da onaylanacak)* · touches:
+    `packages/application/src/b2b/{check,check.test}.ts`, `apps/web/app/(operations)/operations/customers/{actions.ts,customers-types.ts,customers-client.tsx,components/b2b-approval-dialog.tsx}`
+    - `readB2bCheck` + `B2bCheckView` · `B2bDuplicateRow` artık `@lezzet/application`da; web kopyası
+      BIRAKILMADI (~~`apps/web/lib/customer/b2b-check.ts`~~), action doğrudan paketi çağırıyor. Davranış
+      aynı: dört okuma, aynı sinyaller, aynı bayrak; web testi de pakete taşındı.
+    - **Görünüm tipi `packages/types`e DEĞİL pakete:** motorun tiplerini taşıyor (`B2bSignal`), `types`
+      motorun altında (STACK §4). Emsal `CourierStop` · `OrderBoxTrace`; mobil uç tel şemasını kendi sarar.
+    - Tazeleme ölçüsü mobil için de aynı: kartın ilk açılışı `refreshExternal: true`, aynı kartın ikinci
+      okuması `false` — kural yüzeye değil okumanın sırasına bağlı (künye).
 - [x] (09.12) **Talepler** — kuyruk (durum/tip daraltma, AI'nın yanıtladıkları ayırt edilir) + detay (sipariş bağı, kalemler, fotoğraflar, yazışma); cevap → e-posta bildirimi; iade tetikleme köprüsü; AI'dan devralma; elle talep açma
   - *Bitti:* durum döngüsü `open → in_progress → resolved` (yeniden açılabilir) çalışıyor; devralınan talepte AI susuyor
   - **16. MODÜLDE TESLİM EDİLDİ (kayıt düzeltmesi 19.08 — satır `[ ]` görünüyordu, iş aylardır yayındaydı).**
