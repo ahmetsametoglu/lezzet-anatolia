@@ -14,6 +14,7 @@ import {
   serviceDb,
   StockService,
   UserProfileService,
+  VariantBarcodeService,
 } from '@lezzet/database';
 import { createTestWarehouse, mustDelete, purgeTestData, purgeVariantStock, settingsSnapshot } from '@lezzet/database/testing';
 import { loadBox, openBox, recordOrderPayment, sealBox } from '@lezzet/application';
@@ -23,6 +24,8 @@ import type {
   CloseDeliveryRunResult,
   ConfirmDoorDeliveryResponse,
   CourierDayResponse,
+  CourierVanStockMoveResponse,
+  CourierVanStockResponse,
   DayCloseDraftContract,
   DeliveryProofUploadResponse,
   MarkUndeliveredResponse,
@@ -78,6 +81,16 @@ let categoryId = '';
 let productId = '';
 let variantId = '';
 let stockId = '';
+/**
+ * ARAÇ DEPOSU ve onun ARACI (21.278) — van-stock uçlarının bağlamı bu ikisinden çözülüyor
+ * (`courierVanContext`): araç deposu seferin ARACINDAN, çıkış tesisi seferin ROTASINDAN. Fikstür
+ * ikisini de kuruyor ama VARSAYILAN sefer yardımcıları aracı GEÇMİYOR — araçsız sefer de meşru bir
+ * hâl ve ötekilerin zeminini değiştirmek, ölçtükleri şeyi sessizce kaydırmak olurdu.
+ */
+let vanWarehouseId = '';
+let vanVehicleId = '';
+/** Araca okutulacak GERÇEK barkod — kod → varyant çevirisi yalnız UÇTA yaşıyor, motorda değil. */
+const vanBarcode = `VANAPI${stamp}`;
 
 const authUserIds: string[] = [];
 const profileIds: string[] = [];
@@ -297,6 +310,18 @@ beforeAll(async () => {
     })
   ).id;
   accountId = (await new AccountService(db).insert({ name: `Kapı kasası ${stamp}`, type: 'cash' })).id;
+
+  /* ARAÇ BİR DEPODUR (`kind='vehicle'`) ve aracını SÖYLEMEK zorunda — `createTestWarehouse` araç
+     kaydını kendisi açıp bağlıyor (21.249). Tesis olarak kurulsaydı `vanWarehouseIdOf` onu bulamaz
+     ve testin zemini sessizce yanlış olurdu. Temizliği purge biliyor (`cleanup.ts` araç adımı). */
+  const van = await createTestWarehouse(db, { label: 'ARAC', kind: 'vehicle', homeWarehouseId: warehouseId });
+  vanWarehouseId = van.id;
+  vanVehicleId = van.vehicleId ?? '';
+  if (vanVehicleId === '') throw new Error('araç deposu aracını taşımıyor — fikstür bozuk');
+
+  /* Barkod ürünle birlikte düşüyor (`variant_barcode.variant_id … on delete cascade`), o yüzden
+     teardown'a ayrı hedef eklenmedi. */
+  await new VariantBarcodeService(db).insert({ variantId, code: vanBarcode });
 });
 
 beforeEach(async () => {
@@ -340,7 +365,8 @@ afterAll(async () => {
     profileIds,
     authUserIds,
     accountIds: [accountId],
-    warehouseIds: [warehouseId],
+    // Araç deposu da buradan gidiyor; purge onun ARAÇ kaydını da topluyor (21.249 · `cleanup.ts`).
+    warehouseIds: [warehouseId, vanWarehouseId],
   });
 });
 
@@ -900,5 +926,180 @@ describe('sefer kapanışı (K7)', () => {
     const res = await post('/api/v1/courier/day-close', { countedCashCents: 0 });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ data: null, error: 'invalid_body' });
+  });
+});
+
+/**
+ * **ARAÇ STOĞU UÇLARI (21.278)** — bu dosyanın hiç sormadığı dört yol.
+ *
+ * Boşluk ölçülmüştü ve tam ORTADAYDI: motor testli (`application/courier/van-stock.test.ts`, 19
+ * iddia), ekran testli (`van-stock-screen.test.tsx`) ama ekran testi kapıyı TAKLİT ediyor ve motor
+ * testi fonksiyonu DOĞRUDAN çağırıyor — yani ikisi de HTTP katmanının üstünden atlıyor. Yalnız
+ * orada yaşayan dört şey hiç ölçülmüyordu: yetki kapısı, gövdenin Zod ile çözülmesi, gövdedeki
+ * alanın motorun hangi argümanına bağlandığı ve cevabın zarf biçimi. Uçtaki bir hata (alan adı
+ * kayması, argüman yer değiştirmesi, unutulmuş kapsam denetimi) iki testten de YEŞİL geçer ve ilk
+ * kez kuryenin elinde görünürdü — üstelik bunlar rampada para ve mal hareketi yazan uçlar.
+ *
+ * Kararların kendisi burada TEKRARLANMIYOR (dosyanın genel kuralı): "araçta ne kadar olmalı"
+ * sorusu motorun testinde. Buradaki iddialar taşımanın kendisi.
+ */
+describe('araç stoğu uçları (21.278)', () => {
+  /** Araçlı sefer — van-stock bağlamı ancak SÜRÜLEN ve ARACI OLAN seferden çözülüyor. */
+  async function vanRun(): Promise<void> {
+    await startRun({ vehicleId: vanVehicleId });
+  }
+
+  /**
+   * Araca mal koyar ve CEVABI DOĞRULAR — kurulum adımı sessizce düşmesin.
+   *
+   * Bu yardımcı testi yazarken doğdu (07.09): kurulum `post(...)` cevabını hiç okumuyordu ve gövdeye
+   * `observedQty` koymayı unuttuğum tur `invalid_body` dönüp sessizce geçti. İddia üç satır aşağıda,
+   * *"araçta ürün yok"* diye kırıldı — yani test doğru şeyi ölçüyordu ama YANLIŞ SEBEBİ gösteriyordu.
+   * Kurulumun kendisi de bir iddiadır.
+   */
+  async function araca(targetQty: number, observedQty: number): Promise<CourierVanStockMoveResponse> {
+    const sonuc = await dataOf<CourierVanStockMoveResponse>(
+      await post('/api/v1/courier/van-stock/set', { variantId, targetQty, observedQty }),
+    );
+    if (sonuc.status !== 'ok') throw new Error(`araca yazılamadı: ${sonuc.status}`);
+    return sonuc;
+  }
+
+  it('rolsüz kullanıcı dört yolun DÖRDÜNDEN de döner — kapı uçların üstünde', async () => {
+    const asOutsider = (path: string, method: 'GET' | 'POST') =>
+      app.request(path, {
+        method,
+        headers: { authorization: `Bearer ${outsiderToken}`, 'content-type': 'application/json' },
+        ...(method === 'POST' ? { body: '{}' } : {}),
+      });
+
+    const yollar: [string, 'GET' | 'POST'][] = [
+      ['/api/v1/courier/van-stock', 'GET'],
+      ['/api/v1/courier/van-stock?q=reçel', 'GET'],
+      ['/api/v1/courier/van-stock/set', 'POST'],
+      ['/api/v1/courier/van-stock/scan', 'POST'],
+    ];
+    for (const [path, method] of yollar) {
+      const res = await asOutsider(path, method);
+      expect({ path, status: res.status }).toEqual({ path, status: 403 });
+    }
+  });
+
+  it('bozuk gövde MOTORA HİÇ ULAŞMADAN 400 döner — doğrulama uçta', async () => {
+    /* `invalid_body` yalnız bu katmanda doğuyor: motor bu gövdeyi hiç görmüyor, ekran ise onu hiç
+       üretmiyor. Yani kırılırsa başka hiçbir test söylemez. */
+    const eksikHedef = await post('/api/v1/courier/van-stock/set', { variantId });
+    expect(eksikHedef.status).toBe(400);
+    expect(await eksikHedef.json()).toEqual({ data: null, error: 'invalid_body' });
+
+    const bozukKimlik = await post('/api/v1/courier/van-stock/set', { variantId: 'varyant-1', targetQty: 2 });
+    expect(bozukKimlik.status).toBe(400);
+
+    const kodsuz = await post('/api/v1/courier/van-stock/scan', {});
+    expect(kodsuz.status).toBe(400);
+    expect(await kodsuz.json()).toEqual({ data: null, error: 'invalid_body' });
+  });
+
+  it('ARAÇLI SEFERİ OLMAYAN kurye: liste boş künye döner, yazım `no_vehicle` ile reddedilir', async () => {
+    /* Sefer YOK — bağlam çözümü (`courierVanContext`) uçta çağrılıyor ve iki uç aynı boşluğa iki
+       AYRI cevap veriyor: okuma boş bir künye (ekran "araç yok" bloğunu çizsin), yazım adlandırılmış
+       bir ret. İkisi de 200: bu bir hata değil, kuryenin meşru bir hâli. */
+    const liste = await dataOf<CourierVanStockResponse>(await asCourier('/api/v1/courier/van-stock'));
+    expect(liste).toEqual({ vehicleWarehouseId: null, onVan: [], candidates: [] });
+
+    const yazim = await dataOf<CourierVanStockMoveResponse>(
+      await post('/api/v1/courier/van-stock/set', { variantId, targetQty: 3, observedQty: 0 }),
+    );
+    expect(yazim).toEqual({ status: 'no_vehicle' });
+  });
+
+  it('gövdedeki `targetQty` motorun HEDEFİNE bağlanıyor — araç sayısı mutlak yazılıyor', async () => {
+    /*
+      KABLOLAMANIN ASIL İDDİASI. Uç `targetQty`yi `setVanQty`nin `targetQty`sine geçiriyor; bir gün
+      `observedQty` ile yer değiştirse motor testi bunu GÖREMEZ (o fonksiyonu doğru argümanlarla
+      çağırıyor) ve ekran testi de göremez (kapıyı taklit ediyor). Ölçüt sonucun kendisi: araçta 0
+      iken hedef 3 yazılınca fark +3 olmalı, 3 değil de başka bir şey çıkarsa bağlantı yanlıştır.
+    */
+    await vanRun();
+
+    const ilk = await dataOf<CourierVanStockMoveResponse>(
+      await post('/api/v1/courier/van-stock/set', { variantId, targetQty: 3, observedQty: 0 }),
+    );
+    expect(ilk).toMatchObject({ status: 'ok', variantId, delta: 3, vanQty: 3 });
+
+    /* İkinci yazım AZALTIYOR: yön istemciden gelmiyor, sunucu ÖLÇEREK buluyor (`setVanQty` künyesi).
+       Aynı uçtan hem alma hem devretme çıkması bu ucun var oluş sebebiydi. */
+    const azalt = await dataOf<CourierVanStockMoveResponse>(
+      await post('/api/v1/courier/van-stock/set', { variantId, targetQty: 1, observedQty: 3 }),
+    );
+    expect(azalt).toMatchObject({ status: 'ok', delta: -2, vanQty: 1 });
+  });
+
+  it('`observedQty` BAYATLIK KALKANI olarak motora ulaşıyor — yanlış taban yazım yapmıyor', async () => {
+    /*
+      TESTİ YAZARKEN ÖĞRENİLDİ (07.09): ilk denemede gövdelere `observedQty` konmamıştı ve uç
+      `invalid_body` döndü — yani alan ZORUNLU ve doğrulama çalışıyor. Ama asıl soru bir sonrakiydi:
+      alan uçtan motora GEÇİYOR mu? Motor onu bir kalkan olarak kullanıyor (`van-stock.ts:516`):
+      istemcinin gördüğü taban araçtakiyle uyuşmuyorsa hiçbir şey yazmıyor, `stale` diyor.
+
+      Uç bu alanı düşürse ya da sabit bir değer geçirse kalkan SESSİZCE devre dışı kalırdı: motor
+      testi bunu göremez (fonksiyonu doğru argümanla çağırıyor), ekran testi de göremez (kapıyı
+      taklit ediyor). Belirtisi de olmazdı — yalnız bayat ekrandan yapılan yazımlar geçmeye başlardı.
+    */
+    await vanRun();
+    await araca(4, 0);
+
+    /* Kurye ekranı 4 yerine 1 görüyor sanıyor (başka bir telefon araca mal koydu). */
+    const bayat = await dataOf<CourierVanStockMoveResponse>(
+      await post('/api/v1/courier/van-stock/set', { variantId, targetQty: 2, observedQty: 1 }),
+    );
+    expect(bayat).toMatchObject({ status: 'stale', variantId, vanQty: 4 });
+
+    /* Ve gerçekten HİÇBİR ŞEY yazılmadı — reddin kanıtı cevabın kendisi değil, sayının durmasıdır. */
+    const liste = await dataOf<CourierVanStockResponse>(await asCourier('/api/v1/courier/van-stock'));
+    expect(liste.onVan.find((line) => line.variantId === variantId)?.qty).toBe(4);
+  });
+
+  it('okutma KODU VARYANTA ÇEVİRİYOR ve bir tane ekliyor; tanınmayan kod kendi dalıyla döner', async () => {
+    /*
+      Çeviri yalnız UÇTA: eşleme `variant_barcode`ta ve ne motor ne ekran oraya bakıyor
+      (`VariantBarcodeService.findByCode` bu dosyanın ölçtüğü tek yerde çağrılıyor). Tanınmayan kodun
+      SESSİZ GEÇMEMESİ de burada kanıtlanıyor — sessiz geçseydi kurye okuttuğunu sanır, mal araca
+      hiç binmezdi.
+    */
+    await vanRun();
+
+    const okutma = await dataOf<CourierVanStockMoveResponse>(
+      await post('/api/v1/courier/van-stock/scan', { code: vanBarcode }),
+    );
+    expect(okutma).toMatchObject({ status: 'ok', variantId, delta: 1, vanQty: 1 });
+
+    const taninmayan = await dataOf<CourierVanStockMoveResponse>(
+      await post('/api/v1/courier/van-stock/scan', { code: `YOK-${stamp}` }),
+    );
+    expect(taninmayan).toEqual({ status: 'unknown_code' });
+  });
+
+  it('liste araçtakini ve depodaki adayları BİRLİKTE veriyor; `?q=` süzgeci uca ulaşıyor', async () => {
+    /*
+      Tek uçtan iki okuma (v3:19) — ayrı uç açılmadı, çünkü soru aynı: "depodan ne alabilirim".
+      `?q=` sorgu dizesinden okunuyor ve yalnız burada; motorun `query` argümanına bağlandığını
+      başka hiçbir test ölçmüyor.
+    */
+    await vanRun();
+    await araca(2, 0);
+
+    const liste = await dataOf<CourierVanStockResponse>(await asCourier('/api/v1/courier/van-stock'));
+    expect(liste.vehicleWarehouseId).toBe(vanWarehouseId);
+    expect(liste.onVan.map((line) => line.variantId)).toContain(variantId);
+    expect(liste.candidates.map((row) => row.variantId)).toContain(variantId);
+
+    /* Eşleşmeyen sorgu ADAYLARI boşaltır ama ARAÇTAKİNİ boşaltmaz: süzgeç depodan ne alınacağının
+       sorusudur, araçta ne olduğunun değil. İkisi tek cevapta ama iki ayrı okuma. */
+    const suzulmus = await dataOf<CourierVanStockResponse>(
+      await asCourier(`/api/v1/courier/van-stock?q=hicboyleurunyok${stamp}`),
+    );
+    expect(suzulmus.candidates).toEqual([]);
+    expect(suzulmus.onVan.map((line) => line.variantId)).toContain(variantId);
   });
 });
