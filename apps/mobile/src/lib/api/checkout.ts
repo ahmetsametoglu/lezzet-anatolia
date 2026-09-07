@@ -9,7 +9,7 @@ import {
 import type { Locale } from '@lezzet/i18n';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { queryString, type ApiResult } from './client';
 
 /*
   `/api/v1/me/checkout` — "Siparişi tamamla" ekranının OKUMASI + sipariş açan YAZMASI.
@@ -48,12 +48,6 @@ interface CheckoutQuery {
 type CheckoutOrderBody = z.input<typeof CheckoutOrderBodySchema>;
 
 /** Sorgu dizesi — verilmemiş parametre YAZILMAZ (`cart.ts`/`orders.ts` deseni). */
-function queryOf(params: Record<string, string | undefined>): string {
-  const pairs = Object.entries(params)
-    .filter((entry): entry is [string, string] => entry[1] !== undefined)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
-  return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
-}
 
 /** Boş dize = "yok" ile aynı kapıya çıkar: sunucuyu boş bir parametreyle meşgul etmeyiz. */
 function present(value: string | null): string | undefined {
@@ -66,7 +60,7 @@ function present(value: string | null): string | undefined {
  * çağrılır — bölünseydi gün listesi yeni adresin, ödeme yolları eskisinin olurdu (sözleşme künyesi).
  */
 export function fetchCheckout(query: CheckoutQuery): Promise<ApiResult<CheckoutSnapshot>> {
-  const path = `/api/v1/me/checkout${queryOf({
+  const path = `/api/v1/me/checkout${queryString({
     locale: query.locale,
     addressId: present(query.addressId),
     coupon: present(query.coupon),
@@ -84,7 +78,7 @@ export function fetchCheckout(query: CheckoutQuery): Promise<ApiResult<CheckoutS
  * `locale` sorguda ve ZORUNLU: sipariş bildirimi ve kalem adları o dilde yazılır.
  */
 export function placeCheckoutOrder(locale: Locale, body: CheckoutOrderBody): Promise<ApiResult<CheckoutOrderResult>> {
-  return authorizedFetch(`/api/v1/me/checkout/order${queryOf({ locale })}`, CheckoutOrderResultSchema, {
+  return authorizedFetch(`/api/v1/me/checkout/order${queryString({ locale })}`, CheckoutOrderResultSchema, {
     method: 'POST',
     body,
   });

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CategoryService, OrderService, PriceService, ProductService, ProductVariantService, StockService, SupplierProductService, SupplierService, TicketService, serviceDb } from '@lezzet/database';
 import { createTestWarehouse, purgeTestData } from '@lezzet/database/testing';
-import type { ComplaintResponse, ExceptionAskResponse, ExceptionsResponse, ManagementHub, OfferCandidatesResponse, OfferOpenResponse, SupplyDraftResponse, SupplyResponse, TicketActionResponse } from '@lezzet/types';
+import type { ComplaintResponse, ComplaintsResponse, ExceptionAskResponse, ExceptionsResponse, ManagementHub, OfferCandidatesResponse, OfferOpenResponse, SupplyDraftResponse, SupplyResponse, TicketActionResponse } from '@lezzet/types';
 import { app } from '../../app';
 import { bearer, createSignedInUser, envelopeData, type SignedInUser } from '../../lib/testing';
 
@@ -365,6 +365,35 @@ describe('Y1 · şikâyet / talep detayı', () => {
        rota kayıtlı, gövde okundu, motor çağrıldı ve reddi 4xx değil CÜMLE olarak döndü. */
     const ret = await envelopeData<TicketActionResponse>(await post(admin, `complaints/${ticketId}/return`, {}));
     expect(ret).toEqual({ ok: false, reason: 'no_order' });
+  });
+
+  /* TALEP LİSTESİ (21.281) — kuyruk sayfası + şerit sayaçları TEK turda.
+
+     PAYLAŞILAN DB: kendi kurduğumuz satırı ARIYORUZ, toplam saymıyoruz (CLAUDE §4b). Sayaçlar
+     için de aynısı: eşitlik değil ALT SINIR iddiası — başka bir şeridin talebi sayıyı oynatır. */
+  it('liste kendi talebimizi taşıyor; sayaçlar sayfadan DEĞİL sayımdan gelir', async () => {
+    const list = await envelopeData<ComplaintsResponse>(await get(admin, 'complaints'));
+    const mine = list.rows.find((row) => row.ticketId === ticketId);
+    expect(mine).toBeDefined();
+    // Tür yukarıdaki çekmece testinde `damaged`a düzeltilmişti; liste de onu okuyor.
+    expect(mine!.type).toBe('damaged');
+    expect(mine!.customerName).toBe('musteri');
+    // Sayaçlar sayfa uzunluğundan türetilseydi kalabalıkta yalan söylerdi.
+    expect(list.counts.all).toBeGreaterThanOrEqual(1);
+    expect(list.counts.byType.damaged).toBeGreaterThanOrEqual(1);
+  });
+
+  it('SÜZGEÇ sunucuda uygulanır: tür daraltması bizim talebimizi ELER', async () => {
+    // Talebimiz `damaged`; `question` süzgeci onu getirmemeli — süzme ekranın işi değil.
+    const other = await envelopeData<ComplaintsResponse>(await get(admin, 'complaints?type=question'));
+    expect(other.rows.some((row) => row.ticketId === ticketId)).toBe(false);
+
+    const same = await envelopeData<ComplaintsResponse>(await get(admin, 'complaints?type=damaged'));
+    expect(same.rows.some((row) => row.ticketId === ticketId)).toBe(true);
+  });
+
+  it('geçersiz süzgeç 400 — uç kendi kabuğunu doğrular', async () => {
+    expect((await get(admin, 'complaints?type=yok-boyle-bir-tur')).status).toBe(400);
   });
 
   it('taslak yokken tüketme reddi adlandırılır: no_draft', async () => {

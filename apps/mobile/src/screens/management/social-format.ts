@@ -1,4 +1,5 @@
 import { upperIn } from '@/lib/i18n/locale';
+import { stripChatFormatting } from '@lezzet/domain-core';
 import type { MessageKind } from '@lezzet/types';
 
 /*
@@ -27,8 +28,19 @@ export function socialPreview(
   row: { lastMessageText: string | null; lastMessageKind: MessageKind | null },
   kindLabels: Record<MessageKind, string>,
 ): string {
+  /*
+    BİÇİMLENDİRME İŞARETLERİ SÖKÜLÜR (21.281 · talep listesinde ölçülen arızanın aynısı).
+
+    Gövde defterde HAM durur (`*kalın*`, `_italik_`) çünkü WhatsApp onu çiziyor ve ajanın cevapları
+    o dilde üretiliyor. İki gösterim yerinin davranışı ZITTIR: sohbet balonu işaretleri ÇİZER
+    (`ChatText`), liste satırı SÖKER — burası tek satırlık bir TARAMA dizesidir, okunacak metin
+    değil. Sökülmezse operatör kuyrukta çıplak yıldız görür.
+
+    Talep kuyruğunda aynısı 07.09'da cihazda görüldü ve `previewOf`ta düzeltildi; sosyal kuyruk
+    o turda sayılmamıştı — oysa biçimli mesajın EN ÇOK düştüğü defter burası.
+  */
   const text = row.lastMessageText?.trim();
-  if (text) return text;
+  if (text) return stripChatFormatting(text);
   return row.lastMessageKind === null ? '' : kindLabels[row.lastMessageKind];
 }
 

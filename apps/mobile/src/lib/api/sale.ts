@@ -11,7 +11,7 @@ import {
 
 import { authorizedFetch } from '../auth/authorized-fetch';
 import { withWarehouseChoice } from '../operations/warehouse-choice';
-import type { ApiFetchInit, ApiResult } from './client';
+import { queryString, type ApiFetchInit, type ApiResult } from './client';
 
 /**
  * **Bu dosyanın TEK çağrı kapısı** — ve satış yerini adrese yazan yer.
@@ -59,12 +59,6 @@ function saleFetch<TSchema extends z.ZodTypeAny>(
 */
 
 /** `undefined` parametre YAZILMAZ (kurye emsali): boş dize meşru bir değerdir, yokluk değil. */
-function queryOf(params: Record<string, string | undefined>): string {
-  const pairs = Object.entries(params)
-    .filter((entry): entry is [string, string] => entry[1] !== undefined)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
-  return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
-}
 
 /**
  * **Bu depoda ne var** — satış ekranının listesi. Kart, vitrin kartı + `availableHere` (kalan adet)
@@ -76,7 +70,7 @@ export function fetchSaleCatalog(params: {
   place: SalePlace;
 }): Promise<ApiResult<z.infer<typeof SaleCatalogPageSchema>>> {
   return saleFetch(
-    `/api/v1/sale/catalog${queryOf({ locale: 'tr', q: params.q, cursor: params.cursor })}`,
+    `/api/v1/sale/catalog${queryString({ locale: 'tr', q: params.q, cursor: params.cursor })}`,
     params.place,
     SaleCatalogPageSchema,
   );
@@ -95,7 +89,7 @@ export function fetchSaleVariants(
  * Yer buraya da geçiyor: araçta "burada duran mal" kuralı okutmada da geçerli (`not_here`).
  */
 export function scanSaleCode(code: string, place: SalePlace): Promise<ApiResult<z.infer<typeof SaleScanResponseSchema>>> {
-  return saleFetch(`/api/v1/sale/scan${queryOf({ locale: 'tr', code })}`, place, SaleScanResponseSchema);
+  return saleFetch(`/api/v1/sale/scan${queryString({ locale: 'tr', code })}`, place, SaleScanResponseSchema);
 }
 
 /**

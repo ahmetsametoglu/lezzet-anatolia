@@ -696,7 +696,8 @@ export {
   type TicketWriteResult,
 } from './ticket/staff-write';
 export type { StaffTicketDetail, TicketOrderRef, TicketQueueItem } from './ticket/ticket-types';
-export { readComplaint } from './management/complaint';
+export { readComplaint, readComplaintQueue } from './management/complaint';
+export type { ComplaintQueueCounts, ComplaintQueueFilter } from './management/complaint';
 export { askShortfall, countOrderExceptions, listOrderExceptions } from './management/exceptions';
 
 // ── Kargo tarifesi (07.12) ──────────────────────────────────────────────────

@@ -70,6 +70,10 @@
         "title": "Sosyal gelen kutusu",
         "subtitle": "cevap bekleyen konuşma"
       },
+      "complaints": {
+        "title": "Talep ve şikâyetler",
+        "subtitle": "cevap bekleyen talep"
+      },
       "summary": {
         "title": "Gün özeti",
         "subtitle": "ciro · {orders} sipariş"
@@ -168,6 +172,35 @@
     "empty": {
       "title": "Bekleyen talep yok",
       "body": "Cevap bekleyen açık talep kalmadı."
+    }
+  },
+  "complaints": {
+    "title": "Talep ve şikâyetler",
+    "caption": "{open} açık · {awaiting} tanesi top bizde",
+    "loading": "Talepler yükleniyor…",
+    "filterAll": "tümü",
+    "filterAwaiting": "top bizde",
+    "filterResolved": "kapandı",
+    "ourTurn": "TOP BİZDE",
+    "theirTurn": "TOP ONLARDA",
+    "closed": "KAPANDI",
+    "attachment": "görsel var",
+    "quoted": "\"{text}\"",
+    "translated": "{lang} · çeviri var",
+    "translatedNoLang": "çeviri var",
+    "footnote": "Top bizde olan talepler listede üstte durur; kapanan kayıtlar solar ama silinmez.",
+    "empty": {
+      "title": "Bu süzgeçte talep yok",
+      "body": "Başka bir çipe dokunup kuyruğun tamamına bakabilirsiniz."
+    },
+    "error": {
+      "title": "Liste yüklenemedi",
+      "retry": "Tekrar dene"
+    },
+    "tail": {
+      "loading": "Yükleniyor…",
+      "failed": "Devamı gelmedi — dokun, yeniden dene",
+      "end": "Liste bitti"
     }
   },
   "exception": {

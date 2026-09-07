@@ -12993,3 +12993,104 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   açıkken çekmece açıldı ve `dumpsys input_method` `mInputShown=false` yazdı, panel tam boyunda
   çizildi; satış aramasında aynı ölçüm `true` kaldı.
 
+
+- [x] (21.281) **TALEP LİSTESİ AÇILDI — operatör "6 açık" görüp 1'ini açabiliyordu** (kullanıcı kararı 07.09)
+  `touches:` `packages/database/src/services/ticket.service.ts` · `packages/application/src/ticket/{ticket-types.ts,staff-read.ts,staff-read.test.ts}` · `packages/application/src/management/complaint.ts` · `packages/application/src/index.ts` · `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/{management.ts,management.test.ts}` · `apps/mobile/src/lib/api/{client.ts,management.ts,social.ts,sale.ts,checkout.ts,orders.ts}` · `apps/mobile/src/components/operations/status-badge.tsx` · `apps/mobile/src/screens/management/{complaints-screen.tsx,complaints-screen.test.tsx,use-complaints.hook.ts,messages.json,management-hub-screen.tsx,social-format.ts,social-format.test.ts}` · `packages/design-tokens/src/operations-app.ts` · `supabase/migrations/0026_ticket.sql` · `packages/types/src/entities/ticket.schema.ts` · `apps/mobile/src/app/(operations)/complaints.tsx` · `apps/web/app/(operations)/operations/tickets/tickets-read.test.ts`
+
+  **NİÇİN AÇILDI.** Ölçüldü: mobilde bir talebe ulaşmanın TEK yolu hub'ın karar kartıydı ve o da
+  kuyruğun BAŞINDAKİ talebi açıyordu. Kartın dipnotu *"6 açık talep"* yazarken altıncısına
+  gidilemiyordu; kapanmış talep hiç görünmüyordu. **Sayı gösterip kapı açmayan bir ekran, olmayan
+  bir yeteneği vaat eder.** Tasarımın 29. ekranı mobilde hiç yoktu, web'de tam karşılığı vardı —
+  yani sistem düzeyinde değil, yalnız mobilde boşluktu.
+
+  **OKUYUCU ZATEN PAYLAŞILANDI, TERFİ GEREKMEDİ.** `listTicketQueue` (`ticket/staff-read`) web'in
+  talepler sayfasının okuduğu kapı; mobil ucu onun ÜSTÜNE indi (`readComplaintQueue`), yanına
+  değil. İki yüzey artık kuyruğu farklı sıralayamaz ya da farklı çeviremez.
+
+  **SÜZGEÇ ÇEVİRİSİ MOTORDA, EKRANDA DEĞİL:** hangi çipin hangi süzgeç olduğu bir İŞ kuralıdır
+  ("açık kuyruk = `open` + `in_progress`") ve iki yüzeye ayrı yazılsaydı biri bir gün `resolved`ı
+  açık sayardı — `OPEN_TICKET_FILTER` künyesinin uyardığı şey.
+
+  **SAYAÇLAR SAYFADAN TÜRETİLMEZ** (`countForFilters`, `countByStatus`ün deseni): çip "bozuk · 3"
+  derken ilk sayfada üç bozuk olması "üç bozuk var" demek değildir. `all` ayrı bir tur değil,
+  türlerin TOPLAMI — tür zorunlu ve enum, dört küme açık kuyruğu tam böler; yedinci bir sayım aynı
+  sayıyı ikinci kez sorar ve bir gün ayrışırdı. RPC yok, `STACK §13` eşiği burada da karşılanmıyor.
+
+  **"KAPANDI" ÇİPİ TASARIMDA YOK, BURADA VAR.** v3'ün şeridi beş çip çiziyor ve hiçbiri
+  kapanmışları getirmiyor — ama aynı tasarımın LİSTESİNDE bir *"KAPANDI · 12:05"* satırı duruyor.
+  İkisi birlikte tutarsız. Çözüm onları "tümü"ye karıştırmak DEĞİL (o zaman şerit yalan söylerdi:
+  "tümü · 6" derken listede dokuz satır olurdu), kendi çipini vermek — sayı ile liste ancak böyle
+  aynı şeyi söyler. Kullanıcının bulduğu açık zaten tam buydu: kapanmış talebe gidilemiyordu.
+
+  **İKİ ALAN SORULDU, KULLANICI KARAR VERDİ (07.09):**
+  · *"2 görsel"* → **çizilmedi.** Görünüm ekin sayısını taşımıyor (`bool_or(cardinality(...))`),
+    var/yok taşıyor; sayı için şema değişmesi ve `db:reset` gerekirdi. Satır "görsel var" diyor.
+  · *"DE · çeviri var"* → **dil eklendi.** Veritabanı DEĞİŞMEDİ: `last_message_language` görünümde
+    baştan beri vardı ve `resolveUserText` onu okuyordu, yalnız kuyruk satırına taşınmamıştı
+    (`TicketQueueItem.previewLanguage`). Operatörün sorusu "çevrildi mi" değil *"neyden çevrildi"* —
+    çeviriye güvenip güvenmeyeceği ona bağlı. `null` = dil saptanmamış; ekran o zaman SUSAR.
+
+  **SLA SAYACI YOK.** Tasarımın satırı sağda "22 sa kaldı" yazıyor; talepte SLA kavramı yok ve bu
+  bilinçli (detay ekranının aynı kararı). Yerinde SON HAREKETİN yaşı duruyor — operatörün gerçekten
+  sorabileceği tek şey: "ne kadardır bekliyor".
+
+  **YOL BOYUNCA İKİ DUPLICATION KAPANDI:**
+  · `queryOf` DÖRT dosyada karakteri karakterine aynıydı (`sale` · `checkout` · `orders` · `social`)
+    ve beşincisini yazmak üzereydim. `client.ts`e `queryString` olarak taşındı, dördü de ona bağlandı.
+    Küçük olması onu duplication olmaktan çıkarmıyor: kaçırılan bir `encodeURIComponent` düzeltmesi
+    bir gün dört yerden yalnız birine uygulanırdı. (`packages.ts`in kendi `queryOf`u BAĞLANMADI —
+    imzası başka; aynı ada sahip olmak aynı iş olmak değildir.)
+  · Süzgeç çipi için yeni bir komponent YAZILMADI: kitte `OperationsChoiceChip` (`tone: 'filter'`)
+    zaten tam bu iş için duruyor. (Sosyal ekranın kendi yerel `FilterChip`'i eski bir borç; o
+    dosya başka şeridin elinde olduğu için dokunulmadı.)
+
+  **KİTE BİR TON EKLENDİ (`status-badge` · `critical`).** Tasarım "TOP BİZDE"yi DOLU kırmızı, tür
+  rozetini YUMUŞAK kırmızı çiziyor ve ikisi YAN YANA duruyor. Kitte dolu olan yalnız zeytin vardı
+  (`live`); tek tonla çizmek, kuyrukta gözün aradığı tek şeyi tür etiketiyle aynı ağırlığa
+  indirirdi — `live`in 31.08 turunda ölçülen arızanın aynısı.
+
+  **HUB'IN DİPNOTU ARTIK BİR KAPI:** karar kartının altındaki "N açık talep" cümlesi sayıyı söyleyip
+  kapı açmıyordu. "Günün nabzı"na kutucuk eklendi (`/complaints`) — sosyal gelen kutusunun kardeşi,
+  aynı soru: "bekleyen kuyruğa gir".
+
+  **CİHAZ TURU BİR ARIZA BULDU — ÖNİZLEME BİÇİMLENDİRMEYİ SÖKMÜYORDU.** Liste açılınca satırda
+  ÇIPLAK işaretler duruyordu: *"İki tepsi için `*bedelsiz yeniden gönderim*` planladık — yarın
+  `_09:00_` gibi"*. 21.279 biçimlendirmeyi yedi yüzeyde çizdirmişti ama **önizleme o yedinin içinde
+  değildi** — kimsenin saymadığı sekizinci yüzey burasıydı ve yalnız cihazda görüldü (hiçbir test
+  bakmıyordu, çünkü kimse bakması gerektiğini bilmiyordu).
+
+  Çare `previewOf`ta, yani ÜÇ yüzeyi birden düzeltiyor: mobil talep listesi, **web'in talepler
+  sayfası** ve yönetim hub'ının karar kartı — üçü de aynı fonksiyonu okuyor, ekranda çözülseydi
+  ötekiler çıplak kalırdı.
+
+  **AYNI SINIF SOSYALDE DE ARANDI ve iki yerde daha bulundu** (kullanıcı sorusu üzerine): mobil
+  sosyal gelen kutusu (`social-format.ts` → `socialPreview`) **burada kapatıldı** (2 iddia), web'in
+  sosyal önizlemesi (`operations/social/social-read.ts`) sosyal şeride devredildi — orası bu şeridin
+  alanı değil. Sosyal defter aslında daha riskli: ajanın WhatsApp cevapları BİÇİMLİ üretiliyor
+  (WhatsApp onu çiziyor) ve o mesajlar oraya düşüyor. Önizleme ÇİZİLMEZ **SÖKÜLÜR**: burası tek satırlık bir TARAMA dizesidir,
+  okunacak metin değil; çizici blok üretip satır kırpmasıyla çakışırdı ve tasarımın satırı (v3:29)
+  önizlemeyi zaten düz metin çiziyor. Kayıplı olması sorun değil — bu türetilmiş, kırpılmış bir
+  kopya; kaynak detayda duruyor ve orada ÇİZİLİYOR (cihazda ikisi birden doğrulandı). Sökme ÖNCE,
+  kırpma SONRA: ters sırada 120. karakter bir işaretin ortasına düşerse çıplak yıldız kalırdı.
+
+  **Doğrulama:** ekranın **13 iddiası** (biri bu arıza) + `previewOf`un 4 iddiası · yönetim
+  **109/109** · birim paketi **2072/2072** · ucun 3 yeni iddiası · **kök typecheck 20/20**
+  (sözleşme değişti, paket paket değil kökten) · lint + knip temiz.
+
+  **Fiziksel Oppo'da (USB) ölçüldü:** hub kutucuğu listeyi açıyor · yedi çipin hepsine yatay
+  şeritten ulaşılıyor (*"kapandı"* dahil) · sayaçlar sunucudan geliyor (*"tümü · 1 / bozuk · 1"*)
+  · *"kapandı"* çipi sunucuya gidiyor ve liste boş hâle düşüyor · satır → detay geçişi çalışıyor ·
+  önizleme temiz, detay hâlâ biçimli.
+
+  **SAYFALAMA DA CİHAZDA ÖLÇÜLDÜ** (kullanıcı kararı 07.09: *"bekleyen olarak bırakmaya gerek yok,
+  veritabanına doğrudan veri girebilirsin"*). Yerel kuyruğa 25 talep kuruldu (26 açık, sayfa boyu
+  20), kaydırıldı: **26 FARKLI satır yüklendi**, ardından *"Liste bitti"* — yani `onEndReached`
+  ikinci sayfayı çekti ve imleç doğru tükendi. Satırlar tur bitince tek tek silindi (ilk mesaj
+  gövdesinden tanınıyorlardı); defter kullanıcının inceleme talebiyle baş başa kaldı, `seed`e
+  hiçbir şey yazılmadı.
+
+  Ölçümün kendisi bir ders bıraktı: ilk turda "20 satır yüklendi, sayfalama kırık" diye okumuştum;
+  yanlıştı — toplamaya kaydırdıktan SONRA başlamış, baştaki satırları hiç saymamıştım.
+  `uiautomator` yalnız GÖRÜNEN düğümleri döker, o yüzden sayım kaydırmanın her adımında ve
+  BAŞLANGIÇTAN itibaren yapılmalı.
+

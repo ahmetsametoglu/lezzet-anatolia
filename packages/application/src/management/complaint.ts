@@ -1,7 +1,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { TicketQueueService, UserProfileService } from '@lezzet/database';
-import type { ComplaintDetail } from '@lezzet/types';
-import { getStaffTicketDetail } from '../ticket/staff-read';
+import { TicketQueueService, UserProfileService, type TicketQueueFilter } from '@lezzet/database';
+import type { ComplaintDetail, KeysetCursor, TicketType } from '@lezzet/types';
+import { getStaffTicketDetail, listTicketQueue } from '../ticket/staff-read';
+import type { TicketQueueItem } from '../ticket/ticket-types';
 
 /*
   Y1 · ŞİKÂYET/TALEP DETAYI — mobil yönetim görünümü (21.12).
@@ -66,4 +67,54 @@ export async function readComplaint(
   // Operasyon dili: yazışma personele Türkçe açılır (staff-read'in ters yön kuralı).
   const detail = await getStaffTicketDetail(db, 'tr', ticketId);
   return detail === null ? null : toComplaint(db, detail);
+}
+
+/** Şerit sayaçları — `TicketQueueService.countForFilters`ın döndürdüğü şeklin adı. */
+export type ComplaintQueueCounts = Awaited<ReturnType<TicketQueueService['countForFilters']>>;
+
+/** Süzgeç şeridinin telde taşınan hâli — çipler birbirini dışlar (v3:29'da tam bir çip koyu). */
+export type ComplaintQueueFilter =
+  | { kind: 'all' }
+  | { kind: 'awaiting' }
+  | { kind: 'resolved' }
+  | { kind: 'type'; type: TicketType };
+
+/**
+ * Talep listesi (21.281 · v3:29) — kuyruk sayfası + şerit sayaçları TEK turda.
+ *
+ * **`listTicketQueue`in üstüne iner, yanına değil** (`readComplaint`in aynı kararı): kuyruk satırı,
+ * önizleme ve çeviri hep o kapıdan gelir — web'in talepler sayfası da aynı okumayı kullanıyor, yani
+ * iki yüzey kuyruğu farklı sıralayamaz ya da farklı çeviremez.
+ *
+ * **Süzgeç burada `TicketQueueFilter`e çevrilir**, ekranda değil: hangi çipin hangi süzgeç anlamına
+ * geldiği bir İŞ kuralıdır ("açık kuyruk = `open` + `in_progress`") ve iki yüzeye ayrı ayrı
+ * yazılsaydı biri bir gün `resolved`ı açık sayardı — `OPEN_TICKET_FILTER` künyesinin uyardığı şey.
+ *
+ * **Sayaçlar süzgeçten BAĞIMSIZ** ve her sayfada aynı: çip "bozuk · 3" derken bu sayı seçili
+ * süzgece göre değişseydi şeridin kendisi okunamaz olurdu — operatör başka bir çipe geçmeden
+ * oradaki sayıyı göremezdi.
+ */
+export async function readComplaintQueue(
+  db: SupabaseClient,
+  filter: ComplaintQueueFilter,
+  cursor?: KeysetCursor,
+  limit?: number,
+): Promise<{ rows: TicketQueueItem[]; nextCursor: KeysetCursor | null; counts: ComplaintQueueCounts }> {
+  const queue: TicketQueueFilter =
+    filter.kind === 'resolved'
+      ? { status: 'resolved' }
+      : filter.kind === 'awaiting'
+        ? { openOnly: true, awaitingReply: true }
+        : filter.kind === 'type'
+          ? { openOnly: true, type: filter.type }
+          : { openOnly: true };
+
+  // İkisi birbirine bakmıyor; sırayla beklemek ekran açılışını iki katına çıkarırdı (sosyal uç deseni).
+  const [page, counts] = await Promise.all([
+    // Operasyon dili: kuyruk da personele Türkçe açılır (`readComplaint`in aynı satırı).
+    listTicketQueue(db, 'tr', queue, cursor, limit),
+    new TicketQueueService(db).countForFilters(),
+  ]);
+
+  return { rows: page.rows, nextCursor: page.nextCursor, counts };
 }

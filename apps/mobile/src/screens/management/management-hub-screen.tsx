@@ -103,7 +103,7 @@ const SKELETON_QUIET_HEIGHT =
   sözleşmesi rota adreslerini literal olarak doğruluyor ve `string`e genişletilen bir alan o kapıyı
   kapatır — yanlış yazılmış bir adres ancak cihazda, boş ekran olarak görünürdü.
 */
-type ManagementRoute = '/offer-approval' | '/supply-suggestion' | '/social' | '/day-summary';
+type ManagementRoute = '/offer-approval' | '/supply-suggestion' | '/social' | '/complaints' | '/day-summary';
 
 /** Sessiz satır kartının (teklif · tedarik) içeriği — ikisi de aynı iskeleti çiziyor (v3:2110-2126). */
 interface QuietCard {
@@ -116,7 +116,7 @@ interface QuietCard {
 
 /** "Günün nabzı" kutucuğu — büyük sayı + ad + alt satır (v3:2129-2137). */
 interface PulseTile {
-  key: 'social' | 'summary';
+  key: 'social' | 'complaints' | 'summary';
   /** `null` = OKUNAMADI; ekran "—" yazar, sıfır DEĞİL. */
   value: string | null;
   title: string;
@@ -309,6 +309,19 @@ function pulseTilesOf(hub: ManagementHub | null): PulseTile[] {
          sıfırken aynı renk kalsaydı "bekleyen var" ile "bekleyen yok" aynı sesle konuşurdu. */
       alert: intents !== null && intents > 0,
       route: '/social',
+    },
+    /*
+      TALEP KUYRUĞUNUN KAPISI (21.281). Karar kartı kuyruğun yalnız BAŞINI açıyor ve dipnotu
+      "N açık talep" diyordu — sayıyı söyleyip kapıyı açmayan bir cümle. Kutucuk o kapı; sosyal
+      gelen kutusunun tam kardeşi (aynı soru: "bekleyen kuyruğa gir").
+    */
+    {
+      key: 'complaints',
+      value: hub === null ? null : String(hub.queue.complaints.count),
+      title: copy.complaints.title,
+      subtitle: copy.complaints.subtitle,
+      alert: hub !== null && hub.queue.complaints.count > 0,
+      route: '/complaints',
     },
     {
       key: 'summary',

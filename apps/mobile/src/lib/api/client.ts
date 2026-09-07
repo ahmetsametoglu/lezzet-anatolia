@@ -129,3 +129,22 @@ export async function apiFetch<TSchema extends z.ZodTypeAny>(
 
   return { data: parsed.data, error: null, status: response.status, retryAfterSec: null };
 }
+
+/**
+ * Sorgu dizesi — `?a=1&b=2`, `undefined` olan atlanır, sonuç boşsa dize de boş.
+ *
+ * **KİTE TAŞINDI (21.281): dört dosyada KARAKTERİ KARAKTERİNE aynı kopyası vardı** (`sale`,
+ * `checkout`, `orders`, `social`) ve beşincisini yazmak üzereydim. Küçük bir yardımcı olması onu
+ * duplication olmaktan çıkarmıyor — kaçırılan `encodeURIComponent` ya da "boş dizeyi de atla"
+ * gibi bir düzeltme bir gün dört yerden yalnız birine uygulanırdı ve fark hiçbir yerde görünmezdi
+ * (CLAUDE §1).
+ *
+ * `packages.ts`in kendi `queryOf`u BURAYA BAĞLANMADI: onun imzası başka (`locale` zorunlu,
+ * `postalCode` opsiyonel) — aynı ada sahip olmak aynı iş olmak değildir.
+ */
+export function queryString(params: Record<string, string | undefined>): string {
+  const pairs = Object.entries(params)
+    .filter((entry): entry is [string, string] => entry[1] !== undefined)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
+  return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
+}

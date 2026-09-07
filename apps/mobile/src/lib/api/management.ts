@@ -1,6 +1,7 @@
 import {
   ComplaintDraftResponseSchema,
   ComplaintResponseSchema,
+  ComplaintsResponseSchema,
   ExceptionAskResponseSchema,
   ExceptionsResponseSchema,
   ManagementHubSchema,
@@ -10,6 +11,7 @@ import {
   SupplyResponseSchema,
   type ComplaintDraftResponse,
   type ComplaintResponse,
+  type ComplaintsResponse,
   type ExceptionAskResponse,
   type ExceptionsResponse,
   type ManagementHub,
@@ -27,7 +29,7 @@ import {
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { queryString, type ApiResult } from './client';
 
 /*
   YÖNETİM UÇLARI — `/api/v1/management/*` (21.12).
@@ -62,6 +64,24 @@ export function createSupplyDraft(body: SupplyDraftRequest): Promise<ApiResult<S
 }
 
 /* ── Y1 · Şikâyet / talep ───────────────────────────────────────────────────── */
+
+/**
+ * Talep listesi (21.281) — süzgeç + keyset sayfası.
+ *
+ * `cursor` telde OPAK: istemci onu yorumlamaz, sunucudan aldığını aynen geri verir (sosyal gelen
+ * kutusunun aynı kuralı). Süzgeç ile tür ayrı iki parametre ama ekran ikisini birden GÖNDERMEZ —
+ * şerit tek seçimlidir.
+ */
+export function fetchComplaints(params: {
+  cursor?: string;
+  filter?: 'all' | 'awaiting' | 'resolved';
+  type?: TicketType;
+}): Promise<ApiResult<ComplaintsResponse>> {
+  return authorizedFetch(
+    `/api/v1/management/complaints${queryString({ cursor: params.cursor, filter: params.filter, type: params.type })}`,
+    ComplaintsResponseSchema,
+  );
+}
 
 /** `ticketId` verilmezse cevap bekleyen EN TAZE talep — hub'ın karar satırı parametresiz de açılır. */
 export function fetchComplaint(ticketId?: string): Promise<ApiResult<ComplaintResponse>> {

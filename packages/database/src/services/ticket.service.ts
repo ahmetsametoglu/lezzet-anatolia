@@ -9,6 +9,7 @@ import {
   TicketQueueRowSchema,
   TicketSchema,
   TicketStatusEnum,
+  TicketTypeEnum,
   TicketUpdateSchema,
   type KeysetCursor,
   type Page,
@@ -399,6 +400,34 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
   }
 
   /**
+   * Talep listesi süzgeç şeridinin SAYAÇLARI (21.281) — çipin üstünde yazan sayı.
+   *
+   * Sayımlar sayfadan türetilmez, `countByStatus` künyesindeki gerekçenin aynısı: çip "bozuk · 3"
+   * derken ilk sayfada üç bozuk olması "üç bozuk var" demek değildir.
+   *
+   * **`all` ayrı bir tur DEĞİL, türlerin toplamı** — `type` zorunlu ve enum, yani dört küme açık
+   * kuyruğu tam olarak BÖLER; yedinci bir sayım aynı sayıyı ikinci kez sorardı ve iki sayının bir
+   * gün ayrışması mümkün olurdu.
+   *
+   * `resolved` burada çünkü ekranın kapanmışlar çipi de bir SAYIM ister; `awaiting` kuyruğun
+   * içinden bir daralmadır (açık + son sözü müşteride), o yüzden `all`ın parçasıdır ve toplamı
+   * bozmaz — çipler bir bölüntü değil, aynı kümeye bakan farklı sorulardır.
+   *
+   * Her sayım AYRI ve indeksli bir tur; tek `group by` ancak RPC ile gelirdi ve `STACK §13`
+   * eşiği burada da karşılanmıyor (`countByStatus`ün ölçtüğü karar).
+   */
+  async countForFilters(): Promise<{ all: number; byType: Record<TicketType, number>; awaiting: number; resolved: number }> {
+    const types = TicketTypeEnum.options;
+    const [typeCounts, awaiting, resolved] = await Promise.all([
+      Promise.all(types.map((type) => this.count({ type, status: ['open', 'in_progress'] }))),
+      this.countAwaiting(),
+      this.count({ status: 'resolved' }),
+    ]);
+    const byType = Object.fromEntries(types.map((type, i) => [type, typeCounts[i] ?? 0])) as Record<TicketType, number>;
+    return { all: typeCounts.reduce((sum, n) => sum + n, 0), byType, awaiting, resolved };
+  }
+
+  /**
    * Operasyon kuyruğu — **son mesaja göre** sıralı: kuyruğun tek amacı cevap bekleyeni
    * bekletmemektir, o yüzden sıra açılış tarihine değil son harekete bakar.
    */
@@ -415,7 +444,14 @@ export class TicketQueueService extends BaseDbService<TicketQueueRow, never, nev
         answeredByAi: filter.answeredByAi,
       },
       {
-        orderBy: 'lastMessageAt',
+        /* SIRA `queueSortAt`TEN (21.281 · kullanıcı kararı 07.09) — "cevap bekleyenler ÜSTTE,
+           kendi içlerinde en taze önce", tasarımın kendi dipnotunun kuralı (v3:29).
+
+           `lastMessageAt` TERSİNİ yapıyordu: personel cevap verince kart en üste çıkıyor, cevap
+           bekleyen aşağı düşüyordu — oysa kuyruğun tek işi bekleyeni bekletmemek. Sıralama tek
+           sütunda çünkü keyset imleci tek alana dayanıyor; iki `order by` üç parçalı bir imleç
+           isterdi ve o değişiklik projedeki HER sayfalanan listenin altından geçerdi. */
+        orderBy: 'queueSortAt',
         orderDirection: 'desc',
         limit,
         keysetAfter: cursor,

@@ -185,6 +185,22 @@ select t.*,
        coalesce(m.last_message_at, t.created_at) as last_message_at,
        coalesce(m.message_count, 0)              as message_count,
        coalesce(m.last_sender = 'customer', false) as awaiting_reply,
+       -- **KUYRUĞUN SIRA ANAHTARI** (21.281) — "cevap bekleyenler ÜSTTE, kendi içlerinde en taze
+       -- önce". Tasarımın kendi dipnotu bu kuralı yazıyor (v3:29) ve kuyruğun işi zaten budur:
+       -- bekleyeni bekletmemek. Yalnız son mesaja göre sıralamak tersini yapıyordu — personel
+       -- cevap verince kart en üste çıkıyor, cevap bekleyen aşağı düşüyordu.
+       --
+       -- TEK SÜTUN, çünkü keyset imleci tek sıralama alanına dayanıyor (`base.service` künyesi:
+       -- `değer + id`). İki ayrı `order by` üç parçalı bir imleç isterdi ve o değişiklik projedeki
+       -- HER sayfalanan listenin altındaki koddan geçerdi. Bekleyen satırlar bir yüzyıl ileri
+       -- alınarak tek bir sıralanabilir damgada birleşiyor: sıra tam, imleç sade.
+       --
+       -- **EKRANA ÇIKMAZ.** Sahte bir tarihtir, olgu değil; sözleşme (`TicketQueueItem`) onu
+       -- taşımaz ve hiçbir yüzey okumaz. Adı da bunu söylüyor: `_sort_at`.
+       (case when coalesce(m.last_sender = 'customer', false)
+             then coalesce(m.last_message_at, t.created_at) + interval '100 years'
+             else coalesce(m.last_message_at, t.created_at)
+        end)                                     as queue_sort_at,
        coalesce(m.has_attachment, false)         as has_attachment,
        (t.return_triggered_at is not null)       as return_triggered,
        -- Kuyrukta okunan önizleme; tam metin detayda. Satır sonu ekranda yer açmasın diye

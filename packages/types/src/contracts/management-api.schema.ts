@@ -8,6 +8,7 @@ import {
   TicketStatusEnum,
   TicketTypeEnum,
 } from '../primitives/enums.schema';
+import { SourceLanguageSchema } from '../primitives/user-text.schema';
 
 /**
  * `/api/v1/management/*` SÖZLEŞME şemaları (21.12) — yönetim bölümünün (Y1–Y6 · gün özeti)
@@ -324,6 +325,65 @@ export type ComplaintDetail = z.infer<typeof ComplaintDetailSchema>;
 /** `complaint: null` = talep yok (ya da `next` istendi ve bekleyen kalmadı) — 404 değil, cevap. */
 export const ComplaintResponseSchema = z.object({ complaint: ComplaintDetailSchema.nullable() });
 export type ComplaintResponse = z.infer<typeof ComplaintResponseSchema>;
+
+/* ── TALEP LİSTESİ (21.281 · v3:29 "Talep ve şikâyetler") ───────────────────────────────────── */
+
+/**
+ * Kuyruk satırı — TARAMA için gereken her şey, tek turda.
+ *
+ * Detayın (`ComplaintDetailSchema`) küçültülmüşü DEĞİL ve olmamalı: detay yazışmayı, sipariş
+ * zeminini ve müşteri bağlamını taşır; liste bunların hiçbirini taramak için gerektirmez ve
+ * taşısaydı altı satır için altı yazışma çekilirdi.
+ *
+ * Alanlar `TicketQueueItem`ın (uygulama katmanı) tel karşılığıdır — ekranın çizdiği her rozetin
+ * bir kaynağı var: tür rozeti `type`, "top bizde" `awaitingReply`, "kapandı" `status`, alt şerit
+ * `hasAttachment` + `previewLanguage`/`previewTranslated`.
+ */
+export const ComplaintRowSchema = z.object({
+  ticketId: z.string().uuid(),
+  type: TicketTypeEnum,
+  status: TicketStatusEnum,
+  customerName: z.string(),
+  /** Son mesajın kırpılmış önizlemesi, operasyon dilinde çözülmüş. */
+  preview: z.string(),
+  previewTranslated: z.boolean(),
+  /**
+   * Önizlemenin KAYNAK dili — "çeviri var" tek başına eksik bir cümle (21.281 künyesi,
+   * `TicketQueueItem`). `null` = dil saptanmamış; ekran o zaman susar.
+   */
+  previewLanguage: SourceLanguageSchema.nullable(),
+  lastMessageAt: z.string(),
+  awaitingReply: z.boolean(),
+  /**
+   * Ek VAR MI — kaç tane DEĞİL (kullanıcı kararı 07.09). Tasarım "2 görsel" yazıyor ama görünüm
+   * `bool_or(cardinality(...))` taşıyor; sayı için şema değişmesi gerekirdi ve sayı tarama
+   * kararını değiştirmiyor — operatör zaten açacak.
+   */
+  hasAttachment: z.boolean(),
+  orderReferenceNo: z.string().nullable(),
+});
+export type ComplaintRow = z.infer<typeof ComplaintRowSchema>;
+
+/**
+ * `GET /management/complaints` yanıtı — sayfa + şerit sayaçları TEK turda.
+ *
+ * `counts` her sayfada gelir (sosyal gelen kutusunun aynı kararı): sayaç SAYIMDIR, sayfa uzunluğu
+ * değil, ve ayrı bir uç aynı ekran açılışına ikinci tur ekleyip iki değeri farklı anlardan
+ * okuturdu. Devam sayfasında ekran onları yok sayar.
+ */
+export const ComplaintsResponseSchema = z.object({
+  rows: z.array(ComplaintRowSchema),
+  /** Keyset imleci — telde OPAK dize; istemci yorumlamaz, aynen geri verir. `null` = liste bitti. */
+  nextCursor: z.string().nullable(),
+  counts: z.object({
+    /** Açık kuyruğun tamamı (`open` + `in_progress`) — türlerin toplamı. */
+    all: z.number().int().nonnegative(),
+    byType: z.record(TicketTypeEnum, z.number().int().nonnegative()),
+    awaiting: z.number().int().nonnegative(),
+    resolved: z.number().int().nonnegative(),
+  }),
+});
+export type ComplaintsResponse = z.infer<typeof ComplaintsResponseSchema>;
 
 export const ComplaintReplyRequestSchema = z.object({ body: z.string().trim().min(1) });
 export type ComplaintReplyRequest = z.infer<typeof ComplaintReplyRequestSchema>;

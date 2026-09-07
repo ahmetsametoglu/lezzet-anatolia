@@ -53,6 +53,18 @@ describe('socialPreview — metinsiz mesaj BOŞ görünmez', () => {
   it('hiç mesaj yoksa boş — uydurma etiket basılmaz', () => {
     expect(socialPreview({ lastMessageText: null, lastMessageKind: null }, KIND_LABELS)).toBe('');
   });
+
+  /* BİÇİM İŞARETLERİ SÖKÜLÜR (21.281). Gövde defterde HAM durur çünkü WhatsApp onu çiziyor;
+     sohbet balonu da çizer. Ama liste satırı tek satırlık bir TARAMA dizesidir — sökülmezse
+     operatör kuyrukta çıplak yıldız görür. Talep kuyruğunda aynısı cihazda ölçülmüştü. */
+  it('biçimlendirme işaretleri SÖKÜLÜR — kuyrukta çıplak yıldız kalmaz', () => {
+    expect(
+      socialPreview({ lastMessageText: 'Yarın *09:00* gibi kapınızda oluruz', lastMessageKind: 'text' }, KIND_LABELS),
+    ).toBe('Yarın 09:00 gibi kapınızda oluruz');
+    expect(
+      socialPreview({ lastMessageText: 'Eski teslim ~bugün~ iptal', lastMessageKind: 'text' }, KIND_LABELS),
+    ).toBe('Eski teslim bugün iptal');
+  });
 });
 
 describe('socialStamp — bugünse saat, değilse gün.ay', () => {

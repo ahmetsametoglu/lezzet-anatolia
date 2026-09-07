@@ -241,8 +241,14 @@ describe('operations-app ↔ müşteri katmanları kompozisyonu', () => {
        dördüncü üyesi — `neutral-bg`e Δ5/2/14 ve ondan farklı olarak SOĞUK, gerekçe orada) +
        `badge-xs` ile `badge-xs--letter-spacing` (8,5 px rozet kademesi; setin tabanı 10 ve
        `customer.ts` §0.4b kontrol kademelerinde yuvarlamayı yasaklıyor) + `snug--line-height`
-       (1.45; şablonda 29 kullanım, sette tek oran `lead` 1.6 idi ve o bir PARAGRAFIN nefesi). */
-    expect(total).toBe(28);
+       (1.45; şablonda 29 kullanım, sette tek oran `lead` 1.6 idi ve o bir PARAGRAFIN nefesi).
+       07.09'da BİR durak: `shadow.card` (v3:29 talep listesinin acil kartı, `0 6px 18px` %6).
+       Dosyanın kendi özeti *"v3 düz bir yüzeye geçti, gölge yok"* diyor ve o özet DOĞRU — ama
+       v3:29 bu tek istisnayı taşıyor; özetin kapsamadığı bir sayfa çıkınca özet güncellenir,
+       ölçüm yok sayılmaz. `fab`/`glow`dan ayrı çünkü onlar "sayfanın ÜSTÜNDE duruyorum" der
+       (%24-26, gözle görünür); bu ise akışın İÇİNDEKİ bir kartın bir gömlek öne çıkması ve tek
+       başına taşıyıcı DEĞİL — kartı asıl ayıran kırmızı çerçevesi ile beyaz zemini. */
+    expect(total).toBe(29);
   });
 
   it('birleşim taban katmanlarını BÜYÜTÜR, küçültmez', () => {

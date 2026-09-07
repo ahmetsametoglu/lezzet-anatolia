@@ -1,5 +1,7 @@
 import { Hono } from 'hono';
-import type { z } from 'zod';
+/* `z` artık DEĞER olarak da kullanılıyor: liste ucunun sorgu şeması burada kuruluyor (21.281) —
+   gövde şemaları sözleşmeden gelir ama sorgu dizesi UCUN kendi kabuğudur, sözleşmenin değil. */
+import { z } from 'zod';
 import {
   askShortfall,
   changeTicketStatus,
@@ -10,11 +12,13 @@ import {
   listSupplyGroups,
   openBatchOffer,
   readComplaint,
+  readComplaintQueue,
   readManagementHub,
   replyAsStaff,
   setTicketMode,
   setTicketType,
   triggerReturnFromTicket,
+  type ComplaintQueueFilter,
 } from '@lezzet/application';
 import { WarehouseService, serviceDb } from '@lezzet/database';
 import {
@@ -23,6 +27,7 @@ import {
   ComplaintModeRequestSchema,
   ComplaintReplyRequestSchema,
   ComplaintResponseSchema,
+  ComplaintsResponseSchema,
   ComplaintStatusRequestSchema,
   ComplaintTypeRequestSchema,
   ExceptionAskResponseSchema,
@@ -35,9 +40,10 @@ import {
   SupplyDraftResponseSchema,
   SupplyResponseSchema,
   TicketActionResponseSchema,
+  TicketTypeEnum,
 } from '@lezzet/types';
 import { fail, ok } from '../../lib/respond';
-import { readJsonBody, UuidSchema } from '../../lib/request';
+import { decodeCursor, encodeCursor, readJsonBody, UuidSchema } from '../../lib/request';
 import { requireStaffRole, type StaffEnv } from './auth';
 
 /**
@@ -116,6 +122,59 @@ management.post('/supply/draft', async (c) => {
 });
 
 /* ── Y1 · Şikâyet / talep detayı ────────────────────────────────────────────── */
+
+/** Sayfa tavanı — sosyal ve sipariş uçlarının aynı kararı: tek istekle arşivi boşaltmak sayfalamayı anlamsız kılar. */
+const COMPLAINTS_MAX_PAGE_SIZE = 50;
+
+/**
+ * Kuyruk sorgusu (21.281). Süzgeç ile tür AYRI iki alan ama ekranda tek şerit: çipler birbirini
+ * dışlıyor (v3:29'da tam bir çip koyu). Telde ayrı tutuluyor çünkü ikisi farklı sorular —
+ * `filter` kuyruğun HÂLİNİ (`awaiting`/`resolved`), `type` SINIFINI daraltır; tek bir enum'a
+ * gömülseydi "bozuk VE top bizde" gibi meşru bir daralma bir daha hiç sorulamazdı.
+ */
+const ComplaintsQuerySchema = z.object({
+  cursor: z.string().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(COMPLAINTS_MAX_PAGE_SIZE).default(20),
+  filter: z.enum(['all', 'awaiting', 'resolved']).default('all'),
+  type: TicketTypeEnum.optional(),
+});
+
+/**
+ * Y1 · TALEP LİSTESİ — kuyruk sayfası + şerit sayaçları tek turda.
+ *
+ * Ekranın satırı `TicketQueueItem`dan daraltılıyor: kuyruk satırı `handledBy`, `answeredByAi`,
+ * `source`, `returnBound` gibi TARAMANIN sormadığı alanlar da taşıyor ve `parse` bir SÜZGEÇTİR
+ * (`MeSchema` kararı) — sözleşmede olmayan alan zarfa sızmaz.
+ */
+management.get('/complaints', async (c) => {
+  const parsed = ComplaintsQuerySchema.safeParse(c.req.query());
+  if (!parsed.success) return fail(c, 'invalid_query', 400);
+  const { cursor, limit, filter, type } = parsed.data;
+
+  /* Tür seçiliyse şeridin hâl çipi zaten koyu değildir — tür DAHA DAR bir sorudur ve ikisi
+     çakışırsa tür kazanır. Ekran zaten ikisini birden göndermiyor; uç yine de belirli davranır. */
+  const queueFilter: ComplaintQueueFilter = type ? { kind: 'type', type } : { kind: filter };
+  const { rows, nextCursor, counts } = await readComplaintQueue(serviceDb(), queueFilter, decodeCursor(cursor), limit);
+
+  const body: z.input<typeof ComplaintsResponseSchema> = {
+    rows: rows.map((row) => ({
+      ticketId: row.id,
+      type: row.type,
+      status: row.status,
+      customerName: row.customerName,
+      preview: row.preview,
+      previewTranslated: row.previewTranslated,
+      previewLanguage: row.previewLanguage,
+      lastMessageAt: row.lastMessageAt,
+      awaitingReply: row.awaitingReply,
+      hasAttachment: row.hasAttachment,
+      orderReferenceNo: row.orderReferenceNo,
+    })),
+    nextCursor: nextCursor ? encodeCursor(nextCursor) : null,
+    counts,
+  };
+  return ok(c, ComplaintsResponseSchema.parse(body));
+});
 
 management.get('/complaints/next', async (c) => {
   const complaint = await readComplaint(serviceDb(), { next: true });

@@ -125,6 +125,19 @@ export interface TicketQueueItem {
   preview: string;
   /** Önizleme makine çevirisi mi — ekran isterse küçük bir işaret koyar. */
   previewTranslated: boolean;
+  /**
+   * Son mesajın KENDİ dili (21.281) — "çeviri var" tek başına eksik bir cümleydi.
+   *
+   * Görünüm bu alanı baştan beri taşıyor (`last_message_language`) ve okuyucu çeviriyi seçerken
+   * zaten okuyordu; kuyruk satırına taşınmamıştı. Operatörün sorusu "çevrildi mi" değil **"neyden
+   * çevrildi"**: Almanca bir şikâyetin makine çevirisine ne kadar güveneceği buna bağlı, ve
+   * çeviriye güvenmeyeceği satırı açıp aslını okuması gerekir. Tasarım da satırda "DE · çeviri var"
+   * diye ikisini birlikte yazıyor (v3:29).
+   *
+   * Çevrilmemiş satırda da dolu: dil bir olgudur, çevirinin yan ürünü değil. `null` = dil hiç
+   * saptanmamış (`SourceLanguage` şeması nullable) — ekran o zaman SUSAR, tahmin yazmaz.
+   */
+  previewLanguage: SourceLanguage | null;
   lastMessageAt: string;
   /** Son sözü müşteri söyledi: top bizde. */
   awaitingReply: boolean;

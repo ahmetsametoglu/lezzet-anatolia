@@ -3,7 +3,7 @@ import { MeOrderDetailSchema, MeOrderPageSchema } from '@lezzet/types';
 import type { Locale } from '@lezzet/i18n';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { queryString, type ApiResult } from './client';
 
 /*
   `/api/v1/me/orders` — "Siparişlerim" listesi + sipariş detayı (21.18).
@@ -26,12 +26,6 @@ export type OrderSummary = z.infer<typeof MeOrderPageSchema>['orders'][number];
 export type OrderDetail = z.infer<typeof MeOrderDetailSchema>;
 
 /** Sorgu dizesi — verilmemiş (`undefined`) parametre YAZILMAZ (katalog istemcisinin kuralı). */
-function queryOf(params: Record<string, string | undefined>): string {
-  const pairs = Object.entries(params)
-    .filter((entry): entry is [string, string] => entry[1] !== undefined)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
-  return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
-}
 
 /**
  * Sipariş sayfası — keyset imleçli (`nextCursor === null` → liste bitti).
@@ -40,7 +34,7 @@ function queryOf(params: Record<string, string | undefined>): string {
  * istemci onu okumaya kalksaydı keyset'in şekli sözleşme olurdu.
  */
 export function fetchOrders(locale: Locale, cursor?: string): Promise<ApiResult<z.infer<typeof MeOrderPageSchema>>> {
-  return authorizedFetch(`/api/v1/me/orders${queryOf({ locale, cursor })}`, MeOrderPageSchema);
+  return authorizedFetch(`/api/v1/me/orders${queryString({ locale, cursor })}`, MeOrderPageSchema);
 }
 
 /**
@@ -52,7 +46,7 @@ export function fetchOrders(locale: Locale, cursor?: string): Promise<ApiResult<
  */
 export function fetchOrderDetail(reference: string, locale: Locale): Promise<ApiResult<OrderDetail>> {
   return authorizedFetch(
-    `/api/v1/me/orders/${encodeURIComponent(reference)}${queryOf({ locale })}`,
+    `/api/v1/me/orders/${encodeURIComponent(reference)}${queryString({ locale })}`,
     MeOrderDetailSchema,
   );
 }

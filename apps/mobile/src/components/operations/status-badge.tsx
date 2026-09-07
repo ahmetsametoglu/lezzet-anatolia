@@ -29,7 +29,7 @@ import { operationsTheme } from '../../theme/unistyles';
 */
 
 /** Ton = rozetin SÖYLEDİĞİ şey; renk oradan türer, çağıran renk seçmez. */
-export type OperationsStatusTone = 'live' | 'active' | 'idle' | 'pending' | 'warn' | 'error';
+export type OperationsStatusTone = 'live' | 'active' | 'idle' | 'pending' | 'warn' | 'error' | 'critical';
 
 interface OperationsStatusBadgeProps {
   /** Rozet metni — i18n üstte çözülür, komponent metin gömmez. */
@@ -96,5 +96,18 @@ const styles = StyleSheet.create({
   error: {
     color: operationsTheme.colors.error,
     backgroundColor: operationsTheme.colors['error-bg'],
+  },
+  /*
+    BİZDEN BEKLENEN ŞEY — DOLU kırmızı, krem yazı (v3:29 `#a44a3f` / `#fff`).
+
+    `live`in kırmızı kardeşi ve aynı gerekçeyle ayrı bir ton: `live` "şu an olan" ise bu "şu an
+    BİZDEN beklenen"dir. `error`dan ayrılması ise tasarımın kendi ayrımı — talep listesinde iki
+    rozet YAN YANA duruyor: tür rozeti yumuşak kırmızı (`error`), "TOP BİZDE" dolu kırmızı. İkisini
+    tek tonla çizmek, kuyrukta gözün aradığı tek şeyi (kim cevap bekliyor) tür etiketiyle aynı
+    ağırlığa indirirdi — `live`in 31.08 turunda ölçülen arızanın aynısı.
+  */
+  critical: {
+    color: operationsTheme.colors['on-image'],
+    backgroundColor: operationsTheme.colors.error,
   },
 });

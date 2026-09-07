@@ -11,7 +11,7 @@ import {
   UserProfileService,
   type TicketQueueFilter,
 } from '@lezzet/database';
-import { allowedTicketTransitions, canTriggerReturn, isReturnBound, resolveUserText } from '@lezzet/domain-core';
+import { allowedTicketTransitions, canTriggerReturn, isReturnBound, resolveUserText, stripChatFormatting } from '@lezzet/domain-core';
 import {
   resolveLocalizedText,
   type KeysetCursor,
@@ -40,7 +40,26 @@ import type { StaffTicketDetail, TicketOrderRef, TicketQueueItem } from './ticke
  * uzunlukta görünmesi demekti (CLAUDE §1).
  */
 export function previewOf(body: string): string {
-  const firstLine = body.split('\n')[0]?.trim() ?? '';
+  /*
+    BİÇİMLENDİRME İŞARETLERİ SÖKÜLÜR (cihazda görüldü 07.09 · 21.281).
+
+    Talep listesi açılınca satırda ÇIPLAK işaretler duruyordu: *"İki tepsi için \*bedelsiz yeniden
+    gönderim\* planladık — yarın \_09:00\_ gibi"*. 21.279 biçimlendirmeyi yedi yüzeyde çizdirdi ama
+    ÖNİZLEME o yedinin içinde değildi — kimsenin saymadığı sekizinci yüzey burasıydı.
+
+    Önizleme ÇİZİLMEZ, SÖKÜLÜR ve bu bilinçli: burası tek satırlık bir TARAMA dizesidir, okunacak
+    metin değil. Çizici (`ChatText`) blok üretir ve satır kırpmayla (`numberOfLines`) çakışır;
+    üstelik tasarımın satırı (v3:29) önizlemeyi düz metin olarak çiziyor — vurgu, taranan bir
+    listede gürültüdür. Kayıplı olması da sorun değil: bu zaten türetilmiş, kırpılmış bir kopya,
+    kaynak değil (kaynak `ComplaintDetail.messages`ta olduğu gibi duruyor ve orada ÇİZİLİYOR).
+
+    SÖKME ÖNCE, KIRPMA SONRA: ters sırada 120. karakter bir işaretin ortasına düşerse sökme yarım
+    kalır ve önizlemenin sonunda tek bir çıplak yıldız kalırdı.
+
+    Çare BURADA çünkü üç yüzey aynı fonksiyonu okuyor — mobil talep listesi, web'in talepler
+    sayfası ve yönetim hub'ının karar kartı. Ekranda çözülseydi ötekiler çıplak kalırdı.
+  */
+  const firstLine = stripChatFormatting(body.split('\n')[0]?.trim() ?? '');
   return firstLine.length > 120 ? `${firstLine.slice(0, 119)}…` : firstLine;
 }
 
@@ -135,6 +154,9 @@ export async function listTicketQueue(
         source: row.source,
         preview: previewOf(shown.text ?? ''),
         previewTranslated: shown.isTranslated,
+        /* Çevirinin SEÇİLDİĞİ dil değil, mesajın GELDİĞİ dil (21.281): `resolveUserText` zaten bu
+           alana bakarak çeviriyi seçiyordu, satır onu dışarı taşımıyordu. */
+        previewLanguage: row.lastMessageLanguage,
         lastMessageAt: row.lastMessageAt,
         awaitingReply: row.awaitingReply,
         hasAttachment: row.hasAttachment,

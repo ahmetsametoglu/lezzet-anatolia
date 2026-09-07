@@ -13,7 +13,7 @@ import {
 } from '@lezzet/types';
 
 import { authorizedFetch } from '../auth/authorized-fetch';
-import type { ApiResult } from './client';
+import { queryString, type ApiResult } from './client';
 
 /*
   `/api/v1/social/*` — operasyonun sosyal gelen kutusu (15.15 mobil ayağı): üç Meta kanalı
@@ -38,12 +38,6 @@ export type SocialMessage = SocialMessageContract;
 export type { SocialConversationDetail };
 
 /** Sorgu dizesi — verilmemiş (`undefined`) parametre YAZILMAZ (talep/sipariş istemcilerinin kuralı). */
-function queryOf(params: Record<string, string | undefined>): string {
-  const pairs = Object.entries(params)
-    .filter((entry): entry is [string, string] => entry[1] !== undefined)
-    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`);
-  return pairs.length === 0 ? '' : `?${pairs.join('&')}`;
-}
 
 /**
  * Kuyruk sayfası — keyset imleçli; süzgeç (`awaiting`) ve kanal daraltması sorguda. Başlık
@@ -55,7 +49,7 @@ export function fetchSocialInbox(params: {
   source?: ConversationSource;
 }): Promise<ApiResult<z.infer<typeof SocialInboxResponseSchema>>> {
   return authorizedFetch(
-    `/api/v1/social/conversations${queryOf({ cursor: params.cursor, filter: params.filter, source: params.source })}`,
+    `/api/v1/social/conversations${queryString({ cursor: params.cursor, filter: params.filter, source: params.source })}`,
     SocialInboxResponseSchema,
   );
 }
@@ -66,7 +60,7 @@ export function fetchSocialConversation(
   cursor?: string,
 ): Promise<ApiResult<SocialConversationDetail>> {
   return authorizedFetch(
-    `/api/v1/social/conversations/${encodeURIComponent(id)}${queryOf({ cursor })}`,
+    `/api/v1/social/conversations/${encodeURIComponent(id)}${queryString({ cursor })}`,
     SocialConversationDetailSchema,
   );
 }

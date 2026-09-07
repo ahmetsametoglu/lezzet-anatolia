@@ -374,6 +374,22 @@ export const operationsAppShadow = {
    */
   fab: `0 8px 22px ${customerSurface.ink}42`,
   /**
+   * **ACİL KARTIN YÜKSELTİSİ** — v3:29 talep listesi, yalnız "top bizde" kartında (21.281).
+   *
+   * Ölçüm: `0 6px 18px rgba(47,53,58,.06)`. Yukarıdaki envanter notu *"v3 düz bir yüzeye geçti"*
+   * diyor ve o özet DOĞRU — ama v3:29 bu tek istisnayı taşıyor ve ölçüm ölçümdür; özetin
+   * kapsamadığı bir sayfa çıkınca özet güncellenir, sayfa yok sayılmaz.
+   *
+   * `fab`/`glow`dan AYRI bir durak ve ayrım rolde: onlar "bu öğe sayfanın ÜSTÜNDE duruyor" der
+   * (%24-26 opaklık, gözle görünür). Bu ise akışın İÇİNDEKİ bir kartın bir gömlek öne çıkması —
+   * %6, neredeyse eşikte. Kartı asıl ayıran şey kırmızı çerçevesi ve beyaz zemini; gölge onların
+   * üstüne binen ince bir vurgu, tek başına taşıyıcı değil.
+   *
+   * Renk `ink`ten okunur (tasarımın #2f353a'sı bu ailenin tonu — dosyanın kendi kuralı); opaklık
+   * %6 ölçümün kendisidir (`0f` = 15/255).
+   */
+  card: `0 6px 18px ${customerSurface.ink}0f`,
+  /**
    * @deprecated v2 kalıntısı — v3'te karşılığı YOK (yukarıdaki ölçüm).
    *
    * Bugün 6 operasyon ekranı hâlâ okuyor; durak, son tüketici kite geçince silinecek.

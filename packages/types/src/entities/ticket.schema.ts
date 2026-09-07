@@ -139,6 +139,14 @@ export const TicketQueueRowSchema = TicketSchema.extend({
   messageCount: z.number().int(),
   /** Son sözü müşteri söyledi — top bizde. */
   awaitingReply: z.boolean(),
+  /**
+   * **Kuyruğun SIRA anahtarı** (21.281) — "cevap bekleyenler üstte, kendi içlerinde en taze önce".
+   *
+   * Şemada çünkü servis bu alana göre sıralıyor ve keyset imleci onu okuyor; **ekrana çıkmaz**:
+   * sahte bir damgadır (bekleyen satırlar bir yüzyıl ileri alınır, gerekçe görünümün künyesinde),
+   * olgu değil. Yüzeylerin gördüğü sözleşme `TicketQueueItem` onu taşımaz.
+   */
+  queueSortAt: z.string(),
   hasAttachment: z.boolean(),
   returnTriggered: z.boolean(),
   /** Son mesajın TAM metni; kuyruk önizlemesini yüzey kırpar (kısaltma bir sunum kararıdır). */

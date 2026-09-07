@@ -17,6 +17,9 @@ const row = (patch: Partial<TicketQueueItem> = {}): TicketQueueItem => ({
   source: 'order',
   preview: 'Bir kutu ezilmiş gelmiş',
   previewTranslated: false,
+  /* Kuyruk satırına 21.281'de eklendi (mobil talep listesi "DE · çeviri var" yazıyor); web bu
+     alanı henüz çizmiyor ama tip ZORUNLU — fikstür sözleşmenin tamamını taşımalı. */
+  previewLanguage: 'tr',
   lastMessageAt: '2026-08-03T11:30:00.000Z',
   awaitingReply: true,
   hasAttachment: true,
