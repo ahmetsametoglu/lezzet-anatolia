@@ -633,10 +633,20 @@ grant execute on function public.order_counts(text, uuid[], text, text, text, te
 --
 -- Kalemler jsonb: sepet kalemi bir VARLIK değil, geçici bir seçim. Ayrı tablo açmak her ekleme/çıkarma
 -- için satır yönetimi getirir, karşılığında sorgulanabilirlik kazandırır — sepet sorgulanmaz, okunur.
+--
+-- ── SEPETİN SAHİBİ MÜŞTERİ YA DA SOHBETTİR (15.22 · kullanıcı kararı 07.09) ──
+-- Birincil anahtar bir zamanlar `customer_id`nin kendisiydi ("tek satır / müşteri"). Sohbetten sepet
+-- kurma kararı bunu değiştirdi: Messenger/Instagram sohbeti KİMLİKSİZ doğar (PSID telefon taşımaz,
+-- `0039` künyesi) ve ajanın orada kurduğu sepetin yazılacak bir müşterisi yoktur. Sepet bu yüzden
+-- kendi kimliğini aldı; sahibi ya müşteri ya sohbet (`conversation_id`, `0055`te ekleniyor — tablo
+-- burada henüz yok). "Tek satır / sahip" kuralı yine şemada: iki kolon da `unique`.
+-- Müşteri sepeti bugüne kadarki bütün yollarda (web, mobil, birleştirme, GDPR silmesi) `customer_id`
+-- ile anılmaya devam eder — o kapılar değişmedi, yalnız anahtarın adı "birincil" olmaktan çıktı.
 
 create table public.cart (
-  -- Birincil anahtar müşterinin kendisi: "tek satır / müşteri" kuralı şemada zorlanır.
-  customer_id uuid primary key references public.user_profiles (id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  -- Müşteri sepeti — "tek satır / müşteri" kuralı `unique` ile şemada. `null` = sohbet sepeti.
+  customer_id uuid unique references public.user_profiles (id) on delete cascade,
   -- [{ variantId, qty, unitPrice, stockId, addedAt }] — `unitPrice` **BAĞLAYICI DEĞİLDİR**:
   -- gösterim ve değişiklik tespiti içindir (DOMAIN §5, karar 27.07). Fiyat CHECKOUT BAŞLANGICINDA
   -- sabitlenir — stok ayırma ve ödeme oturumuyla aynı 30 dk'lık pencerede. Sepet aylarca
@@ -652,7 +662,11 @@ create table public.cart (
   -- kaydı, ayrımları yalnız BUGÜN alınıp alınamayacağı. Ayrı tablo, aynı kalemi iki yapıda tutmak
   -- ve aralarında taşırken iki yazma yolu açmak olurdu.
   saved_items jsonb not null default '[]'::jsonb,
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  -- Sohbet sepeti (0055): kimliksiz sohbetin (Messenger/IG) niyeti. Kolon BURADA, yabancı anahtarı
+  -- 0055'te — `conversation` tablosu bu dosyadan sonra doğuyor (0039); kısıt ancak o doğunca
+  -- bağlanabilir. `unique`: sohbet başına tek sepet, müşteri başına tek sepetle aynı kural.
+  conversation_id uuid unique
 );
 
 alter table public.cart enable row level security;

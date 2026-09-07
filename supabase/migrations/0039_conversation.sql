@@ -110,7 +110,11 @@ create table public.conversation (
   -- "hangi kanıtla bağlandı"dır; "e-postası neydi" değil, ve değeri saklamak gereksiz bir
   -- kişisel veriyi ikinci bir yere kopyalamak olurdu. Enum DEĞİL `text`+check: dördüncü değer
   -- (04.10'un e-posta kodu) geldiğinde tip değişimi gerektirmesin.
-  link_proof text check (link_proof in ('order_ref', 'email', 'phone')),
+  -- **Dördüncü değer geldi (15.22 · 07.09): `cart_link`** — sohbette kurulan sepetin bağlantısını
+  -- açıp giriş yapan kişi. Kanıt operatörün değil SİSTEMİN doğruladığı bir jetondur (`cart_link`
+  -- tablosu, 0055): bağlantıyı alan kişi sohbetin öteki ucundadır, giriş yapan kişi posta kutusunun
+  -- sahibidir — iki katlı kanıt, `wa_link_token`ın (0011) aynı kuralı, ters yönde.
+  link_proof text check (link_proof in ('order_ref', 'email', 'phone', 'cart_link')),
 
   -- 24 saatlik servis penceresinin bitişi. Kararı motor verir (`serviceWindowExpiry`), burası
   -- yalnız saklar — süreyi SQL'e de yazsaydık aynı kural iki dilde iki kopya olurdu.
@@ -173,6 +177,22 @@ create table public.message (
   -- 360dialog/Cloud API mesaj kimliği. Adım 1'de boş (elle kayıt), adım 2'de dolar.
   provider_message_id text,
 
+  -- ── Gelen medyanın deposu (15.x) ───────────────────────────────────────────
+  -- Müşterinin gönderdiği fotoğraf/ses/belge PRIVATE R2 kovasına indirilir; burada duran onun
+  -- ANAHTARIDIR (`r2Keys.conversationMedia`), sağlayıcının medya kimliği değil.
+  --
+  -- **Neden indiriyoruz:** Meta'nın verdiği adres dakikalar içinde ölüyor ve medyanın kendisi de
+  -- ~30 gün sonra siliniyor. Adresi saklasaydık ekran ertesi gün boş açılırdı; hiç saklamasaydık
+  -- ezik ürün fotoğrafı — şikâyetin tek kanıtı — talep sonuçlanmadan yok olurdu.
+  --
+  -- **`body` içine konmadı:** `body` sağlayıcının gövdesini taşıyor, bu ise BİZİM ürettiğimiz bir
+  -- kayıt. Kolon olması ayrıca yetim nesne taramasını mümkün kılıyor (kovada olup satırda olmayan).
+  media_key text,
+  -- Türü ekranın işi: fotoğraf mı, ses mi, belge mi — `kind` hepsine `media` diyor. Sağlayıcının
+  -- gövdesinden okunabilirdi ama o gövdenin şekli kanala göre değişiyor; ekran sağlayıcı biçimi
+  -- bilmemeli.
+  media_mime text,
+
   created_at timestamptz not null default now(),
 
   -- Metin mesajı metinsiz olamaz: `body->>'text'` boşsa ortada bir mesaj yoktur ve ekranda boş bir
@@ -192,7 +212,15 @@ create table public.message (
   constraint message_inbound_kind check (direction = 'outbound' or kind <> 'template'),
   -- Yazar yönle ÇELİŞEMEZ: gelen mesajın yazarı daima müşteridir, giden mesajı müşteri yazamaz.
   -- Kısıt olmasaydı yanlış eşleşme sessizce geçer ve "AI mı cevapladı" sorusu yalan okurdu.
-  constraint message_author_direction check ((direction = 'inbound') = (author = 'customer'))
+  constraint message_author_direction check ((direction = 'inbound') = (author = 'customer')),
+  -- Medya alanları YALNIZ medya mesajında dolabilir — ama TERSİ ŞART DEĞİL, ve bu bilinçli:
+  -- indirme düşse bile mesaj satırı yazılır (`kind='media'`, anahtar boş). Çift yönlü bir kısıt
+  -- (`(kind='media') = (media_key is not null)`) o satırı reddederdi; yani sağlayıcıdaki geçici
+  -- bir arıza, müşterinin mesajını tümüyle kaybettirirdi. Defterin ilk kuralı satırın
+  -- kaybolmamasıdır — medya ikinci sıradadır.
+  constraint message_media_kind check (
+    (media_key is null and media_mime is null) or kind = 'media'
+  )
 );
 
 alter table public.message enable row level security;
@@ -291,7 +319,11 @@ create or replace function public.record_message(
   p_window_expires_at timestamptz default null,
   -- Kim yazdı (16.08). `null` = yönden türet: gelen daima müşteri, giden personel varsayılır —
   -- AI kendi gönderdiğinde 'ai' der. Yanlış eşleşmeyi tablo kısıtı keser.
-  p_author ticket_sender default null
+  p_author ticket_sender default null,
+  -- Gelen medyanın PRIVATE R2 anahtarı ve türü. İkisi de `null` kalabilir — indirme düşse bile
+  -- satır yazılır; RPC burada karar vermez, yalnız taşır (kural `send.ts`/webhook tarafında).
+  p_media_key text default null,
+  p_media_mime text default null
 ) returns public.message
 language plpgsql
 security invoker
@@ -309,7 +341,7 @@ begin
     raise exception 'template mesaji yalniz whatsapp konusmasina yazilabilir (conversation %)', p_conversation_id;
   end if;
 
-  insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id)
+  insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id, media_key, media_mime)
   values (
     p_conversation_id,
     p_direction,
@@ -318,7 +350,9 @@ begin
     p_body,
     p_template_name,
     p_template_category,
-    p_provider_message_id
+    p_provider_message_id,
+    p_media_key,
+    p_media_mime
   )
   returning * into v_message;
 
@@ -332,7 +366,7 @@ end;
 $$;
 
 revoke all on function public.open_conversation(conversation_source, text, uuid, text, text) from anon;
-revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender) from anon;
+revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender, text, text) from anon;
 
 comment on table public.conversation is
   'Mesajlaşma konuşması (15.1 · üç kanal 21.08): kaynak (whatsapp/messenger/instagram), kimlik bağı, opt-in, 24s servis penceresi, son hareket.';

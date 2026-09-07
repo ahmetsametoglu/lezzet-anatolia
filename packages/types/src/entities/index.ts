@@ -32,6 +32,7 @@ export * from './price-group.schema';
 export * from './product-collection.schema';
 export * from './address.schema';
 export * from './cart.schema';
+export * from './cart-link.schema';
 export * from './order.schema';
 export * from './order-box.schema';
 export * from './shipping-box.schema';

@@ -145,12 +145,34 @@ export async function consumeWhatsappLink(db: SupabaseClient, phone: string, tex
     return { status: 'invalid' };
   }
 
-  const phones = new CustomerPhoneService(db);
-  const kanit = await phones.recordProof(profile.id, phone);
   // Jeton her hâlde düşer: TEK KULLANIM bir güvenlik özelliğidir ve başarısız denemede de geçerli.
+  // Kanıt yazımından ÖNCE değil SONRA düşmesi gerekmiyor — iki adım birbirine bağlı değil.
   await temizle(profiles, profile.id);
+  return bindPhoneToAccount(db, { accountId: profile.id, phone, context: 'customer/whatsapp-link' });
+}
 
-  if (kanit.status !== 'taken') return { status: 'linked', customerId: profile.id };
+export type BindPhoneOutcome = Exclude<ConsumeWhatsappLinkOutcome, { status: 'none' }>;
+
+/**
+ * **Kanıtlanmış numarayı hesaba BAĞLA** — jetonun ardındaki ortak gövde (04.10 · 15.21).
+ *
+ * İki kapı çağırıyor ve ikisinin kanıtı aynı iki kattan oluşuyor: kişi hesabını açmış (posta
+ * kutusuna gelen kodla girdi) ve hattı ŞU AN elinde tutuyor. Fark yalnız hangi yönden geldiği —
+ * WhatsApp bağlama jetonu siteden sohbete gider (`consumeWhatsappLink`), sepet bağlantısı sohbetten
+ * siteye (`cart/link.ts`). Kural tek yerde: ikinci bir kopya, taslak birleştirme ile kanal devrinin
+ * bir gün iki kapıda farklı davranması demekti.
+ *
+ * `context` log satırının kaynağıdır — hangi kapıdan geldiği teşhiste görünsün.
+ */
+export async function bindPhoneToAccount(
+  db: SupabaseClient,
+  input: { accountId: string; phone: string; context: string },
+): Promise<BindPhoneOutcome> {
+  const profiles = new UserProfileService(db);
+  const phones = new CustomerPhoneService(db);
+  const kanit = await phones.recordProof(input.accountId, input.phone);
+
+  if (kanit.status !== 'taken') return { status: 'linked', customerId: input.accountId };
 
   const holderId = kanit.row?.customerId ?? null;
   if (!holderId) return { status: 'invalid' }; // yarışta emekliye ayrılmış — müşteri tekrar dener
@@ -179,23 +201,23 @@ export async function consumeWhatsappLink(db: SupabaseClient, phone: string, tex
       kapı" tam olarak o olurdu.
     */
     if (kanit.row) await phones.retire(kanit.row.id);
-    const yeni = await phones.recordProof(profile.id, phone);
+    const yeni = await phones.recordProof(input.accountId, input.phone);
     if (yeni.status === 'taken') {
       // Yarış: emeklilik ile yeni yazım arasında başkası kaptı. Sessiz geçilmez — tekrar eden bir
       // `taken` yarış değil, aynı numaranın iki kimliğe düştüğü gerçek bir arızadır.
-      logger.warn({ context: 'customer/whatsapp-link', customerId: profile.id, holderId }, 'bağlama: devir yarışta kaybedildi');
+      logger.warn({ context: input.context, customerId: input.accountId, holderId }, 'bağlama: devir yarışta kaybedildi');
       return { status: 'invalid' };
     }
-    logger.info({ context: 'customer/whatsapp-link', customerId: profile.id, previousHolderId: holderId }, 'bağlama: numara önceki kayıttan DEVRALINDI');
-    return { status: 'transferred', customerId: profile.id, previousHolderId: holderId };
+    logger.info({ context: input.context, customerId: input.accountId, previousHolderId: holderId }, 'bağlama: numara önceki kayıttan DEVRALINDI');
+    return { status: 'transferred', customerId: input.accountId, previousHolderId: holderId };
   }
 
   // Taslak → hesap. Kanıt satırı da `merge_customers` içinde taşınıyor (0040), ayrıca yazılmaz.
   // Servis DEĞİL uygulama kapısı çağrılıyor (`customer/merge.ts`): birleşmenin ödül sonucu SQL'de
   // yapılamıyor ve doğrudan RPC'ye gitmek onu sessizce atlardı.
-  await mergeCustomers(db, { targetId: profile.id, sourceId: holderId });
-  logger.info({ context: 'customer/whatsapp-link', customerId: profile.id, mergedId: holderId }, 'bağlama: WhatsApp taslağı hesaba birleştirildi');
-  return { status: 'merged', customerId: profile.id, mergedId: holderId };
+  await mergeCustomers(db, { targetId: input.accountId, sourceId: holderId });
+  logger.info({ context: input.context, customerId: input.accountId, mergedId: holderId }, 'bağlama: WhatsApp taslağı hesaba birleştirildi');
+  return { status: 'merged', customerId: input.accountId, mergedId: holderId };
 }
 
 /** Jetonu düşür — ikisi birlikte gider (DB kısıtı: biri olmadan öteki yazılamaz). */

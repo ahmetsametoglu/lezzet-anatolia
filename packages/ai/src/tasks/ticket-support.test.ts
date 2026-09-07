@@ -107,10 +107,17 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
     for (const [ad, talimat] of talimatlar) expect(talimat, `${ad} talimatında eksik`).toContain(parca);
   };
 
-  it('ajan sipariş ALAMAYACAĞINI biliyor — sepet/adres/kayıt üçü de kapalı', () => {
-    // Araçların değişmezi zaten "yalnız okur"; ama değişmezi KOD zorlar, modeli PROMPT bilgilendirir.
-    // İkisi ayrı katman: araç vermemek modelin uydurmasını engellemez, yalnız yapmasını engeller.
-    herIkisinde('siparişi SEN alamazsın');
+  it('ajan siparişi KAPATAMAYACAĞINI biliyor — adres/ödeme/kayıt üçü de kapalı; SEPET açık (07.09)', () => {
+    // Araçların değişmezi "sepet dışında yalnız okur" (15.20); ama değişmezi KOD zorlar, modeli
+    // PROMPT bilgilendirir. İkisi ayrı katman: araç vermemek modelin uydurmasını engellemez,
+    // yalnız yapmasını engeller. Sınır 07.09'da kaydı: satın almada değil, ONAY ve ÖDEMEDE.
+    herIkisinde('siparişi SEN kapatamazsın');
+    herIkisinde('SEPETİ sen kurabilirsin');
+    herIkisinde('Sepete ekleme bir sipariş DEĞİLDİR');
+  });
+
+  it('bağlantıyı model YAZMAZ, sistem ekler — kayan bir harf boş sayfaya götürür', () => {
+    herIkisinde('sen bağlantıyı yazma');
   });
 
   it('yönlendirme bir EKSİKLİK gibi değil, doğru yol olarak anlatılıyor', () => {

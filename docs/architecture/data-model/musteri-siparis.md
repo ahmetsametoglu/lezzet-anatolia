@@ -546,20 +546,24 @@ Sipariş kayıt anında değil, **gerçekleştiği anda** gelirdir. `order_sale`
 
 ## Cart (sunucu sepeti)
 
-Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de durur; sepet kurtarma e-postasının (Faz 2 otomasyonu) zeminidir.
+Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de durur; sepet kurtarma e-postasının (Faz 2 otomasyonu) zeminidir. **Sahibi müşteri YA DA sohbettir** (15.22 · 07.09): Messenger/Instagram sohbetinde ajanın kurduğu sepetin müşterisi yoktur, sepet sohbete yazılır ve bağlantıyı açıp giriş yapan kişinin hesabına taşınır.
 
 <!-- alanlar:cart -->
 | Kolon | Tip | Null | Varsayılan |
 | --- | --- | --- | --- |
-| `customer_id` | uuid |  |  |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `customer_id` | uuid | • |  |
 | `items` | jsonb |  | `'[]'::jsonb` |
 | `saved_items` | jsonb |  | `'[]'::jsonb` |
 | `updated_at` | timestamptz |  | `now()` |
+| `conversation_id` | uuid | • |  |
 <!-- /alanlar -->
 
 **Kararlar**
 
-- **`customer_id`** — **birincil anahtar** — "tek satır / müşteri" kuralı şemada zorlanır
+- **`id`** — sepetin KENDİ kimliği (0012, 07.09). Birincil anahtar bir zamanlar `customer_id`nin kendisiydi; sohbet sepeti için sahibin iki türü olunca anahtar ayrıldı
+- **`customer_id`** — müşteri sepeti, `unique` — "tek satır / müşteri" kuralı yine şemada; `null` = sohbet sepeti. Web, mobil, birleştirme (0040) ve GDPR silmesi (0037) sepeti yine bu kolonla anar
+- **`conversation_id`** — sohbet sepeti (0055), `unique`; `cart_owner` kısıtı ikisinden en az birini ister. İkisi birden dolu satır DOĞMAZ: sohbet müşteriye bağlanınca kalemler `takeOver` ile taşınır ve sohbet satırı silinir (kural kapıda, `cart/link.ts`)
 - **`items`** — `[{ kind, variantId, bundleId, qty, unitPrice, stockId, addedAt }]`
 - **`saved_items`** — **sonraya kaydedilenler** (K33) — aynı biçim, aynı satır
 - **`updated_at`** — her dokunuşta tazelenir (sepet kurtarma zamanlaması buna bakar)
@@ -573,6 +577,31 @@ Giriş yapmış müşterinin sepeti sunucuda kalıcıdır — cihaz değişse de
 **İKİ TÜR satır vardır** ve `kind` bunu açıkça taşır: varyant satırı (`variantId` + `stockId`) ve **paket satırı** (`bundleId`, 05.5). Paketin varyantı ya da partisi yoktur — satılan şey paketin kendisidir ve sepette bütün olarak artırılır/silinir (DOMAIN §13). Türü kimlik alanının varlığından çıkarmak yerine açıkça yazmanın sebebi kod tarafında: TypeScript yalnız birim tipli alanlarla daraltma yapar, `string` birim tip değildir.
 
 **`saved_items` — sonraya kaydedilenler.** Teslimat yerine gönderilemeyen kalem sepetten SİLİNMEZ, buraya taşınır: alışveriş ölmez, sepet bölünür. Ayrı tablo açılmadı çünkü ikisi aynı şeyin iki hâli — ikisi de "bu ürünü istiyorum" kaydı, ayrımları yalnız BUGÜN alınıp alınamayacağı. Ayrı yapılarda tutmak, aralarında taşırken iki yazma yolu açardı. `addedAt` taşınırken korunur: "iki haftadır bekliyor" sinyali listeye geçerken sıfırlanmamalı.
+
+## CartLink (sepet bağlantısı)
+
+Sohbette kurulan sepeti siteye TAŞIYAN jeton (15.21 · 15.22 · 0055). Ajan bağlantıyı sohbete yazar; açıp giriş yapan kişi sepetini ve kimliğini kazanır. `wa_link_token`ın (0011) ters yönü: orada jeton siteden sohbete gider, burada sohbetten siteye — kanıt aynı iki kattan oluşur (bağlantıyı ALAN kişi sohbetin öteki ucunda, GİRİŞ yapan posta kutusunun sahibi).
+
+<!-- alanlar:cart_link -->
+| Kolon | Tip | Null | Varsayılan |
+| --- | --- | --- | --- |
+| `id` | uuid |  | `gen_random_uuid()` |
+| `token` | text |  |  |
+| `conversation_id` | uuid |  |  |
+| `expires_at` | timestamptz |  |  |
+| `claimed_at` | timestamptz | • |  |
+| `claimed_by` | uuid | • |  |
+| `created_at` | timestamptz |  | `now()` |
+<!-- /alanlar -->
+
+**Kararlar**
+
+- **`token`** — 12 hane okunabilir alfabe (`readableCode`) ≈ 60 bit, `unique`, BÜYÜK harf. 6 haneli çapa kodu DEĞİLDİR; "koddan kimliğe gidilmez" kuralı ona uygulanmaz — güvenlik entropiden gelir (0011 künyesindeki ayrım)
+- **`conversation_id`** — bağlantı SOHBETİN bağlantısıdır, müşterinin değil: WhatsApp'ta sohbetin müşterisi var (taslak ya da gerçek), Messenger'da yok; sahip açılış anında sohbetten bulunur. `cascade`
+- **`expires_at`** — 7 gün (`CART_LINK_TTL_MS`, uygulama sabiti). Rezervasyon TTL'ine bağlı DEĞİL: bağlantı bir niyettir, stok ayırmaz (DOMAIN §4); fiyat açılışta yeniden çözülür (§5). Yeni bağlantı üretilince eskisinin süresi ŞİMDİYE çekilir — satır silinmez, iz kalır
+- **`claimed_at` · `claimed_by`** — tek kullanım damgası, koşullu yazım (`updateIfNull`): iki sekme aynı bağlantıyı aynı anda açarsa ikincisi düşer, sepet iki kez taşınmaz. `claimed_by` hesap silinince `null` (FK `set null`), damga kalır — kısıt bu yüzden tek yönlü
+- **Neden kendi tablosu, kolon çifti değil:** bir sohbete birden çok bağlantı üretilebilir ("tekrar gönder") ve "hangisi ne zaman, kim tarafından açıldı" sorusu sonradan cevaplanabilmeli (15.19'un kuralı)
+- **Açılış sırası (kapı, `cart/link.ts`):** jeton doğrula → damga → SEPETİ TAŞI (`takeOver`) → KİMLİĞİ BAĞLA. Sepet kimlikten önce, çünkü `merge_customers` hedefin sepeti varsa kaynağınkini siler
 
 ## DeliveryRun (sefer — gerçekleşen teslimat rotası, 0046 · 18.08)
 

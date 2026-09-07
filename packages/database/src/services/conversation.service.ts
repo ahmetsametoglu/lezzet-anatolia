@@ -20,7 +20,7 @@ import {
   type TicketHandler,
   type TicketSender,
   type KeysetCursor,
-  type LinkProofKind,
+  type ConversationLinkProof,
   type Page,
   DEFAULT_PAGE_SIZE,
 } from '@lezzet/types';
@@ -116,7 +116,7 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
    */
   linkCustomer(
     id: string,
-    input: { customerId: string; linkedBy: string | null; proof: LinkProofKind },
+    input: { customerId: string; linkedBy: string | null; proof: ConversationLinkProof },
   ): Promise<Conversation | null> {
     /* Bağ ve KÜNYESİ tek yazımda gider (15.19): ayrı iki çağrı olsaydı ikincisi düştüğünde
        elimizde "kim bağladı, neye dayanarak" sorusu cevapsız bir bağ kalırdı — ve tam da o satır
@@ -241,6 +241,12 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
     templateCategory?: TemplateCategory | null;
     providerMessageId?: string | null;
     windowExpiresAt?: string | null;
+    /**
+     * Gelen medyanın PRIVATE R2 anahtarı ve türü (`r2Keys.conversationMedia`). İkisi de boş
+     * kalabilir: indirme düşse bile satır yazılır — defterin ilk kuralı mesajın kaybolmamasıdır.
+     */
+    mediaKey?: string | null;
+    mediaMime?: string | null;
   }): Promise<Message> {
     const raw = await this.executeRpc('record_message', {
       p_conversation_id: input.conversationId,
@@ -252,6 +258,8 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
       p_provider_message_id: input.providerMessageId ?? null,
       p_window_expires_at: input.windowExpiresAt ?? null,
       p_author: input.author ?? null,
+      p_media_key: input.mediaKey ?? null,
+      p_media_mime: input.mediaMime ?? null,
     });
     return MessageSchema.parse(dbToApp(raw));
   }

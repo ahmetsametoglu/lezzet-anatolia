@@ -48,7 +48,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 - **`opt_in_asked_at`** — **SORULDUĞU an**, cevap ne olursa olsun. Üç hâli bu ayırıyor: boş → hiç sorulmadı · dolu + `opt_in=false` → soruldu, reddetti · `opt_in_at` dolu → izin verildi. Ayrı kolon, çünkü iki alan üç hâli taşıyamıyordu: ret `opt_in=false, opt_in_at=null` yazıyor ve **varsayılan da tam olarak buydu** — yani ret hiçbir iz bırakmıyordu (ölçüldü 25.08)
 - **`linked_by`** — bağı KURAN personel (15.19) — FK `set null`, yani kim bağladığı kaybolabilir
 - **`linked_at`** — bağın kurulduğu an; kanıtla BİRLİKTE dolar (kısıt)
-- **`link_proof`** — kanıtın TÜRÜ (`order_ref`,`email`,`phone`) — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan)
+- **`link_proof`** — kanıtın TÜRÜ (`order_ref`,`email`,`phone` operatörün; `cart_link` sistemin — 15.22) — değeri saklanmaz; üçü de boşsa bağı SİSTEM kurdu (WhatsApp, numaradan). `cart_link`: sohbette kurulan sepetin bağlantısını açıp giriş yapan kişi; kanıt operatörün değil sistemin doğruladığı jetondur (`cart_link` tablosu), `linked_by` bu yüzden boş
 - **`window_expires_at`** — 24s servis penceresi bitişi — süre üç kanalda aynı; EKONOMİSİ değil (ücret/şablon yalnız WhatsApp)
 
 **Bir kişi, bir konuşma — kanal başına** — tekillik `(source, external_ref)` üzerinde (0039). Üç kanalda da thread kavramı yoktur: aynı kişiden gelen her mesaj aynı sohbetin devamıdır. İndeks olmasaydı ikinci mesaj yeni bir satır açar, admin aynı müşteriyi gelen kutusunda iki kez görür, AI ajanı geçmişin yarısını okurdu. Açılış bu yüzden tek deyimlik upsert (`open_conversation`): oku-sonra-yaz yarışır ve canlı kanalda arka arkaya gelen iki mesajın ikincisi kaybolurdu. **Hesap boyutu tekillikte DEĞİL (bilinçli):** PSID sayfa-kapsamlıdır ve ikinci bir işletme hesabı (ikinci numara/sayfa) açıldığı gün tekillik `(source, provider_account_ref, external_ref)` üçlüsüne genişletilir — bugün genişletmek, elle işlenen (hesapsız) geçmişi webhook geçmişinden bölerdi; kolon yine de bugünden var, çünkü sonradan eklenen kolon o güne kadarki geçmişi belirsiz bırakır.
@@ -79,6 +79,8 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | `template_name` | text | • |  |
 | `template_category` | template_category | • |  |
 | `provider_message_id` | text | • |  |
+| `media_key` | text | • |  |
+| `media_mime` | text | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 

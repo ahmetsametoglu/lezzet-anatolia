@@ -15,6 +15,8 @@ import { formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
 import { ORDER_STATUS_LABELS, resolveLocalizedText, type Conversation, type Order, type Ticket } from '@lezzet/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { cartAgentTools } from '../cart/agent-tools';
+import { withCartLink } from '../cart/link-text';
 import { anchorGateOf, type AnchorGate } from '../customer/anchor';
 import { sendOutboundMessage, type MessageSender } from '../messaging/send';
 import { ringConversationsBell, ringTicketBell, ringTicketsBell } from '../realtime/bell';
@@ -50,8 +52,31 @@ const THREAD_LIMIT = 12;
  * olduklarını değiştiremez (`support-tools.ts` künyesi). Enjekte model verildiğinde (test) araç
  * geçilmiyor: sahte model araç çağırmaz ve geçmek testi ağa açardı.
  */
-async function runOpts(db: SupabaseClient, customerId: string | null, opts: SupportAiOpts, known: AnchorGate | null = null) {
+async function runOpts(
+  db: SupabaseClient,
+  customerId: string | null,
+  opts: SupportAiOpts,
+  known: AnchorGate | null = null,
+  /**
+   * SOHBET turunda sepet araçları da verilir (15.20 · 15.22): kimlik kapısından BAĞIMSIZ, çünkü
+   * sepet kapılı üç yetkiden biri değil (`cart/agent-tools.ts` künyesi). Kimliksiz sohbette sepet
+   * sohbetin kendisine yazılır; fiyat kademesi ve kayıtlı adres yine kapıya bağlı (`identity`).
+   * Talep yolunda (e-posta) sohbet yok, sepet aracı da yok.
+   */
+  cart: { conversation: Conversation; sink: CartLinkSink } | null = null,
+) {
   if (opts.model) return { model: opts.model };
+  const cartTools = (identity: string | null) =>
+    cart
+      ? cartAgentTools(db, {
+          conversation: cart.conversation,
+          pricingCustomerId: identity,
+          addressCustomerId: identity,
+          onLink: (url) => {
+            cart.sink.url = url;
+          },
+        })
+      : {};
   // ── KİMLİK KAPISI ÜÇLÜDÜR (04.10 · DOMAIN §10 · 28.08'de genişledi) ───────
   // Kapı GEÇMİŞ araçlarını korur (siparişler, adrese gelinen günler): *"kimliği bilmeden ne
   // açtığımız asıl sorudur."* Ama kapatılan şey bir tur boyunca **araç setinin tamamıydı** ve bu
@@ -65,10 +90,19 @@ async function runOpts(db: SupabaseClient, customerId: string | null, opts: Supp
   //
   // `known` sohbet yolundan gelir: orada kapı zaten okundu (soruyu da o okuma söylüyor) — iki kez
   // okumak aynı cevabı iki sorguya mal ederdi.
-  if (!customerId) return { tools: customerSupportTools(db, null) };
+  if (!customerId) return { tools: { ...customerSupportTools(db, null), ...cartTools(null) } };
   const gate = known ?? (await anchorGateOf(db, customerId));
   if (!gate.open) logger.info({ customerId, anchor: gate.state }, 'ai: kimlik kapısı kapalı — yalnız kamusal araçlar verildi');
-  return { tools: customerSupportTools(db, toolsIdentityOf(customerId, gate)) };
+  const identity = toolsIdentityOf(customerId, gate);
+  return { tools: { ...customerSupportTools(db, identity), ...cartTools(identity) } };
+}
+
+/**
+ * Sohbet turunun sepet bağlantısı — araç üretir (`sepet_baglantisi`), kabı doldurur; cevabın
+ * sonuna `withCartLink` ekler (kural ve gerekçesi `cart/link-text.ts`te, saf ve birim testli).
+ */
+interface CartLinkSink {
+  url: string | null;
 }
 
 /**
@@ -254,19 +288,21 @@ export async function generateConversationDraft(
   // "benim siparişlerim" sorusu kimin siparişi olduğu belirsizken cevaplanamaz. Kamusal araçlar
   // (katalog, teslimat şartları, posta kodu) yine verilir — `runOpts`un üçlü kapısı.
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
+  const cartLink: CartLinkSink = { url: null };
   const result = await runTask(
     ticketDraftTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
-    await runOpts(db, conversation.customerId, opts, gate),
+    await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink }),
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   /* Taslak KANALA GÖRE biçimlendirilir (06.09): operatör kutuya aldığı metni olduğu gibi
      gönderiyor, yani taslakta duran işaret müşteriye gidecek işarettir. WhatsApp'ta kalır,
-     Messenger/IG'de sökülür — orada çizilmiyor ve müşteri çıplak yıldız görürdü. */
+     Messenger/IG'de sökülür — orada çizilmiyor ve müşteri çıplak yıldız görürdü.
+     Sepet bağlantısı da taslağa BURADA girer: operatör onu görür, isterse siler. */
   await conversations.update({
     id: conversation.id,
-    aiDraftReply: formatForChannel(result.data.reply, conversation.source),
+    aiDraftReply: withCartLink(formatForChannel(result.data.reply, conversation.source), cartLink.url),
     aiDraftGeneratedAt: new Date().toISOString(),
   });
   // Taslağı cron yazdı — WhatsApp ekranı açık duran operatör onu elle yenilemeden görsün (16.8).
@@ -546,16 +582,19 @@ async function autonomousConversationReply(
      numarasından gelmek zorunda (`verifySecurityCode` imzası), yani e-posta talebinde sormak
      cevaplanamayacak bir soru sormaktır. Kapı orada da kapalı — ama soru burada. */
   const gate = conversation.customerId ? await anchorGateOf(db, conversation.customerId) : null;
+  const cartLink: CartLinkSink = { url: null };
   const result = await runTask(
     ticketAgentTask,
     gate?.ask ? { ...context, identity: { ask: gate.ask } } : context,
-    await runOpts(db, conversation.customerId, opts, gate),
+    await runOpts(db, conversation.customerId, opts, gate, { conversation, sink: cartLink }),
   );
   if (!result.ok) return { status: 'failed', reason: result.reason };
 
   /* Kanal kararı gönderimden ÖNCE, tek yerde: WhatsApp işaretleri kendi çizer, Messenger/IG
-     çizmez ve müşteri `*Fıstıklı Baklava*` diye okurdu (`chat-formatting` künyesi). */
-  const reply = result.data.action === 'reply' ? formatForChannel(result.data.reply ?? '', conversation.source).trim() || null : null;
+     çizmez ve müşteri `*Fıstıklı Baklava*` diye okurdu (`chat-formatting` künyesi).
+     Sepet bağlantısı biçimlendirmeden SONRA eklenir: sökücü bağlantının alt çizgisine dokunmasın. */
+  const govdeMetni = result.data.action === 'reply' ? formatForChannel(result.data.reply ?? '', conversation.source).trim() || null : null;
+  const reply = govdeMetni ? withCartLink(govdeMetni, cartLink.url) : null;
   if (!reply) return handOff(result.data.handoffReason?.trim() || 'AI cevap veremedi — sebep bildirmedi.', true);
 
   /*

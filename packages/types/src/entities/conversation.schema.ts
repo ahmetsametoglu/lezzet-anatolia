@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import {
+  ConversationLinkProofEnum,
   ConversationSourceEnum,
-  LinkProofKindEnum,
   MessageDirectionEnum,
   MessageKindEnum,
   TemplateCategoryEnum,
@@ -92,8 +92,11 @@ export const ConversationSchema = z.object({
    */
   linkedBy: z.string().uuid().nullable(),
   linkedAt: z.string().nullable(),
-  /** Kanıtın TÜRÜ — değeri saklanmaz (`CLAUDE §1`: kimlik yazılır, içerik yazılmaz). */
-  linkProof: LinkProofKindEnum.nullable(),
+  /**
+   * Kanıtın TÜRÜ — değeri saklanmaz (`CLAUDE §1`: kimlik yazılır, içerik yazılmaz). Operatörün üç
+   * kanıtı + sistemin doğruladığı sepet bağlantısı (`cart_link`, 15.22) — ayrım enum künyesinde.
+   */
+  linkProof: ConversationLinkProofEnum.nullable(),
   /** Son hareketin anı; gelen kutusunun sıralama alanı. `recordMessage` yazar. */
   lastMessageAt: z.string().nullable(),
   createdAt: z.string(),
@@ -164,6 +167,17 @@ export const MessageSchema = z.object({
   templateCategory: TemplateCategoryEnum.nullable(),
   /** 360dialog/Cloud API mesaj kimliği. Adım 1'de boş (elle kayıt), adım 2'de dolar. */
   providerMessageId: z.string().nullable(),
+  /**
+   * Gelen medyanın PRIVATE R2 anahtarı (`r2Keys.conversationMedia`) — sağlayıcının medya kimliği
+   * DEĞİL. Meta'nın adresi dakikalar içinde ölüyor, medyanın kendisi ~30 gün sonra siliniyor;
+   * kanıt olacak bir fotoğrafın ömrü sağlayıcının saklama süresine bağlanamaz.
+   *
+   * **Medya mesajında bile `null` olabilir** ve bu bilinçli: indirme düşse de satır yazılır.
+   * Defterin ilk kuralı mesajın kaybolmamasıdır (DB kısıtı da tam bu yönde tek taraflıdır).
+   */
+  mediaKey: z.string().nullable(),
+  /** Ekran fotoğrafı mı sesi mi çizeceğini buradan bilir — `kind` hepsine `media` diyor. */
+  mediaMime: z.string().nullable(),
   createdAt: z.string(),
 });
 export type Message = z.infer<typeof MessageSchema>;
@@ -178,6 +192,9 @@ export const MessageInsertSchema = z.object({
   templateName: z.string().nullish(),
   templateCategory: TemplateCategoryEnum.nullish(),
   providerMessageId: z.string().nullish(),
+  /** İndirme başarılıysa dolu; düştüyse boş kalır ve satır yine yazılır. */
+  mediaKey: z.string().nullish(),
+  mediaMime: z.string().nullish(),
 });
 export type MessageInsert = z.infer<typeof MessageInsertSchema>;
 

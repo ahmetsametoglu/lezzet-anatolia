@@ -33,6 +33,15 @@ const REFERRAL_MAX_AGE_SEC = 30 * 24 * 60 * 60;
 const NEIGHBOR_COOKIE = 'lz_neighbor';
 const NEIGHBOR_MAX_AGE_SEC = 7 * 24 * 60 * 60;
 
+/**
+ * **Sepet bağlantısı** (15.21) — üçüncü taşıma çerezi, aynı sebeple aynı dosyada: sohbetten gelen
+ * bağlantı kimliği olmayan bir ziyaretçide açılır, giriş yapana kadar çerez taşır, giriş anında
+ * `claimCartLink` tüketir. Ömrü jetonun kendi ömrüyle aynı (`CART_LINK_TTL_MS`, 7 gün): çerez
+ * jetondan uzun yaşasa da bir işe yaramaz — jeton sunucuda çoktan ölmüştür.
+ */
+const CART_LINK_COOKIE = 'lz_cart_link';
+const CART_LINK_MAX_AGE_SEC = 7 * 24 * 60 * 60;
+
 async function remember(name: string, value: string, maxAge: number): Promise<void> {
   const jar = await cookies();
   jar.set(name, value, {
@@ -92,4 +101,22 @@ export function readNeighborInvite(): Promise<string | null> {
  */
 export function forgetNeighborInvite(): Promise<void> {
   return forget(NEIGHBOR_COOKIE);
+}
+
+/** Sohbetten gelen sepet bağlantısının jetonunu saklar (15.21). Yalnız route handler / server action. */
+export function rememberCartLink(token: string): Promise<void> {
+  return remember(CART_LINK_COOKIE, token, CART_LINK_MAX_AGE_SEC);
+}
+
+/** Taşınan sepet jetonu — giriş anında `claimCartLink` okur. */
+export function readCartLink(): Promise<string | null> {
+  return read(CART_LINK_COOKIE);
+}
+
+/**
+ * Sepet çerezini düşürür — tüketim SONUCUNDAN bağımsız: geçersiz jeton da tarayıcıda yedi gün
+ * daha durup her girişte bir kez daha "geçersiz" demesin (getiren daveti ile aynı karar).
+ */
+export function forgetCartLink(): Promise<void> {
+  return forget(CART_LINK_COOKIE);
 }

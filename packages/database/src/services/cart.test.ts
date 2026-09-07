@@ -3,6 +3,7 @@ import { serviceDb } from '../client';
 import { purgeTestData } from '../testing/cleanup';
 import { CartService } from './cart.service';
 import { CategoryService } from './category.service';
+import { ConversationService } from './conversation.service';
 import { ProductService } from './product.service';
 import { UserProfileService } from './user-profile.service';
 
@@ -183,5 +184,56 @@ describe('anonim sepeti devralma (07.1)', () => {
   it('devralma müşterinin daha önce eklediğini kaybettirmez (boş liste gelse de)', async () => {
     await carts.addItem(customerId, { variantId: variantA, qty: 2, unitPrice: 12.5 });
     expect((await carts.takeOver(customerId, [])).items).toHaveLength(1);
+  });
+});
+
+/**
+ * SOHBET SEPETİ (15.22 · 0055) — sahibi müşteri değil, kimliksiz sohbet (Messenger/IG).
+ *
+ * Sınanan şey ayrı bir kural DEĞİL, aynı kuralın ikinci sahibe uygulanması: satır birleştirme, adet
+ * ve çıkarma `*For` uçlarında da aynı gövdeden geçiyor. Ayrıca iki sahibin sepetlerinin birbirine
+ * KARIŞMADIĞI ve sohbet silinince sepetin de gittiği (cascade — sahipsiz satır kalmaz).
+ */
+describe('sohbet sepeti (15.22)', () => {
+  const conversations = new ConversationService(db);
+  let conversationId: string;
+
+  beforeAll(async () => {
+    conversationId = (await conversations.open({ source: 'messenger', externalRef: `psid-sepet-${stamp}` })).id;
+  });
+
+  afterAll(async () => {
+    await purgeTestData(db, { conversationIds: [conversationId] });
+  });
+
+  it('kimliksiz sohbetin sepeti MÜŞTERİSİZ doğar — sahibi sohbetin kendisi', async () => {
+    const cart = await carts.addItemsFor({ conversationId }, [{ variantId: variantA, qty: 2, unitPrice: 4.57 }]);
+    expect(cart.customerId).toBeNull();
+    expect(cart.conversationId).toBe(conversationId);
+    expect(cart.items).toHaveLength(1);
+    expect(cart.id).not.toBe('');
+  });
+
+  it('sohbet sepeti ile müşteri sepeti birbirine KARIŞMAZ — iki sahip, iki satır', async () => {
+    await carts.addItem(customerId, { variantId: variantB, qty: 1, unitPrice: 9 });
+    const sohbet = await carts.getFor({ conversationId });
+    const musteri = await carts.get(customerId);
+    expect(sohbet.items.map((i) => i.variantId)).toEqual([variantA]);
+    expect(musteri.items.map((i) => i.variantId)).toEqual([variantB]);
+  });
+
+  it('adet ve çıkarma sohbet sepetinde de AYNI kuralla — sıfır adet satırı siler', async () => {
+    await carts.setQtyFor({ conversationId }, { variantId: variantA }, 5);
+    expect((await carts.getFor({ conversationId })).items[0]?.qty).toBe(5);
+    await carts.removeItemFor({ conversationId }, { variantId: variantA });
+    expect((await carts.getFor({ conversationId })).items).toEqual([]);
+  });
+
+  it('sohbet silinince sepeti de gider — sahipsiz satır KALMAZ (cascade)', async () => {
+    const gecici = await conversations.open({ source: 'messenger', externalRef: `psid-gecici-${stamp}` });
+    await carts.addItemsFor({ conversationId: gecici.id }, [{ variantId: variantA, qty: 1, unitPrice: 1 }]);
+    await purgeTestData(db, { conversationIds: [gecici.id] });
+    const { data } = await db.from('cart').select('id').eq('conversation_id', gecici.id);
+    expect(data).toEqual([]);
   });
 });

@@ -1,6 +1,7 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
+import { CART_LINK_PARAM } from '@lezzet/application/cart/link';
 import { detectDevice } from '@/lib/device';
 import { getEmptyCartContext } from '@/lib/cart/empty-cart';
 import { SiteFrame } from '@/components/customer/ui/site-frame';
@@ -12,6 +13,8 @@ import messages from './messages.json';
 
 interface CartPageProps {
   params: Promise<{ locale: string }>;
+  /** `?link=<jeton>` — sohbetten gelen sepet bağlantısı (15.21); sayfa onu çerez kapısına devreder. */
+  searchParams: Promise<{ [CART_LINK_PARAM]?: string }>;
 }
 
 /**
@@ -24,10 +27,19 @@ interface CartPageProps {
  * Girişli müşteride sunucu sepeti kazanır (action oturuma bakar) — yani ayrım bir performans
  * ödünü değil, doğruluk gereği.
  */
-export default async function CartPage({ params }: CartPageProps) {
+export default async function CartPage({ params, searchParams }: CartPageProps) {
   const { locale } = await params;
   if (!hasLocale(routing.locales, locale)) notFound();
   setRequestLocale(locale);
+
+  /* SOHBETTEN GELEN BAĞLANTI (15.21): ajanın gönderdiği adres bu sayfadır (`/fr/panier?link=…`)
+     ki müşteri okunaklı bir bağlantı görsün. Ama jeton burada TÜKETİLEMEZ — sunucu bileşeni çerez
+     yazamaz ve oturum yoksa önce giriş gerekir. Sayfa jetonu çerez kapısına devreder
+     (`/cart-link`): oturum varsa orada tüketilir ve buraya dönülür, yoksa giriş sayfasına gidilir
+     ve giriş anında tüketilir (`invite-handoff`). Sayfa görüntülemesi de o dönüşte sayılır. */
+  const { [CART_LINK_PARAM]: linkToken } = await searchParams;
+  if (linkToken) redirect(`/cart-link?token=${encodeURIComponent(linkToken)}&locale=${locale}`);
+
   void recordPageView('/cart');
 
   const t: Messages = messages[locale];

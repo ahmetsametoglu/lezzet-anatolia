@@ -23,7 +23,8 @@
       "checkout": "Siparişinizi tamamlamak için. Şifre yok — hiç olmadı.",
       "talepler": "Taleplerinizi görmek için. Şifre yok — hiç olmadı.",
       "hesap": "Hesabınıza ulaşmak için. Şifre yok — hiç olmadı.",
-      "geribildirim": "Değerlendirmenizi kaydetmek için. Şifre yok — hiç olmadı."
+      "geribildirim": "Değerlendirmenizi kaydetmek için. Şifre yok — hiç olmadı.",
+      "sepet": "Sohbette hazırladığınız sepeti görmek için. Şifre yok — hiç olmadı."
     }
   },
   "fr": {
@@ -50,7 +51,8 @@
       "checkout": "Pour finaliser votre commande. Pas de mot de passe — jamais.",
       "talepler": "Pour voir vos demandes. Pas de mot de passe — jamais.",
       "hesap": "Pour accéder à votre compte. Pas de mot de passe — jamais.",
-      "geribildirim": "Pour enregistrer votre avis. Pas de mot de passe — jamais."
+      "geribildirim": "Pour enregistrer votre avis. Pas de mot de passe — jamais.",
+      "sepet": "Pour retrouver le panier préparé dans la conversation. Pas de mot de passe — jamais."
     }
   },
   "de": {
@@ -77,7 +79,8 @@
       "checkout": "Um Ihre Bestellung abzuschließen. Kein Passwort — nie.",
       "talepler": "Um Ihre Anfragen zu sehen. Kein Passwort — nie.",
       "hesap": "Um auf Ihr Konto zuzugreifen. Kein Passwort — nie.",
-      "geribildirim": "Um Ihre Bewertung zu speichern. Kein Passwort — nie."
+      "geribildirim": "Um Ihre Bewertung zu speichern. Kein Passwort — nie.",
+      "sepet": "Um den im Chat vorbereiteten Warenkorb zu öffnen. Kein Passwort — nie."
     }
   }
 }

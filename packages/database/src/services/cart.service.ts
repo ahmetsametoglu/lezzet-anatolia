@@ -13,10 +13,22 @@ import { BundleService } from './bundle.service';
 import { ProductVariantService } from './product-variant.service';
 
 /**
+ * **Sepetin sahibi** — müşteri YA DA sohbet (15.22 · kullanıcı kararı 07.09).
+ *
+ * Müşteri sepeti bugüne kadarki tek hâldi ve bütün kapılar (`get`, `addItems`, `setQty`…) onu
+ * `customerId` ile anmaya devam ediyor — web ve mobil o imzaları çağırıyor, değişmediler. Sohbet
+ * sepeti (Messenger/IG'de ajanın kurduğu, kimliksiz sohbetin sepeti) aynı kuralların `*For`
+ * ekleriyle anılan hâli: gövde ortak, yalnız satırı bulan anahtar farklı. İkinci bir servis
+ * yazılsaydı satır birleştirme kuralı iki yerde yaşar ve bir gün ayrışırdı.
+ */
+export type CartOwner = { customerId: string; conversationId?: never } | { conversationId: string; customerId?: never };
+
+/**
  * Sunucu sepeti (07.1) — DOMAIN §4, §5.
  *
- * Müşteri başına TEK satır; anahtar `customerId` (bu yüzden `id` tabanlı miras metodlar —
- * `getById`/`update`/`delete` — kullanılmaz, yerlerine buradaki uçlar vardır).
+ * Sahip başına TEK satır; anahtar `customerId` ya da `conversationId` (`unique` kolonlar; bu yüzden
+ * `id` tabanlı miras metodlar — `getById`/`update`/`delete` — kullanılmaz, yerlerine buradaki uçlar
+ * vardır).
  *
  * **Sepetteki fiyat bağlayıcı değildir** (DOMAIN §5): gösterim ve değişiklik tespiti içindir;
  * bağlayıcı fiyat checkout başlangıcında çözülür (stok + ödeme ile aynı pencerede). Servis fiyatı
@@ -31,9 +43,23 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
   }
 
   /** Müşterinin sepeti; hiç açılmamışsa boş sepet döner — çağıranın `null` kontrolü gerekmez. */
-  async get(customerId: string): Promise<Cart> {
-    const cart = await this.getOneBy({ customerId });
-    return cart ?? { customerId, items: [], savedItems: [], updatedAt: new Date().toISOString() };
+  get(customerId: string): Promise<Cart> {
+    return this.getFor({ customerId });
+  }
+
+  /** Sahibin sepeti (müşteri ya da sohbet); hiç açılmamışsa boş sepet — `id` o hâlde boş dizedir. */
+  async getFor(owner: CartOwner): Promise<Cart> {
+    const cart = await this.getOneBy(owner);
+    return (
+      cart ?? {
+        id: '',
+        customerId: owner.customerId ?? null,
+        conversationId: owner.conversationId ?? null,
+        items: [],
+        savedItems: [],
+        updatedAt: new Date().toISOString(),
+      }
+    );
   }
 
   /**
@@ -42,7 +68,7 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    *
    * Tek kalem, TEK ELEMANLI LİSTEDİR — kural `addItems`te (gerekçesi orada).
    */
-  async addItem(customerId: string, item: Omit<CartItem, 'addedAt'>): Promise<Cart> {
+  addItem(customerId: string, item: Omit<CartItem, 'addedAt'>): Promise<Cart> {
     return this.addItems(customerId, [item]);
   }
 
@@ -64,8 +90,13 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    * korumaz (o, satır düzeyinde kilit ya da veritabanı tarafında birleştirme ister). Kapatılan şey
    * TEK eylemin kendi içinde ürettiği yarıştı — bugünkü arıza buydu.
    */
-  async addItems(customerId: string, incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
-    const { items } = await this.get(customerId);
+  addItems(customerId: string, incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
+    return this.addItemsFor({ customerId }, incoming);
+  }
+
+  /** `addItems`in sahip-bağımsız gövdesi — sohbet sepeti de buradan yazar (kural tek yerde). */
+  async addItemsFor(owner: CartOwner, incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
+    const { items } = await this.getFor(owner);
     const merged = [...items];
 
     for (const item of await this.existingOnly(incoming)) {
@@ -73,7 +104,7 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
       if (index >= 0) merged[index] = { ...merged[index]!, qty: merged[index]!.qty + item.qty };
       else merged.push({ ...item, stockId: item.stockId ?? null, addedAt: new Date().toISOString() });
     }
-    return this.write(customerId, merged);
+    return this.write(owner, merged);
   }
 
   /**
@@ -86,15 +117,23 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    * sipariş düğmesi kilitli kalıyordu (ölçüldü cihazda 20.08). `sameLine` paket dalını zaten
    * biliyordu; eksik olan tek şey anahtarın buraya kadar gelmesiydi.
    */
-  async setQty(customerId: string, ref: CartRef, qty: number): Promise<Cart> {
-    const { items } = await this.get(customerId);
-    const next =
-      qty > 0 ? items.map((row) => (sameLine(row, ref) ? { ...row, qty } : row)) : items.filter((row) => !sameLine(row, ref));
-    return this.write(customerId, next);
+  setQty(customerId: string, ref: CartRef, qty: number): Promise<Cart> {
+    return this.setQtyFor({ customerId }, ref, qty);
   }
 
-  async removeItem(customerId: string, ref: CartRef): Promise<Cart> {
+  async setQtyFor(owner: CartOwner, ref: CartRef, qty: number): Promise<Cart> {
+    const { items } = await this.getFor(owner);
+    const next =
+      qty > 0 ? items.map((row) => (sameLine(row, ref) ? { ...row, qty } : row)) : items.filter((row) => !sameLine(row, ref));
+    return this.write(owner, next);
+  }
+
+  removeItem(customerId: string, ref: CartRef): Promise<Cart> {
     return this.setQty(customerId, ref, 0);
+  }
+
+  removeItemFor(owner: CartOwner, ref: CartRef): Promise<Cart> {
+    return this.setQtyFor(owner, ref, 0);
   }
 
   /**
@@ -108,13 +147,14 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    * bekleyen sepet") bu zamana bakar; her adet değişiminde tazelenirse o sinyal ölür.
    */
   async replace(customerId: string, items: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
-    const { items: current } = await this.get(customerId);
+    const owner: CartOwner = { customerId };
+    const { items: current } = await this.getFor(owner);
     const next = items.map((item) => ({
       ...item,
       stockId: item.stockId ?? null,
       addedAt: current.find((row) => sameLine(row, item))?.addedAt ?? new Date().toISOString(),
     }));
-    return this.write(customerId, next);
+    return this.write(owner, next);
   }
 
   /**
@@ -164,8 +204,13 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
   }
 
   /** Sipariş kapandığında ya da müşteri boşalttığında — satır silinir, boş sepet satırı bırakılmaz. */
-  async clear(customerId: string): Promise<void> {
-    return this.deleteWhere({ customerId });
+  clear(customerId: string): Promise<void> {
+    return this.clearFor({ customerId });
+  }
+
+  /** Sohbet sepeti müşteriye TAŞINDIĞINDA da buradan: sahipsiz satır bırakılmaz (0055 künyesi). */
+  clearFor(owner: CartOwner): Promise<void> {
+    return this.deleteWhere(owner);
   }
 
   /**
@@ -176,8 +221,10 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    * Kural `addItems`in TA KENDİSİDİR; ad çağrı yerinde niyeti söylediği için duruyor ("sepeti
    * devral" ile "şu kalemleri ekle" aynı fiil değil, aynı sonuçtur). Gövdesi kopyalanmıyor —
    * kopyalandığı sürece devirdeki birleştirme ile eklemedeki birleştirme bir gün ayrışırdı.
+   *
+   * Sohbetten gelen sepet de (15.21 bağlantısı) BU kapıdan geçer: üçüncü bir birleştirme kuralı yok.
    */
-  async takeOver(customerId: string, incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
+  takeOver(customerId: string, incoming: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
     return this.addItems(customerId, incoming);
   }
 
@@ -186,7 +233,8 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    * tutar, tek yönlü eşitleme iki tarafın ayrışmasını imkânsız kılar.
    */
   async replaceSaved(customerId: string, saved: readonly Omit<CartItem, 'addedAt'>[]): Promise<Cart> {
-    const cart = await this.get(customerId);
+    const owner: CartOwner = { customerId };
+    const cart = await this.getFor(owner);
     const next = saved.map((item) => ({
       ...item,
       stockId: item.stockId ?? null,
@@ -194,7 +242,7 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
       // haftadır bekliyor" bilgisi sepet ile liste arasında gidip gelirken sıfırlanmamalı.
       addedAt: [...cart.items, ...cart.savedItems].find((row) => sameLine(row, item))?.addedAt ?? new Date().toISOString(),
     }));
-    return this.write(customerId, cart.items, next);
+    return this.write(owner, cart.items, next);
   }
 
   /**
@@ -207,10 +255,13 @@ export class CartService extends BaseDbService<Cart, CartInsert, CartUpdate> {
    * çağrıyı geçerli gösteriyordu; `upsert` girdiyi `insertSchema.parse`ten geçirince Zod damgayı
    * sessizce atıyor ve bu künyenin vaadi yerine gelmiyordu. Şema düzeltildi, cast de gitti —
    * bundan sonra alan yeniden düşerse derleyici uyaracak. Bir dönüşüm, kapının kendisini kapatır.
+   *
+   * Çakışma anahtarı SAHİBE göre: iki `unique` kolon var ve `upsert` hangisine çarpacağını bilmeli.
    */
-  private async write(customerId: string, items: CartItem[], saved?: CartItem[]): Promise<Cart> {
-    const savedItems = saved ?? (await this.get(customerId)).savedItems;
-    return this.upsert({ customerId, items, savedItems, updatedAt: new Date().toISOString() }, 'customer_id');
+  private async write(owner: CartOwner, items: CartItem[], saved?: CartItem[]): Promise<Cart> {
+    const savedItems = saved ?? (await this.getFor(owner)).savedItems;
+    const onConflict = owner.customerId ? 'customer_id' : 'conversation_id';
+    return this.upsert({ ...owner, items, savedItems, updatedAt: new Date().toISOString() }, onConflict);
   }
 }
 

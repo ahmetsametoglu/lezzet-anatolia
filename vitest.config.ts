@@ -89,6 +89,8 @@ const UYGULAMA_DBSIZ = [
   'packages/application/src/warehouse/label-svg.test.ts',
   'packages/application/src/warehouse/karla-metrics.test.ts',
   'packages/application/src/cart/cart-blocker.test.ts',
+  // Sepet bağlantısının cevaba eklenmesi (15.21) — saf metin kuralı; DB'siz olduğu için ayrı dosyada.
+  'packages/application/src/cart/link-text.test.ts',
   'packages/application/src/catalog/campaign.test.ts',
   // Seçkinin SIRALAMASI — `apps/web/lib/storefront/showcase-rank.test.ts` idi, okuma pakete terfi
   // edince testi de birlikte taşındı (27.08). Üç fonksiyon da saf: dizi girer, dizi çıkar.

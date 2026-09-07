@@ -372,11 +372,22 @@ export type ConversationHandler = z.infer<typeof ConversationHandlerEnum>;
 export const LinkProofKindEnum = z.enum(['order_ref', 'email', 'phone']);
 export type LinkProofKind = z.infer<typeof LinkProofKindEnum>;
 
-/** Kanıt türlerinin operatöre görünen adları — pencere bunları okur. */
-export const LINK_PROOF_LABELS: Record<LinkProofKind, string> = {
+/**
+ * **Dördüncü değer geldi (15.22 · 07.09): `cart_link`** — ama OPERATÖRÜN listesine DEĞİL, satırın.
+ * `LinkProofKindEnum` operatörün pencereden sunabildiği kanıtlardır; sepet bağlantısı ise sistemin
+ * doğruladığı bir jetondur (`cart_link` tablosu) — operatör onu ne bilir ne yazar. İki küme ayrı
+ * tutuluyor ki pencere jetonu bir seçenek olarak ÇİZMESİN: satır "bağ nasıl kuruldu" diye okur,
+ * pencere "operatör ne sunabilir" diye seçer.
+ */
+export const ConversationLinkProofEnum = z.enum([...LinkProofKindEnum.options, 'cart_link']);
+export type ConversationLinkProof = z.infer<typeof ConversationLinkProofEnum>;
+
+/** Kanıt türlerinin operatöre görünen adları — pencere üçünü seçtirir, satır rozeti dördüncüyü de okur. */
+export const LINK_PROOF_LABELS: Record<ConversationLinkProof, string> = {
   order_ref: 'Sipariş numarası',
   email: 'Kayıtlı e-posta',
   phone: 'Kayıtlı telefon',
+  cart_link: 'Sepet bağlantısı',
 };
 
 /** Mod anahtarının etiketleri — Talepler ve WhatsApp ekranı aynı üçlüyü okur (16.08). */

@@ -109,10 +109,14 @@ kurmaksa geri alınabilir ve taahhüt doğurmaz.
 **ADR-001 ile çelişmiyor.** O karardaki *"satışın kapandığı yer WhatsApp"* ifadesi **sepetin
 netleştiği** yeri anlatıyor (07.09'da netleştirildi), ödemenin alındığı yeri değil.
 
-**Kimlik kanala göre ayrışıyor.** WhatsApp'tan yazan kişi zaten bir `user_profiles` satırı olarak
-doğuyor ve `cart` birincil anahtarı `customer_id` — sepeti bugünkü şemayla var olabilir.
-Adreslenebilir sepet yalnız Messenger/Instagram için gerekiyor; orada `customer_id` hiç yok.
-Görevler: `build/15` `15.20`–`15.22`.
+**Kimlik kanala göre ayrışıyor — ve sepet ikisini de taşıyor (yazıldı 07.09).** WhatsApp'tan yazan
+kişi bir `user_profiles` satırı olarak doğuyor; ajan sepeti o müşterinin GERÇEK sepetine yazar
+(siteyi açtığında aynı sepet). Messenger/Instagram sohbeti kimliksiz doğar; sepet SOHBETİN kendisine
+yazılır (`cart.conversation_id`, 0055) ve bağlantıyı açıp giriş yapan kişinin hesabına taşınır —
+sohbet de o an o hesaba bağlanır (`link_proof = cart_link`). Sepet araçları çapadan bağımsızdır
+(DOMAIN §10'un kapılı üç yetkisinden biri değil); çapa kapalıyken yalnız fiyat kademesi ziyaretçiye
+düşer ve kayıtlı adres okunmaz. Bağlantı `wa_link_token`ın ters yönü: sohbetten siteye, 7 gün, tek
+kullanım. Görevler: `build/15` `15.20`–`15.22`; kapılar `application/cart/{agent-tools,link}.ts`.
 
 ---
 

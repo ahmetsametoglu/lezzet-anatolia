@@ -1,8 +1,10 @@
 import 'server-only';
 import { acceptNeighborInvite, tryAttachReferral } from '@lezzet/application';
+// Alt yoldan (`settings-keys`/`bell-event` emsali): barrel o gün başka şeritlerin elindeydi (07.09).
+import { claimCartLink } from '@lezzet/application/cart/link';
 import { serviceDb, UserProfileService } from '@lezzet/database';
 import { logger } from '@lezzet/observability';
-import { forgetInvite, forgetNeighborInvite, readInvite, readNeighborInvite } from './invite-cookie';
+import { forgetCartLink, forgetInvite, forgetNeighborInvite, readCartLink, readInvite, readNeighborInvite } from './invite-cookie';
 
 /**
  * **Çerezden KİŞİYE devir** — her giriş yolunun geçtiği tek nokta (17.11 · 12.08).
@@ -21,8 +23,8 @@ import { forgetInvite, forgetNeighborInvite, readInvite, readNeighborInvite } fr
  * **Girişi ASLA düşürmez:** davet bir kolaylıktır, kimlik değil. Ama sessiz de değil — iz kalır.
  */
 export async function handOffInvitesToCustomer(authUserId: string): Promise<void> {
-  const [referralCode, neighborToken] = await Promise.all([readInvite(), readNeighborInvite()]);
-  if (!referralCode && !neighborToken) return;
+  const [referralCode, neighborToken, cartToken] = await Promise.all([readInvite(), readNeighborInvite(), readCartLink()]);
+  if (!referralCode && !neighborToken && !cartToken) return;
 
   // Getiren bağı: kendi kapısı zaten hatayı yutuyor ve gerekçesini log'a yazıyor.
   if (referralCode) {
@@ -31,6 +33,31 @@ export async function handOffInvitesToCustomer(authUserId: string): Promise<void
   }
 
   if (neighborToken) await handOffNeighbor(authUserId, neighborToken);
+  if (cartToken) await handOffCartLink(authUserId, cartToken);
+}
+
+/**
+ * **Sohbetten gelen sepeti kişiye yazar** (15.21) — üçüncü yolcu, aynı kapı.
+ *
+ * Profil yoksa çerez KORUNUR (komşu davetiyle aynı karar): `0002` tetikleyicisi henüz yazmamış
+ * olabilir; bir sonraki istek aynı kapıdan geçer. Tüketildiyse SONUÇ ne olursa olsun çerez düşer —
+ * jeton tek kullanımlıktır, tekrar denemenin bir hâli yok. Kimlik köprüsünün sonucu (birleşme,
+ * devir, bağlanma) log'a KİMLİKLE düşer; içerik değil.
+ */
+export async function handOffCartLink(authUserId: string, token: string): Promise<void> {
+  try {
+    const profile = await new UserProfileService(serviceDb()).findByAuthUserId(authUserId);
+    if (!profile) return;
+
+    const outcome = await claimCartLink(serviceDb(), { token, customerId: profile.id });
+    logger.info({ context: 'identity/invite-handoff', customerId: profile.id, outcome: outcome.status }, 'sepet bağlantısı tüketildi');
+    await forgetCartLink();
+  } catch (err) {
+    logger.warn(
+      { context: 'identity/invite-handoff', authUserId, err: err instanceof Error ? err.message : String(err) },
+      'sepet bağlantısı kişiye yazılamadı — giriş etkilenmedi',
+    );
+  }
 }
 
 /**

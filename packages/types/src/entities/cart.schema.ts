@@ -38,8 +38,20 @@ export const CartItemSchema = z.object({
 });
 export type CartItem = z.infer<typeof CartItemSchema>;
 
+/**
+ * **Sepetin SAHİBİ müşteri YA DA sohbettir** (15.22 · kullanıcı kararı 07.09).
+ *
+ * Bir zamanlar `customerId` birincil anahtardı. Sohbetten sepet kurma kararı bunu değiştirdi:
+ * Messenger/Instagram sohbeti kimliksiz doğar ve ajanın orada kurduğu sepetin yazılacak bir
+ * müşterisi yoktur. Sepet kendi kimliğini aldı (`id`); `customerId` ile `conversationId`den tam
+ * biri doludur (kural DB kısıtı + servis kapısında — `cart.service.ts`). Müşteri sepetini okuyan
+ * her yol (`CartService.get(customerId)`) aynen çalışır; alan yalnız zorunlu olmaktan çıktı.
+ */
 export const CartSchema = z.object({
-  customerId: z.string().uuid(),
+  id: z.string().uuid(),
+  customerId: z.string().uuid().nullable(),
+  /** Sohbet sepeti (Messenger/IG) — müşteri bağlanınca sepet TAŞINIR ve bu satır silinir. */
+  conversationId: z.string().uuid().nullable(),
   items: z.array(CartItemSchema),
   /**
    * Sonraya kaydedilenler (K35) — sepetten çıkmış ama VAZGEÇİLMEMİŞ kalemler. Teslimat yerine
@@ -53,7 +65,8 @@ export const CartSchema = z.object({
 export type Cart = z.infer<typeof CartSchema>;
 
 export const CartInsertSchema = z.object({
-  customerId: z.string().uuid(),
+  customerId: z.string().uuid().nullish(),
+  conversationId: z.string().uuid().nullish(),
   items: z.array(CartItemSchema).optional(),
   savedItems: z.array(CartItemSchema).optional(),
   /**
@@ -74,7 +87,9 @@ export const CartInsertSchema = z.object({
 export type CartInsert = z.infer<typeof CartInsertSchema>;
 
 export const CartUpdateSchema = z.object({
-  customerId: z.string().uuid(),
+  id: z.string().uuid(),
+  customerId: z.string().uuid().nullish(),
+  conversationId: z.string().uuid().nullish(),
   items: z.array(CartItemSchema).optional(),
   savedItems: z.array(CartItemSchema).optional(),
   updatedAt: z.string().optional(),
