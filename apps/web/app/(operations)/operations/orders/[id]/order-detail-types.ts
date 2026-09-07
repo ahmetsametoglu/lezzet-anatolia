@@ -5,6 +5,7 @@
 // ekranda formül yoktur, operatör onaylar.
 //
 // Para her yerde KURUŞ (STACK §8).
+import type { OrderBoxTrace } from '@lezzet/application';
 import type { OrderDecision } from '@lezzet/domain-core';
 import type {
   DeliveryType,
@@ -335,6 +336,14 @@ export interface OrderDetailView {
      * o depo adresten türemiştir, buradan değiştirilmez. `null` yalnız ad çözülemediğinde.
      */
     warehouse: { code: string; name: string } | null;
+    /**
+     * **KUTU İZİ** (07.09) — "bu siparişin hangi kutuları çıktı": mühür, araca yükleme ya da
+     * taşıyıcıya devir, kapıda okutma. Kaynak paketin `listOrderBoxes` kapısı — mobilin de
+     * okuyabileceği tek yer; web kendi kompozisyonunu kurmaz (`BACKLOG §17`). Boş dizi = kutu
+     * açılmadı (henüz hazırlanmadı ya da kutusuz eski akış); ekran bunu bir cümleyle söyler.
+     * İşlem burada YOK: kutu mobilde açılır, kapanır, yüklenir (`design/KARARLAR.md §4`).
+     */
+    boxes: OrderBoxTrace[];
     /**
      * **KARGO GÖNDERİSİ** (07.12) — `null` = rota siparişi ya da henüz duyurulmamış kargo.
      *

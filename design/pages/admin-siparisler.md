@@ -23,6 +23,12 @@ Tüm siparişlerin izlendiği, yönetildiği ve gerektiğinde elle girildiği ek
     olguyu SAYI olarak gösterir ("2 durak başka posta kodunda"), telefonu operatör bu ekrandan açar.
     Okuma sipariş anındaki KOPYADAN: müşteri adresini sonradan düzeltmiş olabilir, ama bu sipariş
     eski hâliyle yola çıktı
+- **Kutular** (07.09) — Teslimat kartında her kutu bir satır: kutu no ve QR kodu, mühür (kim, ne
+  zaman), araca yükleme ya da taşıyıcıya devir (kim, ne zaman), kapıda okutuldu mu (teslim
+  kanıtından), kargoda takip numarası. Amaç: *"bu siparişin hangi kutuları çıktı"* sorusu ofisten
+  cevaplanır. **İşlem yok** — kutu mobilde açılır, kapanır, yüklenir (`KARARLAR.md §4`); kutusuz
+  sipariş tek cümle ("kutu açılmadı"), yerinde satışta satır hiç yok. Okuma paketin kapısından
+  (`listOrderBoxes`); mobil aynı kapıyı kullanabilir.
 - **Kalemler** — ürün/varyant, adet, karşılanan adet (eksikte düşer), sabitlenmiş birim fiyat, kalem indirim payı, paket grubu (paketten gelen kalemler paket adıyla gruplu görünür); toplam, indirim, kargo ücreti
 - **Durum ve geçmişi** — mevcut durum + izinli geçişler; her geçişin kim/ne zaman kaydı (audit). Geçişler esnektir ama serbest değildir — yalnız izin verilenler sunulur
 - **Ödeme** — ödeme durumu (türetilir: tahsil − iade vs karşılanan tutar), yöntem, tahsilat/iade hareketleri; vadeli siparişte vade bilgisi

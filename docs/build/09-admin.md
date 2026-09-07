@@ -368,6 +368,22 @@ Yönetim panelinin inşası: önce Claude Design'dan gelen **operasyon evreni ko
     **Kart artık daha AZ sayı gösteriyor ve bu düzeltmenin kendisidir:** maliyetler kapanışta sabitlenir, o güne kadar dağıtım payı/komisyon/ambalaj yoktur. Eskiden bunlar 0 sayılıp kâra giriyordu — kullanıcının gördüğü "ciro − mal maliyeti" tam buydu ve sayı **şişikti**. Parti alışından çıkan maliyet yine görünür ama `estimate` olarak işaretlenir, kâra girmez ve eksi işareti almaz: bilgi vermek ile hesap uydurmak farklı şeylerdir.
     **(2) Merkezî motorda gerçek bir para hatası vardı** — yurtiçi B2B'de KDV iki kez çıkarılıyordu. Ayrıntı `12-para-muhasebe` (12.6) altında; oradan düzeltildi, sipariş detayı da aynı düzeltmeden yararlanıyor.
   - **Durum (29.07 — geride bırakılan boşluklar işaretlendi):** Dört ekranın bilinçli sınırları artık `BEKLEYEN(<ref>)` ile koddan bir kayda bağlı (CLAUDE.md §5); `docs:check` her birinin referansını doğruluyor. **Boşluğu işaretlemek onu kapatmaz — bulunabilir yapar:** aynı boşluğa ikinci kez rastlayan kişi "bu bilerek mi böyle" sorusunu yeniden araştırmaz. Altısı: sağlayıcıya iade (`07.11` — YENİ görev satırı, aşağıda) · `order_item_batch` junction servisi (`02.8` — YENİ, kural borcu STACK §6) · imha aramasının sunucu tarafı (`09.13`) · "+ Sipariş" elle giriş düğmesi (`09.8`) · Bağlar kartındaki talep köprüsü (`09.12`) · "Buraya girmeyenler" kutusundaki Rotalar/Kurye adları (`09.15`, `11.1`). **İki yeni görev satırı açıldı çünkü ikisi de "kapanmış bir işin küçük eksiği" değil, kendi başına üstlenilecek işler:** biri paranın fiilen dönmesini sağlıyor, diğeri bir tablonun evini değiştiriyor. Kapalı bir görevin altına iliştirilseler kimse onları bir daha görmezdi.
+  - **Durum (07.09) — TESLİMAT KARTINA KUTU İZİ GELDİ** *(kullanıcı kararı: operasyon mobilde,
+    görünürlük web'de)* · touches: `packages/application/src/warehouse/order-boxes.ts`,
+    `packages/application/src/warehouse/boxes.test.ts`,
+    `apps/web/app/(operations)/operations/orders/[id]/{order-detail-read.ts,order-detail-types.ts,order-detail-labels.ts,order-detail.desktop.tsx}`,
+    `design/pages/admin-siparisler.md`
+    - Her kutu tek satır: no/kod · mühür (kim, ne zaman) · araca yükleme ya da taşıyıcıya devir ·
+      kapıda okutuldu mu · kargoda takip numarası. Kutusuz sipariş "kutu açılmadı" der; `pickup`ta
+      satır hiç yok (hazırlık yok, cümle yanlış olurdu).
+    - **Okuma paketin kapısından** (`listOrderBoxes`) — web kendi kompozisyonunu kurmadı, `BACKLOG
+      §17`in okuma-ikizi sınıfına yenisi eklenmedi. Üç damga üç kaynaktan: mühür ve yükleme kutu
+      satırında, kapıda okutma teslim KANITININ `boxCodes`unda; kanıt yokken `null`, "okutulmadı"
+      değil (CLAUDE §1).
+    - Kargoda koli satırları artık kutu satırında: `ShipmentRows` parça listesini yalnız kutusuz
+      elle girişte çizer — aynı koli iki kez yazılmaz.
+    - Kapının üç DB testi `boxes.test.ts`te (aynı fikstür); sakin pencerede koşulacak (kullanıcı:
+      ağır test şimdilik yok). `typecheck · lint · knip · test:unit` yeşil.
 - [x] (09.8) **Siparişler: elle giriş (TELEFONLA GELEN)** · `touches: apps/web/app/(operations)/operations/orders/** · packages/application/src/order/**` — müşteri bul-veya-oluştur; kalem fiyatı liste fiyatıyla dolu gelir, **pazarlıklı fiyat üstüne yazılır** (yalnız admin; liste fiyatı + kim/ne girdi iz kaydı); marj-altı uyarı engelsiz; hediye işareti; `order_source='manual'`, **tam yol**
   - *Bitti:* pazarlık iz kaydından "verilen indirim" türetilebiliyor; telefonla gelen sipariş tek ekranda açılıp `confirmed`e geçiyor
   - **KAPSAM DARALDI — yerinde satış BU GÖREVDEN ÇIKTI (kullanıcı kararı 26.08).** Satır *"door hızlı satış (`draft → completed`)"* diyordu ve bu `DOMAIN §17` ile çelişiyordu: orada **"Admin kapı önü satış yapmaz"** yazılı — satan kişi malın yanında duran personeldir. Çelişki bir ay boyunca kimseye görünmedi çünkü ekran hiç yazılmamıştı. Yerinde satış (depo kapısı **ve kuryenin aracı**) artık **native uygulamanın** kurye/depo bölümünün işidir; `21`de kendi satırını alır. Burada kalan, telefonla/DM'den gelen siparişin masada yazılmasıdır — operasyon web'i zaten yalnız masaüstü, o da masa başı bir iştir.

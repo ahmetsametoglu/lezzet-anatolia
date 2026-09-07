@@ -18,6 +18,7 @@ import { advanceOrder } from '../order/advance.testkit';
 import { cancelOrder } from '../order/refund';
 import { boxLabelPayload, declareOrderShort, markBoxPrinted, openBox, printersFor, sealBox } from './boxes';
 import { listPreparationQueue } from './preparation';
+import { listOrderBoxes } from './order-boxes';
 
 /**
  * **Kutu döngüsü** (23.6 · karar §1.4) — `openBox`/`sealBox` kapıları + `seal_order_box` RPC'si.
@@ -539,5 +540,66 @@ describe('basım (markBoxPrinted + printersFor · 23.7 → 07.12)', () => {
       status: 'forbidden',
       reason: 'out_of_scope',
     });
+  });
+});
+
+/*
+  SİPARİŞ DETAYININ KUTU İZİ (07.09) — `listOrderBoxes`: mühür · yükleme · kapıda okutma tek satırda.
+  Kutu mobilde açılır ve kapanır; web yalnız okur. Fikstür yukarıdakiyle aynı — ikinci bir kurulum
+  yazmak aynı seksen satırı ikinci kez yazmak olurdu (CLAUDE §1).
+*/
+describe('kutu izi (listOrderBoxes)', () => {
+  it('kutusuz sipariş BOŞ dizi döner — "kutu açılmadı" ekranın cümlesidir, kapı uydurmaz', async () => {
+    const { orderId } = await confirmedOrder([1]);
+
+    expect(await listOrderBoxes(db, { id: orderId, deliveryProof: null })).toEqual([]);
+  });
+
+  it('mühür damgası ve mühürleyenin ADI izde; yükleme ve kapı henüz yokken null, "hayır" değil', async () => {
+    const { orderId, itemIds } = await confirmedOrder([3]);
+    const opened = await openBox(db, { orderId, warehouseId });
+    const boxId = opened.status === 'ok' ? opened.box.boxId : '';
+    await sealBox(db, {
+      boxId,
+      warehouseId,
+      actorId: customerId,
+      picks: [{ orderItemId: itemIds[0]!, batches: [{ stockId: nearBatch, qty: 3 }] }],
+    });
+
+    const [trace] = await listOrderBoxes(db, { id: orderId, deliveryProof: null });
+
+    expect(trace).toMatchObject({
+      boxNo: 1,
+      totalBoxes: 1,
+      sealedBy: 'Kutu Müşterisi',
+      loadedAt: null,
+      loadedBy: null,
+      scannedAtDoor: null,
+      trackingNumber: null,
+    });
+    expect(trace?.sealedAt).not.toBeNull();
+    expect(trace?.code).toMatch(/^KT-/);
+  });
+
+  it('kapıda okutulan kod KANITTAN okunur — okutulmayan kutu false, kanıtsız sipariş null', async () => {
+    const { orderId } = await confirmedOrder([2]);
+    const first = await openBox(db, { orderId, warehouseId });
+    const second = await openBox(db, { orderId, warehouseId });
+    const codes = [first, second].map((box) => (box.status === 'ok' ? box.box.code : ''));
+    const proof = {
+      kind: 'box_scan',
+      imageKey: null,
+      receivedBy: null,
+      courierId: customerId,
+      at: new Date().toISOString(),
+      boxCodes: [codes[0]],
+    };
+
+    const traces = await listOrderBoxes(db, { id: orderId, deliveryProof: proof });
+
+    expect(traces.map((t) => [t.boxNo, t.totalBoxes, t.scannedAtDoor])).toEqual([
+      [1, 2, true],
+      [2, 2, false],
+    ]);
   });
 });

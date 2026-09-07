@@ -1,5 +1,6 @@
+import type { OrderBoxTrace } from '@lezzet/application';
 import { isZeroRated, vatBaseOf, type OrderDecision } from '@lezzet/domain-core';
-import type { OrderSource, ShipmentStatus } from '@lezzet/types';
+import type { DeliveryType, OrderSource, ShipmentStatus } from '@lezzet/types';
 import { money, shortDateTime } from '@/components/operation/ui/format';
 import type { TimelineStep } from '@/components/operation/ui/timeline';
 import type { DeliveryProofView, OrderDetailView } from './order-detail-types';
@@ -245,4 +246,24 @@ export const ORDER_NOTES = {
   /** `box_scan` görselsizdir ve bu bir arıza DEĞİL (23.8) — cümle "açılamıyor"la karışmasın. */
   proofBoxScan:
     'Kanıt, kapıda okutulan kutu QR kodları — görseli yoktur, okutulan kodlar teslim kaydında duruyor.',
+  /** Kutu izi boş: hazırlık kutuyla başlar (mobil depo ekranı); kutu yoksa çıkan bir şey de yok. */
+  noBoxes: 'kutu açılmadı',
 } as const;
+
+/**
+ * **Kutu satırının izi** (07.09) — damgalar SIRAYLA ve yalnız VARSA: mühür → yükleme/devir → kapı.
+ *
+ * `loaded_at` tek kolon, iki fiil: rota kulvarında araca yükleme, kargoda rampada taşıyıcıya devir —
+ * cümle kulvarı bilmek zorunda, yoksa kargo kutusu "araca yüklendi" derdi. `scannedAtDoor === null`
+ * HİÇ yazılmaz: kanıt yokken "okutulmadı" demek, olmayan bir teslimi olmuş gibi okuturdu (CLAUDE §1).
+ * Personel adı yalnız çözülebildiyse — adsız damga yine damgadır, ad uydurulmaz.
+ */
+export function boxTrailOf(box: OrderBoxTrace, type: DeliveryType): string[] {
+  const who = (name: string | null): string => (name ? ` ${name}` : '');
+  const trail = [box.sealedAt ? `mühür ${shortDateTime(box.sealedAt)}${who(box.sealedBy)}` : 'açık — masada dolduruluyor'];
+  if (box.loadedAt) {
+    trail.push(`${type === 'shipping' ? 'taşıyıcıya verildi' : 'araca yüklendi'} ${shortDateTime(box.loadedAt)}${who(box.loadedBy)}`);
+  }
+  if (box.scannedAtDoor !== null) trail.push(box.scannedAtDoor ? 'kapıda okutuldu' : 'kapıda okutulmadı');
+  return trail;
+}

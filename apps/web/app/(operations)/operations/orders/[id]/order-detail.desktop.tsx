@@ -11,6 +11,7 @@ import { DOOR_CHECK_NOTE } from '@/components/operation/ui/labels';
 import { statusLabel, statusTone } from '../orders-labels';
 import { OrderLines } from './components/order-lines';
 import {
+  boxTrailOf,
   DECISION_COPY,
   ORDER_NOTES,
   PROOF_KIND_LABEL,
@@ -500,8 +501,11 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
                   <InfoRow label="Sefer" value={order.delivery.runReference ?? 'açılmadı'} />
                 </>
               ) : (
-                <ShipmentRows shipment={order.delivery.shipment} />
+                <ShipmentRows shipment={order.delivery.shipment} showParcels={order.delivery.boxes.length === 0} />
               )}
+              {/* KUTU İZİ (07.09): hangi kutular çıktı — mühür, yükleme/devir, kapıda okutma. Yerinde
+                  satışta (`pickup`) hazırlık yok, satır da yok; "kutu açılmadı" orada yanlış olurdu. */}
+              {order.delivery.type !== 'pickup' ? <BoxRows boxes={order.delivery.boxes} type={order.delivery.type} /> : null}
               {/* Kanıt AÇILABİLİR olmalı (07.08): türünü yazmak yetmiyor, ihtilafta bakılan şey
                   görselin kendisi. `imageUrl` süreli imzalı adres — sayfa her açıldığında yeniden
                   doğuyor, saklanmıyor. Kova yoksa görsel yerine SEBEP yazılır; boş bir çerçeve
@@ -636,6 +640,41 @@ function MetaCell({ label, value, mono, strong, tone }: MetaCellProps) {
  * satır girseydi kartın ritmi bozulur ve not kendi başına bir bilgi gibi okunurdu — oysa o notun
  * tek işi üstündeki değeri nitelemek.
  */
+/**
+ * **KUTU İZİ** (07.09) — Teslimat kartının "hangi kutular çıktı" satırları. Kutu mobilde açılır,
+ * kapanır, yüklenir; burası yalnız GÖRÜNÜRLÜK (`design/KARARLAR.md §4`, kullanıcı kararı). Satır
+ * kalıbı `InfoRow`la aynı (78 px etiket + gövde): yeni görsel dil yok. Kargoda takip numarası aynı
+ * satırda — koli listesi ikinci kez yazılmaz (`ShipmentRows`a `showParcels`).
+ */
+function BoxRows({ boxes, type }: { boxes: OrderDetailView['delivery']['boxes']; type: OrderDetailView['delivery']['type'] }) {
+  if (boxes.length === 0) return <InfoRow label="Kutular" value={ORDER_NOTES.noBoxes} />;
+  return (
+    <>
+      {boxes.map((box) => (
+        <div key={box.boxId} className="flex items-baseline gap-2">
+          <span className="w-[78px] flex-none font-ops-body text-ops-xs text-ops-muted">{`Kutu ${box.boxNo}/${box.totalBoxes}`}</span>
+          <span className="min-w-0 flex-1 font-ops-body text-ops-xs text-ops-ink">
+            <span className="font-ops-mono">{box.code}</span>
+            <span className="text-ops-micro text-ops-muted"> · {boxTrailOf(box, type).join(' · ')}</span>
+            {box.trackingNumber ? (
+              <span className="font-ops-mono text-ops-micro">
+                {' · '}
+                {box.trackingUrl ? (
+                  <a href={box.trackingUrl} target="_blank" rel="noopener noreferrer" className="cursor-pointer underline hover:text-ops-olive-dark">
+                    {box.trackingNumber}
+                  </a>
+                ) : (
+                  box.trackingNumber
+                )}
+              </span>
+            ) : null}
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 function InfoRow({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="flex items-baseline gap-2">
@@ -663,7 +702,14 @@ function InfoRow({ label, value, hint }: { label: string; value: string; hint?: 
  * Numara TIKLANABİLİR (bağlantısı varsa): operatör telefondayken numarayı elle kopyalamak zorunda
  * kalmasın.
  */
-function ShipmentRows({ shipment }: { shipment: OrderDetailView['delivery']['shipment'] }) {
+function ShipmentRows({
+  shipment,
+  showParcels,
+}: {
+  shipment: OrderDetailView['delivery']['shipment'];
+  /** Koli satırları kutu izinde zaten yazılıyorsa burada İKİNCİ kez çizilmez — yalnız kutusuz elle girişte. */
+  showParcels: boolean;
+}) {
   if (!shipment) return <InfoRow label="Gönderi" value="duyurulmadı" />;
 
   return (
@@ -675,7 +721,7 @@ function ShipmentRows({ shipment }: { shipment: OrderDetailView['delivery']['shi
       />
       {shipment.parcels.length === 0 ? (
         <InfoRow label="Takip" value="taşıyıcı numarayı henüz atamadı" />
-      ) : (
+      ) : showParcels ? (
         shipment.parcels.map((parcel) => (
           <div key={parcel.trackingNumber} className="flex items-baseline gap-2">
             <span className="w-[78px] flex-none font-ops-body text-ops-xs text-ops-muted">
@@ -697,7 +743,7 @@ function ShipmentRows({ shipment }: { shipment: OrderDetailView['delivery']['shi
             </span>
           </div>
         ))
-      )}
+      ) : null}
     </>
   );
 }

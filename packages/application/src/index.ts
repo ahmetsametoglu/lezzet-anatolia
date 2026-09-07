@@ -426,6 +426,8 @@ export type { PreparationBox, PreparationLine, PreparationOrder, PreparationSugg
 export { boxLabelPayload, declareOrderShort, printersFor, registerPrinter, markBoxPrinted, openBox, sealBox, unsealBox } from './warehouse/boxes';
 export type { RegisterPrinterOutcome } from './warehouse/boxes';
 export type { BoxLabel, BoxLabelOutcome, BoxPrinter, MarkPrintedOutcome, OpenBoxOutcome, SealBoxOutcome } from './warehouse/boxes';
+export { listOrderBoxes } from './warehouse/order-boxes';
+export type { OrderBoxTrace } from './warehouse/order-boxes';
 export { boxLabelSvg, sampleBoxLabel } from './warehouse/label-svg';
 export { listPendingIntakes, openIntakeForm, readIntakeHeader, receiveGoods, receivePurchase } from './warehouse/intake';
 // Tarama kapısı (Modül 23): kod → kimlik + öğrenen eşleme. Kimlik bulur, stok/depo kararı VERMEZ.

@@ -47,7 +47,7 @@ import {
   skippedBetween,
   vatSplitOf,
 } from '@lezzet/domain-core';
-import { readDeliveryProof, readOrderTracking } from '@lezzet/application';
+import { listOrderBoxes, readDeliveryProof, readOrderTracking } from '@lezzet/application';
 import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
@@ -296,6 +296,8 @@ export async function readOrderDetail(db: Db, orderId: string): Promise<OrderDet
       runReference: run?.referenceNo ?? null,
       proof: await proofOf(order.deliveryProof),
       warehouse: warehouseLabels.get(order.warehouseId) ?? null,
+      // Kutu izi paketin kapısından (07.09) — kanıt siparişin kendi satırında, ikinci okuma yok.
+      boxes: await listOrderBoxes(db, order),
       /*
         Kargo künyesi MÜŞTERİ YÜZEYİYLE AYNI kapıdan (`readOrderTracking`): operatörün gördüğü
         numara ile müşteriye gösterilen aynı olmak zorunda. İki ayrı sorgu bir gün ayrışır ve
