@@ -99,6 +99,38 @@ atlamak olurdu; yanlış adres soğuk zincirde malın kendisidir (22.08 kararın
 
 Bu yüzden iş bölümü şudur ve sitenin kendisi de böyle çalışır: **sohbet danışmanlık, checkout işlem.**
 
+### Genişletildi (07.09 · kullanıcı kararı) — TÜM KANALLAR TEK SEPET AKIŞINA DÖKÜLÜR
+
+Yukarıdaki cümle doğruydu ama DAR kaldı: "danışmanlık" ile "işlem" arasında bir üçüncü adım var ve
+sohbet onu yapabilir — **sepet kurmak.** Kullanıcının kararı:
+
+> *"Hangi mesajlaşma platformunda olursa olsun en sonunda sepete yönlendirilir. Sepet onaylanır,
+> sonra ödeme ekranına geçilir. Dolayısıyla bizim sepet akışımıza tüm satış kanalları dâhil olur."*
+
+Yani sınır **satın almada değil, ONAY ve ÖDEMEDE**:
+
+| Adım | Nerede olabilir |
+| --- | --- |
+| Ürünü bulmak, fiyat/stok/teslimat sormak | her kanalda |
+| **Sepeti kurmak, kalem eklemek/çıkarmak, sepeti okumak** | **her kanalda** |
+| Sepeti ONAYLAMAK | yalnız sitede |
+| Ödemek | yalnız sitede |
+
+**Neden onay ve ödeme sitede kalıyor — gerekçe 22.08'den aynen geçerli:** adres doğrulaması (BAN
+sorgusu · posta kodu çözümü · bölge eşleşmesi), stok ayırma ve ödeme orada BİRLİKTE çalışıyor.
+Sohbette "onaylıyorum" demek bu makinenin hiçbirini çalıştırmaz; sepet kurmak ise geri alınabilir
+ve hiçbir taahhüt doğurmaz — ayrım tam olarak buradan geçiyor.
+
+**Kimlik meselesi kanala göre ayrışıyor ve WhatsApp SANILDIĞI KADAR ENGELLİ DEĞİL (ölçüldü 07.09):**
+WhatsApp'tan yazan kişi `findOrCreateCustomer` ile bir `user_profiles` satırı olarak doğuyor ve
+`cart` tablosunun birincil anahtarı `customer_id` — yani o müşterinin sepeti bugünkü şemayla bile
+var olabilir. Adreslenebilir sepet ihtiyacı **yalnız Messenger/Instagram'ındır**; orada `customer_id`
+hiç yok. Görevler: `build/15` `15.20`–`15.22`.
+
+> **ADR-001 ile ilişki:** ADR-001 hâlâ *"satışın kapandığı yer WhatsApp… site buna bağlanır, tersi
+> değil"* diyor ve `değiştirildi` işareti taşımıyor. Bu bölüm onun tersini söylüyor. İşaretleme
+> kullanıcının kararını bekliyor — o güne kadar çelişki BURADA kayıtlı.
+
 ### Kimliksiz sohbette araç kapısı ÜÇLÜDÜR
 
 `customerSupportTools` beş araç veriyor ve kimlik ihtiyaçları aynı değil:
