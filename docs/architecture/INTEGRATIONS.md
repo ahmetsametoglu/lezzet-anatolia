@@ -19,6 +19,11 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
 
 - **Faz 1.** Rota dışı teslimat için kargo şirketi: etiket üretimi, takip numarası, durum güncellemesi.
 - Sağlayıcı FR/DE'de çalışan bir kargo olacak; agnostik arayüz.
+- **BEDAVA ama ATILAN bir adres sinyali var** (ölçüldü 02.09): `announce` cevabındaki `errors[]`
+  alınıp düşürülüyor (`packages/sendcloud/src/client.ts` — yalnız istisna detayında görünüyor).
+  Taşıyıcının adres hakkında söylediği tek şey o ve bize hiçbir şeye mal olmuyor. **Ama geç geliyor:**
+  etiket basıldıktan SONRA, yani para harcanmışken — o yüzden checkout doğrulamasının yerine geçmez,
+  yanına gelir. Kaydı: `docs/build/11-kurye-rota.md` › `(11.11)`.
 
 ## Adres ve coğrafi kodlama
 
@@ -41,6 +46,59 @@ Webhook alan entegrasyonlar tercihen `apps/backend`'de yaşar (blueprint STACK �
   kapalı" diyebilir; sessiz bir eksik olmaz.
 - Port `packages/application/src/delivery/geocode-port.ts`, fabrika `geocode-provider.ts` (env'i
   yalnız orada okur). Hiçbir yol fırlatmaz; her başarısızlık adlandırılmış bir sonuçtur.
+
+### Kapının VARLIĞI ayrı bir sorudur — adres doğrulama (11.11)
+
+Koordinat çözmek ile *"bu kapı gerçekten var mı"* diye sormak aynı iş değil. İkincisi
+**sipariş anında** sorulur (kullanıcı kararı 02.09) — adres girişinde değil: müşteri defterine on
+adres ekleyebilir, soru ancak malın gideceği kapı seçilince anlamlıdır.
+
+**Yöntem BAN'a İKİ sorgudur ve ikinciliği şart:** birinci sorgu posta kodunu sert süzgeç olarak
+verir, ikincisi vermez. Kodu sabitlemek "posta kodu yanlış" hâlini **yapısal olarak görünmez**
+kılıyordu — ölçüldü (01.09): `192c Rue du Maréchal Foch` 67000 ile sorulduğunda Strasbourg'un aynı
+adlı SOKAĞI dönüyor (0,717), kısıtsız sorulduğunda 67380 Lingolsheim'deki gerçek kapı (0,973).
+Arada 7,2 km. Karar `domain-core/delivery/address-verdict`, kapı
+`application/delivery/address-check`.
+
+### Genişleme yolu: Google Address Validation — SEÇİLDİ, henüz BAĞLI DEĞİL
+
+BAN yalnız Fransa'ya bakar. Almanya ve ötesi açıldığında (`07.17`, bugün **dondurulmuş**) sağlayıcı
+**Google Address Validation** olacak. Gerekçe: tek çağrı dördünü birden veriyor — geçerlilik
+(`verdict.addressComplete`), neyin düzeltildiği (`hasReplacedComponents`), düzeltilmiş adresin
+kendisi **ve `geocode.location` (enlem/boylam)**. Sonuncusu olmasa ikinci bir çağrı gerekirdi;
+`geocodeGranularity` bizim `precision` alanımızın karşılığıdır.
+
+**Bağlanmadan önce okunması gereken üç kısıt:**
+
+- ⚠ **Koordinat en fazla 30 GÜN saklanabilir.** Süresiz saklanabilen tek alan `placeId`. Bize
+  dokunmuyor çünkü koordinatın gerçek ömrü sipariş↔teslimat penceresi kadar (kullanıcı düzeltmesi
+  02.09) — ama **şema bunu bilmiyor**: bugün `address.lat/lng` süresiz duruyor ve BAN kaynaklıysa
+  bu doğru (Licence Ouverte). Google kaynaklı satır geldiği gün kaynağa göre bir yaşlanma kuralı
+  gerekir; `geo_source` alanı bu ayrımı zaten taşıyor.
+- ⚠ **"Google Maps" atfı zorunlu ve gizlenemez** — sonucun gösterildiği yerde, yani düzeltme
+  teklifinin çıktığı checkout ekranında. Tasarım kararı doğurur.
+- ⚠ **FAIL-OPEN zorunlu.** Doğrulama sipariş anında koştuğu için servisin düştüğü an checkout
+  DURMAMALI: sipariş geçer, adres "doğrulanamadı" işaretlenir, sevkiyat ve kurye uyarılır. BAN
+  yolunda bu kural zaten uygulanıyor ve testli.
+
+**Maliyet:** sipariş başına ~0,5–2 cent, ücretsiz kotanın içinde kalması muhtemel. **Fransa'da çoğu
+sipariş SIFIR** — BAN önerisinden kapı düzeyinde seçilmiş adres zaten doğrulanmıştır ve Google'a hiç
+gidilmez. Google yalnız DE/diğer ve elle yazılmış FR adresleri için çağrılır.
+
+**Anahtar bugün YOK** (ölçüldü 02.09: env'de Google OAuth ve Gemini var, Maps yok). Adaptör
+`routeMatrixProvider` deseniyle yazılacak: anahtar yokken **adlı yokluk** döner, geldiği gün açılır.
+
+### Kargo sağlayıcısı bu işi YAPAMAZ — ölçüldü, ve nedeni yapısal
+
+Sendcloud'un `addresses/validate` ucu **var** (100+ ülke, düzeltilmiş adres döndürüyor) ama bizim
+soruya cevap veremiyor:
+
+- **Koordinat döndürmüyor** — rota sırası koordinatla hesaplanıyor, adres metniyle değil.
+- **`carrier_code` ZORUNLU** — yapısı gereği bir KARGO doğrulaması. Kurye rotasında taşıyıcı yok;
+  olmayan bir taşıyıcı adına doğrulama yapılamaz.
+
+`here` yönteminin ücretsiz kademesi de bizim posta kodu kontrolümüzden fazlasını vermiyor.
+Tam ölçüm ve karar zinciri: `docs/build/11-kurye-rota.md` › `(11.11)`.
 
 ## Muhasebe export
 

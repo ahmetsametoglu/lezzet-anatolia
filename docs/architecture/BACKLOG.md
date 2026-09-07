@@ -339,6 +339,70 @@ Kararlar: `ADR_WHATSAPP.md`. Mimari: `CHANNELS.md`. Faz sınırları: `SCOPE.md`
 
 ---
 
+## 17. Web ile native uygulama AYNI işi FARKLI kapıdan yapıyor
+
+**Kayıt açılış gerekçesi (07.09):** kullanıcı sordu — *"mobilin yapabildiğini web niye yapamıyor?"*
+Cevap tek tek arızalar değil, tekrarlayan bir ŞEKİL: iş kuralı `@lezzet/application`'a yazılıyor,
+native uygulama oradan geçiyor, web operasyon yüzeyi **kendi eski kopyasında** kalıyor. Kural yeni
+kapıya yazılınca eski kapı sessizce yanlışa dönüyor — ve **hiçbir şey kırılmıyor**, çünkü her iki
+taraf da kendi içinde tutarlı görünüyor. Bu bugüne kadar yalnız `docs/talep/not-*` gözlemlerinde
+duruyordu; o klasör repoya gitmiyor, yani kalıcı bir kaydı yoktu.
+
+**Üç hâl var ve ayrımı önemli:**
+
+| hâl | örnek | tehlike |
+|---|---|---|
+| **(a) Adlandırılmış köprü** — gövde pakette, web'de tek satırlık yeniden dışa verme | `lib/b2b/vat-check.ts` (künyesinde `KÖPRÜ (21.31)` yazıyor) | yok — sağlıklı desen |
+| **(b) Birebir kopya, henüz ayrışmamış** | `lib/cart/place-change.ts` ↔ `application/cart/place-change.ts` — gövdeler AYNI, fark yalnız 4 satır (import'lar) | bugün zararsız, yarın (c) |
+| **(c) AYRIŞMIŞ kopya** — kural yalnız birine yazılmış | aşağıdaki iki ölçüm | **canlı arıza** |
+
+### (c) · Ölçülmüş iki vaka
+
+**1 · Kapıda teslim kapısı** (ölçüm 06.09, mobil şeridin gözlemi). `apps/web/lib/courier/delivery.ts`
+kendi `confirmDoorDelivery`'sini taşıyor (**175 satır**), ortak kapı `packages/application/src/courier/delivery.ts`
+(**277 satır**). Web kopyası web-yerel kardeşleri çağırıyor (`../order/fulfillment`, `../order/refund`),
+paketi değil. Künyesi kendini *"geçiş köprüsü"* diye tanıtıyor — köprü kapanmadı. Ortak kapıya
+yazılıp web'e HİÇ geçmeyen üç değişmez:
+
+- **Kutu kapısı** (`boxes_missing`) — pakette 5 yerde, web'de **0**. Panelden kutu okutulmadan teslim
+  kapanabiliyor; oysa kural 30.08'de kondu: *"mal kutusuyla hazırlanır, kutusuyla araca biner,
+  kutusuyla kapıdan çıkar."*
+- **Tekillik anahtarı** (`idempotencyKey`) — pakette 4 yerde, web'de **0**. Çift gönderilen tahsilat
+  parayı iki kez yazabilir.
+- **Düzeltme + teslim tek transaction** (`21.271`) — pakette var, web'de yok. `adjustFulfillment`
+  sonra `deliverOrder`; ikincisi `stale` dönerse birincisi geri alınmıyor → yarım teslim.
+
+**2 · Hazırlık masası** (ölçüm 31.08 · doğrulandı 07.09). Kutu duvarı kargo kulvarından rotaya da
+genişledi: `packages/application/src/warehouse/preparation.ts:465` artık `pickup` dışında her
+siparişe `box_required` diyor. **Native uygulama yeni kapıdan geçiyor** (`openBox` → topla →
+`sealBox`; mühür siparişi hazır yapıyor, ayrı bir "onayla" adımı yok). **Web hazırlık masası
+(`/operations/preparation`) hâlâ `confirmPreparation`'ı çağırıyor ve kutu arayüzü yok** — yani
+bugün web'den hiçbir rota siparişi `ready` yapılamıyor. Ekran duruyor, düğme duruyor, basılınca
+reddediliyor.
+
+### Karar gereken: web'in bu ekranları YAŞAYACAK MI
+
+Düzeltmenin iki ayrı yolu var ve seçim kullanıcınındır — **ikisi çok farklı iş:**
+
+- **(A) Web'i yeni kapıya bağla** — hazırlık masasına kutu adımı yaz, teslim kapısını
+  `@lezzet/application`a çevir. Web operasyon yüzeyi tam kalır.
+- **(B) Ekranları KALDIR** — `docs/uygulama` yüzey formülüne göre *personelin mobil deneyimi native
+  uygulamanın işi*. Depocu ve kurye zaten telefonla çalışıyorsa bu ekranlar bir yedek değil, bir
+  yanlış cevap kaynağıdır: çalışmadıkları hâlde duruyorlar.
+
+**Ne olursa olsun bugünkü hâl korunamaz:** çalışmayan bir düğme, olmayan bir düğmeden kötüdür.
+
+### Yapılmamış iş: tam tarama
+
+Yukarıdaki iki vaka bize BİLDİRİLDİ, aranarak bulunmadı. `apps/web/lib` ile
+`packages/application/src` arasında aynı adı taşıyan dosyalar tarandı (07.09) ve (b) hâlinde en az
+bir aday çıktı — ama **her dosyanın gövdesi karşılaştırılmadı**. Tarama makineyle zorlanabilir:
+köprü olmayan, gövdesi paketteki kardeşinden ayrışmış her web dosyası bir `docs:check` kuralına
+konu olabilir. `knip` bunu göremez (iki kopya da KULLANILIYOR), `typecheck` göremez (ikisi de
+geçerli), `boundaries` göremez (yön doğru).
+
+---
+
 ## Faz 2 (ekstrem/ileri — bkz. SCOPE.md)
 
 Mobil uygulama + push, teslimat penceresi/rota kapasitesi, Meta/Google pixel + CAPI + retargeting, akıllı bölge önerisi, kampanya otomasyonu, WhatsApp broadcast/tam chatbot (§14 ölçek), ileri analitik.
