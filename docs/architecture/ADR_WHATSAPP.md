@@ -33,6 +33,12 @@ mesajlaşmayı tercih ediyor (bkz. research §3).
 **Karar.** Site vitrin ve katalog olarak kalır; **satışın kapandığı yer
 WhatsApp** olur. Instagram keşif/üst-huni; WhatsApp dönüşüm/tekrar-sipariş.
 
+> **"Satışın kapandığı yer" ne demek — netleştirildi (07.09, kullanıcı).** Müşterinin NE ALACAĞINA
+> karar verdiği, yani **sepetin netleştiği** yer. Ödemenin alındığı yer değil. Müşteri sepeti
+> sohbette kurar, onaylamaya ve ödemeye siteye gider. Bu bir değişiklik DEĞİL, ifadenin
+> açıklanmasıdır — karar aynen yürürlükte. (Gerekli oldu çünkü cümle "işlem WhatsApp'ta tamamlanır"
+> diye okunup `CHANNELS §3b` ile çelişiyor sanıldı; çelişki yoktu.)
+
 **Gerekçe.** Kanal tercihi pazar davranışıyla uyumlu; rakiplerin çoğu bu
 kanalı gayri resmi/otomasyonsuz kullanıyor — sistematik kullanım fark yaratır.
 

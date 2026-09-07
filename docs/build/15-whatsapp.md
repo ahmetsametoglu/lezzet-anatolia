@@ -420,17 +420,16 @@ WhatsApp'ın satış yüzeyi olarak kurulması — **iki adımda, ikisi de Faz 1
 > **Fikir PARKTAN ÇIKTI (kullanıcı kararı 07.09).** 22.08'de konuşulmuş, kullanıcının *"şu an için erken"*
 > demesiyle `Netleşecekler`e bırakılmıştı; bugün kullanıcı kapsamı netleştirdi: **müşteri sepetini SOHBETTE
 > hazırlar, yalnız ÖDEME başka yerde tamamlanır.** O günkü iki önkoşuldan biri (özerk sohbet motoru, 15.8)
-> aradan geçen sürede karşılandı — geriye tek engel kaldı: sepetin kimliği yok.
+> aradan geçen sürede karşılandı (özerk motor 30.08'de canlı doğrulandı).
 >
 > **AÇIK SORU KAPANDI:** 22.08 *"15.10 ile örtüşüyor mu"* diye sormuştu. Kullanıcının bugünkü tarifi cevabı
 > veriyor — **sepet bağı yolu seçildi**, sohbet-içi Stripe linki (15.10) değil. İkisi aynı işi yapıyor ve
 > 15.10 daha pahalı (sohbette rezervasyon + TTL'li ödeme linki + ödeme webhook'u dallanması).
 >
-> ⚠️ **ADR-001 BU KARARLA ÇELİŞİYOR ve işaretlenmemiş** (`ADR_WHATSAPP.md:26`): *"satışın kapandığı yer
-> WhatsApp olur… site buna bağlanır, tersi değil."* Bugünkü gerçek bunun tersi (`CHANNELS §3b`: sohbet
-> danışmanlık, checkout işlem) ve dosyanın kendi kuralı değişen kararın *"değiştirildi"* diye işaretlenmesini
-> istiyor. **Bu turda YAPILMADI — kullanıcının kararı bekleniyor**; buraya not düşüldü ki bu satırları okuyan
-> ADR'yi yürürlükte sanmasın.
+> **ADR-001 ile çelişki YOK (07.09'da netleşti).** Bir tur "çelişiyor" sanıldı: ADR-001'in
+> *"satışın kapandığı yer WhatsApp"* ifadesi *"işlem WhatsApp'ta tamamlanır"* diye okunmuştu.
+> Kullanıcı netleştirdi — kastedilen **sepetin netleştiği** yer; ödeme zaten sitede. İki metin
+> aynı şeyi söylüyor, ifadeler `ADR_WHATSAPP.md` ve `CHANNELS §3b`'de sadeleştirildi.
 
 - [ ] (15.20) **Ajan sepeti OKUR ve YAZAR — kimliği olan sohbette (WhatsApp):** sepetteki kalemler, indirim ve toplam okunabilir; ajan sepete kalem ekler/çıkarır; müşteri sepete yönlendirilir `touches: packages/application/src/ticket/support-tools.ts, packages/application/src/cart/**, packages/ai/src/tasks/ticket-support.ts`
   - *Bitti:* müşteri sohbette "sepetimde ne var" diye soruyor ve gerçek sepetini duyuyor; "şunu ekle" diyor ve siteyi açtığında kalem sepette duruyor

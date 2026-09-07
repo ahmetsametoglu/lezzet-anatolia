@@ -21,7 +21,7 @@ Sistem üzerinden geçen her sipariş aynı `orders` tablosuna, aynı durum maki
 - **Kapı önü (hızlı satış)** — depo kapısında tek adımda kapanır (bkz. `ORDER_LIFECYCLE.md`).
 - **Elle giriş** — telefon/DM'den gelen siparişin admin tarafından sisteme işlenmesi.
 
-> WhatsApp, ADR-001'de **merkezî satış kanalı** olarak konumlandı: site vitrin ve katalog kalır, satışın kapandığı yer büyük ölçüde WhatsApp'tır. Ama sistem tarafında hiçbir yüzey ayrıcalıklı değildir — hepsi domain-core'u çağırır.
+> WhatsApp, ADR-001'de **merkezî satış kanalı** olarak konumlandı: site vitrin ve katalog kalır, satışın kapandığı — yani **sepetin netleştiği** — yer büyük ölçüde WhatsApp'tır (onay ve ödeme sitede; §3b). Ama sistem tarafında hiçbir yüzey ayrıcalıklı değildir — hepsi domain-core'u çağırır.
 
 > **Messenger/Instagram bu listede YOK ve bilerek:** sipariş orada kapanmıyor, yani bir *sipariş
 > kaynağı* değiller (`order_source` enum'unda karşılıkları da yok — §2'nin "kullanılmayan enum
@@ -66,7 +66,7 @@ WhatsApp müşteriyi **telefon numarasıyla** tanır; web müşteriyi e-posta/ot
 
 ---
 
-## 3b. Sosyal kanalların iş rolü — danışma orada, işlem sitede
+## 3b. Sosyal kanalların iş rolü — sepet orada, onay ve ödeme sitede
 
 > **Karar (28.08, kullanıcı turu).** ADR-006 Messenger/Instagram'ı kapsama aldı ama gerekçesi
 > tümüyle teknikti (tek app, tek webhook, tek jeton). Bu bölüm o boşluğu kapatıyor: **iki kanalın
@@ -80,95 +80,39 @@ WhatsApp müşteriyi **telefon numarasıyla** tanır; web müşteriyi e-posta/ot
 | "Şu ürün var mı, kaça?" | hayır (ziyaretçi = B2C liste fiyatı) | sohbette |
 | "Kargo kaç para, ücretsiz kargo eşiği ne?" | hayır | sohbette |
 | "Siparişim nerede?" | **evet** | kimlik bağlanır ya da devredilir |
-| Satın alma | **evet** (+ adres + ödeme) | **sitede / checkout** |
+| Sepet kurma | hayır (kimliksizde 15.22) | sohbette |
+| Sepet onayı + ödeme | **evet** (+ adres) | **sitede / checkout** |
 
 - **Instagram = danışman vitrin.** Gıdada IG görsel bir kanal; DM'lerin çoğu düşük niyetli ve
   kimliksizdir ("bu var mı", "nereye gönderiyorsunuz", story cevabı). Doğru kullanımı soruyu orada
   **bitirmek**, satın almayı siteye taşımaktır.
 - **Messenger = aynı rol, düşük hacim.** Kendi başına yatırım hak etmiyor; aynı webhook'a, aynı
   gelen kutusuna, aynı araç setine **bedava biniyor**. Değeri "gelen mesaj cevapsız kalmasın"dır.
-- **WhatsApp = satışın kapandığı yer** (ADR-001) — kimlik telefondan otomatik çözüldüğü için tek
+- **WhatsApp = sepetin netleştiği yer** (ADR-001'in "satışın kapandığı yer"i) — kimlik telefondan otomatik çözüldüğü için tek
   kanal orada tam hizmet verebiliyor.
 
-### Neden satış sohbette kapanmıyor — ve neden bu bir kusur değil
+### Sepet her kanalda kurulur; ONAY ve ÖDEME sitede (07.09 · kullanıcı kararı)
 
-Satış kapatmak **kimlik + adres + ödeme** ister. Messenger/IG'de üçü de yok ve posta kodu bunları
-çözmez: posta kodu *depoyu* ve *teslimat biçimini* çözer, **teslim adresini değil**. Adresi serbest
-metinden almak, doğrulama makinesini (BAN sorgusu · posta kodu çözümü · bölge eşleşmesi) tümüyle
-atlamak olurdu; yanlış adres soğuk zincirde malın kendisidir (22.08 kararının gerekçesi).
+Eski cümle *"sohbet danışmanlık, checkout işlem"*di ve **kafa karıştırdı**: arada bir adım var ve
+sohbet onu yapabiliyor — **sepet kurmak.**
 
-Bu yüzden iş bölümü şudur ve sitenin kendisi de böyle çalışır: **sohbet danışmanlık, checkout işlem.**
-
-### Genişletildi (07.09 · kullanıcı kararı) — TÜM KANALLAR TEK SEPET AKIŞINA DÖKÜLÜR
-
-Yukarıdaki cümle doğruydu ama DAR kaldı: "danışmanlık" ile "işlem" arasında bir üçüncü adım var ve
-sohbet onu yapabilir — **sepet kurmak.** Kullanıcının kararı:
-
-> *"Hangi mesajlaşma platformunda olursa olsun en sonunda sepete yönlendirilir. Sepet onaylanır,
-> sonra ödeme ekranına geçilir. Dolayısıyla bizim sepet akışımıza tüm satış kanalları dâhil olur."*
-
-Yani sınır **satın almada değil, ONAY ve ÖDEMEDE**:
-
-| Adım | Nerede olabilir |
+| Adım | Nerede |
 | --- | --- |
-| Ürünü bulmak, fiyat/stok/teslimat sormak | her kanalda |
-| **Sepeti kurmak, kalem eklemek/çıkarmak, sepeti okumak** | **her kanalda** |
-| Sepeti ONAYLAMAK | yalnız sitede |
-| Ödemek | yalnız sitede |
+| Ürün, fiyat, stok, teslimat sormak | her kanalda |
+| **Sepeti kurmak, okumak, kalem eklemek/çıkarmak** | **her kanalda** |
+| Sepeti onaylamak · ödemek | yalnız sitede |
 
-**Neden onay ve ödeme sitede kalıyor — gerekçe 22.08'den aynen geçerli:** adres doğrulaması (BAN
-sorgusu · posta kodu çözümü · bölge eşleşmesi), stok ayırma ve ödeme orada BİRLİKTE çalışıyor.
-Sohbette "onaylıyorum" demek bu makinenin hiçbirini çalıştırmaz; sepet kurmak ise geri alınabilir
-ve hiçbir taahhüt doğurmaz — ayrım tam olarak buradan geçiyor.
+**Sınır satın almada değil, onay ve ödemede.** Gerekçe (22.08): adres doğrulaması, stok ayırma ve
+ödeme sitede BİRLİKTE çalışıyor; sohbette "onaylıyorum" demek bunların hiçbirini çalıştırmaz. Sepet
+kurmaksa geri alınabilir ve taahhüt doğurmaz.
 
-**Kimlik meselesi kanala göre ayrışıyor ve WhatsApp SANILDIĞI KADAR ENGELLİ DEĞİL (ölçüldü 07.09):**
-WhatsApp'tan yazan kişi `findOrCreateCustomer` ile bir `user_profiles` satırı olarak doğuyor ve
-`cart` tablosunun birincil anahtarı `customer_id` — yani o müşterinin sepeti bugünkü şemayla bile
-var olabilir. Adreslenebilir sepet ihtiyacı **yalnız Messenger/Instagram'ındır**; orada `customer_id`
-hiç yok. Görevler: `build/15` `15.20`–`15.22`.
+**ADR-001 ile çelişmiyor.** O karardaki *"satışın kapandığı yer WhatsApp"* ifadesi **sepetin
+netleştiği** yeri anlatıyor (07.09'da netleştirildi), ödemenin alındığı yeri değil.
 
-> **ADR-001 ile ilişki:** ADR-001 hâlâ *"satışın kapandığı yer WhatsApp… site buna bağlanır, tersi
-> değil"* diyor ve `değiştirildi` işareti taşımıyor. Bu bölüm onun tersini söylüyor. İşaretleme
-> kullanıcının kararını bekliyor — o güne kadar çelişki BURADA kayıtlı.
-
-### Kimliksiz sohbette araç kapısı ÜÇLÜDÜR
-
-`customerSupportTools` beş araç veriyor ve kimlik ihtiyaçları aynı değil:
-
-- **Kamusal** (`posta_kodu_kontrol` · `teslimat_sartlari` · `urun_ara`): girdi kimlik değil, herkese
-  açık bir sorudur — cevapları sitede ziyaretçiye zaten görünüyor. `pricingViewerOf(db, null)`
-  ziyaretçi kapsamına düşer, yani fiyat da okunabilir.
-- **Kimliğe bağlı** (`siparislerim` · `teslimat_gunleri`): çapa kapısının arkasında kalır.
-
-Kapının "kimlik yoksa hiçbir araç yok" biçiminde ikili olması bir **eksiklikti**: Messenger'dan
-"67000'e geliyor musunuz" diye soran kişiye ajan, cevaplayabilecekken araçsız cevap veriyordu.
-Aynı düzeltme WhatsApp'ta da kazandırır — 04.10'dan sonra kanıtsız numara kimlik kurmuyor, yani
-orada da kimliksiz sohbetler var.
-
-### Devir — ne zaman, nereye
-
-Devir bir **kaçış değil**, kimliğin ya da ödemenin gerektiği andır:
-
-- Kimliğe bağlı soru gelince → önce **kimlik bağlama** denenir (operatör eylemi 15.16 · çapraz-kanal
-  çapası 04.10), bağlanamıyorsa devir.
-- Satış kapanacaksa → hedef **site/checkout**, WhatsApp değil. WhatsApp'a devretmek satışı bir adım
-  yaklaştırmaz, yalnız uygulama değiştirir; üstelik müşteri o kanala geçmek istemeyebilir.
-
-**Bugünkü hâli (29.08):** devrin **ajan yarısı yazıldı** — sipariş vermek isteyen müşteriye "siparişi
-ben alamam, sitemizden verebilirsiniz" denir ve gerekçesi gerçektir (adres doğrulaması, stok ayırma
-ve ödeme orada birlikte çalışır); adres sohbette ALINMAZ. Site adresi prompt'a taşınmadı, model
-ezberden yazmaz. **Operatör yarısı (sağ panelde hazır devir cümlesi) çizilmedi** ve `design/BACKLOG
-§4`'e gerekçesiyle yazıldı: bugün taşıyabileceği tek şey jenerik bir bağlantı olurdu — öğeyi anlamlı
-kılacak iki parça (adreslenebilir sepet · müşterinin dili) henüz yok.
-
-### Danışma kanalının altyapı borcu: 7 günlük cevap penceresi
-
-Danışmanlık bir **hafta sonu** boyunca sürebilir; 24 saatlik servis penceresi buna yetmiyor. Meta'nın
-karşılığı Messenger/IG'de ücret değil kural: mesaj `MESSAGE_TAG` + `HUMAN_AGENT` zarfıyla gider ve
-süre 7 güne çıkar (`humanAgentWindowState`, 15.11 · 28.08). Bu dal açılmadan önce operatörün
-pazartesi yazdığı cevap "gönderilemedi" ile geri dönüyordu — kanalın kendi işini yapamadığı tek yer
-burasıydı. Etiket yalnız pencere gerçekten kapalıyken kullanılır; gerekçesi olmayan etiket, Meta'nın
-denetlediği bir dayanağı yalan yapardı.
+**Kimlik kanala göre ayrışıyor.** WhatsApp'tan yazan kişi zaten bir `user_profiles` satırı olarak
+doğuyor ve `cart` birincil anahtarı `customer_id` — sepeti bugünkü şemayla var olabilir.
+Adreslenebilir sepet yalnız Messenger/Instagram için gerekiyor; orada `customer_id` hiç yok.
+Görevler: `build/15` `15.20`–`15.22`.
 
 ---
 
