@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 
-import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsQuantitySheet } from '@/components/operations/quantity-sheet';
 import { quantityTotal } from '@/components/operations/quantity-value';
@@ -82,17 +81,6 @@ export function StockCountScreen() {
     setNote(null);
   }, [batch?.stockId]);
 
-  useEffect(() => {
-    if (adjustment.notice !== null) toastInfo(adjustment.notice.text);
-  }, [adjustment.notice]);
-
-  useEffect(() => {
-    if (subject.notice !== null) toastInfo(subject.notice.text);
-  }, [subject.notice]);
-
-  useEffect(() => {
-    if (scan.notice !== null) toastInfo(scan.notice.text);
-  }, [scan.notice]);
 
   /*
     PARTİNİN YERİ KAYITTAN SONRA YAZILIR (kullanıcı kararı 03.09).

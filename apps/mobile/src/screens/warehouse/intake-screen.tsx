@@ -1,5 +1,4 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { toastInfo } from '@/lib/toast/toast-store';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Text, View, type ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -107,18 +106,8 @@ export function IntakeScreen() {
   const intake = useIntake(purchaseOrderId, unplanned);
   const { offline } = useWarehouseStatus();
 
-  /*
-    BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
-
-    Uygulamanın tek bir bildirim dili var (`ToastHost`, kökte) ve depo ekranlarının her biri kendi
-    satırını çiziyordu: aynı iş, ekran sayısı kadar görsel dil. Cümle artık her yerden aynı yoldan
-    geçiyor. `toastInfo` SESSİZ olan ve bu bilinçli: titreşimi `useNotice` tonuna göre ZATEN yazma
-    anında veriyor (künyesi orada); `toastSuccess`/`toastError` seçilseydi her bildirim iki kez
-    titrerdi.
-  */
-  useEffect(() => {
-    if (intake.notice !== null) toastInfo(intake.notice.text);
-  }, [intake.notice]);
+  /* BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI; toast'a
+     basan köprü de 07.09'da BURADAN KALKTI ve `useNotice`ın içine girdi. Gerekçesi orada. */
   const [searchOpen, setSearchOpen] = useState(false);
 
   /*

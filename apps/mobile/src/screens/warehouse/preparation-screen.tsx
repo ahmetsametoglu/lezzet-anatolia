@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { ScrollView, Text, View } from 'react-native';
@@ -24,7 +24,6 @@ import { Icon } from '@/components/ui/icon';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextAction } from '@/components/ui/text-action';
-import { toastInfo } from '@/lib/toast/toast-store';
 import { fillCopy, operationsCopy } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
@@ -84,12 +83,9 @@ export function PreparationScreen() {
     ve adet çekmecesi ürünün adıyla açılıyor; üstüne bir de "bulundu" demek aynı haberi üç kez
     vermekti.
 
-    `toastInfo` SESSİZ olan ve bu bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında
-    veriyor (künyesi orada). `toastSuccess`/`toastError` seçilseydi her bildirim iki kez titrerdi.
+    Toast'a basan köprü 07.09'da BURADAN KALKTI ve `useNotice`ın içine girdi — aynı üç satır on
+    ekranda tekrar ediyordu ve unutulduğu yerde mesaj sessizce kayboluyordu. Gerekçesi orada.
   */
-  useEffect(() => {
-    if (picking.notice !== null) toastInfo(picking.notice.text);
-  }, [picking.notice]);
   const { offline } = useWarehouseStatus();
 
   const order = picking.order;

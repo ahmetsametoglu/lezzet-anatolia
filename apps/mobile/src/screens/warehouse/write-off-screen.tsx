@@ -5,7 +5,6 @@ import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { StockWriteOffReason } from '@lezzet/types';
 
-import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsAmountKeypad } from '@/components/operations/amount-keypad';
 import { OperationsQtyReasonRow } from '@/components/operations/qty-reason-row';
 import { OperationsScanFab } from '@/components/operations/scan-fab';
@@ -83,17 +82,6 @@ export function WriteOffScreen() {
     setReason(null);
   }, [batch?.stockId]);
 
-  useEffect(() => {
-    if (adjustment.notice !== null) toastInfo(adjustment.notice.text);
-  }, [adjustment.notice]);
-
-  useEffect(() => {
-    if (subject.notice !== null) toastInfo(subject.notice.text);
-  }, [subject.notice]);
-
-  useEffect(() => {
-    if (scan.notice !== null) toastInfo(scan.notice.text);
-  }, [scan.notice]);
 
   /* Partinin yeri KAYITTAN SONRA yazılır — sayım ekranının aynı kararı (kullanıcı 03.09):
      seçmek beyan değildir, düşümü kaydetmek beyandır. */

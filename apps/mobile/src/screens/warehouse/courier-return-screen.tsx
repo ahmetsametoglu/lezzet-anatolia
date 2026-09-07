@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TextInput, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { ReturnDispositionEnum, UNASSIGNED_RETURNS, type ReturnDisposition, type ReturningCourierContract } from '@lezzet/types';
 
-import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsProductThumb } from '@/components/operations/product-thumb';
 import { OperationsQuantityBox } from '@/components/operations/quantity-box';
@@ -63,16 +62,8 @@ export function CourierReturnScreen() {
   const { offline } = useWarehouseStatus();
   const [qtyVariantId, setQtyVariantId] = useState<string | null>(null);
 
-  /*
-    BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
-
-    Uygulamanın tek bir bildirim dili var (`ToastHost`, kökte); depo ekranlarının her biri kendi
-    satırını çiziyordu, yani aynı iş ekran sayısı kadar görsel dille. `toastInfo` SESSİZ ve bu
-    bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında veriyor.
-  */
-  useEffect(() => {
-    if (returnState.notice !== null) toastInfo(returnState.notice.text);
-  }, [returnState.notice]);
+  /* BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI; toast'a
+     basan köprü de 07.09'da BURADAN KALKTI ve `useNotice`ın içine girdi. Gerekçesi orada. */
 
   const detail = returnState.detail;
   /* Geri: DETAYDAN LİSTEYE, listeden hub'a. Android tuşu ve iOS kaydırması da aynı yolu izler

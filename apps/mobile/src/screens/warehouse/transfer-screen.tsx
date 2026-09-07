@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import type { ClosedTransferContract } from '@lezzet/types';
 
-import { toastInfo } from '@/lib/toast/toast-store';
 import { OperationsChoiceChip } from '@/components/operations/choice-chip';
 import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsProductThumb } from '@/components/operations/product-thumb';
@@ -118,17 +117,8 @@ export function TransferScreen() {
   /** Adet çekmecesi açık olan satır — `null` = kapalı. Sayacın ortasındaki rakamdan açılır. */
   const [qtyLineId, setQtyLineId] = useState<string | null>(null);
 
-  /*
-    BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI.
-
-    Uygulamanın tek bir bildirim dili var (`ToastHost`, kökte); depo ekranlarının her biri kendi
-    satırını çiziyordu, yani aynı iş ekran sayısı kadar görsel dille. `toastInfo` SESSİZ ve bu
-    bilinçli: titreşimi `useNotice` tonuna göre zaten yazma anında veriyor — `toastSuccess`/
-    `toastError` seçilseydi her bildirim iki kez titrerdi.
-  */
-  useEffect(() => {
-    if (transferState.notice !== null) toastInfo(transferState.notice.text);
-  }, [transferState.notice]);
+  /* BİLDİRİM KANALI TOAST (kullanıcı kararı 01.09) — ekrana yapıştırılan satır KALKTI; toast'a
+     basan köprü de 07.09'da BURADAN KALKTI ve `useNotice`ın içine girdi. Gerekçesi orada. */
 
   const { offline } = useWarehouseStatus();
   const workplace = useOperationsWorkplace();

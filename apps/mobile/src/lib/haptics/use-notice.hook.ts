@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 
+import { toastInfo } from '@/lib/toast/toast-store';
 import { hapticError, hapticSuccess, hapticWarning } from './haptics';
 
 /*
@@ -41,14 +42,43 @@ function announceTone(tone: NoticeTone): void {
 }
 
 /**
- * `useState` yerine geçer: bildirimi yazar VE tonuna göre titretir.
+ * `useState` yerine geçer: bildirimi yazar, tonuna göre titretir VE ekranda duyurur.
+ *
+ * ── DUYURU DA BURADA, ÇÜNKÜ TİTREŞİM BURADA (07.09) ────────────────────────
+ * Toast'a basmak önce her ekranın kendi `useEffect`indeydi ve aynı üç satır **on yerde** tekrar
+ * ediyordu. O satırı yazmayı unutan ekran, mesajı sessizce yutuyordu: kanca yazıyor, telefon
+ * titriyor, ekranda hiçbir şey çıkmıyor — ve bunu ne `typecheck` ne `lint` görüyor. Kural artık
+ * kancanın KURULUŞUNDA duruyor, tıpkı titreşimde olduğu gibi: sonucu bildiren herkes onu duyurur.
+ *
+ * **Duyuru YAZMA anında, çizimde değil** — yukarıdaki künyenin titreşim için verdiği gerekçenin
+ * aynısı: çizim tekrar eder (yeniden render, tema, odak), olay bir kez olur.
+ *
+ * **`toastInfo` SEÇİLDİ ve bu bilinçli:** dört toast fiili görsel olarak aynı (`publish`), tek
+ * farkları titreşim — ve titreşimi tonuna göre bir satır yukarıda zaten verdik. `toastSuccess`
+ * seçilseydi her bildirim iki kez titrerdi.
+ *
+ * ── SINIR: AÇIK ÇEKMECE ────────────────────────────────────────────────────
+ * Toast kökte çiziliyor; açık bir `Modal` Android'de KENDİ penceresini açar ve toast onun ALTINDA
+ * kalır (kurye şeridi cihazda ölçtü — 31.08, `van-stock-screen`: kod okutuluyor, hiçbir şey
+ * olmamış gibi görünüyor, kurye ikinci kez okutuyor). **Bugün bu kancayı kullanan hiçbir yer o
+ * hâlde değil** — ölçüldü 07.09: tek şüpheli `use-batch-scan`di ve `handleScan` daha ilk satırda
+ * çekmeceyi kapatıyor, yani bildirim yazıldığında çekmece kapalı. Sonucu AÇIK çekmecede duyurması
+ * gereken bir kanca doğarsa toast doğru kanal değildir; deseni `van-stock-screen`in `sheetHint`i
+ * gösteriyor ve o gün bu kancaya bir katman seçeneği eklenir — bugün eklenmedi, çünkü kullananı
+ * olmayan seçenek ölü koddur.
  *
  * `null` yazmak (bildirimi temizlemek) sessizdir — temizlik bir sonuç değildir.
  */
-export function useNotice<T extends { tone: NoticeTone }>(): [T | null, (next: T | null) => void] {
+export function useNotice<T extends { tone: NoticeTone; text: string }>(): [
+  T | null,
+  (next: T | null) => void,
+] {
   const [notice, setNotice] = useState<T | null>(null);
   const announce = useCallback((next: T | null) => {
-    if (next !== null) announceTone(next.tone);
+    if (next !== null) {
+      announceTone(next.tone);
+      toastInfo(next.text);
+    }
     setNotice(next);
   }, []);
   return [notice, announce];

@@ -18,6 +18,16 @@ import { resetWarehouseStatus } from './warehouse-status';
   taşıma katmanı değil.
 */
 
+/* Toast KÖKTE çiziliyor; burada taklit edilmesinin sebebi basılanı ölçmek değil, BASILMADIĞINI
+   ölçebilmek: tarama çekmecesi açıkken cümle toast'a gitmemeli (07.09 · aşağıdaki test). */
+const mockToast = jest.fn<void, [string]>();
+jest.mock('@/lib/toast/toast-store', () => ({
+  toastSuccess: (m: string) => mockToast(m),
+  toastWarning: (m: string) => mockToast(m),
+  toastError: (m: string) => mockToast(m),
+  toastInfo: (m: string) => mockToast(m),
+}));
+
 const mockBack = jest.fn();
 jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
@@ -83,6 +93,8 @@ function batch(overrides: Partial<ResolvedBatchContract> = {}): ResolvedBatchCon
 beforeEach(() => {
   resetWarehouseStatus();
   resetActiveArea();
+  /* "Toast'a hiç basılmadı" iddiası önceki testin toast'ını görmemeli. */
+  mockToast.mockReset();
   mockBack.mockReset();
   mockFetchBatches.mockReset();
   mockFetchBatches.mockResolvedValue({ data: { batches: [batch()], nextCursor: null }, error: null });
@@ -159,6 +171,29 @@ describe('D4 · Sayım', () => {
     expect(mockResolveBatch).toHaveBeenCalledWith('PRT-STR-26-0401');
     await screen.findByTestId('warehouse-stock-count-context');
     expect(screen.getByTestId('warehouse-stock-count-context')).toHaveTextContent(/PRT-STR-26-0401/);
+  });
+
+  it('bildirim EKRANDA KÖPRÜ OLMADAN toast’a ulaşır — duyuru kancanın kendi işi', async () => {
+    /*
+      07.09'da toast'a basan üç satırlık `useEffect` bu ekrandan (ve dokuz kardeşinden) KALKTI;
+      duyuru `useNotice`ın içine girdi. Test o taşımanın bekçisi: ekran artık hiçbir şey
+      köprülemiyor, cümle yine de görünüyor.
+
+      Neden değerli: köprü elle yazıldığı sürece onu YAZMAYI UNUTAN ekran mesajı sessizce yutuyordu
+      — kanca yazar, telefon titrer, ekranda hiçbir şey çıkmaz; ne `typecheck` ne `lint` görür.
+      Bu iddia kırılırsa o sessiz yutma geri gelmiş demektir.
+    */
+    mockResolveBatch.mockResolvedValue({ data: { status: 'unknown' }, error: null });
+    await render(<StockCountScreen />);
+    await screen.findByTestId('warehouse-stock-count-picker-row-00000000-0000-4000-8000-000000000401');
+
+    await fireEvent.press(screen.getByTestId('warehouse-stock-count-scan'));
+    await waitFor(() => expect(screen.getByLabelText('Tanınmayan')).toBeOnTheScreen());
+    await fireEvent.press(screen.getByLabelText('Tanınmayan'));
+
+    await waitFor(() =>
+      expect(mockToast).toHaveBeenCalledWith(expect.stringContaining('bu depoda açık parti yok')),
+    );
   });
 
   /* TAVAN: cihazda otuz satır otuz çip oldu ve vizörü ekrandan itti (03.09). İlk beş + bilinmeyen. */
