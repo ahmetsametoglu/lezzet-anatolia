@@ -55,9 +55,13 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
   const tickets = new TicketQueueService(db);
   const stocks = new StockService(db);
 
-  const [complaintCount, complaintPage, exceptions, batches, thresholds, supplyGroups, intentCount] =
+  const [complaintCount, ticketCounts, complaintPage, exceptions, batches, thresholds, supplyGroups, intentCount] =
     await Promise.all([
       tickets.countAwaiting(),
+      /* Karar kutusunun TALEP kartı için (v3:28) — açık kuyruğun tamamı ve tür kırılımı.
+         Talep LİSTESİNİN şeridiyle aynı sayım (`countForFilters`), yani kart "6 açık" derken
+         listenin "tümü · 6" demesi garanti; iki ekran ayrışamaz. */
+      tickets.countForFilters(),
       tickets.list({ openOnly: true, awaitingReply: true }, undefined, 1),
       // İstisna sayısı Y2 ekranının OKUDUĞU motordan (`listOrderExceptions`) — kutu ile ekran
       // aynı kümeyi sayar, ayrışamaz ("kutu 3 diyor, ekran 2" çelişkisi motor düzeyinde imkânsız).
@@ -119,6 +123,8 @@ async function readQueue(db: Db, facilityIds: string[]): Promise<ManagementQueue
   return {
     complaints: {
       count: complaintCount,
+      open: ticketCounts.all,
+      byType: ticketCounts.byType,
       head: head
         ? {
             ticketId: head.id,

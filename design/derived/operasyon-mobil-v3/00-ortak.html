@@ -1,7 +1,7 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
 <!-- ekrana bağlanamayan kalan parçalar: sayfa iskeleti, stil, sekme çubuğu, sheet'ler, betik kalanı -->
-<!-- parça sayısı: 39 -->
+<!-- parça sayısı: 40 -->
 
 <!-- kaynak: satır 1-63 · ortak -->
 <!DOCTYPE html>
@@ -149,31 +149,34 @@
 <!-- kaynak: satır 2586-2586 · ortak -->
 
 
-<!-- kaynak: satır 2669-2669 · ortak -->
+<!-- kaynak: satır 2685-2685 · ortak -->
 
 
-<!-- kaynak: satır 2762-2762 · ortak -->
+<!-- kaynak: satır 2778-2778 · ortak -->
 
 
-<!-- kaynak: satır 2872-2872 · ortak -->
+<!-- kaynak: satır 2888-2888 · ortak -->
 
 
-<!-- kaynak: satır 2922-2922 · ortak -->
+<!-- kaynak: satır 2938-2938 · ortak -->
 
 
-<!-- kaynak: satır 2990-2990 · ortak -->
+<!-- kaynak: satır 3006-3006 · ortak -->
 
 
-<!-- kaynak: satır 3026-3026 · ortak -->
+<!-- kaynak: satır 3042-3042 · ortak -->
 
 
-<!-- kaynak: satır 3058-3058 · ortak -->
+<!-- kaynak: satır 3074-3074 · ortak -->
 
 
-<!-- kaynak: satır 3098-3098 · ortak -->
+<!-- kaynak: satır 3114-3114 · ortak -->
 
 
-<!-- kaynak: satır 3168-3776 · ortak -->
+<!-- kaynak: satır 3216-3216 · ortak -->
+
+
+<!-- kaynak: satır 3286-3916 · ortak -->
 
   </div>
 
@@ -741,6 +744,28 @@
     </div>
   </sc-if>
 
+  <sc-if value="{{ sheetB2bRet }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;z-index:56">
+      <div onClick="{{ closeAksiyon }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
+      <div style="position:absolute;left:0;right:0;bottom:0;background:#f6f4ec;border-radius:26px 26px 0 0;padding:14px 20px 24px;display:flex;flex-direction:column;gap:12px;animation:sheetIn .26s cubic-bezier(.2,.8,.2,1)">
+        <span style="width:46px;height:4px;border-radius:3px;background:#ddd6c4;align-self:center;margin-bottom:2px"></span>
+        <span style="font:600 19px 'Lora'">Başvuruyu reddet</span>
+        <span style="font:400 11.5px/1.5 'Karla';color:#8a8270">{{ b2b.ad }} · Ret silmez: hesap B2C olarak kalır, aday künyesini düzeltip yeniden başvurabilir.</span>
+        <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#8a8270;margin-top:2px">SEBEP · ZORUNLU</span>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <sc-for list="{{ ch.b2bRet }}" as="rs" hint-placeholder-count="4">
+            <span onClick="{{ rs.sec }}" style="min-height:48px;border-radius:15px;border:1.5px solid {{ rs.c.bd }};background:{{ rs.c.bg }};color:{{ rs.c.fg }};display:flex;align-items:center;padding:0 15px;font:700 12.5px 'Karla';cursor:pointer">{{ rs.v }}</span>
+          </sc-for>
+        </div>
+        <textarea rows="2" placeholder="Not (isteğe bağlı) — altı ay sonra bunu okuyacaksınız" style="border:1.5px solid #ddd6c4;border-radius:15px;background:#fff;padding:12px 14px;font:400 12.5px/1.45 'Karla';outline:none;resize:none"></textarea>
+        <div style="display:flex;gap:8px;margin-top:2px">
+          <span onClick="{{ closeAksiyon }}" style="flex:1;height:50px;border-radius:15px;border:1.5px solid #ddd6c4;background:#fff;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';cursor:pointer">Vazgeç</span>
+          <span onClick="{{ b2b.reddet }}" style="flex:1.4;height:50px;border-radius:15px;background:{{ b2b.retBg }};color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 13px 'Karla';cursor:pointer">Reddet</span>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ t.navSheet }}" hint-placeholder-val="{{ false }}">
     <div style="position:absolute;inset:0;z-index:55">
       <div onClick="{{ tg.navSheet }}" style="position:absolute;inset:0;background:rgba(47,53,58,.42);animation:fadeIn .2s ease"></div>
@@ -782,11 +807,27 @@
 
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;serbestUrun&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:430,&quot;height&quot;:920},&quot;baslangicEkran&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;depoHub&quot;,&quot;toplama&quot;,&quot;toplamaDetay&quot;,&quot;maKabul&quot;,&quot;maDetay&quot;,&quot;maPlansiz&quot;,&quot;skt&quot;,&quot;sayim&quot;,&quot;transfer&quot;,&quot;transferKabul&quot;,&quot;kuryeDonus&quot;,&quot;satis&quot;,&quot;sonSatislar&quot;,&quot;kargoDevri&quot;,&quot;kuryeGun&quot;,&quot;seferBaslat&quot;,&quot;aracaYukle&quot;,&quot;serbestUrun&quot;,&quot;kuryeDurak&quot;,&quot;seferKapat&quot;,&quot;para&quot;,&quot;gunSonu&quot;,&quot;karar&quot;,&quot;sosyal&quot;,&quot;konusma&quot;,&quot;sikayet&quot;,&quot;gunOzeti&quot;,&quot;kampanya&quot;,&quot;tedarik&quot;,&quot;bildirim&quot;,&quot;b2bOnay&quot;,&quot;kapsam&quot;,&quot;yazicilar&quot;],&quot;default&quot;:&quot;depoHub&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;listeHali&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dolu&quot;,&quot;boş&quot;,&quot;yükleniyor&quot;,&quot;hata&quot;],&quot;default&quot;:&quot;dolu&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;roller&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;yalniz depo&quot;,&quot;depo + para&quot;,&quot;dort rol&quot;],&quot;default&quot;:&quot;dort rol&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;b2bOrnek&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;temiz&quot;,&quot;dikkat&quot;,&quot;mukerrer&quot;],&quot;default&quot;:&quot;temiz&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototip&quot;},&quot;cevrimdisiMi&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;kanitZorunlu&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;},&quot;vurguRengi&quot;:{&quot;editor&quot;:&quot;color&quot;,&quot;options&quot;:[&quot;#5f7a2c&quot;,&quot;#b05c2e&quot;,&quot;#2f353a&quot;,&quot;#7a5c8a&quot;],&quot;default&quot;:&quot;#5f7a2c&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Operasyon kuralları&quot;}}">
 
-<!-- kaynak: satır 3777-5320 · betik kalanı -->
+<!-- kaynak: satır 3917-5507 · betik kalanı -->
 <script type="text/x-dc-fragment">
-const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar'];
+const SCREENS = ['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat','para','gunSonu','karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','bildirim','eksikKarar','kapsam','yazicilar','b2bOnay'];
+// B2B başvuru örnekleri — masaüstü kontrol kartıyla aynı kaynak (readB2bCheck); üç yüzey aynı şeyi söyler.
+const B2B_ORNEK = {
+  temiz: { ad:'Restaurant Anatolie', unvan:'ANATOLIE SAS', ulke:'FR', kimlikEt:'SIRET', kimlik:'812 456 789 00012', kaynak:'resmî kayıttan', tel:'+33 3 88 12 44 70', adres:'8 Rue du Fossé, 67000 Strasbourg', geldi:'bugün 08:31 · web formu',
+    bildirimAlt:'Strasbourg · FR · sinyaller temiz', bayrak:'temiz', bayrakMetin:'Sinyaller temiz — onaya engel görünmüyor.',
+    ai:"2016'dan beri aktif restoran, rota içinde, faaliyet kodu uyumlu — risk işareti yok.",
+    sinyaller:[ ['Resmî kayıt','Aktif','iyi'], ['Faaliyet kodu','56.10A · restoran, uyumlu','iyi'], ['Kuruluş','2016','iyi'], ['KDV (TVA)','Doğrulandı','iyi'], ['Adres–rota','Rota içi','iyi'] ], mukerrer:[] },
+  dikkat: { ad:'Bäckerei Wolff', unvan:'Bäckerei Wolff GmbH', ulke:'DE', kimlikEt:'USt-IdNr', kimlik:'DE 314 159 265', kaynak:'elle girilmiş', tel:'+49 78 51 90 21 4', adres:'Hauptstr. 12, 77694 Kehl', geldi:'bugün 08:31 · web formu',
+    bildirimAlt:'Kehl · DE · dikkat', bayrak:'dikkat', bayrakMetin:'Dikkat — resmî kayıt sinyali yok, bilgiler elle girilmiş.',
+    ai:null,
+    sinyaller:[ ['Resmî kayıt','Sinyal yok (DE)','dikkat'], ['KDV (USt-IdNr)','Geçerli · VIES','iyi'], ['Faaliyet kodu','Elle: fırın','notr'], ['Kuruluş','Belirtilmemiş','dikkat'], ['Adres–rota','Rota içi','iyi'] ], mukerrer:[] },
+  mukerrer: { ad:'Snack Bosphore', unvan:'BOSPHORE SARL', ulke:'FR', kimlikEt:'SIRET', kimlik:'901 233 118 00019', kaynak:'resmî kayıttan', tel:'+33 3 88 62 07 31', adres:'2 Rue de la Gare, 67300 Schiltigheim', geldi:'bugün 08:31 · web formu',
+    bildirimAlt:'Schiltigheim · FR · başka kayıtla eşleşme', bayrak:'dikkat', bayrakMetin:'Dikkat — telefon başka bir kayıtta da var.',
+    ai:'Aktif işletme, rota içinde — ancak telefon mevcut bir müşteriyle eşleşiyor. Onaydan önce ilişkiyi çöz.',
+    sinyaller:[ ['Resmî kayıt','Aktif','iyi'], ['Faaliyet kodu','56.10C · snack, uyumlu','iyi'], ['Kuruluş','2021','iyi'], ['KDV (TVA)','Doğrulandı','iyi'], ['Adres–rota','Rota içi','iyi'] ],
+    mukerrer:[ { ad:'Bosphore Kebab', alt:'B2C müşteri · 14 sipariş · Schiltigheim', es:'aynı telefon' } ] }
+};
 const TOGGLES = ['kutuAcik','eksik','scanner','yabanci','etiket','kimlikSheet','boySheet','urunAraSheet','imzaOpen','imzaCizildi','ulasilamadi','kabulEtmedi','hasarNotu','sepetVar','maSatir','imzaAlindi','navSheet'];
 const GROUPS = {
   sebep: ['imha','hasar','kayip','fark'],
@@ -804,8 +845,8 @@ const CUBUK_EKRAN = ['depoHub','toplama','maKabul','skt','transfer','sonSatislar
 // Ekran numarası tek yerde durur; yeni ekran araya girerse harfle eklenir, sonrakiler kaymaz.
 // Serbest ürün 16'nın devamı olduğu için 16b — Durak 17, Seferi kapat 18, Yerinde satış 20 yerinde kalır.
 const NUMARA = { skt:'D3', sayim:'D4', dusum:'D4b', kuryeDonus:'13', kuryeGun:'14', aracSeferler:'14b', seferBaslat:'15', aracaYukle:'16', serbestUrun:'17', kuryeDurak:'18', seferKapat:'19', satis:'20' };
-const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım', dusum:'Stok düşümü', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
-const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar'], para:['para','gunSonu'] };
+const ADLAR = { depoHub:'Depo İşleri', toplama:'Toplama kuyruğu', toplamaDetay:'Sipariş toplama', maKabul:'Mal kabul', maDetay:'Kabul satırları', maPlansiz:'Siparişsiz kabul', skt:'Yakın-SKT turu', sayim:'Sayım', dusum:'Stok düşümü', transfer:'Transfer', transferKabul:'Transfer kabulü', kuryeDonus:'Kurye dönüşü', satis:'Yerinde satış', sonSatislar:'Son satışlar', sonSatis:'Satış fişi', kargoDevri:'Kargo devri', kuryeGun:'Günün Rotası', aracSeferler:'Araçtaki seferler', seferBaslat:'Sefer ve araç seçimi', aracaYukle:'Araca yükleme', serbestUrun:'Araca serbest ürün', kuryeDurak:'Durak', seferKapat:'Seferi kapat', para:'Tahsilat izleme', gunSonu:'Gün sonu', karar:'Karar kutusu', sosyal:'Sosyal gelen kutusu', konusma:'Konuşma', sikayet:'Talep detayı', talepler:'Talep ve şikâyetler', gunOzeti:'Gün özeti', kampanya:'Kampanya', tedarik:'Tedarik taslağı', b2bOnay:'Kurumsal hesap başvurusu', bildirim:'Bildirimler', kapsam:'Kapsam', yazicilar:'Yazıcılar' };
+const TABS = { depo:['depoHub','toplama','toplamaDetay','maKabul','maDetay','maPlansiz','skt','sayim','dusum','transfer','transferKabul','kuryeDonus','satis','sepet','sonSatis','sonSatislar','kargoDevri','kapsam','yazicilar'], kurye:['kuryeGun','aracSeferler','seferBaslat','aracaYukle','serbestUrun','kuryeDurak','seferKapat'], yon:['karar','sosyal','konusma','sikayet','talepler','gunOzeti','kampanya','tedarik','eksikKarar','b2bOnay'], para:['para','gunSonu'] };
 
 // Kurye kendi deposunun dışını görmez: rota, araç ve serbest ürün listeleri depo künyesine göre süzülür.
 // Araç bir ara depodur: aynı anda birden çok seferin kutusunu taşır.
@@ -915,6 +956,7 @@ const SERBEST_KATALOG = [
 class Component extends DCLogic {
   state = {
     screen: null,
+    b2b: { hal:'bekliyor', sebep:'', zaman:'' },
     t: { kutuAcik:false, eksik:false, scanner:false, yabanci:false, etiket:false, kimlikSheet:false, boySheet:false, urunAraSheet:false, imzaOpen:false, imzaCizildi:false, ulasilamadi:false, kabulEtmedi:false, hasarNotu:false, sepetVar:true, maSatir:true },
     sel: { sebep:null, yontem:'kart', tahsilat:null, kanal:'tum', durum:'tumu', mod:'hibrit', boy:null, akibet:null },
     adet: { k1:0, k2:0, ma1:0, sayim:0 },
@@ -1523,7 +1565,8 @@ class Component extends DCLogic {
           redSebep: { list:['koku / hasar şüphesi','sipariş beklenmiyordu','çok geç geldi'] },
           oran: { list:['%20','%30','%40'], varsayilan:'%30' },
           sikayet: { list:['Jest — bedelsiz yeniden gönderim','Kısmi iade','Tam iade','Kapat — işlem yok'] },
-          yaziciKargo: { list:['Brother QL-1110NWB','Zebra ZD421 · rampa'] }
+          yaziciKargo: { list:['Brother QL-1110NWB','Zebra ZD421 · rampa'] },
+          b2bRet: { list:['resmî kayıt doğrulanamadı','faaliyet gıda satışıyla uyumsuz','mükerrer hesap — mevcut kayıtla aynı işletme','bilgiler eksik ya da tutarsız'] }
         };
         const res = {};
         Object.keys(SPEC).forEach(g => {
@@ -1546,6 +1589,33 @@ class Component extends DCLogic {
         res.secili = (g) => (st.chips[g] || []).join(' · ');
         return res;
       })(this),
+      b2b: (() => {
+        const o = B2B_ORNEK[this.props.b2bOrnek] || B2B_ORNEK.temiz;
+        const TON = { iyi:{ fg:'#46601f', bg:'#e3ecd2', ik:'✓' }, notr:{ fg:'#6d7261', bg:'#e7e2d2', ik:'–' }, dikkat:{ fg:'#b05c2e', bg:'#f6e6d6', ik:'!' } };
+        const hal = st.b2b.hal;
+        const bayrak = hal === 'onayli' ? { bg:'#e3ecd2', bd:'#a9bf84', fg:'#46601f', nokta:'#5f7a2c', metin:'Onaylandı · ' + st.b2b.zaman + ' · toptan fiyat açık' }
+          : hal === 'red' ? { bg:'#f0ede3', bd:'#ddd6c4', fg:'#6d7261', nokta:'#8a8270', metin:'Reddedildi · ' + st.b2b.zaman + ' · ' + st.b2b.sebep }
+          : o.bayrak === 'temiz' ? { bg:'#e3ecd2', bd:'#a9bf84', fg:'#46601f', nokta:'#5f7a2c', metin:o.bayrakMetin }
+          : { bg:'#fdf8f3', bd:'#d9a97f', fg:'#b05c2e', nokta:'#b05c2e', metin:o.bayrakMetin };
+        const rozet = hal === 'onayli' ? { ad:'Onaylı', bg:'#5f7a2c', fg:'#f5f1e6' } : hal === 'red' ? { ad:'Reddedildi', bg:'#2f353a', fg:'#f5f1e6' } : { ad:'Bekliyor', bg:'#e7e2d2', fg:'#6d7261' };
+        const retSecili = (st.chips.b2bRet || [])[0] || '';
+        const simdi = () => { const d = new Date(); return 'bugün ' + String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0') + ' · SÖ'; };
+        return {
+          ad:o.ad, unvan:o.unvan, unvanFarkli:o.unvan !== o.ad, ulke:o.ulke, kimlikEt:o.kimlikEt, kimlik:o.kimlik, kaynak:o.kaynak, tel:o.tel, adres:o.adres, adresVar:!!o.adres, geldi:o.geldi,
+          bayrak, rozet,
+          aiVar: !!o.ai, aiYok: !o.ai, ai:o.ai || '',
+          sinyaller: o.sinyaller.map(s => ({ k:s[0], v:s[1], c:TON[s[2]] })),
+          mukerrerVar: o.mukerrer.length > 0, mukerrer: o.mukerrer,
+          bekliyor: hal === 'bekliyor', kararli: hal !== 'bekliyor',
+          onayla: () => this.setState({ b2b:{ hal:'onayli', sebep:'', zaman:simdi() } }),
+          retAc: () => openSheet('b2bRet'),
+          retSecili, retHazir: !!retSecili,
+          retBg: retSecili ? '#a44a3f' : '#c4bda9',
+          reddet: retSecili ? (() => this.setState({ b2b:{ hal:'red', sebep:retSecili, zaman:simdi() }, sheet:null })) : (() => {}),
+          geriAl: () => this.setState({ b2b:{ hal:'bekliyor', sebep:'', zaman:'' }, chips: Object.assign({}, st.chips, { b2bRet: [] }) })
+        };
+      })(),
+      sheetB2bRet: st.sheet === 'b2bRet',
       sikayetSecili: (st.chips.sikayet || []).length > 0,
       sikayetKarar: (st.chips.sikayet || [])[0] || '',
       sikayetSecilmedi: (st.chips.sikayet || []).length === 0,
@@ -1987,7 +2057,7 @@ class Component extends DCLogic {
         return n > 0 ? ('araçta bekleyen ' + n + ' sefer bu sayıma girmez') : 'araçta bekleyen başka sefer yok';
       })(),
       aracSatirOzet: aractakiler.length + ' sefer araçta · ' + acikSurulen.length + ' sürülüyor',
-      duraklarListesi: (function () {
+      duraklarListesi: (() => {
         const stil = {
           teslim: { ikonBg:'#5f7a2c', ikonFg:'#f5f1e6', ikon:'✓', kartBg:'#f4f2ea', kartBd:'#e7e2d2', ustFg:'#46601f', baslikFg:'#6d7261', altFg:'#8a8270' },
           kismi: { ikonBg:'#e0b487', ikonFg:'#7a4a1e', ikon:'½', kartBg:'#fbf3e8', kartBd:'#e6cfae', ustFg:'#8a5a22', baslikFg:'#4a4238', altFg:'#8a7a62' },
@@ -2127,7 +2197,7 @@ class Component extends DCLogic {
         }));
       }).call(this),
       bldSuzgecSifirla: () => this.setState({ bldSuzgec: 'tümü' }),
-      bldGruplar: (function () {
+      bldGruplar: (() => {
         const renk = {
           depo: { rail:'#5f7a2c', rozet:'#e3ecd2' },
           kurye: { rail:'#2f353a', rozet:'#e2e4e0' },
@@ -2139,6 +2209,8 @@ class Component extends DCLogic {
             baslik:'Yeni sipariş onaylandı — LA-26-QRPRRV', alt:'Claire Weber · 1 kalem · toplama bekliyor', hedef:'Toplama listesini aç →', ekran:'toplama' },
           { gun:'bugün', bolum:'kurye', saat:'08:20', yeni:true, acil:false,
             baslik:'Rota atandı — 4 durak', alt:'SF-26-YRNWV9 · 7 kutu · 2 tahsilat', hedef:'Sefer künyesini aç →', ekran:'seferBaslat' },
+          { gun:'bugün', bolum:'yönetim', saat:'08:31', yeni:true, acil:false,
+            baslik:'Kurumsal hesap başvurusu — ' + B2B_ORNEK[this.props.b2bOrnek || 'temiz'].ad, alt:B2B_ORNEK[this.props.b2bOrnek || 'temiz'].bildirimAlt, hedef:'Başvuruyu aç →', ekran:'b2bOnay' },
           { gun:'bugün', bolum:'yönetim', saat:'08:14', yeni:true, acil:true,
             baslik:'Eksik toplama — LA-26-9ERUNH', alt:'Mangolu Artisan Kek 1 adet eksik · karar bekliyor', hedef:'İstisna kararını ver →', ekran:'karar' },
           { gun:'bugün', bolum:'depo', saat:'08:10', yeni:false, acil:true,
@@ -2332,7 +2404,7 @@ class Component extends DCLogic {
 }
 </script>
 
-<!-- kaynak: satır 5321-5323 · ortak -->
+<!-- kaynak: satır 5508-5510 · ortak -->
 </script>
 </body>
 </html>

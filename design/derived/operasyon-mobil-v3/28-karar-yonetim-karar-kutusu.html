@@ -1,16 +1,16 @@
 <!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
 <!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
 <!-- ekran: karar · Yönetim · Karar kutusu -->
-<!-- kaynak satırlar: 2587-2668 -->
+<!-- kaynak satırlar: 2587-2684 -->
 
-<!-- kaynak: satır 2587-2668 · görünüm bloğu -->
+<!-- kaynak: satır 2587-2684 · görünüm bloğu -->
     <sc-if value="{{ is.karar }}">
       <div data-screen-label="Yönetim · Karar kutusu" style="animation:pageIn .26s ease;display:flex;flex-direction:column;padding-bottom:24px">
         <div style="padding:22px 20px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
           <div style="display:flex;flex-direction:column;gap:4px">
             <span style="font:800 9.5px 'Karla';letter-spacing:.2em;color:#5f7a2c">YÖNETİM · KARAR KUTUSU</span>
             <span style="font:600 27px/1.1 'Lora'">Bugün Ne Bekliyor</span>
-            <span style="font:400 12px 'Karla';color:#8a8270">4 karar · 2 tanesi gün içinde</span>
+            <span style="font:400 12px 'Karla';color:#8a8270">5 karar · 2 tanesi gün içinde</span>
           </div>
           <div onClick="{{ tg.kimlikSheet }}" style="width:40px;height:40px;border-radius:14px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:800 13px 'Karla';cursor:pointer;flex:none">SÖ</div>
         </div>
@@ -28,32 +28,48 @@
             </div>
           </div>
 
-          <div style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:20px;padding:15px 16px;display:flex;flex-direction:column;gap:9px;cursor:pointer">
-            <div style="display:flex;align-items:center;gap:9px">
-              <span style="background:#f6e6d6;color:#b05c2e;font:800 9px 'Karla';letter-spacing:.14em;border-radius:8px;padding:4px 8px">EKSİK KALEM</span>
-              <span style="font:400 11px 'Karla';color:#8a8270">LA-26-9ERUNH</span>
+          <div style="background:#fdf8f3;border:1.5px solid #d9a97f;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;cursor:pointer">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="width:42px;height:42px;border-radius:14px;background:#f6e6d6;display:flex;align-items:center;justify-content:center;flex:none"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/></svg></span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:700 15px 'Karla';color:#2f353a">Eksik kalem kararı</span>
+                <span style="font:400 12px/1.4 'Karla';color:#6d7261">Yoğurtlu Patlıcan 1000 g · 1 adet eksik · LA-26-9ERUNH</span>
+              </div>
             </div>
-            <span style="font:700 14.5px/1.45 'Karla'">Yoğurtlu Patlıcan 1000 g — depoda 1 adet eksik bildirildi</span>
-            <div style="display:flex;gap:8px;margin-top:2px">
+            <div style="display:flex;gap:8px">
               <span style="flex:1;height:44px;border-radius:14px;background:#2f353a;color:#f5f1e6;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla'">eksik gönder</span>
               <span style="flex:1;height:44px;border-radius:14px;border:1.5px solid #ddd6c4;background:#fff;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla'">ikame öner</span>
             </div>
           </div>
 
-          <div onClick="{{ go.kampanya }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer">
-            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
-              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">YAKIN-SKT TEKLİFİ</span>
-              <span style="font:700 14px 'Karla'">Su Böreği · 6 adet · %30 öneri</span>
-              <span style="font:400 11px 'Karla';color:#8a8270">2 gün kaldı · onay bekliyor</span>
+          <sc-if value="{{ b2b.bekliyor }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ go.b2bOnay }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+              <span style="width:42px;height:42px;border-radius:14px;background:#e3ecd2;display:flex;align-items:center;justify-content:center;flex:none"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-5h6v5"/><path d="M9 10h.01M15 10h.01M9 13h.01M15 13h.01"/></svg></span>
+              <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                <span style="font:700 15px 'Karla';color:#2f353a">Kurumsal hesap başvurusu</span>
+                <span style="font:400 12px/1.4 'Karla';color:#6d7261;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b2b.ad }} · {{ b2b.ulke }}</span>
+                <span style="font:700 11px 'Karla';color:{{ b2b.bayrak.fg }}">{{ b2b.bayrak.metin }}</span>
+              </div>
+              <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
+            </div>
+          </sc-if>
+
+          <div onClick="{{ go.kampanya }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:42px;height:42px;border-radius:14px;background:#f6e6d6;display:flex;align-items:center;justify-content:center;flex:none"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#b05c2e" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13l-8 8-9-9V4h8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></span>
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+              <span style="font:700 15px 'Karla';color:#2f353a">Yakın-SKT kampanyası</span>
+              <span style="font:400 12px/1.4 'Karla';color:#6d7261">Su Böreği · 6 adet · %30 öneri</span>
+              <span style="font:700 11px 'Karla';color:#b05c2e">2 gün kaldı · onay bekliyor</span>
             </div>
             <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
           </div>
 
-          <div onClick="{{ go.tedarik }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:15px 16px;display:flex;align-items:center;gap:12px;cursor:pointer">
-            <div style="display:flex;flex-direction:column;gap:3px;flex:1;min-width:0">
-              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">TEDARİK TASLAĞI</span>
-              <span style="font:700 14px 'Karla'">Gaziantep · 7 kalem · 12 gün kapak</span>
-              <span style="font:400 11px 'Karla';color:#8a8270">motor önerisi hazır</span>
+          <div onClick="{{ go.tedarik }}" style="background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;padding:14px 16px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.985)">
+            <span style="width:42px;height:42px;border-radius:14px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;flex:none"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="6" width="14" height="11" rx="1.5"/><path d="M15 9h4l4 4v4h-8"/><circle cx="5.5" cy="19" r="1.8"/><circle cx="18.5" cy="19" r="1.8"/></svg></span>
+            <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+              <span style="font:700 15px 'Karla';color:#2f353a">Tedarik taslağı</span>
+              <span style="font:400 12px/1.4 'Karla';color:#6d7261">Gaziantep · 7 kalem · 12 gün kapak</span>
+              <span style="font:700 11px 'Karla';color:#8a8270">motor önerisi hazır</span>
             </div>
             <span style="font:400 18px 'Karla';color:#b3ab97">›</span>
           </div>

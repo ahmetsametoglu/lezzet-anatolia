@@ -72,6 +72,19 @@ export const appMetrics = {
     /** Başlık çubuğundaki yuvarlak ikon düğmesi (tasarım: 40). */
     iconButton: 40,
     /**
+     * **KARAR KARTININ İKON KUTUSU** (v3:28 — 42×42, 07.09) ve içindeki ikon (21).
+     *
+     * `iconButton`dan (40) AYRI bir durak ve fark rol: o BASILABİLİR bir kontroldür ve dokunma
+     * hedefi kuralına uyar; bu ise kartın içinde duran, tek başına basılamayan bir İŞARETTİR —
+     * kartın tamamı zaten bir dokunma hedefi. İkisini tek durağa indirmek, bir gün dokunma hedefi
+     * büyütülünce kart ikonunu da büyütürdü ve kartın dikey ritmi kayardı.
+     *
+     * İkon 21, kutunun yarısı: tasarımın oranı ve ölçüsü (`text.icon` 22 ödünç alınmadı — o metin
+     * hizasındaki bir ok, bu kutunun içinde ortalanan bir sembol).
+     */
+    decisionIconBox: 42,
+    decisionIcon: 21,
+    /**
      * **YÜZEN OKUTMA DÜĞMESİ (FAB)** — sayfanın üstünde duran daire (v3:03 · `topFab`, 66×66).
      *
      * `iconButton`dan (40) ayrı bir durak ve fark ROL: o başlık çubuğunun içinde, hizaya giren

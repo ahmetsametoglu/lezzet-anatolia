@@ -50,7 +50,7 @@ function fail(error: string): Response {
 function hubData(): ManagementHub {
   return {
     queue: {
-      complaints: { count: 3, head: null },
+      complaints: { count: 3, open: 3, byType: { damaged: 3, missing: 0, question: 0, other: 0 }, head: null },
       exceptions: { count: 0, head: null },
       offers: { candidateCount: 4, head: null },
       supply: { groupCount: 2, unmappedVariantCount: 1, head: null },

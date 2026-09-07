@@ -10312,11 +10312,69 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
     susturur · olmayan uzun basma kanca kurmaz). Bekçi gerekliydi: fazla konan muafiyet uygulamayı
     sessizleştirir, eksik konan gezinirken titretir — ikisi de hata vermez.
 
-- [ ] (21.217) **B2B onay ekranı yok ama bildirimi var** — `notification-map.ts:42`
-  `b2b_application_received → 'management'` diyor, `screens/management/` altında karşılığı olan
-  ekran yok. Bildirim cihaza düşüyor, dokunuluyor, boşluğa gidiyor. İki yol: ya ekran yazılır ya
-  bildirim mobilde yönlendirilmez. Kural/metin/motor hazır (`b2bSignals` · `b2bFlag` ·
-  `b2bSummaryTask` · `setB2bApproval`), iş yalnız ekranın kendisi.
+- [~] (21.217) **B2B onay ekranı yok ama bildirimi var** — yön seçildi (kullanıcı kararı 07.09: *"A seçeneğini istiyorum"*)
+  `touches:` `design/pages/app-yonetim-b2b-onay.md` · `docs/talep/operasyon-b2b-kontrol-karti-uygulama-paketine.md` ·
+  (gelecek) `packages/types/src/contracts/management-api.schema.ts` · `apps/mobile-api/src/api/v1/management.ts` ·
+  `apps/mobile/src/screens/management/`
+
+  ~~Bildirim cihaza düşüyor, dokunuluyor, boşluğa gidiyor.~~ **BU KAYIT YANLIŞTI (ölçüldü 07.09):**
+  bildirimin hedefi `null` ve satır **dokunulamıyor** — `notification-map.test.ts:37` bunu çiviliyor.
+  Yani "boşluğa gitme" zararı yok; bildirim, hedefi olmayan türler için ayrılmış bekleme tablosunda
+  duruyor (`SECTION_WITHOUT_DESTINATION`, künyesi *"hedef doğduğu gün bu tablodan düşer"*). Durum bir
+  arıza değil, tasarlanmış bir bekleme hâliydi.
+
+  ~~İş yalnız ekranın kendisi.~~ **BU DA YANLIŞTI.** Ölçüm üç katman gösterdi, ikisi eksik:
+  · **Karar verisi web'e kilitli** — operatörün baktığı sinyaller/mükerrer/bayrak `readB2bCheck`ten
+    geliyor ve o fonksiyon YALNIZ `apps/web/lib/customer/b2b-check.ts:117`te yaşıyor;
+    `packages/application` onu ihraç etmiyor. `apps/mobile-api` `apps/web`ten import edemez ve aynı
+    dört okumayı yeniden yazmak CLAUDE §1'in ikinci nüshası olurdu.
+  · **Mobil arka uçta onay ucu yok** — `apps/mobile-api/src/api/v1/b2b.ts` MÜŞTERİNİN başvuru yaptığı
+    taraf (SIRET sorgula, başvuru gönder). Operatörün onay/ret tarafı hiç yazılmamış.
+  · Ekran yok (bilinen kısım).
+  Onay/ret KAPISI eksik değil: `approveB2b`/`rejectB2b` zaten `UserProfileService`te, paylaşılan yerde.
+
+  **ÜÇ YOL SUNULDU, KULLANICI A'YI SEÇTİ** (07.09): A tam dilim (terfi → uç → ekran) · B yalnız okuma
+  ekranı · C kararı masaüstüne bırakıp gerekçesini `KARARLAR.md`ye yaz. Ben C'yi önermiştim (B2B onayı
+  rampada verilecek bir karar değil: resmî kayıt sinyali okumak, mükerreri görmek, bir müşteriye
+  kalıcı toptan fiyat açmak); kullanıcı telefondan da onaylayabilmeyi istedi.
+
+  **BU TURDA YAPILANLAR:**
+  · **Terfi talebi açıldı** → `docs/talep/operasyon-b2b-kontrol-karti-uygulama-paketine.md`. Taşınacak
+    üçlü ölçülerek yazıldı (`readB2bCheck` + iç yardımcıları + `B2bCheckView` tipi); tipin
+    `packages/types`e gitmesi isteniyor, çünkü iki yüzey birden okuyacak. Web'e davranış değişikliği
+    İSTENMEDİ. Bir de soru soruldu: mobil çağrı dış servisleri tazelesin mi (`refreshExternal`), ölçüyü
+    onlar koymuştu.
+  · **Tasarım brief'i yazıldı** → `design/pages/app-yonetim-b2b-onay.md`. İçerik envanteri masaüstü
+    kartıyla aynı kaynaktan; girişin bildirim olması ve mobilde müşteri paneli olmaması yüzünden
+    **ayrı ekran** doğuyor — masaüstündeki *"ayrı sayfa yok, diyalog"* kararından (30.07) bilinçli
+    sapma, gerekçesi brief'te. Tasarıma beş karar bırakıldı (sinyal listesinin biçimi, iki eylemin
+    ağırlık asimetrisi, bayrağın yeri, mükerrer bloğunun tonu, karar verilmiş başvurunun hâli) ve üç
+    sınır çizildi (kuyruk yok · vade/limit yok · belge okuma yok).
+
+  **TASARIMIN İLK TURU GELDİ (07.09 · 13:00) — İNCELENDİ.** Mobil v3'e tek ekran girdi
+  (`36-b2bOnay-yonetim-b2b-basvuru-onayi.html`). Brief'in beş kararından üçü karşılandı ve ikisi
+  benim yazdığımdan iyi çıktı: mükerrer bloğu *"AYNI KİŞİ OLABİLİR Mİ?"* başlığıyla soru tonuna
+  oturmuş ve altına operatöre ne YAPACAĞINI söyleyen bir cümle koymuş (*"aynı işletmeyse eski kaydı
+  yükseltmek onaydan iyidir"*); iki eylemin asimetrisi de çözülmüş (*"Onayla — toptan fiyatı aç"*
+  tam cümle, *"Reddet…"* üç noktayla ikinci adımı haber veriyor).
+  **Açık kalan:** dört hâlden yalnız *Bekliyor* rozeti çizilmiş. Bildirim ESKİ olabilir ve karar
+  verilmiş bir başvuru bu ekrandan açılabilir — *Onaylı · Reddedildi · Başvuru yok* da gerekiyor,
+  metinleri masaüstünün `B2B_STATUS_VIEW`inden birebir.
+
+  **LİSTE İSTENDİ (kullanıcı kararı 07.09, tasarımdan sonra):** *"öncelikle liste görünsün istiyorum
+  ben. Eğer tek kayıt varsa o kaydı görebiliriz."* İlk turda liste YOKTU ve bu tasarımın eksiği
+  DEĞİL — brief'e *"başvuru kuyruğu bu ekranda yok, giriş kapısı bildirimdir"* diye sınırı ben
+  çizmiştim, tasarım ona uydu. Sınır kalktı, brief'e `§2b` bölümü yazıldı: **liste asıl giriş**;
+  tek bekleyen başvuruda liste ATLANIR (tek satırlık liste bir dokunuş fazladan ödetir, hiçbir şey
+  söylemez); bildirimden gelinirse sayı ne olursa olsun doğrudan başvuru açılır. Satırın künyesi
+  masaüstündeki kuyruktan alındı — **ad · bayrak · şehir · yaş** — ve başlık cümlesi de
+  (*"2 bekleyen başvuru · en eski 3 saat önce"*); iki yüzeyin aynı başvuruyu farklı künyeyle
+  yazması, operatörün ikisini eşleştirememesi demek. Süzgeç masaüstündeki iki sekme (*Bekliyor* ·
+  *Karar verilmiş*). Boş hâlde bölüme hiç girilmiyor — "bekleyen yok" ekranı olmayan bir işi varmış
+  gibi gösterir.
+
+  **BEKLEYEN(21.217):** uç ve ekran, terfinin gelmesine bağlı. Tasarımın ikinci turu (liste + dört
+  rozet) terfiyi beklemeden çizilebilir — veri şekli brief'te ve değişmiyor.
 
 - [ ] (21.218) **"Eksikleri bildirerek siparişi kapat" düğmesi açık kutu varken görünmesin** —
   sunucu kuralı ZATEN var (`declareOrderShort` içi dolu açık kutuda `open_box_not_empty` dönüyor);
@@ -12624,17 +12682,41 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 
   **Doğrulama:** kök typecheck · lint · tam paket.
 
-- [ ] (21.272) **Kurye sözleşmesine `already_marked` dalı — bugün `stale` diye söyleniyor** (21.271'in kalanı)
-  `touches:` `packages/types/src/contracts/courier-api.schema.ts` · `packages/application/src/courier/delivery.ts` · `apps/mobile/src/screens/courier/*`
+- [x] (21.272) ~~**Kurye sözleşmesine `already_marked` dalı — bugün `stale` diye söyleniyor**~~ → **AKIBET ALANI KURYE İSTEĞİNDEN ÇIKARILDI** (21.271'in kalanı · yön değişti 07.09, kullanıcı kararı)
+  `touches:` `packages/types/src/contracts/courier-api.schema.ts` · `packages/application/src/courier/delivery.ts` · `apps/mobile-api/src/api/v1/courier.test.ts`
 
-  `deliver_order_with_adjustments` düzeltme reddini olduğu gibi yukarı taşıyor ve iki sebep var:
-  `stale` (sipariş değişti) ile `already_marked` (KALEM zaten karara bağlanmış — aynı durağı iki
-  telefondan işaretlemek). Ekranın yapması gereken şey farklı: birincide listeyi tazeler, ikincide
-  o kalemi tazeleyip yazılı akıbeti gösterir.
+  **VAAT ÜSTÜ ÇİZİLDİ — TEŞHİS YANLIŞTI, ÖLÇÜLDÜ (07.09).** Satır *"kapı `already_marked`ı `stale`e
+  çeviriyor, kuryeye YANLIŞ SEBEP söylüyor"* diyordu. Öyle bir şey olmuyormuş: veritabanının koşulu
+  gelen isteğin bir AKIBET taşımasını şart koşuyor
+  (`0020_order_return.sql:127` — `v_disposition is not null and v_disposition <> v_existing`), kurye
+  ise akıbeti HİÇ göndermiyor (`use-delivery.hook.ts:358` künyesi bunu bilerek yazıyor). Yani ret
+  kurye kapısında hiç tetiklenemiyordu; kimse yanlış bir cümle görmüyordu.
 
-  Kurye sözleşmesinde bugün ikinci dal YOK, o yüzden kapı `already_marked`ı `stale`e çeviriyor —
-  **hiçbir şey yazılmadığı için zararsız ama kuryeye YANLIŞ SEBEP söylüyor.** Depo tarafında ayrım
-  zaten var (`FulfillmentResultSchema.reason`), yani iş sözleşme + ekran cümlesi.
+  **KAPIDAKİ İKİ KARAR AYRI ELLERDE (DOMAIN §8) ve gerçek açık ŞEMADAYDI.** Adedi KURYE söyler
+  ("4'ün 2'si geri geldi" — teslimat ekranının "Reddedilen kalem" çekmecesi); akıbeti
+  (`restock` · `discard` · `goodwill`) mal depoya dönünce DEPOCU seçer (D6 kurye dönüşü ekranı,
+  `use-courier-return.hook.ts` → `pick(orderItemId, disposition)`). Gerekçesi soğuk zincir: kurye
+  kapıda o malın hâlâ satılabilir olduğunu bilemez ve `restock` sebep beyanı zorunludur. Ama
+  `ConfirmDoorDeliveryRequestSchema.adjustments` ortak kalem şeklini OLDUĞU GİBİ taşıyordu, yani
+  şema alana kapı açık bırakıyordu — **sözleşme, şeridin kuralından fazlasına izin veriyordu.**
+
+  **YAPILAN:** `FulfillmentAdjustmentSchema.omit({ returnDisposition: true })`. Kural artık yalnız
+  yorumda değil sözleşmede de yazılı: kurye ne GÖRDÜĞÜNÜ söyler, ne OLACAĞINI söylemez. Üç yol
+  tartışıldı (A: alanı çıkar · B: cevaba `already_marked` dalını ekle · C: dokunma, satırı düzelt);
+  **kullanıcı A'yı seçti** — B, bugün kimsenin görmediği bir yol için ekran metni yazmak olurdu.
+
+  **`note` KALDI ve bu da ölçüldü:** `adjust_fulfillment` notu akıbetten BAĞIMSIZ yazıyor
+  (`return_note = coalesce(v_note, return_note)`, `0020:164`), yani kuryenin kapıda gördüğü bir
+  ayrıntı akıbet seçmeden de kaleme düşebilir. Kapatılan yalnız akıbet.
+
+  **DAL SİLİNMEDİ, künyesi değişti.** `deliverOrderWithAdjustments` paylaşılan kapı ve DEPO yolu o
+  cevabı hâlâ üretiyor — tip birleşimi onu taşımaya devam ediyor. Ulaşılamayan bir dalı sessizce
+  düşürmek, tip bir gün genişlediğinde cevabı kaybetmek olurdu. `BEKLEYEN(21.272)` işareti kalktı.
+
+  **Testi:** kapıda gövdeye `returnDisposition: 'discard'` KONSA BİLE kalemin akıbeti boş kalıyor.
+  İddia "400 döner" değil "yazılmaz" — şema bilinmeyen anahtarı reddetmez DÜŞÜRÜR, ve ölçüt reddin
+  biçimi değil malın gerçeği. Aynı testte adet yazılıyor: kuryenin söylediği geçiyor, söylemediği
+  geçmiyor.
 
 - [x] (21.273) **ETİKETİN ÖLÇÜSÜ FONTUN KENDİSİNDEN — ad taşmıyor, alt satıra iniyor** (kullanıcı bulgusu 06.09)
   `touches:` `packages/application/src/warehouse/ttf-advances.ts` ·
@@ -12913,13 +12995,63 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `z.record(z.unknown())`); daraltmak, motorun bir gün öğreneceği beşinci alanı fikstürden dışarıda
   bırakırdı. Kök typecheck 20/20 yeşile döndü.
 
-- [ ] (21.278) **Van-stock uçlarının HİÇ testi yok — dört uç istek almıyor** (kurye şeridi kaydı 05.09)
+- [x] (21.278) **Van-stock uçlarının HTTP katmanı test edildi — üstündeki ve altındaki katman testliydi, arası değil** (kurye şeridi kaydı 05.09 · yapıldı 07.09)
   `touches:` `apps/mobile-api/src/api/v1/courier.test.ts`
 
-  Ölçüldü: `courier.ts` dört `van-stock` yolu tanımlıyor, `courier.test.ts` hiçbirine istek
-  atmıyor (`grep -c van-stock` → uçta 4, testte 0). Uygulama katmanı testli (`van-stock.test.ts`);
-  boşluk yalnız HTTP katmanında — yetki, gövde doğrulama, kapsam ve idempotency anahtarının uçtan
-  geçip geçmediği hiç ölçülmüyor. Kayıt `docs/talep`teki nottan geldi; not kapandı, borç burada.
+  **ÖNCEKİ YAZIM YANLIŞTI, DÜZELTİLDİ (07.09).** Satır *"dört uç istek almıyor"* diyordu ve bu
+  "uçlar kullanılmıyor" gibi okunuyordu. Ölçüldü, öyle değil: dördü de canlı yolda —
+  `van-stock-screen.tsx` → `lib/api/courier.ts` → `GET /van-stock` (liste ve `?q=` aramasıyla iki
+  çağıran), `POST /van-stock/set`, `POST /van-stock/scan`. Kastedilen, hiçbir TESTİN o uçlara istek
+  atmaması.
+
+  **Boşluk tek katmanda ve tam ortada:**
+  · Motor testli — `packages/application/src/courier/van-stock.test.ts`, 19 test.
+  · Ekran testli — `van-stock-screen.test.tsx`, ama kapıyı TAKLİT ediyor.
+  · Uç TESTSİZ — `courier.test.ts` yalnız `day`, `day-close` ve `stops` yollarına istek atıyor.
+
+  Yani iki test de HTTP katmanının üstünden atlıyor: ekran testi mock'a konuşuyor, motor testi
+  fonksiyonu doğrudan çağırıyor. Yalnız o katmanda yaşayan şeyler ölçülmüyor — yetki kapısı
+  (`requireStaffRole`), gövdenin Zod ile çözülmesi ve `invalid_body` cevabı, gövdedeki alanın
+  motorun hangi argümanına bağlandığı, ve cevabın zarf biçimi. Uçta yapılacak bir hata (alan adı
+  kayması, argüman yer değiştirmesi, unutulan kapsam denetimi) **iki testten de yeşil geçer** ve
+  ancak kuryenin elinde görünür. Rampada para ve mal hareketi yazan uçlar bunlar.
+
+  **YEDİ İDDİA YAZILDI** (`courier.test.ts` 33 → 40 test). Fikstüre iki şey girdi: bir **araç deposu**
+  (`kind='vehicle'` — `createTestWarehouse` araç kaydını kendi açıp bağlıyor; bağlam seferin
+  ARACINDAN çözülüyor) ve bir **gerçek barkod** (kod → varyant çevirisi yalnız uçta yaşıyor).
+  Varsayılan sefer yardımcılarına DOKUNULMADI — araçsız sefer de meşru bir hâl ve ötekilerin
+  zeminini kaydırmak, ölçtüklerini sessizce değiştirmek olurdu.
+
+  · **Kapı:** rolsüz kullanıcı dört yolun dördünden de dönüyor (tek tek — bir uç bir gün kapının
+    dışına düşebilir).
+  · **Gövde:** eksik `targetQty`, bozuk uuid, kodsuz okutma → `invalid_body`. Bu cevap yalnız burada
+    doğuyor; motor gövdeyi hiç görmüyor, ekran onu hiç üretmiyor.
+  · **Araçsız kurye:** aynı boşluğa iki uç iki AYRI cevap veriyor — okuma boş künye (ekran "araç yok"
+    bloğunu çizsin), yazım adlandırılmış ret. İkisi de 200: hata değil, kuryenin meşru hâli.
+  · **Kablolama:** araçta 0 iken `targetQty:3` → `delta:+3`; sonra `targetQty:1` → `delta:−2`. Yön
+    istemciden gelmiyor, sunucu ölçerek buluyor.
+  · **Okutma:** gerçek barkod bir tane ekliyor, tanınmayan kod `unknown_code` ile kendi dalından
+    dönüyor (sessiz geçseydi kurye okuttuğunu sanır, mal araca hiç binmezdi).
+  · **Liste ve süzgeç:** araçtaki ve adaylar tek cevapta; `?q=` uca ulaşıyor. Eşleşmeyen sorgu
+    ADAYLARI boşaltıyor ama ARAÇTAKİNİ boşaltmıyor — süzgeç "depodan ne alabilirim"in sorusu.
+
+  **TESTİ YAZARKEN BİR KABLO DAHA BULUNDU (`observedQty`).** İlk turda gövdelere `observedQty`
+  koymamıştım ve uç `invalid_body` döndü — yani alan ZORUNLU ve doğrulama çalışıyor. Asıl soru bir
+  sonrakiydi: alan uçtan motora GEÇİYOR mu? Motor onu bayatlık kalkanı olarak kullanıyor
+  (`van-stock.ts:516`): istemcinin gördüğü taban araçtakiyle uyuşmazsa HİÇBİR ŞEY yazmıyor, `stale`
+  diyor. Uç bu alanı düşürse ya da sabit geçirse kalkan sessizce devre dışı kalır ve yalnız bayat
+  ekrandan yapılan yazımlar geçmeye başlardı — iki testin de göremeyeceği bir sapma. Yedinci iddia
+  bu: bayat tabanla yazım `stale` dönüyor **ve araçtaki sayı yerinde duruyor** (reddin kanıtı
+  cevabın kendisi değil, sayının oynamaması).
+
+  **İKİNCİ DERS, AYRI DÜZELTME:** kurulum satırım `post(...)` cevabını okumuyordu, o yüzden o 400
+  sessizce geçti ve test üç satır aşağıda *"araçta ürün yok"* diye kırıldı — doğru şeyi ölçüyordu
+  ama YANLIŞ SEBEBİ gösteriyordu. Kurulumu doğrulayan bir yardımcı (`araca`) yazıldı; kurulumun
+  kendisi de bir iddiadır.
+
+  **Doğrulama:** kilitli tam paket **4354/4356**; `courier.test.ts` 40/40 yeşil. Düşen iki test
+  başka şeritlerde (`support-tools.test.ts` — yönetim şeridinin ağaçtaki işi; `checkout-shipping-order`
+  — kargo/web, iki notla kayıtlı).
 
 - [x] (21.279) **SOHBET BİÇİMLENDİRMESİ MOBİLDE ÇİZİLİYOR — üç yüzey birden** (kullanıcı kararı 06.09; sosyal şeridiyle ortak iş)
   `touches:` `apps/mobile/src/components/ui/{chat-text.tsx,chat-text.test.tsx,icon-paths.ts}` · `apps/mobile/src/theme/fonts.ts` · `apps/mobile/src/screens/management/{chat-bubble.tsx,complaint-screen.tsx}` · `apps/mobile/src/screens/support/ticket-detail-screen.tsx`
@@ -13094,3 +13226,88 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   `uiautomator` yalnız GÖRÜNEN düğümleri döker, o yüzden sayım kaydırmanın her adımında ve
   BAŞLANGIÇTAN itibaren yapılmalı.
 
+- [x] (21.282) **BİLDİRİMİ DUYURMAK KANCANIN İŞİ — on ekrandaki köprü `useEffect` silindi** (not: kurye → depo şeridi, 01.09)
+  `touches:` `apps/mobile/src/lib/haptics/use-notice.hook.ts` ·
+  `apps/mobile/src/screens/warehouse/{intake,preparation,transfer,courier-return,stock-count,write-off}-screen.tsx` ·
+  `apps/mobile/src/screens/warehouse/stock-count-screen.test.tsx`
+
+  **ÖLÇÜM NOTU DOĞRULADI AMA BAŞKA YERİNDEN.** Not *"`useNotice` hâlâ altı depo kancasında, toast'a
+  geçilecek"* diyordu; ölçünce geçişin ZATEN yapılmış olduğu çıktı — yedi kancanın yedisi de
+  köprülü, 54 mesajın hepsi bugün toast olarak görünüyor. Kalan şey davranış değil ÇOĞALTMAYDI.
+
+  **KÖPRÜ ELLE YAZILIYORDU, 10 KEZ.** Her ekran aynı üç satırı taşıyordu
+  (`useEffect(() => { if (x.notice !== null) toastInfo(x.notice.text) }, [x.notice])`) — altı ekranda
+  on kopya. Arıza potansiyeli de buradaydı: köprüyü yazmayı UNUTAN ekranda kanca mesajı yazar,
+  telefon titrer, ekranda hiçbir şey çıkmaz — ve bunu ne `typecheck` ne `lint` görür. Duyuru artık
+  `useNotice`ın kendi işi; kural kancanın KURULUŞUNDA duruyor, tıpkı titreşimde olduğu gibi.
+
+  **DUYURU YAZMA ANINDA, ÇİZİMDE DEĞİL** — kancanın titreşim için verdiği gerekçenin aynısı: çizim
+  tekrar eder (yeniden render, tema, odak), olay bir kez olur. `toastInfo` seçimi de korundu ve
+  gerekçesi tek yere indi: dört toast fiili görsel olarak aynı (`publish`), tek farkları titreşim —
+  ve titreşimi bir satır yukarıda tonuna göre zaten verdik; `toastSuccess` iki kez titretirdi.
+
+  **KENDİ TEŞHİSİMİ GERİ ALDIM — arıza YOKMUŞ.** Aynı turda *"tarama çekmecesi açıkken mesaj
+  görünmüyor"* diye bir arıza bildirmiştim: toast kökte, `ScanSheet` bir `Modal`, Android'de modal
+  kendi penceresini açıyor ve toast altında kalıyor. Yapı doğruydu, VAKA yanlıştı — testi yazınca
+  düştü. `use-batch-scan.handleScan` daha ilk satırında çekmeceyi KAPATIYOR (`setOpen(false)`),
+  sonra kodu çözüyor; bildirim yazıldığında çekmece kapalı, toast görünüyor. `openScan`daki
+  `setOpen(true)`u görüp `handleScan`i okumadan sonuç çıkarmıştım (CLAUDE §0: sebebi kanıtlanmadan
+  müdahale yok). Üç değişiklik geri alındı, `useNotice`a eklediğim katman seçeneği de kaldırıldı —
+  kullananı olmayan seçenek ölü koddur. Sınır kancanın künyesine yazıldı: sonucu AÇIK çekmecede
+  duyurması gereken bir kanca doğarsa desen `van-stock-screen`in `sheetHint`idir (kurye şeridi
+  31.08'de cihazda ölçtü — orada çekmece art arda okutma için açık KALIYOR, fark bu).
+
+  **`printer-setup-screen` KAPSAM DIŞI, bilinçli:** kendi yerel `useState`ini kullanıyor ve
+  bildirimi düğmeye bağlı (`notice.purpose === purpose`) — bir olayın duyurusu değil, o düğmenin
+  yanındaki sonuç. Notun "ekranın kendi içeriği" ayrımına giriyor.
+
+  **Doğrulama:** dokunulan 42 suite **464/464** · `apps/mobile` lint temiz. Yeni test iki yönlü
+  sınandı: `useNotice`tan toast çağrısı çıkarılınca kırmızıya döndü, geri konunca yeşile — yani
+  köprünün sessizce geri gelmesini gerçekten yakalıyor.
+
+- [x] (21.283) **KARAR KUTUSU v3'ÜN YENİ ÇİZİMİNE GEÇTİ — üstbaşlık bağırmıyor, ikon tanıtıyor** (tasarım güncellendi 07.09 · kullanıcı isteği)
+  `touches:` `design/derived/operasyon-mobil-v3/*` (türetildi) · `packages/types/src/contracts/management-api.schema.ts` · `packages/application/src/management/hub.ts` · `apps/mobile/src/components/ui/icon-paths.ts` · `apps/mobile/src/theme/metrics.ts` · `apps/mobile/src/screens/management/{management-hub-screen.tsx,management-hub-screen.test.tsx,day-summary-screen.test.tsx,messages.json}`
+
+  Tasarım bugün güncellendi; `pnpm design:split` ile türetilenler tazelendi (36 → **37 ekran**;
+  `36-b2bOnay` yeni, bildirim 37'ye kaydı). Yerel kopya 31.08'den kalmaydı — CLAUDE §3'ün
+  *"yerel kopya bayat olabilir"* uyarısı bu turda gerçek çıktı.
+
+  **KART ANATOMİSİ DEĞİŞTİ.** Eski kalıp "büyük harf üstbaşlık + dikey blok"tu; yenisi **42'lik
+  ikon kutusu + metin sütunu + `›`**, başlıklar cümle düzeninde ("TEDARİK TASLAĞI" → "Tedarik
+  taslağı"). Üstbaşlık kartın ne olduğunu harf harf bağırıyordu ve üç kart yan yana gelince ekran
+  üç bağıran etiketle açılıyordu; o iş artık ikonda — tanıma göz kırpması kadar sürüyor, başlık
+  cümle olarak okunuyor. Kazanç yer değil RİTİM: kartlar aynı hizada üç satır taşıyor (ne · hangi
+  kayıt · hangi hâl).
+
+  **İKİ İKON KİTTE ZATEN VARDI, BİRİ AÇILDI.** Kamyon `courier`, kutu `packages` — tasarımın
+  geometrileriyle aynı. Yeni açılan tek durak `tag` (fiyat etiketi): `sale`den ayrı, çünkü o bir
+  SATIŞ eylemidir, bu bir FİYAT işareti — kampanya kartı bir onay bekliyor, satış yapmıyor.
+  Ölçüler `metrics.ts`e girdi (`decisionIconBox` 42 · `decisionIcon` 21): `iconButton`dan (40)
+  ayrı, çünkü o basılabilir bir kontrol ve dokunma hedefi kuralına uyar; bu kartın içindeki bir
+  işaret ve kart zaten tek başına dokunma hedefi.
+
+  **TALEP KARTI DOĞRU YERİNE TAŞINDI.** 21.281'de "günün nabzı"na bir kutucuk olarak koymuştum —
+  29. ekrana bakıp 28'e bakmamışım; oysa tasarımda karar listesiyle nabız ARASINDA kendi kartı
+  vardı ve içeriği daha zengin. Kutucuk yalnız bir sayı taşıyabiliyordu; kart üç şey söylüyor:
+  açık sayısı, kaçının bizde olduğu, tür kırılımı. Nabız da tasarımdaki gibi İKİ kutucuğa döndü —
+  ızgara iki sütun ve üçüncü kutucuk satırı tek başına bırakıyordu.
+
+  Kırılım için sözleşmeye iki alan eklendi (`complaints.open`, `complaints.byType`), kaynağı
+  **talep listesinin şeridiyle AYNI sayım** (`countForFilters`): kart "3 açık" derken listenin
+  "tümü · 3" demesi böylece garanti, iki ekran ayrışamaz. Ayrı bir uçtan okunmadı — kart hub
+  açılışında çiziliyor ve ikinci bir tur iki sayıyı iki ayrı andan okuturdu.
+
+  **B2B KARTINA DOKUNULMADI.** Tasarımın yeni `<sc-if value="{{ b2b.bekliyor }}">` kartı ve
+  `36-b2bOnay` ekranı **21.217'nin** (kullanıcı: *"birbirinizle kesişmeyin"*). Kart anatomisi
+  kurulduğu için o şerit veriyi taktığında çizim işi kalmıyor: aynı kalıba zeytin tonlu bir ikon
+  kutusu eklemek yetiyor.
+
+  **İKİ SAPMA KORUNDU, ikisi de daha eski bir kararın devamı:**
+  · Koyu kartın rozeti tasarımda **"ACİL"**, bizde **"CEVAP BEKLİYOR"**. Aciliyet ÖLÇÜLMÜYOR
+    (talepte SLA yok, 21.276'nın kararı); "acil" demek ekrana ölçülmemiş bir yargı yazmak olurdu.
+  · Eksik kalem kartının iki düğmesi ("eksik gönder" · "ikame öner") tasarımda **eylemsiz**
+    (`onClick` yok, ölçüldü) — mevcut tek satırlık ipucu korundu ("Masada devam et"in aynı gerekçesi).
+
+  **Doğrulama:** yönetim **111/111** · kök typecheck 20/20 · lint temiz · **fiziksel Oppo'da
+  görüldü**: iki ikonlu kart, talep kartı kendi bloğunda ("3 açık · 2 tanesi top bizde" / "2 bozuk ·
+  1 eksik · 0 soru · 0 diğer" — kırılımın toplamı başlığı tutuyor), nabız iki kutucuk.

@@ -44,7 +44,8 @@
         "title": "{item} — depoda {qty} adet eksik",
         "titleMoreLines": "{item} — depoda {qty} adet eksik · +{more} kalem daha",
         "titleNoHead": "{lines} kalem eksik toplandı",
-        "action": "sistem önerisi hazır — kararı aç"
+        "action": "sistem önerisi hazır — kararı aç",
+        "name": "Eksik kalem kararı"
       },
       "offer": {
         "eyebrow": "YAKIN-SKT TEKLİFİ",
@@ -54,7 +55,8 @@
         "subtitleMore": "{life} · +{more} aday daha",
         "lifeDays": "{n} gün kaldı",
         "lifeToday": "bugün son gün",
-        "lifePast": "tavsiye tarihi geçti"
+        "lifePast": "tavsiye tarihi geçti",
+        "name": "Yakın-SKT kampanyası"
       },
       "supply": {
         "eyebrow": "TEDARİK TASLAĞI",
@@ -62,7 +64,8 @@
         "titleNoHead": "{groups} grup",
         "subtitleMore": "sistem önerisi hazır · +{more} grup daha",
         "subtitle": "sistem önerisi hazır",
-        "subtitleUnmapped": "{unmapped} eşlenmemiş varyant — masada eşleyin"
+        "subtitleUnmapped": "{unmapped} eşlenmemiş varyant — masada eşleyin",
+        "name": "Tedarik taslağı"
       }
     },
     "tiles": {
@@ -78,6 +81,11 @@
         "title": "Gün özeti",
         "subtitle": "ciro · {orders} sipariş"
       }
+    },
+    "tickets": {
+      "eyebrow": "TALEP VE ŞİKÂYETLER",
+      "title": "{open} açık · {awaiting} tanesi top bizde",
+      "breakdown": "{damaged} bozuk · {missing} eksik · {question} soru · {other} diğer"
     }
   },
   "complaint": {

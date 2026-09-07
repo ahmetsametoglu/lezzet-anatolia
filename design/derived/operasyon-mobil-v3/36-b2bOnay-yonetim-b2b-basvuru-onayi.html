@@ -1,0 +1,107 @@
+<!-- TÜRETİLMİŞTİR — elle düzenlenmez. Yeniden üretim: pnpm design:split -->
+<!-- kaynak dosya: design/project/Operasyon Mobil v3.dc.html -->
+<!-- ekran: b2bOnay · Yönetim · B2B başvuru onayı -->
+<!-- kaynak satırlar: 3115-3215 -->
+
+<!-- kaynak: satır 3115-3215 · görünüm bloğu -->
+    <sc-if value="{{ is.b2bOnay }}">
+      <div data-screen-label="Yönetim · B2B başvuru onayı" style="animation:pageIn .26s ease;display:flex;flex-direction:column;min-height:100%">
+        <div style="display:flex;align-items:center;gap:12px;padding:18px 20px 12px">
+          <div onClick="{{ go.karar }}" style="width:38px;height:38px;border-radius:13px;background:#e7e2d2;display:flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .12s" style-active="transform:scale(.94)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#2f353a" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/></svg></div>
+          <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+            <span style="font:600 20px 'Lora'">Kurumsal hesap</span>
+            <span style="font:400 11.5px 'Karla';color:#8a8270">başvuru · {{ b2b.geldi }}</span>
+          </div>
+        </div>
+
+        <div style="margin:2px 20px 0;background:{{ b2b.bayrak.bg }};border:1.5px solid {{ b2b.bayrak.bd }};border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px">
+          <span style="width:9px;height:9px;border-radius:50%;background:{{ b2b.bayrak.nokta }};flex:none"></span>
+          <span style="font:700 12.5px/1.4 'Karla';color:{{ b2b.bayrak.fg }};flex:1">{{ b2b.bayrak.metin }}</span>
+        </div>
+
+        <div style="padding:18px 20px 0;display:flex;flex-direction:column;gap:5px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+            <span style="font:600 23px/1.15 'Lora';color:#2f353a;flex:1;min-width:0">{{ b2b.ad }}</span>
+            <span style="background:{{ b2b.rozet.bg }};color:{{ b2b.rozet.fg }};font:800 9.5px 'Karla';letter-spacing:.14em;border-radius:9px;padding:5px 9px;flex:none;margin-top:5px;text-transform:uppercase">{{ b2b.rozet.ad }}</span>
+          </div>
+          <sc-if value="{{ b2b.unvanFarkli }}" hint-placeholder-val="{{ true }}">
+            <span style="font:400 12.5px 'Karla';color:#6d7261">{{ b2b.unvan }} <span style="color:#a8a191">· resmî unvan</span></span>
+          </sc-if>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;margin-top:8px;padding:11px 13px;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:14px">
+            <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+              <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">{{ b2b.kimlikEt }}</span>
+              <span style="font:700 13.5px 'Karla';color:#2f353a">{{ b2b.kimlik }}</span>
+              <span style="font:400 10.5px 'Karla';color:#a8a191">{{ b2b.kaynak }}</span>
+            </div>
+            <span style="font:800 12px 'Karla';letter-spacing:.08em;color:#2f353a;border:1.5px solid #2f353a;border-radius:11px;padding:5px 10px">{{ b2b.ulke }}</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:6px">
+            <span style="flex:1;min-height:42px;border-radius:13px;border:1.5px solid #ddd6c4;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px;font:700 12px 'Karla';color:#2f353a;cursor:pointer;min-width:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.1 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b2b.tel }}</span></span>
+            <sc-if value="{{ b2b.adresVar }}" hint-placeholder-val="{{ true }}">
+              <span style="flex:1.4;min-height:42px;border-radius:13px;border:1.5px solid #ddd6c4;background:#fff;display:flex;align-items:center;gap:8px;padding:0 12px;font:400 11.5px/1.3 'Karla';color:#2f353a;cursor:pointer;min-width:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5f7a2c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ b2b.adres }}</span></span>
+            </sc-if>
+          </div>
+        </div>
+
+        <div style="margin:14px 20px 0;background:#fbfaf4;border:1.5px solid #ddd6c4;border-radius:20px;overflow:hidden">
+          <div style="padding:12px 15px 10px;display:flex;align-items:center;gap:8px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#8a8270;flex:1">SİNYALLER</span>
+            <span style="font:400 10px 'Karla';color:#a8a191">masaüstü kartıyla aynı kaynak</span>
+          </div>
+          <sc-for list="{{ b2b.sinyaller }}" as="sg" hint-placeholder-count="5">
+            <div style="border-top:1px solid #ece8db;padding:11px 15px;display:flex;align-items:center;gap:10px;min-height:44px">
+              <span style="font:400 12.5px 'Karla';color:#6d7261;flex:1;min-width:0">{{ sg.k }}</span>
+              <span style="font:700 12.5px 'Karla';color:#2f353a;text-align:right">{{ sg.v }}</span>
+              <span style="width:20px;height:20px;border-radius:50%;background:{{ sg.c.bg }};color:{{ sg.c.fg }};display:flex;align-items:center;justify-content:center;font:800 11px 'Karla';flex:none">{{ sg.c.ik }}</span>
+            </div>
+          </sc-for>
+        </div>
+
+        <sc-if value="{{ b2b.mukerrerVar }}" hint-placeholder-val="{{ false }}">
+          <div style="margin:12px 20px 0;background:#f4f2ea;border-radius:18px;padding:14px 15px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:800 9.5px 'Karla';letter-spacing:.16em;color:#8a8270">AYNI KİŞİ OLABİLİR Mİ?</span>
+            <sc-for list="{{ b2b.mukerrer }}" as="mk" hint-placeholder-count="1">
+              <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #e7e2d2;border-radius:14px;padding:11px 13px;cursor:pointer">
+                <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0">
+                  <span style="font:700 13px 'Karla';color:#2f353a">{{ mk.ad }}</span>
+                  <span style="font:400 11px 'Karla';color:#8a8270">{{ mk.alt }}</span>
+                </div>
+                <span style="font:700 10.5px 'Karla';color:#6d7261;background:#e7e2d2;border-radius:8px;padding:4px 8px;flex:none">{{ mk.es }}</span>
+                <span style="font:400 17px 'Karla';color:#b3ab97">›</span>
+              </div>
+            </sc-for>
+            <span style="font:400 11px/1.5 'Karla';color:#8a8270">Bu bir soru, arıza değil — aynı işletmeyse eski kaydı yükseltmek onaydan iyidir.</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ b2b.aiVar }}" hint-placeholder-val="{{ true }}">
+          <div style="margin:12px 20px 0;padding:12px 14px;border:1.5px dashed #ddd6c4;border-radius:16px;display:flex;flex-direction:column;gap:4px">
+            <span style="font:800 9px 'Karla';letter-spacing:.14em;color:#8a8270">ASİSTAN ÖZETİ · OKUMA YARDIMI, KARAR DEĞİL</span>
+            <span style="font:400 12.5px/1.5 'Karla';color:#2f353a">{{ b2b.ai }}</span>
+          </div>
+        </sc-if>
+        <sc-if value="{{ b2b.aiYok }}" hint-placeholder-val="{{ false }}">
+          <span style="margin:12px 20px 0;font:400 11.5px/1.5 'Karla';color:#a8a191">Özet üretilemedi — sinyalleri yukarıdan okuyun.</span>
+        </sc-if>
+
+        <div style="flex:1;min-height:14px"></div>
+
+        <div style="position:sticky;bottom:0;z-index:20;padding:12px 16px 14px;display:flex;flex-direction:column;gap:8px;border-top:1.5px solid #e7e2d2;background:#f6f4ec">
+          <sc-if value="{{ b2b.bekliyor }}" hint-placeholder-val="{{ true }}">
+            <div onClick="{{ b2b.onayla }}" style="height:54px;border-radius:16px;background:#5f7a2c;color:#f5f1e6;display:flex;align-items:center;justify-content:center;gap:9px;font:700 14.5px 'Karla';cursor:pointer;box-shadow:0 4px 14px rgba(95,122,44,.24);transition:transform .12s" style-active="transform:scale(.98)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f5f1e6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>Onayla — toptan fiyatı aç</div>
+            <div style="display:flex;gap:8px">
+              <span onClick="{{ b2b.retAc }}" style="flex:1;height:46px;border-radius:14px;border:1.5px solid #e0b9b2;background:#fff;color:#a44a3f;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Reddet…</span>
+              <span onClick="{{ go.karar }}" style="flex:1;height:46px;border-radius:14px;border:1.5px solid #ddd6c4;background:#fff;color:#2f353a;display:flex;align-items:center;justify-content:center;font:700 12.5px 'Karla';cursor:pointer">Masada devam et</span>
+            </div>
+            <span style="font:400 10.5px/1.45 'Karla';color:#a8a191">Onay yalnız toptan fiyatı açar; vade ve limit masaüstünde ayrı karardır. Ret sebep ister.</span>
+          </sc-if>
+          <sc-if value="{{ b2b.kararli }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="font:400 11.5px/1.45 'Karla';color:#6d7261;flex:1">Karar verildi; düğmeler kalktı. Değiştirmek masaüstünden.</span>
+              <span onClick="{{ go.karar }}" style="height:44px;border-radius:14px;border:1.5px solid #ddd6c4;background:#fff;color:#2f353a;display:flex;align-items:center;padding:0 14px;font:700 12.5px 'Karla';cursor:pointer;flex:none">Masada aç</span>
+            </div>
+            <span onClick="{{ b2b.geriAl }}" style="font:700 10.5px 'Karla';color:#a8a191;cursor:pointer;align-self:center">prototip: kararı sıfırla</span>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>

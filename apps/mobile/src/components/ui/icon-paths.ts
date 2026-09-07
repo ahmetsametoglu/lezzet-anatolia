@@ -227,6 +227,14 @@ export const ICON_PATHS = {
   calendar: { paths: ['M8 3v4M16 3v4M3 11h18'], rects: [[3, 5, 18, 16, 3]] },
   /** Uyarı — daire içinde ünlem. `near-expiry`den AYRI: o bir SAAT, bu bir uyarıdır. */
   'alert-circle': { paths: ['M12 8v5M12 16.5v.5'], circles: [[12, 12, 9]] },
+  /**
+   * FİYAT ETİKETİ — yakın-SKT kampanyası kararı (v3:28, 07.09).
+   *
+   * `sale`den AYRI ve ayrım rolde: `sale` bir SATIŞ eylemidir (yerinde satış bölümü), bu ise bir
+   * FİYAT işaretidir — indirim, teklif, kampanya. Tasarım karar kutusunda kampanya kartını bununla
+   * çiziyor; satış ikonuyla çizmek "burada satış yapılıyor" derdi, oysa kart bir onay bekliyor.
+   */
+  tag: { paths: ['M20 13l-8 8-9-9V4h8z'], circles: [[7.5, 7.5, 1.3]] },
 } as const satisfies Record<string, IconGeometry>;
 
 /** Kitin tanıdığı ikon adları — `Icon` bunun dışına çıkamaz (yanlış ad derlemede yakalanır). */

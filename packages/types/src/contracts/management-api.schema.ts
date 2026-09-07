@@ -92,7 +92,22 @@ export type DecisionSupplyHead = z.infer<typeof DecisionSupplyHeadSchema>;
 
 export const ManagementQueueSchema = z.object({
   /** Cevap bekleyen açık talepler (Y1). `head` en taze bekleyen; `null` = alan boş. */
-  complaints: z.object({ count: z.number().int().nonnegative(), head: DecisionComplaintHeadSchema.nullable() }),
+  complaints: z.object({
+    count: z.number().int().nonnegative(),
+    head: DecisionComplaintHeadSchema.nullable(),
+    /**
+     * Karar kutusunun TALEP kartı (v3:28, 07.09) — *"6 açık · 2'si top bizde"* + tür kırılımı.
+     *
+     * `count` cevap BEKLEYENİ sayar (karar kutusunun rozeti, `countAwaiting`); bu ikisi kuyruğun
+     * TAMAMINI anlatır ve kart onu yazıyor. Ayrı bir uçtan okunmadı: kart hub açılışında çiziliyor
+     * ve ikinci bir tur, iki sayıyı iki ayrı andan okuturdu (sosyal kutucuğun aynı kararı).
+     *
+     * Kaynak `TicketQueueService.countForFilters` — talep listesinin şeridiyle AYNI sayım, yani
+     * kart "6 açık" derken listenin "tümü · 6" demesi garanti.
+     */
+    open: z.number().int().nonnegative(),
+    byType: z.record(TicketTypeEnum, z.number().int().nonnegative()),
+  }),
   /** Eksik toplamalı hazırlıktaki siparişler (Y2 — D1'den düşer, karar admin'in). */
   exceptions: z.object({ count: z.number().int().nonnegative(), head: DecisionExceptionHeadSchema.nullable() }),
   /** Yakın-SKT teklif adayı partiler (Y3). Aday = SKT eşiğin altında ve teklif fiyatı henüz yok. */

@@ -1,6 +1,6 @@
 # Operasyon Mobil v3.dc.html — ekran dizini
 
-TÜRETİLMİŞTİR (`pnpm design:split`). Kaynak: `design/project/Operasyon Mobil v3.dc.html` · 5323 satır.
+TÜRETİLMİŞTİR (`pnpm design:split`). Kaynak: `design/project/Operasyon Mobil v3.dc.html` · 5510 satır.
 
 | # | Ekran (sc-if) | Etiket | Dosya | Kaynak satırlar |
 | --- | --- | --- | --- | --- |
@@ -31,19 +31,20 @@ TÜRETİLMİŞTİR (`pnpm design:split`). Kaynak: `design/project/Operasyon Mobi
 | 25 | `sonSatis` | Yerinde satış · fiş | [25-sonSatis-yerinde-satis-fis.html](25-sonSatis-yerinde-satis-fis.html) | 2444-2465 |
 | 26 | `para` | Para · Tahsilat İzleme | [26-para-para-tahsilat-izleme.html](26-para-para-tahsilat-izleme.html) | 2467-2545 |
 | 27 | `gunSonu` | Para · gün sonu | [27-gunSonu-para-gun-sonu.html](27-gunSonu-para-gun-sonu.html) | 2547-2585 |
-| 28 | `karar` | Yönetim · Karar kutusu | [28-karar-yonetim-karar-kutusu.html](28-karar-yonetim-karar-kutusu.html) | 2587-2668 |
-| 29 | `talepler` | Yönetim · Talep listesi | [29-talepler-yonetim-talep-listesi.html](29-talepler-yonetim-talep-listesi.html) | 2670-2761 |
-| 30 | `sikayet` | Yönetim · Şikâyet | [30-sikayet-yonetim-sikayet.html](30-sikayet-yonetim-sikayet.html) | 2763-2871 |
-| 31 | `sosyal` | Yönetim · Sosyal | [31-sosyal-yonetim-sosyal.html](31-sosyal-yonetim-sosyal.html) | 2873-2921 |
-| 32 | `konusma` | Yönetim · Konuşma | [32-konusma-yonetim-konusma.html](32-konusma-yonetim-konusma.html) | 2923-2989 |
-| 33 | `gunOzeti` | Yönetim · Gün özeti | [33-gunOzeti-yonetim-gun-ozeti.html](33-gunOzeti-yonetim-gun-ozeti.html) | 2991-3025 |
-| 34 | `kampanya` | Yönetim · Kampanya | [34-kampanya-yonetim-kampanya.html](34-kampanya-yonetim-kampanya.html) | 3027-3057 |
-| 35 | `tedarik` | Yönetim · Tedarik | [35-tedarik-yonetim-tedarik.html](35-tedarik-yonetim-tedarik.html) | 3059-3097 |
-| 36 | `bildirim` | Bildirimler | [36-bildirim-bildirimler.html](36-bildirim-bildirimler.html) | 3099-3167 |
-| 00 | — | ortak (iskelet, stil, sekme çubuğu, sheet, betik kalanı) | [00-ortak.html](00-ortak.html) | 1-63, 212-212, 363-363, 548-548, 628-628, 787-787, 867-867, 912-912, 1051-1051, 1187-1187, 1235-1235, 1259-1259, 1346-1346, 1408-1408, 1540-1540, 1678-1678, 1733-1733, 1806-1806, 1895-1895, 1983-1983, 2125-2125, 2190-2190, 2269-2269, 2390-2390, 2443-2443, 2466-2466, 2546-2546, 2586-2586, 2669-2669, 2762-2762, 2872-2872, 2922-2922, 2990-2990, 3026-3026, 3058-3058, 3098-3098, 3168-3776, 3777-5320, 5321-5323 |
+| 28 | `karar` | Yönetim · Karar kutusu | [28-karar-yonetim-karar-kutusu.html](28-karar-yonetim-karar-kutusu.html) | 2587-2684 |
+| 29 | `talepler` | Yönetim · Talep listesi | [29-talepler-yonetim-talep-listesi.html](29-talepler-yonetim-talep-listesi.html) | 2686-2777 |
+| 30 | `sikayet` | Yönetim · Şikâyet | [30-sikayet-yonetim-sikayet.html](30-sikayet-yonetim-sikayet.html) | 2779-2887 |
+| 31 | `sosyal` | Yönetim · Sosyal | [31-sosyal-yonetim-sosyal.html](31-sosyal-yonetim-sosyal.html) | 2889-2937 |
+| 32 | `konusma` | Yönetim · Konuşma | [32-konusma-yonetim-konusma.html](32-konusma-yonetim-konusma.html) | 2939-3005 |
+| 33 | `gunOzeti` | Yönetim · Gün özeti | [33-gunOzeti-yonetim-gun-ozeti.html](33-gunOzeti-yonetim-gun-ozeti.html) | 3007-3041 |
+| 34 | `kampanya` | Yönetim · Kampanya | [34-kampanya-yonetim-kampanya.html](34-kampanya-yonetim-kampanya.html) | 3043-3073 |
+| 35 | `tedarik` | Yönetim · Tedarik | [35-tedarik-yonetim-tedarik.html](35-tedarik-yonetim-tedarik.html) | 3075-3113 |
+| 36 | `b2bOnay` | Yönetim · B2B başvuru onayı | [36-b2bOnay-yonetim-b2b-basvuru-onayi.html](36-b2bOnay-yonetim-b2b-basvuru-onayi.html) | 3115-3215 |
+| 37 | `bildirim` | Bildirimler | [37-bildirim-bildirimler.html](37-bildirim-bildirimler.html) | 3217-3285 |
+| 00 | — | ortak (iskelet, stil, sekme çubuğu, sheet, betik kalanı) | [00-ortak.html](00-ortak.html) | 1-63, 212-212, 363-363, 548-548, 628-628, 787-787, 867-867, 912-912, 1051-1051, 1187-1187, 1235-1235, 1259-1259, 1346-1346, 1408-1408, 1540-1540, 1678-1678, 1733-1733, 1806-1806, 1895-1895, 1983-1983, 2125-2125, 2190-2190, 2269-2269, 2390-2390, 2443-2443, 2466-2466, 2546-2546, 2586-2586, 2685-2685, 2778-2778, 2888-2888, 2938-2938, 3006-3006, 3042-3042, 3074-3074, 3114-3114, 3216-3216, 3286-3916, 3917-5507, 5508-5510 |
 
 ## Kapsama
 
-- Kaynak satır: 5323 · parçalarda geçen: 5323
+- Kaynak satır: 5510 · parçalarda geçen: 5510
 - Boşluk (hiçbir parçada olmayan satır): yok
 - Çakışma (birden çok parçada olan satır): yok

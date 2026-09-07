@@ -9,6 +9,8 @@ import { OperationsSectionHeader } from '@/components/operations/section-header'
 import { OperationsSkeletonList } from '@/components/operations/skeleton-list';
 import { OperationsStaffMenu } from '@/components/operations/staff-menu';
 import { OperationsSurface } from '@/components/operations/surface';
+import { Icon } from '@/components/ui/icon';
+import type { IconName } from '@/components/ui/icon-paths';
 import { PressableSurface } from '@/components/ui/pressable-surface';
 import { pullRefreshColors } from '@/components/ui/pull-refresh';
 import { money } from '@/lib/operations/money';
@@ -106,9 +108,23 @@ const SKELETON_QUIET_HEIGHT =
 type ManagementRoute = '/offer-approval' | '/supply-suggestion' | '/social' | '/complaints' | '/day-summary';
 
 /** Sessiz satır kartının (teklif · tedarik) içeriği — ikisi de aynı iskeleti çiziyor (v3:2110-2126). */
+/*
+  KART ANATOMİSİ DEĞİŞTİ (v3:28 · 07.09) — büyük harf üstbaşlık + dikey blok yerine
+  **42'lik ikon kutusu + metin sütunu + `›`**, başlıklar cümle düzeninde.
+
+  Üstbaşlık ("TEDARİK TASLAĞI") kartın NE OLDUĞUNU harf harf bağırıyordu ve üç kart yan yana
+  gelince ekran üç bağıran etiketle açılıyordu. Yeni düzende o iş İKONA geçti: tanıma göz kırpması
+  kadar sürüyor, başlık ise cümle olarak okunuyor ("Tedarik taslağı"). Kazanç yer de değil ritim:
+  kartlar artık aynı hizada üç satır taşıyor — ne, hangi kayıt, hangi hâl.
+*/
 interface QuietCard {
   key: 'offer' | 'supply';
-  eyebrow: string;
+  /** Kartın rolünü söyleyen ikon — tanımayı harften önce yapan şey (künye yukarıda). */
+  icon: IconName;
+  /** İkon kutusunun ailesi: `warn` terracotta (para/zaman baskısı), `neutral` kum. */
+  iconTone: 'warn' | 'neutral';
+  /** Cümle düzeninde başlık — eski `eyebrow`ün yerini aldı. */
+  name: string;
   title: string;
   subtitle: string;
   route: ManagementRoute;
@@ -245,7 +261,10 @@ function quietCardsOf(queue: ManagementQueue): QuietCard[] {
     const more = queue.offers.candidateCount - 1;
     cards.push({
       key: 'offer',
-      eyebrow: t.hub.rows.offer.eyebrow,
+      /* ETİKET, satış değil: kart bir FİYAT kararı bekliyor (`icon-paths` künyesi). */
+      icon: 'tag',
+      iconTone: 'warn',
+      name: t.hub.rows.offer.name,
       title:
         head === null
           ? fillCopy(t.hub.rows.offer.titleNoHead, { n: String(queue.offers.candidateCount) })
@@ -269,7 +288,10 @@ function quietCardsOf(queue: ManagementQueue): QuietCard[] {
     const more = queue.supply.groupCount - 1;
     cards.push({
       key: 'supply',
-      eyebrow: t.hub.rows.supply.eyebrow,
+      /* KAMYON — tedarik bir SEVKİYAT beklentisidir; kitin `courier`ı tam o geometri. */
+      icon: 'courier',
+      iconTone: 'neutral',
+      name: t.hub.rows.supply.name,
       title:
         head === null
           ? fillCopy(t.hub.rows.supply.titleNoHead, { groups: String(queue.supply.groupCount) })
@@ -295,6 +317,29 @@ function quietCardsOf(queue: ManagementQueue): QuietCard[] {
  * `hub === null` (yükleniyor ya da okuma düştü) hâlinde kutucuklar yine çizilir ama sayıları
  * "—"dir: kapı açık kalır, sayı yalan söylemez.
  */
+/** Talep kartının BAŞLIK satırı — "6 açık · 2 tanesi top bizde". */
+function ticketsLine(queue: ManagementQueue): string {
+  return fillCopy(t.hub.tickets.title, {
+    open: String(queue.complaints.open),
+    awaiting: String(queue.complaints.count),
+  });
+}
+
+/**
+ * Tür kırılımı — talep LİSTESİNİN çip şeridiyle aynı sayım (`countForFilters`), yani kart ile
+ * liste ayrışamaz. Dört türün dördü de yazılır, sıfır olanlar dahil: "0 soru" bir olgudur ve
+ * gizlenirse kırılımın toplamı başlıktaki sayıyı tutmaz.
+ */
+function ticketsBreakdown(queue: ManagementQueue): string {
+  const n = queue.complaints.byType;
+  return fillCopy(t.hub.tickets.breakdown, {
+    damaged: String(n.damaged ?? 0),
+    missing: String(n.missing ?? 0),
+    question: String(n.question ?? 0),
+    other: String(n.other ?? 0),
+  });
+}
+
 function pulseTilesOf(hub: ManagementHub | null): PulseTile[] {
   const copy = t.hub.tiles;
   const intents = hub === null ? null : hub.queue.intents.count;
@@ -310,19 +355,9 @@ function pulseTilesOf(hub: ManagementHub | null): PulseTile[] {
       alert: intents !== null && intents > 0,
       route: '/social',
     },
-    /*
-      TALEP KUYRUĞUNUN KAPISI (21.281). Karar kartı kuyruğun yalnız BAŞINI açıyor ve dipnotu
-      "N açık talep" diyordu — sayıyı söyleyip kapıyı açmayan bir cümle. Kutucuk o kapı; sosyal
-      gelen kutusunun tam kardeşi (aynı soru: "bekleyen kuyruğa gir").
-    */
-    {
-      key: 'complaints',
-      value: hub === null ? null : String(hub.queue.complaints.count),
-      title: copy.complaints.title,
-      subtitle: copy.complaints.subtitle,
-      alert: hub !== null && hub.queue.complaints.count > 0,
-      route: '/complaints',
-    },
+    /* Talep kuyruğunun kapısı 21.281'de BURAYA konmuştu; 07.09'da tasarımın kendi yerine taşındı
+       (nabzın üstünde, kendi kartında — orada tür kırılımını da taşıyabiliyor). Nabız yalnız İKİ
+       kutucuk: tasarımın ızgarası iki sütun ve üçüncü kutucuk satırı tek başına bırakıyordu. */
     {
       key: 'summary',
       value: hub === null ? null : money(hub.summary.revenueCents),
@@ -497,20 +532,67 @@ export function ManagementHubScreen() {
                 padding="md"
                 chevron
                 onPress={() => router.navigate(card.route)}
-                accessibilityLabel={`${card.eyebrow} — ${card.title}`}
+                accessibilityLabel={`${card.name} — ${card.title}`}
                 testID={`management-decision-${card.key}`}
               >
-                <View style={styles.quietText}>
-                  <Text style={styles.quietEyebrow}>{card.eyebrow}</Text>
-                  <Text style={styles.quietTitle}>{card.title}</Text>
-                  <Text style={styles.quietSubtitle}>{card.subtitle}</Text>
+                {/* İKON + METİN SÜTUNU (v3:28) — ikon kutusu ÖLÇÜLÜ 42, kartın dikey ritmini o
+                    kuruyor; metin sütunu `flex:1` + `minWidth:0` ki uzun tedarikçi adı kutuyu
+                    itmesin, kendi içinde kırpılsın. */}
+                <View style={styles.cardRow}>
+                  <View style={[styles.iconBox, card.iconTone === 'warn' ? styles.iconWarn : styles.iconNeutral]}>
+                    <Icon
+                      name={card.icon}
+                      size={operationsTheme.size.decisionIcon}
+                      color={card.iconTone === 'warn' ? operationsTheme.colors.terracotta : operationsTheme.colors.ink}
+                    />
+                  </View>
+                  <View style={styles.quietText}>
+                    <Text style={styles.quietName} numberOfLines={1}>
+                      {card.name}
+                    </Text>
+                    <Text style={styles.quietTitle} numberOfLines={2}>
+                      {card.title}
+                    </Text>
+                    <Text style={styles.quietSubtitle}>{card.subtitle}</Text>
+                  </View>
                 </View>
               </OperationsSurface>
             ))}
           </View>
         )}
 
-        {/* ── 4. GÜNÜN NABZI — durum dalının DIŞINDA (künye) ──────────────── */}
+        {/* ── 4. TALEP VE ŞİKÂYETLER — KENDİ BLOĞU (v3:28) ─────────────────
+            21.281'de bunu "günün nabzı"na bir kutucuk olarak koymuştum; tasarımda karar listesiyle
+            nabız ARASINDA kendi kartı var ve içeriği daha zengin: açık sayısı, kaçının bizde
+            olduğu VE tür kırılımı. Kutucuk yalnız bir sayı taşıyabiliyordu.
+
+            Karar listesinin İÇİNDE değil, ALTINDA: kuyruk bir karar değil bir HÂLDİR — "şu an
+            bekleyen şu kadar iş var" der, "şuna karar ver" demez. Durum dalının dışında, çünkü
+            okuma düşse de kapı açık kalmalı (nabız kutucuklarının aynı kararı).
+
+            İkon YOK ve bu tasarımın kendi ayrımı: üstteki kartlar tekil bir KARARI gösteriyor
+            (ikon o kararın türünü söylüyor), bu ise bir LİSTEYE açılıyor — üstbaşlığı zaten
+            "TALEP VE ŞİKÂYETLER" diyor. */}
+        {hub === null ? null : (
+          <View style={styles.ticketsWrap}>
+            <OperationsSurface
+              tone="panel"
+              padding="md"
+              chevron
+              onPress={() => router.navigate('/complaints')}
+              accessibilityLabel={`${t.hub.tickets.eyebrow} — ${ticketsLine(hub.queue)}`}
+              testID="management-decision-tickets"
+            >
+              <View style={styles.quietText}>
+                <Text style={styles.quietEyebrow}>{t.hub.tickets.eyebrow}</Text>
+                <Text style={styles.ticketsTitle}>{ticketsLine(hub.queue)}</Text>
+                <Text style={styles.quietSubtitle}>{ticketsBreakdown(hub.queue)}</Text>
+              </View>
+            </OperationsSurface>
+          </View>
+        )}
+
+        {/* ── 5. GÜNÜN NABZI — durum dalının DIŞINDA (künye) ──────────────── */}
         <Text style={styles.pulseLabel}>{t.hub.pulse}</Text>
         <View style={styles.grid}>
           {pulseTilesOf(hub).map((tile) => (
@@ -670,9 +752,42 @@ const styles = StyleSheet.create({
   /* ── 3. Sessiz satır kartı (v3:2110) ────────────────────────────────────── */
   /* Kartın kabuğu (zemin · kenar · yarıçap · dolgu · yön oku) KİTTEN geliyor — burada yalnız
      içeriğin dizilimi kaldı. */
+  /* İKONLU KART SATIRI (v3:28) — kutu ölçüsü sabit, metin sütunu esner. `minWidth:0` ŞART:
+     onsuz uzun bir tedarikçi adı sütunu şişirip ikonu kenara itiyor (RN'de flex çocuğu varsayılan
+     olarak içeriğinden küçülmez). */
+  cardRow: { flexDirection: 'row', alignItems: 'center', gap: operationsTheme.space.xl },
+  iconBox: {
+    width: operationsTheme.size.decisionIconBox,
+    height: operationsTheme.size.decisionIconBox,
+    borderRadius: operationsTheme.radius.control,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  /** Para/zaman baskısı taşıyan karar — terracotta ailesi (kampanya, eksik kalem). */
+  iconWarn: { backgroundColor: operationsTheme.colors['terracotta-bg'] },
+  /** Sıradan iş — kum. */
+  iconNeutral: { backgroundColor: operationsTheme.colors['sand-200'] },
   quietText: {
     flex: 1,
+    minWidth: 0,
     gap: operationsTheme.space['2xs'],
+  },
+  /** Cümle düzeninde kart başlığı — eski büyük harf üstbaşlığın yerini aldı (künye yukarıda). */
+  quietName: {
+    fontFamily: operationsTheme.font.body['700'],
+    fontSize: operationsTheme.text.body,
+    color: operationsTheme.colors.ink,
+  },
+  ticketsWrap: {
+    paddingHorizontal: operationsTheme.space['6xl'],
+    paddingTop: operationsTheme.space.lg,
+  },
+  /** Talep kartının sayı satırı — nabız kutucuğundan bir kademe küçük, kartın başlığı o değil. */
+  ticketsTitle: {
+    fontFamily: operationsTheme.font.body['700'],
+    fontSize: operationsTheme.text['body-sm'],
+    color: operationsTheme.colors.ink,
   },
   quietEyebrow: {
     fontFamily: operationsTheme.font.body[operationsTheme.text['eyebrow--font-weight']],

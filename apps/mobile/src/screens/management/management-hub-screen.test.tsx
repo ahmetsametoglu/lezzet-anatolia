@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react-native';
 
+import { operationsCopy } from '@/screens/operations/copy';
 import { OperationsSessionProvider } from '@/screens/operations/sections-context';
 import type { ManagementHub } from '@lezzet/types';
 import { DaySummaryScreen } from './day-summary-screen';
@@ -24,9 +25,20 @@ jest.mock('expo-router', () => {
   const react = jest.requireActual<{ useEffect: (effect: () => void, deps: unknown[]) => void }>('react');
   return {
     useRouter: () => ({ navigate: mockNavigate, back: jest.fn() }),
-    useFocusEffect: (callback: () => void) => react.useEffect(callback, [callback]),
+    /* Odak kanalı CASUSLU: "hub odakta tazelenir" iddiası ancak İKİNCİ bir odak tetiklenerek
+       ölçülebilir — kayıtlı geri çağrılar `refocus()` ile yeniden koşturuluyor. */
+    useFocusEffect: jest.fn((callback: () => void) => react.useEffect(callback, [callback])),
   };
 });
+
+/** Ekranın kayıtlı bütün odak etkilerini yeniden koşturur — gerçek bir geri dönüşün yaptığı şey. */
+async function refocus(): Promise<void> {
+  const { useFocusEffect } = jest.requireMock<{ useFocusEffect: jest.Mock }>('expo-router');
+  const callbacks = useFocusEffect.mock.calls.map(([callback]) => callback as () => void);
+  await act(async () => {
+    for (const callback of callbacks) callback();
+  });
+}
 
 const mockSession = { access_token: 'test-token' };
 jest.mock('@/lib/auth/supabase', () => ({
@@ -70,6 +82,10 @@ function hubData(overrides: {
     queue: {
       complaints: {
         count: 3,
+        /* Karar kutusunun TALEP kartı (07.09): `count` cevap bekleyeni, `open` kuyruğun tamamını
+           sayar; kırılım listenin çip şeridiyle aynı kaynaktan gelir. */
+        open: 6,
+        byType: { damaged: 3, missing: 2, question: 1, other: 0 },
         head: {
           ticketId: '00000000-0000-4000-8000-000000000001',
           type: 'damaged',
@@ -194,6 +210,8 @@ describe('yönetim hub — karar kutusu', () => {
             ...hubData().queue,
             complaints: {
               count: 5,
+              open: 8,
+              byType: { damaged: 4, missing: 2, question: 2, other: 0 },
               head: {
                 ticketId: '00000000-0000-4000-8000-000000000001',
                 type: 'question',
@@ -226,7 +244,7 @@ describe('yönetim hub — karar kutusu', () => {
       ok(
         hubData({
           queue: {
-            complaints: { count: 3, head: null },
+            complaints: { count: 3, open: 3, byType: { damaged: 3, missing: 0, question: 0, other: 0 }, head: null },
             exceptions: { count: 2, head: null },
             offers: { candidateCount: 4, head: null },
             supply: { groupCount: 2, unmappedVariantCount: 0, head: null },
@@ -253,7 +271,7 @@ describe('yönetim hub — karar kutusu', () => {
       ok(
         hubData({
           queue: {
-            complaints: { count: 0, head: null },
+            complaints: { count: 0, open: 0, byType: { damaged: 0, missing: 0, question: 0, other: 0 }, head: null },
             exceptions: { count: 0, head: null },
             offers: {
               candidateCount: 1,
@@ -335,6 +353,43 @@ describe('yönetim hub — karar kutusu', () => {
     await fireEvent.press(screen.getByTestId('management-hub-error-retry'));
     await waitFor(() => expect(screen.getByTestId('management-decision-complaint')).toBeOnTheScreen());
     expect(hubCalls).toBe(2);
+  });
+
+  /*
+    ODAKTA TAZELENME (06.09) — kapının sayısı montaj anında DONMAMALI.
+
+    Okuma `useEffect` ile yalnız montajda koşuyordu; kabuk yığınında hub ekranı sökülmediği için
+    kutucuk saatlerce eski günü gösterebiliyordu. İki sonucu ölçüldü: (1) kapı ile içerisi ayrışıyor
+    — operatör gelen kutusunu boşaltıp dönüyor, kutucuk hâlâ "1 bekliyor" diyor; (2) ölü bir oturum
+    SAĞLIKLI görünüyor — hub dolu fotoğrafı çizmeye devam ettiği için arıza yalnız alt ekranda
+    sanılıyor. Kurye günü ve depo hub'ı bu kararı çoktan vermişti.
+  */
+  it('hub odakta YENİDEN okur ve tazelerken iskelete düşmez', async () => {
+    let hubCalls = 0;
+    routeHub(() => {
+      hubCalls += 1;
+      return ok(hubData({ queue: { intents: { count: hubCalls === 1 ? 2 : 0 } } }));
+    });
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+    expect(screen.getByTestId('management-pulse-social-value')).toHaveTextContent('2');
+
+    await refocus();
+
+    expect(hubCalls).toBeGreaterThan(1);
+    // Sessiz tazeleme: kartlar yerinde kalır, iskelet geri gelmez.
+    expect(screen.queryByTestId('management-hub-loading')).toBeNull();
+    await waitFor(() => expect(screen.getByTestId('management-pulse-social-value')).toHaveTextContent('0'));
+  });
+
+  it('okuma düşerse SEBEP yazılır — 401 "bağlantı" diye gösterilmez', async () => {
+    // Cihazda ölçülen yanlış teşhisin hub ayağı: oturum ölünce hub da bu kapıdan düşüyor.
+    routeHub(() => fail('unauthorized', 401));
+
+    await renderScreen(<ManagementHubScreen />, 'management-hub-loading');
+
+    const description = screen.getByTestId('management-hub-error-description');
+    expect(description).toHaveTextContent(new RegExp(operationsCopy.failure.session.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
   });
 
   it('kuyruk okunamasa da nabız KAPILARI durur; sayılar "—" yazar, 0 değil', async () => {
