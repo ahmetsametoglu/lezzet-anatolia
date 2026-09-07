@@ -12,6 +12,7 @@ import {
   startEmailAnchorAction,
   sendOutboundAction,
   setConversationModeAction,
+  setDefaultConversationModeAction,
   suggestConversationDraftAction,
 } from './actions';
 import { ConversationTicketDialog } from './conversation-ticket-dialog';
@@ -120,6 +121,10 @@ export function SocialClient({ data, urlState }: SocialClientProps) {
     // Mod anahtarı (16.08) — onaysız: anahtar kararın kendisi; Devral düğmesi de buradan geçer.
     onMode: (mode: TicketHandler) => {
       if (detail) void run(() => setConversationModeAction(detail.id, mode));
+    },
+    // Yeni sohbetin VARSAYILANI (15.30) — sohbete değil ayara yazar; Ayarlar ekranıyla aynı satır.
+    onDefaultMode: (mode: TicketHandler) => {
+      void run(() => setDefaultConversationModeAction(mode));
     },
     /** Hibrit taslağı tüket — dönen metni ekran defter kutusuna taşır (16.08). */
     onConsumeDraft: async (): Promise<string | null> => {

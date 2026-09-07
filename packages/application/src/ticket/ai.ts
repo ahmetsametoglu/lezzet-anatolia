@@ -305,25 +305,51 @@ function mediaPlaceholder(
   return '[müşteri bir DOSYA gönderdi — sen dosyayı açamazsın, içeriğini bilmiyorsun]';
 }
 
+/**
+ * Yeniden selam eşiği (saat) — PARAMETRİK (üslup kararı 07.09, araştırmalı).
+ *
+ * Model zamanı görmez; "uzun aradan sonra" kararını sistem verir ve son müşteri mesajına işaret
+ * koyar. On iki saat: Fransız kuralı "günde bir bonjour" (aynı gün ikinci selam kabalık), WhatsApp'ın
+ * kendi karşılama mesajı 14 gün sessizlikten sonra; ikisinin arasında bir sohbet oturumu ölçüsü —
+ * sabah yazıp akşam dönen müşteri yeniden selam alır, on dakika sonra dönen almaz.
+ */
+const SESSION_GAP_HOURS = 12;
+
 async function conversationContextOf(db: SupabaseClient, conversation: Conversation): Promise<SupportContextInput | null> {
   const messages = await new MessageService(db).listByConversation(conversation.id);
   if (messages.length === 0) return null;
   return {
     channel: conversation.source,
     business: BUSINESS_CARD,
-    messages: messages.slice(-THREAD_LIMIT).map((message, i, dizi) => ({
-      who: message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'staff',
+    messages: messages.slice(-THREAD_LIMIT).map((message, i, dizi) => {
       /*
-        MÜŞTERİ ORİJİNALİYLE, BİZ TÜRKÇEMİZLE (15.28). Giden mesajın `body.text`i müşteriye GİDEN
-        çeviridir (Fransızca); yazılan Türkçe torbada durur. Model kendi önceki turlarını Fransızca
-        görseydi "Türkçe yaz" kuralı her turda biraz daha aşınırdı. Müşterinin sözü ise olduğu gibi
-        gider: çeviri bir yorum katmanıdır ve model üç dili de okuyor.
+        UZUN ARA İŞARETİ (üslup 07.09): selam yalnız ilk cevapta — ama günler sonra dönen müşteriye
+        selamsız girmek de tuhaf. Zamanı model değil sistem bilir; son GELEN mesaj bir önceki
+        mesajdan `SESSION_GAP_HOURS`ten geç geldiyse metnin başına işaret düşer, istem o işarete
+        bakar. Medya yer tutucusuyla aynı desen: karar veride, cümle modelde.
       */
-      text:
-        (message.direction === 'outbound' ? message.translations?.tr?.trim() : undefined) ||
-        message.body.text?.trim() ||
-        mediaPlaceholder(message, i === dizi.length - 1),
-    })),
+      const onceki = dizi[i - 1];
+      const sonMu = i === dizi.length - 1;
+      const araSaat =
+        sonMu && onceki && message.direction === 'inbound'
+          ? (Date.parse(message.createdAt) - Date.parse(onceki.createdAt)) / 3_600_000
+          : 0;
+      const araIsareti = araSaat >= SESSION_GAP_HOURS ? `[uzun aradan sonra yazdı — ${Math.round(araSaat)} saat] ` : '';
+      return {
+        who: message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'staff',
+        /*
+          MÜŞTERİ ORİJİNALİYLE, BİZ TÜRKÇEMİZLE (15.28). Giden mesajın `body.text`i müşteriye GİDEN
+          çeviridir (Fransızca); yazılan Türkçe torbada durur. Model kendi önceki turlarını Fransızca
+          görseydi "Türkçe yaz" kuralı her turda biraz daha aşınırdı. Müşterinin sözü ise olduğu gibi
+          gider: çeviri bir yorum katmanıdır ve model üç dili de okuyor.
+        */
+        text:
+          araIsareti +
+          ((message.direction === 'outbound' ? message.translations?.tr?.trim() : undefined) ||
+            message.body.text?.trim() ||
+            mediaPlaceholder(message, sonMu)),
+      };
+    }),
     order: null,
   };
 }
@@ -461,10 +487,15 @@ const OPT_IN_QUESTION =
  * İzin sorusunun sorulacağı EN ERKEN tur — parametrik ve varsayılanı bilinçli (15.12).
  *
  * İlk mesajda sormak, daha yardım etmeden pazarlama istemektir; müşterinin gözünde cevabın kendisi
- * de o isteğin bahanesi hâline gelir. İki müşteri mesajı, "bir soru soruldu, cevaplandı" eşiğidir.
- * Sayı bir tercih olduğu için sabit: veriye bakarak seçilmedi (yerel veri sahtedir — `CLAUDE`).
+ * de o isteğin bahanesi hâline gelir. Sayı bir tercih olduğu için sabit: veriye bakarak seçilmedi
+ * (yerel veri sahtedir — `CLAUDE`).
+ *
+ * **2 → 4 (üslup kararı 07.09, canlı turda ölçüldü):** ikinci mesaj *"sipariş vermek istiyorum"*du
+ * ve soru, sepet bağlantısıyla aynı cevaba eklendi — müşteri daha ürün seçmemişken kampanya izni
+ * istendi. Dört müşteri mesajı, "iş gerçekten yürüdü" eşiğidir; bağlantılı mesaja ise hiç eklenmez
+ * (`izinSorulacak`): o mesajın tek işi var, ödeme bağlantısı.
  */
-const OPT_IN_MIN_TURNS = 2;
+const OPT_IN_MIN_TURNS = 4;
 
 export async function runAutonomousTicketReply(db: SupabaseClient, ticketId: string, opts: SupportAiOpts = {}): Promise<SupportAiOutcome> {
   const tickets = new TicketService(db);
@@ -673,8 +704,10 @@ async function autonomousConversationReply(
     Ve yeterince tur geçmiş olmalı (`OPT_IN_MIN_TURNS`) — önce yardım, sonra istek.
   */
   const musteriMesaji = context.messages.filter((m) => m.who === 'customer').length;
+  // Sepet bağlantısı taşıyan cevaba izin sorusu EKLENMEZ (07.09): o mesajın tek işi ödeme bağlantısı;
+  // altına pazarlama paragrafı koymak hem uzatır hem müşteriyi bağlantıdan uzaklaştırır.
   const izinSorulacak =
-    conversation.source === 'whatsapp' && conversation.optInAskedAt === null && musteriMesaji >= OPT_IN_MIN_TURNS;
+    conversation.source === 'whatsapp' && conversation.optInAskedAt === null && musteriMesaji >= OPT_IN_MIN_TURNS && !cartLink.url;
 
   const govde = izinSorulacak ? `${reply}\n\n${OPT_IN_QUESTION}` : reply;
   const outcome = await sendOutboundMessage(db, sender, {

@@ -1,7 +1,7 @@
 import { ConversationService, serviceDb } from '@lezzet/database';
 import { normalizePhone } from '@lezzet/helper';
 import type { Conversation, UserProfile } from '@lezzet/types';
-import { findOrCreateCustomer } from '@lezzet/application';
+import { defaultConversationHandler, findOrCreateCustomer } from '@lezzet/application';
 
 /**
  * Konuşma AÇILIŞ kapısı (15.1/15.2; üç kanal 21.08, ADR-006) — **motor ile servisi birleştiren
@@ -99,6 +99,8 @@ export async function openWhatsappConversation(input: OpenConversationInput): Pr
     customerId: customer?.id ?? null,
     // Profil adı konuşmaya da yazılır: müşteri kaydı silinse/bağlanmasa da sohbetin bir başlığı olur.
     profileName: input.name?.trim() || null,
+    // Yeni sohbetin yürütücüsü ayardan (15.30) — webhook'la aynı kapı; var olan sohbete dokunmaz.
+    handledBy: await defaultConversationHandler(serviceDb()),
   });
 
   return {

@@ -253,6 +253,8 @@ export type { MessageTranslationPatch } from './messaging/translate';
 export type { RecordMessageInput } from './messaging/record';
 export type { LinkProof, LinkOutcome } from './messaging/link';
 export type { ConversationOptInOutcome } from './messaging/opt-in';
+// Yeni sohbetin varsayılan yürütücüsü (15.30): elle DM açan web kapısı okur, sosyal ekran yazar.
+export { defaultConversationHandler, setDefaultConversationHandler } from './messaging/default-handler';
 
 // ── Canlı zil (16.8) ────────────────────────────────────────────────────────────────────────
 // Sipariş zilinin terfi etmiş hâli: müşteri mobilden yazınca operasyon ekranının kendiliğinden

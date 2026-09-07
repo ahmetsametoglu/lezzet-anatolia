@@ -1,9 +1,14 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 // Kayıt kapıları 21.08'de `@lezzet/application`a terfi etti (`messaging/record.ts`); açılış webde.
 import { recordInboundMessage, recordOutboundMessage } from '@lezzet/application';
-import { ConversationService, CustomerPhoneService, MessageService, UserProfileService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, MessageService, SettingsService, UserProfileService, serviceDb } from '@lezzet/database';
 import { purgeTestData } from '@lezzet/database/testing';
-import { SERVICE_WINDOW_HOURS, serviceWindowState } from '@lezzet/domain-core';
+import {
+  CONVERSATION_DEFAULT_HANDLER_FALLBACK,
+  CONVERSATION_DEFAULT_HANDLER_KEY,
+  SERVICE_WINDOW_HOURS,
+  serviceWindowState,
+} from '@lezzet/domain-core';
 import { openWhatsappConversation } from './conversation';
 
 /**
@@ -63,6 +68,45 @@ async function kanitla(customerId: string, phone: string): Promise<void> {
 
 afterAll(async () => {
   await purgeTestData(db, { conversationIds, profileIds });
+});
+
+/*
+  YENİ SOHBETİN VARSAYILAN YÜRÜTÜCÜSÜ (15.30) — ayar okunuyor mu, ve yalnız YENİ sohbete mi.
+  Ayar küresel tek satır (`CLAUDE §4b`: testler tekil satırı kirletmez): önce okunur, sonra geri konur.
+*/
+describe('yeni sohbetin yürütücüsü ayardan (15.30)', () => {
+  const settings = new SettingsService(db);
+  let onceki: unknown;
+
+  beforeAll(async () => {
+    onceki = await settings.get<unknown>(CONVERSATION_DEFAULT_HANDLER_KEY, null);
+  });
+
+  afterAll(async () => {
+    await settings.set(CONVERSATION_DEFAULT_HANDLER_KEY, onceki ?? CONVERSATION_DEFAULT_HANDLER_FALLBACK);
+  });
+
+  it('ayar hibrit ise yeni sohbet hibrit doğar; VAR OLAN sohbetin modu ayarla değişmez', async () => {
+    await settings.set(CONVERSATION_DEFAULT_HANDLER_KEY, 'hybrid');
+    const telefon = numara();
+    const ilk = await ac({ phone: telefon, name: 'Ayar müşterisi' });
+    if (ilk.status !== 'ok') throw new Error(`açılamadı: ${ilk.status}`);
+    expect(ilk.conversation.handledBy).toBe('hybrid');
+
+    // Ayar değişti, aynı numara yeniden yazdı: açılış çakışma dalından geçer, mod yerinde kalır.
+    await settings.set(CONVERSATION_DEFAULT_HANDLER_KEY, 'ai');
+    const ikinci = await ac({ phone: telefon, name: 'Ayar müşterisi' });
+    if (ikinci.status !== 'ok') throw new Error(`açılamadı: ${ikinci.status}`);
+    expect(ikinci.conversation.id).toBe(ilk.conversation.id);
+    expect(ikinci.conversation.handledBy).toBe('hybrid');
+  });
+
+  it('bozuk ayar değeri FABRİKA değerine düşer — sohbet modsuz doğmaz', async () => {
+    await settings.set(CONVERSATION_DEFAULT_HANDLER_KEY, 'robot');
+    const sonuc = await ac({ phone: numara(), name: 'Bozuk ayar' });
+    if (sonuc.status !== 'ok') throw new Error(`açılamadı: ${sonuc.status}`);
+    expect(sonuc.conversation.handledBy).toBe(CONVERSATION_DEFAULT_HANDLER_FALLBACK);
+  });
 });
 
 describe('numaradan konuşmaya (15.2)', () => {

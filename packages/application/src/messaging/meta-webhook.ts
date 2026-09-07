@@ -13,6 +13,7 @@ import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
 import type { Conversation, ConversationSource, Message, MessageKind, PreferredLanguage } from '@lezzet/types';
 import { resolveOutboundLanguage, translateConversationMessageNow } from './translate';
+import { defaultConversationHandler } from './default-handler';
 import { findOrCreateCustomer } from '../customer/find-or-create';
 import { fetchMetaProfileName } from './meta-profile';
 import { runAutonomousConversationReply } from '../ticket/ai';
@@ -390,6 +391,8 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally,
             customerId,
             providerAccountRef: phoneNumberId,
             profileName,
+            // Yalnız YENİ sohbete uygulanır — RPC çakışmada dokunmaz (15.30).
+            handledBy: await defaultConversationHandler(serviceDb()),
           });
 
           /*
@@ -603,6 +606,8 @@ async function openSocialConversation(
     providerAccountRef: accountRef,
     // Webhook ad taşımıyor; aşağıda Graph'tan çekiliyor. `open` yalnız boş alanı doldurur.
     profileName: null,
+    // Yalnız YENİ sohbete uygulanır — RPC çakışmada dokunmaz (15.30).
+    handledBy: await defaultConversationHandler(serviceDb()),
   });
   if (conversation.profileName) return conversation;
 

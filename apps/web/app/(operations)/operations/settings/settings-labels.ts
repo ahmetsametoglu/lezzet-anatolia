@@ -86,6 +86,12 @@ export function formatSettingValue(def: SettingDef, value: SettingValue, names: 
     }
     case 'text':
       return String(value || '').trim() || '— tanımsız';
+    case 'choice': {
+      // Seçeneğin ADI görünür, kimliği değil; sözlükte olmayan bir değer ham hâliyle kalır — uydurma
+      // bir ad ("Bilinmeyen"), operatöre yanlış bir şeyin düzeldiğini düşündürürdü.
+      const id = String(value ?? '').trim();
+      return def.choices?.find((c) => c.value === id)?.label ?? (id || '— seçilmedi');
+    }
   }
 }
 
@@ -117,6 +123,12 @@ export function parseSettingValue(def: SettingDef, raw: string | boolean | Recor
   const text = raw.trim();
 
   if (def.kind === 'text') return { ok: true, value: text };
+  // Seçenekli ayar: değer LİSTEDEN gelir. Sözlükte olmayan bir mod (`"robot"`) satıra yazılsaydı
+  // çözücü fabrika değerine düşer ve operatör ekranda bir şey görürken sistem başka davranırdı.
+  if (def.kind === 'choice') {
+    if (!def.choices?.some((c) => c.value === text)) return { ok: false, error: 'Listeden bir seçenek seçin.' };
+    return { ok: true, value: text };
+  }
 
   /**
    * Hesap seçimi. Biçim BURADA elenir, VARLIK burada elenemez — hangi hesapların var olduğunu bu

@@ -217,18 +217,29 @@ export function cartAgentTools(db: Db, input: CartAgentToolsInput): ToolSet {
 
     sepet_baglantisi: tool({
       description:
-        'Müşterinin sepetini SİTEDE açacak bağlantıyı üretir. Müşteri sepetini tamamlamak, onaylamak, ödemek istediğinde ya da ' +
-        '"nasıl sipariş veririm" dediğinde ÇAĞIR. Bağlantı cevabının sonuna otomatik eklenir; sen yazma.',
+        'Müşterinin sepetini SİTEDE açacak bağlantıyı üretir. Sepet DOLUYKEN ve müşteri tamamlamak, onaylamak, ödemek istediğinde ÇAĞIR. ' +
+        'Boş sepette çağırma: "nasıl sipariş veririm" sorusuna önce ne istediğini sor ya da sepete_ekle ile doldur. Bağlantı cevabının sonuna otomatik eklenir; sen yazma.',
       inputSchema: z.object({}),
       execute: async () => {
         try {
           const cart = await carts.getFor(owner);
+          /*
+            BOŞ SEPETE BAĞLANTI YOK (07.09 · canlı turda ölçüldü). Müşteri *"sipariş vermek istiyorum"*
+            der demez ajan bağlantıyı çağırdı; kap dolduğu için cevabın sonuna *"Sepetiniz hazır —
+            giriş yapıp onaylamak ve ödemek için"* satırı eklendi — sepet BOŞKEN. Uyarı alanı vardı ama
+            bağlantı yine üretiliyordu; model uyarıyı okusa da satır cevaba giriyordu. Kural araçta:
+            boş sepette bağlantı üretilmez, kap dolmaz, satır eklenmez.
+          */
+          if (cart.items.length === 0) {
+            return {
+              bos: 'Sepet BOŞ — bağlantı üretilmedi. Önce sepete_ekle ile ürün ekle; müşteri yalnız nasıl sipariş vereceğini sorduysa ne istediğini sor. Bağlantı sepet doluyken gönderilir.',
+            };
+          }
           const sonuc = await startCartLink(db, { conversationId: conversation.id });
           if (sonuc.status !== 'ok') return { bilinmiyor: 'Bağlantı şu an üretilemedi — müşteriye sitemizden devam edebileceğini söyle.' };
           input.onLink(sonuc.url);
           return {
             hazir: 'Bağlantı üretildi ve cevabının SONUNA otomatik eklenecek — sen bağlantıyı YAZMA.',
-            ...(cart.items.length === 0 ? { uyari: 'Sepet şu an BOŞ; müşteri sayfada ürün ekleyebilir ama önce sepete_ekle ile doldurmak daha iyi.' } : {}),
             nasil: 'Müşteri bağlantıyı açar, e-postasıyla giriş yapar (şifre yok), sepetini görür, adresini seçer ve öder. Sepet hesabına geçer.',
             gecerlilik: '7 gün',
           };

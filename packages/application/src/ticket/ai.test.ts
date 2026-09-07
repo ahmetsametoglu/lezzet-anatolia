@@ -350,7 +350,7 @@ describe('ajan izin soruyor — bir kez, doğru kanalda, yardımdan sonra', () =
   const sender = metaCloudSender(fakeCloudApiConfig(meta));
 
   it('WhatsApp\'ta yeterli tur geçince soru cevabın SONUNA eklenir ve damgalanır', async () => {
-    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 2 });
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 4 });
     const sonuc = await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
     expect(sonuc).toEqual({ status: 'replied' });
 
@@ -363,7 +363,7 @@ describe('ajan izin soruyor — bir kez, doğru kanalda, yardımdan sonra', () =
   });
 
   it('İKİNCİ kez SORULMAZ — ısrar, reddin kendisinden kötü bir izlenim bırakır', async () => {
-    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 2 });
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 4 });
     await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
     await recordInboundMessage(db, { conversationId, text: 'Teşekkürler', receivedAt: new Date().toISOString() });
 
@@ -376,7 +376,7 @@ describe('ajan izin soruyor — bir kez, doğru kanalda, yardımdan sonra', () =
   it('REDDEDENE tekrar sorulmaz — retten sonra damga dolu kalıyor', async () => {
     /* 15.12'nin asıl vaadi buydu ve eski veriyle İMKÂNSIZDI: ret `optIn=false, optInAt=null`
        yazıyordu, yani "hiç sorulmadı" hâlinden ayırt edilemiyordu. */
-    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 2 });
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 4 });
     await conversations.setOptIn(conversationId, false);
 
     await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
@@ -386,7 +386,7 @@ describe('ajan izin soruyor — bir kez, doğru kanalda, yardımdan sonra', () =
 
   it('MESSENGER\'da hiç sorulmaz — o kanalın izni Meta\'nın kendi mekanizmasından gelir', async () => {
     // Olmayan bir kanal için izin kaydı üretmek, dayanağı olmayan bir izin demekti (`opt-in.ts`).
-    const conversationId = await sohbetAc('ai', { source: 'messenger', turSayisi: 2 });
+    const conversationId = await sohbetAc('ai', { source: 'messenger', turSayisi: 4 });
     await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
 
     const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');
@@ -394,8 +394,9 @@ describe('ajan izin soruyor — bir kez, doğru kanalda, yardımdan sonra', () =
     expect((await conversations.getById(conversationId))?.optInAskedAt).toBeNull();
   });
 
-  it('İLK turda sorulmaz — önce yardım, sonra istek', async () => {
-    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 1 });
+  it('EŞİĞİN altında sorulmaz — önce yardım, sonra istek (eşik 4, 07.09: sipariş turunda sorulmasın)', async () => {
+    // Üç müşteri mesajı hâlâ "iş yürüyor" evresi: ürün seçimi, boy, adet. Soru dördüncüden itibaren.
+    const conversationId = await sohbetAc('ai', { source: 'whatsapp', turSayisi: 3 });
     await runAutonomousConversationReply(db, sender, conversationId, { model: fakeAiModel(AJAN_CEVABI) });
 
     const giden = (await messages.listByConversation(conversationId)).filter((m) => m.direction === 'outbound');

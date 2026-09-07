@@ -143,8 +143,12 @@ describe('sipariş yönlendirmesi — sohbet danışmanlık, işlem sitede (28.0
   it('UZUNLUK ölçülebilir — "kısa yaz" bir kural değildir', () => {
     /* Eskiden yalnız "Kısa ve net" yazıyordu; ölçülen ilk gerçek cevap dört uzun cümle, ~380
        karakterdi. Mesajlaşmada müşteri telefonda okuyor — sayı verilmezse "kısa" modelin
-       yorumuna kalır ve her seferinde başka çıkar. */
-    herIkisinde('~500 karakter');
+       yorumuna kalır ve her seferinde başka çıkar. 500 → 350 (07.09): canlı turda 500'lük sınır
+       520–616 karakterlik cevaplar üretti; 3-4 kısa cümle 350'ye sığar, liste satırları hariç. */
+    herIkisinde('~350 karakter');
+    // Selam yalnız bir kez ve tek soru — her turdaki "Merhaba!" ve üç soruluk mesajlar ölçülmüş üslup arızası (07.09).
+    herIkisinde('SELAM YALNIZ BİR KEZ');
+    herIkisinde('TEK SORU');
   });
 
   it('BİÇİMLENDİRME kuralı var ve KANALDAN BAĞIMSIZ — dallanma yüzeyde, prompt’ta değil', () => {

@@ -287,6 +287,18 @@ function ValueEditor({ row, draft, onChange, label, accountOptions }: ValueEdito
           />
         </FieldShell>
       );
+    // Seçenekli ayar (15.30): hesap seçiciyle aynı kap — listeden seçilir, yazılmaz.
+    case 'choice':
+      return (
+        <FieldShell label={label}>
+          <Select
+            value={typeof draft.raw === 'string' ? draft.raw : ''}
+            onChange={(v) => onChange({ raw: v, numeric: null })}
+            placeholder="Seçin"
+            options={(row.choices ?? []).map((c) => ({ value: c.value, label: c.label }))}
+          />
+        </FieldShell>
+      );
     case 'boolean':
       return <ToggleField label={label} on={draft.raw === true} onChange={(on) => onChange({ raw: on, numeric: null })} />;
     case 'channelFlags': {

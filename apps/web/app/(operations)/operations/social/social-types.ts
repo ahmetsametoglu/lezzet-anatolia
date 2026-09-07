@@ -171,6 +171,11 @@ export interface SocialData {
   awaitingCount: number;
   /** Çizimin ikinci sayısı ("N AI'da") — 16.08'de gerçek oldu; ai + hibrit sohbetler. */
   aiCount: number;
+  /**
+   * Yeni sohbetin VARSAYILAN yürütücüsü (15.30) — Ayarlar'daki satırın aynısı, başlıkta anahtar
+   * olarak. Açık sohbetleri değiştirmez; onların anahtarı sohbet panosunda.
+   */
+  defaultHandler: TicketHandler;
   detail: ConversationDetailView | null;
 }
 
@@ -296,6 +301,8 @@ export interface SocialViewProps {
   onSendReply: (text: string) => Promise<boolean>;
   /** Yürütücü modu (16.08): human · hybrid · ai — Devral da bu kapıdan geçer (`mode='human'`). */
   onMode: (mode: TicketHandler) => void;
+  /** Yeni sohbetlerin varsayılan modu (15.30) — sohbete değil AYARA yazar; Ayarlar ekranıyla aynı satır. */
+  onDefaultMode: (mode: TicketHandler) => void;
   /** Hibrit taslağı tüket — metni döndürür, ekran cevap kutusuna taşır; gönderme kararı operatörün. */
   onConsumeDraft: () => Promise<string | null>;
   /** Taslağı istek üzerine üret (20.4) — hibritte taslak yokken. */

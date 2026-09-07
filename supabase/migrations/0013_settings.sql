@@ -50,6 +50,10 @@ alter table public.settings enable row level security;
 -- Para değerleri CENT (STACK §8: para tamsayı cent'te taşınır), yüzdeler tam sayı.
 insert into public.settings (key, value, description) values
   ('reservation_ttl_minutes',      '30',     'Checkout rezervasyon penceresi (dk). Stripe oturum asgarisi 30 dk — altına inilemez; ödeme penceresi buna eşitlenir.'),
+  -- Yeni sohbetin yürütücüsü (15.30 · kullanıcı kararı 07.09): human | hybrid | ai. Fabrika değeri
+  -- AI — kullanıcı "varsayılan AI modunda açılsın" dedi. Yalnız YENİ sohbete uygulanır
+  -- (`open_conversation` çakışmada dokunmaz); Ayarlar ve Sosyal Mesajlar ekranları aynı satırı yazar.
+  ('conversation_default_handler', '"ai"',   'Yeni sohbetin yürütücüsü: human | hybrid | ai. Açık sohbetleri değiştirmez; Ayarlar ve Sosyal Mesajlar ekranından değiştirilir.'),
   ('order_cutoff_time',            '"16:00"','Sipariş kesim saati. Sonrasında gelen sipariş bir SONRAKİ rota gününe yazılır.'),
   -- ── GÜNÜN EŞİK SAATLERİ (09.3 paneli, kullanıcı onayı 17.08) ────────────────
   -- Panelin "gün akışı" şeridi bu üç satırı okur; üstteki uyarı şeridi de günün EN YAKIN eşiğini

@@ -14,7 +14,15 @@ import { SettingScopeEnum } from '@lezzet/types';
  */
 export const ExceptionScopeEnum = SettingScopeEnum.exclude(['global']);
 export type ExceptionScope = z.infer<typeof ExceptionScopeEnum>;
-import { POINTS_DAILY_CAP_DEFAULT, POINTS_DAILY_CAP_KEY, POINTS_SETTING_KEYS } from '@lezzet/domain-core';
+import {
+  CONVERSATION_DEFAULT_HANDLER_FALLBACK,
+  CONVERSATION_DEFAULT_HANDLER_HELP,
+  CONVERSATION_DEFAULT_HANDLER_KEY,
+  POINTS_DAILY_CAP_DEFAULT,
+  POINTS_DAILY_CAP_KEY,
+  POINTS_SETTING_KEYS,
+} from '@lezzet/domain-core';
+import { TICKET_HANDLER_LABELS, TicketHandlerEnum } from '@lezzet/types';
 import { FREE_SHIPPING_THRESHOLD_KEY, MIN_BASKET_KEY, POINTS_CENT_VALUE_KEY, POINTS_REDEEM_MIN_KEY, SHIPPING_FEE_KEY } from '@/lib/settings-keys';
 import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
 
@@ -52,7 +60,7 @@ import { DAY_HOUR_FALLBACK } from '@/lib/settings/day-hours';
  */
 
 /** Ayarın ekranda hangi sekmede durduğu. */
-export type SettingGroup = 'order' | 'payment' | 'stock' | 'points' | 'cost' | 'feedback';
+export type SettingGroup = 'order' | 'payment' | 'stock' | 'points' | 'cost' | 'feedback' | 'social';
 
 export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
   { key: 'order', label: 'Sipariş & teslimat' },
@@ -61,6 +69,8 @@ export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
   { key: 'points', label: 'Puan' },
   { key: 'cost', label: 'Birim maliyet' },
   { key: 'feedback', label: 'Geri bildirim' },
+  // Sosyal mesajlaşma (15.30): ilk ayarı yeni sohbetin yürütücüsü; ajan/kanal ayarları buraya gelir.
+  { key: 'social', label: 'Sosyal mesajlar' },
 ] as const;
 
 /**
@@ -70,7 +80,7 @@ export const SETTING_GROUPS: readonly { key: SettingGroup; label: string }[] = [
  * kapsamı yine de `global`: kanal ayrımı değerin İÇİNDE yaşıyor, bir istisna satırı olarak değil.
  * İkisini birden sunmak aynı soruya iki cevap kapısı açmak olurdu.
  */
-export type SettingKind = 'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text' | 'account';
+export type SettingKind = 'money' | 'percent' | 'integer' | 'time' | 'boolean' | 'channelFlags' | 'text' | 'account' | 'choice';
 
 /** Ayarın değeri — `jsonb` sütununun ekranda karşılık gelen dar hâli. */
 export type SettingValue = string | number | boolean | Record<string, boolean>;
@@ -85,6 +95,12 @@ export interface SettingDef {
   kind: SettingKind;
   /** Sayısal değerin birimi (`dk`, `gün`, `puan`, `cent`). Para ve yüzde kendi biçimini taşır. */
   unit?: string;
+  /**
+   * `choice` türünün seçenekleri — değer LİSTEDEN gelir, serbest metin değil (15.30). Etiket
+   * operatörün gördüğü ad, değer satıra yazılan kimlik; ikisi sözlükte yan yana durur ki ekran
+   * bir enum'u ham kimliğiyle göstermesin.
+   */
+  choices?: readonly { value: string; label: string }[];
   /** Alt/üst sınır — ham sayı üzerinden (para cent, yüzde tam sayı). */
   min?: number;
   max?: number;
@@ -140,6 +156,20 @@ const ZONE_ONLY = ['zone'] as const;
 const WITH_WAREHOUSE = (...rest: readonly ExceptionScope[]): readonly ExceptionScope[] => ['warehouse', ...rest];
 
 export const SETTING_CATALOG: readonly SettingDef[] = [
+  // ── Sosyal mesajlar ───────────────────────────────────────────────────────
+  {
+    key: CONVERSATION_DEFAULT_HANDLER_KEY,
+    label: 'Yeni sohbetin yürütücüsü',
+    help: CONVERSATION_DEFAULT_HANDLER_HELP,
+    group: 'social',
+    kind: 'choice',
+    // Seçenekler şemadan (`TicketHandlerEnum` + ortak etiketler): yeni bir mod eklendiğinde burası
+    // kendiliğinden genişler, ikinci bir liste yazılmaz.
+    choices: TicketHandlerEnum.options.map((mode) => ({ value: mode, label: TICKET_HANDLER_LABELS[mode] })),
+    impact: 'Geniş etkili: AI seçiliyse her yeni müşteriye ilk cevap onaysız, ajandan gider. Açık sohbetler etkilenmez; her sohbette anahtar ayrıca çevrilebilir.',
+    exceptionScopes: NONE,
+    fallback: CONVERSATION_DEFAULT_HANDLER_FALLBACK,
+  },
   // ── Sipariş & teslimat ────────────────────────────────────────────────────
   {
     key: MIN_BASKET_KEY,

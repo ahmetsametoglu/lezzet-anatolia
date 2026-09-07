@@ -180,6 +180,18 @@ describe('kimliksiz sohbette (Messenger) sepet SOHBETE yazılır', () => {
     expect(sepet.kalemler.map((k) => k.urun)).toEqual([AD('Peynirli Gözleme'), AD('Misafir Kutusu')]);
   });
 
+  it('BOŞ sepette bağlantı ÜRETİLMEZ — kap dolmaz, "Sepetiniz hazır" satırı cevaba giremez (07.09)', async () => {
+    /* Canlı turda müşteri "sipariş vermek istiyorum" der demez ajan bağlantıyı çağırdı ve boş bir
+       sepet için "Sepetiniz hazır" gitti. Kural araçta: uyarı yetmedi, bağlantı hiç üretilmemeli. */
+    const bos = await new ConversationService(db).open({ source: 'messenger', externalRef: `psid-bos-${stamp}` });
+    conversationIds.push(bos.id);
+    let alinan: string | null = null;
+    const sonuc = await cagir(araclar(bos, (url) => (alinan = url)), 'sepet_baglantisi');
+    expect(sonuc).toHaveProperty('bos');
+    expect(sonuc).not.toHaveProperty('hazir');
+    expect(alinan).toBeNull();
+  });
+
   it('bağlantı aracı KABI doldurur ve modele "yazma" der — adres sohbetin dilinde sepet sayfası', async () => {
     let alinan: string | null = null;
     const sonuc = await cagir(araclar(messenger, (url) => (alinan = url)), 'sepet_baglantisi');

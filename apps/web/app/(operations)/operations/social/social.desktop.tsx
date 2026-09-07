@@ -1,5 +1,7 @@
 'use client';
 
+import { MultiToggle } from '@/components/operation/form/multi-toggle';
+import { handlerOptions } from '@/components/operation/ui/ai-handling';
 import { Button } from '@/components/operation/ui/button';
 import { Chip } from '@/components/operation/ui/chip';
 import { PageHeader } from '@/components/operation/ui/page-header';
@@ -38,6 +40,7 @@ export function SocialDesktop({
   onSelect,
   onSendReply,
   onMode,
+  onDefaultMode,
   onConsumeDraft,
   onSuggestDraft,
   onIncoming,
@@ -57,6 +60,11 @@ export function SocialDesktop({
         // şey söyleyebilir ("AI yok" / "AI'da iş yok") ve başlık hangisi olduğunu bilemez.
         subtitle={`${data.awaitingCount} cevap bekliyor${data.aiCount > 0 ? ` · ${data.aiCount} AI'da` : ''} · kuyruk son mesaja göre sıralı`}
       >
+        {/* Yeni sohbetin VARSAYILAN yürütücüsü (15.30) — Ayarlar'daki satırın aynısı; operatör
+            kuyruktayken oraya gitmesin diye burada da. Açık sohbetleri DEĞİŞTİRMEZ: onların
+            anahtarı sohbet panosunda ve bu ayrım cümleyle söyleniyor. */}
+        <span className="font-ops-body text-ops-micro text-ops-faint">Yeni sohbet:</span>
+        <MultiToggle size="sm" label="Yeni sohbetin yürütücüsü" value={data.defaultHandler} options={handlerOptions(busy)} onChange={onDefaultMode} />
         <Button variant="dark" size="sm" onClick={onNewDm}>
           + Gelen DM işle
         </Button>

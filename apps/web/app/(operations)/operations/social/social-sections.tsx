@@ -288,10 +288,12 @@ export function ConversationPane({ detail, busy, error, onIncoming, onSendReply,
             {detail.messages.length} mesaj ·{' '}
             {/* Alt satır modu CÜMLEYLE de söyler (çizim: "AI ajanı yürütüyor / insan yürütüyor") —
                 anahtar seçimi, cümle durumu okur. */}
-            {/* `ai` artık SEÇİLEMEZ (aşağıdaki künye) ama eski satırlarda durabilir — ve o hâlde
-                cümle "yürütüyor" DEMEZ: kimse yürütmüyor, sohbet cevapsız bekliyor. */}
+            {/* Üç mod da GERÇEK (ajan 15.8, anahtar 29.08). Bir tur boyunca burada "AI modunda ama
+                ajan yok — cevapsız bekliyor" yazıyordu: ajan yazıldıktan sonra kimse cümleyi
+                güncellememişti ve operatör, ajanın az önce cevapladığı sohbette "cevapsız" okuyordu
+                (canlı turda görüldü 07.09). */}
             {detail.handledBy === 'ai'
-              ? 'AI modunda ama ajan yok — sohbet cevapsız bekliyor, Devral’a basın'
+              ? 'AI ajanı yürütüyor — gerekirse Devral ile araya girin'
               : detail.handledBy === 'hybrid'
                 ? 'hibrit — AI taslak yazar'
                 : 'insan yürütüyor'}

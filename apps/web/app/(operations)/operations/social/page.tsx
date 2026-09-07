@@ -1,4 +1,4 @@
-import { anchorOf, conversationsChannelName } from '@lezzet/application';
+import { anchorOf, conversationsChannelName, defaultConversationHandler } from '@lezzet/application';
 import { ConversationInboxService, ConversationService, serviceDb } from '@lezzet/database';
 import { DEFAULT_PAGE_SIZE, TICKET_STATUS_LABELS } from '@lezzet/types';
 import { guarded, requireAdmin } from '@/lib/guard';
@@ -54,13 +54,15 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
   const inbox = new ConversationInboxService(serviceDb());
   const source = channelSource(urlState.ch);
 
-  const [page, awaitingCount, aiCount] = await Promise.all([
+  const [page, awaitingCount, aiCount, defaultHandler] = await Promise.all([
     inbox.list({ awaitingReply: urlState.f === 'awaiting' ? true : undefined, source }, undefined, DEFAULT_PAGE_SIZE),
     // Sayaçlar kanal süzgecine UYAR: süzgeçli kuyruğun başlığı süzgeçsiz sayı yazsaydı, tam da
     // kalabalıkta yalan söylerdi.
     inbox.countAwaitingReply(source),
     // Çizimin "1 AI yürütüyor" sayısı — 16.08'e kadar bilerek yoktu (daima 0 gösterirdi).
     new ConversationService(serviceDb()).countHandledByAi(source),
+    // Yeni sohbetin varsayılan modu (15.30) — webhook'un okuduğu ayarın aynısı, başlıkta anahtar.
+    defaultConversationHandler(serviceDb()),
   ]);
 
   /**
@@ -107,6 +109,7 @@ export default async function SocialPage({ searchParams }: SocialPageProps) {
     nextCursor: page.nextCursor,
     awaitingCount,
     aiCount,
+    defaultHandler,
     detail: detailView,
   };
 

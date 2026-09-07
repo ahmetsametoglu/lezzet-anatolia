@@ -4,10 +4,21 @@ import { tool, z, type ToolSet } from '@lezzet/ai';
 import { AddressService, OrderService, PostalCodePlaceService, type Db } from '@lezzet/database';
 import { formatPrice, formatShortDate } from '@lezzet/helper';
 import { logger } from '@lezzet/observability';
-import { COUNTRY_LABELS, ORDER_STATUS_LABELS, type Address, type StockStatus } from '@lezzet/types';
+import {
+  ALLERGEN_LABELS,
+  COUNTRY_LABELS,
+  NUTRITION_KEYS,
+  NUTRITION_LABELS,
+  ORDER_STATUS_LABELS,
+  resolveLocalizedText,
+  type Address,
+  type ProductAllergen,
+  type StockStatus,
+} from '@lezzet/types';
 import { getCatalogData } from '../catalog/catalog';
 import { pricingViewerOf } from '../catalog/pricing-viewer';
 import { getProductDetail } from '../catalog/product';
+import type { StorefrontDeclaration } from '../catalog/storefront-types';
 import { resolvePlaceForPostalCode, resolvePlaceWarehouses, UNRESOLVED_PLACE } from '../delivery/place';
 import { readDeliveryInputs, resolveDelivery } from '../order/delivery';
 import { readPublicDeliveryTerms } from '../settings/public-terms';
@@ -77,6 +88,33 @@ const PRODUCT_HITS = 5;
  * sitenin işidir.
  */
 const CATEGORY_HITS = 20;
+
+/**
+ * Yasal beyanın modele giden hâli (07.09 · ölçülmüş yanlış devir) — alerjen · olası bulaşma ·
+ * içindekiler · 100 g besin değerleri, Türkçe adlarla.
+ *
+ * "Beyan yok" ile "alerjen yok" AYRI cümlelerdir ve fark bir sağlık sorusudur: boş alerjen listesi
+ * kataloğun kuralına göre EKSİK BEYANDIR (`declarationGaps`), "içermez" değil. Model bu cümleyi
+ * okuyunca "içermez" diyemez; yetkili teyidine yönlendirir. Besin değeri de aynı: yoksa yoktur,
+ * tahmin edilmez — etiketler `NUTRITION_LABELS`tan, ikinci bir liste yazılmaz.
+ */
+function beyanOf(d: StorefrontDeclaration): Record<string, unknown> {
+  const ad = (a: ProductAllergen): string => resolveLocalizedText(ALLERGEN_LABELS[a], 'tr');
+  const besin = d.nutrition
+    ? Object.fromEntries(
+        NUTRITION_KEYS.filter((k) => d.nutrition![k] !== null).map((k) => [`${NUTRITION_LABELS[k].label} (${NUTRITION_LABELS[k].unit})`, d.nutrition![k]]),
+      )
+    : null;
+  return {
+    alerjenler:
+      d.allergens.length > 0
+        ? d.allergens.map(ad).join(', ')
+        : 'BEYAN YOK — bu ürün için alerjen kaydı girilmemiş; "içermez" DEME, yetkili teyit etmeli',
+    ...(d.traces.length > 0 ? { olasiBulasma: d.traces.map(ad).join(', ') } : {}),
+    icindekiler: d.ingredients ? d.ingredients.map((s) => s.text).join('') : 'sistemde kayıtlı değil',
+    besinDegerleri100g: besin ?? 'sistemde kayıtlı değil — uydurma; müşteri isterse yetkili iletir',
+  };
+}
 
 /**
  * Stok hâlinin modele söylenen karşılığı — DÖRT hâl, dört ayrı cümle (19.10).
@@ -375,15 +413,24 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
             fiyat kuralı doğmuyor, yani listedeki fiyatla boy fiyatları ayrışamaz.
           */
           const ilk = katalog.products[0];
+          /*
+            DETAY ARTIK HER İLK EŞLEŞME İÇİN OKUNUYOR (07.09 · ölçülmüş yanlış devir): eskiden yalnız
+            çok boylu üründe, boyları saymak için. Şimdi YASAL BEYAN da buradan geliyor — müşteri
+            *"bu pastanın besin değerleri ve alerjenleri"*ni sordu, ajan *"bilgi sistemde yok"* diye
+            devretti; oysa katalog alerjeni, içindekileri ve besin tablosunu tutuyordu, yalnız araç
+            vermiyordu. Alerjen bir sağlık sorusudur: cevabı tahmin değil kayıt olmalı (`beyanOf`).
+          */
+          const detay = ilk ? await getProductDetail(db, { locale: 'tr', slug: ilk.slug, place, viewer }) : null;
           const boylar =
             ilk && ilk.variantCount > 1
-              ? ((await getProductDetail(db, { locale: 'tr', slug: ilk.slug, place, viewer }))?.variants ?? [])
+              ? (detay?.variants ?? [])
                   .filter((v) => v.priceCents !== null)
                   .map((v) => ({ boy: v.label, fiyat: formatPrice(v.priceCents!, 'tr') }))
               : [];
           // Boy listesi yalnız DOLUYSA gönderiliyor: boş dizi, modele "boy yok" diye okunabilecek
           // bir gürültüdür — tek boylu üründe alan hiç olmamalı.
           const boyAlani = boylar.length > 0 ? { boylar: { urun: ilk!.name, secenekler: boylar } } : {};
+          const beyanAlani = ilk && detay ? { beyan: { urun: ilk.name, ...beyanOf(detay.declaration) } } : {};
 
           /*
             ── ÇIKTI HANGİ SORUYU CEVAPLADIĞINI SÖYLER ───────────────────────────────────────
@@ -427,10 +474,11 @@ function publicTools(db: Db, customerId: string | null): ToolSet {
               };
 
           return kod
-            ? { urunler, ...boyAlani, ...kapsam, yer: kod }
+            ? { urunler, ...boyAlani, ...beyanAlani, ...kapsam, yer: kod }
             : {
                 urunler,
                 ...boyAlani,
+                ...beyanAlani,
                 ...kapsam,
                 yerBilinmiyor:
                   'Yer bilinmiyor — stok "hiç var mı" düzeyinde okundu, bir depoya göre değil. ' +

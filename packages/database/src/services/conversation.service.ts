@@ -68,6 +68,11 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
     providerAccountRef?: string | null;
     /** Sağlayıcı profil adı — kimliksiz sohbetin başlığı; son görülen değer kazanır. */
     profileName?: string | null;
+    /**
+     * Yeni sohbetin yürütücüsü (15.30) — çağıran ayardan okur (`defaultConversationHandler`), RPC
+     * yalnız satır DOĞARKEN yazar; var olan sohbetin modu değişmez. Boş = kolon varsayılanı (`human`).
+     */
+    handledBy?: TicketHandler | null;
   }): Promise<Conversation> {
     const raw = await this.executeRpc('open_conversation', {
       p_source: input.source,
@@ -75,6 +80,7 @@ export class ConversationService extends BaseDbService<Conversation, Conversatio
       p_customer_id: input.customerId ?? null,
       p_provider_account_ref: input.providerAccountRef ?? null,
       p_profile_name: input.profileName ?? null,
+      p_handled_by: input.handledBy ?? null,
     });
     return ConversationSchema.parse(dbToApp(raw));
   }

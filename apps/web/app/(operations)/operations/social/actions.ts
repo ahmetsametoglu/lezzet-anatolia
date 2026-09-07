@@ -9,6 +9,7 @@ import {
   recordConversationOptIn,
   recordInboundMessage,
   sendOutboundMessage,
+  setDefaultConversationHandler,
   startEmailAnchor,
 } from '@lezzet/application';
 // Alt yoldan (`settings-keys` emsali): barrel o gün başka şeritlerin elindeydi (07.09).
@@ -209,6 +210,24 @@ export async function sendOutboundAction(input: unknown): Promise<ActionResult<{
         ? `Sağlayıcı şu an gönderemedi (${outcome.reason}) — birazdan tekrar deneyin.`
         : `Sağlayıcı reddetti (${outcome.reason}) — tekrar denemek aynı sonucu verir.`,
     };
+  } catch (err) {
+    return { data: null, error: getErrorMessage(err) };
+  }
+}
+
+/**
+ * Yeni sohbetlerin VARSAYILAN yürütücüsü (15.30 · kullanıcı kararı 07.09) — AYARA yazar, sohbete değil.
+ *
+ * Ayarlar ekranındaki satırın aynısı; operatör sohbet kuyruğundayken oraya gitmek zorunda kalmasın
+ * diye buradan da çevriliyor. Açık sohbetlere dokunmaz (`open_conversation` yalnız doğuşta yazar).
+ */
+export async function setDefaultConversationModeAction(mode: unknown): Promise<ActionResult<{ mode: TicketHandler }>> {
+  try {
+    await requireAdmin();
+    const parsed = ConversationHandlerEnum.parse(mode);
+    await setDefaultConversationHandler(serviceDb(), parsed);
+    refresh();
+    return { data: { mode: parsed }, error: null };
   } catch (err) {
     return { data: null, error: getErrorMessage(err) };
   }

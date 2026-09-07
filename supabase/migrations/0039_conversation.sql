@@ -303,7 +303,11 @@ create or replace function public.open_conversation(
   p_external_ref text,
   p_customer_id uuid default null,
   p_provider_account_ref text default null,
-  p_profile_name text default null
+  p_profile_name text default null,
+  -- Yeni sohbetin yürütücüsü (15.30): çağıran ayardan okuyup geçirir; `null` = kolon varsayılanı.
+  -- YALNIZ satır doğarken yazılır — çakışma dalı bilerek dokunmuyor: açık sohbetin modu operatörün
+  -- kararıdır, genel bir ayar onu sessizce ezmemeli.
+  p_handled_by ticket_handler default null
 ) returns public.conversation
 language plpgsql
 security invoker
@@ -312,8 +316,8 @@ as $$
 declare
   v_conversation public.conversation;
 begin
-  insert into public.conversation (source, external_ref, customer_id, provider_account_ref, profile_name)
-  values (p_source, p_external_ref, p_customer_id, p_provider_account_ref, p_profile_name)
+  insert into public.conversation (source, external_ref, customer_id, provider_account_ref, profile_name, handled_by)
+  values (p_source, p_external_ref, p_customer_id, p_provider_account_ref, p_profile_name, coalesce(p_handled_by, 'human'::ticket_handler))
   on conflict (source, external_ref) do update
      set customer_id = coalesce(conversation.customer_id, excluded.customer_id),
          provider_account_ref = coalesce(conversation.provider_account_ref, excluded.provider_account_ref),
@@ -408,7 +412,7 @@ begin
 end;
 $$;
 
-revoke all on function public.open_conversation(conversation_source, text, uuid, text, text) from anon;
+revoke all on function public.open_conversation(conversation_source, text, uuid, text, text, ticket_handler) from anon;
 revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender, text, text, text, text, jsonb, timestamptz) from anon;
 
 comment on table public.conversation is

@@ -56,7 +56,7 @@ KURALLAR — sırayla ve istisnasız:
 3. ANLAMI ve TONU koru. Şikâyet şikâyet kalır, öfke öfke kalır, argo argo kalır. Metni yumuşatmak, kibarlaştırmak ya da sansürlemek çeviri değil TAHRİFTİR: müşterinin söylemediği bir şeyi söylemiş gibi göstermek, bu işin en ağır hatasıdır.
 4. Metne CEVAP VERME, yorum ekleme, özür dileme, öneride bulunma. Sen bir muhatap değil, bir çevirmensin. Metin sana bir soru soruyorsa bile o soruyu ÇEVİRİRSİN, cevaplamazsın.
 5. Ürün adlarını, marka adlarını, sipariş numaralarını, kodları, bağlantıları (URL), emoji ve noktalama işaretlerini olduğu gibi bırak. Sohbet biçim işaretleri (*kalın*, _italik_, ~üstü çizili~) ve satır sonları da olduğu gibi kalır — işaretin içindeki metin çevrilir, işaret korunur.
-6. Metin çevrilemezse (anlamsız harf dizisi, yalnız emoji, tek kelimelik "ok") üç alana da metni AYNEN koy ve tespit ettiğin dili yaz; dil belirlenemiyorsa "und" döndür.
+6. Yalnız GERÇEKTEN çevrilemeyen metinde (anlamsız harf dizisi, yalnız emoji, yalnız sayı ya da kod, "ok"/"OK" gibi evrensel kısaltma) üç alana da metni AYNEN koy ve tespit ettiğin dili yaz; dil belirlenemiyorsa "und" döndür. KISA ya da TEK KELİMELİK olmak çevrilemez demek DEĞİLDİR: selamlar, teşekkürler, evet/hayır, tek kelimelik sorular ÇEVRİLİR — "Salut" → "Selam", "Bonjour," → "Merhaba,", "merci" → "teşekkürler", "oui" → "evet", "Hallo" → "Merhaba".
 7. Yalnız istenen alanları doldur; açıklama, tırnak, markdown, ön söz yazma.`;
 
 export const translateTask: AiTask<TranslateInput, TranslateOutput> = {

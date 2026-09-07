@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CONVERSATION_DEFAULT_HANDLER_KEY } from '@lezzet/domain-core';
 import type { Setting, UserProfile } from '@lezzet/types';
 import { SETTING_BY_KEY } from './settings-catalog';
 import { checkBounds, formatSettingValue, parseSettingValue } from './settings-labels';
@@ -52,6 +53,29 @@ function profile(over: Partial<UserProfile> & { id: string }): UserProfile {
     ...over,
   } as UserProfile;
 }
+
+/*
+  SEÇENEKLİ AYAR (15.30) — yeni sohbetin yürütücüsü. Değer listeden gelir: sözlükte olmayan bir mod
+  satıra yazılsaydı çözücü sessizce fabrika değerine düşer, operatör ekranda başka bir şey görürdü.
+*/
+describe('choice türü (15.30)', () => {
+  const def = SETTING_BY_KEY.get(CONVERSATION_DEFAULT_HANDLER_KEY)!;
+
+  it('listedeki seçenek geçer, olmayan REDDEDİLİR', () => {
+    expect(parseSettingValue(def, 'hybrid')).toEqual({ ok: true, value: 'hybrid' });
+    expect(parseSettingValue(def, 'robot').ok).toBe(false);
+    expect(parseSettingValue(def, '').ok).toBe(false);
+  });
+
+  it('ekranda seçeneğin ADI görünür, kimliği değil', () => {
+    expect(formatSettingValue(def, 'ai')).toBe('AI');
+    expect(formatSettingValue(def, 'hybrid')).toBe('Hibrit');
+  });
+
+  it('fabrika değeri AI — kullanıcı kararı: yeni sohbet AI modunda açılır', () => {
+    expect(def.fallback).toBe('ai');
+  });
+});
 
 describe('toSettingRows', () => {
   it('hiç satırı olmayan ayar da listede — çalışan bir değeri var, görünmezse değiştirilemez', () => {

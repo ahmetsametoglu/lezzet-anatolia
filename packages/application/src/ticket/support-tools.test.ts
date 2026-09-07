@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { z, ToolSet } from '@lezzet/ai';
+import { EMPTY_NUTRITION } from '@lezzet/types';
 import {
   AddressService,
   CategoryService,
@@ -111,6 +112,9 @@ async function urunAc(ad: string, opts: { b2c?: number; b2b?: number; stok?: boo
     description: ucDil('Destek testi ürünü'),
     ingredients: ucDil('Un, su, tuz'),
     storageInstructions: ucDil('Serin yerde saklayın'),
+    // Yasal beyan (07.09): ajan alerjen/besin sorusunu KAYITTAN cevaplamalı — fikstür onu taşıyor.
+    allergens: ['sut', 'gluten'],
+    nutrition: { ...EMPTY_NUTRITION, energyKcal: 290, fatG: 12 },
     categoryId,
     status: 'active',
     variants: [{ label: { tr: '1 kg' } }],
@@ -252,6 +256,17 @@ describe('kimliksiz sohbet — set BOŞ değil, DAR (28.08 · CHANNELS §3b)', (
     const fiyatZiyaretci = (kimliksiz.urunler as { fiyat: string }[])[0]!.fiyat;
     expect(fiyatZiyaretci).toContain('€');
     expect(fiyatZiyaretci).not.toBe((toptan.urunler as { fiyat: string }[])[0]!.fiyat);
+  });
+
+  it('İLK eşleşmenin yasal BEYANI gelir — alerjen sorusu tahminle değil kayıtla cevaplanır (07.09)', async () => {
+    /* Canlı turda ajan "alerjen bilgisi sistemde yok" diye devretti; katalog beyanı tutuyordu, araç
+       vermiyordu. Alerjen bir sağlık sorusudur: kayıt varsa listeyi, yoksa "beyan yok" der. */
+    const sonuc = await cagir(customerSupportTools(db, null), 'urun_ara', { terim: `Fistikli ${stamp}` });
+    const beyan = sonuc.beyan as { alerjenler: string; icindekiler: string; besinDegerleri100g: Record<string, number> };
+    expect(beyan.alerjenler).toContain('Süt');
+    expect(beyan.alerjenler).toContain('Gluten');
+    expect(beyan.icindekiler).toContain('Un');
+    expect(beyan.besinDegerleri100g).toMatchObject({ 'Enerji (kcal)': 290, 'Yağ (g)': 12 });
   });
 
   it('kimliksiz + posta kodu = stok DEPO-DOĞRU okunur (kimlik gerekmiyor)', async () => {
