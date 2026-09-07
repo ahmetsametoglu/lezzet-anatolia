@@ -178,6 +178,18 @@ describe('YZ taslağının tek çıkışı kutuya taşımaktır', () => {
     expect(screen.queryByText(t.record)).toBeOnTheScreen(); // altlıktaki defter düğmesi hâlâ tek yazma yolu
   });
 
+  it('taslak BİÇİMLİ çizilir — operatör göndereceği metnin görüneceği hâli görmeli (07.09)', async () => {
+    /* Dokuzuncu yüzeydi ve atlanmıştı: 21.279 mesaj baloncuklarını çizdirdi, taslak AYRI bir kutu.
+       Buradaki metin defterde işaret taşıma ihtimali en yüksek metin — onu yapay zekâ üretiyor ve
+       biçimli üretiyor. Ham gösterilirse operatör görmediği bir hâli onaylar. */
+    mockDetay(detay({ handledBy: 'hybrid', aiDraftReply: '*Fıstıklı Baklava* 4,57 €' }));
+    await ekranAc();
+
+    // İşaret ÇİZİLİYOR: yıldızlar ekranda düz metin olarak durmuyor.
+    expect(screen.getByText('Fıstıklı Baklava')).toBeOnTheScreen();
+    expect(screen.queryByText('*Fıstıklı Baklava* 4,57 €')).toBeNull();
+  });
+
   it('hibritte taslak YOKKEN "Taslak öner" düğmesi görünür', async () => {
     mockDetay(detay({ handledBy: 'hybrid', aiDraftReply: null }));
     await ekranAc();

@@ -9,8 +9,9 @@ import { OperationsNoticeBlock } from '@/components/operations/notice-block';
 import { OperationsStackHeader } from '@/components/operations/stack-header';
 import { ChatLayout } from '@/components/ui/chat-layout';
 import { PressableSurface } from '@/components/ui/pressable-surface';
+import { ChatText } from '@/components/ui/chat-text';
 import type { SocialMessage } from '@/lib/api/social';
-import { fillCopy } from '@/screens/operations/copy';
+import { fillCopy, operationsFailureText } from '@/screens/operations/copy';
 import { emToDp } from '@/theme/parse';
 import { operationsTheme } from '@/theme/unistyles';
 import { ManagementChatBubble } from './chat-bubble';
@@ -177,10 +178,13 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
           testID="management-social-chat-header"
         />
         <View style={styles.noticeWrap}>
+          {/* Alt satır SEBEBİ söyler (gelen kutusuyla aynı karar): oturum · yetki · bağlantı ·
+              beklenmedik. `conversation === null` hâlinde sonuç kaydı yoktur ve o zaman bir sebep
+              iddia edilmez — `operationsFailureText` genel cümleye düşer. */}
           <OperationsNoticeBlock
             variant="error"
             title={td.notFound.title}
-            description={td.notFound.body}
+            description={operationsFailureText(chat.failure)}
             retry={{ label: td.notFound.retry, onPress: chat.retry }}
             testID="management-social-chat-error"
           />
@@ -239,7 +243,12 @@ export function SocialConversationScreen({ conversationId }: SocialConversationS
   const draftSlot = conversation.aiDraftReply ? (
     <View style={styles.draft} testID="management-social-draft">
       <Text style={styles.draftEyebrow}>{td.draftEyebrow}</Text>
-      <Text style={styles.draftBody}>{conversation.aiDraftReply}</Text>
+      {/* Taslak, ajanın YAZDIĞI hâliyle çizilir (07.09) — talep ekranının aynı kararı. Buradaki
+          metin defterde biçim işareti taşıma ihtimali EN YÜKSEK metindir: onu yapay zekâ üretiyor
+          ve biçimli üretiyor. Ham işaretle gösterilirse operatör, gönderilecek metnin görüneceği
+          hâli GÖRMEDEN onaylamış olur. Mesaj baloncukları 21.279'da çizdirilmişti; taslak ayrı bir
+          kutu olduğu için o turda atlanmıştı. */}
+      <ChatText style={styles.draftBody}>{conversation.aiDraftReply}</ChatText>
       <PressableSurface
         onPress={() => void takeDraft()}
         disabled={chat.busy}
