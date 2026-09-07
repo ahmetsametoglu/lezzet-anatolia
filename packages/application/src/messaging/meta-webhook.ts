@@ -191,7 +191,19 @@ interface Tally {
  * kabuk 500 döner → Meta tekrar dener → yazılabilenler `duplicate` olarak atlanır, düşen yeniden
  * denenir. Tanınmayan olay tipi ise HATA DEĞİL: tekrar almak fayda sağlamaz, sayılır ve 200 geçilir.
  */
-export async function handleMetaWebhook(body: unknown): Promise<MetaWebhookOutcome> {
+export interface MetaWebhookOptions {
+  /**
+   * Graph'a çıkan TEK dış çağrının (Messenger/IG profil adı) `fetch`i. Üretimde geçilmez —
+   * varsayılan küresel `fetch`tir. Testler sahte geçerek kapıyı ağdan koparır; gerekçe
+   * `meta-profile.ts`'in künyesinde.
+   */
+  fetchImpl?: typeof fetch;
+}
+
+export async function handleMetaWebhook(
+  body: unknown,
+  opts: MetaWebhookOptions = {},
+): Promise<MetaWebhookOutcome> {
   const root = body as { object?: string; entry?: unknown[] } | null;
   if (!root?.object || !Array.isArray(root.entry)) {
     logger.warn({ object: root?.object ?? null }, 'meta webhook: tanınmayan gövde yapısı — işlenmedi');
@@ -204,7 +216,12 @@ export async function handleMetaWebhook(body: unknown): Promise<MetaWebhookOutco
     if (root.object === 'whatsapp_business_account') {
       await ingestWhatsappEntry(entry as Record<string, unknown>, tally);
     } else if (root.object === 'page' || root.object === 'instagram') {
-      await ingestMessengerEntry(root.object === 'page' ? 'messenger' : 'instagram', entry as Record<string, unknown>, tally);
+      await ingestMessengerEntry(
+        root.object === 'page' ? 'messenger' : 'instagram',
+        entry as Record<string, unknown>,
+        tally,
+        opts.fetchImpl,
+      );
     } else {
       tally.ignored += 1;
       logger.warn({ object: root.object }, 'meta webhook: abone olunmamış obje — yok sayıldı');
@@ -483,7 +500,12 @@ function waTimestamp(timestamp: string | undefined): string {
  * Çağrı YALNIZ ad boşken yapılır: konuşma başına bir kez, her mesajda değil. Düşerse konuşma adsız
  * kalır ve mesaj yine yazılır — ad bilinmiyor olabilir, mesaj kaybolamaz.
  */
-async function openSocialConversation(source: ConversationSource, personId: string, accountRef: string | null) {
+async function openSocialConversation(
+  source: ConversationSource,
+  personId: string,
+  accountRef: string | null,
+  fetchImpl?: typeof fetch,
+) {
   const service = new ConversationService(serviceDb());
   const conversation = await service.open({
     source,
@@ -496,13 +518,18 @@ async function openSocialConversation(source: ConversationSource, personId: stri
   });
   if (conversation.profileName) return conversation;
 
-  const name = await fetchMetaProfileName(source, personId);
+  const name = await fetchMetaProfileName(source, personId, fetchImpl);
   if (!name) return conversation;
   // `setProfileName` de "yalnız boşsa yazar" — iki mesaj aynı anda düşerse ikincisi ezmez.
   return (await service.setProfileName(conversation.id, name)) ?? conversation;
 }
 
-async function ingestMessengerEntry(source: ConversationSource, entry: Record<string, unknown>, tally: Tally): Promise<void> {
+async function ingestMessengerEntry(
+  source: ConversationSource,
+  entry: Record<string, unknown>,
+  tally: Tally,
+  fetchImpl?: typeof fetch,
+): Promise<void> {
   // entry.id = sayfa / IG hesabı kimliği — konuşmanın aktığı İŞLETME hesabı (cevap yönlendirme anahtarı).
   const accountRef = typeof entry.id === 'string' ? entry.id : null;
   const events = Array.isArray(entry.messaging) ? (entry.messaging as MessengerEvent[]) : [];
@@ -527,7 +554,7 @@ async function ingestMessengerEntry(source: ConversationSource, entry: Record<st
         type: `${source}.${echo ? 'echo' : 'message'}`,
         payload: message as Record<string, unknown>,
         write: async () => {
-          const conversation = await openSocialConversation(source, personId, accountRef);
+          const conversation = await openSocialConversation(source, personId, accountRef, fetchImpl);
 
           const hasAttachments = Array.isArray(message.attachments) && message.attachments.length > 0;
           const text = typeof message.text === 'string' && message.text.trim() ? message.text : null;
@@ -561,7 +588,7 @@ async function ingestMessengerEntry(source: ConversationSource, entry: Record<st
         type: `${source}.postback`,
         payload: event.postback as Record<string, unknown>,
         write: async () => {
-          const conversation = await openSocialConversation(source, personId, accountRef);
+          const conversation = await openSocialConversation(source, personId, accountRef, fetchImpl);
           await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             text: event.postback?.title ?? null,

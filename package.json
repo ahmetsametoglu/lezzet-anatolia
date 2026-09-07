@@ -68,6 +68,7 @@
     "ai:smoke": "tsx scripts/ai-smoke.ts",
     "meta:register": "tsx scripts/meta-register.ts",
     "meta:smoke": "tsx scripts/meta-smoke.ts",
+    "meta:templates": "tsx scripts/meta-templates.ts",
     "whatsapp:smoke": "tsx scripts/whatsapp-send-smoke.ts",
     "sendcloud:smoke": "tsx scripts/sendcloud-smoke.ts",
     "sendcloud:label:smoke": "tsx scripts/sendcloud-label-smoke.ts"

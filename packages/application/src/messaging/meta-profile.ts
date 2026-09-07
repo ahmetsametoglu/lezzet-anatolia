@@ -55,7 +55,25 @@ interface ProfileBody {
  *
  * WhatsApp bu kapıdan geçmez: adı zaten webhook gövdesinde gelir, ikinci bir tur israf olurdu.
  */
-export async function fetchMetaProfileName(source: ConversationSource, personId: string): Promise<string | null> {
+export async function fetchMetaProfileName(
+  source: ConversationSource,
+  personId: string,
+  /*
+    DİKİŞ (07.09 · kullanıcı sorusundan çıktı: *"testler Meta'ya çağrı atıyor olabilir mi"*).
+
+    Ölçüldü: ATMIYORDU, ve koruma tesadüf DEĞİLDİ — `meta-webhook.test.ts` jetonu `beforeAll`da
+    siliyor, `afterAll`da geri koyuyor (deponun "önce oku, sonra geri koy" deseni). Yani kapı zaten
+    bilerek susturulmuştu; bu parametre bir arızayı kapatmıyor.
+
+    Yine de eklendi, çünkü koruma ORTAM DEĞİŞKENİNE dayanıyordu: kapıyı ağdan koparan şey testin
+    env'i düzenlemesiydi, bağımlılığın kendisi değil. `sendCloudApiMessage` bu dikişi baştan
+    taşıyor (`fetchImpl` + `FakeMeta`) ve deponun kuralı da yazılı (`whatsapp/testing.ts`):
+    *"vi.mock YOK — gerçeğe vur ya da bağımlılığı enjekte et."* İki kapı artık aynı desende.
+
+    Varsayılan küresel `fetch` — üretim davranışı değişmiyor.
+  */
+  fetchImpl: typeof fetch = fetch,
+): Promise<string | null> {
   if (source === 'whatsapp') return null;
   const token = pageAccessToken();
   if (!token) return null;
@@ -67,7 +85,7 @@ export async function fetchMetaProfileName(source: ConversationSource, personId:
        genişlettiği `fetch`e aitti ve standart Node `fetch`inde yok — tip hatası verdi. Kayıp yok:
        önbellek Next'in kendi eklentisiydi, Node hiçbir yanıtı zaten önbelleklemiyor. Bu satır,
        taşımanın gerçekten Next'ten koptuğunun da kanıtı. */
-    const response = await fetch(url);
+    const response = await fetchImpl(url);
     const body = (await response.json()) as ProfileBody;
 
     if (!response.ok || body.error) {
