@@ -2367,3 +2367,16 @@ dayanıyor. Her birinin başına "web ekranı söküldü" notu kondu; yeniden bi
 sınıfa giren öteki web ekranları (mal kabul formu · transfer kabulü · imha diyaloğu) kullanıcıya
 listelendi; her biri ayrı karardır.
 
+
+## Yönetim karar kutusu — "gün içinde" ayrımı YOK (07.09)
+
+Tasarımın 28. ekranı başlığın altına *"5 karar · **2 tanesi gün içinde**"* yazıyor: kararları
+toplam ve BUGÜN İÇİNDE olanlar diye ikiye ayırıyor. **Bu ayrım sistemde yok ve açılmayacak**
+(kullanıcı kararı: *"Gün içindeki kavramlar bizde yok. Olmasına da gerek yok. Kaldıralım onları."*).
+
+Ekran kendi cümlesinde kalıyor: **"{n} karar bekliyor"**. Sapma bilinçli ve yeniden tartışılmaz.
+
+Gerekçe ölçülebilirlikte: "gün içinde" tanımsız bir eşik — teslim tarihi bugün olan mı, açılalı 24
+saat dolmayan mı, vardiya sonuna kalan mı? Üçü üç ayrı sayı verir. Tanımı olmayan bir ayrımı ekrana
+yazmak, `design/KARARLAR.md`'nin *"ekranda yalnız olgu"* hükmünü çiğnerdi: operatör o sayıya bakıp
+bir şey yapamaz, çünkü neyi saydığını bilemez.

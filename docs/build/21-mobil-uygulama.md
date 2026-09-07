@@ -13311,3 +13311,29 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
   **Doğrulama:** yönetim **111/111** · kök typecheck 20/20 · lint temiz · **fiziksel Oppo'da
   görüldü**: iki ikonlu kart, talep kartı kendi bloğunda ("3 açık · 2 tanesi top bizde" / "2 bozuk ·
   1 eksik · 0 soru · 0 diğer" — kırılımın toplamı başlığı tutuyor), nabız iki kutucuk.
+
+  **BİRE BİR KARŞILAŞTIRMA İKİ UYUMSUZLUK ÇIKARDI** (kullanıcı isteği 07.09: *"ekran görüntüleri
+  alarak… arayüzleri bire bir karşılaştır"*). İkisi de ekran görüntüsüne bakarak DEĞİL, tasarımın
+  kaynak dosyasındaki sayılarla karşılaştırınca çıktı — gözle ayırt edilmiyorlardı:
+
+  · **Eksik kalem kartı yeni anatomiye geçmemişti.** Üç kart tipinden ikisini çevirmişim; uyarı
+    kartı ikonsuz, büyük harf üstbaşlıklı kalmıştı. Şimdi o da ikon + cümle başlığı düzeninde
+    (kutu ikonu — eksik olan şey bir KALEM), ürün · adet · referans tek satırda.
+  · **Kartın ikinci ve üçüncü satırı eski ölçülerdeydi.** Yalnız BAŞLIĞI çevirmişim: ikinci satır
+    14/700 mürekkep yazılıyordu (tasarım 12/400 `body`), üçüncü satır 11/400 sönük yazılıyordu
+    (tasarım 11/**700** ve TONLU). Ayrım anlamlı ve düzeltildi: ikinci satır kartın KONUSUDUR ve
+    başlıkla yarışmamalı; üçüncü satır kartın HÂLİDİR ("2 gün kaldı") ve aciliyeti o taşıyor —
+    yakın-SKT'de terracotta, tedarikte sönük.
+
+  **Eksik kalem kartı VERİ AÇARAK üretildi** (kullanıcı isteği: *"üretilemeyen durumlar için
+  veritabanına uygun kayıtları aç"*): `LA-26-R4K6D7` siparişinin `Peynirli Kalzone` satırı 4 adet
+  isterken stok 29'du; stok 3'e indirilince FEFO 1 adet eksik verdi ve kart doğdu. Kayıt yerinde
+  bırakıldı (kullanıcı: *"geri alman şart değil"*).
+
+  **PİKSEL ÇAKIŞTIRMASI YAPILMADI ve yapılmamalı:** tasarım tuvali 390 px, cihaz 423 dp. Uygulama
+  esneyerek uyum sağlıyor; anlamlı ölçüt "her değerin kaynağı tasarımın ölçtüğü sayı mı" ve
+  karşılaştırma o eksende yapıldı.
+
+  **"GÜN İÇİNDE" AYRIMI AÇILMAYACAK** (kullanıcı kararı 07.09) — tasarım *"5 karar · 2 tanesi gün
+  içinde"* diyor, bizde öyle bir kavram yok ve olmayacak. Ekran kendi cümlesinde kalıyor
+  (*"{n} karar bekliyor"*); gerekçe `design/KARARLAR.md`de kayıtlı.

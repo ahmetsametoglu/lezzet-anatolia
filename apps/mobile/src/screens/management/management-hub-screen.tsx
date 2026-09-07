@@ -507,14 +507,30 @@ export function ManagementHubScreen() {
                 accessibilityLabel={`${t.hub.rows.exception.badge} — ${exception.title}`}
                 testID="management-decision-exception"
               >
-                <View style={styles.attentionHead}>
-                  <Text style={styles.attentionBadge}>{t.hub.rows.exception.badge}</Text>
-                  <Text style={styles.attentionRef}>{exception.ref}</Text>
+                {/* İKON + METİN SÜTUNU — sessiz kartlarla AYNI anatomi (v3:28). Kart bu ailenin
+                    en acil üyesi ama şekli aynı: üstbaşlık bağırmıyor, ikon tanıtıyor. Aciliyeti
+                    çerçevesi ve zemini söylüyor (uyarı ailesi), etiketi değil. */}
+                <View style={styles.cardRow}>
+                  <View style={[styles.iconBox, styles.iconWarn]}>
+                    {/* KUTU — eksik olan şey bir KALEM; tasarımın geometrisi kitin `packages`ıyla aynı. */}
+                    <Icon
+                      name="packages"
+                      size={operationsTheme.size.decisionIcon}
+                      color={operationsTheme.colors.terracotta}
+                    />
+                  </View>
+                  <View style={styles.quietText}>
+                    <Text style={styles.quietName} numberOfLines={1}>
+                      {t.hub.rows.exception.name}
+                    </Text>
+                    {/* Ürün · eksik adet · sipariş referansı TEK satırda (v3:28) — üçü aynı olayın
+                        parçaları ve ayrı satırlara bölünince kart iki katına çıkıyordu. */}
+                    <Text style={styles.quietTitle} numberOfLines={2}>
+                      {exception.title}
+                    </Text>
+                    <Text style={styles.quietSubtitle}>{exception.ref}</Text>
+                  </View>
                 </View>
-                {/* Ürün adı + eksik adet iki satıra sığar; tasarımın kartı da iki satırlık. */}
-                <Text style={styles.attentionTitle} numberOfLines={2}>
-                  {exception.title}
-                </Text>
                 <View style={styles.attentionFoot}>
                   <Text style={styles.attentionAction}>{t.hub.rows.exception.action}</Text>
                   <Text style={styles.chevron}>›</Text>
@@ -553,7 +569,11 @@ export function ManagementHubScreen() {
                     <Text style={styles.quietTitle} numberOfLines={2}>
                       {card.title}
                     </Text>
-                    <Text style={styles.quietSubtitle}>{card.subtitle}</Text>
+                    {/* Hâl satırının tonu KARTIN ailesinden: yakın-SKT bir süre baskısı taşıyor
+                        (terracotta), tedarik taslağı yalnız hazır olduğunu söylüyor (sönük). */}
+                    <Text style={[styles.quietSubtitle, card.iconTone === 'warn' ? styles.quietSubtitleWarn : null]}>
+                      {card.subtitle}
+                    </Text>
                   </View>
                 </View>
               </OperationsSurface>
@@ -795,16 +815,31 @@ const styles = StyleSheet.create({
     letterSpacing: emToDp(operationsTheme.text['eyebrow--letter-spacing'], operationsTheme.text.eyebrow),
     color: operationsTheme.colors.muted,
   },
+  /*
+    İKİNCİ VE ÜÇÜNCÜ SATIR DA YENİ ANATOMİYE ÇEKİLDİ (ölçüldü 07.09).
+
+    İlk turda yalnız BAŞLIK çevrilmişti; alt iki satır eski kalıbın ölçülerinde kalmıştı ve fark
+    gözle değil ancak tasarımın sayılarıyla karşılaştırınca çıktı — ikinci satır 14/700 mürekkep
+    yazılıyordu, tasarım 12/400 `body` diyor; üçüncü satır 11/400 sönük yazılıyordu, tasarım
+    11/**700** ve TONLU diyor.
+
+    Ayrım anlamlı: ikinci satır kartın KONUSUDUR (hangi ürün, hangi tedarikçi) ve okunur —
+    başlıkla yarışmaması için ince. Üçüncü satır ise kartın HÂLİDİR ("2 gün kaldı", "10 eşlenmemiş
+    varyant") ve kalın + tonlu, çünkü aciliyeti taşıyan satır o.
+  */
   quietTitle: {
-    fontFamily: operationsTheme.font.body[operationsTheme.text['button--font-weight']],
-    fontSize: operationsTheme.text['body-sm'],
-    color: operationsTheme.colors.ink,
+    fontFamily: operationsTheme.font.body['400'],
+    fontSize: operationsTheme.text.helper,
+    lineHeight: operationsTheme.text.helper * 1.4,
+    color: operationsTheme.colors.body,
   },
   quietSubtitle: {
-    fontFamily: operationsTheme.font.body['400'],
+    fontFamily: operationsTheme.font.body['700'],
     fontSize: operationsTheme.text.tag,
     color: operationsTheme.colors.muted,
   },
+  /** Hâl satırı ACİLİYET taşıyorsa terracotta (v3:28 — kampanyanın "2 gün kaldı"sı). */
+  quietSubtitleWarn: { color: operationsTheme.colors.terracotta },
   chevron: {
     fontFamily: operationsTheme.font.body['400'],
     fontSize: operationsTheme.text['icon-sm'],
