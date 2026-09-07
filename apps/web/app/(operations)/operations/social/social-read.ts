@@ -1,4 +1,4 @@
-import { serviceWindowState } from '@lezzet/domain-core';
+import { serviceWindowState, stripChatFormatting } from '@lezzet/domain-core';
 import type { ConversationInboxRow, Message } from '@lezzet/types';
 import { agoShort, shortDateTime } from '@/components/operation/ui/format';
 import { MESSAGE_KIND_LABELS, TEMPLATE_CATEGORY_LABELS } from './social-labels';
@@ -60,7 +60,22 @@ export function toWindowView(windowExpiresAt: string | null, now: Date): WindowV
  * okunur, oysa mesaj var ve türü metin değil.
  */
 export function previewOf(text: string | null, kind: ConversationInboxRow['lastMessageKind']): string {
-  const flat = (text ?? '').replace(/\s+/g, ' ').trim();
+  /*
+    ── ÖNİZLEME İŞARETLERİ SÖKER, BALON ÇİZER — DAVRANIŞ ZITTIR (07.09) ──────────────────────
+    Ajan cevaplarını biçimli üretiyor (`*kalın*`, `•` madde) ve WhatsApp onu çiziyor; aynı metin
+    sosyal deftere düşünce kuyruk satırında ÇIPLAK YILDIZ olarak görünüyordu. Sohbet balonu
+    çiziyor (`ChatText`), liste satırı sökmeli: orası okunacak bir metin değil, tek satırlık bir
+    TARAMA dizesi — operatör "kim ne demiş" diye göz gezdiriyor.
+
+    Kayıplı olması sorun değil, çünkü önizleme zaten türetilmiş ve kırpılmış bir kopya: kaynak
+    sohbette duruyor ve orada tam hâliyle çiziliyor.
+
+    Sıra ÖNEMLİ — önce sök, sonra düzleştir: sökme madde işaretini bırakıyor (`•` düz metinde de
+    okunur) ve satır sonları burada zaten boşluğa çevriliyor.
+  */
+  const flat = stripChatFormatting(text ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
   if (flat) return flat;
   return kind ? MESSAGE_KIND_LABELS[kind] : 'Henüz mesaj yok';
 }

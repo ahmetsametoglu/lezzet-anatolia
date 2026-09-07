@@ -113,6 +113,24 @@ describe('previewOf', () => {
   it('hiç mesaj yoksa bunu SÖYLER — boş önizleme "mesaj yok" diye okunurdu', () => {
     expect(previewOf(null, null)).toBe('Henüz mesaj yok');
   });
+
+  it('BİÇİM İŞARETLERİNİ SÖKER — kuyrukta çıplak yıldız görünmez (07.09)', () => {
+    /* Ajan cevapları biçimli üretiliyor ve WhatsApp onları çiziyor; aynı metin deftere düşünce
+       kuyruk satırında ham işaret olarak görünüyordu. Balon ÇİZER, satır SÖKER — ikisi zıt ve
+       bilinçli: liste satırı okunacak metin değil, tek satırlık bir tarama dizesidir. */
+    expect(previewOf('*Fıstıklı Baklava* 4,57 €', 'text')).toBe('Fıstıklı Baklava 4,57 €');
+    expect(previewOf('_yarın_ ~iptal~ gönderim', 'text')).toBe('yarın iptal gönderim');
+  });
+
+  it('madde listesi tek satıra düzleşir, işaret KALIR', () => {
+    // `•` bir biçim işareti değil, düz metinde de okunan bir karakter: kalması satırı bozmuyor,
+    // aksine "burada liste vardı" bilgisini taşıyor.
+    expect(previewOf('*Boylar*:\n• 225 g — 4,57 €\n• 450 g — 9,15 €', 'text')).toBe('Boylar: • 225 g — 4,57 € • 450 g — 9,15 €');
+  });
+
+  it('çarpma işaretini yemez — sökücünün sınır kuralı önizlemede de geçerli', () => {
+    expect(previewOf('9*90 g paket', 'text')).toBe('9*90 g paket');
+  });
 });
 
 describe('toInboxRows', () => {
