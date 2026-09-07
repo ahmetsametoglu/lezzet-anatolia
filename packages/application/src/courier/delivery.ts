@@ -174,11 +174,26 @@ export async function confirmDoorDelivery(
   });
   if (written.status === 'stale') return { status: 'stale', currentStatus: written.currentStatus };
   if (written.status === 'not_found') return { status: 'not_found' };
-  /* `already_marked` KURYE YOLUNDA da doğabilir: aynı durağı iki telefondan işaretlemek. Ekranın
-     yapacağı şey `stale`den farklı (kalemi tazele, yazılı akıbeti göster) ama kurye sözleşmesinde
-     bugün o dal yok — `stale` diyerek ekranı tazelemeye göndermek, kuryeye YANLIŞ sebep söylemek
-     olurdu. Kapı hiçbir şey yazmadı, o yüzden cevap da "yazamadım" değil "araya biri girdi"nin
-     kardeşi: `BEKLEYEN(21.272)` ile sözleşmeye kendi dalı açılacak. */
+  /*
+    `already_marked` BU YOLDAN DOĞAMAZ — ve bu artık sözleşmenin garantisi (21.272 · 07.09).
+
+    Bir tur burada *"kurye yolunda da doğabilir"* yazıyordu ve `BEKLEYEN(21.272)` ile sözleşmeye
+    ayrı bir dal açılması bekleniyordu. Ölçüldü, öyle değilmiş: veritabanının koşulu gelen isteğin
+    bir AKIBET taşımasını şart koşuyor (`0020_order_return.sql:127` —
+    `v_disposition is not null and v_disposition <> v_existing`), kurye ise akıbeti hiç göndermiyor.
+    Yani ret kurye kapısında hiç tetiklenmiyordu; "kuryeye yanlış sebep söyleniyor" teşhisi
+    yanlıştı.
+
+    Gerçek açık ŞEMADAYDI: `ConfirmDoorDeliveryRequestSchema.adjustments` ortak kalem şeklini
+    olduğu gibi taşıyor ve akıbet alanına kapı açık bırakıyordu — yani sözleşme, şeridin kuralından
+    fazlasına izin veriyordu. Alan `omit` ile çıkarıldı; artık kurye isteği akıbet TAŞIYAMIYOR ve
+    bu dal ulaşılamaz.
+
+    Dal yine de SİLİNMEDİ: `deliverOrderWithAdjustments` paylaşılan bir kapı ve depo yolu o cevabı
+    üretiyor, yani tip birleşimi onu taşımaya devam ediyor. Ulaşılamayan bir dalı sessizce düşürmek,
+    tip bir gün genişlediğinde cevabı kaybetmek olurdu. En yakın doğru cevap `stale`: kapı hiçbir
+    şey YAZMADI ve durak hâlâ yolda.
+  */
   if (written.status === 'already_marked') {
     return { status: 'stale', currentStatus: 'out_for_delivery' };
   }

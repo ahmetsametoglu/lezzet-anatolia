@@ -558,6 +558,40 @@ describe('GET /api/v1/courier/day', () => {
     expect((await orders.getWithItems(orderId))!.items[0]!.fulfilledQty).toBe(1);
     expect((await stocks.getAvailable(warehouseId, variantId)).physicalQty).toBe(19);
   });
+
+  it('kurye AKIBET yazamaz — gövdeye konsa bile kaleme geçmez (21.272)', async () => {
+    /*
+      KAPIDAKİ İKİ KARAR AYRI ELLERDE (DOMAIN §8): adedi KURYE söyler ("2'si geri geldi"), akıbeti
+      (`restock` · `discard` · `goodwill`) mal depoya dönünce DEPOCU seçer — kurye kapıda o malın
+      hâlâ satılabilir olup olmadığını bilemez ve `restock` için sebep beyanı zorunludur.
+      Kurye ekranı bu alanı zaten hiç doldurmuyordu; açık ŞEMADAYDI, `adjustments` ortak kalem
+      şeklini olduğu gibi taşıyıp alana kapı açık bırakıyordu. Alan `omit` ile çıkarıldı.
+
+      İDDİA "400 döner" DEĞİL, "yazılmaz": şema bilinmeyen anahtarı reddetmez, DÜŞÜRÜR — ve bizim
+      istediğimiz de tam bu, çünkü ölçüt reddin biçimi değil malın gerçeği. Gövdeye akıbet konsa
+      bile kalemin `returnDisposition`ı BOŞ kalmalı; kalırsa depocunun kararı elinden alınmamış
+      demektir.
+    */
+    const orderId = await dispatched({ qty: 2, orderedTotalCents: 2000 });
+    await startRun();
+    const day = await dataOf<CourierDayResponse>(await asCourier('/api/v1/courier/day'));
+    const item = day.stops.find((s) => s.orderId === orderId)!.items[0]!;
+
+    const res = await post(`/api/v1/courier/stops/${orderId}/deliver`, {
+      // Sözleşmede artık olmayan alan — kötü niyet değil, bayat bir istemcinin göndereceği şey.
+      adjustments: [{ orderItemId: item.orderItemId, fulfilledQty: 1, returnDisposition: 'discard' }],
+      scannedBoxCodes: [await boxCodeOf(orderId)],
+    });
+
+    expect(res.status).toBe(200);
+    expect(await dataOf<ConfirmDoorDeliveryResponse>(res)).toMatchObject({ status: 'ok', adjustedLines: 1 });
+
+    /* Adet yazıldı — kuryenin söylediği şey geçti. */
+    const line = (await orders.getWithItems(orderId))!.items[0]!;
+    expect(line.fulfilledQty).toBe(1);
+    /* Akıbet YAZILMADI — kuryenin söylemediği şey geçmedi. Karar depocuda kaldı. */
+    expect(line.returnDisposition).toBeNull();
+  });
 });
 
 describe('POST /api/v1/courier/day/start — seferi başlat', () => {

@@ -952,8 +952,25 @@ export type DoorCollectionInputContract = z.infer<typeof DoorCollectionInputSche
  * İstemci sırayı kurmaz, tek istek gönderir — yarısı yazılmış teslimat bırakmamanın tek yolu bu.
  */
 export const ConfirmDoorDeliveryRequestSchema = z.object({
-  /** `fulfilledQty` **hedef** değerdir (kalan adet), fark değil — ekranda görülen sayı gönderilir. */
-  adjustments: z.array(FulfillmentAdjustmentSchema).optional(),
+  /**
+   * `fulfilledQty` **hedef** değerdir (kalan adet), fark değil — ekranda görülen sayı gönderilir.
+   *
+   * ── AKIBET ALANI KURYEDE YOK, BİLİNÇLİ (21.272 · 07.09) ────────────────────
+   * Kapıdaki iki karar AYRI ellerde: **adedi kurye** söyler ("4'ün 2'si geri geldi"), **akıbeti
+   * depocu** seçer mal depoya dönünce (`restock` · `discard` · `goodwill` — DOMAIN §8). Kurye
+   * kapıda o malın hâlâ satılabilir olup olmadığını bilemez: soğuk zincir bozulmuş mu, ambalaj
+   * sağlam mı — bunu depoda bakan kişi BEYAN eder, üstelik `restock` için sebep notu zorunludur.
+   *
+   * Kurye ekranı bu alanı zaten hiç doldurmuyordu (`use-delivery.hook.ts` künyesi) ama şema ortak
+   * kalem şeklini olduğu gibi taşıyor ve alana KAPI AÇIK bırakıyordu — yani sözleşme, şeridin
+   * kuralından fazlasına izin veriyordu. `omit` ile kural sözleşmeye de yazıldı: kurye ne
+   * GÖRDÜĞÜNÜ söyler, ne OLACAĞINI söylemez.
+   *
+   * `note` KALIYOR ve bu da ölçüldü: `adjust_fulfillment` notu akıbetten BAĞIMSIZ yazıyor
+   * (`return_note = coalesce(v_note, return_note)`, `0020:164`), yani kuryenin kapıda gördüğü bir
+   * ayrıntı ("kapağı açılmış") akıbet seçmeden de kaleme düşebilir.
+   */
+  adjustments: z.array(FulfillmentAdjustmentSchema.omit({ returnDisposition: true })).optional(),
   proof: DeliveryProofInputSchema.nullish(),
   collection: DoorCollectionInputSchema.nullish(),
   /**
