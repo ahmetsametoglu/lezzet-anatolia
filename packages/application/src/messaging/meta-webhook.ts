@@ -4,9 +4,10 @@ import { consumeWhatsappLink, waLinkTokenIn } from '../customer/whatsapp-link';
 import { ringConversationsBell } from '../realtime/bell';
 import { messageSenderFor } from './meta-sender';
 import { storeConversationMedia } from './meta-media';
+import { transcribeConversationAudio } from './voice';
 import { recordInboundMessage, recordOutboundMessage } from './record';
 import { sendOutboundMessage } from './send';
-import { ConversationService, CustomerPhoneService, UserProfileService, WebhookEventService, serviceDb } from '@lezzet/database';
+import { ConversationService, CustomerPhoneService, MessageService, UserProfileService, WebhookEventService, serviceDb } from '@lezzet/database';
 import { maskSecretsInText, sixDigitCodeIn } from '@lezzet/domain-core';
 import { normalizePhone } from '@lezzet/helper';
 import { captureError, logger, SOURCES } from '@lezzet/observability';
@@ -37,6 +38,50 @@ import type { TicketHandler } from '@lezzet/types';
  * Beklenmeyen hata `captureError`la gürültü çıkarır (`CLAUDE §1`: sessiz `catch` yok). Cevap
  * üretilemezse zaten kayıp yok: satır `awaiting_reply` kalır ve bir sonraki tarama devralır.
  */
+/**
+ * **SES ÇÖZÜMÜ WEBHOOK'UN DIŞINDA** (15.26 · 07.09 · ölçümle düzeltildi).
+ *
+ * Bir tur çözüm webhook'un İÇİNDE koşuyordu ve gerekçem *"defter güncellenmez, transkript yazımla
+ * birlikte gelmeli"*ydi. Ölçüm o gerekçeyi çürüttü ve yerine çok daha ciddi bir risk koydu:
+ *
+ * `ingestOne` olayı YAZIMDAN ÖNCE sahipleniyor (`webhook_event.claim`) ve tekrar geldiğinde
+ * `fresh:false` görüp ATLIYOR. Yani istek çözüm sürerken zaman aşımına uğrarsa olay sahiplenilmiş
+ * ama mesaj hiç yazılmamış olur; Meta tekrar gönderir, biz "bunu zaten aldım" deyip geçeriz —
+ * **müşterinin mesajı sessizce kaybolur.** Defterin ilk kuralını korumak için yazılan kod, tam onu
+ * tehdit ediyordu.
+ *
+ * Webhook'un işi Meta'ya MAKBUZ vermektir, müşteriye cevap değil (kullanıcı sorusu 07.09 bu
+ * ayrımı netleştirdi): mesajı yaz, 200 dön, bitir. Yavaş cevap müşteriyi bekletmez — Meta'ya
+ * teslimatı başarısız saydırır ve aynı olayı 7 gün boyunca üstümüze döktürür.
+ *
+ * ── AJAN ÇÖZÜMÜ BEKLER, ÖTEKİ MESAJLARDA BEKLEMEZ ───────────────────────────
+ * Sesli mesajda ajan tetiği çözümün ARDINDAN koşuyor: sırayla değil de paralel koşsaydı ajan tam
+ * da okuması gereken turda transkripti göremez, "duyamıyorum" deyip devrederdi — çözümün varlık
+ * sebebi ortadan kalkardı. Metin mesajında bekleme yok, tetik doğrudan.
+ */
+function triggerVoiceTranscript(input: {
+  messageId: string;
+  conversationId: string;
+  mediaKey: string;
+  mediaMime: string;
+  handledBy: TicketHandler;
+}): void {
+  void (async () => {
+    const metin = await transcribeConversationAudio(input.mediaKey, input.mediaMime, {
+      conversationId: input.conversationId,
+    });
+    // Çözülemese de ajan koşar: "duyamıyorum, bir arkadaşım dinleyecek" da bir cevaptır ve
+    // müşteriyi sessiz bırakmaz.
+    if (metin) await new MessageService(serviceDb()).setTranscript(input.messageId, metin);
+    triggerAutonomousReply(input.conversationId, input.handledBy);
+  })().catch((err: unknown) =>
+    captureError(err, {
+      source: SOURCES.webhook,
+      context: { area: 'messaging/voice-trigger', conversationId: input.conversationId },
+    }),
+  );
+}
+
 function triggerAutonomousReply(conversationId: string, handledBy: TicketHandler): void {
   if (handledBy !== 'ai') return;
   void runAutonomousConversationReply(serviceDb(), messageSenderFor(process.env.META_ACCESS_TOKEN), conversationId).catch(
@@ -353,7 +398,8 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally,
             ? await storeConversationMedia(conversation.id, mediaId, process.env.META_ACCESS_TOKEN ?? null, fetchImpl)
             : null;
 
-          await recordInboundMessage(serviceDb(), {
+
+          const yazilan = await recordInboundMessage(serviceDb(), {
             conversationId: conversation.id,
             text: maskSecretsInText(text, [waLinkTokenIn(text), kimlikSirri]),
             kind,
@@ -394,6 +440,21 @@ async function ingestWhatsappEntry(entry: Record<string, unknown>, tally: Tally,
           */
           if (bagliMi) {
             await bagalamaOnayiGonder(conversation.id, customerId);
+            return;
+          }
+
+          /*
+            SESLİ MESAJDA SIRA: çöz → satıra yaz → ajanı tetikle; hepsi webhook'un DIŞINDA
+            (`triggerVoiceTranscript` künyesi). Ötekilerde ajan doğrudan tetikleniyor.
+          */
+          if (medya?.mime.startsWith('audio/')) {
+            triggerVoiceTranscript({
+              messageId: yazilan.id,
+              conversationId: conversation.id,
+              mediaKey: medya.key,
+              mediaMime: medya.mime,
+              handledBy: conversation.handledBy,
+            });
             return;
           }
 

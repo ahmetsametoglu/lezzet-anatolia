@@ -43,6 +43,11 @@ export interface RecordMessageInput {
   mediaKey?: string | null;
   mediaMime?: string | null;
   /**
+   * Sesin makine çözümü (15.26). Çözülemezse boş kalır ve mesaj yine yazılır — transkript de
+   * medya gibi mesajın ön koşulu değildir.
+   */
+  mediaTranscript?: string | null;
+  /**
    * Kim yazdı (15.8). Verilmezse RPC yönden türetir (gelen → `customer`, giden → `admin`) ve bu
    * doğru varsayılandır: elle işlenen satırı gerçekten personel yazmıştır. **Özerk ajan kendini
    * `ai` diye bildirmek ZORUNDA** — yoksa defter "bunu kim söyledi" sorusuna personel der ve
@@ -75,6 +80,7 @@ export async function recordInboundMessage(
     windowExpiresAt: serviceWindowExpiry(input.receivedAt),
     mediaKey: input.mediaKey,
     mediaMime: input.mediaMime,
+    mediaTranscript: input.mediaTranscript,
   });
 }
 

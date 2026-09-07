@@ -186,7 +186,20 @@ function MediaBody({ message }: { message: MessageView }) {
     );
   }
   if (mime.startsWith('audio/')) {
-    return <audio controls src={message.mediaUrl} className="w-full max-w-xs" />;
+    return (
+      <div className="flex flex-col gap-1.5">
+        <audio controls src={message.mediaUrl} className="w-full max-w-xs" />
+        {/* Çözülmüş metin kaydın ALTINDA ve künyeli. Balonun kendi metniymiş gibi çizilseydi
+            operatör onu müşterinin YAZDIĞI cümle sanırdı; oysa makine duyduğunu yazdı ve
+            yanılmış olabilir. Kayıt yerinde duruyor — şüphelenen dinler. */}
+        {message.mediaTranscript ? (
+          <>
+            <span className="font-ops-mono text-ops-micro text-ops-faint">yazıya çevrildi · makine</span>
+            <span className="whitespace-pre-wrap font-ops-body text-ops-micro italic text-ops-lead">{message.mediaTranscript}</span>
+          </>
+        ) : null}
+      </div>
+    );
   }
   return (
     <a href={message.mediaUrl} target="_blank" rel="noreferrer" className="cursor-pointer font-ops-body text-ops-micro underline">

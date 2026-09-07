@@ -251,15 +251,69 @@ export async function generateTicketDraft(db: SupabaseClient, ticketId: string, 
  * Kanal KONUŞMADAN okunur, sabit değil (21.08): sabit `'whatsapp'` yazılıydı ve Messenger'dan yazan
  * müşteriye ajan "WhatsApp" diyordu. Kanal adı modele söyleniyor çünkü müşteri onu görüyor.
  */
+/**
+ * Metinsiz mesajın modele NE OLARAK anlatılacağı (15.26).
+ *
+ * ── DÜZELTİLEN ARIZA ────────────────────────────────────────────────────────
+ * Buraya kadar her metinsiz mesaj modele `[metinsiz mesaj]` diye geçiyordu: ajan bir SES kaydı mı
+ * bir FOTOĞRAF mı geldiğini bilmiyordu, üstelik onu ALGILAYAMADIĞINI da bilmiyordu. Eline anlamsız
+ * bir dize geçiyor ve üzerine cevap kuruyordu — saha turunda adını koyduğumuz desenin aynısı:
+ * *araç susunca model uyduruyor.*
+ *
+ * Çözüm modele daha çok bilgi vermek değil, **ne bilmediğini söylemek**: hem türü hem sınırı aynı
+ * cümlede duruyor. Model artık "duyamıyorum, dinleyip döneceğiz" diyebiliyor; bu, uydurulmuş bir
+ * cevaptan hem dürüst hem ucuz.
+ *
+ * Transkripsiyon geldiğinde (15.26'nın asıl yarısı) ses satırı metnini KAZANIR ve bu yer tutucuya
+ * hiç düşmez; fotoğraf ve belge burada kalır.
+ */
+/**
+ * Geçmişteki bir transkriptin bağlamda kaplayabileceği en fazla karakter. Cevaplanan SON mesaj bu
+ * sınıra girmez — orada eksik bilgi, yanlış cevabın ta kendisidir.
+ */
+const TRANSCRIPT_CONTEXT_LIMIT = 400;
+
+function mediaPlaceholder(
+  message: { kind: string; mediaMime: string | null; mediaTranscript: string | null },
+  sonMu: boolean,
+): string {
+  if (message.kind !== 'media') return '[metinsiz mesaj]';
+  const mime = message.mediaMime ?? '';
+  /*
+    ÇÖZÜLMÜŞ SES: metin modele veriliyor ama "müşterinin sözü" diye DEĞİL. İşaret bilerek metnin
+    başında duruyor — model cümleyi okumadan önce kaynağını görüyor ve 15.26'nın teyit kuralı
+    (önce "şunu mu demek istediniz") ancak böyle tetiklenebilir. Metni işaretsiz vermek, konuşma
+    dilinin tutarsızlığını yazılı bir beyan gibi okutmak olurdu.
+  */
+  const cozum = message.mediaTranscript?.trim();
+  if (cozum) {
+    /*
+      SON MESAJ TAM, GEÇMİŞ KIRPIK (07.09 · kullanıcı senaryosu). Müşteri iki dakika anlatıp talebi
+      SONDA söyleyebilir — cevaplanan mesajı kırpmak, tam da cevaplanacak cümleyi atmak olurdu. Ama
+      geçmişteki uzun transkriptler 12 mesajlık pencereyi doldurur ve yeni soruyu bağlamdan iter.
+      Ölçüt bu yüzden konum: sondaki tam, öncekiler kısaltılmış.
+
+      Kırpma MEKANİKTİR, özetleme değil — özetleyen bir model uydurabilir; kırpma yalnız eksiltir ve
+      eksilttiğini SÖYLER.
+    */
+    const kirp = !sonMu && cozum.length > TRANSCRIPT_CONTEXT_LIMIT;
+    const govde = kirp ? `${cozum.slice(0, TRANSCRIPT_CONTEXT_LIMIT)}… [kısaltıldı]` : cozum;
+    return `[müşterinin SESLİ MESAJININ makine çözümü — birebir doğru olmayabilir]: ${govde}`;
+  }
+  if (mime.startsWith('audio/')) return '[müşteri SESLİ MESAJ gönderdi — sen sesi dinleyemezsin, içeriğini bilmiyorsun]';
+  if (mime.startsWith('image/')) return '[müşteri FOTOĞRAF gönderdi — sen görseli göremezsin, içeriğini bilmiyorsun]';
+  return '[müşteri bir DOSYA gönderdi — sen dosyayı açamazsın, içeriğini bilmiyorsun]';
+}
+
 async function conversationContextOf(db: SupabaseClient, conversation: Conversation): Promise<SupportContextInput | null> {
   const messages = await new MessageService(db).listByConversation(conversation.id);
   if (messages.length === 0) return null;
   return {
     channel: conversation.source,
     business: BUSINESS_CARD,
-    messages: messages.slice(-THREAD_LIMIT).map((message) => ({
+    messages: messages.slice(-THREAD_LIMIT).map((message, i, dizi) => ({
       who: message.direction === 'inbound' ? 'customer' : message.author === 'ai' ? 'ai' : 'staff',
-      text: message.body.text?.trim() || '[metinsiz mesaj]',
+      text: message.body.text?.trim() || mediaPlaceholder(message, i === dizi.length - 1),
     })),
     order: null,
   };

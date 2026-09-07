@@ -81,6 +81,7 @@ Konuşma durumu kendi DB'mizde yaşar (karar: kendi DB — bkz. `CHANNELS.md §7
 | `provider_message_id` | text | • |  |
 | `media_key` | text | • |  |
 | `media_mime` | text | • |  |
+| `media_transcript` | text | • |  |
 | `created_at` | timestamptz |  | `now()` |
 <!-- /alanlar -->
 

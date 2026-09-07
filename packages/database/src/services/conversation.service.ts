@@ -221,6 +221,21 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
   }
 
   /**
+   * Sesin çözülmüş metnini satıra yazar (15.26) — **defterin tek yazılabilir alanı** ve sınırı bu.
+   *
+   * `message` yazılır, güncellenmez: müşterinin sözü, yönü, anı sonradan değişmez. `media_transcript`
+   * ise müşterinin sözü DEĞİL, bizim ondan TÜRETTİĞİMİZ bir alan — defterin değişmezliği ona
+   * uzanmıyor. Yine de kapı dar tutuluyor: yalnız bu tek alan, yalnız BOŞSA.
+   *
+   * **`updateIfNull` çünkü çözüm birden çok kez koşabilir:** olay tekrar düşerse ya da iki tur
+   * yarışırsa ikinci sonuç birincisini EZMEMELİ. İki çözüm birbirinden farklı çıkabilir (model
+   * belirlenimci değil) ve operatörün okuduğu metnin, ajanın gördüğü metnin aynısı olması gerekir.
+   */
+  setTranscript(id: string, transcript: string): Promise<Message | null> {
+    return this.updateIfNull(id, 'mediaTranscript', { mediaTranscript: transcript });
+  }
+
+  /**
    * Mesaj + konuşmanın damgaları, TEK turda (`record_message`).
    *
    * Ayrı iki yazım olsaydı ikincisi düştüğünde gelen kutusu sessizce bayatlardı: yeni mesaj gelmiş
@@ -247,6 +262,8 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
      */
     mediaKey?: string | null;
     mediaMime?: string | null;
+    /** Sesin makine çözümü (15.26) — müşterinin alt yazısıyla KARIŞMASIN diye ayrı alan. */
+    mediaTranscript?: string | null;
   }): Promise<Message> {
     const raw = await this.executeRpc('record_message', {
       p_conversation_id: input.conversationId,
@@ -260,6 +277,7 @@ export class MessageService extends BaseDbService<Message, MessageInsert, never>
       p_author: input.author ?? null,
       p_media_key: input.mediaKey ?? null,
       p_media_mime: input.mediaMime ?? null,
+      p_media_transcript: input.mediaTranscript ?? null,
     });
     return MessageSchema.parse(dbToApp(raw));
   }

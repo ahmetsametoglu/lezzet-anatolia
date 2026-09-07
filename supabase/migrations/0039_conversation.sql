@@ -192,6 +192,12 @@ create table public.message (
   -- gövdesinden okunabilirdi ama o gövdenin şekli kanala göre değişiyor; ekran sağlayıcı biçimi
   -- bilmemeli.
   media_mime text,
+  -- Sesli mesajın ÇÖZÜLMÜŞ metni (15.26). `body->>'text'` DEĞİL ve bu ayrım şart: orası müşterinin
+  -- KENDİ yazdığı alt yazıdır, burası MAKİNENİN duyduğudur. Aynı alana yazmak ikisini birbirinden
+  -- ayırt edilemez kılardı — operatör hangi cümlenin insandan geldiğini bilemez, ajan da makine
+  -- çıktısını müşterinin kesin sözü sanırdı (15.26'nın teyit kuralı tam bu yüzden var).
+  -- Boş kalması normaldir: çözülemeyen kayıt, fotoğraf/belge, ya da çözüm henüz koşmamış.
+  media_transcript text,
 
   created_at timestamptz not null default now(),
 
@@ -219,7 +225,7 @@ create table public.message (
   -- bir arıza, müşterinin mesajını tümüyle kaybettirirdi. Defterin ilk kuralı satırın
   -- kaybolmamasıdır — medya ikinci sıradadır.
   constraint message_media_kind check (
-    (media_key is null and media_mime is null) or kind = 'media'
+    (media_key is null and media_mime is null and media_transcript is null) or kind = 'media'
   )
 );
 
@@ -323,7 +329,8 @@ create or replace function public.record_message(
   -- Gelen medyanın PRIVATE R2 anahtarı ve türü. İkisi de `null` kalabilir — indirme düşse bile
   -- satır yazılır; RPC burada karar vermez, yalnız taşır (kural `send.ts`/webhook tarafında).
   p_media_key text default null,
-  p_media_mime text default null
+  p_media_mime text default null,
+  p_media_transcript text default null
 ) returns public.message
 language plpgsql
 security invoker
@@ -341,7 +348,7 @@ begin
     raise exception 'template mesaji yalniz whatsapp konusmasina yazilabilir (conversation %)', p_conversation_id;
   end if;
 
-  insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id, media_key, media_mime)
+  insert into public.message (conversation_id, direction, author, kind, body, template_name, template_category, provider_message_id, media_key, media_mime, media_transcript)
   values (
     p_conversation_id,
     p_direction,
@@ -352,7 +359,8 @@ begin
     p_template_category,
     p_provider_message_id,
     p_media_key,
-    p_media_mime
+    p_media_mime,
+    p_media_transcript
   )
   returning * into v_message;
 
@@ -366,7 +374,7 @@ end;
 $$;
 
 revoke all on function public.open_conversation(conversation_source, text, uuid, text, text) from anon;
-revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender, text, text) from anon;
+revoke all on function public.record_message(uuid, message_direction, message_kind, jsonb, text, template_category, text, timestamptz, ticket_sender, text, text, text) from anon;
 
 comment on table public.conversation is
   'Mesajlaşma konuşması (15.1 · üç kanal 21.08): kaynak (whatsapp/messenger/instagram), kimlik bağı, opt-in, 24s servis penceresi, son hareket.';

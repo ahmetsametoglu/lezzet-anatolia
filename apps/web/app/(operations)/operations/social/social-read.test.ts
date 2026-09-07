@@ -54,6 +54,7 @@ function message(patch: Partial<MessageWithMedia> = {}): MessageWithMedia {
     providerMessageId: null,
     mediaKey: null,
     mediaMime: null,
+    mediaTranscript: null,
     // Adres okuma kapısında imzalanıyor (`readConversationDetail`), çeviricinin işi değil —
     // fikstür de onu veri olarak taşıyor.
     mediaUrl: null,

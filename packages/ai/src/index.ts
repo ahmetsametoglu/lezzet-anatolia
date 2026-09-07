@@ -26,6 +26,12 @@ export {
 } from './tasks/ticket-support';
 export { bankColumnsTask, type BankColumnsInput } from './tasks/bank-columns';
 export { b2bSummaryTask, type B2bSummaryInput } from './tasks/b2b-summary';
+export {
+  VoiceTranscriptOutputSchema,
+  voiceTranscriptTask,
+  type VoiceTranscriptInput,
+  type VoiceTranscriptOutput,
+} from './tasks/voice-transcript';
 
 /**
  * Araç ilkelinin TEK kapısı (16.9) — `ai` SDK'sından geçiriliyor.

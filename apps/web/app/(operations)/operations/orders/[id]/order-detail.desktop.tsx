@@ -592,7 +592,16 @@ export function OrderDetailDesktop({ order, onAdvance, onDecision, busy, error }
 /** Kaynağın tonu — kimlik şeridinde kaynak renkle de okunur (15.08): WhatsApp yeşil, kapı önü amber. */
 const SOURCE_TONE: Record<OrderSource, MetaTone> = {
   web: 'blue',
+  /*
+    ÜÇ SOHBET KANALI AYNI TONDA ve bu bir eksiklik değil, seçim: renk SINIFI söylüyor ("sohbetten
+    geldi"), platformu etiket söylüyor (Messenger / Instagram). Her kanala ayrı renk vermek yeni
+    tonlar icat etmek olurdu — palet tasarımın kararıdır, buranın değil (`CLAUDE §3`), ve dört
+    kaynağı dört renkle ayırmanın operatöre kazandıracağı bir şey de yok: aradığı ayrım "sohbet mi
+    site mi", kanal adı zaten yanında yazıyor.
+  */
   whatsapp: 'olive',
+  messenger: 'olive',
+  instagram: 'olive',
   door: 'amber',
   manual: 'slate',
 };

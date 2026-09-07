@@ -178,6 +178,15 @@ export const MessageSchema = z.object({
   mediaKey: z.string().nullable(),
   /** Ekran fotoğrafı mı sesi mi çizeceğini buradan bilir — `kind` hepsine `media` diyor. */
   mediaMime: z.string().nullable(),
+  /**
+   * Sesli mesajın MAKİNE tarafından çözülmüş metni (15.26) — `body.text` DEĞİL.
+   *
+   * Ayrım şart: `body.text` müşterinin kendi yazdığı alt yazıdır, bu ise duyulanın yazıya
+   * geçirilmiş hâli. Aynı alana koymak ikisini ayırt edilemez kılardı — operatör hangi cümlenin
+   * insandan geldiğini bilemez, ajan da makine çıktısını müşterinin kesin sözü sanardı. Ajanın
+   * teyit kuralı (15.26) tam olarak bu ayrımın üstüne kurulu.
+   */
+  mediaTranscript: z.string().nullable(),
   createdAt: z.string(),
 });
 export type Message = z.infer<typeof MessageSchema>;
@@ -195,6 +204,8 @@ export const MessageInsertSchema = z.object({
   /** İndirme başarılıysa dolu; düştüyse boş kalır ve satır yine yazılır. */
   mediaKey: z.string().nullish(),
   mediaMime: z.string().nullish(),
+  /** Çözülemeyen ya da henüz çözülmemiş kayıtta boş kalır — yokluğu normal bir hâl. */
+  mediaTranscript: z.string().nullish(),
 });
 export type MessageInsert = z.infer<typeof MessageInsertSchema>;
 

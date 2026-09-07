@@ -80,6 +80,14 @@ export interface MessageView {
   mediaUrl: string | null;
   /** Fotoğraf mı ses mi çizileceği — `kind` hepsine `media` diyor. */
   mediaMime: string | null;
+  /**
+   * Sesin MAKİNE çözümü — müşterinin yazdığı metin değil, bu yüzden `text`ten ayrı taşınıyor ve
+   * ekranda ayrı çiziliyor. Operatör hangi cümlenin insandan geldiğini görmeden okumamalı.
+   *
+   * `null`: ses değil · çözüm henüz koşmadı · güvenle çözülemedi. Üçünde de operatörün yapacağı şey
+   * aynı (kaydı kendisi dinlemek), o yüzden ekran ayırt etmiyor.
+   */
+  mediaTranscript: string | null;
 }
 
 export interface ConversationDetailView {

@@ -97,10 +97,26 @@ export async function runTask<TInput, TOutput>(
     modelId = resolved.modelId;
   }
 
+  /*
+    İSTEM İKİ BİÇİMDE GELEBİLİR (15.26). Dize dönen görevler `prompt` alanına düşüyor — bugüne
+    kadarki davranış aynen. Parça dizisi dönen görev (sesli mesaj çözümü) tek kullanıcı mesajına
+    çevriliyor: SDK dosyayı `messages` içinde taşıyor, `prompt` alanı dosya kabul etmiyor.
+
+    İki alan aynı anda VERİLMEZ — SDK ikisini birden gördüğünde hangisini kullanacağı belirsizdir
+    ve sessizce biri yok sayılırdı.
+  */
+  const istem = task.buildPrompt(input);
+  // `prompt: undefined` / `messages: undefined` AÇIKÇA yazılıyor: SDK'nın tipi ikisinden yalnız
+  // birinin var olmasını şart koşuyor ve alanı hiç yazmamak, yayılan (spread) nesnede belirsizlik
+  // bırakıyor.
+  const govde = Array.isArray(istem)
+    ? { messages: [{ role: 'user' as const, content: istem }], prompt: undefined }
+    : { prompt: istem, messages: undefined };
+
   const ortak = {
     model,
     system: task.system,
-    prompt: task.buildPrompt(input),
+    ...govde,
     temperature: task.temperature,
     ...(opts.signal ? { abortSignal: opts.signal } : {}),
   };
@@ -122,10 +138,28 @@ export async function runTask<TInput, TOutput>(
       // FAZ 2 — ŞEMAYA BAĞLA. Araç sonuçları prompt'a EK olarak giriyor, yani ikinci çağrı
       // gerçekleri "hatırlamak" zorunda değil; önünde yazılı. Sözleşme yine `generateObject`
       // tarafından dayatılıyor — serbest metin ayrıştırmıyoruz (bu dosyanın 2. değişmezi).
+      /*
+        Gerçekler istemin SONUNA ekleniyor. Dize hâlinde düz birleştirme; parça dizisinde yeni bir
+        metin parçası olarak — base64 bir dosyanın peşine metin yapıştırmak parçayı bozardı.
+      */
+      const gercekli = !facts.text
+        ? govde
+        : Array.isArray(istem)
+          ? {
+              messages: [
+                {
+                  role: 'user' as const,
+                  content: [...istem, { type: 'text' as const, text: `\n\nARAÇLARDAN GELEN DOĞRULANMIŞ GERÇEKLER:\n${facts.text}` }],
+                },
+              ],
+              prompt: undefined,
+            }
+          : { prompt: `${istem}\n\nARAÇLARDAN GELEN DOĞRULANMIŞ GERÇEKLER:\n${facts.text}`, messages: undefined };
+
       const res = await generateObject({
         ...ortak,
+        ...gercekli,
         schema: task.output,
-        prompt: facts.text ? `${ortak.prompt}\n\nARAÇLARDAN GELEN DOĞRULANMIŞ GERÇEKLER:\n${facts.text}` : ortak.prompt,
       });
       return {
         ok: true,

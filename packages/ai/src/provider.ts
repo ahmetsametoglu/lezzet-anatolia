@@ -34,7 +34,19 @@ const PROVIDERS: Record<AiProviderName, ProviderSpec> = {
   },
   google: {
     apiKeyEnv: 'GOOGLE_GENERATIVE_AI_API_KEY',
-    defaults: { cheap: 'gemini-2.5-flash-lite', standard: 'gemini-2.5-flash' },
+    /*
+      2.5 SATIRI ÖLDÜ — ölçüldü 07.09: `gemini-2.5-flash-lite` çağrısı
+      *"no longer available to new users"* ile reddedildi. Varsayılan bir model listesi bayatladığında
+      arıza SESSİZ olmuyor ama YANLIŞ yerde görünüyor: env'i doğru kurulmuş makinede her şey çalışır,
+      env'siz bir ortamda (CI, yeni geliştirici, üretim ilk kurulum) ilk AI çağrısı sağlayıcı hatasıyla
+      düşer ve sebep koddaki bu satırdır.
+
+      Ses çözümünün ucuz katmanda olması bir maliyet tercihi DEĞİL, doğru model seçimidir: lite'ta
+      düşünme kapalı ve transkripsiyon akıl yürütme değil çözümleme işidir. Ölçüldü (42 sn kayıt):
+      flash 799 çıktı jetonu · flash-lite 186 — metin ikisinde de doğru, lite'ınki dil kodunu da
+      doğru verdi. Fiyat farkıyla birlikte toplam ~10 kat.
+    */
+    defaults: { cheap: 'gemini-3.5-flash-lite', standard: 'gemini-3.5-flash' },
     create: (apiKey, modelId) => createGoogleGenerativeAI({ apiKey })(modelId),
   },
 };

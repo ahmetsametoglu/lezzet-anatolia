@@ -85,6 +85,21 @@ export type AiResult<T> = AiSuccess<T> | AiFailure;
  * Prompt burada durur, çağıranın içinde değil: aynı prompt'un iki yerde iki sürümü olması
  * (`CLAUDE §1` duplication) çıktının neden değiştiğini bulunamaz hâle getirir.
  */
+/**
+ * Modele giden tek kullanıcı mesajının parçaları (15.26).
+ *
+ * `data` ham bayt ya da base64 dize olabilir — SDK ikisini de alıyor; `mediaType` zorunlu, çünkü
+ * modelin dosyayı nasıl okuyacağını uzantı değil bu alan söyler (`audio/ogg`, `image/jpeg`).
+ * Dosyayı bir dizeye gömmek (base64'ü prompt metnine yapıştırmak) teknik olarak mümkün ama
+ * yanlış: jeton sayacı onu metin sanır ve maliyet okunamaz hâle gelirdi.
+ */
+export type AiPromptPart =
+  | { type: 'text'; text: string }
+  | { type: 'file'; data: Uint8Array | string; mediaType: string };
+
+/** Görevin ürettiği istem: düz metin ya da (dosya taşıyorsa) parça dizisi. */
+export type AiPromptContent = string | AiPromptPart[];
+
 export interface AiTask<TInput, TOutput> {
   /** Kayıt anahtarı — ölçüm/log satırında görünür. */
   id: string;
@@ -93,8 +108,18 @@ export interface AiTask<TInput, TOutput> {
   output: z.ZodType<TOutput>;
   /** Sistem talimatı — görevin değişmeyen yarısı. */
   system: string;
-  /** Girdinin değişen yarısı. */
-  buildPrompt(input: TInput): string;
+  /**
+   * Girdinin değişen yarısı.
+   *
+   * **Metin ya da PARÇA DİZİSİ** (15.26): sesli mesajı çözmek için modele ham dosyayı vermek
+   * gerekiyor ve dosya bir dizeye sığmaz. Dize dönen bugünkü görevlerin hiçbiri değişmedi —
+   * koşucu iki hâli de aynı kapıdan geçiriyor.
+   *
+   * Ayrı bir "ses çağrısı" yazmak yerine sözleşmenin genişletilmesi bilinçli: ikinci bir model
+   * çağırma yolu, kullanım ölçümünü, tekrar denemesini ve hata sınıflandırmasını ikinci kez
+   * yaşatırdı (`CLAUDE §1`).
+   */
+  buildPrompt(input: TInput): AiPromptContent;
   /**
    * Yaratıcılık ayarı. Çeviri/çıkarım gibi TEK doğrusu olan işlerde 0 — aynı girdi aynı çıktıyı
    * versin. Metin taslağı gibi işlerde yükselir.

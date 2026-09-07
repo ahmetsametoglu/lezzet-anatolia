@@ -142,5 +142,6 @@ export function toMessageViews(messages: readonly MessageWithMedia[]): MessageVi
       : null,
     mediaUrl: m.mediaUrl,
     mediaMime: m.mediaMime,
+    mediaTranscript: m.mediaTranscript,
   }));
 }

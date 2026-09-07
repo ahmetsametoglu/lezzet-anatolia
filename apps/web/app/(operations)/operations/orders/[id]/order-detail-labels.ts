@@ -12,6 +12,10 @@ import type { DeliveryProofView, OrderDetailView } from './order-detail-types';
 const SOURCE_LABELS: Record<OrderSource, string> = {
   web: 'İnternetten',
   whatsapp: 'WhatsApp',
+  // 15.23 iki kanal ekledi (sepet şeridi) ve enum büyüdü; etiketler operasyon şeridinin işi.
+  // Platform ADIYLA yazılıyor — operatörün gördüğü "sosyal medya" değil, hangi uygulama.
+  messenger: 'Messenger',
+  instagram: 'Instagram',
   door: 'Kapı önü',
   manual: 'Elle girildi',
 };
