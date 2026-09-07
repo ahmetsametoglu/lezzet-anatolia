@@ -354,43 +354,21 @@ duruyordu; o klasör repoya gitmiyor, yani kalıcı bir kaydı yoktu.
 |---|---|---|
 | **(a) Adlandırılmış köprü** — gövde pakette, web'de tek satırlık yeniden dışa verme | `lib/b2b/vat-check.ts` (künyesinde `KÖPRÜ (21.31)` yazıyor) | yok — sağlıklı desen |
 | **(b) Birebir kopya, henüz ayrışmamış** | `lib/cart/place-change.ts` ↔ `application/cart/place-change.ts` — gövdeler AYNI, fark yalnız 4 satır (import'lar) | bugün zararsız, yarın (c) |
-| **(c) AYRIŞMIŞ kopya** — kural yalnız birine yazılmış | aşağıdaki iki ölçüm | **canlı arıza** |
+| **(c) AYRIŞMIŞ kopya** — kural yalnız birine yazılmış | aşağıdaki iki vaka (07.09'da söküldü) | **canlı arıza** |
 
-### (c) · Ölçülmüş iki vaka
+### (c) · İki vaka ölçüldü ve KARAR VERİLDİ (07.09): ekranlar söküldü
 
-**1 · Kapıda teslim kapısı** (ölçüm 06.09, mobil şeridin gözlemi). `apps/web/lib/courier/delivery.ts`
-kendi `confirmDoorDelivery`'sini taşıyor (**175 satır**), ortak kapı `packages/application/src/courier/delivery.ts`
-(**277 satır**). Web kopyası web-yerel kardeşleri çağırıyor (`../order/fulfillment`, `../order/refund`),
-paketi değil. Künyesi kendini *"geçiş köprüsü"* diye tanıtıyor — köprü kapanmadı. Ortak kapıya
-yazılıp web'e HİÇ geçmeyen üç değişmez:
+**Kapıda teslim kapısı** (`apps/web/lib/courier/delivery.ts`, 175 satır ↔ paket 277) üç değişmezi
+taşımıyordu: kutu kapısı (`boxes_missing`), tekillik anahtarı (`idempotencyKey`), düzeltme + teslim
+tek transaction (`21.271`). **Hazırlık masası** (`/operations/preparation`) kutu duvarı 31.08'de rotaya
+genişleyince hiçbir rota siparişini `ready` yapamaz olmuştu — düğme duruyor, basılınca reddediliyordu.
 
-- **Kutu kapısı** (`boxes_missing`) — pakette 5 yerde, web'de **0**. Panelden kutu okutulmadan teslim
-  kapanabiliyor; oysa kural 30.08'de kondu: *"mal kutusuyla hazırlanır, kutusuyla araca biner,
-  kutusuyla kapıdan çıkar."*
-- **Tekillik anahtarı** (`idempotencyKey`) — pakette 4 yerde, web'de **0**. Çift gönderilen tahsilat
-  parayı iki kez yazabilir.
-- **Düzeltme + teslim tek transaction** (`21.271`) — pakette var, web'de yok. `adjustFulfillment`
-  sonra `deliverOrder`; ikincisi `stale` dönerse birincisi geri alınmıyor → yarım teslim.
-
-**2 · Hazırlık masası** (ölçüm 31.08 · doğrulandı 07.09). Kutu duvarı kargo kulvarından rotaya da
-genişledi: `packages/application/src/warehouse/preparation.ts:465` artık `pickup` dışında her
-siparişe `box_required` diyor. **Native uygulama yeni kapıdan geçiyor** (`openBox` → topla →
-`sealBox`; mühür siparişi hazır yapıyor, ayrı bir "onayla" adımı yok). **Web hazırlık masası
-(`/operations/preparation`) hâlâ `confirmPreparation`'ı çağırıyor ve kutu arayüzü yok** — yani
-bugün web'den hiçbir rota siparişi `ready` yapılamıyor. Ekran duruyor, düğme duruyor, basılınca
-reddediliyor.
-
-### Karar gereken: web'in bu ekranları YAŞAYACAK MI
-
-Düzeltmenin iki ayrı yolu var ve seçim kullanıcınındır — **ikisi çok farklı iş:**
-
-- **(A) Web'i yeni kapıya bağla** — hazırlık masasına kutu adımı yaz, teslim kapısını
-  `@lezzet/application`a çevir. Web operasyon yüzeyi tam kalır.
-- **(B) Ekranları KALDIR** — `docs/uygulama` yüzey formülüne göre *personelin mobil deneyimi native
-  uygulamanın işi*. Depocu ve kurye zaten telefonla çalışıyorsa bu ekranlar bir yedek değil, bir
-  yanlış cevap kaynağıdır: çalışmadıkları hâlde duruyorlar.
-
-**Ne olursa olsun bugünkü hâl korunamaz:** çalışmayan bir düğme, olmayan bir düğmeden kötüdür.
+**Kullanıcı kararı (07.09): (B) — ekranlar KALDIRILDI.** *"Mobil hazır ve çalışıyor; mobilde olan ve
+çalışan bir özelliği, hele operasyonun asıl gerçekleşmesi gereken yer mobilken, web'de aynısıyla
+kurmak mantıklı değil."* Söküldü: hazırlık masası, kapıda teslim, sefer kapanışı, sayfanın kurye dalı
+(`?view=mine`) ve `apps/web/lib/courier/` köprüleri; sevkiyat masası web'de kaldı. Paket kapıları
+yerinde, tek tüketicileri native. Kural olarak YAZILMADI (kullanıcı isteği) — aynı sınıfa giren
+adaylar (mal kabul formu · transfer kabulü · imha diyaloğu) kullanıcıya listelendi, kararı bekliyor.
 
 ### Yapılmamış iş: tam tarama
 

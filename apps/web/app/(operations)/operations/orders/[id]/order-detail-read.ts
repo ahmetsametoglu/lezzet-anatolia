@@ -47,10 +47,9 @@ import {
   skippedBetween,
   vatSplitOf,
 } from '@lezzet/domain-core';
-import { readOrderTracking } from '@lezzet/application';
+import { readDeliveryProof, readOrderTracking } from '@lezzet/application';
 import { toCents } from '@lezzet/helper';
 import { titleOf } from '@/lib/catalog/title';
-import { readDeliveryProof } from '@/lib/courier/proof';
 import { readWarehouseLabels } from '@/lib/warehouse/context';
 import { ticketsLink } from '../../tickets/tickets-url';
 import type {

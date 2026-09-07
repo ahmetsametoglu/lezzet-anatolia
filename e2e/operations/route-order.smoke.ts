@@ -36,7 +36,7 @@ test.describe('kademe 2 · sevkiyat masasında tur önizlemesi', () => {
   test('sıralanmış seferin haritası açılır, künyesi ölçüyü söyler ve duraklar numaralıdır', async ({ page }) => {
     test.slow();
 
-    await page.goto('/operations/deliveries?view=dispatch', NAV);
+    await page.goto('/operations/deliveries', NAV);
 
     // Sefer şeridi: fikstürün rotası ve sefer kodu gerçekten listede mi.
     await expect(page.getByText(fixture.zoneName).first()).toBeVisible({ timeout: 20_000 });
@@ -67,7 +67,7 @@ test.describe('kademe 2 · sevkiyat masasında tur önizlemesi', () => {
   test('depoya en yakın duraklardan biri EN SON teslim ediliyor — U senaryosu ekranda', async ({ page }) => {
     test.slow();
 
-    await page.goto('/operations/deliveries?view=dispatch', NAV);
+    await page.goto('/operations/deliveries', NAV);
     const details = page.getByTestId(`run-map-${fixture.runId}`);
     await expect(details).toBeVisible({ timeout: 20_000 });
     await details.getByText('Turu haritada gör').click();

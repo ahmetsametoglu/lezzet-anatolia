@@ -1,5 +1,8 @@
 # Kurye — Gün Kapanışı ve Kasa Mutabakatı
 
+> **Web ekranı SÖKÜLDÜ (kullanıcı kararı 07.09 · `design/KARARLAR.md §4`).** Bu brief iş tanımı
+> olarak yaşar; sefer kapanışı native uygulamada (`app-kurye.md`). Yeniden bir web ekranı çizilmez.
+
 ## 1. Amaç ve kullanıcı
 
 Kuryenin gün sonunda teslimatlarını, topladığı parayı ve getirdiği iadeleri kapatıp kasaya teslim ettiği ekran. Kullanıcı: kurye (yalnız kendi günü).

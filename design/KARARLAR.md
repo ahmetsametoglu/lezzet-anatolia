@@ -2341,3 +2341,29 @@ mobil uçtu.
 
 **`null` ≠ `0` çekmecede de geçerli:** sayılmamış satır *"sayılmadı"* der, "0" demez. Yoldaki bir
 kayıtta bütün satırlar öyledir ve "0" yazmak henüz sayılmamış bir sevkiyatı KAYIP gibi okuturdu.
+
+---
+
+## 4. Saha akışları web'den söküldü — hazırlık masası · kapıda teslim · sefer kapanışı (kullanıcı kararı 07.09)
+
+**Karar.** Depocunun ve kuryenin sahada yaptığı iş native uygulamanın yüzeyidir; web operasyon
+paneli bu akışları **taşımaz**. Kaldırılanlar: `/operations/preparation` (hazırlık masası + hazırlık
+kâğıdı), `/operations/deliveries/[orderId]` (kapıda teslim), `/operations/deliveries/close` (sefer
+kapanışı), teslimat sayfasının kurye dalı (`?view=mine`). Sevkiyat masası (plan · rotalar · seferler),
+sipariş detayındaki kanıt okuması ve ofisten sonradan düzeltme penceresi web'de kaldı.
+
+**Gerekçe (kullanıcının cümlesiyle).** *"Mobil hazır ve çalışıyor. Mobilin akışında havada kalacak bir
+durumu çözmek için web'i kullanabiliriz ama zaten mobilde olan ve çalışan bir özelliği, hele ki
+operasyonun asıl gerçekleşmesi gereken yer mobilken, web'de aynısıyla oluşturmaya çalışmak mantıklı
+değil."* Ölçülen bedel de buydu: iki kopya ayrışmıştı — kutu kapısı, tekillik anahtarı ve tek
+transaction yalnız pakete yazılmış, web hazırlık masası kutu duvarından sonra hiçbir rota siparişini
+hazır yapamaz olmuştu (`docs/architecture/BACKLOG.md §17`).
+
+**Tasarım brief'leri SİLİNMEDİ.** `depo-hazirlik.md` · `kurye-gun.md` · `kurye-teslimat.md` ·
+`kurye-kapanis.md` iş tanımı olarak yaşıyor; native brief'ler (`app-kurye.md`, depo bölümü) onlara
+dayanıyor. Her birinin başına "web ekranı söküldü" notu kondu; yeniden bir web ekranı çizilmez.
+
+**Bu bir KURAL değil, kayıtlı bir karar** (kullanıcı: *"bu cümlemi bir kural olarak yazma"*). Aynı
+sınıfa giren öteki web ekranları (mal kabul formu · transfer kabulü · imha diyaloğu) kullanıcıya
+listelendi; her biri ayrı karardır.
+

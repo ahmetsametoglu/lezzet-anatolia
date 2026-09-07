@@ -1,5 +1,8 @@
 # Kurye — Teslimat Ekranı
 
+> **Web ekranı SÖKÜLDÜ (kullanıcı kararı 07.09 · `design/KARARLAR.md §4`).** Bu brief iş tanımı
+> olarak yaşar; kapıda teslim native uygulamada (`app-kurye.md`). Yeniden bir web ekranı çizilmez.
+
 ## 1. Amaç ve kullanıcı
 
 Tek bir teslimatın kapıda sonuçlandırıldığı ekran: teslim, tahsilat, kanıt — ya da ulaşılamadı/reddedildi. Kullanıcı: kurye (yalnız kendine atanan teslimat).

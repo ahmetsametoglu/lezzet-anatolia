@@ -1,5 +1,9 @@
 # Depo — Sipariş Hazırlama
 
+> **Web ekranı SÖKÜLDÜ (kullanıcı kararı 07.09 · `design/KARARLAR.md §4`).** Bu brief iş tanımı
+> olarak yaşar; hazırlık native depo ekranında (`app-operasyon-zemin.md` depo bölümü, `docs/build/21`).
+> Yeniden bir web ekranı çizilmez.
+
 ## 1. Amaç ve kullanıcı
 
 Depocunun onaylanmış siparişleri doğru partiden toplayıp "hazır" hale getirdiği ekran. Kullanıcı: depo sorumlusu (yalnız bu rol).

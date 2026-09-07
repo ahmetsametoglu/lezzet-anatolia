@@ -6927,7 +6927,7 @@ için bilinçli ayrı klasör). Kullanıcı buradan ara ara bakıp uygulamanın 
 - [x] (21.131) **KARGODA KUTUSUZ ONAY REDDEDİLİYOR** (kullanıcı kararı 28.08 · kargo kanalı Faz 1.5)
   `touches:` `packages/application/src/warehouse/{preparation,preparation.test}.ts` ·
   `packages/types/src/contracts/warehouse-api.schema.ts` ·
-  `apps/web/app/(operations)/operations/preparation/preparation-actions.ts` ·
+  ~~`apps/web/app/(operations)/operations/preparation/preparation-actions.ts`~~ *(web hazırlık masası 07.09'da söküldü)* ·
   `apps/mobile/src/screens/warehouse/{use-preparation.hook,preparation-screen.test,messages.json}`
 
   **Durum (29.08).** Gönderinin ölçüsü de ağırlığı da kutu tipinden geliyor; kutusuz kapanan bir

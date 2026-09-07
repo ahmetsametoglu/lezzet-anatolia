@@ -1,5 +1,8 @@
 # Kurye — Günün Teslimat Listesi
 
+> **Web ekranı SÖKÜLDÜ (kullanıcı kararı 07.09 · `design/KARARLAR.md §4`).** Bu brief iş tanımı
+> olarak yaşar; kuryenin günü native uygulamada (`app-kurye.md`). Yeniden bir web ekranı çizilmez.
+
 ## 1. Amaç ve kullanıcı
 
 Kuryenin o gün yapacağı teslimatları rota sırasıyla gördüğü ve gününü yönettiği ekran. Kullanıcı: kurye — **yalnız kendine atanan** teslimatları görür.

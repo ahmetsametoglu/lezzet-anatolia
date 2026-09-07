@@ -21,7 +21,15 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
 
 - [x] (11.1) **Gün listesi:** kuryenin o günkü teslimatları rota sırasıyla (adres, müşteri, ödeme beklentisi + tutar, içerik özeti); yalnız kendi teslimatları
   - *Bitti:* başka kuryenin teslimatı görünmüyor; ulaşılamayanlar listede kalıyor
-  - **Durum (28.07) — ARKA UÇ HAZIR, ekran yok.** Kapı `apps/web/lib/courier/day.ts`: `listCourierDay` (adres anlık kopyadan, ödeme beklentisi, içerik özeti, "yoldayım" bağlantısı). Ekranı yüzey ajanı yazacak; bu kapı onun sözleşmesidir.
+  - **Durum (07.09) — WEB'İN KURYE DALI SÖKÜLDÜ (kullanıcı kararı).** `/operations/deliveries`in
+    `?view=mine` dalı, `[orderId]` (kapıda teslim), `close` (sefer kapanışı) ve `apps/web/lib/courier/`
+    köprüleri kaldırıldı. Gerekçe: kuryenin günü sahada geçer, native uygulama akışı uçtan uca
+    taşıyor (`21.10` · `21.271`) ve web kopyası ayrışmıştı — kutu kapısı, tekillik anahtarı, tek
+    transaction yalnız pakete yazılmıştı (`BACKLOG §17`). Mobilde çalışan bir saha akışı web'de
+    ikinci kez kurulmaz. Paket kapıları (`listCourierDay` · `confirmDoorDelivery` · `closeCourierDay`
+    · `markUndelivered`) yerinde; sevkiyat masası (plan · rotalar · seferler) web'de kalıyor.
+    Aşağıda üstü çizili web yolları tarihçedir.
+  - **Durum (28.07) — ARKA UÇ HAZIR, ekran yok.** Kapı ~~`apps/web/lib/courier/day.ts`~~: `listCourierDay` (adres anlık kopyadan, ödeme beklentisi, içerik özeti, "yoldayım" bağlantısı). Ekranı yüzey ajanı yazacak; bu kapı onun sözleşmesidir.
   - **Durum (05.08) — EKRAN YAZILDI:** `/operations/deliveries` (cihaz forklu, `requireCourier`). **Rayın son ölü girişi kapandı** — on beş nav hedefinin hepsinin artık rotası var.
     - **Kurye kimliği GUARD'dan, adresten DEĞİL.** `?courierId=` gibi bir parametre olsaydı bir kurye başkasının gününü açardı; kapının zorunlu imzası da aynı sınırı yapısal kılıyor.
     - **Rota bilerek TEK adres:** sevkiyatçının gün planı (`09.15`) aynı sayfanın ikinci dalı — nav zaten tek giriş taşıyor ("Teslimat & Rota") ve ikisi aynı veriye bakıyor. Ayrı rotalar açmak aynı günü iki adresten anlatmak olurdu. **İkinci dal 07.08'de yazıldı**; dal ROLDEN seçiliyor, adresten değil (`?view=mine` yalnız iki şapkayı da taşıyan kişi için, ve yetki değil GÖRÜNÜM seçiyor).
@@ -39,9 +47,12 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     Sevkiyat masası aynı sayıyı yazmayı bilerek reddediyordu (`dispatch-read.ts` künyesi: *"sistem
     sırayı bilmiyor"*) — yani kod kendiyle çelişiyordu. Gerçek hesap **11.9**'un işi; o kapanana dek
     buradaki "rota sırasıyla" ifadesi bir niyet, teslim edilmiş bir yetenek değil.
-- [~] (11.2) **Teslimat ekranı — onay:** kalem listesi + eksik/reddedilen işaretleme (tutar kendiliğinden düşer); B2B'de imza/foto zorunlu (parametrik) → `Order.delivery_proof`
+- [x] (11.2) **Teslimat ekranı — onay:** kalem listesi + eksik/reddedilen işaretleme (tutar kendiliğinden düşer); B2B'de imza/foto zorunlu (parametrik) → `Order.delivery_proof`
   - *Bitti:* B2B teslimatı imzasız kapanmıyor; eksik işareti tutarı düşürüyor
-  - **Durum (28.07) — arka uç hazır.** Kapı `apps/web/lib/courier/delivery.ts` (`confirmDoorDelivery`).
+  - **Durum (07.09) — `[x]`: kapı pakette ve testli, ekran native'de; web ekranı söküldü** (bkz. `11.1`).
+    Satırı `[~]`de tutan şey web ekranının kanıt-yakalama/CORS notuydu; o ekran gitti. Kanıt yakalama
+    ve kutu kapısı native teslim ekranında (`21.10` · `23.8`), orada izlenir.
+  - **Durum (28.07) — arka uç hazır.** Kapı ~~`apps/web/lib/courier/delivery.ts`~~ (`confirmDoorDelivery`).
   - **Sıra kuralın kendisidir:** kanıt kapısı (hiçbir yazım yapılmadan) → MAL → teslim → PARA. Kanıt sonda kalsaydı yarısı yazılmış teslimat üstüne "olmadı" denirdi; kalem düzeltmesi teslimden sonra yapılsaydı aynı mal iki kez oynatılırdı (0026'nın "tam bir kez say" kuralı); tahsilat teslimden önce yazılsaydı `stale` dönüşte karşılıksız para kalırdı.
   - **Kurye hesap yapmaz:** eksik işaretlendiğinde tutarı düşüren şey bir çarpma değil, ödeme durumu türetimidir (`domain-core/payment`) — tutar tek yerde hesaplanır.
   - **Ayar okunamazsa kanıt zorunlu SAYILMAZ:** eksik ayar yüzünden kuryenin kapıda kilitlenmesi, kanıtsız bir teslimattan pahalıdır.
@@ -61,6 +72,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - **Teslimin kendisi tamamlanamadı:** ölçüm sırasında yerel veritabanı başka bir şerit tarafından yenilendi ve sipariş kaydı ortadan kalktı. Kanıtın `delivery_proof`a yazılıp `readDeliveryProof` ile okunması bu yüzden ekranda görülmedi — kapının kendi testleri o yolu tutuyor, ama ekran üstünden doğrulanmış değil. Satır bu tek boşluk için `[~]` kalıyor. BEKLEYEN(11.2)
 - [x] (11.3) **Teslimat ekranı — tahsilat:** nakit/kart/çek + tutar; nakit yasal sınır aşımında uyarı (engel yok); kapıda tavan/`cod_allowed` zaten checkout'ta uygulandı
   - *Bitti:* nakit sınır uyarısı çıkıyor ama tahsilat tamamlanabiliyor
+  - **Durum (07.09):** web ekranı söküldü — bkz. `11.1`; kapı pakette, ekran native'de.
   - **Durum (28.07) — arka uç hazır.** Aynı kapıdan (`confirmDoorDelivery`) geçer; `cashLimitExceeded` dönen bir BİLGİDİR, akış durmaz (DOMAIN §7). Sınır ayardan (`cash_legal_limit_cents`), yalnız nakde ait — aynı tutar kartla alınırsa uyarı yok.
   - **Yöntem siparişe yazılır:** gün kapanışının yöntem bazlı beklenen toplamı bundan türer; ayrıca bir "kurye tahsil etti mi" bayrağı tutulmadı.
   - **Durum (06.08) — EKRAN YAZILDI.** Kapıda üç yöntem (nakit/kart/çek), tutar kutusu türetilen tutarla açılıyor, nakit eşiği aşınca amber uyarı çıkıyor ve **onay açık kalıyor**.
@@ -69,6 +81,7 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
     - **Yöntem sözlüğü şemaya bağlandı** (`Record<PaymentMethod, …>`): serbest `Record<string, …>` iken iki anahtar ayrışmıştı (`check`/`transfer` yazılmış, şemada `cheque`/`bank_transfer`) — çek bekleyen kapıda ekran ham `cheque` yazıyordu. Tip artık ayrışmayı derlemede yakalıyor.
 - [x] (11.4) **Ulaşılamadı / reddedildi:** iki ayrı işaret; ulaşılamadı → `ready` (mal ayrılmış kalır), reddedildi → `returned` (depoya döner); `wa.me` "yoldayım" tek tık
   - *Bitti:* iki durumun stok sonucu 07/06 kurallarına uygun
+  - **Durum (07.09):** web ekranı söküldü — bkz. `11.1`; kapı pakette, ekran native'de.
   - **Durum (28.07) — arka uç hazır.** `markUndelivered` (day.ts) + saf motor `domain-core/delivery/on-the-way.ts` (6 birim testi).
   - **"Yoldayım" mesajı MÜŞTERİNİN dilinde** kurulur, kuryenin değil: operasyon yüzeyi Türkçedir, ekranın diline uyulsaydı Fransız müşteriye Türkçe giderdi. Metin bu yüzden motorda; bir sayfa `messages.json`'una konsaydı operasyon sözlüğüne düşer, müşteri dilleri hiç doğmazdı.
   - **Numara biçimi normalize edilir:** `+33 6…`, `0033 6…` ve yerel `06…` aynı sonuca iner; ayırt edilemeyecek kadar kısa girdide bağlantı üretilmez (çalışmayan düğme gösterilmez).
@@ -81,11 +94,12 @@ Kuryenin sahadaki iki ekranı (gün listesi, teslimat) + gün kapanışı. Tesli
   - **Not:** `14.6` ile AYNI iştir; tek yerde yapılır (PDF üretimi + `delivered` mailine ek). Yeni bir PDF bağımlılığı gerektirdiği için ayrı ele alınıyor.
 - [x] (11.6) **Gün kapanışı (RPC):** ~~`CourierDayClose` — kurye×gün ekseni~~ → **18.08'de SEFER eksenine indi (11.7):** kapanışın sahibi artık `delivery_run_close`; buradaki mutabakat kuralları (beklenen dondurulur, fark açıklanır, salt-okunur kapanış) aynen 11.7'de yaşıyor
   - *Bitti:* fark hesabı doğru; kapanan gün değiştirilemiyor
-  - **Durum (28.07) — TAMAM.** ~~`0025_courier_day_close.sql` (görünüm + tablo + RPC), `CourierDayCloseService`~~, kapı `apps/web/lib/courier/day-close.ts`. 9 test. Ekran yüzey ajanının.
+  - **Durum (07.09):** web ekranı söküldü — bkz. `11.1`; kapı pakette, ekran native'de.
+  - **Durum (28.07) — TAMAM.** ~~`0025_courier_day_close.sql` (görünüm + tablo + RPC), `CourierDayCloseService`~~, kapı ~~`apps/web/lib/courier/day-close.ts`~~. 9 test. Ekran yüzey ajanının.
   - **Durum (26.08 — DENETİM DÜZELTMESİ): yukarıdaki notun İKİ vaadi artık YOK.** Eksen 18.08'de
     sefere inince `0025` migration'ı kaldırıldı (halefi `0046_delivery_run.sql`) ve
     `CourierDayCloseService` söküldü; ölçüldü, ikisi de dosya sisteminde yok. Ayakta kalan tek şey
-    kapı: `apps/web/lib/courier/day-close.ts` — ama o da artık gövde değil, `@lezzet/application`a
+    kapı: ~~`apps/web/lib/courier/day-close.ts`~~ — ama o da artık gövde değil, `@lezzet/application`a
     giden bir **köprü** (terfi aşama 2/3). Başlık üstü çizilmişti, NOT çizilmemişti; satırı okuyup
     notu okuyan bir ajan var olmayan bir migration arardı.
     **`docs:check` bunu neden görmedi:** vaat denetimi (§3c) yalnız `apps/…`/`packages/…` gibi

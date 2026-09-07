@@ -299,7 +299,9 @@ export function buildBand(facts: BandFacts): AlertBandView {
         : `${names} ${cutoff} kesimine yetişmiyor — ${num(late)} sipariş hâlâ hazırlanmadı.`,
       detail: queueDetail,
       tone: missed ? 'red' : 'amber',
-      primary: { label: 'Depo Hazırlık →', href: '/operations/preparation' },
+      // Hazırlık masası web'den söküldü (kullanıcı kararı 07.09): kuyruk native depo ekranında
+      // (21.11). Şerit burada yalnız söyler; iş yapılacak yer bu tarayıcı değil.
+      primary: null,
       secondary,
     };
   }

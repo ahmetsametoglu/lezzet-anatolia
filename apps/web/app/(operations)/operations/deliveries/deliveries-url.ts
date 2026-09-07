@@ -1,8 +1,8 @@
 // Teslimat sayfasının URL sözleşmesi (09.15).
 //
 // Sayfa GÜN üzerine kuruludur (tasarım §2) ve gün adreste durur: sevkiyatçı "yarının listesi"ni
-// birine gönderebilmeli, tazelediğinde aynı günde kalmalı. Kuryenin dalında URL durumu YOKTU ve
-// hâlâ yok — onun tek bir görünümü var (bugünün durakları).
+// birine gönderebilmeli, tazelediğinde aynı günde kalmalı. `?view=mine` (kurye dalı) 07.09'da
+// söküldü — kuryenin günü native uygulamada; adres yalnız sevkiyat masasınındır.
 
 /** Sayfanın ÜÇ yüzü (18.08): günü planla · rotayı tanımla · GERÇEKLEŞENİ oku — aynı işin üç anı. */
 export const DELIVERY_TABS = ['plan', 'routes', 'runs'] as const;
@@ -11,12 +11,6 @@ export type DeliveryTab = (typeof DELIVERY_TABS)[number];
 interface DeliveriesUrlState {
   /** ISO `YYYY-MM-DD`. Yoksa bugün. */
   date: string;
-  /**
-   * Kimin gözünden bakılıyor. Varsayılan rolden türer — bu parametre yalnız **hem yönetici hem
-   * kurye** olan kişinin kendi gününe geçebilmesi için var (rol iki şapkayı da taşıyabiliyor,
-   * `admin` + `courier` sık bir bileşim).
-   */
-  view: 'dispatch' | 'mine' | null;
   /** `plan` günün çıkışları · `routes` güzergâh kurulumu. Varsayılan `plan`: günlük iş odur. */
   tab: DeliveryTab;
   /** Rotalar sekmesinde seçili güzergâh. Adreste durur: bir rotanın bağlantısı paylaşılabilmeli. */
@@ -32,10 +26,9 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function parseDeliveriesUrl(params: Record<string, string | string[] | undefined>, today: string): DeliveriesUrlState {
   const raw = typeof params.d === 'string' ? params.d : undefined;
-  const view = params.view === 'mine' ? 'mine' : params.view === 'dispatch' ? 'dispatch' : null;
   const tab = params.tab === 'routes' ? 'routes' : params.tab === 'runs' ? 'runs' : 'plan';
   const routeId = typeof params.route === 'string' ? params.route : null;
-  return { date: raw && ISO_DATE.test(raw) && isRealDate(raw) ? raw : today, view, tab, routeId };
+  return { date: raw && ISO_DATE.test(raw) && isRealDate(raw) ? raw : today, tab, routeId };
 }
 
 /** `2026-02-31` biçimi tutar ama gün yoktur — takvim de doğrulanmalı. */

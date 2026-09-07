@@ -8,7 +8,7 @@ const TODAY = '2026-08-07';
 describe('parseDeliveriesUrl', () => {
   it('gün yoksa bugüne düşer, sekme varsayılanı GÜN PLANI', () => {
     // Varsayılan `plan` çünkü günlük iş odur; rota kurulumu ara sıra yapılan bir kurulum işidir.
-    expect(parseDeliveriesUrl({}, TODAY)).toEqual({ date: TODAY, view: null, tab: 'plan', routeId: null });
+    expect(parseDeliveriesUrl({}, TODAY)).toEqual({ date: TODAY, tab: 'plan', routeId: null });
   });
 
   it('sekme yalnız bilinen değeri kabul eder', () => {
@@ -41,12 +41,6 @@ describe('parseDeliveriesUrl', () => {
     expect(parseDeliveriesUrl({ d: '2028-02-29' }, TODAY).date).toBe('2028-02-29');
   });
 
-  it('görünüm yalnız bilinen iki değeri kabul eder', () => {
-    expect(parseDeliveriesUrl({ view: 'mine' }, TODAY).view).toBe('mine');
-    expect(parseDeliveriesUrl({ view: 'dispatch' }, TODAY).view).toBe('dispatch');
-    // Uydurma değer yetki açmaz: bilinmeyen görünüm null'a düşer, dal role göre seçilir.
-    expect(parseDeliveriesUrl({ view: 'admin' }, TODAY).view).toBeNull();
-  });
 
   it('dizi gelen parametreyi yok sayar (aynı anahtar iki kez yazılmış adres)', () => {
     expect(parseDeliveriesUrl({ d: ['2026-08-09', '2026-08-10'] }, TODAY).date).toBe(TODAY);

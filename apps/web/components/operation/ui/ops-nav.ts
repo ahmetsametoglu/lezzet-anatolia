@@ -56,7 +56,7 @@ const NAV_SECTIONS: NavSection[] = [
       // açmak aynı soruyu ("bugün ne var") üç ekrana bölerdi.
       { key: 'panel', label: 'Panel', href: '/operations', roles: DAILY },
       { key: 'siparisler', label: 'Siparişler', href: '/operations/orders', roles: FINANCE },
-      { key: 'rotalar', label: 'Teslimat & Rota', href: '/operations/deliveries', roles: DAILY },
+      { key: 'rotalar', label: 'Teslimat & Rota', href: '/operations/deliveries', roles: ADMIN_ONLY },
       // Asistan onay kuyruğu (22.3) GÜNLÜK grubunda: bir modül değil, her gün bakılıp boşaltılan
       // bir karar kuyruğu — komşuları da öyle. "Sistem"e konsaydı bir ayar gibi okunurdu, oysa
       // burada bekleyen şey işin kendisi. YALNIZ admin: buradan verilen tek bir onay katalogda
@@ -79,7 +79,6 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       // Hazırlık grubun BAŞINDA: depocunun günü bu ekranda başlıyor (`design/pages/depo-hazirlik.md §5`),
       // stok sayfası ise günün içinde bakılan bir defter. Sıra kullanım sıklığını izliyor.
-      { key: 'hazirlik', label: 'Hazırlık', href: '/operations/preparation', roles: STOCK_FLOOR },
       /**
        * **Depo yüzeyi TEK SATIR** (22.26). "Mal kabul" ve "Stoktan düş" ayrı girişlerdi; ikisi de
        * Stok'un sekmesi oldu — mal girer, durur, çıkar: üçü tek stoğun üç anı. Üç satır, aynı sayının
